@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 0e4fb0d1..d6fe36be 100644
+index 0e4fb0d1..b2fb1404 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -10,17 +10,27 @@ index 0e4fb0d1..d6fe36be 100644
  copyright: Copyright © 2026
  
  directories:
-@@ -47,6 +47,9 @@ extraResources:
+@@ -47,6 +47,19 @@ extraResources:
        - "!packages/desktop/**"
        - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
        - "!node_modules/**/*.md"
 +      # 瘦身:排除构建工具/开发依赖(运行时不需要,client 已 bundle,server 只 external 少数包)
 +      - "!node_modules/{typescript,vue-tsc,@tsoa,@rolldown,esbuild,@esbuild,playwright-core,playwright,rollup,vite,@vitejs}/**"
 +      - "!node_modules/{@types,.bin}/**"
++      # 瘦身:client 库源码已 bundle 进 dist/client,运行时 node_modules 只需 server external 包
++      # (node-pty/iconv-lite/keygrip)。排除大型 client 库源码。
++      - "!node_modules/{monaco-editor,naive-ui,mermaid,date-fns,js-tiktoken,es-toolkit,@vue,cytoscape-fcose,highlight.js}/**"
++      - "!node_modules/{katex,matrix-widget-api,linkifyjs,markdown-it,markdown-it-katex}/**"
++      - "!node_modules/{@vueuse,vue,vue-router,pinia,vue-i18n,@intlify}/**"
++      - "!node_modules/{lightningcss,lightningcss-darwin-arm64,lightningcss-darwin-x64,lightningcss-linux-x64-gnu,lightningcss-win32-x64-msvc}/**"
++      # 瘦身:测试框架 + 已 bundle 进 client 的库源码
++      - "!node_modules/{vitest,@vitest,jsdom,sass,sass-embedded,@vscode}/**"
++      - "!node_modules/{cytoscape,cytoscape-fcose,cytoscape-cose-bilkent,cytoscape-cxttap,cytoscape-klay,cytoscape-popper,cytoscape-dom-node}/**"
++      - "!node_modules/{rxjs,@mermaid-js,@babel,@rollup}/**"
  
  asarUnpack:
    - "**/*.node"
-@@ -54,20 +57,20 @@ asarUnpack:
+@@ -54,20 +67,20 @@ asarUnpack:
  mac:
    target:
      - target: dmg
