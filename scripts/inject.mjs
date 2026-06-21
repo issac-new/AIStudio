@@ -74,9 +74,10 @@ function reversePatches(patches) {
 
 function generateOverlayViteConfig() {
   // 生成完整派生 config:把 @ 指向 upstream src,@/custom 指向 overlay custom,
-  // 入口重定向到 overlay client entry shim(复制上游 main.ts 启动序列 + A 类 bootstrap)。
+  // 入口重定向到 overlay client shim(复制上游 main.ts 启动序列 + A 类 bootstrap)。
   const upstreamViteConfig = resolve(hermesStudioRoot, 'vite.config.ts');
   const upstreamClientSrc = resolve(hermesStudioRoot, 'packages/client/src');
+  const upstreamClientRoot = resolve(hermesStudioRoot, 'packages/client');
   const overlayClientEntry = resolve(overlayRoot, 'registries/client/entry.mts');
   const overlayCustomClient = resolve(overlayRoot, 'custom/client');
   const overlayRegistries = resolve(overlayRoot, 'registries');
@@ -93,15 +94,20 @@ const upstreamCfg =
 export default mergeConfig(
   upstreamCfg,
   defineConfig({
+    // 关键:覆盖上游的相对 root/packages/client,改为绝对上游路径。
+    // 上游 config 用相对路径,mergeConfig 后会被当作相对 overlay 解析(错)。
+    root: '${upstreamClientRoot}',
+    publicDir: resolve('${upstreamClientRoot}', 'public'),
     resolve: {
-      alias: {
-        // 更具体的别名在前(Vite 按顺序匹配,前缀更长者需先声明)
-        '@/custom': '${overlayCustomClient}',
-        '@custom': '${overlayCustomClient}',
-        '@registries': '${overlayRegistries}',
-        // @ 指向上游 client/src(@/api、@/views、@/components 等解析到上游)
-        '@': '${upstreamClientSrc}',
-      },
+      // 用数组形式 alias(保证顺序:更具体的前缀先匹配)。
+      // Vite 对象形式 alias 不保证顺序;数组形式按声明顺序匹配,故 '@/custom' 必须在 '@' 前。
+      alias: [
+        { find: '@/custom', replacement: '${overlayCustomClient}' },
+        { find: '@custom', replacement: '${overlayCustomClient}' },
+        { find: '@registries', replacement: '${overlayRegistries}' },
+        // @ 兜底指向上游 client src(@/api、@/views、@/components 等解析到上游)
+        { find: '@', replacement: '${upstreamClientSrc}' },
+      ],
     },
     // 入口改为 overlay client shim(复制上游 main.ts 启动序列 + A 类注册)
     build: {

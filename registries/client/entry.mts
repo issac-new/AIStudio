@@ -43,9 +43,10 @@ app.use(router)
 
 // === A 类注册(mount 前插入)===
 // 对应原 custom/index.ts 的 registerCustomFeatures,改为从 overlay/custom 注册。
-const { bootstrapClient } = await import('./bootstrap')
-await bootstrapClient(app)
-
-router.isReady().finally(() => {
-  app.mount('#app')
-})
+// 注意:不用顶层 await(es2020 target 不支持),改用 .then 链式,保证 bootstrap 在 mount 前完成。
+import('./bootstrap')
+  .then(({ bootstrapClient }) => bootstrapClient(app))
+  .then(() => router.isReady())
+  .finally(() => {
+    app.mount('#app')
+  })
