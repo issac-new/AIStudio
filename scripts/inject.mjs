@@ -202,7 +202,15 @@ function main() {
   }
 
   if (mode === 'inject') {
-    // 1. 校验上游工作树状态(若有 patch 残留,提示先 clean)
+    // 0. 清理 inject 自身可能遗留的产物(符号链接),避免 dirty-check 被自己的残留挡住。
+    //    这些是 inject/clean 管理的,不应阻断下次 inject。
+    try {
+      if (lstatSync(upstreamServerCustom).isSymbolicLink()) {
+        unlinkSync(upstreamServerCustom);
+        console.log('[inject] removed stale server/src/custom symlink (self-residual)');
+      }
+    } catch { /* 不存在,跳过 */ }
+    // 1. 校验上游工作树状态(若有 patch/外部改动残留,提示先 clean)
     const status = git('status --porcelain', hermesStudioRoot).trim();
     const patches = readSeries();
     if (status && patches.length > 0) {
