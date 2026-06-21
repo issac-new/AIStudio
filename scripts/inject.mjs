@@ -4,7 +4,7 @@
 //
 // 注意:本脚本用 node 直跑(.mjs),不依赖 ts 加载器,因此路径在此内联计算,
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync } from 'fs';
 import { execSync } from 'child_process';
 import { resolve } from 'path';
 
@@ -12,6 +12,8 @@ const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
 const upstreamRoot = resolve(ncwkRoot, 'upstream');
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
+const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');
+const overlayNodeModules = resolve(overlayRoot, 'node_modules');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
@@ -120,6 +122,31 @@ export default mergeConfig(
   console.log('[inject] generated vite.config.overlay.ts (@/@custom/@registries alias + entry input)');
 }
 
+function ensureNodeModulesSymlink() {
+  // overlay 自身无依赖;构建/开发需解析到上游 node_modules(vite/vue/matrix-js-sdk 等)。
+  // 建符号链接 overlay/node_modules → upstream/hermes-studio/node_modules。
+  if (!existsSync(upstreamNodeModules)) {
+    console.warn('[inject] WARN: 上游 node_modules 不存在,先在上游跑 npm ci/install');
+    return;
+  }
+  let need = true;
+  try {
+    if (lstatSync(overlayNodeModules).isSymbolicLink()) need = false;
+  } catch {
+    /* not present */
+  }
+  if (need) {
+    try {
+      symlinkSync(upstreamNodeModules, overlayNodeModules);
+      console.log('[inject] linked overlay/node_modules → upstream/hermes-studio/node_modules');
+    } catch (e) {
+      if (!existsSync(overlayNodeModules)) {
+        console.warn('[inject] WARN: 无法创建 node_modules 符号链接:', e.message);
+      }
+    }
+  }
+}
+
 function main() {
   if (!existsSync(hermesStudioRoot)) {
     console.error(`[inject] 上游目录不存在: ${hermesStudioRoot}`);
@@ -137,9 +164,11 @@ function main() {
     }
     // 2. 应用 B 类 patch
     const applied = applyPatches();
-    // 3. 生成派生 config
+    // 3. 确保 overlay 能解析上游依赖(符号链接 node_modules)
+    ensureNodeModulesSymlink();
+    // 4. 生成派生 config
     generateOverlayViteConfig();
-    // 4. 写清单
+    // 5. 写清单
     writeFileSync(
       manifestPath,
       JSON.stringify(

@@ -2,4 +2,5 @@
 .overlay-injected.json
 vite.config.overlay.ts
 *.log
+node_modules
 node_modules/
