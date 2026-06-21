@@ -1,0 +1,44 @@
+diff --git a/packages/server/src/db/hermes/sessions-db.ts b/packages/server/src/db/hermes/sessions-db.ts
+index 67470d4e..9f88d26a 100644
+--- a/packages/server/src/db/hermes/sessions-db.ts
++++ b/packages/server/src/db/hermes/sessions-db.ts
+@@ -210,7 +210,7 @@ function normalizeTitleLikeQuery(query: string): string {
+ function shouldUseLiteralContentSearch(query: string): boolean {
+   const trimmed = query.trim()
+   if (!trimmed) return false
+-  if (/[^\p{L}\p{N}\s"*.-]/u.test(trimmed)) return true
++  if (new RegExp('[^\\p{L}\\p{N}\\s"*.-]', 'u').test(trimmed)) return true
+ 
+   const tokens = trimmed.match(/"[^"]*"\*?|\S+/g)
+   if (!tokens) return true
+@@ -224,17 +224,17 @@ function shouldUseLiteralContentSearch(query: string): boolean {
+     if (raw.startsWith('"') && raw.endsWith('"')) {
+       const inner = raw.slice(1, -1)
+       if (!inner.trim()) return true
+-      if (!/^[\p{L}\p{N}\s.-]+$/u.test(inner)) return true
+-      if ((inner.includes('.') || inner.includes('-')) && !/^[\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)*(?:\s+[\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)*)*$/u.test(inner)) return true
++      if (!new RegExp('^[\\p{L}\\p{N}\\s.-]+$', 'u').test(inner)) return true
++      if ((inner.includes('.') || inner.includes('-')) && !new RegExp('^[\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)*(?:\\s+[\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)*)*$', 'u').test(inner)) return true
+       continue
+     }
+ 
+     if (raw.includes('.') || raw.includes('-')) {
+-      if (!/^[\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)*$/u.test(raw)) return true
++      if (!new RegExp('^[\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)*$', 'u').test(raw)) return true
+       continue
+     }
+ 
+-    if (!/^[\p{L}\p{N}]+$/u.test(raw)) return true
++    if (!new RegExp('^[\\p{L}\\p{N}]+$', 'u').test(raw)) return true
+   }
+ 
+   return false
+@@ -290,7 +290,7 @@ function sanitizeFtsQuery(query: string): string {
+   sanitized = sanitized.replace(/(^|\s)\*/g, '$1')
+   sanitized = sanitized.trim().replace(/^(AND|OR|NOT)\b\s*/i, '')
+   sanitized = sanitized.trim().replace(/\s+(AND|OR|NOT)\s*$/i, '')
+-  sanitized = sanitized.replace(/\b([\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)+)\b/gu, '"$1"')
++  sanitized = sanitized.replace(new RegExp('\b([\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)+)\b', 'gu'), '"$1"')
+ 
+   for (let i = 0; i < quotedParts.length; i += 1) {
+     sanitized = sanitized.replace(`\u0000Q${i}\u0000`, quotedParts[i])

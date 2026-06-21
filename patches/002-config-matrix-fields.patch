@@ -1,0 +1,36 @@
+diff --git a/packages/server/src/config.ts b/packages/server/src/config.ts
+index fcfc5dfc..9ea96779 100644
+--- a/packages/server/src/config.ts
++++ b/packages/server/src/config.ts
+@@ -24,6 +24,9 @@ import { homedir } from 'os'
+  * - HERMES_GATEWAY_URL / GATEWAY_URL: Explicit Hermes gateway upstream URL for proxy routes.
+  * - GATEWAY_HOST: Default Hermes gateway upstream host. Default: 127.0.0.1.
+  * - GATEWAY_PORT: Default Hermes gateway upstream port. Default: 8642.
++ * - HERMES_DASHBOARD_URL: Base URL of the Hermes agent dashboard serving the kanban plugin page (embedded via iframe at /hermes/kanban). Overrides HERMES_DASHBOARD_HOST/PORT.
++ * - HERMES_DASHBOARD_HOST: Dashboard host. Default: 127.0.0.1.
++ * - HERMES_DASHBOARD_PORT: Dashboard port. Default: 9119.
+  * - HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART: Disable Web UI gateway autostart checks and config-driven gateway start/stop reconciliation.
+  * - HERMES_WEB_UI_MANAGED_GATEWAY: Web UI-managed Hermes gateway handling. Enabled by default; set 0/false/off to use CLI start.
+  * - HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: Whether Web UI shutdown also stops managed gateways.
+@@ -59,6 +62,21 @@ export function getCorsOrigins(env: Record<string, string | undefined> = process
+   return env.CORS_ORIGINS?.trim() || ''
+ }
+ 
++/**
++ * Base URL of the Hermes agent dashboard that serves the kanban plugin page.
++ * The /hermes/kanban view embeds `${dashboardUrl}/kanban` in an iframe; the
++ * dashboard injects its own session token into the served HTML on loopback, so
++ * the embedded page authenticates itself without any token handling here.
++ * Default assumes the dashboard is running on its default loopback port.
++ */
++export function getDashboardUrl(env: Record<string, string | undefined> = process.env): string {
++  const url = env.HERMES_DASHBOARD_URL?.trim()
++  if (url) return url.replace(/\/+$/, '')
++  const host = env.HERMES_DASHBOARD_HOST?.trim() || '127.0.0.1'
++  const port = parseInt(env.HERMES_DASHBOARD_PORT || '9119', 10)
++  return `http://${host}:${port}`
++}
++
+ const appHome = getWebUiHome()
+ 
+ export const config = {

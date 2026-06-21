@@ -1,2 +1,8 @@
-# B 类 patch 应用清单(每行一个 .patch 文件名,按序)
-# 阶段 2 填充
+# B 类 patch 应用清单(按序)
+001-schemas-matrix-columns.patch
+002-config-matrix-fields.patch
+003-vite-matrix-presbundle.patch
+004-sessions-db.patch
+005-routes-auth.patch
+006-safe-file-store.patch
+007-model-run-prompt.patch
