@@ -39,3 +39,6 @@
 038-test-kanban-controller.patch
 039-test-kanban-routes.patch
 040-package-lock-matrix-sdk.patch
+041-desktop-rebrand-swarmstudio-config.patch
+042-desktop-rebrand-swarmstudio-pkg.patch
+043-desktop-rebrand-swarmstudio-strings.patch

@@ -1,0 +1,37 @@
+diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+index 0e4fb0d1..a49b7278 100644
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -1,5 +1,5 @@
+-appId: com.hermeswebui.studio
+-productName: Hermes Studio
++appId: com.swarmstudio.app
++productName: SwarmStudio
+ copyright: Copyright © 2026
+ 
+ directories:
+@@ -54,20 +54,20 @@ asarUnpack:
+ mac:
+   target:
+     - target: dmg
+-      arch: [arm64, x64]
++      arch: [arm64]
+     - target: zip
+-      arch: [arm64, x64]
++      arch: [arm64]
+   category: public.app-category.developer-tools
+   hardenedRuntime: true
+   gatekeeperAssess: false
+   notarize: true
+-  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ win:
+   target:
+     - target: nsis
+       arch: [x64]
+-  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ linux:
+   icon: build/icons
