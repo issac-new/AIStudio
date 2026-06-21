@@ -1,0 +1,50 @@
+// matrix-chat local design tokens.
+// Maps element-web (CPD) spacing/font/color semantics onto the app's
+// "Pure Ink" black-and-white theme. Scope is the matrix-chat surface only;
+// the global theme variables (styles/variables.scss) are NOT changed.
+
+:root {
+  // ── Spacing ramp (element $spacing-* ) ──
+  --mx-space-1x: 4px;
+  --mx-space-2x: 8px;
+  --mx-space-3x: 12px;
+  --mx-space-4x: 16px;
+
+  // ── Font-size ramp (element $font-*px) ──
+  --mx-font-11px: 11px;
+  --mx-font-13px: 13px;
+  --mx-font-15px: 15px;
+  --mx-font-20px: 20px;
+  --mx-font-22px: 22px;
+
+  // ── Event tile ──
+  --mx-left-gutter: 64px;
+  --mx-bubble-max-width: 600px;
+  --mx-gutter-size: 16px;
+  --mx-content-margin-inline-end: 34px;
+  --mx-selected-border-width: 4px;
+  // box-shadow inset offset = 50px (avatar area) + border width
+  --mx-selected-shadow-offset-x: calc(50px + var(--mx-selected-border-width));
+  --mx-selected-shadow-spread: -50px;
+
+  // ── Event background states (element: $event-selected-color / $event-highlight-bg-color) ──
+  --mx-event-selected-bg: rgba(var(--accent-primary-rgb), 0.06);
+  --mx-event-highlight-bg: rgba(var(--accent-primary-rgb), 0.08);
+
+  // ── Text tiers (element: $secondary-content / $tertiary-content) ──
+  --mx-text-secondary: var(--text-secondary);
+  --mx-text-tertiary: var(--text-muted);
+
+  // ── Action bar ──
+  --mx-action-bar-bg: var(--bg-card);
+  --mx-action-bar-radius: 8px;
+
+  // ── Room tile ──
+  --mx-room-tile-radius: 8px;
+  --mx-room-tile-hover-bg: rgba(var(--accent-primary-rgb), 0.04);
+  --mx-room-tile-active-bg: rgba(var(--accent-primary-rgb), 0.08);
+
+  // ── Read marker ──
+  --mx-read-marker-color: var(--accent-primary);
+  --mx-code-bg: var(--code-bg, #f5f5f5);
+}

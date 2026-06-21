@@ -73,10 +73,16 @@ function reversePatches(patches) {
 }
 
 function generateOverlayViteConfig() {
-  // 阶段 1:生成最小派生 config(入口 alias 在阶段 3 Task 3.4 扩充)
+  // 生成完整派生 config:把 @ 指向 upstream src,@/custom 指向 overlay custom,
+  // 入口重定向到 overlay client entry shim(复制上游 main.ts 启动序列 + A 类 bootstrap)。
   const upstreamViteConfig = resolve(hermesStudioRoot, 'vite.config.ts');
-  const cfg = `// 派生构建配置(inject 生成,已 gitignore)。阶段 3 将扩充 entry/alias。
+  const upstreamClientSrc = resolve(hermesStudioRoot, 'packages/client/src');
+  const overlayClientEntry = resolve(overlayRoot, 'registries/client/entry.mts');
+  const overlayCustomClient = resolve(overlayRoot, 'custom/client');
+  const overlayRegistries = resolve(overlayRoot, 'registries');
+  const cfg = `// 派生构建配置(inject 生成,已 gitignore)。勿手改,改 inject.mjs。
 import { defineConfig, mergeConfig } from 'vite';
+import { resolve } from 'path';
 import upstream from '${upstreamViteConfig}';
 
 const upstreamCfg =
@@ -87,12 +93,25 @@ const upstreamCfg =
 export default mergeConfig(
   upstreamCfg,
   defineConfig({
-    // 阶段 3 Task 3.4 在此追加 resolve.alias 与 build.rollupOptions.input
+    resolve: {
+      alias: {
+        // 更具体的别名在前(Vite 按顺序匹配,前缀更长者需先声明)
+        '@/custom': '${overlayCustomClient}',
+        '@custom': '${overlayCustomClient}',
+        '@registries': '${overlayRegistries}',
+        // @ 指向上游 client/src(@/api、@/views、@/components 等解析到上游)
+        '@': '${upstreamClientSrc}',
+      },
+    },
+    // 入口改为 overlay client shim(复制上游 main.ts 启动序列 + A 类注册)
+    build: {
+      rollupOptions: { input: resolve('${overlayRoot}', 'registries/client/entry.mts') },
+    },
   })
 );
 `;
   writeFileSync(resolve(overlayRoot, 'vite.config.overlay.ts'), cfg);
-  console.log('[inject] generated vite.config.overlay.ts');
+  console.log('[inject] generated vite.config.overlay.ts (@/@custom/@registries alias + entry input)');
 }
 
 function main() {
