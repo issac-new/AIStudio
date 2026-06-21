@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 0e4fb0d1..a49b7278 100644
+index 0e4fb0d1..d6fe36be 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -10,7 +10,17 @@ index 0e4fb0d1..a49b7278 100644
  copyright: Copyright © 2026
  
  directories:
-@@ -54,20 +54,20 @@ asarUnpack:
+@@ -47,6 +47,9 @@ extraResources:
+       - "!packages/desktop/**"
+       - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
+       - "!node_modules/**/*.md"
++      # 瘦身:排除构建工具/开发依赖(运行时不需要,client 已 bundle,server 只 external 少数包)
++      - "!node_modules/{typescript,vue-tsc,@tsoa,@rolldown,esbuild,@esbuild,playwright-core,playwright,rollup,vite,@vitejs}/**"
++      - "!node_modules/{@types,.bin}/**"
+ 
+ asarUnpack:
+   - "**/*.node"
+@@ -54,20 +57,20 @@ asarUnpack:
  mac:
    target:
      - target: dmg

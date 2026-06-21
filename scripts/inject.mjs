@@ -195,6 +195,34 @@ function ensureServerCustomSymlink() {
   }
 }
 
+function restoreNonPatchArtifacts(label) {
+  // 还原所有"非 patch 目标"的 build 产物(如 docs/openapi.json)到 HEAD。
+  // 这些不是我们的 patch,留着会挡住 inject 的 dirty-check。
+  const patchTargets = new Set();
+  for (const p of readSeries()) {
+    try {
+      const patchText = readFileSync(resolve(patchDir, p), 'utf8');
+      for (const line of patchText.split('\n')) {
+        const m = line.match(/^(?:\+\+\+|---) b\/(.+)$/);
+        if (m) patchTargets.add(m[1]);
+      }
+    } catch { /* patch 文件读取失败,跳过 */ }
+  }
+  git('status --porcelain', hermesStudioRoot)
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .forEach((line) => {
+      const f = line.slice(3).trim();
+      if (!patchTargets.has(f) && line.startsWith(' M')) {
+        try {
+          execSync(`git checkout -- "${f}"`, { cwd: hermesStudioRoot, stdio: 'ignore' });
+          console.log(`[${label}] restored build artifact (non-patch): ${f}`);
+        } catch { /* 可能是 untracked 或已删,跳过 */ }
+      }
+    });
+}
+
 function main() {
   if (!existsSync(hermesStudioRoot)) {
     console.error(`[inject] 上游目录不存在: ${hermesStudioRoot}`);
@@ -210,29 +238,8 @@ function main() {
         console.log('[inject] removed stale server/src/custom symlink (self-residual)');
       }
     } catch { /* 不存在,跳过 */ }
-    //    b) 非 patch 目标的 build 产物(如 docs/openapi.json,build 时 generate 改动它)。
-    //       这些不是我们的 patch,还原到 HEAD(纯净),不影响 patch 应用。
-    const patchTargets = new Set();
-    for (const p of readSeries()) {
-      const patchText = readFileSync(resolve(patchDir, p), 'utf8');
-      for (const line of patchText.split('\n')) {
-        const m = line.match(/^(?:\+\+\+|---) b\/(.+)$/);
-        if (m) patchTargets.add(m[1]);
-      }
-    }
-    git('status --porcelain', hermesStudioRoot)
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .forEach((line) => {
-        const f = line.slice(3).trim();
-        if (!patchTargets.has(f)) {
-          try {
-            execSync(`git checkout -- "${f}"`, { cwd: hermesStudioRoot, stdio: 'ignore' });
-            console.log(`[inject] restored build artifact (non-patch): ${f}`);
-          } catch { /* 可能是 untracked 或已删,跳过 */ }
-        }
-      });
+    //    b) 非 patch 目标的 build 产物
+    restoreNonPatchArtifacts('inject');
     // 1. 校验上游工作树状态(若有 patch 残留,提示先 clean)
     const status = git('status --porcelain', hermesStudioRoot).trim();
     const patches = readSeries();
@@ -265,6 +272,8 @@ function main() {
       ? JSON.parse(readFileSync(manifestPath, 'utf8')).appliedPatches || []
       : readSeries();
     reversePatches(applied);
+    // 还原非 patch 的 build 产物(如 openapi.json),保持上游完全干净
+    restoreNonPatchArtifacts('clean');
     console.log('[clean] done');
   }
 }
