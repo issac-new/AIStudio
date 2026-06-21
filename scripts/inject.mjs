@@ -4,7 +4,7 @@
 //
 // 注意:本脚本用 node 直跑(.mjs),不依赖 ts 加载器,因此路径在此内联计算,
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
-import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync } from 'fs';
 import { execSync } from 'child_process';
 import { resolve } from 'path';
 
@@ -14,6 +14,10 @@ const upstreamRoot = resolve(ncwkRoot, 'upstream');
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');
 const overlayNodeModules = resolve(overlayRoot, 'node_modules');
+// server 代码用相对路径 import '../custom/...'(非 @ alias,tsc/esbuild 无法经 alias 重定向),
+// 故需把 overlay/custom/server 链接到上游 packages/server/src/custom。
+const upstreamServerCustom = resolve(hermesStudioRoot, 'packages/server/src/custom');
+const overlayServerCustom = resolve(overlayRoot, 'custom/server');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
@@ -80,6 +84,7 @@ function generateOverlayViteConfig() {
   const upstreamViteConfig = resolve(hermesStudioRoot, 'vite.config.ts');
   const upstreamClientSrc = resolve(hermesStudioRoot, 'packages/client/src');
   const upstreamClientRoot = resolve(hermesStudioRoot, 'packages/client');
+  const upstreamDistClient = resolve(hermesStudioRoot, 'dist/client');
   const overlayClientEntry = resolve(overlayRoot, 'registries/client/entry.mts');
   const overlayCustomClient = resolve(overlayRoot, 'custom/client');
   const overlayRegistries = resolve(overlayRoot, 'registries');
@@ -104,6 +109,11 @@ export default mergeConfig(
       // 用数组形式 alias(保证顺序:更具体的前缀先匹配)。
       // Vite 对象形式 alias 不保证顺序;数组形式按声明顺序匹配,故 '@/custom' 必须在 '@' 前。
       alias: [
+        // /src/main.ts(index.html 的入口)→ overlay entry shim(复制上游 main.ts 启动序列 + A 类注册)。
+        // 用字符串精确匹配 index.html 里的 /src/main.ts,使 Vite 以 index.html 为入口、
+        // 但把 main 重定向到 overlay shim(保留 HTML 处理,生成 index.html)。
+        // (字符串 find 做精确匹配;正则在模板插值里转义易错,故不用 RegExp。)
+        { find: '/src/main.ts', replacement: '${overlayClientEntry}' },
         { find: '@/custom', replacement: '${overlayCustomClient}' },
         { find: '@custom', replacement: '${overlayCustomClient}' },
         { find: '@registries', replacement: '${overlayRegistries}' },
@@ -111,9 +121,13 @@ export default mergeConfig(
         { find: '@', replacement: '${upstreamClientSrc}' },
       ],
     },
-    // 入口改为 overlay client shim(复制上游 main.ts 启动序列 + A 类注册)
+    // outDir 必须显式覆盖为上游 dist/client 的绝对路径——上游 config 用相对
+    // '../../dist/client',mergeConfig 后会相对 overlay 解析(错)。desktop 构建读此目录。
+    // input 显式指向上游 index.html:覆盖 root 后,Vite 默认从 <root>/index.html 发现入口
+    // 可能失效,显式 input 保证 HTML 被处理、生成 dist/client/index.html。
     build: {
-      rollupOptions: { input: resolve('${overlayRoot}', 'registries/client/entry.mts') },
+      outDir: '${upstreamDistClient}',
+      rollupOptions: { input: resolve('${upstreamClientRoot}', 'index.html') },
     },
   })
 );
@@ -147,6 +161,40 @@ function ensureNodeModulesSymlink() {
   }
 }
 
+function ensureServerCustomSymlink() {
+  // server 代码用相对路径 import '../custom/...'(如 controllers/auth.ts → custom/matrix/admin-service)。
+  // tsc/esbuild 无法经 vite alias 重定向相对路径,故把 overlay/custom/server 链接到
+  // 上游 packages/server/src/custom。clean 时移除链接(还原上游)。
+  const isOursSymlink = () => {
+    try {
+      return lstatSync(upstreamServerCustom).isSymbolicLink();
+    } catch {
+      return false;
+    }
+  };
+  if (mode === 'inject') {
+    if (isOursSymlink()) return; // 已链接
+    try {
+      symlinkSync(overlayServerCustom, upstreamServerCustom);
+      console.log('[inject] linked upstream/.../server/src/custom → overlay/custom/server');
+    } catch (e) {
+      if (!existsSync(upstreamServerCustom)) {
+        console.warn('[inject] WARN: 无法创建 server custom 符号链接:', e.message);
+      }
+    }
+  } else {
+    // clean: 移除我们创建的链接(仅当它是符号链接时)
+    if (isOursSymlink()) {
+      try {
+        unlinkSync(upstreamServerCustom);
+        console.log('[clean] removed server/src/custom symlink');
+      } catch (e) {
+        console.warn('[clean] WARN: 无法移除 server custom 符号链接:', e.message);
+      }
+    }
+  }
+}
+
 function main() {
   if (!existsSync(hermesStudioRoot)) {
     console.error(`[inject] 上游目录不存在: ${hermesStudioRoot}`);
@@ -166,6 +214,8 @@ function main() {
     const applied = applyPatches();
     // 3. 确保 overlay 能解析上游依赖(符号链接 node_modules)
     ensureNodeModulesSymlink();
+    // 3b. server 代码用相对路径 import '../custom/...',需把 overlay custom/server 链接到上游
+    ensureServerCustomSymlink();
     // 4. 生成派生 config
     generateOverlayViteConfig();
     // 5. 写清单
