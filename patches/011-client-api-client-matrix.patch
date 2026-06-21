@@ -1,0 +1,137 @@
+diff --git a/packages/client/src/api/client.ts b/packages/client/src/api/client.ts
+index 0e5664e8..3f3656ed 100644
+--- a/packages/client/src/api/client.ts
++++ b/packages/client/src/api/client.ts
+@@ -108,11 +108,54 @@ function isProfileWideSessionCollection(pathname: string): boolean {
+     pathname === '/api/hermes/sessions/conversations'
+ }
+ 
+-function emitAuthNotice(kind: 'expired' | 'forbidden') {
++export function emitAuthNotice(kind: 'expired' | 'forbidden') {
+   if (typeof window === 'undefined') return
+   window.dispatchEvent(new CustomEvent('hermes-auth-notice', { detail: { kind } }))
+ }
+ 
++/**
++ * Authoritative auth-state recovery: clear the stored token, notify listeners
++ * (AuthEventListener shows a toast), and redirect to login. Shared by the REST
++ * 401 handler below and by callers that cannot read HTTP status directly
++ * (e.g. the kanban WebSocket, whose `onclose` only surfaces code 1006).
++ */
++export function triggerAuthRecheck() {
++  clearAuthSessionState()
++  emitAuthNotice('expired')
++  if (router.currentRoute.value.name !== 'login') {
++    router.replace({ name: 'login' })
++  }
++}
++
++/**
++ * Lightweight REST probe used to authoritatively decide whether a persistent
++ * WebSocket failure is an auth problem. Returns `false` only when REST returns
++ * a confirmed 401 (auth expired — in which case request() has already cleared
++ * the token and redirected to login). Returns `true` when the token is valid
++ * (REST 200) OR when the probe itself failed inconclusively (network error,
++ * 5xx) — callers should keep retrying the WebSocket in that case rather than
++ * force a logout they cannot justify.
++ *
++ * Use this when a caller observes repeated failures but cannot read HTTP
++ * status directly (e.g. the kanban WebSocket, whose `onclose` only surfaces
++ * close code 1006).
++ */
++export async function probeAuthViaRest(): Promise<boolean> {
++  try {
++    // getCapabilities is a cheap, always-available local BFF endpoint.
++    await request('/api/hermes/kanban/capabilities')
++    return true
++  } catch (err) {
++    // Only a 401 counts as an auth verdict. The request() handler throws
++    // 'Unauthorized' for 401 (and has already cleared the token + redirected
++    // to login). Network errors, 5xx, etc. mean the probe itself failed and
++    // say nothing about auth — treat as "inconclusive, not an auth failure"
++    // so callers keep retrying the WebSocket instead of forcing logout.
++    const msg = err instanceof Error ? err.message : String(err)
++    return msg !== 'Unauthorized'
++  }
++}
++
+ function messageFromErrorValue(value: unknown): string {
+   if (typeof value === 'string') return value
+   if (value == null) return ''
+@@ -175,11 +218,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
+     !path.startsWith('/v1/')
+ 
+   if (res.status === 401 && isLocalBff) {
+-    clearAuthSessionState()
+-    emitAuthNotice('expired')
+-    if (router.currentRoute.value.name !== 'login') {
+-      router.replace({ name: 'login' })
+-    }
++    triggerAuthRecheck()
+     throw new Error('Unauthorized')
+   }
+ 
+@@ -187,11 +226,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
+     const text = await res.text().catch(() => '')
+     if (res.status === 403 && isLocalBff) {
+       if (text.includes('User is disabled or does not exist')) {
+-        clearAuthSessionState()
+-        emitAuthNotice('expired')
+-        if (router.currentRoute.value.name !== 'login') {
+-          router.replace({ name: 'login' })
+-        }
++        triggerAuthRecheck()
+       } else {
+         emitAuthNotice('forbidden')
+       }
+@@ -205,3 +240,50 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
+ export function getBaseUrlValue(): string {
+   return getBaseUrl()
+ }
++
++export function isMatrixBypassMode(): boolean {
++  return false
++}
++
++// ─── Matrix credential helpers ────────────────────────────────
++
++const MATRIX_KEYS = {
++  accessToken: 'matrix_access_token',
++  userId: 'matrix_user_id',
++  deviceId: 'matrix_device_id',
++  homeserverUrl: 'matrix_homeserver_url',
++} as const
++
++export interface MatrixCredentials {
++  accessToken: string
++  userId: string
++  deviceId: string
++  homeserverUrl: string
++}
++
++export function storeMatrixCredentials(creds: MatrixCredentials): void {
++  localStorage.setItem(MATRIX_KEYS.accessToken, creds.accessToken)
++  localStorage.setItem(MATRIX_KEYS.userId, creds.userId)
++  localStorage.setItem(MATRIX_KEYS.deviceId, creds.deviceId)
++  localStorage.setItem(MATRIX_KEYS.homeserverUrl, creds.homeserverUrl)
++}
++
++export function getMatrixCredentials(): MatrixCredentials | null {
++  const accessToken = localStorage.getItem(MATRIX_KEYS.accessToken)
++  const userId = localStorage.getItem(MATRIX_KEYS.userId)
++  const deviceId = localStorage.getItem(MATRIX_KEYS.deviceId)
++  const homeserverUrl = localStorage.getItem(MATRIX_KEYS.homeserverUrl)
++  if (!accessToken || !userId || !homeserverUrl) return null
++  return { accessToken, userId, deviceId: deviceId || '', homeserverUrl }
++}
++
++export function clearMatrixCredentials(): void {
++  localStorage.removeItem(MATRIX_KEYS.accessToken)
++  localStorage.removeItem(MATRIX_KEYS.userId)
++  localStorage.removeItem(MATRIX_KEYS.deviceId)
++  localStorage.removeItem(MATRIX_KEYS.homeserverUrl)
++}
++
++export function hasMatrixCredentials(): boolean {
++  return !!getMatrixCredentials()
++}

@@ -1,0 +1,138 @@
+diff --git a/packages/client/src/api/auth.ts b/packages/client/src/api/auth.ts
+index 6213ed03..29984d3f 100644
+--- a/packages/client/src/api/auth.ts
++++ b/packages/client/src/api/auth.ts
+@@ -27,6 +27,29 @@ export async function loginWithPassword(username: string, password: string): Pro
+   return data.token
+ }
+ 
++// ─── Matrix login via matrix-js-sdk ──────────────────────────
++
++export interface MatrixLoginResult {
++  accessToken: string
++  userId: string
++  deviceId: string
++  homeserverUrl: string
++}
++
++export async function matrixSdkLogin(homeserverUrl: string, username: string, password: string): Promise<MatrixLoginResult> {
++  const { createClient } = await import('matrix-js-sdk')
++  const baseUrl = homeserverUrl.replace(/\/+$/, '')
++  const client = createClient({ baseUrl })
++
++  const loginRes = await client.loginWithPassword(username, password)
++  return {
++    accessToken: loginRes.access_token,
++    userId: loginRes.user_id,
++    deviceId: loginRes.device_id || '',
++    homeserverUrl: baseUrl,
++  }
++}
++
+ export interface CurrentUser {
+   id: number
+   username: string
+@@ -37,6 +60,12 @@ export interface CurrentUser {
+   last_login_at: number | null
+   avatar?: string
+   requiresCredentialChange?: boolean
++  // Matrix fields
++  matrix_user_id?: string
++  matrix_display_name?: string
++  matrix_avatar_url?: string
++  matrix_homeserver_url?: string
++  auth_source?: 'local' | 'matrix'
+ }
+ 
+ export interface UserAvatar {
+@@ -124,6 +153,90 @@ export interface ManagedUsersResponse {
+   profiles: string[]
+ }
+ 
++export async function hermesMatrixLogin(
++  matrixAccessToken: string,
++  matrixUserId: string,
++  deviceId: string,
++  homeserverUrl: string
++): Promise<{ token: string; user: CurrentUser }> {
++  const res = await fetch('/api/auth/matrix-login', {
++    method: 'POST',
++    headers: { 'Content-Type': 'application/json' },
++    body: JSON.stringify({ matrixAccessToken, matrixUserId, deviceId, homeserverUrl }),
++  })
++  if (!res.ok) {
++    const data = await res.json().catch(() => ({}))
++    throw new Error(data.error || 'Matrix login failed')
++  }
++  return res.json()
++}
++
++export interface MatrixUser {
++  matrix_user_id: string
++  display_name: string
++  avatar_url: string | null
++  role: UserRole
++  status: UserStatus
++  profiles: string[]
++  last_login_at: number | null
++  is_admin: boolean
++  source: 'matrix' | 'hermes'
++}
++
++export interface MatrixUserListResponse {
++  users: MatrixUser[]
++  total: number
++}
++
++export async function fetchMatrixUsers(page = 0, pageSize = 100): Promise<MatrixUserListResponse> {
++  return request<MatrixUserListResponse>(`/api/auth/matrix-users?page=${page}&pageSize=${pageSize}`)
++}
++
++export async function createMatrixUser(input: {
++  userId: string
++  password: string
++  displayName?: string
++  role: UserRole
++  profiles: string[]
++}): Promise<{ user: CurrentUser }> {
++  return request<{ user: CurrentUser }>('/api/auth/matrix-users', {
++    method: 'POST',
++    body: JSON.stringify(input),
++  })
++}
++
++export async function updateMatrixUser(matrixUserId: string, input: {
++  displayName?: string
++  role?: UserRole
++  status?: UserStatus
++  profiles?: string[]
++}): Promise<{ user: CurrentUser }> {
++  return request<{ user: CurrentUser }>(`/api/auth/matrix-users/${encodeURIComponent(matrixUserId)}`, {
++    method: 'PUT',
++    body: JSON.stringify(input),
++  })
++}
++
++export async function deleteMatrixUser(matrixUserId: string): Promise<{ success: boolean }> {
++  return request<{ success: boolean }>(`/api/auth/matrix-users/${encodeURIComponent(matrixUserId)}`, {
++    method: 'DELETE',
++  })
++}
++
++export async function deactivateMatrixUser(matrixUserId: string, active: boolean): Promise<{ success: boolean }> {
++  return request<{ success: boolean }>(`/api/auth/matrix-users/${encodeURIComponent(matrixUserId)}/deactivate`, {
++    method: 'POST',
++    body: JSON.stringify({ active }),
++  })
++}
++
++export async function resetMatrixUserPassword(matrixUserId: string, password: string): Promise<{ success: boolean }> {
++  return request<{ success: boolean }>(`/api/auth/matrix-users/${encodeURIComponent(matrixUserId)}/reset-password`, {
++    method: 'POST',
++    body: JSON.stringify({ password }),
++  })
++}
++
+ export async function fetchManagedUsers(): Promise<ManagedUsersResponse> {
+   return request<ManagedUsersResponse>('/api/auth/users')
+ }

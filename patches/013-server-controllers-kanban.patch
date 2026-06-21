@@ -1,0 +1,572 @@
+diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
+index 31545577..b3bb8dd4 100644
+--- a/packages/server/src/controllers/hermes/kanban.ts
++++ b/packages/server/src/controllers/hermes/kanban.ts
+@@ -4,7 +4,8 @@ import { resolve, normalize } from 'path'
+ import { homedir } from 'os'
+ import * as kanbanCli from '../../services/hermes/hermes-kanban'
+ import { isPathWithin } from '../../services/hermes/hermes-path'
+-import { listProfileNamesFromDisk } from '../../services/hermes/hermes-profile'
++import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
++import { safeFileStore } from '../../services/safe-file-store'
+ import {
+   searchSessionSummariesWithProfile,
+   getSessionDetailFromDbWithProfile,
+@@ -398,6 +399,7 @@ export async function create(ctx: Context) {
+   const assignee = optionalString(payload.assignee, 'assignee')
+   const priority = optionalInteger(payload.priority, 'priority')
+   const tenant = optionalString(payload.tenant, 'tenant')
++  const project = optionalString(payload.project, 'project')
+   const workspace = optionalString(payload.workspace, 'workspace')
+   const branch = optionalString(payload.branch, 'branch')
+   const triage = optionalBoolean(payload.triage, 'triage')
+@@ -406,7 +408,7 @@ export async function create(ctx: Context) {
+   const maxRetries = optionalPositiveInteger(payload.maxRetries, 'maxRetries', 100)
+   const goalMode = optionalBoolean(payload.goalMode, 'goalMode')
+   const goalMaxTurns = optionalPositiveInteger(payload.goalMaxTurns, 'goalMaxTurns', 100)
+-  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error)) return
++  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || project.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error)) return
+   const targetAssignee = assignee.value || requestedProfile(ctx) || undefined
+   if (targetAssignee && denyProfileAccess(ctx, targetAssignee)) return
+   const board = requestBoard(ctx)
+@@ -418,6 +420,7 @@ export async function create(ctx: Context) {
+       assignee: targetAssignee,
+       priority: priority.value,
+       tenant: tenant.value,
++      project: project.value,
+       workspace: workspace.value,
+       branch: branch.value,
+       triage: triage.value,
+@@ -812,3 +815,532 @@ export async function searchSessions(ctx: Context) {
+     ctx.body = { error: err.message }
+   }
+ }
++
++export async function deleteTask(ctx: Context) {
++  try {
++    const taskId = ctx.params.id
++    const board = ctx.query.board as string | undefined
++    await kanbanCli.deleteTask(taskId, { board })
++    ctx.body = { ok: true }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function patchTask(ctx: Context) {
++  try {
++    const taskId = ctx.params.id
++    const board = ctx.query.board as string | undefined
++    const body = ctx.request.body as any
++    const task = await kanbanCli.patchTask(taskId, { ...body, board })
++    ctx.body = { task }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function decomposeTask(ctx: Context) {
++  try {
++    const taskId = ctx.params.id
++    const board = ctx.query.board as string | undefined
++    const body = (ctx.request.body as any) || {}
++    const result = await kanbanCli.decomposeTask(taskId, { board, author: body.author })
++    ctx.body = { result }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++// ─── Orchestration ──────────────────────────────────────────────
++
++import { readConfigYaml, writeConfigYaml } from '../../services/config-helpers'
++
++export async function getOrchestration(ctx: Context) {
++  try {
++    const config = await readConfigYaml()
++    const kanban = config.kanban || {}
++    const explicitOrch = kanban.orchestrator_profile || null
++    const explicitDefault = kanban.default_assignee || null
++    const autoDecompose = kanban.auto_decompose !== false // default true
++    const autoPromoteChildren = kanban.auto_promote_children === true // default false
++
++    // Resolve fallbacks
++    const profiles = listProfileNamesFromDisk()
++    const activeProfile = config.profile?.default || 'default'
++    const resolvedOrch = explicitOrch || activeProfile
++    const resolvedDefault = explicitDefault || activeProfile
++
++    ctx.body = {
++      orchestrator_profile: explicitOrch,
++      default_assignee: explicitDefault,
++      auto_decompose: autoDecompose,
++      auto_promote_children: autoPromoteChildren,
++      resolved_orchestrator_profile: resolvedOrch,
++      resolved_default_assignee: resolvedDefault,
++      active_profile: activeProfile,
++      profiles,
++    }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function setOrchestration(ctx: Context) {
++  const bodyResult = requestBody(ctx)
++  if (rejectBadRequest(ctx, bodyResult.error)) return
++  const body = bodyResult.body
++
++  try {
++    const config = await readConfigYaml()
++    const kanban = config.kanban || {}
++
++    // Validate profile names if provided
++    const profiles = new Set(listProfileNamesFromDisk())
++    if (hasOwn(body, 'orchestrator_profile')) {
++      const orch = body.orchestrator_profile
++      if (orch !== null && orch !== undefined && !profiles.has(orch as string)) {
++        ctx.status = 400
++        ctx.body = { error: `Profile "${orch}" does not exist` }
++        return
++      }
++      if (orch === null || orch === undefined) {
++        delete kanban.orchestrator_profile
++      } else {
++        kanban.orchestrator_profile = orch as string
++      }
++    }
++    if (hasOwn(body, 'default_assignee')) {
++      const def = body.default_assignee
++      if (def !== null && def !== undefined && !profiles.has(def as string)) {
++        ctx.status = 400
++        ctx.body = { error: `Profile "${def}" does not exist` }
++        return
++      }
++      if (def === null || def === undefined) {
++        delete kanban.default_assignee
++      } else {
++        kanban.default_assignee = def as string
++      }
++    }
++    if (hasOwn(body, 'auto_decompose')) {
++      kanban.auto_decompose = !!body.auto_decompose
++    }
++    if (hasOwn(body, 'auto_promote_children')) {
++      kanban.auto_promote_children = !!body.auto_promote_children
++    }
++
++    config.kanban = kanban
++    await writeConfigYaml(config)
++
++    // Return updated settings
++    await getOrchestration(ctx)
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++// ─── Attachments ──────────────────────────────────────────────
++
++import { mkdir, writeFile, unlink, readdir } from 'fs/promises'
++import { join, basename, dirname } from 'path'
++import { createHash } from 'crypto'
++
++const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024 // 25 MB
++
++function attachmentsRoot(board?: string): string {
++  const override = process.env.HERMES_KANBAN_ATTACHMENTS_ROOT?.trim()
++  if (override) return resolve(override)
++  const base = resolve(homedir(), '.hermes', 'kanban', 'attachments')
++  if (!board || board === 'default') return base
++  return join(base, board)
++}
++
++function taskAttachmentsDir(taskId: string, board?: string): string {
++  return join(attachmentsRoot(board), taskId)
++}
++
++function safeAttachmentName(filename: string): string {
++  const name = basename(filename).trim()
++  if (!name || name.startsWith('.')) return 'unnamed'
++  // Strip control characters and path separators
++  return name.replace(/[\x00-\x1f\\/]/g, '_').slice(0, 255)
++}
++
++interface AttachmentRecord {
++  id: number
++  task_id: string
++  filename: string
++  stored_path: string
++  content_type: string | null
++  size: number
++  uploaded_by: string | null
++  created_at: number
++}
++
++// In-memory attachment store (simple JSON file per board)
++async function readAttachmentsMeta(board?: string): Promise<AttachmentRecord[]> {
++  const metaPath = join(attachmentsRoot(board), '.attachments.json')
++  try {
++    const raw = await readFile(metaPath, 'utf-8')
++    return JSON.parse(raw)
++  } catch {
++    return []
++  }
++}
++
++async function writeAttachmentsMeta(records: AttachmentRecord[], board?: string): Promise<void> {
++  const metaPath = join(attachmentsRoot(board), '.attachments.json')
++  await mkdir(dirname(metaPath), { recursive: true })
++  await writeFile(metaPath, JSON.stringify(records, null, 2) + '\n')
++}
++
++async function addAttachment(record: Omit<AttachmentRecord, 'id'>, board?: string): Promise<AttachmentRecord> {
++  const records = await readAttachmentsMeta(board)
++  const id = records.length > 0 ? Math.max(...records.map(r => r.id)) + 1 : 1
++  const newRecord = { ...record, id }
++  records.push(newRecord)
++  await writeAttachmentsMeta(records, board)
++  return newRecord
++}
++
++async function getAttachment(id: number, board?: string): Promise<AttachmentRecord | null> {
++  const records = await readAttachmentsMeta(board)
++  return records.find(r => r.id === id) || null
++}
++
++async function deleteAttachment(id: number, board?: string): Promise<AttachmentRecord | null> {
++  const records = await readAttachmentsMeta(board)
++  const idx = records.findIndex(r => r.id === id)
++  if (idx === -1) return null
++  const [removed] = records.splice(idx, 1)
++  await writeAttachmentsMeta(records, board)
++  // Best-effort file deletion
++  try { await unlink(removed.stored_path) } catch { /* ignore */ }
++  return removed
++}
++
++export async function listAttachments(ctx: Context) {
++  const taskId = ctx.params.id
++  const board = ctx.query.board as string | undefined
++  try {
++    const records = await readAttachmentsMeta(board)
++    const attachments = records.filter(r => r.task_id === taskId)
++    ctx.body = { attachments }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function uploadAttachment(ctx: Context) {
++  const taskId = ctx.params.id
++  const board = ctx.query.board as string | undefined
++
++  try {
++    // Parse multipart form data manually (project uses custom parser)
++    const contentType = ctx.get('content-type') || ''
++    if (!contentType.startsWith('multipart/form-data')) {
++      ctx.status = 400
++      ctx.body = { error: 'Expected multipart/form-data' }
++      return
++    }
++
++    const { parseMultipartBoundary, parseMultipartFilename, splitMultipart } = await import('../../lib/multipart')
++    const boundaryBuf = parseMultipartBoundary(contentType)
++    if (!boundaryBuf) {
++      ctx.status = 400
++      ctx.body = { error: 'Missing boundary' }
++      return
++    }
++
++    const chunks: Buffer[] = []
++    let totalSize = 0
++    for await (const chunk of (ctx as any).req) {
++      totalSize += chunk.length
++      if (totalSize > MAX_ATTACHMENT_BYTES) {
++        ctx.status = 413
++        ctx.body = { error: `Attachment too large (max ${MAX_ATTACHMENT_BYTES} bytes)` }
++        return
++      }
++      chunks.push(chunk)
++    }
++    const raw = Buffer.concat(chunks)
++    const parts = splitMultipart(raw, boundaryBuf)
++
++    let uploadedFile: { filename: string; data: Buffer; size: number } | null = null
++
++    for (const part of parts) {
++      const headerEnd = part.indexOf(Buffer.from('\r\n\r\n'))
++      if (headerEnd === -1) continue
++      const headerBuf = part.subarray(0, headerEnd)
++      const header = headerBuf.toString('utf-8')
++      const data = part.subarray(headerEnd + 4, part.length - 2)
++      const filename = parseMultipartFilename(header)
++      if (!filename) continue
++      uploadedFile = { filename, data, size: data.length }
++      break // Only process first file
++    }
++
++    if (!uploadedFile) {
++      ctx.status = 400
++      ctx.body = { error: 'No file uploaded' }
++      return
++    }
++
++    const safeName = safeAttachmentName(uploadedFile.filename)
++    const destDir = taskAttachmentsDir(taskId, board)
++    await mkdir(destDir, { recursive: true })
++
++    // Collision resolution
++    let candidate = safeName
++    let destPath = join(destDir, candidate)
++    let counter = 1
++    while (true) {
++      try {
++        await readFile(destPath)
++        // File exists, try next name
++        const extIndex = safeName.lastIndexOf('.')
++        const baseName = extIndex > 0 ? safeName.slice(0, extIndex) : safeName
++        const ext = extIndex > 0 ? safeName.slice(extIndex) : ''
++        candidate = `${baseName} (${counter})${ext}`
++        destPath = join(destDir, candidate)
++        counter++
++      } catch {
++        // File doesn't exist, we can use this path
++        break
++      }
++    }
++
++    await writeFile(destPath, uploadedFile.data)
++
++    const uploadedBy = ctx.state.user?.username || 'dashboard'
++    const record = await addAttachment({
++      task_id: taskId,
++      filename: candidate,
++      stored_path: destPath,
++      content_type: null,
++      size: uploadedFile.size,
++      uploaded_by: uploadedBy,
++      created_at: Date.now(),
++    }, board)
++
++    ctx.body = { attachment: record }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function downloadAttachment(ctx: Context) {
++  const attachmentId = parseInt(ctx.params.id, 10)
++  const board = ctx.query.board as string | undefined
++
++  if (!Number.isFinite(attachmentId)) {
++    ctx.status = 400
++    ctx.body = { error: 'Invalid attachment ID' }
++    return
++  }
++
++  try {
++    const record = await getAttachment(attachmentId, board)
++    if (!record) {
++      ctx.status = 404
++      ctx.body = { error: 'Attachment not found' }
++      return
++    }
++
++    // Security check: ensure file is within attachments root
++    const root = resolve(attachmentsRoot(board))
++    const stored = resolve(record.stored_path)
++    if (!stored.startsWith(root + '/') && stored !== root) {
++      ctx.status = 403
++      ctx.body = { error: 'Invalid attachment path' }
++      return
++    }
++
++    const content = await readFile(stored)
++    ctx.set('Content-Disposition', `attachment; filename="${encodeURIComponent(record.filename)}"`)
++    ctx.set('Content-Type', record.content_type || 'application/octet-stream')
++    ctx.body = content
++  } catch (err: any) {
++    if (err.code === 'ENOENT') {
++      ctx.status = 404
++      ctx.body = { error: 'Attachment file not found' }
++      return
++    }
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function removeAttachment(ctx: Context) {
++  const attachmentId = parseInt(ctx.params.id, 10)
++  const board = ctx.query.board as string | undefined
++
++  if (!Number.isFinite(attachmentId)) {
++    ctx.status = 400
++    ctx.body = { error: 'Invalid attachment ID' }
++    return
++  }
++
++  try {
++    const record = await deleteAttachment(attachmentId, board)
++    if (!record) {
++      ctx.status = 404
++      ctx.body = { error: 'Attachment not found' }
++      return
++    }
++    ctx.body = { ok: true, id: attachmentId }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++// ─── Home channel notification subscriptions ──────────────────────
++
++export async function homeChannels(ctx: Context) {
++  try {
++    const taskId = ctx.query.task as string | undefined || null
++    const board = requestBoard(ctx)
++    if (board === null) return
++
++    const channels = await kanbanCli.getHomeChannels(taskId, { board })
++    ctx.body = { home_channels: channels }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function debugHomeChannels(ctx: Context) {
++  try {
++    const profile = getActiveProfileName() || 'default'
++    const configPath = join(getProfileDir(profile), 'config.yaml')
++    
++    let config: Record<string, any> = {}
++    try {
++      config = await safeFileStore.readYaml(configPath)
++    } catch (err: any) {
++      ctx.body = { error: `Failed to read config: ${err.message}`, configPath }
++      return
++    }
++    
++    const gatewayPlatforms = config.gateway?.platforms || {}
++    const topLevelPlatforms = config.platforms || {}
++    const platforms = { ...gatewayPlatforms, ...topLevelPlatforms }
++    
++    const homes: any[] = []
++    for (const [platformName, platformCfg] of Object.entries(platforms)) {
++      if (!platformCfg || typeof platformCfg !== 'object') continue
++      const hc = (platformCfg as Record<string, any>).home_channel
++      
++      // Check env vars using the same mapping as listConfiguredHomeChannels
++      const upper = platformName.toUpperCase().replace(/-/g, '_')
++      const isMatrix = platformName === 'matrix'
++      const isEmail = platformName === 'email'
++      const envChatIdKey = isMatrix ? 'MATRIX_HOME_ROOM' : isEmail ? 'EMAIL_HOME_ADDRESS' : `${upper}_HOME_CHANNEL`
++      const envNameKey = isMatrix ? 'MATRIX_HOME_ROOM_NAME' : isEmail ? 'EMAIL_HOME_ADDRESS_NAME' : `${upper}_HOME_CHANNEL_NAME`
++      const envThreadIdKey = isMatrix ? 'MATRIX_HOME_ROOM_THREAD_ID' : isEmail ? 'EMAIL_HOME_ADDRESS_THREAD_ID' : `${upper}_HOME_CHANNEL_THREAD_ID`
++      
++      const envChatId = process.env[envChatIdKey]
++      const envName = process.env[envNameKey]
++      const envThreadId = process.env[envThreadIdKey]
++      
++      const chatId = envChatId || hc?.chat_id || ''
++      if (chatId) {
++        homes.push({
++          platform: platformName,
++          chat_id: chatId,
++          thread_id: envThreadId || hc?.thread_id || '',
++          name: envName || hc?.name || 'Home',
++          source: envChatId ? 'env' : 'yaml',
++          envKeys: { chatId: envChatIdKey, name: envNameKey, threadId: envThreadIdKey },
++        })
++      }
++    }
++    
++    ctx.body = {
++      configPath,
++      profile,
++      configKeys: Object.keys(config),
++      gatewayPlatformsKeys: Object.keys(gatewayPlatforms),
++      topLevelPlatformsKeys: Object.keys(topLevelPlatforms),
++      homesFound: homes.length,
++      homes,
++    }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function subscribeHome(ctx: Context) {
++  const taskId = ctx.params.id
++  const platform = ctx.params.platform
++  if (!taskId || !platform) {
++    ctx.status = 400
++    ctx.body = { error: 'Missing task_id or platform' }
++    return
++  }
++
++  try {
++    // Fetch configured home channels to find the chat_id for this platform
++    const homes = await kanbanCli.getHomeChannels(null)
++    const home = homes.find(h => h.platform === platform)
++    if (!home) {
++      ctx.status = 404
++      ctx.body = { error: `No home channel configured for platform "${platform}"` }
++      return
++    }
++
++    const board = requestBoard(ctx)
++    if (board === null) return
++
++    await kanbanCli.subscribeHomeChannel(taskId, platform, home.chat_id, {
++      board,
++      threadId: home.thread_id || undefined,
++    })
++    ctx.body = { ok: true, task_id: taskId, home_channel: { platform, chat_id: home.chat_id, thread_id: home.thread_id, name: home.name } }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++export async function unsubscribeHome(ctx: Context) {
++  const taskId = ctx.params.id
++  const platform = ctx.params.platform
++  if (!taskId || !platform) {
++    ctx.status = 400
++    ctx.body = { error: 'Missing task_id or platform' }
++    return
++  }
++
++  try {
++    const homes = await kanbanCli.getHomeChannels(null)
++    const home = homes.find(h => h.platform === platform)
++    if (!home) {
++      ctx.status = 404
++      ctx.body = { error: `No home channel configured for platform "${platform}"` }
++      return
++    }
++
++    const board = requestBoard(ctx)
++    if (board === null) return
++
++    await kanbanCli.unsubscribeHomeChannel(taskId, platform, home.chat_id, {
++      board,
++      threadId: home.thread_id || undefined,
++    })
++    ctx.body = { ok: true, task_id: taskId }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}

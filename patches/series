@@ -7,3 +7,11 @@
 006-safe-file-store.patch
 007-model-run-prompt.patch
 008-server-index-element-web-middleware.patch
+009-client-api-auth-matrix.patch
+010-client-api-kanban-extensions.patch
+011-client-api-client-matrix.patch
+012-server-controllers-auth.patch
+013-server-controllers-kanban.patch
+014-server-service-hermes-kanban.patch
+015-server-db-users-store.patch
+016-server-middleware-user-auth.patch
