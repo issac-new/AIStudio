@@ -1,0 +1,24 @@
+diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
+index 8aeadf24..e352e0cd 100644
+--- a/tests/server/kanban-routes.test.ts
++++ b/tests/server/kanban-routes.test.ts
+@@ -22,6 +22,19 @@ const handlers = {
+   addComment: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   taskLog: vi.fn(async (ctx: any) => { ctx.body = { log: '' } }),
+   diagnostics: vi.fn(async (ctx: any) => { ctx.body = { diagnostics: [] } }),
++  getOrchestration: vi.fn(async (ctx: any) => { ctx.body = { orchestration: {} } }),
++  setOrchestration: vi.fn(async (ctx: any) => { ctx.body = { orchestration: {} } }),
++  homeChannels: vi.fn(async (ctx: any) => { ctx.body = { channels: [] } }),
++  debugHomeChannels: vi.fn(async (ctx: any) => { ctx.body = { debug: [] } }),
++  subscribeHome: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  unsubscribeHome: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  listAttachments: vi.fn(async (ctx: any) => { ctx.body = { attachments: [] } }),
++  uploadAttachment: vi.fn(async (ctx: any) => { ctx.body = { attachment: {} } }),
++  downloadAttachment: vi.fn(async (ctx: any) => { ctx.body = '' }),
++  removeAttachment: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  deleteTask: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  patchTask: vi.fn(async (ctx: any) => { ctx.body = { task: {} } }),
++  decomposeTask: vi.fn(async (ctx: any) => { ctx.body = { result: {} } }),
+   reclaim: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   reassign: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   specify: vi.fn(async (ctx: any) => { ctx.body = { results: [] } }),

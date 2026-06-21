@@ -1,0 +1,924 @@
+diff --git a/packages/client/src/views/hermes/KanbanView.vue b/packages/client/src/views/hermes/KanbanView.vue
+index 8867e44f..9e670237 100644
+--- a/packages/client/src/views/hermes/KanbanView.vue
++++ b/packages/client/src/views/hermes/KanbanView.vue
+@@ -1,371 +1,448 @@
++<!-- HERMES_CUSTOM[Kanban] BEGIN: Enhanced Kanban view with orchestration, bulk operations, and advanced task management -->
+ <script setup lang="ts">
+-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+-import { NButton, NSelect, NSpin, NCollapse, NCollapseItem, NModal, NInput, useMessage } from 'naive-ui'
++import { ref, computed, onMounted, watch } from 'vue'
++import { NSpin, useMessage } from 'naive-ui'
+ import { useI18n } from 'vue-i18n'
+-import { useRoute, useRouter } from 'vue-router'
+-import KanbanTaskCard from '@/components/hermes/kanban/KanbanTaskCard.vue'
+-import KanbanTaskDrawer from '@/components/hermes/kanban/KanbanTaskDrawer.vue'
+-import KanbanCreateForm from '@/components/hermes/kanban/KanbanCreateForm.vue'
+-import { DEFAULT_KANBAN_BOARD, useKanbanStore } from '@/stores/hermes/kanban'
+-import { useProfilesStore } from '@/stores/hermes/profiles'
+-import { withDefaultAssignee } from '@/utils/hermes/kanban-assignees'
+-import type { KanbanTaskStatus } from '@/api/hermes/kanban'
+-import type { ProfileAvatar } from '@/api/hermes/profiles'
++import { useKanbanStore } from '@/stores/hermes/kanban'
++import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
++import KanbanBoard from '@/custom/kanban/components/KanbanBoard.vue'
++import KanbanToolbar from '@/custom/kanban/components/KanbanToolbar.vue'
++import KanbanBulkBar from '@/custom/kanban/components/KanbanBulkBar.vue'
++import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
++import KanbanOrchestrationPanel from '@/custom/kanban/components/KanbanOrchestrationPanel.vue'
++import KanbanAttentionStrip from '@/custom/kanban/components/KanbanAttentionStrip.vue'
+ 
+ const { t } = useI18n()
+-const route = useRoute()
+-const router = useRouter()
+ const message = useMessage()
+-const kanbanStore = useKanbanStore()
+-const profilesStore = useProfilesStore()
++const store = useKanbanStore()
+ 
+-const showCreateForm = ref(false)
+-const showCreateBoardForm = ref(false)
+ const selectedTaskId = ref<string | null>(null)
+-const newBoardSlug = ref('')
+-const newBoardName = ref('')
+-const boardActionLoading = ref(false)
+-const refreshTimer = ref<ReturnType<typeof setInterval> | null>(null)
+-const routeReady = ref(false)
++const showTaskDrawer = ref(false)
++const includeArchived = ref(false)
++const laneByProfile = ref(false)
++const tenantFilter = ref('')
++const attentionExpanded = ref(false)
++
++const filteredTasks = computed(() => {
++  let tasks = store.tasks
++  if (store.filterStatus) {
++    tasks = tasks.filter((t: KanbanTask) => t.status === store.filterStatus)
++  }
++  if (store.filterAssignee) {
++    tasks = tasks.filter((t: KanbanTask) => t.assignee === store.filterAssignee)
++  }
++  if (tenantFilter.value) {
++    tasks = tasks.filter((t: KanbanTask) => t.tenant === tenantFilter.value)
++  }
++  if (!includeArchived.value) {
++    tasks = tasks.filter((t: KanbanTask) => t.status !== 'archived')
++  }
++  if (store.searchQuery) {
++    const q = store.searchQuery.toLowerCase()
++    tasks = tasks.filter((t: KanbanTask) =>
++      t.title.toLowerCase().includes(q) ||
++      (t.body && t.body.toLowerCase().includes(q)) ||
++      t.id.toLowerCase().includes(q) ||
++      (t.result && t.result.toLowerCase().includes(q)) ||
++      (t.assignee && t.assignee.toLowerCase().includes(q)) ||
++      (t.tenant && t.tenant.toLowerCase().includes(q))
++    )
++  }
++  return tasks
++})
+ 
+-const boardStatuses: KanbanTaskStatus[] = ['triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived']
+-const expandedStatusNames = ref<string[]>([...boardStatuses])
++const selectedIds = computed(() => store.selectedIds)
+ 
+-function firstQueryString(value: unknown): string | null {
+-  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : null
+-  return typeof value === 'string' ? value : null
+-}
++onMounted(async () => {
++  store.fetchCapabilities()
++  // Fetch boards first so selectedBoard is resolved before fetching tasks
++  await store.fetchBoards()
++  store.fetchTasks()
++  store.fetchStats()
++  store.fetchAssignees()
++  store.fetchDiagnostics()
++  store.fetchOrchestration()
++  store.connectEvents()
++})
+ 
+-function routeBoard(): string | null {
+-  return firstQueryString(route.query.board)
++watch(() => store.selectedBoard, () => {
++  store.fetchTasks()
++  store.fetchStats()
++  store.fetchAssignees()
++  store.fetchDiagnostics()
++  store.fetchOrchestration()
++})
++
++function handleTaskClick(taskId: string, multiSelect: boolean, rangeSelect: boolean) {
++  if (multiSelect) {
++    store.toggleSelection(taskId)
++    return
++  }
++  if (rangeSelect) {
++    // Shift+click: select range from last selected to clicked task
++    const ids = filteredTasks.value.map(t => t.id)
++    const clickedIndex = ids.indexOf(taskId)
++    if (clickedIndex === -1) return
++
++    // Find the last selected task index
++    let lastSelectedIndex = -1
++    for (let i = ids.length - 1; i >= 0; i--) {
++      if (store.selectedIds.has(ids[i])) {
++        lastSelectedIndex = i
++        break
++      }
++    }
++
++    if (lastSelectedIndex === -1) {
++      // No previous selection, just select this one
++      store.selectedIds.add(taskId)
++    } else {
++      // Select range between lastSelectedIndex and clickedIndex
++      const start = Math.min(lastSelectedIndex, clickedIndex)
++      const end = Math.max(lastSelectedIndex, clickedIndex)
++      for (let i = start; i <= end; i++) {
++        store.selectedIds.add(ids[i])
++      }
++    }
++    return
++  }
++  // Normal click: open drawer
++  selectedTaskId.value = taskId
++  showTaskDrawer.value = true
+ }
+ 
+-async function replaceRouteBoard(board: string) {
+-  if (routeBoard() === board) return
+-  await router.replace({ query: { ...route.query, board } })
++function handleSelectAll(taskIds: string[]) {
++  for (const id of taskIds) {
++    store.selectedIds.add(id)
++  }
+ }
+ 
+-async function applyBoardSelection(candidate: string | null, notify = true, forceRefresh = false) {
+-  const previousBoard = kanbanStore.selectedBoard
+-  const { board, recovered } = kanbanStore.recoverSelectedBoard(candidate || kanbanStore.selectedBoard || DEFAULT_KANBAN_BOARD)
++function handleTaskDrawerClose() {
++  showTaskDrawer.value = false
+   selectedTaskId.value = null
+-  showCreateForm.value = false
+-  showCreateBoardForm.value = false
+-  if (notify && recovered && kanbanStore.boardWarning) message.warning(kanbanStore.boardWarning)
+-  await replaceRouteBoard(board)
+-  if (forceRefresh || board !== previousBoard) {
+-    await kanbanStore.refreshAll()
+-  }
+ }
+ 
+-function taskCountLabel(count: number): string {
+-  return `${t('kanban.stats.tasks')}: ${count}`
++function handleTaskDragStart(taskId: string, e: DragEvent, _selectedCount: number) {
++  e.dataTransfer?.setData('text/plain', taskId)
++  e.dataTransfer?.setData('text/x-hermes-task', taskId)
+ }
+ 
+-const boardOptions = computed(() => kanbanStore.activeBoards.map(board => {
+-  const count = typeof board.total === 'number' ? board.total : 0
+-  return {
+-    label: `${t('kanban.title')}: ${board.icon ? `${board.icon} ` : ''}${board.name || board.slug} · ${taskCountLabel(count)}`,
+-    value: board.slug,
+-  }
+-}))
++function handleTaskDragEnd(_taskId: string, _e: DragEvent) {
++  // cleanup if needed
++}
+ 
+-const selectedBoardValue = computed({
+-  get: () => kanbanStore.selectedBoard,
+-  set: (value: string) => {
+-    void applyBoardSelection(value || DEFAULT_KANBAN_BOARD)
+-  },
+-})
++async function handleColumnDrop(status: KanbanTaskStatus | 'trash', e: DragEvent) {
++  const taskId = e.dataTransfer?.getData('text/x-hermes-task') || e.dataTransfer?.getData('text/plain')
++  if (!taskId) return
+ 
+-const tasksByStatus = computed(() => {
+-  const grouped: Record<string, typeof kanbanStore.tasks> = {}
+-  for (const status of boardStatuses) {
+-    grouped[status] = kanbanStore.tasks
+-      .filter(t => t.status === status)
+-      .sort((a, b) => b.created_at - a.created_at)
++  if (status === 'trash') {
++    try {
++      await store.deleteTask(taskId)
++      message.success(t('kanban.message.taskDeleted'))
++    } catch (err) {
++      message.error(t('kanban.message.deleteFailed'))
++    }
++    return
+   }
+-  return grouped
+-})
+ 
+-const visibleBoardStatuses = computed(() => {
+-  const status = kanbanStore.filterStatus as KanbanTaskStatus | null
+-  return status && boardStatuses.includes(status) ? [status] : boardStatuses
+-})
++  const task = store.tasks.find((t: KanbanTask) => t.id === taskId)
++  if (!task || task.status === status) return
+ 
+-const visibleAssignees = computed(() => withDefaultAssignee(kanbanStore.assignees, kanbanStore.stats?.by_assignee || {}))
++  try {
++    await store.moveTask(taskId, status)
++    message.success(t('kanban.message.taskMoved'))
++  } catch (err) {
++    message.error(t('kanban.message.moveFailed'))
++  }
++}
+ 
+-const profileAvatarByName = computed<Record<string, ProfileAvatar | null>>(() => {
+-  return Object.fromEntries(profilesStore.profiles.map(profile => [profile.name, profile.avatar || null]))
+-})
++function handleColumnDragOver(_status: KanbanTaskStatus | 'trash', e: DragEvent) {
++  e.preventDefault()
++  // visual feedback handled by KanbanColumn
++}
+ 
+-const statusFilterOptions = computed(() => [
+-  { label: t('kanban.allStatuses'), value: '' },
+-  ...boardStatuses.map(s => ({ label: t(`kanban.columns.${s}`, s), value: s })),
+-])
++async function handleInlineCreate(_status: KanbanTaskStatus, data: any) {
++  try {
++    await store.createTask(data)
++    message.success(t('kanban.message.taskCreated'))
++  } catch (err) {
++    message.error(t('kanban.message.createFailed'))
++  }
++}
+ 
+-const assigneeFilterOptions = computed(() => [
+-  { label: t('kanban.allAssignees'), value: '' },
+-  ...visibleAssignees.value.map(a => ({ label: a.name, value: a.name })),
+-])
++function handleBoardChange(boardSlug: string) {
++  store.setBoard(boardSlug)
++}
+ 
+-const filterStatusValue = computed({
+-  get: () => kanbanStore.filterStatus || '',
+-  set: (v: string) => kanbanStore.setFilter('status', v || null),
+-})
++function handleAssigneeChange(assignee: string) {
++  store.setAssigneeFilter(assignee || undefined)
++}
+ 
+-const filterAssigneeValue = computed({
+-  get: () => kanbanStore.filterAssignee || '',
+-  set: (v: string) => kanbanStore.setFilter('assignee', v || null),
+-})
++function handleSearchChange(query: string) {
++  store.setSearchQuery(query)
++}
+ 
+-watch(() => route.query.board, async () => {
+-  if (!routeReady.value) return
+-  await applyBoardSelection(routeBoard(), false)
+-})
++function handleRefresh() {
++  store.fetchTasks()
++  store.fetchStats()
++  store.fetchAssignees()
++}
++
++function handleAttentionOpen(taskId: string) {
++  selectedTaskId.value = taskId
++  showTaskDrawer.value = true
++}
+ 
+-watch(visibleBoardStatuses, statuses => {
+-  expandedStatusNames.value = [...statuses]
+-}, { immediate: true })
++function handleBulkClear() {
++  store.clearSelection()
++}
+ 
+-onMounted(async () => {
+-  await Promise.all([
+-    kanbanStore.fetchBoards(),
+-    kanbanStore.fetchCapabilities(),
+-    profilesStore.profiles.length === 0 ? profilesStore.fetchProfiles() : Promise.resolve(),
+-  ])
+-  await applyBoardSelection(routeBoard(), true, true)
+-  kanbanStore.startEventStream()
+-  routeReady.value = true
+-  refreshTimer.value = setInterval(() => {
+-    if (document.visibilityState === 'visible') {
+-      void Promise.all([kanbanStore.fetchBoards(), kanbanStore.fetchTasks(true), kanbanStore.fetchStats()])
++function handleBulkSelectAllVisible() {
++  for (const task of filteredTasks.value) {
++    if (!store.selectedIds.has(task.id)) {
++      store.selectedIds.add(task.id)
+     }
+-  }, 15000)
+-})
++  }
++}
+ 
+-onUnmounted(() => {
+-  kanbanStore.stopEventStream()
+-  if (refreshTimer.value) clearInterval(refreshTimer.value)
+-})
++async function handleBulkComplete() {
++  try {
++    await store.bulkComplete(Array.from(selectedIds.value))
++    message.success(t('kanban.message.taskCompleted'))
++  } catch (err) {
++    message.error(t('kanban.message.bulkFailed'))
++  }
++}
+ 
+-function handleTaskClick(taskId: string) {
+-  selectedTaskId.value = taskId
++async function handleBulkBlock() {
++  try {
++    await store.bulkBlock(Array.from(selectedIds.value))
++    message.success(t('kanban.message.taskBlocked'))
++  } catch (err) {
++    message.error(t('kanban.message.bulkFailed'))
++  }
+ }
+ 
+-function handleDrawerClose() {
+-  selectedTaskId.value = null
++async function handleBulkUnblock() {
++  try {
++    await store.bulkUnblock(Array.from(selectedIds.value))
++    message.success(t('kanban.message.taskUnblocked'))
++  } catch (err) {
++    message.error(t('kanban.message.bulkFailed'))
++  }
+ }
+ 
+-async function handleDrawerUpdated() {
+-  await Promise.all([kanbanStore.fetchTasks(), kanbanStore.fetchStats()])
++async function handleBulkArchive() {
++  try {
++    await store.bulkArchive(Array.from(selectedIds.value))
++    message.success(t('kanban.message.taskArchived'))
++  } catch (err) {
++    message.error(t('kanban.message.bulkFailed'))
++  }
+ }
+ 
+-function handleNavigateTask(taskId: string) {
+-  selectedTaskId.value = taskId
++async function handleBulkDelete() {
++  try {
++    const ids = Array.from(selectedIds.value)
++    await Promise.all(ids.map(id => store.deleteTask(id)))
++    message.success(t('kanban.message.deleteSuccess'))
++  } catch (err) {
++    message.error(t('kanban.message.deleteFailed'))
++  }
+ }
+ 
+-async function handleApplyFilter() {
+-  await kanbanStore.fetchTasks()
++async function handleBulkSetPriority(priority: number) {
++  try {
++    const ids = Array.from(selectedIds.value)
++    await Promise.all(ids.map(id => store.patchTask(id, { priority })))
++    message.success(t('kanban.message.taskUpdated'))
++  } catch (err) {
++    message.error(t('kanban.message.updateFailed'))
++  }
+ }
+ 
+-async function handleStatusChipClick(status: KanbanTaskStatus | null) {
+-  kanbanStore.setFilter('status', status)
+-  expandedStatusNames.value = status ? [status] : [...boardStatuses]
+-  await kanbanStore.fetchTasks()
++async function handleBulkAssign(profile: string, reclaimFirst: boolean) {
++  try {
++    const ids = Array.from(selectedIds.value)
++    await Promise.all(ids.map(id => {
++      if (reclaimFirst) {
++        return store.reassignTask(id, profile || 'none', { reclaim: true })
++      } else {
++        return store.assignTask(id, profile || 'none')
++      }
++    }))
++    message.success(t('kanban.message.taskAssigned'))
++  } catch (err) {
++    message.error(t('kanban.message.bulkFailed'))
++  }
+ }
+ 
+-async function handleTaskCreated() {
+-  await Promise.all([kanbanStore.fetchTasks(), kanbanStore.fetchStats(), kanbanStore.fetchBoards()])
++async function handleBulkMoveToTodo() {
++  try {
++    const ids = Array.from(selectedIds.value)
++    await Promise.all(ids.map(id => store.moveTask(id, 'todo')))
++    message.success(t('kanban.message.taskMoved'))
++  } catch (err) {
++    message.error(t('kanban.message.moveFailed'))
++  }
+ }
+ 
+-async function handleCreateBoard() {
+-  const slug = newBoardSlug.value.trim()
+-  if (!slug) {
+-    message.warning(t('kanban.board.slugRequired'))
+-    return
++async function handleBulkMoveToReady() {
++  try {
++    const ids = Array.from(selectedIds.value)
++    await Promise.all(ids.map(id => store.moveTask(id, 'ready')))
++    message.success(t('kanban.message.taskMoved'))
++  } catch (err) {
++    message.error(t('kanban.message.moveFailed'))
+   }
+-  boardActionLoading.value = true
++}
++
++function handleTenantChange(tenant: string) {
++  tenantFilter.value = tenant
++}
++
++function handleIncludeArchivedChange(value: boolean) {
++  includeArchived.value = value
++}
++
++function handleLaneByProfileChange(value: boolean) {
++  laneByProfile.value = value
++}
++
++async function handleDispatch() {
+   try {
+-    const board = await kanbanStore.createBoard({
+-      slug,
+-      name: newBoardName.value.trim() || undefined,
+-    })
+-    newBoardSlug.value = ''
+-    newBoardName.value = ''
+-    showCreateBoardForm.value = false
+-    await replaceRouteBoard(board.slug)
+-    message.success(t('kanban.board.created'))
+-  } catch (err: any) {
+-    message.error(err.message)
+-  } finally {
+-    boardActionLoading.value = false
++    await store.dispatch()
++    message.success(t('kanban.message.dispatchNudged'))
++  } catch (err) {
++    message.error(t('kanban.message.bulkFailed'))
+   }
+ }
+ 
+-async function handleArchiveSelectedBoard() {
+-  if (kanbanStore.selectedBoard === DEFAULT_KANBAN_BOARD) return
+-  if (!window.confirm(t('kanban.board.archiveConfirm'))) return
+-  boardActionLoading.value = true
++function handleClearFilters() {
++  store.setSearchQuery('')
++  store.setStatusFilter('')
++  store.setAssigneeFilter('')
++  tenantFilter.value = ''
++  includeArchived.value = false
++}
++
++async function handleCreateBoard(data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean }) {
+   try {
+-    await kanbanStore.archiveSelectedBoard()
+-    await replaceRouteBoard(DEFAULT_KANBAN_BOARD)
+-    message.success(t('kanban.board.archived'))
++    await store.createBoard({
++      slug: data.slug,
++      name: data.name,
++      description: data.description,
++      icon: data.icon,
++      color: data.color,
++      switchCurrent: data.switchCurrent ?? true,
++    })
++    message.success(t('kanban.board.created', 'Board created'))
++    await store.fetchTasks()
+   } catch (err: any) {
+-    message.error(err.message)
+-  } finally {
+-    boardActionLoading.value = false
++    message.error(err?.message || t('kanban.board.createFailed', 'Failed to create board'))
+   }
+ }
+ 
+-async function handleDispatch() {
+-  boardActionLoading.value = true
++async function handleArchiveBoard() {
+   try {
+-    await kanbanStore.dispatch()
+-    await kanbanStore.refreshAll()
+-    message.success(t('kanban.message.dispatchNudged'))
++    await store.archiveSelectedBoard()
++    message.success(t('kanban.board.archived', 'Board archived'))
++    await store.fetchTasks()
+   } catch (err: any) {
+-    message.error(err.message)
+-  } finally {
+-    boardActionLoading.value = false
++    message.error(err?.message || t('kanban.board.archiveFailed', 'Failed to archive board'))
+   }
+ }
++
++const tenants = computed(() => {
++  const set = new Set<string>()
++  for (const task of store.tasks) {
++    if (task.tenant) set.add(task.tenant)
++  }
++  return Array.from(set).sort()
++})
++
++const assigneeNames = computed(() => store.assignees.map(a => a.name))
+ </script>
+ 
+ <template>
+   <div class="kanban-view">
+-    <header class="page-header">
+-      <h2 class="header-title">{{ t('kanban.title') }}</h2>
+-      <div class="header-actions">
+-        <NSelect
+-          v-model:value="selectedBoardValue"
+-          :options="boardOptions"
+-          :loading="kanbanStore.boardsLoading"
+-          size="small"
+-          style="width: 260px;"
+-        />
+-        <NButton size="small" :loading="boardActionLoading" @click="showCreateBoardForm = true">
+-          {{ t('common.add') }}
+-        </NButton>
+-        <NButton
+-          size="small"
+-          secondary
+-          :disabled="kanbanStore.selectedBoard === DEFAULT_KANBAN_BOARD"
+-          :loading="boardActionLoading"
+-          @click="handleArchiveSelectedBoard"
+-        >
+-          {{ t('kanban.board.archive') }}
+-        </NButton>
+-        <NButton size="small" secondary :loading="boardActionLoading" @click="handleDispatch">
+-          {{ t('kanban.action.dispatch') }}
+-        </NButton>
+-        <NSelect
+-          v-model:value="filterStatusValue"
+-          :options="statusFilterOptions"
+-          size="small"
+-          style="width: 150px;"
+-          @update:value="handleApplyFilter"
+-        />
+-        <NSelect
+-          v-model:value="filterAssigneeValue"
+-          :options="assigneeFilterOptions"
+-          size="small"
+-          style="width: 170px;"
+-          @update:value="handleApplyFilter"
+-        />
+-        <NButton type="primary" size="small" @click="showCreateForm = true">
+-          <template #icon>
+-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+-          </template>
+-          {{ t('kanban.createTask') }}
+-        </NButton>
+-      </div>
+-    </header>
+-
+-    <!-- Stats bar -->
+-    <div v-if="kanbanStore.stats" class="stats-bar">
+-      <button
+-        v-for="status in boardStatuses"
+-        :key="status"
+-        type="button"
+-        class="stat-chip"
+-        :class="[status, { active: kanbanStore.filterStatus === status }]"
+-        :aria-pressed="kanbanStore.filterStatus === status"
+-        @click="handleStatusChipClick(status)"
+-      >
+-        <span class="stat-count">{{ kanbanStore.stats.by_status[status] || 0 }}</span>
+-        <span class="stat-label">{{ t(`kanban.columns.${status}`, status) }}</span>
+-      </button>
+-      <button
+-        type="button"
+-        class="stat-chip total"
+-        :class="{ active: !kanbanStore.filterStatus }"
+-        :aria-pressed="!kanbanStore.filterStatus"
+-        @click="handleStatusChipClick(null)"
+-      >
+-        <span class="stat-count">{{ kanbanStore.stats.total }}</span>
+-        <span class="stat-label">{{ t('kanban.stats.total') }}</span>
+-      </button>
+-    </div>
++    <KanbanToolbar
++      :boards="store.boards"
++      :current-board="store.selectedBoard"
++      :assignees="store.assignees"
++      :selected-assignee="store.filterAssignee || ''"
++      :selected-tenant="tenantFilter"
++      :search-query="store.searchQuery"
++      :loading="store.loading"
++      :include-archived="includeArchived"
++      :lane-by-profile="laneByProfile"
++      :tenants="tenants"
++      :task-count="filteredTasks.length"
++      @board-change="handleBoardChange"
++      @assignee-change="handleAssigneeChange"
++      @tenant-change="handleTenantChange"
++      @search-change="handleSearchChange"
++      @include-archived-change="handleIncludeArchivedChange"
++      @lane-by-profile-change="handleLaneByProfileChange"
++      @refresh="handleRefresh"
++      @dispatch="handleDispatch"
++      @clear-filters="handleClearFilters"
++      @create-board="handleCreateBoard"
++      @archive-board="handleArchiveBoard"
++    />
+ 
+-    <!-- Board -->
+-    <NSpin :show="kanbanStore.loading && kanbanStore.tasks.length === 0">
+-      <div class="kanban-board">
+-        <NCollapse v-model:expanded-names="expandedStatusNames">
+-          <NCollapseItem
+-            v-for="status in visibleBoardStatuses"
+-            :key="status"
+-            :title="`${t(`kanban.columns.${status}`, status)} (${tasksByStatus[status].length})`"
+-            :name="status"
+-            :class="['kanban-column', `status-${status}`]"
+-          >
+-            <template #header>
+-              <span class="column-header" :class="`status-${status}`">
+-                <span class="status-dot" aria-hidden="true" />
+-                <span>{{ t(`kanban.columns.${status}`, status) }} ({{ tasksByStatus[status].length }})</span>
+-              </span>
+-            </template>
+-            <div class="task-list" :class="`status-${status}`">
+-              <KanbanTaskCard
+-                v-for="task in tasksByStatus[status]"
+-                :key="task.id"
+-                :task="task"
+-                :assignee-avatar="task.assignee ? profileAvatarByName[task.assignee] || null : null"
+-                @click="handleTaskClick(task.id)"
+-              />
+-              <div v-if="tasksByStatus[status].length === 0" class="column-empty">
+-                {{ t('kanban.noTasks') }}
+-              </div>
+-            </div>
+-          </NCollapseItem>
+-        </NCollapse>
+-      </div>
+-    </NSpin>
++    <KanbanOrchestrationPanel />
++
++    <KanbanAttentionStrip
++      :diagnostics="store.diagnostics"
++      :expanded="attentionExpanded"
++      @toggle="attentionExpanded = !attentionExpanded"
++      @open="handleAttentionOpen"
++      @refresh="store.fetchDiagnostics()"
++    />
++
++    <KanbanBulkBar
++      :selected-count="selectedIds.size"
++      :total-count="filteredTasks.length"
++      :assignees="assigneeNames"
++      @clear="handleBulkClear"
++      @select-all-visible="handleBulkSelectAllVisible"
++      @complete="handleBulkComplete"
++      @block="handleBulkBlock"
++      @unblock="handleBulkUnblock"
++      @archive="handleBulkArchive"
++      @delete="handleBulkDelete"
++      @set-priority="handleBulkSetPriority"
++      @assign="handleBulkAssign"
++      @move-to-todo="handleBulkMoveToTodo"
++      @move-to-ready="handleBulkMoveToReady"
++    />
++
++    <div class="board-container">
++      <NSpin v-if="store.loading && !store.tasks.length" size="large" class="page-loading" />
++      <KanbanBoard
++        v-else
++        :tasks="filteredTasks"
++        :loading="store.loading"
++        :selected-ids="selectedIds"
++        :include-archived="includeArchived"
++        :lane-by-profile="laneByProfile"
++        :parent-tasks="store.tasks.map(t => ({ id: t.id, title: t.title }))"
++        @task-click="handleTaskClick"
++        @select-all="handleSelectAll"
++        @task-drag-start="handleTaskDragStart"
++        @task-drag-end="handleTaskDragEnd"
++        @column-drag-over="handleColumnDragOver"
++        @column-drop="handleColumnDrop"
++        @inline-create="handleInlineCreate"
++      />
++    </div>
+ 
+     <!-- Task detail drawer -->
+     <KanbanTaskDrawer
++      v-model:show="showTaskDrawer"
+       :task-id="selectedTaskId"
+-      @close="handleDrawerClose"
+-      @updated="handleDrawerUpdated"
+-      @navigate="handleNavigateTask"
+-    />
+-
+-    <!-- Board management -->
+-    <NModal v-model:show="showCreateBoardForm" preset="dialog" :title="t('kanban.board.create')" style="width: 420px;">
+-      <div class="board-form">
+-        <NInput v-model:value="newBoardSlug" :placeholder="t('kanban.board.slugPlaceholder')" />
+-        <NInput v-model:value="newBoardName" :placeholder="t('kanban.board.namePlaceholder')" />
+-      </div>
+-      <template #action>
+-        <NButton @click="showCreateBoardForm = false">{{ t('common.cancel') }}</NButton>
+-        <NButton type="primary" :loading="boardActionLoading" @click="handleCreateBoard">{{ t('common.create') }}</NButton>
+-      </template>
+-    </NModal>
+-
+-    <!-- Create form -->
+-    <KanbanCreateForm
+-      v-if="showCreateForm"
+-      @close="showCreateForm = false"
+-      @created="handleTaskCreated"
++      @close="handleTaskDrawerClose"
+     />
+   </div>
+ </template>
+@@ -374,163 +451,23 @@ async function handleDispatch() {
+ @use '@/styles/variables' as *;
+ 
+ .kanban-view {
+-  height: calc(100 * var(--vh));
+   display: flex;
+   flex-direction: column;
++  height: 100%;
++  overflow: hidden;
+ }
+ 
+-.page-header {
+-  padding: 21px 20px;
+-  border-bottom: 1px solid $border-color;
+-}
+-
+-.header-title {
+-  font-size: 16px;
+-}
+-
+-.header-actions {
+-  display: flex;
+-  align-items: center;
+-  gap: 10px;
+-}
+-
+-.stats-bar {
+-  display: flex;
+-  gap: 8px;
+-  padding: 12px 20px;
+-  flex-shrink: 0;
+-  flex-wrap: wrap;
+-}
+-
+-.stat-chip,
+-.column-header,
+-.task-list {
+-  --kanban-status-color: #64748b;
+-
+-  &.triage,
+-  &.status-triage { --kanban-status-color: #94a3b8; }
+-  &.todo,
+-  &.status-todo { --kanban-status-color: #38bdf8; }
+-  &.scheduled,
+-  &.status-scheduled { --kanban-status-color: #06b6d4; }
+-  &.ready,
+-  &.status-ready { --kanban-status-color: #f59e0b; }
+-  &.running,
+-  &.status-running { --kanban-status-color: #8b5cf6; }
+-  &.blocked,
+-  &.status-blocked { --kanban-status-color: #ef4444; }
+-  &.review,
+-  &.status-review { --kanban-status-color: #ec4899; }
+-  &.done,
+-  &.status-done { --kanban-status-color: #22c55e; }
+-  &.archived,
+-  &.status-archived { --kanban-status-color: #64748b; }
+-  &.total { --kanban-status-color: #e2e8f0; }
+-}
+-
+-.stat-chip {
+-  display: flex;
+-  align-items: center;
+-  gap: 6px;
+-  padding: 4px 12px;
+-  border-radius: 16px;
+-  font-size: 12px;
+-  border: 1px solid $border-light;
+-  border-left: 3px solid var(--kanban-status-color);
+-  background: transparent;
+-  color: inherit;
+-  cursor: pointer;
+-  font: inherit;
+-  line-height: inherit;
+-
+-  &:hover,
+-  &.active {
+-    border-color: var(--kanban-status-color);
+-    background-color: rgba(var(--accent-primary-rgb), 0.08);
+-  }
+-
+-  &.active .stat-label,
+-  &.active .stat-count {
+-    color: var(--kanban-status-color);
+-  }
+-
+-  &:focus-visible {
+-    outline: 2px solid var(--kanban-status-color);
+-    outline-offset: 2px;
+-  }
+-}
+-
+-.stat-count {
+-  font-weight: 600;
+-  color: $text-primary;
+-}
+-
+-.stat-label {
+-  color: $text-muted;
+-}
+-
+-.kanban-board {
+-  padding: 14px 20px 20px;
++.board-container {
+   flex: 1;
+-  min-height: 0;
+-  overflow-y: auto;
+-}
+-
+-.column-header {
+-  display: inline-flex;
+-  align-items: center;
+-  gap: 8px;
+-  color: var(--kanban-status-color);
+-  font-weight: 600;
+-}
+-
+-.status-dot {
+-  width: 8px;
+-  height: 8px;
+-  border-radius: 999px;
+-  background: var(--kanban-status-color);
+-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--kanban-status-color) 18%, transparent);
+-  flex-shrink: 0;
+-}
+-
+-.task-list {
+-  display: flex;
+-  flex-direction: column;
+-  gap: 8px;
+-  border-left: 2px solid var(--kanban-status-color);
+-  padding-left: 10px;
++  overflow: hidden;
++  position: relative;
+ }
+ 
+-.column-empty {
+-  display: flex;
+-  align-items: center;
+-  justify-content: center;
+-  min-height: 40px;
+-  font-size: 12px;
+-  color: $text-muted;
+-}
+-
+-.board-form {
+-  display: flex;
+-  flex-direction: column;
+-  gap: 10px;
+-}
+-
+-@media (max-width: $breakpoint-mobile) {
+-  .page-header {
+-    padding: 16px 12px 16px 52px;
+-    position: sticky;
+-    top: 0;
+-    z-index: 20;
+-    flex-direction: column;
+-    align-items: flex-start;
+-    background: $bg-primary;
+-    gap: 10px;
+-  }
+-
+-  .header-actions {
+-    flex-wrap: wrap;
+-    width: 100%;
+-  }
++.page-loading {
++  position: absolute;
++  top: 50%;
++  left: 50%;
++  transform: translate(-50%, -50%);
+ }
+ </style>
++<!-- HERMES_CUSTOM[Kanban] END -->

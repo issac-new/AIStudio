@@ -1,0 +1,24 @@
+diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
+index 06b77429..3ae5a8e2 100644
+--- a/packages/client/src/components/hermes/chat/ChatPanel.vue
++++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
+@@ -34,16 +34,17 @@ import OutlinePanel from "./OutlinePanel.vue";
+ import FilesPanel from "./FilesPanel.vue";
+ import TerminalPanel from "./TerminalPanel.vue";
+ import PageSidebarNav from "@/components/layout/PageSidebarNav.vue";
+-import { isStoredSuperAdmin } from "@/api/client";
++import { useAuthStore } from "@/stores/hermes/auth";
+ 
+ const chatStore = useChatStore();
+ const appStore = useAppStore();
+ const profilesStore = useProfilesStore();
+ const sessionBrowserPrefsStore = useSessionBrowserPrefsStore();
++const authStore = useAuthStore();
+ const router = useRouter();
+ const message = useMessage();
+ const { t } = useI18n();
+-const isSuperAdmin = computed(() => isStoredSuperAdmin());
++const isSuperAdmin = computed(() => authStore.isSuperAdmin);
+ 
+ const showOutline = ref(false);
+ const messageListRef = ref<InstanceType<typeof MessageList> | null>(null);

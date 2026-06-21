@@ -1,0 +1,13 @@
+diff --git a/packages/client/src/api/hermes/profiles.ts b/packages/client/src/api/hermes/profiles.ts
+index 4c47d7c0..140e032f 100644
+--- a/packages/client/src/api/hermes/profiles.ts
++++ b/packages/client/src/api/hermes/profiles.ts
+@@ -61,7 +61,7 @@ export interface ProfileRuntimeStatusesResponse {
+ 
+ export async function fetchProfiles(): Promise<HermesProfile[]> {
+   const res = await request<{ profiles: HermesProfile[] }>('/api/hermes/profiles')
+-  return res.profiles
++  return res?.profiles ?? []
+ }
+ 
+ export async function fetchProfileDetail(name: string): Promise<HermesProfileDetail> {

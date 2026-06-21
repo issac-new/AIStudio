@@ -1,0 +1,42 @@
+diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
+index 4366219f..607f21f6 100644
+--- a/packages/client/src/App.vue
++++ b/packages/client/src/App.vue
+@@ -11,6 +11,9 @@ import { useKeyboard } from '@/composables/useKeyboard'
+ import { useAppStore } from '@/stores/hermes/app'
+ import SessionSearchModal from '@/components/hermes/chat/SessionSearchModal.vue'
+ import AuthEventListener from '@/components/auth/AuthEventListener.vue'
++// HERMES_CUSTOM[MatrixChat] BEGIN: import matrix bypass mode check
++import { isMatrixBypassMode } from '@/api/client'
++// HERMES_CUSTOM[MatrixChat] END
+ import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.vue'
+ 
+ const { isDark, isComic } = useTheme()
+@@ -22,9 +25,11 @@ const themeOverrides = computed(() => getThemeOverrides(isDark.value, isComic.va
+ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
+ 
+ const isLoginPage = computed(() => route.name === 'login')
++// HERMES_CUSTOM[All] BEGIN: page sidebar routes include MatrixChat and Kanban
+ const usesPageSidebar = computed(() =>
+-  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.groupChat', 'hermes.groupChatRoom'].includes(route.name as string),
++  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.matrixChat', 'hermes.matrixChatRoom', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.kanban'].includes(route.name as string),
+ )
++// HERMES_CUSTOM[All] END
+ const showAppSidebar = computed(() => !isLoginPage.value && !usesPageSidebar.value)
+ const showMobileMenuButton = computed(() => !isLoginPage.value && (showAppSidebar.value || usesPageSidebar.value))
+ 
+@@ -55,8 +60,12 @@ watch(isLoginPage, (loginPage) => {
+     appStore.stopHealthPolling()
+     return
+   }
+-  appStore.loadModels()
+-  appStore.startHealthPolling()
++  // HERMES_CUSTOM[MatrixChat] BEGIN: skip health polling in matrix bypass mode
++  if (!isMatrixBypassMode()) {
++    appStore.loadModels()
++    appStore.startHealthPolling()
++  }
++  // HERMES_CUSTOM[MatrixChat] END
+ }, {
+   immediate: true,
+ })

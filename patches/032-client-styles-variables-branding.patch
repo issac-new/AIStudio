@@ -1,0 +1,58 @@
+diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
+index b38d08ee..ccbc436c 100644
+--- a/packages/client/src/styles/variables.scss
++++ b/packages/client/src/styles/variables.scss
+@@ -45,7 +45,7 @@
+   --text-on-overlay: #ffffff;
+   --accent-info: #4a90d9;
+ 
+-  // RGB components (for rgba() usage)
++  // HERMES_CUSTOM[Branding] BEGIN: RGB component variables for rgba() usage
+   --accent-primary-rgb: 51, 51, 51;
+   --accent-hover-rgb: 26, 26, 26;
+   --text-primary-rgb: 26, 26, 26;
+@@ -54,6 +54,7 @@
+   --error-rgb: 198, 40, 40;
+   --warning-rgb: 245, 127, 23;
+   --accent-info-rgb: 74, 144, 217;
++  // HERMES_CUSTOM[Branding] END
+ }
+ 
+ .dark {
+@@ -97,7 +98,7 @@
+   --text-on-overlay: #ffffff;
+   --accent-info: #6ba3d6;
+ 
+-  // RGB components
++  // HERMES_CUSTOM[Branding] BEGIN: RGB component variables for dark theme
+   --accent-primary-rgb: 240, 240, 240;
+   --accent-hover-rgb: 245, 245, 245;
+   --text-primary-rgb: 240, 240, 240;
+@@ -106,6 +107,7 @@
+   --error-rgb: 239, 83, 80;
+   --warning-rgb: 255, 183, 77;
+   --accent-info-rgb: 107, 163, 214;
++  // HERMES_CUSTOM[Branding] END
+ }
+ 
+ .comic {
+@@ -185,3 +187,19 @@ $radius-lg: 14px;
+ // Transition
+ $transition-fast: 0.15s ease;
+ $transition-normal: 0.25s ease;
++
++// Utility
++$text-on-accent: var(--text-on-accent);
++$text-on-overlay: var(--text-on-overlay);
++$accent-info: var(--accent-info);
++
++// HERMES_CUSTOM[Branding] BEGIN: RGB SCSS variables (delegate to CSS custom properties)
++$accent-primary-rgb: var(--accent-primary-rgb);
++$accent-hover-rgb: var(--accent-hover-rgb);
++$text-primary-rgb: var(--text-primary-rgb);
++$text-muted-rgb: var(--text-muted-rgb);
++$success-rgb: var(--success-rgb);
++$error-rgb: var(--error-rgb);
++$warning-rgb: var(--warning-rgb);
++$accent-info-rgb: var(--accent-info-rgb);
++// HERMES_CUSTOM[Branding] END

@@ -1,0 +1,91 @@
+diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
+index 5d326234..c5463900 100644
+--- a/packages/client/src/components/layout/PageSidebarNav.vue
++++ b/packages/client/src/components/layout/PageSidebarNav.vue
+@@ -4,7 +4,9 @@ import { useI18n } from 'vue-i18n'
+ import { useRouter } from 'vue-router'
+ import { useSessionSearch } from '@/composables/useSessionSearch'
+ 
+-type ActiveSection = 'chat' | 'history' | 'group' | 'global'
++// HERMES_CUSTOM[MatrixChat, Kanban] BEGIN: ActiveSection includes matrix and kanban
++type ActiveSection = 'chat' | 'history' | 'group' | 'global' | 'matrix' | 'kanban'
++// HERMES_CUSTOM[MatrixChat, Kanban] END
+ 
+ const props = defineProps<{
+   active: ActiveSection
+@@ -44,10 +46,19 @@ function openGroupChat() {
+   void router.push({ name: 'hermes.groupChat' })
+ }
+ 
+-function openApiRelay() {
+-  if (typeof window === 'undefined') return
+-  window.open('https://apikey.fun/register?aff=LIBAPI', '_blank', 'noopener,noreferrer')
++// HERMES_CUSTOM[MatrixChat] BEGIN: openMatrixChat navigation
++function openMatrixChat() {
++  if (props.active === 'matrix') return
++  void router.push({ name: 'hermes.matrixChat' })
+ }
++// HERMES_CUSTOM[MatrixChat] END
++
++// HERMES_CUSTOM[Kanban] BEGIN: openKanban navigation
++function openKanban() {
++  if (props.active === 'kanban') return
++  void router.push({ name: 'hermes.kanban' })
++}
++// HERMES_CUSTOM[Kanban] END
+ </script>
+ 
+ <template>
+@@ -119,7 +130,8 @@ function openApiRelay() {
+         </svg>
+         <span>{{ historyButtonLabel }}</span>
+       </button>
+-      <button class="page-sidebar-tab" type="button" @click="openApiRelay">
++      <!-- HERMES_CUSTOM[Kanban] BEGIN: Kanban tab button -->
++      <button class="page-sidebar-tab" :class="{ active: active === 'kanban' }" type="button" @click="openKanban">
+         <svg
+           width="15"
+           height="15"
+@@ -127,15 +139,29 @@ function openApiRelay() {
+           fill="none"
+           stroke="currentColor"
+           stroke-width="1.8"
++          stroke-linecap="round"
++          stroke-linejoin="round"
+         >
+-          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+-          <polyline points="15 3 21 3 21 9" />
+-          <line x1="10" y1="14" x2="21" y2="3" />
++          <rect x="3" y="3" width="5" height="18" rx="1" />
++          <rect x="10" y="3" width="5" height="12" rx="1" />
++          <rect x="17" y="3" width="5" height="18" rx="1" />
+         </svg>
+-        <span>{{ t('sidebar.apiRelay') }}</span>
++        <span>{{ t('sidebar.kanban') }}</span>
+       </button>
++      <!-- HERMES_CUSTOM[Kanban] END -->
+     </div>
+-    <div v-if="showModeSwitch" class="conversation-switch" role="tablist" aria-label="Conversation type">
++    <!-- HERMES_CUSTOM[MatrixChat] BEGIN: Mode switch with Matrix tab -->
++    <div v-if="showModeSwitch" class="conversation-switch conversation-switch--three" role="tablist" aria-label="Conversation type">
++      <button
++        class="conversation-switch-tab"
++        :class="{ active: active === 'matrix' }"
++        type="button"
++        role="tab"
++        :aria-selected="active === 'matrix'"
++        @click="openMatrixChat"
++      >
++        {{ t('sidebar.matrixChat') }}
++      </button>
+       <button
+         class="conversation-switch-tab"
+         :class="{ active: active === 'chat' || active === 'history' }"
+@@ -157,6 +183,7 @@ function openApiRelay() {
+         {{ t('sidebar.groupChat') }}
+       </button>
+     </div>
++    <!-- HERMES_CUSTOM[MatrixChat] END -->
+   </div>
+ </template>
+ 
