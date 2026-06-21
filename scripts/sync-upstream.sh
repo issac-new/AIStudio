@@ -12,11 +12,11 @@ git fetch origin
 git reset --hard origin/main
 cd ../../overlay
 
-echo "[sync] 3. re-inject(应用 patch + 建 node_modules 符号链接)"
+echo "[sync] 3. re-inject(应用 40 patch 含 package.json+lock + 建 node_modules 符号链接)"
 npm run inject
 
-echo "[sync] 3b. install deps(部分 patch 改了 package.json,如 matrix-js-sdk)"
-cd ../upstream/hermes-studio && npm install --no-audit --no-fund && cd ../../overlay
+echo "[sync] 3b. install deps(patch 017/040 加 matrix-js-sdk 到 package.json+lock)"
+cd ../upstream/hermes-studio && npm ci --no-audit --no-fund && cd ../../overlay
 
 echo "[sync] 4. verify"
 npm run verify

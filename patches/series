@@ -38,3 +38,4 @@
 037-test-kanban-service.patch
 038-test-kanban-controller.patch
 039-test-kanban-routes.patch
+040-package-lock-matrix-sdk.patch
