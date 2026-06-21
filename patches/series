@@ -54,3 +54,4 @@
 053-i18n-locale-zh.patch
 000-vitest-custom-alias.patch
 055-test-matrix-right-panel.patch
+056-test-matrix-thread-notifications.patch
