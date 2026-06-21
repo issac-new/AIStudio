@@ -52,3 +52,5 @@
 051-i18n-locale-ru.patch
 052-i18n-locale-zh-TW.patch
 053-i18n-locale-zh.patch
+000-vitest-custom-alias.patch
+055-test-matrix-right-panel.patch
