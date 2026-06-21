@@ -202,15 +202,38 @@ function main() {
   }
 
   if (mode === 'inject') {
-    // 0. 清理 inject 自身可能遗留的产物(符号链接),避免 dirty-check 被自己的残留挡住。
-    //    这些是 inject/clean 管理的,不应阻断下次 inject。
+    // 0. 清理 inject/build 自身可能遗留的产物,避免 dirty-check 被自己的残留挡住。
+    //    a) server/src/custom 符号链接(inject 建的)
     try {
       if (lstatSync(upstreamServerCustom).isSymbolicLink()) {
         unlinkSync(upstreamServerCustom);
         console.log('[inject] removed stale server/src/custom symlink (self-residual)');
       }
     } catch { /* 不存在,跳过 */ }
-    // 1. 校验上游工作树状态(若有 patch/外部改动残留,提示先 clean)
+    //    b) 非 patch 目标的 build 产物(如 docs/openapi.json,build 时 generate 改动它)。
+    //       这些不是我们的 patch,还原到 HEAD(纯净),不影响 patch 应用。
+    const patchTargets = new Set();
+    for (const p of readSeries()) {
+      const patchText = readFileSync(resolve(patchDir, p), 'utf8');
+      for (const line of patchText.split('\n')) {
+        const m = line.match(/^(?:\+\+\+|---) b\/(.+)$/);
+        if (m) patchTargets.add(m[1]);
+      }
+    }
+    git('status --porcelain', hermesStudioRoot)
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .forEach((line) => {
+        const f = line.slice(3).trim();
+        if (!patchTargets.has(f)) {
+          try {
+            execSync(`git checkout -- "${f}"`, { cwd: hermesStudioRoot, stdio: 'ignore' });
+            console.log(`[inject] restored build artifact (non-patch): ${f}`);
+          } catch { /* 可能是 untracked 或已删,跳过 */ }
+        }
+      });
+    // 1. 校验上游工作树状态(若有 patch 残留,提示先 clean)
     const status = git('status --porcelain', hermesStudioRoot).trim();
     const patches = readSeries();
     if (status && patches.length > 0) {
