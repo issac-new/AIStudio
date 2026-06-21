@@ -1,0 +1,71 @@
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 0e0238c9..b4e3454e 100644
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -250,14 +250,18 @@ export async function bootstrap() {
+       const skillInjector = new HermesSkillInjector()
+       const injectionResult = await skillInjector.injectMissingSkills()
+       if (injectionResult.injected.length > 0) {
++        const injectedSet = new Set(injectionResult.injected)
++        const injectedArray = Array.from(injectedSet)
+         logger.info({
+-          injected: [...new Set(injectionResult.injected)],
++          injected: injectedArray,
+           targetCount: injectionResult.targets.length,
+         }, '[bootstrap] bundled skills injected')
+       }
+       if (injectionResult.updated.length > 0) {
++        const updatedSet = new Set(injectionResult.updated)
++        const updatedArray = Array.from(updatedSet)
+         logger.info({
+-          updated: [...new Set(injectionResult.updated)],
++          updated: updatedArray,
+           targetCount: injectionResult.targets.length,
+         }, '[bootstrap] bundled skills updated')
+       }
+@@ -306,9 +310,45 @@ export async function bootstrap() {
+   // SPA fallback
+   const distDir = resolve(__dirname, '..', 'client')
+   app.use(createStaticCompressionMiddleware())
++
++  // Serve element-web static files at /element-web/*
++  const elementWebDir = resolve(__dirname, '..', 'element-web')
++  app.use(async (ctx, next) => {
++    if (ctx.path.startsWith('/element-web/')) {
++      const relativePath = ctx.path.replace(/^\/element-web\//, '') || 'index.html'
++      try {
++        await send(ctx, relativePath, { root: elementWebDir })
++        return
++      } catch {
++        // Fall through to SPA fallback for index.html
++        await send(ctx, 'index.html', { root: elementWebDir })
++        return
++      }
++    }
++    // Dynamic element-web config.json — inject homeserver from query params or default
++    if (ctx.path === '/element-web/config.json') {
++      const homeserverUrl = (ctx.query.hs as string) || 'https://matrix.org'
++      ctx.type = 'application/json'
++      ctx.body = JSON.stringify({
++        'default_server_config': {
++          'm.homeserver': {
++            'base_url': homeserverUrl,
++            'server_name': new URL(homeserverUrl).hostname,
++          },
++        },
++        'disable_custom_urls': true,
++        'disable_guests': true,
++        'brand': 'Hermes Matrix Chat',
++      })
++      return
++    }
++    await next()
++  })
++
+   app.use(serve(distDir))
+   app.use(async (ctx) => {
+     if (!ctx.path.startsWith('/api') &&
++      !ctx.path.startsWith('/element-web/') &&
+       ctx.path !== '/health' &&
+       ctx.path !== '/upload' &&
+       ctx.path !== '/webhook') {

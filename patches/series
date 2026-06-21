@@ -6,3 +6,4 @@
 005-routes-auth.patch
 006-safe-file-store.patch
 007-model-run-prompt.patch
+008-server-index-element-web-middleware.patch
