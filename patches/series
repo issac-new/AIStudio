@@ -42,3 +42,13 @@
 041-desktop-rebrand-swarmstudio-config.patch
 042-desktop-rebrand-swarmstudio-pkg.patch
 043-desktop-rebrand-swarmstudio-strings.patch
+044-i18n-locale-de.patch
+045-i18n-locale-en.patch
+046-i18n-locale-es.patch
+047-i18n-locale-fr.patch
+048-i18n-locale-ja.patch
+049-i18n-locale-ko.patch
+050-i18n-locale-pt.patch
+051-i18n-locale-ru.patch
+052-i18n-locale-zh-TW.patch
+053-i18n-locale-zh.patch

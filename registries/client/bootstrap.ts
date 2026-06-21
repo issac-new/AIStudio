@@ -21,10 +21,8 @@ export async function bootstrapClient(app: App): Promise<void> {
     const { registerBranding } = await import('../../custom/client/branding')
     await registerBranding(app)
   }
-  if (features.extendedI18n) {
-    const { registerExtendedI18n } = await import('../../custom/client/branding/i18n')
-    await registerExtendedI18n(app)
-  }
+  // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
+  // 实际翻译是直接写在上游 locale 文件里的(现经 patch 044-053 注入)。无需运行时注册。
 
   // 把 registry 收集的路由加入上游 router(addRoute 必须在 mount 前)。
   for (const route of getRegisteredRoutes()) {
