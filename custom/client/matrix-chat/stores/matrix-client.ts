@@ -84,6 +84,10 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
       baseUrl: creds.homeserverUrl,
       accessToken: creds.accessToken,
       userId: creds.userId,
+      // 启用 thread 支持:否则 client.supportsThreads() 返回 false,SDK 不会从
+      // m.thread 关系构建 Thread 对象 → room.getThread() 永远返回 null,
+      // ThreadSummary 卡片无法渲染。element-web 默认开启此项。
+      threadSupport: true,
     }
 
     if (creds.deviceId) {
@@ -146,7 +150,10 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
     client.value = matrixClient
 
     try {
-      await matrixClient.startClient({ initialSyncLimit: 20 })
+      // threadSupport 必须在 startClient 的 opts 里(SDK 把 startClient 的 opts
+      // 存为 clientOpts,supportsThreads() 读 clientOpts.threadSupport)。
+      // 不传则 SDK 不构建 Thread 对象,ThreadSummary 卡片无法渲染。
+      await matrixClient.startClient({ initialSyncLimit: 20, threadSupport: true } as any)
     } catch (err: any) {
       error.value = err?.message || 'Failed to start Matrix client'
     }

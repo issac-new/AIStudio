@@ -114,8 +114,12 @@ function handleDelete() {
 const isEdited = computed(() => composerStore.isEdited(props.event))
 
 // ─── Thread info ──────────────────────────────────────────
+// 读取 roomStore.threadTimelineVersion 建立响应式依赖:
+// SDK fetchRoomThreads 完成后该 ref 自增,触发重算(否则 SDK 内部 thread
+// 状态变化 Vue 追踪不到,hasThread 永远是初始值 false)。
 const hasThread = computed(() => {
   if (props.event.threadRootId) return false
+  void roomStore.threadTimelineVersion
   const thread = threadStore.getThreadForEvent(props.event)
   return Boolean(thread && (thread.length ?? 0) > 0)
 })

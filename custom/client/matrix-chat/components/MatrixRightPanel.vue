@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import MatrixRoomSummaryCard from './MatrixRoomSummaryCard.vue'
+import MatrixMemberList from './MatrixMemberList.vue'
+import MatrixMemberInfo from './MatrixMemberInfo.vue'
 import MatrixThreadPanel from './MatrixThreadPanel.vue'
 import MatrixThreadView from './MatrixThreadView.vue'
 

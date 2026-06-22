@@ -1,0 +1,231 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -2513,5 +2513,19 @@
+     copyLink: 'Copy Link',
+     linkCopied: 'Link copied',
+     loadingThreads: 'Loading threads...',
++    // State event system notices
++    stateRoomCreated: '{user} created the room',
++    stateJoined: '{user} joined the room',
++    stateLeft: '{user} left the room{reason}',
++    stateInvited: '{sender} invited {target}',
++    stateBanned: '{sender} banned {target}{reason}',
++    stateKicked: '{sender} kicked {target}{reason}',
++    stateUnbanned: '{sender} unbanned {target}',
++    stateWithdrewInvite: '{sender} withdrew {target}\'s invitation',
++    stateRejectedInvite: '{user} rejected the invitation',
++    stateChangedName: '{user} changed their display name to {newName}',
++    stateReason: ' (reason: {reason})',
++    stateLoadingOlder: 'Loading older messages...',
++    stateNoMoreHistory: 'This is the beginning of the room',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -2510,5 +2510,19 @@
+     copyLink: '复制链接',
+     linkCopied: '链接已复制',
+     loadingThreads: '加载话题中...',
++    // 状态事件系统通知
++    stateRoomCreated: '{user} 创建了房间',
++    stateJoined: '{user} 加入了房间',
++    stateLeft: '{user} 离开了房间{reason}',
++    stateInvited: '{sender} 邀请了 {target}',
++    stateBanned: '{sender} 封禁了 {target}{reason}',
++    stateKicked: '{sender} 踢出了 {target}{reason}',
++    stateUnbanned: '{sender} 解除了 {target} 的封禁',
++    stateWithdrewInvite: '{sender} 撤回了对 {target} 的邀请',
++    stateRejectedInvite: '{user} 拒绝了邀请',
++    stateChangedName: '{user} 将显示名改为了 {newName}',
++    stateReason: '（原因：{reason}）',
++    stateLoadingOlder: '正在加载更早的消息...',
++    stateNoMoreHistory: '已到房间起点',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -2259,5 +2259,19 @@
+     copyLink: 'Link kopieren',
+     linkCopied: 'Link kopiert',
+     loadingThreads: 'Threads werden geladen...',
++    // Statusereignis-Systemhinweise
++    stateRoomCreated: '{user} hat den Raum erstellt',
++    stateJoined: '{user} ist dem Raum beigetreten',
++    stateLeft: '{user} hat den Raum verlassen{reason}',
++    stateInvited: '{sender} hat {target} eingeladen',
++    stateBanned: '{sender} hat {target} gesperrt{reason}',
++    stateKicked: '{sender} hat {target} hinausgeworfen{reason}',
++    stateUnbanned: '{sender} hat die Sperrung von {target} aufgehoben',
++    stateWithdrewInvite: '{sender} hat die Einladung von {target} zurückgezogen',
++    stateRejectedInvite: '{user} hat die Einladung abgelehnt',
++    stateChangedName: '{user} hat den Anzeigenamen zu {newName} geändert',
++    stateReason: ' (Grund: {reason})',
++    stateLoadingOlder: 'Ältere Nachrichten werden geladen...',
++    stateNoMoreHistory: 'Dies ist der Anfang des Raums',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -2259,5 +2259,19 @@
+     copyLink: 'Copiar enlace',
+     linkCopied: 'Enlace copiado',
+     loadingThreads: 'Cargando hilos...',
++    // Avisos del sistema de eventos de estado
++    stateRoomCreated: '{user} creó la sala',
++    stateJoined: '{user} se unió a la sala',
++    stateLeft: '{user} salió de la sala{reason}',
++    stateInvited: '{sender} invitó a {target}',
++    stateBanned: '{sender} bloqueó a {target}{reason}',
++    stateKicked: '{sender} expulsó a {target}{reason}',
++    stateUnbanned: '{sender} desbloqueó a {target}',
++    stateWithdrewInvite: '{sender} retiró la invitación de {target}',
++    stateRejectedInvite: '{user} rechazó la invitación',
++    stateChangedName: '{user} cambió su nombre para mostrar a {newName}',
++    stateReason: ' (motivo: {reason})',
++    stateLoadingOlder: 'Cargando mensajes anteriores...',
++    stateNoMoreHistory: 'Este es el principio de la sala',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -2259,5 +2259,19 @@
+     copyLink: 'Copier le lien',
+     linkCopied: 'Lien copié',
+     loadingThreads: 'Chargement des fils...',
++    // Avis système des événements d'état
++    stateRoomCreated: '{user} a créé le salon',
++    stateJoined: '{user} a rejoint le salon',
++    stateLeft: '{user} a quitté le salon{reason}',
++    stateInvited: '{sender} a invité {target}',
++    stateBanned: '{sender} a banni {target}{reason}',
++    stateKicked: '{sender} a expulsé {target}{reason}',
++    stateUnbanned: '{sender} a dé-banni {target}',
++    stateWithdrewInvite: "{sender} a retiré l'invitation de {target}",
++    stateRejectedInvite: "{user} a refusé l'invitation",
++    stateChangedName: "{user} a changé son nom d'affichage en {newName}",
++    stateReason: ' (raison : {reason})',
++    stateLoadingOlder: 'Chargement des messages plus anciens...',
++    stateNoMoreHistory: "C'est le début du salon",
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -2258,5 +2258,19 @@
+     copyLink: 'リンクをコピー',
+     linkCopied: 'リンクをコピーしました',
+     loadingThreads: 'スレッドを読み込み中...',
++    // 状態イベントのシステム通知
++    stateRoomCreated: '{user} がルームを作成しました',
++    stateJoined: '{user} がルームに参加しました',
++    stateLeft: '{user} がルームから退出しました{reason}',
++    stateInvited: '{sender} が {target} を招待しました',
++    stateBanned: '{sender} が {target} をブロックしました{reason}',
++    stateKicked: '{sender} が {target} を追い出しました{reason}',
++    stateUnbanned: '{sender} が {target} のブロックを解除しました',
++    stateWithdrewInvite: '{sender} が {target} の招待を取り消しました',
++    stateRejectedInvite: '{user} が招待を拒否しました',
++    stateChangedName: '{user} が表示名を {newName} に変更しました',
++    stateReason: '（理由：{reason}）',
++    stateLoadingOlder: '過去のメッセージを読み込み中...',
++    stateNoMoreHistory: 'これがルームの最初です',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -2258,5 +2258,19 @@
+     copyLink: '링크 복사',
+     linkCopied: '링크 복사됨',
+     loadingThreads: '스레드 로딩 중...',
++    // 상태 이벤트 시스템 알림
++    stateRoomCreated: '{user}님이 방을 만들었습니다',
++    stateJoined: '{user}님이 방에 참여했습니다',
++    stateLeft: '{user}님이 방을 나갔습니다{reason}',
++    stateInvited: '{sender}님이 {target}님을 초대했습니다',
++    stateBanned: '{sender}님이 {target}님을 차단했습니다{reason}',
++    stateKicked: '{sender}님이 {target}님을 내보냈습니다{reason}',
++    stateUnbanned: '{sender}님이 {target}님의 차단을 해제했습니다',
++    stateWithdrewInvite: '{sender}님이 {target}님의 초대를 철회했습니다',
++    stateRejectedInvite: '{user}님이 초대를 거절했습니다',
++    stateChangedName: '{user}님이 표시 이름을 {newName}(으)로 변경했습니다',
++    stateReason: ' (사유: {reason})',
++    stateLoadingOlder: '이전 메시지를 로딩하는 중...',
++    stateNoMoreHistory: '방의 시작입니다',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -2259,5 +2259,19 @@
+     copyLink: 'Copiar link',
+     linkCopied: 'Link copiado',
+     loadingThreads: 'Carregando tópicos...',
++    // Avisos do sistema de eventos de estado
++    stateRoomCreated: '{user} criou a sala',
++    stateJoined: '{user} entrou na sala',
++    stateLeft: '{user} saiu da sala{reason}',
++    stateInvited: '{sender} convidou {target}',
++    stateBanned: '{sender} baniu {target}{reason}',
++    stateKicked: '{sender} expulsou {target}{reason}',
++    stateUnbanned: '{sender} desbaniu {target}',
++    stateWithdrewInvite: '{sender} retirou o convite de {target}',
++    stateRejectedInvite: '{user} recusou o convite',
++    stateChangedName: '{user} alterou o nome de exibição para {newName}',
++    stateReason: ' (motivo: {reason})',
++    stateLoadingOlder: 'Carregando mensagens antigas...',
++    stateNoMoreHistory: 'Este é o início da sala',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -2012,6 +2012,20 @@
+     copyLink: 'Скопировать ссылку',
+     linkCopied: 'Ссылка скопирована',
+     loadingThreads: 'Загрузка тредов...',
++    // Системные уведомления о событиях состояния
++    stateRoomCreated: '{user} создал комнату',
++    stateJoined: '{user} присоединился к комнате',
++    stateLeft: '{user} покинул комнату{reason}',
++    stateInvited: '{sender} пригласил {target}',
++    stateBanned: '{sender} заблокировал {target}{reason}',
++    stateKicked: '{sender} выгнал {target}{reason}',
++    stateUnbanned: '{sender} разблокировал {target}',
++    stateWithdrewInvite: '{sender} отозвал приглашение {target}',
++    stateRejectedInvite: '{user} отклонил приглашение',
++    stateChangedName: '{user} изменил отображаемое имя на {newName}',
++    stateReason: ' (причина: {reason})',
++    stateLoadingOlder: 'Загрузка старых сообщений...',
++    stateNoMoreHistory: 'Это начало комнаты',
+   },
+ 
+ }
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -2270,5 +2270,19 @@
+     copyLink: '複製連結',
+     linkCopied: '連結已複製',
+     loadingThreads: '載入話題中...',
++    // 狀態事件系統通知
++    stateRoomCreated: '{user} 建立了聊天室',
++    stateJoined: '{user} 加入了聊天室',
++    stateLeft: '{user} 离開了聊天室{reason}',
++    stateInvited: '{sender} 邀請了 {target}',
++    stateBanned: '{sender} 封鎖了 {target}{reason}',
++    stateKicked: '{sender} 踢出了 {target}{reason}',
++    stateUnbanned: '{sender} 解除了 {target} 的封鎖',
++    stateWithdrewInvite: '{sender} 撤回對 {target} 的邀請',
++    stateRejectedInvite: '{user} 拒絕了邀請',
++    stateChangedName: '{user} 將顯示名稱變更為 {newName}',
++    stateReason: '（原因：{reason}）',
++    stateLoadingOlder: '正在載入較早的訊息...',
++    stateNoMoreHistory: '已到聊天室起點',
+   },
+ }
