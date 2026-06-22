@@ -3,10 +3,28 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
+import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import MatrixReactionPicker from './MatrixReactionPicker.vue'
+
+interface Props {
+  /** 紧凑模式(thread 详情 composer 用):减小 padding/字号 */
+  compact?: boolean
+  /** 传入时,普通模式发送走 thread relation(详情视图用) */
+  threadRelation?: {
+    rel_type: string
+    event_id: string
+    is_falling_back?: boolean
+    'm.in_reply_to'?: { event_id: string }
+  }
+}
+const props = withDefaults(defineProps<Props>(), {
+  compact: false,
+  threadRelation: undefined,
+})
 
 const roomStore = useMatrixRoomStore()
 const composerStore = useMatrixComposerStore()
+const threadStore = useMatrixThreadStore()
 const { t } = useI18n()
 
 const inputText = ref('')
@@ -236,6 +254,13 @@ async function handleSend() {
       await composerStore.sendReply(text, replyToEvent.value as any)
     } else if (composerMode.value === 'edit' && editingEvent.value) {
       await composerStore.sendEdit(text, editingEvent.value as any)
+    } else if (props.threadRelation) {
+      // thread 详情 composer:走 thread relation send
+      await threadStore.sendThreadMessage(
+        text,
+        props.threadRelation.event_id,
+        props.threadRelation['m.in_reply_to']?.event_id,
+      )
     } else {
       await composerStore.sendMessage(text)
     }
@@ -265,7 +290,7 @@ function getMemberInitial(member: any): string {
 </script>
 
 <template>
-  <div v-if="roomStore.activeRoomId" class="matrix-message-input">
+  <div v-if="roomStore.activeRoomId" class="matrix-message-input" :class="{ 'matrix-message-input--compact': compact }">
     <!-- Mention autocomplete popup -->
     <div v-if="showMentionPopup && filteredMentionMembers.length > 0" class="mention-popup">
       <div
@@ -401,6 +426,12 @@ function getMemberInitial(member: any): string {
   gap: 8px;
   flex-shrink: 0;
   position: relative;
+}
+
+// ─── Compact mode (thread detail composer) ───────────────
+.matrix-message-input--compact {
+  padding: 8px 12px;
+  gap: 6px;
 }
 
 // ─── Composer preview bar (reply / edit) ──────────────────
