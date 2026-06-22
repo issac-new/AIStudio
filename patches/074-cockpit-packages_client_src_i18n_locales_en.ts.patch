@@ -1,12 +1,12 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index efcc5613..dd2c8159 100644
+index efcc5613..ac029fe2 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -208,6 +208,7 @@ export default {
      cockpit: 'AI Collaboration Center',
      jobs: 'Jobs',
      kanban: 'Kanban',
-+    swarmKanban: 'Collaboration Kanban',
++    swarmKanban: 'Swarm kanban',
      models: 'Models',
      profiles: 'Profiles',
      skills: 'Skills',
