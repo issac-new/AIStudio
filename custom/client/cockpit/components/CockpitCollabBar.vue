@@ -35,7 +35,6 @@ function pickNew(kind: ChannelKind) {
     >
       <span class="cockpit-collab-bar__chip-icon">{{ KIND_ICON[c.kind] }}</span>
       <span class="cockpit-collab-bar__chip-label">{{ c.label }}</span>
-      <span v-if="c.members.length" class="cockpit-collab-bar__chip-count">{{ c.members.length }}{{ t('cockpit.members') }}</span>
     </button>
     <button type="button" data-action="add" class="cockpit-collab-bar__add" @click="menuOpen = !menuOpen">+ {{ t('cockpit.addCollab') }}</button>
 

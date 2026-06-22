@@ -1,0 +1,109 @@
+diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
+index b3bb8dd4..5137cdc6 100644
+--- a/packages/server/src/controllers/hermes/kanban.ts
++++ b/packages/server/src/controllers/hermes/kanban.ts
+@@ -1,6 +1,6 @@
+ import type { Context } from 'koa'
+-import { readFile } from 'fs/promises'
+-import { resolve, normalize } from 'path'
++import { readFile, readdir, stat } from 'fs/promises'
++import { resolve, normalize, join } from 'path'
+ import { homedir } from 'os'
+ import * as kanbanCli from '../../services/hermes/hermes-kanban'
+ import { isPathWithin } from '../../services/hermes/hermes-path'
+@@ -758,6 +758,83 @@ export async function readArtifact(ctx: Context) {
+   }
+ }
+ 
++interface WorkspaceFileEntry {
++  name: string
++  isDir: boolean
++  size: number
++  modified: number
++  children?: WorkspaceFileEntry[]
++}
++
++async function readDirTree(dir: string, depth: number): Promise<WorkspaceFileEntry[]> {
++  if (depth <= 0) return []
++  let names: string[]
++  try {
++    names = await readdir(dir)
++  } catch {
++    return []
++  }
++  return Promise.all(names.map(async (name) => {
++    const full = join(dir, name)
++    let st: Awaited<ReturnType<typeof stat>>
++    try {
++      st = await stat(full)
++    } catch {
++      return { name, isDir: false, size: 0, modified: 0 }
++    }
++    const entry: WorkspaceFileEntry = {
++      name, isDir: st.isDirectory(),
++      size: st.size, modified: st.mtimeMs,
++    }
++    if (entry.isDir && depth > 1) {
++      entry.children = await readDirTree(full, depth - 1)
++    }
++    return entry
++  }))
++}
++
++export async function listWorkspaceFiles(ctx: Context) {
++  const taskId = ctx.query.task_id as string | undefined
++  const sub = (ctx.query.path as string | undefined) ?? ''
++  const depthRaw = parseInt(ctx.query.depth as string, 10)
++  const depth = Number.isFinite(depthRaw) ? Math.min(Math.max(depthRaw, 1), 4) : 2
++
++  if (!taskId) {
++    ctx.status = 400
++    ctx.body = { error: 'task_id is required' }
++    return
++  }
++
++  const detail = await kanbanCli.getTask(taskId)
++  const wsPath = detail?.task?.workspace_path
++  if (!wsPath) {
++    ctx.body = { path: '', entries: [] }
++    return
++  }
++
++  const workspacesRoot = resolve(homedir(), '.hermes', 'kanban', 'workspaces')
++  const root = resolve(workspacesRoot, normalize(wsPath))
++  if (!isPathWithin(root, workspacesRoot)) {
++    ctx.status = 403
++    ctx.body = { error: 'workspace path out of sandbox' }
++    return
++  }
++  const target = sub ? resolve(root, normalize(sub)) : root
++  if (!isPathWithin(target, root)) {
++    ctx.status = 403
++    ctx.body = { error: 'sub path out of task workspace' }
++    return
++  }
++
++  try {
++    const entries = await readDirTree(target, depth)
++    ctx.body = { path: sub, entries }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
+ export async function searchSessions(ctx: Context) {
+   const { task_id, profile, q } = ctx.query as {
+     task_id?: string
+diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+index 2ff5f696..0126afa4 100644
+--- a/packages/server/src/routes/hermes/kanban.ts
++++ b/packages/server/src/routes/hermes/kanban.ts
+@@ -22,6 +22,7 @@ kanbanRoutes.get('/api/hermes/kanban/orchestration', ctrl.getOrchestration)
+ kanbanRoutes.put('/api/hermes/kanban/orchestration', ctrl.setOrchestration)
+ kanbanRoutes.post('/api/hermes/kanban/dispatch', ctrl.dispatch)
+ kanbanRoutes.get('/api/hermes/kanban/artifact', ctrl.readArtifact)
++kanbanRoutes.get('/api/hermes/kanban/workspace-files', ctrl.listWorkspaceFiles)
+ kanbanRoutes.get('/api/hermes/kanban/search-sessions', ctrl.searchSessions)
+ kanbanRoutes.post('/api/hermes/kanban/links', ctrl.linkTasks)
+ kanbanRoutes.delete('/api/hermes/kanban/links', ctrl.unlinkTasks)

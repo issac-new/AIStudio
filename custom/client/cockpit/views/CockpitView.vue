@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import CockpitAttention from '@/custom/cockpit/components/CockpitAttention.vue'
@@ -15,7 +15,6 @@ import CockpitTerminalPane from '@/custom/cockpit/components/CockpitTerminalPane
 import CockpitHistoryModal from '@/custom/cockpit/components/CockpitHistoryModal.vue'
 import CockpitTemplateManager from '@/custom/cockpit/components/CockpitTemplateManager.vue'
 import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
-import { loadSeed } from '@/custom/cockpit/fixtures/seed'
 import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
@@ -27,8 +26,10 @@ const goSettings = () => router.push({ name: 'hermes.settings' })
 // Kanban 下方"AI协作中心"入口 → 进入原生 Kanban 管理面板
 const goCenter = () => router.push({ name: 'hermes.kanban' })
 
-// 演示种子（批次 1 抽离到 fixtures/seed.ts；后续接 kanban API 时替换 loadSeed）
-onMounted(() => loadSeed(store))
+// 从 kanban 真实数据引导 cockpit（替代原 loadSeed mock 装载）
+onMounted(() => { store.bootstrap() })
+// 离开 cockpit 时断开 group socket（matrix client 跨页保活，不在此断开）
+onUnmounted(() => { store.disconnectOnUnmount() })
 </script>
 
 <template>
@@ -73,7 +74,7 @@ onMounted(() => loadSeed(store))
           <CockpitModeBar v-if="store.workspaceMode !== 'term'" />
           <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
-          <CockpitWorkspace v-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="() => {}" @later="() => {}" />
+          <CockpitWorkspace v-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="store.submitWorkItem" @later="() => {}" />
           <CockpitChatPane v-else-if="store.workspaceMode === 'chat'" />
           <CockpitTerminalPane v-else />
         </div>

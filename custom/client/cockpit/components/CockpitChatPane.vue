@@ -23,7 +23,7 @@ function onSend() {
       <div class="cockpit-chat-pane__head">
         <div>
           <div class="cockpit-chat-pane__title">{{ channel.label }}</div>
-          <div class="cockpit-chat-pane__sub">{{ channel.members.join(' · ') }}</div>
+          <div class="cockpit-chat-pane__sub">{{ channel.kind }}</div>
         </div>
         <button type="button" class="cockpit-chat-pane__back" @click="store.setWorkspaceMode('work')">{{ t('cockpit.backToWork') }}</button>
       </div>
