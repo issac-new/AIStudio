@@ -1,22 +1,40 @@
 <script setup lang="ts">
-import { useCockpitStore, type CockpitCategory, type CockpitPriority, type CockpitStatus } from '@/custom/cockpit/store/cockpit'
+import { computed } from 'vue'
+import { useCockpitStore, type CockpitPriority } from '@/custom/cockpit/store/cockpit'
+import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapters/task-adapter'
 
 const store = useCockpitStore()
 defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void }>()
 
-const categories: { key: CockpitCategory; label: string; mark: string }[] = [
-  { key: 'human', label: '人类协作', mark: 'mk-solid-bold' },
-  { key: 'cluster', label: 'Agent 集群', mark: 'mk-solid-thin' },
-  { key: 'direct', label: '人机 1:1', mark: 'mk-dotted' },
-]
 const priorities: CockpitPriority[] = ['P0', 'P1', 'P2', 'P3']
-const statuses: { key: CockpitStatus; label: string }[] = [
+const statuses: { key: CockpitStatusBucket; label: string }[] = [
   { key: 'review', label: '待审' },
   { key: 'blocked', label: '阻塞' },
   { key: 'running', label: '进行中' },
   { key: 'todo', label: '待办' },
   { key: 'done', label: '完成' },
 ]
+
+// 动态 tenant 列表：从所有任务去重 tenant（null → (未指定)）
+const tenantOptions = computed(() => {
+  const set = new Set<string>()
+  for (const t of store.tasks) set.add(t.tenant ?? '(未指定)')
+  return [...set].sort()
+})
+
+// 分组：按 tasksByTenant 的 key（含 (未指定)）
+const tenantGroups = computed(() => {
+  const map = store.tasksByTenant as Record<string, ReturnType<typeof Array.from>>
+  return Object.keys(map)
+    .sort((a, b) => (a === '(未指定)' ? 1 : a.localeCompare(b)))
+    .map(key => ({ key, tasks: store.tasksByTenant[key] ?? [] }))
+})
+
+// 状态显示：原始 status（9 值）但分组筛选用 bucketStatus 5 桶
+function statusBucketLabel(s: string): string {
+  const b = bucketStatus(s as any)
+  return statuses.find(x => x.key === b)?.label ?? s
+}
 </script>
 
 <template>
@@ -42,22 +60,22 @@ const statuses: { key: CockpitStatus; label: string }[] = [
           @click="store.toggleFilter('statuses', st.key)">{{ st.label }}</button>
       </div>
       <div class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">类别</span>
-        <button v-for="c in categories" :key="c.key" type="button" :data-filter="c.key"
-          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.categories.includes(c.key) }"
-          @click="store.toggleFilter('categories', c.key)">{{ c.label }}</button>
+        <span class="cockpit-kanban__flabel">分组</span>
+        <button v-for="tn in tenantOptions" :key="tn" type="button" :data-filter="tn"
+          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.tenants.includes(tn) }"
+          @click="store.toggleFilter('tenants', tn)">{{ tn }}</button>
       </div>
     </div>
 
-    <!-- 任务列表 -->
+    <!-- 任务列表（按 tenant 分组）-->
     <div class="cockpit-kanban__list">
-      <div v-for="c in categories" :key="c.key" class="cockpit-kanban__cat">
+      <div v-for="g in tenantGroups" :key="g.key" class="cockpit-kanban__cat" :data-tenant-group="g.key">
         <div class="cockpit-kanban__cat-head">
-          <span class="cockpit-kanban__cat-mark" :class="c.mark" />
-          {{ c.label }}
-          <span class="cockpit-kanban__cat-count">{{ store.tasksByCategory[c.key].length }}</span>
+          <span class="cockpit-kanban__cat-mark" />
+          {{ g.key }}
+          <span class="cockpit-kanban__cat-count">{{ g.tasks.length }}</span>
         </div>
-        <button v-for="t in store.tasksByCategory[c.key]" :key="t.id"
+        <button v-for="t in g.tasks" :key="t.id"
           type="button"
           :data-task-id="t.id"
           class="cockpit-kanban__task"
@@ -68,7 +86,7 @@ const statuses: { key: CockpitStatus; label: string }[] = [
           <div class="cockpit-kanban__tt">{{ t.title }}</div>
           <div class="cockpit-kanban__meta">
             <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
-              {{ t.status }}
+              {{ statusBucketLabel(t.status) }}
             </span>
             <span class="cockpit-kanban__who">{{ t.assignee }}</span>
           </div>
@@ -115,10 +133,7 @@ const statuses: { key: CockpitStatus; label: string }[] = [
   display: flex; align-items: center; gap: 6px; padding: 6px 8px;
   font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
 }
-.cockpit-kanban__cat-mark { width: 10px; height: 2px; background: var(--text-secondary); }
-.mk-solid-bold { background: var(--accent-primary); }
-.mk-solid-thin { background: var(--text-muted); height: 2px; }
-.mk-dotted { background: transparent; border-bottom: 2px dotted var(--text-muted); }
+.cockpit-kanban__cat-mark { width: 10px; height: 2px; background: var(--text-muted); }
 .cockpit-kanban__cat-count { font-size: 9px; color: var(--text-muted); margin-left: auto; background: var(--bg-secondary); border-radius: 8px; padding: 0 6px; font-weight: 400; text-transform: none; }
 
 .cockpit-kanban__task {
