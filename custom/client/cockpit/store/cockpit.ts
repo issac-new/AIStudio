@@ -1,364 +1,85 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useKanbanStore } from '@/stores/hermes/kanban'
+import * as kanbanApi from '@/api/hermes/kanban'
+import { useChatStore } from '@/stores/hermes/chat'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
+import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
+import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
+import * as extras from '@/custom/cockpit/api/kanban-extras'
+import * as kv from './cockpit-kv'
+import * as taskAdapter from '../adapters/task-adapter'
+import * as attentionAdapter from '../adapters/attention-adapter'
+import * as collabAdapter from '../adapters/collab-adapter'
+import * as eventAdapter from '../adapters/event-adapter'
+import * as topologyAdapter from '../adapters/topology-adapter'
+import * as historyAdapter from '../adapters/history-adapter'
+import type { ChatMessage } from '../adapters/chat-adapter'
+import type { KanbanTaskDetail } from '@/api/hermes/kanban'
+import type { RouteLocationRaw } from 'vue-router'
 
-export type CockpitCategory = 'human' | 'cluster' | 'direct'
-export type CockpitPriority = 'P0' | 'P1' | 'P2' | 'P3'
-export type CockpitStatus =
-  | 'triage' | 'todo' | 'running' | 'blocked' | 'review' | 'done' | 'archived'
-
-export interface CockpitTask {
-  id: string
-  title: string
-  category: CockpitCategory
-  priority: CockpitPriority
-  status: CockpitStatus
-  assignee: string
-  workspace: string
-}
-
-export type AttentionSeverity = 'high' | 'medium' | 'low'
-
-export interface AttentionItem {
-  id: string
-  severity: AttentionSeverity
-  title: string
-  taskId: string
-}
+// 重新导出类型（供组件继续从 store 导入）
+export type CockpitTask = taskAdapter.CockpitTask
+export type CockpitPriority = taskAdapter.CockpitPriority
+export type CockpitStatus = taskAdapter.CockpitStatus
+export type AttentionSeverity = attentionAdapter.AttentionSeverity
+export type AttentionItem = attentionAdapter.AttentionItem
+export type GraphNode = topologyAdapter.GraphNode
+export type GraphRelation = topologyAdapter.GraphRelation
+export type GraphNodeRelation = topologyAdapter.GraphNodeRelation
+export type CockpitEvent = eventAdapter.CockpitEvent
+export type HistoryItem = historyAdapter.HistoryItem
+export type HistoryFilters = { actions: string[]; archived: 'all' | 'only' | 'exclude' }
+export type WorkspaceMode = 'work' | 'chat' | 'term'
+export type ChannelKind = 'matrix' | 'chat' | 'group'
+export type WorkDecision = kv.WorkDecision
+export type DraftWorkItem = kv.DraftWorkItem
+export type A2uiTemplate = kv.A2uiTemplate
+export type ColumnKey = 'left' | 'mid' | 'right'
+export type TerminalLineKind = 'prompt' | 'info' | 'ok' | 'warn' | 'dim'
+export interface TerminalLine { kind: TerminalLineKind; text: string }
 
 export interface CockpitFilters {
   priorities: CockpitPriority[]
-  statuses: CockpitStatus[]
-  categories: CockpitCategory[]
+  statuses: taskAdapter.CockpitStatusBucket[]
+  tenants: string[]
 }
-
-export type ColumnKey = 'left' | 'mid' | 'right'
-
-// ── P2: 时序事件 & 拓扑 ──
-export interface CockpitEvent {
-  id: string
-  taskId: string
-  actor: string
-  kind: 'A2H' | 'A2A'
-  what: string
-  when: string
-  pending: boolean
-  ts: number
-  /** 事件涉及的图节点 id（节点级时序源筛选用；不填则该事件不在节点级时序流显示） */
-  nodeIds?: string[]
-}
-
-export type TopologyLevel = 'project' | 'req' | 'app'
-export type GraphNodeKind = 'project' | 'req' | 'file' | 'test'
-
-export interface GraphNode {
-  id: string
-  taskId: string
-  label: string
-  kind: GraphNodeKind
-  focus: boolean
-  /** 连线目标节点 id 列表（无向，由调用方去重） */
-  links?: string[]
-  /** 该节点的在场者（谁在处理这个文件/测试），节点上以小圆点显示，hover 出名字。 */
-  occupants?: string[]
-}
-
-// ── P3: 工作项 & 文件树 ──
-export type WorkDecision = 'conditional' | 'reject' | 'approve'
-
-export interface WorkItem {
-  id: string
-  taskId: string
-  decision: WorkDecision
-  riskTags: string[]
-  opinion: string
-  modifiedFiles: string[]
-  score?: number
-}
-
-export interface FileNode {
-  id: string
-  name: string
-  isDir: boolean
-  modified?: boolean
-  children?: FileNode[]
-}
-
-// ── P4: 协作频道 & 聊天 ──
-export type ChannelKind = 'matrix' | 'chat' | 'group'
-export type WorkspaceMode = 'work' | 'chat' | 'term'
 
 export interface CollabChannel {
   id: string
   taskId: string
   kind: ChannelKind
   label: string
-  members: string[]
+  routeTarget?: RouteLocationRaw
 }
 
-export interface ChatMessage {
-  id: string
-  channelId: string
-  author: string
-  isMe: boolean
-  text: string
-  ts: number
-}
+export interface FileNode { id: string; name: string; isDir: boolean; children?: FileNode[] }
 
-// ── P5: 终端 & 历史 & 归档 ──
-export type TerminalLineKind = 'prompt' | 'info' | 'ok' | 'warn' | 'dim'
-export interface TerminalLine {
-  kind: TerminalLineKind
-  text: string
-}
-
-export interface HistoryItem {
-  id: string
-  when: string
-  taskId: string
-  action: string
-  title: string
-  archived: boolean
-}
-
-export interface HistoryFilters {
-  actions: string[]
-  archived: 'all' | 'only' | 'exclude'
-}
-
-// ── P6: A2UI 模板 & 拓扑关系 ──
-export interface A2uiTemplate {
-  id: string
-  name: string
-  decision: WorkDecision
-  riskTags: string[]
-  opinion: string
-  modifiedFiles: string[]
-}
-
-export type RelationLabel = 'A2A' | 'A2H'
-
-export interface GraphRelation {
-  id: string
-  taskId: string
-  from: string
-  to: string
-  label: RelationLabel
-}
-
-const PRIORITY_ORDER: Record<CockpitPriority, number> = {
-  P0: 0, P1: 1, P2: 2, P3: 3,
-}
+const PRIORITY_ORDER: Record<CockpitPriority, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
 
 export const useCockpitStore = defineStore('cockpit', () => {
-  const tasks = ref<CockpitTask[]>([])
-  const selectedTaskId = ref<string | null>(null)
-  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], categories: [] })
-  const collapsed = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
-  const attention = ref<AttentionItem[]>([])
+  const kanban = useKanbanStore()
+  const chatStore = useChatStore()
+  const groupStore = useGroupChatStore()
+  const matrixClient = useMatrixClientStore()
+  const matrixRoom = useMatrixRoomStore()
+  const matrixComposer = useMatrixComposerStore()
 
-  const selectedTask = computed(
-    () => tasks.value.find((t) => t.id === selectedTaskId.value) ?? null,
+  // ── 派生态（computed，单一数据源）──
+  const tasks = computed(() => kanban.tasks.map(taskAdapter.toCockpitTask))
+  const attention = computed(() =>
+    kanban.tasks.map(attentionAdapter.toAttention).filter((x): x is AttentionItem => x !== null),
   )
-
-  const sortedTasks = computed(() =>
-    [...tasks.value].sort(
-      (a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority],
-    ),
-  )
-
-  const filteredTasks = computed(() =>
-    sortedTasks.value.filter((t) => {
-      const f = filters.value
-      const ok = <T,>(arr: T[], v: T) => arr.length === 0 || arr.includes(v)
-      return (
-        ok(f.priorities, t.priority) && ok(f.statuses, t.status) && ok(f.categories, t.category)
-      )
-    }),
-  )
-
-  const tasksByCategory = computed(() => ({
-    human: filteredTasks.value.filter((t) => t.category === 'human'),
-    cluster: filteredTasks.value.filter((t) => t.category === 'cluster'),
-    direct: filteredTasks.value.filter((t) => t.category === 'direct'),
-  }))
-
   const attentionCount = computed(() => attention.value.length)
 
-  function selectTask(id: string | null) {
-    selectedTaskId.value = tasks.value.some((t) => t.id === id) ? id : null
-    // 切任务时清空节点级时序源（避免上个任务的节点聚焦残留）
-    focusedGraphNodeId.value = null
-    // 退出归档只读态（recallHistoryItem 会在调用 selectTask 后重新设置）
-    archivedMode.value = false
-  }
-  function toggleCollapsed(col: ColumnKey) {
-    collapsed.value[col] = !collapsed.value[col]
-  }
-  function toggleFilter<K extends keyof CockpitFilters>(
-    key: K,
-    value: CockpitFilters[K][number],
-  ) {
-    const arr = filters.value[key] as CockpitFilters[K][number][]
-    const i = arr.indexOf(value)
-    if (i >= 0) arr.splice(i, 1)
-    else arr.push(value)
-  }
-
-  // ── P2 state ──
-  const events = ref<CockpitEvent[]>([])
-  const selectedTimelineNodeId = ref<string | null>(null)
-  /** 当前作为时序源的图节点（null=任务级时序流）。点节点 toggle，切任务清空。 */
-  const focusedGraphNodeId = ref<string | null>(null)
-  const topologyLevel = ref<TopologyLevel>('app')
-  const appTopology = ref<GraphNode[]>([])
-  const reqTopology = ref<GraphNode[]>([])
-  const projTopology = ref<GraphNode[]>([])
-  /** 按 taskId 记录用户选中的图节点（多选） */
-  const selectedGraphNodeIds = ref<Record<string, string[]>>({})
-
-  // ── P2 getters ──
-  const selectedTimelineNode = computed(
-    () => events.value.find((e) => e.id === selectedTimelineNodeId.value) ?? null,
-  )
-
-  const eventsForSelectedTask = computed(() =>
-    selectedTaskId.value
-      ? events.value
-          .filter((e) => e.taskId === selectedTaskId.value)
-          .sort((a, b) => a.ts - b.ts)
-      : [],
-  )
-
-  /** 时序流真正使用的事件源：无 focusedGraphNodeId 时=任务级；有则按节点筛选。 */
-  const eventsForTimeline = computed(() => {
-    const taskEvents = eventsForSelectedTask.value
-    if (!focusedGraphNodeId.value) return taskEvents
-    return taskEvents.filter((e) => (e.nodeIds ?? []).includes(focusedGraphNodeId.value))
-  })
-
-  const topologyForSelectedTask = computed(() => {
-    const level = topologyLevel.value
-    const pool =
-      level === 'project'
-        ? projTopology.value
-        : level === 'req'
-          ? reqTopology.value
-          : appTopology.value
-    const nodes = selectedTaskId.value
-      ? pool.filter((n) => n.taskId === selectedTaskId.value)
-      : []
-    return { level, nodes }
-  })
-
-  function recentEventsForSelectedTask(threshold: number) {
-    const all = eventsForSelectedTask.value
-    if (all.length <= threshold) return { visible: all, folded: [] as CockpitEvent[] }
-    return {
-      visible: all.slice(all.length - threshold),
-      folded: all.slice(0, all.length - threshold),
-    }
-  }
-
-  /** 基于 eventsForTimeline 的折叠版本（取代 recentEventsForSelectedTask 的时序流用法）。 */
-  function recentEventsForTimeline(threshold: number) {
-    const all = eventsForTimeline.value
-    if (all.length <= threshold) return { visible: all, folded: [] as CockpitEvent[] }
-    return {
-      visible: all.slice(all.length - threshold),
-      folded: all.slice(0, all.length - threshold),
-    }
-  }
-
-  // ── P2 methods ──
-  function selectTimelineNode(id: string | null) {
-    selectedTimelineNodeId.value = events.value.some((e) => e.id === id) ? id : null
-  }
-  function toggleGraphNode(taskId: string, nodeId: string) {
-    const cur = selectedGraphNodeIds.value[taskId] ?? []
-    const i = cur.indexOf(nodeId)
-    if (i >= 0) cur.splice(i, 1)
-    else cur.push(nodeId)
-    selectedGraphNodeIds.value = { ...selectedGraphNodeIds.value, [taskId]: cur }
-  }
-  function setTopologyLevel(level: TopologyLevel) {
-    topologyLevel.value = level
-  }
-
-  // ── P3 state ──
-  const workItems = ref<WorkItem[]>([])
-  const fileTrees = ref<Record<string, FileNode[]>>({})
-  const selectedFileId = ref<string | null>(null)
-
-  // ── P3 getters ──
-  const workItemForSelectedTask = computed(
-    () => workItems.value.find((w) => w.taskId === selectedTaskId.value) ?? null,
-  )
-  const filesForSelectedTask = computed(() =>
-    selectedTaskId.value ? (fileTrees.value[selectedTaskId.value] ?? []) : [],
-  )
-
-  // ── P3 methods ──
-  function selectFile(id: string | null) {
-    selectedFileId.value = id
-  }
-  function updateWorkItem(patch: Partial<Omit<WorkItem, 'id' | 'taskId'>>) {
-    const wi = workItemForSelectedTask.value
-    if (!wi) return
-    Object.assign(wi, patch)
-  }
-  function toggleRiskTag(tag: string) {
-    const wi = workItemForSelectedTask.value
-    if (!wi) return
-    const i = wi.riskTags.indexOf(tag)
-    if (i >= 0) wi.riskTags.splice(i, 1)
-    else wi.riskTags.push(tag)
-  }
-
-  // ── P4 state ──
+  // ── 客户端态 ──
+  const selectedTaskId = ref<string | null>(null)
+  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [] })
+  const collapsed = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
   const workspaceMode = ref<WorkspaceMode>('work')
-  const channels = ref<CollabChannel[]>([])
   const activeChannelId = ref<string | null>(null)
-  const messages = ref<Record<string, ChatMessage[]>>({})
   const maximized = ref(false)
-
-  // ── P4 getters ──
-  const channelsForSelectedTask = computed(() =>
-    selectedTaskId.value ? channels.value.filter((c) => c.taskId === selectedTaskId.value) : [],
-  )
-  const activeChannel = computed(
-    () => channels.value.find((c) => c.id === activeChannelId.value) ?? null,
-  )
-  const messagesForActiveChannel = computed(() =>
-    activeChannelId.value ? (messages.value[activeChannelId.value] ?? []) : [],
-  )
-
-  // ── P4 methods ──
-  function setWorkspaceMode(mode: WorkspaceMode) {
-    workspaceMode.value = mode
-  }
-  function selectChannel(id: string | null) {
-    activeChannelId.value = id
-    if (id) workspaceMode.value = 'chat'
-  }
-  function sendMessage(text: string) {
-    const cid = activeChannelId.value
-    if (!cid || !text.trim()) return
-    const list = messages.value[cid] ?? []
-    list.push({
-      id: 'm' + Date.now(),
-      channelId: cid,
-      author: '你',
-      isMe: true,
-      text: text.trim(),
-      ts: Date.now(),
-    })
-    messages.value = { ...messages.value, [cid]: list }
-  }
-  function toggleMaximized() {
-    maximized.value = !maximized.value
-  }
-
-  // ── P5 state ──
   const terminalMode = ref(false)
   const terminalLines = ref<TerminalLine[]>([
     { kind: 'dim', text: 'Claude Code · sandbox 模式 · 根目录由当前任务 Workspace 决定' },
@@ -367,149 +88,369 @@ export const useCockpitStore = defineStore('cockpit', () => {
     { kind: 'dim', text: '────────────────────────────' },
     { kind: 'warn', text: '! 输入指令开始编程，如「打开 refresh.ts 看并发问题」' },
   ])
-  const history = ref<HistoryItem[]>([])
   const historyOpen = ref(false)
   const historyFilters = ref<HistoryFilters>({ actions: [], archived: 'all' })
   const archivedMode = ref(false)
-  const _attentionFocusTitle = ref<string | null>(null)
-  const _attentionFocusDesc = ref<string | null>(null)
+  const templateManagerOpen = ref(false)
+  const focusedGraphNodeId = ref<string | null>(null)
+  const selectedGraphNodeIds = ref<Record<string, string[]>>({})
+  // 协作图画布变换（决策 #14）
+  const canvasTransform = ref({ x: 0, y: 0, scale: 1 })
 
-  // ── P5 getters ──
+  // ── 懒加载态 ──
+  const _detailCache = ref<Record<string, KanbanTaskDetail>>({})
+  const _fileTreeCache = ref<Record<string, FileNode[]>>({})
+  const events = ref<CockpitEvent[]>([])
+  const fileTrees = ref<Record<string, FileNode[]>>({})
+  const history = ref<HistoryItem[]>([])
+  // localStorage 写入计数器：让依赖 localStorage 的 computed（workItem/templates）能响应式刷新
+  const _kvRev = ref(0)
+  function bumpKv() { _kvRev.value++ }
+
+  // ── selectedTask / 派生 getter ──
+  const selectedTask = computed(() =>
+    tasks.value.find(t => t.id === selectedTaskId.value) ?? null,
+  )
+
+  const sortedTasks = computed(() =>
+    [...tasks.value].sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]),
+  )
+
+  const filteredTasks = computed(() =>
+    sortedTasks.value.filter(t => {
+      const f = filters.value
+      const okArr = <T,>(arr: T[], v: T) => arr.length === 0 || arr.includes(v)
+      return okArr(f.priorities, t.priority)
+        && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
+        && okArr(f.tenants, t.tenant ?? '(未指定)')
+    }),
+  )
+
+  const tasksByTenant = computed(() => {
+    const map: Record<string, CockpitTask[]> = {}
+    for (const t of filteredTasks.value) {
+      const key = t.tenant ?? '(未指定)'
+      ;(map[key] ??= []).push(t)
+    }
+    return map
+  })
+
+  // ── 时序事件 ──
+  const eventsForSelectedTask = computed(() =>
+    selectedTaskId.value
+      ? events.value.filter(e => e.taskId === selectedTaskId.value).sort((a, b) => a.ts - b.ts)
+      : [],
+  )
+
+  const eventsForTimeline = computed(() => eventsForSelectedTask.value)
+
+  function recentEventsForTimeline(threshold: number) {
+    const all = eventsForTimeline.value
+    if (all.length <= threshold) return { visible: all, folded: [] as CockpitEvent[] }
+    return { visible: all.slice(all.length - threshold), folded: all.slice(0, all.length - threshold) }
+  }
+  function recentEventsForSelectedTask(threshold: number) { return recentEventsForTimeline(threshold) }
+
+  // ── 协作图 ──
+  const topologyForSelectedTask = computed(() => {
+    const detail = selectedTaskId.value ? _detailCache.value[selectedTaskId.value] : undefined
+    return topologyAdapter.buildTopology(selectedTask.value, detail, tasks.value)
+  })
+  const relationsForSelectedTask = computed(() => topologyForSelectedTask.value.relations)
+
+  // ── 频道（parseTenant）──
+  const channels = computed<CollabChannel[]>(() => {
+    const t = selectedTask.value
+    if (!t) return []
+    const parsed = collabAdapter.parseTenant(t.tenant)
+    if (!parsed || parsed.kind === 'plain') return []
+    return [{
+      id: `ch-${t.id}`, taskId: t.id,
+      kind: parsed.kind === 'session' ? 'chat' : parsed.kind,
+      label: parsed.label, routeTarget: parsed.routeTarget,
+    }]
+  })
+  const channelsForSelectedTask = computed(() => channels.value)
+  const activeChannel = computed(() => channels.value.find(c => c.id === activeChannelId.value) ?? null)
+
+  // ── 文件树 ──
+  const filesForSelectedTask = computed(() =>
+    selectedTaskId.value ? (fileTrees.value[selectedTaskId.value] ?? []) : [],
+  )
+
+  // ── 工作项（localStorage）──
+  const workItemForSelectedTask = computed(() => {
+    void _kvRev.value  // 依赖 kv 写入计数器
+    const id = selectedTaskId.value
+    return id ? kv.loadDraft(id) : null
+  })
+
+  // ── 历史 ──
   const filteredHistory = computed(() =>
-    history.value.filter((h) => {
+    history.value.filter(h => {
       const f = historyFilters.value
       const actionOk = f.actions.length === 0 || f.actions.includes(h.action)
-      const archOk =
-        f.archived === 'all' ? true : f.archived === 'only' ? h.archived : !h.archived
+      const archOk = f.archived === 'all' ? true : f.archived === 'only' ? h.archived : !h.archived
       return actionOk && archOk
     }),
   )
 
-  // ── P5 methods ──
-  function enterTerminal() {
-    terminalMode.value = true
-    workspaceMode.value = 'term'
+  // ── bootstrap ──
+  async function bootstrap() {
+    await Promise.allSettled([
+      kanban.fetchTasks(),
+      kanban.fetchAssignees(),
+      chatStore.loadSessions(),
+      groupStore.connect().then(() => groupStore.loadRooms()).catch(() => {}),
+      matrixClient.initClient(),
+    ])
+    if (kanban.tasks.length) await selectTask(kanban.tasks[0].id)
+    kanban.startEventStream?.()
   }
-  function exitTerminal() {
-    terminalMode.value = false
-    workspaceMode.value = 'work'
+
+  async function selectTask(id: string | null) {
+    selectedTaskId.value = id
+    focusedGraphNodeId.value = null
+    archivedMode.value = false
+    if (!id) { events.value = []; return }
+    await loadTaskDetail(id)
   }
-  function sendTerminalCommand(cmd: string) {
-    const c = cmd.trim()
-    if (!c) return
-    terminalLines.value.push({ kind: 'prompt', text: c })
-    terminalLines.value.push({ kind: 'info', text: `ℹ sandbox 内执行：${c}` })
+
+  async function loadTaskDetail(id: string) {
+    try {
+      const detail = _detailCache.value[id] ?? await kanbanApi.getTask(id)
+      _detailCache.value[id] = detail
+      events.value = eventAdapter.mergeDetail(detail)
+      const profile = detail.task.assignee ?? undefined
+      if (profile) extras.searchSessions(id, profile).catch(() => {})
+    } catch {
+      events.value = []
+    }
+    if (!_fileTreeCache.value[id]) {
+      try {
+        _fileTreeCache.value[id] = await extras.listWorkspaceFiles(id)
+        fileTrees.value = { ...fileTrees.value, [id]: _fileTreeCache.value[id] }
+      } catch {
+        fileTrees.value = { ...fileTrees.value, [id]: [] }
+      }
+    }
   }
-  function openHistory() {
+
+  // ── WebSocket 联动：tasks 引用变化 → 选中任务 detail invalidate ──
+  watch(() => kanban.tasks, (newTasks) => {
+    const id = selectedTaskId.value
+    if (!id || !newTasks.some(t => t.id === id)) return
+    if (_detailCache.value[id]) {
+      delete _detailCache.value[id]
+      loadTaskDetail(id)
+    }
+  })
+
+  // ── 工作区/折叠/筛选 ──
+  function toggleCollapsed(col: ColumnKey) { collapsed.value[col] = !collapsed.value[col] }
+  function toggleFilter<K extends keyof CockpitFilters>(key: K, value: CockpitFilters[K][number]) {
+    const arr = filters.value[key] as CockpitFilters[K][number][]
+    const i = arr.indexOf(value)
+    if (i >= 0) {
+      arr.splice(i, 1)
+    } else {
+      arr.push(value)
+    }
+  }
+  function setWorkspaceMode(mode: WorkspaceMode) { workspaceMode.value = mode }
+  function toggleMaximized() { maximized.value = !maximized.value }
+
+  // ── 文件/节点 ──
+  const selectedFileId = ref<string | null>(null)
+  function selectFile(id: string | null) { selectedFileId.value = id }
+  function toggleGraphNode(taskId: string, nodeId: string) {
+    const cur = selectedGraphNodeIds.value[taskId] ?? []
+    const i = cur.indexOf(nodeId)
+    if (i >= 0) {
+      cur.splice(i, 1)
+    } else {
+      cur.push(nodeId)
+    }
+    selectedGraphNodeIds.value = { ...selectedGraphNodeIds.value, [taskId]: cur }
+  }
+  function focusOnGraphNodeForTimeline(nodeId: string) {
+    focusedGraphNodeId.value = focusedGraphNodeId.value === nodeId ? null : nodeId
+  }
+
+  // ── 工作项 ──
+  function updateWorkItem(patch: Partial<DraftWorkItem>) {
+    const id = selectedTaskId.value
+    if (!id) return
+    kv.saveDraft(id, patch)
+    bumpKv()
+  }
+  function toggleRiskTag(tag: string) {
+    const id = selectedTaskId.value
+    if (!id) return
+    const cur = kv.loadDraft(id)
+    if (!cur) return
+    const i = cur.riskTags.indexOf(tag)
+    if (i >= 0) {
+      cur.riskTags.splice(i, 1)
+    } else {
+      cur.riskTags.push(tag)
+    }
+    kv.saveDraft(id, { riskTags: cur.riskTags })
+    bumpKv()
+  }
+  async function submitWorkItem() {
+    const id = selectedTaskId.value
+    const draft = id ? kv.loadDraft(id) : null
+    if (!id || !draft) return
+    const text = `[决策:${draft.decision}] 风险:${draft.riskTags.join(',')} ${draft.opinion}`.trim()
+    await kanbanApi.addComment(id, { body: text })
+    kv.clearDraft(id)
+    bumpKv()
+    delete _detailCache.value[id]
+    await loadTaskDetail(id)
+  }
+
+  // ── 频道（聊天精简壳）──
+  function selectChannel(id: string | null) {
+    activeChannelId.value = id
+    if (id) workspaceMode.value = 'chat'
+  }
+  async function sendMessage(text: string): Promise<void> {
+    const ch = activeChannel.value
+    if (!ch || !text.trim()) return
+    switch (ch.kind) {
+      case 'matrix': await matrixComposer.sendMessage(text); break
+      case 'chat': await chatStore.sendMessage(text); break
+      case 'group': await groupStore.sendMessage(text); break
+    }
+  }
+  const messagesForActiveChannel = computed<ChatMessage[]>(() => {
+    const ch = activeChannel.value
+    if (!ch) return []
+    switch (ch.kind) {
+      case 'matrix': return [] // matrix 消息归一需 currentUserId，由组件层注入 adapter 调用
+      case 'chat': return (chatStore as any).messages?.map?.((m: any) => ({
+        id: m.id, channelId: ch.id, author: m.role === 'user' ? '你' : m.role,
+        isMe: m.role === 'user', text: m.content, ts: m.timestamp,
+      })) ?? []
+      case 'group': return (groupStore as any).sortedMessages?.map?.((m: any) => ({
+        id: m.id, channelId: ch.id, author: m.senderName || m.senderId,
+        isMe: false, text: m.content, ts: m.timestamp,
+      })) ?? []
+    }
+    return []
+  })
+  function disconnectOnUnmount() {
+    try { groupStore.disconnect?.() } catch { /* ignore */ }
+  }
+
+  // ── 历史 ──
+  async function openHistory() {
     historyOpen.value = true
+    try {
+      const res = await extras.getTimeline({ limit: 100 })
+      history.value = historyAdapter.mergeTimeline(res.items)
+    } catch {
+      history.value = []
+    }
   }
-  function closeHistory() {
-    historyOpen.value = false
-  }
+  function closeHistory() { historyOpen.value = false }
   function toggleHistoryAction(action: string) {
     const arr = historyFilters.value.actions
     const i = arr.indexOf(action)
-    if (i >= 0) arr.splice(i, 1)
-    else arr.push(action)
+    if (i >= 0) {
+      arr.splice(i, 1)
+    } else {
+      arr.push(action)
+    }
   }
-  function setHistoryArchivedFilter(v: 'all' | 'only' | 'exclude') {
-    historyFilters.value.archived = v
-  }
+  function setHistoryArchivedFilter(v: 'all' | 'only' | 'exclude') { historyFilters.value.archived = v }
   function recallHistoryItem(id: string) {
-    const item = history.value.find((h) => h.id === id)
+    const item = history.value.find(h => h.id === id)
     if (!item) return
     selectTask(item.taskId)
     archivedMode.value = item.archived
     setWorkspaceMode('work')
     historyOpen.value = false
   }
-  function clearArchivedMode() {
-    archivedMode.value = false
-  }
+  function clearArchivedMode() { archivedMode.value = false }
 
-  // ── 联动：注意力/时序/拓扑点击 → 右栏工作区 ──
+  // ── 联动：注意力/时序 ──
+  const _attentionFocusTitle = ref<string | null>(null)
+  const _attentionFocusDesc = ref<string | null>(null)
   function focusOnTaskFromAttention(taskId: string, title?: string, desc?: string) {
     selectTask(taskId)
     setWorkspaceMode('work')
-    // 暂存注意力点击的文案供 Workspace banner 显示
     _attentionFocusTitle.value = title ?? null
     _attentionFocusDesc.value = desc ?? null
   }
-  function focusOnTimelineNode(eventId: string) {
-    selectTimelineNode(eventId)
+  function focusOnTimelineNode(_eventId: string) {
     setWorkspaceMode('work')
   }
-  function focusOnGraphNodeForTimeline(nodeId: string) {
-    // toggle：点已聚焦节点→取消（回任务级）；点新节点→设为时序源。
-    focusedGraphNodeId.value = focusedGraphNodeId.value === nodeId ? null : nodeId
+
+  // ── 终端 ──
+  function enterTerminal() { terminalMode.value = true; workspaceMode.value = 'term' }
+  function exitTerminal() { terminalMode.value = false; workspaceMode.value = 'work' }
+  function sendTerminalCommand(cmd: string) {
+    const c = cmd.trim()
+    if (!c) return
+    terminalLines.value.push({ kind: 'prompt', text: c })
+    terminalLines.value.push({ kind: 'info', text: `ℹ sandbox 内执行：${c}` })
   }
 
-  // ── P6 state ──
-  const templates = ref<A2uiTemplate[]>([])
-  const templateManagerOpen = ref(false)
-  const appRelations = ref<GraphRelation[]>([])
-
-  // ── P6 getters ──
-  const relationsForSelectedTask = computed(() =>
-    selectedTaskId.value ? appRelations.value.filter((r) => r.taskId === selectedTaskId.value) : [],
-  )
-
-  // ── P6 methods ──
+  // ── 模板（localStorage）──
+  const templates = computed(() => { void _kvRev.value; return kv.loadTemplates() })
   function saveTemplateFromCurrentWorkItem(name: string) {
-    const wi = workItemForSelectedTask.value
-    if (!wi) return
-    templates.value.push({
-      id: 'tpl-' + Date.now(),
-      name,
-      decision: wi.decision,
-      riskTags: [...wi.riskTags],
-      opinion: wi.opinion,
-      modifiedFiles: [...wi.modifiedFiles],
+    const id = selectedTaskId.value
+    const draft = id ? kv.loadDraft(id) : null
+    if (!draft) return
+    const list = kv.loadTemplates()
+    list.push({
+      id: 'tpl-' + Date.now(), name, decision: draft.decision,
+      riskTags: [...draft.riskTags], opinion: draft.opinion, modifiedFiles: [...draft.modifiedFiles],
     })
+    kv.saveTemplates(list)
+    bumpKv()
   }
   function deleteTemplate(id: string) {
-    const i = templates.value.findIndex((t) => t.id === id)
-    if (i >= 0) templates.value.splice(i, 1)
+    const list = kv.loadTemplates().filter(t => t.id !== id)
+    kv.saveTemplates(list)
+    bumpKv()
   }
   function applyTemplateToCurrentWorkItem(templateId: string) {
-    const tpl = templates.value.find((t) => t.id === templateId)
-    const wi = workItemForSelectedTask.value
-    if (!tpl || !wi) return
-    wi.decision = tpl.decision
-    wi.riskTags = [...tpl.riskTags]
-    wi.opinion = tpl.opinion
+    const tpl = kv.loadTemplates().find(t => t.id === templateId)
+    const id = selectedTaskId.value
+    if (!tpl || !id) return
+    kv.saveDraft(id, { decision: tpl.decision, riskTags: [...tpl.riskTags], opinion: tpl.opinion })
+    bumpKv()
     templateManagerOpen.value = false
   }
-  function openTemplateManager() {
-    templateManagerOpen.value = true
-  }
-  function closeTemplateManager() {
-    templateManagerOpen.value = false
-  }
+  function openTemplateManager() { templateManagerOpen.value = true }
+  function closeTemplateManager() { templateManagerOpen.value = false }
 
   return {
-    tasks, selectedTaskId, filters, collapsed, attention,
-    selectedTask, sortedTasks, filteredTasks, tasksByCategory, attentionCount,
-    selectTask, toggleCollapsed, toggleFilter,
-    events, selectedTimelineNodeId, focusedGraphNodeId, topologyLevel, appTopology, reqTopology, projTopology, selectedGraphNodeIds,
-    selectedTimelineNode, eventsForSelectedTask, eventsForTimeline, topologyForSelectedTask, recentEventsForSelectedTask, recentEventsForTimeline,
-    selectTimelineNode, toggleGraphNode, setTopologyLevel,
-    workItems, fileTrees, selectedFileId,
-    workItemForSelectedTask, filesForSelectedTask,
-    selectFile, updateWorkItem, toggleRiskTag,
-    workspaceMode, channels, activeChannelId, messages, maximized,
-    channelsForSelectedTask, activeChannel, messagesForActiveChannel,
-    setWorkspaceMode, selectChannel, sendMessage, toggleMaximized,
-    terminalMode, terminalLines, history, historyOpen, historyFilters, archivedMode,
-    filteredHistory,
+    // 派生态
+    tasks, attention, attentionCount, selectedTask, selectedTaskId,
+    sortedTasks, filteredTasks, tasksByTenant,
+    events, eventsForSelectedTask, eventsForTimeline, recentEventsForTimeline, recentEventsForSelectedTask,
+    topologyForSelectedTask, relationsForSelectedTask,
+    channels, channelsForSelectedTask, activeChannel,
+    filesForSelectedTask, workItemForSelectedTask,
+    filteredHistory, messagesForActiveChannel, templates,
+    // 客户端态
+    filters, collapsed, workspaceMode, activeChannelId, maximized,
+    terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
+    templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
+    _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
+    // 方法
+    bootstrap, selectTask, loadTaskDetail,
+    toggleCollapsed, toggleFilter, setWorkspaceMode, toggleMaximized,
+    selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
+    updateWorkItem, toggleRiskTag, submitWorkItem,
+    selectChannel, sendMessage, disconnectOnUnmount,
+    openHistory, closeHistory, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
+    focusOnTaskFromAttention, focusOnTimelineNode,
     enterTerminal, exitTerminal, sendTerminalCommand,
-    openHistory, closeHistory, toggleHistoryAction, setHistoryArchivedFilter,
-    recallHistoryItem, clearArchivedMode,
-    _attentionFocusTitle, _attentionFocusDesc,
-    focusOnTaskFromAttention, focusOnTimelineNode, focusOnGraphNodeForTimeline,
-    templates, templateManagerOpen, appRelations,
-    relationsForSelectedTask,
-    saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem,
-    openTemplateManager, closeTemplateManager,
+    saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,
   }
 })

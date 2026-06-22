@@ -1,463 +1,355 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useCockpitStore, type CockpitTask } from '@/custom/cockpit/store/cockpit'
 
-const task = (over: Partial<CockpitTask> = {}): CockpitTask => ({
-  id: 't1',
-  title: 'PR #142',
-  category: 'human',
-  priority: 'P0',
-  status: 'review',
-  assignee: '@张三',
-  workspace: '~/ws/auth-svc',
-  ...over,
+// ── mock kanban store ──
+const { mockKanbanTasks, fetchTasks, fetchAssignees, startEventStream } = vi.hoisted(() => ({
+  mockKanbanTasks: [] as any[],
+  fetchTasks: vi.fn(async () => { /* 由用例填充 mockKanbanTasks */ }),
+  fetchAssignees: vi.fn(async () => {}),
+  startEventStream: vi.fn(),
+}))
+vi.mock('@/stores/hermes/kanban', () => ({
+  useKanbanStore: () => ({
+    tasks: mockKanbanTasks,
+    fetchTasks, fetchAssignees, startEventStream,
+  }),
+}))
+
+// ── mock kanban-extras ──
+const { searchSessions, listWorkspaceFiles, getTimeline } = vi.hoisted(() => ({
+  searchSessions: vi.fn(async () => []),
+  listWorkspaceFiles: vi.fn(async () => []),
+  getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
+}))
+vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
+  searchSessions, listWorkspaceFiles, getTimeline,
+}))
+
+// ── mock kanban api（保留类型导出）──
+const { getTask, addComment } = vi.hoisted(() => ({
+  getTask: vi.fn(async () => null),
+  addComment: vi.fn(async () => ({ ok: true })),
+}))
+vi.mock('@/api/hermes/kanban', async () => {
+  const actual = await vi.importActual<any>('@/api/hermes/kanban')
+  return { ...actual, getTask, addComment }
 })
 
-describe('useCockpitStore', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+// ── mock 聊天 store（bootstrap 会调）──
+vi.mock('@/stores/hermes/chat', () => ({
+  useChatStore: () => ({
+    loadSessions: vi.fn(async () => {}),
+    messages: [],
+    sendMessage: vi.fn(async () => {}),
+    switchSession: vi.fn(async () => {}),
+  }),
+}))
+vi.mock('@/stores/hermes/group-chat', () => ({
+  useGroupChatStore: () => ({
+    connect: vi.fn(async () => {}),
+    disconnect: vi.fn(),
+    loadRooms: vi.fn(async () => {}),
+    joinRoom: vi.fn(async () => {}),
+    sendMessage: vi.fn(async () => {}),
+    sortedMessages: [],
+  }),
+}))
+vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
+  useMatrixClientStore: () => ({ initClient: vi.fn(async () => {}), syncState: { value: 'PREPARED' } }),
+}))
+vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
+  useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [] }),
+}))
+vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
+  useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }),
+}))
 
-  it('selects a task by id and exposes its workspace', () => {
+import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+
+// 内存 localStorage polyfill（vitest 3.x jsdom 默认 stub localStorage）
+class MemStorage {
+  private m = new Map<string, string>()
+  getItem(k: string) { return this.m.has(k) ? this.m.get(k)! : null }
+  setItem(k: string, v: string) { this.m.set(k, String(v)) }
+  removeItem(k: string) { this.m.delete(k) }
+  clear() { this.m.clear() }
+}
+let savedLS: any
+beforeEach(() => {
+  setActivePinia(createPinia())
+  mockKanbanTasks.splice(0, mockKanbanTasks.length)
+  fetchTasks.mockClear(); fetchAssignees.mockClear(); startEventStream.mockClear()
+  searchSessions.mockClear(); listWorkspaceFiles.mockClear(); getTimeline.mockClear()
+  getTask.mockClear(); addComment.mockClear()
+  savedLS = (globalThis as any).localStorage
+  Object.defineProperty(globalThis, 'localStorage', { value: new MemStorage(), configurable: true, writable: true })
+})
+afterEach(() => {
+  if (savedLS === undefined) delete (globalThis as any).localStorage
+  else (globalThis as any).localStorage = savedLS
+})
+
+// 构造一个最小 KanbanTask
+const kt = (over: Record<string, any> = {}) => ({
+  id: 't1', title: 'T', body: null, assignee: 'alice', status: 'todo',
+  priority: 0, created_by: null, created_at: 0, started_at: null, completed_at: null,
+  workspace_kind: 'dir', workspace_path: '~/ws', tenant: null, project_id: null,
+  result: null, skills: null, latest_summary: null, ...over,
+})
+
+describe('cockpit store bootstrap + 派生态', () => {
+  it('bootstrap pulls kanban tasks and selects first', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', title: 'T1', priority: 3 }))
     const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' }), task({ id: 't2', workspace: '~/ws/fe' })]
-    s.selectTask('t2')
-    expect(s.selectedTaskId).toBe('t2')
-    expect(s.selectedTask?.workspace).toBe('~/ws/fe')
+    await s.bootstrap()
+    expect(fetchTasks).toHaveBeenCalled()
+    expect(s.selectedTaskId).toBe('t1')
+    expect(s.tasks[0].priority).toBe('P0')
+    expect(s.tasks[0].title).toBe('T1')
   })
 
-  it('sorts tasks by priority (P0 first, then P1)', () => {
+  it('tasks is derived (computed) — not directly assignable', async () => {
     const s = useCockpitStore()
-    s.tasks = [task({ id: 'b', priority: 'P1' }), task({ id: 'a', priority: 'P0' })]
-    expect(s.sortedTasks.map((t) => t.id)).toEqual(['a', 'b'])
+    mockKanbanTasks.push(kt({ id: 'x1' }))
+    expect(s.tasks.map(t => t.id)).toEqual(['x1'])
+    // computed 在 store 上是只读：直接赋值不会改变派生值（Vue 仅 warn 不抛错）
+    ;(s as any).tasks = []
+    expect(s.tasks.map(t => t.id)).toEqual(['x1']) // 仍是派生值
   })
 
-  it('filters by priority, status, category', () => {
+  it('attention derived from status (blocked→high, review→medium)', async () => {
+    mockKanbanTasks.push(
+      kt({ id: 'b1', title: '阻塞', status: 'blocked' }),
+      kt({ id: 'r1', title: '评审', status: 'review' }),
+      kt({ id: 'o1', title: '其他', status: 'todo' }),
+    )
     const s = useCockpitStore()
-    s.tasks = [
-      task({ id: '1', priority: 'P0', status: 'review', category: 'human' }),
-      task({ id: '2', priority: 'P1', status: 'blocked', category: 'cluster' }),
-    ]
-    s.filters = { priorities: ['P0'], statuses: [], categories: [] }
-    expect(s.filteredTasks.map((t) => t.id)).toEqual(['1'])
+    expect(s.attention).toHaveLength(2)
+    expect(s.attentionCount).toBe(2)
+    expect(s.attention.find(a => a.taskId === 'b1')!.severity).toBe('high')
+    expect(s.attention.find(a => a.taskId === 'r1')!.severity).toBe('medium')
   })
 
-  it('empty filter array means "all" (not "none")', () => {
+  it('sortedTasks orders P0 before P1 before P2 before P3', async () => {
+    mockKanbanTasks.push(
+      kt({ id: 'p2', priority: 1 }),
+      kt({ id: 'p0', priority: 5 }),
+      kt({ id: 'p1', priority: 2 }),
+    )
     const s = useCockpitStore()
-    s.tasks = [task({ id: '1', priority: 'P0' }), task({ id: '2', priority: 'P2' })]
-    s.filters = { priorities: [], statuses: [], categories: [] }
-    expect(s.filteredTasks).toHaveLength(2)
+    expect(s.sortedTasks.map(t => t.id)).toEqual(['p0', 'p1', 'p2'])
   })
 
-  it('toggles a column collapsed state', () => {
+  it('tasksByTenant groups by tenant field, null → (未指定)', async () => {
+    mockKanbanTasks.push(
+      kt({ id: 't1', tenant: 'team-x' }),
+      kt({ id: 't2', tenant: null }),
+    )
     const s = useCockpitStore()
-    expect(s.collapsed.left).toBe(false)
-    s.toggleCollapsed('left')
-    expect(s.collapsed.left).toBe(true)
+    expect(Object.keys(s.tasksByTenant).sort()).toEqual(['(未指定)', 'team-x'])
+    expect(s.tasksByTenant['team-x'].map(t => t.id)).toEqual(['t1'])
+    expect(s.tasksByTenant['(未指定)'].map(t => t.id)).toEqual(['t2'])
   })
 
-  it('attention items derive a count', () => {
+  it('filteredTasks respects priority filter', async () => {
+    mockKanbanTasks.push(kt({ id: 'a', priority: 3 }), kt({ id: 'b', priority: 0 }))
     const s = useCockpitStore()
-    s.attention = [{ id: 'a1', severity: 'high', title: 'x', taskId: 't1' }]
-    expect(s.attentionCount).toBe(1)
-  })
-
-  it('selectTask clears when id not found', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('nope')
-    expect(s.selectedTaskId).toBeNull()
-    expect(s.selectedTask).toBeNull()
-  })
-
-  it('toggleFilter adds then removes a value, and recomputes filteredTasks', () => {
-    const s = useCockpitStore()
-    s.tasks = [
-      task({ id: '1', priority: 'P0', status: 'review', category: 'human' }),
-      task({ id: '2', priority: 'P1', status: 'blocked', category: 'cluster' }),
-    ]
-    // add
     s.toggleFilter('priorities', 'P0')
-    expect(s.filters.priorities).toEqual(['P0'])
-    expect(s.filteredTasks.map((t) => t.id)).toEqual(['1'])
-    // remove
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['a'])
+  })
+
+  it('filteredTasks respects status bucket filter', async () => {
+    mockKanbanTasks.push(kt({ id: 'a', status: 'blocked' }), kt({ id: 'b', status: 'todo' }))
+    const s = useCockpitStore()
+    s.toggleFilter('statuses', 'blocked')
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['a'])
+  })
+
+  it('filteredTasks respects tenant filter', async () => {
+    mockKanbanTasks.push(kt({ id: 'a', tenant: 'x' }), kt({ id: 'b', tenant: 'y' }))
+    const s = useCockpitStore()
+    s.toggleFilter('tenants', 'x')
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['a'])
+  })
+
+  it('toggleFilter toggles value off', async () => {
+    mockKanbanTasks.push(kt({ id: 'a', priority: 3 }), kt({ id: 'b', priority: 0 }))
+    const s = useCockpitStore()
     s.toggleFilter('priorities', 'P0')
-    expect(s.filters.priorities).toEqual([])
-    expect(s.filteredTasks.map((t) => t.id)).toEqual(['1', '2'])
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['a'])
+    s.toggleFilter('priorities', 'P0')
+    expect(s.filteredTasks.map(t => t.id).sort()).toEqual(['a', 'b'])
+  })
+})
+
+describe('cockpit store selectTask + 联动加载', () => {
+  it('selectTask loads detail (events) + fileTree', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', assignee: 'arch' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    expect(getTask).toHaveBeenCalledWith('t1')
+    expect(listWorkspaceFiles).toHaveBeenCalledWith('t1')
   })
 
-  it('tasksByCategory groups filtered tasks by category', () => {
+  it('selectTask null clears events', async () => {
     const s = useCockpitStore()
-    s.tasks = [
-      task({ id: '1', category: 'human', priority: 'P0' }),
-      task({ id: '2', category: 'cluster', priority: 'P0' }),
-      task({ id: '3', category: 'human', priority: 'P1' }),
-    ]
-    expect(s.tasksByCategory.human.map((t) => t.id)).toEqual(['1', '3'])
-    expect(s.tasksByCategory.cluster.map((t) => t.id)).toEqual(['2'])
-    expect(s.tasksByCategory.direct).toEqual([])
+    await s.selectTask(null)
+    expect(s.events).toEqual([])
   })
 
-  it('selects a timeline node by id', () => {
+  it('selectTask sets selectedTaskId + selectedTask derived', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', title: 'Hello' }))
     const s = useCockpitStore()
-    s.events = [
-      { id: 'e1', taskId: 't1', actor: 'review-agent', kind: 'A2A', what: '委派', when: '14:36', pending: true, ts: 1739 },
-      { id: 'e2', taskId: 't1', actor: 'qa-agent', kind: 'A2H', what: '写用例', when: '14:40', pending: false, ts: 1740 },
-    ]
-    s.selectTimelineNode('e2')
-    expect(s.selectedTimelineNodeId).toBe('e2')
-    expect(s.selectedTimelineNode?.what).toBe('写用例')
+    await s.bootstrap()
+    expect(s.selectedTaskId).toBe('t1')
+    expect(s.selectedTask?.title).toBe('Hello')
   })
+})
 
-  it('eventsForSelectedTask filters by selected task id', () => {
+describe('cockpit store 工作项 localStorage 草稿', () => {
+  it('updateWorkItem writes localStorage; workItemForSelectedTask reads back', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
     const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.events = [
-      { id: 'e1', taskId: 't1', actor: 'a', kind: 'A2H', what: 'x', when: '14:00', pending: false, ts: 1 },
-      { id: 'e2', taskId: 't2', actor: 'b', kind: 'A2A', what: 'y', when: '14:01', pending: false, ts: 2 },
-    ]
-    expect(s.eventsForSelectedTask.map((e) => e.id)).toEqual(['e1'])
-  })
-
-  it('topologyForTask returns app-level nodes by default', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1', workspace: '~/ws/auth-svc' })]
-    s.selectTask('t1')
-    s.appTopology = [
-      { id: 'n1', taskId: 't1', label: 'refresh.ts', kind: 'file', focus: true },
-      { id: 'n2', taskId: 't1', label: 'auth.spec', kind: 'file', focus: false },
-    ]
-    const topo = s.topologyForSelectedTask
-    expect(topo.level).toBe('app')
-    expect(topo.nodes.map((n) => n.id)).toEqual(['n1', 'n2'])
-  })
-
-  it('switching topology level changes returned nodes', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.appTopology = [{ id: 'n1', taskId: 't1', label: 'refresh.ts', kind: 'file', focus: true }]
-    s.reqTopology = [{ id: 'r1', taskId: 't1', label: '认证重构', kind: 'req', focus: true }]
-    s.projTopology = [{ id: 'p1', taskId: 't1', label: 'auth-platform', kind: 'project', focus: true }]
-    s.topologyLevel = 'req'
-    expect(s.topologyForSelectedTask.nodes[0].id).toBe('r1')
-    s.topologyLevel = 'project'
-    expect(s.topologyForSelectedTask.nodes[0].id).toBe('p1')
-  })
-
-  it('selecting a graph node sets selectedGraphNodeIds for that task', () => {
-    const s = useCockpitStore()
-    s.appTopology = [{ id: 'n1', taskId: 't1', label: 'refresh.ts', kind: 'file', focus: true }]
-    s.toggleGraphNode('t1', 'n1')
-    expect(s.selectedGraphNodeIds['t1']).toContain('n1')
-    s.toggleGraphNode('t1', 'n1')
-    expect(s.selectedGraphNodeIds['t1']).not.toContain('n1')
-  })
-
-  it('collapses older timeline events into a fold when more than threshold', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.events = Array.from({ length: 6 }, (_, i) => ({
-      id: 'e' + i, taskId: 't1', actor: 'a', kind: 'A2H' as const, what: 'x' + i, when: '1' + i, pending: false, ts: i,
-    }))
-    const recent = s.recentEventsForSelectedTask(4)
-    expect(recent.visible.map((e) => e.id)).toEqual(['e2', 'e3', 'e4', 'e5'])
-    expect(recent.folded.length).toBe(2)
-    expect(recent.folded.map((e) => e.id)).toEqual(['e0', 'e1'])
-  })
-
-  it('workItemForSelectedTask returns the work item bound to the selected task', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.workItems = [
-      { id: 'w1', taskId: 't1', decision: 'conditional', riskTags: ['concurrency', 'test-gap'], opinion: '补用例再合并', modifiedFiles: ['refresh.ts'] },
-    ]
-    expect(s.workItemForSelectedTask?.decision).toBe('conditional')
-  })
-
-  it('workItemForSelectedTask returns null when task has no work item', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.workItems = []
-    expect(s.workItemForSelectedTask).toBeNull()
-  })
-
-  it('filesForSelectedTask returns files for the selected task workspace', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1', workspace: '~/ws/auth-svc' })]
-    s.selectTask('t1')
-    s.fileTrees = {
-      't1': [
-        { id: 'f1', name: 'src', isDir: true, children: [{ id: 'f2', name: 'refresh.ts', isDir: false, modified: true }] },
-        { id: 'f3', name: 'package.json', isDir: false, modified: false },
-      ],
-    }
-    const files = s.filesForSelectedTask
-    expect(files.map((f) => f.id)).toEqual(['f1', 'f3'])
-    expect(files[0].children?.[0].modified).toBe(true)
-  })
-
-  it('filesForSelectedTask returns empty array when task has no tree', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.fileTrees = {}
-    expect(s.filesForSelectedTask).toEqual([])
-  })
-
-  it('selectFile sets selectedFileId', () => {
-    const s = useCockpitStore()
-    s.selectFile('f2')
-    expect(s.selectedFileId).toBe('f2')
-  })
-
-  it('updateDecision updates the work item for selected task', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.workItems = [{ id: 'w1', taskId: 't1', decision: 'conditional', riskTags: [], opinion: '', modifiedFiles: [] }]
-    s.updateWorkItem({ decision: 'reject' })
+    await s.bootstrap()
+    s.updateWorkItem({ decision: 'reject', opinion: '不行' })
     expect(s.workItemForSelectedTask?.decision).toBe('reject')
+    expect(s.workItemForSelectedTask?.opinion).toBe('不行')
   })
 
-  it('toggleRiskTag adds and removes a risk tag', () => {
+  it('toggleRiskTag adds then removes', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
     const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.workItems = [{ id: 'w1', taskId: 't1', decision: 'conditional', riskTags: ['concurrency'], opinion: '', modifiedFiles: [] }]
+    await s.bootstrap()
+    s.updateWorkItem({ riskTags: ['concurrency'] })
     s.toggleRiskTag('test-gap')
     expect(s.workItemForSelectedTask?.riskTags).toContain('test-gap')
     s.toggleRiskTag('concurrency')
     expect(s.workItemForSelectedTask?.riskTags).not.toContain('concurrency')
   })
 
-  it('switches workspace mode between work and chat', () => {
+  it('submitWorkItem posts comment + clears draft', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
     const s = useCockpitStore()
-    expect(s.workspaceMode).toBe('work')
-    s.setWorkspaceMode('chat')
+    await s.bootstrap()
+    s.updateWorkItem({ decision: 'approve', riskTags: ['x'], opinion: '好' })
+    await s.submitWorkItem()
+    expect(addComment).toHaveBeenCalledWith('t1', { body: expect.stringContaining('[决策:approve]') })
+    expect(s.workItemForSelectedTask).toBeNull()
+  })
+})
+
+describe('cockpit store 频道（parseTenant 派生）', () => {
+  it('channel derived from tenant matrix:...', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', tenant: 'matrix:!r:s.ms:Auth联调' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    expect(s.channelsForSelectedTask).toHaveLength(1)
+    expect(s.channelsForSelectedTask[0].kind).toBe('matrix')
+    expect(s.channelsForSelectedTask[0].label).toBe('Auth联调')
+  })
+
+  it('plain tenant → no channel', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', tenant: 'platform-team' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    expect(s.channelsForSelectedTask).toEqual([])
+  })
+
+  it('selectChannel switches workspace mode to chat', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', tenant: 'matrix:!r:m:X' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    const chId = s.channelsForSelectedTask[0].id
+    s.selectChannel(chId)
+    expect(s.activeChannelId).toBe(chId)
     expect(s.workspaceMode).toBe('chat')
   })
+})
 
-  it('channelsForSelectedTask returns channels bound to the task', () => {
+describe('cockpit store 协作图（topology）', () => {
+  it('topologyForSelectedTask has center node focused', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', title: '中心' }))
     const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.channels = [
-      { id: 'c1', taskId: 't1', kind: 'matrix', label: 'auth-svc 联调', members: ['张三', '李四', '你'] },
-      { id: 'c2', taskId: 't2', kind: 'group', label: '其它', members: [] },
-    ]
-    expect(s.channelsForSelectedTask.map((c) => c.id)).toEqual(['c1'])
+    await s.bootstrap()
+    const center = s.topologyForSelectedTask.nodes.find(n => n.kind === 'center')
+    expect(center?.label).toBe('中心')
+    expect(center?.focus).toBe(true)
   })
+})
 
-  it('selectChannel sets active channel id and switches mode to chat', () => {
+describe('cockpit store 终端 + 历史 + 模板（客户端态）', () => {
+  it('terminal lifecycle', async () => {
     const s = useCockpitStore()
-    s.channels = [{ id: 'c1', taskId: 't1', kind: 'matrix', label: 'x', members: [] }]
-    s.selectChannel('c1')
-    expect(s.activeChannelId).toBe('c1')
-    expect(s.workspaceMode).toBe('chat')
-  })
-
-  it('messagesForActiveChannel returns messages for the active channel', () => {
-    const s = useCockpitStore()
-    s.channels = [{ id: 'c1', taskId: 't1', kind: 'matrix', label: 'x', members: [] }]
-    s.selectChannel('c1')
-    s.messages = {
-      c1: [
-        { id: 'm1', channelId: 'c1', author: '张三', isMe: false, text: 'hello', ts: 1 },
-        { id: 'm2', channelId: 'c1', author: '你', isMe: true, text: 'hi', ts: 2 },
-      ],
-    }
-    expect(s.messagesForActiveChannel.map((m) => m.id)).toEqual(['m1', 'm2'])
-  })
-
-  it('sendMessage appends a message to the active channel', () => {
-    const s = useCockpitStore()
-    s.channels = [{ id: 'c1', taskId: 't1', kind: 'matrix', label: 'x', members: [] }]
-    s.selectChannel('c1')
-    s.sendMessage('ping')
-    expect(s.messagesForActiveChannel.at(-1)?.text).toBe('ping')
-    expect(s.messagesForActiveChannel.at(-1)?.isMe).toBe(true)
-  })
-
-  it('toggleMaximized toggles the right column maximized state', () => {
-    const s = useCockpitStore()
-    expect(s.maximized).toBe(false)
-    s.toggleMaximized()
-    expect(s.maximized).toBe(true)
-  })
-  it('terminalLines starts with seed intro lines', () => {
-    const s = useCockpitStore()
-    expect(s.terminalLines.length).toBeGreaterThan(0)
+    const before = s.terminalLines.length
     expect(s.terminalMode).toBe(false)
-  })
-
-  it('enterTerminal switches workspace mode to term', () => {
-    const s = useCockpitStore()
     s.enterTerminal()
     expect(s.terminalMode).toBe(true)
     expect(s.workspaceMode).toBe('term')
-  })
-
-  it('exitTerminal switches back to work mode', () => {
-    const s = useCockpitStore()
-    s.enterTerminal()
+    s.sendTerminalCommand('ls')
+    expect(s.terminalLines.length).toBe(before + 2)
     s.exitTerminal()
     expect(s.terminalMode).toBe(false)
     expect(s.workspaceMode).toBe('work')
   })
 
-  it('sendTerminalCommand appends a prompt line and a response line', () => {
+  it('history filter by action', async () => {
     const s = useCockpitStore()
-    const before = s.terminalLines.length
-    s.sendTerminalCommand('ls')
-    expect(s.terminalLines.length).toBe(before + 2)
-    expect(s.terminalLines.at(-2)?.kind).toBe('prompt')
-    expect(s.terminalLines.at(-2)?.text).toBe('ls')
-  })
-
-  it('history filters by action when filter set', () => {
-    const s = useCockpitStore()
+    // 直接设置 history ref（仍是本地 ref，可赋值）
     s.history = [
-      { id: 'h1', when: '今天 14:36', taskId: '1', action: '审批', title: '审批 PR', archived: false },
-      { id: 'h2', when: '今天 13:20', taskId: '4', action: '决策', title: '决定延后', archived: false },
+      { id: 'h1', when: '今', taskId: 't1', action: '审批', title: 'a', archived: false },
+      { id: 'h2', when: '今', taskId: 't1', action: '决策', title: 'b', archived: false },
     ]
     s.historyFilters = { actions: ['审批'], archived: 'all' }
-    expect(s.filteredHistory.map((h) => h.id)).toEqual(['h1'])
+    expect(s.filteredHistory.map(h => h.id)).toEqual(['h1'])
   })
 
-  it('history filters archived-only', () => {
+  it('history filter archived-only', async () => {
     const s = useCockpitStore()
     s.history = [
-      { id: 'h1', when: '今天', taskId: '1', action: '审批', title: 'x', archived: false },
-      { id: 'h2', when: '昨天', taskId: '2', action: '审批', title: 'y', archived: true },
+      { id: 'h1', when: '今', taskId: 't1', action: '审批', title: 'a', archived: false },
+      { id: 'h2', when: '今', taskId: 't1', action: '审批', title: 'b', archived: true },
     ]
     s.historyFilters = { actions: [], archived: 'only' }
-    expect(s.filteredHistory.map((h) => h.id)).toEqual(['h2'])
+    expect(s.filteredHistory.map(h => h.id)).toEqual(['h2'])
   })
 
-  it('recallHistoryItem sets archived mode when item archived', () => {
+  it('templates CRUD via localStorage', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
     const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.history = [{ id: 'h1', when: '昨天', taskId: 't1', action: '审批', title: 'y', archived: true }]
+    await s.bootstrap()
+    s.updateWorkItem({ decision: 'conditional', riskTags: ['x'], opinion: 'y', modifiedFiles: ['a.ts'] })
+    expect(s.templates).toEqual([])
+    s.saveTemplateFromCurrentWorkItem('我的模板')
+    expect(s.templates).toHaveLength(1)
+    expect(s.templates[0].name).toBe('我的模板')
+    s.deleteTemplate(s.templates[0].id)
+    expect(s.templates).toEqual([])
+  })
+
+  it('recallHistoryItem sets archived mode + selects task', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    s.history = [{ id: 'h1', when: '昨', taskId: 't1', action: '审批', title: 'x', archived: true }]
     s.recallHistoryItem('h1')
     expect(s.archivedMode).toBe(true)
     expect(s.selectedTaskId).toBe('t1')
   })
+})
 
-  it('recallHistoryItem clears archived mode when item not archived', () => {
+describe('cockpit store 折叠 + 最大化', () => {
+  it('toggleCollapsed', async () => {
     const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.history = [{ id: 'h1', when: '今天', taskId: 't1', action: '审批', title: 'x', archived: false }]
-    s.recallHistoryItem('h1')
-    expect(s.archivedMode).toBe(false)
-  })
-  it('templates list starts empty', () => {
-    const s = useCockpitStore()
-    expect(s.templates).toEqual([])
+    expect(s.collapsed.left).toBe(false)
+    s.toggleCollapsed('left')
+    expect(s.collapsed.left).toBe(true)
   })
 
-  it('saveTemplateFromCurrentWorkItem creates a template from the selected task work item', () => {
+  it('toggleMaximized', async () => {
     const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.workItems = [{ id: 'w1', taskId: 't1', decision: 'conditional', riskTags: ['concurrency'], opinion: 'x', modifiedFiles: ['a.ts'] }]
-    s.saveTemplateFromCurrentWorkItem('我的审核模板')
-    expect(s.templates.length).toBe(1)
-    expect(s.templates[0].name).toBe('我的审核模板')
-    expect(s.templates[0].decision).toBe('conditional')
-    expect(s.templates[0].riskTags).toContain('concurrency')
-    expect(s.templates[0].id).toBeTruthy()
-  })
-
-  it('saveTemplateFromCurrentWorkItem does nothing when no work item', () => {
-    const s = useCockpitStore()
-    s.saveTemplateFromCurrentWorkItem('x')
-    expect(s.templates).toEqual([])
-  })
-
-  it('deleteTemplate removes a template by id', () => {
-    const s = useCockpitStore()
-    s.templates = [{ id: 'tpl1', name: 'x', decision: 'approve', riskTags: [], opinion: '', modifiedFiles: [] }]
-    s.deleteTemplate('tpl1')
-    expect(s.templates).toEqual([])
-  })
-
-  it('applyTemplateToCurrentWorkItem copies template fields into the work item', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.workItems = [{ id: 'w1', taskId: 't1', decision: 'reject', riskTags: [], opinion: '', modifiedFiles: [] }]
-    s.templates = [{ id: 'tpl1', name: 't', decision: 'conditional', riskTags: ['perf'], opinion: 'ok', modifiedFiles: [] }]
-    s.applyTemplateToCurrentWorkItem('tpl1')
-    expect(s.workItemForSelectedTask?.decision).toBe('conditional')
-    expect(s.workItemForSelectedTask?.riskTags).toContain('perf')
-  })
-
-  it('topology relations carry a2a/a2h labels', () => {
-    const s = useCockpitStore()
-    s.appRelations = [
-      { id: 'rel1', taskId: 't1', from: 'n1', to: 'n2', label: 'A2A' },
-      { id: 'rel2', taskId: 't1', from: 'n2', to: 'n3', label: 'A2H' },
-    ]
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    expect(s.relationsForSelectedTask.map((r) => r.id)).toEqual(['rel1', 'rel2'])
-  })
-
-  it('focusOnGraphNodeForTimeline filters eventsForTimeline by node', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.events = [
-      { id: 'e1', taskId: 't1', actor: 'a', kind: 'A2H', what: 'x', when: '1', pending: false, ts: 1, nodeIds: ['n1'] },
-      { id: 'e2', taskId: 't1', actor: 'b', kind: 'A2A', what: 'y', when: '2', pending: false, ts: 2, nodeIds: ['n1', 'n2'] },
-      { id: 'e3', taskId: 't1', actor: 'c', kind: 'A2A', what: 'z', when: '3', pending: false, ts: 3, nodeIds: ['n2'] },
-      { id: 'e4', taskId: 't1', actor: 'd', kind: 'A2H', what: 'w', when: '4', pending: false, ts: 4 },
-    ]
-    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4'])
-    s.focusOnGraphNodeForTimeline('n1')
-    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1', 'e2'])
-    s.focusOnGraphNodeForTimeline('n2')
-    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e2', 'e3'])
-  })
-
-  it('focusOnGraphNodeForTimeline toggles off → back to task-level events', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.events = [
-      { id: 'e1', taskId: 't1', actor: 'a', kind: 'A2H', what: 'x', when: '1', pending: false, ts: 1, nodeIds: ['n1'] },
-      { id: 'e2', taskId: 't1', actor: 'b', kind: 'A2A', what: 'y', when: '2', pending: false, ts: 2 },
-    ]
-    s.focusOnGraphNodeForTimeline('n1')
-    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1'])
-    s.focusOnGraphNodeForTimeline('n1') // 同一节点再点 → 取消
-    expect(s.focusedGraphNodeId).toBeNull()
-    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1', 'e2'])
-  })
-
-  it('selectTask clears focusedGraphNodeId', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' }), task({ id: 't2' })]
-    s.selectTask('t1')
-    s.focusOnGraphNodeForTimeline('n1')
-    expect(s.focusedGraphNodeId).toBe('n1')
-    s.selectTask('t2')
-    expect(s.focusedGraphNodeId).toBeNull()
-  })
-
-  it('events without nodeIds are excluded from node-level timeline', () => {
-    const s = useCockpitStore()
-    s.tasks = [task({ id: 't1' })]
-    s.selectTask('t1')
-    s.events = [
-      { id: 'e1', taskId: 't1', actor: 'a', kind: 'A2H', what: 'x', when: '1', pending: false, ts: 1, nodeIds: ['n1'] },
-      { id: 'e2', taskId: 't1', actor: 'b', kind: 'A2A', what: 'y', when: '2', pending: false, ts: 2 }, // 无 nodeIds
-    ]
-    s.focusOnGraphNodeForTimeline('n1')
-    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1'])
+    expect(s.maximized).toBe(false)
+    s.toggleMaximized()
+    expect(s.maximized).toBe(true)
   })
 })
