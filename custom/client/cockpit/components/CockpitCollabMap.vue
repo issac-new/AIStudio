@@ -81,6 +81,7 @@ const relations = computed(() => store.relationsForSelectedTask)
           >{{ r.label }}</text>
         </g>
       </svg>
+      <span class="cockpit-map__hint">拖拽节点 · 点节点切时序源</span>
       <CockpitGraphNode
         v-for="(n, i) in nodes"
         :key="n.id"
@@ -113,5 +114,6 @@ const relations = computed(() => store.relationsForSelectedTask)
   overflow: hidden;
 }
 .cockpit-map__svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cockpit-map__hint { position: absolute; bottom: 4px; left: 8px; font-size: 8px; color: var(--text-muted); pointer-events: none; }
 .cockpit-map__empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
 </style>
