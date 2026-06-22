@@ -52,6 +52,7 @@
 057-test-matrix-room-threads.patch
 058-test-matrix-timeline-panel-params.patch
 059-test-matrix-thread-summary.patch
+060-test-matrix-message-actions.patch
 070-cockpit-packages_client_src_App.vue.patch
 071-cockpit-packages_client_src_router_index.ts.patch
 072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch

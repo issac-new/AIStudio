@@ -53,12 +53,11 @@ function closePicker() {
   pickerOpen.value = false
 }
 
-async function handleSendReaction(emoji: string) {
-  try {
-    await composerStore.sendReaction(props.eventId, emoji)
-  } catch {
-    // error handled in store
-  }
+async function handleSendReaction(_emoji: string) {
+  // The picker toggles the reaction internally (send/redact) before emitting
+  // `select`, mirroring element-web ReactionPicker.onChoose. Nothing to do
+  // here except keep the handler for API symmetry with the emoji-toolbar use
+  // of the same picker component.
 }
 
 // ─── Toggle reaction (click pill to add/remove) ──────────────

@@ -275,6 +275,16 @@
     color: var(--error);
     background: rgba(var(--error-rgb), 0.08);
   }
+
+  &.mx_MessageActionBar_button--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+
+    &:hover {
+      color: var(--text-secondary);
+      background: transparent;
+    }
+  }
 }
 
 // ─── Reactions Row ───────────────────────────────────────
