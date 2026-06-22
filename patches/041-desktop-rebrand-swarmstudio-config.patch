@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 0e4fb0d1..b2fb1404 100644
+index 0e4fb0d1..ec205519 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -10,7 +10,23 @@ index 0e4fb0d1..b2fb1404 100644
  copyright: Copyright © 2026
  
  directories:
-@@ -47,6 +47,19 @@ extraResources:
+@@ -41,12 +41,59 @@ extraResources:
+       - "bin/**"
+       - "dist/**"
+       - "node_modules/**"
+-      # Drop other-platform node-pty prebuilds (saves ~45MB)
+-      - "!node_modules/node-pty/prebuilds/!(${platform}-${arch})/**"
++      # 排除 Vite 缓存 (860MB+ 的 deps_temp_* 缓存,绝不能进生产包)
++      - "!node_modules/.vite/**"
++      - "!node_modules/.tmp/**"
++      # Drop other-platform node-pty prebuilds (saves ~58MB)
++      - "!node_modules/node-pty/prebuilds/win32-*/**"
++      - "!node_modules/node-pty/prebuilds/linux-*/**"
++      - "!node_modules/node-pty/prebuilds/darwin-x64/**"
+       - "!node_modules/node-pty/build/**"
++      - "!node_modules/node-pty/third_party/**"
++      - "!node_modules/node-pty/deps/**"
++      - "!node_modules/node-pty/src/**"
        - "!packages/desktop/**"
        - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
        - "!node_modules/**/*.md"
@@ -27,10 +43,36 @@ index 0e4fb0d1..b2fb1404 100644
 +      - "!node_modules/{vitest,@vitest,jsdom,sass,sass-embedded,@vscode}/**"
 +      - "!node_modules/{cytoscape,cytoscape-fcose,cytoscape-cose-bilkent,cytoscape-cxttap,cytoscape-klay,cytoscape-popper,cytoscape-dom-node}/**"
 +      - "!node_modules/{rxjs,@mermaid-js,@babel,@rollup}/**"
++      # 瘦身第二轮:排除已 bundle 的 client 库源码(server esbuild 打包后运行时不需要)
++      - "!node_modules/{matrix-js-sdk,@matrix-org,lodash,lodash-es}/**"
++      - "!node_modules/{handlebars,@multiavatar,dayjs,axios,d3}/**"
++      - "!node_modules/{css-tree,cssstyle,css-render,csstype,@asamuzakjp}/**"
++      # 排除开发工具
++      - "!node_modules/{vite-node,uglify-js,js-beautify,nodemon,concurrently,pino-pretty}/**"
++      # 排除 matrix-js-sdk 传递依赖(已 bundle 进 client vendor chunk)
++      - "!node_modules/{@hapi,tldts,pngjs,validator,yaml}/**"
++      # 排除 *.d.ts 和测试/文档目录(通用瘦身)
++      - "!node_modules/**/*.d.ts"
++      - "!node_modules/**/{test,tests,__tests__,docs,doc,example,examples,.github,coverage}/**"
++      # 排除 server source map(12MB,生产环境不需要)
++      - "!dist/server/*.map"
++      # 瘦身第三轮:排除 d3 全家桶 + dagre + khroma (mermaid 依赖,已 bundle 进 client)
++      - "!node_modules/d3-*/**"
++      - "!node_modules/{dagre,dagre-d3-es,khroma,layout-base,graphlib}/**"
++      # 排除更多已 bundle 的 client 依赖
++      - "!node_modules/{mdn-data,neo-async,parse5,parse5-parser,immutable,qrcode,oidc-client-ts,dompurify,js-yaml}/**"
++      - "!node_modules/{ts-node,chai,acorn,source-map,magicast,yargs,body-parser}/**"
++      - "!node_modules/{socket.io-client,engine.io-client}/**"
++      - "!node_modules/{@acemir,@exodus,@parcel,@volar,@upsetjs,@csstools,@css-render,@cspotcode,@juggle,@audio,@one-ini,@jridgewell,@iconify}/**"
++      # 排除 node_modules 中的 source map / flow / coffee 文件
++      - "!node_modules/**/*.map"
++      - "!node_modules/**/*.flow"
++      # 排除 .pnpm 元数据(如有)
++      - "!node_modules/.pnpm/**"
  
  asarUnpack:
    - "**/*.node"
-@@ -54,20 +67,20 @@ asarUnpack:
+@@ -54,20 +101,20 @@ asarUnpack:
  mac:
    target:
      - target: dmg
