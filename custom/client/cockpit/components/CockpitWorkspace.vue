@@ -28,7 +28,7 @@ const isReadOnly = computed(() => store.archivedMode)
     <div class="cockpit-workspace__form">
       <div v-if="hasTask && workItem" class="cockpit-workspace__body">
         <!-- 待办 banner -->
-        <div class="cockpit-workspace__banner">
+        <div class="cockpit-workspace__banner" :class="{ 'is-archived': isReadOnly }">
           <span class="cockpit-workspace__banner-dot" />
           <div>
             <div class="cockpit-workspace__banner-title">{{ store._attentionFocusTitle || t('cockpit.pendingTodo') }}</div>
@@ -130,6 +130,11 @@ const isReadOnly = computed(() => store.archivedMode)
 .cockpit-workspace__banner-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); margin-top: 4px; flex-shrink: 0; }
 .cockpit-workspace__banner-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
 .cockpit-workspace__banner-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.cockpit-workspace__banner.is-archived {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  .cockpit-workspace__banner-dot { background: var(--text-muted); }
+}
 .cockpit-workspace__ref { background: var(--bg-secondary); border-radius: 6px; padding: 8px 11px; font-size: 11px; color: var(--text-secondary); margin-bottom: 14px; }
 .cockpit-workspace__files { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
 .cockpit-workspace__files-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
