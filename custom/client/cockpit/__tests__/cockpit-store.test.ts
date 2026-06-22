@@ -406,4 +406,58 @@ describe('useCockpitStore', () => {
     s.selectTask('t1')
     expect(s.relationsForSelectedTask.map((r) => r.id)).toEqual(['rel1', 'rel2'])
   })
+
+  it('focusOnGraphNodeForTimeline filters eventsForTimeline by node', () => {
+    const s = useCockpitStore()
+    s.tasks = [task({ id: 't1' })]
+    s.selectTask('t1')
+    s.events = [
+      { id: 'e1', taskId: 't1', actor: 'a', kind: 'A2H', what: 'x', when: '1', pending: false, ts: 1, nodeIds: ['n1'] },
+      { id: 'e2', taskId: 't1', actor: 'b', kind: 'A2A', what: 'y', when: '2', pending: false, ts: 2, nodeIds: ['n1', 'n2'] },
+      { id: 'e3', taskId: 't1', actor: 'c', kind: 'A2A', what: 'z', when: '3', pending: false, ts: 3, nodeIds: ['n2'] },
+      { id: 'e4', taskId: 't1', actor: 'd', kind: 'A2H', what: 'w', when: '4', pending: false, ts: 4 },
+    ]
+    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4'])
+    s.focusOnGraphNodeForTimeline('n1')
+    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1', 'e2'])
+    s.focusOnGraphNodeForTimeline('n2')
+    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e2', 'e3'])
+  })
+
+  it('focusOnGraphNodeForTimeline toggles off → back to task-level events', () => {
+    const s = useCockpitStore()
+    s.tasks = [task({ id: 't1' })]
+    s.selectTask('t1')
+    s.events = [
+      { id: 'e1', taskId: 't1', actor: 'a', kind: 'A2H', what: 'x', when: '1', pending: false, ts: 1, nodeIds: ['n1'] },
+      { id: 'e2', taskId: 't1', actor: 'b', kind: 'A2A', what: 'y', when: '2', pending: false, ts: 2 },
+    ]
+    s.focusOnGraphNodeForTimeline('n1')
+    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1'])
+    s.focusOnGraphNodeForTimeline('n1') // 同一节点再点 → 取消
+    expect(s.focusedGraphNodeId).toBeNull()
+    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1', 'e2'])
+  })
+
+  it('selectTask clears focusedGraphNodeId', () => {
+    const s = useCockpitStore()
+    s.tasks = [task({ id: 't1' }), task({ id: 't2' })]
+    s.selectTask('t1')
+    s.focusOnGraphNodeForTimeline('n1')
+    expect(s.focusedGraphNodeId).toBe('n1')
+    s.selectTask('t2')
+    expect(s.focusedGraphNodeId).toBeNull()
+  })
+
+  it('events without nodeIds are excluded from node-level timeline', () => {
+    const s = useCockpitStore()
+    s.tasks = [task({ id: 't1' })]
+    s.selectTask('t1')
+    s.events = [
+      { id: 'e1', taskId: 't1', actor: 'a', kind: 'A2H', what: 'x', when: '1', pending: false, ts: 1, nodeIds: ['n1'] },
+      { id: 'e2', taskId: 't1', actor: 'b', kind: 'A2A', what: 'y', when: '2', pending: false, ts: 2 }, // 无 nodeIds
+    ]
+    s.focusOnGraphNodeForTimeline('n1')
+    expect(s.eventsForTimeline.map((e) => e.id)).toEqual(['e1'])
+  })
 })
