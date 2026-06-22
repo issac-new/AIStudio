@@ -56,3 +56,4 @@
 055-test-matrix-right-panel.patch
 056-test-matrix-thread-notifications.patch
 057-test-matrix-room-threads.patch
+058-test-matrix-timeline-panel-params.patch
