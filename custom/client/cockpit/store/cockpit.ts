@@ -43,6 +43,8 @@ export interface CockpitEvent {
   when: string
   pending: boolean
   ts: number
+  /** 事件涉及的图节点 id（节点级时序源筛选用；不填则该事件不在节点级时序流显示） */
+  nodeIds?: string[]
 }
 
 export type TopologyLevel = 'project' | 'req' | 'app'
@@ -182,6 +184,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   function selectTask(id: string | null) {
     selectedTaskId.value = tasks.value.some((t) => t.id === id) ? id : null
+    // 切任务时清空节点级时序源（避免上个任务的节点聚焦残留）
+    focusedGraphNodeId.value = null
     // 退出归档只读态（recallHistoryItem 会在调用 selectTask 后重新设置）
     archivedMode.value = false
   }
@@ -201,6 +205,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // ── P2 state ──
   const events = ref<CockpitEvent[]>([])
   const selectedTimelineNodeId = ref<string | null>(null)
+  /** 当前作为时序源的图节点（null=任务级时序流）。点节点 toggle，切任务清空。 */
+  const focusedGraphNodeId = ref<string | null>(null)
   const topologyLevel = ref<TopologyLevel>('app')
   const appTopology = ref<GraphNode[]>([])
   const reqTopology = ref<GraphNode[]>([])
@@ -221,6 +227,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
       : [],
   )
 
+  /** 时序流真正使用的事件源：无 focusedGraphNodeId 时=任务级；有则按节点筛选。 */
+  const eventsForTimeline = computed(() => {
+    const taskEvents = eventsForSelectedTask.value
+    if (!focusedGraphNodeId.value) return taskEvents
+    return taskEvents.filter((e) => (e.nodeIds ?? []).includes(focusedGraphNodeId.value))
+  })
+
   const topologyForSelectedTask = computed(() => {
     const level = topologyLevel.value
     const pool =
@@ -237,6 +250,16 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   function recentEventsForSelectedTask(threshold: number) {
     const all = eventsForSelectedTask.value
+    if (all.length <= threshold) return { visible: all, folded: [] as CockpitEvent[] }
+    return {
+      visible: all.slice(all.length - threshold),
+      folded: all.slice(0, all.length - threshold),
+    }
+  }
+
+  /** 基于 eventsForTimeline 的折叠版本（取代 recentEventsForSelectedTask 的时序流用法）。 */
+  function recentEventsForTimeline(threshold: number) {
+    const all = eventsForTimeline.value
     if (all.length <= threshold) return { visible: all, folded: [] as CockpitEvent[] }
     return {
       visible: all.slice(all.length - threshold),
@@ -348,7 +371,6 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const archivedMode = ref(false)
   const _attentionFocusTitle = ref<string | null>(null)
   const _attentionFocusDesc = ref<string | null>(null)
-  const _timelineSourceLabel = ref<string | null>(null)
 
   // ── P5 getters ──
   const filteredHistory = computed(() =>
@@ -416,8 +438,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
     setWorkspaceMode('work')
   }
   function focusOnGraphNodeForTimeline(nodeId: string) {
-    // 拓扑节点 → 高亮节点 + 切时序流到该节点关联的事件（按 node.taskId 过滤已生效，这里仅切时序源标签）
-    _timelineSourceLabel.value = nodeId
+    // toggle：点已聚焦节点→取消（回任务级）；点新节点→设为时序源。
+    focusedGraphNodeId.value = focusedGraphNodeId.value === nodeId ? null : nodeId
   }
 
   // ── P6 state ──
@@ -467,8 +489,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
     tasks, selectedTaskId, filters, collapsed, attention,
     selectedTask, sortedTasks, filteredTasks, tasksByCategory, attentionCount,
     selectTask, toggleCollapsed, toggleFilter,
-    events, selectedTimelineNodeId, topologyLevel, appTopology, reqTopology, projTopology, selectedGraphNodeIds,
-    selectedTimelineNode, eventsForSelectedTask, topologyForSelectedTask, recentEventsForSelectedTask,
+    events, selectedTimelineNodeId, focusedGraphNodeId, topologyLevel, appTopology, reqTopology, projTopology, selectedGraphNodeIds,
+    selectedTimelineNode, eventsForSelectedTask, eventsForTimeline, topologyForSelectedTask, recentEventsForSelectedTask, recentEventsForTimeline,
     selectTimelineNode, toggleGraphNode, setTopologyLevel,
     workItems, fileTrees, selectedFileId,
     workItemForSelectedTask, filesForSelectedTask,
@@ -481,7 +503,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     enterTerminal, exitTerminal, sendTerminalCommand,
     openHistory, closeHistory, toggleHistoryAction, setHistoryArchivedFilter,
     recallHistoryItem, clearArchivedMode,
-    _attentionFocusTitle, _attentionFocusDesc, _timelineSourceLabel,
+    _attentionFocusTitle, _attentionFocusDesc,
     focusOnTaskFromAttention, focusOnTimelineNode, focusOnGraphNodeForTimeline,
     templates, templateManagerOpen, appRelations,
     relationsForSelectedTask,

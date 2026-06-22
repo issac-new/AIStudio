@@ -9,17 +9,24 @@ const { t } = useI18n()
 const THRESHOLD = 4
 const expanded = ref(false)
 
-const recent = computed(() => store.recentEventsForSelectedTask(THRESHOLD))
+const recent = computed(() => store.recentEventsForTimeline(THRESHOLD))
 const visibleEvents = computed(() =>
   expanded.value ? [...recent.value.folded, ...recent.value.visible] : recent.value.visible,
 )
 const hasTask = computed(() => !!store.selectedTask)
+// 节点级时序源：显示被聚焦节点的 label 作为来源提示；任务级则不显示。
+const timelineSourceLabel = computed(() => {
+  const nid = store.focusedGraphNodeId
+  if (!nid) return null
+  return store.topologyForSelectedTask.nodes.find((n) => n.id === nid)?.label ?? null
+})
 </script>
 
 <template>
   <div class="cockpit-timeline">
     <div class="cockpit-timeline__head">
       <span class="cockpit-timeline__title">{{ t('cockpit.timeline') }}</span>
+      <span v-if="timelineSourceLabel" class="cockpit-timeline__source">· {{ timelineSourceLabel }}</span>
     </div>
     <div v-if="hasTask" class="cockpit-timeline__body">
       <button
@@ -59,6 +66,7 @@ const hasTask = computed(() => !!store.selectedTask)
 .cockpit-timeline { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .cockpit-timeline__head { padding: 8px 16px; }
 .cockpit-timeline__title { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+.cockpit-timeline__source { font-size: 10px; color: var(--text-muted); margin-left: 6px; }
 .cockpit-timeline__body { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
 .cockpit-timeline__fold {
   display: block; width: 100%; text-align: left; padding: 5px 9px; margin: 4px 0 6px 18px;
