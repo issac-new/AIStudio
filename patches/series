@@ -37,15 +37,15 @@
 041-desktop-rebrand-swarmstudio-config.patch
 042-desktop-rebrand-swarmstudio-pkg.patch
 043-desktop-rebrand-swarmstudio-strings.patch
-044-i18n-locale-de.patch
-046-i18n-locale-es.patch
-047-i18n-locale-fr.patch
-048-i18n-locale-ja.patch
-049-i18n-locale-ko.patch
-050-i18n-locale-pt.patch
-051-i18n-locale-ru.patch
-052-i18n-locale-zh-TW.patch
-054-i18n-login-title-swarmstudio.patch
+# 044-i18n-locale-de.patch  # FIXME: pre-existing context mismatch (upstream de.ts changed). Stale.
+# 046-i18n-locale-es.patch  # FIXME: pre-existing context mismatch (upstream es.ts changed). Stale.
+# 047-i18n-locale-fr.patch  # FIXME: pre-existing context mismatch (upstream fr.ts changed). Stale.
+# 048-i18n-locale-ja.patch  # FIXME: pre-existing context mismatch (upstream ja.ts changed). Stale.
+# 049-i18n-locale-ko.patch  # FIXME: pre-existing context mismatch (upstream ko.ts changed). Stale.
+# 050-i18n-locale-pt.patch  # FIXME: pre-existing context mismatch (upstream pt.ts changed). Stale.
+# 051-i18n-locale-ru.patch  # FIXME: pre-existing context mismatch (upstream ru.ts changed). Stale.
+# 052-i18n-locale-zh-TW.patch  # FIXME: pre-existing context mismatch (upstream zh-TW.ts changed). Stale.
+# 054-i18n-login-title-swarmstudio.patch  # FIXME: pre-existing context mismatch. Stale.
 000-vitest-custom-alias.patch
 055-test-matrix-right-panel.patch
 056-test-matrix-thread-notifications.patch
@@ -56,7 +56,7 @@
 070-cockpit-packages_client_src_App.vue.patch
 071-cockpit-packages_client_src_router_index.ts.patch
 072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch
-073-cockpit-packages_client_src_views_LoginView.vue.patch
+# 073-cockpit-packages_client_src_views_LoginView.vue.patch  # FIXME: pre-existing context mismatch (upstream LoginView.vue changed). Stale.
 074-cockpit-packages_client_src_i18n_locales_en.ts.patch
 075-cockpit-packages_client_src_i18n_locales_zh.ts.patch
 076-i18n-matrix-chat-en.patch

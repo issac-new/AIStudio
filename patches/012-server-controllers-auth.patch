@@ -1,8 +1,6 @@
-diff --git a/packages/server/src/controllers/auth.ts b/packages/server/src/controllers/auth.ts
-index 155822dd..f5adac67 100644
---- a/packages/server/src/controllers/auth.ts
-+++ b/packages/server/src/controllers/auth.ts
-@@ -6,14 +6,19 @@ import {
+--- a/packages/server/src/controllers/auth.ts	2026-06-22 16:55:55
++++ b/packages/server/src/controllers/auth.ts	2026-06-21 16:06:50
+@@ -6,14 +6,19 @@
    bootstrapDefaultSuperAdmin,
    countActiveSuperAdmins,
    countUsers,
@@ -22,7 +20,7 @@ index 155822dd..f5adac67 100644
    updateUser,
    updateUsername,
    updateUserPassword,
-@@ -25,6 +30,17 @@ import {
+@@ -25,6 +30,17 @@
  import { issueUserJwt } from '../middleware/user-auth'
  import { listProfileNamesFromDisk } from '../services/hermes/hermes-profile'
  import { startOutboundRelayClient, stopOutboundRelayClient } from '../services/global-agent/outbound-relay-client'
@@ -40,7 +38,7 @@ index 155822dd..f5adac67 100644
  
  /**
   * GET /api/auth/status
-@@ -43,6 +59,9 @@ export async function authStatus(ctx: Context) {
+@@ -43,6 +59,9 @@
   */
  export async function currentUser(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -50,7 +48,7 @@ index 155822dd..f5adac67 100644
    const user = userId ? findUserById(userId) : null
    if (!user) {
      ctx.status = 404
-@@ -62,6 +81,11 @@ export async function currentUser(ctx: Context) {
+@@ -62,6 +81,11 @@
        requiresCredentialChange: process.env.HERMES_DESKTOP === 'true'
          ? false
          : user.username === DEFAULT_USERNAME && verifyPassword(DEFAULT_PASSWORD, user.password_hash),
@@ -62,7 +60,7 @@ index 155822dd..f5adac67 100644
      },
    }
  }
-@@ -93,7 +117,7 @@ function isValidAvatarPayload(value: unknown): { ok: true; json: string } | { ok
+@@ -93,7 +117,7 @@
   */
  export async function getMyAvatar(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -71,17 +69,18 @@ index 155822dd..f5adac67 100644
      ctx.status = 401
      ctx.body = { error: 'Unauthorized' }
      return
-@@ -405,6 +429,386 @@ function validateProfiles(profiles: string[]): string | null {
+@@ -403,9 +427,389 @@
+   const available = new Set(listProfileNamesFromDisk())
+   const missing = profiles.find(profile => !available.has(profile))
    return missing || null
- }
- 
-+// Helper: get admin token from config or current user
-+function getMatrixAdminToken(_ctx: Context): string | null {
-+  return process.env.MATRIX_ADMIN_TOKEN || null
 +}
 +
-+function getMatrixHomeserverUrl(): string {
-+  return process.env.MATRIX_HOMESERVER_URL || 'http://localhost:8008'
++// Helper: get admin token from config or current user
++function getMatrixAdminToken(ctx: Context): string | null {
++  // For now, use the current user's Matrix accessToken if they are admin
++  // In production, this should come from server config
++  // TODO: Read from Hermes config system
++  return null
 +}
 +
 +/**
@@ -183,7 +182,7 @@ index 155822dd..f5adac67 100644
 + */
 +export async function listMatrixUsers(ctx: Context) {
 +  const adminToken = getMatrixAdminToken(ctx)
-+  const homeserverUrl = getMatrixHomeserverUrl()
++  const homeserverUrl = 'http://localhost:8008' // TODO: Get from config or user
 +
 +  if (!adminToken) {
 +    // Fallback: return only Hermes users with matrix_user_id
@@ -255,7 +254,7 @@ index 155822dd..f5adac67 100644
 +  }
 +
 +  const adminToken = getMatrixAdminToken(ctx)
-+  const homeserverUrl = getMatrixHomeserverUrl()
++  const homeserverUrl = 'http://localhost:8008' // TODO: Config
 +
 +  if (!adminToken) {
 +    ctx.status = 503
@@ -414,9 +413,9 @@ index 155822dd..f5adac67 100644
 +
 +  updateMatrixUserMetadata(matrixUserId, { status: active ? 'active' : 'disabled' })
 +  ctx.body = { success: true }
-+}
-+
-+/**
+ }
+ 
+ /**
 + * POST /api/auth/matrix-users/:id/reset-password
 + * Reset a Matrix user's password.
 + */
@@ -456,6 +455,7 @@ index 155822dd..f5adac67 100644
 +  ctx.body = { success: true }
 +}
 +
- /**
++/**
   * GET /api/auth/users
   * Super admin user management list.
+  */

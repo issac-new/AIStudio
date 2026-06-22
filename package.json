@@ -10,7 +10,7 @@
     "verify": "node scripts/verify-clean.mjs",
     "sync": "bash scripts/sync-upstream.sh",
     "build": "vite build --config vite.config.overlay.ts",
-    "dev": "vite --config vite.config.overlay.ts",
+    "dev": "cross-env HERMES_WEB_UI_BACKEND_PORT=8647 vite --config vite.config.overlay.ts --host --port 8649 --strictPort",
     "test": "vitest run",
     "build:full": "node scripts/build.mjs"
   },
