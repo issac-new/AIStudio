@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
-index 5d326234..c5463900 100644
+index 5d326234..d6616738 100644
 --- a/packages/client/src/components/layout/PageSidebarNav.vue
 +++ b/packages/client/src/components/layout/PageSidebarNav.vue
 @@ -4,7 +4,9 @@ import { useI18n } from 'vue-i18n'
@@ -7,9 +7,9 @@ index 5d326234..c5463900 100644
  import { useSessionSearch } from '@/composables/useSessionSearch'
  
 -type ActiveSection = 'chat' | 'history' | 'group' | 'global'
-+// HERMES_CUSTOM[MatrixChat, Kanban] BEGIN: ActiveSection includes matrix and kanban
-+type ActiveSection = 'chat' | 'history' | 'group' | 'global' | 'matrix' | 'kanban'
-+// HERMES_CUSTOM[MatrixChat, Kanban] END
++// HERMES_CUSTOM[MatrixChat, SwarmKanban] BEGIN: ActiveSection includes matrix and swarm-kanban
++type ActiveSection = 'chat' | 'history' | 'group' | 'global' | 'matrix' | 'swarm-kanban'
++// HERMES_CUSTOM[MatrixChat, SwarmKanban] END
  
  const props = defineProps<{
    active: ActiveSection
@@ -27,12 +27,12 @@ index 5d326234..c5463900 100644
  }
 +// HERMES_CUSTOM[MatrixChat] END
 +
-+// HERMES_CUSTOM[Kanban] BEGIN: openKanban navigation
-+function openKanban() {
-+  if (props.active === 'kanban') return
-+  void router.push({ name: 'hermes.kanban' })
++// HERMES_CUSTOM[SwarmKanban] BEGIN: openSwarmKanban navigation
++function openSwarmKanban() {
++  if (props.active === 'swarm-kanban') return
++  void router.push({ name: 'hermes.swarmKanban' })
 +}
-+// HERMES_CUSTOM[Kanban] END
++// HERMES_CUSTOM[SwarmKanban] END
  </script>
  
  <template>
@@ -41,8 +41,8 @@ index 5d326234..c5463900 100644
          <span>{{ historyButtonLabel }}</span>
        </button>
 -      <button class="page-sidebar-tab" type="button" @click="openApiRelay">
-+      <!-- HERMES_CUSTOM[Kanban] BEGIN: Kanban tab button -->
-+      <button class="page-sidebar-tab" :class="{ active: active === 'kanban' }" type="button" @click="openKanban">
++      <!-- HERMES_CUSTOM[SwarmKanban] BEGIN: Swarm kanban tab button -->
++      <button class="page-sidebar-tab" :class="{ active: active === 'swarm-kanban' }" type="button" @click="openSwarmKanban">
          <svg
            width="15"
            height="15"
@@ -61,9 +61,9 @@ index 5d326234..c5463900 100644
 +          <rect x="17" y="3" width="5" height="18" rx="1" />
          </svg>
 -        <span>{{ t('sidebar.apiRelay') }}</span>
-+        <span>{{ t('sidebar.kanban') }}</span>
++        <span>{{ t('sidebar.swarmKanban') }}</span>
        </button>
-+      <!-- HERMES_CUSTOM[Kanban] END -->
++      <!-- HERMES_CUSTOM[SwarmKanban] END -->
      </div>
 -    <div v-if="showModeSwitch" class="conversation-switch" role="tablist" aria-label="Conversation type">
 +    <!-- HERMES_CUSTOM[MatrixChat] BEGIN: Mode switch with Matrix tab -->

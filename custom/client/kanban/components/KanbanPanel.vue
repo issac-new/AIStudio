@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
-import KanbanView from '@/views/hermes/KanbanView.vue'
+import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -48,7 +48,7 @@ function openSettingsPage() {
     >
       <div v-if="showSidebar" class="page-sidebar-top">
         <PageSidebarNav
-          active="kanban"
+          active="swarm-kanban"
           :primary-label="t('chat.newChat')"
           @primary="router.push({ name: 'hermes.chat' })"
         />
@@ -77,7 +77,7 @@ function openSettingsPage() {
     </aside>
 
     <div class="kanban-main">
-      <KanbanView />
+      <SwarmKanbanView />
     </div>
   </div>
 </template>

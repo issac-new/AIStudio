@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index 4366219f..9742f988 100644
+index 4366219f..865b9ff1 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
 @@ -11,6 +11,9 @@ import { useKeyboard } from '@/composables/useKeyboard'
@@ -16,10 +16,10 @@ index 4366219f..9742f988 100644
  const naiveTheme = computed(() => isDark.value ? darkTheme : null)
  
  const isLoginPage = computed(() => route.name === 'login')
-+// HERMES_CUSTOM[All] BEGIN: page sidebar routes include MatrixChat and Kanban
++// HERMES_CUSTOM[All] BEGIN: page sidebar routes include MatrixChat and SwarmKanban
  const usesPageSidebar = computed(() =>
 -  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.groupChat', 'hermes.groupChatRoom'].includes(route.name as string),
-+  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.matrixChat', 'hermes.matrixChatRoom', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.kanban'].includes(route.name as string),
++  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.matrixChat', 'hermes.matrixChatRoom', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.swarmKanban'].includes(route.name as string),
  )
 -const showAppSidebar = computed(() => !isLoginPage.value && !usesPageSidebar.value)
 -const showMobileMenuButton = computed(() => !isLoginPage.value && (showAppSidebar.value || usesPageSidebar.value))
