@@ -41,8 +41,8 @@ export const seedEvents: CockpitEvent[] = [
 ]
 
 export const seedAppTopology: GraphNode[] = [
-  { id: 'n1', taskId: '1', label: 'refresh.ts', kind: 'file', focus: true, links: ['n2'] },
-  { id: 'n2', taskId: '1', label: 'auth.spec', kind: 'test', focus: false, links: [] },
+  { id: 'n1', taskId: '1', label: 'refresh.ts', kind: 'file', focus: true, links: ['n2'], occupants: ['张三', 'review-agent'] },
+  { id: 'n2', taskId: '1', label: 'auth.spec', kind: 'test', focus: false, links: [], occupants: ['qa-agent'] },
 ]
 
 export const seedReqTopology: GraphNode[] = [{ id: 'r1', taskId: '1', label: '认证重构', kind: 'req', focus: true }]
