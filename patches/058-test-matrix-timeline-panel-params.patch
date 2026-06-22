@@ -1,0 +1,51 @@
+diff --git a/tests/client/matrix-timeline-panel-params.test.ts b/tests/client/matrix-timeline-panel-params.test.ts
+new file mode 100644
+index 00000000..9b0a74e3
+--- /dev/null
++++ b/tests/client/matrix-timeline-panel-params.test.ts
+@@ -0,0 +1,45 @@
++// @vitest-environment jsdom
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { createPinia, setActivePinia } from 'pinia'
++
++// 这个测试只验证 props 的默认值与派生逻辑入口,不挂载完整组件(避免触发 onMounted
++// 的 SDK 路径)。组件渲染行为由 Task 5 的 ThreadSummary 测试间接覆盖。
++vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
++  useMatrixClientStore: () => ({ client: null, error: null, userId: '' }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-events', () => ({
++  matrixEventBus: {
++    onSelectRoom: { value: null },
++    onThreadUpdate: { value: null },
++    onRoomListChange: { value: null },
++    onTimeline: { value: null },
++  },
++}))
++
++describe('MatrixTimelinePanel params (props contract)', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++  })
++
++  it('exposes optional props with documented defaults via component meta', async () => {
++    const mod = await import('@/custom/matrix-chat/components/MatrixTimelinePanel.vue')
++    const comp: any = mod.default
++    const props = comp.props as Record<string, { default?: any; required?: boolean; type?: any }>
++    // 旧的调用点不传这些 prop → 它们必须有默认值,且不 required
++    expect(props.timelineSet?.required).toBeFalsy()
++    expect(props.timelineSet?.default).toBeUndefined() // undefined ⇒ 走 roomStore 现状分支
++    expect(props.renderingType?.required).toBeFalsy()
++    expect(props.renderingType?.default).toBe('room')
++    expect(props.threadId?.required).toBeFalsy()
++    expect(props.showReadReceipts?.required).toBeFalsy()
++    expect(props.showReadReceipts?.default).toBe(true)
++    expect(props.showReactions?.required).toBeFalsy()
++    expect(props.showReactions?.default).toBe(true)
++    expect(props.hideThreadedMessages?.required).toBeFalsy()
++    expect(props.hideThreadedMessages?.default).toBe(false)
++    expect(props.alwaysShowTimestamps?.required).toBeFalsy()
++    expect(props.alwaysShowTimestamps?.default).toBe(false)
++    expect(props.disableGrouping?.required).toBeFalsy()
++    expect(props.disableGrouping?.default).toBe(false)
++  })
++})

@@ -7,6 +7,32 @@ import MatrixDateSeparator from './MatrixDateSeparator.vue'
 import MatrixReadMarker from './MatrixReadMarker.vue'
 import MatrixTypingNotification from './MatrixTypingNotification.vue'
 
+interface Props {
+  /** 传入时,从该 timelineSet 派生消息(列表/详情用);不传 = 读 roomStore.activeRoomMessages(主聊天界面,零回归) */
+  timelineSet?: any
+  /** 渲染模式:'room'(主时间线)|'thread'(单话题详情)|'threads-list'(话题列表) */
+  renderingType?: 'room' | 'thread' | 'threads-list'
+  /** thread id(renderingType='thread' 时用) */
+  threadId?: string
+  showReadReceipts?: boolean
+  showReactions?: boolean
+  hideThreadedMessages?: boolean
+  alwaysShowTimestamps?: boolean
+  disableGrouping?: boolean
+  emptyState?: { title: string; description: string }
+}
+const props = withDefaults(defineProps<Props>(), {
+  timelineSet: undefined,
+  renderingType: 'room',
+  threadId: undefined,
+  showReadReceipts: true,
+  showReactions: true,
+  hideThreadedMessages: false,
+  alwaysShowTimestamps: false,
+  disableGrouping: false,
+  emptyState: undefined,
+})
+
 const roomStore = useMatrixRoomStore()
 const { t } = useI18n()
 
@@ -15,7 +41,18 @@ const isLoadingMore = ref(false)
 const isNearBottom = ref(true)
 const scrollTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
-const messages = computed(() => roomStore.activeRoomMessages)
+// 传入 timelineSet ⇒ 从该 timelineSet 派生;否则走 roomStore(现状)
+const useExternalTimeline = computed(() => props.timelineSet !== undefined)
+const messages = computed(() => {
+  if (useExternalTimeline.value) {
+    const live = props.timelineSet?.getLiveTimeline?.()
+    const evts = live?.getEvents?.() ?? []
+    return evts.filter(
+      (e: any) => e.getType?.() === 'm.room.message' && !e.isRedacted?.(),
+    )
+  }
+  return roomStore.activeRoomMessages
+})
 
 /** Group messages with date separators, continuation flags, and read marker */
 const groupedItems = computed(() => {
@@ -45,7 +82,7 @@ const groupedItems = computed(() => {
     }
 
     const senderId = event.getSender() ?? ''
-    const isContinuation = senderId === lastSenderId && lastDateStr === dateStr
+    const isContinuation = !props.disableGrouping && senderId === lastSenderId && lastDateStr === dateStr
     const nextEvent = messages.value[i + 1]
     const nextSenderId = nextEvent?.getSender() ?? ''
     const nextDate = nextEvent?.getDate()
@@ -108,7 +145,12 @@ async function loadMore() {
   if (isLoadingMore.value) return
   isLoadingMore.value = true
   try {
-    await roomStore.paginateMessages()
+    if (useExternalTimeline.value) {
+      const live = props.timelineSet?.getLiveTimeline?.()
+      await live?.paginate?.('b' as any, 20)
+    } else {
+      await roomStore.paginateMessages()
+    }
   } catch {
     // ignore
   } finally {
@@ -136,6 +178,10 @@ onMounted(() => {
         :is-continuation="item.isContinuation"
         :is-last-in-section="item.isLastInSection"
         :layout="roomStore.timelineLayout"
+        :rendering-type="renderingType"
+        :thread-id="threadId"
+        :show-reactions="showReactions"
+        :always-show-timestamps="alwaysShowTimestamps"
       />
     </template>
     <MatrixTypingNotification />

@@ -10,22 +10,30 @@ import { matrixEventBus } from './matrix-events'
 import { useMatrixClientStore } from './matrix-client'
 import { useMatrixRoomStore } from './matrix-room'
 import { useMatrixComposerStore } from './matrix-composer'
+import { useMatrixRightPanelStore } from './matrix-right-panel'
+
+export type ThreadNotificationIndicator = 'none' | 'unread' | 'highlight'
 
 export const useMatrixThreadStore = defineStore('matrix-thread', () => {
   const clientStore = useMatrixClientStore()
   const roomStore = useMatrixRoomStore()
   const composer = useMatrixComposerStore()
+  const rightPanelStore = useMatrixRightPanelStore()
 
-  const threadRootEventId = ref<string | null>(null)
+  // threadMessages/threadsLoading retained for onThreadUpdate live-refresh
+  // signaling (thread detail timeline reactivity). View-state (threadRootEventId)
+  // was migrated to the right-panel store in Task 1; the back-compat computed
+  // is removed now that all call sites use right-panel phase directly.
   const threadMessages = ref<MatrixEvent[]>([])
   const threadsLoading = ref(false)
 
   function refreshThreadMessages() {
-    if (!threadRootEventId.value || !roomStore.activeRoom) {
+    const rootId = rightPanelStore.rightPanelThreadRootId
+    if (!rootId || !roomStore.activeRoom) {
       threadMessages.value = []
       return
     }
-    const thread = roomStore.activeRoom.getThread(threadRootEventId.value)
+    const thread = roomStore.activeRoom.getThread(rootId)
     if (!thread || !thread.timelineSet) {
       threadMessages.value = []
       return
@@ -41,9 +49,7 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
   function setThreadView(event: MatrixEvent) {
     const eventId = event.getId()
     if (!eventId) return
-    threadRootEventId.value = eventId
-    // Composer state lives on the composer store; write directly (the god-store
-    // facade exposes composerMode/replyToEvent/editingEvent as read-only computeds).
+    rightPanelStore.openThreadView(eventId)
     composer.composerMode = 'thread'
     composer.replyToEvent = null
     composer.editingEvent = null
@@ -51,7 +57,7 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
   }
 
   function clearThreadView() {
-    threadRootEventId.value = null
+    rightPanelStore.clearThreadView()
     threadMessages.value = []
     composer.composerMode = 'normal'
     composer.replyToEvent = null
@@ -59,15 +65,18 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
   }
 
   function openThreadPanel() {
-    // Use '__list__' as a special marker to show the thread list (no specific
-    // thread selected). The panel reads threadRootEventId to decide its mode.
-    threadRootEventId.value = '__list__'
+    // Back-compat: 委托 right-panel store 进入 ThreadPanel phase。
+    // (('__list__' 语义已被 ThreadPanel phase 取代)
+    rightPanelStore.openThreadPanel()
     threadMessages.value = []
   }
 
   function toggleThreadPanel() {
-    if (threadRootEventId.value) {
-      clearThreadView()
+    if (
+      rightPanelStore.rightPanelPhase === 'ThreadPanel' ||
+      rightPanelStore.rightPanelPhase === 'ThreadView'
+    ) {
+      rightPanelStore.closeRightPanel()
     } else {
       openThreadPanel()
     }
@@ -146,26 +155,35 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
     }
   }
 
-  /** Check if current room has thread notifications (unread threads) */
-  const hasThreadNotifications = computed(() => {
-    if (!roomStore.activeRoom) return false
+  /**
+   * 话题通知指示器(镜像 element-web determineUnreadState + notificationLevelToIndicator)。
+   * 读 room.threadsAggregateNotificationType。
+   */
+  function getThreadNotificationIndicator(): ThreadNotificationIndicator {
+    if (!roomStore.activeRoom) return 'none'
     try {
-      const notificationType = roomStore.activeRoom.threadsAggregateNotificationType
-      if (notificationType === NotificationCountType.Highlight || notificationType === NotificationCountType.Total) {
-        return true
-      }
-      return getRoomThreads().length > 0
+      const t = roomStore.activeRoom.threadsAggregateNotificationType
+      if (t === NotificationCountType.Highlight) return 'highlight'
+      if (t === NotificationCountType.Total) return 'unread'
+      return 'none'
     } catch {
-      return false
+      return 'none'
     }
-  })
+  }
+
+  /** Check if current room has thread notifications (unread/highlight threads) */
+  const hasThreadNotifications = computed(
+    () => getThreadNotificationIndicator() !== 'none',
+  )
 
   // Register on event bus
-  matrixEventBus.onSelectRoom.value = clearThreadView
+  matrixEventBus.onSelectRoom.value = () => {
+    rightPanelStore.closeRightPanel()
+    threadMessages.value = []
+  }
   matrixEventBus.onThreadUpdate.value = refreshThreadMessages
 
   return {
-    threadRootEventId,
     threadMessages,
     threadsLoading,
     refreshThreadMessages,
@@ -179,6 +197,7 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
     getThreadReplyCount,
     getThreadLastReply,
     getRoomThreads,
+    getThreadNotificationIndicator,
     hasThreadNotifications,
   }
 })

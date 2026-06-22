@@ -1,0 +1,77 @@
+diff --git a/tests/client/matrix-thread-summary.test.ts b/tests/client/matrix-thread-summary.test.ts
+new file mode 100644
+index 00000000..0423c2be
+--- /dev/null
++++ b/tests/client/matrix-thread-summary.test.ts
+@@ -0,0 +1,71 @@
++// @vitest-environment jsdom
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { createPinia, setActivePinia } from 'pinia'
++import { mount } from '@vue/test-utils'
++
++vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
++  useMatrixRoomStore: () => ({
++    getUserAvatarUrl: () => null,
++  }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
++  useMatrixClientStore: () => ({ client: null, error: null, userId: '' }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-events', () => ({
++  matrixEventBus: {
++    onSelectRoom: { value: null },
++    onThreadUpdate: { value: null },
++    onRoomListChange: { value: null },
++    onTimeline: { value: null },
++  },
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
++  useMatrixComposerStore: () => ({ stripPlainReply: (s: string) => s }),
++}))
++
++import MatrixThreadSummary from '@/custom/matrix-chat/components/MatrixThreadSummary.vue'
++
++function makeThread(length: number, lastReply?: any) {
++  return {
++    length,
++    replyToEvent: lastReply ?? null,
++    id: '$root:server',
++    room: { roomId: '!r:s' },
++  }
++}
++
++describe('MatrixThreadSummary', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++  })
++
++  it('renders reply count label', () => {
++    const thread = makeThread(3)
++    const wrapper = mount(MatrixThreadSummary, {
++      props: { thread, mxEvent: { getId: () => '$root:server' } as any },
++      global: { mocks: { $t: (k: string, p?: any) => (p ? `${k}:${JSON.stringify(p)}` : k) } },
++    })
++    expect(wrapper.text()).toContain('3')
++  })
++
++  it('emits openThread with root event id on click', async () => {
++    const thread = makeThread(1)
++    const wrapper = mount(MatrixThreadSummary, {
++      props: { thread, mxEvent: { getId: () => '$root:server' } as any },
++      global: { mocks: { $t: (k: string) => k } },
++    })
++    await wrapper.find('button').trigger('click')
++    const emitted = wrapper.emitted('openThread')
++    expect(emitted).toBeTruthy()
++    expect(emitted![0]).toEqual(['$root:server'])
++  })
++
++  it('renders empty string count when thread has 0 replies', () => {
++    const thread = makeThread(0)
++    const wrapper = mount(MatrixThreadSummary, {
++      props: { thread, mxEvent: { getId: () => '$root:server' } as any },
++      global: { mocks: { $t: (k: string) => k } },
++    })
++    expect(wrapper.find('.mx_ThreadSummary_repliesAmount').text()).toBe('')
++  })
++})

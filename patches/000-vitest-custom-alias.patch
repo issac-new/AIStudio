@@ -1,0 +1,15 @@
+diff --git a/vitest.config.ts b/vitest.config.ts
+index 850ca0b1..a499b9a2 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -6,6 +6,10 @@ export default defineConfig({
+   plugins: [vue()],
+   resolve: {
+     alias: {
++      // overlay 二次开发:@/custom / @custom 解析到 overlay custom 目录
++      // (与 vite.config.overlay.ts 的构建期 alias 对齐,使 vitest 能测试 overlay 代码)
++      '@/custom': resolve(__dirname, '../../overlay/custom/client'),
++      '@custom': resolve(__dirname, '../../overlay/custom/client'),
+       '@': resolve(__dirname, 'packages/client/src'),
+       '/logo.png': resolve(__dirname, 'packages/client/src/assets/logo.png'),
+     },

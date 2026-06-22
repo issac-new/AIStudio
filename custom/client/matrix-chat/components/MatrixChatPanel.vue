@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
-import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
 import MatrixRoomList from './MatrixRoomList.vue'
@@ -14,13 +13,11 @@ import MatrixRoomHeader from './MatrixRoomHeader.vue'
 import MatrixCreateRoomDialog from './MatrixCreateRoomDialog.vue'
 import MatrixJoinRoomDialog from './MatrixJoinRoomDialog.vue'
 import MatrixRedactDialog from './MatrixRedactDialog.vue'
-import MatrixThreadPanel from './MatrixThreadPanel.vue'
 import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
 import '../styles/matrix-chat.scss'
 
 const clientStore = useMatrixClientStore()
 const roomStore = useMatrixRoomStore()
-const threadStore = useMatrixThreadStore()
 const rightPanelStore = useMatrixRightPanelStore()
 const composerStore = useMatrixComposerStore()
 const route = useRoute()
@@ -160,13 +157,12 @@ onUnmounted(() => {
         </template>
       </div>
 
-      <!-- Content area with optional right panel / thread panel -->
+      <!-- Content area with optional right panel (按 phase 分发:RoomSummary/MemberList/ThreadPanel/ThreadView) -->
       <div class="chat-content-wrapper">
         <div class="chat-main-content">
           <MatrixMessagePanel />
         </div>
-        <MatrixThreadPanel v-if="threadStore.threadRootEventId" />
-        <MatrixRightPanel v-else-if="rightPanelStore.rightPanelPhase" />
+        <MatrixRightPanel v-if="rightPanelStore.rightPanelPhase" />
       </div>
     </div>
   </div>

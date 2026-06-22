@@ -1,0 +1,71 @@
+diff --git a/tests/client/matrix-right-panel.test.ts b/tests/client/matrix-right-panel.test.ts
+new file mode 100644
+index 00000000..145913bb
+--- /dev/null
++++ b/tests/client/matrix-right-panel.test.ts
+@@ -0,0 +1,65 @@
++// @vitest-environment jsdom
++import { beforeEach, describe, expect, it } from 'vitest'
++import { createPinia, setActivePinia } from 'pinia'
++import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
++
++describe('matrix-right-panel store (thread phases)', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++  })
++
++  it('openThreadPanel sets phase to ThreadPanel with null root id', () => {
++    const store = useMatrixRightPanelStore()
++    store.openThreadPanel()
++    expect(store.rightPanelPhase).toBe('ThreadPanel')
++    expect(store.rightPanelThreadRootId).toBe(null)
++  })
++
++  it('openThreadView sets phase to ThreadView with root event id', () => {
++    const store = useMatrixRightPanelStore()
++    store.openThreadView('$evt1:server')
++    expect(store.rightPanelPhase).toBe('ThreadView')
++    expect(store.rightPanelThreadRootId).toBe('$evt1:server')
++  })
++
++  it('openThreadView records history so rightPanelBack returns to ThreadPanel', () => {
++    const store = useMatrixRightPanelStore()
++    store.openThreadPanel()
++    store.openThreadView('$evt1:server')
++    store.rightPanelBack()
++    expect(store.rightPanelPhase).toBe('ThreadPanel')
++    expect(store.rightPanelThreadRootId).toBe(null)
++  })
++
++  it('clearThreadView from ThreadView returns to ThreadPanel', () => {
++    const store = useMatrixRightPanelStore()
++    store.openThreadView('$evt1:server')
++    store.clearThreadView()
++    expect(store.rightPanelPhase).toBe('ThreadPanel')
++    expect(store.rightPanelThreadRootId).toBe(null)
++  })
++
++  it('clearThreadView from ThreadPanel closes the panel', () => {
++    const store = useMatrixRightPanelStore()
++    store.openThreadPanel()
++    store.clearThreadView()
++    expect(store.rightPanelPhase).toBe(null)
++  })
++
++  it('setThreadFilter updates filter', () => {
++    const store = useMatrixRightPanelStore()
++    expect(store.rightPanelThreadFilter).toBe('all')
++    store.setThreadFilter('my')
++    expect(store.rightPanelThreadFilter).toBe('my')
++  })
++
++  it('closeRightPanel clears thread root id and filter', () => {
++    const store = useMatrixRightPanelStore()
++    store.openThreadView('$evt1:server')
++    store.setThreadFilter('my')
++    store.closeRightPanel()
++    expect(store.rightPanelPhase).toBe(null)
++    expect(store.rightPanelThreadRootId).toBe(null)
++    expect(store.rightPanelThreadFilter).toBe('all')
++  })
++})
