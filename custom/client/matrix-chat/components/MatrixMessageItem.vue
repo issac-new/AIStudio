@@ -25,6 +25,10 @@ interface Props {
   isLastInSection?: boolean
   isLast?: boolean
   layout?: 'group' | 'bubble' | 'irc'
+  renderingType?: 'room' | 'thread' | 'threads-list'
+  threadId?: string
+  showReactions?: boolean
+  alwaysShowTimestamps?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -33,6 +37,10 @@ const props = withDefaults(defineProps<Props>(), {
   isLastInSection: false,
   isLast: false,
   layout: 'group',
+  renderingType: 'room',
+  threadId: undefined,
+  showReactions: true,
+  alwaysShowTimestamps: false,
 })
 
 const { t } = useI18n()
@@ -131,6 +139,14 @@ const hasReactions = computed(() => {
   if (!eventId.value) return false
   return composerStore.getEventReactions(eventId.value).length > 0
 })
+
+// threads-list 模式下隐藏 reactions/action bar(对齐上游 showReactions=false)
+const effectiveHasReactions = computed(() =>
+  props.renderingType === 'threads-list' ? false : hasReactions.value,
+)
+const effectiveShowActionBar = computed(() =>
+  props.renderingType === 'threads-list' ? false : showActionBar.value,
+)
 
 function handleCopyLink() {
   navigator.clipboard.writeText(tileData.permalink.value).catch(() => {})
@@ -239,13 +255,15 @@ function closeContextMenu() {
       <!-- Footer: Reactions + Thread info + Read receipts -->
       <MatrixEventTileFooter
         :event-id="eventId"
-        :has-reactions="hasReactions"
-        :show-action-bar="showActionBar"
+        :event="props.event"
+        :has-reactions="effectiveHasReactions"
+        :show-action-bar="effectiveShowActionBar"
         :has-thread="hasThread"
         :thread-reply-count="threadReplyCount"
         :thread-last-reply-sender="threadLastReplySender"
         :thread-last-reply-content="threadLastReplyContent"
         :is-continuation="props.isContinuation"
+        :rendering-type="renderingType"
         @open-thread="openThread"
       />
 
