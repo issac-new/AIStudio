@@ -7,6 +7,7 @@ import MatrixReactionsRow from './MatrixReactionsRow.vue'
 import MatrixReadReceiptGroup from './MatrixReadReceiptGroup.vue'
 import MatrixThreadSummary from './MatrixThreadSummary.vue'
 import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
+import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 
 interface Props {
   eventId: string | null
@@ -27,8 +28,14 @@ const emit = defineEmits<{
 }>()
 
 const threadStore = useMatrixThreadStore()
-// 从 event 查 SDK Thread 对象(供 ThreadSummary 卡片渲染头像/预览/通知圆点)
-const thread = computed(() => threadStore.getThreadForEvent(props.event))
+const roomStore = useMatrixRoomStore()
+// 从 event 查 SDK Thread 对象(供 ThreadSummary 卡片渲染头像/预览/通知圆点)。
+// 读取 threadTimelineVersion 建立响应式依赖:SDK fetchRoomThreads 完成后
+// 该 ref 自增,触发本 computed 重算(否则 SDK 内部状态变化 Vue 追踪不到)。
+const thread = computed(() => {
+  void roomStore.threadTimelineVersion
+  return threadStore.getThreadForEvent(props.event)
+})
 const hasThreadCard = computed(
   () => Boolean(thread.value) && (thread.value?.length ?? 0) > 0,
 )

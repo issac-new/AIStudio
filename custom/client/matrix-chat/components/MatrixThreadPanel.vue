@@ -22,6 +22,8 @@ onMounted(() => {
 
 const filter = computed(() => rightPanelStore.rightPanelThreadFilter)
 const timelineSet = computed(() => roomStore.getThreadsTimelineSet(filter.value))
+// 加载态:initRoomThreads 在跑(createThreadsTimelineSets/fetchRoomThreads)期间为 true
+const loading = computed(() => threadStore.threadsLoading)
 
 const hasThreads = computed(() => {
   try {
@@ -134,8 +136,14 @@ function closePanel() {
     </div>
 
     <div class="thread-panel-body">
+      <!-- 加载中:initRoomThreads 在跑 -->
+      <div v-if="loading && !timelineSet" class="thread-panel-loading">
+        <MatrixSpinner />
+        <span>{{ t('matrixChat.loadingThreads') }}</span>
+      </div>
+      <!-- 有 timelineSet:渲染列表(空时由 TimelinePanel 的 emptyState 兜底) -->
       <MatrixTimelinePanel
-        v-if="timelineSet"
+        v-else-if="timelineSet"
         :timeline-set="timelineSet"
         rendering-type="threads-list"
         :show-read-receipts="false"
@@ -143,11 +151,15 @@ function closePanel() {
         :hide-threaded-messages="false"
         :always-show-timestamps="true"
         :disable-grouping="true"
-        :empty-state="hasThreads ? undefined : emptyState"
+        :empty-state="emptyState"
       />
-      <div v-else class="thread-panel-loading">
-        <MatrixSpinner />
-        <span>{{ t('matrixChat.loadingThreads') }}</span>
+      <!-- 服务器不支持 threads / 无 timelineSet 且加载已结束:显示空态 -->
+      <div v-else class="thread-panel-empty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <p class="thread-panel-empty-title">{{ emptyState.title }}</p>
+        <p class="thread-panel-empty-desc">{{ emptyState.description }}</p>
       </div>
     </div>
   </div>
@@ -271,5 +283,36 @@ function closePanel() {
   gap: 8px;
   color: $text-muted;
   font-size: 13px;
+}
+
+.thread-panel-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 24px;
+  text-align: center;
+  color: $text-muted;
+
+  svg {
+    opacity: 0.4;
+  }
+}
+
+.thread-panel-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: $text-secondary;
+  margin: 0;
+}
+
+.thread-panel-empty-desc {
+  font-size: 13px;
+  color: $text-muted;
+  margin: 0;
+  line-height: 1.4;
+  max-width: 260px;
 }
 </style>

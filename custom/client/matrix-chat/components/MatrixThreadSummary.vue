@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
+import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import MatrixThreadMessagePreview from './MatrixThreadMessagePreview.vue'
 
 interface Props {
@@ -22,7 +23,13 @@ const replyCountLabel = computed(() => {
 const lastReply = computed<import('matrix-js-sdk').MatrixEvent | null>(
   () => props.thread?.replyToEvent ?? null,
 )
-const notificationIndicator = computed(() => threadStore.getThreadNotificationIndicator())
+// 通知指示器读 SDK 的 threadsAggregateNotificationType(非响应式)。
+// 依赖 roomStore.threadTimelineVersion,确保 SDK thread 状态变更后重算。
+const roomStore = useMatrixRoomStore()
+const notificationIndicator = computed(() => {
+  void roomStore.threadTimelineVersion
+  return threadStore.getThreadNotificationIndicator()
+})
 
 function handleClick() {
   const id = props.mxEvent.getId()

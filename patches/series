@@ -43,7 +43,6 @@
 042-desktop-rebrand-swarmstudio-pkg.patch
 043-desktop-rebrand-swarmstudio-strings.patch
 044-i18n-locale-de.patch
-045-i18n-locale-en.patch
 046-i18n-locale-es.patch
 047-i18n-locale-fr.patch
 048-i18n-locale-ja.patch
@@ -51,9 +50,12 @@
 050-i18n-locale-pt.patch
 051-i18n-locale-ru.patch
 052-i18n-locale-zh-TW.patch
-053-i18n-locale-zh.patch
 054-i18n-login-title-swarmstudio.patch
 000-vitest-custom-alias.patch
 055-test-matrix-right-panel.patch
 056-test-matrix-thread-notifications.patch
 057-test-matrix-room-threads.patch
+058-test-matrix-timeline-panel-params.patch
+059-test-matrix-thread-summary.patch
+060-i18n-matrix-identity-keys.patch
+061-i18n-matrix-state-events.patch
