@@ -61,3 +61,4 @@
 075-cockpit-packages_client_src_i18n_locales_zh.ts.patch
 076-i18n-matrix-chat-en.patch
 077-i18n-matrix-chat-zh.patch
+078-server-kanban-workspace-files.patch
