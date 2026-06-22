@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 9f893c48..b5c9d97d 100644
+index 9f893c48..2719f301 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
-@@ -2,56 +2,109 @@
+@@ -2,98 +2,182 @@
  import { ref, onMounted } from "vue";
  import { useRouter } from "vue-router";
  import { useI18n } from "vue-i18n";
@@ -34,11 +34,17 @@ index 9f893c48..b5c9d97d 100644
 -// If already has a key, try to go to main page
 -if (hasApiKey()) {
 -  router.replace("/hermes/chat");
+-}
 +onMounted(() => {
 +  const savedHs = localStorage.getItem('matrix_homeserver_url');
 +  if (savedHs) homeserverUrl.value = savedHs;
 +});
-+
+ 
+-onMounted(async () => {
+-  try {
+-    await fetchAuthStatus();
+-  } catch {
+-    // Login remains available; the submit request will surface connection errors.
 +// The matrix-js-sdk wraps browser fetch failures in a ConnectionError whose
 +// message is exactly "fetch failed". Matrix protocol errors are MatrixError
 +// instances carrying an `errcode` (e.g. M_FORBIDDEN, M_UNKNOWN). A failure to
@@ -60,8 +66,11 @@ index 9f893c48..b5c9d97d 100644
 +  // otherwise a Hermes-backend outage gets misreported as a Homeserver problem.
 +  if (name === 'ConnectionError') {
 +    return t("login.homeserverConnectionFailed");
-+  }
-+
+   }
+-});
+ 
+-async function handleLogin() {
+-  await handlePasswordLogin();
 +  // Hermes backend (/api) connectivity failure. The Matrix login already
 +  // succeeded at this point, so the Homeserver is fine — the backend/proxy
 +  // (Vite dev proxy on :8649 → backend :8647, or the server itself) is down.
@@ -73,48 +82,14 @@ index 9f893c48..b5c9d97d 100644
 +  return msg || t("login.invalidCredentials");
  }
  
--onMounted(async () => {
--  try {
--    await fetchAuthStatus();
--  } catch {
--    // Login remains available; the submit request will surface connection errors.
+-async function handlePasswordLogin() {
+-  if (!username.value.trim() || !password.value) {
 +async function handleMatrixLogin() {
 +  if (!homeserverUrl.value.trim()) {
 +    errorMsg.value = t("login.homeserverRequired");
 +    return;
-   }
--});
++  }
 +  if (!matrixUsername.value.trim() || !matrixPassword.value) {
-+    errorMsg.value = t("login.credentialsRequired");
-+    return;
-+  }
-+
-+  loading.value = true;
-+  errorMsg.value = "";
- 
--async function handleLogin() {
--  await handlePasswordLogin();
-+  try {
-+    await authStore.matrixLogin(
-+      homeserverUrl.value.trim(),
-+      matrixUsername.value.trim(),
-+      matrixPassword.value
-+    );
-+    // Persist the working homeserver so the user does not have to re-enter it.
-+    // Only saved on success, never on a failed attempt.
-+    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
-+    router.replace("/hermes/chat");
-+  } catch (err: any) {
-+    errorMsg.value = classifyLoginError(err);
-+  } finally {
-+    loading.value = false;
-+  }
- }
- 
--async function handlePasswordLogin() {
--  if (!username.value.trim() || !password.value) {
-+async function handleLocalLogin() {
-+  if (!localUsername.value.trim() || !localPassword.value) {
      errorMsg.value = t("login.credentialsRequired");
      return;
    }
@@ -126,7 +101,14 @@ index 9f893c48..b5c9d97d 100644
    try {
 -    const sessionToken = await loginWithPassword(username.value.trim(), password.value);
 -    setApiKey(sessionToken);
-+    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
++    await authStore.matrixLogin(
++      homeserverUrl.value.trim(),
++      matrixUsername.value.trim(),
++      matrixPassword.value
++    );
++    // Persist the working homeserver so the user does not have to re-enter it.
++    // Only saved on success, never on a failed attempt.
++    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
      router.replace("/hermes/chat");
    } catch (err: any) {
 -    if (err.status === 429 || err.status === 503) {
@@ -134,47 +116,63 @@ index 9f893c48..b5c9d97d 100644
 -      showLockResetHint.value = true;
 -    } else {
 -      errorMsg.value = err.message || t("login.invalidCredentials");
--    }
-+    errorMsg.value = err?.message || t("login.invalidCredentials");
++    errorMsg.value = classifyLoginError(err);
++    // Fallback / degradation strategy:
++    // Only fall back to local login when Matrix login itself succeeded but the
++    // Hermes backend (/api/auth/matrix-login) could not be reached. Credential
++    // errors or a down Homeserver are NOT recoverable via local login, so we
++    // leave the user on the Matrix form with the real error.
++    if (errorMsg.value === t("login.backendConnectionFailed")) {
++      activeTab.value = 'local';
+     }
    } finally {
      loading.value = false;
    }
-@@ -65,32 +118,70 @@ async function handlePasswordLogin() {
-         <img src="/logo.png" alt="Hermes" width="80" height="80" />
-       </div>
+ }
++
++async function handleLocalLogin() {
++  if (!localUsername.value.trim() || !localPassword.value) {
++    errorMsg.value = t("login.credentialsRequired");
++    return;
++  }
++
++  loading.value = true;
++  errorMsg.value = "";
++
++  try {
++    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
++    router.replace("/hermes/chat");
++  } catch (err: any) {
++    errorMsg.value = err?.message || t("login.invalidCredentials");
++  } finally {
++    loading.value = false;
++  }
++}
+ </script>
+ 
+ <template>
+   <div class="login-view">
+     <div class="login-card">
+-      <div class="login-logo">
+-        <img src="/logo.png" alt="Hermes" width="80" height="80" />
+-      </div>
        <h1 class="login-title">{{ t("login.title") }}</h1>
 -      <p class="login-desc">{{ t("login.description") }}</p>
 -      <p class="login-default-hint">{{ t("login.defaultCredentialsHint") }}</p>
  
 -      <form class="login-form" @submit.prevent="handleLogin">
-+      <!-- Tab switcher -->
-+      <div class="login-tabs">
-+        <button
-+          :class="['tab-btn', { active: activeTab === 'matrix' }]"
-+          @click="activeTab = 'matrix'"
-+        >
-+          {{ t("login.matrixTab") }}
-+        </button>
-+        <button
-+          :class="['tab-btn', { active: activeTab === 'local' }]"
-+          @click="activeTab = 'local'"
-+        >
-+          {{ t("login.localTab") }}
-+        </button>
-+      </div>
-+
-+      <!-- Matrix Login Form -->
++      <!-- Matrix Login Form (default). Local login is only shown as a fallback. -->
 +      <form v-if="activeTab === 'matrix'" class="login-form" @submit.prevent="handleMatrixLogin">
 +        <p class="login-desc">{{ t("login.matrixDescription") }}</p>
-+        <input
+         <input
+-          v-model="username"
 +          v-model="homeserverUrl"
 +          type="url"
 +          class="login-input"
 +          :placeholder="t('login.homeserverPlaceholder')"
 +          autofocus
 +        />
-         <input
--          v-model="username"
++        <input
 +          v-model="matrixUsername"
 +          type="text"
 +          class="login-input"
@@ -193,8 +191,9 @@ index 9f893c48..b5c9d97d 100644
 +        </button>
 +      </form>
 +
-+      <!-- Local Login Form -->
-+      <form v-else class="login-form" @submit.prevent="handleLocalLogin">
++      <!-- Local Login Form (fallback: shown only after a backend-down degradation) -->
++      <form v-else-if="activeTab === 'local'" class="login-form" @submit.prevent="handleLocalLogin">
++        <p class="login-fallback-hint">{{ t("login.fallbackToLocalHint") }}</p>
 +        <p class="login-desc">{{ t("login.localDescription") }}</p>
 +        <input
 +          v-model="localUsername"
@@ -223,41 +222,24 @@ index 9f893c48..b5c9d97d 100644
          <button type="submit" class="login-btn" :disabled="loading">
            {{ loading ? "..." : t("login.submit") }}
          </button>
-@@ -135,6 +226,33 @@ async function handlePasswordLogin() {
-   margin: 0 0 10px;
++        <button type="button" class="login-fallback-link" @click="activeTab = 'matrix'">
++          {{ t("login.useMatrixLogin") }}
++        </button>
+       </form>
+     </div>
+   </div>
+@@ -124,10 +208,6 @@ async function handlePasswordLogin() {
+   }
  }
  
-+.login-tabs {
-+  display: flex;
-+  gap: 8px;
-+  margin-bottom: 20px;
-+  justify-content: center;
-+}
-+
-+.tab-btn {
-+  padding: 8px 16px;
-+  border: none;
-+  border-radius: $radius-sm;
-+  background: transparent;
-+  color: $text-muted;
-+  font-size: 14px;
-+  cursor: pointer;
-+  transition: all $transition-fast;
-+
-+  &.active {
-+    background: $text-primary;
-+    color: var(--text-on-accent);
-+  }
-+
-+  &:hover:not(.active) {
-+    color: $text-secondary;
-+  }
-+}
-+
- .login-desc {
-   font-size: 14px;
-   color: $text-muted;
-@@ -142,13 +260,6 @@ async function handlePasswordLogin() {
+-.login-logo {
+-  margin-bottom: 24px;
+-}
+-
+ .login-title {
+   font-size: 26px;
+   font-weight: 600;
+@@ -142,13 +222,6 @@ async function handlePasswordLogin() {
    line-height: 1.6;
  }
  
@@ -271,7 +253,7 @@ index 9f893c48..b5c9d97d 100644
  .login-form {
    display: flex;
    flex-direction: column;
-@@ -183,25 +294,6 @@ async function handlePasswordLogin() {
+@@ -183,25 +256,6 @@ async function handlePasswordLogin() {
    text-align: left;
  }
  
@@ -297,3 +279,36 @@ index 9f893c48..b5c9d97d 100644
  .login-btn {
    width: 100%;
    padding: 14px;
+@@ -223,4 +277,32 @@ async function handlePasswordLogin() {
+     cursor: not-allowed;
+   }
+ }
++
++.login-fallback-hint {
++  margin: 0 0 12px;
++  padding: 10px 12px;
++  border: 1px solid rgba(var(--warning-rgb), 0.35);
++  border-radius: $radius-sm;
++  background: rgba(var(--warning-rgb), 0.08);
++  color: $text-secondary;
++  font-size: 13px;
++  line-height: 1.5;
++  text-align: left;
++}
++
++.login-fallback-link {
++  margin-top: 4px;
++  padding: 6px;
++  border: none;
++  background: transparent;
++  color: $text-muted;
++  font-size: 13px;
++  cursor: pointer;
++  text-decoration: underline;
++  transition: color $transition-fast;
++
++  &:hover {
++    color: $text-primary;
++  }
++}
+ </style>

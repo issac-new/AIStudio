@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index a05f28cf..1fa39d4a 100644
+index a05f28cf..9fef1cae 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -8,6 +8,15 @@ export default {
+@@ -8,6 +8,17 @@ export default {
      tokenRequired: 'Please enter your access token',
      invalidToken: 'Invalid token',
      connectionFailed: 'Cannot connect to server',
@@ -15,10 +15,12 @@ index a05f28cf..1fa39d4a 100644
 +    homeserverRequired: 'Please enter a Homeserver URL',
 +    homeserverConnectionFailed: 'Cannot connect to the specified Homeserver',
 +    backendConnectionFailed: 'Connected to the Homeserver, but cannot reach the Hermes backend. Is the backend running?',
++    fallbackToLocalHint: 'Matrix login succeeded but the backend is unreachable. You can sign in with a local account instead.',
++    useMatrixLogin: 'Use Matrix login',
      passwordLogin: 'Password',
      tokenLogin: 'Token',
      usernamePlaceholder: 'Username',
-@@ -103,6 +112,9 @@ export default {
+@@ -103,6 +114,9 @@ export default {
      collapse: 'Collapse',
      start: 'Start',
      stop: 'Stop',
@@ -28,7 +30,7 @@ index a05f28cf..1fa39d4a 100644
    },
  
    // MCP Management
-@@ -201,6 +213,7 @@ export default {
+@@ -201,6 +215,7 @@ export default {
      terminal: 'Terminal',
      singleChat: 'Chat',
      globalAgent: 'Global Agent',
@@ -36,7 +38,7 @@ index a05f28cf..1fa39d4a 100644
      groupChat: 'Group Chat',
      files: 'Files',
      devices: 'Devices',
-@@ -615,6 +628,7 @@ export default {
+@@ -615,6 +630,7 @@ export default {
      noTasks: 'No tasks',
      allStatuses: 'All Statuses',
      allAssignees: 'All Assignees',
@@ -44,7 +46,7 @@ index a05f28cf..1fa39d4a 100644
      board: {
        create: 'New Board',
        archive: 'Archive Board',
-@@ -625,17 +639,35 @@ export default {
+@@ -625,17 +641,35 @@ export default {
        archived: 'Board archived',
        archiveConfirm: 'Archive the current board?',
      },
@@ -81,7 +83,7 @@ index a05f28cf..1fa39d4a 100644
      form: {
        title: 'Title',
        titlePlaceholder: 'Task title',
-@@ -648,6 +680,8 @@ export default {
+@@ -648,6 +682,8 @@ export default {
        selectPriority: 'Select priority...',
        tenant: 'Tenant',
        tenantPlaceholder: 'Tenant (optional)',
@@ -90,7 +92,7 @@ index a05f28cf..1fa39d4a 100644
        workspace: 'Workspace',
        workspaceScratch: 'Scratch workspace',
        workspaceDir: 'Use directory',
-@@ -669,6 +703,10 @@ export default {
+@@ -669,6 +705,10 @@ export default {
      },
      card: {
        assigneeTooltip: 'Assignee',
@@ -101,7 +103,7 @@ index a05f28cf..1fa39d4a 100644
        priority: {
          low: 'Low',
          medium: 'Medium',
-@@ -681,11 +719,20 @@ export default {
+@@ -681,11 +721,20 @@ export default {
          days: '{count}d ago',
        },
      },
@@ -122,7 +124,7 @@ index a05f28cf..1fa39d4a 100644
        createdAt: 'Created',
        startedAt: 'Started',
        completedAt: 'Completed',
-@@ -720,6 +767,11 @@ export default {
+@@ -720,6 +769,11 @@ export default {
        specify: 'Specify',
        loadLog: 'Load Log',
        loadDiagnostics: 'Load Diagnostics',
@@ -134,7 +136,7 @@ index a05f28cf..1fa39d4a 100644
      },
      message: {
        taskCreated: 'Task created',
-@@ -732,12 +784,125 @@ export default {
+@@ -732,12 +786,125 @@ export default {
        taskReclaimed: 'Task reclaimed',
        taskReassigned: 'Task reassigned',
        taskSpecified: 'Task specified',
@@ -261,7 +263,7 @@ index a05f28cf..1fa39d4a 100644
    },
  
    // Jobs
-@@ -2123,4 +2288,120 @@ export default {
+@@ -2123,4 +2290,120 @@ export default {
      new_0_6_13_5: 'Desktop updates are more reliable: Windows upgrades close stale Hermes Studio processes, Cloudflare is checked first, and GitHub remains the fallback feed',
      new_0_6_13_6: 'Release automation now keeps Web UI and Docker releases out of GitHub Latest while full desktop releases are manually promoted to Latest',
    },

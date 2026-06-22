@@ -52,9 +52,8 @@
 051-i18n-locale-ru.patch
 052-i18n-locale-zh-TW.patch
 053-i18n-locale-zh.patch
+054-i18n-login-title-swarmstudio.patch
 000-vitest-custom-alias.patch
 055-test-matrix-right-panel.patch
 056-test-matrix-thread-notifications.patch
 057-test-matrix-room-threads.patch
-058-test-matrix-timeline-panel-params.patch
-059-test-matrix-thread-summary.patch
