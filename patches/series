@@ -58,3 +58,5 @@
 073-cockpit-packages_client_src_views_LoginView.vue.patch
 074-cockpit-packages_client_src_i18n_locales_en.ts.patch
 075-cockpit-packages_client_src_i18n_locales_zh.ts.patch
+076-i18n-matrix-chat-en.patch
+077-i18n-matrix-chat-zh.patch

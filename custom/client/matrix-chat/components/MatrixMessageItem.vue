@@ -17,6 +17,8 @@ import MatrixMessageContextMenu from './MatrixMessageContextMenu.vue'
 import MatrixMessageBody from './MatrixMessageBody.vue'
 import MatrixMessageActionBar from './MatrixMessageActionBar.vue'
 import MatrixEventTileFooter from './MatrixEventTileFooter.vue'
+import MatrixForwardDialog from './MatrixForwardDialog.vue'
+import MatrixReactionPicker from './MatrixReactionPicker.vue'
 
 interface Props {
   event: MatrixEvent
@@ -161,7 +163,29 @@ function handleCopyText() {
 }
 
 function handleForward() {
-  // TODO: implement forward dialog
+  forwardDialogOpen.value = true
+}
+
+const forwardDialogOpen = ref(false)
+
+// Reaction picker (Element Web parity: opens picker, not hardcoded thumbs-up)
+const reactionPickerOpen = ref(false)
+
+function openReactionPicker() {
+  reactionPickerOpen.value = true
+}
+
+function closeReactionPicker() {
+  reactionPickerOpen.value = false
+}
+
+async function handleReactionSelect(emoji: string) {
+  try {
+    await composerStore.sendReaction(eventId.value, emoji)
+  } catch {
+    // error handled in store
+  }
+  closeReactionPicker()
 }
 
 // ─── Context menu ─────────────────────────────────────────
@@ -179,6 +203,10 @@ function onContextMenu(e: MouseEvent) {
 
 function closeContextMenu() {
   contextMenuOpen.value = false
+}
+
+function handleReplyInThread() {
+  threadStore.setThreadView(props.event)
 }
 
 </script>
@@ -280,7 +308,7 @@ function closeContextMenu() {
         @reply="handleReply"
         @edit="handleEdit"
         @delete="handleDelete"
-        @react="composerStore.sendReaction(eventId, '👍')"
+        @react="openReactionPicker"
         @copy-link="handleCopyLink"
       />
 
@@ -299,8 +327,23 @@ function closeContextMenu() {
       @delete="handleDelete(); closeContextMenu()"
       @copy-text="handleCopyText(); closeContextMenu()"
       @copy-link="handleCopyLink(); closeContextMenu()"
-      @react="composerStore.sendReaction(eventId, '👍'); closeContextMenu()"
+      @react="openReactionPicker(); closeContextMenu()"
       @forward="handleForward(); closeContextMenu()"
+      @reply-in-thread="handleReplyInThread(); closeContextMenu()"
+    />
+    <!-- Forward dialog -->
+    <MatrixForwardDialog
+      :event="event"
+      :visible="forwardDialogOpen"
+      @close="forwardDialogOpen = false"
+    />
+
+    <!-- Reaction picker (Element Web parity: opens on react button click) -->
+    <MatrixReactionPicker
+      :event-id="eventId"
+      :visible="reactionPickerOpen"
+      @close="closeReactionPicker"
+      @select="handleReactionSelect"
     />
   </div>
 </template>

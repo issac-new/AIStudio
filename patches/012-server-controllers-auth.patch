@@ -76,11 +76,12 @@ index 155822dd..f5adac67 100644
  }
  
 +// Helper: get admin token from config or current user
-+function getMatrixAdminToken(ctx: Context): string | null {
-+  // For now, use the current user's Matrix accessToken if they are admin
-+  // In production, this should come from server config
-+  // TODO: Read from Hermes config system
-+  return null
++function getMatrixAdminToken(_ctx: Context): string | null {
++  return process.env.MATRIX_ADMIN_TOKEN || null
++}
++
++function getMatrixHomeserverUrl(): string {
++  return process.env.MATRIX_HOMESERVER_URL || 'http://localhost:8008'
 +}
 +
 +/**
@@ -182,7 +183,7 @@ index 155822dd..f5adac67 100644
 + */
 +export async function listMatrixUsers(ctx: Context) {
 +  const adminToken = getMatrixAdminToken(ctx)
-+  const homeserverUrl = 'http://localhost:8008' // TODO: Get from config or user
++  const homeserverUrl = getMatrixHomeserverUrl()
 +
 +  if (!adminToken) {
 +    // Fallback: return only Hermes users with matrix_user_id
@@ -254,7 +255,7 @@ index 155822dd..f5adac67 100644
 +  }
 +
 +  const adminToken = getMatrixAdminToken(ctx)
-+  const homeserverUrl = 'http://localhost:8008' // TODO: Config
++  const homeserverUrl = getMatrixHomeserverUrl()
 +
 +  if (!adminToken) {
 +    ctx.status = 503

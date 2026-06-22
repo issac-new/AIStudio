@@ -21,6 +21,7 @@ const emit = defineEmits<{
   copyLink: []
   react: []
   forward: []
+  replyInThread: []
 }>()
 
 const { t } = useI18n()
@@ -51,6 +52,12 @@ const menuStyle = computed(() => ({
           <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
         </svg>
         <span>{{ t('matrixChat.actionReply') }}</span>
+      </button>
+      <button v-if="canReply" class="mx_MessageContextMenu_item" @click="emit('replyInThread')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <span>{{ t('matrixChat.replyInThread') }}</span>
       </button>
       <button v-if="canEdit" class="mx_MessageContextMenu_item" @click="emit('edit')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

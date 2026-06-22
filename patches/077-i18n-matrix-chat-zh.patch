@@ -1,0 +1,23 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index b88b6e96..06196ebd 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -2482,6 +2482,18 @@ export default {
+     codeBlock: '代码块',
+     emoji: '表情',
+     uploadFile: '上传文件',
++    forwardMessage: '转发消息',
++    forwardingMessage: '正在转发：',
++    send: '发送',
++    sent: '已发送',
++    failed: '失败',
++    noResults: '未找到结果',
++    searchHint: '输入关键词搜索本房间消息',
++    comingSoon: '即将推出',
++    forward: '转发',
++    copyText: '复制文本',
++    showLess: '收起',
++    showAll: '显示全部 ({count})',
+     // Thread interactions
+     threads: '话题',
+     thread: '话题',

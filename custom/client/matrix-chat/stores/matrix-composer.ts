@@ -57,6 +57,66 @@ export const useMatrixComposerStore = defineStore('matrix-composer', () => {
     }
   }
 
+  /** Upload a file and send as m.file / m.image message (Element Web parity) */
+  async function sendFile(file: File) {
+    if (!clientStore.client || !roomStore.activeRoomId) return
+    try {
+      const isImage = file.type.startsWith('image/')
+      let info: Record<string, unknown> = { size: file.size, mimetype: file.type }
+      let msgtype = 'm.file'
+
+      if (isImage) {
+        msgtype = 'm.image'
+        try {
+          const imgInfo = await getImageInfo(file)
+          if (imgInfo) {
+            info = { ...info, w: imgInfo.w, h: imgInfo.h }
+          }
+        } catch {
+          // Fall back to m.file on image load failure (Element Web behavior)
+          msgtype = 'm.file'
+        }
+      }
+
+      const contentUri = await clientStore.client.uploadContent(file, {
+        name: file.name,
+        type: file.type,
+        includeFilename: true,
+      })
+
+      await clientStore.client.sendEvent(
+        roomStore.activeRoomId,
+        'm.room.message' as any,
+        {
+          body: file.name,
+          msgtype,
+          url: contentUri,
+          info,
+        } as any,
+      )
+    } catch (err: any) {
+      clientStore.error = err?.message || 'Failed to send file'
+      throw err
+    }
+  }
+
+  /** Get natural image dimensions (Element Web parity: infoForImageFile) */
+  function getImageInfo(file: File): Promise<{ w: number; h: number } | null> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve({ w: img.naturalWidth, h: img.naturalHeight })
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(null)
+      }
+      img.src = url
+    })
+  }
+
   /** Strip reply fallback (lines starting with `> `) from plain body */
   function stripPlainReply(body: string): string {
     const lines = body.split('\n')
@@ -222,5 +282,6 @@ export const useMatrixComposerStore = defineStore('matrix-composer', () => {
     sendMessage, stripPlainReply, sendReply, sendEdit, redactEvent,
     canEditOwnMessage, isContentActionable, getReplyEventId, getReplyEvent, isEdited,
     getEventReactions, sendReaction, removeReaction,
+    sendFile,
   }
 })

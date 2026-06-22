@@ -5,6 +5,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import MatrixInviteDialog from './MatrixInviteDialog.vue'
+import MatrixSearchDialog from './MatrixSearchDialog.vue'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
@@ -12,6 +13,7 @@ const threadStore = useMatrixThreadStore()
 const { t } = useI18n()
 
 const showInviteDialog = ref(false)
+const searchDialogOpen = ref(false)
 
 const room = computed(() => roomStore.activeRoom)
 const roomName = computed(() => room.value?.name || '')
@@ -87,15 +89,15 @@ function handleOpenMemberList() {
 }
 
 function handleSearch() {
-  // TODO: implement search dialog
+  searchDialogOpen.value = true
 }
 
 function handleVideoCall() {
-  // TODO: implement video call
+  window.alert(t('matrixChat.comingSoon'))
 }
 
 function handleVoiceCall() {
-  // TODO: implement voice call
+  window.alert(t('matrixChat.comingSoon'))
 }
 
 const roomTopic = computed(() => {
@@ -179,6 +181,13 @@ const roomTopic = computed(() => {
 
     <!-- Invite dialog -->
     <MatrixInviteDialog v-if="showInviteDialog" @close="showInviteDialog = false" />
+
+    <!-- Search dialog -->
+    <MatrixSearchDialog
+      :visible="searchDialogOpen"
+      @close="searchDialogOpen = false"
+      @select="(eventId: string) => roomStore.selectEvent(eventId)"
+    />
   </div>
 </template>
 

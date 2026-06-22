@@ -226,8 +226,11 @@ function onFileSelected(e: Event) {
   const target = e.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
-  // TODO: implement file upload
-  target.value = ''
+  sending.value = true
+  composerStore.sendFile(file).finally(() => {
+    sending.value = false
+    target.value = ''
+  })
 }
 
 function handleKeydown(e: KeyboardEvent) {
