@@ -1,12 +1,12 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index b88b6e96..a6aa3b23 100644
+index b88b6e96..1b97a61a 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -206,6 +206,7 @@ export default {
      cockpit: 'AI协作中心',
      jobs: '任务',
      kanban: '看板',
-+    swarmKanban: 'Swarm 协作看板',
++    swarmKanban: '协作看板',
      models: '模型',
      profiles: '用户',
      plugins: '插件',
