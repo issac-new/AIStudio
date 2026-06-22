@@ -52,4 +52,30 @@ describe('CockpitGraphNode', () => {
     expect(drag).toBeTruthy()
     expect(drag!.at(-1)![0]).toEqual({ left: 130, top: 30 })
   })
+
+  it('renders occupant dots with title when node has occupants', () => {
+    const w = mount(CockpitGraphNode, {
+      props: { ...props, node: { ...props.node, occupants: ['张三', 'review-agent'] } },
+    })
+    const occs = w.findAll('.cockpit-graph-node__occ')
+    expect(occs).toHaveLength(2)
+    expect(occs[0].attributes('title')).toBe('张三')
+    expect(occs[0].text()).toBe('张')
+    expect(occs[1].attributes('title')).toBe('review-agent')
+  })
+
+  it('shows +N overflow dot when occupants exceed 3 and hides row when none', () => {
+    // 超出 3 个 → 前 3 圆点 + 一个 +N
+    const wMore = mount(CockpitGraphNode, {
+      props: { ...props, node: { ...props.node, occupants: ['a', 'b', 'c', 'd', 'e'] } },
+    })
+    const dotsMore = wMore.findAll('.cockpit-graph-node__occ')
+    expect(dotsMore).toHaveLength(4) // 3 个 + 1 个 +N
+    expect(dotsMore.at(-1)!.classes()).toContain('cockpit-graph-node__occ--more')
+    expect(dotsMore.at(-1)!.text()).toBe('+2')
+
+    // 无 occupants → 不渲染该行
+    const wNone = mount(CockpitGraphNode, { props })
+    expect(wNone.findAll('.cockpit-graph-node__occ')).toHaveLength(0)
+  })
 })
