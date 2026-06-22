@@ -457,6 +457,38 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     }
   }
 
+  /** 初始化房间的话题 timeline sets(镜像 element-web ThreadPanel onMount) */
+  async function initRoomThreads(): Promise<void> {
+    if (!activeRoom.value) return
+    try {
+      await (activeRoom.value as any).createThreadsTimelineSets()
+      await (activeRoom.value as any).fetchRoomThreads()
+    } catch {
+      // Server may not support threads — ignore
+    }
+  }
+
+  /**
+   * 取话题过滤后的 timeline set。
+   * All = threadsTimelineSets[0],My = [1](镜像 element-web ThreadPanel)。
+   */
+  function getThreadsTimelineSet(filter: 'all' | 'my'): any | undefined {
+    if (!activeRoom.value) return undefined
+    const sets = (activeRoom.value as any).threadsTimelineSets
+    if (!sets) return undefined
+    return filter === 'my' ? sets[1] : sets[0]
+  }
+
+  /** 按 id 取 SDK Thread 对象 */
+  function getThreadById(threadId: string): any | null {
+    if (!activeRoom.value) return null
+    try {
+      return (activeRoom.value as any).getThread(threadId) ?? null
+    } catch {
+      return null
+    }
+  }
+
   return {
     roomList, activeRoomId, messageList,
     timelineLayout, alwaysShowTimestamps, useCompactLayout,
@@ -473,6 +505,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     searchUserDirectory, getUserPresence,
     createRoom, joinRoom, leaveRoom, paginateMessages,
     getRoomUnreadCount, getRoomNotificationLevel, getEventReadReceipts,
+    initRoomThreads, getThreadsTimelineSet, getThreadById,
   }
 })
 
