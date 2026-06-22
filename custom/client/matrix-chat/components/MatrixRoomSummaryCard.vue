@@ -3,12 +3,10 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
-import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import MatrixInviteDialog from './MatrixInviteDialog.vue'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
-const threadStore = useMatrixThreadStore()
 const { t } = useI18n()
 
 const showInviteDialog = ref(false)
@@ -50,9 +48,8 @@ function handleOpenMemberList() {
 }
 
 function handleOpenThreadPanel() {
-  // Close right panel first, then open thread panel
-  rightPanelStore.closeRightPanel()
-  threadStore.openThreadPanel()
+  // 直接走 right-panel store 的 ThreadPanel phase(openThreadPanel 会 push history)
+  rightPanelStore.openThreadPanel()
 }
 
 function handleShareLink() {

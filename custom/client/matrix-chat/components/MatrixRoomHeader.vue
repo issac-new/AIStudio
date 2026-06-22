@@ -23,7 +23,11 @@ const avatarUrl = computed(() => roomStore.getRoomAvatarUrl(room.value, 40))
 const isEncrypted = computed(() => room.value ? roomStore.isRoomEncrypted(room.value.roomId) : false)
 const isPublic = computed(() => roomStore.isRoomPublic(room.value))
 const isRightPanelOpen = computed(() => rightPanelStore.rightPanelPhase !== null)
-const isThreadPanelOpen = computed(() => threadStore.threadRootEventId !== null)
+const isThreadPanelOpen = computed(
+  () =>
+    rightPanelStore.rightPanelPhase === 'ThreadPanel' ||
+    rightPanelStore.rightPanelPhase === 'ThreadView',
+)
 const isDirectMessage = computed(() => {
   if (!room.value) return false
   // DM rooms have exactly 2 joined members
@@ -63,10 +67,7 @@ async function _handleLeaveRoom() {
 void _handleLeaveRoom
 
 function handleToggleRightPanel() {
-  if (threadStore.threadRootEventId) {
-    threadStore.clearThreadView()
-    rightPanelStore.openRoomSummary()
-  } else if (rightPanelStore.rightPanelPhase) {
+  if (rightPanelStore.rightPanelPhase) {
     rightPanelStore.closeRightPanel()
   } else {
     rightPanelStore.openRoomSummary()
