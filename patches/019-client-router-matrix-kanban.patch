@@ -1,5 +1,4 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
-index 8b6863af..9bd7bd0f 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
 @@ -1,5 +1,8 @@
@@ -12,7 +11,7 @@ index 8b6863af..9bd7bd0f 100644
  
  const router = createRouter({
    history: createWebHashHistory(),
-@@ -48,7 +51,7 @@ const router = createRouter({
+@@ -53,7 +56,7 @@
      {
        path: '/hermes/kanban',
        name: 'hermes.kanban',
@@ -21,12 +20,12 @@ index 8b6863af..9bd7bd0f 100644
      },
      {
        path: '/hermes/models',
-@@ -118,6 +121,18 @@ const router = createRouter({
+@@ -123,7 +126,19 @@
        name: 'hermes.devices',
        component: () => import('@/views/hermes/DevicesView.vue'),
      },
 +    // HERMES_CUSTOM[MatrixChat] BEGIN: Matrix 聊天路由
-+    {
+     {
 +      path: '/hermes/matrix-chat',
 +      name: 'hermes.matrixChat',
 +      component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
@@ -37,22 +36,23 @@ index 8b6863af..9bd7bd0f 100644
 +      component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
 +    },
 +    // HERMES_CUSTOM[MatrixChat] END
-     {
++    {
        path: '/hermes/group-chat',
        name: 'hermes.groupChat',
-@@ -171,10 +186,16 @@ router.beforeEach((to, _from, next) => {
+       component: () => import('@/views/hermes/GroupChatView.vue'),
+@@ -176,10 +191,16 @@
      return
    }
  
 -  if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
--    next({ name: 'hermes.chat' })
+-    next({ name: 'hermes.cockpit' })
 -    return
 +  // HERMES_CUSTOM[MatrixAuth] BEGIN: 使用 auth store 检查超级管理员权限
 +  // Check super admin requirement using auth store
 +  if (to.meta.requiresSuperAdmin) {
 +    const authStore = useAuthStore()
 +    if (!authStore.isSuperAdmin) {
-+      next({ name: 'hermes.chat' })
++      next({ name: 'hermes.cockpit' })
 +      return
 +    }
    }
