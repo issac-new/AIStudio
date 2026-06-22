@@ -7,6 +7,7 @@ export interface FeatureConfig {
   kanbanEnhancements: boolean;
   branding: boolean;
   extendedI18n: boolean;
+  cockpit: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -16,6 +17,7 @@ export const features: FeatureConfig = {
   kanbanEnhancements: process.env.CUSTOM_KANBAN_ENHANCEMENTS !== 'false',
   branding: process.env.VITE_CUSTOM_BRANDING !== 'false',
   extendedI18n: process.env.VITE_CUSTOM_EXTENDED_I18N !== 'false',
+  cockpit: process.env.VITE_CUSTOM_COCKPIT !== 'false',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {

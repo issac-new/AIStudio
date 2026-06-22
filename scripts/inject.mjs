@@ -274,6 +274,8 @@ function main() {
     reversePatches(applied);
     // 还原非 patch 的 build 产物(如 openapi.json),保持上游完全干净
     restoreNonPatchArtifacts('clean');
+    // 移除 inject 创建的 server/src/custom 符号链接(保持上游纯净)
+    ensureServerCustomSymlink();
     console.log('[clean] done');
   }
 }

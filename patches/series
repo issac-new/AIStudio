@@ -16,14 +16,10 @@
 015-server-db-users-store.patch
 016-server-middleware-user-auth.patch
 017-package-json-matrix-sdk-dep.patch
-018-client-app-matrix-bypass.patch
-019-client-router-matrix-kanban.patch
 020-client-pagesidebarnav-nav.patch
-021-client-appsidebar-matrix.patch
 022-client-store-kanban-enh.patch
 023-client-store-chat.patch
 024-client-store-auth-matrix.patch
-025-client-loginview-matrix.patch
 026-client-accountsettings-matrix.patch
 027-client-usermgmtsettings-matrix.patch
 028-client-kanbanview-enh.patch
@@ -57,5 +53,9 @@
 057-test-matrix-room-threads.patch
 058-test-matrix-timeline-panel-params.patch
 059-test-matrix-thread-summary.patch
-060-i18n-matrix-identity-keys.patch
-061-i18n-matrix-state-events.patch
+070-cockpit-packages_client_src_App.vue.patch
+071-cockpit-packages_client_src_router_index.ts.patch
+072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch
+073-cockpit-packages_client_src_views_LoginView.vue.patch
+074-cockpit-packages_client_src_i18n_locales_en.ts.patch
+075-cockpit-packages_client_src_i18n_locales_zh.ts.patch
