@@ -62,3 +62,4 @@
 076-i18n-matrix-chat-en.patch
 077-i18n-matrix-chat-zh.patch
 078-server-kanban-workspace-files.patch
+079-server-kanban-timeline-aggregate.patch
