@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
@@ -16,10 +16,16 @@ interface Props {
     is_falling_back?: boolean
     'm.in_reply_to'?: { event_id: string }
   }
+  /**
+   * Focus the textarea on mount (thread view uses this to mirror element-web's
+   * post-ShowThread FocusSendMessageComposer dispatch).
+   */
+  autofocus?: boolean
 }
 const props = withDefaults(defineProps<Props>(), {
   compact: false,
   threadRelation: undefined,
+  autofocus: false,
 })
 
 const roomStore = useMatrixRoomStore()
@@ -247,6 +253,13 @@ function autoResizeTextarea() {
   el.style.height = 'auto'
   el.style.height = Math.min(el.scrollHeight, 120) + 'px'
 }
+
+// Autofocus on mount when requested (thread view → element-web FocusSendMessageComposer).
+onMounted(() => {
+  if (props.autofocus) {
+    nextTick(() => textareaRef.value?.focus())
+  }
+})
 
 async function handleSend() {
   const text = inputText.value.trim()

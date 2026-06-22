@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, toValue } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { EventStatus } from 'matrix-js-sdk'
 import type { MatrixEvent } from 'matrix-js-sdk'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
@@ -90,14 +89,25 @@ const displayContent = computed(() => toValue(tileData.displayContent))
 
 // ─── Action bar ──────────────────────────────────────────
 const showActionBar = ref(false)
-const canReply = computed(() => composerStore.isContentActionable(props.event))
+// Mirror element-web EventTileActionBarViewModel gating:
+//   showReply = contentActionable && canSendMessages
+//   showReact = contentActionable && canReact && !isSearch
+//   showEdit  = canEditOwnMessage
+const contentActionable = computed(() => composerStore.isContentActionable(props.event))
+const canReply = computed(() => contentActionable.value && composerStore.canSendMessages)
+const canReact = computed(() => contentActionable.value && composerStore.canReact)
 const canEdit = computed(() => composerStore.canEditOwnMessage(props.event))
-const canDelete = computed(() => {
-  if (!clientStore.client) return false
-  const isSent = !props.event.status || props.event.status === EventStatus.SENT
-  if (!isSent) return false
-  return true
-})
+
+// Reply-in-thread visibility (mirror element-web canShowReplyInThreadAction).
+// Hidden inside a thread timeline and for verification/beacon messages.
+const canReplyInThread = computed(
+  () => contentActionable.value
+    && composerStore.canSendMessages
+    && composerStore.canShowReplyInThreadAction(props.event, props.renderingType),
+)
+// Disabled when the event already carries a non-thread relation (reply/edit),
+// which would conflict with becoming a thread root (element-web isThreadReplyAllowed).
+const replyInThreadDisabled = computed(() => !composerStore.isThreadReplyAllowed(props.event))
 
 function onMouseEnter() { showActionBar.value = true }
 function onMouseLeave() { showActionBar.value = false }
@@ -136,7 +146,9 @@ const threadLastReplyContent = computed(() => {
 })
 
 function openThread() {
-  threadStore.setThreadView(props.event)
+  // Thread-summary "N replies" affordance: open the thread this event roots or
+  // belongs to (branch-aware, same path as reply-in-thread).
+  threadStore.openThreadFromEvent(props.event)
 }
 
 // ─── Reactions ────────────────────────────────────────────
@@ -168,10 +180,13 @@ function handleForward() {
 
 const forwardDialogOpen = ref(false)
 
-// Reaction picker (Element Web parity: opens picker, not hardcoded thumbs-up)
+// Reaction picker (Element Web parity: opens picker anchored above the react
+// button via aboveLeftOf(buttonRect), toggles the reaction on re-select).
 const reactionPickerOpen = ref(false)
+const reactionPickerAnchor = ref<DOMRect | null>(null)
 
-function openReactionPicker() {
+function openReactionPicker(anchor?: HTMLElement) {
+  reactionPickerAnchor.value = anchor?.getBoundingClientRect() ?? null
   reactionPickerOpen.value = true
 }
 
@@ -179,16 +194,14 @@ function closeReactionPicker() {
   reactionPickerOpen.value = false
 }
 
-async function handleReactionSelect(emoji: string) {
-  try {
-    await composerStore.sendReaction(eventId.value, emoji)
-  } catch {
-    // error handled in store
-  }
+async function handleReactionSelect(_emoji: string) {
+  // The picker already toggled the reaction internally (send/redact) before
+  // emitting `select`, mirroring element-web ReactionPicker.onChoose. We only
+  // need to close the popover here.
   closeReactionPicker()
 }
 
-// ─── Context menu ─────────────────────────────────────────
+// ─── Context menu (right-click + options overflow) ────────
 const contextMenuOpen = ref(false)
 const contextMenuPos = ref({ x: 0, y: 0 })
 
@@ -201,12 +214,22 @@ function onContextMenu(e: MouseEvent) {
   contextMenuOpen.value = true
 }
 
+function openOptionsMenu(anchor: HTMLElement) {
+  // Anchor the overflow menu at the options button (element-web positions the
+  // MessageContextMenu via aboveLeftOf(optionsButtonRect)).
+  contextMenuPos.value = { x: anchor.getBoundingClientRect().left, y: anchor.getBoundingClientRect().top }
+  contextMenuOpen.value = true
+}
+
 function closeContextMenu() {
   contextMenuOpen.value = false
 }
 
 function handleReplyInThread() {
-  threadStore.setThreadView(props.event)
+  // Mirror element-web onReplyInThreadClick: if the event already belongs to a
+  // thread (and isn't the root), open that thread; otherwise start a new one
+  // rooted at this event. Both paths land on the ThreadView right-panel card.
+  threadStore.openThreadFromEvent(props.event)
 }
 
 </script>
@@ -299,16 +322,22 @@ function handleReplyInThread() {
         @open-thread="openThread"
       />
 
-      <!-- Action bar (hover/focus) -->
+      <!-- Action bar (hover/focus). Button order mirrors element-web
+           EventTileActionBarViewModel.resolveActions: React → Reply →
+           ReplyInThread → Edit → Cancel → Options(overflow). -->
       <MatrixMessageActionBar
+        :visible="effectiveShowActionBar"
+        :can-react="canReact"
         :can-reply="canReply"
+        :can-reply-in-thread="canReplyInThread"
+        :reply-in-thread-disabled="replyInThreadDisabled"
         :can-edit="canEdit"
-        :can-delete="canDelete"
-        :visible="showActionBar"
+        :can-cancel="false"
         @reply="handleReply"
         @edit="handleEdit"
-        @delete="handleDelete"
         @react="openReactionPicker"
+        @reply-in-thread="handleReplyInThread"
+        @options="openOptionsMenu"
         @copy-link="handleCopyLink"
       />
 
@@ -338,10 +367,12 @@ function handleReplyInThread() {
       @close="forwardDialogOpen = false"
     />
 
-    <!-- Reaction picker (Element Web parity: opens on react button click) -->
+    <!-- Reaction picker (Element Web parity: anchored above the react button,
+         toggles the reaction on re-select). -->
     <MatrixReactionPicker
       :event-id="eventId"
       :visible="reactionPickerOpen"
+      :anchor-rect="reactionPickerAnchor"
       @close="closeReactionPicker"
       @select="handleReactionSelect"
     />

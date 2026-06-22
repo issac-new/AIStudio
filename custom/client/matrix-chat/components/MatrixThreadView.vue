@@ -121,6 +121,7 @@ onMounted(async () => {
     <MatrixMessageInput
       v-if="!loading && thread?.timelineSet"
       compact
+      autofocus
       :thread-relation="threadRelation"
     />
   </div>

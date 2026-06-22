@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { MatrixEvent, MsgType, RelationType, EventType, EventStatus } from 'matrix-js-sdk'
 // Reads room/client data through the god-store facade; re-pointed to the
 // dedicated matrix-client / matrix-room stores in S1-5 once they exist.
@@ -224,6 +224,9 @@ export const useMatrixComposerStore = defineStore('matrix-composer', () => {
   /**
    * Get all reactions for a given event, grouped by reaction key.
    * Uses room.relations.getChildEventsForEvent() from the SDK.
+   * Mirrors element-web ReactionsRow + ReactionPicker.getReactions():
+   * each group carries `myReactionEventId` so the picker can highlight the
+   * current user's existing reaction and toggle (redact) on re-select.
    */
   function getEventReactions(eventId: string | null): { key: string; count: number; senders: string[]; myReactionEventId: string | null }[] {
     if (!roomStore.activeRoom || !eventId) return []
@@ -247,6 +250,49 @@ export const useMatrixComposerStore = defineStore('matrix-composer', () => {
       })
     } catch {
       return []
+    }
+  }
+
+  /**
+   * The reaction keys the current user has already sent for an event.
+   * Mirrors element-web ReactionPicker `selectedEmojis` (getAnnotationsBySender).
+   * Used by the picker to highlight existing reactions before the user toggles.
+   */
+  function getMyReactionKeys(eventId: string | null): Set<string> {
+    if (!eventId) return new Set()
+    return new Set(
+      getEventReactions(eventId)
+        .filter((r) => r.myReactionEventId)
+        .map((r) => r.key),
+    )
+  }
+
+  /**
+   * Toggle a reaction the way element-web ReactionPicker.onChoose does:
+   * if the current user has already sent this emoji → redact it,
+   * otherwise → send a new m.reaction annotation.
+   * Returns 'sent' | 'redacted' | null (null = no-op / error swallowed).
+   */
+  async function toggleReaction(targetEventId: string | null, emoji: string): Promise<'sent' | 'redacted' | null> {
+    if (!clientStore.client || !roomStore.activeRoomId || !targetEventId) return null
+    const existing = getEventReactions(targetEventId).find((r) => r.key === emoji)
+    if (existing?.myReactionEventId) {
+      try {
+        await clientStore.client.redactEvent(roomStore.activeRoomId, existing.myReactionEventId)
+        return 'redacted'
+      } catch (err: any) {
+        clientStore.error = err?.message || 'Failed to remove reaction'
+        throw err
+      }
+    }
+    try {
+      await (clientStore.client as any).sendEvent(roomStore.activeRoomId, EventType.Reaction, {
+        'm.relates_to': { rel_type: RelationType.Annotation, event_id: targetEventId, key: emoji },
+      })
+      return 'sent'
+    } catch (err: any) {
+      clientStore.error = err?.message || 'Failed to send reaction'
+      throw err
     }
   }
 
@@ -274,6 +320,101 @@ export const useMatrixComposerStore = defineStore('matrix-composer', () => {
     }
   }
 
+  // ── Power-level gating (mirror element-web RoomContext canReact / canSendMessages) ──
+  /**
+   * Whether the current user may send m.room.message in the active room.
+   * Mirrors element-web `RoomContext.canSendMessages` (maySendMessage + membership).
+   */
+  const canSendMessages = computed(() => {
+    const room = roomStore.activeRoom
+    const client = clientStore.client
+    if (!room || !client) return false
+    try {
+      const me = client.getUserId()
+      if (!me) return false
+      return room.currentState.maySendMessage(me)
+    } catch {
+      return false
+    }
+  })
+
+  /**
+   * Whether the current user may send m.reaction in the active room.
+   * Mirrors element-web `RoomContext.canReact` (default events_power_levels for m.reaction).
+   */
+  const canReact = computed(() => {
+    const room = roomStore.activeRoom
+    const client = clientStore.client
+    if (!room || !client) return false
+    try {
+      const me = client.getUserId()
+      if (!me) return false
+      // element-web falls back to maySendEvent('m.reaction', ...) then to the
+      // configured reactions power level; the SDK exposes maySendEvent for this.
+      return room.currentState.maySendEvent(EventType.Reaction, me)
+    } catch {
+      return false
+    }
+  })
+
+  /**
+   * Whether the current user may redact their own events in the active room.
+   * Mirrors element-web `RoomContext.canSelfRedact` (power to redact own events).
+   */
+  const canSelfRedact = computed(() => {
+    const room = roomStore.activeRoom
+    const client = clientStore.client
+    if (!room || !client) return false
+    try {
+      const me = client.getUserId()
+      if (!me) return false
+      return room.currentState.maySendRedactionForEvent(
+        // maySendRedactionForEvent needs an event; use a synthetic check via
+        // the user's own redact power level. Fall back to maySendEvent('m.room.redaction').
+        { getSender: () => me } as any,
+        me,
+      )
+    } catch {
+      try {
+        const me = client.getUserId()
+        return me ? room.currentState.maySendEvent(EventType.RoomRedaction, me) : false
+      } catch {
+        return false
+      }
+    }
+  })
+
+  // ── Reply-in-thread visibility guards (mirror element-web
+  //    EventTileActionBarViewModel.canShowReplyInThreadAction + isThreadReplyAllowed) ──
+
+  /**
+   * Whether the "Reply in thread" action should be *shown* at all for an event.
+   * Mirrors element-web `canShowReplyInThreadAction`:
+   *   - only outside a Thread timeline (the thread view has its own composer)
+   *   - not for m.key.verification.request / m.beacon_info messages
+   * Callers additionally require content-actionable + canSendMessages.
+   */
+  function canShowReplyInThreadAction(event: MatrixEvent, timelineRenderingType: 'room' | 'thread' | 'threads-list' = 'room'): boolean {
+    if (timelineRenderingType === 'thread') return false
+    const type = event.getType()
+    const content = event.getContent()
+    // Mirror element-web isAllowedMessageType exclusions
+    if (content?.msgtype === MsgType.KeyVerificationRequest) return false
+    if (type === 'm.beacon_info' || type === 'org.matrix.msc3672.beacon_info') return false
+    return true
+  }
+
+  /**
+   * Whether starting/continuing a thread from this event is *allowed* (not disabled).
+   * Mirrors element-web `isThreadReplyAllowed`:
+   *   disallowed when the event already has a non-thread relation (e.g. it is
+   *   itself a reply or an edit), which would conflict with a thread root.
+   */
+  function isThreadReplyAllowed(event: MatrixEvent): boolean {
+    const relationType = event.getRelation()?.rel_type
+    return !(!!relationType && relationType !== RelationType.Thread)
+  }
+
   return {
     composerMode, replyToEvent, editingEvent,
     redactingEventId, showRedactDialog,
@@ -281,7 +422,11 @@ export const useMatrixComposerStore = defineStore('matrix-composer', () => {
     requestRedact, closeRedactDialog,
     sendMessage, stripPlainReply, sendReply, sendEdit, redactEvent,
     canEditOwnMessage, isContentActionable, getReplyEventId, getReplyEvent, isEdited,
-    getEventReactions, sendReaction, removeReaction,
+    getEventReactions, getMyReactionKeys, toggleReaction, sendReaction, removeReaction,
     sendFile,
+    // Power-level gating (mirror element-web RoomContext)
+    canSendMessages, canReact, canSelfRedact,
+    // Reply-in-thread visibility guards
+    canShowReplyInThreadAction, isThreadReplyAllowed,
   }
 })

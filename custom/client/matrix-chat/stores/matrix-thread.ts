@@ -56,6 +56,34 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
     refreshThreadMessages()
   }
 
+  /**
+   * Reply-in-thread trigger (mirrors element-web
+   * EventTileActionBarViewModel.onReplyInThreadClick + MessageContextMenu
+   * ReplyInThreadButton.onClick):
+   *
+   *   - if the event already belongs to a thread AND is not the thread root →
+   *     open that existing thread (rooted at the thread's root event),
+   *   - otherwise → start a new thread rooted at this event.
+   *
+   * Both branches land on the ThreadView right-panel card. The view's composer
+   * is auto-focused on mount (MatrixThreadView focuses its textarea), matching
+   * element-web's post-ShowThread `FocusSendMessageComposer` dispatch.
+   */
+  function openThreadFromEvent(event: MatrixEvent) {
+    const thread = getThreadForEvent(event)
+    const isThreadRoot = event.isThreadRoot ?? false
+    if (thread?.rootEvent && !isThreadRoot) {
+      // Open the existing thread, rooted at its root event.
+      const rootEvent = thread.rootEvent
+      if (rootEvent) {
+        setThreadView(rootEvent)
+        return
+      }
+    }
+    // No existing thread (or this IS the root): start a new one here.
+    setThreadView(event)
+  }
+
   function clearThreadView() {
     rightPanelStore.clearThreadView()
     threadMessages.value = []
@@ -188,6 +216,7 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
     threadsLoading,
     refreshThreadMessages,
     setThreadView,
+    openThreadFromEvent,
     clearThreadView,
     openThreadPanel,
     toggleThreadPanel,
