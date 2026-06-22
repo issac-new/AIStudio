@@ -58,6 +58,8 @@ export interface GraphNode {
   focus: boolean
   /** 连线目标节点 id 列表（无向，由调用方去重） */
   links?: string[]
+  /** 该节点的在场者（谁在处理这个文件/测试），节点上以小圆点显示，hover 出名字。 */
+  occupants?: string[]
 }
 
 // ── P3: 工作项 & 文件树 ──
