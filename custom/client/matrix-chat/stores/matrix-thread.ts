@@ -20,15 +20,10 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
   const composer = useMatrixComposerStore()
   const rightPanelStore = useMatrixRightPanelStore()
 
-  // ── View-state back-compat(只读,派生自 right-panel store) ──
-  // Task 9 改完所有调用点后,删除这些 computed 与对应 export。
-  const threadRootEventId = computed<string | null>(() => {
-    if (rightPanelStore.rightPanelPhase === 'ThreadView') {
-      return rightPanelStore.rightPanelThreadRootId
-    }
-    if (rightPanelStore.rightPanelPhase === 'ThreadPanel') return '__list__'
-    return null
-  })
+  // threadMessages/threadsLoading retained for onThreadUpdate live-refresh
+  // signaling (thread detail timeline reactivity). View-state (threadRootEventId)
+  // was migrated to the right-panel store in Task 1; the back-compat computed
+  // is removed now that all call sites use right-panel phase directly.
   const threadMessages = ref<MatrixEvent[]>([])
   const threadsLoading = ref(false)
 
@@ -189,7 +184,6 @@ export const useMatrixThreadStore = defineStore('matrix-thread', () => {
   matrixEventBus.onThreadUpdate.value = refreshThreadMessages
 
   return {
-    threadRootEventId,
     threadMessages,
     threadsLoading,
     refreshThreadMessages,
