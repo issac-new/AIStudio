@@ -4,7 +4,9 @@ import { toMs } from './task-adapter'
 export interface HistoryItem {
   id: string
   when: string
+  ts: number
   taskId: string
+  source: 'event' | 'comment'
   action: string
   title: string
   archived: boolean
@@ -46,7 +48,9 @@ export function mergeTimeline(items: TimelineRawItem[]): HistoryItem[] {
     .map(it => ({
       id: `h-${it.id}`,
       when: formatWhen(toMs(it.ts)),
+      ts: toMs(it.ts),
       taskId: it.taskId,
+      source: it.source,
       action: deriveAction(it.source, { kind: it.kind, payload: it.payload }),
       title: it.source === 'comment'
         ? (it.body ?? '')

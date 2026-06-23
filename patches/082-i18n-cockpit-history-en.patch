@@ -1,0 +1,20 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index efcc5613..eced4df2 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -342,6 +342,15 @@ export default {
+     templateCount: '{n} templates',
+     relationA2A: 'A2A',
+     relationA2H: 'A2H',
++    historySearchPlaceholder: 'Search history…',
++    historyToday: 'Today',
++    historyWeek: 'This Week',
++    historyMonth: 'This Month',
++    historyCategory: 'Category',
++    historyCatEvent: 'Events',
++    historyCatComment: 'Comments',
++    historyActive: 'Active',
++    historyDone: 'Done',
+   },
+ 
+   runtimeVersions: {

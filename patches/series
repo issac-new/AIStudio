@@ -64,3 +64,5 @@
 078-server-kanban-workspace-files.patch
 079-server-kanban-timeline-aggregate.patch
 080-echarts-dep.patch
+082-i18n-cockpit-history-en.patch
+083-i18n-cockpit-history-zh.patch

@@ -1,0 +1,20 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index b88b6e96..7490a770 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -340,6 +340,15 @@ export default {
+     templateCount: '{n} 个模板',
+     relationA2A: 'A2A',
+     relationA2H: 'A2H',
++    historySearchPlaceholder: '搜索历史事件…',
++    historyToday: '今天',
++    historyWeek: '本周',
++    historyMonth: '本月',
++    historyCategory: '类别',
++    historyCatEvent: '事件',
++    historyCatComment: '评论',
++    historyActive: '进行中',
++    historyDone: '已完成',
+   },
+ 
+   runtimeVersions: {

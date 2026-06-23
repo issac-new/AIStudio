@@ -33,7 +33,13 @@ export type GraphRelation = topologyAdapter.GraphRelation
 export type GraphNodeRelation = topologyAdapter.GraphNodeRelation
 export type CockpitEvent = eventAdapter.CockpitEvent
 export type HistoryItem = historyAdapter.HistoryItem
-export type HistoryFilters = { actions: string[]; archived: 'all' | 'only' | 'exclude' }
+export interface HistoryFilters {
+  search: string
+  timeRange: 'today' | 'week' | 'month' | null
+  categories: ('event' | 'comment')[]
+  actions: string[]
+  statuses: ('active' | 'done' | 'archived')[]
+}
 export type WorkspaceMode = 'work' | 'chat' | 'term'
 export type ChannelKind = 'matrix' | 'chat' | 'group'
 export type WorkDecision = kv.WorkDecision
@@ -118,7 +124,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
     { kind: 'warn', text: '! 输入指令开始编程，如「打开 refresh.ts 看并发问题」' },
   ])
   const historyOpen = ref(false)
-  const historyFilters = ref<HistoryFilters>({ actions: [], archived: 'all' })
+  const historyFilters = ref<HistoryFilters>({
+    search: '',
+    timeRange: null,
+    categories: ['event', 'comment'],
+    actions: [],
+    statuses: ['active', 'done', 'archived'],
+  })
   const archivedMode = ref(false)
   const templateManagerOpen = ref(false)
   // task title 详情弹窗（双击 title 查看）（需求 #2）
@@ -312,9 +324,47 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const filteredHistory = computed(() =>
     history.value.filter(h => {
       const f = historyFilters.value
+
+      // 搜索：标题模糊匹配
+      const q = f.search.trim().toLowerCase()
+      const searchOk = !q || h.title.toLowerCase().includes(q)
+
+      // 时间片（互斥三选一，null=不限）
+      let timeOk = true
+      if (f.timeRange) {
+        const now = new Date()
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+        if (f.timeRange === 'today') {
+          timeOk = h.ts >= todayStart
+        } else if (f.timeRange === 'week') {
+          const dow = now.getDay()
+          const mondayOffset = dow === 0 ? -6 : 1 - dow
+          const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset).getTime()
+          timeOk = h.ts >= weekStart
+        } else {
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+          timeOk = h.ts >= monthStart
+        }
+      }
+
+      // 类别（多选）
+      const catOk = f.categories.length === 0 || f.categories.includes(h.source)
+
+      // 动作（多选）
       const actionOk = f.actions.length === 0 || f.actions.includes(h.action)
-      const archOk = f.archived === 'all' ? true : f.archived === 'only' ? h.archived : !h.archived
-      return actionOk && archOk
+
+      // 状态（多选，从本地 tasks 查找任务当前状态）
+      let statusOk = true
+      if (f.statuses.length > 0 && f.statuses.length < 3) {
+        const task = tasks.value.find(t => t.id === h.taskId)
+        const isDone = task?.status === 'done' || task?.status === 'archived'
+        if (f.statuses.includes('active') && !isDone && !h.archived) statusOk = true
+        else if (f.statuses.includes('done') && isDone && !h.archived) statusOk = true
+        else if (f.statuses.includes('archived') && h.archived) statusOk = true
+        else statusOk = false
+      }
+
+      return searchOk && timeOk && catOk && actionOk && statusOk
     }),
   )
 
@@ -753,7 +803,20 @@ export const useCockpitStore = defineStore('cockpit', () => {
       arr.push(action)
     }
   }
-  function setHistoryArchivedFilter(v: 'all' | 'only' | 'exclude') { historyFilters.value.archived = v }
+  function setHistorySearch(v: string) { historyFilters.value.search = v }
+  function setHistoryTimeRange(v: 'today' | 'week' | 'month' | null) {
+    historyFilters.value.timeRange = historyFilters.value.timeRange === v ? null : v
+  }
+  function toggleHistoryCategory(v: 'event' | 'comment') {
+    const arr = historyFilters.value.categories
+    const i = arr.indexOf(v)
+    if (i >= 0) arr.splice(i, 1); else arr.push(v)
+  }
+  function toggleHistoryStatus(v: 'active' | 'done' | 'archived') {
+    const arr = historyFilters.value.statuses
+    const i = arr.indexOf(v)
+    if (i >= 0) arr.splice(i, 1); else arr.push(v)
+  }
   function recallHistoryItem(id: string) {
     const item = history.value.find(h => h.id === id)
     if (!item) return
@@ -889,7 +952,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     updateWorkItem, toggleRiskTag, submitWorkItem, autoSaveDraft,
     setPendingAssignee, setPendingPriority, setPendingBody, addPendingLink, removePendingLink,
     selectChannel, sendMessage, disconnectOnUnmount,
-    openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
+    openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistorySearch, setHistoryTimeRange, toggleHistoryCategory, toggleHistoryStatus, recallHistoryItem, clearArchivedMode,
     focusOnTaskFromAttention, focusOnTimelineNode, clearAttentionFilter,
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,
