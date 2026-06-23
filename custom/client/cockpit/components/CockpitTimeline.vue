@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 
@@ -9,11 +9,30 @@ const { t } = useI18n()
 const THRESHOLD = 4
 const expanded = ref(false)
 
-// 组件层直接读 store 的原始数据 + 本地 filter 计算（避免 Pinia 代理响应式断裂）
+// 本地 actor filter（完全脱离 store 响应式，纯组件内控制）
+const localActorFilter = ref<string[]>([])
+
+// actor 选项（从事件去重）
+const actorOptions = computed(() => {
+  const set = new Set<string>()
+  for (const e of (store.eventsForSelectedTask ?? [])) set.add(e.actor)
+  return [...set].sort()
+})
+
+function toggleActor(actor: string) {
+  const i = localActorFilter.value.indexOf(actor)
+  if (i >= 0) {
+    localActorFilter.value = localActorFilter.value.filter(a => a !== actor)
+  } else {
+    localActorFilter.value = [...localActorFilter.value, actor]
+  }
+}
+
+// 组件内 filter 计算（依赖 localActorFilter + store.eventsForSelectedTask）
 const allFilteredEvents = computed(() => {
   const all = store.eventsForSelectedTask ?? []
-  const f = store.timelineActorFilter
-  if (!f || f.length === 0) return all
+  const f = localActorFilter.value
+  if (f.length === 0) return all
   return all.filter(e => f.includes(e.actor))
 })
 const recent = computed(() => {
@@ -25,6 +44,12 @@ const visibleEvents = computed(() =>
   expanded.value ? [...recent.value.folded, ...recent.value.visible] : recent.value.visible,
 )
 const hasTask = computed(() => !!store.selectedTask)
+
+// 切任务时清空 filter
+watch(() => store.selectedTaskId, () => {
+  localActorFilter.value = []
+  expanded.value = false
+})
 
 // 双击事件节点：按 source 类型弹窗显示完整内容
 function onEventDblClick(ev: { taskId: string; fullText: string; source: string; actor: string }) {
@@ -46,15 +71,15 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
       <span class="cockpit-timeline__title">{{ t('cockpit.timeline') }}</span>
     </div>
     <!-- actor 标签过滤（多选） -->
-    <div v-if="hasTask && store.timelineActorOptions.length" class="cockpit-timeline__actors">
+    <div v-if="hasTask && actorOptions.length" class="cockpit-timeline__actors">
       <button
-        v-for="actor in store.timelineActorOptions"
+        v-for="actor in actorOptions"
         :key="actor"
         type="button"
         class="cockpit-timeline__actor-chip"
-        :class="{ 'is-on': store.timelineActorFilter.includes(actor) }"
+        :class="{ 'is-on': localActorFilter.includes(actor) }"
         :data-actor-filter="actor"
-        @click="store.toggleTimelineActor(actor)"
+        @click="toggleActor(actor)"
       >{{ actor }}</button>
     </div>
     <div v-if="hasTask" class="cockpit-timeline__body">
