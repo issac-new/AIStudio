@@ -107,7 +107,10 @@ describe('CockpitWorkspace', () => {
   it('shows task header with title and status', () => {
     seed()
     const w = mount(CockpitWorkspace)
-    expect(w.text()).toContain('PR #142')
+    // 标题现为可编辑 input（A1），其值不进入 wrapper.text()，需查 input.value
+    const titleInput = w.find('.cockpit-workspace__title-input')
+    expect(titleInput.exists()).toBe(true)
+    expect((titleInput.element as HTMLInputElement).value).toContain('PR #142')
     expect(w.find('.cockpit-workspace__status-chip').exists()).toBe(true)
   })
 

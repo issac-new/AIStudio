@@ -3,7 +3,12 @@ import { computed, ref, watch } from 'vue'
 import { useCockpitStore, type WorkDecision } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import * as kanbanApi from '@/api/hermes/kanban'
+import type { KanbanTaskStatus, HomeChannel } from '@/api/hermes/kanban'
 import CockpitFileTree from './CockpitFileTree.vue'
+import CockpitConfirmDialog from './CockpitConfirmDialog.vue'
+import CockpitCompletionModal from './CockpitCompletionModal.vue'
+import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
 
 const store = useCockpitStore()
 const kanbanStore = useKanbanStore()
@@ -49,9 +54,9 @@ function isLinkPendingRemove(parent: string, child: string): boolean {
 const newParentId = ref('')
 const newChildId = ref('')
 
-// Assignee 选择（暂存到草稿）
+// Assignee 选择（暂存到草稿）—— assignees 是 KanbanAssignee[]，取 .name
 const assigneeOptions = computed(() => {
-  return (kanbanStore.assignees ?? []).map((a: string) => ({ label: a, value: a }))
+  return (kanbanStore.assignees ?? []).map((a: any) => ({ label: a?.name ?? a, value: a?.name ?? a }))
 })
 function onAssigneeChange(e: Event) {
   const v = (e.target as HTMLSelectElement).value
@@ -111,10 +116,13 @@ function navigateToTask(taskId: string) {
   store.selectTask(taskId)
 }
 
-// 任务切换时重置输入框
+// 任务切换时重置输入框 + 刷新诊断/home 频道
 watch(() => store.selectedTaskId, () => {
   newParentId.value = ''
   newChildId.value = ''
+  reassignProfile.value = ''
+  refreshDiagnostics()
+  refreshHomeChannels()
 })
 
 // ── 区域3: A2UI ──
@@ -139,6 +147,167 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
+
+// ── 评论区（草稿）──
+const pendingComment = computed(() => workItem.value?.pendingComment ?? '')
+function onCommentInput(e: Event) {
+  store.setPendingComment((e.target as HTMLTextAreaElement).value)
+}
+const comments = computed(() => detail.value?.comments ?? [])
+
+// ── 动作命令区（即时执行）──
+const actionBusy = ref(false)
+const actionMsg = ref<{ ok: boolean; text: string } | null>(null)
+const reassignProfile = ref('')
+
+async function execAction(label: string, fn: () => Promise<string | void>) {
+  const tid = store.selectedTaskId
+  if (actionBusy.value || !tid) return
+  actionBusy.value = true
+  actionMsg.value = null
+  try {
+    // fn 可返回更详细的成功文案；未返回时用通用 label ✓
+    const detail = await fn()
+    await store.loadTaskDetail(tid)
+    actionMsg.value = { ok: true, text: detail || (label + ' ✓') }
+  } catch (err: any) {
+    actionMsg.value = { ok: false, text: `${label} 失败: ${err?.message || String(err)}` }
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+// B1/B2 Specify / Decompose
+function doSpecify() {
+  if (!task.value) return
+  execAction('Specify', async () => {
+    const res = await kanbanStore.specifyTask(task.value!.id) as any
+    if (res && !res.ok) throw new Error(res?.reason || 'unknown')
+    return res?.new_title ? `Specified — retitled: ${res.new_title}` : ''
+  })
+}
+function doDecompose() {
+  if (!task.value) return
+  execAction('Decompose', async () => {
+    const res = await kanbanStore.decomposeTask(task.value!.id) as any
+    if (res && !res.ok) throw new Error(res?.reason || 'unknown')
+    if (res?.fanout && res?.child_ids?.length) {
+      return `Decomposed into ${res.child_ids.length} children: ${res.child_ids.join(', ')}`
+    } else if (res?.new_title) {
+      return `Single task (no fanout) — retitled: ${res.new_title}`
+    }
+    return ''
+  })
+}
+
+// B3 状态门禁（搬自 KanbanTaskDrawer.vue）
+function canMoveTo(status: KanbanTaskStatus): boolean {
+  if (!task.value) return false
+  const s = task.value.status as KanbanTaskStatus
+  switch (status) {
+    case 'triage': return s !== 'triage'
+    case 'ready': return s !== 'ready'
+    case 'blocked': return s === 'running' || s === 'ready'
+    case 'done': return s === 'running' || s === 'ready' || s === 'blocked'
+    case 'archived': return s !== 'archived'
+    default: return false
+  }
+}
+
+// B3/B4 状态流转 + 完成校验
+const confirmState = ref<{ show: boolean; status: KanbanTaskStatus; content: string } | null>(null)
+const completionShow = ref(false)
+const pendingDonePatch = ref<kanbanApi.KanbanTaskPatch | null>(null)
+
+function attemptStatusChange(status: KanbanTaskStatus) {
+  if (!task.value || !canMoveTo(status)) return
+  if (status === 'done') {
+    pendingDonePatch.value = { status: 'done' }
+    completionShow.value = true
+    return
+  }
+  const confirmMap: Partial<Record<KanbanTaskStatus, string>> = {
+    blocked: t('cockpit.confirmBlocked'),
+    archived: t('cockpit.confirmArchive'),
+  }
+  const content = confirmMap[status]
+  if (content) {
+    confirmState.value = { show: true, status, content }
+  } else {
+    doStatusPatch({ status })
+  }
+}
+function doStatusPatch(patch: kanbanApi.KanbanTaskPatch) {
+  execAction('Status', () => kanbanStore.patchTask(task.value!.id, patch))
+}
+function confirmStatusChange() {
+  if (!confirmState.value) return
+  doStatusPatch({ status: confirmState.value.status })
+  confirmState.value = null
+}
+function handleCompletionSubmit(summary: string) {
+  if (!summary) return
+  completionShow.value = false
+  const patch = { ...(pendingDonePatch.value || {}), result: summary } as kanbanApi.KanbanTaskPatch
+  pendingDonePatch.value = null
+  doStatusPatch(patch)
+}
+
+// B5/B6 Recovery（仅 running）
+function doReclaim() {
+  if (!task.value) return
+  execAction('Reclaim', () => kanbanStore.reclaimTask(task.value!.id))
+}
+function doReassign() {
+  if (!task.value || !reassignProfile.value.trim()) return
+  const profile = reassignProfile.value.trim()
+  execAction('Reassign', () => kanbanStore.reassignTask(task.value!.id, profile, { reclaim: true }))
+}
+
+// B7 Diagnostics（复用 kanban 子组件，按选中任务拉取）
+const diagItems = ref<kanbanApi.KanbanDiagnosticItem[]>([])
+const assigneeList = computed(() => (kanbanStore.assignees ?? []).map((a: any) => a?.name ?? a))
+function refreshDiagnostics() {
+  const tid = store.selectedTaskId
+  if (!tid) { diagItems.value = []; return }
+  kanbanStore.getDiagnostics({ task: tid })
+    .then((res: any) => {
+      // getDiagnostics({task}) 返回该任务的诊断数组（通常 1 项），取其 .diagnostics
+      const list = Array.isArray(res) ? res : []
+      diagItems.value = list.flatMap((d: any) => d.diagnostics ?? [])
+    })
+    .catch(() => { diagItems.value = [] })
+}
+
+// B8 Home-channel 通知订阅
+const homeChannels = ref<HomeChannel[]>([])
+const homeBusy = ref<Record<string, boolean>>({})
+async function refreshHomeChannels() {
+  const tid = store.selectedTaskId
+  if (!tid) { homeChannels.value = []; return }
+  try {
+    homeChannels.value = await kanbanApi.getHomeChannels(tid, { board: kanbanStore.selectedBoard })
+  } catch {
+    homeChannels.value = []
+  }
+}
+async function toggleHomeSubscription(ch: HomeChannel) {
+  const tid = store.selectedTaskId
+  if (!tid) return
+  homeBusy.value[ch.platform] = true
+  try {
+    if (ch.subscribed) {
+      await kanbanApi.unsubscribeHomeChannel(tid, ch.platform, { board: kanbanStore.selectedBoard })
+    } else {
+      await kanbanApi.subscribeHomeChannel(tid, ch.platform, { board: kanbanStore.selectedBoard })
+    }
+    await refreshHomeChannels()
+  } catch (err: any) {
+    actionMsg.value = { ok: false, text: `通知订阅失败: ${err?.message || String(err)}` }
+  } finally {
+    homeBusy.value[ch.platform] = false
+  }
+}
 </script>
 
 <template>
@@ -147,7 +316,10 @@ function formatFileSize(bytes: number): string {
       <div v-if="hasTask" class="cockpit-workspace__body">
         <!-- ═══ AREA 1: Task Header ═══ -->
         <div class="cockpit-workspace__header">
-          <div class="cockpit-workspace__title">{{ task?.title || selectedTask?.title }}</div>
+          <input class="cockpit-workspace__title-input"
+            :value="store.currentTitle"
+            :placeholder="t('cockpit.editTitlePlaceholder')"
+            @input="store.setPendingTitle(($event.target as HTMLInputElement).value)" />
           <div v-if="taskSummary" class="cockpit-workspace__summary">{{ taskSummary }}</div>
           <div class="cockpit-workspace__meta-row">
             <span class="cockpit-workspace__status-chip" :class="'is-' + (task?.status ?? '')">{{ task?.status ?? '' }}</span>
@@ -246,6 +418,84 @@ function formatFileSize(bytes: number): string {
             @input="onBodyInput" />
         </div>
 
+        <!-- ═══ 动作命令区（即时执行）═══ -->
+        <div class="cockpit-workspace__section cockpit-workspace__actions">
+          <label class="cockpit-workspace__section-title">{{ t('cockpit.actions') }}</label>
+          <div class="cockpit-workspace__action-row">
+            <button v-if="task?.status === 'triage'" type="button" class="cockpit-workspace__btn-mini"
+              :disabled="actionBusy" @click="doSpecify">✨ {{ t('cockpit.specify') }}</button>
+            <button v-if="task?.status === 'triage'" type="button" class="cockpit-workspace__btn-mini"
+              :disabled="actionBusy" @click="doDecompose">⚗ {{ t('cockpit.decompose') }}</button>
+          </div>
+          <div class="cockpit-workspace__action-row">
+            <button type="button" class="cockpit-workspace__btn-mini"
+              :disabled="!canMoveTo('triage')" @click="attemptStatusChange('triage')">→ {{ t('cockpit.moveToTriage') }}</button>
+            <button type="button" class="cockpit-workspace__btn-mini"
+              :disabled="!canMoveTo('ready')" @click="attemptStatusChange('ready')">→ {{ t('cockpit.moveToReady') }}</button>
+            <button type="button" class="cockpit-workspace__btn-mini"
+              :disabled="!canMoveTo('blocked')" @click="attemptStatusChange('blocked')">⚠ {{ t('cockpit.moveToBlocked') }}</button>
+            <button v-if="task?.status === 'blocked'" type="button" class="cockpit-workspace__btn-mini"
+              @click="doStatusPatch({ status: 'ready' })">{{ t('cockpit.unblock') }}</button>
+            <button type="button" class="cockpit-workspace__btn-mini is-pri"
+              :disabled="!canMoveTo('done')" @click="attemptStatusChange('done')">✓ {{ t('cockpit.moveToDone') }}</button>
+            <button type="button" class="cockpit-workspace__btn-mini"
+              :disabled="!canMoveTo('archived')" @click="attemptStatusChange('archived')">📦 {{ t('cockpit.moveToArchived') }}</button>
+          </div>
+          <div v-if="actionMsg" :class="['cockpit-workspace__action-msg', actionMsg.ok ? 'is-ok' : 'is-err']">
+            {{ actionMsg.text }}
+          </div>
+
+          <!-- B5/B6 Recovery（仅 running） -->
+          <div v-if="task?.status === 'running'" class="cockpit-workspace__sub-section">
+            <label class="cockpit-workspace__sub-title">{{ t('cockpit.recovery') }}</label>
+            <div class="cockpit-workspace__action-row">
+              <button type="button" class="cockpit-workspace__btn-mini"
+                :disabled="actionBusy" @click="doReclaim">{{ t('cockpit.reclaim') }}</button>
+              <input v-model="reassignProfile" class="cockpit-workspace__link-input"
+                :placeholder="t('cockpit.reassignProfile')" style="max-width:160px" />
+              <button type="button" class="cockpit-workspace__btn-mini"
+                :disabled="actionBusy || !reassignProfile.trim()" @click="doReassign">{{ t('cockpit.reassign') }}</button>
+            </div>
+          </div>
+
+          <!-- B7 Diagnostics -->
+          <div class="cockpit-workspace__sub-section">
+            <label class="cockpit-workspace__sub-title">{{ t('cockpit.diagnostics') }}</label>
+            <KanbanDiagnosticsSection
+              v-if="task"
+              :task="task"
+              :diagnostics="diagItems"
+              :assignees="assigneeList"
+              @refresh="refreshDiagnostics" />
+          </div>
+
+          <!-- B8 Home-channel 通知订阅 -->
+          <div v-if="homeChannels.length" class="cockpit-workspace__sub-section">
+            <label class="cockpit-workspace__sub-title">{{ t('cockpit.notifyHomeChannels') }}</label>
+            <div class="cockpit-workspace__action-row">
+              <button v-for="ch in homeChannels" :key="ch.platform" type="button"
+                class="cockpit-workspace__btn-mini"
+                :class="{ 'is-on': ch.subscribed }"
+                :disabled="homeBusy[ch.platform]"
+                @click="toggleHomeSubscription(ch)">
+                {{ ch.platform }} · {{ ch.subscribed ? t('cockpit.unsubscribe') : t('cockpit.subscribe') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- B3 确认弹窗 -->
+        <CockpitConfirmDialog
+          :show="!!confirmState?.show"
+          :content="confirmState?.content || ''"
+          @confirm="confirmStatusChange"
+          @cancel="confirmState = null" />
+        <!-- B4 完成校验弹窗 -->
+        <CockpitCompletionModal
+          :show="completionShow"
+          @submit="handleCompletionSubmit"
+          @cancel="completionShow = false" />
+
         <!-- ═══ AREA 3: A2UI Suggestions ═══ -->
         <div v-if="workItem" class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.yourDecision') }} *</label>
@@ -288,6 +538,22 @@ function formatFileSize(bytes: number): string {
             :value="workItem.opinion"
             @input="store.updateWorkItem({ opinion: ($event.target as HTMLTextAreaElement).value })" />
         </div>
+
+        <!-- ═══ 评论区（草稿）═══ -->
+        <div class="cockpit-workspace__section">
+          <label class="cockpit-workspace__section-title">{{ t('cockpit.comments') }}</label>
+          <div class="cockpit-workspace__comment-list">
+            <div v-for="c in comments" :key="c.id" class="cockpit-workspace__comment">
+              <span class="cockpit-workspace__comment-author">{{ c.author || '?' }}</span>
+              <span class="cockpit-workspace__comment-body">{{ c.body }}</span>
+            </div>
+            <div v-if="!comments.length" class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</div>
+          </div>
+          <textarea class="cockpit-workspace__textarea"
+            :value="pendingComment"
+            :placeholder="t('cockpit.addCommentPlaceholder')"
+            @input="onCommentInput" />
+        </div>
       </div>
       <div v-else class="cockpit-workspace__empty">{{ t('cockpit.noTaskSelected') }}</div>
 
@@ -317,6 +583,10 @@ function formatFileSize(bytes: number): string {
 /* AREA 1: Header */
 .cockpit-workspace__header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
 .cockpit-workspace__title { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 6px; }
+.cockpit-workspace__title-input { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 6px; width: 100%; border: none; background: transparent; border-bottom: 1px solid transparent; padding: 2px 0; font-family: inherit;
+  &:hover { border-bottom-color: var(--border-color); }
+  &:focus { border-bottom-color: var(--accent-primary); outline: none; }
+}
 .cockpit-workspace__summary { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
 .cockpit-workspace__meta-row { display: flex; align-items: center; gap: 8px; }
 .cockpit-workspace__status-chip { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
@@ -387,4 +657,25 @@ function formatFileSize(bytes: number): string {
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
   &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
 }
+
+/* 动作命令区 */
+.cockpit-workspace__actions { border-top: 1px solid var(--border-color); padding-top: 12px; }
+.cockpit-workspace__action-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.cockpit-workspace__btn-mini { font: inherit; font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+  &:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
+  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+}
+.cockpit-workspace__action-msg { font-size: 11px; margin-top: 6px; padding: 4px 8px; border-radius: 4px; }
+.cockpit-workspace__action-msg.is-ok { color: var(--success, #52c41a); background: rgba(82,196,26,0.08); }
+.cockpit-workspace__action-msg.is-err { color: var(--error); background: rgba(255,77,79,0.08); }
+.cockpit-workspace__sub-section { margin-top: 10px; }
+.cockpit-workspace__sub-title { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
+
+/* 评论区 */
+.cockpit-workspace__comment-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 180px; overflow-y: auto; }
+.cockpit-workspace__comment { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; background: var(--bg-secondary); border-radius: 6px; font-size: 12px; }
+.cockpit-workspace__comment-author { font-weight: 600; color: var(--accent-primary); font-size: 11px; }
+.cockpit-workspace__comment-body { color: var(--text-primary); line-height: 1.4; white-space: pre-wrap; }
 </style>

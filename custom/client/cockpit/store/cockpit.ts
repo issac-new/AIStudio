@@ -350,6 +350,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
     return _detailCache.value[id] ?? null
   })
 
+  // ── 当前标题（草稿优先，回退到 selectedTask.title）──
+  const currentTitle = computed(() => {
+    const draft = workItemForSelectedTask.value
+    if (draft?.pendingTitle !== undefined) return draft.pendingTitle || ''
+    return selectedTask.value?.title ?? ''
+  })
+
   // ── 当前用户（从 localStorage 获取）──
   const currentUserName = computed(() => {
     try {
@@ -683,6 +690,18 @@ export const useCockpitStore = defineStore('cockpit', () => {
     kv.saveDraft(id, { pendingBody: body })
     bumpKv()
   }
+  function setPendingTitle(v: string) {
+    const id = selectedTaskId.value
+    if (!id) return
+    kv.saveDraft(id, { pendingTitle: v })
+    bumpKv()
+  }
+  function setPendingComment(v: string) {
+    const id = selectedTaskId.value
+    if (!id) return
+    kv.saveDraft(id, { pendingComment: v })
+    bumpKv()
+  }
   function addPendingLink(link: kv.PendingLink) {
     const id = selectedTaskId.value
     if (!id) return
@@ -717,6 +736,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
     if (draft.pendingAssignee !== undefined) patch.assignee = draft.pendingAssignee
     if (draft.pendingPriority !== undefined) patch.priority = draft.pendingPriority
     if (draft.pendingBody !== undefined) patch.body = draft.pendingBody
+    // 标题（仅当与当前标题不同才提交）
+    if (draft.pendingTitle !== undefined && draft.pendingTitle !== (selectedTask.value?.title ?? '')) {
+      patch.title = draft.pendingTitle
+    }
     if (Object.keys(patch).length) {
       ops.push(kanbanApi.patchTask(id, patch, boardOpts))
     }
@@ -730,6 +753,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
     // 3. 始终提交决策评论
     const text = `[决策:${draft.decision}] 风险:${draft.riskTags.join(',')} ${draft.opinion}`.trim()
     ops.push(kanbanApi.addComment(id, { body: text }, boardOpts))
+    // 4. 用户自由评论（非空时额外一条，与决策评论并存）
+    if (draft.pendingComment && draft.pendingComment.trim()) {
+      ops.push(kanbanApi.addComment(id, { body: draft.pendingComment }, boardOpts))
+    }
     // 并发执行，单个失败不阻塞其他
     await Promise.allSettled(ops)
     kv.clearDraft(id)
@@ -1061,7 +1088,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     toggleCollapsed, toggleMidTop, toggleMidBottom, toggleTimelineActor, toggleFilter, setDateRangeFilter, clearDateRangeFilter, runSearch, clearSearch, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
     updateWorkItem, toggleRiskTag, submitWorkItem, autoSaveDraft,
-    setPendingAssignee, setPendingPriority, setPendingBody, addPendingLink, removePendingLink,
+    setPendingAssignee, setPendingPriority, setPendingBody, setPendingTitle, setPendingComment, currentTitle, addPendingLink, removePendingLink,
     selectChannel, sendMessage, disconnectOnUnmount,
     openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistorySearch, setHistoryTimeRange, toggleHistoryCategory, toggleHistoryStatus, recallHistoryItem, clearArchivedMode,
     focusOnTaskFromAttention, focusOnTimelineNode, clearAttentionFilter,
