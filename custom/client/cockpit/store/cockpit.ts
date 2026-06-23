@@ -91,6 +91,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const selectedTaskId = ref<string | null>(null)
   const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [], boardSlugs: [], dateRange: { from: null, to: null } })
   const collapsed = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
+  // 中栏上下分区折叠（协作图/时序流独立折叠）
+  const midTopCollapsed = ref(false)     // 协作图折叠（向上收）
+  const midBottomCollapsed = ref(false)  // 时序流折叠（向下收）
   const workspaceMode = ref<WorkspaceMode>('work')
   const activeChannelId = ref<string | null>(null)
   const maximized = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
@@ -380,6 +383,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   // ── 工作区/折叠/筛选 ──
   function toggleCollapsed(col: ColumnKey) { collapsed.value[col] = !collapsed.value[col] }
+  function toggleMidTop() { midTopCollapsed.value = !midTopCollapsed.value }
+  function toggleMidBottom() { midBottomCollapsed.value = !midBottomCollapsed.value }
   function toggleFilter<K extends keyof CockpitFilters>(key: K, value: CockpitFilters[K][number]) {
     const arr = filters.value[key] as CockpitFilters[K][number][]
     const i = arr.indexOf(value)
@@ -595,14 +600,14 @@ export const useCockpitStore = defineStore('cockpit', () => {
     filesForSelectedTask, workItemForSelectedTask,
     filteredHistory, messagesForActiveChannel, templates,
     // 客户端态
-    filters, collapsed, workspaceMode, activeChannelId, maximized,
+    filters, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
     titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
     templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
     _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
     // 方法
     bootstrap, selectTask, loadTaskDetail,
-    toggleCollapsed, toggleFilter, setDateRangeFilter, clearDateRangeFilter, setWorkspaceMode, toggleMaximized,
+    toggleCollapsed, toggleMidTop, toggleMidBottom, toggleFilter, setDateRangeFilter, clearDateRangeFilter, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
     updateWorkItem, toggleRiskTag, submitWorkItem,
     selectChannel, sendMessage, disconnectOnUnmount,

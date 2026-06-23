@@ -100,8 +100,22 @@ function onColCtrl(col: ColumnKey) {
             <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': colState('mid') !== 'normal' }"
               :title="colCtrlTitle('mid')" @click="onColCtrl('mid')">{{ colCtrlIcon('mid') }}</button>
           </div>
-          <CockpitCollabMap />
-          <CockpitTimeline />
+          <CockpitCollabMap v-show="!store.midTopCollapsed" :style="{ flex: store.midBottomCollapsed ? '1 1 0' : '1 1 0' }" />
+          <!-- 中栏分区折叠分隔条 -->
+          <div class="cockpit-mid-divider">
+            <button type="button" class="cockpit-mid-divider__btn" :class="{ 'is-on': store.midTopCollapsed }"
+              :title="store.midTopCollapsed ? '展开协作图' : '折叠协作图'"
+              @click="store.toggleMidTop()">
+              {{ store.midTopCollapsed ? '▽' : '△' }}
+            </button>
+            <span class="cockpit-mid-divider__line" />
+            <button type="button" class="cockpit-mid-divider__btn" :class="{ 'is-on': store.midBottomCollapsed }"
+              :title="store.midBottomCollapsed ? '展开时序流' : '折叠时序流'"
+              @click="store.toggleMidBottom()">
+              {{ store.midBottomCollapsed ? '△' : '▽' }}
+            </button>
+          </div>
+          <CockpitTimeline v-show="!store.midBottomCollapsed" />
         </div>
       </section>
 
@@ -176,4 +190,18 @@ function onColCtrl(col: ColumnKey) {
   padding: 16px; font-size: 14px; line-height: 1.6; color: var(--text-primary);
   word-break: break-word; white-space: pre-wrap; max-height: 60vh; overflow-y: auto;
 }
+.cockpit-mid-divider {
+  flex-shrink: 0; display: flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color); background: var(--bg-card);
+}
+.cockpit-mid-divider__btn {
+  width: 20px; height: 18px; padding: 0; border: 1px solid var(--border-color);
+  border-radius: 4px; background: var(--bg-secondary); color: var(--text-muted);
+  cursor: pointer; font-size: 10px; line-height: 1; font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+}
+.cockpit-mid-divider__line { flex: 1; height: 1px; background: var(--border-light); }
 </style>
