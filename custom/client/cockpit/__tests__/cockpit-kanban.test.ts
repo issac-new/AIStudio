@@ -25,10 +25,17 @@ vi.mock('@/api/hermes/kanban', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/kanban')
   return { ...actual, getTask, addComment }
 })
+const { mockSearchHermesSessions } = vi.hoisted(() => ({
+  mockSearchHermesSessions: vi.fn(async (_q: string) => []),
+}))
+vi.mock('@/api/hermes/sessions', async () => {
+  const actual = await vi.importActual<any>('@/api/hermes/sessions')
+  return { ...actual, searchSessions: mockSearchHermesSessions }
+})
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ loadSessions: vi.fn(async () => {}), messages: [], sendMessage: vi.fn(async () => {}), switchSession: vi.fn(async () => {}) }) }))
 vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => ({ connect: vi.fn(async () => {}), disconnect: vi.fn(), loadRooms: vi.fn(async () => {}), joinRoom: vi.fn(async () => {}), sendMessage: vi.fn(async () => {}), sortedMessages: [] }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({ useMatrixClientStore: () => ({ initClient: vi.fn(async () => {}), syncState: { value: 'PREPARED' } }) }))
-vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [] }) }))
+vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [], roomList: [] }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({ useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }) }))
 
 import CockpitKanban from '@/custom/cockpit/components/CockpitKanban.vue'
@@ -45,6 +52,10 @@ describe('CockpitKanban', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     mockKanbanTasks.splice(0, mockKanbanTasks.length)
+    mockSearchHermesSessions.mockResolvedValue([])
+    // mock clipboard
+    if (!(globalThis as any).navigator) (globalThis as any).navigator = {} as any
+    ;(globalThis as any).navigator.clipboard = { writeText: vi.fn().mockResolvedValue(undefined) }
     Object.defineProperty(globalThis, 'localStorage', { value: { getItem: () => null, setItem() {}, removeItem() {}, clear() {} }, configurable: true, writable: true })
   })
 
@@ -108,5 +119,44 @@ describe('CockpitKanban', () => {
     // 去重后的 tenant 选项：team-a, team-b（不含 (未指定)，因 seed 都有 tenant）
     expect(w.find('[data-filter="team-a"]').exists()).toBe(true)
     expect(w.find('[data-filter="team-b"]').exists()).toBe(true)
+  })
+
+  it('renders search input', () => {
+    seed()
+    const w = mount(CockpitKanban)
+    expect(w.find('[data-search-input]').exists()).toBe(true)
+  })
+
+  it('search filters tasks by local match via store', async () => {
+    seed()
+    const s = useCockpitStore()
+    s.runSearch('PR')
+    const filtered = s.filteredTasks.map(t => t.id)
+    expect(filtered).toEqual(['1'])
+  })
+
+  it('clearSearch restores all tasks', async () => {
+    seed()
+    const s = useCockpitStore()
+    s.runSearch('PR')
+    s.clearSearch()
+    const filtered = s.filteredTasks.map(t => t.id).sort()
+    expect(filtered).toEqual(['1', '2', '3'])
+  })
+
+  it('renders task id copy element per task', () => {
+    seed()
+    const w = mount(CockpitKanban)
+    const ids = w.findAll('[data-task-id-copy]')
+    expect(ids).toHaveLength(3)
+    expect(ids[0].text()).toBe('#1')
+  })
+
+  it('clicking task id copies to clipboard', async () => {
+    seed()
+    const w = mount(CockpitKanban)
+    await w.find('[data-task-id-copy]').trigger('click')
+    const clip = (globalThis as any).navigator.clipboard
+    expect(clip.writeText).toHaveBeenCalledWith('1')
   })
 })
