@@ -71,3 +71,5 @@
 087-group-chat-autojoin-on-connect.patch
 088-run-chat-autojoin-sessions-on-connect.patch
 089-chat-store-unread-tracking.patch
+090-cockpit-i18n-workitem-actions-en.ts.patch
+091-cockpit-i18n-workitem-actions-zh.ts.patch
