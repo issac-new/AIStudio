@@ -107,4 +107,6 @@
 
 // ── P5: 历史弹窗 overlay ──
 .cockpit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 40; }
+// 通知下拉面板：透明遮罩（仅用于点击外部关闭，不暗化背景）
+.cockpit-overlay--clear { background: transparent; z-index: 1000; }
 .cockpit-modal-anchor { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 41; }

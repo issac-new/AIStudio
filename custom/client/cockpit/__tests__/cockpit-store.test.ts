@@ -510,68 +510,36 @@ describe('cockpit store 折叠 + 最大化', () => {
   })
 })
 
-describe('notify (unread chat aggregation)', () => {
+describe('notify (Matrix unread only)', () => {
   beforeEach(() => {
     mockSortedRooms.splice(0, mockSortedRooms.length)
-    mockChatSessions.splice(0, mockChatSessions.length)
-    mockGroupRooms.splice(0, mockGroupRooms.length)
-    for (const k of Object.keys(groupLastMessageMap)) delete groupLastMessageMap[k]
-    isSessionUnread.mockReturnValue(false)
-    getSessionUnreadCount.mockReturnValue(0)
-    getSessionUnreadInfo.mockReturnValue(null)
-    groupGetRoomUnread.mockReturnValue(0)
     matrixGetRoomUnreadCount.mockReturnValue(0)
   })
 
-  it('聚合三类未读 → notifyItems 按 ts 降序', () => {
+  it('聚合 matrix 未读 → notifyItems 按 ts 降序', () => {
     mockSortedRooms.push({
-      roomId: '!m:sv', name: 'M-room', timeline: [
+      roomId: '!m2:sv', name: 'Room2', timeline: [
+        { getType: () => 'm.room.message', getContent: () => ({ body: 'later' }), getTs: () => 2000000000000, getSender: () => '@b:sv' },
+      ],
+    }, {
+      roomId: '!m1:sv', name: 'Room1', timeline: [
         { getType: () => 'm.room.message', getContent: () => ({ body: 'hi' }), getTs: () => 3000000000000, getSender: () => '@a:sv' },
       ],
     })
     matrixGetRoomUnreadCount.mockReturnValue(2)
-    // 三类均用 >1e12 毫秒时间戳避免 toMs 秒→毫秒启发式；chat 最小排最后
-    mockChatSessions.push({ id: 's1', title: 'C-sess', lastActiveAt: 1000000000000 })
-    isSessionUnread.mockReturnValue(true)
-    getSessionUnreadCount.mockReturnValue(1)
-    getSessionUnreadInfo.mockReturnValue({ count: 1, lastPreview: 'done', lastRole: 'assistant', lastTs: 1000000000000 })
-    mockGroupRooms.push({ id: 'g1', name: 'G-room' })
-    groupGetRoomUnread.mockReturnValue(1)
-    groupLastMessageMap['g1'] = { content: 'yo', senderName: 'B', ts: 2000000000000 }
 
     const store = useCockpitStore()
-    expect(store.notifyItems.map(i => i.id)).toEqual(['matrix:!m:sv', 'group:g1', 'chat:s1'])
-    expect(store.notifyCount).toBe(4) // 2 + 1 + 1
+    // ts 降序：3000 > 2000
+    expect(store.notifyItems.map(i => i.id)).toEqual(['matrix:!m1:sv', 'matrix:!m2:sv'])
+    expect(store.notifyCount).toBe(4) // 2 + 2
   })
 
-  it('filteredNotifyItems 按来源筛选', () => {
+  it('unread=0 的房间不计入', () => {
     mockSortedRooms.push({ roomId: '!m:sv', name: 'M', timeline: [] })
-    matrixGetRoomUnreadCount.mockReturnValue(1)
-    mockGroupRooms.push({ id: 'g1', name: 'G' })
-    groupGetRoomUnread.mockReturnValue(1)
-
+    matrixGetRoomUnreadCount.mockReturnValue(0)
     const store = useCockpitStore()
-    store.setNotifySourceFilter('matrix')
-    expect(store.filteredNotifyItems.map(i => i.kind)).toEqual(['matrix'])
-    store.setNotifySourceFilter('group')
-    expect(store.filteredNotifyItems.map(i => i.kind)).toEqual(['group'])
-    store.setNotifySourceFilter('all')
-    expect(store.filteredNotifyItems).toHaveLength(2)
-  })
-
-  it('clearNotifyItemUnread 分发到对应 store', () => {
-    mockChatSessions.push({ id: 's1', title: 'X' })
-    isSessionUnread.mockReturnValue(true)
-    getSessionUnreadCount.mockReturnValue(1)
-    getSessionUnreadInfo.mockReturnValue({ count: 1, lastPreview: 'hi', lastRole: 'user', lastTs: 1000 })
-    mockGroupRooms.push({ id: 'g1', name: 'G' })
-    groupGetRoomUnread.mockReturnValue(2)
-
-    const store = useCockpitStore()
-    store.clearNotifyItemUnread({ id: 'chat:s1', kind: 'chat' } as any)
-    expect(clearSessionUnread).toHaveBeenCalledWith('s1')
-    store.clearNotifyItemUnread({ id: 'group:g1', kind: 'group' } as any)
-    expect(groupClearRoomUnread).toHaveBeenCalledWith('g1')
+    expect(store.notifyItems).toHaveLength(0)
+    expect(store.notifyCount).toBe(0)
   })
 
   it('openNotify/closeNotify 开关', () => {
@@ -581,15 +549,5 @@ describe('notify (unread chat aggregation)', () => {
     expect(store.notifyOpen).toBe(true)
     store.closeNotify()
     expect(store.notifyOpen).toBe(false)
-  })
-
-  it('clearAllNotify 清零全部（逐项分发）', () => {
-    mockGroupRooms.push({ id: 'g1', name: 'G' }, { id: 'g2', name: 'G2' })
-    groupGetRoomUnread.mockReturnValue(1)
-    const store = useCockpitStore()
-    store.clearAllNotify()
-    // clearAllNotify 遍历 notifyItems 逐项清零：两个群聊项 → 各调一次 clearRoomUnread
-    expect(groupClearRoomUnread).toHaveBeenCalledWith('g1')
-    expect(groupClearRoomUnread).toHaveBeenCalledWith('g2')
   })
 })

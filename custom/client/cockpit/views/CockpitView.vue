@@ -168,8 +168,8 @@ function onColCtrl(col: ColumnKey) {
     <CockpitHistoryModal v-if="store.historyOpen" class="cockpit-modal-anchor" />
     <div v-if="store.scheduleOpen" class="cockpit-overlay" @click="store.closeSchedule()" />
     <CockpitScheduleModal v-if="store.scheduleOpen" class="cockpit-modal-anchor" />
-    <div v-if="store.notifyOpen" class="cockpit-overlay" @click="store.closeNotify()" />
-    <CockpitNotifyModal v-if="store.notifyOpen" class="cockpit-modal-anchor" />
+    <div v-if="store.notifyOpen" class="cockpit-overlay cockpit-overlay--clear" @click="store.closeNotify()" />
+    <CockpitNotifyModal v-if="store.notifyOpen" />
     <div v-if="store.templateManagerOpen" class="cockpit-overlay" @click="store.closeTemplateManager()" />
     <CockpitTemplateManager v-if="store.templateManagerOpen" class="cockpit-modal-anchor" />
 
