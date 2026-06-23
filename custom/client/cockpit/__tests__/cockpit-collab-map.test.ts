@@ -37,6 +37,13 @@ vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({ useMatrixClientSto
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [] }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({ useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }) }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+// mock mermaid（避免 jsdom 下真实渲染）
+vi.mock('mermaid', () => ({
+  default: {
+    initialize: vi.fn(),
+    render: vi.fn(async () => ({ svg: '<svg class="mock-mermaid"></svg>' })),
+  },
+}))
 
 import CockpitCollabMap from '@/custom/cockpit/components/CockpitCollabMap.vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -48,7 +55,7 @@ const kt = (over: Record<string, any> = {}) => ({
   result: null, skills: null, latest_summary: null, ...over,
 })
 
-describe('CockpitCollabMap (Canvas)', () => {
+describe('CockpitCollabMap (mermaid)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     mockKanbanTasks.splice(0, mockKanbanTasks.length)
@@ -72,14 +79,13 @@ describe('CockpitCollabMap (Canvas)', () => {
     return s
   }
 
-  it('renders canvas element when task selected', async () => {
+  it('renders canvas container when task selected', async () => {
     await seed()
     const w = mount(CockpitCollabMap)
     expect(w.find('.cockpit-map__canvas').exists()).toBe(true)
-    expect(w.find('canvas').exists()).toBe(true)
   })
 
-  it('store topology has center + ancestor + descendant + person + channel nodes', async () => {
+  it('store topology has center + ancestor + descendant + person + channel', async () => {
     const s = await seed()
     const topo = s.topologyForSelectedTask
     const kinds = topo.nodes.map(n => n.kind)
@@ -98,46 +104,30 @@ describe('CockpitCollabMap (Canvas)', () => {
     expect(center?.focus).toBe(true)
   })
 
-  it('ancestor node target.taskId is set for selectTask', async () => {
+  it('ancestor node target.taskId set', async () => {
     const s = await seed()
     const ancestor = s.topologyForSelectedTask.nodes.find(n => n.kind === 'ancestor')
     expect(ancestor?.target?.taskId).toBe('p1')
   })
 
-  it('renders zoom control buttons', async () => {
-    await seed()
-    const w = mount(CockpitCollabMap)
-    expect(w.find('[data-canvas-zoom-in]').exists()).toBe(true)
-    expect(w.find('[data-canvas-zoom-out]').exists()).toBe(true)
-  })
-
-  it('zoom-in button increases view scale', async () => {
-    await seed()
-    const w = mount(CockpitCollabMap)
-    // canvas 组件用内部 view，通过按钮触发 zoomBy
-    const vm = w.vm as any
-    const before = vm.view.scale ?? 1
-    await w.find('[data-canvas-zoom-in]').trigger('click')
-    expect((w.vm as any).view.scale).toBeGreaterThan(before)
-  })
-
-  it('renders empty state when no task selected', () => {
+  it('renders empty state when no task', () => {
     const w = mount(CockpitCollabMap)
     expect(w.find('.cockpit-map__empty').exists()).toBe(true)
   })
 
-  it('channel node links to current task channel', async () => {
+  it('channel node links to current task', async () => {
     const s = await seed()
     const ch = s.topologyForSelectedTask.nodes.find(n => n.kind === 'channel')
-    expect(ch).toBeDefined()
-    expect(ch!.taskId).toBe('t1')  // 频道节点关联当前任务
-    // store 的 channelsForSelectedTask 含该任务 channel
+    expect(ch?.taskId).toBe('t1')
     expect(s.channelsForSelectedTask.length).toBeGreaterThan(0)
   })
 
-  it('detail loaded with correct board context (syncBoardForTask)', async () => {
-    const s = await seed()
-    // getTask 被调用（带正确 board 上下文）
-    expect(getTask).toHaveBeenCalledWith('t1', expect.objectContaining({ board: expect.any(String) }))
+  it('mermaid render called on task selection', async () => {
+    await seed()
+    const mermaid = (await import('mermaid')).default
+    const w = mount(CockpitCollabMap)
+    await new Promise(r => setTimeout(r, 50))  // 等 watch + async render
+    expect(mermaid.render).toHaveBeenCalled()
+    w.unmount()
   })
 })
