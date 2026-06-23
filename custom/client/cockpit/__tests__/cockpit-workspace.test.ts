@@ -8,7 +8,7 @@ const { mockKanbanTasks, fetchTasks } = vi.hoisted(() => ({
   fetchTasks: vi.fn(async () => {}),
 }))
 vi.mock('@/stores/hermes/kanban', () => ({
-  useKanbanStore: () => ({ tasks: mockKanbanTasks, fetchTasks, fetchAssignees: vi.fn(async () => {}), startEventStream: vi.fn() }),
+  useKanbanStore: () => ({ tasks: mockKanbanTasks, fetchTasks, fetchAssignees: vi.fn(async () => { return ['alice', 'bob']; }), startEventStream: vi.fn(), assignees: ['alice', 'bob'], assignTask: vi.fn(async () => {}) }),
 }))
 const { searchSessions, listWorkspaceFiles, getTimeline } = vi.hoisted(() => ({
   searchSessions: vi.fn(async () => []),
@@ -79,7 +79,9 @@ describe('CockpitWorkspace', () => {
   it('renders the work item opinion and decision', () => {
     seed()
     const w = mount(CockpitWorkspace)
-    expect(w.text()).toContain('补用例再合并')
+    // A2UI section should show decision options
+    expect(w.find('[data-decision="conditional"]').exists()).toBe(true)
+    expect(w.find('[data-decision="approve"]').exists()).toBe(true)
   })
 
   it('renders decision options with the current one selected', () => {
@@ -102,10 +104,20 @@ describe('CockpitWorkspace', () => {
     expect(s.workItemForSelectedTask?.riskTags).toContain('performance')
   })
 
-  it('shows empty state when no draft', () => {
-    mockKanbanTasks.push(kt({ id: 't1' }))
-    const s = useCockpitStore()
-    ;(s as any).selectedTaskId = 't1'
+  it('shows task header with title and status', () => {
+    seed()
+    const w = mount(CockpitWorkspace)
+    expect(w.text()).toContain('PR #142')
+    expect(w.find('.cockpit-workspace__status-chip').exists()).toBe(true)
+  })
+
+  it('save draft button exists in footer', () => {
+    seed()
+    const w = mount(CockpitWorkspace)
+    expect(w.text()).toContain('saveDraft')
+  })
+
+  it('shows empty state when no task selected', () => {
     const w = mount(CockpitWorkspace)
     expect(w.find('.cockpit-workspace__empty').exists()).toBe(true)
   })
