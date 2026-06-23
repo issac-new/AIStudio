@@ -219,6 +219,16 @@ function renderChart() {
 
 const hasTask = computed(() => !!store.selectedTask)
 
+// 节点双击：弹窗显示 kanban 详情
+function onChartDblClick(params: any) {
+  if (params.dataType !== 'node') return
+  const d = params.data
+  if (!d) return
+  // 用 taskId 打开 kanban 详情（center 用自身 taskId，其他用 target.taskId）
+  const tid = d._targetTaskId ?? d._taskId
+  if (tid) store.openKanbanDetail(tid)
+}
+
 // 数据变化时重渲染
 watch(chartOption, () => renderChart(), { deep: true })
 
@@ -236,6 +246,7 @@ function initChart() {
   if (chart.value || !chartEl.value) return
   chart.value = echarts.init(chartEl.value)
   chart.value.on('click', onChartClick)
+  chart.value.on('dblclick', onChartDblClick)
   renderChart()
 }
 

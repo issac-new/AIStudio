@@ -112,6 +112,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // task title 详情弹窗（双击 title 查看）（需求 #2）
   const titleDetailOpen = ref(false)
   const titleDetailText = ref('')
+  // kanban 任务详情弹窗（双击协作图节点显示）
+  const kanbanDetailOpen = ref(false)
+  const kanbanDetailTask = ref<CockpitTask | null>(null)
   const titleDetailTaskId = ref<string | null>(null)
   const focusedGraphNodeId = ref<string | null>(null)
   const selectedGraphNodeIds = ref<Record<string, string[]>>({})
@@ -169,13 +172,27 @@ export const useCockpitStore = defineStore('cockpit', () => {
   })
 
   // ── 时序事件 ──
+  // 时序流 actor 过滤（多选）
+  const timelineActorFilter = ref<string[]>([])
+
   const eventsForSelectedTask = computed(() =>
     selectedTaskId.value
       ? events.value.filter(e => e.taskId === selectedTaskId.value).sort((a, b) => b.ts - a.ts)  // 逆序：新在前
       : [],
   )
 
-  const eventsForTimeline = computed(() => eventsForSelectedTask.value)
+  // actor 选项（从当前任务事件去重）
+  const timelineActorOptions = computed(() => {
+    const set = new Set<string>()
+    for (const e of eventsForSelectedTask.value) set.add(e.actor)
+    return [...set].sort()
+  })
+
+  const eventsForTimeline = computed(() => {
+    const f = timelineActorFilter.value
+    if (!f.length) return eventsForSelectedTask.value
+    return eventsForSelectedTask.value.filter(e => f.includes(e.actor))
+  })
 
   function recentEventsForTimeline(threshold: number) {
     const all = eventsForTimeline.value  // 逆序（新在前）
@@ -385,6 +402,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function toggleCollapsed(col: ColumnKey) { collapsed.value[col] = !collapsed.value[col] }
   function toggleMidTop() { midTopCollapsed.value = !midTopCollapsed.value }
   function toggleMidBottom() { midBottomCollapsed.value = !midBottomCollapsed.value }
+  function toggleTimelineActor(actor: string) {
+    const i = timelineActorFilter.value.indexOf(actor)
+    if (i >= 0) timelineActorFilter.value.splice(i, 1)
+    else timelineActorFilter.value.push(actor)
+  }
   function toggleFilter<K extends keyof CockpitFilters>(key: K, value: CockpitFilters[K][number]) {
     const arr = filters.value[key] as CockpitFilters[K][number][]
     const i = arr.indexOf(value)
@@ -517,6 +539,18 @@ export const useCockpitStore = defineStore('cockpit', () => {
     titleDetailTaskId.value = null
     titleDetailText.value = ''
   }
+  // kanban 详情弹窗
+  function openKanbanDetail(taskId: string) {
+    const t = tasks.value.find(x => x.id === taskId)
+    if (t) {
+      kanbanDetailTask.value = t
+      kanbanDetailOpen.value = true
+    }
+  }
+  function closeKanbanDetail() {
+    kanbanDetailOpen.value = false
+    kanbanDetailTask.value = null
+  }
   function toggleHistoryAction(action: string) {
     const arr = historyFilters.value.actions
     const i = arr.indexOf(action)
@@ -595,6 +629,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     tasks, attention, attentionCount, selectedTask, selectedTaskId,
     sortedTasks, filteredTasks, tasksByTenant, boards,
     events, eventsForSelectedTask, eventsForTimeline, recentEventsForTimeline, recentEventsForSelectedTask,
+    timelineActorFilter, timelineActorOptions,
     topologyForSelectedTask, relationsForSelectedTask,
     channels, channelsForSelectedTask, activeChannel,
     filesForSelectedTask, workItemForSelectedTask,
@@ -603,15 +638,16 @@ export const useCockpitStore = defineStore('cockpit', () => {
     filters, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
     titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
+    kanbanDetailOpen, kanbanDetailTask,
     templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
     _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
     // 方法
     bootstrap, selectTask, loadTaskDetail,
-    toggleCollapsed, toggleMidTop, toggleMidBottom, toggleFilter, setDateRangeFilter, clearDateRangeFilter, setWorkspaceMode, toggleMaximized,
+    toggleCollapsed, toggleMidTop, toggleMidBottom, toggleTimelineActor, toggleFilter, setDateRangeFilter, clearDateRangeFilter, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
     updateWorkItem, toggleRiskTag, submitWorkItem,
     selectChannel, sendMessage, disconnectOnUnmount,
-    openHistory, closeHistory, openTitleDetail, closeTitleDetail, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
+    openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
     focusOnTaskFromAttention, focusOnTimelineNode,
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,

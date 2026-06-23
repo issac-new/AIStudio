@@ -21,6 +21,18 @@ const hasTask = computed(() => !!store.selectedTask)
     <div class="cockpit-timeline__head">
       <span class="cockpit-timeline__title">{{ t('cockpit.timeline') }}</span>
     </div>
+    <!-- actor 标签过滤（多选） -->
+    <div v-if="hasTask && store.timelineActorOptions.length" class="cockpit-timeline__actors">
+      <button
+        v-for="actor in store.timelineActorOptions"
+        :key="actor"
+        type="button"
+        class="cockpit-timeline__actor-chip"
+        :class="{ 'is-on': store.timelineActorFilter.includes(actor) }"
+        :data-actor-filter="actor"
+        @click="store.toggleTimelineActor(actor)"
+      >{{ actor }}</button>
+    </div>
     <div v-if="hasTask" class="cockpit-timeline__body">
       <div class="cockpit-timeline__line">
         <button
@@ -57,6 +69,14 @@ const hasTask = computed(() => !!store.selectedTask)
 <style scoped lang="scss">
 .cockpit-timeline { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .cockpit-timeline__head { padding: 8px 16px; }
+.cockpit-timeline__actors { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 16px 6px; }
+.cockpit-timeline__actor-chip {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  border: 1px solid var(--border-color); background: var(--bg-card);
+  color: var(--text-secondary); cursor: pointer; font-family: inherit;
+  &:hover { border-color: var(--text-muted); }
+  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+}
 .cockpit-timeline__title { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
 .cockpit-timeline__body { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
 .cockpit-timeline__fold {

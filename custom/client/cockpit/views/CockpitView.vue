@@ -91,6 +91,16 @@ function onColCtrl(col: ColumnKey) {
         </div>
       </section>
 
+      <!-- 左-中分割线折叠按钮 -->
+      <div v-if="!store.collapsed.left || !store.collapsed.mid" class="cockpit-divider" data-divider="left-mid">
+        <button type="button" class="cockpit-divider__btn"
+          :title="store.collapsed.left ? '展开左栏' : '向左折叠左栏'"
+          @click="store.toggleCollapsed('left')">◀</button>
+        <button type="button" class="cockpit-divider__btn"
+          :title="store.collapsed.mid ? '展开中栏' : '向左折叠中栏'"
+          @click="store.toggleCollapsed('mid')">◀</button>
+      </div>
+
       <!-- 中栏 协作图 + 时序流 -->
       <section class="cockpit-col cockpit-col--mid"
         :class="{ 'is-collapsed': store.collapsed.mid, 'is-maximized': store.maximized.mid, 'is-hidden-by-max': !store.maximized.mid && (store.maximized.left || store.maximized.right) }">
@@ -118,6 +128,13 @@ function onColCtrl(col: ColumnKey) {
           <CockpitTimeline v-show="!store.midBottomCollapsed" />
         </div>
       </section>
+
+      <!-- 中-右分割线折叠按钮 -->
+      <div v-if="!store.collapsed.right || !store.collapsed.mid" class="cockpit-divider" data-divider="mid-right">
+        <button type="button" class="cockpit-divider__btn"
+          :title="store.collapsed.right ? '展开右栏' : '向右折叠右栏'"
+          @click="store.toggleCollapsed('right')">▶</button>
+      </div>
 
       <!-- 右栏 A2UI 工作区（按模式切换）-->
       <section class="cockpit-col cockpit-col--right"
@@ -151,6 +168,24 @@ function onColCtrl(col: ColumnKey) {
         <button type="button" class="cockpit-title-detail__close" @click="store.closeTitleDetail()">×</button>
       </div>
       <div class="cockpit-title-detail__body">{{ store.titleDetailText }}</div>
+    </div>
+
+    <!-- kanban 任务详情弹窗（双击协作图节点） -->
+    <div v-if="store.kanbanDetailOpen" class="cockpit-overlay" @click="store.closeKanbanDetail()" />
+    <div v-if="store.kanbanDetailOpen && store.kanbanDetailTask" class="cockpit-kanban-detail cockpit-modal-anchor">
+      <div class="cockpit-title-detail__head">
+        <span>任务详情</span>
+        <button type="button" class="cockpit-title-detail__close" @click="store.closeKanbanDetail()">×</button>
+      </div>
+      <div class="cockpit-kanban-detail__body">
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">标题</span><span>{{ store.kanbanDetailTask.title }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">状态</span><span>{{ store.kanbanDetailTask.status }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">优先级</span><span>{{ store.kanbanDetailTask.priority }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">负责人</span><span>{{ store.kanbanDetailTask.assignee }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">Workspace</span><span>{{ store.kanbanDetailTask.workspace }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">租户</span><span>{{ store.kanbanDetailTask.tenant ?? '(未指定)' }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">看板</span><span>{{ store.kanbanDetailTask.boardSlug }}</span></div>
+      </div>
     </div>
   </div>
 </template>
@@ -190,6 +225,22 @@ function onColCtrl(col: ColumnKey) {
   padding: 16px; font-size: 14px; line-height: 1.6; color: var(--text-primary);
   word-break: break-word; white-space: pre-wrap; max-height: 60vh; overflow-y: auto;
 }
+.cockpit-kanban-detail {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 1000; width: min(480px, calc(100vw - 48px));
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+.cockpit-kanban-detail__body { padding: 12px 16px; }
+.cockpit-kanban-detail__row {
+  display: flex; align-items: baseline; gap: 12px; padding: 6px 0;
+  border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--text-primary);
+  &:last-child { border-bottom: none; }
+}
+.cockpit-kanban-detail__label {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  width: 70px; flex-shrink: 0; text-transform: uppercase;
+}
 .cockpit-mid-divider {
   flex-shrink: 0; display: flex; align-items: center; gap: 4px;
   padding: 2px 8px; border-top: 1px solid var(--border-color);
@@ -204,4 +255,17 @@ function onColCtrl(col: ColumnKey) {
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
 .cockpit-mid-divider__line { flex: 1; height: 1px; background: var(--border-light); }
+.cockpit-divider {
+  flex-shrink: 0; width: 14px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  background: var(--bg-card); border-left: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color); z-index: 50;
+}
+.cockpit-divider__btn {
+  width: 12px; height: 28px; padding: 0; border: 1px solid var(--border-color);
+  border-radius: 3px; background: var(--bg-secondary); color: var(--text-muted);
+  cursor: pointer; font-size: 8px; line-height: 1; font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+  &:hover { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+}
 </style>
