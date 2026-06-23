@@ -24,6 +24,13 @@ const router = useRouter()
 const goSettings = () => router.push({ name: 'hermes.settings' })
 const goCenter = () => router.push({ name: 'hermes.kanban' })
 
+// 时间戳格式化（秒/毫秒兼容）
+function formatTimestamp(ts: number | null | undefined): string {
+  if (!ts) return '—'
+  const ms = ts < 1e12 ? ts * 1000 : ts
+  return new Date(ms).toLocaleString('zh-CN')
+}
+
 onMounted(() => { store.bootstrap() })
 onUnmounted(() => { store.disconnectOnUnmount() })
 
@@ -178,13 +185,27 @@ function onColCtrl(col: ColumnKey) {
         <button type="button" class="cockpit-title-detail__close" @click="store.closeKanbanDetail()">×</button>
       </div>
       <div class="cockpit-kanban-detail__body">
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">标题</span><span>{{ store.kanbanDetailTask.title }}</span></div>
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">状态</span><span>{{ store.kanbanDetailTask.status }}</span></div>
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">优先级</span><span>{{ store.kanbanDetailTask.priority }}</span></div>
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">负责人</span><span>{{ store.kanbanDetailTask.assignee }}</span></div>
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">Workspace</span><span>{{ store.kanbanDetailTask.workspace }}</span></div>
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">租户</span><span>{{ store.kanbanDetailTask.tenant ?? '(未指定)' }}</span></div>
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">看板</span><span>{{ store.kanbanDetailTask.boardSlug }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">ID</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.id }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">标题</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.title }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.body"><span class="cockpit-kanban-detail__label">描述</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.task.body }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">状态</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.status }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">优先级</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.priority }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">负责人</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.assignee ?? '(未分配)' }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">创建者</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.created_by ?? '—' }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">Workspace</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.workspace_kind }}: {{ store.kanbanDetailTask.task.workspace_path ?? '—' }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">租户</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.tenant ?? '(未指定)' }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">项目ID</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.project_id ?? '—' }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.skills?.length"><span class="cockpit-kanban-detail__label">技能</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.skills.join(', ') }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.latest_summary"><span class="cockpit-kanban-detail__label">摘要</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.latest_summary }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.result"><span class="cockpit-kanban-detail__label">结果</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.task.result }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">创建时间</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.created_at) }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.started_at"><span class="cockpit-kanban-detail__label">开始时间</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.started_at) }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.completed_at"><span class="cockpit-kanban-detail__label">完成时间</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.completed_at) }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.parents?.length"><span class="cockpit-kanban-detail__label">父任务</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.parents.join(', ') }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.children?.length"><span class="cockpit-kanban-detail__label">子任务</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.children.join(', ') }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">事件数</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.events?.length ?? 0 }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">执行次数</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.runs?.length ?? 0 }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">评论数</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.comments?.length ?? 0 }}</span></div>
       </div>
     </div>
   </div>
@@ -241,6 +262,8 @@ function onColCtrl(col: ColumnKey) {
   font-size: 11px; font-weight: 700; color: var(--text-muted);
   width: 70px; flex-shrink: 0; text-transform: uppercase;
 }
+.cockpit-kanban-detail__value { word-break: break-word; }
+.cockpit-kanban-detail__value--pre { white-space: pre-wrap; max-height: 120px; overflow-y: auto; font-size: 12px; }
 .cockpit-mid-divider {
   flex-shrink: 0; display: flex; align-items: center; gap: 4px;
   padding: 2px 8px; border-top: 1px solid var(--border-color);

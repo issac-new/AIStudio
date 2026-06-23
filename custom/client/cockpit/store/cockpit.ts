@@ -112,9 +112,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // task title 详情弹窗（双击 title 查看）（需求 #2）
   const titleDetailOpen = ref(false)
   const titleDetailText = ref('')
-  // kanban 任务详情弹窗（双击协作图节点显示）
+  // kanban 任务详情弹窗（双击协作图节点显示完整 KanbanTaskDetail）
   const kanbanDetailOpen = ref(false)
-  const kanbanDetailTask = ref<CockpitTask | null>(null)
+  const kanbanDetailTask = ref<KanbanTaskDetail | null>(null)
   const titleDetailTaskId = ref<string | null>(null)
   const focusedGraphNodeId = ref<string | null>(null)
   const selectedGraphNodeIds = ref<Record<string, string[]>>({})
@@ -539,12 +539,27 @@ export const useCockpitStore = defineStore('cockpit', () => {
     titleDetailTaskId.value = null
     titleDetailText.value = ''
   }
-  // kanban 详情弹窗
+  // kanban 详情弹窗：取完整 KanbanTaskDetail（含 comments/events/runs 等）
   function openKanbanDetail(taskId: string) {
-    const t = tasks.value.find(x => x.id === taskId)
-    if (t) {
-      kanbanDetailTask.value = t
+    const detail = _detailCache.value[taskId]
+    if (detail) {
+      kanbanDetailTask.value = detail
       kanbanDetailOpen.value = true
+    } else {
+      // 若 detail 未缓存，用 CockpitTask 的基本信息构造最小 detail
+      const t = tasks.value.find(x => x.id === taskId)
+      if (t) {
+        kanbanDetailTask.value = {
+          task: {
+            id: t.id, title: t.title, body: null, assignee: t.assignee === '未分配' ? null : t.assignee,
+            status: t.status, priority: 0, created_by: null, created_at: t.createdAt,
+            started_at: null, completed_at: null, workspace_kind: 'dir', workspace_path: t.workspace,
+            tenant: t.tenant, project_id: null, result: null, skills: null, latest_summary: null,
+          } as any,
+          latest_summary: null, comments: [], events: [], runs: [],
+        } as KanbanTaskDetail
+        kanbanDetailOpen.value = true
+      }
     }
   }
   function closeKanbanDetail() {
