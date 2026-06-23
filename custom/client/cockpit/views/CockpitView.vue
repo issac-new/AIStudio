@@ -110,6 +110,10 @@ function onColCtrl(col: ColumnKey) {
         :class="{ 'is-collapsed': store.collapsed.right, 'is-maximized': store.maximized.right, 'is-hidden-by-max': !store.maximized.right && (store.maximized.left || store.maximized.mid) }">
         <CockpitColumnRail label="工作区" @expand="store.toggleCollapsed('right')" />
         <div class="cockpit-col__inner">
+          <div class="cockpit-col__ctrls">
+            <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': colState('right') !== 'normal' }"
+              :title="colCtrlTitle('right')" @click="onColCtrl('right')">{{ colCtrlIcon('right') }}</button>
+          </div>
           <CockpitModeBar v-if="store.workspaceMode !== 'term'" />
           <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>

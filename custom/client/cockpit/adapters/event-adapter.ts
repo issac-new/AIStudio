@@ -10,7 +10,8 @@ export interface CockpitEvent {
   taskId: string
   actor: string
   kind: EventActorKind
-  what: string
+  what: string         // 截断版（UI 单行显示）
+  fullText: string     // 完整原文（双击弹窗显示）
   when: string
   pending: boolean
   ts: number
@@ -49,6 +50,24 @@ export function kindToWhat(kind: string, payload: Record<string, unknown> | null
   }
 }
 
+/** 完整文案（不截断，用于双击弹窗） */
+function kindToFullText(kind: string, payload: Record<string, unknown> | null): string {
+  const p = payload ?? {}
+  switch (kind) {
+    case 'created': return '创建任务'
+    case 'status_changed': return `状态 → ${p.to ?? '?'}`
+    case 'assigned': return `指派给 ${p.assignee ?? '?'}`
+    case 'commented': return `评论：${typeof p.body === 'string' ? p.body : ''}`
+    case 'linked': return `关联父任务 ${p.parent_id ?? '?'}`
+    case 'dispatched': return '派发执行'
+    case 'completed': return `完成：${typeof p.result === 'string' ? p.result : ''}`
+    case 'blocked': return `标记阻塞：${typeof p.reason === 'string' ? p.reason : ''}`
+    default:
+      if (kind.endsWith('_failed')) return `失败：${typeof p.error === 'string' ? p.error : ''}`
+      return kind
+  }
+}
+
 function fromEvent(taskId: string, e: KanbanEvent): CockpitEvent {
   const actor = (e.payload && typeof e.payload.actor === 'string' && e.payload.actor) || 'system'
   return {
@@ -57,6 +76,7 @@ function fromEvent(taskId: string, e: KanbanEvent): CockpitEvent {
     actor,
     kind: 'A2A',
     what: kindToWhat(e.kind, e.payload),
+    fullText: kindToFullText(e.kind, e.payload),
     when: formatWhen(toMs(e.created_at)),
     pending: e.kind.includes('pending'),
     ts: toMs(e.created_at),
@@ -70,6 +90,7 @@ function fromRun(taskId: string, r: KanbanRun): CockpitEvent {
     actor: r.profile ?? 'system',
     kind: 'A2A',
     what: r.outcome ? `执行：${r.outcome}` : '执行',
+    fullText: [`执行${r.outcome ? `：${r.outcome}` : ''}`, r.summary ? `摘要：${r.summary}` : '', r.error ? `错误：${r.error}` : ''].filter(Boolean).join('\n'),
     when: formatWhen(toMs(r.started_at)),
     pending: r.status === 'running',
     ts: toMs(r.started_at),
@@ -84,6 +105,7 @@ function fromMessage(taskId: string, assignee: string | null, m: KanbanTaskMessa
     actor: isUser ? (assignee ?? 'user') : (m.role || 'assistant'),
     kind: isUser ? 'A2H' : 'A2A',
     what: trunc(m.content),
+    fullText: m.content,
     when: formatWhen(toMs(m.timestamp)),
     pending: false,
     ts: toMs(m.timestamp),

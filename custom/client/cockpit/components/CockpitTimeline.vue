@@ -31,7 +31,7 @@ const hasTask = computed(() => !!store.selectedTask)
           class="cockpit-timeline__event"
           :class="{ 'is-pending': ev.pending }"
           @click="store.focusOnTimelineNode(ev.id)"
-          @dblclick.stop="store.openTitleDetail(ev.taskId, ev.what, '事件详情')"
+          @dblclick.stop="store.openTitleDetail(ev.taskId, ev.fullText, '事件详情')"
         >
           <span class="cockpit-timeline__event-head">
             <span class="cockpit-timeline__actor">{{ ev.actor }}</span>
