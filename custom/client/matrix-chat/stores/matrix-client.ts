@@ -143,6 +143,14 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
       matrixEventBus.onRoomListChange.value?.()
     })
 
+    // ★ 未读通知数变化时刷新 roomList。
+    // SDK 在 /sync 带回 notification_count、或收到 receipt 时会触发此事件。
+    // 之前没监听它,导致 roomList 的未读 badge 不响应 SDK 的更新(表现为
+    // 已读房间仍显示旧未读数,如"始终 2 条")。
+    matrixClient.on(RoomEvent.UnreadNotifications, () => {
+      matrixEventBus.onRoomListChange.value?.()
+    })
+
     matrixClient.on(RoomEvent.Receipt, () => {
       matrixEventBus.onRoomListChange.value?.()
     })

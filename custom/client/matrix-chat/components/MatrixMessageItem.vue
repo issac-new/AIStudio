@@ -84,6 +84,11 @@ const msgType = computed(() => toValue(tileData.msgType))
 const isBigEmoji = computed(() => toValue(tileData.isBigEmoji))
 const displayContent = computed(() => toValue(tileData.displayContent))
 
+// ─── Decryption failure ──────────────────────────────────
+// 加密事件解密失败(getType() 仍为 m.room.encrypted)时,显示占位提示。
+// 常见于:向上翻页拉到密钥尚未同步的历史段;或别的设备发的、本端无密钥的消息。
+const isUndecryptable = computed(() => props.event.getType?.() === 'm.room.encrypted')
+
 // ─── Send status ──────────────────────────────────────────
 // (now derived from tileState.sendStatus above)
 
@@ -283,8 +288,14 @@ function handleReplyInThread() {
         @click="roomStore.selectRoom(roomStore.activeRoomId)"
       />
 
+      <!-- Undecryptable placeholder (key not yet available) -->
+      <div v-if="isUndecryptable" class="mx_EventTile_content mx_EventTile_undecryptable">
+        {{ t('matrixChat.undecryptable') }}
+      </div>
+
       <!-- Message content -->
       <MatrixMessageBody
+        v-else
         :display-content="displayContent"
         :formatted-content="formattedContent"
         :msg-type="msgType"
@@ -541,6 +552,13 @@ $left-gutter: 64px;
   &--failed {
     color: var(--error);
   }
+}
+
+// ─── Undecryptable placeholder ───────────────────────────
+.mx_EventTile_undecryptable {
+  font-style: italic;
+  color: $text-muted;
+  opacity: 0.7;
 }
 
 // ─── Mobile ──────────────────────────────────────────────

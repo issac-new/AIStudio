@@ -34,9 +34,16 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   // isLoadingOlder: 正在向上翻页(loadOlderMessages 运行中)。
   const paginationState = ref<Record<string, { oldestToken: string | null; hasMore: boolean; isLoadingOlder: boolean }>>({})
 
+  // 历史加载错误(按 roomId)。服务器对 /messages 返回 500 时设置,
+  // 让 UI 能显示"服务器错误,无法加载更早历史"而非静默失败。
+  const historyLoadError = ref<Record<string, string | null>>({})
+
   // 消息 + 状态事件过滤白名单(主时间线显示这些类型)。
   // m.room.message: 普通消息; m.room.member: 加入/离开/邀请/封禁; m.room.create: 房间创建。
-  const TIMELINE_EVENT_TYPES = new Set(['m.room.message', 'm.room.member', 'm.room.create'])
+  // m.room.encrypted: 加密房间里 /messages 返回的密文事件(getType() 解密前是 encrypted)。
+  //   必须**先包含**,再在 await 解密后重新判断 getType() 是否变成 m.room.message。
+  //   否则加密房间的历史会被过滤成空(无法滚动到 room 起点)。
+  const TIMELINE_EVENT_TYPES = new Set(['m.room.message', 'm.room.member', 'm.room.create', 'm.room.encrypted'])
 
   // ── Layout settings (timeline-rendering concern) ──
   const timelineLayout = ref<TimelineLayout>('group')
@@ -112,10 +119,17 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   }
 
   /**
-   * 刷新当前房间的消息列表(首屏)。
+   * 刷新当前房间的消息列表。
    *
-   * 策略:先拉一页最近的消息(约 50 条,覆盖最近 1-2 天),快速展示。
-   * 完整历史靠用户向上滚动时 loadOlderMessages 按需分页拉取。
+   * 分两种模式:
+   *   1. 首次加载(messageList 为空):先用 SDK room.timeline 快速填充,再异步调
+   *      createMessagesRequest 拉~50 条覆盖(首屏)。
+   *   2. 后续增量(messageList 已有分页内容):从 SDK room.timeline 检出不在现有列表
+   *      中的新事件,追加到末尾。不重置 messageList,保留 loadOlderMessages() 加载
+   *      的历史。
+   *
+   * 区分原因:RoomEvent.Timeline 在每次同步新消息时触发,旧实现直接重置 messageList
+   * 会导致已分页的历史丢失,用户无法滚动回到 room 起点。
    *
    * 不直接用 room.timeline:开启 threadSupport 后,SDK 会过滤 thread replies,
    * 且 initialSyncLimit(20)限制太多。改用 createMessagesRequest 直接拉 /messages,
@@ -126,9 +140,20 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
       messageList.value = []
       return
     }
-    // 立即用 SDK 已有的 timeline 填充(快速首屏,无网络等待)
+
+    // ── 已有分页内容:只追加新事件,不重置 ────────────────────
+    if (messageList.value.length > 0) {
+      const sdkTimeline = activeRoom.value.timeline.filter(isTimelineEvent)
+      const existingIds = new Set(messageList.value.map(e => e.getId()))
+      const newEvents = sdkTimeline.filter(e => !existingIds.has(e.getId()))
+      if (newEvents.length > 0) {
+        messageList.value = [...messageList.value, ...newEvents]
+      }
+      return
+    }
+
+    // ── 首次加载:SDK timeline 快速填充 + 异步拉取 ───────────
     messageList.value = [...activeRoom.value.timeline.filter(isTimelineEvent)]
-    // 异步拉取首屏消息页(createMessagesRequest),覆盖快速首屏
     void ensureTimelineLoaded(activeRoom.value)
   }
 
@@ -137,12 +162,17 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
    * m.room.message: 普通消息(过滤 redact + replace 编辑关系)
    * m.room.member: 加入/离开/邀请/封禁(过滤 no-op:join 但 profile 无变化)
    * m.room.create: 房间创建
+   *
+   * 注意:加密事件(m.room.encrypted)在这里通过,但其 getType() 在解密完成后会
+   * 变成 m.room.message。对这类事件不能查 isRelation(密文阶段无 relates_to),
+   * 也不能按 m.room.message 的规则过滤——交给解密后的二次过滤处理。
    */
   function isTimelineEvent(evt: any): boolean {
     if (!evt || typeof evt.getType !== 'function') return false
     const type = evt.getType()
     if (!TIMELINE_EVENT_TYPES.has(type)) return false
     if (evt.isRedacted?.()) return false
+    // 加密事件:解密前不查 m.replace,否则会把合法的加密编辑当成"编辑"过滤掉
     if (type === 'm.room.message' && evt.isRelation?.(RelationType.Replace)) return false
     // no-op member event: join 但 prev_content 也是 join 且 displayname/avatar 未变 → 过滤
     if (type === 'm.room.member') {
@@ -158,37 +188,85 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   }
 
   /**
+   * 等待事件解密完成(若是加密事件)。
+   * /messages 返回 m.room.encrypted;SDK event mapper 会 fire-and-forget
+   * 触发 attemptDecryption,但同步代码里 getType() 仍是 encrypted。
+   * 必须等解密 promise 走完,getType() 才会变成 m.room.message。
+   */
+  async function awaitDecryption(evt: any): Promise<void> {
+    if (!evt || typeof evt.isEncrypted !== 'function' || !evt.isEncrypted()) return
+    // 若 SDK 还没触发解密,主动触发
+    if (typeof evt.shouldAttemptDecryption === 'function' && evt.shouldAttemptDecryption()) {
+      try {
+        const crypto = clientStore.client?.getCrypto?.()
+        if (crypto) await evt.attemptDecryption?.(crypto)
+      } catch {
+        // 解密失败(密钥未到) → 保留密文事件,渲染层显示"无法解密"
+      }
+    }
+    // 等待 mapper / 主动触发里设置的 decryptionPromise
+    if (typeof evt.isBeingDecrypted === 'function' && evt.isBeingDecrypted()) {
+      try {
+        await evt.getDecryptionPromise?.()
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  /**
    * 首屏拉取:用 createMessagesRequest 从最新位置向后拉一页(~50 条)。
    * 记录 oldestToken 供 loadOlderMessages 向上翻页。绕过 SDK 的 canContain 过滤。
+   *
+   * 关键:fetch 完成前不写入 paginationState(避免 loadOlderMessages 在
+   * oldestToken=null 时竞态拉取重复数据)。结果与现有 messageList 合并而非
+   * 替换,保护可能已在并行分页中加载的历史。
    */
   async function ensureTimelineLoaded(room: any) {
     if (!clientStore.client) return
     if (loadingRooms.has(room.roomId)) return
     loadingRooms.add(room.roomId)
 
-    // 重置该房间的分页状态
-    const state = { oldestToken: null as string | null, hasMore: true, isLoadingOlder: false }
-    paginationState.value = { ...paginationState.value, [room.roomId]: state }
-
     try {
       const res = await fetchMessagesPage(room, null, 50)
-      const mapped = mapAndFilterEvents(res.events)
-      if (mapped.length > 0 && activeRoomId.value === room.roomId) {
-        messageList.value = mapped
-      }
-      // 记录游标:res.end 是更早的 token;null 表示已到起点
-      updatePagination(room.roomId, { oldestToken: res.endToken, hasMore: !!res.endToken })
+      historyLoadError.value = { ...historyLoadError.value, [room.roomId]: null }
+      const mapped = await mapAndFilterEvents(res.events)
 
-      // 兜底:拉到 0 条且 room.timeline 也空 → 用 thread 根消息
-      if (mapped.length === 0 && (!room.timeline || room.timeline.length === 0)) {
-        await ensureRoomThreadsLoaded(room)
-        const roots = await collectThreadRoots(room)
-        if (roots.length > 0 && activeRoomId.value === room.roomId) {
-          messageList.value = roots.filter(isTimelineEvent)
+      if (activeRoomId.value === room.roomId) {
+        if (mapped.length > 0) {
+          // 合并而非替换:保护 loadOlderMessages 在请求期间加载的历史
+          const existingById = new Map<string, any>()
+          for (const e of messageList.value) existingById.set(e.getId(), e)
+          for (const e of mapped) existingById.set(e.getId(), e)
+          messageList.value = Array.from(existingById.values())
+            .sort((a: any, b: any) => (a.getTs?.() ?? 0) - (b.getTs?.() ?? 0))
+        }
+
+        // 兜底:拉到 0 条且 room.timeline 也空 → 用 thread 根消息
+        if (mapped.length === 0 && (!room.timeline || room.timeline.length === 0)) {
+          await ensureRoomThreadsLoaded(room)
+          const roots = await collectThreadRoots(room)
+          if (roots.length > 0) {
+            const existingById = new Map<string, any>()
+            for (const e of messageList.value) existingById.set(e.getId(), e)
+            for (const e of roots.filter(isTimelineEvent)) existingById.set(e.getId(), e)
+            messageList.value = Array.from(existingById.values())
+              .sort((a: any, b: any) => (a.getTs?.() ?? 0) - (b.getTs?.() ?? 0))
+          }
         }
       }
-    } catch {
-      // 网络错误:保留 refreshMessages 的快速首屏
+
+      // 仅 fetch 成功后写入分页状态(确保 oldestToken 有效)
+      updatePagination(room.roomId, { oldestToken: res.endToken, hasMore: !!res.endToken })
+    } catch (err: any) {
+      // /messages 失败(常见:Conduit 服务器对某些 room 返回 500)。
+      // 记录错误供 UI 显示;保留 refreshMessages 的快速首屏(SDK room.timeline)。
+      const msg = err?.data?.error || err?.message || `HTTP ${err?.httpStatus ?? '?'}`
+      historyLoadError.value = { ...historyLoadError.value, [room.roomId]: msg }
+      // eslint-disable-next-line no-console
+      console.warn(`[matrix] /messages failed for ${room.roomId}:`, msg, err)
+      // 设置 hasMore=false 防止 UI 无限重试 500 的端点
+      updatePagination(room.roomId, { hasMore: false, isLoadingOlder: false })
     } finally {
       loadingRooms.delete(room.roomId)
     }
@@ -207,15 +285,21 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     updatePagination(room.roomId, { isLoadingOlder: true })
     try {
       const res = await fetchMessagesPage(room, state.oldestToken, 50)
-      const mapped = mapAndFilterEvents(res.events)
+      const mapped = await mapAndFilterEvents(res.events)
+      historyLoadError.value = { ...historyLoadError.value, [room.roomId]: null }
       if (mapped.length > 0 && activeRoomId.value === room.roomId) {
         // prepend:更早的消息插到数组前面(时间正序)
         messageList.value = [...mapped, ...messageList.value]
       }
       updatePagination(room.roomId, { oldestToken: res.endToken, hasMore: !!res.endToken, isLoadingOlder: false })
       return mapped.length
-    } catch {
-      updatePagination(room.roomId, { isLoadingOlder: false })
+    } catch (err: any) {
+      // /messages 向上翻页失败(常见:Conduit 500)。记录错误,停止重试。
+      const msg = err?.data?.error || err?.message || `HTTP ${err?.httpStatus ?? '?'}`
+      historyLoadError.value = { ...historyLoadError.value, [room.roomId]: msg }
+      // eslint-disable-next-line no-console
+      console.warn(`[matrix] loadOlderMessages failed for ${room.roomId}:`, msg, err)
+      updatePagination(room.roomId, { hasMore: false, isLoadingOlder: false })
       return 0
     }
   }
@@ -254,12 +338,23 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     return { events: chunk, endToken }
   }
 
-  /** 把原始 IEvent 数组 map 成 MatrixEvent,过滤 + 按时间正序排序。 */
-  function mapAndFilterEvents(rawEvents: any[]): any[] {
+  /**
+   * 把原始 IEvent 数组 map 成 MatrixEvent,过滤 + 按时间正序排序。
+   *
+   * 异步:加密事件(m.room.encrypted)需等解密完成后才知真实类型。否则 /messages
+   * 在加密房间返回的密文事件会在 getType()=encrypted 时被 isTimelineEvent 过滤掉,
+   * 导致加密房间历史显示不全(用户无法滚动到 room 起点)。
+   *
+   * 解密失败(密钥未到)的事件保留为密文,渲染层应显示"无法解密"占位。
+   */
+  async function mapAndFilterEvents(rawEvents: any[]): Promise<any[]> {
     const mapper = clientStore.client?.getEventMapper?.()
-    return rawEvents
+    const mapped = rawEvents
       .map((raw: any) => (mapper ? mapper(raw) : null))
       .filter((e: any) => !!e)
+    // 并发等待所有加密事件解密完成
+    await Promise.all(mapped.map(awaitDecryption))
+    return mapped
       .filter(isTimelineEvent)
       .sort((a: any, b: any) => (a.getTs?.() ?? 0) - (b.getTs?.() ?? 0))
   }
@@ -317,6 +412,19 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     if (roomId) {
       delete paginationState.value[roomId]
       paginationState.value = { ...paginationState.value }
+      delete historyLoadError.value[roomId]
+      historyLoadError.value = { ...historyLoadError.value }
+      // 点击进入房间 = 用户正在查看,立即本地清零未读数(visual feedback)。
+      // 实际 read receipt 由 TimelinePanel 的 scheduleReadReceipt 发送。
+      const room = clientStore.client?.getRoom(roomId)
+      if (room) {
+        try {
+          room.setUnreadNotificationCount(NotificationCountType.Total, 0)
+          room.setUnreadNotificationCount(NotificationCountType.Highlight, 0)
+        } catch {
+          // ignore
+        }
+      }
     }
     refreshMessages()
     matrixEventBus.onSelectRoom.value?.()
@@ -699,6 +807,91 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     }
   }
 
+  /**
+   * 诊断:打印某个 room 的完整属性 + /messages 原始返回,用于对比不同 room 的差异。
+   * 浏览器控制台调用:
+   *   useMatrixRoomStore().diagnoseRoom('!bqMsLiasBqZqWkuogk:matrix.test')
+   * 或在组件里直接调。
+   * 返回一个对象(也 console.log 出来),含 room 属性 + timeline + /messages 原始 chunk。
+   */
+  async function diagnoseRoom(roomId: string): Promise<any> {
+    const client = clientStore.client
+    if (!client) return { error: 'no client' }
+    const room: any = client.getRoom(roomId)
+    if (!room) return { error: `room ${roomId} not found in client` }
+
+    // SDK room 属性(只取可序列化的)
+    const cs = room.currentState ?? room.getLiveTimeline?.().getState?.(0)
+    const histVis = cs?.getStateEvents?.('m.room.history_visibility', '')?.getContent?.()?.history_visibility
+    const joinRule = cs?.getStateEvents?.('m.room.join_rules', '')?.getContent?.()?.join_rule
+    const powerLevels = cs?.getStateEvents?.('m.room.power_levels', '')?.getContent?.()
+    const roomProps: any = {
+      roomId: room.roomId,
+      name: room.name,
+      normalizedName: room.normalizedName,
+      tags: room.tags,
+      myMembership: room.getMyMembership?.(),
+      hasEncryptionStateEvent: room.hasEncryptionStateEvent?.(),
+      // ★ history_visibility: world_readable / shared / invited / joined
+      //   joined = 只能看到加入后的消息(加入前的历史 /messages 返回空)
+      //   这是 Room1/2 能否加载历史的决定性因素
+      historyVisibility: histVis,
+      joinRule,
+      myPowerLevel: (() => {
+        const me = client.getUserId()
+        if (!me) return null
+        const member = room.getMember?.(me)
+        return member?.powerLevel ?? null
+      })(),
+      powerLevelsDefault: powerLevels?.events_default ?? null,
+      timelineLength: room.timeline?.length ?? 0,
+      timelineTypes: (room.timeline ?? []).map((e: any) => e.getType?.()),
+      timelineIds: (room.timeline ?? []).slice(-5).map((e: any) => e.getId?.()),
+      // 分页 token(SDK 内部的,可能与 /messages 的 token 不同)
+      liveTimelineStartToken: room.getLiveTimeline?.().getPaginationToken?.(0),
+      liveTimelineEndToken: room.getLiveTimeline?.().getPaginationToken?.(1),
+      // 未读
+      unreadTotal: room.getUnreadNotificationCount?.(NotificationCountType.Total),
+      unreadHighlight: room.getUnreadNotificationCount?.(NotificationCountType.Highlight),
+      // 已读回执位置(本用户)
+      myReadReceipt: (() => {
+        const me = client.getUserId()
+        if (!me) return null
+        const rr = room.getReadReceipt?.(me)
+        return rr?.eventId ?? rr?.data?.event_id ?? null
+      })(),
+    }
+
+    // 直接打 /messages 看原始返回(不经过 mapper/filter)
+    let rawMessages: any = null
+    try {
+      const res: any = await (client as any).createMessagesRequest(roomId, null, 10, 'b')
+      rawMessages = {
+        chunkLength: res?.chunk?.length ?? 0,
+        start: res?.start,
+        end: res?.end,
+        types: (res?.chunk ?? []).map((e: any) => e.type),
+        firstEvent: res?.chunk?.[0],
+        lastEvent: res?.chunk?.[res.chunk.length - 1],
+      }
+    } catch (e: any) {
+      rawMessages = { error: e?.message || String(e) }
+    }
+
+    // 本 store 的状态
+    const storeState = {
+      activeRoomId: activeRoomId.value,
+      isActive: activeRoomId.value === roomId,
+      messageListLength: messageList.value.length,
+      paginationState: paginationState.value[roomId] ?? null,
+    }
+
+    const diag = { roomProps, rawMessages, storeState }
+    // eslint-disable-next-line no-console
+    console.log(`[matrix-diagnose] room ${roomId}`, diag)
+    return diag
+  }
+
   return {
     roomList, activeRoomId, messageList,
     timelineLayout, alwaysShowTimestamps, useCompactLayout,
@@ -719,6 +912,10 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     threadTimelineVersion,
     // 分页加载(向上翻页历史消息)
     paginationState, loadOlderMessages, hasMoreMessages,
+    // 历史加载错误(服务器 500 等),供 UI 显示
+    historyLoadError,
+    // 诊断(临时,排查历史加载问题)
+    diagnoseRoom,
   }
 })
 
@@ -734,3 +931,16 @@ function getRoomStore() {
 }
 matrixEventBus.onRoomListChange.value = () => getRoomStore().refreshRoomList()
 matrixEventBus.onTimeline.value = () => getRoomStore().refreshMessages()
+
+// 诊断快捷入口:浏览器控制台输入 __diagMatrix() 对比所有房间
+// 或 __diagMatrix('!bqMs...:matrix.test') 诊断单个房间
+;(typeof window !== 'undefined') && ((window as any).__diagMatrix = async (roomId?: string) => {
+  const store = getRoomStore()
+  if (roomId) return store.diagnoseRoom(roomId)
+  // 对比所有已加入的房间
+  const rooms = store.sortedRooms
+  console.log(`[matrix-diagnose] ${rooms.length} joined rooms:`)
+  for (const r of rooms) {
+    await store.diagnoseRoom(r.roomId)
+  }
+})
