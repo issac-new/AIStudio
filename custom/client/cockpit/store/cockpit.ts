@@ -8,6 +8,8 @@ import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
 import * as extras from '@/custom/cockpit/api/kanban-extras'
+import { searchSessions as searchHermesSessions } from '@/api/hermes/sessions'
+import { mapSearchToTaskIds, type MatrixRoomSearchData } from '@/custom/cockpit/adapters/search-adapter'
 import * as kv from './cockpit-kv'
 import * as taskAdapter from '../adapters/task-adapter'
 import * as attentionAdapter from '../adapters/attention-adapter'
@@ -72,6 +74,12 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // useKanbanStore 是单 board 模型，cockpit 自己聚合所有 board 的任务
   const cockpitTasks = ref<CockpitTask[]>([])
   const boards = ref<{ slug: string; name: string; total: number }[]>([])
+
+  // ── 搜索态 ──
+  const searchQuery = ref('')
+  const _sessionSearching = ref(false)
+  const _sessionSearchCache = ref<Record<string, { ts: number; results: any[] }>>({})
+  let _searchTimer: ReturnType<typeof setTimeout> | undefined
 
   // ── 派生态（computed）──
   // 优先读跨 board 聚合的 cockpitTasks；若未聚合（如单元测试直接 push mockKanbanTasks），
@@ -139,6 +147,20 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const sortedTasks = computed(() =>
     [...tasks.value].sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]),
   )
+
+  const searchResult = computed<Set<string>>(() => {
+    const q = searchQuery.value.trim()
+    if (!q) return new Set()
+    const mr = (matrixRoom as any).roomList ?? []
+    const rooms: MatrixRoomSearchData[] = mr.map((r: any) => ({
+      roomId: r.roomId ?? '',
+      name: r.name,
+      topic: r.getCanonicalAlias?.() ?? undefined,
+    }))
+    const cacheEntry = _sessionSearchCache.value[q]
+    const sessions = cacheEntry?.results ?? []
+    return mapSearchToTaskIds(tasks.value, rooms, sessions, q)
+  })
 
   const filteredTasks = computed(() =>
     sortedTasks.value.filter(t => {
