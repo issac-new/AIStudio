@@ -27,7 +27,7 @@ defineProps<{ agentCount?: number; humanCount?: number; notifyCount?: number; sc
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('schedule')">
-      📅 {{ t('sidebar.history') === 'sidebar.history' ? '日程' : '日程' }}
+      📅 {{ t('cockpit.schedule') }}
       <span v-if="scheduleCount" class="cockpit-top__bdg">{{ scheduleCount }}</span>
     </button>
     <div class="cockpit-top__clock">
@@ -35,7 +35,7 @@ defineProps<{ agentCount?: number; humanCount?: number; notifyCount?: number; sc
       <span class="cockpit-top__ctime">{{ timeStr() }}</span>
     </div>
     <div class="cockpit-top__search" @click="emit('search')">
-      {{ t('sidebar.search') === 'sidebar.search' ? '搜索任务、空间、Agent' : t('sidebar.search') }}
+      {{ t('cockpit.search') }}
       <span class="cockpit-top__kk">⌘K</span>
     </div>
     <div class="cockpit-top__spacer" />
