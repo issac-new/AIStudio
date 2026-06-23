@@ -68,3 +68,6 @@
 083-i18n-cockpit-history-zh.patch
 085-group-chat-unread-tracking.patch
 086-i18n-cockpit-notify.patch
+087-group-chat-autojoin-on-connect.patch
+088-run-chat-autojoin-sessions-on-connect.patch
+089-chat-store-unread-tracking.patch

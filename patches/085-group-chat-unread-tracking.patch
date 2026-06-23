@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
-index df411c9..7b1ed13 100644
+index df411c94..95a3cda5 100644
 --- a/packages/client/src/stores/hermes/group-chat.ts
 +++ b/packages/client/src/stores/hermes/group-chat.ts
 @@ -131,6 +131,12 @@ export interface GroupPendingApproval {
@@ -15,9 +15,24 @@ index df411c9..7b1ed13 100644
      const currentRoomId = ref<string | null>(null)
      const rooms = ref<RoomInfo[]>([])
      const messages = ref<ChatMessage[]>([])
-@@ -346,6 +352,17 @@ const currentUserAvatar = ref('')
+@@ -345,7 +351,32 @@ const currentUserAvatar = ref('')
+             connected.value = false
          })
  
++        // Server pushes initial per-room state (last message preview) on connect
++        // after auto-joining the user's visible rooms. Unread count starts at 0
++        // (in-memory; resets on refresh — accepted). Subsequent live `message`
++        // events accumulate unread for non-active rooms.
++        socket.on('unread_sync', (sync: { roomId: string; unreadCount: number; lastMessage: { content: string; senderName: string; ts: number } | null }[]) => {
++            if (!Array.isArray(sync)) return
++            const nextLast = { ...lastMessageMap.value }
++            for (const item of sync) {
++                if (!item?.roomId) continue
++                if (item.lastMessage) nextLast[item.roomId] = item.lastMessage
++            }
++            lastMessageMap.value = nextLast
++        })
++
          socket.on('message', (msg: ChatMessage) => {
 +            // Unread tracking: non-active room → accumulate count + last message
 +            if (msg.roomId !== currentRoomId.value) {
@@ -33,7 +48,7 @@ index df411c9..7b1ed13 100644
              if (msg.roomId === currentRoomId.value) {
                  const idx = messages.value.findIndex(m => m.id === msg.id)
                  const existing = idx >= 0 ? messages.value[idx] : null
-@@ -568,6 +585,12 @@ const currentUserAvatar = ref('')
+@@ -568,6 +599,12 @@ const currentUserAvatar = ref('')
      async function joinRoom(roomId: string) {
          isJoining.value = true
          error.value = null
@@ -46,7 +61,7 @@ index df411c9..7b1ed13 100644
  
          try {
              const res = await getRoomDetail(roomId)
-@@ -810,6 +833,19 @@ const currentUserAvatar = ref('')
+@@ -810,6 +847,19 @@ const currentUserAvatar = ref('')
          pendingApprovals.value = new Map(pendingApprovals.value)
      }
  
@@ -66,10 +81,13 @@ index df411c9..7b1ed13 100644
      return {
          // State
          connected,
-@@ -857,6 +893,9 @@ const currentUserAvatar = ref('')
+@@ -857,6 +907,12 @@ const currentUserAvatar = ref('')
          deleteRoom,
          cloneRoom,
          clearCurrentRoomContext,
++        // Unread tracking state (exported for cockpit notify aggregation)
++        unreadCounts,
++        lastMessageMap,
 +        clearRoomUnread,
 +        clearAllUnread,
 +        getRoomUnread,

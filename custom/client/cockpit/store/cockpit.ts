@@ -313,8 +313,15 @@ export const useCockpitStore = defineStore('cockpit', () => {
       if (item) items.push(item)
     }
     for (const s of (chatStore as any).sessions ?? []) {
-      if ((chatStore as any).isSessionCompletedUnread?.(s.id)) {
-        const item = notifyAdapter.fromChatSession(s)
+      if ((chatStore as any).isSessionUnread?.(s.id)) {
+        const info = (chatStore as any).getSessionUnreadInfo?.(s.id) ?? null
+        const item = notifyAdapter.fromChatSession({
+          ...s,
+          unreadCount: (chatStore as any).getSessionUnreadCount?.(s.id) ?? 0,
+          lastPreview: info?.lastPreview ?? '',
+          lastRole: info?.lastRole ?? '',
+          lastTs: info?.lastTs ?? 0,
+        })
         if (item) items.push(item)
       }
     }
@@ -773,7 +780,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function clearNotifyItemUnread(item: NotifyItem) {
     switch (item.kind) {
       case 'matrix': break // SDK 进入房间后自动清零
-      case 'chat': (chatStore as any).clearSessionCompletedUnread?.(item.id.replace('chat:', '')); break
+      case 'chat': (chatStore as any).clearSessionUnread?.(item.id.replace('chat:', '')); break
       case 'group': (groupStore as any).clearRoomUnread?.(item.id.replace('group:', '')); break
     }
   }
