@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onMounted } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import MatrixMessageItem from './MatrixMessageItem.vue'
 import MatrixDateSeparator from './MatrixDateSeparator.vue'
 import MatrixReadMarker from './MatrixReadMarker.vue'
@@ -35,12 +36,26 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const roomStore = useMatrixRoomStore()
+const clientStore = useMatrixClientStore()
 const { t } = useI18n()
 
 const listRef = ref<HTMLElement | null>(null)
 const isLoadingMore = ref(false)
 const isNearBottom = ref(true)
 const scrollTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+// 已读回执去抖:用户停滚 500ms 后发一次 receipt,避免高频请求。
+let readReceiptTimer: ReturnType<typeof setTimeout> | null = null
+// 记录已发过 receipt 的最新 event id,避免重复发送同一条。
+let lastReceiptEventId: string | null = null
+
+// 切房间时重置已读回执游标 + 滚动状态(isNearBottom 复位为 true,新房间默认贴底)
+watch(
+  () => roomStore.activeRoomId,
+  () => {
+    lastReceiptEventId = null
+    isNearBottom.value = true
+  },
+)
 
 // 传入 timelineSet ⇒ 从该 timelineSet 派生;否则走 roomStore(现状)
 const useExternalTimeline = computed(() => props.timelineSet !== undefined)
@@ -61,6 +76,14 @@ const pagination = computed(() => {
   const room = roomStore.activeRoom as any
   if (!room) return { hasMore: false, isLoadingOlder: false }
   return roomStore.paginationState[room.roomId] ?? { hasMore: true, isLoadingOlder: false }
+})
+
+// 历史加载错误(服务器 500 等)。仅主实例。
+const historyError = computed(() => {
+  if (useExternalTimeline.value) return null
+  const room = roomStore.activeRoom as any
+  if (!room) return null
+  return roomStore.historyLoadError?.[room.roomId] ?? null
 })
 
 /** 判断事件是否为状态事件(m.room.create / m.room.member)。 */
@@ -146,6 +169,8 @@ watch(
   (newLen, oldLen) => {
     if (newLen > (oldLen ?? 0) && isNearBottom.value) {
       nextTick(() => scrollToBottom(true))
+      // 新消息到达且停在底部 → 标记已读
+      scheduleReadReceipt()
     }
   },
 )
@@ -155,6 +180,9 @@ function handleScroll() {
 
   checkScrollPosition()
 
+  // 滚到底部附近 → 标记已读(发 read receipt 清未读数)
+  if (isNearBottom.value) scheduleReadReceipt()
+
   // Debounce pagination check
   if (scrollTimeout.value) clearTimeout(scrollTimeout.value)
   scrollTimeout.value = setTimeout(() => {
@@ -162,6 +190,71 @@ function handleScroll() {
       loadMore()
     }
   }, 150)
+}
+
+/**
+ * 发送已读回执。
+ * 主聊天界面之前从不发 read receipt,导致已读消息的未读数一直不归零。
+ * element-web 在滚动到底部 / 新消息到达且停在底部时发 receipt。
+ *
+ * 仅主实例(非 external timeline)发;线程视图由 ThreadPanel 自己发。
+ * 用防抖避免高频请求;记录 lastReceiptEventId 避免重复发同一条。
+ */
+function scheduleReadReceipt() {
+  if (useExternalTimeline.value) return
+  if (readReceiptTimer) clearTimeout(readReceiptTimer)
+  readReceiptTimer = setTimeout(() => {
+    sendReadReceipt()
+  }, 500)
+}
+
+function sendReadReceipt() {
+  const client = clientStore.client
+  const room = roomStore.activeRoom as any
+  if (!client || !room) return
+  // ★ 关键:用 SDK live timeline 的最后一条事件做已读锚点,而不是我们的 messageList。
+  // SDK 的未读计数重算 (Room.recalculateUnreadCount) 遍历 room.timeline 事件,
+  // 用 hasUserReadEvent 判断每条是否已读。如果 receipt 指向的事件不在 SDK timeline,
+  // 或落后于 SDK timeline 的末尾事件,那些末尾事件仍会被算作未读(表现为"始终 2 条")。
+  const liveEvents = room.getLiveTimeline?.().getEvents?.() ?? []
+  const sdkLastEvent = liveEvents[liveEvents.length - 1]
+  // 兜底:SDK timeline 为空时用 messageList 末尾
+  const msgs = messages.value
+  const fallbackLast = msgs[msgs.length - 1]
+  const lastEvent = sdkLastEvent || fallbackLast
+  if (!lastEvent) return
+  const eventId = lastEvent.getId?.()
+  if (!eventId || eventId === lastReceiptEventId) return
+  lastReceiptEventId = eventId
+  // unthreaded=true:让 receipt 覆盖所有 thread(main + 子话题),
+  // 避免线程消息的未读数无法被主时间线的 receipt 清除。
+  client.sendReadReceipt(lastEvent, undefined, true).then(() => {
+    // 成功 → 本地清零 + 触发 SDK 重算未读(双保险)
+    clearLocalUnread(room)
+  }).catch((err: any) => {
+    // /receipt 失败(500/网络)→ 本地清零,避免假未读数卡住
+    clearLocalUnread(room)
+    // eslint-disable-next-line no-console
+    console.warn('[matrix] sendReadReceipt failed, clearing local unread:', err?.message || err)
+  })
+}
+
+/**
+ * 本地清零 room 的未读通知数(不影响服务器,仅 UI 立即生效)。
+ * 配合 matrix-client 里监听的 RoomEvent.UnreadNotifications,
+ * setUnreadNotificationCount 会触发 SDK emit → roomList 刷新。
+ */
+function clearLocalUnread(room: any) {
+  if (!room) return
+  try {
+    // NotificationCountType.Total = 'total', Highlight = 'highlight'
+    room.setUnreadNotificationCount?.('total', 0)
+    room.setUnreadNotificationCount?.('highlight', 0)
+    // 触发 roomStore 的 sortedRooms 重算(依赖未读数)
+    roomStore.refreshRoomList()
+  } catch {
+    // 忽略
+  }
 }
 
 /**
@@ -192,12 +285,16 @@ async function loadMore() {
   isLoadingMore.value = true
   try {
     await roomStore.loadOlderMessages()
-    // 恢复滚动位置:新内容加在上方,scrollTop 加上新增高度,保持视口内容不变
+    // 恢复滚动位置:新内容加在上方,scrollTop 加上新增高度,保持视口内容不变。
+    // 用双重 nextTick + requestAnimationFrame 确保布局计算完成(flex 重排可能
+    // 跨多帧),否则 scrollHeight 读到旧值导致滚动锚点错位。
     nextTick(() => {
-      if (listRef.value) {
-        const newHeight = listRef.value.scrollHeight
-        listRef.value.scrollTop = oldScrollTop + (newHeight - oldScrollHeight)
-      }
+      requestAnimationFrame(() => {
+        if (listRef.value) {
+          const newHeight = listRef.value.scrollHeight
+          listRef.value.scrollTop = oldScrollTop + (newHeight - oldScrollHeight)
+        }
+      })
     })
   } catch {
     // ignore
@@ -207,15 +304,27 @@ async function loadMore() {
 }
 
 onMounted(() => {
-  nextTick(() => scrollToBottom())
+  nextTick(() => {
+    scrollToBottom()
+    // 进入房间默认停在底部 → 标记已读
+    scheduleReadReceipt()
+  })
+})
+
+onBeforeUnmount(() => {
+  if (readReceiptTimer) clearTimeout(readReceiptTimer)
+  if (scrollTimeout.value) clearTimeout(scrollTimeout.value)
 })
 </script>
 
 <template>
   <div ref="listRef" class="matrix-timeline-panel" @scroll="handleScroll">
-    <!-- 顶部:加载更早消息 / 已到房间起点(仅主实例) -->
+    <!-- 顶部:加载更早消息 / 已到房间起点 / 服务器错误(仅主实例) -->
     <div v-if="!useExternalTimeline && pagination.isLoadingOlder" class="paginate-loading">
       {{ t('matrixChat.stateLoadingOlder') }}
+    </div>
+    <div v-else-if="!useExternalTimeline && historyError" class="timeline-error" :title="historyError">
+      {{ t('matrixChat.historyLoadError') }}（{{ historyError }}）
     </div>
     <div v-else-if="!useExternalTimeline && !pagination.hasMore && messages.length > 0" class="timeline-start">
       {{ t('matrixChat.stateNoMoreHistory') }}
@@ -265,13 +374,10 @@ onMounted(() => {
   flex-direction: column;
   gap: 0;
 
-  // Performance optimization: content-visibility for off-screen items.
-  // 注意 contain-intrinsic-size 的 width 必须是 auto(或具体宽度),
-  // 不能是 0 —— 在 flex column 容器里 width:0 会让元素被压成不可见。
-  :deep(.mx_EventTile) {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 60px;
-  }
+  // NOTE: content-visibility: auto 已移除 —— 它在 flex column 滚动容器里会导致
+  // scrollHeight 估算错误(用 contain-intrinsic-size 的 60px 替代真实高度),使得
+  // 用户向上翻页加载历史后无法滚动到 room 起点或滚动条跳变。滚动容器里应避免对
+  // 直接子元素使用 content-visibility: auto。
 }
 
 .paginate-loading {
@@ -286,6 +392,17 @@ onMounted(() => {
   text-align: center;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+// 服务器错误提示(/messages 返回 500 等)
+.timeline-error {
+  padding: 8px 16px;
+  text-align: center;
+  color: var(--error, #e53e3e);
+  font-size: 12px;
+  background: rgba(229, 62, 62, 0.06);
+  border-radius: 6px;
+  margin: 0 8px;
 }
 
 .matrix-timeline-empty {

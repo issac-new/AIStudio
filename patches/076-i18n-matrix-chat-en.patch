@@ -8,6 +8,8 @@ index efcc5613..8a1c2b3d 100644
      uploadFile: 'Upload file',
 +    options: 'Options',
 +    threadStartDisabled: 'Cannot start a thread from a message with an existing relation',
++    undecryptable: 'Unable to decrypt message',
++    historyLoadError: 'Server error, unable to load earlier history',
      // Thread interactions
      threads: 'Threads',
      thread: 'Thread',
