@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 229770c1..9fb544a6 100644
+index 4003583..001a3f7 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -624,6 +624,13 @@ export const useChatStore = defineStore('chat', () => {
@@ -16,7 +16,7 @@ index 229770c1..9fb544a6 100644
    const sessionProfileFilter = ref<string | null>(null)
    /** sessionId → queued message count */
    const queueLengths = ref<Map<string, number>>(new Map())
-@@ -688,6 +695,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -689,6 +696,8 @@ export const useChatStore = defineStore('chat', () => {
      runtimeMode.value = mode
      sessions.value = []
      completedUnreadSessions.value = new Set()
@@ -25,7 +25,7 @@ index 229770c1..9fb544a6 100644
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
      pendingApprovals.value = new Map()
-@@ -762,8 +771,50 @@ export const useChatStore = defineStore('chat', () => {
+@@ -763,7 +772,49 @@ export const useChatStore = defineStore('chat', () => {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -63,20 +63,19 @@ index 229770c1..9fb544a6 100644
 +
 +  function getSessionUnreadInfo(sessionId: string): { count: number; lastPreview: string; lastRole: string; lastTs: number } | null {
 +    return unreadMessages.value.get(sessionId) ?? null
-   }
- 
++  }
++
 +  function clearSessionUnread(sessionId: string) {
 +    if (!unreadMessages.value.has(sessionId)) return
 +    const next = new Map(unreadMessages.value)
 +    next.delete(sessionId)
 +    unreadMessages.value = next
-+  }
+   }
 +  // HERMES_CUSTOM[ChatUnread] END
-+
+ 
    function clearActiveSession() {
      const sid = activeSessionId.value
-     activeSessionId.value = null
-@@ -998,6 +1049,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -999,6 +1050,8 @@ export const useChatStore = defineStore('chat', () => {
      if (legacyActiveKey) removeItem(legacyActiveKey)
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
@@ -85,47 +84,34 @@ index 229770c1..9fb544a6 100644
  
      if (!activeSession.value) return
  
-@@ -2640,6 +2693,12 @@ export const useChatStore = defineStore('chat', () => {
+@@ -2413,6 +2466,8 @@ export const useChatStore = defineStore('chat', () => {
+                   isStreaming: true,
+                 })
+                 activeAssistantMessageId = newId
++                // HERMES_CUSTOM[ChatUnread]: count each new agent reply (mirrors group-chat message counting)
++                accumulateUnread(sid, nextContent, 'assistant', Date.now())
+               }
  
-               const hasQueue = (evt as any).queue_remaining > 0
-               markSessionCompletedUnread(sid, hasQueue)
-+              // HERMES_CUSTOM[ChatUnread] BEGIN: count the completed assistant reply as unread
-+              if (!hasQueue && activeSessionId.value !== sid) {
-+                const preview = (evt as any).parsed_content ?? (evt as any).output ?? ''
-+                accumulateUnread(sid, typeof preview === 'string' ? preview : '', 'assistant', (evt as any).timestamp)
-+              }
-+              // HERMES_CUSTOM[ChatUnread] END
-               if (hasQueue) {
-                 queueLengths.value.set(sid, (evt as any).queue_remaining)
-               } else {
-@@ -3198,6 +3257,12 @@ export const useChatStore = defineStore('chat', () => {
+               break
+@@ -2987,6 +3042,8 @@ export const useChatStore = defineStore('chat', () => {
+               isStreaming: true,
+             })
+             activeAssistantMessageId = newId
++            // HERMES_CUSTOM[ChatUnread]: count each new agent reply (mirrors group-chat message counting)
++            accumulateUnread(sid, nextContent, 'assistant', Date.now())
+           }
  
-           if (!hasQueue) {
-             markSessionCompletedUnread(sid)
-+            // HERMES_CUSTOM[ChatUnread] BEGIN: count the completed assistant reply as unread
-+            if (activeSessionId.value !== sid) {
-+              const preview = (evt as any).parsed_content ?? (evt as any).output ?? ''
-+              accumulateUnread(sid, typeof preview === 'string' ? preview : '', 'assistant', (evt as any).timestamp)
-+            }
-+            // HERMES_CUSTOM[ChatUnread] END
-             cleanup()
-             activeAssistantMessageId = null
-             reasoningAssistantMessageId = null
-@@ -3291,6 +3356,13 @@ export const useChatStore = defineStore('chat', () => {
+           break
+@@ -3292,6 +3349,8 @@ export const useChatStore = defineStore('chat', () => {
  
    function handlePeerUserMessage(evt: RunEvent) {
      const sid = evt.session_id
-+    // HERMES_CUSTOM[ChatUnread] BEGIN: count peer user messages for non-active sessions
-+    if (sid && activeSessionId.value !== sid) {
-+      const peer = evt.message
-+      const content = typeof peer?.content === 'string' ? peer.content : ''
-+      if (content.trim()) accumulateUnread(sid, content, peer?.role === 'command' ? 'user' : 'user', peer?.timestamp)
-+    }
-+    // HERMES_CUSTOM[ChatUnread] END
++    // Note: peer user messages are NOT counted as unread — only agent (assistant)
++    // replies generate notifications (see accumulateUnread calls at run completion).
      if (!sid || activeSessionId.value !== sid || !activeSession.value) return
  
      const peer = evt.message
-@@ -3543,6 +3615,13 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3546,6 +3605,13 @@ export const useChatStore = defineStore('chat', () => {
      isSessionLive,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

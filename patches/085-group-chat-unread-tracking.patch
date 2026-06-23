@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
-index df411c94..95a3cda5 100644
+index df411c9..e35db32 100644
 --- a/packages/client/src/stores/hermes/group-chat.ts
 +++ b/packages/client/src/stores/hermes/group-chat.ts
 @@ -131,6 +131,12 @@ export interface GroupPendingApproval {
@@ -15,7 +15,7 @@ index df411c94..95a3cda5 100644
      const currentRoomId = ref<string | null>(null)
      const rooms = ref<RoomInfo[]>([])
      const messages = ref<ChatMessage[]>([])
-@@ -345,7 +351,32 @@ const currentUserAvatar = ref('')
+@@ -345,7 +351,33 @@ const currentUserAvatar = ref('')
              connected.value = false
          })
  
@@ -34,8 +34,9 @@ index df411c94..95a3cda5 100644
 +        })
 +
          socket.on('message', (msg: ChatMessage) => {
-+            // Unread tracking: non-active room → accumulate count + last message
-+            if (msg.roomId !== currentRoomId.value) {
++            // Unread tracking: only count agent (assistant) replies for non-active rooms.
++            // User-sent messages do not generate notifications.
++            if (msg.roomId !== currentRoomId.value && msg.role === 'assistant') {
 +                unreadCounts.value = {
 +                    ...unreadCounts.value,
 +                    [msg.roomId]: (unreadCounts.value[msg.roomId] ?? 0) + 1,
@@ -48,7 +49,7 @@ index df411c94..95a3cda5 100644
              if (msg.roomId === currentRoomId.value) {
                  const idx = messages.value.findIndex(m => m.id === msg.id)
                  const existing = idx >= 0 ? messages.value[idx] : null
-@@ -568,6 +599,12 @@ const currentUserAvatar = ref('')
+@@ -568,6 +600,12 @@ const currentUserAvatar = ref('')
      async function joinRoom(roomId: string) {
          isJoining.value = true
          error.value = null
@@ -61,7 +62,7 @@ index df411c94..95a3cda5 100644
  
          try {
              const res = await getRoomDetail(roomId)
-@@ -810,6 +847,19 @@ const currentUserAvatar = ref('')
+@@ -810,6 +848,19 @@ const currentUserAvatar = ref('')
          pendingApprovals.value = new Map(pendingApprovals.value)
      }
  
@@ -81,7 +82,7 @@ index df411c94..95a3cda5 100644
      return {
          // State
          connected,
-@@ -857,6 +907,12 @@ const currentUserAvatar = ref('')
+@@ -857,6 +908,12 @@ const currentUserAvatar = ref('')
          deleteRoom,
          cloneRoom,
          clearCurrentRoomContext,

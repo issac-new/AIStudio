@@ -302,9 +302,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
   )
   const relationsForSelectedTask = computed(() => topologyForSelectedTask.value.relations)
 
-  // ── 通知（未读聊天聚合）──
+  // ── 通知（仅 Matrix 未读消息）──
   const notifyOpen = ref(false)
-  const notifySourceFilter = ref<NotifyKind | 'all'>('all')
 
   const notifyItems = computed<NotifyItem[]>(() => {
     const items: NotifyItem[] = []
@@ -312,37 +311,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
       const item = notifyAdapter.fromMatrixRoom(room, (r: any) => (matrixRoom as any).getRoomUnreadCount(r))
       if (item) items.push(item)
     }
-    for (const s of (chatStore as any).sessions ?? []) {
-      if ((chatStore as any).isSessionUnread?.(s.id)) {
-        const info = (chatStore as any).getSessionUnreadInfo?.(s.id) ?? null
-        const item = notifyAdapter.fromChatSession({
-          ...s,
-          unreadCount: (chatStore as any).getSessionUnreadCount?.(s.id) ?? 0,
-          lastPreview: info?.lastPreview ?? '',
-          lastRole: info?.lastRole ?? '',
-          lastTs: info?.lastTs ?? 0,
-        })
-        if (item) items.push(item)
-      }
-    }
-    for (const r of (groupStore as any).rooms ?? []) {
-      const cnt = (groupStore as any).getRoomUnread?.(r.id) ?? 0
-      if (cnt > 0) {
-        const last = (groupStore as any).lastMessageMap?.[r.id] ?? null
-        const item = notifyAdapter.fromGroupRoom(r, cnt, last)
-        if (item) items.push(item)
-      }
-    }
     return items.sort((a, b) => b.ts - a.ts)
   })
 
   const notifyCount = computed(() => notifyItems.value.reduce((n, i) => n + i.count, 0))
-
-  const filteredNotifyItems = computed(() => {
-    const f = notifySourceFilter.value
-    if (f === 'all') return notifyItems.value
-    return notifyItems.value.filter(i => i.kind === f)
-  })
 
   // ── 频道（parseTenant）──
   const channels = computed<CollabChannel[]>(() => {
@@ -776,17 +748,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // ── 通知 ──
   function openNotify() { notifyOpen.value = true }
   function closeNotify() { notifyOpen.value = false }
-  function setNotifySourceFilter(f: NotifyKind | 'all') { notifySourceFilter.value = f }
-  function clearNotifyItemUnread(item: NotifyItem) {
-    switch (item.kind) {
-      case 'matrix': break // SDK 进入房间后自动清零
-      case 'chat': (chatStore as any).clearSessionUnread?.(item.id.replace('chat:', '')); break
-      case 'group': (groupStore as any).clearRoomUnread?.(item.id.replace('group:', '')); break
-    }
-  }
-  function clearAllNotify() {
-    for (const item of notifyItems.value) clearNotifyItemUnread(item)
-  }
+  // 仅 Matrix：进入房间后 SDK 自动清零未读，无需额外操作
 
   // ── 频道（聊天精简壳）──
   function selectChannel(id: string | null) {
@@ -1083,8 +1045,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
     timelineActorFilter, timelineActorOptions,
     topologyForSelectedTask, relationsForSelectedTask,
     channels, channelsForSelectedTask, activeChannel,
-    notifyOpen, notifySourceFilter, notifyItems, filteredNotifyItems, notifyCount,
-    openNotify, closeNotify, setNotifySourceFilter, clearNotifyItemUnread, clearAllNotify,
+    notifyOpen, notifyItems, notifyCount,
+    openNotify, closeNotify,
     filesForSelectedTask, workItemForSelectedTask, selectedTaskDetail,
     filteredHistory, messagesForActiveChannel, templates, currentUserName,
     // 客户端态
