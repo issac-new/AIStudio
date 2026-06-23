@@ -85,6 +85,22 @@ describe('CockpitCollabBar', () => {
     expect(w.find('.cockpit-collab-bar__menu').exists()).toBe(true)
   })
 
+  it('channel chip shows navigate arrow when tenant has routeTarget', () => {
+    mockKanbanTasks.push(kt({ id: 't1', tenant: 'matrix:!r:m:Auth联调' }))
+    const s = useCockpitStore()
+    ;(s as any).selectedTaskId = 't1'
+    const w = mount(CockpitCollabBar)
+    expect(w.find('.cockpit-collab-bar__chip-nav').exists()).toBe(true)
+  })
+
+  it('channel chip has no navigate arrow when tenant is plain', () => {
+    mockKanbanTasks.push(kt({ id: 't1', tenant: 'platform-team' }))
+    const s = useCockpitStore()
+    ;(s as any).selectedTaskId = 't1'
+    const w = mount(CockpitCollabBar)
+    expect(w.find('.cockpit-collab-bar__chip-nav').exists()).toBe(false)
+  })
+
   it('menu has three new-collab options', async () => {
     mockKanbanTasks.push(kt({ id: 't1', tenant: 'matrix:!r:m:X' }))
     const s = useCockpitStore()

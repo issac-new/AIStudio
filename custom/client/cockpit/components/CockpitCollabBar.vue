@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useCockpitStore, type ChannelKind } from '@/custom/cockpit/store/cockpit'
+import { useRouter } from 'vue-router'
+import { useCockpitStore, type ChannelKind, type CollabChannel } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
+const router = useRouter()
 const { t } = useI18n()
 const menuOpen = ref(false)
+
+function navigateRoute(ch: CollabChannel) {
+  if (ch.routeTarget) {
+    router.push(ch.routeTarget)
+  }
+}
 
 const KIND_ICON: Record<ChannelKind, string> = { matrix: '👥', chat: '💬', group: '🗣' }
 
@@ -35,6 +43,7 @@ function pickNew(kind: ChannelKind) {
     >
       <span class="cockpit-collab-bar__chip-icon">{{ KIND_ICON[c.kind] }}</span>
       <span class="cockpit-collab-bar__chip-label">{{ c.label }}</span>
+      <span v-if="c.routeTarget" class="cockpit-collab-bar__chip-nav" title="打开完整页面" @click.stop="navigateRoute(c)">↗</span>
     </button>
     <button type="button" data-action="add" class="cockpit-collab-bar__add" @click="menuOpen = !menuOpen">+ {{ t('cockpit.addCollab') }}</button>
 
@@ -66,6 +75,11 @@ function pickNew(kind: ChannelKind) {
 }
 .cockpit-collab-bar__chip-icon { font-size: 11px; }
 .cockpit-collab-bar__chip-count { font-size: 9px; color: var(--text-muted); }
+.cockpit-collab-bar__chip-nav {
+  font-size: 10px; color: var(--text-muted); cursor: pointer; margin-left: 2px;
+  padding: 1px 3px; border-radius: 3px; line-height: 1;
+  &:hover { color: var(--accent-primary); background: var(--bg-secondary); }
+}
 .cockpit-collab-bar__add { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 10px; border: 1px solid var(--accent-primary); border-radius: 6px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-weight: 600; font: inherit;
   &:hover { background: var(--accent-hover); }
 }
