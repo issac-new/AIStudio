@@ -1,0 +1,42 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index a5816fb..6ded6d9 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -352,6 +352,16 @@ export default {
+     historyCatComment: 'Comments',
+     historyActive: 'Active',
+     historyDone: 'Done',
++    notifyTitle: 'Notifications',
++    notifyUnread: 'unread',
++    notifySource: 'Source',
++    notifyAll: 'All',
++    notifyMatrix: 'Matrix',
++    notifyChat: 'Chat',
++    notifyGroup: 'Group',
++    notifyEmpty: 'No unread messages',
++    notifyClickHint: 'Click an item to open the chat',
++    notifyReadAll: 'Mark all as read',
+   },
+ 
+   runtimeVersions: {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 0fd6ec5..f9612f8 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -350,6 +350,16 @@ export default {
+     historyCatComment: '评论',
+     historyActive: '进行中',
+     historyDone: '已完成',
++    notifyTitle: '通知',
++    notifyUnread: '条未读',
++    notifySource: '来源',
++    notifyAll: '全部',
++    notifyMatrix: 'Matrix',
++    notifyChat: '单聊',
++    notifyGroup: '群聊',
++    notifyEmpty: '没有未读消息',
++    notifyClickHint: '点击条目进入对应聊天',
++    notifyReadAll: '全部标为已读',
+   },
+ 
+   runtimeVersions: {
