@@ -8,8 +8,14 @@ const store = useCockpitStore()
 const { t } = useI18n()
 defineEmits<{ (e: 'submit'): void; (e: 'later'): void }>()
 
-const decisions: { key: WorkDecision; labelKey: string }[] = [
-  { key: 'conditional', labelKey: 'cockpit.decisionConditional' },
+interface DecisionOption {
+  key: WorkDecision
+  labelKey: string
+  descKey?: string
+  recommended?: boolean
+}
+const decisions: DecisionOption[] = [
+  { key: 'conditional', labelKey: 'cockpit.decisionConditional', descKey: 'cockpit.decisionConditionalDesc', recommended: true },
   { key: 'reject', labelKey: 'cockpit.decisionReject' },
   { key: 'approve', labelKey: 'cockpit.decisionApprove' },
 ]
@@ -63,7 +69,13 @@ const isReadOnly = computed(() => store.archivedMode)
             @click="store.updateWorkItem({ decision: d.key })"
           >
             <span class="cockpit-workspace__opt-dot" />
-            <span class="cockpit-workspace__opt-name">{{ t(d.labelKey) }}</span>
+            <span class="cockpit-workspace__opt-info">
+              <span class="cockpit-workspace__opt-header">
+                <span class="cockpit-workspace__opt-name">{{ t(d.labelKey) }}</span>
+                <span v-if="d.recommended" class="cockpit-workspace__opt-rec">{{ t('cockpit.recommend') }}</span>
+              </span>
+              <span v-if="d.descKey" class="cockpit-workspace__opt-desc">{{ t(d.descKey) }}</span>
+            </span>
           </button>
         </div>
 
@@ -149,7 +161,11 @@ const isReadOnly = computed(() => store.archivedMode)
 }
 .cockpit-workspace__opt-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text-muted); flex-shrink: 0; margin-top: 1px; }
 .is-selected .cockpit-workspace__opt-dot { border-color: var(--accent-primary); background: radial-gradient(var(--accent-primary) 45%, transparent 50%); }
+.cockpit-workspace__opt-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cockpit-workspace__opt-header { display: flex; align-items: center; gap: 8px; }
 .cockpit-workspace__opt-name { font-size: 13px; font-weight: 600; }
+.cockpit-workspace__opt-rec { font-size: 9px; padding: 1px 6px; border-radius: 3px; background: var(--accent-primary); color: var(--text-on-accent); font-weight: 600; white-space: nowrap; }
+.cockpit-workspace__opt-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
 .cockpit-workspace__chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .cockpit-workspace__chip { font-size: 12px; padding: 4px 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font: inherit;
   &:hover { border-color: var(--text-muted); }

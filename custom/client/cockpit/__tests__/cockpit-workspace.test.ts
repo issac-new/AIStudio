@@ -117,6 +117,13 @@ describe('CockpitWorkspace', () => {
     expect(w.emitted('submit')).toBeTruthy()
   })
 
+  it('recommended option shows recommend badge', () => {
+    seed()
+    const w = mount(CockpitWorkspace)
+    const cond = w.find('[data-decision="conditional"]')
+    expect(cond.text()).toContain('recommend')
+  })
+
   it('claude code button calls enterTerminal', async () => {
     const s = seed()
     const w = mount(CockpitWorkspace)
