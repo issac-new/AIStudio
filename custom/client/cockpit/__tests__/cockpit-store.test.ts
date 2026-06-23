@@ -338,22 +338,22 @@ describe('cockpit store 终端 + 历史 + 模板（客户端态）', () => {
 
   it('history filter by action', async () => {
     const s = useCockpitStore()
-    // 直接设置 history ref（仍是本地 ref，可赋值）
     s.history = [
-      { id: 'h1', when: '今', taskId: 't1', action: '审批', title: 'a', archived: false },
-      { id: 'h2', when: '今', taskId: 't1', action: '决策', title: 'b', archived: false },
+      { id: 'h1', when: '今', taskId: 't1', action: '审批', title: 'a', archived: false, source: 'event' } as any,
+      { id: 'h2', when: '今', taskId: 't1', action: '决策', title: 'b', archived: false, source: 'event' } as any,
     ]
-    s.historyFilters = { actions: ['审批'], archived: 'all' }
+    s.toggleHistoryAction('审批')
     expect(s.filteredHistory.map(h => h.id)).toEqual(['h1'])
   })
 
   it('history filter archived-only', async () => {
     const s = useCockpitStore()
     s.history = [
-      { id: 'h1', when: '今', taskId: 't1', action: '审批', title: 'a', archived: false },
-      { id: 'h2', when: '今', taskId: 't1', action: '审批', title: 'b', archived: true },
+      { id: 'h1', when: '今', taskId: 't1', action: '审批', title: 'a', archived: false, source: 'event' } as any,
+      { id: 'h2', when: '今', taskId: 't1', action: '审批', title: 'b', archived: true, source: 'event' } as any,
     ]
-    s.historyFilters = { actions: [], archived: 'only' }
+    s.toggleHistoryStatus('active')
+    s.toggleHistoryStatus('done')
     expect(s.filteredHistory.map(h => h.id)).toEqual(['h2'])
   })
 

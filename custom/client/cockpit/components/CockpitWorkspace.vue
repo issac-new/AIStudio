@@ -12,41 +12,33 @@ defineEmits<{ (e: 'submit'): void }>()
 
 // ── 区域1: Task Header ──
 const selectedTask = computed(() => store.selectedTask)
-const taskSummary = computed(() => {
-  const id = store.selectedTaskId
-  if (!id) return ''
-  const cache = (store as any)._detailCache?.value?.[id]
-  return cache?.latest_summary ?? ''
-})
+const detail = computed(() => store.selectedTaskDetail)
+const taskSummary = computed(() => detail.value?.latest_summary ?? detail.value?.task?.result ?? '')
 
 // ── 区域2: Kanban 详情字段（暂存草稿模式）──
-const detailCache = computed(() => {
-  const id = store.selectedTaskId
-  if (!id) return null
-  return (store as any)._detailCache?.value?.[id] ?? null
-})
+const task = computed(() => detail.value?.task ?? null)
 const workItem = computed(() => store.workItemForSelectedTask)
 
-// 当前生效值（草稿优先，回退到 detail）
+// 当前生效值（草稿优先，回退到 detail.task）
 const currentAssignee = computed(() => {
   const draft = workItem.value
-  if (draft?.pendingAssignee !== undefined) return draft.pendingAssignee || '—'
-  return (selectedTask.value as any)?.assignee || '—'
+  if (draft?.pendingAssignee !== undefined) return draft.pendingAssignee || ''
+  return task.value?.assignee ?? ''
 })
 const currentPriority = computed(() => {
   const draft = workItem.value
   if (draft?.pendingPriority !== undefined) return draft.pendingPriority
-  return (selectedTask.value as any)?.priority ?? 0
+  return task.value?.priority ?? 0
 })
 const currentBody = computed(() => {
   const draft = workItem.value
   if (draft?.pendingBody !== undefined) return draft.pendingBody
-  return (selectedTask.value as any)?.body ?? ''
+  return task.value?.body ?? ''
 })
 
 // 父子任务（detail 提供原始列表 + 草稿中的待增删）
-const parentIds = computed(() => detailCache.value?.parents ?? [])
-const childIds = computed(() => detailCache.value?.children ?? [])
+const parentIds = computed(() => detail.value?.parents ?? [])
+const childIds = computed(() => detail.value?.children ?? [])
 const pendingLinkAdds = computed(() => workItem.value?.pendingLinkAdds ?? [])
 const pendingLinkRemoves = computed(() => workItem.value?.pendingLinkRemoves ?? [])
 
@@ -155,11 +147,11 @@ function formatFileSize(bytes: number): string {
       <div v-if="hasTask" class="cockpit-workspace__body">
         <!-- ═══ AREA 1: Task Header ═══ -->
         <div class="cockpit-workspace__header">
-          <div class="cockpit-workspace__title">{{ selectedTask?.title }}</div>
+          <div class="cockpit-workspace__title">{{ task?.title || selectedTask?.title }}</div>
           <div v-if="taskSummary" class="cockpit-workspace__summary">{{ taskSummary }}</div>
           <div class="cockpit-workspace__meta-row">
-            <span class="cockpit-workspace__status-chip" :class="'is-' + (selectedTask as any)?.status">{{ (selectedTask as any)?.status }}</span>
-            <span class="cockpit-workspace__priority-tag">{{ 'P' + ((selectedTask as any)?.priority ?? '—') }}</span>
+            <span class="cockpit-workspace__status-chip" :class="'is-' + (task?.status ?? '')">{{ task?.status ?? '' }}</span>
+            <span class="cockpit-workspace__priority-tag">{{ 'P' + (task?.priority ?? '—') }}</span>
           </div>
         </div>
 
@@ -168,7 +160,7 @@ function formatFileSize(bytes: number): string {
           <label class="cockpit-workspace__section-title">{{ t('cockpit.assignee') }}</label>
           <div class="cockpit-workspace__field-row">
             <span class="cockpit-workspace__field-val">{{ currentAssignee }}</span>
-            <select class="cockpit-workspace__select" value="" @change="onAssigneeChange">
+            <select class="cockpit-workspace__select" :value="currentAssignee" @change="onAssigneeChange">
               <option value="" disabled>{{ t('cockpit.selectAssignee') }}</option>
               <option v-for="opt in assigneeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
