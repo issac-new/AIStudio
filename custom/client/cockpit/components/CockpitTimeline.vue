@@ -9,7 +9,13 @@ const { t } = useI18n()
 const THRESHOLD = 4
 const expanded = ref(false)
 
-const recent = computed(() => store.recentEventsForTimeline(THRESHOLD))
+// 直接读 store.eventsForTimeline（computed，响应 actor filter 变化）
+const allFilteredEvents = computed(() => store.eventsForTimeline)
+const recent = computed(() => {
+  const all = allFilteredEvents.value
+  if (all.length <= THRESHOLD) return { visible: all, folded: [] as any[] }
+  return { visible: all.slice(0, THRESHOLD), folded: all.slice(THRESHOLD) }
+})
 const visibleEvents = computed(() =>
   expanded.value ? [...recent.value.folded, ...recent.value.visible] : recent.value.visible,
 )
