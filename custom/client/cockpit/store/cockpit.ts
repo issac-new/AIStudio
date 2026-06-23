@@ -282,7 +282,17 @@ export const useCockpitStore = defineStore('cockpit', () => {
     await loadTaskDetail(id)
   }
 
+  // 按任务所属 board 切换 kanban store 上下文（跨 board 聚合时必需）
+  function syncBoardForTask(id: string) {
+    const t = cockpitTasks.value.find(x => x.id === id)
+    if (t?.boardSlug) {
+      try { kanban.setSelectedBoard?.(t.boardSlug) } catch { /* ignore */ }
+    }
+  }
+
   async function loadTaskDetail(id: string) {
+    // 切到任务所属 board，确保 getTask / listWorkspaceFiles 返回正确数据（含 parents/children）
+    syncBoardForTask(id)
     try {
       const detail = _detailCache.value[id] ?? await kanbanApi.getTask(id)
       _detailCache.value[id] = detail

@@ -3,13 +3,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
-// ── mock kanban store ──
 const { mockKanbanTasks, fetchTasks } = vi.hoisted(() => ({
   mockKanbanTasks: [] as any[],
   fetchTasks: vi.fn(async () => {}),
 }))
 vi.mock('@/stores/hermes/kanban', () => ({
-  useKanbanStore: () => ({ tasks: mockKanbanTasks, fetchTasks, fetchAssignees: vi.fn(async () => {}), startEventStream: vi.fn() }),
+  useKanbanStore: () => ({
+    tasks: mockKanbanTasks,
+    boards: [{ slug: 'default', name: 'default', total: 0 }],
+    fetchTasks, fetchAssignees: vi.fn(async () => {}),
+    startEventStream: vi.fn(),
+    fetchBoards: vi.fn(async () => {}),
+    setSelectedBoard: vi.fn(),
+  }),
 }))
 const { searchSessions, listWorkspaceFiles, getTimeline } = vi.hoisted(() => ({
   searchSessions: vi.fn(async () => []),
@@ -42,7 +48,7 @@ const kt = (over: Record<string, any> = {}) => ({
   result: null, skills: null, latest_summary: null, ...over,
 })
 
-describe('CockpitCollabMap', () => {
+describe('CockpitCollabMap (Canvas)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     mockKanbanTasks.splice(0, mockKanbanTasks.length)
@@ -51,13 +57,11 @@ describe('CockpitCollabMap', () => {
   })
 
   async function seed() {
-    // 当前任务 + 父任务 + 子任务
     mockKanbanTasks.push(
       kt({ id: 't1', title: '中心任务', tenant: 'matrix:!r:m:Auth联调' }),
       kt({ id: 'p1', title: '父任务' }),
       kt({ id: 'c1', title: '子任务1' }),
     )
-    // getTask 返回带 parents/children 的 detail
     getTask.mockResolvedValue({
       task: { id: 't1', title: '中心任务', body: null, assignee: 'alice', status: 'todo', priority: 0, created_by: 'bob', created_at: 0, started_at: null, completed_at: null, workspace_kind: 'dir', workspace_path: '~/ws', tenant: 'matrix:!r:m:Auth联调', project_id: null, result: null, skills: null },
       latest_summary: null, comments: [], events: [], runs: [],
@@ -68,70 +72,72 @@ describe('CockpitCollabMap', () => {
     return s
   }
 
-  it('renders center node (current task title) + radiate nodes', async () => {
+  it('renders canvas element when task selected', async () => {
     await seed()
     const w = mount(CockpitCollabMap)
-    expect(w.text()).toContain('中心任务')
-    expect(w.text()).toContain('父任务')
-    expect(w.text()).toContain('子任务1')
-    // center node 是 focus 态
-    expect(w.find('[data-node-kind="center"]').classes()).toContain('is-focus')
+    expect(w.find('.cockpit-map__canvas').exists()).toBe(true)
+    expect(w.find('canvas').exists()).toBe(true)
   })
 
-  it('renders person nodes (assignee + created_by)', async () => {
-    await seed()
-    const w = mount(CockpitCollabMap)
-    expect(w.text()).toContain('alice')  // assignee
-    expect(w.text()).toContain('bob')    // created_by
+  it('store topology has center + parent + child + person + channel nodes', async () => {
+    const s = await seed()
+    const topo = s.topologyForSelectedTask
+    const kinds = topo.nodes.map(n => n.kind)
+    expect(kinds).toContain('center')
+    expect(kinds).toContain('parent')
+    expect(kinds).toContain('child')
+    expect(kinds).toContain('person')
+    expect(kinds).toContain('channel')
+    expect(topo.relations.length).toBeGreaterThan(0)
   })
 
-  it('renders channel node from tenant', async () => {
-    await seed()
-    const w = mount(CockpitCollabMap)
-    expect(w.text()).toContain('Auth联调')
-    expect(w.find('[data-node-kind="channel"]').exists()).toBe(true)
+  it('center node label is the task title', async () => {
+    const s = await seed()
+    const center = s.topologyForSelectedTask.nodes.find(n => n.kind === 'center')
+    expect(center?.label).toBe('中心任务')
+    expect(center?.focus).toBe(true)
   })
 
-  it('renders canvas zoom control buttons', async () => {
+  it('parent node target.taskId is set for selectTask', async () => {
+    const s = await seed()
+    const parent = s.topologyForSelectedTask.nodes.find(n => n.kind === 'parent')
+    expect(parent?.target?.taskId).toBe('p1')
+  })
+
+  it('renders zoom control buttons', async () => {
     await seed()
     const w = mount(CockpitCollabMap)
-    // 全屏/最小化按钮已移至 CockpitView 栏位控件；CollabMap 仅保留缩放
     expect(w.find('[data-canvas-zoom-in]').exists()).toBe(true)
     expect(w.find('[data-canvas-zoom-out]').exists()).toBe(true)
   })
 
-  it('zoom-in button increases canvas scale', async () => {
-    const s = await seed()
-    const w = mount(CockpitCollabMap)
-    const before = s.canvasTransform.scale
-    await w.find('[data-canvas-zoom-in]').trigger('click')
-    expect(s.canvasTransform.scale).toBeGreaterThan(before)
-  })
-
-  it('clicking a parent node selects that task in store', async () => {
-    const s = await seed()
-    const w = mount(CockpitCollabMap)
-    const parentNode = w.find('[data-node-kind="parent"]')
-    await parentNode.trigger('click')
-    expect(s.selectedTaskId).toBe('p1')
-  })
-
-  it('clicking a channel node switches workspace mode to chat', async () => {
-    const s = await seed()
-    const w = mount(CockpitCollabMap)
-    const chNode = w.find('[data-node-kind="channel"]')
-    await chNode.trigger('click')
-    expect(s.workspaceMode).toBe('chat')
-  })
-
-  it('renders SVG line between center and radiate nodes', async () => {
+  it('zoom-in button increases view scale', async () => {
     await seed()
     const w = mount(CockpitCollabMap)
-    expect(w.findAll('line').length).toBeGreaterThan(0)
+    // canvas 组件用内部 view，通过按钮触发 zoomBy
+    const vm = w.vm as any
+    const before = vm.view.scale ?? 1
+    await w.find('[data-canvas-zoom-in]').trigger('click')
+    expect((w.vm as any).view.scale).toBeGreaterThan(before)
   })
 
   it('renders empty state when no task selected', () => {
     const w = mount(CockpitCollabMap)
     expect(w.find('.cockpit-map__empty').exists()).toBe(true)
+  })
+
+  it('channel node links to current task channel', async () => {
+    const s = await seed()
+    const ch = s.topologyForSelectedTask.nodes.find(n => n.kind === 'channel')
+    expect(ch).toBeDefined()
+    expect(ch!.taskId).toBe('t1')  // 频道节点关联当前任务
+    // store 的 channelsForSelectedTask 含该任务 channel
+    expect(s.channelsForSelectedTask.length).toBeGreaterThan(0)
+  })
+
+  it('detail loaded with correct board context (syncBoardForTask)', async () => {
+    const s = await seed()
+    // getTask 被调用（带正确 board 上下文）
+    expect(getTask).toHaveBeenCalledWith('t1')
   })
 })

@@ -1,142 +1,283 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useCockpitStore, type GraphNode } from '@/custom/cockpit/store/cockpit'
-import CockpitGraphNode from './CockpitGraphNode.vue'
 import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
 const { t } = useI18n()
 
-// 画布实际尺寸（ResizeObserver 响应式测量，viewBox 自适应）
-const canvasEl = ref<HTMLElement | null>(null)
-const canvasW = ref(320)
-const canvasH = ref(140)
-let ro: ResizeObserver | null = null
-onMounted(() => {
-  if (canvasEl.value && typeof ResizeObserver !== 'undefined') {
-    try {
-      ro = new ResizeObserver((entries) => {
-        for (const e of entries) {
-          canvasW.value = e.contentRect.width || 320
-          canvasH.value = e.contentRect.height || 140
-        }
-      })
-      ro.observe(canvasEl.value)
-    } catch { /* ResizeObserver 不可用（如 jsdom 测试环境），用默认尺寸 */ }
-  }
-})
-onUnmounted(() => { try { ro?.disconnect() } catch { /* ignore */ } })
+// Canvas 元素与上下文
+const canvasEl = ref<HTMLCanvasElement | null>(null)
+const wrapEl = ref<HTMLElement | null>(null)
+let ctx: CanvasRenderingContext2D | null = null
 
-// 中心 + 辐射节点位置（120° 三扇区分布）
-// center 居中；parent 在上方扇区（-90° ± 60°）；child 在下方扇区（90° ± 60°）；person/channel 在左右扇区
-const nodePos = computed<Record<string, { x: number; y: number }>>(() => {
-  const out: Record<string, { x: number; y: number }> = {}
+// 画布逻辑尺寸（CSS 像素，DPR 缩放在 resize 时处理）
+let cw = 320
+let ch = 140
+
+// 视口变换（pan + zoom）
+const view = ref({ x: 0, y: 0, scale: 1 })
+let dragging = false
+let lastX = 0, lastY = 0
+
+// hover 节点（用于光标提示）
+const hoverNode = ref<GraphNode | null>(null)
+
+// 节点布局：计算每个节点的位置（中心辐射，按类型分扇区，防重叠）
+const layout = computed(() => {
   const topo = store.topologyForSelectedTask
-  const cx = canvasW.value / 2
-  const cy = canvasH.value / 2
-  // 半径：取宽高较小者的 35%（留出节点标签空间）
-  const R = Math.min(canvasW.value, canvasH.value) * 0.35
+  const pos: Record<string, { x: number; y: number; w: number; h: number }> = {}
+  const cx = cw / 2
+  const cy = ch / 2
+  // 根据画布尺寸与节点总数自适应半径
+  const total = topo.nodes.length
+  const baseR = Math.min(cw, ch) * 0.32
+  const R = Math.max(60, baseR + Math.min(40, total * 4))
 
   const center = topo.nodes.find(n => n.kind === 'center')
-  if (center) out[center.id] = { x: cx, y: cy }
-
-  // 按类型分组辐射节点
-  const parents = topo.nodes.filter(n => n.kind === 'parent')
-  const children = topo.nodes.filter(n => n.kind === 'child')
-  const persons = topo.nodes.filter(n => n.kind === 'person')
-  const channels = topo.nodes.filter(n => n.kind === 'channel')
-
-  // 上方扇区（parent）：以 -90°（正上）为中心，±60° 内均分
-  const spread = (count: number, centerAngle: number, halfRange: number) => {
-    if (count === 0) return [] as number[]
-    if (count === 1) return [centerAngle]
-    const step = (halfRange * 2) / (count - 1)
-    return Array.from({ length: count }, (_, i) => centerAngle - halfRange + step * i)
+  // 节点框尺寸（根据 label 长度估算）
+  const nodeSize = (label: string, isCenter = false) => {
+    ctx!.font = isCenter ? 'bold 12px sans-serif' : '11px sans-serif'
+    const tw = ctx!.measureText(label).width
+    return { w: Math.min(isCenter ? 170 : 130, Math.max(50, tw + 20)), h: isCenter ? 30 : 24 }
   }
-  // parent：上方（-90°），半范围 60°
-  parents.forEach((node, i) => {
-    const angles = spread(parents.length, -Math.PI / 2, Math.PI / 3)
-    const a = angles[i]
-    out[node.id] = { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) }
-  })
-  // child：下方（90°），半范围 60°
-  children.forEach((node, i) => {
-    const angles = spread(children.length, Math.PI / 2, Math.PI / 3)
-    const a = angles[i]
-    out[node.id] = { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) }
-  })
-  // person：左侧（180°），半范围 50°
-  persons.forEach((node, i) => {
-    const angles = spread(persons.length, Math.PI, Math.PI / 3.6)
-    const a = angles[i]
-    out[node.id] = { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) }
-  })
-  // channel：右侧（0°），半范围 50°
-  channels.forEach((node, i) => {
-    const angles = spread(channels.length, 0, Math.PI / 3.6)
-    const a = angles[i]
-    out[node.id] = { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) }
-  })
 
-  // folded 节点放右下角
-  const folded = topo.nodes.find(nn => nn.kind === 'folded')
-  if (folded) out[folded.id] = { x: cx + R * 0.8, y: cy + R * 0.8 }
-  return out
+  if (center) {
+    const s = nodeSize(center.label, true)
+    pos[center.id] = { x: cx, y: cy, w: s.w, h: s.h }
+  }
+
+  // 按类型分组
+  const groups: Record<string, GraphNode[]> = { parent: [], child: [], person: [], channel: [] }
+  for (const n of topo.nodes) {
+    if (n.kind in groups) groups[n.kind].push(n)
+  }
+  // 扇区中心角（弧度）：parent 上、person 左、channel 右、child 下
+  const sectorAngle: Record<string, number> = {
+    parent: -Math.PI / 2,
+    person: Math.PI,
+    channel: 0,
+    child: Math.PI / 2,
+  }
+  // 每个扇区的半范围（弧度）
+  const halfRange = Math.PI / 3.2
+
+  for (const [kind, list] of Object.entries(groups)) {
+    if (!list.length) continue
+    const ca = sectorAngle[kind]
+    list.forEach((node, i) => {
+      let a: number
+      if (list.length === 1) {
+        a = ca
+      } else {
+        const step = (halfRange * 2) / (list.length - 1)
+        a = ca - halfRange + step * i
+      }
+      const s = nodeSize(node.label)
+      pos[node.id] = {
+        x: cx + R * Math.cos(a),
+        y: cy + R * Math.sin(a),
+        w: s.w, h: s.h,
+      }
+    })
+  }
+  // folded 放右下
+  const folded = topo.nodes.find(n => n.kind === 'folded')
+  if (folded) {
+    const s = nodeSize(folded.label)
+    pos[folded.id] = { x: cx + R * 0.7, y: cy + R * 0.7, w: s.w, h: s.h }
+  }
+  return pos
 })
 
-// viewBox 响应实际画布尺寸
-const viewBoxStr = computed(() => `0 0 ${canvasW.value} ${canvasH.value}`)
+// 绘制
+function draw() {
+  if (!ctx) return
+  const c = canvasEl.value!
+  ctx.save()
+  ctx.clearRect(0, 0, c.width, c.height)
+  // 应用 DPR：ctx 已在 resize 时 scale(dpr,dpr)，这里只做视口变换
+  ctx.translate(view.value.x, view.value.y)
+  ctx.scale(view.value.scale, view.value.scale)
 
-// 画布变换（pan + zoom），存 store.canvasTransform
-const tf = computed(() => store.canvasTransform)
+  const topo = store.topologyForSelectedTask
+  const pos = layout.value
 
-function zoomBy(delta: number) {
-  const next = Math.min(2, Math.max(0.5, tf.value.scale + delta))
-  store.canvasTransform = { ...tf.value, scale: next }
+  // 背景点阵（可选，视觉提示）
+  ctx.fillStyle = 'rgba(0,0,0,0.04)'
+  // 画连线（center → 辐射）
+  ctx.strokeStyle = 'rgba(128,128,128,0.35)'
+  ctx.lineWidth = 1
+  const centerPos = pos['g-center']
+  for (const r of topo.relations) {
+    const from = pos[r.from]
+    const to = pos[r.to]
+    if (!from || !to) continue
+    ctx.beginPath()
+    ctx.moveTo(from.x, from.y)
+    ctx.lineTo(to.x, to.y)
+    ctx.stroke()
+  }
+
+  // 画节点
+  for (const n of topo.nodes) {
+    const p = pos[n.id]
+    if (!p) continue
+    const isFocus = n.focus
+    const isHover = hoverNode.value?.id === n.id
+    // 节点背景
+    ctx.fillStyle = n.kind === 'folded' ? 'rgba(0,0,0,0.04)' : (isFocus ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.9)')
+    ctx.strokeStyle = isFocus ? 'rgba(0,0,0,0.8)' : (isHover ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.2)')
+    ctx.lineWidth = isFocus ? 2 : 1
+    const radius = 6
+    roundRect(ctx, p.x - p.w / 2, p.y - p.h / 2, p.w, p.h, radius)
+    ctx.fill()
+    ctx.stroke()
+    // 文字
+    ctx.fillStyle = n.kind === 'folded' ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.85)'
+    ctx.font = isFocus ? 'bold 12px sans-serif' : '11px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    // 截断长 label
+    let label = n.label
+    const maxW = p.w - 12
+    while (ctx.measureText(label).width > maxW && label.length > 1) {
+      label = label.slice(0, -1)
+    }
+    if (label !== n.label) label = label.slice(0, -1) + '…'
+    ctx.fillText(label, p.x, p.y)
+  }
+  ctx.restore()
 }
 
-// 拖拽画布 pan
-const dragging = ref(false)
-let startX = 0, startY = 0, startTx = 0, startTy = 0
-function onCanvasDown(e: MouseEvent) {
-  if ((e.target as HTMLElement).classList.contains('cockpit-map__canvas') ||
-      (e.target as HTMLElement).classList.contains('cockpit-map__svg')) {
-    dragging.value = true
-    startX = e.clientX; startY = e.clientY
-    startTx = tf.value.x; startTy = tf.value.y
-    e.preventDefault()
+function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  c.beginPath()
+  c.moveTo(x + r, y)
+  c.arcTo(x + w, y, x + w, y + h, r)
+  c.arcTo(x + w, y + h, x, y + h, r)
+  c.arcTo(x, y + h, x, y, r)
+  c.arcTo(x, y, x + w, y, r)
+  c.closePath()
+}
+
+// 命中检测：屏幕坐标 → 逻辑坐标 → 找节点
+function hitTest(clientX: number, clientY: number): GraphNode | null {
+  const c = canvasEl.value!
+  const rect = c.getBoundingClientRect()
+  const x = (clientX - rect.left - view.value.x) / view.value.scale
+  const y = (clientY - rect.top - view.value.y) / view.value.scale
+  const pos = layout.value
+  const topo = store.topologyForSelectedTask
+  for (const n of topo.nodes) {
+    const p = pos[n.id]
+    if (!p) continue
+    if (x >= p.x - p.w / 2 && x <= p.x + p.w / 2 && y >= p.y - p.h / 2 && y <= p.y + p.h / 2) {
+      return n
+    }
+  }
+  return null
+}
+
+// 交互
+function onDown(e: MouseEvent) {
+  const hit = hitTest(e.clientX, e.clientY)
+  if (hit) {
+    // 点击节点：不拖拽，由 click 处理
+    return
+  }
+  dragging = true
+  lastX = e.clientX
+  lastY = e.clientY
+  ;(e.target as HTMLElement).style.cursor = 'grabbing'
+}
+function onMove(e: MouseEvent) {
+  if (dragging) {
+    view.value = {
+      ...view.value,
+      x: view.value.x + (e.clientX - lastX),
+      y: view.value.y + (e.clientY - lastY),
+    }
+    lastX = e.clientX
+    lastY = e.clientY
+    draw()
+    return
+  }
+  // hover 检测
+  const hit = hitTest(e.clientX, e.clientY)
+  const prev = hoverNode.value
+  hoverNode.value = hit
+  if (prev?.id !== hit?.id) {
+    ;(e.target as HTMLElement).style.cursor = hit ? 'pointer' : 'grab'
+    draw()
   }
 }
-function onCanvasMove(e: MouseEvent) {
-  if (!dragging.value) return
-  store.canvasTransform = {
-    ...tf.value,
-    x: startTx + (e.clientX - startX),
-    y: startTy + (e.clientY - startY),
-  }
+function onUp() {
+  dragging = false
+  if (canvasEl.value) canvasEl.value.style.cursor = 'grab'
 }
-function onCanvasUp() { dragging.value = false }
 function onWheel(e: WheelEvent) {
   e.preventDefault()
-  zoomBy(e.deltaY < 0 ? 0.1 : -0.1)
+  const delta = e.deltaY < 0 ? 0.1 : -0.1
+  view.value = { ...view.value, scale: Math.min(2, Math.max(0.5, view.value.scale + delta)) }
+  draw()
 }
-
-// 节点点击：分发到 store
-function onNodeClick(node: GraphNode) {
-  if (node.kind === 'center' || node.kind === 'folded') return
-  if (node.target?.taskId) {
-    store.selectTask(node.target.taskId)
-  } else if (node.kind === 'channel' && node.target?.routeTarget) {
-    const ch = store.channelsForSelectedTask.find(c => c.taskId === node.taskId)
+function onClick(e: MouseEvent) {
+  const hit = hitTest(e.clientX, e.clientY)
+  if (!hit) return
+  if (hit.kind === 'center' || hit.kind === 'folded') return
+  if (hit.target?.taskId) {
+    store.selectTask(hit.target.taskId)
+  } else if (hit.kind === 'channel' && hit.target?.routeTarget) {
+    const ch = store.channelsForSelectedTask.find(c => c.taskId === hit.taskId)
     if (ch) store.selectChannel(ch.id)
   }
 }
 
+// 缩放按钮
+function zoomBy(delta: number) {
+  view.value = { ...view.value, scale: Math.min(2, Math.max(0.5, view.value.scale + delta)) }
+  draw()
+}
+
+// resize：DPR 处理
+let ro: ResizeObserver | null = null
+function resize() {
+  const c = canvasEl.value
+  const wrap = wrapEl.value
+  if (!c || !wrap) return
+  const rect = wrap.getBoundingClientRect()
+  cw = rect.width || 320
+  ch = rect.height || 140
+  const dpr = window.devicePixelRatio || 1
+  c.width = cw * dpr
+  c.height = ch * dpr
+  c.style.width = cw + 'px'
+  c.style.height = ch + 'px'
+  ctx = c.getContext('2d')
+  if (ctx) {
+    ctx.scale(dpr, dpr)
+    draw()
+  }
+}
+
 const hasTask = computed(() => !!store.selectedTask)
-const nodes = computed(() => store.topologyForSelectedTask.nodes)
-const relations = computed(() => store.topologyForSelectedTask.relations)
-const centerX = computed(() => canvasW.value / 2)
-const centerY = computed(() => canvasH.value / 2)
+
+// 数据变化时重绘
+watch(() => store.topologyForSelectedTask, () => draw(), { deep: true })
+watch(() => store.selectedTaskId, () => { view.value = { x: 0, y: 0, scale: 1 }; nextTick(draw) })
+
+onMounted(() => {
+  nextTick(() => {
+    resize()
+    if (wrapEl.value && typeof ResizeObserver !== 'undefined') {
+      try {
+        ro = new ResizeObserver(() => resize())
+        ro.observe(wrapEl.value)
+      } catch { /* ignore */ }
+    }
+  })
+})
+onUnmounted(() => { try { ro?.disconnect() } catch { /* ignore */ } })
 </script>
 
 <template>
@@ -148,25 +289,9 @@ const centerY = computed(() => canvasH.value / 2)
         <button type="button" class="cockpit-map__tool" data-canvas-zoom-out :title="'缩小'" @click="zoomBy(-0.1)">−</button>
       </div>
     </div>
-    <div v-if="hasTask" class="cockpit-map__canvas" ref="canvasEl"
-      @mousedown="onCanvasDown" @mousemove="onCanvasMove" @mouseup="onCanvasUp" @mouseleave="onCanvasUp" @wheel="onWheel">
-      <svg class="cockpit-map__svg" :viewBox="viewBoxStr" preserveAspectRatio="none">
-        <g :transform="`translate(${tf.x},${tf.y}) scale(${tf.scale})`" :style="{ transformOrigin: `${centerX}px ${centerY}px` }">
-          <line v-for="r in relations" :key="r.id"
-            :x1="nodePos[r.from]?.x ?? centerX" :y1="nodePos[r.from]?.y ?? centerY"
-            :x2="nodePos[r.to]?.x ?? centerX" :y2="nodePos[r.to]?.y ?? centerY"
-            stroke="var(--text-muted)" stroke-width="1.5" />
-        </g>
-      </svg>
-      <div class="cockpit-map__nodes" :style="{ transform: `translate(${tf.x}px,${tf.y}px) scale(${tf.scale})`, transformOrigin: `${centerX}px ${centerY}px` }">
-        <CockpitGraphNode
-          v-for="n in nodes" :key="n.id"
-          :node="n"
-          :x="nodePos[n.id]?.x ?? centerX"
-          :y="nodePos[n.id]?.y ?? centerY"
-          @click="onNodeClick"
-        />
-      </div>
+    <div v-if="hasTask" ref="wrapEl" class="cockpit-map__canvas"
+      @mousedown="onDown" @mousemove="onMove" @mouseup="onUp" @mouseleave="onUp" @wheel="onWheel" @click="onClick">
+      <canvas ref="canvasEl" class="cockpit-map__canvas-el"></canvas>
       <span class="cockpit-map__hint">拖拽空白处平移 · 滚轮缩放 · 点节点联动</span>
     </div>
     <div v-else class="cockpit-map__empty">{{ t('cockpit.noTaskSelected') }}</div>
@@ -192,10 +317,8 @@ const centerY = computed(() => canvasH.value / 2)
   background-size: 14px 14px;
   overflow: hidden;
   cursor: grab;
-  &.is-dragging { cursor: grabbing; }
 }
-.cockpit-map__svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.cockpit-map__nodes { position: absolute; inset: 0; }
+.cockpit-map__canvas-el { display: block; }
 .cockpit-map__hint { position: absolute; bottom: 4px; left: 8px; font-size: 8px; color: var(--text-muted); pointer-events: none; }
 .cockpit-map__empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
 </style>
