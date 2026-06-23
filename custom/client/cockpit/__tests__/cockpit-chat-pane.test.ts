@@ -153,6 +153,15 @@ describe('CockpitChatPane', () => {
     expect(matrixSendMessage).toHaveBeenCalledWith('hi matrix')
   })
 
+  it('shows open-full button when channel has routeTarget', () => {
+    mockKanbanTasks.push(kt({ id: 't1', tenant: 'matrix:!r:m:Auth联调' }))
+    const s = useCockpitStore()
+    ;(s as any).selectedTaskId = 't1'
+    s.selectChannel('ch-t1')
+    const w = mount(CockpitChatPane)
+    expect(w.find('.cockpit-chat-pane__open').exists()).toBe(true)
+  })
+
   it('shows empty state when no active channel', () => {
     const w = mount(CockpitChatPane)
     expect(w.find('.cockpit-chat-pane__empty').exists()).toBe(true)

@@ -1,14 +1,29 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
+const router = useRouter()
 const { t } = useI18n()
 const draft = ref('')
 
 const channel = computed(() => store.activeChannel)
 const messages = computed(() => store.messagesForActiveChannel)
+const hasRoute = computed(() => {
+  const ch = channel.value
+  if (!ch) return false
+  return store.channelsForSelectedTask.some(c => c.id === ch.id && c.routeTarget)
+})
+function openFullPage() {
+  const ch = channel.value
+  if (!ch) return
+  const chWithRoute = store.channelsForSelectedTask.find(c => c.id === ch.id)
+  if (chWithRoute?.routeTarget) {
+    router.push(chWithRoute.routeTarget)
+  }
+}
 
 function onSend() {
   if (!draft.value.trim()) return
@@ -26,6 +41,7 @@ function onSend() {
           <div class="cockpit-chat-pane__sub">{{ channel.kind }}</div>
         </div>
         <button type="button" class="cockpit-chat-pane__back" @click="store.setWorkspaceMode('work')">{{ t('cockpit.backToWork') }}</button>
+        <button v-if="hasRoute" type="button" class="cockpit-chat-pane__open" @click="openFullPage">↗ {{ t('cockpit.openFull') }}</button>
       </div>
       <div class="cockpit-chat-pane__msgs">
         <div
@@ -53,8 +69,11 @@ function onSend() {
 .cockpit-chat-pane__head { flex-shrink: 0; padding: 10px 16px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px; }
 .cockpit-chat-pane__title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
 .cockpit-chat-pane__sub { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
-.cockpit-chat-pane__back { margin-left: auto; font-size: 10px; color: var(--accent-primary); cursor: pointer; border: none; background: transparent; font: inherit;
+.cockpit-chat-pane__back { font-size: 10px; color: var(--accent-primary); cursor: pointer; border: none; background: transparent; font: inherit;
   &:hover { text-decoration: underline; }
+}
+.cockpit-chat-pane__open { font-size: 10px; color: var(--text-secondary); cursor: pointer; border: none; background: transparent; font: inherit;
+  &:hover { color: var(--accent-primary); text-decoration: underline; }
 }
 .cockpit-chat-pane__msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 .cockpit-chat-pane__msg { display: flex; flex-direction: column; gap: 2px; max-width: 80%;
