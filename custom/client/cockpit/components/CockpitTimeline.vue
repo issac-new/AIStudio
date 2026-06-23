@@ -9,8 +9,13 @@ const { t } = useI18n()
 const THRESHOLD = 4
 const expanded = ref(false)
 
-// 直接读 store.eventsForTimeline（computed，响应 actor filter 变化）
-const allFilteredEvents = computed(() => store.eventsForTimeline)
+// 组件层直接读 store 的原始数据 + 本地 filter 计算（避免 Pinia 代理响应式断裂）
+const allFilteredEvents = computed(() => {
+  const all = store.eventsForSelectedTask ?? []
+  const f = store.timelineActorFilter
+  if (!f || f.length === 0) return all
+  return all.filter(e => f.includes(e.actor))
+})
 const recent = computed(() => {
   const all = allFilteredEvents.value
   if (all.length <= THRESHOLD) return { visible: all, folded: [] as any[] }
