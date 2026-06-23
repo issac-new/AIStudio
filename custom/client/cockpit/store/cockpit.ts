@@ -168,7 +168,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // ── 时序事件 ──
   const eventsForSelectedTask = computed(() =>
     selectedTaskId.value
-      ? events.value.filter(e => e.taskId === selectedTaskId.value).sort((a, b) => a.ts - b.ts)
+      ? events.value.filter(e => e.taskId === selectedTaskId.value).sort((a, b) => b.ts - a.ts)  // 逆序：新在前
       : [],
   )
 
@@ -439,9 +439,12 @@ export const useCockpitStore = defineStore('cockpit', () => {
   }
   function closeHistory() { historyOpen.value = false }
   // task title 详情弹窗（双击查看完整 title）（需求 #2）
-  function openTitleDetail(taskId: string, title: string) {
+  // 通用详情弹窗标题（区分"任务标题"/"事件详情"等）
+  const titleDetailTitle = ref('任务标题')
+  function openTitleDetail(taskId: string, text: string, title: string = '任务标题') {
     titleDetailTaskId.value = taskId
-    titleDetailText.value = title
+    titleDetailText.value = text
+    titleDetailTitle.value = title
     titleDetailOpen.value = true
   }
   function closeTitleDetail() {
@@ -534,7 +537,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     // 客户端态
     filters, collapsed, workspaceMode, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
-    titleDetailOpen, titleDetailText, titleDetailTaskId,
+    titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
     templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
     _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
     // 方法

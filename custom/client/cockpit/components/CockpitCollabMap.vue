@@ -118,7 +118,7 @@ const relations = computed(() => store.topologyForSelectedTask.relations)
 </template>
 
 <style scoped lang="scss">
-.cockpit-map { display: flex; flex-direction: column; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
+.cockpit-map { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
 .cockpit-map__head { display: flex; align-items: center; gap: 8px; padding: 8px 44px 4px 16px; }
 .cockpit-map__title { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
 .cockpit-map__tools { display: flex; gap: 3px; margin-left: auto; }
@@ -130,7 +130,7 @@ const relations = computed(() => store.topologyForSelectedTask.relations)
   &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 }
 .cockpit-map__canvas {
-  position: relative; height: 140px;
+  position: relative; flex: 1 1 0; min-height: 100px;
   background: var(--bg-secondary);
   background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 14px 14px;

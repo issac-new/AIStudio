@@ -57,6 +57,6 @@ function kindIcon(k: GraphNode['kind']): string {
 }
 .cockpit-graph-node__icon { font-size: 10px; color: var(--text-muted); }
 .is-channel .cockpit-graph-node__icon { color: var(--text-secondary); }
-.cockpit-graph-node__label { font-weight: 500; }
-.is-center .cockpit-graph-node__label { font-weight: 700; }
+.cockpit-graph-node__label { font-weight: 500; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.is-center .cockpit-graph-node__label { font-weight: 700; max-width: 160px; }
 </style>

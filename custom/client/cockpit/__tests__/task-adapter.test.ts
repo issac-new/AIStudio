@@ -38,9 +38,11 @@ describe('bucketStatus', () => {
     expect(bucketStatus('triage')).toBe('todo')
     expect(bucketStatus('todo')).toBe('todo')
   })
-  it('done/archived → done', () => {
+  it('done → done', () => {
     expect(bucketStatus('done')).toBe('done')
-    expect(bucketStatus('archived')).toBe('done')
+  })
+  it('archived → archived (independent bucket)', () => {
+    expect(bucketStatus('archived')).toBe('archived')
   })
 })
 

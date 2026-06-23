@@ -110,10 +110,6 @@ function onColCtrl(col: ColumnKey) {
         :class="{ 'is-collapsed': store.collapsed.right, 'is-maximized': store.maximized.right, 'is-hidden-by-max': !store.maximized.right && (store.maximized.left || store.maximized.mid) }">
         <CockpitColumnRail label="工作区" @expand="store.toggleCollapsed('right')" />
         <div class="cockpit-col__inner">
-          <div class="cockpit-col__ctrls">
-            <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': colState('right') !== 'normal' }"
-              :title="colCtrlTitle('right')" @click="onColCtrl('right')">{{ colCtrlIcon('right') }}</button>
-          </div>
           <CockpitModeBar v-if="store.workspaceMode !== 'term'" />
           <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
@@ -133,7 +129,7 @@ function onColCtrl(col: ColumnKey) {
     <div v-if="store.titleDetailOpen" class="cockpit-overlay" @click="store.closeTitleDetail()" />
     <div v-if="store.titleDetailOpen" class="cockpit-title-detail cockpit-modal-anchor">
       <div class="cockpit-title-detail__head">
-        <span>任务标题</span>
+        <span>{{ store.titleDetailTitle }}</span>
         <button type="button" class="cockpit-title-detail__close" @click="store.closeTitleDetail()">×</button>
       </div>
       <div class="cockpit-title-detail__body">{{ store.titleDetailText }}</div>

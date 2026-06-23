@@ -13,6 +13,7 @@ const statuses: { key: CockpitStatusBucket; label: string }[] = [
   { key: 'running', label: '进行中' },
   { key: 'todo', label: '待办' },
   { key: 'done', label: '完成' },
+  { key: 'archived', label: '归档' },
 ]
 
 // 动态 tenant 列表：从所有任务去重 tenant（null → (未指定)）

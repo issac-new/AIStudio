@@ -2,9 +2,9 @@ import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
 
 export type CockpitPriority = 'P0' | 'P1' | 'P2' | 'P3'
 
-export type CockpitStatusBucket = 'review' | 'blocked' | 'running' | 'todo' | 'done'
+export type CockpitStatusBucket = 'review' | 'blocked' | 'running' | 'todo' | 'done' | 'archived'
 
-/** CockpitTask.status stores the raw 9 values; only filter chips use bucketStatus to merge into 5 buckets */
+/** CockpitTask.status stores the raw 9 values; only filter chips use bucketStatus to merge into 6 buckets */
 export type CockpitStatus = KanbanTaskStatus
 
 export interface CockpitTask {
@@ -32,7 +32,8 @@ export function bucketStatus(s: KanbanTaskStatus): CockpitStatusBucket {
     case 'blocked': return 'blocked'
     case 'running': case 'ready': case 'scheduled': return 'running'
     case 'triage': case 'todo': return 'todo'
-    case 'done': case 'archived': return 'done'
+    case 'archived': return 'archived'
+    case 'done': return 'done'
   }
 }
 

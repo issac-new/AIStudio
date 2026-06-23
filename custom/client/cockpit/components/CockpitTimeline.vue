@@ -37,6 +37,7 @@ const hasTask = computed(() => !!store.selectedTask)
           class="cockpit-timeline__event"
           :class="{ 'is-pending': ev.pending }"
           @click="store.focusOnTimelineNode(ev.id)"
+          @dblclick.stop="store.openTitleDetail(ev.taskId, ev.what, '事件详情')"
         >
           <span class="cockpit-timeline__event-head">
             <span class="cockpit-timeline__actor">{{ ev.actor }}</span>
@@ -85,7 +86,7 @@ const hasTask = computed(() => !!store.selectedTask)
 .cockpit-timeline__kind { font-size: 8px; padding: 0 5px; border-radius: 2px; background: var(--bg-secondary); }
 .cockpit-timeline__assignee { font-size: 9px; color: var(--text-muted); font-family: monospace; }
 .cockpit-timeline__when { margin-left: auto; font-size: 9px; color: var(--text-muted); }
-.cockpit-timeline__what { font-size: 12px; color: var(--text-primary); }
+.cockpit-timeline__what { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
 .cockpit-timeline__state { font-size: 9px; color: var(--text-muted); }
 .cockpit-timeline__empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
 </style>
