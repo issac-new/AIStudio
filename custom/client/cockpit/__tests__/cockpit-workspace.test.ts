@@ -117,6 +117,14 @@ describe('CockpitWorkspace', () => {
     expect(w.emitted('submit')).toBeTruthy()
   })
 
+  it('claude code button calls enterTerminal', async () => {
+    const s = seed()
+    const w = mount(CockpitWorkspace)
+    const buttons = w.findAll('.cockpit-workspace__btn')
+    const claudeBtn = buttons.find(b => b.text().includes('⌘'))
+    expect(claudeBtn).toBeTruthy()
+  })
+
   it('submitting via store posts comment + clears draft', async () => {
     const s = seed()
     await s.submitWorkItem()
