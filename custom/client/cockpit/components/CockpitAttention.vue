@@ -7,12 +7,7 @@ const { t } = useI18n()
 defineEmits<{ (e: 'history'): void }>()
 
 function handleClick(item: { taskId: string; title: string }) {
-  // 如果已经是该任务的注意力筛选态，再次点击切换清除
-  if (store._attentionTaskIds.length > 0 && store._attentionTaskIds[0] === item.taskId) {
-    store.clearAttentionFilter()
-  } else {
-    store.focusOnTaskFromAttention(item.taskId, item.title)
-  }
+  store.focusOnTaskFromAttention(item.taskId, item.title)
 }
 </script>
 
@@ -28,7 +23,7 @@ function handleClick(item: { taskId: string; title: string }) {
         :key="item.id"
         type="button"
         class="cockpit-attention__item"
-        :class="['is-' + item.severity, { 'is-attention-active': store._attentionTaskIds.includes(item.taskId) }]"
+        :class="['is-' + item.severity]"
         @click="handleClick(item)"
       >
         <span class="cockpit-attention__sev-bar" />
@@ -115,12 +110,6 @@ function handleClick(item: { taskId: string; title: string }) {
   max-width: 200px;
 }
 .cockpit-attention__arrow { font-size: 10px; color: var(--text-muted); }
-.cockpit-attention__item.is-attention-active {
-  background: var(--accent-primary);
-  color: var(--text-on-accent);
-  border-color: var(--accent-primary);
-  .cockpit-attention__arrow { color: var(--text-on-accent); }
-}
 .cockpit-attention__history { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 0 14px; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; font-size: 11px; font-weight: 600;
   &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 }

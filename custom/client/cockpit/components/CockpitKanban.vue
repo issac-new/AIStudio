@@ -96,30 +96,13 @@ function statusBucketLabel(s: string): string {
       </div>
     </div>
 
-    <!-- 注意力筛选提示 -->
-    <div v-if="store.attentionActive" class="cockpit-attention-filter">
-      <span class="cockpit-attention-filter__icon">🎯</span>
-      <span class="cockpit-attention-filter__text">
-        注意力筛选：{{ store._attentionTaskIds.length }} 个关联任务
-      </span>
-      <button type="button" class="cockpit-attention-filter__clear" @click="store.clearAttentionFilter()">
-        × 清除筛选
-      </button>
-    </div>
-
     <!-- 任务列表（扁平展示）-->
     <div class="cockpit-kanban__list">
       <button v-for="t in store.filteredTasks" :key="t.id"
         type="button"
         :data-task-id="t.id"
         class="cockpit-kanban__task"
-        :class="[
-          'is-' + t.priority.toLowerCase(),
-          {
-            'is-selected': store.selectedTaskId === t.id,
-            'is-attention-highlight': store.attentionActive && store._attentionTaskIds.includes(t.id),
-          }
-        ]"
+        :class="['is-' + t.priority.toLowerCase(), { 'is-selected': store.selectedTaskId === t.id }]"
         @click="store.selectTask(t.id)">
         <span class="cockpit-sel-bar" />
         <span class="cockpit-kanban__pri">{{ t.priority }}</span>
@@ -275,32 +258,5 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__tenant {
   font-size: 9px; color: var(--text-muted); padding: 0 3px; max-width: 60px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* ── 注意力筛选提示条 ── */
-.cockpit-attention-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  margin: 0 8px 4px;
-  background: rgba(var(--accent-primary-rgb, 88, 144, 255), 0.08);
-  border: 1px solid var(--accent-primary);
-  border-radius: 6px;
-  font-size: 11px;
-  color: var(--text-primary);
-}
-.cockpit-attention-filter__icon { font-size: 12px; }
-.cockpit-attention-filter__text { flex: 1; }
-.cockpit-attention-filter__clear {
-  font-size: 10px; padding: 2px 8px; border-radius: 4px;
-  border: 1px solid var(--border-color); background: var(--bg-card);
-  color: var(--text-secondary); cursor: pointer; font-family: inherit;
-  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-}
-
-/* ── 注意力筛选高亮任务 ── */
-.cockpit-kanban__task.is-attention-highlight {
-  background: rgba(var(--accent-primary-rgb, 88, 144, 255), 0.06);
 }
 </style>

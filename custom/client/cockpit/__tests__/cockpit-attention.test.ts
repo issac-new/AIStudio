@@ -2,7 +2,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
-import { nextTick } from 'vue'
 
 // ── mock kanban store ──
 const { mockKanbanTasks, fetchTasks } = vi.hoisted(() => ({
@@ -85,41 +84,5 @@ describe('CockpitAttention', () => {
     const w = mount(CockpitAttention)
     await w.find('.cockpit-attention__history').trigger('click')
     expect(w.emitted('history')).toBeTruthy()
-  })
-
-  it('clicking the same attention item twice toggles filter state', async () => {
-    mockKanbanTasks.push(kt({ id: 'b1', title: '阻塞', status: 'blocked' }))
-    const s = useCockpitStore()
-    const w = mount(CockpitAttention)
-    const btn = w.find('.cockpit-attention__item')
-    // 第一次点击：激活注意力筛选（异步）
-    await btn.trigger('click')
-    await nextTick()
-    // focusOnTaskFromAttention 是 async，需要等待 store 更新
-    await vi.waitFor(() => {
-      expect(s.attentionActive).toBe(true)
-    })
-    expect(s._attentionTaskIds).toContain('b1')
-    // 第二次点击同一项：清除
-    await btn.trigger('click')
-    await nextTick()
-    expect(s.attentionActive).toBe(false)
-  })
-
-  it('clicking attention item adds is-attention-active class to the button', async () => {
-    mockKanbanTasks.push(kt({ id: 'b1', title: '阻塞', status: 'blocked' }))
-    const s = useCockpitStore()
-    const w = mount(CockpitAttention)
-    const btn = w.find('.cockpit-attention__item')
-    expect(btn.classes()).not.toContain('is-attention-active')
-    await btn.trigger('click')
-    await nextTick()
-    await vi.waitFor(() => {
-      expect(btn.classes()).toContain('is-attention-active')
-    })
-    // 再次点击清除
-    await btn.trigger('click')
-    await nextTick()
-    expect(btn.classes()).not.toContain('is-attention-active')
   })
 })

@@ -168,27 +168,4 @@ describe('CockpitKanban', () => {
     const clip = (globalThis as any).navigator.clipboard
     expect(clip.writeText).toHaveBeenCalledWith('1')
   })
-
-  it('shows attention filter bar when store.attentionActive is true', async () => {
-    const s = seed()
-    const w = mount(CockpitKanban)
-    // 初始无注意力筛选
-    expect(w.find('.cockpit-attention-filter').exists()).toBe(false)
-    await s.focusOnTaskFromAttention('1')
-    await w.vm.$nextTick()
-    expect(w.find('.cockpit-attention-filter').exists()).toBe(true)
-    expect(w.find('.cockpit-attention-filter__text').text()).toContain('注意力筛选')
-  })
-
-  it('clear button in attention filter clears the filter', async () => {
-    const s = seed()
-    const w = mount(CockpitKanban)
-    await s.focusOnTaskFromAttention('1')
-    await w.vm.$nextTick()
-    expect(w.find('.cockpit-attention-filter').exists()).toBe(true)
-    await w.find('.cockpit-attention-filter__clear').trigger('click')
-    expect(s.attentionActive).toBe(false)
-    await w.vm.$nextTick()
-    expect(w.find('.cockpit-attention-filter').exists()).toBe(false)
-  })
 })
