@@ -99,13 +99,10 @@ function onColCtrl(col: ColumnKey) {
       </section>
 
       <!-- 左-中分割线折叠按钮 -->
-      <div v-if="!store.collapsed.left || !store.collapsed.mid" class="cockpit-divider" data-divider="left-mid">
+      <div v-if="!store.collapsed.left" class="cockpit-divider" data-divider="left-mid">
         <button type="button" class="cockpit-divider__btn"
           :title="store.collapsed.left ? '展开左栏' : '向左折叠左栏'"
           @click="store.toggleCollapsed('left')">◀</button>
-        <button type="button" class="cockpit-divider__btn"
-          :title="store.collapsed.mid ? '展开中栏' : '向左折叠中栏'"
-          @click="store.toggleCollapsed('mid')">◀</button>
       </div>
 
       <!-- 中栏 协作图 + 时序流 -->
@@ -137,7 +134,10 @@ function onColCtrl(col: ColumnKey) {
       </section>
 
       <!-- 中-右分割线折叠按钮 -->
-      <div v-if="!store.collapsed.right || !store.collapsed.mid" class="cockpit-divider" data-divider="mid-right">
+      <div v-if="!store.collapsed.mid || !store.collapsed.right" class="cockpit-divider" data-divider="mid-right">
+        <button type="button" class="cockpit-divider__btn"
+          :title="store.collapsed.mid ? '展开中栏' : '向右折叠中栏'"
+          @click="store.toggleCollapsed('mid')">◀</button>
         <button type="button" class="cockpit-divider__btn"
           :title="store.collapsed.right ? '展开右栏' : '向右折叠右栏'"
           @click="store.toggleCollapsed('right')">▶</button>
