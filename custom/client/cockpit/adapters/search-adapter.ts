@@ -16,6 +16,7 @@ export interface SessionSearchResult {
  * 检查单个 kanban 任务是否被关键词命中（title / id / boardSlug / tenant / assignee）。
  */
 export function matchLocalTask(t: CockpitTask, q: string): boolean {
+  if (!q) return false
   const lq = q.toLowerCase()
   const fields = [
     t.title,
@@ -31,6 +32,7 @@ export function matchLocalTask(t: CockpitTask, q: string): boolean {
  * 检查单个 matrix 房间是否命中。命中则返回 roomId，否则返回 null。
  */
 export function matchMatrixRoom(room: MatrixRoomSearchData, q: string): string | null {
+  if (!q) return null
   const lq = q.toLowerCase()
   const fields = [room.name, room.topic].filter(Boolean) as string[]
   if (fields.some(f => f.toLowerCase().includes(lq))) return room.roomId
