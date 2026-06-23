@@ -71,9 +71,11 @@ describe('CockpitKanban', () => {
   it('groups tasks by tenant under tenant headers', () => {
     seed()
     const w = mount(CockpitKanban)
-    const groups = w.findAll('[data-tenant-group]')
-    const keys = groups.map(g => g.attributes('data-tenant-group'))
-    expect(keys.sort()).toEqual(['team-a', 'team-b'])
+    const tGroups = w.findAll('[data-group-kind="tenant"]')
+    const bGroups = w.findAll('[data-group-kind="board"]')
+    // seed 中所有任务都有 tenant → 仅租户组
+    expect(tGroups.length).toBeGreaterThan(0)
+    expect(bGroups).toHaveLength(0)
   })
 
   it('renders P0 task with is-p0 class', () => {

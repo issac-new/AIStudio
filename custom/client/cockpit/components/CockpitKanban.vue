@@ -35,6 +35,12 @@ function statusBucketLabel(s: string): string {
   const b = bucketStatus(s as any)
   return statuses.find(x => x.key === b)?.label ?? s
 }
+
+// 第一个看板组（定位分隔标识插入点）
+const firstBoardGroupKey = computed(() => {
+  for (const g of store.taskGroups) if (g.kind === 'board') return g.key
+  return null
+})
 </script>
 
 <template>
@@ -96,11 +102,13 @@ function statusBucketLabel(s: string): string {
       </div>
     </div>
 
-    <!-- 任务列表（按 tenant/board 混合分组）-->
+    <!-- 任务列表（租户组 + 看板组分离）-->
     <div class="cockpit-kanban__list">
-      <div v-for="g in store.taskGroups" :key="g.key" class="cockpit-kanban__cat" :data-tenant-group="g.label">
+      <div v-for="g in store.taskGroups" :key="g.key" class="cockpit-kanban__cat" :data-group-kind="g.kind">
+        <!-- 看板组前插入分隔标识 -->
+        <div v-if="g.kind === 'board' && g.key === firstBoardGroupKey" class="cockpit-kanban__sep">其他（无租户）</div>
         <div class="cockpit-kanban__cat-head">
-          <span class="cockpit-kanban__cat-mark" />
+          <span class="cockpit-kanban__cat-mark" :class="{ 'is-board': g.kind === 'board' }" />
           {{ g.label }}
           <span class="cockpit-kanban__cat-count">{{ g.tasks.length }}</span>
         </div>
@@ -170,7 +178,12 @@ function statusBucketLabel(s: string): string {
   font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
 }
 .cockpit-kanban__cat-mark { width: 10px; height: 2px; background: var(--text-muted); }
+.cockpit-kanban__cat-mark.is-board { background: var(--accent-primary); width: 14px; }
 .cockpit-kanban__cat-count { font-size: 9px; color: var(--text-muted); margin-left: auto; background: var(--bg-secondary); border-radius: 8px; padding: 0 6px; font-weight: 400; text-transform: none; }
+.cockpit-kanban__sep {
+  padding: 4px 8px 2px; font-size: 9px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.3px; border-top: 1px dashed var(--border-light); margin: 8px 0 4px;
+}
 
 .cockpit-kanban__task {
   position: relative; padding: 8px 10px 8px 14px; border-radius: 6px; cursor: pointer; margin-bottom: 3px;

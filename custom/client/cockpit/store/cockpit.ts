@@ -189,16 +189,15 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const taskGroups = computed(() => {
     const map: Record<string, CockpitTask[]> = {}
     const labelMap: Record<string, string> = {}
+    const kindMap: Record<string, 'tenant' | 'board'> = {}
     for (const t of filteredTasks.value) {
       if (t.tenant) {
-        // 有 tenant：按 tenant 分组
         const key = 'tenant::' + t.tenant
-        if (!map[key]) { map[key] = []; labelMap[key] = t.tenant }
+        if (!map[key]) { map[key] = []; labelMap[key] = t.tenant; kindMap[key] = 'tenant' }
         map[key].push(t)
       } else {
-        // null tenant：按 boardSlug 分组
         const key = 'board::' + t.boardSlug
-        if (!map[key]) { map[key] = []; labelMap[key] = t.boardSlug }
+        if (!map[key]) { map[key] = []; labelMap[key] = t.boardSlug; kindMap[key] = 'board' }
         map[key].push(t)
       }
     }
@@ -209,7 +208,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
         if (aIsBoard !== bIsBoard) return aIsBoard ? 1 : -1
         return (labelMap[a] ?? '').localeCompare(labelMap[b] ?? '')
       })
-      .map(key => ({ key, label: labelMap[key] ?? key, tasks: map[key] }))
+      .map(key => ({ key, label: labelMap[key] ?? key, kind: kindMap[key] ?? 'tenant', tasks: map[key] }))
   })
 
   // ── 时序事件 ──
