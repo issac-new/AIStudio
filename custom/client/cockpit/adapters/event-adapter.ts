@@ -121,15 +121,16 @@ function fromComment(taskId: string, c: { id: number; author: string; body: stri
   }
 }
 
-// worker log → CockpitEvent（单个节点，ts 用当前时间）
-export function fromLog(taskId: string, log: { content: string; size_bytes: number; truncated: boolean }): CockpitEvent {
+// worker log → CockpitEvent（单个节点，ts 用当前时间——log 是最新执行日志）
+function fromLog(taskId: string, log: { content: string; size_bytes: number; truncated: boolean }): CockpitEvent {
   return {
     id: `evt-log-${taskId}`,
     taskId, actor: 'worker', kind: 'A2A',
     what: `Worker Log（${log.size_bytes} bytes${log.truncated ? ', 截断' : ''}）`,
     fullText: log.content,
-    when: '—',
-    pending: false, ts: 0,  // log 无时间戳，排末尾
+    when: '现在',
+    pending: false,
+    ts: Date.now(),  // 当前时间（排最新位置）
     source: 'log',
   }
 }

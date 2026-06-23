@@ -327,16 +327,20 @@ export const useCockpitStore = defineStore('cockpit', () => {
     try {
       const detail = _detailCache.value[id] ?? await kanbanApi.getTask(id, boardOpts)
       _detailCache.value[id] = detail
+      // 初步合并（events + runs + comments + messages）
       events.value = eventAdapter.mergeDetail(detail)
       const profile = detail.task.assignee ?? undefined
       if (profile) extras.searchSessions(id, profile).catch(() => {})
-      // 异步拉 worker log，追加为时序流节点
+      // 异步拉 worker log，返回后重新合并（避免被后续 mergeDetail 覆盖）
       kanbanApi.getTaskLog(id, boardOpts).then((log) => {
+        // 确保仍是当前选中任务（避免竞态）
+        if (selectedTaskId.value !== id) return
         if (log?.exists && log.content) {
           const logEvt = eventAdapter.fromLog(id, { content: log.content, size_bytes: log.size_bytes, truncated: log.truncated })
-          // 去重：若已有同 id 的 log 节点则不重复加
-          if (!events.value.some(e => e.id === logEvt.id)) {
-            events.value = [...events.value, logEvt]
+          // 重新合并：mergeDetail + log，确保排序正确
+          const merged = eventAdapter.mergeDetail(detail)
+          if (!merged.some(e => e.id === logEvt.id)) {
+            events.value = [...merged, logEvt]
           }
         }
       }).catch(() => { /* log 不存在时静默 */ })
@@ -413,9 +417,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function toggleMidTop() { midTopCollapsed.value = !midTopCollapsed.value }
   function toggleMidBottom() { midBottomCollapsed.value = !midBottomCollapsed.value }
   function toggleTimelineActor(actor: string) {
-    const i = timelineActorFilter.value.indexOf(actor)
-    if (i >= 0) timelineActorFilter.value.splice(i, 1)
-    else timelineActorFilter.value.push(actor)
+    const cur = timelineActorFilter.value
+    const i = cur.indexOf(actor)
+    // 新数组赋值（确保 Vue 响应式触发 computed 重算）
+    timelineActorFilter.value = i >= 0 ? cur.filter(a => a !== actor) : [...cur, actor]
   }
   function toggleFilter<K extends keyof CockpitFilters>(key: K, value: CockpitFilters[K][number]) {
     const arr = filters.value[key] as CockpitFilters[K][number][]
