@@ -109,11 +109,4 @@ describe('CockpitKanban', () => {
     expect(w.find('[data-filter="team-a"]').exists()).toBe(true)
     expect(w.find('[data-filter="team-b"]').exists()).toBe(true)
   })
-
-  it('emits collapse when collapse button clicked', async () => {
-    seed()
-    const w = mount(CockpitKanban)
-    await w.find('.cockpit-collapse-btn').trigger('click')
-    expect(w.emitted('collapse')).toBeTruthy()
-  })
 })

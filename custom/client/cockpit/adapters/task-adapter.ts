@@ -15,6 +15,8 @@ export interface CockpitTask {
   assignee: string
   workspace: string
   tenant: string | null
+  boardSlug: string         // 来源看板 slug（跨 board 聚合标记）
+  createdAt: number         // 创建时间戳（日期筛选用）
 }
 
 export function bucketPriority(p: number | null | undefined): CockpitPriority {
@@ -34,7 +36,7 @@ export function bucketStatus(s: KanbanTaskStatus): CockpitStatusBucket {
   }
 }
 
-export function toCockpitTask(t: KanbanTask): CockpitTask {
+export function toCockpitTask(t: KanbanTask, boardSlug: string = 'default'): CockpitTask {
   return {
     id: t.id,
     title: t.title,
@@ -43,5 +45,7 @@ export function toCockpitTask(t: KanbanTask): CockpitTask {
     assignee: t.assignee ?? '未分配',
     workspace: t.workspace_path ?? '~',
     tenant: t.tenant,
+    boardSlug,
+    createdAt: t.created_at,
   }
 }

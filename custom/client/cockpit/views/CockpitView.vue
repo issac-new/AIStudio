@@ -47,30 +47,49 @@ onUnmounted(() => { store.disconnectOnUnmount() })
     />
     <CockpitAttention @history="store.openHistory()" />
 
-    <div class="cockpit__body">
+    <div class="cockpit__body" :class="{ 'has-max': store.maximized.left || store.maximized.mid || store.maximized.right }">
       <!-- 左栏 Kanban -->
-      <section class="cockpit-col cockpit-col--left" :class="{ 'is-collapsed': store.collapsed.left }">
+      <section class="cockpit-col cockpit-col--left"
+        :class="{ 'is-collapsed': store.collapsed.left, 'is-maximized': store.maximized.left, 'is-hidden-by-max': !store.maximized.left && (store.maximized.mid || store.maximized.right) }">
         <CockpitColumnRail label="KANBAN" @expand="store.toggleCollapsed('left')" />
         <div class="cockpit-col__inner">
-          <CockpitKanban @collapse="store.toggleCollapsed('left')" @enter-center="goCenter" />
+          <div class="cockpit-col__ctrls">
+            <button type="button" class="cockpit-col__ctrl" :title="'最小化'" @click="store.toggleCollapsed('left')">◂</button>
+            <button type="button" class="cockpit-col__ctrl" :title="store.maximized.left ? '还原' : '最大化'"
+              :class="{ 'is-on': store.maximized.left }"
+              @click="store.toggleMaximized('left')">{{ store.maximized.left ? '🗗' : '🗖' }}</button>
+          </div>
+          <CockpitKanban @enter-center="goCenter" />
         </div>
       </section>
 
       <!-- 中栏 协作图 + 时序流 -->
-      <section class="cockpit-col cockpit-col--mid" :class="{ 'is-collapsed': store.collapsed.mid }">
+      <section class="cockpit-col cockpit-col--mid"
+        :class="{ 'is-collapsed': store.collapsed.mid, 'is-maximized': store.maximized.mid, 'is-hidden-by-max': !store.maximized.mid && (store.maximized.left || store.maximized.right) }">
         <CockpitColumnRail label="协作 · 时序" @expand="store.toggleCollapsed('mid')" />
-        <button type="button" class="cockpit-collapse-btn" @click="store.toggleCollapsed('mid')">◀</button>
         <div class="cockpit-col__inner">
+          <div class="cockpit-col__ctrls">
+            <button type="button" class="cockpit-col__ctrl" :title="'最小化'" @click="store.toggleCollapsed('mid')">◂</button>
+            <button type="button" class="cockpit-col__ctrl" :title="store.maximized.mid ? '还原' : '最大化'"
+              :class="{ 'is-on': store.maximized.mid }"
+              @click="store.toggleMaximized('mid')">{{ store.maximized.mid ? '🗗' : '🗖' }}</button>
+          </div>
           <CockpitCollabMap />
           <CockpitTimeline />
         </div>
       </section>
 
       <!-- 右栏 A2UI 工作区（按模式切换）-->
-      <section class="cockpit-col cockpit-col--right" :class="{ 'is-collapsed': store.collapsed.right }">
+      <section class="cockpit-col cockpit-col--right"
+        :class="{ 'is-collapsed': store.collapsed.right, 'is-maximized': store.maximized.right, 'is-hidden-by-max': !store.maximized.right && (store.maximized.left || store.maximized.mid) }">
         <CockpitColumnRail label="工作区" @expand="store.toggleCollapsed('right')" />
-        <button type="button" class="cockpit-collapse-btn" @click="store.toggleCollapsed('right')">▶</button>
         <div class="cockpit-col__inner">
+          <div class="cockpit-col__ctrls">
+            <button type="button" class="cockpit-col__ctrl" :title="'最小化'" @click="store.toggleCollapsed('right')">▸</button>
+            <button type="button" class="cockpit-col__ctrl" :title="store.maximized.right ? '还原' : '最大化'"
+              :class="{ 'is-on': store.maximized.right }"
+              @click="store.toggleMaximized('right')">{{ store.maximized.right ? '🗗' : '🗖' }}</button>
+          </div>
           <CockpitModeBar v-if="store.workspaceMode !== 'term'" />
           <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
@@ -90,4 +109,17 @@ onUnmounted(() => { store.disconnectOnUnmount() })
 
 <style scoped lang="scss">
 .cockpit-readonly-badge { position: absolute; top: 8px; right: 14px; font-size: 10px; color: var(--text-muted); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 9px; z-index: 5; }
+.cockpit-col__ctrls {
+  position: absolute; top: 6px; right: 8px; z-index: 30;
+  display: flex; gap: 3px;
+}
+.cockpit-col__ctrl {
+  width: 20px; height: 18px; padding: 0;
+  border: 1px solid var(--border-color); border-radius: 4px;
+  background: var(--bg-card); color: var(--text-muted);
+  cursor: pointer; font-size: 11px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+}
 </style>

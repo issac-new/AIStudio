@@ -36,12 +36,7 @@ function zoomBy(delta: number) {
   const next = Math.min(2, Math.max(0.5, tf.value.scale + delta))
   store.canvasTransform = { ...tf.value, scale: next }
 }
-function toggleFullscreen() {
-  store.toggleMaximized()
-}
-function toggleMinimize() {
-  store.toggleCollapsed('mid')
-}
+// 全屏/最小化已移至 CockpitView 的栏位控件（store.toggleMaximized / toggleCollapsed）
 
 // 拖拽画布 pan
 const dragging = ref(false)
@@ -93,8 +88,6 @@ const relations = computed(() => store.topologyForSelectedTask.relations)
     <div class="cockpit-map__head">
       <span class="cockpit-map__title">{{ t('cockpit.collaborationMap') }}</span>
       <div class="cockpit-map__tools">
-        <button type="button" class="cockpit-map__tool" data-canvas-fullscreen :title="'全屏'" @click="toggleFullscreen">⛶</button>
-        <button type="button" class="cockpit-map__tool" data-canvas-minimize :title="'最小化'" @click="toggleMinimize">☶</button>
         <button type="button" class="cockpit-map__tool" data-canvas-zoom-in :title="'放大'" @click="zoomBy(0.1)">+</button>
         <button type="button" class="cockpit-map__tool" data-canvas-zoom-out :title="'缩小'" @click="zoomBy(-0.1)">−</button>
       </div>

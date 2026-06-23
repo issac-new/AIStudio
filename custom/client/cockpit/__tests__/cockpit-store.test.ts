@@ -3,16 +3,19 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
 // ── mock kanban store ──
-const { mockKanbanTasks, fetchTasks, fetchAssignees, startEventStream } = vi.hoisted(() => ({
+const { mockKanbanTasks, fetchTasks, fetchAssignees, startEventStream, fetchBoards, setSelectedBoard } = vi.hoisted(() => ({
   mockKanbanTasks: [] as any[],
-  fetchTasks: vi.fn(async () => { /* 由用例填充 mockKanbanTasks */ }),
+  fetchTasks: vi.fn(async () => {}),
   fetchAssignees: vi.fn(async () => {}),
   startEventStream: vi.fn(),
+  fetchBoards: vi.fn(async () => {}),
+  setSelectedBoard: vi.fn(),
 }))
 vi.mock('@/stores/hermes/kanban', () => ({
   useKanbanStore: () => ({
     tasks: mockKanbanTasks,
-    fetchTasks, fetchAssignees, startEventStream,
+    boards: [{ slug: 'default', name: 'default', total: 0 }],
+    fetchTasks, fetchAssignees, startEventStream, fetchBoards, setSelectedBoard,
   }),
 }))
 
@@ -346,10 +349,18 @@ describe('cockpit store 折叠 + 最大化', () => {
     expect(s.collapsed.left).toBe(true)
   })
 
-  it('toggleMaximized', async () => {
+  it('toggleMaximized(col) toggles per-column maximized (exclusive)', async () => {
     const s = useCockpitStore()
-    expect(s.maximized).toBe(false)
-    s.toggleMaximized()
-    expect(s.maximized).toBe(true)
+    expect(s.maximized.mid).toBe(false)
+    s.toggleMaximized('mid')
+    expect(s.maximized.mid).toBe(true)
+    expect(s.maximized.left).toBe(false)
+    // 最大化另一栏时，前栏取消
+    s.toggleMaximized('left')
+    expect(s.maximized.left).toBe(true)
+    expect(s.maximized.mid).toBe(false)
+    // 再点同一栏取消
+    s.toggleMaximized('left')
+    expect(s.maximized.left).toBe(false)
   })
 })

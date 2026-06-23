@@ -92,11 +92,10 @@ describe('CockpitCollabMap', () => {
     expect(w.find('[data-node-kind="channel"]').exists()).toBe(true)
   })
 
-  it('renders canvas control buttons', async () => {
+  it('renders canvas zoom control buttons', async () => {
     await seed()
     const w = mount(CockpitCollabMap)
-    expect(w.find('[data-canvas-fullscreen]').exists()).toBe(true)
-    expect(w.find('[data-canvas-minimize]').exists()).toBe(true)
+    // 全屏/最小化按钮已移至 CockpitView 栏位控件；CollabMap 仅保留缩放
     expect(w.find('[data-canvas-zoom-in]').exists()).toBe(true)
     expect(w.find('[data-canvas-zoom-out]').exists()).toBe(true)
   })
@@ -107,14 +106,6 @@ describe('CockpitCollabMap', () => {
     const before = s.canvasTransform.scale
     await w.find('[data-canvas-zoom-in]').trigger('click')
     expect(s.canvasTransform.scale).toBeGreaterThan(before)
-  })
-
-  it('fullscreen button toggles maximized', async () => {
-    const s = await seed()
-    const w = mount(CockpitCollabMap)
-    expect(s.maximized).toBe(false)
-    await w.find('[data-canvas-fullscreen]').trigger('click')
-    expect(s.maximized).toBe(true)
   })
 
   it('clicking a parent node selects that task in store', async () => {

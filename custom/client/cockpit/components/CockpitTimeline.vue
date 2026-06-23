@@ -41,6 +41,7 @@ const hasTask = computed(() => !!store.selectedTask)
           <span class="cockpit-timeline__event-head">
             <span class="cockpit-timeline__actor">{{ ev.actor }}</span>
             <span class="cockpit-timeline__kind">{{ ev.kind }}</span>
+            <span v-if="store.selectedTask?.assignee" class="cockpit-timeline__assignee" :data-assignee="store.selectedTask.assignee">@{{ store.selectedTask.assignee }}</span>
             <span class="cockpit-timeline__when">{{ ev.when }}</span>
           </span>
           <span class="cockpit-timeline__what">{{ ev.what }}</span>
@@ -82,6 +83,7 @@ const hasTask = computed(() => !!store.selectedTask)
 .cockpit-timeline__event-head { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
 .cockpit-timeline__actor { font-weight: 500; }
 .cockpit-timeline__kind { font-size: 8px; padding: 0 5px; border-radius: 2px; background: var(--bg-secondary); }
+.cockpit-timeline__assignee { font-size: 9px; color: var(--text-muted); font-family: monospace; }
 .cockpit-timeline__when { margin-left: auto; font-size: 9px; color: var(--text-muted); }
 .cockpit-timeline__what { font-size: 12px; color: var(--text-primary); }
 .cockpit-timeline__state { font-size: 9px; color: var(--text-muted); }

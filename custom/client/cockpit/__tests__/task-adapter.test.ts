@@ -45,11 +45,12 @@ describe('bucketStatus', () => {
 })
 
 describe('toCockpitTask', () => {
-  it('maps core fields + bucketed priority + tenant, drops category', () => {
-    const t = toCockpitTask(baseTask({ id: 't9', title: 'Hello', priority: 3, status: 'review', assignee: 'bob', workspace_path: '~/ws/x', tenant: 'matrix:!r:s.ms:Auth' }))
+  it('maps core fields + bucketed priority + tenant + boardSlug + createdAt, drops category', () => {
+    const t = toCockpitTask(baseTask({ id: 't9', title: 'Hello', priority: 3, status: 'review', assignee: 'bob', workspace_path: '~/ws/x', tenant: 'matrix:!r:s.ms:Auth', created_at: 1000 }), 'auth-svc')
     expect(t).toEqual({
       id: 't9', title: 'Hello', priority: 'P0', status: 'review',
       assignee: 'bob', workspace: '~/ws/x', tenant: 'matrix:!r:s.ms:Auth',
+      boardSlug: 'auth-svc', createdAt: 1000,
     })
     expect(t).not.toHaveProperty('category')
   })
@@ -57,5 +58,9 @@ describe('toCockpitTask', () => {
     const t = toCockpitTask(baseTask({ assignee: null, workspace_path: null }))
     expect(t.assignee).toBe('未分配')
     expect(t.workspace).toBe('~')
+  })
+  it('defaults boardSlug to default when not provided', () => {
+    const t = toCockpitTask(baseTask({ id: 'x' }))
+    expect(t.boardSlug).toBe('default')
   })
 })

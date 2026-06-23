@@ -44,6 +44,8 @@ export interface CockpitFilters {
   priorities: CockpitPriority[]
   statuses: taskAdapter.CockpitStatusBucket[]
   tenants: string[]
+  boardSlugs: string[]                 // 看板 slug 筛选（需求 #1）
+  dateRange: { from: string | null; to: string | null }  // 日期范围筛选（需求 #1，YYYY-MM-DD）
 }
 
 export interface CollabChannel {
@@ -66,20 +68,32 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const matrixRoom = useMatrixRoomStore()
   const matrixComposer = useMatrixComposerStore()
 
-  // ── 派生态（computed，单一数据源）──
-  const tasks = computed(() => kanban.tasks.map(taskAdapter.toCockpitTask))
+  // ── 跨 board 聚合数据（ref，bootstrap 时填充）──
+  // useKanbanStore 是单 board 模型，cockpit 自己聚合所有 board 的任务
+  const cockpitTasks = ref<CockpitTask[]>([])
+  const boards = ref<{ slug: string; name: string; total: number }[]>([])
+
+  // ── 派生态（computed）──
+  // 优先读跨 board 聚合的 cockpitTasks；若未聚合（如单元测试直接 push mockKanbanTasks），
+  // fallback 读当前 kanban.tasks（映射为 default board），保持向后兼容
+  const tasks = computed(() => {
+    if (cockpitTasks.value.length) return cockpitTasks.value
+    return kanban.tasks.map(t => taskAdapter.toCockpitTask(t, 'default'))
+  })
   const attention = computed(() =>
-    kanban.tasks.map(attentionAdapter.toAttention).filter((x): x is AttentionItem => x !== null),
+    tasks.value
+      .map(t => attentionAdapter.toAttention({ ...t, status: t.status } as any))
+      .filter((x): x is AttentionItem => x !== null),
   )
   const attentionCount = computed(() => attention.value.length)
 
   // ── 客户端态 ──
   const selectedTaskId = ref<string | null>(null)
-  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [] })
+  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [], boardSlugs: [], dateRange: { from: null, to: null } })
   const collapsed = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
   const workspaceMode = ref<WorkspaceMode>('work')
   const activeChannelId = ref<string | null>(null)
-  const maximized = ref(false)
+  const maximized = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
   const terminalMode = ref(false)
   const terminalLines = ref<TerminalLine[]>([
     { kind: 'dim', text: 'Claude Code · sandbox 模式 · 根目录由当前任务 Workspace 决定' },
@@ -120,9 +134,21 @@ export const useCockpitStore = defineStore('cockpit', () => {
     sortedTasks.value.filter(t => {
       const f = filters.value
       const okArr = <T,>(arr: T[], v: T) => arr.length === 0 || arr.includes(v)
+      // 日期范围筛选（需求 #1）
+      let dateOk = true
+      if (f.dateRange.from) {
+        const fromTs = new Date(f.dateRange.from + 'T00:00:00').getTime()
+        if (t.createdAt < fromTs) dateOk = false
+      }
+      if (dateOk && f.dateRange.to) {
+        const toTs = new Date(f.dateRange.to + 'T23:59:59').getTime()
+        if (t.createdAt > toTs) dateOk = false
+      }
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
         && okArr(f.tenants, t.tenant ?? '(未指定)')
+        && okArr(f.boardSlugs, t.boardSlug)
+        && dateOk
     }),
   )
 
@@ -196,15 +222,38 @@ export const useCockpitStore = defineStore('cockpit', () => {
   )
 
   // ── bootstrap ──
+  // 跨 board 聚合：拉所有 board，对每个 board 切换并拉任务，合并到 cockpitTasks
+  async function loadAllBoards() {
+    try {
+      await kanban.fetchBoards?.()
+    } catch { /* boards 拉取失败，降级到 default */ }
+    const kanbanBoards = (kanban as any).boards ?? []
+    const boardList = Array.isArray(kanbanBoards) && kanbanBoards.length
+      ? kanbanBoards.map((b: any) => ({ slug: b.slug, name: b.name, total: b.total ?? 0 }))
+      : [{ slug: 'default', name: 'default', total: 0 }]
+    boards.value = boardList
+    const all: CockpitTask[] = []
+    for (const b of boardList) {
+      try {
+        kanban.setSelectedBoard?.(b.slug)
+        await kanban.fetchTasks()
+        for (const t of kanban.tasks) {
+          all.push(taskAdapter.toCockpitTask(t, b.slug))
+        }
+      } catch { /* 单 board 失败不阻塞其他 */ }
+    }
+    cockpitTasks.value = all
+  }
+
   async function bootstrap() {
     await Promise.allSettled([
-      kanban.fetchTasks(),
+      loadAllBoards(),
       kanban.fetchAssignees(),
       chatStore.loadSessions(),
       groupStore.connect().then(() => groupStore.loadRooms()).catch(() => {}),
       matrixClient.initClient(),
     ])
-    if (kanban.tasks.length) await selectTask(kanban.tasks[0].id)
+    if (cockpitTasks.value.length) await selectTask(cockpitTasks.value[0].id)
     kanban.startEventStream?.()
   }
 
@@ -237,10 +286,12 @@ export const useCockpitStore = defineStore('cockpit', () => {
   }
 
   // ── WebSocket 联动：tasks 引用变化 → 选中任务 detail invalidate ──
-  watch(() => kanban.tasks, (newTasks) => {
+  // WebSocket 联动：kanban.tasks 变化 → 重新聚合所有 board + 选中任务 detail invalidate
+  watch(() => kanban.tasks, () => {
+    // 重新聚合（当前 board 的任务已刷新，重新合并所有 board）
+    loadAllBoards().catch(() => {})
     const id = selectedTaskId.value
-    if (!id || !newTasks.some(t => t.id === id)) return
-    if (_detailCache.value[id]) {
+    if (id && _detailCache.value[id]) {
       delete _detailCache.value[id]
       loadTaskDetail(id)
     }
@@ -257,8 +308,19 @@ export const useCockpitStore = defineStore('cockpit', () => {
       arr.push(value)
     }
   }
+  // 日期范围筛选（需求 #1）：from/to 为 'YYYY-MM-DD' 或 null
+  function setDateRangeFilter(from: string | null, to: string | null) {
+    filters.value = { ...filters.value, dateRange: { from, to } }
+  }
+  function clearDateRangeFilter() {
+    filters.value = { ...filters.value, dateRange: { from: null, to: null } }
+  }
   function setWorkspaceMode(mode: WorkspaceMode) { workspaceMode.value = mode }
-  function toggleMaximized() { maximized.value = !maximized.value }
+  function toggleMaximized(col: ColumnKey) {
+    // 独占式全屏：任一栏最大化时，其他栏取消
+    const cur = maximized.value[col]
+    maximized.value = { left: false, mid: false, right: false, [col]: !cur }
+  }
 
   // ── 文件/节点 ──
   const selectedFileId = ref<string | null>(null)
@@ -431,7 +493,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   return {
     // 派生态
     tasks, attention, attentionCount, selectedTask, selectedTaskId,
-    sortedTasks, filteredTasks, tasksByTenant,
+    sortedTasks, filteredTasks, tasksByTenant, boards,
     events, eventsForSelectedTask, eventsForTimeline, recentEventsForTimeline, recentEventsForSelectedTask,
     topologyForSelectedTask, relationsForSelectedTask,
     channels, channelsForSelectedTask, activeChannel,
@@ -444,7 +506,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
     // 方法
     bootstrap, selectTask, loadTaskDetail,
-    toggleCollapsed, toggleFilter, setWorkspaceMode, toggleMaximized,
+    toggleCollapsed, toggleFilter, setDateRangeFilter, clearDateRangeFilter, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
     updateWorkItem, toggleRiskTag, submitWorkItem,
     selectChannel, sendMessage, disconnectOnUnmount,

@@ -25,14 +25,22 @@
   min-width: 0;
   min-height: 0;
   position: relative;
-  transition: flex-basis 0.2s ease;
+  transition: flex 0.2s ease;
 
-  &--left { flex: 0 0 220px; border-right: 1px solid var(--border-color); background: var(--bg-sidebar); }
-  &--mid { flex: 0 0 340px; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
-  &--right { flex: 1 1 0; min-width: 360px; background: var(--bg-sidebar); }
+  // 默认宽度比例（折叠/最大化时覆盖）
+  &--left { flex: 1 1 0; border-right: 1px solid var(--border-color); background: var(--bg-sidebar); }
+  &--mid { flex: 1.5 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
+  &--right { flex: 2 1 0; min-width: 360px; background: var(--bg-sidebar); }
 
-  &.is-collapsed { flex: 0 0 32px; }
+  // 折叠：宽度收为 32px 竖条
+  &.is-collapsed { flex: 0 0 32px !important; min-width: 0; }
   &.is-collapsed .cockpit-col__inner { display: none; }
+
+  // 最大化：占满剩余空间（其他栏隐藏）
+  &.is-maximized { flex: 1 1 100% !important; min-width: 0; }
+
+  // 被其他栏的最大化隐藏
+  &.is-hidden-by-max { display: none; }
 }
 
 .cockpit-col__inner {

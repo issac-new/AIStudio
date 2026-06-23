@@ -22,6 +22,9 @@ const tenantOptions = computed(() => {
   return [...set].sort()
 })
 
+// 动态 board slug 列表（需求 #1）：从 store.boards 取
+const boardOptions = computed(() => store.boards.map(b => b.slug))
+
 // 分组：按 tasksByTenant 的 key（含 (未指定)）
 const tenantGroups = computed(() => {
   const map = store.tasksByTenant as Record<string, ReturnType<typeof Array.from>>
@@ -39,9 +42,8 @@ function statusBucketLabel(s: string): string {
 
 <template>
   <div class="cockpit-kanban">
-    <div class="cockpit-collapse-btn" @click="$emit('collapse')">◀</div>
     <div class="cockpit-kanban__head">
-      <span class="cockpit-kanban__title">Kanban 统筹</span>
+      <span class="cockpit-kanban__title">kanban总览</span>
       <span class="cockpit-kanban__sort">↓ 优先级</span>
     </div>
 
@@ -60,10 +62,27 @@ function statusBucketLabel(s: string): string {
           @click="store.toggleFilter('statuses', st.key)">{{ st.label }}</button>
       </div>
       <div class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">分组</span>
+        <span class="cockpit-kanban__flabel">租户</span>
         <button v-for="tn in tenantOptions" :key="tn" type="button" :data-filter="tn"
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.tenants.includes(tn) }"
           @click="store.toggleFilter('tenants', tn)">{{ tn }}</button>
+      </div>
+      <div v-if="boardOptions.length > 1" class="cockpit-kanban__frow">
+        <span class="cockpit-kanban__flabel">看板</span>
+        <button v-for="sl in boardOptions" :key="sl" type="button" :data-filter="sl"
+          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.boardSlugs.includes(sl) }"
+          @click="store.toggleFilter('boardSlugs', sl)">{{ sl }}</button>
+      </div>
+      <div class="cockpit-kanban__frow cockpit-kanban__frow--date">
+        <span class="cockpit-kanban__flabel">日期</span>
+        <input type="date" class="cockpit-kanban__date" data-filter="date-from"
+          :value="store.filters.dateRange.from ?? ''"
+          @change="store.setDateRangeFilter(($event.target as HTMLInputElement).value || null, store.filters.dateRange.to)" />
+        <span class="cockpit-kanban__date-sep">~</span>
+        <input type="date" class="cockpit-kanban__date" data-filter="date-to"
+          :value="store.filters.dateRange.to ?? ''"
+          @change="store.setDateRangeFilter(store.filters.dateRange.from, ($event.target as HTMLInputElement).value || null)" />
+        <button v-if="store.filters.dateRange.from || store.filters.dateRange.to" type="button" class="cockpit-kanban__date-clear" data-action="clear-date" @click="store.clearDateRangeFilter()">×</button>
       </div>
     </div>
 
@@ -85,6 +104,7 @@ function statusBucketLabel(s: string): string {
           <span class="cockpit-kanban__pri">{{ t.priority }}</span>
           <div class="cockpit-kanban__tt">{{ t.title }}</div>
           <div class="cockpit-kanban__meta">
+            <span class="cockpit-kanban__slug" :data-task-slug="t.boardSlug">@{{ t.boardSlug }}</span>
             <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
               {{ statusBucketLabel(t.status) }}
             </span>
@@ -152,6 +172,19 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__stg.is-blocked { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
 .cockpit-kanban__stg.is-review { font-weight: 600; color: var(--text-primary); }
 .cockpit-kanban__who { font-size: 10px; color: var(--text-muted); margin-left: auto; }
+.cockpit-kanban__slug { font-size: 9px; color: var(--text-muted); font-family: monospace; padding: 0 4px; }
+.cockpit-kanban__frow--date { align-items: center; }
+.cockpit-kanban__date {
+  font-size: 10px; padding: 1px 4px; border: 1px solid var(--border-color);
+  border-radius: 4px; background: var(--bg-card); color: var(--text-secondary);
+  font-family: inherit; width: 90px;
+}
+.cockpit-kanban__date-sep { font-size: 10px; color: var(--text-muted); }
+.cockpit-kanban__date-clear {
+  width: 16px; height: 16px; padding: 0; border: 1px solid var(--border-color);
+  border-radius: 50%; background: var(--bg-card); color: var(--text-muted);
+  cursor: pointer; font-size: 10px; line-height: 1;
+}
 
 .cockpit-kanban__entry {
   flex-shrink: 0;
