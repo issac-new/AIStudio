@@ -48,14 +48,29 @@ vi.mock('@/api/hermes/sessions', async () => {
   return { ...actual, searchSessions: mockSearchHermesSessions }
 })
 
-// ── mock 聊天 store（bootstrap 会调）──
+// ── mock 聊天 store（bootstrap 会调 + notify 聚合）──
+const { mockChatSessions, isSessionCompletedUnread, clearSessionCompletedUnread } = vi.hoisted(() => ({
+  mockChatSessions: [] as any[],
+  isSessionCompletedUnread: vi.fn(() => false),
+  clearSessionCompletedUnread: vi.fn(),
+}))
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
     loadSessions: vi.fn(async () => {}),
     messages: [],
     sendMessage: vi.fn(async () => {}),
     switchSession: vi.fn(async () => {}),
+    sessions: mockChatSessions,
+    isSessionCompletedUnread,
+    clearSessionCompletedUnread,
   }),
+}))
+const { mockGroupRooms, groupGetRoomUnread, groupClearRoomUnread, groupClearAllUnread, groupLastMessageMap } = vi.hoisted(() => ({
+  mockGroupRooms: [] as any[],
+  groupGetRoomUnread: vi.fn(() => 0),
+  groupClearRoomUnread: vi.fn(),
+  groupClearAllUnread: vi.fn(),
+  groupLastMessageMap: {} as Record<string, any>,
 }))
 vi.mock('@/stores/hermes/group-chat', () => ({
   useGroupChatStore: () => ({
@@ -65,13 +80,22 @@ vi.mock('@/stores/hermes/group-chat', () => ({
     joinRoom: vi.fn(async () => {}),
     sendMessage: vi.fn(async () => {}),
     sortedMessages: [],
+    rooms: mockGroupRooms,
+    getRoomUnread: groupGetRoomUnread,
+    clearRoomUnread: groupClearRoomUnread,
+    clearAllUnread: groupClearAllUnread,
+    lastMessageMap: groupLastMessageMap,
   }),
 }))
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
   useMatrixClientStore: () => ({ initClient: vi.fn(async () => {}), syncState: { value: 'PREPARED' } }),
 }))
+const { mockSortedRooms, matrixGetRoomUnreadCount } = vi.hoisted(() => ({
+  mockSortedRooms: [] as any[],
+  matrixGetRoomUnreadCount: vi.fn(() => 0),
+}))
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
-  useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [], roomList: [] }),
+  useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [], roomList: [], sortedRooms: mockSortedRooms, getRoomUnreadCount: matrixGetRoomUnreadCount }),
 }))
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
   useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }),
@@ -475,5 +499,83 @@ describe('cockpit store 折叠 + 最大化', () => {
     // 再点同一栏取消
     s.toggleMaximized('left')
     expect(s.maximized.left).toBe(false)
+  })
+})
+
+describe('notify (unread chat aggregation)', () => {
+  beforeEach(() => {
+    mockSortedRooms.splice(0, mockSortedRooms.length)
+    mockChatSessions.splice(0, mockChatSessions.length)
+    mockGroupRooms.splice(0, mockGroupRooms.length)
+    for (const k of Object.keys(groupLastMessageMap)) delete groupLastMessageMap[k]
+    isSessionCompletedUnread.mockReturnValue(false)
+    groupGetRoomUnread.mockReturnValue(0)
+    matrixGetRoomUnreadCount.mockReturnValue(0)
+  })
+
+  it('聚合三类未读 → notifyItems 按 ts 降序', () => {
+    mockSortedRooms.push({
+      roomId: '!m:sv', name: 'M-room', timeline: [
+        { getType: () => 'm.room.message', getContent: () => ({ body: 'hi' }), getTs: () => 3000000000000, getSender: () => '@a:sv' },
+      ],
+    })
+    matrixGetRoomUnreadCount.mockReturnValue(2)
+    // 三类均用 >1e12 毫秒时间戳避免 toMs 秒→毫秒启发式；chat 最小排最后
+    mockChatSessions.push({ id: 's1', title: 'C-sess', lastActiveAt: 1000000000000 })
+    isSessionCompletedUnread.mockReturnValue(true)
+    mockGroupRooms.push({ id: 'g1', name: 'G-room' })
+    groupGetRoomUnread.mockReturnValue(1)
+    groupLastMessageMap['g1'] = { content: 'yo', senderName: 'B', ts: 2000000000000 }
+
+    const store = useCockpitStore()
+    expect(store.notifyItems.map(i => i.id)).toEqual(['matrix:!m:sv', 'group:g1', 'chat:s1'])
+    expect(store.notifyCount).toBe(4) // 2 + 1 + 1
+  })
+
+  it('filteredNotifyItems 按来源筛选', () => {
+    mockSortedRooms.push({ roomId: '!m:sv', name: 'M', timeline: [] })
+    matrixGetRoomUnreadCount.mockReturnValue(1)
+    mockGroupRooms.push({ id: 'g1', name: 'G' })
+    groupGetRoomUnread.mockReturnValue(1)
+
+    const store = useCockpitStore()
+    store.setNotifySourceFilter('matrix')
+    expect(store.filteredNotifyItems.map(i => i.kind)).toEqual(['matrix'])
+    store.setNotifySourceFilter('group')
+    expect(store.filteredNotifyItems.map(i => i.kind)).toEqual(['group'])
+    store.setNotifySourceFilter('all')
+    expect(store.filteredNotifyItems).toHaveLength(2)
+  })
+
+  it('clearNotifyItemUnread 分发到对应 store', () => {
+    mockChatSessions.push({ id: 's1', title: 'X' })
+    isSessionCompletedUnread.mockReturnValue(true)
+    mockGroupRooms.push({ id: 'g1', name: 'G' })
+    groupGetRoomUnread.mockReturnValue(2)
+
+    const store = useCockpitStore()
+    store.clearNotifyItemUnread({ id: 'chat:s1', kind: 'chat' } as any)
+    expect(clearSessionCompletedUnread).toHaveBeenCalledWith('s1')
+    store.clearNotifyItemUnread({ id: 'group:g1', kind: 'group' } as any)
+    expect(groupClearRoomUnread).toHaveBeenCalledWith('g1')
+  })
+
+  it('openNotify/closeNotify 开关', () => {
+    const store = useCockpitStore()
+    expect(store.notifyOpen).toBe(false)
+    store.openNotify()
+    expect(store.notifyOpen).toBe(true)
+    store.closeNotify()
+    expect(store.notifyOpen).toBe(false)
+  })
+
+  it('clearAllNotify 清零全部（逐项分发）', () => {
+    mockGroupRooms.push({ id: 'g1', name: 'G' }, { id: 'g2', name: 'G2' })
+    groupGetRoomUnread.mockReturnValue(1)
+    const store = useCockpitStore()
+    store.clearAllNotify()
+    // clearAllNotify 遍历 notifyItems 逐项清零：两个群聊项 → 各调一次 clearRoomUnread
+    expect(groupClearRoomUnread).toHaveBeenCalledWith('g1')
+    expect(groupClearRoomUnread).toHaveBeenCalledWith('g2')
   })
 })

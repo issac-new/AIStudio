@@ -19,6 +19,8 @@ import * as collabAdapter from '../adapters/collab-adapter'
 import * as eventAdapter from '../adapters/event-adapter'
 import * as topologyAdapter from '../adapters/topology-adapter'
 import * as historyAdapter from '../adapters/history-adapter'
+import * as notifyAdapter from '../adapters/notify-adapter'
+import type { NotifyItem, NotifyKind } from '../adapters/notify-adapter'
 import type { ChatMessage } from '../adapters/chat-adapter'
 import type { KanbanTaskDetail } from '@/api/hermes/kanban'
 import type { RouteLocationRaw } from 'vue-router'
@@ -299,6 +301,41 @@ export const useCockpitStore = defineStore('cockpit', () => {
     topologyAdapter.buildTopology(selectedTask.value, linksMap.value, tasks.value),
   )
   const relationsForSelectedTask = computed(() => topologyForSelectedTask.value.relations)
+
+  // ── 通知（未读聊天聚合）──
+  const notifyOpen = ref(false)
+  const notifySourceFilter = ref<NotifyKind | 'all'>('all')
+
+  const notifyItems = computed<NotifyItem[]>(() => {
+    const items: NotifyItem[] = []
+    for (const room of (matrixRoom as any).sortedRooms ?? []) {
+      const item = notifyAdapter.fromMatrixRoom(room, (r: any) => (matrixRoom as any).getRoomUnreadCount(r))
+      if (item) items.push(item)
+    }
+    for (const s of (chatStore as any).sessions ?? []) {
+      if ((chatStore as any).isSessionCompletedUnread?.(s.id)) {
+        const item = notifyAdapter.fromChatSession(s)
+        if (item) items.push(item)
+      }
+    }
+    for (const r of (groupStore as any).rooms ?? []) {
+      const cnt = (groupStore as any).getRoomUnread?.(r.id) ?? 0
+      if (cnt > 0) {
+        const last = (groupStore as any).lastMessageMap?.[r.id] ?? null
+        const item = notifyAdapter.fromGroupRoom(r, cnt, last)
+        if (item) items.push(item)
+      }
+    }
+    return items.sort((a, b) => b.ts - a.ts)
+  })
+
+  const notifyCount = computed(() => notifyItems.value.reduce((n, i) => n + i.count, 0))
+
+  const filteredNotifyItems = computed(() => {
+    const f = notifySourceFilter.value
+    if (f === 'all') return notifyItems.value
+    return notifyItems.value.filter(i => i.kind === f)
+  })
 
   // ── 频道（parseTenant）──
   const channels = computed<CollabChannel[]>(() => {
@@ -729,6 +766,21 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
   }
 
+  // ── 通知 ──
+  function openNotify() { notifyOpen.value = true }
+  function closeNotify() { notifyOpen.value = false }
+  function setNotifySourceFilter(f: NotifyKind | 'all') { notifySourceFilter.value = f }
+  function clearNotifyItemUnread(item: NotifyItem) {
+    switch (item.kind) {
+      case 'matrix': break // SDK 进入房间后自动清零
+      case 'chat': (chatStore as any).clearSessionCompletedUnread?.(item.id.replace('chat:', '')); break
+      case 'group': (groupStore as any).clearRoomUnread?.(item.id.replace('group:', '')); break
+    }
+  }
+  function clearAllNotify() {
+    for (const item of notifyItems.value) clearNotifyItemUnread(item)
+  }
+
   // ── 频道（聊天精简壳）──
   function selectChannel(id: string | null) {
     activeChannelId.value = id
@@ -1024,6 +1076,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
     timelineActorFilter, timelineActorOptions,
     topologyForSelectedTask, relationsForSelectedTask,
     channels, channelsForSelectedTask, activeChannel,
+    notifyOpen, notifySourceFilter, notifyItems, filteredNotifyItems, notifyCount,
+    openNotify, closeNotify, setNotifySourceFilter, clearNotifyItemUnread, clearAllNotify,
     filesForSelectedTask, workItemForSelectedTask, selectedTaskDetail,
     filteredHistory, messagesForActiveChannel, templates, currentUserName,
     // 客户端态
