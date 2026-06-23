@@ -80,37 +80,38 @@ function computePositions(topo: typeof store.topologyForSelectedTask): Record<st
   return pos
 }
 
-// 四维度样式配置（Pure Ink 风格：黑白灰 + 边框/线型/symbol 区分）
+// 四维度样式配置（Pure Ink 风格）
+// label 放节点内部（inside），symbolSize 按 label 长度自适应增大
 const STYLE = {
   center: {
     itemStyle: { color: '#333', borderColor: '#1a1a1a', borderWidth: 3 },
-    label: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-    symbol: 'circle', symbolSize: 60,
+    label: { color: '#fff', fontSize: 13, fontWeight: 'bold', position: 'inside' },
+    symbol: 'circle', symbolSizeBase: 48,
   },
   ancestor: {
     itemStyle: { color: '#fff', borderColor: '#555', borderWidth: 2.5 },
-    label: { color: '#333', fontSize: 12, fontWeight: '600' },
-    symbol: 'circle', symbolSize: 46,
+    label: { color: '#333', fontSize: 11, fontWeight: '600', position: 'inside' },
+    symbol: 'circle', symbolSizeBase: 34,
   },
   descendant: {
     itemStyle: { color: '#fff', borderColor: '#bbb', borderWidth: 1.5, borderType: 'dashed' },
-    label: { color: '#555', fontSize: 12, fontWeight: 'normal' },
-    symbol: 'diamond', symbolSize: 44,
+    label: { color: '#555', fontSize: 11, fontWeight: 'normal', position: 'inside' },
+    symbol: 'diamond', symbolSizeBase: 34,
   },
   channel: {
     itemStyle: { color: '#f0f0f0', borderColor: '#333', borderWidth: 2 },
-    label: { color: '#333', fontSize: 12, fontWeight: 'bold' },
-    symbol: 'roundRect', symbolSize: 44,
+    label: { color: '#333', fontSize: 11, fontWeight: 'bold', position: 'inside' },
+    symbol: 'roundRect', symbolSizeBase: 34,
   },
   person: {
     itemStyle: { color: '#fff', borderColor: '#ccc', borderWidth: 1 },
-    label: { color: '#888', fontSize: 11, fontWeight: 'normal' },
-    symbol: 'circle', symbolSize: 38,
+    label: { color: '#888', fontSize: 10, fontWeight: 'normal', position: 'inside' },
+    symbol: 'circle', symbolSizeBase: 28,
   },
   folded: {
     itemStyle: { color: '#eee', borderColor: '#ddd', borderWidth: 1, borderType: 'dotted' },
-    label: { color: '#bbb', fontSize: 10 },
-    symbol: 'circle', symbolSize: 32,
+    label: { color: '#bbb', fontSize: 9, position: 'inside' },
+    symbol: 'circle', symbolSizeBase: 24,
   },
 }
 
@@ -138,18 +139,27 @@ const chartOption = computed(() => {
   const nodeKindMap = new Map(topo.nodes.map(n => [n.id, n.kind]))
 
   const nodes = topo.nodes.map((n) => {
-    const label = n.label.length > 16 ? n.label.slice(0, 15) + '…' : n.label
     const st = STYLE[n.kind] ?? STYLE.folded
     const p = positions[n.id] ?? { x: BASE_W / 2, y: BASE_H / 2 }
+    // symbolSize 按 label 长度自适应（让文字尽量放得下）
+    const labelLen = n.label.length
+    const dynSize = Math.min(90, st.symbolSizeBase + labelLen * 3.2)
+    // label 截断宽度 = symbolSize - padding（保证文字在框内）
+    const truncW = dynSize - 10
+    // 截断 label 使其放得下
+    let label = n.label
+    const approxCharW = st.label.fontSize > 11 ? 8 : 6.5
+    const maxChars = Math.floor(truncW / approxCharW)
+    if (labelLen > maxChars) label = label.slice(0, maxChars - 1) + '…'
     return {
       id: n.id,
       name: label,
       x: p.x,
       y: p.y,
       symbol: st.symbol,
-      symbolSize: st.symbolSize,
+      symbolSize: dynSize,
       itemStyle: st.itemStyle,
-      label: { ...st.label, show: true, overflow: 'truncate', width: 110 },
+      label: { ...st.label, show: true, overflow: 'truncate', width: truncW },
       _nodeKind: n.kind,
       _taskId: n.taskId,
       _targetTaskId: n.target?.taskId,
