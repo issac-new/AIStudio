@@ -41,22 +41,36 @@ export function fromMatrixRoom(room: any, getRoomUnreadCount: (r: any) => number
   }
 }
 
-/** 单聊: completedUnread 二值, count 恒 1 */
+/** 单聊: 真实未读消息（count + 最后一条预览）。count 0 → null */
 export function fromChatSession(session: {
   id: string
   title: string
   profile?: string | null
   updatedAt?: string
   lastActiveAt?: string | number | null
-}): NotifyItem {
-  const ts = toMs(session.lastActiveAt ?? session.updatedAt)
+  unreadCount?: number
+  lastPreview?: string
+  lastRole?: string
+  lastTs?: number
+}): NotifyItem | null {
+  const count = typeof session.unreadCount === 'number' && session.unreadCount > 0
+    ? session.unreadCount
+    : 0
+  if (!count) return null
+  const role = session.lastRole === 'assistant' ? '助手' : '用户'
+  const preview = session.lastPreview
+    ? `${role}: ${session.lastPreview}`
+    : `${count} 条新消息`
+  const ts = typeof session.lastTs === 'number' && session.lastTs > 0
+    ? session.lastTs
+    : toMs(session.lastActiveAt ?? session.updatedAt)
   return {
     id: `chat:${session.id}`,
     kind: 'chat',
     title: session.title || session.id,
-    preview: '助手运行完成，请查看结果',
+    preview,
     ts,
-    count: 1,
+    count,
     routeTarget: {
       name: 'hermes.session',
       params: { sessionId: session.id },

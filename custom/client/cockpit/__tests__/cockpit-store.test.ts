@@ -49,8 +49,12 @@ vi.mock('@/api/hermes/sessions', async () => {
 })
 
 // ── mock 聊天 store（bootstrap 会调 + notify 聚合）──
-const { mockChatSessions, isSessionCompletedUnread, clearSessionCompletedUnread } = vi.hoisted(() => ({
+const { mockChatSessions, isSessionUnread, getSessionUnreadCount, getSessionUnreadInfo, clearSessionUnread, isSessionCompletedUnread, clearSessionCompletedUnread } = vi.hoisted(() => ({
   mockChatSessions: [] as any[],
+  isSessionUnread: vi.fn(() => false),
+  getSessionUnreadCount: vi.fn(() => 0),
+  getSessionUnreadInfo: vi.fn(() => null),
+  clearSessionUnread: vi.fn(),
   isSessionCompletedUnread: vi.fn(() => false),
   clearSessionCompletedUnread: vi.fn(),
 }))
@@ -61,6 +65,10 @@ vi.mock('@/stores/hermes/chat', () => ({
     sendMessage: vi.fn(async () => {}),
     switchSession: vi.fn(async () => {}),
     sessions: mockChatSessions,
+    isSessionUnread,
+    getSessionUnreadCount,
+    getSessionUnreadInfo,
+    clearSessionUnread,
     isSessionCompletedUnread,
     clearSessionCompletedUnread,
   }),
@@ -508,7 +516,9 @@ describe('notify (unread chat aggregation)', () => {
     mockChatSessions.splice(0, mockChatSessions.length)
     mockGroupRooms.splice(0, mockGroupRooms.length)
     for (const k of Object.keys(groupLastMessageMap)) delete groupLastMessageMap[k]
-    isSessionCompletedUnread.mockReturnValue(false)
+    isSessionUnread.mockReturnValue(false)
+    getSessionUnreadCount.mockReturnValue(0)
+    getSessionUnreadInfo.mockReturnValue(null)
     groupGetRoomUnread.mockReturnValue(0)
     matrixGetRoomUnreadCount.mockReturnValue(0)
   })
@@ -522,7 +532,9 @@ describe('notify (unread chat aggregation)', () => {
     matrixGetRoomUnreadCount.mockReturnValue(2)
     // 三类均用 >1e12 毫秒时间戳避免 toMs 秒→毫秒启发式；chat 最小排最后
     mockChatSessions.push({ id: 's1', title: 'C-sess', lastActiveAt: 1000000000000 })
-    isSessionCompletedUnread.mockReturnValue(true)
+    isSessionUnread.mockReturnValue(true)
+    getSessionUnreadCount.mockReturnValue(1)
+    getSessionUnreadInfo.mockReturnValue({ count: 1, lastPreview: 'done', lastRole: 'assistant', lastTs: 1000000000000 })
     mockGroupRooms.push({ id: 'g1', name: 'G-room' })
     groupGetRoomUnread.mockReturnValue(1)
     groupLastMessageMap['g1'] = { content: 'yo', senderName: 'B', ts: 2000000000000 }
@@ -549,13 +561,15 @@ describe('notify (unread chat aggregation)', () => {
 
   it('clearNotifyItemUnread 分发到对应 store', () => {
     mockChatSessions.push({ id: 's1', title: 'X' })
-    isSessionCompletedUnread.mockReturnValue(true)
+    isSessionUnread.mockReturnValue(true)
+    getSessionUnreadCount.mockReturnValue(1)
+    getSessionUnreadInfo.mockReturnValue({ count: 1, lastPreview: 'hi', lastRole: 'user', lastTs: 1000 })
     mockGroupRooms.push({ id: 'g1', name: 'G' })
     groupGetRoomUnread.mockReturnValue(2)
 
     const store = useCockpitStore()
     store.clearNotifyItemUnread({ id: 'chat:s1', kind: 'chat' } as any)
-    expect(clearSessionCompletedUnread).toHaveBeenCalledWith('s1')
+    expect(clearSessionUnread).toHaveBeenCalledWith('s1')
     store.clearNotifyItemUnread({ id: 'group:g1', kind: 'group' } as any)
     expect(groupClearRoomUnread).toHaveBeenCalledWith('g1')
   })

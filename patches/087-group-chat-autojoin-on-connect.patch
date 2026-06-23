@@ -1,0 +1,64 @@
+diff --git a/packages/server/src/services/hermes/group-chat/index.ts b/packages/server/src/services/hermes/group-chat/index.ts
+index 395022fc..b8c9aa95 100644
+--- a/packages/server/src/services/hermes/group-chat/index.ts
++++ b/packages/server/src/services/hermes/group-chat/index.ts
+@@ -409,6 +409,16 @@ class ChatStorage {
+         return this.mapStoredMessageRow(row)
+     }
+ 
++    // HERMES_CUSTOM[GroupChatAutoJoin] BEGIN: last message per room for unread preview sync
++    getLastMessage(roomId: string): ChatMessage | null {
++        const rows = (this.db()?.prepare(
++            'SELECT id, roomId, senderId, senderName, content, timestamp, role, tool_call_id, tool_calls, tool_name, finish_reason, reasoning, reasoning_details, reasoning_content FROM gc_messages WHERE roomId = ? ORDER BY timestamp DESC, id DESC LIMIT 1'
++        ).all(roomId) || []) as any[]
++        if (!rows.length) return null
++        return this.mapStoredMessageRow(rows[0])
++    }
++    // HERMES_CUSTOM[GroupChatAutoJoin] END
++
+     addMessage(msg: ChatMessage): void {
+         this.upsertMessage(msg)
+     }
+@@ -900,6 +910,42 @@ export class GroupChatServer {
+ 
+         logger.debug(`[GroupChat] Connected: ${userName} (socket=${socket.id}, user=${userId})`)
+ 
++        // HERMES_CUSTOM[GroupChatAutoJoin] BEGIN: auto-join user's visible rooms on connect
++        // so the socket receives live `message` events for unread tracking while the user
++        // is in the cockpit (not actively viewing any group room). Unread is in-memory on
++        // the client (resets on refresh — accepted). We emit `unread_sync` with the last
++        // message per room to seed the preview; unread count starts at 0.
++        if (requestedSource === 'human' && authenticatedUser) {
++            try {
++                const visibleRooms = authenticatedUser.role === 'super_admin'
++                    ? this.storage.getAllRooms()
++                    : this.storage.getRoomsForProfiles(authenticatedUser.profiles || [])
++                const sync: { roomId: string; unreadCount: number; lastMessage: { content: string; senderName: string; ts: number } | null }[] = []
++                for (const r of visibleRooms) {
++                    let room = this.rooms.get(r.id)
++                    if (!room) {
++                        room = new ChatRoom(r.id, r.name)
++                        this.rooms.set(r.id, room)
++                    }
++                    room.addOrUpdateMember(socket.id, userId, userName, description, 'human', '')
++                    if (typeof authUserId === 'number') {
++                        this.storage.addRoomMember(r.id, userId, userName, description, '', authUserId)
++                    }
++                    socket.join(r.id)
++                    const last = this.storage.getLastMessage(r.id)
++                    sync.push({
++                        roomId: r.id,
++                        unreadCount: 0,
++                        lastMessage: last ? { content: last.content ?? '', senderName: last.senderName ?? '', ts: typeof last.timestamp === 'number' ? last.timestamp : Date.now() } : null,
++                    })
++                }
++                socket.emit('unread_sync', sync)
++            } catch (err) {
++                logger.info(`[GroupChat] auto-join failed for ${userName}: ${(err as Error).message}`)
++            }
++        }
++        // HERMES_CUSTOM[GroupChatAutoJoin] END
++
+         socket.on('join', (data: { roomId?: string; name?: string }, ack?: (response?: unknown) => void) => this.handleJoin(socket, data, ack))
+         socket.on('message', (data: Partial<ChatMessage> & { roomId?: string; content: string | Array<Record<string, unknown>>; id?: string; mentionDepth?: number }, ack?: (response?: unknown) => void) => this.handleMessage(socket, data, ack))
+         socket.on('message_stream_start', (data: { roomId?: string; id?: string; senderId?: string; senderName?: string; timestamp?: number }) => this.handleMessageStreamStart(socket, data))

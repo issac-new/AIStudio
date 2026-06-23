@@ -1,0 +1,61 @@
+diff --git a/packages/server/src/db/hermes/session-store.ts b/packages/server/src/db/hermes/session-store.ts
+index f3315e6c..e0f82ee5 100644
+--- a/packages/server/src/db/hermes/session-store.ts
++++ b/packages/server/src/db/hermes/session-store.ts
+@@ -439,6 +439,20 @@ export function listSessions(profile?: string, source?: string, limit = 2000): H
+   return rows.map(mapSessionRow)
+ }
+ 
++// HERMES_CUSTOM[ChatRunAutoJoin] BEGIN: list session ids owned by a user, for socket auto-join
++// Enables cockpit unread notifications: the chat-run socket auto-joins all of a user's
++// session rooms on connect so it receives run.completed / peer_user_message events for
++// sessions the user is not currently viewing. Unread is in-memory on the client.
++export function listSessionIdsByUserId(userId: string, limit = 2000): string[] {
++  if (!isSqliteAvailable()) return []
++  const db = getDb()!
++  const rows = db.prepare(
++    `SELECT id FROM ${SESSIONS_TABLE} WHERE user_id = ? ORDER BY last_active DESC LIMIT ?`,
++  ).all(String(userId), limit) as Record<string, unknown>[]
++  return rows.map(row => String(row.id || '')).filter(Boolean)
++}
++// HERMES_CUSTOM[ChatRunAutoJoin] END
++
+ export function searchSessions(profile: string | null | undefined, query: string, limit = 20): HermesSessionSearchRow[] {
+   if (!isSqliteAvailable()) return []
+   const profileFilter = profile?.trim()
+diff --git a/packages/server/src/services/hermes/run-chat/index.ts b/packages/server/src/services/hermes/run-chat/index.ts
+index e5b98481..d856ee97 100644
+--- a/packages/server/src/services/hermes/run-chat/index.ts
++++ b/packages/server/src/services/hermes/run-chat/index.ts
+@@ -10,7 +10,7 @@
+ import type { Server, Socket } from 'socket.io'
+ import { logger } from '../../logger'
+ import { getSystemPrompt } from '../../../lib/llm-prompt'
+-import { clearSessionMessages, getSession, getSessionDetail  } from '../../../db/hermes/session-store'
++import { clearSessionMessages, getSession, getSessionDetail, listSessionIdsByUserId } from '../../../db/hermes/session-store'
+ import { getActiveProfileName, getProfileDir, listProfileNamesFromDisk } from '../hermes-profile'
+ import { AgentBridgeClient } from '../agent-bridge'
+ import { getAgentBridgeManager } from '../agent-bridge/manager'
+@@ -120,6 +120,22 @@ export class ChatRunSocket {
+   private onConnection(socket: Socket) {
+     const socketUser = socket.data.user as AuthenticatedUser | undefined
+     const socketProfile = (socket.handshake.query?.profile as string) || 'default'
++
++    // HERMES_CUSTOM[ChatRunAutoJoin] BEGIN: auto-join all of the user's session rooms on connect
++    // so the socket receives run.completed / run.peer_user_message events for sessions the
++    // user is not currently viewing. The client accumulates real unread messages from these.
++    // Joining a room only subscribes to broadcasts; it does NOT resume/load messages.
++    if (socketUser) {
++      try {
++        for (const sid of listSessionIdsByUserId(String(socketUser.id))) {
++          socket.join(`session:${sid}`)
++        }
++      } catch (err) {
++        logger.info(`[chat-run-socket] auto-join sessions failed for user ${socketUser.id}: ${(err as Error).message}`)
++      }
++    }
++    // HERMES_CUSTOM[ChatRunAutoJoin] END
++
+     const currentProfile = () => socketProfile || getActiveProfileName() || 'default'
+     const profileExists = (profile: string) => {
+       if (!profile || profile === 'default') return true

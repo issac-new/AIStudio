@@ -20,7 +20,7 @@ vi.mock('vue-router', async () => {
   const actual = await vi.importActual<any>('vue-router')
   return { ...actual, useRouter: () => ({ push: mockPush }) }
 })
-vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ loadSessions: vi.fn(async () => {}), messages: [], sessions: [], isSessionCompletedUnread: vi.fn(() => false), clearSessionCompletedUnread: vi.fn() }) }))
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ loadSessions: vi.fn(async () => {}), messages: [], sessions: [], isSessionUnread: vi.fn(() => false), getSessionUnreadCount: vi.fn(() => 0), getSessionUnreadInfo: vi.fn(() => null), clearSessionUnread: vi.fn(), isSessionCompletedUnread: vi.fn(() => false), clearSessionCompletedUnread: vi.fn() }) }))
 vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => ({ connect: vi.fn(async () => {}), disconnect: vi.fn(), loadRooms: vi.fn(async () => {}), rooms: mockGroupRooms, getRoomUnread: groupGetRoomUnread, clearRoomUnread: vi.fn(), clearAllUnread: vi.fn(), lastMessageMap: groupLastMessageMap }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({ useMatrixClientStore: () => ({ initClient: vi.fn(async () => {}), syncState: { value: 'PREPARED' } }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: () => ({ selectRoom: vi.fn(), sortedRooms: [], getRoomUnreadCount: vi.fn(() => 0) }) }))

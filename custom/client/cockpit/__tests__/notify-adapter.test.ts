@@ -38,21 +38,33 @@ describe('fromMatrixRoom', () => {
 })
 
 describe('fromChatSession', () => {
-  it('构造 NotifyItem, count 恒 1, preview 固定文案', () => {
-    const item = fromChatSession({ id: 's1', title: 'SQL 注入排查', profile: 'claude', lastActiveAt: '2026-06-23T14:20:00Z' })
+  it('unreadCount > 0 + lastPreview → 完整 item, 真实 count + 角色前缀预览', () => {
+    const item = fromChatSession({ id: 's1', title: 'SQL 注入排查', profile: 'claude', unreadCount: 2, lastPreview: '修复完成', lastRole: 'assistant', lastTs: 3000 })
     expect(item).toEqual({
       id: 'chat:s1',
       kind: 'chat',
       title: 'SQL 注入排查',
-      preview: '助手运行完成，请查看结果',
-      ts: Date.parse('2026-06-23T14:20:00Z'),
-      count: 1,
+      preview: '助手: 修复完成',
+      ts: 3000,
+      count: 2,
       routeTarget: { name: 'hermes.session', params: { sessionId: 's1' }, query: { profile: 'claude' } },
     })
   })
+  it('unreadCount === 0 → null', () => {
+    expect(fromChatSession({ id: 's1', title: 'X', unreadCount: 0 })).toBeNull()
+  })
+  it('无 lastPreview → 用 count 文案', () => {
+    const item = fromChatSession({ id: 's2', title: 'X', unreadCount: 5, lastRole: 'user', lastTs: 9000 })
+    expect(item!.preview).toBe('5 条新消息')
+    expect(item!.count).toBe(5)
+  })
   it('无 profile → query 空', () => {
-    const item = fromChatSession({ id: 's2', title: 'X' })
+    const item = fromChatSession({ id: 's2', title: 'X', unreadCount: 1, lastPreview: 'hi', lastRole: 'user', lastTs: 1000 })
     expect(item!.routeTarget.query).toEqual({})
+  })
+  it('无 lastTs → 回退 lastActiveAt/updatedAt', () => {
+    const item = fromChatSession({ id: 's3', title: 'X', unreadCount: 1, lastPreview: 'hi', lastRole: 'user', lastActiveAt: '2026-06-23T14:20:00Z' })
+    expect(item!.ts).toBe(Date.parse('2026-06-23T14:20:00Z'))
   })
 })
 
