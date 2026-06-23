@@ -203,9 +203,11 @@ function onChartClick(params: any) {
   const d = params.data
   if (!d) return
   const kind = d._nodeKind
-  if (kind === 'center' || kind === 'folded') return
+  if (kind === 'folded') return
   if (d._targetTaskId) {
     store.selectTask(d._targetTaskId)
+  } else if (kind === 'center') {
+    store.selectTask(d._taskId)
   } else if (kind === 'channel' && d._routeTarget) {
     const ch = store.channelsForSelectedTask.find(c => c.taskId === d._taskId)
     if (ch) store.selectChannel(ch.id)
