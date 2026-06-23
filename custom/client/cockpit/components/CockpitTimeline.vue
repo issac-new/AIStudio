@@ -22,12 +22,6 @@ const hasTask = computed(() => !!store.selectedTask)
       <span class="cockpit-timeline__title">{{ t('cockpit.timeline') }}</span>
     </div>
     <div v-if="hasTask" class="cockpit-timeline__body">
-      <button
-        v-if="!expanded && recent.folded.length > 0"
-        type="button"
-        class="cockpit-timeline__fold"
-        @click="expanded = true"
-      >▸ {{ t('cockpit.olderHistory', { n: recent.folded.length }) }}</button>
       <div class="cockpit-timeline__line">
         <button
           v-for="ev in visibleEvents"
@@ -49,6 +43,12 @@ const hasTask = computed(() => !!store.selectedTask)
           <span class="cockpit-timeline__state">{{ ev.pending ? t('cockpit.pending') : t('cockpit.done') }}</span>
         </button>
       </div>
+      <button
+        v-if="!expanded && recent.folded.length > 0"
+        type="button"
+        class="cockpit-timeline__fold"
+        @click="expanded = true"
+      >▾ {{ t('cockpit.olderHistory', { n: recent.folded.length }) }}</button>
     </div>
     <div v-else class="cockpit-timeline__empty">{{ t('cockpit.noTaskSelected') }}</div>
   </div>
@@ -60,7 +60,7 @@ const hasTask = computed(() => !!store.selectedTask)
 .cockpit-timeline__title { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
 .cockpit-timeline__body { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
 .cockpit-timeline__fold {
-  display: block; width: 100%; text-align: left; padding: 5px 9px; margin: 4px 0 6px 18px;
+  display: block; width: 100%; text-align: left; padding: 5px 9px; margin: 6px 0 4px 18px;
   border: 1px dashed var(--border-color); border-radius: 6px; background: var(--bg-card);
   font-size: 10px; color: var(--text-muted); cursor: pointer; font-family: inherit;
   &:hover { background: var(--bg-secondary); color: var(--text-secondary); }

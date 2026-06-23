@@ -175,9 +175,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const eventsForTimeline = computed(() => eventsForSelectedTask.value)
 
   function recentEventsForTimeline(threshold: number) {
-    const all = eventsForTimeline.value
+    const all = eventsForTimeline.value  // 逆序（新在前）
     if (all.length <= threshold) return { visible: all, folded: [] as CockpitEvent[] }
-    return { visible: all.slice(all.length - threshold), folded: all.slice(0, all.length - threshold) }
+    // 逆序：前 threshold 条是最新（visible），剩余是较早（folded，折叠在下方）
+    return { visible: all.slice(0, threshold), folded: all.slice(threshold) }
   }
   function recentEventsForSelectedTask(threshold: number) { return recentEventsForTimeline(threshold) }
 
