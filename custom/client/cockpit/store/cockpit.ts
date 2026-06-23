@@ -179,20 +179,37 @@ export const useCockpitStore = defineStore('cockpit', () => {
       const searchOk = !searchQuery.value.trim() || searchResult.value.has(t.id)
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
-        && okArr(f.tenants, t.tenant ?? '(未指定)')
+        && (t.tenant == null || okArr(f.tenants, t.tenant))
         && okArr(f.boardSlugs, t.boardSlug)
         && dateOk
         && searchOk
     }),
   )
 
-  const tasksByTenant = computed(() => {
+  const taskGroups = computed(() => {
     const map: Record<string, CockpitTask[]> = {}
+    const labelMap: Record<string, string> = {}
     for (const t of filteredTasks.value) {
-      const key = t.tenant ?? '(未指定)'
-      ;(map[key] ??= []).push(t)
+      if (t.tenant) {
+        // 有 tenant：按 tenant 分组
+        const key = 'tenant::' + t.tenant
+        if (!map[key]) { map[key] = []; labelMap[key] = t.tenant }
+        map[key].push(t)
+      } else {
+        // null tenant：按 boardSlug 分组
+        const key = 'board::' + t.boardSlug
+        if (!map[key]) { map[key] = []; labelMap[key] = t.boardSlug }
+        map[key].push(t)
+      }
     }
-    return map
+    return Object.keys(map)
+      .sort((a, b) => {
+        const aIsBoard = a.startsWith('board::')
+        const bIsBoard = b.startsWith('board::')
+        if (aIsBoard !== bIsBoard) return aIsBoard ? 1 : -1
+        return (labelMap[a] ?? '').localeCompare(labelMap[b] ?? '')
+      })
+      .map(key => ({ key, label: labelMap[key] ?? key, tasks: map[key] }))
   })
 
   // ── 时序事件 ──
@@ -704,7 +721,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   return {
     // 派生态
     tasks, attention, attentionCount, selectedTask, selectedTaskId,
-    sortedTasks, filteredTasks, tasksByTenant, boards, searchResult,
+    sortedTasks, filteredTasks, taskGroups, boards, searchResult,
     events, eventsForSelectedTask, eventsForTimeline, recentEventsForTimeline, recentEventsForSelectedTask,
     timelineActorFilter, timelineActorOptions,
     topologyForSelectedTask, relationsForSelectedTask,
