@@ -49,9 +49,20 @@ const layout = computed(() => {
     pos[center.id] = { x: cx, y: cy, w: s.w, h: s.h }
   }
 
+  // 自适应尺寸：根据画布大小与节点总数动态计算间距
+  const taskCount = topo.nodes.filter(n => n.kind === 'ancestor' || n.kind === 'descendant').length
+  const maxLayerCount = Math.max(1, ...new Set(topo.nodes.filter(n => n.kind === 'ancestor' || n.kind === 'descendant').map(n => n.depth)))
+  const minDepth = Math.min(0, ...topo.nodes.filter(n => n.kind === 'ancestor').map(n => n.depth))
+  const maxDepth = Math.max(0, ...topo.nodes.filter(n => n.kind === 'descendant').map(n => n.depth))
+  const totalLayers = maxDepth - minDepth + 1
+  // 层间距：画布高度 / (总层数 + 1)，限制 [28, 60]
+  const layerH = Math.max(28, Math.min(60, (ch - 60) / Math.max(1, totalLayers)))
+  // 同层水平间距：画布宽度自适应
+  const nodeHGap = Math.max(8, Math.min(20, cw / 30))
+  // 频道/人员距 center 的偏移
+  const sideOffset = Math.max(70, Math.min(120, cw / 4))
+
   // 按深度分层任务节点（ancestor/descendant）
-  const layerH = 40  // 每层垂直高度
-  const nodeHGap = 12  // 同层节点水平间距
   const taskNodes = topo.nodes.filter(n => n.kind === 'ancestor' || n.kind === 'descendant')
   // 按深度分组
   const depthGroups = new Map<number, typeof taskNodes>()
@@ -75,13 +86,13 @@ const layout = computed(() => {
   const channels = topo.nodes.filter(n => n.kind === 'channel')
   channels.forEach((node, i) => {
     const s = nodeSize(node.label)
-    pos[node.id] = { x: cx - 90 - i * 90, y: cy, w: s.w, h: s.h }
+    pos[node.id] = { x: cx - sideOffset - i * (sideOffset * 0.7), y: cy, w: s.w, h: s.h }
   })
   // 人员：右侧，水平向右
   const persons = topo.nodes.filter(n => n.kind === 'person')
   persons.forEach((node, i) => {
     const s = nodeSize(node.label)
-    pos[node.id] = { x: cx + 90 + i * 90, y: cy, w: s.w, h: s.h }
+    pos[node.id] = { x: cx + sideOffset + i * (sideOffset * 0.7), y: cy, w: s.w, h: s.h }
   })
 
   // folded 放右下角
@@ -108,17 +119,32 @@ function draw() {
 
   // 背景点阵（可选，视觉提示）
   ctx.fillStyle = 'rgba(0,0,0,0.04)'
-  // 画连线（center → 辐射）
+  // 画连线（直角折线，树状分支感）
   ctx.strokeStyle = 'rgba(128,128,128,0.35)'
   ctx.lineWidth = 1
-  const centerPos = pos['g-center']
   for (const r of topo.relations) {
     const from = pos[r.from]
     const to = pos[r.to]
     if (!from || !to) continue
     ctx.beginPath()
-    ctx.moveTo(from.x, from.y)
-    ctx.lineTo(to.x, to.y)
+    // 判断方向：垂直关系（ancestor/descendant，y 差大）用垂直 L 型；水平关系（person/channel）用水平 L 型
+    const dy = Math.abs(from.y - to.y)
+    const dx = Math.abs(from.x - to.x)
+    if (dy > dx) {
+      // 垂直 L 型：from → 中间 y → to（从 from 底/顶部出发，水平到 to 的 x，再垂直到 to）
+      const midY = (from.y + to.y) / 2
+      ctx.moveTo(from.x, from.y)
+      ctx.lineTo(from.x, midY)
+      ctx.lineTo(to.x, midY)
+      ctx.lineTo(to.x, to.y)
+    } else {
+      // 水平 L 型：from → 中间 x → to
+      const midX = (from.x + to.x) / 2
+      ctx.moveTo(from.x, from.y)
+      ctx.lineTo(midX, from.y)
+      ctx.lineTo(midX, to.y)
+      ctx.lineTo(to.x, to.y)
+    }
     ctx.stroke()
   }
 
