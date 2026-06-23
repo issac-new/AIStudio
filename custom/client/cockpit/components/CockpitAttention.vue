@@ -15,7 +15,7 @@ function handleClick(item: { taskId: string; title: string }) {
   <div class="cockpit-attention">
     <div class="cockpit-attention__label">
       <span class="cockpit-attention__count">{{ store.attentionCount }}</span>
-      <span class="cockpit-attention__label-text">需要你</span>
+      <span class="cockpit-attention__label-text">{{ t('cockpit.attention') }}</span>
     </div>
     <div class="cockpit-attention__items">
       <button
