@@ -23,75 +23,68 @@ let lastX = 0, lastY = 0
 // hover 节点（用于光标提示）
 const hoverNode = ref<GraphNode | null>(null)
 
-// 节点布局：计算每个节点的位置（中心辐射，按类型分扇区，防重叠）
+// 节点布局：分支式（中心居中，四方向延伸）
+// 上方：父任务（垂直向上）；下方：子任务（垂直向下）；左侧：频道（水平向左）；右侧：人员（水平向右）
 const layout = computed(() => {
   const topo = store.topologyForSelectedTask
   const pos: Record<string, { x: number; y: number; w: number; h: number }> = {}
   const cx = cw / 2
   const cy = ch / 2
-  // 根据画布尺寸与节点总数自适应半径
-  const total = topo.nodes.length
-  const baseR = Math.min(cw, ch) * 0.32
-  const R = Math.max(60, baseR + Math.min(40, total * 4))
 
-  const center = topo.nodes.find(n => n.kind === 'center')
-  // 节点框尺寸（ctx 就绪时用 measureText 精确测量；否则用字符数估算）
+  // 节点框尺寸
   const nodeSize = (label: string, isCenter = false) => {
     let tw: number
     if (ctx) {
       ctx.font = isCenter ? 'bold 12px sans-serif' : '11px sans-serif'
       tw = ctx.measureText(label).width
     } else {
-      // 估算：中文2宽，英文1宽（11px 字体下约 7px/中文，6px/英文）
       tw = label.length * 7
     }
     return { w: Math.min(isCenter ? 170 : 130, Math.max(50, tw + 20)), h: isCenter ? 30 : 24 }
   }
 
+  const center = topo.nodes.find(n => n.kind === 'center')
   if (center) {
     const s = nodeSize(center.label, true)
     pos[center.id] = { x: cx, y: cy, w: s.w, h: s.h }
   }
 
   // 按类型分组
-  const groups: Record<string, GraphNode[]> = { parent: [], child: [], person: [], channel: [] }
-  for (const n of topo.nodes) {
-    if (n.kind in groups) groups[n.kind].push(n)
-  }
-  // 扇区中心角（弧度）：parent 上、person 左、channel 右、child 下
-  const sectorAngle: Record<string, number> = {
-    parent: -Math.PI / 2,
-    person: Math.PI,
-    channel: 0,
-    child: Math.PI / 2,
-  }
-  // 每个扇区的半范围（弧度）
-  const halfRange = Math.PI / 3.2
+  const parents = topo.nodes.filter(n => n.kind === 'parent')
+  const children = topo.nodes.filter(n => n.kind === 'child')
+  const persons = topo.nodes.filter(n => n.kind === 'person')
+  const channels = topo.nodes.filter(n => n.kind === 'channel')
 
-  for (const [kind, list] of Object.entries(groups)) {
-    if (!list.length) continue
-    const ca = sectorAngle[kind]
-    list.forEach((node, i) => {
-      let a: number
-      if (list.length === 1) {
-        a = ca
-      } else {
-        const step = (halfRange * 2) / (list.length - 1)
-        a = ca - halfRange + step * i
-      }
-      const s = nodeSize(node.label)
-      pos[node.id] = {
-        x: cx + R * Math.cos(a),
-        y: cy + R * Math.sin(a),
-        w: s.w, h: s.h,
-      }
-    })
-  }
-  // folded 放右下
+  // 分支间距：节点高度 + 间隙（垂直分支）；节点宽度 + 间隙（水平分支）
+  const vGap = 34   // 垂直方向节点间距
+  const hGap = 100  // 水平方向节点间距（留连线空间）
+
+  // 父任务：上方，垂直向上排列（第一个离 center 最近）
+  parents.forEach((node, i) => {
+    const s = nodeSize(node.label)
+    pos[node.id] = { x: cx, y: cy - (i + 1) * vGap - s.h / 2, w: s.w, h: s.h }
+  })
+  // 子任务：下方，垂直向下排列
+  children.forEach((node, i) => {
+    const s = nodeSize(node.label)
+    pos[node.id] = { x: cx, y: cy + (i + 1) * vGap + s.h / 2, w: s.w, h: s.h }
+  })
+  // 频道：左侧，水平向左排列
+  channels.forEach((node, i) => {
+    const s = nodeSize(node.label)
+    pos[node.id] = { x: cx - (i + 1) * hGap - s.w / 2, y: cy, w: s.w, h: s.h }
+  })
+  // 人员：右侧，水平向右排列
+  persons.forEach((node, i) => {
+    const s = nodeSize(node.label)
+    pos[node.id] = { x: cx + (i + 1) * hGap + s.w / 2, y: cy, w: s.w, h: s.h }
+  })
+
+  // folded 放右下角
   const folded = topo.nodes.find(n => n.kind === 'folded')
   if (folded) {
     const s = nodeSize(folded.label)
-    pos[folded.id] = { x: cx + R * 0.7, y: cy + R * 0.7, w: s.w, h: s.h }
+    pos[folded.id] = { x: cx + 80, y: cy + 60, w: s.w, h: s.h }
   }
   return pos
 })

@@ -1,17 +1,15 @@
 diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
-index b3bb8dd4..5137cdc6 100644
+index b3bb8dd4..588f6a31 100644
 --- a/packages/server/src/controllers/hermes/kanban.ts
 +++ b/packages/server/src/controllers/hermes/kanban.ts
-@@ -1,6 +1,6 @@
+@@ -1,5 +1,5 @@
  import type { Context } from 'koa'
 -import { readFile } from 'fs/promises'
--import { resolve, normalize } from 'path'
 +import { readFile, stat } from 'fs/promises'
-+import { resolve, normalize } from 'path'
+ import { resolve, normalize } from 'path'
  import { homedir } from 'os'
  import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { isPathWithin } from '../../services/hermes/hermes-path'
-@@ -758,6 +758,83 @@ export async function readArtifact(ctx: Context) {
+@@ -758,6 +758,88 @@ export async function readArtifact(ctx: Context) {
    }
  }
  
@@ -52,6 +50,7 @@ index b3bb8dd4..5137cdc6 100644
 +
 +export async function listWorkspaceFiles(ctx: Context) {
 +  const taskId = ctx.query.task_id as string | undefined
++  const board = (ctx.query.board as string | undefined) || 'default'
 +  const sub = (ctx.query.path as string | undefined) ?? ''
 +  const depthRaw = parseInt(ctx.query.depth as string, 10)
 +  const depth = Number.isFinite(depthRaw) ? Math.min(Math.max(depthRaw, 1), 4) : 2
@@ -62,14 +61,18 @@ index b3bb8dd4..5137cdc6 100644
 +    return
 +  }
 +
-+  const detail = await kanbanCli.getTask(taskId)
++  const detail = await kanbanCli.getTask(taskId, { board })
 +  const wsPath = detail?.task?.workspace_path
 +  if (!wsPath) {
 +    ctx.body = { path: '', entries: [] }
 +    return
 +  }
 +
-+  const workspacesRoot = resolve(homedir(), '.hermes', 'kanban', 'workspaces')
++  // board-aware workspaces root: default→workspaces，其他→boards/<slug>/workspaces
++  const kanbanHome = resolve(homedir(), '.hermes', 'kanban')
++  const workspacesRoot = board === 'default'
++    ? resolve(kanbanHome, 'workspaces')
++    : resolve(kanbanHome, 'boards', board, 'workspaces')
 +  const root = resolve(workspacesRoot, normalize(wsPath))
 +  if (!isPathWithin(root, workspacesRoot)) {
 +    ctx.status = 403
