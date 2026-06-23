@@ -155,7 +155,7 @@ function onColCtrl(col: ColumnKey) {
           <CockpitModeBar v-if="store.workspaceMode !== 'term'" />
           <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
-          <CockpitWorkspace v-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="store.submitWorkItem" @later="() => {}" />
+          <CockpitWorkspace v-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="store.submitWorkItem" />
           <CockpitChatPane v-else-if="store.workspaceMode === 'chat'" />
           <CockpitTerminalPane v-else />
         </div>
