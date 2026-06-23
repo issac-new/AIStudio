@@ -330,6 +330,16 @@ export const useCockpitStore = defineStore('cockpit', () => {
       events.value = eventAdapter.mergeDetail(detail)
       const profile = detail.task.assignee ?? undefined
       if (profile) extras.searchSessions(id, profile).catch(() => {})
+      // 异步拉 worker log，追加为时序流节点
+      kanbanApi.getTaskLog(id, boardOpts).then((log) => {
+        if (log?.exists && log.content) {
+          const logEvt = eventAdapter.fromLog(id, { content: log.content, size_bytes: log.size_bytes, truncated: log.truncated })
+          // 去重：若已有同 id 的 log 节点则不重复加
+          if (!events.value.some(e => e.id === logEvt.id)) {
+            events.value = [...events.value, logEvt]
+          }
+        }
+      }).catch(() => { /* log 不存在时静默 */ })
     } catch {
       events.value = []
     }

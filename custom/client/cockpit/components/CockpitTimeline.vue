@@ -14,6 +14,19 @@ const visibleEvents = computed(() =>
   expanded.value ? [...recent.value.folded, ...recent.value.visible] : recent.value.visible,
 )
 const hasTask = computed(() => !!store.selectedTask)
+
+// 双击事件节点：按 source 类型弹窗显示完整内容
+function onEventDblClick(ev: { taskId: string; fullText: string; source: string; actor: string }) {
+  const titleMap: Record<string, string> = {
+    event: '事件详情',
+    run: '执行记录',
+    comment: '评论',
+    log: 'Worker Log',
+    message: '对话消息',
+  }
+  const title = titleMap[ev.source] ?? '事件详情'
+  store.openTitleDetail(ev.taskId, ev.fullText, title)
+}
 </script>
 
 <template>
@@ -43,11 +56,12 @@ const hasTask = computed(() => !!store.selectedTask)
           class="cockpit-timeline__event"
           :class="{ 'is-pending': ev.pending }"
           @click="store.focusOnTimelineNode(ev.id)"
-          @dblclick.stop="store.openTitleDetail(ev.taskId, ev.fullText, '事件详情')"
+          @dblclick.stop="onEventDblClick(ev)"
         >
           <span class="cockpit-timeline__event-head">
             <span class="cockpit-timeline__actor">{{ ev.actor }}</span>
             <span class="cockpit-timeline__kind">{{ ev.kind }}</span>
+            <span class="cockpit-timeline__source" :data-source="ev.source">{{ ev.source }}</span>
             <span v-if="store.selectedTask?.assignee" class="cockpit-timeline__assignee" :data-assignee="store.selectedTask.assignee">@{{ store.selectedTask.assignee }}</span>
             <span class="cockpit-timeline__when">{{ ev.when }}</span>
           </span>
@@ -104,6 +118,7 @@ const hasTask = computed(() => !!store.selectedTask)
 .cockpit-timeline__event-head { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
 .cockpit-timeline__actor { font-weight: 500; }
 .cockpit-timeline__kind { font-size: 8px; padding: 0 5px; border-radius: 2px; background: var(--bg-secondary); }
+.cockpit-timeline__source { font-size: 8px; padding: 0 4px; border-radius: 2px; border: 1px solid var(--border-light); color: var(--text-muted); text-transform: uppercase; }
 .cockpit-timeline__assignee { font-size: 9px; color: var(--text-muted); font-family: monospace; }
 .cockpit-timeline__when { margin-left: auto; font-size: 9px; color: var(--text-muted); }
 .cockpit-timeline__what { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
