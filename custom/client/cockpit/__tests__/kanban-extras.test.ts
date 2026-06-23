@@ -36,7 +36,7 @@ describe('listWorkspaceFiles', () => {
         { name: 'p.json', isDir: false, size: 5, modified: 3 },
       ],
     })
-    const out = await listWorkspaceFiles('t1', '', 2)
+    const out = await listWorkspaceFiles('t1', undefined, '', 2)
     expect(out).toEqual([
       { id: 'src', name: 'src', isDir: true, children: [
         { id: 'src/a.ts', name: 'a.ts', isDir: false },

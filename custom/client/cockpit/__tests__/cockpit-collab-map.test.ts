@@ -138,6 +138,6 @@ describe('CockpitCollabMap (Canvas)', () => {
   it('detail loaded with correct board context (syncBoardForTask)', async () => {
     const s = await seed()
     // getTask 被调用（带正确 board 上下文）
-    expect(getTask).toHaveBeenCalledWith('t1')
+    expect(getTask).toHaveBeenCalledWith('t1', expect.objectContaining({ board: expect.any(String) }))
   })
 })

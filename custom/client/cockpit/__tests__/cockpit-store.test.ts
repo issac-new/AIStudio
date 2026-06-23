@@ -191,8 +191,8 @@ describe('cockpit store selectTask + 联动加载', () => {
     mockKanbanTasks.push(kt({ id: 't1', assignee: 'arch' }))
     const s = useCockpitStore()
     await s.bootstrap()
-    expect(getTask).toHaveBeenCalledWith('t1')
-    expect(listWorkspaceFiles).toHaveBeenCalledWith('t1')
+    expect(getTask).toHaveBeenCalledWith('t1', expect.objectContaining({ board: expect.any(String) }))
+    expect(listWorkspaceFiles).toHaveBeenCalledWith('t1', expect.any(String))
   })
 
   it('selectTask null clears events', async () => {

@@ -282,19 +282,17 @@ export const useCockpitStore = defineStore('cockpit', () => {
     await loadTaskDetail(id)
   }
 
-  // 按任务所属 board 切换 kanban store 上下文（跨 board 聚合时必需）
-  function syncBoardForTask(id: string) {
-    const t = cockpitTasks.value.find(x => x.id === id)
-    if (t?.boardSlug) {
-      try { kanban.setSelectedBoard?.(t.boardSlug) } catch { /* ignore */ }
-    }
+  // 查任务所属 board slug（用于 detail/files 加载时带正确 board 上下文，不切全局 selectedBoard）
+  function boardSlugOf(id: string): string | undefined {
+    return cockpitTasks.value.find(x => x.id === id)?.boardSlug
   }
 
   async function loadTaskDetail(id: string) {
-    // 切到任务所属 board，确保 getTask / listWorkspaceFiles 返回正确数据（含 parents/children）
-    syncBoardForTask(id)
+    // 带 board 参数请求（不切换全局 selectedBoard，避免触发 watch 清空 cockpitTasks）
+    const board = boardSlugOf(id)
+    const boardOpts = board ? { board } : undefined
     try {
-      const detail = _detailCache.value[id] ?? await kanbanApi.getTask(id)
+      const detail = _detailCache.value[id] ?? await kanbanApi.getTask(id, boardOpts)
       _detailCache.value[id] = detail
       events.value = eventAdapter.mergeDetail(detail)
       const profile = detail.task.assignee ?? undefined
@@ -304,7 +302,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
     if (!_fileTreeCache.value[id]) {
       try {
-        _fileTreeCache.value[id] = await extras.listWorkspaceFiles(id)
+        _fileTreeCache.value[id] = await extras.listWorkspaceFiles(id, board)
         fileTrees.value = { ...fileTrees.value, [id]: _fileTreeCache.value[id] }
       } catch {
         fileTrees.value = { ...fileTrees.value, [id]: [] }

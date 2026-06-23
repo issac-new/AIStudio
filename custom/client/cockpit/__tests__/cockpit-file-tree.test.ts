@@ -103,6 +103,6 @@ describe('CockpitFileTree', () => {
     listWorkspaceFiles.mockResolvedValue([{ id: 'a.ts', name: 'a.ts', isDir: false }])
     const s = useCockpitStore()
     await s.bootstrap()
-    expect(listWorkspaceFiles).toHaveBeenCalledWith('t1')
+    expect(listWorkspaceFiles).toHaveBeenCalledWith('t1', expect.any(String))
   })
 })

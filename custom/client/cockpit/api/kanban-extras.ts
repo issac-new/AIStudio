@@ -39,9 +39,10 @@ function mapEntries(entries: RawFileEntry[], parentPath: string): FileNode[] {
   })
 }
 
-export async function listWorkspaceFiles(taskId: string, sub = '', depth = 2): Promise<FileNode[]> {
+export async function listWorkspaceFiles(taskId: string, board?: string, sub = '', depth = 2): Promise<FileNode[]> {
   const q = new URLSearchParams({ task_id: taskId, depth: String(depth) })
   if (sub) q.set('path', sub)
+  if (board) q.set('board', board)
   const res = await request<{ path: string; entries: RawFileEntry[] }>(
     `/api/hermes/kanban/workspace-files?${q}`,
   )
