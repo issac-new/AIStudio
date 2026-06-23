@@ -30,13 +30,14 @@ vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
 }))
 
 // ── mock kanban api（保留类型导出）──
-const { getTask, addComment } = vi.hoisted(() => ({
+const { getTask, addComment, patchTask } = vi.hoisted(() => ({
   getTask: vi.fn(async () => null),
   addComment: vi.fn(async () => ({ ok: true })),
+  patchTask: vi.fn(async () => ({})),
 }))
 vi.mock('@/api/hermes/kanban', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/kanban')
-  return { ...actual, getTask, addComment }
+  return { ...actual, getTask, addComment, patchTask }
 })
 
 // ── mock hermes sessions API（runSearch 需要）──
@@ -125,7 +126,7 @@ beforeEach(() => {
   mockKanbanTasks.splice(0, mockKanbanTasks.length)
   fetchTasks.mockClear(); fetchAssignees.mockClear(); startEventStream.mockClear()
   searchSessions.mockClear(); listWorkspaceFiles.mockClear(); getTimeline.mockClear()
-  getTask.mockClear(); addComment.mockClear()
+  getTask.mockClear(); addComment.mockClear(); patchTask.mockClear()
   mockSearchHermesSessions.mockClear()
   mockSearchHermesSessions.mockResolvedValue([])
   savedLS = (globalThis as any).localStorage
@@ -549,5 +550,50 @@ describe('notify (Matrix unread only)', () => {
     expect(store.notifyOpen).toBe(true)
     store.closeNotify()
     expect(store.notifyOpen).toBe(false)
+  })
+})
+
+describe('cockpit store 工作项标题/评论草稿', () => {
+  it('setPendingTitle writes pendingTitle; currentTitle reads draft over task', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', title: '原标题' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    expect(s.currentTitle).toBe('原标题')
+    s.setPendingTitle('新标题')
+    expect(s.currentTitle).toBe('新标题')
+    expect(s.workItemForSelectedTask?.pendingTitle).toBe('新标题')
+  })
+
+  it('setPendingComment writes pendingComment', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    s.setPendingComment('我的评论')
+    expect(s.workItemForSelectedTask?.pendingComment).toBe('我的评论')
+  })
+
+  it('submitWorkItem flushes title via patchTask + user comment via addComment', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', title: '原标题' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    s.setPendingTitle('改后标题')
+    s.setPendingComment('用户自由评论')
+    s.updateWorkItem({ decision: 'approve', riskTags: [], opinion: 'ok' })
+    await s.submitWorkItem()
+    expect(patchTask).toHaveBeenCalledWith('t1', expect.objectContaining({ title: '改后标题' }), expect.anything())
+    const calls = addComment.mock.calls
+    expect(calls.length).toBe(2)
+    expect(calls[1][1]).toEqual({ body: '用户自由评论' })
+    expect(s.workItemForSelectedTask).toBeNull()
+  })
+
+  it('submitWorkItem omits title patch when pendingTitle equals task title', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', title: '原标题' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    s.setPendingTitle('原标题')
+    s.updateWorkItem({ decision: 'approve', riskTags: [], opinion: 'ok' })
+    await s.submitWorkItem()
+    expect(patchTask).not.toHaveBeenCalled()
   })
 })

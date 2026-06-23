@@ -20,6 +20,8 @@ export interface DraftWorkItem {
   pendingBody?: string               // 待变更的 description（任务 body）
   pendingLinkAdds?: PendingLink[]    // 待新增的父子关联
   pendingLinkRemoves?: PendingLink[] // 待移除的父子关联
+  pendingTitle?: string               // 待变更的标题（与 task.title 不同才 flush）
+  pendingComment?: string            // 待提交的用户自由评论（非空时 flush 一条 addComment）
 }
 
 export interface A2uiTemplate {
