@@ -1,0 +1,78 @@
+diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
+index df411c9..7b1ed13 100644
+--- a/packages/client/src/stores/hermes/group-chat.ts
++++ b/packages/client/src/stores/hermes/group-chat.ts
+@@ -131,6 +131,12 @@ export interface GroupPendingApproval {
+ export const useGroupChatStore = defineStore('groupChat', () => {
+     // ─── State ─────────────────────────────────────────────
+     const connected = ref(false)
++    // ─── Unread tracking (in-memory, resets on refresh) ──────────────
++    // Tracks per-room unread message count + last message preview for
++    // rooms that are NOT currently active. Cleared on joinRoom.
++    const unreadCounts = ref<Record<string, number>>({})
++    const lastMessageMap = ref<Record<string, { content: string; senderName: string; ts: number }>>({})
++
+     const currentRoomId = ref<string | null>(null)
+     const rooms = ref<RoomInfo[]>([])
+     const messages = ref<ChatMessage[]>([])
+@@ -346,6 +352,17 @@ const currentUserAvatar = ref('')
+         })
+ 
+         socket.on('message', (msg: ChatMessage) => {
++            // Unread tracking: non-active room → accumulate count + last message
++            if (msg.roomId !== currentRoomId.value) {
++                unreadCounts.value = {
++                    ...unreadCounts.value,
++                    [msg.roomId]: (unreadCounts.value[msg.roomId] ?? 0) + 1,
++                }
++                lastMessageMap.value = {
++                    ...lastMessageMap.value,
++                    [msg.roomId]: { content: msg.content ?? '', senderName: msg.senderName ?? '', ts: Date.now() },
++                }
++            }
+             if (msg.roomId === currentRoomId.value) {
+                 const idx = messages.value.findIndex(m => m.id === msg.id)
+                 const existing = idx >= 0 ? messages.value[idx] : null
+@@ -568,6 +585,12 @@ const currentUserAvatar = ref('')
+     async function joinRoom(roomId: string) {
+         isJoining.value = true
+         error.value = null
++        // Clear unread for the room being entered
++        if (unreadCounts.value[roomId]) {
++            const next = { ...unreadCounts.value }
++            delete next[roomId]
++            unreadCounts.value = next
++        }
+ 
+         try {
+             const res = await getRoomDetail(roomId)
+@@ -810,6 +833,19 @@ const currentUserAvatar = ref('')
+         pendingApprovals.value = new Map(pendingApprovals.value)
+     }
+ 
++    function clearRoomUnread(roomId: string) {
++        if (!unreadCounts.value[roomId]) return
++        const next = { ...unreadCounts.value }
++        delete next[roomId]
++        unreadCounts.value = next
++    }
++    function clearAllUnread() {
++        unreadCounts.value = {}
++    }
++    function getRoomUnread(roomId: string): number {
++        return unreadCounts.value[roomId] ?? 0
++    }
++
+     return {
+         // State
+         connected,
+@@ -857,6 +893,9 @@ const currentUserAvatar = ref('')
+         deleteRoom,
+         cloneRoom,
+         clearCurrentRoomContext,
++        clearRoomUnread,
++        clearAllUnread,
++        getRoomUnread,
+         loadAgents,
+         addAgentToRoom,
+         removeAgentFromRoom,
