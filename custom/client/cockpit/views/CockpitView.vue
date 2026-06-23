@@ -76,7 +76,7 @@ function onColCtrl(col: ColumnKey) {
       :human-count="2"
       :notify-count="3"
       :schedule-count="2"
-      user-name="石磊"
+      :user-name="store.currentUserName"
       @schedule="store.openHistory()"
       @notify="store.openHistory()"
       @search="() => {}"

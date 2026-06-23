@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import { useAuthStore } from '@/stores/hermes/auth'
 import * as kanbanApi from '@/api/hermes/kanban'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
@@ -287,6 +288,17 @@ export const useCockpitStore = defineStore('cockpit', () => {
     void _kvRev.value  // 依赖 kv 写入计数器
     const id = selectedTaskId.value
     return id ? kv.loadDraft(id) : null
+  })
+
+  // ── 当前用户（从 auth store 获取）──
+  const currentUserName = computed(() => {
+    try {
+      const auth = useAuthStore()
+      const u = (auth as any).user
+      return u?.displayName ?? u?.username ?? '你'
+    } catch {
+      return '你'
+    }
   })
 
   // ── 历史 ──
@@ -726,7 +738,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     topologyForSelectedTask, relationsForSelectedTask,
     channels, channelsForSelectedTask, activeChannel,
     filesForSelectedTask, workItemForSelectedTask,
-    filteredHistory, messagesForActiveChannel, templates,
+    filteredHistory, messagesForActiveChannel, templates, currentUserName,
     // 客户端态
     filters, searchQuery, _sessionSearching, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
