@@ -6,6 +6,10 @@ import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapter
 const store = useCockpitStore()
 defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void }>()
 
+function copyTaskId(id: string) {
+  navigator.clipboard?.writeText(id).catch(() => {})
+}
+
 const priorities: CockpitPriority[] = ['P0', 'P1', 'P2', 'P3']
 const statuses: { key: CockpitStatusBucket; label: string }[] = [
   { key: 'review', label: '待审' },
@@ -16,23 +20,15 @@ const statuses: { key: CockpitStatusBucket; label: string }[] = [
   { key: 'archived', label: '归档' },
 ]
 
-// 动态 tenant 列表：从所有任务去重 tenant（null → (未指定)）
+// 动态 tenant 列表：从所有任务去重 tenant（仅非 null）
 const tenantOptions = computed(() => {
   const set = new Set<string>()
-  for (const t of store.tasks) set.add(t.tenant ?? '(未指定)')
+  for (const t of store.tasks) if (t.tenant) set.add(t.tenant)
   return [...set].sort()
 })
 
 // 动态 board slug 列表（需求 #1）：从 store.boards 取
 const boardOptions = computed(() => store.boards.map(b => b.slug))
-
-// 分组：按 tasksByTenant 的 key（含 (未指定)）
-const tenantGroups = computed(() => {
-  const map = store.tasksByTenant as Record<string, ReturnType<typeof Array.from>>
-  return Object.keys(map)
-    .sort((a, b) => (a === '(未指定)' ? 1 : a.localeCompare(b)))
-    .map(key => ({ key, tasks: store.tasksByTenant[key] ?? [] }))
-})
 
 // 状态显示：原始 status（9 值）但分组筛选用 bucketStatus 5 桶
 function statusBucketLabel(s: string): string {
@@ -45,6 +41,19 @@ function statusBucketLabel(s: string): string {
   <div class="cockpit-kanban">
     <div class="cockpit-kanban__head">
       <span class="cockpit-kanban__title">kanban总览</span>
+      <div class="cockpit-kanban__search">
+        <span class="cockpit-kanban__search-icon">🔍</span>
+        <input
+          type="text"
+          class="cockpit-kanban__search-input"
+          :value="store.searchQuery"
+          placeholder="搜索 会话/任务/房间"
+          data-search-input
+          @input="store.runSearch(($event.target as HTMLInputElement).value)"
+        />
+        <button v-if="store.searchQuery" type="button" class="cockpit-kanban__search-clear" @click="store.clearSearch()">×</button>
+        <span v-if="store._sessionSearching" class="cockpit-kanban__search-spinner" />
+      </div>
       <span class="cockpit-kanban__sort">↓ 优先级</span>
     </div>
 
@@ -87,12 +96,12 @@ function statusBucketLabel(s: string): string {
       </div>
     </div>
 
-    <!-- 任务列表（按 tenant 分组）-->
+    <!-- 任务列表（按 tenant/board 混合分组）-->
     <div class="cockpit-kanban__list">
-      <div v-for="g in tenantGroups" :key="g.key" class="cockpit-kanban__cat" :data-tenant-group="g.key">
+      <div v-for="g in store.taskGroups" :key="g.key" class="cockpit-kanban__cat" :data-tenant-group="g.label">
         <div class="cockpit-kanban__cat-head">
           <span class="cockpit-kanban__cat-mark" />
-          {{ g.key }}
+          {{ g.label }}
           <span class="cockpit-kanban__cat-count">{{ g.tasks.length }}</span>
         </div>
         <button v-for="t in g.tasks" :key="t.id"
@@ -106,6 +115,12 @@ function statusBucketLabel(s: string): string {
           <div class="cockpit-kanban__tt" :title="t.title" @dblclick.stop="store.openTitleDetail(t.id, t.title)">{{ t.title }}</div>
           <div class="cockpit-kanban__meta">
             <span class="cockpit-kanban__slug" :data-task-slug="t.boardSlug">@{{ t.boardSlug }}</span>
+            <span
+              class="cockpit-kanban__id"
+              :data-task-id-copy="t.id"
+              :title="`点击复制任务ID: ${t.id}`"
+              @click.stop="copyTaskId(t.id)"
+            >#{{ t.id }}</span>
             <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
               {{ statusBucketLabel(t.status) }}
             </span>
@@ -212,4 +227,43 @@ function statusBucketLabel(s: string): string {
 }
 .cockpit-kanban__entry-label { flex: 1; text-align: left; }
 .cockpit-kanban__entry-arrow { color: var(--text-muted); transition: transform 0.15s ease, color 0.15s ease; }
+
+/* ── 搜索框 ── */
+.cockpit-kanban__head {
+  padding: 8px 12px 8px 16px;
+  gap: 6px;
+  display: flex;
+  align-items: center;
+}
+.cockpit-kanban__search {
+  flex: 1; position: relative; display: flex; align-items: center; min-width: 0;
+}
+.cockpit-kanban__search-icon {
+  position: absolute; left: 6px; font-size: 10px; color: var(--text-muted); pointer-events: none; line-height: 1;
+}
+.cockpit-kanban__search-input {
+  width: 100%; font-size: 11px; padding: 3px 24px 3px 22px;
+  border: 1px solid var(--border-color); border-radius: 10px;
+  background: var(--bg-card); color: var(--text-secondary); font-family: inherit; outline: none;
+  &::placeholder { color: var(--text-muted); opacity: 0.6; }
+  &:focus { border-color: var(--accent-primary); }
+}
+.cockpit-kanban__search-clear {
+  position: absolute; right: 4px; width: 16px; height: 16px; padding: 0;
+  border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 12px; line-height: 1;
+  &:hover { color: var(--text-primary); }
+}
+.cockpit-kanban__search-spinner {
+  position: absolute; right: 6px; width: 10px; height: 10px;
+  border: 1.5px solid var(--border-color); border-top-color: var(--accent-primary);
+  border-radius: 50%; animation: cockpit-kspin 0.6s linear infinite;
+}
+@keyframes cockpit-kspin { to { transform: rotate(360deg); } }
+
+/* ── 任务ID ── */
+.cockpit-kanban__id {
+  font-family: monospace; font-size: 9px; color: var(--text-muted);
+  cursor: copy; padding: 0 3px; border-radius: 2px;
+  &:hover { color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 0), 0.08); }
+}
 </style>
