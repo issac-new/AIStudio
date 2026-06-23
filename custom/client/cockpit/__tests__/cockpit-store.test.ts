@@ -39,6 +39,15 @@ vi.mock('@/api/hermes/kanban', async () => {
   return { ...actual, getTask, addComment }
 })
 
+// ── mock hermes sessions API（runSearch 需要）──
+const { mockSearchHermesSessions } = vi.hoisted(() => ({
+  mockSearchHermesSessions: vi.fn(async (_q: string) => []),
+}))
+vi.mock('@/api/hermes/sessions', async () => {
+  const actual = await vi.importActual<any>('@/api/hermes/sessions')
+  return { ...actual, searchSessions: mockSearchHermesSessions }
+})
+
 // ── mock 聊天 store（bootstrap 会调）──
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
@@ -62,7 +71,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
   useMatrixClientStore: () => ({ initClient: vi.fn(async () => {}), syncState: { value: 'PREPARED' } }),
 }))
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
-  useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [] }),
+  useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [], roomList: [] }),
 }))
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
   useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }),
@@ -85,6 +94,8 @@ beforeEach(() => {
   fetchTasks.mockClear(); fetchAssignees.mockClear(); startEventStream.mockClear()
   searchSessions.mockClear(); listWorkspaceFiles.mockClear(); getTimeline.mockClear()
   getTask.mockClear(); addComment.mockClear()
+  mockSearchHermesSessions.mockClear()
+  mockSearchHermesSessions.mockResolvedValue([])
   savedLS = (globalThis as any).localStorage
   Object.defineProperty(globalThis, 'localStorage', { value: new MemStorage(), configurable: true, writable: true })
 })
@@ -144,15 +155,31 @@ describe('cockpit store bootstrap + 派生态', () => {
     expect(s.sortedTasks.map(t => t.id)).toEqual(['p0', 'p1', 'p2'])
   })
 
-  it('tasksByTenant groups by tenant field, null → (未指定)', async () => {
+  it('taskGroups: null tenant grouped by boardSlug, valued tenant by tenant', async () => {
     mockKanbanTasks.push(
       kt({ id: 't1', tenant: 'team-x' }),
       kt({ id: 't2', tenant: null }),
+      kt({ id: 't3', tenant: null }),
     )
     const s = useCockpitStore()
-    expect(Object.keys(s.tasksByTenant).sort()).toEqual(['(未指定)', 'team-x'])
-    expect(s.tasksByTenant['team-x'].map(t => t.id)).toEqual(['t1'])
-    expect(s.tasksByTenant['(未指定)'].map(t => t.id)).toEqual(['t2'])
+    const groups = s.taskGroups
+    expect(groups).toHaveLength(2)
+    expect(groups[0].label).toBe('team-x')
+    expect(groups[0].tasks.map(t => t.id)).toEqual(['t1'])
+    expect(groups[1].label).toBe('default')
+    expect(groups[1].tasks.map(t => t.id)).toEqual(['t2', 't3'])
+  })
+
+  it('null tenant tasks are not filtered out by tenant chip', async () => {
+    mockKanbanTasks.push(
+      kt({ id: 'a', tenant: 'x' }),
+      kt({ id: 'b', tenant: null }),
+    )
+    const s = useCockpitStore()
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['a', 'b'])
+    s.toggleFilter('tenants', 'x')
+    // b has null tenant, should still pass the tenant filter
+    expect(s.filteredTasks.map(t => t.id).sort()).toEqual(['a', 'b'])
   })
 
   it('filteredTasks respects priority filter', async () => {
