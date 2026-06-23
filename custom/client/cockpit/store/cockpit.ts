@@ -540,6 +540,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     titleDetailText.value = ''
   }
   // kanban 详情弹窗：取完整 KanbanTaskDetail（含 comments/events/runs 等）
+  const detailExpanded = ref(false)  // 弹窗"更多信息"折叠态
   function openKanbanDetail(taskId: string) {
     const detail = _detailCache.value[taskId]
     if (detail) {
@@ -561,6 +562,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
         kanbanDetailOpen.value = true
       }
     }
+    detailExpanded.value = false  // 打开时默认折叠"更多信息"
   }
   function closeKanbanDetail() {
     kanbanDetailOpen.value = false
@@ -653,7 +655,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     filters, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
     titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
-    kanbanDetailOpen, kanbanDetailTask,
+    kanbanDetailOpen, kanbanDetailTask, detailExpanded,
     templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
     _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
     // 方法
