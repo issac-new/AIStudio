@@ -13,6 +13,7 @@ import CockpitCollabBar from '@/custom/cockpit/components/CockpitCollabBar.vue'
 import CockpitChatPane from '@/custom/cockpit/components/CockpitChatPane.vue'
 import CockpitTerminalPane from '@/custom/cockpit/components/CockpitTerminalPane.vue'
 import CockpitHistoryModal from '@/custom/cockpit/components/CockpitHistoryModal.vue'
+import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitTemplateManager from '@/custom/cockpit/components/CockpitTemplateManager.vue'
 import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
 import { useI18n } from 'vue-i18n'
@@ -75,9 +76,9 @@ function onColCtrl(col: ColumnKey) {
       :agent-count="3"
       :human-count="2"
       :notify-count="3"
-      :schedule-count="2"
+      :schedule-count="store.scheduleDatesWithEvents.size"
       :user-name="store.currentUserName"
-      @schedule="store.openHistory()"
+      @schedule="store.openSchedule()"
       @notify="store.openHistory()"
       @search="() => {}"
       @settings="goSettings"
@@ -164,6 +165,8 @@ function onColCtrl(col: ColumnKey) {
 
     <div v-if="store.historyOpen" class="cockpit-overlay" @click="store.closeHistory()" />
     <CockpitHistoryModal v-if="store.historyOpen" class="cockpit-modal-anchor" />
+    <div v-if="store.scheduleOpen" class="cockpit-overlay" @click="store.closeSchedule()" />
+    <CockpitScheduleModal v-if="store.scheduleOpen" class="cockpit-modal-anchor" />
     <div v-if="store.templateManagerOpen" class="cockpit-overlay" @click="store.closeTemplateManager()" />
     <CockpitTemplateManager v-if="store.templateManagerOpen" class="cockpit-modal-anchor" />
 

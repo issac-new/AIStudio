@@ -76,3 +76,25 @@ export function loadTemplates(): A2uiTemplate[] {
 export function saveTemplates(list: A2uiTemplate[]): void {
   safeSet(TPL_KEY, JSON.stringify(list))
 }
+
+// ── 用户待办 ──
+export interface UserTodo {
+  id: string
+  date: string        // YYYY-MM-DD
+  title: string
+  note?: string
+  createdAt: number
+}
+
+const KEY_TODOS = 'cockpit.userTodos'
+
+export function loadUserTodos(): UserTodo[] {
+  try {
+    const raw = localStorage.getItem(KEY_TODOS)
+    return raw ? (JSON.parse(raw) as UserTodo[]) : []
+  } catch { return [] }
+}
+
+export function saveUserTodos(todos: UserTodo[]): void {
+  try { localStorage.setItem(KEY_TODOS, JSON.stringify(todos)) } catch { /* quota 静默 */ }
+}

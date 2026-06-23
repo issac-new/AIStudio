@@ -12,6 +12,7 @@ import * as extras from '@/custom/cockpit/api/kanban-extras'
 import { searchSessions as searchHermesSessions } from '@/api/hermes/sessions'
 import { mapSearchToTaskIds, type MatrixRoomSearchData } from '@/custom/cockpit/adapters/search-adapter'
 import * as kv from './cockpit-kv'
+import type { UserTodo } from './cockpit-kv'
 import * as taskAdapter from '../adapters/task-adapter'
 import * as attentionAdapter from '../adapters/attention-adapter'
 import * as collabAdapter from '../adapters/collab-adapter'
@@ -66,6 +67,16 @@ export interface CollabChannel {
 }
 
 export interface FileNode { id: string; name: string; isDir: boolean; children?: FileNode[] }
+
+export interface ScheduleEvent {
+  id: string
+  date: string            // YYYY-MM-DD
+  title: string
+  kind: 'task' | 'timeline' | 'todo'
+  taskId?: string
+  time?: string
+  archived?: boolean
+}
 
 const PRIORITY_ORDER: Record<CockpitPriority, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
 
@@ -144,6 +155,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const selectedGraphNodeIds = ref<Record<string, string[]>>({})
   // 协作图画布变换（决策 #14）
   const canvasTransform = ref({ x: 0, y: 0, scale: 1 })
+
+  // ── 日程 ──
+  const scheduleOpen = ref(false)
+  const scheduleSelectedDate = ref('')
+  const scheduleViewYear = ref(2026)
+  const scheduleViewMonth = ref(5)   // 0-indexed
+  const userTodos = ref<UserTodo[]>([])
 
   // ── 懒加载态 ──
   const _detailCache = ref<Record<string, KanbanTaskDetail>>({})
@@ -751,6 +769,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
   }
   function closeHistory() { historyOpen.value = false }
+  function setHistoryArchivedFilter(v: 'all' | 'only' | 'exclude') { /* added by feat/history-filters */ }
   // task title 详情弹窗（双击查看完整 title）（需求 #2）
   // 通用详情弹窗标题（区分"任务标题"/"事件详情"等）
   const titleDetailTitle = ref('任务标题')
@@ -864,6 +883,39 @@ export const useCockpitStore = defineStore('cockpit', () => {
     terminalLines.value.push({ kind: 'info', text: `ℹ sandbox 内执行：${c}` })
   }
 
+  // ── 日程事件（按日期聚合）──
+  const scheduleEvents = computed<Record<string, ScheduleEvent[]>>(() => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const dateToStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    const map: Record<string, ScheduleEvent[]> = {}
+    // 1. 现有任务按 createdAt 归类
+    for (const t of tasks.value) {
+      const d = dateToStr(new Date(t.createdAt))
+      if (!map[d]) map[d] = []
+      map[d].push({ id: t.id, date: d, title: t.title, kind: 'task', taskId: t.id })
+    }
+    // 2. timeline 事件（从 history 提取）
+    for (const h of history.value) {
+      const d = dateToStr(new Date())
+      if (!map[d]) map[d] = []
+      if (!map[d].some(e => e.id === h.id)) {
+        map[d].push({ id: h.id, date: d, title: h.title, kind: 'timeline', taskId: h.taskId })
+      }
+    }
+    // 3. 用户待办
+    for (const t of userTodos.value) {
+      if (!map[t.date]) map[t.date] = []
+      map[t.date].push({ id: t.id, date: t.date, title: t.title, kind: 'todo' })
+    }
+    return map
+  })
+
+  const scheduleEventsForSelected = computed<ScheduleEvent[]>(() =>
+    scheduleEvents.value[scheduleSelectedDate.value] ?? [],
+  )
+
+  const scheduleDatesWithEvents = computed(() => new Set(Object.keys(scheduleEvents.value)))
+
   // ── 模板（localStorage）──
   const templates = computed(() => { void _kvRev.value; return kv.loadTemplates() })
   function saveTemplateFromCurrentWorkItem(name: string) {
@@ -894,6 +946,37 @@ export const useCockpitStore = defineStore('cockpit', () => {
   }
   function openTemplateManager() { templateManagerOpen.value = true }
   function closeTemplateManager() { templateManagerOpen.value = false }
+
+  // ── 日程 ──
+  function openSchedule() {
+    scheduleOpen.value = true
+    const now = new Date()
+    scheduleViewYear.value = now.getFullYear()
+    scheduleViewMonth.value = now.getMonth()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    scheduleSelectedDate.value =
+      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    userTodos.value = kv.loadUserTodos()
+  }
+  function closeSchedule() { scheduleOpen.value = false }
+  function setScheduleDate(d: string) { scheduleSelectedDate.value = d }
+  function navigateScheduleMonth(delta: number) {
+    let m = scheduleViewMonth.value + delta
+    let y = scheduleViewYear.value
+    if (m < 0) { m = 11; y-- }
+    else if (m > 11) { m = 0; y++ }
+    scheduleViewMonth.value = m
+    scheduleViewYear.value = y
+  }
+  function addUserTodo(date: string, title: string, note?: string) {
+    const todo: UserTodo = { id: 'todo-' + Date.now(), date, title, note, createdAt: Date.now() }
+    userTodos.value.push(todo)
+    kv.saveUserTodos(userTodos.value)
+  }
+  function removeUserTodo(id: string) {
+    userTodos.value = userTodos.value.filter(t => t.id !== id)
+    kv.saveUserTodos(userTodos.value)
+  }
 
   // ── 附件 ──
   const taskAttachments = ref<Record<string, any[]>>({})
@@ -957,6 +1040,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,
     taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment,
+    // 日程
+    scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth, userTodos,
+    scheduleEvents, scheduleEventsForSelected, scheduleDatesWithEvents,
+    openSchedule, closeSchedule, setScheduleDate, navigateScheduleMonth,
+    addUserTodo, removeUserTodo,
 
   }
 })

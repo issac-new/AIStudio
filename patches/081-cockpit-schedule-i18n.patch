@@ -1,0 +1,48 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index efcc5613..c783e408 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -342,6 +342,19 @@ export default {
+     templateCount: '{n} templates',
+     relationA2A: 'A2A',
+     relationA2H: 'A2H',
++    saveDraft: 'Save Draft',
++    schedule: 'Schedule',
++    scheduleEvents: 'Events',
++    scheduleEmpty: 'No events today',
++    scheduleAddTodo: 'Add todo',
++    scheduleTodoPlaceholder: 'What needs to be done…',
++    today: 'Today',
++    search: 'Search tasks, spaces, agents…',
++    actionApprove: 'Approve',
++    actionDecide: 'Decide',
++    actionSupplement: 'Supplement',
++    actionEvaluate: 'Evaluate',
++    actionDelegate: 'Delegate',
+   },
+ 
+   runtimeVersions: {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index b88b6e96..4f6aef65 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -340,6 +340,19 @@ export default {
+     templateCount: '{n} 个模板',
+     relationA2A: 'A2A',
+     relationA2H: 'A2H',
++    saveDraft: '保存草稿',
++    schedule: '日程',
++    scheduleEvents: '日程',
++    scheduleEmpty: '当天无日程',
++    scheduleAddTodo: '添加待办',
++    scheduleTodoPlaceholder: '待办事项…',
++    today: '今日',
++    search: '搜索任务、空间、Agent…',
++    actionApprove: '审批',
++    actionDecide: '决策',
++    actionSupplement: '补充',
++    actionEvaluate: '评估',
++    actionDelegate: '委派',
+   },
+ 
+   runtimeVersions: {

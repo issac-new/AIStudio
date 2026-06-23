@@ -2,7 +2,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   loadDraft, saveDraft, clearDraft, loadTemplates, saveTemplates,
-  type DraftWorkItem, type A2uiTemplate,
+  loadUserTodos, saveUserTodos,
+  type DraftWorkItem, type A2uiTemplate, type UserTodo,
 } from '@/custom/cockpit/store/cockpit-kv'
 
 // 内存 storage polyfill：vitest 3.x jsdom 默认 stub localStorage，手动装回
@@ -74,5 +75,26 @@ describe('templates', () => {
     saveTemplates(tpls)
     const loaded = loadTemplates()
     expect(loaded[0].score).toBe(4)
+  })
+})
+
+describe('user todos', () => {
+  it('loadUserTodos returns [] when absent', () => {
+    expect(loadUserTodos()).toEqual([])
+  })
+
+  it('save/load roundtrip', () => {
+    const todos = [
+      { id: 'todo-1', date: '2026-06-23', title: '与团队同步', note: '下午3点', createdAt: Date.now() },
+    ]
+    saveUserTodos(todos)
+    expect(loadUserTodos()).toEqual(todos)
+  })
+
+  it('save failure is swallowed', () => {
+    const orig = Storage.prototype.setItem
+    Storage.prototype.setItem = () => { throw new DOMException('quota') }
+    expect(() => saveUserTodos([{ id: 'x', date: '2026-06-23', title: 'x', createdAt: 0 }])).not.toThrow()
+    Storage.prototype.setItem = orig
   })
 })
