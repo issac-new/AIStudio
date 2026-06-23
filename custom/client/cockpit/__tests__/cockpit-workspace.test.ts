@@ -147,7 +147,9 @@ describe('CockpitWorkspace', () => {
   it('submitting via store posts comment + clears draft', async () => {
     const s = seed()
     await s.submitWorkItem()
-    expect(addComment).toHaveBeenCalledWith('t1', { body: expect.stringContaining('[决策:conditional]') })
+    expect(addComment).toHaveBeenCalled()
+    expect(addComment.mock.calls[0][0]).toBe('t1')
+    expect(addComment.mock.calls[0][1].body).toContain('[决策:conditional]')
     expect(s.workItemForSelectedTask).toBeNull()
   })
 })

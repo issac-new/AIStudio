@@ -575,16 +575,85 @@ export const useCockpitStore = defineStore('cockpit', () => {
     bumpKv()
   }
 
+  // ── Area 2 草稿暂存方法（不调用 API，仅写 localStorage）──
+  function setPendingAssignee(profile: string | null) {
+    const id = selectedTaskId.value
+    if (!id) return
+    kv.saveDraft(id, { pendingAssignee: profile })
+    bumpKv()
+  }
+  function setPendingPriority(p: number) {
+    const id = selectedTaskId.value
+    if (!id) return
+    kv.saveDraft(id, { pendingPriority: p })
+    bumpKv()
+  }
+  function setPendingBody(body: string) {
+    const id = selectedTaskId.value
+    if (!id) return
+    kv.saveDraft(id, { pendingBody: body })
+    bumpKv()
+  }
+  function addPendingLink(link: kv.PendingLink) {
+    const id = selectedTaskId.value
+    if (!id) return
+    const cur = kv.loadDraft(id)
+    const adds = cur?.pendingLinkAdds ?? []
+    if (!adds.some(l => l.parent === link.parent && l.child === link.child)) {
+      kv.saveDraft(id, { pendingLinkAdds: [...adds, link] })
+      bumpKv()
+    }
+  }
+  function removePendingLink(link: kv.PendingLink) {
+    const id = selectedTaskId.value
+    if (!id) return
+    const cur = kv.loadDraft(id)
+    const removes = cur?.pendingLinkRemoves ?? []
+    if (!removes.some(l => l.parent === link.parent && l.child === link.child)) {
+      kv.saveDraft(id, { pendingLinkRemoves: [...removes, link] })
+      bumpKv()
+    }
+  }
+
   async function submitWorkItem() {
     const id = selectedTaskId.value
     const draft = id ? kv.loadDraft(id) : null
     if (!id || !draft) return
+    const board = boardSlugOf(id)
+    const boardOpts = board ? { board } : undefined
+    // 收集所有待执行操作，并发提交
+    const ops: Promise<unknown>[] = []
+    // 1. Area 2 字段变更：patchTask（仅在草稿中有 pending 字段时）
+    const patch: kanbanApi.KanbanTaskPatch = {}
+    if (draft.pendingAssignee !== undefined) patch.assignee = draft.pendingAssignee
+    if (draft.pendingPriority !== undefined) patch.priority = draft.pendingPriority
+    if (draft.pendingBody !== undefined) patch.body = draft.pendingBody
+    if (Object.keys(patch).length) {
+      ops.push(kanbanApi.patchTask(id, patch, boardOpts))
+    }
+    // 2. 父子关联变更
+    for (const link of draft.pendingLinkAdds ?? []) {
+      ops.push(kanbanApi.linkTasks({ parent_id: link.parent, child_id: link.child }, boardOpts))
+    }
+    for (const link of draft.pendingLinkRemoves ?? []) {
+      ops.push(kanbanApi.unlinkTasks({ parent_id: link.parent, child_id: link.child }, boardOpts))
+    }
+    // 3. 始终提交决策评论
     const text = `[决策:${draft.decision}] 风险:${draft.riskTags.join(',')} ${draft.opinion}`.trim()
-    await kanbanApi.addComment(id, { body: text })
+    ops.push(kanbanApi.addComment(id, { body: text }, boardOpts))
+    // 并发执行，单个失败不阻塞其他
+    await Promise.allSettled(ops)
     kv.clearDraft(id)
     bumpKv()
     delete _detailCache.value[id]
     await loadTaskDetail(id)
+    // 刷新附件列表
+    if (taskAttachments.value[id]) {
+      const newVal = { ...taskAttachments.value }
+      delete newVal[id]
+      taskAttachments.value = newVal
+      loadAttachments(id).catch(() => {})
+    }
   }
 
   // ── 频道（聊天精简壳）──
@@ -818,6 +887,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     toggleCollapsed, toggleMidTop, toggleMidBottom, toggleTimelineActor, toggleFilter, setDateRangeFilter, clearDateRangeFilter, runSearch, clearSearch, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
     updateWorkItem, toggleRiskTag, submitWorkItem, autoSaveDraft,
+    setPendingAssignee, setPendingPriority, setPendingBody, addPendingLink, removePendingLink,
     selectChannel, sendMessage, disconnectOnUnmount,
     openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
     focusOnTaskFromAttention, focusOnTimelineNode, clearAttentionFilter,

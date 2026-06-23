@@ -4,12 +4,11 @@ import { useCockpitStore, type WorkDecision } from '@/custom/cockpit/store/cockp
 import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import CockpitFileTree from './CockpitFileTree.vue'
-import * as kanbanApi from '@/api/hermes/kanban'
 
 const store = useCockpitStore()
 const kanbanStore = useKanbanStore()
 const { t } = useI18n()
-const emit = defineEmits<{ (e: 'submit'): void }>()
+defineEmits<{ (e: 'submit'): void }>()
 
 // ── 区域1: Task Header ──
 const selectedTask = computed(() => store.selectedTask)
@@ -20,54 +19,94 @@ const taskSummary = computed(() => {
   return cache?.latest_summary ?? ''
 })
 
-// ── 区域2: Kanban 详情字段 ──
-const attachments = computed(() => {
-  const id = store.selectedTaskId
-  if (!id) return []
-  return store.taskAttachments[id] ?? []
-})
+// ── 区域2: Kanban 详情字段（暂存草稿模式）──
 const detailCache = computed(() => {
   const id = store.selectedTaskId
   if (!id) return null
   return (store as any)._detailCache?.value?.[id] ?? null
 })
+const workItem = computed(() => store.workItemForSelectedTask)
+
+// 当前生效值（草稿优先，回退到 detail）
+const currentAssignee = computed(() => {
+  const draft = workItem.value
+  if (draft?.pendingAssignee !== undefined) return draft.pendingAssignee || '—'
+  return (selectedTask.value as any)?.assignee || '—'
+})
+const currentPriority = computed(() => {
+  const draft = workItem.value
+  if (draft?.pendingPriority !== undefined) return draft.pendingPriority
+  return (selectedTask.value as any)?.priority ?? 0
+})
+const currentBody = computed(() => {
+  const draft = workItem.value
+  if (draft?.pendingBody !== undefined) return draft.pendingBody
+  return (selectedTask.value as any)?.body ?? ''
+})
+
+// 父子任务（detail 提供原始列表 + 草稿中的待增删）
 const parentIds = computed(() => detailCache.value?.parents ?? [])
 const childIds = computed(() => detailCache.value?.children ?? [])
+const pendingLinkAdds = computed(() => workItem.value?.pendingLinkAdds ?? [])
+const pendingLinkRemoves = computed(() => workItem.value?.pendingLinkRemoves ?? [])
+
+function isLinkPendingRemove(parent: string, child: string): boolean {
+  return pendingLinkRemoves.value.some(l => l.parent === parent && l.child === child)
+}
+
+const newParentId = ref('')
+const newChildId = ref('')
+
+// Assignee 选择（暂存到草稿）
 const assigneeOptions = computed(() => {
   return (kanbanStore.assignees ?? []).map((a: string) => ({ label: a, value: a }))
 })
-const newAssignee = ref('')
-const descDraft = ref('')
+function onAssigneeChange(e: Event) {
+  const v = (e.target as HTMLSelectElement).value
+  store.setPendingAssignee(v || null)
+}
 
-watch(() => store.selectedTaskId, (id) => {
-  newAssignee.value = ''
-  const task = store.selectedTask
-  descDraft.value = (task as any)?.body ?? ''
+// Priority 调整（暂存到草稿）
+function onPriorityDelta(delta: number) {
+  const np = Math.max(0, currentPriority.value + delta)
+  store.setPendingPriority(np)
+}
+
+// Description 编辑（暂存到草稿）
+function onBodyInput(e: Event) {
+  store.setPendingBody((e.target as HTMLTextAreaElement).value)
+}
+
+// 父子关联调整（暂存到草稿）
+function onRemoveParent(pid: string) {
+  const tid = store.selectedTaskId
+  if (!tid) return
+  store.removePendingLink({ parent: pid, child: tid })
+}
+function onRemoveChild(cid: string) {
+  const tid = store.selectedTaskId
+  if (!tid) return
+  store.removePendingLink({ parent: tid, child: cid })
+}
+function onAddParent() {
+  const tid = store.selectedTaskId
+  if (!tid || !newParentId.value.trim()) return
+  store.addPendingLink({ parent: newParentId.value.trim(), child: tid })
+  newParentId.value = ''
+}
+function onAddChild() {
+  const tid = store.selectedTaskId
+  if (!tid || !newChildId.value.trim()) return
+  store.addPendingLink({ parent: tid, child: newChildId.value.trim() })
+  newChildId.value = ''
+}
+
+// 附件（即时上传/删除）
+const attachments = computed(() => {
+  const id = store.selectedTaskId
+  if (!id) return []
+  return store.taskAttachments[id] ?? []
 })
-
-async function handleAssign() {
-  const taskId = store.selectedTaskId
-  if (!taskId || !newAssignee.value) return
-  try {
-    await kanbanStore.assignTask(taskId, newAssignee.value)
-    newAssignee.value = ''
-  } catch { /* api 错误静默 */ }
-}
-
-async function handlePriorityChange(delta: number) {
-  const task = selectedTask.value
-  if (!task) return
-  const cur = (task as any).priority ?? 0
-  const np = Math.max(0, cur + delta)
-  try {
-    await kanbanApi.updateTaskPriority?.(task.id, np)
-  } catch { /* api 错误静默 */ }
-}
-
-function navigateToTask(taskId: string) {
-  store.selectTask(taskId)
-}
-
 function onFileSelected(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -75,6 +114,16 @@ function onFileSelected(e: Event) {
   store.uploadAttachment(store.selectedTaskId, file)
   input.value = ''
 }
+
+function navigateToTask(taskId: string) {
+  store.selectTask(taskId)
+}
+
+// 任务切换时重置输入框
+watch(() => store.selectedTaskId, () => {
+  newParentId.value = ''
+  newChildId.value = ''
+})
 
 // ── 区域3: A2UI ──
 interface DecisionOption {
@@ -90,8 +139,6 @@ const decisions: DecisionOption[] = [
 ]
 
 const ALL_TAGS = ['concurrency', 'test-gap', 'performance', 'compatibility']
-
-const workItem = computed(() => store.workItemForSelectedTask)
 const hasTask = computed(() => !!store.selectedTask)
 const isReadOnly = computed(() => store.archivedMode)
 
@@ -116,12 +163,12 @@ function formatFileSize(bytes: number): string {
           </div>
         </div>
 
-        <!-- ═══ AREA 2: Kanban Detail Fields ═══ -->
+        <!-- ═══ AREA 2: Kanban Detail Fields（暂存草稿模式）═══ -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.assignee') }}</label>
           <div class="cockpit-workspace__field-row">
-            <span class="cockpit-workspace__field-val">{{ (selectedTask as any)?.assignee || '—' }}</span>
-            <select v-model="newAssignee" class="cockpit-workspace__select" @change="handleAssign">
+            <span class="cockpit-workspace__field-val">{{ currentAssignee }}</span>
+            <select class="cockpit-workspace__select" value="" @change="onAssigneeChange">
               <option value="" disabled>{{ t('cockpit.selectAssignee') }}</option>
               <option v-for="opt in assigneeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
@@ -131,32 +178,58 @@ function formatFileSize(bytes: number): string {
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.priority') }}</label>
           <div class="cockpit-workspace__field-row">
-            <span class="cockpit-workspace__field-val">{{ 'P' + ((selectedTask as any)?.priority ?? '—') }}</span>
-            <button type="button" class="cockpit-workspace__mini-btn" @click="handlePriorityChange(-1)">−</button>
-            <button type="button" class="cockpit-workspace__mini-btn" @click="handlePriorityChange(1)">+</button>
+            <span class="cockpit-workspace__field-val">{{ 'P' + currentPriority }}</span>
+            <button type="button" class="cockpit-workspace__mini-btn" @click="onPriorityDelta(-1)">−</button>
+            <button type="button" class="cockpit-workspace__mini-btn" @click="onPriorityDelta(1)">+</button>
           </div>
         </div>
 
+        <!-- 父任务（可调整关联） -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.parentTasks') }}</label>
           <div class="cockpit-workspace__field-row">
             <template v-if="parentIds.length">
-              <a v-for="pid in parentIds" :key="pid" class="cockpit-workspace__task-link" @click="navigateToTask(pid)">{{ pid }}</a>
+              <span v-for="pid in parentIds" :key="pid"
+                class="cockpit-workspace__task-link"
+                :class="{ 'is-pending-remove': isLinkPendingRemove(pid, store.selectedTaskId ?? '') }">
+                <a @click="navigateToTask(pid)">{{ pid }}</a>
+                <button type="button" class="cockpit-workspace__link-del" @click="onRemoveParent(pid)">✕</button>
+              </span>
             </template>
             <span v-else class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</span>
           </div>
+          <div class="cockpit-workspace__link-add">
+            <input v-model="newParentId" class="cockpit-workspace__link-input" :placeholder="t('cockpit.parentIdPlaceholder')" @keydown.enter="onAddParent">
+            <button type="button" class="cockpit-workspace__link-add-btn" @click="onAddParent">+ {{ t('cockpit.add') }}</button>
+          </div>
         </div>
 
+        <!-- 子任务（可调整关联） -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.childTasks') }}</label>
           <div class="cockpit-workspace__field-row">
             <template v-if="childIds.length">
-              <a v-for="cid in childIds" :key="cid" class="cockpit-workspace__task-link" @click="navigateToTask(cid)">{{ cid }}</a>
+              <span v-for="cid in childIds" :key="cid"
+                class="cockpit-workspace__task-link"
+                :class="{ 'is-pending-remove': isLinkPendingRemove(store.selectedTaskId ?? '', cid) }">
+                <a @click="navigateToTask(cid)">{{ cid }}</a>
+                <button type="button" class="cockpit-workspace__link-del" @click="onRemoveChild(cid)">✕</button>
+              </span>
             </template>
             <span v-else class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</span>
           </div>
+          <div class="cockpit-workspace__link-add">
+            <input v-model="newChildId" class="cockpit-workspace__link-input" :placeholder="t('cockpit.childIdPlaceholder')" @keydown.enter="onAddChild">
+            <button type="button" class="cockpit-workspace__link-add-btn" @click="onAddChild">+ {{ t('cockpit.add') }}</button>
+          </div>
         </div>
 
+        <!-- 待提交关联变更提示 -->
+        <div v-if="pendingLinkAdds.length || pendingLinkRemoves.length" class="cockpit-workspace__pending-hint">
+          ⏳ {{ pendingLinkAdds.length + pendingLinkRemoves.length }} {{ t('cockpit.pendingLinksHint') }}
+        </div>
+
+        <!-- 附件（即时上传/删除） -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.attachments') }}</label>
           <div class="cockpit-workspace__attach-list">
@@ -173,11 +246,12 @@ function formatFileSize(bytes: number): string {
           </div>
         </div>
 
+        <!-- Description（暂存草稿） -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.description') }}</label>
-          <textarea class="cockpit-workspace__textarea" v-model="descDraft"
+          <textarea class="cockpit-workspace__textarea" :value="currentBody"
             :placeholder="t('cockpit.descriptionPlaceholder')"
-            @input="store.updateWorkItem({ opinion: ($event.target as HTMLTextAreaElement).value })" />
+            @input="onBodyInput" />
         </div>
 
         <!-- ═══ AREA 3: A2UI Suggestions ═══ -->
@@ -221,14 +295,6 @@ function formatFileSize(bytes: number): string {
           <textarea class="cockpit-workspace__textarea"
             :value="workItem.opinion"
             @input="store.updateWorkItem({ opinion: ($event.target as HTMLTextAreaElement).value })" />
-        </div>
-
-        <!-- 修改文件列表 -->
-        <div v-if="workItem?.modifiedFiles?.length" class="cockpit-workspace__section">
-          <label class="cockpit-workspace__section-title">{{ t('cockpit.modified') || 'Modified' }}</label>
-          <div class="cockpit-workspace__files">
-            <span v-for="f in workItem.modifiedFiles" :key="f" class="cockpit-workspace__file">{{ f }}</span>
-          </div>
         </div>
       </div>
       <div v-else class="cockpit-workspace__empty">{{ t('cockpit.noTaskSelected') }}</div>
@@ -274,9 +340,19 @@ function formatFileSize(bytes: number): string {
 .cockpit-workspace__mini-btn { width: 22px; height: 22px; padding: 0; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
-.cockpit-workspace__task-link { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent-primary); cursor: pointer; background: var(--bg-secondary); padding: 2px 6px; border-radius: 3px;
-  &:hover { text-decoration: underline; }
+.cockpit-workspace__task-link { font-family: ui-monospace, monospace; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 2px 6px; border-radius: 3px;
+  a { color: var(--accent-primary); cursor: pointer; &:hover { text-decoration: underline; } }
+  &.is-pending-remove { opacity: 0.4; text-decoration: line-through; }
 }
+.cockpit-workspace__link-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 10px; padding: 0 1px;
+  &:hover { color: var(--error); }
+}
+.cockpit-workspace__link-add { display: flex; gap: 6px; margin-top: 6px; }
+.cockpit-workspace__link-input { flex: 1; font-family: ui-monospace, monospace; font-size: 11px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); }
+.cockpit-workspace__link-add-btn { font-family: inherit; font-size: 11px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+  &:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+}
+.cockpit-workspace__pending-hint { font-size: 11px; color: var(--warning); background: rgba(var(--warning-rgb), 0.08); padding: 6px 10px; border-radius: 6px; margin-bottom: 12px; }
 .cockpit-workspace__attach-list { display: flex; flex-direction: column; gap: 4px; }
 .cockpit-workspace__attach-item { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 4px; background: var(--bg-secondary); font-size: 12px; }
 .cockpit-workspace__attach-name { font-family: ui-monospace, monospace; color: var(--text-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; }
@@ -288,8 +364,6 @@ function formatFileSize(bytes: number): string {
   &:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
 }
 .cockpit-workspace__file-input { display: none; }
-.cockpit-workspace__files { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.cockpit-workspace__file { font-family: ui-monospace, monospace; font-size: 10px; background: var(--bg-secondary); padding: 2px 7px; border-radius: 3px; color: var(--text-secondary); }
 
 /* AREA 3: A2UI */
 .cockpit-workspace__sub { font-size: 10px; color: var(--text-muted); font-weight: 400; margin-left: 6px; }

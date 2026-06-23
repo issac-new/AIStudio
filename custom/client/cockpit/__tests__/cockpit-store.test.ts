@@ -264,7 +264,7 @@ describe('cockpit store 工作项 localStorage 草稿', () => {
     await s.bootstrap()
     s.updateWorkItem({ decision: 'approve', riskTags: ['x'], opinion: '好' })
     await s.submitWorkItem()
-    expect(addComment).toHaveBeenCalledWith('t1', { body: expect.stringContaining('[决策:approve]') })
+    expect(addComment).toHaveBeenCalledWith('t1', { body: expect.stringContaining('[决策:approve]') }, expect.anything())
     expect(s.workItemForSelectedTask).toBeNull()
   })
 

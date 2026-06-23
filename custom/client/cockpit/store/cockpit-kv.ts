@@ -1,5 +1,11 @@
 export type WorkDecision = 'conditional' | 'reject' | 'approve'
 
+/** 待提交的父子关联变更（草稿态） */
+export interface PendingLink {
+  parent: string
+  child: string
+}
+
 export interface DraftWorkItem {
   id: string
   taskId: string
@@ -8,6 +14,12 @@ export interface DraftWorkItem {
   opinion: string
   modifiedFiles: string[]
   score?: number
+  // ── Area 2 待提交改动（仅在用户改动时存在，提交后清除）──
+  pendingAssignee?: string | null    // 待变更的 assignee（null=清空）
+  pendingPriority?: number           // 待变更的 priority
+  pendingBody?: string               // 待变更的 description（任务 body）
+  pendingLinkAdds?: PendingLink[]    // 待新增的父子关联
+  pendingLinkRemoves?: PendingLink[] // 待移除的父子关联
 }
 
 export interface A2uiTemplate {
