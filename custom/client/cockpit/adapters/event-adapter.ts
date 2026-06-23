@@ -84,11 +84,22 @@ function fromEvent(taskId: string, e: KanbanEvent): CockpitEvent {
 }
 
 function fromRun(taskId: string, r: KanbanRun): CockpitEvent {
+  // what 显示：status + outcome + summary（截断），让节点信息更丰富
+  const parts: string[] = [`[${r.status}]`]
+  if (r.outcome) parts.push(r.outcome)
+  if (r.summary) parts.push(trunc(r.summary, 60))
+  const whatText = parts.join(' ')
   return {
     id: `evt-run-${r.id}`,
     taskId, actor: r.profile ?? 'system', kind: 'A2A',
-    what: r.outcome ? `执行：${r.outcome}` : '执行',
-    fullText: [`执行${r.outcome ? `：${r.outcome}` : ''}`, r.summary ? `摘要：${r.summary}` : '', r.error ? `错误：${r.error}` : ''].filter(Boolean).join('\n'),
+    what: whatText,
+    fullText: [
+      `状态：${r.status}`,
+      r.outcome ? `结果：${r.outcome}` : '',
+      r.summary ? `摘要：${r.summary}` : '',
+      r.error ? `错误：${r.error}` : '',
+      r.ended_at ? `耗时：${Math.round((toMs(r.ended_at) - toMs(r.started_at)) / 1000)}秒` : '',
+    ].filter(Boolean).join('\n'),
     when: formatWhen(toMs(r.started_at)),
     pending: r.status === 'running',
     ts: toMs(r.started_at),
