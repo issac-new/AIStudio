@@ -27,12 +27,6 @@ const { t } = useI18n()
       @click="store.enterTerminal()"
     >⌘ {{ t('cockpit.modeTerm') }}</button>
     <span class="cockpit-mode-bar__spacer" />
-    <button
-      type="button"
-      class="cockpit-mode-bar__max"
-      :title="store.maximized ? t('cockpit.restore') : t('cockpit.maximize')"
-      @click="store.toggleMaximized()"
-    >{{ store.maximized ? '🗗' : '⛶' }}</button>
   </div>
 </template>
 
@@ -48,9 +42,4 @@ const { t } = useI18n()
 .cockpit-mode-bar__count { font-size: 9px; color: var(--text-muted); background: var(--bg-secondary); border-radius: 8px; padding: 0 5px; }
 .is-on .cockpit-mode-bar__count { background: var(--accent-primary); color: var(--text-on-accent); }
 .cockpit-mode-bar__spacer { flex: 1; }
-.cockpit-mode-bar__max {
-  width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent;
-  color: var(--text-muted); cursor: pointer; font-size: 14px;
-  &:hover { background: var(--bg-secondary); color: var(--text-primary); }
-}
 </style>
