@@ -37,6 +37,14 @@ vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({ useMatrixClientSto
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [] }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({ useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }) }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+// mock echarts（jsdom 无法真实渲染 Canvas）
+vi.mock('echarts/core', () => ({
+  use: vi.fn(),
+  init: vi.fn(() => ({ setOption: vi.fn(), on: vi.fn(), resize: vi.fn(), dispose: vi.fn() })),
+}))
+vi.mock('echarts/charts', () => ({ GraphChart: {} }))
+vi.mock('echarts/components', () => ({ TooltipComponent: {} }))
+vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }))
 
 import CockpitCollabMap from '@/custom/cockpit/components/CockpitCollabMap.vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -48,7 +56,7 @@ const kt = (over: Record<string, any> = {}) => ({
   result: null, skills: null, latest_summary: null, ...over,
 })
 
-describe('CockpitCollabMap (mermaid)', () => {
+describe('CockpitCollabMap (echarts)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     mockKanbanTasks.splice(0, mockKanbanTasks.length)
@@ -72,10 +80,11 @@ describe('CockpitCollabMap (mermaid)', () => {
     return s
   }
 
-  it('renders canvas container when task selected', async () => {
+  it('renders chart container when task selected', async () => {
     await seed()
     const w = mount(CockpitCollabMap)
-    expect(w.find('.cockpit-map__canvas').exists()).toBe(true)
+    expect(w.find('.cockpit-map__chart').exists()).toBe(true)
+    w.unmount()
   })
 
   it('store topology has center + ancestor + descendant + person + channel', async () => {
@@ -115,11 +124,11 @@ describe('CockpitCollabMap (mermaid)', () => {
     expect(s.channelsForSelectedTask.length).toBeGreaterThan(0)
   })
 
-  it('renders canvas element when task selected', async () => {
+  it('echarts init called on mount', async () => {
     await seed()
+    const echartsCore = (await import('echarts/core'))
     const w = mount(CockpitCollabMap)
-    expect(w.find('.cockpit-map__canvas').exists()).toBe(true)
-    expect(w.find('canvas').exists()).toBe(true)
+    expect(echartsCore.init).toHaveBeenCalled()
     w.unmount()
   })
 })
