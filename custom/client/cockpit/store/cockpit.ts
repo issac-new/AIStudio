@@ -176,11 +176,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
         const toTs = new Date(f.dateRange.to + 'T23:59:59').getTime()
         if (t.createdAt > toTs) dateOk = false
       }
+      const searchOk = !searchQuery.value.trim() || searchResult.value.has(t.id)
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
         && okArr(f.tenants, t.tenant ?? '(未指定)')
         && okArr(f.boardSlugs, t.boardSlug)
         && dateOk
+        && searchOk
     }),
   )
 
@@ -460,6 +462,27 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function clearDateRangeFilter() {
     filters.value = { ...filters.value, dateRange: { from: null, to: null } }
   }
+  function runSearch(q: string) {
+    searchQuery.value = q
+    if (_searchTimer) { clearTimeout(_searchTimer); _searchTimer = undefined }
+    if (!q.trim()) return
+    _searchTimer = setTimeout(async () => {
+      const key = q.trim()
+      const cached = _sessionSearchCache.value[key]
+      if (cached && (Date.now() - cached.ts < 5 * 60 * 1000)) return // 缓存 5min 未过期
+      if (_sessionSearching.value) return
+      _sessionSearching.value = true
+      try {
+        const results = await searchHermesSessions(key)
+        _sessionSearchCache.value = { ..._sessionSearchCache.value, [key]: { ts: Date.now(), results } }
+      } catch { /* 静默：退化为仅本地匹配 */ }
+      finally { _sessionSearching.value = false }
+    }, 300)
+  }
+  function clearSearch() {
+    searchQuery.value = ''
+    if (_searchTimer) { clearTimeout(_searchTimer); _searchTimer = undefined }
+  }
   function setWorkspaceMode(mode: WorkspaceMode) { workspaceMode.value = mode }
   function toggleMaximized(col: ColumnKey) {
     // 独占式全屏：任一栏最大化时，其他栏取消
@@ -681,7 +704,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   return {
     // 派生态
     tasks, attention, attentionCount, selectedTask, selectedTaskId,
-    sortedTasks, filteredTasks, tasksByTenant, boards,
+    sortedTasks, filteredTasks, tasksByTenant, boards, searchResult,
     events, eventsForSelectedTask, eventsForTimeline, recentEventsForTimeline, recentEventsForSelectedTask,
     timelineActorFilter, timelineActorOptions,
     topologyForSelectedTask, relationsForSelectedTask,
@@ -689,7 +712,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     filesForSelectedTask, workItemForSelectedTask,
     filteredHistory, messagesForActiveChannel, templates,
     // 客户端态
-    filters, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
+    filters, searchQuery, _sessionSearching, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
     titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
     kanbanDetailOpen, kanbanDetailTask, detailExpanded,
@@ -697,7 +720,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
     // 方法
     bootstrap, selectTask, loadTaskDetail,
-    toggleCollapsed, toggleMidTop, toggleMidBottom, toggleTimelineActor, toggleFilter, setDateRangeFilter, clearDateRangeFilter, setWorkspaceMode, toggleMaximized,
+    toggleCollapsed, toggleMidTop, toggleMidBottom, toggleTimelineActor, toggleFilter, setDateRangeFilter, clearDateRangeFilter, runSearch, clearSearch, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
     updateWorkItem, toggleRiskTag, submitWorkItem,
     selectChannel, sendMessage, disconnectOnUnmount,
