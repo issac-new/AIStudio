@@ -35,10 +35,16 @@ const layout = computed(() => {
   const R = Math.max(60, baseR + Math.min(40, total * 4))
 
   const center = topo.nodes.find(n => n.kind === 'center')
-  // 节点框尺寸（根据 label 长度估算）
+  // 节点框尺寸（ctx 就绪时用 measureText 精确测量；否则用字符数估算）
   const nodeSize = (label: string, isCenter = false) => {
-    ctx!.font = isCenter ? 'bold 12px sans-serif' : '11px sans-serif'
-    const tw = ctx!.measureText(label).width
+    let tw: number
+    if (ctx) {
+      ctx.font = isCenter ? 'bold 12px sans-serif' : '11px sans-serif'
+      tw = ctx.measureText(label).width
+    } else {
+      // 估算：中文2宽，英文1宽（11px 字体下约 7px/中文，6px/英文）
+      tw = label.length * 7
+    }
     return { w: Math.min(isCenter ? 170 : 130, Math.max(50, tw + 20)), h: isCenter ? 30 : 24 }
   }
 
@@ -265,10 +271,17 @@ const hasTask = computed(() => !!store.selectedTask)
 // 数据变化时重绘
 watch(() => store.topologyForSelectedTask, () => draw(), { deep: true })
 watch(() => store.selectedTaskId, () => { view.value = { x: 0, y: 0, scale: 1 }; nextTick(draw) })
+// 任务首次就绪时强制重绘（确保 canvas 已 mount 后重绘一次）
+watch(hasTask, (v) => { if (v) nextTick(() => { resize(); draw() }) })
 
 onMounted(() => {
-  nextTick(() => {
+  // 用 requestAnimationFrame 确保父级 flex 布局完成后再测量尺寸
+  requestAnimationFrame(() => {
     resize()
+    // 二次 raf 兜底（某些布局需两帧才稳定）
+    requestAnimationFrame(() => {
+      if (cw < 50 || ch < 50) resize()
+    })
     if (wrapEl.value && typeof ResizeObserver !== 'undefined') {
       try {
         ro = new ResizeObserver(() => resize())
