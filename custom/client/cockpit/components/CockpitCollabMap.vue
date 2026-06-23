@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch, shallowRef } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, shallowRef, nextTick } from 'vue'
 import * as echarts from 'echarts/core'
 import { GraphChart } from 'echarts/charts'
 import { TooltipComponent } from 'echarts/components'
@@ -15,47 +15,141 @@ const { t } = useI18n()
 const chartEl = ref<HTMLElement | null>(null)
 const chart = shallowRef<echarts.ECharts | null>(null)
 
-// 图表数据：从 topology 构建 ECharts graph 所需的 nodes/links
-const chartOption = computed(() => {
-  const topo = store.topologyForSelectedTask
-  const colorMap: Record<string, string> = {
-    center: '#1a1a1a',
-    ancestor: '#555',
-    descendant: '#555',
-    person: '#888',
-    channel: '#333',
-    folded: '#bbb',
+// 画布参考尺寸（用于坐标计算；ECharts 会自适应容器）
+const BASE_W = 360
+const BASE_H = 240
+
+// 节点布局：中心居中，四方向分区延伸（layout:'none' 自定义坐标）
+function computePositions(topo: typeof store.topologyForSelectedTask): Record<string, { x: number; y: number }> {
+  const cx = BASE_W / 2
+  const cy = BASE_H / 2
+  const trunkLen = 75
+  const layerH = 55
+  const nodeHGap = 16
+  const sideGap = 100
+  const pos: Record<string, { x: number; y: number }> = {}
+
+  const center = topo.nodes.find(n => n.kind === 'center')
+  if (center) pos[center.id] = { x: cx, y: cy }
+
+  // 祖先：上方
+  const ancestors = topo.nodes.filter(n => n.kind === 'ancestor')
+  const ancDepths = new Map<number, typeof ancestors>()
+  for (const n of ancestors) {
+    if (!ancDepths.has(n.depth)) ancDepths.set(n.depth, [])
+    ancDepths.get(n.depth)!.push(n)
   }
-  const symbolSizeMap: Record<string, number> = {
-    center: 60,
-    ancestor: 46,
-    descendant: 46,
-    person: 40,
-    channel: 44,
-    folded: 36,
+  for (const [depth, list] of ancDepths) {
+    const totalW = list.length * 100 + (list.length - 1) * nodeHGap
+    let x = cx - totalW / 2
+    const yOff = trunkLen + (Math.abs(depth) - 1) * layerH
+    for (const n of list) {
+      pos[n.id] = { x: x + 50, y: cy - yOff }
+      x += 100 + nodeHGap
+    }
   }
 
+  // 后代：下方
+  const descendants = topo.nodes.filter(n => n.kind === 'descendant')
+  const descDepths = new Map<number, typeof descendants>()
+  for (const n of descendants) {
+    if (!descDepths.has(n.depth)) descDepths.set(n.depth, [])
+    descDepths.get(n.depth)!.push(n)
+  }
+  for (const [depth, list] of descDepths) {
+    const totalW = list.length * 100 + (list.length - 1) * nodeHGap
+    let x = cx - totalW / 2
+    const yOff = trunkLen + (depth - 1) * layerH
+    for (const n of list) {
+      pos[n.id] = { x: x + 50, y: cy + yOff }
+      x += 100 + nodeHGap
+    }
+  }
+
+  // 频道：左侧
+  topo.nodes.filter(n => n.kind === 'channel').forEach((n, i) => {
+    pos[n.id] = { x: cx - trunkLen - i * sideGap, y: cy }
+  })
+  // 人员：右侧
+  topo.nodes.filter(n => n.kind === 'person').forEach((n, i) => {
+    pos[n.id] = { x: cx + trunkLen + i * sideGap, y: cy }
+  })
+  // folded
+  const folded = topo.nodes.find(n => n.kind === 'folded')
+  if (folded) pos[folded.id] = { x: cx + 80, y: cy + 60 }
+  return pos
+}
+
+// 四维度样式配置（Pure Ink 风格：黑白灰 + 边框/线型/symbol 区分）
+const STYLE = {
+  center: {
+    itemStyle: { color: '#333', borderColor: '#1a1a1a', borderWidth: 3 },
+    label: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+    symbol: 'circle', symbolSize: 60,
+  },
+  ancestor: {
+    itemStyle: { color: '#fff', borderColor: '#555', borderWidth: 2.5 },
+    label: { color: '#333', fontSize: 12, fontWeight: '600' },
+    symbol: 'circle', symbolSize: 46,
+  },
+  descendant: {
+    itemStyle: { color: '#fff', borderColor: '#bbb', borderWidth: 1.5, borderType: 'dashed' },
+    label: { color: '#555', fontSize: 12, fontWeight: 'normal' },
+    symbol: 'diamond', symbolSize: 44,
+  },
+  channel: {
+    itemStyle: { color: '#f0f0f0', borderColor: '#333', borderWidth: 2 },
+    label: { color: '#333', fontSize: 12, fontWeight: 'bold' },
+    symbol: 'roundRect', symbolSize: 44,
+  },
+  person: {
+    itemStyle: { color: '#fff', borderColor: '#ccc', borderWidth: 1 },
+    label: { color: '#888', fontSize: 11, fontWeight: 'normal' },
+    symbol: 'circle', symbolSize: 38,
+  },
+  folded: {
+    itemStyle: { color: '#eee', borderColor: '#ddd', borderWidth: 1, borderType: 'dotted' },
+    label: { color: '#bbb', fontSize: 10 },
+    symbol: 'circle', symbolSize: 32,
+  },
+}
+
+// 连线样式：按节点类型组合
+function linkStyle(fromKind: string, toKind: string) {
+  // 垂直关系（ancestor↔center↔descendant）
+  if (fromKind === 'ancestor' || toKind === 'ancestor') {
+    return { color: '#999', width: 1.5, type: 'solid' as const }  // 实线
+  }
+  if (fromKind === 'descendant' || toKind === 'descendant') {
+    return { color: '#ccc', width: 1.5, type: 'dashed' as const }  // 虚线
+  }
+  // 水平关系（channel/person）
+  if (fromKind === 'channel' || toKind === 'channel') {
+    return { color: '#999', width: 1.5, type: 'dotted' as const }  // 点线
+  }
+  return { color: '#ddd', width: 1, type: 'solid' as const }  // 人员细线
+}
+
+// 图表数据
+const chartOption = computed(() => {
+  const topo = store.topologyForSelectedTask
+  if (!topo.nodes.length) return { series: [] }
+  const positions = computePositions(topo)
+  const nodeKindMap = new Map(topo.nodes.map(n => [n.id, n.kind]))
+
   const nodes = topo.nodes.map((n) => {
-    // 截断长 label（ECharts label 自带 overflow，但设宽度更稳）
-    const label = n.label.length > 18 ? n.label.slice(0, 17) + '…' : n.label
+    const label = n.label.length > 16 ? n.label.slice(0, 15) + '…' : n.label
+    const st = STYLE[n.kind] ?? STYLE.folded
+    const p = positions[n.id] ?? { x: BASE_W / 2, y: BASE_H / 2 }
     return {
       id: n.id,
       name: label,
-      symbolSize: symbolSizeMap[n.kind] ?? 40,
-      itemStyle: {
-        color: n.kind === 'folded' ? '#eee' : '#fff',
-        borderColor: colorMap[n.kind] ?? '#888',
-        borderWidth: n.focus ? 3 : 1.5,
-      },
-      label: {
-        show: true,
-        color: n.kind === 'center' ? '#1a1a1a' : '#333',
-        fontSize: n.kind === 'center' ? 14 : 12,
-        fontWeight: n.focus ? 'bold' : 'normal',
-        overflow: 'truncate',
-        width: 120,
-      },
-      // 自定义数据（点击时用）
+      x: p.x,
+      y: p.y,
+      symbol: st.symbol,
+      symbolSize: st.symbolSize,
+      itemStyle: st.itemStyle,
+      label: { ...st.label, show: true, overflow: 'truncate', width: 110 },
       _nodeKind: n.kind,
       _taskId: n.taskId,
       _targetTaskId: n.target?.taskId,
@@ -63,33 +157,30 @@ const chartOption = computed(() => {
     }
   })
 
-  const links = topo.relations.map((r) => ({
-    source: r.from,
-    target: r.to,
-    lineStyle: { color: '#ccc', width: 1.5, curveness: 0 },
-  }))
+  const links = topo.relations.map((r) => {
+    const fromKind = nodeKindMap.get(r.from) ?? ''
+    const toKind = nodeKindMap.get(r.to) ?? ''
+    return {
+      source: r.from,
+      target: r.to,
+      lineStyle: linkStyle(fromKind, toKind),
+    }
+  })
 
   return {
     tooltip: { show: false },
     series: [{
       type: 'graph',
-      layout: 'force',
-      roam: true,  // 内置 pan + zoom（不影响页面布局）
-      draggable: true,
-      force: {
-        repulsion: 220,     // 节点间排斥力（防遮挡）
-        edgeLength: [80, 160],  // 连线长度范围
-        gravity: 0.08,      // 向中心引力（防飞散）
-        layoutAnimation: true,
-      },
+      layout: 'none',      // 自定义坐标（四方向分区）
+      roam: true,           // 滚轮缩放 + 拖拽平移
+      draggable: false,     // 节点不可拖（固定分区布局）
       label: { show: true },
-      edgeSymbol: ['none', 'none'],
-      edgeSymbolSize: 0,
       emphasis: {
         focus: 'adjacency',
-        label: { fontSize: 14, fontWeight: 'bold' },
+        label: { fontSize: 13, fontWeight: 'bold' },
         lineStyle: { width: 2.5, color: '#666' },
       },
+      scaleLimit: { min: 0.5, max: 3 },
       data: nodes,
       links,
     }],
@@ -121,11 +212,27 @@ const hasTask = computed(() => !!store.selectedTask)
 // 数据变化时重渲染
 watch(chartOption, () => renderChart(), { deep: true })
 
+// hasTask 变 true 时（chartEl 从 v-if 渲染出来）初始化 ECharts
+watch(hasTask, (v, oldV) => {
+  if (v && !oldV) {
+    nextTick(() => initChart())
+  } else if (!v && chart.value) {
+    chart.value.dispose()
+    chart.value = null
+  }
+})
+
+function initChart() {
+  if (chart.value || !chartEl.value) return
+  chart.value = echarts.init(chartEl.value)
+  chart.value.on('click', onChartClick)
+  renderChart()
+}
+
 onMounted(() => {
-  if (chartEl.value) {
-    chart.value = echarts.init(chartEl.value)
-    chart.value.on('click', onChartClick)
-    if (hasTask.value) renderChart()
+  // 若 onMounted 时 hasTask 已为 true（chartEl 已渲染），直接 init
+  if (hasTask.value && chartEl.value) {
+    initChart()
   }
   window.addEventListener('resize', onResize)
 })
