@@ -67,4 +67,12 @@ describe('templates', () => {
     saveTemplates(tpls)
     expect(loadTemplates()).toEqual(tpls)
   })
+  it('template with score field saves and loads correctly', () => {
+    const tpls: A2uiTemplate[] = [
+      { id: 'tpl2', name: 'test', decision: 'approve', riskTags: [], opinion: '', modifiedFiles: [], score: 4 },
+    ]
+    saveTemplates(tpls)
+    const loaded = loadTemplates()
+    expect(loaded[0].score).toBe(4)
+  })
 })

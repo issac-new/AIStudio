@@ -17,6 +17,7 @@ export interface A2uiTemplate {
   riskTags: string[]
   opinion: string
   modifiedFiles: string[]
+  score?: number
 }
 
 const DRAFT_KEY = (taskId: string) => `cockpit:workitem:${taskId}`

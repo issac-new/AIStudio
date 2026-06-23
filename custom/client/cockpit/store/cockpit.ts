@@ -709,6 +709,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     list.push({
       id: 'tpl-' + Date.now(), name, decision: draft.decision,
       riskTags: [...draft.riskTags], opinion: draft.opinion, modifiedFiles: [...draft.modifiedFiles],
+      score: draft.score,
     })
     kv.saveTemplates(list)
     bumpKv()
@@ -722,7 +723,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     const tpl = kv.loadTemplates().find(t => t.id === templateId)
     const id = selectedTaskId.value
     if (!tpl || !id) return
-    kv.saveDraft(id, { decision: tpl.decision, riskTags: [...tpl.riskTags], opinion: tpl.opinion })
+    kv.saveDraft(id, { decision: tpl.decision, riskTags: [...tpl.riskTags], opinion: tpl.opinion, score: tpl.score })
     bumpKv()
     templateManagerOpen.value = false
   }

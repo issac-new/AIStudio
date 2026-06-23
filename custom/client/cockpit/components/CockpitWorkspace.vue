@@ -47,13 +47,10 @@ const isReadOnly = computed(() => store.archivedMode)
           {{ t('cockpit.basedOnTemplate', { tpl: templateName, n: templateDiffs }) }}
         </div>
 
-        <!-- 修改文件 diff 摘要 -->
-        <div class="cockpit-workspace__diff">
-          <div class="cockpit-workspace__diff-file">{{ workItem.modifiedFiles[0] ?? 'refresh.ts' }}</div>
-          <div class="cockpit-workspace__diff-ln cockpit-workspace__diff-ln--add"><span class="cockpit-workspace__diff-no">+42</span><span class="cockpit-workspace__diff-code">async function refresh() {</span></div>
-          <div class="cockpit-workspace__diff-ln cockpit-workspace__diff-ln--add"><span class="cockpit-workspace__diff-no">+43</span><span class="cockpit-workspace__diff-code">  const lock = await mutex()</span></div>
-          <div class="cockpit-workspace__diff-ln cockpit-workspace__diff-ln--del"><span class="cockpit-workspace__diff-no">-40</span><span class="cockpit-workspace__diff-code">  return token</span></div>
-          <div class="cockpit-workspace__diff-ln cockpit-workspace__diff-ln--add"><span class="cockpit-workspace__diff-no">+44</span><span class="cockpit-workspace__diff-code">  return newToken</span></div>
+        <!-- 修改文件列表（从 workItem 动态渲染）-->
+        <div class="cockpit-workspace__files">
+          <span class="cockpit-workspace__files-label">{{ t('cockpit.modified') || 'Modified' }}</span>
+          <span v-for="f in (workItem.modifiedFiles ?? [])" :key="f" class="cockpit-workspace__file">{{ f }}</span>
         </div>
 
         <!-- 决定 -->
@@ -178,15 +175,6 @@ const isReadOnly = computed(() => store.archivedMode)
   &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
 }
 
-.cockpit-workspace__diff { font-family: ui-monospace, monospace; font-size: 11px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin-bottom: 16px; }
-.cockpit-workspace__diff-file { font-size: 10px; color: var(--text-muted); padding: 6px 10px; border-bottom: 1px solid var(--border-light); background: var(--bg-secondary); }
-.cockpit-workspace__diff-ln { display: flex; }
-.cockpit-workspace__diff-no { width: 32px; text-align: right; padding: 3px 6px; color: var(--text-muted); background: var(--bg-secondary); flex-shrink: 0; font-size: 10px; user-select: none; }
-.cockpit-workspace__diff-code { padding: 3px 9px; white-space: pre; }
-.cockpit-workspace__diff-ln--add { background: rgba(var(--success-rgb, 46, 125, 50), 0.07); }
-.cockpit-workspace__diff-ln--add .cockpit-workspace__diff-code { color: var(--success); }
-.cockpit-workspace__diff-ln--del { background: rgba(var(--error-rgb), 0.07); }
-.cockpit-workspace__diff-ln--del .cockpit-workspace__diff-code { color: var(--error); }
 .cockpit-workspace__form.is-readonly .cockpit-workspace__body { opacity: 0.5; pointer-events: none; }
 .cockpit-workspace__score { display: flex; gap: 4px; }
 .cockpit-workspace__star { font-size: 20px; color: var(--border-color); cursor: pointer; border: none; background: none; font: inherit; padding: 0;
