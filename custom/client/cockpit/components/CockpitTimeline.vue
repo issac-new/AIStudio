@@ -9,6 +9,9 @@ const { t } = useI18n()
 const THRESHOLD = 4
 const expanded = ref(false)
 
+// 本地内容搜索
+const contentSearch = ref('')
+
 // 本地 actor filter（完全脱离 store 响应式，纯组件内控制）
 const localActorFilter = ref<string[]>([])
 
@@ -28,12 +31,22 @@ function toggleActor(actor: string) {
   }
 }
 
-// 组件内 filter 计算（依赖 localActorFilter + store.eventsForSelectedTask）
+// 事件内容搜索匹配（what / actor / kind / source / when）
+function matchEvent(e: any, q: string): boolean {
+  const fields = [e.what, e.actor, e.kind, e.source, e.when].filter(Boolean)
+  return fields.some(f => String(f).toLowerCase().includes(q))
+}
+
+// 组件内 filter 计算（依赖 localActorFilter + contentSearch + store.eventsForSelectedTask）
 const allFilteredEvents = computed(() => {
   const all = store.eventsForSelectedTask ?? []
   const f = localActorFilter.value
-  if (f.length === 0) return all
-  return all.filter(e => f.includes(e.actor))
+  const q = contentSearch.value.trim().toLowerCase()
+  return all.filter(e => {
+    if (f.length > 0 && !f.includes(e.actor)) return false
+    if (q && !matchEvent(e, q)) return false
+    return true
+  })
 })
 const recent = computed(() => {
   const all = allFilteredEvents.value
@@ -69,6 +82,17 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
   <div class="cockpit-timeline">
     <div class="cockpit-timeline__head">
       <span class="cockpit-timeline__title">{{ t('cockpit.timeline') }}</span>
+      <div class="cockpit-timeline__search">
+        <span class="cockpit-timeline__search-icon">🔍</span>
+        <input
+          type="text"
+          class="cockpit-timeline__search-input"
+          v-model="contentSearch"
+          placeholder="搜索事件..."
+          data-timeline-search
+        />
+        <button v-if="contentSearch" type="button" class="cockpit-timeline__search-clear" @click="contentSearch = ''">×</button>
+      </div>
     </div>
     <!-- actor 标签过滤（多选） -->
     <div v-if="hasTask && actorOptions.length" class="cockpit-timeline__actors">
@@ -118,7 +142,23 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
 
 <style scoped lang="scss">
 .cockpit-timeline { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.cockpit-timeline__head { padding: 8px 16px; }
+.cockpit-timeline__head { padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
+.cockpit-timeline__search { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; }
+.cockpit-timeline__search-icon {
+  position: absolute; left: 6px; font-size: 10px; color: var(--text-muted); pointer-events: none; line-height: 1;
+}
+.cockpit-timeline__search-input {
+  width: 100%; font-size: 11px; padding: 3px 22px 3px 22px;
+  border: 1px solid var(--border-color); border-radius: 10px;
+  background: var(--bg-card); color: var(--text-secondary); font-family: inherit; outline: none;
+  &::placeholder { color: var(--text-muted); opacity: 0.6; }
+  &:focus { border-color: var(--accent-primary); }
+}
+.cockpit-timeline__search-clear {
+  position: absolute; right: 4px; width: 16px; height: 16px; padding: 0;
+  border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 12px; line-height: 1;
+  &:hover { color: var(--text-primary); }
+}
 .cockpit-timeline__actors { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 16px 6px; }
 .cockpit-timeline__actor-chip {
   font-size: 10px; padding: 2px 8px; border-radius: 10px;
