@@ -1,0 +1,16 @@
+diff --git a/package.json b/package.json
+index cdb7ecce..6ff298c8 100644
+--- a/package.json
++++ b/package.json
+@@ -71,9 +71,11 @@
+     "@audio/decode-wav": "^1.2.0",
+     "@vscode/markdown-it-katex": "^1.1.2",
+     "adm-zip": "^0.5.17",
++    "echarts": "^6.1.0",
+     "eventsource": "^4.1.0",
+     "js-tiktoken": "^1.0.21",
+     "katex": "^0.17.0",
++    "matrix-js-sdk": "^41.8.0-rc.0",
+     "node-edge-tts": "^1.2.10",
+     "node-pty": "^1.1.0",
+     "socket.io": "^4.8.3",
