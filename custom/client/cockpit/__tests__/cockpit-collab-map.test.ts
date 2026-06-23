@@ -115,19 +115,11 @@ describe('CockpitCollabMap (mermaid)', () => {
     expect(s.channelsForSelectedTask.length).toBeGreaterThan(0)
   })
 
-  it('renders zoom control buttons', async () => {
+  it('renders canvas element when task selected', async () => {
     await seed()
     const w = mount(CockpitCollabMap)
-    expect(w.find('[data-canvas-zoom-in]').exists()).toBe(true)
-    expect(w.find('[data-canvas-zoom-out]').exists()).toBe(true)
-  })
-
-  it('zoom-in increases view scale', async () => {
-    await seed()
-    const w = mount(CockpitCollabMap)
-    const before = (w.vm as any).view.scale ?? 1
-    await w.find('[data-canvas-zoom-in]').trigger('click')
-    expect((w.vm as any).view.scale).toBeGreaterThan(before)
+    expect(w.find('.cockpit-map__canvas').exists()).toBe(true)
+    expect(w.find('canvas').exists()).toBe(true)
     w.unmount()
   })
 })

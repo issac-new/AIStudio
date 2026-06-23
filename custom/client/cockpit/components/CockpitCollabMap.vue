@@ -12,8 +12,8 @@ let ctx: CanvasRenderingContext2D | null = null
 let cw = 320
 let ch = 140
 
-// 视口变换（pan + zoom）
-const view = ref({ x: 0, y: 0, scale: 1 })
+// 视口变换（仅 pan，不缩放——避免影响页面布局）
+const view = ref({ x: 0, y: 0 })
 let dragging = false
 let lastX = 0, lastY = 0
 const hoverNode = ref<GraphNode | null>(null)
@@ -126,9 +126,8 @@ function draw() {
   if (!ctx || !canvasEl.value) return
   const c = canvasEl.value
   ctx.save()
-  ctx.clearRect(0, 0, c.width, c.height)
+  ctx.clearRect(0, 0, cw, ch)
   ctx.translate(view.value.x, view.value.y)
-  ctx.scale(view.value.scale, view.value.scale)
 
   const topo = store.topologyForSelectedTask
   const pos = layout.value
@@ -203,8 +202,8 @@ function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number,
 function hitTest(clientX: number, clientY: number): GraphNode | null {
   const c = canvasEl.value!
   const rect = c.getBoundingClientRect()
-  const x = (clientX - rect.left - view.value.x) / view.value.scale
-  const y = (clientY - rect.top - view.value.y) / view.value.scale
+  const x = clientX - rect.left - view.value.x
+  const y = clientY - rect.top - view.value.y
   const pos = layout.value
   for (const n of store.topologyForSelectedTask.nodes) {
     const p = pos[n.id]
@@ -236,12 +235,6 @@ function onMove(e: MouseEvent) {
   }
 }
 function onUp() { dragging = false; if (canvasEl.value) canvasEl.value.style.cursor = 'grab' }
-function onWheel(e: WheelEvent) {
-  e.preventDefault()
-  const delta = e.deltaY < 0 ? 0.1 : -0.1
-  view.value = { ...view.value, scale: Math.min(2.5, Math.max(0.5, view.value.scale + delta)) }
-  draw()
-}
 function onClick(e: MouseEvent) {
   const hit = hitTest(e.clientX, e.clientY)
   if (!hit || hit.kind === 'center' || hit.kind === 'folded') return
@@ -250,10 +243,6 @@ function onClick(e: MouseEvent) {
     const ch = store.channelsForSelectedTask.find(c => c.taskId === hit.taskId)
     if (ch) store.selectChannel(ch.id)
   }
-}
-function zoomBy(delta: number) {
-  view.value = { ...view.value, scale: Math.min(2.5, Math.max(0.5, view.value.scale + delta)) }
-  draw()
 }
 
 // resize + DPR
@@ -277,7 +266,7 @@ function resize() {
 const hasTask = computed(() => !!store.selectedTask)
 
 watch(() => store.topologyForSelectedTask, () => draw(), { deep: true })
-watch(() => store.selectedTaskId, () => { view.value = { x: 0, y: 0, scale: 1 }; nextTick(draw) })
+watch(() => store.selectedTaskId, () => { view.value = { x: 0, y: 0 }; nextTick(draw) })
 watch(hasTask, (v) => { if (v) nextTick(() => { resize(); draw() }) })
 
 onMounted(() => {
@@ -297,12 +286,10 @@ onUnmounted(() => { try { ro?.disconnect() } catch { /* ignore */ } })
     <div class="cockpit-map__head">
       <span class="cockpit-map__title">{{ t('cockpit.collaborationMap') }}</span>
       <div class="cockpit-map__tools">
-        <button type="button" class="cockpit-map__tool" data-canvas-zoom-in title="放大" @click="zoomBy(0.15)">+</button>
-        <button type="button" class="cockpit-map__tool" data-canvas-zoom-out title="缩小" @click="zoomBy(-0.15)">−</button>
       </div>
     </div>
     <div v-if="hasTask" ref="wrapEl" class="cockpit-map__canvas"
-      @mousedown="onDown" @mousemove="onMove" @mouseup="onUp" @mouseleave="onUp" @wheel="onWheel" @click="onClick">
+      @mousedown="onDown" @mousemove="onMove" @mouseup="onUp" @mouseleave="onUp" @click="onClick">
       <canvas ref="canvasEl"></canvas>
       <span class="cockpit-map__hint">拖拽空白处平移 · 滚轮缩放 · 点节点联动</span>
     </div>
