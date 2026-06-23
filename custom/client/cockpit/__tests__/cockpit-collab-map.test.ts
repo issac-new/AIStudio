@@ -37,13 +37,6 @@ vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({ useMatrixClientSto
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [] }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({ useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }) }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
-// mock mermaid（避免 jsdom 下真实渲染）
-vi.mock('mermaid', () => ({
-  default: {
-    initialize: vi.fn(),
-    render: vi.fn(async () => ({ svg: '<svg class="mock-mermaid"></svg>' })),
-  },
-}))
 
 import CockpitCollabMap from '@/custom/cockpit/components/CockpitCollabMap.vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -122,12 +115,19 @@ describe('CockpitCollabMap (mermaid)', () => {
     expect(s.channelsForSelectedTask.length).toBeGreaterThan(0)
   })
 
-  it('mermaid render called on task selection', async () => {
+  it('renders zoom control buttons', async () => {
     await seed()
-    const mermaid = (await import('mermaid')).default
     const w = mount(CockpitCollabMap)
-    await new Promise(r => setTimeout(r, 50))  // 等 watch + async render
-    expect(mermaid.render).toHaveBeenCalled()
+    expect(w.find('[data-canvas-zoom-in]').exists()).toBe(true)
+    expect(w.find('[data-canvas-zoom-out]').exists()).toBe(true)
+  })
+
+  it('zoom-in increases view scale', async () => {
+    await seed()
+    const w = mount(CockpitCollabMap)
+    const before = (w.vm as any).view.scale ?? 1
+    await w.find('[data-canvas-zoom-in]').trigger('click')
+    expect((w.vm as any).view.scale).toBeGreaterThan(before)
     w.unmount()
   })
 })
