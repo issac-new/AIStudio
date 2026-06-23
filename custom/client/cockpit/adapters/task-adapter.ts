@@ -46,6 +46,13 @@ export function toCockpitTask(t: KanbanTask, boardSlug: string = 'default'): Coc
     workspace: t.workspace_path ?? '~',
     tenant: t.tenant,
     boardSlug,
-    createdAt: t.created_at,
+    // kanban created_at 是秒级时间戳，统一转为毫秒（与 JS Date 一致）
+    createdAt: toMs(t.created_at),
   }
+}
+
+/** kanban 时间戳可能是秒或毫秒，统一为毫秒（启发式：< 1e12 视为秒） */
+export function toMs(ts: number | null | undefined): number {
+  if (ts == null) return 0
+  return ts < 1e12 ? ts * 1000 : ts
 }

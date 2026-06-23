@@ -133,7 +133,7 @@ function statusBucketLabel(s: string): string {
 <style scoped lang="scss">
 .cockpit-kanban { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .cockpit-kanban__head {
-  padding: 12px 16px 8px; border-bottom: 1px solid var(--border-light);
+  padding: 12px 44px 8px 16px; border-bottom: 1px solid var(--border-light);
   display: flex; justify-content: space-between; align-items: baseline;
 }
 .cockpit-kanban__title { font-size: 12px; font-weight: 700; color: var(--text-primary); }

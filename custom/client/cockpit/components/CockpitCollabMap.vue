@@ -119,7 +119,7 @@ const relations = computed(() => store.topologyForSelectedTask.relations)
 
 <style scoped lang="scss">
 .cockpit-map { display: flex; flex-direction: column; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
-.cockpit-map__head { display: flex; align-items: center; gap: 8px; padding: 8px 16px 4px; }
+.cockpit-map__head { display: flex; align-items: center; gap: 8px; padding: 8px 44px 4px 16px; }
 .cockpit-map__title { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
 .cockpit-map__tools { display: flex; gap: 3px; margin-left: auto; }
 .cockpit-map__tool {

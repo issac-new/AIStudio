@@ -1,4 +1,5 @@
 import { formatWhen, kindToWhat } from './event-adapter'
+import { toMs } from './task-adapter'
 
 export interface HistoryItem {
   id: string
@@ -41,10 +42,10 @@ export function deriveAction(source: 'event' | 'comment', item: { kind?: string;
 export function mergeTimeline(items: TimelineRawItem[]): HistoryItem[] {
   return items
     .slice()
-    .sort((a, b) => b.ts - a.ts)
+    .sort((a, b) => toMs(b.ts) - toMs(a.ts))
     .map(it => ({
       id: `h-${it.id}`,
-      when: formatWhen(it.ts),
+      when: formatWhen(toMs(it.ts)),
       taskId: it.taskId,
       action: deriveAction(it.source, { kind: it.kind, payload: it.payload }),
       title: it.source === 'comment'

@@ -37,7 +37,7 @@ const { t } = useI18n()
 </template>
 
 <style scoped lang="scss">
-.cockpit-mode-bar { display: flex; align-items: center; gap: 0; padding: 0 12px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
+.cockpit-mode-bar { display: flex; align-items: center; gap: 0; padding: 0 44px 0 12px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
 .cockpit-mode-bar__mode {
   padding: 9px 12px; font-size: 12px; font-weight: 600; color: var(--text-muted);
   cursor: pointer; border: none; border-bottom: 2px solid transparent; background: transparent;

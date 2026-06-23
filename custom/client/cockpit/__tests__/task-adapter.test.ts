@@ -45,12 +45,13 @@ describe('bucketStatus', () => {
 })
 
 describe('toCockpitTask', () => {
-  it('maps core fields + bucketed priority + tenant + boardSlug + createdAt, drops category', () => {
+  it('maps core fields + bucketed priority + tenant + boardSlug + createdAt (s→ms), drops category', () => {
+    // created_at=1000 是秒级（< 1e12），转为毫秒 1000*1000
     const t = toCockpitTask(baseTask({ id: 't9', title: 'Hello', priority: 3, status: 'review', assignee: 'bob', workspace_path: '~/ws/x', tenant: 'matrix:!r:s.ms:Auth', created_at: 1000 }), 'auth-svc')
     expect(t).toEqual({
       id: 't9', title: 'Hello', priority: 'P0', status: 'review',
       assignee: 'bob', workspace: '~/ws/x', tenant: 'matrix:!r:s.ms:Auth',
-      boardSlug: 'auth-svc', createdAt: 1000,
+      boardSlug: 'auth-svc', createdAt: 1000000,
     })
     expect(t).not.toHaveProperty('category')
   })

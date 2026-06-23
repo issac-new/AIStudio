@@ -1,6 +1,7 @@
 import type {
   KanbanTaskDetail, KanbanEvent, KanbanRun, KanbanTaskMessage,
 } from '@/api/hermes/kanban'
+import { toMs } from './task-adapter'
 
 export type EventActorKind = 'A2H' | 'A2A'
 
@@ -56,9 +57,9 @@ function fromEvent(taskId: string, e: KanbanEvent): CockpitEvent {
     actor,
     kind: 'A2A',
     what: kindToWhat(e.kind, e.payload),
-    when: formatWhen(e.created_at),
+    when: formatWhen(toMs(e.created_at)),
     pending: e.kind.includes('pending'),
-    ts: e.created_at,
+    ts: toMs(e.created_at),
   }
 }
 
@@ -69,9 +70,9 @@ function fromRun(taskId: string, r: KanbanRun): CockpitEvent {
     actor: r.profile ?? 'system',
     kind: 'A2A',
     what: r.outcome ? `执行：${r.outcome}` : '执行',
-    when: formatWhen(r.started_at),
+    when: formatWhen(toMs(r.started_at)),
     pending: r.status === 'running',
-    ts: r.started_at,
+    ts: toMs(r.started_at),
   }
 }
 
@@ -83,9 +84,9 @@ function fromMessage(taskId: string, assignee: string | null, m: KanbanTaskMessa
     actor: isUser ? (assignee ?? 'user') : (m.role || 'assistant'),
     kind: isUser ? 'A2H' : 'A2A',
     what: trunc(m.content),
-    when: formatWhen(m.timestamp),
+    when: formatWhen(toMs(m.timestamp)),
     pending: false,
-    ts: m.timestamp,
+    ts: toMs(m.timestamp),
   }
 }
 
