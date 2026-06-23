@@ -78,6 +78,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   // ── 搜索态 ──
   const searchQuery = ref('')
+  // ── 注意力筛选（点击注意力条后筛选 kanban 总览）──
+  const _attentionTaskIds = ref<string[]>([])
+  const attentionActive = computed(() => _attentionTaskIds.value.length > 0)
   const _sessionSearching = ref(false)
   const _sessionSearchCache = ref<Record<string, { ts: number; results: any[] }>>({})
   let _searchTimer: ReturnType<typeof setTimeout> | undefined
@@ -178,6 +181,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
         if (t.createdAt > toTs) dateOk = false
       }
       const searchOk = !searchQuery.value.trim() || searchResult.value.has(t.id)
+      // 注意力筛选：若 _attentionTaskIds 非空，只显示集合内的任务
+      if (_attentionTaskIds.value.length > 0 && !_attentionTaskIds.value.includes(t.id)) {
+        return false
+      }
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
         && (t.tenant == null || okArr(f.tenants, t.tenant))
@@ -360,12 +367,16 @@ export const useCockpitStore = defineStore('cockpit', () => {
   }
 
   async function selectTask(id: string | null) {
+    autoSaveDraft() // 保存当前草稿
     selectedTaskId.value = id
     focusedGraphNodeId.value = null
     archivedMode.value = false
     if (!id) { events.value = []; return }
     await loadTaskDetail(id)
+    loadAttachments(id).catch(() => {})
   }
+
+
 
   // 查任务所属 board slug（用于 detail/files 加载时带正确 board 上下文，不切全局 selectedBoard）
   function boardSlugOf(id: string): string | undefined {
@@ -511,6 +522,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
     searchQuery.value = ''
     if (_searchTimer) { clearTimeout(_searchTimer); _searchTimer = undefined }
   }
+  function clearAttentionFilter() {
+    _attentionTaskIds.value = []
+  }
   function setWorkspaceMode(mode: WorkspaceMode) { workspaceMode.value = mode }
   function toggleMaximized(col: ColumnKey) {
     // 独占式全屏：任一栏最大化时，其他栏取消
@@ -556,6 +570,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
     kv.saveDraft(id, { riskTags: cur.riskTags })
     bumpKv()
   }
+
+  function autoSaveDraft() {
+    bumpKv()
+  }
+
   async function submitWorkItem() {
     const id = selectedTaskId.value
     const draft = id ? kv.loadDraft(id) : null
@@ -679,11 +698,25 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // ── 联动：注意力/时序 ──
   const _attentionFocusTitle = ref<string | null>(null)
   const _attentionFocusDesc = ref<string | null>(null)
-  function focusOnTaskFromAttention(taskId: string, title?: string, desc?: string) {
-    selectTask(taskId)
+  async function focusOnTaskFromAttention(taskId: string, title?: string, desc?: string) {
+    // 同一任务再次点击 → 切换（清除筛选）
+    if (_attentionTaskIds.value.length === 1 && _attentionTaskIds.value[0] === taskId) {
+      _attentionTaskIds.value = []
+      return
+    }
+    // 保持原有行为
+    await selectTask(taskId)
     setWorkspaceMode('work')
     _attentionFocusTitle.value = title ?? null
     _attentionFocusDesc.value = desc ?? null
+    // 计算关联任务 ID：本身 + parents + children
+    const related = new Set<string>([taskId])
+    const detail = _detailCache.value[taskId]
+    if (detail) {
+      for (const p of detail.parents ?? []) related.add(p)
+      for (const c of detail.children ?? []) related.add(c)
+    }
+    _attentionTaskIds.value = [...related]
   }
   function focusOnTimelineNode(_eventId: string) {
     setWorkspaceMode('work')
@@ -730,6 +763,39 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function openTemplateManager() { templateManagerOpen.value = true }
   function closeTemplateManager() { templateManagerOpen.value = false }
 
+  // ── 附件 ──
+  const taskAttachments = ref<Record<string, any[]>>({})
+  const attachmentsLoading = ref(false)
+
+  async function loadAttachments(taskId: string) {
+    if (taskAttachments.value[taskId]) return
+    attachmentsLoading.value = true
+    try {
+      const { listAttachments } = await import('@/api/hermes/kanban')
+      const list = await listAttachments(taskId)
+      taskAttachments.value = { ...taskAttachments.value, [taskId]: list }
+    } catch {
+      taskAttachments.value = { ...taskAttachments.value, [taskId]: [] }
+    } finally {
+      attachmentsLoading.value = false
+    }
+  }
+
+  async function uploadAttachment(taskId: string, file: File) {
+    const { uploadAttachment } = await import('@/api/hermes/kanban')
+    await uploadAttachment(taskId, file)
+    const newVal = { ...taskAttachments.value }
+    delete newVal[taskId]
+    taskAttachments.value = newVal
+    await loadAttachments(taskId)
+  }
+
+  async function deleteAttachment(attachmentId: number) {
+    const { deleteAttachment: del } = await import('@/api/hermes/kanban')
+    await del(attachmentId)
+    taskAttachments.value = {}
+  }
+
   return {
     // 派生态
     tasks, attention, attentionCount, selectedTask, selectedTaskId,
@@ -746,16 +812,18 @@ export const useCockpitStore = defineStore('cockpit', () => {
     titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
     kanbanDetailOpen, kanbanDetailTask, detailExpanded,
     templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
-    _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
+    _attentionFocusTitle, _attentionFocusDesc, _attentionTaskIds, attentionActive, history, fileTrees, canvasTransform,
     // 方法
     bootstrap, selectTask, loadTaskDetail,
     toggleCollapsed, toggleMidTop, toggleMidBottom, toggleTimelineActor, toggleFilter, setDateRangeFilter, clearDateRangeFilter, runSearch, clearSearch, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
-    updateWorkItem, toggleRiskTag, submitWorkItem,
+    updateWorkItem, toggleRiskTag, submitWorkItem, autoSaveDraft,
     selectChannel, sendMessage, disconnectOnUnmount,
     openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
-    focusOnTaskFromAttention, focusOnTimelineNode,
+    focusOnTaskFromAttention, focusOnTimelineNode, clearAttentionFilter,
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,
+    taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment,
+
   }
 })

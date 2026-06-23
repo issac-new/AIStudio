@@ -267,6 +267,19 @@ describe('cockpit store 工作项 localStorage 草稿', () => {
     expect(addComment).toHaveBeenCalledWith('t1', { body: expect.stringContaining('[决策:approve]') })
     expect(s.workItemForSelectedTask).toBeNull()
   })
+
+  it('autoSaveDraft bumps kv rev to persist current draft', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    s.updateWorkItem({ decision: 'approve', opinion: 'looks good' })
+    s.autoSaveDraft()
+    // selectTask re-loads draft from localStorage before switching
+    await s.selectTask(null)
+    await s.selectTask('t1')
+    expect(s.workItemForSelectedTask?.decision).toBe('approve')
+  })
+
 })
 
 describe('cockpit store 频道（parseTenant 派生）', () => {
@@ -365,6 +378,79 @@ describe('cockpit store 终端 + 历史 + 模板（客户端态）', () => {
     s.recallHistoryItem('h1')
     expect(s.archivedMode).toBe(true)
     expect(s.selectedTaskId).toBe('t1')
+  })
+})
+
+describe('cockpit store 注意力筛选', () => {
+  it('focusOnTaskFromAttention sets _attentionTaskIds with task itself', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', status: 'blocked' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    // 先清除默认的 dateRange 筛选，让所有任务可见
+    s.clearDateRangeFilter()
+    expect(s.attentionActive).toBe(false)
+    await s.focusOnTaskFromAttention('t1', '阻塞任务')
+    expect(s.attentionActive).toBe(true)
+    expect(s._attentionTaskIds).toContain('t1')
+  })
+
+  it('focusOnTaskFromAttention filters filteredTasks to related tasks only', async () => {
+    mockKanbanTasks.push(
+      kt({ id: 't1', title: '阻塞任务', status: 'blocked' }),
+      kt({ id: 't2', title: '其他任务', status: 'todo' }),
+    )
+    const s = useCockpitStore()
+    await s.bootstrap()
+    s.clearDateRangeFilter()
+    expect(s.filteredTasks.map(t => t.id).sort()).toEqual(['t1', 't2'])
+    await s.focusOnTaskFromAttention('t1')
+    const ids = s.filteredTasks.map(t => t.id)
+    expect(ids).toContain('t1')
+    // 非关联任务（t2 没有 parents/children 关联）不应出现
+    expect(ids).not.toContain('t2')
+    expect(s.filteredTasks.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('re-clicking the same attention item toggles filter off', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', status: 'blocked' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    await s.focusOnTaskFromAttention('t1')
+    expect(s.attentionActive).toBe(true)
+    // 再次点击同一任务
+    await s.focusOnTaskFromAttention('t1')
+    expect(s.attentionActive).toBe(false)
+    expect(s._attentionTaskIds).toEqual([])
+  })
+
+  it('clearAttentionFilter resets attention filter', async () => {
+    mockKanbanTasks.push(kt({ id: 't1', status: 'blocked' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    await s.focusOnTaskFromAttention('t1')
+    expect(s.attentionActive).toBe(true)
+    s.clearAttentionFilter()
+    expect(s.attentionActive).toBe(false)
+  })
+
+  it('attention filter ANDs with existing filters', async () => {
+    mockKanbanTasks.push(
+      kt({ id: 't1', title: 'P0阻塞', status: 'blocked', priority: 3 }),
+      kt({ id: 't2', title: 'P1阻塞', status: 'blocked', priority: 1 }),
+    )
+    const s = useCockpitStore()
+    await s.bootstrap()
+    s.clearDateRangeFilter()
+    await s.focusOnTaskFromAttention('t1')
+    // 注意力筛选后只有 t1（t2 无关联）
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['t1'])
+    // 加上优先级筛选 P0
+    s.toggleFilter('priorities', 'P0')
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['t1'])
+    // 切换优先级为 P1 → 交集为空
+    s.toggleFilter('priorities', 'P0')
+    s.toggleFilter('priorities', 'P1')
+    expect(s.filteredTasks.map(t => t.id)).toEqual([])
   })
 })
 
