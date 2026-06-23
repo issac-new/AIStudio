@@ -79,13 +79,13 @@ describe('CockpitCollabMap (Canvas)', () => {
     expect(w.find('canvas').exists()).toBe(true)
   })
 
-  it('store topology has center + parent + child + person + channel nodes', async () => {
+  it('store topology has center + ancestor + descendant + person + channel nodes', async () => {
     const s = await seed()
     const topo = s.topologyForSelectedTask
     const kinds = topo.nodes.map(n => n.kind)
     expect(kinds).toContain('center')
-    expect(kinds).toContain('parent')
-    expect(kinds).toContain('child')
+    expect(kinds).toContain('ancestor')
+    expect(kinds).toContain('descendant')
     expect(kinds).toContain('person')
     expect(kinds).toContain('channel')
     expect(topo.relations.length).toBeGreaterThan(0)
@@ -98,10 +98,10 @@ describe('CockpitCollabMap (Canvas)', () => {
     expect(center?.focus).toBe(true)
   })
 
-  it('parent node target.taskId is set for selectTask', async () => {
+  it('ancestor node target.taskId is set for selectTask', async () => {
     const s = await seed()
-    const parent = s.topologyForSelectedTask.nodes.find(n => n.kind === 'parent')
-    expect(parent?.target?.taskId).toBe('p1')
+    const ancestor = s.topologyForSelectedTask.nodes.find(n => n.kind === 'ancestor')
+    expect(ancestor?.target?.taskId).toBe('p1')
   })
 
   it('renders zoom control buttons', async () => {

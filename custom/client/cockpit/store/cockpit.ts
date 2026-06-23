@@ -183,10 +183,23 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function recentEventsForSelectedTask(threshold: number) { return recentEventsForTimeline(threshold) }
 
   // ── 协作图 ──
-  const topologyForSelectedTask = computed(() => {
-    const detail = selectedTaskId.value ? _detailCache.value[selectedTaskId.value] : undefined
-    return topologyAdapter.buildTopology(selectedTask.value, detail, tasks.value)
+  // 从 _detailCache 构建 task_links 映射（供 topology 递归展开链路）
+  const linksMap = computed<topologyAdapter.TaskLinksMap>(() => {
+    const map: topologyAdapter.TaskLinksMap = {}
+    for (const [tid, d] of Object.entries(_detailCache.value)) {
+      if (!d) continue
+      const detail = d as KanbanTaskDetail
+      map[tid] = {
+        parents: detail.parents ?? [],
+        children: detail.children ?? [],
+      }
+    }
+    return map
   })
+
+  const topologyForSelectedTask = computed(() =>
+    topologyAdapter.buildTopology(selectedTask.value, linksMap.value, tasks.value),
+  )
   const relationsForSelectedTask = computed(() => topologyForSelectedTask.value.relations)
 
   // ── 频道（parseTenant）──
@@ -307,6 +320,44 @@ export const useCockpitStore = defineStore('cockpit', () => {
       } catch {
         fileTrees.value = { ...fileTrees.value, [id]: [] }
       }
+    }
+    // 异步递归拉链路上其他任务的 detail（供 topology 展示爷爷/孙子），不阻塞当前渲染
+    loadLinksChain(id, board).catch(() => {})
+  }
+
+  // 递归拉链路（BFS，向上向下各 MAX_DEPTH 层），填充 _detailCache 供 linksMap 使用
+  async function loadLinksChain(rootId: string, board?: string, maxDepth = 2) {
+    const visited = new Set<string>([rootId])
+    const queue: Array<{ id: string; depth: number }> = []
+    // 先加载 rootId 的 detail（若已缓存则跳过）
+    if (!_detailCache.value[rootId]) {
+      try {
+        const boardOpts = board ? { board } : undefined
+        _detailCache.value[rootId] = await kanbanApi.getTask(rootId, boardOpts)
+      } catch { return }
+    }
+    const root = _detailCache.value[rootId]
+    for (const p of root.parents ?? []) if (!visited.has(p)) { visited.add(p); queue.push({ id: p, depth: 1 }) }
+    for (const c of root.children ?? []) if (!visited.has(c)) { visited.add(c); queue.push({ id: c, depth: 1 }) }
+    while (queue.length) {
+      const { id, depth } = queue.shift()!
+      if (depth > maxDepth) continue
+      if (_detailCache.value[id]) {
+        // 已缓存，继续展开其父子
+        const d = _detailCache.value[id]
+        for (const p of d.parents ?? []) if (!visited.has(p)) { visited.add(p); queue.push({ id: p, depth: depth + 1 }) }
+        for (const c of d.children ?? []) if (!visited.has(c)) { visited.add(c); queue.push({ id: c, depth: depth + 1 }) }
+        continue
+      }
+      try {
+        // 用任务自身 board（从 cockpitTasks 查），fallback 到当前 board
+        const tBoard = boardSlugOf(id) ?? board
+        const tOpts = tBoard ? { board: tBoard } : undefined
+        const d = await kanbanApi.getTask(id, tOpts)
+        _detailCache.value[id] = d
+        for (const p of d.parents ?? []) if (!visited.has(p)) { visited.add(p); queue.push({ id: p, depth: depth + 1 }) }
+        for (const c of d.children ?? []) if (!visited.has(c)) { visited.add(c); queue.push({ id: c, depth: depth + 1 }) }
+      } catch { /* 单个失败不阻塞 */ }
     }
   }
 

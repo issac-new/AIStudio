@@ -23,15 +23,15 @@ let lastX = 0, lastY = 0
 // hover 节点（用于光标提示）
 const hoverNode = ref<GraphNode | null>(null)
 
-// 节点布局：分支式（中心居中，四方向延伸）
-// 上方：父任务（垂直向上）；下方：子任务（垂直向下）；左侧：频道（水平向左）；右侧：人员（水平向右）
+// 节点布局：按 depth 分层（树状）
+// ancestor（depth<0）在上层、descendant（depth>0）在下层、同层水平排列
+// person 右侧、channel 左侧（紧邻 center 同层）
 const layout = computed(() => {
   const topo = store.topologyForSelectedTask
   const pos: Record<string, { x: number; y: number; w: number; h: number }> = {}
   const cx = cw / 2
   const cy = ch / 2
 
-  // 节点框尺寸
   const nodeSize = (label: string, isCenter = false) => {
     let tw: number
     if (ctx) {
@@ -49,42 +49,46 @@ const layout = computed(() => {
     pos[center.id] = { x: cx, y: cy, w: s.w, h: s.h }
   }
 
-  // 按类型分组
-  const parents = topo.nodes.filter(n => n.kind === 'parent')
-  const children = topo.nodes.filter(n => n.kind === 'child')
-  const persons = topo.nodes.filter(n => n.kind === 'person')
+  // 按深度分层任务节点（ancestor/descendant）
+  const layerH = 40  // 每层垂直高度
+  const nodeHGap = 12  // 同层节点水平间距
+  const taskNodes = topo.nodes.filter(n => n.kind === 'ancestor' || n.kind === 'descendant')
+  // 按深度分组
+  const depthGroups = new Map<number, typeof taskNodes>()
+  for (const n of taskNodes) {
+    if (!depthGroups.has(n.depth)) depthGroups.set(n.depth, [])
+    depthGroups.get(n.depth)!.push(n)
+  }
+  for (const [depth, list] of depthGroups) {
+    // 同层水平排列：计算总宽度居中
+    const sizes = list.map(n => nodeSize(n.label))
+    const totalW = sizes.reduce((s, sz) => s + sz.w, 0) + (list.length - 1) * nodeHGap
+    let x = cx - totalW / 2
+    list.forEach((n, i) => {
+      const sz = sizes[i]
+      pos[n.id] = { x: x + sz.w / 2, y: cy + depth * layerH, w: sz.w, h: sz.h }
+      x += sz.w + nodeHGap
+    })
+  }
+
+  // 频道：左侧，水平向左
   const channels = topo.nodes.filter(n => n.kind === 'channel')
-
-  // 分支间距：节点高度 + 间隙（垂直分支）；节点宽度 + 间隙（水平分支）
-  const vGap = 34   // 垂直方向节点间距
-  const hGap = 100  // 水平方向节点间距（留连线空间）
-
-  // 父任务：上方，垂直向上排列（第一个离 center 最近）
-  parents.forEach((node, i) => {
-    const s = nodeSize(node.label)
-    pos[node.id] = { x: cx, y: cy - (i + 1) * vGap - s.h / 2, w: s.w, h: s.h }
-  })
-  // 子任务：下方，垂直向下排列
-  children.forEach((node, i) => {
-    const s = nodeSize(node.label)
-    pos[node.id] = { x: cx, y: cy + (i + 1) * vGap + s.h / 2, w: s.w, h: s.h }
-  })
-  // 频道：左侧，水平向左排列
   channels.forEach((node, i) => {
     const s = nodeSize(node.label)
-    pos[node.id] = { x: cx - (i + 1) * hGap - s.w / 2, y: cy, w: s.w, h: s.h }
+    pos[node.id] = { x: cx - 90 - i * 90, y: cy, w: s.w, h: s.h }
   })
-  // 人员：右侧，水平向右排列
+  // 人员：右侧，水平向右
+  const persons = topo.nodes.filter(n => n.kind === 'person')
   persons.forEach((node, i) => {
     const s = nodeSize(node.label)
-    pos[node.id] = { x: cx + (i + 1) * hGap + s.w / 2, y: cy, w: s.w, h: s.h }
+    pos[node.id] = { x: cx + 90 + i * 90, y: cy, w: s.w, h: s.h }
   })
 
   // folded 放右下角
   const folded = topo.nodes.find(n => n.kind === 'folded')
   if (folded) {
     const s = nodeSize(folded.label)
-    pos[folded.id] = { x: cx + 80, y: cy + 60, w: s.w, h: s.h }
+    pos[folded.id] = { x: cx + 100, y: cy + 80, w: s.w, h: s.h }
   }
   return pos
 })
