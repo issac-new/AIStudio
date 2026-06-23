@@ -6,7 +6,13 @@ import { useI18n } from 'vue-i18n'
 const store = useCockpitStore()
 const { t } = useI18n()
 
-const ACTIONS = ['审批', '决策', '补充', '评估', '委派']
+const ACTIONS: { key: string; labelKey: string }[] = [
+  { key: '审批', labelKey: 'cockpit.actionApprove' },
+  { key: '决策', labelKey: 'cockpit.actionDecide' },
+  { key: '补充', labelKey: 'cockpit.actionSupplement' },
+  { key: '评估', labelKey: 'cockpit.actionEvaluate' },
+  { key: '委派', labelKey: 'cockpit.actionDelegate' },
+]
 const ARCHIVE_OPTS: { key: 'all' | 'only' | 'exclude'; labelKey: string }[] = [
   { key: 'all', labelKey: 'cockpit.historyAll' },
   { key: 'only', labelKey: 'cockpit.historyArchivedOnly' },
@@ -25,9 +31,9 @@ const items = computed(() => store.filteredHistory)
     <div class="cockpit-history-modal__filters">
       <div class="cockpit-history-modal__frow">
         <span class="cockpit-history-modal__flabel">{{ t('cockpit.historyAction') }}</span>
-        <button v-for="a in ACTIONS" :key="a" type="button" :data-action-filter="a"
-          class="cockpit-history-modal__chip" :class="{ 'is-on': store.historyFilters.actions.includes(a) }"
-          @click="store.toggleHistoryAction(a)">{{ a }}</button>
+        <button v-for="a in ACTIONS" :key="a.key" type="button" :data-action-filter="a.key"
+          class="cockpit-history-modal__chip" :class="{ 'is-on': store.historyFilters.actions.includes(a.key) }"
+          @click="store.toggleHistoryAction(a.key)">{{ t(a.labelKey) }}</button>
       </div>
       <div class="cockpit-history-modal__frow">
         <span class="cockpit-history-modal__flabel">{{ t('cockpit.historyStatus') }}</span>
