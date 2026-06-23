@@ -106,6 +106,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const historyFilters = ref<HistoryFilters>({ actions: [], archived: 'all' })
   const archivedMode = ref(false)
   const templateManagerOpen = ref(false)
+  // task title 详情弹窗（双击 title 查看）（需求 #2）
+  const titleDetailOpen = ref(false)
+  const titleDetailText = ref('')
+  const titleDetailTaskId = ref<string | null>(null)
   const focusedGraphNodeId = ref<string | null>(null)
   const selectedGraphNodeIds = ref<Record<string, string[]>>({})
   // 协作图画布变换（决策 #14）
@@ -245,7 +249,19 @@ export const useCockpitStore = defineStore('cockpit', () => {
     cockpitTasks.value = all
   }
 
+  // 默认日期范围：近 2 周（需求 #2）
+  function defaultDateRange(): { from: string; to: string } {
+    const to = new Date()
+    const from = new Date()
+    from.setDate(from.getDate() - 14)
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return { from: fmt(from), to: fmt(to) }
+  }
+
   async function bootstrap() {
+    // 设置默认日期筛选（近 2 周）
+    const dr = defaultDateRange()
+    filters.value = { ...filters.value, dateRange: { from: dr.from, to: dr.to } }
     await Promise.allSettled([
       loadAllBoards(),
       kanban.fetchAssignees(),
@@ -285,11 +301,16 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
   }
 
-  // ── WebSocket 联动：tasks 引用变化 → 选中任务 detail invalidate ──
-  // WebSocket 联动：kanban.tasks 变化 → 重新聚合所有 board + 选中任务 detail invalidate
-  watch(() => kanban.tasks, () => {
-    // 重新聚合（当前 board 的任务已刷新，重新合并所有 board）
-    loadAllBoards().catch(() => {})
+  // WebSocket 联动：kanban.tasks 变化时，只做轻量同步（避免与 loadAllBoards 形成循环）
+  // - 不再调用 loadAllBoards（它会改 kanban.tasks 触发死循环）
+  // - 只更新 cockpitTasks 中当前 board 的任务片段 + 选中任务 detail invalidate
+  watch(() => kanban.tasks, (newTasks) => {
+    const curBoard = (kanban as any).selectedBoard ?? 'default'
+    // 用最新 tasks 替换 cockpitTasks 中属于当前 board 的部分（按 boardSlug 过滤）
+    const others = cockpitTasks.value.filter(t => t.boardSlug !== curBoard)
+    const mapped = newTasks.map(t => taskAdapter.toCockpitTask(t, curBoard))
+    cockpitTasks.value = [...others, ...mapped]
+    // 选中任务 detail invalidate
     const id = selectedTaskId.value
     if (id && _detailCache.value[id]) {
       delete _detailCache.value[id]
@@ -417,6 +438,17 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
   }
   function closeHistory() { historyOpen.value = false }
+  // task title 详情弹窗（双击查看完整 title）（需求 #2）
+  function openTitleDetail(taskId: string, title: string) {
+    titleDetailTaskId.value = taskId
+    titleDetailText.value = title
+    titleDetailOpen.value = true
+  }
+  function closeTitleDetail() {
+    titleDetailOpen.value = false
+    titleDetailTaskId.value = null
+    titleDetailText.value = ''
+  }
   function toggleHistoryAction(action: string) {
     const arr = historyFilters.value.actions
     const i = arr.indexOf(action)
@@ -502,6 +534,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     // 客户端态
     filters, collapsed, workspaceMode, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
+    titleDetailOpen, titleDetailText, titleDetailTaskId,
     templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
     _attentionFocusTitle, _attentionFocusDesc, history, fileTrees, canvasTransform,
     // 方法
@@ -510,7 +543,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
     updateWorkItem, toggleRiskTag, submitWorkItem,
     selectChannel, sendMessage, disconnectOnUnmount,
-    openHistory, closeHistory, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
+    openHistory, closeHistory, openTitleDetail, closeTitleDetail, toggleHistoryAction, setHistoryArchivedFilter, recallHistoryItem, clearArchivedMode,
     focusOnTaskFromAttention, focusOnTimelineNode,
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,

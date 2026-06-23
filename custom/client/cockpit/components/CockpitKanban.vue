@@ -102,7 +102,7 @@ function statusBucketLabel(s: string): string {
           @click="store.selectTask(t.id)">
           <span class="cockpit-sel-bar" />
           <span class="cockpit-kanban__pri">{{ t.priority }}</span>
-          <div class="cockpit-kanban__tt">{{ t.title }}</div>
+          <div class="cockpit-kanban__tt" :title="t.title" @dblclick.stop="store.openTitleDetail(t.id, t.title)">{{ t.title }}</div>
           <div class="cockpit-kanban__meta">
             <span class="cockpit-kanban__slug" :data-task-slug="t.boardSlug">@{{ t.boardSlug }}</span>
             <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
@@ -166,7 +166,10 @@ function statusBucketLabel(s: string): string {
 .is-p0 .cockpit-kanban__pri { color: var(--text-primary); }
 .is-p0 .cockpit-kanban__tt { font-weight: 700; color: var(--text-primary); }
 .is-p1 .cockpit-kanban__tt { font-weight: 600; }
-.cockpit-kanban__tt { font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 4px; padding-right: 24px; }
+.cockpit-kanban__tt {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 4px; padding-right: 24px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help;
+}
 .cockpit-kanban__meta { display: flex; align-items: center; gap: 6px; }
 .cockpit-kanban__stg { font-size: 9px; padding: 1px 6px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); }
 .cockpit-kanban__stg.is-blocked { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
