@@ -68,14 +68,21 @@ describe('CockpitKanban', () => {
     return useCockpitStore()
   }
 
-  it('groups tasks by tenant under tenant headers', () => {
+  it('renders tasks as flat list (no grouping)', () => {
     seed()
     const w = mount(CockpitKanban)
-    const tGroups = w.findAll('[data-group-kind="tenant"]')
-    const bGroups = w.findAll('[data-group-kind="board"]')
-    // seed 中所有任务都有 tenant → 仅租户组
-    expect(tGroups.length).toBeGreaterThan(0)
-    expect(bGroups).toHaveLength(0)
+    const tasks = w.findAll('[data-task-id]')
+    expect(tasks).toHaveLength(3)
+    // 无分组标题（.cockpit-kanban__cat-head 不应存在）
+    expect(w.find('.cockpit-kanban__cat-head').exists()).toBe(false)
+  })
+
+  it('renders tenant column per task', () => {
+    seed()
+    const w = mount(CockpitKanban)
+    const tenants = w.findAll('.cockpit-kanban__tenant')
+    expect(tenants).toHaveLength(3) // team-a（2个任务）+ team-b（1个任务）
+    expect(tenants[0].text()).toBe('team-a')
   })
 
   it('renders P0 task with is-p0 class', () => {

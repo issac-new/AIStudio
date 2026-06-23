@@ -35,12 +35,6 @@ function statusBucketLabel(s: string): string {
   const b = bucketStatus(s as any)
   return statuses.find(x => x.key === b)?.label ?? s
 }
-
-// 第一个看板组（定位分隔标识插入点）
-const firstBoardGroupKey = computed(() => {
-  for (const g of store.taskGroups) if (g.kind === 'board') return g.key
-  return null
-})
 </script>
 
 <template>
@@ -102,40 +96,32 @@ const firstBoardGroupKey = computed(() => {
       </div>
     </div>
 
-    <!-- 任务列表（租户组 + 看板组分离）-->
+    <!-- 任务列表（扁平展示）-->
     <div class="cockpit-kanban__list">
-      <div v-for="g in store.taskGroups" :key="g.key" class="cockpit-kanban__cat" :data-group-kind="g.kind">
-        <!-- 看板组前插入分隔标识 -->
-        <div v-if="g.kind === 'board' && g.key === firstBoardGroupKey" class="cockpit-kanban__sep">其他（无租户）</div>
-        <div class="cockpit-kanban__cat-head">
-          <span class="cockpit-kanban__cat-mark" :class="{ 'is-board': g.kind === 'board' }" />
-          {{ g.label }}
-          <span class="cockpit-kanban__cat-count">{{ g.tasks.length }}</span>
+      <button v-for="t in store.filteredTasks" :key="t.id"
+        type="button"
+        :data-task-id="t.id"
+        class="cockpit-kanban__task"
+        :class="['is-' + t.priority.toLowerCase(), { 'is-selected': store.selectedTaskId === t.id }]"
+        @click="store.selectTask(t.id)">
+        <span class="cockpit-sel-bar" />
+        <span class="cockpit-kanban__pri">{{ t.priority }}</span>
+        <div class="cockpit-kanban__tt" :title="t.title" @dblclick.stop="store.openTitleDetail(t.id, t.title)">{{ t.title }}</div>
+        <div class="cockpit-kanban__meta">
+          <span class="cockpit-kanban__slug" :data-task-slug="t.boardSlug">@{{ t.boardSlug }}</span>
+          <span
+            class="cockpit-kanban__id"
+            :data-task-id-copy="t.id"
+            :title="`点击复制任务ID: ${t.id}`"
+            @click.stop="copyTaskId(t.id)"
+          >#{{ t.id }}</span>
+          <span v-if="t.tenant" class="cockpit-kanban__tenant" :title="t.tenant">{{ t.tenant }}</span>
+          <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
+            {{ statusBucketLabel(t.status) }}
+          </span>
+          <span class="cockpit-kanban__who">{{ t.assignee }}</span>
         </div>
-        <button v-for="t in g.tasks" :key="t.id"
-          type="button"
-          :data-task-id="t.id"
-          class="cockpit-kanban__task"
-          :class="['is-' + t.priority.toLowerCase(), { 'is-selected': store.selectedTaskId === t.id }]"
-          @click="store.selectTask(t.id)">
-          <span class="cockpit-sel-bar" />
-          <span class="cockpit-kanban__pri">{{ t.priority }}</span>
-          <div class="cockpit-kanban__tt" :title="t.title" @dblclick.stop="store.openTitleDetail(t.id, t.title)">{{ t.title }}</div>
-          <div class="cockpit-kanban__meta">
-            <span class="cockpit-kanban__slug" :data-task-slug="t.boardSlug">@{{ t.boardSlug }}</span>
-            <span
-              class="cockpit-kanban__id"
-              :data-task-id-copy="t.id"
-              :title="`点击复制任务ID: ${t.id}`"
-              @click.stop="copyTaskId(t.id)"
-            >#{{ t.id }}</span>
-            <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
-              {{ statusBucketLabel(t.status) }}
-            </span>
-            <span class="cockpit-kanban__who">{{ t.assignee }}</span>
-          </div>
-        </button>
-      </div>
+      </button>
     </div>
 
     <!-- AI协作中心入口（kanban 下方）-->
@@ -172,18 +158,6 @@ const firstBoardGroupKey = computed(() => {
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
 .cockpit-kanban__list { flex: 1; overflow-y: auto; padding: 8px; }
-.cockpit-kanban__cat { margin-bottom: 8px; }
-.cockpit-kanban__cat-head {
-  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
-  font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
-}
-.cockpit-kanban__cat-mark { width: 10px; height: 2px; background: var(--text-muted); }
-.cockpit-kanban__cat-mark.is-board { background: var(--accent-primary); width: 14px; }
-.cockpit-kanban__cat-count { font-size: 9px; color: var(--text-muted); margin-left: auto; background: var(--bg-secondary); border-radius: 8px; padding: 0 6px; font-weight: 400; text-transform: none; }
-.cockpit-kanban__sep {
-  padding: 4px 8px 2px; font-size: 9px; color: var(--text-muted); text-transform: uppercase;
-  letter-spacing: 0.3px; border-top: 1px dashed var(--border-light); margin: 8px 0 4px;
-}
 
 .cockpit-kanban__task {
   position: relative; padding: 8px 10px 8px 14px; border-radius: 6px; cursor: pointer; margin-bottom: 3px;
@@ -278,5 +252,11 @@ const firstBoardGroupKey = computed(() => {
   font-family: monospace; font-size: 9px; color: var(--text-muted);
   cursor: copy; padding: 0 3px; border-radius: 2px;
   &:hover { color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 0), 0.08); }
+}
+
+/* ── 租户 ── */
+.cockpit-kanban__tenant {
+  font-size: 9px; color: var(--text-muted); padding: 0 3px; max-width: 60px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 </style>
