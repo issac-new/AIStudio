@@ -57,6 +57,12 @@ export interface CockpitFilters {
   priorities: CockpitPriority[]
   statuses: taskAdapter.CockpitStatusBucket[]
   tenants: string[]
+  tenantGroupChat: string[]
+  tenantTopic: string[]
+  tenantUserId: string[]
+  tenantRoomId: string[]
+  tenantSessionId: string[]
+  tenantSource: string[]
   boardSlugs: string[]                 // 看板 slug 筛选（需求 #1）
   dateRange: { from: string | null; to: string | null }  // 日期范围筛选（需求 #1，YYYY-MM-DD）
 }
@@ -125,7 +131,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // 让依赖「选中动作」的消费者（如 CockpitFilePanel 的 Home 路径同步）能在
   // 点击中心节点重新选中当前任务时也收到刷新信号——单看 selectedTaskId 无法区分。
   const selectionSeq = ref(0)
-  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [], boardSlugs: [], dateRange: { from: null, to: null } })
+  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [], tenantGroupChat: [], tenantTopic: [], tenantUserId: [], tenantRoomId: [], tenantSessionId: [], tenantSource: [], boardSlugs: [], dateRange: { from: null, to: null } })
   const collapsed = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
   // 中栏上下分区折叠（协作图/时序流独立折叠）
   const midTopCollapsed = ref(false)     // 协作图折叠（向上收）
@@ -224,7 +230,21 @@ export const useCockpitStore = defineStore('cockpit', () => {
       }
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
-        && (t.tenant == null || okArr(f.tenants, tenantFilterValue(parseTenant(t.tenant))))
+        && (t.tenant == null || (
+          // 旧 tenants 筛选（兼容）+ 结构化字段筛选
+          okArr(f.tenants, tenantFilterValue(parseTenant(t.tenant)))
+          && (() => {
+            if (!t.tenant) return true
+            const p = parseTenant(t.tenant)
+            const tf = (arr: string[], val: string) => arr.length === 0 || arr.includes(val)
+            return tf(f.tenantGroupChat, p.groupChat || '___other___')
+              && tf(f.tenantTopic, p.topic || '___other___')
+              && tf(f.tenantUserId, p.userId || '___other___')
+              && tf(f.tenantRoomId, p.roomId || '___other___')
+              && tf(f.tenantSessionId, p.sessionId || '___other___')
+              && tf(f.tenantSource, p.source || '___other___')
+          })()
+        ))
         && okArr(f.boardSlugs, t.boardSlug)
         && dateOk
         && searchOk

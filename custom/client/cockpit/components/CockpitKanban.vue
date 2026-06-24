@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useCockpitStore, type CockpitPriority } from '@/custom/cockpit/store/cockpit'
 import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapters/task-adapter'
-import { parseTenant, tenantFilterValue, tenantDisplayLabel, isLegacyTag } from '@/custom/kanban/utils/tenant-parser'
+import { parseTenant, tenantDisplayLabel, type ParsedTenant } from '@/custom/kanban/utils/tenant-parser'
 
 const store = useCockpitStore()
 defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void }>()
@@ -21,28 +21,42 @@ const statuses: { key: CockpitStatusBucket; label: string }[] = [
   { key: 'archived', label: '归档' },
 ]
 
-// 动态 tenant 列表：解析结构化 tenant 格式，按群聊名称分组去重
-const tenantOptions = computed(() => {
-  const map = new Map<string, string>()
-  let hasLegacy = false
-  for (const t of store.tasks) {
-    if (!t.tenant) continue
-    const parsed = parseTenant(t.tenant)
-    const val = tenantFilterValue(parsed)
-    if (isLegacyTag(val)) {
-      hasLegacy = true
-    } else if (!map.has(val)) {
-      map.set(val, tenantDisplayLabel(parsed))
+// 解析所有任务的 tenant，生成 6 个字段的去重选项
+const tenantFields: { key: keyof ParsedTenant; filterKey: 'tenantGroupChat' | 'tenantTopic' | 'tenantUserId' | 'tenantRoomId' | 'tenantSessionId' | 'tenantSource'; label: string }[] = [
+  { key: 'groupChat', filterKey: 'tenantGroupChat', label: '群聊名称' },
+  { key: 'topic', filterKey: 'tenantTopic', label: '话题摘要' },
+  { key: 'userId', filterKey: 'tenantUserId', label: '用户ID' },
+  { key: 'roomId', filterKey: 'tenantRoomId', label: '房间ID' },
+  { key: 'sessionId', filterKey: 'tenantSessionId', label: '会话ID' },
+  { key: 'source', filterKey: 'tenantSource', label: '来源' },
+]
+
+const tenantFieldOptions = computed(() => {
+  const result: Record<string, string[]> = {}
+  for (const field of tenantFields) {
+    const set = new Set<string>()
+    let hasLegacy = false
+    for (const t of store.tasks) {
+      if (!t.tenant) continue
+      const parsed = parseTenant(t.tenant)
+      if (parsed.isLegacy) {
+        hasLegacy = true
+      } else {
+        const val = (parsed as any)[field.key] as string
+        if (val) set.add(val)
+      }
     }
-  }
-  const result = Array.from(map.entries())
-    .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-  if (hasLegacy) {
-    result.push({ value: '___other___', label: '其它' })
+    const arr = Array.from(set).sort()
+    if (hasLegacy) arr.push('___other___')
+    result[field.filterKey] = arr
   }
   return result
 })
+
+function tenantFieldDisplay(field: typeof tenantFields[0], value: string): string {
+  if (value === '___other___') return '其它'
+  return value.length > 25 ? value.slice(0, 24) + '…' : value
+}
 
 // 动态 board slug 列表（需求 #1）：从 store.boards 取
 const boardOptions = computed(() => store.boards.map(b => b.slug))
@@ -87,12 +101,18 @@ function statusBucketLabel(s: string): string {
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.statuses.includes(st.key) }"
           @click="store.toggleFilter('statuses', st.key)">{{ st.label }}</button>
       </div>
-      <div class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">租户</span>
-        <button v-for="tn in tenantOptions" :key="tn.value" type="button" :data-filter="tn.value"
-          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.tenants.includes(tn.value) }"
-          @click="store.toggleFilter('tenants', tn.value)">{{ tn.label }}</button>
-      </div>
+      <template v-for="field in tenantFields" :key="field.filterKey">
+        <div class="cockpit-kanban__frow">
+          <span class="cockpit-kanban__flabel">{{ field.label }}</span>
+          <button
+            v-for="val in tenantFieldOptions[field.filterKey]" :key="val" type="button"
+            :data-filter="val"
+            class="cockpit-kanban__tag"
+            :class="{ 'is-on': (store.filters as any)[field.filterKey].includes(val) }"
+            @click="store.toggleFilter(field.filterKey, val)"
+          >{{ tenantFieldDisplay(field, val) }}</button>
+        </div>
+      </template>
       <div v-if="boardOptions.length > 1" class="cockpit-kanban__frow">
         <span class="cockpit-kanban__flabel">看板</span>
         <button v-for="sl in boardOptions" :key="sl" type="button" :data-filter="sl"
