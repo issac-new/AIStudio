@@ -1,0 +1,13 @@
+diff --git a/packages/client/src/components/hermes/files/FileTree.vue b/packages/client/src/components/hermes/files/FileTree.vue
+index a392a840..2ed25fd4 100644
+--- a/packages/client/src/components/hermes/files/FileTree.vue
++++ b/packages/client/src/components/hermes/files/FileTree.vue
+@@ -14,7 +14,7 @@ const selectedKeys = ref<string[]>([])
+ 
+ async function loadChildren(path: string): Promise<TreeOption[]> {
+   try {
+-    const result = await filesApi.listFiles(path)
++    const result = await filesApi.listFiles(path, filesStore.workspaceRoot)
+     return result.entries
+       .filter(e => e.isDir)
+       .sort((a, b) => a.name.localeCompare(b.name))
