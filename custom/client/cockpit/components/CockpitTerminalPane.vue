@@ -6,6 +6,10 @@
  * 在 session 创建后自动执行初始命令：打印 kanban 脱离警告 →
  * cd 到当前任务 workspace 目录 → 启动 Claude Code agent。
  *
+ * 根据服务端返回的 shell 类型自动选择命令语法：
+ *   - Unix (bash/zsh) → ANSI echo + subshell + env
+ *   - Windows (PowerShell) → Write-Host -ForegroundColor + Set-Location + $env:
+ *
  * 复用了 upstream Chat 面板中 "Workspace / Terminal" 的终端栈
  * （xterm.js → WebSocket → node-pty），但 workspace 由任务动态决定。
  */
@@ -127,12 +131,29 @@ function handleControl(msg: any) {
       if (!initialCdSent) {
         initialCdSent = true
         const wsPath = workspacePath.value || '~'
-        // 对路径中的双引号和反斜杠做转义，安全嵌入 bash 双引号
-        const escapedPath = wsPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-        const initCmd = [
-          `echo -e "\\e[1;33m⚠️ 警告：当前已脱离kanban管理，请谨慎操作，避免信息丢失或文件损坏！\\e[0m"`,
-          `(cd "${escapedPath}" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --dangerously-skip-permissions --effort ultracode --agent --teammate-mode tmux --sandbox --append-system-prompt "【系统警告】当前已脱离kanban管理，请极其谨慎地操作，避免信息丢失或文件损坏。")`,
-        ].join(' && ')
+        const isWin = /powershell|pwsh/i.test(msg.shell ?? '')
+        const escapedPath = wsPath.replace(/"/g, '\\"')
+
+        const claudeArgs = '--dangerously-skip-permissions --effort ultracode --agent --teammate-mode tmux --sandbox --append-system-prompt "【系统警告】当前已脱离kanban管理，请极其谨慎地操作，避免信息丢失或文件损坏。"'
+        const warningMsg = '⚠️ 警告：当前已脱离kanban管理，请谨慎操作，避免信息丢失或文件损坏！'
+
+        let initCmd: string
+        if (isWin) {
+          // Windows / PowerShell
+          initCmd = [
+            `Write-Host "${warningMsg}" -ForegroundColor Yellow`,
+            `Set-Location "${escapedPath}"`,
+            `$env:CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`,
+            `claude ${claudeArgs}`,
+          ].join('; ')
+        } else {
+          // Unix / bash / zsh
+          initCmd = [
+            `echo -e "\\e[1;33m${warningMsg}\\e[0m"`,
+            `(cd "${escapedPath}" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude ${claudeArgs})`,
+          ].join(' && ')
+        }
+
         sendRaw(`${initCmd}\r`)
       }
       break
