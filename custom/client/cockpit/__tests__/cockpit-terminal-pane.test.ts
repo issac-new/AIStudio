@@ -31,6 +31,35 @@ vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: 
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({ useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }) }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
+// Mock xterm.js 及其 addons（jsdom 环境不支持 canvas/终端渲染）
+vi.mock('@xterm/xterm', () => {
+  const mockTerminal = vi.fn().mockImplementation(() => ({
+    loadAddon: vi.fn(),
+    open: vi.fn(),
+    write: vi.fn(),
+    onData: vi.fn(),
+    dispose: vi.fn(),
+  }))
+  return { Terminal: mockTerminal }
+})
+vi.mock('@xterm/addon-fit', () => {
+  const mockFitAddon = vi.fn().mockImplementation(() => ({
+    fit: vi.fn(),
+  }))
+  return { FitAddon: mockFitAddon }
+})
+vi.mock('@xterm/addon-web-links', () => {
+  const mockWebLinksAddon = vi.fn()
+  return { WebLinksAddon: mockWebLinksAddon }
+})
+
+// jsdom 没有 ResizeObserver，全局 mock
+vi.stubGlobal('ResizeObserver', vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  disconnect: vi.fn(),
+  unobserve: vi.fn(),
+})))
+
 import CockpitTerminalPane from '@/custom/cockpit/components/CockpitTerminalPane.vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
@@ -61,20 +90,10 @@ describe('CockpitTerminalPane', () => {
     expect(w.text()).toContain('~/ws/auth-svc')
   })
 
-  it('renders seed terminal lines', () => {
+  it('renders the xterm container element', () => {
     seed()
     const w = mount(CockpitTerminalPane)
-    expect(w.findAll('.cockpit-terminal-pane__line').length).toBeGreaterThan(0)
-  })
-
-  it('typing and pressing enter runs a command', async () => {
-    const s = seed()
-    const w = mount(CockpitTerminalPane)
-    const before = s.terminalLines.length
-    const input = w.find('.cockpit-terminal-pane__input')
-    await input.setValue('ls')
-    await input.trigger('keydown', { key: 'Enter' })
-    expect(s.terminalLines.length).toBe(before + 2)
+    expect(w.find('.cockpit-terminal-pane__body').exists()).toBe(true)
   })
 
   it('exit button calls store.exitTerminal', async () => {
