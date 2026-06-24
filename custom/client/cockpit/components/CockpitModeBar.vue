@@ -52,12 +52,6 @@ function onRightMaximize() {
       :class="{ 'is-on': store.workspaceMode === 'chat' }"
       @click="store.setWorkspaceMode('chat')"
     >💬 {{ t('cockpit.modeChat') }} <span v-if="store.channelsForSelectedTask.length" class="cockpit-mode-bar__count">{{ store.channelsForSelectedTask.length }}</span></button>
-    <button
-      type="button"
-      class="cockpit-mode-bar__mode"
-      :class="{ 'is-on': store.workspaceMode === 'term' }"
-      @click="store.enterTerminal()"
-    >⌘ {{ t('cockpit.modeTerm') }}</button>
     <span class="cockpit-mode-bar__spacer" />
     <button
       type="button"
