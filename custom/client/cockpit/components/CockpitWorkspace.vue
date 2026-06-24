@@ -204,19 +204,23 @@ async function execAction(label: string, fn: () => Promise<string | void>) {
   }
 }
 
-// B1/B2 Specify / Decompose
+// B1/B2 Specify / Decompose（用任务实际 board，而非 kanbanStore.selectedBoard）
 function doSpecify() {
   if (!task.value) return
+  const tid = task.value.id
+  const opts = { board: store.boardSlugOf(tid) }
   execAction('Specify', async () => {
-    const res = await kanbanStore.specifyTask(task.value!.id) as any
+    const res = await kanbanApi.specifyTask(tid, opts) as any
     if (res && !res.ok) throw new Error(res?.reason || 'unknown')
     return res?.new_title ? `Specified — retitled: ${res.new_title}` : ''
   })
 }
 function doDecompose() {
   if (!task.value) return
+  const tid = task.value.id
+  const opts = { board: store.boardSlugOf(tid) }
   execAction('Decompose', async () => {
-    const res = await kanbanStore.decomposeTask(task.value!.id) as any
+    const res = await kanbanApi.decomposeTask(tid, opts) as any
     if (res && !res.ok) throw new Error(res?.reason || 'unknown')
     if (res?.fanout && res?.child_ids?.length) {
       return `Decomposed into ${res.child_ids.length} children: ${res.child_ids.join(', ')}`
@@ -265,7 +269,8 @@ function attemptStatusChange(status: KanbanTaskStatus) {
   }
 }
 function doStatusPatch(patch: kanbanApi.KanbanTaskPatch) {
-  execAction('Status', () => kanbanStore.patchTask(task.value!.id, patch))
+  const tid = task.value!.id
+  execAction('Status', () => kanbanApi.patchTask(tid, patch, { board: store.boardSlugOf(tid) }))
 }
 function confirmStatusChange() {
   if (!confirmState.value) return
@@ -280,15 +285,17 @@ function handleCompletionSubmit(summary: string) {
   doStatusPatch(patch)
 }
 
-// B5/B6 Recovery（仅 running）
+// B5/B6 Recovery（仅 running，用任务实际 board）
 function doReclaim() {
   if (!task.value) return
-  execAction('Reclaim', () => kanbanStore.reclaimTask(task.value!.id))
+  const tid = task.value.id
+  execAction('Reclaim', () => kanbanApi.reclaimTask(tid, { board: store.boardSlugOf(tid) }))
 }
 function doReassign() {
   if (!task.value || !reassignProfile.value.trim()) return
+  const tid = task.value.id
   const profile = reassignProfile.value.trim()
-  execAction('Reassign', () => kanbanStore.reassignTask(task.value!.id, profile, { reclaim: true }))
+  execAction('Reassign', () => kanbanApi.reassignTask(tid, profile, { board: store.boardSlugOf(tid), reclaim: true }))
 }
 
 // B7 Diagnostics（复用 kanban 子组件，按选中任务拉取）
@@ -297,7 +304,8 @@ const assigneeList = computed(() => (kanbanStore.assignees ?? []).map((a: any) =
 function refreshDiagnostics() {
   const tid = store.selectedTaskId
   if (!tid) { diagItems.value = []; return }
-  kanbanStore.getDiagnostics({ task: tid })
+  // 用任务实际 board，而非 kanbanStore.selectedBoard
+  kanbanApi.getDiagnostics({ task: tid, board: store.boardSlugOf(tid) })
     .then((res: any) => {
       // getDiagnostics({task}) 返回该任务的诊断数组（通常 1 项），取其 .diagnostics
       const list = Array.isArray(res) ? res : []
@@ -313,7 +321,7 @@ async function refreshHomeChannels() {
   const tid = store.selectedTaskId
   if (!tid) { homeChannels.value = []; return }
   try {
-    homeChannels.value = await kanbanApi.getHomeChannels(tid, { board: kanbanStore.selectedBoard })
+    homeChannels.value = await kanbanApi.getHomeChannels(tid, { board: store.boardSlugOf(tid) })
   } catch {
     homeChannels.value = []
   }
@@ -321,12 +329,13 @@ async function refreshHomeChannels() {
 async function toggleHomeSubscription(ch: HomeChannel) {
   const tid = store.selectedTaskId
   if (!tid) return
+  const board = store.boardSlugOf(tid)
   homeBusy.value[ch.platform] = true
   try {
     if (ch.subscribed) {
-      await kanbanApi.unsubscribeHomeChannel(tid, ch.platform, { board: kanbanStore.selectedBoard })
+      await kanbanApi.unsubscribeHomeChannel(tid, ch.platform, { board })
     } else {
-      await kanbanApi.subscribeHomeChannel(tid, ch.platform, { board: kanbanStore.selectedBoard })
+      await kanbanApi.subscribeHomeChannel(tid, ch.platform, { board })
     }
     await refreshHomeChannels()
   } catch (err: any) {

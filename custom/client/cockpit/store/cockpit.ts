@@ -1097,7 +1097,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     channels, channelsForSelectedTask, activeChannel,
     notifyOpen, notifyItems, notifyCount,
     openNotify, closeNotify,
-    filesForSelectedTask, workItemForSelectedTask, selectedTaskDetail,
+    filesForSelectedTask, workItemForSelectedTask, selectedTaskDetail, boardSlugOf,
     filteredHistory, messagesForActiveChannel, templates, currentUserName,
     // 客户端态
     filters, searchQuery, _sessionSearching, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
