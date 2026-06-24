@@ -6,7 +6,7 @@ import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapter
 import { parseTenant, tenantDisplayLabel, type ParsedTenant } from '@/custom/kanban/utils/tenant-parser'
 
 const store = useCockpitStore()
-defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void }>()
+defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void; (e: 'maximize'): void }>()
 
 function copyTaskId(id: string) {
   navigator.clipboard?.writeText(id).catch(() => {})
@@ -89,6 +89,7 @@ function statusBucketLabel(s: string): string {
         <button v-if="store.searchQuery" type="button" class="cockpit-kanban__search-clear" @click="store.clearSearch()">×</button>
         <span v-if="store._sessionSearching" class="cockpit-kanban__search-spinner" />
       </div>
+      <button type="button" class="cockpit-kanban__max" title="最大化/还原" @click="$emit('maximize')">⛶</button>
     </div>
 
     <!-- 筛选器 -->
@@ -295,6 +296,13 @@ function statusBucketLabel(s: string): string {
   border-radius: 50%; animation: cockpit-kspin 0.6s linear infinite;
 }
 @keyframes cockpit-kspin { to { transform: rotate(360deg); } }
+
+.cockpit-kanban__max {
+  width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent;
+  color: var(--text-muted); cursor: pointer; font-size: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  &:hover { background: var(--bg-secondary); color: var(--text-primary); }
+}
 
 /* ── 任务ID ── */
 .cockpit-kanban__id {

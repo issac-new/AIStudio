@@ -93,11 +93,7 @@ function onColCtrl(col: ColumnKey) {
         :class="{ 'is-collapsed': store.collapsed.left, 'is-maximized': store.maximized.left, 'is-hidden-by-max': !store.maximized.left && (store.maximized.mid || store.maximized.right) }">
         <CockpitColumnRail label="KANBAN" @expand="store.toggleCollapsed('left')" />
         <div class="cockpit-col__inner">
-          <div class="cockpit-col__ctrls">
-            <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': colState('left') !== 'normal' }"
-              :title="colCtrlTitle('left')" @click="onColCtrl('left')">{{ colCtrlIcon('left') }}</button>
-          </div>
-          <CockpitKanban @enter-center="goCenter" />
+          <CockpitKanban @enter-center="goCenter" @maximize="onColCtrl('left')" />
         </div>
       </section>
 
