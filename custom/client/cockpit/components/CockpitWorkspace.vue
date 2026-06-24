@@ -54,6 +54,22 @@ function isLinkPendingRemove(parent: string, child: string): boolean {
 const newParentId = ref('')
 const newChildId = ref('')
 
+// 父/子任务候选列表（对齐 KanbanTaskDrawer：来自 kanbanStore.tasks，排除自身和已关联）
+const allKanbanTasks = computed(() => kanbanStore.tasks ?? [])
+const candidateTasksForParent = computed(() => {
+  const tid = store.selectedTaskId
+  const exclude = new Set([tid, ...(detail.value?.parents ?? [])])
+  return allKanbanTasks.value.filter(tk => !exclude.has(tk.id))
+})
+const candidateTasksForChild = computed(() => {
+  const tid = store.selectedTaskId
+  const exclude = new Set([tid, ...(detail.value?.children ?? [])])
+  return allKanbanTasks.value.filter(tk => !exclude.has(tk.id))
+})
+function taskOptionLabel(tk: any): string {
+  return `${tk.id} — ${(tk.title || '').slice(0, 50)}`
+}
+
 // Assignee 选择（暂存到草稿）—— assignees 是 KanbanAssignee[]，取 .name
 const assigneeOptions = computed(() => {
   return (kanbanStore.assignees ?? []).map((a: any) => ({ label: a?.name ?? a, value: a?.name ?? a }))
@@ -363,8 +379,11 @@ async function toggleHomeSubscription(ch: HomeChannel) {
             <span v-else class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</span>
           </div>
           <div class="cockpit-workspace__link-add">
-            <input v-model="newParentId" class="cockpit-workspace__link-input" :placeholder="t('cockpit.parentIdPlaceholder')" @keydown.enter="onAddParent">
-            <button type="button" class="cockpit-workspace__link-add-btn" @click="onAddParent">+ {{ t('cockpit.add') }}</button>
+            <select v-model="newParentId" class="cockpit-workspace__link-select">
+              <option value="">{{ t('cockpit.parentIdPlaceholder') }}</option>
+              <option v-for="tk in candidateTasksForParent" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option>
+            </select>
+            <button type="button" class="cockpit-workspace__link-add-btn" :disabled="!newParentId" @click="onAddParent">+ {{ t('cockpit.add') }}</button>
           </div>
         </div>
 
@@ -383,8 +402,11 @@ async function toggleHomeSubscription(ch: HomeChannel) {
             <span v-else class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</span>
           </div>
           <div class="cockpit-workspace__link-add">
-            <input v-model="newChildId" class="cockpit-workspace__link-input" :placeholder="t('cockpit.childIdPlaceholder')" @keydown.enter="onAddChild">
-            <button type="button" class="cockpit-workspace__link-add-btn" @click="onAddChild">+ {{ t('cockpit.add') }}</button>
+            <select v-model="newChildId" class="cockpit-workspace__link-select">
+              <option value="">{{ t('cockpit.childIdPlaceholder') }}</option>
+              <option v-for="tk in candidateTasksForChild" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option>
+            </select>
+            <button type="button" class="cockpit-workspace__link-add-btn" :disabled="!newChildId" @click="onAddChild">+ {{ t('cockpit.add') }}</button>
           </div>
         </div>
 
@@ -611,6 +633,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 }
 .cockpit-workspace__link-add { display: flex; gap: 6px; margin-top: 6px; }
 .cockpit-workspace__link-input { flex: 1; font-family: ui-monospace, monospace; font-size: 11px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); }
+.cockpit-workspace__link-select { flex: 1; font-family: ui-monospace, monospace; font-size: 11px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); max-width: 100%; }
 .cockpit-workspace__link-add-btn { font-family: inherit; font-size: 11px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
   &:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
 }

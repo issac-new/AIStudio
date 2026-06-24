@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index efcc5613..5580cb52 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -315,6 +315,37 @@ export default {
+@@ -315,6 +315,46 @@ export default {
      backToWork: 'Back to work',
      members: 'members',
      modeTerm: 'Code',
@@ -37,6 +37,15 @@ index efcc5613..5580cb52 100644
 +    parentIdPlaceholder: 'Parent task id',
 +    childIdPlaceholder: 'Child task id',
 +    pendingLinksHint: 'pending link changes',
++    assignee: 'Assignee',
++    selectAssignee: 'Select assignee…',
++    description: 'Description',
++    descriptionPlaceholder: 'Task description…',
++    add: 'Add',
++    attachments: 'Attachments',
++    noAttachments: 'No attachments',
++    uploadFile: 'Upload file',
++    none: 'None',
      history: 'History',
      historyTitle: 'My history',
      historySearch: 'Search events, tasks, agents…',
