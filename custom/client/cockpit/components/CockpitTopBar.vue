@@ -21,7 +21,6 @@ defineProps<{ agentCount?: number; humanCount?: number; notifyCount?: number; sc
 <template>
   <div class="cockpit-top">
     <div class="cockpit-top__brand">
-      <span class="cockpit-top__mark" />
       <button type="button" class="cockpit-top__set" title="设置" @click="emit('settings')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3" />
