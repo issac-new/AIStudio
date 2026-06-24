@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 492b2c2a..ec9e8fab 100644
+index 492b2c2a..1f9b657d 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
 @@ -35,16 +35,17 @@ import FilesPanel from "./FilesPanel.vue";
@@ -22,3 +22,12 @@ index 492b2c2a..ec9e8fab 100644
  
  const showOutline = ref(false);
  const messageListRef = ref<InstanceType<typeof MessageList> | null>(null);
+@@ -763,7 +764,7 @@ const contextMenuOptions = computed(() => {
+ });
+ 
+ function openSettingsPage() {
+-  router.push({ name: "hermes.settings" });
++  router.push({ name: "hermes.cockpit" });
+ }
+ 
+ function handleContextMenu(e: MouseEvent, sessionId: string) {
