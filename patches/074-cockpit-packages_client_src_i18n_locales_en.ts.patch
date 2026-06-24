@@ -1,25 +1,18 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index fdc761f3..1766d961 100644
+index fdc761f3..6955bbda 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -44,6 +44,16 @@ export default {
-     defaultCredentialMessage: 'This account is still using the default username or password. To prevent unauthorized access, update the username and password as soon as possible.',
-     defaultCredentialAction: 'Update now',
-     defaultCredentialLater: 'Remind me later',
-+    matrixDescription: 'Sign in with your Matrix account',
-+    homeserverPlaceholder: 'Homeserver URL (e.g. http://localhost:8008)',
-+    matrixUsernamePlaceholder: 'Matrix Username (e.g. user:matrix.test)',
-+    homeserverRequired: 'Please enter a homeserver URL',
-+    homeserverConnectionFailed: 'Cannot connect to the Matrix homeserver',
-+    backendConnectionFailed: 'Matrix login succeeded but cannot reach the Hermes backend',
-+    fallbackToLocalHint: 'The backend is temporarily unreachable. You can still log in with a local account.',
-+    localDescription: 'Enter your local Hermes credentials.',
-+    useMatrixLogin: '← Back to Matrix Login',
-+    rememberMe: 'Remember Me',
-   },
- 
-   users: {
-@@ -186,6 +196,9 @@ export default {
+@@ -78,6 +78,9 @@ export default {
+   common: {
+     loading: 'Loading...',
+     cancel: 'Cancel',
++    search: 'Search',
++    refresh: 'Refresh',
++    open: 'Open',
+     delete: 'Delete',
+     edit: 'Edit',
+     save: 'Save',
+@@ -186,6 +189,9 @@ export default {
      history: 'History',
      jobs: 'Jobs',
      kanban: 'Kanban',
@@ -29,15 +22,79 @@ index fdc761f3..1766d961 100644
      workflow: 'Workflow',
      models: 'Models',
      profiles: 'Profiles',
-@@ -727,6 +740,7 @@ export default {
+@@ -727,6 +733,45 @@ export default {
    // Kanban
    kanban: {
      title: 'Kanban Board',
 +    diagnostics: 'Diagnostics',
++    searchPlaceholder: 'Search tasks...',
++    tenant: 'Tenant',
++    allTenants: 'All Tenants',
++    assignee: 'Assignee',
++    showArchived: 'Show Archived',
++    lanesByProfile: 'Lanes by Profile',
++    confirmDone: 'Mark this task as done?',
++    confirmArchive: 'Archive this task?',
++    confirmBlocked: 'Mark this task as blocked?',
++    completionSummary: 'Completion Summary',
++    tasksNeedAttention: 'Tasks Need Attention',
++    untitled: 'Untitled',
++    unassigned: 'Unassigned',
++    maximizeDrawer: 'Maximize Drawer',
++    clickToEdit: 'Click to edit',
++    clickToEditAssignee: 'Click to edit assignee',
++    workspace: 'Workspace',
++    createdBy: 'Created by',
++    description: 'Description',
++    dependencies: 'Dependencies',
++    parents: 'Parents',
++    none: 'None',
++    children: 'Children',
++    events: 'Events',
++    workerLog: 'Worker Log',
++    loadingLog: 'Loading log...',
++    runHistory: 'Run History',
++    comments: 'Comments',
++    addComment: 'Add comment',
++    parent: 'Parent',
++    child: 'Child',
++    comment: 'Comment',
++    attachments: 'Attachments',
++    uploadFile: 'Upload file',
++    noAttachments: 'No attachments',
++    notifyHomeChannels: 'Notify Home Channels',
++    sendNotifications: 'Send Notifications',
++    reassignTo: 'Reassign to',
      createTask: 'New Task',
      noTasks: 'No tasks',
      allStatuses: 'All Statuses',
-@@ -1838,6 +1852,17 @@ export default {
+@@ -741,6 +786,17 @@ export default {
+       archived: 'Board archived',
+       archiveConfirm: 'Archive the current board?',
+     },
++    trash: { dropHere: 'Drop here to archive' },
++    columnSubtitles: {
++      triage: 'Needs triage',
++      todo: 'Todo items',
++      scheduled: 'Scheduled tasks',
++      ready: 'Ready to run',
++      running: 'Currently running',
++      blocked: 'Blocked tasks',
++      done: 'Completed tasks',
++      archived: 'Archived tasks',
++    },
+     columns: {
+       triage: 'Triage',
+       todo: 'To Do',
+@@ -836,6 +892,7 @@ export default {
+       specify: 'Specify',
+       loadLog: 'Load Log',
+       loadDiagnostics: 'Load Diagnostics',
++      archive: 'Archive',
+     },
+     message: {
+       taskCreated: 'Task created',
+@@ -1838,6 +1895,17 @@ export default {
        mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
        mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace',
      },
@@ -55,38 +112,7 @@ index fdc761f3..1766d961 100644
    },
    githubPreview: {
      title: "Version Preview",
-@@ -1953,22 +1978,22 @@ export default {
- 
-   // Platform channel settings
-   platform: {
--    requireMention: "Require {'@'}Mention",
--    requireMentionGroup: "Require {'@'}mention in groups to respond",
--    requireMentionChannel: "Require {'@'}mention in channels to respond",
--    requireMentionRoom: "Require {'@'}mention in rooms to respond",
-+    requireMention: "Require Mention",
-+    requireMentionGroup: "Require mention in groups to respond",
-+    requireMentionChannel: "Require mention in channels to respond",
-+    requireMentionRoom: "Require mention in rooms to respond",
-     reactions: 'Reactions',
-     reactionsHint: 'React to messages with emoji',
-     freeResponseChats: 'Free Response Chats',
--    freeResponseChatsHint: "Chat IDs that respond without {'@'}mention (comma-separated)",
-+    freeResponseChatsHint: "Chat IDs that respond without mention (comma-separated)",
-     freeResponseChannels: 'Free Response Channels',
--    freeResponseChannelsHint: "Channel IDs that respond without {'@'}mention (comma-separated)",
-+    freeResponseChannelsHint: "Channel IDs that respond without mention (comma-separated)",
-     freeResponseRooms: 'Free Response Rooms',
--    freeResponseRoomsHint: "Room IDs that respond without {'@'}mention (comma-separated)",
-+    freeResponseRoomsHint: "Room IDs that respond without mention (comma-separated)",
-     mentionPatterns: 'Custom Mention Patterns',
-     mentionPatternsHint: 'Additional trigger patterns',
-     autoThread: 'Auto Thread',
--    autoThreadHint: "Auto-create reply threads after {'@'}mention",
-+    autoThreadHint: "Auto-create reply threads after mention",
-     autoThreadHintRoom: 'Auto-create reply threads in rooms',
-     dmMentionThreads: 'DM Mention Threads',
-     dmMentionThreadsHint: 'Use thread replies for mentions in DMs',
-@@ -2266,4 +2291,125 @@ export default {
+@@ -2266,4 +2334,138 @@ export default {
      new_0_6_13_5: 'Desktop updates are more reliable: Windows upgrades close stale Hermes Studio processes, Cloudflare is checked first, and GitHub remains the fallback feed',
      new_0_6_13_6: 'Release automation now keeps Web UI and Docker releases out of GitHub Latest while full desktop releases are manually promoted to Latest',
    },
@@ -96,6 +122,19 @@ index fdc761f3..1766d961 100644
 +    threadStartDisabled: 'Cannot start a thread from a message with an existing relation',
 +    undecryptable: 'Unable to decrypt message',
 +    historyLoadError: 'Server error, unable to load earlier history',
++    stateRoomCreated: 'Room created',
++    bold: 'Bold',
++    italic: 'Italic',
++    code: 'Code',
++    codeBlock: 'Code block',
++    emoji: 'Emoji',
++    uploadFile: 'Upload file',
++    sendMessage: 'Send message',
++    searchRooms: 'Search rooms',
++    stateJoined: 'Joined',
++    stateInvited: 'Invited',
++    stateLoadingOlder: 'Loading older messages...',
++    stateNoMoreHistory: 'No more history',
 +  },
 +
 +  cockpit: {
