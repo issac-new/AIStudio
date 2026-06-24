@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 9f893c48..0087d6cd 100644
+index 9f893c48..94f17fb8 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -2,56 +2,158 @@
@@ -135,7 +135,6 @@ index 9f893c48..0087d6cd 100644
    try {
 -    const sessionToken = await loginWithPassword(username.value.trim(), password.value);
 -    setApiKey(sessionToken);
--    router.replace("/hermes/chat");
 +    await authStore.matrixLogin(
 +      homeserverUrl.value.trim(),
 +      matrixUsername.value.trim(),
@@ -147,7 +146,7 @@ index 9f893c48..0087d6cd 100644
 +    } else {
 +      clearSavedCredentials('matrix');
 +    }
-+    router.replace("/hermes/cockpit");
+     router.replace("/hermes/chat");
    } catch (err: any) {
 -    if (err.status === 429 || err.status === 503) {
 -      errorMsg.value = t("login.tooManyAttempts");
@@ -179,7 +178,7 @@ index 9f893c48..0087d6cd 100644
 -      errorMsg.value = err.message || t("login.invalidCredentials");
 +      clearSavedCredentials('local');
      }
-+    router.replace("/hermes/cockpit");
++    router.replace("/hermes/chat");
 +  } catch (err: any) {
 +    errorMsg.value = err?.message || t("login.invalidCredentials");
 +    clearSavedCredentials('local');
@@ -201,8 +200,7 @@ index 9f893c48..0087d6cd 100644
 +      <!-- Matrix Login Form (default) -->
 +      <form v-if="activeTab === 'matrix'" class="login-form" @submit.prevent="handleMatrixLogin">
 +        <p class="login-desc">{{ t("login.matrixDescription") }}</p>
-         <input
--          v-model="username"
++        <input
 +          v-model="homeserverUrl"
 +          type="url"
 +          class="login-input"
@@ -236,7 +234,8 @@ index 9f893c48..0087d6cd 100644
 +      <form v-else-if="activeTab === 'local'" class="login-form" @submit.prevent="handleLocalLogin">
 +        <p class="login-fallback-hint">{{ t("login.fallbackToLocalHint") }}</p>
 +        <p class="login-desc">{{ t("login.localDescription") }}</p>
-+        <input
+         <input
+-          v-model="username"
 +          v-model="localUsername"
            type="text"
            class="login-input"
