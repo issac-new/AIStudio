@@ -3,10 +3,11 @@
  * CockpitTerminalPane — 基于 @xterm/xterm + WebSocket 的真实 PTY 终端。
  *
  * 连接 upstream hermes-studio 的 /api/hermes/terminal WebSocket 端点，
- * 在 session 创建后自动 cd 到当前选中任务的 workspace 目录。
+ * 在 session 创建后自动执行初始命令：打印 kanban 脱离警告 →
+ * cd 到当前任务 workspace 目录 → 启动 Claude Code agent。
  *
  * 复用了 upstream Chat 面板中 "Workspace / Terminal" 的终端栈
- * （xterm.js → WebSocket → node-pty），但 workspace 根目录由任务动态决定。
+ * （xterm.js → WebSocket → node-pty），但 workspace 由任务动态决定。
  */
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
@@ -120,13 +121,19 @@ function sendRaw(data: string) {
 function handleControl(msg: any) {
   switch (msg.type) {
     case 'created':
-      // session 已创建，自动 cd 到任务 workspace
+      // session 已创建，自动执行初始命令：
+      // 1. 打印 kanban 脱离警告
+      // 2. cd 到任务 workspace 并启动 Claude Code agent
       if (!initialCdSent) {
         initialCdSent = true
-        const wsPath = workspacePath.value
-        if (wsPath && wsPath !== '~') {
-          sendRaw(`cd "${wsPath}"\r`)
-        }
+        const wsPath = workspacePath.value || '~'
+        // 对路径中的双引号和反斜杠做转义，安全嵌入 bash 双引号
+        const escapedPath = wsPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+        const initCmd = [
+          `echo -e "\\e[1;33m⚠️ 警告：当前已脱离kanban管理，请谨慎操作，避免信息丢失或文件损坏！\\e[0m"`,
+          `(cd "${escapedPath}" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --dangerously-skip-permissions --effort ultracode --agent --teammate-mode tmux --sandbox --append-system-prompt "【系统警告】当前已脱离kanban管理，请极其谨慎地操作，避免信息丢失或文件损坏。")`,
+        ].join(' && ')
+        sendRaw(`${initCmd}\r`)
       }
       break
     case 'exited': {
