@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useCockpitStore, type CockpitPriority } from '@/custom/cockpit/store/cockpit'
 import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapters/task-adapter'
+import { parseTenant, tenantFilterValue, tenantDisplayLabel, isLegacyTag } from '@/custom/kanban/utils/tenant-parser'
 
 const store = useCockpitStore()
 defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void }>()
@@ -20,11 +21,27 @@ const statuses: { key: CockpitStatusBucket; label: string }[] = [
   { key: 'archived', label: '归档' },
 ]
 
-// 动态 tenant 列表：从所有任务去重 tenant（仅非 null）
+// 动态 tenant 列表：解析结构化 tenant 格式，按群聊名称分组去重
 const tenantOptions = computed(() => {
-  const set = new Set<string>()
-  for (const t of store.tasks) if (t.tenant) set.add(t.tenant)
-  return [...set].sort()
+  const map = new Map<string, string>()
+  let hasLegacy = false
+  for (const t of store.tasks) {
+    if (!t.tenant) continue
+    const parsed = parseTenant(t.tenant)
+    const val = tenantFilterValue(parsed)
+    if (isLegacyTag(val)) {
+      hasLegacy = true
+    } else if (!map.has(val)) {
+      map.set(val, tenantDisplayLabel(parsed))
+    }
+  }
+  const result = Array.from(map.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+  if (hasLegacy) {
+    result.push({ value: '___other___', label: '其它' })
+  }
+  return result
 })
 
 // 动态 board slug 列表（需求 #1）：从 store.boards 取
@@ -72,9 +89,9 @@ function statusBucketLabel(s: string): string {
       </div>
       <div class="cockpit-kanban__frow">
         <span class="cockpit-kanban__flabel">租户</span>
-        <button v-for="tn in tenantOptions" :key="tn" type="button" :data-filter="tn"
-          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.tenants.includes(tn) }"
-          @click="store.toggleFilter('tenants', tn)">{{ tn }}</button>
+        <button v-for="tn in tenantOptions" :key="tn.value" type="button" :data-filter="tn.value"
+          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.tenants.includes(tn.value) }"
+          @click="store.toggleFilter('tenants', tn.value)">{{ tn.label }}</button>
       </div>
       <div v-if="boardOptions.length > 1" class="cockpit-kanban__frow">
         <span class="cockpit-kanban__flabel">看板</span>
@@ -114,7 +131,7 @@ function statusBucketLabel(s: string): string {
             :title="`点击复制任务ID: ${t.id}`"
             @click.stop="copyTaskId(t.id)"
           >#{{ t.id }}</span>
-          <span v-if="t.tenant" class="cockpit-kanban__tenant" :title="t.tenant">{{ t.tenant }}</span>
+          <span v-if="t.tenant" class="cockpit-kanban__tenant" :title="t.tenant">{{ tenantDisplayLabel(parseTenant(t.tenant)) }}</span>
           <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
             {{ statusBucketLabel(t.status) }}
           </span>

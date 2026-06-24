@@ -10,7 +10,6 @@ import KanbanBulkBar from '@/custom/kanban/components/KanbanBulkBar.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import KanbanOrchestrationPanel from '@/custom/kanban/components/KanbanOrchestrationPanel.vue'
 import KanbanAttentionStrip from '@/custom/kanban/components/KanbanAttentionStrip.vue'
-import { parseTenant, tenantFilterValue, tenantDisplayLabel, isLegacyTag } from '@/custom/kanban/utils/tenant-parser'
 
 const { t } = useI18n()
 const message = useMessage()
@@ -32,10 +31,7 @@ const filteredTasks = computed(() => {
     tasks = tasks.filter((t: KanbanTask) => t.assignee === store.filterAssignee)
   }
   if (tenantFilter.value) {
-    tasks = tasks.filter((t: KanbanTask) => {
-      if (!t.tenant) return false
-      return tenantFilterValue(parseTenant(t.tenant)) === tenantFilter.value
-    })
+    tasks = tasks.filter((t: KanbanTask) => t.tenant === tenantFilter.value)
   }
   if (!includeArchived.value) {
     tasks = tasks.filter((t: KanbanTask) => t.status !== 'archived')
@@ -357,25 +353,11 @@ async function handleArchiveBoard() {
 }
 
 const tenants = computed(() => {
-  const map = new Map<string, string>()
-  let hasLegacy = false
+  const set = new Set<string>()
   for (const task of store.tasks) {
-    if (!task.tenant) continue
-    const parsed = parseTenant(task.tenant)
-    const val = tenantFilterValue(parsed)
-    if (isLegacyTag(val)) {
-      hasLegacy = true
-    } else if (!map.has(val)) {
-      map.set(val, tenantDisplayLabel(parsed))
-    }
+    if (task.tenant) set.add(task.tenant)
   }
-  const result = Array.from(map.entries())
-    .map(([value, label]) => ({ label, value }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-  if (hasLegacy) {
-    result.push({ label: '其它', value: '___other___' })
-  }
-  return result
+  return Array.from(set).sort()
 })
 
 const assigneeNames = computed(() => store.assignees.map(a => a.name))

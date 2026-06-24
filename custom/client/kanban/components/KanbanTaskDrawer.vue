@@ -6,7 +6,6 @@ import {
   NSelect, NTag, NSpin, NEmpty, NModal, useMessage, useDialog
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
-import { parseTenant, tenantDisplayLabel } from '@/custom/kanban/utils/tenant-parser'
 import * as kanbanApi from '@/api/hermes/kanban'
 import type { KanbanTaskDetail, KanbanTaskStatus, KanbanEvent, KanbanRun, KanbanTaskLog, HomeChannel } from '@/api/hermes/kanban'
 import { useKanbanStore } from '@/stores/hermes/kanban'
@@ -91,11 +90,6 @@ const isMaximized = ref(false)
 const drawerWidth = computed(() => isMaximized.value ? 'calc(100vw - 40px)' : 720)
 
 const task = computed(() => detail.value?.task || null)
-const tenantLabel = computed(() => {
-  const tn = task.value?.tenant
-  if (!tn) return ''
-  return tenantDisplayLabel(parseTenant(tn))
-})
 const comments = computed(() => detail.value?.comments || [])
 const events = computed(() => detail.value?.events || [])
 const runs = computed(() => detail.value?.runs || [])
@@ -757,7 +751,7 @@ function statusDotClass(status: string): string {
 
           <div v-if="task.tenant" class="meta-row">
             <span class="meta-label">{{ t('kanban.tenant', 'Tenant') }}</span>
-            <span class="meta-value" :title="task.tenant">{{ tenantLabel }}</span>
+            <span class="meta-value">{{ task.tenant }}</span>
           </div>
 
           <div v-if="task.project_id" class="meta-row">

@@ -18,6 +18,7 @@ import * as attentionAdapter from '../adapters/attention-adapter'
 import * as collabAdapter from '../adapters/collab-adapter'
 import * as eventAdapter from '../adapters/event-adapter'
 import * as topologyAdapter from '../adapters/topology-adapter'
+import { parseTenant, tenantFilterValue } from '@/custom/kanban/utils/tenant-parser'
 import * as historyAdapter from '../adapters/history-adapter'
 import * as notifyAdapter from '../adapters/notify-adapter'
 import type { NotifyItem, NotifyKind } from '../adapters/notify-adapter'
@@ -223,7 +224,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
       }
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
-        && (t.tenant == null || okArr(f.tenants, t.tenant))
+        && (t.tenant == null || okArr(f.tenants, tenantFilterValue(parseTenant(t.tenant))))
         && okArr(f.boardSlugs, t.boardSlug)
         && dateOk
         && searchOk
