@@ -1,48 +1,81 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio 0.6.18(基于 hermes-studio v0.6.18 + overlay 二次开发)
+SwarmStudio 0.6.20（基于 hermes-studio v0.6.20 + overlay 二次开发）
+
+## 上游版本
+
+| 仓库 | 版本 |
+|------|------|
+| hermes-studio | v0.6.20 |
+| hermes-agent | v2026.6.19 |
+| element-web | v1.12.22 |
+
+## Overlay Patch 体系
+
+- **Active patches**: 65 个（100% inject 通过率）
+- **Disabled/stale patches**: 22 个（已注释，含 10 个 i18n locale、4 个 combined、8 个 stale）
+- **归档 patches**: 7 个（018/021/025/028 已迁移到 active patches 或合并）
+
+### Patch 分类
+
+| 范围 | Patch 编号 | 说明 |
+|------|-----------|------|
+| 数据库 schema | 001 | Matrix 列、SQLite UNIQUE 约束 |
+| 服务器配置 | 002-008 | Matrix 字段、端口、element-web 中间件 |
+| 客户端 API | 009-011 | Matrix 认证、Kanban 扩展 |
+| 服务器控制器 | 012-017 | Auth、Kanban、Users、Middleware |
+| 登录页 | 025 | Matrix 登录表单 + Remember Me + 本地降级 |
+| 客户端组件 | 020, 022-034 | PageSidebarNav、ChatPanel、Kanban store |
+| Kanban 路由/测试 | 035-043 | Routes、tests、desktop rebrand |
+| Vite/Vitest | 000 | Custom alias for overlay testing |
+| Matrix 测试 | 055-060 | Right panel、threads、notifications |
+| Cockpit | 070-075 | App.vue、router、AppSidebar、i18n |
+| Kanban API | 078 | listWorkspaceFiles、listTimeline、attachment sync |
+| ECharts | 080 | 依赖添加 |
+| Group chat | 085, 087-089 | Unread tracking、autojoin |
+| Gateway notice | 094-102 | Banner、files root |
+
+### 新增功能
+
+- **Matrix 登录**：Homeserver URL + MXID + 密码，Remember Me 持久化
+- **Cockpit**：全屏 AI 协作中心，登录后首页
+- **SwarmKanban**：协作看板（自定义组件，独立路由）
+- **原生看板**：保持上游 KanbanView 不变（AppSidebar 入口）
+- **Matrix Chat**：完整 Matrix 客户端（路由动态注册）
+- **ECharts 协作地图**：支持面板最大化时画布自适应
 
 ## 构建
+
 ```bash
 cd overlay
-npm run inject          # 应用 53 patch(40 迁移 + 3 rebrand + 10 i18n)
+npm run inject          # 应用 65 patch
 node scripts/build.mjs  # 构建 dist/(openapi + client + server)
 cd ../upstream/hermes-studio
 npm --prefix packages/desktop run dist -- --mac --win --publish never
 ```
 
-## ⚠️ 同版本号覆盖更新的缓存陷阱
+## 开发启动
 
-desktop app 的 `webuiDir()` 优先用 `~/.hermes-web-ui/webui/<version>/` 的副本(首次启动/runtime 下载时复制),而非 app 内打包的 dist。`cleanupLegacyWebUiVersions` 只删低于 `MIN_COMPATIBLE_WEB_UI_VERSION` 的版本,**同版本号(0.6.18)的旧副本不会刷新**。
-
-**后果**:重装同版本 SwarmStudio 时,app 会继续用旧副本(可能是非 overlay 的旧构建),界面与新版不一致。
-
-**解决(二选一)**:
-1. 每次发版**递增版本号**(改 `packages/desktop/package.json` 的 `version`),app 会用新版本目录
-2. 重装后删除旧副本再启动:`rm -rf ~/.hermes-web-ui/webui/<version>/`(macOS/Linux),app 会 fallback 到 app 内 dist
-
-**诊断命令**:
 ```bash
-# 查 app 实际用的 webui 路径
-ls ~/.hermes-web-ui/webui/
-# 旧进程占端口导致 EADDRINUSE
-lsof -nP -iTCP:8748 -sTCP:LISTEN
+cd overlay
+npm run inject                              # 注入 patches
+cd ../upstream/hermes-studio
+npm install --no-audit --no-fund --ignore-scripts
+mkdir -p dist
+cd ../../overlay
+bash scripts/serve-server.sh &              # 后端 :8647
+npm run dev &                                # 前端 :8649
 ```
 
-## 体积(瘦身版)
-| 包 | 大小 |
-|----|------|
-| SwarmStudio-0.6.18-arm64.dmg (Mac Apple Silicon) | 162 MB |
-| SwarmStudio-0.6.18-arm64.zip (Mac) | 159 MB |
-| SwarmStudio-0.6.18-x64.exe (Windows x86_64) | 139 MB |
+## ⚠️ 同版本号覆盖更新的缓存陷阱
 
-## 包含的 overlay 功能
-- Matrix 聊天(matrix 登录 + 聊天界面)
-- Kanban 增强(18 条 API 路由)
-- 品牌替换(SwarmStudio + logo)
-- 10 语言 i18n 翻译
-- element-web 静态服务集成
+desktop app 的 `webuiDir()` 优先用 `~/.hermes-web-ui/webui/<version>/` 的副本。
+
+**解决**：
+1. 每次发版递增版本号
+2. 重装后删除旧副本：`rm -rf ~/.hermes-web-ui/webui/<version>/`
 
 ## 不包含
-- hermes-agent(runtime 下载,首次启动获取)
+
+- hermes-agent（runtime 下载，首次启动获取）
