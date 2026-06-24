@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
-index cbb1d4a1..c943a9f6 100644
+index cbb1d4a1..4231800d 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
 +++ b/packages/client/src/components/hermes/chat/MessageItem.vue
 @@ -37,6 +37,7 @@ const toast = useMessage();
@@ -18,6 +18,15 @@ index cbb1d4a1..c943a9f6 100644
                command: isCommandMessage,
                'command-error': isCommandError,
                'speech-playing': isPlayingThisMessage && !isPausedThisMessage,
+@@ -934,7 +936,7 @@ onBeforeUnmount(() => {
+               </div>
+             </div>
+             <MarkdownRenderer
+-              v-if="parsedThinking.body && message.role === 'assistant'"
++              v-if="parsedThinking.body && message.role === 'assistant' && !isGatewayNotice"
+               :content="parsedThinking.body"
+               :heading-id-prefix="effectiveHeadingIdPrefix"
+             />
 @@ -987,9 +989,9 @@ onBeforeUnmount(() => {
                :heading-id-prefix="effectiveHeadingIdPrefix"
              />

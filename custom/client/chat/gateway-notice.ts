@@ -18,6 +18,10 @@ export function isGatewayNotice(content: unknown): boolean {
   return text.length > 0 && GATEWAY_NOTICE_RE.test(text)
 }
 
+// chat store 中 Message.systemType 的联合类型（与 stores/hermes/chat.ts 保持一致）。
+// 在此独立声明而非 import，避免 overlay 模块反向依赖上游 store。
+export type MessageSystemType = 'command' | 'error' | 'fork-divider' | 'gateway'
+
 /**
  * 计算消息应使用的 systemType：
  * - 若 currentSystemType 已显式设置（非 undefined），原样返回——尊重 error/command 等已有语义；
@@ -27,8 +31,8 @@ export function isGatewayNotice(content: unknown): boolean {
  */
 export function tagGatewayNotice(
   content: unknown,
-  currentSystemType: string | undefined,
-): 'gateway' | string | undefined {
+  currentSystemType: MessageSystemType | undefined,
+): MessageSystemType | undefined {
   if (currentSystemType !== undefined) return currentSystemType
   return isGatewayNotice(content) ? 'gateway' : undefined
 }
