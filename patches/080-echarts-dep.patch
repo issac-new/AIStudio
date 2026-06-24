@@ -1,10 +1,10 @@
 diff --git a/package.json b/package.json
-index cdb7ecce..6e62c561 100644
+index 0000000..0000000 100644
 --- a/package.json
 +++ b/package.json
-@@ -71,6 +71,7 @@
-     "@audio/decode-wav": "^1.2.0",
-     "@vscode/markdown-it-katex": "^1.1.2",
+@@ -76,6 +76,7 @@
+     "@vue-flow/minimap": "^1.5.4",
+     "@vue-flow/node-resizer": "^1.5.1",
      "adm-zip": "^0.5.17",
 +    "echarts": "^6.1.0",
      "eventsource": "^4.1.0",

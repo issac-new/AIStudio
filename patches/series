@@ -33,7 +33,7 @@
 037-test-kanban-service.patch
 038-test-kanban-controller.patch
 039-test-kanban-routes.patch
-040-package-lock-matrix-sdk.patch
+# 040-package-lock-matrix-sdk.patch  # SKIP: auto-generated via npm install
 041-desktop-rebrand-swarmstudio-config.patch
 042-desktop-rebrand-swarmstudio-pkg.patch
 043-desktop-rebrand-swarmstudio-strings.patch
@@ -59,22 +59,22 @@
 # 073-cockpit-packages_client_src_views_LoginView.vue.patch  # FIXME: pre-existing context mismatch (upstream LoginView.vue changed). Stale.
 074-cockpit-packages_client_src_i18n_locales_en.ts.patch
 075-cockpit-packages_client_src_i18n_locales_zh.ts.patch
-076-i18n-matrix-chat-en.patch
-077-i18n-matrix-chat-zh.patch
+# 076-i18n-matrix-chat-en.patch  # v0.6.20: combined into 074
+# 077-i18n-matrix-chat-zh.patch  # v0.6.20: combined into 075
 078-server-kanban-workspace-files.patch
-079-server-kanban-timeline-aggregate.patch
+# 079-server-kanban-timeline-aggregate.patch  # v0.6.20: combined into 078
 080-echarts-dep.patch
-082-i18n-cockpit-history-en.patch
-083-i18n-cockpit-history-zh.patch
+# 082-i18n-cockpit-history-en.patch  # v0.6.20: combined into 074
+# 083-i18n-cockpit-history-zh.patch  # v0.6.20: combined into 075
 085-group-chat-unread-tracking.patch
-086-i18n-cockpit-notify.patch
+# 086-i18n-cockpit-notify.patch  # v0.6.20: combined into 074+075
 087-group-chat-autojoin-on-connect.patch
 088-run-chat-autojoin-sessions-on-connect.patch
 089-chat-store-unread-tracking.patch
-090-cockpit-i18n-workitem-actions-en.ts.patch
-091-cockpit-i18n-workitem-actions-zh.ts.patch
-092-fix-upstream-i18n-duplicate-keys.patch
-093-server-kanban-attachment-workspace-sync.patch
+# 090-cockpit-i18n-workitem-actions-en.ts.patch  # v0.6.20: combined into 074
+# 091-cockpit-i18n-workitem-actions-zh.ts.patch  # v0.6.20: combined into 075
+# 092-fix-upstream-i18n-duplicate-keys.patch  # v0.6.20: no-op, duplicates already removed upstream
+# 093-server-kanban-attachment-workspace-sync.patch  # v0.6.20: combined into 078
 094-client-store-chat-gateway-notice.patch
 095-client-messageitem-gateway-notice.patch
 096-client-groupmessageitem-gateway-notice.patch
