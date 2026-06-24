@@ -37,38 +37,15 @@ function formatTimestamp(ts: number | null | undefined): string {
 onMounted(() => { store.bootstrap() })
 onUnmounted(() => { store.disconnectOnUnmount() })
 
-// 单按钮三态循环：正常 → 最大化 → 折叠 → 正常（需求 #3）
-// 返回该栏当前图标 + 点击行为
-function colState(col: ColumnKey): 'normal' | 'max' | 'collapsed' {
-  if (store.collapsed[col]) return 'collapsed'
-  if (store.maximized[col]) return 'max'
-  return 'normal'
-}
+// 单按钮双态切换：最大（全屏）↔ 还原（原页面布局）
 function colCtrlIcon(col: ColumnKey): string {
-  const s = colState(col)
-  if (s === 'collapsed') return '◌'  // 折叠态：展开
-  if (s === 'max') return '🗗'       // 最大化态：还原
-  return '⛶'                         // 正常态：最大化
+  return store.maximized[col] ? '🗗' : '⛶'
 }
 function colCtrlTitle(col: ColumnKey): string {
-  const s = colState(col)
-  if (s === 'collapsed') return '展开'
-  if (s === 'max') return '还原'
-  return '最大化'
+  return store.maximized[col] ? '还原' : '最大化'
 }
 function onColCtrl(col: ColumnKey) {
-  const s = colState(col)
-  if (s === 'normal') {
-    // 正常 → 最大化
-    store.toggleMaximized(col)
-  } else if (s === 'max') {
-    // 最大化 → 折叠
-    store.toggleMaximized(col) // 先还原（取消 maximized）
-    store.toggleCollapsed(col)  // 再折叠
-  } else {
-    // 折叠 → 正常
-    store.toggleCollapsed(col)
-  }
+  store.toggleMaximized(col)
 }
 </script>
 
@@ -110,7 +87,7 @@ function onColCtrl(col: ColumnKey) {
         <CockpitColumnRail label="协作 · 时序" @expand="store.toggleCollapsed('mid')" />
         <div class="cockpit-col__inner">
           <div class="cockpit-col__ctrls">
-            <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': colState('mid') !== 'normal' }"
+            <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': store.maximized.mid }"
               :title="colCtrlTitle('mid')" @click="onColCtrl('mid')">{{ colCtrlIcon('mid') }}</button>
           </div>
           <CockpitCollabMap v-show="!store.midTopCollapsed" :style="{ flex: store.midBottomCollapsed ? '1 1 0' : '1 1 0' }" />

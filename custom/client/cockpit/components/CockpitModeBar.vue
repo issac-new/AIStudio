@@ -9,34 +9,11 @@ const store = useCockpitStore()
 const { t } = useI18n()
 const router = useRouter()
 
-// 三态循环：正常 → 最大化 → 折叠 → 正常
-function rightColState(): 'normal' | 'max' | 'collapsed' {
-  if (store.collapsed.right) return 'collapsed'
-  if (store.maximized.right) return 'max'
-  return 'normal'
-}
-const colMaxIcon = computed(() => {
-  const s = rightColState()
-  if (s === 'collapsed') return '◌'
-  if (s === 'max') return '🗗'
-  return '⛶'
-})
-const colMaxTitle = computed(() => {
-  const s = rightColState()
-  if (s === 'collapsed') return t('cockpit.restore')
-  if (s === 'max') return t('cockpit.restore')
-  return t('cockpit.maximize')
-})
+// 双态切换：最大（全屏）↔ 还原（原页面布局）
+const colMaxIcon = computed(() => store.maximized.right ? '🗗' : '⛶')
+const colMaxTitle = computed(() => store.maximized.right ? t('cockpit.restore') : t('cockpit.maximize'))
 function onRightMaximize() {
-  const s = rightColState()
-  if (s === 'normal') {
-    store.toggleMaximized('right')
-  } else if (s === 'max') {
-    store.toggleMaximized('right')
-    store.toggleCollapsed('right')
-  } else {
-    store.toggleCollapsed('right')
-  }
+  store.toggleMaximized('right')
 }
 </script>
 
