@@ -7,12 +7,13 @@
  * 通过 store.workspaceMode === 'workspace' 激活，由 CockpitView 渲染。
  *
  * 原理：
- *   1. 监控 store.selectedTask?.workspace
+ *   1. 监控 store.selectedTaskId + store.selectionSeq（每次 selectTask 自增）
  *   2. 将路径设置到 filesStore.workspaceRoot
- *   3. 当 workspace 改变时调用 filesStore.fetchEntries('') 刷新
+ *   3. 当选中任务变化（含重新点击中心节点选中同一任务，id 不变但 seq 自增）时调用 filesStore.fetchEntries('') 刷新
  *   4. 渲染 FilesPanel（复用 upstream 组件）
+ *   5. 任务未 claim（workspace 为空）时不发起请求，显示加载中占位
  */
-import { watch, onMounted } from 'vue'
+import { watch, onMounted, computed } from 'vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useFilesStore } from '@/stores/hermes/files'
 import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
@@ -20,28 +21,45 @@ import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
 const store = useCockpitStore()
 const filesStore = useFilesStore()
 
-// 当选中任务变化时（含重新点击中心节点），更新文件浏览器的根目录并刷新
-// 监听 selectedTaskId 而非 workspace 值，确保每次切换任务都触发刷新
-watch(() => store.selectedTaskId, () => {
-  const root = store.selectedTask?.workspace || '~'
+const hasWorkspace = computed(() => !!store.selectedTask?.workspace)
+
+// 把「当前生效的 workspace 根目录」同步到 filesStore 并刷新文件列表。
+// 任务未 claim 时 workspace 为空 → 不设 root、不 fetch，等待 claim 后重新触发。
+function syncWorkspaceRoot() {
+  const root = store.selectedTask?.workspace
+  if (!root) {
+    filesStore.workspaceRoot = undefined
+    filesStore.currentPath = ''
+    return
+  }
   filesStore.workspaceRoot = root
   filesStore.currentPath = ''
   filesStore.fetchEntries('')
-}, { immediate: true })
+}
+
+// 当选中任务变化时（含重新点击中心节点），更新文件浏览器的根目录并刷新。
+// 监听 [selectedTaskId, selectionSeq]：selectionSeq 每次 selectTask 都自增，
+// 因此即便点击中心节点重新选中同一任务（id 不变），watch 也会触发，
+// 把 Home 路径重新同步回该任务的 workspace。
+watch(
+  () => [store.selectedTaskId, store.selectionSeq] as const,
+  () => { syncWorkspaceRoot() },
+  { immediate: true },
+)
 
 // 每次切换到 Workspace 标签页时，重置到 workspace 根目录
 // (filesStore.currentPath 可能还停留在上次浏览的子目录)
 onMounted(() => {
-  const root = store.selectedTask?.workspace || '~'
-  filesStore.workspaceRoot = root
-  filesStore.currentPath = ''
-  filesStore.fetchEntries('')
+  syncWorkspaceRoot()
 })
 </script>
 
 <template>
   <div class="cockpit-file-panel">
-    <FilesPanel />
+    <FilesPanel v-if="hasWorkspace" />
+    <div v-else class="cockpit-file-panel__no-workspace">
+      任务尚未领取 workspace，请等待 agent claim 后重试
+    </div>
   </div>
 </template>
 
@@ -53,5 +71,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--bg-card);
+}
+.cockpit-file-panel__no-workspace {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 24px;
 }
 </style>

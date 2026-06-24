@@ -44,7 +44,7 @@ export function toCockpitTask(t: KanbanTask, boardSlug: string = 'default'): Coc
     priority: bucketPriority(t.priority),
     status: t.status,
     assignee: t.assignee ?? '未分配',
-    workspace: t.workspace_path ?? '~',
+    workspace: t.workspace_path ?? '',
     tenant: t.tenant,
     boardSlug,
     // kanban created_at 是秒级时间戳，统一转为毫秒（与 JS Date 一致）

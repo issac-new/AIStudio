@@ -57,10 +57,10 @@ describe('toCockpitTask', () => {
     })
     expect(t).not.toHaveProperty('category')
   })
-  it('null assignee → 未分配; null workspace → ~', () => {
+  it('null assignee → 未分配; null workspace → empty string', () => {
     const t = toCockpitTask(baseTask({ assignee: null, workspace_path: null }))
     expect(t.assignee).toBe('未分配')
-    expect(t.workspace).toBe('~')
+    expect(t.workspace).toBe('')
   })
   it('defaults boardSlug to default when not provided', () => {
     const t = toCockpitTask(baseTask({ id: 'x' }))

@@ -120,6 +120,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   // ── 客户端态 ──
   const selectedTaskId = ref<string | null>(null)
+  // 选中任务的自增序号：每次 selectTask 调用都 +1（即便重新选中同一任务）。
+  // 让依赖「选中动作」的消费者（如 CockpitFilePanel 的 Home 路径同步）能在
+  // 点击中心节点重新选中当前任务时也收到刷新信号——单看 selectedTaskId 无法区分。
+  const selectionSeq = ref(0)
   const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [], boardSlugs: [], dateRange: { from: null, to: null } })
   const collapsed = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
   // 中栏上下分区折叠（协作图/时序流独立折叠）
@@ -465,6 +469,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   async function selectTask(id: string | null) {
     autoSaveDraft() // 保存当前草稿
     selectedTaskId.value = id
+    selectionSeq.value++ // 通知「选中动作」消费者（含重新选中同一任务，如点击中心节点）
     focusedGraphNodeId.value = null
     archivedMode.value = false
     if (!id) { events.value = []; return }
@@ -1102,7 +1107,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   return {
     // 派生态
-    tasks, attention, attentionCount, selectedTask, selectedTaskId,
+    tasks, attention, attentionCount, selectedTask, selectedTaskId, selectionSeq,
     sortedTasks, filteredTasks, taskGroups, boards, searchResult,
     events, eventsForSelectedTask, eventsForTimeline, recentEventsForTimeline, recentEventsForSelectedTask,
     timelineActorFilter, timelineActorOptions,
