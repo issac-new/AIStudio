@@ -46,8 +46,6 @@ function onColCtrl(col: ColumnKey) {
 <template>
   <div class="cockpit">
     <CockpitTopBar
-      :agent-count="3"
-      :human-count="2"
       :notify-count="store.notifyCount"
       :schedule-count="store.scheduleDatesWithEvents.size"
       :user-name="store.currentUserName"

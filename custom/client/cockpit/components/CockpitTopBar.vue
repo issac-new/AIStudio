@@ -16,6 +16,27 @@ const dateStr = () => `${now.value.getFullYear()}-${pad(now.value.getMonth() + 1
 const timeStr = () => `${pad(now.value.getHours())}:${pad(now.value.getMinutes())}:${pad(now.value.getSeconds())}`
 
 defineProps<{ agentCount?: number; humanCount?: number; notifyCount?: number; scheduleCount?: number; userName?: string }>()
+
+// Gateway & platform connection status
+const gatewayStatus = ref<'checking' | 'running' | 'stopped'>('checking')
+const platformCount = ref(0)
+
+async function fetchGatewayStatus() {
+  try {
+    const res = await fetch('/health')
+    const data = await res.json()
+    gatewayStatus.value = data.gateway === 'running' ? 'running' : 'stopped'
+    // Count enabled platforms from config
+    const cfgRes = await fetch('/api/hermes/config')
+    const cfg = await cfgRes.json()
+    const platforms = cfg.platforms || {}
+    platformCount.value = Object.values(platforms).filter((p: any) => p?.enabled).length
+  } catch {
+    gatewayStatus.value = 'stopped'
+  }
+}
+
+onMounted(() => { fetchGatewayStatus() })
 </script>
 
 <template>
@@ -45,8 +66,11 @@ defineProps<{ agentCount?: number; humanCount?: number; notifyCount?: number; sc
     </div>
     <div class="cockpit-top__spacer" />
     <div class="cockpit-top__grp">
-      <span v-if="agentCount" class="cockpit-top__ustat">{{ agentCount }} Agent</span>
-      <span v-if="humanCount" class="cockpit-top__ustat">+{{ humanCount }}</span>
+      <span class="cockpit-top__ustat" :class="'is-' + gatewayStatus">
+        {{ gatewayStatus === 'running' ? '🟢' : gatewayStatus === 'stopped' ? '🔴' : '⚪' }}
+        Gateway {{ gatewayStatus === 'running' ? '在线' : gatewayStatus === 'stopped' ? '离线' : '检测中' }}
+      </span>
+      <span v-if="platformCount" class="cockpit-top__ustat">{{ platformCount }} 通道</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
