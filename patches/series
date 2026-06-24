@@ -73,3 +73,4 @@
 089-chat-store-unread-tracking.patch
 090-cockpit-i18n-workitem-actions-en.ts.patch
 091-cockpit-i18n-workitem-actions-zh.ts.patch
+092-fix-upstream-i18n-duplicate-keys.patch
