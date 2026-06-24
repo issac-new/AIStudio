@@ -1,6 +1,6 @@
-diff --git a/a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
+diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
 index 0000000..0000000 100644
---- a/a/packages/server/src/controllers/hermes/kanban.ts
+--- a/packages/server/src/controllers/hermes/kanban.ts
 +++ b/packages/server/src/controllers/hermes/kanban.ts
 @@ -1,5 +1,5 @@
  import type { Context } from 'koa'
@@ -84,9 +84,9 @@ index 0000000..0000000 100644
      ctx.status = 500
      ctx.body = { error: err.message }
 
-diff --git a/a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
 index 0000000..0000000 100644
---- a/a/packages/server/src/routes/hermes/kanban.ts
+--- a/packages/server/src/routes/hermes/kanban.ts
 +++ b/packages/server/src/routes/hermes/kanban.ts
 @@ -22,6 +22,8 @@ kanbanRoutes.get('/api/hermes/kanban/orchestration', ctrl.getOrchestration)
  kanbanRoutes.put('/api/hermes/kanban/orchestration', ctrl.setOrchestration)
