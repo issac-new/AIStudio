@@ -117,6 +117,7 @@ function statusBucketLabel(s: string): string {
             :placeholder="field.label"
             multiple
             size="tiny"
+            :teleported="false"
             class="cockpit-kanban__tenant-sel"
             @update:value="(v: any) => setTenantFilterValues(field.filterKey, v)"
           />
@@ -228,7 +229,8 @@ function statusBucketLabel(s: string): string {
 
 .cockpit-kanban__frow--tenant { flex-wrap: wrap; }
 .cockpit-kanban__tenant-selects { display: flex; gap: 4px; flex: 1; min-width: 0; flex-wrap: wrap; }
-.cockpit-kanban__tenant-sel { flex: 1; min-width: 80px; max-width: 200px; }
+.cockpit-kanban__tenant-sel { flex: 1; min-width: 100px; }
+.cockpit-kanban__tenant-sel :deep(.n-base-select-option__content) { overflow: visible; white-space: normal; word-break: break-all; }
 .cockpit-kanban__date {
   font-size: 10px; padding: 1px 4px; border: 1px solid var(--border-color);
   border-radius: 4px; background: var(--bg-card); color: var(--text-secondary);
