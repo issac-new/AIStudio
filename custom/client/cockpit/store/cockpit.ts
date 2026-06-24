@@ -486,6 +486,19 @@ export const useCockpitStore = defineStore('cockpit', () => {
     try {
       const detail = _detailCache.value[id] ?? await kanbanApi.getTask(id, boardOpts)
       _detailCache.value[id] = detail
+      // 同步 detail.task 的最新状态回 cockpitTasks（动作执行后 task.status 已变，否则 UI 按钮门禁失效）
+      const t = detail.task
+      if (t) {
+        const idx = cockpitTasks.value.findIndex(x => x.id === id)
+        if (idx >= 0) {
+          const cur = cockpitTasks.value[idx]
+          cockpitTasks.value = [
+            ...cockpitTasks.value.slice(0, idx),
+            { ...cur, status: t.status as any, title: t.title ?? cur.title, assignee: t.assignee ?? cur.assignee, priority: (t.priority ?? cur.priority) as any },
+            ...cockpitTasks.value.slice(idx + 1),
+          ]
+        }
+      }
       // 初步合并（events + runs + comments + messages）
       events.value = eventAdapter.mergeDetail(detail)
       const profile = detail.task.assignee ?? undefined
