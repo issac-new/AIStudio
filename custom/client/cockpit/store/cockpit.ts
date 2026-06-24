@@ -230,21 +230,24 @@ export const useCockpitStore = defineStore('cockpit', () => {
       }
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
-        && (t.tenant == null || (
-          // 旧 tenants 筛选（兼容）+ 结构化字段筛选
-          okArr(f.tenants, tenantFilterValue(parseTenant(t.tenant)))
-          && (() => {
-            if (!t.tenant) return true
-            const p = parseTenant(t.tenant)
-            const tf = (arr: string[], val: string) => arr.length === 0 || arr.includes(val)
-            return tf(f.tenantGroupChat, p.groupChat || '___other___')
-              && tf(f.tenantTopic, p.topic || '___other___')
-              && tf(f.tenantUserId, p.userId || '___other___')
-              && tf(f.tenantRoomId, p.roomId || '___other___')
-              && tf(f.tenantSessionId, p.sessionId || '___other___')
-              && tf(f.tenantSource, p.source || '___other___')
-          })()
-        ))
+        && (() => {
+          // 结构化字段筛选：若任一字段有筛选值，则要求 task 必须有 tenant
+          const hasAnyTenantFilter = f.tenantGroupChat.length > 0 || f.tenantTopic.length > 0
+            || f.tenantUserId.length > 0 || f.tenantRoomId.length > 0
+            || f.tenantSessionId.length > 0 || f.tenantSource.length > 0
+            || f.tenants.length > 0
+          if (!hasAnyTenantFilter) return true
+          if (!t.tenant) return false
+          const p = parseTenant(t.tenant)
+          const tf = (arr: string[], val: string) => arr.length === 0 || arr.includes(val)
+          return okArr(f.tenants, tenantFilterValue(parseTenant(t.tenant)))
+            && tf(f.tenantGroupChat, p.groupChat || '___other___')
+            && tf(f.tenantTopic, p.topic || '___other___')
+            && tf(f.tenantUserId, p.userId || '___other___')
+            && tf(f.tenantRoomId, p.roomId || '___other___')
+            && tf(f.tenantSessionId, p.sessionId || '___other___')
+            && tf(f.tenantSource, p.source || '___other___')
+        })()
         && okArr(f.boardSlugs, t.boardSlug)
         && dateOk
         && searchOk
