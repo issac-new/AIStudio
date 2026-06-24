@@ -502,7 +502,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
           const cur = cockpitTasks.value[idx]
           cockpitTasks.value = [
             ...cockpitTasks.value.slice(0, idx),
-            { ...cur, status: t.status as any, title: t.title ?? cur.title, assignee: t.assignee ?? cur.assignee, priority: (t.priority ?? cur.priority) as any, workspace: t.workspace_path ?? cur.workspace },
+            { ...cur, status: t.status as any, title: t.title ?? cur.title, assignee: t.assignee ?? cur.assignee, priority: taskAdapter.bucketPriority(t.priority), workspace: t.workspace_path ?? cur.workspace },
             ...cockpitTasks.value.slice(idx + 1),
           ]
         }
