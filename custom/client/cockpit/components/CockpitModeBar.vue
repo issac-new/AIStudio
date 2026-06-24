@@ -10,7 +10,10 @@ const { t } = useI18n()
 const router = useRouter()
 
 // 双态切换：最大（全屏）↔ 还原（原页面布局）
-const colMaxIcon = computed(() => store.maximized.right ? '🗗' : '⛶')
+const colMaxIcon = computed(() => store.maximized.right
+  ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`
+  : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`
+)
 const colMaxTitle = computed(() => store.maximized.right ? t('cockpit.restore') : t('cockpit.maximize'))
 function onRightMaximize() {
   store.toggleMaximized('right')
@@ -48,7 +51,7 @@ function onRightMaximize() {
       class="cockpit-mode-bar__max"
       :title="colMaxTitle"
       @click="onRightMaximize"
-    >{{ colMaxIcon }}</button>
+      v-html="colMaxIcon" />
   </div>
 </template>
 
