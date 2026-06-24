@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NModal } from 'naive-ui'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const { t } = useI18n()
@@ -149,16 +148,20 @@ onUnmounted(() => {
     </button>
   </div>
 
-  <!-- 手动探测详情弹窗 -->
-  <NModal v-if="showDetail" :show="showDetail" @update:show="(v: boolean) => showDetail = v" title="Connected Platforms 探测结果">
-    <div class="cockpit-probe" style="padding: 20px; max-width: 500px; background: var(--bg-card); border-radius: 8px;">
-      <pre style="font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: var(--text-primary);">{{ JSON.stringify(rawData, null, 2) }}</pre>
+  <!-- 探测结果下拉面板 -->
+  <div v-if="showDetail" class="cockpit-probe" @click.stop>
+    <div class="cockpit-probe__head">
+      <span>Connected Platforms</span>
+      <button type="button" class="cockpit-probe__close" @click="showDetail = false">×</button>
     </div>
-  </NModal>
+    <pre class="cockpit-probe__json">{{ JSON.stringify(rawData, null, 2) }}</pre>
+  </div>
+  <!-- 点击遮罩关闭 -->
+  <div v-if="showDetail" class="cockpit-probe__mask" @click="showDetail = false" />
 </template>
 
 <style scoped lang="scss">
-.cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+.cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; padding: 0 16px; position: relative; z-index: 10; }
 .cockpit-top__brand { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; white-space: nowrap; color: var(--text-primary); }
 .cockpit-top__mark { width: 8px; height: 8px; border-radius: 2px; background: var(--accent-primary); display: inline-block; }
 .cockpit-top__sub { font-weight: 400; font-size: 11px; color: var(--text-muted); }
@@ -189,4 +192,11 @@ onUnmounted(() => {
 .cockpit-top__avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-primary); color: var(--text-on-accent); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
 .cockpit-top__uname { font-size: 11px; font-weight: 600; color: var(--text-primary); }
 .cockpit-top__caret { font-size: 9px; color: var(--text-muted); }
+
+/* 探测结果下拉面板 */
+.cockpit-probe { position: absolute; top: 100%; right: 16px; min-width: 360px; max-width: 480px; max-height: 320px; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 999; }
+.cockpit-probe__head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-color); font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.cockpit-probe__close { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0 4px; &:hover { color: var(--text-primary); } }
+.cockpit-probe__json { padding: 12px 14px; font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: var(--text-primary); margin: 0; }
+.cockpit-probe__mask { position: fixed; inset: 0; z-index: 998; }
 </style>
