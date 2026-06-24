@@ -40,6 +40,15 @@ const currentBody = computed(() => {
   return task.value?.body ?? ''
 })
 
+// 差异标注：草稿值与原值不同时高亮
+const isAssigneePending = computed(() => workItem.value?.pendingAssignee !== undefined && workItem.value?.pendingAssignee !== (task.value?.assignee ?? ''))
+const isPriorityPending = computed(() => workItem.value?.pendingPriority !== undefined && workItem.value?.pendingPriority !== (task.value?.priority ?? 0))
+const isBodyPending = computed(() => workItem.value?.pendingBody !== undefined && workItem.value?.pendingBody !== (task.value?.body ?? ''))
+const isTitlePending = computed(() => {
+  const pt = workItem.value?.pendingTitle
+  return pt !== undefined && pt !== '' && pt !== (task.value?.title ?? '')
+})
+
 // 父子任务（detail 提供原始列表 + 草稿中的待增删）
 const parentIds = computed(() => detail.value?.parents ?? [])
 const childIds = computed(() => detail.value?.children ?? [])
@@ -351,7 +360,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
       <div v-if="hasTask" class="cockpit-workspace__body">
         <!-- ═══ AREA 1: Task Header ═══ -->
         <div class="cockpit-workspace__header">
-          <input class="cockpit-workspace__title-input"
+          <input class="cockpit-workspace__title-input" :class="{ 'is-pending': isTitlePending }"
             :value="store.currentTitle"
             :placeholder="t('cockpit.editTitlePlaceholder')"
             @input="store.setPendingTitle(($event.target as HTMLInputElement).value)" />
@@ -366,7 +375,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.assignee') }}</label>
           <div class="cockpit-workspace__field-row">
-            <span class="cockpit-workspace__field-val">{{ currentAssignee }}</span>
+            <span class="cockpit-workspace__field-val" :class="{ 'is-pending': isAssigneePending }">{{ currentAssignee }}</span>
             <select class="cockpit-workspace__select" :value="currentAssignee" @change="onAssigneeChange">
               <option value="" disabled>{{ t('cockpit.selectAssignee') }}</option>
               <option v-for="opt in assigneeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -377,7 +386,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.priority') }}</label>
           <div class="cockpit-workspace__field-row">
-            <span class="cockpit-workspace__field-val">{{ 'P' + currentPriority }}</span>
+            <span class="cockpit-workspace__field-val" :class="{ 'is-pending': isPriorityPending }">{{ 'P' + currentPriority }}</span>
             <button type="button" class="cockpit-workspace__mini-btn" @click="onPriorityDelta(-1)">−</button>
             <button type="button" class="cockpit-workspace__mini-btn" @click="onPriorityDelta(1)">+</button>
           </div>
@@ -454,7 +463,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         <!-- Description（暂存草稿） -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.description') }}</label>
-          <textarea class="cockpit-workspace__textarea" :value="currentBody"
+          <textarea class="cockpit-workspace__textarea" :class="{ 'is-pending': isBodyPending }" :value="currentBody"
             :placeholder="t('cockpit.descriptionPlaceholder')"
             @input="onBodyInput" />
         </div>
@@ -633,6 +642,9 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 .cockpit-workspace__section-title { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
 .cockpit-workspace__field-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cockpit-workspace__field-val { font-size: 13px; color: var(--text-primary); }
+.cockpit-workspace__field-val.is-pending,
+.cockpit-workspace__title-input.is-pending { color: var(--warning, #e6a23c); border-bottom-color: var(--warning, #e6a23c); }
+.cockpit-workspace__textarea.is-pending { border-color: var(--warning, #e6a23c); background: rgba(var(--warning-rgb, 230,162,60), 0.04); }
 .cockpit-workspace__field-val--muted { font-size: 12px; color: var(--text-muted); font-style: italic; }
 .cockpit-workspace__select { font-family: inherit; font-size: 12px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); }
 .cockpit-workspace__mini-btn { width: 22px; height: 22px; padding: 0; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center;
