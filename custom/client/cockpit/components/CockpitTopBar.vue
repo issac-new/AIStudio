@@ -20,64 +20,46 @@ defineProps<{ notifyCount?: number; scheduleCount?: number; userName?: string }>
 interface PlatformInfo {
   name: string
   icon: string
-  enabled: boolean
-  detail: string
+  state: string
+  updated: string
 }
 
-const healthStatus = ref<{
-  gateway: 'checking' | 'running' | 'stopped'
-  bridge: 'checking' | 'ready' | 'offline'
-  platforms: PlatformInfo[]
-}>({
-  gateway: 'checking',
-  bridge: 'checking',
-  platforms: [],
-})
+const gatewayState = ref<'checking' | 'running' | 'stopped'>('checking')
+const platforms = ref<PlatformInfo[]>([])
 
 const PLATFORM_ICONS: Record<string, string> = {
   api_server: '🔌',
   matrix: '👥',
   email: '📧',
-  chat: '💬',
-  group: '🗣',
+}
+
+function formatTimeAgo(iso: string): string {
+  if (!iso) return ''
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '刚刚'
+  if (mins < 60) return `${mins}分钟前`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}小时前`
+  return `${Math.floor(hrs / 24)}天前`
 }
 
 async function fetchGatewayStatus() {
   try {
-    const [healthRes, cfgRes] = await Promise.all([
-      fetch('/health'),
-      fetch('/api/hermes/config'),
-    ])
-    const health = await healthRes.json()
-    healthStatus.value.gateway = health.gateway === 'running' ? 'running' : 'stopped'
-    const bridge = health.agent_bridge || {}
-    healthStatus.value.bridge = bridge.ready ? 'ready' : 'offline'
+    const res = await fetch('http://127.0.0.1:8650/health/detailed')
+    const data = await res.json()
+    gatewayState.value = data.gateway_state === 'running' ? 'running' : 'stopped'
 
-    const cfg = await cfgRes.json()
-    const pl = cfg.platforms || {}
-    const PLATFORM_LABELS: Record<string, string> = {
-      api_server: 'API Server',
-      matrix: 'Matrix',
-      email: 'Email',
-    }
-    healthStatus.value.platforms = Object.entries(pl)
-      .filter(([, v]: [string, any]) => v?.enabled)
-      .map(([name, v]: [string, any]) => {
-        const detail = name === 'api_server'
-          ? `:${v?.extra?.port || '?'}`
-          : name === 'matrix'
-            ? v?.token ? ' (Token OK)' : ' (未配置)'
-            : ''
-        return {
-          name: PLATFORM_LABELS[name] || name,
-          icon: PLATFORM_ICONS[name] || '📡',
-          enabled: true,
-          detail,
-        }
-      })
+    const pl = data.platforms || {}
+    platforms.value = Object.entries(pl).map(([name, info]: [string, any]) => ({
+      name,
+      icon: PLATFORM_ICONS[name] || '📡',
+      state: info.state || 'unknown',
+      updated: formatTimeAgo(info.updated_at || ''),
+    }))
   } catch {
-    healthStatus.value.gateway = 'stopped'
-    healthStatus.value.bridge = 'offline'
+    gatewayState.value = 'stopped'
+    platforms.value = []
   }
 }
 
@@ -111,19 +93,16 @@ onMounted(() => { fetchGatewayStatus() })
     </div>
     <div class="cockpit-top__spacer" />
     <div class="cockpit-top__grp">
-      <span class="cockpit-top__ustat" :class="'is-' + healthStatus.gateway">
-        {{ healthStatus.gateway === 'running' ? '🟢' : healthStatus.gateway === 'stopped' ? '🔴' : '⚪' }}
+      <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
+        {{ gatewayState === 'running' ? '🟢' : gatewayState === 'stopped' ? '🔴' : '⚪' }}
         Gateway
       </span>
-      <span class="cockpit-top__ustat" :class="'is-' + healthStatus.bridge">
-        {{ healthStatus.bridge === 'ready' ? '🟢' : healthStatus.bridge === 'offline' ? '🔴' : '⚪' }}
-        Bridge
-      </span>
       <span
-        v-for="pl in healthStatus.platforms" :key="pl.name"
-        class="cockpit-top__ustat is-running"
-        :title="pl.name + pl.detail"
-      >{{ pl.icon }} {{ pl.name }}{{ pl.detail }}</span>
+        v-for="pl in platforms" :key="pl.name"
+        class="cockpit-top__ustat"
+        :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
+        :title="`${pl.name}: ${pl.state} · ${pl.updated}`"
+      >{{ pl.icon }} {{ pl.name }} · {{ pl.state === 'connected' ? '🟢' : '🔴' }}</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
@@ -142,10 +121,10 @@ onMounted(() => { fetchGatewayStatus() })
 .cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; padding: 0 16px; }
 .cockpit-top__brand { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; white-space: nowrap; color: var(--text-primary); }
 .cockpit-top__mark { width: 8px; height: 8px; border-radius: 2px; background: var(--accent-primary); display: inline-block; }
+.cockpit-top__sub { font-weight: 400; font-size: 11px; color: var(--text-muted); }
 .cockpit-top__set { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; flex-shrink: 0;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
-.cockpit-top__sub { font-weight: 400; font-size: 11px; color: var(--text-muted); }
 .cockpit-top__div { width: 1px; height: 20px; background: var(--border-color); margin: 0 4px; }
 .cockpit-top__btn { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; font-family: inherit; position: relative;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
