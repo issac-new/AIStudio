@@ -1,8 +1,10 @@
 <script setup lang="ts">
 /**
- * CockpitFilePanel — 在 Cockpit Work 页面中替换原有的 CockpitFileTree，
+ * CockpitFilePanel — 在 Cockpit 页面中作为独立标签页使用的文件浏览器，
  * 复用 upstream Chat 面板 "Workspace / Terminal" 中的 FilesPanel 模块，
  * 但将文件浏览器的根目录设为当前选中任务的 workspace。
+ *
+ * 通过 store.workspaceMode === 'workspace' 激活，由 CockpitView 渲染。
  *
  * 原理：
  *   1. 监控 store.selectedTask?.workspace
@@ -34,9 +36,8 @@ watch(() => store.selectedTask?.workspace, (ws) => {
 
 <style scoped lang="scss">
 .cockpit-file-panel {
-  flex: 0 0 320px;
-  min-width: 0;
-  border-left: 1px solid var(--border-color);
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

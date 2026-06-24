@@ -49,6 +49,12 @@ function onRightMaximize() {
     <button
       type="button"
       class="cockpit-mode-bar__mode"
+      :class="{ 'is-on': store.workspaceMode === 'workspace' }"
+      @click="store.setWorkspaceMode('workspace')"
+    >📁 {{ t('cockpit.modeWorkspace') }}</button>
+    <button
+      type="button"
+      class="cockpit-mode-bar__mode"
       :class="{ 'is-on': store.workspaceMode === 'term' }"
       @click="store.enterTerminal()"
     >⌘ {{ t('cockpit.modeTerm') }}</button>

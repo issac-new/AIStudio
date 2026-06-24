@@ -43,7 +43,7 @@ export interface HistoryFilters {
   actions: string[]
   statuses: ('active' | 'done' | 'archived')[]
 }
-export type WorkspaceMode = 'work' | 'chat' | 'term'
+export type WorkspaceMode = 'work' | 'chat' | 'term' | 'workspace'
 export type ChannelKind = 'matrix' | 'chat' | 'group'
 export type WorkDecision = kv.WorkDecision
 export type DraftWorkItem = kv.DraftWorkItem

@@ -4,3 +4,6 @@ vite.config.overlay.ts
 *.log
 node_modules
 node_modules/
+# inject 在 overlay 目录内生成的上游派生文件/目录
+packages/
+tests/

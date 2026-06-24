@@ -2,10 +2,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index efcc5613..5580cb52 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -315,6 +315,46 @@ export default {
+@@ -315,6 +315,47 @@ export default {
      backToWork: 'Back to work',
      members: 'members',
      modeTerm: 'Code',
++    modeWorkspace: 'Workspace',
 +    editTitlePlaceholder: 'Title',
 +    actions: 'Actions',
 +    specify: 'Specify',

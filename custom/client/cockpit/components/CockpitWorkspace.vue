@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import * as kanbanApi from '@/api/hermes/kanban'
 import type { KanbanTaskStatus, HomeChannel } from '@/api/hermes/kanban'
-import CockpitFilePanel from './CockpitFilePanel.vue'
 import CockpitConfirmDialog from './CockpitConfirmDialog.vue'
 import CockpitCompletionModal from './CockpitCompletionModal.vue'
 import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
@@ -607,12 +606,9 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         </template>
         <button v-else type="button" class="cockpit-workspace__btn is-pri" @click="store.openTemplateManager()">{{ t('cockpit.newCollabFromArchive') }}</button>
       </div>
-    </div>
-
-    <!-- Workspace 文件浏览器 -->
-    <CockpitFilePanel />
-  </div>
-</template>
+	    </div>
+	  </div>
+	</template>
 
 <style scoped lang="scss">
 .cockpit-workspace { display: flex; flex: 1; min-height: 0; }

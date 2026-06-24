@@ -12,6 +12,7 @@ import CockpitModeBar from '@/custom/cockpit/components/CockpitModeBar.vue'
 import CockpitCollabBar from '@/custom/cockpit/components/CockpitCollabBar.vue'
 import CockpitChatPane from '@/custom/cockpit/components/CockpitChatPane.vue'
 import CockpitTerminalPane from '@/custom/cockpit/components/CockpitTerminalPane.vue'
+import CockpitFilePanel from '@/custom/cockpit/components/CockpitFilePanel.vue'
 import CockpitHistoryModal from '@/custom/cockpit/components/CockpitHistoryModal.vue'
 import CockpitNotifyModal from '@/custom/cockpit/components/CockpitNotifyModal.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
@@ -158,6 +159,7 @@ function onColCtrl(col: ColumnKey) {
           <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
           <CockpitWorkspace v-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="store.submitWorkItem" />
+          <CockpitFilePanel v-else-if="store.workspaceMode === 'workspace'" />
           <CockpitChatPane v-else-if="store.workspaceMode === 'chat'" />
           <CockpitTerminalPane v-else />
         </div>
