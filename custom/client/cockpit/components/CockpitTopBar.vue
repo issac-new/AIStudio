@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NModal } from 'naive-ui'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const { t } = useI18n()
@@ -10,7 +11,6 @@ const store = useCockpitStore()
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
 onMounted(() => { timer = setInterval(() => { now.value = new Date() }, 1000) })
-onUnmounted(() => { if (timer) clearInterval(timer) })
 
 const WK = ['日', '一', '二', '三', '四', '五', '六']
 function pad(n: number) { return String(n).padStart(2, '0') }
@@ -28,11 +28,12 @@ interface PlatformInfo {
 
 const gatewayState = ref<'checking' | 'running' | 'stopped'>('checking')
 const platforms = ref<PlatformInfo[]>([])
+const refreshing = ref(false)
+const rawData = ref<any>(null)
+const showDetail = ref(false)
 
 const PLATFORM_ICONS: Record<string, string> = {
-  api_server: '🔌',
-  matrix: '👥',
-  email: '📧',
+  api_server: '🔌', matrix: '👥', email: '📧',
 }
 
 function formatTimeAgo(iso: string): string {
@@ -46,26 +47,54 @@ function formatTimeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}天前`
 }
 
-async function fetchGatewayStatus() {
+// 30s 自动刷新；保存上次状态，仅变化时更新 UI 避免闪动
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let lastStates: Record<string, string> = {}
+
+async function fetchGatewayStatus(silent = true) {
+  if (!silent) refreshing.value = true
   try {
     const res = await fetch('/agent-health/detailed')
     const data = await res.json()
-    gatewayState.value = data.gateway_state === 'running' ? 'running' : 'stopped'
+    rawData.value = data
+
+    const gw = data.gateway_state === 'running' ? 'running' as const : 'stopped' as const
+    if (gw !== gatewayState.value) gatewayState.value = gw
 
     const pl = data.platforms || {}
-    platforms.value = Object.entries(pl).map(([name, info]: [string, any]) => ({
-      name,
-      icon: PLATFORM_ICONS[name] || '📡',
-      state: info.state || 'unknown',
-      updated: formatTimeAgo(info.updated_at || ''),
-    }))
+    const newPlatforms: PlatformInfo[] = []
+    let changed = false
+    for (const [name, info] of Object.entries(pl) as [string, any][]) {
+      const state = info.state || 'unknown'
+      const key = `${name}:${state}`
+      if (lastStates[name] !== key) changed = true
+      lastStates[name] = key
+      newPlatforms.push({ name, icon: PLATFORM_ICONS[name] || '📡', state, updated: formatTimeAgo(info.updated_at || '') })
+    }
+    if (changed || platforms.value.length !== newPlatforms.length) {
+      platforms.value = newPlatforms
+    }
   } catch {
-    gatewayState.value = 'stopped'
-    platforms.value = []
+    if (gatewayState.value !== 'stopped') gatewayState.value = 'stopped'
+  } finally {
+    if (!silent) refreshing.value = false
   }
 }
 
-onMounted(() => { fetchGatewayStatus() })
+/** 双击手动探测并弹出详情 */
+async function manualProbe() {
+  await fetchGatewayStatus(false)
+  if (rawData.value) showDetail.value = true
+}
+
+onMounted(() => {
+  fetchGatewayStatus()
+  pollTimer = setInterval(() => fetchGatewayStatus(true), 30000)
+})
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+  if (timer) clearInterval(timer)
+})
 </script>
 
 <template>
@@ -91,28 +120,22 @@ onMounted(() => { fetchGatewayStatus() })
     </div>
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon">🔍</span>
-      <input
-        type="text"
-        class="cockpit-top__search-input"
-        :value="store.searchQuery"
-        placeholder="搜索 会话/任务/房间"
-        @input="store.runSearch(($event.target as HTMLInputElement).value)"
-      />
+      <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
+        placeholder="搜索 会话/任务/房间" @input="store.runSearch(($event.target as HTMLInputElement).value)" />
       <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
     </div>
     <div class="cockpit-top__spacer" />
-    <div class="cockpit-top__grp">
+    <div class="cockpit-top__grp" title="双击手动探测" @dblclick="manualProbe">
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
         {{ gatewayState === 'running' ? '🟢' : gatewayState === 'stopped' ? '🔴' : '⚪' }}
-        Gateway
+        Gateway{{ refreshing ? ' ⏳' : '' }}
       </span>
-      <span
-        v-for="pl in platforms" :key="pl.name"
-        class="cockpit-top__ustat"
+      <span v-for="pl in platforms" :key="pl.name" class="cockpit-top__ustat"
         :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
-        :title="`${pl.name}: ${pl.state} · ${pl.updated}`"
-      >{{ pl.icon }} {{ pl.name }} · {{ pl.state === 'connected' ? '🟢' : '🔴' }}</span>
+        :title="`${pl.name}: ${pl.state} · ${pl.updated}`">
+        {{ pl.icon }} {{ pl.name }}{{ pl.state === 'connected' ? '' : ' ⚠' }}
+      </span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
@@ -125,6 +148,13 @@ onMounted(() => { fetchGatewayStatus() })
       <span class="cockpit-top__caret">▾</span>
     </button>
   </div>
+
+  <!-- 手动探测详情弹窗 -->
+  <NModal v-if="showDetail" :show="showDetail" @update:show="(v: boolean) => showDetail = v" title="Connected Platforms 探测结果">
+    <div class="cockpit-probe" style="padding: 20px; max-width: 500px; background: var(--bg-card); border-radius: 8px;">
+      <pre style="font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: var(--text-primary);">{{ JSON.stringify(rawData, null, 2) }}</pre>
+    </div>
+  </NModal>
 </template>
 
 <style scoped lang="scss">
@@ -151,7 +181,7 @@ onMounted(() => { fetchGatewayStatus() })
 .cockpit-top__search-spinner { width: 10px; height: 10px; flex-shrink: 0; border: 1.5px solid var(--border-color); border-top-color: var(--accent-primary); border-radius: 50%; animation: cockpit-tspin 0.6s linear infinite; }
 @keyframes cockpit-tspin { to { transform: rotate(360deg); } }
 .cockpit-top__spacer { flex: 1; }
-.cockpit-top__grp { display: flex; align-items: center; gap: 6px; }
+.cockpit-top__grp { display: flex; align-items: center; gap: 6px; cursor: default; }
 .cockpit-top__ustat { font-size: 10px; color: var(--text-muted); }
 .cockpit-top__user { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 4px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; font-family: inherit;
   &:hover { background: var(--bg-secondary); }
