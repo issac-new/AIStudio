@@ -601,7 +601,12 @@ export const useCockpitStore = defineStore('cockpit', () => {
     const id = selectedTaskId.value
     if (id && _detailCache.value[id]) {
       delete _detailCache.value[id]
-      loadTaskDetail(id)
+      loadTaskDetail(id).then(() => {
+        // loadTaskDetail 不走 selectTask → selectionSeq 不自增。
+        // 但 cockpitTasks 中 workspace 已被 kanban.tasks 的值覆盖，
+        // 需要通知 CockpitFilePanel 等消费者重新读取已刷新的 workspace。
+        if (selectedTaskId.value === id) selectionSeq.value++
+      })
     }
   })
 
