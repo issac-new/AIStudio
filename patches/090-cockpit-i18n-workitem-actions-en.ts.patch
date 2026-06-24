@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index efcc5613..5580cb52 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -315,6 +315,30 @@ export default {
+@@ -315,6 +315,37 @@ export default {
      backToWork: 'Back to work',
      members: 'members',
      modeTerm: 'Code',
@@ -30,6 +30,13 @@ index efcc5613..5580cb52 100644
 +    confirmArchive: 'Archive this task? It disappears from the default board view.',
 +    confirmBlocked: 'Mark this task as blocked? The worker\'s claim is released.',
 +    completionSummaryRequired: 'Completion summary is required before marking a task done.',
++    evaluation: 'Evaluation',
++    saveDraft: 'Save draft',
++    parentTasks: 'Parent tasks',
++    childTasks: 'Child tasks',
++    parentIdPlaceholder: 'Parent task id',
++    childIdPlaceholder: 'Child task id',
++    pendingLinksHint: 'pending link changes',
      history: 'History',
      historyTitle: 'My history',
      historySearch: 'Search events, tasks, agents…',
