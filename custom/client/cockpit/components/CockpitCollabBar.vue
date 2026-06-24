@@ -45,8 +45,6 @@ function pickNew(kind: ChannelKind) {
       <span class="cockpit-collab-bar__chip-label">{{ c.label }}</span>
       <span v-if="c.routeTarget" class="cockpit-collab-bar__chip-nav" title="打开完整页面" @click.stop="navigateRoute(c)">↗</span>
     </button>
-    <button type="button" data-action="add" class="cockpit-collab-bar__add" @click="menuOpen = !menuOpen">+ {{ t('cockpit.addCollab') }}</button>
-
     <div v-if="menuOpen" class="cockpit-collab-bar__menu">
       <div class="cockpit-collab-bar__menu-head">{{ t('cockpit.addCollabTitle') }}</div>
       <button
