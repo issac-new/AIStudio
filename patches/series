@@ -75,4 +75,3 @@
 091-cockpit-i18n-workitem-actions-zh.ts.patch
 092-fix-upstream-i18n-duplicate-keys.patch
 093-server-kanban-attachment-workspace-sync.patch
-094-client-store-chat-gateway-notice.patch
