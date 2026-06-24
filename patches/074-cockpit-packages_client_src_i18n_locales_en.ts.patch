@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index fdc761f3..b9e6aeed 100644
+index fdc761f3..1766d961 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -44,6 +44,15 @@ export default {
+@@ -44,6 +44,16 @@ export default {
      defaultCredentialMessage: 'This account is still using the default username or password. To prevent unauthorized access, update the username and password as soon as possible.',
      defaultCredentialAction: 'Update now',
      defaultCredentialLater: 'Remind me later',
@@ -15,10 +15,11 @@ index fdc761f3..b9e6aeed 100644
 +    fallbackToLocalHint: 'The backend is temporarily unreachable. You can still log in with a local account.',
 +    localDescription: 'Enter your local Hermes credentials.',
 +    useMatrixLogin: '← Back to Matrix Login',
++    rememberMe: 'Remember Me',
    },
  
    users: {
-@@ -186,6 +195,9 @@ export default {
+@@ -186,6 +196,9 @@ export default {
      history: 'History',
      jobs: 'Jobs',
      kanban: 'Kanban',
@@ -28,7 +29,7 @@ index fdc761f3..b9e6aeed 100644
      workflow: 'Workflow',
      models: 'Models',
      profiles: 'Profiles',
-@@ -727,6 +739,7 @@ export default {
+@@ -727,6 +740,7 @@ export default {
    // Kanban
    kanban: {
      title: 'Kanban Board',
@@ -36,7 +37,7 @@ index fdc761f3..b9e6aeed 100644
      createTask: 'New Task',
      noTasks: 'No tasks',
      allStatuses: 'All Statuses',
-@@ -1838,6 +1851,17 @@ export default {
+@@ -1838,6 +1852,17 @@ export default {
        mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
        mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace',
      },
@@ -54,7 +55,7 @@ index fdc761f3..b9e6aeed 100644
    },
    githubPreview: {
      title: "Version Preview",
-@@ -1953,22 +1977,22 @@ export default {
+@@ -1953,22 +1978,22 @@ export default {
  
    // Platform channel settings
    platform: {
@@ -85,7 +86,7 @@ index fdc761f3..b9e6aeed 100644
      autoThreadHintRoom: 'Auto-create reply threads in rooms',
      dmMentionThreads: 'DM Mention Threads',
      dmMentionThreadsHint: 'Use thread replies for mentions in DMs',
-@@ -2266,4 +2290,125 @@ export default {
+@@ -2266,4 +2291,125 @@ export default {
      new_0_6_13_5: 'Desktop updates are more reliable: Windows upgrades close stale Hermes Studio processes, Cloudflare is checked first, and GitHub remains the fallback feed',
      new_0_6_13_6: 'Release automation now keeps Web UI and Docker releases out of GitHub Latest while full desktop releases are manually promoted to Latest',
    },

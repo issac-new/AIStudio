@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index d10836a8..eba5d35e 100644
+index d10836a8..e77b26e4 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -44,6 +44,15 @@ export default {
+@@ -44,6 +44,16 @@ export default {
      defaultCredentialMessage: '当前登录账户仍在使用默认用户名或默认密码。为了避免未授权访问，请尽快进入当前账户修改用户名和密码。',
      defaultCredentialAction: '去修改',
      defaultCredentialLater: '稍后提醒',
@@ -15,10 +15,11 @@ index d10836a8..eba5d35e 100644
 +    fallbackToLocalHint: '后端暂时无法访问，您仍然可以使用本地账号登录。',
 +    localDescription: '输入本地 Hermes 凭证。',
 +    useMatrixLogin: '← 返回 Matrix 登录',
++    rememberMe: '记住我',
    },
  
    users: {
-@@ -186,6 +195,9 @@ export default {
+@@ -186,6 +196,9 @@ export default {
      history: '历史',
      jobs: '任务',
      kanban: '看板',
@@ -28,7 +29,7 @@ index d10836a8..eba5d35e 100644
      workflow: '工作流',
      models: '模型',
      profiles: '用户',
-@@ -727,6 +739,7 @@ export default {
+@@ -727,6 +740,7 @@ export default {
    // 看板
    kanban: {
      title: '看板',
@@ -36,7 +37,7 @@ index d10836a8..eba5d35e 100644
      createTask: '新建任务',
      noTasks: '暂无任务',
      allStatuses: '全部状态',
-@@ -1830,6 +1843,17 @@ export default {
+@@ -1830,6 +1844,17 @@ export default {
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
        mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
      },
@@ -54,7 +55,7 @@ index d10836a8..eba5d35e 100644
    },
    githubPreview: {
      title: "版本预览",
-@@ -1945,22 +1969,22 @@ export default {
+@@ -1945,22 +1970,22 @@ export default {
  
    // 平台频道设置
    platform: {
@@ -85,7 +86,7 @@ index d10836a8..eba5d35e 100644
      autoThreadHintRoom: '在房间中自动创建回复线程',
      dmMentionThreads: 'DM 提及线程',
      dmMentionThreadsHint: '在私聊中也使用线程回复提及',
-@@ -2268,4 +2292,125 @@ export default {
+@@ -2268,4 +2293,125 @@ export default {
      new_0_6_13_5: '桌面更新更可靠：Windows 升级会关闭残留 Hermes Studio 进程，优先检查 Cloudflare，并保留 GitHub 更新源兜底',
      new_0_6_13_6: '发布自动化调整：Web UI 和 Docker release 不再标记为 GitHub Latest，完整桌面 release 手动构建成功后才提升为 Latest',
    },
