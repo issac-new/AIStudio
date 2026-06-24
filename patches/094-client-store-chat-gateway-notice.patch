@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 229770c1..09494ca9 100644
+index 001a3f7c..63c3178a 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -4,6 +4,7 @@ import { getActiveProfileName } from '@/api/client'
+@@ -4,6 +4,7 @@ import { getActiveProfileName, hasApiKey } from '@/api/client'
  import { inferCodingAgentApiMode, normalizeCodingAgentApiMode } from '@/api/coding-agents'
  import { getDownloadUrl } from '@/api/hermes/download'
  import type { ProviderApiMode } from '@/api/hermes/system'
@@ -28,7 +28,7 @@ index 229770c1..09494ca9 100644
        finishReason: readFinishReason(msg),
        runMarker: readRunMarker(msg),
      })
-@@ -1269,6 +1270,12 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1323,6 +1324,12 @@ export const useChatStore = defineStore('chat', () => {
    }
  
    function addMessage(sessionId: string, msg: Message) {
