@@ -129,6 +129,15 @@ export default mergeConfig(
       outDir: '${upstreamDistClient}',
       rollupOptions: { input: resolve('${upstreamClientRoot}', 'index.html') },
     },
+    server: {
+      proxy: {
+        '/agent-health': {
+          target: 'http://127.0.0.1:8650',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\\/agent-health/, '/health'),
+        },
+      },
+    },
   })
 );
 `;
