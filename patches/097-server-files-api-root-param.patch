@@ -1,8 +1,14 @@
 diff --git a/packages/server/src/routes/hermes/files.ts b/packages/server/src/routes/hermes/files.ts
-index f01227b3..599f441e 100644
+index f01227b3..379d1aca 100644
 --- a/packages/server/src/routes/hermes/files.ts
 +++ b/packages/server/src/routes/hermes/files.ts
-@@ -12,7 +12,14 @@ function requestedProfile(ctx: any): string | undefined {
+@@ -1,4 +1,5 @@
+ import Router from '@koa/router'
++import { join } from 'path'
+ import {
+   createFileProvider,
+   resolveHermesPath,
+@@ -12,7 +13,14 @@ function requestedProfile(ctx: any): string | undefined {
    return ctx.state?.profile?.name
  }
  
@@ -17,7 +23,7 @@ index f01227b3..599f441e 100644
    return resolveHermesPath(relativePath, requestedProfile(ctx))
  }
  
-@@ -21,6 +28,8 @@ async function createRequestFileProvider(ctx: any) {
+@@ -21,6 +29,8 @@ async function createRequestFileProvider(ctx: any) {
  }
  
  function withAbsolutePath<T extends { path: string }>(ctx: any, entry: T): T & { absolutePath: string } {
