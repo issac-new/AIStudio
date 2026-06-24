@@ -51,7 +51,6 @@ function onColCtrl(col: ColumnKey) {
       :user-name="store.currentUserName"
       @schedule="store.openSchedule()"
       @notify="store.openNotify()"
-      @search="() => {}"
       @settings="goSettings"
     />
     <CockpitAttention />

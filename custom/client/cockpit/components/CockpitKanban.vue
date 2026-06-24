@@ -75,19 +75,16 @@ function statusBucketLabel(s: string): string {
 <template>
   <div class="cockpit-kanban">
     <div class="cockpit-kanban__head">
-      <span class="cockpit-kanban__title">kanban总览</span>
-      <div class="cockpit-kanban__search">
-        <span class="cockpit-kanban__search-icon">🔍</span>
-        <input
-          type="text"
-          class="cockpit-kanban__search-input"
-          :value="store.searchQuery"
-          placeholder="搜索 会话/任务/房间"
-          data-search-input
-          @input="store.runSearch(($event.target as HTMLInputElement).value)"
-        />
-        <button v-if="store.searchQuery" type="button" class="cockpit-kanban__search-clear" @click="store.clearSearch()">×</button>
-        <span v-if="store._sessionSearching" class="cockpit-kanban__search-spinner" />
+      <span class="cockpit-kanban__title">kanban任务</span>
+      <div class="cockpit-kanban__date-inline">
+        <input type="date" class="cockpit-kanban__date" data-filter="date-from"
+          :value="store.filters.dateRange.from ?? ''"
+          @change="store.setDateRangeFilter(($event.target as HTMLInputElement).value || null, store.filters.dateRange.to)" />
+        <span class="cockpit-kanban__date-sep">~</span>
+        <input type="date" class="cockpit-kanban__date" data-filter="date-to"
+          :value="store.filters.dateRange.to ?? ''"
+          @change="store.setDateRangeFilter(store.filters.dateRange.from, ($event.target as HTMLInputElement).value || null)" />
+        <button v-if="store.filters.dateRange.from || store.filters.dateRange.to" type="button" class="cockpit-kanban__date-clear" data-action="clear-date" @click="store.clearDateRangeFilter()">×</button>
       </div>
       <button type="button" class="cockpit-kanban__max" :title="store.maximized.left ? '还原' : '最大化'" @click="$emit('maximize')">
         <svg v-if="store.maximized.left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
@@ -130,17 +127,6 @@ function statusBucketLabel(s: string): string {
         <button v-for="sl in boardOptions" :key="sl" type="button" :data-filter="sl"
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.boardSlugs.includes(sl) }"
           @click="store.toggleFilter('boardSlugs', sl)">{{ sl }}</button>
-      </div>
-      <div class="cockpit-kanban__frow cockpit-kanban__frow--date">
-        <span class="cockpit-kanban__flabel">日期</span>
-        <input type="date" class="cockpit-kanban__date" data-filter="date-from"
-          :value="store.filters.dateRange.from ?? ''"
-          @change="store.setDateRangeFilter(($event.target as HTMLInputElement).value || null, store.filters.dateRange.to)" />
-        <span class="cockpit-kanban__date-sep">~</span>
-        <input type="date" class="cockpit-kanban__date" data-filter="date-to"
-          :value="store.filters.dateRange.to ?? ''"
-          @change="store.setDateRangeFilter(store.filters.dateRange.from, ($event.target as HTMLInputElement).value || null)" />
-        <button v-if="store.filters.dateRange.from || store.filters.dateRange.to" type="button" class="cockpit-kanban__date-clear" data-action="clear-date" @click="store.clearDateRangeFilter()">×</button>
       </div>
     </div>
 
@@ -275,6 +261,7 @@ function statusBucketLabel(s: string): string {
   display: flex;
   align-items: center;
 }
+.cockpit-kanban__date-inline { display: flex; align-items: center; gap: 3px; margin-left: auto; margin-right: 6px; }
 .cockpit-kanban__search {
   flex: 1; position: relative; display: flex; align-items: center; min-width: 0;
 }

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const { t } = useI18n()
-const emit = defineEmits<{ (e: 'schedule'): void; (e: 'notify'): void; (e: 'search'): void; (e: 'settings'): void }>()
+const emit = defineEmits<{ (e: 'schedule'): void; (e: 'notify'): void; (e: 'settings'): void }>()
+const store = useCockpitStore()
 
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
@@ -87,9 +89,17 @@ onMounted(() => { fetchGatewayStatus() })
       <span class="cockpit-top__cdate">{{ dateStr() }}</span>
       <span class="cockpit-top__ctime">{{ timeStr() }}</span>
     </div>
-    <div class="cockpit-top__search" @click="emit('search')">
-      {{ t('cockpit.search') }}
-      <span class="cockpit-top__kk">⌘K</span>
+    <div class="cockpit-top__search">
+      <span class="cockpit-top__search-icon">🔍</span>
+      <input
+        type="text"
+        class="cockpit-top__search-input"
+        :value="store.searchQuery"
+        placeholder="搜索 会话/任务/房间"
+        @input="store.runSearch(($event.target as HTMLInputElement).value)"
+      />
+      <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>
+      <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
     </div>
     <div class="cockpit-top__spacer" />
     <div class="cockpit-top__grp">
@@ -134,8 +144,12 @@ onMounted(() => { fetchGatewayStatus() })
 .cockpit-top__clock { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cockpit-top__cdate { font-size: 11px; color: var(--text-muted); }
 .cockpit-top__ctime { font-weight: 600; color: var(--text-primary); font-family: ui-monospace, 'SF Mono', monospace; letter-spacing: 0.3px; }
-.cockpit-top__search { flex: 1; max-width: 280px; height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 11px; color: var(--text-muted); cursor: pointer; }
-.cockpit-top__kk { font-size: 9px; border: 1px solid var(--border-color); border-radius: 3px; padding: 0 4px; background: var(--bg-card); color: var(--text-muted); margin-left: auto; }
+.cockpit-top__search { flex: 1; max-width: 280px; height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 11px; color: var(--text-muted); position: relative; }
+.cockpit-top__search-icon { font-size: 12px; flex-shrink: 0; color: var(--text-muted); }
+.cockpit-top__search-input { flex: 1; border: none; background: transparent; color: var(--text-primary); font-size: 11px; outline: none; font-family: inherit; min-width: 0; &::placeholder { color: var(--text-muted); } }
+.cockpit-top__search-clear { flex-shrink: 0; width: 16px; height: 16px; padding: 0; border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 12px; &:hover { color: var(--text-primary); } }
+.cockpit-top__search-spinner { width: 10px; height: 10px; flex-shrink: 0; border: 1.5px solid var(--border-color); border-top-color: var(--accent-primary); border-radius: 50%; animation: cockpit-tspin 0.6s linear infinite; }
+@keyframes cockpit-tspin { to { transform: rotate(360deg); } }
 .cockpit-top__spacer { flex: 1; }
 .cockpit-top__grp { display: flex; align-items: center; gap: 6px; }
 .cockpit-top__ustat { font-size: 10px; color: var(--text-muted); }
