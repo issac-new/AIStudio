@@ -54,7 +54,6 @@ function statusBucketLabel(s: string): string {
         <button v-if="store.searchQuery" type="button" class="cockpit-kanban__search-clear" @click="store.clearSearch()">×</button>
         <span v-if="store._sessionSearching" class="cockpit-kanban__search-spinner" />
       </div>
-      <span class="cockpit-kanban__sort">↓ 优先级</span>
     </div>
 
     <!-- 筛选器 -->
