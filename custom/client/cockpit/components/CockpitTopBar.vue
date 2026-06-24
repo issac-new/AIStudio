@@ -21,10 +21,18 @@ interface PlatformInfo {
   name: string
   icon: string
   enabled: boolean
+  detail: string
 }
 
-const gatewayStatus = ref<'checking' | 'running' | 'stopped'>('checking')
-const platforms = ref<PlatformInfo[]>([])
+const healthStatus = ref<{
+  gateway: 'checking' | 'running' | 'stopped'
+  bridge: 'checking' | 'ready' | 'offline'
+  platforms: PlatformInfo[]
+}>({
+  gateway: 'checking',
+  bridge: 'checking',
+  platforms: [],
+})
 
 const PLATFORM_ICONS: Record<string, string> = {
   api_server: '🔌',
@@ -41,19 +49,35 @@ async function fetchGatewayStatus() {
       fetch('/api/hermes/config'),
     ])
     const health = await healthRes.json()
-    gatewayStatus.value = health.gateway === 'running' ? 'running' : 'stopped'
+    healthStatus.value.gateway = health.gateway === 'running' ? 'running' : 'stopped'
+    const bridge = health.agent_bridge || {}
+    healthStatus.value.bridge = bridge.ready ? 'ready' : 'offline'
 
     const cfg = await cfgRes.json()
     const pl = cfg.platforms || {}
-    platforms.value = Object.entries(pl)
+    const PLATFORM_LABELS: Record<string, string> = {
+      api_server: 'API Server',
+      matrix: 'Matrix',
+      email: 'Email',
+    }
+    healthStatus.value.platforms = Object.entries(pl)
       .filter(([, v]: [string, any]) => v?.enabled)
-      .map(([name]) => ({
-        name,
-        icon: PLATFORM_ICONS[name] || '📡',
-        enabled: true,
-      }))
+      .map(([name, v]: [string, any]) => {
+        const detail = name === 'api_server'
+          ? `:${v?.extra?.port || '?'}`
+          : name === 'matrix'
+            ? v?.token ? ' (Token OK)' : ' (未配置)'
+            : ''
+        return {
+          name: PLATFORM_LABELS[name] || name,
+          icon: PLATFORM_ICONS[name] || '📡',
+          enabled: true,
+          detail,
+        }
+      })
   } catch {
-    gatewayStatus.value = 'stopped'
+    healthStatus.value.gateway = 'stopped'
+    healthStatus.value.bridge = 'offline'
   }
 }
 
@@ -87,14 +111,19 @@ onMounted(() => { fetchGatewayStatus() })
     </div>
     <div class="cockpit-top__spacer" />
     <div class="cockpit-top__grp">
-      <span class="cockpit-top__ustat" :class="'is-' + gatewayStatus">
-        {{ gatewayStatus === 'running' ? '🟢' : gatewayStatus === 'stopped' ? '🔴' : '⚪' }}
+      <span class="cockpit-top__ustat" :class="'is-' + healthStatus.gateway">
+        {{ healthStatus.gateway === 'running' ? '🟢' : healthStatus.gateway === 'stopped' ? '🔴' : '⚪' }}
         Gateway
       </span>
+      <span class="cockpit-top__ustat" :class="'is-' + healthStatus.bridge">
+        {{ healthStatus.bridge === 'ready' ? '🟢' : healthStatus.bridge === 'offline' ? '🔴' : '⚪' }}
+        Bridge
+      </span>
       <span
-        v-for="pl in platforms" :key="pl.name"
+        v-for="pl in healthStatus.platforms" :key="pl.name"
         class="cockpit-top__ustat is-running"
-      >{{ pl.icon }} {{ pl.name }}</span>
+        :title="pl.name + pl.detail"
+      >{{ pl.icon }} {{ pl.name }}{{ pl.detail }}</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
