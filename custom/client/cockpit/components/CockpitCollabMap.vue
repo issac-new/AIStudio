@@ -19,10 +19,21 @@ const chart = shallowRef<echarts.ECharts | null>(null)
 const BASE_W = 360
 const BASE_H = 240
 
+/** 获取实际容器尺寸，用于节点位置计算 */
+function getContainerSize(): { w: number; h: number } {
+  if (chart.value) {
+    const w = chart.value.getWidth()
+    const h = chart.value.getHeight()
+    if (w > 0 && h > 0) return { w, h }
+  }
+  return { w: BASE_W, h: BASE_H }
+}
+
 // 节点布局：中心居中，四方向分区延伸（layout:'none' 自定义坐标）
 function computePositions(topo: typeof store.topologyForSelectedTask): Record<string, { x: number; y: number }> {
-  const cx = BASE_W / 2
-  const cy = BASE_H / 2
+  const { w, h } = getContainerSize()
+  const cx = w / 2
+  const cy = h / 2
   const trunkLen = 75
   const layerH = 55
   const nodeHGap = 16
@@ -261,20 +272,20 @@ onMounted(() => {
 })
 
 function onResize() {
-  chart.value?.resize()
+  renderChart()
 }
 
 // 面板最大化/折叠/展开时容器尺寸可能变化，ECharts 需重新自适应
 // window.resize 不会在面板内部尺寸变化时触发，因此用 watch + nextTick 兜底
 watch(() => [store.maximized.mid, store.collapsed.mid, store.maximized.left, store.maximized.right], () => {
-  nextTick(() => chart.value?.resize())
+  nextTick(() => renderChart())
 })
 
 // ResizeObserver: 更精确地监听容器自身大小变化（面板拖拽分割线等场景）
 let resizeObserver: ResizeObserver | null = null
 watch(chartEl, (el) => {
   if (el && !resizeObserver) {
-    resizeObserver = new ResizeObserver(() => chart.value?.resize())
+    resizeObserver = new ResizeObserver(() => renderChart())
     resizeObserver.observe(el)
   }
 })
