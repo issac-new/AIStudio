@@ -20,10 +20,12 @@ import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
 const store = useCockpitStore()
 const filesStore = useFilesStore()
 
-// 当选中任务的 workspace 变化时，更新文件浏览器的根目录并刷新
-watch(() => store.selectedTask?.workspace, (ws) => {
-  const root = ws || '~'
+// 当选中任务变化时（含重新点击中心节点），更新文件浏览器的根目录并刷新
+// 监听 selectedTaskId 而非 workspace 值，确保每次切换任务都触发刷新
+watch(() => store.selectedTaskId, () => {
+  const root = store.selectedTask?.workspace || '~'
   filesStore.workspaceRoot = root
+  filesStore.currentPath = ''
   filesStore.fetchEntries('')
 }, { immediate: true })
 
@@ -32,6 +34,7 @@ watch(() => store.selectedTask?.workspace, (ws) => {
 onMounted(() => {
   const root = store.selectedTask?.workspace || '~'
   filesStore.workspaceRoot = root
+  filesStore.currentPath = ''
   filesStore.fetchEntries('')
 })
 </script>
