@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index fdc761f3..05e986ce 100644
+index fdc761f3..b9e6aeed 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -44,6 +44,15 @@ export default {
@@ -8,7 +8,7 @@ index fdc761f3..05e986ce 100644
      defaultCredentialLater: 'Remind me later',
 +    matrixDescription: 'Sign in with your Matrix account',
 +    homeserverPlaceholder: 'Homeserver URL (e.g. http://localhost:8008)',
-+    matrixUsernamePlaceholder: 'Matrix Username (e.g. '{'@'}user:matrix.test)',
++    matrixUsernamePlaceholder: 'Matrix Username (e.g. user:matrix.test)',
 +    homeserverRequired: 'Please enter a homeserver URL',
 +    homeserverConnectionFailed: 'Cannot connect to the Matrix homeserver',
 +    backendConnectionFailed: 'Matrix login succeeded but cannot reach the Hermes backend',
@@ -54,6 +54,37 @@ index fdc761f3..05e986ce 100644
    },
    githubPreview: {
      title: "Version Preview",
+@@ -1953,22 +1977,22 @@ export default {
+ 
+   // Platform channel settings
+   platform: {
+-    requireMention: "Require {'@'}Mention",
+-    requireMentionGroup: "Require {'@'}mention in groups to respond",
+-    requireMentionChannel: "Require {'@'}mention in channels to respond",
+-    requireMentionRoom: "Require {'@'}mention in rooms to respond",
++    requireMention: "Require Mention",
++    requireMentionGroup: "Require mention in groups to respond",
++    requireMentionChannel: "Require mention in channels to respond",
++    requireMentionRoom: "Require mention in rooms to respond",
+     reactions: 'Reactions',
+     reactionsHint: 'React to messages with emoji',
+     freeResponseChats: 'Free Response Chats',
+-    freeResponseChatsHint: "Chat IDs that respond without {'@'}mention (comma-separated)",
++    freeResponseChatsHint: "Chat IDs that respond without mention (comma-separated)",
+     freeResponseChannels: 'Free Response Channels',
+-    freeResponseChannelsHint: "Channel IDs that respond without {'@'}mention (comma-separated)",
++    freeResponseChannelsHint: "Channel IDs that respond without mention (comma-separated)",
+     freeResponseRooms: 'Free Response Rooms',
+-    freeResponseRoomsHint: "Room IDs that respond without {'@'}mention (comma-separated)",
++    freeResponseRoomsHint: "Room IDs that respond without mention (comma-separated)",
+     mentionPatterns: 'Custom Mention Patterns',
+     mentionPatternsHint: 'Additional trigger patterns',
+     autoThread: 'Auto Thread',
+-    autoThreadHint: "Auto-create reply threads after {'@'}mention",
++    autoThreadHint: "Auto-create reply threads after mention",
+     autoThreadHintRoom: 'Auto-create reply threads in rooms',
+     dmMentionThreads: 'DM Mention Threads',
+     dmMentionThreadsHint: 'Use thread replies for mentions in DMs',
 @@ -2266,4 +2290,125 @@ export default {
      new_0_6_13_5: 'Desktop updates are more reliable: Windows upgrades close stale Hermes Studio processes, Cloudflare is checked first, and GitHub remains the fallback feed',
      new_0_6_13_6: 'Release automation now keeps Web UI and Docker releases out of GitHub Latest while full desktop releases are manually promoted to Latest',

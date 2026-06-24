@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index d10836a8..23ed08de 100644
+index d10836a8..eba5d35e 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -44,6 +44,15 @@ export default {
@@ -8,7 +8,7 @@ index d10836a8..23ed08de 100644
      defaultCredentialLater: '稍后提醒',
 +    matrixDescription: '使用 Matrix 账号登录',
 +    homeserverPlaceholder: 'Homeserver URL (例如 http://localhost:8008)',
-+    matrixUsernamePlaceholder: 'Matrix 用户名 (例如 '{'@'}user:matrix.test)',
++    matrixUsernamePlaceholder: 'Matrix 用户名 (例如 user:matrix.test)',
 +    homeserverRequired: '请输入 Homeserver URL',
 +    homeserverConnectionFailed: '无法连接到 Matrix Homeserver',
 +    backendConnectionFailed: 'Matrix 登录成功但无法连接到 Hermes 后端',
@@ -54,6 +54,37 @@ index d10836a8..23ed08de 100644
    },
    githubPreview: {
      title: "版本预览",
+@@ -1945,22 +1969,22 @@ export default {
+ 
+   // 平台频道设置
+   platform: {
+-    requireMention: "需要 {'@'}提及",
+-    requireMentionGroup: "群组中需要 {'@'}机器人 才会响应",
+-    requireMentionChannel: "频道中需要 {'@'}机器人 才会响应",
+-    requireMentionRoom: "房间中需要 {'@'}机器人 才会响应",
++    requireMention: "需要 提及",
++    requireMentionGroup: "群组中需要 机器人 才会响应",
++    requireMentionChannel: "频道中需要 机器人 才会响应",
++    requireMentionRoom: "房间中需要 机器人 才会响应",
+     reactions: '表情回应',
+     reactionsHint: '对消息添加表情回应',
+     freeResponseChats: '自由响应聊天',
+-    freeResponseChatsHint: "不需要 {'@'}提及即响应的聊天 ID（逗号分隔）",
++    freeResponseChatsHint: "不需要 提及即响应的聊天 ID（逗号分隔）",
+     freeResponseChannels: '自由响应频道',
+-    freeResponseChannelsHint: "不需要 {'@'}提及即响应的频道 ID（逗号分隔）",
++    freeResponseChannelsHint: "不需要 提及即响应的频道 ID（逗号分隔）",
+     freeResponseRooms: '自由响应房间',
+-    freeResponseRoomsHint: "不需要 {'@'}提及即响应的房间 ID（逗号分隔）",
++    freeResponseRoomsHint: "不需要 提及即响应的房间 ID（逗号分隔）",
+     mentionPatterns: '自定义提及模式',
+     mentionPatternsHint: '额外的触发模式列表',
+     autoThread: '自动创建线程',
+-    autoThreadHint: "{'@'}提及 后自动创建回复线程",
++    autoThreadHint: "提及 后自动创建回复线程",
+     autoThreadHintRoom: '在房间中自动创建回复线程',
+     dmMentionThreads: 'DM 提及线程',
+     dmMentionThreadsHint: '在私聊中也使用线程回复提及',
 @@ -2268,4 +2292,125 @@ export default {
      new_0_6_13_5: '桌面更新更可靠：Windows 升级会关闭残留 Hermes Studio 进程，优先检查 Cloudflare，并保留 GitHub 更新源兜底',
      new_0_6_13_6: '发布自动化调整：Web UI 和 Docker release 不再标记为 GitHub Latest，完整桌面 release 手动构建成功后才提升为 Latest',
