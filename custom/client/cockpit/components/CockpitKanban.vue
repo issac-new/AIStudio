@@ -59,9 +59,7 @@ function tenantFilterValues(key: typeof tenantFields[0]['filterKey']): string[] 
   return (store.filters as any)[key] as string[]
 }
 function setTenantFilterValues(key: typeof tenantFields[0]['filterKey'], vals: string[]) {
-  const arr = (store.filters as any)[key] as string[]
-  arr.length = 0
-  arr.push(...vals)
+  store.$patch({ filters: { ...store.filters, [key]: [...vals] } })
 }
 
 // 动态 board slug 列表（需求 #1）：从 store.boards 取
