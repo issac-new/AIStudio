@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 
 import { computed } from 'vue'
 
 const store = useCockpitStore()
 const { t } = useI18n()
+const router = useRouter()
 
 // 三态循环：正常 → 最大化 → 折叠 → 正常
 function rightColState(): 'normal' | 'max' | 'collapsed' {
@@ -58,6 +60,11 @@ function onRightMaximize() {
       :class="{ 'is-on': store.workspaceMode === 'term' }"
       @click="store.enterTerminal()"
     >⌘ {{ t('cockpit.modeTerm') }}</button>
+    <button
+      type="button"
+      class="cockpit-mode-bar__mode"
+      @click="router.push('/hermes/matrix-chat')"
+    >💬 {{ t('cockpit.addCollab') }}</button>
     <span class="cockpit-mode-bar__spacer" />
     <button
       type="button"

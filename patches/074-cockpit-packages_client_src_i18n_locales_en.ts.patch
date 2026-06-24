@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index fdc761f3..bf7bfb5e 100644
+index fdc761f3..2f7862ce 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -186,6 +186,9 @@ export default {
@@ -118,7 +118,7 @@ index fdc761f3..bf7bfb5e 100644
 +    send: 'Send',
 +    noTaskSelected: 'No task selected',
 +    collabWith: 'Collab with',
-+    addCollab: 'Add Collab',
++    addCollab: 'Chat & Collab',
 +    addCollabTitle: 'Add Collaborator',
 +    collaborationMap: 'Collaboration Map',
 +    handleLater: 'Handle Later',
