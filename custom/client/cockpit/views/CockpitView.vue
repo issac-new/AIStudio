@@ -200,13 +200,12 @@ function onColCtrl(col: ColumnKey) {
   display: flex; gap: 3px;
 }
 .cockpit-col__ctrl {
-  width: 20px; height: 18px; padding: 0;
-  border: 1px solid var(--border-color); border-radius: 4px;
-  background: var(--bg-card); color: var(--text-muted);
-  cursor: pointer; font-size: 11px; line-height: 1;
+  width: 28px; height: 28px; padding: 0;
+  border: none; border-radius: 6px;
+  background: transparent; color: var(--text-muted);
+  cursor: pointer; font-size: 14px; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
-  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+  &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .cockpit-title-detail {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
