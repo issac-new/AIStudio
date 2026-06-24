@@ -1,0 +1,16 @@
+diff --git a/packages/client/src/api/hermes/files.ts b/packages/client/src/api/hermes/files.ts
+index 9bd027d4..9c98434b 100644
+--- a/packages/client/src/api/hermes/files.ts
++++ b/packages/client/src/api/hermes/files.ts
+@@ -19,9 +19,10 @@ export interface FileStat {
+   permissions?: string
+ }
+ 
+-export async function listFiles(path: string = ''): Promise<{ entries: FileEntry[]; path: string; absolutePath?: string }> {
++export async function listFiles(path: string = '', root?: string): Promise<{ entries: FileEntry[]; path: string; absolutePath?: string }> {
+   const params = new URLSearchParams()
+   if (path) params.set('path', path)
++  if (root) params.set('root', root)
+   const query = params.toString()
+   return request<{ entries: FileEntry[]; path: string }>(`/api/hermes/files/list${query ? `?${query}` : ''}`)
+ }

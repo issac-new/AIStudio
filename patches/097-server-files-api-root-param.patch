@@ -1,0 +1,28 @@
+diff --git a/packages/server/src/routes/hermes/files.ts b/packages/server/src/routes/hermes/files.ts
+index f01227b3..599f441e 100644
+--- a/packages/server/src/routes/hermes/files.ts
++++ b/packages/server/src/routes/hermes/files.ts
+@@ -12,7 +12,14 @@ function requestedProfile(ctx: any): string | undefined {
+   return ctx.state?.profile?.name
+ }
+ 
++function requestedRoot(ctx: any): string | undefined {
++  const root = ctx.query.root as string | undefined
++  return root?.trim() || undefined
++}
++
+ function resolveRequestPath(ctx: any, relativePath: string): string {
++  const root = requestedRoot(ctx)
++  if (root) return relativePath ? join(root, relativePath) : root
+   return resolveHermesPath(relativePath, requestedProfile(ctx))
+ }
+ 
+@@ -21,6 +28,8 @@ async function createRequestFileProvider(ctx: any) {
+ }
+ 
+ function withAbsolutePath<T extends { path: string }>(ctx: any, entry: T): T & { absolutePath: string } {
++  const root = requestedRoot(ctx)
++  if (root) return { ...entry, absolutePath: join(root, entry.path) }
+   return { ...entry, absolutePath: resolveRequestPath(ctx, entry.path) }
+ }
+ 

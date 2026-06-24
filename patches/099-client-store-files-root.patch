@@ -1,0 +1,30 @@
+diff --git a/packages/client/src/stores/hermes/files.ts b/packages/client/src/stores/hermes/files.ts
+index b3a7f8d6..c9ab431e 100644
+--- a/packages/client/src/stores/hermes/files.ts
++++ b/packages/client/src/stores/hermes/files.ts
+@@ -117,6 +117,7 @@ export const useFilesStore = defineStore('files', () => {
+   const currentPath = ref('')
+   const entries = ref<FileEntry[]>([])
+   const loading = ref(false)
++  const workspaceRoot = ref<string | undefined>(undefined)
+   const sortBy = ref<'name' | 'size' | 'modTime'>('name')
+   const sortOrder = ref<'asc' | 'desc'>('asc')
+ 
+@@ -164,7 +165,7 @@ export const useFilesStore = defineStore('files', () => {
+     if (path !== undefined) currentPath.value = path
+     loading.value = true
+     try {
+-      const result = await filesApi.listFiles(currentPath.value)
++      const result = await filesApi.listFiles(currentPath.value, workspaceRoot.value)
+       entries.value = result.entries
+     } catch (err) {
+       console.error('Failed to fetch files:', err)
+@@ -279,7 +280,7 @@ export const useFilesStore = defineStore('files', () => {
+   })
+ 
+   return {
+-    currentPath, entries, loading, sortBy, sortOrder,
++    currentPath, entries, loading, workspaceRoot, sortBy, sortOrder,
+     editingFile, previewFile,
+     pathSegments, sortedEntries, hasUnsavedChanges,
+     fetchEntries, navigateTo, navigateUp,

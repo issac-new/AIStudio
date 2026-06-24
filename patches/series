@@ -78,3 +78,6 @@
 094-client-store-chat-gateway-notice.patch
 095-client-messageitem-gateway-notice.patch
 096-client-groupmessageitem-gateway-notice.patch
+097-server-files-api-root-param.patch
+098-client-api-files-root.patch
+099-client-store-files-root.patch

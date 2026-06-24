@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import * as kanbanApi from '@/api/hermes/kanban'
 import type { KanbanTaskStatus, HomeChannel } from '@/api/hermes/kanban'
-import CockpitFileTree from './CockpitFileTree.vue'
+import CockpitFilePanel from './CockpitFilePanel.vue'
 import CockpitConfirmDialog from './CockpitConfirmDialog.vue'
 import CockpitCompletionModal from './CockpitCompletionModal.vue'
 import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
@@ -609,8 +609,8 @@ async function toggleHomeSubscription(ch: HomeChannel) {
       </div>
     </div>
 
-    <!-- 文件资源管理器 -->
-    <CockpitFileTree />
+    <!-- Workspace 文件浏览器 -->
+    <CockpitFilePanel />
   </div>
 </template>
 
