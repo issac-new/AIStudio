@@ -21,18 +21,26 @@ import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
 const store = useCockpitStore()
 const filesStore = useFilesStore()
 
-const hasWorkspace = computed(() => !!store.selectedTask?.workspace)
+const hasWorkspace = computed(() => {
+  const detailWs = store.selectedTaskDetail?.task?.workspace_path
+  const listWs = store.selectedTask?.workspace
+  return !!(detailWs ?? listWs)
+})
 
 // 把「当前生效的 workspace 根目录」同步到 filesStore 并刷新文件列表。
-// 任务未 claim 时 workspace 为空 → 不设 root、不 fetch，等待 claim 后重新触发。
+// 优先从 detail cache（selectedTaskDetail）读取 workspace_path，因为它
+// 在每次 selectTask 后都会刷新；cockpitTasks 中的 workspace 可能因
+// kanban.tasks 变化触发的 watch 重建而被覆盖为旧值。
+// detail 不可用时回退到 cockpitTasks 的 workspace（兼容 detail.task 为 null 的场景）。
 function syncWorkspaceRoot() {
-  const root = store.selectedTask?.workspace
-  if (!root) {
+  const wsPath = store.selectedTaskDetail?.task?.workspace_path
+    ?? store.selectedTask?.workspace
+  if (!wsPath) {
     filesStore.workspaceRoot = undefined
     filesStore.currentPath = ''
     return
   }
-  filesStore.workspaceRoot = root
+  filesStore.workspaceRoot = wsPath
   filesStore.currentPath = ''
   filesStore.fetchEntries('')
 }
