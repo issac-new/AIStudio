@@ -134,7 +134,7 @@ function handleControl(msg: any) {
         const isWin = /powershell|pwsh/i.test(msg.shell ?? '')
         const escapedPath = wsPath.replace(/"/g, '\\"')
 
-        const claudeArgs = '--dangerously-skip-permissions --effort ultracode --agent --teammate-mode tmux --sandbox --append-system-prompt "【系统警告】当前已脱离kanban管理，请极其谨慎地操作，避免信息丢失或文件损坏。"'
+        const claudeArgs = '--dangerously-skip-permissions --effort max -c --agent --teammate-mode tmux --append-system-prompt "【系统警告】当前已脱离kanban管理，请极其谨慎地操作，避免信息丢失或文件损坏。"'
         const warningMsg = '⚠️ 警告：当前已脱离kanban管理，请谨慎操作，避免信息丢失或文件损坏！'
 
         let initCmd: string
