@@ -142,8 +142,8 @@ function linkStyle(fromKind: string, toKind: string) {
   return { color: '#ddd', width: 1, type: 'solid' as const }  // 人员细线
 }
 
-// 图表数据
-const chartOption = computed(() => {
+// 图表数据（函数形式：每次调用重新计算，确保容器尺寸变化时坐标更新）
+function buildChartOption() {
   const topo = store.topologyForSelectedTask
   if (!topo.nodes.length) return { series: [] }
   const positions = computePositions(topo)
@@ -206,7 +206,7 @@ const chartOption = computed(() => {
       links,
     }],
   }
-})
+}
 
 // 节点点击处理
 function onChartClick(params: any) {
@@ -227,7 +227,7 @@ function onChartClick(params: any) {
 
 function renderChart() {
   if (!chart.value) return
-  chart.value.setOption(chartOption.value, { notMerge: true })
+  chart.value.setOption(buildChartOption(), { notMerge: true })
 }
 
 const hasTask = computed(() => !!store.selectedTask)
@@ -242,8 +242,8 @@ function onChartDblClick(params: any) {
   if (tid) store.openKanbanDetail(tid)
 }
 
-// 数据变化时重渲染
-watch(chartOption, () => renderChart(), { deep: true })
+// 拓扑数据变化时重渲染
+watch(() => store.topologyForSelectedTask, () => renderChart(), { deep: true })
 
 // hasTask 变 true 时（chartEl 从 v-if 渲染出来）初始化 ECharts
 watch(hasTask, (v, oldV) => {
