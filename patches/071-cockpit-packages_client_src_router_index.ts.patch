@@ -2,21 +2,15 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
 index f72f74e1..05339f24 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -51,9 +51,14 @@ const router = createRouter({
+@@ -51,6 +51,11 @@ const router = createRouter({
        component: () => import('@/views/hermes/KanbanView.vue'),
      },
      {
--      path: '/hermes/workflow',
--      name: 'hermes.workflow',
--      component: () => import('@/views/hermes/WorkflowView.vue'),
-+      path: '/hermes/kanban',
-+      name: 'hermes.kanban',
-+      component: () => import('@/views/hermes/KanbanView.vue'),
-+    },
-+    {
 +      path: '/hermes/swarm-kanban',
 +      name: 'hermes.swarmKanban',
 +      component: () => import('@/custom/kanban/components/KanbanPanel.vue'),
-     },
-     {
-       path: '/hermes/models',
++    },
++    {
+       path: '/hermes/workflow',
+       name: 'hermes.workflow',
+       component: () => import('@/views/hermes/WorkflowView.vue'),
