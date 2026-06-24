@@ -80,10 +80,10 @@ async function fetchGatewayStatus(silent = true) {
   }
 }
 
-/** 双击手动探测并弹出详情 */
+/** 点击手动探测并弹出详情 */
 async function manualProbe() {
   await fetchGatewayStatus(false)
-  if (rawData.value) showDetail.value = true
+  showDetail.value = !showDetail.value
 }
 
 onMounted(() => {
@@ -125,7 +125,7 @@ onUnmounted(() => {
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
     </div>
     <div class="cockpit-top__spacer" />
-    <div class="cockpit-top__grp" title="双击手动探测" @dblclick="manualProbe">
+    <div class="cockpit-top__grp" title="点击查看详情" @click="manualProbe">
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
         {{ gatewayState === 'running' ? '🟢' : gatewayState === 'stopped' ? '🔴' : '⚪' }}
         Gateway{{ refreshing ? ' ⏳' : '' }}
