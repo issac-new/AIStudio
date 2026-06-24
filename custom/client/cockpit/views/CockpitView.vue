@@ -155,7 +155,7 @@ function onColCtrl(col: ColumnKey) {
             <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': colState('right') !== 'normal' }"
               :title="colCtrlTitle('right')" @click="onColCtrl('right')">{{ colCtrlIcon('right') }}</button>
           </div>
-          <CockpitModeBar v-if="store.workspaceMode !== 'term'" />
+          <CockpitModeBar />
           <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
           <CockpitWorkspace v-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="store.submitWorkItem" />
