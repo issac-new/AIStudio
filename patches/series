@@ -77,3 +77,4 @@
 093-server-kanban-attachment-workspace-sync.patch
 094-client-store-chat-gateway-notice.patch
 095-client-messageitem-gateway-notice.patch
+096-client-groupmessageitem-gateway-notice.patch
