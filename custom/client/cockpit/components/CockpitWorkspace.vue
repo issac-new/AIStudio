@@ -623,7 +623,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 <style scoped lang="scss">
 .cockpit-workspace { display: flex; flex: 1; min-height: 0; }
 .cockpit-workspace__form { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.cockpit-workspace__body { flex: 1; overflow-y: auto; padding: 20px 24px; max-width: 640px; }
+.cockpit-workspace__body { flex: 1; overflow-y: auto; padding: 20px 24px; max-width: 100%; }
 .cockpit-workspace__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; }
 
 /* AREA 1: Header */
