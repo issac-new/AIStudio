@@ -23,6 +23,7 @@
 025-client-loginview-matrix.patch
 026-client-accountsettings-matrix.patch
 027-client-usermgmtsettings-matrix.patch
+028-client-kanbanview-enh.patch
 029-client-settingsview.patch
 030-client-groupchatview.patch
 031-client-chatpanel.patch

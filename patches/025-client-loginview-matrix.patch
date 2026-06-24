@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 9f893c48..8c039a19 100644
+index 9f893c48..67892bd2 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -2,56 +2,92 @@
@@ -18,7 +18,7 @@ index 9f893c48..8c039a19 100644
 +
 +// Matrix login fields
 +const homeserverUrl = ref("http://localhost:8008");
-+const matrixUsername = ref("@testuser1:matrix.test");
++const matrixUsername = ref("testuser1:matrix.test");
 +const matrixPassword = ref("");
 +
 +// Local login fields

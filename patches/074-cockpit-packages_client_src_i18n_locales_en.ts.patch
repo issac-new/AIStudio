@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index fdc761f3..455b8c8c 100644
+index fdc761f3..05e986ce 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -44,6 +44,15 @@ export default {
@@ -8,7 +8,7 @@ index fdc761f3..455b8c8c 100644
      defaultCredentialLater: 'Remind me later',
 +    matrixDescription: 'Sign in with your Matrix account',
 +    homeserverPlaceholder: 'Homeserver URL (e.g. http://localhost:8008)',
-+    matrixUsernamePlaceholder: 'Matrix Username (e.g. @user:matrix.test)',
++    matrixUsernamePlaceholder: 'Matrix Username (e.g. '{'@'}user:matrix.test)',
 +    homeserverRequired: 'Please enter a homeserver URL',
 +    homeserverConnectionFailed: 'Cannot connect to the Matrix homeserver',
 +    backendConnectionFailed: 'Matrix login succeeded but cannot reach the Hermes backend',

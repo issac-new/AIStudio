@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index d10836a8..3f3942bf 100644
+index d10836a8..23ed08de 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -44,6 +44,15 @@ export default {
@@ -8,7 +8,7 @@ index d10836a8..3f3942bf 100644
      defaultCredentialLater: '稍后提醒',
 +    matrixDescription: '使用 Matrix 账号登录',
 +    homeserverPlaceholder: 'Homeserver URL (例如 http://localhost:8008)',
-+    matrixUsernamePlaceholder: 'Matrix 用户名 (例如 @user:matrix.test)',
++    matrixUsernamePlaceholder: 'Matrix 用户名 (例如 '{'@'}user:matrix.test)',
 +    homeserverRequired: '请输入 Homeserver URL',
 +    homeserverConnectionFailed: '无法连接到 Matrix Homeserver',
 +    backendConnectionFailed: 'Matrix 登录成功但无法连接到 Hermes 后端',
