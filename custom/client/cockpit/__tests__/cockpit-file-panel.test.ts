@@ -163,4 +163,33 @@ describe('CockpitFilePanel — Workspace Home path sync', () => {
     // 不应发起 fetchEntries
     expect(filesState.fetchEntries).not.toHaveBeenCalled()
   })
+
+  it('picking up workspace_path after task is claimed (loadTaskDetail sync)', async () => {
+    // 引导时任务 workspace_path 为 null（未 claim），detail.task 也无 workspace。
+    mockKanbanTasks.push(kt({ id: 't1', title: '待领取', workspace_path: null }))
+    getTask.mockResolvedValue({
+      task: { id: 't1', title: '待领取', body: null, assignee: null, status: 'triage', priority: 0, created_by: null, created_at: 0, started_at: null, completed_at: null, workspace_kind: 'scratch', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
+      latest_summary: null, comments: [], events: [], runs: [],
+      parents: [], children: [],
+    })
+    const s = useCockpitStore()
+    await s.bootstrap()
+    mount(CockpitFilePanel)
+    expect(filesState.workspaceRoot).toBeUndefined()
+
+    // 模拟 agent claim 后 workspace_path 已解析：selectTask 重新拉 detail，
+    // 这一次 detail.task.workspace_path 有值。
+    getTask.mockResolvedValue({
+      task: { id: 't1', title: '待领取', body: null, assignee: 'alice', status: 'running', priority: 0, created_by: null, created_at: 0, started_at: null, completed_at: null, workspace_kind: 'scratch', workspace_path: '/home/u/.hermes/kanban/workspaces/T-abc', tenant: null, project_id: null, result: null, skills: null },
+      latest_summary: null, comments: [], events: [], runs: [],
+      parents: [], children: [],
+    })
+    filesState.fetchEntries.mockClear()
+    await s.selectTask(s.selectedTask!.id) // 重新选中 → loadTaskDetail
+
+    expect(s.selectedTask?.workspace).toBe('/home/u/.hermes/kanban/workspaces/T-abc')
+    expect(filesState.workspaceRoot).toBe('/home/u/.hermes/kanban/workspaces/T-abc')
+    expect(filesState.currentPath).toBe('')
+    expect(filesState.fetchEntries).toHaveBeenCalledWith('')
+  })
 })

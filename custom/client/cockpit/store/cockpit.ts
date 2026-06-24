@@ -469,11 +469,14 @@ export const useCockpitStore = defineStore('cockpit', () => {
   async function selectTask(id: string | null) {
     autoSaveDraft() // 保存当前草稿
     selectedTaskId.value = id
-    selectionSeq.value++ // 通知「选中动作」消费者（含重新选中同一任务，如点击中心节点）
     focusedGraphNodeId.value = null
     archivedMode.value = false
-    if (!id) { events.value = []; return }
+    if (!id) { events.value = []; selectionSeq.value++; return }
+    // 清除缓存强制重新拉取详情，确保 workspace_path 等字段反映最新状态
+    // （如任务从未 claim → agent claim 后 workspace_path 从 null 变为实际路径）
+    delete _detailCache.value[id]
     await loadTaskDetail(id)
+    selectionSeq.value++ // 在 detail 刷新后再通知消费者，避免 watch 读到旧 workspace
     loadAttachments(id).catch(() => {})
   }
 
@@ -499,7 +502,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
           const cur = cockpitTasks.value[idx]
           cockpitTasks.value = [
             ...cockpitTasks.value.slice(0, idx),
-            { ...cur, status: t.status as any, title: t.title ?? cur.title, assignee: t.assignee ?? cur.assignee, priority: (t.priority ?? cur.priority) as any },
+            { ...cur, status: t.status as any, title: t.title ?? cur.title, assignee: t.assignee ?? cur.assignee, priority: (t.priority ?? cur.priority) as any, workspace: t.workspace_path ?? cur.workspace },
             ...cockpitTasks.value.slice(idx + 1),
           ]
         }
