@@ -195,13 +195,19 @@ function initTerminal() {
 
   term.open(terminalRef.value)
 
-  // 初次 fit
-  requestAnimationFrame(() => fitAddon?.fit())
+  // 首次 fit 并同步 PTY 尺寸；延迟重试以保证布局稳定
+  function doFit() {
+    if (!fitAddon || !term) return
+    try {
+      fitAddon.fit()
+      send({ type: 'resize', cols: term.cols, rows: term.rows })
+    } catch { /* fit 可能暂时不可用 */ }
+  }
+  requestAnimationFrame(() => doFit())
+  setTimeout(() => doFit(), 300)
 
-  // 容器 resize 时自动 fit
-  resizeObserver = new ResizeObserver(() => {
-    try { fitAddon?.fit() } catch {}
-  })
+  // 容器 resize 时自动 fit + 同步 PTY 尺寸
+  resizeObserver = new ResizeObserver(() => doFit())
   resizeObserver.observe(terminalRef.value)
 
   // 连接后端 PTY
