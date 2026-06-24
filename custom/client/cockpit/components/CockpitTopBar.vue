@@ -48,7 +48,7 @@ function formatTimeAgo(iso: string): string {
 
 async function fetchGatewayStatus() {
   try {
-    const res = await fetch('http://127.0.0.1:8650/health/detailed')
+    const res = await fetch('/agent-health/detailed')
     const data = await res.json()
     gatewayState.value = data.gateway_state === 'running' ? 'running' : 'stopped'
 
