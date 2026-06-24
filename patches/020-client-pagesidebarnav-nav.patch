@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
-index 58751c5d..97957f55 100644
+index 58751c5d..8270b801 100644
 --- a/packages/client/src/components/layout/PageSidebarNav.vue
 +++ b/packages/client/src/components/layout/PageSidebarNav.vue
 @@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
@@ -25,7 +25,7 @@ index 58751c5d..97957f55 100644
 +
 +function openSwarmKanban() {
 +  if (props.active === 'swarm-kanban') return
-+  void router.push({ name: 'hermes.kanban' })
++  void router.push({ name: 'hermes.swarmKanban' })
  }
  </script>
  
