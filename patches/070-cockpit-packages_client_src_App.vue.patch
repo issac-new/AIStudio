@@ -1,8 +1,24 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index dc8105f2..7685e62d 100644
+index dc8105f2..8777ee48 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -23,10 +23,11 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
+@@ -9,6 +9,7 @@ import AppSidebar from '@/components/layout/AppSidebar.vue'
+ import DesktopTitleBar from '@/components/layout/DesktopTitleBar.vue'
+ import { useKeyboard } from '@/composables/useKeyboard'
+ import { useAppStore } from '@/stores/hermes/app'
++import { useAuthStore } from '@/stores/hermes/auth'
+ import SessionSearchModal from '@/components/hermes/chat/SessionSearchModal.vue'
+ import AuthEventListener from '@/components/auth/AuthEventListener.vue'
+ import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.vue'
+@@ -16,6 +17,7 @@ import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.v
+ const { isDark, isComic } = useTheme()
+ const { t } = useI18n()
+ const appStore = useAppStore()
++const authStore = useAuthStore()
+ const route = useRoute()
+ 
+ const themeOverrides = computed(() => getThemeOverrides(isDark.value, isComic.value))
+@@ -23,10 +25,11 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
  
  const isLoginPage = computed(() => route.name === 'login')
  const usesPageSidebar = computed(() =>
@@ -17,3 +33,12 @@ index dc8105f2..7685e62d 100644
  
  const nodeVersionLow = computed(() => {
    const v = appStore.nodeVersion
+@@ -55,6 +58,8 @@ watch(isLoginPage, (loginPage) => {
+     appStore.stopHealthPolling()
+     return
+   }
++  // Restore user session on page refresh (authStore.user is lost on reload)
++  authStore.fetchUser()
+   appStore.loadModels()
+   appStore.startHealthPolling()
+ }, {
