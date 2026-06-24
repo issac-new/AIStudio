@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
+import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 
 const { t } = useI18n()
 const emit = defineEmits<{ (e: 'schedule'): void; (e: 'notify'): void; (e: 'search'): void; (e: 'settings'): void }>()
@@ -15,22 +17,29 @@ function pad(n: number) { return String(n).padStart(2, '0') }
 const dateStr = () => `${now.value.getFullYear()}-${pad(now.value.getMonth() + 1)}-${pad(now.value.getDate())} 周${WK[now.value.getDay()]}`
 const timeStr = () => `${pad(now.value.getHours())}:${pad(now.value.getMinutes())}:${pad(now.value.getSeconds())}`
 
-defineProps<{ agentCount?: number; humanCount?: number; notifyCount?: number; scheduleCount?: number; userName?: string }>()
+defineProps<{ notifyCount?: number; scheduleCount?: number; userName?: string }>()
 
-// Gateway & platform connection status
+const groupStore = useGroupChatStore()
+const matrixClient = useMatrixClientStore()
+
+// Gateway & channel connection status
 const gatewayStatus = ref<'checking' | 'running' | 'stopped'>('checking')
-const platformCount = ref(0)
+
+interface ChannelState {
+  name: string
+  icon: string
+  connected: boolean
+}
+const channels = computed<ChannelState[]>(() => [
+  { name: '群聊', icon: '🗣', connected: groupStore.connected },
+  { name: 'Matrix', icon: '👥', connected: matrixClient.authenticated },
+])
 
 async function fetchGatewayStatus() {
   try {
     const res = await fetch('/health')
     const data = await res.json()
     gatewayStatus.value = data.gateway === 'running' ? 'running' : 'stopped'
-    // Count enabled platforms from config
-    const cfgRes = await fetch('/api/hermes/config')
-    const cfg = await cfgRes.json()
-    const platforms = cfg.platforms || {}
-    platformCount.value = Object.values(platforms).filter((p: any) => p?.enabled).length
   } catch {
     gatewayStatus.value = 'stopped'
   }
@@ -68,9 +77,13 @@ onMounted(() => { fetchGatewayStatus() })
     <div class="cockpit-top__grp">
       <span class="cockpit-top__ustat" :class="'is-' + gatewayStatus">
         {{ gatewayStatus === 'running' ? '🟢' : gatewayStatus === 'stopped' ? '🔴' : '⚪' }}
-        Gateway {{ gatewayStatus === 'running' ? '在线' : gatewayStatus === 'stopped' ? '离线' : '检测中' }}
+        Gateway
       </span>
-      <span v-if="platformCount" class="cockpit-top__ustat">{{ platformCount }} 通道</span>
+      <span
+        v-for="ch in channels" :key="ch.name"
+        class="cockpit-top__ustat"
+        :class="ch.connected ? 'is-running' : 'is-stopped'"
+      >{{ ch.icon }} {{ ch.name }}</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
