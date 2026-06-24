@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 001a3f7c..63c3178a 100644
+index 001a3f7c..0bea01d1 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -4,6 +4,7 @@ import { getActiveProfileName, hasApiKey } from '@/api/client'
@@ -33,7 +33,7 @@ index 001a3f7c..63c3178a 100644
  
    function addMessage(sessionId: string, msg: Message) {
 +    // 兜底：未显式指定 systemType 的消息，若是网关关闭/重启告警则打标，
-+    // 供渲染层折叠为紧凑系统提示（两入口之一；历史回放入口在 normalizeHistoryMessage）。
++    // 供渲染层折叠为紧凑系统提示（两入口之一；历史回放入口在 mapHermesMessages）。
 +    if (msg.systemType === undefined) {
 +      const tagged = tagGatewayNotice(msg.content, msg.systemType)
 +      if (tagged) msg.systemType = tagged as NonNullable<typeof msg.systemType>
