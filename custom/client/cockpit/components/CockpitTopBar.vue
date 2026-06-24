@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useGroupChatStore } from '@/stores/hermes/group-chat'
-import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 
 const { t } = useI18n()
 const emit = defineEmits<{ (e: 'schedule'): void; (e: 'notify'): void; (e: 'search'): void; (e: 'settings'): void }>()
@@ -19,27 +17,41 @@ const timeStr = () => `${pad(now.value.getHours())}:${pad(now.value.getMinutes()
 
 defineProps<{ notifyCount?: number; scheduleCount?: number; userName?: string }>()
 
-const groupStore = useGroupChatStore()
-const matrixClient = useMatrixClientStore()
-
-// Gateway & channel connection status
-const gatewayStatus = ref<'checking' | 'running' | 'stopped'>('checking')
-
-interface ChannelState {
+interface PlatformInfo {
   name: string
   icon: string
-  connected: boolean
+  enabled: boolean
 }
-const channels = computed<ChannelState[]>(() => [
-  { name: '群聊', icon: '🗣', connected: groupStore.connected },
-  { name: 'Matrix', icon: '👥', connected: matrixClient.authenticated },
-])
+
+const gatewayStatus = ref<'checking' | 'running' | 'stopped'>('checking')
+const platforms = ref<PlatformInfo[]>([])
+
+const PLATFORM_ICONS: Record<string, string> = {
+  api_server: '🔌',
+  matrix: '👥',
+  email: '📧',
+  chat: '💬',
+  group: '🗣',
+}
 
 async function fetchGatewayStatus() {
   try {
-    const res = await fetch('/health')
-    const data = await res.json()
-    gatewayStatus.value = data.gateway === 'running' ? 'running' : 'stopped'
+    const [healthRes, cfgRes] = await Promise.all([
+      fetch('/health'),
+      fetch('/api/hermes/config'),
+    ])
+    const health = await healthRes.json()
+    gatewayStatus.value = health.gateway === 'running' ? 'running' : 'stopped'
+
+    const cfg = await cfgRes.json()
+    const pl = cfg.platforms || {}
+    platforms.value = Object.entries(pl)
+      .filter(([, v]: [string, any]) => v?.enabled)
+      .map(([name]) => ({
+        name,
+        icon: PLATFORM_ICONS[name] || '📡',
+        enabled: true,
+      }))
   } catch {
     gatewayStatus.value = 'stopped'
   }
@@ -80,10 +92,9 @@ onMounted(() => { fetchGatewayStatus() })
         Gateway
       </span>
       <span
-        v-for="ch in channels" :key="ch.name"
-        class="cockpit-top__ustat"
-        :class="ch.connected ? 'is-running' : 'is-stopped'"
-      >{{ ch.icon }} {{ ch.name }}</span>
+        v-for="pl in platforms" :key="pl.name"
+        class="cockpit-top__ustat is-running"
+      >{{ pl.icon }} {{ pl.name }}</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
