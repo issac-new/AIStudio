@@ -38,14 +38,6 @@ onMounted(() => { store.bootstrap() })
 onUnmounted(() => { store.disconnectOnUnmount() })
 
 // 单按钮双态切换：最大（全屏）↔ 还原（原页面布局）
-const colMaximizedIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`
-const colRestoreIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`
-function colCtrlHtml(col: ColumnKey): string {
-  return store.maximized[col] ? colMaximizedIcon : colRestoreIcon
-}
-function colCtrlTitle(col: ColumnKey): string {
-  return store.maximized[col] ? '还原' : '最大化'
-}
 function onColCtrl(col: ColumnKey) {
   store.toggleMaximized(col)
 }
@@ -90,7 +82,10 @@ function onColCtrl(col: ColumnKey) {
         <div class="cockpit-col__inner">
           <div class="cockpit-col__ctrls">
             <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': store.maximized.mid }"
-              :title="colCtrlTitle('mid')" @click="onColCtrl('mid')" v-html="colCtrlHtml('mid')" />
+              :title="store.maximized.mid ? '还原' : '最大化'" @click="onColCtrl('mid')">
+              <svg v-if="store.maximized.mid" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            </button>
           </div>
           <CockpitCollabMap v-show="!store.midTopCollapsed" :style="{ flex: store.midBottomCollapsed ? '1 1 0' : '1 1 0' }" />
           <!-- 中栏分区折叠分隔条 -->

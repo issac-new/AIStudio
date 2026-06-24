@@ -89,10 +89,9 @@ function statusBucketLabel(s: string): string {
         <button v-if="store.searchQuery" type="button" class="cockpit-kanban__search-clear" @click="store.clearSearch()">×</button>
         <span v-if="store._sessionSearching" class="cockpit-kanban__search-spinner" />
       </div>
-      <button type="button" class="cockpit-kanban__max" title="最大化/还原" @click="$emit('maximize')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-        </svg>
+      <button type="button" class="cockpit-kanban__max" :title="store.maximized.left ? '还原' : '最大化'" @click="$emit('maximize')">
+        <svg v-if="store.maximized.left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
       </button>
     </div>
 
