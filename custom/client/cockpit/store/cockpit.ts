@@ -68,7 +68,7 @@ export interface CollabChannel {
   routeTarget?: RouteLocationRaw
 }
 
-export interface FileNode { id: string; name: string; isDir: boolean; children?: FileNode[] }
+export interface FileNode { id: string; name: string; isDir: boolean; size: number; modified: number; children?: FileNode[] }
 
 export interface ScheduleEvent {
   id: string
@@ -516,6 +516,19 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
     // 异步递归拉链路上其他任务的 detail（供 topology 展示爷爷/孙子），不阻塞当前渲染
     loadLinksChain(id, board).catch(() => {})
+  }
+
+  // 强制刷新某任务文件树（附件上传/删除后、定时轮询用），绕过缓存重新拉取
+  async function refreshFileTree(taskId?: string) {
+    const id = taskId ?? selectedTaskId.value
+    if (!id) return
+    const board = boardSlugOf(id)
+    try {
+      _fileTreeCache.value[id] = await extras.listWorkspaceFiles(id, board)
+      fileTrees.value = { ...fileTrees.value, [id]: _fileTreeCache.value[id] }
+    } catch {
+      /* 文件树刷新失败静默 */
+    }
   }
 
   // 递归拉链路（BFS，向上向下各 MAX_DEPTH 层），填充 _detailCache 供 linksMap 使用
@@ -1040,7 +1053,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
     attachmentsLoading.value = true
     try {
       const { listAttachments } = await import('@/api/hermes/kanban')
-      const list = await listAttachments(taskId)
+      const board = boardSlugOf(taskId)
+      const list = await listAttachments(taskId, board ? { board } : undefined)
       taskAttachments.value = { ...taskAttachments.value, [taskId]: list }
     } catch {
       taskAttachments.value = { ...taskAttachments.value, [taskId]: [] }
@@ -1051,17 +1065,26 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   async function uploadAttachment(taskId: string, file: File) {
     const { uploadAttachment } = await import('@/api/hermes/kanban')
-    await uploadAttachment(taskId, file)
+    const board = boardSlugOf(taskId)
+    await uploadAttachment(taskId, file, board ? { board, uploadedBy: 'dashboard' } : { uploadedBy: 'dashboard' })
     const newVal = { ...taskAttachments.value }
     delete newVal[taskId]
     taskAttachments.value = newVal
     await loadAttachments(taskId)
+    // 附件已同步到 workspace，刷新文件树
+    await refreshFileTree(taskId)
   }
 
   async function deleteAttachment(attachmentId: number) {
     const { deleteAttachment: del } = await import('@/api/hermes/kanban')
-    await del(attachmentId)
+    const tid = selectedTaskId.value
+    const board = tid ? boardSlugOf(tid) : undefined
+    await del(attachmentId, board ? { board } : undefined)
     taskAttachments.value = {}
+    if (tid) {
+      await loadAttachments(tid)
+      await refreshFileTree(tid)
+    }
   }
 
   return {
@@ -1094,7 +1117,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     focusOnTaskFromAttention, focusOnTimelineNode, clearAttentionFilter,
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,
-    taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment,
+    taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment, refreshFileTree,
     // 日程
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth, userTodos,
     scheduleEvents, scheduleEventsForSelected, scheduleDatesWithEvents,

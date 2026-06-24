@@ -27,13 +27,15 @@ export interface FileNode {
   id: string       // 相对根的路径
   name: string
   isDir: boolean
+  size: number
+  modified: number
   children?: FileNode[]
 }
 
 function mapEntries(entries: RawFileEntry[], parentPath: string): FileNode[] {
   return entries.map(e => {
     const id = parentPath ? `${parentPath}/${e.name}` : e.name
-    const node: FileNode = { id, name: e.name, isDir: e.isDir }
+    const node: FileNode = { id, name: e.name, isDir: e.isDir, size: e.size ?? 0, modified: e.modified ?? 0 }
     if (e.isDir && e.children) node.children = mapEntries(e.children, id)
     return node
   })
