@@ -14,7 +14,7 @@ const props = defineProps<{
   loading?: boolean
   includeArchived?: boolean
   laneByProfile?: boolean
-  tenants?: string[]
+  tenants?: Array<string | { label: string; value: string }>
   taskCount?: number
 }>()
 
@@ -85,10 +85,13 @@ const assigneeOptions = computed(() => [
 
 const tenantOptions = computed(() => [
   { label: t('kanban.allTenants', 'All tenants'), value: '' },
-  ...(props.tenants || []).map(tn => ({
-    label: tn,
-    value: tn,
-  })),
+  ...(props.tenants || []).map(tn => {
+    // tenants can be string (legacy) or { label, value } object (parsed)
+    if (typeof tn === 'string') {
+      return { label: tn, value: tn }
+    }
+    return { label: tn.label, value: tn.value }
+  }),
 ])
 
 const boardOptions = computed(() =>

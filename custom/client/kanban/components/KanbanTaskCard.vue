@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { NCheckbox } from 'naive-ui'
 import type { KanbanTask } from '@/api/hermes/kanban'
 import { useI18n } from 'vue-i18n'
+import { parseTenant, tenantDisplayLabel } from '@/custom/kanban/utils/tenant-parser'
 
 const props = defineProps<{
   task: KanbanTask
@@ -13,6 +14,11 @@ const props = defineProps<{
   progress?: { done: number; total: number } | null
   warnings?: { count: number; highest_severity: string | null } | null
 }>()
+
+const tenantLabel = computed(() => {
+  if (!props.task.tenant) return ''
+  return tenantDisplayLabel(parseTenant(props.task.tenant))
+})
 
 const emit = defineEmits<{
   click: [taskId: string, multiSelect: boolean, rangeSelect: boolean]
@@ -164,7 +170,7 @@ function handleDragEnd(e: DragEvent) {
         P{{ task.priority }}
       </span>
       <span v-if="task.tenant" class="tenant-badge" :title="`Tenant: ${task.tenant}.`">
-        {{ task.tenant }}
+        {{ tenantLabel }}
       </span>
       <span
         v-if="progress && progress.total > 0"
