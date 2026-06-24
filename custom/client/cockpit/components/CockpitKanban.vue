@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { NSelect } from 'naive-ui'
 import { useCockpitStore, type CockpitPriority } from '@/custom/cockpit/store/cockpit'
 import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapters/task-adapter'
 import { parseTenant, tenantDisplayLabel, type ParsedTenant } from '@/custom/kanban/utils/tenant-parser'
@@ -32,7 +33,7 @@ const tenantFields: { key: keyof ParsedTenant; filterKey: 'tenantGroupChat' | 't
 ]
 
 const tenantFieldOptions = computed(() => {
-  const result: Record<string, string[]> = {}
+  const result: Record<string, { label: string; value: string }[]> = {}
   for (const field of tenantFields) {
     const set = new Set<string>()
     let hasLegacy = false
@@ -46,9 +47,12 @@ const tenantFieldOptions = computed(() => {
         if (val) set.add(val)
       }
     }
-    const arr = Array.from(set).sort()
-    if (hasLegacy) arr.push('___other___')
-    result[field.filterKey] = arr
+    const arr = Array.from(set).sort().map(v => ({ label: v.length > 25 ? v.slice(0, 24) + '…' : v, value: v }))
+    if (hasLegacy) arr.push({ label: '其它', value: '___other___' })
+    result[field.filterKey] = [
+      { label: '全部', value: '' },
+      ...arr,
+    ]
   }
   return result
 })
@@ -56,6 +60,18 @@ const tenantFieldOptions = computed(() => {
 function tenantFieldDisplay(field: typeof tenantFields[0], value: string): string {
   if (value === '___other___') return '其它'
   return value.length > 25 ? value.slice(0, 24) + '…' : value
+}
+
+/** Get/set the first value of a tenant filter array (single-select wrapper) */
+function tenantFilterValue(key: typeof tenantFields[0]['filterKey']): string {
+  const arr = (store.filters as any)[key] as string[]
+  return arr[0] || ''
+}
+function setTenantFilterValue(key: typeof tenantFields[0]['filterKey'], val: string) {
+  // Clear current array, set new value if not empty
+  const arr = (store.filters as any)[key] as string[]
+  arr.length = 0
+  if (val) arr.push(val)
 }
 
 // 动态 board slug 列表（需求 #1）：从 store.boards 取
@@ -101,18 +117,20 @@ function statusBucketLabel(s: string): string {
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.statuses.includes(st.key) }"
           @click="store.toggleFilter('statuses', st.key)">{{ st.label }}</button>
       </div>
-      <template v-for="field in tenantFields" :key="field.filterKey">
-        <div class="cockpit-kanban__frow">
-          <span class="cockpit-kanban__flabel">{{ field.label }}</span>
-          <button
-            v-for="val in tenantFieldOptions[field.filterKey]" :key="val" type="button"
-            :data-filter="val"
-            class="cockpit-kanban__tag"
-            :class="{ 'is-on': (store.filters as any)[field.filterKey].includes(val) }"
-            @click="store.toggleFilter(field.filterKey, val)"
-          >{{ tenantFieldDisplay(field, val) }}</button>
+      <div class="cockpit-kanban__frow cockpit-kanban__frow--tenant">
+        <span class="cockpit-kanban__flabel">租户</span>
+        <div class="cockpit-kanban__tenant-selects">
+          <NSelect
+            v-for="field in tenantFields" :key="field.filterKey"
+            :value="tenantFilterValue(field.filterKey)"
+            :options="tenantFieldOptions[field.filterKey]"
+            :placeholder="field.label"
+            size="tiny"
+            class="cockpit-kanban__tenant-sel"
+            @update:value="(v: any) => setTenantFilterValue(field.filterKey, v)"
+          />
         </div>
-      </template>
+      </div>
       <div v-if="boardOptions.length > 1" class="cockpit-kanban__frow">
         <span class="cockpit-kanban__flabel">看板</span>
         <button v-for="sl in boardOptions" :key="sl" type="button" :data-filter="sl"
@@ -216,6 +234,10 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__who { font-size: 10px; color: var(--text-muted); margin-left: auto; }
 .cockpit-kanban__slug { font-size: 9px; color: var(--text-muted); font-family: monospace; padding: 0 4px; }
 .cockpit-kanban__frow--date { align-items: center; }
+
+.cockpit-kanban__frow--tenant { flex-wrap: nowrap; }
+.cockpit-kanban__tenant-selects { display: flex; gap: 4px; flex: 1; min-width: 0; }
+.cockpit-kanban__tenant-sel { flex: 1; min-width: 60px; max-width: 160px; }
 .cockpit-kanban__date {
   font-size: 10px; padding: 1px 4px; border: 1px solid var(--border-color);
   border-radius: 4px; background: var(--bg-card); color: var(--text-secondary);
