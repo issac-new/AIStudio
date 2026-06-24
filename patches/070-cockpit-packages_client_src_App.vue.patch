@@ -1,19 +1,23 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index dc8105f2..7685e62d 100644
+index dc8105f2..8876ac34 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -23,10 +23,11 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
- 
- const isLoginPage = computed(() => route.name === 'login')
- const usesPageSidebar = computed(() =>
--  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.workflow'].includes(route.name as string),
-+  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.matrixChat', 'hermes.matrixChatRoom', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.swarmKanban', 'hermes.workflow'].includes(route.name as string),
- )
--const showAppSidebar = computed(() => !isLoginPage.value && !usesPageSidebar.value)
--const showMobileMenuButton = computed(() => !isLoginPage.value && (showAppSidebar.value || usesPageSidebar.value))
-+const isFullscreen = computed(() => route.meta?.fullscreen === true)
-+const showAppSidebar = computed(() => !isLoginPage.value && !usesPageSidebar.value && !isFullscreen.value)
-+const showMobileMenuButton = computed(() => !isLoginPage.value && !isFullscreen.value && (showAppSidebar.value || usesPageSidebar.value))
- 
- const nodeVersionLow = computed(() => {
-   const v = appStore.nodeVersion
+@@ -9,6 +9,7 @@ import AppSidebar from '@/components/layout/AppSidebar.vue'
+ import DesktopTitleBar from '@/components/layout/DesktopTitleBar.vue'
+ import { useKeyboard } from '@/composables/useKeyboard'
+ import { useAppStore } from '@/stores/hermes/app'
++import { isMatrixBypassMode } from '@/api/client'
+ import SessionSearchModal from '@/components/hermes/chat/SessionSearchModal.vue'
+ import AuthEventListener from '@/components/auth/AuthEventListener.vue'
+ import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.vue'
+@@ -55,8 +56,10 @@ watch(isLoginPage, (loginPage) => {
+     appStore.stopHealthPolling()
+     return
+   }
++  if (!isMatrixBypassMode()) {
+   appStore.loadModels()
+   appStore.startHealthPolling()
++}
+ }, {
+   immediate: true,
+ })
