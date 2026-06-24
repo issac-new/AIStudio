@@ -125,16 +125,14 @@ onUnmounted(() => {
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
     </div>
     <div class="cockpit-top__spacer" />
-    <div class="cockpit-top__grp" title="点击查看详情" @click="manualProbe">
+    <div class="cockpit-top__grp" title="点击查看 Connected Platforms 详情" @click.stop="manualProbe">
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
         {{ gatewayState === 'running' ? '🟢' : gatewayState === 'stopped' ? '🔴' : '⚪' }}
         Gateway{{ refreshing ? ' ⏳' : '' }}
       </span>
       <span v-for="pl in platforms" :key="pl.name" class="cockpit-top__ustat"
         :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
-        :title="`${pl.name}: ${pl.state} · ${pl.updated}`">
-        {{ pl.icon }} {{ pl.name }}{{ pl.state === 'connected' ? '' : ' ⚠' }}
-      </span>
+      >{{ pl.icon }} {{ pl.name }}{{ pl.state === 'connected' ? '' : ' ⚠' }}</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
