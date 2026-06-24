@@ -3,12 +3,11 @@
  * CockpitTerminalPane — 基于 @xterm/xterm + WebSocket 的真实 PTY 终端。
  *
  * 连接 upstream hermes-studio 的 /api/hermes/terminal WebSocket 端点，
- * 在 session 创建后自动执行初始命令：打印 kanban 脱离警告 →
- * cd 到当前任务 workspace 目录 → 启动 Claude Code agent。
+ * 在 session 创建后自动 cd 到当前任务 workspace 目录并启动 Claude Code agent。
  *
  * 根据服务端返回的 shell 类型自动选择命令语法：
- *   - Unix (bash/zsh) → ANSI echo + subshell + env
- *   - Windows (PowerShell) → Write-Host -ForegroundColor + Set-Location + $env:
+ *   - Unix (bash/zsh) → subshell + env
+ *   - Windows (PowerShell) → Set-Location + $env:
  *
  * 复用了 upstream Chat 面板中 "Workspace / Terminal" 的终端栈
  * （xterm.js → WebSocket → node-pty），但 workspace 由任务动态决定。
@@ -125,34 +124,26 @@ function sendRaw(data: string) {
 function handleControl(msg: any) {
   switch (msg.type) {
     case 'created':
-      // session 已创建，自动执行初始命令：
-      // 1. 打印 kanban 脱离警告
-      // 2. cd 到任务 workspace 并启动 Claude Code agent
+      // session 已创建，自动 cd 到任务 workspace 并启动 Claude Code agent
       if (!initialCdSent) {
         initialCdSent = true
         const wsPath = workspacePath.value || '~'
         const isWin = /powershell|pwsh/i.test(msg.shell ?? '')
         const escapedPath = wsPath.replace(/"/g, '\\"')
         const teammateMode = isWin ? 'psmux' : 'tmux'
-
-        const claudeArgs = `--dangerously-skip-permissions --effort max -c --agent --teammate-mode ${teammateMode} --append-system-prompt "【系统警告】当前已脱离kanban管理，请极其谨慎地操作，避免信息丢失或文件损坏。"`
-        const warningMsg = '⚠️ 警告：当前已脱离kanban管理，请谨慎操作，避免信息丢失或文件损坏！'
+        const claudeArgs = `--dangerously-skip-permissions --effort max -c --agent --teammate-mode ${teammateMode}`
 
         let initCmd: string
         if (isWin) {
           // Windows / PowerShell
           initCmd = [
-            `Write-Host "${warningMsg}" -ForegroundColor Yellow`,
             `Set-Location "${escapedPath}"`,
             `$env:CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`,
             `claude ${claudeArgs}`,
           ].join('; ')
         } else {
           // Unix / bash / zsh
-          initCmd = [
-            `echo -e "\\e[1;33m${warningMsg}\\e[0m"`,
-            `(cd "${escapedPath}" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude ${claudeArgs})`,
-          ].join(' && ')
+          initCmd = `(cd "${escapedPath}" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude ${claudeArgs})`
         }
 
         sendRaw(`${initCmd}\r`)
