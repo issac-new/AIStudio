@@ -20,6 +20,7 @@
 022-client-store-kanban-enh.patch
 023-client-store-chat.patch
 024-client-store-auth-matrix.patch
+025-client-loginview-matrix.patch
 026-client-accountsettings-matrix.patch
 027-client-usermgmtsettings-matrix.patch
 029-client-settingsview.patch

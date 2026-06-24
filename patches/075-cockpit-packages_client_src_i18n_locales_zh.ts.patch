@@ -1,8 +1,24 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index d10836a8..d27949f1 100644
+index d10836a8..3f3942bf 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -186,6 +186,9 @@ export default {
+@@ -44,6 +44,15 @@ export default {
+     defaultCredentialMessage: '当前登录账户仍在使用默认用户名或默认密码。为了避免未授权访问，请尽快进入当前账户修改用户名和密码。',
+     defaultCredentialAction: '去修改',
+     defaultCredentialLater: '稍后提醒',
++    matrixDescription: '使用 Matrix 账号登录',
++    homeserverPlaceholder: 'Homeserver URL (例如 http://localhost:8008)',
++    matrixUsernamePlaceholder: 'Matrix 用户名 (例如 @user:matrix.test)',
++    homeserverRequired: '请输入 Homeserver URL',
++    homeserverConnectionFailed: '无法连接到 Matrix Homeserver',
++    backendConnectionFailed: 'Matrix 登录成功但无法连接到 Hermes 后端',
++    fallbackToLocalHint: '后端暂时无法访问，您仍然可以使用本地账号登录。',
++    localDescription: '输入本地 Hermes 凭证。',
++    useMatrixLogin: '← 返回 Matrix 登录',
+   },
+ 
+   users: {
+@@ -186,6 +195,9 @@ export default {
      history: '历史',
      jobs: '任务',
      kanban: '看板',
@@ -12,7 +28,7 @@ index d10836a8..d27949f1 100644
      workflow: '工作流',
      models: '模型',
      profiles: '用户',
-@@ -727,6 +730,7 @@ export default {
+@@ -727,6 +739,7 @@ export default {
    // 看板
    kanban: {
      title: '看板',
@@ -20,7 +36,7 @@ index d10836a8..d27949f1 100644
      createTask: '新建任务',
      noTasks: '暂无任务',
      allStatuses: '全部状态',
-@@ -1830,6 +1834,17 @@ export default {
+@@ -1830,6 +1843,17 @@ export default {
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
        mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
      },
@@ -38,7 +54,7 @@ index d10836a8..d27949f1 100644
    },
    githubPreview: {
      title: "版本预览",
-@@ -2268,4 +2283,125 @@ export default {
+@@ -2268,4 +2292,125 @@ export default {
      new_0_6_13_5: '桌面更新更可靠：Windows 升级会关闭残留 Hermes Studio 进程，优先检查 Cloudflare，并保留 GitHub 更新源兜底',
      new_0_6_13_6: '发布自动化调整：Web UI 和 Docker release 不再标记为 GitHub Latest，完整桌面 release 手动构建成功后才提升为 Latest',
    },
