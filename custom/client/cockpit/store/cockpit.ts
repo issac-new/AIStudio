@@ -730,9 +730,17 @@ export const useCockpitStore = defineStore('cockpit', () => {
     bumpKv()
   }
 
-  function autoSaveDraft() {
-    bumpKv()
-  }
+	  function autoSaveDraft() {
+	    bumpKv()
+	  }
+
+	  /** 一键还原：清除当前任务草稿，恢复原始值 */
+	  function clearDraft() {
+	    const id = selectedTaskId.value
+	    if (!id) return
+	    kv.clearDraft(id)
+	    bumpKv()
+	  }
 
   // ── Area 2 草稿暂存方法（不调用 API，仅写 localStorage）──
   function setPendingAssignee(profile: string | null) {
@@ -1160,7 +1168,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     bootstrap, selectTask, loadTaskDetail,
     toggleCollapsed, toggleMidTop, toggleMidBottom, toggleTimelineActor, toggleFilter, setDateRangeFilter, clearDateRangeFilter, runSearch, clearSearch, setWorkspaceMode, toggleMaximized,
     selectFile, toggleGraphNode, focusOnGraphNodeForTimeline,
-    updateWorkItem, toggleRiskTag, submitWorkItem, autoSaveDraft,
+    updateWorkItem, toggleRiskTag, submitWorkItem, autoSaveDraft, clearDraft,
     setPendingAssignee, setPendingPriority, setPendingBody, setPendingTitle, setPendingComment, currentTitle, addPendingLink, removePendingLink,
     selectChannel, sendMessage, disconnectOnUnmount,
     openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistorySearch, setHistoryTimeRange, toggleHistoryCategory, toggleHistoryStatus, recallHistoryItem, clearArchivedMode,

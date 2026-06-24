@@ -56,7 +56,7 @@ function onColCtrl(col: ColumnKey) {
       @search="() => {}"
       @settings="goSettings"
     />
-    <CockpitAttention @history="store.openHistory()" />
+    <CockpitAttention />
 
     <div class="cockpit__body" :class="{ 'has-max': store.maximized.left || store.maximized.mid || store.maximized.right }">
       <!-- 左栏 Kanban -->

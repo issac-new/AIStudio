@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
 const { t } = useI18n()
-defineEmits<{ (e: 'history'): void }>()
 
 function handleClick(item: { taskId: string; title: string }) {
   store.focusOnTaskFromAttention(item.taskId, item.title)
@@ -31,7 +30,6 @@ function handleClick(item: { taskId: string; title: string }) {
         <span class="cockpit-attention__arrow">→</span>
       </button>
     </div>
-    <button type="button" class="cockpit-attention__history" @click="$emit('history')">🕘 {{ t('cockpit.history') }}</button>
   </div>
 </template>
 
@@ -110,7 +108,4 @@ function handleClick(item: { taskId: string; title: string }) {
   max-width: 200px;
 }
 .cockpit-attention__arrow { font-size: 10px; color: var(--text-muted); }
-.cockpit-attention__history { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 0 14px; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; font-size: 11px; font-weight: 600;
-  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-}
 </style>

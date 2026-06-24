@@ -611,6 +611,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
       <div class="cockpit-workspace__foot">
         <template v-if="!isReadOnly">
           <button type="button" class="cockpit-workspace__btn" @click="store.autoSaveDraft()">💾 {{ t('cockpit.saveDraft') }}</button>
+          <button type="button" class="cockpit-workspace__btn" @click="store.clearDraft()">↺ 还原</button>
           <button type="button" data-action="submit" class="cockpit-workspace__btn is-pri" @click="$emit('submit')">{{ t('cockpit.submit') }}</button>
         </template>
         <button v-else type="button" class="cockpit-workspace__btn is-pri" @click="store.openTemplateManager()">{{ t('cockpit.newCollabFromArchive') }}</button>
