@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { NSelect } from 'naive-ui'
 import { useCockpitStore, type CockpitPriority } from '@/custom/cockpit/store/cockpit'
 import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapters/task-adapter'
 import { parseTenant, tenantDisplayLabel, type ParsedTenant } from '@/custom/kanban/utils/tenant-parser'
 
 const store = useCockpitStore()
+const router = useRouter()
 defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void }>()
 
 function copyTaskId(id: string) {
@@ -168,15 +170,13 @@ function statusBucketLabel(s: string): string {
       </button>
     </div>
 
-    <!-- AI协作中心入口（kanban 下方）-->
-    <button type="button" class="cockpit-kanban__entry" data-entry="cockpit" @click="$emit('enterCenter')">
+    <!-- 设置入口（kanban 下方）-->
+    <button type="button" class="cockpit-kanban__entry" data-entry="settings" @click="router.push({ name: 'hermes.settings' })">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
-      <span class="cockpit-kanban__entry-label">AI协作中心</span>
+      <span class="cockpit-kanban__entry-label">设置</span>
       <svg class="cockpit-kanban__entry-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6" />
       </svg>
