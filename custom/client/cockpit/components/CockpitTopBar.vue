@@ -82,8 +82,11 @@ async function fetchGatewayStatus(silent = true) {
 
 /** 点击手动探测并弹出详情 */
 async function manualProbe() {
-  await fetchGatewayStatus(false)
+  // 先切换显示状态，再异步刷新数据
   showDetail.value = !showDetail.value
+  if (showDetail.value) {
+    await fetchGatewayStatus(false)
+  }
 }
 
 onMounted(() => {
