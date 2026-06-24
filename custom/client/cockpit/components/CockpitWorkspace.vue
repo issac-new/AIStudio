@@ -54,8 +54,9 @@ function isLinkPendingRemove(parent: string, child: string): boolean {
 const newParentId = ref('')
 const newChildId = ref('')
 
-// 父/子任务候选列表（对齐 KanbanTaskDrawer：来自 kanbanStore.tasks，排除自身和已关联）
-const allKanbanTasks = computed(() => kanbanStore.tasks ?? [])
+// 父/子任务候选列表（对齐 KanbanTaskDrawer：候选任务列表，排除自身和已关联）
+// 用 store.tasks（跨 board 聚合的 cockpitTasks），而非 kanbanStore.tasks（仅当前 board）
+const allKanbanTasks = computed(() => store.tasks ?? [])
 const candidateTasksForParent = computed(() => {
   const tid = store.selectedTaskId
   const exclude = new Set([tid, ...(detail.value?.parents ?? [])])
@@ -70,9 +71,19 @@ function taskOptionLabel(tk: any): string {
   return `${tk.id} — ${(tk.title || '').slice(0, 50)}`
 }
 
-// Assignee 选择（暂存到草稿）—— assignees 是 KanbanAssignee[]，取 .name
+// Assignee 选择（暂存到草稿）—— 优先用 kanbanStore.assignees，补充 store.tasks 中的 distinct assignee
+// （bootstrap 后 kanbanStore.assignees 只反映最后一个 board，store.tasks 是跨 board 聚合）
 const assigneeOptions = computed(() => {
-  return (kanbanStore.assignees ?? []).map((a: any) => ({ label: a?.name ?? a, value: a?.name ?? a }))
+  const map = new Map<string, string>()
+  for (const a of (kanbanStore.assignees ?? [])) {
+    const name = (a as any)?.name ?? a
+    if (name) map.set(name, name)
+  }
+  for (const t of (store.tasks ?? [])) {
+    const name = (t as any)?.assignee
+    if (name && name !== '未分配' && name !== 'unassigned') map.set(name, name)
+  }
+  return [...map].map(([v]) => ({ label: v, value: v }))
 })
 function onAssigneeChange(e: Event) {
   const v = (e.target as HTMLSelectElement).value

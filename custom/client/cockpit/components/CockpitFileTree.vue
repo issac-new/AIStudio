@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import CockpitFileNode from './CockpitFileNode.vue'
@@ -11,6 +11,40 @@ const filter = ref('')
 const rootFiles = computed(() => store.filesForSelectedTask)
 const workspace = computed(() => store.selectedTask?.workspace ?? '')
 const hasTask = computed(() => !!store.selectedTask)
+
+// 汇总信息：顶层文件/文件夹数 + 总大小
+const summary = computed(() => {
+  const nodes = rootFiles.value
+  let files = 0, dirs = 0, totalSize = 0
+  function walk(list: any[]) {
+    for (const n of list) {
+      if (n.isDir) { dirs++; if (n.children) walk(n.children) }
+      else { files++; totalSize += n.size || 0 }
+    }
+  }
+  walk(nodes)
+  return { files, dirs, totalSize }
+})
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+// 每 10 秒刷新当前任务文件树（任务切换时也会立即刷新一次）
+let pollTimer: ReturnType<typeof setInterval> | null = null
+function startPoll() {
+  stopPoll()
+  if (store.selectedTaskId) {
+    store.refreshFileTree()
+    pollTimer = setInterval(() => store.refreshFileTree(), 10000)
+  }
+}
+function stopPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+watch(() => store.selectedTaskId, startPoll, { immediate: true })
+onUnmounted(stopPoll)
 </script>
 
 <template>
@@ -19,6 +53,10 @@ const hasTask = computed(() => !!store.selectedTask)
       <span class="cockpit-file-tree__title">{{ t('cockpit.taskFiles') }}</span>
       <span class="cockpit-file-tree__sub">{{ t('cockpit.currentTaskWorkspace') }}</span>
       <code v-if="hasTask" class="cockpit-file-tree__root">{{ workspace }}</code>
+      <div v-if="hasTask && (summary.files || summary.dirs)" class="cockpit-file-tree__summary">
+        <span>{{ summary.dirs }} 📁 / {{ summary.files }} 📄</span>
+        <span>{{ formatSize(summary.totalSize) }}</span>
+      </div>
       <input v-model="filter" class="cockpit-file-tree__filter" :placeholder="t('cockpit.filterFiles')">
     </div>
     <div class="cockpit-file-tree__list">
@@ -42,6 +80,7 @@ const hasTask = computed(() => !!store.selectedTask)
 .cockpit-file-tree__title { font-size: 11px; font-weight: 700; color: var(--text-primary); }
 .cockpit-file-tree__sub { font-size: 9px; color: var(--text-muted); }
 .cockpit-file-tree__root { font-family: ui-monospace, monospace; font-size: 9px; color: var(--text-secondary); background: var(--bg-secondary); padding: 2px 6px; border-radius: 3px; word-break: break-all; }
+.cockpit-file-tree__summary { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); font-family: ui-monospace, monospace; }
 .cockpit-file-tree__filter { font-family: inherit; font-size: 10px; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; color: var(--text-primary); }
 .cockpit-file-tree__list { flex: 1; overflow-y: auto; padding: 6px 0; }
 .cockpit-file-tree__empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
