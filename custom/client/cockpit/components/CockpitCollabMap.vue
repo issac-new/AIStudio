@@ -275,27 +275,27 @@ onMounted(() => {
   window.addEventListener('resize', onResize)
 })
 
-function onResize() {
+function safeResizeAndRender() {
+  // 容器尺寸为 0 时（动画过渡期间）跳过，防 eCharts 内部矩阵 null 崩溃
+  if (!chartEl.value || chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0) return
   chart.value?.resize()
   renderChart()
 }
 
+function onResize() {
+  safeResizeAndRender()
+}
+
 // 面板最大化/折叠/展开时容器尺寸可能变化，ECharts 需重新自适应
 watch(() => [store.maximized.mid, store.collapsed.mid, store.maximized.left, store.maximized.right], () => {
-  nextTick(() => {
-    chart.value?.resize()
-    renderChart()
-  })
+  nextTick(() => safeResizeAndRender())
 })
 
 // ResizeObserver: 更精确地监听容器自身大小变化（面板拖拽分割线等场景）
 let resizeObserver: ResizeObserver | null = null
 watch(chartEl, (el) => {
   if (el && !resizeObserver) {
-    resizeObserver = new ResizeObserver(() => {
-      chart.value?.resize()
-      renderChart()
-    })
+    resizeObserver = new ResizeObserver(() => safeResizeAndRender())
     resizeObserver.observe(el)
   }
 })
