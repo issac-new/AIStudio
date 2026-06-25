@@ -115,7 +115,7 @@ function onPriorityDelta(delta: number) {
 function onBodyInput(e: Event) {
   store.setPendingBody((e.target as HTMLTextAreaElement).value)
 }
-const descPreview = ref(false)
+const descPreview = ref(true)
 
 // 父子关联调整（暂存到草稿）
 function onRemoveParent(pid: string) {
