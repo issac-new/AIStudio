@@ -488,49 +488,6 @@ async function toggleHomeSubscription(ch: HomeChannel) {
           @submit="handleCompletionSubmit"
           @cancel="completionShow = false" />
 
-        <!-- ═══ AREA 3: A2UI Suggestions ═══ -->
-        <div v-if="workItem" class="cockpit-workspace__section">
-          <label class="cockpit-workspace__section-title">{{ t('cockpit.yourDecision') }} *</label>
-          <button v-for="d in decisions" :key="d.key" type="button"
-            :data-decision="d.key" class="cockpit-workspace__opt"
-            :class="{ 'is-selected': workItem.decision === d.key }"
-            @click="store.updateWorkItem({ decision: d.key })">
-            <span class="cockpit-workspace__opt-dot" />
-            <span class="cockpit-workspace__opt-info">
-              <span class="cockpit-workspace__opt-header">
-                <span class="cockpit-workspace__opt-name">{{ t(d.labelKey) }}</span>
-                <span v-if="d.recommended" class="cockpit-workspace__opt-rec">{{ t('cockpit.recommend') }}</span>
-              </span>
-              <span v-if="d.descKey" class="cockpit-workspace__opt-desc">{{ t(d.descKey) }}</span>
-            </span>
-          </button>
-        </div>
-
-        <div v-if="workItem" class="cockpit-workspace__section">
-          <label class="cockpit-workspace__section-title">{{ t('cockpit.riskTags') }} <span class="cockpit-workspace__sub">{{ t('cockpit.agentPrefilled') }}</span></label>
-          <div class="cockpit-workspace__chips">
-            <button v-for="tag in ALL_TAGS" :key="tag" type="button" :data-tag="tag"
-              class="cockpit-workspace__chip" :class="{ 'is-on': workItem.riskTags.includes(tag) }"
-              @click="store.toggleRiskTag(tag)">{{ tag }}</button>
-          </div>
-        </div>
-
-        <div v-if="workItem" class="cockpit-workspace__section">
-          <label class="cockpit-workspace__section-title">{{ t('cockpit.reviewOpinion') }} · {{ t('cockpit.evaluation') }}</label>
-          <div class="cockpit-workspace__score">
-            <button v-for="n in 5" :key="n" type="button" class="cockpit-workspace__star"
-              :class="{ 'is-on': (workItem.score ?? 0) >= n }"
-              @click="store.updateWorkItem({ score: n })">★</button>
-          </div>
-        </div>
-
-        <div v-if="workItem" class="cockpit-workspace__section">
-          <label class="cockpit-workspace__section-title">{{ t('cockpit.reviewOpinion') }}</label>
-          <textarea class="cockpit-workspace__textarea"
-            :value="workItem.opinion"
-            @input="store.updateWorkItem({ opinion: ($event.target as HTMLTextAreaElement).value })" />
-        </div>
-
         <!-- ═══ 评论区（草稿）═══ -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.comments') }}</label>

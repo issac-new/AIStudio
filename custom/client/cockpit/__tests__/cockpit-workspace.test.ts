@@ -68,41 +68,8 @@ describe('CockpitWorkspace', () => {
     mockKanbanTasks.push(kt({ id: 't1', title: 'PR #142' }))
     const s = useCockpitStore()
     ;(s as any).selectedTaskId = 't1'
-    // 预填 localStorage 草稿
-    s.updateWorkItem({
-      decision: 'conditional', riskTags: ['concurrency', 'test-gap'],
-      opinion: '补用例再合并', modifiedFiles: ['refresh.ts'],
-    })
     return s
   }
-
-  it('renders the work item opinion and decision', () => {
-    seed()
-    const w = mount(CockpitWorkspace)
-    // A2UI section should show decision options
-    expect(w.find('[data-decision="conditional"]').exists()).toBe(true)
-    expect(w.find('[data-decision="approve"]').exists()).toBe(true)
-  })
-
-  it('renders decision options with the current one selected', () => {
-    seed()
-    const w = mount(CockpitWorkspace)
-    expect(w.find('[data-decision="conditional"]').classes()).toContain('is-selected')
-  })
-
-  it('clicking a decision option updates the draft', async () => {
-    const s = seed()
-    const w = mount(CockpitWorkspace)
-    await w.find('[data-decision="approve"]').trigger('click')
-    expect(s.workItemForSelectedTask?.decision).toBe('approve')
-  })
-
-  it('clicking a risk tag chip toggles it', async () => {
-    const s = seed()
-    const w = mount(CockpitWorkspace)
-    await w.find('[data-tag="performance"]').trigger('click')
-    expect(s.workItemForSelectedTask?.riskTags).toContain('performance')
-  })
 
   it('shows task header with title and status', () => {
     seed()
@@ -132,27 +99,13 @@ describe('CockpitWorkspace', () => {
     expect(w.emitted('submit')).toBeTruthy()
   })
 
-  it('recommended option shows recommend badge', () => {
-    seed()
-    const w = mount(CockpitWorkspace)
-    const cond = w.find('[data-decision="conditional"]')
-    expect(cond.text()).toContain('recommend')
-  })
-
-  it('claude code button calls enterTerminal', async () => {
-    const s = seed()
-    const w = mount(CockpitWorkspace)
-    const buttons = w.findAll('.cockpit-workspace__btn')
-    const claudeBtn = buttons.find(b => b.text().includes('⌘'))
-    expect(claudeBtn).toBeTruthy()
-  })
-
   it('submitting via store posts comment + clears draft', async () => {
     const s = seed()
+    s.updateWorkItem({ decision: 'approve', riskTags: [], opinion: 'ok' })
     await s.submitWorkItem()
     expect(addComment).toHaveBeenCalled()
     expect(addComment.mock.calls[0][0]).toBe('t1')
-    expect(addComment.mock.calls[0][1].body).toContain('[决策:conditional]')
+    expect(addComment.mock.calls[0][1].body).toContain('[决策:approve]')
     expect(s.workItemForSelectedTask).toBeNull()
   })
 })
