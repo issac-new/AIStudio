@@ -189,6 +189,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const scheduleViewYear = ref(2026)
   const scheduleViewMonth = ref(5)   // 0-indexed
   const userTodos = ref<UserTodo[]>([])
+  const scheduleAnchorLeft = ref<number | null>(null)   // 下拉横向定位（「日程」按钮 left）
+  // 待办闹钟触发的应用内通知（合并进 notifyItems）
+  const reminderNotifications = ref<NotifyItem[]>([])
+  let _reminderTimer: ReturnType<typeof setInterval> | undefined
 
   // ── 懒加载态 ──
   const _detailCache = ref<Record<string, KanbanTaskDetail>>({})
@@ -349,7 +353,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const notifyOpen = ref(false)
 
   const notifyItems = computed<NotifyItem[]>(() => {
-    const items: NotifyItem[] = []
+    const items: NotifyItem[] = [...reminderNotifications.value]
     for (const room of (matrixRoom as any).sortedRooms ?? []) {
       const item = notifyAdapter.fromMatrixRoom(room, (r: any) => (matrixRoom as any).getRoomUnreadCount(r))
       if (item) items.push(item)
@@ -508,6 +512,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
     // 设置默认日期筛选（近 2 周）
     const dr = defaultDateRange()
     filters.value = { ...filters.value, dateRange: { from: dr.from, to: dr.to } }
+    // 加载用户待办并启动闹钟提醒调度（应用启动即生效，无需打开日程面板）
+    userTodos.value = kv.loadUserTodos()
+    startReminderScheduler()
     await Promise.allSettled([
       loadAllBoards(),
       kanban.fetchAssignees(),
@@ -1134,7 +1141,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function closeTemplateManager() { templateManagerOpen.value = false }
 
   // ── 日程 ──
-  function openSchedule() {
+  function openSchedule(triggerBtn?: HTMLElement) {
     scheduleOpen.value = true
     const now = new Date()
     scheduleViewYear.value = now.getFullYear()
@@ -1142,7 +1149,14 @@ export const useCockpitStore = defineStore('cockpit', () => {
     const pad = (n: number) => String(n).padStart(2, '0')
     scheduleSelectedDate.value =
       `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    // 下拉横向定位：取「日程」按钮 left（右边界保护）
+    if (triggerBtn) {
+      const rect = triggerBtn.getBoundingClientRect()
+      const maxLeft = Math.max(16, window.innerWidth - 680 - 16)
+      scheduleAnchorLeft.value = Math.min(rect.left, maxLeft)
+    }
     userTodos.value = kv.loadUserTodos()
+    startReminderScheduler()
   }
   function closeSchedule() { scheduleOpen.value = false }
   function setScheduleDate(d: string) { scheduleSelectedDate.value = d }
@@ -1154,14 +1168,95 @@ export const useCockpitStore = defineStore('cockpit', () => {
     scheduleViewMonth.value = m
     scheduleViewYear.value = y
   }
-  function addUserTodo(date: string, title: string, note?: string) {
-    const todo: UserTodo = { id: 'todo-' + Date.now(), date, title, note, createdAt: Date.now() }
+  function addUserTodo(date: string, title: string, note?: string, remindAt?: number) {
+    const todo: UserTodo = {
+      id: 'todo-' + Date.now(), date, title, note,
+      createdAt: Date.now(),
+      remindAt: remindAt && remindAt > Date.now() ? remindAt : undefined,
+    }
     userTodos.value.push(todo)
     kv.saveUserTodos(userTodos.value)
+    // 立即检查一次，应对临近提醒
+    checkReminders()
   }
   function removeUserTodo(id: string) {
     userTodos.value = userTodos.value.filter(t => t.id !== id)
     kv.saveUserTodos(userTodos.value)
+    // 同步移除其应用内提醒通知
+    reminderNotifications.value = reminderNotifications.value.filter(n => !n.id.startsWith(`reminder:${id}:`))
+  }
+
+  // ── 待办闹钟提醒调度 ──
+  const MIN15 = 15 * 60 * 1000
+  const MIN5 = 5 * 60 * 1000
+
+  // 触发一次提醒：浏览器系统通知 + 应用内通知面板
+  function fireReminder(todo: UserTodo, stage: 15 | 5) {
+    // 浏览器系统通知
+    try {
+      if (typeof Notification !== 'undefined') {
+        if (Notification.permission === 'granted') {
+          new Notification(`⏰ ${todo.title}`, {
+            body: stage === 15 ? '15 分钟后开始' : '5 分钟后开始',
+            tag: `reminder:${todo.id}:${stage}`,
+          })
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(p => {
+            if (p === 'granted') {
+              new Notification(`⏰ ${todo.title}`, {
+                body: stage === 15 ? '15 分钟后开始' : '5 分钟后开始',
+                tag: `reminder:${todo.id}:${stage}`,
+              })
+            }
+          })
+        }
+      }
+    } catch { /* SSR/无权限环境静默 */ }
+    // 应用内通知面板
+    const item = notifyAdapter.fromReminder(todo, stage)
+    // 去重：同 stage 仅保留最新一条
+    reminderNotifications.value = [
+      ...reminderNotifications.value.filter(n => n.id !== item.id),
+      item,
+    ]
+  }
+
+  // 检查所有待办的提醒窗口，按需触发并持久化触发标记
+  function checkReminders() {
+    let changed = false
+    for (const todo of userTodos.value) {
+      if (!todo.remindAt) continue
+      const now = Date.now()
+      const t = todo.remindAt
+      // T-15 窗口：[t-15min, t-5min)
+      if (!todo.reminded15 && now >= t - MIN15 && now < t - MIN5) {
+        fireReminder(todo, 15)
+        todo.reminded15 = true
+        changed = true
+      }
+      // T-5 窗口：[t-5min, t)
+      else if (!todo.reminded5 && now >= t - MIN5 && now < t) {
+        fireReminder(todo, 5)
+        todo.reminded5 = true
+        changed = true
+      }
+      // 重载恢复：已过 remindAt 但 T-15/T-5 标记仍缺 → 补触发（仅一次，靠标记防重复）
+      else if (now >= t) {
+        if (!todo.reminded15) { fireReminder(todo, 15); todo.reminded15 = true; changed = true }
+        if (!todo.reminded5) { fireReminder(todo, 5); todo.reminded5 = true; changed = true }
+      }
+    }
+    if (changed) kv.saveUserTodos(userTodos.value)
+  }
+
+  // 启动每分钟调度器（幂等：已启动则跳过）
+  function startReminderScheduler() {
+    if (_reminderTimer) return
+    checkReminders()   // 启动时立即检查一次（重载恢复）
+    _reminderTimer = setInterval(checkReminders, 60_000)
+  }
+  function stopReminderScheduler() {
+    if (_reminderTimer) { clearInterval(_reminderTimer); _reminderTimer = undefined }
   }
 
   // ── 附件 ──
@@ -1240,10 +1335,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
     taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment, refreshFileTree,
     // 日程
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth, userTodos,
+    scheduleAnchorLeft, reminderNotifications,
     scheduleEvents, scheduleEventsForSelected, scheduleEventsForSelectedSorted,
     scheduleDatesWithEvents, scheduleCountsByDate, scheduleTopPriorityByDate,
     openSchedule, closeSchedule, setScheduleDate, navigateScheduleMonth,
-    addUserTodo, removeUserTodo,
+    addUserTodo, removeUserTodo, startReminderScheduler, stopReminderScheduler,
 
   }
 })

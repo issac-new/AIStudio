@@ -86,6 +86,9 @@ export interface UserTodo {
   title: string
   note?: string
   createdAt: number
+  remindAt?: number       // 提醒时刻（毫秒），由日期+时间计算；缺省=无提醒
+  reminded15?: boolean    // T-15 已触发标记（防重复）
+  reminded5?: boolean     // T-5 已触发标记
 }
 
 const KEY_TODOS = 'cockpit.userTodos'

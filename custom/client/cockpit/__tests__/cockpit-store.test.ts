@@ -111,6 +111,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
 }))
 
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { saveUserTodos } from '@/custom/cockpit/store/cockpit-kv'
 
 // 内存 localStorage polyfill（vitest 3.x jsdom 默认 stub localStorage）
 class MemStorage {
@@ -121,6 +122,7 @@ class MemStorage {
   clear() { this.m.clear() }
 }
 let savedLS: any
+let savedNotification: any
 beforeEach(() => {
   setActivePinia(createPinia())
   mockKanbanTasks.splice(0, mockKanbanTasks.length)
@@ -131,10 +133,19 @@ beforeEach(() => {
   mockSearchHermesSessions.mockResolvedValue([])
   savedLS = (globalThis as any).localStorage
   Object.defineProperty(globalThis, 'localStorage', { value: new MemStorage(), configurable: true, writable: true })
+  // Notification 在 jsdom 不存在，注入 mock 供闹钟调度使用
+  savedNotification = (globalThis as any).Notification
+  ;(globalThis as any).Notification = class {
+    static permission = 'granted'
+    static requestPermission = vi.fn(async () => 'granted')
+    constructor(_title: string, _opts?: any) {}
+  }
 })
 afterEach(() => {
   if (savedLS === undefined) delete (globalThis as any).localStorage
   else (globalThis as any).localStorage = savedLS
+  if (savedNotification === undefined) delete (globalThis as any).Notification
+  else (globalThis as any).Notification = savedNotification
 })
 
 // 构造一个最小 KanbanTask
@@ -595,5 +606,67 @@ describe('cockpit store 工作项标题/评论草稿', () => {
     s.updateWorkItem({ decision: 'approve', riskTags: [], opinion: 'ok' })
     await s.submitWorkItem()
     expect(patchTask).not.toHaveBeenCalled()
+  })
+})
+
+describe('cockpit store 待办闹钟提醒', () => {
+  it('addUserTodo 接受 remindAt 并持久化', () => {
+    const s = useCockpitStore()
+    s.openSchedule()
+    // remindAt = now + 20min，落在两个提醒窗口之外（now < t-15），不触发
+    const remindAt = Date.now() + 20 * 60 * 1000
+    s.addUserTodo('2026-06-25', '提醒待办', undefined, remindAt)
+    const todo = s.userTodos.find(t => t.title === '提醒待办')
+    expect(todo).toBeTruthy()
+    expect(todo!.remindAt).toBe(remindAt)
+    expect(todo!.reminded15).toBeUndefined()
+  })
+
+  it('addUserTodo 忽略过去的 remindAt（不设提醒）', () => {
+    const s = useCockpitStore()
+    s.openSchedule()
+    s.addUserTodo('2026-06-25', '过期', undefined, Date.now() - 1000)
+    const todo = s.userTodos.find(t => t.title === '过期')!
+    expect(todo.remindAt).toBeUndefined()
+  })
+
+  it('T-15 窗口触发提醒并写入通知面板', () => {
+    const s = useCockpitStore()
+    s.openSchedule()
+    // remindAt = now + 10min → 落在 T-15 窗口 [t-15, t-5) 内
+    const remindAt = Date.now() + 10 * 60 * 1000
+    s.addUserTodo('2026-06-25', '即将开始', undefined, remindAt)
+    // addUserTodo 内部已调用 checkReminders，应触发 T-15
+    const todo = s.userTodos.find(t => t.title === '即将开始')!
+    expect(todo.reminded15).toBe(true)
+    // 通知面板应出现一条 reminder 项
+    const reminderItem = s.notifyItems.find(n => n.kind === 'reminder')
+    expect(reminderItem).toBeTruthy()
+    expect(reminderItem!.id).toContain(':15')
+  })
+
+  it('removeUserTodo 同步移除其提醒通知', () => {
+    const s = useCockpitStore()
+    s.openSchedule()
+    const remindAt = Date.now() + 10 * 60 * 1000
+    s.addUserTodo('2026-06-25', '待删提醒', undefined, remindAt)
+    const todo = s.userTodos.find(t => t.title === '待删提醒')!
+    expect(s.notifyItems.some(n => n.kind === 'reminder')).toBe(true)
+    s.removeUserTodo(todo.id)
+    expect(s.userTodos.find(t => t.id === todo.id)).toBeUndefined()
+    expect(s.notifyItems.some(n => n.id.startsWith(`reminder:${todo.id}:`))).toBe(false)
+  })
+
+  it('重载恢复：已过 remindAt 但标记缺失时补触发', () => {
+    // 模拟重载：直接写一个过期且未触发的待办到 localStorage
+    saveUserTodos([{
+      id: 'todo-stale', date: '2026-06-25', title: '遗留待办', createdAt: Date.now() - 3600_000,
+      remindAt: Date.now() - 600_000, reminded15: false, reminded5: false,
+    }])
+    const s = useCockpitStore()
+    s.openSchedule()   // 加载 todos + checkReminders
+    const todo = s.userTodos.find(t => t.id === 'todo-stale')!
+    expect(todo.reminded15).toBe(true)
+    expect(todo.reminded5).toBe(true)
   })
 })

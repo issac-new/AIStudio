@@ -1,9 +1,9 @@
 import type { RouteLocationRaw } from 'vue-router'
 
-export type NotifyKind = 'matrix' | 'chat' | 'group'
+export type NotifyKind = 'matrix' | 'chat' | 'group' | 'reminder'
 
 export interface NotifyItem {
-  id: string                  // `<kind>:<roomId/sessionId>`
+  id: string                  // `<kind>:<roomId/sessionId>` 或 `reminder:<todoId>:<stage>`
   kind: NotifyKind
   title: string
   preview: string
@@ -97,6 +97,25 @@ export function fromGroupRoom(
     ts: lastMsg?.ts ?? 0,
     count: unreadCount,
     routeTarget: { name: 'hermes.groupChatRoom', params: { roomId: room.id } },
+  }
+}
+
+/** 待办闹钟提醒：stage 为 15（T-15）或 5（T-5）。点击跳转 cockpit 并打开日程 */
+export function fromReminder(
+  todo: { id: string; title: string; date: string; remindAt?: number },
+  stage: 15 | 5,
+): NotifyItem {
+  const when = new Date(todo.remindAt ?? Date.now())
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const timeStr = `${pad(when.getHours())}:${pad(when.getMinutes())}`
+  return {
+    id: `reminder:${todo.id}:${stage}`,
+    kind: 'reminder',
+    title: `⏰ ${todo.title}`,
+    preview: stage === 15 ? `15 分钟后提醒 · ${todo.date} ${timeStr}` : `5 分钟后提醒 · ${todo.date} ${timeStr}`,
+    ts: Date.now(),
+    count: 1,
+    routeTarget: { name: 'hermes.cockpit' },
   }
 }
 
