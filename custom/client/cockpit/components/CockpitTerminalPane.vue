@@ -12,7 +12,7 @@
  * 复用了 upstream Chat 面板中 "Workspace / Terminal" 的终端栈
  * （xterm.js → WebSocket → node-pty），但 workspace 由任务动态决定。
  */
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
