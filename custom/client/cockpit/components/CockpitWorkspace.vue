@@ -115,6 +115,7 @@ function onPriorityDelta(delta: number) {
 function onBodyInput(e: Event) {
   store.setPendingBody((e.target as HTMLTextAreaElement).value)
 }
+const descPreview = ref(false)
 
 // 父子关联调整（暂存到草稿）
 function onRemoveParent(pid: string) {
@@ -439,12 +440,19 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         </span>
       </div>
 
-      <!-- Row: Description -->
-      <div class="cockpit-workspace__flow-row">
+      <!-- Row: Description（编辑/预览切换） -->
+      <div class="cockpit-workspace__desc-bar">
+        <span class="cockpit-workspace__field-label">{{ t('cockpit.description') }}</span>
+        <span class="cockpit-workspace__desc-tabs">
+          <button type="button" class="cockpit-workspace__desc-tab" :class="{ 'is-on': !descPreview }" @click="descPreview = false">编辑</button>
+          <button type="button" class="cockpit-workspace__desc-tab" :class="{ 'is-on': descPreview }" @click="descPreview = true">预览</button>
+        </span>
+      </div>
+      <div v-if="!descPreview" class="cockpit-workspace__flow-row">
         <textarea class="cockpit-workspace__textarea" :class="{ 'is-pending': isBodyPending }" :value="currentBody"
           :placeholder="t('cockpit.descriptionPlaceholder')" @input="onBodyInput" />
       </div>
-      <div v-if="currentBody" class="cockpit-workspace__desc-preview" v-html="renderMarkdown(currentBody)" />
+      <div v-else class="cockpit-workspace__desc-preview" v-html="renderMarkdown(currentBody || '_无内容_')" />
 
       <!-- Row: 动作按钮（Specify, Decompose, 状态流转）flex-wrap -->
       <div class="cockpit-workspace__flow-row">
@@ -642,6 +650,12 @@ async function toggleHomeSubscription(ch: HomeChannel) {
   :deep(a) { color: var(--accent-primary); &:hover { text-decoration: underline; } }
   :deep(ul, ol) { padding-left: 16px; margin: 2px 0; }
   :deep(blockquote) { border-left: 3px solid var(--accent-primary); padding-left: 8px; margin: 4px 0; color: var(--text-secondary); }
+}
+.cockpit-workspace__desc-bar { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.cockpit-workspace__desc-tabs { display: inline-flex; gap: 2px; margin-left: auto; }
+.cockpit-workspace__desc-tab { font: inherit; font-size: 11px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-muted); cursor: pointer;
+  &:hover { color: var(--text-primary); }
+  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
 .cockpit-workspace__desc-preview { padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); font-size: 13px; color: var(--text-primary); line-height: 1.6; word-break: break-word;
   :deep(p) { margin: 0 0 6px; &:last-child { margin-bottom: 0; } }
