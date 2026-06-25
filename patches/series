@@ -88,3 +88,5 @@
 102-groupmessagelist-gateway-banner.patch
 
 103-lunar-dep.patch
+104-kanban-i18n-en.patch
+105-kanban-i18n-zh.patch
