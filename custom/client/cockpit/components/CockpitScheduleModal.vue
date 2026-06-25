@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
+import { Solar } from 'lunar-typescript'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import type { ScheduleEvent } from '@/custom/cockpit/store/cockpit'
@@ -27,93 +28,87 @@ function defaultTime(): string {
   return `${pad(d.getHours())}:00`
 }
 
-interface CalendarCell {
+// ── 农历计算：公历日期串 → { 日名, 节日?, 节气? } ──
+interface LunarInfo { label: string; festival?: string; jieqi?: string }
+function getLunarInfo(dateStr: string): LunarInfo {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const lunar = Solar.fromYmd(y, m, d).getLunar()
+  const festivals = lunar.getFestivals()        // 春节/端午/中秋…
+  const jieqi = lunar.getJieQi()                 // 清明…
+  const day = lunar.getDayInChinese()            // 初一/十五/廿一
+  // 初一显示月名（正月/二月…），其余显示日名
+  const label = day === '初一'
+    ? `${lunar.getMonthInChinese()}月`
+    : day
+  return { label, festival: festivals.length ? festivals[0] : undefined, jieqi: jieqi || undefined }
+}
+
+// ── 年历：当前年的 12 个月，每格含农历/节日/事件计数，点击直达该日 ──
+interface MiniCell {
   day: number
   date: string
   isToday: boolean
-  isCurrentMonth: boolean
+  isSelected: boolean
   count: number
   topPriority?: string
+  lunar?: LunarInfo
+  isFestival: boolean
 }
-
-const calendarCells = computed<CalendarCell[]>(() => {
-  const { scheduleViewYear: year, scheduleViewMonth: month } = store
-  const counts = store.scheduleCountsByDate
-  const topPri = store.scheduleTopPriorityByDate
-  const firstDay = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const todayStr = dateToStr(new Date())
-  const cells: CalendarCell[] = []
-
-  // 上月补齐（补齐日期归到上月日期串，便于点击）
-  const prevDays = new Date(year, month, 0).getDate()
-  for (let i = firstDay - 1; i >= 0; i--) {
-    const d = prevDays - i
-    const pm = month === 0 ? 11 : month - 1
-    const py = month === 0 ? year - 1 : year
-    const date = `${py}-${pad(pm + 1)}-${pad(d)}`
-    cells.push({ day: d, date, isToday: date === todayStr, isCurrentMonth: false, count: counts[date] ?? 0, topPriority: topPri[date] })
-  }
-  // 本月
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = `${year}-${pad(month + 1)}-${pad(d)}`
-    cells.push({ day: d, date, isToday: date === todayStr, isCurrentMonth: true, count: counts[date] ?? 0, topPriority: topPri[date] })
-  }
-  // 下月补齐至 42 格
-  let next = 1
-  while (cells.length < 42) {
-    const nm = month === 11 ? 0 : month + 1
-    const ny = month === 11 ? year + 1 : year
-    const date = `${ny}-${pad(nm + 1)}-${pad(next)}`
-    cells.push({ day: next, date, isToday: false, isCurrentMonth: false, count: counts[date] ?? 0, topPriority: topPri[date] })
-    next++
-  }
-  return cells
-})
-
-// ── 年历：当前年的 12 个 mini 月，点击切换月历视图 ──
-interface MiniCell { day: number; date: string; hasEvents: boolean; isToday: boolean }
 interface MiniMonth { month: number; label: string; weeks: MiniCell[][]; isCurrentMonth: boolean }
 const yearMonths = computed<MiniMonth[]>(() => {
   const year = store.scheduleViewYear
   const counts = store.scheduleCountsByDate
+  const topPri = store.scheduleTopPriorityByDate
   const todayStr = dateToStr(new Date())
+  const selDate = store.scheduleSelectedDate
   const curMonth = store.scheduleViewMonth
   return MONTHS.map((label, m) => {
     const firstDay = new Date(year, m, 1).getDay()
     const daysInMonth = new Date(year, m + 1, 0).getDate()
     const prevDays = new Date(year, m, 0).getDate()
     const cells: MiniCell[] = []
-    // 上月补齐
+    // 上月补齐（仅占位，不计算农历）
     for (let i = firstDay - 1; i >= 0; i--) {
       const d = prevDays - i
       const pm = m === 0 ? 11 : m - 1
       const py = m === 0 ? year - 1 : year
-      cells.push({ day: d, date: `${py}-${pad(pm + 1)}-${pad(d)}`, hasEvents: false, isToday: false })
+      const date = `${py}-${pad(pm + 1)}-${pad(d)}`
+      cells.push({ day: d, date, isToday: date === todayStr, isSelected: date === selDate, count: 0, isFestival: false })
     }
-    // 本月
+    // 本月（计算农历）
     for (let d = 1; d <= daysInMonth; d++) {
       const date = `${year}-${pad(m + 1)}-${pad(d)}`
-      cells.push({ day: d, date, hasEvents: (counts[date] ?? 0) > 0, isToday: date === todayStr })
+      const lunar = getLunarInfo(date)
+      cells.push({
+        day: d, date, isToday: date === todayStr, isSelected: date === selDate,
+        count: counts[date] ?? 0, topPriority: topPri[date],
+        lunar, isFestival: !!(lunar.festival || lunar.jieqi),
+      })
     }
     // 下月补齐至 7 的倍数
     let next = 1
     while (cells.length % 7 !== 0) {
       const nm = m === 11 ? 0 : m + 1
       const ny = m === 11 ? year + 1 : year
-      cells.push({ day: next, date: `${ny}-${pad(nm + 1)}-${pad(next)}`, hasEvents: false, isToday: false })
+      const date = `${ny}-${pad(nm + 1)}-${pad(next)}`
+      cells.push({ day: next, date, isToday: false, isSelected: date === selDate, count: 0, isFestival: false })
       next++
     }
-    // 切分为周
     const weeks: MiniCell[][] = []
     for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
     return { month: m, label, weeks, isCurrentMonth: m === curMonth }
   })
 })
 
-// 点击 mini 月：切换月历到该月（同年直接切，跨年改年份）
-function jumpToMonth(m: number) {
-  store.scheduleViewMonth = m
+// 年份导航
+function navigateYear(delta: number) { store.scheduleViewYear += delta }
+
+// mini 格子点击：直接选该日（同步年月，确保右栏切换）
+function pickDay(date: string) {
+  const [y, m] = date.split('-').map(Number)
+  store.scheduleViewYear = y
+  store.scheduleViewMonth = m - 1
+  store.setScheduleDate(date)
 }
 
 // 右栏事件流（按时间升序）
@@ -247,10 +242,15 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-// 日期格子 title 提示
-function cellTitle(c: CalendarCell): string {
-  if (c.count === 0) return `${c.date}`
-  return `${c.date} · ${c.count} 项日程`
+// mini 格子 title 提示：日期 + 农历 + 事件数
+function miniTitle(c: MiniCell): string {
+  const parts = [c.date]
+  if (c.lunar) {
+    const extra = c.lunar.festival || c.lunar.jieqi || c.lunar.label
+    if (extra) parts.push(extra)
+  }
+  if (c.count > 0) parts.push(`${c.count} 项日程`)
+  return parts.join(' · ')
 }
 </script>
 
@@ -304,67 +304,55 @@ function cellTitle(c: CalendarCell): string {
 
     <!-- 双栏主体 -->
     <div class="cockpit-schedule__body">
-      <!-- 左栏：月历 -->
+      <!-- 左栏：年历（12 个月，点击直达某日） -->
       <div class="cockpit-schedule__cal">
         <div class="cockpit-schedule__nav">
-          <button type="button" class="cockpit-schedule__nav-btn" :title="t('cockpit.schedulePrevMonth') || '上月'" @click="store.navigateScheduleMonth(-1)">
+          <button type="button" class="cockpit-schedule__nav-btn" :title="'上一年'" @click="navigateYear(-1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
-          <span class="cockpit-schedule__nav-label">{{ store.scheduleViewYear }}年{{ MONTHS[store.scheduleViewMonth] }}</span>
-          <button type="button" class="cockpit-schedule__nav-btn" :title="t('cockpit.scheduleNextMonth') || '下月'" @click="store.navigateScheduleMonth(1)">
+          <span class="cockpit-schedule__nav-label">{{ store.scheduleViewYear }} 年</span>
+          <button type="button" class="cockpit-schedule__nav-btn" :title="'下一年'" @click="navigateYear(1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
           </button>
           <button type="button" class="cockpit-schedule__today-btn" @click="goToToday">{{ t('cockpit.today') }}</button>
         </div>
-        <div class="cockpit-schedule__grid">
-          <div v-for="(w, i) in WEEKDAYS" :key="w" class="cockpit-schedule__wk" :class="{ 'is-weekend': i === 0 || i === 6 }">{{ w }}</div>
-          <button
-            v-for="(c, i) in calendarCells"
-            :key="i"
-            type="button"
-            class="cockpit-schedule__cell"
-            :class="{
-              'is-other': !c.isCurrentMonth,
-              'is-today': c.isToday,
-              'is-selected': c.date === store.scheduleSelectedDate,
-            }"
-            :title="cellTitle(c)"
-            @click="store.setScheduleDate(c.date)"
-          >
-            <span class="cockpit-schedule__num">{{ c.day }}</span>
-            <span
-              v-if="c.count > 0"
-              class="cockpit-schedule__count"
-              :class="c.topPriority ? `is-${c.topPriority.toLowerCase()}` : 'is-todo'"
-            >{{ c.count }}</span>
-          </button>
-        </div>
 
-        <!-- 年历：12 个 mini 月，点击切换月历视图 -->
         <div class="cockpit-schedule__year">
-          <div class="cockpit-schedule__year-label">{{ store.scheduleViewYear }} 年总览</div>
           <div class="cockpit-schedule__year-grid">
-            <button
+            <div
               v-for="mm in yearMonths"
               :key="mm.month"
-              type="button"
               class="cockpit-schedule__mini"
               :class="{ 'is-cur': mm.isCurrentMonth }"
-              :title="`${store.scheduleViewYear}年${mm.label}`"
-              @click="jumpToMonth(mm.month)"
             >
-              <span class="cockpit-schedule__mini-label">{{ mm.label }}</span>
+              <div class="cockpit-schedule__mini-head">
+                <span class="cockpit-schedule__mini-label">{{ mm.label }}</span>
+              </div>
               <div class="cockpit-schedule__mini-weeks">
                 <div v-for="(wk, wi) in mm.weeks" :key="wi" class="cockpit-schedule__mini-wk">
-                  <span
+                  <button
                     v-for="(c, ci) in wk"
                     :key="ci"
+                    type="button"
                     class="cockpit-schedule__mini-d"
-                    :class="{ 'is-event': c.hasEvents, 'is-today': c.isToday }"
-                  >{{ c.day }}</span>
+                    :class="{
+                      'is-today': c.isToday,
+                      'is-selected': c.isSelected,
+                      'is-festival': c.isFestival,
+                      'has-count': c.count > 0,
+                      [`is-${c.topPriority?.toLowerCase()}`]: c.count > 0 && c.topPriority,
+                    }"
+                    :title="miniTitle(c)"
+                    @click="pickDay(c.date)"
+                  >
+                    <span class="cockpit-schedule__mini-num">{{ c.day }}</span>
+                    <span v-if="c.lunar" class="cockpit-schedule__mini-lunar">
+                      {{ c.lunar.festival || c.lunar.jieqi || c.lunar.label }}
+                    </span>
+                  </button>
                 </div>
               </div>
-            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -488,8 +476,8 @@ function cellTitle(c: CalendarCell): string {
   flex: 1; display: flex; min-height: 0;
 }
 .cockpit-schedule__cal {
-  flex: 1.1 1 0; min-width: 0; display: flex; flex-direction: column;
-  border-right: 1px solid var(--border-color); overflow-y: auto;
+  flex: 1.4 1 0; min-width: 0; display: flex; flex-direction: column;
+  border-right: 1px solid var(--border-color); overflow: hidden;
 }
 .cockpit-schedule__day {
   flex: 1 1 0; min-width: 280px; display: flex; flex-direction: column;
@@ -518,81 +506,51 @@ function cellTitle(c: CalendarCell): string {
   &:hover { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--text-muted); }
 }
 
-/* 月历网格 */
-.cockpit-schedule__grid {
-  display: flex; flex-wrap: wrap; padding: 8px 10px; flex-shrink: 0; align-content: flex-start;
-}
-.cockpit-schedule__wk {
-  width: calc(100% / 7); text-align: center; font-size: 10px; font-weight: 600;
-  color: var(--text-muted); padding: 6px 0 8px;
-  &.is-weekend { color: var(--accent-info); }
-}
-.cockpit-schedule__cell {
-  position: relative; width: calc(100% / 7); aspect-ratio: 1; padding: 0; border: none;
-  background: none; cursor: pointer; font-family: inherit;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  border-radius: 8px; transition: background 0.12s;
-  &:hover { background: var(--bg-secondary); }
-  &.is-other .cockpit-schedule__num { color: var(--text-muted); opacity: 0.5; }
-  &.is-other:hover { background: transparent; }
-  &.is-today .cockpit-schedule__num {
-    border: 1.5px solid var(--accent-primary); border-radius: 50%;
-    width: 26px; height: 26px; line-height: 23px; display: inline-block; font-weight: 700;
-  }
-  &.is-selected {
-    background: var(--bg-secondary);
-    .cockpit-schedule__num {
-      background: var(--accent-primary); color: var(--text-on-accent);
-      border-radius: 50%; width: 26px; height: 26px; line-height: 26px;
-      display: inline-block; font-weight: 700; border-color: var(--accent-primary);
-    }
-  }
-}
-.cockpit-schedule__num { font-size: 12px; color: var(--text-primary); transition: 0.1s; }
-/* 每日计数徽标：按当日最高优先级着色 */
-.cockpit-schedule__count {
-  min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px;
-  font-size: 9px; font-weight: 700; line-height: 15px; text-align: center;
-  color: var(--text-on-accent); font-family: ui-monospace, monospace;
-  &.is-p0 { background: var(--error); }
-  &.is-p1 { background: var(--warning, #e6a23c); }
-  &.is-p2 { background: var(--accent-primary); }
-  &.is-p3 { background: var(--text-muted); }
-  &.is-todo { background: var(--accent-info); }
-}
-.cockpit-schedule__cell.is-selected .cockpit-schedule__count {
-  box-shadow: 0 0 0 1.5px var(--bg-secondary);
-}
-
-/* 年历：12 个 mini 月 */
+/* 年历：12 个月铺满左栏，不滚动 */
 .cockpit-schedule__year {
-  flex-shrink: 0; padding: 8px 12px 14px; border-top: 1px solid var(--border-color);
-}
-.cockpit-schedule__year-label {
-  font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
-  padding: 4px 0 8px; letter-spacing: 0.5px;
+  flex: 1; min-height: 0; padding: 10px 14px 14px; overflow: hidden;
 }
 .cockpit-schedule__year-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr);
+  gap: 8px; height: 100%;
 }
 .cockpit-schedule__mini {
-  display: flex; flex-direction: column; gap: 4px; padding: 8px 6px 6px;
+  display: flex; flex-direction: column; gap: 4px; padding: 6px 6px 4px;
   border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card);
-  cursor: pointer; font-family: inherit; transition: border-color 0.12s, background 0.12s;
-  &:hover { border-color: var(--text-muted); background: var(--bg-secondary); }
-  &.is-cur { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb), 0.05); }
+  min-height: 0; transition: border-color 0.12s, background 0.12s;
+  &.is-cur { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb), 0.04); }
 }
+.cockpit-schedule__mini-head { text-align: center; flex-shrink: 0; }
 .cockpit-schedule__mini-label {
-  font-size: 10px; font-weight: 700; color: var(--text-primary); text-align: center;
+  font-size: 11px; font-weight: 700; color: var(--text-primary);
 }
 .cockpit-schedule__mini.is-cur .cockpit-schedule__mini-label { color: var(--accent-primary); }
-.cockpit-schedule__mini-weeks { display: flex; flex-direction: column; gap: 1px; }
-.cockpit-schedule__mini-wk { display: flex; gap: 1px; }
+.cockpit-schedule__mini-weeks { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; }
+.cockpit-schedule__mini-wk { display: flex; gap: 2px; flex: 1; }
 .cockpit-schedule__mini-d {
-  flex: 1; aspect-ratio: 1; font-size: 7px; line-height: 1; color: var(--text-muted);
-  display: flex; align-items: center; justify-content: center; border-radius: 2px;
-  &.is-event { background: var(--accent-primary); color: var(--text-on-accent); font-weight: 700; }
-  &.is-today { background: rgba(var(--accent-primary-rgb), 0.15); color: var(--accent-primary); font-weight: 700; }
+  flex: 1; min-width: 0; padding: 1px 0; border: none; background: none;
+  cursor: pointer; font-family: inherit; border-radius: 4px; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  transition: background 0.1s;
+  &:hover { background: var(--bg-secondary); }
+  &.is-selected { background: var(--accent-primary); .cockpit-schedule__mini-num, .cockpit-schedule__mini-lunar { color: var(--text-on-accent); } }
+  &.is-today .cockpit-schedule__mini-num { color: var(--accent-primary); font-weight: 700; }
+  &.is-festival .cockpit-schedule__mini-lunar { color: var(--error); font-weight: 600; }
+  &.has-count::after {
+    content: ''; position: absolute; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--accent-primary); margin-top: 22px;
+  }
+  &.is-p0::after { background: var(--error); }
+  &.is-p1::after { background: var(--warning, #e6a23c); }
+  &.is-p2::after { background: var(--accent-primary); }
+  &.is-p3::after { background: var(--text-muted); }
+}
+.cockpit-schedule__mini-num {
+  font-size: 11px; line-height: 1.2; color: var(--text-primary);
+}
+.cockpit-schedule__mini-lunar {
+  font-size: 8px; line-height: 1; color: var(--text-muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
 
 /* 右栏：当日时间流 */
