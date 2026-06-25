@@ -397,8 +397,11 @@ async function toggleHomeSubscription(ch: HomeChannel) {
             </span>
           </template>
           <span v-else class="cockpit-workspace__field-val--muted">-</span>
-          <select v-model="newParentId" class="cockpit-workspace__link-select--sm"><option value="">+</option><option v-for="tk in candidateTasksForParent" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option></select>
-          <button v-if="newParentId" type="button" class="cockpit-workspace__link-add-sm" @click="onAddParent">✓</button>
+          <select v-model="newParentId" class="cockpit-workspace__select--sm">
+            <option value="">{{ t('cockpit.parentIdPlaceholder') }}</option>
+            <option v-for="tk in candidateTasksForParent" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option>
+          </select>
+          <button type="button" class="cockpit-workspace__link-add-btn" :disabled="!newParentId" @click="onAddParent">+ {{ t('cockpit.add') }}</button>
         </span>
         <span class="cockpit-workspace__flow-item">
           <span class="cockpit-workspace__field-label">{{ t('cockpit.childTasks') }}</span>
@@ -409,8 +412,11 @@ async function toggleHomeSubscription(ch: HomeChannel) {
             </span>
           </template>
           <span v-else class="cockpit-workspace__field-val--muted">-</span>
-          <select v-model="newChildId" class="cockpit-workspace__link-select--sm"><option value="">+</option><option v-for="tk in candidateTasksForChild" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option></select>
-          <button v-if="newChildId" type="button" class="cockpit-workspace__link-add-sm" @click="onAddChild">✓</button>
+          <select v-model="newChildId" class="cockpit-workspace__select--sm">
+            <option value="">{{ t('cockpit.childIdPlaceholder') }}</option>
+            <option v-for="tk in candidateTasksForChild" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option>
+          </select>
+          <button type="button" class="cockpit-workspace__link-add-btn" :disabled="!newChildId" @click="onAddChild">+ {{ t('cockpit.add') }}</button>
         </span>
       </div>
 
@@ -559,80 +565,83 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 <style scoped lang="scss">
 .cockpit-workspace { display: flex; flex: 1; min-height: 0; }
 .cockpit-workspace__form { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.cockpit-workspace__body { flex: 1; overflow-y: auto; padding: 16px 18px; max-width: 100%; }
+.cockpit-workspace__body { flex: 1; overflow-y: auto; padding: 20px 24px; max-width: 100%; }
 .cockpit-workspace__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; flex-direction: column; gap: 8px; padding: 40px 24px; text-align: center; }
 
 /* ── 统一流式布局 ── */
 .cockpit-workspace__flow { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
-.cockpit-workspace__title-input { font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 2px; width: 100%; border: none; background: transparent; border-bottom: 1px solid transparent; padding: 2px 0; font-family: inherit;
+.cockpit-workspace__title-input { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 4px; width: 100%; border: none; background: transparent; border-bottom: 1px solid transparent; padding: 2px 0; font-family: inherit;
   &:hover { border-bottom-color: var(--border-color); }
   &:focus { border-bottom-color: var(--accent-primary); outline: none; }
   &.is-pending { color: var(--warning, #e6a23c); border-bottom-color: var(--warning, #e6a23c); }
 }
-.cockpit-workspace__summary { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-bottom: 6px; }
+.cockpit-workspace__summary { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 6px; }
 
 /* Flow row: flex-wrap 自然换行，一行可放多个 item */
-.cockpit-workspace__flow-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 2px 0; }
-.cockpit-workspace__flow-item { display: inline-flex; align-items: center; gap: 4px; }
+.cockpit-workspace__flow-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 3px 0; }
+.cockpit-workspace__flow-item { display: inline-flex; align-items: center; gap: 6px; }
 
-/* Shared compact atoms */
+/* Shared compact atoms（字体/按钮大小保持原尺寸） */
 .cockpit-workspace__field-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
-.cockpit-workspace__field-val { font-size: 11px; color: var(--text-primary); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cockpit-workspace__field-val.is-pending { color: var(--warning, #e6a23c); }
-.cockpit-workspace__field-val--muted { font-size: 10px; color: var(--text-muted); }
-.cockpit-workspace__status-chip { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; white-space: nowrap; }
-.cockpit-workspace__pri-label { font-size: 10px; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, monospace; }
+.cockpit-workspace__field-val { font-size: 13px; color: var(--text-primary); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cockpit-workspace__field-val.is-pending,
+.cockpit-workspace__title-input.is-pending { color: var(--warning, #e6a23c); }
+.cockpit-workspace__field-val--muted { font-size: 12px; color: var(--text-muted); font-style: italic; }
+.cockpit-workspace__status-chip { font-size: 10px; padding: 2px 8px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+.cockpit-workspace__pri-label { font-size: 11px; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, monospace; }
 .cockpit-workspace__pri-val { font-size: 12px; color: var(--text-primary); font-weight: 600; font-family: ui-monospace, monospace; }
 .cockpit-workspace__pri-val.is-pending { color: var(--warning, #e6a23c); }
-.cockpit-workspace__mini-btn { width: 20px; height: 20px; padding: 0; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
+.cockpit-workspace__mini-btn { width: 22px; height: 22px; padding: 0; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
-.cockpit-workspace__select--sm { font-family: inherit; font-size: 11px; padding: 1px 3px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-primary); max-width: 110px; }
-.cockpit-workspace__task-link { font-family: ui-monospace, monospace; font-size: 10px; display: inline-flex; align-items: center; gap: 3px; background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px;
+.cockpit-workspace__select--sm { font-family: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); max-width: 130px; }
+.cockpit-workspace__task-link { font-family: ui-monospace, monospace; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 2px 6px; border-radius: 3px;
   a { color: var(--accent-primary); cursor: pointer; &:hover { text-decoration: underline; } }
   &.is-pending-remove { opacity: 0.4; text-decoration: line-through; }
 }
-.cockpit-workspace__link-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 9px; padding: 0 1px;
+.cockpit-workspace__link-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 10px; padding: 0 1px;
   &:hover { color: var(--error); }
 }
-.cockpit-workspace__link-select--sm { font-family: ui-monospace, monospace; font-size: 10px; padding: 1px 3px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-muted); max-width: 90px; }
-.cockpit-workspace__link-add-sm { font-family: inherit; font-size: 10px; padding: 1px 5px; border: 1px solid var(--accent-primary); border-radius: 3px; background: transparent; color: var(--accent-primary); cursor: pointer; }
-.cockpit-workspace__attach-chip { font-family: ui-monospace, monospace; font-size: 10px; display: inline-flex; align-items: center; gap: 3px; background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px; color: var(--text-primary); }
-.cockpit-workspace__attach-chip-sz { font-size: 9px; color: var(--text-muted); }
-.cockpit-workspace__attach-chip-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 9px; padding: 0 1px; line-height: 1;
+.cockpit-workspace__link-add-btn { font-family: inherit; font-size: 12px; padding: 3px 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+  &:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+.cockpit-workspace__attach-chip { font-family: ui-monospace, monospace; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 2px 6px; border-radius: 3px; color: var(--text-primary); }
+.cockpit-workspace__attach-chip-sz { font-size: 10px; color: var(--text-muted); }
+.cockpit-workspace__attach-chip-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 10px; padding: 0 2px;
   &:hover { color: var(--error); }
 }
-.cockpit-workspace__upload-btn--sm { display: inline-flex; align-items: center; font-size: 11px; width: 18px; height: 18px; border: 1px dashed var(--border-color); border-radius: 3px; color: var(--text-muted); cursor: pointer; justify-content: center;
+.cockpit-workspace__upload-btn--sm { display: inline-flex; align-items: center; font-size: 12px; padding: 3px 10px; border: 1px dashed var(--border-color); border-radius: 4px; color: var(--text-secondary); cursor: pointer;
   &:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
 }
-.cockpit-workspace__textarea { width: 100%; font-family: inherit; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; background: var(--bg-card); color: var(--text-primary); min-height: 44px; resize: vertical;
+.cockpit-workspace__textarea { width: 100%; font-family: inherit; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 10px; background: var(--bg-card); color: var(--text-primary); min-height: 60px; resize: vertical;
   &.is-pending { border-color: var(--warning, #e6a23c); background: rgba(var(--warning-rgb, 230,162,60), 0.04); }
 }
-.cockpit-workspace__pending-hint { font-size: 10px; color: var(--warning); background: rgba(var(--warning-rgb), 0.08); padding: 3px 8px; border-radius: 4px; margin-top: 4px; }
-.cockpit-workspace__link-input { font-family: ui-monospace, monospace; font-size: 11px; padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-primary); }
+.cockpit-workspace__pending-hint { font-size: 11px; color: var(--warning); background: rgba(var(--warning-rgb), 0.08); padding: 4px 10px; border-radius: 4px; margin-top: 4px; }
+.cockpit-workspace__link-input { font-family: ui-monospace, monospace; font-size: 11px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); }
 .cockpit-workspace__file-input { display: none; }
 
-/* 动作按钮 */
-.cockpit-workspace__btn-mini { font: inherit; font-size: 11px; padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+/* 动作按钮（原尺寸） */
+.cockpit-workspace__btn-mini { font: inherit; font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
   &:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
   &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
-.cockpit-workspace__action-msg { font-size: 10px; padding: 2px 6px; border-radius: 3px; width: 100%; }
+.cockpit-workspace__action-msg { font-size: 11px; margin-top: 6px; padding: 4px 8px; border-radius: 4px; width: 100%; }
 .cockpit-workspace__action-msg.is-ok { color: var(--success, #52c41a); background: rgba(82,196,26,0.08); }
 .cockpit-workspace__action-msg.is-err { color: var(--error); background: rgba(255,77,79,0.08); }
 
-/* Footer */
-.cockpit-workspace__foot { flex-shrink: 0; padding: 10px 14px; border-top: 1px solid var(--border-color); background: var(--bg-card); display: flex; gap: 8px; }
-.cockpit-workspace__btn { font-family: inherit; font-size: 12px; border-radius: 6px; padding: 5px 12px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+/* Footer（原尺寸） */
+.cockpit-workspace__foot { flex-shrink: 0; padding: 12px 16px; border-top: 1px solid var(--border-color); background: var(--bg-card); display: flex; gap: 8px; }
+.cockpit-workspace__btn { font-family: inherit; font-size: 13px; border-radius: 6px; padding: 6px 14px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
   &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
 }
 
-/* ── A2UI（保持原样，与评论区一起成为焦点）── */
-.cockpit-workspace__section { margin-bottom: 10px; }
-.cockpit-workspace__section-title { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
+/* ── A2UI（保持原样）── */
+.cockpit-workspace__section { margin-bottom: 16px; }
+.cockpit-workspace__section-title { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
 .cockpit-workspace__sub { font-size: 10px; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
 .cockpit-workspace__opt { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 6px; cursor: pointer; background: var(--bg-card); font: inherit; color: var(--text-primary); width: 100%; text-align: left;
   &:hover { border-color: var(--text-muted); }
