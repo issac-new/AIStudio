@@ -260,7 +260,11 @@ function initChart() {
   chart.value = echarts.init(chartEl.value)
   chart.value.on('click', onChartClick)
   chart.value.on('dblclick', onChartDblClick)
-  renderChart()
+  // 等待 flex 容器布局完成再渲染，避免 0 高度导致 eCharts 内部矩阵 null
+  requestAnimationFrame(() => {
+    chart.value?.resize()
+    renderChart()
+  })
 }
 
 onMounted(() => {
