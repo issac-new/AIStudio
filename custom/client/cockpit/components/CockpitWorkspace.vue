@@ -6,6 +6,13 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import * as kanbanApi from '@/api/hermes/kanban'
 import type { KanbanTaskStatus, HomeChannel } from '@/api/hermes/kanban'
 import CockpitConfirmDialog from './CockpitConfirmDialog.vue'
+import MarkdownIt from 'markdown-it'
+
+const md = new MarkdownIt({ breaks: true, linkify: true })
+function renderMarkdown(text: string): string {
+  if (!text) return ''
+  return md.render(text)
+}
 import CockpitCompletionModal from './CockpitCompletionModal.vue'
 import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
 
@@ -494,7 +501,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
           <div class="cockpit-workspace__comment-list">
             <div v-for="c in comments" :key="c.id" class="cockpit-workspace__comment">
               <span class="cockpit-workspace__comment-author">{{ c.author || '?' }}</span>
-              <span class="cockpit-workspace__comment-body">{{ c.body }}</span>
+              <span class="cockpit-workspace__comment-body" v-html="renderMarkdown(c.body)" />
             </div>
             <div v-if="!comments.length" class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</div>
           </div>
@@ -625,5 +632,14 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 .cockpit-workspace__comment-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 180px; overflow-y: auto; }
 .cockpit-workspace__comment { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; background: var(--bg-secondary); border-radius: 6px; font-size: 12px; }
 .cockpit-workspace__comment-author { font-weight: 600; color: var(--accent-primary); font-size: 11px; }
-.cockpit-workspace__comment-body { color: var(--text-primary); line-height: 1.4; white-space: pre-wrap; }
+.cockpit-workspace__comment-body { color: var(--text-primary); line-height: 1.5; word-break: break-word;
+  :deep(p) { margin: 0 0 4px; &:last-child { margin-bottom: 0; } }
+  :deep(code) { font-family: ui-monospace, monospace; font-size: 11px; background: var(--bg-card); padding: 1px 4px; border-radius: 3px; }
+  :deep(pre) { background: var(--bg-card); padding: 6px 8px; border-radius: 4px; overflow-x: auto; font-size: 11px; margin: 4px 0;
+    code { background: none; padding: 0; }
+  }
+  :deep(a) { color: var(--accent-primary); &:hover { text-decoration: underline; } }
+  :deep(ul, ol) { padding-left: 16px; margin: 2px 0; }
+  :deep(blockquote) { border-left: 3px solid var(--accent-primary); padding-left: 8px; margin: 4px 0; color: var(--text-secondary); }
+}
 </style>
