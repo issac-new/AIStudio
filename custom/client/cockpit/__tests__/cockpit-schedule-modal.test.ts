@@ -133,9 +133,13 @@ describe('CockpitScheduleModal', () => {
     const store = useCockpitStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
-    expect(wrapper.find('.cockpit-schedule__add-btn').exists()).toBe(true)
-    await wrapper.find('.cockpit-schedule__add-btn').trigger('click')
+    // 添加按钮在头部「日程」文字右侧
+    expect(wrapper.find('.cockpit-schedule__add-trigger').exists()).toBe(true)
+    await wrapper.find('.cockpit-schedule__add-trigger').trigger('click')
+    // 展开后显示标题输入框 + 日期/时间选择
     expect(wrapper.find('.cockpit-schedule__input').exists()).toBe(true)
+    expect(wrapper.find('.cockpit-schedule__add-date').exists()).toBe(true)
+    expect(wrapper.find('.cockpit-schedule__add-time').exists()).toBe(true)
   })
 
   it('close button calls closeSchedule', async () => {

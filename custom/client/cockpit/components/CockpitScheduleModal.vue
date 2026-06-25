@@ -10,14 +10,21 @@ const { t } = useI18n()
 const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
-// 内联新建待办
+// 内联新建待办（日期 + 时间 + 标题，时间可选作闹钟提醒）
 const showAddForm = ref(false)
 const newTodoTitle = ref('')
+const newTodoDate = ref('')
+const newTodoTime = ref('')
 const todoInputEl = ref<HTMLInputElement | null>(null)
 
 function pad(n: number): string { return String(n).padStart(2, '0') }
 function dateToStr(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+// 默认时间 = 当前时间 + 1 小时（向上取整到整点）
+function defaultTime(): string {
+  const d = new Date(Date.now() + 60 * 60 * 1000)
+  return `${pad(d.getHours())}:00`
 }
 
 interface CalendarCell {
@@ -116,15 +123,35 @@ const KIND_ICON: Record<string, string> = { task: '🗓', timeline: '🕘', todo
 function saveTodo() {
   const title = newTodoTitle.value.trim()
   if (!title) return
-  store.addUserTodo(store.scheduleSelectedDate, title)
+  const date = newTodoDate.value || store.scheduleSelectedDate
+  // 时间非空 → 计算提醒时刻；为空则无提醒
+  let remindAt: number | undefined
+  if (newTodoTime.value) {
+    const [h, m] = newTodoTime.value.split(':').map(Number)
+    const dt = new Date(date + 'T00:00:00')
+    dt.setHours(h, m, 0, 0)
+    remindAt = dt.getTime()
+  }
+  store.addUserTodo(date, title, undefined, remindAt)
   newTodoTitle.value = ''
+  newTodoTime.value = ''
   showAddForm.value = false
 }
 
 async function openAddForm() {
+  // 默认日期 = 当前选中日，默认时间 = 当前+1h
+  newTodoDate.value = store.scheduleSelectedDate
+  newTodoTime.value = defaultTime()
   showAddForm.value = true
   await nextTick()
   todoInputEl.value?.focus()
+}
+
+// 待办闹钟时刻可读化（HH:mm）
+function todoRemindLabel(ev: ScheduleEvent): string {
+  if (ev.kind !== 'todo' || !ev.ts) return ''
+  const d = new Date(ev.ts)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function goToToday() {
@@ -185,11 +212,52 @@ function cellTitle(c: CalendarCell): string {
 </script>
 
 <template>
-  <div class="cockpit-schedule-modal" tabindex="0" @keydown="onKeydown">
+  <div
+    class="cockpit-schedule-modal"
+    tabindex="0"
+    :style="store.scheduleAnchorLeft != null ? { '--schedule-left': store.scheduleAnchorLeft + 'px' } : {}"
+    @keydown="onKeydown"
+  >
     <!-- 头部 -->
     <div class="cockpit-schedule__head">
-      <span class="cockpit-schedule__title">📅 {{ t('cockpit.schedule') }}</span>
+      <div class="cockpit-schedule__head-left">
+        <span class="cockpit-schedule__title">📅 {{ t('cockpit.schedule') }}</span>
+        <button
+          v-if="!showAddForm"
+          type="button"
+          class="cockpit-schedule__add-trigger"
+          :title="t('cockpit.scheduleAddTodo')"
+          @click="openAddForm"
+        >+ {{ t('cockpit.scheduleAddTodo') }}</button>
+      </div>
       <button type="button" class="cockpit-schedule__close" @click="store.closeSchedule()">✕</button>
+    </div>
+
+    <!-- 添加待办表单（日期 + 时间 + 标题） -->
+    <div v-if="showAddForm" class="cockpit-schedule__add-form">
+      <input
+        ref="todoInputEl"
+        v-model="newTodoTitle"
+        class="cockpit-schedule__input"
+        :placeholder="t('cockpit.scheduleTodoPlaceholder')"
+        @keyup.enter="saveTodo"
+        @keyup.esc="showAddForm = false"
+      />
+      <div class="cockpit-schedule__add-row">
+        <label class="cockpit-schedule__add-field">
+          <span class="cockpit-schedule__add-label">📅</span>
+          <input type="date" v-model="newTodoDate" class="cockpit-schedule__add-date" />
+        </label>
+        <label class="cockpit-schedule__add-field">
+          <span class="cockpit-schedule__add-label">⏰</span>
+          <input type="time" v-model="newTodoTime" class="cockpit-schedule__add-time" />
+        </label>
+        <span v-if="!newTodoTime" class="cockpit-schedule__add-hint">无时间=无提醒</span>
+      </div>
+      <div class="cockpit-schedule__add-actions">
+        <button type="button" class="cockpit-schedule__add-save" :disabled="!newTodoTitle.trim()" @click="saveTodo">{{ t('common.save') }}</button>
+        <button type="button" class="cockpit-schedule__add-cancel" @click="showAddForm = false">{{ t('common.cancel') }}</button>
+      </div>
     </div>
 
     <!-- 双栏主体 -->
@@ -260,6 +328,9 @@ function cellTitle(c: CalendarCell): string {
                 <span v-if="ev.priority" class="cockpit-schedule__ev-pri">{{ ev.priority }}</span>
                 <span v-if="ev.status" class="cockpit-schedule__ev-stg" :class="statusClass(ev.status)">{{ statusLabel(ev.status) }}</span>
               </div>
+              <span v-else-if="ev.kind === 'todo' && todoRemindLabel(ev)" class="cockpit-schedule__ev-alarm">
+                ⏰ {{ todoRemindLabel(ev) }}
+              </span>
             </div>
             <button
               v-if="ev.kind === 'todo'"
@@ -270,30 +341,6 @@ function cellTitle(c: CalendarCell): string {
             >✕</button>
           </div>
         </div>
-
-        <!-- 添加待办 -->
-        <div class="cockpit-schedule__add">
-          <button
-            v-if="!showAddForm"
-            type="button"
-            class="cockpit-schedule__add-btn"
-            @click="openAddForm"
-          >+ {{ t('cockpit.scheduleAddTodo') }}</button>
-          <div v-else class="cockpit-schedule__add-form">
-            <input
-              ref="todoInputEl"
-              v-model="newTodoTitle"
-              class="cockpit-schedule__input"
-              :placeholder="t('cockpit.scheduleTodoPlaceholder')"
-              @keyup.enter="saveTodo"
-              @keyup.esc="showAddForm = false"
-            />
-            <div class="cockpit-schedule__add-actions">
-              <button type="button" class="cockpit-schedule__add-save" :disabled="!newTodoTitle.trim()" @click="saveTodo">{{ t('common.save') }}</button>
-              <button type="button" class="cockpit-schedule__add-cancel" @click="showAddForm = false">{{ t('common.cancel') }}</button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -301,26 +348,72 @@ function cellTitle(c: CalendarCell): string {
 
 <style scoped lang="scss">
 .cockpit-schedule-modal {
+  position: fixed; top: 48px;
+  left: var(--schedule-left, 16px);
+  z-index: 1001;
   display: flex; flex-direction: column;
-  width: min(680px, 92vw); max-height: 80vh;
+  width: min(680px, calc(100vw - 32px)); max-height: 80vh;
   background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden;
+  border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
   outline: none;
 }
 
 /* 头部 */
 .cockpit-schedule__head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px; border-bottom: 1px solid var(--border-color);
+  padding: 12px 16px; border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
-.cockpit-schedule__title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.cockpit-schedule__head-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cockpit-schedule__title { font-size: 14px; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.cockpit-schedule__add-trigger {
+  font-size: 11px; padding: 3px 10px; border-radius: 6px;
+  border: 1px dashed var(--border-color); background: none;
+  color: var(--text-muted); cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  &:hover { border-color: var(--text-muted); color: var(--text-primary); background: var(--bg-secondary); }
+}
 .cockpit-schedule__close {
   cursor: pointer; color: var(--text-muted); font-size: 16px;
   width: 24px; height: 24px; border: none; background: none;
   display: flex; align-items: center; justify-content: center; border-radius: 4px;
-  font: inherit;
+  font: inherit; flex-shrink: 0;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
+}
+
+/* 添加待办表单（头部下方展开） */
+.cockpit-schedule__add-form {
+  flex-shrink: 0; padding: 12px 16px; border-bottom: 1px solid var(--border-color);
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg-secondary);
+}
+.cockpit-schedule__input {
+  width: 100%; height: 32px; padding: 0 10px; border: 1px solid var(--border-color);
+  border-radius: 6px; background: var(--bg-card); color: var(--text-primary);
+  font-size: 13px; font-family: inherit; outline: none;
+  &:focus { border-color: var(--accent-primary); }
+  &::placeholder { color: var(--text-muted); }
+}
+.cockpit-schedule__add-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cockpit-schedule__add-field { display: flex; align-items: center; gap: 4px; }
+.cockpit-schedule__add-label { font-size: 13px; }
+.cockpit-schedule__add-date, .cockpit-schedule__add-time {
+  height: 28px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px;
+  background: var(--bg-card); color: var(--text-primary); font-size: 12px; font-family: inherit; outline: none;
+  &:focus { border-color: var(--accent-primary); }
+}
+.cockpit-schedule__add-hint { font-size: 10px; color: var(--text-muted); }
+.cockpit-schedule__add-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.cockpit-schedule__add-save {
+  font-size: 11px; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--accent-primary);
+  background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-family: inherit;
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+.cockpit-schedule__add-cancel {
+  font-size: 11px; padding: 5px 14px; border-radius: 6px;
+  border: 1px solid var(--border-color); background: var(--bg-card);
+  color: var(--text-secondary); cursor: pointer; font-family: inherit;
+  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }
 
 /* 双栏主体 */
@@ -481,34 +574,9 @@ function cellTitle(c: CalendarCell): string {
   &:hover { background: var(--bg-secondary); color: var(--error); }
 }
 
-/* 添加待办 */
-.cockpit-schedule__add {
-  flex-shrink: 0; border-top: 1px solid var(--border-color); padding: 10px 14px;
-}
-.cockpit-schedule__add-btn {
-  width: 100%; padding: 7px 0; border: 1px dashed var(--border-color); border-radius: 6px;
-  background: none; color: var(--text-muted); cursor: pointer; font-size: 12px; font-family: inherit;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
-  &:hover { border-color: var(--text-muted); color: var(--text-primary); background: var(--bg-secondary); }
-}
-.cockpit-schedule__add-form { display: flex; flex-direction: column; gap: 8px; }
-.cockpit-schedule__input {
-  width: 100%; height: 32px; padding: 0 10px; border: 1px solid var(--border-color);
-  border-radius: 6px; background: var(--bg-card); color: var(--text-primary);
-  font-size: 13px; font-family: inherit; outline: none;
-  &:focus { border-color: var(--accent-primary); }
-  &::placeholder { color: var(--text-muted); }
-}
-.cockpit-schedule__add-actions { display: flex; gap: 6px; justify-content: flex-end; }
-.cockpit-schedule__add-save {
-  font-size: 11px; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--accent-primary);
-  background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-family: inherit;
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-}
-.cockpit-schedule__add-cancel {
-  font-size: 11px; padding: 5px 14px; border-radius: 6px;
-  border: 1px solid var(--border-color); background: var(--bg-card);
-  color: var(--text-secondary); cursor: pointer; font-family: inherit;
-  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
+/* 待办闹钟时刻标签 */
+.cockpit-schedule__ev-alarm {
+  font-size: 10px; color: var(--accent-info); font-family: ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 </style>

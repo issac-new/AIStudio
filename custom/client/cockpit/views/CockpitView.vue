@@ -60,7 +60,7 @@ function onColCtrl(col: ColumnKey) {
       :notify-count="store.notifyCount"
       :schedule-count="store.scheduleDatesWithEvents.size"
       :user-name="store.currentUserName"
-      @schedule="store.openSchedule()"
+      @schedule="(btn: HTMLElement) => store.openSchedule(btn)"
       @notify="store.openNotify()"
       @settings="goSettings"
     />
@@ -139,8 +139,8 @@ function onColCtrl(col: ColumnKey) {
 
     <div v-if="store.historyOpen" class="cockpit-overlay" @click="store.closeHistory()" />
     <CockpitHistoryModal v-if="store.historyOpen" class="cockpit-modal-anchor" />
-    <div v-if="store.scheduleOpen" class="cockpit-overlay" @click="store.closeSchedule()" />
-    <CockpitScheduleModal v-if="store.scheduleOpen" class="cockpit-modal-anchor" />
+    <div v-if="store.scheduleOpen" class="cockpit-overlay cockpit-overlay--clear" @click="store.closeSchedule()" />
+    <CockpitScheduleModal v-if="store.scheduleOpen" />
     <div v-if="store.notifyOpen" class="cockpit-overlay cockpit-overlay--clear" @click="store.closeNotify()" />
     <CockpitNotifyModal v-if="store.notifyOpen" />
     <div v-if="store.templateManagerOpen" class="cockpit-overlay" @click="store.closeTemplateManager()" />
