@@ -169,8 +169,7 @@ function handleControl(msg: any) {
         const wsPath = workspacePath.value || '~'
         const isWin = /powershell|pwsh/i.test(msg.shell ?? '')
         const escapedPath = wsPath.replace(/"/g, '\\"')
-        const teammateMode = isWin ? 'psmux' : 'tmux'
-        const claudeArgs = `agents --dangerously-skip-permissions --effort max --teammate-mode ${teammateMode}`
+        const claudeArgs = `agents --dangerously-skip-permissions --effort max`
 
         let initCmd: string
         if (isWin) {
