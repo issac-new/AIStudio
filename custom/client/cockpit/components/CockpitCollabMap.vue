@@ -229,7 +229,17 @@ function renderChart() {
   if (!chart.value) return
   // 容器尺寸为 0 时跳过 setOption，防 eCharts 内部矩阵 null 崩溃
   if (!chartEl.value || chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0) return
-  chart.value.setOption(buildChartOption(), { notMerge: true })
+  try {
+    chart.value.setOption(buildChartOption(), { notMerge: true })
+  } catch {
+    // eCharts 内部矩阵可能因之前的 0 尺寸初始化而损坏，重建实例
+    chart.value.dispose()
+    chart.value = echarts.init(chartEl.value)
+    chart.value.on('click', onChartClick)
+    chart.value.on('dblclick', onChartDblClick)
+    chart.value.resize()
+    chart.value.setOption(buildChartOption(), { notMerge: true })
+  }
 }
 
 const hasTask = computed(() => !!store.selectedTask)
@@ -259,14 +269,17 @@ watch(hasTask, (v, oldV) => {
 
 function initChart() {
   if (chart.value || !chartEl.value) return
+  // 容器尺寸为 0 时延迟初始化，等 ResizeObserver 检测到尺寸后再触发
+  if (chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0) {
+    // 等待容器有尺寸后重试
+    requestAnimationFrame(() => initChart())
+    return
+  }
   chart.value = echarts.init(chartEl.value)
   chart.value.on('click', onChartClick)
   chart.value.on('dblclick', onChartDblClick)
-  // 等待 flex 容器布局完成再渲染，避免 0 高度导致 eCharts 内部矩阵 null
-  requestAnimationFrame(() => {
-    chart.value?.resize()
-    renderChart()
-  })
+  chart.value.resize()
+  renderChart()
 }
 
 onMounted(() => {
