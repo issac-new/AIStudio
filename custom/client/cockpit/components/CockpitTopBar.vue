@@ -7,7 +7,7 @@ import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
 
 const { t } = useI18n()
-const emit = defineEmits<{ (e: 'schedule'): void; (e: 'notify'): void; (e: 'settings'): void }>()
+const emit = defineEmits<{ (e: 'schedule', btn: HTMLElement): void; (e: 'notify'): void; (e: 'settings'): void }>()
 const store = useCockpitStore()
 const appStore = useAppStore()
 
@@ -128,7 +128,7 @@ async function manualProbe() {
       <span class="cockpit-top__sub">Swarm Studio</span>
     </div>
     <div class="cockpit-top__div" />
-    <button type="button" class="cockpit-top__btn" @click="emit('schedule')">
+    <button type="button" class="cockpit-top__btn" @click="emit('schedule', $event.currentTarget as HTMLElement)">
       📅 {{ t('cockpit.schedule') }}
       <span v-if="scheduleCount" class="cockpit-top__bdg">{{ scheduleCount }}</span>
     </button>

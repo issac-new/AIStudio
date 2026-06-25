@@ -97,4 +97,22 @@ describe('user todos', () => {
     expect(() => saveUserTodos([{ id: 'x', date: '2026-06-23', title: 'x', createdAt: 0 }])).not.toThrow()
     Storage.prototype.setItem = orig
   })
+
+  it('persist remindAt + reminded flags roundtrip', () => {
+    const todos = [
+      {
+        id: 'todo-rem', date: '2026-06-25', title: '带提醒的待办', createdAt: Date.now(),
+        remindAt: Date.now() + 10 * 60 * 1000, reminded15: false, reminded5: false,
+      },
+      {
+        id: 'todo-fired', date: '2026-06-25', title: '已触发', createdAt: Date.now(),
+        remindAt: Date.now() - 1000, reminded15: true, reminded5: true,
+      },
+    ]
+    saveUserTodos(todos)
+    const loaded = loadUserTodos()
+    expect(loaded[0].remindAt).toBe(todos[0].remindAt)
+    expect(loaded[0].reminded15).toBe(false)
+    expect(loaded[1].reminded5).toBe(true)
+  })
 })

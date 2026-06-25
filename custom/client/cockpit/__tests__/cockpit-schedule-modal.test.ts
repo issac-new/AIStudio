@@ -92,6 +92,14 @@ vi.mock('@/custom/cockpit/store/cockpit-kv', async (importOriginal) => {
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
+// 任务工厂（与 cockpit-store.test.ts 的 kt 一致）
+const kt = (over: Record<string, any> = {}) => ({
+  id: 't1', title: 'T', body: null, assignee: 'alice', status: 'todo',
+  priority: 0, created_by: null, created_at: 0, started_at: null, completed_at: null,
+  workspace_kind: 'dir', workspace_path: '~/ws', tenant: null, project_id: null,
+  result: null, skills: null, latest_summary: null, ...over,
+})
+
 describe('CockpitScheduleModal', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -106,14 +114,6 @@ describe('CockpitScheduleModal', () => {
     expect(wrapper.find('.cockpit-schedule__title').text()).toBe('📅 cockpit.schedule')
   })
 
-  it('renders 7 weekday headers', () => {
-    const store = useCockpitStore()
-    store.openSchedule()
-    const wrapper = mount(CockpitScheduleModal)
-    const wks = wrapper.findAll('.cockpit-schedule__wk')
-    expect(wks).toHaveLength(7)
-  })
-
   it('shows empty state when no events for selected date', () => {
     const store = useCockpitStore()
     store.openSchedule()
@@ -125,9 +125,13 @@ describe('CockpitScheduleModal', () => {
     const store = useCockpitStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
-    expect(wrapper.find('.cockpit-schedule__add-btn').exists()).toBe(true)
-    await wrapper.find('.cockpit-schedule__add-btn').trigger('click')
+    // 添加按钮在头部「日程」文字右侧
+    expect(wrapper.find('.cockpit-schedule__add-trigger').exists()).toBe(true)
+    await wrapper.find('.cockpit-schedule__add-trigger').trigger('click')
+    // 展开后显示标题输入框 + 日期/时间选择
     expect(wrapper.find('.cockpit-schedule__input').exists()).toBe(true)
+    expect(wrapper.find('.cockpit-schedule__add-date').exists()).toBe(true)
+    expect(wrapper.find('.cockpit-schedule__add-time').exists()).toBe(true)
   })
 
   it('close button calls closeSchedule', async () => {
@@ -138,17 +142,16 @@ describe('CockpitScheduleModal', () => {
     expect(store.scheduleOpen).toBe(false)
   })
 
-  it('navigates months via nav buttons', async () => {
+  it('navigates years via nav buttons', async () => {
     const store = useCockpitStore()
     store.openSchedule()
     store.scheduleViewYear = 2026
-    store.scheduleViewMonth = 5
     const wrapper = mount(CockpitScheduleModal)
     const btns = wrapper.findAll('.cockpit-schedule__nav-btn')
-    await btns[1].trigger('click') // next
-    expect(store.scheduleViewMonth).toBe(6)
-    await btns[0].trigger('click') // prev
-    expect(store.scheduleViewMonth).toBe(5)
+    await btns[1].trigger('click') // next year
+    expect(store.scheduleViewYear).toBe(2027)
+    await btns[0].trigger('click') // prev year
+    expect(store.scheduleViewYear).toBe(2026)
   })
 
   it('today button resets to current month', async () => {
@@ -161,5 +164,99 @@ describe('CockpitScheduleModal', () => {
     const now = new Date()
     expect(store.scheduleViewYear).toBe(now.getFullYear())
     expect(store.scheduleViewMonth).toBe(now.getMonth())
+  })
+
+  it('renders two-column layout (calendar + day panel)', () => {
+    const store = useCockpitStore()
+    store.openSchedule()
+    const wrapper = mount(CockpitScheduleModal)
+    expect(wrapper.find('.cockpit-schedule__cal').exists()).toBe(true)
+    expect(wrapper.find('.cockpit-schedule__day').exists()).toBe(true)
+  })
+
+  it('marks a mini day with has-count when tasks exist for today', async () => {
+    mockKanbanTasks.length = 0
+    mockKanbanTasks.push(kt({ id: 't-ct', title: '计数任务', status: 'todo', priority: 3, created_at: Date.now() }))
+    const store = useCockpitStore()
+    store.openSchedule()
+    await nextTick()
+    const wrapper = mount(CockpitScheduleModal)
+    // 今日所在 mini 格子应带 has-count 且按 P0 着色（priority:3 → P0）
+    const todayCell = wrapper.find('.cockpit-schedule__mini-d.is-today')
+    expect(todayCell.exists()).toBe(true)
+    expect(todayCell.classes()).toContain('has-count')
+    expect(todayCell.classes()).toContain('is-p0')
+  })
+
+  it('renders events sorted by time ascending in day panel', async () => {
+    mockKanbanTasks.length = 0
+    const now = Date.now()
+    // 两个任务，later 在前 push 但时间更晚 → 右栏应按时间升序（earlier 在上）
+    mockKanbanTasks.push(
+      kt({ id: 't-late', title: '晚任务', status: 'todo', priority: 0, created_at: now }),
+      kt({ id: 't-early', title: '早任务', status: 'todo', priority: 0, created_at: now - 3600_000 }),
+    )
+    const store = useCockpitStore()
+    store.openSchedule()
+    await nextTick()
+    const wrapper = mount(CockpitScheduleModal)
+    const titles = wrapper.findAll('.cockpit-schedule__ev-title').map(n => n.text())
+    expect(titles.length).toBeGreaterThanOrEqual(2)
+    // 升序：早任务应在晚任务之前
+    expect(titles.indexOf('早任务')).toBeLessThan(titles.indexOf('晚任务'))
+  })
+
+  it('applies priority visual classes to task event rows', async () => {
+    mockKanbanTasks.length = 0
+    mockKanbanTasks.push(kt({ id: 't-p0', title: 'P0任务', status: 'blocked', priority: 3, created_at: Date.now() }))
+    const store = useCockpitStore()
+    store.openSchedule()
+    await nextTick()
+    const wrapper = mount(CockpitScheduleModal)
+    const ev = wrapper.find('.cockpit-schedule__ev')
+    expect(ev.exists()).toBe(true)
+    expect(ev.classes()).toContain('is-p0')
+    // 状态标签应渲染 blocked 语义
+    expect(wrapper.find('.cockpit-schedule__ev-stg.st-blocked').exists()).toBe(true)
+  })
+
+  it('renders 12 mini months in the year overview', () => {
+    const store = useCockpitStore()
+    store.openSchedule()
+    const wrapper = mount(CockpitScheduleModal)
+    const minis = wrapper.findAll('.cockpit-schedule__mini')
+    expect(minis).toHaveLength(12)
+    // 当前查看月应高亮
+    const cur = minis.find(m => m.classes().includes('is-cur'))
+    expect(cur).toBeTruthy()
+  })
+
+  it('clicking a mini day selects that date', async () => {
+    const store = useCockpitStore()
+    store.openSchedule()
+    const wrapper = mount(CockpitScheduleModal)
+    // 点击 1 月 15 日（第一个 mini 月的第 15 天）
+    store.scheduleViewYear = 2026
+    await nextTick()
+    const allDays = wrapper.findAll('.cockpit-schedule__mini-d')
+    // 找到 title 含 2026-01-15 的格子
+    const jan15 = allDays.find(d => d.attributes('title')?.startsWith('2026-01-15'))
+    expect(jan15).toBeTruthy()
+    await jan15!.trigger('click')
+    expect(store.scheduleSelectedDate).toBe('2026-01-15')
+    expect(store.scheduleViewMonth).toBe(0)
+  })
+
+  it('renders lunar day label under each solar day', () => {
+    const store = useCockpitStore()
+    store.openSchedule()
+    store.scheduleViewYear = 2026
+    const wrapper = mount(CockpitScheduleModal)
+    // 2026-02-17 = 春节，应渲染农历标签「春节」
+    const allDays = wrapper.findAll('.cockpit-schedule__mini-d')
+    const springFestival = allDays.find(d => d.attributes('title')?.startsWith('2026-02-17'))
+    expect(springFestival).toBeTruthy()
+    expect(springFestival!.classes()).toContain('is-festival')
+    expect(springFestival!.find('.cockpit-schedule__mini-lunar').text()).toBe('春节')
   })
 })
