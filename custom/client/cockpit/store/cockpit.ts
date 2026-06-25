@@ -84,7 +84,10 @@ export interface ScheduleEvent {
   title: string
   kind: 'task' | 'timeline' | 'todo'
   taskId?: string
-  time?: string
+  time?: string           // HH:mm（由 ts 派生）
+  ts?: number             // 毫秒时间戳（右栏按时间排序）
+  priority?: CockpitPriority   // task 类：优先级（右栏色带/视觉权重）
+  status?: string              // task 类：状态（9 值之一）
   archived?: boolean
 }
 
@@ -1036,25 +1039,37 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const scheduleEvents = computed<Record<string, ScheduleEvent[]>>(() => {
     const pad = (n: number) => String(n).padStart(2, '0')
     const dateToStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-    const map: Record<string, ScheduleEvent[]> = {}
-    // 1. 现有任务按 createdAt 归类
-    for (const t of tasks.value) {
-      const d = dateToStr(new Date(t.createdAt))
-      if (!map[d]) map[d] = []
-      map[d].push({ id: t.id, date: d, title: t.title, kind: 'task', taskId: t.id })
+    const hhmm = (ts: number) => {
+      const d = new Date(ts)
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`
     }
-    // 2. timeline 事件（从 history 提取）
+    const map: Record<string, ScheduleEvent[]> = {}
+    // 1. 现有任务按 createdAt 归类（携带优先级/状态，供右栏色带与视觉权重复用）
+    for (const t of tasks.value) {
+      const ts = t.createdAt
+      const d = dateToStr(new Date(ts))
+      if (!map[d]) map[d] = []
+      map[d].push({
+        id: t.id, date: d, title: t.title, kind: 'task', taskId: t.id,
+        ts, time: hhmm(ts), priority: t.priority, status: t.status,
+      })
+    }
+    // 2. timeline 事件（按真实 ts 归类日期，修正原先一律归当天的逻辑）
     for (const h of history.value) {
-      const d = dateToStr(new Date())
+      const ts = h.ts
+      const d = dateToStr(new Date(ts))
       if (!map[d]) map[d] = []
       if (!map[d].some(e => e.id === h.id)) {
-        map[d].push({ id: h.id, date: d, title: h.title, kind: 'timeline', taskId: h.taskId })
+        map[d].push({
+          id: h.id, date: d, title: h.title, kind: 'timeline', taskId: h.taskId,
+          ts, time: hhmm(ts), archived: h.archived,
+        })
       }
     }
     // 3. 用户待办
     for (const t of userTodos.value) {
       if (!map[t.date]) map[t.date] = []
-      map[t.date].push({ id: t.id, date: t.date, title: t.title, kind: 'todo' })
+      map[t.date].push({ id: t.id, date: t.date, title: t.title, kind: 'todo', ts: t.createdAt })
     }
     return map
   })
@@ -1064,6 +1079,28 @@ export const useCockpitStore = defineStore('cockpit', () => {
   )
 
   const scheduleDatesWithEvents = computed(() => new Set(Object.keys(scheduleEvents.value)))
+
+  // 右栏按时间升序排列（无 ts 的归末位）
+  const scheduleEventsForSelectedSorted = computed<ScheduleEvent[]>(() =>
+    [...scheduleEventsForSelected.value].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)),
+  )
+
+  // 每日事件计数（左栏徽标数字）
+  const scheduleCountsByDate = computed<Record<string, number>>(() => {
+    const m: Record<string, number> = {}
+    for (const [d, evs] of Object.entries(scheduleEvents.value)) m[d] = evs.length
+    return m
+  })
+
+  // 每日最高优先级（左栏徽标着色：P0>P1>P2>P3，仅当当日含 task 类事件）
+  const scheduleTopPriorityByDate = computed<Record<string, CockpitPriority>>(() => {
+    const m: Record<string, CockpitPriority> = {}
+    for (const [d, evs] of Object.entries(scheduleEvents.value)) {
+      const prios = evs.filter(e => e.priority).map(e => e.priority!)
+      if (prios.length) m[d] = prios.sort((a, b) => PRIORITY_ORDER[a] - PRIORITY_ORDER[b])[0]
+    }
+    return m
+  })
 
   // ── 模板（localStorage）──
   const templates = computed(() => { void _kvRev.value; return kv.loadTemplates() })
@@ -1203,7 +1240,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
     taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment, refreshFileTree,
     // 日程
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth, userTodos,
-    scheduleEvents, scheduleEventsForSelected, scheduleDatesWithEvents,
+    scheduleEvents, scheduleEventsForSelected, scheduleEventsForSelectedSorted,
+    scheduleDatesWithEvents, scheduleCountsByDate, scheduleTopPriorityByDate,
     openSchedule, closeSchedule, setScheduleDate, navigateScheduleMonth,
     addUserTodo, removeUserTodo,
 
