@@ -71,6 +71,51 @@ const calendarCells = computed<CalendarCell[]>(() => {
   return cells
 })
 
+// ── 年历：当前年的 12 个 mini 月，点击切换月历视图 ──
+interface MiniCell { day: number; date: string; hasEvents: boolean; isToday: boolean }
+interface MiniMonth { month: number; label: string; weeks: MiniCell[][]; isCurrentMonth: boolean }
+const yearMonths = computed<MiniMonth[]>(() => {
+  const year = store.scheduleViewYear
+  const counts = store.scheduleCountsByDate
+  const todayStr = dateToStr(new Date())
+  const curMonth = store.scheduleViewMonth
+  return MONTHS.map((label, m) => {
+    const firstDay = new Date(year, m, 1).getDay()
+    const daysInMonth = new Date(year, m + 1, 0).getDate()
+    const prevDays = new Date(year, m, 0).getDate()
+    const cells: MiniCell[] = []
+    // 上月补齐
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const d = prevDays - i
+      const pm = m === 0 ? 11 : m - 1
+      const py = m === 0 ? year - 1 : year
+      cells.push({ day: d, date: `${py}-${pad(pm + 1)}-${pad(d)}`, hasEvents: false, isToday: false })
+    }
+    // 本月
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = `${year}-${pad(m + 1)}-${pad(d)}`
+      cells.push({ day: d, date, hasEvents: (counts[date] ?? 0) > 0, isToday: date === todayStr })
+    }
+    // 下月补齐至 7 的倍数
+    let next = 1
+    while (cells.length % 7 !== 0) {
+      const nm = m === 11 ? 0 : m + 1
+      const ny = m === 11 ? year + 1 : year
+      cells.push({ day: next, date: `${ny}-${pad(nm + 1)}-${pad(next)}`, hasEvents: false, isToday: false })
+      next++
+    }
+    // 切分为周
+    const weeks: MiniCell[][] = []
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+    return { month: m, label, weeks, isCurrentMonth: m === curMonth }
+  })
+})
+
+// 点击 mini 月：切换月历到该月（同年直接切，跨年改年份）
+function jumpToMonth(m: number) {
+  store.scheduleViewMonth = m
+}
+
 // 右栏事件流（按时间升序）
 const sortedEvents = computed(() => store.scheduleEventsForSelectedSorted)
 
@@ -294,6 +339,34 @@ function cellTitle(c: CalendarCell): string {
             >{{ c.count }}</span>
           </button>
         </div>
+
+        <!-- 年历：12 个 mini 月，点击切换月历视图 -->
+        <div class="cockpit-schedule__year">
+          <div class="cockpit-schedule__year-label">{{ store.scheduleViewYear }} 年总览</div>
+          <div class="cockpit-schedule__year-grid">
+            <button
+              v-for="mm in yearMonths"
+              :key="mm.month"
+              type="button"
+              class="cockpit-schedule__mini"
+              :class="{ 'is-cur': mm.isCurrentMonth }"
+              :title="`${store.scheduleViewYear}年${mm.label}`"
+              @click="jumpToMonth(mm.month)"
+            >
+              <span class="cockpit-schedule__mini-label">{{ mm.label }}</span>
+              <div class="cockpit-schedule__mini-weeks">
+                <div v-for="(wk, wi) in mm.weeks" :key="wi" class="cockpit-schedule__mini-wk">
+                  <span
+                    v-for="(c, ci) in wk"
+                    :key="ci"
+                    class="cockpit-schedule__mini-d"
+                    :class="{ 'is-event': c.hasEvents, 'is-today': c.isToday }"
+                  >{{ c.day }}</span>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 右栏：当日时间流 -->
@@ -416,7 +489,7 @@ function cellTitle(c: CalendarCell): string {
 }
 .cockpit-schedule__cal {
   flex: 1.1 1 0; min-width: 0; display: flex; flex-direction: column;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color); overflow-y: auto;
 }
 .cockpit-schedule__day {
   flex: 1 1 0; min-width: 280px; display: flex; flex-direction: column;
@@ -447,7 +520,7 @@ function cellTitle(c: CalendarCell): string {
 
 /* 月历网格 */
 .cockpit-schedule__grid {
-  display: flex; flex-wrap: wrap; padding: 8px 10px; flex: 1; align-content: flex-start;
+  display: flex; flex-wrap: wrap; padding: 8px 10px; flex-shrink: 0; align-content: flex-start;
 }
 .cockpit-schedule__wk {
   width: calc(100% / 7); text-align: center; font-size: 10px; font-weight: 600;
@@ -489,6 +562,37 @@ function cellTitle(c: CalendarCell): string {
 }
 .cockpit-schedule__cell.is-selected .cockpit-schedule__count {
   box-shadow: 0 0 0 1.5px var(--bg-secondary);
+}
+
+/* 年历：12 个 mini 月 */
+.cockpit-schedule__year {
+  flex-shrink: 0; padding: 8px 12px 14px; border-top: 1px solid var(--border-color);
+}
+.cockpit-schedule__year-label {
+  font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+  padding: 4px 0 8px; letter-spacing: 0.5px;
+}
+.cockpit-schedule__year-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.cockpit-schedule__mini {
+  display: flex; flex-direction: column; gap: 4px; padding: 8px 6px 6px;
+  border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card);
+  cursor: pointer; font-family: inherit; transition: border-color 0.12s, background 0.12s;
+  &:hover { border-color: var(--text-muted); background: var(--bg-secondary); }
+  &.is-cur { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb), 0.05); }
+}
+.cockpit-schedule__mini-label {
+  font-size: 10px; font-weight: 700; color: var(--text-primary); text-align: center;
+}
+.cockpit-schedule__mini.is-cur .cockpit-schedule__mini-label { color: var(--accent-primary); }
+.cockpit-schedule__mini-weeks { display: flex; flex-direction: column; gap: 1px; }
+.cockpit-schedule__mini-wk { display: flex; gap: 1px; }
+.cockpit-schedule__mini-d {
+  flex: 1; aspect-ratio: 1; font-size: 7px; line-height: 1; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center; border-radius: 2px;
+  &.is-event { background: var(--accent-primary); color: var(--text-on-accent); font-weight: 700; }
+  &.is-today { background: rgba(var(--accent-primary-rgb), 0.15); color: var(--accent-primary); font-weight: 700; }
 }
 
 /* 右栏：当日时间流 */

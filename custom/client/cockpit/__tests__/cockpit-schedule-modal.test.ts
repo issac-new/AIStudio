@@ -231,4 +231,26 @@ describe('CockpitScheduleModal', () => {
     // 状态标签应渲染 blocked 语义
     expect(wrapper.find('.cockpit-schedule__ev-stg.st-blocked').exists()).toBe(true)
   })
+
+  it('renders 12 mini months in the year overview', () => {
+    const store = useCockpitStore()
+    store.openSchedule()
+    const wrapper = mount(CockpitScheduleModal)
+    const minis = wrapper.findAll('.cockpit-schedule__mini')
+    expect(minis).toHaveLength(12)
+    // 当前查看月应高亮
+    const cur = minis.find(m => m.classes().includes('is-cur'))
+    expect(cur).toBeTruthy()
+  })
+
+  it('clicking a mini month switches the calendar view month', async () => {
+    const store = useCockpitStore()
+    store.openSchedule()
+    store.scheduleViewMonth = 0  // January
+    const wrapper = mount(CockpitScheduleModal)
+    // 点击 6 月（index 5）
+    const minis = wrapper.findAll('.cockpit-schedule__mini')
+    await minis[5].trigger('click')
+    expect(store.scheduleViewMonth).toBe(5)
+  })
 })
