@@ -227,6 +227,8 @@ function onChartClick(params: any) {
 
 function renderChart() {
   if (!chart.value) return
+  // 容器尺寸为 0 时跳过 setOption，防 eCharts 内部矩阵 null 崩溃
+  if (!chartEl.value || chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0) return
   chart.value.setOption(buildChartOption(), { notMerge: true })
 }
 
