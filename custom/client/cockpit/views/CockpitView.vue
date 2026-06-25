@@ -139,7 +139,7 @@ function onColCtrl(col: ColumnKey) {
 
     <div v-if="store.historyOpen" class="cockpit-overlay" @click="store.closeHistory()" />
     <CockpitHistoryModal v-if="store.historyOpen" class="cockpit-modal-anchor" />
-    <div v-if="store.scheduleOpen" class="cockpit-overlay cockpit-overlay--clear" @click="store.closeSchedule()" />
+    <div v-if="store.scheduleOpen" class="cockpit-overlay" @click="store.closeSchedule()" />
     <CockpitScheduleModal v-if="store.scheduleOpen" />
     <div v-if="store.notifyOpen" class="cockpit-overlay cockpit-overlay--clear" @click="store.closeNotify()" />
     <CockpitNotifyModal v-if="store.notifyOpen" />

@@ -118,8 +118,6 @@ function statusLabel(s?: string): string {
   return s ? (STATUS_LABEL[s] ?? s) : ''
 }
 
-const KIND_ICON: Record<string, string> = { task: '🗓', timeline: '🕘', todo: '📝' }
-
 function saveTodo() {
   const title = newTodoTitle.value.trim()
   if (!title) return
@@ -215,7 +213,6 @@ function cellTitle(c: CalendarCell): string {
   <div
     class="cockpit-schedule-modal"
     tabindex="0"
-    :style="store.scheduleAnchorLeft != null ? { '--schedule-left': store.scheduleAnchorLeft + 'px' } : {}"
     @keydown="onKeydown"
   >
     <!-- 头部 -->
@@ -321,7 +318,6 @@ function cellTitle(c: CalendarCell): string {
           >
             <span class="cockpit-schedule__ev-bar" :style="{ background: eventBarColor(ev) }" />
             <span v-if="ev.time" class="cockpit-schedule__ev-time">{{ ev.time }}</span>
-            <span class="cockpit-schedule__ev-icon">{{ KIND_ICON[ev.kind] ?? '📌' }}</span>
             <div class="cockpit-schedule__ev-body">
               <span class="cockpit-schedule__ev-title">{{ ev.title }}</span>
               <div v-if="ev.kind === 'task' || ev.kind === 'timeline'" class="cockpit-schedule__ev-meta">
@@ -348,13 +344,11 @@ function cellTitle(c: CalendarCell): string {
 
 <style scoped lang="scss">
 .cockpit-schedule-modal {
-  position: fixed; top: 48px;
-  left: var(--schedule-left, 16px);
+  position: fixed; inset: 24px;
   z-index: 1001;
   display: flex; flex-direction: column;
-  width: min(680px, calc(100vw - 32px)); max-height: 80vh;
   background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
+  border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden;
   outline: none;
 }
 
@@ -519,8 +513,8 @@ function cellTitle(c: CalendarCell): string {
 
 /* 事件项：左色带 + 时间 + 图标 + 标题 + 元信息 */
 .cockpit-schedule__ev {
-  position: relative; display: flex; align-items: center; gap: 8px;
-  padding: 8px 14px 8px 18px; cursor: default;
+  position: relative; display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px 8px 22px; cursor: default;
   border-bottom: 1px solid var(--border-color); transition: background 0.1s, box-shadow 0.1s;
   &.is-clickable { cursor: pointer; }
   &.is-clickable:hover, &.is-focused {
@@ -528,16 +522,16 @@ function cellTitle(c: CalendarCell): string {
   }
   &.is-archived { opacity: 0.55; }
 }
+/* 左侧色带：替代图标，按类型/优先级着色（P0 红/P1 橙/P2 蓝/P3 灰/todo 蓝/timeline 灰） */
 .cockpit-schedule__ev-bar {
-  position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 2px 2px 0;
+  position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 0 3px 3px 0;
 }
 /* P0 色带加粗，强化最高优先级视觉 */
-.cockpit-schedule__ev.is-p0 .cockpit-schedule__ev-bar { width: 4px; }
+.cockpit-schedule__ev.is-p0 .cockpit-schedule__ev-bar { width: 7px; }
 .cockpit-schedule__ev-time {
   flex-shrink: 0; width: 38px; font-size: 10px; color: var(--text-muted);
   font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
 }
-.cockpit-schedule__ev-icon { flex-shrink: 0; font-size: 14px; }
 .cockpit-schedule__ev-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .cockpit-schedule__ev-title {
   font-size: 12px; color: var(--text-primary); font-weight: 500;
