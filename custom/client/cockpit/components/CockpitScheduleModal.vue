@@ -194,7 +194,7 @@ const KIND_ICON: Record<string, string> = { task: '🗓', timeline: '🕘', todo
 /* 月份导航 */
 .cockpit-schedule__nav {
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 18px; border-bottom: 1px solid var(--border-light);
+  padding: 10px 18px; border-bottom: 1px solid var(--border-color);
 }
 .cockpit-schedule__nav-btn {
   width: 24px; height: 24px; padding: 0; border: 1px solid var(--border-color);
@@ -215,7 +215,7 @@ const KIND_ICON: Record<string, string> = { task: '🗓', timeline: '🕘', todo
 
 /* 月历网格 */
 .cockpit-schedule__grid {
-  display: flex; flex-wrap: wrap; padding: 4px 12px; border-bottom: 1px solid var(--border-light);
+  display: flex; flex-wrap: wrap; padding: 4px 12px; border-bottom: 1px solid var(--border-color);
 }
 .cockpit-schedule__wk {
   width: calc(100% / 7); text-align: center; font-size: 10px; font-weight: 600;
@@ -247,7 +247,7 @@ const KIND_ICON: Record<string, string> = { task: '🗓', timeline: '🕘', todo
 }
 .cockpit-schedule__ev {
   display: flex; align-items: center; gap: 10px; padding: 8px 18px; cursor: default;
-  border-bottom: 1px solid var(--border-light); transition: .1s;
+  border-bottom: 1px solid var(--border-color); transition: .1s;
   &.is-clickable { cursor: pointer; &:hover { background: var(--bg-secondary); } }
 }
 .cockpit-schedule__ev-icon { flex-shrink: 0; font-size: 14px; }

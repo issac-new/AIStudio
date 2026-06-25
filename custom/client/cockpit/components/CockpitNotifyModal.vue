@@ -85,13 +85,13 @@ function onItemClick(item: NotifyItem) {
 .cockpit-notify-panel__item {
   display: flex; align-items: flex-start; gap: 10px; padding: 9px 14px; cursor: pointer;
   border: none; background: none; width: 100%; text-align: left; font: inherit;
-  border-bottom: 1px solid var(--border-light); color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color); color: var(--text-primary);
   &:hover { background: var(--bg-secondary); }
 }
 .cockpit-notify-panel__avatar {
   flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; color: var(--text-on-accent); background: var(--text-primary);
+  font-size: 10px; font-weight: 700; color: var(--text-on-accent); background: var(--text-primary);
 }
 .cockpit-notify-panel__body { flex: 1; min-width: 0; }
 .cockpit-notify-panel__row1 { display: flex; align-items: center; gap: 6px; }
@@ -99,14 +99,14 @@ function onItemClick(item: NotifyItem) {
   font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.cockpit-notify-panel__when { font-size: 9px; color: var(--text-muted); font-family: ui-monospace, monospace; flex-shrink: 0; }
+.cockpit-notify-panel__when { font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; flex-shrink: 0; }
 .cockpit-notify-panel__preview {
   font-size: 11px; color: var(--text-secondary); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cockpit-notify-panel__count {
   flex-shrink: 0; background: var(--error); color: var(--text-on-accent);
-  font-size: 9px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px;
+  font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center; padding: 0 4px;
 }
 .cockpit-notify-panel__empty { padding: 28px 14px; text-align: center; font-size: 12px; color: var(--text-muted); }

@@ -2,12 +2,10 @@
 // Cockpit (Swarm Studio) — AI Collaboration Center
 // A 类注册:路由、导航、组件、store、样式、i18n 增量的运行时注册。
 import type { App } from 'vue';
-import type { Router } from 'vue-router';
-import { registerRoute, registerNavEntry } from '../../../registries/client';
+import { registerNavEntry } from '../../../registries/client';
 import { features } from '../../../config/features';
 
 // 全局布局样式（Pure Ink）：三列布局、折叠竖条、统一选中态、modal overlay。
-// 原本内联在 CockpitView.vue，批次 1 迁此为单一来源（模块加载即生效）。
 import './styles/cockpit.scss';
 
 export async function registerCockpit(_app: App) {
@@ -18,20 +16,15 @@ export async function registerCockpit(_app: App) {
 
   console.log('[Custom] Cockpit (AI Collaboration Center) registered');
 
-  // Register the cockpit route (component lazy-loaded from custom dir)
-  registerRoute({
-    path: '/hermes/cockpit',
-    name: 'hermes.cockpit',
-    component: () => import('./views/CockpitView.vue'),
-    meta: { fullscreen: true },
-  });
+  // Cockpit route is defined statically in router/index.ts (patch 071)
+  // with chat/group/history/workflow/swarm-kanban as nested children.
+  // Matrix chat room routes are added dynamically as cockpit children in bootstrap.
 
   // Register sidebar navigation entry
   registerNavEntry({
     id: 'hermes.cockpit',
-    label: 'AI Collaboration Center', // i18n key: sidebar.cockpit
+    label: 'AI Collaboration Center',
     section: 'agent',
-    // icon handled by AppSidebar patch
   });
 }
 

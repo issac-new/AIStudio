@@ -47,13 +47,13 @@ function onSave() {
 .cockpit-template-manager__close { cursor: pointer; color: var(--text-muted); font-size: 16px; width: 24px; height: 24px; border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 4px; font: inherit;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
-.cockpit-template-manager__save { display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--border-light); }
+.cockpit-template-manager__save { display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--border-color); }
 .cockpit-template-manager__input { flex: 1; font: inherit; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; color: var(--text-primary); }
 .cockpit-template-manager__save-btn { font: inherit; font-size: 12px; border-radius: 6px; padding: 6px 12px; border: 1px solid var(--accent-primary); background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-weight: 600;
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .cockpit-template-manager__list { flex: 1; overflow-y: auto; padding: 8px 0; }
-.cockpit-template-manager__item { padding: 10px 18px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px;
+.cockpit-template-manager__item { padding: 10px 18px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;
   &:hover { background: var(--bg-secondary); }
 }
 .cockpit-template-manager__item-name { font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1; }

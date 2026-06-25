@@ -107,7 +107,7 @@ const items = computed(() => store.filteredHistory)
 .cockpit-history-modal__close { cursor: pointer; color: var(--text-muted); font-size: 16px; width: 24px; height: 24px; border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 4px; font: inherit;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
-.cockpit-history-modal__filters { padding: 12px 18px; border-bottom: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 8px; }
+.cockpit-history-modal__filters { padding: 12px 18px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
 .cockpit-history-modal__frow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .cockpit-history-modal__flabel { font-size: 10px; color: var(--text-muted); width: 44px; flex-shrink: 0; font-weight: 600; }
 .cockpit-history-modal__chip { font-size: 10px; padding: 2px 9px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font: inherit;
@@ -115,7 +115,7 @@ const items = computed(() => store.filteredHistory)
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
 .cockpit-history-modal__list { flex: 1; overflow-y: auto; padding: 4px 0; }
-.cockpit-history-modal__item { display: flex; align-items: center; gap: 11px; padding: 10px 18px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font: inherit; border-bottom: 1px solid var(--border-light); color: var(--text-primary); position: relative; transition: background 0.1s, box-shadow 0.1s;
+.cockpit-history-modal__item { display: flex; align-items: center; gap: 11px; padding: 10px 18px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font: inherit; border-bottom: 1px solid var(--border-color); color: var(--text-primary); position: relative; transition: background 0.1s, box-shadow 0.1s;
   &:hover { background: var(--bg-secondary); box-shadow: inset 3px 0 0 var(--accent-primary); }
   &.is-archived { opacity: 0.55; }
   &.is-archived .cockpit-history-modal__text { color: var(--text-muted); }
@@ -124,6 +124,6 @@ const items = computed(() => store.filteredHistory)
 .cockpit-history-modal__dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
 .is-archived .cockpit-history-modal__dot { background: var(--border-color); }
 .cockpit-history-modal__text { flex: 1; font-size: 12px; font-weight: 500; }
-.cockpit-history-modal__action { font-size: 9px; padding: 0 5px; border: 1px solid var(--border-light); border-radius: 3px; background: var(--bg-card); color: var(--text-muted); }
-.cockpit-history-modal__archtag { font-size: 9px; color: var(--text-muted); background: var(--bg-secondary); border-radius: 3px; padding: 0 5px; border: 1px solid var(--border-light); }
+.cockpit-history-modal__action { font-size: 10px; padding: 0 5px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-muted); }
+.cockpit-history-modal__archtag { font-size: 10px; color: var(--text-muted); background: var(--bg-secondary); border-radius: 3px; padding: 0 5px; border: 1px solid var(--border-color); }
 </style>

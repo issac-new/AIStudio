@@ -75,13 +75,13 @@ onUnmounted(stopPoll)
 </template>
 
 <style scoped lang="scss">
-.cockpit-file-tree { display: flex; flex-direction: column; flex: 0 0 240px; border-left: 1px solid var(--border-color); background: var(--bg-sidebar); min-height: 0; }
-.cockpit-file-tree__head { flex-shrink: 0; padding: 10px 12px; border-bottom: 1px solid var(--border-light); background: var(--bg-card); display: flex; flex-direction: column; gap: 4px; }
-.cockpit-file-tree__title { font-size: 11px; font-weight: 700; color: var(--text-primary); }
-.cockpit-file-tree__sub { font-size: 9px; color: var(--text-muted); }
-.cockpit-file-tree__root { font-family: ui-monospace, monospace; font-size: 9px; color: var(--text-secondary); background: var(--bg-secondary); padding: 2px 6px; border-radius: 3px; word-break: break-all; }
-.cockpit-file-tree__summary { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); font-family: ui-monospace, monospace; }
-.cockpit-file-tree__filter { font-family: inherit; font-size: 10px; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; color: var(--text-primary); }
+.cockpit-file-tree { display: flex; flex-direction: column; flex: 0 0 240px; border-left: 1px solid var(--border-color); background: var(--bg-primary); min-height: 0; }
+.cockpit-file-tree__head { flex-shrink: 0; padding: 10px 12px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column; gap: 4px; }
+.cockpit-file-tree__title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.cockpit-file-tree__sub { font-size: 10px; color: var(--text-muted); }
+.cockpit-file-tree__root { font-family: ui-monospace, monospace; font-size: 10px; color: var(--text-secondary); background: var(--bg-secondary); padding: 2px 6px; border-radius: 3px; word-break: break-all; }
+.cockpit-file-tree__summary { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; }
+.cockpit-file-tree__filter { font-family: inherit; font-size: 11px; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; color: var(--text-primary); }
 .cockpit-file-tree__list { flex: 1; overflow-y: auto; padding: 6px 0; }
-.cockpit-file-tree__empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.cockpit-file-tree__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; padding: 40px 16px; text-align: center; }
 </style>

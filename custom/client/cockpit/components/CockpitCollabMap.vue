@@ -309,9 +309,7 @@ onUnmounted(() => {
   <div class="cockpit-map">
     <div class="cockpit-map__head">
       <span class="cockpit-map__title">{{ t('cockpit.collaborationMap') }}</span>
-      <div class="cockpit-map__tools">
-        <span class="cockpit-map__hint-inline">滚轮缩放 · 拖拽节点/画布 · 点击联动</span>
-      </div>
+      <span class="cockpit-map__hint-inline">滚轮缩放 · 拖拽节点/画布 · 点击联动</span>
     </div>
     <div v-if="hasTask" ref="chartEl" class="cockpit-map__chart"></div>
     <div v-else class="cockpit-map__empty">{{ t('cockpit.noTaskSelected') }}</div>
@@ -319,11 +317,10 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="scss">
-.cockpit-map { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
-.cockpit-map__head { display: flex; align-items: center; gap: 8px; padding: 8px 44px 4px 16px; flex-shrink: 0; }
-.cockpit-map__title { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
-.cockpit-map__tools { margin-left: auto; }
-.cockpit-map__hint-inline { font-size: 9px; color: var(--text-muted); }
+.cockpit-map { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; border-bottom: 1px solid var(--border-color); background: var(--bg-primary); }
+.cockpit-map__head { display: flex; align-items: center; gap: 8px; padding: 10px 44px 6px 16px; flex-shrink: 0; }
+.cockpit-map__title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.cockpit-map__hint-inline { font-size: 10px; color: var(--text-muted); }
 .cockpit-map__chart { flex: 1 1 0; min-height: 100px; width: 100%; }
-.cockpit-map__empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.cockpit-map__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; }
 </style>

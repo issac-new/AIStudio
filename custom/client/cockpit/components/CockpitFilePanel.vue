@@ -86,7 +86,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  font-size: 12px;
-  padding: 24px;
+  font-size: 13px;
+  padding: 40px 24px;
+  text-align: center;
 }
 </style>

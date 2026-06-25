@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useCockpitStore, type ColumnKey } from '@/custom/cockpit/store/cockpit'
 import CockpitAttention from '@/custom/cockpit/components/CockpitAttention.vue'
 import CockpitKanban from '@/custom/cockpit/components/CockpitKanban.vue'
@@ -10,7 +10,6 @@ import CockpitTimeline from '@/custom/cockpit/components/CockpitTimeline.vue'
 import CockpitWorkspace from '@/custom/cockpit/components/CockpitWorkspace.vue'
 import CockpitModeBar from '@/custom/cockpit/components/CockpitModeBar.vue'
 import CockpitCollabBar from '@/custom/cockpit/components/CockpitCollabBar.vue'
-import CockpitChatPane from '@/custom/cockpit/components/CockpitChatPane.vue'
 import CockpitTerminalPane from '@/custom/cockpit/components/CockpitTerminalPane.vue'
 import CockpitFilePanel from '@/custom/cockpit/components/CockpitFilePanel.vue'
 import CockpitHistoryModal from '@/custom/cockpit/components/CockpitHistoryModal.vue'
@@ -23,6 +22,18 @@ import { useI18n } from 'vue-i18n'
 const store = useCockpitStore()
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
+
+// 子路由名称 → 是否在 chat 标签页中展示（嵌入的 app 页面）
+const chatSubRoutes = new Set([
+  'hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession',
+  'hermes.globalAgent', 'hermes.globalAgentSession',
+  'hermes.matrixChat', 'hermes.matrixChatRoom',
+  'hermes.groupChat', 'hermes.groupChatRoom',
+  'hermes.workflow', 'hermes.swarmKanban',
+])
+// 当前是否在 chat 子路由（决定右栏显示 router-view 还是工作区）
+const isChatSubRoute = computed(() => chatSubRoutes.has(route.name as string))
 
 const goSettings = () => router.push({ name: 'hermes.settings' })
 const goCenter = () => router.push({ name: 'hermes.kanban' })
@@ -61,16 +72,12 @@ function onColCtrl(col: ColumnKey) {
         :class="{ 'is-collapsed': store.collapsed.left, 'is-maximized': store.maximized.left, 'is-hidden-by-max': !store.maximized.left && (store.maximized.mid || store.maximized.right) }">
         <CockpitColumnRail label="KANBAN" @expand="store.toggleCollapsed('left')" />
         <div class="cockpit-col__inner">
-          <CockpitKanban @enter-center="goCenter" @maximize="onColCtrl('left')" />
+          <CockpitKanban @enter-center="goCenter" @maximize="onColCtrl('left')" @fold="store.toggleCollapsed('left')" />
         </div>
       </section>
 
-      <!-- 左-中分割线折叠按钮 -->
-      <div v-if="!store.collapsed.left" class="cockpit-divider" data-divider="left-mid">
-        <button type="button" class="cockpit-divider__btn"
-          :title="store.collapsed.left ? '展开左栏' : '向左折叠左栏'"
-          @click="store.toggleCollapsed('left')">◀</button>
-      </div>
+      <!-- 左-中分割线 -->
+      <div v-if="!store.collapsed.left" class="cockpit-divider" data-divider="left-mid" />
 
       <!-- 中栏 协作图 + 时序流 -->
       <section class="cockpit-col cockpit-col--mid"
@@ -82,6 +89,10 @@ function onColCtrl(col: ColumnKey) {
               :title="store.maximized.mid ? '还原' : '最大化'" @click="onColCtrl('mid')">
               <svg v-if="store.maximized.mid" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
               <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            </button>
+            <button v-if="!store.collapsed.mid" class="cockpit-fold-btn" title="折叠中栏"
+              @click="store.toggleCollapsed('mid')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
             </button>
           </div>
           <CockpitCollabMap v-show="!store.midTopCollapsed" :style="{ flex: store.midBottomCollapsed ? '1 1 0' : '1 1 0' }" />
@@ -103,28 +114,25 @@ function onColCtrl(col: ColumnKey) {
         </div>
       </section>
 
-      <!-- 中-右分割线折叠按钮 -->
-      <div v-if="!store.collapsed.mid || !store.collapsed.right" class="cockpit-divider" data-divider="mid-right">
-        <button type="button" class="cockpit-divider__btn"
-          :title="store.collapsed.mid ? '展开中栏' : '向右折叠中栏'"
-          @click="store.toggleCollapsed('mid')">◀</button>
-        <button type="button" class="cockpit-divider__btn"
-          :title="store.collapsed.right ? '展开右栏' : '向右折叠右栏'"
-          @click="store.toggleCollapsed('right')">▶</button>
-      </div>
+      <!-- 中-右分割线 -->
+      <div v-if="!store.collapsed.mid || !store.collapsed.right" class="cockpit-divider" data-divider="mid-right" />
 
       <!-- 右栏 A2UI 工作区（按模式切换）-->
       <section class="cockpit-col cockpit-col--right"
         :class="{ 'is-collapsed': store.collapsed.right, 'is-maximized': store.maximized.right, 'is-hidden-by-max': !store.maximized.right && (store.maximized.left || store.maximized.mid) }">
         <CockpitColumnRail label="工作区" @expand="store.toggleCollapsed('right')" />
         <div class="cockpit-col__inner">
-          <CockpitModeBar />
-          <CockpitCollabBar v-if="store.workspaceMode !== 'term'" />
+          <CockpitModeBar @fold="store.toggleCollapsed('right')" />
+          <CockpitCollabBar v-if="store.workspaceMode !== 'term' && !isChatSubRoute" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
-          <CockpitWorkspace v-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="store.submitWorkItem" />
+          <!-- chat 子路由：嵌入 app 页面（chat/group/matrix/history/workflow/kanban） -->
+          <div v-if="isChatSubRoute" class="cockpit-embed-view">
+            <router-view />
+          </div>
+          <!-- cockpit 原生标签页 -->
+          <CockpitWorkspace v-else-if="store.workspaceMode === 'work'" :class="{ 'is-readonly': store.archivedMode }" @submit="store.submitWorkItem" />
           <CockpitFilePanel v-else-if="store.workspaceMode === 'workspace'" />
-          <CockpitChatPane v-else-if="store.workspaceMode === 'chat'" />
-          <CockpitTerminalPane v-else />
+          <CockpitTerminalPane v-else-if="store.workspaceMode === 'term'" />
         </div>
       </section>
     </div>
@@ -204,6 +212,25 @@ function onColCtrl(col: ColumnKey) {
   display: inline-flex; align-items: center; justify-content: center;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
+/* 三栏折叠按钮 — 统一置于各栏右上角 */
+.cockpit-fold-btn {
+  width: 24px; height: 24px; padding: 0;
+  border: 1px solid var(--border-color); border-radius: 4px;
+  background: var(--bg-card); color: var(--text-muted);
+  cursor: pointer; font-size: 12px; line-height: 1; font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  &:hover { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--text-muted); }
+}
+/* 左栏和右栏的折叠按钮，置于最大化按钮左侧同一行 */
+.cockpit-col--left > .cockpit-fold-btn {
+  position: absolute; top: 6px; right: 40px; z-index: 101;
+}
+.cockpit-col--right > .cockpit-fold-btn {
+  position: absolute; top: 6px; right: 40px; z-index: 101;
+}
+/* 中栏折叠按钮在 ctrls 区域内，不需要绝对定位 */
+.cockpit-col__ctrls .cockpit-fold-btn {}
 .cockpit-title-detail {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   z-index: 1000; width: min(560px, calc(100vw - 48px));
@@ -233,7 +260,7 @@ function onColCtrl(col: ColumnKey) {
 .cockpit-kanban-detail__body { padding: 12px 16px; }
 .cockpit-kanban-detail__row {
   display: flex; align-items: baseline; gap: 12px; padding: 6px 0;
-  border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-primary);
   &:last-child { border-bottom: none; }
 }
 .cockpit-kanban-detail__label {
@@ -258,24 +285,39 @@ function onColCtrl(col: ColumnKey) {
 }
 .cockpit-mid-divider__btn {
   width: 20px; height: 18px; padding: 0; border: 1px solid var(--border-color);
-  border-radius: 4px; background: var(--bg-secondary); color: var(--text-muted);
+  border-radius: 4px; background: var(--bg-card); color: var(--text-muted);
   cursor: pointer; font-size: 10px; line-height: 1; font-family: inherit;
   display: inline-flex; align-items: center; justify-content: center;
   &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
-.cockpit-mid-divider__line { flex: 1; height: 1px; background: var(--border-light); }
+.cockpit-mid-divider__line { flex: 1; height: 1px; background: var(--border-color); }
 .cockpit-divider {
-  flex-shrink: 0; width: 14px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 6px;
-  background: var(--bg-card); border-left: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color); z-index: 50;
+  flex-shrink: 0; width: 6px;
+  background: var(--bg-primary); z-index: 50;
 }
 .cockpit-divider__btn {
   width: 12px; height: 28px; padding: 0; border: 1px solid var(--border-color);
-  border-radius: 3px; background: var(--bg-secondary); color: var(--text-muted);
+  border-radius: 3px; background: var(--bg-card); color: var(--text-muted);
   cursor: pointer; font-size: 8px; line-height: 1; font-family: inherit;
   display: flex; align-items: center; justify-content: center;
   &:hover { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+}
+
+/* 嵌入的 app 页面（chat/group/matrix 等）填满右栏 */
+.cockpit-embed-view {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+/* 确保 router-view 渲染的页面能占满容器，覆盖 100vh 等固定高度 */
+.cockpit-embed-view > :first-child {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
+  max-height: none !important;
 }
 </style>

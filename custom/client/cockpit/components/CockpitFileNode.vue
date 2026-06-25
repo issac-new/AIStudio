@@ -81,5 +81,5 @@ function onClick() {
 }
 .cockpit-file-node__icon { font-size: 10px; width: 13px; text-align: center; color: var(--text-muted); }
 .cockpit-file-node__name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
-.cockpit-file-node__meta { font-size: 9px; color: var(--text-muted); font-family: ui-monospace, monospace; margin-left: auto; }
+.cockpit-file-node__meta { font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; margin-left: auto; }
 </style>

@@ -44,8 +44,8 @@ export interface HistoryFilters {
   actions: string[]
   statuses: ('active' | 'done' | 'archived')[]
 }
-export type WorkspaceMode = 'work' | 'chat' | 'term' | 'workspace'
-export type ChannelKind = 'matrix' | 'chat' | 'group'
+export type WorkspaceMode = 'work' | 'term' | 'workspace'
+export type ChannelKind = 'matrix' | 'chat' | 'group' | 'plain'
 export type WorkDecision = kv.WorkDecision
 export type DraftWorkItem = kv.DraftWorkItem
 export type A2uiTemplate = kv.A2uiTemplate
@@ -56,6 +56,7 @@ export interface TerminalLine { kind: TerminalLineKind; text: string }
 export interface CockpitFilters {
   priorities: CockpitPriority[]
   statuses: taskAdapter.CockpitStatusBucket[]
+  assignees: string[]
   tenants: string[]
   tenantGroupChat: string[]
   tenantTopic: string[]
@@ -118,11 +119,21 @@ export const useCockpitStore = defineStore('cockpit', () => {
     if (cockpitTasks.value.length) return cockpitTasks.value
     return kanban.tasks.map(t => taskAdapter.toCockpitTask(t, 'default'))
   })
-  const attention = computed(() =>
-    tasks.value
+  const attention = computed(() => {
+    return tasks.value
       .map(t => attentionAdapter.toAttention({ ...t, status: t.status } as any))
-      .filter((x): x is AttentionItem => x !== null),
-  )
+      .filter((x): x is AttentionItem => x !== null)
+      .sort((a, b) => {
+        // 第一层：按状态分梯队（阻塞 > 待审 > 待分类）
+        const tier = attentionAdapter.attentionTier(a.status) - attentionAdapter.attentionTier(b.status)
+        if (tier !== 0) return tier
+        // 第二层：梯队内按优先级（P0 > P1 > P2 > P3）
+        const pri = (a.priority ?? 3) - (b.priority ?? 3)
+        if (pri !== 0) return pri
+        // 第三层：同优先级按创建时间降序（晚的在前）
+        return b.createdAt - a.createdAt
+      })
+  })
   const attentionCount = computed(() => attention.value.length)
 
   // ── 客户端态 ──
@@ -131,7 +142,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // 让依赖「选中动作」的消费者（如 CockpitFilePanel 的 Home 路径同步）能在
   // 点击中心节点重新选中当前任务时也收到刷新信号——单看 selectedTaskId 无法区分。
   const selectionSeq = ref(0)
-  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], tenants: [], tenantGroupChat: [], tenantTopic: [], tenantUserId: [], tenantRoomId: [], tenantSessionId: [], tenantSource: [], boardSlugs: [], dateRange: { from: null, to: null } })
+  const filters = ref<CockpitFilters>({ priorities: [], statuses: [], assignees: [], tenants: [], tenantGroupChat: [], tenantTopic: [], tenantUserId: [], tenantRoomId: [], tenantSessionId: [], tenantSource: [], boardSlugs: [], dateRange: { from: null, to: null } })
   const collapsed = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
   // 中栏上下分区折叠（协作图/时序流独立折叠）
   const midTopCollapsed = ref(false)     // 协作图折叠（向上收）
@@ -230,6 +241,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
       }
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
+        && okArr(f.assignees, t.assignee)
         && (() => {
           // 结构化字段筛选：若任一字段有筛选值，则要求 task 必须有 tenant
           const hasAnyTenantFilter = f.tenantGroupChat.length > 0 || f.tenantTopic.length > 0
@@ -344,16 +356,30 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   const notifyCount = computed(() => notifyItems.value.reduce((n, i) => n + i.count, 0))
 
-  // ── 频道（parseTenant）──
+  // ── 频道（按 kanban tenant 解析规则展示 room/session，点击跳转 matrix 房间）──
   const channels = computed<CollabChannel[]>(() => {
     const t = selectedTask.value
-    if (!t) return []
-    const parsed = collabAdapter.parseTenant(t.tenant)
-    if (!parsed || parsed.kind === 'plain') return []
+    if (!t?.tenant) return []
+    const parsed = parseTenant(t.tenant)
+    // 解析失败或旧格式 → 显示 tenant 原值
+    if (parsed.isLegacy || !parsed.roomId) {
+      return [{
+        id: `ch-raw-${t.id}`, taskId: t.id, kind: 'plain',
+        label: t.tenant,
+      }]
+    }
+    // Matrix 聊天室（按 roomId + sessionId 拼装跳转）
+    const label = parsed.topic
+      ? `${parsed.groupChat}:${parsed.topic} @${parsed.userId}`
+      : `${parsed.groupChat} @${parsed.userId}`
     return [{
-      id: `ch-${t.id}`, taskId: t.id,
-      kind: parsed.kind === 'session' ? 'chat' : parsed.kind,
-      label: parsed.label, routeTarget: parsed.routeTarget,
+      id: `ch-matrix-${t.id}`, taskId: t.id, kind: 'matrix',
+      label,
+      routeTarget: {
+        name: 'hermes.matrixChatRoom',
+        params: { roomId: parsed.roomId },
+        query: parsed.sessionId ? { session: parsed.sessionId } : {},
+      },
     }]
   })
   const channelsForSelectedTask = computed(() => channels.value)
@@ -848,10 +874,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function closeNotify() { notifyOpen.value = false }
   // 仅 Matrix：进入房间后 SDK 自动清零未读，无需额外操作
 
-  // ── 频道（聊天精简壳）──
+  // ── 频道（聊天由路由驱动，不再切换 workspaceMode）──
   function selectChannel(id: string | null) {
     activeChannelId.value = id
-    if (id) workspaceMode.value = 'chat'
   }
   async function sendMessage(text: string): Promise<void> {
     const ch = activeChannel.value

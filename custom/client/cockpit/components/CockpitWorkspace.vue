@@ -624,7 +624,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 .cockpit-workspace { display: flex; flex: 1; min-height: 0; }
 .cockpit-workspace__form { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .cockpit-workspace__body { flex: 1; overflow-y: auto; padding: 20px 24px; max-width: 100%; }
-.cockpit-workspace__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; }
+.cockpit-workspace__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; flex-direction: column; gap: 8px; padding: 40px 24px; text-align: center; }
 
 /* AREA 1: Header */
 .cockpit-workspace__header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
@@ -688,7 +688,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 .cockpit-workspace__opt-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cockpit-workspace__opt-header { display: flex; align-items: center; gap: 8px; }
 .cockpit-workspace__opt-name { font-size: 13px; font-weight: 600; }
-.cockpit-workspace__opt-rec { font-size: 9px; padding: 1px 6px; border-radius: 3px; background: var(--accent-primary); color: var(--text-on-accent); font-weight: 600; white-space: nowrap; }
+.cockpit-workspace__opt-rec { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--accent-primary); color: var(--text-on-accent); font-weight: 600; white-space: nowrap; }
 .cockpit-workspace__opt-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
 .cockpit-workspace__chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .cockpit-workspace__chip { font-size: 12px; padding: 4px 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font: inherit;

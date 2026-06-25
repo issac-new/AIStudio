@@ -142,7 +142,7 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
 
 <style scoped lang="scss">
 .cockpit-timeline { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.cockpit-timeline__head { padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
+.cockpit-timeline__head { padding: 10px 16px 8px; display: flex; align-items: center; gap: 10px; }
 .cockpit-timeline__search { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; }
 .cockpit-timeline__search-icon {
   position: absolute; left: 6px; font-size: 10px; color: var(--text-muted); pointer-events: none; line-height: 1;
@@ -167,7 +167,7 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
   &:hover { border-color: var(--text-muted); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
-.cockpit-timeline__title { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+.cockpit-timeline__title { font-size: 13px; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
 .cockpit-timeline__body { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
 .cockpit-timeline__fold {
   display: block; width: 100%; text-align: left; padding: 5px 9px; margin: 6px 0 4px 18px;
@@ -180,12 +180,13 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
   content: ''; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 1px; background: var(--border-color);
 }
 .cockpit-timeline__event {
-  position: relative; display: flex; flex-direction: column; gap: 1px;
-  width: 100%; text-align: left; padding: 6px 9px; margin-bottom: 10px;
+  position: relative; display: flex; flex-direction: column; gap: 2px;
+  width: 100%; text-align: left; padding: 8px 10px; margin-bottom: 8px;
   border: 1px solid transparent; border-radius: 6px; background: none;
   cursor: pointer; font-family: inherit; color: var(--text-primary);
+  transition: background 0.12s, border-color 0.12s;
   &::before {
-    content: ''; position: absolute; left: -19px; top: 9px; width: 9px; height: 9px;
+    content: ''; position: absolute; left: -19px; top: 11px; width: 9px; height: 9px;
     border-radius: 50%; background: var(--bg-primary); border: 2px solid var(--text-muted);
   }
   &:hover { background: var(--bg-card-hover); }
@@ -193,11 +194,11 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
 }
 .cockpit-timeline__event-head { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
 .cockpit-timeline__actor { font-weight: 500; }
-.cockpit-timeline__kind { font-size: 8px; padding: 0 5px; border-radius: 2px; background: var(--bg-secondary); }
-.cockpit-timeline__source { font-size: 8px; padding: 0 4px; border-radius: 2px; border: 1px solid var(--border-light); color: var(--text-muted); text-transform: uppercase; }
-.cockpit-timeline__assignee { font-size: 9px; color: var(--text-muted); font-family: monospace; }
-.cockpit-timeline__when { margin-left: auto; font-size: 9px; color: var(--text-muted); }
+.cockpit-timeline__kind { font-size: 10px; padding: 0 5px; border-radius: 2px; background: var(--bg-secondary); }
+.cockpit-timeline__source { font-size: 10px; padding: 0 4px; border-radius: 2px; border: 1px solid var(--border-color); color: var(--text-muted); text-transform: uppercase; }
+.cockpit-timeline__assignee { font-size: 10px; color: var(--text-muted); font-family: monospace; }
+.cockpit-timeline__when { margin-left: auto; font-size: 10px; color: var(--text-muted); }
 .cockpit-timeline__what { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
-.cockpit-timeline__state { font-size: 9px; color: var(--text-muted); }
-.cockpit-timeline__empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.cockpit-timeline__state { font-size: 10px; color: var(--text-muted); }
+.cockpit-timeline__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; padding: 40px 16px; text-align: center; }
 </style>

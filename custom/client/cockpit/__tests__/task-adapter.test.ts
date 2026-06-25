@@ -27,21 +27,15 @@ describe('bucketPriority', () => {
 })
 
 describe('bucketStatus', () => {
-  it('review → review', () => { expect(bucketStatus('review')).toBe('review') })
-  it('blocked → blocked', () => { expect(bucketStatus('blocked')).toBe('blocked') })
-  it('running/ready/scheduled → running', () => {
-    expect(bucketStatus('running')).toBe('running')
-    expect(bucketStatus('ready')).toBe('running')
-    expect(bucketStatus('scheduled')).toBe('running')
-  })
-  it('triage/todo → todo', () => {
-    expect(bucketStatus('triage')).toBe('todo')
+  it('returns identity (all 9 statuses exposed individually)', () => {
+    expect(bucketStatus('triage')).toBe('triage')
     expect(bucketStatus('todo')).toBe('todo')
-  })
-  it('done → done', () => {
+    expect(bucketStatus('scheduled')).toBe('scheduled')
+    expect(bucketStatus('ready')).toBe('ready')
+    expect(bucketStatus('running')).toBe('running')
+    expect(bucketStatus('blocked')).toBe('blocked')
+    expect(bucketStatus('review')).toBe('review')
     expect(bucketStatus('done')).toBe('done')
-  })
-  it('archived → archived (independent bucket)', () => {
     expect(bucketStatus('archived')).toBe('archived')
   })
 })

@@ -12,7 +12,7 @@
  * 复用了 upstream Chat 面板中 "Workspace / Terminal" 的终端栈
  * （xterm.js → WebSocket → node-pty），但 workspace 由任务动态决定。
  */
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
@@ -20,14 +20,53 @@ import '@xterm/xterm/css/xterm.css'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import { getApiKey, getBaseUrlValue } from '@/api/client'
+import { useTheme } from '@/composables/useTheme'
 
 const store = useCockpitStore()
+const { isDark } = useTheme()
 const { t } = useI18n()
 
 const terminalRef = ref<HTMLDivElement | null>(null)
 
+// ── 终端主题：自动跟随 App 暗色/亮色模式 ──
+
+interface XtermTheme {
+  background: string; foreground: string; cursor: string; cursorAccent: string
+  selectionBackground: string
+  black: string; red: string; green: string; yellow: string; blue: string; magenta: string; cyan: string; white: string
+  brightBlack: string; brightRed: string; brightGreen: string; brightYellow: string; brightBlue: string; brightMagenta: string; brightCyan: string; brightWhite: string
+}
+
+function getTheme(dark: boolean): XtermTheme {
+  const style = getComputedStyle(document.documentElement)
+  if (dark) {
+    const bg = style.getPropertyValue('--bg-primary').trim() || '#1a1a1a'
+    const fg = style.getPropertyValue('--text-primary').trim() || '#e0e0e0'
+    const accent = style.getPropertyValue('--accent-primary').trim() || '#4cc9f0'
+    const border = style.getPropertyValue('--border-color').trim() || '#333'
+    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: '#e06c75', green: '#98c379', yellow: '#e5c07b', blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+  }
+  const bg = style.getPropertyValue('--bg-primary').trim() || '#fafafa'
+  const fg = style.getPropertyValue('--text-primary').trim() || '#383a42'
+  const accent = style.getPropertyValue('--accent-primary').trim() || '#526fff'
+  const border = style.getPropertyValue('--border-color').trim() || '#e0e0e0'
+  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
+}
+
 // 当前任务的 workspace 目录，回退 ~
 const workspacePath = computed(() => store.selectedTask?.workspace ?? '~')
+
+// 终端外壳配色：从 CSS 变量读取，与 App 主题一致
+const chromeStyle = computed(() => {
+  const style = getComputedStyle(document.documentElement)
+  return {
+    '--term-bg': style.getPropertyValue('--bg-primary').trim(),
+    '--term-head-bg': style.getPropertyValue('--bg-secondary').trim(),
+    '--term-border': style.getPropertyValue('--border-color').trim(),
+    '--term-fg': style.getPropertyValue('--text-primary').trim(),
+    '--term-muted': style.getPropertyValue('--text-muted').trim(),
+  }
+})
 
 // ── 内部状态 ──
 
@@ -170,18 +209,7 @@ function initTerminal() {
     cursorBlink: true,
     fontSize: 14,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-    theme: {
-      background: '#1a1a2e',
-      foreground: '#e0e0e0',
-      cursor: '#4cc9f0',
-      cursorAccent: '#1a1a2e',
-      selectionBackground: 'rgba(76, 201, 240, 0.3)',
-      black: '#000000', red: '#e06c75', green: '#98c379', yellow: '#e5c07b',
-      blue: '#61afef', magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf',
-      brightBlack: '#5c6370', brightRed: '#e06c75', brightGreen: '#98c379',
-      brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd',
-      brightCyan: '#56b6c2', brightWhite: '#ffffff',
-    },
+    theme: getTheme(isDark.value),
   })
 
   fitAddon = new FitAddon()
@@ -228,6 +256,13 @@ function disposeTerminal() {
   fitAddon = null
 }
 
+// App 主题切换时重建终端
+watch(isDark, () => {
+  if (!term) return
+  disposeTerminal()
+  nextTick(initTerminal)
+})
+
 onMounted(() => {
   nextTick(initTerminal)
 })
@@ -236,8 +271,8 @@ onUnmounted(disposeTerminal)
 </script>
 
 <template>
-  <div class="cockpit-terminal-pane">
-    <div class="cockpit-terminal-pane__head">
+  <div class="cockpit-terminal-pane" :style="chromeStyle">
+    <div class="cockpit-terminal-pane__head" :style="chromeStyle">
       <span class="cockpit-terminal-pane__title">⌘ {{ t('cockpit.modeTerm') }}</span>
       <code class="cockpit-terminal-pane__root">{{ workspacePath }}</code>
       <button
@@ -257,41 +292,41 @@ onUnmounted(disposeTerminal)
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background: #1a1a2e;
+  background: var(--term-bg, #1a1a2e);
 }
 .cockpit-terminal-pane__head {
   flex-shrink: 0;
   padding: 8px 14px;
-  background: #0d0d0d;
-  border-bottom: 1px solid #333;
+  background: var(--term-head-bg, #0d0d0d);
+  border-bottom: 1px solid var(--term-border, #333);
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #ccc;
+  color: var(--term-fg, #ccc);
   z-index: 1;
 }
 .cockpit-terminal-pane__title {
-  color: #e0e0e0;
+  color: var(--term-fg, #e0e0e0);
   font-weight: 600;
 }
 .cockpit-terminal-pane__root {
-  font-size: 10px;
-  color: #888;
-  background: #1a1a1a;
+  font-size: 11px;
+  color: var(--term-muted, #888);
+  background: var(--term-head-bg, #1a1a1a);
   padding: 2px 7px;
   border-radius: 3px;
-  border: 1px solid #333;
+  border: 1px solid var(--term-border, #333);
 }
 .cockpit-terminal-pane__exit {
   margin-left: auto;
   cursor: pointer;
-  color: #888;
+  color: var(--term-muted, #888);
   font-size: 11px;
   border: none;
   background: transparent;
   font: inherit;
-  &:hover { color: #fff; }
+  &:hover { color: var(--term-fg, #fff); }
 }
 .cockpit-terminal-pane__body {
   flex: 1;

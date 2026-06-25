@@ -15,7 +15,7 @@ function navigateRoute(ch: CollabChannel) {
   }
 }
 
-const KIND_ICON: Record<ChannelKind, string> = { matrix: '👥', chat: '💬', group: '🗣' }
+const KIND_ICON: Record<ChannelKind, string> = { matrix: '👥', chat: '💬', group: '🗣', plain: '📡' }
 
 const newOptions: { kind: ChannelKind; labelKey: string; descKey: string }[] = [
   { kind: 'matrix', labelKey: 'cockpit.newMatrix', descKey: 'cockpit.newMatrixDesc' },
@@ -39,7 +39,7 @@ function pickNew(kind: ChannelKind) {
       type="button"
       :data-channel-id="c.id"
       class="cockpit-collab-bar__chip"
-      @click="store.selectChannel(c.id)"
+      @click="navigateRoute(c)"
     >
       <span class="cockpit-collab-bar__chip-icon">{{ KIND_ICON[c.kind] }}</span>
       <span class="cockpit-collab-bar__chip-label">{{ c.label }}</span>
@@ -66,13 +66,13 @@ function pickNew(kind: ChannelKind) {
 </template>
 
 <style scoped lang="scss">
-.cockpit-collab-bar { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-bottom: 1px solid var(--border-light); background: var(--bg-card); position: relative; flex-wrap: wrap; }
+.cockpit-collab-bar { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); position: relative; flex-wrap: wrap; }
 .cockpit-collab-bar__label { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
-.cockpit-collab-bar__chip { display: flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font: inherit;
+.cockpit-collab-bar__chip { display: flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font: inherit; transition: border-color 0.12s, color 0.12s, background 0.12s;
   &:hover { border-color: var(--text-muted); color: var(--text-primary); }
 }
 .cockpit-collab-bar__chip-icon { font-size: 11px; }
-.cockpit-collab-bar__chip-count { font-size: 9px; color: var(--text-muted); }
+.cockpit-collab-bar__chip-count { font-size: 10px; color: var(--text-muted); }
 .cockpit-collab-bar__chip-nav {
   font-size: 10px; color: var(--text-muted); cursor: pointer; margin-left: 2px;
   padding: 1px 3px; border-radius: 3px; line-height: 1;
@@ -82,8 +82,8 @@ function pickNew(kind: ChannelKind) {
   &:hover { background: var(--accent-hover); }
 }
 .cockpit-collab-bar__menu { position: absolute; top: 36px; right: 12px; width: 230px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 30; overflow: hidden; }
-.cockpit-collab-bar__menu-head { padding: 9px 12px; border-bottom: 1px solid var(--border-light); font-size: 11px; font-weight: 700; color: var(--text-primary); }
-.cockpit-collab-bar__menu-opt { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font: inherit; border-bottom: 1px solid var(--border-light);
+.cockpit-collab-bar__menu-head { padding: 9px 12px; border-bottom: 1px solid var(--border-color); font-size: 11px; font-weight: 700; color: var(--text-primary); }
+.cockpit-collab-bar__menu-opt { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font: inherit; border-bottom: 1px solid var(--border-color);
   &:last-child { border-bottom: none; }
   &:hover { background: var(--bg-secondary); }
 }

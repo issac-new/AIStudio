@@ -1,6 +1,5 @@
 import type { App } from 'vue';
 import type { Router } from 'vue-router';
-import { registerRoute } from '../../../registries/client';
 import { features } from '../../../config/features';
 
 export async function registerMatrixChat(_app: App) {
@@ -11,21 +10,21 @@ export async function registerMatrixChat(_app: App) {
 
   console.log('[Custom] Matrix chat feature registered');
 
-  // Register Matrix chat main route
-  registerRoute({
-    path: '/hermes/matrix-chat',
+  // Matrix chat routes are added as children of the cockpit route
+  // (registered dynamically in bootstrap.ts after cockpit is defined)
+}
+
+export function registerMatrixChatRoutes(router: Router) {
+  if (!features.matrixChat) return;
+  // Add matrix-chat as children of the cockpit parent route
+  router.addRoute('hermes.cockpit', {
+    path: 'matrix-chat',
     name: 'hermes.matrixChat',
     component: () => import('./views/MatrixChatView.vue'),
   });
-
-  // Register Matrix chat room route
-  registerRoute({
-    path: '/hermes/matrix-chat/room/:roomId',
+  router.addRoute('hermes.cockpit', {
+    path: 'matrix-chat/room/:roomId',
     name: 'hermes.matrixChatRoom',
     component: () => import('./views/MatrixChatView.vue'),
   });
-}
-
-export function registerMatrixChatRoutes(_router: Router) {
-  // Routes registered via registerRoute() in registerMatrixChat()
 }

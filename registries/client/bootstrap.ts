@@ -32,4 +32,10 @@ export async function bootstrapClient(app: App): Promise<void> {
   for (const route of getRegisteredRoutes()) {
     router.addRoute(route)
   }
+
+  // 注册需要挂载为 cockpit 子路由的动态路由（如 matrix-chat）
+  if (features.matrixChat) {
+    const { registerMatrixChatRoutes } = await import('../../custom/client/matrix-chat')
+    registerMatrixChatRoutes(router)
+  }
 }
