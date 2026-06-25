@@ -358,165 +358,117 @@ async function toggleHomeSubscription(ch: HomeChannel) {
   <div class="cockpit-workspace">
     <div class="cockpit-workspace__form">
       <div v-if="hasTask" class="cockpit-workspace__body">
-    <!-- ═══ AREA 1: Task Header（紧凑：标题 + 摘要 + 状态/优先级/Assignee 单行） ═══ -->
-    <div class="cockpit-workspace__header">
+    <!-- ═══ 统一流式布局：标题 + 字段 + 操作 + 通知 全部合入 ═══ -->
+    <div class="cockpit-workspace__flow">
+      <!-- 标题 -->
       <input class="cockpit-workspace__title-input" :class="{ 'is-pending': isTitlePending }"
         :value="store.currentTitle"
         :placeholder="t('cockpit.editTitlePlaceholder')"
         @input="store.setPendingTitle(($event.target as HTMLInputElement).value)" />
       <div v-if="taskSummary" class="cockpit-workspace__summary">{{ taskSummary }}</div>
-      <div class="cockpit-workspace__meta-row">
+
+      <!-- Row: 状态 + 优先级 + Assignee -->
+      <div class="cockpit-workspace__flow-row">
         <span class="cockpit-workspace__status-chip" :class="'is-' + (task?.status ?? '')">{{ task?.status ?? '' }}</span>
-        <div class="cockpit-workspace__pri-row">
+        <span class="cockpit-workspace__flow-item">
           <span class="cockpit-workspace__pri-label">P</span>
           <span class="cockpit-workspace__pri-val" :class="{ 'is-pending': isPriorityPending }">{{ currentPriority }}</span>
           <button type="button" class="cockpit-workspace__mini-btn" @click="onPriorityDelta(-1)" title="-1">−</button>
           <button type="button" class="cockpit-workspace__mini-btn" @click="onPriorityDelta(1)" title="+1">+</button>
-        </div>
-        <div class="cockpit-workspace__assignee-row">
+        </span>
+        <span class="cockpit-workspace__flow-item">
           <span class="cockpit-workspace__field-label">{{ t('cockpit.assignee') }}</span>
           <span class="cockpit-workspace__field-val" :class="{ 'is-pending': isAssigneePending }">{{ currentAssignee || '-' }}</span>
           <select class="cockpit-workspace__select--sm" :value="currentAssignee" @change="onAssigneeChange">
             <option value="" disabled>-</option>
             <option v-for="opt in assigneeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
-        </div>
+        </span>
       </div>
 
-      <!-- 待提交关联变更提示（紧凑内联） -->
+      <!-- Row: 父/子任务 + 附件 -->
+      <div class="cockpit-workspace__flow-row">
+        <span class="cockpit-workspace__flow-item">
+          <span class="cockpit-workspace__field-label">{{ t('cockpit.parentTasks') }}</span>
+          <template v-if="parentIds.length">
+            <span v-for="pid in parentIds" :key="pid" class="cockpit-workspace__task-link" :class="{ 'is-pending-remove': isLinkPendingRemove(pid, store.selectedTaskId ?? '') }">
+              <a @click="navigateToTask(pid)">{{ pid }}</a>
+              <button type="button" class="cockpit-workspace__link-del" @click="onRemoveParent(pid)">✕</button>
+            </span>
+          </template>
+          <span v-else class="cockpit-workspace__field-val--muted">-</span>
+          <select v-model="newParentId" class="cockpit-workspace__link-select--sm"><option value="">+</option><option v-for="tk in candidateTasksForParent" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option></select>
+          <button v-if="newParentId" type="button" class="cockpit-workspace__link-add-sm" @click="onAddParent">✓</button>
+        </span>
+        <span class="cockpit-workspace__flow-item">
+          <span class="cockpit-workspace__field-label">{{ t('cockpit.childTasks') }}</span>
+          <template v-if="childIds.length">
+            <span v-for="cid in childIds" :key="cid" class="cockpit-workspace__task-link" :class="{ 'is-pending-remove': isLinkPendingRemove(store.selectedTaskId ?? '', cid) }">
+              <a @click="navigateToTask(cid)">{{ cid }}</a>
+              <button type="button" class="cockpit-workspace__link-del" @click="onRemoveChild(cid)">✕</button>
+            </span>
+          </template>
+          <span v-else class="cockpit-workspace__field-val--muted">-</span>
+          <select v-model="newChildId" class="cockpit-workspace__link-select--sm"><option value="">+</option><option v-for="tk in candidateTasksForChild" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option></select>
+          <button v-if="newChildId" type="button" class="cockpit-workspace__link-add-sm" @click="onAddChild">✓</button>
+        </span>
+      </div>
+
+      <!-- Row: 附件 -->
+      <div class="cockpit-workspace__flow-row">
+        <span class="cockpit-workspace__flow-item">
+          <span class="cockpit-workspace__field-label">{{ t('cockpit.attachments') }}</span>
+          <template v-if="attachments.length">
+            <span v-for="att in attachments" :key="att.id" class="cockpit-workspace__attach-chip">{{ att.filename }}<span class="cockpit-workspace__attach-chip-sz">{{ formatFileSize(att.size) }}</span><button type="button" class="cockpit-workspace__attach-chip-del" @click="store.deleteAttachment(att.id)">×</button></span>
+          </template>
+          <span v-else class="cockpit-workspace__field-val--muted">-</span>
+          <label class="cockpit-workspace__upload-btn--sm"><input type="file" class="cockpit-workspace__file-input" @change="onFileSelected">+</label>
+        </span>
+      </div>
+
+      <!-- Row: Description -->
+      <div class="cockpit-workspace__flow-row">
+        <textarea class="cockpit-workspace__textarea" :class="{ 'is-pending': isBodyPending }" :value="currentBody"
+          :placeholder="t('cockpit.descriptionPlaceholder')" @input="onBodyInput" />
+      </div>
+
+      <!-- Row: 动作按钮（Specify, Decompose, 状态流转）flex-wrap -->
+      <div class="cockpit-workspace__flow-row">
+        <button v-if="task?.status === 'triage'" type="button" class="cockpit-workspace__btn-mini" :disabled="actionBusy" @click="doSpecify">✨ {{ t('cockpit.specify') }}</button>
+        <button v-if="task?.status === 'triage'" type="button" class="cockpit-workspace__btn-mini" :disabled="actionBusy" @click="doDecompose">⚗ {{ t('cockpit.decompose') }}</button>
+        <button type="button" class="cockpit-workspace__btn-mini" :disabled="!canMoveTo('triage')" @click="attemptStatusChange('triage')">→ {{ t('cockpit.moveToTriage') }}</button>
+        <button type="button" class="cockpit-workspace__btn-mini" :disabled="!canMoveTo('ready')" @click="attemptStatusChange('ready')">→ ready</button>
+        <button type="button" class="cockpit-workspace__btn-mini" :disabled="!canMoveTo('blocked')" @click="attemptStatusChange('blocked')">⚠ {{ t('cockpit.moveToBlocked') }}</button>
+        <button v-if="task?.status === 'blocked'" type="button" class="cockpit-workspace__btn-mini" @click="doStatusPatch({ status: 'ready' })">{{ t('cockpit.unblock') }}</button>
+        <button type="button" class="cockpit-workspace__btn-mini is-pri" :disabled="!canMoveTo('done')" @click="attemptStatusChange('done')">✓ done</button>
+        <button type="button" class="cockpit-workspace__btn-mini" :disabled="!canMoveTo('archived')" @click="attemptStatusChange('archived')">📦 archive</button>
+      </div>
+      <div v-if="actionMsg" :class="['cockpit-workspace__action-msg', actionMsg.ok ? 'is-ok' : 'is-err']">{{ actionMsg.text }}</div>
+
+      <!-- Row: Recovery（仅 running） -->
+      <div v-if="task?.status === 'running'" class="cockpit-workspace__flow-row">
+        <button type="button" class="cockpit-workspace__btn-mini" :disabled="actionBusy" @click="doReclaim">{{ t('cockpit.reclaim') }}</button>
+        <input v-model="reassignProfile" class="cockpit-workspace__link-input" :placeholder="t('cockpit.reassignProfile')" style="max-width:160px" />
+        <button type="button" class="cockpit-workspace__btn-mini" :disabled="actionBusy || !reassignProfile.trim()" @click="doReassign">{{ t('cockpit.reassign') }}</button>
+      </div>
+
+      <!-- Row: Diagnostics -->
+      <div class="cockpit-workspace__flow-row">
+        <KanbanDiagnosticsSection v-if="task" :task="task" :diagnostics="diagItems" :assignees="assigneeList" @refresh="refreshDiagnostics" />
+      </div>
+
+      <!-- Row: Home-channel 通知订阅 -->
+      <div v-if="homeChannels.length" class="cockpit-workspace__flow-row">
+        <button v-for="ch in homeChannels" :key="ch.platform" type="button" class="cockpit-workspace__btn-mini" :class="{ 'is-on': ch.subscribed }" :disabled="homeBusy[ch.platform]" @click="toggleHomeSubscription(ch)">
+          {{ ch.platform }} · {{ ch.subscribed ? t('cockpit.unsubscribe') : t('cockpit.subscribe') }}
+        </button>
+      </div>
+
+      <!-- 关联变更提示 -->
       <div v-if="pendingLinkAdds.length || pendingLinkRemoves.length" class="cockpit-workspace__pending-hint">
         ⏳ {{ pendingLinkAdds.length + pendingLinkRemoves.length }} {{ t('cockpit.pendingLinksHint') }}
       </div>
     </div>
-
-    <!-- ═══ AREA 2: 关联 & 附件（紧凑内联）═══ -->
-    <div class="cockpit-workspace__compact-area">
-      <!-- 父任务 -->
-      <div class="cockpit-workspace__compact-row">
-        <span class="cockpit-workspace__field-label">{{ t('cockpit.parentTasks') }}</span>
-        <template v-if="parentIds.length">
-          <span v-for="pid in parentIds" :key="pid"
-            class="cockpit-workspace__task-link"
-            :class="{ 'is-pending-remove': isLinkPendingRemove(pid, store.selectedTaskId ?? '') }">
-            <a @click="navigateToTask(pid)">{{ pid }}</a>
-            <button type="button" class="cockpit-workspace__link-del" @click="onRemoveParent(pid)">✕</button>
-          </span>
-        </template>
-        <span v-else class="cockpit-workspace__field-val--muted">-</span>
-        <select v-model="newParentId" class="cockpit-workspace__link-select--sm">
-          <option value="">+</option>
-          <option v-for="tk in candidateTasksForParent" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option>
-        </select>
-        <button v-if="newParentId" type="button" class="cockpit-workspace__link-add-sm" @click="onAddParent">✓</button>
-      </div>
-      <!-- 子任务 -->
-      <div class="cockpit-workspace__compact-row">
-        <span class="cockpit-workspace__field-label">{{ t('cockpit.childTasks') }}</span>
-        <template v-if="childIds.length">
-          <span v-for="cid in childIds" :key="cid"
-            class="cockpit-workspace__task-link"
-            :class="{ 'is-pending-remove': isLinkPendingRemove(store.selectedTaskId ?? '', cid) }">
-            <a @click="navigateToTask(cid)">{{ cid }}</a>
-            <button type="button" class="cockpit-workspace__link-del" @click="onRemoveChild(cid)">✕</button>
-          </span>
-        </template>
-        <span v-else class="cockpit-workspace__field-val--muted">-</span>
-        <select v-model="newChildId" class="cockpit-workspace__link-select--sm">
-          <option value="">+</option>
-          <option v-for="tk in candidateTasksForChild" :key="tk.id" :value="tk.id">{{ taskOptionLabel(tk) }}</option>
-        </select>
-        <button v-if="newChildId" type="button" class="cockpit-workspace__link-add-sm" @click="onAddChild">✓</button>
-      </div>
-      <!-- 附件（紧凑单行） -->
-      <div class="cockpit-workspace__compact-row">
-        <span class="cockpit-workspace__field-label">{{ t('cockpit.attachments') }}</span>
-        <template v-if="attachments.length">
-          <span v-for="att in attachments" :key="att.id" class="cockpit-workspace__attach-chip">
-            {{ att.filename }}<span class="cockpit-workspace__attach-chip-sz">{{ formatFileSize(att.size) }}</span>
-            <button type="button" class="cockpit-workspace__attach-chip-del" @click="store.deleteAttachment(att.id)">×</button>
-          </span>
-        </template>
-        <span v-else class="cockpit-workspace__field-val--muted">-</span>
-        <label class="cockpit-workspace__upload-btn--sm">
-          +
-          <input type="file" class="cockpit-workspace__file-input" @change="onFileSelected">
-        </label>
-      </div>
-    </div>
-
-    <!-- Description（紧凑 textarea） -->
-    <div class="cockpit-workspace__section">
-      <label class="cockpit-workspace__section-title">{{ t('cockpit.description') }}</label>
-      <textarea class="cockpit-workspace__textarea" :class="{ 'is-pending': isBodyPending }" :value="currentBody"
-        :placeholder="t('cockpit.descriptionPlaceholder')"
-        @input="onBodyInput" />
-    </div>
-
-        <!-- ═══ 动作命令区（即时执行）═══ -->
-        <div class="cockpit-workspace__section cockpit-workspace__actions">
-          <label class="cockpit-workspace__section-title">{{ t('cockpit.actions') }}</label>
-          <div class="cockpit-workspace__action-row">
-            <button v-if="task?.status === 'triage'" type="button" class="cockpit-workspace__btn-mini"
-              :disabled="actionBusy" @click="doSpecify">✨ {{ t('cockpit.specify') }}</button>
-            <button v-if="task?.status === 'triage'" type="button" class="cockpit-workspace__btn-mini"
-              :disabled="actionBusy" @click="doDecompose">⚗ {{ t('cockpit.decompose') }}</button>
-          </div>
-          <div class="cockpit-workspace__action-row">
-            <button type="button" class="cockpit-workspace__btn-mini"
-              :disabled="!canMoveTo('triage')" @click="attemptStatusChange('triage')">→ {{ t('cockpit.moveToTriage') }}</button>
-            <button type="button" class="cockpit-workspace__btn-mini"
-              :disabled="!canMoveTo('ready')" @click="attemptStatusChange('ready')">→ {{ t('cockpit.moveToReady') }}</button>
-            <button type="button" class="cockpit-workspace__btn-mini"
-              :disabled="!canMoveTo('blocked')" @click="attemptStatusChange('blocked')">⚠ {{ t('cockpit.moveToBlocked') }}</button>
-            <button v-if="task?.status === 'blocked'" type="button" class="cockpit-workspace__btn-mini"
-              @click="doStatusPatch({ status: 'ready' })">{{ t('cockpit.unblock') }}</button>
-            <button type="button" class="cockpit-workspace__btn-mini is-pri"
-              :disabled="!canMoveTo('done')" @click="attemptStatusChange('done')">✓ {{ t('cockpit.moveToDone') }}</button>
-            <button type="button" class="cockpit-workspace__btn-mini"
-              :disabled="!canMoveTo('archived')" @click="attemptStatusChange('archived')">📦 {{ t('cockpit.moveToArchived') }}</button>
-          </div>
-          <div v-if="actionMsg" :class="['cockpit-workspace__action-msg', actionMsg.ok ? 'is-ok' : 'is-err']">
-            {{ actionMsg.text }}
-          </div>
-
-          <!-- B5/B6 Recovery（仅 running） -->
-          <div v-if="task?.status === 'running'" class="cockpit-workspace__sub-section">
-            <label class="cockpit-workspace__sub-title">{{ t('cockpit.recovery') }}</label>
-            <div class="cockpit-workspace__action-row">
-              <button type="button" class="cockpit-workspace__btn-mini"
-                :disabled="actionBusy" @click="doReclaim">{{ t('cockpit.reclaim') }}</button>
-              <input v-model="reassignProfile" class="cockpit-workspace__link-input"
-                :placeholder="t('cockpit.reassignProfile')" style="max-width:160px" />
-              <button type="button" class="cockpit-workspace__btn-mini"
-                :disabled="actionBusy || !reassignProfile.trim()" @click="doReassign">{{ t('cockpit.reassign') }}</button>
-            </div>
-          </div>
-
-          <!-- B7 Diagnostics -->
-          <div class="cockpit-workspace__sub-section">
-            <label class="cockpit-workspace__sub-title">{{ t('cockpit.diagnostics') }}</label>
-            <KanbanDiagnosticsSection
-              v-if="task"
-              :task="task"
-              :diagnostics="diagItems"
-              :assignees="assigneeList"
-              @refresh="refreshDiagnostics" />
-          </div>
-
-          <!-- B8 Home-channel 通知订阅 -->
-          <div v-if="homeChannels.length" class="cockpit-workspace__sub-section">
-            <label class="cockpit-workspace__sub-title">{{ t('cockpit.notifyHomeChannels') }}</label>
-            <div class="cockpit-workspace__action-row">
-              <button v-for="ch in homeChannels" :key="ch.platform" type="button"
-                class="cockpit-workspace__btn-mini"
-                :class="{ 'is-on': ch.subscribed }"
-                :disabled="homeBusy[ch.platform]"
-                @click="toggleHomeSubscription(ch)">
-                {{ ch.platform }} · {{ ch.subscribed ? t('cockpit.unsubscribe') : t('cockpit.subscribe') }}
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- B3 确认弹窗 -->
         <CockpitConfirmDialog
@@ -607,53 +559,35 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 <style scoped lang="scss">
 .cockpit-workspace { display: flex; flex: 1; min-height: 0; }
 .cockpit-workspace__form { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.cockpit-workspace__body { flex: 1; overflow-y: auto; padding: 20px 24px; max-width: 100%; }
+.cockpit-workspace__body { flex: 1; overflow-y: auto; padding: 16px 18px; max-width: 100%; }
 .cockpit-workspace__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; flex-direction: column; gap: 8px; padding: 40px 24px; text-align: center; }
 
-/* AREA 1: Header（紧凑） */
-.cockpit-workspace__header { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
-.cockpit-workspace__title { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 6px; }
-.cockpit-workspace__title-input { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 4px; width: 100%; border: none; background: transparent; border-bottom: 1px solid transparent; padding: 2px 0; font-family: inherit;
+/* ── 统一流式布局 ── */
+.cockpit-workspace__flow { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+.cockpit-workspace__title-input { font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.4; margin-bottom: 2px; width: 100%; border: none; background: transparent; border-bottom: 1px solid transparent; padding: 2px 0; font-family: inherit;
   &:hover { border-bottom-color: var(--border-color); }
   &:focus { border-bottom-color: var(--accent-primary); outline: none; }
+  &.is-pending { color: var(--warning, #e6a23c); border-bottom-color: var(--warning, #e6a23c); }
 }
-.cockpit-workspace__summary { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 6px; }
-.cockpit-workspace__meta-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.cockpit-workspace__status-chip { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
-.cockpit-workspace__pri-row { display: flex; align-items: center; gap: 3px; }
-.cockpit-workspace__pri-label { font-size: 11px; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, monospace; }
+.cockpit-workspace__summary { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-bottom: 6px; }
+
+/* Flow row: flex-wrap 自然换行，一行可放多个 item */
+.cockpit-workspace__flow-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 2px 0; }
+.cockpit-workspace__flow-item { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Shared compact atoms */
+.cockpit-workspace__field-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+.cockpit-workspace__field-val { font-size: 11px; color: var(--text-primary); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cockpit-workspace__field-val.is-pending { color: var(--warning, #e6a23c); }
+.cockpit-workspace__field-val--muted { font-size: 10px; color: var(--text-muted); }
+.cockpit-workspace__status-chip { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+.cockpit-workspace__pri-label { font-size: 10px; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, monospace; }
 .cockpit-workspace__pri-val { font-size: 12px; color: var(--text-primary); font-weight: 600; font-family: ui-monospace, monospace; }
 .cockpit-workspace__pri-val.is-pending { color: var(--warning, #e6a23c); }
-.cockpit-workspace__assignee-row { display: flex; align-items: center; gap: 4px; }
-.cockpit-workspace__field-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
-.cockpit-workspace__field-val { font-size: 12px; color: var(--text-primary); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cockpit-workspace__field-val.is-pending,
-.cockpit-workspace__title-input.is-pending { color: var(--warning, #e6a23c); border-bottom-color: var(--warning, #e6a23c); }
-.cockpit-workspace__field-val--muted { font-size: 11px; color: var(--text-muted); }
-.cockpit-workspace__select--sm { font-family: inherit; font-size: 11px; padding: 2px 4px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); max-width: 120px; }
-
-/* AREA 2: 关联 & 附件（紧凑单行） */
-.cockpit-workspace__compact-area { margin-bottom: 10px; }
-.cockpit-workspace__compact-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; flex-wrap: wrap; }
-.cockpit-workspace__link-select--sm { font-family: ui-monospace, monospace; font-size: 10px; padding: 1px 3px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-muted); max-width: 100px; }
-.cockpit-workspace__link-add-sm { font-family: inherit; font-size: 10px; padding: 1px 5px; border: 1px solid var(--accent-primary); border-radius: 3px; background: transparent; color: var(--accent-primary); cursor: pointer; }
-.cockpit-workspace__attach-chip { font-family: ui-monospace, monospace; font-size: 10px; display: inline-flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 1px 5px; border-radius: 3px; color: var(--text-primary); }
-.cockpit-workspace__attach-chip-sz { font-size: 9px; color: var(--text-muted); }
-.cockpit-workspace__attach-chip-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 9px; padding: 0 1px; line-height: 1;
-  &:hover { color: var(--error); }
-}
-.cockpit-workspace__upload-btn--sm { display: inline-flex; align-items: center; font-size: 11px; width: 18px; height: 18px; border: 1px dashed var(--border-color); border-radius: 4px; color: var(--text-muted); cursor: pointer; justify-content: center;
-  &:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
-}
-
-/* Section（缩减间距） */
-.cockpit-workspace__section { margin-bottom: 10px; }
-.cockpit-workspace__section-title { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
-.cockpit-workspace__textarea { width: 100%; font-family: inherit; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px; background: var(--bg-card); color: var(--text-primary); min-height: 48px; resize: vertical; }
-.cockpit-workspace__textarea.is-pending { border-color: var(--warning, #e6a23c); background: rgba(var(--warning-rgb, 230,162,60), 0.04); }
-.cockpit-workspace__mini-btn { width: 22px; height: 22px; padding: 0; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center;
+.cockpit-workspace__mini-btn { width: 20px; height: 20px; padding: 0; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
+.cockpit-workspace__select--sm { font-family: inherit; font-size: 11px; padding: 1px 3px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-primary); max-width: 110px; }
 .cockpit-workspace__task-link { font-family: ui-monospace, monospace; font-size: 10px; display: inline-flex; align-items: center; gap: 3px; background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px;
   a { color: var(--accent-primary); cursor: pointer; &:hover { text-decoration: underline; } }
   &.is-pending-remove { opacity: 0.4; text-decoration: line-through; }
@@ -661,10 +595,44 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 .cockpit-workspace__link-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 9px; padding: 0 1px;
   &:hover { color: var(--error); }
 }
-.cockpit-workspace__pending-hint { font-size: 10px; color: var(--warning); background: rgba(var(--warning-rgb), 0.08); padding: 3px 8px; border-radius: 4px; margin-top: 6px; }
+.cockpit-workspace__link-select--sm { font-family: ui-monospace, monospace; font-size: 10px; padding: 1px 3px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-muted); max-width: 90px; }
+.cockpit-workspace__link-add-sm { font-family: inherit; font-size: 10px; padding: 1px 5px; border: 1px solid var(--accent-primary); border-radius: 3px; background: transparent; color: var(--accent-primary); cursor: pointer; }
+.cockpit-workspace__attach-chip { font-family: ui-monospace, monospace; font-size: 10px; display: inline-flex; align-items: center; gap: 3px; background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px; color: var(--text-primary); }
+.cockpit-workspace__attach-chip-sz { font-size: 9px; color: var(--text-muted); }
+.cockpit-workspace__attach-chip-del { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 9px; padding: 0 1px; line-height: 1;
+  &:hover { color: var(--error); }
+}
+.cockpit-workspace__upload-btn--sm { display: inline-flex; align-items: center; font-size: 11px; width: 18px; height: 18px; border: 1px dashed var(--border-color); border-radius: 3px; color: var(--text-muted); cursor: pointer; justify-content: center;
+  &:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+}
+.cockpit-workspace__textarea { width: 100%; font-family: inherit; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; background: var(--bg-card); color: var(--text-primary); min-height: 44px; resize: vertical;
+  &.is-pending { border-color: var(--warning, #e6a23c); background: rgba(var(--warning-rgb, 230,162,60), 0.04); }
+}
+.cockpit-workspace__pending-hint { font-size: 10px; color: var(--warning); background: rgba(var(--warning-rgb), 0.08); padding: 3px 8px; border-radius: 4px; margin-top: 4px; }
+.cockpit-workspace__link-input { font-family: ui-monospace, monospace; font-size: 11px; padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-primary); }
 .cockpit-workspace__file-input { display: none; }
 
-/* AREA 3: A2UI */
+/* 动作按钮 */
+.cockpit-workspace__btn-mini { font: inherit; font-size: 11px; padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+  &:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
+  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+}
+.cockpit-workspace__action-msg { font-size: 10px; padding: 2px 6px; border-radius: 3px; width: 100%; }
+.cockpit-workspace__action-msg.is-ok { color: var(--success, #52c41a); background: rgba(82,196,26,0.08); }
+.cockpit-workspace__action-msg.is-err { color: var(--error); background: rgba(255,77,79,0.08); }
+
+/* Footer */
+.cockpit-workspace__foot { flex-shrink: 0; padding: 10px 14px; border-top: 1px solid var(--border-color); background: var(--bg-card); display: flex; gap: 8px; }
+.cockpit-workspace__btn { font-family: inherit; font-size: 12px; border-radius: 6px; padding: 5px 12px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
+  &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
+}
+
+/* ── A2UI（保持原样，与评论区一起成为焦点）── */
+.cockpit-workspace__section { margin-bottom: 10px; }
+.cockpit-workspace__section-title { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
 .cockpit-workspace__sub { font-size: 10px; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
 .cockpit-workspace__opt { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 6px; cursor: pointer; background: var(--bg-card); font: inherit; color: var(--text-primary); width: 100%; text-align: left;
   &:hover { border-color: var(--text-muted); }
@@ -682,33 +650,10 @@ async function toggleHomeSubscription(ch: HomeChannel) {
   &:hover { border-color: var(--text-muted); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
-.cockpit-workspace__textarea { width: 100%; font-family: inherit; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 10px; background: var(--bg-card); color: var(--text-primary); min-height: 64px; resize: vertical; }
 .cockpit-workspace__score { display: flex; gap: 4px; }
 .cockpit-workspace__star { font-size: 20px; color: var(--border-color); cursor: pointer; border: none; background: none; font: inherit; padding: 0;
   &.is-on { color: var(--warning); }
 }
-
-/* Footer */
-.cockpit-workspace__foot { flex-shrink: 0; padding: 12px 16px; border-top: 1px solid var(--border-color); background: var(--bg-card); display: flex; gap: 8px; }
-.cockpit-workspace__btn { font-family: inherit; font-size: 13px; border-radius: 6px; padding: 6px 14px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
-  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
-  &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
-}
-
-/* 动作命令区 */
-.cockpit-workspace__actions { border-top: 1px solid var(--border-color); padding-top: 12px; }
-.cockpit-workspace__action-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.cockpit-workspace__btn-mini { font: inherit; font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
-  &:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
-  &.is-pri { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
-  &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
-}
-.cockpit-workspace__action-msg { font-size: 11px; margin-top: 6px; padding: 4px 8px; border-radius: 4px; }
-.cockpit-workspace__action-msg.is-ok { color: var(--success, #52c41a); background: rgba(82,196,26,0.08); }
-.cockpit-workspace__action-msg.is-err { color: var(--error); background: rgba(255,77,79,0.08); }
-.cockpit-workspace__sub-section { margin-top: 10px; }
-.cockpit-workspace__sub-title { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
 
 /* 评论区 */
 .cockpit-workspace__comment-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 180px; overflow-y: auto; }
