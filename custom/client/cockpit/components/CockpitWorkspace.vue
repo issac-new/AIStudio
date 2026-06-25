@@ -444,6 +444,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         <textarea class="cockpit-workspace__textarea" :class="{ 'is-pending': isBodyPending }" :value="currentBody"
           :placeholder="t('cockpit.descriptionPlaceholder')" @input="onBodyInput" />
       </div>
+      <div v-if="currentBody" class="cockpit-workspace__desc-preview" v-html="renderMarkdown(currentBody)" />
 
       <!-- Row: 动作按钮（Specify, Decompose, 状态流转）flex-wrap -->
       <div class="cockpit-workspace__flow-row">
@@ -641,5 +642,23 @@ async function toggleHomeSubscription(ch: HomeChannel) {
   :deep(a) { color: var(--accent-primary); &:hover { text-decoration: underline; } }
   :deep(ul, ol) { padding-left: 16px; margin: 2px 0; }
   :deep(blockquote) { border-left: 3px solid var(--accent-primary); padding-left: 8px; margin: 4px 0; color: var(--text-secondary); }
+}
+.cockpit-workspace__desc-preview { padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); font-size: 13px; color: var(--text-primary); line-height: 1.6; word-break: break-word;
+  :deep(p) { margin: 0 0 6px; &:last-child { margin-bottom: 0; } }
+  :deep(code) { font-family: ui-monospace, monospace; font-size: 12px; background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px; }
+  :deep(pre) { background: var(--bg-secondary); padding: 8px 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; margin: 6px 0;
+    code { background: none; padding: 0; }
+  }
+  :deep(a) { color: var(--accent-primary); &:hover { text-decoration: underline; } }
+  :deep(ul, ol) { padding-left: 18px; margin: 4px 0; }
+  :deep(blockquote) { border-left: 3px solid var(--accent-primary); padding-left: 10px; margin: 6px 0; color: var(--text-secondary); }
+  :deep(h1, h2, h3, h4) { margin: 8px 0 4px; font-weight: 600; }
+  :deep(h1) { font-size: 18px; }
+  :deep(h2) { font-size: 15px; }
+  :deep(h3) { font-size: 14px; }
+  :deep(table) { border-collapse: collapse; margin: 4px 0;
+    th, td { border: 1px solid var(--border-color); padding: 4px 8px; font-size: 12px; }
+    th { background: var(--bg-secondary); }
+  }
 }
 </style>
