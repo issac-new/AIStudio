@@ -151,6 +151,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const midTopCollapsed = ref(false)     // 协作图折叠（向上收）
   const midBottomCollapsed = ref(false)  // 时序流折叠（向下收）
   const workspaceMode = ref<WorkspaceMode>('work')
+  const swarmKanbanVisible = ref(false)
   const activeChannelId = ref<string | null>(null)
   const maximized = ref<Record<ColumnKey, boolean>>({ left: false, mid: false, right: false })
   const terminalMode = ref(false)
@@ -1363,7 +1364,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     filesForSelectedTask, workItemForSelectedTask, selectedTaskDetail, boardSlugOf,
     filteredHistory, messagesForActiveChannel, templates, currentUserName,
     // 客户端态
-    filters, searchQuery, _sessionSearching, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, activeChannelId, maximized,
+    filters, searchQuery, _sessionSearching, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, swarmKanbanVisible, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
     titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
     kanbanDetailOpen, kanbanDetailTask, detailExpanded,

@@ -36,7 +36,7 @@ function goTerminal() {
   store.enterTerminal()
 }
 function goChat() {
-  router.push({ name: 'hermes.chat' })
+  router.push({ name: 'hermes.matrixChat' })
 }
 </script>
 

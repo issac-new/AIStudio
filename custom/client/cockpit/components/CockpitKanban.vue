@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue'
 import { NSelect } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import { useCockpitStore, type CockpitPriority } from '@/custom/cockpit/store/cockpit'
 import { bucketStatus, type CockpitStatusBucket } from '@/custom/cockpit/adapters/task-adapter'
 import { parseTenant, tenantDisplayLabel, type ParsedTenant } from '@/custom/kanban/utils/tenant-parser'
 
 const store = useCockpitStore()
+const { t } = useI18n()
 defineEmits<{ (e: 'collapse'): void; (e: 'enterCenter'): void; (e: 'maximize'): void; (e: 'fold'): void }>()
 
 // 任务列表容器引用，用于滚动到选中项
@@ -171,7 +173,8 @@ function statusBucketLabel(s: string): string {
 <template>
   <div class="cockpit-kanban">
     <div class="cockpit-kanban__head">
-      <div class="cockpit-kanban__date-inline">
+      <div class="cockpit-kanban__head-row">
+        <div class="cockpit-kanban__date-inline">
         <input type="date" class="cockpit-kanban__date" data-filter="date-from"
           :value="store.filters.dateRange.from ?? ''"
           @change="store.setDateRangeFilter(($event.target as HTMLInputElement).value || null, store.filters.dateRange.to)" />
@@ -190,10 +193,17 @@ function statusBucketLabel(s: string): string {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
       </div>
+      </div>
     </div>
 
     <!-- 筛选器 -->
     <div class="cockpit-kanban__filters">
+      <div v-if="boardOptions.length > 1" class="cockpit-kanban__frow">
+        <span class="cockpit-kanban__flabel">看板</span>
+        <button v-for="sl in boardOptions" :key="sl" type="button"
+          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.boardSlugs.includes(sl) }"
+          @click="store.toggleFilter('boardSlugs', sl)">{{ sl }}</button>
+      </div>
       <div class="cockpit-kanban__frow">
         <span class="cockpit-kanban__flabel">优先</span>
         <button v-for="p in priorities" :key="p" type="button" :data-filter="p"
@@ -227,12 +237,6 @@ function statusBucketLabel(s: string): string {
             @update:value="(v: any) => setTenantFilterValues(field.filterKey, v)"
           />
         </div>
-      </div>
-      <div v-if="boardOptions.length > 1" class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">看板</span>
-        <button v-for="sl in boardOptions" :key="sl" type="button" :data-filter="sl"
-          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.boardSlugs.includes(sl) }"
-          @click="store.toggleFilter('boardSlugs', sl)">{{ sl }}</button>
       </div>
     </div>
 
@@ -302,13 +306,22 @@ function statusBucketLabel(s: string): string {
 <style scoped lang="scss">
 .cockpit-kanban { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .cockpit-kanban__head {
-  padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--border-color);
+  padding: 10px 12px 6px 16px; border-bottom: 1px solid var(--border-color);
+  display: flex; flex-direction: column;
+}
+.cockpit-kanban__head-row {
   display: flex; align-items: baseline; gap: 8px;
 }
-.cockpit-kanban__title { font-size: 13px; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
 .cockpit-kanban__head-actions {
   margin-left: auto; display: flex; align-items: center; gap: 4px; flex-shrink: 0;
 }
+.cockpit-kanban__head-actions {
+  margin-left: auto; display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+}
+.cockpit-kanban__head-boards {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding-bottom: 4px;
+}
+.cockpit-kanban__head-boards-spacer { flex: 1; }
 .cockpit-kanban__fold {
   width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-muted); cursor: pointer; flex-shrink: 0;

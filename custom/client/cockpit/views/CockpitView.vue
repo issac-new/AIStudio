@@ -17,6 +17,7 @@ import CockpitNotifyModal from '@/custom/cockpit/components/CockpitNotifyModal.v
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitTemplateManager from '@/custom/cockpit/components/CockpitTemplateManager.vue'
 import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
+import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
@@ -36,7 +37,7 @@ const chatSubRoutes = new Set([
 const isChatSubRoute = computed(() => chatSubRoutes.has(route.name as string))
 
 const goSettings = () => router.push({ name: 'hermes.settings' })
-const goCenter = () => router.push({ name: 'hermes.kanban' })
+const goCenter = () => router.push({ name: 'hermes.swarmKanban' })
 
 // 时间戳格式化（秒/毫秒兼容）
 function formatTimestamp(ts: number | null | undefined): string {
@@ -195,6 +196,14 @@ function onColCtrl(col: ColumnKey) {
         </div>
       </div>
     </div>
+
+    <!-- Swarm Kanban 全屏弹窗 -->
+    <div v-if="store.swarmKanbanVisible" class="cockpit-overlay" @click="store.swarmKanbanVisible = false" />
+    <div v-if="store.swarmKanbanVisible" class="cockpit-swarm-modal">
+      <div class="cockpit-swarm-modal__body">
+        <SwarmKanbanView />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -320,4 +329,19 @@ function onColCtrl(col: ColumnKey) {
   height: auto !important;
   max-height: none !important;
 }
+.cockpit-swarm-modal {
+  position: fixed; top: 84px; right: 0; bottom: 0; left: 0; z-index: 100;
+  display: flex; flex-direction: column; background: var(--bg-primary);
+}
+.cockpit-swarm-modal__head {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border-color);
+  font-size: 14px; font-weight: 600;
+}
+.cockpit-swarm-modal__close {
+  width: 28px; height: 28px; border: none; background: transparent; cursor: pointer;
+  font-size: 18px; color: var(--text-muted); border-radius: 4px;
+  &:hover { background: var(--bg-secondary); color: var(--text-primary); }
+}
+.cockpit-swarm-modal__body { flex: 1; min-height: 0; overflow: auto; }
 </style>

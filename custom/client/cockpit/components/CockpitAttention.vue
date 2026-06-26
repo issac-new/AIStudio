@@ -10,6 +10,10 @@ function handleClick(item: { taskId: string; title: string }) {
   store.focusOnTaskFromAttention(item.taskId, item.title)
 }
 
+function goSwarmKanban() {
+  store.swarmKanbanVisible = true
+}
+
 // ── 刷新按钮：30s 倒计时 → 自动触发 → 错误暂停 ──
 const REFRESH_SEC = 30
 const countdown = ref(REFRESH_SEC)
@@ -66,7 +70,7 @@ onUnmounted(() => { stopCountdown() })
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         <span class="cockpit-attention__refresh-cd">{{ countdown }}</span>
       </button>
-      <span class="cockpit-attention__label-text">{{ t('cockpit.attention') }}</span>
+      <button type="button" class="cockpit-attention__tab" @click="goSwarmKanban" title="Swarm kanban">⊞ swarm kanban</button>
     </div>
     <div class="cockpit-attention__items">
       <span v-if="store.attention.length === 0" class="cockpit-attention__empty">无待处理事项</span>
@@ -127,6 +131,14 @@ onUnmounted(() => { stopCountdown() })
 @keyframes att-refresh-spin { to { transform: rotate(360deg); } }
 @keyframes att-refresh-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 .cockpit-attention__label-text { white-space: nowrap; }
+.cockpit-attention__tab {
+  flex-shrink: 0; cursor: pointer;
+  font-size: 13px; font-weight: 600; font-family: inherit; color: var(--text-primary);
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: 6px; padding: 5px 12px;
+  transition: background 0.12s, border-color 0.12s;
+  &:hover { background: var(--bg-card-hover); border-color: var(--text-muted); }
+}
 .cockpit-attention__items {
   flex: 1;
   display: flex;

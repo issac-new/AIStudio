@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { NButton, NInput, NSelect, NSpace, NCheckbox, NModal, NForm, NFormItem, NTooltip, NPopconfirm } from 'naive-ui'
 import type { KanbanAssignee, KanbanBoard } from '@/api/hermes/kanban'
 import { useI18n } from 'vue-i18n'
+import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const props = defineProps<{
   boards: KanbanBoard[]
@@ -33,6 +34,10 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+function closeModal() {
+  useCockpitStore().swarmKanbanVisible = false
+}
 
 // --- Board management (create + archive) ---------------------------------
 const showCreateBoard = ref(false)
@@ -199,6 +204,14 @@ const hasActiveFilters = computed(() =>
           </template>
           {{ t('kanban.board.archiveConfirm', { name: currentBoard }) }}
         </NPopconfirm>
+        <NButton
+          size="small"
+          quaternary
+          @click="closeModal"
+          title="关闭"
+        >
+          ×
+        </NButton>
       </div>
     </div>
 
