@@ -1,3 +1,19 @@
+diff --git a/packages/client/index.html b/packages/client/index.html
+index 98c3768a..08dab7d8 100644
+--- a/packages/client/index.html
++++ b/packages/client/index.html
+@@ -8,9 +8,9 @@
+   <link rel="manifest" href="/manifest.webmanifest" />
+   <meta name="theme-color" content="#f7f7f4" />
+   <meta name="apple-mobile-web-app-capable" content="yes" />
+-  <meta name="apple-mobile-web-app-title" content="Hermes Studio" />
++  <meta name="apple-mobile-web-app-title" content="Swarm Studio" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-  <title>Hermes Studio</title>
++  <title>Swarm Studio</title>
+   <style>
+     html,
+     body,
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
 index 4231800d..34d2fbd2 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
@@ -1170,7 +1186,7 @@ index 23546401..0bf34d52 100644
  
  function isValidDeviceIdentity(value: any): value is DeviceIdentity {
 diff --git a/packages/website/src/i18n/en.ts b/packages/website/src/i18n/en.ts
-index 4c920e9b..77c077ff 100644
+index 4c920e9b..c54dea5f 100644
 --- a/packages/website/src/i18n/en.ts
 +++ b/packages/website/src/i18n/en.ts
 @@ -1,6 +1,6 @@
@@ -1192,13 +1208,18 @@ index 4c920e9b..77c077ff 100644
      cta: 'Download Desktop',
      docsCta: 'Read Docs',
      viewGithub: 'View on GitHub',
-@@ -43,11 +43,11 @@ export default {
-     previewAlt: 'Hermes Studio dashboard preview',
+@@ -40,14 +40,14 @@ export default {
+     docsTitle: 'Documentation',
+     docsLibrary: 'Library',
+     install: 'npm install -g hermes-web-ui',
+-    previewAlt: 'Hermes Studio dashboard preview',
++    previewAlt: 'Swarm Studio dashboard preview',
    },
    features: {
 -    title: 'One Local Console for Hermes Agent',
+-    desc: 'Hermes Studio brings chat, runtime management, automation, files, coding agents, and release-ready desktop distribution into one workspace.',
 +    title: 'One Local Console for Swarm Agent',
-     desc: 'Hermes Studio brings chat, runtime management, automation, files, coding agents, and release-ready desktop distribution into one workspace.',
++    desc: 'Swarm Studio brings chat, runtime management, automation, files, coding agents, and release-ready desktop distribution into one workspace.',
      streaming: {
        title: 'Agent Chat',
 -      desc: 'Streaming Hermes Agent conversations with sessions, Markdown, tool traces, uploads, downloads, model badges, and context usage.',
@@ -1211,10 +1232,37 @@ index 4c920e9b..77c077ff 100644
      quickInstall: {
        title: 'Desktop Runtime',
 -      desc: 'Windows, macOS, and Linux desktop builds bundle the Web UI runtime and manage Hermes Studio state separately from Hermes Agent data.',
-+      desc: 'Windows, macOS, and Linux desktop builds bundle the Web UI runtime and manage Hermes Studio state separately from Swarm Agent data.',
++      desc: 'Windows, macOS, and Linux desktop builds bundle the Web UI runtime and manage Swarm Studio state separately from Swarm Agent data.',
      },
      i18n: {
        title: 'Coding Agents & MCP',
+@@ -115,22 +115,22 @@ export default {
+     items: [
+       {
+         src: '/image.gif',
+-        alt: 'Hermes Studio product walkthrough',
+-        title: 'Hermes Studio Workflow',
++        alt: 'Swarm Studio product walkthrough',
++        title: 'Swarm Studio Workflow',
+         desc: 'Chat with coding agents, preview versions, manage runtime assets, and browse your workspace in one app.',
+       },
+     ],
+   },
+   install: {
+     title: 'Quick Start',
+-    desc: 'Download the desktop app or run Hermes Studio yourself.',
++    desc: 'Download the desktop app or run Swarm Studio yourself.',
+     desktop: {
+       title: 'Desktop',
+       download: 'Download',
+       githubDownload: 'GitHub Download',
+       cloudflareDownload: 'Cloudflare Download',
+       allDownloads: 'View all release assets',
+-      prereq: 'Desktop builds bundle the Hermes Studio runtime.',
++      prereq: 'Desktop builds bundle the Swarm Studio runtime.',
+       downloads: [
+         {
+           title: 'macOS Apple Silicon',
 @@ -189,7 +189,7 @@ export default {
      chartAlt: 'Star History',
    },
@@ -1224,15 +1272,39 @@ index 4c920e9b..77c077ff 100644
      license: 'BSL-1.1 License',
      madeWith: 'Built with Vue 3, Naive UI, and TypeScript.',
      github: 'Open GitHub',
-@@ -209,7 +209,7 @@ export default {
+@@ -209,14 +209,14 @@ export default {
      },
      gettingStarted: {
        title: 'Getting Started',
 -      intro: 'Hermes Studio is a self-hosted web dashboard for managing AI conversations, platform channels, scheduled jobs, and more. It wraps the Hermes Agent CLI and provides a beautiful web interface.',
-+      intro: 'Hermes Studio is a self-hosted web dashboard for managing AI conversations, platform channels, scheduled jobs, and more. It wraps the Swarm Agent CLI and provides a beautiful web interface.',
++      intro: 'Swarm Studio is a self-hosted web dashboard for managing AI conversations, platform channels, scheduled jobs, and more. It wraps the Swarm Agent CLI and provides a beautiful web interface.',
        install: {
          title: 'Installation',
          content: 'Install globally via npm. Node.js 23 or higher is required.',
+       },
+       firstRun: {
+         title: 'First Run',
+-        content: 'On first start, Hermes Studio will automatically generate an auth token, initialize local data, start the Hermes agent bridge, and open the dashboard in your browser.',
++        content: 'On first start, Swarm Studio will automatically generate an auth token, initialize local data, start the Hermes agent bridge, and open the dashboard in your browser.',
+       },
+       login: {
+         title: 'Login',
+@@ -225,13 +225,13 @@ export default {
+     },
+     configuration: {
+       title: 'Configuration',
+-      intro: 'Hermes Studio can be configured via environment variables.',
++      intro: 'Swarm Studio can be configured via environment variables.',
+       envVars: {
+         title: 'Environment Variables',
+         rows: [
+           ['PORT', 'Server listen port (default: 8648)'],
+           ['BIND_HOST', 'Server bind host (default: 0.0.0.0). Set :: explicitly to enable IPv6 listening.'],
+-          ['HERMES_WEB_UI_HOME', 'Hermes Studio data home for auth token, credentials, logs, DB, and default uploads'],
++          ['HERMES_WEB_UI_HOME', 'Swarm Studio data home for auth token, credentials, logs, DB, and default uploads'],
+           ['HERMES_WEBUI_STATE_DIR', 'Compatibility alias for HERMES_WEB_UI_HOME'],
+           ['HERMES_WEB_UI_DISABLE_MCP_AUTOINJECT', 'Disable startup injection of the managed hermes-studio MCP server into Hermes profile configs'],
+           ['HERMES_WEB_UI_ALLOW_TRANSIENT_MCP_AUTOINJECT', 'Allow managed MCP injection when HERMES_WEB_UI_HOME is under a temporary directory, such as Version Preview runtimes'],
 @@ -247,7 +247,7 @@ export default {
            ['WORKSPACE_BASE', 'Base directory for workspace browsing'],
            ['HERMES_HOME', 'Hermes data home'],
@@ -1242,7 +1314,7 @@ index 4c920e9b..77c077ff 100644
            ['HERMES_AGENT_BRIDGE_PYTHON', 'Python interpreter used to launch the agent bridge'],
            ['HERMES_AGENT_BRIDGE_UV', 'uv executable used to launch the agent bridge when available'],
            ['UV', 'Fallback uv executable path'],
-@@ -258,13 +258,13 @@ export default {
+@@ -258,20 +258,20 @@ export default {
            ['HERMES_AGENT_BRIDGE_STARTUP_TIMEOUT_MS', 'Timeout while waiting for the Python bridge to become ready'],
            ['HERMES_AGENT_BRIDGE_AUTO_RESTART', 'Auto-restart the bridge broker after unexpected exit; set 0/false/no/off to disable'],
            ['HERMES_AGENT_BRIDGE_RESTART_DELAY_MS', 'Base delay for bridge auto-restart backoff'],
@@ -1258,17 +1330,110 @@ index 4c920e9b..77c077ff 100644
            ['HERMES_OPENROUTER_APP_REFERER', 'OpenRouter attribution referer sent by bridge runs'],
            ['HERMES_OPENROUTER_APP_TITLE', 'OpenRouter attribution title sent by bridge runs'],
            ['HERMES_OPENROUTER_APP_CATEGORIES', 'OpenRouter attribution categories sent by bridge runs'],
+           ['HERMES_WEB_UI_MANAGED_GATEWAY', 'Controls Web UI-managed Hermes gateway handling. Enabled by default; set 0/false/off to use hermes gateway start'],
+           ['HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART', 'Skip startup gateway checks/autostart for dashboard-only deployments where another service owns Hermes gateway lifecycle'],
+-          ['HERMES_WEB_UI_DISABLE_SKILL_INJECTION', 'Skip startup bundled skill injection when skills are managed outside Hermes Web UI. Enabled injection only updates Web UI-managed or identical bundled copies; local edits are skipped'],
+-          ['HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN', 'Controls whether Hermes Studio shutdown also stops managed gateway processes'],
++          ['HERMES_WEB_UI_DISABLE_SKILL_INJECTION', 'Skip startup bundled skill injection when skills are managed outside Swarm Web UI. Enabled injection only updates Web UI-managed or identical bundled copies; local edits are skipped'],
++          ['HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN', 'Controls whether Swarm Studio shutdown also stops managed gateway processes'],
+           ['HERMES_GATEWAY_URL / GATEWAY_URL', 'Explicit Hermes gateway upstream URL for proxy routes'],
+           ['GATEWAY_HOST', 'Default Hermes gateway upstream host for proxy routes'],
+           ['GATEWAY_PORT', 'Default Hermes gateway upstream port for proxy routes'],
 @@ -284,7 +284,7 @@ export default {
        },
        gateway: {
          title: 'Agent Bridge Runtime',
 -        content: 'Chat runs are handled through the Hermes agent bridge, which runs alongside the Hermes Studio server and talks directly to the Hermes Agent runtime. HERMES_AGENT_BRIDGE_ENDPOINT controls the Node-to-broker address, while HERMES_AGENT_BRIDGE_WORKER_TRANSPORT controls the broker-to-profile-worker transport. Switching the frontend Hermes Profile changes later request context only; it does not restart the bridge or clear other running tasks.',
-+        content: 'Chat runs are handled through the Hermes agent bridge, which runs alongside the Hermes Studio server and talks directly to the Swarm Agent runtime. HERMES_AGENT_BRIDGE_ENDPOINT controls the Node-to-broker address, while HERMES_AGENT_BRIDGE_WORKER_TRANSPORT controls the broker-to-profile-worker transport. Switching the frontend Hermes Profile changes later request context only; it does not restart the bridge or clear other running tasks.',
++        content: 'Chat runs are handled through the Hermes agent bridge, which runs alongside the Swarm Studio server and talks directly to the Swarm Agent runtime. HERMES_AGENT_BRIDGE_ENDPOINT controls the Node-to-broker address, while HERMES_AGENT_BRIDGE_WORKER_TRANSPORT controls the broker-to-profile-worker transport. Switching the frontend Hermes Profile changes later request context only; it does not restart the bridge or clear other running tasks.',
        },
        profiles: {
          title: 'Profiles',
+@@ -293,10 +293,10 @@ export default {
+     },
+     features: {
+       title: 'Features',
+-      intro: 'Explore the core features of Hermes Studio.',
++      intro: 'Explore the core features of Swarm Studio.',
+       chat: {
+         title: 'AI Chat',
+-        content: 'Real-time chat streaming over Socket.IO /chat-run. Supports multi-session management, Markdown rendering with syntax highlighting, tool call inspection, profile-scoped upload, path-based download, and Ctrl+K search across the Hermes Studio local session database.',
++        content: 'Real-time chat streaming over Socket.IO /chat-run. Supports multi-session management, Markdown rendering with syntax highlighting, tool call inspection, profile-scoped upload, path-based download, and Ctrl+K search across the Swarm Studio local session database.',
+       },
+       kanban: {
+         title: 'Kanban Board',
+@@ -332,8 +332,8 @@ export default {
+       },
+     },
+     hermesStudioManual: {
+-      title: 'Hermes Studio Client Manual',
+-      intro: 'This page publishes the complete Hermes Studio 0.6.12 client operations manual. The full manual is currently authored in Chinese and covers day-to-day usage, configuration, operations, acceptance review, internal training, visible navigation, dialogs, status pages, key actions, common workflows, and risk notes.',
++      title: 'Swarm Studio Client Manual',
++      intro: 'This page publishes the complete Swarm Studio 0.6.12 client operations manual. The full manual is currently authored in Chinese and covers day-to-day usage, configuration, operations, acceptance review, internal training, visible navigation, dialogs, status pages, key actions, common workflows, and risk notes.',
+       open: {
+         title: 'Open the full manual',
+         content: 'The uploaded manual preserves the original HTML layout, annotated screenshots, tables, and PDF export. Use the HTML version for online browsing and the PDF version for offline review, archiving, or training distribution.',
+@@ -353,7 +353,7 @@ export default {
+       scope: {
+         title: 'Scope',
+         rows: [
+-          ['Version', 'Hermes Studio 0.6.12 client operations manual'],
++          ['Version', 'Swarm Studio 0.6.12 client operations manual'],
+           ['Language', 'Full manual in Chinese, with bilingual website entry copy'],
+           ['Coverage', 'Login, chat, history, memory, skills, plugins, files, terminal, jobs, group chat, Kanban, usage, logs, MCP, platform integrations, devices, settings, backup, security, and troubleshooting'],
+           ['Audience', 'Individual users, administrators, support teams, acceptance reviewers, and internal training teams'],
+@@ -366,7 +366,7 @@ export default {
+     },
+     esp32Intro: {
+       title: 'Hermes ESP32-C3 Device Intro',
+-      intro: 'This page publishes the public introduction for the Hermes ESP32-C3 desktop AI conversation box. The device handles the small display, microphone, speaker, physical buttons, and local network connection, while Hermes Studio handles model access, speech recognition, speech synthesis, and session execution.',
++      intro: 'This page publishes the public introduction for the Hermes ESP32-C3 desktop AI conversation box. The device handles the small display, microphone, speaker, physical buttons, and local network connection, while Swarm Studio handles model access, speech recognition, speech synthesis, and session execution.',
+       open: {
+         title: 'Open the full intro page',
+         content: 'The uploaded intro page preserves the original HTML layout, product visuals, setup flow, specification notes, pre-purchase checklist, and FAQ. It is useful for public presentation, handoff notes, and quick user orientation.',
+@@ -374,26 +374,26 @@ export default {
+           {
+             label: 'Open the Chinese ESP32 intro page',
+             href: '/docs/hermes-esp32-intro/index.html',
+-            description: 'Includes product visuals, hardware highlights, Wi-Fi provisioning notes, Hermes Studio connection guidance, specifications, and FAQ.',
++            description: 'Includes product visuals, hardware highlights, Wi-Fi provisioning notes, Swarm Studio connection guidance, specifications, and FAQ.',
+           },
+         ],
+       },
+       overview: {
+         title: 'Device positioning',
+-        content: 'This is a desktop hardware entry point for Hermes Studio, not an offline standalone large-model device. The ESP32-C3 provides local interaction and status feedback, while AI capability comes from Hermes Studio running on a computer or server plus the model, STT, and TTS services configured by the user.',
++        content: 'This is a desktop hardware entry point for Swarm Studio, not an offline standalone large-model device. The ESP32-C3 provides local interaction and status feedback, while AI capability comes from Swarm Studio running on a computer or server plus the model, STT, and TTS services configured by the user.',
+       },
+       requirements: {
+         title: 'Requirements',
+         rows: [
+-          ['Network', 'The ESP32 device and Hermes Studio should communicate on the same local network.'],
++          ['Network', 'The ESP32 device and Swarm Studio should communicate on the same local network.'],
+           ['Service address', 'Enter the computer or server LAN IP plus port on the device page; do not use 127.0.0.1.'],
+-          ['Voice capability', 'Hermes Studio needs working speech recognition, speech synthesis, and model services.'],
+-          ['Best fit', 'Built for Hermes Studio users, ESP32/Arduino/PlatformIO makers, open hardware customization, and desktop AI interaction demos.'],
++          ['Voice capability', 'Swarm Studio needs working speech recognition, speech synthesis, and model services.'],
++          ['Best fit', 'Built for Swarm Studio users, ESP32/Arduino/PlatformIO makers, open hardware customization, and desktop AI interaction demos.'],
+         ],
+       },
+       maintenance: {
+         title: 'Maintenance note',
+-        content: 'If firmware behavior, provisioning pages, ports, device visuals, or the Hermes Studio device connection flow changes, update the static HTML asset and this page scope together.',
++        content: 'If firmware behavior, provisioning pages, ports, device visuals, or the Swarm Studio device connection flow changes, update the static HTML asset and this page scope together.',
+       },
+     },
+     platforms: {
+@@ -434,7 +434,7 @@ export default {
+     },
+     api: {
+       title: 'API Reference',
+-      intro: 'Hermes Studio provides a local BFF API for the dashboard and Socket.IO endpoints for streaming chat.',
++      intro: 'Swarm Studio provides a local BFF API for the dashboard and Socket.IO endpoints for streaming chat.',
+       local: {
+         title: 'Local BFF Endpoints',
+         content: 'The Koa server handles session management, profile CRUD, account- and profile-scoped management, config read/write, log access, skill listing, memory operations, and static assets.',
 diff --git a/packages/website/src/i18n/zh.ts b/packages/website/src/i18n/zh.ts
-index bc33290d..f9f90ecd 100644
+index bc33290d..c5412b12 100644
 --- a/packages/website/src/i18n/zh.ts
 +++ b/packages/website/src/i18n/zh.ts
 @@ -1,6 +1,6 @@
@@ -1290,13 +1455,18 @@ index bc33290d..f9f90ecd 100644
      cta: '下载桌面版',
      docsCta: '查看文档',
      viewGithub: '查看 GitHub',
-@@ -43,11 +43,11 @@ export default {
-     previewAlt: 'Hermes Studio 仪表板预览',
+@@ -40,14 +40,14 @@ export default {
+     docsTitle: '文档',
+     docsLibrary: '资料库',
+     install: 'npm install -g hermes-web-ui',
+-    previewAlt: 'Hermes Studio 仪表板预览',
++    previewAlt: 'Swarm Studio 仪表板预览',
    },
    features: {
 -    title: 'Hermes Agent 的本地控制台',
+-    desc: 'Hermes Studio 把聊天、运行时管理、自动化、文件、Coding Agent 和桌面分发整合到一个工作区。',
 +    title: 'Swarm Agent 的本地控制台',
-     desc: 'Hermes Studio 把聊天、运行时管理、自动化、文件、Coding Agent 和桌面分发整合到一个工作区。',
++    desc: 'Swarm Studio 把聊天、运行时管理、自动化、文件、Coding Agent 和桌面分发整合到一个工作区。',
      streaming: {
        title: 'Agent 聊天',
 -      desc: 'Hermes Agent 流式对话，支持会话、Markdown、工具轨迹、上传下载、模型标签和上下文用量。',
@@ -1309,10 +1479,37 @@ index bc33290d..f9f90ecd 100644
      quickInstall: {
        title: '桌面运行时',
 -      desc: 'Windows、macOS 和 Linux 桌面版内置 Web UI 运行时，并把 Hermes Studio 状态与 Hermes Agent 数据分开管理。',
-+      desc: 'Windows、macOS 和 Linux 桌面版内置 Web UI 运行时，并把 Hermes Studio 状态与 Swarm Agent 数据分开管理。',
++      desc: 'Windows、macOS 和 Linux 桌面版内置 Web UI 运行时，并把 Swarm Studio 状态与 Swarm Agent 数据分开管理。',
      },
      i18n: {
        title: 'Coding Agent 与 MCP',
+@@ -115,22 +115,22 @@ export default {
+     items: [
+       {
+         src: '/image.gif',
+-        alt: 'Hermes Studio 产品流程演示',
+-        title: 'Hermes Studio 工作流',
++        alt: 'Swarm Studio 产品流程演示',
++        title: 'Swarm Studio 工作流',
+         desc: '在一个应用里完成 Agent 对话、版本预览、Runtime 管理和工作区浏览。',
+       },
+     ],
+   },
+   install: {
+     title: '快速开始',
+-    desc: '下载桌面应用，或自行运行 Hermes Studio。',
++    desc: '下载桌面应用，或自行运行 Swarm Studio。',
+     desktop: {
+       title: '桌面版',
+       download: '下载',
+       githubDownload: 'GitHub 下载',
+       cloudflareDownload: 'Cloudflare 下载',
+       allDownloads: '查看全部发布文件',
+-      prereq: '桌面版已内置 Hermes Studio 运行时。',
++      prereq: '桌面版已内置 Swarm Studio 运行时。',
+       downloads: [
+         {
+           title: 'macOS Apple Silicon',
 @@ -189,7 +189,7 @@ export default {
      chartAlt: 'Star 历史',
    },
@@ -1322,15 +1519,39 @@ index bc33290d..f9f90ecd 100644
      license: 'BSL-1.1 开源协议',
      madeWith: '使用 Vue 3、Naive UI 和 TypeScript 构建。',
      github: '打开 GitHub',
-@@ -209,7 +209,7 @@ export default {
+@@ -209,14 +209,14 @@ export default {
      },
      gettingStarted: {
        title: '快速开始',
 -      intro: 'Hermes Studio 是一个自托管的 Web 仪表板，用于管理 AI 对话、平台通道、定时任务等。它封装了 Hermes Agent CLI 并提供美观的 Web 界面。',
-+      intro: 'Hermes Studio 是一个自托管的 Web 仪表板，用于管理 AI 对话、平台通道、定时任务等。它封装了 Swarm Agent CLI 并提供美观的 Web 界面。',
++      intro: 'Swarm Studio 是一个自托管的 Web 仪表板，用于管理 AI 对话、平台通道、定时任务等。它封装了 Swarm Agent CLI 并提供美观的 Web 界面。',
        install: {
          title: '安装',
          content: '通过 npm 全局安装。需要 Node.js 23 或更高版本。',
+       },
+       firstRun: {
+         title: '首次运行',
+-        content: '首次启动时，Hermes Studio 会自动生成认证令牌、初始化本地数据、启动 Hermes agent bridge 并在浏览器中打开仪表板。',
++        content: '首次启动时，Swarm Studio 会自动生成认证令牌、初始化本地数据、启动 Hermes agent bridge 并在浏览器中打开仪表板。',
+       },
+       login: {
+         title: '登录',
+@@ -225,13 +225,13 @@ export default {
+     },
+     configuration: {
+       title: '配置说明',
+-      intro: 'Hermes Studio 可通过环境变量进行配置。',
++      intro: 'Swarm Studio 可通过环境变量进行配置。',
+       envVars: {
+         title: '环境变量',
+         rows: [
+           ['PORT', '服务器监听端口（默认：8648）'],
+           ['BIND_HOST', '服务器绑定地址（默认：0.0.0.0）。如需 IPv6，请显式设置为 ::。'],
+-          ['HERMES_WEB_UI_HOME', 'Hermes Studio 数据目录，用于认证 token、登录凭据、日志、数据库和默认上传目录'],
++          ['HERMES_WEB_UI_HOME', 'Swarm Studio 数据目录，用于认证 token、登录凭据、日志、数据库和默认上传目录'],
+           ['HERMES_WEBUI_STATE_DIR', 'HERMES_WEB_UI_HOME 的兼容别名'],
+           ['HERMES_WEB_UI_DISABLE_MCP_AUTOINJECT', '关闭启动时向 Hermes profile 配置自动注入托管的 hermes-studio MCP server'],
+           ['HERMES_WEB_UI_ALLOW_TRANSIENT_MCP_AUTOINJECT', '当 HERMES_WEB_UI_HOME 位于临时目录（例如 Version Preview runtime）时，仍允许托管 MCP 自动注入'],
 @@ -247,7 +247,7 @@ export default {
            ['WORKSPACE_BASE', 'Workspace 浏览根目录'],
            ['HERMES_HOME', 'Hermes 数据目录'],
@@ -1340,7 +1561,7 @@ index bc33290d..f9f90ecd 100644
            ['HERMES_AGENT_BRIDGE_PYTHON', '用于启动 agent bridge 的 Python 解释器'],
            ['HERMES_AGENT_BRIDGE_UV', '可用时用于启动 agent bridge 的 uv 可执行文件'],
            ['UV', 'uv 可执行文件 fallback'],
-@@ -258,13 +258,13 @@ export default {
+@@ -258,20 +258,20 @@ export default {
            ['HERMES_AGENT_BRIDGE_STARTUP_TIMEOUT_MS', '等待 Python bridge ready 的超时'],
            ['HERMES_AGENT_BRIDGE_AUTO_RESTART', 'bridge broker 意外退出后是否自动重启；设为 0/false/no/off 可关闭'],
            ['HERMES_AGENT_BRIDGE_RESTART_DELAY_MS', 'bridge 自动重启退避的基础延迟'],
@@ -1356,12 +1577,105 @@ index bc33290d..f9f90ecd 100644
            ['HERMES_OPENROUTER_APP_REFERER', 'bridge 运行发送给 OpenRouter 的 attribution referer'],
            ['HERMES_OPENROUTER_APP_TITLE', 'bridge 运行发送给 OpenRouter 的 attribution title'],
            ['HERMES_OPENROUTER_APP_CATEGORIES', 'bridge 运行发送给 OpenRouter 的 attribution categories'],
+           ['HERMES_WEB_UI_MANAGED_GATEWAY', '控制 Web UI 托管 Hermes gateway。默认开启；设为 0/false/off 时改用 hermes gateway start'],
+           ['HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART', '跳过启动时的 gateway 检查/自动启动；适用于由其它服务管理 Hermes gateway 的 dashboard-only 部署'],
+-          ['HERMES_WEB_UI_DISABLE_SKILL_INJECTION', '跳过启动时的内置 skill 注入；适用于由 Hermes Web UI 外部管理 skills 的部署。启用注入时只更新 Web UI 管理或完全相同的内置副本，本地修改会跳过'],
+-          ['HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN', 'Hermes Studio 关闭时是否同时停止托管的 gateway 进程'],
++          ['HERMES_WEB_UI_DISABLE_SKILL_INJECTION', '跳过启动时的内置 skill 注入；适用于由 Swarm Web UI 外部管理 skills 的部署。启用注入时只更新 Web UI 管理或完全相同的内置副本，本地修改会跳过'],
++          ['HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN', 'Swarm Studio 关闭时是否同时停止托管的 gateway 进程'],
+           ['HERMES_GATEWAY_URL / GATEWAY_URL', 'proxy 路由使用的 Hermes gateway upstream URL'],
+           ['GATEWAY_HOST', 'proxy 路由使用的默认 Hermes gateway upstream host'],
+           ['GATEWAY_PORT', 'proxy 路由使用的默认 Hermes gateway upstream port'],
 @@ -284,7 +284,7 @@ export default {
        },
        gateway: {
          title: 'Agent Bridge 运行时',
 -        content: '聊天运行通过 Hermes agent bridge 处理。它随 Hermes Studio 服务一起运行，并直接连接 Hermes Agent runtime。HERMES_AGENT_BRIDGE_ENDPOINT 控制 Node 与 bridge broker 的连接地址；HERMES_AGENT_BRIDGE_WORKER_TRANSPORT 控制 broker 与各 Profile worker 的连接方式。前端切换 Hermes Profile 只影响后续请求上下文，不会重启 bridge 或清理其他正在运行的任务。',
-+        content: '聊天运行通过 Hermes agent bridge 处理。它随 Hermes Studio 服务一起运行，并直接连接 Swarm Agent runtime。HERMES_AGENT_BRIDGE_ENDPOINT 控制 Node 与 bridge broker 的连接地址；HERMES_AGENT_BRIDGE_WORKER_TRANSPORT 控制 broker 与各 Profile worker 的连接方式。前端切换 Hermes Profile 只影响后续请求上下文，不会重启 bridge 或清理其他正在运行的任务。',
++        content: '聊天运行通过 Hermes agent bridge 处理。它随 Swarm Studio 服务一起运行，并直接连接 Swarm Agent runtime。HERMES_AGENT_BRIDGE_ENDPOINT 控制 Node 与 bridge broker 的连接地址；HERMES_AGENT_BRIDGE_WORKER_TRANSPORT 控制 broker 与各 Profile worker 的连接方式。前端切换 Hermes Profile 只影响后续请求上下文，不会重启 bridge 或清理其他正在运行的任务。',
        },
        profiles: {
          title: '配置文件',
+@@ -293,10 +293,10 @@ export default {
+     },
+     features: {
+       title: '功能详解',
+-      intro: '探索 Hermes Studio 的核心功能。',
++      intro: '探索 Swarm Studio 的核心功能。',
+       chat: {
+         title: 'AI 聊天',
+-        content: '通过 Socket.IO /chat-run 实时流式聊天。支持多会话管理、Markdown 渲染与语法高亮、工具调用检查、按 Profile 上传、按路径下载，以及 Ctrl+K 搜索 Hermes Studio 本地会话库。',
++        content: '通过 Socket.IO /chat-run 实时流式聊天。支持多会话管理、Markdown 渲染与语法高亮、工具调用检查、按 Profile 上传、按路径下载，以及 Ctrl+K 搜索 Swarm Studio 本地会话库。',
+       },
+       kanban: {
+         title: '看板管理',
+@@ -332,8 +332,8 @@ export default {
+       },
+     },
+     hermesStudioManual: {
+-      title: 'Hermes Studio 客户端完整操作手册',
+-      intro: '这份手册面向 Hermes Studio 桌面客户端和 Web 界面的使用、配置、运维、验收与内部培训场景，覆盖当前客户端可见导航、设置、弹窗、状态页、关键按钮、常见流程和风险提示。',
++      title: 'Swarm Studio 客户端完整操作手册',
++      intro: '这份手册面向 Swarm Studio 桌面客户端和 Web 界面的使用、配置、运维、验收与内部培训场景，覆盖当前客户端可见导航、设置、弹窗、状态页、关键按钮、常见流程和风险提示。',
+       open: {
+         title: '打开完整手册',
+         content: '完整手册保留原始 HTML 排版、截图标注和 PDF 版本。HTML 版本适合在线浏览，PDF 版本适合归档、打印和离线分发。',
+@@ -353,7 +353,7 @@ export default {
+       scope: {
+         title: '适用范围',
+         rows: [
+-          ['适用版本', 'Hermes Studio 0.6.12 客户端操作手册'],
++          ['适用版本', 'Swarm Studio 0.6.12 客户端操作手册'],
+           ['文档语言', '中文完整手册；官网提供中英文入口说明'],
+           ['覆盖内容', '登录、聊天、历史、记忆、技能、插件、文件、终端、任务、群聊、看板、用量、日志、MCP、平台集成、设备、设置、备份、安全和故障排除'],
+           ['推荐读者', '个人用户、管理员、技术支持、交付验收人员和内部培训对象'],
+@@ -366,7 +366,7 @@ export default {
+     },
+     esp32Intro: {
+       title: 'Hermes ESP32-C3 设备介绍',
+-      intro: '这页发布 Hermes ESP32-C3 桌面 AI 对话小方盒的官网介绍资料。设备侧负责小屏、麦克风、扬声器、实体按键和局域网连接；Hermes Studio 负责模型、语音识别、语音合成和会话运行。',
++      intro: '这页发布 Hermes ESP32-C3 桌面 AI 对话小方盒的官网介绍资料。设备侧负责小屏、麦克风、扬声器、实体按键和局域网连接；Swarm Studio 负责模型、语音识别、语音合成和会话运行。',
+       open: {
+         title: '打开完整介绍页',
+         content: '完整介绍页保留原始 HTML 排版、产品图、使用流程、规格说明、购买前须知和常见问题，适合公开展示、交付说明和用户快速了解设备定位。',
+@@ -374,26 +374,26 @@ export default {
+           {
+             label: '在线打开 ESP32 中文介绍页',
+             href: '/docs/hermes-esp32-intro/index.html',
+-            description: '包含产品图、硬件亮点、配网教程、连接 Hermes Studio 的说明、规格与常见问题。',
++            description: '包含产品图、硬件亮点、配网教程、连接 Swarm Studio 的说明、规格与常见问题。',
+           },
+         ],
+       },
+       overview: {
+         title: '设备定位',
+-        content: '这是配合 Hermes Studio 使用的桌面硬件入口，不是离线独立大模型设备。ESP32-C3 提供本地交互与状态反馈，AI 能力由电脑端或服务器端 Hermes Studio 以及用户配置的模型、STT、TTS 服务提供。',
++        content: '这是配合 Swarm Studio 使用的桌面硬件入口，不是离线独立大模型设备。ESP32-C3 提供本地交互与状态反馈，AI 能力由电脑端或服务器端 Swarm Studio 以及用户配置的模型、STT、TTS 服务提供。',
+       },
+       requirements: {
+         title: '使用前提',
+         rows: [
+-          ['网络', 'ESP32 设备和 Hermes Studio 需要在同一局域网内通信。'],
++          ['网络', 'ESP32 设备和 Swarm Studio 需要在同一局域网内通信。'],
+           ['服务地址', '设备端应填写电脑或服务器的局域网 IP + 端口，不能填写 127.0.0.1。'],
+-          ['语音能力', '需要在 Hermes Studio 中配置可用的语音识别、语音合成和模型服务。'],
+-          ['适合用户', '适合 Hermes Studio 用户、ESP32/Arduino/PlatformIO 玩家、开源硬件改造和桌面 AI 交互演示场景。'],
++          ['语音能力', '需要在 Swarm Studio 中配置可用的语音识别、语音合成和模型服务。'],
++          ['适合用户', '适合 Swarm Studio 用户、ESP32/Arduino/PlatformIO 玩家、开源硬件改造和桌面 AI 交互演示场景。'],
+         ],
+       },
+       maintenance: {
+         title: '维护说明',
+-        content: '后续如固件、配网页、端口、设备外观或 Hermes Studio 设备接入流程变化，请同步更新静态 HTML 资源和本页的适用说明。',
++        content: '后续如固件、配网页、端口、设备外观或 Swarm Studio 设备接入流程变化，请同步更新静态 HTML 资源和本页的适用说明。',
+       },
+     },
+     platforms: {
+@@ -434,7 +434,7 @@ export default {
+     },
+     api: {
+       title: 'API 参考',
+-      intro: 'Hermes Studio 提供本地 BFF API，并通过 Socket.IO 端点进行聊天流式通信。',
++      intro: 'Swarm Studio 提供本地 BFF API，并通过 Socket.IO 端点进行聊天流式通信。',
+       local: {
+         title: '本地 BFF 端点',
+         content: 'Koa 服务器处理会话管理、Profile CRUD、分账户分 Profile 管理、配置读写、日志访问、技能列表、记忆操作和静态资源。',

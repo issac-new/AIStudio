@@ -1,5 +1,5 @@
 diff --git a/packages/client/index.html b/packages/client/index.html
-index 98c3768a..79bb2214 100644
+index 08dab7d8..b1755863 100644
 --- a/packages/client/index.html
 +++ b/packages/client/index.html
 @@ -3,8 +3,6 @@
@@ -11,23 +11,38 @@ index 98c3768a..79bb2214 100644
    <link rel="manifest" href="/manifest.webmanifest" />
    <meta name="theme-color" content="#f7f7f4" />
    <meta name="apple-mobile-web-app-capable" content="yes" />
-@@ -56,8 +54,6 @@
-       transform: translateX(-140%);
-       mix-blend-mode: screen;
-       pointer-events: none;
--      -webkit-mask: url("/logo.png") center / contain no-repeat;
--      mask: url("/logo.png") center / contain no-repeat;
+@@ -39,7 +37,6 @@
+       color: #f0f0f0;
+     }
+ 
+-    .boot-fallback__logo-wrap {
+       position: relative;
+       display: block;
+       width: 72px;
+@@ -48,7 +45,6 @@
+       overflow: hidden;
+     }
+ 
+-    .boot-fallback__logo-wrap::after {
+       content: "";
+       position: absolute;
+       inset: 0;
+@@ -61,7 +57,6 @@
        animation: boot-logo-shimmer 1.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
      }
  
-@@ -113,7 +109,6 @@
+-    .boot-fallback__logo-wrap img {
+       width: 100%;
+       height: 100%;
+       object-fit: contain;
+@@ -112,7 +107,6 @@
+   <div id="app">
      <div class="boot-fallback">
        <div class="boot-fallback__brand">
-         <span class="boot-fallback__logo-wrap">
--          <img src="/logo.png" alt="" />
+-        <span class="boot-fallback__logo-wrap">
+           <img src="/logo.png" alt="" />
          </span>
        </div>
-     </div>
 diff --git a/packages/client/src/components/layout/DesktopTitleBar.vue b/packages/client/src/components/layout/DesktopTitleBar.vue
 index c3c43df2..a916bf11 100644
 --- a/packages/client/src/components/layout/DesktopTitleBar.vue
