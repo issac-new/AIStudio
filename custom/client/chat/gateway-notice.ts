@@ -1,7 +1,7 @@
 // 网关生命周期告警识别。
 //
-// hermes-agent 的 gateway 在关闭/重启时，会向所有活跃会话推送一条告警
-// （upstream/hermes-agent/gateway/run.py:4497）：
+// swarm-agent 的 gateway 在关闭/重启时，会向所有活跃会话推送一条告警
+// （upstream/swarm-agent/gateway/run.py:4497）：
 //   "⚠️ Gateway shutting down — Your current task will be interrupted."
 //   "⚠️ Gateway restarting — Your current task will be interrupted. Send any message..."
 // 这类消息本质是系统事件而非对话内容，命中后由 chat store 打 systemType: 'gateway'

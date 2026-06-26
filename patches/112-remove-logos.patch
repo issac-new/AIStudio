@@ -1,0 +1,42 @@
+diff --git a/packages/client/index.html b/packages/client/index.html
+index 98c3768a..79bb2214 100644
+--- a/packages/client/index.html
++++ b/packages/client/index.html
+@@ -3,8 +3,6 @@
+ 
+ <head>
+   <meta charset="UTF-8" />
+-  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+-  <link rel="apple-touch-icon" href="/logo.png" />
+   <link rel="manifest" href="/manifest.webmanifest" />
+   <meta name="theme-color" content="#f7f7f4" />
+   <meta name="apple-mobile-web-app-capable" content="yes" />
+@@ -56,8 +54,6 @@
+       transform: translateX(-140%);
+       mix-blend-mode: screen;
+       pointer-events: none;
+-      -webkit-mask: url("/logo.png") center / contain no-repeat;
+-      mask: url("/logo.png") center / contain no-repeat;
+       animation: boot-logo-shimmer 1.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+     }
+ 
+@@ -113,7 +109,6 @@
+     <div class="boot-fallback">
+       <div class="boot-fallback__brand">
+         <span class="boot-fallback__logo-wrap">
+-          <img src="/logo.png" alt="" />
+         </span>
+       </div>
+     </div>
+diff --git a/packages/client/src/components/layout/DesktopTitleBar.vue b/packages/client/src/components/layout/DesktopTitleBar.vue
+index c3c43df2..a916bf11 100644
+--- a/packages/client/src/components/layout/DesktopTitleBar.vue
++++ b/packages/client/src/components/layout/DesktopTitleBar.vue
+@@ -49,7 +49,6 @@ onMounted(() => {
+   <header v-if="showTitleBar" class="desktop-titlebar" :class="{ mac: isMac }" @dblclick="controlWindow('toggle-maximize')">
+     <div class="desktop-titlebar__drag">
+       <div class="desktop-titlebar__brand">
+-        <img class="desktop-titlebar__logo" src="/logo.png" alt="" draggable="false">
+         <span class="desktop-titlebar__title">Swarm Studio</span>
+       </div>
+     </div>

@@ -26,7 +26,7 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const productTitle = 'Hermes Studio'
+const productTitle = 'Swarm Studio'
 const tabTitle = computed(() => `${t('sidebar.matrixChat')} - ${productTitle}`)
 
 watch(tabTitle, (value) => {

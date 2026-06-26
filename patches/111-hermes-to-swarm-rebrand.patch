@@ -1,0 +1,1367 @@
+diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
+index 4231800d..34d2fbd2 100644
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -103,7 +103,7 @@ function parseContentBlocks(content: string): Array<ContentBlock | Record<string
+   try {
+     return parse(trimmed)
+   } catch {
+-    // Hermes Agent stored some multimodal user messages via Python str(list),
++    // Swarm Agent stored some multimodal user messages via Python str(list),
+     // e.g. [{'type': 'text'}, {'type': 'image_url', ...}]. Convert that
+     // legacy repr into JSON for display only.
+     if (!trimmed.startsWith("[{'") && !trimmed.startsWith('[{"')) return null
+diff --git a/packages/client/src/components/layout/DesktopTitleBar.vue b/packages/client/src/components/layout/DesktopTitleBar.vue
+index 55357b5d..c3c43df2 100644
+--- a/packages/client/src/components/layout/DesktopTitleBar.vue
++++ b/packages/client/src/components/layout/DesktopTitleBar.vue
+@@ -50,7 +50,7 @@ onMounted(() => {
+     <div class="desktop-titlebar__drag">
+       <div class="desktop-titlebar__brand">
+         <img class="desktop-titlebar__logo" src="/logo.png" alt="" draggable="false">
+-        <span class="desktop-titlebar__title">Hermes Studio</span>
++        <span class="desktop-titlebar__title">Swarm Studio</span>
+       </div>
+     </div>
+     <div v-if="showWindowButtons" class="desktop-titlebar__controls" @dblclick.stop>
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+index a2b71031..7d58ab0b 100644
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: 'Geben Sie Benutzername und Passwort ein, um fortzufahren.',
+     placeholder: 'Zugangs-Token',
+     submit: 'Anmelden',
+@@ -261,7 +261,7 @@ export default {
+     remoteLoadFailed: 'Remote-Versionen konnten nicht geladen werden',
+     downloadTasks: 'Download-Aufgaben',
+     downloadStarted: 'Download gestartet',
+-    activateSuccess: 'Versionsauswahl gespeichert. Starten Sie Hermes Studio neu, um sie zu verwenden.',
++    activateSuccess: 'Versionsauswahl gespeichert. Starten Sie Swarm Studio neu, um sie zu verwenden.',
+     jobStatus: {
+       queued: 'In Warteschlange',
+       running: 'Läuft',
+@@ -413,7 +413,7 @@ export default {
+     contextEditInvalid: 'Bitte geben Sie eine gültige Kontextlänge ein',
+     contextEditSuccess: 'Kontextlänge aktualisiert',
+     contextEditFailed: 'Aktualisierung fehlgeschlagen',
+-    emptyState: 'Starten Sie eine Konversation mit Hermes Agent',
++    emptyState: 'Starten Sie eine Konversation mit Swarm Agent',
+     emptyStateAgent: 'Starten Sie eine Konversation mit {agent}',
+     viewOlderInHistory: 'Fruehere Nachrichten im Verlauf ansehen',
+     scrollToBottom: 'Nach unten scrollen',
+@@ -751,10 +751,10 @@ jobTriggered: 'Job ausgelost',
+     reloadHint: 'Aktive Sitzungen: /reload-skills ausführen; neue Sitzungen laden automatisch.',
+     writeApprovalButton: 'Ausstehend {count}',
+     writeApprovalTitle: 'Ausstehende Schreibfreigaben',
+-    writeApprovalDescription: 'Freigeben oder ablehnen, was Hermes Agent fuer Speicher und Skills vorgemerkt hat.',
++    writeApprovalDescription: 'Freigeben oder ablehnen, was Swarm Agent fuer Speicher und Skills vorgemerkt hat.',
+     writeApprovalRefresh: 'Aktualisieren',
+     writeApprovalEmpty: 'Keine ausstehenden Schreibvorgaenge.',
+-    writeApprovalUnsupported: 'Diese Hermes-Agent-Version unterstuetzt keine Schreibfreigaben. Aktualisiere Hermes Agent, um diese Funktion zu nutzen.',
++    writeApprovalUnsupported: 'Diese Hermes-Agent-Version unterstuetzt keine Schreibfreigaben. Aktualisiere Swarm Agent, um diese Funktion zu nutzen.',
+     writeApprovalMemory: 'Speicher',
+     writeApprovalSkills: 'Skills',
+     writeApprovalViewDiff: 'Pruefen',
+@@ -1185,7 +1185,7 @@ jobTriggered: 'Job ausgelost',
+       enabled: 'Gateways automatisch starten',
+       enabledHint: 'Wenn deaktiviert, startet die Web UI beim Start kein Profile-Gateway automatisch.',
+       management: 'Vereinheitlichtes Gateway',
+-      managementHint: 'Erfordert Hermes Agent 0.17.0 oder neuer. Wenn aktiviert, schreibt die Web UI multiplex_profiles, damit das default gateway alle Profile bedient; andere Profile konnen keine separaten Feishu-, Weixin-, QQBot- oder ahnlichen Messaging-Einstiegspunkte konfigurieren. Beim Deaktivieren wird diese Einstellung entfernt.',
++      managementHint: 'Erfordert Swarm Agent 0.17.0 oder neuer. Wenn aktiviert, schreibt die Web UI multiplex_profiles, damit das default gateway alle Profile bedient; andere Profile konnen keine separaten Feishu-, Weixin-, QQBot- oder ahnlichen Messaging-Einstiegspunkte konfigurieren. Beim Deaktivieren wird diese Einstellung entfernt.',
+       managementAuto: 'Automatisch',
+       managementPerProfile: 'Ein Gateway pro Profil',
+       managementUnified: 'Vereinheitlichtes default gateway',
+@@ -1243,7 +1243,7 @@ jobTriggered: 'Job ausgelost',
+       skillsWriteApproval: 'Skill-Schreibungen pruefen',
+       skillsWriteApprovalHint: 'Hermes-Agent-Skill-Aenderungen vor dem Speichern zur Freigabe vormerken.',
+       writeApprovalTitle: 'Ausstehende Schreibfreigaben',
+-      writeApprovalDescription: 'Freigeben oder ablehnen, was Hermes Agent fuer Speicher und Skills vorgemerkt hat.',
++      writeApprovalDescription: 'Freigeben oder ablehnen, was Swarm Agent fuer Speicher und Skills vorgemerkt hat.',
+       writeApprovalRefresh: 'Aktualisieren',
+       writeApprovalEmpty: 'Keine ausstehenden Schreibvorgaenge.',
+       writeApprovalMemory: 'Speicher',
+@@ -1852,11 +1852,11 @@ jobTriggered: 'Job ausgelost',
+     new_0_6_19_4: 'TTS Einstellungen werden jetzt pro profile gespeichert; Speed, Pitch und Voice Tests lesen dieselbe Konfigurationsquelle',
+     new_0_6_19_5: 'Coding-Agent Modellwechsel beeinflussen bestehende Sessions nicht mehr, und custom provider keys werden korrekt weitergegeben',
+     new_0_6_19_6: 'Skills runtime Filter, Cron-Job Sortierung, begrenzte Skill-Detail-Hoehe, Windows Updater Recovery, Backup Fallbacks und komprimierte Logo Assets runden das Update ab',
+-    new_0_6_18_2: 'Hermes Studio MCP ist in fokussierte api-, devices- und use-Toolsets aufgeteilt, mit neuen Session-, Modell-, Chat-Run- und Ops-Aktionen',
++    new_0_6_18_2: 'Swarm Studio MCP ist in fokussierte api-, devices- und use-Toolsets aufgeteilt, mit neuen Session-, Modell-, Chat-Run- und Ops-Aktionen',
+     new_0_6_18_3: 'Chat- und Gruppenchat-Historien sind zuverlaessiger durch getrennte UI-Historie, sichere Null-Message-Behandlung, erhaltene Assistant-Antworten nach run failures und abgestimmtes Reasoning-Replay',
+     new_0_6_18_4: 'MCU-Device-Feedback ist klarer: Tool Calls bleiben vor Sprache sichtbar, Audio markiert Aufgaben nicht mehr zu frueh als fertig, Active-Device-Login ist stabiler und lange ONLINE/IP-Texte scrollen',
+     new_0_6_18_5: 'Voice- und Message-Workflows erhalten eigene HTTP TTS/STT-Endpunkte, Audio-Transcoding, Fork-Message-Aktionen, persistente Fork-Marker und klarere Upload-Fehler',
+-    new_0_6_18_6: 'Desktop- und Runtime-Setup sind sicherer mit Unicode-sicherer Windows-PATH-Registrierung, Hermes Agent 0.17.0 Runtime-Publishing, mobiler PWA-Metadata und mehreren Profile/Auth-Recovery-Fixes',
++    new_0_6_18_6: 'Desktop- und Runtime-Setup sind sicherer mit Unicode-sicherer Windows-PATH-Registrierung, Swarm Agent 0.17.0 Runtime-Publishing, mobiler PWA-Metadata und mehreren Profile/Auth-Recovery-Fixes',
+     new_0_6_18_7: 'Feinschliff und Detailverbesserungen in der gesamten App',
+     new_0_6_17_1: 'Probleme beim Starten von Codex- und Claude-Code-Unterhaltungen wurden behoben',
+     new_0_6_16_1: 'Provider-Einstellungen speichern jetzt eigene API-Modes, decken LongCat korrekt ab, unterstuetzen das Loeschen von v12-Providern und halten Modellkataloge mit Auth- und API-Key-Bildprovidern synchron',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index a2d21283..8a994376 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: 'Enter your username and password to continue.',
+     placeholder: 'Access token',
+     submit: 'Login',
+@@ -267,7 +267,7 @@ export default {
+     remoteLoadFailed: 'Failed to load remote versions',
+     downloadTasks: 'Download tasks',
+     downloadStarted: 'Download started',
+-    activateSuccess: 'Version selection saved. Restart Hermes Studio to use it.',
++    activateSuccess: 'Version selection saved. Restart Swarm Studio to use it.',
+     jobStatus: {
+       queued: 'Queued',
+       running: 'Running',
+@@ -419,7 +419,7 @@ export default {
+     contextEditInvalid: 'Please enter a valid context length',
+     contextEditSuccess: 'Context length updated',
+     contextEditFailed: 'Update failed',
+-    emptyState: 'Start a conversation with Hermes Agent',
++    emptyState: 'Start a conversation with Swarm Agent',
+     emptyStateAgent: 'Start a conversation with {agent}',
+     viewOlderInHistory: 'View earlier messages in History',
+     scrollToBottom: 'Scroll to bottom',
+@@ -1151,10 +1151,10 @@ export default {
+     reloadHint: 'Active sessions: run /reload-skills; new sessions pick it up automatically.',
+     writeApprovalButton: 'Pending {count}',
+     writeApprovalTitle: 'Pending write approvals',
+-    writeApprovalDescription: 'Approve or reject staged Hermes Agent memory and skill writes.',
++    writeApprovalDescription: 'Approve or reject staged Swarm Agent memory and skill writes.',
+     writeApprovalRefresh: 'Refresh',
+     writeApprovalEmpty: 'No pending writes.',
+-    writeApprovalUnsupported: 'This Hermes Agent version does not support write approvals. Upgrade Hermes Agent to use this feature.',
++    writeApprovalUnsupported: 'This Swarm Agent version does not support write approvals. Upgrade Swarm Agent to use this feature.',
+     writeApprovalMemory: 'Memory',
+     writeApprovalSkills: 'Skills',
+     writeApprovalViewDiff: 'Review',
+@@ -1601,7 +1601,7 @@ export default {
+       enabled: 'Auto-start gateways',
+       enabledHint: 'When disabled, startup will not automatically start any profile gateway.',
+       management: 'Unified gateway',
+-      managementHint: 'Requires Hermes Agent 0.17.0 or later. When enabled, Web UI writes multiplex_profiles so the default gateway serves every profile; other profiles cannot configure separate Feishu, Weixin, QQBot, or similar messaging entrypoints. Turning it off removes that config.',
++      managementHint: 'Requires Swarm Agent 0.17.0 or later. When enabled, Web UI writes multiplex_profiles so the default gateway serves every profile; other profiles cannot configure separate Feishu, Weixin, QQBot, or similar messaging entrypoints. Turning it off removes that config.',
+       managementAuto: 'Auto',
+       managementPerProfile: 'One gateway per profile',
+       managementUnified: 'Unified default gateway',
+@@ -1655,11 +1655,11 @@ export default {
+       requireAuth: 'Session Authorization',
+       requireAuthHint: 'Require authorization for session operations',
+       memoryWriteApproval: 'Review memory writes',
+-      memoryWriteApprovalHint: 'Stage Hermes Agent memory writes for approval before they are saved.',
++      memoryWriteApprovalHint: 'Stage Swarm Agent memory writes for approval before they are saved.',
+       skillsWriteApproval: 'Review skill writes',
+-      skillsWriteApprovalHint: 'Stage Hermes Agent skill changes for approval before they are saved.',
++      skillsWriteApprovalHint: 'Stage Swarm Agent skill changes for approval before they are saved.',
+       writeApprovalTitle: 'Pending write approvals',
+-      writeApprovalDescription: 'Approve or reject staged Hermes Agent memory and skill writes.',
++      writeApprovalDescription: 'Approve or reject staged Swarm Agent memory and skill writes.',
+       writeApprovalRefresh: 'Refresh',
+       writeApprovalEmpty: 'No pending writes.',
+       writeApprovalMemory: 'Memory',
+@@ -2392,11 +2392,11 @@ export default {
+     new_0_6_19_4: 'TTS settings are now saved by profile, and speed, pitch, and voice tests read from the same configuration source',
+     new_0_6_19_5: 'Coding Agent model switches no longer affect existing sessions, and custom provider keys are forwarded correctly',
+     new_0_6_19_6: 'Skills runtime filters, cron job sorting, skill-detail height limits, Windows updater recovery, backup fallbacks, and compressed logo assets round out this update',
+-    new_0_6_18_2: 'Hermes Studio MCP is split into focused api, devices, and use toolsets with new session, model, chat-run, and ops actions',
++    new_0_6_18_2: 'Swarm Studio MCP is split into focused api, devices, and use toolsets with new session, model, chat-run, and ops actions',
+     new_0_6_18_3: 'Chat and group-chat history are more reliable with separate UI history, safer null-message handling, preserved assistant replies after run failures, and aligned reasoning replay',
+     new_0_6_18_4: 'MCU device feedback is clearer: tool calls stay visible over speech, audio no longer marks tasks done too early, active-device login is steadier, and long online/IP status text scrolls',
+     new_0_6_18_5: 'Voice and message workflows gained custom HTTP TTS/STT endpoint support, audio transcoding, fork message actions, persistent fork markers, and clearer upload errors',
+-    new_0_6_18_6: 'Desktop and runtime setup are safer with Unicode-safe Windows PATH registration, Hermes Agent 0.17.0 runtime publishing support, mobile PWA metadata, and several profile/auth recovery fixes',
++    new_0_6_18_6: 'Desktop and runtime setup are safer with Unicode-safe Windows PATH registration, Swarm Agent 0.17.0 runtime publishing support, mobile PWA metadata, and several profile/auth recovery fixes',
+     new_0_6_18_7: 'Polish and detail improvements across the app',
+     new_0_6_17_1: 'Fixed Codex and Claude Code conversation startup issues',
+     new_0_6_16_1: 'Provider settings now preserve custom API modes, cover LongCat correctly, support deleting v12 provider entries, and keep model catalogs in sync with auth and API-key image providers',
+@@ -2423,7 +2423,7 @@ export default {
+     new_0_6_13_2: 'File handling is safer with literal-dot path validation and malformed skill-import filename rejection',
+     new_0_6_13_3: 'Chat is more stable on mobile and in browsers without speech synthesis support',
+     new_0_6_13_4: 'Agent failures now preserve the bridge error tail, and Claude Code root-permission launches are more reliable',
+-    new_0_6_13_5: 'Desktop updates are more reliable: Windows upgrades close stale Hermes Studio processes, Cloudflare is checked first, and GitHub remains the fallback feed',
++    new_0_6_13_5: 'Desktop updates are more reliable: Windows upgrades close stale Swarm Studio processes, Cloudflare is checked first, and GitHub remains the fallback feed',
+     new_0_6_13_6: 'Release automation now keeps Web UI and Docker releases out of GitHub Latest while full desktop releases are manually promoted to Latest',
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+index 85c47f18..5d7b6711 100644
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: 'Introduce tu nombre de usuario y contrasena para continuar.',
+     placeholder: 'Token de acceso',
+     submit: 'Iniciar sesion',
+@@ -261,7 +261,7 @@ export default {
+     remoteLoadFailed: 'No se pudieron cargar las versiones remotas',
+     downloadTasks: 'Tareas de descarga',
+     downloadStarted: 'Descarga iniciada',
+-    activateSuccess: 'Selección de versión guardada. Reinicia Hermes Studio para usarla.',
++    activateSuccess: 'Selección de versión guardada. Reinicia Swarm Studio para usarla.',
+     jobStatus: {
+       queued: 'En cola',
+       running: 'En ejecución',
+@@ -413,7 +413,7 @@ export default {
+     contextEditInvalid: 'Por favor ingresa una longitud de contexto válida',
+     contextEditSuccess: 'Longitud del contexto actualizada',
+     contextEditFailed: 'Error en la actualización',
+-    emptyState: 'Inicia una conversacion con Hermes Agent',
++    emptyState: 'Inicia una conversacion con Swarm Agent',
+     emptyStateAgent: 'Inicia una conversacion con {agent}',
+     viewOlderInHistory: 'Ver mensajes anteriores en el historial',
+     scrollToBottom: 'Ir al final',
+@@ -751,10 +751,10 @@ jobTriggered: 'Job ejecutado',
+     reloadHint: 'Sesiones activas: ejecuta /reload-skills; las nuevas la cargan automáticamente.',
+     writeApprovalButton: 'Pendientes {count}',
+     writeApprovalTitle: 'Escrituras pendientes de revision',
+-    writeApprovalDescription: 'Aprueba o rechaza escrituras de memoria y skills preparadas por Hermes Agent.',
++    writeApprovalDescription: 'Aprueba o rechaza escrituras de memoria y skills preparadas por Swarm Agent.',
+     writeApprovalRefresh: 'Actualizar',
+     writeApprovalEmpty: 'No hay escrituras pendientes.',
+-    writeApprovalUnsupported: 'Esta version de Hermes Agent no admite revision de escrituras. Actualiza Hermes Agent para usar esta funcion.',
++    writeApprovalUnsupported: 'Esta version de Swarm Agent no admite revision de escrituras. Actualiza Swarm Agent para usar esta funcion.',
+     writeApprovalMemory: 'Memoria',
+     writeApprovalSkills: 'Skills',
+     writeApprovalViewDiff: 'Revisar',
+@@ -1185,7 +1185,7 @@ jobTriggered: 'Job ejecutado',
+       enabled: 'Iniciar gateways automáticamente',
+       enabledHint: 'Si está desactivado, el arranque no iniciará automáticamente ningún gateway de perfil.',
+       management: 'Gateway unificado',
+-      managementHint: 'Requiere Hermes Agent 0.17.0 o posterior. Al activarlo, Web UI escribe multiplex_profiles para que el gateway default sirva todos los perfiles; otros perfiles no pueden configurar entradas de mensajeria separadas como Feishu, Weixin o QQBot. Al desactivarlo elimina esa configuración.',
++      managementHint: 'Requiere Swarm Agent 0.17.0 o posterior. Al activarlo, Web UI escribe multiplex_profiles para que el gateway default sirva todos los perfiles; otros perfiles no pueden configurar entradas de mensajeria separadas como Feishu, Weixin o QQBot. Al desactivarlo elimina esa configuración.',
+       managementAuto: 'Automático',
+       managementPerProfile: 'Un gateway por perfil',
+       managementUnified: 'Gateway default unificado',
+@@ -1239,11 +1239,11 @@ jobTriggered: 'Job ejecutado',
+       requireAuth: 'Autorizacion de sesion',
+       requireAuthHint: 'Requerir autorizacion para operaciones de sesion',
+       memoryWriteApproval: 'Revisar escrituras de memoria',
+-      memoryWriteApprovalHint: 'Preparar las escrituras de memoria de Hermes Agent para aprobacion antes de guardarlas.',
++      memoryWriteApprovalHint: 'Preparar las escrituras de memoria de Swarm Agent para aprobacion antes de guardarlas.',
+       skillsWriteApproval: 'Revisar escrituras de skills',
+-      skillsWriteApprovalHint: 'Preparar los cambios de skills de Hermes Agent para aprobacion antes de guardarlos.',
++      skillsWriteApprovalHint: 'Preparar los cambios de skills de Swarm Agent para aprobacion antes de guardarlos.',
+       writeApprovalTitle: 'Escrituras pendientes de revision',
+-      writeApprovalDescription: 'Aprueba o rechaza escrituras de memoria y skills preparadas por Hermes Agent.',
++      writeApprovalDescription: 'Aprueba o rechaza escrituras de memoria y skills preparadas por Swarm Agent.',
+       writeApprovalRefresh: 'Actualizar',
+       writeApprovalEmpty: 'No hay escrituras pendientes.',
+       writeApprovalMemory: 'Memoria',
+@@ -1852,11 +1852,11 @@ jobTriggered: 'Job ejecutado',
+     new_0_6_19_4: 'Los ajustes TTS ahora se guardan por profile, y velocidad, tono y pruebas de voz leen la misma fuente de configuracion',
+     new_0_6_19_5: 'Los cambios de modelo de Coding Agent ya no afectan sesiones existentes y las custom provider keys se envian correctamente',
+     new_0_6_19_6: 'Filtros de skills runtime, orden de cron jobs, limite de altura en detalles de skill, recuperacion del updater de Windows, fallbacks de backup y logos comprimidos completan la version',
+-    new_0_6_18_2: 'Hermes Studio MCP se divide en toolsets api, devices y use, con nuevas acciones de sesion, modelos, chat-run y ops',
++    new_0_6_18_2: 'Swarm Studio MCP se divide en toolsets api, devices y use, con nuevas acciones de sesion, modelos, chat-run y ops',
+     new_0_6_18_3: 'El historial de chat y grupos es mas fiable con historial de UI separado, manejo seguro de mensajes nulos, respuestas del assistant preservadas tras run failures y replay de reasoning alineado',
+     new_0_6_18_4: 'El feedback de MCU es mas claro: las tool calls tienen prioridad sobre speech, el audio ya no marca tareas como terminadas demasiado pronto, el login del dispositivo activo es mas estable y ONLINE/IP largo se desplaza',
+     new_0_6_18_5: 'Los flujos de voz y mensajes agregan endpoints HTTP TTS/STT personalizados, transcodificacion de audio, acciones de fork de mensajes, marcadores de fork persistentes y errores de upload mas claros',
+-    new_0_6_18_6: 'La configuracion de desktop y runtime es mas segura con registro Unicode-safe del PATH en Windows, soporte para publicar runtime Hermes Agent 0.17.0, metadata PWA movil y varias correcciones de recuperacion de profile/auth',
++    new_0_6_18_6: 'La configuracion de desktop y runtime es mas segura con registro Unicode-safe del PATH en Windows, soporte para publicar runtime Swarm Agent 0.17.0, metadata PWA movil y varias correcciones de recuperacion de profile/auth',
+     new_0_6_18_7: 'Optimizaciones y mejoras de detalles en toda la app',
+     new_0_6_17_1: 'Se corrigieron los problemas de inicio de conversaciones en Codex y Claude Code',
+     new_0_6_16_1: 'Los ajustes de Provider ahora conservan modos API personalizados, cubren LongCat correctamente, permiten eliminar Providers v12 y sincronizan catalogos de modelos con Providers de autenticacion e imagen con API key',
+@@ -1883,7 +1883,7 @@ jobTriggered: 'Job ejecutado',
+     new_0_6_13_2: 'El manejo de archivos es mas seguro, con validacion de puntos literales en rutas y rechazo de nombres de archivo de importacion de skills mal codificados',
+     new_0_6_13_3: 'El chat es mas estable en moviles y en navegadores sin soporte de speech synthesis',
+     new_0_6_13_4: 'Los fallos de Agent ahora conservan el final del error del bridge, y los lanzamientos de Claude Code con permiso root son mas fiables',
+-    new_0_6_13_5: 'Las actualizaciones de escritorio son mas fiables: las actualizaciones de Windows cierran procesos Hermes Studio residuales, revisan Cloudflare primero y mantienen GitHub como feed de respaldo',
++    new_0_6_13_5: 'Las actualizaciones de escritorio son mas fiables: las actualizaciones de Windows cierran procesos Swarm Studio residuales, revisan Cloudflare primero y mantienen GitHub como feed de respaldo',
+     new_0_6_13_6: 'La automatizacion de releases mantiene Web UI y Docker fuera de GitHub Latest, mientras que las releases completas de escritorio se promocionan manualmente a Latest tras una compilacion correcta',
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+index 2ff0c2c4..a5e8ef09 100644
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: 'Entrez votre nom d\'utilisateur et votre mot de passe pour continuer.',
+     placeholder: 'Jeton d\'acces',
+     submit: 'Connexion',
+@@ -261,7 +261,7 @@ export default {
+     remoteLoadFailed: 'Impossible de charger les versions distantes',
+     downloadTasks: 'Tâches de téléchargement',
+     downloadStarted: 'Téléchargement démarré',
+-    activateSuccess: 'Sélection de version enregistrée. Redémarrez Hermes Studio pour l’utiliser.',
++    activateSuccess: 'Sélection de version enregistrée. Redémarrez Swarm Studio pour l’utiliser.',
+     jobStatus: {
+       queued: 'En attente',
+       running: 'En cours',
+@@ -413,7 +413,7 @@ export default {
+     contextEditInvalid: 'Veuillez entrer une longueur de contexte valide',
+     contextEditSuccess: 'Longueur du contexte mise à jour',
+     contextEditFailed: 'Échec de la mise à jour',
+-    emptyState: 'Demarrer une conversation avec Hermes Agent',
++    emptyState: 'Demarrer une conversation avec Swarm Agent',
+     emptyStateAgent: 'Demarrer une conversation avec {agent}',
+     viewOlderInHistory: 'Voir les messages precedents dans l’historique',
+     scrollToBottom: 'Aller en bas',
+@@ -751,10 +751,10 @@ jobTriggered: 'Job declenche',
+     reloadHint: 'Sessions actives : exécutez /reload-skills ; les nouvelles le chargent automatiquement.',
+     writeApprovalButton: 'En attente {count}',
+     writeApprovalTitle: 'Ecritures en attente de validation',
+-    writeApprovalDescription: 'Approuvez ou refusez les ecritures de memoire et de skills preparees par Hermes Agent.',
++    writeApprovalDescription: 'Approuvez ou refusez les ecritures de memoire et de skills preparees par Swarm Agent.',
+     writeApprovalRefresh: 'Actualiser',
+     writeApprovalEmpty: 'Aucune ecriture en attente.',
+-    writeApprovalUnsupported: 'Cette version de Hermes Agent ne prend pas en charge la validation des ecritures. Mettez Hermes Agent a jour pour utiliser cette fonction.',
++    writeApprovalUnsupported: 'Cette version de Swarm Agent ne prend pas en charge la validation des ecritures. Mettez Swarm Agent a jour pour utiliser cette fonction.',
+     writeApprovalMemory: 'Memoire',
+     writeApprovalSkills: 'Skills',
+     writeApprovalViewDiff: 'Verifier',
+@@ -1185,7 +1185,7 @@ jobTriggered: 'Job declenche',
+       enabled: 'Démarrer automatiquement les gateways',
+       enabledHint: 'Si désactivé, aucun gateway de profil ne sera démarré automatiquement au lancement.',
+       management: 'Gateway unifié',
+-      managementHint: 'Nécessite Hermes Agent 0.17.0 ou ultérieur. Si activé, la Web UI écrit multiplex_profiles afin que le gateway default serve tous les profils; les autres profils ne peuvent pas configurer des points d entree de messagerie distincts comme Feishu, Weixin ou QQBot. Désactiver retire cette configuration.',
++      managementHint: 'Nécessite Swarm Agent 0.17.0 ou ultérieur. Si activé, la Web UI écrit multiplex_profiles afin que le gateway default serve tous les profils; les autres profils ne peuvent pas configurer des points d entree de messagerie distincts comme Feishu, Weixin ou QQBot. Désactiver retire cette configuration.',
+       managementAuto: 'Automatique',
+       managementPerProfile: 'Un gateway par profil',
+       managementUnified: 'Gateway default unifié',
+@@ -1239,11 +1239,11 @@ jobTriggered: 'Job declenche',
+       requireAuth: 'Autorisation de session',
+       requireAuthHint: 'Exiger une autorisation pour les operations de session',
+       memoryWriteApproval: 'Verifier les ecritures de memoire',
+-      memoryWriteApprovalHint: 'Mettre les ecritures de memoire de Hermes Agent en attente de validation avant de les enregistrer.',
++      memoryWriteApprovalHint: 'Mettre les ecritures de memoire de Swarm Agent en attente de validation avant de les enregistrer.',
+       skillsWriteApproval: 'Verifier les ecritures de skills',
+-      skillsWriteApprovalHint: 'Mettre les modifications de skills de Hermes Agent en attente de validation avant de les enregistrer.',
++      skillsWriteApprovalHint: 'Mettre les modifications de skills de Swarm Agent en attente de validation avant de les enregistrer.',
+       writeApprovalTitle: 'Ecritures en attente de validation',
+-      writeApprovalDescription: 'Approuvez ou refusez les ecritures de memoire et de skills preparees par Hermes Agent.',
++      writeApprovalDescription: 'Approuvez ou refusez les ecritures de memoire et de skills preparees par Swarm Agent.',
+       writeApprovalRefresh: 'Actualiser',
+       writeApprovalEmpty: 'Aucune ecriture en attente.',
+       writeApprovalMemory: 'Memoire',
+@@ -1852,11 +1852,11 @@ jobTriggered: 'Job declenche',
+     new_0_6_19_4: 'Les reglages TTS sont maintenant enregistres par profile, et la vitesse, le pitch et les tests vocaux lisent la meme source de configuration',
+     new_0_6_19_5: 'Les changements de modele Coding Agent n affectent plus les sessions existantes, et les custom provider keys sont transmises correctement',
+     new_0_6_19_6: 'Filtres skills runtime, tri des cron jobs, limite de hauteur des details skill, recuperation updater Windows, fallbacks de backup et logos compresses completent cette mise a jour',
+-    new_0_6_18_2: 'Hermes Studio MCP est separe en toolsets api, devices et use, avec de nouvelles actions session, model, chat-run et ops',
++    new_0_6_18_2: 'Swarm Studio MCP est separe en toolsets api, devices et use, avec de nouvelles actions session, model, chat-run et ops',
+     new_0_6_18_3: 'Les historiques de chat et de groupe sont plus fiables avec historique UI separe, gestion sure des messages nuls, reponses assistant preservees apres run failures et replay reasoning aligne',
+     new_0_6_18_4: 'Le retour MCU est plus clair: les tool calls restent prioritaires sur la voix, l audio ne marque plus les taches terminees trop tot, le login active-device est plus stable et les longs textes ONLINE/IP defilent',
+     new_0_6_18_5: 'Les workflows voix et messages ajoutent des endpoints HTTP TTS/STT personnalises, le transcodage audio, les actions fork message, les marqueurs fork persistants et des erreurs d upload plus claires',
+-    new_0_6_18_6: 'La configuration desktop et runtime est plus sure avec un enregistrement PATH Windows compatible Unicode, le support de publication runtime Hermes Agent 0.17.0, les metadonnees PWA mobile et plusieurs corrections profile/auth',
++    new_0_6_18_6: 'La configuration desktop et runtime est plus sure avec un enregistrement PATH Windows compatible Unicode, le support de publication runtime Swarm Agent 0.17.0, les metadonnees PWA mobile et plusieurs corrections profile/auth',
+     new_0_6_18_7: 'Optimisations et ameliorations de details dans toute l application',
+     new_0_6_17_1: 'Correction des problemes de demarrage des conversations Codex et Claude Code',
+     new_0_6_16_1: 'Les reglages Provider conservent maintenant les API modes personnalises, couvrent LongCat correctement, permettent de supprimer les Providers v12 et synchronisent les catalogues de modeles avec les Providers auth et image a API key',
+@@ -1883,7 +1883,7 @@ jobTriggered: 'Job declenche',
+     new_0_6_13_2: 'La gestion des fichiers est plus sure, avec validation des points litteraux dans les chemins et rejet des noms de fichiers d import de skill mal encodes',
+     new_0_6_13_3: 'Le chat est plus stable sur mobile et dans les navigateurs sans prise en charge de speech synthesis',
+     new_0_6_13_4: 'Les echecs d Agent conservent maintenant la fin d erreur du bridge, et les lancements Claude Code avec permission root sont plus fiables',
+-    new_0_6_13_5: 'Les mises a jour desktop sont plus fiables : les mises a niveau Windows ferment les anciens processus Hermes Studio, Cloudflare est verifie en premier et GitHub reste le flux de secours',
++    new_0_6_13_5: 'Les mises a jour desktop sont plus fiables : les mises a niveau Windows ferment les anciens processus Swarm Studio, Cloudflare est verifie en premier et GitHub reste le flux de secours',
+     new_0_6_13_6: 'L automatisation des releases garde les releases Web UI et Docker hors de GitHub Latest, tandis que les releases desktop completes sont promues manuellement en Latest apres build reussi',
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+index ac2d41d8..132d6730 100644
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // ログイン
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: 'ユーザー名とパスワードを入力して続行してください。',
+     placeholder: 'アクセストークン',
+     submit: 'ログイン',
+@@ -261,7 +261,7 @@ export default {
+     remoteLoadFailed: 'リモートバージョンの読み込みに失敗しました',
+     downloadTasks: 'ダウンロードタスク',
+     downloadStarted: 'ダウンロードを開始しました',
+-    activateSuccess: 'バージョン選択を保存しました。Hermes Studio を再起動すると反映されます。',
++    activateSuccess: 'バージョン選択を保存しました。Swarm Studio を再起動すると反映されます。',
+     jobStatus: {
+       queued: '待機中',
+       running: '実行中',
+@@ -413,7 +413,7 @@ export default {
+     contextEditInvalid: '有効なコンテキスト長を入力してください',
+     contextEditSuccess: 'コンテキスト長を更新しました',
+     contextEditFailed: '更新に失敗しました',
+-    emptyState: 'Hermes Agent と会話を開始しましょう',
++    emptyState: 'Swarm Agent と会話を開始しましょう',
+     emptyStateAgent: '{agent} と会話を開始しましょう',
+     viewOlderInHistory: '以前のメッセージは履歴で表示',
+     scrollToBottom: '一番下へ移動',
+@@ -751,10 +751,10 @@ export default {
+     reloadHint: 'アクティブなセッションは /reload-skills を実行してください。新規セッションは自動で読み込みます。',
+     writeApprovalButton: '保留中 {count}',
+     writeApprovalTitle: '書き込み承認待ち',
+-    writeApprovalDescription: 'Hermes Agent が保留したメモリとスキルの書き込みを承認または拒否します。',
++    writeApprovalDescription: 'Swarm Agent が保留したメモリとスキルの書き込みを承認または拒否します。',
+     writeApprovalRefresh: '更新',
+     writeApprovalEmpty: '承認待ちの書き込みはありません。',
+-    writeApprovalUnsupported: 'この Hermes Agent バージョンは書き込み承認に対応していません。この機能を使うには Hermes Agent を更新してください。',
++    writeApprovalUnsupported: 'この Swarm Agent バージョンは書き込み承認に対応していません。この機能を使うには Swarm Agent を更新してください。',
+     writeApprovalMemory: 'メモリ',
+     writeApprovalSkills: 'スキル',
+     writeApprovalViewDiff: '確認',
+@@ -1185,7 +1185,7 @@ export default {
+       enabled: 'Gateway を自動起動',
+       enabledHint: '無効にすると、起動時に profile gateway を自動起動しません。',
+       management: '統一 gateway',
+-      managementHint: 'Hermes Agent 0.17.0 以降が必要です。有効にすると Web UI が multiplex_profiles を書き込み、default gateway がすべての profiles を処理します。他の profile では Feishu、Weixin、QQBot などのメッセージング入口を個別設定できません。無効にするとその設定を削除します。',
++      managementHint: 'Swarm Agent 0.17.0 以降が必要です。有効にすると Web UI が multiplex_profiles を書き込み、default gateway がすべての profiles を処理します。他の profile では Feishu、Weixin、QQBot などのメッセージング入口を個別設定できません。無効にするとその設定を削除します。',
+       managementAuto: '自動',
+       managementPerProfile: 'Profile ごとに 1 gateway',
+       managementUnified: '統一 default gateway',
+@@ -1239,11 +1239,11 @@ export default {
+       requireAuth: 'セッション認可',
+       requireAuthHint: 'セッション操作に認可を要求します',
+       memoryWriteApproval: 'メモリ書き込みを確認',
+-      memoryWriteApprovalHint: 'Hermes Agent のメモリ書き込みを保存前に承認待ちにします。',
++      memoryWriteApprovalHint: 'Swarm Agent のメモリ書き込みを保存前に承認待ちにします。',
+       skillsWriteApproval: 'スキル書き込みを確認',
+-      skillsWriteApprovalHint: 'Hermes Agent のスキル変更を保存前に承認待ちにします。',
++      skillsWriteApprovalHint: 'Swarm Agent のスキル変更を保存前に承認待ちにします。',
+       writeApprovalTitle: '書き込み承認待ち',
+-      writeApprovalDescription: 'Hermes Agent が保留したメモリとスキルの書き込みを承認または拒否します。',
++      writeApprovalDescription: 'Swarm Agent が保留したメモリとスキルの書き込みを承認または拒否します。',
+       writeApprovalRefresh: '更新',
+       writeApprovalEmpty: '承認待ちの書き込みはありません。',
+       writeApprovalMemory: 'メモリ',
+@@ -1851,11 +1851,11 @@ export default {
+     new_0_6_19_4: 'TTS settings は profile ごとに保存され、speed、pitch、voice test は同じ設定ソースを参照します',
+     new_0_6_19_5: 'Coding Agent の model switch は既存 session に影響せず、custom provider key も正しく渡されます',
+     new_0_6_19_6: 'Skills runtime filter、cron job sort、skill detail height limit、Windows updater recovery、backup fallback、logo asset compression も含まれます',
+-    new_0_6_18_2: 'Hermes Studio MCP を api、devices、use の toolset に分割し、session、model、chat-run、ops 操作を追加しました',
++    new_0_6_18_2: 'Swarm Studio MCP を api、devices、use の toolset に分割し、session、model、chat-run、ops 操作を追加しました',
+     new_0_6_18_3: 'チャットとグループチャット履歴は、UI 履歴の分離、安全な null message 処理、run failure 後の assistant reply 保持、reasoning replay の整合でより信頼できます',
+     new_0_6_18_4: 'MCU デバイス表示が明確になり、tool call が speech より優先表示され、audio が早すぎる DONE を出さず、active device login が安定し、長い ONLINE/IP テキストはスクロールします',
+     new_0_6_18_5: '音声とメッセージの workflow にカスタム HTTP TTS/STT endpoint、audio transcoding、fork message action、永続 fork marker、より明確な upload error を追加しました',
+-    new_0_6_18_6: 'Desktop と runtime setup は、Unicode-safe な Windows PATH 登録、Hermes Agent 0.17.0 runtime publish 対応、mobile PWA metadata、profile/auth recovery 修正で安全になりました',
++    new_0_6_18_6: 'Desktop と runtime setup は、Unicode-safe な Windows PATH 登録、Swarm Agent 0.17.0 runtime publish 対応、mobile PWA metadata、profile/auth recovery 修正で安全になりました',
+     new_0_6_18_7: '各所の細部を改善しました',
+     new_0_6_17_1: 'Codex と Claude Code の会話起動問題を修正しました',
+     new_0_6_16_1: 'Provider 設定でカスタム API mode を保持し、LongCat プリセットを正しく扱い、v12 Provider の削除と auth/API-key 画像 Provider を含むモデルカタログ同期に対応しました',
+@@ -1882,7 +1882,7 @@ export default {
+     new_0_6_13_2: 'ファイル処理をより安全にし、リテラルのドットを含むパス検証と、不正なエンコードのスキルインポートファイル名の拒否に対応しました',
+     new_0_6_13_3: 'モバイル環境と speech synthesis 非対応ブラウザでのチャットがより安定しました',
+     new_0_6_13_4: 'Agent 失敗時に bridge のエラー末尾を保持し、Claude Code の root 権限起動をより安定させました',
+-    new_0_6_13_5: 'デスクトップ更新の信頼性を改善しました。Windows アップグレード時に残留 Hermes Studio プロセスを閉じ、Cloudflare を先に確認し、GitHub をフォールバック更新元として保持します',
++    new_0_6_13_5: 'デスクトップ更新の信頼性を改善しました。Windows アップグレード時に残留 Swarm Studio プロセスを閉じ、Cloudflare を先に確認し、GitHub をフォールバック更新元として保持します',
+     new_0_6_13_6: 'リリース自動化を調整し、Web UI と Docker の release は GitHub Latest にせず、完全なデスクトップ release だけを手動ビルド成功後に Latest へ昇格します',
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+index 2d673ecf..9cc7ffcf 100644
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // 로그인
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: '계속하려면 사용자 이름과 비밀번호를 입력하세요.',
+     placeholder: '액세스 토큰',
+     submit: '로그인',
+@@ -261,7 +261,7 @@ export default {
+     remoteLoadFailed: '원격 버전을 불러오지 못했습니다',
+     downloadTasks: '다운로드 작업',
+     downloadStarted: '다운로드를 시작했습니다',
+-    activateSuccess: '버전 선택이 저장되었습니다. Hermes Studio를 다시 시작하면 적용됩니다.',
++    activateSuccess: '버전 선택이 저장되었습니다. Swarm Studio를 다시 시작하면 적용됩니다.',
+     jobStatus: {
+       queued: '대기 중',
+       running: '실행 중',
+@@ -413,7 +413,7 @@ export default {
+     contextEditInvalid: '유효한 컨텍스트 길이를 입력하세요',
+     contextEditSuccess: '컨텍스트 길이가 업데이트되었습니다',
+     contextEditFailed: '업데이트 실패',
+-    emptyState: 'Hermes Agent와 대화를 시작하세요',
++    emptyState: 'Swarm Agent와 대화를 시작하세요',
+     emptyStateAgent: '{agent}와 대화를 시작하세요',
+     viewOlderInHistory: '이전 메시지는 기록에서 보기',
+     scrollToBottom: '맨 아래로 이동',
+@@ -751,10 +751,10 @@ export default {
+     reloadHint: '활성 세션에서는 /reload-skills 실행. 새 세션은 자동 로드됩니다.',
+     writeApprovalButton: '대기 {count}',
+     writeApprovalTitle: '쓰기 승인 대기',
+-    writeApprovalDescription: 'Hermes Agent가 보류한 메모리와 스킬 쓰기를 승인하거나 거부합니다.',
++    writeApprovalDescription: 'Swarm Agent가 보류한 메모리와 스킬 쓰기를 승인하거나 거부합니다.',
+     writeApprovalRefresh: '새로고침',
+     writeApprovalEmpty: '승인 대기 중인 쓰기가 없습니다.',
+-    writeApprovalUnsupported: '이 Hermes Agent 버전은 쓰기 승인을 지원하지 않습니다. 이 기능을 사용하려면 Hermes Agent를 업그레이드하세요.',
++    writeApprovalUnsupported: '이 Swarm Agent 버전은 쓰기 승인을 지원하지 않습니다. 이 기능을 사용하려면 Swarm Agent를 업그레이드하세요.',
+     writeApprovalMemory: '메모리',
+     writeApprovalSkills: '스킬',
+     writeApprovalViewDiff: '검토',
+@@ -1185,7 +1185,7 @@ export default {
+       enabled: 'Gateway 자동 시작',
+       enabledHint: '끄면 시작 시 어떤 profile gateway도 자동으로 실행하지 않습니다.',
+       management: '통합 gateway',
+-      managementHint: 'Hermes Agent 0.17.0 이상이 필요합니다. 켜면 Web UI가 multiplex_profiles를 기록해 default gateway가 모든 profiles를 처리합니다. 다른 profile은 Feishu, Weixin, QQBot 같은 메시징 진입점을 별도로 설정할 수 없습니다. 끄면 해당 설정을 제거합니다.',
++      managementHint: 'Swarm Agent 0.17.0 이상이 필요합니다. 켜면 Web UI가 multiplex_profiles를 기록해 default gateway가 모든 profiles를 처리합니다. 다른 profile은 Feishu, Weixin, QQBot 같은 메시징 진입점을 별도로 설정할 수 없습니다. 끄면 해당 설정을 제거합니다.',
+       managementAuto: '자동',
+       managementPerProfile: 'Profile별 gateway 하나',
+       managementUnified: '통합 default gateway',
+@@ -1239,11 +1239,11 @@ export default {
+       requireAuth: '세션 승인',
+       requireAuthHint: '세션 작업에 승인을 요구합니다',
+       memoryWriteApproval: '메모리 쓰기 검토',
+-      memoryWriteApprovalHint: 'Hermes Agent의 메모리 쓰기를 저장하기 전에 승인 대기 상태로 둡니다.',
++      memoryWriteApprovalHint: 'Swarm Agent의 메모리 쓰기를 저장하기 전에 승인 대기 상태로 둡니다.',
+       skillsWriteApproval: '스킬 쓰기 검토',
+-      skillsWriteApprovalHint: 'Hermes Agent의 스킬 변경을 저장하기 전에 승인 대기 상태로 둡니다.',
++      skillsWriteApprovalHint: 'Swarm Agent의 스킬 변경을 저장하기 전에 승인 대기 상태로 둡니다.',
+       writeApprovalTitle: '쓰기 승인 대기',
+-      writeApprovalDescription: 'Hermes Agent가 보류한 메모리와 스킬 쓰기를 승인하거나 거부합니다.',
++      writeApprovalDescription: 'Swarm Agent가 보류한 메모리와 스킬 쓰기를 승인하거나 거부합니다.',
+       writeApprovalRefresh: '새로고침',
+       writeApprovalEmpty: '승인 대기 중인 쓰기가 없습니다.',
+       writeApprovalMemory: '메모리',
+@@ -1851,11 +1851,11 @@ export default {
+     new_0_6_19_4: 'TTS 설정은 이제 profile별로 저장되며 speed, pitch, voice test가 같은 설정 소스를 읽습니다',
+     new_0_6_19_5: 'Coding Agent의 model switch는 기존 session에 영향을 주지 않으며 custom provider key가 올바르게 전달됩니다',
+     new_0_6_19_6: 'Skills runtime filter, cron job sort, skill detail height limit, Windows updater recovery, backup fallback, logo asset compression도 포함됩니다',
+-    new_0_6_18_2: 'Hermes Studio MCP가 api, devices, use toolset으로 나뉘고 session, model, chat-run, ops 작업이 추가되었습니다',
++    new_0_6_18_2: 'Swarm Studio MCP가 api, devices, use toolset으로 나뉘고 session, model, chat-run, ops 작업이 추가되었습니다',
+     new_0_6_18_3: '채팅과 그룹 채팅 기록은 UI 기록 분리, 안전한 null message 처리, run failure 후 assistant reply 보존, 정렬된 reasoning replay로 더 안정적입니다',
+     new_0_6_18_4: 'MCU 디바이스 피드백이 더 명확해져 tool call이 speech보다 우선 표시되고, audio가 작업을 너무 일찍 DONE으로 표시하지 않으며, active device login이 안정화되고 긴 ONLINE/IP 텍스트가 스크롤됩니다',
+     new_0_6_18_5: '음성 및 메시지 workflow에 custom HTTP TTS/STT endpoint, audio transcoding, fork message action, 지속되는 fork marker, 더 명확한 upload error가 추가되었습니다',
+-    new_0_6_18_6: 'Desktop 및 runtime setup은 Unicode-safe Windows PATH 등록, Hermes Agent 0.17.0 runtime publish 지원, mobile PWA metadata, 여러 profile/auth recovery 수정으로 더 안전해졌습니다',
++    new_0_6_18_6: 'Desktop 및 runtime setup은 Unicode-safe Windows PATH 등록, Swarm Agent 0.17.0 runtime publish 지원, mobile PWA metadata, 여러 profile/auth recovery 수정으로 더 안전해졌습니다',
+     new_0_6_18_7: '여러 세부 사항을 개선했습니다',
+     new_0_6_17_1: 'Codex와 Claude Code 대화 시작 문제를 수정했습니다',
+     new_0_6_16_1: 'Provider 설정이 사용자 API mode를 보존하고 LongCat preset을 올바르게 처리하며 v12 Provider 삭제와 auth/API-key 이미지 Provider가 포함된 모델 카탈로그 동기화를 지원합니다',
+@@ -1882,7 +1882,7 @@ export default {
+     new_0_6_13_2: '파일 처리가 더 안전해져 리터럴 점이 포함된 경로 검증과 잘못 인코딩된 skill import 파일명 거부를 지원합니다',
+     new_0_6_13_3: '모바일과 speech synthesis를 지원하지 않는 브라우저에서 채팅이 더 안정적입니다',
+     new_0_6_13_4: 'Agent 실패 시 bridge 오류 꼬리 로그를 보존하고 Claude Code root 권한 실행이 더 안정적입니다',
+-    new_0_6_13_5: '데스크톱 업데이트 안정성을 개선했습니다. Windows 업그레이드는 남아 있는 Hermes Studio 프로세스를 닫고, Cloudflare를 먼저 확인하며, GitHub 업데이트 피드를 fallback으로 유지합니다',
++    new_0_6_13_5: '데스크톱 업데이트 안정성을 개선했습니다. Windows 업그레이드는 남아 있는 Swarm Studio 프로세스를 닫고, Cloudflare를 먼저 확인하며, GitHub 업데이트 피드를 fallback으로 유지합니다',
+     new_0_6_13_6: '릴리스 자동화를 조정해 Web UI와 Docker release는 GitHub Latest로 표시하지 않고, 전체 데스크톱 release만 수동 빌드 성공 후 Latest로 승격합니다',
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+index ddc34fb7..1f06f0c1 100644
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: 'Insira seu nome de usuario e senha para continuar.',
+     placeholder: 'Token de acesso',
+     submit: 'Entrar',
+@@ -261,7 +261,7 @@ export default {
+     remoteLoadFailed: 'Falha ao carregar versões remotas',
+     downloadTasks: 'Tarefas de download',
+     downloadStarted: 'Download iniciado',
+-    activateSuccess: 'Seleção de versão salva. Reinicie o Hermes Studio para usá-la.',
++    activateSuccess: 'Seleção de versão salva. Reinicie o Swarm Studio para usá-la.',
+     jobStatus: {
+       queued: 'Na fila',
+       running: 'Em execução',
+@@ -413,7 +413,7 @@ export default {
+     contextEditInvalid: 'Por favor, insira um tamanho de contexto válido',
+     contextEditSuccess: 'Tamanho do contexto atualizado',
+     contextEditFailed: 'Falha na atualização',
+-    emptyState: 'Inicie uma conversa com o Hermes Agent',
++    emptyState: 'Inicie uma conversa com o Swarm Agent',
+     emptyStateAgent: 'Inicie uma conversa com {agent}',
+     viewOlderInHistory: 'Ver mensagens anteriores no historico',
+     scrollToBottom: 'Rolar ate o fim',
+@@ -751,10 +751,10 @@ jobTriggered: 'Job acionado',
+     reloadHint: 'Sessões ativas: execute /reload-skills; novas sessões carregam automaticamente.',
+     writeApprovalButton: 'Pendentes {count}',
+     writeApprovalTitle: 'Escritas pendentes de revisao',
+-    writeApprovalDescription: 'Aprove ou rejeite escritas de memoria e skills preparadas pelo Hermes Agent.',
++    writeApprovalDescription: 'Aprove ou rejeite escritas de memoria e skills preparadas pelo Swarm Agent.',
+     writeApprovalRefresh: 'Atualizar',
+     writeApprovalEmpty: 'Nenhuma escrita pendente.',
+-    writeApprovalUnsupported: 'Esta versao do Hermes Agent nao suporta revisao de escritas. Atualize o Hermes Agent para usar este recurso.',
++    writeApprovalUnsupported: 'Esta versao do Swarm Agent nao suporta revisao de escritas. Atualize o Swarm Agent para usar este recurso.',
+     writeApprovalMemory: 'Memoria',
+     writeApprovalSkills: 'Skills',
+     writeApprovalViewDiff: 'Revisar',
+@@ -1185,7 +1185,7 @@ jobTriggered: 'Job acionado',
+       enabled: 'Iniciar gateways automaticamente',
+       enabledHint: 'Quando desativado, nenhum gateway de perfil será iniciado automaticamente.',
+       management: 'Gateway unificado',
+-      managementHint: 'Requer Hermes Agent 0.17.0 ou superior. Quando ativado, a Web UI grava multiplex_profiles para o gateway default servir todos os perfis; outros perfis nao podem configurar entradas de mensagens separadas como Feishu, Weixin ou QQBot. Ao desativar, remove essa configuração.',
++      managementHint: 'Requer Swarm Agent 0.17.0 ou superior. Quando ativado, a Web UI grava multiplex_profiles para o gateway default servir todos os perfis; outros perfis nao podem configurar entradas de mensagens separadas como Feishu, Weixin ou QQBot. Ao desativar, remove essa configuração.',
+       managementAuto: 'Automático',
+       managementPerProfile: 'Um gateway por perfil',
+       managementUnified: 'Gateway default unificado',
+@@ -1239,11 +1239,11 @@ jobTriggered: 'Job acionado',
+       requireAuth: 'Autorizacao da sessao',
+       requireAuthHint: 'Exigir autorizacao para operacoes da sessao',
+       memoryWriteApproval: 'Revisar escritas de memoria',
+-      memoryWriteApprovalHint: 'Colocar escritas de memoria do Hermes Agent em aprovacao antes de salvar.',
++      memoryWriteApprovalHint: 'Colocar escritas de memoria do Swarm Agent em aprovacao antes de salvar.',
+       skillsWriteApproval: 'Revisar escritas de skills',
+-      skillsWriteApprovalHint: 'Colocar alteracoes de skills do Hermes Agent em aprovacao antes de salvar.',
++      skillsWriteApprovalHint: 'Colocar alteracoes de skills do Swarm Agent em aprovacao antes de salvar.',
+       writeApprovalTitle: 'Escritas pendentes de revisao',
+-      writeApprovalDescription: 'Aprove ou rejeite escritas de memoria e skills preparadas pelo Hermes Agent.',
++      writeApprovalDescription: 'Aprove ou rejeite escritas de memoria e skills preparadas pelo Swarm Agent.',
+       writeApprovalRefresh: 'Atualizar',
+       writeApprovalEmpty: 'Nenhuma escrita pendente.',
+       writeApprovalMemory: 'Memoria',
+@@ -1852,11 +1852,11 @@ jobTriggered: 'Job acionado',
+     new_0_6_19_4: 'As configuracoes TTS agora sao salvas por profile, e velocidade, tom e testes de voz leem a mesma fonte de configuracao',
+     new_0_6_19_5: 'Trocas de modelo no Coding Agent nao afetam mais sessoes existentes e custom provider keys sao encaminhadas corretamente',
+     new_0_6_19_6: 'Filtros de skills runtime, ordenacao de cron jobs, limite de altura de detalhes de skill, recuperacao do updater do Windows, fallbacks de backup e logos comprimidos completam a atualizacao',
+-    new_0_6_18_2: 'Hermes Studio MCP foi dividido em toolsets api, devices e use, com novas acoes de session, model, chat-run e ops',
++    new_0_6_18_2: 'Swarm Studio MCP foi dividido em toolsets api, devices e use, com novas acoes de session, model, chat-run e ops',
+     new_0_6_18_3: 'O historico de chat e grupos e mais confiavel com historico de UI separado, tratamento seguro de mensagens nulas, respostas do assistant preservadas apos run failures e replay de reasoning alinhado',
+     new_0_6_18_4: 'O feedback do MCU ficou mais claro: tool calls ficam acima de speech, audio nao marca tarefas como concluidas cedo demais, active-device login esta mais estavel e textos ONLINE/IP longos rolam',
+     new_0_6_18_5: 'Workflows de voz e mensagens ganharam endpoints HTTP TTS/STT customizados, transcodificacao de audio, acoes de fork message, marcadores fork persistentes e erros de upload mais claros',
+-    new_0_6_18_6: 'Desktop e runtime setup ficaram mais seguros com registro Unicode-safe do PATH no Windows, suporte a publicar runtime Hermes Agent 0.17.0, metadata PWA movel e varias correcoes de profile/auth recovery',
++    new_0_6_18_6: 'Desktop e runtime setup ficaram mais seguros com registro Unicode-safe do PATH no Windows, suporte a publicar runtime Swarm Agent 0.17.0, metadata PWA movel e varias correcoes de profile/auth recovery',
+     new_0_6_18_7: 'Otimizacoes e melhorias de detalhes em todo o app',
+     new_0_6_17_1: 'Corrigidos problemas ao iniciar conversas no Codex e no Claude Code',
+     new_0_6_16_1: 'As configuracoes de Provider agora preservam API modes personalizados, cobrem LongCat corretamente, permitem excluir Providers v12 e sincronizam catalogos de modelos com Providers de auth e imagem por API key',
+@@ -1883,7 +1883,7 @@ jobTriggered: 'Job acionado',
+     new_0_6_13_2: 'O tratamento de arquivos esta mais seguro, com validacao de pontos literais em caminhos e rejeicao de nomes de arquivo de importacao de skills mal codificados',
+     new_0_6_13_3: 'O chat esta mais estavel em dispositivos moveis e em navegadores sem suporte a speech synthesis',
+     new_0_6_13_4: 'Falhas do Agent agora preservam o final do erro do bridge, e inicializacoes do Claude Code com permissao root estao mais confiaveis',
+-    new_0_6_13_5: 'As atualizacoes desktop estao mais confiaveis: upgrades no Windows fecham processos Hermes Studio residuais, verificam Cloudflare primeiro e mantem GitHub como feed de fallback',
++    new_0_6_13_5: 'As atualizacoes desktop estao mais confiaveis: upgrades no Windows fecham processos Swarm Studio residuais, verificam Cloudflare primeiro e mantem GitHub como feed de fallback',
+     new_0_6_13_6: 'A automacao de releases mantem Web UI e Docker fora do GitHub Latest, enquanto releases desktop completas sao promovidas manualmente para Latest apos build bem-sucedido',
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+index e77aed82..e989414a 100644
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -1,7 +1,7 @@
+ export default {
+ 
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: 'Введите имя пользователя и пароль для продолжения.',
+     placeholder: 'Токен доступа',
+     submit: 'Войти',
+@@ -183,7 +183,7 @@ export default {
+     remoteLoadFailed: 'Не удалось загрузить удаленные версии',
+     downloadTasks: 'Задачи загрузки',
+     downloadStarted: 'Загрузка начата',
+-    activateSuccess: 'Выбор версии сохранен. Перезапустите Hermes Studio, чтобы применить его.',
++    activateSuccess: 'Выбор версии сохранен. Перезапустите Swarm Studio, чтобы применить его.',
+     jobStatus: {
+       queued: 'В очереди',
+       running: 'Выполняется',
+@@ -340,7 +340,7 @@ export default {
+     contextEditInvalid: 'Введите корректный размер контекста',
+     contextEditSuccess: 'Размер контекста обновлён',
+     contextEditFailed: 'Ошибка обновления',
+-    emptyState: 'Начните диалог с Hermes Agent',
++    emptyState: 'Начните диалог с Swarm Agent',
+     viewOlderInHistory: 'Посмотреть более ранние сообщения в истории',
+     scrollToBottom: 'Прокрутить вниз',
+     cliEmptyState: 'Начните CLI-диалог',
+@@ -866,10 +866,10 @@ export default {
+     },
+     writeApprovalButton: 'Ожидает {count}',
+     writeApprovalTitle: 'Ожидающие подтверждения записи',
+-    writeApprovalDescription: 'Подтвердите или отклоните записи памяти и skills, подготовленные Hermes Agent.',
++    writeApprovalDescription: 'Подтвердите или отклоните записи памяти и skills, подготовленные Swarm Agent.',
+     writeApprovalRefresh: 'Обновить',
+     writeApprovalEmpty: 'Нет ожидающих записей.',
+-    writeApprovalUnsupported: 'Эта версия Hermes Agent не поддерживает подтверждение записей. Обновите Hermes Agent, чтобы использовать эту функцию.',
++    writeApprovalUnsupported: 'Эта версия Swarm Agent не поддерживает подтверждение записей. Обновите Swarm Agent, чтобы использовать эту функцию.',
+     writeApprovalMemory: 'Память',
+     writeApprovalSkills: 'Skills',
+     writeApprovalViewDiff: 'Проверить',
+@@ -1303,11 +1303,11 @@ export default {
+     },
+     gatewayAutoStart: {
+       title: 'Автозапуск gateway',
+-      description: 'Управляет тем, какие локальные gateway профилей Hermes Web UI запускает при старте. Настройка хранится в конфигурации Web UI, а не в profile config.yaml.',
++      description: 'Управляет тем, какие локальные gateway профилей Swarm Web UI запускает при старте. Настройка хранится в конфигурации Web UI, а не в profile config.yaml.',
+       enabled: 'Автоматически запускать gateway',
+       enabledHint: 'Если выключено, при старте не будет автоматически запущен ни один gateway профиля.',
+       management: 'Единый gateway',
+-      managementHint: 'Требуется Hermes Agent 0.17.0 или новее. Если включено, Web UI записывает multiplex_profiles, чтобы default gateway обслуживал все профили; другие профили не могут отдельно настраивать точки входа сообщений, такие как Feishu, Weixin или QQBot. При выключении эта настройка удаляется.',
++      managementHint: 'Требуется Swarm Agent 0.17.0 или новее. Если включено, Web UI записывает multiplex_profiles, чтобы default gateway обслуживал все профили; другие профили не могут отдельно настраивать точки входа сообщений, такие как Feishu, Weixin или QQBot. При выключении эта настройка удаляется.',
+       managementAuto: 'Автоматически',
+       managementPerProfile: 'Один gateway на профиль',
+       managementUnified: 'Единый default gateway',
+@@ -1361,11 +1361,11 @@ export default {
+       requireAuth: 'Авторизация сеанса',
+       requireAuthHint: 'Требовать авторизацию для операций сеанса',
+       memoryWriteApproval: 'Проверять записи памяти',
+-      memoryWriteApprovalHint: 'Отправлять записи памяти Hermes Agent на подтверждение перед сохранением.',
++      memoryWriteApprovalHint: 'Отправлять записи памяти Swarm Agent на подтверждение перед сохранением.',
+       skillsWriteApproval: 'Проверять записи skills',
+-      skillsWriteApprovalHint: 'Отправлять изменения skills от Hermes Agent на подтверждение перед сохранением.',
++      skillsWriteApprovalHint: 'Отправлять изменения skills от Swarm Agent на подтверждение перед сохранением.',
+       writeApprovalTitle: 'Ожидающие подтверждения записи',
+-      writeApprovalDescription: 'Подтвердите или отклоните записи памяти и skills, подготовленные Hermes Agent.',
++      writeApprovalDescription: 'Подтвердите или отклоните записи памяти и skills, подготовленные Swarm Agent.',
+       writeApprovalRefresh: 'Обновить',
+       writeApprovalEmpty: 'Нет ожидающих записей.',
+       writeApprovalMemory: 'Память',
+@@ -1981,11 +1981,11 @@ export default {
+     new_0_6_19_4: 'TTS настройки теперь сохраняются по profile, а speed, pitch и voice tests читают один источник конфигурации',
+     new_0_6_19_5: 'Переключение модели в Coding Agent больше не влияет на существующие sessions, а custom provider keys передаются корректно',
+     new_0_6_19_6: 'Skills runtime filters, сортировка cron jobs, ограничение высоты skill details, Windows updater recovery, backup fallbacks и сжатые logo assets завершают обновление',
+-    new_0_6_18_2: 'Hermes Studio MCP разделен на toolsets api, devices и use с новыми действиями для session, model, chat-run и ops',
++    new_0_6_18_2: 'Swarm Studio MCP разделен на toolsets api, devices и use с новыми действиями для session, model, chat-run и ops',
+     new_0_6_18_3: 'История чатов и групповых чатов надежнее благодаря отдельной UI history, безопасной обработке null messages, сохранению assistant replies после run failures и согласованному reasoning replay',
+     new_0_6_18_4: 'Обратная связь MCU стала понятнее: tool calls показываются поверх speech, audio больше не помечает задачи DONE слишком рано, active-device login стабильнее, а длинный ONLINE/IP текст прокручивается',
+     new_0_6_18_5: 'Voice и message workflows получили custom HTTP TTS/STT endpoints, audio transcoding, fork message actions, persistent fork markers и более понятные upload errors',
+-    new_0_6_18_6: 'Desktop и runtime setup стали безопаснее: Unicode-safe регистрация Windows PATH, поддержка публикации Hermes Agent 0.17.0 runtime, mobile PWA metadata и несколько исправлений profile/auth recovery',
++    new_0_6_18_6: 'Desktop и runtime setup стали безопаснее: Unicode-safe регистрация Windows PATH, поддержка публикации Swarm Agent 0.17.0 runtime, mobile PWA metadata и несколько исправлений profile/auth recovery',
+     new_0_6_18_7: 'Улучшения и доработка деталей во всем приложении',
+     new_0_6_17_1: 'Исправлены проблемы запуска диалогов Codex и Claude Code',
+     new_0_6_16_1: 'Настройки Provider теперь сохраняют пользовательские API mode, корректно покрывают LongCat, поддерживают удаление Provider v12 и синхронизируют каталоги моделей с auth и API-key image Provider',
+@@ -2012,7 +2012,7 @@ export default {
+     new_0_6_13_2: 'Работа с файлами стала безопаснее: проверка путей допускает буквальные точки, а некорректно закодированные имена файлов импорта skills отклоняются',
+     new_0_6_13_3: 'Чат стал стабильнее на мобильных устройствах и в браузерах без поддержки speech synthesis',
+     new_0_6_13_4: 'При сбоях Agent теперь сохраняется хвост ошибки bridge, а запуск Claude Code с root-разрешениями стал надежнее',
+-    new_0_6_13_5: 'Обновления desktop стали надежнее: обновления Windows закрывают оставшиеся процессы Hermes Studio, сначала проверяют Cloudflare и сохраняют GitHub как резервный feed',
++    new_0_6_13_5: 'Обновления desktop стали надежнее: обновления Windows закрывают оставшиеся процессы Swarm Studio, сначала проверяют Cloudflare и сохраняют GitHub как резервный feed',
+     new_0_6_13_6: 'Автоматизация релизов больше не помечает Web UI и Docker releases как GitHub Latest, а полные desktop releases вручную продвигаются в Latest после успешной сборки',
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+index 5a7951e7..26b63cc4 100644
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // 登入
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: '輸入使用者名稱和密碼以繼續。',
+     placeholder: '存取權杖',
+     submit: '登入',
+@@ -261,7 +261,7 @@ export default {
+     remoteLoadFailed: '遠端版本載入失敗',
+     downloadTasks: '下載任務',
+     downloadStarted: '已開始下載',
+-    activateSuccess: '版本選擇已儲存，重啟 Hermes Studio 後生效。',
++    activateSuccess: '版本選擇已儲存，重啟 Swarm Studio 後生效。',
+     jobStatus: {
+       queued: '排隊中',
+       running: '下載中',
+@@ -413,7 +413,7 @@ export default {
+     contextEditInvalid: '請輸入有效的上下文長度',
+     contextEditSuccess: '上下文長度已更新',
+     contextEditFailed: '更新失敗',
+-    emptyState: '開始與 Hermes Agent 對話',
++    emptyState: '開始與 Swarm Agent 對話',
+     emptyStateAgent: '開始與 {agent} 對話',
+     viewOlderInHistory: '更早的訊息請到歷史記錄查看',
+     scrollToBottom: '捲動到底部',
+@@ -1002,10 +1002,10 @@ export default {
+     reloadHint: '活躍會話請執行 /reload-skills；新會話會自動載入。',
+     writeApprovalButton: '待審核 {count}',
+     writeApprovalTitle: '待審核寫入',
+-    writeApprovalDescription: '批准或拒絕 Hermes Agent 暫存的記憶和技能寫入。',
++    writeApprovalDescription: '批准或拒絕 Swarm Agent 暫存的記憶和技能寫入。',
+     writeApprovalRefresh: '重新整理',
+     writeApprovalEmpty: '暫無待審核寫入。',
+-    writeApprovalUnsupported: '目前 Hermes Agent 版本不支援寫入審核。請升級 Hermes Agent 後再使用。',
++    writeApprovalUnsupported: '目前 Swarm Agent 版本不支援寫入審核。請升級 Swarm Agent 後再使用。',
+     writeApprovalMemory: '記憶',
+     writeApprovalSkills: '技能',
+     writeApprovalViewDiff: '查看',
+@@ -1444,7 +1444,7 @@ export default {
+       enabled: '自動啟動 gateway',
+       enabledHint: '關閉後，啟動期不會自動拉起任何 profile gateway。',
+       management: '統一 gateway',
+-      managementHint: '需要 Hermes Agent 0.17.0 及以上版本。開啟後會寫入 multiplex_profiles，讓 default gateway 服務所有 profiles；其他 profile 不能單獨設定飛書、微信、QQBot 等通訊工具入口。關閉後會移除此設定。',
++      managementHint: '需要 Swarm Agent 0.17.0 及以上版本。開啟後會寫入 multiplex_profiles，讓 default gateway 服務所有 profiles；其他 profile 不能單獨設定飛書、微信、QQBot 等通訊工具入口。關閉後會移除此設定。',
+       managementAuto: '自動',
+       managementPerProfile: '每個 profile 一個 gateway',
+       managementUnified: '統一 default gateway',
+@@ -1498,11 +1498,11 @@ export default {
+       requireAuth: '工作階段授權',
+       requireAuthHint: '修改工作階段操作是否授權',
+       memoryWriteApproval: '記憶寫入審核',
+-      memoryWriteApprovalHint: 'Hermes Agent 寫入 MEMORY.md / USER.md 前先進入待審核佇列。',
++      memoryWriteApprovalHint: 'Swarm Agent 寫入 MEMORY.md / USER.md 前先進入待審核佇列。',
+       skillsWriteApproval: '技能寫入審核',
+-      skillsWriteApprovalHint: 'Hermes Agent 建立或修改技能前先進入待審核佇列。',
++      skillsWriteApprovalHint: 'Swarm Agent 建立或修改技能前先進入待審核佇列。',
+       writeApprovalTitle: '待審核寫入',
+-      writeApprovalDescription: '批准或拒絕 Hermes Agent 暫存的記憶和技能寫入。',
++      writeApprovalDescription: '批准或拒絕 Swarm Agent 暫存的記憶和技能寫入。',
+       writeApprovalRefresh: '重新整理',
+       writeApprovalEmpty: '暫無待審核寫入。',
+       writeApprovalMemory: '記憶',
+@@ -2237,11 +2237,11 @@ export default {
+     new_0_6_19_4: 'TTS 設定改為依 profile 儲存，語速、音調和測試語音會讀取同一套設定來源',
+     new_0_6_19_5: 'Coding Agent 的模型切換不會影響既有會話，並修復自訂 provider key 透傳',
+     new_0_6_19_6: '補齊 skills runtime 過濾、定時任務排序、技能詳情高度限制、Windows 更新恢復、設定備份兜底和 logo 資源壓縮',
+-    new_0_6_18_2: 'Hermes Studio MCP 拆分為 api、devices 和 use 工具集，新增 session、model、chat-run 與 ops 相關操作',
++    new_0_6_18_2: 'Swarm Studio MCP 拆分為 api、devices 和 use 工具集，新增 session、model、chat-run 與 ops 相關操作',
+     new_0_6_18_3: '聊天和群聊歷史更可靠：UI 歷史與模型上下文分離，空訊息處理更安全，run failed 不再覆蓋既有助手回覆，reasoning 回放也更一致',
+     new_0_6_18_4: 'MCU 裝置回饋更清楚：工具呼叫會優先顯示在語音之上，音訊不會過早標記任務完成，活躍裝置登入更穩定，ONLINE/IP 長文字支援捲動',
+     new_0_6_18_5: '語音和訊息工作流新增自訂 HTTP TTS/STT 端點、音訊轉碼、fork 訊息操作、持久化 fork 標記，以及更清楚的上傳錯誤',
+-    new_0_6_18_6: '桌面與 runtime 設定更安全：Windows PATH 註冊支援 Unicode，支援發布 Hermes Agent 0.17.0 runtime，並補齊行動端 PWA metadata 和多項 profile/auth 恢復修復',
++    new_0_6_18_6: '桌面與 runtime 設定更安全：Windows PATH 註冊支援 Unicode，支援發布 Swarm Agent 0.17.0 runtime，並補齊行動端 PWA metadata 和多項 profile/auth 恢復修復',
+     new_0_6_18_7: '各項細節最佳化',
+     new_0_6_17_1: '修復 Codex 和 Claude Code 的對話啟動問題',
+     new_0_6_16_1: 'Provider 設定現在會保留自訂 API mode，正確涵蓋 LongCat，支援刪除 v12 Provider，並讓模型目錄同步 auth 和 API-key 圖像 Provider',
+@@ -2268,7 +2268,7 @@ export default {
+     new_0_6_13_2: '檔案處理更安全：路徑校驗支援字面量點號，並拒絕異常編碼的技能匯入檔名',
+     new_0_6_13_3: '聊天在行動端和不支援 speech synthesis 的瀏覽器中更穩定',
+     new_0_6_13_4: 'Agent 失敗時會保留 bridge 錯誤尾部資訊，Claude Code root 權限啟動也更可靠',
+-    new_0_6_13_5: '桌面更新更可靠：Windows 升級會關閉殘留 Hermes Studio 行程，優先檢查 Cloudflare，並保留 GitHub 更新源兜底',
++    new_0_6_13_5: '桌面更新更可靠：Windows 升級會關閉殘留 Swarm Studio 行程，優先檢查 Cloudflare，並保留 GitHub 更新源兜底',
+     new_0_6_13_6: '發佈自動化調整：Web UI 和 Docker release 不再標記為 GitHub Latest，完整桌面 release 手動建置成功後才提升為 Latest',
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 6b268e86..0a71a7e5 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1,7 +1,7 @@
+ export default {
+   // 登录
+   login: {
+-    title: 'Hermes Web UI',
++    title: Swarm Web UI,
+     description: '输入用户名和密码以继续。',
+     placeholder: '访问令牌',
+     submit: '登录',
+@@ -267,7 +267,7 @@ export default {
+     remoteLoadFailed: '远程版本加载失败',
+     downloadTasks: '下载任务',
+     downloadStarted: '已开始下载',
+-    activateSuccess: '版本选择已保存，重启 Hermes Studio 后生效。',
++    activateSuccess: '版本选择已保存，重启 Swarm Studio 后生效。',
+     jobStatus: {
+       queued: '排队中',
+       running: '下载中',
+@@ -419,7 +419,7 @@ export default {
+     contextEditInvalid: '请输入有效的上下文长度',
+     contextEditSuccess: '上下文长度已更新',
+     contextEditFailed: '更新失败',
+-    emptyState: '开始与 Hermes Agent 对话',
++    emptyState: '开始与 Swarm Agent 对话',
+     emptyStateAgent: '开始与 {agent} 对话',
+     viewOlderInHistory: '前面的消息请到历史记录查看',
+     scrollToBottom: '滚动到底部',
+@@ -1151,10 +1151,10 @@ export default {
+     reloadHint: '活跃会话请执行 /reload-skills；新会话会自动加载。',
+     writeApprovalButton: '待审核 {count}',
+     writeApprovalTitle: '待审核写入',
+-    writeApprovalDescription: '批准或拒绝 Hermes Agent 暂存的记忆和技能写入。',
++    writeApprovalDescription: '批准或拒绝 Swarm Agent 暂存的记忆和技能写入。',
+     writeApprovalRefresh: '刷新',
+     writeApprovalEmpty: '暂无待审核写入。',
+-    writeApprovalUnsupported: '当前 Hermes Agent 版本不支持写入审核。请升级 Hermes Agent 后再使用。',
++    writeApprovalUnsupported: '当前 Swarm Agent 版本不支持写入审核。请升级 Swarm Agent 后再使用。',
+     writeApprovalMemory: '记忆',
+     writeApprovalSkills: '技能',
+     writeApprovalViewDiff: '查看',
+@@ -1593,7 +1593,7 @@ export default {
+       enabled: '自动启动 gateway',
+       enabledHint: '关闭后，启动期不会自动拉起任何 profile gateway。',
+       management: '统一 gateway',
+-      managementHint: '需要 Hermes Agent 0.17.0 及以上版本。开启后会写入 multiplex_profiles，让 default gateway 服务所有 profiles；其他 profile 不能单独配置飞书、微信、QQBot 等通讯工具入口。关闭后会移除该配置。',
++      managementHint: '需要 Swarm Agent 0.17.0 及以上版本。开启后会写入 multiplex_profiles，让 default gateway 服务所有 profiles；其他 profile 不能单独配置飞书、微信、QQBot 等通讯工具入口。关闭后会移除该配置。',
+       managementAuto: '自动',
+       managementPerProfile: '每个 profile 一个 gateway',
+       managementUnified: '统一 default gateway',
+@@ -1647,11 +1647,11 @@ export default {
+       requireAuth: '会话授权',
+       requireAuthHint: '修改会话操作是否授权',
+       memoryWriteApproval: '记忆写入审核',
+-      memoryWriteApprovalHint: 'Hermes Agent 写入 MEMORY.md / USER.md 前先进入待审核队列。',
++      memoryWriteApprovalHint: 'Swarm Agent 写入 MEMORY.md / USER.md 前先进入待审核队列。',
+       skillsWriteApproval: '技能写入审核',
+-      skillsWriteApprovalHint: 'Hermes Agent 创建或修改技能前先进入待审核队列。',
++      skillsWriteApprovalHint: 'Swarm Agent 创建或修改技能前先进入待审核队列。',
+       writeApprovalTitle: '待审核写入',
+-      writeApprovalDescription: '批准或拒绝 Hermes Agent 暂存的记忆和技能写入。',
++      writeApprovalDescription: '批准或拒绝 Swarm Agent 暂存的记忆和技能写入。',
+       writeApprovalRefresh: '刷新',
+       writeApprovalEmpty: '暂无待审核写入。',
+       writeApprovalMemory: '记忆',
+@@ -2394,11 +2394,11 @@ export default {
+     new_0_6_19_4: 'TTS 配置改为按 profile 保存，音速、音调和测试语音会读取同一套配置来源',
+     new_0_6_19_5: 'Coding Agent 的模型切换不会影响既有会话，并修复自定义 provider key 透传',
+     new_0_6_19_6: '补齐 skills runtime 过滤、定时任务排序、技能详情高度限制、Windows 更新恢复、配置备份兜底和 logo 资源压缩',
+-    new_0_6_18_2: 'Hermes Studio MCP 拆分为 api、devices 和 use 工具集，新增 session、model、chat-run 与 ops 相关操作',
++    new_0_6_18_2: 'Swarm Studio MCP 拆分为 api、devices 和 use 工具集，新增 session、model、chat-run 与 ops 相关操作',
+     new_0_6_18_3: '聊天和群聊历史更可靠：UI 历史与模型上下文分离，空消息处理更安全，run failed 不再覆盖已有助手回复，reasoning 回放也更一致',
+     new_0_6_18_4: 'MCU 设备反馈更清楚：工具调用会优先显示在语音之上，音频不会过早标记任务完成，活跃设备登录更稳定，ONLINE/IP 长文本支持滚动',
+     new_0_6_18_5: '语音和消息工作流新增自定义 HTTP TTS/STT 端点、音频转码、fork 消息操作、持久化 fork 标记，以及更清晰的上传错误',
+-    new_0_6_18_6: '桌面与 runtime 设置更安全：Windows PATH 注册支持 Unicode，支持发布 Hermes Agent 0.17.0 runtime，并补齐移动端 PWA 元数据和多项 profile/auth 恢复修复',
++    new_0_6_18_6: '桌面与 runtime 设置更安全：Windows PATH 注册支持 Unicode，支持发布 Swarm Agent 0.17.0 runtime，并补齐移动端 PWA 元数据和多项 profile/auth 恢复修复',
+     new_0_6_18_7: '各项细节的优化',
+     new_0_6_17_1: '修复 Codex 和 Claude Code 的对话启动问题',
+     new_0_6_16_1: 'Provider 设置会正确保存自定义 API mode，补齐 LongCat 预设，支持删除 v12 Provider，并让模型目录同步认证和 API-key 图像 Provider',
+@@ -2425,7 +2425,7 @@ export default {
+     new_0_6_13_2: '文件处理更安全：路径校验支持字面量点号，并拒绝异常编码的技能导入文件名',
+     new_0_6_13_3: '聊天在移动端和不支持 speech synthesis 的浏览器中更稳定',
+     new_0_6_13_4: 'Agent 失败时会保留 bridge 错误尾部信息，Claude Code root 权限启动也更可靠',
+-    new_0_6_13_5: '桌面更新更可靠：Windows 升级会关闭残留 Hermes Studio 进程，优先检查 Cloudflare，并保留 GitHub 更新源兜底',
++    new_0_6_13_5: '桌面更新更可靠：Windows 升级会关闭残留 Swarm Studio 进程，优先检查 Cloudflare，并保留 GitHub 更新源兜底',
+     new_0_6_13_6: '发布自动化调整：Web UI 和 Docker release 不再标记为 GitHub Latest，完整桌面 release 手动构建成功后才提升为 Latest',
+   },
+ 
+diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
+index 029708a6..46f302e9 100644
+--- a/packages/client/src/views/hermes/ChatView.vue
++++ b/packages/client/src/views/hermes/ChatView.vue
+@@ -24,7 +24,7 @@ const routeProfile = computed(() => {
+   return typeof value === 'string' && value.trim() ? value : null
+ })
+ 
+-const productTitle = 'Hermes Studio'
++const productTitle = Swarm Studio
+ const tabTitle = computed(() => {
+   if (route.name !== 'hermes.session') return productTitle
+   return chatStore.activeSession?.title?.trim() || productTitle
+diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
+index f1a37ce8..9a1f60c5 100644
+--- a/packages/desktop/src/main/cli-shim.ts
++++ b/packages/desktop/src/main/cli-shim.ts
+@@ -158,7 +158,7 @@ export function createShimContent(
+       'echo.',
+       'echo Commands:',
+       'echo   ^(no command^)       Open SwarmStudio desktop app',
+-      'echo   cli [args...]       Run bundled Hermes Agent CLI',
++      'echo   cli [args...]       Run bundled Swarm Agent CLI',
+       'echo   web [args...]       Run bundled hermes-web-ui command',
+       'echo   help, -h, --help    Show this help message',
+       'exit /b 0',
+@@ -178,7 +178,7 @@ export function createShimContent(
+     '',
+     'Commands:',
+     '  (no command)       Open SwarmStudio desktop app',
+-    '  cli [args...]      Run bundled Hermes Agent CLI',
++    '  cli [args...]      Run bundled Swarm Agent CLI',
+     '  web [args...]      Run bundled hermes-web-ui command',
+     '  help, -h, --help   Show this help message',
+     'EOF',
+diff --git a/packages/desktop/src/main/updater-helpers.ts b/packages/desktop/src/main/updater-helpers.ts
+index bb979588..18bbba06 100644
+--- a/packages/desktop/src/main/updater-helpers.ts
++++ b/packages/desktop/src/main/updater-helpers.ts
+@@ -35,6 +35,6 @@ export function pendingUpdateDirectories(options: {
+   if (localAppData) bases.add(localAppData)
+   if (appDataPath) bases.add(appDataPath)
+   if (!bases.size) return []
+-  return [...bases].flatMap(base => updateCacheNames(options.appName || 'Hermes Studio')
++  return [...bases].flatMap(base => updateCacheNames(options.appName || Swarm Studio)
+     .map(name => join(base, name, 'pending')))
+ }
+diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
+index e9bb9e52..1df19e87 100644
+--- a/packages/desktop/src/main/webui-server.ts
++++ b/packages/desktop/src/main/webui-server.ts
+@@ -390,7 +390,7 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
+     // still override by setting GATEWAY_ALLOW_ALL_USERS=false in their
+     // HERMES_HOME/.env or by configuring per-platform allowlists.
+     GATEWAY_ALLOW_ALL_USERS: process.env.GATEWAY_ALLOW_ALL_USERS ?? 'true',
+-    // Keep the bundled Hermes Agent, bridge, gateway, and Web UI path helpers
++    // Keep the bundled Swarm Agent, bridge, gateway, and Web UI path helpers
+     // on the same data directory. Native Windows uses an existing
+     // %LOCALAPPDATA%\hermes or %APPDATA%\hermes; otherwise all platforms keep
+     // the standard ~/.hermes layout.
+diff --git a/packages/server/src/controllers/health.ts b/packages/server/src/controllers/health.ts
+index 34289689..832cff6e 100644
+--- a/packages/server/src/controllers/health.ts
++++ b/packages/server/src/controllers/health.ts
+@@ -189,7 +189,7 @@ async function refreshAgentBridgeHealth(): Promise<AgentBridgeHealthPayload> {
+ 
+ export async function healthCheck(ctx: any) {
+   const raw = await hermesCli.getVersion()
+-  const hermesVersion = raw.split('\n')[0].replace('Hermes Agent ', '') || ''
++  const hermesVersion = raw.split('\n')[0].replace('Swarm Agent ', '') || ''
+   const agentBridge = await getAgentBridgeHealth()
+   ctx.body = {
+     status: 'ok',
+diff --git a/packages/server/src/controllers/hermes/profiles.ts b/packages/server/src/controllers/hermes/profiles.ts
+index f461fa74..f71b80f2 100644
+--- a/packages/server/src/controllers/hermes/profiles.ts
++++ b/packages/server/src/controllers/hermes/profiles.ts
+@@ -747,13 +747,13 @@ export async function switchProfile(ctx: any) {
+ 
+       const profileConfig = join(detail.path, 'config.yaml')
+       if (!existsSync(profileConfig)) {
+-        writeFileSync(profileConfig, '# Hermes Agent Configuration\n', 'utf-8')
++        writeFileSync(profileConfig, '# Swarm Agent Configuration\n', 'utf-8')
+         logger.info('Created config.yaml for: %s', detail.path)
+       }
+ 
+       const profileEnv = join(detail.path, '.env')
+       if (!existsSync(profileEnv)) {
+-        writeFileSync(profileEnv, '# Hermes Agent Environment Configuration\n', 'utf-8')
++        writeFileSync(profileEnv, '# Swarm Agent Environment Configuration\n', 'utf-8')
+         logger.info('Created .env for: %s', detail.path)
+       }
+     } catch (err: any) {
+diff --git a/packages/server/src/routes/index.ts b/packages/server/src/routes/index.ts
+index d4f7cd57..b74a5eea 100644
+--- a/packages/server/src/routes/index.ts
++++ b/packages/server/src/routes/index.ts
+@@ -103,5 +103,5 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(performanceMonitorRoutes.routes())
+   app.use(mcpRoutes.routes())                   // MCP management
+   app.use(runtimeVersionRoutes.routes())         // Runtime and version management
+-  app.use(writeGateRoutes.routes())              // Hermes Agent write approval review
++  app.use(writeGateRoutes.routes())              // Swarm Agent write approval review
+ }
+diff --git a/packages/server/src/services/app-config.ts b/packages/server/src/services/app-config.ts
+index 2bebe954..da65b16e 100644
+--- a/packages/server/src/services/app-config.ts
++++ b/packages/server/src/services/app-config.ts
+@@ -14,7 +14,7 @@ export interface GatewayAutoStartConfig {
+   enabled?: boolean
+   include?: string[]
+   exclude?: string[]
+-  // Derived from Hermes Agent default config.yaml when returned by the config
++  // Derived from Swarm Agent default config.yaml when returned by the config
+   // controller. It is not persisted in the Web UI app config.
+   management?: 'auto' | 'per_profile' | 'unified'
+ }
+@@ -58,7 +58,7 @@ export interface AppConfig {
+ 
+   // Web UI-only manually entered model IDs. Keys are provider -> model IDs.
+   // This lets users persist provider-supported models that are absent from a
+-  // provider catalog response without changing Hermes Agent config.yaml.
++  // provider catalog response without changing Swarm Agent config.yaml.
+   customModels?: Record<string, string[]>
+ 
+   // Web UI-only model picker visibility. This filters what the WUI exposes in
+diff --git a/packages/server/src/services/hermes/agent-bridge/manager.ts b/packages/server/src/services/hermes/agent-bridge/manager.ts
+index a8c93816..8342bba6 100644
+--- a/packages/server/src/services/hermes/agent-bridge/manager.ts
++++ b/packages/server/src/services/hermes/agent-bridge/manager.ts
+@@ -13,7 +13,7 @@ const DEFAULT_AGENT_BRIDGE_RECOVERY_EXIT_TIMEOUT_MS = 5000
+ const DEFAULT_AGENT_BRIDGE_RECOVERY_SIGKILL_WAIT_MS = 250
+ const OPENROUTER_WEB_UI_ATTRIBUTION_ENV = {
+   HERMES_OPENROUTER_APP_REFERER: 'https://hermes-studio.ai',
+-  HERMES_OPENROUTER_APP_TITLE: 'Hermes Studio',
++  HERMES_OPENROUTER_APP_TITLE: Swarm Studio,
+   HERMES_OPENROUTER_APP_CATEGORIES: 'cli-agent,personal-agent',
+ } as const
+ 
+diff --git a/packages/server/src/services/hermes/custom-providers-compat.ts b/packages/server/src/services/hermes/custom-providers-compat.ts
+index 4299df30..5cf6c51c 100644
+--- a/packages/server/src/services/hermes/custom-providers-compat.ts
++++ b/packages/server/src/services/hermes/custom-providers-compat.ts
+@@ -1,7 +1,7 @@
+ /**
+- * Compatibility layer for the two `config.yaml` provider schemas used by Hermes Agent.
++ * Compatibility layer for the two `config.yaml` provider schemas used by Swarm Agent.
+  *
+- * Hermes Agent's v12 migration converts `custom_providers:` (a list of provider
++ * Swarm Agent's v12 migration converts `custom_providers:` (a list of provider
+  * entries) into `providers:` (a dict keyed by provider name) and deletes the list.
+  * Agent itself ships a compatibility helper, `get_compatible_custom_providers()`,
+  * so every consumer in core sees a unified list view across both schemas:
+@@ -195,7 +195,7 @@ export function normalizeCustomProviderEntry(
+ 
+ /**
+  * Return the full set of custom providers visible to Studio, drawn from both
+- * schemas with name/base_url/model deduplication. Mirrors Hermes Agent's
++ * schemas with name/base_url/model deduplication. Mirrors Swarm Agent's
+  * `get_compatible_custom_providers()`.
+  *
+  * Order: legacy list entries first, then v12+ dict entries — matching Agent's
+diff --git a/packages/server/src/services/hermes/group-chat/agent-clients.ts b/packages/server/src/services/hermes/group-chat/agent-clients.ts
+index 795064f0..da9770d6 100644
+--- a/packages/server/src/services/hermes/group-chat/agent-clients.ts
++++ b/packages/server/src/services/hermes/group-chat/agent-clients.ts
+@@ -416,7 +416,7 @@ class AgentClient {
+         }
+     }
+ 
+-    // ─── Hermes Agent Bridge Integration ───────────────────────
++    // ─── Swarm Agent Bridge Integration ───────────────────────
+ 
+     /**
+      * Handle an @mention from the server side.
+diff --git a/packages/server/src/services/hermes/plugins.ts b/packages/server/src/services/hermes/plugins.ts
+index 46710f23..b065a0b9 100644
+--- a/packages/server/src/services/hermes/plugins.ts
++++ b/packages/server/src/services/hermes/plugins.ts
+@@ -67,7 +67,7 @@ try:
+     from hermes_constants import get_hermes_home
+ except Exception as exc:
+     print(json.dumps({
+-        "error": "Failed to import Hermes Agent plugin modules",
++        "error": "Failed to import Swarm Agent plugin modules",
+         "detail": str(exc),
+         "traceback": traceback.format_exc(),
+     }))
+diff --git a/packages/server/src/services/hermes/run-chat/abort.ts b/packages/server/src/services/hermes/run-chat/abort.ts
+index 735e380b..58023da1 100644
+--- a/packages/server/src/services/hermes/run-chat/abort.ts
++++ b/packages/server/src/services/hermes/run-chat/abort.ts
+@@ -12,7 +12,7 @@ import { replaceState } from './compression'
+ import { calcAndUpdateUsage } from './usage'
+ import type { QueuedRun, SessionState } from './types'
+ 
+-const ABORT_BRIDGE_SYNC_TIMEOUT_MESSAGE = 'Hermes Agent did not confirm stop before timeout. Local run state was released so you can continue.'
++const ABORT_BRIDGE_SYNC_TIMEOUT_MESSAGE = 'Swarm Agent did not confirm stop before timeout. Local run state was released so you can continue.'
+ 
+ function isBridgeRunSource(source?: string): boolean {
+   return source === 'cli' || source === 'global_agent' || source === 'workflow'
+diff --git a/packages/server/src/services/hermes/write-gate.ts b/packages/server/src/services/hermes/write-gate.ts
+index b32b9f16..26644ee5 100644
+--- a/packages/server/src/services/hermes/write-gate.ts
++++ b/packages/server/src/services/hermes/write-gate.ts
+@@ -250,7 +250,7 @@ async function listPendingFor(profile: string, subsystem: WriteGateSubsystem): P
+       const record = normalizeRecord(raw, subsystem, fallbackId)
+       if (record) records.push(record)
+     } catch {
+-      // Skip unreadable records, matching Hermes Agent's pending list behavior.
++      // Skip unreadable records, matching Swarm Agent's pending list behavior.
+     }
+   }
+   return records.sort((a, b) => (a.created_at || 0) - (b.created_at || 0))
+@@ -361,7 +361,7 @@ function tryResolveAgentRoot(): string {
+ function resolveAgentRoot(): string {
+   const agentRoot = tryResolveAgentRoot()
+   if (agentRoot) return agentRoot
+-  throw new Error('Hermes Agent source not found. Set HERMES_AGENT_ROOT to enable write approval actions.')
++  throw new Error('Swarm Agent source not found. Set HERMES_AGENT_ROOT to enable write approval actions.')
+ }
+ 
+ function resolveHermesPython(agentRoot?: string): string {
+@@ -414,7 +414,7 @@ async function runPythonAction(
+   assertSubsystem(subsystem)
+   assertPendingId(pendingId)
+   if (!isWriteGateSupported()) {
+-    throw new Error('Hermes Agent write approval is not supported by the installed Hermes Agent version.')
++    throw new Error('Swarm Agent write approval is not supported by the installed Swarm Agent version.')
+   }
+   const agentRoot = tryResolveAgentRoot()
+   const python = resolveHermesPython(agentRoot)
+diff --git a/packages/server/src/services/system-info.ts b/packages/server/src/services/system-info.ts
+index 23546401..0bf34d52 100644
+--- a/packages/server/src/services/system-info.ts
++++ b/packages/server/src/services/system-info.ts
+@@ -67,7 +67,7 @@ export function getHermesWebUiVersion(): string {
+ }
+ 
+ export function normalizeHermesAgentVersion(raw: string): string {
+-  return raw.split('\n')[0]?.replace(/^Hermes Agent\s+/, '').trim() || ''
++  return raw.split('\n')[0]?.replace(/^Swarm Agent\s+/, '').trim() || ''
+ }
+ 
+ function isValidDeviceIdentity(value: any): value is DeviceIdentity {
+diff --git a/packages/website/src/i18n/en.ts b/packages/website/src/i18n/en.ts
+index 4c920e9b..c417d5ad 100644
+--- a/packages/website/src/i18n/en.ts
++++ b/packages/website/src/i18n/en.ts
+@@ -1,6 +1,6 @@
+ export default {
+   brand: {
+-    name: 'Hermes Studio',
++    name: Swarm Studio,
+     logoAlt: 'Hermes',
+   },
+   ui: {
+@@ -29,8 +29,8 @@ export default {
+       deploy: 'Deploy',
+     },
+     badge: 'Local-first AI Agent Workspace',
+-    title: 'Hermes Studio',
+-    subtitle: 'A desktop app and local control plane for Hermes Agent. Chat, manage profiles, run coding agents, inspect files, automate jobs, and keep your runtime under your control.',
++    title: Swarm Studio,
++    subtitle: 'A desktop app and local control plane for Swarm Agent. Chat, manage profiles, run coding agents, inspect files, automate jobs, and keep your runtime under your control.',
+     cta: 'Download Desktop',
+     docsCta: 'Read Docs',
+     viewGithub: 'View on GitHub',
+@@ -43,11 +43,11 @@ export default {
+     previewAlt: 'Hermes Studio dashboard preview',
+   },
+   features: {
+-    title: 'One Local Console for Hermes Agent',
++    title: 'One Local Console for Swarm Agent',
+     desc: 'Hermes Studio brings chat, runtime management, automation, files, coding agents, and release-ready desktop distribution into one workspace.',
+     streaming: {
+       title: 'Agent Chat',
+-      desc: 'Streaming Hermes Agent conversations with sessions, Markdown, tool traces, uploads, downloads, model badges, and context usage.',
++      desc: 'Streaming Swarm Agent conversations with sessions, Markdown, tool traces, uploads, downloads, model badges, and context usage.',
+     },
+     platforms: {
+       title: 'Platform Channels',
+@@ -83,7 +83,7 @@ export default {
+     },
+     quickInstall: {
+       title: 'Desktop Runtime',
+-      desc: 'Windows, macOS, and Linux desktop builds bundle the Web UI runtime and manage Hermes Studio state separately from Hermes Agent data.',
++      desc: 'Windows, macOS, and Linux desktop builds bundle the Web UI runtime and manage Hermes Studio state separately from Swarm Agent data.',
+     },
+     i18n: {
+       title: 'Coding Agents & MCP',
+@@ -189,7 +189,7 @@ export default {
+     chartAlt: 'Star History',
+   },
+   footer: {
+-    description: 'Self-hosted AI chat dashboard for Hermes Agent.',
++    description: 'Self-hosted AI chat dashboard for Swarm Agent.',
+     license: 'BSL-1.1 License',
+     madeWith: 'Built with Vue 3, Naive UI, and TypeScript.',
+     github: 'Open GitHub',
+@@ -209,7 +209,7 @@ export default {
+     },
+     gettingStarted: {
+       title: 'Getting Started',
+-      intro: 'Hermes Studio is a self-hosted web dashboard for managing AI conversations, platform channels, scheduled jobs, and more. It wraps the Hermes Agent CLI and provides a beautiful web interface.',
++      intro: 'Hermes Studio is a self-hosted web dashboard for managing AI conversations, platform channels, scheduled jobs, and more. It wraps the Swarm Agent CLI and provides a beautiful web interface.',
+       install: {
+         title: 'Installation',
+         content: 'Install globally via npm. Node.js 23 or higher is required.',
+@@ -247,7 +247,7 @@ export default {
+           ['WORKSPACE_BASE', 'Base directory for workspace browsing'],
+           ['HERMES_HOME', 'Hermes data home'],
+           ['HERMES_BIN', 'Custom Hermes CLI binary path'],
+-          ['HERMES_AGENT_ROOT', 'Hermes Agent source checkout containing run_agent.py'],
++          ['HERMES_AGENT_ROOT', 'Swarm Agent source checkout containing run_agent.py'],
+           ['HERMES_AGENT_BRIDGE_PYTHON', 'Python interpreter used to launch the agent bridge'],
+           ['HERMES_AGENT_BRIDGE_UV', 'uv executable used to launch the agent bridge when available'],
+           ['UV', 'Fallback uv executable path'],
+@@ -258,13 +258,13 @@ export default {
+           ['HERMES_AGENT_BRIDGE_STARTUP_TIMEOUT_MS', 'Timeout while waiting for the Python bridge to become ready'],
+           ['HERMES_AGENT_BRIDGE_AUTO_RESTART', 'Auto-restart the bridge broker after unexpected exit; set 0/false/no/off to disable'],
+           ['HERMES_AGENT_BRIDGE_RESTART_DELAY_MS', 'Base delay for bridge auto-restart backoff'],
+-          ['HERMES_AGENT_BRIDGE_PLATFORM', 'Platform identity passed to Hermes Agent'],
++          ['HERMES_AGENT_BRIDGE_PLATFORM', 'Platform identity passed to Swarm Agent'],
+           ['HERMES_AGENT_BRIDGE_WORKER_TRANSPORT', 'Profile worker endpoint transport. Set tcp for loopback TCP, or ipc/unix for Unix domain sockets; defaults to Windows TCP and macOS/Linux IPC'],
+           ['HERMES_AGENT_BRIDGE_WORKER_PORT_BASE', 'Base port for TCP worker endpoints (default: 18780). Version Preview uses an isolated 19650 port range'],
+           ['HERMES_BRIDGE_PROVIDER', 'Provider override for bridge runs'],
+           ['HERMES_BRIDGE_TOOLSETS', 'Toolset override for bridge runs'],
+           ['HERMES_BRIDGE_MAX_TURNS', 'Maximum turn override for bridge runs'],
+-          ['HERMES_BRIDGE_SUPPRESS_PLATFORM_HINT', 'Controls bridge platform hint suppression passed to Hermes Agent'],
++          ['HERMES_BRIDGE_SUPPRESS_PLATFORM_HINT', 'Controls bridge platform hint suppression passed to Swarm Agent'],
+           ['HERMES_OPENROUTER_APP_REFERER', 'OpenRouter attribution referer sent by bridge runs'],
+           ['HERMES_OPENROUTER_APP_TITLE', 'OpenRouter attribution title sent by bridge runs'],
+           ['HERMES_OPENROUTER_APP_CATEGORIES', 'OpenRouter attribution categories sent by bridge runs'],
+@@ -284,7 +284,7 @@ export default {
+       },
+       gateway: {
+         title: 'Agent Bridge Runtime',
+-        content: 'Chat runs are handled through the Hermes agent bridge, which runs alongside the Hermes Studio server and talks directly to the Hermes Agent runtime. HERMES_AGENT_BRIDGE_ENDPOINT controls the Node-to-broker address, while HERMES_AGENT_BRIDGE_WORKER_TRANSPORT controls the broker-to-profile-worker transport. Switching the frontend Hermes Profile changes later request context only; it does not restart the bridge or clear other running tasks.',
++        content: 'Chat runs are handled through the Hermes agent bridge, which runs alongside the Hermes Studio server and talks directly to the Swarm Agent runtime. HERMES_AGENT_BRIDGE_ENDPOINT controls the Node-to-broker address, while HERMES_AGENT_BRIDGE_WORKER_TRANSPORT controls the broker-to-profile-worker transport. Switching the frontend Hermes Profile changes later request context only; it does not restart the bridge or clear other running tasks.',
+       },
+       profiles: {
+         title: 'Profiles',
+diff --git a/packages/website/src/i18n/zh.ts b/packages/website/src/i18n/zh.ts
+index bc33290d..0e759dc1 100644
+--- a/packages/website/src/i18n/zh.ts
++++ b/packages/website/src/i18n/zh.ts
+@@ -1,6 +1,6 @@
+ export default {
+   brand: {
+-    name: 'Hermes Studio',
++    name: Swarm Studio,
+     logoAlt: 'Hermes',
+   },
+   ui: {
+@@ -29,8 +29,8 @@ export default {
+       deploy: '部署',
+     },
+     badge: '本地优先的 AI Agent 工作区',
+-    title: 'Hermes Studio',
+-    subtitle: '面向 Hermes Agent 的桌面应用和本地控制台。聊天、管理 Profile、运行 Coding Agent、查看文件、自动化任务，并掌控自己的运行环境。',
++    title: Swarm Studio,
++    subtitle: '面向 Swarm Agent 的桌面应用和本地控制台。聊天、管理 Profile、运行 Coding Agent、查看文件、自动化任务，并掌控自己的运行环境。',
+     cta: '下载桌面版',
+     docsCta: '查看文档',
+     viewGithub: '查看 GitHub',
+@@ -43,11 +43,11 @@ export default {
+     previewAlt: 'Hermes Studio 仪表板预览',
+   },
+   features: {
+-    title: 'Hermes Agent 的本地控制台',
++    title: 'Swarm Agent 的本地控制台',
+     desc: 'Hermes Studio 把聊天、运行时管理、自动化、文件、Coding Agent 和桌面分发整合到一个工作区。',
+     streaming: {
+       title: 'Agent 聊天',
+-      desc: 'Hermes Agent 流式对话，支持会话、Markdown、工具轨迹、上传下载、模型标签和上下文用量。',
++      desc: 'Swarm Agent 流式对话，支持会话、Markdown、工具轨迹、上传下载、模型标签和上下文用量。',
+     },
+     platforms: {
+       title: '平台渠道',
+@@ -83,7 +83,7 @@ export default {
+     },
+     quickInstall: {
+       title: '桌面运行时',
+-      desc: 'Windows、macOS 和 Linux 桌面版内置 Web UI 运行时，并把 Hermes Studio 状态与 Hermes Agent 数据分开管理。',
++      desc: 'Windows、macOS 和 Linux 桌面版内置 Web UI 运行时，并把 Hermes Studio 状态与 Swarm Agent 数据分开管理。',
+     },
+     i18n: {
+       title: 'Coding Agent 与 MCP',
+@@ -189,7 +189,7 @@ export default {
+     chartAlt: 'Star 历史',
+   },
+   footer: {
+-    description: 'Hermes Agent 的自托管 AI 聊天仪表板。',
++    description: 'Swarm Agent 的自托管 AI 聊天仪表板。',
+     license: 'BSL-1.1 开源协议',
+     madeWith: '使用 Vue 3、Naive UI 和 TypeScript 构建。',
+     github: '打开 GitHub',
+@@ -209,7 +209,7 @@ export default {
+     },
+     gettingStarted: {
+       title: '快速开始',
+-      intro: 'Hermes Studio 是一个自托管的 Web 仪表板，用于管理 AI 对话、平台通道、定时任务等。它封装了 Hermes Agent CLI 并提供美观的 Web 界面。',
++      intro: 'Hermes Studio 是一个自托管的 Web 仪表板，用于管理 AI 对话、平台通道、定时任务等。它封装了 Swarm Agent CLI 并提供美观的 Web 界面。',
+       install: {
+         title: '安装',
+         content: '通过 npm 全局安装。需要 Node.js 23 或更高版本。',
+@@ -247,7 +247,7 @@ export default {
+           ['WORKSPACE_BASE', 'Workspace 浏览根目录'],
+           ['HERMES_HOME', 'Hermes 数据目录'],
+           ['HERMES_BIN', '自定义 Hermes CLI 二进制路径'],
+-          ['HERMES_AGENT_ROOT', '包含 run_agent.py 的 Hermes Agent 源码目录'],
++          ['HERMES_AGENT_ROOT', '包含 run_agent.py 的 Swarm Agent 源码目录'],
+           ['HERMES_AGENT_BRIDGE_PYTHON', '用于启动 agent bridge 的 Python 解释器'],
+           ['HERMES_AGENT_BRIDGE_UV', '可用时用于启动 agent bridge 的 uv 可执行文件'],
+           ['UV', 'uv 可执行文件 fallback'],
+@@ -258,13 +258,13 @@ export default {
+           ['HERMES_AGENT_BRIDGE_STARTUP_TIMEOUT_MS', '等待 Python bridge ready 的超时'],
+           ['HERMES_AGENT_BRIDGE_AUTO_RESTART', 'bridge broker 意外退出后是否自动重启；设为 0/false/no/off 可关闭'],
+           ['HERMES_AGENT_BRIDGE_RESTART_DELAY_MS', 'bridge 自动重启退避的基础延迟'],
+-          ['HERMES_AGENT_BRIDGE_PLATFORM', '传给 Hermes Agent 的 platform 标识'],
++          ['HERMES_AGENT_BRIDGE_PLATFORM', '传给 Swarm Agent 的 platform 标识'],
+           ['HERMES_AGENT_BRIDGE_WORKER_TRANSPORT', 'profile worker endpoint transport。设为 tcp 使用 loopback TCP；设为 ipc/unix 使用 Unix domain socket；默认 Windows TCP、macOS/Linux IPC'],
+           ['HERMES_AGENT_BRIDGE_WORKER_PORT_BASE', 'TCP worker endpoint 起始端口（默认：18780）。Version Preview 会使用独立端口段 19650'],
+           ['HERMES_BRIDGE_PROVIDER', 'bridge 运行时的 provider 覆盖'],
+           ['HERMES_BRIDGE_TOOLSETS', 'bridge 运行时的 toolset 覆盖'],
+           ['HERMES_BRIDGE_MAX_TURNS', 'bridge 运行时的最大轮数覆盖'],
+-          ['HERMES_BRIDGE_SUPPRESS_PLATFORM_HINT', '控制传给 Hermes Agent 的 bridge platform hint suppression'],
++          ['HERMES_BRIDGE_SUPPRESS_PLATFORM_HINT', '控制传给 Swarm Agent 的 bridge platform hint suppression'],
+           ['HERMES_OPENROUTER_APP_REFERER', 'bridge 运行发送给 OpenRouter 的 attribution referer'],
+           ['HERMES_OPENROUTER_APP_TITLE', 'bridge 运行发送给 OpenRouter 的 attribution title'],
+           ['HERMES_OPENROUTER_APP_CATEGORIES', 'bridge 运行发送给 OpenRouter 的 attribution categories'],
+@@ -284,7 +284,7 @@ export default {
+       },
+       gateway: {
+         title: 'Agent Bridge 运行时',
+-        content: '聊天运行通过 Hermes agent bridge 处理。它随 Hermes Studio 服务一起运行，并直接连接 Hermes Agent runtime。HERMES_AGENT_BRIDGE_ENDPOINT 控制 Node 与 bridge broker 的连接地址；HERMES_AGENT_BRIDGE_WORKER_TRANSPORT 控制 broker 与各 Profile worker 的连接方式。前端切换 Hermes Profile 只影响后续请求上下文，不会重启 bridge 或清理其他正在运行的任务。',
++        content: '聊天运行通过 Hermes agent bridge 处理。它随 Hermes Studio 服务一起运行，并直接连接 Swarm Agent runtime。HERMES_AGENT_BRIDGE_ENDPOINT 控制 Node 与 bridge broker 的连接地址；HERMES_AGENT_BRIDGE_WORKER_TRANSPORT 控制 broker 与各 Profile worker 的连接方式。前端切换 Hermes Profile 只影响后续请求上下文，不会重启 bridge 或清理其他正在运行的任务。',
+       },
+       profiles: {
+         title: '配置文件',

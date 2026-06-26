@@ -2,7 +2,7 @@
 /**
  * CockpitTerminalPane — 基于 @xterm/xterm + WebSocket 的真实 PTY 终端。
  *
- * 连接 upstream hermes-studio 的 /api/hermes/terminal WebSocket 端点，
+ * 连接 upstream swarm-studio 的 /api/hermes/terminal WebSocket 端点，
  * 在 session 创建后自动 cd 到当前任务 workspace 目录并启动 Claude Code agent。
  *
  * 根据服务端返回的 shell 类型自动选择命令语法：
