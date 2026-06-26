@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 
@@ -8,12 +9,63 @@ const { t } = useI18n()
 function handleClick(item: { taskId: string; title: string }) {
   store.focusOnTaskFromAttention(item.taskId, item.title)
 }
+
+// ── 刷新按钮：30s 倒计时 → 自动触发 → 错误暂停 ──
+const REFRESH_SEC = 30
+const countdown = ref(REFRESH_SEC)
+const refreshing = ref(false)
+const refreshError = ref(false)
+let _cdTimer: ReturnType<typeof setInterval> | null = null
+
+function startCountdown() {
+  stopCountdown()
+  _cdTimer = setInterval(() => {
+    if (refreshing.value) return
+    if (countdown.value > 0) countdown.value--
+    if (countdown.value === 0 && !refreshing.value && !refreshError.value) {
+      doRefresh(false)
+    }
+  }, 1000)
+}
+function stopCountdown() {
+  if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null }
+}
+function resetCountdown() { countdown.value = REFRESH_SEC }
+
+async function doRefresh(force: boolean) {
+  refreshing.value = true
+  refreshError.value = false
+  try {
+    const ok = await store.refreshAllBoards(force)
+    if (ok) resetCountdown()
+    else { refreshError.value = true; stopCountdown() }
+  } catch {
+    refreshError.value = true
+    stopCountdown()
+  }
+  refreshing.value = false
+}
+
+function handleRefreshClick() {
+  doRefresh(true)
+}
+
+onMounted(() => { startCountdown() })
+onUnmounted(() => { stopCountdown() })
 </script>
 
 <template>
   <div class="cockpit-attention">
     <div class="cockpit-attention__label">
-      <span class="cockpit-attention__count">{{ store.attentionCount }}</span>
+      <button type="button"
+        class="cockpit-attention__refresh"
+        :class="{ 'is-spinning': refreshing, 'is-error': refreshError }"
+        :title="refreshError ? '刷新失败，点击重试' : `刷新全部看板 (${countdown}s)`"
+        :disabled="refreshing"
+        @click="handleRefreshClick">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <span class="cockpit-attention__refresh-cd">{{ countdown }}</span>
+      </button>
       <span class="cockpit-attention__label-text">{{ t('cockpit.attention') }}</span>
     </div>
     <div class="cockpit-attention__items">
@@ -47,26 +99,34 @@ function handleClick(item: { taskId: string; title: string }) {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px;
+  gap: 6px;
+  padding: 0 12px;
   border-right: 1px solid var(--border-color);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
 }
-.cockpit-attention__count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 9px;
-  background: var(--accent-primary);
-  color: var(--text-on-accent);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 0 5px;
+.cockpit-attention__refresh {
+  width: auto; min-width: 24px; height: 20px; border-radius: 4px; border: 1px solid var(--border-color);
+  background: var(--bg-card); color: var(--text-muted); cursor: pointer; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 2px; padding: 0 4px;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  &:hover:not(:disabled) { background: var(--bg-secondary); color: var(--accent-primary); border-color: var(--accent-primary); }
+  &:disabled { opacity: 0.5; cursor: default; }
+  &.is-spinning svg { animation: att-refresh-spin 0.8s linear infinite; }
+  &.is-error {
+    border-color: var(--warning, #e6a23c); color: var(--warning, #e6a23c); background: rgba(230, 162, 60, 0.08);
+    &:hover:not(:disabled) { border-color: var(--warning, #e6a23c); color: var(--warning, #e6a23c); background: rgba(230, 162, 60, 0.15); }
+    .cockpit-attention__refresh-cd { animation: att-refresh-pulse 1.2s ease-in-out infinite; }
+  }
+  svg { flex-shrink: 0; }
 }
+.cockpit-attention__refresh-cd {
+  font-size: 9px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 12px; text-align: center;
+}
+@keyframes att-refresh-spin { to { transform: rotate(360deg); } }
+@keyframes att-refresh-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.cockpit-attention__label-text { white-space: nowrap; }
 .cockpit-attention__items {
   flex: 1;
   display: flex;

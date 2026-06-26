@@ -36,19 +36,20 @@ const filteredTasks = computed(() => {
   if (!includeArchived.value) {
     tasks = tasks.filter((t: KanbanTask) => t.status !== 'archived')
   }
-  if (store.searchQuery) {
-    const q = store.searchQuery.toLowerCase()
-    tasks = tasks.filter((t: KanbanTask) =>
-      t.title.toLowerCase().includes(q) ||
-      (t.body && t.body.toLowerCase().includes(q)) ||
-      t.id.toLowerCase().includes(q) ||
-      (t.result && t.result.toLowerCase().includes(q)) ||
-      (t.assignee && t.assignee.toLowerCase().includes(q)) ||
-      (t.tenant && t.tenant.toLowerCase().includes(q))
-    )
-  }
-  return tasks
-})
+	  if (store.searchQuery) {
+	    const q = store.searchQuery.toLowerCase()
+	    tasks = tasks.filter((t: KanbanTask) =>
+	      t.title.toLowerCase().includes(q) ||
+	      (t.body && t.body.toLowerCase().includes(q)) ||
+	      t.id.toLowerCase().includes(q) ||
+	      (t.result && t.result.toLowerCase().includes(q)) ||
+	      (t.assignee && t.assignee.toLowerCase().includes(q)) ||
+	      (t.tenant && t.tenant.toLowerCase().includes(q))
+	    )
+	  }
+	  // 默认按创建时间逆序（最新在最上面）
+	  return [...tasks].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+	})
 
 const selectedIds = computed(() => store.selectedIds)
 

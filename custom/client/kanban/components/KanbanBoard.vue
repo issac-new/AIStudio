@@ -64,12 +64,12 @@ const tasksByColumn = computed(() => {
     if (map[bucket]) map[bucket].push(task)
   }
 
-  // Sort by priority desc, then created_at asc (agent uses created_at ASC)
-  for (const col of Object.keys(map)) {
-    map[col].sort((a, b) => {
-      if (b.priority !== a.priority) return b.priority - a.priority
-      return a.created_at - b.created_at
-    })
+	  // Sort by priority desc, then created_at desc (newest first)
+	  for (const col of Object.keys(map)) {
+	    map[col].sort((a, b) => {
+	      if (b.priority !== a.priority) return b.priority - a.priority
+	      return b.created_at - a.created_at
+	    })
   }
   return map
 })

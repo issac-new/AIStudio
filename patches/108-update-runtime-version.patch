@@ -1,0 +1,32 @@
+diff --git a/packages/desktop/build/runtime-release.json b/packages/desktop/build/runtime-release.json
+--- a/packages/desktop/build/runtime-release.json
++++ b/packages/desktop/build/runtime-release.json
+@@ -1,3 +1,3 @@
+ {
+-  "tag": "hermes-0.15.2-runtime"
++  "tag": "hermes-0.17.0-runtime"
+ }
+diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
+--- a/packages/desktop/src/main/paths.ts
++++ b/packages/desktop/src/main/paths.ts
+@@ -10,7 +10,7 @@ import {
+ import { compareHermesAgentVersions, hermesAgentVersionFromRuntimeTag } from './runtime-version'
+ 
+ const isWin = platform() === 'win32'
+-const DEFAULT_HERMES_AGENT_VERSION = '0.15.2'
++const DEFAULT_HERMES_AGENT_VERSION = '0.17.0'
+ const MIN_COMPATIBLE_WEB_UI_VERSION = '0.6.14'
+ const PACKAGED_RUNTIME_RELEASE_NAME = 'runtime-release.json'
+ const ACTIVE_RUNTIME_VERSION_NAME = 'active-version.json'
+diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
+--- a/packages/desktop/src/main/cli-shim.ts
++++ b/packages/desktop/src/main/cli-shim.ts
+@@ -90,7 +90,7 @@ export function createShimContent(
+   executablePath: string,
+   platform: NodeJS.Platform = process.platform,
+   archName: string = process.arch,
+-  runtimeVersion = '0.15.2',
++  runtimeVersion = '0.17.0',
+   nodePath = process.execPath,
+   webUiScriptPath = resolve(process.cwd(), 'bin', 'hermes-web-ui.mjs'),
+ ): string {

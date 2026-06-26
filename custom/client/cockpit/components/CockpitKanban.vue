@@ -171,7 +171,6 @@ function statusBucketLabel(s: string): string {
 <template>
   <div class="cockpit-kanban">
     <div class="cockpit-kanban__head">
-      <span class="cockpit-kanban__title">kanban任务</span>
       <div class="cockpit-kanban__date-inline">
         <input type="date" class="cockpit-kanban__date" data-filter="date-from"
           :value="store.filters.dateRange.from ?? ''"
@@ -182,13 +181,15 @@ function statusBucketLabel(s: string): string {
           @change="store.setDateRangeFilter(store.filters.dateRange.from, ($event.target as HTMLInputElement).value || null)" />
         <button v-if="store.filters.dateRange.from || store.filters.dateRange.to" type="button" class="cockpit-kanban__date-clear" data-action="clear-date" @click="store.clearDateRangeFilter()">×</button>
       </div>
-      <button type="button" class="cockpit-kanban__max" :title="store.maximized.left ? '还原' : '最大化'" @click="$emit('maximize')">
-        <svg v-if="store.maximized.left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-        <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-      </button>
-      <button type="button" class="cockpit-kanban__fold" title="折叠左栏" @click="$emit('fold')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-      </button>
+      <div class="cockpit-kanban__head-actions">
+        <button type="button" class="cockpit-kanban__max" :title="store.maximized.left ? '还原' : '最大化'" @click="$emit('maximize')">
+          <svg v-if="store.maximized.left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        </button>
+        <button type="button" class="cockpit-kanban__fold" title="折叠左栏" @click="$emit('fold')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+        </button>
+      </div>
     </div>
 
     <!-- 筛选器 -->
@@ -301,10 +302,13 @@ function statusBucketLabel(s: string): string {
 <style scoped lang="scss">
 .cockpit-kanban { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .cockpit-kanban__head {
-  padding: 12px 44px 10px 16px; border-bottom: 1px solid var(--border-color);
-  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--border-color);
+  display: flex; align-items: baseline; gap: 8px;
 }
-.cockpit-kanban__title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.cockpit-kanban__title { font-size: 13px; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
+.cockpit-kanban__head-actions {
+  margin-left: auto; display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+}
 .cockpit-kanban__fold {
   width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-muted); cursor: pointer; flex-shrink: 0;

@@ -12,7 +12,11 @@
     "build": "vite build --config vite.config.overlay.ts",
     "dev": "cross-env HERMES_WEB_UI_BACKEND_PORT=8647 vite --config vite.config.overlay.ts --host --port 8649 --strictPort",
     "test": "vitest run",
-    "build:full": "node scripts/build.mjs"
+    "build:full": "node scripts/build.mjs",
+    "build:dmg": "node scripts/build-dmg.mjs",
+    "build:dmg:mac": "node scripts/build-dmg.mjs --mac",
+    "build:dmg:win": "node scripts/build-dmg.mjs --win",
+    "build:dmg:linux": "node scripts/build-dmg.mjs --linux"
   },
   "engines": {
     "node": ">=23.0.0"

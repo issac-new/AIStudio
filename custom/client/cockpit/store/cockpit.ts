@@ -209,9 +209,12 @@ export const useCockpitStore = defineStore('cockpit', () => {
     tasks.value.find(t => t.id === selectedTaskId.value) ?? null,
   )
 
-  const sortedTasks = computed(() =>
-    [...tasks.value].sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]),
-  )
+	  const sortedTasks = computed(() =>
+	    [...tasks.value].sort((a, b) => {
+	      // 默认按创建时间逆序（最新在前），同时间按优先级升序
+	      return (b.createdAt - a.createdAt) || (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+	    }),
+	  )
 
   const searchResult = computed<Set<string>>(() => {
     const q = searchQuery.value.trim()
@@ -475,29 +478,58 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }),
   )
 
-  // ── bootstrap ──
-  // 跨 board 聚合：拉所有 board，对每个 board 切换并拉任务，合并到 cockpitTasks
-  async function loadAllBoards() {
-    try {
-      await kanban.fetchBoards?.()
-    } catch { /* boards 拉取失败，降级到 default */ }
-    const kanbanBoards = (kanban as any).boards ?? []
-    const boardList = Array.isArray(kanbanBoards) && kanbanBoards.length
-      ? kanbanBoards.map((b: any) => ({ slug: b.slug, name: b.name, total: b.total ?? 0 }))
-      : [{ slug: 'default', name: 'default', total: 0 }]
-    boards.value = boardList
-    const all: CockpitTask[] = []
-    for (const b of boardList) {
-      try {
-        kanban.setSelectedBoard?.(b.slug)
-        await kanban.fetchTasks()
-        for (const t of kanban.tasks) {
-          all.push(taskAdapter.toCockpitTask(t, b.slug))
-        }
-      } catch { /* 单 board 失败不阻塞其他 */ }
-    }
-    cockpitTasks.value = all
-  }
+	  // ── bootstrap ──
+	  // 跨 board 聚合：拉所有 board，对每个 board 切换并拉任务，合并到 cockpitTasks
+	  async function loadAllBoards() {
+	    try {
+	      await kanban.fetchBoards?.()
+	    } catch { /* boards 拉取失败，降级到 default */ }
+	    const kanbanBoards = (kanban as any).boards ?? []
+	    const boardList = Array.isArray(kanbanBoards) && kanbanBoards.length
+	      ? kanbanBoards.map((b: any) => ({ slug: b.slug, name: b.name, total: b.total ?? 0 }))
+	      : [{ slug: 'default', name: 'default', total: 0 }]
+	    boards.value = boardList
+	    const all: CockpitTask[] = []
+	    for (const b of boardList) {
+	      try {
+	        kanban.setSelectedBoard?.(b.slug)
+	        await kanban.fetchTasks()
+	        for (const t of kanban.tasks) {
+	          all.push(taskAdapter.toCockpitTask(t, b.slug))
+	        }
+	      } catch { /* 单 board 失败不阻塞其他 */ }
+	    }
+	    cockpitTasks.value = all
+	    _lastRefreshTs = Date.now()
+	  }
+
+	  // ── 轻量全量刷新（并行 API、旁路 kanban store，不切 selectedBoard）──
+	  let _lastRefreshTs = 0
+	  async function refreshAllBoards(force = false): Promise<boolean> {
+	    const now = Date.now()
+	    if (!force && now - _lastRefreshTs < 2000) return true // 2s 防抖，视为成功（不重复刷新）
+	    _lastRefreshTs = now
+	    try {
+	      const boardList = await kanbanApi.listBoards({ includeArchived: false })
+	      const active = (boardList || []).filter((b: any) => !b.archived)
+	      boards.value = active.map((b: any) => ({ slug: b.slug, name: b.name, total: (b as any).total ?? 0 }))
+	      const results = await Promise.allSettled(
+	        active.map((b: any) =>
+	          kanbanApi.listTasks({ board: b.slug, includeArchived: true }).then(
+	            tasks => tasks.map(t => taskAdapter.toCockpitTask(t, b.slug)),
+	          ),
+	        ),
+	      )
+	      const all: CockpitTask[] = []
+	      for (const r of results) {
+	        if (r.status === 'fulfilled') all.push(...r.value)
+	      }
+	      cockpitTasks.value = all
+	      return true
+	    } catch {
+	      return false
+	    }
+	  }
 
   // 默认日期范围：近 2 周（需求 #2）
   function defaultDateRange(): { from: string; to: string } {
@@ -508,23 +540,23 @@ export const useCockpitStore = defineStore('cockpit', () => {
     return { from: fmt(from), to: fmt(to) }
   }
 
-  async function bootstrap() {
-    // 设置默认日期筛选（近 2 周）
-    const dr = defaultDateRange()
-    filters.value = { ...filters.value, dateRange: { from: dr.from, to: dr.to } }
-    // 加载用户待办并启动闹钟提醒调度（应用启动即生效，无需打开日程面板）
-    userTodos.value = kv.loadUserTodos()
-    startReminderScheduler()
-    await Promise.allSettled([
-      loadAllBoards(),
-      kanban.fetchAssignees(),
-      chatStore.loadSessions(),
-      groupStore.connect().then(() => groupStore.loadRooms()).catch(() => {}),
-      matrixClient.initClient(),
-    ])
-    if (cockpitTasks.value.length) await selectTask(cockpitTasks.value[0].id)
-    kanban.startEventStream?.()
-  }
+	  async function bootstrap() {
+	    // 设置默认日期筛选（近 2 周）
+	    const dr = defaultDateRange()
+	    filters.value = { ...filters.value, dateRange: { from: dr.from, to: dr.to } }
+	    // 加载用户待办并启动闹钟提醒调度（应用启动即生效，无需打开日程面板）
+	    userTodos.value = kv.loadUserTodos()
+	    startReminderScheduler()
+	    await Promise.allSettled([
+	      loadAllBoards(),
+	      kanban.fetchAssignees(),
+	      chatStore.loadSessions(),
+	      groupStore.connect().then(() => groupStore.loadRooms()).catch(() => {}),
+	      matrixClient.initClient(),
+	    ])
+	    if (cockpitTasks.value.length) await selectTask(cockpitTasks.value[0].id)
+	    kanban.startEventStream?.()
+	  }
 
   async function selectTask(id: string | null) {
     autoSaveDraft() // 保存当前草稿
@@ -648,27 +680,32 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
   }
 
-  // WebSocket 联动：kanban.tasks 变化时，只做轻量同步（避免与 loadAllBoards 形成循环）
-  // - 不再调用 loadAllBoards（它会改 kanban.tasks 触发死循环）
-  // - 只更新 cockpitTasks 中当前 board 的任务片段 + 选中任务 detail invalidate
-  watch(() => kanban.tasks, (newTasks) => {
-    const curBoard = (kanban as any).selectedBoard ?? 'default'
-    // 用最新 tasks 替换 cockpitTasks 中属于当前 board 的部分（按 boardSlug 过滤）
-    const others = cockpitTasks.value.filter(t => t.boardSlug !== curBoard)
-    const mapped = newTasks.map(t => taskAdapter.toCockpitTask(t, curBoard))
-    cockpitTasks.value = [...others, ...mapped]
-    // 选中任务 detail invalidate
-    const id = selectedTaskId.value
-    if (id && _detailCache.value[id]) {
-      delete _detailCache.value[id]
-      loadTaskDetail(id).then(() => {
-        // loadTaskDetail 不走 selectTask → selectionSeq 不自增。
-        // 但 cockpitTasks 中 workspace 已被 kanban.tasks 的值覆盖，
-        // 需要通知 CockpitFilePanel 等消费者重新读取已刷新的 workspace。
-        if (selectedTaskId.value === id) selectionSeq.value++
-      })
-    }
-  })
+	  // WebSocket 联动：kanban.tasks 变化时，只做轻量同步（避免与 loadAllBoards 形成循环）
+	  // - 不再调用 loadAllBoards（它会改 kanban.tasks 触发死循环）
+	  // - 只更新 cockpitTasks 中当前 board 的任务片段 + 选中任务 detail invalidate
+	  // - 同时触发去抖的 refreshAllBoards（500ms），聚合所有 board 的 WS 事件
+	  let _wsDebounceTimer: ReturnType<typeof setTimeout> | undefined
+	  watch(() => kanban.tasks, (newTasks) => {
+	    const curBoard = (kanban as any).selectedBoard ?? 'default'
+	    // 用最新 tasks 替换 cockpitTasks 中属于当前 board 的部分（按 boardSlug 过滤）
+	    const others = cockpitTasks.value.filter(t => t.boardSlug !== curBoard)
+	    const mapped = newTasks.map(t => taskAdapter.toCockpitTask(t, curBoard))
+	    cockpitTasks.value = [...others, ...mapped]
+	    // 选中任务 detail invalidate
+	    const id = selectedTaskId.value
+	    if (id && _detailCache.value[id]) {
+	      delete _detailCache.value[id]
+	      loadTaskDetail(id).then(() => {
+	        // loadTaskDetail 不走 selectTask → selectionSeq 不自增。
+	        // 但 cockpitTasks 中 workspace 已被 kanban.tasks 的值覆盖，
+	        // 需要通知 CockpitFilePanel 等消费者重新读取已刷新的 workspace。
+	        if (selectedTaskId.value === id) selectionSeq.value++
+	      })
+	    }
+	    // WS 事件去抖：500ms 后刷新全部 board，保证注意力条/总览实时
+	    if (_wsDebounceTimer) clearTimeout(_wsDebounceTimer)
+	    _wsDebounceTimer = setTimeout(() => { refreshAllBoards() }, 500)
+	  })
 
   // ── 工作区/折叠/筛选 ──
   function toggleCollapsed(col: ColumnKey) { collapsed.value[col] = !collapsed.value[col] }
@@ -1249,15 +1286,26 @@ export const useCockpitStore = defineStore('cockpit', () => {
     if (changed) kv.saveUserTodos(userTodos.value)
   }
 
-  // 启动每分钟调度器（幂等：已启动则跳过）
-  function startReminderScheduler() {
-    if (_reminderTimer) return
-    checkReminders()   // 启动时立即检查一次（重载恢复）
-    _reminderTimer = setInterval(checkReminders, 60_000)
-  }
-  function stopReminderScheduler() {
-    if (_reminderTimer) { clearInterval(_reminderTimer); _reminderTimer = undefined }
-  }
+	  // 启动每分钟调度器（幂等：已启动则跳过）
+	  function startReminderScheduler() {
+	    if (_reminderTimer) return
+	    checkReminders()   // 启动时立即检查一次（重载恢复）
+	    _reminderTimer = setInterval(checkReminders, 60_000)
+	  }
+	  function stopReminderScheduler() {
+	    if (_reminderTimer) { clearInterval(_reminderTimer); _reminderTimer = undefined }
+	  }
+
+	  // ── 定时轮询所有 board（注意力条/kabban 总览自动刷新）──
+	  let _pollTimer: ReturnType<typeof setInterval> | undefined
+	  function startCockpitPolling() {
+	    if (_pollTimer) return
+	    _pollTimer = setInterval(() => { refreshAllBoards() }, 30_000)
+	  }
+	  function stopCockpitPolling() {
+	    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = undefined }
+	    if (_wsDebounceTimer) { clearTimeout(_wsDebounceTimer); _wsDebounceTimer = undefined }
+	  }
 
   // ── 附件 ──
   const taskAttachments = ref<Record<string, any[]>>({})
@@ -1340,6 +1388,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     scheduleDatesWithEvents, scheduleCountsByDate, scheduleTopPriorityByDate,
     openSchedule, closeSchedule, setScheduleDate, navigateScheduleMonth,
     addUserTodo, removeUserTodo, startReminderScheduler, stopReminderScheduler,
+    startCockpitPolling, stopCockpitPolling, refreshAllBoards,
 
   }
 })

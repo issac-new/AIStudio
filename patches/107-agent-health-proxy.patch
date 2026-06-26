@@ -1,0 +1,30 @@
+--- a/b/packages/server/src/index.ts	2026-06-25 23:46:40
++++ b/packages/server/src/index.ts	2026-06-25 23:46:40
+@@ -347,6 +347,27 @@
+     await next()
+   })
+ 
++  // Proxy /agent-health/* → hermes-agent health endpoint (for CockpitTopBar)
++  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8650'
++  app.use(async (ctx, next) => {
++    if (ctx.path.startsWith('/agent-health/')) {
++      const targetPath = ctx.path.replace('/agent-health', '/health')
++      const qs = ctx.querystring ? `?${ctx.querystring}` : ''
++      try {
++        const res = await fetch(`${agentHealthTarget}${targetPath}${qs}`)
++        ctx.status = res.status
++        const contentType = res.headers.get('content-type') || 'application/json'
++        ctx.type = contentType
++        ctx.body = await res.text()
++      } catch {
++        ctx.status = 502
++        ctx.body = JSON.stringify({ error: 'Agent health endpoint unreachable' })
++      }
++      return
++    }
++    await next()
++  })
++
+   app.use(serve(distDir))
+   app.use(async (ctx) => {
+     if (!ctx.path.startsWith('/api') &&

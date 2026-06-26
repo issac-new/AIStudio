@@ -301,15 +301,22 @@ function onResize() {
   safeResizeAndRender()
 }
 
-// 面板最大化/折叠/展开时容器尺寸可能变化，ECharts 需重新自适应
-watch(() => [store.maximized.mid, store.collapsed.mid, store.maximized.left, store.maximized.right], () => {
+// 面板最大化/折叠/展开/分割线拖拽时容器尺寸可能变化，ECharts 需重新自适应
+watch(() => [
+  store.maximized.mid, store.collapsed.mid,
+  store.maximized.left, store.collapsed.left,
+  store.maximized.right, store.collapsed.right,
+  store.midTopCollapsed, store.midBottomCollapsed,
+], () => {
   nextTick(() => safeResizeAndRender())
 })
 
 // ResizeObserver: 更精确地监听容器自身大小变化（面板拖拽分割线等场景）
+// 每次 chartEl 变化（v-if 销毁/重建）时重建 observer，避免监听已卸载元素
 let resizeObserver: ResizeObserver | null = null
 watch(chartEl, (el) => {
-  if (el && !resizeObserver) {
+  if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null }
+  if (el) {
     resizeObserver = new ResizeObserver(() => safeResizeAndRender())
     resizeObserver.observe(el)
   }
