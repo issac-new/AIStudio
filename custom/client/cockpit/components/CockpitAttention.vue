@@ -70,7 +70,7 @@ onUnmounted(() => { stopCountdown() })
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         <span class="cockpit-attention__refresh-cd">{{ countdown }}</span>
       </button>
-      <button type="button" class="cockpit-attention__tab" @click="goSwarmKanban" title="Swarm kanban">⊞ swarm kanban</button>
+      <button type="button" class="cockpit-attention__tab" @click="goSwarmKanban" :title="t('sidebar.swarmKanban')">⊞ {{ t('sidebar.swarmKanban') }}</button>
     </div>
     <div class="cockpit-attention__items">
       <span v-if="store.attention.length === 0" class="cockpit-attention__empty">无待处理事项</span>

@@ -16,7 +16,7 @@ index 7a1cfdb2..1d17ac5b 100644
      "node-pty": "^1.1.0",
      "socket.io": "^4.8.3",
 diff --git a/packages/client/index.html b/packages/client/index.html
-index 98c3768a..1bb51a8e 100644
+index 98c3768a..d8fdae9b 100644
 --- a/packages/client/index.html
 +++ b/packages/client/index.html
 @@ -1,124 +1,9 @@
@@ -151,7 +151,7 @@ index 98c3768a..1bb51a8e 100644
 +<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 +<title>Swarm Studio</title>
 +<style>html,body,#app{min-height:100%}body{margin:0;background:#f7f7f4}html.dark body{background:#1a1a1a}.boot-fallback{min-height:100vh;display:grid;place-items:center;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}html.dark .boot-fallback{color:#f0f0f0}</style>
-+<script>(function(){try{const b=localStorage.getItem('hermes_brightness')||'system';const s=localStorage.getItem('hermes_style')||'ink';const p=window.matchMedia('(prefers-color-scheme:dark)').matches;const d=b==='dark'||(b==='system'&&p);if(d)document.documentElement.classList.add('dark');if(s==='comic')document.documentElement.classList.add('comic')}catch(e){console.warn('Failed to apply theme:',e)}})();</script>
++<script>(function(){try{var b=localStorage.getItem('hermes_brightness')||'auto';var s=localStorage.getItem('hermes_style')||'ink';var d;if(b==='auto'){var n=new Date();var doy=Math.floor((n.getTime()-new Date(n.getFullYear(),0,0).getTime())/864e5);var se=-Math.cos(2*Math.PI*(doy-172)/365);var sm=300+se*85;var em=1140-se*85;var bm=((n.getUTCHours()+8)*60+n.getUTCMinutes())%1440;d=bm>=em||bm<sm}else{d=b==='dark'||(b==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches)}if(d)document.documentElement.classList.add('dark');if(s==='comic')document.documentElement.classList.add('comic')}catch(e){console.warn('Failed to apply theme:',e)}})();</script>
 +</head><body><div id="app"><div class="boot-fallback"></div></div><script type="module" src="/src/main.ts"></script></body></html>
 diff --git a/packages/client/public/coding-agents/hermes.png b/packages/client/public/coding-agents/hermes.png
 deleted file mode 100644
@@ -1636,10 +1636,18 @@ index 0922e9b7..b24a0abe 100644
 +}
  </style>
 diff --git a/packages/client/src/components/hermes/settings/DisplaySettings.vue b/packages/client/src/components/hermes/settings/DisplaySettings.vue
-index f8df2347..f08d082b 100644
+index f8df2347..6fd5b831 100644
 --- a/packages/client/src/components/hermes/settings/DisplaySettings.vue
 +++ b/packages/client/src/components/hermes/settings/DisplaySettings.vue
-@@ -51,7 +51,7 @@ async function handleNotifyOnCompleteChange(value: boolean) {
+@@ -14,6 +14,7 @@ const { brightness, setBrightness } = useTheme()
+ const themeOptions = [
+   { label: t('settings.display.themeLight'), value: 'light' },
+   { label: t('settings.display.themeDark'), value: 'dark' },
++  { label: t('settings.display.themeAuto'), value: 'auto' },
+   { label: t('settings.display.themeSystem'), value: 'system' },
+ ]
+ 
+@@ -51,7 +52,7 @@ async function handleNotifyOnCompleteChange(value: boolean) {
      void showCompletionNotification({
        title: 'Hermes',
        body: t('settings.display.notifyOnCompleteTest'),
@@ -1648,7 +1656,7 @@ index f8df2347..f08d082b 100644
        tag: `hermes-complete-test-${Date.now()}`,
      })
    }
-@@ -66,7 +66,7 @@ async function testCompletionNotification() {
+@@ -66,7 +67,7 @@ async function testCompletionNotification() {
    const shown = await showCompletionNotification({
      title: 'Hermes',
      body: t('settings.display.notifyOnCompleteTest'),
@@ -2204,6 +2212,128 @@ index 58751c5d..265bb1d7 100644
  .conversation-switch-tab {
    width: 100%;
    min-width: 0;
+diff --git a/packages/client/src/composables/useTheme.ts b/packages/client/src/composables/useTheme.ts
+index 6b953454..a5b18d4f 100644
+--- a/packages/client/src/composables/useTheme.ts
++++ b/packages/client/src/composables/useTheme.ts
+@@ -1,13 +1,13 @@
+ import { ref, watch, computed } from 'vue'
+ 
+-export type BrightnessMode = 'light' | 'dark' | 'system'
++export type BrightnessMode = 'light' | 'dark' | 'system' | 'auto'
+ export type ThemeStyle = 'ink' | 'comic'
+ 
+ const BRIGHTNESS_KEY = 'hermes_brightness'
+ const STYLE_KEY = 'hermes_style'
+ 
+ const brightness = ref<BrightnessMode>(
+-  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'system',
++  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'auto',
+ )
+ 
+ const style = ref<ThemeStyle>(
+@@ -17,10 +17,87 @@ const style = ref<ThemeStyle>(
+ const isDark = ref(false)
+ const isComic = ref(false)
+ 
++// ── Beijing sunrise/sunset estimation ──
++// Approximate Beijing sunrise/sunset based on day-of-year.
++// Beijing: lat ~40°N, lon ~116°E, UTC+8.
++// Uses simple sinusoidal approximation (± seasonal variation).
++function beijingSunriseSunset(): { sunrise: number; sunset: number } {
++  const now = new Date()
++  const dayOfYear = Math.floor(
++    (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000,
++  )
++  // Day 172 (summer solstice): sunrise ~4:45, sunset ~19:45
++  // Day 355 (winter solstice): sunrise ~7:35, sunset ~16:50
++  // Seasonal offset uses cosine curve; max variation ~2.8h
++  const seasonal = -Math.cos((2 * Math.PI * (dayOfYear - 172)) / 365)
++  const sunriseMinutes = 5 * 60 + seasonal * 85   // range 04:20–07:20
++  const sunsetMinutes = 19 * 60 - seasonal * 85   // range 17:05–19:45
++
++  return {
++    sunrise: sunriseMinutes,
++    sunset: sunsetMinutes,
++  }
++}
++
++function msUntil(targetMinutes: number): number {
++  const now = new Date()
++  // Use Beijing time (UTC+8)
++  const utcH = now.getUTCHours()
++  const utcM = now.getUTCMinutes()
++  const nowBeijingMinutes = ((utcH + 8) * 60 + utcM) % 1440
++
++  let diff = targetMinutes - nowBeijingMinutes
++  if (diff <= 0) diff += 1440 // next occurrence
++  // Convert minutes diff to ms from now
++  const nowMs = utcH * 3600_000 + utcM * 60_000 + now.getUTCSeconds() * 1000 + now.getUTCMilliseconds()
++  const targetMs = diff * 60_000 - (nowMs % 3600_000)
++  return targetMs > 0 ? targetMs : diff * 60_000
++}
++
++let autoTimer: ReturnType<typeof setTimeout> | undefined
++
++function scheduleAutoSwitch() {
++  if (autoTimer) clearTimeout(autoTimer)
++  const { sunrise, sunset } = beijingSunriseSunset()
++  const now = new Date()
++  const utcH = now.getUTCHours()
++  const utcM = now.getUTCMinutes()
++  const currentMinutes = ((utcH + 8) * 60 + utcM) % 1440
++
++  // Determine next switch
++  const nextIsDark = currentMinutes >= sunset || currentMinutes < sunrise
++  const nextTarget = nextIsDark ? sunrise : sunset
++
++  autoTimer = setTimeout(() => {
++    applyAutoMode()
++    scheduleAutoSwitch() // reschedule for next day
++  }, msUntil(nextTarget))
++}
++
++function applyAutoMode() {
++  const { sunrise, sunset } = beijingSunriseSunset()
++  const now = new Date()
++  const utcH = now.getUTCHours()
++  const utcM = now.getUTCMinutes()
++  const currentMinutes = ((utcH + 8) * 60 + utcM) % 1440
++
++  const dark = currentMinutes >= sunset || currentMinutes < sunrise
++  isDark.value = dark
++  document.documentElement.classList.toggle('dark', dark)
++}
++
+ function resolveDark(b: BrightnessMode): boolean {
+   if (b === 'system') {
+     return window.matchMedia('(prefers-color-scheme: dark)').matches
+   }
++  if (b === 'auto') {
++    const { sunrise, sunset } = beijingSunriseSunset()
++    const now = new Date()
++    const utcH = now.getUTCHours()
++    const utcM = now.getUTCMinutes()
++    const currentMinutes = ((utcH + 8) * 60 + utcM) % 1440
++    return currentMinutes >= sunset || currentMinutes < sunrise
++  }
+   return b === 'dark'
+ }
+ 
+@@ -30,6 +107,13 @@ function applyClasses() {
+   isComic.value = style.value === 'comic'
+   document.documentElement.classList.toggle('dark', dark)
+   document.documentElement.classList.toggle('comic', isComic.value)
++
++  // Manage auto-timer
++  if (brightness.value === 'auto') {
++    scheduleAutoSwitch()
++  } else {
++    if (autoTimer) { clearTimeout(autoTimer); autoTimer = undefined }
++  }
+ }
+ 
+ // Initial
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
 index a2b71031..3297c15e 100644
 --- a/packages/client/src/i18n/locales/de.ts
@@ -2281,7 +2411,7 @@ index a2b71031..3297c15e 100644
      new_0_6_17_1: 'Probleme beim Starten von Codex- und Claude-Code-Unterhaltungen wurden behoben',
      new_0_6_16_1: 'Provider-Einstellungen speichern jetzt eigene API-Modes, decken LongCat korrekt ab, unterstuetzen das Loeschen von v12-Providern und halten Modellkataloge mit Auth- und API-Key-Bildprovidern synchron',
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index fdc761f3..e214e720 100644
+index fdc761f3..50f91204 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -1,7 +1,7 @@
@@ -2528,7 +2658,19 @@ index fdc761f3..e214e720 100644
      writeApprovalMemory: 'Memory',
      writeApprovalSkills: 'Skills',
      writeApprovalViewDiff: 'Review',
-@@ -1452,7 +1601,7 @@ export default {
+@@ -1428,9 +1577,10 @@ export default {
+       busyInputMode: 'Busy Input Mode',
+       busyInputModeHint: 'Allow input while AI is processing',
+       theme: 'Theme',
+-      themeHint: 'Choose light, dark, or follow system preference',
++      themeHint: 'Choose light, dark, auto, or follow system preference',
+       themeLight: 'Light',
+       themeDark: 'Dark',
++      themeAuto: 'Auto (Beijing)',
+       themeSystem: 'System',
+     },
+     agent: {
+@@ -1452,7 +1602,7 @@ export default {
        enabled: 'Auto-start gateways',
        enabledHint: 'When disabled, startup will not automatically start any profile gateway.',
        management: 'Unified gateway',
@@ -2537,7 +2679,7 @@ index fdc761f3..e214e720 100644
        managementAuto: 'Auto',
        managementPerProfile: 'One gateway per profile',
        managementUnified: 'Unified default gateway',
-@@ -1506,11 +1655,11 @@ export default {
+@@ -1506,11 +1656,11 @@ export default {
        requireAuth: 'Session Authorization',
        requireAuthHint: 'Require authorization for session operations',
        memoryWriteApproval: 'Review memory writes',
@@ -2552,7 +2694,7 @@ index fdc761f3..e214e720 100644
        writeApprovalRefresh: 'Refresh',
        writeApprovalEmpty: 'No pending writes.',
        writeApprovalMemory: 'Memory',
-@@ -1838,6 +1987,17 @@ export default {
+@@ -1838,6 +1988,17 @@ export default {
        mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
        mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace',
      },
@@ -2570,7 +2712,7 @@ index fdc761f3..e214e720 100644
    },
    githubPreview: {
      title: "Version Preview",
-@@ -2232,11 +2392,11 @@ export default {
+@@ -2232,11 +2393,11 @@ export default {
      new_0_6_19_4: 'TTS settings are now saved by profile, and speed, pitch, and voice tests read from the same configuration source',
      new_0_6_19_5: 'Coding Agent model switches no longer affect existing sessions, and custom provider keys are forwarded correctly',
      new_0_6_19_6: 'Skills runtime filters, cron job sorting, skill-detail height limits, Windows updater recovery, backup fallbacks, and compressed logo assets round out this update',
@@ -2584,7 +2726,7 @@ index fdc761f3..e214e720 100644
      new_0_6_18_7: 'Polish and detail improvements across the app',
      new_0_6_17_1: 'Fixed Codex and Claude Code conversation startup issues',
      new_0_6_16_1: 'Provider settings now preserve custom API modes, cover LongCat correctly, support deleting v12 provider entries, and keep model catalogs in sync with auth and API-key image providers',
-@@ -2263,7 +2423,247 @@ export default {
+@@ -2263,7 +2424,247 @@ export default {
      new_0_6_13_2: 'File handling is safer with literal-dot path validation and malformed skill-import filename rejection',
      new_0_6_13_3: 'Chat is more stable on mobile and in browsers without speech synthesis support',
      new_0_6_13_4: 'Agent failures now preserve the bridge error tail, and Claude Code root-permission launches are more reliable',
@@ -3476,7 +3618,7 @@ index 5a7951e7..e1e85eb6 100644
    },
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index d10836a8..f6d4c0d0 100644
+index d10836a8..e28f5f3e 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -1,7 +1,7 @@
@@ -3723,7 +3865,19 @@ index d10836a8..f6d4c0d0 100644
      writeApprovalMemory: '记忆',
      writeApprovalSkills: '技能',
      writeApprovalViewDiff: '查看',
-@@ -1444,7 +1593,7 @@ export default {
+@@ -1420,9 +1569,10 @@ export default {
+       busyInputMode: '忙碌输入模式',
+       busyInputModeHint: 'AI 处理中仍可输入',
+       theme: '主题',
+-      themeHint: '选择浅色、暗色或跟随系统',
++      themeHint: '选择浅色、暗色、自动或跟随系统',
+       themeLight: '浅色',
+       themeDark: '暗色',
++      themeAuto: '自动（北京时间）',
+       themeSystem: '跟随系统',
+     },
+     agent: {
+@@ -1444,7 +1594,7 @@ export default {
        enabled: '自动启动 gateway',
        enabledHint: '关闭后，启动期不会自动拉起任何 profile gateway。',
        management: '统一 gateway',
@@ -3732,7 +3886,7 @@ index d10836a8..f6d4c0d0 100644
        managementAuto: '自动',
        managementPerProfile: '每个 profile 一个 gateway',
        managementUnified: '统一 default gateway',
-@@ -1498,11 +1647,11 @@ export default {
+@@ -1498,11 +1648,11 @@ export default {
        requireAuth: '会话授权',
        requireAuthHint: '修改会话操作是否授权',
        memoryWriteApproval: '记忆写入审核',
@@ -3747,7 +3901,7 @@ index d10836a8..f6d4c0d0 100644
        writeApprovalRefresh: '刷新',
        writeApprovalEmpty: '暂无待审核写入。',
        writeApprovalMemory: '记忆',
-@@ -1830,6 +1979,17 @@ export default {
+@@ -1830,6 +1980,17 @@ export default {
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
        mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
      },
@@ -3765,7 +3919,7 @@ index d10836a8..f6d4c0d0 100644
    },
    githubPreview: {
      title: "版本预览",
-@@ -2234,11 +2394,11 @@ export default {
+@@ -2234,11 +2395,11 @@ export default {
      new_0_6_19_4: 'TTS 配置改为按 profile 保存，音速、音调和测试语音会读取同一套配置来源',
      new_0_6_19_5: 'Coding Agent 的模型切换不会影响既有会话，并修复自定义 provider key 透传',
      new_0_6_19_6: '补齐 skills runtime 过滤、定时任务排序、技能详情高度限制、Windows 更新恢复、配置备份兜底和 logo 资源压缩',
@@ -3779,7 +3933,7 @@ index d10836a8..f6d4c0d0 100644
      new_0_6_18_7: '各项细节的优化',
      new_0_6_17_1: '修复 Codex 和 Claude Code 的对话启动问题',
      new_0_6_16_1: 'Provider 设置会正确保存自定义 API mode，补齐 LongCat 预设，支持删除 v12 Provider，并让模型目录同步认证和 API-key 图像 Provider',
-@@ -2265,7 +2425,128 @@ export default {
+@@ -2265,7 +2426,128 @@ export default {
      new_0_6_13_2: '文件处理更安全：路径校验支持字面量点号，并拒绝异常编码的技能导入文件名',
      new_0_6_13_3: '聊天在移动端和不支持 speech synthesis 的浏览器中更稳定',
      new_0_6_13_4: 'Agent 失败时会保留 bridge 错误尾部信息，Claude Code root 权限启动也更可靠',
