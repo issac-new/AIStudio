@@ -1,28 +1,48 @@
 diff --git a/packages/client/index.html b/packages/client/index.html
-index 98c3768a..9829dc6b 100644
+index 98c3768a..1bb51a8e 100644
 --- a/packages/client/index.html
 +++ b/packages/client/index.html
-@@ -3,14 +3,12 @@
- 
- <head>
-   <meta charset="UTF-8" />
+@@ -1,124 +1,9 @@
+-<!doctype html>
+-<html lang="zh-CN">
+-
+-<head>
+-  <meta charset="UTF-8" />
 -  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
 -  <link rel="apple-touch-icon" href="/logo.png" />
-   <link rel="manifest" href="/manifest.webmanifest" />
-   <meta name="theme-color" content="#f7f7f4" />
-   <meta name="apple-mobile-web-app-capable" content="yes" />
+-  <link rel="manifest" href="/manifest.webmanifest" />
+-  <meta name="theme-color" content="#f7f7f4" />
+-  <meta name="apple-mobile-web-app-capable" content="yes" />
 -  <meta name="apple-mobile-web-app-title" content="Hermes Studio" />
-+  <meta name="apple-mobile-web-app-title" content="Swarm Studio" />
-   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 -  <title>Hermes Studio</title>
-+  <title>Swarm Studio</title>
-   <style>
-     html,
-     body,
-@@ -38,46 +36,6 @@
-     html.dark .boot-fallback {
-       color: #f0f0f0;
-     }
+-  <style>
+-    html,
+-    body,
+-    #app {
+-      min-height: 100%;
+-    }
+-
+-    body {
+-      margin: 0;
+-      background: #f7f7f4;
+-    }
+-
+-    html.dark body {
+-      background: #1a1a1a;
+-    }
+-
+-    .boot-fallback {
+-      min-height: 100vh;
+-      display: grid;
+-      place-items: center;
+-      color: #222222;
+-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+-    }
+-
+-    html.dark .boot-fallback {
+-      color: #f0f0f0;
+-    }
 -
 -    .boot-fallback__logo-wrap {
 -      position: relative;
@@ -63,13 +83,38 @@ index 98c3768a..9829dc6b 100644
 -        transform: translateX(140%);
 -      }
 -    }
-   </style>
- 
-   <!-- Prevent FOUC by applying theme classes immediately -->
-@@ -110,13 +68,7 @@
- 
- <body>
-   <div id="app">
+-  </style>
+-
+-  <!-- Prevent FOUC by applying theme classes immediately -->
+-  <script>
+-    (function() {
+-      try {
+-        const brightness = localStorage.getItem('hermes_brightness') || 'system';
+-        const style = localStorage.getItem('hermes_style') || 'ink';
+-
+-        // Resolve dark mode
+-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+-        const isDark = brightness === 'dark' || (brightness === 'system' && prefersDark);
+-
+-        // Resolve comic style
+-        const isComic = style === 'comic';
+-
+-        // Apply classes immediately
+-        if (isDark) {
+-          document.documentElement.classList.add('dark');
+-        }
+-        if (isComic) {
+-          document.documentElement.classList.add('comic');
+-        }
+-      } catch (e) {
+-        console.warn('Failed to apply theme:', e);
+-      }
+-    })();
+-  </script>
+-</head>
+-
+-<body>
+-  <div id="app">
 -    <div class="boot-fallback">
 -      <div class="boot-fallback__brand">
 -        <span class="boot-fallback__logo-wrap">
@@ -77,10 +122,46 @@ index 98c3768a..9829dc6b 100644
 -        </span>
 -      </div>
 -    </div>
-+    <div class="boot-fallback"></div>
-   </div>
-   <script type="module" src="/src/main.ts"></script>
- </body>
+-  </div>
+-  <script type="module" src="/src/main.ts"></script>
+-</body>
+-
+-</html>
++<!doctype html><html lang="zh-CN"><head>
++<meta charset="UTF-8" /><link rel="manifest" href="/manifest.webmanifest" />
++<meta name="theme-color" content="#f7f7f4" /><meta name="apple-mobile-web-app-capable" content="yes" />
++<meta name="apple-mobile-web-app-title" content="Swarm Studio" />
++<meta name="viewport" content="width=device-width, initial-scale=1.0" />
++<title>Swarm Studio</title>
++<style>html,body,#app{min-height:100%}body{margin:0;background:#f7f7f4}html.dark body{background:#1a1a1a}.boot-fallback{min-height:100vh;display:grid;place-items:center;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}html.dark .boot-fallback{color:#f0f0f0}</style>
++<script>(function(){try{const b=localStorage.getItem('hermes_brightness')||'system';const s=localStorage.getItem('hermes_style')||'ink';const p=window.matchMedia('(prefers-color-scheme:dark)').matches;const d=b==='dark'||(b==='system'&&p);if(d)document.documentElement.classList.add('dark');if(s==='comic')document.documentElement.classList.add('comic')}catch(e){console.warn('Failed to apply theme:',e)}})();</script>
++</head><body><div id="app"><div class="boot-fallback"></div></div><script type="module" src="/src/main.ts"></script></body></html>
+diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
+index 9dcd134e..8f208a53 100644
+--- a/packages/client/src/App.vue
++++ b/packages/client/src/App.vue
+@@ -86,7 +86,7 @@ useKeyboard()
+             </div>
+             <div class="app-layout" :class="{ 'no-sidebar': isLoginPage || !showAppSidebar }">
+               <button v-if="showMobileMenuButton" class="hamburger-btn" @click="handleMobileMenuClick">
+-                <img src="/logo.png" alt="Menu" style="width: 24px; height: 24px;" />
++                <img src= alt="Menu" style="width: 24px; height: 24px;" />
+               </button>
+               <div v-if="!isLoginPage && showAppSidebar && appStore.sidebarOpen" class="mobile-backdrop" @click="appStore.closeSidebar" />
+               <AppSidebar v-if="!isLoginPage && showAppSidebar" />
+diff --git a/packages/client/src/components/hermes/chat/HistoryMessageList.vue b/packages/client/src/components/hermes/chat/HistoryMessageList.vue
+index 196bf82b..96f85f2e 100644
+--- a/packages/client/src/components/hermes/chat/HistoryMessageList.vue
++++ b/packages/client/src/components/hermes/chat/HistoryMessageList.vue
+@@ -192,7 +192,7 @@ defineExpose({
+     >
+       <template #empty>
+         <div class="empty-state">
+-          <img :src="'/coding-agents/hermes.png'" alt="Hermes" class="empty-logo" />
++          <img :src="''" alt="Hermes" class="empty-logo" />
+           <p>{{ t("chat.emptyState") }}</p>
+         </div>
+       </template>
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
 index 4231800d..34d2fbd2 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
@@ -94,16 +175,78 @@ index 4231800d..34d2fbd2 100644
      // e.g. [{'type': 'text'}, {'type': 'image_url', ...}]. Convert that
      // legacy repr into JSON for display only.
      if (!trimmed.startsWith("[{'") && !trimmed.startsWith('[{"')) return null
+diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
+index 740eab59..1572f7d3 100644
+--- a/packages/client/src/components/hermes/chat/MessageList.vue
++++ b/packages/client/src/components/hermes/chat/MessageList.vue
+@@ -112,7 +112,7 @@ const emptyState = computed(() => {
+     };
+   }
+   return {
+-    logo: "/coding-agents/hermes.png",
++    logo: "",
+     alt: "Hermes",
+     text: t("chat.emptyState"),
+   };
+diff --git a/packages/client/src/components/hermes/chat/SessionListItem.vue b/packages/client/src/components/hermes/chat/SessionListItem.vue
+index 6158c729..57d0143a 100644
+--- a/packages/client/src/components/hermes/chat/SessionListItem.vue
++++ b/packages/client/src/components/hermes/chat/SessionListItem.vue
+@@ -50,7 +50,7 @@ const sessionAgentLogo = computed(() => {
+     }
+     return { label: 'Claude Code', src: '/coding-agents/claude-code.svg' }
+   }
+-  return { label: 'Hermes', src: '/coding-agents/hermes.png' }
++  return { label: 'Hermes', src: '' }
+ })
+ 
+ let longPressTimer: ReturnType<typeof setTimeout> | null = null
+diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
+index 8a1b7829..97d897e4 100644
+--- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
+@@ -104,7 +104,7 @@ defineExpose({ scrollToBottom })
+         >
+             <template #empty>
+                 <div class="empty-state">
+-                <img :src="'/coding-agents/hermes.png'" alt="Hermes" class="empty-logo" />
++                <img :src="''" alt="Hermes" class="empty-logo" />
+                 <p>{{ t("chat.emptyState") }}</p>
+             </div>
+             </template>
+diff --git a/packages/client/src/components/hermes/settings/DisplaySettings.vue b/packages/client/src/components/hermes/settings/DisplaySettings.vue
+index f8df2347..f08d082b 100644
+--- a/packages/client/src/components/hermes/settings/DisplaySettings.vue
++++ b/packages/client/src/components/hermes/settings/DisplaySettings.vue
+@@ -51,7 +51,7 @@ async function handleNotifyOnCompleteChange(value: boolean) {
+     void showCompletionNotification({
+       title: 'Hermes',
+       body: t('settings.display.notifyOnCompleteTest'),
+-      icon: '/coding-agents/hermes.png',
++      icon: '',
+       tag: `hermes-complete-test-${Date.now()}`,
+     })
+   }
+@@ -66,7 +66,7 @@ async function testCompletionNotification() {
+   const shown = await showCompletionNotification({
+     title: 'Hermes',
+     body: t('settings.display.notifyOnCompleteTest'),
+-    icon: '/coding-agents/hermes.png',
++    icon: '',
+     tag: `hermes-complete-test-${Date.now()}`,
+   })
+   if (!shown) {
 diff --git a/packages/client/src/components/layout/DesktopTitleBar.vue b/packages/client/src/components/layout/DesktopTitleBar.vue
-index 55357b5d..a916bf11 100644
+index 55357b5d..fc18584e 100644
 --- a/packages/client/src/components/layout/DesktopTitleBar.vue
 +++ b/packages/client/src/components/layout/DesktopTitleBar.vue
-@@ -49,8 +49,7 @@ onMounted(() => {
+@@ -49,8 +49,8 @@ onMounted(() => {
    <header v-if="showTitleBar" class="desktop-titlebar" :class="{ mac: isMac }" @dblclick="controlWindow('toggle-maximize')">
      <div class="desktop-titlebar__drag">
        <div class="desktop-titlebar__brand">
 -        <img class="desktop-titlebar__logo" src="/logo.png" alt="" draggable="false">
 -        <span class="desktop-titlebar__title">Hermes Studio</span>
++        <img class="desktop-titlebar__logo" src= alt="" draggable="false">
 +        <span class="desktop-titlebar__title">Swarm Studio</span>
        </div>
      </div>
@@ -1008,6 +1151,19 @@ index 6b268e86..f6d4c0d0 100644
      new_0_6_13_6: '发布自动化调整：Web UI 和 Docker release 不再标记为 GitHub Latest，完整桌面 release 手动构建成功后才提升为 Latest',
    },
  
+diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index 09ca12c4..f81aa333 100644
+--- a/packages/client/src/stores/hermes/chat.ts
++++ b/packages/client/src/stores/hermes/chat.ts
+@@ -1947,7 +1947,7 @@ export const useChatStore = defineStore('chat', () => {
+     if (codingAgentId === 'claude-code') {
+       return { icon: '/coding-agents/claude-code.svg' }
+     }
+-    return { icon: '/coding-agents/hermes.png' }
++    return { icon: '' }
+   }
+ 
+   function completionNotificationBody(session: Session, message?: Message): string {
 diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
 index 029708a6..0490594c 100644
 --- a/packages/client/src/views/hermes/ChatView.vue
@@ -1043,6 +1199,20 @@ index f1a37ce8..9a1f60c5 100644
      '  web [args...]      Run bundled hermes-web-ui command',
      '  help, -h, --help   Show this help message',
      'EOF',
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index edde5f6a..bf1c86d2 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -308,9 +308,6 @@ function escapeHtml(value: string): string {
+ 
+ function resolveRuntimeSourceLogo(): string {
+   const candidates = [
+-    join(webuiDir(), 'dist', 'client', 'logo.png'),
+-    join(webuiDir(), 'packages', 'client', 'public', 'logo.png'),
+-    join(webuiDir(), 'logo.png'),
+     desktopIcon(),
+   ]
+   return candidates.find(candidate => existsSync(candidate)) || desktopIcon()
 diff --git a/packages/desktop/src/main/updater-helpers.ts b/packages/desktop/src/main/updater-helpers.ts
 index bb979588..854f67bc 100644
 --- a/packages/desktop/src/main/updater-helpers.ts
@@ -1253,6 +1423,45 @@ index 23546401..0bf34d52 100644
  }
  
  function isValidDeviceIdentity(value: any): value is DeviceIdentity {
+diff --git a/packages/website/src/components/landing/InstallSection.vue b/packages/website/src/components/landing/InstallSection.vue
+index 040b83c4..daeba9ec 100644
+--- a/packages/website/src/components/landing/InstallSection.vue
++++ b/packages/website/src/components/landing/InstallSection.vue
+@@ -48,7 +48,7 @@ function copyText(text: string) {
+         <p class="panel-desc reveal">{{ t('install.desc') }}</p>
+       </div>
+       <div class="install-mark reveal reveal-delay-1" aria-hidden="true">
+-        <img src="/logo.png" alt="" />
++        <img src= alt="" />
+       </div>
+     </div>
+ 
+diff --git a/packages/website/src/components/layout/SiteFooter.vue b/packages/website/src/components/layout/SiteFooter.vue
+index 1945833e..af0b1af6 100644
+--- a/packages/website/src/components/layout/SiteFooter.vue
++++ b/packages/website/src/components/layout/SiteFooter.vue
+@@ -9,7 +9,7 @@ const { t } = useI18n()
+     <div class="footer-inner">
+       <div class="footer-left">
+         <div class="footer-brand">
+-          <img src="/logo.png" :alt="t('brand.logoAlt')" class="footer-logo" />
++          <img src= :alt="t('brand.logoAlt')" class="footer-logo" />
+           <span>{{ t('brand.name') }}</span>
+         </div>
+         <p class="footer-desc">{{ t('footer.description') }}</p>
+diff --git a/packages/website/src/components/layout/SiteHeader.vue b/packages/website/src/components/layout/SiteHeader.vue
+index fdf3af97..723ff9a7 100644
+--- a/packages/website/src/components/layout/SiteHeader.vue
++++ b/packages/website/src/components/layout/SiteHeader.vue
+@@ -28,7 +28,7 @@ function goHome() {
+   <header class="site-header">
+     <div class="header-inner">
+       <div class="header-left" @click="goHome">
+-        <img src="/logo.png" :alt="t('brand.logoAlt')" class="logo-icon" />
++        <img src= :alt="t('brand.logoAlt')" class="logo-icon" />
+         <span class="logo-text">{{ t('brand.name') }}</span>
+       </div>
+ 
 diff --git a/packages/website/src/i18n/en.ts b/packages/website/src/i18n/en.ts
 index 4c920e9b..c54dea5f 100644
 --- a/packages/website/src/i18n/en.ts
