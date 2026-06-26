@@ -1,8 +1,13 @@
 diff --git a/packages/client/index.html b/packages/client/index.html
-index 98c3768a..08dab7d8 100644
+index 98c3768a..9829dc6b 100644
 --- a/packages/client/index.html
 +++ b/packages/client/index.html
-@@ -8,9 +8,9 @@
+@@ -3,14 +3,12 @@
+ 
+ <head>
+   <meta charset="UTF-8" />
+-  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+-  <link rel="apple-touch-icon" href="/logo.png" />
    <link rel="manifest" href="/manifest.webmanifest" />
    <meta name="theme-color" content="#f7f7f4" />
    <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -14,6 +19,68 @@ index 98c3768a..08dab7d8 100644
    <style>
      html,
      body,
+@@ -38,46 +36,6 @@
+     html.dark .boot-fallback {
+       color: #f0f0f0;
+     }
+-
+-    .boot-fallback__logo-wrap {
+-      position: relative;
+-      display: block;
+-      width: 72px;
+-      height: 72px;
+-      border-radius: 18px;
+-      overflow: hidden;
+-    }
+-
+-    .boot-fallback__logo-wrap::after {
+-      content: "";
+-      position: absolute;
+-      inset: 0;
+-      background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.85) 48%, transparent 66%);
+-      transform: translateX(-140%);
+-      mix-blend-mode: screen;
+-      pointer-events: none;
+-      -webkit-mask: url("/logo.png") center / contain no-repeat;
+-      mask: url("/logo.png") center / contain no-repeat;
+-      animation: boot-logo-shimmer 1.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+-    }
+-
+-    .boot-fallback__logo-wrap img {
+-      width: 100%;
+-      height: 100%;
+-      object-fit: contain;
+-      border-radius: 18px;
+-    }
+-
+-    @keyframes boot-logo-shimmer {
+-      0% {
+-        transform: translateX(-140%);
+-      }
+-
+-      52%,
+-      100% {
+-        transform: translateX(140%);
+-      }
+-    }
+   </style>
+ 
+   <!-- Prevent FOUC by applying theme classes immediately -->
+@@ -110,13 +68,7 @@
+ 
+ <body>
+   <div id="app">
+-    <div class="boot-fallback">
+-      <div class="boot-fallback__brand">
+-        <span class="boot-fallback__logo-wrap">
+-          <img src="/logo.png" alt="" />
+-        </span>
+-      </div>
+-    </div>
++    <div class="boot-fallback"></div>
+   </div>
+   <script type="module" src="/src/main.ts"></script>
+ </body>
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
 index 4231800d..34d2fbd2 100644
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
@@ -28,13 +95,14 @@ index 4231800d..34d2fbd2 100644
      // legacy repr into JSON for display only.
      if (!trimmed.startsWith("[{'") && !trimmed.startsWith('[{"')) return null
 diff --git a/packages/client/src/components/layout/DesktopTitleBar.vue b/packages/client/src/components/layout/DesktopTitleBar.vue
-index 55357b5d..c3c43df2 100644
+index 55357b5d..a916bf11 100644
 --- a/packages/client/src/components/layout/DesktopTitleBar.vue
 +++ b/packages/client/src/components/layout/DesktopTitleBar.vue
-@@ -50,7 +50,7 @@ onMounted(() => {
+@@ -49,8 +49,7 @@ onMounted(() => {
+   <header v-if="showTitleBar" class="desktop-titlebar" :class="{ mac: isMac }" @dblclick="controlWindow('toggle-maximize')">
      <div class="desktop-titlebar__drag">
        <div class="desktop-titlebar__brand">
-         <img class="desktop-titlebar__logo" src="/logo.png" alt="" draggable="false">
+-        <img class="desktop-titlebar__logo" src="/logo.png" alt="" draggable="false">
 -        <span class="desktop-titlebar__title">Hermes Studio</span>
 +        <span class="desktop-titlebar__title">Swarm Studio</span>
        </div>
