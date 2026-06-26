@@ -25,7 +25,7 @@ index 55357b5d..c3c43df2 100644
      </div>
      <div v-if="showWindowButtons" class="desktop-titlebar__controls" @dblclick.stop>
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
-index a2b71031..7d58ab0b 100644
+index a2b71031..3297c15e 100644
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
 @@ -1,7 +1,7 @@
@@ -33,7 +33,7 @@ index a2b71031..7d58ab0b 100644
    // Login
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: 'Geben Sie Benutzername und Passwort ein, um fortzufahren.',
      placeholder: 'Zugangs-Token',
      submit: 'Anmelden',
@@ -101,7 +101,7 @@ index a2b71031..7d58ab0b 100644
      new_0_6_17_1: 'Probleme beim Starten von Codex- und Claude-Code-Unterhaltungen wurden behoben',
      new_0_6_16_1: 'Provider-Einstellungen speichern jetzt eigene API-Modes, decken LongCat korrekt ab, unterstuetzen das Loeschen von v12-Providern und halten Modellkataloge mit Auth- und API-Key-Bildprovidern synchron',
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index a2d21283..8a994376 100644
+index a2d21283..e214e720 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -1,7 +1,7 @@
@@ -109,7 +109,7 @@ index a2d21283..8a994376 100644
    // Login
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: 'Enter your username and password to continue.',
      placeholder: 'Access token',
      submit: 'Login',
@@ -192,7 +192,7 @@ index a2d21283..8a994376 100644
    },
  
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
-index 85c47f18..5d7b6711 100644
+index 85c47f18..a3384253 100644
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
 @@ -1,7 +1,7 @@
@@ -200,7 +200,7 @@ index 85c47f18..5d7b6711 100644
    // Login
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: 'Introduce tu nombre de usuario y contrasena para continuar.',
      placeholder: 'Token de acceso',
      submit: 'Iniciar sesion',
@@ -283,7 +283,7 @@ index 85c47f18..5d7b6711 100644
    },
  
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
-index 2ff0c2c4..a5e8ef09 100644
+index 2ff0c2c4..b23dc991 100644
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
 @@ -1,7 +1,7 @@
@@ -291,7 +291,7 @@ index 2ff0c2c4..a5e8ef09 100644
    // Login
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: 'Entrez votre nom d\'utilisateur et votre mot de passe pour continuer.',
      placeholder: 'Jeton d\'acces',
      submit: 'Connexion',
@@ -374,7 +374,7 @@ index 2ff0c2c4..a5e8ef09 100644
    },
  
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
-index ac2d41d8..132d6730 100644
+index ac2d41d8..966b334d 100644
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
 @@ -1,7 +1,7 @@
@@ -382,7 +382,7 @@ index ac2d41d8..132d6730 100644
    // ログイン
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: 'ユーザー名とパスワードを入力して続行してください。',
      placeholder: 'アクセストークン',
      submit: 'ログイン',
@@ -465,7 +465,7 @@ index ac2d41d8..132d6730 100644
    },
  
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
-index 2d673ecf..9cc7ffcf 100644
+index 2d673ecf..72c8d506 100644
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
 @@ -1,7 +1,7 @@
@@ -473,7 +473,7 @@ index 2d673ecf..9cc7ffcf 100644
    // 로그인
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: '계속하려면 사용자 이름과 비밀번호를 입력하세요.',
      placeholder: '액세스 토큰',
      submit: '로그인',
@@ -556,7 +556,7 @@ index 2d673ecf..9cc7ffcf 100644
    },
  
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
-index ddc34fb7..1f06f0c1 100644
+index ddc34fb7..825b11b8 100644
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
 @@ -1,7 +1,7 @@
@@ -564,7 +564,7 @@ index ddc34fb7..1f06f0c1 100644
    // Login
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: 'Insira seu nome de usuario e senha para continuar.',
      placeholder: 'Token de acesso',
      submit: 'Entrar',
@@ -647,7 +647,7 @@ index ddc34fb7..1f06f0c1 100644
    },
  
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
-index e77aed82..e989414a 100644
+index e77aed82..2d4db015 100644
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
 @@ -1,7 +1,7 @@
@@ -655,7 +655,7 @@ index e77aed82..e989414a 100644
  
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: 'Введите имя пользователя и пароль для продолжения.',
      placeholder: 'Токен доступа',
      submit: 'Войти',
@@ -743,7 +743,7 @@ index e77aed82..e989414a 100644
    },
  
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
-index 5a7951e7..26b63cc4 100644
+index 5a7951e7..e1e85eb6 100644
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
 @@ -1,7 +1,7 @@
@@ -751,7 +751,7 @@ index 5a7951e7..26b63cc4 100644
    // 登入
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: '輸入使用者名稱和密碼以繼續。',
      placeholder: '存取權杖',
      submit: '登入',
@@ -834,7 +834,7 @@ index 5a7951e7..26b63cc4 100644
    },
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 6b268e86..0a71a7e5 100644
+index 6b268e86..f6d4c0d0 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -1,7 +1,7 @@
@@ -842,7 +842,7 @@ index 6b268e86..0a71a7e5 100644
    // 登录
    login: {
 -    title: 'Hermes Web UI',
-+    title: Swarm Web UI,
++    title: 'Swarm Web UI',
      description: '输入用户名和密码以继续。',
      placeholder: '访问令牌',
      submit: '登录',
@@ -925,7 +925,7 @@ index 6b268e86..0a71a7e5 100644
    },
  
 diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
-index 029708a6..46f302e9 100644
+index 029708a6..0490594c 100644
 --- a/packages/client/src/views/hermes/ChatView.vue
 +++ b/packages/client/src/views/hermes/ChatView.vue
 @@ -24,7 +24,7 @@ const routeProfile = computed(() => {
@@ -933,7 +933,7 @@ index 029708a6..46f302e9 100644
  })
  
 -const productTitle = 'Hermes Studio'
-+const productTitle = Swarm Studio
++const productTitle = 'Swarm Studio'
  const tabTitle = computed(() => {
    if (route.name !== 'hermes.session') return productTitle
    return chatStore.activeSession?.title?.trim() || productTitle
@@ -960,7 +960,7 @@ index f1a37ce8..9a1f60c5 100644
      '  help, -h, --help   Show this help message',
      'EOF',
 diff --git a/packages/desktop/src/main/updater-helpers.ts b/packages/desktop/src/main/updater-helpers.ts
-index bb979588..18bbba06 100644
+index bb979588..854f67bc 100644
 --- a/packages/desktop/src/main/updater-helpers.ts
 +++ b/packages/desktop/src/main/updater-helpers.ts
 @@ -35,6 +35,6 @@ export function pendingUpdateDirectories(options: {
@@ -968,7 +968,7 @@ index bb979588..18bbba06 100644
    if (appDataPath) bases.add(appDataPath)
    if (!bases.size) return []
 -  return [...bases].flatMap(base => updateCacheNames(options.appName || 'Hermes Studio')
-+  return [...bases].flatMap(base => updateCacheNames(options.appName || Swarm Studio)
++  return [...bases].flatMap(base => updateCacheNames(options.appName || 'Swarm Studio')
      .map(name => join(base, name, 'pending')))
  }
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
@@ -1051,7 +1051,7 @@ index 2bebe954..da65b16e 100644
  
    // Web UI-only model picker visibility. This filters what the WUI exposes in
 diff --git a/packages/server/src/services/hermes/agent-bridge/manager.ts b/packages/server/src/services/hermes/agent-bridge/manager.ts
-index a8c93816..8342bba6 100644
+index a8c93816..cb7ffe2a 100644
 --- a/packages/server/src/services/hermes/agent-bridge/manager.ts
 +++ b/packages/server/src/services/hermes/agent-bridge/manager.ts
 @@ -13,7 +13,7 @@ const DEFAULT_AGENT_BRIDGE_RECOVERY_EXIT_TIMEOUT_MS = 5000
@@ -1059,7 +1059,7 @@ index a8c93816..8342bba6 100644
  const OPENROUTER_WEB_UI_ATTRIBUTION_ENV = {
    HERMES_OPENROUTER_APP_REFERER: 'https://hermes-studio.ai',
 -  HERMES_OPENROUTER_APP_TITLE: 'Hermes Studio',
-+  HERMES_OPENROUTER_APP_TITLE: Swarm Studio,
++  HERMES_OPENROUTER_APP_TITLE: 'Swarm Studio',
    HERMES_OPENROUTER_APP_CATEGORIES: 'cli-agent,personal-agent',
  } as const
  
@@ -1170,14 +1170,14 @@ index 23546401..0bf34d52 100644
  
  function isValidDeviceIdentity(value: any): value is DeviceIdentity {
 diff --git a/packages/website/src/i18n/en.ts b/packages/website/src/i18n/en.ts
-index 4c920e9b..c417d5ad 100644
+index 4c920e9b..77c077ff 100644
 --- a/packages/website/src/i18n/en.ts
 +++ b/packages/website/src/i18n/en.ts
 @@ -1,6 +1,6 @@
  export default {
    brand: {
 -    name: 'Hermes Studio',
-+    name: Swarm Studio,
++    name: 'Swarm Studio',
      logoAlt: 'Hermes',
    },
    ui: {
@@ -1187,7 +1187,7 @@ index 4c920e9b..c417d5ad 100644
      badge: 'Local-first AI Agent Workspace',
 -    title: 'Hermes Studio',
 -    subtitle: 'A desktop app and local control plane for Hermes Agent. Chat, manage profiles, run coding agents, inspect files, automate jobs, and keep your runtime under your control.',
-+    title: Swarm Studio,
++    title: 'Swarm Studio',
 +    subtitle: 'A desktop app and local control plane for Swarm Agent. Chat, manage profiles, run coding agents, inspect files, automate jobs, and keep your runtime under your control.',
      cta: 'Download Desktop',
      docsCta: 'Read Docs',
@@ -1268,14 +1268,14 @@ index 4c920e9b..c417d5ad 100644
        profiles: {
          title: 'Profiles',
 diff --git a/packages/website/src/i18n/zh.ts b/packages/website/src/i18n/zh.ts
-index bc33290d..0e759dc1 100644
+index bc33290d..f9f90ecd 100644
 --- a/packages/website/src/i18n/zh.ts
 +++ b/packages/website/src/i18n/zh.ts
 @@ -1,6 +1,6 @@
  export default {
    brand: {
 -    name: 'Hermes Studio',
-+    name: Swarm Studio,
++    name: 'Swarm Studio',
      logoAlt: 'Hermes',
    },
    ui: {
@@ -1285,7 +1285,7 @@ index bc33290d..0e759dc1 100644
      badge: '本地优先的 AI Agent 工作区',
 -    title: 'Hermes Studio',
 -    subtitle: '面向 Hermes Agent 的桌面应用和本地控制台。聊天、管理 Profile、运行 Coding Agent、查看文件、自动化任务，并掌控自己的运行环境。',
-+    title: Swarm Studio,
++    title: 'Swarm Studio',
 +    subtitle: '面向 Swarm Agent 的桌面应用和本地控制台。聊天、管理 Profile、运行 Coding Agent、查看文件、自动化任务，并掌控自己的运行环境。',
      cta: '下载桌面版',
      docsCta: '查看文档',
