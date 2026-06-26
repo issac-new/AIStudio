@@ -95,4 +95,4 @@
 108-update-runtime-version.patch
 109-windows-zip-target.patch
 110-sidebar-logout-consistency.patch
-111-hermes-to-swarm-rebrand.patch
+#111-hermes-to-swarm-rebrand.patch
