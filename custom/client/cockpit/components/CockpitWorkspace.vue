@@ -4,7 +4,7 @@ import { useCockpitStore, type WorkDecision } from '@/custom/cockpit/store/cockp
 import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import * as kanbanApi from '@/api/hermes/kanban'
-import type { KanbanTaskStatus, HomeChannel } from '@/api/hermes/kanban'
+import type { KanbanTaskStatus, HomeChannel, KanbanTaskLog } from '@/api/hermes/kanban'
 import CockpitConfirmDialog from './CockpitConfirmDialog.vue'
 import MarkdownIt from 'markdown-it'
 
@@ -15,6 +15,7 @@ function renderMarkdown(text: string): string {
 }
 import CockpitCompletionModal from './CockpitCompletionModal.vue'
 import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
+import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
 
 const store = useCockpitStore()
 const kanbanStore = useKanbanStore()
@@ -198,6 +199,25 @@ function onCommentInput(e: Event) {
 }
 const comments = computed(() => detail.value?.comments ?? [])
 
+// ── Worker Log ──
+const workerLog = ref<KanbanTaskLog | null>(null)
+const workerLogLoading = ref(false)
+
+async function fetchWorkerLog() {
+  const id = store.selectedTaskId
+  if (!id) { workerLog.value = null; return }
+  workerLogLoading.value = true
+  try {
+    const board = store.boardSlugOf(id)
+    workerLog.value = await kanbanApi.getTaskLog(id, board ? { board, maxSizeBytes: 100000 } : { maxSizeBytes: 100000 })
+  } catch {
+    workerLog.value = null
+  }
+  workerLogLoading.value = false
+}
+
+watch(() => store.selectedTaskId, () => { fetchWorkerLog() }, { immediate: true })
+
 // ── 动作命令区（即时执行）──
 const actionBusy = ref(false)
 const actionMsg = ref<{ ok: boolean; text: string } | null>(null)
@@ -373,7 +393,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         :value="store.currentTitle"
         :placeholder="t('cockpit.editTitlePlaceholder')"
         @input="store.setPendingTitle(($event.target as HTMLInputElement).value)" />
-      <div v-if="taskSummary" class="cockpit-workspace__summary">{{ taskSummary }}</div>
+      <div v-if="taskSummary" class="cockpit-workspace__summary" v-html="renderMarkdown(taskSummary)" />
 
       <!-- Row: 状态 + 优先级 + Assignee -->
       <div class="cockpit-workspace__flow-row">
@@ -504,6 +524,16 @@ async function toggleHomeSubscription(ch: HomeChannel) {
           @submit="handleCompletionSubmit"
           @cancel="completionShow = false" />
 
+        <!-- ═══ Worker Log ═══ -->
+        <div class="cockpit-workspace__section">
+          <label class="cockpit-workspace__section-title">{{ t('kanban.workerLog', 'Worker log') }}</label>
+          <div v-if="workerLogLoading" class="cockpit-workspace__field-val--muted">{{ t('kanban.loadingLog', 'Loading…') }}</div>
+          <div v-else-if="!workerLog?.exists" class="cockpit-workspace__field-val--muted">{{ t('kanban.noWorkerLog', '— no worker log —') }}</div>
+          <div v-else class="cockpit-workspace__log markdown-body">
+            <KanbanMarkdown :source="workerLog.content || ''" />
+          </div>
+        </div>
+
         <!-- ═══ 评论区（草稿）═══ -->
         <div class="cockpit-workspace__section">
           <label class="cockpit-workspace__section-title">{{ t('cockpit.comments') }}</label>
@@ -548,7 +578,12 @@ async function toggleHomeSubscription(ch: HomeChannel) {
   &:focus { border-bottom-color: var(--accent-primary); outline: none; }
   &.is-pending { color: var(--warning, #e6a23c); border-bottom-color: var(--warning, #e6a23c); }
 }
-.cockpit-workspace__summary { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 6px; }
+.cockpit-workspace__summary { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 6px;
+  :deep(p) { margin: 0 0 4px; }
+  :deep(code) { font-size: 11px; background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px; }
+  :deep(pre) { font-size: 11px; background: var(--bg-secondary); padding: 6px 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0; }
+  :deep(a) { color: var(--accent-primary); }
+}
 
 /* Flow row: flex-wrap 自然换行，一行可放多个 item */
 .cockpit-workspace__flow-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 3px 0; }
@@ -638,6 +673,11 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 }
 
 /* 评论区 */
+.cockpit-workspace__log { max-height: 240px; overflow-y: auto; font-size: 12px; line-height: 1.5;
+  :deep(p) { margin: 0 0 4px; }
+  :deep(code) { font-size: 11px; background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px; }
+  :deep(pre) { font-size: 11px; background: var(--bg-secondary); padding: 6px 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0; }
+}
 .cockpit-workspace__comment-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 180px; overflow-y: auto; }
 .cockpit-workspace__comment { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; background: var(--bg-secondary); border-radius: 6px; font-size: 12px; }
 .cockpit-workspace__comment-author { font-weight: 600; color: var(--accent-primary); font-size: 11px; }

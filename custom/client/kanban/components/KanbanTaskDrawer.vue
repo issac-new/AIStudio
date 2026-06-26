@@ -1100,8 +1100,9 @@ function statusDotClass(status: string): string {
           <div v-else-if="!logData.exists" class="empty-text">
             {{ t('kanban.noWorkerLog', '— no worker log yet (task hasn\'t spawned or log was rotated away) —') }}
           </div>
-          <div v-else class="log-content">
-            <pre class="log-pre">{{ logData.content || '(empty)' }}</pre>
+          <div v-else class="log-content markdown-body">
+            <KanbanMarkdown v-if="logData.content" :source="logData.content" />
+            <pre v-else class="log-pre">(empty)</pre>
           </div>
           <div v-if="logData?.truncated" class="empty-text">
             {{ t('kanban.logTruncated', '(showing last 100 KB — full log at') }} {{ logData.path }})
