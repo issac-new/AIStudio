@@ -47,6 +47,15 @@ app.use(router)
 import('./bootstrap')
   .then(({ bootstrapClient }) => bootstrapClient(app))
   .then(() => router.isReady())
+  .then(() => {
+    // 动态路由(cockpit 子路由如 matrix-chat)在 bootstrap 中 addRoute,
+    // 但 router.isReady() 时初始导航可能已完成且未命中这些动态路由。
+    // 若当前路由未匹配(警告 "No match found"),重导航一次让新路由生效。
+    const current = router.currentRoute.value
+    if (current.matched.length === 0) {
+      return router.replace(current.fullPath)
+    }
+  })
   .finally(() => {
     app.mount('#app')
   })

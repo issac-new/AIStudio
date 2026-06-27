@@ -19,6 +19,7 @@ const composerStore = useMatrixComposerStore()
 const replyEvent = computed(() => composerStore.getReplyEvent(props.event))
 const replySender = computed(() => replyEvent.value?.getSender() ?? '')
 const replyDisplayName = computed(() => {
+  void roomStore.roomVersion
   if (!replyEvent.value || !roomStore.activeRoom) return replySender.value
   const member = roomStore.activeRoom.getMember(replySender.value)
   return member?.name || replySender.value

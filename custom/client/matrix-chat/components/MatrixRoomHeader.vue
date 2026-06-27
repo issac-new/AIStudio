@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import MatrixInviteDialog from './MatrixInviteDialog.vue'
-import MatrixSearchDialog from './MatrixSearchDialog.vue'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
@@ -13,17 +12,89 @@ const threadStore = useMatrixThreadStore()
 const { t } = useI18n()
 
 const showInviteDialog = ref(false)
-const searchDialogOpen = ref(false)
+/** Inline search input (shown in header when search active, element-web style) */
+const showSearchInput = ref(false)
+const searchInputValue = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
 
-const room = computed(() => roomStore.activeRoom)
-const roomName = computed(() => room.value?.name || '')
+// Watch room search term from RoomSummaryCard search bar → mirror value in header input only.
+// Do not execute search here; user confirms with Enter or search button.
+watch(
+  () => roomStore.roomSearchTerm,
+  (term) => {
+    if (term && !showSearchInput.value) {
+      showSearchInput.value = true
+      searchInputValue.value = term
+    }
+  },
+)
+
+function onSearchInput() {
+  roomStore.roomSearchTerm = searchInputValue.value
+}
+
+function doSearch() {
+  const q = searchInputValue.value.trim()
+  if (q) {
+    roomStore.performRoomSearch(q)
+  } else {
+    roomStore.cancelRoomSearch()
+    showSearchInput.value = false
+  }
+}
+
+function handleSearch() {
+  // First click opens/focuses the input. If input is already open and has text,
+  // run search explicitly. This prevents searching while the user is still typing.
+  if (!showSearchInput.value) {
+    showSearchInput.value = true
+    nextTick(() => searchInputRef.value?.focus())
+    return
+  }
+
+  if (searchInputValue.value.trim()) {
+    doSearch()
+  } else if (roomStore.isSearching) {
+    cancelSearch()
+  } else {
+    nextTick(() => searchInputRef.value?.focus())
+  }
+}
+
+function cancelSearch() {
+  roomStore.cancelRoomSearch()
+  showSearchInput.value = false
+  searchInputValue.value = ''
+}
+
+function onSearchKeydown(ev: KeyboardEvent) {
+  if (ev.key === 'Escape') {
+    cancelSearch()
+  }
+}
+
+const room = computed(() => {
+  void roomStore.roomVersion
+  return roomStore.activeRoom
+})
+const roomName = computed(() => {
+  void roomStore.roomVersion
+  return room.value?.name || ''
+})
 const memberCount = computed(() => {
+  void roomStore.roomVersion
   if (!room.value) return 0
   return room.value.getJoinedMemberCount()
 })
-const avatarUrl = computed(() => roomStore.getRoomAvatarUrl(room.value, 40))
+const avatarUrl = computed(() => {
+  void roomStore.roomVersion
+  return roomStore.getRoomAvatarUrl(room.value, 40)
+})
 const isEncrypted = computed(() => room.value ? roomStore.isRoomEncrypted(room.value.roomId) : false)
-const isPublic = computed(() => roomStore.isRoomPublic(room.value))
+const isPublic = computed(() => {
+  void roomStore.roomVersion
+  return roomStore.isRoomPublic(room.value)
+})
 const isRightPanelOpen = computed(() => rightPanelStore.rightPanelPhase !== null)
 const isThreadPanelOpen = computed(
   () =>
@@ -31,13 +102,14 @@ const isThreadPanelOpen = computed(
     rightPanelStore.rightPanelPhase === 'ThreadView',
 )
 const isDirectMessage = computed(() => {
+  void roomStore.roomVersion
   if (!room.value) return false
-  // DM rooms have exactly 2 joined members
   return room.value.getJoinedMemberCount() === 2 && !isPublic.value
 })
 
 // FacePile: show first 3 joined members (like Element Web)
 const facePileMembers = computed(() => {
+  void roomStore.roomVersion
   if (!room.value || isDirectMessage.value) return []
   const members = room.value.getJoinedMembers()
   return members.slice(0, 3)
@@ -88,10 +160,6 @@ function handleOpenMemberList() {
   rightPanelStore.openMemberList()
 }
 
-function handleSearch() {
-  searchDialogOpen.value = true
-}
-
 function handleVideoCall() {
   window.alert(t('matrixChat.comingSoon'))
 }
@@ -101,6 +169,7 @@ function handleVoiceCall() {
 }
 
 const roomTopic = computed(() => {
+  void roomStore.roomVersion
   if (!room.value) return ''
   return roomStore.getRoomTopic(room.value)
 })
@@ -131,8 +200,26 @@ const roomTopic = computed(() => {
 
     <!-- Right side buttons (Element Web style) -->
     <div class="room-header-buttons">
+      <!-- Inline search bar (shown when search active, element-web style) -->
+      <div v-if="showSearchInput" class="header-search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+        <input
+          ref="searchInputRef"
+          v-model="searchInputValue"
+          type="text"
+          class="header-search-input"
+          :placeholder="t('matrixChat.search') + '...'"
+          @input="onSearchInput"
+          @keydown.enter.prevent="doSearch"
+          @keydown="onSearchKeydown"
+        />
+        <button v-if="searchInputValue" class="header-search-clear" @click="cancelSearch" :title="t('matrixChat.cancel')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+      </div>
+
       <!-- Search button -->
-      <button class="header-action-btn" @click="handleSearch" :title="t('matrixChat.search')">
+      <button class="header-action-btn" :class="{ 'header-action-btn--active': roomStore.isSearching }" @click="handleSearch" :title="t('matrixChat.search')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
       </button>
 
@@ -181,13 +268,6 @@ const roomTopic = computed(() => {
 
     <!-- Invite dialog -->
     <MatrixInviteDialog v-if="showInviteDialog" @close="showInviteDialog = false" />
-
-    <!-- Search dialog -->
-    <MatrixSearchDialog
-      :visible="searchDialogOpen"
-      @close="searchDialogOpen = false"
-      @select="(eventId: string) => roomStore.selectEvent(eventId)"
-    />
   </div>
 </template>
 
@@ -325,6 +405,51 @@ const roomTopic = computed(() => {
 .header-action-btn--active {
   background: rgba(var(--accent-primary-rgb), 0.08);
   color: $accent-primary;
+}
+
+// ─── Inline search bar ──────────────────────────────────
+
+.header-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid $border-color;
+  border-radius: $radius-sm;
+  background: $bg-input;
+  transition: border-color $transition-fast;
+
+  &:focus-within { border-color: $accent-primary; }
+
+  svg { color: $text-muted; flex-shrink: 0; }
+}
+
+.header-search-input {
+  width: 160px;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 13px;
+  color: $text-primary;
+
+  &::placeholder { color: $text-muted; }
+}
+
+.header-search-clear {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: $text-muted;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:hover { background: rgba(var(--text-muted-rgb), 0.1); color: $text-primary; }
 }
 
 // ─── Thread notification dot ──────────────────────────────

@@ -38,8 +38,8 @@ describe('mergeTimeline', () => {
     ]
     const out = mergeTimeline(items)
     expect(out).toEqual([
-      { id: 'h-cmt-2', when: expect.any(String), taskId: 't2', action: '补充', title: '回复内容', archived: true },
-      { id: 'h-evt-1', when: expect.any(String), taskId: 't1', action: '审批', title: '状态 → review', archived: false },
+      { id: 'h-cmt-2', when: expect.any(String), ts: expect.any(Number), taskId: 't2', source: 'comment', action: '补充', title: '回复内容', archived: true },
+      { id: 'h-evt-1', when: expect.any(String), ts: expect.any(Number), taskId: 't1', source: 'event', action: '审批', title: '状态 → review', archived: false },
     ])
   })
 })

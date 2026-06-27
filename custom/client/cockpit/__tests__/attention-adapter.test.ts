@@ -11,17 +11,21 @@ const t = (over: Partial<KanbanTask> = {}): KanbanTask => ({
 
 describe('toAttention', () => {
   it('blocked → high severity, prefix 阻塞', () => {
-    expect(toAttention(t({ id: 'b1', title: 'X', status: 'blocked' }))).toEqual({
-      id: 'att-b1', taskId: 'b1', severity: 'high', title: '阻塞 · X',
-    })
+    const out = toAttention(t({ id: 'b1', title: 'X', status: 'blocked', priority: 2, created_at: 100 }))
+    expect(out).toMatchObject({ id: 'att-b1', taskId: 'b1', severity: 'high', title: '阻塞 · X' })
+    expect(out?.priority).toBe(2)
+    expect(out?.status).toBe('blocked')
   })
   it('review → medium severity, prefix 待审', () => {
-    expect(toAttention(t({ id: 'r1', title: 'Y', status: 'review' }))).toEqual({
-      id: 'att-r1', taskId: 'r1', severity: 'medium', title: '待审 · Y',
-    })
+    const out = toAttention(t({ id: 'r1', title: 'Y', status: 'review' }))
+    expect(out).toMatchObject({ id: 'att-r1', taskId: 'r1', severity: 'medium', title: '待审 · Y' })
+  })
+  it('triage → high severity, prefix 待分类', () => {
+    const out = toAttention(t({ id: 't1', title: 'Z', status: 'triage' }))
+    expect(out).toMatchObject({ id: 'att-t1', taskId: 't1', severity: 'high', title: '待分类 · Z' })
   })
   it('other statuses → null', () => {
-    for (const s of ['triage', 'todo', 'running', 'ready', 'scheduled', 'done', 'archived'] as const) {
+    for (const s of ['todo', 'running', 'ready', 'scheduled', 'done', 'archived'] as const) {
       expect(toAttention(t({ status: s }))).toBeNull()
     }
   })

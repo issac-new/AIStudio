@@ -86,6 +86,7 @@ const mentionStartIndex = ref(-1)
 const mentionSelectedIndex = ref(0)
 
 const roomMembers = computed(() => {
+  void roomStore.roomVersion
   const roomId = roomStore.activeRoomId
   if (!roomId) return []
   const groups = roomStore.getRoomMemberList(roomId)

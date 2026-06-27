@@ -10,6 +10,7 @@ const { t } = useI18n()
 const menuOpen = ref(false)
 
 function navigateRoute(ch: CollabChannel) {
+  store.selectChannel(ch.id)
   if (ch.routeTarget) {
     router.push(ch.routeTarget)
   }
@@ -44,6 +45,10 @@ function pickNew(kind: ChannelKind) {
       <span class="cockpit-collab-bar__chip-icon">{{ KIND_ICON[c.kind] }}</span>
       <span class="cockpit-collab-bar__chip-label">{{ c.label }}</span>
       <span v-if="c.routeTarget" class="cockpit-collab-bar__chip-nav" title="打开完整页面" @click.stop="navigateRoute(c)">↗</span>
+    </button>
+    <button class="cockpit-collab-bar__add" type="button" data-action="add" @click="menuOpen = !menuOpen">
+      <span>＋</span>
+      <span>{{ t('cockpit.addCollab') }}</span>
     </button>
     <div v-if="menuOpen" class="cockpit-collab-bar__menu">
       <div class="cockpit-collab-bar__menu-head">{{ t('cockpit.addCollabTitle') }}</div>

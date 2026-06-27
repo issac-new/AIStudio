@@ -25,12 +25,14 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const roomId = computed(() => roomStore.activeRoomId)
 const roomName = computed(() => {
+  void roomStore.roomVersion
   const room = roomStore.activeRoom
   return room?.name || t('matrixChat.noRoomSelected')
 })
 
 // ─── Existing room members ─────────────────────────────
 const existingMemberIds = computed(() => {
+  void roomStore.roomVersion
   const groups = roomStore.getRoomMemberList(roomId.value ?? '')
   const all = [...groups.admins, ...groups.mods, ...groups.defaults, ...groups.invited]
   return new Set(all.map((m: any) => m.userId))
@@ -38,6 +40,7 @@ const existingMemberIds = computed(() => {
 
 // ─── Suggestions: room members who are not in the room yet (from contacts) ───
 const suggestions = computed(() => {
+  void roomStore.roomVersion
   const groups = roomStore.getRoomMemberList(roomId.value ?? '')
   // Show all known users except those already in this room
   const allKnown = [...groups.admins, ...groups.mods, ...groups.defaults]

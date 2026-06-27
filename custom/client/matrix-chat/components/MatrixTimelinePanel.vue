@@ -315,6 +315,34 @@ onBeforeUnmount(() => {
   if (readReceiptTimer) clearTimeout(readReceiptTimer)
   if (scrollTimeout.value) clearTimeout(scrollTimeout.value)
 })
+
+// ─── Scroll to event (from search result click) ──────────
+// When selectedEventId is set (e.g. after clicking a search result),
+// scroll to that event and highlight it briefly.
+const highlightedEventId = ref<string | null>(null)
+
+function scrollToEvent(eventId: string) {
+  if (!listRef.value) return
+  const el = listRef.value.querySelector(`[data-event-id="${eventId}"]`) as HTMLElement | null
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    highlightedEventId.value = eventId
+    setTimeout(() => { highlightedEventId.value = null }, 3000)
+  }
+}
+
+// Watch selectedEventId from store (set by search result click)
+watch(
+  () => roomStore.selectedEventId,
+  (eventId) => {
+    if (eventId) {
+      nextTick(() => {
+        scrollToEvent(eventId)
+        roomStore.selectEvent(null) // clear after handling
+      })
+    }
+  },
+)
 </script>
 
 <template>
@@ -345,18 +373,23 @@ onBeforeUnmount(() => {
       <MatrixDateSeparator v-if="item.type === 'date'" :date="item.date" />
       <MatrixReadMarker v-if="item.type === 'readMarker'" />
       <MatrixStateEvent v-if="item.type === 'stateEvent'" :event="item.event" />
-      <MatrixMessageItem
+      <div
         v-if="item.type === 'message'"
-        :event="item.event"
-        :show-sender="item.showSender"
-        :is-continuation="item.isContinuation"
-        :is-last-in-section="item.isLastInSection"
-        :layout="roomStore.timelineLayout"
-        :rendering-type="renderingType"
-        :thread-id="threadId"
-        :show-reactions="showReactions"
-        :always-show-timestamps="alwaysShowTimestamps"
-      />
+        :data-event-id="item.event.getId()"
+        :class="['timeline-event-wrapper', { 'timeline-event-wrapper--highlighted': highlightedEventId === item.event.getId() }]"
+      >
+        <MatrixMessageItem
+          :event="item.event"
+          :show-sender="item.showSender"
+          :is-continuation="item.isContinuation"
+          :is-last-in-section="item.isLastInSection"
+          :layout="roomStore.timelineLayout"
+          :rendering-type="renderingType"
+          :thread-id="threadId"
+          :show-reactions="showReactions"
+          :always-show-timestamps="alwaysShowTimestamps"
+        />
+      </div>
     </template>
     <MatrixTypingNotification />
   </div>
@@ -433,5 +466,21 @@ onBeforeUnmount(() => {
   margin: 0;
   line-height: 1.4;
   max-width: 260px;
+}
+
+// ─── Event highlight (from search jump) ─────────────────
+
+.timeline-event-wrapper {
+  border-radius: $radius-sm;
+  transition: background-color 0.3s ease;
+}
+
+.timeline-event-wrapper--highlighted {
+  animation: highlight-flash 3s ease;
+}
+
+@keyframes highlight-flash {
+  0% { background: rgba(var(--accent-primary-rgb), 0.15); }
+  100% { background: transparent; }
 }
 </style>

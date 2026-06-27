@@ -24,6 +24,160 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   const roomList = ref<any[]>([])
   const activeRoomId = ref<string | null>(null)
   const messageList = ref<MatrixEvent[]>([])
+  /** Search term from RoomSummaryCard search bar — consumed by MatrixMessagePanel */
+  const roomSearchTerm = ref('')
+  /** Inline room search state (element-web TimelineRenderingType.Search equivalent) */
+  const isSearching = ref(false)
+  const searchResults = ref<any[]>([])
+  const searchHighlights = ref<string[]>([])
+  const searchCount = ref(0)
+  const searchInProgress = ref(false)
+  const searchBatchSize = ref(20)
+  let searchAbortController: AbortController | null = null
+
+  /**
+   * Local fallback search for loaded room events.
+   * Element Web uses EventIndex for encrypted/local searches; we do not have Seshat,
+   * so fallback to currently loaded MatrixEvent objects (messageList + SDK live timeline).
+   */
+  function localSearchLoadedRoomEvents(term: string): any[] {
+    const q = term.toLowerCase()
+    const byId = new Map<string, MatrixEvent>()
+
+    for (const ev of messageList.value) {
+      const id = ev.getId?.()
+      if (id) byId.set(id, ev)
+    }
+
+    const liveEvents = activeRoom.value?.getLiveTimeline?.()?.getEvents?.() ?? []
+    for (const ev of liveEvents) {
+      const id = ev.getId?.()
+      if (id) byId.set(id, ev)
+    }
+
+    const matches: any[] = []
+    for (const ev of byId.values()) {
+      if (ev.getType?.() !== 'm.room.message' || ev.isRedacted?.()) continue
+      const content = ev.getContent?.() ?? {}
+      const body = String(content.body ?? '')
+      const formatted = String(content.formatted_body ?? '').replace(/<[^>]*>/g, ' ')
+      const haystack = `${body}\n${formatted}`.toLowerCase()
+      if (!haystack.includes(q)) continue
+      matches.push({
+        event: ev,
+        rank: 1,
+        eventId: ev.getId?.(),
+        sender: ev.getSender?.(),
+        timestamp: ev.getTs?.(),
+        body,
+        context: [],
+        local: true,
+      })
+    }
+
+    // Recent first, matching element-web SearchOrderBy.Recent
+    matches.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+    return matches
+  }
+
+  /**
+   * Perform an inline room message search (element-web eventSearch equivalent).
+   * Results are stored in searchResults; isSearching switches the message panel
+   * to search-result rendering mode.
+   */
+  async function performRoomSearch(term: string): Promise<void> {
+    const q = term.trim()
+    if (!q) {
+      cancelRoomSearch()
+      return
+    }
+    // Abort previous search
+    searchAbortController?.abort()
+    searchAbortController = new AbortController()
+
+    isSearching.value = true
+    searchInProgress.value = true
+    searchResults.value = []
+    searchCount.value = 0
+    roomSearchTerm.value = q
+
+    try {
+      if (!clientStore.client || !activeRoomId.value) return
+      const resp: any = await clientStore.client.searchRoomEvents({
+        term: q,
+        filter: { rooms: [activeRoomId.value] },
+      } as any)
+      if (searchAbortController?.signal.aborted) return
+
+      // matrix-js-sdk searchRoomEvents returns ISearchResults directly:
+      // { count, results, highlights, next_batch, _query }
+      const rawResults = resp?.results ?? []
+      searchCount.value = resp?.count ?? rawResults.length
+
+      // Collect highlights
+      let hl = resp?.highlights ?? []
+      if (!hl.includes(q)) hl = [...hl, q]
+      hl = hl.sort((a: string, b: string) => b.length - a.length)
+      searchHighlights.value = hl
+
+      // Map results: each result has result (MatrixEvent) + rank + context
+      const mapped = rawResults.map((r: any) => {
+        const ev = r.result
+        return {
+          event: ev,
+          rank: r.rank ?? 0,
+          eventId: ev.getId?.() ?? ev.event_id,
+          sender: ev.getSender?.() ?? ev.sender,
+          timestamp: ev.getTs?.() ?? ev.origin_server_ts,
+          body: ev.getContent?.()?.body ?? ev.content?.body ?? '',
+          context: r.context?.events_before ?? [],
+        }
+      })
+      mapped.sort((a: any, b: any) => b.rank - a.rank)
+
+      // If homeserver search returns no results (common for encrypted rooms or
+      // homeservers without message search indexing), fallback to locally loaded
+      // timeline messages. This mirrors Element Web's local/EventIndex path.
+      const fallback = mapped.length === 0 ? localSearchLoadedRoomEvents(q) : []
+      searchResults.value = mapped.length > 0 ? mapped : fallback
+      if (fallback.length > 0) searchCount.value = fallback.length
+    } catch {
+      if (!searchAbortController?.signal.aborted) {
+        const fallback = localSearchLoadedRoomEvents(q)
+        searchResults.value = fallback
+        searchCount.value = fallback.length
+        searchHighlights.value = [q]
+      }
+    } finally {
+      if (!searchAbortController?.signal.aborted) {
+        searchInProgress.value = false
+      }
+    }
+  }
+
+  /** Cancel inline search, return to normal timeline */
+  function cancelRoomSearch(): void {
+    searchAbortController?.abort()
+    searchAbortController = null
+    isSearching.value = false
+    searchResults.value = []
+    searchHighlights.value = []
+    searchCount.value = 0
+    searchInProgress.value = false
+    roomSearchTerm.value = ''
+  }
+  /**
+   * Version counter bumped after every room mutation (name/topic/avatar/favourite/power/etc).
+   * Components that read Room properties directly (room.name etc.) should add this as a
+   * dependency in their computed so Vue sees the change even though the Room object reference
+   * hasn't changed.
+   */
+  const roomVersion = ref(0)
+  function bumpRoomVersion() {
+    roomVersion.value++
+    // Also refresh room list so sidebar updates room names/avatars
+    refreshRoomList()
+  }
 
   // 正在拉取完整消息历史的房间集合(去重,避免并发刷新重复请求 /messages)
   const loadingRooms = new Set<string>()
@@ -486,6 +640,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     try {
       await clientStore.client.invite(roomId, userIdToInvite)
       refreshRoomList()
+      bumpRoomVersion()
     } catch (err: any) {
       clientStore.error = err?.message || 'Failed to invite user'
       throw err
@@ -497,6 +652,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     try {
       await clientStore.client.kick(roomId, userIdToKick, reason ?? '')
       refreshRoomList()
+      bumpRoomVersion()
     } catch (err: any) {
       clientStore.error = err?.message || 'Failed to kick user'
       throw err
@@ -605,6 +761,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
       } else {
         await clientStore.client.setRoomTag(activeRoom.value.roomId, 'm.favourite', { order: 0 })
       }
+      bumpRoomVersion()
     } catch (err: any) {
       clientStore.error = err?.message || 'Failed to toggle favorite'
       throw err
@@ -628,10 +785,141 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     if (!clientStore.client || !activeRoomId.value) return
     try {
       await clientStore.client.setRoomTopic(activeRoomId.value, topicText)
+      bumpRoomVersion()
     } catch (err: any) {
       clientStore.error = err?.message || 'Failed to set room topic'
       throw err
     }
+  }
+
+  // ── Room Info helpers (mirror element-web RoomSummaryCardViewModel) ──
+
+  /** Get history visibility for a room: world_readable | shared | invited | joined */
+  function getHistoryVisibility(room: any): string {
+    if (!room?.currentState) return ''
+    const hvEvent = room.currentState.getStateEvents('m.room.history_visibility', '')
+    const hv = hvEvent?.getContent()?.history_visibility
+    return hv ?? ''
+  }
+
+  /**
+   * Get E2E trust status for a room.
+   * 'warning' = room is encrypted but there are unverified devices.
+   * 'normal'  = OK or not encrypted.
+   */
+  function getE2EStatus(roomId: string): 'normal' | 'warning' {
+    if (!clientStore.client) return 'normal'
+    const room = clientStore.client.getRoom(roomId)
+    if (!room) return 'normal'
+    if (!room.hasEncryptionStateEvent()) return 'normal'
+    // Check if crypto is available and has untrusted devices
+    try {
+      const crypto = clientStore.client.getCrypto?.()
+      if (!crypto) return 'normal'
+      // Check device trust status via cross-signing / device list
+      const myUserId = clientStore.client.getUserId()
+      if (!myUserId) return 'normal'
+      const members = room.getJoinedMembers()
+      for (const member of members) {
+        if (member.userId === myUserId) continue
+        try {
+          // getUserDeviceInfo may take a single userId or array depending on SDK version
+          const deviceMap: any = crypto.getUserDeviceInfo?.(member.userId)
+            ?? crypto.getUserDeviceInfo?.([member.userId])
+          if (deviceMap instanceof Map) {
+            for (const [, device] of deviceMap) {
+              // Check various trust indicators across SDK versions
+              if (typeof device?.isUnverified === 'function' && device.isUnverified()) return 'warning'
+              if (typeof device?.isVerified === 'function' && !device.isVerified()) return 'warning'
+              if (device?.verified === false) return 'warning'
+            }
+          }
+        } catch {
+          // skip this member if device lookup fails
+        }
+      }
+      return 'normal'
+    } catch {
+      return 'normal'
+    }
+  }
+
+  /** Check if a room is a direct message (1:1 chat). Matches element-web useIsDirectMessage. */
+  function isDirectMessage(room: any): boolean {
+    if (!room || !clientStore.client) return false
+    try {
+      // Check m.direct account data first (authoritative)
+      const directEvent = clientStore.client.getAccountData('m.direct')
+      if (directEvent) {
+        const content = directEvent.getContent() as Record<string, string[]>
+        for (const [, roomIds] of Object.entries(content)) {
+          if (Array.isArray(roomIds) && roomIds.includes(room.roomId)) return true
+        }
+      }
+      // Fallback: 2 members and not public
+      const joinRuleEvent = room.currentState?.getStateEvents('m.room.join_rules', '')
+      const isPublic = joinRuleEvent?.getContent()?.join_rule === 'public'
+      return room.getJoinedMemberCount() === 2 && !isPublic
+    } catch {
+      return false
+    }
+  }
+
+  /** Check if a room is a video room (Element Call / video conferencing room). */
+  function isVideoRoom(room: any): boolean {
+    if (!room) return false
+    try {
+      // Check via SDK helper if available
+      if (typeof room.isVideoRoom === 'function') return room.isVideoRoom()
+      // Check create event for type field
+      const createEvent = room.currentState?.getStateEvents('m.room.create', '')
+      const type = createEvent?.getContent()?.type
+      return type === 'm.video'
+    } catch {
+      return false
+    }
+  }
+
+  /** Check if the current user can invite new members to the room. Matches element-web canInviteTo. */
+  function canInviteToRoom(room: any): boolean {
+    if (!room || !clientStore.client) return false
+    try {
+      const uid = clientStore.client.getSafeUserId()
+      return room.canInvite(uid) && room.getMyMembership() === 'join'
+    } catch {
+      return false
+    }
+  }
+
+  /** Get count of pinned messages in a room. */
+  function getPinnedEventCount(room: any): number {
+    if (!room?.currentState) return 0
+    try {
+      const pinnedEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
+      if (!pinnedEvent) return 0
+      const pinned = pinnedEvent.getContent()?.pinned
+      return Array.isArray(pinned) ? pinned.length : 0
+    } catch {
+      return 0
+    }
+  }
+
+  /** Get the pinned events state content (event IDs array). */
+  function getPinnedEventIds(room: any): string[] {
+    if (!room?.currentState) return []
+    try {
+      const pinnedEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
+      const pinned = pinnedEvent?.getContent()?.pinned
+      return Array.isArray(pinned) ? pinned : []
+    } catch {
+      return []
+    }
+  }
+
+  /** Get file events from room timeline (stub — for future FilePanel). */
+  function getRoomFiles(_room: any): any[] {
+    // TODO: Implement file listing from room timeline filtered by m.file type
+    return []
   }
 
   /** Search the user directory for matching users */
@@ -893,7 +1181,10 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   }
 
   return {
-    roomList, activeRoomId, messageList,
+    roomList, activeRoomId, messageList, roomSearchTerm, roomVersion,
+    isSearching, searchResults, searchHighlights, searchCount, searchInProgress,
+    performRoomSearch, cancelRoomSearch,
+    bumpRoomVersion,
     timelineLayout, alwaysShowTimestamps, useCompactLayout,
     readMarkerEventId, readMarkerVisible, typingUsers, selectedEventId,
     activeRoom, sortedRooms, activeRoomMessages, activeRoomUnreadCount,
@@ -905,6 +1196,9 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     getRoomAvatarUrl, getUserAvatarUrl, getRoomTopic,
     isRoomEncrypted, isRoomPublic, getRoomAlias, isRoomFavorite,
     toggleRoomFavorite, canEditTopic, setRoomTopic,
+    getHistoryVisibility, getE2EStatus, isDirectMessage, isVideoRoom,
+    canInviteToRoom, getPinnedEventCount, getPinnedEventIds,
+    getRoomFiles,
     searchUserDirectory, getUserPresence,
     createRoom, joinRoom, leaveRoom, paginateMessages,
     getRoomUnreadCount, getRoomNotificationLevel, getEventReadReceipts,
