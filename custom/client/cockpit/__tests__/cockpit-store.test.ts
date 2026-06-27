@@ -670,3 +670,22 @@ describe('cockpit store 待办闹钟提醒', () => {
     expect(todo.reminded5).toBe(true)
   })
 })
+
+
+describe('cockpit store run trace modal', () => {
+  it('opens and closes the run trace modal with session and run references', () => {
+    const s = useCockpitStore()
+    s.openRunTrace({ taskId: 'task-1', sessionId: 'session-1', runId: 'run-1' })
+
+    expect(s.runTraceOpen).toBe(true)
+    expect(s.runTraceTaskId).toBe('task-1')
+    expect(s.runTraceSessionId).toBe('session-1')
+    expect(s.runTraceRunId).toBe('run-1')
+
+    s.closeRunTrace()
+    expect(s.runTraceOpen).toBe(false)
+    expect(s.runTraceTaskId).toBe('task-1')
+    expect(s.runTraceSessionId).toBe('session-1')
+    expect(s.runTraceRunId).toBe('run-1')
+  })
+})
