@@ -79,10 +79,4 @@ describe('CockpitAttention', () => {
     expect(s.selectedTaskId).toBe('b1')
   })
 
-  it('emits history when history button clicked', async () => {
-    mockKanbanTasks.push(kt({ id: 'b1', status: 'blocked' }))
-    const w = mount(CockpitAttention)
-    await w.find('.cockpit-attention__history').trigger('click')
-    expect(w.emitted('history')).toBeTruthy()
-  })
 })

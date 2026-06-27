@@ -87,9 +87,17 @@ const historyError = computed(() => {
 })
 
 /** 判断事件是否为状态事件(m.room.create / m.room.member)。 */
+const STATE_EVENT_TYPES = new Set([
+  'm.room.create', 'm.room.member',
+  'm.room.name', 'm.room.topic', 'm.room.avatar', 'm.room.power_levels',
+  'm.room.canonical_alias', 'm.room.join_rules', 'm.room.history_visibility',
+  'm.room.encryption', 'm.room.pinned_events', 'm.room.tombstone',
+  'm.room.server_acl',
+])
+
 function isStateEvent(event: any): boolean {
   const type = event?.getType?.()
-  return type === 'm.room.create' || type === 'm.room.member'
+  return STATE_EVENT_TYPES.has(type)
 }
 
 /** Group messages with date separators, continuation flags, read marker, and state events */
@@ -250,8 +258,10 @@ function clearLocalUnread(room: any) {
     // NotificationCountType.Total = 'total', Highlight = 'highlight'
     room.setUnreadNotificationCount?.('total', 0)
     room.setUnreadNotificationCount?.('highlight', 0)
-    // 触发 roomStore 的 sortedRooms 重算(依赖未读数)
+    // 触发 roomStore 的 sortedRooms 重算(依赖未读数) + bumpRoomVersion
+    // 让 cockpit notifyItems 等下游消费者重新评估未读计数
     roomStore.refreshRoomList()
+    roomStore.bumpRoomVersion()
   } catch {
     // 忽略
   }

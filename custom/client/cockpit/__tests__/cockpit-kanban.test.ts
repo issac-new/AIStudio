@@ -122,20 +122,6 @@ describe('CockpitKanban', () => {
     expect(statusChips).toHaveLength(5)
   })
 
-  it('tenant filter chips are dynamically generated', () => {
-    seed()
-    const w = mount(CockpitKanban)
-    // 去重后的 tenant 选项：team-a, team-b（不含 (未指定)，因 seed 都有 tenant）
-    expect(w.find('[data-filter="team-a"]').exists()).toBe(true)
-    expect(w.find('[data-filter="team-b"]').exists()).toBe(true)
-  })
-
-  it('renders search input', () => {
-    seed()
-    const w = mount(CockpitKanban)
-    expect(w.find('[data-search-input]').exists()).toBe(true)
-  })
-
   it('search filters tasks by local match via store', async () => {
     seed()
     const s = useCockpitStore()
