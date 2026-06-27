@@ -30,6 +30,7 @@ export default defineConfig({
   test: {
     // 只跑 overlay 自己的测试，不混跑 upstream 的 tests/**。
     include: ['custom/**/*.test.ts'],
+    setupFiles: [resolve(overlayRoot, 'custom/client/test/setup.ts')],
     // environment 由各测试文件头部的 // @vitest-environment jsdom 指令按需指定；
     // store 级测试无需 DOM，config 层不强制全局 environment 以减少开销。
   },

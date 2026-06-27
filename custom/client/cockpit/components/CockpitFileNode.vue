@@ -59,14 +59,15 @@ function onClick() {
       <span class="cockpit-file-node__name">{{ node.name }}</span>
       <span v-if="meta" class="cockpit-file-node__meta">{{ meta }}</span>
     </button>
-    <CockpitFileNode
-      v-for="child in node.children"
-      v-if="node.isDir && expanded && node.children"
-      :key="child.id"
-      :node="child"
-      :depth="depth + 1"
-      :filter="filter"
-    />
+    <template v-if="node.isDir && expanded && node.children">
+      <CockpitFileNode
+        v-for="child in node.children"
+        :key="child.id"
+        :node="child"
+        :depth="depth + 1"
+        :filter="filter"
+      />
+    </template>
   </div>
 </template>
 

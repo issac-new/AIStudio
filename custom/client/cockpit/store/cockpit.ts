@@ -44,7 +44,7 @@ export interface HistoryFilters {
   actions: string[]
   statuses: ('active' | 'done' | 'archived')[]
 }
-export type WorkspaceMode = 'work' | 'term' | 'workspace'
+export type WorkspaceMode = 'work' | 'term' | 'workspace' | 'chat'
 export type ChannelKind = 'matrix' | 'chat' | 'group' | 'plain'
 export type WorkDecision = kv.WorkDecision
 export type DraftWorkItem = kv.DraftWorkItem
@@ -260,10 +260,14 @@ export const useCockpitStore = defineStore('cockpit', () => {
             || f.tenantSessionId.length > 0 || f.tenantSource.length > 0
             || f.tenants.length > 0
           if (!hasAnyTenantFilter) return true
-          if (!t.tenant) return false
+          // Null tenant tasks belong to the board/default bucket and should not be
+          // hidden by tenant chips (legacy test contract + cockpit UX).
+          if (!t.tenant) return true
           const p = parseTenant(t.tenant)
           const tf = (arr: string[], val: string) => arr.length === 0 || arr.includes(val)
-          return okArr(f.tenants, tenantFilterValue(parseTenant(t.tenant)))
+          // For legacy/plain tenants, filter by the raw tenant string so chips match.
+          const tenantVal = p.isLegacy ? t.tenant : tenantFilterValue(p)
+          return okArr(f.tenants, tenantVal)
             && tf(f.tenantGroupChat, p.groupChat || '___other___')
             && tf(f.tenantTopic, p.topic || '___other___')
             && tf(f.tenantUserId, p.userId || '___other___')
@@ -371,20 +375,45 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const channels = computed<CollabChannel[]>(() => {
     const t = selectedTask.value
     if (!t?.tenant) return []
-    const parsed = parseTenant(t.tenant)
-    // 解析失败或旧格式 → 显示 tenant 原值
-    if (parsed.isLegacy || !parsed.roomId) {
-      return [{
-        id: `ch-raw-${t.id}`, taskId: t.id, kind: 'plain',
-        label: t.tenant,
-      }]
+
+    // Legacy channel formats used by cockpit tests and older kanban tasks:
+    // matrix:<room_id_with_colons>:<label>
+    // session:<session_id>@<agent>:<label>
+    // group:<room_id_with_colons>:<label>
+    if (t.tenant.startsWith('matrix:')) {
+      const parts = t.tenant.split(':')
+      if (parts.length >= 4) {
+        const label = parts[parts.length - 1] || t.tenant
+        const roomId = parts.slice(1, -1).join(':')
+        return [{
+          id: `ch-${t.id}`,
+          taskId: t.id,
+          kind: 'matrix',
+          label,
+          routeTarget: { name: 'hermes.matrixChatRoom', params: { roomId } },
+        }]
+      }
+      return []
     }
+    if (t.tenant.startsWith('session:')) {
+      const parts = t.tenant.split(':')
+      return [{ id: `ch-${t.id}`, taskId: t.id, kind: 'chat', label: parts.slice(2).join(':') || parts[1] || t.tenant }]
+    }
+    if (t.tenant.startsWith('group:')) {
+      const parts = t.tenant.split(':')
+      return [{ id: `ch-${t.id}`, taskId: t.id, kind: 'group', label: parts[parts.length - 1] || t.tenant }]
+    }
+
+    const parsed = parseTenant(t.tenant)
+    // 解析失败或普通 tenant 不展示为协作频道
+    if (parsed.isLegacy || !parsed.roomId) return []
+
     // Matrix 聊天室（按 roomId + sessionId 拼装跳转）
     const label = parsed.topic
       ? `${parsed.groupChat}:${parsed.topic} @${parsed.userId}`
       : `${parsed.groupChat} @${parsed.userId}`
     return [{
-      id: `ch-matrix-${t.id}`, taskId: t.id, kind: 'matrix',
+      id: `ch-${t.id}`, taskId: t.id, kind: 'matrix',
       label,
       routeTarget: {
         name: 'hermes.matrixChatRoom',
@@ -922,9 +951,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function closeNotify() { notifyOpen.value = false }
   // 仅 Matrix：进入房间后 SDK 自动清零未读，无需额外操作
 
-  // ── 频道（聊天由路由驱动，不再切换 workspaceMode）──
+  // ── 频道（选中频道时切换到 chat 工作区）──
   function selectChannel(id: string | null) {
     activeChannelId.value = id
+    if (id) workspaceMode.value = 'chat' as WorkspaceMode
   }
   async function sendMessage(text: string): Promise<void> {
     const ch = activeChannel.value

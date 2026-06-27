@@ -3,16 +3,30 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
+import MatrixInviteDialog from './MatrixInviteDialog.vue'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
 const { t } = useI18n()
 
+const showInviteDialog = ref(false)
 const searchQuery = ref('')
 const room = computed(() => roomStore.activeRoom)
 const roomId = computed(() => room.value?.roomId ?? '')
 
+const totalMemberCount = computed(() => {
+  void roomStore.roomVersion
+  if (!room.value) return 0
+  return room.value.getJoinedMemberCount() + (room.value.getInvitedMembers?.()?.length ?? 0)
+})
+
+const canInvite = computed(() => {
+  void roomStore.roomVersion
+  return roomStore.canInviteToRoom(room.value)
+})
+
 const memberGroups = computed(() => {
+  void roomStore.roomVersion
   if (!roomId.value) return { admins: [], mods: [], defaults: [], invited: [] }
   return roomStore.getRoomMemberList(roomId.value)
 })
@@ -72,13 +86,23 @@ const hasAnyMembers = computed(() =>
 
 <template>
   <div class="member-list-panel">
-    <!-- Search -->
-    <div class="member-search">
-      <input
-        v-model="searchQuery"
-        class="member-search-input"
-        :placeholder="t('matrixChat.memberSearch')"
-      />
+    <!-- Search + Invite header -->
+    <div class="member-search-row">
+      <div class="member-search">
+        <input
+          v-model="searchQuery"
+          class="member-search-input"
+          :placeholder="t('matrixChat.memberSearch')"
+        />
+      </div>
+      <button v-if="canInvite" class="member-invite-btn" @click="showInviteDialog = true" :title="t('matrixChat.inviteUser')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+      </button>
+    </div>
+
+    <!-- Member count -->
+    <div class="member-count-bar">
+      <span class="member-count-text">{{ t('matrixChat.memberCount', { count: totalMemberCount }) }}</span>
     </div>
 
     <!-- Empty -->
@@ -169,6 +193,9 @@ const hasAnyMembers = computed(() =>
         </div>
       </template>
     </div>
+
+    <!-- Invite dialog -->
+    <MatrixInviteDialog v-if="showInviteDialog" @close="showInviteDialog = false" />
   </div>
 </template>
 
@@ -181,9 +208,22 @@ const hasAnyMembers = computed(() =>
   height: 100%;
 }
 
-.member-search {
-  padding: 12px;
+.member-search-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
+}
+
+.member-search {
+  flex: 1;
+  min-width: 0;
+}
+
+/* keep old .member-search styles but remove standalone padding */
+.member-search {
+  padding: 0;
+  border-bottom: none;
 }
 
 .member-search-input {
@@ -199,6 +239,33 @@ const hasAnyMembers = computed(() =>
 
   &::placeholder { color: var(--text-muted); }
   &:focus { border-color: var(--accent-primary); }
+}
+
+.member-invite-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-sm;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all $transition-fast;
+
+  &:hover { background: rgba(var(--accent-primary-rgb), 0.06); color: var(--accent-primary); }
+}
+
+.member-count-bar {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.member-count-text {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .member-empty {

@@ -17,6 +17,7 @@ const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
 
 const displayName = computed(() => {
+  void roomStore.roomVersion
   const room = roomStore.activeRoom
   if (!room) return props.userId
   const member = room.getMember(props.userId)

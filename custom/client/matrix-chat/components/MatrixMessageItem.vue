@@ -70,8 +70,12 @@ const sendStatus = computed(() => toValue(tileState.sendStatus))
 const eventId = computed(() => toValue(tileState.eventId))
 
 const sender = computed(() => toValue(tileData.sender))
-const senderAvatarUrl = computed(() => roomStore.getUserAvatarUrl(sender.value, 32))
+const senderAvatarUrl = computed(() => {
+  void roomStore.roomVersion
+  return roomStore.getUserAvatarUrl(sender.value, 32)
+})
 const senderInitial = computed(() => {
+  void roomStore.roomVersion
   const room = roomStore.activeRoom
   if (!room) return (sender.value || '?').charAt(0).toUpperCase()
   const member = room.getMember(sender.value)

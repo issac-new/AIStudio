@@ -4,27 +4,38 @@ import { useI18n } from 'vue-i18n'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 
-interface Props {
-  visible: boolean
-}
-const props = defineProps<Props>()
+const { t } = useI18n()
+const clientStore = useMatrixClientStore()
+const roomStore = useMatrixRoomStore()
+
 const emit = defineEmits<{
   close: []
   select: [eventId: string]
 }>()
 
-const { t } = useI18n()
-const clientStore = useMatrixClientStore()
-const roomStore = useMatrixRoomStore()
+const visible = defineModel<boolean>('visible', { required: true })
 
 const searchQuery = ref('')
 const searching = ref(false)
 const results = ref<any[]>([])
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
-watch(() => props.visible, (v) => {
+// When opened, pre-fill from store search term
+watch(visible, (v) => {
   if (v) {
-    nextTick(() => searchInputRef.value?.focus())
+    if (roomStore.roomSearchTerm) {
+      searchQuery.value = roomStore.roomSearchTerm
+      nextTick(() => {
+        searchInputRef.value?.focus()
+        searchInputRef.value?.select()
+        doSearch()
+      })
+    } else {
+      nextTick(() => searchInputRef.value?.focus())
+    }
+  } else {
+    // Clear store search term when dialog closes
+    roomStore.roomSearchTerm = ''
   }
 })
 

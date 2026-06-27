@@ -9,6 +9,7 @@ const { t } = useI18n()
 const typingUsers = computed(() => roomStore.typingUsers)
 
 const typingText = computed(() => {
+  void roomStore.roomVersion // 成员头像/名称变更时刷新
   const users = typingUsers.value
   if (users.length === 0) return ''
   if (users.length === 1) {

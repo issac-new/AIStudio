@@ -23,7 +23,7 @@ export function registerMatrixChatRoutes(router: Router) {
     component: () => import('./views/MatrixChatView.vue'),
   });
   router.addRoute('hermes.cockpit', {
-    path: 'matrix-chat/room/:roomId',
+    path: 'matrix-chat/room/:roomId([^?]+)',
     name: 'hermes.matrixChatRoom',
     component: () => import('./views/MatrixChatView.vue'),
   });

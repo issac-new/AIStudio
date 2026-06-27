@@ -6,8 +6,14 @@ import { useI18n } from 'vue-i18n'
 const store = useCockpitStore()
 const { t } = useI18n()
 
+const emit = defineEmits<{ (e: 'history'): void }>()
+
 function handleClick(item: { taskId: string; title: string }) {
   store.focusOnTaskFromAttention(item.taskId, item.title)
+}
+
+function handleHistoryClick() {
+  emit('history')
 }
 
 function goSwarmKanban() {
@@ -71,6 +77,7 @@ onUnmounted(() => { stopCountdown() })
         <span class="cockpit-attention__refresh-cd">{{ countdown }}</span>
       </button>
       <button type="button" class="cockpit-attention__tab" @click="goSwarmKanban" :title="t('sidebar.swarmKanban')">⊞ {{ t('sidebar.swarmKanban') }}</button>
+      <button type="button" class="cockpit-attention__history" @click="handleHistoryClick" :title="t('cockpit.history')">{{ t('cockpit.history') }}</button>
     </div>
     <div class="cockpit-attention__items">
       <span v-if="store.attention.length === 0" class="cockpit-attention__empty">无待处理事项</span>

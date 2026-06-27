@@ -7,8 +7,13 @@ export type RightPanelPhase =
   | 'RoomSummary'
   | 'MemberList'
   | 'MemberInfo'
-  | 'ThreadPanel' // 列表(对应上游 RightPanelPhases.ThreadPanel)
-  | 'ThreadView' // 单个 thread 详情(对应上游 RightPanelPhases.ThreadView)
+  | 'ThreadPanel'       // 话题列表(对应上游 RightPanelPhases.ThreadPanel)
+  | 'ThreadView'        // 单个 thread 详情(对应上游 RightPanelPhases.ThreadView)
+  | 'PinnedMessages'    // 已固定消息列表(对应上游 RightPanelPhases.PinnedMessages)
+  | 'FilePanel'         // 文件面板(对应上游 RightPanelPhases.FilePanel)
+  | 'Extensions'        // 扩展/集成(对应上游 RightPanelPhases.Extensions)
+  | 'RoomSettings'      // 房间设置面板
+  | 'PollHistory'       // 投票历史面板
   | null
 
 export type ThreadFilterType = 'all' | 'my'
@@ -43,6 +48,8 @@ export const useMatrixRightPanelStore = defineStore('matrix-right-panel', () => 
   function pushHistory(): void {
     rightPanelPhaseHistory.value.push(snapshot())
   }
+
+  // ── Phase openers ──────────────────────────────────────────────
 
   function openRoomSummary() {
     pushHistory()
@@ -84,6 +91,46 @@ export const useMatrixRightPanelStore = defineStore('matrix-right-panel', () => 
   /** 切换话题列表的 All/My 过滤 */
   function setThreadFilter(filter: ThreadFilterType) {
     rightPanelThreadFilter.value = filter
+  }
+
+  /** 打开已固定消息面板 */
+  function openPinnedMessages() {
+    pushHistory()
+    rightPanelPhase.value = 'PinnedMessages'
+    rightPanelMemberUserId.value = null
+    rightPanelThreadRootId.value = null
+  }
+
+  /** 打开文件面板 */
+  function openFilePanel() {
+    pushHistory()
+    rightPanelPhase.value = 'FilePanel'
+    rightPanelMemberUserId.value = null
+    rightPanelThreadRootId.value = null
+  }
+
+  /** 打开扩展/集成面板 */
+  function openExtensions() {
+    pushHistory()
+    rightPanelPhase.value = 'Extensions'
+    rightPanelMemberUserId.value = null
+    rightPanelThreadRootId.value = null
+  }
+
+  /** 打开房间设置面板 */
+  function openRoomSettings() {
+    pushHistory()
+    rightPanelPhase.value = 'RoomSettings'
+    rightPanelMemberUserId.value = null
+    rightPanelThreadRootId.value = null
+  }
+
+  /** 打开投票历史面板 */
+  function openPollHistory() {
+    pushHistory()
+    rightPanelPhase.value = 'PollHistory'
+    rightPanelMemberUserId.value = null
+    rightPanelThreadRootId.value = null
   }
 
   /**
@@ -132,5 +179,11 @@ export const useMatrixRightPanelStore = defineStore('matrix-right-panel', () => 
     clearThreadView,
     closeRightPanel,
     rightPanelBack,
+    // New phases (aligned with element-web)
+    openPinnedMessages,
+    openFilePanel,
+    openExtensions,
+    openRoomSettings,
+    openPollHistory,
   }
 })

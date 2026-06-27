@@ -38,10 +38,10 @@ describe('listWorkspaceFiles', () => {
     })
     const out = await listWorkspaceFiles('t1', undefined, '', 2)
     expect(out).toEqual([
-      { id: 'src', name: 'src', isDir: true, children: [
-        { id: 'src/a.ts', name: 'a.ts', isDir: false },
+      { id: 'src', name: 'src', isDir: true, size: 0, modified: 1, children: [
+        { id: 'src/a.ts', name: 'a.ts', isDir: false, size: 10, modified: 2 },
       ] },
-      { id: 'p.json', name: 'p.json', isDir: false },
+      { id: 'p.json', name: 'p.json', isDir: false, size: 5, modified: 3 },
     ])
   })
 })

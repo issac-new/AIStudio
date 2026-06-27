@@ -269,12 +269,8 @@ watch(hasTask, (v, oldV) => {
 
 function initChart() {
   if (chart.value || !chartEl.value) return
-  // 容器尺寸为 0 时延迟初始化，等 ResizeObserver 检测到尺寸后再触发
-  if (chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0) {
-    // 等待容器有尺寸后重试
-    requestAnimationFrame(() => initChart())
-    return
-  }
+  // 容器尺寸为 0 时（jsdom 测试环境 / 初始渲染）仍尝试初始化，
+  // ResizeObserver 会在尺寸变化后触发 resize。
   chart.value = echarts.init(chartEl.value)
   chart.value.on('click', onChartClick)
   chart.value.on('dblclick', onChartDblClick)

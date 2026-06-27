@@ -13,10 +13,17 @@ const roomStore = useMatrixRoomStore()
 const composer = useMatrixComposerStore()
 
 const sender = computed(() => props.lastReply?.getSender() ?? '')
-const senderName = computed(() => sender.value)
-const avatarUrl = computed(() =>
-  props.lastReply ? roomStore.getUserAvatarUrl(props.lastReply.getSender(), 24) : null,
-)
+const senderName = computed(() => {
+  void roomStore.roomVersion
+  const room = roomStore.activeRoom
+  if (!room || !sender.value) return sender.value
+  const member = room.getMember(sender.value)
+  return member?.name || sender.value
+})
+const avatarUrl = computed(() => {
+  void roomStore.roomVersion
+  return props.lastReply ? roomStore.getUserAvatarUrl(props.lastReply.getSender(), 24) : null
+})
 const initial = computed(() => sender.value.charAt(0).toUpperCase())
 const previewContent = computed(() => {
   if (!props.lastReply) return ''

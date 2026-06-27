@@ -25,6 +25,7 @@ function getDisplayName(userId: string): string {
 
 const text = computed(() => {
   void roomStore.threadTimelineVersion // 响应式依赖(member 变更时重算)
+  void roomStore.roomVersion // room 元数据变更时重算
   return formatStateEvent(props.event, t, getDisplayName)
 })
 </script>

@@ -51,15 +51,16 @@ describe('CockpitFileTree', () => {
 
   function seedFileTree() {
     // 直接填 store.fileTrees（懒加载缓存），绕过 async selectTask
+    const tree = [
+      { id: 'src', name: 'src', isDir: true, children: [{ id: 'src/refresh.ts', name: 'refresh.ts', isDir: false }] },
+      { id: 'package.json', name: 'package.json', isDir: false },
+    ]
     mockKanbanTasks.push(kt({ id: 't1', workspace_path: '~/ws/auth-svc' }))
+    // listWorkspaceFiles 需返回与 seed 一致的数据，避免 refreshFileTree 覆盖清空
+    listWorkspaceFiles.mockResolvedValue(tree)
     const s = useCockpitStore()
     ;(s as any).selectedTaskId = 't1'
-    s.fileTrees = {
-      t1: [
-        { id: 'src', name: 'src', isDir: true, children: [{ id: 'src/refresh.ts', name: 'refresh.ts', isDir: false }] },
-        { id: 'package.json', name: 'package.json', isDir: false },
-      ],
-    }
+    s.fileTrees = { t1: tree }
     return s
   }
 
