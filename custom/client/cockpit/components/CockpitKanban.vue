@@ -70,15 +70,6 @@ function setTenantFilterValues(key: typeof tenantFields[0]['filterKey'], vals: s
   store.$patch({ filters: { ...store.filters, [key]: [...vals] } })
 }
 
-// Legacy tenant chip options: plain tenant values (non-structured tenants)
-const legacyTenantOptions = computed(() => {
-  const set = new Set<string>()
-  for (const t of store.tasks) {
-    if (t.tenant) set.add(t.tenant)
-  }
-  return Array.from(set).sort()
-})
-
 // 动态 board slug 列表（需求 #1）：从 store.boards 取
 const boardOptions = computed(() => store.boards.map(b => b.slug))
 
@@ -183,15 +174,6 @@ function statusBucketLabel(s: string): string {
   <div class="cockpit-kanban">
     <div class="cockpit-kanban__head">
       <div class="cockpit-kanban__head-row">
-        <input
-          type="text"
-          class="cockpit-kanban__search"
-          data-search-input
-          :value="store.searchQuery"
-          :placeholder="t('cockpit.search')"
-          @input="store.runSearch(($event.target as HTMLInputElement).value)"
-        />
-        <button v-if="store.searchQuery" type="button" class="cockpit-kanban__search-clear" @click="store.clearSearch()">×</button>
         <div class="cockpit-kanban__date-inline">
         <input type="date" class="cockpit-kanban__date" data-filter="date-from"
           :value="store.filters.dateRange.from ?? ''"
@@ -242,16 +224,6 @@ function statusBucketLabel(s: string): string {
       </div>
       <div class="cockpit-kanban__frow cockpit-kanban__frow--tenant">
         <span class="cockpit-kanban__flabel">租户</span>
-        <!-- Legacy tenant filter chips (plain tenant values) -->
-        <button
-          v-for="tv in legacyTenantOptions"
-          :key="tv"
-          type="button"
-          :data-filter="tv"
-          class="cockpit-kanban__tag"
-          :class="{ 'is-on': store.filters.tenants.includes(tv) }"
-          @click="store.toggleFilter('tenants', tv)"
-        >{{ tv }}</button>
         <div class="cockpit-kanban__tenant-selects">
           <NSelect
             v-for="field in tenantFields" :key="field.filterKey"

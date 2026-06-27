@@ -77,7 +77,6 @@ onUnmounted(() => { stopCountdown() })
         <span class="cockpit-attention__refresh-cd">{{ countdown }}</span>
       </button>
       <button type="button" class="cockpit-attention__tab" @click="goSwarmKanban" :title="t('sidebar.swarmKanban')">⊞ {{ t('sidebar.swarmKanban') }}</button>
-      <button type="button" class="cockpit-attention__history" @click="handleHistoryClick" :title="t('cockpit.history')">{{ t('cockpit.history') }}</button>
     </div>
     <div class="cockpit-attention__items">
       <span v-if="store.attention.length === 0" class="cockpit-attention__empty">无待处理事项</span>

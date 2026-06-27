@@ -16,14 +16,94 @@ export function formatStateEvent(
   getDisplayName?: (userId: string) => string,
 ): string | null {
   const type = event.getType()
+  const sender = event.getSender() ?? ''
+  const senderName = getDisplayName?.(sender) ?? sender
+  const content = event.getContent() as any
+  const prevContent = (event.getPrevContent?.() ?? {}) as any
+
   if (type === 'm.room.create') {
-    const sender = event.getSender()
-    const name = getDisplayName?.(sender) ?? sender
-    return t('matrixChat.stateRoomCreated', { user: name })
+    return t('matrixChat.stateRoomCreated', { user: senderName })
   }
 
   if (type === 'm.room.member') {
     return formatMemberEvent(event, t, getDisplayName)
+  }
+
+  // 房间名称变更
+  if (type === 'm.room.name') {
+    const newName = content?.name
+    const oldName = prevContent?.name
+    if (newName && !oldName) return t('matrixChat.stateNameSet', { sender: senderName, name: newName })
+    if (newName && oldName) return t('matrixChat.stateNameChanged', { sender: senderName, oldName, newName })
+    if (!newName && oldName) return t('matrixChat.stateNameRemoved', { sender: senderName, oldName })
+    return null
+  }
+
+  // 房间主题变更
+  if (type === 'm.room.topic') {
+    const newTopic = content?.topic
+    const oldTopic = prevContent?.topic
+    if (newTopic && !oldTopic) return t('matrixChat.stateTopicSet', { sender: senderName, topic: newTopic })
+    if (newTopic && oldTopic) return t('matrixChat.stateTopicChanged', { sender: senderName, oldTopic, newTopic })
+    if (!newTopic && oldTopic) return t('matrixChat.stateTopicRemoved', { sender: senderName })
+    return null
+  }
+
+  // 房间头像变更
+  if (type === 'm.room.avatar') {
+    if (content?.url) return t('matrixChat.stateAvatarChanged', { sender: senderName })
+    return null
+  }
+
+  // 房间别名变更
+  if (type === 'm.room.canonical_alias') {
+    const alias = content?.alias
+    const oldAlias = prevContent?.alias
+    if (alias && !oldAlias) return t('matrixChat.stateAliasSet', { sender: senderName, alias })
+    if (alias && oldAlias) return t('matrixChat.stateAliasChanged', { sender: senderName, oldAlias, alias })
+    if (!alias && oldAlias) return t('matrixChat.stateAliasRemoved', { sender: senderName, oldAlias })
+    return null
+  }
+
+  // 权限等级变更
+  if (type === 'm.room.power_levels') {
+    return t('matrixChat.statePowerLevelChanged', { sender: senderName })
+  }
+
+  // 加入规则变更
+  if (type === 'm.room.join_rules') {
+    const rule = content?.join_rule
+    const oldRule = prevContent?.join_rule
+    if (rule === 'public' && oldRule !== 'public') return t('matrixChat.stateMadePublic', { sender: senderName })
+    if (rule !== 'public' && oldRule === 'public') return t('matrixChat.stateMadePrivate', { sender: senderName })
+    return t('matrixChat.stateJoinRulesChanged', { sender: senderName })
+  }
+
+  // 历史可见性变更
+  if (type === 'm.room.history_visibility') {
+    return t('matrixChat.stateHistoryVisibilityChanged', { sender: senderName })
+  }
+
+  // 加密启用
+  if (type === 'm.room.encryption') {
+    return t('matrixChat.stateEncryptionEnabled', { sender: senderName })
+  }
+
+  // 固定消息变更
+  if (type === 'm.room.pinned_events') {
+    const pinned = content?.pinned
+    const prevPinned = prevContent?.pinned
+    const count = Array.isArray(pinned) ? pinned.length : 0
+    const prevCount = Array.isArray(prevPinned) ? prevPinned.length : 0
+    if (count > prevCount) return t('matrixChat.statePinnedMessages', { sender: senderName, count })
+    if (count < prevCount && count > 0) return t('matrixChat.stateUnpinnedMessages', { sender: senderName, count })
+    if (count === 0 && prevCount > 0) return t('matrixChat.stateClearedPinned', { sender: senderName })
+    return null
+  }
+
+  // 房间升级(tombstone)
+  if (type === 'm.room.tombstone') {
+    return t('matrixChat.stateRoomUpgraded', { sender: senderName })
   }
 
   return null

@@ -197,7 +197,16 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   // m.room.encrypted: 加密房间里 /messages 返回的密文事件(getType() 解密前是 encrypted)。
   //   必须**先包含**,再在 await 解密后重新判断 getType() 是否变成 m.room.message。
   //   否则加密房间的历史会被过滤成空(无法滚动到 room 起点)。
-  const TIMELINE_EVENT_TYPES = new Set(['m.room.message', 'm.room.member', 'm.room.create', 'm.room.encrypted'])
+  // 房间设置变更事件(name/topic/avatar/power_levels/canonical_alias/join_rules/
+  //   history_visibility/encryption/pinned_events/tombstone): 对齐 element-web
+  //   TextForEvent,在时间线中渲染为系统通知。
+  const TIMELINE_EVENT_TYPES = new Set([
+    'm.room.message', 'm.room.member', 'm.room.create', 'm.room.encrypted',
+    'm.room.name', 'm.room.topic', 'm.room.avatar', 'm.room.power_levels',
+    'm.room.canonical_alias', 'm.room.join_rules', 'm.room.history_visibility',
+    'm.room.encryption', 'm.room.pinned_events', 'm.room.tombstone',
+    'm.room.server_acl',
+  ])
 
   // ── Layout settings (timeline-rendering concern) ──
   const timelineLayout = ref<TimelineLayout>('group')
@@ -232,6 +241,10 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   })
 
   const sortedRooms = computed(() => {
+    // roomVersion dependency: when unread counts are cleared (selectRoom/SCR),
+    // bumpRoomVersion fires so downstream consumers (cockpit notifyItems, room
+    // list badges) re-evaluate even though Room object references are unchanged.
+    void roomVersion.value
     return [...roomList.value]
       .filter((r: any) => r.getMyMembership() === KnownMembership.Join)
       .sort((a: any, b: any) => {
@@ -579,6 +592,8 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
           // ignore
         }
       }
+      // Trigger downstream re-evaluation (cockpit notify panel, room list badges)
+      bumpRoomVersion()
     }
     refreshMessages()
     matrixEventBus.onSelectRoom.value?.()
@@ -1020,6 +1035,52 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   }
 
   /**
+   * Clear (redact) all visible messages in the active room.
+   * Matrix protocol does not support bulk-delete; we redact each message event
+   * the current user can redact. State events (member/name/topic) are left intact.
+   */
+  async function clearAllMessages(): Promise<{ deleted: number; failed: number }> {
+    if (!clientStore.client || !activeRoom.value) return { deleted: 0, failed: 0 }
+    const client = clientStore.client
+    const roomId = activeRoom.value.roomId
+    const myUserId = client.getUserId()
+    const myPowerLevel = activeRoom.value.getMember(myUserId)?.powerLevel ?? 0
+    const powerLevels = activeRoom.value.currentState?.getStateEvents('m.room.power_levels', '')?.getContent() ?? {}
+    const redactLevel = powerLevels.redact ?? 50
+
+    let deleted = 0
+    let failed = 0
+
+    // Collect all redactable message events from live timeline
+    const events = messageList.value.filter((ev: MatrixEvent) => {
+      if (ev.isRedacted?.()) return false
+      if (ev.getType() !== 'm.room.message') return false
+      // Check power level: can redact own always, others need redactLevel
+      const sender = ev.getSender()
+      if (sender === myUserId) return true
+      return myPowerLevel >= redactLevel
+    })
+
+    // Redact in reverse (newest first) to preserve scroll position context
+    for (let i = events.length - 1; i >= 0; i--) {
+      const ev = events[i]
+      const eventId = ev.getId()
+      if (!eventId) continue
+      try {
+        await client.redactEvent(roomId, eventId, undefined, undefined)
+        deleted++
+      } catch {
+        failed++
+      }
+    }
+
+    // Refresh message list to reflect redactions
+    refreshMessages()
+    bumpRoomVersion()
+    return { deleted, failed }
+  }
+
+  /**
    * Read receipts for a specific event, as { userId, ts } pairs.
    * Wraps matrix-js-sdk Room.getEventReadReceipts. Excludes the local user.
    */
@@ -1202,6 +1263,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     searchUserDirectory, getUserPresence,
     createRoom, joinRoom, leaveRoom, paginateMessages,
     getRoomUnreadCount, getRoomNotificationLevel, getEventReadReceipts,
+    clearAllMessages,
     initRoomThreads, getThreadsTimelineSet, getThreadById,
     threadTimelineVersion,
     // 分页加载(向上翻页历史消息)

@@ -124,7 +124,7 @@ function onColCtrl(col: ColumnKey) {
         <CockpitColumnRail label="工作区" @expand="store.toggleCollapsed('right')" />
         <div class="cockpit-col__inner">
           <CockpitModeBar @fold="store.toggleCollapsed('right')" />
-          <CockpitCollabBar v-if="store.workspaceMode !== 'term' && !isChatSubRoute" />
+          <CockpitCollabBar v-if="store.workspaceMode === 'chat' && !isChatSubRoute" />
           <span v-if="store.archivedMode" class="cockpit-readonly-badge">{{ t('cockpit.readOnly') }}</span>
           <!-- chat 子路由：嵌入 app 页面（chat/group/matrix/history/workflow/kanban） -->
           <div v-if="isChatSubRoute" class="cockpit-embed-view">
