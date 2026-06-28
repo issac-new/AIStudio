@@ -341,3 +341,61 @@ export function applyRunEvent(state: TraceState, event: RunEvent): TraceState {
     default: return state
   }
 }
+
+/**
+ * Fetch Layer 2 trace data from backend API.
+ * Returns null if L2 data is not available (plugin not installed or file not found).
+ */
+export async function fetchLayer2Trace(sessionId: string): Promise<{
+  nodes: TraceNode[]
+  edges: TraceEdge[]
+  meta?: {
+    started_at?: number
+    ended_at?: number
+    duration_ms?: number
+    model?: string
+    provider?: string
+    outcome?: string
+  }
+} | null> {
+  try {
+    const res = await fetch(`/api/hermes/sessions/${sessionId}/trace`)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!data.nodes || !Array.isArray(data.nodes)) return null
+    return {
+      nodes: data.nodes as TraceNode[],
+      edges: (data.edges || []) as TraceEdge[],
+      meta: data.meta,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Merge L2 trace data into existing L1 state.
+ * Upgrades evidence tier from L1 to L2 for matching nodes.
+ */
+export function mergeLayer2Data(state: TraceState, l2Data: { nodes: TraceNode[]; edges: TraceEdge[] }): TraceState {
+  const l2NodeIds = new Set(l2Data.nodes.map(n => n.id))
+  const l2EdgeIds = new Set(l2Data.edges.map(e => e.id))
+
+  // Keep L1 nodes that don't have L2 equivalents, upgrade matching ones
+  const mergedNodes = [
+    ...state.nodes.filter(n => !l2NodeIds.has(n.id)),
+    ...l2Data.nodes,
+  ]
+
+  // Same for edges
+  const mergedEdges = [
+    ...state.edges.filter(e => !l2EdgeIds.has(e.id)),
+    ...l2Data.edges,
+  ]
+
+  return {
+    ...state,
+    nodes: mergedNodes,
+    edges: mergedEdges,
+  }
+}
