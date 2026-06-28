@@ -1,0 +1,17 @@
+diff --git a/packages/server/src/routes/index.ts b/packages/server/src/routes/index.ts
+index 12345678..abcdef90 100644
+--- a/packages/server/src/routes/index.ts
++++ b/packages/server/src/routes/index.ts
+@@ -45,6 +45,7 @@ import { mcpRoutes } from './hermes/mcp'
+ import { runtimeVersionRoutes } from './hermes/runtime-versions'
+ import { writeGateRoutes } from './hermes/write-gate'
++import traceRoutes from '../custom/controllers/hermes/trace'
+ 
+ /**
+  * Register all routes on the Koa app.
+@@ -103,6 +104,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(mcpRoutes.routes())                   // MCP management
+   app.use(runtimeVersionRoutes.routes())         // Runtime and version management
+   app.use(writeGateRoutes.routes())              // Hermes Agent write approval review
++  app.use(traceRoutes.routes())                  // RunTraceView Layer 3 API
+ }

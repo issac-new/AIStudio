@@ -97,3 +97,4 @@
 110-sidebar-logout-consistency.patch
 113-settings-hide-sidebar-footer.patch
 #111-hermes-to-swarm-rebrand.patch
+114-server-trace-api.patch
