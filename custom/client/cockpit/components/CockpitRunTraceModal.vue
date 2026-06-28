@@ -6,6 +6,7 @@ import RunTraceGraph from './RunTraceGraph.vue'
 import RunTraceTimeBand from './RunTraceTimeBand.vue'
 import RunTraceInspector from './RunTraceInspector.vue'
 import RunTraceSkillDrilldown from './RunTraceSkillDrilldown.vue'
+import RunTraceScrubber from './RunTraceScrubber.vue'
 
 const store = useCockpitStore()
 const sessionId = computed(() => store.runTraceSessionId)
@@ -14,6 +15,10 @@ const focusedId = ref<string | null>(null)
 const drilldownSkillId = ref<string | null>(null)
 const focusedNode = computed(() => trace.nodes.value.find(n => n.id === (focusedId.value || trace.focusedNodeId.value)) ?? null)
 const drilldownSkill = computed(() => trace.nodes.value.find(n => n.id === drilldownSkillId.value && n.kind === 'skill') ?? null)
+
+// Time range for scrubber
+const minTime = computed(() => trace.sessionStartedAt.value || Date.now() - 3600000) // Default: 1 hour ago
+const maxTime = computed(() => Date.now())
 
 function focusNode(id: string) {
   focusedId.value = id
@@ -33,6 +38,7 @@ function exportDossier() {
     run_id: store.runTraceRunId,
     task_id: store.runTraceTaskId,
     evidence_tier: trace.l2Available.value ? 'L2' : 'L1',
+    mode: trace.mode.value,
     nodes: trace.nodes.value,
     edges: trace.edges.value,
     focused_node_id: focusedNode.value?.id || null,
@@ -65,12 +71,22 @@ function exportDossier() {
       @keydown.esc="store.closeRunTrace"
     >
       <header class="run-trace-modal__top">
-        <span class="run-trace-modal__dot"></span>
-        <div><b>Run Observatory</b><small>{{ store.runTraceSessionId }}</small></div>
+        <span class="run-trace-modal__dot" :class="trace.mode.value === 'live' ? 'is-live' : ''"></span>
+        <div><b>Run Observatory</b><small>{{ store.runTraceSessionId || 'Select Session' }}</small></div>
         <span v-if="trace.l2Available.value" class="run-trace-modal__l2badge" title="Layer 2 data available">L2</span>
         <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" title="导出证据档案">📥</button>
         <button type="button" data-action="close" @click="store.closeRunTrace">×</button>
       </header>
+      <RunTraceScrubber
+        :min-time="minTime"
+        :max-time="maxTime"
+        :current-time="trace.scrubberTime.value"
+        :mode="trace.mode.value"
+        :replay-progress="trace.replayProgress.value"
+        @scrub="trace.scrubTo"
+        @switch-live="trace.switchToLive"
+        @start-replay="trace.switchToReplay"
+      />
       <RunTraceTimeBand :nodes="trace.nodes.value" />
       <main class="run-trace-modal__main">
         <RunTraceSkillDrilldown v-if="drilldownSkill" :skill="drilldownSkill" @back="drilldownSkillId = null" />
@@ -81,13 +97,16 @@ function exportDossier() {
   </teleport>
 </template>
 <style scoped lang="scss">
-.run-trace-modal { position: fixed; inset: 0; z-index: 3000; display: grid; grid-template-rows: 52px auto 1fr; background: var(--bg-primary); color: var(--text-primary); }
+.run-trace-modal { position: fixed; inset: 0; z-index: 3000; display: grid; grid-template-rows: 52px auto auto 1fr; background: var(--bg-primary); color: var(--text-primary); }
 .run-trace-modal__top { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-sidebar); }
 .run-trace-modal__top b { display: block; font-size: 13px; }
 .run-trace-modal__top small { display: block; font-size: 11px; color: var(--text-muted); }
 .run-trace-modal__top button { margin-left: auto; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; }
-.run-trace-modal__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); }
+.run-trace-modal__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning);
+  &.is-live { background: var(--success); animation: run-trace-live-pulse 1.5s ease-in-out infinite; }
+}
 .run-trace-modal__l2badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: var(--accent-info); color: var(--text-on-accent); font-weight: 600; }
 .run-trace-modal__export { margin-left: 8px !important; font-size: 14px; }
 .run-trace-modal__main { min-height: 0; display: grid; grid-template-columns: 1fr 320px; }
+@keyframes run-trace-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 </style>

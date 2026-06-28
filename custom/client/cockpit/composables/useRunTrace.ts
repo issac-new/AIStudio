@@ -1,5 +1,5 @@
 import { ref, watch, onScopeDispose, type Ref } from 'vue'
-import { connectChatRun, type RunEvent } from '@/api/hermes/chat'
+import { connectChatRun, resumeSession, type RunEvent, type ResumeSessionPayload } from '@/api/hermes/chat'
 import {
   applyRunEvent,
   createTraceState,
@@ -10,6 +10,7 @@ import {
 
 type SocketLike = ReturnType<typeof connectChatRun>
 type EventHandler = (event: RunEvent) => void
+type TraceMode = 'live' | 'replay'
 
 const TRACE_EVENTS = [
   'message.delta',
@@ -46,7 +47,15 @@ export function useRunTrace(sessionId: Ref<string | null>) {
   const edges = ref<TraceState['edges']>(state.value?.edges ?? [])
   const focusedNodeId = ref<string | null>(state.value?.focusedNodeId ?? null)
   const l2Available = ref(false)  // Whether L2 trace data was fetched successfully
+
+  // Live/Replay mode state
+  const mode = ref<TraceMode>('live')
+  const scrubberTime = ref<number>(Date.now()) // scrubber 当前时间点 (ms)
+  const replayProgress = ref<number>(0) // 回放进度 0-100%
+  const sessionStartedAt = ref<number>(0) // session 开始时间，用于时间轴范围
+
   let cleanup: (() => void) | null = null
+  let replayAbort: (() => void) | null = null
 
   function sync(next: TraceState | null) {
     state.value = next
@@ -60,6 +69,9 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     if (!sid || event.session_id !== sid || !state.value) return
     const next = applyRunEvent(state.value, event)
     sync(next)
+    // Update scrubber time to latest event timestamp
+    const eventTs = event.timestamp ?? Date.now()
+    if (eventTs > scrubberTime.value) scrubberTime.value = eventTs
     // When run completes, try to fetch L2 data
     if ((event.event === 'run.completed' || event.event === 'run.failed') && sid) {
       fetchL2Data(sid)
@@ -73,14 +85,22 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     const merged = mergeLayer2Data(state.value, l2Data)
     sync(merged)
     l2Available.value = true
+    // Update session startedAt from L2 meta if available
+    if (l2Data.meta?.started_at) sessionStartedAt.value = l2Data.meta.started_at * 1000
   }
 
   function detach() {
     cleanup?.()
     cleanup = null
+    replayAbort?.()
+    replayAbort = null
   }
 
-  function attach(sid: string) {
+  /** Live mode: attach to real-time socket */
+  function attachLive(sid: string) {
+    mode.value = 'live'
+    scrubberTime.value = Date.now()
+    replayProgress.value = 0
     sync(createTraceState(sid))
     const socket = connectChatRun()
     const handlers = TRACE_EVENTS.map((eventName) => {
@@ -95,13 +115,117 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     fetchL2Data(sid)
   }
 
+  /** Replay mode: call resumeSession to get historical events */
+  async function startReplay(sid: string, fromTime: number) {
+    mode.value = 'replay'
+    scrubberTime.value = fromTime
+    replayProgress.value = 0
+    sync(createTraceState(sid))
+
+    // Call resumeSession to get historical messages/events
+    const socket = resumeSession(sid, (data: ResumeSessionPayload) => {
+      // Process resumed data - extract events from messages
+      // ResumeSessionPayload contains messages, we need to synthesize RunEvents
+      processResumeData(data, sid)
+    })
+
+    replayAbort = () => {
+      removeSocketListener(socket, 'resumed', () => {})
+      socket.disconnect()
+    }
+  }
+
+  /** Process ResumeSessionPayload to synthesize RunEvents */
+  function processResumeData(data: ResumeSessionPayload, sid: string) {
+    // Extract session startedAt
+    if (data.started_at) sessionStartedAt.value = data.started_at * 1000
+
+    // If data has events array, process directly
+    if (data.events && Array.isArray(data.events)) {
+      let processed = 0
+      const total = data.events.length
+      for (const event of data.events) {
+        const next = applyRunEvent(state.value!, event as RunEvent)
+        sync(next)
+        processed++
+        replayProgress.value = Math.round((processed / total) * 100)
+      }
+      return
+    }
+
+    // Otherwise, synthesize events from messages
+    if (data.messages && Array.isArray(data.messages)) {
+      let processed = 0
+      const total = data.messages.length
+      for (const msg of data.messages) {
+        // Synthesize tool events from tool messages
+        if (msg.role === 'tool') {
+          const toolEvent: RunEvent = {
+            event: 'tool.completed',
+            session_id: sid,
+            tool: msg.name || 'unknown',
+            name: msg.name,
+            timestamp: msg.timestamp,
+          }
+          const next = applyRunEvent(state.value!, toolEvent)
+          sync(next)
+        }
+        // Synthesize reasoning events from reasoning_content
+        if (msg.reasoning_content || msg.reasoning) {
+          const reasoningEvent: RunEvent = {
+            event: 'reasoning.delta',
+            session_id: sid,
+            text: msg.reasoning_content || msg.reasoning || '',
+            timestamp: msg.timestamp,
+          }
+          const next = applyRunEvent(state.value!, reasoningEvent)
+          sync(next)
+        }
+        processed++
+        replayProgress.value = Math.round((processed / total) * 100)
+      }
+    }
+
+    // Fetch L2 data for accurate tool durations
+    fetchL2Data(sid)
+  }
+
+  /** Switch to live mode */
+  function switchToLive() {
+    const sid = sessionId.value
+    if (!sid) return
+    detach()
+    attachLive(sid)
+  }
+
+  /** Switch to replay mode at specific time */
+  function switchToReplay(time: number) {
+    const sid = sessionId.value
+    if (!sid) return
+    detach()
+    startReplay(sid, time)
+  }
+
+  /** Update scrubber position (drag) */
+  function scrubTo(time: number) {
+    scrubberTime.value = time
+    // If in replay mode and time changes significantly, restart replay from new position
+    if (mode.value === 'replay' && Math.abs(time - scrubberTime.value) > 5000) {
+      switchToReplay(time)
+    }
+  }
+
   watch(sessionId, (sid) => {
     detach()
-    if (sid) attach(sid)
+    if (sid) attachLive(sid)
     else sync(null)
   }, { immediate: true })
 
   onScopeDispose(detach)
 
-  return { state, nodes, edges, focusedNodeId, l2Available, route, fetchL2Data }
+  return {
+    state, nodes, edges, focusedNodeId, l2Available,
+    mode, scrubberTime, replayProgress, sessionStartedAt,
+    route, fetchL2Data, switchToLive, switchToReplay, scrubTo,
+  }
 }

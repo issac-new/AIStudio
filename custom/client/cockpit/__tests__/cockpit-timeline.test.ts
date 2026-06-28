@@ -109,7 +109,7 @@ describe('CockpitTimeline', () => {
     expect(w.find('.cockpit-timeline__empty').exists()).toBe(true)
   })
 
-  it('double-clicking a run event opens RunTrace modal', async () => {
+  it('double-clicking a run event opens title detail (not RunTrace modal)', async () => {
     mockKanbanTasks.push(kt({ id: 't1' }))
     getTask.mockResolvedValue({
       task: {
@@ -130,17 +130,20 @@ describe('CockpitTimeline', () => {
     })
     const s = useCockpitStore()
     await s.selectTask('t1')
-    const spy = vi.spyOn(s, 'openRunTrace')
+    const openRunTraceSpy = vi.spyOn(s, 'openRunTrace')
+    const openTitleDetailSpy = vi.spyOn(s, 'openTitleDetail')
     const w = mount(CockpitTimeline)
 
     // 找到 run 事件节点（由 store.eventsForSelectedTask 返回）
     const runEvent = w.find('[data-source="run"]')
     if (runEvent.exists()) {
       await runEvent.trigger('dblclick')
-      expect(spy).toHaveBeenCalledWith({ taskId: 't1', sessionId: 'session-1', runId: expect.any(String) })
+      // 应该调用 openTitleDetail 而非 openRunTrace
+      expect(openTitleDetailSpy).toHaveBeenCalled()
+      expect(openRunTraceSpy).not.toHaveBeenCalled()
     } else {
       // 如果没有 run 事件节点，验证 openRunTrace 未被调用
-      expect(spy).not.toHaveBeenCalled()
+      expect(openRunTraceSpy).not.toHaveBeenCalled()
     }
   })
 })

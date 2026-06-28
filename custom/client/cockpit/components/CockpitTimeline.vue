@@ -66,13 +66,6 @@ watch(() => store.selectedTaskId, () => {
 
 // 双击事件节点：按 source 类型弹窗显示完整内容
 function onEventDblClick(ev: { taskId: string; fullText: string; source: string; actor: string; id?: string }) {
-  if (ev.source === 'run') {
-    const sessionId = store.selectedTaskDetail?.session?.id || ''
-    if (sessionId) {
-      store.openRunTrace({ taskId: ev.taskId, sessionId, runId: ev.id ?? null })
-      return
-    }
-  }
   const titleMap: Record<string, string> = {
     event: '事件详情',
     run: '执行记录',

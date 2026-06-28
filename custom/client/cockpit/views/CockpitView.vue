@@ -65,6 +65,7 @@ function onColCtrl(col: ColumnKey) {
       @schedule="(btn: HTMLElement) => store.openSchedule(btn)"
       @notify="store.openNotify()"
       @settings="goSettings"
+      @runtrace="store.openRunTraceGlobal()"
     />
     <CockpitAttention />
 

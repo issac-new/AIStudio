@@ -7,7 +7,7 @@ import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
 
 const { t } = useI18n()
-const emit = defineEmits<{ (e: 'schedule', btn: HTMLElement): void; (e: 'notify'): void; (e: 'settings'): void }>()
+const emit = defineEmits<{ (e: 'schedule', btn: HTMLElement): void; (e: 'notify'): void; (e: 'settings'): void; (e: 'runtrace'): void }>()
 const store = useCockpitStore()
 const appStore = useAppStore()
 
@@ -132,6 +132,9 @@ async function manualProbe() {
       📅 {{ t('cockpit.schedule') }}
       <span v-if="scheduleCount" class="cockpit-top__bdg">{{ scheduleCount }}</span>
     </button>
+    <button type="button" class="cockpit-top__btn cockpit-top__btn--runtrace" @click="emit('runtrace')">
+      ⚡ Run Observatory
+    </button>
     <div class="cockpit-top__clock">
       <span class="cockpit-top__cdate">{{ dateStr() }}</span>
       <span class="cockpit-top__ctime">{{ timeStr() }}</span>
@@ -215,6 +218,9 @@ async function manualProbe() {
 .cockpit-top__div { width: 1px; height: 20px; background: var(--border-color); margin: 0 4px; }
 .cockpit-top__btn { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; font-family: inherit; position: relative;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
+}
+.cockpit-top__btn--runtrace { background: linear-gradient(135deg, var(--accent-primary), var(--accent-info)); color: var(--text-on-accent); font-weight: 600; border: none;
+  &:hover { background: linear-gradient(135deg, var(--accent-info), var(--accent-primary)); }
 }
 .cockpit-top__bdg { position: absolute; top: -3px; right: -3px; background: var(--accent-primary); color: var(--text-on-accent); font-size: 8px; font-weight: 700; min-width: 13px; height: 13px; border-radius: 7px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--bg-card); padding: 0 3px; }
 .cockpit-top__bdg--err { background: var(--error); }

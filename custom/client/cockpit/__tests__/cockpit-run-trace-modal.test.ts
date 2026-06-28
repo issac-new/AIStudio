@@ -90,7 +90,15 @@ vi.mock('../composables/useRunTrace', () => ({
     edges: { value: [{ id: 'e1', from: 'run:s1:r1', to: 'skill:s1:auth:1', kind: 'call', evidence: 'L1' }] },
     focusedNodeId: { value: 'run:s1:r1' },
     l2Available: { value: false },
+    mode: { value: 'live' as const },
+    scrubberTime: { value: Date.now() },
+    replayProgress: { value: 0 },
+    sessionStartedAt: { value: Date.now() - 3600000 },
     fetchL2Data: vi.fn(async () => {}),
+    switchToLive: vi.fn(),
+    switchToReplay: vi.fn(),
+    scrubTo: vi.fn(),
+    route: vi.fn(),
   }),
 }))
 
@@ -144,5 +152,15 @@ describe('CockpitRunTraceModal', () => {
     expect(w.find('.run-trace-node.is-l1').exists()).toBe(true)
     await w.find('[data-node-id="skill:s1:auth:1"]').trigger('click')
     expect(w.text()).toContain('推断')
+  })
+
+  it('renders scrubber with live mode indicator', () => {
+    const store = useCockpitStore()
+    store.openRunTrace({ sessionId: 's1', runId: 'r1' })
+    const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
+    expect(w.find('[data-run-trace-scrubber]').exists()).toBe(true)
+    expect(w.find('.run-trace-scrubber__btn.is-active').text()).toContain('Live')
+    // Live mode indicator (green dot with pulse)
+    expect(w.find('.run-trace-modal__dot.is-live').exists()).toBe(true)
   })
 })
