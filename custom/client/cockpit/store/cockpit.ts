@@ -179,6 +179,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const kanbanDetailOpen = ref(false)
   const kanbanDetailTask = ref<KanbanTaskDetail | null>(null)
   const titleDetailTaskId = ref<string | null>(null)
+  const runTraceOpen = ref(false)
+  const runTraceTaskId = ref<string | null>(null)
+  const runTraceSessionId = ref<string | null>(null)
+  const runTraceRunId = ref<string | null>(null)
   const focusedGraphNodeId = ref<string | null>(null)
   const selectedGraphNodeIds = ref<Record<string, string[]>>({})
   // 协作图画布变换（决策 #14）
@@ -1011,6 +1015,15 @@ export const useCockpitStore = defineStore('cockpit', () => {
     titleDetailTaskId.value = null
     titleDetailText.value = ''
   }
+  function openRunTrace(input: { taskId?: string | null; sessionId: string; runId?: string | null }) {
+    runTraceTaskId.value = input.taskId ?? null
+    runTraceSessionId.value = input.sessionId
+    runTraceRunId.value = input.runId ?? null
+    runTraceOpen.value = true
+  }
+  function closeRunTrace() {
+    runTraceOpen.value = false
+  }
   // kanban 详情弹窗：取完整 KanbanTaskDetail（含 comments/events/runs 等）
   const detailExpanded = ref(false)  // 弹窗"更多信息"折叠态
   function openKanbanDetail(taskId: string) {
@@ -1397,6 +1410,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     filters, searchQuery, _sessionSearching, collapsed, midTopCollapsed, midBottomCollapsed, workspaceMode, swarmKanbanVisible, activeChannelId, maximized,
     terminalMode, terminalLines, historyOpen, historyFilters, archivedMode,
     titleDetailOpen, titleDetailText, titleDetailTaskId, titleDetailTitle,
+    runTraceOpen, runTraceTaskId, runTraceSessionId, runTraceRunId,
     kanbanDetailOpen, kanbanDetailTask, detailExpanded,
     templateManagerOpen, focusedGraphNodeId, selectedGraphNodeIds, selectedFileId,
     _attentionFocusTitle, _attentionFocusDesc, _attentionTaskIds, attentionActive, history, fileTrees, canvasTransform,
@@ -1407,7 +1421,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     updateWorkItem, toggleRiskTag, submitWorkItem, autoSaveDraft, clearDraft,
     setPendingAssignee, setPendingPriority, setPendingBody, setPendingTitle, setPendingComment, currentTitle, addPendingLink, removePendingLink,
     selectChannel, sendMessage, disconnectOnUnmount,
-    openHistory, closeHistory, openTitleDetail, closeTitleDetail, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistorySearch, setHistoryTimeRange, toggleHistoryCategory, toggleHistoryStatus, recallHistoryItem, clearArchivedMode,
+    openHistory, closeHistory, openTitleDetail, closeTitleDetail, openRunTrace, closeRunTrace, openKanbanDetail, closeKanbanDetail, toggleHistoryAction, setHistorySearch, setHistoryTimeRange, toggleHistoryCategory, toggleHistoryStatus, recallHistoryItem, clearArchivedMode,
     focusOnTaskFromAttention, focusOnTimelineNode, clearAttentionFilter,
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,

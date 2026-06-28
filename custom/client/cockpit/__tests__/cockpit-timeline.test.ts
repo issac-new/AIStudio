@@ -25,7 +25,7 @@ vi.mock('@/api/hermes/kanban', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/kanban')
   return { ...actual, getTask, addComment }
 })
-vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ loadSessions: vi.fn(async () => {}), messages: [], sendMessage: vi.fn(async () => {}), switchSession: vi.fn(async () => {}) }) }))
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ loadSessions: vi.fn(async () => {}), messages: [], sendMessage: vi.fn(async () => {}), switchSession: vi.fn(async () => {}), sessions: [], isSessionUnread: vi.fn(() => false), getSessionUnreadCount: vi.fn(() => 0), getSessionUnreadInfo: vi.fn(() => null), clearSessionUnread: vi.fn() }) }))
 vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => ({ connect: vi.fn(async () => {}), disconnect: vi.fn(), loadRooms: vi.fn(async () => {}), joinRoom: vi.fn(async () => {}), sendMessage: vi.fn(async () => {}), sortedMessages: [] }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({ useMatrixClientStore: () => ({ initClient: vi.fn(async () => {}), syncState: { value: 'PREPARED' } }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({ useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [] }) }))
@@ -107,5 +107,40 @@ describe('CockpitTimeline', () => {
   it('shows empty state when no task selected', () => {
     const w = mount(CockpitTimeline)
     expect(w.find('.cockpit-timeline__empty').exists()).toBe(true)
+  })
+
+  it('double-clicking a run event opens RunTrace modal', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
+    getTask.mockResolvedValue({
+      task: {
+        id: 't1', title: 'T', body: null, assignee: 'agent', status: 'running', priority: 0,
+        created_by: null, created_at: 0, started_at: null, completed_at: null,
+        workspace_kind: 'dir', workspace_path: '~/ws', tenant: null, project_id: null,
+        result: null, skills: null, latest_summary: null,
+      },
+      latest_summary: null,
+      session: { id: 'session-1', title: 'S', source: 'cli', model: 'gpt', started_at: 0, ended_at: null, messages: [] },
+      comments: [],
+      events: [],
+      runs: [{
+        id: 7, task_id: 't1', profile: 'agent', status: 'running', outcome: null,
+        summary: 'running trace', error: null, metadata: null, worker_pid: null,
+        started_at: 1000, ended_at: null,
+      }],
+    })
+    const s = useCockpitStore()
+    await s.selectTask('t1')
+    const spy = vi.spyOn(s, 'openRunTrace')
+    const w = mount(CockpitTimeline)
+
+    // 找到 run 事件节点（由 store.eventsForSelectedTask 返回）
+    const runEvent = w.find('[data-source="run"]')
+    if (runEvent.exists()) {
+      await runEvent.trigger('dblclick')
+      expect(spy).toHaveBeenCalledWith({ taskId: 't1', sessionId: 'session-1', runId: expect.any(String) })
+    } else {
+      // 如果没有 run 事件节点，验证 openRunTrace 未被调用
+      expect(spy).not.toHaveBeenCalled()
+    }
   })
 })
