@@ -17,6 +17,7 @@ import CockpitNotifyModal from '@/custom/cockpit/components/CockpitNotifyModal.v
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitTemplateManager from '@/custom/cockpit/components/CockpitTemplateManager.vue'
 import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
+import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import { useI18n } from 'vue-i18n'
 
@@ -146,6 +147,9 @@ function onColCtrl(col: ColumnKey) {
     <CockpitNotifyModal v-if="store.notifyOpen" />
     <div v-if="store.templateManagerOpen" class="cockpit-overlay" @click="store.closeTemplateManager()" />
     <CockpitTemplateManager v-if="store.templateManagerOpen" class="cockpit-modal-anchor" />
+
+    <!-- Run Trace modal（双击 run 事件触发） -->
+    <CockpitRunTraceModal />
 
     <!-- task title 详情弹窗（双击查看完整 title） -->
     <div v-if="store.titleDetailOpen" class="cockpit-overlay" @click="store.closeTitleDetail()" />
