@@ -20,6 +20,37 @@ function focusNode(id: string) {
   const node = trace.nodes.value.find(n => n.id === id)
   if (node?.kind === 'skill') drilldownSkillId.value = id
 }
+
+/** Export trace as JSON dossier for offline analysis / audit */
+function exportDossier() {
+  const sid = sessionId.value
+  if (!sid) return
+
+  const dossier = {
+    version: '1.0.0',
+    exported_at: new Date().toISOString(),
+    session_id: sid,
+    run_id: store.runTraceRunId,
+    task_id: store.runTraceTaskId,
+    evidence_tier: trace.l2Available.value ? 'L2' : 'L1',
+    nodes: trace.nodes.value,
+    edges: trace.edges.value,
+    focused_node_id: focusedNode.value?.id || null,
+    active_skill: drilldownSkill.value ? {
+      id: drilldownSkill.value.id,
+      label: drilldownSkill.value.label,
+      children: drilldownSkill.value.children,
+    } : null,
+  }
+
+  const blob = new Blob([JSON.stringify(dossier, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `trace-dossier-${sid}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 <template>
   <teleport to="body">
@@ -36,6 +67,8 @@ function focusNode(id: string) {
       <header class="run-trace-modal__top">
         <span class="run-trace-modal__dot"></span>
         <div><b>Run Observatory</b><small>{{ store.runTraceSessionId }}</small></div>
+        <span v-if="trace.l2Available.value" class="run-trace-modal__l2badge" title="Layer 2 data available">L2</span>
+        <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" title="导出证据档案">📥</button>
         <button type="button" data-action="close" @click="store.closeRunTrace">×</button>
       </header>
       <RunTraceTimeBand :nodes="trace.nodes.value" />
@@ -54,5 +87,7 @@ function focusNode(id: string) {
 .run-trace-modal__top small { display: block; font-size: 11px; color: var(--text-muted); }
 .run-trace-modal__top button { margin-left: auto; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; }
 .run-trace-modal__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); }
+.run-trace-modal__l2badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: var(--accent-info); color: var(--text-on-accent); font-weight: 600; }
+.run-trace-modal__export { margin-left: 8px !important; font-size: 14px; }
 .run-trace-modal__main { min-height: 0; display: grid; grid-template-columns: 1fr 320px; }
 </style>

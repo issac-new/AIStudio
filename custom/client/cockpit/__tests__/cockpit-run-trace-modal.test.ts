@@ -89,6 +89,8 @@ vi.mock('../composables/useRunTrace', () => ({
     },
     edges: { value: [{ id: 'e1', from: 'run:s1:r1', to: 'skill:s1:auth:1', kind: 'call', evidence: 'L1' }] },
     focusedNodeId: { value: 'run:s1:r1' },
+    l2Available: { value: false },
+    fetchL2Data: vi.fn(async () => {}),
   }),
 }))
 
