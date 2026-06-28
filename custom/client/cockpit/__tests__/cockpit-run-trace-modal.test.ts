@@ -134,4 +134,13 @@ describe('CockpitRunTraceModal', () => {
     expect(w.find('[data-run-trace-skill-drilldown]').exists()).toBe(true)
     expect(w.text()).toContain('先读现有实现')
   })
+
+  it('marks inferred skill timeline items and evidence tiers', async () => {
+    const store = useCockpitStore()
+    store.openRunTrace({ sessionId: 's1', runId: 'r1' })
+    const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
+    expect(w.find('.run-trace-node.is-l1').exists()).toBe(true)
+    await w.find('[data-node-id="skill:s1:auth:1"]').trigger('click')
+    expect(w.text()).toContain('推断')
+  })
 })

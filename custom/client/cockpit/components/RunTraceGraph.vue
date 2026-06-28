@@ -16,6 +16,7 @@ function evidenceClass(e: { evidence: string }) { return `is-${e.evidence.toLowe
       class="run-trace-node"
       :class="[`is-${node.kind}`, `is-${node.status}`, evidenceClass(node), { 'is-focus': node.id === focusedNodeId }]"
       :data-node-id="node.id"
+      :aria-label="`${node.kind}: ${node.label}`"
       @click="emit('focus-node', node.id)"
     >
       <span class="run-trace-node__dot"></span>

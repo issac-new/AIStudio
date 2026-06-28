@@ -23,7 +23,16 @@ function focusNode(id: string) {
 </script>
 <template>
   <teleport to="body">
-    <div v-if="store.runTraceOpen" class="run-trace-modal" data-run-trace-modal>
+    <div
+      v-if="store.runTraceOpen"
+      class="run-trace-modal"
+      data-run-trace-modal
+      role="dialog"
+      aria-modal="true"
+      aria-label="Run Observatory"
+      tabindex="-1"
+      @keydown.esc="store.closeRunTrace"
+    >
       <header class="run-trace-modal__top">
         <span class="run-trace-modal__dot"></span>
         <div><b>Run Observatory</b><small>{{ store.runTraceSessionId }}</small></div>
