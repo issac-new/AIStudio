@@ -31,7 +31,6 @@
 033-client-api-profiles.patch
 034-client-api-sessions.patch
 035-server-routes-kanban.patch
-036-server-routes-index.patch
 037-test-kanban-service.patch
 038-test-kanban-controller.patch
 039-test-kanban-routes.patch
@@ -98,3 +97,5 @@
 113-settings-hide-sidebar-footer.patch
 #111-hermes-to-swarm-rebrand.patch
 114-server-trace-api.patch
+
+036-server-routes-index.patch
