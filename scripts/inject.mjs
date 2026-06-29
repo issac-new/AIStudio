@@ -50,26 +50,23 @@ function applyPatches() {
       console.error(`[inject] FAILED: patch 文件不存在: ${p}`);
       process.exit(1);
     }
-    // 判断 patch 目标：hermes-agent 还是 hermes-studio
-    let targetRoot = hermesStudioRoot;
-    try {
-      const patchText = readFileSync(patchPath, 'utf8');
-      const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
-      if (firstTargetMatch) {
-        const targetPath = firstTargetMatch[1];
-        // hermes-studio 的文件路径以 packages/ 或 dist/ 开头，或以 vite.config.ts 等根文件结尾
-        // hermes-agent 的文件路径不以 packages/ 开头（如 hermes_cli/kanban_db.py）
-        if (!targetPath.startsWith('packages/') && !targetPath.startsWith('dist/')) {
-          // 可能是 hermes-studio 根文件（如 vite.config.ts）或 hermes-agent 文件
-          // 检查目标文件是否存在于 hermes-studio 中
-          if (existsSync(resolve(hermesStudioRoot, targetPath))) {
-            targetRoot = hermesStudioRoot;
-          } else {
-            targetRoot = hermesAgentRoot;
-          }
-        }
-      }
-    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
+	    // 判断 patch 目标：hermes-agent 还是 hermes-studio
+	    let targetRoot = hermesStudioRoot;
+	    try {
+	      const patchText = readFileSync(patchPath, 'utf8');
+	      const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
+	      if (firstTargetMatch) {
+	        const targetPath = firstTargetMatch[1];
+	        // hermes-agent 特有的路径前缀 → 路由到 hermes-agent
+	        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') || 
+	            targetPath.startsWith('agent/') || targetPath.startsWith('apps/') ||
+	            targetPath.startsWith('assets/') || targetPath.startsWith('acp_')) {
+	          targetRoot = hermesAgentRoot;
+	        }
+	        // hermes-studio 特有的路径前缀 → 保留默认
+	        // (paths like packages/, tests/, dist/, vite.config.ts, package.json etc.)
+	      }
+	    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
 
     try {
       git(`apply --whitespace=nowarn ${patchPath}`, targetRoot);
@@ -92,9 +89,24 @@ function reversePatches(patches) {
       console.warn(`[clean] WARN: patch 文件不存在,跳过: ${p}`);
       continue;
     }
+    // 判断 patch 目标：hermes-agent 还是 hermes-studio
+    let targetRoot = hermesStudioRoot;
     try {
-      git(`apply --reverse --whitespace=nowarn ${patchPath}`, hermesStudioRoot);
-      console.log(`[clean] reversed patch: ${p}`);
+      const patchText = readFileSync(patchPath, 'utf8');
+      const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
+      if (firstTargetMatch) {
+        const targetPath = firstTargetMatch[1];
+        // hermes-agent 特有的路径前缀 → 路由到 hermes-agent
+        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') || 
+            targetPath.startsWith('agent/') || targetPath.startsWith('apps/') ||
+            targetPath.startsWith('assets/') || targetPath.startsWith('acp_')) {
+          targetRoot = hermesAgentRoot;
+        }
+      }
+    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
+    try {
+      git(`apply --reverse --whitespace=nowarn ${patchPath}`, targetRoot);
+      console.log(`[clean] reversed patch: ${p} (from ${targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio'})`);
     } catch {
       console.error(`[clean] FAILED to reverse patch: ${p}`);
       process.exit(1);
