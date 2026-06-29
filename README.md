@@ -1,15 +1,363 @@
-# Hermes Overlay
+# SwarmStudio
 
-本仓是 hermes-studio 二次开发的 overlay 层。三个上游仓在 `../upstream/`(hermes-studio / element-web / hermes-agent),保持纯净。
+> 基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发的 **AI 协作中心**桌面应用。本仓是 overlay（二次开发层），通过构建期注入将自定义功能叠加到上游，上游源码始终保持纯净、可独立升级。
 
-## 机制(混合策略)
-- **A 类(纯新增)**:`custom/` + 运行时 registry(经 entry shim + 派生 vite/tsconfig alias 接入)
-- **B 类(改上游骨架)**:`patches/`(`git apply` 可逆)
+SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机 1:1 协作」三类工作统一在一个驾驶舱（Cockpit）里统筹：既有突出重点的全貌概览，又可针对具体任务接入，进行补充 / 评估 / 决策 / 审批。同时提供协作看板、Matrix 即时通讯、运行全过程可观测性等能力。
 
-## 常用命令
-- `npm run inject` — 应用 B 类 patch + 生成派生 config
-- `npm run clean` — 还原上游工作树
-- `npm run verify` — 校验上游状态
-- `npm run sync` — 升级上游(clean → fetch/reset → re-inject)
+---
 
-详见 `../docs/superpowers/specs/2026-06-21-overlay-architecture-design.md`。
+## 功能特色
+
+### 🚀 Cockpit — AI 协作中心（主操作界面）
+
+登录后的首页，三段联动式布局（全貌 → 聚焦 → 处理）：
+
+- **顶栏**：品牌 · 日程 · 时钟 · 搜索 · 在线状态 · 通知 · 用户
+- **注意力条**：克制的「需要你」提醒（浅底 + 左色条 + 文字），重心始终在右栏工作区
+- **左栏**：Kanban 统筹入口，按优先级聚合三类工作（协作 / 管理 / 易用），支持筛选
+- **中栏**：协作图（图谱画布）+ 时序事件流（纵向时间线），呈现并行 / 派生 / 收敛
+- **右栏**：工作区重心，A2UI 表单 + 文件资源管理器，底部衔接 Claude Code / 提交
+- **模式切换**：⚡ 工作项 / 💬 协作 / ⌘ 编程，同一任务多视角处理
+- 视觉严格遵循 **Pure Ink** 黑白灰主题（仅 status 用 error / warning / success 三色），避免颜色过载
+
+### 🔭 RunTraceView — 运行全过程可观测性
+
+把线性聊天消息流重构成 **Evidence Graph（证据图）**，呈现多 agent 协作的并行 / 派生 / 收敛：
+
+- **证据分层**（不可伪造原则）：`L1` 前端事件流可靠可见（实线）/ `L2` 运行时 hook 后补齐（虚线 + 推断标签）/ `L3` 分布式 trace propagation 后补齐（点线 + future 标签）
+- **TraceNode 类型**：ingress / workflow / agent / skill / tool …，skill 可下钻展开内部「思维链 + 工具」交错编排
+- **时间轴 + 检查器 + 时间游标**：回放 live / replay 两种模式
+- 对齐 **OpenTelemetry GenAI 语义约定**的 JSONL 导出 + 证据档案（Evidence Dossier）导出
+- 第 1 层零运行时改动，纯前端消费已有 Socket.IO 事件流（`run/tool/subagent/usage/reasoning`）
+
+### 📋 SwarmKanban — 协作看板
+
+自定义组件（独立路由 `swarm-kanban`），与上游原生 KanbanView 并存：
+
+- 看板列 / 任务卡 / 任务抽屉 / 任务表单 / 内联创建
+- 批量操作栏、注意力条、编排面板、诊断区
+- Markdown 渲染、附件管理、租户解析（多租户隔离）
+- 工作区文件列表、时间线、附件同步 API
+
+### 💬 Matrix Chat — 完整 Matrix 客户端
+
+49 个组件构成的完整即时通讯客户端，路由动态注册为 Cockpit 子路由：
+
+- 房间列表 / 消息流 / 消息输入 / 上下文菜单 / 消息操作栏
+- 文件面板 / 成员列表 / 成员信息 / 邀请 / 转发 / 导出 / 加入 / 离开 / 创建房间
+- 群聊未读追踪、自动 join、日期分隔符、清空消息
+- 基于 `matrix-js-sdk`，经 Matrix homeserver 认证
+
+### 🔐 Matrix 账号集成
+
+- **登录**：Homeserver URL + MXID + 密码，Remember Me 持久化 + 本地降级
+- **管理**：账号设置、用户管理（admin-service）
+- 服务端：Matrix 认证路由、数据库 schema 扩展（Matrix 列 + SQLite UNIQUE 约束）
+
+### 🎨 品牌与网关通知
+
+- 桌面端 rebrand 为 SwarmStudio（config + package）
+- 品牌样式变量注入
+- Gateway 通知横幅：Chat / Group Chat 关停公告，经内容检测识别（非 systemType）
+
+### 🌐 国际化
+
+扩展 i18n 翻译键（看板、历史筛选、Matrix 聊天等），直接经 patch 注入上游 locale 文件，无需运行时 merge。
+
+---
+
+## 架构
+
+### 工作区三层布局
+
+```
+ncwk/
+├── upstream/                 # 上游原始项目（只读，禁止直接修改）
+│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.6.20）
+│   ├── element-web/          #   Element Web Matrix 客户端参考实现
+│   └── hermes-agent/         #   Hermes AI Agent 运行时
+├── overlay/                  # ← 本仓：二次开发代码（唯一被提交的地方）
+│   ├── custom/               #     A 类：纯新增代码（组件/store/服务）
+│   ├── patches/              #     B 类：上游骨架修改（git apply 可逆）
+│   ├── registries/           #     运行时注册中枢（路由/导航/组件）
+│   ├── config/               #     功能开关
+│   ├── scripts/              #     inject / build / sync 工具链
+│   └── tests/                #     单测
+└── docs/superpowers/         # 设计文档（specs + plans）
+```
+
+**核心原则**：三个上游仓始终保持上游原状，`.git` 永不污染，可独立 `git pull` 升级；所有二次开发代码集中在 overlay 仓。
+
+### 混合注入策略（A 类 + B 类）
+
+二次开发改动按「是否能纯新增」分两类，分别用不同机制接入上游：
+
+| 类别 | 改动性质 | 存放 | 接入机制 | 可逆性 |
+|------|---------|------|---------|--------|
+| **A 类** | 纯新增文件（组件/store/服务） | `custom/` | 构建期 alias 重定向 + entry shim + 运行时 registry | 零侵入上游源码 |
+| **B 类** | 修改上游骨架（schema/config/vite/路由） | `patches/` | `git apply`（构建期注入） | `git apply --reverse` 完全还原 |
+
+> 为什么不全用 A 类？对修改文件做分类后发现，~7 类改的是上游骨架（schemas 加列、config 加字段、vite 预打包等），属运行前置条件，无法运行时注册，必须转 patch。
+
+### overlay 仓库目录结构
+
+```
+overlay/
+├── custom/
+│   ├── client/                    # 前端 A 类代码
+│   │   ├── cockpit/               #   驾驶舱（27 组件 + store + adapters + 样式）
+│   │   ├── matrix-chat/           #   Matrix 聊天（49 组件 + views）
+│   │   ├── kanban/                #   协作看板（14 组件 + utils + views）
+│   │   ├── chat/                  #   网关通知横幅
+│   │   ├── branding/              #   品牌注入
+│   │   └── test/                  #   测试桩
+│   └── server/                    # 服务端 A 类代码
+│       ├── kanban/                #   看板服务
+│       └── matrix/                #   Matrix 认证路由 + admin-service
+├── patches/                       # B 类 patch（73 个 active + 归档）
+│   └── series                     #   patch 应用顺序清单
+├── registries/
+│   ├── client/                    # 客户端注册中枢 + entry shim + bootstrap
+│   └── server/                    # 服务端 bootstrap（预留）
+├── config/
+│   ├── features.ts                # 功能开关（VITE_* 环境变量控制）
+│   └── bootstrap.ts
+├── scripts/
+│   ├── inject.mjs                 # 注入工具（应用 patch + 生成派生 config + 建符号链接）
+│   ├── build.mjs                  # 完整构建编排
+│   ├── build-dmg.mjs              # 桌面端 dmg 打包
+│   ├── verify-clean.mjs           # 校验上游工作树干净
+│   ├── sync-upstream.sh           # 上游升级流程
+│   └── serve-server.sh            # 开发期后端启动
+└── tests/                         # 单测（vitest）
+```
+
+---
+
+## 运行原理
+
+### 1. 注入流程（`npm run inject`）
+
+`scripts/inject.mjs` 是核心，幂等执行，将 overlay 叠加到上游工作树：
+
+```
+inject.mjs
+  │
+  ├─ 0. 清理自残留（旧 server/src/custom 符号链接 + 非 patch 的 build 产物）
+  ├─ 1. 校验上游工作树干净（脏则报错，提示先 clean）
+  ├─ 2. 应用 B 类 patch ──── 按 patches/series 顺序 git apply 到 hermes-studio
+  ├─ 3. 建符号链接
+  │     ├─ overlay/node_modules → upstream/hermes-studio/node_modules（复用上游依赖）
+  │     └─ upstream/.../server/src/custom → overlay/custom/server（server 用相对路径 import）
+  ├─ 4. 生成派生 vite.config.overlay.ts（alias 重定向 + entry 重定向，见下）
+  └─ 5. 写清单 .overlay-injected.json（记录已应用 patch，供 clean 反向还原）
+```
+
+**`npm run clean`** 反向执行：按清单逆序 `git apply --reverse` 还原 patch + 移除符号链接 + 还原 build 产物，让上游完全回到 HEAD。
+
+### 2. A 类接入：构建期 alias 重定向 + 运行时注册
+
+A 类代码不改动上游源码，靠两个机制接入：
+
+**(a) 派生 vite config 的 alias 重定向**
+
+`inject` 生成的 `vite.config.overlay.ts` 在上游 vite config 基础上 `mergeConfig` 注入 alias（数组形式保证匹配顺序，更具体的前缀先匹配）：
+
+| alias | 指向 | 作用 |
+|-------|------|------|
+| `/src/main.ts` | `overlay/registries/client/entry.mts` | 把 index.html 入口重定向到 overlay shim |
+| `@/custom` / `@custom` | `overlay/custom/client` | 自定义组件解析到 overlay |
+| `@registries` | `overlay/registries` | 注册中枢解析到 overlay |
+| `@`（兜底） | `upstream/.../client/src` | `@/api`、`@/views` 等仍解析到上游 |
+
+**(b) entry shim + 运行时 registry**
+
+`registries/client/entry.mts` 忠实复制上游 `main.ts` 的启动序列（createApp → use pinia/i18n/router → FOUC/token 处理），唯一差别是在 `app.use(router)` 与 `app.mount()` 之间插入 A 类注册：
+
+```
+entry.mts
+  ├─ 复制上游 main.ts 启动序列（createApp / use pinia / use i18n / use router）
+  ├─ import('./bootstrap').then(bootstrapClient(app))   ← A 类注册插入点
+  │     │
+  │     ├─ 按 features 开关动态 import 各 custom 模块
+  │     │   ├─ registerMatrixChat(app)
+  │     │   ├─ registerKanbanEnhancements(app)
+  │     │   ├─ registerBranding(app)
+  │     │   └─ registerCockpit(app)
+  │     │
+  │     └─ 把 registry 收集到的路由 router.addRoute()（必须在 mount 前）
+  │           └─ 动态子路由（如 matrix-chat 作为 cockpit 子路由）也在此注册
+  │
+  ├─ router.isReady() + 重导航（让动态路由对初始导航生效）
+  └─ app.mount('#app')
+```
+
+`registries/client/index.ts` 是注册中枢，提供 `registerRoute` / `registerNavEntry` / `registerComponent`，各 custom 模块调用它们收集扩展，bootstrap 在 mount 前统一挂载。
+
+> **为何不用顶层 await**：es2020 target 不支持，用 `.then` 链式保证 bootstrap 在 mount 前完成。
+
+### 3. 功能开关
+
+`config/features.ts` 用 `import.meta.env.VITE_*` 读取环境变量（必须带 `VITE_` 前缀，否则 Vite 不注入客户端 bundle）。默认全开（向后兼容），可经环境变量关闭：
+
+| 开关 | 环境变量 | 默认 |
+|------|---------|------|
+| matrixChat | `VITE_CUSTOM_MATRIX_CHAT=false` | 开 |
+| matrixAuth | `VITE_CUSTOM_MATRIX_AUTH=true` | 关 |
+| matrixAdmin | `VITE_CUSTOM_MATRIX_ADMIN=true` | 关 |
+| kanbanEnhancements | `VITE_CUSTOM_KANBAN_ENHANCEMENTS=false` | 开 |
+| branding | `VITE_CUSTOM_BRANDING=false` | 开 |
+| extendedI18n | `VITE_CUSTOM_EXTENDED_I18N=false` | 开 |
+| cockpit | `VITE_CUSTOM_COCKPIT=false` | 开 |
+
+### 4. 完整构建流水线（`npm run build:full`）
+
+`scripts/build.mjs` 编排四步，产物落到上游 `dist/`（desktop 构建读取该目录）：
+
+```
+1. openapi:generate     → dist/server/openapi.json（上游脚本）
+2. vite build           → dist/client/（用 overlay config：@/custom alias + entry shim）
+3. tsc --noEmit         → server 类型检查
+4. build-server         → dist/server/（上游打包脚本）
+```
+
+桌面端打包：`npm run build:dmg:mac|win|linux`（`scripts/build-dmg.mjs`）。
+
+### 5. 数据流（运行时）
+
+```
+浏览器 (Vue3 + Pinia + Vue Router)
+  │  index.html → entry shim (alias 重定向)
+  │  ├─ @/custom/*   → overlay custom 组件
+  │  └─ @/*          → 上游 client src
+  │
+  │  Socket.IO 事件流 (run/tool/subagent/usage/reasoning)
+  │  ├─ chat.ts handleEvent        → 线性 Message[]（上游，不改）
+  │  └─ RunTraceView 并行消费者     → Evidence Graph（overlay，零侵入）
+  │
+Koa Server (上游 packages/server + custom/server 经符号链接)
+  ├─ Matrix 认证路由 (custom/server/matrix/routes.ts)
+  ├─ Kanban 服务 (custom/server/kanban)
+  └─ element-web 中间件 (patch 008)
+  │
+hermes-agent (运行时，首次启动下载)
+```
+
+---
+
+## 快速开始
+
+### 环境要求
+
+- Node.js ≥ 23.0.0
+- 上游仓已 clone 到 `../upstream/`（hermes-studio / element-web / hermes-agent）
+
+### 开发启动
+
+```bash
+cd overlay
+npm run inject                              # 1. 注入 patches + 生成派生 config
+
+cd ../upstream/hermes-studio
+npm install --no-audit --no-fund --ignore-scripts   # 2. 安装上游依赖
+mkdir -p dist
+
+cd ../../overlay
+bash scripts/serve-server.sh &              # 3. 后端 :8647
+npm run dev                                 # 4. 前端 :8649（vite，host + strictPort）
+```
+
+开发期 vite dev server 代理 `/agent-health` → `http://127.0.0.1:8650/health`。
+
+### 完整构建 + 桌面端打包
+
+```bash
+cd overlay
+npm run inject          # 应用 73 patch
+npm run build:full      # 构建 dist/(openapi + client + server)
+
+cd ../upstream/hermes-studio
+npm --prefix packages/desktop run dist -- --mac --win --publish never
+# 或在 overlay 内：
+# npm run build:dmg:mac
+```
+
+### 常用命令
+
+| 命令 | 作用 |
+|------|------|
+| `npm run inject` | 应用 B 类 patch + 生成派生 config + 建符号链接 |
+| `npm run clean` | 反向还原上游工作树（逆序 reverse patch + 移除链接） |
+| `npm run verify` | 校验上游工作树状态干净 |
+| `npm run sync` | 上游升级（clean → fetch/reset → re-inject） |
+| `npm run dev` | 前端开发服务器 :8649 |
+| `npm run build` | 仅构建 client bundle |
+| `npm run build:full` | 完整构建（openapi + client + server） |
+| `npm run build:dmg:mac` | macOS dmg 打包 |
+| `npm test` | 运行单测（vitest） |
+
+---
+
+## 开发工作流
+
+### 修改上游骨架（B 类）
+
+1. 在 `upstream/hermes-studio` 直接改（临时）
+2. `git diff > overlay/patches/NNN-描述.patch` 生成 patch
+3. 还原上游工作树（`git checkout -- .`）
+4. 把 patch 文件名加入 `overlay/patches/series`
+5. `npm run inject` 验证可应用
+
+### 新增功能（A 类）
+
+1. 在 `overlay/custom/client/<feature>/` 写组件 / store
+2. 在 `overlay/registries/client/bootstrap.ts` 调度注册（按 features 开关动态 import）
+3. 用 `registerRoute` / `registerNavEntry` / `registerComponent` 收集扩展
+4. `npm run dev` 即可热加载验证
+
+### 上游升级
+
+```bash
+npm run sync   # = clean → git fetch/reset upstream → re-inject
+```
+
+patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。详见 `docs/superpowers/specs/2026-06-21-overlay-architecture-design.md`。
+
+---
+
+## 技术栈
+
+| 层 | 技术 |
+|----|------|
+| 前端 | Vue 3 + Pinia + Vue Router + Vite + TypeScript |
+| UI | Naive UI + Pure Ink 自定义主题（黑白灰）+ ECharts |
+| 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
+| 后端 | Koa + SQLite |
+| 桌面 | Electron（hermes-studio packages/desktop） |
+| 测试 | Vitest（41 个测试文件） |
+| Agent | hermes-agent（运行时下载，OpenTelemetry GenAI 语义对齐） |
+
+---
+
+## 规模
+
+- **73** 个 active B 类 patch（100% inject 通过率）
+- **94** 个自定义 Vue 组件（Cockpit 27 / Matrix Chat 49 / Kanban 14 / 其他 4）
+- **41** 个单测文件
+- 上游基础：hermes-studio v0.6.20 / hermes-agent / element-web v1.12.22
+
+## 设计文档
+
+完整设计文档位于 `../docs/superpowers/`（specs + plans），覆盖 Cockpit、RunTraceView、Kanban、Matrix 集成、overlay 架构等。
+
+## ⚠️ 同版本号覆盖更新的缓存陷阱
+
+桌面端 `webuiDir()` 优先用 `~/.hermes-web-ui/webui/<version>/` 的副本。每次发版需递增版本号，重装后删除旧副本：
+
+```bash
+rm -rf ~/.hermes-web-ui/webui/<version>/
+```
+
+## 不包含
+
+- hermes-agent（运行时首次启动自动下载，不在本仓）
