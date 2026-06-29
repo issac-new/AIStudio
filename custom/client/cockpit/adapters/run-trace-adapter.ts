@@ -1,4 +1,5 @@
 import type { RunEvent } from '@/api/hermes/chat'
+import { request } from '@/api/client'
 import { normalizeRunEvent, type TraceEvent } from './trace-event'
 import { applyTraceEvent, type TraceMiddleware, defaultMiddlewares } from './trace-middlewares'
 
@@ -364,8 +365,9 @@ export function applyTraceEventToState(state: TraceState, event: TraceEvent, mid
 /**
  * Fetch Layer 2 trace data from backend API.
  * Returns null if L2 data is not available (plugin not installed or file not found).
+ * Uses request helper for proper auth headers and base URL handling.
  */
-export async function fetchLayer2Trace(sessionId: string): Promise<{
+export async function fetchLayer2Trace(sessionId: string, profile?: string | null): Promise<{
   nodes: TraceNode[]
   edges: TraceEdge[]
   meta?: {
@@ -378,9 +380,12 @@ export async function fetchLayer2Trace(sessionId: string): Promise<{
   }
 } | null> {
   try {
-    const res = await fetch(`/api/hermes/sessions/${sessionId}/trace`)
-    if (!res.ok) return null
-    const data = await res.json()
+    const params = new URLSearchParams()
+    if (profile) params.set('profile', profile)
+    const query = params.toString()
+    const data = await request<{ nodes: TraceNode[]; edges: TraceEdge[]; meta?: TraceNode['meta'] }>(
+      `/api/hermes/sessions/${encodeURIComponent(sessionId)}/trace${query ? `?${query}` : ''}`
+    )
     if (!data.nodes || !Array.isArray(data.nodes)) return null
     return {
       nodes: data.nodes as TraceNode[],

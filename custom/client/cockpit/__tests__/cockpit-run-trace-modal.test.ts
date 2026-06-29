@@ -105,12 +105,23 @@ vi.mock('@/api/hermes/kanban', async () => {
   return { ...actual, getTask: vi.fn(async () => null), addComment: vi.fn(async () => ({ ok: true })), patchTask: vi.fn(async () => ({})) }
 })
 
+// run-trace-adapter 静态导入 @/api/client 的 request helper（→ router → location），
+// 在 jsdom 外的环境不稳定，mock 掉避免模块链加载。
+vi.mock('@/api/client', async () => {
+  const actual = await vi.importActual<any>('@/api/client')
+  return { ...actual, request: vi.fn(async () => null) }
+})
+
 vi.mock('@/api/hermes/sessions', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/sessions')
   return { ...actual, searchSessions: vi.fn(async () => []) }
 })
 
 vi.mock('../composables/useRunTrace', () => ({
+  extractKanbanTaskId: (title: string) => {
+    const m = title?.match(/work kanban task (t_\w+)/i)
+    return m ? m[1] : null
+  },
   useRunTrace: () => ({
     nodes: {
       value: [

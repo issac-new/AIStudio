@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useCockpitStore } from '../store/cockpit'
-import { useRunTrace } from '../composables/useRunTrace'
+import { useRunTrace, extractKanbanTaskId } from '../composables/useRunTrace'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useProfilesStore } from '@/stores/hermes/profiles'
 import { fetchHermesSessions, type SessionSummary } from '@/api/hermes/sessions'
@@ -111,12 +111,6 @@ const pagedSessionTree = computed(() => {
     children: byParent.get(root.id) || [],
   }))
 })
-
-// 从标题提取 kanban 任务 ID
-function extractKanbanTaskId(title: string): string | null {
-  const m = title.match(/work kanban task (t_\w+)/i)
-  return m ? m[1] : null
-}
 
 // 当进入会话选择模式时，跨所有 profile 加载会话
 watch(needsSessionSelect, async (need) => {
