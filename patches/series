@@ -100,3 +100,5 @@
 
 036-server-routes-index.patch
 115-client-api-sessions-hermes-profile-wide.patch
+116-server-sessions-parent-id.patch
+116-agent-default-workspace-kind-dir.patch

@@ -71,7 +71,6 @@ const sessionList = computed(() => {
 
   return source
     .sort((a, b) => (b.last_active ?? b.started_at) - (a.last_active ?? a.started_at))
-    .slice(0, 200)
     .map(s => ({
       id: s.id,
       title: s.title || '(未命名会话)',
@@ -80,8 +79,41 @@ const sessionList = computed(() => {
       updatedAt: s.last_active ?? s.started_at,
       messageCount: s.message_count ?? 0,
       profile: s.profile || '',
+      parentSessionId: (s as any).parent_session_id || null,
+      source: (s as any).source || '',
     }))
 })
+
+// 分页
+const currentPage = ref(1)
+const pageSize = 30
+const totalFiltered = computed(() => sessionList.value.length)
+const totalPages = computed(() => Math.max(1, Math.ceil(totalFiltered.value / pageSize)))
+const pagedSessions = computed(() => sessionList.value.slice((currentPage.value - 1) * pageSize, currentPage.value * pageSize))
+
+// 搜索/筛选变化时重置到第一页
+watch([searchQuery, filterProfile], () => { currentPage.value = 1 })
+
+// 父子分组：将分页后的会话按 parent_session_id 组织
+const pagedSessionTree = computed(() => {
+  const byParent = new Map<string | null, typeof sessionList.value>()
+  for (const s of pagedSessions.value) {
+    const key = s.parentSessionId || null
+    if (!byParent.has(key)) byParent.set(key, [])
+    byParent.get(key)!.push(s)
+  }
+  const roots = byParent.get(null) || []
+  return roots.map(root => ({
+    ...root,
+    children: byParent.get(root.id) || [],
+  }))
+})
+
+// 从标题提取 kanban 任务 ID
+function extractKanbanTaskId(title: string): string | null {
+  const m = title.match(/work kanban task (t_\w+)/i)
+  return m ? m[1] : null
+}
 
 // 当进入会话选择模式时，跨所有 profile 加载会话
 watch(needsSessionSelect, async (need) => {
@@ -133,6 +165,9 @@ watch(needsSessionSelect, async (need) => {
 }, { immediate: true })
 
 function selectSession(sid: string) {
+  // 从 allSessions 查找该会话是否已结束
+  const s = allSessions.value.find(x => x.id === sid)
+  trace.sessionEnded.value = !!(s && s.ended_at != null)
   store.openRunTrace({ sessionId: sid })
 }
 
@@ -198,10 +233,10 @@ function exportDossier() {
     <!-- 会话选择器（无 sessionId 时显示） -->
     <div v-if="needsSessionSelect" class="run-trace-session-picker">
       <div class="run-trace-session-picker__head">
-        <span>选择会话观察 <small>{{ allSessions.length }} 条会话</small></span>
+        <span>选择会话观察 <small>{{ totalFiltered }} / {{ allSessions.length }} 条会话</small></span>
         <button type="button" @click="store.closeRunTrace">×</button>
       </div>
-      <!-- 搜索 + profile 筛选 -->
+      <!-- 搜索 -->
       <div class="run-trace-session-picker__filters">
         <input
           type="text"
@@ -209,32 +244,43 @@ function exportDossier() {
           v-model="searchQuery"
           placeholder="搜索会话标题、ID、模型…"
         />
-        <select class="run-trace-session-picker__select" v-model="filterProfile">
-          <option value="">全部 Profile</option>
-          <option v-for="p in availableProfiles" :key="p" :value="p">{{ p }}</option>
-        </select>
       </div>
+      <!-- Profile 标签按钮 -->
+      <div class="run-trace-session-picker__tabs">
+        <button class="run-trace-session-picker__tab" :class="{ 'is-active': filterProfile === '' }" @click="filterProfile = ''">全部</button>
+        <button v-for="p in availableProfiles" :key="p" class="run-trace-session-picker__tab" :class="{ 'is-active': filterProfile === p }" @click="filterProfile = p">{{ p }}</button>
+      </div>
+      <!-- 会话列表（父子分组） -->
       <div class="run-trace-session-picker__list">
-        <div v-if="loadingSessions" class="run-trace-session-picker__empty">
-          加载会话列表…
-        </div>
-        <div v-else-if="sessionList.length === 0" class="run-trace-session-picker__empty">
+        <div v-if="loadingSessions" class="run-trace-session-picker__empty">加载会话列表…</div>
+        <div v-else-if="pagedSessions.length === 0" class="run-trace-session-picker__empty">
           {{ searchQuery || filterProfile ? '无匹配会话' : '暂无会话记录' }}
         </div>
-        <button
-          v-for="s in sessionList"
-          :key="s.id"
-          type="button"
-          class="run-trace-session-picker__item"
-          :class="{ 'is-running': s.isRunning }"
-          @click="selectSession(s.id)"
-        >
-          <span class="run-trace-session-picker__dot" :class="{ 'is-live': s.isRunning }"></span>
-          <span class="run-trace-session-picker__title">{{ s.title }}</span>
-          <span v-if="s.profile" class="run-trace-session-picker__profile">{{ s.profile }}</span>
-          <span class="run-trace-session-picker__meta">{{ s.model }} · {{ s.messageCount }}条 · {{ fmtTime(s.updatedAt) }}</span>
-          <span v-if="s.isRunning" class="run-trace-session-picker__badge">运行中</span>
-        </button>
+        <template v-for="root in pagedSessionTree" :key="root.id">
+          <!-- 根会话 -->
+          <button type="button" class="run-trace-session-picker__item" :class="{ 'is-running': root.isRunning }" @click="selectSession(root.id)">
+            <span class="run-trace-session-picker__dot" :class="{ 'is-live': root.isRunning }"></span>
+            <span class="run-trace-session-picker__title">{{ root.title }}</span>
+            <span v-if="extractKanbanTaskId(root.title)" class="run-trace-session-picker__kanban">{{ extractKanbanTaskId(root.title) }}</span>
+            <span v-if="root.profile" class="run-trace-session-picker__profile">{{ root.profile }}</span>
+            <span class="run-trace-session-picker__meta">{{ root.model }} · {{ root.messageCount }}条 · {{ fmtTime(root.updatedAt) }}</span>
+            <span v-if="root.isRunning" class="run-trace-session-picker__badge">运行中</span>
+          </button>
+          <!-- 子会话（缩进） -->
+          <button v-for="child in root.children" :key="child.id" type="button" class="run-trace-session-picker__item run-trace-session-picker__item--child" :class="{ 'is-running': child.isRunning }" @click="selectSession(child.id)">
+            <span class="run-trace-session-picker__dot" :class="{ 'is-live': child.isRunning }"></span>
+            <span class="run-trace-session-picker__title">↳ {{ child.title }}</span>
+            <span v-if="child.profile" class="run-trace-session-picker__profile">{{ child.profile }}</span>
+            <span class="run-trace-session-picker__meta">{{ child.model }} · {{ child.messageCount }}条</span>
+            <span v-if="child.isRunning" class="run-trace-session-picker__badge">运行中</span>
+          </button>
+        </template>
+      </div>
+      <!-- 分页 -->
+      <div v-if="totalPages > 1" class="run-trace-session-picker__pagination">
+        <button type="button" :disabled="currentPage <= 1" @click="currentPage--">‹ 上一页</button>
+        <span class="run-trace-session-picker__page-info">{{ currentPage }} / {{ totalPages }}</span>
+        <button type="button" :disabled="currentPage >= totalPages" @click="currentPage++">下一页 ›</button>
       </div>
     </div>
 
@@ -257,6 +303,7 @@ function exportDossier() {
         @scrub="trace.scrubTo"
         @switch-live="trace.switchToLive"
         @start-replay="trace.switchToReplay"
+        @scrub-end="trace.scrubEnd"
       />
       <RunTraceTimeBand :nodes="trace.nodes.value" />
       <main class="run-trace-modal__main">
@@ -283,20 +330,34 @@ function exportDossier() {
   &:focus { border-color: var(--accent-primary); }
   &::placeholder { color: var(--text-muted); }
 }
-.run-trace-session-picker__select { flex-shrink: 0; height: 28px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 12px; cursor: pointer; outline: none; }
+/* Profile 标签按钮 */
+.run-trace-session-picker__tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); }
+.run-trace-session-picker__tab { font-size: 10px; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font-family: inherit;
+  &:hover { border-color: var(--text-muted); color: var(--text-secondary); }
+  &.is-active { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); font-weight: 600; }
+}
 .run-trace-session-picker__list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
 .run-trace-session-picker__empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 48px 16px; }
 .run-trace-session-picker__item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); cursor: pointer; font-family: inherit; text-align: left; transition: background 0.12s;
   &:hover { background: var(--bg-secondary); border-color: var(--text-muted); }
   &.is-running { border-color: var(--success); }
 }
+.run-trace-session-picker__item--child { margin-left: 24px; padding: 6px 12px; background: var(--bg-secondary); font-size: 11px; border-style: dashed; }
 .run-trace-session-picker__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0;
   &.is-live { background: var(--success); animation: run-trace-live-pulse 1.5s ease-in-out infinite; }
 }
 .run-trace-session-picker__title { flex: 1; min-width: 0; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .run-trace-session-picker__meta { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 .run-trace-session-picker__profile { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-muted); flex-shrink: 0; text-transform: uppercase; }
+.run-trace-session-picker__kanban { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--accent-info); color: var(--text-on-accent); flex-shrink: 0; font-family: monospace; }
 .run-trace-session-picker__badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: var(--success); color: #fff; flex-shrink: 0; }
+/* 分页 */
+.run-trace-session-picker__pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 18px; border-top: 1px solid var(--border-color); background: var(--bg-card); }
+.run-trace-session-picker__pagination button { height: 26px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 11px; font-family: inherit;
+  &:hover:not(:disabled) { background: var(--bg-card-hover); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+.run-trace-session-picker__page-info { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* ── 正常 trace 视图 ── */
 .run-trace-modal__top { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
