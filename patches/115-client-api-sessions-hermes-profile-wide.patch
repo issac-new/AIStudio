@@ -1,0 +1,11 @@
+diff --git a/packages/client/src/api/client.ts b/packages/client/src/api/client.ts
+--- a/packages/client/src/api/client.ts
++++ b/packages/client/src/api/client.ts
+@@ -106,6 +106,7 @@ function isProfileWideSessionCollection(pathname: string): boolean {
+ function isProfileWideSessionCollection(pathname: string): boolean {
+   return pathname === '/api/hermes/sessions' ||
+     pathname === '/api/hermes/sessions/batch-delete' ||
++    pathname === '/api/hermes/sessions/hermes' ||
+     pathname === '/api/hermes/search/sessions' ||
+     pathname === '/api/hermes/sessions/search' ||
+     pathname === '/api/hermes/sessions/conversations'
