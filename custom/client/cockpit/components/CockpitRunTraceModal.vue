@@ -27,33 +27,58 @@ const needsSessionSelect = computed(() => !sessionId.value)
 // 跨所有 profile 的会话列表（合并 orchestrator + worker-coder + worker-researcher 等）
 const allSessions = ref<Array<SessionSummary & { profile?: string }>>([])
 const loadingSessions = ref(false)
+const searchQuery = ref('')
+const filterProfile = ref('')  // '' = 全部
 
-const sessionList = computed(() => {
-  if (allSessions.value.length > 0) {
-    return allSessions.value
-      .sort((a, b) => (b.last_active ?? b.started_at) - (a.last_active ?? a.started_at))
-      .slice(0, 100)
-      .map(s => ({
-        id: s.id,
-        title: s.title || '(未命名会话)',
-        model: s.model || '',
-        isRunning: s.ended_at == null,
-        updatedAt: s.last_active ?? s.started_at,
-        messageCount: s.message_count,
-        profile: s.profile || '',
-      }))
+// 所有出现的 profile 名称（用于筛选下拉）
+const availableProfiles = computed(() => {
+  const set = new Set<string>()
+  for (const s of allSessions.value) {
+    if (s.profile) set.add(s.profile)
   }
-  // Fallback: chatStore.sessions（Studio 导入的会话）
-  return [...chatStore.sessions]
-    .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, 100)
+  return [...set].sort()
+})
+
+// 带搜索筛选的会话列表
+const sessionList = computed(() => {
+  let source = allSessions.value.length > 0
+    ? allSessions.value
+    : chatStore.sessions.map(s => ({
+        ...s,
+        ended_at: s.endedAt ? Math.round(s.endedAt / 1000) : null,
+        started_at: Math.round(s.createdAt / 1000),
+        last_active: Math.round(s.updatedAt / 1000),
+        message_count: s.messageCount ?? 0,
+        profile: s.profile || 'default',
+        source: s.source || 'webui',
+      }) as any)
+
+  // Profile 筛选
+  if (filterProfile.value) {
+    source = source.filter(s => (s as any).profile === filterProfile.value)
+  }
+
+  // 搜索筛选（标题 + id + model）
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    source = source.filter(s => {
+      const title = (s.title || '').toLowerCase()
+      const id = (s.id || '').toLowerCase()
+      const model = (s.model || '').toLowerCase()
+      return title.includes(q) || id.includes(q) || model.includes(q)
+    })
+  }
+
+  return source
+    .sort((a, b) => (b.last_active ?? b.started_at) - (a.last_active ?? a.started_at))
+    .slice(0, 200)
     .map(s => ({
       id: s.id,
       title: s.title || '(未命名会话)',
       model: s.model || '',
-      isRunning: s.endedAt === null,
-      updatedAt: s.updatedAt,
-      messageCount: s.messageCount ?? 0,
+      isRunning: s.ended_at == null,
+      updatedAt: s.last_active ?? s.started_at,
+      messageCount: s.message_count ?? 0,
       profile: s.profile || '',
     }))
 })
@@ -74,9 +99,9 @@ watch(needsSessionSelect, async (need) => {
     } catch { /* profilesStore 未初始化 */ }
     const targets = profileNames.length > 0 ? profileNames : ['default']
 
-    // 并行查询所有 profile 的会话
+    // 并行查询所有 profile 的会话（limit 提高到 500 确保全量）
     const results = await Promise.allSettled(
-      targets.map((name: string) => fetchHermesSessions(undefined, undefined, name).then(sessions =>
+      targets.map((name: string) => fetchHermesSessions(undefined, 500, name).then(sessions =>
         sessions.map(s => ({ ...s, profile: name }))
       ))
     )
@@ -160,15 +185,28 @@ function exportDossier() {
     <!-- 会话选择器（无 sessionId 时显示） -->
     <div v-if="needsSessionSelect" class="run-trace-session-picker">
       <div class="run-trace-session-picker__head">
-        <span>选择会话观察</span>
+        <span>选择会话观察 <small>{{ allSessions.length }} 条会话</small></span>
         <button type="button" @click="store.closeRunTrace">×</button>
+      </div>
+      <!-- 搜索 + profile 筛选 -->
+      <div class="run-trace-session-picker__filters">
+        <input
+          type="text"
+          class="run-trace-session-picker__search"
+          v-model="searchQuery"
+          placeholder="搜索会话标题、ID、模型…"
+        />
+        <select class="run-trace-session-picker__select" v-model="filterProfile">
+          <option value="">全部 Profile</option>
+          <option v-for="p in availableProfiles" :key="p" :value="p">{{ p }}</option>
+        </select>
       </div>
       <div class="run-trace-session-picker__list">
         <div v-if="loadingSessions" class="run-trace-session-picker__empty">
           加载会话列表…
         </div>
         <div v-else-if="sessionList.length === 0" class="run-trace-session-picker__empty">
-          暂无会话记录。请先通过聊天发起一个任务。
+          {{ searchQuery || filterProfile ? '无匹配会话' : '暂无会话记录' }}
         </div>
         <button
           v-for="s in sessionList"
@@ -223,7 +261,16 @@ function exportDossier() {
 /* ── 会话选择器 ── */
 .run-trace-session-picker { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .run-trace-session-picker__head { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--border-color); font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.run-trace-session-picker__head small { font-size: 10px; font-weight: 400; color: var(--text-muted); margin-left: 8px; }
 .run-trace-session-picker__head button { width: 28px; height: 28px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); border-radius: 6px; cursor: pointer; }
+
+/* 搜索 + 筛选 */
+.run-trace-session-picker__filters { display: flex; gap: 8px; padding: 8px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); }
+.run-trace-session-picker__search { flex: 1; height: 28px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 12px; outline: none;
+  &:focus { border-color: var(--accent-primary); }
+  &::placeholder { color: var(--text-muted); }
+}
+.run-trace-session-picker__select { flex-shrink: 0; height: 28px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 12px; cursor: pointer; outline: none; }
 .run-trace-session-picker__list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
 .run-trace-session-picker__empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 48px 16px; }
 .run-trace-session-picker__item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); cursor: pointer; font-family: inherit; text-align: left; transition: background 0.12s;
