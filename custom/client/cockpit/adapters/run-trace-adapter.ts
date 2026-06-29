@@ -1,4 +1,6 @@
 import type { RunEvent } from '@/api/hermes/chat'
+import { normalizeRunEvent, type TraceEvent } from './trace-event'
+import { applyTraceEvent, type TraceMiddleware, defaultMiddlewares } from './trace-middlewares'
 
 export type EvidenceTier = 'L1' | 'L2' | 'L3'
 export type TraceNodeKind = 'ingress' | 'workflow' | 'agent' | 'skill' | 'tool' | 'memory' | 'service' | 'peer' | 'approval'
@@ -321,25 +323,23 @@ export function activateSkill(state: TraceState, input: { skillName: string; ts:
   return { ...state, nodes, edges, activeSkillNodeId: skillId, focusedNodeId: skillId, sequence: state.sequence + 1 }
 }
 
-export function applyRunEvent(state: TraceState, event: RunEvent): TraceState {
+/**
+ * 处理一个 RunEvent（向后兼容入口）。
+ *
+ * 内部先 normalize 为强类型 TraceEvent，再通过中间件链处理。
+ * 这让旧的 useRunTrace 调用无需改动即可获得中间件架构的全部能力。
+ */
+export function applyRunEvent(state: TraceState, event: RunEvent, middlewares: TraceMiddleware[] = defaultMiddlewares): TraceState {
   if (event.event !== 'run.started' && !isActiveRunEvent(state, event)) return state
-  switch (event.event) {
-    case 'run.started': return handleRunStarted(state, event)
-    case 'tool.started': return handleToolStarted(state, event)
-    case 'tool.completed': return handleToolCompleted(state, event)
-    case 'reasoning.delta':
-    case 'thinking.delta':
-    case 'reasoning.available': return handleReasoning(state, event)
-    case 'message.delta': return handleMessageDelta(state, event)
-    case 'run.completed': return handleRunFinished(state, event, 'ok')
-    case 'run.failed': return handleRunFinished(state, event, 'error')
-    case 'usage.updated': return { ...state, usage: event.usage ?? state.usage }
-    case 'subagent.start':
-    case 'subagent.tool':
-    case 'subagent.progress':
-    case 'subagent.complete': return handleSubagent(state, event)
-    default: return state
-  }
+  const traceEvent = normalizeRunEvent(event)
+  return applyTraceEvent(state, traceEvent, middlewares)
+}
+
+/**
+ * 处理一个已归一化的 TraceEvent（新入口，供直接消费 TraceEvent 的场景）。
+ */
+export function applyTraceEventToState(state: TraceState, event: TraceEvent, middlewares: TraceMiddleware[] = defaultMiddlewares): TraceState {
+  return applyTraceEvent(state, event, middlewares)
 }
 
 /**
