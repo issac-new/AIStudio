@@ -252,34 +252,109 @@ hermes-agent (运行时，首次启动下载)
 - Node.js ≥ 23.0.0
 - 上游仓已 clone 到 `../upstream/`（hermes-studio / element-web / hermes-agent）
 
-### 开发启动
+### 开发启动（首次）
 
 ```bash
 cd overlay
-npm run inject                              # 1. 注入 patches + 生成派生 config
+npm run inject                                       # 1. 注入 patches + 生成派生 config + 建符号链接
 
 cd ../upstream/hermes-studio
-npm install --no-audit --no-fund --ignore-scripts   # 2. 安装上游依赖
+npm install --no-audit --no-fund --ignore-scripts    # 2. 安装上游依赖（overlay 经符号链接复用）
 mkdir -p dist
 
 cd ../../overlay
-bash scripts/serve-server.sh &              # 3. 后端 :8647
-npm run dev                                 # 4. 前端 :8649（vite，host + strictPort）
+bash scripts/serve-server.sh &                       # 3. 后端 :8647（ts-node 直跑上游 src/index.ts）
+npm run dev                                          # 4. 前端 :8649（vite，host + strictPort）
 ```
 
 开发期 vite dev server 代理 `/agent-health` → `http://127.0.0.1:8650/health`。
 
-### 完整构建 + 桌面端打包
+### 前后端服务重启
+
+开发期后端用 `serve-server.sh`（前台进程，`node -r ts-node/register` 直跑 TS 源码，无热重载）；前端用 vite dev server（HMR 自动热更新）。两者各自独立，重启互不影响。
+
+**重启后端**（改了 server 代码 / patch / `custom/server/` 后需重启）：
+
+```bash
+# 1. 找到并杀掉旧后端进程（监听 :8647）
+lsof -ti:8647 | xargs kill -9 2>/dev/null
+
+# 2. 重新启动（后台）
+cd overlay
+bash scripts/serve-server.sh &                        # 默认 :8647
+# 或指定端口：bash scripts/serve-server.sh --port 8647
+
+# 若改了 B 类 patch，重启前需先重注入：
+# npm run clean && npm run inject
+```
+
+**重启前端**（改了 `custom/client/` 后通常无需重启——vite HMR 自动热更新；仅当改了 `vite.config.overlay.ts` / alias / entry shim 时需重启）：
+
+```bash
+# 1. 杀掉旧 vite 进程（监听 :8649）
+lsof -ti:8649 | xargs kill -9 2>/dev/null
+
+# 2. 重新启动
+cd overlay
+npm run dev                                           # 前台跑，Ctrl+C 停止；或加 & 后台
+```
+
+> **若改了 B 类 patch**：后端重启前必须 `npm run clean && npm run inject` 重新注入，否则上游工作树仍是旧 patch 状态。
+
+### 完整构建 + 桌面端打包（两个版本构建物）
+
+SwarmStudio 桌面端当前版本 **0.6.20**，构建产物分 **macOS** 与 **Windows** 两个版本。
+
+**方式 A — overlay 一键脚本（推荐，自动 inject + build:full + electron-builder）**
+
+```bash
+cd overlay
+
+# macOS 版（arm64 DMG + zip）
+npm run build:dmg:mac
+# 产物：upstream/hermes-studio/packages/desktop/release/
+#       ├── SwarmStudio-0.6.20-arm64.dmg
+#       └── SwarmStudio-0.6.20-arm64.zip
+
+# Windows 版（x64 exe + zip + msi）
+npm run build:dmg:win
+# 产物：upstream/hermes-studio/packages/desktop/release/
+#       ├── SwarmStudio-0.6.20-x64.exe
+#       ├── SwarmStudio-0.6.20-x64.zip
+#       └── __msi-x64/
+```
+
+`build-dmg.mjs` 编排 5 步（自动完成，无需手动分步）：
+1. `inject` — 应用 patch + 生成派生 config + 建符号链接
+2. `build:full` — 用 overlay vite config 构建 web UI → `dist/client` + `dist/server`
+3. `desktop:install` — `npm ci --prefix packages/desktop`
+4. `build:main` — `tsc` 编译桌面主进程
+5. `electron-builder --<platform> --publish never` — 打包
+
+**方式 B — 手动分步（更细粒度控制）**
+
+```bash
+cd overlay
+npm run inject                  # 1. 注入 patch
+npm run build:full              # 2. 构建 dist/(openapi + client + server)
+
+cd ../upstream/hermes-studio
+npm ci --prefix packages/desktop --no-audit --no-fund   # 3. 桌面端依赖
+npm --prefix packages/desktop run build:main            # 4. tsc 编译主进程
+
+# 5. 打包（--mac / --win / --linux，可组合）
+npm --prefix packages/desktop run dist -- --mac --win --publish never
+# 产物同样落到 packages/desktop/release/
+```
+
+> **关键**：必须用 overlay 的 `build:full`（`scripts/build.mjs`，用 overlay vite config），而非上游的 `npm run build`——后者会覆盖 `dist/` 且不带 `@/custom` alias + entry shim，产物不含自定义组件。`build-dmg.mjs` 已默认绕开上游 `npm run dist`（避免其内部 `npm run build` 覆盖 dist）。
+
+**仅构建 web UI（不打桌面端）**
 
 ```bash
 cd overlay
 npm run inject          # 应用 73 patch
-npm run build:full      # 构建 dist/(openapi + client + server)
-
-cd ../upstream/hermes-studio
-npm --prefix packages/desktop run dist -- --mac --win --publish never
-# 或在 overlay 内：
-# npm run build:dmg:mac
+npm run build:full      # 构建 dist/(openapi + client + server)，落到上游 dist/
 ```
 
 ### 常用命令
@@ -292,8 +367,10 @@ npm --prefix packages/desktop run dist -- --mac --win --publish never
 | `npm run sync` | 上游升级（clean → fetch/reset → re-inject） |
 | `npm run dev` | 前端开发服务器 :8649 |
 | `npm run build` | 仅构建 client bundle |
-| `npm run build:full` | 完整构建（openapi + client + server） |
-| `npm run build:dmg:mac` | macOS dmg 打包 |
+| `npm run build:full` | 完整构建 web UI（openapi + client + server）→ 上游 dist/ |
+| `npm run build:dmg:mac` | macOS 版构建物（arm64 DMG + zip，一键 inject+build+打包） |
+| `npm run build:dmg:win` | Windows 版构建物（x64 exe + zip + msi，一键 inject+build+打包） |
+| `npm run build:dmg:linux` | Linux 版构建物（一键 inject+build+打包） |
 | `npm test` | 运行单测（vitest） |
 
 ---
