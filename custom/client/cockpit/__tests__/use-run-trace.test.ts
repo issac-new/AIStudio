@@ -16,6 +16,11 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@/api/hermes/chat', () => ({
   connectChatRun: mocks.connectChatRun,
+  resumeSession: vi.fn((_sid: string, onResumed: (data: any) => void) => mocks.socket),
+}))
+
+vi.mock('@/api/hermes/sessions', () => ({
+  fetchSessionMessagesPage: vi.fn(async () => ({ messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} })),
 }))
 
 describe('useRunTrace', () => {
