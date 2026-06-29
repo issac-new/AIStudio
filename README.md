@@ -260,6 +260,39 @@ hermes-agent (运行时，首次启动下载)
 - Node.js ≥ 23.0.0
 - 上游仓已 clone 到 `../upstream/`（hermes-studio / element-web / hermes-agent）
 
+### 上游依赖
+
+SwarmStudio 基于以下三个上游开源项目二次开发：
+
+| 上游项目 | GitHub 仓库 | 用途 |
+|---------|-----------|------|
+| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标 |
+| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，运行时首次启动自动下载） |
+| **element-web** | https://github.com/element-hq/element-web | Element Web Matrix 客户端参考实现（v1.12.22） |
+
+**独立安装运行（不依赖 overlay 二次开发）**
+
+若只想运行上游原版，可直接用官方命令安装：
+
+```bash
+# 1. 安装 hermes-agent 运行时（Python）
+pip install hermes-agent[all]
+
+# 2. 安装 hermes-web-ui（SwarmStudio 桌面应用）
+npm install -g hermes-web-ui
+
+# 3. 启动 web UI 服务
+hermes-web-ui start
+
+# 4. 启动 agent（终端 TUI 交互模式）
+hermes --tui
+
+# 5. 启动 agent dashboard（桌面 GUI 后端）
+hermes dashboard --tui
+```
+
+> 注：上述是上游官方用法。本 overlay 仓的二次开发版需经 `npm run inject` 注入后从源码构建（见下文「开发启动」），不走全局安装路径。
+
 ### 开发启动（首次）
 
 ```bash
