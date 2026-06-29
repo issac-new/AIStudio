@@ -149,7 +149,8 @@ function onColCtrl(col: ColumnKey) {
     <div v-if="store.templateManagerOpen" class="cockpit-overlay" @click="store.closeTemplateManager()" />
     <CockpitTemplateManager v-if="store.templateManagerOpen" class="cockpit-modal-anchor" />
 
-    <!-- Run Trace modal（双击 run 事件触发） -->
+    <!-- Run Observatory 面板（注意力条下方展开，与协作看板同定位） -->
+    <div v-if="store.runTraceOpen" class="cockpit-overlay" @click="store.closeRunTrace()" />
     <CockpitRunTraceModal />
 
     <!-- task title 详情弹窗（双击查看完整 title） -->

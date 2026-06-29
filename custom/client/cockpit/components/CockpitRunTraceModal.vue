@@ -59,49 +59,48 @@ function exportDossier() {
 }
 </script>
 <template>
-  <teleport to="body">
-    <div
-      v-if="store.runTraceOpen"
-      class="run-trace-modal"
-      data-run-trace-modal
-      role="dialog"
-      aria-modal="true"
-      aria-label="Run Observatory"
-      tabindex="-1"
-      @keydown.esc="store.closeRunTrace"
-    >
-      <header class="run-trace-modal__top">
-        <span class="run-trace-modal__dot" :class="trace.mode.value === 'live' ? 'is-live' : ''"></span>
-        <div><b>Run Observatory</b><small>{{ store.runTraceSessionId || 'Select Session' }}</small></div>
-        <span v-if="trace.l2Available.value" class="run-trace-modal__l2badge" title="Layer 2 data available">L2</span>
-        <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" title="导出证据档案">📥</button>
-        <button type="button" data-action="close" @click="store.closeRunTrace">×</button>
-      </header>
-      <RunTraceScrubber
-        :min-time="minTime"
-        :max-time="maxTime"
-        :current-time="trace.scrubberTime.value"
-        :mode="trace.mode.value"
-        :replay-progress="trace.replayProgress.value"
-        @scrub="trace.scrubTo"
-        @switch-live="trace.switchToLive"
-        @start-replay="trace.switchToReplay"
-      />
-      <RunTraceTimeBand :nodes="trace.nodes.value" />
-      <main class="run-trace-modal__main">
-        <RunTraceSkillDrilldown v-if="drilldownSkill" :skill="drilldownSkill" @back="drilldownSkillId = null" />
-        <RunTraceGraph v-else :nodes="trace.nodes.value" :edges="trace.edges.value" :focused-node-id="focusedNode?.id || null" @focus-node="focusNode" />
-        <RunTraceInspector :node="focusedNode" />
-      </main>
-    </div>
-  </teleport>
+  <div
+    v-if="store.runTraceOpen"
+    class="run-trace-modal"
+    data-run-trace-modal
+    role="dialog"
+    aria-modal="true"
+    aria-label="Run Observatory"
+    tabindex="-1"
+    @keydown.esc="store.closeRunTrace"
+  >
+    <header class="run-trace-modal__top">
+      <span class="run-trace-modal__dot" :class="trace.mode.value === 'live' ? 'is-live' : ''"></span>
+      <div><b>Run Observatory</b><small>{{ store.runTraceSessionId || 'Select Session' }}</small></div>
+      <span v-if="trace.l2Available.value" class="run-trace-modal__l2badge" title="Layer 2 data available">L2</span>
+      <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" title="导出证据档案">📥</button>
+      <button type="button" data-action="close" @click="store.closeRunTrace">×</button>
+    </header>
+    <RunTraceScrubber
+      :min-time="minTime"
+      :max-time="maxTime"
+      :current-time="trace.scrubberTime.value"
+      :mode="trace.mode.value"
+      :replay-progress="trace.replayProgress.value"
+      @scrub="trace.scrubTo"
+      @switch-live="trace.switchToLive"
+      @start-replay="trace.switchToReplay"
+    />
+    <RunTraceTimeBand :nodes="trace.nodes.value" />
+    <main class="run-trace-modal__main">
+      <RunTraceSkillDrilldown v-if="drilldownSkill" :skill="drilldownSkill" @back="drilldownSkillId = null" />
+      <RunTraceGraph v-else :nodes="trace.nodes.value" :edges="trace.edges.value" :focused-node-id="focusedNode?.id || null" @focus-node="focusNode" />
+      <RunTraceInspector :node="focusedNode" />
+    </main>
+  </div>
 </template>
 <style scoped lang="scss">
-.run-trace-modal { position: fixed; inset: 0; z-index: 3000; display: grid; grid-template-rows: 52px auto auto 1fr; background: var(--bg-primary); color: var(--text-primary); }
-.run-trace-modal__top { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-sidebar); }
+/* 内联定位：与协作看板一致，从注意力条下方(top:84px)展开，不遮罩 TopBar/Attention */
+.run-trace-modal { position: fixed; top: 84px; right: 0; bottom: 0; left: 0; z-index: 100; display: grid; grid-template-rows: 44px auto auto 1fr; background: var(--bg-primary); color: var(--text-primary); border-top: 1px solid var(--border-color); box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
+.run-trace-modal__top { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
 .run-trace-modal__top b { display: block; font-size: 13px; }
 .run-trace-modal__top small { display: block; font-size: 11px; color: var(--text-muted); }
-.run-trace-modal__top button { margin-left: auto; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; }
+.run-trace-modal__top button { margin-left: auto; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; }
 .run-trace-modal__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning);
   &.is-live { background: var(--success); animation: run-trace-live-pulse 1.5s ease-in-out infinite; }
 }
