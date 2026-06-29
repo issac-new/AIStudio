@@ -128,12 +128,17 @@ vi.mock('../composables/useRunTrace', () => ({
     replayProgress: { value: 0 },
     sessionStartedAt: { value: Date.now() - 3600000 },
     sessionEnded: { value: false },
+    relatedSessions: { value: [] },
+    relatedSessionIds: { value: new Set<string>() },
+    aggregateMode: { value: true },
     fetchL2Data: vi.fn(async () => {}),
     switchToLive: vi.fn(),
     switchToReplay: vi.fn(),
     scrubTo: vi.fn(),
     scrubEnd: vi.fn(),
     route: vi.fn(),
+    setAllSessionsRef: vi.fn(),
+    loadRelatedSessions: vi.fn(async () => []),
   }),
 }))
 

@@ -61,6 +61,15 @@ function currentRunNodeId(state: TraceState): string | null {
   return state.runId ? `run:${state.sessionId}:${state.runId}` : null
 }
 
+/**
+ * 返回事件的有效 sessionId。
+ * 多会话聚合时，关联会话的事件 session_id ≠ state.sessionId，
+ * 此时用事件自身的 session_id 生成节点 ID，确保不碰撞、不混淆。
+ */
+function effectiveSid(state: TraceState, event: { session_id?: string }): string {
+  return (event.session_id && event.session_id !== state.sessionId) ? event.session_id : state.sessionId
+}
+
 function appendChildToNode(nodes: TraceNode[], nodeId: string, item: TraceTimelineItem): TraceNode[] {
   return nodes.map(n => n.id === nodeId ? { ...n, children: [...(n.children ?? []), item] } : n)
 }
@@ -77,18 +86,19 @@ function firstOpenToolId(state: TraceState, toolName?: string): string | null {
 export const runLifecycleMiddleware: TraceMiddleware = {
   onReplyStart(state, event) {
     const runId = event.runId || `local-${state.sequence + 1}`
-    const ingressId = `ingress:${state.sessionId}`
-    const runNodeId = `run:${state.sessionId}:${runId}`
+    const sid = effectiveSid(state, event)
+    const ingressId = `ingress:${sid}`
+    const runNodeId = `run:${sid}:${runId}`
     const startedAt = event.timestamp
     const ingress: TraceNode = {
       id: ingressId,
       kind: 'ingress',
       label: '外部消息',
-      detail: state.sessionId,
+      detail: sid,
       status: 'ok',
       startedAt,
       evidence: 'L1',
-      ref: { sessionId: state.sessionId },
+      ref: { sessionId: sid },
     }
     const runNode: TraceNode = {
       id: runNodeId,
@@ -99,7 +109,7 @@ export const runLifecycleMiddleware: TraceMiddleware = {
       startedAt,
       evidence: 'L1',
       children: [],
-      ref: { sessionId: state.sessionId, runId },
+      ref: { sessionId: sid, runId },
     }
     const edge: TraceEdge = {
       id: `edge:${ingressId}->${runNodeId}`,
@@ -148,8 +158,9 @@ export const toolTraceMiddleware: TraceMiddleware = {
   onToolCallStart(state, event) {
     const startedAt = event.timestamp
     const toolName = event.toolName
+    const sid = effectiveSid(state, event)
     const seq = state.sequence + 1
-    const toolId = `tool:${state.sessionId}:${toolName}:${seq}`
+    const toolId = `tool:${sid}:${toolName}:${seq}`
     const parentId = state.activeSkillNodeId ?? currentRunNodeId(state)
     const node: TraceNode = {
       id: toolId,
@@ -159,7 +170,7 @@ export const toolTraceMiddleware: TraceMiddleware = {
       status: 'running',
       startedAt,
       evidence: 'L1',
-      ref: { sessionId: state.sessionId, runId: state.runId ?? undefined, toolCallId: toolId },
+      ref: { sessionId: sid, runId: state.runId ?? undefined, toolCallId: toolId },
     }
     let nodes = upsertNode(state.nodes, node)
     let edges = state.edges
@@ -212,8 +223,9 @@ export const thinkingTraceMiddleware: TraceMiddleware = {
   onThinkingDelta(state, event) {
     const parentId = state.activeSkillNodeId ?? currentRunNodeId(state)
     if (!parentId || !event.text) return state
+    const sid = effectiveSid(state, event)
     const item: TraceTimelineItem = {
-      id: `thinking:${state.sessionId}:${state.sequence + 1}`,
+      id: `thinking:${sid}:${state.sequence + 1}`,
       kind: 'thinking',
       ts: event.timestamp,
       text: event.text,
@@ -231,15 +243,15 @@ export const thinkingTraceMiddleware: TraceMiddleware = {
 
 export const subagentTraceMiddleware: TraceMiddleware = {
   onSubagentStart(state, event) {
-    return upsertSubagentNode(state, event.label, 'running', event.timestamp, event.preview)
+    return upsertSubagentNode(state, event.label, 'running', event.timestamp, event.preview, event.session_id)
   },
 
   onSubagentEnd(state, event) {
-    return upsertSubagentNode(state, event.label, event.status, event.timestamp, undefined)
+    return upsertSubagentNode(state, event.label, event.status, event.timestamp, undefined, event.session_id)
   },
 
   onSubagentProgress(state, event) {
-    let next = upsertSubagentNode(state, event.label, 'running', event.timestamp, event.preview)
+    let next = upsertSubagentNode(state, event.label, 'running', event.timestamp, event.preview, event.session_id)
     // Phase 3: 如果携带 tasksContext，产生 STATE_UPDATED
     if (event.tasksContext) {
       next = stateChangeMiddleware.onStateUpdated?.(next, {
@@ -261,9 +273,11 @@ function upsertSubagentNode(
   status: SpanStatus,
   eventTs: number,
   preview?: string,
+  eventSid?: string,
 ): TraceState {
+  const sid = eventSid && eventSid !== state.sessionId ? eventSid : state.sessionId
   const existingId = state.openSubagentNodeIds[label]
-  const nodeId = existingId ?? `agent:${state.sessionId}:${label}:${state.sequence + 1}`
+  const nodeId = existingId ?? `agent:${sid}:${label}:${state.sequence + 1}`
   const parentId = currentRunNodeId(state)
   const existing = state.nodes.find(n => n.id === nodeId)
   const node: TraceNode = {
@@ -276,7 +290,7 @@ function upsertSubagentNode(
     endedAt: status === 'ok' ? eventTs : existing?.endedAt,
     durationMs: status === 'ok' && existing ? Math.max(0, eventTs - existing.startedAt) : existing?.durationMs,
     evidence: 'L1',
-    ref: { sessionId: state.sessionId, runId: state.runId ?? undefined },
+    ref: { sessionId: sid, runId: state.runId ?? undefined },
   }
   let edges = state.edges
   if (parentId && !existing) {

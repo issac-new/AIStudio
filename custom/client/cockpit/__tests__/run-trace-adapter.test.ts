@@ -4,6 +4,7 @@ import {
   applyRunEvent,
   getFocusedNode,
   activateSkill,
+  mergeTraceStates,
   type TraceState,
 } from '../adapters/run-trace-adapter'
 
@@ -181,5 +182,73 @@ describe('run-trace-adapter', () => {
     const run2 = state.nodes.find(n => n.id === 'run:s1:run-2')!
     expect(run1.status).toBe('running')
     expect(run2.status).toBe('running')
+  })
+})
+
+describe('mergeTraceStates', () => {
+  it('merges nodes and edges from multiple states without collision', () => {
+    let main = createTraceState('s1')
+    main = applyRunEvent(main, { event: 'run.started', session_id: 's1', run_id: 'r1', timestamp: 1000 })
+
+    let other = createTraceState('s2')
+    other = applyRunEvent(other, { event: 'run.started', session_id: 's2', run_id: 'r2', timestamp: 2000 })
+
+    const merged = mergeTraceStates(main, [other])
+    // 应有 s1 和 s2 的 ingress 节点
+    expect(merged.nodes.some(n => n.id === 'ingress:s1')).toBe(true)
+    expect(merged.nodes.some(n => n.id === 'ingress:s2')).toBe(true)
+    // 应有 s1 和 s2 的 run 节点
+    expect(merged.nodes.some(n => n.id === 'run:s1:r1')).toBe(true)
+    expect(merged.nodes.some(n => n.id === 'run:s2:r2')).toBe(true)
+    // 应有 delegate 边 s2.ingress → s1.ingress
+    expect(merged.edges.some(e => e.from === 'ingress:s2' && e.to === 'ingress:s1' && e.kind === 'delegate')).toBe(true)
+  })
+
+  it('preserves main sessionId/runId/focusedNodeId', () => {
+    let main = createTraceState('main-sid')
+    main = applyRunEvent(main, { event: 'run.started', session_id: 'main-sid', run_id: 'main-run', timestamp: 1000 })
+    const mainFocused = main.focusedNodeId
+
+    let other = createTraceState('other-sid')
+    other = applyRunEvent(other, { event: 'run.started', session_id: 'other-sid', run_id: 'other-run', timestamp: 2000 })
+
+    const merged = mergeTraceStates(main, [other])
+    expect(merged.sessionId).toBe('main-sid')
+    expect(merged.focusedNodeId).toBe(mainFocused)
+  })
+
+  it('deduplicates nodes by id', () => {
+    let main = createTraceState('s1')
+    main = applyRunEvent(main, { event: 'run.started', session_id: 's1', run_id: 'r1', timestamp: 1000 })
+    const mainNodeCount = main.nodes.length
+
+    const merged = mergeTraceStates(main, [])  // no others
+    expect(merged.nodes.length).toBe(mainNodeCount)
+  })
+})
+
+describe('relatedSessionIds', () => {
+  it('createTraceState accepts optional relatedSessionIds', () => {
+    const ids = new Set(['s1', 's2', 's3'])
+    const state = createTraceState('s1', ids)
+    expect(state.relatedSessionIds).toBe(ids)
+  })
+
+  it('applyRunEvent accepts events from related sessions', () => {
+    const ids = new Set(['s1', 's2'])
+    let state = createTraceState('s1', ids)
+    // s1 的 run.started 设置 state.runId
+    state = applyRunEvent(state, { event: 'run.started', session_id: 's1', run_id: 'r1', timestamp: 1000 })
+    // s2 的 run.started 应被接受（因 s2 在 relatedSessionIds 中）
+    state = applyRunEvent(state, { event: 'run.started', session_id: 's2', run_id: 'r2', timestamp: 2000 })
+    expect(state.nodes.some(n => n.id === 'run:s2:r2')).toBe(true)
+  })
+
+  it('applyRunEvent still filters events from unrelated sessions', () => {
+    let state = createTraceState('s1', new Set(['s1', 's2']))
+    state = applyRunEvent(state, { event: 'run.started', session_id: 's1', run_id: 'r1', timestamp: 1000 })
+    // s3 不在 relatedSessionIds → 其事件应被过滤
+    state = applyRunEvent(state, { event: 'run.started', session_id: 's3', run_id: 'r3', timestamp: 3000 })
+    expect(state.nodes.some(n => n.id === 'run:s3:r3')).toBe(false)
   })
 })
