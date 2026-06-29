@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useCockpitStore } from '../store/cockpit'
 import { useRunTrace } from '../composables/useRunTrace'
 import { useChatStore } from '@/stores/hermes/chat'
+import { useProfilesStore } from '@/stores/hermes/profiles'
 import { fetchHermesSessions, type SessionSummary } from '@/api/hermes/sessions'
 import RunTraceGraph from './RunTraceGraph.vue'
 import RunTraceTimeBand from './RunTraceTimeBand.vue'
@@ -12,6 +13,7 @@ import RunTraceScrubber from './RunTraceScrubber.vue'
 
 const store = useCockpitStore()
 const chatStore = useChatStore()
+const profilesStore = useProfilesStore()
 const sessionId = computed(() => store.runTraceSessionId)
 const trace = useRunTrace(sessionId)
 const focusedId = ref<string | null>(null)
@@ -22,16 +24,15 @@ const drilldownSkill = computed(() => trace.nodes.value.find(n => n.id === drill
 // 是否处于"无会话选择"状态（sessionId 为空）
 const needsSessionSelect = computed(() => !sessionId.value)
 
-// hermes-agent 原生会话列表（从 state.db 获取，包含完整历史）
-const hermesSessions = ref<SessionSummary[]>([])
+// 跨所有 profile 的会话列表（合并 orchestrator + worker-coder + worker-researcher 等）
+const allSessions = ref<Array<SessionSummary & { profile?: string }>>([])
 const loadingSessions = ref(false)
 
-// 会话列表：优先用 hermes-agent 原生会话（更完整），fallback 到 chatStore
 const sessionList = computed(() => {
-  if (hermesSessions.value.length > 0) {
-    return hermesSessions.value
+  if (allSessions.value.length > 0) {
+    return allSessions.value
       .sort((a, b) => (b.last_active ?? b.started_at) - (a.last_active ?? a.started_at))
-      .slice(0, 50)
+      .slice(0, 100)
       .map(s => ({
         id: s.id,
         title: s.title || '(未命名会话)',
@@ -39,12 +40,13 @@ const sessionList = computed(() => {
         isRunning: s.ended_at == null,
         updatedAt: s.last_active ?? s.started_at,
         messageCount: s.message_count,
+        profile: s.profile || '',
       }))
   }
   // Fallback: chatStore.sessions（Studio 导入的会话）
   return [...chatStore.sessions]
     .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, 50)
+    .slice(0, 100)
     .map(s => ({
       id: s.id,
       title: s.title || '(未命名会话)',
@@ -52,20 +54,43 @@ const sessionList = computed(() => {
       isRunning: s.endedAt === null,
       updatedAt: s.updatedAt,
       messageCount: s.messageCount ?? 0,
+      profile: s.profile || '',
     }))
 })
 
-// 当进入会话选择模式时，加载 hermes-agent 原生会话
+// 当进入会话选择模式时，跨所有 profile 加载会话
 watch(needsSessionSelect, async (need) => {
-  if (need) {
-    loadingSessions.value = true
+  if (!need) return
+  loadingSessions.value = true
+  allSessions.value = []
+  try {
+    // 获取所有 profile 名称（容错：profiles 可能为空）
+    let profileNames: string[] = []
     try {
-      hermesSessions.value = await fetchHermesSessions()
-    } catch {
-      hermesSessions.value = []
-    } finally {
-      loadingSessions.value = false
+      const profiles = (profilesStore as any)?.profiles
+      if (Array.isArray(profiles)) {
+        profileNames = profiles.map((p: any) => p?.name).filter(Boolean)
+      }
+    } catch { /* profilesStore 未初始化 */ }
+    const targets = profileNames.length > 0 ? profileNames : ['default']
+
+    // 并行查询所有 profile 的会话
+    const results = await Promise.allSettled(
+      targets.map((name: string) => fetchHermesSessions(undefined, undefined, name).then(sessions =>
+        sessions.map(s => ({ ...s, profile: name }))
+      ))
+    )
+    const merged: Array<SessionSummary & { profile?: string }> = []
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        merged.push(...result.value)
+      }
     }
+    allSessions.value = merged
+  } catch {
+    allSessions.value = []
+  } finally {
+    loadingSessions.value = false
   }
 }, { immediate: true })
 
@@ -155,6 +180,7 @@ function exportDossier() {
         >
           <span class="run-trace-session-picker__dot" :class="{ 'is-live': s.isRunning }"></span>
           <span class="run-trace-session-picker__title">{{ s.title }}</span>
+          <span v-if="s.profile" class="run-trace-session-picker__profile">{{ s.profile }}</span>
           <span class="run-trace-session-picker__meta">{{ s.model }} · {{ s.messageCount }}条 · {{ fmtTime(s.updatedAt) }}</span>
           <span v-if="s.isRunning" class="run-trace-session-picker__badge">运行中</span>
         </button>
@@ -209,6 +235,7 @@ function exportDossier() {
 }
 .run-trace-session-picker__title { flex: 1; min-width: 0; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .run-trace-session-picker__meta { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+.run-trace-session-picker__profile { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-muted); flex-shrink: 0; text-transform: uppercase; }
 .run-trace-session-picker__badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: var(--success); color: #fff; flex-shrink: 0; }
 
 /* ── 正常 trace 视图 ── */
