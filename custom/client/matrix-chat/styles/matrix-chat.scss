@@ -1,0 +1,656 @@
+// Matrix Chat CSS Variables and Styles
+// Based on element-web design system (Pure Ink theme mapping)
+@use './_tokens' as *;
+
+// ─── Group Layout ────────────────────────────────────────
+.mx_EventTile {
+  position: relative;
+  max-width: 100%;
+  flex-shrink: 0;
+
+  // Avatar in left gutter
+  .mx_EventTile_avatar {
+    position: absolute;
+    top: 14px;
+    left: 8px;
+    z-index: 9;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  // Sender name
+  .mx_DisambiguatedProfile {
+    line-height: 20px;
+    margin-left: var(--mx-left-gutter);
+    max-width: calc(100% - var(--mx-left-gutter));
+  }
+
+  // Message line
+  .mx_EventTile_line {
+    position: relative;
+    padding-top: 1px;
+    padding-bottom: 3px;
+    padding-left: var(--mx-left-gutter);
+    line-height: 22px;
+    border-radius: 8px;
+    transition: background-color 0.15s ease;
+  }
+
+  // Timestamp (absolute positioned left)
+  .mx_MessageTimestamp {
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 56px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+
+    &.mx_MessageTimestamp--visible {
+      opacity: 1;
+    }
+  }
+
+  // Hover background
+  &:hover .mx_EventTile_line {
+    background-color: var(--mx-event-selected-bg);
+  }
+
+  // Selected state
+  &.mx_EventTile--selected .mx_EventTile_line {
+    background-color: var(--mx-event-selected-bg);
+    box-shadow: inset var(--mx-selected-shadow-offset-x) 0 0 var(--mx-selected-shadow-spread) var(--accent-primary);
+  }
+
+  // Continuation
+  &.mx_EventTile_continuation {
+    padding-top: 0;
+
+    .mx_EventTile_avatar {
+      display: none;
+    }
+
+    .mx_DisambiguatedProfile {
+      display: none;
+    }
+  }
+}
+
+// ─── Bubble Layout ───────────────────────────────────────
+.mx_EventTile_bubbleLayout {
+  margin-top: calc(var(--mx-gutter-size) / 2);
+  margin-left: var(--bubble-margin-inline-start, 48px);
+  max-width: unset;
+  padding-top: 0;
+
+  .mx_EventTile_line {
+    position: relative;
+    border-radius: 8px;
+    padding: 8px 12px;
+    max-width: var(--mx-bubble-max-width);
+  }
+
+  .mx_EventTile_content {
+    max-width: var(--mx-bubble-max-width);
+  }
+
+  &.mx_EventTile--own .mx_EventTile_line {
+    margin-left: auto;
+    background: var(--msg-user-bg);
+  }
+
+  &:not(.mx_EventTile--own) .mx_EventTile_line {
+    background: var(--msg-assistant-bg);
+  }
+
+  &.mx_EventTile_continuation {
+    margin-top: 2px;
+  }
+
+  &.mx_EventTile_lastInSection {
+    margin-bottom: calc(var(--mx-gutter-size) / 2);
+  }
+}
+
+// ─── Message Content (markdown-body) ─────────────────────
+.mx_EventTile_content {
+  overflow: hidden;
+  text-align: start;
+
+  &.mx_EventTile_content--big-emoji {
+    font-size: 48px;
+    line-height: 57px;
+  }
+}
+
+.mx_EventTile_body {
+  white-space: pre-wrap;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  word-break: break-word;
+
+  &.mx_EventTile_body--big-emoji {
+    font-size: 48px;
+    line-height: 57px;
+  }
+}
+
+.mx_EventTile_emote {
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+// ─── HTML Content ───────────────────────────────────────
+.mx_EventTile_html {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  word-break: break-word;
+
+  pre, code {
+    font-family: var(--font-code, monospace) !important;
+    background-color: var(--mx-code-bg);
+  }
+
+  code:not(pre *) {
+    background-color: var(--mx-code-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 2px 4px;
+    line-height: 22px;
+    margin-right: 2px;
+  }
+
+  code {
+    white-space: pre-wrap;
+  }
+
+  pre {
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+
+    code {
+      white-space: pre;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+  }
+
+  blockquote {
+    border-left: 2px solid var(--accent-primary);
+    color: var(--text-secondary);
+    border-radius: 2px;
+    padding: 0 10px;
+    margin: 4px 0;
+  }
+
+  a {
+    color: var(--accent-info);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: inherit !important;
+    color: inherit;
+    margin: 8px 0;
+  }
+
+  h1, h2 {
+    font-size: 1.5em;
+    border-bottom: none !important;
+  }
+
+  ul {
+    list-style-type: disc;
+    padding-left: 1.5em;
+  }
+
+  ol {
+    list-style-position: inside;
+    padding-left: 0.5em;
+  }
+
+  p {
+    margin: 4px 0;
+  }
+}
+
+// ─── Action Bar ──────────────────────────────────────────
+.mx_MessageActionBar {
+  position: absolute;
+  top: -4px;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 5;
+  background: var(--mx-action-bar-bg);
+  border-radius: var(--mx-action-bar-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 2px;
+
+  &.mx_MessageActionBar--visible {
+    opacity: 1;
+  }
+}
+
+.mx_EventTile:hover .mx_MessageActionBar,
+.mx_EventTile--selected .mx_MessageActionBar {
+  opacity: 1;
+}
+
+.mx_MessageActionBar_button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--accent-primary);
+    background: rgba(var(--accent-primary-rgb), 0.08);
+  }
+
+  &.mx_MessageActionBar_button--danger:hover {
+    color: var(--error);
+    background: rgba(var(--error-rgb), 0.08);
+  }
+
+  &.mx_MessageActionBar_button--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+
+    &:hover {
+      color: var(--text-secondary);
+      background: transparent;
+    }
+  }
+}
+
+// ─── Reactions Row ───────────────────────────────────────
+.mx_ReactionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.mx_ReactionsRowButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  transition: all 0.15s ease;
+  color: var(--text-secondary);
+
+  &:hover {
+    background: rgba(var(--accent-primary-rgb), 0.06);
+    border-color: rgba(var(--accent-primary-rgb), 0.3);
+  }
+
+  &.mx_ReactionsRowButton--selected {
+    background: rgba(var(--accent-primary-rgb), 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    font-weight: 500;
+  }
+}
+
+.mx_ReactionsRowButton_emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.mx_ReactionsRowButton_count {
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 8px;
+  text-align: center;
+}
+
+.mx_ReactionsRow_showAll {
+  font-size: 12px;
+  color: var(--accent-primary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ─── Read Marker ─────────────────────────────────────────
+.mx_ReadMarker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin: 4px 0;
+
+  .mx_ReadMarker_line {
+    flex: 1;
+    height: 2px;
+    background: var(--mx-read-marker-color);
+  }
+
+  .mx_ReadMarker_text {
+    font-size: 11px;
+    color: var(--mx-read-marker-color);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+// ─── Date Separator ──────────────────────────────────────
+.mx_DateSeparator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  margin: 4px 0;
+
+  .mx_DateSeparator_text {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    padding: 4px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+  }
+}
+
+// ─── Typing Notification ───────────────────────────────────
+.mx_TypingNotification {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  min-height: 24px;
+
+  .mx_TypingNotification_avatars {
+    display: flex;
+    align-items: center;
+  }
+
+  .mx_TypingNotification_avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-left: -4px;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  .mx_TypingNotification_text {
+    font-style: italic;
+  }
+}
+
+// ─── Room Tile ───────────────────────────────────────────
+.mx_RoomTile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-radius: var(--mx-room-tile-radius);
+
+  &:hover {
+    background: var(--mx-room-tile-hover-bg);
+  }
+
+  &.mx_RoomTile--selected {
+    background: var(--mx-room-tile-active-bg);
+  }
+
+  &.mx_RoomTile--unread {
+    .mx_RoomTile_name {
+      font-weight: 600;
+    }
+  }
+}
+
+.mx_RoomTile_avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.mx_RoomTile_info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mx_RoomTile_top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mx_RoomTile_name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.mx_RoomTile_preview {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mx_RoomTile_badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-on-accent);
+  background: var(--accent-primary);
+  border-radius: 10px;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+// ─── Context Menu ────────────────────────────────────────
+.mx_MessageContextMenu {
+  position: absolute;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  min-width: 180px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  z-index: 1000;
+}
+
+.mx_MessageContextMenu_item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: rgba(var(--accent-primary-rgb), 0.06);
+  }
+
+  &.mx_MessageContextMenu_item--danger {
+    color: var(--error);
+
+    &:hover {
+      background: rgba(var(--error-rgb), 0.06);
+    }
+  }
+}
+
+// ─── Reply Chain ─────────────────────────────────────────
+.mx_ReplyChain {
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  border-left: 2px solid var(--accent-primary);
+  background: rgba(var(--accent-primary-rgb), 0.04);
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: rgba(var(--accent-primary-rgb), 0.08);
+  }
+}
+
+.mx_ReplyChain_sender {
+  font-weight: 600;
+  color: var(--accent-primary);
+  font-size: 12px;
+}
+
+.mx_ReplyChain_content {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ─── Sender Profile ──────────────────────────────────────
+.mx_DisambiguatedProfile {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent-primary);
+  }
+}
+
+// ─── Edited Marker ───────────────────────────────────────
+.mx_EventTile_edited {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  cursor: default;
+}
+
+// ─── Thread Info ─────────────────────────────────────────
+.mx_ThreadInfo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(var(--accent-primary-rgb), 0.04);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 12px;
+
+  &:hover {
+    background: rgba(var(--accent-primary-rgb), 0.1);
+  }
+}
+
+.mx_ThreadInfo_count {
+  font-weight: 500;
+  color: var(--accent-primary);
+}
+
+.mx_ThreadInfo_lastReply {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+// ─── Read receipt msgOption (element right gutter) ───────────
+.mx_EventTile_footer {
+  // ensure footer is a flex row so the msgOption can sit on the right
+  display: flex;
+  align-items: center;
+  gap: var(--mx-space-2x, 8px);
+}
+
+.mx_EventTile_msgOption {
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+// ─── Mobile Adaptation ───────────────────────────────────
+@media (max-width: 768px) {
+  .mx_EventTile {
+    .mx_EventTile_line {
+      margin-right: 0;
+    }
+
+    .mx_EventTile_content {
+      margin-right: 0;
+    }
+  }
+
+  .mx_MessageActionBar {
+    position: static;
+    opacity: 1;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    margin-top: 4px;
+  }
+}

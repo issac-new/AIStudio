@@ -1,0 +1,46 @@
+diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
+index dc8105f2..9dcd134e 100644
+--- a/packages/client/src/App.vue
++++ b/packages/client/src/App.vue
+@@ -9,6 +9,7 @@ import AppSidebar from '@/components/layout/AppSidebar.vue'
+ import DesktopTitleBar from '@/components/layout/DesktopTitleBar.vue'
+ import { useKeyboard } from '@/composables/useKeyboard'
+ import { useAppStore } from '@/stores/hermes/app'
++import { useAuthStore } from '@/stores/hermes/auth'
+ import SessionSearchModal from '@/components/hermes/chat/SessionSearchModal.vue'
+ import AuthEventListener from '@/components/auth/AuthEventListener.vue'
+ import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.vue'
+@@ -16,17 +17,19 @@ import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.v
+ const { isDark, isComic } = useTheme()
+ const { t } = useI18n()
+ const appStore = useAppStore()
++const authStore = useAuthStore()
+ const route = useRoute()
+ 
+ const themeOverrides = computed(() => getThemeOverrides(isDark.value, isComic.value))
+ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
+ 
+ const isLoginPage = computed(() => route.name === 'login')
+-const usesPageSidebar = computed(() =>
+-  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.workflow'].includes(route.name as string),
+-)
+-const showAppSidebar = computed(() => !isLoginPage.value && !usesPageSidebar.value)
+-const showMobileMenuButton = computed(() => !isLoginPage.value && (showAppSidebar.value || usesPageSidebar.value))
++// Chat-related routes are now children of hermes.cockpit and render inside
++// the cockpit layout. AppSidebar stays visible for all authenticated routes.
++const usesPageSidebar = computed(() => false)
++const isFullscreen = computed(() => route.meta?.fullscreen === true)
++const showAppSidebar = computed(() => !isLoginPage.value && !isFullscreen.value)
++const showMobileMenuButton = computed(() => !isLoginPage.value && !isFullscreen.value && showAppSidebar.value)
+ 
+ const nodeVersionLow = computed(() => {
+   const v = appStore.nodeVersion
+@@ -55,6 +58,8 @@ watch(isLoginPage, (loginPage) => {
+     appStore.stopHealthPolling()
+     return
+   }
++  // Restore user session on page refresh (authStore.user is lost on reload)
++  authStore.fetchUser()
+   appStore.loadModels()
+   appStore.startHealthPolling()
+ }, {

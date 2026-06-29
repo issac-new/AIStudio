@@ -1,0 +1,66 @@
+diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
+index 492b2c2a..2f2bdb04 100644
+--- a/packages/client/src/components/hermes/chat/ChatPanel.vue
++++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
+@@ -34,17 +34,17 @@ import OutlinePanel from "./OutlinePanel.vue";
+ import FilesPanel from "./FilesPanel.vue";
+ import TerminalPanel from "./TerminalPanel.vue";
+ import PageSidebarNav from "@/components/layout/PageSidebarNav.vue";
+-import SettingsCircuitBadge from "@/components/layout/SettingsCircuitBadge.vue";
+-import { isStoredSuperAdmin } from "@/api/client";
++import { useAuthStore } from "@/stores/hermes/auth";
+ 
+ const chatStore = useChatStore();
+ const appStore = useAppStore();
+ const profilesStore = useProfilesStore();
+ const sessionBrowserPrefsStore = useSessionBrowserPrefsStore();
++const authStore = useAuthStore();
+ const router = useRouter();
+ const message = useMessage();
+ const { t } = useI18n();
+-const isSuperAdmin = computed(() => isStoredSuperAdmin());
++const isSuperAdmin = computed(() => authStore.isSuperAdmin);
+ 
+ const showOutline = ref(false);
+ const messageListRef = ref<InstanceType<typeof MessageList> | null>(null);
+@@ -762,10 +762,6 @@ const contextMenuOptions = computed(() => {
+   return options
+ });
+ 
+-function openSettingsPage() {
+-  router.push({ name: "hermes.settings" });
+-}
+-
+ function handleContextMenu(e: MouseEvent, sessionId: string) {
+   e.preventDefault();
+   contextSessionId.value = sessionId;
+@@ -1266,23 +1262,14 @@ async function handleSessionModelCustomSubmit() {
+         />
+       </div>
+       <div v-if="showSessions" class="page-sidebar-bottom">
+-        <button class="page-sidebar-menu-btn" type="button" @click="openSettingsPage">
+-          <svg
+-            width="16"
+-            height="16"
+-            viewBox="0 0 24 24"
+-            fill="none"
+-            stroke="currentColor"
+-            stroke-width="1.8"
+-            stroke-linecap="round"
+-            stroke-linejoin="round"
+-          >
+-            <circle cx="12" cy="12" r="3" />
+-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
++        <button class="page-sidebar-menu-btn" type="button" @click="authStore.logout()">
++          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
++            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
++            <polyline points="16 17 21 12 16 7" />
++            <line x1="21" y1="12" x2="9" y2="12" />
+           </svg>
+-          <span>{{ t("sidebar.settings") }}</span>
++          <span>{{ t('sidebar.logout') }}</span>
+         </button>
+-        <SettingsCircuitBadge />
+       </div>
+     </aside>
+ 

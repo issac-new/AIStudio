@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/api/hermes/sessions.ts b/packages/client/src/api/hermes/sessions.ts
+index 072001d8..7611e2cc 100644
+--- a/packages/client/src/api/hermes/sessions.ts
++++ b/packages/client/src/api/hermes/sessions.ts
+@@ -95,7 +95,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
+   if (profile) params.set('profile', profile)
+   const query = params.toString()
+   const res = await request<{ sessions: SessionSummary[] }>(`/api/hermes/sessions${query ? `?${query}` : ''}`)
+-  return res.sessions
++  return res?.sessions ?? []
+ }
+ 
+ /**
+@@ -108,7 +108,7 @@ export async function fetchHermesSessions(source?: string, limit?: number, profi
+   if (profile) params.set('profile', profile)
+   const query = params.toString()
+   const res = await request<{ sessions: SessionSummary[] }>(`/api/hermes/sessions/hermes${query ? `?${query}` : ''}`)
+-  return res.sessions
++  return res?.sessions ?? []
+ }
+ 
+ export async function searchSessions(q: string, source?: string, limit?: number, profile?: string): Promise<SessionSearchResult[]> {

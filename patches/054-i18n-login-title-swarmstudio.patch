@@ -1,0 +1,88 @@
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -1,6 +1,6 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: 'Geben Sie Benutzername und Passwort ein, um fortzufahren.',
+     placeholder: 'Zugangs-Token',
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -1,6 +1,6 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: 'Introduce tu nombre de usuario y contrasena para continuar.',
+     placeholder: 'Token de acceso',
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -1,6 +1,6 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: 'Entrez votre nom d\'utilisateur et votre mot de passe pour continuer.',
+     placeholder: 'Jeton d\'acces',
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -1,6 +1,6 @@
+ export default {
+   // ログイン
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: 'ユーザー名とパスワードを入力して続行してください。',
+     placeholder: 'アクセストークン',
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -1,6 +1,6 @@
+ export default {
+   // 로그인
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: '계속하려면 사용자 이름과 비밀번호를 입력하세요.',
+     placeholder: '액세스 토큰',
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -1,6 +1,6 @@
+ export default {
+   // Login
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: 'Insira seu nome de usuario e senha para continuar.',
+     placeholder: 'Token de acesso',
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -1,6 +1,6 @@
+ export default {
+ 
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: 'Введите имя пользователя и пароль для продолжения.',
+     placeholder: 'Токен доступа',
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -1,6 +1,6 @@
+ export default {
+   // 登入
+   login: {
+-    title: 'Hermes Web UI',
++    title: 'SwarmStudio',
+     description: '輸入使用者名稱和密碼以繼續。',
+     placeholder: '存取權杖',

@@ -1,0 +1,149 @@
+// 驾驶舱样式 · Pure Ink（仅用 CSS 变量，无自定义色值）
+// 统一选中态语言：左侧 3px 色条 + 浅底
+// 间距：8 倍数 4/8/12/16/24/32；圆角 6/8/12
+// 色彩纪律：仅两档背景——工作区(--bg-primary) 与 面板面(--bg-card)；
+//          侧栏不再使用 --bg-sidebar，与工作区同面，靠分隔线区分。
+
+.cockpit {
+  height: calc(100 * var(--vh, 1vh));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.cockpit__body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// ── 三列通用 ──
+.cockpit-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  transition: flex 0.2s ease;
+
+  // 默认宽度比例（折叠/最大化时覆盖）
+  // 左/右栏统一使用 --bg-primary，与中栏同面，消除背景断层
+  &--left { flex: 1 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
+  &--mid { flex: 1.5 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
+  &--right { flex: 2 1 0; min-width: 360px; background: var(--bg-primary); }
+
+  // 折叠：宽度收为 32px 竖条
+  &.is-collapsed { flex: 0 0 32px !important; min-width: 0; }
+  &.is-collapsed .cockpit-col__inner { display: none; }
+
+  // 最大化：占满剩余空间（其他栏隐藏）
+  &.is-maximized { flex: 1 1 100% !important; min-width: 0; }
+
+  // 被其他栏的最大化隐藏
+  &.is-hidden-by-max { display: none; }
+}
+
+.cockpit-col__inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// 折叠竖条（贴边）
+.cockpit-rail {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 10px;
+  cursor: pointer;
+  width: 100%;
+  & .cockpit-rail__label {
+    writing-mode: vertical-rl;
+    letter-spacing: 2px;
+    font-size: 15px;
+    color: var(--text-muted);
+  }
+  &:hover .cockpit-rail__label { color: var(--text-primary); }
+}
+.is-collapsed .cockpit-rail { display: flex; }
+
+// 折叠按钮（列内侧边缘）
+.cockpit-collapse-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 14px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  color: var(--text-muted);
+  border-radius: 3px;
+  padding: 0;
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
+}
+
+// ── 统一选中态（左色条 + 浅底）──
+.cockpit-sel-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-primary);
+  display: none;
+}
+.is-selected .cockpit-sel-bar { display: block; }
+.cockpit-kanban__task.is-selected { background: var(--bg-secondary); }
+// 折叠竖条背景统一为面板面色，避免与工作区形成色差
+.is-collapsed { background: var(--bg-card); }
+
+// ── P5: 历史弹窗 overlay ──
+.cockpit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 40; }
+// 通知下拉面板：透明遮罩（仅用于点击外部关闭，不暗化背景）
+.cockpit-overlay--clear { background: transparent; z-index: 1000; }
+.cockpit-modal-anchor { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 41; }
+
+// ── 统一滚动条 ──
+// 细窄、半透明，与主题边框色协调；仅覆盖 cockpit 内的可滚动区域
+.cockpit ::-webkit-scrollbar { width: 6px; height: 6px; }
+.cockpit ::-webkit-scrollbar-track { background: transparent; }
+.cockpit ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+.cockpit ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+.cockpit { scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
+
+// ── 键盘焦点环 ──
+// 仅键盘导航时显示（:focus-visible），鼠标点击不触发
+.cockpit button:focus-visible,
+.cockpit input:focus-visible,
+.cockpit select:focus-visible,
+.cockpit textarea:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+// ── 弹窗入场动画 ──
+@keyframes cockpit-modal-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.cockpit-modal-anchor { animation: cockpit-modal-in 0.18s ease-out; }
+
+// ── 下拉面板入场动画 ──
+@keyframes cockpit-dropdown-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cockpit-probe { animation: cockpit-dropdown-in 0.15s ease-out; }

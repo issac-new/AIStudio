@@ -1,0 +1,68 @@
+diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
+index cbb1d4a1..4231800d 100644
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -37,6 +37,7 @@ const toast = useMessage();
+ 
+ const isSystem = computed(() => props.message.role === "system");
+ const isAgentError = computed(() => props.message.role === "assistant" && props.message.systemType === "error");
++const isGatewayNotice = computed(() => props.message.systemType === "gateway");
+ 
+ const effectiveHeadingIdPrefix = computed(() => props.headingIdPrefix || `msg-${props.message.id}`);
+ const isCommandMessage = computed(() => props.message.role === "command" || props.message.systemType === "command");
+@@ -850,6 +851,7 @@ onBeforeUnmount(() => {
+             :class="{
+               system: isSystem,
+               'agent-error': isAgentError,
++              gateway: isGatewayNotice,
+               command: isCommandMessage,
+               'command-error': isCommandError,
+               'speech-playing': isPlayingThisMessage && !isPausedThisMessage,
+@@ -934,7 +936,7 @@ onBeforeUnmount(() => {
+               </div>
+             </div>
+             <MarkdownRenderer
+-              v-if="parsedThinking.body && message.role === 'assistant'"
++              v-if="parsedThinking.body && message.role === 'assistant' && !isGatewayNotice"
+               :content="parsedThinking.body"
+               :heading-id-prefix="effectiveHeadingIdPrefix"
+             />
+@@ -987,9 +989,9 @@ onBeforeUnmount(() => {
+               :heading-id-prefix="effectiveHeadingIdPrefix"
+             />
+ 
+-            <!-- Render system message content -->
++            <!-- Render system / gateway-notice content (compact, no slash icon) -->
+             <MarkdownRenderer
+-              v-if="message.role === 'system' && message.content && !isCommandMessage"
++              v-if="(message.role === 'system' || isGatewayNotice) && message.content && !isCommandMessage"
+               :content="message.content"
+             />
+             <div v-if="isStatusCommand" class="command-result command-status">
+@@ -1139,6 +1141,10 @@ onBeforeUnmount(() => {
+     align-items: flex-start;
+   }
+ 
++  &.gateway {
++    align-items: flex-start;
++  }
++
+   &.highlight {
+     .message-bubble {
+       box-shadow: 0 0 0 1px rgba(var(--accent-primary-rgb), 0.45);
+@@ -1203,6 +1209,15 @@ onBeforeUnmount(() => {
+     padding: 8px 10px;
+   }
+ 
++  &.gateway {
++    border-left: none;
++    border: 1px solid rgba(var(--accent-primary-rgb), 0.12);
++    background-color: rgba(var(--accent-primary-rgb), 0.04);
++    color: $text-secondary;
++    max-width: min(100%, 960px);
++    padding: 8px 10px;
++  }
++
+   &.command-error {
+     border-color: rgba(var(--warning-rgb), 0.28);
+     background-color: rgba(var(--warning-rgb), 0.06);

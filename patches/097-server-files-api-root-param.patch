@@ -1,0 +1,107 @@
+diff --git a/packages/server/src/routes/hermes/download.ts b/packages/server/src/routes/hermes/download.ts
+index d67ca71a..fea0ec34 100644
+--- a/packages/server/src/routes/hermes/download.ts
++++ b/packages/server/src/routes/hermes/download.ts
+@@ -1,5 +1,5 @@
+ import Router from '@koa/router'
+-import { basename, extname, isAbsolute } from 'path'
++import { basename, extname, isAbsolute, join, resolve } from 'path'
+ import {
+   createFileProvider,
+   localProvider,
+@@ -70,6 +70,7 @@ function requestedProfile(ctx: any): string {
+ downloadRoutes.get('/api/hermes/download', async (ctx) => {
+   const filePath = ctx.query.path as string | undefined
+   const fileName = ctx.query.name as string | undefined
++  const root = (ctx.query.root as string | undefined)?.trim() || undefined
+ 
+   if (!filePath) {
+     ctx.status = 400
+@@ -80,8 +81,13 @@ downloadRoutes.get('/api/hermes/download', async (ctx) => {
+   try {
+     const profile = requestedProfile(ctx)
+     // Validate the path first
+-    // Support both absolute and relative paths
+-    const validPath = isAbsolute(filePath) ? validatePath(filePath) : resolveHermesPath(filePath, profile)
++    // Support both absolute and relative paths; when a root is provided,
++    // resolve the relative path against it (same semantics as files/list).
++    const validPath = isAbsolute(filePath)
++      ? validatePath(filePath)
++      : root
++        ? resolve(root, filePath)  // root acts as the base for relative paths
++        : resolveHermesPath(filePath, profile)
+ 
+     // Choose provider: always use local for upload directory files
+     let data: Buffer
+diff --git a/packages/server/src/routes/hermes/files.ts b/packages/server/src/routes/hermes/files.ts
+index f01227b3..75ce6333 100644
+--- a/packages/server/src/routes/hermes/files.ts
++++ b/packages/server/src/routes/hermes/files.ts
+@@ -1,10 +1,12 @@
+ import Router from '@koa/router'
++import { join, resolve } from 'path'
+ import {
+   createFileProvider,
+   resolveHermesPath,
+   isSensitivePath,
+   MAX_EDIT_SIZE,
+ } from '../../services/hermes/file-provider'
++import { relativePathFromBase } from '../../services/hermes/hermes-path'
+ import { requireSuperAdmin } from '../../middleware/user-auth'
+ import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../../lib/multipart'
+ 
+@@ -12,7 +14,14 @@ function requestedProfile(ctx: any): string | undefined {
+   return ctx.state?.profile?.name
+ }
+ 
++function requestedRoot(ctx: any): string | undefined {
++  const root = ctx.query.root as string | undefined
++  return root?.trim() || undefined
++}
++
+ function resolveRequestPath(ctx: any, relativePath: string): string {
++  const root = requestedRoot(ctx)
++  if (root) return relativePath ? join(root, relativePath) : root
+   return resolveHermesPath(relativePath, requestedProfile(ctx))
+ }
+ 
+@@ -20,7 +29,21 @@ async function createRequestFileProvider(ctx: any) {
+   return createFileProvider(requestedProfile(ctx))
+ }
+ 
++// When a `root` is in effect, the FileProvider still computes entry.path relative
++// to the profile home (or falls back to a bare filename for paths outside home).
++// The `?root=` client model assumes entry.path is relative to `root`, so that
++// navigation like fetchEntries(entry.path) resolves correctly via join(root, path).
++// Re-base each entry's path against `root` when present; keep the provider's value otherwise.
++function rebaseEntryPath<T extends { name: string; path: string }>(entry: T, dirAbsPath: string, root: string | undefined): T {
++  if (!root) return entry
++  const absEntry = resolve(dirAbsPath, entry.name)
++  const rel = relativePathFromBase(absEntry, root)
++  return { ...entry, path: rel ?? entry.name }
++}
++
+ function withAbsolutePath<T extends { path: string }>(ctx: any, entry: T): T & { absolutePath: string } {
++  const root = requestedRoot(ctx)
++  if (root) return { ...entry, absolutePath: join(root, entry.path) }
+   return { ...entry, absolutePath: resolveRequestPath(ctx, entry.path) }
+ }
+ 
+@@ -49,6 +72,7 @@ function handleError(ctx: any, err: any) {
+ // GET /api/hermes/files/list?path=
+ fileRoutes.get('/api/hermes/files/list', async (ctx) => {
+   const relativePath = (ctx.query.path as string) || ''
++  const root = requestedRoot(ctx)
+   try {
+     const absPath = resolveRequestPath(ctx, relativePath)
+     const provider = await createRequestFileProvider(ctx)
+@@ -57,7 +81,8 @@ fileRoutes.get('/api/hermes/files/list', async (ctx) => {
+       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
+       return a.name.localeCompare(b.name)
+     })
+-    ctx.body = { entries: entries.map(entry => withAbsolutePath(ctx, entry)), path: relativePath, absolutePath: absPath }
++    const rebased = root ? entries.map(entry => rebaseEntryPath(entry, absPath, root)) : entries
++    ctx.body = { entries: rebased.map(entry => withAbsolutePath(ctx, entry)), path: relativePath, absolutePath: absPath }
+   } catch (err: any) {
+     handleError(ctx, err)
+   }

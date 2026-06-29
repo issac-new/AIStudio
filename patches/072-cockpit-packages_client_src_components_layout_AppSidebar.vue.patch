@@ -1,0 +1,49 @@
+diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
+index e429a02b..338581b2 100644
+--- a/packages/client/src/components/layout/AppSidebar.vue
++++ b/packages/client/src/components/layout/AppSidebar.vue
+@@ -12,17 +12,19 @@ import LanguageSwitch from "@/components/layout/LanguageSwitch.vue";
+ import ThemeSwitch from "@/components/layout/ThemeSwitch.vue";
+ import VersionManagementModal from "@/components/layout/VersionManagementModal.vue";
+ import { changelog } from "@/data/changelog";
+-import { getStoredUsername, isStoredSuperAdmin } from "@/api/client";
++import { useAuthStore } from "@/stores/hermes/auth";
++import { getStoredUsername } from "@/api/client";
+ 
+ const { t } = useI18n();
+ const message = useMessage();
+ const route = useRoute();
+ const router = useRouter();
+ const appStore = useAppStore();
++const authStore = useAuthStore();
+ const selectedKey = computed(() => {
+   return route.name as string;
+ });
+-const isSuperAdmin = computed(() => isStoredSuperAdmin());
++const isSuperAdmin = computed(() => authStore.isSuperAdmin);
+ const currentUsername = computed(() => getStoredUsername());
+ const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === '1';
+ const isDesktopShell = computed(() =>
+@@ -119,6 +121,13 @@ function openVersionManagement() {
+             </svg>
+             <span>{{ t("sidebar.kanban") }}</span>
+           </RouteLinkItem>
++          <RouteLinkItem class="nav-item" :to="{ name: 'hermes.cockpit' }" :active="selectedKey === 'hermes.cockpit'">
++            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
++              <circle cx="12" cy="12" r="3" />
++              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
++            </svg>
++            <span>{{ t("sidebar.cockpit") }}</span>
++          </RouteLinkItem>
+           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.channels' }" :active="selectedKey === 'hermes.channels'">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+@@ -348,7 +357,7 @@ function openVersionManagement() {
+     </div>
+ 
+     <div class="sidebar-top-actions">
+-      <RouteLinkItem class="nav-item sidebar-return-tab" :to="{ name: 'hermes.chat' }" :title="t('sidebar.backToChat')">
++      <RouteLinkItem class="nav-item sidebar-return-tab" :to="{ name: 'hermes.cockpit' }" :title="t('sidebar.backToChat')">
+         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+           <polyline points="15 18 9 12 15 6" />
+           <line x1="9" y1="12" x2="21" y2="12" />

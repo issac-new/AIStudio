@@ -1,0 +1,15 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index b88b6e96..c2a1d4ef 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -2482,6 +2482,10 @@ export default {
+     codeBlock: '代码块',
+     emoji: '表情',
+     uploadFile: '上传文件',
++    options: '选项',
++    threadStartDisabled: '无法基于已有关系（回复/编辑）的消息发起话题',
++    undecryptable: '无法解密此消息',
++    historyLoadError: '服务器错误，无法加载更早的历史',
+     // Thread interactions
+     threads: '话题',
+     thread: '话题',

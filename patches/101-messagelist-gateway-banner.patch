@@ -1,0 +1,38 @@
+diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
+index 5c9199d5..740eab59 100644
+--- a/packages/client/src/components/hermes/chat/MessageList.vue
++++ b/packages/client/src/components/hermes/chat/MessageList.vue
+@@ -23,6 +23,7 @@ import MessageItem from "./MessageItem.vue";
+ import { LIVE_CHAT_MAX_LOADED_MESSAGES, useChatStore, type Message } from "@/stores/hermes/chat";
+ import thinkingImage from "@/assets/thinking.gif";
+ import { useToolTraceVisibility } from "@/composables/useToolTraceVisibility";
++import GatewayNoticeBanner from "@/custom/chat/components/GatewayNoticeBanner.vue";
+ 
+ const chatStore = useChatStore();
+ const { t } = useI18n();
+@@ -124,11 +125,12 @@ const displayMessages = computed(() => {
+       return toolTraceVisible.value && !!m.toolName && !(chatStore.isRunActive && currentToolIds.has(m.id));
+     }
+     if (
+-      m.role === "assistant" &&
+-      m.isStreaming &&
+-      !m.content?.trim() &&
+-      !!m.reasoning?.trim() &&
+-      currentToolCalls.value.length === 0
++      m.systemType === "gateway" ||
++      (m.role === "assistant" &&
++       m.isStreaming &&
++       !m.content?.trim() &&
++       !!m.reasoning?.trim() &&
++       currentToolCalls.value.length === 0)
+     ) {
+       return false;
+     }
+@@ -469,6 +471,7 @@ defineExpose({
+ 
+ <template>
+   <div class="message-list-shell">
++    <GatewayNoticeBanner :session-id="chatStore.activeSessionId" :messages="chatStore.messages" />
+     <VirtualMessageList
+       :key="chatStore.activeSessionId || 'chat-empty'"
+       ref="listRef"

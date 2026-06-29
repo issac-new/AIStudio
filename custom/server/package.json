@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "comment": "显式声明 CJS(无 type:module):overlay 根 package.json 的 type:module 会经符号链接泄漏到 server custom 文件,但 ts-node 用 CJS require 加载它们,会 ERR_REQUIRE_ESM。本 package.json 覆盖为 CJS,匹配 ts-node。"
+}

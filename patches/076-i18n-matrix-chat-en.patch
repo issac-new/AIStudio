@@ -1,0 +1,15 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index efcc5613..8a1c2b3d 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -2485,6 +2485,10 @@ export default {
+     codeBlock: 'Code block',
+     emoji: 'Emoji',
+     uploadFile: 'Upload file',
++    options: 'Options',
++    threadStartDisabled: 'Cannot start a thread from a message with an existing relation',
++    undecryptable: 'Unable to decrypt message',
++    historyLoadError: 'Server error, unable to load earlier history',
+     // Thread interactions
+     threads: 'Threads',
+     thread: 'Thread',

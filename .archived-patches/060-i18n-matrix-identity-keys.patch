@@ -1,0 +1,474 @@
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+index bb943e00..c0c7c3dc 100644
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -47,6 +47,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "Matrix-Benutzer-ID",
++    matrixUserIdPlaceholder: "Matrix-Benutzer-ID eingeben (z. B. @user:matrix.org)",
++    resetPassword: "Passwort zurücksetzen",
++    displayName: "Anzeigename",
++    displayNamePlaceholder: "Anzeigename eingeben",
+     title: 'Kontoverwaltung',
+     description: 'Benutzer erstellen, Rollen zuweisen und steuern, auf welche Profile normale Administratoren zugreifen koennen.',
+     create: 'Benutzer erstellen',
+@@ -179,6 +184,7 @@ export default {
+ 
+   // Sidebar
+   sidebar: {
++    matrixChat: "Matrix-Chat",
+     chat: 'Chat',
+     backToChat: 'Zuruck',
+     search: 'Suche',
+@@ -1102,6 +1108,17 @@ jobTriggered: 'Job ausgelost',
+ 
+   // Settings
+   settings: {
++    matrixIdentity: {
++      title: "Matrix-Identität",
++      userId: "Matrix-Benutzer-ID",
++      displayName: "Anzeigename",
++      homeserver: "Homeserver",
++      role: "Rolle",
++      authSource: "Authentifizierungsquelle",
++      passwordManagedByMatrix: "Passwort wird von Matrix verwaltet",
++      changeMatrixPassword: "Matrix-Passwort ändern",
++      passwordChanged: "Matrix-Passwort erfolgreich geändert",
++    },
+     title: 'Einstellungen',
+     saved: 'Gespeichert',
+     saveFailed: 'Speichern fehlgeschlagen',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index b48ca1d9..604cdbc5 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -58,6 +58,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "Matrix User ID",
++    matrixUserIdPlaceholder: "Enter Matrix user ID (e.g. @user:matrix.org)",
++    resetPassword: "Reset Password",
++    displayName: "Display Name",
++    displayNamePlaceholder: "Enter display name",
+     title: 'Account Management',
+     description: 'Create users, assign roles, and control which profiles regular admins can access.',
+     create: 'Create User',
+@@ -193,6 +198,7 @@ export default {
+ 
+   // Sidebar
+   sidebar: {
++    matrixChat: "Matrix Chat",
+     chat: 'Chat',
+     backToChat: 'Back',
+     search: 'Search',
+@@ -718,6 +724,8 @@ export default {
+       created: 'Board created',
+       archived: 'Board archived',
+       archiveConfirm: 'Archive the current board?',
++      createFailed: "Failed to create board",
++      archiveFailed: "Failed to archive board",
+     },
+     iframe: {
+       loading: 'Loading kanban board…',
+@@ -866,6 +874,8 @@ export default {
+       taskSpecified: 'Task specified',
+       taskMoved: 'Task moved',
+       taskArchived: 'Task archived',
++      taskDeleted: "Task deleted",
++      loadFailed: "Failed to load task",
+       moveFailed: 'Failed to move task',
+       createFailed: 'Failed to create task',
+       bulkFailed: 'Bulk operation failed',
+@@ -1491,6 +1501,17 @@ export default {
+ 
+   // Settings
+   settings: {
++    matrixIdentity: {
++      title: "Matrix Identity",
++      userId: "Matrix User ID",
++      displayName: "Display Name",
++      homeserver: "Homeserver",
++      role: "Role",
++      authSource: "Auth Source",
++      passwordManagedByMatrix: "Password is managed by Matrix",
++      changeMatrixPassword: "Change Matrix Password",
++      passwordChanged: "Matrix password changed successfully",
++    },
+     title: 'Settings',
+     saved: 'Saved',
+     saveFailed: 'Save failed',
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+index dec5b2c7..19dd84d7 100644
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -47,6 +47,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "ID de usuario de Matrix",
++    matrixUserIdPlaceholder: "Ingrese el ID de usuario de Matrix (p. ej. @user:matrix.org)",
++    resetPassword: "Restablecer contraseña",
++    displayName: "Nombre para mostrar",
++    displayNamePlaceholder: "Ingrese el nombre para mostrar",
+     title: 'Gestion de cuentas',
+     description: 'Crea usuarios, asigna roles y controla que perfiles pueden usar los administradores normales.',
+     create: 'Crear usuario',
+@@ -179,6 +184,7 @@ export default {
+ 
+   // Sidebar
+   sidebar: {
++    matrixChat: "Chat de Matrix",
+     chat: 'Chat',
+     backToChat: 'Volver',
+     search: 'Buscar',
+@@ -1102,6 +1108,17 @@ jobTriggered: 'Job ejecutado',
+ 
+   // Settings
+   settings: {
++    matrixIdentity: {
++      title: "Identidad de Matrix",
++      userId: "ID de usuario de Matrix",
++      displayName: "Nombre para mostrar",
++      homeserver: "Servidor principal",
++      role: "Rol",
++      authSource: "Origen de autenticación",
++      passwordManagedByMatrix: "La contraseña está gestionada por Matrix",
++      changeMatrixPassword: "Cambiar contraseña de Matrix",
++      passwordChanged: "Contraseña de Matrix cambiada correctamente",
++    },
+     title: 'Configuracion',
+     saved: 'Guardado',
+     saveFailed: 'Error al guardar',
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+index 709ca735..73210d7f 100644
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -47,6 +47,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "ID utilisateur Matrix",
++    matrixUserIdPlaceholder: "Saisir l'ID utilisateur Matrix (ex. @user:matrix.org)",
++    resetPassword: "Réinitialiser le mot de passe",
++    displayName: "Nom d'affichage",
++    displayNamePlaceholder: "Saisir le nom d'affichage",
+     title: 'Gestion des comptes',
+     description: 'Creez des utilisateurs, attribuez des roles et controlez les profils accessibles aux administrateurs standard.',
+     create: 'Creer un utilisateur',
+@@ -179,6 +184,7 @@ export default {
+ 
+   // Sidebar
+   sidebar: {
++    matrixChat: "Chat Matrix",
+     chat: 'Discussion',
+     backToChat: 'Retour',
+     search: 'Rechercher',
+@@ -1102,6 +1108,17 @@ jobTriggered: 'Job declenche',
+ 
+   // Settings
+   settings: {
++    matrixIdentity: {
++      title: "Identité Matrix",
++      userId: "ID utilisateur Matrix",
++      displayName: "Nom d'affichage",
++      homeserver: "Serveur principal",
++      role: "Rôle",
++      authSource: "Source d'authentification",
++      passwordManagedByMatrix: "Le mot de passe est géré par Matrix",
++      changeMatrixPassword: "Changer le mot de passe Matrix",
++      passwordChanged: "Mot de passe Matrix modifié avec succès",
++    },
+     title: 'Parametres',
+     saved: 'Enregistre',
+     saveFailed: 'Echec de l\'enregistrement',
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+index 7a8e2fe2..a4299d98 100644
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -47,6 +47,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "Matrix ユーザー ID",
++    matrixUserIdPlaceholder: "Matrix ユーザー ID を入力（例: @user:matrix.org）",
++    resetPassword: "パスワードをリセット",
++    displayName: "表示名",
++    displayNamePlaceholder: "表示名を入力",
+     title: 'アカウント管理',
+     description: 'ユーザーを作成し、ロールを割り当て、通常管理者がアクセスできるプロファイルを制御します。',
+     create: 'ユーザー作成',
+@@ -179,6 +184,7 @@ export default {
+   },
+ 
+   sidebar: {
++    matrixChat: "Matrix チャット",
+     chat: 'チャット',
+     backToChat: '戻る',
+     search: '検索',
+@@ -1102,6 +1108,17 @@ export default {
+ 
+   // 設定
+   settings: {
++    matrixIdentity: {
++      title: "Matrix ID",
++      userId: "Matrix ユーザー ID",
++      displayName: "表示名",
++      homeserver: "ホームサーバー",
++      role: "ロール",
++      authSource: "認証元",
++      passwordManagedByMatrix: "パスワードは Matrix により管理されています",
++      changeMatrixPassword: "Matrix パスワードを変更",
++      passwordChanged: "Matrix パスワードを変更しました",
++    },
+     title: '設定',
+     saved: '保存しました',
+     saveFailed: '保存に失敗しました',
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+index 8e8bdb0b..82c98665 100644
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -47,6 +47,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "Matrix 사용자 ID",
++    matrixUserIdPlaceholder: "Matrix 사용자 ID 입력 (예: @user:matrix.org)",
++    resetPassword: "비밀번호 재설정",
++    displayName: "표시 이름",
++    displayNamePlaceholder: "표시 이름 입력",
+     title: '계정 관리',
+     description: '사용자를 만들고 역할을 할당하며 일반 관리자가 접근할 수 있는 프로필을 제어합니다.',
+     create: '사용자 만들기',
+@@ -179,6 +184,7 @@ export default {
+   },
+ 
+   sidebar: {
++    matrixChat: "Matrix 채팅",
+     chat: '채팅',
+     backToChat: '뒤로',
+     search: '검색',
+@@ -1102,6 +1108,17 @@ export default {
+ 
+   // 설정
+   settings: {
++    matrixIdentity: {
++      title: "Matrix 식별",
++      userId: "Matrix 사용자 ID",
++      displayName: "표시 이름",
++      homeserver: "홈서버",
++      role: "역할",
++      authSource: "인증 출처",
++      passwordManagedByMatrix: "비밀번호는 Matrix에서 관리됩니다",
++      changeMatrixPassword: "Matrix 비밀번호 변경",
++      passwordChanged: "Matrix 비밀번호가 변경되었습니다",
++    },
+     title: '설정',
+     saved: '저장됨',
+     saveFailed: '저장 실패',
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+index e8399aff..3ef3af50 100644
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -47,6 +47,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "ID de usuário Matrix",
++    matrixUserIdPlaceholder: "Insira o ID de usuário Matrix (ex. @user:matrix.org)",
++    resetPassword: "Redefinir senha",
++    displayName: "Nome de exibição",
++    displayNamePlaceholder: "Insira o nome de exibição",
+     title: 'Gerenciamento de contas',
+     description: 'Crie usuarios, atribua funcoes e controle quais perfis administradores comuns podem acessar.',
+     create: 'Criar usuario',
+@@ -179,6 +184,7 @@ export default {
+ 
+   // Sidebar
+   sidebar: {
++    matrixChat: "Chat Matrix",
+     chat: 'Chat',
+     backToChat: 'Voltar',
+     search: 'Pesquisar',
+@@ -1102,6 +1108,17 @@ jobTriggered: 'Job acionado',
+ 
+   // Settings
+   settings: {
++    matrixIdentity: {
++      title: "Identidade Matrix",
++      userId: "ID de usuário Matrix",
++      displayName: "Nome de exibição",
++      homeserver: "Servidor principal",
++      role: "Papel",
++      authSource: "Fonte de autenticação",
++      passwordManagedByMatrix: "A senha é gerenciada pelo Matrix",
++      changeMatrixPassword: "Alterar senha do Matrix",
++      passwordChanged: "Senha do Matrix alterada com sucesso",
++    },
+     title: 'Configuracoes',
+     saved: 'Salvo',
+     saveFailed: 'Falha ao salvar',
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+index a9848c3a..3e4ad2c8 100644
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -45,6 +45,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "ID пользователя Matrix",
++    matrixUserIdPlaceholder: "Введите ID пользователя Matrix (напр. @user:matrix.org)",
++    resetPassword: "Сбросить пароль",
++    displayName: "Отображаемое имя",
++    displayNamePlaceholder: "Введите отображаемое имя",
+     title: 'Управление учётными записями',
+     description: 'Создавайте пользователей, назначайте роли и управляйте доступом к конфигурациям для обычных администраторов.',
+     create: 'Создать пользователя',
+@@ -105,6 +110,7 @@ export default {
+ 
+ 
+   sidebar: {
++    matrixChat: "Matrix-чат",
+     chat: 'Чат',
+     backToChat: 'Назад',
+     search: 'Поиск',
+@@ -528,6 +534,8 @@ export default {
+       created: 'Канбан создан',
+       archived: 'Канбан архивирован',
+       archiveConfirm: 'Архивировать текущий канбан?',
++      createFailed: "Не удалось создать доску",
++      archiveFailed: "Не удалось архивировать доску",
+     },
+     columns: {
+       triage: 'На сортировку',
+@@ -1100,6 +1108,17 @@ export default {
+ 
+ 
+   settings: {
++    matrixIdentity: {
++      title: "Идентичность Matrix",
++      userId: "ID пользователя Matrix",
++      displayName: "Отображаемое имя",
++      homeserver: "Домашний сервер",
++      role: "Роль",
++      authSource: "Источник аутентификации",
++      passwordManagedByMatrix: "Пароль управляется Matrix",
++      changeMatrixPassword: "Изменить пароль Matrix",
++      passwordChanged: "Пароль Matrix успешно изменён",
++    },
+     title: 'Настройки',
+     saved: 'Сохранено',
+     saveFailed: 'Ошибка сохранения',
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+index d5f85846..b062c1e6 100644
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -47,6 +47,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "Matrix 使用者 ID",
++    matrixUserIdPlaceholder: "輸入 Matrix 使用者 ID（如 @user:matrix.org）",
++    resetPassword: "重設密碼",
++    displayName: "顯示名稱",
++    displayNamePlaceholder: "輸入顯示名稱",
+     title: '帳號管理',
+     description: '建立使用者、分配角色，並控制一般管理員可存取的設定檔。',
+     create: '建立使用者',
+@@ -179,6 +184,7 @@ export default {
+   },
+ 
+   sidebar: {
++    matrixChat: "Matrix 聊天",
+     chat: '對話',
+     backToChat: '返回',
+     search: '搜尋',
+@@ -624,6 +630,8 @@ export default {
+       created: '看板已建立',
+       archived: '看板已封存',
+       archiveConfirm: '確定封存目前看板？',
++      createFailed: "建立看板失敗",
++      archiveFailed: "封存看板失敗",
+     },
+     columns: {
+       triage: '待分類',
+@@ -1238,6 +1246,17 @@ export default {
+ 
+   // 設定
+   settings: {
++    matrixIdentity: {
++      title: "Matrix 身份",
++      userId: "Matrix 使用者 ID",
++      displayName: "顯示名稱",
++      homeserver: "Homeserver 位址",
++      role: "角色",
++      authSource: "認證來源",
++      passwordManagedByMatrix: "密碼由 Matrix 管理",
++      changeMatrixPassword: "修改 Matrix 密碼",
++      passwordChanged: "Matrix 密碼修改成功",
++    },
+     title: '設定',
+     saved: '已儲存',
+     saveFailed: '儲存失敗',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 1de0e0be..49306069 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -56,6 +56,11 @@ export default {
+   },
+ 
+   users: {
++    matrixUserId: "Matrix 用户 ID",
++    matrixUserIdPlaceholder: "输入 Matrix 用户 ID（如 @user:matrix.org）",
++    resetPassword: "重置密码",
++    displayName: "显示名称",
++    displayNamePlaceholder: "输入显示名称",
+     title: '账户管理',
+     description: '创建用户、分配角色，并控制普通管理员可访问的配置。',
+     create: '创建用户',
+@@ -191,6 +196,7 @@ export default {
+   },
+ 
+   sidebar: {
++    matrixChat: "Matrix 聊天",
+     chat: '对话',
+     backToChat: '返回',
+     search: '搜索',
+@@ -716,6 +722,8 @@ export default {
+       created: '看板已创建',
+       archived: '看板已归档',
+       archiveConfirm: '确定归档当前看板？',
++      createFailed: "创建看板失败",
++      archiveFailed: "归档看板失败",
+     },
+     iframe: {
+       loading: '正在加载看板…',
+@@ -861,6 +869,8 @@ export default {
+       taskSpecified: '任务已细化',
+       taskMoved: '任务已移动',
+       taskArchived: '任务已归档',
++      taskDeleted: "任务已删除",
++      loadFailed: "加载任务失败",
+       moveFailed: '移动任务失败',
+       createFailed: '创建任务失败',
+       bulkFailed: '批量操作失败',
+@@ -1478,6 +1488,17 @@ export default {
+ 
+   // 设置
+   settings: {
++    matrixIdentity: {
++      title: "Matrix 身份",
++      userId: "Matrix 用户 ID",
++      displayName: "显示名称",
++      homeserver: "Homeserver 地址",
++      role: "角色",
++      authSource: "认证来源",
++      passwordManagedByMatrix: "密码由 Matrix 管理",
++      changeMatrixPassword: "修改 Matrix 密码",
++      passwordChanged: "Matrix 密码修改成功",
++    },
+     title: '设置',
+     saved: '已保存',
+     saveFailed: '保存失败',

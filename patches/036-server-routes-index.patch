@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/routes/index.ts b/packages/server/src/routes/index.ts
+index e9402724..d4f7cd57 100644
+--- a/packages/server/src/routes/index.ts
++++ b/packages/server/src/routes/index.ts
+@@ -33,7 +33,7 @@ import { fileRoutes } from './hermes/files'
+ import { downloadRoutes } from './hermes/download'
+ import { jobRoutes } from './hermes/jobs'
+ import { cronHistoryRoutes } from './hermes/cron-history'
+-import { kanbanRoutes } from './hermes/kanban'
++import { kanbanDashboardUrlRoutes, kanbanRoutes } from './hermes/kanban'
+ import { workflowRoutes } from './hermes/workflows'
+ import { ttsRoutes, ttsProtectedRoutes } from './hermes/tts'
+ import { sttProtectedRoutes } from './hermes/stt'
+@@ -93,6 +93,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(downloadRoutes.routes())
+   app.use(jobRoutes.routes())
+   app.use(cronHistoryRoutes.routes())
++  app.use(kanbanDashboardUrlRoutes.routes())
+   app.use(kanbanRoutes.routes())
+   app.use(workflowRoutes.routes())
+   app.use(ttsProtectedRoutes.routes())

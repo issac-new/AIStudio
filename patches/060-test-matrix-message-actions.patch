@@ -1,0 +1,214 @@
+diff --git a/tests/client/matrix-message-actions.test.ts b/tests/client/matrix-message-actions.test.ts
+new file mode 100644
+index 00000000..bf040c06
+--- /dev/null
++++ b/tests/client/matrix-message-actions.test.ts
+@@ -0,0 +1,208 @@
++// @vitest-environment jsdom
++//
++// Tests for the message-action parity work (react / reply / reply-in-thread)
++// against the element-web reference behaviour:
++//   - ReactionPicker.onChoose toggle semantics (send if absent, redact if present)
++//   - RoomContext power-level gating (canReact / canSendMessages / canSelfRedact)
++//   - EventTileActionBarViewModel.canShowReplyInThreadAction + isThreadReplyAllowed
++//   - MessageContextMenu ReplyInThreadButton branch (open existing vs start new)
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { createPinia, setActivePinia } from 'pinia'
++
++const ROOM_ID = '!room:server'
++const MY_USER = '@me:server'
++const EVENT_ID = '$evt:server'
++const ROOT_ID = '$root:server'
++
++// ── Mocked SDK room state ────────────────────────────────────────────────
++const maySendEvent = vi.fn(() => true)
++const maySendMessage = vi.fn(() => true)
++const maySendRedactionForEvent = vi.fn(() => true)
++const mockRoomState = { maySendEvent, maySendMessage, maySendRedactionForEvent }
++
++// A minimal annotation set used by getEventReactions.
++function makeAnnotationSet(entries: Array<{ key: string; sender: string; id: string; redacted?: boolean }>) {
++  return {
++    getSortedAnnotationsByKey: () => {
++      const byKey = new Map<string, any[]>()
++      for (const e of entries) {
++        if (e.redacted) continue
++        if (!byKey.has(e.key)) byKey.set(e.key, [])
++        byKey.get(e.key)!.push({ getSender: () => e.sender, getId: () => e.id, isRedacted: () => false })
++      }
++      return Array.from(byKey.entries())
++    },
++  }
++}
++
++let currentAnnotations: any = null
++const mockRoom: any = {
++  roomId: ROOM_ID,
++  currentState: mockRoomState,
++  relations: {
++    getChildEventsForEvent: vi.fn(() => currentAnnotations),
++  },
++}
++
++const sendEvent = vi.fn()
++const redactEvent = vi.fn()
++const mockClient: any = {
++  getUserId: () => MY_USER,
++  getRoom: () => mockRoom,
++  sendEvent,
++  redactEvent,
++}
++
++vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
++  useMatrixClientStore: () => ({ client: mockClient, userId: MY_USER, error: null }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
++  useMatrixRoomStore: () => ({
++    activeRoom: mockRoom,
++    activeRoomId: ROOM_ID,
++  }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-events', () => ({
++  matrixEventBus: {
++    onSelectRoom: { value: null },
++    onThreadUpdate: { value: null },
++    onRoomListChange: { value: null },
++    onTimeline: { value: null },
++  },
++}))
++
++import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
++
++// Helper to build a fake MatrixEvent with the bits the composer store reads.
++function fakeEvent(overrides: Record<string, any> = {}) {
++  const content = overrides.content ?? { msgtype: 'm.text', body: 'hi' }
++  return {
++    getId: () => overrides.id ?? EVENT_ID,
++    getType: () => overrides.type ?? 'm.room.message',
++    getSender: () => overrides.sender ?? MY_USER,
++    getStatus: () => overrides.status ?? null,
++    getContent: () => content,
++    getOriginalContent: () => content,
++    getRelation: () => overrides.relation ?? undefined,
++    isRedacted: () => overrides.redacted ?? false,
++    isRelation: () => !!overrides.relation,
++    replyEventId: overrides.replyEventId,
++    threadRootId: overrides.threadRootId,
++    isThreadRoot: overrides.isThreadRoot ?? false,
++    replacingEvent: () => overrides.replacingEvent ?? null,
++  } as any
++}
++
++describe('matrix-composer store — reaction toggle (element-web ReactionPicker.onChoose parity)', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++    vi.clearAllMocks()
++    currentAnnotations = null
++  })
++
++  it('sends a reaction when the user has not reacted yet', async () => {
++    const store = useMatrixComposerStore()
++    const result = await store.toggleReaction(EVENT_ID, '👍')
++    expect(result).toBe('sent')
++    expect(sendEvent).toHaveBeenCalledWith(
++      ROOM_ID,
++      'm.reaction',
++      expect.objectContaining({
++        'm.relates_to': expect.objectContaining({ rel_type: 'm.annotation', event_id: EVENT_ID, key: '👍' }),
++      }),
++    )
++    expect(redactEvent).not.toHaveBeenCalled()
++  })
++
++  it('redacts the existing reaction when the user already reacted', async () => {
++    currentAnnotations = makeAnnotationSet([
++      { key: '👍', sender: MY_USER, id: '$my-react:server' },
++      { key: '👍', sender: '@other:server', id: '$other-react:server' },
++    ])
++    const store = useMatrixComposerStore()
++    const result = await store.toggleReaction(EVENT_ID, '👍')
++    expect(result).toBe('redacted')
++    expect(redactEvent).toHaveBeenCalledWith(ROOM_ID, '$my-react:server')
++    expect(sendEvent).not.toHaveBeenCalled()
++  })
++
++  it('getMyReactionKeys returns the keys the current user has sent', () => {
++    currentAnnotations = makeAnnotationSet([
++      { key: '👍', sender: MY_USER, id: '$r1:server' },
++      { key: '🎉', sender: '@other:server', id: '$r2:server' },
++      { key: '❤️', sender: MY_USER, id: '$r3:server' },
++    ])
++    const store = useMatrixComposerStore()
++    const keys = store.getMyReactionKeys(EVENT_ID)
++    // Only the current user's keys, not @other's 🎉 (order-independent).
++    expect(keys.size).toBe(2)
++    expect(keys.has('👍')).toBe(true)
++    expect(keys.has('❤️')).toBe(true)
++    expect(keys.has('🎉')).toBe(false)
++  })
++})
++
++describe('matrix-composer store — power-level gating (element-web RoomContext parity)', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++    vi.clearAllMocks()
++  })
++
++  it('canSendMessages reflects room.currentState.maySendMessage', () => {
++    maySendMessage.mockReturnValue(true)
++    const store = useMatrixComposerStore()
++    expect(store.canSendMessages).toBe(true)
++  })
++
++  it('canSendMessages is false when maySendMessage returns false', () => {
++    maySendMessage.mockReturnValue(false)
++    const store = useMatrixComposerStore()
++    expect(store.canSendMessages).toBe(false)
++  })
++
++  it('canReact reflects room.currentState.maySendEvent(m.reaction)', () => {
++    maySendEvent.mockReturnValue(true)
++    const store = useMatrixComposerStore()
++    expect(store.canReact).toBe(true)
++    expect(maySendEvent).toHaveBeenCalledWith('m.reaction', MY_USER)
++  })
++})
++
++describe('matrix-composer store — reply-in-thread guards (element-web EventTileActionBarViewModel parity)', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++  })
++
++  it('canShowReplyInThreadAction is true for a normal message in the room timeline', () => {
++    const store = useMatrixComposerStore()
++    expect(store.canShowReplyInThreadAction(fakeEvent(), 'room')).toBe(true)
++  })
++
++  it('canShowReplyInThreadAction is false inside a thread timeline', () => {
++    const store = useMatrixComposerStore()
++    expect(store.canShowReplyInThreadAction(fakeEvent(), 'thread')).toBe(false)
++  })
++
++  it('canShowReplyInThreadAction is false for m.key.verification.request', () => {
++    const store = useMatrixComposerStore()
++    const evt = fakeEvent({ content: { msgtype: 'm.key.verification.request', body: '' } })
++    expect(store.canShowReplyInThreadAction(evt, 'room')).toBe(false)
++  })
++
++  it('canShowReplyInThreadAction is false for m.beacon_info', () => {
++    const store = useMatrixComposerStore()
++    expect(store.canShowReplyInThreadAction(fakeEvent({ type: 'm.beacon_info' }), 'room')).toBe(false)
++  })
++
++  it('isThreadReplyAllowed is false when the event has a non-thread relation (e.g. a reply)', () => {
++    const store = useMatrixComposerStore()
++    const reply = fakeEvent({ relation: { rel_type: 'm.annotation', event_id: 'x' } })
++    expect(store.isThreadReplyAllowed(reply)).toBe(false)
++  })
++
++  it('isThreadReplyAllowed is true when the relation is a thread relation', () => {
++    const store = useMatrixComposerStore()
++    const threadReply = fakeEvent({ relation: { rel_type: 'm.thread', event_id: ROOT_ID } })
++    expect(store.isThreadReplyAllowed(threadReply)).toBe(true)
++  })
++})

@@ -1,0 +1,43 @@
+diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index 001a3f7c..0bea01d1 100644
+--- a/packages/client/src/stores/hermes/chat.ts
++++ b/packages/client/src/stores/hermes/chat.ts
+@@ -4,6 +4,7 @@ import { getActiveProfileName, hasApiKey } from '@/api/client'
+ import { inferCodingAgentApiMode, normalizeCodingAgentApiMode } from '@/api/coding-agents'
+ import { getDownloadUrl } from '@/api/hermes/download'
+ import type { ProviderApiMode } from '@/api/hermes/system'
++import { tagGatewayNotice } from '@/custom/chat/gateway-notice'
+ import { defineStore } from 'pinia'
+ import { ref, computed, watch } from 'vue'
+ import { useAppStore } from './app'
+@@ -50,7 +51,7 @@ export interface Message {
+   // 不含 <think> 包裹标签；内容自身可以为多段纯文本。
+   reasoning?: string
+   queued?: boolean
+-  systemType?: 'command' | 'error' | 'fork-divider'
++  systemType?: 'command' | 'error' | 'fork-divider' | 'gateway'
+   commandAction?: string
+   commandData?: Record<string, unknown>
+   finishReason?: string | null
+@@ -432,7 +433,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
+       content: displayContent || '',
+       timestamp: Math.round(msg.timestamp * 1000),
+       reasoning: msg.reasoning ? msg.reasoning : undefined,
+-      systemType: displayRole === 'command' ? 'command' : undefined,
++      systemType: tagGatewayNotice(displayContent, displayRole === 'command' ? 'command' : undefined),
+       finishReason: readFinishReason(msg),
+       runMarker: readRunMarker(msg),
+     })
+@@ -1323,6 +1324,12 @@ export const useChatStore = defineStore('chat', () => {
+   }
+ 
+   function addMessage(sessionId: string, msg: Message) {
++    // 兜底：未显式指定 systemType 的消息，若是网关关闭/重启告警则打标，
++    // 供渲染层折叠为紧凑系统提示（两入口之一；历史回放入口在 mapHermesMessages）。
++    if (msg.systemType === undefined) {
++      const tagged = tagGatewayNotice(msg.content, msg.systemType)
++      if (tagged) msg.systemType = tagged as NonNullable<typeof msg.systemType>
++    }
+     const s = sessions.value.find(s => s.id === sessionId)
+     if (s) s.messages.push(msg)
+   }

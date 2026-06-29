@@ -1,0 +1,107 @@
+diff --git a/packages/client/src/stores/hermes/files.ts b/packages/client/src/stores/hermes/files.ts
+index b3a7f8d6..9d2e43e9 100644
+--- a/packages/client/src/stores/hermes/files.ts
++++ b/packages/client/src/stores/hermes/files.ts
+@@ -117,6 +117,7 @@ export const useFilesStore = defineStore('files', () => {
+   const currentPath = ref('')
+   const entries = ref<FileEntry[]>([])
+   const loading = ref(false)
++  const workspaceRoot = ref<string | undefined>(undefined)
+   const sortBy = ref<'name' | 'size' | 'modTime'>('name')
+   const sortOrder = ref<'asc' | 'desc'>('asc')
+ 
+@@ -164,7 +165,7 @@ export const useFilesStore = defineStore('files', () => {
+     if (path !== undefined) currentPath.value = path
+     loading.value = true
+     try {
+-      const result = await filesApi.listFiles(currentPath.value)
++      const result = await filesApi.listFiles(currentPath.value, workspaceRoot.value)
+       entries.value = result.entries
+     } catch (err) {
+       console.error('Failed to fetch files:', err)
+@@ -182,7 +183,7 @@ export const useFilesStore = defineStore('files', () => {
+   }
+ 
+   async function openEditor(filePath: string) {
+-    const result = await filesApi.readFile(filePath)
++    const result = await filesApi.readFile(filePath, workspaceRoot.value)
+     editingFile.value = {
+       path: filePath,
+       content: result.content,
+@@ -193,7 +194,7 @@ export const useFilesStore = defineStore('files', () => {
+ 
+   async function saveEditor() {
+     if (!editingFile.value) return
+-    await filesApi.writeFile(editingFile.value.path, editingFile.value.content)
++    await filesApi.writeFile(editingFile.value.path, editingFile.value.content, workspaceRoot.value)
+     editingFile.value.originalContent = editingFile.value.content
+   }
+ 
+@@ -203,10 +204,10 @@ export const useFilesStore = defineStore('files', () => {
+     if (isImageFile(entry.name)) {
+       previewFile.value = { path: entry.path, type: 'image' }
+     } else if (isMarkdownFile(entry.name)) {
+-      const result = await filesApi.readFile(entry.path)
++      const result = await filesApi.readFile(entry.path, workspaceRoot.value)
+       previewFile.value = { path: entry.path, type: 'markdown', content: result.content }
+     } else if (isTextFile(entry.name)) {
+-      const result = await filesApi.readFile(entry.path)
++      const result = await filesApi.readFile(entry.path, workspaceRoot.value)
+       previewFile.value = {
+         path: entry.path,
+         type: 'text',
+@@ -220,18 +221,18 @@ export const useFilesStore = defineStore('files', () => {
+ 
+   async function createDir(name: string, targetPath = currentPath.value) {
+     const path = targetPath ? `${targetPath}/${name}` : name
+-    await filesApi.mkDir(path)
++    await filesApi.mkDir(path, workspaceRoot.value)
+     await fetchEntries()
+   }
+ 
+   async function createFile(name: string) {
+     const path = currentPath.value ? `${currentPath.value}/${name}` : name
+-    await filesApi.writeFile(path, '')
++    await filesApi.writeFile(path, '', workspaceRoot.value)
+     await fetchEntries()
+   }
+ 
+   async function deleteEntry(entry: FileEntry) {
+-    await filesApi.deleteFile(entry.path, entry.isDir)
++    await filesApi.deleteFile(entry.path, entry.isDir, workspaceRoot.value)
+     if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
+       previewFile.value = null
+     }
+@@ -244,7 +245,7 @@ export const useFilesStore = defineStore('files', () => {
+   async function renameEntry(entry: FileEntry, newName: string) {
+     const parentPath = entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : ''
+     const newPath = parentPath ? `${parentPath}/${newName}` : newName
+-    await filesApi.renameFile(entry.path, newPath)
++    await filesApi.renameFile(entry.path, newPath, workspaceRoot.value)
+     if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
+       previewFile.value = null
+     }
+@@ -255,12 +256,12 @@ export const useFilesStore = defineStore('files', () => {
+   }
+ 
+   async function copyEntry(entry: FileEntry, destPath: string) {
+-    await filesApi.copyFile(entry.path, destPath)
++    await filesApi.copyFile(entry.path, destPath, workspaceRoot.value)
+     await fetchEntries()
+   }
+ 
+   async function uploadFiles(files: File[]) {
+-    await filesApi.uploadFiles(currentPath.value, files)
++    await filesApi.uploadFiles(currentPath.value, files, workspaceRoot.value)
+     await fetchEntries()
+   }
+ 
+@@ -279,7 +280,7 @@ export const useFilesStore = defineStore('files', () => {
+   })
+ 
+   return {
+-    currentPath, entries, loading, sortBy, sortOrder,
++    currentPath, entries, loading, workspaceRoot, sortBy, sortOrder,
+     editingFile, previewFile,
+     pathSegments, sortedEntries, hasUnsavedChanges,
+     fetchEntries, navigateTo, navigateUp,

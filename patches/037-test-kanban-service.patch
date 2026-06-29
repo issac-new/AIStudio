@@ -1,0 +1,13 @@
+diff --git a/tests/server/hermes-kanban-service.test.ts b/tests/server/hermes-kanban-service.test.ts
+index 59b51a6b..4eb0fd81 100644
+--- a/tests/server/hermes-kanban-service.test.ts
++++ b/tests/server/hermes-kanban-service.test.ts
+@@ -48,7 +48,7 @@ describe('hermes kanban service', () => {
+     await expect(service.getCapabilities()).resolves.toMatchObject({
+       source: 'hermes-cli',
+       supports: { boardsList: true, boardCreate: true, commentsWrite: true, dispatch: true, links: true },
+-      missing: expect.arrayContaining(['cliCurrentSwitch', 'bulk', 'homeSubscriptions']),
++      missing: expect.arrayContaining(['cliCurrentSwitch', 'bulk', 'events']),
+       capabilities: expect.arrayContaining([
+         expect.objectContaining({ key: 'commentsWrite', status: 'supported', canonicalCommand: 'comment', requiresBoard: true }),
+         expect.objectContaining({ key: 'links', status: 'supported', canonicalRoute: '/links', canonicalCommand: 'link/unlink', requiresBoard: true }),

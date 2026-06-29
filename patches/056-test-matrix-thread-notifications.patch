@@ -1,0 +1,65 @@
+diff --git a/tests/client/matrix-thread-notifications.test.ts b/tests/client/matrix-thread-notifications.test.ts
+new file mode 100644
+index 00000000..449b50c4
+--- /dev/null
++++ b/tests/client/matrix-thread-notifications.test.ts
+@@ -0,0 +1,59 @@
++// @vitest-environment jsdom
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { createPinia, setActivePinia } from 'pinia'
++import { NotificationCountType } from 'matrix-js-sdk'
++
++// mock room store: 提供一个可控的 activeRoom
++const mockRoom = {
++  threadsAggregateNotificationType: 0,
++}
++vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
++  useMatrixRoomStore: () => ({
++    get activeRoom() {
++      return mockRoom
++    },
++  }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
++  useMatrixClientStore: () => ({ client: null, error: null }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-events', () => ({
++  matrixEventBus: {
++    onSelectRoom: { value: null },
++    onThreadUpdate: { value: null },
++  },
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
++  useMatrixComposerStore: () => ({
++    composerMode: 'normal',
++    replyToEvent: null,
++    editingEvent: null,
++    stripPlainReply: (s: string) => s,
++  }),
++}))
++
++import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
++
++describe('matrix-thread store notification helper', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++  })
++
++  it('returns "highlight" when room has highlight thread notifications', () => {
++    mockRoom.threadsAggregateNotificationType = NotificationCountType.Highlight
++    const store = useMatrixThreadStore()
++    expect(store.getThreadNotificationIndicator()).toBe('highlight')
++  })
++
++  it('returns "unread" when room has total (non-highlight) thread notifications', () => {
++    mockRoom.threadsAggregateNotificationType = NotificationCountType.Total
++    const store = useMatrixThreadStore()
++    expect(store.getThreadNotificationIndicator()).toBe('unread')
++  })
++
++  it('returns "none" when no thread notifications', () => {
++    mockRoom.threadsAggregateNotificationType = 0
++    const store = useMatrixThreadStore()
++    expect(store.getThreadNotificationIndicator()).toBe('none')
++  })
++})

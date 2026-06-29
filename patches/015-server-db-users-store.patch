@@ -1,0 +1,156 @@
+diff --git a/packages/server/src/db/hermes/users-store.ts b/packages/server/src/db/hermes/users-store.ts
+index 0cc66828..158cae0f 100644
+--- a/packages/server/src/db/hermes/users-store.ts
++++ b/packages/server/src/db/hermes/users-store.ts
+@@ -16,6 +16,11 @@ export interface UserRecord {
+   updated_at: number
+   last_login_at: number | null
+   avatar: string
++  matrix_user_id: string | null
++  matrix_display_name: string | null
++  matrix_avatar_url: string | null
++  matrix_homeserver_url: string | null
++  auth_source: 'local' | 'matrix'
+ }
+ 
+ export interface UserProfileRecord {
+@@ -35,6 +40,9 @@ export interface UserSummary {
+   created_at: number
+   updated_at: number
+   last_login_at: number | null
++  matrix_user_id: string | null
++  matrix_display_name: string | null
++  matrix_avatar_url: string | null
+ }
+ 
+ export const DEFAULT_USERNAME = 'admin'
+@@ -82,6 +90,13 @@ export function findUserByUsername(username: string): UserRecord | null {
+   return row || null
+ }
+ 
++export function findByMatrixUserId(matrixUserId: string): UserRecord | null {
++  const db = getDb()
++  if (!db) return null
++  const row = db.prepare(`SELECT * FROM ${USERS_TABLE} WHERE matrix_user_id = ?`).get(matrixUserId) as UserRecord | undefined
++  return row || null
++}
++
+ export function findFirstUser(): UserRecord | null {
+   const db = getDb()
+   if (!db) return null
+@@ -93,7 +108,7 @@ export function listUsers(): UserSummary[] {
+   const db = getDb()
+   if (!db) return []
+   const users = db.prepare(
+-    `SELECT id, username, role, status, created_at, updated_at, last_login_at FROM ${USERS_TABLE} ORDER BY id ASC`
++    `SELECT id, username, role, status, created_at, updated_at, last_login_at, matrix_user_id, matrix_display_name, matrix_avatar_url FROM ${USERS_TABLE} ORDER BY id ASC`
+   ).all() as Array<Omit<UserSummary, 'profiles' | 'default_profile'>>
+   return users.map(user => {
+     const profiles = listUserProfiles(user.id)
+@@ -162,6 +177,67 @@ export function touchUserLogin(userId: UserId, at = Date.now()): void {
+   db.prepare(`UPDATE ${USERS_TABLE} SET last_login_at = ?, updated_at = ? WHERE id = ?`).run(at, at, id)
+ }
+ 
++export function syncMatrixMetadata(
++  userId: UserId,
++  data: {
++    displayName?: string
++    avatarUrl?: string
++    lastLoginAt?: number
++  }
++): boolean {
++  const db = getDb()
++  if (!db) return false
++  const id = normalizeUserId(userId)
++  if (!id) return false
++  const sets: string[] = []
++  const values: (string | number)[] = []
++  if (data.displayName !== undefined) {
++    sets.push('matrix_display_name = ?')
++    values.push(data.displayName)
++  }
++  if (data.avatarUrl !== undefined) {
++    sets.push('matrix_avatar_url = ?')
++    values.push(data.avatarUrl)
++  }
++  if (data.lastLoginAt !== undefined) {
++    sets.push('last_login_at = ?')
++    values.push(data.lastLoginAt)
++  }
++  if (sets.length === 0) return false
++  sets.push('updated_at = ?')
++  values.push(Date.now())
++  values.push(id)
++  const result = db.prepare(`UPDATE ${USERS_TABLE} SET ${sets.join(', ')} WHERE id = ?`).run(...values)
++  return result.changes > 0
++}
++
++export function updateMatrixUserMetadata(
++  matrixUserId: string,
++  data: {
++    role?: UserRole
++    status?: UserStatus
++  }
++): boolean {
++  const db = getDb()
++  if (!db) return false
++  const sets: string[] = []
++  const values: (string | number)[] = []
++  if (data.role !== undefined) {
++    sets.push('role = ?')
++    values.push(data.role)
++  }
++  if (data.status !== undefined) {
++    sets.push('status = ?')
++    values.push(data.status)
++  }
++  if (sets.length === 0) return false
++  sets.push('updated_at = ?')
++  values.push(Date.now())
++  values.push(matrixUserId)
++  const result = db.prepare(`UPDATE ${USERS_TABLE} SET ${sets.join(', ')} WHERE matrix_user_id = ?`).run(...values)
++  return result.changes > 0
++}
++
+ export function updateUserPassword(userId: UserId, password: string): boolean {
+   const db = getDb()
+   if (!db) return false
+@@ -224,6 +300,38 @@ export function createUser(input: {
+   return user
+ }
+ 
++export function createFromMatrix(data: {
++  matrixUserId: string
++  username: string
++  displayName: string
++  avatarUrl: string
++  homeserverUrl: string
++  role: UserRole
++}): UserRecord | null {
++  const db = getDb()
++  if (!db) return null
++  const now = Date.now()
++  db.prepare(
++    `INSERT INTO ${USERS_TABLE} (username, password_hash, role, status, created_at, updated_at, matrix_user_id, matrix_display_name, matrix_avatar_url, matrix_homeserver_url, auth_source)
++     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
++  ).run(
++    data.username,
++    '', // No local password for Matrix users
++    data.role,
++    'active',
++    now,
++    now,
++    data.matrixUserId,
++    data.displayName,
++    data.avatarUrl,
++    data.homeserverUrl,
++    'matrix'
++  )
++  const user = findByMatrixUserId(data.matrixUserId)
++  if (user) replaceUserProfiles(user.id, [DEFAULT_PROFILE_NAME], DEFAULT_PROFILE_NAME)
++  return user
++}
++
+ export function updateUser(input: {
+   userId: UserId
+   username?: string

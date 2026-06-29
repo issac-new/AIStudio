@@ -1,0 +1,75 @@
+diff --git a/tests/client/matrix-room-threads.test.ts b/tests/client/matrix-room-threads.test.ts
+new file mode 100644
+index 00000000..792e427c
+--- /dev/null
++++ b/tests/client/matrix-room-threads.test.ts
+@@ -0,0 +1,69 @@
++// @vitest-environment jsdom
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { createPinia, setActivePinia } from 'pinia'
++
++const ROOM_ID = '!room:server'
++const allSet = { filterId: 'all' }
++const mySet = { filterId: 'my' }
++const threadObj = { id: '$root:server' }
++
++const mockRoom = {
++  threadsTimelineSets: [allSet, mySet],
++  getThread: vi.fn((id: string) => (id === '$root:server' ? threadObj : null)),
++  createThreadsTimelineSets: vi.fn().mockResolvedValue(undefined),
++  fetchRoomThreads: vi.fn().mockResolvedValue(undefined),
++}
++
++const mockClient = {
++  getRoom: vi.fn((id: string) => (id === ROOM_ID ? mockRoom : null)),
++}
++
++vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
++  useMatrixClientStore: () => ({ client: mockClient, error: null }),
++}))
++vi.mock('@/custom/matrix-chat/stores/matrix-events', () => ({
++  matrixEventBus: {
++    onSelectRoom: { value: null },
++    onThreadUpdate: { value: null },
++    onRoomListChange: { value: null },
++    onTimeline: { value: null },
++  },
++}))
++
++import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
++
++describe('matrix-room store thread helpers', () => {
++  beforeEach(() => {
++    setActivePinia(createPinia())
++    vi.clearAllMocks()
++  })
++
++  it('getThreadsTimelineSet returns [0] for all, [1] for my', () => {
++    const store = useMatrixRoomStore()
++    store.activeRoomId = ROOM_ID
++    expect(store.getThreadsTimelineSet('all')).toBe(allSet)
++    expect(store.getThreadsTimelineSet('my')).toBe(mySet)
++  })
++
++  it('getThreadsTimelineSet returns undefined when no active room', () => {
++    const store = useMatrixRoomStore()
++    // activeRoomId 未设置 ⇒ activeRoom computed 为 null
++    expect(store.getThreadsTimelineSet('all')).toBe(undefined)
++  })
++
++  it('getThreadById returns the SDK Thread object', () => {
++    const store = useMatrixRoomStore()
++    store.activeRoomId = ROOM_ID
++    expect(store.getThreadById('$root:server')).toBe(threadObj)
++    expect(store.getThreadById('$missing:server')).toBe(null)
++  })
++
++  it('initRoomThreads calls createThreadsTimelineSets + fetchRoomThreads', async () => {
++    const store = useMatrixRoomStore()
++    store.activeRoomId = ROOM_ID
++    await store.initRoomThreads()
++    expect(mockRoom.createThreadsTimelineSets).toHaveBeenCalled()
++    expect(mockRoom.fetchRoomThreads).toHaveBeenCalled()
++  })
++})
++

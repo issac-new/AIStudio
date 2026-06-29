@@ -1,0 +1,109 @@
+diff --git a/packages/client/src/api/hermes/files.ts b/packages/client/src/api/hermes/files.ts
+index 9bd027d4..7a72561a 100644
+--- a/packages/client/src/api/hermes/files.ts
++++ b/packages/client/src/api/hermes/files.ts
+@@ -19,57 +19,67 @@ export interface FileStat {
+   permissions?: string
+ }
+ 
+-export async function listFiles(path: string = ''): Promise<{ entries: FileEntry[]; path: string; absolutePath?: string }> {
++export async function listFiles(path: string = '', root?: string): Promise<{ entries: FileEntry[]; path: string; absolutePath?: string }> {
+   const params = new URLSearchParams()
+   if (path) params.set('path', path)
++  if (root) params.set('root', root)
+   const query = params.toString()
+   return request<{ entries: FileEntry[]; path: string }>(`/api/hermes/files/list${query ? `?${query}` : ''}`)
+ }
+ 
+-export async function statFile(path: string): Promise<FileStat> {
+-  return request<FileStat>(`/api/hermes/files/stat?path=${encodeURIComponent(path)}`)
++export async function statFile(path: string, root?: string): Promise<FileStat> {
++  const params = new URLSearchParams({ path })
++  if (root) params.set('root', root)
++  return request<FileStat>(`/api/hermes/files/stat?${params.toString()}`)
+ }
+ 
+-export async function readFile(path: string): Promise<{ content: string; path: string; size: number }> {
+-  return request<{ content: string; path: string; size: number }>(`/api/hermes/files/read?path=${encodeURIComponent(path)}`)
++export async function readFile(path: string, root?: string): Promise<{ content: string; path: string; size: number }> {
++  const params = new URLSearchParams({ path })
++  if (root) params.set('root', root)
++  return request<{ content: string; path: string; size: number }>(`/api/hermes/files/read?${params.toString()}`)
+ }
+ 
+-export async function writeFile(path: string, content: string): Promise<void> {
+-  await request<{ ok: boolean }>('/api/hermes/files/write', {
++export async function writeFile(path: string, content: string, root?: string): Promise<void> {
++  const query = root ? `?root=${encodeURIComponent(root)}` : ''
++  await request<{ ok: boolean }>(`/api/hermes/files/write${query}`, {
+     method: 'PUT',
+     body: JSON.stringify({ path, content }),
+   })
+ }
+ 
+-export async function deleteFile(path: string, recursive: boolean = false): Promise<void> {
+-  await request<{ ok: boolean }>('/api/hermes/files/delete', {
++export async function deleteFile(path: string, recursive: boolean = false, root?: string): Promise<void> {
++  const query = root ? `?root=${encodeURIComponent(root)}` : ''
++  await request<{ ok: boolean }>(`/api/hermes/files/delete${query}`, {
+     method: 'DELETE',
+     body: JSON.stringify({ path, recursive }),
+   })
+ }
+ 
+-export async function renameFile(oldPath: string, newPath: string): Promise<void> {
+-  await request<{ ok: boolean }>('/api/hermes/files/rename', {
++export async function renameFile(oldPath: string, newPath: string, root?: string): Promise<void> {
++  const query = root ? `?root=${encodeURIComponent(root)}` : ''
++  await request<{ ok: boolean }>(`/api/hermes/files/rename${query}`, {
+     method: 'POST',
+     body: JSON.stringify({ oldPath, newPath }),
+   })
+ }
+ 
+-export async function mkDir(path: string): Promise<void> {
+-  await request<{ ok: boolean }>('/api/hermes/files/mkdir', {
++export async function mkDir(path: string, root?: string): Promise<void> {
++  const query = root ? `?root=${encodeURIComponent(root)}` : ''
++  await request<{ ok: boolean }>(`/api/hermes/files/mkdir${query}`, {
+     method: 'POST',
+     body: JSON.stringify({ path }),
+   })
+ }
+ 
+-export async function copyFile(srcPath: string, destPath: string): Promise<void> {
+-  await request<{ ok: boolean }>('/api/hermes/files/copy', {
++export async function copyFile(srcPath: string, destPath: string, root?: string): Promise<void> {
++  const query = root ? `?root=${encodeURIComponent(root)}` : ''
++  await request<{ ok: boolean }>(`/api/hermes/files/copy${query}`, {
+     method: 'POST',
+     body: JSON.stringify({ srcPath, destPath }),
+   })
+ }
+ 
+-export async function uploadFiles(targetDir: string, files: File[]): Promise<{ name: string; path: string }[]> {
++export async function uploadFiles(targetDir: string, files: File[], root?: string): Promise<{ name: string; path: string }[]> {
+   const base = getBaseUrlValue()
+   const formData = new FormData()
+   for (const file of files) {
+@@ -77,6 +87,7 @@ export async function uploadFiles(targetDir: string, files: File[]): Promise<{ n
+   }
+   const params = new URLSearchParams()
+   if (targetDir) params.set('path', targetDir)
++  if (root) params.set('root', root)
+   const query = params.toString()
+   const url = `${base}/api/hermes/files/upload${query ? `?${query}` : ''}`
+ 
+@@ -95,10 +106,11 @@ export async function uploadFiles(targetDir: string, files: File[]): Promise<{ n
+   return data.files
+ }
+ 
+-export function getFileDownloadUrl(relativePath: string, fileName?: string): string {
++export function getFileDownloadUrl(relativePath: string, fileName?: string, root?: string): string {
+   const base = getBaseUrlValue()
+   const params = new URLSearchParams({ path: relativePath })
+   if (fileName) params.set('name', fileName)
++  if (root) params.set('root', root)
+   const profileName = getActiveProfileName()
+   if (profileName) params.set('profile', profileName)
+   const token = getApiKey()

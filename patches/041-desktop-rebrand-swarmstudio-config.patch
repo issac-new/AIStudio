@@ -1,0 +1,99 @@
+diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+index 0e4fb0d1..ec205519 100644
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -1,5 +1,5 @@
+-appId: com.hermeswebui.studio
+-productName: Hermes Studio
++appId: com.swarmstudio.app
++productName: SwarmStudio
+ copyright: Copyright © 2026
+ 
+ directories:
+@@ -41,12 +41,59 @@ extraResources:
+       - "bin/**"
+       - "dist/**"
+       - "node_modules/**"
+-      # Drop other-platform node-pty prebuilds (saves ~45MB)
+-      - "!node_modules/node-pty/prebuilds/!(${platform}-${arch})/**"
++      # 排除 Vite 缓存 (860MB+ 的 deps_temp_* 缓存,绝不能进生产包)
++      - "!node_modules/.vite/**"
++      - "!node_modules/.tmp/**"
++      # Drop other-platform node-pty prebuilds (saves ~58MB)
++      - "!node_modules/node-pty/prebuilds/win32-*/**"
++      - "!node_modules/node-pty/prebuilds/linux-*/**"
++      - "!node_modules/node-pty/prebuilds/darwin-x64/**"
+       - "!node_modules/node-pty/build/**"
++      - "!node_modules/node-pty/third_party/**"
++      - "!node_modules/node-pty/deps/**"
++      - "!node_modules/node-pty/src/**"
+       - "!packages/desktop/**"
+       - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
+       - "!node_modules/**/*.md"
++      # 瘦身:排除构建工具/开发依赖(运行时不需要,client 已 bundle,server 只 external 少数包)
++      - "!node_modules/{typescript,vue-tsc,@tsoa,@rolldown,esbuild,@esbuild,playwright-core,playwright,rollup,vite,@vitejs}/**"
++      - "!node_modules/{@types,.bin}/**"
++      # 瘦身:client 库源码已 bundle 进 dist/client,运行时 node_modules 只需 server external 包
++      # (node-pty/iconv-lite/keygrip)。排除大型 client 库源码。
++      - "!node_modules/{monaco-editor,naive-ui,mermaid,date-fns,js-tiktoken,es-toolkit,@vue,cytoscape-fcose,highlight.js}/**"
++      - "!node_modules/{katex,matrix-widget-api,linkifyjs,markdown-it,markdown-it-katex}/**"
++      - "!node_modules/{@vueuse,vue,vue-router,pinia,vue-i18n,@intlify}/**"
++      - "!node_modules/{lightningcss,lightningcss-darwin-arm64,lightningcss-darwin-x64,lightningcss-linux-x64-gnu,lightningcss-win32-x64-msvc}/**"
++      # 瘦身:测试框架 + 已 bundle 进 client 的库源码
++      - "!node_modules/{vitest,@vitest,jsdom,sass,sass-embedded,@vscode}/**"
++      - "!node_modules/{cytoscape,cytoscape-fcose,cytoscape-cose-bilkent,cytoscape-cxttap,cytoscape-klay,cytoscape-popper,cytoscape-dom-node}/**"
++      - "!node_modules/{rxjs,@mermaid-js,@babel,@rollup}/**"
++      # 瘦身第二轮:排除已 bundle 的 client 库源码(server esbuild 打包后运行时不需要)
++      - "!node_modules/{matrix-js-sdk,@matrix-org,lodash,lodash-es}/**"
++      - "!node_modules/{handlebars,@multiavatar,dayjs,axios,d3}/**"
++      - "!node_modules/{css-tree,cssstyle,css-render,csstype,@asamuzakjp}/**"
++      # 排除开发工具
++      - "!node_modules/{vite-node,uglify-js,js-beautify,nodemon,concurrently,pino-pretty}/**"
++      # 排除 matrix-js-sdk 传递依赖(已 bundle 进 client vendor chunk)
++      - "!node_modules/{@hapi,tldts,pngjs,validator,yaml}/**"
++      # 排除 *.d.ts 和测试/文档目录(通用瘦身)
++      - "!node_modules/**/*.d.ts"
++      - "!node_modules/**/{test,tests,__tests__,docs,doc,example,examples,.github,coverage}/**"
++      # 排除 server source map(12MB,生产环境不需要)
++      - "!dist/server/*.map"
++      # 瘦身第三轮:排除 d3 全家桶 + dagre + khroma (mermaid 依赖,已 bundle 进 client)
++      - "!node_modules/d3-*/**"
++      - "!node_modules/{dagre,dagre-d3-es,khroma,layout-base,graphlib}/**"
++      # 排除更多已 bundle 的 client 依赖
++      - "!node_modules/{mdn-data,neo-async,parse5,parse5-parser,immutable,qrcode,oidc-client-ts,dompurify,js-yaml}/**"
++      - "!node_modules/{ts-node,chai,acorn,source-map,magicast,yargs,body-parser}/**"
++      - "!node_modules/{socket.io-client,engine.io-client}/**"
++      - "!node_modules/{@acemir,@exodus,@parcel,@volar,@upsetjs,@csstools,@css-render,@cspotcode,@juggle,@audio,@one-ini,@jridgewell,@iconify}/**"
++      # 排除 node_modules 中的 source map / flow / coffee 文件
++      - "!node_modules/**/*.map"
++      - "!node_modules/**/*.flow"
++      # 排除 .pnpm 元数据(如有)
++      - "!node_modules/.pnpm/**"
+ 
+ asarUnpack:
+   - "**/*.node"
+@@ -54,20 +101,20 @@ asarUnpack:
+ mac:
+   target:
+     - target: dmg
+-      arch: [arm64, x64]
++      arch: [arm64]
+     - target: zip
+-      arch: [arm64, x64]
++      arch: [arm64]
+   category: public.app-category.developer-tools
+   hardenedRuntime: true
+   gatekeeperAssess: false
+   notarize: true
+-  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ win:
+   target:
+     - target: nsis
+       arch: [x64]
+-  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ linux:
+   icon: build/icons

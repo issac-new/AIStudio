@@ -1,0 +1,24 @@
+{
+  "name": "hermes-overlay",
+  "version": "0.6.18-overlay",
+  "private": true,
+  "type": "module",
+  "description": "二次开发 overlay 层:注入到 hermes-studio 上游",
+  "scripts": {
+    "inject": "node scripts/inject.mjs",
+    "clean": "node scripts/inject.mjs --clean",
+    "verify": "node scripts/verify-clean.mjs",
+    "sync": "bash scripts/sync-upstream.sh",
+    "build": "vite build --config vite.config.overlay.ts",
+    "dev": "cross-env HERMES_WEB_UI_BACKEND_PORT=8647 vite --config vite.config.overlay.ts --host --port 8649 --strictPort",
+    "test": "vitest run",
+    "build:full": "node scripts/build.mjs",
+    "build:dmg": "node scripts/build-dmg.mjs",
+    "build:dmg:mac": "node scripts/build-dmg.mjs --mac",
+    "build:dmg:win": "node scripts/build-dmg.mjs --win",
+    "build:dmg:linux": "node scripts/build-dmg.mjs --linux"
+  },
+  "engines": {
+    "node": ">=23.0.0"
+  }
+}

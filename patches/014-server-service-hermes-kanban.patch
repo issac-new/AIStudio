@@ -1,0 +1,317 @@
+diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/server/src/services/hermes/hermes-kanban.ts
+index e20dc99b..4edaf020 100644
+--- a/packages/server/src/services/hermes/hermes-kanban.ts
++++ b/packages/server/src/services/hermes/hermes-kanban.ts
+@@ -1,6 +1,9 @@
+ import type { ChildProcess } from 'child_process'
+ import { logger } from '../logger'
+ import { execHermes, spawnHermes } from './hermes-process'
++import { safeFileStore } from '../safe-file-store'
++import { getActiveProfileName, getProfileDir } from './hermes-profile'
++import { join } from 'path'
+ 
+ const execOpts = { windowsHide: true }
+ const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+@@ -41,6 +44,7 @@ export interface KanbanTask {
+   workspace_kind: string
+   workspace_path: string | null
+   tenant: string | null
++  project_id: string | null
+   result: string | null
+   skills: string[] | null
+ }
+@@ -153,6 +157,7 @@ export interface KanbanBulkTaskUpdateOptions extends KanbanBoardOptions {
+   ids: string[]
+   status?: KanbanTaskStatus
+   assignee?: string | null
++  priority?: number
+   archive?: boolean
+   summary?: string
+   reason?: string
+@@ -251,7 +256,7 @@ export async function getCapabilities(): Promise<KanbanCapabilities> {
+     { key: 'links', status: 'supported', canonicalRoute: '/links', canonicalCommand: 'link/unlink', requiresBoard: true },
+     { key: 'bulk', status: 'partial', reason: 'WUI applies supported bulk-equivalent CLI transitions per id and returns per-task outcomes; direct priority/status patch parity remains deferred', canonicalRoute: '/tasks/bulk', canonicalCommand: 'bulk-equivalent via complete/block/unblock/archive/assign', requiresBoard: true },
+     { key: 'events', status: 'partial', reason: 'WUI exposes a board-scoped WebSocket bridge backed by the canonical `kanban watch` stream; payload is currently a refresh invalidation signal, not a typed event model', canonicalRoute: '/events', canonicalCommand: 'watch', requiresBoard: true },
+-    { key: 'homeSubscriptions', status: 'missing', reason: 'Deferred from current WUI parity batch', canonicalRoute: '/home-channels and subscription routes', canonicalCommand: 'notify-*', requiresBoard: true },
++    { key: 'homeSubscriptions', status: 'supported', canonicalRoute: '/home-channels and subscription routes', canonicalCommand: 'notify-subscribe/notify-list/notify-unsubscribe', requiresBoard: true },
+   ]
+   const supports = Object.fromEntries(capabilities.map(capability => [capability.key, capability.status === 'supported'])) as Record<string, boolean>
+   const missing = capabilities
+@@ -516,6 +521,7 @@ export async function createTask(
+     assignee?: string
+     priority?: number
+     tenant?: string
++    project?: string
+     workspace?: string
+     branch?: string
+     triage?: boolean
+@@ -531,6 +537,7 @@ export async function createTask(
+   if (opts?.assignee) args.push('--assignee', opts.assignee)
+   if (opts?.priority !== undefined) args.push('--priority', String(opts.priority))
+   if (opts?.tenant) args.push('--tenant', opts.tenant)
++  if (opts?.project) args.push('--project', opts.project)
+   if (opts?.workspace) args.push('--workspace', opts.workspace)
+   if (opts?.branch) args.push('--branch', opts.branch)
+   if (opts?.triage) args.push('--triage')
+@@ -660,3 +667,261 @@ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAss
+     throw new Error(`Failed to get kanban assignees: ${err.message}`)
+   }
+ }
++
++export async function deleteTask(taskId: string, opts?: KanbanBoardOptions): Promise<boolean> {
++  const args = [...boardArgs(opts?.board), 'rm', taskId, '--json']
++  try {
++    await execHermes(args, { maxBuffer: 50 * 1024 * 1024, timeout: 30000, ...execOpts })
++    return true
++  } catch (err: any) {
++    logger.error(err, 'Hermes CLI: kanban delete task failed')
++    throw new Error(`Failed to delete kanban task: ${err.message}`)
++  }
++}
++
++export async function decomposeTask(taskId: string, opts?: KanbanBoardOptions & { author?: string }): Promise<unknown> {
++  const args = [...boardArgs(opts?.board), 'decompose', taskId, '--json']
++  pushOptional(args, '--author', opts?.author)
++  try {
++    const { stdout } = await execHermes(args, {
++      maxBuffer: 50 * 1024 * 1024,
++      timeout: 120000,
++      ...execOpts,
++    })
++    return parseJsonPayload(stdout)
++  } catch (err: any) {
++    logger.error(err, 'Hermes CLI: kanban decompose failed')
++    throw new Error(`Failed to decompose kanban task: ${err.message}`)
++  }
++}
++
++export interface KanbanTaskPatchOptions extends KanbanBoardOptions {
++  status?: string
++  assignee?: string | null
++  priority?: number
++  title?: string
++  body?: string
++  result?: string
++  block_reason?: string
++  summary?: string
++}
++
++export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions): Promise<KanbanTask | null> {
++  const board = patch.board
++  // Map PATCH fields to existing CLI verbs (same approach as agent plugin_api.py)
++  if (patch.status) {
++    const s = patch.status
++    if (s === 'done') {
++      await completeTasks([taskId], patch.summary, { board })
++    } else if (s === 'blocked') {
++      await blockTask(taskId, patch.block_reason || '', { board })
++    } else if (s === 'ready') {
++      const task = await getTask(taskId, { board })
++      if (task?.task.status === 'blocked' || task?.task.status === 'scheduled') {
++        await unblockTasks([taskId], { board })
++      } else {
++        // Direct status set for todo->ready etc. via unblock (CLI treats as reopen)
++        await unblockTasks([taskId], { board })
++      }
++    } else if (s === 'archived') {
++      await archiveTasks([taskId], { board })
++    } else if (s === 'todo' || s === 'triage' || s === 'scheduled') {
++      // Use bulk update for direct status writes
++      await bulkUpdateTasks({ ids: [taskId], status: s as KanbanTaskStatus, board })
++    }
++  }
++  if (patch.assignee !== undefined) {
++    await assignTask(taskId, patch.assignee || 'none', { board })
++  }
++  if (patch.priority !== undefined) {
++    await bulkUpdateTasks({ ids: [taskId], priority: patch.priority, board })
++  }
++  // For title/body edits, we don't have a direct CLI verb — use create+replace pattern
++  // is not available, so title/body edits fall back to re-fetching.
++  return (await getTask(taskId, { board }))?.task || null
++}
++
++// ─── Home channel notification subscriptions ──────────────────────
++
++export interface HomeChannel {
++  platform: string
++  chat_id: string
++  thread_id: string
++  name: string
++  subscribed: boolean
++}
++
++export async function getHomeChannels(taskId: string | null, opts?: KanbanBoardOptions): Promise<HomeChannel[]> {
++  // Step 1: Build the list of configured home channels from config.yaml + env vars
++  const homes = await listConfiguredHomeChannels()
++
++  if (homes.length === 0) return []
++
++  // Step 2: If a taskId is given, fetch existing subscriptions and mark matches
++  let subs: Array<{ platform: string; chat_id: string; thread_id: string }> = []
++  if (taskId) {
++    try {
++      const args = [...boardArgs(opts?.board), 'notify-list', taskId, '--json']
++      const { stdout } = await execHermes(args, { maxBuffer: 1024 * 1024, ...execOpts })
++      const parsed = JSON.parse(stdout.trim())
++      subs = Array.isArray(parsed) ? parsed : []
++    } catch {
++      subs = []
++    }
++  }
++
++  return homes.map(h => ({
++    platform: h.platform,
++    chat_id: h.chat_id,
++    thread_id: h.thread_id,
++    name: h.name,
++    subscribed: subs.some(s =>
++      s.platform === h.platform && String(s.chat_id) === String(h.chat_id) && String(s.thread_id || '') === String(h.thread_id || ''),
++    ),
++  }))
++}
++
++export async function subscribeHomeChannel(
++  taskId: string,
++  platform: string,
++  chatId: string,
++  opts?: KanbanBoardOptions & { threadId?: string; userId?: string; notifierProfile?: string },
++): Promise<{ ok: boolean }> {
++  const args = [...boardArgs(opts?.board), 'notify-subscribe', taskId, '--platform', platform, '--chat-id', chatId]
++  pushOptional(args, '--thread-id', opts?.threadId)
++  pushOptional(args, '--user-id', opts?.userId)
++  pushOptional(args, '--notifier-profile', opts?.notifierProfile)
++  await execKanbanMutation(args, 'Hermes CLI: kanban notify-subscribe failed', 'Failed to subscribe home channel')
++  return { ok: true }
++}
++
++export async function unsubscribeHomeChannel(
++  taskId: string,
++  platform: string,
++  chatId: string,
++  opts?: KanbanBoardOptions & { threadId?: string },
++): Promise<{ ok: boolean }> {
++  const args = [...boardArgs(opts?.board), 'notify-unsubscribe', taskId, '--platform', platform, '--chat-id', chatId]
++  pushOptional(args, '--thread-id', opts?.threadId)
++  await execKanbanMutation(args, 'Hermes CLI: kanban notify-unsubscribe failed', 'Failed to unsubscribe home channel')
++  return { ok: true }
++}
++
++// ─── Internal: read configured home channels from profile config + env vars ──
++
++interface ConfiguredHomeChannel {
++  platform: string
++  chat_id: string
++  thread_id: string
++  name: string
++}
++
++/**
++ * Per-platform env var name overrides for the home-channel chat_id.
++ *
++ * Most platforms follow the `<PLATFORM>_HOME_CHANNEL` convention, but a few
++ * use platform-specific names that must match the Python gateway config
++ * (see `load_gateway_config` in gateway/config.py):
++ *   - Matrix  → MATRIX_HOME_ROOM / MATRIX_HOME_ROOM_NAME / MATRIX_HOME_ROOM_THREAD_ID
++ *   - Email   → EMAIL_HOME_ADDRESS / EMAIL_HOME_ADDRESS_NAME / EMAIL_HOME_ADDRESS_THREAD_ID
++ */
++const HOME_ENV_OVERRIDES: Record<string, { chatId: string; name: string; threadId: string }> = {
++  matrix: { chatId: 'MATRIX_HOME_ROOM', name: 'MATRIX_HOME_ROOM_NAME', threadId: 'MATRIX_HOME_ROOM_THREAD_ID' },
++  email: { chatId: 'EMAIL_HOME_ADDRESS', name: 'EMAIL_HOME_ADDRESS_NAME', threadId: 'EMAIL_HOME_ADDRESS_THREAD_ID' },
++}
++
++function homeEnvNames(platform: string): { chatId: string; name: string; threadId: string } {
++  if (HOME_ENV_OVERRIDES[platform]) return HOME_ENV_OVERRIDES[platform]
++  const upper = platform.toUpperCase().replace(/-/g, '_')
++  return {
++    chatId: `${upper}_HOME_CHANNEL`,
++    name: `${upper}_HOME_CHANNEL_NAME`,
++    threadId: `${upper}_HOME_CHANNEL_THREAD_ID`,
++  }
++}
++
++/**
++ * Read configured home channels from the active profile's config.yaml + .env.
++ * Mirrors the Python `_configured_home_channels()` logic in plugin_api.py.
++ */
++async function listConfiguredHomeChannels(): Promise<ConfiguredHomeChannel[]> {
++  const { readFile } = await import('fs/promises')
++  const profile = getActiveProfileName() || 'default'
++  const profileDir = getProfileDir(profile)
++  const configPath = join(profileDir, 'config.yaml')
++  const envPath = join(profileDir, '.env')
++
++  let config: Record<string, any> = {}
++  try {
++    config = await safeFileStore.readYaml(configPath)
++  } catch (err: any) {
++    logger.warn(`Failed to read config.yaml at ${configPath}: ${err?.message}`)
++    return []
++  }
++
++  // Read .env file for env-var overrides (Python gateway loads these via dotenv)
++  let envVars: Record<string, string> = {}
++  try {
++    const envRaw = await readFile(envPath, 'utf-8')
++    envVars = parseDotEnv(envRaw)
++  } catch { /* no .env is fine */ }
++
++  // Merge both `gateway.platforms` and top-level `platforms` (same as Python)
++  const gatewayPlatforms = config.gateway?.platforms || {}
++  const topLevelPlatforms = config.platforms || {}
++  const platforms = { ...gatewayPlatforms, ...topLevelPlatforms }
++
++  const result: ConfiguredHomeChannel[] = []
++
++  for (const [platformName, platformCfg] of Object.entries(platforms)) {
++    if (!platformCfg || typeof platformCfg !== 'object') continue
++
++    const hc = (platformCfg as Record<string, any>).home_channel
++    const envNames = homeEnvNames(platformName)
++
++    // Env var overrides: process.env first, then .env file (same as Python)
++    const envChatId = process.env[envNames.chatId] || envVars[envNames.chatId]
++    const envName = process.env[envNames.name] || envVars[envNames.name]
++    const envThreadId = process.env[envNames.threadId] || envVars[envNames.threadId]
++
++    // Determine final home channel: env override > yaml config
++    const chatId = envChatId || (hc?.chat_id as string) || ''
++    if (!chatId) continue
++
++    const threadId = envThreadId || (hc?.thread_id as string) || ''
++    const name = envName || (hc?.name as string) || 'Home'
++
++    result.push({
++      platform: platformName,
++      chat_id: chatId,
++      thread_id: threadId || '',
++      name,
++    })
++  }
++
++  // Stable alphabetical order (matching Python)
++  result.sort((a, b) => a.platform.localeCompare(b.platform))
++  return result
++}
++
++/**
++ * Parse a .env file into a key→value map. Handles quoted values, comments,
++ * and blank lines. Does NOT expand variable references.
++ */
++function parseDotEnv(raw: string): Record<string, string> {
++  const env: Record<string, string> = {}
++  for (const line of raw.split('\n')) {
++    const trimmed = line.trim()
++    if (!trimmed || trimmed.startsWith('#')) continue
++    const eqIdx = trimmed.indexOf('=')
++    if (eqIdx === -1) continue
++    const key = trimmed.slice(0, eqIdx).trim()
++    let val = trimmed.slice(eqIdx + 1).trim()
++    // Strip surrounding quotes
++    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
++      val = val.slice(1, -1)
++    }
++    if (key && val) env[key] = val
++  }
++  return env
++}

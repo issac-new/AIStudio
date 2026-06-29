@@ -1,0 +1,297 @@
+diff --git a/packages/client/src/components/hermes/settings/UserManagementSettings.vue b/packages/client/src/components/hermes/settings/UserManagementSettings.vue
+index 33adeab8..44270b53 100644
+--- a/packages/client/src/components/hermes/settings/UserManagementSettings.vue
++++ b/packages/client/src/components/hermes/settings/UserManagementSettings.vue
+@@ -3,11 +3,13 @@ import { computed, h, onMounted, reactive, ref } from 'vue'
+ import { NButton, NDataTable, NForm, NFormItem, NInput, NModal, NPopconfirm, NSelect, NSpace, NTag, useMessage, type DataTableColumns } from 'naive-ui'
+ import { useI18n } from 'vue-i18n'
+ import {
+-  createManagedUser,
+-  deleteManagedUser,
+-  fetchManagedUsers,
+-  updateManagedUser,
+-  type ManagedUser,
++  createMatrixUser,
++  deleteMatrixUser,
++  deactivateMatrixUser,
++  fetchMatrixUsers,
++  updateMatrixUser,
++  resetMatrixUserPassword,
++  type MatrixUser,
+   type UserRole,
+   type UserStatus,
+ } from '@/api/auth'
+@@ -17,14 +19,17 @@ const message = useMessage()
+ 
+ const loading = ref(false)
+ const saving = ref(false)
+-const users = ref<ManagedUser[]>([])
+-const profiles = ref<string[]>([])
++const users = ref<MatrixUser[]>([])
+ const showModal = ref(false)
+-const editingUser = ref<ManagedUser | null>(null)
++const editingUser = ref<MatrixUser | null>(null)
++const showResetPasswordModal = ref(false)
++const resetPasswordTarget = ref<MatrixUser | null>(null)
++const newPassword = ref('')
+ 
+ const form = reactive({
+-  username: '',
++  userId: '',
+   password: '',
++  displayName: '',
+   role: 'admin' as UserRole,
+   status: 'active' as UserStatus,
+   profiles: [] as string[],
+@@ -40,12 +45,13 @@ const statusOptions = computed(() => [
+   { label: t('users.status.disabled'), value: 'disabled' },
+ ])
+ 
+-const profileOptions = computed(() => profiles.value.map(profile => ({ label: profile, value: profile })))
++const profileOptions = computed(() => []) // Profiles fetched from API
+ 
+ function resetForm() {
+   editingUser.value = null
+-  form.username = ''
++  form.userId = ''
+   form.password = ''
++  form.displayName = ''
+   form.role = 'admin'
+   form.status = 'active'
+   form.profiles = []
+@@ -54,9 +60,8 @@ function resetForm() {
+ async function loadUsers() {
+   loading.value = true
+   try {
+-    const res = await fetchManagedUsers()
++    const res = await fetchMatrixUsers()
+     users.value = res.users
+-    profiles.value = res.profiles
+   } catch (err: any) {
+     message.error(err.message || t('users.loadFailed'))
+   } finally {
+@@ -69,9 +74,10 @@ function openCreate() {
+   showModal.value = true
+ }
+ 
+-function openEdit(user: ManagedUser) {
++function openEdit(user: MatrixUser) {
+   editingUser.value = user
+-  form.username = user.username
++  form.userId = user.matrix_user_id
++  form.displayName = user.display_name
+   form.password = ''
+   form.role = user.role
+   form.status = user.status
+@@ -80,36 +86,57 @@ function openEdit(user: ManagedUser) {
+ }
+ 
+ async function submit() {
+-  if (form.username.trim().length < 2) {
+-    message.error(t('login.usernameTooShort'))
+-    return
+-  }
+-  if (!editingUser.value && form.password.length < 6) {
+-    message.error(t('login.passwordTooShort'))
+-    return
+-  }
+-  if (form.password && form.password.length < 6) {
+-    message.error(t('login.passwordTooShort'))
+-    return
++  if (!editingUser.value) {
++    // Create new user
++    if (!form.userId.trim() || !form.password || form.password.length < 6) {
++      message.error(t('login.passwordTooShort'))
++      return
++    }
++    saving.value = true
++    try {
++      await createMatrixUser({
++        userId: form.userId.trim(),
++        password: form.password,
++        displayName: form.displayName,
++        role: form.role,
++        profiles: form.role === 'super_admin' ? [] : form.profiles,
++      })
++      await loadUsers()
++      showModal.value = false
++      resetForm()
++      message.success(t('common.saved'))
++    } catch (err: any) {
++      message.error(err.message || t('common.saveFailed'))
++    } finally {
++      saving.value = false
++    }
++  } else {
++    // Update existing user
++    saving.value = true
++    try {
++      await updateMatrixUser(editingUser.value.matrix_user_id, {
++        displayName: form.displayName,
++        role: form.role,
++        status: form.status,
++        profiles: form.role === 'super_admin' ? [] : form.profiles,
++      })
++      await loadUsers()
++      showModal.value = false
++      resetForm()
++      message.success(t('common.saved'))
++    } catch (err: any) {
++      message.error(err.message || t('common.saveFailed'))
++    } finally {
++      saving.value = false
++    }
+   }
++}
+ 
++async function setStatus(user: MatrixUser, status: UserStatus) {
+   saving.value = true
+   try {
+-    const payload = {
+-      username: form.username.trim(),
+-      password: form.password || undefined,
+-      role: form.role,
+-      status: form.status,
+-      profiles: form.role === 'super_admin' ? [] : form.profiles,
+-      defaultProfile: form.profiles[0] || null,
+-    }
+-    const res = editingUser.value
+-      ? await updateManagedUser(editingUser.value.id, payload)
+-      : await createManagedUser({ ...payload, password: form.password })
+-    users.value = res.users
+-    profiles.value = res.profiles
+-    showModal.value = false
+-    resetForm()
++    await deactivateMatrixUser(user.matrix_user_id, status === 'active')
++    await loadUsers()
+     message.success(t('common.saved'))
+   } catch (err: any) {
+     message.error(err.message || t('common.saveFailed'))
+@@ -118,29 +145,34 @@ async function submit() {
+   }
+ }
+ 
+-async function setStatus(user: ManagedUser, status: UserStatus) {
++async function removeUser(user: MatrixUser) {
+   saving.value = true
+   try {
+-    const res = await updateManagedUser(user.id, { status })
+-    users.value = res.users
+-    profiles.value = res.profiles
++    await deleteMatrixUser(user.matrix_user_id)
++    await loadUsers()
+     message.success(t('common.saved'))
+   } catch (err: any) {
+-    message.error(err.message || t('common.saveFailed'))
++    message.error(err.message || t('common.deleteFailed'))
+   } finally {
+     saving.value = false
+   }
+ }
+ 
+-async function removeUser(user: ManagedUser) {
++async function handleResetPassword() {
++  if (!newPassword.value || newPassword.value.length < 6) {
++    message.error(t('login.passwordTooShort'))
++    return
++  }
++  if (!resetPasswordTarget.value) return
+   saving.value = true
+   try {
+-    const res = await deleteManagedUser(user.id)
+-    users.value = res.users
+-    profiles.value = res.profiles
+-    message.success(t('common.saved'))
++    await resetMatrixUserPassword(resetPasswordTarget.value.matrix_user_id, newPassword.value)
++    showResetPasswordModal.value = false
++    newPassword.value = ''
++    resetPasswordTarget.value = null
++    message.success(t('settings.matrixIdentity.passwordChanged'))
+   } catch (err: any) {
+-    message.error(err.message || t('common.deleteFailed'))
++    message.error(err.message || t('common.saveFailed'))
+   } finally {
+     saving.value = false
+   }
+@@ -151,10 +183,16 @@ function formatTime(value: number | null): string {
+   return new Date(value).toLocaleString()
+ }
+ 
+-const columns = computed<DataTableColumns<ManagedUser>>(() => [
++const columns = computed<DataTableColumns<MatrixUser>>(() => [
+   {
+-    title: t('users.username'),
+-    key: 'username',
++    title: t('users.matrixUserId'),
++    key: 'matrix_user_id',
++    minWidth: 180,
++    render: (row) => h('span', { class: 'mono' }, row.matrix_user_id),
++  },
++  {
++    title: t('users.displayName'),
++    key: 'display_name',
+     minWidth: 140,
+   },
+   {
+@@ -194,10 +232,11 @@ const columns = computed<DataTableColumns<ManagedUser>>(() => [
+   {
+     title: t('common.edit'),
+     key: 'actions',
+-    width: 280,
++    width: 340,
+     render: (row) => h(NSpace, { size: 8 }, {
+       default: () => [
+         h(NButton, { size: 'small', onClick: () => openEdit(row) }, { default: () => t('common.edit') }),
++        h(NButton, { size: 'small', onClick: () => { resetPasswordTarget.value = row; showResetPasswordModal.value = true; } }, { default: () => t('users.resetPassword') }),
+         h(NButton, {
+           size: 'small',
+           type: row.status === 'active' ? 'warning' : 'primary',
+@@ -238,12 +277,15 @@ onMounted(loadUsers)
+ 
+     <NModal v-model:show="showModal" preset="dialog" :title="editingUser ? t('users.edit') : t('users.create')">
+       <NForm label-placement="top">
+-        <NFormItem :label="t('users.username')">
+-          <NInput v-model:value="form.username" :placeholder="t('login.usernamePlaceholder')" />
++        <NFormItem :label="t('users.matrixUserId')">
++          <NInput v-model:value="form.userId" :disabled="!!editingUser" :placeholder="t('users.matrixUserIdPlaceholder')" />
+         </NFormItem>
+-        <NFormItem :label="editingUser ? t('users.newPasswordOptional') : t('login.newPassword')">
++        <NFormItem v-if="!editingUser" :label="t('login.newPassword')">
+           <NInput v-model:value="form.password" type="password" show-password-on="click" :placeholder="t('login.passwordPlaceholder')" />
+         </NFormItem>
++        <NFormItem :label="t('users.displayName')">
++          <NInput v-model:value="form.displayName" :placeholder="t('users.displayNamePlaceholder')" />
++        </NFormItem>
+         <NFormItem :label="t('users.role')">
+           <NSelect v-model:value="form.role" :options="roleOptions" />
+         </NFormItem>
+@@ -265,6 +307,19 @@ onMounted(loadUsers)
+         <NButton type="primary" :loading="saving" @click="submit">{{ t('common.save') }}</NButton>
+       </template>
+     </NModal>
++
++    <!-- Reset Password Modal -->
++    <NModal v-model:show="showResetPasswordModal" preset="dialog" :title="t('users.resetPassword')">
++      <NForm label-placement="top">
++        <NFormItem :label="t('login.newPassword')">
++          <NInput v-model:value="newPassword" type="password" show-password-on="click" :placeholder="t('login.passwordPlaceholder')" />
++        </NFormItem>
++      </NForm>
++      <template #action>
++        <NButton @click="showResetPasswordModal = false">{{ t('common.cancel') }}</NButton>
++        <NButton type="primary" :loading="saving" @click="handleResetPassword">{{ t('common.save') }}</NButton>
++      </template>
++    </NModal>
+   </div>
+ </template>
+ 
+@@ -299,4 +354,9 @@ onMounted(loadUsers)
+ :deep(.muted) {
+   color: $text-muted;
+ }
++
++:deep(.mono) {
++  font-family: $font-code;
++  font-size: 13px;
++}
+ </style>

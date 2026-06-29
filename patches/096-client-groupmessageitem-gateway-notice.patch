@@ -1,0 +1,49 @@
+diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
+index 30497293..8359a9bd 100644
+--- a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
+@@ -13,6 +13,7 @@ import {
+     renderHighlightedCodeBlock,
+ } from '../chat/highlight'
+ import { parseThinking, countThinkingChars } from '@/utils/thinking-parser'
++import { isGatewayNotice as isGatewayNoticeText } from '@/custom/chat/gateway-notice'
+ import { useGlobalSpeech } from '@/composables/useSpeech'
+ import { useVoiceSettings } from '@/composables/useVoiceSettings'
+ import { speedToEdgeRate, hzToEdgePitch } from '@/utils/ttsHelpers'
+@@ -51,6 +52,8 @@ const isAgentError = computed(() => {
+     return /^Error:\s*/i.test(props.message.content || '')
+ })
+ 
++const isGatewayNotice = computed(() => isGatewayNoticeText(props.message.content))
++
+ const isSelf = computed(() => {
+     return !!props.currentUserId && props.message.senderId === props.currentUserId
+ })
+@@ -541,6 +544,7 @@ onBeforeUnmount(() => {
+                 :class="{
+                     'agent-content': isAgent,
+                     'agent-error': isAgentError,
++                    'gateway-notice': isGatewayNotice,
+                     'speech-playing': isPlayingThisMessage && !isPausedThisMessage,
+                 }"
+             >
+@@ -663,6 +667,19 @@ onBeforeUnmount(() => {
+         }
+     }
+ 
++    &.agent .msg-content.gateway-notice {
++        color: $text-secondary;
++        background-color: rgba(128, 128, 128, 0.06);
++        border: 1px solid rgba(128, 128, 128, 0.2);
++        font-size: 0.85em;
++
++        :deep(.markdown-body),
++        :deep(.markdown-body p) {
++            color: $text-secondary;
++            margin: 0;
++        }
++    }
++
+     &.self .msg-content {
+         background-color: rgba(var(--accent-primary-rgb), 0.1);
+     }

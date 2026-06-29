@@ -1,0 +1,62 @@
+diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+--- a/packages/client/src/router/index.ts
++++ b/packages/client/src/router/index.ts
+@@ -1,5 +1,8 @@
+ import { createRouter, createWebHashHistory } from 'vue-router'
+-import { hasApiKey, isStoredSuperAdmin } from '@/api/client'
++// HERMES_CUSTOM[MatrixAuth] BEGIN: 使用 auth store 进行超级管理员检查
++import { hasApiKey } from '@/api/client'
++import { useAuthStore } from '@/stores/hermes/auth'
++// HERMES_CUSTOM[MatrixAuth] END
+ 
+ const router = createRouter({
+   history: createWebHashHistory(),
+@@ -53,7 +56,7 @@
+     {
+       path: '/hermes/kanban',
+       name: 'hermes.kanban',
+-      component: () => import('@/views/hermes/KanbanView.vue'),
++      component: () => import('@/custom/kanban/components/KanbanPanel.vue'),
+     },
+     {
+       path: '/hermes/models',
+@@ -123,7 +126,19 @@
+       name: 'hermes.devices',
+       component: () => import('@/views/hermes/DevicesView.vue'),
+     },
++    // HERMES_CUSTOM[MatrixChat] BEGIN: Matrix 聊天路由
+     {
++      path: '/hermes/matrix-chat',
++      name: 'hermes.matrixChat',
++      component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
++    },
++    {
++      path: '/hermes/matrix-chat/room/:roomId',
++      name: 'hermes.matrixChatRoom',
++      component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
++    },
++    // HERMES_CUSTOM[MatrixChat] END
++    {
+       path: '/hermes/group-chat',
+       name: 'hermes.groupChat',
+       component: () => import('@/views/hermes/GroupChatView.vue'),
+@@ -176,10 +191,16 @@
+     return
+   }
+ 
+-  if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
+-    next({ name: 'hermes.cockpit' })
+-    return
++  // HERMES_CUSTOM[MatrixAuth] BEGIN: 使用 auth store 检查超级管理员权限
++  // Check super admin requirement using auth store
++  if (to.meta.requiresSuperAdmin) {
++    const authStore = useAuthStore()
++    if (!authStore.isSuperAdmin) {
++      next({ name: 'hermes.cockpit' })
++      return
++    }
+   }
++  // HERMES_CUSTOM[MatrixAuth] END
+ 
+   next()
+ })

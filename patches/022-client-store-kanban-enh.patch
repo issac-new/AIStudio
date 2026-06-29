@@ -1,0 +1,434 @@
+diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+index d3358560..b0f49c3f 100644
+--- a/packages/client/src/stores/hermes/kanban.ts
++++ b/packages/client/src/stores/hermes/kanban.ts
+@@ -1,7 +1,8 @@
+ import { defineStore } from 'pinia'
+ import { computed, ref } from 'vue'
+ import * as kanbanApi from '@/api/hermes/kanban'
+-import type { KanbanTask, KanbanStats, KanbanAssignee, KanbanBoard, KanbanCapabilities, KanbanDiagnosticsOptions, KanbanDispatchOptions, KanbanBulkUpdateRequest, KanbanCreateRequest } from '@/api/hermes/kanban'
++import { probeAuthViaRest } from '@/api/client'
++import type { KanbanTask, KanbanTaskStatus, KanbanStats, KanbanAssignee, KanbanBoard, KanbanCapabilities, KanbanDiagnosticsOptions, KanbanDispatchOptions, KanbanBulkUpdateRequest, KanbanCreateRequest, KanbanDiagnostic, KanbanOrchestration, KanbanAttachment } from '@/api/hermes/kanban'
+ 
+ export const KANBAN_SELECTED_BOARD_STORAGE_KEY = 'hermes.kanban.selectedBoard'
+ export const DEFAULT_KANBAN_BOARD = 'default'
+@@ -42,10 +43,17 @@ export const useKanbanStore = defineStore('kanban', () => {
+   const boardsLoading = ref(false)
+   const boardWarning = ref<string | null>(null)
+ 
++  // Advanced features state
++  const diagnostics = ref<KanbanDiagnostic[]>([])
++  const orchestration = ref<KanbanOrchestration | null>(null)
++  const attachments = ref<Record<string, KanbanAttachment[]>>({})
++
+   const selectedBoard = ref(normalizeBoardSlug(safeStorageGet(KANBAN_SELECTED_BOARD_STORAGE_KEY)))
+ 
+   const filterStatus = ref<string | null>(null)
+   const filterAssignee = ref<string | null>(null)
++  const selectedIds = ref<Set<string>>(new Set())
++  const searchQuery = ref('')
+ 
+   let boardGeneration = 0
+   let boardsRequestSeq = 0
+@@ -58,6 +66,13 @@ export const useKanbanStore = defineStore('kanban', () => {
+   let eventReconnectTimer: ReturnType<typeof setTimeout> | null = null
+   let eventRefreshTimer: ReturnType<typeof setTimeout> | null = null
+   let eventStreamEnabled = false
++  let eventConsecutiveFailures = 0
++  let eventMaxBackoffMs = 30_000
++  // Failures beyond this threshold trigger an authoritative REST auth probe.
++  // The WebSocket close code (1006) cannot distinguish auth rejection from
++  // transient network/upgrade issues, so we defer to REST for the verdict.
++  const eventAuthProbeThreshold = 3
++  let eventAuthProbeInFlight = false
+ 
+   const activeBoards = computed(() => {
+     const visible = boards.value.filter(board => !board.archived)
+@@ -140,6 +155,8 @@ export const useKanbanStore = defineStore('kanban', () => {
+   function stopEventStream() {
+     eventStreamEnabled = false
+     eventStreamSeq++
++    eventConsecutiveFailures = 0
++    eventAuthProbeInFlight = false
+     clearEventTimers()
+     closeEventSocket()
+   }
+@@ -154,10 +171,11 @@ export const useKanbanStore = defineStore('kanban', () => {
+ 
+   function scheduleEventReconnect(board: string, generation: number, seq: number) {
+     if (eventReconnectTimer) clearTimeout(eventReconnectTimer)
++    const delayMs = Math.min(3000 * Math.pow(2, eventConsecutiveFailures), eventMaxBackoffMs)
+     eventReconnectTimer = setTimeout(() => {
+       if (!eventStreamEnabled || seq !== eventStreamSeq || generation !== boardGeneration || board !== selectedBoard.value) return
+       connectEventStream(board, generation, seq)
+-    }, 3000)
++    }, delayMs)
+   }
+ 
+   function connectEventStream(board: string, generation: number, seq: number) {
+@@ -167,6 +185,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+       socket = kanbanApi.openKanbanEventStream({ board })
+     } catch (err) {
+       console.error('Failed to open kanban event stream:', err)
++      eventConsecutiveFailures++
+       scheduleEventReconnect(board, generation, seq)
+       return
+     }
+@@ -183,11 +202,44 @@ export const useKanbanStore = defineStore('kanban', () => {
+     socket.onerror = () => {
+       if (eventSocket === socket) console.error('Kanban event stream error')
+     }
+-    socket.onclose = () => {
+-      if (eventSocket === socket) {
+-        eventSocket = null
+-        scheduleEventReconnect(board, generation, seq)
++    socket.onclose = (ev: CloseEvent) => {
++      if (eventSocket !== socket) return
++      eventSocket = null
++      eventConsecutiveFailures++
++
++      // 1006 = abnormal close (no close frame — server rejected the upgrade).
++      // After sustained failures, ask REST for an authoritative verdict: the
++      // WebSocket close code alone cannot tell auth rejection apart from
++      // transient network issues. The probe returns false only on a confirmed
++      // 401 (auth expired); 200 or inconclusive errors keep us reconnecting.
++      if (ev.code === 1006 && eventConsecutiveFailures >= eventAuthProbeThreshold && !eventAuthProbeInFlight) {
++        eventAuthProbeInFlight = true
++        console.warn(
++          `Kanban event stream closed abnormally (code=${ev.code}) after ${eventConsecutiveFailures} ` +
++          `consecutive failures. Probing REST to determine whether auth has expired.`,
++        )
++        void probeAuthViaRest().then((ok) => {
++          eventAuthProbeInFlight = false
++          if (!ok) {
++            // REST returned 401 — auth has expired. The probe already cleared
++            // the token and redirected to login. Stop the WS reconnect loop.
++            console.warn('Kanban event stream: REST probe confirmed auth failure; stopping reconnect.')
++            return
++          }
++          // REST is healthy (or the probe itself was inconclusive, e.g. 5xx /
++          // network error). Treat as a WS-only channel problem and resume
++          // reconnecting, but only if the stream is still meant to be active.
++          if (eventStreamEnabled) scheduleEventReconnect(board, generation, seq)
++        })
++        return
+       }
++
++      scheduleEventReconnect(board, generation, seq)
++    }
++    // Reset failure counter once the WebSocket is open — a successful handshake
++    // proves the credentials and connection are good.
++    socket.onopen = () => {
++      eventConsecutiveFailures = 0
+     }
+   }
+ 
+@@ -253,7 +305,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+     try {
+       const nextBoards = await kanbanApi.listBoards({ includeArchived })
+       if (seq !== boardsRequestSeq) return
+-      boards.value = nextBoards
++      boards.value = nextBoards || []
+       const resolved = resolveAvailableBoard(selectedBoard.value)
+       if (resolved !== selectedBoard.value) recoverSelectedBoard(selectedBoard.value)
+     } catch (err) {
+@@ -271,6 +323,10 @@ export const useKanbanStore = defineStore('kanban', () => {
+     }
+   }
+ 
++  async function refreshAll() {
++    await Promise.all([fetchBoards(), fetchTasks(), fetchStats(), fetchAssignees()])
++  }
++
+   async function createBoard(data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean }) {
+     const board = await kanbanApi.createBoard(data)
+     await fetchBoards()
+@@ -299,7 +355,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+         assignee: filterAssignee.value || undefined,
+         includeArchived: true,
+       })
+-      if (isCurrentRequest(seq, generation, board, tasksRequestSeq)) tasks.value = nextTasks
++      if (isCurrentRequest(seq, generation, board, tasksRequestSeq)) tasks.value = nextTasks || []
+     } catch (err) {
+       if (isCurrentRequest(seq, generation, board, tasksRequestSeq)) console.error('Failed to fetch kanban tasks:', err)
+     } finally {
+@@ -311,7 +367,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+     const { seq, generation, board } = nextRequestContext(() => ++statsRequestSeq)
+     try {
+       const nextStats = await kanbanApi.getStats({ board })
+-      if (isCurrentRequest(seq, generation, board, statsRequestSeq)) stats.value = nextStats
++      if (isCurrentRequest(seq, generation, board, statsRequestSeq)) stats.value = nextStats || null
+     } catch (err) {
+       if (isCurrentRequest(seq, generation, board, statsRequestSeq)) console.error('Failed to fetch kanban stats:', err)
+     }
+@@ -321,7 +377,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+     const { seq, generation, board } = nextRequestContext(() => ++assigneesRequestSeq)
+     try {
+       const nextAssignees = await kanbanApi.getAssignees({ board })
+-      if (isCurrentRequest(seq, generation, board, assigneesRequestSeq)) assignees.value = nextAssignees
++      if (isCurrentRequest(seq, generation, board, assigneesRequestSeq)) assignees.value = nextAssignees || []
+     } catch (err) {
+       if (isCurrentRequest(seq, generation, board, assigneesRequestSeq)) console.error('Failed to fetch kanban assignees:', err)
+     }
+@@ -461,8 +517,209 @@ export const useKanbanStore = defineStore('kanban', () => {
+     else filterAssignee.value = value
+   }
+ 
+-  async function refreshAll() {
+-    await Promise.all([fetchBoards(), fetchTasks(), fetchStats(), fetchAssignees()])
++  function setBoard(board?: string | null) {
++    return setSelectedBoard(board)
++  }
++
++  function setStatusFilter(status?: string) {
++    filterStatus.value = status || null
++    fetchTasks()
++  }
++
++  function setAssigneeFilter(assignee?: string) {
++    filterAssignee.value = assignee || null
++    fetchTasks()
++  }
++
++  function setSearchQuery(query: string) {
++    searchQuery.value = query
++  }
++
++  function clearSelection() {
++    selectedIds.value.clear()
++  }
++
++  function toggleSelection(taskId: string) {
++    if (selectedIds.value.has(taskId)) {
++      selectedIds.value.delete(taskId)
++    } else {
++      selectedIds.value.add(taskId)
++    }
++  }
++
++  async function moveTask(taskId: string, status: string) {
++    const board = selectedBoard.value
++    switch (status) {
++      case 'done':
++        await kanbanApi.completeTasks([taskId], undefined, { board })
++        break
++      case 'blocked':
++        await kanbanApi.blockTask(taskId, '', { board })
++        break
++      case 'ready':
++        // ready is the canonical "unblock" target
++        await kanbanApi.unblockTasks([taskId], { board })
++        break
++      case 'todo':
++      case 'scheduled':
++      case 'triage':
++      case 'archived':
++        // These statuses need an explicit PATCH via bulkUpdate, NOT unblock
++        // (unblock always sets status=ready server-side, which would desync)
++        await kanbanApi.bulkUpdateTasks({ ids: [taskId], status: status as any }, { board })
++        break
++      default:
++        await kanbanApi.bulkUpdateTasks({ ids: [taskId], status: status as any }, { board })
++    }
++    if (board === selectedBoard.value) {
++      const task = tasks.value.find(t => t.id === taskId)
++      if (task) task.status = status as KanbanTaskStatus
++      await Promise.all([fetchStats(), fetchBoards()])
++    }
++  }
++
++  async function bulkComplete(taskIds: string[]) {
++    return completeTasks(taskIds)
++  }
++
++  async function bulkBlock(taskIds: string[]) {
++    const board = selectedBoard.value
++    for (const id of taskIds) {
++      await kanbanApi.blockTask(id, '', { board })
++    }
++    if (board === selectedBoard.value) {
++      for (const id of taskIds) {
++        const task = tasks.value.find(t => t.id === id)
++        if (task) task.status = 'blocked'
++      }
++      await Promise.all([fetchStats(), fetchBoards()])
++    }
++  }
++
++  async function bulkUnblock(taskIds: string[]) {
++    return unblockTasks(taskIds)
++  }
++
++  async function bulkArchive(taskIds: string[]) {
++    const board = selectedBoard.value
++    await kanbanApi.bulkUpdateTasks({ ids: taskIds, archive: true }, { board })
++    if (board === selectedBoard.value) {
++      for (const id of taskIds) {
++        const task = tasks.value.find(t => t.id === id)
++        if (task) task.status = 'archived'
++      }
++      await Promise.all([fetchStats(), fetchBoards()])
++    }
++  }
++
++  async function deleteTask(taskId: string) {
++    const board = selectedBoard.value
++    await kanbanApi.deleteTask(taskId, { board })
++    if (board === selectedBoard.value) {
++      tasks.value = tasks.value.filter(t => t.id !== taskId)
++      selectedIds.value.delete(taskId)
++      await Promise.all([fetchStats(), fetchBoards(), fetchAssignees()])
++    }
++  }
++
++  async function patchTask(taskId: string, patch: kanbanApi.KanbanTaskPatch) {
++    const board = selectedBoard.value
++    const updated = await kanbanApi.patchTask(taskId, patch, { board })
++    if (board === selectedBoard.value) {
++      const idx = tasks.value.findIndex(t => t.id === taskId)
++      if (idx >= 0) tasks.value[idx] = updated
++      await Promise.all([fetchStats(), fetchBoards(), fetchAssignees()])
++    }
++    return updated
++  }
++
++  async function decomposeTask(taskId: string, author?: string) {
++    const board = selectedBoard.value
++    const result = await kanbanApi.decomposeTask(taskId, { board, author })
++    if (board === selectedBoard.value) {
++      await Promise.all([fetchTasks(true), fetchStats(), fetchBoards()])
++    }
++    return result
++  }
++
++  async function fetchDiagnostics(opts: Omit<KanbanDiagnosticsOptions, 'board'> = {}) {
++    assertCapability('diagnostics')
++    const board = selectedBoard.value
++    try {
++      const result = await kanbanApi.getDiagnostics({ ...opts, board })
++      if (board === selectedBoard.value) diagnostics.value = result
++    } catch (err) {
++      console.error('Failed to fetch kanban diagnostics:', err)
++    }
++  }
++
++  async function fetchOrchestration() {
++    const board = selectedBoard.value
++    try {
++      const result = await kanbanApi.getOrchestration({ board })
++      if (board === selectedBoard.value) orchestration.value = result
++    } catch (err) {
++      console.error('Failed to fetch kanban orchestration:', err)
++    }
++  }
++
++  async function saveOrchestrationSettings(patch: kanbanApi.KanbanOrchestrationPatch) {
++    const board = selectedBoard.value
++    const result = await kanbanApi.saveOrchestration(patch, { board })
++    if (board === selectedBoard.value) orchestration.value = result
++    return result
++  }
++
++  async function fetchAttachments(taskId: string) {
++    const board = selectedBoard.value
++    try {
++      const result = await kanbanApi.listAttachments(taskId, { board })
++      if (board === selectedBoard.value) attachments.value[taskId] = result
++    } catch (err) {
++      console.error('Failed to fetch attachments:', err)
++    }
++  }
++
++  async function uploadTaskAttachment(taskId: string, file: File) {
++    const board = selectedBoard.value
++    const result = await kanbanApi.uploadAttachment(taskId, file, { board, uploadedBy: 'dashboard' })
++    if (board === selectedBoard.value) {
++      const list = attachments.value[taskId] || []
++      list.push(result)
++      attachments.value[taskId] = list
++    }
++    return result
++  }
++
++  async function deleteTaskAttachment(taskId: string, attachmentId: number) {
++    const board = selectedBoard.value
++    await kanbanApi.deleteAttachment(attachmentId, { board })
++    if (board === selectedBoard.value) {
++      const list = attachments.value[taskId] || []
++      attachments.value[taskId] = list.filter(a => a.id !== attachmentId)
++    }
++  }
++
++  function connectEvents() {
++    return startEventStream()
++  }
++
++  async function downloadTaskAttachment(attachmentId: number): Promise<Blob> {
++    return kanbanApi.downloadAttachment(attachmentId, { board: selectedBoard.value })
++  }
++
++  async function saveProfileDescription(name: string, description: string) {
++    const board = selectedBoard.value
++    const result = await kanbanApi.saveProfileDescription(name, { description }, { board })
++    if (board === selectedBoard.value) await fetchOrchestration()
++    return result
++  }
++
++  async function autoGenerateProfileDescription(name: string, overwrite = false) {
++    const board = selectedBoard.value
++    const result = await kanbanApi.autoGenerateProfileDescription(name, { board, overwrite })
++    if (board === selectedBoard.value) await fetchOrchestration()
++    return result
+   }
+ 
+   return {
+@@ -479,6 +736,12 @@ export const useKanbanStore = defineStore('kanban', () => {
+     selectedBoard,
+     filterStatus,
+     filterAssignee,
++    selectedIds,
++    searchQuery,
++    // Advanced features
++    diagnostics,
++    orchestration,
++    attachments,
+     fetchBoards,
+     fetchCapabilities,
+     fetchTasks,
+@@ -503,11 +766,36 @@ export const useKanbanStore = defineStore('kanban', () => {
+     dispatch,
+     setFilter,
+     setSelectedBoard,
++    setBoard,
++    setStatusFilter,
++    setAssigneeFilter,
++    setSearchQuery,
++    clearSelection,
++    toggleSelection,
++    moveTask,
++    bulkComplete,
++    bulkBlock,
++    bulkUnblock,
++    bulkArchive,
++    connectEvents,
++    deleteTask,
++    patchTask,
++    decomposeTask,
+     startEventStream,
+     stopEventStream,
+     recoverSelectedBoard,
+     resolveAvailableBoard,
+     clearBoardScopedState,
+     refreshAll,
++    // Advanced methods
++    fetchDiagnostics,
++    fetchOrchestration,
++    saveOrchestrationSettings,
++    downloadTaskAttachment,
++    saveProfileDescription,
++    autoGenerateProfileDescription,
++    fetchAttachments,
++    uploadTaskAttachment,
++    deleteTaskAttachment,
+   }
+ })

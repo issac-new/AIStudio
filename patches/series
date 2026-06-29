@@ -1,0 +1,101 @@
+# B 类 patch 应用清单(按序)
+001-schemas-matrix-columns.patch
+002-config-matrix-fields.patch
+003-vite-matrix-presbundle.patch
+004-sessions-db.patch
+005-routes-auth.patch
+006-safe-file-store.patch
+007-model-run-prompt.patch
+008-server-index-element-web-middleware.patch
+009-client-api-auth-matrix.patch
+010-client-api-kanban-extensions.patch
+011-client-api-client-matrix.patch
+012-server-controllers-auth.patch
+013-server-controllers-kanban.patch
+014-server-service-hermes-kanban.patch
+015-server-db-users-store.patch
+016-server-middleware-user-auth.patch
+017-package-json-matrix-sdk-dep.patch
+020-client-pagesidebarnav-nav.patch
+022-client-store-kanban-enh.patch
+023-client-store-chat.patch
+024-client-store-auth-matrix.patch
+025-client-loginview-matrix.patch
+026-client-accountsettings-matrix.patch
+027-client-usermgmtsettings-matrix.patch
+# 028-client-kanbanview-enh.patch  # v0.6.20: disabled — keep native kanban, swarm-kanban uses overlay components
+029-client-settingsview.patch
+030-client-groupchatview.patch
+031-client-chatpanel.patch
+032-client-styles-variables-branding.patch
+033-client-api-profiles.patch
+034-client-api-sessions.patch
+035-server-routes-kanban.patch
+037-test-kanban-service.patch
+038-test-kanban-controller.patch
+039-test-kanban-routes.patch
+# 040-package-lock-matrix-sdk.patch  # SKIP: auto-generated via npm install
+041-desktop-rebrand-swarmstudio-config.patch
+042-desktop-rebrand-swarmstudio-pkg.patch
+043-desktop-rebrand-swarmstudio-strings.patch
+# 044-i18n-locale-de.patch  # FIXME: pre-existing context mismatch (upstream de.ts changed). Stale.
+# 046-i18n-locale-es.patch  # FIXME: pre-existing context mismatch (upstream es.ts changed). Stale.
+# 047-i18n-locale-fr.patch  # FIXME: pre-existing context mismatch (upstream fr.ts changed). Stale.
+# 048-i18n-locale-ja.patch  # FIXME: pre-existing context mismatch (upstream ja.ts changed). Stale.
+# 049-i18n-locale-ko.patch  # FIXME: pre-existing context mismatch (upstream ko.ts changed). Stale.
+# 050-i18n-locale-pt.patch  # FIXME: pre-existing context mismatch (upstream pt.ts changed). Stale.
+# 051-i18n-locale-ru.patch  # FIXME: pre-existing context mismatch (upstream ru.ts changed). Stale.
+# 052-i18n-locale-zh-TW.patch  # FIXME: pre-existing context mismatch (upstream zh-TW.ts changed). Stale.
+# 054-i18n-login-title-swarmstudio.patch  # FIXME: pre-existing context mismatch. Stale.
+000-vitest-custom-alias.patch
+055-test-matrix-right-panel.patch
+056-test-matrix-thread-notifications.patch
+057-test-matrix-room-threads.patch
+058-test-matrix-timeline-panel-params.patch
+059-test-matrix-thread-summary.patch
+060-test-matrix-message-actions.patch
+070-cockpit-packages_client_src_App.vue.patch
+071-cockpit-packages_client_src_router_index.ts.patch
+072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch
+# 073-cockpit-packages_client_src_views_LoginView.vue.patch  # FIXME: pre-existing context mismatch (upstream LoginView.vue changed). Stale.
+074-cockpit-packages_client_src_i18n_locales_en.ts.patch
+075-cockpit-packages_client_src_i18n_locales_zh.ts.patch
+# 076-i18n-matrix-chat-en.patch  # v0.6.20: combined into 074
+# 077-i18n-matrix-chat-zh.patch  # v0.6.20: combined into 075
+078-server-kanban-workspace-files.patch
+# 079-server-kanban-timeline-aggregate.patch  # v0.6.20: combined into 078
+080-echarts-dep.patch
+# 082-i18n-cockpit-history-en.patch  # v0.6.20: combined into 074
+# 083-i18n-cockpit-history-zh.patch  # v0.6.20: combined into 075
+085-group-chat-unread-tracking.patch
+# 086-i18n-cockpit-notify.patch  # v0.6.20: combined into 074+075
+087-group-chat-autojoin-on-connect.patch
+088-run-chat-autojoin-sessions-on-connect.patch
+089-chat-store-unread-tracking.patch
+# 090-cockpit-i18n-workitem-actions-en.ts.patch  # v0.6.20: combined into 074
+# 091-cockpit-i18n-workitem-actions-zh.ts.patch  # v0.6.20: combined into 075
+# 092-fix-upstream-i18n-duplicate-keys.patch  # v0.6.20: no-op, duplicates already removed upstream
+# 093-server-kanban-attachment-workspace-sync.patch  # v0.6.20: combined into 078
+094-client-store-chat-gateway-notice.patch
+095-client-messageitem-gateway-notice.patch
+096-client-groupmessageitem-gateway-notice.patch
+097-server-files-api-root-param.patch
+098-client-api-files-root.patch
+099-client-store-files-root.patch
+100-client-files-filetree-root.patch
+101-messagelist-gateway-banner.patch
+102-groupmessagelist-gateway-banner.patch
+
+103-lunar-dep.patch
+#104-kanban-i18n-en.patch  # v0.6.20: keys already in upstream
+#105-kanban-i18n-zh.patch  # v0.6.20: keys already in upstream
+106-desktop-installer-targets.patch
+107-agent-health-proxy.patch
+108-update-runtime-version.patch
+109-windows-zip-target.patch
+110-sidebar-logout-consistency.patch
+113-settings-hide-sidebar-footer.patch
+#111-hermes-to-swarm-rebrand.patch
+114-server-trace-api.patch
+
+036-server-routes-index.patch

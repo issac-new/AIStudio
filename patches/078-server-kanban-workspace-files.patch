@@ -1,0 +1,99 @@
+diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
+index 0000000..0000000 100644
+--- a/packages/server/src/controllers/hermes/kanban.ts
++++ b/packages/server/src/controllers/hermes/kanban.ts
+@@ -1,5 +1,5 @@
+ import type { Context } from 'koa'
+-import { readFile } from 'fs/promises'
++import { readFile, stat, copyFile } from 'fs/promises'
+ import { resolve, normalize } from 'path'
+ import { homedir } from 'os'
+ import * as kanbanCli from '../../services/hermes/hermes-kanban'
+@@ -758,6 +758,30 @@ export async function readArtifact(ctx: Context) {
+   }
+ }
+ 
++interface WorkspaceFileEntry { name: string; isDir: boolean; size: number; modified: number; children?: WorkspaceFileEntry[] }
++async function readDirTree(dir: string, depth: number): Promise<WorkspaceFileEntry[]> {
++  if (depth <= 0) return []; let names: string[]; try { names = await readdir(dir) } catch { return [] }
++  return Promise.all(names.map(async (name) => {
++    const full = join(dir, name); let st: Awaited<ReturnType<typeof stat>>; try { st = await stat(full) } catch { return { name, isDir: false, size: 0, modified: 0 } }
++    const entry: WorkspaceFileEntry = { name, isDir: st.isDirectory(), size: st.size, modified: st.mtimeMs }
++    if (entry.isDir && depth > 1) entry.children = await readDirTree(full, depth - 1); return entry
++  }))
++}
++export async function listWorkspaceFiles(ctx: Context) {
++  const taskId = ctx.query.task_id as string | undefined; const board = (ctx.query.board as string | undefined) || 'default'; const sub = (ctx.query.path as string | undefined) ?? ''; const depthRaw = parseInt(ctx.query.depth as string, 10); const depth = Number.isFinite(depthRaw) ? Math.min(Math.max(depthRaw, 1), 4) : 2
++  if (!taskId) { ctx.status = 400; ctx.body = { error: 'task_id is required' }; return }
++  const detail = await kanbanCli.getTask(taskId, { board }); const wsPath = detail?.task?.workspace_path; if (!wsPath) { ctx.body = { path: '', entries: [] }; return }
++  const kanbanHome = resolve(homedir(), '.hermes', 'kanban'); const workspacesRoot = board === 'default' ? resolve(kanbanHome, 'workspaces') : resolve(kanbanHome, 'boards', board, 'workspaces')
++  const root = resolve(workspacesRoot, normalize(wsPath)); if (!isPathWithin(root, workspacesRoot)) { ctx.status = 403; ctx.body = { error: 'workspace path out of sandbox' }; return }
++  const target = sub ? resolve(root, normalize(sub)) : root; if (!isPathWithin(target, root)) { ctx.status = 403; ctx.body = { error: 'sub path out of task workspace' }; return }
++  try { const entries = await readDirTree(target, depth); ctx.body = { path: sub, entries } } catch (err: any) { ctx.status = 500; ctx.body = { error: err.message } }
++}
++export async function listTimeline(ctx: Context) {
++  const limitRaw = parseInt(ctx.query.limit as string, 10); const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100; const since = parseInt(ctx.query.since as string, 10); const sinceTs = Number.isFinite(since) ? since : 0
++  const allTasks = await kanbanCli.listTasks({}); const items: Array<Record<string, unknown>> = []
++  await Promise.all(allTasks.map(async (t) => { const detail = await kanbanCli.getTask(t.id); if (!detail) return; const archived = detail.task.status === 'archived'; for (const e of detail.events ?? []) items.push({ source: 'event', id: 'evt-' + e.id, taskId: t.id, taskTitle: t.title, taskArchived: archived, ts: e.created_at, kind: e.kind, payload: e.payload }); for (const c of detail.comments ?? []) items.push({ source: 'comment', id: 'cmt-' + c.id, taskId: t.id, taskTitle: t.title, taskArchived: archived, ts: c.created_at, author: c.author, body: c.body }) }))
++  const filtered = items.filter(x => (x.ts as number) >= sinceTs).sort((a, b) => (b.ts as number) - (a.ts as number)).slice(0, limit); ctx.body = { items: filtered, total: filtered.length }
++}
+ export async function searchSessions(ctx: Context) {
+   const { task_id, profile, q } = ctx.query as {
+     task_id?: string
+@@ -950,6 +974,26 @@ import { mkdir, writeFile, unlink, readdir } from 'fs/promises'
+ import { join, basename, dirname } from 'path'
+ import { createHash } from 'crypto'
+ 
++async function syncAttachmentToWorkspace(taskId: string, board: string | undefined, filename: string, srcPath: string): Promise<void> {
++  try {
++    const detail = await kanbanCli.getTask(taskId, { board: board || 'default' })
++    const wsPath = detail?.task?.workspace_path; if (!wsPath) return
++    const kanbanHome = resolve(homedir(), '.hermes', 'kanban')
++    const workspacesRoot = (!board || board === 'default') ? resolve(kanbanHome, 'workspaces') : resolve(kanbanHome, 'boards', board, 'workspaces')
++    const root = resolve(workspacesRoot, normalize(wsPath)); if (!isPathWithin(root, workspacesRoot)) return
++    await mkdir(root, { recursive: true }); await copyFile(srcPath, join(root, filename)).catch(() => {})
++  } catch { }
++}
++async function removeAttachmentFromWorkspace(taskId: string, board: string | undefined, filename: string): Promise<void> {
++  try {
++    const detail = await kanbanCli.getTask(taskId, { board: board || 'default' })
++    const wsPath = detail?.task?.workspace_path; if (!wsPath) return
++    const kanbanHome = resolve(homedir(), '.hermes', 'kanban')
++    const workspacesRoot = (!board || board === 'default') ? resolve(kanbanHome, 'workspaces') : resolve(kanbanHome, 'boards', board, 'workspaces')
++    const root = resolve(workspacesRoot, normalize(wsPath)); if (!isPathWithin(root, workspacesRoot)) return
++    await unlink(join(root, filename)).catch(() => {})
++  } catch { }
++}
+ const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024 // 25 MB
+ 
+ function attachmentsRoot(board?: string): string {
+@@ -1117,6 +1161,7 @@ export async function uploadAttachment(ctx: Context) {
+     }
+ 
+     await writeFile(destPath, uploadedFile.data)
++    await syncAttachmentToWorkspace(taskId, board, candidate, destPath)
+ 
+     const uploadedBy = ctx.state.user?.username || 'dashboard'
+     const record = await addAttachment({
+@@ -1196,6 +1241,7 @@ export async function removeAttachment(ctx: Context) {
+       return
+     }
+     ctx.body = { ok: true, id: attachmentId }
++    await removeAttachmentFromWorkspace(record.task_id, board, record.filename)
+   } catch (err: any) {
+     ctx.status = 500
+     ctx.body = { error: err.message }
+
+diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+index 0000000..0000000 100644
+--- a/packages/server/src/routes/hermes/kanban.ts
++++ b/packages/server/src/routes/hermes/kanban.ts
+@@ -22,6 +22,8 @@ kanbanRoutes.get('/api/hermes/kanban/orchestration', ctrl.getOrchestration)
+ kanbanRoutes.put('/api/hermes/kanban/orchestration', ctrl.setOrchestration)
+ kanbanRoutes.post('/api/hermes/kanban/dispatch', ctrl.dispatch)
+ kanbanRoutes.get('/api/hermes/kanban/artifact', ctrl.readArtifact)
++kanbanRoutes.get('/api/hermes/kanban/workspace-files', ctrl.listWorkspaceFiles)
++kanbanRoutes.get('/api/hermes/kanban/timeline', ctrl.listTimeline)
+ kanbanRoutes.get('/api/hermes/kanban/search-sessions', ctrl.searchSessions)
+ kanbanRoutes.post('/api/hermes/kanban/links', ctrl.linkTasks)
+ kanbanRoutes.delete('/api/hermes/kanban/links', ctrl.unlinkTasks)

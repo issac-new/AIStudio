@@ -1,0 +1,13 @@
+diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+index 28b894ea..1577dd79 100644
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -114,6 +114,8 @@ mac:
+ 
+ win:
+   target:
++    - target: zip
++      arch: [x64]
+     - target: nsis
+       arch: [x64]
+   artifactName: "SwarmStudio-${version}-${arch}.${ext}"

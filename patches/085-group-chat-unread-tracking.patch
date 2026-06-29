@@ -1,0 +1,97 @@
+diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
+index df411c9..e35db32 100644
+--- a/packages/client/src/stores/hermes/group-chat.ts
++++ b/packages/client/src/stores/hermes/group-chat.ts
+@@ -131,6 +131,12 @@ export interface GroupPendingApproval {
+ export const useGroupChatStore = defineStore('groupChat', () => {
+     // ─── State ─────────────────────────────────────────────
+     const connected = ref(false)
++    // ─── Unread tracking (in-memory, resets on refresh) ──────────────
++    // Tracks per-room unread message count + last message preview for
++    // rooms that are NOT currently active. Cleared on joinRoom.
++    const unreadCounts = ref<Record<string, number>>({})
++    const lastMessageMap = ref<Record<string, { content: string; senderName: string; ts: number }>>({})
++
+     const currentRoomId = ref<string | null>(null)
+     const rooms = ref<RoomInfo[]>([])
+     const messages = ref<ChatMessage[]>([])
+@@ -345,7 +351,33 @@ const currentUserAvatar = ref('')
+             connected.value = false
+         })
+ 
++        // Server pushes initial per-room state (last message preview) on connect
++        // after auto-joining the user's visible rooms. Unread count starts at 0
++        // (in-memory; resets on refresh — accepted). Subsequent live `message`
++        // events accumulate unread for non-active rooms.
++        socket.on('unread_sync', (sync: { roomId: string; unreadCount: number; lastMessage: { content: string; senderName: string; ts: number } | null }[]) => {
++            if (!Array.isArray(sync)) return
++            const nextLast = { ...lastMessageMap.value }
++            for (const item of sync) {
++                if (!item?.roomId) continue
++                if (item.lastMessage) nextLast[item.roomId] = item.lastMessage
++            }
++            lastMessageMap.value = nextLast
++        })
++
+         socket.on('message', (msg: ChatMessage) => {
++            // Unread tracking: only count agent (assistant) replies for non-active rooms.
++            // User-sent messages do not generate notifications.
++            if (msg.roomId !== currentRoomId.value && msg.role === 'assistant') {
++                unreadCounts.value = {
++                    ...unreadCounts.value,
++                    [msg.roomId]: (unreadCounts.value[msg.roomId] ?? 0) + 1,
++                }
++                lastMessageMap.value = {
++                    ...lastMessageMap.value,
++                    [msg.roomId]: { content: msg.content ?? '', senderName: msg.senderName ?? '', ts: Date.now() },
++                }
++            }
+             if (msg.roomId === currentRoomId.value) {
+                 const idx = messages.value.findIndex(m => m.id === msg.id)
+                 const existing = idx >= 0 ? messages.value[idx] : null
+@@ -568,6 +600,12 @@ const currentUserAvatar = ref('')
+     async function joinRoom(roomId: string) {
+         isJoining.value = true
+         error.value = null
++        // Clear unread for the room being entered
++        if (unreadCounts.value[roomId]) {
++            const next = { ...unreadCounts.value }
++            delete next[roomId]
++            unreadCounts.value = next
++        }
+ 
+         try {
+             const res = await getRoomDetail(roomId)
+@@ -810,6 +848,19 @@ const currentUserAvatar = ref('')
+         pendingApprovals.value = new Map(pendingApprovals.value)
+     }
+ 
++    function clearRoomUnread(roomId: string) {
++        if (!unreadCounts.value[roomId]) return
++        const next = { ...unreadCounts.value }
++        delete next[roomId]
++        unreadCounts.value = next
++    }
++    function clearAllUnread() {
++        unreadCounts.value = {}
++    }
++    function getRoomUnread(roomId: string): number {
++        return unreadCounts.value[roomId] ?? 0
++    }
++
+     return {
+         // State
+         connected,
+@@ -857,6 +908,12 @@ const currentUserAvatar = ref('')
+         deleteRoom,
+         cloneRoom,
+         clearCurrentRoomContext,
++        // Unread tracking state (exported for cockpit notify aggregation)
++        unreadCounts,
++        lastMessageMap,
++        clearRoomUnread,
++        clearAllUnread,
++        getRoomUnread,
+         loadAgents,
+         addAgentToRoom,
+         removeAgentFromRoom,

@@ -1,0 +1,20 @@
+diff --git a/packages/desktop/package.json b/packages/desktop/package.json
+index 91923401..1da0af7f 100644
+--- a/packages/desktop/package.json
++++ b/packages/desktop/package.json
+@@ -1,11 +1,11 @@
+ {
+-  "name": "hermes-studio",
++  "name": "swarmstudio",
+   "version": "0.6.20",
+-  "description": "Hermes Studio desktop distribution with bundled Python runtime and hermes-agent",
++  "description": "SwarmStudio desktop distribution with bundled Python runtime and hermes-agent",
+   "homepage": "https://hermes-studio.ai",
+   "author": {
+-    "name": "Hermes Studio Contributors",
+-    "email": "noreply@hermes-studio.local"
++    "name": "SwarmStudio Contributors",
++    "email": "noreply@swarmstudio.local"
+   },
+   "license": "BSL-1.1",
+   "private": true,

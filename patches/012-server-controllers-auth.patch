@@ -1,0 +1,461 @@
+--- a/packages/server/src/controllers/auth.ts	2026-06-22 16:55:55
++++ b/packages/server/src/controllers/auth.ts	2026-06-21 16:06:50
+@@ -6,14 +6,19 @@
+   bootstrapDefaultSuperAdmin,
+   countActiveSuperAdmins,
+   countUsers,
++  createFromMatrix,
+   createUser,
+   deleteUser,
++  findByMatrixUserId,
+   findUserById,
+   findUserByUsername,
+   getUserAvatar,
+   listUserProfiles,
+   listUsers,
++  replaceUserProfiles,
+   setUserAvatar,
++  syncMatrixMetadata,
++  updateMatrixUserMetadata,
+   updateUser,
+   updateUsername,
+   updateUserPassword,
+@@ -25,6 +30,17 @@
+ import { issueUserJwt } from '../middleware/user-auth'
+ import { listProfileNamesFromDisk } from '../services/hermes/hermes-profile'
+ import { startOutboundRelayClient, stopOutboundRelayClient } from '../services/global-agent/outbound-relay-client'
++// HERMES_CUSTOM[MatrixAuth] BEGIN: Matrix 管理员服务集成
++import {
++  validateMatrixToken,
++  getMatrixUserInfo,
++  listMatrixUsers as listMatrixUsersFromServer,
++  createMatrixUser as createMatrixUserOnServer,
++  resetMatrixUserPassword as resetMatrixUserPasswordOnServer,
++  setMatrixUserActive,
++  deleteMatrixUser as deleteMatrixUserOnServer,
++} from '../custom/matrix/admin-service'
++// HERMES_CUSTOM[MatrixAuth] END
+ 
+ /**
+  * GET /api/auth/status
+@@ -43,6 +59,9 @@
+  */
+ export async function currentUser(ctx: Context) {
+   const userId = ctx.state.user?.id
++  const username = ctx.state.user?.username
++  const role = ctx.state.user?.role
++
+   const user = userId ? findUserById(userId) : null
+   if (!user) {
+     ctx.status = 404
+@@ -62,6 +81,11 @@
+       requiresCredentialChange: process.env.HERMES_DESKTOP === 'true'
+         ? false
+         : user.username === DEFAULT_USERNAME && verifyPassword(DEFAULT_PASSWORD, user.password_hash),
++      matrix_user_id: user.matrix_user_id,
++      matrix_display_name: user.matrix_display_name,
++      matrix_avatar_url: user.matrix_avatar_url,
++      matrix_homeserver_url: user.matrix_homeserver_url,
++      auth_source: user.auth_source,
+     },
+   }
+ }
+@@ -93,7 +117,7 @@
+  */
+ export async function getMyAvatar(ctx: Context) {
+   const userId = ctx.state.user?.id
+-  if (!userId) {
++  if (userId == null) {
+     ctx.status = 401
+     ctx.body = { error: 'Unauthorized' }
+     return
+@@ -403,9 +427,389 @@
+   const available = new Set(listProfileNamesFromDisk())
+   const missing = profiles.find(profile => !available.has(profile))
+   return missing || null
++}
++
++// Helper: get admin token from config or current user
++function getMatrixAdminToken(ctx: Context): string | null {
++  // For now, use the current user's Matrix accessToken if they are admin
++  // In production, this should come from server config
++  // TODO: Read from Hermes config system
++  return null
++}
++
++/**
++ * POST /api/auth/matrix-login
++ * Authenticate with Matrix accessToken, find/create Hermes user, return JWT.
++ */
++export async function matrixLogin(ctx: Context) {
++  const { matrixAccessToken, matrixUserId, deviceId, homeserverUrl } = ctx.request.body as {
++    matrixAccessToken?: string
++    matrixUserId?: string
++    deviceId?: string
++    homeserverUrl?: string
++  }
++
++  if (!matrixAccessToken || !matrixUserId || !homeserverUrl) {
++    ctx.status = 400
++    ctx.body = { error: 'Matrix accessToken, userId, and homeserverUrl are required' }
++    return
++  }
++
++  // 1. Validate the Matrix token
++  const validation = await validateMatrixToken(matrixAccessToken, homeserverUrl)
++  if (!validation || validation.userId !== matrixUserId) {
++    ctx.status = 401
++    ctx.body = { error: 'Invalid Matrix access token' }
++    return
++  }
++
++  // 2. Get user info from Matrix (including admin status)
++  // Use the user's own token to check their profile; admin status requires admin token
++  const matrixInfo = await getMatrixUserInfo(matrixUserId, matrixAccessToken, homeserverUrl)
++
++  // 3. Find or create Hermes user
++  let user = findByMatrixUserId(matrixUserId)
++  const now = Date.now()
++
++  if (!user) {
++    const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
++    const role = 'super_admin'
++    user = createFromMatrix({
++      matrixUserId,
++      username: localpart,
++      displayName: matrixInfo?.displayName || localpart,
++      avatarUrl: matrixInfo?.avatarUrl || '',
++      homeserverUrl,
++      role,
++    })
++    if (user) {
++      // Ensure matrix user has access to all profiles (same permission as local admin)
++      const allProfiles = listProfileNamesFromDisk()
++      replaceUserProfiles(user.id, allProfiles, allProfiles[0] || 'default')
++      user = findByMatrixUserId(matrixUserId)
++    }
++  } else {
++    // Update cached metadata
++    syncMatrixMetadata(user.id, {
++      displayName: matrixInfo?.displayName || undefined,
++      avatarUrl: matrixInfo?.avatarUrl || undefined,
++      lastLoginAt: now,
++    })
++    // Ensure matrix user has access to all profiles (same permission as local admin)
++    const allProfiles = listProfileNamesFromDisk()
++    replaceUserProfiles(user.id, allProfiles, allProfiles[0] || 'default')
++    user = findByMatrixUserId(matrixUserId)
++  }
++
++  if (!user) {
++    ctx.status = 500
++    ctx.body = { error: 'Failed to create or update user record' }
++    return
++  }
++
++  // 4. Issue Hermes JWT
++  try {
++    const token = await issueUserJwt(user)
++    ctx.body = { token, user: {
++      id: user.id,
++      username: user.username,
++      role: user.role,
++      status: user.status,
++      matrix_user_id: user.matrix_user_id,
++      matrix_display_name: user.matrix_display_name,
++      matrix_avatar_url: user.matrix_avatar_url,
++      matrix_homeserver_url: user.matrix_homeserver_url,
++      auth_source: user.auth_source,
++      created_at: user.created_at,
++      updated_at: user.updated_at,
++      last_login_at: user.last_login_at,
++    }}
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err?.message || 'Failed to issue login token' }
++  }
++}
++
++/**
++ * GET /api/auth/matrix-users
++ * List Matrix users merged with Hermes metadata.
++ */
++export async function listMatrixUsers(ctx: Context) {
++  const adminToken = getMatrixAdminToken(ctx)
++  const homeserverUrl = 'http://localhost:8008' // TODO: Get from config or user
++
++  if (!adminToken) {
++    // Fallback: return only Hermes users with matrix_user_id
++    const hermesUsers = listUsers().filter(u => u.matrix_user_id)
++    ctx.body = {
++      users: hermesUsers.map(u => ({
++        matrix_user_id: u.matrix_user_id,
++        display_name: u.matrix_display_name,
++        avatar_url: u.matrix_avatar_url,
++        role: u.role,
++        status: u.status,
++        profiles: u.profiles,
++        last_login_at: u.last_login_at,
++        is_admin: false,
++        source: 'hermes',
++      })),
++      total: hermesUsers.length,
++    }
++    return
++  }
++
++  const matrixResult = await listMatrixUsersFromServer(adminToken, homeserverUrl)
++  if (!matrixResult) {
++    ctx.status = 503
++    ctx.body = { error: 'Failed to fetch users from Matrix homeserver' }
++    return
++  }
++
++  // Merge with Hermes metadata
++  const mergedUsers = matrixResult.users.map((matrixUser: { name: string; displayname: string | null; avatar_url: string | null; is_admin: boolean; deactivated: boolean }) => {
++    const hermesUser = findByMatrixUserId(matrixUser.name)
++    return {
++      matrix_user_id: matrixUser.name,
++      display_name: matrixUser.displayname || matrixUser.name.replace(/^@/, '').split(':')[0],
++      avatar_url: matrixUser.avatar_url,
++      role: hermesUser?.role || (matrixUser.is_admin ? 'super_admin' : 'admin'),
++      status: hermesUser?.status || (matrixUser.deactivated ? 'disabled' : 'active'),
++      profiles: hermesUser ? listUserProfiles(hermesUser.id).map(p => p.profile_name) : [],
++      last_login_at: hermesUser?.last_login_at || null,
++      is_admin: matrixUser.is_admin,
++      source: 'matrix',
++    }
++  })
++
++  ctx.body = { users: mergedUsers, total: matrixResult.total }
++}
++
++/**
++ * POST /api/auth/matrix-users
++ * Create a Matrix user and Hermes metadata.
++ */
++export async function createMatrixUser(ctx: Context) {
++  const body = ctx.request.body as {
++    userId?: string
++    password?: string
++    displayName?: string
++    role?: unknown
++    profiles?: unknown
++  }
++  const userId = String(body.userId || '').trim()
++  const password = String(body.password || '')
++  const role = normalizeRole(body.role || 'admin')
++  const profiles = normalizeProfiles(body.profiles)
++
++  if (!userId || !password || password.length < 6 || !role) {
++    ctx.status = 400
++    ctx.body = { error: 'Invalid userId, password (min 6 chars), or role' }
++    return
++  }
++
++  const adminToken = getMatrixAdminToken(ctx)
++  const homeserverUrl = 'http://localhost:8008' // TODO: Config
++
++  if (!adminToken) {
++    ctx.status = 503
++    ctx.body = { error: 'Matrix admin API not configured' }
++    return
++  }
++
++  const created = await createMatrixUserOnServer(userId, password, adminToken, homeserverUrl)
++  if (!created) {
++    ctx.status = 500
++    ctx.body = { error: 'Failed to create Matrix user' }
++    return
++  }
++
++  // Create Hermes record
++  const localpart = userId.replace(/^@/, '').split(':')[0]
++  const hermesUser = createFromMatrix({
++    matrixUserId: userId,
++    username: localpart,
++    displayName: body.displayName || localpart,
++    avatarUrl: '',
++    homeserverUrl,
++    role,
++  })
++
++  if (profiles.length > 0 && hermesUser) {
++    replaceUserProfiles(hermesUser.id, profiles, profiles[0])
++  }
++
++  ctx.status = 201
++  ctx.body = { user: hermesUser }
++}
++
++/**
++ * PUT /api/auth/matrix-users/:id
++ * Update Matrix user (Hermes metadata + Matrix profile).
++ */
++export async function updateMatrixUser(ctx: Context) {
++  const matrixUserId = decodeURIComponent(ctx.params.id)
++  const body = ctx.request.body as {
++    displayName?: string
++    role?: unknown
++    status?: unknown
++    profiles?: unknown
++  }
++
++  const role = body.role == null ? undefined : normalizeRole(body.role)
++  const status = body.status == null ? undefined : normalizeStatus(body.status)
++  const profiles = body.profiles == null ? undefined : normalizeProfiles(body.profiles)
++
++  const hermesUser = findByMatrixUserId(matrixUserId)
++  if (!hermesUser) {
++    ctx.status = 404
++    ctx.body = { error: 'User not found' }
++    return
++  }
++
++  // Update Hermes metadata
++  if (role !== undefined || status !== undefined) {
++    updateMatrixUserMetadata(matrixUserId, { role: role || undefined, status: status || undefined })
++  }
++
++  if (profiles !== undefined) {
++    replaceUserProfiles(hermesUser.id, profiles, profiles[0] || null)
++  }
++
++  // Update Matrix display name if provided
++  if (body.displayName) {
++    const adminToken = getMatrixAdminToken(ctx)
++    const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
++    if (adminToken) {
++      await fetch(`${homeserverUrl}/_matrix/client/v3/profile/${encodeURIComponent(matrixUserId)}/displayname`, {
++        method: 'PUT',
++        headers: {
++          Authorization: `Bearer ${adminToken}`,
++          'Content-Type': 'application/json',
++        },
++        body: JSON.stringify({ displayname: body.displayName }),
++      })
++    }
++  }
++
++  ctx.body = { user: findByMatrixUserId(matrixUserId) }
++}
++
++/**
++ * DELETE /api/auth/matrix-users/:id
++ * Delete a Matrix user and Hermes record.
++ */
++export async function deleteMatrixUser(ctx: Context) {
++  const matrixUserId = decodeURIComponent(ctx.params.id)
++  const hermesUser = findByMatrixUserId(matrixUserId)
++
++  if (!hermesUser) {
++    ctx.status = 404
++    ctx.body = { error: 'User not found' }
++    return
++  }
++
++  if (ctx.state.user?.id === hermesUser.id) {
++    ctx.status = 400
++    ctx.body = { error: 'You cannot delete your own account' }
++    return
++  }
++
++  if (hermesUser.role === 'super_admin' && hermesUser.status === 'active' && countActiveSuperAdmins(hermesUser.id) === 0) {
++    ctx.status = 400
++    ctx.body = { error: 'At least one active super administrator is required' }
++    return
++  }
++
++  const adminToken = getMatrixAdminToken(ctx)
++  const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
++
++  if (adminToken) {
++    await deleteMatrixUserOnServer(matrixUserId, adminToken, homeserverUrl)
++  }
++
++  deleteUser(hermesUser.id)
++  ctx.body = { success: true }
++}
++
++/**
++ * POST /api/auth/matrix-users/:id/deactivate
++ * Activate or deactivate a Matrix user.
++ */
++export async function deactivateMatrixUser(ctx: Context) {
++  const matrixUserId = decodeURIComponent(ctx.params.id)
++  const { active } = ctx.request.body as { active?: boolean }
++
++  if (active === undefined) {
++    ctx.status = 400
++    ctx.body = { error: 'active field is required' }
++    return
++  }
++
++  const hermesUser = findByMatrixUserId(matrixUserId)
++  if (!hermesUser) {
++    ctx.status = 404
++    ctx.body = { error: 'User not found' }
++    return
++  }
++
++  if (ctx.state.user?.id === hermesUser.id && !active) {
++    ctx.status = 400
++    ctx.body = { error: 'You cannot disable your own account' }
++    return
++  }
++
++  const adminToken = getMatrixAdminToken(ctx)
++  const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
++
++  if (adminToken) {
++    await setMatrixUserActive(matrixUserId, active, adminToken, homeserverUrl)
++  }
++
++  updateMatrixUserMetadata(matrixUserId, { status: active ? 'active' : 'disabled' })
++  ctx.body = { success: true }
+ }
+ 
+ /**
++ * POST /api/auth/matrix-users/:id/reset-password
++ * Reset a Matrix user's password.
++ */
++export async function resetMatrixUserPassword(ctx: Context) {
++  const matrixUserId = decodeURIComponent(ctx.params.id)
++  const { password } = ctx.request.body as { password?: string }
++
++  if (!password || password.length < 6) {
++    ctx.status = 400
++    ctx.body = { error: 'Password must be at least 6 characters' }
++    return
++  }
++
++  const hermesUser = findByMatrixUserId(matrixUserId)
++  if (!hermesUser) {
++    ctx.status = 404
++    ctx.body = { error: 'User not found' }
++    return
++  }
++
++  const adminToken = getMatrixAdminToken(ctx)
++  const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
++
++  if (!adminToken) {
++    ctx.status = 503
++    ctx.body = { error: 'Matrix admin API not configured' }
++    return
++  }
++
++  const ok = await resetMatrixUserPasswordOnServer(matrixUserId, password, adminToken, homeserverUrl)
++  if (!ok) {
++    ctx.status = 500
++    ctx.body = { error: 'Failed to reset password' }
++    return
++  }
++
++  ctx.body = { success: true }
++}
++
++/**
+  * GET /api/auth/users
+  * Super admin user management list.
+  */

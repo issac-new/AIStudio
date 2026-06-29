@@ -1,0 +1,31 @@
+diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
+index e429a02b..c7838431 100644
+--- a/packages/client/src/components/layout/AppSidebar.vue
++++ b/packages/client/src/components/layout/AppSidebar.vue
+@@ -12,18 +12,24 @@ import LanguageSwitch from "@/components/layout/LanguageSwitch.vue";
+ import ThemeSwitch from "@/components/layout/ThemeSwitch.vue";
+ import VersionManagementModal from "@/components/layout/VersionManagementModal.vue";
+ import { changelog } from "@/data/changelog";
+-import { getStoredUsername, isStoredSuperAdmin } from "@/api/client";
++// HERMES_CUSTOM[MatrixAuth] BEGIN: auth store import for super admin check and username display
++import { useAuthStore } from "@/stores/hermes/auth";
++import { getStoredUsername } from "@/api/client";
++// HERMES_CUSTOM[MatrixAuth] END
+ 
+ const { t } = useI18n();
+ const message = useMessage();
+ const route = useRoute();
+ const router = useRouter();
+ const appStore = useAppStore();
++// HERMES_CUSTOM[MatrixAuth] BEGIN: auth store usage for super admin and username
++const authStore = useAuthStore();
+ const selectedKey = computed(() => {
+   return route.name as string;
+ });
+-const isSuperAdmin = computed(() => isStoredSuperAdmin());
++const isSuperAdmin = computed(() => authStore.isSuperAdmin);
+ const currentUsername = computed(() => getStoredUsername());
++// HERMES_CUSTOM[MatrixAuth] END
+ const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === '1';
+ const isDesktopShell = computed(() =>
+   (window as typeof window & { hermesDesktop?: { isDesktop?: boolean } }).hermesDesktop?.isDesktop === true,

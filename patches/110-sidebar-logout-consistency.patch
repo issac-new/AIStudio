@@ -1,0 +1,126 @@
+diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+index cc7ceed9..ce47e867 100644
+--- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+@@ -11,6 +11,7 @@ import GroupChatInput from './GroupChatInput.vue'
+ import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
+ import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
+ import SettingsCircuitBadge from '@/components/layout/SettingsCircuitBadge.vue'
++import { useAuthStore } from '@/stores/hermes/auth'
+ import { copyToClipboard } from '@/utils/clipboard'
+ import type { Attachment } from '@/stores/hermes/chat'
+ import type { RoomAgent } from '@/api/hermes/group-chat'
+@@ -20,6 +21,7 @@ const router = useRouter()
+ const message = useMessage()
+ const store = useGroupChatStore()
+ const profilesStore = useProfilesStore()
++const authStore = useAuthStore()
+ 
+ const showSidebar = ref(window.innerWidth > 768)
+ const showCreateModal = ref(false)
+@@ -436,14 +438,14 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
+                 </div>
+             </div>
+             <div class="page-sidebar-bottom">
+-                <button class="page-sidebar-menu-btn" type="button" @click="openSettingsPage">
++                <button class="page-sidebar-menu-btn" type="button" @click="authStore.logout()">
+                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+-                        <circle cx="12" cy="12" r="3" />
+-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
++                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
++                        <polyline points="16 17 21 12 16 7" />
++                        <line x1="21" y1="12" x2="9" y2="12" />
+                     </svg>
+-                    <span>{{ t('sidebar.settings') }}</span>
++                    <span>{{ t('sidebar.logout') }}</span>
+                 </button>
+-                <SettingsCircuitBadge />
+             </div>
+         </div>
+ 
+diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
+index 5a93fd1a..5a3de64b 100644
+--- a/packages/client/src/views/hermes/WorkflowView.vue
++++ b/packages/client/src/views/hermes/WorkflowView.vue
+@@ -17,7 +17,7 @@ import FolderPicker from '@/components/hermes/chat/FolderPicker.vue'
+ import HistoryMessageList from '@/components/hermes/chat/HistoryMessageList.vue'
+ import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
+ import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
+-import PageSidebarFooter from '@/components/layout/PageSidebarFooter.vue'
++import { useAuthStore } from '@/stores/hermes/auth'
+ import { useAppStore } from '@/stores/hermes/app'
+ import { useProfilesStore } from '@/stores/hermes/profiles'
+ import { uploadRuntimeFiles } from '@/api/hermes/files'
+@@ -64,6 +64,7 @@ import '@vue-flow/minimap/dist/style.css'
+ const { t } = useI18n()
+ const appStore = useAppStore()
+ const profilesStore = useProfilesStore()
++const authStore = useAuthStore()
+ const message = useMessage()
+ const { screenToFlowCoordinate, getViewport, setViewport } = useVueFlow('hermes-workflow')
+ const defaultViewport: WorkflowViewport = { x: 80, y: 80, zoom: 0.75 }
+@@ -1651,7 +1652,16 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
+           </NPopconfirm>
+         </button>
+       </div>
+-      <PageSidebarFooter v-if="showWorkflowSidebar" />
++      <div v-if="showWorkflowSidebar" class="page-sidebar-bottom">
++        <button class="page-sidebar-menu-btn" type="button" @click="authStore.logout()">
++          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
++            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
++            <polyline points="16 17 21 12 16 7" />
++            <line x1="21" y1="12" x2="9" y2="12" />
++          </svg>
++          <span>{{ t('sidebar.logout') }}</span>
++        </button>
++      </div>
+     </aside>
+ 
+     <main class="workflow-main">
+@@ -2549,4 +2559,46 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
+     display: none;
+   }
+ }
++
++.page-sidebar-bottom {
++  flex-shrink: 0;
++  padding: 10px 12px;
++  display: flex;
++  align-items: center;
++  gap: 8px;
++}
++
++.page-sidebar-menu-btn {
++  flex: 1 1 auto;
++  width: auto;
++  min-width: 0;
++  height: 36px;
++  border: none;
++  border-radius: $radius-sm;
++  background: transparent;
++  color: $text-secondary;
++  display: inline-flex;
++  align-items: center;
++  justify-content: flex-start;
++  gap: 8px;
++  padding: 8px 10px;
++  cursor: pointer;
++  transition:
++    background-color $transition-fast,
++    color $transition-fast;
++
++  &:hover {
++    background: rgba(var(--accent-primary-rgb), 0.06);
++    color: $text-primary;
++  }
++
++  span {
++    min-width: 0;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
++    font-size: 13px;
++    line-height: 18px;
++  }
++}
+ </style>

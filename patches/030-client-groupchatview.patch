@@ -1,0 +1,13 @@
+diff --git a/packages/client/src/views/hermes/GroupChatView.vue b/packages/client/src/views/hermes/GroupChatView.vue
+index dbe540a7..9e33cd79 100644
+--- a/packages/client/src/views/hermes/GroupChatView.vue
++++ b/packages/client/src/views/hermes/GroupChatView.vue
+@@ -33,7 +33,7 @@ async function syncRouteRoom() {
+ }
+ 
+ onMounted(async () => {
+-    store.connect()
++    await store.connect()
+     await store.loadRooms()
+     await syncRouteRoom()
+ })

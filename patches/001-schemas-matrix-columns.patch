@@ -1,0 +1,40 @@
+diff --git a/packages/server/src/db/hermes/schemas.ts b/packages/server/src/db/hermes/schemas.ts
+index 4c71fd1a..960afd5b 100644
+--- a/packages/server/src/db/hermes/schemas.ts
++++ b/packages/server/src/db/hermes/schemas.ts
+@@ -128,6 +128,11 @@ export const USERS_SCHEMA: Record<string, string> = {
+   updated_at: 'INTEGER NOT NULL',
+   last_login_at: 'INTEGER',
+   avatar: "TEXT NOT NULL DEFAULT ''",
++  matrix_user_id: 'TEXT UNIQUE',
++  matrix_display_name: 'TEXT',
++  matrix_avatar_url: 'TEXT',
++  matrix_homeserver_url: 'TEXT',
++  auth_source: "TEXT NOT NULL DEFAULT 'local'",
+ }
+ 
+ export const USER_PROFILES_TABLE = 'user_profiles'
+@@ -387,11 +392,22 @@ function addMissingSafeColumns(
+ 
+   for (const [columnName, columnDef] of Object.entries(schema)) {
+     if (existingColumns.has(columnName)) continue
++    // SQLite's ALTER TABLE ADD COLUMN cannot carry a UNIQUE constraint, so
++    // previously UNIQUE columns (e.g. users.matrix_user_id) were skipped on
++    // pre-existing tables, leaving login queries to fail with
++    // "no such column". Add the column without the constraint and enforce
++    // uniqueness via a separate unique index instead. Multiple NULLs are
++    // allowed under a SQLite unique index, so existing rows are unaffected.
+     if (!canAddColumnToExistingTable(columnDef)) {
+       console.warn(`[Schema] ${tableName}.${columnName} cannot be added safely to existing table; skipping`)
+       continue
+     }
+-    db.exec(`ALTER TABLE ${quoteIdentifier(tableName)} ADD COLUMN ${quoteIdentifier(columnName)} ${columnDef}`)
++    const bareDef = columnDef.replace(/\s+UNIQUE\b/i, '')
++    db.exec(`ALTER TABLE ${quoteIdentifier(tableName)} ADD COLUMN ${quoteIdentifier(columnName)} ${bareDef}`)
++    if (/\bUNIQUE\b/i.test(columnDef)) {
++      const indexName = `idx_${tableName}_${columnName}_unique`
++      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ${quoteIdentifier(indexName)} ON ${quoteIdentifier(tableName)} (${quoteIdentifier(columnName)})`)
++    }
+   }
+ }
+ 

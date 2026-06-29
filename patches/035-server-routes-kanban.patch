@@ -1,0 +1,48 @@
+diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+index 254b117c..2ff5f696 100644
+--- a/packages/server/src/routes/hermes/kanban.ts
++++ b/packages/server/src/routes/hermes/kanban.ts
+@@ -1,5 +1,13 @@
+ import Router from '@koa/router'
+ import * as ctrl from '../../controllers/hermes/kanban'
++import { getDashboardUrl } from '../../config'
++
++// Separate router for the dashboard-url endpoint so it is not shadowed by
++// the /:id catch-all in the main kanban router.
++export const kanbanDashboardUrlRoutes = new Router()
++kanbanDashboardUrlRoutes.get('/api/hermes/kanban/dashboard-url', (ctx) => {
++  ctx.body = { url: getDashboardUrl() }
++})
+ 
+ export const kanbanRoutes = new Router()
+ 
+@@ -10,12 +18,22 @@ kanbanRoutes.get('/api/hermes/kanban/capabilities', ctrl.capabilities)
+ kanbanRoutes.get('/api/hermes/kanban/stats', ctrl.stats)
+ kanbanRoutes.get('/api/hermes/kanban/assignees', ctrl.assignees)
+ kanbanRoutes.get('/api/hermes/kanban/diagnostics', ctrl.diagnostics)
++kanbanRoutes.get('/api/hermes/kanban/orchestration', ctrl.getOrchestration)
++kanbanRoutes.put('/api/hermes/kanban/orchestration', ctrl.setOrchestration)
+ kanbanRoutes.post('/api/hermes/kanban/dispatch', ctrl.dispatch)
+ kanbanRoutes.get('/api/hermes/kanban/artifact', ctrl.readArtifact)
+ kanbanRoutes.get('/api/hermes/kanban/search-sessions', ctrl.searchSessions)
+ kanbanRoutes.post('/api/hermes/kanban/links', ctrl.linkTasks)
+ kanbanRoutes.delete('/api/hermes/kanban/links', ctrl.unlinkTasks)
+ kanbanRoutes.post('/api/hermes/kanban/tasks/bulk', ctrl.bulkUpdateTasks)
++kanbanRoutes.get('/api/hermes/kanban/home-channels', ctrl.homeChannels)
++kanbanRoutes.get('/api/hermes/kanban/debug-home-channels', ctrl.debugHomeChannels)
++kanbanRoutes.post('/api/hermes/kanban/:id/home-subscribe/:platform', ctrl.subscribeHome)
++kanbanRoutes.delete('/api/hermes/kanban/:id/home-subscribe/:platform', ctrl.unsubscribeHome)
++kanbanRoutes.get('/api/hermes/kanban/:id/attachments', ctrl.listAttachments)
++kanbanRoutes.post('/api/hermes/kanban/:id/attachments', ctrl.uploadAttachment)
++kanbanRoutes.get('/api/hermes/kanban/attachments/:id', ctrl.downloadAttachment)
++kanbanRoutes.delete('/api/hermes/kanban/attachments/:id', ctrl.removeAttachment)
+ kanbanRoutes.get('/api/hermes/kanban', ctrl.list)
+ kanbanRoutes.get('/api/hermes/kanban/:id', ctrl.get)
+ kanbanRoutes.post('/api/hermes/kanban', ctrl.create)
+@@ -28,3 +46,6 @@ kanbanRoutes.get('/api/hermes/kanban/:id/log', ctrl.taskLog)
+ kanbanRoutes.post('/api/hermes/kanban/:id/reclaim', ctrl.reclaim)
+ kanbanRoutes.post('/api/hermes/kanban/:id/reassign', ctrl.reassign)
+ kanbanRoutes.post('/api/hermes/kanban/:id/specify', ctrl.specify)
++kanbanRoutes.post('/api/hermes/kanban/:id/decompose', ctrl.decomposeTask)
++kanbanRoutes.patch('/api/hermes/kanban/:id', ctrl.patchTask)
++kanbanRoutes.delete('/api/hermes/kanban/:id', ctrl.deleteTask)
