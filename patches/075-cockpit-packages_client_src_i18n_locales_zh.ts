@@ -2,7 +2,15 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 index d10836a8..f69fe53f 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -186,6 +186,9 @@ export default {
+@@ -78,6 +78,7 @@ export default {
+   common: {
+     loading: '加载中...',
+     cancel: '取消',
++    search: '搜索',
+     delete: '删除',
+     edit: '编辑',
+     save: '保存',
+@@ -186,6 +187,9 @@ export default {
      history: '历史',
      jobs: '任务',
      kanban: '看板',
@@ -12,15 +20,18 @@ index d10836a8..f69fe53f 100644
      workflow: '工作流',
      models: '模型',
      profiles: '用户',
-@@ -727,6 +730,7 @@ export default {
+@@ -727,6 +731,10 @@ export default {
    // 看板
    kanban: {
      title: '看板',
 +    diagnostics: '诊断',
++    workerLog: '工作日志',
++    loadingLog: '加载日志中...',
++    searchPlaceholder: '搜索任务...',
      createTask: '新建任务',
      noTasks: '暂无任务',
      allStatuses: '全部状态',
-@@ -1830,6 +1834,9 @@ export default {
+@@ -1830,6 +1838,9 @@ export default {
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
        mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
      },
@@ -30,7 +41,7 @@ index d10836a8..f69fe53f 100644
    },
    githubPreview: {
      title: "版本预览",
-@@ -2268,4 +2275,16 @@ export default {
+@@ -2268,4 +2279,16 @@ export default {
      new_0_6_13_5: '桌面更新更可靠：Windows 升级会关闭残留 Hermes Studio 进程，优先检查 Cloudflare，并保留 GitHub 更新源兜底',
      new_0_6_13_6: '发布自动化调整：Web UI 和 Docker release 不再标记为 GitHub Latest，完整桌面 release 手动构建成功后才提升为 Latest',
    },
@@ -44,6 +55,6 @@ index d10836a8..f69fe53f 100644
 +  },
 +
 +  matrixChat: {
-+    actionDelete: '删除', adminTools: '管理工具', actionEdit: '编辑', actionReply: '回复', addReaction: '添加回应', addTopic: '添加主题', allThreads: '全部话题', backToThreads: '返回话题', banUser: '封禁用户', bold: '粗体', cancel: '取消', changeAvatar: '更换头像', code: '代码', codeBlock: '代码块', comingSoon: '即将推出', confirmDelete: '确认删除', confirmDeleteAction: '确定要删除此消息吗？', confirmLeave: '再次点击确认', copyLink: '复制链接', copyText: '复制文本', createRoom: '创建房间', delete: '删除', deleteReasonPlaceholder: '原因（可选）', disabled: '已禁用', edit: '编辑', editMessagePlaceholder: '编辑消息...', edited: '已编辑', editingMessage: '正在编辑消息', emoji: '表情', enabled: '已启用', encryption: '加密', eventNotFound: '事件未找到', exportChatMenu: '导出聊天', exportChatDescription: '将此房间的所有消息导出为 JSON 文件。', exportFailed: '导出失败', exportSuccess: '{count} 条消息已导出', exporting: '导出中...', extensionsMenu: '集成', failed: '失败', favorite: '收藏', filesMenu: '文件', forward: '转发', forwardMessage: '转发消息', forwardingMessage: '转发消息中...', historyLoadError: '服务器错误，无法加载更早的历史', historyWorldReadable: '历史对任何人可见', historyShared: '历史对加入后的成员可见', historyInvited: '历史对受邀成员可见', historyJoined: '历史对成员可见', ignoreUser: '忽略用户', inviteFailed: '邀请失败', inviteSending: '发送邀请中...', inviteToRoom: '邀请加入房间', inviteUser: '邀请用户', italic: '斜体', joinRoom: '加入房间', kickUser: '踢出用户', leaveRoom: '离开房间', leaveFailed: '离开房间失败', leaveRoomConfirm: '确定要离开「{room}」吗？', linkCopied: '链接已复制', loading: '加载中...', loadMore: '加载更多', loadingThreads: '加载话题中...', markAllThreadsRead: '将所有话题标记为已读', memberAdmin: '管理员', memberCount: '{count} 名成员', memberDefault: '成员', memberInvited: '已邀请', memberMod: '版主', memberSearch: '搜索成员', members: '成员', messageSendFailed: '消息发送失败', messageSending: '发送中...', minutesAgo: '{n}分钟前', hoursAgo: '{n}小时前', daysAgo: '{n}天前', justNow: '刚刚', myThreads: '我的话题', newMessages: '新消息', noExtensions: '暂无集成', noExtensionsHint: '从集成管理器添加集成', noFilesFound: '未找到文件', noMembersFound: '未找到成员', noPinnedMessages: '暂无已固定消息', noResults: '无结果', noRoomSelected: '未选择房间', noRooms: '暂无房间', noThreadsDesc: '此房间暂无话题', noThreadsTitle: '暂无话题', noUsersFound: '未找到用户', noTopic: '未设置主题', notAuthenticated: '未认证', notifications: '通知', notifyAllMessages: '所有消息', notifyMentions: '仅提及', notifyNone: '无', notTrusted: '未信任', offline: '离线', online: '在线', openWidget: '打开小部件', options: '选项', paginateLoading: '加载更多...', people: '成员', pinnedMessages: '已固定消息', pollsMenu: '投票', pollEnded: '已结束', pollActive: '进行中', noPolls: '暂无投票', untitledPoll: '无标题投票', votes: '票', powerLevel: '权限等级', powerLevelValue: '{level}', publicRoom: '公开房间', replyInThread: '在话题中回复', replyMessagePlaceholder: '回复...', reportFailed: '举报提交失败', reportReason: '举报原因...', reportRoom: '举报房间', reportRoomDescription: '向服务器管理员举报此房间。请描述问题。', reportSpamAbuse: '垃圾信息或滥用', roomAlias: '房间��名', roomEncryption: '已加密房间', roomId: '房间 ID', roomIdOrAlias: '房间 ID 或别名', roomInfo: '房间信息', roomMembers: '房间成员', roomName: '房间名称', roomPublic: '公开', roomSettings: '房间设置', roomTopic: '主题', save: '保存', saving: '保存中...', search: '搜索', searchHint: '搜索房间和联系人', searchResultCount: '{count} 条结果', searchRooms: '搜索房间', searchUsers: '搜索用户', searchUsersHint: '按用户名或显示名搜索', send: '发送', sendMessage: '发送消息', sent: '已发送', showAll: '显示全部', showLess: '收起', shareRoom: '分享房间', startChat: '开始聊天', stateBanned: '被封禁', stateChangedName: '修改了显示名称', stateInvited: '被邀请', stateJoined: '加入了', stateKicked: '被踢出', stateLeft: '离开了', stateLoadingOlder: '加载更早的消息...', stateNoMoreHistory: '没有更多历史', stateReason: '原因', stateRejectedInvite: '拒绝了邀请', stateRoomCreated: '房间已创建', stateUnbanned: '被解封', stateWithdrewInvite: '撤销了邀请', suggestions: '建议', submitting: '提交中...', syncConnecting: '连接中...', syncError: '连接错误', thread: '话题', threadStartDisabled: '无法基于已有关系的消息发起话题', threads: '话题', threadsMenu: '话题', typingMany: '{n} 人正在输入...', typingOne: '{user} 正在输入...', typingTwo: '{user1} 和 {user2} 正在输入...', trusted: '已信任', unavailable: '离开', undecryptable: '无法解密此消息', unencrypted: '未加密', unignoreUser: '取消忽略', unpinAll: '全部取消固定', unpinMessage: '取消固定', unknownFile: '未知文件', uploadFile: '上传文件', videoCall: '视频通话', voiceCall: '语音通话',
++    actionDelete: '删除', adminTools: '管理工具', actionEdit: '编辑', actionReply: '回复', addReaction: '添加回应', addTopic: '添加主题', allThreads: '全部话题', backToThreads: '返回话题', banUser: '封禁用户', bold: '粗体', cancel: '取消', changeAvatar: '更换头像', code: '代码', codeBlock: '代码块', comingSoon: '即将推出', confirmDelete: '确认删除', confirmDeleteAction: '确定要删除此消息吗？', confirmLeave: '再次点击确认', copyLink: '复制链接', copyText: '复制文本', createRoom: '创建房间', delete: '删除', deleteReasonPlaceholder: '原因（可选）', disabled: '已禁用', edit: '编辑', editMessagePlaceholder: '编辑消息...', edited: '已编辑', editingMessage: '正在编辑消息', emoji: '表情', enabled: '已启用', encryption: '加密', eventNotFound: '事件未找到', exportChatMenu: '导出聊天', exportChatDescription: '将此房间的所有消息导出为 JSON 文件。', exportFailed: '导出失败', exportSuccess: '{count} 条消息已导出', exporting: '导出中...', extensionsMenu: '集成', failed: '失败', favorite: '收藏', filesMenu: '文件', forward: '转发', forwardMessage: '转发消息', forwardingMessage: '转发消息中...', historyLoadError: '服务器错误，无法加载更早的历史', historyWorldReadable: '历史对任何人可见', historyShared: '历史对加入后的成员可见', historyInvited: '历史对受邀成员可见', historyJoined: '历史对成员可见', ignoreUser: '忽略用户', inviteFailed: '邀请失败', inviteSending: '发送邀请中...', inviteToRoom: '邀请加入房间', inviteUser: '邀请用户', italic: '斜体', joinRoom: '加入房间', kickUser: '踢出用户', leaveRoom: '离开房间', leaveFailed: '离开房间失败', leaveRoomConfirm: '确定要离开「{room}」吗？', linkCopied: '链接已复制', loading: '加载中...', loadMore: '加载更多', loadingThreads: '加载话题中...', markAllThreadsRead: '将所有话题标记为已读', memberAdmin: '管理员', memberCount: '{count} 名成员', memberDefault: '成员', memberInvited: '已邀请', memberMod: '版主', memberSearch: '搜索成员', members: '成员', messageSendFailed: '消息发送失败', messageSending: '发送中...', minutesAgo: '{n}分钟前', hoursAgo: '{n}小时前', daysAgo: '{n}天前', justNow: '刚刚', myThreads: '我的话题', newMessages: '新消息', noExtensions: '暂无集成', noExtensionsHint: '从集成管理器添加集成', noFilesFound: '未找到文件', noMembersFound: '未找到成员', noPinnedMessages: '暂无已固定消息', noResults: '无结果', noRoomSelected: '未选择房间', noRooms: '暂无房间', noThreadsDesc: '此房间暂无话题', noThreadsTitle: '暂无话题', noUsersFound: '未找到用户', noTopic: '未设置主题', notAuthenticated: '未认证', notifications: '通知', notifyAllMessages: '所有消息', notifyMentions: '仅提及', notifyNone: '无', notTrusted: '未信任', offline: '离线', online: '在线', openWidget: '打开小部件', options: '选项', paginateLoading: '加载更多...', people: '成员', pinnedMessages: '已固定消息', pollsMenu: '投票', pollEnded: '已结束', pollActive: '进行中', noPolls: '暂无投票', untitledPoll: '无标题投票', votes: '票', powerLevel: '权限等级', powerLevelValue: '{level}', publicRoom: '公开房间', replyInThread: '在话题中回复', replyMessagePlaceholder: '回复...', reportFailed: '举报提交失败', reportReason: '举报原因...', reportRoom: '举报房间', reportRoomDescription: '向服务器管理员举报此房间。请描述问题。', reportSpamAbuse: '垃圾信息或滥用', roomAlias: '房间别名', roomEncryption: '已加密房间', roomId: '房间 ID', roomIdOrAlias: '房间 ID 或别名', roomInfo: '房间信息', roomMembers: '房间成员', roomName: '房间名称', roomPublic: '公开', roomSettings: '房间设置', roomTopic: '主题', save: '保存', saving: '保存中...', search: '搜索', searchHint: '搜索房间和联系人', searchResultCount: '{count} 条结果', searchRooms: '搜索房间', searchUsers: '搜索用户', searchUsersHint: '按用户名或显示名搜索', send: '发送', sendMessage: '发送消息', sent: '已发送', showAll: '显示全部', showLess: '收起', shareRoom: '分享房间', startChat: '开始聊天', stateBanned: '被封禁', stateChangedName: '修改了显示名称', stateInvited: '被邀请', stateJoined: '加入了', stateKicked: '被踢出', stateLeft: '离开了', stateLoadingOlder: '加载更早的消息...', stateNoMoreHistory: '没有更多历史', stateReason: '原因', stateRejectedInvite: '拒绝了邀请', stateRoomCreated: '房间已创建', stateUnbanned: '被解封', stateWithdrewInvite: '撤销了邀请', suggestions: '建议', submitting: '提交中...', syncConnecting: '连接中...', syncError: '连接错误', thread: '话题', threadStartDisabled: '无法基于已有关系的消息发起话题', threads: '话题', threadsMenu: '话题', typingMany: '{n} 人正在输入...', typingOne: '{user} 正在输入...', typingTwo: '{user1} 和 {user2} 正在输入...', trusted: '已信任', unavailable: '离开', undecryptable: '无法解密此消息', unencrypted: '未加密', unignoreUser: '取消忽略', unpinAll: '全部取消固定', unpinMessage: '取消固定', unknownFile: '未知文件', uploadFile: '上传文件', videoCall: '视频通话', voiceCall: '语音通话',
 +  },
  }

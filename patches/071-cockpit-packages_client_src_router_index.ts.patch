@@ -2,7 +2,7 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
 index f72f74e1..9381f72b 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -11,34 +11,62 @@ const router = createRouter({
+@@ -11,34 +11,72 @@ const router = createRouter({
        meta: { public: true },
      },
      {
@@ -88,6 +88,16 @@ index f72f74e1..9381f72b 100644
 +          path: 'group-chat/room/:roomId',
 +          name: 'hermes.groupChatRoom',
 +          component: () => import('@/views/hermes/GroupChatView.vue'),
++        },
++        {
++          path: 'matrix-chat',
++          name: 'hermes.matrixChat',
++          component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
++        },
++        {
++          path: 'matrix-chat/room/:roomId',
++          name: 'hermes.matrixChatRoom',
++          component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
 +        },
 +      ],
      },
