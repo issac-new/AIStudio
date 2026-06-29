@@ -6,6 +6,11 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机 1:1 协作�
 
 ---
 
+## 运行效果图
+
+<img width="1914" height="928" alt="d5515cbc-58fa-48d4-b66b-2edefd345b65" src="https://github.com/user-attachments/assets/786c5b94-1d63-4179-82c3-8f9946ffa420" />
+
+
 ## 功能特色
 
 ### 🚀 Cockpit — AI 协作中心（主操作界面）
