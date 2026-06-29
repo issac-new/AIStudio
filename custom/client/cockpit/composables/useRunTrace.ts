@@ -300,28 +300,47 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     startReplay(sid, time)
   }
 
-  /** Update scrubber position (drag) — 自动从 Live 切换到 Replay */
+  /** Update scrubber position (drag) — Live 模式下拖动自动切换到 Replay */
   function scrubTo(time: number) {
-    // 如果当前是 Live 模式且用户开始拖动，自动切换到 Replay
     if (mode.value === 'live') {
+      // Live 模式下拖动 → 自动切换到 replay 模式标记
+      mode.value = 'replay'
       scrubberTime.value = time
-      // 不立即 startReplay（拖动中频繁触发开销大），等用户松开点击 Replay 按钮
       return
     }
     scrubberTime.value = time
   }
 
+  /** 拖动结束后从当前位置重建 trace（由 Scrubber onPointerUp 触发） */
+  function scrubEnd() {
+    if (mode.value === 'replay') {
+      const sid = sessionId.value
+      if (sid) {
+        detach()
+        startReplay(sid, scrubberTime.value)
+      }
+    }
+  }
+
+  // 外部可设置会话是否已结束，用于自动选择模式
+  const sessionEnded = ref(false)
+
   watch(sessionId, (sid) => {
     detach()
-    if (sid) attachLive(sid)
-    else sync(null)
+    if (!sid) { sync(null); return }
+    // 根据会话是否结束自动选择模式
+    if (sessionEnded.value) {
+      startReplay(sid, Date.now())
+    } else {
+      attachLive(sid)
+    }
   }, { immediate: true })
 
   onScopeDispose(detach)
 
   return {
     state, nodes, edges, focusedNodeId, l2Available,
-    mode, scrubberTime, replayProgress, sessionStartedAt,
-    route, fetchL2Data, switchToLive, switchToReplay, scrubTo,
+    mode, scrubberTime, replayProgress, sessionStartedAt, sessionEnded,
+    route, fetchL2Data, switchToLive, switchToReplay, scrubTo, scrubEnd,
   }
 }

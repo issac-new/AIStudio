@@ -4,7 +4,7 @@ index 229770c1..40035838 100644
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -1,6 +1,6 @@
  import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, respondToolApproval, onPeerUserMessage, onSessionCommand, onSessionTitleUpdated, respondClarify, type ChatRunTransport, type RunEvent, type ResumeSessionPayload, type StartRunRequest, type ContentBlock as ContentBlockImport } from '@/api/hermes/chat'
- import { deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, setSessionModel, type HermesMessage, type SessionSummary } from '@/api/hermes/sessions'
+ import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, setSessionModel, type HermesMessage, type SessionSummary } from '@/api/hermes/sessions'
 -import { getActiveProfileName } from '@/api/client'
 +import { getActiveProfileName, hasApiKey } from '@/api/client'
  import { inferCodingAgentApiMode, normalizeCodingAgentApiMode } from '@/api/coding-agents'

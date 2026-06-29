@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   minTime: number          // session startedAt (ms)
@@ -12,6 +12,7 @@ const emit = defineEmits<{
   (e: 'scrub', timeMs: number): void
   (e: 'switch-live'): void
   (e: 'start-replay', fromMs: number): void
+  (e: 'scrub-end'): void
 }>()
 
 const dragging = ref(false)
@@ -47,7 +48,6 @@ function timeFromEvent(clientX: number): number {
 }
 
 function onPointerDown(e: PointerEvent) {
-  // Live 模式也允许拖动：拖动即切换到 replay 选位
   dragging.value = true
   ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
   emit('scrub', timeFromEvent(e.clientX))
@@ -60,6 +60,8 @@ function onPointerUp(e: PointerEvent) {
   if (!dragging.value) return
   dragging.value = false
   ;(e.target as HTMLElement).releasePointerCapture?.(e.pointerId)
+  // 拖动结束后通知父组件从当前位置重建 trace
+  emit('scrub-end')
 }
 
 // Tick labels: 5 evenly-spaced timestamps
@@ -78,37 +80,25 @@ const durationLabel = computed(() => fmtDuration(totalSpan.value))
 <template>
   <div class="run-trace-scrubber" data-run-trace-scrubber>
     <div class="run-trace-scrubber__controls">
-      <button
-        type="button"
-        class="run-trace-scrubber__btn"
-        :class="{ 'is-active': mode === 'live' }"
-        @click="emit('switch-live')"
-        title="切换到实时模式"
-      >▶ Live</button>
-      <button
-        type="button"
-        class="run-trace-scrubber__btn"
-        :class="{ 'is-active': mode === 'replay' }"
-        :disabled="dragging"
-        @click="emit('start-replay', currentTime)"
-        title="从当前位置开始回放"
-      >⟲ Replay</button>
+      <span class="run-trace-scrubber__mode" :class="'is-' + mode">
+        {{ mode === 'live' ? '● 实时' : '⟲ 回放中' }}
+      </span>
       <span class="run-trace-scrubber__time">{{ fmtTime(currentTime) }}</span>
       <span class="run-trace-scrubber__dur">时长 {{ durationLabel }}</span>
-      <span v-if="mode === 'replay'" class="run-trace-scrubber__progress">
-        回放 {{ Math.round(replayProgress) }}%
+      <span v-if="mode === 'replay' && replayProgress > 0" class="run-trace-scrubber__progress">
+        {{ Math.round(replayProgress) }}%
       </span>
+      <span class="run-trace-scrubber__hint">拖动时间轴切换回放</span>
     </div>
     <div
       ref="trackRef"
       class="run-trace-scrubber__track"
-      :class="{ 'is-draggable': mode === 'replay' }"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
     >
-      <!-- Progress fill (replay mode) -->
+      <!-- Progress fill -->
       <div
         class="run-trace-scrubber__fill"
         :style="{ width: mode === 'replay' ? `${replayProgress}%` : '100%' }"
@@ -135,14 +125,14 @@ const durationLabel = computed(() => fmtDuration(totalSpan.value))
 <style scoped lang="scss">
 .run-trace-scrubber { padding: 8px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
 .run-trace-scrubber__controls { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.run-trace-scrubber__btn { height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); font-size: 10px; cursor: pointer; font-family: inherit;
-  &:hover { background: var(--bg-secondary); }
-  &.is-active { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+.run-trace-scrubber__mode { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+  &.is-live { color: var(--success); background: rgba(76,175,80,0.1); }
+  &.is-replay { color: var(--accent-info); background: rgba(107,163,214,0.1); }
 }
 .run-trace-scrubber__time { font-size: 11px; font-weight: 600; color: var(--text-primary); font-family: ui-monospace, 'SF Mono', monospace; font-variant-numeric: tabular-nums; }
-.run-trace-scrubber__dur { font-size: 10px; color: var(--text-muted); margin-left: auto; }
+.run-trace-scrubber__dur { font-size: 10px; color: var(--text-muted); }
 .run-trace-scrubber__progress { font-size: 10px; color: var(--accent-info); }
+.run-trace-scrubber__hint { font-size: 9px; color: var(--text-muted); margin-left: auto; }
 .run-trace-scrubber__track { position: relative; height: 24px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; overflow: visible; cursor: ew-resize; }
 .run-trace-scrubber__fill { position: absolute; top: 0; left: 0; bottom: 0; background: linear-gradient(to right, var(--accent-info-alpha, rgba(107,163,214,0.15)), rgba(107,163,214,0.25)); border-radius: 3px 0 0 3px; transition: width 0.15s ease; }
 .run-trace-scrubber__tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border-color); pointer-events: none; }

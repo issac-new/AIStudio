@@ -1,0 +1,70 @@
+diff --git a/packages/server/src/controllers/hermes/sessions.ts b/packages/server/src/controllers/hermes/sessions.ts
+index 7349ec01..7105e13b 100644
+--- a/packages/server/src/controllers/hermes/sessions.ts
++++ b/packages/server/src/controllers/hermes/sessions.ts
+@@ -399,9 +399,10 @@ export async function listHermesSessions(ctx: any) {
+   const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
+   const profile = requestedProfile(ctx)
+   const effectiveLimit = limit && limit > 0 ? limit : 2000
++  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
+ 
+   const importedIds = new Set(localListSessions(profile, undefined, effectiveLimit).map(session => session.id))
+-  const allSessions = (await listSessionSummaries(source, effectiveLimit, profile))
++  const allSessions = (await listSessionSummaries(source, effectiveLimit, profile, includeChildren))
+     .map(session => ({
+       ...(profile ? { ...session, profile } : session),
+       webui_imported: importedIds.has(session.id),
+diff --git a/packages/server/src/db/hermes/sessions-db.ts b/packages/server/src/db/hermes/sessions-db.ts
+index 67470d4e..820f1f14 100644
+--- a/packages/server/src/db/hermes/sessions-db.ts
++++ b/packages/server/src/db/hermes/sessions-db.ts
+@@ -34,6 +34,7 @@ export interface HermesSessionRow {
+   cost_status: string
+   preview: string
+   last_active: number
++  parent_session_id?: string | null
+ }
+ 
+ export interface HermesSessionSearchRow extends HermesSessionRow {
+@@ -390,9 +391,11 @@ function latestSessionInChain(chain: HermesSessionInternalRow[]): HermesSessionI
+ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSessionInternalRow[]): HermesSessionRow {
+   const latest = latestSessionInChain(chain)
+   const firstPreview = chain.map(session => session.preview).find(Boolean) || root.preview
++  const parentSessionId = root.parent_session_id ?? null
+   const { parent_session_id: _parentSessionId, ...rootRow } = root
+   return {
+     ...rootRow,
++    parent_session_id: parentSessionId,
+     id: latest.id,
+     model: latest.model || root.model,
+     title: latest.title || root.title || titleFromPreview(firstPreview),
+@@ -411,7 +414,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
+     cost_status: latest.cost_status,
+     preview: latest.preview || root.preview || firstPreview || '',
+     last_active: latest.last_active || root.last_active,
+-  }
++  } as HermesSessionRow
+ }
+ 
+ // --- In-memory session index for chain traversal ---
+@@ -1274,7 +1277,7 @@ export async function getUsageStatsFromDb(
+   }
+ }
+ 
+-export async function listSessionSummaries(source?: string, limit = 2000, profile?: string): Promise<HermesSessionRow[]> {
++export async function listSessionSummaries(source?: string, limit = 2000, profile?: string, includeChildren = false): Promise<HermesSessionRow[]> {
+   if (!SQLITE_AVAILABLE) {
+     throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
+   }
+@@ -1284,7 +1287,10 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
+   const db = new DatabaseSync(dbPath, { open: true, readOnly: true })
+ 
+   try {
+-    const clauses = ["s.parent_session_id IS NULL", "s.source != 'tool'", "s.id NOT LIKE 'compress_%'"]
++    const clauses = ["s.source != 'tool'", "s.id NOT LIKE 'compress_%'"]
++    if (!includeChildren) {
++      clauses.push("s.parent_session_id IS NULL")
++    }
+     const params: any[] = []
+     if (source) {
+       clauses.push('s.source = ?')

@@ -12,14 +12,17 @@
  *   3. 当选中任务变化（含重新点击中心节点选中同一任务，id 不变但 seq 自增）时调用 filesStore.fetchEntries('') 刷新
  *   4. 渲染 FilesPanel（复用 upstream 组件）
  *   5. 任务未 claim（workspace 为空）时不发起请求，显示加载中占位
+ *   6. 目录不存在时显示友好错误信息
  */
-import { watch, onMounted, computed } from 'vue'
+import { watch, onMounted, computed, ref } from 'vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useFilesStore } from '@/stores/hermes/files'
 import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
+import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
 const filesStore = useFilesStore()
+const { t } = useI18n()
 
 const hasWorkspace = computed(() => {
   const detailWs = store.selectedTaskDetail?.task?.workspace_path
@@ -27,22 +30,38 @@ const hasWorkspace = computed(() => {
   return !!(detailWs ?? listWs)
 })
 
+// 错误状态：workspace 目录不存在或其他文件系统错误
+const errorState = ref<{ code: string; message: string } | null>(null)
+
 // 把「当前生效的 workspace 根目录」同步到 filesStore 并刷新文件列表。
 // 优先从 detail cache（selectedTaskDetail）读取 workspace_path，因为它
 // 在每次 selectTask 后都会刷新；cockpitTasks 中的 workspace 可能因
 // kanban.tasks 变化触发的 watch 重建而被覆盖为旧值。
 // detail 不可用时回退到 cockpitTasks 的 workspace（兼容 detail.task 为 null 的场景）。
-function syncWorkspaceRoot() {
+async function syncWorkspaceRoot() {
   const wsPath = store.selectedTaskDetail?.task?.workspace_path
     ?? store.selectedTask?.workspace
   if (!wsPath) {
     filesStore.workspaceRoot = undefined
     filesStore.currentPath = ''
+    errorState.value = null
     return
   }
   filesStore.workspaceRoot = wsPath
   filesStore.currentPath = ''
-  filesStore.fetchEntries('')
+  errorState.value = null
+  try {
+    await filesStore.fetchEntries('')
+  } catch (err: any) {
+    // 捕获错误并设置友好的错误状态
+    const code = err?.code || err?.response?.data?.code || 'unknown'
+    const msg = err?.message || err?.response?.data?.error || String(err)
+    if (code === 'ENOENT' || code === 'not_found' || msg.includes('ENOENT') || msg.includes('not found') || msg.includes('no such file')) {
+      errorState.value = { code: 'ENOENT', message: t('cockpit.workspaceNotFound', '工作区目录不存在（尚未创建或已被清理）') }
+    } else {
+      errorState.value = { code, message: msg }
+    }
+  }
 }
 
 // 当选中任务变化时（含重新点击中心节点），更新文件浏览器的根目录并刷新。

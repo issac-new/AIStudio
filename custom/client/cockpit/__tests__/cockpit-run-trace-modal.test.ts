@@ -127,10 +127,12 @@ vi.mock('../composables/useRunTrace', () => ({
     scrubberTime: { value: Date.now() },
     replayProgress: { value: 0 },
     sessionStartedAt: { value: Date.now() - 3600000 },
+    sessionEnded: { value: false },
     fetchL2Data: vi.fn(async () => {}),
     switchToLive: vi.fn(),
     switchToReplay: vi.fn(),
     scrubTo: vi.fn(),
+    scrubEnd: vi.fn(),
     route: vi.fn(),
   }),
 }))
@@ -192,8 +194,9 @@ describe('CockpitRunTraceModal', () => {
     store.openRunTrace({ sessionId: 's1', runId: 'r1' })
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
     expect(w.find('[data-run-trace-scrubber]').exists()).toBe(true)
-    expect(w.find('.run-trace-scrubber__btn.is-active').text()).toContain('Live')
-    // Live mode indicator (green dot with pulse)
+    // Live mode indicator (green mode badge)
+    expect(w.find('.run-trace-scrubber__mode.is-live').exists()).toBe(true)
+    // Live mode dot in header (green pulse)
     expect(w.find('.run-trace-modal__dot.is-live').exists()).toBe(true)
   })
 
