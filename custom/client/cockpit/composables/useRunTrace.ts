@@ -1,5 +1,6 @@
 import { ref, watch, onScopeDispose, type Ref } from 'vue'
 import { connectChatRun, resumeSession, type RunEvent, type ResumeSessionPayload } from '@/api/hermes/chat'
+import { fetchSessionMessagesPage } from '@/api/hermes/sessions'
 import {
   applyRunEvent,
   createTraceState,
@@ -96,7 +97,7 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     replayAbort = null
   }
 
-  /** Live mode: attach to real-time socket */
+  /** Live mode: attach to real-time socket. If session is ended, fallback to replay. */
   function attachLive(sid: string) {
     mode.value = 'live'
     scrubberTime.value = Date.now()
@@ -111,83 +112,176 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     cleanup = () => {
       handlers.forEach(({ eventName, handler }) => removeSocketListener(socket, eventName, handler))
     }
-    // Try to fetch L2 data immediately (for replay scenarios)
+    // Try to fetch L2 data + historical messages for context
     fetchL2Data(sid)
+    // Also fetch historical messages as fallback (in case session is ended)
+    fetchSessionMessagesPage(sid, 0, 500).then(page => {
+      if (page && page.messages && page.messages.length > 0 && state.value && state.value.nodes.length === 0) {
+        // No live events received; rebuild from history
+        processMessages(page.messages, sid)
+      }
+    }).catch(() => {})
   }
 
-  /** Replay mode: call resumeSession to get historical events */
+  /** Replay mode: fetch historical messages via REST API and rebuild trace */
   async function startReplay(sid: string, fromTime: number) {
     mode.value = 'replay'
     scrubberTime.value = fromTime
     replayProgress.value = 0
-    sync(createTraceState(sid))
 
-    // Call resumeSession to get historical messages/events
-    const socket = resumeSession(sid, (data: ResumeSessionPayload) => {
-      // Process resumed data - extract events from messages
-      // ResumeSessionPayload contains messages, we need to synthesize RunEvents
-      processResumeData(data, sid)
-    })
+    // Initialize state with a synthetic run.started so tool/thinking events are accepted
+    let s = createTraceState(sid)
+    const startedEvent: RunEvent = {
+      event: 'run.started',
+      session_id: sid,
+      run_id: `replay-${sid}`,
+      timestamp: fromTime,
+    } as any
+    s = applyRunEvent(s, startedEvent)
+    sync(s)
 
-    replayAbort = () => {
-      removeSocketListener(socket, 'resumed', () => {})
-      socket.disconnect()
+    try {
+      // Fetch messages via REST API (reliable for ended sessions)
+      const page = await fetchSessionMessagesPage(sid, 0, 500)
+      if (page && page.messages && page.messages.length > 0) {
+        // Set session start time from first message
+        const firstMsg = page.messages[0]
+        if (firstMsg?.timestamp) {
+          sessionStartedAt.value = firstMsg.timestamp * 1000
+        }
+        await processMessages(page.messages, sid)
+      }
+      // Also try resumeSession for live events (if session is still active)
+      try {
+        const socket = resumeSession(sid, (data: ResumeSessionPayload) => {
+          processResumeData(data, sid)
+        })
+        replayAbort = () => {
+          removeSocketListener(socket, 'resumed', () => {})
+          socket.disconnect()
+        }
+      } catch {
+        // Session may be ended; REST messages are sufficient
+      }
+      // Fetch L2 data for accurate tool durations
+      await fetchL2Data(sid)
+    } catch {
+      // Fallback: try resumeSession only
+      const socket = resumeSession(sid, (data: ResumeSessionPayload) => {
+        processResumeData(data, sid)
+      })
+      replayAbort = () => {
+        removeSocketListener(socket, 'resumed', () => {})
+        socket.disconnect()
+      }
     }
   }
 
-  /** Process ResumeSessionPayload to synthesize RunEvents */
+  /** Process historical messages to rebuild trace */
+  async function processMessages(messages: any[], sid: string) {
+    const total = messages.length
+    let processed = 0
+
+    for (const msg of messages) {
+      const ts = msg.timestamp * 1000 // messages use seconds
+      const role = msg.role || msg.display_role
+
+      // Synthesize run.started for the first user message
+      if (role === 'user' && processed === 0) {
+        const startEvent: RunEvent = {
+          event: 'run.started',
+          session_id: sid,
+          run_id: `replay-${sid}`,
+          timestamp: ts,
+        } as any
+        sync(applyRunEvent(state.value!, startEvent))
+      }
+
+      // Tool messages → tool.completed events
+      if (role === 'tool' || msg.tool_name) {
+        const toolEvent: RunEvent = {
+          event: 'tool.completed',
+          session_id: sid,
+          run_id: `replay-${sid}`,
+          tool: msg.tool_name || 'tool',
+          name: msg.tool_name,
+          output: typeof msg.content === 'string' ? msg.content.slice(0, 200) : '',
+          timestamp: ts,
+        } as any
+        // First emit tool.started for node creation
+        const startEvent: RunEvent = {
+          event: 'tool.started',
+          session_id: sid,
+          run_id: `replay-${sid}`,
+          tool: msg.tool_name || 'tool',
+          name: msg.tool_name,
+          preview: '',
+          timestamp: ts - 1,
+        } as any
+        sync(applyRunEvent(state.value!, startEvent))
+        sync(applyRunEvent(state.value!, toolEvent))
+      }
+
+      // Reasoning content → reasoning.delta events
+      const reasoning = msg.reasoning || msg.reasoning_content
+      if (reasoning && typeof reasoning === 'string' && reasoning.trim()) {
+        const reasoningEvent: RunEvent = {
+          event: 'reasoning.delta',
+          session_id: sid,
+          run_id: `replay-${sid}`,
+          text: reasoning,
+          timestamp: ts,
+        } as any
+        sync(applyRunEvent(state.value!, reasoningEvent))
+      }
+
+      // Assistant text → message.delta
+      if (role === 'assistant' && msg.content) {
+        const msgEvent: RunEvent = {
+          event: 'message.delta',
+          session_id: sid,
+          run_id: `replay-${sid}`,
+          delta: msg.content,
+          timestamp: ts,
+        } as any
+        sync(applyRunEvent(state.value!, msgEvent))
+      }
+
+      processed++
+      replayProgress.value = Math.round((processed / total) * 100)
+      // Yield to UI every 20 messages
+      if (processed % 20 === 0) {
+        await new Promise(r => setTimeout(r, 0))
+      }
+    }
+
+    // Emit run.completed to close the workflow node
+    const endEvent: RunEvent = {
+      event: 'run.completed',
+      session_id: sid,
+      run_id: `replay-${sid}`,
+      timestamp: messages.length > 0 ? messages[messages.length - 1].timestamp * 1000 : Date.now(),
+    } as any
+    sync(applyRunEvent(state.value!, endEvent))
+  }
+
+  /** Process ResumeSessionPayload events (if session is still active) */
   function processResumeData(data: ResumeSessionPayload, sid: string) {
-    // Extract session startedAt
-    if (data.started_at) sessionStartedAt.value = data.started_at * 1000
-
-    // If data has events array, process directly
-    if (data.events && Array.isArray(data.events)) {
-      let processed = 0
+    // If data has events array (live RunEvent stream), process directly
+    if (data.events && Array.isArray(data.events) && data.events.length > 0) {
       const total = data.events.length
-      for (const event of data.events) {
-        const next = applyRunEvent(state.value!, event as RunEvent)
-        sync(next)
-        processed++
-        replayProgress.value = Math.round((processed / total) * 100)
-      }
-      return
-    }
-
-    // Otherwise, synthesize events from messages
-    if (data.messages && Array.isArray(data.messages)) {
       let processed = 0
-      const total = data.messages.length
-      for (const msg of data.messages) {
-        // Synthesize tool events from tool messages
-        if (msg.role === 'tool') {
-          const toolEvent: RunEvent = {
-            event: 'tool.completed',
-            session_id: sid,
-            tool: msg.name || 'unknown',
-            name: msg.name,
-            timestamp: msg.timestamp,
-          }
-          const next = applyRunEvent(state.value!, toolEvent)
-          sync(next)
-        }
-        // Synthesize reasoning events from reasoning_content
-        if (msg.reasoning_content || msg.reasoning) {
-          const reasoningEvent: RunEvent = {
-            event: 'reasoning.delta',
-            session_id: sid,
-            text: msg.reasoning_content || msg.reasoning || '',
-            timestamp: msg.timestamp,
-          }
-          const next = applyRunEvent(state.value!, reasoningEvent)
-          sync(next)
-        }
+      for (const { event, data: eventData } of data.events) {
+        const runEvent = { ...eventData, event, session_id: sid } as RunEvent
+        sync(applyRunEvent(state.value!, runEvent))
         processed++
         replayProgress.value = Math.round((processed / total) * 100)
       }
     }
-
-    // Fetch L2 data for accurate tool durations
-    fetchL2Data(sid)
+    // Process messages if events not available
+    else if (data.messages && Array.isArray(data.messages) && data.messages.length > 0 && state.value!.nodes.length <= 1) {
+      processMessages(data.messages, sid)
+    }
   }
 
   /** Switch to live mode */

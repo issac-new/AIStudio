@@ -9,6 +9,7 @@ vi.mock('@/api/hermes/sessions', () => ({
     { id: 's1', title: 'Hermes Session 1', model: 'gpt-4', ended_at: null, started_at: 1000, last_active: 5000, message_count: 10 },
     { id: 's2', title: 'Hermes Session 2', model: 'claude', ended_at: 2000, started_at: 1000, last_active: 2000, message_count: 5 },
   ]),
+  fetchSessionMessagesPage: vi.fn(async () => ({ messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} })),
 }))
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
