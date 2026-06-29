@@ -9,7 +9,10 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机 1:1 协作�
 ## 运行效果图
 
 <img width="1914" height="928" alt="d5515cbc-58fa-48d4-b66b-2edefd345b65" src="https://github.com/user-attachments/assets/786c5b94-1d63-4179-82c3-8f9946ffa420" />
-
+<img width="1916" height="917" alt="d71cdaa7-eb9b-45ed-b435-1bc2ee2031f4" src="https://github.com/user-attachments/assets/85f568fe-57f4-4a49-83a9-48496b5aefa6" />
+<img width="1920" height="923" alt="67876615-bab7-4880-b919-8c7f4caa1165" src="https://github.com/user-attachments/assets/71136468-70f8-4cb2-b7bb-c25978fdfb0a" />
+<img width="1920" height="933" alt="d0c3941b21d78a93b6c90f67e9faea87" src="https://github.com/user-attachments/assets/4827c359-09bb-4052-9eb1-2696061c3e2d" />
+<img width="1920" height="930" alt="ea0b09bd5c3e608883e6a661e6fc658b" src="https://github.com/user-attachments/assets/bf5293b0-374a-4a7a-92a1-645d87775cbe" />
 
 ## 功能特色
 
