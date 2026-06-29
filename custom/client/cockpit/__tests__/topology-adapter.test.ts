@@ -7,7 +7,7 @@ vi.mock('@/custom/cockpit/adapters/collab-adapter', () => ({
     : null,
 }))
 
-import { buildTopology, MAX_NODES, type TaskLinksMap } from '@/custom/cockpit/adapters/topology-adapter'
+import { buildTopology, MAX_NODES, isHumanActionStatus, type TaskLinksMap } from '@/custom/cockpit/adapters/topology-adapter'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 
 const task = (over: Partial<CockpitTask> = {}): CockpitTask => ({
@@ -105,5 +105,42 @@ describe('buildTopology', () => {
     const centerId = 'g-center'
     // 至少有一条 center → descendant 或 ancestor → center 的连线
     expect(r.relations.length).toBeGreaterThan(0)
+  })
+
+  it('center node carries task status', () => {
+    const r = buildTopology(task({ status: 'blocked' }), null, [])
+    const center = r.nodes.find(n => n.kind === 'center')
+    expect(center?.status).toBe('blocked')
+  })
+
+  it('ancestor/descendant nodes carry sibling status', () => {
+    const links: TaskLinksMap = { t1: { parents: ['p1'], children: ['c1'] } }
+    const siblings = [
+      task({ id: 'p1', title: '父', status: 'triage' }),
+      task({ id: 'c1', title: '子', status: 'review' }),
+    ]
+    const r = buildTopology(task(), links, siblings)
+    expect(r.nodes.find(n => n.taskId === 'p1')?.status).toBe('triage')
+    expect(r.nodes.find(n => n.taskId === 'c1')?.status).toBe('review')
+  })
+})
+
+describe('isHumanActionStatus', () => {
+  it('returns true for blocked/todo/triage/review', () => {
+    expect(isHumanActionStatus('blocked')).toBe(true)
+    expect(isHumanActionStatus('todo')).toBe(true)
+    expect(isHumanActionStatus('triage')).toBe(true)
+    expect(isHumanActionStatus('review')).toBe(true)
+  })
+  it('returns false for running/done/scheduled/ready/archived', () => {
+    expect(isHumanActionStatus('running')).toBe(false)
+    expect(isHumanActionStatus('done')).toBe(false)
+    expect(isHumanActionStatus('scheduled')).toBe(false)
+    expect(isHumanActionStatus('ready')).toBe(false)
+    expect(isHumanActionStatus('archived')).toBe(false)
+  })
+  it('returns false for undefined/null', () => {
+    expect(isHumanActionStatus(undefined)).toBe(false)
+    expect(isHumanActionStatus(null)).toBe(false)
   })
 })
