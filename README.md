@@ -76,6 +76,9 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机 1:1 协作�
 
 ## 架构
 
+### 技术架构说明
+<img width="2960" height="4000" alt="image" src="https://github.com/user-attachments/assets/3e41bc6e-7afc-4c2b-b437-404e1f33c629" />
+
 ### 工作区三层布局
 
 ```
