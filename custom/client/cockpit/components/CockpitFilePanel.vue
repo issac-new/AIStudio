@@ -83,7 +83,14 @@ onMounted(() => {
 
 <template>
   <div class="cockpit-file-panel">
-    <FilesPanel v-if="hasWorkspace" />
+    <div v-if="errorState" class="cockpit-file-panel__error">
+      <span class="cockpit-file-panel__error-icon">⚠️</span>
+      <span class="cockpit-file-panel__error-text">{{ errorState.message }}</span>
+      <button type="button" class="cockpit-file-panel__error-retry" @click="syncWorkspaceRoot()">
+        {{ t('cockpit.retry', '重试') }}
+      </button>
+    </div>
+    <FilesPanel v-else-if="hasWorkspace" />
     <div v-else class="cockpit-file-panel__no-workspace">
       任务尚未领取 workspace，请等待 agent claim 后重试
     </div>
@@ -108,5 +115,37 @@ onMounted(() => {
   font-size: 13px;
   padding: 40px 24px;
   text-align: center;
+}
+.cockpit-file-panel__error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.cockpit-file-panel__error-icon {
+  font-size: 24px;
+}
+.cockpit-file-panel__error-text {
+  color: var(--text-muted);
+  font-size: 13px;
+  max-width: 400px;
+}
+.cockpit-file-panel__error-retry {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  &:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
 }
 </style>

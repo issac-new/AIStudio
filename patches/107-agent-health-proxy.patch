@@ -1,5 +1,5 @@
---- a/b/packages/server/src/index.ts	2026-06-25 23:46:40
-+++ b/packages/server/src/index.ts	2026-06-25 23:46:40
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
 @@ -347,6 +347,27 @@
      await next()
    })

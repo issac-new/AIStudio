@@ -12,6 +12,7 @@ const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
 const upstreamRoot = resolve(ncwkRoot, 'upstream');
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
+const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');
 const overlayNodeModules = resolve(overlayRoot, 'node_modules');
 // server 代码用相对路径 import '../custom/...'(非 @ alias,tsc/esbuild 无法经 alias 重定向),
@@ -49,11 +50,34 @@ function applyPatches() {
       console.error(`[inject] FAILED: patch 文件不存在: ${p}`);
       process.exit(1);
     }
+    // 判断 patch 目标：hermes-agent 还是 hermes-studio
+    let targetRoot = hermesStudioRoot;
     try {
-      git(`apply --whitespace=nowarn ${patchPath}`, hermesStudioRoot);
-      console.log(`[inject] applied patch: ${p}`);
-    } catch {
+      const patchText = readFileSync(patchPath, 'utf8');
+      const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
+      if (firstTargetMatch) {
+        const targetPath = firstTargetMatch[1];
+        // hermes-studio 的文件路径以 packages/ 或 dist/ 开头，或以 vite.config.ts 等根文件结尾
+        // hermes-agent 的文件路径不以 packages/ 开头（如 hermes_cli/kanban_db.py）
+        if (!targetPath.startsWith('packages/') && !targetPath.startsWith('dist/')) {
+          // 可能是 hermes-studio 根文件（如 vite.config.ts）或 hermes-agent 文件
+          // 检查目标文件是否存在于 hermes-studio 中
+          if (existsSync(resolve(hermesStudioRoot, targetPath))) {
+            targetRoot = hermesStudioRoot;
+          } else {
+            targetRoot = hermesAgentRoot;
+          }
+        }
+      }
+    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
+
+    try {
+      git(`apply --whitespace=nowarn ${patchPath}`, targetRoot);
+      console.log(`[inject] applied patch: ${p} (to ${targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio'})`);
+    } catch (e) {
       console.error(`[inject] FAILED to apply patch: ${p}`);
+      console.error(`  message: ${e.message}`);
+      console.error(`  stderr: ${e.stderr}`);
       console.error('  用 git apply --reject 手动排查,修复后重跑');
       process.exit(1);
     }
