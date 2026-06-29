@@ -89,19 +89,28 @@ watch(needsSessionSelect, async (need) => {
   loadingSessions.value = true
   allSessions.value = []
   try {
-    // 获取所有 profile 名称（容错：profiles 可能为空）
+    // 获取所有 profile 名称
     let profileNames: string[] = []
     try {
-      const profiles = (profilesStore as any)?.profiles
-      if (Array.isArray(profiles)) {
+      // 先确保 profiles 已加载
+      const pStore = profilesStore as any
+      if (!pStore.profiles || pStore.profiles.length === 0) {
+        await pStore.fetchProfiles?.()
+      }
+      const profiles = pStore.profiles
+      if (Array.isArray(profiles) && profiles.length > 0) {
         profileNames = profiles.map((p: any) => p?.name).filter(Boolean)
       }
     } catch { /* profilesStore 未初始化 */ }
-    const targets = profileNames.length > 0 ? profileNames : ['default']
+
+    // Fallback: 从已知 profile 目录名硬编码（确保总能查到）
+    if (profileNames.length === 0) {
+      profileNames = ['default', 'orchestrator', 'worker-coder', 'worker-researcher']
+    }
 
     // 并行查询所有 profile 的会话（limit 提高到 500 确保全量）
     const results = await Promise.allSettled(
-      targets.map((name: string) => fetchHermesSessions(undefined, 500, name).then(sessions =>
+      profileNames.map((name: string) => fetchHermesSessions(undefined, 500, name).then(sessions =>
         sessions.map(s => ({ ...s, profile: name }))
       ))
     )
