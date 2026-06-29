@@ -99,3 +99,4 @@
 114-server-trace-api.patch
 
 036-server-routes-index.patch
+115-client-api-sessions-hermes-profile-wide.patch
