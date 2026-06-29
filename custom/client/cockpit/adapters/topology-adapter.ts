@@ -2,6 +2,14 @@ import type { RouteLocationRaw } from 'vue-router'
 import type { CockpitTask } from './task-adapter'
 import { parseTenant } from './collab-adapter'
 
+/** 需要人工介入的任务状态（在协作地图中高亮区分） */
+export type HumanActionStatus = 'blocked' | 'todo' | 'triage' | 'review'
+
+/** 判断状态是否属于"需要人工介入" */
+export function isHumanActionStatus(status: string | undefined | null): status is HumanActionStatus {
+  return status === 'blocked' || status === 'todo' || status === 'triage' || status === 'review'
+}
+
 export type GraphNodeRelation = 'center' | 'ancestor' | 'descendant' | 'person' | 'channel' | 'folded'
 
 export interface GraphNode {
@@ -10,6 +18,8 @@ export interface GraphNode {
   label: string
   kind: GraphNodeRelation
   focus: boolean
+  /** 任务状态（仅 center/ancestor/descendant 有值；用于人工介入视觉区分） */
+  status?: string
   /** 层级深度：center=0，祖先为负（-1 父、-2 爷爷），后代为正（1 子、2 孙子） */
   depth: number
   target?: {
@@ -52,7 +62,7 @@ export function buildTopology(
   const centerId = 'g-center'
   nodes.push({
     id: centerId, taskId: task.id, label: task.title,
-    kind: 'center', focus: true, depth: 0,
+    kind: 'center', focus: true, depth: 0, status: task.status,
   })
 
   // BFS 向上（祖先）和向下（后代），记录每个 taskId 的深度
@@ -118,6 +128,7 @@ export function buildTopology(
     nodes.push({
       id: `g-${kind}-${tid}`, taskId: tid,
       label: sibling?.title ?? tid, kind, focus: false, depth,
+      status: sibling?.status,
       target: { taskId: tid },
     })
   }
