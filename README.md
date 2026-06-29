@@ -1,4 +1,5 @@
 # SwarmStudio
+本项目基于作者想法，由AI 100%完成，不包含任何人类代码。使用Apache 2.0 协议发布，对于参考的的上游项目，如需运行时部署，请遵守其授权约定，或自行参考迁移功能完成本地化实现。
 
 > 基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发的 **AI 协作中心**桌面应用。本仓是 overlay（二次开发层），通过构建期注入将自定义功能叠加到上游，上游源码始终保持纯净、可独立升级。
 
