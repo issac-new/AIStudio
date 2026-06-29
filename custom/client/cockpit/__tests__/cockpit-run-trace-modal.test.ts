@@ -3,14 +3,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
-// ── mock chat store (避免 __APP_VERSION__ 问题) ──
+// ── mock sessions API (fetchHermesSessions 从 state.db 获取) ──
+vi.mock('@/api/hermes/sessions', () => ({
+  fetchHermesSessions: vi.fn(async () => [
+    { id: 's1', title: 'Hermes Session 1', model: 'gpt-4', ended_at: null, started_at: 1000, last_active: 5000, message_count: 10 },
+    { id: 's2', title: 'Hermes Session 2', model: 'claude', ended_at: 2000, started_at: 1000, last_active: 2000, message_count: 5 },
+  ]),
+}))
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
     loadSessions: vi.fn(async () => {}),
     messages: [],
     sendMessage: vi.fn(async () => {}),
     switchSession: vi.fn(async () => {}),
-    sessions: [],
+    sessions: [
+      { id: 's1', title: 'Session 1', model: 'gpt-4', endedAt: null, updatedAt: Date.now() },
+      { id: 's2', title: 'Session 2', model: 'claude', endedAt: 1000, updatedAt: 2000 },
+    ],
     isSessionUnread: vi.fn(() => false),
     getSessionUnreadCount: vi.fn(() => 0),
     getSessionUnreadInfo: vi.fn(() => null),
@@ -162,5 +171,28 @@ describe('CockpitRunTraceModal', () => {
     expect(w.find('.run-trace-scrubber__btn.is-active').text()).toContain('Live')
     // Live mode indicator (green dot with pulse)
     expect(w.find('.run-trace-modal__dot.is-live').exists()).toBe(true)
+  })
+
+  it('shows session picker when sessionId is empty', () => {
+    const store = useCockpitStore()
+    store.openRunTrace({ sessionId: '' }) // Empty → show picker
+    const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
+    expect(w.find('.run-trace-session-picker').exists()).toBe(true)
+    expect(w.text()).toContain('选择会话观察')
+    // Should list the mocked sessions (s1 running, s2 finished)
+    const items = w.findAll('.run-trace-session-picker__item')
+    expect(items.length).toBeGreaterThanOrEqual(2)
+    // s1 should have "运行中" badge
+    expect(items[0].find('.run-trace-session-picker__badge').exists()).toBe(true)
+  })
+
+  it('clicking session item selects it', async () => {
+    const store = useCockpitStore()
+    store.openRunTrace({ sessionId: '' })
+    const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
+    const items = w.findAll('.run-trace-session-picker__item')
+    await items[0].trigger('click')
+    // After select, sessionId should be set
+    expect(store.runTraceSessionId).toBe('s1')
   })
 })

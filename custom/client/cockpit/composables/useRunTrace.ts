@@ -206,13 +206,15 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     startReplay(sid, time)
   }
 
-  /** Update scrubber position (drag) */
+  /** Update scrubber position (drag) — 自动从 Live 切换到 Replay */
   function scrubTo(time: number) {
-    scrubberTime.value = time
-    // If in replay mode and time changes significantly, restart replay from new position
-    if (mode.value === 'replay' && Math.abs(time - scrubberTime.value) > 5000) {
-      switchToReplay(time)
+    // 如果当前是 Live 模式且用户开始拖动，自动切换到 Replay
+    if (mode.value === 'live') {
+      scrubberTime.value = time
+      // 不立即 startReplay（拖动中频繁触发开销大），等用户松开点击 Replay 按钮
+      return
     }
+    scrubberTime.value = time
   }
 
   watch(sessionId, (sid) => {

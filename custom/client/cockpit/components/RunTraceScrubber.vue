@@ -47,7 +47,7 @@ function timeFromEvent(clientX: number): number {
 }
 
 function onPointerDown(e: PointerEvent) {
-  if (props.mode === 'live') return // Can't drag in live mode
+  // Live 模式也允许拖动：拖动即切换到 replay 选位
   dragging.value = true
   ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
   emit('scrub', timeFromEvent(e.clientX))
@@ -143,8 +143,7 @@ const durationLabel = computed(() => fmtDuration(totalSpan.value))
 .run-trace-scrubber__time { font-size: 11px; font-weight: 600; color: var(--text-primary); font-family: ui-monospace, 'SF Mono', monospace; font-variant-numeric: tabular-nums; }
 .run-trace-scrubber__dur { font-size: 10px; color: var(--text-muted); margin-left: auto; }
 .run-trace-scrubber__progress { font-size: 10px; color: var(--accent-info); }
-.run-trace-scrubber__track { position: relative; height: 24px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; overflow: visible; }
-.run-trace-scrubber__track.is-draggable { cursor: ew-resize; }
+.run-trace-scrubber__track { position: relative; height: 24px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; overflow: visible; cursor: ew-resize; }
 .run-trace-scrubber__fill { position: absolute; top: 0; left: 0; bottom: 0; background: linear-gradient(to right, var(--accent-info-alpha, rgba(107,163,214,0.15)), rgba(107,163,214,0.25)); border-radius: 3px 0 0 3px; transition: width 0.15s ease; }
 .run-trace-scrubber__tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border-color); pointer-events: none; }
 .run-trace-scrubber__tick-label { position: absolute; top: 100%; left: 0; transform: translateX(-50%); margin-top: 2px; font-size: 8px; color: var(--text-muted); white-space: nowrap; }
