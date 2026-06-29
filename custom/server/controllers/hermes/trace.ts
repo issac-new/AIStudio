@@ -146,10 +146,10 @@ function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[
       const obj = JSON.parse(line)
       // OTel format detection
       if (isOTelSpan(obj)) {
-        const converted = otelToLegacy(obj)
+        const converted = otelToLegacy(obj) as any
         if (converted.isTrailer) {
           trailer = converted as JSONLTrailer
-        } else if ((converted as any).type === 'header') {
+        } else if (converted.type === 'header') {
           Object.assign(header, converted)
         } else {
           chunks.push(converted as JSONLChunk)
