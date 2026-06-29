@@ -106,8 +106,34 @@ interface JSONLTrailer {
 
 type JSONLLine = JSONLHeader | JSONLChunk | JSONLTrailer
 
+// ── OTel span format (Phase 4) ──
+
+interface OTelSpan {
+  traceId: string
+  spanId: string
+  parentSpanId?: string | null
+  name: string
+  kind: string  // INTERNAL | CLIENT | SERVER
+  startTime: number  // microseconds
+  endTime?: number   // microseconds
+  durationMs?: number
+  attributes?: Record<string, unknown>
+  status?: { code: string; message?: string }
+  otelFormat?: true
+  isTrailer?: boolean
+}
+
+function isOTelSpan(obj: any): obj is OTelSpan {
+  return obj && obj.otelFormat === true && typeof obj.traceId === 'string' && typeof obj.spanId === 'string'
+}
+
+/** Convert microseconds → milliseconds */
+function usToMs(us: number): number {
+  return Math.floor(us / 1000)
+}
+
 /**
- * Parse JSONL file and build trace state.
+ * Parse a JSONL file (auto-detects legacy vs OTel format).
  */
 function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[]; trailer?: JSONLTrailer } {
   const header: JSONLHeader = { type: 'header', version: '1', session_id: '', started_at: 0 }
@@ -117,13 +143,27 @@ function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[
   for (const line of lines) {
     if (!line.trim()) continue
     try {
-      const obj = JSON.parse(line) as JSONLLine
-      if (obj.type === 'header') {
-        Object.assign(header, obj)
-      } else if (obj.type === 'chunk') {
-        chunks.push(obj)
-      } else if (obj.type === 'trailer') {
-        trailer = obj
+      const obj = JSON.parse(line)
+      // OTel format detection
+      if (isOTelSpan(obj)) {
+        const converted = otelToLegacy(obj)
+        if (converted.isTrailer) {
+          trailer = converted as JSONLTrailer
+        } else if ((converted as any).type === 'header') {
+          Object.assign(header, converted)
+        } else {
+          chunks.push(converted as JSONLChunk)
+        }
+        continue
+      }
+      // Legacy format
+      const legacy = obj as JSONLLine
+      if (legacy.type === 'header') {
+        Object.assign(header, legacy)
+      } else if (legacy.type === 'chunk') {
+        chunks.push(legacy)
+      } else if (legacy.type === 'trailer') {
+        trailer = legacy
       }
     } catch {
       // Skip malformed lines
@@ -131,6 +171,96 @@ function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[
   }
 
   return { header, chunks, trailer }
+}
+
+/** Convert an OTel span back to legacy JSONL format for buildTraceGraph */
+function otelToLegacy(span: OTelSpan): JSONLHeader | JSONLChunk | JSONLTrailer {
+  const attrs = span.attributes || {}
+  const sessionId = (attrs['gen_ai.conversation.id'] as string) || (attrs['agentscope.session.id'] as string) || span.traceId
+  const startedAtMs = usToMs(span.startTime)
+  const endedAtMs = span.endTime ? usToMs(span.endTime) : undefined
+  const opName = attrs['gen_ai.operation.name'] as string | undefined
+
+  if (span.isTrailer) {
+    return {
+      type: 'trailer',
+      session_id: sessionId,
+      ended_at: startedAtMs,
+      duration_ms: span.durationMs || 0,
+      outcome: attrs['agentscope.session.outcome'] as string,
+      error: span.status?.message,
+    }
+  }
+
+  if (opName === 'invoke_agent' && span.kind === 'SERVER' && !span.parentSpanId) {
+    // Root session span → header
+    return {
+      type: 'header',
+      version: '1.0.0',
+      session_id: sessionId,
+      task_id: attrs['agentscope.task.id'] as string,
+      started_at: startedAtMs,
+      model: attrs['gen_ai.request.model'] as string,
+      provider: attrs['gen_ai.provider.name'] as string,
+      source: 'hermes-agent',
+    }
+  }
+
+  if (opName === 'chat') {
+    // LLM span
+    const usage = attrs['gen_ai.usage.input_tokens'] !== undefined
+      ? { input_tokens: attrs['gen_ai.usage.input_tokens'] as number, output_tokens: attrs['gen_ai.usage.output_tokens'] as number }
+      : undefined
+    return {
+      type: 'chunk',
+      kind: 'llm_span',
+      phase: endedAtMs ? 'post' : 'pre',
+      session_id: sessionId,
+      api_request_id: span.spanId,
+      model: attrs['gen_ai.request.model'] as string,
+      provider: attrs['gen_ai.provider.name'] as string,
+      started_at: startedAtMs,
+      ended_at: endedAtMs,
+      duration_ms: span.durationMs,
+      finish_reason: (attrs['gen_ai.response.finish_reasons'] as string[])?.[0],
+      usage,
+    }
+  }
+
+  if (opName === 'execute_tool') {
+    // Tool span
+    return {
+      type: 'chunk',
+      kind: 'tool_span',
+      session_id: sessionId,
+      tool_call_id: (attrs['gen_ai.tool.call.id'] as string) || span.spanId,
+      tool_name: attrs['gen_ai.tool.name'] as string,
+      args: attrs['gen_ai.tool.call.arguments'],
+      result: attrs['gen_ai.tool.call.result'],
+      duration_ms: span.durationMs,
+      status: span.status?.code === 'ERROR' ? 'error' : (endedAtMs ? 'ok' : undefined),
+      error_message: span.status?.message,
+      ts: startedAtMs,
+    }
+  }
+
+  // Default: treat as subagent span
+  if (attrs['agentscope.subagent.label']) {
+    return {
+      type: 'chunk',
+      kind: 'subagent_span',
+      phase: endedAtMs ? 'stop' : 'start',
+      session_id: sessionId,
+      subagent_label: attrs['agentscope.subagent.label'] as string,
+      started_at: startedAtMs,
+      ended_at: endedAtMs,
+      duration_ms: span.durationMs,
+      status: span.status?.code === 'ERROR' ? 'error' : (endedAtMs ? 'ok' : undefined),
+    }
+  }
+
+  // Fallback: empty chunk
+  return { type: 'chunk', kind: 'tool_span', session_id: sessionId, tool_call_id: span.spanId, ts: startedAtMs }
 }
 
 /**

@@ -51,9 +51,15 @@ hermes plugins enable run-trace
 
 ## Configuration
 
-Optional environment variable:
+Optional environment variables:
 
 - `HERMES_RUN_TRACE_DIR` — Custom trace directory (default: `~/.hermes/traces`)
+- `HERMES_RUN_TRACE_FORMAT` — Output format: `legacy` (default) or `otel`
+
+### OTel Format
+
+Set `HERMES_RUN_TRACE_FORMAT=otel` to output OpenTelemetry GenAI semantic convention
+spans, compatible with Jaeger/Langfuse/Grafana. The Koa API auto-detects both formats.
 
 ## Hooks Subscribed
 

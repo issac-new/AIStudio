@@ -1,7 +1,11 @@
 """run-trace — Hermes plugin for local RunTraceView observability.
 
-Writes JSONL trace files (header/chunk/trailer format) to ~/.hermes/traces/
-for consumption by the RunTraceView frontend via Layer 3 Koa API.
+Writes JSONL trace files to ~/.hermes/traces/ for consumption by the
+RunTraceView frontend via Layer 3 Koa API.
+
+Supports two output formats (controlled by HERMES_RUN_TRACE_FORMAT env var):
+  - "legacy"  (default): custom header/chunk/trailer format
+  - "otel":   OpenTelemetry GenAI semantic convention spans (Jaeger/Langfuse compatible)
 
 Activation is handled by the Hermes plugin system — standalone plugins only
 load when listed in ``plugins.enabled`` (via ``hermes plugins enable run-trace``).
@@ -18,6 +22,19 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+# OTel formatter (Phase 4: aligns with OpenTelemetry GenAI semantic conventions)
+try:
+    from .otel_formatter import (
+        build_session_span,
+        build_llm_span,
+        build_tool_span,
+        build_subagent_span,
+        build_trailer_span,
+    )
+    _OTEL_AVAILABLE = True
+except ImportError:
+    _OTEL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +64,11 @@ class TraceSession:
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
+
+
+def _use_otel_format() -> bool:
+    """Whether to output OpenTelemetry span format (Phase 4)."""
+    return _env("HERMES_RUN_TRACE_FORMAT", "legacy").lower() == "otel" and _OTEL_AVAILABLE
 
 
 def _get_trace_dir() -> Path:
@@ -122,16 +144,26 @@ def _on_session_start(ctx: Any, payload: dict) -> None:
             return
 
         # Build header
-        header = {
-            "type": "header",
-            "version": "1.0.0",
-            "session_id": session_id,
-            "task_id": task_id,
-            "started_at": payload.get("started_at", time.time()),
-            "model": payload.get("model"),
-            "provider": payload.get("provider"),
-            "source": payload.get("source", "hermes-agent"),
-        }
+        started_at = payload.get("started_at", time.time())
+        if _use_otel_format():
+            header = build_session_span(
+                session_id=session_id,
+                task_id=task_id,
+                started_at=started_at,
+                model=payload.get("model"),
+                provider=payload.get("provider"),
+            )
+        else:
+            header = {
+                "type": "header",
+                "version": "1.0.0",
+                "session_id": session_id,
+                "task_id": task_id,
+                "started_at": started_at,
+                "model": payload.get("model"),
+                "provider": payload.get("provider"),
+                "source": payload.get("source", "hermes-agent"),
+            }
         _write_jsonl_line(file_handle, header)
 
         # Store state
@@ -140,7 +172,7 @@ def _on_session_start(ctx: Any, payload: dict) -> None:
             task_id=task_id,
             file_path=file_path,
             file_handle=file_handle,
-            started_at=payload.get("started_at", time.time()),
+            started_at=started_at,
         )
         _TRACE_STATE[key] = state
         _SESSION_FILES[session_id] = file_handle
@@ -160,15 +192,26 @@ def _on_session_end(ctx: Any, payload: dict) -> None:
             return
 
         # Write trailer
-        trailer = {
-            "type": "trailer",
-            "session_id": session_id,
-            "ended_at": payload.get("ended_at", time.time()),
-            "duration_ms": int((payload.get("ended_at", time.time()) - state.started_at) * 1000),
-            "outcome": payload.get("outcome"),
-            "error": payload.get("error"),
-            "summary": payload.get("summary"),
-        }
+        ended_at = payload.get("ended_at", time.time())
+        duration_ms = int((ended_at - state.started_at) * 1000)
+        if _use_otel_format():
+            trailer = build_trailer_span(
+                session_id=session_id,
+                ended_at=ended_at,
+                duration_ms=duration_ms,
+                outcome=payload.get("outcome"),
+                error=payload.get("error"),
+            )
+        else:
+            trailer = {
+                "type": "trailer",
+                "session_id": session_id,
+                "ended_at": ended_at,
+                "duration_ms": duration_ms,
+                "outcome": payload.get("outcome"),
+                "error": payload.get("error"),
+                "summary": payload.get("summary"),
+            }
         _write_jsonl_line(state.file_handle, trailer)
 
         # Close file
@@ -194,24 +237,34 @@ def _pre_api_request(ctx: Any, payload: dict) -> None:
         if not state:
             return
 
-        chunk = {
-            "type": "chunk",
-            "kind": "llm_span",
-            "phase": "pre",
-            "session_id": session_id,
-            "api_request_id": api_request_id,
-            "turn_id": payload.get("turn_id"),
-            "model": payload.get("model"),
-            "provider": payload.get("provider"),
-            "started_at": payload.get("started_at", time.time()),
-            "api_call_count": payload.get("api_call_count"),
-            "request_messages": payload.get("request_messages"),
-        }
+        started_at = payload.get("started_at", time.time())
+        if _use_otel_format():
+            chunk = build_llm_span(
+                session_id=session_id,
+                api_request_id=api_request_id,
+                model=payload.get("model"),
+                provider=payload.get("provider"),
+                started_at=started_at,
+            )
+        else:
+            chunk = {
+                "type": "chunk",
+                "kind": "llm_span",
+                "phase": "pre",
+                "session_id": session_id,
+                "api_request_id": api_request_id,
+                "turn_id": payload.get("turn_id"),
+                "model": payload.get("model"),
+                "provider": payload.get("provider"),
+                "started_at": started_at,
+                "api_call_count": payload.get("api_call_count"),
+                "request_messages": payload.get("request_messages"),
+            }
         _write_jsonl_line(state.file_handle, chunk)
 
         # Track span for post handler
         state.api_request_ids[api_request_id] = {
-            "started_at": payload.get("started_at", time.time()),
+            "started_at": started_at,
             "model": payload.get("model"),
         }
         state.last_updated_at = time.time()
@@ -236,26 +289,39 @@ def _post_api_request(ctx: Any, payload: dict) -> None:
         ended_at = payload.get("ended_at", time.time())
         duration_ms = int((ended_at - started_at) * 1000) if started_at else payload.get("api_duration", 0)
 
-        chunk = {
-            "type": "chunk",
-            "kind": "llm_span",
-            "phase": "post",
-            "session_id": session_id,
-            "api_request_id": api_request_id,
-            "turn_id": payload.get("turn_id"),
-            "model": payload.get("model"),
-            "provider": payload.get("provider"),
-            "started_at": started_at,
-            "ended_at": ended_at,
-            "duration_ms": duration_ms,
-            "finish_reason": payload.get("finish_reason"),
-            "usage": payload.get("usage"),
-            "response_preview": payload.get("response"),
-        }
-        # Truncate large response previews
-        if chunk["response_preview"] and isinstance(chunk["response_preview"], str):
-            if len(chunk["response_preview"]) > 500:
-                chunk["response_preview"] = chunk["response_preview"][:500] + "..."
+        if _use_otel_format():
+            chunk = build_llm_span(
+                session_id=session_id,
+                api_request_id=api_request_id,
+                model=payload.get("model") or span_info.get("model"),
+                provider=payload.get("provider"),
+                started_at=started_at,
+                ended_at=ended_at,
+                duration_ms=duration_ms,
+                usage=payload.get("usage"),
+                finish_reason=payload.get("finish_reason"),
+            )
+        else:
+            chunk = {
+                "type": "chunk",
+                "kind": "llm_span",
+                "phase": "post",
+                "session_id": session_id,
+                "api_request_id": api_request_id,
+                "turn_id": payload.get("turn_id"),
+                "model": payload.get("model"),
+                "provider": payload.get("provider"),
+                "started_at": started_at,
+                "ended_at": ended_at,
+                "duration_ms": duration_ms,
+                "finish_reason": payload.get("finish_reason"),
+                "usage": payload.get("usage"),
+                "response_preview": payload.get("response"),
+            }
+            # Truncate large response previews
+            if chunk["response_preview"] and isinstance(chunk["response_preview"], str):
+                if len(chunk["response_preview"]) > 500:
+                    chunk["response_preview"] = chunk["response_preview"][:500] + "..."
 
         _write_jsonl_line(state.file_handle, chunk)
         state.last_updated_at = time.time()
@@ -275,29 +341,42 @@ def _post_tool_call(ctx: Any, payload: dict) -> None:
         if not state:
             return
 
-        chunk = {
-            "type": "chunk",
-            "kind": "tool_span",
-            "session_id": session_id,
-            "tool_call_id": tool_call_id,
-            "tool_name": payload.get("tool_name"),
-            "args": payload.get("args"),
-            "result": payload.get("result"),
-            "duration_ms": payload.get("duration_ms"),
-            "status": payload.get("status"),
-            "error_type": payload.get("error_type"),
-            "error_message": payload.get("error_message"),
-            "turn_id": payload.get("turn_id"),
-            "api_request_id": payload.get("api_request_id"),
-            "ts": payload.get("ts", time.time()),
-        }
-        # Truncate large args/result
-        if chunk["args"] and isinstance(chunk["args"], str):
-            if len(chunk["args"]) > 1000:
-                chunk["args"] = chunk["args"][:1000] + "..."
-        if chunk["result"] and isinstance(chunk["result"], str):
-            if len(chunk["result"]) > 1000:
-                chunk["result"] = chunk["result"][:1000] + "..."
+        if _use_otel_format():
+            chunk = build_tool_span(
+                session_id=session_id,
+                tool_call_id=tool_call_id,
+                tool_name=payload.get("tool_name"),
+                args=payload.get("args"),
+                result=payload.get("result"),
+                duration_ms=payload.get("duration_ms"),
+                status=payload.get("status"),
+                error_message=payload.get("error_message"),
+                started_at=payload.get("ts", time.time()),
+            )
+        else:
+            chunk = {
+                "type": "chunk",
+                "kind": "tool_span",
+                "session_id": session_id,
+                "tool_call_id": tool_call_id,
+                "tool_name": payload.get("tool_name"),
+                "args": payload.get("args"),
+                "result": payload.get("result"),
+                "duration_ms": payload.get("duration_ms"),
+                "status": payload.get("status"),
+                "error_type": payload.get("error_type"),
+                "error_message": payload.get("error_message"),
+                "turn_id": payload.get("turn_id"),
+                "api_request_id": payload.get("api_request_id"),
+                "ts": payload.get("ts", time.time()),
+            }
+            # Truncate large args/result
+            if chunk["args"] and isinstance(chunk["args"], str):
+                if len(chunk["args"]) > 1000:
+                    chunk["args"] = chunk["args"][:1000] + "..."
+            if chunk["result"] and isinstance(chunk["result"], str):
+                if len(chunk["result"]) > 1000:
+                    chunk["result"] = chunk["result"][:1000] + "..."
 
         _write_jsonl_line(state.file_handle, chunk)
         state.last_updated_at = time.time()
@@ -317,23 +396,31 @@ def _subagent_start(ctx: Any, payload: dict) -> None:
         if not state:
             return
 
-        chunk = {
-            "type": "chunk",
-            "kind": "subagent_span",
-            "phase": "start",
-            "session_id": session_id,
-            "subagent_label": subagent_label,
-            "task_index": payload.get("task_index"),
-            "task_count": payload.get("task_count"),
-            "started_at": payload.get("started_at", time.time()),
-            "input_tokens": payload.get("input_tokens"),
-            "output_tokens": payload.get("output_tokens"),
-            "api_calls": payload.get("api_calls"),
-        }
+        started_at = payload.get("started_at", time.time())
+        if _use_otel_format():
+            chunk = build_subagent_span(
+                session_id=session_id,
+                label=subagent_label,
+                started_at=started_at,
+            )
+        else:
+            chunk = {
+                "type": "chunk",
+                "kind": "subagent_span",
+                "phase": "start",
+                "session_id": session_id,
+                "subagent_label": subagent_label,
+                "task_index": payload.get("task_index"),
+                "task_count": payload.get("task_count"),
+                "started_at": started_at,
+                "input_tokens": payload.get("input_tokens"),
+                "output_tokens": payload.get("output_tokens"),
+                "api_calls": payload.get("api_calls"),
+            }
         _write_jsonl_line(state.file_handle, chunk)
 
         state.subagent_ids[subagent_label] = {
-            "started_at": payload.get("started_at", time.time()),
+            "started_at": started_at,
         }
         state.last_updated_at = time.time()
 
@@ -357,19 +444,29 @@ def _subagent_stop(ctx: Any, payload: dict) -> None:
         ended_at = payload.get("ended_at", time.time())
         duration_ms = int((ended_at - started_at) * 1000) if started_at else 0
 
-        chunk = {
-            "type": "chunk",
-            "kind": "subagent_span",
-            "phase": "stop",
-            "session_id": session_id,
-            "subagent_label": subagent_label,
-            "started_at": started_at,
-            "ended_at": ended_at,
-            "duration_ms": duration_ms,
-            "status": payload.get("status"),
-            "output_tokens": payload.get("output_tokens"),
-            "api_calls": payload.get("api_calls"),
-        }
+        if _use_otel_format():
+            chunk = build_subagent_span(
+                session_id=session_id,
+                label=subagent_label,
+                started_at=started_at,
+                ended_at=ended_at,
+                duration_ms=duration_ms,
+                status=payload.get("status"),
+            )
+        else:
+            chunk = {
+                "type": "chunk",
+                "kind": "subagent_span",
+                "phase": "stop",
+                "session_id": session_id,
+                "subagent_label": subagent_label,
+                "started_at": started_at,
+                "ended_at": ended_at,
+                "duration_ms": duration_ms,
+                "status": payload.get("status"),
+                "output_tokens": payload.get("output_tokens"),
+                "api_calls": payload.get("api_calls"),
+            }
         _write_jsonl_line(state.file_handle, chunk)
         state.last_updated_at = time.time()
 
