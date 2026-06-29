@@ -28,6 +28,9 @@ const needsSessionSelect = computed(() => !sessionId.value)
 const allSessions = ref<Array<SessionSummary & { profile?: string }>>([])
 const loadingSessions = ref(false)
 const searchQuery = ref('')
+
+// 将 allSessions 注入 trace composable，供关联会话发现使用
+trace.setAllSessionsRef(allSessions)
 const filterProfile = ref('')  // '' = 全部
 
 // 所有出现的 profile 名称（用于筛选下拉）
@@ -291,9 +294,32 @@ function exportDossier() {
         <span class="run-trace-modal__dot" :class="trace.mode.value === 'live' ? 'is-live' : ''"></span>
         <div><b>Run Observatory</b><small>{{ sessionId }}</small></div>
         <span v-if="trace.l2Available.value" class="run-trace-modal__l2badge" title="Layer 2 data available">L2</span>
+        <!-- 聚合模式开关 -->
+        <label class="run-trace-modal__aggregate" title="聚合模式：合并关联任务会话到同一视图">
+          <input type="checkbox" v-model="trace.aggregateMode.value" />
+          <span>聚合</span>
+        </label>
         <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" title="导出证据档案">📥</button>
         <button type="button" data-action="close" @click="store.closeRunTrace">×</button>
       </header>
+      <!-- 关联会话栏（聚合模式开启且有关联会话时显示） -->
+      <div v-if="trace.aggregateMode.value && trace.relatedSessions.value.length > 1" class="run-trace-related">
+        <span class="run-trace-related__label">🔗 聚合 {{ trace.relatedSessions.value.length }} 个会话</span>
+        <div class="run-trace-related__list">
+          <span
+            v-for="rs in trace.relatedSessions.value"
+            :key="rs.sessionId"
+            class="run-trace-related__item"
+            :class="{ 'is-primary': rs.isPrimary }"
+            :title="rs.title"
+          >
+            <span class="run-trace-related__dot" :class="{ 'is-ended': rs.ended, 'is-live': !rs.ended }"></span>
+            <span v-if="rs.isPrimary" class="run-trace-related__star">★</span>
+            <span class="run-trace-related__title">{{ rs.taskId || rs.sessionId.slice(-8) }}</span>
+            <span v-if="rs.profile" class="run-trace-related__profile">{{ rs.profile }}</span>
+          </span>
+        </div>
+      </div>
       <RunTraceScrubber
         :min-time="minTime"
         :max-time="maxTime"
@@ -374,4 +400,23 @@ function exportDossier() {
 .run-trace-modal__export { margin-left: 8px !important; font-size: 14px; }
 .run-trace-modal__main { min-height: 0; display: grid; grid-template-columns: 1fr 320px; }
 @keyframes run-trace-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ── 聚合模式开关 ── */
+.run-trace-modal__aggregate { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; margin-left: 8px; flex-shrink: 0; }
+.run-trace-modal__aggregate input { margin: 0; cursor: pointer; }
+
+/* ── 关联会话栏 ── */
+.run-trace-related { display: flex; align-items: center; gap: 8px; padding: 6px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); overflow-x: auto; flex-shrink: 0; }
+.run-trace-related__label { font-size: 11px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+.run-trace-related__list { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+.run-trace-related__item { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 10px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+  &.is-primary { border-color: var(--accent-primary); color: var(--text-primary); font-weight: 600; background: rgba(var(--accent-primary-rgb, 64,120,192), 0.06); }
+}
+.run-trace-related__dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  &.is-live { background: var(--success); }
+  &.is-ended { background: var(--text-muted); }
+}
+.run-trace-related__star { color: var(--warning); font-size: 11px; }
+.run-trace-related__title { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.run-trace-related__profile { font-size: 9px; opacity: 0.7; }
 </style>

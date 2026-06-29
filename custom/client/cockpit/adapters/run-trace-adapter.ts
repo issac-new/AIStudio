@@ -62,6 +62,8 @@ export interface TraceState {
   sequence: number
   outputText: string
   usage?: RunEvent['usage']
+  /** 关联会话 ID 集合（含主会话）；用于多会话聚合时放宽 run_id/session_id 过滤 */
+  relatedSessionIds?: Set<string>
 }
 
 function ts(event: RunEvent): number {
@@ -96,10 +98,14 @@ function firstOpenToolId(state: TraceState, toolName?: string): string | null {
 }
 
 function isActiveRunEvent(state: TraceState, event: RunEvent): boolean {
-  return !event.run_id || !state.runId || event.run_id === state.runId
+  // 原：仅允许当前活跃 run_id 的事件
+  // 新：如果事件来自关联会话（relatedSessionIds），也放行——支持多会话聚合
+  if (!event.run_id || !state.runId || event.run_id === state.runId) return true
+  if (state.relatedSessionIds && event.session_id && state.relatedSessionIds.has(event.session_id)) return true
+  return false
 }
 
-export function createTraceState(sessionId: string): TraceState {
+export function createTraceState(sessionId: string, relatedSessionIds?: Set<string>): TraceState {
   return {
     sessionId,
     runId: null,
@@ -111,6 +117,7 @@ export function createTraceState(sessionId: string): TraceState {
     openSubagentNodeIds: {},
     sequence: 0,
     outputText: '',
+    relatedSessionIds,
   }
 }
 
@@ -330,7 +337,19 @@ export function activateSkill(state: TraceState, input: { skillName: string; ts:
  * 这让旧的 useRunTrace 调用无需改动即可获得中间件架构的全部能力。
  */
 export function applyRunEvent(state: TraceState, event: RunEvent, middlewares: TraceMiddleware[] = defaultMiddlewares): TraceState {
-  if (event.event !== 'run.started' && !isActiveRunEvent(state, event)) return state
+  // run.started 用于初始化/切换 run，需放行同会话的事件以支持多 run 切换；
+  // 但在多会话聚合视图下，需过滤来自无关会话的 run.started，避免污染：
+  //  - 主会话（state.sessionId）的 run.started 始终放行；
+  //  - 关联会话（relatedSessionIds）的 run.started 放行；
+  //  - 其余会话的 run.started 丢弃。
+  if (event.event === 'run.started') {
+    const sid = event.session_id
+    const isPrimary = !sid || sid === state.sessionId
+    const isRelated = !!(state.relatedSessionIds && sid && state.relatedSessionIds.has(sid))
+    if (!isPrimary && !isRelated) return state
+  } else if (!isActiveRunEvent(state, event)) {
+    return state
+  }
   const traceEvent = normalizeRunEvent(event)
   return applyTraceEvent(state, traceEvent, middlewares)
 }
@@ -395,6 +414,61 @@ export function mergeLayer2Data(state: TraceState, l2Data: { nodes: TraceNode[];
 
   return {
     ...state,
+    nodes: mergedNodes,
+    edges: mergedEdges,
+  }
+}
+
+/**
+ * 合并多个 TraceState 到主 state（用于多会话聚合视图）。
+ *
+ * - nodes/edges 按 ID 去重合并
+ * - 为每个关联会话的 ingress 节点添加一条 `delegate` 边连到主会话的 ingress 节点（表示任务流转关系）
+ * - 保留主会话的 sessionId/runId/focusedNodeId
+ */
+export function mergeTraceStates(main: TraceState, others: TraceState[]): TraceState {
+  if (others.length === 0) return main
+
+  const nodeIds = new Set(main.nodes.map(n => n.id))
+  const edgeIds = new Set(main.edges.map(e => e.id))
+  let mergedNodes = [...main.nodes]
+  let mergedEdges = [...main.edges]
+
+  for (const other of others) {
+    // 合并去重 nodes
+    for (const n of other.nodes) {
+      if (!nodeIds.has(n.id)) {
+        mergedNodes.push(n)
+        nodeIds.add(n.id)
+      }
+    }
+    // 合并去重 edges
+    for (const e of other.edges) {
+      if (!edgeIds.has(e.id)) {
+        mergedEdges.push(e)
+        edgeIds.add(e.id)
+      }
+    }
+    // 新增跨会话 delegate 边：other.ingress → main.ingress
+    const mainIngressId = `ingress:${main.sessionId}`
+    const otherIngressId = `ingress:${other.sessionId}`
+    if (otherIngressId !== mainIngressId) {
+      const delegateEdge: TraceEdge = {
+        id: `edge:${otherIngressId}->${mainIngressId}`,
+        from: otherIngressId,
+        to: mainIngressId,
+        kind: 'delegate',
+        evidence: 'L1',
+      }
+      if (!edgeIds.has(delegateEdge.id)) {
+        mergedEdges.push(delegateEdge)
+        edgeIds.add(delegateEdge.id)
+      }
+    }
+  }
+
+  return {
+    ...main,
     nodes: mergedNodes,
     edges: mergedEdges,
   }
