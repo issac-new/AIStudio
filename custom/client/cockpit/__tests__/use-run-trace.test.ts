@@ -21,11 +21,20 @@ vi.mock('@/api/hermes/chat', () => ({
 
 vi.mock('@/api/hermes/sessions', () => ({
   fetchSessionMessagesPage: vi.fn(async () => ({ messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} })),
+  fetchHermesSessions: vi.fn(async () => []),
   // also mock SessionSummary type for re-export compatibility
 }))
 
 vi.mock('@/api/hermes/kanban', () => ({
   getTask: vi.fn(async () => ({ parents: [], children: [] })),
+}))
+
+// run-trace-adapter 静态导入 @/api/client 的 request helper（→ router → location），
+// 在 jsdom 外的环境不稳定，mock 掉避免模块链加载。
+vi.mock('@/api/client', () => ({
+  request: vi.fn(async () => null),
+  getApiKey: () => '',
+  getBaseUrlValue: () => '/api',
 }))
 
 /** flush all pending microtasks (await loadRelatedSessions etc.) */
@@ -133,6 +142,91 @@ describe('useRunTrace', () => {
       useRunTrace(ref<string | null>(null))
     })
     expect(mocks.connectChatRun).not.toHaveBeenCalled()
+    scope.stop()
+  })
+
+  it('loadRelatedSessions auto-loads sessions via fetchHermesSessions when allSessionsRef is empty', async () => {
+    // 模拟 openRunTraceGlobal 单 session 直进：modal 未注入 allSessionsRef
+    // loadRelatedSessions 应自调用 fetchHermesSessions 跨 profile 加载并发现关联会话
+    const { fetchHermesSessions } = await import('@/api/hermes/sessions')
+    const { getTask } = await import('@/api/hermes/kanban')
+    ;(fetchHermesSessions as any).mockImplementation(async (_src: any, _limit: any, profile: string) => {
+      if (profile === 'orchestrator') {
+        return [{ id: 's1', title: 'work kanban task t_abc', profile: 'orchestrator', ended_at: null }]
+      }
+      if (profile === 'worker-coder') {
+        return [{ id: 's2', title: 'work kanban task t_def', profile: 'worker-coder', ended_at: null }]
+      }
+      return []
+    })
+    // t_abc 的子任务是 t_def → s2 应被发现为关联会话
+    ;(getTask as any).mockImplementation(async (tid: string) => {
+      if (tid === 't_abc') return { parents: [], children: ['t_def'] }
+      if (tid === 't_def') return { parents: ['t_abc'], children: [] }
+      return { parents: [], children: [] }
+    })
+
+    const scope = effectScope()
+    let trace!: ReturnType<typeof useRunTrace>
+    scope.run(() => {
+      trace = useRunTrace(ref<string | null>(null))
+    })
+
+    // aggregateMode 默认 true；不调用 setAllSessionsRef，模拟单 session 直进
+    const related = await trace.loadRelatedSessions('s1')
+    expect(related).toContain('s2')
+    expect(trace.relatedSessionIds.value.has('s1')).toBe(true)
+    expect(trace.relatedSessionIds.value.has('s2')).toBe(true)
+    // relatedSessions 含主会话和关联会话
+    expect(trace.relatedSessions.value.length).toBe(2)
+    expect(trace.relatedSessions.value.find(s => s.sessionId === 's2')?.isPrimary).toBe(false)
+
+    scope.stop()
+  })
+
+  it('loadRelatedTraces rebuilds related session trace via processMessages (merged into main state)', async () => {
+    // 通过 attachLive 触发完整聚合链路：
+    // loadRelatedSessions 发现 s2 → loadRelatedTraces 用 processMessages 处理 s2 消息 → 主 state 含 s2 节点
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/hermes/sessions')
+    const { getTask } = await import('@/api/hermes/kanban')
+    ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
+      if (profile === 'orchestrator') return [{ id: 's1', title: 'work kanban task t_abc', profile: 'orchestrator', ended_at: null }]
+      if (profile === 'worker-coder') return [{ id: 's2', title: 'work kanban task t_def', profile: 'worker-coder', ended_at: null }]
+      return []
+    })
+    ;(getTask as any).mockImplementation(async (tid: string) => {
+      if (tid === 't_abc') return { parents: [], children: ['t_def'] }
+      if (tid === 't_def') return { parents: ['t_abc'], children: [] }
+      return { parents: [], children: [] }
+    })
+    ;(fetchSessionMessagesPage as any).mockImplementation(async (sid: string) => {
+      if (sid === 's2') {
+        return {
+          messages: [
+            { role: 'user', content: 'do work', timestamp: 1000 },
+            { role: 'assistant', content: 'done', timestamp: 1001 },
+          ],
+          total: 2, offset: 0, limit: 500, hasMore: false, session: {},
+        }
+      }
+      return { messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} }
+    })
+
+    const scope = effectScope()
+    let trace!: ReturnType<typeof useRunTrace>
+    scope.run(() => {
+      trace = useRunTrace(ref<string | null>('s1'))
+    })
+
+    // attachLive 异步：loadRelatedSessions → connectChatRun → loadRelatedTraces
+    await flush()
+    await flush()
+    await flush()
+
+    // s2 的 run 节点应存在于主 state（节点 id 含 :s2:）
+    const hasS2Run = trace.nodes.value.some(n => n.id.includes(':s2:'))
+    expect(hasS2Run).toBe(true)
+
     scope.stop()
   })
 })

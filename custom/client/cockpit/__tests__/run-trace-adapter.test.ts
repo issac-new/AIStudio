@@ -1,4 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// run-trace-adapter 静态导入 @/api/client 的 request helper（→ router → location），
+// 在 jsdom 外的环境不稳定，mock 掉避免模块链加载。
+vi.mock('@/api/client', () => ({
+  request: vi.fn(async () => null),
+  getApiKey: () => '',
+  getBaseUrlValue: () => '/api',
+}))
+
 import {
   createTraceState,
   applyRunEvent,
