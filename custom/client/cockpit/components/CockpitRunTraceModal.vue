@@ -304,13 +304,15 @@ function exportDossier() {
             v-for="rs in trace.relatedSessions.value"
             :key="rs.sessionId"
             class="run-trace-related__item"
-            :class="{ 'is-primary': rs.isPrimary }"
-            :title="rs.title"
+            :class="{ 'is-primary': rs.isPrimary, 'is-empty': rs.isEmpty, [`is-${rs.role}`]: true }"
+            :title="rs.title + (rs.isEmpty ? ' (空)' : '')"
           >
             <span class="run-trace-related__dot" :class="{ 'is-ended': rs.ended, 'is-live': !rs.ended }"></span>
             <span v-if="rs.isPrimary" class="run-trace-related__star">★</span>
             <span class="run-trace-related__title">{{ rs.taskId || rs.sessionId.slice(-8) }}</span>
             <span v-if="rs.profile" class="run-trace-related__profile">{{ rs.profile }}</span>
+            <span v-if="rs.role === 'creator'" class="run-trace-related__role">创建</span>
+            <span v-if="rs.isEmpty" class="run-trace-related__empty">空</span>
           </span>
         </div>
       </div>
@@ -405,6 +407,8 @@ function exportDossier() {
 .run-trace-related__list { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
 .run-trace-related__item { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 10px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
   &.is-primary { border-color: var(--accent-primary); color: var(--text-primary); font-weight: 600; background: rgba(var(--accent-primary-rgb, 64,120,192), 0.06); }
+  &.is-empty { opacity: 0.5; border-style: dashed; }
+  &.is-creator { border-color: var(--accent-secondary, var(--accent-primary)); }
 }
 .run-trace-related__dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
   &.is-live { background: var(--success); }
@@ -413,4 +417,6 @@ function exportDossier() {
 .run-trace-related__star { color: var(--warning); font-size: 11px; }
 .run-trace-related__title { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .run-trace-related__profile { font-size: 9px; opacity: 0.7; }
+.run-trace-related__role { font-size: 9px; padding: 0 3px; border-radius: 3px; background: rgba(var(--accent-secondary-rgb, 64,120,192), 0.12); color: var(--text-secondary); }
+.run-trace-related__empty { font-size: 9px; padding: 0 3px; border-radius: 3px; background: var(--bg-inset, rgba(0,0,0,0.06)); color: var(--text-muted); }
 </style>

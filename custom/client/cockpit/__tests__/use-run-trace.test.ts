@@ -26,7 +26,7 @@ vi.mock('@/api/hermes/sessions', () => ({
 }))
 
 vi.mock('@/api/hermes/kanban', () => ({
-  getTask: vi.fn(async () => ({ parents: [], children: [] })),
+  getTask: vi.fn(async () => ({ task: { session_id: null }, parents: [], children: [] })),
 }))
 
 // run-trace-adapter 静态导入 @/api/client 的 request helper（→ router → location），
@@ -35,6 +35,11 @@ vi.mock('@/api/client', () => ({
   request: vi.fn(async () => null),
   getApiKey: () => '',
   getBaseUrlValue: () => '/api',
+}))
+
+// useRunTrace 动态 import cockpit store 获取 boardSlugOf；mock 避免真实 store 初始化。
+vi.mock('../store/cockpit', () => ({
+  useCockpitStore: () => ({ boardSlugOf: (id: string) => 'kanban001' }),
 }))
 
 /** flush all pending microtasks (await loadRelatedSessions etc.) */
@@ -161,9 +166,9 @@ describe('useRunTrace', () => {
     })
     // t_abc 的子任务是 t_def → s2 应被发现为关联会话
     ;(getTask as any).mockImplementation(async (tid: string) => {
-      if (tid === 't_abc') return { parents: [], children: ['t_def'] }
-      if (tid === 't_def') return { parents: ['t_abc'], children: [] }
-      return { parents: [], children: [] }
+      if (tid === 't_abc') return { task: { session_id: null }, parents: [], children: ['t_def'] }
+      if (tid === 't_def') return { task: { session_id: null }, parents: ['t_abc'], children: [] }
+      return { task: { session_id: null }, parents: [], children: [] }
     })
 
     const scope = effectScope()
@@ -180,6 +185,8 @@ describe('useRunTrace', () => {
     // relatedSessions 含主会话和关联会话
     expect(trace.relatedSessions.value.length).toBe(2)
     expect(trace.relatedSessions.value.find(s => s.sessionId === 's2')?.isPrimary).toBe(false)
+    // 匹配A：任务树关系被记录
+    expect(trace.relatedSessions.value.find(s => s.sessionId === 's2')?.role).toBe('worker')
 
     scope.stop()
   })
@@ -195,9 +202,9 @@ describe('useRunTrace', () => {
       return []
     })
     ;(getTask as any).mockImplementation(async (tid: string) => {
-      if (tid === 't_abc') return { parents: [], children: ['t_def'] }
-      if (tid === 't_def') return { parents: ['t_abc'], children: [] }
-      return { parents: [], children: [] }
+      if (tid === 't_abc') return { task: { session_id: null }, parents: [], children: ['t_def'] }
+      if (tid === 't_def') return { task: { session_id: null }, parents: ['t_abc'], children: [] }
+      return { task: { session_id: null }, parents: [], children: [] }
     })
     ;(fetchSessionMessagesPage as any).mockImplementation(async (sid: string) => {
       if (sid === 's2') {
@@ -227,6 +234,107 @@ describe('useRunTrace', () => {
     const hasS2Run = trace.nodes.value.some(n => n.id.includes(':s2:'))
     expect(hasS2Run).toBe(true)
 
+    scope.stop()
+  })
+
+  it('(匹配B) task.session_id 创建者会话被聚合为 creator 角色', async () => {
+    const { fetchHermesSessions } = await import('@/api/hermes/sessions')
+    const { getTask } = await import('@/api/hermes/kanban')
+    // orchestrator 创建者会话 s_creator，worker 会话 s_worker
+    ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
+      if (profile === 'orchestrator') return [{ id: 's_creator', title: '创建多agents团队', profile: 'orchestrator', ended_at: null, message_count: 5 }]
+      if (profile === 'worker-coder') return [{ id: 's_worker', title: 'work kanban task t_x', profile: 'worker-coder', ended_at: null, message_count: 10 }]
+      return []
+    })
+    // t_x 的 session_id 是创建者会话 s_creator（匹配B，100%确定）
+    ;(getTask as any).mockImplementation(async (tid: string) => {
+      if (tid === 't_x') return { task: { session_id: 's_creator' }, parents: [], children: [] }
+      return { task: { session_id: null }, parents: [], children: [] }
+    })
+
+    const scope = effectScope()
+    let trace!: ReturnType<typeof useRunTrace>
+    scope.run(() => { trace = useRunTrace(ref<string | null>(null)) })
+
+    await trace.loadRelatedSessions('s_worker')
+    // s_creator 应作为 creator 角色被聚合
+    const creator = trace.relatedSessions.value.find(s => s.sessionId === 's_creator')
+    expect(creator).toBeTruthy()
+    expect(creator?.role).toBe('creator')
+    expect(trace.relatedSessionIds.value.has('s_creator')).toBe(true)
+    scope.stop()
+  })
+
+  it('(匹配C) 精确标题匹配，宽泛标题不误匹配', async () => {
+    const { matchSessionTaskId, extractKanbanTaskId } = await import('../composables/useRunTrace')
+    // 精确匹配
+    expect(matchSessionTaskId('work kanban task t_342327f6')).toBe('t_342327f6')
+    expect(matchSessionTaskId('  Work Kanban Task t_abc  ')).toBe('t_abc')
+    // 宽泛标题不匹配（精确匹配返回 null）
+    expect(matchSessionTaskId('创建多agents协作研发交付团队')).toBeNull()
+    expect(matchSessionTaskId('讨论 t_342327f6 的实现')).toBeNull()
+    // extractKanbanTaskId 仍可提取（低置信度 fallback，用于 UI 显示）
+    expect(extractKanbanTaskId('讨论 t_342327f6 的实现')).toBe('t_342327f6')
+  })
+
+  it('(匹配E) 跨会话 delegate 边基于任务树构建', async () => {
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/hermes/sessions')
+    const { getTask } = await import('@/api/hermes/kanban')
+    ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
+      if (profile === 'worker-coder') return [
+        { id: 's_child', title: 'work kanban task t_child', profile: 'worker-coder', ended_at: null, message_count: 5 },
+        { id: 's_parent', title: 'work kanban task t_parent', profile: 'worker-coder', ended_at: null, message_count: 8 },
+      ]
+      return []
+    })
+    // t_parent → t_child 任务树关系
+    ;(getTask as any).mockImplementation(async (tid: string) => {
+      if (tid === 't_parent') return { task: { session_id: null }, parents: [], children: ['t_child'] }
+      if (tid === 't_child') return { task: { session_id: null }, parents: ['t_parent'], children: [] }
+      return { task: { session_id: null }, parents: [], children: [] }
+    })
+    ;(fetchSessionMessagesPage as any).mockImplementation(async () => ({
+      messages: [{ role: 'user', content: 'work', timestamp: 1000 }, { role: 'assistant', content: 'done', timestamp: 1001 }],
+      total: 2, offset: 0, limit: 500, hasMore: false, session: {},
+    }))
+
+    const scope = effectScope()
+    let trace!: ReturnType<typeof useRunTrace>
+    scope.run(() => { trace = useRunTrace(ref<string | null>('s_child')) })
+    await flush(); await flush(); await flush(); await flush()
+
+    // 应有 delegate 边：s_child ingress → s_parent ingress
+    const delegateEdge = trace.edges.value.find(e => e.from === 'ingress:s_child' && e.to === 'ingress:s_parent' && e.kind === 'delegate')
+    expect(delegateEdge).toBeTruthy()
+    scope.stop()
+  })
+
+  it('空壳会话标记 isEmpty 并降级', async () => {
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/hermes/sessions')
+    const { getTask } = await import('@/api/hermes/kanban')
+    ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
+      if (profile === 'worker-coder') return [
+        { id: 's_real', title: 'work kanban task t_x', profile: 'worker-coder', ended_at: null, message_count: 10 },
+        { id: 's_empty', title: 'work kanban task t_x', profile: 'worker-coder', ended_at: null, message_count: 1 },
+      ]
+      return []
+    })
+    ;(getTask as any).mockImplementation(async () => ({ task: { session_id: null }, parents: [], children: [] }))
+    ;(fetchSessionMessagesPage as any).mockImplementation(async (sid: string) => {
+      if (sid === 's_empty') return { messages: [{ role: 'user', content: 'work kanban task t_x', timestamp: 1000 }], total: 1, offset: 0, limit: 500, hasMore: false, session: {} }
+      return { messages: [{ role: 'user', content: 'work', timestamp: 1000 }, { role: 'assistant', content: 'done', timestamp: 1001 }], total: 2, offset: 0, limit: 500, hasMore: false, session: {} }
+    })
+
+    const scope = effectScope()
+    let trace!: ReturnType<typeof useRunTrace>
+    scope.run(() => { trace = useRunTrace(ref<string | null>('s_real')) })
+    await flush(); await flush(); await flush()
+
+    const emptyInfo = trace.relatedSessions.value.find(s => s.sessionId === 's_empty')
+    expect(emptyInfo?.isEmpty).toBe(true)
+    // 空壳会话 run 节点状态降级为 cancelled
+    const emptyRun = trace.nodes.value.find(n => n.id === 'run:s_empty:replay-s_empty')
+    expect(emptyRun?.status).toBe('cancelled')
     scope.stop()
   })
 })

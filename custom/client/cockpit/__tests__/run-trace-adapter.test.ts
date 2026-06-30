@@ -14,6 +14,7 @@ import {
   getFocusedNode,
   activateSkill,
   mergeTraceStates,
+  buildCrossSessionEdges,
   type TraceState,
 } from '../adapters/run-trace-adapter'
 
@@ -209,8 +210,10 @@ describe('mergeTraceStates', () => {
     // 应有 s1 和 s2 的 run 节点
     expect(merged.nodes.some(n => n.id === 'run:s1:r1')).toBe(true)
     expect(merged.nodes.some(n => n.id === 'run:s2:r2')).toBe(true)
-    // 应有 delegate 边 s2.ingress → s1.ingress
-    expect(merged.edges.some(e => e.from === 'ingress:s2' && e.to === 'ingress:s1' && e.kind === 'delegate')).toBe(true)
+    // mergeTraceStates 不再构建跨会话 delegate 边（改由 buildCrossSessionEdges 基于任务树构建）
+    // 仅验证 edges 被合并去重，无重复
+    const edgeIds = merged.edges.map(e => e.id)
+    expect(new Set(edgeIds).size).toBe(edgeIds.length)
   })
 
   it('preserves main sessionId/runId/focusedNodeId', () => {
@@ -259,5 +262,67 @@ describe('relatedSessionIds', () => {
     // s3 不在 relatedSessionIds → 其事件应被过滤
     state = applyRunEvent(state, { event: 'run.started', session_id: 's3', run_id: 'r3', timestamp: 3000 })
     expect(state.nodes.some(n => n.id === 'run:s3:r3')).toBe(false)
+  })
+})
+
+describe('buildCrossSessionEdges', () => {
+  // 辅助：构建含多会话 ingress+run 节点的 state
+  function buildMultiSessionState(sessionIds: string[]): TraceState {
+    let state = createTraceState(sessionIds[0], new Set(sessionIds))
+    for (const sid of sessionIds) {
+      state = applyRunEvent(state, { event: 'run.started', session_id: sid, run_id: `replay-${sid}`, timestamp: 1000 })
+    }
+    return state
+  }
+
+  it('builds delegate edges for parent-child task relations (匹配E)', () => {
+    // 任务树：t_parent → t_child；t_child 的 worker 会话 s_child，t_parent 的 worker 会话 s_parent
+    const state = buildMultiSessionState(['s_parent', 's_child'])
+    const taskRelations = [{ parent: 't_parent', child: 't_child' }]
+    const sessionTaskMap = new Map([
+      ['s_parent', { taskId: 't_parent', role: 'worker' as const }],
+      ['s_child', { taskId: 't_child', role: 'worker' as const }],
+    ])
+    const edges = buildCrossSessionEdges(state, taskRelations, sessionTaskMap)
+    // delegate 边：子任务会话 ingress → 父任务会话 ingress
+    expect(edges.some(e => e.from === 'ingress:s_child' && e.to === 'ingress:s_parent' && e.kind === 'delegate')).toBe(true)
+    expect(edges.every(e => e.evidence === 'L1')).toBe(true)
+  })
+
+  it('builds spawn edges from creator session to worker session (匹配E)', () => {
+    // t_x 的创建者会话 s_creator，t_x 的 worker 会话 s_worker
+    const state = buildMultiSessionState(['s_creator', 's_worker'])
+    const taskRelations: Array<{ parent: string; child: string }> = []
+    const sessionTaskMap = new Map([
+      ['s_creator', { taskId: 't_x', role: 'creator' as const }],
+      ['s_worker', { taskId: 't_x', role: 'worker' as const }],
+    ])
+    const edges = buildCrossSessionEdges(state, taskRelations, sessionTaskMap)
+    // spawn 边：创建者会话 run 节点 → worker 会话 ingress
+    expect(edges.some(e => e.from === 'run:s_creator:replay-s_creator' && e.to === 'ingress:s_worker' && e.kind === 'spawn')).toBe(true)
+  })
+
+  it('skips edges when endpoint session not aggregated (no dangling edges)', () => {
+    // 只有 s_child 聚合，s_parent 未聚合 → 不应构建 delegate 边
+    const state = buildMultiSessionState(['s_child'])
+    const taskRelations = [{ parent: 't_parent', child: 't_child' }]
+    const sessionTaskMap = new Map([
+      ['s_child', { taskId: 't_child', role: 'worker' as const }],
+      ['s_parent', { taskId: 't_parent', role: 'worker' as const }], // s_parent 未在 state 中
+    ])
+    const edges = buildCrossSessionEdges(state, taskRelations, sessionTaskMap)
+    expect(edges.length).toBe(0)
+  })
+
+  it('deduplicates edges', () => {
+    const state = buildMultiSessionState(['s_parent', 's_child'])
+    const taskRelations = [{ parent: 't_parent', child: 't_child' }]
+    const sessionTaskMap = new Map([
+      ['s_parent', { taskId: 't_parent', role: 'worker' as const }],
+      ['s_child', { taskId: 't_child', role: 'worker' as const }],
+    ])
+    const edges = buildCrossSessionEdges(state, taskRelations, sessionTaskMap)
+    const edgeIds = edges.map(e => e.id)
+    expect(new Set(edgeIds).size).toBe(edgeIds.length)
   })
 })
