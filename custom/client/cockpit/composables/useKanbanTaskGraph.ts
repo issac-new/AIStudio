@@ -9,6 +9,7 @@ import type { KanbanTask, KanbanTaskDetail, KanbanRun } from '@/api/hermes/kanba
 import { fetchHermesSessions, fetchSessionMessagesPage, type SessionSummary } from '@/api/hermes/sessions'
 import {
   applyRunEvent,
+  buildCrossSessionEdges,
   createTraceState,
   fetchLayer2Trace,
   mergeLayer2Data,
@@ -62,7 +63,7 @@ export function useKanbanTaskGraph() {
   const progress = ref(0)
   const error = ref<string | null>(null)
   /** cluster(taskId) → 元信息 */
-  const clusterMeta = ref<Map<string, { startedAt: number; title: string; profile?: string; sessionCount: number; board?: string }>>(new Map())
+  const clusterMeta = ref<Map<string, { startedAt: number; title: string; summary?: string; profile?: string; sessionCount: number; board?: string }>>(new Map())
 
   // 内部缓存
   const taskDetailCache = new Map<string, KanbanTaskDetail>()
@@ -72,6 +73,8 @@ export function useKanbanTaskGraph() {
   let sessionTaskMap = new Map<string, { taskId: string; profile?: string; role: 'creator' | 'worker' }>()
   /** 全量会话列表 */
   let allSessions: Array<SessionSummary & { profile?: string }> = []
+  /** 任务树父子关系（BFS 收集，供 buildCrossSessionEdges 构建跨任务拓扑边） */
+  let taskRelations: Array<{ parent: string; child: string }> = []
 
   /** 跨所有 profile 拉全量会话 */
   async function loadAllSessions(): Promise<Array<SessionSummary & { profile?: string }>> {
@@ -131,9 +134,11 @@ export function useKanbanTaskGraph() {
     }
   }
 
-  /** BFS 任务树：从 seedTaskIds 出发，上溯 parents + 下探 children，返回全树 taskId 集合 */
-  async function buildTaskTree(seedTaskIds: string[]): Promise<Set<string>> {
+  /** BFS 任务树：从 seedTaskIds 出发，上溯 parents + 下探 children。
+   *  返回全树 taskId 集合 + 父子关系列表（供 buildCrossSessionEdges 构建跨任务边）。 */
+  async function buildTaskTree(seedTaskIds: string[]): Promise<{ tree: Set<string>; relations: Array<{ parent: string; child: string }> }> {
     const tree = new Set<string>()
+    const relations: Array<{ parent: string; child: string }> = []
     const queue = [...seedTaskIds]
     let depth = 0
     while (queue.length > 0 && depth < 30) {
@@ -145,12 +150,18 @@ export function useKanbanTaskGraph() {
         const tid = d.task.id
         if (tree.has(tid)) continue
         tree.add(tid)
-        for (const p of d.parents ?? []) if (!tree.has(p)) queue.push(p)
-        for (const c of d.children ?? []) if (!tree.has(c)) queue.push(c)
+        for (const p of d.parents ?? []) {
+          relations.push({ parent: p, child: tid })
+          if (!tree.has(p)) queue.push(p)
+        }
+        for (const c of d.children ?? []) {
+          relations.push({ parent: tid, child: c })
+          if (!tree.has(c)) queue.push(c)
+        }
       }
       depth++
     }
-    return tree
+    return { tree, relations }
   }
 
   /** 发现关联会话：建立 sessionTaskMap（创建者会话 + worker 会话标题匹配） */
@@ -203,7 +214,9 @@ export function useKanbanTaskGraph() {
     return times.some(t => t >= win.start && t <= win.end)
   }
 
-  /** 为单个会话构建 trace state */
+  /** 为单个会话构建 trace state。
+   *  除消息回放外，额外从 profile 推导 agent 节点、从 tool 聚合 skill 节点，
+   *  确保 agent/skill 层级有值（L2 数据优先合并）。 */
   async function buildSessionState(sid: string, startedAt: number, isEmpty: boolean, profile?: string): Promise<TraceState | null> {
     let s = createTraceState(sid, new Set([sid]))
     const startedEvent: RunEvent = {
@@ -217,21 +230,73 @@ export function useKanbanTaskGraph() {
     if (isEmpty) {
       const runNodeId = `run:${sid}:replay-${sid}`
       s = { ...s, nodes: s.nodes.map(n => (n.id === runNodeId ? { ...n, status: 'cancelled' as const } : n)) }
-      return s
+    } else {
+      try {
+        const page = await fetchSessionMessagesPage(sid, 0, 500, profile)
+        if (page && page.messages && page.messages.length > 0) {
+          s = replayMessagesIntoState(s, page.messages, sid)
+        }
+      } catch (e) {
+        console.warn(`[taskGraph] 会话 ${sid} 消息拉取失败:`, e)
+      }
+      try {
+        const l2 = await fetchLayer2Trace(sid, profile)
+        if (l2) s = mergeLayer2Data(s, l2)
+      } catch { /* L2 不可用 */ }
     }
 
-    try {
-      const page = await fetchSessionMessagesPage(sid, 0, 500, profile)
-      if (page && page.messages && page.messages.length > 0) {
-        s = replayMessagesIntoState(s, page.messages, sid)
+    // 补充 agent 节点（profile 推导）：每个关联会话生成一个 agent 节点连到 run。
+    // 若 L2 已提供 agent 节点则跳过。
+    const runNodeId = `run:${sid}:replay-${sid}`
+    const hasAgent = s.nodes.some(n => n.kind === 'agent' && n.ref?.sessionId === sid)
+    if (!hasAgent && profile) {
+      const agentId = `agent:${sid}:${profile}`
+      const agentNode: TraceNode = {
+        id: agentId,
+        kind: 'agent',
+        label: profile,
+        detail: 'agent',
+        status: 'ok',
+        startedAt: startedAt || Date.now(),
+        evidence: 'L1',
+        children: [],
+        ref: { sessionId: sid, runId: `replay-${sid}` },
+        profile,
       }
-    } catch (e) {
-      console.warn(`[taskGraph] 会话 ${sid} 消息拉取失败:`, e)
+      s = {
+        ...s,
+        nodes: [...s.nodes, agentNode],
+        edges: [...s.edges, { id: `edge:${runNodeId}->${agentId}:call`, from: runNodeId, to: agentId, kind: 'call', evidence: 'L1' }],
+      }
     }
-    try {
-      const l2 = await fetchLayer2Trace(sid, profile)
-      if (l2) s = mergeLayer2Data(s, l2)
-    } catch { /* L2 不可用 */ }
+
+    // 补充 skill 节点：若该会话有 tool 节点但无 skill 节点，聚合为一个 skill 节点连到 agent/run。
+    const hasSkill = s.nodes.some(n => n.kind === 'skill' && n.ref?.sessionId === sid)
+    const toolNodes = s.nodes.filter(n => n.kind === 'tool' && n.ref?.sessionId === sid)
+    if (!hasSkill && toolNodes.length > 0) {
+      const skillLabel = toolNodes[0].label || '技能执行'
+      const skillId = `skill:${sid}:${skillLabel}:${Date.now()}`
+      const parentId = s.nodes.find(n => n.kind === 'agent' && n.ref?.sessionId === sid)?.id ?? runNodeId
+      const skillNode: TraceNode = {
+        id: skillId,
+        kind: 'skill',
+        label: skillLabel,
+        detail: `${toolNodes.length} 个工具调用`,
+        status: 'ok',
+        startedAt: toolNodes[0].startedAt,
+        endedAt: toolNodes[toolNodes.length - 1].endedAt,
+        evidence: 'L1',
+        children: [],
+        ref: { sessionId: sid, runId: `replay-${sid}` },
+        profile,
+      }
+      s = {
+        ...s,
+        nodes: [...s.nodes, skillNode],
+        edges: [...s.edges, { id: `edge:${parentId}->${skillId}:call`, from: parentId, to: skillId, kind: 'call', evidence: 'L1' }],
+      }
+    }
+
     return s
   }
 
@@ -259,7 +324,8 @@ export function useKanbanTaskGraph() {
       console.debug(`[taskGraph] 加载到 ${allTasks.length} 个任务`)
 
       // 2. 全树 BFS（所有任务为 seed）
-      const tree = await buildTaskTree(allTasks.map(t => t.id))
+      const { tree, relations } = await buildTaskTree(allTasks.map(t => t.id))
+      taskRelations = relations
       progress.value = 20
 
       // 3. 拉全量会话 + 发现关联
@@ -320,7 +386,7 @@ export function useKanbanTaskGraph() {
         await new Promise(r => setTimeout(r, 0))
       }
 
-      // 7. 合并 + 回填 cluster/profile + 注入 [board] taskId 追踪信息
+      // 7. 合并 + 回填 cluster/profile + 注入 title/摘要 + 构建跨任务拓扑边
       if (traceStates.length > 0) {
         const merged = traceStates.length > 1
           ? mergeTraceStates(traceStates[0], traceStates.slice(1))
@@ -331,27 +397,46 @@ export function useKanbanTaskGraph() {
           const taskId = info?.taskId ?? n.cluster
           const board = taskId ? taskBoardMap.get(taskId) : undefined
           const profile = sid ? (info?.profile ?? allSessions.find(x => x.id === sid)?.profile as string | undefined) : n.profile
-          // 给 ingress/run 节点注入追踪信息
+          // 给 ingress/run 节点注入任务标题 + [board] taskId 追踪信息
           let label = n.label
           let detail = n.detail
           if (taskId && (n.kind === 'ingress' || n.kind === 'workflow')) {
+            const t = taskDetailCache.get(taskId)
             const tag = board ? `[${board}] ${taskId}` : taskId
-            if (!label?.includes(taskId)) label = `${label} · ${tag}`
-            detail = detail ? `${detail} · ${tag}` : tag
+            const title = t?.task?.title
+            const summary = t?.latest_summary
+            // label 显示任务标题（含 taskId 追踪信息）
+            label = title ? `${title} · ${tag}` : (label?.includes(taskId) ? label : `${label} · ${tag}`)
+            // detail: 摘要 + tag（确保 taskId 可检索）
+            const parts: string[] = []
+            if (summary) parts.push(summary)
+            parts.push(tag)
+            detail = parts.join(' · ')
           }
           return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile, label, detail }
         })
+        // 构建跨任务 delegate/spawn 边（基于 taskRelations + sessionTaskMap）
+        const crossEdges = buildCrossSessionEdges(
+          { ...merged, nodes: annotated },
+          taskRelations,
+          new Map([...sessionTaskMap].map(([sid, info]) => [sid, { taskId: info.taskId, role: info.role }])),
+        )
+        const existingEdgeIds = new Set(merged.edges.map(e => e.id))
+        const newEdges = crossEdges.filter(e => !existingEdgeIds.has(e.id))
         nodes.value = annotated
-        edges.value = merged.edges
+        edges.value = [...merged.edges, ...newEdges]
+        console.debug(`[taskGraph] 节点 ${annotated.length}，边 ${edges.value.length}（跨任务 ${newEdges.length}）`)
       }
 
-      // 8. clusterMeta
-      const cm = new Map<string, { startedAt: number; title: string; profile?: string; sessionCount: number; board?: string }>()
+      // 8. clusterMeta（含 title/summary）
+      const cm = new Map<string, { startedAt: number; title: string; summary?: string; profile?: string; sessionCount: number; board?: string }>()
       for (const m of metas) {
+        const d = taskDetailCache.get(m.taskId)
         const start = m.activityTimes.length > 0 ? Math.min(...m.activityTimes) : m.createdAt
         cm.set(m.taskId, {
           startedAt: start || Date.now(),
           title: m.title,
+          summary: d?.latest_summary ?? undefined,
           profile: sessionTaskMap.get(m.sessionIds[0])?.profile,
           sessionCount: m.sessionIds.length,
           board: m.board,
@@ -375,28 +460,30 @@ export function useKanbanTaskGraph() {
     nodes: TraceNode[]
     edges: TraceState['edges']
     tasks: TaskMeta[]
-    clusterMeta: Map<string, { startedAt: number; title: string; profile?: string; sessionCount: number; board?: string }>
+    clusterMeta: Map<string, { startedAt: number; title: string; summary?: string; profile?: string; sessionCount: number; board?: string }>
   } | null> {
-    const tree = await buildTaskTree([taskId])
-    const treeTaskIds = [...tree]
+    const { tree } = await buildTaskTree([taskId])
+    const treeSet = tree
     const subNodes = nodes.value.filter(n => {
       const sid = n.ref?.sessionId
       const info = sid ? sessionTaskMap.get(sid) : undefined
       const tid = info?.taskId ?? n.cluster
-      return tid && tree.has(tid)
+      return tid && treeSet.has(tid)
     })
     const subEdges = edges.value.filter(e => {
       const from = subNodes.find(n => n.id === e.from)
       const to = subNodes.find(n => n.id === e.to)
       return from && to
     })
-    const subTasks = tasks.value.filter(t => tree.has(t.taskId))
-    const cm = new Map<string, { startedAt: number; title: string; profile?: string; sessionCount: number; board?: string }>()
+    const subTasks = tasks.value.filter(t => treeSet.has(t.taskId))
+    const cm = new Map<string, { startedAt: number; title: string; summary?: string; profile?: string; sessionCount: number; board?: string }>()
     for (const t of subTasks) {
+      const d = taskDetailCache.get(t.taskId)
       const start = t.activityTimes.length > 0 ? Math.min(...t.activityTimes) : t.createdAt
       cm.set(t.taskId, {
         startedAt: start || Date.now(),
         title: t.title,
+        summary: d?.latest_summary ?? undefined,
         profile: sessionTaskMap.get(t.sessionIds[0])?.profile,
         sessionCount: t.sessionIds.length,
         board: t.board,
