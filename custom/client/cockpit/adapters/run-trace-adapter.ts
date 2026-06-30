@@ -44,6 +44,8 @@ export interface TraceNode {
   cluster?: string
   /** 节点所属 agent profile（orchestrator/worker-coder/worker-researcher，用于着色） */
   profile?: string
+  /** kanban 任务状态（running/done/blocked…，仅任务级节点 ingress/workflow 填充） */
+  taskStatus?: string
 }
 
 export interface TraceEdge {
