@@ -40,6 +40,10 @@ export interface TraceNode {
     toolCallId?: string
     workflowNodeId?: string
   }
+  /** 聚类键：节点所属的 kanban 任务 ID（用于力导向图谱按任务聚类） */
+  cluster?: string
+  /** 节点所属 agent profile（orchestrator/worker-coder/worker-researcher，用于着色） */
+  profile?: string
 }
 
 export interface TraceEdge {

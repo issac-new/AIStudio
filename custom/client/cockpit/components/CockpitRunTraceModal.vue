@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onScopeDispose } from 'vue'
 import { useCockpitStore } from '../store/cockpit'
 import { useRunTrace, extractKanbanTaskId } from '../composables/useRunTrace'
 import { useChatStore } from '@/stores/hermes/chat'
@@ -178,6 +178,35 @@ function focusNode(id: string) {
   if (node?.kind === 'skill') drilldownSkillId.value = id
 }
 
+// 时间游标播放控制：自动推进 scrubberTime，驱动图谱节点按时间逐步激活
+const playing = ref(false)
+const playSpeed = ref(1) // 1x / 2x / 4x
+let playTimer: ReturnType<typeof setInterval> | null = null
+function togglePlay() {
+  if (playing.value) {
+    playing.value = false
+    if (playTimer) { clearInterval(playTimer); playTimer = null }
+  } else {
+    playing.value = true
+    const span = maxTime.value - minTime.value
+    const step = span / 200 // 200 步走完整段
+    playTimer = setInterval(() => {
+      const next = trace.scrubberTime.value + step * playSpeed.value
+      if (next >= maxTime.value) {
+        trace.scrubTo(maxTime.value)
+        playing.value = false
+        if (playTimer) { clearInterval(playTimer); playTimer = null }
+      } else {
+        trace.scrubTo(next)
+      }
+    }, 80)
+  }
+}
+function cyclePlaySpeed() {
+  playSpeed.value = playSpeed.value === 1 ? 2 : playSpeed.value === 2 ? 4 : 1
+}
+onScopeDispose(() => { if (playTimer) clearInterval(playTimer) })
+
 function fmtTime(ts: number): string {
   const ms = ts < 1e12 ? ts * 1000 : ts  // 兼容秒级/毫秒级时间戳
   const d = new Date(ms)
@@ -327,10 +356,24 @@ function exportDossier() {
         @start-replay="trace.switchToReplay"
         @scrub-end="trace.scrubEnd"
       />
-      <RunTraceTimeBand :nodes="trace.nodes.value" />
+      <!-- 播放控制：驱动时间游标，图谱节点按时间逐步激活 -->
+      <div class="run-trace-modal__playback">
+        <button type="button" class="run-trace-modal__play-btn" :class="{ 'is-playing': playing }" @click="togglePlay" :title="playing ? '暂停' : '播放时间游标'">
+          {{ playing ? '⏸' : '▶' }}
+        </button>
+        <button type="button" class="run-trace-modal__speed-btn" @click="cyclePlaySpeed" title="切换播放速度">{{ playSpeed }}x</button>
+        <span class="run-trace-modal__playback-hint">拖动时间轴或播放，观察任务/会话/agent 运行过程</span>
+      </div>
+      <RunTraceTimeBand
+        :nodes="trace.nodes.value"
+        :min-time="minTime"
+        :max-time="maxTime"
+        :current-time="trace.scrubberTime.value"
+        @focus-node="focusNode"
+      />
       <main class="run-trace-modal__main">
         <RunTraceSkillDrilldown v-if="drilldownSkill" :skill="drilldownSkill" @back="drilldownSkillId = null" />
-        <RunTraceGraph v-else :nodes="trace.nodes.value" :edges="trace.edges.value" :focused-node-id="focusedNode?.id || null" @focus-node="focusNode" />
+        <RunTraceGraph v-else :nodes="trace.nodes.value" :edges="trace.edges.value" :focused-node-id="focusedNode?.id || null" :current-time="trace.scrubberTime.value" @focus-node="focusNode" />
         <RunTraceInspector :node="focusedNode" />
       </main>
     </template>
@@ -394,6 +437,13 @@ function exportDossier() {
 }
 .run-trace-modal__l2badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: var(--accent-info); color: var(--text-on-accent); font-weight: 600; }
 .run-trace-modal__export { margin-left: 8px !important; font-size: 14px; }
+.run-trace-modal__playback { display: flex; align-items: center; gap: 8px; padding: 4px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
+.run-trace-modal__play-btn { width: 26px; height: 26px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.run-trace-modal__play-btn:hover { background: var(--bg-card-hover); }
+.run-trace-modal__play-btn.is-playing { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
+.run-trace-modal__speed-btn { padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 10px; font-family: ui-monospace, monospace; }
+.run-trace-modal__speed-btn:hover { background: var(--bg-card-hover); }
+.run-trace-modal__playback-hint { font-size: 9px; color: var(--text-muted); margin-left: 4px; }
 .run-trace-modal__main { min-height: 0; display: grid; grid-template-columns: 1fr 320px; }
 @keyframes run-trace-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
