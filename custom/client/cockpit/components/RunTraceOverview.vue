@@ -158,6 +158,7 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
         <div class="run-trace-overview__progress-bar" :style="{ width: graph.progress.value + '%' }"></div>
         <span>{{ graph.progress.value }}%</span>
       </div>
+      <button v-if="selectedTaskId" type="button" class="run-trace-overview__back-all" @click="clearFocus" title="返回全部任务（不修改筛选条件）">← 返回全部</button>
       <button type="button" class="run-trace-overview__close" @click="emit('close')" title="关闭">×</button>
     </header>
 
@@ -181,29 +182,6 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
       />
     </div>
 
-    <!-- 下层详细视图：选中任务全树（与上层同数据，可独立缩放/拖动查看细节） -->
-    <section v-if="selectedTaskId" class="run-trace-detail" data-task-detail-view>
-      <header class="run-trace-detail__head">
-        <span class="run-trace-detail__title">
-          <b>聚焦任务全树</b>
-          <small>{{ selectedTaskId }} · {{ graph.tasks.value.find(t => t.taskId === selectedTaskId)?.title }}</small>
-        </span>
-        <button type="button" class="run-trace-detail__back" @click="clearFocus">返回全部</button>
-      </header>
-      <div v-if="focusLoading" class="run-trace-overview__empty">加载任务全树…</div>
-      <div v-else-if="focusResult && focusResult.nodes.length === 0" class="run-trace-overview__empty">该任务树暂无会话/执行数据</div>
-      <div v-else class="run-trace-detail__topo">
-        <RunTraceTopology
-          :nodes="focusResult?.nodes ?? []"
-          :edges="focusResult?.edges ?? []"
-          :selected-task-id="selectedTaskId"
-          @focus-task="onTopFocusTask"
-          @select-session="onTopSelectSession"
-          @show-detail="onShowDetail"
-        />
-      </div>
-    </section>
-
     <!-- 节点详情浮层 -->
     <RunTraceNodeDetail :node="detailNode" @close="detailNode = null" />
 
@@ -213,7 +191,7 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
       <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-agent"></span>Agent</span>
       <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-skill"></span>Skill</span>
       <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-tool"></span>Tool</span>
-      <span class="run-trace-overview__legend-hint">拓扑：左→右 时序 · 上→下 执行层级 · 实线=call · 虚线=delegate · 动画=spawn · 点任务聚焦全树 · 点ⓘ看详情</span>
+      <span class="run-trace-overview__legend-hint">拓扑：左→右 时序 · 上→下 执行层级 · 实线=call · 虚线=delegate · 动画=spawn · 点任务聚焦该任务 · 点ⓘ看详情 · ±折叠展开</span>
     </footer>
   </div>
 </template>
@@ -258,16 +236,9 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
 /* 拓扑图区 */
 .run-trace-overview__topo { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 .run-trace-overview__empty { padding: 48px 24px; text-align: center; color: var(--text-muted); font-size: 13px; }
-
-/* 下层详细视图 */
-.run-trace-detail { flex-shrink: 0; height: 42%; display: flex; flex-direction: column; border-top: 2px solid var(--accent-primary); background: var(--bg-primary); }
-.run-trace-detail__head { display: flex; align-items: center; justify-content: space-between; padding: 6px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
-.run-trace-detail__title b { font-size: 12px; margin-right: 8px; }
-.run-trace-detail__title small { font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; }
-.run-trace-detail__back { height: 26px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 11px; font-family: inherit;
-  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.run-trace-overview__back-all { height: 28px; padding: 0 12px; border: 1px solid var(--accent-primary); border-radius: 6px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; flex-shrink: 0;
+  &:hover { filter: brightness(1.08); }
 }
-.run-trace-detail__topo { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 
 /* 图例 */
 .run-trace-overview__legend { display: flex; align-items: center; gap: 14px; padding: 6px 18px; border-top: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; flex-wrap: wrap; }

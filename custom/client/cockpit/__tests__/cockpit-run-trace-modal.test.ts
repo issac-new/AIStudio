@@ -322,16 +322,19 @@ describe('CockpitRunTraceModal', () => {
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
     await new Promise(r => setTimeout(r, 400))
     await w.vm.$nextTick()
-    // No detail view initially
-    expect(w.find('[data-task-detail-view]').exists()).toBe(false)
+    // 初始无“返回全部”按钮
+    expect(w.find('.run-trace-overview__back-all').exists()).toBe(false)
     // 点击拓扑图中的任务节点（stub 渲染为 .trace-node-card，点击触发 node-click → focus-task）
     const nodes = w.findAll('[data-run-trace-topology] .trace-node-card')
     expect(nodes.length).toBeGreaterThan(0)
     await nodes[0].trigger('click')
     await new Promise(r => setTimeout(r, 150))
     await w.vm.$nextTick()
-    // Detail view appears (focused task tree)
-    expect(w.find('[data-task-detail-view]').exists()).toBe(true)
-    expect(w.text()).toContain('聚焦任务全树')
+    // 聚焦后出现“返回全部”按钮
+    expect(w.find('.run-trace-overview__back-all').exists()).toBe(true)
+    // 点击返回全部 → 按钮消失，恢复全部任务
+    await w.find('.run-trace-overview__back-all').trigger('click')
+    await w.vm.$nextTick()
+    expect(w.find('.run-trace-overview__back-all').exists()).toBe(false)
   })
 })

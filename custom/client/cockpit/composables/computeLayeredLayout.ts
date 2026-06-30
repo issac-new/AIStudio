@@ -16,7 +16,7 @@ export const LAYER_GAP = 90
 export const GROUP_GAP = 48          // 分量间垂直间距
 export const PADDING = 24
 
-export interface LayeredPosition { x: number; y: number; depth: number }
+export interface LayeredPosition { x: number; y: number; depth: number; seq: number }
 export interface LayeredLayout {
   positions: Map<string, LayeredPosition>
   width: number
@@ -172,11 +172,18 @@ export function computeLayeredLayout(
       ids.forEach((id, i) => {
         const x = xOffset + i * (NODE_W + COL_GAP)
         const y = cursorY + d * (NODE_H + LAYER_GAP)
-        positions.set(id, { x, y, depth: d })
+        positions.set(id, { x, y, depth: d, seq: 0 })
       })
     }
     cursorY += (maxDepth + 1) * (NODE_H + LAYER_GAP) + GROUP_GAP
   }
+
+  // 全局时序序号：所有可见节点按 startedAt 升序编号（1-based），用于节点上显示时序标号
+  const sortedIds = [...positions.keys()].sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
+  sortedIds.forEach((id, i) => {
+    const p = positions.get(id)!
+    positions.set(id, { ...p, seq: i + 1 })
+  })
 
   const width = globalMaxWidth + PADDING * 2
   const height = cursorY - GROUP_GAP + PADDING
