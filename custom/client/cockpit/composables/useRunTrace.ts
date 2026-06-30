@@ -443,6 +443,28 @@ export function useRunTrace(sessionId: Ref<string | null>) {
       }
       console.debug(`[loadRelatedTraces] 跨会话边构建: ${crossEdges.length} 条 (delegate+spawn)`)
     }
+
+    // 后处理：为每个节点标注 cluster（所属任务 taskId）与 profile（agent）。
+    // 通过 node.ref.sessionId 反查 sessionTaskMap 得 taskId；profile 从 relatedSessions 取。
+    // 力导向图谱按 cluster 聚类，节点按 profile 着色。
+    if (state.value && state.value.nodes.length > 0) {
+      const sessionProfileMap = new Map<string, string | undefined>()
+      for (const rs of relatedSessions.value) {
+        if (rs.profile) sessionProfileMap.set(rs.sessionId, rs.profile)
+      }
+      let changed = false
+      const annotatedNodes = state.value.nodes.map(n => {
+        const sid = n.ref?.sessionId
+        const taskId = sid ? sessionTaskMap.get(sid)?.taskId : undefined
+        const profile = sid ? sessionProfileMap.get(sid) : undefined
+        if ((taskId && n.cluster !== taskId) || (profile && n.profile !== profile)) {
+          changed = true
+          return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile }
+        }
+        return n
+      })
+      if (changed) sync({ ...state.value, nodes: annotatedNodes })
+    }
   }
 
   /** Live mode: attach to real-time socket. If session is ended, fallback to replay. */
