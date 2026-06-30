@@ -80,7 +80,20 @@ export function computeLayeredLayout(
     if (collapsedIds.has(id)) continue
     queue.push(...(childrenOf.get(id) ?? []))
   }
-  for (const n of nodes) if (!visible.has(n.id)) visible.add(n.id)
+  // 兜底：未被 BFS 覆盖的节点纳入 visible —— 但排除“被折叠节点隐藏的子孙”。
+  // 判断：若节点有任一前驱已在 visible 中，说明它是因前驱折叠而未展开，应保持隐藏。
+  const predsOf = new Map<string, string[]>()
+  for (const e of edges) {
+    if (!nodeMap.has(e.from) || !nodeMap.has(e.to)) continue
+    if (!predsOf.has(e.to)) predsOf.set(e.to, [])
+    predsOf.get(e.to)!.push(e.from)
+  }
+  for (const n of nodes) {
+    if (visible.has(n.id)) continue
+    const preds = predsOf.get(n.id) ?? []
+    if (preds.some(p => visible.has(p))) continue // 前驱可见但未展开本节点 → 折叠隐藏，跳过
+    visible.add(n.id)
+  }
 
   // ── 连通分量检测（无向：边的两端连通） ──
   const uf = new UnionFind()
