@@ -1025,20 +1025,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
     runTraceOpen.value = false
   }
   /** Open RunTrace from global entry point (TopBar button).
-   * Auto-selects the single running session, or shows selector if multiple.
+   * 统一进入全局聚合视图（所有跨任务会话聚合图）；
+   * 由 overview 承载检索与下钻，用户在图中选择会话后切到单会话详细视图。
    */
   function openRunTraceGlobal() {
-    const runningSessions = chatStore.sessions.filter(s => s.endedAt === null)
-    if (runningSessions.length === 1) {
-      // Single running session: open directly
-      openRunTrace({ sessionId: runningSessions[0].id })
-    } else if (runningSessions.length > 1) {
-      // Multiple: open modal with session selector (session will be selected in modal)
-      openRunTrace({ sessionId: '' }) // Empty sessionId signals "show selector"
-    } else {
-      // No running sessions: open modal in history mode
-      openRunTrace({ sessionId: '' })
-    }
+    openRunTrace({ sessionId: '' }) // Empty sessionId signals "show overview"
   }
   // kanban 详情弹窗：取完整 KanbanTaskDetail（含 comments/events/runs 等）
   const detailExpanded = ref(false)  // 弹窗"更多信息"折叠态
