@@ -5,16 +5,15 @@
 //   - 分量内：根节点第 0 层，下游逐层 +1；同层按 startedAt 排序水平居中
 //   - 分量间：从上到下垂直堆叠，各自独立居中，组间留较大间距
 //   - 折叠：折叠节点的子孙不参与布局（隐藏）
-import type { TraceNode } from '../adapters/run-trace-adapter'
-import type { TraceEdge } from '../adapters/run-trace-adapter'
+import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 
 // 布局常量（px）
-export const NODE_W = 190
-export const NODE_H = 56
-export const COL_GAP = 60
-export const LAYER_GAP = 120
-export const GROUP_GAP = 48          // 分量间垂直间距
-export const PADDING = 24
+export const NODE_W = 180
+export const NODE_H = 52
+export const COL_GAP = 24              // 同层节点水平间距（紧凑）
+export const LAYER_GAP = 80            // 层间垂直间距（足够边走线不穿越）
+export const GROUP_GAP = 36            // 分量间垂直间距
+export const PADDING = 20
 
 export interface LayeredPosition { x: number; y: number; depth: number; seq: number }
 export interface LayeredLayout {
@@ -156,51 +155,53 @@ export function computeLayeredLayout(
     }
     for (const id of groupIds) if (!depth.has(id)) depth.set(id, 0)
 
-    // 分量内按层分组 + startedAt 排序
+    const maxDepth = Math.max(0, ...depth.values())
+    const groupHeight = (maxDepth + 1) * (NODE_H + LAYER_GAP)
+
+    // 分量内局部布局：拓扑分层（Sugiyama 风格）。
+    // - Y 轴 = depth（父在上、子在下），层间 LAYER_GAP 足够大让边走线不穿越
+    // - 同层节点按 startedAt 排序后紧凑水平排列（X 左→右体现时间先后）
+    // - 父子边仅在相邻层间走垂直直角折线，不穿越无关节点
+    // 为减少边交叉：子节点 x 尽量靠近其父节点 x（按父 x 中点排序同层节点）。
     const byDepth = new Map<number, string[]>()
     for (const id of groupIds) {
       const d = depth.get(id) ?? 0
       if (!byDepth.has(d)) byDepth.set(d, [])
       byDepth.get(d)!.push(id)
     }
-    for (const [, ids] of byDepth) {
-      ids.sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
-    }
-    const maxDepth = Math.max(0, ...depth.values())
-    const groupHeight = (maxDepth + 1) * (NODE_H + LAYER_GAP)
-
-    // 分量内局部布局：时间左→右，父子上→下。
-    // X 轴 = startedAt 时间槽（从左到右），Y 轴 = depth（父在上、子在下）。
-    // 父子 x 接近、y 不同，smoothstep 边走短直角折线，不穿越无关节点。
-    const times = groupIds.map(id => nodeMap.get(id)?.startedAt ?? 0).filter(Boolean)
-    const tMin = times.length > 0 ? Math.min(...times) : 0
-    const tMax = times.length > 0 ? Math.max(...times) : tMin + 1
-    const tSpan = Math.max(1, tMax - tMin)
-    const slotW = NODE_W + COL_GAP
-    // 每个节点尽量独占一个时间槽：按 startedAt 排名分配槽位
-    const sortedByTime = [...groupIds].sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
-    const timeSlot = new Map<string, number>()
-    sortedByTime.forEach((id, i) => timeSlot.set(id, i))
-    // 同槽（同 startedAt）节点数，用于 x 错位
-    const slotCount = new Map<number, number>()
-    const slotIdx = new Map<string, number>()
-    for (const id of groupIds) {
-      const s = timeSlot.get(id) ?? 0
-      const idx = slotCount.get(s) ?? 0
-      slotIdx.set(id, idx)
-      slotCount.set(s, idx + 1)
+    // 第 0 层按 startedAt 排序；后续层按父节点 x 中点排序（减少交叉）
+    const localChildren = new Map<string, string[]>()
+    const localParents = new Map<string, string[]>()
+    for (const id of groupIds) { localChildren.set(id, []); localParents.set(id, []) }
+    for (const e of edges) {
+      if (groupSet.has(e.from) && groupSet.has(e.to)) {
+        localChildren.get(e.from)!.push(e.to)
+        localParents.get(e.to)!.push(e.from)
+      }
     }
 
     const gp = new Map<string, LayeredPosition>()
-    for (const id of groupIds) {
-      const s = timeSlot.get(id) ?? 0
-      const idx = slotIdx.get(id) ?? 0
-      const cnt = slotCount.get(s) ?? 1
-      // 同槽多节点垂直堆叠会与下层重叠，改为水平微错位 + 深度 y
-      const xOff = cnt > 1 ? (idx - (cnt - 1) / 2) * (NODE_W * 0.6) : 0
-      const x = s * slotW + xOff
-      const y = (depth.get(id) ?? 0) * (NODE_H + LAYER_GAP)
-      gp.set(id, { x, y, depth: depth.get(id) ?? 0, seq: 0 })
+    const slotW = NODE_W + COL_GAP
+    // 逐层分配 x
+    for (let d = 0; d <= maxDepth; d++) {
+      const ids = byDepth.get(d) ?? []
+      if (d === 0) {
+        // 根层按 startedAt 排序
+        ids.sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
+        ids.forEach((id, i) => gp.set(id, { x: i * slotW, y: d * (NODE_H + LAYER_GAP), depth: d, seq: 0 }))
+      } else {
+        // 非根层：按父节点 x 中点排序，使子节点靠近父，减少边交叉
+        const withParentMid = ids.map(id => {
+          const ps = localParents.get(id) ?? []
+          const xs = ps.map(p => gp.get(p)?.x ?? 0).filter(x => x != null)
+          const mid = xs.length > 0 ? xs.reduce((s, x) => s + x, 0) / xs.length : 0
+          return { id, mid, startedAt: nodeMap.get(id)?.startedAt ?? 0 }
+        })
+        withParentMid.sort((a, b) => a.mid - b.mid || a.startedAt - b.startedAt)
+        withParentMid.forEach((item, i) => {
+          gp.set(item.id, { x: i * slotW, y: d * (NODE_H + LAYER_GAP), depth: d, seq: 0 })
+        })
+      }
     }
     const groupMaxWidth = Math.max(...[...gp.values()].map(p => p.x + NODE_W), slotW)
     globalMaxWidth = Math.max(globalMaxWidth, groupMaxWidth)
