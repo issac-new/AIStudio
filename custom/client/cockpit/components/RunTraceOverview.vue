@@ -15,11 +15,37 @@ const selectedTaskId = ref<string | null>(null)
 const includeDone = ref(false)
 const includeArchived = ref(false)
 
-// 时间窗（默认全部范围；首次加载后用任务最早/最晚活动时间初始化）
-const minTime = ref(0)
-const maxTime = ref(Date.now())
-const windowStart = ref(0)
-const windowEnd = ref(Date.now())
+// 时间窗：默认以天为维度，仅加载今天（今天 00:00:00 ~ 当前时间）。
+// minTime/maxTime 为可浏览范围（默认近 30 天 ~ 现在），供滑块拖动。
+const DAY_MS = 86400000
+function startOfDay(ts: number): number {
+  const d = new Date(ts)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+function endOfDay(ts: number): number {
+  const d = new Date(ts)
+  d.setHours(23, 59, 59, 999)
+  return d.getTime()
+}
+const now = Date.now()
+const minTime = ref(startOfDay(now) - 30 * DAY_MS) // 可浏览下限：30 天前
+const maxTime = ref(now)
+const windowStart = ref(startOfDay(now))           // 默认今天 00:00:00
+const windowEnd = ref(now)                          // 默认当前时间
+
+// datetime-local 输入绑定（格式 yyyy-MM-ddTHH:mm）
+const startInput = ref(toLocalInput(windowStart.value))
+const endInput = ref(toLocalInput(windowEnd.value))
+function toLocalInput(ms: number): string {
+  const d = new Date(ms)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+function fromLocalInput(v: string): number {
+  const t = new Date(v).getTime()
+  return isNaN(t) ? 0 : t
+}
 
 /** 统一重载入口：携带当前状态过滤 + 可选时间窗 */
 function reload(win: TimeWindow | null = null) {
@@ -70,6 +96,11 @@ const firstHitCluster = computed(() => {
 })
 
 const scrollContainer = ref<HTMLElement | null>(null)
+// 内容宽度溢出时才允许拖拽平移（运行时按 DOM 实际尺寸判断）
+const canDragScroll = computed(() => {
+  const el = scrollContainer.value
+  return !!el && el.scrollWidth > el.clientWidth
+})
 watch(firstHitCluster, async (cluster) => {
   if (!cluster || !scrollContainer.value) return
   await nextTick()
@@ -119,12 +150,35 @@ function clearFocus() {
 function onWindowUpdate(p: { start: number; end: number }) {
   windowStart.value = p.start
   windowEnd.value = p.end
+  startInput.value = toLocalInput(p.start)
+  endInput.value = toLocalInput(p.end)
 }
 function onWindowApply(p: { start: number; end: number }) {
   windowStart.value = p.start
   windowEnd.value = p.end
+  startInput.value = toLocalInput(p.start)
+  endInput.value = toLocalInput(p.end)
   reload({ start: p.start, end: p.end })
   clearFocus()
+}
+
+/** 按天步进：保持窗口宽度，整体左/右平移 1 天，自动夹到 [minTime, maxTime] */
+function stepDay(dir: -1 | 1) {
+  const span = windowEnd.value - windowStart.value
+  let ns = windowStart.value + dir * DAY_MS
+  let ne = ns + span
+  // 夹到可浏览范围
+  if (ns < minTime.value) { ns = minTime.value; ne = ns + span }
+  if (ne > maxTime.value) { ne = maxTime.value; ns = ne - span }
+  onWindowApply({ start: ns, end: ne })
+}
+
+/** 日期+时间输入应用：手动精确设定起止 */
+function applyDateInput() {
+  const ns = fromLocalInput(startInput.value)
+  const ne = fromLocalInput(endInput.value)
+  if (!ns || !ne || ns >= ne) return
+  onWindowApply({ start: ns, end: ne })
 }
 
 /** 切换"已完成/已归档"标签：主动重新加载 */
@@ -137,24 +191,8 @@ function toggleStatusFilter(which: 'done' | 'archived') {
 }
 
 onMounted(async () => {
-  await reload(null)
-  // 初始化时间窗为全部任务活动范围
-  const times: number[] = []
-  for (const t of graph.tasks.value) times.push(...t.activityTimes, t.createdAt)
-  if (times.length > 0) {
-    const lo = Math.min(...times)
-    const hi = Math.max(...times, Date.now())
-    minTime.value = lo
-    maxTime.value = hi
-    windowStart.value = lo
-    windowEnd.value = hi
-  } else {
-    const now = Date.now()
-    minTime.value = now - 7 * 86400000
-    maxTime.value = now
-    windowStart.value = minTime.value
-    windowEnd.value = now
-  }
+  // 默认加载今天（今天 00:00:00 ~ 当前时间）
+  await reload({ start: windowStart.value, end: windowEnd.value })
 })
 
 function onNodeClick(n: TraceNode) {
@@ -172,6 +210,37 @@ function fmtTime(ts: number): string {
   if (!ts) return '—'
   const d = new Date(ts)
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+/** 日期标签：同一天显示「M/D 周X」，跨天显示「M/D → M/D」 */
+function fmtDateLabel(ms: number): string {
+  const d = new Date(ms)
+  const week = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
+  const sameDay = startOfDay(windowStart.value) === startOfDay(windowEnd.value)
+  if (sameDay) return `${d.getMonth() + 1}/${d.getDate()} 周${week}`
+  const e = new Date(windowEnd.value)
+  return `${d.getMonth() + 1}/${d.getDate()} → ${e.getMonth() + 1}/${e.getDate()}`
+}
+
+// ── scroll 区域拖拽平移：宽度显示不下时，鼠标按住左右拖动平移内容 ──
+const dragState = ref<{ active: boolean; startX: number; startScroll: number } | null>(null)
+function onScrollPointerDown(e: PointerEvent) {
+  // 仅左键且内容确实溢出时启用拖拽
+  const el = scrollContainer.value
+  if (!el || el.scrollWidth <= el.clientWidth) return
+  // 点击节点/列头时不启动拖拽（避免误触）
+  const target = e.target as HTMLElement
+  if (target.closest('.trace-node-card, .run-trace-overview__col-head')) return
+  dragState.value = { active: true, startX: e.clientX, startScroll: el.scrollLeft }
+  el.setPointerCapture?.(e.pointerId)
+}
+function onScrollPointerMove(e: PointerEvent) {
+  if (!dragState.value?.active) return
+  const el = scrollContainer.value
+  if (!el) return
+  el.scrollLeft = dragState.value.startScroll - (e.clientX - dragState.value.startX)
+}
+function onScrollPointerUp() {
+  if (dragState.value) dragState.value = null
 }
 </script>
 
@@ -199,17 +268,39 @@ function fmtTime(ts: number): string {
       <button type="button" class="run-trace-overview__close" @click="emit('close')" title="关闭">×</button>
     </header>
 
-    <TimeRangeSlider
-      :min-time="minTime"
-      :max-time="maxTime"
-      :window-start="windowStart"
-      :window-end="windowEnd"
-      @update:window="onWindowUpdate"
-      @apply="onWindowApply"
-    />
+    <!-- 时间筛选：按天步进 + 日期时间输入 + 可拖动滑块 -->
+    <div class="run-trace-overview__timebar">
+      <div class="run-trace-overview__date-step">
+        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(-1)" title="向左按天拖动（上一日）">‹</button>
+        <span class="run-trace-overview__date-label">{{ fmtDateLabel(windowStart) }}</span>
+        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(1)" title="向右按天拖动（下一日）">›</button>
+      </div>
+      <div class="run-trace-overview__date-inputs">
+        <input type="datetime-local" class="run-trace-overview__date-input" v-model="startInput" @change="applyDateInput" title="起始时间" />
+        <span class="run-trace-overview__date-sep">→</span>
+        <input type="datetime-local" class="run-trace-overview__date-input" v-model="endInput" @change="applyDateInput" title="结束时间" />
+        <button type="button" class="run-trace-overview__apply-btn" @click="applyDateInput" title="应用时间筛选">应用</button>
+      </div>
+      <TimeRangeSlider
+        :min-time="minTime"
+        :max-time="maxTime"
+        :window-start="windowStart"
+        :window-end="windowEnd"
+        @update:window="onWindowUpdate"
+        @apply="onWindowApply"
+      />
+    </div>
 
-    <!-- 上层聚合图 -->
-    <div ref="scrollContainer" class="run-trace-overview__scroll">
+    <!-- 上层聚合图（宽度溢出时可左右拖动平移） -->
+    <div
+      ref="scrollContainer"
+      class="run-trace-overview__scroll"
+      :class="{ 'is-draggable': canDragScroll }"
+      @pointerdown="onScrollPointerDown"
+      @pointermove="onScrollPointerMove"
+      @pointerup="onScrollPointerUp"
+      @pointercancel="onScrollPointerUp"
+    >
       <div v-if="graph.loading.value && graph.nodes.value.length === 0" class="run-trace-overview__empty">
         加载聚合数据中… {{ graph.progress.value }}%
       </div>
@@ -355,6 +446,25 @@ function fmtTime(ts: number): string {
 }
 
 .run-trace-overview__scroll { flex: 1; min-height: 0; overflow: auto; position: relative; background: var(--bg-primary); }
+.run-trace-overview__scroll.is-draggable { cursor: grab; }
+.run-trace-overview__scroll.is-draggable:active { cursor: grabbing; }
+
+/* 时间筛选条 */
+.run-trace-overview__timebar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); flex-shrink: 0; flex-wrap: wrap; }
+.run-trace-overview__date-step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.run-trace-overview__step-btn { width: 26px; height: 26px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  &:hover { background: var(--bg-card-hover); color: var(--text-primary); border-color: var(--text-muted); }
+}
+.run-trace-overview__date-label { font-size: 12px; font-weight: 600; color: var(--text-primary); min-width: 96px; text-align: center; font-variant-numeric: tabular-nums; }
+.run-trace-overview__date-inputs { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.run-trace-overview__date-input { height: 26px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 11px; font-family: ui-monospace, monospace; outline: none;
+  &:focus { border-color: var(--accent-primary); }
+}
+.run-trace-overview__date-sep { font-size: 11px; color: var(--text-muted); }
+.run-trace-overview__apply-btn { height: 26px; padding: 0 10px; border: 1px solid var(--accent-primary); border-radius: 4px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 600;
+  &:hover { filter: brightness(1.08); }
+}
+.run-trace-overview__timebar :deep(.time-range-slider) { flex: 1; min-width: 180px; padding: 0; background: transparent; border-bottom: none; }
 .run-trace-overview__empty { padding: 48px 24px; text-align: center; color: var(--text-muted); font-size: 13px; }
 .run-trace-overview__grid { position: relative; min-width: 100%; }
 
