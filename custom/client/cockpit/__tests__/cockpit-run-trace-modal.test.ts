@@ -330,11 +330,13 @@ describe('CockpitRunTraceModal', () => {
     await nodes[0].trigger('click')
     await new Promise(r => setTimeout(r, 150))
     await w.vm.$nextTick()
-    // 聚焦后出现“返回全部”按钮
+    // 聚焦后出现“返回全部”按钮 + 右侧时间轴面板
     expect(w.find('.run-trace-overview__back-all').exists()).toBe(true)
-    // 点击返回全部 → 按钮消失，恢复全部任务
+    expect(w.find('[data-trace-timeline-panel]').exists()).toBe(true)
+    // 点击返回全部 → 按钮与面板消失，恢复全部任务
     await w.find('.run-trace-overview__back-all').trigger('click')
     await w.vm.$nextTick()
     expect(w.find('.run-trace-overview__back-all').exists()).toBe(false)
+    expect(w.find('[data-trace-timeline-panel]').exists()).toBe(false)
   })
 })
