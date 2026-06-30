@@ -18,7 +18,8 @@ const { mockFetchHermesSessions, mockFetchSessionMessagesPage } = vi.hoisted(() 
   mockFetchHermesSessions: vi.fn(async (_source?: string, _limit?: number, profile?: string) => {
     if (profile === 'orchestrator') return [
       { id: 's1', title: 'Hermes Session 1', model: 'gpt-4', ended_at: null, started_at: 1000, last_active: 5000, message_count: 10, source: 'cli' },
-      { id: 's2', title: 'Hermes Session 2', model: 'claude', ended_at: 2000, started_at: 1000, last_active: 2000, message_count: 5, source: 'cli' },
+      // t_child 的 worker 会话（标题精确匹配 matchSessionTaskId）
+      { id: 'wc1', title: 'work kanban task t_child', model: 'gpt-4', ended_at: 2000, started_at: 1100, last_active: 2100, message_count: 5, source: 'cli' },
     ]
     if (profile === 'worker-coder') return [
       { id: 'w1', title: 'Worker Coder Session', model: 'gpt-4', ended_at: 3000, started_at: 2000, last_active: 3000, message_count: 3, source: 'cli' },
@@ -100,9 +101,36 @@ vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
 }))
 
 // ── mock kanban api ──
+// 示例任务树：t_parent(running) → t_child(done)；t_child 的 worker 会话标题为 "work kanban task t_child"
+// 默认隐藏已完成/已归档任务，故 t_child 默认不显示，需勾选"已完成"后才纳入。
+const mockKanbanTasks = [
+  { id: 't_parent', title: '父任务', body: null, assignee: null, status: 'running', priority: 2, created_by: null, created_at: 1000, started_at: 1000, completed_at: null, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
+  { id: 't_child', title: '子任务', body: null, assignee: null, status: 'done', priority: 2, created_by: null, created_at: 1100, started_at: 1100, completed_at: 2100, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
+]
 vi.mock('@/api/hermes/kanban', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/kanban')
-  return { ...actual, getTask: vi.fn(async () => null), addComment: vi.fn(async () => ({ ok: true })), patchTask: vi.fn(async () => ({})) }
+  return {
+    ...actual,
+    listBoards: vi.fn(async () => [{ slug: 'default', name: 'default', archived: false, total: 2 }]),
+    listTasks: vi.fn(async (opts?: any) => mockKanbanTasks.map(t => ({ ...t, board: opts?.board ?? 'default' }))),
+    getTask: vi.fn(async (id: string) => {
+      const t = mockKanbanTasks.find(x => x.id === id)
+      if (!t) return null
+      const parents = id === 't_child' ? ['t_parent'] : []
+      const children = id === 't_parent' ? ['t_child'] : []
+      return {
+        task: { ...t, session_id: id === 't_parent' ? 's1' : null },
+        latest_summary: null,
+        comments: [],
+        events: [],
+        runs: [{ id: 1, task_id: id, profile: 'orchestrator', status: 'completed', outcome: null, summary: null, error: null, metadata: null, worker_pid: null, started_at: 1000, ended_at: 2000 }],
+        parents,
+        children,
+      }
+    }),
+    addComment: vi.fn(async () => ({ ok: true })),
+    patchTask: vi.fn(async () => ({})),
+  }
 })
 
 // run-trace-adapter 静态导入 @/api/client 的 request helper（→ router → location），
@@ -114,7 +142,7 @@ vi.mock('@/api/client', async () => {
 
 vi.mock('@/api/hermes/sessions', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/sessions')
-  return { ...actual, searchSessions: vi.fn(async () => []) }
+  return { ...actual, fetchHermesSessions: mockFetchHermesSessions, fetchSessionMessagesPage: mockFetchSessionMessagesPage, searchSessions: vi.fn(async () => []) }
 })
 
 // vue-flow 在 jsdom 下渲染不稳定，mock 为简单占位组件。
@@ -247,31 +275,57 @@ describe('CockpitRunTraceModal', () => {
     expect(w.find('.run-trace-modal__dot.is-live').exists()).toBe(true)
   })
 
-  it('shows session picker when sessionId is empty', async () => {
+  it('shows overview (task aggregate graph + time range slider) when sessionId is empty', async () => {
     mockFetchHermesSessions.mockClear()
     const store = useCockpitStore()
-    store.openRunTrace({ sessionId: '' }) // Empty → show picker
+    store.openRunTrace({ sessionId: '' }) // Empty → show overview
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
-    // Wait for async session loading (multiple profiles in parallel)
-    await new Promise(r => setTimeout(r, 300))
+    // Wait for async task tree + session loading
+    await new Promise(r => setTimeout(r, 400))
     await w.vm.$nextTick()
-    expect(w.find('.run-trace-session-picker').exists()).toBe(true)
-    expect(w.text()).toContain('选择会话观察')
-    // Should list sessions from chatStore fallback (mocked) or hermes API
-    const items = w.findAll('.run-trace-session-picker__item')
-    expect(items.length).toBeGreaterThanOrEqual(1)
+    expect(w.find('[data-run-trace-overview]').exists()).toBe(true)
+    expect(w.find('[data-time-range-slider]').exists()).toBe(true)
+    expect(w.text()).toContain('kanban 任务树全聚合')
+    // 默认隐藏已完成/已归档：t_parent(running) 显示，t_child(done) 不显示
+    const cols = w.findAll('.run-trace-overview__col-head')
+    expect(cols.length).toBeGreaterThanOrEqual(1)
+    expect(w.text()).toContain('t_parent')
+    expect(w.text()).not.toContain('t_child')
   })
 
-  it('clicking session item selects it', async () => {
+  it('toggling "已完成" filter reloads done tasks', async () => {
     const store = useCockpitStore()
     store.openRunTrace({ sessionId: '' })
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
-    // Wait for async session loading
-    await new Promise(r => setTimeout(r, 50))
-    const items = w.findAll('.run-trace-session-picker__item')
-    expect(items.length).toBeGreaterThan(0)
-    await items[0].trigger('click')
-    // After select, sessionId should be set
-    expect(store.runTraceSessionId).toBeTruthy()
+    await new Promise(r => setTimeout(r, 400))
+    await w.vm.$nextTick()
+    // 默认 t_child(done) 不显示
+    expect(w.text()).not.toContain('t_child')
+    // 点击"已完成"标签 → 重新加载
+    const doneBtn = w.findAll('.run-trace-overview__filter').find(b => b.text().includes('已完成'))!
+    await doneBtn.trigger('click')
+    await new Promise(r => setTimeout(r, 400))
+    await w.vm.$nextTick()
+    // 现在 t_child 出现
+    expect(w.text()).toContain('t_child')
+  })
+
+  it('clicking a task column opens the focused task-tree detail view', async () => {
+    const store = useCockpitStore()
+    store.openRunTrace({ sessionId: '' })
+    const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
+    await new Promise(r => setTimeout(r, 400))
+    await w.vm.$nextTick()
+    // No detail view initially
+    expect(w.find('[data-task-detail-view]').exists()).toBe(false)
+    // Click the first task column head (t_parent, running → visible by default)
+    const cols = w.findAll('.run-trace-overview__col-head')
+    expect(cols.length).toBeGreaterThan(0)
+    await cols[0].trigger('click')
+    await new Promise(r => setTimeout(r, 100))
+    await w.vm.$nextTick()
+    // Detail view appears (focused task tree)
+    expect(w.find('[data-task-detail-view]').exists()).toBe(true)
+    expect(w.text()).toContain('聚焦任务全树')
   })
 })

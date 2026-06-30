@@ -10,6 +10,7 @@ import RunTraceTimeBand from './RunTraceTimeBand.vue'
 import RunTraceInspector from './RunTraceInspector.vue'
 import RunTraceSkillDrilldown from './RunTraceSkillDrilldown.vue'
 import RunTraceScrubber from './RunTraceScrubber.vue'
+import RunTraceOverview from './RunTraceOverview.vue'
 
 const store = useCockpitStore()
 const chatStore = useChatStore()
@@ -256,59 +257,12 @@ function exportDossier() {
     tabindex="-1"
     @keydown.esc="store.closeRunTrace"
   >
-    <!-- 会话选择器（无 sessionId 时显示） -->
-    <div v-if="needsSessionSelect" class="run-trace-session-picker">
-      <div class="run-trace-session-picker__head">
-        <span>选择会话观察 <small>{{ totalFiltered }} / {{ allSessions.length }} 条会话</small></span>
-        <button type="button" @click="store.closeRunTrace">×</button>
-      </div>
-      <!-- 搜索 -->
-      <div class="run-trace-session-picker__filters">
-        <input
-          type="text"
-          class="run-trace-session-picker__search"
-          v-model="searchQuery"
-          placeholder="搜索会话标题、ID、模型…"
-        />
-      </div>
-      <!-- Profile 标签按钮 -->
-      <div class="run-trace-session-picker__tabs">
-        <button class="run-trace-session-picker__tab" :class="{ 'is-active': filterProfile === '' }" @click="filterProfile = ''">全部</button>
-        <button v-for="p in availableProfiles" :key="p" class="run-trace-session-picker__tab" :class="{ 'is-active': filterProfile === p }" @click="filterProfile = p">{{ p }}</button>
-      </div>
-      <!-- 会话列表（父子分组） -->
-      <div class="run-trace-session-picker__list">
-        <div v-if="loadingSessions" class="run-trace-session-picker__empty">加载会话列表…</div>
-        <div v-else-if="pagedSessions.length === 0" class="run-trace-session-picker__empty">
-          {{ searchQuery || filterProfile ? '无匹配会话' : '暂无会话记录' }}
-        </div>
-        <template v-for="root in pagedSessionTree" :key="root.id">
-          <!-- 根会话 -->
-          <button type="button" class="run-trace-session-picker__item" :class="{ 'is-running': root.isRunning }" @click="selectSession(root.id)">
-            <span class="run-trace-session-picker__dot" :class="{ 'is-live': root.isRunning }"></span>
-            <span class="run-trace-session-picker__title">{{ root.title }}</span>
-            <span v-if="extractKanbanTaskId(root.title)" class="run-trace-session-picker__kanban">{{ extractKanbanTaskId(root.title) }}</span>
-            <span v-if="root.profile" class="run-trace-session-picker__profile">{{ root.profile }}</span>
-            <span class="run-trace-session-picker__meta">{{ root.model }} · {{ root.messageCount }}条 · {{ fmtTime(root.updatedAt) }}</span>
-            <span v-if="root.isRunning" class="run-trace-session-picker__badge">运行中</span>
-          </button>
-          <!-- 子会话（缩进） -->
-          <button v-for="child in root.children" :key="child.id" type="button" class="run-trace-session-picker__item run-trace-session-picker__item--child" :class="{ 'is-running': child.isRunning }" @click="selectSession(child.id)">
-            <span class="run-trace-session-picker__dot" :class="{ 'is-live': child.isRunning }"></span>
-            <span class="run-trace-session-picker__title">↳ {{ child.title }}</span>
-            <span v-if="child.profile" class="run-trace-session-picker__profile">{{ child.profile }}</span>
-            <span class="run-trace-session-picker__meta">{{ child.model }} · {{ child.messageCount }}条</span>
-            <span v-if="child.isRunning" class="run-trace-session-picker__badge">运行中</span>
-          </button>
-        </template>
-      </div>
-      <!-- 分页 -->
-      <div v-if="totalPages > 1" class="run-trace-session-picker__pagination">
-        <button type="button" :disabled="currentPage <= 1" @click="currentPage--">‹ 上一页</button>
-        <span class="run-trace-session-picker__page-info">{{ currentPage }} / {{ totalPages }}</span>
-        <button type="button" :disabled="currentPage >= totalPages" @click="currentPage++">下一页 ›</button>
-      </div>
-    </div>
+    <!-- 全局聚合视图（无 sessionId 时显示）：所有跨任务会话聚合图 -->
+    <RunTraceOverview
+      v-if="needsSessionSelect"
+      @select-session="selectSession"
+      @close="store.closeRunTrace"
+    />
 
     <!-- 正常 trace 视图（有 sessionId 时显示） -->
     <template v-else>
