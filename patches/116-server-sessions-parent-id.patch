@@ -2,13 +2,14 @@ diff --git a/packages/server/src/controllers/hermes/sessions.ts b/packages/serve
 index 7349ec01..7105e13b 100644
 --- a/packages/server/src/controllers/hermes/sessions.ts
 +++ b/packages/server/src/controllers/hermes/sessions.ts
-@@ -399,9 +399,10 @@ export async function listHermesSessions(ctx: any) {
+@@ -409,10 +409,11 @@ export async function listHermesSessions(ctx: any) {
    const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
    const profile = requestedProfile(ctx)
    const effectiveLimit = limit && limit > 0 ? limit : 2000
 +  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
  
-   const importedIds = new Set(localListSessions(profile, undefined, effectiveLimit).map(session => session.id))
+   const localSessions = localListSessions(profile, undefined, effectiveLimit)
+   const importedIds = new Set(localSessions.map(session => session.id))
 -  const allSessions = (await listSessionSummaries(source, effectiveLimit, profile))
 +  const allSessions = (await listSessionSummaries(source, effectiveLimit, profile, includeChildren))
      .map(session => ({
