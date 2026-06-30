@@ -11,8 +11,8 @@ import type { TraceEdge } from '../adapters/run-trace-adapter'
 // 布局常量（px）
 export const NODE_W = 190
 export const NODE_H = 56
-export const COL_GAP = 40
-export const LAYER_GAP = 90
+export const COL_GAP = 60
+export const LAYER_GAP = 120
 export const GROUP_GAP = 48          // 分量间垂直间距
 export const PADDING = 24
 
