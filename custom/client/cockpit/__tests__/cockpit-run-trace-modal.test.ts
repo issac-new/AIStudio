@@ -283,7 +283,7 @@ describe('CockpitRunTraceModal', () => {
     expect(w.find('.run-trace-modal__dot.is-live').exists()).toBe(true)
   })
 
-  it('shows overview (task aggregate graph + time range slider) when sessionId is empty', async () => {
+  it('shows overview (task topology graph) when sessionId is empty', async () => {
     mockFetchHermesSessions.mockClear()
     const store = useCockpitStore()
     store.openRunTrace({ sessionId: '' }) // Empty → show overview
@@ -292,11 +292,9 @@ describe('CockpitRunTraceModal', () => {
     await new Promise(r => setTimeout(r, 400))
     await w.vm.$nextTick()
     expect(w.find('[data-run-trace-overview]').exists()).toBe(true)
-    expect(w.find('[data-time-range-slider]').exists()).toBe(true)
-    expect(w.text()).toContain('kanban 任务树全聚合')
+    expect(w.find('[data-run-trace-topology]').exists()).toBe(true)
+    expect(w.text()).toContain('kanban 任务树拓扑')
     // 默认隐藏已完成/已归档：t_parent(running) 显示，t_child(done) 不显示
-    const cols = w.findAll('.run-trace-overview__col-head')
-    expect(cols.length).toBeGreaterThanOrEqual(1)
     expect(w.text()).toContain('t_parent')
     expect(w.text()).not.toContain('t_child')
   })
@@ -318,7 +316,7 @@ describe('CockpitRunTraceModal', () => {
     expect(w.text()).toContain('t_child')
   })
 
-  it('clicking a task column opens the focused task-tree detail view', async () => {
+  it('clicking a task node opens the focused task-tree detail view', async () => {
     const store = useCockpitStore()
     store.openRunTrace({ sessionId: '' })
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
@@ -326,11 +324,11 @@ describe('CockpitRunTraceModal', () => {
     await w.vm.$nextTick()
     // No detail view initially
     expect(w.find('[data-task-detail-view]').exists()).toBe(false)
-    // Click the first task column head (t_parent, running → visible by default)
-    const cols = w.findAll('.run-trace-overview__col-head')
-    expect(cols.length).toBeGreaterThan(0)
-    await cols[0].trigger('click')
-    await new Promise(r => setTimeout(r, 100))
+    // 点击拓扑图中的任务节点（stub 渲染为 .trace-node-card，点击触发 node-click → focus-task）
+    const nodes = w.findAll('[data-run-trace-topology] .trace-node-card')
+    expect(nodes.length).toBeGreaterThan(0)
+    await nodes[0].trigger('click')
+    await new Promise(r => setTimeout(r, 150))
     await w.vm.$nextTick()
     // Detail view appears (focused task tree)
     expect(w.find('[data-task-detail-view]').exists()).toBe(true)
