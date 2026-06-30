@@ -164,7 +164,7 @@ const KIND_LABEL: Record<string, string> = {
               type="button"
               class="trace-timeline-panel__item"
               :class="`is-${n.kind}`"
-              @click="emit('select-node', n)"
+              @click="emit('show-detail', n)"
             >
               <span class="trace-timeline-panel__time">{{ fmtTime(n.startedAt) }}</span>
               <span class="trace-timeline-panel__kind-tag" :class="`is-${n.kind}`">{{ KIND_LABEL[n.kind] ?? n.kind }}</span>
