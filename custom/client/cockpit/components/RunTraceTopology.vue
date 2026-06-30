@@ -22,9 +22,18 @@ const emit = defineEmits<{
 
 const { onPaneReady, fitView, setNodes, setEdges } = useVueFlow()
 
-// 折叠的节点 id 集合（默认折叠任务节点的子树，避免过密）
-// 任务节点（ingress/workflow）默认折叠；用户点击展开/收起
+// 折叠的节点 id 集合：默认折叠 skill 节点（隐藏其下 tool 调用），避免过密。
+// 用户点击 ± 可展开/收起任意有子节点的节点。
 const collapsedIds = ref<Set<string>>(new Set())
+let defaultCollapsedInit = false
+// 首次拿到节点时，把所有 skill 节点加入默认折叠集
+watch(() => props.nodes, (ns) => {
+  if (defaultCollapsedInit || !ns || ns.length === 0) return
+  defaultCollapsedInit = true
+  const s = new Set<string>()
+  for (const n of ns) if (n.kind === 'skill') s.add(n.id)
+  collapsedIds.value = s
+}, { immediate: true })
 
 const CLUSTER_COLORS = [
   '#6B83D6', '#4CAF8B', '#D69B5A', '#B56BD6', '#5AAAD6',
