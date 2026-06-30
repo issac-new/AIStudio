@@ -8,10 +8,13 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'show-detail', node: TraceNode): void }>()
 
+// 仅显示当前选中任务（taskId）的执行节点，不含任务树内其他任务。
 // 按 startedAt 时间分组（按天分组，组内按时间升序）
 interface Group { key: string; label: string; items: TraceNode[] }
 const groups = computed<Group[]>(() => {
-  const ns = [...props.nodes].filter(n => n.startedAt).sort((a, b) => a.startedAt - b.startedAt)
+  const ns = [...props.nodes]
+    .filter(n => n.startedAt && n.cluster === props.taskId)
+    .sort((a, b) => a.startedAt - b.startedAt)
   const map = new Map<string, TraceNode[]>()
   for (const n of ns) {
     const d = new Date(n.startedAt < 1e12 ? n.startedAt * 1000 : n.startedAt)
