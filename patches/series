@@ -91,7 +91,7 @@
 #105-kanban-i18n-zh.patch  # v0.6.20: keys already in upstream
 106-desktop-installer-targets.patch
 107-agent-health-proxy.patch
-108-update-runtime-version.patch
+# 108-update-runtime-version.patch  # v0.6.22: upstream already bumped runtime to 0.17.0
 109-windows-zip-target.patch
 110-sidebar-logout-consistency.patch
 113-settings-hide-sidebar-footer.patch

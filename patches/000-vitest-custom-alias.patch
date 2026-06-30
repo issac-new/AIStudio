@@ -9,5 +9,6 @@ index 0868870e..a8011625 100644
 +      '@/custom': resolve(__dirname, '../../overlay/custom/client'),
 +      '@custom': resolve(__dirname, '../../overlay/custom/client'),
        '@': resolve(__dirname, 'packages/client/src'),
+       electron: resolve(__dirname, 'tests/mocks/electron.ts'),
        '/logo.png': resolve(__dirname, 'packages/client/public/logo.png'),
-     },
+    },
