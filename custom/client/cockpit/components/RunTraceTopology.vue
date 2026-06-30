@@ -93,17 +93,26 @@ const flowNodes = computed<Node[]>(() => {
 
 const flowEdges = computed<Edge[]>(() => {
   const vis = visibleNodeIds.value
+  const pos = layout.value.positions
+  const EDGE_LABEL: Record<string, string> = { spawn: '派生', delegate: '委托', call: '调用', converge: '汇聚', recall: '回忆' }
   return props.edges.filter(e => vis.has(e.from) && vis.has(e.to)).map(e => {
     const isSpawn = e.kind === 'spawn'
     const isDelegate = e.kind === 'delegate'
     const fromNode = props.nodes.find(n => n.id === e.from)
+    const toNode = props.nodes.find(n => n.id === e.to)
     const color = fromNode?.cluster ? clusterColorMap.value.get(fromNode.cluster) : '#999'
+    const fromSeq = pos.get(e.from)?.seq
+    const toSeq = pos.get(e.to)?.seq
+    const label = (fromSeq && toSeq) ? `${EDGE_LABEL[e.kind] ?? e.kind} #${fromSeq}→#${toSeq}` : (EDGE_LABEL[e.kind] ?? e.kind)
     return {
       id: e.id,
       source: e.from,
       target: e.to,
       type: 'smoothstep',
       animated: isSpawn,
+      label,
+      labelStyle: { fill: color, fontSize: '9px', fontWeight: 600 },
+      labelBgStyle: { fill: 'var(--bg-card)', fillOpacity: 0.9 },
       markerEnd: MarkerType.ArrowClosed,
       style: {
         stroke: color,
