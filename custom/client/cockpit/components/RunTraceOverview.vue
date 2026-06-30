@@ -12,6 +12,8 @@ const graph = useKanbanTaskGraph()
 const searchQuery = ref('')
 const selectedTaskId = ref<string | null>(null)
 const detailNode = ref<TraceNode | null>(null)
+// 右侧面板选中的节点（显示其详情 + 子节点时间轴）
+const selectedNode = ref<TraceNode | null>(null)
 
 // 状态过滤：默认隐藏已完成/已归档任务；用户主动勾选后才纳入
 const includeDone = ref(false)
@@ -84,6 +86,7 @@ async function selectTask(taskId: string) {
 function clearFocus() {
   selectedTaskId.value = null
   focusResult.value = null
+  selectedNode.value = null
 }
 
 // 时间窗
@@ -127,6 +130,11 @@ onMounted(async () => {
 function onShowDetail(n: TraceNode) { detailNode.value = n }
 function onTopFocusTask(taskId: string) { selectTask(taskId) }
 function onTopSelectSession(sid: string) { emit('select-session', sid) }
+function onSelectNode(n: TraceNode) { selectedNode.value = n }
+function closeRightPanel() {
+  selectedNode.value = null
+  clearFocus()
+}
 </script>
 
 <template>
@@ -181,14 +189,18 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
           @focus-task="onTopFocusTask"
           @select-session="onTopSelectSession"
           @show-detail="onShowDetail"
+          @select-node="onSelectNode"
         />
       </div>
       <RunTraceTimelinePanel
-        v-if="selectedTaskId && focusResult"
-        :nodes="focusResult.nodes"
+        v-if="selectedNode && (focusResult || graph.nodes.value.length)"
+        :node="selectedNode"
+        :all-nodes="focusResult?.nodes ?? graph.nodes.value"
+        :all-edges="focusResult?.edges ?? graph.edges.value"
         :task-id="selectedTaskId"
-        @close="clearFocus"
+        @close="closeRightPanel"
         @show-detail="onShowDetail"
+        @select-node="onSelectNode"
       />
     </div>
 

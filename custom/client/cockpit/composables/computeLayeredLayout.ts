@@ -169,74 +169,40 @@ export function computeLayeredLayout(
     const maxDepth = Math.max(0, ...depth.values())
     const groupHeight = (maxDepth + 1) * (NODE_H + LAYER_GAP)
 
-    // 分量内局部布局：树形居中。每个节点居中于其子树之上，
-    // 父子边基本垂直/短斜，避免穿越无关节点。
-    // 仅用分量内边建子关系。
-    const localChildren = new Map<string, string[]>()
-    for (const id of groupIds) localChildren.set(id, [])
-    for (const e of edges) {
-      if (groupSet.has(e.from) && groupSet.has(e.to)) localChildren.get(e.from)!.push(e.to)
+    // 分量内局部布局：时间左→右，父子上→下。
+    // X 轴 = startedAt 时间槽（从左到右），Y 轴 = depth（父在上、子在下）。
+    // 父子 x 接近、y 不同，smoothstep 边走短直角折线，不穿越无关节点。
+    const times = groupIds.map(id => nodeMap.get(id)?.startedAt ?? 0).filter(Boolean)
+    const tMin = times.length > 0 ? Math.min(...times) : 0
+    const tMax = times.length > 0 ? Math.max(...times) : tMin + 1
+    const tSpan = Math.max(1, tMax - tMin)
+    const slotW = NODE_W + COL_GAP
+    // 每个节点尽量独占一个时间槽：按 startedAt 排名分配槽位
+    const sortedByTime = [...groupIds].sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
+    const timeSlot = new Map<string, number>()
+    sortedByTime.forEach((id, i) => timeSlot.set(id, i))
+    // 同槽（同 startedAt）节点数，用于 x 错位
+    const slotCount = new Map<number, number>()
+    const slotIdx = new Map<string, number>()
+    for (const id of groupIds) {
+      const s = timeSlot.get(id) ?? 0
+      const idx = slotCount.get(s) ?? 0
+      slotIdx.set(id, idx)
+      slotCount.set(s, idx + 1)
     }
-    // 同层多子节点按 startedAt 排序，保持时序
-    for (const [, ks] of localChildren) ks.sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
-
-    // 子树宽度（叶子数 * 单元宽）
-    const unitW = NODE_W + COL_GAP
-    const subtreeWidth = new Map<string, number>()
-    function calcWidth(id: string, seen: Set<string>): number {
-      if (seen.has(id)) return 0
-      seen.add(id)
-      const kids = localChildren.get(id) ?? []
-      if (kids.length === 0) { subtreeWidth.set(id, unitW); return unitW }
-      let w = 0
-      for (const c of kids) w += calcWidth(c, seen)
-      const cw = Math.max(w, unitW)
-      subtreeWidth.set(id, cw)
-      return cw
-    }
-    const roots = groupIds.filter(id => (inDeg.get(id) ?? 0) === 0)
-    if (roots.length === 0) roots.push(groupIds[0])
-    let rootTotalW = 0
-    const rootSeen = new Set<string>()
-    for (const r of roots) rootTotalW += calcWidth(r, rootSeen)
 
     const gp = new Map<string, LayeredPosition>()
-    function assign(id: string, leftX: number, depthVal: number, seen: Set<string>) {
-      if (seen.has(id)) return
-      seen.add(id)
-      const w = subtreeWidth.get(id) ?? unitW
-      const kids = localChildren.get(id) ?? []
-      const y = depthVal * (NODE_H + LAYER_GAP)
-      if (kids.length === 0) {
-        gp.set(id, { x: leftX + (w - NODE_W) / 2, y, depth: depthVal, seq: 0 })
-        return
-      }
-      let kidsW = 0
-      const kidSeen = new Set<string>()
-      for (const c of kids) kidsW += subtreeWidth.get(c) ?? unitW
-      let cursor = leftX + (w - kidsW) / 2
-      for (const c of kids) {
-        const cw = subtreeWidth.get(c) ?? unitW
-        assign(c, cursor, depthVal + 1, seen)
-        cursor += cw
-      }
-      // 父居中于子节点中心
-      const firstKid = gp.get(kids[0])
-      const lastKid = gp.get(kids[kids.length - 1])
-      const cx = (firstKid && lastKid) ? (firstKid.x + lastKid.x) / 2 : leftX + (w - NODE_W) / 2
-      gp.set(id, { x: cx, y, depth: depthVal, seq: 0 })
-    }
-    let rootCursor = 0
-    const assignSeen = new Set<string>()
-    for (const r of roots) {
-      assign(r, rootCursor, 0, assignSeen)
-      rootCursor += subtreeWidth.get(r) ?? unitW
-    }
-    // 兜底：未被分配的节点（成环/孤立）放第 0 层末尾
     for (const id of groupIds) {
-      if (!gp.has(id)) gp.set(id, { x: rootCursor, y: 0, depth: 0, seq: 0 }), rootCursor += unitW
+      const s = timeSlot.get(id) ?? 0
+      const idx = slotIdx.get(id) ?? 0
+      const cnt = slotCount.get(s) ?? 1
+      // 同槽多节点垂直堆叠会与下层重叠，改为水平微错位 + 深度 y
+      const xOff = cnt > 1 ? (idx - (cnt - 1) / 2) * (NODE_W * 0.6) : 0
+      const x = s * slotW + xOff
+      const y = (depth.get(id) ?? 0) * (NODE_H + LAYER_GAP)
+      gp.set(id, { x, y, depth: depth.get(id) ?? 0, seq: 0 })
     }
-    const groupMaxWidth = Math.max(...[...gp.values()].map(p => p.x + NODE_W), unitW)
+    const groupMaxWidth = Math.max(...[...gp.values()].map(p => p.x + NODE_W), slotW)
     globalMaxWidth = Math.max(globalMaxWidth, groupMaxWidth)
     boxes.push({ ids: groupIds, w: groupMaxWidth, h: groupHeight, positions: gp })
   }
