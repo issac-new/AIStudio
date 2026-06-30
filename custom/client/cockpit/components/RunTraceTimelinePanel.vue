@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
+import { fetchProfileDetail, type HermesProfileDetail } from '@/api/hermes/profiles'
 
 const props = defineProps<{
   /** 选中的节点（显示其详情） */
@@ -12,6 +13,20 @@ const props = defineProps<{
   taskId: string | null
 }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'show-detail', node: TraceNode): void; (e: 'select-node', node: TraceNode): void }>()
+
+// agent 节点：加载 profile 配置详情
+const agentDetail = ref<HermesProfileDetail | null>(null)
+const agentLoading = ref(false)
+watch(() => props.node, async (n) => {
+  agentDetail.value = null
+  if (!n || n.kind !== 'agent' || !n.profile) return
+  agentLoading.value = true
+  try {
+    agentDetail.value = await fetchProfileDetail(n.profile)
+  } catch { /* profile 不可用 */ } finally {
+    agentLoading.value = false
+  }
+}, { immediate: true })
 
 // 子节点：边的 from = 选中节点 id 的 to 节点
 const childNodes = computed<TraceNode[]>(() => {
@@ -117,9 +132,24 @@ const KIND_LABEL: Record<string, string> = {
         </div>
       </section>
 
+      <!-- agent 配置详情（仅 agent 节点） -->
+      <section v-if="node.kind === 'agent'" class="trace-timeline-panel__agent">
+        <div class="trace-timeline-panel__children-title">Agent 配置</div>
+        <div v-if="agentLoading" class="trace-timeline-panel__empty-mini">加载配置…</div>
+        <div v-else-if="agentDetail">
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">模型</span><span class="trace-timeline-panel__value">{{ agentDetail.model }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Provider</span><span class="trace-timeline-panel__value">{{ agentDetail.provider }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">技能数</span><span class="trace-timeline-panel__value">{{ agentDetail.skills }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">路径</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ agentDetail.path }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">环境</span><span class="trace-timeline-panel__value">{{ agentDetail.hasEnv ? '已配置' : '无' }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Soul</span><span class="trace-timeline-panel__value">{{ agentDetail.hasSoulMd ? '有' : '无' }}</span></div>
+        </div>
+        <div v-else class="trace-timeline-panel__empty-mini">配置不可用</div>
+      </section>
+
       <!-- 子节点时间轴 -->
       <section class="trace-timeline-panel__children">
-        <div class="trace-timeline-panel__children-title">子节点时间轴（{{ childNodes.length }}）</div>
+        <div class="trace-timeline-panel__children-title">{{ node.kind === 'skill' ? '工具执行时间轴' : '子节点时间轴' }}（{{ childNodes.length }}）</div>
         <div v-if="childNodes.length === 0" class="trace-timeline-panel__empty-mini">无子节点</div>
         <div v-for="g in groups" :key="g.key" class="trace-timeline-panel__group">
           <div class="trace-timeline-panel__group-head">
@@ -179,6 +209,7 @@ const KIND_LABEL: Record<string, string> = {
 .trace-timeline-panel__value { color: var(--text-primary); word-break: break-word; }
 .trace-timeline-panel__value--pre { white-space: pre-wrap; max-height: 80px; overflow-y: auto; font-size: 10px; }
 .trace-timeline-panel__value--mono { font-family: ui-monospace, monospace; font-size: 10px; }
+.trace-timeline-panel__agent { padding: 8px 14px; border-bottom: 1px solid var(--border-color); }
 .trace-timeline-panel__children { padding: 8px 14px; }
 .trace-timeline-panel__children-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
 .trace-timeline-panel__group { margin-bottom: 10px; }

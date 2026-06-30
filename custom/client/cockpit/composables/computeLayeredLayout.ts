@@ -158,49 +158,40 @@ export function computeLayeredLayout(
     const maxDepth = Math.max(0, ...depth.values())
     const groupHeight = (maxDepth + 1) * (NODE_H + LAYER_GAP)
 
-    // 分量内局部布局：拓扑分层（Sugiyama 风格）。
-    // - Y 轴 = depth（父在上、子在下），层间 LAYER_GAP 足够大让边走线不穿越
-    // - 同层节点按 startedAt 排序后紧凑水平排列（X 左→右体现时间先后）
-    // - 父子边仅在相邻层间走垂直直角折线，不穿越无关节点
-    // 为减少边交叉：子节点 x 尽量靠近其父节点 x（按父 x 中点排序同层节点）。
+    // 分量内局部布局：严格树形分层（保证不穿插遮挡）。
+    // - Y 轴 = depth（父在上、子在下），层间 LAYER_GAP 足够大
+    // - 同层节点独占 x 列（紧凑水平排列，按 startedAt 排序体现时间左→右）
+    // - 父子边仅相邻层间走垂直直角折线，因同层独占列、层间有间距，不穿越无关节点
+    // - 子节点 x 尽量靠近父 x（按父 x 中点排序），减少边交叉
     const byDepth = new Map<number, string[]>()
     for (const id of groupIds) {
       const d = depth.get(id) ?? 0
       if (!byDepth.has(d)) byDepth.set(d, [])
       byDepth.get(d)!.push(id)
     }
-    // 第 0 层按 startedAt 排序；后续层按父节点 x 中点排序（减少交叉）
-    const localChildren = new Map<string, string[]>()
     const localParents = new Map<string, string[]>()
-    for (const id of groupIds) { localChildren.set(id, []); localParents.set(id, []) }
+    for (const id of groupIds) localParents.set(id, [])
     for (const e of edges) {
-      if (groupSet.has(e.from) && groupSet.has(e.to)) {
-        localChildren.get(e.from)!.push(e.to)
-        localParents.get(e.to)!.push(e.from)
-      }
+      if (groupSet.has(e.from) && groupSet.has(e.to)) localParents.get(e.to)!.push(e.from)
     }
 
     const gp = new Map<string, LayeredPosition>()
     const slotW = NODE_W + COL_GAP
-    // 逐层分配 x
     for (let d = 0; d <= maxDepth; d++) {
       const ids = byDepth.get(d) ?? []
       if (d === 0) {
-        // 根层按 startedAt 排序
         ids.sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
         ids.forEach((id, i) => gp.set(id, { x: i * slotW, y: d * (NODE_H + LAYER_GAP), depth: d, seq: 0 }))
       } else {
-        // 非根层：按父节点 x 中点排序，使子节点靠近父，减少边交叉
-        const withParentMid = ids.map(id => {
+        // 非根层：按父 x 中点排序，使子靠近父，减少交叉
+        const items = ids.map(id => {
           const ps = localParents.get(id) ?? []
-          const xs = ps.map(p => gp.get(p)?.x ?? 0).filter(x => x != null)
+          const xs = ps.map(p => gp.get(p)?.x ?? 0)
           const mid = xs.length > 0 ? xs.reduce((s, x) => s + x, 0) / xs.length : 0
-          return { id, mid, startedAt: nodeMap.get(id)?.startedAt ?? 0 }
+          return { id, mid, t: nodeMap.get(id)?.startedAt ?? 0 }
         })
-        withParentMid.sort((a, b) => a.mid - b.mid || a.startedAt - b.startedAt)
-        withParentMid.forEach((item, i) => {
-          gp.set(item.id, { x: i * slotW, y: d * (NODE_H + LAYER_GAP), depth: d, seq: 0 })
-        })
+        items.sort((a, b) => a.mid - b.mid || a.t - b.t)
+        items.forEach((it, i) => gp.set(it.id, { x: i * slotW, y: d * (NODE_H + LAYER_GAP), depth: d, seq: 0 }))
       }
     }
     const groupMaxWidth = Math.max(...[...gp.values()].map(p => p.x + NODE_W), slotW)
