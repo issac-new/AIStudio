@@ -248,6 +248,7 @@ export function useKanbanTaskGraph() {
     // 补充 agent 节点（profile 推导）：每个关联会话生成一个 agent 节点连到 run。
     // 若 L2 已提供 agent 节点则跳过。
     const runNodeId = `run:${sid}:replay-${sid}`
+    const runNode = s.nodes.find(n => n.id === runNodeId)
     const hasAgent = s.nodes.some(n => n.kind === 'agent' && n.ref?.sessionId === sid)
     if (!hasAgent && profile) {
       const agentId = `agent:${sid}:${profile}`
@@ -256,8 +257,11 @@ export function useKanbanTaskGraph() {
         kind: 'agent',
         label: profile,
         detail: 'agent',
-        status: 'ok',
-        startedAt: startedAt || Date.now(),
+        status: runNode?.status ?? 'ok',
+        // 时间取自该会话 run 节点（准确反映 run 的开始/结束）
+        startedAt: runNode?.startedAt ?? startedAt,
+        endedAt: runNode?.endedAt,
+        durationMs: runNode?.durationMs,
         evidence: 'L1',
         children: [],
         ref: { sessionId: sid, runId: `replay-${sid}` },
