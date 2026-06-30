@@ -335,7 +335,7 @@ function exportDossier() {
 </template>
 <style scoped lang="scss">
 /* 内联定位：与协作看板一致，从注意力条下方(top:84px)展开 */
-.run-trace-modal { position: fixed; top: 84px; right: 0; bottom: 0; left: 0; z-index: 100; display: grid; grid-template-rows: auto 1fr; background: var(--bg-primary); color: var(--text-primary); border-top: 1px solid var(--border-color); box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
+.run-trace-modal { position: fixed; top: 84px; right: 0; bottom: 0; left: 0; z-index: 100; display: flex; flex-direction: column; background: var(--bg-primary); color: var(--text-primary); border-top: 1px solid var(--border-color); box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
 
 /* ── 会话选择器 ── */
 .run-trace-session-picker { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
@@ -379,7 +379,7 @@ function exportDossier() {
 .run-trace-session-picker__page-info { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* ── 正常 trace 视图 ── */
-.run-trace-modal__top { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); }
+.run-trace-modal__top { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; }
 .run-trace-modal__back { width: 28px; height: 28px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); border-radius: 6px; cursor: pointer; font-size: 16px; line-height: 1; flex-shrink: 0;
   &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 }
@@ -398,7 +398,7 @@ function exportDossier() {
 .run-trace-modal__speed-btn { padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 10px; font-family: ui-monospace, monospace; }
 .run-trace-modal__speed-btn:hover { background: var(--bg-card-hover); }
 .run-trace-modal__playback-hint { font-size: 9px; color: var(--text-muted); margin-left: 4px; }
-.run-trace-modal__main { min-height: 0; display: grid; grid-template-columns: 1fr 320px; }
+.run-trace-modal__main { min-height: 0; flex: 1; display: grid; grid-template-columns: 1fr 320px; }
 @keyframes run-trace-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* ── 聚合模式开关 ── */

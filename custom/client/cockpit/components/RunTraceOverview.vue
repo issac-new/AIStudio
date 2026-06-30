@@ -197,7 +197,7 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
 </template>
 
 <style scoped lang="scss">
-.run-trace-overview { display: flex; flex-direction: column; min-height: 0; height: 100%; background: var(--bg-primary); }
+.run-trace-overview { display: flex; flex-direction: column; min-height: 0; flex: 1; background: var(--bg-primary); }
 .run-trace-overview__top { display: flex; align-items: center; gap: 12px; padding: 8px 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); flex-shrink: 0; flex-wrap: wrap; }
 .run-trace-overview__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-primary); flex-shrink: 0; }
 .run-trace-overview__title b { display: block; font-size: 13px; }
