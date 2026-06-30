@@ -77,6 +77,7 @@ const flowNodes = computed<Node[]>(() => {
         status: n.status,
         profile: n.profile,
         cluster: n.cluster,
+        taskStatus: n.taskStatus,
         clusterColor: color,
         isHit,
         isSelected,
@@ -180,6 +181,10 @@ function onToggleCollapse(nodeId: string, e: Event) {
           <span class="topo-card__dot"></span>
           <span class="topo-card__text">
             <b>{{ props.data.label }}</b>
+            <span v-if="props.data.cluster || props.data.taskStatus" class="topo-card__tags">
+              <span v-if="props.data.cluster" class="topo-card__task" :title="`任务 ${props.data.cluster}`">{{ props.data.cluster }}</span>
+              <span v-if="props.data.taskStatus" class="topo-card__status" :class="`is-${props.data.taskStatus}`">{{ props.data.taskStatus }}</span>
+            </span>
             <small v-if="props.data.detail">{{ props.data.detail }}</small>
             <small v-if="props.data.profile" class="topo-card__profile">{{ props.data.profile }}</small>
           </span>
@@ -216,6 +221,14 @@ function onToggleCollapse(nodeId: string, e: Event) {
 .topo-card.is-workflow .topo-card__dot { background: var(--accent-primary); }
 .topo-card__text { display: flex; flex-direction: column; min-width: 0; overflow: hidden; gap: 1px; }
 .topo-card__text b { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topo-card__tags { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 1px; }
+.topo-card__task { font-size: 9px; font-family: ui-monospace, monospace; color: var(--cluster-color, var(--text-muted)); background: var(--bg-secondary); padding: 0 4px; border-radius: 3px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topo-card__status { font-size: 8px; font-weight: 700; padding: 0 4px; border-radius: 3px; text-transform: uppercase; }
+.topo-card__status.is-running { background: rgba(76,175,80,0.18); color: var(--success); }
+.topo-card__status.is-done, .topo-card__status.is-archived { background: rgba(76,175,80,0.1); color: var(--success); }
+.topo-card__status.is-blocked { background: rgba(214,90,107,0.18); color: var(--error); }
+.topo-card__status.is-review, .topo-card__status.is-ready { background: rgba(214,155,90,0.18); color: var(--warning); }
+.topo-card__status.is-triage, .topo-card__status.is-todo, .topo-card__status.is-scheduled { background: var(--bg-secondary); color: var(--text-muted); }
 .topo-card__text small { font-size: 9px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
 .topo-card__profile { font-size: 8px; color: var(--cluster-color, var(--text-muted)); font-weight: 600; }
 .topo-card__info { position: absolute; top: 3px; right: 4px; width: 16px; height: 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; line-height: 1; padding: 0; border-radius: 3px;

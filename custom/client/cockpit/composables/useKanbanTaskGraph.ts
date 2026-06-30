@@ -417,14 +417,14 @@ export function useKanbanTaskGraph() {
             const title = t?.task?.title
             const summary = t?.latest_summary
             const taskStatus = t?.task?.status // kanban 任务状态（running/done/blocked…）
-            // label 显示任务标题 + 状态 + taskId 追踪信息
-            const statusTag = taskStatus ? `[${taskStatus}]` : ''
-            label = title ? `${title} ${statusTag} · ${tag}`.trim() : (label?.includes(taskId) ? `${label} ${statusTag}`.trim() : `${label} ${statusTag} · ${tag}`.trim())
+            // label 显示任务标题 + taskId 追踪信息（状态用独立徽标显示，避免长文本被截断）
+            label = title ? `${title} · ${tag}` : (label?.includes(taskId) ? label : `${label} · ${tag}`)
             // detail: 摘要 + tag（确保 taskId 可检索）
             const parts: string[] = []
             if (summary) parts.push(summary)
             parts.push(tag)
             detail = parts.join(' · ')
+            return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile, label, detail, taskStatus }
           }
           return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile, label, detail }
         })
