@@ -18,6 +18,7 @@ const emit = defineEmits<{
   (e: 'focus-task', taskId: string): void
   (e: 'select-session', sid: string): void
   (e: 'show-detail', node: TraceNode): void
+  (e: 'select-node', node: TraceNode): void
 }>()
 
 const { onPaneReady, fitView, setNodes, setEdges } = useVueFlow()
@@ -148,7 +149,9 @@ function onNodeClick(payload: { node?: Node } & Node) {
   const node = (payload as { node?: Node }).node ?? payload
   const orig = props.nodes.find(n => n.id === node.id)
   if (!orig) return
-  // 任务节点（ingress/workflow）→ 聚焦该任务全树
+  // 任意节点点击：右侧显示该节点详情 + 子节点时间轴
+  emit('select-node', orig)
+  // 任务节点（ingress/workflow）→ 同时聚焦该任务全树
   if (orig.cluster && (orig.kind === 'ingress' || orig.kind === 'workflow')) {
     emit('focus-task', orig.cluster)
     return
