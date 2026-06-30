@@ -95,35 +95,26 @@ const flowNodes = computed<Node[]>(() => {
 
 const flowEdges = computed<Edge[]>(() => {
   const vis = visibleNodeIds.value
-  const pos = layout.value.positions
-  const EDGE_LABEL: Record<string, string> = { spawn: '派生', delegate: '委托', call: '调用', converge: '汇聚', recall: '回忆' }
-  return props.edges.filter(e => vis.has(e.from) && vis.has(e.to)).map(e => {
+  return props.edges.filter(e => vis.has(e.from) && vis.has(e.to)).map((e, idx) => {
     const isSpawn = e.kind === 'spawn'
     const isDelegate = e.kind === 'delegate'
     const fromNode = props.nodes.find(n => n.id === e.from)
-    const toNode = props.nodes.find(n => n.id === e.to)
     const color = fromNode?.cluster ? clusterColorMap.value.get(fromNode.cluster) : '#999'
-    const fromSeq = pos.get(e.from)?.seq
-    const toSeq = pos.get(e.to)?.seq
-    const label = (fromSeq && toSeq) ? `${EDGE_LABEL[e.kind] ?? e.kind} #${fromSeq}→#${toSeq}` : (EDGE_LABEL[e.kind] ?? e.kind)
     return {
       id: e.id,
       source: e.from,
       target: e.to,
-      type: 'smoothstep',
+      type: 'default',
       animated: isSpawn,
-      label,
-      labelStyle: { fill: color, fontSize: '9px', fontWeight: 600 },
-      labelBgStyle: { fill: 'var(--bg-card)', fillOpacity: 0.92 },
-      labelBgPadding: [6, 2] as [number, number],
-      labelBgBorderRadius: 4,
-      zIndex: 1,
+      // curvature 随索引微调，减少同向边重叠
+      curvature: 0.2 + (idx % 3) * 0.1,
+      zIndex: 0,
       markerEnd: MarkerType.ArrowClosed,
       style: {
         stroke: color,
         strokeWidth: isSpawn ? 2.5 : isDelegate ? 2 : 1.2,
         strokeDasharray: isDelegate ? '8 4' : undefined,
-        opacity: 0.7,
+        opacity: 0.65,
       },
     }
   })
@@ -156,6 +147,9 @@ function onNodeClick(payload: { node?: Node } & Node) {
     emit('focus-task', orig.cluster)
     return
   }
+  // agent/skill 节点：仅右侧面板显示，不跳转
+  if (orig.kind === 'agent' || orig.kind === 'skill') return
+  // 其余会话级节点（tool 等）→ 进入单会话详细视图
   const sid = orig.ref?.sessionId
   if (sid) emit('select-session', sid)
 }
@@ -221,10 +215,11 @@ function onToggleCollapse(nodeId: string, e: Event) {
 <style scoped lang="scss">
 .run-trace-topology { position: relative; width: 100%; height: 100%; min-height: 300px; background: radial-gradient(circle at 1px 1px, var(--border-light) 1px, transparent 0) 0 0 / 18px 18px; }
 :deep(.vue-flow) { width: 100%; height: 100%; background: transparent; }
-/* 强制边层在节点层之上，确保连线不被节点卡片遮挡；边不拦截指针事件，节点仍可点击 */
-:deep(.vue-flow__edges) { z-index: 2 !important; pointer-events: none; }
+/* 边在节点之下，节点卡片不透明遮盖边，避免线条穿过节点 */
+:deep(.vue-flow__edges) { z-index: 0 !important; pointer-events: none; }
 :deep(.vue-flow__nodes) { z-index: 1 !important; }
 :deep(.vue-flow__node) { cursor: pointer; pointer-events: all; }
+.topo-card { background: var(--bg-card); }
 
 .topo-card { position: relative; display: flex; align-items: center; gap: 8px; width: 190px; min-height: 56px; padding: 7px 28px 7px 10px; border: 1px solid var(--cluster-color, var(--border-color)); border-radius: 7px; background: var(--bg-card); color: var(--text-primary); transition: box-shadow 0.15s; }
 .topo-card.is-hit { box-shadow: 0 0 0 2px var(--accent-primary); }
