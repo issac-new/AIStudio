@@ -94,12 +94,15 @@ function onWindowApply(p: { start: number; end: number }) {
   reload({ start: p.start, end: p.end })
   clearFocus()
 }
-/** 按天步进：向左=窗口往前增一天，向右=往后增一天 */
+/** 按天步进：
+ *  向左（‹）：左边起始往前减一天，右边结束不变（窗口扩大）
+ *  向右（›）：右边结束往后加一天，左边起始不变（窗口扩大） */
 function stepDay(dir: -1 | 1) {
-  const span = windowEnd.value - windowStart.value
-  let ns = windowStart.value + dir * DAY_MS
-  let ne = ns + span
-  onWindowApply({ start: ns, end: ne })
+  if (dir < 0) {
+    onWindowApply({ start: windowStart.value - DAY_MS, end: windowEnd.value })
+  } else {
+    onWindowApply({ start: windowStart.value, end: windowEnd.value + DAY_MS })
+  }
 }
 /** 日期+时间输入应用 */
 function applyDateInput() {
