@@ -303,8 +303,8 @@ describe('useRunTrace', () => {
     scope.run(() => { trace = useRunTrace(ref<string | null>('s_child')) })
     await flush(); await flush(); await flush(); await flush()
 
-    // 应有 delegate 边：s_child ingress → s_parent ingress
-    const delegateEdge = trace.edges.value.find(e => e.from === 'ingress:s_child' && e.to === 'ingress:s_parent' && e.kind === 'delegate')
+    // 应有 delegate 边：s_parent ingress → s_child ingress（父→子，体现派生流转时序）
+    const delegateEdge = trace.edges.value.find(e => e.from === 'ingress:s_parent' && e.to === 'ingress:s_child' && e.kind === 'delegate')
     expect(delegateEdge).toBeTruthy()
     scope.stop()
   })

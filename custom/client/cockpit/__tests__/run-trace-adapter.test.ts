@@ -284,8 +284,8 @@ describe('buildCrossSessionEdges', () => {
       ['s_child', { taskId: 't_child', role: 'worker' as const }],
     ])
     const edges = buildCrossSessionEdges(state, taskRelations, sessionTaskMap)
-    // delegate 边：子任务会话 ingress → 父任务会话 ingress
-    expect(edges.some(e => e.from === 'ingress:s_child' && e.to === 'ingress:s_parent' && e.kind === 'delegate')).toBe(true)
+    // delegate 边：父任务会话 ingress → 子任务会话 ingress（父→子，体现派生流转时序）
+    expect(edges.some(e => e.from === 'ingress:s_parent' && e.to === 'ingress:s_child' && e.kind === 'delegate')).toBe(true)
     expect(edges.every(e => e.evidence === 'L1')).toBe(true)
   })
 

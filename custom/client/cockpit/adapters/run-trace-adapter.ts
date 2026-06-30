@@ -507,15 +507,16 @@ export function buildCrossSessionEdges(
     taskToSessions.set(info.taskId, arr)
   }
 
-  // delegate 边：子任务会话 ingress → 父任务会话 ingress（匹配E，基于匹配A）
+  // delegate 边：父任务会话 ingress → 子任务会话 ingress（匹配E，基于匹配A）
+  // 方向 父→子：与 spawn/call 一致，体现“父任务派生子任务”的流转时序（父先、子后）。
   for (const rel of taskRelations) {
     const childSessions = taskToSessions.get(rel.child) ?? []
     const parentSessions = taskToSessions.get(rel.parent) ?? []
     for (const csid of childSessions) {
       for (const psid of parentSessions) {
         if (csid === psid) continue
-        const fromId = `ingress:${csid}`
-        const toId = `ingress:${psid}`
+        const fromId = `ingress:${psid}`
+        const toId = `ingress:${csid}`
         if (!ingressNodes.has(fromId) || !ingressNodes.has(toId)) continue
         const edgeId = `edge:${fromId}->${toId}:delegate`
         if (existingEdgeIds.has(edgeId)) continue
