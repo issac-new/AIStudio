@@ -123,11 +123,6 @@ onMounted(async () => {
 function onShowDetail(n: TraceNode) { detailNode.value = n }
 function onTopFocusTask(taskId: string) { selectTask(taskId) }
 function onTopSelectSession(sid: string) { emit('select-session', sid) }
-function fmtTime(ts: number): string {
-  if (!ts) return '—'
-  const d = new Date(ts)
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
 </script>
 
 <template>
@@ -142,6 +137,15 @@ function fmtTime(ts: number): string {
         <input type="text" v-model="searchQuery" placeholder="检索任务 ID / 标题 / board / 状态…" />
         <span v-if="hitClusters" class="run-trace-overview__search-hit">命中 {{ hitClusters.size }} 任务</span>
       </div>
+      <!-- 日期时间筛选（位于“已完成”按钮左侧）：按天步进 + datetime 输入 -->
+      <div class="run-trace-overview__date-bar">
+        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(-1)" title="时间范围在当前基础上往前增加一天">‹</button>
+        <input type="datetime-local" class="run-trace-overview__date-input" v-model="startInput" @change="applyDateInput" title="起始时间" />
+        <span class="run-trace-overview__date-sep">→</span>
+        <input type="datetime-local" class="run-trace-overview__date-input" v-model="endInput" @change="applyDateInput" title="结束时间" />
+        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(1)" title="时间范围在当前基础上往后增加一天">›</button>
+        <button type="button" class="run-trace-overview__apply-btn" @click="applyDateInput" title="应用时间筛选">应用</button>
+      </div>
       <!-- 状态过滤标签 -->
       <div class="run-trace-overview__filters">
         <button type="button" class="run-trace-overview__filter" :class="{ 'is-on': includeDone }" @click="toggleStatusFilter('done')" title="勾选后重新加载已完成任务">已完成</button>
@@ -153,21 +157,6 @@ function fmtTime(ts: number): string {
       </div>
       <button type="button" class="run-trace-overview__close" @click="emit('close')" title="关闭">×</button>
     </header>
-
-    <!-- 日期时间筛选条：按天步进 + datetime 输入（默认今天 00:00 ~ 当前） -->
-    <div class="run-trace-overview__timebar">
-      <div class="run-trace-overview__date-step">
-        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(-1)" title="时间范围往前增加一天">‹</button>
-        <span class="run-trace-overview__date-label">{{ fmtTime(windowStart) }} → {{ fmtTime(windowEnd) }}</span>
-        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(1)" title="时间范围往后增加一天">›</button>
-      </div>
-      <div class="run-trace-overview__date-inputs">
-        <input type="datetime-local" class="run-trace-overview__date-input" v-model="startInput" @change="applyDateInput" title="起始时间" />
-        <span class="run-trace-overview__date-sep">→</span>
-        <input type="datetime-local" class="run-trace-overview__date-input" v-model="endInput" @change="applyDateInput" title="结束时间" />
-        <button type="button" class="run-trace-overview__apply-btn" @click="applyDateInput" title="应用时间筛选">应用</button>
-      </div>
-    </div>
 
     <!-- 上层拓扑图（选中任务时仅显示该任务全树） -->
     <div class="run-trace-overview__topo">
@@ -250,19 +239,16 @@ function fmtTime(ts: number): string {
   &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 }
 
-/* 日期时间筛选条 */
-.run-trace-overview__timebar { display: flex; align-items: center; gap: 16px; padding: 6px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); flex-shrink: 0; flex-wrap: wrap; }
-.run-trace-overview__date-step { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.run-trace-overview__step-btn { width: 28px; height: 28px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+/* 日期时间筛选（嵌入 header，位于“已完成”按钮左侧） */
+.run-trace-overview__date-bar { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.run-trace-overview__step-btn { width: 26px; height: 26px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
   &:hover { background: var(--bg-card-hover); color: var(--text-primary); border-color: var(--text-muted); }
 }
-.run-trace-overview__date-label { font-size: 12px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.run-trace-overview__date-inputs { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.run-trace-overview__date-input { height: 28px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 11px; font-family: ui-monospace, monospace; outline: none;
+.run-trace-overview__date-input { height: 26px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 11px; font-family: ui-monospace, monospace; outline: none; width: 150px; flex-shrink: 0;
   &:focus { border-color: var(--accent-primary); }
 }
-.run-trace-overview__date-sep { font-size: 12px; color: var(--text-muted); }
-.run-trace-overview__apply-btn { height: 28px; padding: 0 12px; border: 1px solid var(--accent-primary); border-radius: 4px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 600;
+.run-trace-overview__date-sep { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.run-trace-overview__apply-btn { height: 26px; padding: 0 10px; border: 1px solid var(--accent-primary); border-radius: 4px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 600; flex-shrink: 0;
   &:hover { filter: brightness(1.08); }
 }
 
