@@ -543,3 +543,104 @@ export function buildCrossSessionEdges(
 
   return edges
 }
+
+/**
+ * 将历史消息回放为 trace（纯函数版本，供 useRunTrace.processMessages 与
+ * useRunTraceOverview 复用，避免逻辑重复）。
+ *
+ * 合成事件序列与原 processMessages 一致：
+ *   首条 user 消息 → run.started（建立 ingress+run 节点）
+ *   tool 消息     → tool.started + tool.completed
+ *   reasoning     → reasoning.delta
+ *   assistant 文本 → message.delta
+ *   末尾          → run.completed（闭合 workflow 节点）
+ *
+ * @param state 初始 TraceState（通常由 createTraceState 创建，含 run.started）
+ * @param messages 历史消息（timestamp 为秒级）
+ * @param sid 会话 ID
+ * @returns 更新后的 TraceState
+ */
+export function replayMessagesIntoState(state: TraceState, messages: any[], sid: string): TraceState {
+  let s = state
+  let processed = 0
+  const total = messages.length
+
+  for (const msg of messages) {
+    const ts = msg.timestamp * 1000 // messages use seconds
+    const role = msg.role || msg.display_role
+
+    // Synthesize run.started for the first user message
+    if (role === 'user' && processed === 0) {
+      const startEvent: RunEvent = {
+        event: 'run.started',
+        session_id: sid,
+        run_id: `replay-${sid}`,
+        timestamp: ts,
+      } as any
+      s = applyRunEvent(s, startEvent)
+    }
+
+    // Tool messages → tool.completed events
+    if (role === 'tool' || msg.tool_name) {
+      const toolEvent: RunEvent = {
+        event: 'tool.completed',
+        session_id: sid,
+        run_id: `replay-${sid}`,
+        tool: msg.tool_name || 'tool',
+        name: msg.tool_name,
+        output: typeof msg.content === 'string' ? msg.content.slice(0, 200) : '',
+        timestamp: ts,
+      } as any
+      // First emit tool.started for node creation
+      const startEvent: RunEvent = {
+        event: 'tool.started',
+        session_id: sid,
+        run_id: `replay-${sid}`,
+        tool: msg.tool_name || 'tool',
+        name: msg.tool_name,
+        preview: '',
+        timestamp: ts - 1,
+      } as any
+      s = applyRunEvent(s, startEvent)
+      s = applyRunEvent(s, toolEvent)
+    }
+
+    // Reasoning content → reasoning.delta events
+    const reasoning = msg.reasoning || msg.reasoning_content
+    if (reasoning && typeof reasoning === 'string' && reasoning.trim()) {
+      const reasoningEvent: RunEvent = {
+        event: 'reasoning.delta',
+        session_id: sid,
+        run_id: `replay-${sid}`,
+        text: reasoning,
+        timestamp: ts,
+      } as any
+      s = applyRunEvent(s, reasoningEvent)
+    }
+
+    // Assistant text → message.delta
+    if (role === 'assistant' && msg.content) {
+      const msgEvent: RunEvent = {
+        event: 'message.delta',
+        session_id: sid,
+        run_id: `replay-${sid}`,
+        delta: msg.content,
+        timestamp: ts,
+      } as any
+      s = applyRunEvent(s, msgEvent)
+    }
+
+    processed++
+  }
+
+  // Emit run.completed to close the workflow node
+  const endEvent: RunEvent = {
+    event: 'run.completed',
+    session_id: sid,
+    run_id: `replay-${sid}`,
+    timestamp: messages.length > 0 ? messages[messages.length - 1].timestamp * 1000 : Date.now(),
+  } as any
+  s = applyRunEvent(s, endEvent)
+
+  return s
+}
