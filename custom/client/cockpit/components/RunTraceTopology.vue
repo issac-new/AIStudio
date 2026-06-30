@@ -218,7 +218,12 @@ function onToggleCollapse(nodeId: string, e: Event) {
 <style scoped lang="scss">
 .run-trace-topology { position: relative; width: 100%; height: 100%; min-height: 300px; background: radial-gradient(circle at 1px 1px, var(--border-light) 1px, transparent 0) 0 0 / 18px 18px; }
 :deep(.vue-flow) { width: 100%; height: 100%; background: transparent; }
+/* 强制边层在节点层之下，避免连线遮挡节点卡片 */
+:deep(.vue-flow__edges) { z-index: 0 !important; }
+:deep(.vue-flow__nodes) { z-index: 1 !important; }
 :deep(.vue-flow__node) { cursor: pointer; }
+/* 节点卡片不透明背景，确保即使边穿过也被卡片遮盖 */
+.topo-card { background: var(--bg-card) !important; }
 
 .topo-card { position: relative; display: flex; align-items: center; gap: 8px; width: 190px; min-height: 56px; padding: 7px 28px 7px 10px; border: 1px solid var(--cluster-color, var(--border-color)); border-radius: 7px; background: var(--bg-card); color: var(--text-primary); transition: box-shadow 0.15s; }
 .topo-card.is-hit { box-shadow: 0 0 0 2px var(--accent-primary); }
