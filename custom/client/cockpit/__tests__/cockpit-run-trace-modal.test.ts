@@ -117,6 +117,37 @@ vi.mock('@/api/hermes/sessions', async () => {
   return { ...actual, searchSessions: vi.fn(async () => []) }
 })
 
+// vue-flow 在 jsdom 下渲染不稳定，mock 为简单占位组件。
+vi.mock('@vue-flow/core', () => ({
+  VueFlow: { name: 'VueFlow', props: ['nodes', 'edges'], template: '<div class="vue-flow-stub" data-run-trace-graph><div v-for="n in nodes" :key="n.id" :data-node-id="n.id" class="trace-node-card is-l1 is-active" @click="$emit(\'node-click\', { node: n })">{{ n.data?.label }}</div></div>', emits: ['node-click'] },
+  useVueFlow: () => ({ onPaneReady: () => {}, fitView: () => {}, setNodes: () => {}, setEdges: () => {} }),
+  MarkerType: { ArrowClosed: 'arrowclosed', Arrow: 'arrow' },
+}))
+
+// d3-force 在 jsdom 下需 requestAnimationFrame，mock 为简单坐标计算避免异步。
+// 所有 force 工厂返回带链式方法的对象（每个方法返回自身）。
+vi.mock('d3-force', () => {
+  const makeForce = () => {
+    const f: any = (links?: any) => f
+    f.id = () => f
+    f.distance = () => f
+    f.strength = () => f
+    f.radius = () => f
+    f.x = () => f
+    f.y = () => f
+    return f
+  }
+  const sim: any = { force: () => sim, stop: () => sim, tick: () => sim }
+  return {
+    forceSimulation: () => sim,
+    forceLink: makeForce(),
+    forceManyBody: makeForce(),
+    forceCollide: makeForce(),
+    forceX: makeForce(),
+    forceY: makeForce(),
+  }
+})
+
 vi.mock('../composables/useRunTrace', () => ({
   extractKanbanTaskId: (title: string) => {
     const m = title?.match(/work kanban task (t_\w+)/i)
@@ -200,7 +231,7 @@ describe('CockpitRunTraceModal', () => {
     const store = useCockpitStore()
     store.openRunTrace({ sessionId: 's1', runId: 'r1' })
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
-    expect(w.find('.run-trace-node.is-l1').exists()).toBe(true)
+    expect(w.find('.trace-node-card.is-l1').exists()).toBe(true)
     await w.find('[data-node-id="skill:s1:auth:1"]').trigger('click')
     expect(w.text()).toContain('推断')
   })
