@@ -86,6 +86,7 @@ const flowNodes = computed<Node[]>(() => {
         seq: p.seq,
       },
       type: 'topo-node',
+      zIndex: 10,
       class: `topo-node-${n.kind} ${isHit ? 'is-hit' : ''} ${isSelected ? 'is-selected' : ''}`,
     }
   })
@@ -108,11 +109,14 @@ const flowEdges = computed<Edge[]>(() => {
       id: e.id,
       source: e.from,
       target: e.to,
-      type: 'smoothstep',
+      type: 'bezier',
       animated: isSpawn,
       label,
       labelStyle: { fill: color, fontSize: '9px', fontWeight: 600 },
-      labelBgStyle: { fill: 'var(--bg-card)', fillOpacity: 0.9 },
+      labelBgStyle: { fill: 'var(--bg-card)', fillOpacity: 0.92 },
+      labelBgPadding: [6, 2] as [number, number],
+      labelBgBorderRadius: 4,
+      zIndex: 1,
       markerEnd: MarkerType.ArrowClosed,
       style: {
         stroke: color,
