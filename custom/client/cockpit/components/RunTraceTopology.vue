@@ -109,7 +109,7 @@ const flowEdges = computed<Edge[]>(() => {
       id: e.id,
       source: e.from,
       target: e.to,
-      type: 'bezier',
+      type: 'smoothstep',
       animated: isSpawn,
       label,
       labelStyle: { fill: color, fontSize: '9px', fontWeight: 600 },
