@@ -4,6 +4,7 @@ import { fetchSessionMessagesPage, fetchHermesSessions, type SessionSummary } fr
 import * as kanbanApi from '@/api/hermes/kanban'
 import {
   applyRunEvent,
+  buildCrossSessionEdges,
   createTraceState,
   fetchLayer2Trace,
   mergeLayer2Data,
@@ -11,6 +12,8 @@ import {
 } from '../adapters/run-trace-adapter'
 
 /** 关联会话信息（供 UI 展示） */
+export type RelatedSessionRole = 'primary' | 'worker' | 'creator'
+
 export interface RelatedSessionInfo {
   sessionId: string
   taskId: string | null
@@ -18,9 +21,16 @@ export interface RelatedSessionInfo {
   profile?: string
   isPrimary: boolean
   ended: boolean
+  /** 会话在聚合视图中的角色：primary 主会话 / worker 任务执行会话 / creator 任务创建者会话 */
+  role: RelatedSessionRole
+  /** 空壳会话（仅含 work kanban task 提示，无实际 tool/reasoning 事件） */
+  isEmpty: boolean
 }
 
-/** 从会话标题提取 kanban 任务 ID（支持多种格式） */
+/**
+ * 从会话标题提取 kanban 任务 ID（支持多种格式，含宽泛 fallback）。
+ * 仅用于 UI 显示等容忍误匹配的场景；聚合匹配请用 matchSessionTaskId。
+ */
 export function extractKanbanTaskId(title: string): string | null {
   // 格式 1: "work kanban task t_xxx" (原有格式)
   let m = title.match(/work kanban task (t_\w+)/i)
@@ -28,10 +38,21 @@ export function extractKanbanTaskId(title: string): string | null {
   // 格式 2: "task t_xxx" 或 "Task: t_xxx"
   m = title.match(/(?:^|\s)task[:\s]+(t_\w+)/i)
   if (m) return m[1]
-  // 格式 3: 直接包含 "t_xxx" (任务 ID 在标题任意位置)
+  // 格式 3: 直接包含 "t_xxx" (任务 ID 在标题任意位置) —— 低置信度，仅 fallback
   m = title.match(/(t_[a-zA-Z0-9_]+)/i)
   if (m) return m[1]
   return null
+}
+
+/**
+ * 精确匹配 worker 会话标题 → 任务 ID。
+ * 仅匹配标题 === "work kanban task <task_id>"（trim + 大小写不敏感）。
+ * 置信度 100%：_default_spawn 用 f"work kanban task {task.id}" 固定生成标题。
+ */
+export function matchSessionTaskId(title: string): string | null {
+  if (!title) return null
+  const m = title.trim().match(/^work kanban task (t_\w+)$/i)
+  return m ? m[1] : null
 }
 
 type SocketLike = ReturnType<typeof connectChatRun>
@@ -87,6 +108,11 @@ export function useRunTrace(sessionId: Ref<string | null>) {
   const aggregateMode = ref(true)
   /** 外部注入的会话列表（由 modal 提供，用于关联会话发现） */
   let allSessionsRef: Ref<Array<SessionSummary & { profile?: string }>> | null = null
+
+  // 任务树关系（匹配A，100%确定）与 会话↔任务映射（匹配B+C，100%确定）。
+  // loadRelatedSessions 填充，loadRelatedTraces 据此构建跨会话 delegate/spawn 边（匹配E）。
+  let taskRelations: Array<{ parent: string; child: string }> = []
+  let sessionTaskMap: Map<string, { taskId: string; role: RelatedSessionRole }> = new Map()
 
   let cleanup: (() => void) | null = null
   let replayAbort: (() => void) | null = null
@@ -242,12 +268,27 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     }
 
     // 方法 2 & 3: 通过 kanban 任务树发现关联会话
-    const primaryTaskId = extractKanbanTaskId(primarySession.title || '')
+    // 主会话标题 → taskId：优先用精确匹配 matchSessionTaskId（100%确定），
+    // fallback 用 extractKanbanTaskId（含低置信度格式3）。
+    const primaryTaskId = matchSessionTaskId(primarySession.title || '')
+      ?? extractKanbanTaskId(primarySession.title || '')
     const taskIds = new Set<string>(primaryTaskId ? [primaryTaskId] : [])
+    // 重置任务树关系与 会话↔任务映射（供 loadRelatedTraces 构建跨会话边）
+    taskRelations = []
+    sessionTaskMap = new Map()
 
     if (primaryTaskId) {
+      // 解析 board：通过 cockpit store 的 boardSlugOf 查询（100%确定）。
+      // 任务可能在 kanban001 等非默认 board，getTask 必须传 board 否则 500。
+      let boardResolver: ((id: string) => string | undefined) | null = null
       try {
-        // BFS 遍历任务树（深度 2 层足够覆盖父子）
+        const { useCockpitStore } = await import('../store/cockpit')
+        const cockpitStore = (useCockpitStore as any)() as { boardSlugOf?: (id: string) => string | undefined }
+        if (typeof cockpitStore.boardSlugOf === 'function') boardResolver = cockpitStore.boardSlugOf.bind(cockpitStore)
+      } catch { /* cockpit store 未初始化 */ }
+
+      try {
+        // BFS 遍历任务树：上溯 parents + 下探 children，visited 防环，深度限制 20。
         const queue = [primaryTaskId]
         const visited = new Set<string>()
         while (queue.length > 0) {
@@ -256,10 +297,25 @@ export function useRunTrace(sessionId: Ref<string | null>) {
           visited.add(tid)
           if (visited.size > 20) break  // 防止无限遍历
           try {
-            const detail = await kanbanApi.getTask(tid)
-            console.debug(`[loadRelatedSessions] kanban task ${tid}: parents=${detail.parents?.length || 0}, children=${detail.children?.length || 0}`)
-            if (detail.parents) for (const p of detail.parents) { taskIds.add(p); queue.push(p) }
-            if (detail.children) for (const c of detail.children) { taskIds.add(c); queue.push(c) }
+            // 传 board 参数：优先用 boardResolver 解析，否则 undefined（fallback 默认 board）
+            const board = boardResolver ? boardResolver(tid) : undefined
+            const detail = await kanbanApi.getTask(tid, board ? { board } : undefined)
+            console.debug(`[loadRelatedSessions] kanban task ${tid} (board=${board || 'default'}): parents=${detail.parents?.length || 0}, children=${detail.children?.length || 0}`)
+            // 匹配A（100%确定）：记录任务树父子关系
+            if (detail.parents) for (const p of detail.parents) {
+              taskIds.add(p); queue.push(p)
+              taskRelations.push({ parent: p, child: tid })
+            }
+            if (detail.children) for (const c of detail.children) {
+              taskIds.add(c); queue.push(c)
+              taskRelations.push({ parent: tid, child: c })
+            }
+            // 匹配B（100%确定）：task.session_id 是创建该任务的 agent 会话
+            const creatorSid = detail.task?.session_id
+            if (creatorSid && creatorSid !== primarySid) {
+              relatedSessionIds.value.add(creatorSid)
+              sessionTaskMap.set(creatorSid, { taskId: tid, role: 'creator' })
+            }
           } catch (e) { console.warn(`[loadRelatedSessions] kanban task ${tid} fetch failed:`, e) }
         }
       } catch (e) { console.warn('[loadRelatedSessions] kanban API unavailable:', e) }
@@ -271,45 +327,55 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     const matchedSessions: RelatedSessionInfo[] = []
     const addedSessionIds = new Set<string>([primarySid])
 
-    for (const s of allSessions) {
-      if (addedSessionIds.has(s.id)) continue
-
-      const title = s.title || ''
-      const sTaskId = extractKanbanTaskId(title)
-      // 匹配方式 1：标题含任务 ID 格式且 taskId 在任务树中
-      const matchedByKanban = sTaskId && taskIds.has(sTaskId)
-      // 匹配方式 2：通过 parent_session_id 关联
-      const isChild = (s as any).parent_session_id === primarySid
-      const isParent = primaryParentId && s.id === primaryParentId
-      const isSibling = primaryParentId && (s as any).parent_session_id === primaryParentId
-
-      if (matchedByKanban || isChild || isParent || isSibling) {
-        relatedSessionIds.value.add(s.id)
-        addedSessionIds.add(s.id)
-        matchedSessions.push({
-          sessionId: s.id,
-          taskId: sTaskId,
-          title: title,
-          profile: (s as any).profile,
-          isPrimary: false,
-          ended: !!s.ended_at,
-        })
-      }
-    }
-
-    // 主会话信息
-    matchedSessions.unshift({
+    // 主会话信息（先加入）
+    matchedSessions.push({
       sessionId: primarySid,
       taskId: primaryTaskId,
       title: primarySession.title || '',
       profile: (primarySession as any).profile,
       isPrimary: true,
       ended: !!primarySession.ended_at,
+      role: 'primary',
+      isEmpty: (primarySession.message_count ?? 0) <= 1,
     })
+    if (primaryTaskId) sessionTaskMap.set(primarySid, { taskId: primaryTaskId, role: primarySession.title && matchSessionTaskId(primarySession.title) ? 'worker' : 'primary' })
+
+    for (const s of allSessions) {
+      if (addedSessionIds.has(s.id)) continue
+
+      const title = s.title || ''
+      // 匹配C（100%确定）：精确匹配 "work kanban task <task_id>"
+      const sTaskId = matchSessionTaskId(title)
+      const matchedByKanban = sTaskId && taskIds.has(sTaskId)
+      // 匹配B（100%确定）：会话是某任务的创建者会话（sessionTaskMap 已记录）
+      const isCreator = sessionTaskMap.has(s.id) && sessionTaskMap.get(s.id)!.role === 'creator'
+      // 旧 fallback：parent_session_id（架构性为空，保留兼容）
+      const isChild = (s as any).parent_session_id === primarySid
+      const isParent = primaryParentId && s.id === primaryParentId
+      const isSibling = primaryParentId && (s as any).parent_session_id === primaryParentId
+
+      if (matchedByKanban || isCreator || isChild || isParent || isSibling) {
+        relatedSessionIds.value.add(s.id)
+        addedSessionIds.add(s.id)
+        const role: RelatedSessionRole = isCreator ? 'creator' : 'worker'
+        const isEmpty = (s.message_count ?? 0) <= 1
+        matchedSessions.push({
+          sessionId: s.id,
+          taskId: sTaskId ?? (isCreator ? sessionTaskMap.get(s.id)?.taskId ?? null : null),
+          title: title,
+          profile: (s as any).profile,
+          isPrimary: false,
+          ended: !!s.ended_at,
+          role,
+          isEmpty,
+        })
+        if (sTaskId) sessionTaskMap.set(s.id, { taskId: sTaskId, role })
+      }
+    }
 
     relatedSessions.value = matchedSessions
 
-    console.debug(`[loadRelatedSessions] 发现 ${matchedSessions.length - 1} 个关联会话: by parent_session_id=${childSessionsByParent.length + siblingSessions.length}, by kanban=${taskIds.size > 1 ? 'yes' : 'no'}`)
+    console.debug(`[loadRelatedSessions] 发现 ${matchedSessions.length - 1} 个关联会话: taskTree=${taskIds.size}任务, relations=${taskRelations.length}条, creators=${[...sessionTaskMap.values()].filter(v => v.role === 'creator').length}个`)
 
     return matchedSessions.filter(s => !s.isPrimary).map(s => s.sessionId)
   }
@@ -325,9 +391,10 @@ export function useRunTrace(sessionId: Ref<string | null>) {
 
     for (const rsid of relatedSids) {
       try {
-        // 从 relatedSessions 获取该会话的 profile
+        // 从 relatedSessions 获取该会话的 profile 与空壳标记
         const sessionInfo = relatedSessions.value.find(s => s.sessionId === rsid)
         const profile = sessionInfo?.profile
+        const isEmpty = sessionInfo?.isEmpty ?? false
         const page = await fetchSessionMessagesPage(rsid, 0, 500, profile)
         if (!page || !page.messages || page.messages.length === 0) continue
 
@@ -340,17 +407,41 @@ export function useRunTrace(sessionId: Ref<string | null>) {
         } as any
         sync(applyRunEvent(state.value!, startedEvent))
 
-        // 复用 processMessages 重建该关联会话的 trace（与主会话重建逻辑一致）
-        await processMessages(page.messages, rsid)
-
-        // 尝试获取 L2 数据并合并到主 state
-        const l2 = await fetchLayer2Trace(rsid, profile)
-        if (l2 && state.value) {
-          sync(mergeLayer2Data(state.value, l2))
+        // 空壳会话（仅含 work kanban task 提示，无 tool/reasoning）：跳过 processMessages，
+        // 仅保留 ingress+run 节点（保持图完整性，便于构建跨会话边）。run 节点标 cancelled 视觉降级。
+        if (!isEmpty) {
+          // 复用 processMessages 重建该关联会话的 trace（与主会话重建逻辑一致）
+          await processMessages(page.messages, rsid)
+          // 尝试获取 L2 数据并合并到主 state
+          const l2 = await fetchLayer2Trace(rsid, profile)
+          if (l2 && state.value) {
+            sync(mergeLayer2Data(state.value, l2))
+          }
+        } else if (state.value) {
+          // 空壳会话：将 run 节点状态降级为 cancelled（复用现有视觉淡化）
+          const runNodeId = `run:${rsid}:replay-${rsid}`
+          const updatedNodes = state.value.nodes.map(n =>
+            n.id === runNodeId ? { ...n, status: 'cancelled' as const } : n,
+          )
+          sync({ ...state.value, nodes: updatedNodes })
         }
       } catch (e) {
         console.warn(`[loadRelatedTraces] 关联会话 ${rsid} 加载失败:`, e)
       }
+    }
+
+    // 匹配E（高置信度）：基于任务树父子关系构建跨会话 delegate/spawn 边。
+    // 在所有会话 trace 聚合完成后构建，确保两端节点已存在。
+    if (state.value && (taskRelations.length > 0 || sessionTaskMap.size > 0)) {
+      const crossEdges = buildCrossSessionEdges(state.value, taskRelations, sessionTaskMap)
+      if (crossEdges.length > 0 && state.value) {
+        const existingIds = new Set(state.value.edges.map(e => e.id))
+        const newEdges = crossEdges.filter(e => !existingIds.has(e.id))
+        if (newEdges.length > 0) {
+          sync({ ...state.value, edges: [...state.value.edges, ...newEdges] })
+        }
+      }
+      console.debug(`[loadRelatedTraces] 跨会话边构建: ${crossEdges.length} 条 (delegate+spawn)`)
     }
   }
 

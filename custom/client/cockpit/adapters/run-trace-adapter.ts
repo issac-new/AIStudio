@@ -454,22 +454,9 @@ export function mergeTraceStates(main: TraceState, others: TraceState[]): TraceS
         edgeIds.add(e.id)
       }
     }
-    // 新增跨会话 delegate 边：other.ingress → main.ingress
-    const mainIngressId = `ingress:${main.sessionId}`
-    const otherIngressId = `ingress:${other.sessionId}`
-    if (otherIngressId !== mainIngressId) {
-      const delegateEdge: TraceEdge = {
-        id: `edge:${otherIngressId}->${mainIngressId}`,
-        from: otherIngressId,
-        to: mainIngressId,
-        kind: 'delegate',
-        evidence: 'L1',
-      }
-      if (!edgeIds.has(delegateEdge.id)) {
-        mergedEdges.push(delegateEdge)
-        edgeIds.add(delegateEdge.id)
-      }
-    }
+    // 跨会话 delegate/spawn 边不再在此处构建——mergeTraceStates 无法区分任务树父子关系，
+    // 旧逻辑"所有关联会话 ingress → 主会话 ingress"不反映真实协作关系。
+    // 跨会话边改由 buildCrossSessionEdges 基于任务树关系（匹配E）显式构建。
   }
 
   return {
@@ -477,4 +464,78 @@ export function mergeTraceStates(main: TraceState, others: TraceState[]): TraceS
     nodes: mergedNodes,
     edges: mergedEdges,
   }
+}
+
+/**
+ * 基于任务树父子关系（匹配A，100%确定）与 会话↔任务映射（匹配B+C，100%确定）
+ * 构建跨会话协作边（匹配E，高置信度推导）。
+ *
+ * - delegate 边：子任务 T_c 的 worker 会话 ingress → 父任务 T_p 的 worker/creator 会话 ingress。
+ *   表达"子任务会话由父任务会话协作派生"。方向：子→父（子任务委托自父任务链）。
+ * - spawn 边：任务 T 的创建者会话（task.session_id）run 节点 → T 的 worker 会话 ingress。
+ *   表达"创建者会话通过 kanban_create 派生 worker 会话"。
+ *
+ * 仅当两端会话都已聚合（节点存在）时才构建边，避免悬挂边。
+ */
+export function buildCrossSessionEdges(
+  state: TraceState,
+  taskRelations: Array<{ parent: string; child: string }>,
+  sessionTaskMap: Map<string, { taskId: string; role: 'primary' | 'worker' | 'creator' }>,
+): TraceEdge[] {
+  const edges: TraceEdge[] = []
+  const existingEdgeIds = new Set(state.edges.map(e => e.id))
+  // 当前 state 中存在的 ingress/run 节点集合，用于判断会话是否已聚合
+  const ingressNodes = new Set(state.nodes.filter(n => n.kind === 'ingress').map(n => n.id))
+  const runNodesBySession = new Map<string, string>()
+  for (const n of state.nodes) {
+    if (n.kind === 'workflow' && n.ref?.sessionId) {
+      runNodesBySession.set(n.ref.sessionId, n.id)
+    }
+  }
+
+  // 任务 → 会话集合（worker + creator + primary）
+  const taskToSessions = new Map<string, string[]>()
+  for (const [sid, info] of sessionTaskMap) {
+    const arr = taskToSessions.get(info.taskId) ?? []
+    arr.push(sid)
+    taskToSessions.set(info.taskId, arr)
+  }
+
+  // delegate 边：子任务会话 ingress → 父任务会话 ingress（匹配E，基于匹配A）
+  for (const rel of taskRelations) {
+    const childSessions = taskToSessions.get(rel.child) ?? []
+    const parentSessions = taskToSessions.get(rel.parent) ?? []
+    for (const csid of childSessions) {
+      for (const psid of parentSessions) {
+        if (csid === psid) continue
+        const fromId = `ingress:${csid}`
+        const toId = `ingress:${psid}`
+        if (!ingressNodes.has(fromId) || !ingressNodes.has(toId)) continue
+        const edgeId = `edge:${fromId}->${toId}:delegate`
+        if (existingEdgeIds.has(edgeId)) continue
+        edges.push({ id: edgeId, from: fromId, to: toId, kind: 'delegate', evidence: 'L1' })
+        existingEdgeIds.add(edgeId)
+      }
+    }
+  }
+
+  // spawn 边：创建者会话 run 节点 → worker 会话 ingress（匹配E，基于匹配B）
+  for (const [sid, info] of sessionTaskMap) {
+    if (info.role !== 'creator') continue
+    const creatorRunId = runNodesBySession.get(sid)
+    if (!creatorRunId) continue
+    const workerSessions = (taskToSessions.get(info.taskId) ?? []).filter(
+      wsid => wsid !== sid && sessionTaskMap.get(wsid)?.role === 'worker',
+    )
+    for (const wsid of workerSessions) {
+      const toId = `ingress:${wsid}`
+      if (!ingressNodes.has(toId)) continue
+      const edgeId = `edge:${creatorRunId}->${toId}:spawn`
+      if (existingEdgeIds.has(edgeId)) continue
+      edges.push({ id: edgeId, from: creatorRunId, to: toId, kind: 'spawn', evidence: 'L1' })
+      existingEdgeIds.add(edgeId)
+    }
+  }
+
+  return edges
 }
