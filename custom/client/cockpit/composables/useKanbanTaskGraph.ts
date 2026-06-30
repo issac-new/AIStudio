@@ -270,7 +270,8 @@ export function useKanbanTaskGraph() {
       }
     }
 
-    // 补充 skill 节点：若该会话有 tool 节点但无 skill 节点，聚合为一个 skill 节点连到 agent/run。
+    // 补充 skill 节点：若该会话有 tool 节点但无 skill 节点，聚合为一个 skill 节点，
+    // 并把该会话所有 tool 的入边重定向到该 skill（折叠 skill 即可隐藏其下 tool）。
     const hasSkill = s.nodes.some(n => n.kind === 'skill' && n.ref?.sessionId === sid)
     const toolNodes = s.nodes.filter(n => n.kind === 'tool' && n.ref?.sessionId === sid)
     if (!hasSkill && toolNodes.length > 0) {
@@ -290,10 +291,20 @@ export function useKanbanTaskGraph() {
         ref: { sessionId: sid, runId: `replay-${sid}` },
         profile,
       }
+      // 重定向 tool 入边：移除原父→tool 边，改为 skill→tool
+      const toolIds = new Set(toolNodes.map(t => t.id))
+      const keptEdges = s.edges.filter(e => !(toolIds.has(e.to) && e.from !== skillId))
+      const newEdges = toolNodes.map(t => ({
+        id: `edge:${skillId}->${t.id}:call`,
+        from: skillId,
+        to: t.id,
+        kind: 'call' as const,
+        evidence: 'L1' as const,
+      }))
       s = {
         ...s,
         nodes: [...s.nodes, skillNode],
-        edges: [...s.edges, { id: `edge:${parentId}->${skillId}:call`, from: parentId, to: skillId, kind: 'call', evidence: 'L1' }],
+        edges: [...keptEdges, { id: `edge:${parentId}->${skillId}:call`, from: parentId, to: skillId, kind: 'call', evidence: 'L1' }, ...newEdges],
       }
     }
 
