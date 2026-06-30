@@ -14,11 +14,10 @@ vi.mock('@/stores/hermes/profiles', () => ({
 }))
 
 // ── mock sessions API (fetchHermesSessions 从 state.db 获取，跨 profile) ──
-// 时间戳统一用今天（秒级），匹配 overview 默认"仅加载今天"的时间窗。
+// 时间戳统一用当前时刻（秒级），匹配 overview 默认"仅加载今天"的时间窗（今天00:00~现在）。
+// 用 Date.now() 而非固定 01:00，避免跨午夜运行时 hoisted 基准与组件窗口错位。
 const { todaySec, mockFetchHermesSessions, mockFetchSessionMessagesPage } = vi.hoisted(() => {
-  const _now = Date.now()
-  const _startOfDay = new Date(_now); _startOfDay.setHours(0, 0, 0, 0)
-  const _todaySec = Math.floor(_startOfDay.getTime() / 1000) + 3600 // 今天 01:00（秒）
+  const _todaySec = Math.floor(Date.now() / 1000) // 当前时刻（秒）
   return {
     todaySec: _todaySec,
     mockFetchHermesSessions: vi.fn(async (_source?: string, _limit?: number, profile?: string) => {
