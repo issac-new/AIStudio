@@ -82,6 +82,7 @@ const flowNodes = computed<Node[]>(() => {
         isSelected,
         isCollapsed,
         canCollapse,
+        seq: p.seq,
       },
       type: 'topo-node',
       class: `topo-node-${n.kind} ${isHit ? 'is-hit' : ''} ${isSelected ? 'is-selected' : ''}`,
@@ -175,6 +176,7 @@ function onToggleCollapse(nodeId: string, e: Event) {
           :class="[`is-${props.data.kind}`, props.data.isHit ? 'is-hit' : '', props.data.isSelected ? 'is-selected' : '', props.data.status === 'running' ? 'is-running' : '', props.data.isCollapsed ? 'is-collapsed' : '']"
           :style="{ '--cluster-color': props.data.clusterColor }"
         >
+          <span class="topo-card__seq" :title="`时序 #${props.data.seq}`">{{ props.data.seq }}</span>
           <span class="topo-card__dot"></span>
           <span class="topo-card__text">
             <b>{{ props.data.label }}</b>
@@ -205,6 +207,7 @@ function onToggleCollapse(nodeId: string, e: Event) {
 .topo-card.is-selected { box-shadow: 0 0 0 3px var(--accent-primary); background: rgba(var(--accent-primary-rgb, 64,120,192), 0.06); }
 .topo-card.is-running { animation: topo-pulse 1.5s ease-in-out infinite; border-color: var(--success); }
 .topo-card.is-collapsed { opacity: 0.92; border-style: dashed; }
+.topo-card__seq { position: absolute; top: -8px; left: -8px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--cluster-color, var(--accent-primary)); color: #fff; font-size: 10px; font-weight: 700; line-height: 18px; text-align: center; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
 .topo-card__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cluster-color, var(--text-muted)); flex-shrink: 0; }
 .topo-card.is-agent .topo-card__dot { background: var(--success); }
 .topo-card.is-skill .topo-card__dot { background: var(--accent-info); }
