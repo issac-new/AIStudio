@@ -4,6 +4,7 @@ import { useKanbanTaskGraph, type TimeWindow } from '../composables/useKanbanTas
 import type { TraceNode } from '../adapters/run-trace-adapter'
 import RunTraceTopology from './RunTraceTopology.vue'
 import RunTraceNodeDetail from './RunTraceNodeDetail.vue'
+import RunTraceTimelinePanel from './RunTraceTimelinePanel.vue'
 
 const emit = defineEmits<{ (e: 'select-session', sid: string): void; (e: 'close'): void }>()
 
@@ -162,22 +163,31 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
       <button type="button" class="run-trace-overview__close" @click="emit('close')" title="关闭">×</button>
     </header>
 
-    <!-- 上层拓扑图（选中任务时仅显示该任务全树） -->
-    <div class="run-trace-overview__topo">
-      <div v-if="graph.loading.value && graph.nodes.value.length === 0" class="run-trace-overview__empty">
-        加载聚合数据中… {{ graph.progress.value }}%
+    <!-- 拓扑图 + 右侧时间轴详情（聚焦任务时显示） -->
+    <div class="run-trace-overview__canvas">
+      <div class="run-trace-overview__topo">
+        <div v-if="graph.loading.value && graph.nodes.value.length === 0" class="run-trace-overview__empty">
+          加载聚合数据中… {{ graph.progress.value }}%
+        </div>
+        <div v-else-if="!graph.loading.value && topNodes.length === 0" class="run-trace-overview__empty">
+          {{ graph.error.value || '暂无任务/会话记录' }}
+        </div>
+        <RunTraceTopology
+          v-else
+          :nodes="topNodes"
+          :edges="topEdges"
+          :hit-clusters="hitClusters"
+          :selected-task-id="selectedTaskId"
+          @focus-task="onTopFocusTask"
+          @select-session="onTopSelectSession"
+          @show-detail="onShowDetail"
+        />
       </div>
-      <div v-else-if="!graph.loading.value && topNodes.length === 0" class="run-trace-overview__empty">
-        {{ graph.error.value || '暂无任务/会话记录' }}
-      </div>
-      <RunTraceTopology
-        v-else
-        :nodes="topNodes"
-        :edges="topEdges"
-        :hit-clusters="hitClusters"
-        :selected-task-id="selectedTaskId"
-        @focus-task="onTopFocusTask"
-        @select-session="onTopSelectSession"
+      <RunTraceTimelinePanel
+        v-if="selectedTaskId && focusResult"
+        :nodes="focusResult.nodes"
+        :task-id="selectedTaskId"
+        @close="clearFocus"
         @show-detail="onShowDetail"
       />
     </div>
@@ -234,6 +244,7 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
 }
 
 /* 拓扑图区 */
+.run-trace-overview__canvas { flex: 1; min-height: 0; display: flex; }
 .run-trace-overview__topo { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 .run-trace-overview__empty { padding: 48px 24px; text-align: center; color: var(--text-muted); font-size: 13px; }
 .run-trace-overview__back-all { height: 28px; padding: 0 12px; border: 1px solid var(--accent-primary); border-radius: 6px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; flex-shrink: 0;
