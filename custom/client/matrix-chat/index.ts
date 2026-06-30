@@ -10,21 +10,16 @@ export async function registerMatrixChat(_app: App) {
 
   console.log('[Custom] Matrix chat feature registered');
 
-  // Matrix chat routes are added as children of the cockpit route
-  // (registered dynamically in bootstrap.ts after cockpit is defined)
+  // Matrix chat routes are defined statically as cockpit children in
+  // router/index.ts (patch 071): hermes.matrixChat / hermes.matrixChatRoom.
+  // No dynamic addRoute needed — static definition is the single source of truth.
 }
 
-export function registerMatrixChatRoutes(router: Router) {
+// Kept for backward compatibility with bootstrap.ts call site, but is now a no-op:
+// matrix-chat routes are statically defined in router/index.ts (patch 071).
+// Previously this dynamically added matrix-chat as cockpit children, which
+// duplicated the static definition and risked confusion on route replacement.
+export function registerMatrixChatRoutes(_router: Router) {
   if (!features.matrixChat) return;
-  // Add matrix-chat as children of the cockpit parent route
-  router.addRoute('hermes.cockpit', {
-    path: 'matrix-chat',
-    name: 'hermes.matrixChat',
-    component: () => import('./views/MatrixChatView.vue'),
-  });
-  router.addRoute('hermes.cockpit', {
-    path: 'matrix-chat/room/:roomId([^?]+)',
-    name: 'hermes.matrixChatRoom',
-    component: () => import('./views/MatrixChatView.vue'),
-  });
+  // no-op: routes defined statically in router/index.ts (patch 071)
 }
