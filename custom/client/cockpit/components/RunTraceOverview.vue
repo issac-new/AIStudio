@@ -149,8 +149,9 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
         <button type="button" class="run-trace-overview__step-btn" @click="stepDay(1)" title="时间范围在当前基础上往后增加一天">›</button>
         <button type="button" class="run-trace-overview__apply-btn" @click="applyDateInput" title="应用时间筛选">应用</button>
       </div>
-      <!-- 状态过滤标签 -->
+      <!-- 状态过滤标签 + 返回全部（聚焦时显示，点击不修改筛选条件） -->
       <div class="run-trace-overview__filters">
+        <button v-if="selectedTaskId" type="button" class="run-trace-overview__back-all" @click="clearFocus" title="返回全部任务（不修改筛选条件）">← 返回全部</button>
         <button type="button" class="run-trace-overview__filter" :class="{ 'is-on': includeDone }" @click="toggleStatusFilter('done')" title="勾选后重新加载已完成任务">已完成</button>
         <button type="button" class="run-trace-overview__filter" :class="{ 'is-on': includeArchived }" @click="toggleStatusFilter('archived')" title="勾选后重新加载已归档任务">已归档</button>
       </div>
@@ -158,7 +159,6 @@ function onTopSelectSession(sid: string) { emit('select-session', sid) }
         <div class="run-trace-overview__progress-bar" :style="{ width: graph.progress.value + '%' }"></div>
         <span>{{ graph.progress.value }}%</span>
       </div>
-      <button v-if="selectedTaskId" type="button" class="run-trace-overview__back-all" @click="clearFocus" title="返回全部任务（不修改筛选条件）">← 返回全部</button>
       <button type="button" class="run-trace-overview__close" @click="emit('close')" title="关闭">×</button>
     </header>
 

@@ -114,10 +114,21 @@ export function computeLayeredLayout(
     return ta - tb
   })
 
-  // ── 分量内分层 + 分量间垂直堆叠 ──
-  let globalMaxWidth = NODE_W
-  let cursorY = PADDING
+  // ── 分量内分层 + 分量间多列网格布局（避免单列过高失衡） ──
+  // 每行最多放置 ceil(sqrt(分量数)) 个聚类，按行排列；行内分量顶部对齐。
+  const groupCount = sortedGroups.length
+  const colsPerRow = Math.max(1, Math.ceil(Math.sqrt(groupCount)))
+  // 每列宽度 = 一个分量最大宽度 + 列间距
+  const COL_BLOCK_W = 360
+  const COL_BLOCK_GAP = 32
+  const ROW_BLOCK_GAP = 40
 
+  let globalMaxWidth = NODE_W
+  let maxRowBottom = PADDING
+
+  // 先计算每个分量的尺寸（宽高），再按网格摆放
+  interface GroupBox { ids: string[]; w: number; h: number; positions: Map<string, LayeredPosition> }
+  const boxes: GroupBox[] = []
   for (const groupIds of sortedGroups) {
     const groupSet = new Set(groupIds)
     // 分量内 depth
@@ -162,30 +173,46 @@ export function computeLayeredLayout(
       layerWidths[d] = ids.length * NODE_W + Math.max(0, ids.length - 1) * COL_GAP
     }
     const groupMaxWidth = Math.max(...layerWidths, NODE_W)
+    const groupHeight = (maxDepth + 1) * (NODE_H + LAYER_GAP)
     globalMaxWidth = Math.max(globalMaxWidth, groupMaxWidth)
 
-    // 分量内布局（水平居中，垂直从 cursorY 起）
+    // 分量内局部布局（左上角对齐，origin 0,0；稍后整体平移到网格位置）
+    const gp = new Map<string, LayeredPosition>()
     for (let d = 0; d <= maxDepth; d++) {
       const ids = byDepth.get(d) ?? []
       const lw = layerWidths[d] ?? NODE_W
-      const xOffset = PADDING + (groupMaxWidth - lw) / 2
+      const xOffset = (groupMaxWidth - lw) / 2
       ids.forEach((id, i) => {
-        const x = xOffset + i * (NODE_W + COL_GAP)
-        const y = cursorY + d * (NODE_H + LAYER_GAP)
-        positions.set(id, { x, y, depth: d, seq: 0 })
+        gp.set(id, { x: xOffset + i * (NODE_W + COL_GAP), y: d * (NODE_H + LAYER_GAP), depth: d, seq: 0 })
       })
     }
-    cursorY += (maxDepth + 1) * (NODE_H + LAYER_GAP) + GROUP_GAP
+    boxes.push({ ids: groupIds, w: groupMaxWidth, h: groupHeight, positions: gp })
   }
 
-  // 全局时序序号：所有可见节点按 startedAt 升序编号（1-based），用于节点上显示时序标号
-  const sortedIds = [...positions.keys()].sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
-  sortedIds.forEach((id, i) => {
-    const p = positions.get(id)!
-    positions.set(id, { ...p, seq: i + 1 })
+  // 按网格摆放各分量，每个分量内独立从 1 编号
+  boxes.forEach((box, idx) => {
+    const row = Math.floor(idx / colsPerRow)
+    const col = idx % colsPerRow
+    // 该行内分量的最大宽度（用于确定该行 x 起始，使行内居中）
+    const rowStart = row * colsPerRow
+    const rowBoxes = boxes.slice(rowStart, Math.min(rowStart + colsPerRow, boxes.length))
+    const rowWidth = rowBoxes.reduce((s, b) => s + b.w, 0) + (rowBoxes.length - 1) * COL_BLOCK_GAP
+    const rowXBase = PADDING + Math.max(0, (globalMaxWidth * colsPerRow + (colsPerRow - 1) * COL_BLOCK_GAP - rowWidth) / 2)
+    // 计算 x 偏移：前面分量的累计宽度
+    let xOffset = rowXBase
+    for (let c = 0; c < col; c++) xOffset += rowBoxes[c].w + COL_BLOCK_GAP
+    // 该行顶部 y
+    const rowTop = PADDING + row * (Math.max(...rowBoxes.map(b => b.h)) + ROW_BLOCK_GAP)
+    // 分量内独立序号：按 startedAt 升序从 1
+    const sortedLocal = [...box.positions.keys()].sort((a, b) => (nodeMap.get(a)?.startedAt ?? 0) - (nodeMap.get(b)?.startedAt ?? 0))
+    sortedLocal.forEach((id, i) => {
+      const p = box.positions.get(id)!
+      positions.set(id, { x: xOffset + p.x, y: rowTop + p.y, depth: p.depth, seq: i + 1 })
+    })
+    maxRowBottom = Math.max(maxRowBottom, rowTop + box.h + ROW_BLOCK_GAP)
   })
 
-  const width = globalMaxWidth + PADDING * 2
-  const height = cursorY - GROUP_GAP + PADDING
+  const width = Math.max(globalMaxWidth, COL_BLOCK_W) * Math.min(colsPerRow, groupCount) + (Math.min(colsPerRow, groupCount) - 1) * COL_BLOCK_GAP + PADDING * 2
+  const height = maxRowBottom
   return { positions, width, height }
 }
