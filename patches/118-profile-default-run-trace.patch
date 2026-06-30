@@ -1,0 +1,110 @@
+diff --git a/hermes_cli/profiles.py b/hermes_cli/profiles.py
+index 490077884..0816a3541 100644
+--- a/hermes_cli/profiles.py
++++ b/hermes_cli/profiles.py
+@@ -822,6 +822,79 @@ def profiles_to_serve(multiplex: bool) -> List[Tuple[str, Path]]:
+     return serve
+ 
+ 
++# Overlay: ensure the run-trace plugin is available in every new profile.
++# Copies the plugin from the global ~/.hermes/plugins/run-trace/ into the
++# new profile's plugins/ directory and adds it to plugins.enabled in the
++# profile's config.yaml. All operations are best-effort so profile creation
++# never fails over an optional observability plugin.
++_RUN_TRACE_PLUGIN_NAME = "run-trace"
++
++
++def _seed_run_trace_plugin(profile_dir: Path) -> None:
++    """Copy the run-trace plugin into a new profile's plugins/ directory.
++
++    Source: global ~/.hermes/plugins/run-trace/ (the default profile's
++    shared plugin directory). Silently skips if the source is missing, so
++    profile creation never fails over an optional plugin.
++    """
++    try:
++        from hermes_constants import get_default_hermes_root
++        global_plugins = get_default_hermes_root() / "plugins" / _RUN_TRACE_PLUGIN_NAME
++        if not global_plugins.is_dir():
++            return
++        dest = profile_dir / "plugins" / _RUN_TRACE_PLUGIN_NAME
++        dest.parent.mkdir(parents=True, exist_ok=True)
++        if dest.exists():
++            shutil.rmtree(dest)
++        shutil.copytree(global_plugins, dest)
++        # Drop __pycache__ so the gateway compiles fresh bytecode for this copy.
++        pycache = dest / "__pycache__"
++        if pycache.is_dir():
++            shutil.rmtree(pycache, ignore_errors=True)
++    except Exception:
++        pass  # best-effort — don't fail profile creation
++
++
++def _ensure_run_trace_enabled_in_config(profile_dir: Path) -> None:
++    """Ensure run-trace is in plugins.enabled of the profile's config.yaml.
++
++    For fresh profiles (no config.yaml), writes a minimal config with just
++    the plugins section. For cloned profiles (config.yaml already exists),
++    merges run-trace into the existing plugins.enabled list without
++    duplicating or removing existing entries.
++    """
++    try:
++        import yaml
++    except ImportError:
++        return
++
++    config_path = profile_dir / "config.yaml"
++    try:
++        if config_path.exists():
++            with open(config_path, "r", encoding="utf-8") as f:
++                cfg = yaml.safe_load(f) or {}
++            if not isinstance(cfg, dict):
++                cfg = {}
++        else:
++            cfg = {}
++
++        plugins_cfg = cfg.get("plugins")
++        if not isinstance(plugins_cfg, dict):
++            plugins_cfg = {}
++        enabled = plugins_cfg.get("enabled")
++        if not isinstance(enabled, list):
++            enabled = []
++        if _RUN_TRACE_PLUGIN_NAME not in enabled:
++            enabled.append(_RUN_TRACE_PLUGIN_NAME)
++        plugins_cfg["enabled"] = enabled
++        cfg["plugins"] = plugins_cfg
++
++        with open(config_path, "w", encoding="utf-8") as f:
++            yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
++    except Exception:
++        pass  # best-effort — don't fail profile creation
++
++
+ def create_profile(
+     name: str,
+     clone_from: Optional[str] = None,
+@@ -906,6 +979,12 @@ def create_profile(
+         profile_dir.mkdir(parents=True, exist_ok=True)
+         for subdir in _PROFILE_DIRS:
+             (profile_dir / subdir).mkdir(parents=True, exist_ok=True)
++        # Overlay: seed the run-trace plugin into the new profile's plugins/
++        # directory so L2 trace data is captured from the very first session.
++        # Skipped for clone_all (it copytrees the whole source tree, including
++        # any plugins/ dir, so seeding here would be overwritten immediately
++        # — the config-merge step below still ensures run-trace is enabled).
++        _seed_run_trace_plugin(profile_dir)
+ 
+         # Clone config files from source
+         if source_dir is not None:
+@@ -1011,6 +1090,12 @@ def create_profile(
+     # unit-generation paths handle gateway lifecycle.
+     _maybe_register_gateway_service(canon)
+ 
++    # Overlay: ensure run-trace is in plugins.enabled. Done after any clone
++    # so cloned configs also pick it up. For fresh profiles this writes a
++    # minimal config.yaml; for cloned profiles it merges into the existing
++    # plugins.enabled list without removing existing entries.
++    _ensure_run_trace_enabled_in_config(profile_dir)
++
+     return profile_dir
+ 
+ 

@@ -52,8 +52,8 @@ _MAX_STATE_ENTRIES = 256
 class TraceSession:
     """Per-session trace state."""
     session_id: str
-    task_id: Optional[str] = None
     file_path: Path
+    task_id: Optional[str] = None
     file_handle: Any = None
     started_at: float = field(default_factory=time.time)
     api_request_ids: Dict[str, dict] = field(default_factory=dict)  # api_request_id -> span info
