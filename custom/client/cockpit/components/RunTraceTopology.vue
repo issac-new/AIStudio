@@ -68,6 +68,12 @@ const chartOption = computed(() => {
   ;[...vis].sort((a, b) => (nodeById.value.get(a)?.startedAt ?? 0) - (nodeById.value.get(b)?.startedAt ?? 0))
     .forEach((id, i) => seqMap.set(id, i + 1))
 
+  // 任务状态映射：taskId → taskStatus（从有 taskStatus 的节点反查，供同任务所有节点着色）
+  const taskStatusMap = new Map<string, string>()
+  for (const n of props.nodes) {
+    if (n.taskStatus && n.cluster) taskStatusMap.set(n.cluster, n.taskStatus)
+  }
+
   const data = props.nodes.filter(n => vis.has(n.id)).map(n => {
     const p = pos.get(n.id) ?? { x: 0, y: 0 }
     const cIdx = n.cluster ? clusterIdx.value.get(n.cluster) ?? 0 : 0
@@ -78,8 +84,10 @@ const chartOption = computed(() => {
     // 标题截断
     const title = n.label && n.label.length > 16 ? n.label.slice(0, 14) + '…' : (n.label || '')
     const taskTag = n.cluster ? n.cluster : ''
-    const statusTag = n.taskStatus ? `[${n.taskStatus}]` : ''
-    const statusColor = n.taskStatus ? (STATUS_COLOR[n.taskStatus] ?? '#999') : (KIND_COLOR[n.kind] ?? '#999')
+    // 节点状态：自身 taskStatus 优先，否则从所属任务(cluster)反查
+    const st = n.taskStatus ?? (n.cluster ? taskStatusMap.get(n.cluster) : undefined)
+    const statusTag = st ? `[${st}]` : ''
+    const statusColor = st ? (STATUS_COLOR[st] ?? '#999') : (KIND_COLOR[n.kind] ?? '#999')
     return {
       id: n.id,
       name: `${title} ${taskTag}`,
@@ -90,8 +98,8 @@ const chartOption = computed(() => {
       symbol: 'circle',
       symbolSize: isSelected ? 40 : isHit ? 36 : 32,
       itemStyle: {
-        // 任务节点按 taskStatus 着色区分，其他节点按 kind 色
-        color: (n.kind === 'ingress' || n.kind === 'workflow') ? statusColor : (KIND_COLOR[n.kind] ?? '#999'),
+        // 圆形颜色与所属任务状态一致（同任务所有节点同色）
+        color: statusColor,
         borderColor: isSelected ? '#ff6600' : '#fff',
         borderWidth: isSelected ? 3 : 2,
         shadowBlur: 4,
