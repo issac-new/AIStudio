@@ -168,6 +168,16 @@ function fmtDuration(ms?: number): string {
   const h = Math.floor(m / 60)
   return `${h}h${m % 60}m`
 }
+/** 转码 \uXXXX 等 unicode 转义序列为可读文本 */
+function decodeText(text?: string): string {
+  if (!text) return ''
+  try {
+    // 将 \uXXXX 形式的转义解码（含 surrogate pair）
+    return text.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+  } catch {
+    return text
+  }
+}
 </script>
 
 <template>
@@ -224,7 +234,7 @@ function fmtDuration(ms?: number): string {
                 <span class="trace-timeline-panel__kind-tag" :class="`is-${e.kind}`">{{ KIND_LABEL[e.kind] ?? e.kind }}</span>
                 <span class="trace-timeline-panel__label-text">
                   <b>{{ e.label }}</b>
-                  <small v-if="e.detail" class="trace-timeline-panel__detail-text">{{ e.detail }}</small>
+                  <small v-if="e.detail" class="trace-timeline-panel__detail-text">{{ decodeText(e.detail) }}</small>
                 </span>
                 <span v-if="e.durationMs" class="trace-timeline-panel__dur">{{ fmtDuration(e.durationMs) }}</span>
                 <span v-if="e.isNode && e.node?.profile" class="trace-timeline-panel__profile">{{ e.node.profile }}</span>
@@ -245,7 +255,7 @@ function fmtDuration(ms?: number): string {
               </template>
               <!-- 节点二级详情（可折叠，不弹窗） -->
               <div v-if="e.isNode && expandedDetail === e.id && e.node" class="trace-timeline-panel__sub-detail">
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">详情</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ e.node.detail || '—' }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">详情</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ decodeText(e.node.detail) || '—' }}</span></div>
                 <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">状态</span><span class="trace-timeline-panel__value">{{ e.node.status }}</span></div>
                 <div v-if="e.node.profile" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Profile</span><span class="trace-timeline-panel__value">{{ e.node.profile }}</span></div>
                 <div v-if="e.node.cluster" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">任务</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.cluster }}</span></div>
@@ -254,6 +264,13 @@ function fmtDuration(ms?: number): string {
                 <div v-if="e.node.endedAt" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">结束</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.node.endedAt) }}</span></div>
                 <div v-if="e.node.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">耗时</span><span class="trace-timeline-panel__value">{{ fmtDuration(e.node.durationMs) }}</span></div>
                 <div v-if="e.node.ref?.sessionId" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">会话</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.ref.sessionId }}</span></div>
+              </div>
+              <!-- 非节点时间线条目（thinking/message/memory）详情 -->
+              <div v-if="!e.isNode && expandedDetail === e.id" class="trace-timeline-panel__sub-detail">
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">类型</span><span class="trace-timeline-panel__value">{{ e.kind }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">时间</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.ts) }}</span></div>
+                <div v-if="e.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">耗时</span><span class="trace-timeline-panel__value">{{ fmtDuration(e.durationMs) }}</span></div>
+                <div v-if="e.text" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">内容</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ decodeText(e.text) }}</span></div>
               </div>
             </template>
           </div>
