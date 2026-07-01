@@ -1,37 +1,39 @@
 diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
-index b8d10b07..2c43af24 100644
+index 8d400312..95b5f373 100644
 --- a/packages/desktop/build/installer.nsh
 +++ b/packages/desktop/build/installer.nsh
 @@ -1,7 +1,7 @@
- !macro customInit
+ !macro stopHermesStudioProcesses
 -  IfFileExists "$INSTDIR\Hermes Studio.exe" 0 hermesStudioStopDone
 -    DetailPrint "Stopping Hermes Studio..."
 -    nsExec::ExecToLog '"$INSTDIR\Hermes Studio.exe" --quit'
 +  IfFileExists "$INSTDIR\SwarmStudio.exe" 0 hermesStudioStopDone
 +    DetailPrint "Stopping SwarmStudio..."
 +    nsExec::ExecToLog '"$INSTDIR\SwarmStudio.exe" --quit'
-     Sleep 2000
+     Pop $0
+     Sleep 1500
  
-     InitPluginsDir
-@@ -9,7 +9,7 @@
+@@ -10,7 +10,7 @@
      FileWrite $0 "$$ErrorActionPreference = 'SilentlyContinue'$\r$\n"
      FileWrite $0 "$$target = [System.IO.Path]::GetFullPath($$env:HERMES_STUDIO_EXE)$\r$\n"
      FileWrite $0 "function Get-HermesStudioProcess {$\r$\n"
 -    FileWrite $0 "  Get-CimInstance Win32_Process -Filter $\"Name = 'Hermes Studio.exe'$\" | Where-Object {$\r$\n"
 +    FileWrite $0 "  Get-CimInstance Win32_Process -Filter $\"Name = 'SwarmStudio.exe'$\" | Where-Object {$\r$\n"
-     FileWrite $0 "    try { [System.IO.Path]::GetFullPath($$_.ExecutablePath) -ieq $$target } catch { $$false }$\r$\n"
+     FileWrite $0 "    try { $$_.ExecutablePath -and ([System.IO.Path]::GetFullPath($$_.ExecutablePath) -ieq $$target) } catch { $$false }$\r$\n"
      FileWrite $0 "  }$\r$\n"
      FileWrite $0 "}$\r$\n"
-@@ -31,9 +31,9 @@
+@@ -32,11 +32,11 @@
      FileWrite $0 "exit 1$\r$\n"
      FileClose $0
  
 -    System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "$INSTDIR\Hermes Studio.exe") i .r0'
 +    System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "$INSTDIR\SwarmStudio.exe") i .r0'
      nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\stop-hermes-studio.ps1"'
+     Pop $0
      System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "") i .r0'
 -    nsExec::ExecToLog 'taskkill.exe /IM "Hermes Studio.exe" /T /F'
 +    nsExec::ExecToLog 'taskkill.exe /IM "SwarmStudio.exe" /T /F'
+     Pop $0
    hermesStudioStopDone:
  !macroend
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
