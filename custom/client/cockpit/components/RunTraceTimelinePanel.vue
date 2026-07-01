@@ -118,15 +118,24 @@ function toggleSkill(skillId: string) {
   expandedSkills.value = s
 }
 
-// 选中节点详情 + agent 配置
+// Agent 配置：双击 Agent 条目才加载并展开 Profile 详细配置
 const agentDetail = ref<HermesProfileDetail | null>(null)
 const agentLoading = ref(false)
-watch(() => props.node, async (n) => {
+const expandedAgentId = ref<string | null>(null)
+async function toggleAgent(e: any) {
+  // 双击 Agent 条目：切换 Profile 配置展开
+  const node = e.node ?? e
+  if (!node || node.kind !== 'agent') return
+  if (expandedAgentId.value === node.id) {
+    expandedAgentId.value = null
+    return
+  }
+  expandedAgentId.value = node.id
   agentDetail.value = null
-  if (!n || n.kind !== 'agent' || !n.profile) return
+  if (!node.profile) return
   agentLoading.value = true
-  try { agentDetail.value = await fetchProfileDetail(n.profile) } catch { /* 不可用 */ } finally { agentLoading.value = false }
-}, { immediate: true })
+  try { agentDetail.value = await fetchProfileDetail(node.profile) } catch { /* 不可用 */ } finally { agentLoading.value = false }
+}
 
 // 展开的二级详情节点 id（点击时间轴项在下方插入可折叠详情，不弹窗）
 const expandedDetail = ref<string | null>(null)
@@ -204,8 +213,8 @@ function decodeText(text?: string): string {
         <span class="trace-timeline-panel__selected-time">{{ fmtDateTime(node.startedAt) }}</span>
       </section>
 
-      <!-- agent 配置（仅 agent 节点） -->
-      <section v-if="node && node.kind === 'agent'" class="trace-timeline-panel__agent">
+      <!-- agent 配置（双击 Agent 条目后展开） -->
+      <section v-if="node && node.kind === 'agent' && expandedAgentId === node.id" class="trace-timeline-panel__agent">
         <div class="trace-timeline-panel__sub-title">Agent 配置</div>
         <div v-if="agentLoading" class="trace-timeline-panel__empty-mini">加载配置…</div>
         <div v-else-if="agentDetail">
@@ -237,6 +246,7 @@ function decodeText(text?: string): string {
                 class="trace-timeline-panel__item"
                 :class="[`is-${e.kind}`, node && e.isNode && e.id === node.id ? 'is-active' : '', e.isNode ? '' : 'is-timeline-item']"
                 @click="e.isNode ? toggleDetail(e.id) : undefined"
+                @dblclick="e.isNode && e.node?.kind === 'agent' ? toggleAgent(e.node) : undefined"
               >
                 <span class="trace-timeline-panel__seq" :title="`时序 #${seqMap.get(e.id) ?? ''}`">{{ seqMap.get(e.id) ?? '' }}</span>
                 <span class="trace-timeline-panel__time">{{ fmtTime(e.ts) }}</span>

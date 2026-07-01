@@ -110,29 +110,28 @@ const chartOption = computed(() => {
       x: p.x,
       y: p.y,
       category: cIdx,
-      // 圆形节点，文字显示在下方（圆形小，文字外置避免遮挡）
+      // 圆形节点，文字在内部居中自适应
       symbol: 'circle',
-      symbolSize: isSelected ? 40 : isHit ? 36 : 32,
+      symbolSize: isSelected ? 72 : isHit ? 66 : 60,
       itemStyle: {
-        // 圆形颜色与所属任务状态一致（同任务所有节点同色）
-        color: statusColor,
-        borderColor: isSelected ? '#ff6600' : '#fff',
-        borderWidth: isSelected ? 3 : 2,
+        // 圆形填充：5 类类型颜色（入口/Run/Agent/Skill/Tool）
+        color: KIND_COLOR[n.kind] ?? '#999',
+        // 圆形边框：任务状态颜色
+        borderColor: statusColor,
+        borderWidth: isSelected ? 4 : 3,
         shadowBlur: 4,
         shadowColor: 'rgba(0,0,0,0.15)',
       },
       label: {
         show: true,
-        position: 'bottom',
-        distance: 8,
-        align: 'left',
-        formatter: () => `{seq|#${seq}} {kind|${kindLabel}} {status|${statusTag}}\n{title|${title}}\n{task|${taskTag}}`,
+        position: 'inside',
+        align: 'center',
+        verticalAlign: 'middle',
+        formatter: () => `{seq|#${seq}}\n{title|${title}}`,
+        color: '#fff',
         rich: {
-          seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [1, 4], borderRadius: 7 },
-          kind: { fontSize: 9, color: KIND_COLOR[n.kind] ?? '#666', padding: [0, 0, 0, 3] },
-          status: { fontSize: 9, fontWeight: 'bold', color: statusColor, padding: [0, 0, 0, 3] },
-          title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 15 },
-          task: { fontSize: 9, color: '#666', lineHeight: 13, fontFamily: 'monospace' },
+          seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', lineHeight: 13 },
+          title: { fontSize: 10, color: '#fff', fontWeight: 'bold', lineHeight: 12, width: 50, overflow: 'truncate' },
         },
       },
       _nodeId: n.id,

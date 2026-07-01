@@ -8,10 +8,10 @@
 import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 
 // 布局常量（px）
-export const NODE_W = 160
-export const NODE_H = 40
-export const COL_GAP = 140             // 同层节点水平间距（拉大，容纳下方 label 左对齐整齐显示）
-export const LAYER_GAP = 110           // 层间垂直间距（label + 边走线空间）
+export const NODE_W = 90
+export const NODE_H = 90
+export const COL_GAP = 60              // 同层节点水平间距
+export const LAYER_GAP = 110           // 层间垂直间距
 export const GROUP_GAP = 48            // 分量间垂直间距
 export const PADDING = 20
 
