@@ -1,0 +1,52 @@
+diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+index f55ad9f4..5128fc20 100644
+--- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+@@ -10,7 +10,7 @@ import GroupMessageList from './GroupMessageList.vue'
+ import GroupChatInput from './GroupChatInput.vue'
+ import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
+ import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
+-import SettingsCircuitBadge from '@/components/layout/SettingsCircuitBadge.vue'
++import { useAuthStore } from '@/stores/hermes/auth'
+ import { copyToClipboard } from '@/utils/clipboard'
+ import type { Attachment } from '@/stores/hermes/chat'
+ import type { RoomAgent } from '@/api/hermes/group-chat'
+@@ -20,6 +20,7 @@ const router = useRouter()
+ const message = useMessage()
+ const store = useGroupChatStore()
+ const profilesStore = useProfilesStore()
++const authStore = useAuthStore()
+ 
+ const showSidebar = ref(window.innerWidth > 768)
+ const showCreateModal = ref(false)
+@@ -84,10 +85,6 @@ function openPageSidebar() {
+     showSidebar.value = true
+ }
+ 
+-function openSettingsPage() {
+-    router.push({ name: 'hermes.settings' })
+-}
+-
+ function hasDraggedFiles(event: DragEvent) {
+     return Array.from(event.dataTransfer?.types || []).includes('Files')
+ }
+@@ -436,14 +433,14 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
+                 </div>
+             </div>
+             <div class="page-sidebar-bottom">
+-                <button class="page-sidebar-menu-btn" type="button" @click="openSettingsPage">
++                <button class="page-sidebar-menu-btn" type="button" @click="authStore.logout()">
+                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+-                        <circle cx="12" cy="12" r="3" />
+-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
++                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
++                        <polyline points="16 17 21 12 16 7" />
++                        <line x1="21" y1="12" x2="9" y2="12" />
+                     </svg>
+-                    <span>{{ t('sidebar.settings') }}</span>
++                    <span>{{ t('sidebar.logout') }}</span>
+                 </button>
+-                <SettingsCircuitBadge />
+             </div>
+         </div>
+ 
