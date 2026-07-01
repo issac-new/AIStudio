@@ -7,10 +7,15 @@
 import Router from '@koa/router'
 import { readFile, access } from 'fs/promises'
 import { homedir } from 'os'
-import { join, resolve } from 'path'
+import { join, resolve, relative } from 'path'
 import { constants } from 'fs'
 // HERMES_CUSTOM[SecTraceSandbox] BEGIN: 路径遍历防护
-import { isPathWithin } from '../../../services/hermes/hermes-path'
+// 内联 isPathWithin，避免通过符号链接路径解析 import upstream 模块（esbuild/ts-node
+// 用真实路径解析，符号链接 custom/ → server/src/custom 会导致 ../../../ 找不到）。
+function isPathWithin(targetPath: string, basePath: string): boolean {
+  const rel = relative(basePath, targetPath)
+  return rel === '' || (!!rel && !rel.startsWith('..') && !rel.startsWith('/'))
+}
 // HERMES_CUSTOM[SecTraceSandbox] END
 
 const router = new Router()
