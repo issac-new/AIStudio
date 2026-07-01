@@ -117,10 +117,9 @@ export function computeLayeredLayout(
   // 每行最多放置 ceil(sqrt(分量数)) 个聚类，按行排列；行内分量顶部对齐。
   const groupCount = sortedGroups.length
   const colsPerRow = Math.max(1, Math.ceil(Math.sqrt(groupCount)))
-  // 每列宽度 = 一个分量最大宽度 + 列间距
-  const COL_BLOCK_W = 360
-  const COL_BLOCK_GAP = 32
-  const ROW_BLOCK_GAP = 40
+  // 分量间间距（基于圆形最大尺寸，确保不重叠）
+  const COL_BLOCK_GAP = 80
+  const ROW_BLOCK_GAP = 80
 
   let globalMaxWidth = NODE_W
   let maxRowBottom = PADDING
@@ -222,7 +221,7 @@ export function computeLayeredLayout(
     maxRowBottom = Math.max(maxRowBottom, rowTop + box.h + ROW_BLOCK_GAP)
   })
 
-  const width = Math.max(globalMaxWidth, COL_BLOCK_W) * Math.min(colsPerRow, groupCount) + (Math.min(colsPerRow, groupCount) - 1) * COL_BLOCK_GAP + PADDING * 2
+  const width = globalMaxWidth * Math.min(colsPerRow, groupCount) + (Math.min(colsPerRow, groupCount) - 1) * COL_BLOCK_GAP + PADDING * 2
   const height = maxRowBottom
   return { positions, width, height }
 }
