@@ -127,14 +127,15 @@ const chartOption = computed(() => {
         position: 'bottom',
         distance: 6,
         align: 'center',
-        formatter: () => `{seq|${seq}}\n{title|${title}}\n{task|${taskTag}}\n{status|${statusTag}}`,
+        // 第一行：数字标号(小圆) + taskId(kanban编号) 同一行
+        formatter: () => `{seq|${seq}} {task|${taskTag}}\n{title|${title}}\n{status|${statusTag}}`,
         rich: {
-          // 数字标号：小圆圈内含数字（不显示#）
+          // 数字标号：小圆圈内含数字
           seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [3, 4], borderRadius: 9, lineHeight: 14, align: 'center', width: 16, height: 16 },
           // title：深色粗体
           title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 14, align: 'center' },
-          // taskId：等宽灰色
-          task: { fontSize: 9, color: '#666', lineHeight: 12, fontFamily: 'monospace', align: 'center' },
+          // taskId：等宽灰色（与数字标号同一行）
+          task: { fontSize: 9, color: '#666', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
           // 任务状态：状态色徽标
           status: { fontSize: 9, fontWeight: 'bold', color: '#fff', backgroundColor: statusColor, padding: [1, 5], borderRadius: 8, lineHeight: 13, align: 'center' },
         },
