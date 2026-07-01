@@ -98,6 +98,7 @@ const chartOption = computed(() => {
     const kindLabel = KIND_LABEL[n.kind] ?? n.kind
     const rawLabel = decodeText(n.label) || ''
     const taskTag = n.cluster ? n.cluster : ''
+    const boardTag = n.taskBoard ?? ''
     // 节点状态：自身 taskStatus 优先，否则从所属任务(cluster)反查
     const st = n.taskStatus ?? (n.cluster ? taskStatusMap.get(n.cluster) : undefined)
     const statusTag = st ? st : ''
@@ -110,9 +111,9 @@ const chartOption = computed(() => {
       x: p.x,
       y: p.y,
       category: cIdx,
-      // 圆形节点，数字显示在圆内
+      // 圆形节点，文字放下方外部
       symbol: 'circle',
-      symbolSize: isSelected ? 40 : isHit ? 36 : 32,
+      symbolSize: isSelected ? 34 : isHit ? 30 : 26,
       itemStyle: {
         // 圆形填充：5 类类型颜色（入口/Run/Agent/Skill/Tool）
         color: KIND_COLOR[n.kind] ?? '#999',
@@ -124,14 +125,25 @@ const chartOption = computed(() => {
       },
       label: {
         show: true,
-        position: 'inside',
-        formatter: () => `${seq}`,
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#fff',
+        position: 'bottom',
+        distance: 6,
+        align: 'center',
+        // 第一行：数字标号(小圆) + kanban id + taskId 同一行
+        formatter: () => `{seq|${seq}} {board|${boardTag}} {task|${taskTag}}\n{title|${title}}\n{status|${statusTag}}`,
+        rich: {
+          // 数字标号：小圆圈内含数字
+          seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [3, 4], borderRadius: 9, lineHeight: 14, align: 'center', width: 16, height: 16 },
+          // kanban id：等宽深色
+          board: { fontSize: 9, color: '#333', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
+          // title：深色粗体
+          title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 14, align: 'center' },
+          // taskId：等宽灰色
+          task: { fontSize: 9, color: '#666', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
+          // 任务状态：状态色徽标
+          status: { fontSize: 9, fontWeight: 'bold', color: '#fff', backgroundColor: statusColor, padding: [1, 5], borderRadius: 8, lineHeight: 13, align: 'center' },
+        },
       },
       _nodeId: n.id,
-      _meta: { seq, title, taskTag, statusTag, statusColor, cIdx, x: p.x, y: p.y, symbolSize: isSelected ? 40 : isHit ? 36 : 32 },
     }
   })
   const links = props.edges.filter(e => vis.has(e.from) && vis.has(e.to)).map(e => {
@@ -160,8 +172,9 @@ const chartOption = computed(() => {
         if (!n) return p.name
         const m = (p.data as any)?._meta
         const tip = [`<b>${decodeText(n.label)}</b>`]
-        if (m?.taskTag) tip.push(`taskId: ${m.taskTag}`)
-        if (m?.statusTag) tip.push(`状态: ${m.statusTag}`)
+        if (n.taskBoard) tip.push(`kanban: ${n.taskBoard}`)
+        if (n.cluster) tip.push(`taskId: ${n.cluster}`)
+        if (n.taskStatus) tip.push(`状态: ${n.taskStatus}`)
         tip.push(`kind: ${n.kind}`, `status: ${n.status}`)
         if (n.detail) tip.push(decodeText(n.detail))
         return tip.join('<br/>')

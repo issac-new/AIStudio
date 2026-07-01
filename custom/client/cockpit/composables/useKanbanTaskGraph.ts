@@ -428,9 +428,10 @@ export function useKanbanTaskGraph() {
             if (summary) parts.push(summary)
             parts.push(tag)
             detail = parts.join(' · ')
-            return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile, label, detail, taskStatus }
+            return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile, label, detail, taskStatus, taskBoard: board }
           }
-          return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile, label, detail }
+          const tBoard = taskId ? (taskBoardMap.get(taskId) ?? undefined) : undefined
+          return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile, label, detail, taskBoard: tBoard }
         })
         // 构建跨任务 delegate/spawn 边（基于 taskRelations + sessionTaskMap）
         const crossEdges = buildCrossSessionEdges(
