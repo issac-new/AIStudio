@@ -110,9 +110,9 @@ const chartOption = computed(() => {
       x: p.x,
       y: p.y,
       category: cIdx,
-      // 圆形节点（小），文字放下方外部
+      // 圆形节点，数字显示在圆内
       symbol: 'circle',
-      symbolSize: isSelected ? 34 : isHit ? 30 : 26,
+      symbolSize: isSelected ? 40 : isHit ? 36 : 32,
       itemStyle: {
         // 圆形填充：5 类类型颜色（入口/Run/Agent/Skill/Tool）
         color: KIND_COLOR[n.kind] ?? '#999',
@@ -124,23 +124,14 @@ const chartOption = computed(() => {
       },
       label: {
         show: true,
-        position: 'bottom',
-        distance: 6,
-        align: 'center',
-        // 第一行：数字标号(小圆) + taskId(kanban编号) 同一行
-        formatter: () => `{seq|${seq}} {task|${taskTag}}\n{title|${title}}\n{status|${statusTag}}`,
-        rich: {
-          // 数字标号：小圆圈内含数字
-          seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [3, 4], borderRadius: 9, lineHeight: 14, align: 'center', width: 16, height: 16 },
-          // title：深色粗体
-          title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 14, align: 'center' },
-          // taskId：等宽灰色（与数字标号同一行）
-          task: { fontSize: 9, color: '#666', lineHeight: 14, fontFamily: 'monospace', align: 'left', padding: [0, 0, 0, 4] },
-          // 任务状态：状态色徽标
-          status: { fontSize: 9, fontWeight: 'bold', color: '#fff', backgroundColor: statusColor, padding: [1, 5], borderRadius: 8, lineHeight: 13, align: 'center' },
-        },
+        position: 'inside',
+        formatter: () => `${seq}`,
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#fff',
       },
       _nodeId: n.id,
+      _meta: { seq, title, taskTag, statusTag, statusColor, cIdx, x: p.x, y: p.y, symbolSize: isSelected ? 40 : isHit ? 36 : 32 },
     }
   })
   const links = props.edges.filter(e => vis.has(e.from) && vis.has(e.to)).map(e => {
@@ -167,7 +158,13 @@ const chartOption = computed(() => {
         const id = p.data?._nodeId
         const n = id ? nodeById.value.get(id) : null
         if (!n) return p.name
-        return `<b>${n.label}</b><br/>kind: ${n.kind}<br/>status: ${n.status}<br/>${decodeText(n.detail) || ''}`
+        const m = (p.data as any)?._meta
+        const tip = [`<b>${decodeText(n.label)}</b>`]
+        if (m?.taskTag) tip.push(`taskId: ${m.taskTag}`)
+        if (m?.statusTag) tip.push(`状态: ${m.statusTag}`)
+        tip.push(`kind: ${n.kind}`, `status: ${n.status}`)
+        if (n.detail) tip.push(decodeText(n.detail))
+        return tip.join('<br/>')
       },
     },
     legend: { show: false },
