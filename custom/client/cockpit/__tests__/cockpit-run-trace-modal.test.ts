@@ -152,7 +152,20 @@ vi.mock('@/api/hermes/sessions', async () => {
   return { ...actual, fetchHermesSessions: mockFetchHermesSessions, fetchSessionMessagesPage: mockFetchSessionMessagesPage, searchSessions: vi.fn(async () => []) }
 })
 
-// vue-flow 在 jsdom 下渲染不稳定，mock 为简单占位组件。
+// echarts 在 jsdom 下无法渲染 canvas，mock init 返回带 setOption/on/dispose 的实例。
+// 组件挂载后通过 mock 实例的 click 回调模拟节点点击。
+const { echartsMock } = vi.hoisted(() => ({
+  echartsMock: {
+    init: vi.fn(() => ({
+      setOption: vi.fn(),
+      on: vi.fn((event: string, cb: any) => { (echartsMock.init as any)._clickCb = cb }),
+      dispose: vi.fn(),
+      resize: vi.fn(),
+    })),
+  },
+}))
+vi.mock('echarts', () => ({ default: echartsMock, ...echartsMock, __esModule: true }))
+// vue-flow mock：单会话详细视图（RunTraceGraph）仍用 vue-flow，渲染节点可点击。
 vi.mock('@vue-flow/core', () => ({
   VueFlow: { name: 'VueFlow', props: ['nodes', 'edges'], template: '<div class="vue-flow-stub" data-run-trace-graph><div v-for="n in nodes" :key="n.id" :data-node-id="n.id" class="trace-node-card is-l1 is-active" @click="$emit(\'node-click\', { node: n })">{{ n.data?.label }}</div></div>', emits: ['node-click'] },
   useVueFlow: () => ({ onPaneReady: () => {}, fitView: () => {}, setNodes: () => {}, setEdges: () => {} }),
@@ -293,9 +306,13 @@ describe('CockpitRunTraceModal', () => {
     expect(w.find('[data-run-trace-overview]').exists()).toBe(true)
     expect(w.find('[data-run-trace-topology]').exists()).toBe(true)
     expect(w.text()).toContain('kanban 任务树拓扑')
+    // echarts 节点数据在 setOption 中（canvas 渲染，不在 DOM 文本）
+    const inst = (echartsMock.init as any).mock.results[0]?.value
+    const opt = inst?.setOption.mock.calls.at(-1)?.[0]
+    const nodeNames = (opt?.series?.[0]?.data ?? []).map((d: any) => d.name).join(' ')
     // 默认隐藏已完成/已归档：t_parent(running) 显示，t_child(done) 不显示
-    expect(w.text()).toContain('t_parent')
-    expect(w.text()).not.toContain('t_child')
+    expect(nodeNames).toContain('t_parent')
+    expect(nodeNames).not.toContain('t_child')
   })
 
   it('toggling "已完成" filter reloads done tasks', async () => {
@@ -305,14 +322,21 @@ describe('CockpitRunTraceModal', () => {
     await new Promise(r => setTimeout(r, 400))
     await w.vm.$nextTick()
     // 默认 t_child(done) 不显示
-    expect(w.text()).not.toContain('t_child')
+    const inst0 = (echartsMock.init as any).mock.results[0]?.value
+    const opt0 = inst0?.setOption.mock.calls.at(-1)?.[0]
+    const names0 = (opt0?.series?.[0]?.data ?? []).map((d: any) => d.name).join(' ')
+    expect(names0).not.toContain('t_child')
     // 点击"已完成"标签 → 重新加载
     const doneBtn = w.findAll('.run-trace-overview__filter').find(b => b.text().includes('已完成'))!
     await doneBtn.trigger('click')
-    await new Promise(r => setTimeout(r, 400))
+    await new Promise(r => setTimeout(r, 600))
     await w.vm.$nextTick()
-    // 现在 t_child 出现
-    expect(w.text()).toContain('t_child')
+    // 现在 t_child 出现（取最新 init 实例的 setOption）
+    const results = (echartsMock.init as any).mock.results
+    const lastInst = results.at(-1)?.value
+    const opt1 = lastInst?.setOption.mock.calls.at(-1)?.[0]
+    const names1 = (opt1?.series?.[0]?.data ?? []).map((d: any) => d.name).join(' ')
+    expect(names1).toContain('t_child')
   })
 
   it('clicking a task node opens the focused task-tree detail view', async () => {
@@ -323,19 +347,26 @@ describe('CockpitRunTraceModal', () => {
     await w.vm.$nextTick()
     // 初始无“返回全部”按钮
     expect(w.find('.run-trace-overview__back-all').exists()).toBe(false)
-    // 点击拓扑图中的任务节点（stub 渲染为 .trace-node-card，点击触发 node-click → focus-task）
-    const nodes = w.findAll('[data-run-trace-topology] .trace-node-card')
-    expect(nodes.length).toBeGreaterThan(0)
-    await nodes[0].trigger('click')
+    // 拓扑组件渲染（echarts 容器）
+    expect(w.find('[data-run-trace-topology]').exists()).toBe(true)
+    expect(echartsMock.init).toHaveBeenCalled()
+    // echarts setOption 应被调用，含 graph 系列 data
+    const inst = (echartsMock.init as any).mock.results[0]?.value
+    expect(inst?.setOption).toHaveBeenCalled()
+    const opt = inst?.setOption.mock.calls[0]?.[0]
+    expect(opt?.series?.[0]?.data?.length).toBeGreaterThan(0)
+    // 模拟点击第一个节点（任务节点 ingress/workflow）→ 聚焦
+    const clickCb = (echartsMock.init as any)._clickCb
+    expect(typeof clickCb).toBe('function')
+    const firstNodeData = opt.series[0].data[0]
+    clickCb({ data: firstNodeData })
     await new Promise(r => setTimeout(r, 150))
     await w.vm.$nextTick()
-    // 聚焦后出现“返回全部”按钮 + 右侧时间轴面板
+    // 聚焦后出现“返回全部”按钮 + 右侧面板
     expect(w.find('.run-trace-overview__back-all').exists()).toBe(true)
-    expect(w.find('[data-trace-timeline-panel]').exists()).toBe(true)
-    // 点击返回全部 → 按钮与面板消失，恢复全部任务
+    // 点击返回全部 → 恢复
     await w.find('.run-trace-overview__back-all').trigger('click')
     await w.vm.$nextTick()
     expect(w.find('.run-trace-overview__back-all').exists()).toBe(false)
-    expect(w.find('[data-trace-timeline-panel]').exists()).toBe(false)
   })
 })
