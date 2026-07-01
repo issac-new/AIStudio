@@ -1,5 +1,5 @@
---- a/packages/server/src/controllers/auth.ts	2026-06-22 16:55:55
-+++ b/packages/server/src/controllers/auth.ts	2026-06-21 16:06:50
+--- a/packages/server/src/controllers/auth.ts
++++ b/packages/server/src/controllers/auth.ts
 @@ -6,14 +6,19 @@
    bootstrapDefaultSuperAdmin,
    countActiveSuperAdmins,
@@ -20,7 +20,7 @@
    updateUser,
    updateUsername,
    updateUserPassword,
-@@ -25,6 +30,17 @@
+@@ -25,6 +30,20 @@
  import { issueUserJwt } from '../middleware/user-auth'
  import { listProfileNamesFromDisk } from '../services/hermes/hermes-profile'
  import { startOutboundRelayClient, stopOutboundRelayClient } from '../services/global-agent/outbound-relay-client'
@@ -35,10 +35,13 @@
 +  deleteMatrixUser as deleteMatrixUserOnServer,
 +} from '../custom/matrix/admin-service'
 +// HERMES_CUSTOM[MatrixAuth] END
++// HERMES_CUSTOM[SecSsrfGuard] BEGIN: SSRF 防护（登录速率限制函数已由 upstream auth.ts 顶部 import）
++import { UnsafeUrlError, assertSafeOutboundUrl } from '../custom/security/url-guard'
++// HERMES_CUSTOM[SecSsrfGuard] END
  
  /**
   * GET /api/auth/status
-@@ -43,6 +59,9 @@
+@@ -43,6 +62,9 @@
   */
  export async function currentUser(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -48,7 +51,7 @@
    const user = userId ? findUserById(userId) : null
    if (!user) {
      ctx.status = 404
-@@ -62,6 +81,11 @@
+@@ -62,6 +84,11 @@
        requiresCredentialChange: process.env.HERMES_DESKTOP === 'true'
          ? false
          : user.username === DEFAULT_USERNAME && verifyPassword(DEFAULT_PASSWORD, user.password_hash),
@@ -60,7 +63,7 @@
      },
    }
  }
-@@ -93,7 +117,7 @@
+@@ -93,7 +120,7 @@
   */
  export async function getMyAvatar(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -69,7 +72,7 @@
      ctx.status = 401
      ctx.body = { error: 'Unauthorized' }
      return
-@@ -403,9 +427,389 @@
+@@ -403,9 +430,414 @@
    const available = new Set(listProfileNamesFromDisk())
    const missing = profiles.find(profile => !available.has(profile))
    return missing || null
@@ -101,9 +104,33 @@
 +    return
 +  }
 +
++  // HERMES_CUSTOM[SecSsrfGuard] BEGIN: 登录速率限制 + SSRF 预校验
++  // matrix-login 是公开路由（authPublicRoutes），复用 passwordLogin 同款 IP 速率限制，
++  // 阻止暴力枚举 Matrix token；并在出站前预校验 homeserverUrl，拒绝指向
++  // 私有/回环/链路本地地址（防 SSRF 探测内网与云元数据、防 token 外泄到攻击者服务器）。
++  const ssrfIp = extractIp(ctx)
++  const ssrfLimit = checkPassword(ssrfIp)
++  if (!ssrfLimit.allowed) {
++    ctx.status = ssrfLimit.status
++    ctx.body = { error: 'Too many login attempts, please try again later' }
++    return
++  }
++  let safeOrigin: string
++  try {
++    // Matrix token 经 Bearer 发往 homeserver，必须强制 https（防 token 明文外泄）。
++    safeOrigin = await assertSafeOutboundUrl(homeserverUrl, { allowHttp: false })
++  } catch (err) {
++    recordPasswordFailure(ssrfIp)
++    ctx.status = 400
++    ctx.body = { error: err instanceof UnsafeUrlError ? err.message : 'Invalid homeserver URL' }
++    return
++  }
++  // HERMES_CUSTOM[SecSsrfGuard] END
++
 +  // 1. Validate the Matrix token
-+  const validation = await validateMatrixToken(matrixAccessToken, homeserverUrl)
++  const validation = await validateMatrixToken(matrixAccessToken, safeOrigin)
 +  if (!validation || validation.userId !== matrixUserId) {
++    recordPasswordFailure(ssrfIp)
 +    ctx.status = 401
 +    ctx.body = { error: 'Invalid Matrix access token' }
 +    return
@@ -111,7 +138,7 @@
 +
 +  // 2. Get user info from Matrix (including admin status)
 +  // Use the user's own token to check their profile; admin status requires admin token
-+  const matrixInfo = await getMatrixUserInfo(matrixUserId, matrixAccessToken, homeserverUrl)
++  const matrixInfo = await getMatrixUserInfo(matrixUserId, matrixAccessToken, safeOrigin)
 +
 +  // 3. Find or create Hermes user
 +  let user = findByMatrixUserId(matrixUserId)
@@ -125,7 +152,7 @@
 +      username: localpart,
 +      displayName: matrixInfo?.displayName || localpart,
 +      avatarUrl: matrixInfo?.avatarUrl || '',
-+      homeserverUrl,
++      homeserverUrl: safeOrigin,
 +      role,
 +    })
 +    if (user) {
@@ -156,6 +183,7 @@
 +  // 4. Issue Hermes JWT
 +  try {
 +    const token = await issueUserJwt(user)
++    recordPasswordSuccess(ssrfIp)
 +    ctx.body = { token, user: {
 +      id: user.id,
 +      username: user.username,
@@ -375,9 +403,9 @@
 +
 +  deleteUser(hermesUser.id)
 +  ctx.body = { success: true }
-+}
-+
-+/**
+ }
+ 
+ /**
 + * POST /api/auth/matrix-users/:id/deactivate
 + * Activate or deactivate a Matrix user.
 + */
@@ -413,9 +441,9 @@
 +
 +  updateMatrixUserMetadata(matrixUserId, { status: active ? 'active' : 'disabled' })
 +  ctx.body = { success: true }
- }
- 
- /**
++}
++
++/**
 + * POST /api/auth/matrix-users/:id/reset-password
 + * Reset a Matrix user's password.
 + */

@@ -1,0 +1,26 @@
+--- a/packages/server/src/middleware/user-auth.ts
++++ b/packages/server/src/middleware/user-auth.ts
+@@ -66,10 +66,22 @@
+   return process.env.AUTH_JWT_SECRET || await getToken()
+ }
+ 
++// HERMES_CUSTOM[SecNoQueryToken] BEGIN: 限制 query token 仅媒体端点可用
++// JWT/server token 经 ?token= 传递会泄露到访问日志/Referer/浏览器 history（VULN-05）。
++// 仅保留无法用 header 传 token 的图片媒体端点（<img src> 场景）的 query token 支持。
++const MEDIA_QUERY_TOKEN_PATHS = new Set([
++  '/api/hermes/media/apikey-image-generate',
++  '/api/hermes/media/grok-image-to-video',
++])
++// HERMES_CUSTOM[SecNoQueryToken] END
+ function requestToken(ctx: Context): string {
+   const auth = ctx.headers.authorization || ''
+   if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7).trim()
+-  return typeof ctx.query.token === 'string' ? ctx.query.token.trim() : ''
++  // HERMES_CUSTOM[SecNoQueryToken] 仅媒体端点允许 query token，防日志/Referer 泄露
++  if (MEDIA_QUERY_TOKEN_PATHS.has(ctx.path)) {
++    return typeof ctx.query.token === 'string' ? ctx.query.token.trim() : ''
++  }
++  return ''
+ }
+ 
+ const SERVER_TOKEN_EXACT_PATHS = new Set([

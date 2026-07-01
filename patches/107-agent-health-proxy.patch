@@ -1,6 +1,6 @@
 --- a/packages/server/src/index.ts
 +++ b/packages/server/src/index.ts
-@@ -347,6 +347,27 @@
+@@ -347,6 +347,43 @@
      await next()
    })
  
@@ -8,7 +8,23 @@
 +  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8650'
 +  app.use(async (ctx, next) => {
 +    if (ctx.path.startsWith('/agent-health/')) {
-+      const targetPath = ctx.path.replace('/agent-health', '/health')
++      // HERMES_CUSTOM[SecAgentHealthAuth] BEGIN: 要求已认证，防未授权访问 agent 内部端点
++      if (!ctx.state.user) {
++        ctx.status = 401
++        ctx.body = { error: 'Unauthorized' }
++        return
++      }
++      // HERMES_CUSTOM[SecAgentHealthAuth] END
++      // HERMES_CUSTOM[SecAgentHealthPath] BEGIN: 限制转发路径白名单，防路径注入探测 agent 其他路由
++      const sub = ctx.path.slice('/agent-health'.length)
++      const allowed = sub === '/' || sub === '/refs' || sub.startsWith('/refs/')
++      if (!allowed) {
++        ctx.status = 404
++        ctx.body = { error: 'Not found' }
++        return
++      }
++      const targetPath = `/health${sub}`
++      // HERMES_CUSTOM[SecAgentHealthPath] END
 +      const qs = ctx.querystring ? `?${ctx.querystring}` : ''
 +      try {
 +        const res = await fetch(`${agentHealthTarget}${targetPath}${qs}`)
