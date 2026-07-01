@@ -106,3 +106,4 @@
 119-desktop-preload-no-strip-credential.patch
 120-server-restrict-query-token.patch
 121-desktop-electron-sandbox.patch
+122-groupchat-sidebar-logout.patch
