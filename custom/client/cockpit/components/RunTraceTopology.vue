@@ -96,23 +96,38 @@ const chartOption = computed(() => {
     const isSelected = props.selectedTaskId && n.cluster === props.selectedTaskId
     const seq = seqMap.get(n.id) ?? 0
     const kindLabel = KIND_LABEL[n.kind] ?? n.kind
-    // 标题截断
     const rawLabel = decodeText(n.label) || ''
-    const title = rawLabel.length > 16 ? rawLabel.slice(0, 14) + '…' : rawLabel
     const taskTag = n.cluster ? n.cluster : ''
     // 节点状态：自身 taskStatus 优先，否则从所属任务(cluster)反查
     const st = n.taskStatus ?? (n.cluster ? taskStatusMap.get(n.cluster) : undefined)
     const statusTag = st ? `[${st}]` : ''
     const statusColor = st ? (STATUS_COLOR[st] ?? '#999') : (KIND_COLOR[n.kind] ?? '#999')
+    // 圆形大小与文字字号按标题长度自适应（不截断，完整显示）
+    const len = rawLabel.length
+    let symbolSize: number
+    let titleFontSize: number
+    if (len <= 4) { symbolSize = 56; titleFontSize = 12 }
+    else if (len <= 8) { symbolSize = 70; titleFontSize = 11 }
+    else if (len <= 12) { symbolSize = 84; titleFontSize = 10 }
+    else { symbolSize = 98; titleFontSize = 9 }
+    if (isSelected) symbolSize += 8
+    else if (isHit) symbolSize += 4
+    // 标题按圆形内宽分行（每行约 symbolSize/8 字符）
+    const charsPerLine = Math.max(2, Math.floor(symbolSize / 9))
+    const lines: string[] = []
+    for (let i = 0; i < rawLabel.length; i += charsPerLine) {
+      lines.push(rawLabel.slice(i, i + charsPerLine))
+    }
+    const titleLines = lines.slice(0, 4).join('\n') // 最多4行
     return {
       id: n.id,
-      name: `${title} ${taskTag}`,
+      name: `${rawLabel} ${taskTag}`,
       x: p.x,
       y: p.y,
       category: cIdx,
       // 圆形节点，文字在内部居中自适应
       symbol: 'circle',
-      symbolSize: isSelected ? 72 : isHit ? 66 : 60,
+      symbolSize,
       itemStyle: {
         // 圆形填充：5 类类型颜色（入口/Run/Agent/Skill/Tool）
         color: KIND_COLOR[n.kind] ?? '#999',
@@ -127,11 +142,11 @@ const chartOption = computed(() => {
         position: 'inside',
         align: 'center',
         verticalAlign: 'middle',
-        formatter: () => `{seq|#${seq}}\n{title|${title}}`,
+        formatter: () => `{seq|#${seq}}\n{title|${titleLines}}`,
         color: '#fff',
         rich: {
-          seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', lineHeight: 13 },
-          title: { fontSize: 10, color: '#fff', fontWeight: 'bold', lineHeight: 12, width: 50, overflow: 'truncate' },
+          seq: { fontSize: 9, fontWeight: 'bold', color: 'rgba(255,255,255,0.85)', lineHeight: 12 },
+          title: { fontSize: titleFontSize, color: '#fff', fontWeight: 'bold', lineHeight: titleFontSize + 3, align: 'center' },
         },
       },
       _nodeId: n.id,
