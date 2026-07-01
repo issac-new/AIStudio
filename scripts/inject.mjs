@@ -75,7 +75,8 @@ function applyPatches() {
       // hermes-agent 的 patch 失败时容错跳过（与桌面应用构建无关，不影响 hermes-studio）
       if (targetRoot === hermesAgentRoot) {
         console.warn(`[inject] WARN: hermes-agent patch 失败,跳过: ${p}`);
-        console.warn(`  ${e.stderr?.trim() || e.message}`);
+        const stderrStr = typeof e.stderr === 'string' ? e.stderr : (e.stderr?.toString?.() || '');
+        console.warn(`  ${stderrStr.trim() || e.message}`);
         continue;
       }
       console.error(`[inject] FAILED to apply patch: ${p}`);
