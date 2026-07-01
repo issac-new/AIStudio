@@ -158,7 +158,10 @@ const { echartsMock } = vi.hoisted(() => ({
   echartsMock: {
     init: vi.fn(() => ({
       setOption: vi.fn(),
-      on: vi.fn((event: string, cb: any) => { (echartsMock.init as any)._clickCb = cb }),
+      on: vi.fn((event: string, cb: any) => {
+        if (!(echartsMock.init as any)._cbs) (echartsMock.init as any)._cbs = {}
+        ;(echartsMock.init as any)._cbs[event] = cb
+      }),
       dispose: vi.fn(),
       resize: vi.fn(),
     })),
@@ -356,7 +359,7 @@ describe('CockpitRunTraceModal', () => {
     const opt = inst?.setOption.mock.calls[0]?.[0]
     expect(opt?.series?.[0]?.data?.length).toBeGreaterThan(0)
     // 模拟点击第一个节点（任务节点 ingress/workflow）→ 聚焦
-    const clickCb = (echartsMock.init as any)._clickCb
+    const clickCb = (echartsMock.init as any)._cbs?.click
     expect(typeof clickCb).toBe('function')
     const firstNodeData = opt.series[0].data[0]
     clickCb({ data: firstNodeData })
