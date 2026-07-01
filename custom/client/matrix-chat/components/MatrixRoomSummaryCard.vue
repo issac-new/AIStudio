@@ -51,11 +51,26 @@ const topic = computed(() => {
   return roomStore.getRoomTopic(room.value)
 })
 const hasTopic = computed(() => !!topic.value)
+// HERMES_CUSTOM[SecXssTopic] BEGIN: 房间 topic 是任意 Matrix 用户可控内容，
+// 必须先 HTML 转义再做 URL 自动链接，否则 <img onerror=...> 等将经 v-html 执行（存储型 XSS）。
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
 const displayedTopic = computed(() => {
   void roomStore.roomVersion
   if (!topic.value) return ''
-  let text = topic.value
-  // Auto-link URLs
+  // 先转义，确保原始 < > & " ' 不被解释为 HTML
+  let text = escapeHtml(topic.value)
+  // 截断在转义后进行（避免切断实体）
+  if (!topicExpanded.value && topic.value.length > 200) {
+    text = text.slice(0, 200) + '...'
+  }
+  // 再对转义后的文本做 URL 自动链接；URL 本身已被转义（& → &amp;），可直接入 href
   text = text.replace(
     /(https?:\/\/[^\s<>"]+)/g,
     '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
@@ -65,11 +80,9 @@ const displayedTopic = computed(() => {
     /(matrix:\/\/[^\s<>"]+)/g,
     '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
   )
-  if (!topicExpanded.value && topic.value.length > 200) {
-    text = text.slice(0, 200) + '...'
-  }
   return text
 })
+// HERMES_CUSTOM[SecXssTopic] END
 
 const topicNeedsExpand = computed(() => {
   return (topic.value?.length ?? 0) > 200

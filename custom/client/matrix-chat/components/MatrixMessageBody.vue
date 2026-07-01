@@ -60,9 +60,23 @@ function sanitizeHtml(html: string): string {
     attrs.forEach((attr) => {
       if (el.hasAttribute(attr)) {
         let val = el.getAttribute(attr)!
-        if (attr === 'href' && !val.startsWith('#') && !val.startsWith('http')) {
-          val = '#'
+        // HERMES_CUSTOM[SecXssMsgBody] BEGIN: URL 属性强制安全协议白名单
+        // href/src 仅允许 http(s)/#锚点/matrix:；拒绝 javascript:/data:text-html 等伪协议。
+        if (attr === 'href') {
+          if (val.startsWith('#')) {
+            // 锚点，放行
+          } else if (/^https?:\/\//i.test(val) || /^matrix:/i.test(val)) {
+            // 安全协议，放行
+          } else {
+            val = '#'
+          }
+        } else if (attr === 'src') {
+          if (!/^https?:\/\//i.test(val) && !/^mxc:\/\//i.test(val)) {
+            // 非图片 URL（mxc:// 是 Matrix 媒体 URI），跳过该属性
+            return
+          }
         }
+        // HERMES_CUSTOM[SecXssMsgBody] END
         newEl.setAttribute(attr, val)
       }
     })

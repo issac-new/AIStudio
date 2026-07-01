@@ -6141,12 +6141,13 @@ index 67470d4e..9f88d26a 100644
    }
  
    return false
-@@ -290,7 +290,7 @@ function sanitizeFtsQuery(query: string): string {
+@@ -290,7 +290,8 @@ function sanitizeFtsQuery(query: string): string {
    sanitized = sanitized.replace(/(^|\s)\*/g, '$1')
    sanitized = sanitized.trim().replace(/^(AND|OR|NOT)\b\s*/i, '')
    sanitized = sanitized.trim().replace(/\s+(AND|OR|NOT)\s*$/i, '')
 -  sanitized = sanitized.replace(/\b([\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)+)\b/gu, '"$1"')
-+  sanitized = sanitized.replace(new RegExp('\b([\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)+)\b', 'gu'), '"$1"')
++  // HERMES_CUSTOM[SecFtsRegex] 修正：原 new RegExp('\b...') 中 \b 是退格符非词边界（VULN-12 ReDoS/语义错误），改回字面量正则
++  sanitized = sanitized.replace(/\b([\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)+)\b/gu, '"$1"')
  
    for (let i = 0; i < quotedParts.length; i += 1) {
      sanitized = sanitized.replace(`\u0000Q${i}\u0000`, quotedParts[i])
