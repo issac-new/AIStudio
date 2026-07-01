@@ -16,19 +16,13 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const KIND_LABEL: Record<string, string> = {
   ingress: '入口', workflow: 'Run', agent: 'Agent', skill: 'Skill', tool: 'Tool',
-  memory: 'Memory', service: 'Service', peer: 'Peer', approval: 'Approval',
+  thinking: '思考', memory: 'Memory', message: '消息', service: 'Service', peer: 'Peer', approval: 'Approval',
 }
 
 // 全树节点按时间排序
 const sortedNodes = computed<TraceNode[]>(() =>
   [...props.allNodes].filter(n => n.startedAt).sort((a, b) => a.startedAt - b.startedAt),
 )
-// 与左侧拓扑对应的数字标号：按 startedAt 全局排序编号
-const seqMap = computed<Map<string, number>>(() => {
-  const m = new Map<string, number>()
-  sortedNodes.value.forEach((n, i) => m.set(n.id, i + 1))
-  return m
-})
 
 // 时间线条目：将 workflow 节点的 children 提取为独立条目，与节点合并按时间排序
 interface TimelineEntry {
@@ -76,6 +70,12 @@ const timelineEntries = computed<TimelineEntry[]>(() => {
     }
   }
   return entries.sort((a, b) => a.ts - b.ts)
+})
+// 与左侧拓扑对应的数字标号：按 startedAt 全局排序编号（含 thinking 等时间线条目）
+const seqMap = computed<Map<string, number>>(() => {
+  const m = new Map<string, number>()
+  timelineEntries.value.forEach((e, i) => m.set(e.id, i + 1))
+  return m
 })
 
 // 时间线条目按天分组
@@ -219,7 +219,7 @@ function fmtDuration(ms?: number): string {
                 :class="[`is-${e.kind}`, node && e.isNode && e.id === node.id ? 'is-active' : '', e.isNode ? '' : 'is-timeline-item']"
                 @click="e.isNode ? toggleDetail(e.id) : undefined"
               >
-                <span v-if="e.isNode" class="trace-timeline-panel__seq" :title="`时序 #${seqMap.get(e.id) ?? ''}`">{{ seqMap.get(e.id) ?? '' }}</span>
+                <span class="trace-timeline-panel__seq" :title="`时序 #${seqMap.get(e.id) ?? ''}`">{{ seqMap.get(e.id) ?? '' }}</span>
                 <span class="trace-timeline-panel__time">{{ fmtTime(e.ts) }}</span>
                 <span class="trace-timeline-panel__kind-tag" :class="`is-${e.kind}`">{{ KIND_LABEL[e.kind] ?? e.kind }}</span>
                 <span class="trace-timeline-panel__label-text">
@@ -303,6 +303,9 @@ function fmtDuration(ms?: number): string {
 .trace-timeline-panel__kind-tag.is-agent { background: rgba(76,175,80,0.15); color: var(--success); }
 .trace-timeline-panel__kind-tag.is-skill { background: rgba(64,120,192,0.15); color: var(--accent-info); }
 .trace-timeline-panel__kind-tag.is-tool { background: rgba(214,155,90,0.15); color: var(--warning); }
+.trace-timeline-panel__kind-tag.is-thinking { background: rgba(181,107,214,0.15); color: #B56BD6; }
+.trace-timeline-panel__kind-tag.is-message { background: rgba(90,170,214,0.15); color: #5AAAD6; }
+.trace-timeline-panel__kind-tag.is-memory { background: var(--bg-secondary); color: var(--text-muted); }
 .trace-timeline-panel__label-text { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .trace-timeline-panel__label-text b { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-timeline-panel__label-text small { font-size: 9px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
