@@ -199,8 +199,6 @@ function closeRightPanel() {
         :all-edges="focusResult?.edges ?? graph.edges.value"
         :task-id="selectedTaskId"
         @close="closeRightPanel"
-        @show-detail="onShowDetail"
-        @select-node="onSelectNode"
       />
     </div>
 

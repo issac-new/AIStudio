@@ -104,9 +104,11 @@ const flowEdges = computed<Edge[]>(() => {
       id: e.id,
       source: e.from,
       target: e.to,
-      type: 'default',
+      type: 'smoothstep',
       animated: isSpawn,
-      // curvature 随索引微调，减少同向边重叠
+      // 直角折线：边从节点底部出、顶部入，配合分层布局父子垂直，不绕穿节点
+      sourcePosition: 'bottom' as any,
+      targetPosition: 'top' as any,
       curvature: 0.2 + (idx % 3) * 0.1,
       zIndex: 0,
       markerEnd: MarkerType.ArrowClosed,
