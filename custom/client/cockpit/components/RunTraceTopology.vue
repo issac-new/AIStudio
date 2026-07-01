@@ -100,35 +100,19 @@ const chartOption = computed(() => {
     const taskTag = n.cluster ? n.cluster : ''
     // 节点状态：自身 taskStatus 优先，否则从所属任务(cluster)反查
     const st = n.taskStatus ?? (n.cluster ? taskStatusMap.get(n.cluster) : undefined)
-    const statusTag = st ? `[${st}]` : ''
+    const statusTag = st ? st : ''
     const statusColor = st ? (STATUS_COLOR[st] ?? '#999') : (KIND_COLOR[n.kind] ?? '#999')
-    // 圆形与文字同步缩放：scale 按标题长度递增，圆形=base*scale，字号=base*scale
-    const len = rawLabel.length
-    let scale: number
-    if (len <= 4) scale = 0.9
-    else if (len <= 8) scale = 1.1
-    else if (len <= 12) scale = 1.3
-    else scale = 1.5
-    if (isSelected) scale += 0.1
-    else if (isHit) scale += 0.05
-    const symbolSize = Math.round(60 * scale)
-    const titleFontSize = Math.round(11 * scale) // 字号与圆形同步缩放
-    // 标题按圆形内宽分行（每行约 symbolSize/(titleFontSize*0.9) 字符）
-    const charsPerLine = Math.max(2, Math.floor(symbolSize / (titleFontSize * 0.95)))
-    const lines: string[] = []
-    for (let i = 0; i < rawLabel.length; i += charsPerLine) {
-      lines.push(rawLabel.slice(i, i + charsPerLine))
-    }
-    const titleLines = lines.slice(0, 4).join('\n') // 最多4行
+    // 标题截断
+    const title = rawLabel.length > 14 ? rawLabel.slice(0, 12) + '…' : rawLabel
     return {
       id: n.id,
       name: `${rawLabel} ${taskTag}`,
       x: p.x,
       y: p.y,
       category: cIdx,
-      // 圆形节点，文字在内部居中自适应
+      // 圆形节点（小），文字放下方外部
       symbol: 'circle',
-      symbolSize,
+      symbolSize: isSelected ? 34 : isHit ? 30 : 26,
       itemStyle: {
         // 圆形填充：5 类类型颜色（入口/Run/Agent/Skill/Tool）
         color: KIND_COLOR[n.kind] ?? '#999',
@@ -140,19 +124,22 @@ const chartOption = computed(() => {
       },
       label: {
         show: true,
-        position: 'inside',
+        position: 'bottom',
+        distance: 6,
         align: 'center',
-        verticalAlign: 'middle',
-        formatter: () => `{seq|#${seq}}\n{title|${titleLines}}\n{task|${taskTag}}`,
-        color: '#fff',
+        formatter: () => `{seq|#${seq}}\n{title|${title}}\n{task|${taskTag}}\n{status|${statusTag}}`,
         rich: {
-          seq: { fontSize: Math.round(9 * scale), fontWeight: 'bold', color: '#fff', backgroundColor: 'rgba(0,0,0,0.25)', padding: [1, 4], borderRadius: 6, lineHeight: Math.round(13 * scale) },
-          title: { fontSize: titleFontSize, color: '#fff', fontWeight: 'bold', lineHeight: titleFontSize + 3, align: 'center' },
-          task: { fontSize: Math.round(8 * scale), color: 'rgba(255,255,255,0.75)', lineHeight: Math.round(11 * scale), fontFamily: 'monospace', align: 'center' },
+          // 数字标号：彩色徽标
+          seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [1, 5], borderRadius: 8, lineHeight: 14, align: 'center' },
+          // title：深色粗体
+          title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 14, align: 'center' },
+          // taskId：等宽灰色
+          task: { fontSize: 9, color: '#666', lineHeight: 12, fontFamily: 'monospace', align: 'center' },
+          // 任务状态：状态色徽标
+          status: { fontSize: 9, fontWeight: 'bold', color: '#fff', backgroundColor: statusColor, padding: [1, 5], borderRadius: 8, lineHeight: 13, align: 'center' },
         },
       },
       _nodeId: n.id,
-      _scale: scale,
     }
   })
   const links = props.edges.filter(e => vis.has(e.from) && vis.has(e.to)).map(e => {
