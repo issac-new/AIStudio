@@ -8,11 +8,11 @@
 import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 
 // 布局常量（px）
-export const NODE_W = 110
-export const NODE_H = 110
-export const COL_GAP = 50              // 同层节点水平间距
-export const LAYER_GAP = 120           // 层间垂直间距（圆形+边走线）
-export const GROUP_GAP = 50            // 分量间垂直间距
+export const NODE_W = 120
+export const NODE_H = 120
+export const COL_GAP = 100             // 同层节点水平间距（>圆形最大直径106，确保不重叠）
+export const LAYER_GAP = 160           // 层间垂直间距（>圆形直径，确保不重叠）
+export const GROUP_GAP = 60            // 分量间垂直间距
 export const PADDING = 20
 
 export interface LayeredPosition { x: number; y: number; depth: number; seq: number }
@@ -118,8 +118,8 @@ export function computeLayeredLayout(
   const groupCount = sortedGroups.length
   const colsPerRow = Math.max(1, Math.ceil(Math.sqrt(groupCount)))
   // 分量间间距（基于圆形最大尺寸，确保不重叠）
-  const COL_BLOCK_GAP = 80
-  const ROW_BLOCK_GAP = 80
+  const COL_BLOCK_GAP = 120
+  const ROW_BLOCK_GAP = 120
 
   let globalMaxWidth = NODE_W
   let maxRowBottom = PADDING
