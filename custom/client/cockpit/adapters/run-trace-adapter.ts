@@ -46,6 +46,8 @@ export interface TraceNode {
   profile?: string
   /** kanban 任务状态（running/done/blocked…，仅任务级节点 ingress/workflow 填充） */
   taskStatus?: string
+  /** kanban board slug（任务所属看板，用于显示 kanban id） */
+  taskBoard?: string
 }
 
 export interface TraceEdge {
