@@ -35,6 +35,10 @@ const CLUSTER_COLORS = [
 const KIND_COLOR: Record<string, string> = {
   ingress: '#909090', workflow: '#6B83D6', agent: '#4CAF8B', skill: '#5AAAD6', tool: '#D69B5A',
 }
+const KIND_LABEL: Record<string, string> = {
+  ingress: '入口', workflow: 'Run', agent: 'Agent', skill: 'Skill', tool: 'Tool',
+  memory: 'Memory', service: 'Service', peer: 'Peer', approval: 'Approval',
+}
 
 const layout = computed(() => computeLayeredLayout(props.nodes, props.edges, collapsedIds.value))
 const visibleNodeIds = computed(() => new Set(layout.value.positions.keys()))
@@ -64,19 +68,40 @@ const chartOption = computed(() => {
     const isHit = props.hitClusters && n.cluster && props.hitClusters.has(n.cluster)
     const isSelected = props.selectedTaskId && n.cluster === props.selectedTaskId
     const seq = seqMap.get(n.id) ?? 0
+    const kindLabel = KIND_LABEL[n.kind] ?? n.kind
+    // 标题截断
+    const title = n.label && n.label.length > 16 ? n.label.slice(0, 14) + '…' : (n.label || '')
+    const taskTag = n.cluster ? n.cluster : ''
+    const statusTag = n.taskStatus ? `[${n.taskStatus}]` : ''
     return {
       id: n.id,
-      name: `#${seq} ${n.label}`,
+      name: `${title} ${taskTag}`,
       x: p.x,
       y: p.y,
       category: cIdx,
-      symbolSize: isSelected ? 60 : isHit ? 52 : 46,
+      symbol: 'circle',
+      symbolSize: isSelected ? 54 : isHit ? 48 : 42,
       itemStyle: {
         color: KIND_COLOR[n.kind] ?? '#999',
         borderColor: isSelected ? '#ff6600' : isHit ? '#6B83D6' : '#fff',
-        borderWidth: isSelected ? 3 : isHit ? 2 : 1,
+        borderWidth: isSelected ? 3 : isHit ? 2 : 1.5,
+        shadowBlur: 4,
+        shadowColor: 'rgba(0,0,0,0.15)',
       },
-      label: { show: true, position: 'bottom', fontSize: 10, color: '#333' },
+      label: {
+        show: true,
+        position: 'bottom',
+        distance: 6,
+        width: 160,
+        overflow: 'truncate',
+        formatter: () => `{seq|#${seq}} {kind|${kindLabel}}\n{title|${title}}\n{task|${taskTag}${statusTag}}`,
+        rich: {
+          seq: { fontSize: 11, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [1, 5], borderRadius: 8 },
+          kind: { fontSize: 9, color: KIND_COLOR[n.kind] ?? '#666', padding: [0, 0, 0, 4] },
+          title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 14 },
+          task: { fontSize: 9, color: '#888', lineHeight: 12 },
+        },
+      },
       _nodeId: n.id,
     }
   })
@@ -121,13 +146,13 @@ const chartOption = computed(() => {
       edgeSymbolSize: [0, 8],
       emphasis: { focus: 'adjacency', lineStyle: { width: 3 } },
       lineStyle: { color: '#999', curveness: 0.15 },
-      label: { show: true, position: 'bottom', fontSize: 10 },
     }],
   }
 })
 
 const containerRef = ref<HTMLElement | null>(null)
 let chart: echarts.ECharts | null = null
+let resizeObserver: ResizeObserver | null = null
 
 onMounted(() => {
   if (!containerRef.value) return
@@ -147,18 +172,27 @@ onMounted(() => {
     const sid = n.ref?.sessionId
     if (sid) emit('select-session', sid)
   })
+  // 监听容器尺寸变化（右侧面板出现/隐藏时自适应）
+  resizeObserver = new ResizeObserver(() => {
+    chart?.resize()
+  })
+  resizeObserver.observe(containerRef.value)
 })
 
 watch(chartOption, (opt) => {
   chart?.setOption(opt, true)
 }, { deep: true })
 
-// 兜底：节点/边变化时强制刷新（确保 toggle reload 后 setOption 被调用）
+// 兜底：节点/边变化时强制刷新
 watch([() => props.nodes, () => props.edges, () => props.selectedTaskId, () => props.hitClusters], () => {
-  if (chart) chart.setOption(chartOption.value, true)
+  if (chart) {
+    chart.setOption(chartOption.value, true)
+    chart.resize()
+  }
 })
 
 onUnmounted(() => {
+  resizeObserver?.disconnect()
   chart?.dispose()
   chart = null
 })
