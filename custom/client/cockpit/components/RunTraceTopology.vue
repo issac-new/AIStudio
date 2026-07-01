@@ -102,18 +102,19 @@ const chartOption = computed(() => {
     const st = n.taskStatus ?? (n.cluster ? taskStatusMap.get(n.cluster) : undefined)
     const statusTag = st ? `[${st}]` : ''
     const statusColor = st ? (STATUS_COLOR[st] ?? '#999') : (KIND_COLOR[n.kind] ?? '#999')
-    // 圆形大小与文字字号按标题长度自适应（不截断，完整显示）
+    // 圆形与文字同步缩放：scale 按标题长度递增，圆形=base*scale，字号=base*scale
     const len = rawLabel.length
-    let symbolSize: number
-    let titleFontSize: number
-    if (len <= 4) { symbolSize = 56; titleFontSize = 12 }
-    else if (len <= 8) { symbolSize = 70; titleFontSize = 11 }
-    else if (len <= 12) { symbolSize = 84; titleFontSize = 10 }
-    else { symbolSize = 98; titleFontSize = 9 }
-    if (isSelected) symbolSize += 8
-    else if (isHit) symbolSize += 4
-    // 标题按圆形内宽分行（每行约 symbolSize/8 字符）
-    const charsPerLine = Math.max(2, Math.floor(symbolSize / 9))
+    let scale: number
+    if (len <= 4) scale = 0.9
+    else if (len <= 8) scale = 1.1
+    else if (len <= 12) scale = 1.3
+    else scale = 1.5
+    if (isSelected) scale += 0.1
+    else if (isHit) scale += 0.05
+    const symbolSize = Math.round(60 * scale)
+    const titleFontSize = Math.round(11 * scale) // 字号与圆形同步缩放
+    // 标题按圆形内宽分行（每行约 symbolSize/(titleFontSize*0.9) 字符）
+    const charsPerLine = Math.max(2, Math.floor(symbolSize / (titleFontSize * 0.95)))
     const lines: string[] = []
     for (let i = 0; i < rawLabel.length; i += charsPerLine) {
       lines.push(rawLabel.slice(i, i + charsPerLine))
@@ -145,9 +146,9 @@ const chartOption = computed(() => {
         formatter: () => `{seq|#${seq}}\n{title|${titleLines}}\n{task|${taskTag}}`,
         color: '#fff',
         rich: {
-          seq: { fontSize: 9, fontWeight: 'bold', color: '#fff', backgroundColor: 'rgba(0,0,0,0.25)', padding: [1, 4], borderRadius: 6, lineHeight: 13 },
+          seq: { fontSize: Math.round(9 * scale), fontWeight: 'bold', color: '#fff', backgroundColor: 'rgba(0,0,0,0.25)', padding: [1, 4], borderRadius: 6, lineHeight: Math.round(13 * scale) },
           title: { fontSize: titleFontSize, color: '#fff', fontWeight: 'bold', lineHeight: titleFontSize + 3, align: 'center' },
-          task: { fontSize: 8, color: 'rgba(255,255,255,0.75)', lineHeight: 11, fontFamily: 'monospace', align: 'center' },
+          task: { fontSize: Math.round(8 * scale), color: 'rgba(255,255,255,0.75)', lineHeight: Math.round(11 * scale), fontFamily: 'monospace', align: 'center' },
         },
       },
       _nodeId: n.id,
