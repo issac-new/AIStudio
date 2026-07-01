@@ -23,6 +23,35 @@ const KIND_LABEL: Record<string, string> = {
 const sortedNodes = computed<TraceNode[]>(() =>
   [...props.allNodes].filter(n => n.startedAt).sort((a, b) => a.startedAt - b.startedAt),
 )
+// 与左侧拓扑对应的数字标号：按 startedAt 全局排序编号
+const seqMap = computed<Map<string, number>>(() => {
+  const m = new Map<string, number>()
+  sortedNodes.value.forEach((n, i) => m.set(n.id, i + 1))
+  return m
+})
+// skill → 其下 tool 子节点（边 from=skill to=tool），用于二级折叠
+const skillTools = computed<Map<string, TraceNode[]>>(() => {
+  const m = new Map<string, TraceNode[]>()
+  for (const e of props.allEdges) {
+    const fromNode = props.allNodes.find(n => n.id === e.from)
+    const toNode = props.allNodes.find(n => n.id === e.to)
+    if (fromNode?.kind === 'skill' && toNode?.kind === 'tool') {
+      if (!m.has(fromNode.id)) m.set(fromNode.id, [])
+      m.get(fromNode.id)!.push(toNode)
+    }
+  }
+  // tool 按时间排序
+  for (const [, tools] of m) tools.sort((a, b) => a.startedAt - b.startedAt)
+  return m
+})
+// 展开的 skill（显示其下 tool 二级节点）
+const expandedSkills = ref<Set<string>>(new Set())
+function toggleSkill(skillId: string) {
+  const s = new Set(expandedSkills.value)
+  if (s.has(skillId)) s.delete(skillId)
+  else s.add(skillId)
+  expandedSkills.value = s
+}
 interface Group { key: string; label: string; items: TraceNode[] }
 const groups = computed<Group[]>(() => {
   const map = new Map<string, TraceNode[]>()
@@ -141,6 +170,7 @@ function fmtDuration(ms?: number): string {
                 :class="[`is-${n.kind}`, node && n.id === node.id ? 'is-active' : '']"
                 @click="toggleDetail(n.id)"
               >
+                <span class="trace-timeline-panel__seq" :title="`时序 #${seqMap.get(n.id) ?? ''}`">{{ seqMap.get(n.id) ?? '' }}</span>
                 <span class="trace-timeline-panel__time">{{ fmtTime(n.startedAt) }}</span>
                 <span class="trace-timeline-panel__kind-tag" :class="`is-${n.kind}`">{{ KIND_LABEL[n.kind] ?? n.kind }}</span>
                 <span class="trace-timeline-panel__label-text">
@@ -150,8 +180,20 @@ function fmtDuration(ms?: number): string {
                 <span v-if="n.durationMs" class="trace-timeline-panel__dur">{{ fmtDuration(n.durationMs) }}</span>
                 <span v-if="n.profile" class="trace-timeline-panel__profile">{{ n.profile }}</span>
                 <span class="trace-timeline-panel__status" :class="`is-${n.status}`">{{ n.status }}</span>
+                <span v-if="n.kind === 'skill' && (skillTools.get(n.id)?.length ?? 0) > 0" class="trace-timeline-panel__expand" @click.stop="toggleSkill(n.id)">{{ expandedSkills.has(n.id) ? '▾' : '▸' }}{{ skillTools.get(n.id)?.length }}</span>
                 <span class="trace-timeline-panel__expand">{{ expandedDetail === n.id ? '▾' : '▸' }}</span>
               </button>
+              <!-- skill 下的 tool 二级节点（可折叠） -->
+              <template v-if="n.kind === 'skill' && expandedSkills.has(n.id)">
+                <div v-for="t in (skillTools.get(n.id) ?? [])" :key="t.id" class="trace-timeline-panel__sub-item" @click="toggleDetail(t.id)">
+                  <span class="trace-timeline-panel__seq">{{ seqMap.get(t.id) ?? '' }}</span>
+                  <span class="trace-timeline-panel__time">{{ fmtTime(t.startedAt) }}</span>
+                  <span class="trace-timeline-panel__kind-tag is-tool">Tool</span>
+                  <span class="trace-timeline-panel__label-text"><b>{{ t.label }}</b><small v-if="t.detail">{{ t.detail }}</small></span>
+                  <span v-if="t.durationMs" class="trace-timeline-panel__dur">{{ fmtDuration(t.durationMs) }}</span>
+                  <span class="trace-timeline-panel__status" :class="`is-${t.status}`">{{ t.status }}</span>
+                </div>
+              </template>
               <!-- 二级详情（可折叠，不弹窗） -->
               <div v-if="expandedDetail === n.id" class="trace-timeline-panel__sub-detail">
                 <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">详情</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ n.detail || '—' }}</span></div>
@@ -163,6 +205,16 @@ function fmtDuration(ms?: number): string {
                 <div v-if="n.endedAt" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">结束</span><span class="trace-timeline-panel__value">{{ fmtDateTime(n.endedAt) }}</span></div>
                 <div v-if="n.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">耗时</span><span class="trace-timeline-panel__value">{{ fmtDuration(n.durationMs) }}</span></div>
                 <div v-if="n.ref?.sessionId" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">会话</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ n.ref.sessionId }}</span></div>
+                <!-- workflow 时间线（children） -->
+                <div v-if="n.children && n.children.length > 0" class="trace-timeline-panel__children-list">
+                  <div class="trace-timeline-panel__sub-title">时间线（{{ n.children.length }}）</div>
+                  <div v-for="(c, ci) in n.children" :key="c.id || ci" class="trace-timeline-panel__child">
+                    <span class="trace-timeline-panel__child-time">{{ fmtTime(c.ts) }}</span>
+                    <span class="trace-timeline-panel__child-kind" :class="`is-${c.kind}`">{{ c.kind }}</span>
+                    <span class="trace-timeline-panel__child-text">{{ c.text || c.toolName || '—' }}</span>
+                    <span v-if="c.durationMs" class="trace-timeline-panel__dur">{{ fmtDuration(c.durationMs) }}</span>
+                  </div>
+                </div>
               </div>
             </template>
           </div>
@@ -200,6 +252,7 @@ function fmtDuration(ms?: number): string {
 .trace-timeline-panel__group-head small { font-size: 9px; color: var(--text-muted); font-weight: 400; margin-left: auto; }
 .trace-timeline-panel__group-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-primary); }
 .trace-timeline-panel__items { display: flex; flex-direction: column; gap: 3px; padding-left: 5px; border-left: 2px solid var(--border-color); margin-left: 2px; }
+.trace-timeline-panel__seq { min-width: 18px; height: 18px; border-radius: 9px; background: var(--accent-primary); color: #fff; font-size: 9px; font-weight: 700; line-height: 18px; text-align: center; flex-shrink: 0; padding: 0 4px; }
 .trace-timeline-panel__item { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); cursor: pointer; text-align: left; font-family: inherit; transition: background 0.12s; flex-wrap: wrap;
   &:hover { background: var(--bg-secondary); border-color: var(--text-muted); }
   &.is-active { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 64,120,192), 0.1); box-shadow: 0 0 0 2px var(--accent-primary); }
@@ -223,6 +276,16 @@ function fmtDuration(ms?: number): string {
 .trace-timeline-panel__status.is-cancelled { background: var(--bg-secondary); color: var(--text-muted); }
 .trace-timeline-panel__expand { font-size: 10px; color: var(--text-muted); flex-shrink: 0; margin-left: 2px; }
 .trace-timeline-panel__sub-detail { margin: 2px 0 4px 8px; padding: 6px 8px; border: 1px dashed var(--border-color); border-radius: 4px; background: var(--bg-secondary); }
+.trace-timeline-panel__sub-item { display: flex; align-items: center; gap: 5px; padding: 4px 7px; margin: 2px 0 2px 20px; border: 1px dashed var(--border-color); border-radius: 4px; background: var(--bg-secondary); cursor: pointer; font-size: 10px; flex-wrap: wrap;
+  &:hover { background: var(--bg-card); }
+}
+.trace-timeline-panel__children-list { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-color); }
+.trace-timeline-panel__child { display: flex; align-items: center; gap: 5px; padding: 3px 0; font-size: 10px; border-bottom: 1px dashed var(--border-color);
+  &:last-child { border-bottom: none; }
+}
+.trace-timeline-panel__child-time { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: 9px; width: 50px; flex-shrink: 0; }
+.trace-timeline-panel__child-kind { font-size: 8px; font-weight: 700; padding: 0 3px; border-radius: 2px; background: var(--bg-primary); color: var(--text-secondary); flex-shrink: 0; }
+.trace-timeline-panel__child-text { color: var(--text-primary); word-break: break-word; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-timeline-panel__row { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; font-size: 11px; border-bottom: 1px dashed var(--border-color);
   &:last-child { border-bottom: none; }
 }
