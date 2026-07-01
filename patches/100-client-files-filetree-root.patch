@@ -1,27 +1,20 @@
 diff --git a/packages/client/src/components/hermes/files/FileTree.vue b/packages/client/src/components/hermes/files/FileTree.vue
-index a392a840..6977673f 100644
+index 902ece7b..ea7dec48 100644
 --- a/packages/client/src/components/hermes/files/FileTree.vue
 +++ b/packages/client/src/components/hermes/files/FileTree.vue
-@@ -1,5 +1,5 @@
- <script setup lang="ts">
--import { ref, onMounted, h } from 'vue'
-+import { ref, onMounted, watch, h } from 'vue'
- import { NTree } from 'naive-ui'
- import { useI18n } from 'vue-i18n'
- import { useFilesStore } from '@/stores/hermes/files'
-@@ -14,7 +14,7 @@ const selectedKeys = ref<string[]>([])
+@@ -19,7 +19,7 @@ const selectedKeys = ref<string[]>([])
  
  async function loadChildren(path: string): Promise<TreeOption[]> {
    try {
--    const result = await filesApi.listFiles(path)
-+    const result = await filesApi.listFiles(path, filesStore.workspaceRoot)
+-    const result = await filesApi.listFiles(path, effectiveProfile.value)
++    const result = await filesApi.listFiles(path, filesStore.workspaceRoot, effectiveProfile.value)
      return result.entries
        .filter(e => e.isDir)
        .sort((a, b) => a.name.localeCompare(b.name))
-@@ -52,6 +52,11 @@ function renderLabel({ option }: { option: TreeOption }) {
- onMounted(async () => {
+@@ -58,6 +58,11 @@ watch(effectiveProfile, async () => {
+   selectedKeys.value = []
    treeData.value = await loadChildren('')
- })
+ }, { immediate: true })
 +
 +// 当 workspaceRoot 变化时（切换到不同任务），重新加载根级目录树
 +watch(() => filesStore.workspaceRoot, async () => {
