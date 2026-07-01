@@ -32,6 +32,10 @@ const hasWorkspace = computed(() => {
 
 // 错误状态：workspace 目录不存在或其他文件系统错误
 const errorState = ref<{ code: string; message: string } | null>(null)
+// 同步中标志：syncWorkspaceRoot 完成前不渲染 FilesPanel，避免其 onMounted
+// 的 fetchEntries 与 syncWorkspaceRoot 的 fetchEntries 竞态——后者抛 ENOENT
+// 后会设 errorState，但前者已把 entries 清空导致 FileList 显示 "No Data"。
+const syncing = ref(true)
 
 // 把「当前生效的 workspace 根目录」同步到 filesStore 并刷新文件列表。
 // 优先从 detail cache（selectedTaskDetail）读取 workspace_path，因为它
@@ -45,11 +49,13 @@ async function syncWorkspaceRoot() {
     filesStore.workspaceRoot = undefined
     filesStore.currentPath = ''
     errorState.value = null
+    syncing.value = false
     return
   }
   filesStore.workspaceRoot = wsPath
   filesStore.currentPath = ''
   errorState.value = null
+  syncing.value = true
   try {
     await filesStore.fetchEntries('')
   } catch (err: any) {
@@ -61,6 +67,8 @@ async function syncWorkspaceRoot() {
     } else {
       errorState.value = { code, message: msg }
     }
+  } finally {
+    syncing.value = false
   }
 }
 
@@ -83,7 +91,10 @@ onMounted(() => {
 
 <template>
   <div class="cockpit-file-panel">
-    <div v-if="errorState" class="cockpit-file-panel__error">
+    <div v-if="syncing" class="cockpit-file-panel__loading">
+      {{ t('common.loading', '加载中…') }}
+    </div>
+    <div v-else-if="errorState" class="cockpit-file-panel__error">
       <span class="cockpit-file-panel__error-icon">⚠️</span>
       <span class="cockpit-file-panel__error-text">{{ errorState.message }}</span>
       <button type="button" class="cockpit-file-panel__error-retry" @click="syncWorkspaceRoot()">
@@ -105,6 +116,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--bg-card);
+}
+.cockpit-file-panel__loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 .cockpit-file-panel__no-workspace {
   flex: 1;
