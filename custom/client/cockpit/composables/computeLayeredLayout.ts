@@ -10,9 +10,9 @@ import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 // 布局常量（px）
 export const NODE_W = 160
 export const NODE_H = 40
-export const COL_GAP = 100             // 同层节点水平间距（容纳下方 label 宽度）
-export const LAYER_GAP = 100           // 层间垂直间距（足够 label + 边走线）
-export const GROUP_GAP = 40            // 分量间垂直间距
+export const COL_GAP = 140             // 同层节点水平间距（拉大，容纳下方 label 左对齐整齐显示）
+export const LAYER_GAP = 110           // 层间垂直间距（label + 边走线空间）
+export const GROUP_GAP = 48            // 分量间垂直间距
 export const PADDING = 20
 
 export interface LayeredPosition { x: number; y: number; depth: number; seq: number }

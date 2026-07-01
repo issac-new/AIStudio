@@ -40,6 +40,12 @@ const KIND_LABEL: Record<string, string> = {
   memory: 'Memory', service: 'Service', peer: 'Peer', approval: 'Approval',
 }
 
+// 任务状态颜色（用于节点圆形与状态标签着色区分）
+const STATUS_COLOR: Record<string, string> = {
+  running: '#4CAF8B', done: '#8a8a8a', archived: '#b0b0b0', blocked: '#D65A6B',
+  review: '#D69B5A', ready: '#D69B5A', triage: '#909090', todo: '#909090', scheduled: '#5AAAD6',
+}
+
 const layout = computed(() => computeLayeredLayout(props.nodes, props.edges, collapsedIds.value))
 const visibleNodeIds = computed(() => new Set(layout.value.positions.keys()))
 
@@ -73,6 +79,7 @@ const chartOption = computed(() => {
     const title = n.label && n.label.length > 16 ? n.label.slice(0, 14) + '…' : (n.label || '')
     const taskTag = n.cluster ? n.cluster : ''
     const statusTag = n.taskStatus ? `[${n.taskStatus}]` : ''
+    const statusColor = n.taskStatus ? (STATUS_COLOR[n.taskStatus] ?? '#999') : (KIND_COLOR[n.kind] ?? '#999')
     return {
       id: n.id,
       name: `${title} ${taskTag}`,
@@ -83,7 +90,8 @@ const chartOption = computed(() => {
       symbol: 'circle',
       symbolSize: isSelected ? 40 : isHit ? 36 : 32,
       itemStyle: {
-        color: KIND_COLOR[n.kind] ?? '#999',
+        // 任务节点按 taskStatus 着色区分，其他节点按 kind 色
+        color: (n.kind === 'ingress' || n.kind === 'workflow') ? statusColor : (KIND_COLOR[n.kind] ?? '#999'),
         borderColor: isSelected ? '#ff6600' : '#fff',
         borderWidth: isSelected ? 3 : 2,
         shadowBlur: 4,
@@ -93,12 +101,12 @@ const chartOption = computed(() => {
         show: true,
         position: 'bottom',
         distance: 8,
-        align: 'center',
+        align: 'left',
         formatter: () => `{seq|#${seq}} {kind|${kindLabel}} {status|${statusTag}}\n{title|${title}}\n{task|${taskTag}}`,
         rich: {
           seq: { fontSize: 10, fontWeight: 'bold', color: '#fff', backgroundColor: CLUSTER_COLORS[cIdx % CLUSTER_COLORS.length], padding: [1, 4], borderRadius: 7 },
           kind: { fontSize: 9, color: KIND_COLOR[n.kind] ?? '#666', padding: [0, 0, 0, 3] },
-          status: { fontSize: 9, color: '#888', padding: [0, 0, 0, 3] },
+          status: { fontSize: 9, fontWeight: 'bold', color: statusColor, padding: [0, 0, 0, 3] },
           title: { fontSize: 11, color: '#222', fontWeight: 'bold', lineHeight: 15 },
           task: { fontSize: 9, color: '#666', lineHeight: 13, fontFamily: 'monospace' },
         },
