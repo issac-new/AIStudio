@@ -1,0 +1,12 @@
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -218,7 +218,8 @@
+       preload: join(__dirname, '..', 'preload', 'index.js'),
+       contextIsolation: true,
+       nodeIntegration: false,
+-      sandbox: false,
++      // HERMES_CUSTOM[SecElectronSandbox] 渲染进程启用 OS 沙箱（VULN-08），缓解 XSS→本地逃逸
++      sandbox: true,
+     },
+   })
+ 
