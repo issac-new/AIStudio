@@ -1032,14 +1032,20 @@ export const useCockpitStore = defineStore('cockpit', () => {
     openRunTrace({ sessionId: '' }) // Empty sessionId signals "show overview"
   }
   // kanban 详情弹窗：取完整 KanbanTaskDetail（含 comments/events/runs 等）
+  // 双击协作图节点打开弹窗时，先 selectTask 联动选中状态——这样右侧 Workspace
+  // 文件面板的 Home 目录会跟随该任务的 workspace_path（CockpitFilePanel 监听
+  // selectionSeq 同步 workspaceRoot），避免「弹窗显示任务 A 的 workspace，
+  // 但文件面板仍停留在之前选中任务 B 的目录」。
   const detailExpanded = ref(false)  // 弹窗"更多信息"折叠态
-  function openKanbanDetail(taskId: string) {
+  async function openKanbanDetail(taskId: string) {
+    // 先联动选中：刷新 detail cache（含最新 workspace_path）并触发 workspace 面板同步
+    await selectTask(taskId)
     const detail = _detailCache.value[taskId]
     if (detail) {
       kanbanDetailTask.value = detail
       kanbanDetailOpen.value = true
     } else {
-      // 若 detail 未缓存，用 CockpitTask 的基本信息构造最小 detail
+      // selectTask 已尝试拉取 detail；若仍无缓存（拉取失败），用 CockpitTask 基本信息兜底
       const t = tasks.value.find(x => x.id === taskId)
       if (t) {
         kanbanDetailTask.value = {
