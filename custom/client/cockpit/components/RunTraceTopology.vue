@@ -152,6 +152,7 @@ const chartOption = computed(() => {
         },
       },
       _nodeId: n.id,
+      _scale: scale,
     }
   })
   const links = props.edges.filter(e => vis.has(e.from) && vis.has(e.to)).map(e => {
