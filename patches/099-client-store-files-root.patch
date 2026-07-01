@@ -1,107 +1,107 @@
 diff --git a/packages/client/src/stores/hermes/files.ts b/packages/client/src/stores/hermes/files.ts
-index b3a7f8d6..9d2e43e9 100644
+index c770fc33..32b8dfd3 100644
 --- a/packages/client/src/stores/hermes/files.ts
 +++ b/packages/client/src/stores/hermes/files.ts
-@@ -117,6 +117,7 @@ export const useFilesStore = defineStore('files', () => {
-   const currentPath = ref('')
+@@ -123,6 +123,7 @@ export const useFilesStore = defineStore('files', () => {
+   const currentProfile = ref<string | null>(null)
    const entries = ref<FileEntry[]>([])
    const loading = ref(false)
 +  const workspaceRoot = ref<string | undefined>(undefined)
    const sortBy = ref<'name' | 'size' | 'modTime'>('name')
    const sortOrder = ref<'asc' | 'desc'>('asc')
  
-@@ -164,7 +165,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -177,7 +178,7 @@ export const useFilesStore = defineStore('files', () => {
      if (path !== undefined) currentPath.value = path
      loading.value = true
      try {
--      const result = await filesApi.listFiles(currentPath.value)
-+      const result = await filesApi.listFiles(currentPath.value, workspaceRoot.value)
+-      const result = await filesApi.listFiles(currentPath.value, nextProfile)
++      const result = await filesApi.listFiles(currentPath.value, workspaceRoot.value, nextProfile)
        entries.value = result.entries
      } catch (err) {
        console.error('Failed to fetch files:', err)
-@@ -182,7 +183,7 @@ export const useFilesStore = defineStore('files', () => {
-   }
- 
-   async function openEditor(filePath: string) {
--    const result = await filesApi.readFile(filePath)
-+    const result = await filesApi.readFile(filePath, workspaceRoot.value)
+@@ -197,7 +198,7 @@ export const useFilesStore = defineStore('files', () => {
+   async function openEditor(filePath: string, options: { profile?: string | null } = {}) {
+     const profile = resolveProfile(options.profile)
+     currentProfile.value = profile
+-    const result = await filesApi.readFile(filePath, profile)
++    const result = await filesApi.readFile(filePath, workspaceRoot.value, profile)
      editingFile.value = {
        path: filePath,
        content: result.content,
-@@ -193,7 +194,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -208,7 +209,7 @@ export const useFilesStore = defineStore('files', () => {
  
    async function saveEditor() {
      if (!editingFile.value) return
--    await filesApi.writeFile(editingFile.value.path, editingFile.value.content)
-+    await filesApi.writeFile(editingFile.value.path, editingFile.value.content, workspaceRoot.value)
+-    await filesApi.writeFile(editingFile.value.path, editingFile.value.content, currentProfile.value)
++    await filesApi.writeFile(editingFile.value.path, editingFile.value.content, workspaceRoot.value, currentProfile.value)
      editingFile.value.originalContent = editingFile.value.content
    }
  
-@@ -203,10 +204,10 @@ export const useFilesStore = defineStore('files', () => {
+@@ -220,10 +221,10 @@ export const useFilesStore = defineStore('files', () => {
      if (isImageFile(entry.name)) {
-       previewFile.value = { path: entry.path, type: 'image' }
+       previewFile.value = { path: entry.path, profile, type: 'image' }
      } else if (isMarkdownFile(entry.name)) {
--      const result = await filesApi.readFile(entry.path)
-+      const result = await filesApi.readFile(entry.path, workspaceRoot.value)
-       previewFile.value = { path: entry.path, type: 'markdown', content: result.content }
+-      const result = await filesApi.readFile(entry.path, profile)
++      const result = await filesApi.readFile(entry.path, workspaceRoot.value, profile)
+       previewFile.value = { path: entry.path, profile, type: 'markdown', content: result.content }
      } else if (isTextFile(entry.name)) {
--      const result = await filesApi.readFile(entry.path)
-+      const result = await filesApi.readFile(entry.path, workspaceRoot.value)
+-      const result = await filesApi.readFile(entry.path, profile)
++      const result = await filesApi.readFile(entry.path, workspaceRoot.value, profile)
        previewFile.value = {
          path: entry.path,
-         type: 'text',
-@@ -220,18 +221,18 @@ export const useFilesStore = defineStore('files', () => {
+         profile,
+@@ -238,18 +239,18 @@ export const useFilesStore = defineStore('files', () => {
  
    async function createDir(name: string, targetPath = currentPath.value) {
      const path = targetPath ? `${targetPath}/${name}` : name
--    await filesApi.mkDir(path)
-+    await filesApi.mkDir(path, workspaceRoot.value)
-     await fetchEntries()
+-    await filesApi.mkDir(path, currentProfile.value)
++    await filesApi.mkDir(path, workspaceRoot.value, currentProfile.value)
+     await fetchEntries(undefined)
    }
  
    async function createFile(name: string) {
      const path = currentPath.value ? `${currentPath.value}/${name}` : name
--    await filesApi.writeFile(path, '')
-+    await filesApi.writeFile(path, '', workspaceRoot.value)
-     await fetchEntries()
+-    await filesApi.writeFile(path, '', currentProfile.value)
++    await filesApi.writeFile(path, '', workspaceRoot.value, currentProfile.value)
+     await fetchEntries(undefined)
    }
  
    async function deleteEntry(entry: FileEntry) {
--    await filesApi.deleteFile(entry.path, entry.isDir)
-+    await filesApi.deleteFile(entry.path, entry.isDir, workspaceRoot.value)
+-    await filesApi.deleteFile(entry.path, entry.isDir, currentProfile.value)
++    await filesApi.deleteFile(entry.path, entry.isDir, workspaceRoot.value, currentProfile.value)
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -244,7 +245,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -262,7 +263,7 @@ export const useFilesStore = defineStore('files', () => {
    async function renameEntry(entry: FileEntry, newName: string) {
      const parentPath = entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : ''
      const newPath = parentPath ? `${parentPath}/${newName}` : newName
--    await filesApi.renameFile(entry.path, newPath)
-+    await filesApi.renameFile(entry.path, newPath, workspaceRoot.value)
+-    await filesApi.renameFile(entry.path, newPath, currentProfile.value)
++    await filesApi.renameFile(entry.path, newPath, workspaceRoot.value, currentProfile.value)
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -255,12 +256,12 @@ export const useFilesStore = defineStore('files', () => {
+@@ -273,12 +274,12 @@ export const useFilesStore = defineStore('files', () => {
    }
  
    async function copyEntry(entry: FileEntry, destPath: string) {
--    await filesApi.copyFile(entry.path, destPath)
-+    await filesApi.copyFile(entry.path, destPath, workspaceRoot.value)
-     await fetchEntries()
+-    await filesApi.copyFile(entry.path, destPath, currentProfile.value)
++    await filesApi.copyFile(entry.path, destPath, workspaceRoot.value, currentProfile.value)
+     await fetchEntries(undefined)
    }
  
    async function uploadFiles(files: File[]) {
--    await filesApi.uploadFiles(currentPath.value, files)
-+    await filesApi.uploadFiles(currentPath.value, files, workspaceRoot.value)
-     await fetchEntries()
+-    await filesApi.uploadFiles(currentPath.value, files, currentProfile.value)
++    await filesApi.uploadFiles(currentPath.value, files, workspaceRoot.value, currentProfile.value)
+     await fetchEntries(undefined)
    }
  
-@@ -279,7 +280,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -297,7 +298,7 @@ export const useFilesStore = defineStore('files', () => {
    })
  
    return {
--    currentPath, entries, loading, sortBy, sortOrder,
-+    currentPath, entries, loading, workspaceRoot, sortBy, sortOrder,
+-    currentPath, currentProfile, entries, loading, sortBy, sortOrder,
++    currentPath, currentProfile, entries, loading, workspaceRoot, sortBy, sortOrder,
      editingFile, previewFile,
      pathSegments, sortedEntries, hasUnsavedChanges,
      fetchEntries, navigateTo, navigateUp,
