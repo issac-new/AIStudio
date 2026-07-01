@@ -7,8 +7,11 @@
 import Router from '@koa/router'
 import { readFile, access } from 'fs/promises'
 import { homedir } from 'os'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { constants } from 'fs'
+// HERMES_CUSTOM[SecTraceSandbox] BEGIN: 路径遍历防护
+import { isPathWithin } from '../../../services/hermes/hermes-path'
+// HERMES_CUSTOM[SecTraceSandbox] END
 
 const router = new Router()
 
@@ -437,8 +440,22 @@ router.get('/api/hermes/sessions/:id/trace', async (ctx) => {
     return
   }
 
+  // HERMES_CUSTOM[SecTraceSandbox] BEGIN: 严格校验 sessionId，防路径遍历读沙箱外文件
+  // sessionId 仅允许安全字符集；最终路径必须落在 TRACE_DIR 沙箱内。
+  if (!/^[A-Za-z0-9._-]+$/.test(sessionId)) {
+    ctx.status = 400
+    ctx.body = { error: 'Invalid session_id' }
+    return
+  }
+
   // Try to read JSONL file
-  const filePath = join(TRACE_DIR, `${sessionId}.jsonl`)
+  const filePath = resolve(TRACE_DIR, `${sessionId}.jsonl`)
+  if (!isPathWithin(filePath, TRACE_DIR)) {
+    ctx.status = 400
+    ctx.body = { error: 'Invalid session_id' }
+    return
+  }
+  // HERMES_CUSTOM[SecTraceSandbox] END
   try {
     await access(filePath, constants.R_OK)
   } catch {
@@ -475,9 +492,10 @@ router.get('/api/hermes/sessions/:id/trace', async (ctx) => {
         outcome: trailer?.outcome,
       },
     }
-  } catch (err) {
+  } catch {
+    // HERMES_CUSTOM[SecTraceSandbox] END: 不回传内部错误细节（防路径/堆栈泄露）
     ctx.status = 500
-    ctx.body = { error: 'Failed to read trace file', details: String(err) }
+    ctx.body = { error: 'Failed to read trace file' }
   }
 })
 
