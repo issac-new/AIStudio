@@ -166,18 +166,21 @@ const chartOption = computed(() => {
   })
   return {
     tooltip: {
+      confine: true,
+      extraCssText: 'max-width: 320px; white-space: normal; word-break: break-word; line-height: 1.4; padding: 6px 8px; font-size: 11px;',
       formatter: (p: any) => {
         const id = p.data?._nodeId
         const n = id ? nodeById.value.get(id) : null
         if (!n) return p.name
-        const m = (p.data as any)?._meta
-        const tip = [`<b>${decodeText(n.label)}</b>`]
-        if (n.taskBoard) tip.push(`kanban: ${n.taskBoard}`)
-        if (n.cluster) tip.push(`taskId: ${n.cluster}`)
-        if (n.taskStatus) tip.push(`状态: ${n.taskStatus}`)
-        tip.push(`kind: ${n.kind}`, `status: ${n.status}`)
-        if (n.detail) tip.push(decodeText(n.detail))
-        return tip.join('<br/>')
+        const rows: string[] = [`<b>${decodeText(n.label)}</b>`]
+        const meta: string[] = []
+        if (n.taskBoard) meta.push(`kanban: ${n.taskBoard}`)
+        if (n.cluster) meta.push(`taskId: ${n.cluster}`)
+        if (n.taskStatus) meta.push(`状态: ${n.taskStatus}`)
+        meta.push(`${n.kind}`, n.status)
+        if (meta.length) rows.push(`<span style="color:#888">${meta.join(' · ')}</span>`)
+        if (n.detail) rows.push(`<span style="color:#555">${decodeText(n.detail)}</span>`)
+        return `<div style="max-width:300px">${rows.join('<br/>')}</div>`
       },
     },
     legend: { show: false },
