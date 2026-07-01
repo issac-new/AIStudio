@@ -92,7 +92,7 @@ const chartOption = computed(() => {
       label: {
         show: true,
         position: 'inside',
-        align: 'left',
+        align: 'center',
         verticalAlign: 'middle',
         padding: [4, 8],
         formatter: () => `{seq|#${seq}} {kind|${kindLabel}} {status|${statusTag}}\n{title|${title}}\n{task|${taskTag}}`,
