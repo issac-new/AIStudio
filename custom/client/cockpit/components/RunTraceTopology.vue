@@ -149,9 +149,9 @@ function onNodeClick(payload: { node?: Node } & Node) {
     emit('focus-task', orig.cluster)
     return
   }
-  // agent/skill 节点：仅右侧面板显示，不跳转
-  if (orig.kind === 'agent' || orig.kind === 'skill') return
-  // 其余会话级节点（tool 等）→ 进入单会话详细视图
+  // agent/skill/tool 节点：仅右侧面板显示并跳转至对应时间轴位置，不跳页面
+  if (orig.kind === 'agent' || orig.kind === 'skill' || orig.kind === 'tool') return
+  // 其余会话级节点 → 进入单会话详细视图
   const sid = orig.ref?.sessionId
   if (sid) emit('select-session', sid)
 }
