@@ -19,7 +19,7 @@ const KIND_LABEL: Record<string, string> = {
   memory: 'Memory', service: 'Service', peer: 'Peer', approval: 'Approval',
 }
 
-// 全树节点按时间排序、按天分组（始终显示完整时间轴）
+// 全树节点按时间排序
 const sortedNodes = computed<TraceNode[]>(() =>
   [...props.allNodes].filter(n => n.startedAt).sort((a, b) => a.startedAt - b.startedAt),
 )
@@ -28,6 +28,72 @@ const seqMap = computed<Map<string, number>>(() => {
   const m = new Map<string, number>()
   sortedNodes.value.forEach((n, i) => m.set(n.id, i + 1))
   return m
+})
+
+// 时间线条目：将 workflow 节点的 children 提取为独立条目，与节点合并按时间排序
+interface TimelineEntry {
+  id: string
+  ts: number
+  kind: string
+  label: string
+  text?: string
+  detail?: string
+  status?: string
+  durationMs?: number
+  isNode: boolean
+  node?: TraceNode
+}
+const timelineEntries = computed<TimelineEntry[]>(() => {
+  const entries: TimelineEntry[] = []
+  for (const n of sortedNodes.value) {
+    entries.push({
+      id: n.id,
+      ts: n.startedAt,
+      kind: n.kind,
+      label: n.label,
+      detail: n.detail,
+      status: n.status,
+      durationMs: n.durationMs,
+      isNode: true,
+      node: n,
+    })
+    // workflow 的 children 提取为独立条目
+    if (n.kind === 'workflow' && n.children) {
+      for (let i = 0; i < n.children.length; i++) {
+        const c = n.children[i]
+        entries.push({
+          id: `${n.id}:child:${i}`,
+          ts: c.ts,
+          kind: c.kind,
+          label: c.toolName || c.kind,
+          text: c.text,
+          detail: c.text,
+          status: c.status,
+          durationMs: c.durationMs,
+          isNode: false,
+        })
+      }
+    }
+  }
+  return entries.sort((a, b) => a.ts - b.ts)
+})
+
+// 时间线条目按天分组
+interface Group { key: string; label: string; items: TimelineEntry[] }
+const groups = computed<Group[]>(() => {
+  const map = new Map<string, TimelineEntry[]>()
+  for (const e of timelineEntries.value) {
+    const ms = e.ts < 1e12 ? e.ts * 1000 : e.ts
+    const d = new Date(ms)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(e)
+  }
+  const week = ['日', '一', '二', '三', '四', '五', '六']
+  return [...map.entries()].map(([key, items]) => {
+    const d = new Date(key)
+    return { key, label: `${d.getMonth() + 1}/${d.getDate()} 周${week[d.getDay()]}`, items }
+  })
 })
 // skill → 其下 tool 子节点（边 from=skill to=tool），用于二级折叠
 const skillTools = computed<Map<string, TraceNode[]>>(() => {
@@ -40,7 +106,6 @@ const skillTools = computed<Map<string, TraceNode[]>>(() => {
       m.get(fromNode.id)!.push(toNode)
     }
   }
-  // tool 按时间排序
   for (const [, tools] of m) tools.sort((a, b) => a.startedAt - b.startedAt)
   return m
 })
@@ -52,22 +117,6 @@ function toggleSkill(skillId: string) {
   else s.add(skillId)
   expandedSkills.value = s
 }
-interface Group { key: string; label: string; items: TraceNode[] }
-const groups = computed<Group[]>(() => {
-  const map = new Map<string, TraceNode[]>()
-  for (const n of sortedNodes.value) {
-    const ms = n.startedAt < 1e12 ? n.startedAt * 1000 : n.startedAt
-    const d = new Date(ms)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push(n)
-  }
-  const week = ['日', '一', '二', '三', '四', '五', '六']
-  return [...map.entries()].map(([key, items]) => {
-    const d = new Date(key)
-    return { key, label: `${d.getMonth() + 1}/${d.getDate()} 周${week[d.getDay()]}`, items }
-  })
-})
 
 // 选中节点详情 + agent 配置
 const agentDetail = ref<HermesProfileDetail | null>(null)
@@ -151,10 +200,10 @@ function fmtDuration(ms?: number): string {
         <div v-else class="trace-timeline-panel__empty-mini">配置不可用</div>
       </section>
 
-      <!-- 全时间轴 -->
+      <!-- 全时间轴（含 Run 节点提取的时间线条目） -->
       <section class="trace-timeline-panel__timeline">
-        <div class="trace-timeline-panel__sub-title">全部执行节点（{{ sortedNodes.length }}）</div>
-        <div v-if="sortedNodes.length === 0" class="trace-timeline-panel__empty-mini">暂无执行数据</div>
+        <div class="trace-timeline-panel__sub-title">全部执行时间线（{{ timelineEntries.length }}）</div>
+        <div v-if="timelineEntries.length === 0" class="trace-timeline-panel__empty-mini">暂无执行数据</div>
         <div v-for="g in groups" :key="g.key" class="trace-timeline-panel__group">
           <div class="trace-timeline-panel__group-head">
             <span class="trace-timeline-panel__group-dot"></span>
@@ -162,30 +211,30 @@ function fmtDuration(ms?: number): string {
             <small>{{ g.items.length }} 项</small>
           </div>
           <div class="trace-timeline-panel__items">
-            <template v-for="n in g.items" :key="n.id">
+            <template v-for="e in g.items" :key="e.id">
               <button
                 type="button"
-                :data-item-id="n.id"
+                :data-item-id="e.id"
                 class="trace-timeline-panel__item"
-                :class="[`is-${n.kind}`, node && n.id === node.id ? 'is-active' : '']"
-                @click="toggleDetail(n.id)"
+                :class="[`is-${e.kind}`, node && e.isNode && e.id === node.id ? 'is-active' : '', e.isNode ? '' : 'is-timeline-item']"
+                @click="e.isNode ? toggleDetail(e.id) : undefined"
               >
-                <span class="trace-timeline-panel__seq" :title="`时序 #${seqMap.get(n.id) ?? ''}`">{{ seqMap.get(n.id) ?? '' }}</span>
-                <span class="trace-timeline-panel__time">{{ fmtTime(n.startedAt) }}</span>
-                <span class="trace-timeline-panel__kind-tag" :class="`is-${n.kind}`">{{ KIND_LABEL[n.kind] ?? n.kind }}</span>
+                <span v-if="e.isNode" class="trace-timeline-panel__seq" :title="`时序 #${seqMap.get(e.id) ?? ''}`">{{ seqMap.get(e.id) ?? '' }}</span>
+                <span class="trace-timeline-panel__time">{{ fmtTime(e.ts) }}</span>
+                <span class="trace-timeline-panel__kind-tag" :class="`is-${e.kind}`">{{ KIND_LABEL[e.kind] ?? e.kind }}</span>
                 <span class="trace-timeline-panel__label-text">
-                  <b>{{ n.label }}</b>
-                  <small v-if="n.detail">{{ n.detail }}</small>
+                  <b>{{ e.label }}</b>
+                  <small v-if="e.detail" class="trace-timeline-panel__detail-text">{{ e.detail }}</small>
                 </span>
-                <span v-if="n.durationMs" class="trace-timeline-panel__dur">{{ fmtDuration(n.durationMs) }}</span>
-                <span v-if="n.profile" class="trace-timeline-panel__profile">{{ n.profile }}</span>
-                <span class="trace-timeline-panel__status" :class="`is-${n.status}`">{{ n.status }}</span>
-                <span v-if="n.kind === 'skill' && (skillTools.get(n.id)?.length ?? 0) > 0" class="trace-timeline-panel__expand" @click.stop="toggleSkill(n.id)">{{ expandedSkills.has(n.id) ? '▾' : '▸' }}{{ skillTools.get(n.id)?.length }}</span>
-                <span class="trace-timeline-panel__expand">{{ expandedDetail === n.id ? '▾' : '▸' }}</span>
+                <span v-if="e.durationMs" class="trace-timeline-panel__dur">{{ fmtDuration(e.durationMs) }}</span>
+                <span v-if="e.isNode && e.node?.profile" class="trace-timeline-panel__profile">{{ e.node.profile }}</span>
+                <span v-if="e.status" class="trace-timeline-panel__status" :class="`is-${e.status}`">{{ e.status }}</span>
+                <span v-if="e.isNode && e.node?.kind === 'skill' && (skillTools.get(e.id)?.length ?? 0) > 0" class="trace-timeline-panel__expand" @click.stop="toggleSkill(e.id)">{{ expandedSkills.has(e.id) ? '▾' : '▸' }}{{ skillTools.get(e.id)?.length }}</span>
+                <span v-if="e.isNode" class="trace-timeline-panel__expand">{{ expandedDetail === e.id ? '▾' : '▸' }}</span>
               </button>
               <!-- skill 下的 tool 二级节点（可折叠） -->
-              <template v-if="n.kind === 'skill' && expandedSkills.has(n.id)">
-                <div v-for="t in (skillTools.get(n.id) ?? [])" :key="t.id" class="trace-timeline-panel__sub-item" @click="toggleDetail(t.id)">
+              <template v-if="e.isNode && e.node?.kind === 'skill' && expandedSkills.has(e.id)">
+                <div v-for="t in (skillTools.get(e.id) ?? [])" :key="t.id" class="trace-timeline-panel__sub-item" @click="toggleDetail(t.id)">
                   <span class="trace-timeline-panel__seq">{{ seqMap.get(t.id) ?? '' }}</span>
                   <span class="trace-timeline-panel__time">{{ fmtTime(t.startedAt) }}</span>
                   <span class="trace-timeline-panel__kind-tag is-tool">Tool</span>
@@ -194,27 +243,17 @@ function fmtDuration(ms?: number): string {
                   <span class="trace-timeline-panel__status" :class="`is-${t.status}`">{{ t.status }}</span>
                 </div>
               </template>
-              <!-- 二级详情（可折叠，不弹窗） -->
-              <div v-if="expandedDetail === n.id" class="trace-timeline-panel__sub-detail">
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">详情</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ n.detail || '—' }}</span></div>
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">状态</span><span class="trace-timeline-panel__value">{{ n.status }}</span></div>
-                <div v-if="n.profile" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Profile</span><span class="trace-timeline-panel__value">{{ n.profile }}</span></div>
-                <div v-if="n.cluster" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">任务</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ n.cluster }}</span></div>
-                <div v-if="n.taskStatus" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">任务状态</span><span class="trace-timeline-panel__value">{{ n.taskStatus }}</span></div>
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">开始</span><span class="trace-timeline-panel__value">{{ fmtDateTime(n.startedAt) }}</span></div>
-                <div v-if="n.endedAt" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">结束</span><span class="trace-timeline-panel__value">{{ fmtDateTime(n.endedAt) }}</span></div>
-                <div v-if="n.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">耗时</span><span class="trace-timeline-panel__value">{{ fmtDuration(n.durationMs) }}</span></div>
-                <div v-if="n.ref?.sessionId" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">会话</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ n.ref.sessionId }}</span></div>
-                <!-- workflow 时间线（children） -->
-                <div v-if="n.children && n.children.length > 0" class="trace-timeline-panel__children-list">
-                  <div class="trace-timeline-panel__sub-title">时间线（{{ n.children.length }}）</div>
-                  <div v-for="(c, ci) in n.children" :key="c.id || ci" class="trace-timeline-panel__child">
-                    <span class="trace-timeline-panel__child-time">{{ fmtTime(c.ts) }}</span>
-                    <span class="trace-timeline-panel__child-kind" :class="`is-${c.kind}`">{{ c.kind }}</span>
-                    <span class="trace-timeline-panel__child-text">{{ c.text || c.toolName || '—' }}</span>
-                    <span v-if="c.durationMs" class="trace-timeline-panel__dur">{{ fmtDuration(c.durationMs) }}</span>
-                  </div>
-                </div>
+              <!-- 节点二级详情（可折叠，不弹窗） -->
+              <div v-if="e.isNode && expandedDetail === e.id && e.node" class="trace-timeline-panel__sub-detail">
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">详情</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ e.node.detail || '—' }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">状态</span><span class="trace-timeline-panel__value">{{ e.node.status }}</span></div>
+                <div v-if="e.node.profile" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Profile</span><span class="trace-timeline-panel__value">{{ e.node.profile }}</span></div>
+                <div v-if="e.node.cluster" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">任务</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.cluster }}</span></div>
+                <div v-if="e.node.taskStatus" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">任务状态</span><span class="trace-timeline-panel__value">{{ e.node.taskStatus }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">开始</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.node.startedAt) }}</span></div>
+                <div v-if="e.node.endedAt" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">结束</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.node.endedAt) }}</span></div>
+                <div v-if="e.node.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">耗时</span><span class="trace-timeline-panel__value">{{ fmtDuration(e.node.durationMs) }}</span></div>
+                <div v-if="e.node.ref?.sessionId" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">会话</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.ref.sessionId }}</span></div>
               </div>
             </template>
           </div>
@@ -267,6 +306,8 @@ function fmtDuration(ms?: number): string {
 .trace-timeline-panel__label-text { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .trace-timeline-panel__label-text b { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-timeline-panel__label-text small { font-size: 9px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-timeline-panel__detail-text { white-space: normal !important; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.trace-timeline-panel__item.is-timeline-item { background: var(--bg-secondary); border-style: dashed; opacity: 0.85; }
 .trace-timeline-panel__dur { font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .trace-timeline-panel__profile { font-size: 8px; color: var(--text-muted); padding: 0 3px; border-radius: 2px; background: var(--bg-secondary); flex-shrink: 0; text-transform: uppercase; }
 .trace-timeline-panel__status { font-size: 8px; padding: 0 3px; border-radius: 2px; flex-shrink: 0; }
