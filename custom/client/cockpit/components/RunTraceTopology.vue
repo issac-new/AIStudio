@@ -46,6 +46,21 @@ const STATUS_COLOR: Record<string, string> = {
   review: '#D69B5A', ready: '#D69B5A', triage: '#909090', todo: '#909090', scheduled: '#5AAAD6',
 }
 
+/** 转码 \uXXXX 等 unicode 转义序列为可读文本 */
+function decodeText(text?: string): string {
+  if (!text) return ''
+  if (!/\\[unrtbf"\\]/.test(text)) return text
+  try {
+    return JSON.parse(`"${text.replace(/(?<!\\)"/g, '\\"')}"`)
+  } catch {
+    return text.replace(/\\u([0-9a-fA-F]{4})\\u([0-9a-fA-F]{4})/g, (_, hi, lo) => {
+      const code = (parseInt(hi, 16) << 10) + parseInt(lo, 16) - 0x35fdc00
+      try { return String.fromCodePoint(code) } catch { return _ }
+    }).replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
+  }
+}
+
 const layout = computed(() => computeLayeredLayout(props.nodes, props.edges, collapsedIds.value))
 const visibleNodeIds = computed(() => new Set(layout.value.positions.keys()))
 
@@ -82,7 +97,8 @@ const chartOption = computed(() => {
     const seq = seqMap.get(n.id) ?? 0
     const kindLabel = KIND_LABEL[n.kind] ?? n.kind
     // 标题截断
-    const title = n.label && n.label.length > 16 ? n.label.slice(0, 14) + '…' : (n.label || '')
+    const rawLabel = decodeText(n.label) || ''
+    const title = rawLabel.length > 16 ? rawLabel.slice(0, 14) + '…' : rawLabel
     const taskTag = n.cluster ? n.cluster : ''
     // 节点状态：自身 taskStatus 优先，否则从所属任务(cluster)反查
     const st = n.taskStatus ?? (n.cluster ? taskStatusMap.get(n.cluster) : undefined)
@@ -146,7 +162,7 @@ const chartOption = computed(() => {
         const id = p.data?._nodeId
         const n = id ? nodeById.value.get(id) : null
         if (!n) return p.name
-        return `<b>${n.label}</b><br/>kind: ${n.kind}<br/>status: ${n.status}<br/>${n.detail || ''}`
+        return `<b>${n.label}</b><br/>kind: ${n.kind}<br/>status: ${n.status}<br/>${decodeText(n.detail) || ''}`
       },
     },
     legend: { show: false },

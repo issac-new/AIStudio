@@ -168,14 +168,23 @@ function fmtDuration(ms?: number): string {
   const h = Math.floor(m / 60)
   return `${h}h${m % 60}m`
 }
-/** 转码 \uXXXX 等 unicode 转义序列为可读文本 */
+/** 转码 \uXXXX 等 unicode 转义序列为可读文本。
+ *  优先用 JSON.parse 处理标准 JSON 转义（\u、\n、\"、\\ 等）；
+ *  失败则用正则替换 \uXXXX，正确处理 surrogate pair（用 fromCodePoint）。 */
 function decodeText(text?: string): string {
   if (!text) return ''
+  // 无转义序列直接返回
+  if (!/\\[unrtbf"\\]/.test(text)) return text
+  // 优先 JSON.parse（处理标准 JSON 转义）
   try {
-    // 将 \uXXXX 形式的转义解码（含 surrogate pair）
-    return text.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    return JSON.parse(`"${text.replace(/(?<!\\)"/g, '\\"')}"`)
   } catch {
-    return text
+    // fallback：正则替换 \uXXXX，surrogate pair 合并
+    return text.replace(/\\u([0-9a-fA-F]{4})\\u([0-9a-fA-F]{4})/g, (_, hi, lo) => {
+      const code = (parseInt(hi, 16) << 10) + parseInt(lo, 16) - 0x35fdc00
+      try { return String.fromCodePoint(code) } catch { return _.replace(/\\u([0-9a-fA-F]{4})/g, (m: string, h: string) => String.fromCharCode(parseInt(h, 16))) }
+    }).replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
   }
 }
 </script>
