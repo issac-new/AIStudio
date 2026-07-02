@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/profiles.py b/hermes_cli/profiles.py
-index 490077884..0816a3541 100644
+index 7f7f3b262..7fbdc6555 100644
 --- a/hermes_cli/profiles.py
 +++ b/hermes_cli/profiles.py
-@@ -822,6 +822,79 @@ def profiles_to_serve(multiplex: bool) -> List[Tuple[str, Path]]:
+@@ -968,6 +968,79 @@ def profiles_to_serve(multiplex: bool) -> List[Tuple[str, Path]]:
      return serve
  
  
@@ -82,7 +82,7 @@ index 490077884..0816a3541 100644
  def create_profile(
      name: str,
      clone_from: Optional[str] = None,
-@@ -906,6 +979,12 @@ def create_profile(
+@@ -1052,6 +1125,12 @@ def create_profile(
          profile_dir.mkdir(parents=True, exist_ok=True)
          for subdir in _PROFILE_DIRS:
              (profile_dir / subdir).mkdir(parents=True, exist_ok=True)
@@ -95,7 +95,7 @@ index 490077884..0816a3541 100644
  
          # Clone config files from source
          if source_dir is not None:
-@@ -1011,6 +1090,12 @@ def create_profile(
+@@ -1157,6 +1236,12 @@ def create_profile(
      # unit-generation paths handle gateway lifecycle.
      _maybe_register_gateway_service(canon)
  
