@@ -1,0 +1,17 @@
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -353,13 +353,6 @@
+   const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8650'
+   app.use(async (ctx, next) => {
+     if (ctx.path.startsWith('/agent-health/')) {
+-      // HERMES_CUSTOM[SecAgentHealthAuth] BEGIN: 要求已认证，防未授权访问 agent 内部端点
+-      if (!ctx.state.user) {
+-        ctx.status = 401
+-        ctx.body = { error: 'Unauthorized' }
+-        return
+-      }
+-      // HERMES_CUSTOM[SecAgentHealthAuth] END
+       // HERMES_CUSTOM[SecAgentHealthPath] BEGIN: 限制转发路径白名单，防路径注入探测 agent 其他路由
+       const sub = ctx.path.slice('/agent-health'.length)
+       const allowed = sub === '/' || sub === '/detailed' || sub === '/refs' || sub.startsWith('/refs/')
