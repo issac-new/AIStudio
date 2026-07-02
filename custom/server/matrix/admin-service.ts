@@ -23,15 +23,15 @@ export interface MatrixUserListResult {
 
 /**
  * 校验 homeserverUrl 安全性并返回规范化 origin（scheme://host[:port]）。
- * Matrix 登录要求 https，防止 token 明文外泄；本机内网部署可显式传 allowHttp。
+ * 默认允许 http + 私有 IP（内网/自建 homeserver 场景）。
  *
  * 所有出站请求必须用本函数返回的 origin 拼接路径，避免原始字符串与
  * DNS 解析结果不一致（缓解 SSRF + DNS rebinding）。
  *
- * @throws UnsafeUrlError 当 URL 不安全（私有/回环/链路本地地址、非法协议等）
+ * @throws UnsafeUrlError 当 URL 不安全（非法协议、userinfo 等）
  */
-export async function safeMatrixOrigin(homeserverUrl: string, allowHttp = false): Promise<string> {
-  return assertSafeOutboundUrl(homeserverUrl, { allowHttp })
+export async function safeMatrixOrigin(homeserverUrl: string, allowHttp = true): Promise<string> {
+  return assertSafeOutboundUrl(homeserverUrl, { allowHttp, allowPrivateIp: true })
 }
 
 export async function validateMatrixToken(
