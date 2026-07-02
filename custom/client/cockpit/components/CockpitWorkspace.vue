@@ -246,9 +246,10 @@ function doSpecify() {
   const tid = task.value.id
   const opts = { board: store.boardSlugOf(tid) }
   execAction('Specify', async () => {
-    const res = await kanbanApi.specifyTask(tid, opts) as any
-    if (res && !res.ok) throw new Error(res?.reason || 'unknown')
-    return res?.new_title ? `Specified — retitled: ${res.new_title}` : ''
+    // kanbanApi.specifyTask 返回 results 数组（失败时 request() 会抛错，由 execAction 捕获）
+    const results = await kanbanApi.specifyTask(tid, opts)
+    const n = Array.isArray(results) ? results.length : 0
+    return n > 0 ? `Specified ✓ (${n} item${n > 1 ? 's' : ''})` : 'Specified ✓'
   })
 }
 function doDecompose() {
@@ -256,14 +257,10 @@ function doDecompose() {
   const tid = task.value.id
   const opts = { board: store.boardSlugOf(tid) }
   execAction('Decompose', async () => {
-    const res = await kanbanApi.decomposeTask(tid, opts) as any
-    if (res && !res.ok) throw new Error(res?.reason || 'unknown')
-    if (res?.fanout && res?.child_ids?.length) {
-      return `Decomposed into ${res.child_ids.length} children: ${res.child_ids.join(', ')}`
-    } else if (res?.new_title) {
-      return `Single task (no fanout) — retitled: ${res.new_title}`
-    }
-    return ''
+    // kanbanApi.decomposeTask 返回 results 数组（失败时 request() 会抛错，由 execAction 捕获）
+    const results = await kanbanApi.decomposeTask(tid, opts)
+    const n = Array.isArray(results) ? results.length : 0
+    return n > 0 ? `Decomposed into ${n} task${n > 1 ? 's' : ''}` : 'Decomposed ✓'
   })
 }
 
