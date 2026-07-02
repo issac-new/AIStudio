@@ -30,6 +30,8 @@ export interface AssertSafeUrlOptions {
   allowHttp?: boolean
   /** 允许的端口白名单；缺省表示允许任意非特权端口外的端口。默认拒绝 0-1023。 */
   allowedPorts?: number[]
+  /** 是否允许目标解析到私有/保留 IP（默认 false）。内网/自建 homeserver 场景需放开。 */
+  allowPrivateIp?: boolean
 }
 
 /**
@@ -104,7 +106,7 @@ export async function assertSafeOutboundUrl(
   rawUrl: string,
   options: AssertSafeUrlOptions = {},
 ): Promise<string> {
-  const { allowHttp = false, allowedPorts } = options
+  const { allowHttp = false, allowedPorts, allowPrivateIp = false } = options
   if (!rawUrl || typeof rawUrl !== 'string') {
     throw new UnsafeUrlError('URL is required')
   }
@@ -155,7 +157,7 @@ export async function assertSafeOutboundUrl(
 
   // 直接给 IP 字面量
   if (isIP(host) !== 0) {
-    if (isPrivateOrReservedIp(host)) {
+    if (!allowPrivateIp && isPrivateOrReservedIp(host)) {
       throw new UnsafeUrlError('Target resolves to a private/reserved address')
     }
   } else {
@@ -170,9 +172,11 @@ export async function assertSafeOutboundUrl(
     if (addresses.length === 0) {
       throw new UnsafeUrlError('Hostname did not resolve to any address')
     }
-    for (const addr of addresses) {
-      if (isPrivateOrReservedIp(addr)) {
-        throw new UnsafeUrlError('Target resolves to a private/reserved address')
+    if (!allowPrivateIp) {
+      for (const addr of addresses) {
+        if (isPrivateOrReservedIp(addr)) {
+          throw new UnsafeUrlError('Target resolves to a private/reserved address')
+        }
       }
     }
   }
