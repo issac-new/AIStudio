@@ -107,3 +107,5 @@
 120-server-restrict-query-token.patch
 121-desktop-electron-sandbox.patch
 122-groupchat-sidebar-logout.patch
+123-server-files-root-task-workspace-allowlist.patch
+124-server-kanban-workspace-files-allowlist.patch

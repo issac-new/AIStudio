@@ -184,10 +184,18 @@ export default mergeConfig(
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\\/agent-health/, '/health'),
           // hermes-agent v0.18.0 的 /health/detailed 需要 API_SERVER_KEY 认证。
-          // 从 .env 读取 key，注入 Authorization header。
+          // 运行时从 ~/.hermes/.env 读取 key（gateway 启动也读同一文件），注入 Authorization header。
           configure: (proxy) => {
+            let key = process.env.API_SERVER_KEY || ''
+            if (!key) {
+              try {
+                const fs = require('fs')
+                const envPath = require('path').join(require('os').homedir(), '.hermes', '.env')
+                const m = fs.readFileSync(envPath, 'utf8').match(/^API_SERVER_KEY=(.+)$/m)
+                if (m) key = m[1].trim()
+              } catch { /* .env 不存在或读失败，忽略 */ }
+            }
             proxy.on('proxyReq', (proxyReq) => {
-              const key = process.env.API_SERVER_KEY || ''
               if (key) proxyReq.setHeader('Authorization', \`Bearer \${key}\`)
             })
           },
