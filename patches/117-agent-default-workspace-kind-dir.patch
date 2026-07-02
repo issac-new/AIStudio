@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index c82d762d5..91df1f0c2 100644
+index 6150b1415..251b45df0 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -992,7 +992,7 @@ CREATE TABLE IF NOT EXISTS tasks (
+@@ -1104,7 +1104,7 @@ CREATE TABLE IF NOT EXISTS tasks (
      created_at           INTEGER NOT NULL,
      started_at           INTEGER,
      completed_at         INTEGER,
@@ -10,8 +10,8 @@ index c82d762d5..91df1f0c2 100644
 +    workspace_kind       TEXT NOT NULL DEFAULT 'dir',
      workspace_path       TEXT,
      branch_name          TEXT,
-     claim_lock           TEXT,
-@@ -2066,7 +2066,7 @@ def create_task(
+     -- Optional link to a first-class Project (hermes_cli/projects_db). When set,
+@@ -2390,7 +2390,7 @@ def create_task(
      body: Optional[str] = None,
      assignee: Optional[str] = None,
      created_by: Optional[str] = None,
@@ -21,7 +21,7 @@ index c82d762d5..91df1f0c2 100644
      branch_name: Optional[str] = None,
      tenant: Optional[str] = None,
 diff --git a/hermes_cli/kanban_swarm.py b/hermes_cli/kanban_swarm.py
-index fe47a4c77..f5849acbb 100644
+index 4903d9127..7fc74374b 100644
 --- a/hermes_cli/kanban_swarm.py
 +++ b/hermes_cli/kanban_swarm.py
 @@ -86,7 +86,7 @@ def create_swarm(
