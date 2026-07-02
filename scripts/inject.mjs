@@ -183,6 +183,14 @@ export default mergeConfig(
           target: 'http://127.0.0.1:8650',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\\/agent-health/, '/health'),
+          // hermes-agent v0.18.0 的 /health/detailed 需要 API_SERVER_KEY 认证。
+          // 从 .env 读取 key，注入 Authorization header。
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              const key = process.env.API_SERVER_KEY || ''
+              if (key) proxyReq.setHeader('Authorization', \`Bearer \${key}\`)
+            })
+          },
         },
       },
     },
