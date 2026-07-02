@@ -1,6 +1,9 @@
 import { resolve, isAbsolute, relative } from 'path'
+import * as pathWin32 from 'path/win32'
 import { homedir } from 'os'
 import { execFile } from 'child_process'
+import { existsSync } from 'fs'
+import { basename, dirname } from 'path'
 import { promisify } from 'util'
 
 /**
@@ -27,10 +30,32 @@ import { promisify } from 'util'
 const execFileAsync = promisify(execFile)
 const TTL_MS = 60_000
 
+// ── Windows 兼容的路径比较（内联自 upstream hermes-path.ts，避免 symlink import）──
+function comparablePath(p: string): string {
+  return process.platform === 'win32' ? p.toLowerCase() : p
+}
+function looksLikeWindowsPath(p: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(p)
+}
+function useWindowsPathOps(...paths: string[]): boolean {
+  return process.platform === 'win32' || paths.some(looksLikeWindowsPath)
+}
+function resolveComparablePath(p: string, useWin: boolean): string {
+  return useWin ? pathWin32.resolve(p) : resolve(p)
+}
+function relativeComparablePath(from: string, to: string, useWin: boolean): string {
+  return useWin ? pathWin32.relative(from, to) : relative(from, to)
+}
+function isComparableAbsolute(p: string, useWin: boolean): boolean {
+  return useWin ? pathWin32.isAbsolute(p) : isAbsolute(p)
+}
 // 内联 isPathWithin（避免通过 symlink 路径 import upstream）
 function isPathWithin(targetPath: string, basePath: string): boolean {
-  const rel = relative(basePath, targetPath)
-  return rel === '' || (!!rel && !rel.startsWith('..') && !rel.startsWith('/'))
+  const useWin = useWindowsPathOps(targetPath, basePath)
+  const base = resolveComparablePath(basePath, useWin)
+  const target = resolveComparablePath(targetPath, useWin)
+  const rel = relativeComparablePath(comparablePath(base), comparablePath(target), useWin)
+  return rel === '' || (!!rel && !rel.startsWith('..') && !isComparableAbsolute(rel, useWin))
 }
 
 // hermes base：default profile 时 ~/.hermes，其它 profile 时 ~/.hermes（detectHermesRootHome 等价）
@@ -41,11 +66,32 @@ function getHermesBaseDir(): string {
 interface KanbanBoard { slug: string }
 interface KanbanTask { workspace_path: string | null }
 
+// ── Windows 兼容的 hermes CLI 调用（内联自 upstream hermes-process.ts）──
+function resolveHermesBin(): string {
+  return process.env.HERMES_BIN?.trim() || 'hermes'
+}
+function bundledCliPythonForWindows(hermesBin: string): string | null {
+  const envPython = process.env.HERMES_AGENT_CLI_PYTHON?.trim()
+  if (envPython) return envPython
+  if (basename(hermesBin).toLowerCase() !== 'hermes.exe') return null
+  const python = resolve(dirname(hermesBin), '..', 'python.exe')
+  return existsSync(python) ? python : null
+}
+function resolveHermesInvocation(hermesBin = resolveHermesBin()) {
+  if (process.platform === 'win32') {
+    const python = bundledCliPythonForWindows(hermesBin)
+    if (python) return { command: python, argsPrefix: ['-m', 'hermes_cli.main'] }
+  }
+  return { command: hermesBin, argsPrefix: [] as string[] }
+}
+
 async function execHermesJson(args: string[]): Promise<unknown> {
-  const { stdout } = await execFileAsync('hermes', args, {
+  const invocation = resolveHermesInvocation()
+  const { stdout } = await execFileAsync(invocation.command, [...invocation.argsPrefix, ...args], {
     maxBuffer: 50 * 1024 * 1024,
     timeout: 30000,
     windowsHide: true,
+    encoding: 'utf8',
   })
   return JSON.parse(stdout)
 }
