@@ -7,14 +7,38 @@
 import Router from '@koa/router'
 import { readFile, access } from 'fs/promises'
 import { homedir } from 'os'
-import { join, resolve, relative } from 'path'
+import { join, resolve, isAbsolute, relative } from 'path'
+import * as pathWin32 from 'path/win32'
 import { constants } from 'fs'
 // HERMES_CUSTOM[SecTraceSandbox] BEGIN: 路径遍历防护
-// 内联 isPathWithin，避免通过符号链接路径解析 import upstream 模块（esbuild/ts-node
-// 用真实路径解析，符号链接 custom/ → server/src/custom 会导致 ../../../ 找不到）。
+// 内联 isPathWithin（含 Windows 兼容），避免通过符号链接路径解析 import upstream
+// 模块（esbuild/ts-node 用真实路径解析，符号链接 custom/ → server/src/custom 会导致
+// ../../../ 找不到）。Windows 兼容逻辑对齐 upstream hermes-path.ts：大小写不敏感、
+// path.win32 解析、isComparableAbsolute 判断绝对路径。
+function comparablePath(p: string): string {
+  return process.platform === 'win32' ? p.toLowerCase() : p
+}
+function looksLikeWindowsPath(p: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(p)
+}
+function useWindowsPathOps(...paths: string[]): boolean {
+  return process.platform === 'win32' || paths.some(looksLikeWindowsPath)
+}
+function resolveComparablePath(p: string, useWin: boolean): string {
+  return useWin ? pathWin32.resolve(p) : resolve(p)
+}
+function relativeComparablePath(from: string, to: string, useWin: boolean): string {
+  return useWin ? pathWin32.relative(from, to) : relative(from, to)
+}
+function isComparableAbsolute(p: string, useWin: boolean): boolean {
+  return useWin ? pathWin32.isAbsolute(p) : isAbsolute(p)
+}
 function isPathWithin(targetPath: string, basePath: string): boolean {
-  const rel = relative(basePath, targetPath)
-  return rel === '' || (!!rel && !rel.startsWith('..') && !rel.startsWith('/'))
+  const useWin = useWindowsPathOps(targetPath, basePath)
+  const base = resolveComparablePath(basePath, useWin)
+  const target = resolveComparablePath(targetPath, useWin)
+  const rel = relativeComparablePath(comparablePath(base), comparablePath(target), useWin)
+  return rel === '' || (!!rel && !rel.startsWith('..') && !isComparableAbsolute(rel, useWin))
 }
 // HERMES_CUSTOM[SecTraceSandbox] END
 
