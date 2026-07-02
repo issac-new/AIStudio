@@ -109,3 +109,4 @@
 122-groupchat-sidebar-logout.patch
 123-server-files-root-task-workspace-allowlist.patch
 124-server-kanban-workspace-files-allowlist.patch
+125-server-agent-health-remove-auth.patch
