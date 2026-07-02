@@ -117,8 +117,8 @@
 +  }
 +  let safeOrigin: string
 +  try {
-+    // Matrix token 经 Bearer 发往 homeserver；允许 http（内网/自建 homeserver 场景）。
-+    safeOrigin = await assertSafeOutboundUrl(homeserverUrl, { allowHttp: true })
++    // Matrix token 经 Bearer 发往 homeserver；允许 http + 私有 IP（内网/自建 homeserver 场景）。
++    safeOrigin = await assertSafeOutboundUrl(homeserverUrl, { allowHttp: true, allowPrivateIp: true })
 +  } catch (err) {
 +    recordPasswordFailure(ssrfIp)
 +    ctx.status = 400
