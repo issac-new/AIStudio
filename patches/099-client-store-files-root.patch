@@ -28,15 +28,13 @@ index c770fc33..32b8dfd3 100644
      editingFile.value = {
        path: filePath,
        content: result.content,
-@@ -208,7 +209,7 @@ export const useFilesStore = defineStore('files', () => {
- 
-   async function saveEditor() {
-     if (!editingFile.value) return
--    await filesApi.writeFile(editingFile.value.path, editingFile.value.content, currentProfile.value)
-+    await filesApi.writeFile(editingFile.value.path, editingFile.value.content, workspaceRoot.value, currentProfile.value)
+@@ -208,5 +209,5 @@ export const useFilesStore = defineStore('files', () => {
+     } else {
+-      await filesApi.writeFile(editingFile.value.path, editingFile.value.content, currentProfile.value)
++      await filesApi.writeFile(editingFile.value.path, editingFile.value.content, workspaceRoot.value, currentProfile.value)
+     }
      editingFile.value.originalContent = editingFile.value.content
    }
- 
 @@ -220,10 +221,10 @@ export const useFilesStore = defineStore('files', () => {
      if (isImageFile(entry.name)) {
        previewFile.value = { path: entry.path, profile, type: 'image' }
