@@ -10,7 +10,7 @@ index 072001d8..7611e2cc 100644
 +  return res?.sessions ?? []
  }
  
- /**
+ export async function fetchWorkspaceRunChangesForSession(id: string): Promise<WorkspaceRunChangeSummary[]> {
 @@ -108,7 +108,7 @@ export async function fetchHermesSessions(source?: string, limit?: number, profi
    if (profile) params.set('profile', profile)
    const query = params.toString()
