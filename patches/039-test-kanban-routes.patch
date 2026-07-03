@@ -2,7 +2,7 @@ diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.tes
 index 8aeadf24..e352e0cd 100644
 --- a/tests/server/kanban-routes.test.ts
 +++ b/tests/server/kanban-routes.test.ts
-@@ -22,6 +22,19 @@ const handlers = {
+@@ -22,6 +22,21 @@ const handlers = {
    addComment: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    taskLog: vi.fn(async (ctx: any) => { ctx.body = { log: '' } }),
    diagnostics: vi.fn(async (ctx: any) => { ctx.body = { diagnostics: [] } }),
@@ -19,6 +19,8 @@ index 8aeadf24..e352e0cd 100644
 +  deleteTask: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
 +  patchTask: vi.fn(async (ctx: any) => { ctx.body = { task: {} } }),
 +  decomposeTask: vi.fn(async (ctx: any) => { ctx.body = { result: {} } }),
++  listWorkspaceFiles: vi.fn(async (ctx: any) => { ctx.body = { files: [] } }),
++  listTimeline: vi.fn(async (ctx: any) => { ctx.body = { timeline: [] } }),
    reclaim: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    reassign: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    specify: vi.fn(async (ctx: any) => { ctx.body = { results: [] } }),
