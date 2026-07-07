@@ -1,11 +1,9 @@
 diff --git a/package.json b/package.json
-index 0000000..0000000 100644
 --- a/package.json
 +++ b/package.json
-@@ -76,6 +76,7 @@
-     "@vue-flow/minimap": "^1.5.4",
-     "@vue-flow/node-resizer": "^1.5.1",
+@@ -80,5 +80,6 @@
      "adm-zip": "^0.5.17",
+     "agent-browser": "^0.26.0",
 +    "echarts": "^6.1.0",
      "eventsource": "^4.1.0",
      "js-tiktoken": "^1.0.21",
