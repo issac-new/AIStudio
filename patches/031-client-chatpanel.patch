@@ -2,13 +2,14 @@ diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages
 index 492b2c2a..2f2bdb04 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -34,17 +34,17 @@ import OutlinePanel from "./OutlinePanel.vue";
+@@ -34,18 +34,18 @@ import OutlinePanel from "./OutlinePanel.vue";
  import FilesPanel from "./FilesPanel.vue";
  import TerminalPanel from "./TerminalPanel.vue";
  import PageSidebarNav from "@/components/layout/PageSidebarNav.vue";
 -import SettingsCircuitBadge from "@/components/layout/SettingsCircuitBadge.vue";
 -import { isStoredSuperAdmin } from "@/api/client";
 +import { useAuthStore } from "@/stores/hermes/auth";
+ import { useDefaultWorkspace } from "@/composables/useDefaultWorkspace";
  
  const chatStore = useChatStore();
  const appStore = useAppStore();
