@@ -82,7 +82,7 @@ index df411c9..e35db32 100644
      return {
          // State
          connected,
-@@ -857,6 +908,12 @@ const currentUserAvatar = ref('')
+@@ -924,6 +975,12 @@ const currentUserAvatar = ref('')
          deleteRoom,
          cloneRoom,
          clearCurrentRoomContext,
@@ -92,6 +92,7 @@ index df411c9..e35db32 100644
 +        clearRoomUnread,
 +        clearAllUnread,
 +        getRoomUnread,
+         setRoomWorkspace,
          loadAgents,
          addAgentToRoom,
          removeAgentFromRoom,
