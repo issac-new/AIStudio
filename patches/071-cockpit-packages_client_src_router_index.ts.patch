@@ -132,10 +132,11 @@ index fbd6fa57..9aa39ec3 100644
      {
        path: '/hermes/files',
        name: 'hermes.files',
-@@ -163,7 +186,7 @@ router.beforeEach((to, _from, next) => {
+@@ -219,8 +242,8 @@ router.beforeEach(async (to, _from, next) => {
+   // Public pages don't need auth
    if (to.meta.public) {
      // Already has key, skip login
-     if (to.name === 'login' && hasApiKey()) {
+     if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
 -      next({ path: '/hermes/chat' })
 +      next({ name: 'hermes.cockpit' })
        return
