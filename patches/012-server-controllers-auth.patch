@@ -20,7 +20,7 @@
    updateUser,
    updateUsername,
    updateUserPassword,
-@@ -25,6 +30,20 @@
+@@ -25,9 +30,23 @@
  import { issueUserJwt } from '../middleware/user-auth'
  import { listProfileNamesFromDisk } from '../services/hermes/hermes-profile'
  import { startOutboundRelayClient, stopOutboundRelayClient } from '../services/global-agent/outbound-relay-client'
@@ -38,6 +38,9 @@
 +// HERMES_CUSTOM[SecSsrfGuard] BEGIN: SSRF 防护（登录速率限制函数已由 upstream auth.ts 顶部 import）
 +import { UnsafeUrlError, assertSafeOutboundUrl } from '../custom/security/url-guard'
 +// HERMES_CUSTOM[SecSsrfGuard] END
+ import { getLanEndpointKind } from '../services/lan-discovery'
+ import { getPublicSystemInfo } from '../services/system-info'
+ import { config } from '../config'
  
  /**
   * GET /api/auth/status
