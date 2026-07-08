@@ -1,38 +1,11 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index fdc761f3..3bc24645 100644
+index ed5d9b28..ba41f208 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -186,6 +186,9 @@ export default {
-     history: 'History',
-     jobs: 'Jobs',
-     kanban: 'Kanban',
-+    swarmKanban: 'Swarm kanban',
-+    matrixChat: 'Matrix Chat',
-+    cockpit: 'Cockpit',
-     workflow: 'Workflow',
-     models: 'Models',
-     profiles: 'Profiles',
-@@ -727,6 +730,7 @@ export default {
-   // Kanban
-   kanban: {
-     title: 'Kanban Board',
-+    diagnostics: 'Diagnostics',
-     createTask: 'New Task',
-     noTasks: 'No tasks',
-     allStatuses: 'All Statuses',
-@@ -1838,6 +1842,7 @@ export default {
-       mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
-       mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace',
-     },
-+    matrixIdentity: { title: 'Matrix Identity', userId: 'User ID', displayName: 'Display Name', homeserver: 'Homeserver', role: 'Role', authSource: 'Auth Source', passwordManagedByMatrix: 'Password is managed by your Matrix homeserver', changeMatrixPassword: 'Change Matrix Password', passwordChanged: 'Matrix password changed successfully', },
+@@ -2378,4 +2378,16 @@ export default {
+     new_0_6_24_5: 'Plugins can be enabled or disabled from Studio when they are manageable user plugins, and the Plugins page now reflects base and profile plugin state more accurately',
+     new_0_6_24_6: 'Models now support default provider and default model actions; bridge terminal error detection is less noisy, Hermes Agent runtime packaging moves to 0.18.0, and the website version manifest was refreshed',
    },
-   githubPreview: {
-     title: "Version Preview",
-@@ -2266,4 +2271,17 @@ export default {
-     new_0_6_13_5: 'Desktop updates are more reliable: Windows upgrades close stale Hermes Studio processes, Cloudflare is checked first, and GitHub remains the fallback feed',
-     new_0_6_13_6: 'Release automation now keeps Web UI and Docker releases out of GitHub Latest while full desktop releases are manually promoted to Latest',
-   },
-+
 +
 +  matrix: {
 +    options: 'Options', threadStartDisabled: 'Cannot start a thread from a message with an existing relation', undecryptable: 'Unable to decrypt message', historyLoadError: 'Server error, unable to load earlier history',
