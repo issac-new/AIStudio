@@ -1,0 +1,196 @@
+diff --git a/packages/desktop/src/main/hermes-cli.ts b/packages/desktop/src/main/hermes-cli.ts
+index 74b179c9..13a052c5 100644
+--- a/packages/desktop/src/main/hermes-cli.ts
++++ b/packages/desktop/src/main/hermes-cli.ts
+@@ -11,6 +11,7 @@ import {
+   hermesHome,
+   nodeBinDir,
+   pythonDir,
++  usingSystemHermesAgent,
+   webUiHome,
+ } from './paths'
+ import { HERMES_CLI_ARG } from './cli-constants'
+@@ -63,15 +64,18 @@ export async function runBundledHermesCli(args: string[]): Promise<number> {
+   ].filter(Boolean).join(delimiter)
+   const gitBin = bundledGit()
+   const browserExecutableOverride = process.env.AGENT_BROWSER_EXECUTABLE_PATH?.trim()
++  const systemMode = usingSystemHermesAgent()
+   const env: NodeJS.ProcessEnv = {
+     ...process.env,
+     HERMES_DESKTOP: 'true',
+     HERMES_BIN: hermesCommand,
+-    HERMES_AGENT_BRIDGE_PYTHON: pythonCommand,
+-    HERMES_AGENT_CLI_PYTHON: pythonCommand,
+-    HERMES_AGENT_ROOT: pythonDir(),
+-    HERMES_AGENT_NODE: bundledNode(),
+-    HERMES_AGENT_NODE_ROOT: process.platform === 'win32' ? bundledNodeBin : dirname(bundledNodeBin),
++    ...(systemMode ? {} : {
++      HERMES_AGENT_BRIDGE_PYTHON: pythonCommand,
++      HERMES_AGENT_CLI_PYTHON: pythonCommand,
++      HERMES_AGENT_ROOT: pythonDir(),
++      HERMES_AGENT_NODE: bundledNode(),
++      HERMES_AGENT_NODE_ROOT: process.platform === 'win32' ? bundledNodeBin : dirname(bundledNodeBin),
++    }),
+     AGENT_BROWSER_HOME: process.env.AGENT_BROWSER_HOME?.trim() || bundledAgentBrowserHome(),
+     ...(browserExecutableOverride ? { AGENT_BROWSER_EXECUTABLE_PATH: browserExecutableOverride } : {}),
+     PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || join(pythonDir(), 'ms-playwright'),
+diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
+index 4e0a9a15..7c5fa3f6 100644
+--- a/packages/desktop/src/main/paths.ts
++++ b/packages/desktop/src/main/paths.ts
+@@ -1,5 +1,6 @@
+ import { app } from 'electron'
+ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
++import { execFileSync } from 'node:child_process'
+ import { join, resolve } from 'node:path'
+ import { homedir, platform } from 'node:os'
+ import {
+@@ -52,6 +53,47 @@ function runtimeDirectoryReady(root: string): boolean {
+   return runtimeRequiredFiles(root).every(existsSync)
+ }
+ 
++function resolveExecutable(command: string): string | undefined {
++  const trimmed = command.trim()
++  if (!trimmed) return undefined
++  if (trimmed.includes('/') || trimmed.includes('\\')) {
++    return existsSync(trimmed) ? resolve(trimmed) : undefined
++  }
++  try {
++    const lookup = process.platform === 'win32'
++      ? execFileSync('where.exe', [trimmed], { encoding: 'utf-8', windowsHide: true })
++      : execFileSync('which', [trimmed], { encoding: 'utf-8' })
++    return lookup.split(/\r?\n/).map(line => line.trim()).find(Boolean)
++  } catch {
++    return undefined
++  }
++}
++
++function preferredSystemHermesCommand(): string {
++  return process.env.HERMES_SYSTEM_BIN?.trim() || process.env.HERMES_BIN?.trim() || 'hermes'
++}
++
++export function systemHermesBin(): string | undefined {
++  return resolveExecutable(preferredSystemHermesCommand())
++}
++
++export function usingSystemHermesAgent(): boolean {
++  if (process.env.HERMES_DESKTOP_FORCE_BUNDLED_RUNTIME?.trim()) return false
++  return !!systemHermesBin()
++}
++
++export function systemHermesPython(): string | undefined {
++  const hermes = systemHermesBin()
++  if (!hermes) return undefined
++  try {
++    const first = readFileSync(hermes, 'utf-8').split(/\r?\n/, 1)[0]
++    const match = first.match(/^#!\s*(.+)$/)
++    return match?.[1]?.trim().split(/\s+/)[0]
++  } catch {
++    return undefined
++  }
++}
++
+ function readRuntimeManifestVersion(runtimeDir: string): string | null {
+   try {
+     const manifest = JSON.parse(readFileSync(join(runtimeDir, 'runtime-manifest.json'), 'utf-8')) as {
+@@ -210,6 +252,7 @@ function runtimeReleaseMetadata(): RuntimeReleaseMetadata | null {
+ }
+ 
+ export function desktopRuntimeVersion(): string {
++  if (usingSystemHermesAgent()) return process.env.HERMES_VERSION?.trim() || 'system'
+   const releaseTag = process.env.HERMES_DESKTOP_RUNTIME_RELEASE_TAG?.trim()
+   const versionFromTag = hermesAgentVersionFromRuntimeTag(releaseTag)
+   if (versionFromTag) return versionFromTag
+@@ -233,6 +276,7 @@ export function targetDesktopRuntimeDir(): string {
+ }
+ 
+ export function desktopRuntimeDir(): string {
++  if (usingSystemHermesAgent()) return dirname(dirname(systemHermesPython() || systemHermesBin() || targetDesktopRuntimeDir()))
+   const override = process.env.HERMES_DESKTOP_RUNTIME_DIR?.trim()
+   if (override) return resolve(override)
+ 
+@@ -261,6 +305,7 @@ export function runtimeResourceDir(name: DesktopRuntimeResource, packaged: boole
+ // dev:  packages/desktop/resources/python/<os>-<arch>
+ // prod: downloaded runtime cache under Web UI home.
+ export function pythonDir(): string {
++  if (usingSystemHermesAgent()) return dirname(dirname(systemHermesPython() || bundledPython()))
+   return runtimeResourceDir('python', isPackaged())
+ }
+ 
+@@ -274,6 +319,7 @@ export function nodeBinDir(): string {
+ }
+ 
+ export function bundledNode(): string {
++  if (usingSystemHermesAgent()) return process.env.HERMES_AGENT_NODE?.trim() || 'node'
+   return isWin ? join(nodeDir(), 'node.exe') : join(nodeBinDir(), 'node')
+ }
+ 
+@@ -343,11 +389,13 @@ export function pythonBinDir(): string {
+ }
+ 
+ export function bundledPython(): string {
++  if (usingSystemHermesAgent()) return systemHermesPython() || 'python3'
+   const dir = pythonDir()
+   return isWin ? join(dir, 'python.exe') : join(dir, 'bin', 'python3')
+ }
+ 
+ export function hermesBin(): string {
++  if (usingSystemHermesAgent()) return systemHermesBin() || 'hermes'
+   return isWin ? join(pythonBinDir(), 'hermes.cmd') : join(pythonBinDir(), 'hermes')
+ }
+ 
+diff --git a/packages/desktop/src/main/runtime-manager.ts b/packages/desktop/src/main/runtime-manager.ts
+index acd39450..ecc4036e 100644
+--- a/packages/desktop/src/main/runtime-manager.ts
++++ b/packages/desktop/src/main/runtime-manager.ts
+@@ -113,6 +113,7 @@ function rootRuntimeReady(root: string): boolean {
+ }
+ 
+ export function isDesktopRuntimeReady(): boolean {
++  if (usingSystemHermesAgent()) return true
+   return runtimeReady()
+ }
+ 
+@@ -367,6 +368,11 @@ export async function ensureDesktopRuntime(
+   onProgress?: RuntimeProgressHandler,
+   source?: RuntimeDownloadSource,
+ ): Promise<void> {
++  if (usingSystemHermesAgent()) {
++    console.log('[runtime] using system-installed hermes-agent; skip desktop runtime download')
++    onProgress?.({ stage: 'ready', message: t('runtime.ready') })
++    return
++  }
+   const runtimeRoot = targetDesktopRuntimeDir()
+   mkdirSync(runtimeRoot, { recursive: true })
+ 
+diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
+index 1bc01e7f..7dc46967 100644
+--- a/packages/desktop/src/main/webui-server.ts
++++ b/packages/desktop/src/main/webui-server.ts
+@@ -348,6 +348,7 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
+   )
+   const browserExecutableOverride = process.env.AGENT_BROWSER_EXECUTABLE_PATH?.trim()
+   const gitBin = bundledGit()
++  const systemMode = usingSystemHermesAgent()
+ 
+   // Run via Electron's "run as Node" mode — Electron binary doubles as Node.
+   const env: NodeJS.ProcessEnv = {
+@@ -359,11 +360,13 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
+     // The bridge and its per-profile workers need working stdout/stderr for
+     // ready handshakes. Use python.exe on Windows and hide windows at the
+     // process creation layer instead of switching the bridge to pythonw.exe.
+-    HERMES_AGENT_BRIDGE_PYTHON: bundledPython,
+-    HERMES_AGENT_CLI_PYTHON: bundledPython,
+-    HERMES_AGENT_ROOT: pythonDir(),
+-    HERMES_AGENT_NODE: bundledNode(),
+-    HERMES_AGENT_NODE_ROOT: isWin ? bundledNodeBin : dirname(bundledNodeBin),
++    ...(systemMode ? {} : {
++      HERMES_AGENT_BRIDGE_PYTHON: bundledPython,
++      HERMES_AGENT_CLI_PYTHON: bundledPython,
++      HERMES_AGENT_ROOT: pythonDir(),
++      HERMES_AGENT_NODE: bundledNode(),
++      HERMES_AGENT_NODE_ROOT: isWin ? bundledNodeBin : dirname(bundledNodeBin),
++    }),
+     AGENT_BROWSER_HOME: process.env.AGENT_BROWSER_HOME?.trim() || bundledAgentBrowserHome(),
+     ...(browserExecutableOverride ? { AGENT_BROWSER_EXECUTABLE_PATH: browserExecutableOverride } : {}),
+     PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || join(pythonDir(), 'ms-playwright'),
