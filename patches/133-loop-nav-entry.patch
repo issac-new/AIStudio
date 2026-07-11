@@ -1,0 +1,17 @@
+diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
+--- a/packages/client/src/components/layout/AppSidebar.vue
++++ b/packages/client/src/components/layout/AppSidebar.vue
+@@ -166,6 +166,13 @@ function openVersionManagement() {
+             </svg>
+             <span>{{ t("sidebar.memory") }}</span>
+           </RouteLinkItem>
++          <RouteLinkItem v-if="hasRoute('hermes.loop')" class="nav-item" :to="{ name: 'hermes.loop' }" :active="selectedKey === 'hermes.loop' || selectedKey === 'hermes.loopDetail'">
++            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
++              <path d="M21 12a9 9 0 1 1-9-9" />
++              <polyline points="21 4 21 12 13 12" />
++            </svg>
++            <span>Loop Engineering</span>
++          </RouteLinkItem>
+           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.models' }" :active="selectedKey === 'hermes.models'">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+               <circle cx="12" cy="12" r="3" />
