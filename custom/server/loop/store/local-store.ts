@@ -20,11 +20,18 @@ export class LocalStore implements LoopStateStore {
   }
 
   private contractPath(loopId: string, contractId: string): string {
-    return resolve(this.loopDir(loopId), 'contracts', `${contractId}.json`)
+    return resolve(this.loopDir(loopId), 'contracts', `${this.safeId(contractId)}.json`)
   }
 
   private verifyPath(loopId: string, contractId: string): string {
-    return resolve(this.loopDir(loopId), 'verifications', `${contractId}.verify.json`)
+    return resolve(this.loopDir(loopId), 'verifications', `${this.safeId(contractId)}.verify.json`)
+  }
+
+  // Contract IDs use a `task/slug-001` namespace prefix; sanitize the `/` so
+  // the file lands flat inside contracts/ (and the dir exists) rather than
+  // creating an unmanaged `task/` subdir.
+  private safeId(id: string): string {
+    return id.replace(/\//g, '__')
   }
 
   private eventsPath(loopId: string): string {
@@ -130,8 +137,9 @@ export class LocalStore implements LoopStateStore {
     // Contracts are nested under loops; search all loop dirs
     const loopsDir = resolve(this.baseDir, 'loops')
     if (!existsSync(loopsDir)) return null
+    const safe = this.safeId(id)
     for (const entry of await fs.readdir(loopsDir)) {
-      const p = resolve(loopsDir, entry, 'contracts', `${id}.json`)
+      const p = resolve(loopsDir, entry, 'contracts', `${safe}.json`)
       if (existsSync(p)) {
         return JSON.parse(await fs.readFile(p, 'utf-8'))
       }
