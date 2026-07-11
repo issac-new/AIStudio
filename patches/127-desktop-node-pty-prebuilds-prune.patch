@@ -1,0 +1,125 @@
+diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+index 34d1c14..85259bb 100644
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -98,6 +98,10 @@ extraResources:
+ asarUnpack:
+   - "**/*.node"
+ 
++# afterPack: 按构建目标裁剪 node-pty prebuilds,只保留目标平台原生二进制。
++# 详见 scripts/after-pack-prune-node-pty.cjs(041 patch 不再静态排除 win32-*)。
++afterPack: "./scripts/after-pack-prune-node-pty.cjs"
++
+ mac:
+   target:
+     - target: dmg
+diff --git a/packages/desktop/scripts/after-pack-prune-node-pty.cjs b/packages/desktop/scripts/after-pack-prune-node-pty.cjs
+new file mode 100644
+index 0000000..3d65eef
+--- /dev/null
++++ b/packages/desktop/scripts/after-pack-prune-node-pty.cjs
+@@ -0,0 +1,104 @@
++// overlay/scripts/after-pack-prune-node-pty.cjs (injected via patch 127)
++// afterPack 钩子:按构建目标裁剪 node-pty prebuilds,只保留目标平台原生二进制。
++//
++// 背景:electron-builder 25.1.8 的 ${platform} 宏展开为宿主机 process.platform,
++// 而非构建目标;跨平台构建(mac 上 --win)无法用 !(${platform}-${arch}) 静态排除。
++// 041 patch 曾用静态 win32-*/linux-*/darwin-x64 排除,误排 Windows 包自身 prebuilds,
++// 导致 require('node-pty') 在 Windows 运行时失败、AI协作中心终端无法打开。
++// 此钩子在 copyFiles(extraResources) 之后(见 app-builder-lib platformPackager.js
++// doPack:240-245)按 context.electronPlatformName + context.arch 删除非目标目录。
++//
++// CommonJS:desktop package.json 无 "type":"module",electron-builder resolveFunction
++// 对 .cjs 走 require()。
++'use strict'
++
++const fs = require('fs')
++const path = require('path')
++
++// 镜像 builder-util Arch 枚举(见 app-builder-lib/out/util/arch.js),避免外部依赖。
++const ARCH_NAMES = { 0: 'ia32', 1: 'x64', 2: 'armv7l', 3: 'arm64', 4: 'universal' }
++
++/**
++ * 计算应保留的 prebuilds 目录名,与 node-pty 的 prebuilds/<platform>-<arch> 命名一致。
++ * @param {string} electronPlatformName - 目标平台 nodeName: win32 / darwin / linux
++ * @param {number} arch - Arch 枚举数字(0=ia32,1=x64,2=armv7l,3=arm64,4=universal)
++ * @returns {string} 如 "win32-x64"、"darwin-arm64"
++ */
++function computeKeepDir(electronPlatformName, arch) {
++  const archName = ARCH_NAMES[arch]
++  if (!archName) throw new Error('after-pack-prune: unknown arch enum ' + arch)
++  return electronPlatformName + '-' + archName
++}
++
++/**
++ * 从 prebuilds 子目录列表中算出应删除的非目标目录。
++ * @param {string[]} dirs - prebuilds/ 下所有子目录名
++ * @param {string} keepDir - 保留目录名
++ * @returns {string[]} 需删除的目录名
++ */
++function listPruneTargets(dirs, keepDir) {
++  return dirs.filter((d) => d !== keepDir)
++}
++
++/**
++ * 解析 prebuilds 根目录:<resourcesDir>/webui/node_modules/node-pty/prebuilds/。
++ * resourcesDir 由 packager.getResourcesDir 给出(mac: <app>.app/Contents/Resources;
++ * win/linux: <appOutDir>/resources)。
++ * @param {string} resourcesDir
++ * @returns {string|null} 存在则返回绝对路径,否则 null
++ */
++function resolvePrebuildsDir(resourcesDir) {
++  const dir = path.join(
++    resourcesDir,
++    'webui',
++    'node_modules',
++    'node-pty',
++    'prebuilds',
++  )
++  return fs.existsSync(dir) ? dir : null
++}
++
++/**
++ * afterPack 钩子主体(electron-builder AfterPackContext)。
++ * @param {object} context
++ * @param {string} context.appOutDir
++ * @param {string} context.electronPlatformName - 目标平台 nodeName
++ * @param {number} context.arch - Arch 枚举
++ * @param {object} context.packager - PlatformPackager(提供 getResourcesDir)
++ */
++async function afterPack(context) {
++  const { electronPlatformName, arch, packager, appOutDir } = context
++  const keepDir = computeKeepDir(electronPlatformName, arch)
++  const resourcesDir = packager.getResourcesDir(appOutDir)
++  const prebuildsDir = resolvePrebuildsDir(resourcesDir)
++  if (!prebuildsDir) {
++    // 非 hermes-studio 桌面包(无 webui node-pty)时 no-op,避免误伤其他项目复用此钩子。
++    console.log('[after-pack-prune] no node-pty prebuilds found, skipping')
++    return
++  }
++
++  const entries = fs.readdirSync(prebuildsDir, { withFileTypes: true })
++  const pruned = []
++  for (const entry of entries) {
++    if (!entry.isDirectory()) continue
++    if (entry.name === keepDir) continue
++    const target = path.join(prebuildsDir, entry.name)
++    fs.rmSync(target, { recursive: true, force: true })
++    pruned.push(entry.name)
++    console.log('[after-pack-prune] removed non-target node-pty prebuild: ' + entry.name + ' (keep: ' + keepDir + ')')
++  }
++  if (pruned.length === 0) {
++    console.log('[after-pack-prune] no non-target prebuilds to prune (keep: ' + keepDir + ')')
++  } else {
++    console.log('[after-pack-prune] pruned ' + pruned.length + ' non-target prebuild dir(s); kept ' + keepDir)
++  }
++}
++
++module.exports = {
++  default: afterPack,
++  afterPack,
++  computeKeepDir,
++  listPruneTargets,
++  resolvePrebuildsDir,
++  ARCH_NAMES,
++}

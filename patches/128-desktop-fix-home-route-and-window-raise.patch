@@ -1,0 +1,33 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index 3ce6d2f..884557b 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -135,7 +135,10 @@ function webUiHashUrl(hashPath: string): string | null {
+ }
+ 
+ function mainRouteUrl(): string | null {
+-  return webUiHashUrl('/hermes/chat')
++  // overlay[fix-home-route]: load /hermes/cockpit (AI协作中心) as the desktop
++  // home route. /hermes/chat is now a child of /hermes/cockpit (patch 071) and
++  // is no longer a top-level route; loading it directly produced a blank page.
++  return webUiHashUrl('/hermes/cockpit')
+ }
+ 
+ function petRouteUrl(): string | null {
+@@ -759,7 +762,15 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+   }
+   notification.on('click', () => {
+     releaseNotification()
+-    showMainWindow()
++    // overlay[fix-window-raise]: only restore the window when it's currently
++    // hidden or minimized. Raising an already-visible, focused window on every
++    // completion notification is what made SwarmStudio keep stealing focus on
++    // Windows even after the user minimized/closed it.
++    if (!mainWindow || mainWindow.isDestroyed() || (!mainWindow.isVisible() && !mainWindow.isMinimized())) {
++      showMainWindow()
++    } else if (mainWindow.isMinimized()) {
++      showMainWindow()
++    }
+   })
+   notification.on('close', releaseNotification)
+   notification.on('failed', (_event, error) => {

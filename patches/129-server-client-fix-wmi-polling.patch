@@ -1,0 +1,54 @@
+diff --git a/packages/client/src/views/hermes/PerformanceView.vue b/packages/client/src/views/hermes/PerformanceView.vue
+index 7a9b538..d8983f3 100644
+--- a/packages/client/src/views/hermes/PerformanceView.vue
++++ b/packages/client/src/views/hermes/PerformanceView.vue
+@@ -69,7 +69,10 @@ function setAutoRefresh(enabled: boolean) {
+     timer = undefined
+   }
+   if (enabled) {
+-    timer = setInterval(() => loadRuntime(false), 5000)
++    // overlay[fix-wmi-polling]: 15s instead of 5s. Each refresh spawns a
++    // powershell WMI query on Windows; 5s was frequent enough that antivirus
++    // products flagged the repeated process-table enumeration.
++    timer = setInterval(() => loadRuntime(false), 15000)
+   }
+ }
+ 
+diff --git a/packages/server/src/services/hermes/ops-monitor.ts b/packages/server/src/services/hermes/ops-monitor.ts
+index 23348a1..9ef9695 100644
+--- a/packages/server/src/services/hermes/ops-monitor.ts
++++ b/packages/server/src/services/hermes/ops-monitor.ts
+@@ -355,8 +355,24 @@ function sampleWindowsProcessCpuPercent(pid: number, cpuSeconds: number): number
+   return clampPercent((cpuDelta / elapsedSeconds / safeCpuCount()) * 100)
+ }
+ 
++// overlay[fix-wmi-polling]: TTL cache for collectWindowsProcessMetrics.
++// The PerformanceView auto-refreshes every 15s and the app health-poller hits
++// /health every 30s; without caching each call spawned a fresh powershell.exe
++// running `Get-CimInstance Win32_Process` (full system process table). High-
++// frequency WMI enumeration is what antivirus products flag as suspicious
++// process-monitoring behaviour. Cache the result for 10s so concurrent callers
++// within one refresh tick share a single powershell invocation.
++const WINDOWS_PROCESS_METRICS_CACHE_TTL_MS = 10_000
++let cachedWindowsProcessMetrics: { key: string; at: number; value: Map<number, Partial<ProcessUsage>> } | null = null
++
+ function collectWindowsProcessMetrics(pids: number[]): Map<number, Partial<ProcessUsage>> {
+   if (!pids.length) return new Map()
++  // overlay[fix-wmi-polling]: serve from cache when the same PID set was queried recently.
++  const cacheKey = pids.slice().sort((a, b) => a - b).join(',')
++  const now = Date.now()
++  if (cachedWindowsProcessMetrics && cachedWindowsProcessMetrics.key === cacheKey && now - cachedWindowsProcessMetrics.at < WINDOWS_PROCESS_METRICS_CACHE_TTL_MS) {
++    return cachedWindowsProcessMetrics.value
++  }
+   const idList = pids.join(',')
+   try {
+     const script = [
+@@ -392,6 +408,8 @@ function collectWindowsProcessMetrics(pids: number[]): Map<number, Partial<Proce
+         command: typeof item?.command === 'string' ? item.command : undefined,
+       })
+     }
++    // overlay[fix-wmi-polling]: populate cache on the primary (successful) path.
++    cachedWindowsProcessMetrics = { key: cacheKey, at: Date.now(), value: metrics }
+     return metrics
+   } catch {}
+ 

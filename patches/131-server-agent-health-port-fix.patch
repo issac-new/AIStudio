@@ -1,0 +1,16 @@
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 52a4552..b457a01 100644
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -350,7 +350,10 @@ export async function bootstrap() {
+   })
+ 
+   // Proxy /agent-health/* → hermes-agent health endpoint (for CockpitTopBar)
+-  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8650'
++    // overlay[fix-health-port]: 8642 is the gateway api_server default port (not 8650
++  // which is the dev preview backend). Production desktop has nothing on 8650
++  // so /agent-health/* always returned 502.
++  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8642'
+   app.use(async (ctx, next) => {
+     if (ctx.path.startsWith('/agent-health/')) {
+       // HERMES_CUSTOM[SecAgentHealthPath] BEGIN: 限制转发路径白名单，防路径注入探测 agent 其他路由
