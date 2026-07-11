@@ -1,0 +1,22 @@
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -34,6 +34,9 @@
+ import { requireUserJwt, resolveUserProfile } from './middleware/user-auth'
+ import { createCorsOriginResolver, securityHeaders } from './security'
+ import type { ShutdownHandler } from './services/shutdown'
++// overlay[loop-socket]: Loop Engineering Socket.IO namespace
++import { setupLoopSocketNamespace } from './custom/loop/services/loop-socket'
++import { LocalStore as LoopLocalStore } from './custom/loop/store/local-store'
+ 
+ // Injected by esbuild at build time; fallback to reading package.json in dev mode
+ declare const __APP_VERSION__: string
+@@ -434,6 +437,9 @@
+   petStateSocketServer = new PetStateSocketServer(groupChatServer.getIO())
+   petStateSocketServer.init()
+ 
++  // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO
++  setupLoopSocketNamespace(groupChatServer.getIO(), new LoopLocalStore())
++
+   const loopbackBaseUrl = getLoopbackBaseUrl(server)
+   startGlobalAgentServer(groupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
+   console.log('[bootstrap] global agent server ready')

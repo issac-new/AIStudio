@@ -120,3 +120,7 @@
 132-desktop-fix-second-instance-raise.patch
 137-proper-lockfile-dep.patch
 136-cron-parser-dep.patch
+
+# Loop Engineering (Task 8): wire REST controller + Socket.IO namespace
+134-loop-server-routes.patch
+135-loop-socket-namespace.patch

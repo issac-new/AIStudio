@@ -1,0 +1,44 @@
+--- a/packages/server/src/routes/index.ts
++++ b/packages/server/src/routes/index.ts
+@@ -50,7 +50,35 @@
+ import { petdexPublicRoutes, petdexRoutes } from './hermes/petdex'
+ import { petRoutes } from './hermes/pets'
+ import traceRoutes from '../custom/controllers/hermes/trace'
++// overlay[loop-routes]: Loop Engineering REST API
++import { createLoopRouter } from '../custom/loop/controllers/loop'
++import { LocalStore } from '../custom/loop/store/local-store'
++import { Scheduler } from '../custom/loop/engine/scheduler'
++import { LoopEngine } from '../custom/loop/engine/loop-engine'
++import { Verifier } from '../custom/loop/engine/verifier'
++import { SubagentDispatcher } from '../custom/loop/engine/subagent-dispatcher'
++import { WorktreeManager } from '../custom/loop/engine/worktree-manager'
++import { BudgetGuard } from '../custom/loop/engine/budget-guard'
++import { StuckDetector } from '../custom/loop/engine/stuck-detector'
++import { HookManager } from '../custom/loop/engine/hooks'
++import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
+ 
++// overlay[loop-routes]: construct loop subsystem singletons (composition root)
++const loopStore = new LocalStore()
++const loopWebhookConnector = new WebhookConnector()
++const loopEngine = new LoopEngine({
++  store: loopStore,
++  verifier: new Verifier(),
++  dispatcher: new SubagentDispatcher(),
++  worktreeManager: new WorktreeManager(),
++  budgetGuard: new BudgetGuard(() => {}),
++  stuckDetector: new StuckDetector(loopStore),
++  hookManager: new HookManager(),
++  emitEvent: () => {},
++})
++const loopScheduler = new Scheduler(loopStore, loopEngine, loopWebhookConnector)
++const loopRouter = createLoopRouter(loopStore, loopScheduler, loopWebhookConnector)
++
+ /**
+  * Register all routes on the Koa app.
+  * Public routes are registered first, then auth middleware,
+@@ -115,4 +143,5 @@
+   app.use(petdexRoutes.routes())
+   app.use(petRoutes.routes())
+   app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
++  app.use(loopRouter.routes())                     // Loop Engineering REST API
+ }
