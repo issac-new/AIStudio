@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 0e4fb0d1..ec205519 100644
+index 0e4fb0d..34d1c14 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -19,10 +19,10 @@ index 0e4fb0d1..ec205519 100644
 +      # 排除 Vite 缓存 (860MB+ 的 deps_temp_* 缓存,绝不能进生产包)
 +      - "!node_modules/.vite/**"
 +      - "!node_modules/.tmp/**"
-+      # Drop other-platform node-pty prebuilds (saves ~58MB)
-+      - "!node_modules/node-pty/prebuilds/win32-*/**"
-+      - "!node_modules/node-pty/prebuilds/linux-*/**"
-+      - "!node_modules/node-pty/prebuilds/darwin-x64/**"
++      # node-pty prebuilds:不在此静态排除任何平台目录——跨平台构建时
++      # !(${platform}-${arch}) 宏展开的是宿主机而非构建目标(electron-builder 25.1.8),
++      # 会误排 win32-* 导致 Windows 包缺失原生二进制、终端打不开。
++      # 改由 afterPack 钩子(scripts/after-pack-prune-node-pty.cjs)按构建目标裁剪。
        - "!node_modules/node-pty/build/**"
 +      - "!node_modules/node-pty/third_party/**"
 +      - "!node_modules/node-pty/deps/**"
