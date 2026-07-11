@@ -1,0 +1,33 @@
+// overlay/custom/client/loop/styles/loop.scss
+// Loop Engineering 全局样式（与 cockpit 共用 CSS 变量）。
+.loop-spine {
+  display: flex;
+  height: 100%;
+  &__sidebar { width: 200px; padding: 1rem; border-right: 1px solid var(--border-color); }
+  &__main { flex: 1; padding: 1rem; overflow: auto; }
+  &__new { margin-top: 1rem; width: 100%; }
+  &__title { margin: 0 0 1rem; }
+}
+.loop-sidebar {
+  &__group { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer;
+    &--active { background: var(--accent-bg); }
+  }
+  &__count { margin-left: auto; font-size: 0.85rem; opacity: 0.7; }
+}
+.loop-table {
+  &__header, &__row { display: flex; align-items: center; padding: 0.5rem; }
+  &__header { font-weight: bold; border-bottom: 2px solid var(--border-color); }
+  &__row { border-bottom: 1px solid var(--border-color); cursor: pointer; &:hover { background: var(--hover-bg); } }
+  &__col { flex: 1; &--status { flex: 0 0 2rem; } &--name { flex: 2; } }
+  &__cost--warning { color: #e11d48; }
+}
+.loop-detail {
+  padding: 1rem;
+  &__header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  &__name { font-size: 1.2rem; font-weight: bold; flex: 1; }
+  &__meta { display: flex; gap: 2rem; margin-bottom: 1rem; font-size: 0.85rem; opacity: 0.8; }
+  &__budget { margin: 1rem 0; }
+  &__tabs { display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); }
+  &__event { display: flex; gap: 1rem; padding: 0.25rem; font-size: 0.85rem; }
+}
+.stage-ring { &__svg { width: 100%; max-width: 400px; } }
