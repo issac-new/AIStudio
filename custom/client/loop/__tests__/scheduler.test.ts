@@ -22,7 +22,10 @@ describe('Scheduler', () => {
     const wc = { enqueue: vi.fn() } as any
     const sched = new Scheduler(store, engine, wc)
     const next = sched.computeNextTick(makeLoop('cron'))
-    expect(new Date(next).getTime()).toBeGreaterThan(Date.now())
+    const nextMs = new Date(next).getTime()
+    const nowMs = Date.now()
+    expect(nextMs).toBeGreaterThan(nowMs)
+    expect(nextMs).toBeLessThan(nowMs + 25 * 60 * 60 * 1000) // within 25h for daily cron
   })
 
   it('does not schedule timer for manual mode', () => {

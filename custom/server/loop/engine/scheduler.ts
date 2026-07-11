@@ -79,7 +79,7 @@ export class Scheduler {
   computeNextTick(loop: LoopInstance): string {
     if (loop.schedule.mode === 'cron' && loop.schedule.cron) {
       try {
-        const interval = cronParser.parseExpression(loop.schedule.cron, { tz: loop.schedule.timezone })
+        const interval = cronParser.CronExpressionParser.parse(loop.schedule.cron, { tz: loop.schedule.timezone })
         return interval.next().toISOString()
       } catch {
         return new Date(Date.now() + 3600_000).toISOString()
