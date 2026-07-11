@@ -1,0 +1,23 @@
+diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
+index 1bc01e7..de4338a 100644
+--- a/packages/desktop/src/main/webui-server.ts
++++ b/packages/desktop/src/main/webui-server.ts
+@@ -422,12 +422,18 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
+ }
+ 
+ async function launchWebUiServer(webUiDirectory: string, entry: string, env: NodeJS.ProcessEnv, port: number): Promise<string> {
++  // overlay[fix-window-raise]: detached + unref so the Web UI server child has an
++  // independent lifecycle. Previously a child killed by antivirus (e.g. during
++  // WMI enumeration) could take the desktop parent down with it, which Electron
++  // interpreted as a crash and re-bootstrapped — re-showing the window.
+   serverProc = spawn(process.execPath, [entry], {
+     cwd: webUiDirectory,
+     env,
+     stdio: ['ignore', 'pipe', 'pipe'],
+     windowsHide: true,
++    detached: true,
+   })
++  serverProc.unref?.()
+ 
+   const launchedProc = serverProc
+   const bridgeStartup = createAgentBridgeStartupTracker()
