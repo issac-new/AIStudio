@@ -1,7 +1,7 @@
 // overlay/custom/server/loop/store/local-store.ts
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 import lockfile from 'proper-lockfile'
 import type {
   LoopInstance, TaskContract, VerificationRecord, LoopEvent,
