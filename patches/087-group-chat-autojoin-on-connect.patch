@@ -1,8 +1,8 @@
-diff --git aa/packages/server/src/services/hermes/group-chat/index.ts bb/packages/server/src/services/hermes/group-chat/index.ts
-index 8cfc7f99..fb503d4e 100644
---- aa/packages/server/src/services/hermes/group-chat/index.ts
-+++ bb/packages/server/src/services/hermes/group-chat/index.ts
-@@ -462,6 +462,16 @@ class ChatStorage {
+diff --git a/packages/server/src/services/hermes/group-chat/index.ts b/packages/server/src/services/hermes/group-chat/index.ts
+index 28699a1..6e2a110 100644
+--- a/packages/server/src/services/hermes/group-chat/index.ts
++++ b/packages/server/src/services/hermes/group-chat/index.ts
+@@ -478,6 +478,16 @@ class ChatStorage {
          return this.mapStoredMessageRow(row)
      }
  
@@ -19,7 +19,7 @@ index 8cfc7f99..fb503d4e 100644
      addMessage(msg: ChatMessage): void {
          this.upsertMessage(msg)
      }
-@@ -953,6 +963,42 @@ export class GroupChatServer {
+@@ -1152,6 +1162,42 @@ export class GroupChatServer {
  
          logger.debug(`[GroupChat] Connected: ${userName} (socket=${socket.id}, user=${userId})`)
  
@@ -59,6 +59,6 @@ index 8cfc7f99..fb503d4e 100644
 +        }
 +        // HERMES_CUSTOM[GroupChatAutoJoin] END
 +
-         socket.on('join', (data: { roomId?: string; name?: string; description?: string; inviteCode?: string }, ack?: (response?: unknown) => void) => this.handleJoin(socket, data, ack))
+         socket.on('join', (data: { roomId?: string; name?: string }, ack?: (response?: unknown) => void) => this.handleJoin(socket, data, ack))
          socket.on('message', (data: Partial<ChatMessage> & { roomId?: string; content: string | Array<Record<string, unknown>>; id?: string; mentionDepth?: number }, ack?: (response?: unknown) => void) => this.handleMessage(socket, data, ack))
          socket.on('message_stream_start', (data: { roomId?: string; id?: string; senderId?: string; senderName?: string; timestamp?: number }) => this.handleMessageStreamStart(socket, data))
