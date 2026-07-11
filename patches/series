@@ -127,3 +127,6 @@
 
 # Loop Engineering (Task 11): sidebar nav entry for Loop Engineering
 133-loop-nav-entry.patch
+
+# Loop Engineering (Phase 3 Task 7): add pg dependency for SaaSStore
+138-pg-dep.patch

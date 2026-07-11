@@ -1,0 +1,10 @@
+diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -87,6 +87,7 @@
+     "node-edge-tts": "^1.2.10",
+     "node-pty": "^1.1.0",
++    "pg": "^8.13.1",
+     "proper-lockfile": "^4.1.2",
+     "socket.io": "^4.8.3",
+     "socket.io-client": "^4.8.3"
