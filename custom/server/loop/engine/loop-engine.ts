@@ -1,4 +1,5 @@
 // overlay/custom/server/loop/engine/loop-engine.ts
+import cronParser from 'cron-parser'
 import type {
   LoopInstance, TaskContract, LoopEvent, LoopStage, LoopStats,
   VerificationRecord,
@@ -240,13 +241,10 @@ export class LoopEngine {
     if (loop.schedule.mode === 'manual') return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     if (loop.schedule.mode === 'cron' && loop.schedule.cron) {
       try {
-        // cron-parser is an optional dep (added in Task 7); fall back if absent
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const parser = require('cron-parser')
-        const interval = parser.parseExpression(loop.schedule.cron, { tz: loop.schedule.timezone })
+        const interval = cronParser.CronExpressionParser.parse(loop.schedule.cron, { tz: loop.schedule.timezone })
         return interval.next().toISOString()
       } catch {
-        return new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        return new Date(Date.now() + 3600_000).toISOString()
       }
     }
     return new Date(Date.now() + 60 * 60 * 1000).toISOString()

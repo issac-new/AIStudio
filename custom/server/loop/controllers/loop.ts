@@ -26,6 +26,13 @@ export function createLoopRouter(
 ): Router {
   const router = new Router()
 
+  // Path safety: loop IDs are used to build LocalStore paths and event rooms,
+  // so reject anything outside a safe charset (and forbid traversal sequences).
+  // Mirrors the constraints enforced by assertAllowedWorkspaceFolder upstream.
+  function validateLoopId(id: string): boolean {
+    return /^[A-Za-z0-9._-]+$/.test(id) && !id.includes('..')
+  }
+
   // List loops
   router.get('/api/loop/loops', async (ctx) => {
     const status = ctx.query.status as string | undefined
@@ -36,6 +43,9 @@ export function createLoopRouter(
 
   // Get single loop
   router.get('/api/loop/loops/:id', async (ctx) => {
+    if (!validateLoopId(ctx.params.id)) {
+      ctx.status = 400; ctx.body = { error: 'Invalid loop id' }; return
+    }
     const loop = await store.getLoop(ctx.params.id)
     if (!loop) { ctx.status = 404; ctx.body = { error: 'Loop not found' }; return }
     ctx.body = { loop }
@@ -46,6 +56,9 @@ export function createLoopRouter(
     const body = ctx.request.body as Partial<LoopInstance>
     if (!body.id || !body.name || !body.goal) {
       ctx.status = 400; ctx.body = { error: 'Missing required fields: id, name, goal' }; return
+    }
+    if (!validateLoopId(body.id)) {
+      ctx.status = 400; ctx.body = { error: 'Invalid loop id' }; return
     }
     const loop: LoopInstance = {
       id: body.id,
@@ -72,6 +85,9 @@ export function createLoopRouter(
 
   // Update loop
   router.patch('/api/loop/loops/:id', async (ctx) => {
+    if (!validateLoopId(ctx.params.id)) {
+      ctx.status = 400; ctx.body = { error: 'Invalid loop id' }; return
+    }
     const patch = ctx.request.body as Partial<LoopInstance>
     await store.updateLoop(ctx.params.id, patch)
     const loop = await store.getLoop(ctx.params.id)
@@ -81,18 +97,27 @@ export function createLoopRouter(
 
   // Delete loop
   router.delete('/api/loop/loops/:id', async (ctx) => {
+    if (!validateLoopId(ctx.params.id)) {
+      ctx.status = 400; ctx.body = { error: 'Invalid loop id' }; return
+    }
     await store.deleteLoop(ctx.params.id)
     ctx.body = { ok: true }
   })
 
   // Manual tick
   router.post('/api/loop/loops/:id/tick', async (ctx) => {
+    if (!validateLoopId(ctx.params.id)) {
+      ctx.status = 400; ctx.body = { error: 'Invalid loop id' }; return
+    }
     await scheduler.manualTick(ctx.params.id)
     ctx.body = { ok: true }
   })
 
   // Pause loop
   router.post('/api/loop/loops/:id/pause', async (ctx) => {
+    if (!validateLoopId(ctx.params.id)) {
+      ctx.status = 400; ctx.body = { error: 'Invalid loop id' }; return
+    }
     await store.updateLoop(ctx.params.id, { status: 'paused' })
     ctx.body = { ok: true }
   })
@@ -121,6 +146,9 @@ export function createLoopRouter(
 
   // Webhook endpoint
   router.post('/api/loop/webhook/:loopId', async (ctx) => {
+    if (!validateLoopId(ctx.params.loopId)) {
+      ctx.status = 400; ctx.body = { error: 'Invalid loop id' }; return
+    }
     const body = ctx.request.body as { source: string; eventType: string; payload: unknown }
     await scheduler.handleWebhook(ctx.params.loopId, body.source, body.eventType, body.payload)
     ctx.body = { ok: true }
