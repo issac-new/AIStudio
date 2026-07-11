@@ -13,6 +13,7 @@ export interface FeatureConfig {
   branding: boolean;
   extendedI18n: boolean;
   cockpit: boolean;
+  loopEngineering: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -23,6 +24,7 @@ export const features: FeatureConfig = {
   branding: import.meta.env.VITE_CUSTOM_BRANDING !== 'false',
   extendedI18n: import.meta.env.VITE_CUSTOM_EXTENDED_I18N !== 'false',
   cockpit: import.meta.env.VITE_CUSTOM_COCKPIT !== 'false',
+  loopEngineering: import.meta.env.VITE_CUSTOM_LOOP !== 'false',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {
