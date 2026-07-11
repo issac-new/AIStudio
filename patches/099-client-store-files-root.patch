@@ -1,26 +1,32 @@
 diff --git a/packages/client/src/stores/hermes/files.ts b/packages/client/src/stores/hermes/files.ts
-index c770fc33..32b8dfd3 100644
+index efa6a02..9886b11 100644
 --- a/packages/client/src/stores/hermes/files.ts
 +++ b/packages/client/src/stores/hermes/files.ts
-@@ -123,6 +123,7 @@ export const useFilesStore = defineStore('files', () => {
-   const currentProfile = ref<string | null>(null)
+@@ -133,6 +133,7 @@ export const useFilesStore = defineStore('files', () => {
+   const currentWorkspaceSessionId = ref<string | null>(null)
    const entries = ref<FileEntry[]>([])
    const loading = ref(false)
 +  const workspaceRoot = ref<string | undefined>(undefined)
    const sortBy = ref<'name' | 'size' | 'modTime'>('name')
    const sortOrder = ref<'asc' | 'desc'>('asc')
+   let fetchRequestSeq = 0
+@@ -186,12 +187,12 @@ export const useFilesStore = defineStore('files', () => {
+     const workspaceSessionId = currentWorkspaceSessionId.value
+     return workspaceSessionId
+       ? listSessionWorkspaceFiles(workspaceSessionId, path)
+-      : filesApi.listFiles(path, currentProfile.value)
++      : filesApi.listFiles(path, workspaceRoot.value, currentProfile.value)
+   }
  
-@@ -177,7 +178,7 @@ export const useFilesStore = defineStore('files', () => {
-     if (path !== undefined) currentPath.value = path
-     loading.value = true
-     try {
--      const result = await filesApi.listFiles(currentPath.value, nextProfile)
-+      const result = await filesApi.listFiles(currentPath.value, workspaceRoot.value, nextProfile)
-       entries.value = result.entries
-     } catch (err) {
-       console.error('Failed to fetch files:', err)
-@@ -197,7 +198,7 @@ export const useFilesStore = defineStore('files', () => {
-   async function openEditor(filePath: string, options: { profile?: string | null } = {}) {
+   async function fetchDirectory(path: string, options: { profile?: string | null } = {}) {
+     const profile = resolveProfile(options.profile)
+-    return filesApi.listFiles(path, profile)
++    return filesApi.listFiles(path, workspaceRoot.value, profile)
+   }
+ 
+   async function fetchEntries(path?: string, options: { profile?: string | null; workspaceSessionId?: string | null } = {}) {
+@@ -246,7 +247,7 @@ export const useFilesStore = defineStore('files', () => {
+     }
      const profile = resolveProfile(options.profile)
      currentProfile.value = profile
 -    const result = await filesApi.readFile(filePath, profile)
@@ -28,78 +34,85 @@ index c770fc33..32b8dfd3 100644
      editingFile.value = {
        path: filePath,
        content: result.content,
-@@ -208,5 +209,5 @@ export const useFilesStore = defineStore('files', () => {
+@@ -276,7 +277,7 @@ export const useFilesStore = defineStore('files', () => {
+         editingFile.value.content,
+       )
      } else {
 -      await filesApi.writeFile(editingFile.value.path, editingFile.value.content, currentProfile.value)
 +      await filesApi.writeFile(editingFile.value.path, editingFile.value.content, workspaceRoot.value, currentProfile.value)
      }
      editingFile.value.originalContent = editingFile.value.content
    }
-@@ -220,10 +221,10 @@ export const useFilesStore = defineStore('files', () => {
-     if (isImageFile(entry.name)) {
-       previewFile.value = { path: entry.path, profile, type: 'image' }
+@@ -291,12 +292,12 @@ export const useFilesStore = defineStore('files', () => {
      } else if (isMarkdownFile(entry.name)) {
--      const result = await filesApi.readFile(entry.path, profile)
-+      const result = await filesApi.readFile(entry.path, workspaceRoot.value, profile)
+       const result = currentWorkspaceSessionId.value
+         ? await readSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path)
+-        : await filesApi.readFile(entry.path, profile)
++        : await filesApi.readFile(entry.path, workspaceRoot.value, profile)
        previewFile.value = { path: entry.path, profile, type: 'markdown', content: result.content }
      } else if (isTextFile(entry.name)) {
--      const result = await filesApi.readFile(entry.path, profile)
-+      const result = await filesApi.readFile(entry.path, workspaceRoot.value, profile)
+       const result = currentWorkspaceSessionId.value
+         ? await readSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path)
+-        : await filesApi.readFile(entry.path, profile)
++        : await filesApi.readFile(entry.path, workspaceRoot.value, profile)
        previewFile.value = {
          path: entry.path,
          profile,
-@@ -238,18 +239,18 @@ export const useFilesStore = defineStore('files', () => {
- 
+@@ -312,20 +313,20 @@ export const useFilesStore = defineStore('files', () => {
    async function createDir(name: string, targetPath = currentPath.value) {
      const path = targetPath ? `${targetPath}/${name}` : name
--    await filesApi.mkDir(path, currentProfile.value)
-+    await filesApi.mkDir(path, workspaceRoot.value, currentProfile.value)
+     if (currentWorkspaceSessionId.value) await mkdirSessionWorkspaceFile(currentWorkspaceSessionId.value, path)
+-    else await filesApi.mkDir(path, currentProfile.value)
++    else await filesApi.mkDir(path, workspaceRoot.value, currentProfile.value)
      await fetchEntries(undefined)
    }
  
    async function createFile(name: string) {
      const path = currentPath.value ? `${currentPath.value}/${name}` : name
--    await filesApi.writeFile(path, '', currentProfile.value)
-+    await filesApi.writeFile(path, '', workspaceRoot.value, currentProfile.value)
+     if (currentWorkspaceSessionId.value) await writeSessionWorkspaceFile(currentWorkspaceSessionId.value, path, '')
+-    else await filesApi.writeFile(path, '', currentProfile.value)
++    else await filesApi.writeFile(path, '', workspaceRoot.value, currentProfile.value)
      await fetchEntries(undefined)
    }
  
    async function deleteEntry(entry: FileEntry) {
--    await filesApi.deleteFile(entry.path, entry.isDir, currentProfile.value)
-+    await filesApi.deleteFile(entry.path, entry.isDir, workspaceRoot.value, currentProfile.value)
+     if (currentWorkspaceSessionId.value) await deleteSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path, entry.isDir)
+-    else await filesApi.deleteFile(entry.path, entry.isDir, currentProfile.value)
++    else await filesApi.deleteFile(entry.path, entry.isDir, workspaceRoot.value, currentProfile.value)
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -262,7 +263,7 @@ export const useFilesStore = defineStore('files', () => {
-   async function renameEntry(entry: FileEntry, newName: string) {
+@@ -339,7 +340,7 @@ export const useFilesStore = defineStore('files', () => {
      const parentPath = entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : ''
      const newPath = parentPath ? `${parentPath}/${newName}` : newName
--    await filesApi.renameFile(entry.path, newPath, currentProfile.value)
-+    await filesApi.renameFile(entry.path, newPath, workspaceRoot.value, currentProfile.value)
+     if (currentWorkspaceSessionId.value) await renameSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path, newPath)
+-    else await filesApi.renameFile(entry.path, newPath, currentProfile.value)
++    else await filesApi.renameFile(entry.path, newPath, workspaceRoot.value, currentProfile.value)
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -273,12 +274,12 @@ export const useFilesStore = defineStore('files', () => {
-   }
+@@ -351,13 +352,13 @@ export const useFilesStore = defineStore('files', () => {
  
    async function copyEntry(entry: FileEntry, destPath: string) {
--    await filesApi.copyFile(entry.path, destPath, currentProfile.value)
-+    await filesApi.copyFile(entry.path, destPath, workspaceRoot.value, currentProfile.value)
+     if (currentWorkspaceSessionId.value) await copySessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path, destPath)
+-    else await filesApi.copyFile(entry.path, destPath, currentProfile.value)
++    else await filesApi.copyFile(entry.path, destPath, workspaceRoot.value, currentProfile.value)
      await fetchEntries(undefined)
    }
  
    async function uploadFiles(files: File[]) {
--    await filesApi.uploadFiles(currentPath.value, files, currentProfile.value)
-+    await filesApi.uploadFiles(currentPath.value, files, workspaceRoot.value, currentProfile.value)
-     await fetchEntries(undefined)
-   }
- 
-@@ -297,7 +298,7 @@ export const useFilesStore = defineStore('files', () => {
+     if (!currentWorkspaceSessionId.value) {
+-      await filesApi.uploadFiles(currentPath.value, files, currentProfile.value)
++      await filesApi.uploadFiles(currentPath.value, files, workspaceRoot.value, currentProfile.value)
+       await fetchEntries(undefined)
+       return
+     }
+@@ -384,7 +385,7 @@ export const useFilesStore = defineStore('files', () => {
    })
  
    return {
--    currentPath, currentProfile, entries, loading, sortBy, sortOrder,
-+    currentPath, currentProfile, entries, loading, workspaceRoot, sortBy, sortOrder,
+-    currentPath, currentProfile, currentWorkspaceSessionId, entries, loading, sortBy, sortOrder,
++    currentPath, currentProfile, currentWorkspaceSessionId, entries, loading, workspaceRoot, sortBy, sortOrder,
      editingFile, previewFile,
      pathSegments, sortedEntries, hasUnsavedChanges,
-     fetchEntries, navigateTo, navigateUp,
+     fetchEntries, listEntries, fetchDirectory, navigateTo, navigateUp,
