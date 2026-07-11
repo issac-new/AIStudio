@@ -1,0 +1,20 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index 37d0157..a196c38 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -803,7 +803,14 @@ function runDesktopApp() {
+       quitApp()
+       return
+     }
+-    showMainWindow()
++    // overlay[fix-second-instance]: only restore the window when it's currently
++    // hidden or minimized. An already-visible window should NOT be re-raised —
++    // any second SwarmStudio.exe launch (auto-updater recheck, scheduled task,
++    // cli shim "open app") would otherwise steal foreground focus every few
++    // seconds, which is what users reported on Windows.
++    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible() || mainWindow.isMinimized()) {
++      showMainWindow()
++    }
+   })
+ 
+   app.whenReady().then(() => {
