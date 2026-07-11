@@ -6,6 +6,7 @@ import type {
 import type { LoopStateStore } from '../store/state-store'
 import type { GithubConnector } from '../connectors/github-connector'
 import type { LocalGitConnector } from '../connectors/local-git-connector'
+import type { WebhookConnector } from '../connectors/webhook-connector'
 import type { Verifier } from './verifier'
 import type { SubagentDispatcher } from './subagent-dispatcher'
 import type { WorktreeManager } from './worktree-manager'
@@ -17,6 +18,7 @@ export interface LoopEngineDeps {
   store: LoopStateStore
   githubConnector?: GithubConnector
   localGitConnector?: LocalGitConnector
+  webhookConnector?: WebhookConnector
   verifier: Verifier
   dispatcher: SubagentDispatcher
   worktreeManager: WorktreeManager
@@ -53,9 +55,14 @@ export class LoopEngine {
       return
     }
 
-    await this.deps.store.updateLoop(loopId, { status: 'running', lastTickAt: new Date().toISOString() })
+    await this.deps.store.updateLoop(loopId, {
+      status: 'running',
+      lastTickAt: new Date().toISOString(),
+      stats: loop.stats,
+    })
     loop.status = 'running'
     loop.stats.currentIteration++
+    loop.stats.totalIterations++
 
     try {
       // Stage 1: Discovery
@@ -106,6 +113,7 @@ export class LoopEngine {
         const nextTick = this.computeNextTick(loop)
         await this.deps.store.updateLoop(loopId, {
           status: 'idle', stage: 'scheduling', nextTickAt: nextTick,
+          stats: loop.stats,
         })
       }
     } catch (err) {
@@ -133,6 +141,9 @@ export class LoopEngine {
     }
     if (this.deps.localGitConnector) {
       contracts.push(...await this.deps.localGitConnector.discover(loop))
+    }
+    if (this.deps.webhookConnector) {
+      contracts.push(...await this.deps.webhookConnector.discover(loop))
     }
     for (const c of contracts) {
       await this.deps.store.appendContract(c)
