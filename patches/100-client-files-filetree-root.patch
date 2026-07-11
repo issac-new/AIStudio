@@ -1,19 +1,10 @@
 diff --git a/packages/client/src/components/hermes/files/FileTree.vue b/packages/client/src/components/hermes/files/FileTree.vue
-index 902ece7b..bb169856 100644
+index e128dd5..67abad5 100644
 --- a/packages/client/src/components/hermes/files/FileTree.vue
 +++ b/packages/client/src/components/hermes/files/FileTree.vue
-@@ -19,7 +19,7 @@ const selectedKeys = ref<string[]>([])
- 
- async function loadChildren(path: string): Promise<TreeOption[]> {
-   try {
--    const result = await filesApi.listFiles(path, effectiveProfile.value)
-+    const result = await filesApi.listFiles(path, filesStore.workspaceRoot, effectiveProfile.value)
-     return result.entries
-       .filter(e => e.isDir)
-       .sort((a, b) => a.name.localeCompare(b.name))
-@@ -58,6 +58,11 @@ watch(effectiveProfile, async () => {
-   selectedKeys.value = []
-   treeData.value = await loadChildren('')
+@@ -67,6 +67,11 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => props
+   const nextTreeData = await loadChildren('')
+   if (seq === rootLoadSeq) treeData.value = nextTreeData
  }, { immediate: true })
 +
 +// 当 workspaceRoot 变化时（切换到不同任务），重新加载根级目录树
@@ -23,7 +14,7 @@ index 902ece7b..bb169856 100644
  </script>
  
  <template>
-@@ -77,7 +82,11 @@ watch(effectiveProfile, async () => {
+@@ -87,7 +92,11 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => props
        expand-on-click
        block-line
        @update:selected-keys="handleSelect"
@@ -36,7 +27,7 @@ index 902ece7b..bb169856 100644
    </div>
  </template>
  
-@@ -112,4 +121,12 @@ watch(effectiveProfile, async () => {
+@@ -122,4 +131,12 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => props
    white-space: nowrap;
    vertical-align: bottom;
  }
