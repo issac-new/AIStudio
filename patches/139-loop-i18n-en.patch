@@ -1,14 +1,14 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 18945607..58766a8b 100644
+index c71b0a32..6aca48e4 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -239,8 +239,76 @@ export default {
+@@ -239,6 +239,83 @@ export default {
      noChangelog: 'No changelog available',
      versionManagement: 'Version Management',
      updateAvailableLabel: '(New version)',
 +    loop: 'Loop Engineering',
-   },
- 
++  },
++
 +  loop: {
 +    title: 'Loop Engineering',
 +    newLoop: 'New Loop',
@@ -38,27 +38,34 @@ index 18945607..58766a8b 100644
 +      stop: 'Stop Condition',
 +      budget: 'Budget',
 +      history: 'History',
-+      workers: 'Workers',
-+      relations: 'Relations',
-+      todo: 'Todo',
-+      loading: 'Loading...',
-+      notFound: 'Loop not found',
++      traces: 'Traces',
++      latest: 'Latest Snapshot',
 +    },
-+    wizard: {
-+      selectPattern: 'Select Loop Pattern',
-+      configure: 'Configure Loop',
-+      name: 'Name',
++    status: {
++      draft: 'Draft',
++      active: 'Active',
++      paused: 'Paused',
++      blocked: 'Blocked',
++      archived: 'Archived',
++      completed: 'Completed',
++    },
++    filters: {
++      search: 'Search loops...',
++      status: 'Status',
++      assignee: 'Assignee',
++    },
++    empty: {
++      title: 'No Loops Yet',
++      subtitle: 'Create a loop to orchestrate iterative work',
++      create: 'Create Loop',
++    },
++    create: {
++      title: 'Create Loop',
++      name: 'Loop Name',
++      pattern: 'Pattern',
 +      goal: 'Goal',
-+      stopCondition: 'Stop Condition',
-+      cron: 'Cron Expression',
-+      autonomyLevel: 'Autonomy Level',
-+      l1: 'L1 Report',
-+      l2: 'L2 Assisted',
-+      l3: 'L3 Autonomous',
 +      budget: 'Budget',
-+      perTick: '/tick',
-+      writeBoundary: 'Write Boundary',
-+      create: 'Create',
++      submit: 'Create',
 +      cancel: 'Cancel',
 +    },
 +    approval: {
@@ -76,6 +83,6 @@ index 18945607..58766a8b 100644
 +      persistence: 'Persistence',
 +      scheduling: 'Scheduling',
 +    },
-   runtimeVersions: {
-     title: 'Version Management',
-     runtimeTitle: 'Hermes Runtime',
+     dockerUpdateTitle: 'Docker Update',
+     dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
+     dockerUpdateNote: 'Your data will persist after the container is recreated.',
