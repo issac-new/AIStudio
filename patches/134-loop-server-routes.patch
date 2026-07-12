@@ -1,12 +1,14 @@
+diff --git a/packages/server/src/routes/index.ts b/packages/server/src/routes/index.ts
+index 3241942a..edb9db47 100644
 --- a/packages/server/src/routes/index.ts
 +++ b/packages/server/src/routes/index.ts
-@@ -50,7 +50,46 @@
+@@ -50,6 +50,49 @@ import { writeGateRoutes } from './hermes/write-gate'
  import { petdexPublicRoutes, petdexRoutes } from './hermes/petdex'
  import { petRoutes } from './hermes/pets'
  import traceRoutes from '../custom/controllers/hermes/trace'
 +// overlay[loop-routes]: Loop Engineering REST API
 +import { createLoopRouter } from '../custom/loop/controllers/loop'
-+import { LocalStore } from '../custom/loop/store/local-store'
++import { createStateStore } from '../custom/loop/store/store-factory'
 +import { Scheduler } from '../custom/loop/engine/scheduler'
 +import { LoopEngine } from '../custom/loop/engine/loop-engine'
 +import { Verifier } from '../custom/loop/engine/verifier'
@@ -18,38 +20,42 @@
 +import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
 +import { emitLoopEvent } from '../custom/loop/services/loop-socket'
 +import { getGroupChatServer } from './hermes/group-chat'
- 
-+// overlay[loop-routes]: construct loop subsystem singletons (composition root)
-+// getGroupChatServer() returns null until setGroupChatServer() runs in
-+// startServer() (which happens before registerRoutes()). The emitEvent
-+// closure resolves the IO instance lazily at call time so it survives
-+// module-load ordering, and degrades to store-only persistence if Socket.IO
-+// is not yet available.
-+const loopStore = new LocalStore()
-+const loopWebhookConnector = new WebhookConnector()
-+const loopEngine = new LoopEngine({
-+  store: loopStore,
-+  verifier: new Verifier(),
-+  dispatcher: new SubagentDispatcher(),
-+  worktreeManager: new WorktreeManager(),
-+  budgetGuard: new BudgetGuard(() => {}),
-+  stuckDetector: new StuckDetector(loopStore),
-+  hookManager: new HookManager(),
-+  emitEvent: async (event) => {
-+    await loopStore.appendEvent(event)
-+    const gcs = getGroupChatServer()
-+    if (gcs) emitLoopEvent(gcs.getIO(), event as any)
-+  },
-+})
-+const loopScheduler = new Scheduler(loopStore, loopEngine, loopWebhookConnector)
-+const loopRouter = createLoopRouter(loopStore, loopScheduler, loopWebhookConnector)
 +
++// overlay[loop-routes]: loop subsystem — auto-detecting state adapter
++// createStateStore() probes environment capabilities and picks:
++//   SaaS (PostgreSQL) > Matrix > Local (filesystem)
++// No manual configuration needed — the system adapts to its environment.
++let loopRouter: any = null
++let loopScheduler: any = null
++async function initLoopSubsystem(): Promise<void> {
++  if (loopRouter) return
++  const { store: loopStore, adapterType, detectedFrom } = await createStateStore()
++  console.log('[loop] state adapter: ' + adapterType + ' (' + detectedFrom + ')')
++  const loopWebhookConnector = new WebhookConnector()
++  const loopEngine = new LoopEngine({
++    store: loopStore,
++    verifier: new Verifier(),
++    dispatcher: new SubagentDispatcher(),
++    worktreeManager: new WorktreeManager(),
++    budgetGuard: new BudgetGuard(() => {}),
++    stuckDetector: new StuckDetector(loopStore),
++    hookManager: new HookManager(),
++    emitEvent: async (event) => {
++      await loopStore.appendEvent(event)
++      const gcs = getGroupChatServer()
++      if (gcs) emitLoopEvent(gcs.getIO(), event as any)
++    },
++  })
++  loopScheduler = new Scheduler(loopStore, loopEngine, loopWebhookConnector)
++  loopRouter = createLoopRouter(loopStore, loopScheduler, loopWebhookConnector)
++}
+ 
  /**
   * Register all routes on the Koa app.
-  * Public routes are registered first, then auth middleware,
-@@ -115,4 +153,5 @@
+@@ -114,4 +157,6 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(petdexRoutes.routes())
    app.use(petRoutes.routes())
    app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
-+  app.use(loopRouter.routes())                     // Loop Engineering REST API
++  // overlay[loop-routes]: init loop subsystem (async, auto-detects adapter)
++  initLoopSubsystem().then(() => app.use(loopRouter.routes())).catch(e => console.error('[loop] init failed:', e))
  }
