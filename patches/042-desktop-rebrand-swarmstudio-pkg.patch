@@ -1,12 +1,12 @@
 diff --git a/packages/desktop/package.json b/packages/desktop/package.json
-index 91923401..1da0af7f 100644
+index 85a0c398..1da0af7f 100644
 --- a/packages/desktop/package.json
 +++ b/packages/desktop/package.json
 @@ -1,11 +1,11 @@
  {
 -  "name": "hermes-studio",
 +  "name": "swarmstudio",
-   "version": "0.6.28",
+   "version": "0.6.29",
 -  "description": "Hermes Studio desktop distribution with bundled Python runtime and hermes-agent",
 +  "description": "SwarmStudio desktop distribution with bundled Python runtime and hermes-agent",
    "homepage": "https://hermes-studio.ai",

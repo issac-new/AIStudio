@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
-index b38d08ee..ccbc436c 100644
+index 0dd7cb84..eb84e17e 100644
 --- a/packages/client/src/styles/variables.scss
 +++ b/packages/client/src/styles/variables.scss
 @@ -45,7 +45,7 @@
@@ -19,15 +19,6 @@ index b38d08ee..ccbc436c 100644
  }
  
  .dark {
-@@ -97,7 +98,7 @@
-   --text-on-overlay: #ffffff;
-   --accent-info: #6ba3d6;
- 
--  // RGB components
-+  // HERMES_CUSTOM[Branding] BEGIN: RGB component variables for dark theme
-   --accent-primary-rgb: 240, 240, 240;
-   --accent-hover-rgb: 245, 245, 245;
-   --text-primary-rgb: 240, 240, 240;
 @@ -106,6 +107,7 @@
    --error-rgb: 239, 83, 80;
    --warning-rgb: 255, 183, 77;
@@ -36,11 +27,10 @@ index b38d08ee..ccbc436c 100644
  }
  
  .comic {
-@@ -185,3 +187,19 @@ $radius-lg: 14px;
+@@ -185,3 +187,18 @@ $radius-lg: 8px;
  // Transition
  $transition-fast: 0.15s ease;
  $transition-normal: 0.25s ease;
-+
 +// Utility
 +$text-on-accent: var(--text-on-accent);
 +$text-on-overlay: var(--text-on-overlay);
