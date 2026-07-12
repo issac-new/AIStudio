@@ -1,6 +1,6 @@
 // overlay/custom/server/loop/engine/scheduler.ts
 import cronParser from 'cron-parser'
-import type { LoopInstance, LoopEvent } from '../../../client/loop/types'
+import type { LoopInstance, LoopEvent } from '../types'
 import type { LoopStateStore } from '../store/state-store'
 import type { LoopEngine } from './loop-engine'
 import type { WebhookConnector } from '../connectors/webhook-connector'

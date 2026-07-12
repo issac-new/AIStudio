@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/engine/task-contract.ts
-import type { TaskContract, TaskSource, ReadPlan, VerificationSpec, ResultTemplate } from '../../../client/loop/types'
+import type { TaskContract, TaskSource, ReadPlan, VerificationSpec, ResultTemplate } from '../types'
 
 let counter = 0
 export function generateContractId(loopId: string, summary: string): string {

@@ -1,7 +1,7 @@
 // overlay/custom/server/loop/connectors/github-connector.ts
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import type { LoopInstance, TaskContract } from '../../../client/loop/types'
+import type { LoopInstance, TaskContract } from '../types'
 import { createContract } from '../engine/task-contract'
 
 const execFileAsync = promisify(execFile)

@@ -76,7 +76,7 @@ export class LeaseManager {
 
   private async getRecentLeaseBids(loopId: string, since: number): Promise<LeaseInfo[]> {
     try {
-      const response = await this.client.createMessagesRequest(this.roomId, '', 50, 'b')
+      const response = await this.client.createMessagesRequest(this.roomId, '', 50, 'b' as any)
       const messages = response.chunk ?? []
       return messages
         .filter((m: any) => {

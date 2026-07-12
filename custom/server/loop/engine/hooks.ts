@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/engine/hooks.ts
-import type { LoopInstance } from '../../../client/loop/types'
+import type { LoopInstance } from '../types'
 
 export type LoopHook =
   | 'pre-discovery' | 'post-discovery'

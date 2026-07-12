@@ -3,7 +3,7 @@ import cronParser from 'cron-parser'
 import type {
   LoopInstance, TaskContract, LoopEvent, LoopStage, LoopStats,
   VerificationRecord,
-} from '../../../client/loop/types'
+} from '../types'
 import type { LoopStateStore } from '../store/state-store'
 import type { GithubConnector } from '../connectors/github-connector'
 import type { LocalGitConnector } from '../connectors/local-git-connector'
