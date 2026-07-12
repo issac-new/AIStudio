@@ -1,7 +1,7 @@
 // overlay/custom/server/loop/engine/matrix-bot.ts
 import type { MatrixClient } from 'matrix-js-sdk'
 import { sendMessage } from '../store/matrix-client'
-import type { LoopEvent } from '../../../client/loop/types'
+import type { LoopEvent } from '../types'
 
 export class MatrixBot {
   constructor(private client: MatrixClient, private roomId: string) {}

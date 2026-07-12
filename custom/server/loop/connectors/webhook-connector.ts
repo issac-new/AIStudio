@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/connectors/webhook-connector.ts
-import type { LoopInstance, TaskContract } from '../../../client/loop/types'
+import type { LoopInstance, TaskContract } from '../types'
 import { createContract } from '../engine/task-contract'
 
 export interface WebhookPayload {

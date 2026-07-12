@@ -24,7 +24,8 @@ import Router from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
 import type { Scheduler } from '../engine/scheduler'
 import type { WebhookConnector } from '../connectors/webhook-connector'
-import type { LoopInstance } from '../../../client/loop/types'
+import type { LoopInstance } from '../types'
+import { PATTERN_TEMPLATES } from '../types'
 
 export function createLoopRouter(
   store: LoopStateStore,

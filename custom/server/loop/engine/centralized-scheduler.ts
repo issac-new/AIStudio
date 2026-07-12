@@ -2,7 +2,7 @@
 import cronParser from 'cron-parser'
 import type { LoopStateStore } from '../store/state-store'
 import type { LoopEngine } from './loop-engine'
-import type { LoopInstance } from '../../../client/loop/types'
+import type { LoopInstance } from '../types'
 
 export class CentralizedScheduler {
   private timer: NodeJS.Timeout | null = null

@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/engine/subagent-dispatcher.ts
-import type { TaskContract } from '../../../client/loop/types'
+import type { TaskContract } from '../types'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 

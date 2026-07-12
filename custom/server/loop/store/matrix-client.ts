@@ -17,7 +17,7 @@ export function getMatrixClient(config: MatrixClientConfig): MatrixClient {
     accessToken: config.accessToken,
     userId: config.userId,
   })
-  clientInstance.startClient({ initialSync: true })
+  clientInstance.startClient({ initialSync: true } as any) as any as string
   return clientInstance
 }
 
@@ -43,7 +43,7 @@ export async function sendStateEvent(
   key: string,
   content: unknown,
 ): Promise<string> {
-  return client.sendStateEvent(roomId, type, content, key)
+  return client.sendStateEvent(roomId, type as any, content, key) as any as string
 }
 
 export async function sendMessage(
@@ -52,11 +52,12 @@ export async function sendMessage(
   type: string,
   content: unknown,
 ): Promise<string> {
-  return client.sendMessage(roomId, {
-    msgtype: 'm.text',
+  const res = await client.sendMessage(roomId, {
+    msgtype: 'm.text' as any,
     body: JSON.stringify(content),
     ...content as object,
   })
+  return typeof res === 'string' ? res : (res as any)?.event_id ?? ''
 }
 
 export async function getStateEvent(
@@ -78,8 +79,8 @@ export async function listStateEventsWithType(
   type: string,
 ): Promise<Array<{ key: string; content: unknown }>> {
   const state = await client.roomState(roomId)
-  const events = state.filter((e: MatrixEvent) => e.getType() === type)
-  return events.map((e: MatrixEvent) => ({
+  const events = state.filter((e: any) => e.getType() === type)
+  return events.map((e: any) => ({
     key: e.getStateKey() ?? '',
     content: e.getContent(),
   }))
@@ -90,6 +91,6 @@ export async function getRoomMessages(
   roomId: string,
   limit: number = 50,
 ): Promise<MatrixEvent[]> {
-  const response = await client.createMessagesRequest(roomId, '', limit, 'b')
-  return response.chunk ?? []
+  const response = await client.createMessagesRequest(roomId, '', limit, 'b' as any)
+  return (response.chunk ?? []) as any[]
 }

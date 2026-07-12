@@ -2,7 +2,7 @@
 import type {
   LoopInstance, TaskContract, VerificationRecord, LoopEvent,
   DriftReport, LoopFilter, ContractFilter,
-} from '../../../client/loop/types'
+} from '../types'
 
 export interface LoopStateStore {
   createLoop(loop: LoopInstance): Promise<void>

@@ -3,7 +3,7 @@ import { Pool } from 'pg'
 import type {
   LoopInstance, TaskContract, VerificationRecord, LoopEvent,
   DriftReport, LoopFilter, ContractFilter,
-} from '../../../client/loop/types'
+} from '../types'
 import type { LoopStateStore } from './state-store'
 
 export interface SaaSStoreConfig {
@@ -245,7 +245,7 @@ export class SaaSStore implements LoopStateStore {
       sql += ` LIMIT $${params.length}`
     }
     const res = await this.query(sql, params)
-    return res.rows.map(r => r.payload as LoopEvent)
+    return res.rows.map((r: any) => r.payload as LoopEvent)
   }
 
   async detectDrift(_loopId: string): Promise<DriftReport> {

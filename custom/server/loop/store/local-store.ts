@@ -6,7 +6,7 @@ import lockfile from 'proper-lockfile'
 import type {
   LoopInstance, TaskContract, VerificationRecord, LoopEvent,
   DriftReport, LoopFilter, ContractFilter,
-} from '../../../client/loop/types'
+} from '../types'
 import type { LoopStateStore } from './state-store'
 
 const DEFAULT_LOOP_DIR = '.loop'
@@ -54,7 +54,7 @@ export class LocalStore implements LoopStateStore {
     const lockPath = resolve(this.baseDir, 'STATE.lock')
     await this.ensureDir(this.baseDir)
     const release = await lockfile.lock(this.baseDir, {
-      lockfilePath: lockPath,
+      
       stale: 5000,
       retries: { retries: 5, minTimeout: 100, maxTimeout: 500 },
     })

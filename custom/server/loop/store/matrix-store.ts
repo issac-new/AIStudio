@@ -2,7 +2,7 @@
 import type {
   LoopInstance, TaskContract, VerificationRecord, LoopEvent,
   DriftReport, LoopFilter, ContractFilter,
-} from '../../../client/loop/types'
+} from '../types'
 import type { LoopStateStore } from './state-store'
 import {
   getMatrixClient, sendStateEvent, sendMessage, getStateEvent,

@@ -5,7 +5,7 @@ import { existsSync, statSync } from 'fs'
 import { resolve } from 'path'
 import type {
   TaskContract, LoopInstance, VerificationRecord, AutonomyLevel,
-} from '../../../client/loop/types'
+} from '../types'
 
 const execFileAsync = promisify(execFile)
 

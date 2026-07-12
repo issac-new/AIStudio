@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/engine/budget-guard.ts
-import type { LoopInstance, LoopEvent } from '../../../client/loop/types'
+import type { LoopInstance, LoopEvent } from '../types'
 
 export interface BudgetDecision {
   allow: boolean

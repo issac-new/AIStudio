@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/engine/stuck-detector.ts
-import type { LoopInstance } from '../../../client/loop/types'
+import type { LoopInstance } from '../types'
 import type { LoopStateStore } from '../store/state-store'
 
 export type StuckReason = 'max-attempts' | 'no-output' | 'validation-loop' | 'agent-silent'
