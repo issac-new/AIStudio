@@ -1,7 +1,8 @@
 diff --git a/package.json b/package.json
 --- a/package.json
 +++ b/package.json
-@@ -87,6 +87,7 @@
+@@ -88,6 +88,7 @@
+     "matrix-js-sdk": "^41.8.0-rc.0",
      "node-edge-tts": "^1.2.10",
      "node-pty": "^1.1.0",
 +    "pg": "^8.13.1",
