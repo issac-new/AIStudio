@@ -1,0 +1,26 @@
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 7a516bbe..51dbd630 100644
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -34,6 +34,8 @@ import { createStaticCompressionMiddleware } from './middleware/static-compressi
+ import { requireUserJwt, resolveUserProfile } from './middleware/user-auth'
+ import { createCorsOriginResolver, securityHeaders } from './security'
+ import type { ShutdownHandler } from './services/shutdown'
++// overlay[loop-socket]: Loop Engineering Socket.IO namespace
++import { setupLoopSocketNamespace } from './custom/loop/services/loop-socket'
+ 
+ // Injected by esbuild at build time; fallback to reading package.json in dev mode
+ declare const __APP_VERSION__: string
+@@ -347,6 +349,12 @@ export async function bootstrap() {
+   petStateSocketServer = new PetStateSocketServer(groupChatServer.getIO())
+   petStateSocketServer.init()
+ 
++  // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
++  // No store is passed here -- the REST subsystem (patch 134) owns the live
++  // LoopStateStore singleton and handles event persistence + broadcasting.
++  // The socket namespace only fans out live events; history replay is skipped.
++  setupLoopSocketNamespace(groupChatServer.getIO())
++
+   const loopbackBaseUrl = getLoopbackBaseUrl(server)
+   startGlobalAgentServer(groupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
+   console.log('[bootstrap] global agent server ready')
