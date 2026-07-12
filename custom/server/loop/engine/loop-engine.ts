@@ -26,7 +26,7 @@ export interface LoopEngineDeps {
   budgetGuard: BudgetGuard
   stuckDetector: StuckDetector
   hookManager: HookManager
-  emitEvent: (event: LoopEvent) => void
+  emitEvent: (event: LoopEvent) => void | Promise<void>
 }
 
 export class LoopEngine {

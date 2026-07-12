@@ -12,11 +12,18 @@
 // Design note: the factory shape (vs. a module-level singleton) keeps the
 // controller testable — the vitest suite can construct a router with mock
 // dependencies and assert the returned object exposes `.routes`.
+//
+// Auth note (I11): all `/api/loop/*` routes are mounted via patch 134 inside
+// `registerRoutes(app, authMiddleware, ...)`. The Koa app applies the
+// authMiddleware chain (requireUserJwt + resolveUserProfile) BEFORE any
+// router middleware is registered, so every loop route inherits that auth
+// ordering by virtue of being registered after the global middleware stack.
+// No per-route auth decorator is needed here; adding one would be redundant
+// with the global stack. If the global auth posture changes, revisit this.
 import Router from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
 import type { Scheduler } from '../engine/scheduler'
 import type { WebhookConnector } from '../connectors/webhook-connector'
-import { PATTERN_TEMPLATES } from '../../../client/loop/types'
 import type { LoopInstance } from '../../../client/loop/types'
 
 export function createLoopRouter(

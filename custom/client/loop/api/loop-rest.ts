@@ -1,5 +1,5 @@
 // overlay/custom/client/loop/api/loop-rest.ts
-import type { LoopInstance, TaskContract, LoopEvent, PatternTemplate } from '../types'
+import type { LoopInstance, TaskContract, LoopEvent } from '../types'
 
 const BASE = '/api/loop'
 
@@ -65,8 +65,5 @@ export const loopRest = {
     const qs = since ? `?since=${since}` : ''
     const qs2 = limit ? `${since ? '&' : '?'}limit=${limit}` : ''
     return (await fetchJson(`${BASE}/loops/${loopId}/events${qs}${qs2}`)).events
-  },
-  getPatterns: async (): Promise<PatternTemplate[]> => {
-    return (await fetchJson(`${BASE}/patterns`)).patterns
   },
 }

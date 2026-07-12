@@ -1,10 +1,12 @@
 <!-- overlay/custom/client/loop/components/LoopCreateWizard.vue -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { PATTERN_TEMPLATES, type LoopPattern } from '@/custom/loop/types'
 
 const store = useLoopStore()
+const { t } = useI18n()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const step = ref(0)
@@ -16,10 +18,11 @@ const form = ref({
   cron: '0 9 * * *',
   autonomyLevel: 'L1' as const,
   budget: 50,
-  writeBoundary: 'packages/**',
+  // C6: writeBoundary 是 string[](glob 列表),而非单个 string。
+  writeBoundary: ['packages/**'],
 })
 
-onMounted(() => { /* patterns available via PATTERN_TEMPLATES */ })
+// M2: 移除空的 onMounted(patterns 直接用 PATTERN_TEMPLATES,无需 fetch)。
 
 function selectPattern(p: LoopPattern) {
   selectedPattern.value = p
@@ -41,7 +44,9 @@ async function create() {
     schedule: { mode: 'cron', cron: form.value.cron, timezone: 'Asia/Shanghai' },
     autonomyLevel: form.value.autonomyLevel,
     budget: { maxCostPerTick: form.value.budget, maxCostTotal: form.value.budget * 4, killMode: 'throw', warningThreshold: 0.8 },
-  })
+    // C6: 发送 writeBoundary 字段(此前遗漏)。
+    writeBoundary: form.value.writeBoundary,
+  } as any)
   emit('close')
 }
 </script>
@@ -51,7 +56,7 @@ async function create() {
     <div class="loop-wizard__overlay" @click="emit('close')"></div>
     <div class="loop-wizard__dialog">
       <template v-if="step === 0">
-        <h3>选择 Loop 模式</h3>
+        <h3>{{ t('loop.wizard.selectPattern') }}</h3>
         <div class="loop-wizard__patterns">
           <div v-for="tmpl in Object.values(PATTERN_TEMPLATES)" :key="tmpl.pattern"
             class="loop-wizard__pattern" @click="selectPattern(tmpl.pattern)">
@@ -62,22 +67,22 @@ async function create() {
         </div>
       </template>
       <template v-if="step === 1">
-        <h3>配置 Loop</h3>
-        <label>名称 <input v-model="form.name" /></label>
-        <label>目标 <textarea v-model="form.goal"></textarea></label>
-        <label>停止条件 <input v-model="form.stopCondition" /></label>
-        <label>Cron <input v-model="form.cron" /></label>
-        <label>自治级
+        <h3>{{ t('loop.wizard.configure') }}</h3>
+        <label>{{ t('loop.wizard.name') }} <input v-model="form.name" /></label>
+        <label>{{ t('loop.wizard.goal') }} <textarea v-model="form.goal"></textarea></label>
+        <label>{{ t('loop.wizard.stopCondition') }} <input v-model="form.stopCondition" /></label>
+        <label>{{ t('loop.wizard.cron') }} <input v-model="form.cron" /></label>
+        <label>{{ t('loop.wizard.autonomyLevel') }}
           <select v-model="form.autonomyLevel">
-            <option value="L1">L1 报告</option>
-            <option value="L2">L2 辅助</option>
-            <option value="L3">L3 无人</option>
+            <option value="L1">{{ t('loop.wizard.l1') }}</option>
+            <option value="L2">{{ t('loop.wizard.l2') }}</option>
+            <option value="L3">{{ t('loop.wizard.l3') }}</option>
           </select>
         </label>
-        <label>预算 $<input type="number" v-model="form.budget" />/tick</label>
-        <label>写边界 <input v-model="form.writeBoundary" /></label>
-        <button @click="create">创建</button>
-        <button @click="emit('close')">取消</button>
+        <label>{{ t('loop.wizard.budget') }} $<input type="number" v-model="form.budget" />{{ t('loop.wizard.perTick') }}</label>
+        <label>{{ t('loop.wizard.writeBoundary') }} <input v-model="form.writeBoundary" /></label>
+        <button @click="create">{{ t('loop.wizard.create') }}</button>
+        <button @click="emit('close')">{{ t('loop.wizard.cancel') }}</button>
       </template>
     </div>
   </div>

@@ -1,0 +1,81 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index b4f9c65c..1c1eb885 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -239,6 +239,76 @@ export default {
+     noChangelog: '暂无更新日志',
+     versionManagement: '版本管理',
+     updateAvailableLabel: '(有新版)',
++    loop: '循环工程',
++  },
++
++  loop: {
++    title: '循环工程',
++    newLoop: '新建 Loop',
++    sidebar: {
++      all: '全部',
++      running: '运行中',
++      awaitingReview: '待审批',
++      blocked: '阻塞',
++      archived: '已归档',
++    },
++    table: {
++      status: '状态',
++      name: 'Loop 名称',
++      stage: '阶段',
++      nextTick: '下次调度',
++      progress: '进度',
++      cost: '费用',
++      actions: '操作',
++    },
++    detail: {
++      back: '返回',
++      run: '运行',
++      pause: '暂停',
++      pattern: '模式',
++      level: '自治级',
++      goal: '目标',
++      stop: '停止条件',
++      budget: '预算',
++      history: '历史',
++      workers: '工作者',
++      relations: '关系',
++      todo: '待办',
++      loading: '加载中...',
++      notFound: 'Loop 未找到',
++    },
++    wizard: {
++      selectPattern: '选择 Loop 模式',
++      configure: '配置 Loop',
++      name: '名称',
++      goal: '目标',
++      stopCondition: '停止条件',
++      cron: 'Cron 表达式',
++      autonomyLevel: '自治级',
++      l1: 'L1 仅报告',
++      l2: 'L2 辅助修复',
++      l3: 'L3 无人值守',
++      budget: '预算',
++      perTick: '/次',
++      writeBoundary: '写边界',
++      create: '创建',
++      cancel: '取消',
++    },
++    approval: {
++      title: '人工审批',
++      prompt: '请审查 worktree 中的变更后决定：',
++      comment: '评语（退回修改时给 maker agent）',
++      approve: '批准',
++      reject: '拒绝',
++      changesRequested: '退回修改',
++    },
++    stages: {
++      discovery: '发现',
++      handoff: '交接',
++      validation: '验证',
++      persistence: '持久化',
++      scheduling: '调度',
++    },
+   },
+ 
+   runtimeVersions: {

@@ -1,7 +1,7 @@
 // overlay/custom/client/loop/store/loop.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { LoopInstance, LoopEvent, TaskContract, PatternTemplate } from '../types'
+import type { LoopInstance, LoopEvent, TaskContract } from '../types'
 import * as rest from '../api/loop-rest'
 import { connectLoop, disconnectLoop, subscribeToLoop } from '../api/loop-socket'
 import type { Socket } from 'socket.io-client'
@@ -11,7 +11,8 @@ export const useLoopStore = defineStore('loop', () => {
   const currentLoop = ref<LoopInstance | null>(null)
   const currentContracts = ref<TaskContract[]>([])
   const currentEvents = ref<LoopEvent[]>([])
-  const patterns = ref<PatternTemplate[]>([])
+  // I9: patterns ref 已移除 — wizard 直接用 PATTERN_TEMPLATES(types.ts),
+  // 服务端 /api/loop/patterns 端点也已移除。
   const loading = ref(false)
   const error = ref<string | null>(null)
   let socket: Socket | null = null
@@ -66,10 +67,6 @@ export const useLoopStore = defineStore('loop', () => {
     loops.value = loops.value.filter(l => l.id !== id)
   }
 
-  async function fetchPatterns(): Promise<void> {
-    patterns.value = await rest.loopRest.getPatterns()
-  }
-
   function connectSocket(loopId: string): void {
     if (!socket) {
       socket = connectLoop()
@@ -92,10 +89,11 @@ export const useLoopStore = defineStore('loop', () => {
   }
 
   return {
-    loops, currentLoop, currentContracts, currentEvents, patterns,
+    loops, currentLoop, currentContracts, currentEvents,
     loading, error,
     activeLoops, awaitingReviewLoops, blockedLoops, archivedLoops,
     fetchLoops, fetchLoop, createLoop, tickLoop, pauseLoop, deleteLoop,
-    fetchPatterns, connectSocket, disconnectSocket,
+    connectSocket, disconnectSocket,
   }
 })
+

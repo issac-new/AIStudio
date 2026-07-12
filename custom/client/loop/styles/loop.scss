@@ -19,7 +19,7 @@
   &__header { font-weight: bold; border-bottom: 2px solid var(--border-color); }
   &__row { border-bottom: 1px solid var(--border-color); cursor: pointer; &:hover { background: var(--hover-bg); } }
   &__col { flex: 1; &--status { flex: 0 0 2rem; } &--name { flex: 2; } }
-  &__cost--warning { color: #e11d48; }
+  &__cost--warning { color: var(--color-danger, #e11d48); }
 }
 .loop-detail {
   padding: 1rem;
@@ -31,3 +31,55 @@
   &__event { display: flex; gap: 1rem; padding: 0.25rem; font-size: 0.85rem; }
 }
 .stage-ring { &__svg { width: 100%; max-width: 400px; } }
+
+// LoopCreateWizard
+.loop-wizard {
+  &__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; }
+  &__dialog { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--bg-card, var(--color-bg-primary)); border-radius: 8px; padding: 2rem; max-width: 600px; width: 90%; max-height: 80vh; overflow: auto; z-index: 1001; }
+  &__patterns { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+  &__pattern { padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; &:hover { border-color: var(--color-primary, #3b82f6); }
+    h4 { margin: 0 0 0.25rem; font-size: 0.9rem; }
+    p { margin: 0 0 0.25rem; font-size: 0.8rem; opacity: 0.7; }
+    span { font-size: 0.75rem; opacity: 0.6; }
+  }
+  label { display: block; margin-bottom: 0.75rem; font-size: 0.85rem; }
+  input, textarea, select { width: 100%; padding: 0.4rem; margin-top: 0.25rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--color-bg-input, transparent); color: inherit; }
+  button { padding: 0.5rem 1.5rem; margin-right: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; background: var(--color-primary, #3b82f6); color: white; &:last-child { background: transparent; color: inherit; } }
+}
+
+// LoopApprovalDialog
+.approval-dialog {
+  &__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; }
+  &__dialog { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--bg-card, var(--color-bg-primary)); border-radius: 8px; padding: 2rem; max-width: 500px; width: 90%; z-index: 1001; }
+  &__actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+  textarea { width: 100%; min-height: 60px; padding: 0.4rem; margin: 0.5rem 0; border: 1px solid var(--border-color); border-radius: 4px; background: var(--color-bg-input, transparent); color: inherit; }
+}
+
+// VerifierPanel
+.verifier-panel {
+  &__record { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--border-color);
+    .pass { color: var(--color-success, #28bf5c); }
+    .fail { color: var(--color-danger, #e11d48); }
+  }
+}
+
+// LoopDetail tab content
+.loop-detail {
+  &__tab-content { margin-top: 1rem; min-height: 200px; }
+  &__event-ts { color: var(--color-text-secondary, #878c99); min-width: 70px; }
+  &__event-type { font-family: monospace; font-size: 0.8rem; }
+  &__loading { display: flex; align-items: center; justify-content: center; padding: 3rem; opacity: 0.5; }
+  &__error { padding: 1rem; color: var(--color-danger, #e11d48); }
+}
+
+// StageRing edges
+.stage-ring {
+  &__edge--forward { stroke: var(--color-text-secondary, #878c99); stroke-width: 1.5; }
+  &__edge--pending { stroke: var(--color-text-secondary, #878c99); stroke-width: 1; stroke-dasharray: 4 2; }
+  &__edge--repair { stroke: var(--color-danger, #e11d48); stroke-width: 1.5; stroke-dasharray: 4 2; }
+}
+
+// LoopTable actions
+.loop-table__actions { display: flex; gap: 0.25rem;
+  button { padding: 0.2rem 0.4rem; border: 1px solid var(--border-color); border-radius: 3px; background: transparent; cursor: pointer; font-size: 0.8rem; &:hover { background: var(--hover-bg, rgba(0,0,0,0.05)); } }
+}
