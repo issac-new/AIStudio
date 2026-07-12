@@ -1,0 +1,11 @@
+diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -80,6 +80,7 @@
+     "adm-zip": "^0.5.17",
+     "agent-browser": "^0.26.0",
++    "cron-parser": "^5.1.1",
+     "echarts": "^6.1.0",
+     "eventsource": "^4.1.0",
+     "js-tiktoken": "^1.0.21",
+     "katex": "^0.17.0",

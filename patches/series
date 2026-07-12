@@ -118,3 +118,19 @@
 130-desktop-webui-detached.patch
 131-server-agent-health-port-fix.patch
 132-desktop-fix-second-instance-raise.patch
+137-proper-lockfile-dep.patch
+136-cron-parser-dep.patch
+
+# Loop Engineering (Task 8): wire REST controller + Socket.IO namespace
+134-loop-server-routes.patch
+135-loop-socket-namespace.patch
+
+# Loop Engineering (Task 11): sidebar nav entry for Loop Engineering
+133-loop-nav-entry.patch
+
+# Loop Engineering (Phase 3 Task 7): add pg dependency for SaaSStore
+138-pg-dep.patch
+
+# Loop Engineering i18n
+139-loop-i18n-en.patch
+140-loop-i18n-zh.patch
