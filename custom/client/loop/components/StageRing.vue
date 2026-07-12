@@ -13,8 +13,27 @@ const emit = defineEmits<{ (e: 'select', stage: LoopStage): void }>()
 
 const graph = computed(() => buildStageGraph(props.currentStage, props.events))
 
+// I14: 用 CSS 变量替代硬编码颜色,方便主题切换与一致性问题。
+// 返回 CSS 变量引用,fill 属性会读取这些变量。
 const nodeColor = (n: { active: boolean; completed: boolean; blocked: boolean }) =>
-  n.blocked ? '#e11d48' : n.active ? '#3b82f6' : n.completed ? '#28bf5c' : '#878c99'
+  n.blocked
+    ? 'var(--color-danger, #e11d48)'
+    : n.active
+      ? 'var(--color-primary, #3b82f6)'
+      : n.completed
+        ? 'var(--color-success, #28bf5c)'
+        : 'var(--color-text-secondary, #878c99)'
+
+// C8: STAGE_POSITIONS 与 nodePos 从第二个 <script> 块迁移到 <script setup>,
+// 以便与组件状态共享作用域(此前在 <script> 块中,模板引用的是非响应式全局函数)。
+const STAGE_POSITIONS: Record<string, { x: number; y: number }> = {
+  discovery: { x: 300, y: 100 },
+  handoff: { x: 200, y: 200 },
+  validation: { x: 100, y: 100 },
+  persistence: { x: 100, y: 250 },
+  scheduling: { x: 300, y: 250 },
+}
+function nodePos(id: string) { return STAGE_POSITIONS[id] ?? { x: 200, y: 150 } }
 </script>
 
 <template>
@@ -35,14 +54,3 @@ const nodeColor = (n: { active: boolean; completed: boolean; blocked: boolean })
     </svg>
   </div>
 </template>
-
-<script lang="ts">
-const STAGE_POSITIONS: Record<string, { x: number; y: number }> = {
-  discovery: { x: 300, y: 100 },
-  handoff: { x: 200, y: 200 },
-  validation: { x: 100, y: 100 },
-  persistence: { x: 100, y: 250 },
-  scheduling: { x: 300, y: 250 },
-}
-function nodePos(id: string) { return STAGE_POSITIONS[id] ?? { x: 200, y: 150 } }
-</script>

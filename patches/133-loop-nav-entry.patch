@@ -10,7 +10,7 @@ diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/cli
 +              <path d="M21 12a9 9 0 1 1-9-9" />
 +              <polyline points="21 4 21 12 13 12" />
 +            </svg>
-+            <span>Loop Engineering</span>
++            <span>{{ t("sidebar.loop") }}</span>
 +          </RouteLinkItem>
            <RouteLinkItem class="nav-item" :to="{ name: 'hermes.models' }" :active="selectedKey === 'hermes.models'">
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
