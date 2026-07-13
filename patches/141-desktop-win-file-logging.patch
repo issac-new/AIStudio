@@ -16,7 +16,7 @@ index 3ce6d2fb..f097d380 100644
    type RuntimeDownloadSource,
    type RuntimeProgress,
 -} from './runtime-manager'
-+} from './runtime-manager' '
++} from './runtime-manager'
  
  const PORT = Number(process.env.HERMES_DESKTOP_PORT) || 8748
  const START_HIDDEN = process.argv.includes('--hidden')

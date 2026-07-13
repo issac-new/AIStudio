@@ -1,21 +1,19 @@
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
 --- a/packages/server/src/index.ts
 +++ b/packages/server/src/index.ts
-@@ -347,6 +347,57 @@
+@@ -349,6 +349,63 @@
      await next()
    })
-
-+  // Proxy /agent-health/* → hermes-agent health endpoint (for CockpitTopBar)
-+  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8650'
+ 
++  // overlay[agent-health-proxy]: Proxy /agent-health/* → hermes-agent api_server
++  // health endpoint (for CockpitTopBar). Default port 8642 is the gateway
++  // api_server default; 8650 is the dev preview backend and is usually empty
++  // in production desktop.
++  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8642'
 +  app.use(async (ctx, next) => {
 +    if (ctx.path.startsWith('/agent-health/')) {
-+      // HERMES_CUSTOM[SecAgentHealthAuth] BEGIN: 要求已认证，防未授权访问 agent 内部端点
-+      if (!ctx.state.user) {
-+        ctx.status = 401
-+        ctx.body = { error: 'Unauthorized' }
-+        return
-+      }
-+      // HERMES_CUSTOM[SecAgentHealthAuth] END
-+      // HERMES_CUSTOM[SecAgentHealthPath] BEGIN: 限制转发路径白名单，防路径注入探测 agent 其他路由
++      // HERMES_CUSTOM[SecAgentHealthPath] BEGIN: limit forwarded paths to a
++      // whitelist so callers can't probe arbitrary agent routes.
 +      const sub = ctx.path.slice('/agent-health'.length)
 +      const allowed = sub === '/' || sub === '/detailed' || sub === '/refs' || sub.startsWith('/refs/')
 +      if (!allowed) {
@@ -26,8 +24,9 @@
 +      const targetPath = `/health${sub}`
 +      // HERMES_CUSTOM[SecAgentHealthPath] END
 +      const qs = ctx.querystring ? `?${ctx.querystring}` : ''
-+      // HERMES_CUSTOM[AgentHealthKey] BEGIN: gateway /health/detailed 需 API_SERVER_KEY 鉴权
-+      // 从 ~/.hermes/.env 读取 key（与 gateway 启动读同一文件），注入 Authorization header
++      // HERMES_CUSTOM[AgentHealthKey] BEGIN: gateway /health/detailed needs
++      // API_SERVER_KEY auth. Read it from ~/.hermes/.env (same file the
++      // gateway reads at startup) and inject as a Bearer header.
 +      const healthHeaders: Record<string, string> = {}
 +      let apiKey = process.env.API_SERVER_KEY || ''
 +      if (!apiKey) {
@@ -36,19 +35,27 @@
 +          const envPath = require('path').join(require('os').homedir(), '.hermes', '.env')
 +          const m = fs.readFileSync(envPath, 'utf8').match(/^API_SERVER_KEY=(.+)$/m)
 +          if (m) apiKey = m[1].trim()
-+        } catch { /* .env 不存在或读失败，忽略 */ }
++        } catch { /* .env missing or unreadable, ignore */ }
 +      }
 +      if (apiKey) healthHeaders['Authorization'] = `Bearer ${apiKey}`
 +      // HERMES_CUSTOM[AgentHealthKey] END
++      // overlay[agent-health-logging]: log every proxy attempt + outcome so
++      // Windows users can ship us the log when /agent-health/* returns 502.
++      const probeUrl = `${agentHealthTarget}${targetPath}${qs}`
++      const hadKey = !!apiKey
++      console.log(`[agent-health] proxy ${ctx.method} ${ctx.path} -> ${probeUrl} (authKey=${hadKey ? 'yes' : 'no'})`)
 +      try {
-+        const res = await fetch(`${agentHealthTarget}${targetPath}${qs}`, { headers: healthHeaders })
++        const res = await fetch(probeUrl, { headers: healthHeaders })
 +        ctx.status = res.status
 +        const contentType = res.headers.get('content-type') || 'application/json'
 +        ctx.type = contentType
 +        ctx.body = await res.text()
-+      } catch {
++        console.log(`[agent-health] <- ${res.status} ${ctx.path} (contentType=${contentType})`)
++      } catch (err) {
++        const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
++        console.error(`[agent-health] proxy FAILED ${ctx.path} -> ${probeUrl}: ${msg}`)
 +        ctx.status = 502
-+        ctx.body = JSON.stringify({ error: 'Agent health endpoint unreachable' })
++        ctx.body = JSON.stringify({ error: 'Agent health endpoint unreachable', detail: msg })
 +      }
 +      return
 +    }
