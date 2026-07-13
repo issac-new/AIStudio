@@ -23,14 +23,11 @@ export async function registerLoopEngineering(app: App): Promise<void> {
       path: '/hermes/loop',
       name: 'hermes.loop',
       component: () => import('./views/LoopSpineView.vue'),
-      // I6: Loop Engineering 是全屏视图(无左侧 sidebar chrome)。
-      meta: { fullscreen: true },
     },
     {
       path: '/hermes/loop/:id',
       name: 'hermes.loopDetail',
       component: () => import('./views/LoopDetailView.vue'),
-      meta: { fullscreen: true },
     },
   ]
   for (const r of routes) registerRoute(r)

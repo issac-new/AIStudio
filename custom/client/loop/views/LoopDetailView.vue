@@ -83,7 +83,7 @@ const maxCostTotal = computed(() => loop.value?.budget?.maxCostTotal?.toFixed(2)
 <template>
   <div class="loop-detail" v-if="loop">
     <div class="loop-detail__header">
-      <button @click="router.back()">{{ t('loop.detail.back') }}</button>
+      <button @click="router.push({ name: 'hermes.loop' })">{{ t('loop.detail.back') }}</button>
       <span class="loop-detail__name">{{ loop.name }}</span>
       <button @click="store.tickLoop(loop.id)">{{ t('loop.detail.run') }}</button>
       <button @click="store.pauseLoop(loop.id)">{{ t('loop.detail.pause') }}</button>
