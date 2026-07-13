@@ -109,14 +109,16 @@
 122-groupchat-sidebar-logout.patch
 123-server-files-root-task-workspace-allowlist.patch
 124-server-kanban-workspace-files-allowlist.patch
-125-server-agent-health-remove-auth.patch
+# 125 + 131 folded into 107 (auth removed + port 8642 + logging, all in one hunk)
+# 125-server-agent-health-remove-auth.patch
 
 126-desktop-system-hermes-agent-default.patch
 127-desktop-node-pty-prebuilds-prune.patch
 128-desktop-fix-home-route-and-window-raise.patch
 129-server-client-fix-wmi-polling.patch
 130-desktop-webui-detached.patch
-131-server-agent-health-port-fix.patch
+# 131 folded into 107
+# 131-server-agent-health-port-fix.patch
 132-desktop-fix-second-instance-raise.patch
 137-proper-lockfile-dep.patch
 136-cron-parser-dep.patch
@@ -137,4 +139,3 @@
 
 # Windows focus-steal + orphan-daemon + diagnostics (Phase 2)
 141-desktop-win-file-logging.patch
-142-server-agent-health-logging.patch
