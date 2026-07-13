@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import LoopSidebar from '@/custom/loop/components/LoopSidebar.vue'
 import LoopTable from '@/custom/loop/components/LoopTable.vue'
@@ -10,6 +11,7 @@ import type { LoopStatus } from '@/custom/loop/types'
 
 const store = useLoopStore()
 const { t } = useI18n()
+const router = useRouter()
 const showWizard = ref(false)
 // C7: 从 LoopSidebar 接收筛选状态,传递给 LoopTable。
 const activeFilter = ref<LoopStatus | undefined>(undefined)
@@ -17,8 +19,7 @@ const activeFilter = ref<LoopStatus | undefined>(undefined)
 onMounted(() => { store.fetchLoops() })
 
 function onSelect(id: string) {
-  // 路由跳转保留原有行为。
-  void id
+  router.push({ name: 'hermes.loopDetail', params: { id } })
 }
 
 function onFilterChange(status?: string) {

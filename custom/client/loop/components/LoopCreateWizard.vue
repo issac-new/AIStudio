@@ -36,7 +36,10 @@ function selectPattern(p: LoopPattern) {
 
 async function create() {
   await store.createLoop({
-    id: `loop/${form.value.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+    // overlay[fix-id]: use '-' instead of '/' — server validates ids against
+    // [A-Za-z0-9._-]+; a leading 'loop/' failed validation and the instance
+    // could not be persisted.
+    id: `loop-${form.value.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
     name: form.value.name,
     goal: form.value.goal,
     stopCondition: form.value.stopCondition,
@@ -44,8 +47,9 @@ async function create() {
     schedule: { mode: 'cron', cron: form.value.cron, timezone: 'Asia/Shanghai' },
     autonomyLevel: form.value.autonomyLevel,
     budget: { maxCostPerTick: form.value.budget, maxCostTotal: form.value.budget * 4, killMode: 'throw', warningThreshold: 0.8 },
-    // C6: 发送 writeBoundary 字段(此前遗漏)。
-    writeBoundary: form.value.writeBoundary,
+    // overlay[fix-writeBoundary]: writeBoundary is a TaskContract field, not a
+    // LoopInstance field — see Bug 8. It is omitted from the create payload and
+    // supplied by each emitted contract instead.
   } as any)
   emit('close')
 }
@@ -80,7 +84,9 @@ async function create() {
           </select>
         </label>
         <label>{{ t('loop.wizard.budget') }} $<input type="number" v-model="form.budget" />{{ t('loop.wizard.perTick') }}</label>
-        <label>{{ t('loop.wizard.writeBoundary') }} <input v-model="form.writeBoundary" /></label>
+        <label>{{ t('loop.wizard.writeBoundary') }} <input
+          :value="form.writeBoundary.join(', ')"
+          @input="form.writeBoundary = ($event.target as HTMLInputElement).value.split(',').map((s: string) => s.trim()).filter(Boolean)" /></label>
         <button @click="create">{{ t('loop.wizard.create') }}</button>
         <button @click="emit('close')">{{ t('loop.wizard.cancel') }}</button>
       </template>

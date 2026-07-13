@@ -1,69 +1,58 @@
 // overlay/custom/client/loop/api/loop-rest.ts
+import { request } from '@/api/client'
 import type { LoopInstance, TaskContract, LoopEvent } from '../types'
 
 const BASE = '/api/loop'
 
-async function fetchJson(url: string): Promise<any> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
-}
-
-async function postJson(url: string, body: unknown): Promise<any> {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
-}
-
-async function patchJson(url: string, body: unknown): Promise<any> {
-  const res = await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
-}
-
-async function deleteJson(url: string): Promise<any> {
-  const res = await fetch(url, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
-}
-
 export const loopRest = {
   listLoops: async (status?: string[]): Promise<LoopInstance[]> => {
-    const qs = status ? `?status=${status.join(',')}` : ''
-    return (await fetchJson(`${BASE}/loops${qs}`)).loops
+    const qs = status && status.length ? `?status=${status.join(',')}` : ''
+    const res = await request<{ loops: LoopInstance[] }>(`${BASE}/loops${qs}`)
+    return res.loops
   },
   getLoop: async (id: string): Promise<LoopInstance> => {
-    return (await fetchJson(`${BASE}/loops/${id}`)).loop
+    const res = await request<{ loop: LoopInstance }>(`${BASE}/loops/${id}`)
+    return res.loop
   },
   createLoop: async (loop: Partial<LoopInstance>): Promise<LoopInstance> => {
-    return (await postJson(`${BASE}/loops`, loop)).loop
+    const res = await request<{ loop: LoopInstance }>(`${BASE}/loops`, {
+      method: 'POST',
+      body: JSON.stringify(loop),
+    })
+    return res.loop
   },
   updateLoop: async (id: string, patch: Partial<LoopInstance>): Promise<LoopInstance> => {
-    return (await patchJson(`${BASE}/loops/${id}`, patch)).loop
+    const res = await request<{ loop: LoopInstance }>(`${BASE}/loops/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    })
+    return res.loop
   },
   deleteLoop: async (id: string): Promise<void> => {
-    await deleteJson(`${BASE}/loops/${id}`)
+    await request<{ ok?: boolean }>(`${BASE}/loops/${id}`, { method: 'DELETE' })
   },
   tickLoop: async (id: string): Promise<void> => {
-    await postJson(`${BASE}/loops/${id}/tick`, {})
+    await request<{ ok?: boolean }>(`${BASE}/loops/${id}/tick`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
   },
   pauseLoop: async (id: string): Promise<void> => {
-    await postJson(`${BASE}/loops/${id}/pause`, {})
+    await request<{ ok?: boolean }>(`${BASE}/loops/${id}/pause`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
   },
   getContracts: async (loopId: string): Promise<TaskContract[]> => {
-    return (await fetchJson(`${BASE}/loops/${loopId}/contracts`)).contracts
+    const res = await request<{ contracts: TaskContract[] }>(`${BASE}/loops/${loopId}/contracts`)
+    return res.contracts
   },
   getEvents: async (loopId: string, since?: string, limit?: number): Promise<LoopEvent[]> => {
-    const qs = since ? `?since=${since}` : ''
-    const qs2 = limit ? `${since ? '&' : '?'}limit=${limit}` : ''
-    return (await fetchJson(`${BASE}/loops/${loopId}/events${qs}${qs2}`)).events
+    const params = new URLSearchParams()
+    if (since) params.set('since', since)
+    if (limit) params.set('limit', String(limit))
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    const res = await request<{ events: LoopEvent[] }>(`${BASE}/loops/${loopId}/events${qs}`)
+    return res.events
   },
 }

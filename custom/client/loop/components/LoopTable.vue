@@ -43,9 +43,9 @@ const rows = computed(() => {
       <span class="loop-table__col">{{ row.progress }}</span>
       <span class="loop-table__col" :class="{ 'loop-table__cost--warning': row.costWarning }">{{ row.cost }}</span>
       <span class="loop-table__col loop-table__actions">
-        <button @click.stop="store.tickLoop(row.id)">▶</button>
-        <button @click.stop="store.pauseLoop(row.id)">⏸</button>
-        <button @click.stop="store.deleteLoop(row.id)">🗑</button>
+        <button @click.stop="store.tickLoop(row.id).catch(() => {})">▶</button>
+        <button @click.stop="store.pauseLoop(row.id).catch(() => {})">⏸</button>
+        <button @click.stop="store.deleteLoop(row.id).catch(() => {})">🗑</button>
       </span>
     </div>
   </div>

@@ -18,7 +18,7 @@ const records = computed(() => {
 
 <template>
   <div class="verifier-panel">
-    <div v-for="r in records" :key="r.contractId" class="verifier-panel__record">
+    <div v-for="(r, index) in records" :key="r.contractId ?? index" class="verifier-panel__record">
       <span>{{ r.contractId }}</span>
       <span :class="r.passed ? 'verifier-panel__pass' : 'verifier-panel__fail'">{{ r.passed ? '✅' : '❌' }}</span>
     </div>

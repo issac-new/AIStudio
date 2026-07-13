@@ -1,20 +1,20 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 37d0157..a196c38 100644
+index 3ce6d2fb..d3df46f0 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -803,7 +803,14 @@ function runDesktopApp() {
+@@ -791,7 +800,13 @@ function runDesktopApp() {
        quitApp()
        return
      }
 -    showMainWindow()
-+    // overlay[fix-second-instance]: only restore the window when it's currently
-+    // hidden or minimized. An already-visible window should NOT be re-raised —
-+    // any second SwarmStudio.exe launch (auto-updater recheck, scheduled task,
-+    // cli shim "open app") would otherwise steal foreground focus every few
-+    // seconds, which is what users reported on Windows.
-+    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible() || mainWindow.isMinimized()) {
-+      showMainWindow()
-+    }
++    // overlay[fix-second-instance]: a second SwarmStudio.exe launch must NOT
++    // steal foreground focus. On Windows the NSIS auto-updater, tray "open
++    // app", scheduled tasks, and the CLI shim (`start "" "%APP%"`) all fire
++    // second-instance events every few seconds. Restoring/showing the window
++    // on each one is what made SwarmStudio keep popping to the foreground
++    // every 3-4s even when minimized. Do nothing here; users reach the app
++    // via the tray icon click instead.
    })
  
    app.whenReady().then(() => {
+
