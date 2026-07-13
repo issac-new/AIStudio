@@ -9,7 +9,7 @@ diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
 +  // health endpoint (for CockpitTopBar). Default port 8642 is the gateway
 +  // api_server default; 8650 is the dev preview backend and is usually empty
 +  // in production desktop.
-+  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8642'
++  const agentHealthTarget = process.env.HERMES_AGENT_HEALTH_URL || 'http://127.0.0.1:8650'
 +  app.use(async (ctx, next) => {
 +    if (ctx.path.startsWith('/agent-health/')) {
 +      // HERMES_CUSTOM[SecAgentHealthPath] BEGIN: limit forwarded paths to a
