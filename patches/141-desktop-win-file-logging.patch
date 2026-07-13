@@ -1,0 +1,98 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index 3ce6d2fb..f097d380 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -1,6 +1,6 @@
+ import { app, BrowserWindow, Menu, Tray, shell, ipcMain, nativeImage, Notification, screen, dialog, type MessageBoxOptions } from 'electron'
+-import { existsSync } from 'node:fs'
+-import { join } from 'node:path'
++import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from 'node:fs'
++import { dirname, join } from 'node:path'
+ import { startWebUiServer, stopWebUiServer, getToken } from './webui-server'
+ import { bundledNode, desktopIcon, desktopRuntimeVersion, desktopTrayTemplateIcon, desktopWindowsTrayIcon, hermesBinExists, hermesBin, webuiDir } from './paths'
+ import { checkForDesktopUpdates, initAutoUpdater } from './updater'
+@@ -14,7 +14,7 @@ import {
+   writeActiveRuntimeVersion,
+   type RuntimeDownloadSource,
+   type RuntimeProgress,
+-} from './runtime-manager'
++} from './runtime-manager' '
+ 
+ const PORT = Number(process.env.HERMES_DESKTOP_PORT) || 8748
+ const START_HIDDEN = process.argv.includes('--hidden')
+@@ -43,6 +43,75 @@ if (process.platform === 'win32') {
+   app.setAppUserModelId(APP_USER_MODEL_ID)
+ }
+ 
++// overlay[win-logging]: mirror console + uncaught errors to a rotating log
++// file beside the exe on Windows (log/swarmstudio-main.log) so users can ship
++// diagnostics when the gateway health check (8642) or window-raise misbehaves.
++// The Web UI server child already writes its own ~/.hermes-web-ui/server.log;
++// this file captures the Electron *main* process only.
++let desktopLogStream: WriteStream | null = null
++let desktopLogRotateTimer: NodeJS.Timeout | null = null
++
++function desktopLogPath(): string {
++  // exe dir for NSIS installs = C:\\Users\\<u>\\AppData\\Local\\swarmstudio\\current.
++  // Putting logs there lets the user find them without digging into %APPDATA%.
++  return join(dirname(process.execPath), 'log', 'swarmstudio-main.log')
++}
++
++function ensureDesktopLogStream(): WriteStream | null {
++  if (desktopLogStream) return desktopLogStream
++  // Only enable for packaged Windows builds; dev runs keep stdout only.
++  if (process.platform !== 'win32' || !app.isPackaged) return null
++  try {
++    const logFile = desktopLogPath()
++    mkdirSync(dirname(logFile), { recursive: true })
++    desktopLogStream = createWriteStream(logFile, { flags: 'a' })
++    desktopLogStream.on('error', () => { /* never let logging crash the app */ })
++    desktopLogRotateTimer = setInterval(() => {
++      // Best-effort rotation: if the file exceeds 5 MB, truncate the head.
++      try {
++        if (existsSync(logFile) && statSync(logFile).size > 5 * 1024 * 1024) {
++          desktopLogStream?.end?.()
++          desktopLogStream = createWriteStream(logFile, { flags: 'w' })
++        }
++      } catch { /* ignore */ }
++    }, 60 * 60 * 1000)
++  } catch {
++    /* best-effort */
++  }
++  return desktopLogStream
++}
++
++function writeDesktopLog(level: string, msg: string): void {
++  const stream = ensureDesktopLogStream()
++  if (!stream) return
++  try {
++    stream.write(`${new Date().toISOString()} [${level}] ${msg}\n`)
++  } catch { /* ignore */ }
++}
++
++function hookDesktopConsole(): void {
++  const origLog = console.log.bind(console)
++  const origWarn = console.warn.bind(console)
++  const origError = console.error.bind(console)
++  console.log = (...args: unknown[]) => {
++    origLog(...args)
++    writeDesktopLog('log', args.map(a => a instanceof Error ? a.stack ?? a.message : String(a)).join(' '))
++  }
++  console.warn = (...args: unknown[]) => {
++    origWarn(...args)
++    writeDesktopLog('warn', args.map(a => a instanceof Error ? a.stack ?? a.message : String(a)).join(' '))
++  }
++  console.error = (...args: unknown[]) => {
++    origError(...args)
++    writeDesktopLog('error', args.map(a => a instanceof Error ? a.stack ?? a.message : String(a)).join(' '))
++  }
++  process.on('uncaughtException', (err) => writeDesktopLog('fatal', `uncaughtException: ${err?.stack ?? err?.message ?? String(err)}`))
++  process.on('unhandledRejection', (reason) => writeDesktopLog('fatal', `unhandledRejection: ${reason instanceof Error ? reason.stack ?? reason.message : String(reason)}`))
++}
++
++hookDesktopConsole()
++
++
+ function cancelWindowFade() {
+   if (windowFadeTimer) {
+     clearInterval(windowFadeTimer)
