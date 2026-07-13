@@ -1,13 +1,18 @@
 // overlay/custom/client/loop/api/loop-socket.ts
 import { io, type Socket } from 'socket.io-client'
+import { getApiKey, getBaseUrlValue } from '@/api/client'
 import type { LoopEvent } from '../types'
 
 let loopSocket: Socket | null = null
 
 export function connectLoop(): Socket {
   if (loopSocket?.connected) return loopSocket
-  const baseUrl = window.location.origin
+  const baseUrl = getBaseUrlValue() || window.location.origin
+  const token = getApiKey()
   loopSocket = io(`${baseUrl}/loop`, {
+    auth: {
+      token: token || undefined,
+    },
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: Infinity,

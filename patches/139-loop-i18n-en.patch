@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index c71b0a32..6aca48e4 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -239,6 +239,83 @@ export default {
+@@ -239,6 +239,100 @@ export default {
      noChangelog: 'No changelog available',
      versionManagement: 'Version Management',
      updateAvailableLabel: '(New version)',
@@ -75,6 +75,23 @@ index c71b0a32..6aca48e4 100644
 +      approve: 'Approve',
 +      reject: 'Reject',
 +      changesRequested: 'Request Changes',
++    },
++    wizard: {
++      selectPattern: 'Select Loop Pattern',
++      configure: 'Configure Loop',
++      name: 'Name',
++      goal: 'Goal',
++      stopCondition: 'Stop Condition',
++      cron: 'Cron Expression',
++      autonomyLevel: 'Autonomy Level',
++      l1: 'L1 Report',
++      l2: 'L2 Assisted',
++      l3: 'L3 Autonomous',
++      budget: 'Budget',
++      perTick: '/tick',
++      writeBoundary: 'Write Boundary',
++      create: 'Create',
++      cancel: 'Cancel',
 +    },
 +    stages: {
 +      discovery: 'Discovery',

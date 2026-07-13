@@ -1,23 +1,19 @@
 diff --git a/packages/desktop/src/main/webui-server.ts b/packages/desktop/src/main/webui-server.ts
-index 1bc01e7..de4338a 100644
+index 1bc01e7f..12445444 100644
 --- a/packages/desktop/src/main/webui-server.ts
 +++ b/packages/desktop/src/main/webui-server.ts
-@@ -422,12 +422,18 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
+@@ -422,6 +422,14 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
  }
  
  async function launchWebUiServer(webUiDirectory: string, entry: string, env: NodeJS.ProcessEnv, port: number): Promise<string> {
-+  // overlay[fix-window-raise]: detached + unref so the Web UI server child has an
-+  // independent lifecycle. Previously a child killed by antivirus (e.g. during
-+  // WMI enumeration) could take the desktop parent down with it, which Electron
-+  // interpreted as a crash and re-bootstrapped — re-showing the window.
++  // overlay[fix-window-raise]: keep the Web UI server as a normal child so its
++  // lifecycle stays bound to the Electron parent. A previous attempt used
++  // `detached: true` + `unref()` so a child killed by antivirus (e.g. during
++  // WMI enumeration) wouldn't take the desktop parent down; but on Windows
++  // that left an orphaned node.exe running the Web UI server after the user
++  // quit SwarmStudio, and the next launch's second-instance event re-showed
++  // the (now-restarted) window every few seconds. The WMI-polling fix
++  // (patch 129) removed the original trigger, so detached is no longer needed.
    serverProc = spawn(process.execPath, [entry], {
      cwd: webUiDirectory,
      env,
-     stdio: ['ignore', 'pipe', 'pipe'],
-     windowsHide: true,
-+    detached: true,
-   })
-+  serverProc.unref?.()
- 
-   const launchedProc = serverProc
-   const bridgeStartup = createAgentBridgeStartupTracker()
