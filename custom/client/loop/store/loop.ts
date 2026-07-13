@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { LoopInstance, LoopEvent, TaskContract } from '../types'
 import * as rest from '../api/loop-rest'
-import { connectLoop, disconnectLoop, subscribeToLoop } from '../api/loop-socket'
+import { connectLoop, disconnectLoop, subscribeToLoop, unsubscribeFromLoop } from '../api/loop-socket'
 import type { Socket } from 'socket.io-client'
 
 export const useLoopStore = defineStore('loop', () => {
@@ -16,6 +16,11 @@ export const useLoopStore = defineStore('loop', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   let socket: Socket | null = null
+  // overlay[fix-resubscribe]: track the currently-subscribed loop id so that
+  // navigating to a different loop detail view unsubscribes from the previous
+  // loop before subscribing to the new one. Without this, repeated navigations
+  // stack `loop:event` listeners and the client receives duplicate events.
+  let subscribedLoopId: string | null = null
 
   const activeLoops = computed(() => loops.value.filter(l => l.status === 'running'))
   const awaitingReviewLoops = computed(() => loops.value.filter(l => l.status === 'awaiting-review'))
@@ -68,9 +73,16 @@ export const useLoopStore = defineStore('loop', () => {
   }
 
   function connectSocket(loopId: string): void {
+    // overlay[fix-resubscribe]: unsubscribe from any previously-subscribed
+    // loop before subscribing to the new one. This prevents duplicate event
+    // listeners when navigating between loop detail views.
+    if (socket && subscribedLoopId && subscribedLoopId !== loopId) {
+      try { unsubscribeFromLoop(socket, subscribedLoopId) } catch { /* socket may be stale */ }
+    }
     if (!socket) {
       socket = connectLoop()
     }
+    subscribedLoopId = loopId
     subscribeToLoop(socket, loopId, (event) => {
       currentEvents.value.push(event)
       // Update loop status based on events
@@ -86,6 +98,7 @@ export const useLoopStore = defineStore('loop', () => {
   function disconnectSocket(): void {
     disconnectLoop()
     socket = null
+    subscribedLoopId = null
   }
 
   return {
