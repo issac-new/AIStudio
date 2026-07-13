@@ -1,12 +1,13 @@
 <!-- overlay/custom/client/loop/views/LoopDetailView.vue -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, ref } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import StageRing from '@/custom/loop/components/StageRing.vue'
 import VerifierPanel from '@/custom/loop/components/VerifierPanel.vue'
-import type { LoopStage } from '@/custom/loop/types'
+import LoopApprovalDialog from '@/custom/loop/components/LoopApprovalDialog.vue'
+import type { LoopStage, TaskContract } from '@/custom/loop/types'
 
 const store = useLoopStore()
 const route = useRoute()
@@ -17,6 +18,10 @@ const activeTab = ref<'history' | 'workers' | 'relations' | 'todo'>('history')
 const granularity = ref(2)
 // C8: 当前选中的 stage(由 StageRing @select 触发)。用于在 UI 上高亮所选阶段。
 const selectedStage = ref<LoopStage | null>(null)
+// overlay[fix-approval-dialog]: LoopApprovalDialog is rendered when there are
+// contracts awaiting review (Bug 9). The dialog emits approve/reject/
+// changes-requested with a comment; we clear the dialog and refresh contracts.
+const showApprovalDialog = ref(false)
 
 onMounted(() => {
   const id = route.params.id as string
@@ -27,10 +32,35 @@ onUnmounted(() => { store.disconnectSocket() })
 
 const loop = computed(() => store.currentLoop)
 const events = computed(() => store.currentEvents)
+// overlay[fix-approval-dialog]: contracts that are still pending verification
+// surface the approval dialog. The detail view already fetched contracts via
+// store.fetchLoop(); we expose the pending subset here.
+const pendingContracts = computed<TaskContract[]>(() =>
+  (store.currentContracts || []).filter((c: TaskContract) => c.status === 'pending' || c.status === 'awaiting-review'),
+)
+watch(pendingContracts, (list) => {
+  showApprovalDialog.value = list.length > 0
+}, { immediate: true })
 
 // C8: StageRing 选中阶段处理器。简单实现:记录所选阶段,可在 UI 上高亮。
 function onStageSelect(stage: LoopStage): void {
   selectedStage.value = stage
+}
+
+// overlay[fix-approval-dialog]: approval action handlers. The store currently
+// exposes loop-level CRUD; contract resolution lives server-side, so we close
+// the dialog and re-fetch the loop's contracts to pick up the new state.
+function onApprove(comment: string) {
+  showApprovalDialog.value = false
+  void store.fetchLoop(route.params.id as string)
+}
+function onReject(comment: string) {
+  showApprovalDialog.value = false
+  void store.fetchLoop(route.params.id as string)
+}
+function onChangesRequested(comment: string) {
+  showApprovalDialog.value = false
+  void store.fetchLoop(route.params.id as string)
 }
 
 // C8: STAGE_POSITIONS 与 nodePos 从第二个 <script> 块迁移到 <script setup>,
@@ -76,7 +106,7 @@ const maxCostTotal = computed(() => loop.value?.budget?.maxCostTotal?.toFixed(2)
         :class="{ active: activeTab === tab }" @click="activeTab = tab as any">{{ tab }}</button>
     </div>
     <div class="loop-detail__tab-content" v-if="activeTab === 'history'">
-      <input type="range" min="0" max="3" v-model="granularity" />
+      <input type="range" min="1" max="3" v-model="granularity" />
       <div v-for="event in events.slice(-20 * granularity)" :key="(event as any).ts" class="loop-detail__event">
         <span class="loop-detail__event-ts">{{ (event as any).ts?.slice(11, 19) }}</span>
         <span class="loop-detail__event-type">{{ event.type }}</span>
@@ -86,6 +116,15 @@ const maxCostTotal = computed(() => loop.value?.budget?.maxCostTotal?.toFixed(2)
     <div class="loop-detail__tab-content" v-else-if="activeTab === 'workers'">
       <VerifierPanel />
     </div>
+    <!-- overlay[fix-approval-dialog]: render the approval dialog when there are
+         contracts pending review (Bug 9). -->
+    <LoopApprovalDialog
+      v-if="showApprovalDialog"
+      @approve="onApprove"
+      @reject="onReject"
+      @changes-requested="onChangesRequested"
+      @close="showApprovalDialog = false"
+    />
   </div>
   <!-- I8: 加载/错误态。loop 未加载时显示 spinner,错误时显示 banner。 -->
   <div class="loop-detail loop-detail--loading" v-else-if="store.loading">

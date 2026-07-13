@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/routes/index.ts b/packages/server/src/routes/index.ts
-index 3241942a..edb9db47 100644
+index 3241942a..7c06d139 100644
 --- a/packages/server/src/routes/index.ts
 +++ b/packages/server/src/routes/index.ts
-@@ -50,6 +50,49 @@ import { writeGateRoutes } from './hermes/write-gate'
+@@ -50,6 +50,47 @@ import { writeGateRoutes } from './hermes/write-gate'
  import { petdexPublicRoutes, petdexRoutes } from './hermes/petdex'
  import { petRoutes } from './hermes/pets'
  import traceRoutes from '../custom/controllers/hermes/trace'
@@ -21,15 +21,13 @@ index 3241942a..edb9db47 100644
 +import { emitLoopEvent } from '../custom/loop/services/loop-socket'
 +import { getGroupChatServer } from './hermes/group-chat'
 +
-+// overlay[loop-routes]: loop subsystem — auto-detecting state adapter
-+// createStateStore() probes environment capabilities and picks:
-+//   SaaS (PostgreSQL) > Matrix > Local (filesystem)
-+// No manual configuration needed — the system adapts to its environment.
 +let loopRouter: any = null
 +let loopScheduler: any = null
++let loopStore: any = null
 +async function initLoopSubsystem(): Promise<void> {
-+  if (loopRouter) return
-+  const { store: loopStore, adapterType, detectedFrom } = await createStateStore()
++  if (loopStore) return
++  const { store, adapterType, detectedFrom } = await createStateStore()
++  loopStore = store
 +  console.log('[loop] state adapter: ' + adapterType + ' (' + detectedFrom + ')')
 +  const loopWebhookConnector = new WebhookConnector()
 +  const loopEngine = new LoopEngine({
@@ -52,10 +50,9 @@ index 3241942a..edb9db47 100644
  
  /**
   * Register all routes on the Koa app.
-@@ -114,4 +157,6 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -114,4 +155,5 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(petdexRoutes.routes())
    app.use(petRoutes.routes())
    app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
-+  // overlay[loop-routes]: init loop subsystem (async, auto-detects adapter)
-+  initLoopSubsystem().then(() => app.use(loopRouter.routes())).catch(e => console.error('[loop] init failed:', e))
++  initLoopSubsystem().then(() => { if (loopRouter) app.use(loopRouter.routes()) }).catch(e => console.error('[loop] init failed:', e))
  }

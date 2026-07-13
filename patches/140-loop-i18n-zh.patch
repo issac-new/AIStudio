@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 index 16c49e3c..d8eb81fd 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -242,6 +242,83 @@ export default {
+@@ -242,6 +242,100 @@ export default {
      noChangelog: '暂无更新日志',
      versionManagement: '版本管理',
      updateAvailableLabel: '(有新版)',
@@ -75,6 +75,23 @@ index 16c49e3c..d8eb81fd 100644
 +      approve: '批准',
 +      reject: '拒绝',
 +      changesRequested: '请求修改',
++    },
++    wizard: {
++      selectPattern: '选择 Loop 模式',
++      configure: '配置 Loop',
++      name: '名称',
++      goal: '目标',
++      stopCondition: '停止条件',
++      cron: 'Cron 表达式',
++      autonomyLevel: '自治等级',
++      l1: 'L1 报告',
++      l2: 'L2 辅助',
++      l3: 'L3 自治',
++      budget: '预算',
++      perTick: '/tick',
++      writeBoundary: '写入边界',
++      create: '创建',
++      cancel: '取消',
 +    },
 +    stages: {
 +      discovery: '发现',
