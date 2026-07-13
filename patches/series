@@ -134,3 +134,7 @@
 # Loop Engineering i18n
 139-loop-i18n-en.patch
 140-loop-i18n-zh.patch
+
+# Windows focus-steal + orphan-daemon + diagnostics (Phase 2)
+141-desktop-win-file-logging.patch
+142-server-agent-health-logging.patch
