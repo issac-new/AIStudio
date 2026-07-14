@@ -1,0 +1,69 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -111,7 +111,26 @@
+ 
+ hookDesktopConsole()
+ 
++// overlay[startup-quit-logging]: record process startup context + quit reason
++let quitReason: 'tray' | 'second-instance-quit' | 'update-explicit' | 'os' | 'unknown' = 'unknown'
++function logStartupContext(): void {
++  const parts = [
++    `pid=${process.pid}`,
++    `ppid=${process.ppid}`,
++    `execPath=${process.execPath}`,
++    `argv=${JSON.stringify(process.argv)}`,
++    `cwd=${process.cwd()}`,
++    `platform=${process.platform}`,
++    `packaged=${app.isPackaged}`,
++    `ELECTRON_RUN_AS_NODE=${process.env.ELECTRON_RUN_AS_NODE || ''}`,
++    `START_HIDDEN=${START_HIDDEN}`,
++    `QUIT_EXISTING=${QUIT_EXISTING}`,
++  ]
++  console.log(`[startup] ${parts.join(' ')}`)
++}
++logStartupContext()
+ 
++
+ function cancelWindowFade() {
+   if (windowFadeTimer) {
+     clearInterval(windowFadeTimer)
+@@ -158,7 +177,9 @@
+   showWindowWithFade(true)
+ }
+ 
+-function quitApp() {
++function quitApp(reason?: 'tray' | 'second-instance-quit' | 'update-explicit' | 'os' | 'unknown') {
++  quitReason = reason || 'tray'
++  console.log(`[quit] quitApp reason=${quitReason}`)
+   isQuitting = true
+   app.quit()
+ }
+@@ -440,7 +461,7 @@
+     { type: 'separator' },
+     {
+       label: t('tray.quit'),
+-      click: quitApp,
++      click: () => quitApp('tray'),
+     },
+   ])
+   tray.setContextMenu(menu)
+@@ -866,8 +887,9 @@
+   }
+ 
+   app.on('second-instance', (_event, argv, _workingDirectory, additionalData) => {
++    console.log(`[second-instance] argv=${JSON.stringify(argv)} additionalData=${JSON.stringify(additionalData)}`)
+     if (argv.includes('--quit') || hasQuitRequest(additionalData)) {
+-      quitApp()
++      quitApp('second-instance-quit')
+       return
+     }
+     // overlay[fix-second-instance]: a second SwarmStudio.exe launch must NOT
+@@ -936,6 +958,7 @@
+   })
+ 
+   app.on('before-quit', async (e) => {
++    console.log(`[quit] before-quit isQuitting=${isQuitting} reason=${quitReason}`)
+     if (!isQuitting && process.platform !== 'darwin') {
+       e.preventDefault()
+       mainWindow?.hide()
