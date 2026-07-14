@@ -141,3 +141,12 @@
 141-desktop-win-file-logging.patch
 143-desktop-bridge-worker-port-range.patch
 144-server-bridge-stderr-capture.patch
+
+# Windows runtime + quit lifecycle fixes (Phase 3)
+145-desktop-explicit-system-hermes-and-run-agent-required.patch
+146-bridge-agent-root-optional-default.patch
+147-install-hermes-run-agent-hardfail.patch
+148-package-runtime-run-agent-check.patch
+149-runtime-manager-require-run-agent.patch
+150-updater-no-auto-install-on-quit.patch
+151-desktop-startup-quit-logging.patch
