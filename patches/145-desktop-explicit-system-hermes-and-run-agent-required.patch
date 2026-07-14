@@ -1,0 +1,24 @@
+diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
+--- a/packages/desktop/src/main/paths.ts
++++ b/packages/desktop/src/main/paths.ts
+@@ -44,7 +44,8 @@
+   const python = isWin ? join(root, 'python', 'python.exe') : join(root, 'python', 'bin', 'python3')
+   const hermes = isWin ? join(root, 'python', 'Scripts', 'hermes.cmd') : join(root, 'python', 'bin', 'hermes')
+   const node = isWin ? join(root, 'node', 'node.exe') : join(root, 'node', 'bin', 'node')
+-  const files = [python, hermes, node]
++  // overlay[run-agent-required]: run_agent.py is required at python root
++  const files = [python, hermes, node, join(root, 'python', 'run_agent.py')]
+   if (isWin) files.push(join(root, 'git', 'cmd', 'git.exe'))
+   return files
+ }
+@@ -78,7 +79,10 @@
+ }
+ 
+ export function usingSystemHermesAgent(): boolean {
++  // overlay[explicit-system-hermes]: system Hermes must be explicitly opted in.
+   if (process.env.HERMES_DESKTOP_FORCE_BUNDLED_RUNTIME?.trim()) return false
++  const raw = (process.env.HERMES_DESKTOP_USE_SYSTEM_HERMES || '').trim().toLowerCase()
++  if (!['1', 'true', 'yes', 'on'].includes(raw)) return false
+   return !!systemHermesBin()
+ }
+ 
