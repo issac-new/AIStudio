@@ -1,0 +1,14 @@
+diff --git a/packages/desktop/scripts/install-hermes.mjs b/packages/desktop/scripts/install-hermes.mjs
+--- a/packages/desktop/scripts/install-hermes.mjs
++++ b/packages/desktop/scripts/install-hermes.mjs
+@@ -508,7 +508,9 @@
+     else symlinkSync(relSrc, dst)
+     console.log(`✓ run_agent.py linked at venv root (relative → ${relSrc})`)
+   } else {
+-    console.warn(`! run_agent.py not found at ${absSrc} — agent-bridge may fail`)
++    // overlay[run-agent-required]: hard fail instead of warning.
++    console.error(`✗ run_agent.py not found at ${absSrc} — agent-bridge will fail`)
++    process.exit(1)
+   }
+ }
+ 

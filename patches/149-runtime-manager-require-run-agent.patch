@@ -1,0 +1,13 @@
+diff --git a/packages/desktop/src/main/runtime-manager.ts b/packages/desktop/src/main/runtime-manager.ts
+--- a/packages/desktop/src/main/runtime-manager.ts
++++ b/packages/desktop/src/main/runtime-manager.ts
+@@ -92,7 +92,8 @@
+   const nodeBin = process.platform === 'win32'
+     ? join(root, 'node', 'node.exe')
+     : join(root, 'node', 'bin', 'node')
+-  const files = [pythonBin, hermesBin, nodeBin, join(root, RUNTIME_MANIFEST_NAME)]
++  // overlay[run-agent-required]: run_agent.py is required at python root
++  const files = [pythonBin, hermesBin, nodeBin, join(root, RUNTIME_MANIFEST_NAME), join(root, 'python', 'run_agent.py')]
+   if (process.platform === 'win32') files.push(join(root, 'git', 'cmd', 'git.exe'))
+   return files
+ }
