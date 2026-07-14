@@ -1,0 +1,48 @@
+diff --git a/packages/server/src/services/hermes/agent-bridge/manager.ts b/packages/server/src/services/hermes/agent-bridge/manager.ts
+index a8c93816..36ec9034 100644
+--- a/packages/server/src/services/hermes/agent-bridge/manager.ts
++++ b/packages/server/src/services/hermes/agent-bridge/manager.ts
+@@ -1,7 +1,8 @@
+ import { execFileSync, spawn, type ChildProcess } from 'child_process'
+-import { existsSync, readFileSync } from 'fs'
++import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
+ import { createConnection, createServer } from 'net'
+ import { dirname, isAbsolute, join, resolve } from 'path'
++import { homedir } from 'os'
+ import { logger } from '../../logger'
+ import { detectHermesHome, getHermesBin } from '../hermes-path'
+ import { AgentBridgeClient, DEFAULT_AGENT_BRIDGE_ENDPOINT } from './client'
+@@ -890,13 +891,32 @@ export class AgentBridgeManager {
+     const env = buildAgentBridgeProcessEnv(this.endpoint, hermesHome, agentRoot)
+ 
+     logger.info('[agent-bridge] starting: %s %s', command.command, args.join(' '))
++    // overlay[bridge-stderr-capture]: capture broker stdout/stderr so Python
++    // startup failures (import errors, missing modules, path issues) are
++    // visible in ~/.hermes-web-ui/logs/bridge-stderr.log instead of being
++    // silently swallowed. This is critical for diagnosing ECONNREFUSED on
++    // Windows where the broker crashes before binding its port.
++    const bridgeStderrLogPath = join(homedir(), '.hermes-web-ui', 'logs', 'bridge-stderr.log')
++    try { mkdirSync(dirname(bridgeStderrLogPath), { recursive: true }) } catch { /* ignore */ }
+     const child = spawn(command.command, args, {
+       env,
+       cwd: process.cwd(),
+-      stdio: ['ignore', 'ignore', 'ignore'],
++      stdio: ['ignore', 'pipe', 'pipe'],
+       detached: process.platform !== 'win32',
+       windowsHide: true,
+     })
++    child.stdout?.on('data', (chunk: Buffer) => {
++      const text = chunk.toString('utf-8')
++      try { appendFileSync(bridgeStderrLogPath, `[stdout] ${text}`) } catch { /* ignore */ }
++      logger.info('[agent-bridge] broker stdout: %s', text.trim())
++    })
++    child.stderr?.on('data', (chunk: Buffer) => {
++      const text = chunk.toString('utf-8')
++      try { appendFileSync(bridgeStderrLogPath, `[stderr] ${text}`) } catch { /* ignore */ }
++      logger.warn('[agent-bridge] broker stderr: %s', text.trim())
++    })
++    child.stdout?.on('error', () => { /* EPIPE: ignore */ })
++    child.stderr?.on('error', () => { /* EPIPE: ignore */ })
+     this.child = child
+     this.attached = false
+     this.ready = false
