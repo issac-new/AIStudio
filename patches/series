@@ -139,3 +139,4 @@
 
 # Windows focus-steal + orphan-daemon + diagnostics (Phase 2)
 141-desktop-win-file-logging.patch
+143-desktop-bridge-worker-port-range.patch
