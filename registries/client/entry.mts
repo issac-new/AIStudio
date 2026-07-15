@@ -8,7 +8,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import router from '../../../upstream/hermes-studio/packages/client/src/router'
-import { i18n } from '../../../upstream/hermes-studio/packages/client/src/i18n'
+import { i18nReady } from '../../../upstream/hermes-studio/packages/client/src/i18n'
 import App from '../../../upstream/hermes-studio/packages/client/src/App.vue'
 import '../../../upstream/hermes-studio/packages/client/src/styles/global.scss'
 import 'katex/dist/katex.min.css'
@@ -38,13 +38,17 @@ if (urlToken) {
 // === 启动 app(上游序列)===
 const app = createApp(App)
 app.use(createPinia())
-app.use(i18n)
 app.use(router)
 
 // === A 类注册(mount 前插入)===
 // 对应原 custom/index.ts 的 registerCustomFeatures,改为从 overlay/custom 注册。
-// 注意:不用顶层 await(es2020 target 不支持),改用 .then 链式,保证 bootstrap 在 mount 前完成。
-import('./bootstrap')
+// v0.6.30+: i18n 改为异步创建(i18nReady 返回 Promise),需 await 后再 use。
+// 不用顶层 await(es2020 target 不支持),改用 .then 链式,保证 bootstrap 在 mount 前完成。
+i18nReady
+  .then((i18n) => {
+    app.use(i18n)
+  })
+  .then(() => import('./bootstrap'))
   .then(({ bootstrapClient }) => bootstrapClient(app))
   .then(() => router.isReady())
   .then(() => {
