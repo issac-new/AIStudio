@@ -1,0 +1,16 @@
+diff --git a/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py b/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py
+--- a/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py
++++ b/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py
+@@ -474,7 +474,11 @@
+ 
+ 
+ def _set_path_env(agent_root: str | None = None, hermes_home: str | None = None) -> None:
+-    resolved_root = _discover_agent_root(agent_root) if agent_root else _find_agent_root()
++    # overlay[bridge-import-fallback]: use _find_agent_root (returns None) instead
++    # of _discover_agent_root (raises) so that a missing run_agent.py in the
++    # specified agent_root falls through to _ensure_agent_imports(), which can
++    # import run_agent from site-packages (pip-installed hermes-agent).
++    resolved_root = _find_agent_root(agent_root) if agent_root else _find_agent_root()
+     if resolved_root is not None:
+         os.environ["HERMES_AGENT_ROOT"] = str(resolved_root)
+     else:
