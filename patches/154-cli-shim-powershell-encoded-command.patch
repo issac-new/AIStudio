@@ -1,0 +1,34 @@
+diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
+--- a/packages/desktop/src/main/cli-shim.ts
++++ b/packages/desktop/src/main/cli-shim.ts
+@@ -351,7 +351,11 @@
+ }
+ 
+ function powershellArgs(command: string): string[] {
+-  return ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command]
++  // overlay[powershell-encoded]: use -EncodedCommand to avoid $ variable
++  // mangling by Node's child_process on Windows. Base64-encode the UTF-16LE
++  // script as PowerShell -EncodedCommand requires.
++  const encoded = Buffer.from(command, 'utf16le').toString('base64')
++  return ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded]
+ }
+ 
+ async function readWindowsUserPath(): Promise<string> {
+@@ -361,7 +365,7 @@
+   ].join('; ')
+   const { stdout } = await execFileAsync('powershell.exe', powershellArgs(command), {
+     encoding: 'utf-8',
+-    timeout: 3000,
++    timeout: 10_000,
+     windowsHide: true,
+   })
+   const encoded = stdout.trim()
+@@ -380,7 +384,7 @@
+       ...process.env,
+       [WINDOWS_USER_PATH_ENV_B64]: Buffer.from(pathValue, 'utf-8').toString('base64'),
+     },
+-    timeout: 3000,
++    timeout: 10_000,
+     windowsHide: true,
+   })
+ }
