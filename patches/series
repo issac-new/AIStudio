@@ -154,3 +154,4 @@
 153-bridge-import-fallback-for-missing-run-agent.patch
 154-cli-shim-powershell-encoded-command.patch
 155-gateway-windows-http-health-fallback.patch
+156-gateway-windows-http-first-cli-fallback.patch

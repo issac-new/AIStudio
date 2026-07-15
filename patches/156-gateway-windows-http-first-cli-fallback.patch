@@ -1,0 +1,54 @@
+diff --git a/packages/server/src/services/hermes/gateway-autostart.ts b/packages/server/src/services/hermes/gateway-autostart.ts
+--- a/packages/server/src/services/hermes/gateway-autostart.ts
++++ b/packages/server/src/services/hermes/gateway-autostart.ts
+@@ -383,6 +383,27 @@
+ export async function isGatewayRunningForProfile(hermesBin: string, profileDir: string): Promise<boolean> {
+   if (gatewayStateLooksRunningForProfile(profileDir)) return true
+ 
++  // overlay[gateway-http-probe]: on Windows, probe the gateway HTTP health
++  // endpoint FIRST. If healthy, return immediately; if unreachable/non-2xx,
++  // fall back to the existing CLI status check. This matches the intended
++  // design: HTTP primary, CLI fallback.
++  if (process.platform === 'win32') {
++    const port = Number(process.env.GATEWAY_PORT) || 8650
++    const host = process.env.GATEWAY_HOST?.trim() || '127.0.0.1'
++    const healthUrl = `http://${host}:${port}/health`
++    try {
++      const res = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) })
++      const body = await res.text()
++      if (res.ok) {
++        logger.info({ profileDir, healthUrl, status: res.status, body }, 'Hermes gateway HTTP health probe succeeded; treating as running')
++        return true
++      }
++      logger.warn({ profileDir, healthUrl, status: res.status, body }, 'Hermes gateway HTTP health probe returned non-2xx; falling back to CLI')
++    } catch (probeErr: any) {
++      logger.warn({ probeErr, profileDir, healthUrl }, 'Hermes gateway HTTP health probe failed; falling back to CLI')
++    }
++  }
++
+   try {
+     const { stdout, stderr } = await execHermesWithBin(hermesBin, ['gateway', 'status'], {
+       timeout: 10000,
+@@ -401,22 +422,6 @@
+     }
+     if (output.trim()) {
+       logger.warn({ err, profileDir }, 'Hermes gateway status failed; treating as not running')
+-    }
+-    // overlay[gateway-http-probe]: on Windows the CLI may fail (Python path
+-    // issues) even when the gateway HTTP server is healthy. Probe the HTTP
+-    // health endpoint as a last-resort fallback before declaring not running.
+-    if (process.platform === 'win32') {
+-      try {
+-        const port = Number(process.env.GATEWAY_PORT) || 8650
+-        const host = process.env.GATEWAY_HOST?.trim() || '127.0.0.1'
+-        const res = await fetch(`http://${host}:${port}/health`, { signal: AbortSignal.timeout(2000) })
+-        if (res.ok) {
+-          logger.info({ profileDir, port }, 'Hermes gateway CLI failed but HTTP health probe succeeded; treating as running')
+-          return true
+-        }
+-      } catch (probeErr: any) {
+-        logger.debug({ probeErr, profileDir }, 'Hermes gateway HTTP health probe also failed')
+-      }
+     }
+     return false
+   }
