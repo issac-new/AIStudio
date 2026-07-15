@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 0e4fb0d..34d1c14 100644
+index d3e9b0cc..eff8278b 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -72,7 +72,7 @@ index 0e4fb0d..34d1c14 100644
  
  asarUnpack:
    - "**/*.node"
-@@ -54,20 +101,20 @@ asarUnpack:
+@@ -54,22 +101,26 @@ asarUnpack:
  mac:
    target:
      - target: dmg
@@ -84,12 +84,19 @@ index 0e4fb0d..34d1c14 100644
    category: public.app-category.developer-tools
    hardenedRuntime: true
    gatekeeperAssess: false
-   notarize: true
+-  notarize: true
++  # notarize 需 Apple Developer 凭据;本地/CI 无凭据构建时关闭以免 build 失败。
++  # 正式发布构建设回 true 并通过 CSC_LINK/CSC_KEY_PASSWORD/APPLE_ID 等环境变量提供凭据。
++  notarize: false
+   extendInfo:
+     NSMicrophoneUsageDescription: "Hermes Studio uses the microphone for voice conversations and speech transcription."
 -  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
 +  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
  
  win:
    target:
++    - target: zip
++      arch: [x64]
      - target: nsis
        arch: [x64]
 -  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
@@ -97,3 +104,12 @@ index 0e4fb0d..34d1c14 100644
  
  linux:
    icon: build/icons
+@@ -79,7 +130,7 @@ linux:
+     - target: deb
+       arch: [x64]   # fpm has no arm64 binary; deb only on x64
+   category: Development
+-  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ deb:
+   afterInstall: build/linux-after-install.tpl
