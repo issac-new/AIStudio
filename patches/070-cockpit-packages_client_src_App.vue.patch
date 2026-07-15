@@ -1,23 +1,24 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index dc8105f2..9dcd134e 100644
+index 076203d6..2a5a0184 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -9,6 +9,7 @@ import AppSidebar from '@/components/layout/AppSidebar.vue'
- import DesktopTitleBar from '@/components/layout/DesktopTitleBar.vue'
+@@ -8,6 +8,7 @@ import { useTheme } from '@/composables/useTheme'
  import { useKeyboard } from '@/composables/useKeyboard'
+ import { useSessionSearch } from '@/composables/useSessionSearch'
  import { useAppStore } from '@/stores/hermes/app'
 +import { useAuthStore } from '@/stores/hermes/auth'
- import SessionSearchModal from '@/components/hermes/chat/SessionSearchModal.vue'
  import AuthEventListener from '@/components/auth/AuthEventListener.vue'
- import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.vue'
-@@ -16,17 +17,19 @@ import DefaultCredentialPrompt from '@/components/auth/DefaultCredentialPrompt.v
+ import { desktopBridge } from '@/utils/desktop-bridge'
+ 
+@@ -21,6 +22,7 @@ const WebPet = defineAsyncComponent(async () => (await import('@/components/herm
  const { isDark, isComic } = useTheme()
  const { t } = useI18n()
  const appStore = useAppStore()
 +const authStore = useAuthStore()
  const route = useRoute()
+ const { sessionSearchOpen } = useSessionSearch()
  
- const themeOverrides = computed(() => getThemeOverrides(isDark.value, isComic.value))
+@@ -28,11 +30,12 @@ const themeOverrides = computed(() => getThemeOverrides(isDark.value, isComic.va
  const naiveTheme = computed(() => isDark.value ? darkTheme : null)
  
  const isLoginPage = computed(() => route.name === 'login')
@@ -35,7 +36,7 @@ index dc8105f2..9dcd134e 100644
  
  const nodeVersionLow = computed(() => {
    const v = appStore.nodeVersion
-@@ -55,6 +58,8 @@ watch(isLoginPage, (loginPage) => {
+@@ -61,6 +64,8 @@ watch(isLoginPage, (loginPage) => {
      appStore.stopHealthPolling()
      return
    }
