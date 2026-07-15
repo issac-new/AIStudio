@@ -1,41 +1,8 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 492b2c2a..2f2bdb04 100644
+index 3d18f585..cb6bd61c 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -34,18 +34,18 @@ import OutlinePanel from "./OutlinePanel.vue";
- import FilesPanel from "./FilesPanel.vue";
- import TerminalPanel from "./TerminalPanel.vue";
- import PageSidebarNav from "@/components/layout/PageSidebarNav.vue";
--import SettingsCircuitBadge from "@/components/layout/SettingsCircuitBadge.vue";
--import { isStoredSuperAdmin } from "@/api/client";
-+import { useAuthStore } from "@/stores/hermes/auth";
- import { useDefaultWorkspace } from "@/composables/useDefaultWorkspace";
- 
- const chatStore = useChatStore();
- const appStore = useAppStore();
- const profilesStore = useProfilesStore();
- const sessionBrowserPrefsStore = useSessionBrowserPrefsStore();
-+const authStore = useAuthStore();
- const router = useRouter();
- const message = useMessage();
- const { t } = useI18n();
--const isSuperAdmin = computed(() => isStoredSuperAdmin());
-+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
- 
- const showOutline = ref(false);
- const messageListRef = ref<InstanceType<typeof MessageList> | null>(null);
-@@ -762,10 +762,6 @@ const contextMenuOptions = computed(() => {
-   return options
- });
- 
--function openSettingsPage() {
--  router.push({ name: "hermes.settings" });
--}
--
- function handleContextMenu(e: MouseEvent, sessionId: string) {
-   e.preventDefault();
-   contextSessionId.value = sessionId;
-@@ -1266,23 +1262,14 @@ async function handleSessionModelCustomSubmit() {
+@@ -1568,23 +1568,14 @@ async function handleSessionModelCustomSubmit() {
          />
        </div>
        <div v-if="showSessions" class="page-sidebar-bottom">

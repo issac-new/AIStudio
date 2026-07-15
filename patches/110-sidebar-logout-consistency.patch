@@ -1,25 +1,16 @@
 diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
-index e119e08c..76a7aded 100644
+index c1538dae..cec5c2bd 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -18,7 +18,7 @@ import ChatInput from '@/components/hermes/chat/ChatInput.vue'
- import MessageList from '@/components/hermes/chat/MessageList.vue'
- import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
- import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
--import PageSidebarFooter from '@/components/layout/PageSidebarFooter.vue'
-+import { useAuthStore } from '@/stores/hermes/auth'
- import { useAppStore } from '@/stores/hermes/app'
- import { useChatStore } from '@/stores/hermes/chat'
- import { useProfilesStore } from '@/stores/hermes/profiles'
-@@ -67,6 +67,7 @@ const { t } = useI18n()
+@@ -86,6 +86,7 @@ const { t } = useI18n()
  const appStore = useAppStore()
  const chatStore = useChatStore()
  const profilesStore = useProfilesStore()
 +const authStore = useAuthStore()
  const message = useMessage()
- const { screenToFlowCoordinate, getViewport, setViewport } = useVueFlow('hermes-workflow')
- const defaultViewport: WorkflowViewport = { x: 80, y: 80, zoom: 0.75 }
-@@ -1737,7 +1738,16 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
+ const {
+   screenToFlowCoordinate, getViewport, setViewport, setNodes, setEdges, updateNodeInternals,
+@@ -2260,7 +2261,16 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
            </NPopconfirm>
          </button>
        </div>
@@ -37,10 +28,11 @@ index e119e08c..76a7aded 100644
      </aside>
  
      <main class="workflow-main">
-@@ -2851,4 +2861,45 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
+@@ -3701,4 +3711,46 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
      display: none;
    }
  }
++
 +.page-sidebar-bottom {
 +  flex-shrink: 0;
 +  padding: 10px 12px;
