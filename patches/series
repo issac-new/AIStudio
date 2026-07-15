@@ -152,3 +152,4 @@
 151-desktop-startup-quit-logging.patch
 152-mcp-shim-electron-run-as-node.patch
 153-bridge-import-fallback-for-missing-run-agent.patch
+154-cli-shim-powershell-encoded-command.patch
