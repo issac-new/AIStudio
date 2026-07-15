@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index 5c9199d5..740eab59 100644
+index 9d1e61e0..8c9b95f1 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
 @@ -23,6 +23,7 @@ import MessageItem from "./MessageItem.vue";
@@ -8,9 +8,9 @@ index 5c9199d5..740eab59 100644
  import { useToolTraceVisibility } from "@/composables/useToolTraceVisibility";
 +import GatewayNoticeBanner from "@/custom/chat/components/GatewayNoticeBanner.vue";
  
- const chatStore = useChatStore();
- const { t } = useI18n();
-@@ -124,11 +125,12 @@ const displayMessages = computed(() => {
+ const props = withDefaults(defineProps<{
+   approvalPortalToBody?: boolean
+@@ -137,11 +138,12 @@ const displayMessages = computed(() => {
        return toolTraceVisible.value && !!m.toolName && !(chatStore.isRunActive && currentToolIds.has(m.id));
      }
      if (
@@ -28,7 +28,7 @@ index 5c9199d5..740eab59 100644
      ) {
        return false;
      }
-@@ -469,6 +471,7 @@ defineExpose({
+@@ -482,6 +484,7 @@ defineExpose({
  
  <template>
    <div class="message-list-shell">

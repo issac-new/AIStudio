@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
-index 0e0238c9..b4e3454e 100644
+index a7f14977..3524924a 100644
 --- a/packages/server/src/index.ts
 +++ b/packages/server/src/index.ts
-@@ -250,14 +250,18 @@ export async function bootstrap() {
+@@ -255,14 +255,18 @@ export async function bootstrap() {
        const skillInjector = new HermesSkillInjector()
        const injectionResult = await skillInjector.injectMissingSkills()
        if (injectionResult.injected.length > 0) {
@@ -23,7 +23,7 @@ index 0e0238c9..b4e3454e 100644
            targetCount: injectionResult.targets.length,
          }, '[bootstrap] bundled skills updated')
        }
-@@ -306,9 +310,45 @@ export async function bootstrap() {
+@@ -311,6 +315,41 @@ export async function bootstrap() {
    // SPA fallback
    const distDir = resolve(__dirname, '..', 'client')
    app.use(createStaticCompressionMiddleware())
@@ -62,7 +62,11 @@ index 0e0238c9..b4e3454e 100644
 +    await next()
 +  })
 +
-   app.use(serve(distDir))
+   app.use(serve(distDir, {
+     setHeaders(res, filePath) {
+       const cacheControl = getStaticCacheControl(relative(distDir, filePath))
+@@ -319,6 +358,7 @@ export async function bootstrap() {
+   }))
    app.use(async (ctx) => {
      if (!ctx.path.startsWith('/api') &&
 +      !ctx.path.startsWith('/element-web/') &&
