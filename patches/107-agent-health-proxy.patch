@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 3524924a..56c568cc 100644
 --- a/packages/server/src/index.ts
 +++ b/packages/server/src/index.ts
-@@ -349,6 +349,63 @@
+@@ -350,6 +350,63 @@ export async function bootstrap() {
      await next()
    })
  
@@ -62,6 +63,6 @@ diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
 +    await next()
 +  })
 +
-   app.use(serve(distDir))
-   app.use(async (ctx) => {
-     if (!ctx.path.startsWith('/api') &&
+   app.use(serve(distDir, {
+     setHeaders(res, filePath) {
+       const cacheControl = getStaticCacheControl(relative(distDir, filePath))
