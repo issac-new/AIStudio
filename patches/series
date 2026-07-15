@@ -89,10 +89,10 @@
 103-lunar-dep.patch
 #104-kanban-i18n-en.patch  # v0.6.20: keys already in upstream
 #105-kanban-i18n-zh.patch  # v0.6.20: keys already in upstream
-106-desktop-installer-targets.patch
+#106-desktop-installer-targets.patch  # v0.6.30: merged into 041 (notarize + artifactName)
 107-agent-health-proxy.patch
 # 108-update-runtime-version.patch  # v0.6.22: upstream already bumped runtime to 0.17.0
-109-windows-zip-target.patch
+#109-windows-zip-target.patch  # v0.6.30: upstream already added zip target for win
 110-sidebar-logout-consistency.patch
 113-settings-hide-sidebar-footer.patch
 #111-hermes-to-swarm-rebrand.patch
@@ -153,3 +153,4 @@
 152-mcp-shim-electron-run-as-node.patch
 153-bridge-import-fallback-for-missing-run-agent.patch
 154-cli-shim-powershell-encoded-command.patch
+155-gateway-windows-http-health-fallback.patch
