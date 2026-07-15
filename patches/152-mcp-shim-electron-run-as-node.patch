@@ -1,0 +1,19 @@
+diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
+--- a/packages/desktop/src/main/cli-shim.ts
++++ b/packages/desktop/src/main/cli-shim.ts
+@@ -235,6 +235,7 @@
+       `rem ${MCP_SHIM_MARKER}`,
+       `set "NODE=${nodePath}"`,
+       `set "SCRIPT=${scriptPath}"`,
++      'set "ELECTRON_RUN_AS_NODE=1"',
+       'if not exist "%NODE%" (',
+       '  echo SwarmStudio Node runtime not found at "%NODE%" 1>&2',
+       '  echo Open SwarmStudio once to finish runtime setup, then retry hermes-studio-mcp. 1>&2',
+@@ -263,6 +264,7 @@
+     `# ${MCP_SHIM_MARKER}`,
+     `NODE=${shellQuote(nodePath)}`,
+     `SCRIPT=${shellQuote(scriptPath)}`,
++    'export ELECTRON_RUN_AS_NODE=1',
+     'if [ ! -x "$NODE" ]; then',
+     '  echo "SwarmStudio Node runtime not found at $NODE" >&2',
+     '  echo "Open SwarmStudio once to finish runtime setup, then retry hermes-studio-mcp." >&2',

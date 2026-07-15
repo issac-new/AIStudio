@@ -150,3 +150,4 @@
 149-runtime-manager-require-run-agent.patch
 150-updater-no-auto-install-on-quit.patch
 151-desktop-startup-quit-logging.patch
+152-mcp-shim-electron-run-as-node.patch
