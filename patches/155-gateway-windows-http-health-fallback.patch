@@ -1,0 +1,26 @@
+diff --git a/packages/server/src/services/hermes/gateway-autostart.ts b/packages/server/src/services/hermes/gateway-autostart.ts
+--- a/packages/server/src/services/hermes/gateway-autostart.ts
++++ b/packages/server/src/services/hermes/gateway-autostart.ts
+@@ -401,6 +401,22 @@
+     }
+     if (output.trim()) {
+       logger.warn({ err, profileDir }, 'Hermes gateway status failed; treating as not running')
++    }
++    // overlay[gateway-http-probe]: on Windows the CLI may fail (Python path
++    // issues) even when the gateway HTTP server is healthy. Probe the HTTP
++    // health endpoint as a last-resort fallback before declaring not running.
++    if (process.platform === 'win32') {
++      try {
++        const port = Number(process.env.GATEWAY_PORT) || 8650
++        const host = process.env.GATEWAY_HOST?.trim() || '127.0.0.1'
++        const res = await fetch(`http://${host}:${port}/health`, { signal: AbortSignal.timeout(2000) })
++        if (res.ok) {
++          logger.info({ profileDir, port }, 'Hermes gateway CLI failed but HTTP health probe succeeded; treating as running')
++          return true
++        }
++      } catch (probeErr: any) {
++        logger.debug({ probeErr, profileDir }, 'Hermes gateway HTTP health probe also failed')
++      }
+     }
+     return false
+   }
