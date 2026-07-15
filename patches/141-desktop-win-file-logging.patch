@@ -1,9 +1,9 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 3ce6d2fb..f097d380 100644
+index eb610757..9caf4151 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
 @@ -1,6 +1,6 @@
- import { app, BrowserWindow, Menu, Tray, shell, ipcMain, nativeImage, Notification, screen, dialog, type MessageBoxOptions } from 'electron'
+ import { app, BrowserWindow, Menu, Tray, shell, ipcMain, nativeImage, Notification, screen, dialog, session, systemPreferences, type MessageBoxOptions } from 'electron'
 -import { existsSync } from 'node:fs'
 -import { join } from 'node:path'
 +import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from 'node:fs'
@@ -11,15 +11,6 @@ index 3ce6d2fb..f097d380 100644
  import { startWebUiServer, stopWebUiServer, getToken } from './webui-server'
  import { bundledNode, desktopIcon, desktopRuntimeVersion, desktopTrayTemplateIcon, desktopWindowsTrayIcon, hermesBinExists, hermesBin, webuiDir } from './paths'
  import { checkForDesktopUpdates, initAutoUpdater } from './updater'
-@@ -14,7 +14,7 @@ import {
-   writeActiveRuntimeVersion,
-   type RuntimeDownloadSource,
-   type RuntimeProgress,
--} from './runtime-manager'
-+} from './runtime-manager'
- 
- const PORT = Number(process.env.HERMES_DESKTOP_PORT) || 8748
- const START_HIDDEN = process.argv.includes('--hidden')
 @@ -43,6 +43,75 @@ if (process.platform === 'win32') {
    app.setAppUserModelId(APP_USER_MODEL_ID)
  }
