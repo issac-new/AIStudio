@@ -156,3 +156,4 @@
 155-gateway-windows-http-health-fallback.patch
 156-gateway-windows-http-first-cli-fallback.patch
 157-agent-health-detailed-401-fallback.patch
+158-i18n-kanban-missing-keys.patch
