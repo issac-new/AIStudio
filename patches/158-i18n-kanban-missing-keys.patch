@@ -1,0 +1,86 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1100,6 +1100,9 @@
+     },
+     card: {
+       assigneeTooltip: 'Assignee',
++      needsAssignee: 'Needs assignee',
++      unassigned: 'Unassigned',
++      untitled: 'Untitled',
+       priority: {
+         low: 'Low',
+         medium: 'Medium',
+@@ -1164,11 +1167,33 @@
+       taskReassigned: 'Task reassigned',
+       taskSpecified: 'Task specified',
+       loadFailed: 'Failed to load task',
++      bulkFailed: 'Bulk operation failed',
++      commentFailed: 'Failed to add comment',
++      createFailed: 'Failed to create task',
++      deleteFailed: 'Failed to delete task',
++      deleteSuccess: 'Task deleted',
++      downloadFailed: 'Download failed',
++      linkAdded: 'Task link added',
++      linkFailed: 'Failed to link task',
++      linkRemoved: 'Task link removed',
++      logFailed: 'Failed to load log',
++      moveFailed: 'Failed to move task',
++      taskArchived: 'Task archived',
++      taskDeleted: 'Task deleted',
++      taskMoved: 'Task moved',
++      taskUpdated: 'Task updated',
++      updateFailed: 'Failed to update task',
++    },
++    trash: {
++      dropHere: 'Drop here to trash',
+     },
+     stats: {
+       total: 'Total',
+       tasks: 'Tasks',
+     },
++    noAttachments: 'No attachments',
++    unassigned: 'Unassigned',
++    taskNeedsAttention: 'Task needs attention',
+   },
+ 
+   // Jobs
+
+
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1104,6 +1104,9 @@
+     },
+     card: {
+       assigneeTooltip: '负责人',
++      needsAssignee: '需要指派',
++      unassigned: '未指派',
++      untitled: '未命名',
+       priority: {
+         low: '低',
+         medium: '中',
+@@ -1168,6 +1171,22 @@
+       taskReassigned: '任务已重新分配',
+       taskSpecified: '任务已细化',
+       loadFailed: '加载任务失败',
++      bulkFailed: '批量操作失败',
++      commentFailed: '评论添加失败',
++      createFailed: '任务创建失败',
++      deleteFailed: '任务删除失败',
++      deleteSuccess: '任务已删除',
++      downloadFailed: '下载失败',
++      linkAdded: '任务关联已添加',
++      linkFailed: '任务关联失败',
++      linkRemoved: '任务关联已移除',
++      logFailed: '日志加载失败',
++      moveFailed: '任务移动失败',
++      taskArchived: '任务已归档',
++      taskDeleted: '任务已删除',
++      taskMoved: '任务已移动',
++      taskUpdated: '任务已更新',
++      updateFailed: '任务更新失败',
+     },
+     stats: {
+       total: '总计',
+
