@@ -44,7 +44,7 @@ function pickNew(kind: ChannelKind) {
     >
       <span class="cockpit-collab-bar__chip-icon">{{ KIND_ICON[c.kind] }}</span>
       <span class="cockpit-collab-bar__chip-label">{{ c.label }}</span>
-      <span v-if="c.routeTarget" class="cockpit-collab-bar__chip-nav" title="打开完整页面" @click.stop="navigateRoute(c)">↗</span>
+      <span v-if="c.routeTarget" class="cockpit-collab-bar__chip-nav" :title="t('cockpit.openFull')" @click.stop="navigateRoute(c)">↗</span>
     </button>
     <button class="cockpit-collab-bar__add" type="button" data-action="add" @click="menuOpen = !menuOpen">
       <span>＋</span>

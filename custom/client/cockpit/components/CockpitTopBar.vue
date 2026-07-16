@@ -15,9 +15,9 @@ const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
 onMounted(() => { timer = setInterval(() => { now.value = new Date() }, 1000) })
 
-const WK = ['日', '一', '二', '三', '四', '五', '六']
+const WK = [t('cockpit.weekPrefix') + '日', t('cockpit.weekPrefix') + '一', t('cockpit.weekPrefix') + '二', t('cockpit.weekPrefix') + '三', t('cockpit.weekPrefix') + '四', t('cockpit.weekPrefix') + '五', t('cockpit.weekPrefix') + '六']
 function pad(n: number) { return String(n).padStart(2, '0') }
-const dateStr = () => `${now.value.getFullYear()}-${pad(now.value.getMonth() + 1)}-${pad(now.value.getDate())} 周${WK[now.value.getDay()]}`
+const dateStr = () => `${now.value.getFullYear()}-${pad(now.value.getMonth() + 1)}-${pad(now.value.getDate())} ${WK[now.value.getDay()]}`
 const timeStr = () => `${pad(now.value.getHours())}:${pad(now.value.getMinutes())}:${pad(now.value.getSeconds())}`
 
 defineProps<{ notifyCount?: number; scheduleCount?: number; userName?: string }>()
@@ -45,11 +45,11 @@ function formatTimeAgo(iso: string): string {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return '刚刚'
-  if (mins < 60) return `${mins}分钟前`
+  if (mins < 1) return t('cockpit.justNow')
+  if (mins < 60) return t('cockpit.minutesAgo', { n: mins })
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}小时前`
-  return `${Math.floor(hrs / 24)}天前`
+  if (hrs < 24) return t('cockpit.hoursAgo', { n: hrs })
+  return t('cockpit.daysAgo', { n: Math.floor(hrs / 24) })
 }
 
 // 保存上次状态，仅变化时更新 UI 避免闪动
@@ -122,9 +122,9 @@ async function manualProbe() {
       <ThemeSwitch />
       <LanguageSwitch />
       <span class="cockpit-top__conn" :class="appStore.connected ? 'is-ok' : 'is-err'"
-        :title="appStore.connected ? '已连接' : '未连接'"
+        :title="appStore.connected ? t('cockpit.connected') : t('cockpit.disconnected')"
       >{{ appStore.connected ? '🟢' : '🔴' }}</span>
-      AI协作中心
+      {{ t('cockpit.brandTitle') }}
       <span class="cockpit-top__sub">Swarm Studio</span>
     </div>
     <div class="cockpit-top__div" />
@@ -142,13 +142,13 @@ async function manualProbe() {
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon">🔍</span>
       <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
-        placeholder="搜索 会话/任务/房间" @input="store.runSearch(($event.target as HTMLInputElement).value)" />
+        :placeholder="t('cockpit.searchPlaceholder')" @input="store.runSearch(($event.target as HTMLInputElement).value)" />
       <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
     </div>
     <div class="cockpit-top__spacer" />
-    <div class="cockpit-top__grp" title="点击查看 Connected Platforms 详情" @click.stop="manualProbe">
-      <span class="cockpit-top__cd" title="下次自动检测倒计时">{{ countdown }}s</span>
+    <div class="cockpit-top__grp" :title="t('cockpit.gatewayProbeTitle')" @click.stop="manualProbe">
+      <span class="cockpit-top__cd" :title="t('cockpit.countdownTitle')">{{ countdown }}s</span>
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
         {{ gatewayState === 'running' ? '🟢' : gatewayState === 'stopped' ? '🔴' : '⚪' }}
         Gateway{{ refreshing ? ' ⏳' : '' }}
@@ -159,12 +159,12 @@ async function manualProbe() {
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
-      通知
+      {{ t('cockpit.notifications') }}
       <span v-if="notifyCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ notifyCount }}</span>
     </button>
     <button type="button" class="cockpit-top__user" @click="emit('settings')">
-      <span class="cockpit-top__avatar">{{ (userName ?? '你').slice(0, 1) }}</span>
-      <span class="cockpit-top__uname">{{ userName ?? '你' }}</span>
+      <span class="cockpit-top__avatar">{{ (userName ?? t('cockpit.defaultUser')).slice(0, 1) }}</span>
+      <span class="cockpit-top__uname">{{ userName ?? t('cockpit.defaultUser') }}</span>
       <span class="cockpit-top__caret">▾</span>
     </button>
 

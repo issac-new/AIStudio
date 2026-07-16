@@ -2,12 +2,13 @@
   <div v-if="showBanner" class="gateway-notice-banner">
     <span class="gateway-notice-icon">⚠️</span>
     <span class="gateway-notice-text">{{ noticeMessage }}</span>
-    <button class="gateway-notice-close" @click="dismiss" title="关闭">×</button>
+    <button class="gateway-notice-close" @click="dismiss" :title="t('cockpit.close')">×</button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { toRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useGatewayNoticeBanner, type Message } from '@/custom/chat/useGatewayNoticeBanner'
 
 const props = defineProps<{
@@ -17,6 +18,7 @@ const props = defineProps<{
 
 const sessionIdRef = toRef(props, 'sessionId')
 const messagesRef = toRef(props, 'messages')
+const { t } = useI18n()
 
 const { showBanner, noticeMessage, dismiss } = useGatewayNoticeBanner(sessionIdRef, messagesRef)
 </script>

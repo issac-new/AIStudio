@@ -199,31 +199,31 @@ function statusBucketLabel(s: string): string {
     <!-- 筛选器 -->
     <div class="cockpit-kanban__filters">
       <div v-if="boardOptions.length > 1" class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">看板</span>
+        <span class="cockpit-kanban__flabel">{{ t('cockpit.filterBoard') }}</span>
         <button v-for="sl in boardOptions" :key="sl" type="button"
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.boardSlugs.includes(sl) }"
           @click="store.toggleFilter('boardSlugs', sl)">{{ sl }}</button>
       </div>
       <div class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">优先</span>
+        <span class="cockpit-kanban__flabel">{{ t('cockpit.filterPriority') }}</span>
         <button v-for="p in priorities" :key="p" type="button" :data-filter="p"
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.priorities.includes(p) }"
           @click="store.toggleFilter('priorities', p)">{{ p }}</button>
       </div>
       <div class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">状态</span>
+        <span class="cockpit-kanban__flabel">{{ t('cockpit.filterStatus') }}</span>
         <button v-for="st in statuses" :key="st.key" type="button" :data-filter="st.key"
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.statuses.includes(st.key) }"
           @click="store.toggleFilter('statuses', st.key)">{{ st.label }}</button>
       </div>
       <div v-if="assigneeOptions.length > 0" class="cockpit-kanban__frow">
-        <span class="cockpit-kanban__flabel">负责</span>
+        <span class="cockpit-kanban__flabel">{{ t('cockpit.filterAssignee') }}</span>
         <button v-for="a in assigneeOptions" :key="a" type="button"
           class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.assignees.includes(a) }"
           @click="store.toggleFilter('assignees', a)">{{ a }}</button>
       </div>
       <div class="cockpit-kanban__frow cockpit-kanban__frow--tenant">
-        <span class="cockpit-kanban__flabel">租户</span>
+        <span class="cockpit-kanban__flabel">{{ t('cockpit.filterTenant') }}</span>
         <div class="cockpit-kanban__tenant-selects">
           <NSelect
             v-for="field in tenantFields" :key="field.filterKey"
@@ -242,9 +242,9 @@ function statusBucketLabel(s: string): string {
 
     <!-- 排序 + 统计 -->
     <div class="cockpit-kanban__sortbar">
-      <span class="cockpit-kanban__stat">共 {{ totalCount }} 条</span>
+      <span class="cockpit-kanban__stat">{{ t('cockpit.totalCount', { n: totalCount }) }}</span>
       <div class="cockpit-kanban__sortbar-right">
-        <button v-if="hasActiveFilters" type="button" class="cockpit-kanban__clear" @click="clearAllFilters">清除筛选</button>
+        <button v-if="hasActiveFilters" type="button" class="cockpit-kanban__clear" @click="clearAllFilters">{{ t('cockpit.clearFilters') }}</button>
         <div class="cockpit-kanban__sorts">
           <button type="button" class="cockpit-kanban__sortbtn"
             :class="{ 'is-on': sortBy === 'priority' }"
