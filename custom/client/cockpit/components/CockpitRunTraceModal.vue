@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onScopeDispose } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '../store/cockpit'
 import { useRunTrace, extractKanbanTaskId } from '../composables/useRunTrace'
 import { useChatStore } from '@/stores/hermes/chat'
@@ -13,6 +14,7 @@ import RunTraceScrubber from './RunTraceScrubber.vue'
 import RunTraceOverview from './RunTraceOverview.vue'
 
 const store = useCockpitStore()
+const { t } = useI18n()
 const chatStore = useChatStore()
 const profilesStore = useProfilesStore()
 const sessionId = computed(() => store.runTraceSessionId)
@@ -267,14 +269,14 @@ function exportDossier() {
     <!-- 正常 trace 视图（有 sessionId 时显示） -->
     <template v-else>
       <header class="run-trace-modal__top">
-        <button type="button" class="run-trace-modal__back" @click="store.openRunTrace({ sessionId: '' })" title="返回会话列表">‹</button>
+        <button type="button" class="run-trace-modal__back" @click="store.openRunTrace({ sessionId: '' })" :title="t('cockpit.backToSessions')">‹</button>
         <span class="run-trace-modal__dot" :class="trace.mode.value === 'live' ? 'is-live' : ''"></span>
         <div><b>Run Observatory</b><small>{{ sessionId }}</small></div>
         <span v-if="trace.l2Available.value" class="run-trace-modal__l2badge" title="Layer 2 data available">L2</span>
         <!-- 聚合模式开关 -->
-        <label class="run-trace-modal__aggregate" title="聚合模式：合并关联任务会话到同一视图">
+        <label class="run-trace-modal__aggregate" :title="t('cockpit.aggregateMode')">
           <input type="checkbox" v-model="trace.aggregateMode.value" />
-          <span>聚合</span>
+          <span>{{ t('cockpit.aggregate') }}</span>
         </label>
         <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" title="导出证据档案">📥</button>
         <button type="button" data-action="close" @click="store.closeRunTrace">×</button>

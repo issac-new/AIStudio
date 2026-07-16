@@ -421,20 +421,20 @@ onUnmounted(() => {
   <div class="cockpit-map">
     <div class="cockpit-map__head">
       <span class="cockpit-map__title">{{ t('cockpit.collaborationMap') }}</span>
-      <span class="cockpit-map__hint-inline">滚轮缩放 · 拖拽节点/画布 · 点击联动</span>
+      <span class="cockpit-map__hint-inline">{{ t('cockpit.mapHint') }}</span>
       <!-- 人工介入状态图例 -->
       <div v-if="hasHumanActionNodes" class="cockpit-map__legend">
         <span v-if="legendStatuses.blocked" class="legend-item legend-blocked">
-          <span class="legend-dot"></span>阻塞
+          <span class="legend-dot"></span>{{ t('cockpit.legendBlocked') }}
         </span>
         <span v-if="legendStatuses.todo" class="legend-item legend-todo">
-          <span class="legend-dot"></span>待办
+          <span class="legend-dot"></span>{{ t('cockpit.legendTodo') }}
         </span>
         <span v-if="legendStatuses.triage" class="legend-item legend-triage">
-          <span class="legend-dot"></span>分诊
+          <span class="legend-dot"></span>{{ t('cockpit.legendTriage') }}
         </span>
         <span v-if="legendStatuses.review" class="legend-item legend-review">
-          <span class="legend-dot"></span>待审核
+          <span class="legend-dot"></span>{{ t('cockpit.legendReview') }}
         </span>
       </div>
     </div>
