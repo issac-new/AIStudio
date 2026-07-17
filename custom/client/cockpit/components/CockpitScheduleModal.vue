@@ -294,7 +294,7 @@ function miniTitle(c: MiniCell): string {
           <span class="cockpit-schedule__add-label">⏰</span>
           <input type="time" v-model="newTodoTime" class="cockpit-schedule__add-time" />
         </label>
-        <span v-if="!newTodoTime" class="cockpit-schedule__add-hint">无时间=无提醒</span>
+        <span v-if="!newTodoTime" class="cockpit-schedule__add-hint">{{ t('cockpit.noReminder') }}</span>
       </div>
       <div class="cockpit-schedule__add-actions">
         <button type="button" class="cockpit-schedule__add-save" :disabled="!newTodoTitle.trim()" @click="saveTodo">{{ t('common.save') }}</button>
@@ -307,11 +307,11 @@ function miniTitle(c: MiniCell): string {
       <!-- 左栏：年历（12 个月，点击直达某日） -->
       <div class="cockpit-schedule__cal">
         <div class="cockpit-schedule__nav">
-          <button type="button" class="cockpit-schedule__nav-btn" :title="'上一年'" @click="navigateYear(-1)">
+          <button type="button" class="cockpit-schedule__nav-btn" :title="t('cockpit.prevYear')" @click="navigateYear(-1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
-          <span class="cockpit-schedule__nav-label">{{ store.scheduleViewYear }} 年</span>
-          <button type="button" class="cockpit-schedule__nav-btn" :title="'下一年'" @click="navigateYear(1)">
+          <span class="cockpit-schedule__nav-label">{{ t('cockpit.yearLabel', { n: store.scheduleViewYear }) }}</span>
+          <button type="button" class="cockpit-schedule__nav-btn" :title="t('cockpit.nextYear')" @click="navigateYear(1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
           </button>
           <button type="button" class="cockpit-schedule__today-btn" @click="goToToday">{{ t('cockpit.today') }}</button>
@@ -361,7 +361,7 @@ function miniTitle(c: MiniCell): string {
       <div class="cockpit-schedule__day">
         <div class="cockpit-schedule__day-head">
           <span class="cockpit-schedule__day-date">{{ selectedDateLabel }}</span>
-          <span v-if="selectedCount > 0" class="cockpit-schedule__day-count">{{ selectedCount }} 项</span>
+          <span v-if="selectedCount > 0" class="cockpit-schedule__day-count">{{ t('cockpit.itemCount', { n: selectedCount }) }}</span>
         </div>
 
         <div class="cockpit-schedule__list">
