@@ -278,26 +278,26 @@ function exportDossier() {
           <input type="checkbox" v-model="trace.aggregateMode.value" />
           <span>{{ t('cockpit.aggregate') }}</span>
         </label>
-        <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" title="导出证据档案">📥</button>
+        <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" :title="t('cockpit.exportDossier')">📥</button>
         <button type="button" data-action="close" @click="store.closeRunTrace">×</button>
       </header>
       <!-- 关联会话栏（聚合模式开启且有关联会话时显示） -->
       <div v-if="trace.aggregateMode.value && trace.relatedSessions.value.length > 1" class="run-trace-related">
-        <span class="run-trace-related__label">🔗 聚合 {{ trace.relatedSessions.value.length }} 个会话</span>
+        <span class="run-trace-related__label">🔗 {{ t('cockpit.aggregateSessions', { n: trace.relatedSessions.value.length }) }}</span>
         <div class="run-trace-related__list">
           <span
             v-for="rs in trace.relatedSessions.value"
             :key="rs.sessionId"
             class="run-trace-related__item"
             :class="{ 'is-primary': rs.isPrimary, 'is-empty': rs.isEmpty, [`is-${rs.role}`]: true }"
-            :title="rs.title + (rs.isEmpty ? ' (空)' : '')"
+            :title="rs.title + (rs.isEmpty ? ' (' + t('cockpit.empty') + ')' : '')"
           >
             <span class="run-trace-related__dot" :class="{ 'is-ended': rs.ended, 'is-live': !rs.ended }"></span>
             <span v-if="rs.isPrimary" class="run-trace-related__star">★</span>
             <span class="run-trace-related__title">{{ rs.taskId || rs.sessionId.slice(-8) }}</span>
             <span v-if="rs.profile" class="run-trace-related__profile">{{ rs.profile }}</span>
-            <span v-if="rs.role === 'creator'" class="run-trace-related__role">创建</span>
-            <span v-if="rs.isEmpty" class="run-trace-related__empty">空</span>
+            <span v-if="rs.role === 'creator'" class="run-trace-related__role">{{ t('cockpit.creator') }}</span>
+            <span v-if="rs.isEmpty" class="run-trace-related__empty">{{ t('cockpit.empty') }}</span>
           </span>
         </div>
       </div>
@@ -314,11 +314,11 @@ function exportDossier() {
       />
       <!-- 播放控制：驱动时间游标，图谱节点按时间逐步激活 -->
       <div class="run-trace-modal__playback">
-        <button type="button" class="run-trace-modal__play-btn" :class="{ 'is-playing': playing }" @click="togglePlay" :title="playing ? '暂停' : '播放时间游标'">
+        <button type="button" class="run-trace-modal__play-btn" :class="{ 'is-playing': playing }" @click="togglePlay" :title="t('cockpit.playPause')">
           {{ playing ? '⏸' : '▶' }}
         </button>
-        <button type="button" class="run-trace-modal__speed-btn" @click="cyclePlaySpeed" title="切换播放速度">{{ playSpeed }}x</button>
-        <span class="run-trace-modal__playback-hint">拖动时间轴或播放，观察任务/会话/agent 运行过程</span>
+        <button type="button" class="run-trace-modal__speed-btn" @click="cyclePlaySpeed" :title="t('cockpit.switchSpeed')">{{ playSpeed }}x</button>
+        <span class="run-trace-modal__playback-hint">{{ t('cockpit.playbackHint') }}</span>
       </div>
       <RunTraceTimeBand
         :nodes="trace.nodes.value"

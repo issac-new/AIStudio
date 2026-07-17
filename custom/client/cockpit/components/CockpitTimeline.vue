@@ -88,7 +88,7 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
           type="text"
           class="cockpit-timeline__search-input"
           v-model="contentSearch"
-          placeholder="搜索事件..."
+          :placeholder="t('cockpit.searchEvents')"
           data-timeline-search
         />
         <button v-if="contentSearch" type="button" class="cockpit-timeline__search-clear" @click="contentSearch = ''">×</button>
