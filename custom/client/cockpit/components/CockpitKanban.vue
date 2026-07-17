@@ -265,31 +265,31 @@ function statusBucketLabel(s: string): string {
       <div v-if="pagedTasks.length === 0" class="cockpit-kanban__empty">
         {{ totalCount === 0 ? t('cockpit.noMatchingTasks') : t('cockpit.noTasksOnPage') }}
       </div>
-      <button v-for="t in pagedTasks" :key="t.id"
+      <button v-for="task in pagedTasks" :key="task.id"
         type="button"
-        :data-task-id="t.id"
+        :data-task-id="task.id"
         class="cockpit-kanban__task"
-        :class="['is-' + t.priority.toLowerCase(), { 'is-selected': store.selectedTaskId === t.id }]"
-        @click="store.selectTask(t.id)">
+        :class="['is-' + task.priority.toLowerCase(), { 'is-selected': store.selectedTaskId === task.id }]"
+        @click="store.selectTask(task.id)">
         <span class="cockpit-kanban__pribar" />
         <span class="cockpit-sel-bar" />
-        <span class="cockpit-kanban__pri">{{ t.priority }}</span>
-        <div class="cockpit-kanban__tt" :title="t.title" @dblclick.stop="store.openTitleDetail(t.id, t.title)">{{ t.title }}</div>
+        <span class="cockpit-kanban__pri">{{ task.priority }}</span>
+        <div class="cockpit-kanban__tt" :title="task.title" @dblclick.stop="store.openTitleDetail(task.id, task.title)">{{ task.title }}</div>
         <div class="cockpit-kanban__meta">
-          <span class="cockpit-kanban__slug" :data-task-slug="t.boardSlug">@{{ t.boardSlug }}</span>
+          <span class="cockpit-kanban__slug" :data-task-slug="task.boardSlug">@{{ task.boardSlug }}</span>
           <span
             class="cockpit-kanban__id"
-            :data-task-id-copy="t.id"
+            :data-task-id-copy="task.id"
             :title="t('cockpit.copyTaskId')"
-            @click.stop="copyTaskId(t.id)"
-          >#{{ t.id }}</span>
-          <span v-if="t.tenant" class="cockpit-kanban__tenant" :title="t.tenant">{{ tenantDisplayLabel(parseTenant(t.tenant)) }}</span>
-          <span class="cockpit-kanban__stg" :class="{ 'is-blocked': t.status === 'blocked', 'is-review': t.status === 'review' }">
-            {{ statusBucketLabel(t.status) }}
+            @click.stop="copyTaskId(task.id)"
+          >#{{ task.id }}</span>
+          <span v-if="task.tenant" class="cockpit-kanban__tenant" :title="task.tenant">{{ tenantDisplayLabel(parseTenant(task.tenant)) }}</span>
+          <span class="cockpit-kanban__stg" :class="{ 'is-blocked': task.status === 'blocked', 'is-review': task.status === 'review' }">
+            {{ statusBucketLabel(task.status) }}
           </span>
           <span class="cockpit-kanban__meta-spacer" />
-          <span class="cockpit-kanban__who">{{ t.assignee }}</span>
-          <span class="cockpit-kanban__time">{{ formatTime(t.createdAt) }}</span>
+          <span class="cockpit-kanban__who">{{ task.assignee }}</span>
+          <span class="cockpit-kanban__time">{{ formatTime(task.createdAt) }}</span>
         </div>
       </button>
     </div>
