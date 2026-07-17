@@ -201,7 +201,7 @@ async function manualProbe() {
         </div>
       </div>
       <div v-else class="cockpit-probe__body cockpit-probe__body--empty">
-        {{ refreshing ? '检测中…' : '无数据' }}
+        {{ refreshing ? t('cockpit.detecting') + '…' : t('cockpit.noData') }}
       </div>
     </div>
     <!-- 点击遮罩关闭 -->

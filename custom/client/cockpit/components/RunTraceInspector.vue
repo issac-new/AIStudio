@@ -62,13 +62,13 @@ function truncate(s: unknown, max: number): string {
 
       <!-- 详情 -->
       <section v-if="node.detail" class="run-trace-inspector__section">
-        <h5>详情</h5>
+        <h5>{{ t('cockpit.taskDetail') }}</h5>
         <pre class="run-trace-inspector__detail">{{ node.detail }}</pre>
       </section>
 
       <!-- 引用信息 -->
       <section v-if="node.ref && (node.ref.sessionId || node.ref.runId || node.ref.toolCallId || node.ref.workflowNodeId)" class="run-trace-inspector__section">
-        <h5>引用</h5>
+        <h5>{{ t('cockpit.source') }}</h5>
         <div v-if="node.ref.sessionId" class="run-trace-inspector__row"><span>Session</span><code>{{ node.ref.sessionId }}</code></div>
         <div v-if="node.ref.runId" class="run-trace-inspector__row"><span>Run</span><code>{{ node.ref.runId }}</code></div>
         <div v-if="node.ref.toolCallId" class="run-trace-inspector__row"><span>Tool Call</span><code>{{ node.ref.toolCallId }}</code></div>
@@ -77,13 +77,13 @@ function truncate(s: unknown, max: number): string {
 
       <!-- 子时间线（思维链 + 工具 + 消息） -->
       <section v-if="node.children && node.children.length > 0" class="run-trace-inspector__section">
-        <h5>时间线 ({{ node.children.length }}项)</h5>
+        <h5>{{ t('cockpit.timelinePrefix') }} ({{ node.children.length }})</h5>
         <div v-for="item in node.children" :key="item.id" class="run-trace-inspector__timeline-item" :class="'is-' + item.kind">
           <div class="run-trace-inspector__timeline-head">
             <span class="run-trace-inspector__timeline-kind">{{ item.kind }}</span>
             <span v-if="item.durationMs" class="run-trace-inspector__timeline-meta">{{ fmtDuration(item.durationMs) }}</span>
             <span v-if="item.status" class="run-trace-inspector__timeline-status" :class="'is-' + item.status">{{ item.status }}</span>
-            <span v-if="item.attribution" class="run-trace-inspector__timeline-attr" :class="'is-' + item.attribution">{{ item.attribution === 'inferred' ? '推断' : '准确' }}</span>
+            <span v-if="item.attribution" class="run-trace-inspector__timeline-attr" :class="'is-' + item.attribution">{{ item.attribution === 'inferred' ? t('cockpit.inference') : t('cockpit.accurate') }}</span>
           </div>
           <!-- 思维链文本 -->
           <p v-if="item.text" class="run-trace-inspector__timeline-text">{{ truncate(item.text, 500) }}</p>
@@ -102,7 +102,7 @@ function truncate(s: unknown, max: number): string {
         </div>
       </section>
     </template>
-    <p v-else class="run-trace-inspector__empty">选择节点查看详情</p>
+    <p v-else class="run-trace-inspector__empty">{{ t('cockpit.selectNodeForDetail') }}</p>
   </aside>
 </template>
 

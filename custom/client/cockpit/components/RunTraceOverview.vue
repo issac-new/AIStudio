@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useKanbanTaskGraph, type TimeWindow } from '../composables/useKanbanTaskGraph'
 import type { TraceNode } from '../adapters/run-trace-adapter'
 import RunTraceTopology from './RunTraceTopology.vue'
 import RunTraceNodeDetail from './RunTraceNodeDetail.vue'
 import RunTraceTimelinePanel from './RunTraceTimelinePanel.vue'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{ (e: 'select-session', sid: string): void; (e: 'close'): void }>()
 
@@ -138,31 +141,31 @@ function closeRightPanel() {
 </script>
 
 <template>
-  <div class="run-trace-overview" data-run-trace-overview role="dialog" aria-modal="true" aria-label="Run Observatory 全局聚合">
+  <div class="run-trace-overview" data-run-trace-overview role="dialog" aria-modal="true" :aria-label="'Run Observatory ' + t('cockpit.globalTimeline')">
     <header class="run-trace-overview__top">
       <span class="run-trace-overview__dot"></span>
       <div class="run-trace-overview__title">
         <b>Run Observatory</b>
-        <small>kanban 任务树拓扑 · {{ graph.tasks.value.length }} 任务{{ selectedTaskId ? ' · 聚焦 ' + selectedTaskId : '' }}</small>
+        <small>kanban {{ t('cockpit.taskTopology') }} · {{ t('cockpit.itemCount', { n: graph.tasks.value.length }) }}{{ selectedTaskId ? ' · 聚焦 ' + selectedTaskId : '' }}</small>
       </div>
       <div class="run-trace-overview__search">
-        <input type="text" v-model="searchQuery" placeholder="检索任务 ID / 标题 / board / 状态…" />
-        <span v-if="hitClusters" class="run-trace-overview__search-hit">命中 {{ hitClusters.size }} 任务</span>
+        <input type="text" v-model="searchQuery" :placeholder="t('cockpit.searchEvents')" />
+        <span v-if="hitClusters" class="run-trace-overview__search-hit">{{ t('cockpit.itemCount', { n: hitClusters.size }) }}</span>
       </div>
       <!-- 日期时间筛选（位于“已完成”按钮左侧）：按天步进 + datetime 输入 -->
       <div class="run-trace-overview__date-bar">
-        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(-1)" title="时间范围在当前基础上往前增加一天">‹</button>
-        <input type="datetime-local" class="run-trace-overview__date-input" v-model="startInput" @change="applyDateInput" title="起始时间" />
+        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(-1)" :title="t('cockpit.expandDayBackward')">‹</button>
+        <input type="datetime-local" class="run-trace-overview__date-input" v-model="startInput" @change="applyDateInput" :title="t('cockpit.startTime')" />
         <span class="run-trace-overview__date-sep">→</span>
-        <input type="datetime-local" class="run-trace-overview__date-input" v-model="endInput" @change="applyDateInput" title="结束时间" />
-        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(1)" title="时间范围在当前基础上往后增加一天">›</button>
-        <button type="button" class="run-trace-overview__apply-btn" @click="applyDateInput" title="应用时间筛选">应用</button>
+        <input type="datetime-local" class="run-trace-overview__date-input" v-model="endInput" @change="applyDateInput" :title="t('cockpit.endTime')" />
+        <button type="button" class="run-trace-overview__step-btn" @click="stepDay(1)" :title="t('cockpit.expandDayForward')">›</button>
+        <button type="button" class="run-trace-overview__apply-btn" @click="applyDateInput" :title="t('cockpit.applyTimeFilter')">{{ t('cockpit.applyTimeFilter') }}</button>
       </div>
       <!-- 状态过滤标签 + 返回全部（聚焦时显示，点击不修改筛选条件） -->
       <div class="run-trace-overview__filters">
-        <button v-if="selectedTaskId" type="button" class="run-trace-overview__back-all" @click="clearFocus" title="返回全部任务（不修改筛选条件）">← 返回全部</button>
-        <button type="button" class="run-trace-overview__filter" :class="{ 'is-on': includeDone }" @click="toggleStatusFilter('done')" title="勾选后重新加载已完成任务">已完成</button>
-        <button type="button" class="run-trace-overview__filter" :class="{ 'is-on': includeArchived }" @click="toggleStatusFilter('archived')" title="勾选后重新加载已归档任务">已归档</button>
+        <button v-if="selectedTaskId" type="button" class="run-trace-overview__back-all" @click="clearFocus" :title="t('cockpit.backToAllTasks')">← {{ t('cockpit.allTasks') }}</button>
+        <button type="button" class="run-trace-overview__filter" :class="{ 'is-on': includeDone }" @click="toggleStatusFilter('done')" :title="t('cockpit.reloadCompleted')">{{ t('cockpit.completed') }}</button>
+        <button type="button" class="run-trace-overview__filter" :class="{ 'is-on': includeArchived }" @click="toggleStatusFilter('archived')" :title="t('cockpit.reloadArchived')">{{ t('cockpit.archived') }}</button>
       </div>
       <div v-if="graph.loading.value" class="run-trace-overview__progress">
         <div class="run-trace-overview__progress-bar" :style="{ width: graph.progress.value + '%' }"></div>
@@ -175,10 +178,10 @@ function closeRightPanel() {
     <div class="run-trace-overview__canvas">
       <div class="run-trace-overview__topo">
         <div v-if="graph.loading.value && graph.nodes.value.length === 0" class="run-trace-overview__empty">
-          加载聚合数据中… {{ graph.progress.value }}%
+          {{ t('cockpit.loadingAggregate') }}… {{ graph.progress.value }}%
         </div>
         <div v-else-if="!graph.loading.value && topNodes.length === 0" class="run-trace-overview__empty">
-          {{ graph.error.value || '暂无任务/会话记录' }}
+          {{ graph.error.value || t('cockpit.noExecutionData') }}
         </div>
         <RunTraceTopology
           v-else
@@ -206,12 +209,12 @@ function closeRightPanel() {
     <RunTraceNodeDetail :node="detailNode" @close="detailNode = null" />
 
     <footer class="run-trace-overview__legend">
-      <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-ingress"></span>入口</span>
+      <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-ingress"></span>{{ t('cockpit.entryPoint') }}</span>
       <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-workflow"></span>Run</span>
       <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-agent"></span>Agent</span>
       <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-skill"></span>Skill</span>
       <span class="run-trace-overview__legend-item"><span class="run-trace-overview__legend-dot is-tool"></span>Tool</span>
-      <span class="run-trace-overview__legend-hint">拓扑：左→右 时序 · 上→下 执行层级 · 实线=call · 虚线=delegate · 动画=spawn · 点任务聚焦该任务 · 点ⓘ看详情 · ±折叠展开</span>
+      <span class="run-trace-overview__legend-hint">{{ t('cockpit.scrollZoom') }}</span>
     </footer>
   </div>
 </template>

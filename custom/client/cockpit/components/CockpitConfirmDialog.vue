@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 // 轻量确认弹窗：vanilla div + transition，复用 cockpit CSS 变量，不引入 Naive UI。
 const props = defineProps<{
   show: boolean
@@ -11,6 +12,8 @@ const emit = defineEmits<{
   confirm: []
   cancel: []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -22,10 +25,10 @@ const emit = defineEmits<{
         <div class="cockpit-confirm__content">{{ content }}</div>
         <div class="cockpit-confirm__actions">
           <button type="button" class="cockpit-confirm__btn" @click="emit('cancel')">
-            {{ cancelText || '取消' }}
+            {{ cancelText || t('common.cancel') }}
           </button>
           <button type="button" class="cockpit-confirm__btn is-pri" @click="emit('confirm')">
-            {{ confirmText || '确认' }}
+            {{ confirmText || t('common.confirm') }}
           </button>
         </div>
       </div>

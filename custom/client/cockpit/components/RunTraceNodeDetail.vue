@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { TraceNode } from '../adapters/run-trace-adapter'
 
 const props = defineProps<{ node: TraceNode | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
+
+const { t } = useI18n()
 
 function fmtTime(ts?: number): string {
   if (!ts) return '—'
@@ -32,15 +35,15 @@ function fmtDuration(ms?: number): string {
       </header>
       <div class="node-detail__body">
         <div v-if="node.detail" class="node-detail__row">
-          <span class="node-detail__label">详情</span>
+          <span class="node-detail__label">{{ t('cockpit.taskDetail') }}</span>
           <span class="node-detail__value node-detail__value--pre">{{ node.detail }}</span>
         </div>
         <div class="node-detail__row">
-          <span class="node-detail__label">状态</span>
+          <span class="node-detail__label">{{ t('cockpit.taskStatus') }}</span>
           <span class="node-detail__value">{{ node.status }}</span>
         </div>
         <div class="node-detail__row">
-          <span class="node-detail__label">证据层级</span>
+          <span class="node-detail__label">{{ t('cockpit.evidenceLevel') }}</span>
           <span class="node-detail__value">{{ node.evidence }}</span>
         </div>
         <div v-if="node.profile" class="node-detail__row">
@@ -48,23 +51,23 @@ function fmtDuration(ms?: number): string {
           <span class="node-detail__value">{{ node.profile }}</span>
         </div>
         <div v-if="node.cluster" class="node-detail__row">
-          <span class="node-detail__label">任务</span>
+          <span class="node-detail__label">{{ t('cockpit.parentTask') }}</span>
           <span class="node-detail__value">{{ node.cluster }}</span>
         </div>
         <div class="node-detail__row">
-          <span class="node-detail__label">开始</span>
+          <span class="node-detail__label">{{ t('cockpit.startTime') }}</span>
           <span class="node-detail__value">{{ fmtTime(node.startedAt) }}</span>
         </div>
         <div v-if="node.endedAt" class="node-detail__row">
-          <span class="node-detail__label">结束</span>
+          <span class="node-detail__label">{{ t('cockpit.endTime') }}</span>
           <span class="node-detail__value">{{ fmtTime(node.endedAt) }}</span>
         </div>
         <div v-if="node.durationMs" class="node-detail__row">
-          <span class="node-detail__label">耗时</span>
+          <span class="node-detail__label">{{ t('cockpit.duration') }}</span>
           <span class="node-detail__value">{{ fmtDuration(node.durationMs) }}</span>
         </div>
         <div v-if="node.ref?.sessionId" class="node-detail__row">
-          <span class="node-detail__label">会话</span>
+          <span class="node-detail__label">{{ t('cockpit.sessionRecords') }}</span>
           <span class="node-detail__value node-detail__value--mono">{{ node.ref.sessionId }}</span>
         </div>
         <div v-if="node.ref?.runId" class="node-detail__row">
@@ -72,7 +75,7 @@ function fmtDuration(ms?: number): string {
           <span class="node-detail__value node-detail__value--mono">{{ node.ref.runId }}</span>
         </div>
         <div v-if="node.children && node.children.length > 0" class="node-detail__children">
-          <div class="node-detail__children-title">时间线（{{ node.children.length }}）</div>
+          <div class="node-detail__children-title">{{ t('cockpit.timelinePrefix') }}（{{ node.children.length }}）</div>
           <div v-for="(c, i) in node.children" :key="i" class="node-detail__child">
             <span class="node-detail__child-kind" :class="`is-${c.kind}`">{{ c.kind }}</span>
             <span class="node-detail__child-text">{{ c.text }}</span>

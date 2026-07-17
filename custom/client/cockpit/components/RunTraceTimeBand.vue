@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TraceNode } from '../adapters/run-trace-adapter'
 
 const props = defineProps<{
@@ -9,6 +10,8 @@ const props = defineProps<{
   currentTime: number
 }>()
 const emit = defineEmits<{ (e: 'focus-node', id: string): void }>()
+
+const { t } = useI18n()
 
 // 按任务聚类分组，每个 cluster 一行泳道
 const lanes = computed(() => {
@@ -69,7 +72,7 @@ const tickMarks = computed(() => {
 <template>
   <div class="run-trace-timeband" data-run-trace-timeband>
     <div class="run-trace-timeband__header">
-      <span class="run-trace-timeband__label">任务泳道</span>
+      <span class="run-trace-timeband__label">{{ t('cockpit.taskSwimlane') }}</span>
       <div class="run-trace-timeband__ticks">
         <span v-for="tick in tickMarks" :key="tick.pct" class="run-trace-timeband__tick" :style="{ left: `${tick.pct}%` }">{{ tick.label }}</span>
       </div>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { TraceNode } from '../adapters/run-trace-adapter'
 defineProps<{ skill: TraceNode }>()
 defineEmits<{ (e: 'back'): void }>()
+const { t } = useI18n()
 </script>
 <template>
   <div class="run-trace-skill" data-run-trace-skill-drilldown>
@@ -10,7 +12,7 @@ defineEmits<{ (e: 'back'): void }>()
       <article v-for="item in skill.children || []" :key="item.id" class="run-trace-skill__item" :class="[`is-${item.kind}`]">
         <span class="run-trace-skill__kind">{{ item.kind }}</span>
         <span class="run-trace-skill__body">{{ item.text || item.toolName }}</span>
-        <span class="run-trace-skill__attr">{{ item.attribution === 'inferred' ? '推断' : '准确' }}</span>
+        <span class="run-trace-skill__attr">{{ item.attribution === 'inferred' ? t('cockpit.inference') : t('cockpit.accurate') }}</span>
       </article>
     </div>
   </div>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 import { fetchProfileDetail, type HermesProfileDetail } from '@/api/hermes/profiles'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   /** 选中的节点（高亮并跳转至该节点在时间轴的位置） */
@@ -201,7 +204,7 @@ function decodeText(text?: string): string {
 <template>
   <aside class="trace-timeline-panel" data-trace-timeline-panel>
     <header class="trace-timeline-panel__head">
-      <b>任务执行时间轴</b>
+      <b>{{ t('cockpit.taskTimeline') }}</b>
       <small v-if="taskId">{{ taskId }}</small>
       <button type="button" class="trace-timeline-panel__close" @click="emit('close')" title="关闭">×</button>
     </header>
@@ -215,28 +218,28 @@ function decodeText(text?: string): string {
 
       <!-- agent 配置（双击 Agent 条目后展开） -->
       <section v-if="node && node.kind === 'agent' && expandedAgentId === node.id" class="trace-timeline-panel__agent">
-        <div class="trace-timeline-panel__sub-title">Agent 配置</div>
-        <div v-if="agentLoading" class="trace-timeline-panel__empty-mini">加载配置…</div>
+        <div class="trace-timeline-panel__sub-title">{{ t('cockpit.config') }}</div>
+        <div v-if="agentLoading" class="trace-timeline-panel__empty-mini">{{ t('cockpit.loadConfig') }}…</div>
         <div v-else-if="agentDetail">
-          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">模型</span><span class="trace-timeline-panel__value">{{ agentDetail.model }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.model') }}</span><span class="trace-timeline-panel__value">{{ agentDetail.model }}</span></div>
           <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Provider</span><span class="trace-timeline-panel__value">{{ agentDetail.provider }}</span></div>
-          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">技能数</span><span class="trace-timeline-panel__value">{{ agentDetail.skills }}</span></div>
-          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">路径</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ agentDetail.path }}</span></div>
-          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">环境</span><span class="trace-timeline-panel__value">{{ agentDetail.hasEnv ? '已配置' : '无' }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.skillCount') }}</span><span class="trace-timeline-panel__value">{{ agentDetail.skills }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.path') }}</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ agentDetail.path }}</span></div>
+          <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.env') }}</span><span class="trace-timeline-panel__value">{{ agentDetail.hasEnv ? t('cockpit.config') : t('cockpit.none') }}</span></div>
           <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Soul</span><span class="trace-timeline-panel__value">{{ agentDetail.hasSoulMd ? '有' : '无' }}</span></div>
         </div>
-        <div v-else class="trace-timeline-panel__empty-mini">配置不可用</div>
+        <div v-else class="trace-timeline-panel__empty-mini">{{ t('cockpit.configUnavailable') }}</div>
       </section>
 
       <!-- 全时间轴（含 Run 节点提取的时间线条目） -->
       <section class="trace-timeline-panel__timeline">
-        <div class="trace-timeline-panel__sub-title">全部执行时间线（{{ timelineEntries.length }}）</div>
-        <div v-if="timelineEntries.length === 0" class="trace-timeline-panel__empty-mini">暂无执行数据</div>
+        <div class="trace-timeline-panel__sub-title">{{ t('cockpit.globalTimeline') }}（{{ timelineEntries.length }}）</div>
+        <div v-if="timelineEntries.length === 0" class="trace-timeline-panel__empty-mini">{{ t('cockpit.noExecutionData') }}</div>
         <div v-for="g in groups" :key="g.key" class="trace-timeline-panel__group">
           <div class="trace-timeline-panel__group-head">
             <span class="trace-timeline-panel__group-dot"></span>
             <span>{{ g.label }}</span>
-            <small>{{ g.items.length }} 项</small>
+            <small>{{ t('cockpit.itemCount', { n: g.items.length }) }}</small>
           </div>
           <div class="trace-timeline-panel__items">
             <template v-for="e in g.items" :key="e.id">
@@ -274,22 +277,22 @@ function decodeText(text?: string): string {
               </template>
               <!-- 节点二级详情（可折叠，不弹窗） -->
               <div v-if="e.isNode && expandedDetail === e.id && e.node" class="trace-timeline-panel__sub-detail">
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">详情</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ decodeText(e.node.detail) || '—' }}</span></div>
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">状态</span><span class="trace-timeline-panel__value">{{ e.node.status }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.taskDetail') }}</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ decodeText(e.node.detail) || '—' }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.taskStatus') }}</span><span class="trace-timeline-panel__value">{{ e.node.status }}</span></div>
                 <div v-if="e.node.profile" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">Profile</span><span class="trace-timeline-panel__value">{{ e.node.profile }}</span></div>
-                <div v-if="e.node.cluster" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">任务</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.cluster }}</span></div>
-                <div v-if="e.node.taskStatus" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">任务状态</span><span class="trace-timeline-panel__value">{{ e.node.taskStatus }}</span></div>
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">开始</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.node.startedAt) }}</span></div>
-                <div v-if="e.node.endedAt" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">结束</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.node.endedAt) }}</span></div>
-                <div v-if="e.node.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">耗时</span><span class="trace-timeline-panel__value">{{ fmtDuration(e.node.durationMs) }}</span></div>
-                <div v-if="e.node.ref?.sessionId" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">会话</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.ref.sessionId }}</span></div>
+                <div v-if="e.node.cluster" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.parentTask') }}</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.cluster }}</span></div>
+                <div v-if="e.node.taskStatus" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.taskStatus') }}</span><span class="trace-timeline-panel__value">{{ e.node.taskStatus }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.startTime') }}</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.node.startedAt) }}</span></div>
+                <div v-if="e.node.endedAt" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.endTime') }}</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.node.endedAt) }}</span></div>
+                <div v-if="e.node.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.duration') }}</span><span class="trace-timeline-panel__value">{{ fmtDuration(e.node.durationMs) }}</span></div>
+                <div v-if="e.node.ref?.sessionId" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.sessionRecords') }}</span><span class="trace-timeline-panel__value trace-timeline-panel__value--mono">{{ e.node.ref.sessionId }}</span></div>
               </div>
               <!-- 非节点时间线条目（thinking/message/memory）详情 -->
               <div v-if="!e.isNode && expandedDetail === e.id" class="trace-timeline-panel__sub-detail">
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">类型</span><span class="trace-timeline-panel__value">{{ e.kind }}</span></div>
-                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">时间</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.ts) }}</span></div>
-                <div v-if="e.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">耗时</span><span class="trace-timeline-panel__value">{{ fmtDuration(e.durationMs) }}</span></div>
-                <div v-if="e.text" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">内容</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ decodeText(e.text) }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.type') }}</span><span class="trace-timeline-panel__value">{{ e.kind }}</span></div>
+                <div class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.startTime') }}</span><span class="trace-timeline-panel__value">{{ fmtDateTime(e.ts) }}</span></div>
+                <div v-if="e.durationMs" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.duration') }}</span><span class="trace-timeline-panel__value">{{ fmtDuration(e.durationMs) }}</span></div>
+                <div v-if="e.text" class="trace-timeline-panel__row"><span class="trace-timeline-panel__label">{{ t('cockpit.content') }}</span><span class="trace-timeline-panel__value trace-timeline-panel__value--pre">{{ decodeText(e.text) }}</span></div>
               </div>
             </template>
           </div>

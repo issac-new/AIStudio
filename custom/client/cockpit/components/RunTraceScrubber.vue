@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   minTime: number          // session startedAt (ms)
@@ -14,6 +15,8 @@ const emit = defineEmits<{
   (e: 'start-replay', fromMs: number): void
   (e: 'scrub-end'): void
 }>()
+
+const { t } = useI18n()
 
 const dragging = ref(false)
 const trackRef = ref<HTMLDivElement | null>(null)
@@ -81,14 +84,14 @@ const durationLabel = computed(() => fmtDuration(totalSpan.value))
   <div class="run-trace-scrubber" data-run-trace-scrubber>
     <div class="run-trace-scrubber__controls">
       <span class="run-trace-scrubber__mode" :class="'is-' + mode">
-        {{ mode === 'live' ? '● 实时' : '⟲ 回放中' }}
+        {{ mode === 'live' ? '● ' + t('cockpit.liveMode') : '⟲ ' + t('cockpit.replayMode') }}
       </span>
       <span class="run-trace-scrubber__time">{{ fmtTime(currentTime) }}</span>
-      <span class="run-trace-scrubber__dur">时长 {{ durationLabel }}</span>
+      <span class="run-trace-scrubber__dur">{{ t('cockpit.duration') }} {{ durationLabel }}</span>
       <span v-if="mode === 'replay' && replayProgress > 0" class="run-trace-scrubber__progress">
         {{ Math.round(replayProgress) }}%
       </span>
-      <span class="run-trace-scrubber__hint">拖动时间轴切换回放</span>
+      <span class="run-trace-scrubber__hint">{{ t('cockpit.playbackHint') }}</span>
     </div>
     <div
       ref="trackRef"
