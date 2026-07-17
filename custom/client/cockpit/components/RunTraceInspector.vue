@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { TraceNode } from '../adapters/run-trace-adapter'
 
 defineProps<{ node: TraceNode | null }>()
+
+const { t } = useI18n()
 
 const KIND_ICONS: Record<string, string> = {
   ingress: '📨', workflow: '🔄', agent: '🤖', skill: '⚡', tool: '🔧',
@@ -51,10 +54,10 @@ function truncate(s: unknown, max: number): string {
 
       <!-- 时间信息 -->
       <section v-if="node.startedAt" class="run-trace-inspector__section">
-        <h5>时间</h5>
-        <div class="run-trace-inspector__row"><span>开始</span><code>{{ fmtTime(node.startedAt) }}</code></div>
-        <div v-if="node.endedAt" class="run-trace-inspector__row"><span>结束</span><code>{{ fmtTime(node.endedAt) }}</code></div>
-        <div v-if="node.durationMs" class="run-trace-inspector__row"><span>耗时</span><code>{{ fmtDuration(node.durationMs) }}</code></div>
+        <h5>{{ t('cockpit.timelinePrefix') }}</h5>
+        <div class="run-trace-inspector__row"><span>{{ t('cockpit.startTime') }}</span><code>{{ fmtTime(node.startedAt) }}</code></div>
+        <div v-if="node.endedAt" class="run-trace-inspector__row"><span>{{ t('cockpit.endTime') }}</span><code>{{ fmtTime(node.endedAt) }}</code></div>
+        <div v-if="node.durationMs" class="run-trace-inspector__row"><span>{{ t('cockpit.duration') }}</span><code>{{ fmtDuration(node.durationMs) }}</code></div>
       </section>
 
       <!-- 详情 -->
@@ -88,12 +91,12 @@ function truncate(s: unknown, max: number): string {
           <p v-if="item.toolName" class="run-trace-inspector__timeline-tool">🔧 {{ item.toolName }}</p>
           <!-- 工具参数 -->
           <div v-if="item.toolArgs" class="run-trace-inspector__timeline-args">
-            <span class="run-trace-inspector__label">参数</span>
+            <span class="run-trace-inspector__label">{{ t('cockpit.parameter') }}</span>
             <pre>{{ truncate(item.toolArgs, 300) }}</pre>
           </div>
           <!-- 工具结果 -->
           <div v-if="item.toolResult" class="run-trace-inspector__timeline-result">
-            <span class="run-trace-inspector__label">结果</span>
+            <span class="run-trace-inspector__label">{{ t('cockpit.result') }}</span>
             <pre>{{ truncate(item.toolResult, 300) }}</pre>
           </div>
         </div>

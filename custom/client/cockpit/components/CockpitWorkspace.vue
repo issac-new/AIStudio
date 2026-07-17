@@ -461,8 +461,8 @@ async function toggleHomeSubscription(ch: HomeChannel) {
       <div class="cockpit-workspace__desc-bar">
         <span class="cockpit-workspace__field-label">{{ t('cockpit.description') }}</span>
         <span class="cockpit-workspace__desc-tabs">
-          <button type="button" class="cockpit-workspace__desc-tab" :class="{ 'is-on': !descPreview }" @click="descPreview = false">编辑</button>
-          <button type="button" class="cockpit-workspace__desc-tab" :class="{ 'is-on': descPreview }" @click="descPreview = true">预览</button>
+          <button type="button" class="cockpit-workspace__desc-tab" :class="{ 'is-on': !descPreview }" @click="descPreview = false">{{ t('cockpit.editMode') }}</button>
+          <button type="button" class="cockpit-workspace__desc-tab" :class="{ 'is-on': descPreview }" @click="descPreview = true">{{ t('cockpit.previewMode') }}</button>
         </span>
       </div>
       <div v-if="!descPreview" class="cockpit-workspace__flow-row">
@@ -553,7 +553,7 @@ async function toggleHomeSubscription(ch: HomeChannel) {
       <div class="cockpit-workspace__foot">
         <template v-if="!isReadOnly">
           <button type="button" class="cockpit-workspace__btn" @click="store.autoSaveDraft()">💾 {{ t('cockpit.saveDraft') }}</button>
-          <button type="button" class="cockpit-workspace__btn" @click="store.clearDraft()">↺ 还原</button>
+          <button type="button" class="cockpit-workspace__btn" @click="store.clearDraft()">↺ {{ t('cockpit.restore') }}</button>
           <button type="button" data-action="submit" class="cockpit-workspace__btn is-pri" @click="$emit('submit')">{{ t('cockpit.submit') }}</button>
         </template>
         <button v-else type="button" class="cockpit-workspace__btn is-pri" @click="store.openTemplateManager()">{{ t('cockpit.newCollabFromArchive') }}</button>
