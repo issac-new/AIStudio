@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   minTime: number
@@ -11,6 +12,8 @@ const emit = defineEmits<{
   (e: 'update:window', payload: { start: number; end: number }): void
   (e: 'apply', payload: { start: number; end: number }): void
 }>()
+
+const { t } = useI18n()
 
 const trackRef = ref<HTMLDivElement | null>(null)
 const dragging = ref<'start' | 'end' | null>(null)
@@ -76,7 +79,7 @@ const winDuration = computed(() => Math.max(0, props.windowEnd - props.windowSta
 
 <template>
   <div class="time-range-slider" data-time-range-slider>
-    <span class="time-range-slider__label">时间窗</span>
+    <span class="time-range-slider__label">{{ t('cockpit.timeWindow') }}</span>
     <span class="time-range-slider__time">{{ fmtDateTime(windowStart) }}</span>
     <div class="time-range-slider__track" ref="trackRef" @pointermove="onPointerMove" @pointerup="onPointerUp">
       <!-- 选中区间高亮 -->

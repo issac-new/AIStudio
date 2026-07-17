@@ -263,7 +263,7 @@ function statusBucketLabel(s: string): string {
     <!-- 任务列表（扁平展示）-->
     <div ref="listEl" class="cockpit-kanban__list">
       <div v-if="pagedTasks.length === 0" class="cockpit-kanban__empty">
-        {{ totalCount === 0 ? '暂无匹配任务' : '当前页无任务' }}
+        {{ totalCount === 0 ? t('cockpit.noMatchingTasks') : t('cockpit.noTasksOnPage') }}
       </div>
       <button v-for="t in pagedTasks" :key="t.id"
         type="button"

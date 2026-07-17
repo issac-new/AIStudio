@@ -208,7 +208,7 @@ const hasActiveFilters = computed(() =>
           size="small"
           quaternary
           @click="closeModal"
-          title="关闭"
+          :title="t('cockpit.close')"
         >
           ×
         </NButton>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import type { TraceEdge, TraceNode } from '../adapters/run-trace-adapter'
 import { computeLayeredLayout } from '../composables/computeLayeredLayout'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   nodes: TraceNode[]
@@ -252,7 +255,7 @@ onUnmounted(() => {
 <template>
   <div class="run-trace-topology" data-run-trace-topology>
     <div ref="containerRef" class="run-trace-topology__canvas"></div>
-    <div class="run-trace-topology__hint">点击任务聚焦 · 点击节点查看右侧详情 · 滚轮缩放 · 拖拽平移</div>
+    <div class="run-trace-topology__hint">{{ t('cockpit.scrollZoom') }}</div>
   </div>
 </template>
 

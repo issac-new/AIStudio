@@ -85,15 +85,15 @@ function onColCtrl(col: ColumnKey) {
       <!-- 中栏 协作图 + 时序流 -->
       <section class="cockpit-col cockpit-col--mid"
         :class="{ 'is-collapsed': store.collapsed.mid, 'is-maximized': store.maximized.mid, 'is-hidden-by-max': !store.maximized.mid && (store.maximized.left || store.maximized.right) }">
-        <CockpitColumnRail label="协作 · 时序" @expand="store.toggleCollapsed('mid')" />
+        <CockpitColumnRail :label="t('cockpit.collaborationSequence')" @expand="store.toggleCollapsed('mid')" />
         <div class="cockpit-col__inner">
           <div class="cockpit-col__ctrls">
             <button type="button" class="cockpit-col__ctrl" :class="{ 'is-on': store.maximized.mid }"
-              :title="store.maximized.mid ? '还原' : '最大化'" @click="onColCtrl('mid')">
+              :title="store.maximized.mid ? t('cockpit.restore') : t('cockpit.maximize')" @click="onColCtrl('mid')">
               <svg v-if="store.maximized.mid" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
               <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
             </button>
-            <button v-if="!store.collapsed.mid" class="cockpit-fold-btn" title="折叠中栏"
+            <button v-if="!store.collapsed.mid" class="cockpit-fold-btn" :title="t('cockpit.collapseSidebar')"
               @click="store.toggleCollapsed('mid')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
             </button>
@@ -102,13 +102,13 @@ function onColCtrl(col: ColumnKey) {
           <!-- 中栏分区折叠分隔条 -->
           <div class="cockpit-mid-divider">
             <button type="button" class="cockpit-mid-divider__btn" :class="{ 'is-on': store.midTopCollapsed }"
-              :title="store.midTopCollapsed ? '展开协作图' : '折叠协作图'"
+              :title="store.midTopCollapsed ? t('cockpit.expandCollabMap') : t('cockpit.collapseCollabMap')"
               @click="store.toggleMidTop()">
               {{ store.midTopCollapsed ? '▽' : '△' }}
             </button>
             <span class="cockpit-mid-divider__line" />
             <button type="button" class="cockpit-mid-divider__btn" :class="{ 'is-on': store.midBottomCollapsed }"
-              :title="store.midBottomCollapsed ? '展开时序流' : '折叠时序流'"
+              :title="store.midBottomCollapsed ? t('cockpit.expandTimeline') : t('cockpit.collapseTimeline')"
               @click="store.toggleMidBottom()">
               {{ store.midBottomCollapsed ? '△' : '▽' }}
             </button>
@@ -123,7 +123,7 @@ function onColCtrl(col: ColumnKey) {
       <!-- 右栏 A2UI 工作区（按模式切换）-->
       <section class="cockpit-col cockpit-col--right"
         :class="{ 'is-collapsed': store.collapsed.right, 'is-maximized': store.maximized.right, 'is-hidden-by-max': !store.maximized.right && (store.maximized.left || store.maximized.mid) }">
-        <CockpitColumnRail label="工作区" @expand="store.toggleCollapsed('right')" />
+        <CockpitColumnRail :label="t('cockpit.modeWorkspace')" @expand="store.toggleCollapsed('right')" />
         <div class="cockpit-col__inner">
           <CockpitModeBar @fold="store.toggleCollapsed('right')" />
           <CockpitCollabBar v-if="store.workspaceMode === 'chat' && !isChatSubRoute" />
@@ -167,38 +167,38 @@ function onColCtrl(col: ColumnKey) {
     <div v-if="store.kanbanDetailOpen" class="cockpit-overlay" @click="store.closeKanbanDetail()" />
     <div v-if="store.kanbanDetailOpen && store.kanbanDetailTask" class="cockpit-kanban-detail cockpit-modal-anchor">
       <div class="cockpit-title-detail__head">
-        <span>任务详情</span>
+        <span>{{ t('cockpit.taskDetail') }}</span>
         <button type="button" class="cockpit-title-detail__close" @click="store.closeKanbanDetail()">×</button>
       </div>
       <div class="cockpit-kanban-detail__body">
         <!-- 关键信息：标题、描述、摘要、Workspace -->
-        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">标题</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--title">{{ store.kanbanDetailTask.task.title }}</span></div>
-        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.body"><span class="cockpit-kanban-detail__label">描述</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.task.body }}</span></div>
-        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.latest_summary"><span class="cockpit-kanban-detail__label">摘要</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.latest_summary }}</span></div>
+        <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.title') }}</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--title">{{ store.kanbanDetailTask.task.title }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.body"><span class="cockpit-kanban-detail__label">{{ t('cockpit.description') }}</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.task.body }}</span></div>
+        <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.latest_summary"><span class="cockpit-kanban-detail__label">{{ t('cockpit.summary') }}</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.latest_summary }}</span></div>
         <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">Workspace</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.workspace_kind }}: {{ store.kanbanDetailTask.task.workspace_path ?? '—' }}</span></div>
 
         <!-- 折叠的更多信息 -->
         <button type="button" class="cockpit-kanban-detail__toggle" @click="store.detailExpanded = !store.detailExpanded">
-          {{ store.detailExpanded ? '▾ 收起更多信息' : '▸ 更多信息' }}
+          {{ store.detailExpanded ? '▾ ' + t('cockpit.moreInfo') : '▸ ' + t('cockpit.moreInfo') }}
         </button>
         <div v-if="store.detailExpanded" class="cockpit-kanban-detail__more">
           <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">ID</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.id }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">状态</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.status }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">优先级</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.priority }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">负责人</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.assignee ?? '(未分配)' }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">创建者</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.created_by ?? '—' }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">租户</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.tenant ?? '(未指定)' }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">项目ID</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.project_id ?? '—' }}</span></div>
-          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.skills?.length"><span class="cockpit-kanban-detail__label">技能</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.skills.join(', ') }}</span></div>
-          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.result"><span class="cockpit-kanban-detail__label">结果</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.task.result }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">创建时间</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.created_at) }}</span></div>
-          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.started_at"><span class="cockpit-kanban-detail__label">开始时间</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.started_at) }}</span></div>
-          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.completed_at"><span class="cockpit-kanban-detail__label">完成时间</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.completed_at) }}</span></div>
-          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.parents?.length"><span class="cockpit-kanban-detail__label">父任务</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.parents.join(', ') }}</span></div>
-          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.children?.length"><span class="cockpit-kanban-detail__label">子任务</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.children.join(', ') }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">事件数</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.events?.length ?? 0 }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">执行次数</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.runs?.length ?? 0 }}</span></div>
-          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">评论数</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.comments?.length ?? 0 }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.taskStatus') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.status }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.priority') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.priority }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.assignee') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.assignee ?? '(' + t('cockpit.unassignedTask') + ')' }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.createdBy') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.created_by ?? '—' }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.tenant') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.tenant ?? '(' + t('cockpit.unspecified') + ')' }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.projectId') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.project_id ?? '—' }}</span></div>
+          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.skills?.length"><span class="cockpit-kanban-detail__label">{{ t('cockpit.skill') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.task.skills.join(', ') }}</span></div>
+          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.result"><span class="cockpit-kanban-detail__label">{{ t('cockpit.result') }}</span><span class="cockpit-kanban-detail__value cockpit-kanban-detail__value--pre">{{ store.kanbanDetailTask.task.result }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.createdAt') }}</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.created_at) }}</span></div>
+          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.started_at"><span class="cockpit-kanban-detail__label">{{ t('cockpit.startTime') }}</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.started_at) }}</span></div>
+          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.task.completed_at"><span class="cockpit-kanban-detail__label">{{ t('cockpit.endTime') }}</span><span class="cockpit-kanban-detail__value">{{ formatTimestamp(store.kanbanDetailTask.task.completed_at) }}</span></div>
+          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.parents?.length"><span class="cockpit-kanban-detail__label">{{ t('cockpit.parentTask') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.parents.join(', ') }}</span></div>
+          <div class="cockpit-kanban-detail__row" v-if="store.kanbanDetailTask.children?.length"><span class="cockpit-kanban-detail__label">{{ t('cockpit.childTask') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.children.join(', ') }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.eventCount') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.events?.length ?? 0 }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.executionCount') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.runs?.length ?? 0 }}</span></div>
+          <div class="cockpit-kanban-detail__row"><span class="cockpit-kanban-detail__label">{{ t('cockpit.comments') }}</span><span class="cockpit-kanban-detail__value">{{ store.kanbanDetailTask.comments?.length ?? 0 }}</span></div>
         </div>
       </div>
     </div>
