@@ -280,7 +280,7 @@ function statusBucketLabel(s: string): string {
           <span
             class="cockpit-kanban__id"
             :data-task-id-copy="t.id"
-            :title="`点击复制任务ID: ${t.id}`"
+            :title="t('cockpit.copyTaskId')"
             @click.stop="copyTaskId(t.id)"
           >#{{ t.id }}</span>
           <span v-if="t.tenant" class="cockpit-kanban__tenant" :title="t.tenant">{{ tenantDisplayLabel(parseTenant(t.tenant)) }}</span>
