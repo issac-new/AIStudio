@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/db/hermes/session-store.ts b/packages/server/src/db/hermes/session-store.ts
-index f3315e6c..e0f82ee5 100644
+index 85419334..5b467a30 100644
 --- a/packages/server/src/db/hermes/session-store.ts
 +++ b/packages/server/src/db/hermes/session-store.ts
-@@ -439,6 +439,20 @@ export function listSessions(profile?: string, source?: string, limit = 2000): H
+@@ -454,6 +454,20 @@ export function listSessions(profile?: string, source?: string, limit = 2000): H
    return rows.map(mapSessionRow)
  }
  
@@ -24,38 +24,15 @@ index f3315e6c..e0f82ee5 100644
    if (!isSqliteAvailable()) return []
    const profileFilter = profile?.trim()
 diff --git a/packages/server/src/services/hermes/run-chat/index.ts b/packages/server/src/services/hermes/run-chat/index.ts
-index e5b98481..d856ee97 100644
+index c1a86fa2..24a132af 100644
 --- a/packages/server/src/services/hermes/run-chat/index.ts
 +++ b/packages/server/src/services/hermes/run-chat/index.ts
 @@ -10,7 +10,7 @@
  import type { Server, Socket } from 'socket.io'
  import { logger } from '../../logger'
  import { getSystemPrompt } from '../../../lib/llm-prompt'
--import { clearSessionMessages, getSession, getSessionDetail  } from '../../../db/hermes/session-store'
-+import { clearSessionMessages, getSession, getSessionDetail, listSessionIdsByUserId } from '../../../db/hermes/session-store'
+-import { clearSessionMessages, getSession, getSessionDetail, listSessions } from '../../../db/hermes/session-store'
++import { clearSessionMessages, getSession, getSessionDetail, listSessions, listSessionIdsByUserId } from '../../../db/hermes/session-store'
  import { getActiveProfileName, getProfileDir, listProfileNamesFromDisk } from '../hermes-profile'
- import { AgentBridgeClient } from '../agent-bridge'
- import { getAgentBridgeManager } from '../agent-bridge/manager'
-@@ -120,6 +120,22 @@ export class ChatRunSocket {
-   private onConnection(socket: Socket) {
-     const socketUser = socket.data.user as AuthenticatedUser | undefined
-     const socketProfile = (socket.handshake.query?.profile as string) || 'default'
-+
-+    // HERMES_CUSTOM[ChatRunAutoJoin] BEGIN: auto-join all of the user's session rooms on connect
-+    // so the socket receives run.completed / run.peer_user_message events for sessions the
-+    // user is not currently viewing. The client accumulates real unread messages from these.
-+    // Joining a room only subscribes to broadcasts; it does NOT resume/load messages.
-+    if (socketUser) {
-+      try {
-+        for (const sid of listSessionIdsByUserId(String(socketUser.id))) {
-+          socket.join(`session:${sid}`)
-+        }
-+      } catch (err) {
-+        logger.info(`[chat-run-socket] auto-join sessions failed for user ${socketUser.id}: ${(err as Error).message}`)
-+      }
-+    }
-+    // HERMES_CUSTOM[ChatRunAutoJoin] END
-+
-     const currentProfile = () => socketProfile || getActiveProfileName() || 'default'
-     const profileExists = (profile: string) => {
-       if (!profile || profile === 'default') return true
+ import {
+   AgentBridgeClient,

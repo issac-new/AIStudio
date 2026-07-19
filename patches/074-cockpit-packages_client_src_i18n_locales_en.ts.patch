@@ -1,9 +1,10 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 288bc9a..2a8dea7 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -2378,4 +2378,16 @@ export default {
-     new_0_6_24_5: 'Plugins can be enabled or disabled from Studio when they are manageable user plugins, and the Plugins page now reflects base and profile plugin state more accurately',
-     new_0_6_24_6: 'Models now support default provider and default model actions; bridge terminal error detection is less noisy, Hermes Agent runtime packaging moves to 0.18.0, and the website version manifest was refreshed',
+@@ -2706,4 +2706,16 @@ export default {
+     new_0_6_27_6: 'Default workspace favorites now sit inside the folder picker selected-path row, with completed locale coverage for the workspace picker labels',
+     new_0_6_27_7: 'Workspace diff cards now skip zero-byte changes with no patch or line delta, avoiding meaningless +0/-0 changed-file cards',
    },
 +
 +  matrix: {

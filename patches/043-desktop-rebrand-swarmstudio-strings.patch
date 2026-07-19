@@ -184,10 +184,10 @@ index 052302df..5bc95406 100644
    }
  }
 diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
-index caa8b66f..4348f665 100644
+index b4b145c..8a68caf 100644
 --- a/packages/desktop/src/main/desktop-i18n.ts
 +++ b/packages/desktop/src/main/desktop-i18n.ts
-@@ -58,35 +58,35 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
+@@ -60,36 +60,36 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
  
  const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
    en: {
@@ -211,6 +211,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': 'Update available',
 -    'update.availableMessage': 'Hermes Studio {version} is available.',
 +    'update.availableMessage': 'SwarmStudio {version} is available.',
+     'update.availableDetail': 'Choose whether to download this update.',
      'update.downloading': 'The update is downloading in the background.',
      'update.readyTitle': 'Update ready',
 -    'update.readyMessage': 'Hermes Studio {version} is ready to install.',
@@ -233,7 +234,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': 'Download from GitHub',
      'desktop.downloadGithubDetail': 'Use the release asset directly from GitHub.',
      'desktop.failedPrepareRuntime': 'Failed to prepare Hermes runtime',
-@@ -102,7 +102,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -106,7 +106,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': 'Cancel',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -242,7 +243,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -110,35 +110,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -114,36 +114,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    zh: {
@@ -266,6 +267,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': '发现新版本',
 -    'update.availableMessage': 'Hermes Studio {version} 可用。',
 +    'update.availableMessage': 'SwarmStudio {version} 可用。',
+     'update.availableDetail': '请选择是否下载此更新。',
      'update.downloading': '更新正在后台下载。',
      'update.readyTitle': '更新已就绪',
 -    'update.readyMessage': 'Hermes Studio {version} 已准备好安装。',
@@ -288,7 +290,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': '从 GitHub 下载',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 资源。',
      'desktop.failedPrepareRuntime': '准备 Hermes 运行时失败',
-@@ -154,7 +154,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -160,7 +160,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': '取消',
      'loginReset.confirmTitle': '重置登录',
      'loginReset.confirmMessage': '确认将登录重置为 admin / 123456？',
@@ -297,7 +299,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': '正在重置登录...',
      'loginReset.successTitle': '登录已重置',
      'loginReset.successMessage': '登录已重置为 {username} / {password}。',
-@@ -162,35 +162,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -168,36 +168,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '无法重置桌面端登录。',
    },
    'zh-TW': {
@@ -321,6 +323,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': '發現新版本',
 -    'update.availableMessage': 'Hermes Studio {version} 可用。',
 +    'update.availableMessage': 'SwarmStudio {version} 可用。',
+     'update.availableDetail': '請選擇是否下載此更新。',
      'update.downloading': '更新正在背景下載。',
      'update.readyTitle': '更新已就緒',
 -    'update.readyMessage': 'Hermes Studio {version} 已準備好安裝。',
@@ -343,7 +346,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': '從 GitHub 下載',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 資源。',
      'desktop.failedPrepareRuntime': '準備 Hermes 運行時失敗',
-@@ -206,7 +206,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -214,7 +214,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': '取消',
      'loginReset.confirmTitle': '重置登入',
      'loginReset.confirmMessage': '確認將登入重置為 admin / 123456？',
@@ -352,7 +355,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': '正在重置登入...',
      'loginReset.successTitle': '登入已重置',
      'loginReset.successMessage': '登入已重置為 {username} / {password}。',
-@@ -214,35 +214,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -222,36 +222,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '無法重置桌面端登入。',
    },
    ja: {
@@ -376,6 +379,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': 'アップデートがあります',
 -    'update.availableMessage': 'Hermes Studio {version} が利用できます。',
 +    'update.availableMessage': 'SwarmStudio {version} が利用できます。',
+     'update.availableDetail': 'このアップデートをダウンロードするか選択してください。',
      'update.downloading': 'アップデートをバックグラウンドでダウンロードしています。',
      'update.readyTitle': 'アップデートの準備ができました',
 -    'update.readyMessage': 'Hermes Studio {version} をインストールできます。',
@@ -398,7 +402,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': 'GitHub からダウンロード',
      'desktop.downloadGithubDetail': 'GitHub のリリースアセットを直接使用します。',
      'desktop.failedPrepareRuntime': 'Hermes ランタイムの準備に失敗しました',
-@@ -258,7 +258,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -268,7 +268,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': 'Cancel',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -407,7 +411,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -266,35 +266,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -276,36 +276,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    ko: {
@@ -431,6 +435,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': '업데이트 사용 가능',
 -    'update.availableMessage': 'Hermes Studio {version}을 사용할 수 있습니다.',
 +    'update.availableMessage': 'SwarmStudio {version}을 사용할 수 있습니다.',
+     'update.availableDetail': '이 업데이트를 다운로드할지 선택하세요.',
      'update.downloading': '업데이트를 백그라운드에서 다운로드하고 있습니다.',
      'update.readyTitle': '업데이트 준비 완료',
 -    'update.readyMessage': 'Hermes Studio {version}을 설치할 준비가 되었습니다.',
@@ -453,7 +458,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': 'GitHub에서 다운로드',
      'desktop.downloadGithubDetail': 'GitHub 릴리스 자산을 직접 사용합니다.',
      'desktop.failedPrepareRuntime': 'Hermes 런타임 준비 실패',
-@@ -310,7 +310,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -322,7 +322,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': 'Cancel',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -462,7 +467,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -318,35 +318,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -330,36 +330,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    fr: {
@@ -486,6 +491,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': 'Mise a jour disponible',
 -    'update.availableMessage': 'Hermes Studio {version} est disponible.',
 +    'update.availableMessage': 'SwarmStudio {version} est disponible.',
+     'update.availableDetail': 'Choisissez si vous souhaitez telecharger cette mise a jour.',
      'update.downloading': 'La mise a jour se telecharge en arriere-plan.',
      'update.readyTitle': 'Mise a jour prete',
 -    'update.readyMessage': 'Hermes Studio {version} est pret a etre installe.',
@@ -508,7 +514,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': 'Telecharger depuis GitHub',
      'desktop.downloadGithubDetail': 'Utilise directement l asset de release GitHub.',
      'desktop.failedPrepareRuntime': 'Echec de la preparation du runtime Hermes',
-@@ -362,7 +362,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -376,7 +376,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': 'Cancel',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -517,7 +523,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -370,35 +370,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -384,36 +384,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    es: {
@@ -541,6 +547,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': 'Actualizacion disponible',
 -    'update.availableMessage': 'Hermes Studio {version} esta disponible.',
 +    'update.availableMessage': 'SwarmStudio {version} esta disponible.',
+     'update.availableDetail': 'Elige si deseas descargar esta actualizacion.',
      'update.downloading': 'La actualizacion se esta descargando en segundo plano.',
      'update.readyTitle': 'Actualizacion lista',
 -    'update.readyMessage': 'Hermes Studio {version} esta listo para instalarse.',
@@ -563,7 +570,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': 'Descargar desde GitHub',
      'desktop.downloadGithubDetail': 'Usa directamente el recurso de release de GitHub.',
      'desktop.failedPrepareRuntime': 'No se pudo preparar el runtime de Hermes',
-@@ -414,7 +414,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -430,7 +430,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': 'Cancel',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -572,7 +579,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -422,35 +422,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -438,36 +438,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    de: {
@@ -596,6 +603,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': 'Update verfugbar',
 -    'update.availableMessage': 'Hermes Studio {version} ist verfugbar.',
 +    'update.availableMessage': 'SwarmStudio {version} ist verfugbar.',
+     'update.availableDetail': 'Wahlen Sie, ob Sie dieses Update herunterladen mochten.',
      'update.downloading': 'Das Update wird im Hintergrund heruntergeladen.',
      'update.readyTitle': 'Update bereit',
 -    'update.readyMessage': 'Hermes Studio {version} ist zur Installation bereit.',
@@ -618,7 +626,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': 'Von GitHub herunterladen',
      'desktop.downloadGithubDetail': 'Verwendet das Release-Asset direkt von GitHub.',
      'desktop.failedPrepareRuntime': 'Hermes Runtime konnte nicht vorbereitet werden',
-@@ -466,7 +466,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -484,7 +484,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': 'Cancel',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -627,7 +635,7 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -474,35 +474,35 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -492,36 +492,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    pt: {
@@ -651,6 +659,7 @@ index caa8b66f..4348f665 100644
      'update.availableTitle': 'Atualizacao disponivel',
 -    'update.availableMessage': 'Hermes Studio {version} esta disponivel.',
 +    'update.availableMessage': 'SwarmStudio {version} esta disponivel.',
+     'update.availableDetail': 'Escolha se deseja baixar esta atualizacao.',
      'update.downloading': 'A atualizacao esta sendo baixada em segundo plano.',
      'update.readyTitle': 'Atualizacao pronta',
 -    'update.readyMessage': 'Hermes Studio {version} esta pronto para instalar.',
@@ -673,7 +682,7 @@ index caa8b66f..4348f665 100644
      'desktop.downloadGithubTitle': 'Baixar pelo GitHub',
      'desktop.downloadGithubDetail': 'Usa diretamente o asset de release do GitHub.',
      'desktop.failedPrepareRuntime': 'Falha ao preparar o runtime Hermes',
-@@ -518,7 +518,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -538,7 +538,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'common.cancel': 'Cancel',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
@@ -682,21 +691,20 @@ index caa8b66f..4348f665 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 09490ae7..edde5f6a 100644
+index 548099e..54e1775 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -185,7 +185,7 @@ function createTray() {
-     icon.setTemplateImage(true)
-   }
+@@ -419,7 +419,7 @@ function createTray() {
+         quality: 'best',
+       })
    tray = new Tray(icon)
 -  tray.setToolTip('Hermes Studio')
 +  tray.setToolTip('SwarmStudio')
    tray.on('click', () => {
      showMainWindow()
      updateTrayMenu()
-@@ -199,7 +199,7 @@ function createWindow() {
+@@ -433,7 +433,7 @@ async function createWindow(): Promise<void> {
      height: 820,
      minWidth: 960,
      minHeight: 600,
@@ -705,7 +713,7 @@ index 09490ae7..edde5f6a 100644
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -259,7 +259,7 @@ function createWindow() {
+@@ -531,7 +531,7 @@ function installMicrophonePermissionHandler() {
  
  function splashHtml(label = t('desktop.startingLocalServices')): string {
    const startingLabel = escapeHtml(label)
@@ -714,16 +722,16 @@ index 09490ae7..edde5f6a 100644
  <style>
    html,body{margin:0;height:100%;background:#1a1a1a;color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
    .wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px}
-@@ -273,7 +273,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
-   .bar{width:0;height:100%;background:#d8d8d8;transition:width .18s ease}
+@@ -547,7 +547,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
+   @keyframes progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
    h1{font-weight:500;margin:0;font-size:18px}
  </style></head><body><div class="wrap">
 -<h1>Hermes Studio</h1>
 +<h1>SwarmStudio</h1>
  <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
  <div id="label" class="label">${startingLabel}</div>
- <div class="progress"><div id="bar" class="bar"></div></div>
-@@ -336,7 +336,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+ <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
+@@ -610,7 +610,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
          <pre>${safeError}</pre>
         </section>`
      : ''
@@ -732,7 +740,7 @@ index 09490ae7..edde5f6a 100644
  <style>
    :root{color-scheme:dark}
    *{box-sizing:border-box}
-@@ -363,7 +363,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -637,7 +637,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
      button{min-height:78px}
    }
  </style></head><body><main class="wrap">
@@ -741,7 +749,7 @@ index 09490ae7..edde5f6a 100644
  <p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
  ${errorBlock}
  <div class="actions">
-@@ -516,7 +516,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+@@ -829,7 +829,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
  
    const title = typeof payload?.title === 'string' && payload.title.trim()
      ? payload.title.trim()

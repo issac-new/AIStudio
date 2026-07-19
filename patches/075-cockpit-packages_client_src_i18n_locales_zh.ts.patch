@@ -1,4 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 6e6ab4f..2f30ef9 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -188,6 +188,9 @@ export default {
@@ -11,7 +12,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      workflow: '工作流',
      models: '模型',
      profiles: '用户',
-@@ -777,6 +780,7 @@ export default {
+@@ -1001,6 +1004,7 @@ export default {
    // 看板
    kanban: {
      title: '看板',
@@ -19,7 +20,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      createTask: '新建任务',
      noTasks: '暂无任务',
      allStatuses: '全部状态',
-@@ -1968,6 +1972,7 @@ export default {
+@@ -2232,6 +2236,7 @@ export default {
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
        mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
      },
@@ -27,11 +28,10 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
    githubPreview: {
      title: "版本预览",
-@@ -2380,4 +2385,17 @@ export default {
-     new_0_6_24_5: 'Plugins 页面支持启用或禁用可管理的用户插件，并能更准确地合并显示 Hermes 基础配置和当前 profile 的插件状态',
-     new_0_6_24_6: 'Models 页面新增设置默认 provider 和默认模型操作；bridge 终端错误识别减少误报，Hermes Agent runtime 打包升级到 0.18.0，官网版本清单也已刷新',
+@@ -2708,4 +2713,16 @@ export default {
+     new_0_6_27_6: '默认工作区收藏星标移动到文件夹选择器的已选路径行右侧，并补齐各语言文案，工作区选择界面更自然',
+     new_0_6_27_7: '工作区 diff 会跳过前后都是 0 字节且没有 patch 或行变化的空文件变更，避免出现 +0/-0 的无意义 diff 卡片',
    },
-+
 +
 +  matrix: {
 +    options: '选项', threadStartDisabled: '无法基于已有关系（回复/编辑）的消息发起话题', undecryptable: '无法解密此消息', historyLoadError: '服务器错误，无法加载更早的历史',
