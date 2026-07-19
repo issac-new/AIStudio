@@ -1,17 +1,19 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index eb610757..9caf4151 100644
+index 8f8cee27..e562981b 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -1,6 +1,6 @@
- import { app, BrowserWindow, Menu, Tray, shell, ipcMain, nativeImage, Notification, screen, dialog, session, systemPreferences, type MessageBoxOptions } from 'electron'
+@@ -14,8 +14,8 @@ import {
+   type MessageBoxOptions,
+   type OpenDialogOptions,
+ } from 'electron'
 -import { existsSync } from 'node:fs'
 -import { join } from 'node:path'
 +import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from 'node:fs'
 +import { dirname, join } from 'node:path'
  import { startWebUiServer, stopWebUiServer, getToken } from './webui-server'
- import { bundledNode, desktopIcon, desktopRuntimeVersion, desktopTrayTemplateIcon, desktopWindowsTrayIcon, hermesBinExists, hermesBin, webuiDir } from './paths'
+ import { bundledNode, desktopIcon, desktopMacTrayIcon, desktopRuntimeVersion, desktopWindowsTrayIcon, hermesBinExists, hermesBin, runtimeStorageRoot, webuiDir } from './paths'
  import { checkForDesktopUpdates, initAutoUpdater } from './updater'
-@@ -43,6 +43,75 @@ if (process.platform === 'win32') {
+@@ -60,6 +60,75 @@ if (process.platform === 'win32') {
    app.setAppUserModelId(APP_USER_MODEL_ID)
  }
  

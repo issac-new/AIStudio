@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/routes/hermes/download.ts b/packages/server/src/routes/hermes/download.ts
-index d67ca71a..9bbcd976 100644
+index 87e0786d..9ec9a794 100644
 --- a/packages/server/src/routes/hermes/download.ts
 +++ b/packages/server/src/routes/hermes/download.ts
 @@ -1,5 +1,5 @@
@@ -64,7 +64,7 @@ index d67ca71a..9bbcd976 100644
      // Choose provider: always use local for upload directory files
      let data: Buffer
 diff --git a/packages/server/src/routes/hermes/files.ts b/packages/server/src/routes/hermes/files.ts
-index f01227b3..8ca9a225 100644
+index ec1c3a5b..01617eec 100644
 --- a/packages/server/src/routes/hermes/files.ts
 +++ b/packages/server/src/routes/hermes/files.ts
 @@ -1,10 +1,16 @@
@@ -83,8 +83,8 @@ index f01227b3..8ca9a225 100644
 +// HERMES_CUSTOM[SecFileRootSandbox] END
  import { requireSuperAdmin } from '../../middleware/user-auth'
  import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../../lib/multipart'
- 
-@@ -12,7 +18,26 @@ function requestedProfile(ctx: any): string | undefined {
+ import * as ctrl from '../../controllers/hermes/file-preview'
+@@ -13,7 +19,26 @@ function requestedProfile(ctx: any): string | undefined {
    return ctx.state?.profile?.name
  }
  
@@ -111,7 +111,7 @@ index f01227b3..8ca9a225 100644
    return resolveHermesPath(relativePath, requestedProfile(ctx))
  }
  
-@@ -20,7 +45,21 @@ async function createRequestFileProvider(ctx: any) {
+@@ -21,7 +46,21 @@ async function createRequestFileProvider(ctx: any) {
    return createFileProvider(requestedProfile(ctx))
  }
  
@@ -133,7 +133,7 @@ index f01227b3..8ca9a225 100644
    return { ...entry, absolutePath: resolveRequestPath(ctx, entry.path) }
  }
  
-@@ -49,6 +88,14 @@ function handleError(ctx: any, err: any) {
+@@ -52,6 +91,14 @@ function handleError(ctx: any, err: any) {
  // GET /api/hermes/files/list?path=
  fileRoutes.get('/api/hermes/files/list', async (ctx) => {
    const relativePath = (ctx.query.path as string) || ''
@@ -148,7 +148,7 @@ index f01227b3..8ca9a225 100644
    try {
      const absPath = resolveRequestPath(ctx, relativePath)
      const provider = await createRequestFileProvider(ctx)
-@@ -57,7 +104,8 @@ fileRoutes.get('/api/hermes/files/list', async (ctx) => {
+@@ -60,7 +107,8 @@ fileRoutes.get('/api/hermes/files/list', async (ctx) => {
        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
        return a.name.localeCompare(b.name)
      })
@@ -158,7 +158,7 @@ index f01227b3..8ca9a225 100644
    } catch (err: any) {
      handleError(ctx, err)
    }
-@@ -71,6 +119,13 @@ fileRoutes.get('/api/hermes/files/stat', async (ctx) => {
+@@ -74,6 +122,13 @@ fileRoutes.get('/api/hermes/files/stat', async (ctx) => {
      ctx.body = { error: 'Missing path parameter', code: 'missing_path' }
      return
    }
