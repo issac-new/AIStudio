@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index 772df099..42752c7c 100644
+index 9b3062b2..60eb8b1d 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 @@ -11,7 +11,7 @@ import GroupChatInput from './GroupChatInput.vue'
@@ -11,15 +11,15 @@ index 772df099..42752c7c 100644
  import { copyToClipboard } from '@/utils/clipboard'
  import type { Attachment } from '@/stores/hermes/chat'
  import type { RoomAgent, RoomInfo } from '@/api/hermes/group-chat'
-@@ -21,6 +21,7 @@ const router = useRouter()
+@@ -27,6 +27,7 @@ const router = useRouter()
  const message = useMessage()
  const store = useGroupChatStore()
  const profilesStore = useProfilesStore()
 +const authStore = useAuthStore()
+ const filesStore = useFilesStore()
+ const toolPanelStore = useToolPanelStore()
  
- const showSidebar = ref(window.innerWidth > 768)
- const showCreateModal = ref(false)
-@@ -101,10 +102,6 @@ function openPageSidebar() {
+@@ -216,10 +217,6 @@ function openPageSidebar() {
      showSidebar.value = true
  }
  
@@ -30,7 +30,7 @@ index 772df099..42752c7c 100644
  function hasDraggedFiles(event: DragEvent) {
      return Array.from(event.dataTransfer?.types || []).includes('Files')
  }
-@@ -501,14 +498,14 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
+@@ -642,14 +639,14 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
                  </div>
              </div>
              <div class="page-sidebar-bottom">

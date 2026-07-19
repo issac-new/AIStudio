@@ -1,22 +1,20 @@
 diff --git a/packages/server/src/controllers/hermes/sessions.ts b/packages/server/src/controllers/hermes/sessions.ts
-index 7349ec01..7105e13b 100644
+index c73ad1b4..d025e9f5 100644
 --- a/packages/server/src/controllers/hermes/sessions.ts
 +++ b/packages/server/src/controllers/hermes/sessions.ts
-@@ -409,10 +409,11 @@ export async function listHermesSessions(ctx: any) {
-   const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
-   const profile = requestedProfile(ctx)
-   const effectiveLimit = limit && limit > 0 ? limit : 2000
+@@ -474,8 +474,9 @@ export async function listHermesSessions(ctx: any) {
+   const normalizedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
+   const paginated = Boolean(source) || normalizedOffset > 0
+   const candidateLimit = paginated ? normalizedOffset + effectiveLimit + 1 : effectiveLimit
 +  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
+   const localSessions = localListSessions(profile, source, candidateLimit)
+-  const allSessions = await listSessionSummaries(source, candidateLimit, profile)
++  const allSessions = await listSessionSummaries(source, candidateLimit, profile, includeChildren)
+   const merged = mergeHermesHistorySessions(ctx, profile, allSessions, localSessions, source)
  
-   const localSessions = localListSessions(profile, undefined, effectiveLimit)
-   const importedIds = new Set(localSessions.map(session => session.id))
--  const allSessions = (await listSessionSummaries(source, effectiveLimit, profile))
-+  const allSessions = (await listSessionSummaries(source, effectiveLimit, profile, includeChildren))
-     .map(session => ({
-       ...(profile ? { ...session, profile } : session),
-       webui_imported: importedIds.has(session.id),
+   if (paginated) {
 diff --git a/packages/server/src/db/hermes/sessions-db.ts b/packages/server/src/db/hermes/sessions-db.ts
-index 67470d4e..820f1f14 100644
+index 028876f9..d2ea02ad 100644
 --- a/packages/server/src/db/hermes/sessions-db.ts
 +++ b/packages/server/src/db/hermes/sessions-db.ts
 @@ -34,6 +34,7 @@ export interface HermesSessionRow {
@@ -27,7 +25,7 @@ index 67470d4e..820f1f14 100644
  }
  
  export interface HermesSessionSearchRow extends HermesSessionRow {
-@@ -390,9 +391,11 @@ function latestSessionInChain(chain: HermesSessionInternalRow[]): HermesSessionI
+@@ -416,9 +417,11 @@ function compareSessionSummariesNewestFirst(a: HermesSessionRow, b: HermesSessio
  function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSessionInternalRow[]): HermesSessionRow {
    const latest = latestSessionInChain(chain)
    const firstPreview = chain.map(session => session.preview).find(Boolean) || root.preview
@@ -39,7 +37,7 @@ index 67470d4e..820f1f14 100644
      id: latest.id,
      model: latest.model || root.model,
      title: latest.title || root.title || titleFromPreview(firstPreview),
-@@ -411,7 +414,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
+@@ -437,7 +440,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
      cost_status: latest.cost_status,
      preview: latest.preview || root.preview || firstPreview || '',
      last_active: latest.last_active || root.last_active,
@@ -48,7 +46,7 @@ index 67470d4e..820f1f14 100644
  }
  
  // --- In-memory session index for chain traversal ---
-@@ -1274,7 +1277,7 @@ export async function getUsageStatsFromDb(
+@@ -1493,7 +1496,7 @@ export async function getUsageStatsFromDb(
    }
  }
  
@@ -57,7 +55,7 @@ index 67470d4e..820f1f14 100644
    if (!SQLITE_AVAILABLE) {
      throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
    }
-@@ -1284,7 +1287,10 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
+@@ -1503,7 +1506,10 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
    const db = new DatabaseSync(dbPath, { open: true, readOnly: true })
  
    try {
