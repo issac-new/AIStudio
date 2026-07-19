@@ -1,17 +1,58 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 34876add..f2d9ee7f 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
-@@ -14,7 +14,11 @@ publish:
+@@ -14,7 +14,7 @@ publish:
  buildDependenciesFromSource: false
  nodeGypRebuild: false
  npmRebuild: false
 -afterPack: "./scripts/verify-packaged-webui.mjs"
-+afterPack:
-+  - "./scripts/verify-packaged-webui.mjs"
-+  # 按构建目标裁剪 node-pty prebuilds,只保留目标平台原生二进制。
-+  # 详见 scripts/after-pack-prune-node-pty.cjs(041 patch 不再静态排除 win32-*)。
-+  - "./scripts/after-pack-prune-node-pty.cjs"
- 
++afterPack: "./scripts/after-pack-combined.cjs"
+
  files:
    - "dist/**/*"
+diff --git a/packages/desktop/scripts/after-pack-combined.cjs b/packages/desktop/scripts/after-pack-combined.cjs
+new file mode 100644
+--- /dev/null
++++ b/packages/desktop/scripts/after-pack-combined.cjs
+@@ -0,0 +1,41 @@
++// Combined afterPack hook: runs verify-packaged-webui + node-pty prebuild pruning.
++// electron-builder 25.x only supports a single afterPack string, so we wrap both
++// hooks in one CommonJS module.
++const { existsSync, readdirSync, rmSync } = require('node:fs')
++const { join } = require('node:path')
++
++async function verifyPackagedWebUi(context) {
++  const resourcesDir = context.electronPlatformName === 'darwin'
++    ? join(context.appOutDir, context.packager.appInfo.productFilename + '.app', 'Contents', 'Resources')
++    : join(context.appOutDir, 'resources')
++  const webUiRoot = join(resourcesDir, 'webui')
++  const required = [
++    join(webUiRoot, 'package.json'),
++    join(webUiRoot, 'bin', 'hermes-web-ui.mjs'),
++    join(webUiRoot, 'dist', 'server', 'index.js'),
++  ]
++  for (const f of required) {
++    if (!existsSync(f)) throw new Error('[after-pack] Missing required file: ' + f)
++  }
++}
++
++async function pruneNodePtyPrebuilds(context) {
++  const resourcesDir = context.electronPlatformName === 'darwin'
++    ? join(context.appOutDir, context.packager.appInfo.productFilename + '.app', 'Contents', 'Resources')
++    : join(context.appOutDir, 'resources')
++  const prebuildsDir = join(resourcesDir, 'webui', 'node_modules', 'node-pty', 'prebuilds')
++  if (!existsSync(prebuildsDir)) return
++  const target = context.electronPlatformName + '-' + context.arch
++  for (const entry of readdirSync(prebuildsDir, { withFileTypes: true })) {
++    if (!entry.isDirectory()) continue
++    if (entry.name !== target) {
++      rmSync(join(prebuildsDir, entry.name), { recursive: true, force: true })
++      console.log('[after-pack-prune] removed non-target node-pty prebuild: ' + entry.name + ' (keep: ' + target + ')')
++    }
++  }
++}
++
++module.exports = async function (context) {
++  await verifyPackagedWebUi(context)
++  await pruneNodePtyPrebuilds(context)
++}
