@@ -1,22 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 4003583..001a3f7 100644
+index fd487d08..3f45f014 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -624,6 +624,13 @@ export const useChatStore = defineStore('chat', () => {
-   const pendingForkCommands = ref<Set<string>>(new Set())
-   /** Sessions that completed while the user was viewing another session. */
-   const completedUnreadSessions = ref<Set<string>>(new Set())
-+  // HERMES_CUSTOM[ChatUnread] BEGIN: real unread-message tracking (in-memory, resets on refresh)
-+  // Parallel to completedUnreadSessions (a binary "run completed" flag). This tracks actual
-+  // unread messages per session for the cockpit notification panel: count + last message
-+  // preview/role/timestamp. Seeded by socket events for non-active sessions (requires the
-+  // server-side auto-join of all user sessions — patch 088).
-+  const unreadMessages = ref<Map<string, { count: number; lastPreview: string; lastRole: string; lastTs: number }>>(new Map())
-+  // HERMES_CUSTOM[ChatUnread] END
-   const sessionProfileFilter = ref<string | null>(null)
-   /** sessionId → queued message count */
-   const queueLengths = ref<Map<string, number>>(new Map())
-@@ -689,6 +696,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1114,6 +1114,8 @@ export const useChatStore = defineStore('chat', () => {
      runtimeMode.value = mode
      sessions.value = []
      completedUnreadSessions.value = new Set()
@@ -25,7 +11,7 @@ index 4003583..001a3f7 100644
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
      pendingApprovals.value = new Map()
-@@ -763,7 +772,49 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1204,7 +1206,49 @@ export const useChatStore = defineStore('chat', () => {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -75,7 +61,7 @@ index 4003583..001a3f7 100644
  
    function clearActiveSession() {
      const sid = activeSessionId.value
-@@ -999,6 +1050,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1608,6 +1652,8 @@ export const useChatStore = defineStore('chat', () => {
      if (legacyActiveKey) removeItem(legacyActiveKey)
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
@@ -84,7 +70,7 @@ index 4003583..001a3f7 100644
  
      if (!activeSession.value) return
  
-@@ -2413,6 +2466,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3307,6 +3353,8 @@ export const useChatStore = defineStore('chat', () => {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -93,7 +79,7 @@ index 4003583..001a3f7 100644
                }
  
                break
-@@ -2987,6 +3042,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3941,6 +3989,8 @@ export const useChatStore = defineStore('chat', () => {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -102,7 +88,7 @@ index 4003583..001a3f7 100644
            }
  
            break
-@@ -3292,6 +3349,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4275,6 +4325,8 @@ export const useChatStore = defineStore('chat', () => {
  
    function handlePeerUserMessage(evt: RunEvent) {
      const sid = evt.session_id
@@ -111,7 +97,7 @@ index 4003583..001a3f7 100644
      if (!sid || activeSessionId.value !== sid || !activeSession.value) return
  
      const peer = evt.message
-@@ -3546,6 +3605,13 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4539,6 +4591,13 @@ export const useChatStore = defineStore('chat', () => {
      isSessionLive,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,
@@ -123,5 +109,5 @@ index 4003583..001a3f7 100644
 +    getSessionUnreadInfo,
 +    clearSessionUnread,
      sessionProfileFilter,
-     compressionState,
-     abortState,
+     setSessionProfileFilter,
+     validateSessionProfileFilter,

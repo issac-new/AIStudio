@@ -1,10 +1,11 @@
 diff --git a/packages/desktop/src/main/updater.ts b/packages/desktop/src/main/updater.ts
+index 650eacdf..a3fcb6fd 100644
 --- a/packages/desktop/src/main/updater.ts
 +++ b/packages/desktop/src/main/updater.ts
-@@ -175,7 +175,11 @@
+@@ -190,7 +190,11 @@ export function initAutoUpdater(nextOptions: AutoUpdaterOptions = {}) {
    if (!app.isPackaged) return // dev mode: skip
  
-   autoUpdater.autoDownload = true
+   autoUpdater.autoDownload = false
 -  autoUpdater.autoInstallOnAppQuit = true
 +  // overlay[quit-no-auto-install]: do not auto-install on普通 quit. A downloaded
 +  // update would trigger NSIS silent install on every tray Quit, spawning

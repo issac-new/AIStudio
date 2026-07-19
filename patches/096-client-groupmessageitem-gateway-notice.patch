@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
-index 30497293..8359a9bd 100644
+index 37fd00ed..37f1c47a 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
-@@ -13,6 +13,7 @@ import {
+@@ -12,6 +12,7 @@ import {
      renderHighlightedCodeBlock,
  } from '../chat/highlight'
  import { parseThinking, countThinkingChars } from '@/utils/thinking-parser'
@@ -10,7 +10,7 @@ index 30497293..8359a9bd 100644
  import { useGlobalSpeech } from '@/composables/useSpeech'
  import { useVoiceSettings } from '@/composables/useVoiceSettings'
  import { speedToEdgeRate, hzToEdgePitch } from '@/utils/ttsHelpers'
-@@ -51,6 +52,8 @@ const isAgentError = computed(() => {
+@@ -61,6 +62,8 @@ const isAgentError = computed(() => {
      return /^Error:\s*/i.test(props.message.content || '')
  })
  
@@ -19,7 +19,7 @@ index 30497293..8359a9bd 100644
  const isSelf = computed(() => {
      return !!props.currentUserId && props.message.senderId === props.currentUserId
  })
-@@ -541,6 +544,7 @@ onBeforeUnmount(() => {
+@@ -666,6 +669,7 @@ onBeforeUnmount(() => {
                  :class="{
                      'agent-content': isAgent,
                      'agent-error': isAgentError,
@@ -27,7 +27,7 @@ index 30497293..8359a9bd 100644
                      'speech-playing': isPlayingThisMessage && !isPausedThisMessage,
                  }"
              >
-@@ -663,6 +667,19 @@ onBeforeUnmount(() => {
+@@ -817,6 +821,19 @@ onBeforeUnmount(() => {
          }
      }
  
@@ -45,5 +45,5 @@ index 30497293..8359a9bd 100644
 +    }
 +
      &.self .msg-content {
-         background-color: rgba(var(--accent-primary-rgb), 0.1);
+         background-color: rgba(var(--accent-primary-rgb), 0.06);
      }

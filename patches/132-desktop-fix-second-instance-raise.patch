@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 3ce6d2fb..d3df46f0 100644
+index 548099e2..ab9ac217 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -791,7 +800,13 @@ function runDesktopApp() {
+@@ -876,7 +876,13 @@ function runDesktopApp() {
        quitApp()
        return
      }
@@ -16,5 +16,4 @@ index 3ce6d2fb..d3df46f0 100644
 +    // via the tray icon click instead.
    })
  
-   app.whenReady().then(() => {
-
+   app.whenReady().then(async () => {

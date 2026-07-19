@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index d3e9b0cc..eff8278b 100644
+index c88ea81..34876ad 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -10,12 +10,12 @@ index d3e9b0cc..eff8278b 100644
  copyright: Copyright © 2026
  
  directories:
-@@ -41,12 +41,59 @@ extraResources:
-       - "bin/**"
-       - "dist/**"
-       - "node_modules/**"
+@@ -51,10 +51,59 @@ extraResources:
+     to: "webui/node_modules"
+     filter:
+       - "**/*"
 -      # Drop other-platform node-pty prebuilds (saves ~45MB)
--      - "!node_modules/node-pty/prebuilds/!(${platform}-${arch})/**"
+-      - "!node-pty/prebuilds/!(${platform}-${arch})/**"
 +      # 排除 Vite 缓存 (860MB+ 的 deps_temp_* 缓存,绝不能进生产包)
 +      - "!node_modules/.vite/**"
 +      - "!node_modules/.tmp/**"
@@ -23,13 +23,14 @@ index d3e9b0cc..eff8278b 100644
 +      # !(${platform}-${arch}) 宏展开的是宿主机而非构建目标(electron-builder 25.1.8),
 +      # 会误排 win32-* 导致 Windows 包缺失原生二进制、终端打不开。
 +      # 改由 afterPack 钩子(scripts/after-pack-prune-node-pty.cjs)按构建目标裁剪。
-       - "!node_modules/node-pty/build/**"
-+      - "!node_modules/node-pty/third_party/**"
-+      - "!node_modules/node-pty/deps/**"
-+      - "!node_modules/node-pty/src/**"
-       - "!packages/desktop/**"
-       - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
-       - "!node_modules/**/*.md"
+       - "!node-pty/build/**"
+-      - "!**/*.md"
++      - "!node-pty/third_party/**"
++      - "!node-pty/deps/**"
++      - "!node-pty/src/**"
++      - "!packages/desktop/**"
++      - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
++      - "!node_modules/**/*.md"
 +      # 瘦身:排除构建工具/开发依赖(运行时不需要,client 已 bundle,server 只 external 少数包)
 +      - "!node_modules/{typescript,vue-tsc,@tsoa,@rolldown,esbuild,@esbuild,playwright-core,playwright,rollup,vite,@vitejs}/**"
 +      - "!node_modules/{@types,.bin}/**"
@@ -72,8 +73,8 @@ index d3e9b0cc..eff8278b 100644
  
  asarUnpack:
    - "**/*.node"
-@@ -54,22 +101,26 @@ asarUnpack:
- mac:
+@@ -65,25 +114,29 @@ mac:
+   icon: build/icon.icon
    target:
      - target: dmg
 -      arch: [arm64, x64]
@@ -88,12 +89,15 @@ index d3e9b0cc..eff8278b 100644
 +  # notarize 需 Apple Developer 凭据;本地/CI 无凭据构建时关闭以免 build 失败。
 +  # 正式发布构建设回 true 并通过 CSC_LINK/CSC_KEY_PASSWORD/APPLE_ID 等环境变量提供凭据。
 +  notarize: false
+   entitlements: build/entitlements.mac.plist
+   entitlementsInherit: build/entitlements.mac.inherit.plist
    extendInfo:
      NSMicrophoneUsageDescription: "Hermes Studio uses the microphone for voice conversations and speech transcription."
 -  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
 +  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
  
  win:
+   icon: build/icon.ico
    target:
 +    - target: zip
 +      arch: [x64]
@@ -104,7 +108,7 @@ index d3e9b0cc..eff8278b 100644
  
  linux:
    icon: build/icons
-@@ -79,7 +130,7 @@ linux:
+@@ -93,7 +146,7 @@ linux:
      - target: deb
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development
