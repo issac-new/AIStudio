@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index c88ea81..34876ad 100644
+index c88ea818..4a902b2c 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -10,71 +10,12 @@ index c88ea81..34876ad 100644
  copyright: Copyright © 2026
  
  directories:
-@@ -51,10 +51,59 @@ extraResources:
-     to: "webui/node_modules"
-     filter:
-       - "**/*"
--      # Drop other-platform node-pty prebuilds (saves ~45MB)
--      - "!node-pty/prebuilds/!(${platform}-${arch})/**"
-+      # 排除 Vite 缓存 (860MB+ 的 deps_temp_* 缓存,绝不能进生产包)
-+      - "!node_modules/.vite/**"
-+      - "!node_modules/.tmp/**"
-+      # node-pty prebuilds:不在此静态排除任何平台目录——跨平台构建时
-+      # !(${platform}-${arch}) 宏展开的是宿主机而非构建目标(electron-builder 25.1.8),
-+      # 会误排 win32-* 导致 Windows 包缺失原生二进制、终端打不开。
-+      # 改由 afterPack 钩子(scripts/after-pack-prune-node-pty.cjs)按构建目标裁剪。
-       - "!node-pty/build/**"
--      - "!**/*.md"
-+      - "!node-pty/third_party/**"
-+      - "!node-pty/deps/**"
-+      - "!node-pty/src/**"
-+      - "!packages/desktop/**"
-+      - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
-+      - "!node_modules/**/*.md"
-+      # 瘦身:排除构建工具/开发依赖(运行时不需要,client 已 bundle,server 只 external 少数包)
-+      - "!node_modules/{typescript,vue-tsc,@tsoa,@rolldown,esbuild,@esbuild,playwright-core,playwright,rollup,vite,@vitejs}/**"
-+      - "!node_modules/{@types,.bin}/**"
-+      # 瘦身:client 库源码已 bundle 进 dist/client,运行时 node_modules 只需 server external 包
-+      # (node-pty/iconv-lite/keygrip)。排除大型 client 库源码。
-+      - "!node_modules/{monaco-editor,naive-ui,mermaid,date-fns,js-tiktoken,es-toolkit,@vue,cytoscape-fcose,highlight.js}/**"
-+      - "!node_modules/{katex,matrix-widget-api,linkifyjs,markdown-it,markdown-it-katex}/**"
-+      - "!node_modules/{@vueuse,vue,vue-router,pinia,vue-i18n,@intlify}/**"
-+      - "!node_modules/{lightningcss,lightningcss-darwin-arm64,lightningcss-darwin-x64,lightningcss-linux-x64-gnu,lightningcss-win32-x64-msvc}/**"
-+      # 瘦身:测试框架 + 已 bundle 进 client 的库源码
-+      - "!node_modules/{vitest,@vitest,jsdom,sass,sass-embedded,@vscode}/**"
-+      - "!node_modules/{cytoscape,cytoscape-fcose,cytoscape-cose-bilkent,cytoscape-cxttap,cytoscape-klay,cytoscape-popper,cytoscape-dom-node}/**"
-+      - "!node_modules/{rxjs,@mermaid-js,@babel,@rollup}/**"
-+      # 瘦身第二轮:排除已 bundle 的 client 库源码(server esbuild 打包后运行时不需要)
-+      - "!node_modules/{matrix-js-sdk,@matrix-org,lodash,lodash-es}/**"
-+      - "!node_modules/{handlebars,@multiavatar,dayjs,axios,d3}/**"
-+      - "!node_modules/{css-tree,cssstyle,css-render,csstype,@asamuzakjp}/**"
-+      # 排除开发工具
-+      - "!node_modules/{vite-node,uglify-js,js-beautify,nodemon,concurrently,pino-pretty}/**"
-+      # 排除 matrix-js-sdk 传递依赖(已 bundle 进 client vendor chunk)
-+      - "!node_modules/{@hapi,tldts,pngjs,validator,yaml}/**"
-+      # 排除 *.d.ts 和测试/文档目录(通用瘦身)
-+      - "!node_modules/**/*.d.ts"
-+      - "!node_modules/**/{test,tests,__tests__,docs,doc,example,examples,.github,coverage}/**"
-+      # 排除 server source map(12MB,生产环境不需要)
-+      - "!dist/server/*.map"
-+      # 瘦身第三轮:排除 d3 全家桶 + dagre + khroma (mermaid 依赖,已 bundle 进 client)
-+      - "!node_modules/d3-*/**"
-+      - "!node_modules/{dagre,dagre-d3-es,khroma,layout-base,graphlib}/**"
-+      # 排除更多已 bundle 的 client 依赖
-+      - "!node_modules/{mdn-data,neo-async,parse5,parse5-parser,immutable,qrcode,oidc-client-ts,dompurify,js-yaml}/**"
-+      - "!node_modules/{ts-node,chai,acorn,source-map,magicast,yargs,body-parser}/**"
-+      - "!node_modules/{socket.io-client,engine.io-client}/**"
-+      - "!node_modules/{@acemir,@exodus,@parcel,@volar,@upsetjs,@csstools,@css-render,@cspotcode,@juggle,@audio,@one-ini,@jridgewell,@iconify}/**"
-+      # 排除 node_modules 中的 source map / flow / coffee 文件
-+      - "!node_modules/**/*.map"
-+      - "!node_modules/**/*.flow"
-+      # 排除 .pnpm 元数据(如有)
-+      - "!node_modules/.pnpm/**"
- 
- asarUnpack:
-   - "**/*.node"
-@@ -65,25 +114,29 @@ mac:
-   icon: build/icon.icon
+@@ -62,28 +62,30 @@ asarUnpack:
+ mac:
+   # Xcode 26 compiles this Icon Composer source into Assets.car and also
+   # generates the legacy ICNS fallback for pre-Tahoe macOS releases.
+-  icon: build/icon.icon
++  icon: build/icon.icns
    target:
      - target: dmg
 -      arch: [arm64, x64]
@@ -86,8 +27,6 @@ index c88ea81..34876ad 100644
    hardenedRuntime: true
    gatekeeperAssess: false
 -  notarize: true
-+  # notarize 需 Apple Developer 凭据;本地/CI 无凭据构建时关闭以免 build 失败。
-+  # 正式发布构建设回 true 并通过 CSC_LINK/CSC_KEY_PASSWORD/APPLE_ID 等环境变量提供凭据。
 +  notarize: false
    entitlements: build/entitlements.mac.plist
    entitlementsInherit: build/entitlements.mac.inherit.plist
@@ -108,7 +47,7 @@ index c88ea81..34876ad 100644
  
  linux:
    icon: build/icons
-@@ -93,7 +146,7 @@ linux:
+@@ -93,7 +95,7 @@ linux:
      - target: deb
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development
