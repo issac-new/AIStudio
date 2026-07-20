@@ -158,3 +158,4 @@
 157-agent-health-detailed-401-fallback.patch
 158-i18n-kanban-missing-keys.patch
 159-i18n-sidebar-common-runtrace-keys.patch
+160-vite-custom-alias.patch

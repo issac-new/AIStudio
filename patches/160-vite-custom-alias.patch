@@ -1,0 +1,15 @@
+diff --git a/vite.config.ts b/vite.config.ts
+index 1b0d7001..9fc073a8 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -38,6 +38,10 @@ export default defineConfig({
+   },
+   resolve: {
+     alias: {
++      // overlay custom modules — must come BEFORE '@' so '@/custom/...' resolves
++      // to the overlay custom/client dir instead of packages/client/src/custom.
++      '@/custom': resolve(__dirname, '../../overlay/custom/client'),
++      '@custom': resolve(__dirname, '../../overlay/custom/client'),
+       '@': resolve(__dirname, 'packages/client/src'),
+     },
+   },
