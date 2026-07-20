@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index c88ea818..4a902b2c 100644
+index c88ea818..a46026d8 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -10,7 +10,20 @@ index c88ea818..4a902b2c 100644
  copyright: Copyright © 2026
  
  directories:
-@@ -62,28 +62,30 @@ asarUnpack:
+@@ -52,7 +52,11 @@ extraResources:
+     filter:
+       - "**/*"
+       # Drop other-platform node-pty prebuilds (saves ~45MB)
+-      - "!node-pty/prebuilds/!(${platform}-${arch})/**"
++      # NOTE: !(${platform}-${arch}) expands to the HOST platform, not the
++      # build target (electron-builder 25.1.8) — cross-platform builds (mac→win)
++      # would exclude win32-x64 prebuilds. Let afterPack (after-pack-combined.cjs)
++      # prune non-target prebuilds by context.electronPlatformName + context.arch.
++      # - "!node-pty/prebuilds/!(${platform}-${arch})/**"
+       - "!node-pty/build/**"
+       - "!**/*.md"
+ 
+@@ -62,28 +66,30 @@ asarUnpack:
  mac:
    # Xcode 26 compiles this Icon Composer source into Assets.car and also
    # generates the legacy ICNS fallback for pre-Tahoe macOS releases.
@@ -47,7 +60,7 @@ index c88ea818..4a902b2c 100644
  
  linux:
    icon: build/icons
-@@ -93,7 +95,7 @@ linux:
+@@ -93,7 +99,7 @@ linux:
      - target: deb
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development
