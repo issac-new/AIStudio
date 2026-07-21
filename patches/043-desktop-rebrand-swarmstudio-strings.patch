@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
-index 8d400312..95b5f373 100644
+index 9fdcfda5..e32110a0 100644
 --- a/packages/desktop/build/installer.nsh
 +++ b/packages/desktop/build/installer.nsh
 @@ -1,7 +1,7 @@
@@ -13,31 +13,33 @@ index 8d400312..95b5f373 100644
      Pop $0
      Sleep 1500
  
-@@ -10,7 +10,7 @@
-     FileWrite $0 "$$ErrorActionPreference = 'SilentlyContinue'$\r$\n"
-     FileWrite $0 "$$target = [System.IO.Path]::GetFullPath($$env:HERMES_STUDIO_EXE)$\r$\n"
+@@ -53,7 +53,7 @@
+     FileWrite $0 "  return $$roots | Select-Object -Unique$\r$\n"
+     FileWrite $0 "}$\r$\n"
      FileWrite $0 "function Get-HermesStudioProcess {$\r$\n"
 -    FileWrite $0 "  Get-CimInstance Win32_Process -Filter $\"Name = 'Hermes Studio.exe'$\" | Where-Object {$\r$\n"
 +    FileWrite $0 "  Get-CimInstance Win32_Process -Filter $\"Name = 'SwarmStudio.exe'$\" | Where-Object {$\r$\n"
      FileWrite $0 "    try { $$_.ExecutablePath -and ([System.IO.Path]::GetFullPath($$_.ExecutablePath) -ieq $$target) } catch { $$false }$\r$\n"
      FileWrite $0 "  }$\r$\n"
      FileWrite $0 "}$\r$\n"
-@@ -32,11 +32,11 @@
+@@ -89,13 +89,13 @@
      FileWrite $0 "exit 1$\r$\n"
      FileClose $0
  
 -    System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "$INSTDIR\Hermes Studio.exe") i .r0'
 +    System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "$INSTDIR\SwarmStudio.exe") i .r0'
+     System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_INSTALL_DIR", t "$INSTDIR") i .r0'
      nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\stop-hermes-studio.ps1"'
      Pop $0
      System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "") i .r0'
+     System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_INSTALL_DIR", t "") i .r0'
 -    nsExec::ExecToLog 'taskkill.exe /IM "Hermes Studio.exe" /T /F'
 +    nsExec::ExecToLog 'taskkill.exe /IM "SwarmStudio.exe" /T /F'
      Pop $0
    hermesStudioStopDone:
  !macroend
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
-index 052302df..5bc95406 100644
+index c7db567b..41f9cb9c 100644
 --- a/packages/desktop/src/main/cli-shim.ts
 +++ b/packages/desktop/src/main/cli-shim.ts
 @@ -17,8 +17,8 @@ const execFileAsync = promisify(execFile)
@@ -184,7 +186,7 @@ index 052302df..5bc95406 100644
    }
  }
 diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
-index b4b145c..8a68caf 100644
+index b4b145c2..8a68caf7 100644
 --- a/packages/desktop/src/main/desktop-i18n.ts
 +++ b/packages/desktop/src/main/desktop-i18n.ts
 @@ -60,36 +60,36 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
@@ -692,10 +694,10 @@ index b4b145c..8a68caf 100644
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 548099e..54e1775 100644
+index 6779b252..18f71bcc 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -419,7 +419,7 @@ function createTray() {
+@@ -425,7 +425,7 @@ function createTray() {
          quality: 'best',
        })
    tray = new Tray(icon)
@@ -704,7 +706,7 @@ index 548099e..54e1775 100644
    tray.on('click', () => {
      showMainWindow()
      updateTrayMenu()
-@@ -433,7 +433,7 @@ async function createWindow(): Promise<void> {
+@@ -439,7 +439,7 @@ async function createWindow(): Promise<void> {
      height: 820,
      minWidth: 960,
      minHeight: 600,
@@ -713,25 +715,25 @@ index 548099e..54e1775 100644
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -531,7 +531,7 @@ function installMicrophonePermissionHandler() {
- 
+@@ -541,7 +541,7 @@ function installMicrophonePermissionHandler() {
  function splashHtml(label = t('desktop.startingLocalServices')): string {
    const startingLabel = escapeHtml(label)
+   const pageBackground = process.platform === 'win32' ? 'transparent' : '#1a1a1a'
 -  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hermes Studio</title>
 +  const html = `<!doctype html><html><head><meta charset="utf-8"><title>SwarmStudio</title>
  <style>
-   html,body{margin:0;height:100%;background:#1a1a1a;color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
-   .wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px}
-@@ -547,7 +547,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
+   html,body{margin:0;height:100%;background:${pageBackground};color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
+   .surface{height:100%;background:#1a1a1a}
+@@ -558,7 +558,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
    @keyframes progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
    h1{font-weight:500;margin:0;font-size:18px}
- </style></head><body><div class="wrap">
+ </style></head><body><main class="surface"><div class="wrap">
 -<h1>Hermes Studio</h1>
 +<h1>SwarmStudio</h1>
  <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
  <div id="label" class="label">${startingLabel}</div>
  <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
-@@ -610,7 +610,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -622,7 +622,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
          <pre>${safeError}</pre>
         </section>`
      : ''
@@ -740,16 +742,16 @@ index 548099e..54e1775 100644
  <style>
    :root{color-scheme:dark}
    *{box-sizing:border-box}
-@@ -637,7 +637,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -650,7 +650,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
      button{min-height:78px}
    }
- </style></head><body><main class="wrap">
+ </style></head><body><main class="surface"><div class="wrap">
 -<div class="brand">${logoUrl ? `<img class="mark" src="${logoUrl}" alt="Hermes Studio">` : ''}<h1>Hermes Studio</h1></div>
 +<div class="brand">${logoUrl ? `<img class="mark" src="${logoUrl}" alt="SwarmStudio">` : ''}<h1>SwarmStudio</h1></div>
  <p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
  ${errorBlock}
  <div class="actions">
-@@ -829,7 +829,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+@@ -844,7 +844,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
  
    const title = typeof payload?.title === 'string' && payload.title.trim()
      ? payload.title.trim()
