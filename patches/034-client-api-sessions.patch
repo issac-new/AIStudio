@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/api/hermes/sessions.ts b/packages/client/src/api/hermes/sessions.ts
-index 0c6d9e7..c97d04f 100644
+index 64ecce0c..ebab989b 100644
 --- a/packages/client/src/api/hermes/sessions.ts
 +++ b/packages/client/src/api/hermes/sessions.ts
-@@ -159,7 +159,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
+@@ -167,7 +167,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
    if (profile) params.set('profile', profile)
    const query = params.toString()
    const res = await request<{ sessions: SessionSummary[] }>(`/api/hermes/sessions${query ? `?${query}` : ''}`)
@@ -10,8 +10,8 @@ index 0c6d9e7..c97d04f 100644
 +  return res?.sessions ?? []
  }
  
- export async function fetchWorkspaceRunChangesForSession(id: string): Promise<WorkspaceRunChangeSummary[]> {
-@@ -295,7 +295,7 @@ export async function fetchHermesSessions(source?: string, limit?: number, profi
+ export async function fetchSessionCategories(): Promise<SessionCategory[]> {
+@@ -333,7 +333,7 @@ export async function fetchHermesSessions(source?: string, limit?: number, profi
    if (profile) params.set('profile', profile)
    const query = params.toString()
    const res = await request<{ sessions: SessionSummary[] }>(`/api/hermes/sessions/hermes${query ? `?${query}` : ''}`)
