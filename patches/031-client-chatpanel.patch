@@ -1,9 +1,9 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 3d18f585..cb6bd61c 100644
+index ca23aa2e..ec798b5a 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -1568,23 +1568,14 @@ async function handleSessionModelCustomSubmit() {
-         />
+@@ -1966,23 +1966,14 @@ async function handleSessionModelCustomSubmit() {
+         </template>
        </div>
        <div v-if="showSessions" class="page-sidebar-bottom">
 -        <button class="page-sidebar-menu-btn" type="button" @click="openSettingsPage">
