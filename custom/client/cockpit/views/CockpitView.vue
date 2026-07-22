@@ -353,7 +353,12 @@ function onColCtrl(col: ColumnKey) {
 .cockpit-swarm-modal__body { flex: 1; min-height: 0; overflow: auto; }
 </style>
 
-<!-- 非 scoped: macOS desktop 红绿灯避让（需匹配 app-shell 上的平台 class） -->
+<!-- 非 scoped: 桌面端窗口控制按钮避让（需匹配 app-shell 上的平台 class） -->
 <style lang="scss">
+/* macOS: 红绿灯 y=16 + 高度 12 = 28px (app-main--card 无 margin-top) */
 .app-shell.desktop-platform-darwin .cockpit { padding-top: 28px; }
+/* Windows: DesktopTitleBar top=10 + height=36 = 46px
+   app-main--card 已有 margin-top: 50px，但 .cockpit 的 height:100% !important
+   可能导致它填满 app-main--card 顶部；额外加 padding-top 确保不重叠 */
+.app-shell.desktop-platform-win32 .cockpit { padding-top: 46px; }
 </style>
