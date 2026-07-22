@@ -214,6 +214,7 @@ function onColCtrl(col: ColumnKey) {
 </template>
 
 <style scoped lang="scss">
+.cockpit { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
 .cockpit-readonly-badge { position: absolute; top: 8px; right: 14px; font-size: 10px; color: var(--text-muted); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 9px; z-index: 5; }
 .cockpit-col__ctrls {
   position: absolute; top: 6px; right: 8px; z-index: 100;
@@ -350,4 +351,9 @@ function onColCtrl(col: ColumnKey) {
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .cockpit-swarm-modal__body { flex: 1; min-height: 0; overflow: auto; }
+</style>
+
+<!-- 非 scoped: macOS desktop 红绿灯避让（需匹配 app-shell 上的平台 class） -->
+<style lang="scss">
+.app-shell.desktop-platform-darwin .cockpit { padding-top: 28px; }
 </style>
