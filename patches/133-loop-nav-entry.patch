@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
+index 5868b695..f8373d40 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -166,6 +166,13 @@ function openVersionManagement() {
+@@ -180,6 +180,26 @@ function handleUpdateClick() {
              </svg>
              <span>{{ t("sidebar.memory") }}</span>
            </RouteLinkItem>
@@ -11,6 +12,19 @@ diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/cli
 +              <polyline points="21 4 21 12 13 12" />
 +            </svg>
 +            <span>{{ t("sidebar.loop") }}</span>
++          </RouteLinkItem>
++          <RouteLinkItem v-if="hasRoute('hermes.graph')" class="nav-item" :to="{ name: 'hermes.graph' }" :active="selectedKey === 'hermes.graph' || selectedKey === 'hermes.graphDetail'">
++            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
++              <circle cx="5" cy="6" r="2" />
++              <circle cx="19" cy="6" r="2" />
++              <circle cx="5" cy="18" r="2" />
++              <circle cx="19" cy="18" r="2" />
++              <line x1="7" y1="6" x2="17" y2="6" />
++              <line x1="7" y1="18" x2="17" y2="18" />
++              <line x1="5" y1="8" x2="5" y2="16" />
++              <line x1="19" y1="8" x2="19" y2="16" />
++            </svg>
++            <span>{{ t("sidebar.graph") }}</span>
 +          </RouteLinkItem>
            <RouteLinkItem class="nav-item" :to="{ name: 'hermes.models' }" :active="selectedKey === 'hermes.models'">
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

@@ -1,0 +1,55 @@
+// overlay/custom/client/loop/graph/styles/graph.scss
+// Graph Engineering 全局样式
+
+.graph-spine {
+  display: flex;
+  height: 100%;
+  &__sidebar { width: 200px; padding: 1rem; border-right: 1px solid var(--border-color); }
+  &__group { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer;
+    &--active { background: var(--accent-bg); }
+  }
+  &__count { margin-left: auto; font-size: 0.85rem; opacity: 0.7; }
+  &__new { margin-top: 1rem; width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; }
+  &__main { flex: 1; padding: 1rem; overflow: auto; }
+  &__title { margin: 0 0 1rem; }
+  &__spinner { padding: 2rem; text-align: center; }
+  &__error { padding: 1rem; color: var(--color-danger, #e11d48); }
+  &__table { border: 1px solid var(--border-color); border-radius: 4px; }
+  &__header, &__row { display: flex; align-items: center; padding: 0.5rem; gap: 1rem; }
+  &__header { font-weight: bold; border-bottom: 2px solid var(--border-color); }
+  &__row { border-bottom: 1px solid var(--border-color); cursor: pointer;
+    &:hover { background: var(--hover-bg); }
+    span { flex: 1; }
+  }
+  &__empty { padding: 2rem; text-align: center; opacity: 0.5; }
+  &__status--running { color: var(--color-primary, #3b82f6); }
+  &__status--awaiting-input { color: var(--color-warning, #f59e0b); }
+  &__status--completed { color: var(--color-success, #28bf5c); }
+  &__status--failed { color: var(--color-danger, #e11d48); }
+}
+
+.graph-detail {
+  padding: 1rem;
+  &__header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  &__name { font-size: 1.2rem; font-weight: bold; flex: 1; }
+  &__status--running { color: var(--color-primary, #3b82f6); }
+  &__status--awaiting-input { color: var(--color-warning, #f59e0b); }
+  &__status--completed { color: var(--color-success, #28bf5c); }
+  &__status--failed { color: var(--color-danger, #e11d48); }
+  &__meta { display: flex; gap: 2rem; margin-bottom: 1rem; font-size: 0.85rem; opacity: 0.8; }
+  &__tabs { display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;
+    button { padding: 0.5rem 1rem; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent;
+      &.active { border-bottom-color: var(--color-primary, #3b82f6); }
+    }
+  }
+  &__tab-content { min-height: 300px; }
+  &__event { display: flex; gap: 1rem; padding: 0.25rem; font-size: 0.85rem; }
+  &__event-ts { color: var(--color-text-secondary, #878c99); min-width: 70px; }
+  &__event-type { font-family: monospace; font-size: 0.8rem; }
+  &__checkpoint { display: flex; align-items: center; gap: 1rem; padding: 0.5rem; border-bottom: 1px solid var(--border-color); }
+  &__spinner { padding: 3rem; text-align: center; }
+}
+
+.graph-renderer {
+  &__svg { width: 100%; max-width: 600px; }
+}
