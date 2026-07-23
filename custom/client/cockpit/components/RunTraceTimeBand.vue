@@ -108,8 +108,8 @@ const tickMarks = computed(() => {
 .run-trace-timeband__lanes { position: relative; }
 .run-trace-timeband__lane { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; height: 18px; margin-bottom: 3px; }
 .run-trace-timeband__lane-label { font-size: 8px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; }
-.run-trace-timeband__lane-track { position: relative; height: 10px; background: var(--bg-card); border-radius: 2px; }
-.run-trace-timeband__bar { position: absolute; top: 0; bottom: 0; min-width: 3px; border: none; border-radius: 2px; cursor: pointer; padding: 0; opacity: 0.85; }
+.run-trace-timeband__lane-track { position: relative; height: 10px; background: var(--bg-card); border-radius: 3px; }
+.run-trace-timeband__bar { position: absolute; top: 0; bottom: 0; min-width: 3px; border: none; border-radius: 3px; cursor: pointer; padding: 0; opacity: 0.85; }
 .run-trace-timeband__bar:hover { opacity: 1; outline: 1px solid var(--text-primary); }
 .run-trace-timeband__bar.is-running { animation: trace-bar-pulse 1.5s ease-in-out infinite; }
 .run-trace-timeband__bar.is-error { outline: 1px solid var(--error); }

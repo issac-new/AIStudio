@@ -232,10 +232,10 @@ const statusColor = computed(() => {
 
 .loop-detail__fork-dialog { position: fixed; inset: 0; z-index: 1000; }
 .loop-detail__fork-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
-.loop-detail__fork-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--bg-card, var(--color-bg-primary)); border-radius: 8px; padding: 1.5rem; min-width: 400px; z-index: 1001; }
+.loop-detail__fork-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--bg-card, var(--color-bg-primary)); border-radius: 6px; padding: 1.5rem; min-width: 400px; z-index: 1001; }
 .loop-detail__fork-content h3 { margin: 0 0 1rem; }
 .loop-detail__fork-content label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; }
-.loop-detail__fork-content input { width: 100%; padding: 0.4rem; margin-top: 0.25rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--color-bg-input, transparent); color: inherit; }
+.loop-detail__fork-content input { width: 100%; padding: 0.4rem; margin-top: 0.25rem; border: 1px solid var(--border-color); border-radius: 3px; background: var(--color-bg-input, transparent); color: inherit; }
 .loop-detail__fork-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
 .loop-detail__spinner { padding: 3rem; text-align: center; }
 .loop-detail__error { padding: 1rem; color: var(--color-danger, #e11d48); }

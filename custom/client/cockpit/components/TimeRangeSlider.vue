@@ -106,11 +106,11 @@ const winDuration = computed(() => Math.max(0, props.windowEnd - props.windowSta
 .time-range-slider { display: flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
 .time-range-slider__label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; flex-shrink: 0; }
 .time-range-slider__time { font-size: 10px; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
-.time-range-slider__track { position: relative; flex: 1; height: 22px; background: var(--bg-secondary); border-radius: 11px; cursor: pointer; touch-action: none; }
-.time-range-slider__range { position: absolute; top: 2px; bottom: 2px; background: rgba(var(--accent-primary-rgb, 64,120,192), 0.22); border: 1px solid var(--accent-primary); border-radius: 9px; }
+.time-range-slider__track { position: relative; flex: 1; height: 22px; background: var(--bg-secondary); border-radius: 12px; cursor: pointer; touch-action: none; }
+.time-range-slider__range { position: absolute; top: 2px; bottom: 2px; background: rgba(var(--accent-primary-rgb, 64,120,192), 0.22); border: 1px solid var(--accent-primary); border-radius: 12px; }
 .time-range-slider__handle {
   position: absolute; top: 50%; transform: translate(-50%, -50%);
-  width: 12px; height: 22px; border-radius: 4px;
+  width: 12px; height: 22px; border-radius: 3px;
   background: var(--accent-primary); border: 2px solid var(--bg-card);
   cursor: ew-resize; z-index: 2; touch-action: none;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);

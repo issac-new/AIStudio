@@ -111,7 +111,7 @@ describe('CockpitScheduleModal', () => {
     await nextTick()
     const wrapper = mount(CockpitScheduleModal)
     expect(wrapper.find('.cockpit-schedule-modal').exists()).toBe(true)
-    expect(wrapper.find('.cockpit-schedule__title').text()).toBe('📅 cockpit.schedule')
+    expect(wrapper.find('.cockpit-schedule__title').text()).toContain('cockpit.schedule')
   })
 
   it('shows empty state when no events for selected date', () => {

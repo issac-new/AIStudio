@@ -89,9 +89,9 @@ function fmtDuration(ms?: number): string {
 <style scoped lang="scss">
 .node-detail { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; }
 .node-detail__mask { position: absolute; inset: 0; background: rgba(0,0,0,0.25); }
-.node-detail__panel { position: relative; width: min(520px, calc(100vw - 32px)); max-height: 80vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
+.node-detail__panel { position: relative; width: min(520px, calc(100vw - 32px)); max-height: 80vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
 .node-detail__head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border-color); }
-.node-detail__kind { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); text-transform: uppercase; }
+.node-detail__kind { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); text-transform: uppercase; }
 .node-detail__kind.is-agent { background: rgba(76,175,80,0.15); color: var(--success); }
 .node-detail__kind.is-skill { background: rgba(64,120,192,0.15); color: var(--accent-info); }
 .node-detail__kind.is-tool { background: rgba(214,155,90,0.15); color: var(--warning); }

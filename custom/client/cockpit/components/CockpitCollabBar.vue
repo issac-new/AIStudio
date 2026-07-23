@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCockpitStore, type ChannelKind, type CollabChannel } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const store = useCockpitStore()
 const router = useRouter()
@@ -16,7 +17,7 @@ function navigateRoute(ch: CollabChannel) {
   }
 }
 
-const KIND_ICON: Record<ChannelKind, string> = { matrix: '👥', chat: '💬', group: '🗣', plain: '📡' }
+const KIND_ICON: Record<ChannelKind, string> = { matrix: 'users', chat: 'message', group: 'message', plain: 'radar' }
 
 const newOptions: { kind: ChannelKind; labelKey: string; descKey: string }[] = [
   { kind: 'matrix', labelKey: 'cockpit.newMatrix', descKey: 'cockpit.newMatrixDesc' },
@@ -42,7 +43,7 @@ function pickNew(kind: ChannelKind) {
       class="cockpit-collab-bar__chip"
       @click="navigateRoute(c)"
     >
-      <span class="cockpit-collab-bar__chip-icon">{{ KIND_ICON[c.kind] }}</span>
+      <span class="cockpit-collab-bar__chip-icon"><CockpitIcon :name="KIND_ICON[c.kind]" :size="12" /></span>
       <span class="cockpit-collab-bar__chip-label">{{ c.label }}</span>
       <span v-if="c.routeTarget" class="cockpit-collab-bar__chip-nav" :title="t('cockpit.openFull')" @click.stop="navigateRoute(c)">↗</span>
     </button>
@@ -60,7 +61,7 @@ function pickNew(kind: ChannelKind) {
         class="cockpit-collab-bar__menu-opt"
         @click="pickNew(opt.kind)"
       >
-        <span class="cockpit-collab-bar__menu-icon">{{ KIND_ICON[opt.kind] }}</span>
+        <span class="cockpit-collab-bar__menu-icon"><CockpitIcon :name="KIND_ICON[opt.kind]" :size="12" /></span>
         <span>
           <div class="cockpit-collab-bar__menu-name">{{ t(opt.labelKey) }}</div>
           <div class="cockpit-collab-bar__menu-desc">{{ t(opt.descKey) }}</div>
@@ -86,7 +87,7 @@ function pickNew(kind: ChannelKind) {
 .cockpit-collab-bar__add { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 10px; border: 1px solid var(--accent-primary); border-radius: 6px; background: var(--accent-primary); color: var(--text-on-accent); cursor: pointer; font-weight: 600; font: inherit;
   &:hover { background: var(--accent-hover); }
 }
-.cockpit-collab-bar__menu { position: absolute; top: 36px; right: 12px; width: 230px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 30; overflow: hidden; }
+.cockpit-collab-bar__menu { position: absolute; top: 36px; right: 12px; width: 230px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 30; overflow: hidden; }
 .cockpit-collab-bar__menu-head { padding: 9px 12px; border-bottom: 1px solid var(--border-color); font-size: 11px; font-weight: 700; color: var(--text-primary); }
 .cockpit-collab-bar__menu-opt { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font: inherit; border-bottom: 1px solid var(--border-color);
   &:last-child { border-bottom: none; }

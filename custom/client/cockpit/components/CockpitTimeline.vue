@@ -83,7 +83,7 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
     <div class="cockpit-timeline__head">
       <span class="cockpit-timeline__title">{{ t('cockpit.timeline') }}</span>
       <div class="cockpit-timeline__search">
-        <span class="cockpit-timeline__search-icon">🔍</span>
+        <span class="cockpit-timeline__search-icon"><CockpitIcon name="search" :size="10" /></span>
         <input
           type="text"
           class="cockpit-timeline__search-input"
@@ -149,7 +149,7 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
 }
 .cockpit-timeline__search-input {
   width: 100%; font-size: 11px; padding: 3px 22px 3px 22px;
-  border: 1px solid var(--border-color); border-radius: 10px;
+  border: 1px solid var(--border-color); border-radius: 12px;
   background: var(--bg-card); color: var(--text-secondary); font-family: inherit; outline: none;
   &::placeholder { color: var(--text-muted); opacity: 0.6; }
   &:focus { border-color: var(--accent-primary); }
@@ -161,13 +161,13 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
 }
 .cockpit-timeline__actors { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 16px 6px; }
 .cockpit-timeline__actor-chip {
-  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  font-size: 10px; padding: 2px 8px; border-radius: 12px;
   border: 1px solid var(--border-color); background: var(--bg-card);
   color: var(--text-secondary); cursor: pointer; font-family: inherit;
   &:hover { border-color: var(--text-muted); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
-.cockpit-timeline__title { font-size: 13px; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
+.cockpit-timeline__title { font-size: 15px; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
 .cockpit-timeline__body { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
 .cockpit-timeline__fold {
   display: block; width: 100%; text-align: left; padding: 5px 9px; margin: 6px 0 4px 18px;
@@ -194,8 +194,8 @@ function onEventDblClick(ev: { taskId: string; fullText: string; source: string;
 }
 .cockpit-timeline__event-head { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
 .cockpit-timeline__actor { font-weight: 500; }
-.cockpit-timeline__kind { font-size: 10px; padding: 0 5px; border-radius: 2px; background: var(--bg-secondary); }
-.cockpit-timeline__source { font-size: 10px; padding: 0 4px; border-radius: 2px; border: 1px solid var(--border-color); color: var(--text-muted); text-transform: uppercase; }
+.cockpit-timeline__kind { font-size: 10px; padding: 0 5px; border-radius: 3px; background: var(--bg-secondary); }
+.cockpit-timeline__source { font-size: 10px; padding: 0 4px; border-radius: 3px; border: 1px solid var(--border-color); color: var(--text-muted); text-transform: uppercase; }
 .cockpit-timeline__assignee { font-size: 10px; color: var(--text-muted); font-family: monospace; }
 .cockpit-timeline__when { margin-left: auto; font-size: 10px; color: var(--text-muted); }
 .cockpit-timeline__what { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }

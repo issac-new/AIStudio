@@ -9,6 +9,7 @@ import { fetchHermesSessions, type SessionSummary } from '@/api/hermes/sessions'
 import RunTraceGraph from './RunTraceGraph.vue'
 import RunTraceTimeBand from './RunTraceTimeBand.vue'
 import RunTraceInspector from './RunTraceInspector.vue'
+import CockpitIcon from './CockpitIcon.vue'
 import RunTraceSkillDrilldown from './RunTraceSkillDrilldown.vue'
 import RunTraceScrubber from './RunTraceScrubber.vue'
 import RunTraceOverview from './RunTraceOverview.vue'
@@ -278,12 +279,12 @@ function exportDossier() {
           <input type="checkbox" v-model="trace.aggregateMode.value" />
           <span>{{ t('cockpit.aggregate') }}</span>
         </label>
-        <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" :title="t('cockpit.exportDossier')">📥</button>
+        <button type="button" data-action="export" class="run-trace-modal__export" @click="exportDossier" :title="t('cockpit.exportDossier')"><CockpitIcon name="download" :size="14" /></button>
         <button type="button" data-action="close" @click="store.closeRunTrace">×</button>
       </header>
       <!-- 关联会话栏（聚合模式开启且有关联会话时显示） -->
       <div v-if="trace.aggregateMode.value && trace.relatedSessions.value.length > 1" class="run-trace-related">
-        <span class="run-trace-related__label">🔗 {{ t('cockpit.aggregateSessions', { n: trace.relatedSessions.value.length }) }}</span>
+        <span class="run-trace-related__label"><CockpitIcon name="link" :size="12" /> {{ t('cockpit.aggregateSessions', { n: trace.relatedSessions.value.length }) }}</span>
         <div class="run-trace-related__list">
           <span
             v-for="rs in trace.relatedSessions.value"
@@ -315,7 +316,7 @@ function exportDossier() {
       <!-- 播放控制：驱动时间游标，图谱节点按时间逐步激活 -->
       <div class="run-trace-modal__playback">
         <button type="button" class="run-trace-modal__play-btn" :class="{ 'is-playing': playing }" @click="togglePlay" :title="t('cockpit.playPause')">
-          {{ playing ? '⏸' : '▶' }}
+          <CockpitIcon :name="playing ? 'pause' : 'run'" :size="14" />
         </button>
         <button type="button" class="run-trace-modal__speed-btn" @click="cyclePlaySpeed" :title="t('cockpit.switchSpeed')">{{ playSpeed }}x</button>
         <span class="run-trace-modal__playback-hint">{{ t('cockpit.playbackHint') }}</span>
@@ -347,7 +348,7 @@ function exportDossier() {
 
 /* 搜索 + 筛选 */
 .run-trace-session-picker__filters { display: flex; gap: 8px; padding: 8px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); }
-.run-trace-session-picker__search { flex: 1; height: 28px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); font-size: 12px; outline: none;
+.run-trace-session-picker__search { flex: 1; height: 28px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-primary); font-size: 12px; outline: none;
   &:focus { border-color: var(--accent-primary); }
   &::placeholder { color: var(--text-muted); }
 }
@@ -371,10 +372,10 @@ function exportDossier() {
 .run-trace-session-picker__meta { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 .run-trace-session-picker__profile { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--bg-secondary); color: var(--text-muted); flex-shrink: 0; text-transform: uppercase; }
 .run-trace-session-picker__kanban { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--accent-info); color: var(--text-on-accent); flex-shrink: 0; font-family: monospace; }
-.run-trace-session-picker__badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: var(--success); color: #fff; flex-shrink: 0; }
+.run-trace-session-picker__badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: var(--success); color: #fff; flex-shrink: 0; }
 /* 分页 */
 .run-trace-session-picker__pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 18px; border-top: 1px solid var(--border-color); background: var(--bg-card); }
-.run-trace-session-picker__pagination button { height: 26px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 11px; font-family: inherit;
+.run-trace-session-picker__pagination button { height: 26px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font-size: 11px; font-family: inherit;
   &:hover:not(:disabled) { background: var(--bg-card-hover); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
@@ -391,13 +392,13 @@ function exportDossier() {
 .run-trace-modal__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning);
   &.is-live { background: var(--success); animation: run-trace-live-pulse 1.5s ease-in-out infinite; }
 }
-.run-trace-modal__l2badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: var(--accent-info); color: var(--text-on-accent); font-weight: 600; }
+.run-trace-modal__l2badge { font-size: 9px; padding: 2px 6px; border-radius: 3px; background: var(--accent-info); color: var(--text-on-accent); font-weight: 600; }
 .run-trace-modal__export { margin-left: 8px !important; font-size: 14px; }
 .run-trace-modal__playback { display: flex; align-items: center; gap: 8px; padding: 4px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
-.run-trace-modal__play-btn { width: 26px; height: 26px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.run-trace-modal__play-btn { width: 26px; height: 26px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
 .run-trace-modal__play-btn:hover { background: var(--bg-card-hover); }
 .run-trace-modal__play-btn.is-playing { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
-.run-trace-modal__speed-btn { padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 10px; font-family: ui-monospace, monospace; }
+.run-trace-modal__speed-btn { padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 10px; font-family: ui-monospace, monospace; }
 .run-trace-modal__speed-btn:hover { background: var(--bg-card-hover); }
 .run-trace-modal__playback-hint { font-size: 9px; color: var(--text-muted); margin-left: 4px; }
 .run-trace-modal__main { min-height: 0; flex: 1; display: grid; grid-template-columns: 1fr 320px; }
@@ -411,7 +412,7 @@ function exportDossier() {
 .run-trace-related { display: flex; align-items: center; gap: 8px; padding: 6px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); overflow-x: auto; flex-shrink: 0; }
 .run-trace-related__label { font-size: 11px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
 .run-trace-related__list { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
-.run-trace-related__item { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 10px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+.run-trace-related__item { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 10px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
   &.is-primary { border-color: var(--accent-primary); color: var(--text-primary); font-weight: 600; background: rgba(var(--accent-primary-rgb, 64,120,192), 0.06); }
   &.is-empty { opacity: 0.5; border-style: dashed; }
   &.is-creator { border-color: var(--accent-secondary, var(--accent-primary)); }
