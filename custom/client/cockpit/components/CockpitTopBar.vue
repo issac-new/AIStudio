@@ -7,7 +7,7 @@ import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
 
 const { t } = useI18n()
-const emit = defineEmits<{ (e: 'schedule', btn: HTMLElement): void; (e: 'notify'): void; (e: 'settings'): void; (e: 'runtrace'): void }>()
+const emit = defineEmits<{ (e: 'schedule', btn: HTMLElement): void; (e: 'loop'): void; (e: 'notify'): void; (e: 'settings'): void; (e: 'runtrace'): void }>()
 const store = useCockpitStore()
 const appStore = useAppStore()
 
@@ -131,6 +131,9 @@ async function manualProbe() {
     <button type="button" class="cockpit-top__btn" @click="emit('schedule', $event.currentTarget as HTMLElement)">
       📅 {{ t('cockpit.schedule') }}
       <span v-if="scheduleCount" class="cockpit-top__bdg">{{ scheduleCount }}</span>
+    </button>
+    <button type="button" class="cockpit-top__btn" @click="emit('loop')" title="Loop Engineering — 循环工程">
+      🔄 {{ t('sidebar.loop') }}
     </button>
     <button type="button" class="cockpit-top__btn" @click="emit('runtrace')" title="Run Observatory — 运行观察台">
       🔭 Run Observatory

@@ -18,6 +18,7 @@ import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleMod
 import CockpitTemplateManager from '@/custom/cockpit/components/CockpitTemplateManager.vue'
 import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
+import LoopModal from '@/custom/loop/components/LoopModal.vue'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import { useI18n } from 'vue-i18n'
 
@@ -63,6 +64,7 @@ function onColCtrl(col: ColumnKey) {
       :schedule-count="store.scheduleDatesWithEvents.size"
       :user-name="store.currentUserName"
       @schedule="(btn: HTMLElement) => store.openSchedule(btn)"
+      @loop="store.openLoop()"
       @notify="store.openNotify()"
       @settings="goSettings"
       @runtrace="store.openRunTraceGlobal()"
@@ -144,6 +146,7 @@ function onColCtrl(col: ColumnKey) {
     <CockpitHistoryModal v-if="store.historyOpen" class="cockpit-modal-anchor" />
     <div v-if="store.scheduleOpen" class="cockpit-overlay" @click="store.closeSchedule()" />
     <CockpitScheduleModal v-if="store.scheduleOpen" />
+    <LoopModal v-if="store.loopOpen" />
     <div v-if="store.notifyOpen" class="cockpit-overlay cockpit-overlay--clear" @click="store.closeNotify()" />
     <CockpitNotifyModal v-if="store.notifyOpen" />
     <div v-if="store.templateManagerOpen" class="cockpit-overlay" @click="store.closeTemplateManager()" />
