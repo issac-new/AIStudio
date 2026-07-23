@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 12589446..260b6937 100644
+index 2939c83f..c4d5978d 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -242,6 +242,132 @@ export default {
+@@ -242,6 +242,122 @@ export default {
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -24,6 +24,7 @@ index 12589446..260b6937 100644
 +      status: 'Status',
 +      name: 'Loop Name',
 +      stage: 'Stage',
++      graph: 'Graph',
 +      nextTick: 'Next Tick',
 +      progress: 'Progress',
 +      cost: 'Cost',
@@ -44,6 +45,12 @@ index 12589446..260b6937 100644
 +      todo: 'Todo',
 +      loading: 'Loading...',
 +      notFound: 'Loop not found',
++      iteration: 'Iteration',
++      discovered: 'Discovered',
++      completedTasks: 'Completed Tasks',
++      blockedTasks: 'Blocked Tasks',
++      nextTick: 'Next Tick',
++      checkpoints: 'Checkpoints',
 +    },
 +    wizard: {
 +      selectPattern: 'Select Loop Pattern',
@@ -77,61 +84,44 @@ index 12589446..260b6937 100644
 +      persistence: 'Persistence',
 +      scheduling: 'Scheduling',
 +    },
-+  },
-+
-+  graph: {
-+    title: 'Graph Engineering',
-+    newGraph: 'New Graph',
-+    sidebar: {
-+      all: 'All',
-+      running: 'Running',
-+      awaiting: 'Awaiting Input',
-+      completed: 'Completed',
-+      failed: 'Failed',
++    stagesDesc: {
++      discovery: 'Scan GitHub issues, CI failures, local git, and webhooks for actionable items.',
++      handoff: 'Create isolated worktree and dispatch a maker subagent to implement the fix.',
++      validation: 'Three-route verification: programmatic checks, independent judge model, human approval.',
++      persistence: 'Commit and push PR for passed contracts, write to STATE.md spine.',
++      scheduling: 'Check stop condition with an independent model, schedule next tick.',
 +    },
-+    table: {
-+      name: 'Name',
-+      status: 'Status',
-+      step: 'Step',
-+      cost: 'Cost',
-+      actions: 'Actions',
++    onboarding: {
++      title: 'Loop Engineering',
++      desc: 'Define a recursive goal — the system discovers issues, dispatches agents, verifies fixes, and merges them, on a schedule you set.',
++      step1: {
++        title: 'Pick a pattern',
++        desc: 'Daily Triage, CI Sweeper, Dep Sweeper, and more — each pre-fills goal, schedule, and cost profile.',
++      },
++      step2: {
++        title: 'Configure your loop',
++        desc: 'Set the goal, stop condition, cron schedule, autonomy level, and budget guard.',
++      },
++      step3: {
++        title: 'Watch it run',
++        desc: 'The graph shows each stage live. Approve fixes when asked, fork to experiment.',
++      },
++      cta: 'Create your first loop',
 +    },
-+    detail: {
-+      back: 'Back',
-+      step: 'Step',
-+      cost: 'Cost',
-+      thread: 'Thread',
-+      pattern: 'Pattern',
-+      level: 'Level',
-+      currentStep: 'Current Step',
++    attention: {
++      title: 'Needs Attention',
++      needsReview: 'Awaiting review',
++      blocked: 'Blocked',
 +    },
 +    tabs: {
 +      graph: 'Graph',
-+      events: 'Events',
-+      checkpoints: 'Checkpoints',
++      history: 'History',
++      workers: 'Workers',
 +      state: 'State',
 +    },
-+    empty: 'No graph instances yet',
-+    fork: 'Fork',
-+    actions: {
-+      run: 'Run',
-+      pause: 'Pause',
-+      fork: 'Fork',
-+      delete: 'Delete',
-+    },
-+    checkpoints: {
-+      empty: 'No checkpoints yet',
-+    },
-+    interrupts: {
-+      title: 'Pending Approvals',
-+    },
-+  },
-+
-+  graphFork: {
-+    title: 'Fork Graph',
-+    name: 'Fork Name',
-+    confirm: 'Create Fork',
-+    cancel: 'Cancel',
++    stageHint: 'Click a stage node to see what it does.',
++    eventsEmpty: 'No events yet — run a tick to see activity.',
++    granularity: 'Event density',
    },
  
    runtimeVersions: {

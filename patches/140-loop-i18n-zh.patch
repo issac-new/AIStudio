@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 2a0265f8..d2b72ec5 100644
+index f970ed36..736a2438 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -242,6 +242,132 @@ export default {
+@@ -245,6 +245,122 @@ export default {
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -24,6 +24,7 @@ index 2a0265f8..d2b72ec5 100644
 +      status: '状态',
 +      name: 'Loop 名称',
 +      stage: '阶段',
++      graph: '图',
 +      nextTick: '下次调度',
 +      progress: '进度',
 +      cost: '费用',
@@ -44,6 +45,12 @@ index 2a0265f8..d2b72ec5 100644
 +      todo: '待办',
 +      loading: '加载中...',
 +      notFound: 'Loop 未找到',
++      iteration: '迭代',
++      discovered: '已发现',
++      completedTasks: '已完成任务',
++      blockedTasks: '阻塞任务',
++      nextTick: '下次调度',
++      checkpoints: '检查点',
 +    },
 +    wizard: {
 +      selectPattern: '选择 Loop 模式',
@@ -77,61 +84,44 @@ index 2a0265f8..d2b72ec5 100644
 +      persistence: '持久化',
 +      scheduling: '调度',
 +    },
-+  },
-+
-+  graph: {
-+    title: '图工程',
-+    newGraph: '新建图',
-+    sidebar: {
-+      all: '全部',
-+      running: '运行中',
-+      awaiting: '等待输入',
-+      completed: '已完成',
-+      failed: '已失败',
++    stagesDesc: {
++      discovery: '扫描 GitHub issue、CI 失败、本地 git 和 webhook，找出可操作项。',
++      handoff: '创建隔离 worktree，派发制造者子代理实现修复。',
++      validation: '三路验证：程序化检查、独立评审模型、人工审批。',
++      persistence: '通过验证的契约提交 PR，写入 STATE.md 脊柱。',
++      scheduling: '用独立模型检查停止条件，调度下一次 tick。',
 +    },
-+    table: {
-+      name: '名称',
-+      status: '状态',
-+      step: '步骤',
-+      cost: '费用',
-+      actions: '操作',
++    onboarding: {
++      title: '循环工程',
++      desc: '定义一个递归目标——系统按你设定的节奏，自动发现问题、派发 agent、验证修复并合并。',
++      step1: {
++        title: '选择模式',
++        desc: '每日分诊、CI 清理、依赖更新等——每种预填目标、调度和成本档位。',
++      },
++      step2: {
++        title: '配置循环',
++        desc: '设置目标、停止条件、cron 调度、自治级别和预算护栏。',
++      },
++      step3: {
++        title: '观察运行',
++        desc: '图上实时显示每个阶段。需要时审批修复，想实验就分叉。',
++      },
++      cta: '创建第一个循环',
 +    },
-+    detail: {
-+      back: '返回',
-+      step: '步骤',
-+      cost: '费用',
-+      thread: '线程',
-+      pattern: '模式',
-+      level: '自治级',
-+      currentStep: '当前步骤',
++    attention: {
++      title: '需要关注',
++      needsReview: '等待审批',
++      blocked: '阻塞',
 +    },
 +    tabs: {
 +      graph: '图',
-+      events: '事件',
-+      checkpoints: '检查点',
++      history: '历史',
++      workers: '工作者',
 +      state: '状态',
 +    },
-+    empty: '暂无图实例',
-+    fork: '分叉',
-+    actions: {
-+      run: '运行',
-+      pause: '暂停',
-+      fork: '分叉',
-+      delete: '删除',
-+    },
-+    checkpoints: {
-+      empty: '暂无检查点',
-+    },
-+    interrupts: {
-+      title: '待审批',
-+    },
-+  },
-+
-+  graphFork: {
-+    title: '分叉图',
-+    name: '分叉名称',
-+    confirm: '创建分叉',
-+    cancel: '取消',
++    stageHint: '点击阶段节点查看说明。',
++    eventsEmpty: '暂无事件——运行一次 tick 查看活动。',
++    granularity: '事件密度',
    },
  
    runtimeVersions: {
