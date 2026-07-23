@@ -1,18 +1,11 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index c858de3a..36a6d6b8 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -190,6 +190,13 @@ function handleUpdateClick() {
+@@ -166,6 +166,7 @@ function openVersionManagement() {
              </svg>
              <span>{{ t("sidebar.memory") }}</span>
            </RouteLinkItem>
-+          <RouteLinkItem v-if="hasRoute('hermes.loop')" class="nav-item" :to="{ name: 'hermes.loop' }" :active="selectedKey === 'hermes.loop' || selectedKey === 'hermes.loopDetail' || selectedKey === 'hermes.graph' || selectedKey === 'hermes.graphDetail'">
-+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-+              <path d="M21 12a9 9 0 1 1-9-9" />
-+              <polyline points="21 4 21 12 13 12" />
-+            </svg>
-+            <span>{{ t("sidebar.loop") }}</span>
-+          </RouteLinkItem>
++          <!-- overlay[loop-nav]: 循环工程入口已移至 AI 协作中心顶栏（CockpitTopBar），不再占用侧边栏 -->
            <RouteLinkItem class="nav-item" :to="{ name: 'hermes.models' }" :active="selectedKey === 'hermes.models'">
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                <circle cx="12" cy="12" r="3" />
