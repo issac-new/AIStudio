@@ -28,6 +28,8 @@ export async function bootstrapClient(app: App): Promise<void> {
   if (features.loopEngineering) {
     const { registerLoopEngineering } = await import('../../custom/client/loop')
     await registerLoopEngineering(app)
+    const { registerGraphEngineering } = await import('../../custom/client/loop/graph')
+    await registerGraphEngineering(app)
   }
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
   // 实际翻译是直接写在上游 locale 文件里的(现经 patch 044-053 注入)。无需运行时注册。
