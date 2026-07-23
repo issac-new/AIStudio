@@ -1,13 +1,14 @@
 diff --git a/packages/server/src/routes/index.ts b/packages/server/src/routes/index.ts
-index 3241942a..2d0f6ce4 100644
+index 38bba30b..c2507134 100644
 --- a/packages/server/src/routes/index.ts
 +++ b/packages/server/src/routes/index.ts
-@@ -50,6 +50,54 @@ import { writeGateRoutes } from './hermes/write-gate'
+@@ -50,6 +50,56 @@ import { writeGateRoutes } from './hermes/write-gate'
  import { petdexPublicRoutes, petdexRoutes } from './hermes/petdex'
  import { petRoutes } from './hermes/pets'
  import traceRoutes from '../custom/controllers/hermes/trace'
 +// overlay[loop-routes]: Loop Engineering REST API
 +import { createLoopRouter } from '../custom/loop/controllers/loop'
++import { createGraphRouter } from '../custom/loop/controllers/graph'
 +import { createStateStore } from '../custom/loop/store/store-factory'
 +import { Scheduler } from '../custom/loop/engine/scheduler'
 +import { LoopEngine } from '../custom/loop/engine/loop-engine'
@@ -48,6 +49,7 @@ index 3241942a..2d0f6ce4 100644
 +})
 +const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
 +const loopRouter = createLoopRouter(lazyStore, loopScheduler, loopWebhookConnector)
++const graphRouter = createGraphRouter(lazyStore)
 +async function initLoopSubsystem(): Promise<void> {
 +  if (loopStore) return
 +  const { store, adapterType, detectedFrom } = await createStateStore()
@@ -57,10 +59,11 @@ index 3241942a..2d0f6ce4 100644
  
  /**
   * Register all routes on the Koa app.
-@@ -114,4 +162,6 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -114,4 +164,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(petdexRoutes.routes())
    app.use(petRoutes.routes())
    app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
 +  app.use(loopRouter.routes())
++  app.use(graphRouter.routes())
 +  initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
  }

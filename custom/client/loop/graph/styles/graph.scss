@@ -53,3 +53,37 @@
 .graph-renderer {
   &__svg { width: 100%; max-width: 600px; }
 }
+
+// Fork dialog
+.graph-spine__fork-dialog {
+  position: fixed; inset: 0; z-index: 1000;
+  .graph-spine__fork-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+  .graph-spine__fork-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--bg-card, var(--color-bg-primary)); border-radius: 8px; padding: 1.5rem; min-width: 400px; z-index: 1001;
+    h3 { margin: 0 0 1rem; }
+    label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; }
+    input { width: 100%; padding: 0.4rem; margin-top: 0.25rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--color-bg-input, transparent); color: inherit; }
+  }
+  .graph-spine__fork-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+}
+
+// Graph detail additions
+.graph-detail {
+  &__current-step { padding: 0.5rem; font-size: 0.85rem; color: var(--color-primary, #3b82f6); }
+  &__event-node { font-size: 0.75rem; opacity: 0.6; }
+  &__empty { padding: 2rem; text-align: center; opacity: 0.5; }
+  &__state-row { display: flex; gap: 1rem; padding: 0.4rem; border-bottom: 1px solid var(--border-color); }
+  &__state-key { font-weight: bold; min-width: 150px; }
+  &__state-value { font-family: monospace; font-size: 0.85rem; word-break: break-all; }
+  &__interrupts { margin-top: 1rem; padding: 1rem; border: 1px solid var(--color-warning, #f59e0b); border-radius: 4px;
+    h4 { margin: 0 0 0.5rem; color: var(--color-warning, #f59e0b); }
+  }
+  &__interrupt { display: flex; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
+  &__error { padding: 1rem; color: var(--color-danger, #e11d48); }
+  &__spinner { padding: 3rem; text-align: center; }
+}
+
+// Actions column
+.graph-spine__actions { display: flex; gap: 0.25rem;
+  button { padding: 0.2rem 0.4rem; border: 1px solid var(--border-color); border-radius: 3px; background: transparent; cursor: pointer; font-size: 0.8rem; &:hover { background: var(--hover-bg); } }
+}
+.graph-spine__col--name { flex: 2; }
