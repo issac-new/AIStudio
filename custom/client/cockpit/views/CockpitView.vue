@@ -2,6 +2,9 @@
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useCockpitStore, type ColumnKey } from '@/custom/cockpit/store/cockpit'
+// 全局布局样式（三列布局、折叠竖条、统一选中态）——必须在 CockpitView 中导入，
+// 因为 cockpit/index.ts 是异步 import 的，其 CSS 在生产构建中可能不被提取。
+import '@/custom/cockpit/styles/cockpit.scss'
 import CockpitAttention from '@/custom/cockpit/components/CockpitAttention.vue'
 import CockpitKanban from '@/custom/cockpit/components/CockpitKanban.vue'
 import CockpitColumnRail from '@/custom/cockpit/components/CockpitColumnRail.vue'

@@ -40,9 +40,9 @@
   // 默认宽度比例（折叠/最大化时覆盖）
   // 左/右栏统一使用 --bg-primary，与中栏同面，消除背景断层
   // 比例 1 : 1.6 : 2 — 中栏(协作图)略增,平衡三栏视觉权重
-  &--left { flex: 1 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); min-width: 280px; }
-  &--mid { flex: 1.6 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); min-width: 320px; }
-  &--right { flex: 2 1 0; min-width: 340px; background: var(--bg-primary); }
+  &--left { flex: 1 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
+  &--mid { flex: 1.6 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
+  &--right { flex: 2 1 0; min-width: 360px; background: var(--bg-primary); }
 
   // 折叠：宽度收为 32px 竖条
   &.is-collapsed { flex: 0 0 32px !important; min-width: 0; }
