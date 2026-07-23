@@ -1,12 +1,13 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index c71b0a32..6aca48e4 100644
+index 021fe34f..11f8d02e 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -239,6 +239,100 @@ export default {
-     noChangelog: 'No changelog available',
-     versionManagement: 'Version Management',
-     updateAvailableLabel: '(New version)',
+@@ -242,6 +242,106 @@ export default {
+     dockerUpdateTitle: 'Docker Update',
+     dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
+     dockerUpdateNote: 'Your data will persist after the container is recreated.',
 +    loop: 'Loop Engineering',
++    graph: 'Graph Engineering',
 +  },
 +
 +  loop: {
@@ -38,43 +39,11 @@ index c71b0a32..6aca48e4 100644
 +      stop: 'Stop Condition',
 +      budget: 'Budget',
 +      history: 'History',
-+      traces: 'Traces',
-+      latest: 'Latest Snapshot',
-+    },
-+    status: {
-+      draft: 'Draft',
-+      active: 'Active',
-+      paused: 'Paused',
-+      blocked: 'Blocked',
-+      archived: 'Archived',
-+      completed: 'Completed',
-+    },
-+    filters: {
-+      search: 'Search loops...',
-+      status: 'Status',
-+      assignee: 'Assignee',
-+    },
-+    empty: {
-+      title: 'No Loops Yet',
-+      subtitle: 'Create a loop to orchestrate iterative work',
-+      create: 'Create Loop',
-+    },
-+    create: {
-+      title: 'Create Loop',
-+      name: 'Loop Name',
-+      pattern: 'Pattern',
-+      goal: 'Goal',
-+      budget: 'Budget',
-+      submit: 'Create',
-+      cancel: 'Cancel',
-+    },
-+    approval: {
-+      title: 'Human Approval',
-+      prompt: 'Review the worktree changes and decide:',
-+      comment: 'Comment (sent to maker agent on changes-requested)',
-+      approve: 'Approve',
-+      reject: 'Reject',
-+      changesRequested: 'Request Changes',
++      workers: 'Workers',
++      relations: 'Relations',
++      todo: 'Todo',
++      loading: 'Loading...',
++      notFound: 'Loop not found',
 +    },
 +    wizard: {
 +      selectPattern: 'Select Loop Pattern',
@@ -93,6 +62,14 @@ index c71b0a32..6aca48e4 100644
 +      create: 'Create',
 +      cancel: 'Cancel',
 +    },
++    approval: {
++      title: 'Human Approval',
++      prompt: 'Review the worktree changes and decide:',
++      comment: 'Comment (sent to maker agent on changes-requested)',
++      approve: 'Approve',
++      reject: 'Reject',
++      changesRequested: 'Request Changes',
++    },
 +    stages: {
 +      discovery: 'Discovery',
 +      handoff: 'Handoff',
@@ -100,6 +77,35 @@ index c71b0a32..6aca48e4 100644
 +      persistence: 'Persistence',
 +      scheduling: 'Scheduling',
 +    },
-     dockerUpdateTitle: 'Docker Update',
-     dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
-     dockerUpdateNote: 'Your data will persist after the container is recreated.',
++  },
++
++  graph: {
++    title: 'Graph Engineering',
++    newGraph: 'New Graph',
++    sidebar: {
++      all: 'All',
++      running: 'Running',
++      awaiting: 'Awaiting Input',
++      completed: 'Completed',
++      failed: 'Failed',
++    },
++    table: {
++      name: 'Name',
++      status: 'Status',
++      step: 'Step',
++      cost: 'Cost',
++      actions: 'Actions',
++    },
++    detail: {
++      back: 'Back',
++    },
++    tabs: {
++      graph: 'Graph',
++      events: 'Events',
++      checkpoints: 'Checkpoints',
++    },
++    empty: 'No graph instances yet',
++    fork: 'Fork',
+   },
+ 
+   runtimeVersions: {
