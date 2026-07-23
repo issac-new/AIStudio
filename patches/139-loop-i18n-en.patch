@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 021fe34f..11f8d02e 100644
+index 12589446..260b6937 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -242,6 +242,106 @@ export default {
+@@ -242,6 +242,132 @@ export default {
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -98,14 +98,40 @@ index 021fe34f..11f8d02e 100644
 +    },
 +    detail: {
 +      back: 'Back',
++      step: 'Step',
++      cost: 'Cost',
++      thread: 'Thread',
++      pattern: 'Pattern',
++      level: 'Level',
++      currentStep: 'Current Step',
 +    },
 +    tabs: {
 +      graph: 'Graph',
 +      events: 'Events',
 +      checkpoints: 'Checkpoints',
++      state: 'State',
 +    },
 +    empty: 'No graph instances yet',
 +    fork: 'Fork',
++    actions: {
++      run: 'Run',
++      pause: 'Pause',
++      fork: 'Fork',
++      delete: 'Delete',
++    },
++    checkpoints: {
++      empty: 'No checkpoints yet',
++    },
++    interrupts: {
++      title: 'Pending Approvals',
++    },
++  },
++
++  graphFork: {
++    title: 'Fork Graph',
++    name: 'Fork Name',
++    confirm: 'Create Fork',
++    cancel: 'Cancel',
    },
  
    runtimeVersions: {

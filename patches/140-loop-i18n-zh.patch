@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 895d7e4d..1ee749a5 100644
+index 2a0265f8..d2b72ec5 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -245,6 +245,106 @@ export default {
+@@ -242,6 +242,132 @@ export default {
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -98,14 +98,40 @@ index 895d7e4d..1ee749a5 100644
 +    },
 +    detail: {
 +      back: '返回',
++      step: '步骤',
++      cost: '费用',
++      thread: '线程',
++      pattern: '模式',
++      level: '自治级',
++      currentStep: '当前步骤',
 +    },
 +    tabs: {
 +      graph: '图',
 +      events: '事件',
 +      checkpoints: '检查点',
++      state: '状态',
 +    },
 +    empty: '暂无图实例',
 +    fork: '分叉',
++    actions: {
++      run: '运行',
++      pause: '暂停',
++      fork: '分叉',
++      delete: '删除',
++    },
++    checkpoints: {
++      empty: '暂无检查点',
++    },
++    interrupts: {
++      title: '待审批',
++    },
++  },
++
++  graphFork: {
++    title: '分叉图',
++    name: '分叉名称',
++    confirm: '创建分叉',
++    cancel: '取消',
    },
  
    runtimeVersions: {
