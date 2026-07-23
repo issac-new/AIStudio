@@ -160,3 +160,5 @@
 159-i18n-sidebar-common-runtrace-keys.patch
 160-vite-custom-alias.patch
 161-i18n-cockpit-missing-keys.patch
+162-i18n-missing-graph-loop-kanban-keys.patch
+163-i18n-missing-loop-kanban-keys.patch
