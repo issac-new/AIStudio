@@ -1,0 +1,24 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 12589446..f60b98b8 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -406,2 +406,3 @@
+     onboarding: {
++      cta: 'Create Loop',
+       title: 'Loop Engineering',
+@@ -1343,2 +1343,3 @@
+     action: {
++      archive: 'Archive',
+       title: 'Actions',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 493abbf7..f60b98b8 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -407,2 +407,3 @@
+     onboarding: {
++      cta: '创建循环',
+       title: '循环工程',
+@@ -1345,2 +1345,3 @@
+     action: {
++      archive: '归档',
+       title: '操作',
