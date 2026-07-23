@@ -333,12 +333,13 @@ function statusBucketLabel(s: string): string {
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .cockpit-kanban__sort { font-size: 11px; color: var(--text-muted); }
-.cockpit-kanban__filters { padding: 10px 12px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
-.cockpit-kanban__frow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.cockpit-kanban__flabel { font-size: 10px; color: var(--text-muted); width: 30px; flex-shrink: 0; font-weight: 600; text-transform: uppercase; }
+.cockpit-kanban__filters { padding: 10px 12px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.cockpit-kanban__frow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.cockpit-kanban__flabel { font-size: 10px; color: var(--text-muted); min-width: 30px; max-width: 52px; flex-shrink: 0; font-weight: 600; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cockpit-kanban__tag {
   font-size: 11px; padding: 3px 9px; border-radius: 12px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-family: inherit;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;
   &:hover { border-color: var(--text-muted); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }
