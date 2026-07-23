@@ -3,8 +3,8 @@
 
 import type { App } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
-import { registerRoute } from '../../../registries/client'
-import { features } from '../../../config/features'
+import { registerRoute } from '../../../../registries/client'
+import { features } from '../../../../config/features'
 
 // 全局图样式
 import './styles/graph.scss'

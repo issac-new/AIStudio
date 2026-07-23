@@ -22,7 +22,7 @@ import { ChannelStore } from './channel-store'
 import { CheckpointManager } from './checkpoint-manager'
 
 export class GraphRuntime {
-  private checkpointManager: CheckpointManager
+  private checkpointManager?: CheckpointManager
 
   constructor(
     private deps: GraphDeps,
