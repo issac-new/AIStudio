@@ -1,12 +1,13 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 16c49e3c..d8eb81fd 100644
+index 895d7e4d..1ee749a5 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -242,6 +242,100 @@ export default {
-     noChangelog: '暂无更新日志',
-     versionManagement: '版本管理',
-     updateAvailableLabel: '(有新版)',
+@@ -245,6 +245,106 @@ export default {
+     dockerUpdateTitle: 'Docker 升级',
+     dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
+     dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
 +    loop: '循环工程',
++    graph: '图工程',
 +  },
 +
 +  loop: {
@@ -33,48 +34,16 @@ index 16c49e3c..d8eb81fd 100644
 +      run: '运行',
 +      pause: '暂停',
 +      pattern: '模式',
-+      level: '等级',
++      level: '自治级',
 +      goal: '目标',
 +      stop: '停止条件',
 +      budget: '预算',
 +      history: '历史',
-+      traces: '追踪',
-+      latest: '最新快照',
-+    },
-+    status: {
-+      draft: '草稿',
-+      active: '运行中',
-+      paused: '已暂停',
-+      blocked: '阻塞',
-+      archived: '已归档',
-+      completed: '已完成',
-+    },
-+    filters: {
-+      search: '搜索循环...',
-+      status: '状态',
-+      assignee: '负责人',
-+    },
-+    empty: {
-+      title: '还没有 Loop',
-+      subtitle: '创建一个循环工程来编排迭代工作',
-+      create: '创建 Loop',
-+    },
-+    create: {
-+      title: '创建 Loop',
-+      name: 'Loop 名称',
-+      pattern: '模式',
-+      goal: '目标',
-+      budget: '预算',
-+      submit: '创建',
-+      cancel: '取消',
-+    },
-+    approval: {
-+      title: '人工审批',
-+      prompt: '请审查工作区变更并决定：',
-+      comment: '备注（changes-requested 时发送给执行 agent）',
-+      approve: '批准',
-+      reject: '拒绝',
-+      changesRequested: '请求修改',
++      workers: '工作者',
++      relations: '关系',
++      todo: '待办',
++      loading: '加载中...',
++      notFound: 'Loop 未找到',
 +    },
 +    wizard: {
 +      selectPattern: '选择 Loop 模式',
@@ -83,15 +52,23 @@ index 16c49e3c..d8eb81fd 100644
 +      goal: '目标',
 +      stopCondition: '停止条件',
 +      cron: 'Cron 表达式',
-+      autonomyLevel: '自治等级',
-+      l1: 'L1 报告',
-+      l2: 'L2 辅助',
-+      l3: 'L3 自治',
++      autonomyLevel: '自治级',
++      l1: 'L1 仅报告',
++      l2: 'L2 辅助修复',
++      l3: 'L3 无人值守',
 +      budget: '预算',
-+      perTick: '/tick',
-+      writeBoundary: '写入边界',
++      perTick: '/次',
++      writeBoundary: '写边界',
 +      create: '创建',
 +      cancel: '取消',
++    },
++    approval: {
++      title: '人工审批',
++      prompt: '请审查 worktree 中的变更后决定：',
++      comment: '评语（退回修改时给 maker agent）',
++      approve: '批准',
++      reject: '拒绝',
++      changesRequested: '退回修改',
 +    },
 +    stages: {
 +      discovery: '发现',
@@ -100,6 +77,35 @@ index 16c49e3c..d8eb81fd 100644
 +      persistence: '持久化',
 +      scheduling: '调度',
 +    },
-     dockerUpdateTitle: 'Docker 升级',
-     dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
-     dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
++  },
++
++  graph: {
++    title: '图工程',
++    newGraph: '新建图',
++    sidebar: {
++      all: '全部',
++      running: '运行中',
++      awaiting: '等待输入',
++      completed: '已完成',
++      failed: '已失败',
++    },
++    table: {
++      name: '名称',
++      status: '状态',
++      step: '步骤',
++      cost: '费用',
++      actions: '操作',
++    },
++    detail: {
++      back: '返回',
++    },
++    tabs: {
++      graph: '图',
++      events: '事件',
++      checkpoints: '检查点',
++    },
++    empty: '暂无图实例',
++    fork: '分叉',
+   },
+ 
+   runtimeVersions: {
