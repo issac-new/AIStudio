@@ -68,7 +68,7 @@ function onItemClick(item: NotifyItem) {
   width: 360px; max-width: calc(100vw - 32px); max-height: 70vh;
   display: flex; flex-direction: column;
   background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
+  border-radius: 6px; box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
 }
 .cockpit-notify-panel__head {
   display: flex; align-items: center; justify-content: space-between;
@@ -78,7 +78,7 @@ function onItemClick(item: NotifyItem) {
 .cockpit-notify-panel__sub { font-size: 11px; color: var(--text-muted); font-weight: 400; }
 .cockpit-notify-panel__close {
   cursor: pointer; color: var(--text-muted); font-size: 14px; width: 22px; height: 22px;
-  border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 4px;
+  border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 3px;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .cockpit-notify-panel__list { flex: 1; overflow-y: auto; }
@@ -106,7 +106,7 @@ function onItemClick(item: NotifyItem) {
 }
 .cockpit-notify-panel__count {
   flex-shrink: 0; background: var(--error); color: var(--text-on-accent);
-  font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px;
+  font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 6px;
   display: flex; align-items: center; justify-content: center; padding: 0 4px;
 }
 .cockpit-notify-panel__empty { padding: 28px 14px; text-align: center; font-size: 12px; color: var(--text-muted); }

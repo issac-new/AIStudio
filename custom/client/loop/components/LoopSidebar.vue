@@ -11,11 +11,11 @@ const { t } = useI18n()
 const emit = defineEmits<{ (e: 'filter-change', status?: string): void }>()
 
 const groups = computed(() => [
-  { label: t('loop.sidebar.all'), count: store.loops.length, status: undefined, icon: '📋' },
-  { label: t('loop.sidebar.running'), count: store.activeLoops.length, status: 'running' as const, icon: '●' },
-  { label: t('loop.sidebar.awaitingReview'), count: store.awaitingReviewLoops.length, status: 'awaiting-review' as const, icon: '⚠' },
-  { label: t('loop.sidebar.blocked'), count: store.blockedLoops.length, status: 'blocked' as const, icon: '▣' },
-  { label: t('loop.sidebar.archived'), count: store.archivedLoops.length, status: 'completed' as const, icon: '✓' },
+  { label: t('loop.sidebar.all'), count: store.loops.length, status: undefined, icon: 'filter' },
+  { label: t('loop.sidebar.running'), count: store.activeLoops.length, status: 'running' as const, icon: 'status-ok' },
+  { label: t('loop.sidebar.awaitingReview'), count: store.awaitingReviewLoops.length, status: 'awaiting-review' as const, icon: 'status-warn' },
+  { label: t('loop.sidebar.blocked'), count: store.blockedLoops.length, status: 'blocked' as const, icon: 'status-err' },
+  { label: t('loop.sidebar.archived'), count: store.archivedLoops.length, status: 'completed' as const, icon: 'check' },
 ])
 
 const activeFilter = ref<string | undefined>(undefined)
@@ -33,7 +33,7 @@ function selectGroup(status?: string) {
       v-for="g in groups" :key="g.label"
       :class="{ 'loop-sidebar__group--active': activeFilter === g.status }"
       @click="selectGroup(g.status)">
-      <span class="loop-sidebar__icon">{{ g.icon }}</span>
+      <span class="loop-sidebar__icon"><CockpitIcon :name="g.icon" :size="14" /></span>
       <span class="loop-sidebar__label">{{ g.label }}</span>
       <span class="loop-sidebar__count">{{ g.count }}</span>
     </div>

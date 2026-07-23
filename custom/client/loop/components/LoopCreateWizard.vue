@@ -5,6 +5,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { PATTERN_TEMPLATES, type LoopPattern } from '@/custom/loop/types'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const store = useLoopStore()
 const { t } = useI18n()
@@ -31,13 +32,13 @@ interface Scenario {
 }
 
 const scenarios: Scenario[] = [
-  { pattern: 'daily-triage', icon: '📋', cost: t('loop.wizard.costLow') },
-  { pattern: 'ci-sweeper', icon: '🔧', cost: t('loop.wizard.costHigh') },
-  { pattern: 'dep-sweeper', icon: '📦', cost: t('loop.wizard.costMedium') },
-  { pattern: 'issue-triage', icon: '🏷️', cost: t('loop.wizard.costLow') },
-  { pattern: 'pr-babysitter', icon: '👶', cost: t('loop.wizard.costHigh') },
-  { pattern: 'changelog-drafter', icon: '📝', cost: t('loop.wizard.costLow') },
-  { pattern: 'post-merge-cleanup', icon: '🧹', cost: t('loop.wizard.costLow') },
+  { pattern: 'daily-triage', icon: 'calendar', cost: t('loop.wizard.costLow') },
+  { pattern: 'ci-sweeper', icon: 'settings', cost: t('loop.wizard.costHigh') },
+  { pattern: 'dep-sweeper', icon: 'archive', cost: t('loop.wizard.costMedium') },
+  { pattern: 'issue-triage', icon: 'filter', cost: t('loop.wizard.costLow') },
+  { pattern: 'pr-babysitter', icon: 'bell', cost: t('loop.wizard.costHigh') },
+  { pattern: 'changelog-drafter', icon: 'file', cost: t('loop.wizard.costLow') },
+  { pattern: 'post-merge-cleanup', icon: 'restore', cost: t('loop.wizard.costLow') },
 ]
 
 function selectScenario(s: Scenario) {
@@ -91,7 +92,7 @@ function back() {
         <div class="loop-wizard__scenarios">
           <div v-for="s in scenarios" :key="s.pattern"
             class="loop-wizard__scenario" @click="selectScenario(s)">
-            <span class="loop-wizard__scenario-icon">{{ s.icon }}</span>
+            <span class="loop-wizard__scenario-icon"><CockpitIcon :name="s.icon" :size="20" /></span>
             <div class="loop-wizard__scenario-info">
               <strong>{{ t(`loop.wizard.scenarios.${s.pattern}.name`) }}</strong>
               <p>{{ t(`loop.wizard.scenarios.${s.pattern}.desc`) }}</p>
@@ -177,7 +178,7 @@ function back() {
 .loop-wizard__scenarios { display: flex; flex-direction: column; gap: 0.5rem; }
 .loop-wizard__scenario {
   display: flex; gap: 1rem; padding: 0.75rem;
-  border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;
 }
 .loop-wizard__scenario:hover { border-color: var(--color-primary, #3b82f6); background: var(--hover-bg); }
 .loop-wizard__scenario-icon { font-size: 1.5rem; }
@@ -188,11 +189,11 @@ function back() {
 .loop-wizard__field { display: block; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .loop-wizard__field input, .loop-wizard__field textarea, .loop-wizard__field select {
   width: 100%; padding: 0.5rem; margin-top: 0.25rem;
-  border: 1px solid var(--border-color); border-radius: 4px;
+  border: 1px solid var(--border-color); border-radius: 3px;
   background: var(--color-bg-input, transparent); color: inherit;
   font-size: 0.9rem;
 }
-.loop-wizard__schedule-preview { padding: 0.5rem; background: var(--bg-secondary, rgba(0,0,0,0.05)); border-radius: 4px; font-size: 0.85rem; opacity: 0.8; }
+.loop-wizard__schedule-preview { padding: 0.5rem; background: var(--bg-secondary, rgba(0,0,0,0.05)); border-radius: 3px; font-size: 0.85rem; opacity: 0.8; }
 
 .loop-wizard__advanced { margin: 1rem 0; }
 .loop-wizard__advanced-toggle { border: none; background: transparent; cursor: pointer; font-size: 0.85rem; color: var(--color-primary, #3b82f6); padding: 0.25rem 0; }

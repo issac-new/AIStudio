@@ -7,12 +7,12 @@ defineProps<{ node: TraceNode | null }>()
 const { t } = useI18n()
 
 const KIND_ICONS: Record<string, string> = {
-  ingress: '📨', workflow: '🔄', agent: '🤖', skill: '⚡', tool: '🔧',
-  memory: '🧠', service: '🌐', peer: '🔗', approval: '✋',
+  ingress: 'send', workflow: 'loop', agent: 'users', skill: 'specify', tool: 'settings',
+  memory: 'file', service: 'radar', peer: 'link', approval: 'block',
 }
 
 function kindIcon(kind: string): string {
-  return KIND_ICONS[kind] || '❓'
+  return KIND_ICONS[kind] || 'file'
 }
 
 function fmtTime(ms: number): string {
@@ -41,7 +41,7 @@ function truncate(s: unknown, max: number): string {
     <template v-if="node">
       <!-- 头部：类型图标 + 标签 + 标签组 -->
       <div class="run-trace-inspector__head">
-        <span class="run-trace-inspector__icon">{{ kindIcon(node.kind) }}</span>
+        <span class="run-trace-inspector__icon"><CockpitIcon :name="kindIcon(node.kind)" :size="12" /></span>
         <div class="run-trace-inspector__head-info">
           <b>{{ node.label }}</b>
           <div class="run-trace-inspector__tags">
@@ -88,7 +88,7 @@ function truncate(s: unknown, max: number): string {
           <!-- 思维链文本 -->
           <p v-if="item.text" class="run-trace-inspector__timeline-text">{{ truncate(item.text, 500) }}</p>
           <!-- 工具名称 -->
-          <p v-if="item.toolName" class="run-trace-inspector__timeline-tool">🔧 {{ item.toolName }}</p>
+          <p v-if="item.toolName" class="run-trace-inspector__timeline-tool"><CockpitIcon name="settings" :size="10" /> {{ item.toolName }}</p>
           <!-- 工具参数 -->
           <div v-if="item.toolArgs" class="run-trace-inspector__timeline-args">
             <span class="run-trace-inspector__label">{{ t('cockpit.parameter') }}</span>
@@ -132,10 +132,10 @@ function truncate(s: unknown, max: number): string {
 .run-trace-inspector__row code { font-size: 10px; color: var(--text-secondary); font-family: ui-monospace, monospace; word-break: break-all; text-align: right; }
 
 /* 详情 */
-.run-trace-inspector__detail { font-size: 11px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap; word-break: break-word; background: var(--bg-secondary); padding: 8px; border-radius: 4px; max-height: 200px; overflow-y: auto; margin: 0; }
+.run-trace-inspector__detail { font-size: 11px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap; word-break: break-word; background: var(--bg-secondary); padding: 8px; border-radius: 3px; max-height: 200px; overflow-y: auto; margin: 0; }
 
 /* 时间线 */
-.run-trace-inspector__timeline-item { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 6px; background: var(--bg-card);
+.run-trace-inspector__timeline-item { padding: 8px; border: 1px solid var(--border-color); border-radius: 3px; margin-bottom: 6px; background: var(--bg-card);
   &.is-thinking { border-left: 3px solid var(--accent-info); }
   &.is-tool { border-left: 3px solid var(--warning); }
   &.is-memory { border-left: 3px solid var(--text-muted); }

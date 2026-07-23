@@ -2,34 +2,10 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index e1e6d67a..e8234484 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -77,6 +77,10 @@ export default {
- 
-   // Common
-   common: {
-+    clear: 'Clear',
-+    open: 'Open',
-+    refresh: 'Refresh',
-+    confirm: 'Confirm',
-     loading: 'Loading...',
-     cancel: 'Cancel',
-     delete: 'Delete',
-@@ -244,6 +248,8 @@ export default {
+@@ -244,6 +244,8 @@ export default {
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
      loop: 'Loop Engineering',
      graph: 'Graph Engineering',
-+    swarmKanban: 'Swarm Kanban',
-+    matrixChat: 'Matrix Chat',
-   },
- 
-   loop: {
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 493abbf7..b1d908ae 100644
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -247,6 +247,8 @@ export default {
-     dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
-     loop: '循环工程',
-     graph: '图工程',
 +    swarmKanban: 'Swarm Kanban',
 +    matrixChat: 'Matrix Chat',
    },

@@ -19,7 +19,7 @@ function onSave() {
 <template>
   <div class="cockpit-template-manager">
     <div class="cockpit-template-manager__head">
-      <span class="cockpit-template-manager__title">📋 {{ t('cockpit.templateManager') }}</span>
+      <span class="cockpit-template-manager__title"><CockpitIcon name="file" /> {{ t('cockpit.templateManager') }}</span>
       <button type="button" data-action="close" class="cockpit-template-manager__close" @click="store.closeTemplateManager()">✕</button>
     </div>
     <div class="cockpit-template-manager__save">
@@ -44,7 +44,7 @@ function onSave() {
 .cockpit-template-manager { display: flex; flex-direction: column; width: 420px; max-width: 92vw; max-height: 70vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
 .cockpit-template-manager__head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border-color); }
 .cockpit-template-manager__title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.cockpit-template-manager__close { cursor: pointer; color: var(--text-muted); font-size: 16px; width: 24px; height: 24px; border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 4px; font: inherit;
+.cockpit-template-manager__close { cursor: pointer; color: var(--text-muted); font-size: 16px; width: 24px; height: 24px; border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 3px; font: inherit;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .cockpit-template-manager__save { display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--border-color); }
@@ -59,7 +59,7 @@ function onSave() {
 .cockpit-template-manager__item-name { font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1; }
 .cockpit-template-manager__item-meta { font-size: 10px; color: var(--text-muted); }
 .cockpit-template-manager__item-actions { display: flex; gap: 6px; }
-.cockpit-template-manager__act { font: inherit; font-size: 10px; border-radius: 4px; padding: 3px 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+.cockpit-template-manager__act { font: inherit; font-size: 10px; border-radius: 3px; padding: 3px 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
   &.is-danger { color: var(--error); border-color: rgba(var(--error-rgb), 0.4); }
 }

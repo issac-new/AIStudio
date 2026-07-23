@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useGraphStore } from '@/custom/loop/graph/store/graph'
 import { request } from '@/api/client'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const store = useGraphStore()
 const { t } = useI18n()
@@ -17,11 +18,11 @@ const forkName = ref('')
 onMounted(() => { store.fetchInstances() })
 
 const statusGroups = computed(() => [
-  { label: t('graph.sidebar.all'), count: store.instances.length, status: undefined, icon: '📊' },
-  { label: t('graph.sidebar.running'), count: store.runningInstances.length, status: 'running' as const, icon: '●' },
-  { label: t('graph.sidebar.awaiting'), count: store.awaitingInstances.length, status: 'awaiting-input' as const, icon: '⚠' },
-  { label: t('graph.sidebar.completed'), count: store.completedInstances.length, status: 'completed' as const, icon: '✓' },
-  { label: t('graph.sidebar.failed'), count: store.failedInstances.length, status: 'failed' as const, icon: '✗' },
+  { label: t('graph.sidebar.all'), count: store.instances.length, status: undefined, icon: 'activity' },
+  { label: t('graph.sidebar.running'), count: store.runningInstances.length, status: 'running' as const, icon: 'status-ok' },
+  { label: t('graph.sidebar.awaiting'), count: store.awaitingInstances.length, status: 'awaiting-input' as const, icon: 'status-warn' },
+  { label: t('graph.sidebar.completed'), count: store.completedInstances.length, status: 'completed' as const, icon: 'check' },
+  { label: t('graph.sidebar.failed'), count: store.failedInstances.length, status: 'failed' as const, icon: 'status-err' },
 ])
 
 const activeFilter = ref<string | undefined>(undefined)
@@ -93,7 +94,7 @@ async function confirmFork() {
         v-for="g in statusGroups" :key="g.label"
         :class="{ 'graph-spine__group--active': activeFilter === g.status }"
         @click="selectGroup(g.status)">
-        <span>{{ g.icon }}</span>
+        <span><CockpitIcon :name="g.icon" :size="14" /></span>
         <span>{{ g.label }}</span>
         <span class="graph-spine__count">{{ g.count }}</span>
       </div>
@@ -117,10 +118,10 @@ async function confirmFork() {
           <span>step {{ inst.currentStep }}</span>
           <span>${{ inst.totalCost.toFixed(2) }}</span>
           <span class="graph-spine__actions">
-            <button @click.stop="onTick(inst.id)" :title="t('graph.actions.run')">▶</button>
-            <button @click.stop="onPause(inst.id)" :title="t('graph.actions.pause')">⏸</button>
-            <button @click.stop="openForkDialog(inst.id)" :title="t('graph.actions.fork')">🍴</button>
-            <button @click.stop="onDelete(inst.id)" :title="t('graph.actions.delete')">🗑</button>
+            <button @click.stop="onTick(inst.id)" :title="t('graph.actions.run')"><CockpitIcon name="run" :size="10" /></button>
+            <button @click.stop="onPause(inst.id)" :title="t('graph.actions.pause')"><CockpitIcon name="pause" :size="10" /></button>
+            <button @click.stop="openForkDialog(inst.id)" :title="t('graph.actions.fork')"><CockpitIcon name="fork" :size="10" /></button>
+            <button @click.stop="onDelete(inst.id)" :title="t('graph.actions.delete')"><CockpitIcon name="trash" :size="10" /></button>
           </span>
         </div>
         <div v-if="filteredInstances.length === 0" class="graph-spine__empty">

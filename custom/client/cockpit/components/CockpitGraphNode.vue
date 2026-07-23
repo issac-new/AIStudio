@@ -53,7 +53,7 @@ function kindIcon(k: GraphNode['kind']): string {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   &:hover { border-color: var(--text-muted); background: var(--bg-card-hover); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
-  &.is-focus { border-color: var(--accent-primary); border-width: 2px; font-weight: 700; box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb, 0), 0.12); }
+  &.is-focus { border-color: var(--accent-primary); border-width: 2px; font-weight: 700; box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb, 64, 120, 192), 0.12); }
   &.is-folded { color: var(--text-muted); font-style: italic; border-style: dashed; }
 }
 .cockpit-graph-node__icon { font-size: 10px; color: var(--text-muted); }

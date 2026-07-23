@@ -7,6 +7,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { useCockpitStore, type GraphNode } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import { isHumanActionStatus } from '../adapters/topology-adapter'
+import { resolveStatusColors, resolveStatusBg, resolveNeutrals } from '../styles/status-colors'
 
 echarts.use([GraphChart, TooltipComponent, CanvasRenderer])
 
@@ -94,86 +95,86 @@ function computePositions(topo: typeof store.topologyForSelectedTask): Record<st
 
 // 四维度样式配置（Pure Ink 风格）
 // label 放节点内部（inside），symbolSize 按 label 长度自适应增大
+// overlay[fix-pure-ink]: 颜色从主题变量 resolve，不再硬编码 hex（dark/comic 主题自动适配）
+const _n = resolveNeutrals()
 const STYLE = {
   center: {
-    itemStyle: { color: '#333', borderColor: '#1a1a1a', borderWidth: 3 },
-    label: { color: '#fff', fontSize: 13, fontWeight: 'bold', position: 'inside' },
+    itemStyle: { color: _n.accent, borderColor: _n.ink, borderWidth: 3 },
+    label: { color: _n.bgCard, fontSize: 13, fontWeight: 'bold', position: 'inside' },
     symbol: 'circle', symbolSizeBase: 48,
   },
   ancestor: {
-    itemStyle: { color: '#fff', borderColor: '#555', borderWidth: 2.5 },
-    label: { color: '#333', fontSize: 11, fontWeight: '600', position: 'inside' },
+    itemStyle: { color: _n.bgCard, borderColor: _n.inkSecondary, borderWidth: 2.5 },
+    label: { color: _n.ink, fontSize: 11, fontWeight: '600', position: 'inside' },
     symbol: 'circle', symbolSizeBase: 34,
   },
   descendant: {
-    itemStyle: { color: '#fff', borderColor: '#bbb', borderWidth: 1.5, borderType: 'dashed' },
-    label: { color: '#555', fontSize: 11, fontWeight: 'normal', position: 'inside' },
+    itemStyle: { color: _n.bgCard, borderColor: _n.muted, borderWidth: 1.5, borderType: 'dashed' },
+    label: { color: _n.inkSecondary, fontSize: 11, fontWeight: 'normal', position: 'inside' },
     symbol: 'diamond', symbolSizeBase: 34,
   },
   channel: {
-    itemStyle: { color: '#f0f0f0', borderColor: '#333', borderWidth: 2 },
-    label: { color: '#333', fontSize: 11, fontWeight: 'bold', position: 'inside' },
+    itemStyle: { color: _n.bgSecondary, borderColor: _n.accent, borderWidth: 2 },
+    label: { color: _n.ink, fontSize: 11, fontWeight: 'bold', position: 'inside' },
     symbol: 'roundRect', symbolSizeBase: 34,
   },
   person: {
-    itemStyle: { color: '#fff', borderColor: '#ccc', borderWidth: 1 },
-    label: { color: '#888', fontSize: 10, fontWeight: 'normal', position: 'inside' },
+    itemStyle: { color: _n.bgCard, borderColor: _n.border, borderWidth: 1 },
+    label: { color: _n.muted, fontSize: 10, fontWeight: 'normal', position: 'inside' },
     symbol: 'circle', symbolSizeBase: 28,
   },
   folded: {
-    itemStyle: { color: '#eee', borderColor: '#ddd', borderWidth: 1, borderType: 'dotted' },
-    label: { color: '#bbb', fontSize: 9, position: 'inside' },
+    itemStyle: { color: _n.bgSecondary, borderColor: _n.border, borderWidth: 1, borderType: 'dotted' },
+    label: { color: _n.muted, fontSize: 9, position: 'inside' },
     symbol: 'circle', symbolSizeBase: 24,
   },
 }
 
 // 连线样式：按节点类型组合
 function linkStyle(fromKind: string, toKind: string) {
+  const n = resolveNeutrals()
   // 垂直关系（ancestor↔center↔descendant）
   if (fromKind === 'ancestor' || toKind === 'ancestor') {
-    return { color: '#999', width: 1.5, type: 'solid' as const }  // 实线
+    return { color: n.muted, width: 1.5, type: 'solid' as const }  // 实线
   }
   if (fromKind === 'descendant' || toKind === 'descendant') {
-    return { color: '#ccc', width: 1.5, type: 'dashed' as const }  // 虚线
+    return { color: n.border, width: 1.5, type: 'dashed' as const }  // 虚线
   }
   // 水平关系（channel/person）
   if (fromKind === 'channel' || toKind === 'channel') {
-    return { color: '#999', width: 1.5, type: 'dotted' as const }  // 点线
+    return { color: n.muted, width: 1.5, type: 'dotted' as const }  // 点线
   }
-  return { color: '#ddd', width: 1, type: 'solid' as const }  // 人员细线
+  return { color: n.border, width: 1, type: 'solid' as const }  // 人员细线
 }
 
 // ── 需要人工介入的状态视觉区分 ──
 // 仅对 center/ancestor/descendant 任务节点生效，覆盖默认边框+背景
 // blocked: 红色（阻塞，需人工取消阻塞）
 // todo: 蓝色（待办，需人工启动）
-// triage: 紫色（分诊，需人工细化/分流）
+// triage: 信息蓝（分诊，需人工细化/分流）
 // review: 橙色（待审核，需人工审核）
-const HUMAN_ACTION_STATUS_STYLE: Record<string, {
-  itemStyle: { borderColor: string; borderWidth: number; color: string; shadowBlur?: number; shadowColor?: string }
-  label: { color: string; fontWeight: string }
-  badge?: string  // 状态标记 emoji（放在 tooltip 和 label 前缀）
-}> = {
-  blocked: {
-    itemStyle: { borderColor: '#e74c3c', borderWidth: 3, color: '#fdecea', shadowBlur: 8, shadowColor: 'rgba(231,76,60,0.3)' },
-    label: { color: '#c0392b', fontWeight: 'bold' },
-    badge: '⛔',
-  },
-  todo: {
-    itemStyle: { borderColor: '#3498db', borderWidth: 2.5, color: '#ebf5fb', shadowBlur: 6, shadowColor: 'rgba(52,152,219,0.25)' },
-    label: { color: '#2471a3', fontWeight: '600' },
-    badge: '📋',
-  },
-  triage: {
-    itemStyle: { borderColor: '#9b59b6', borderWidth: 2.5, color: '#f4ecf7', shadowBlur: 6, shadowColor: 'rgba(155,89,182,0.25)' },
-    label: { color: '#7d3c98', fontWeight: '600' },
-    badge: '🔍',
-  },
-  review: {
-    itemStyle: { borderColor: '#e67e22', borderWidth: 2.5, color: '#fef5e7', shadowBlur: 6, shadowColor: 'rgba(230,126,34,0.25)' },
-    label: { color: '#b9770e', fontWeight: '600' },
-    badge: '👀',
-  },
+// overlay[fix-pure-ink]: 状态色统一从 status-colors.ts resolve，与 Kanban/Attention/Legend 一致
+function humanActionStyles() {
+  const c = resolveStatusColors()
+  const bg = (s: 'blocked' | 'todo' | 'triage' | 'review') => resolveStatusBg(s, 0.12)
+  return {
+    blocked: {
+      itemStyle: { borderColor: c.blocked, borderWidth: 3, color: bg('blocked'), shadowBlur: 8, shadowColor: resolveStatusBg('blocked', 0.3) },
+      label: { color: c.blocked, fontWeight: 'bold' },
+    },
+    todo: {
+      itemStyle: { borderColor: c.todo, borderWidth: 2.5, color: bg('todo'), shadowBlur: 6, shadowColor: resolveStatusBg('todo', 0.25) },
+      label: { color: c.todo, fontWeight: '600' },
+    },
+    triage: {
+      itemStyle: { borderColor: c.triage, borderWidth: 2.5, color: bg('triage'), shadowBlur: 6, shadowColor: resolveStatusBg('triage', 0.25) },
+      label: { color: c.triage, fontWeight: '600' },
+    },
+    review: {
+      itemStyle: { borderColor: c.review, borderWidth: 2.5, color: bg('review'), shadowBlur: 6, shadowColor: resolveStatusBg('review', 0.25) },
+      label: { color: c.review, fontWeight: '600' },
+    },
+  } as const
 }
 
 // 图表数据（函数形式：每次调用重新计算，确保容器尺寸变化时坐标更新）
@@ -200,7 +201,7 @@ function buildChartOption() {
     // 人工介入状态覆盖：仅对任务节点（center/ancestor/descendant）且状态属于需介入类型时生效
     const isTaskNode = n.kind === 'center' || n.kind === 'ancestor' || n.kind === 'descendant'
     const statusStyle = (isTaskNode && isHumanActionStatus(n.status))
-      ? HUMAN_ACTION_STATUS_STYLE[n.status as 'blocked' | 'todo' | 'triage' | 'review']
+      ? (humanActionStyles() as any)[n.status as 'blocked' | 'todo' | 'triage' | 'review']
       : null
 
     const itemStyle = statusStyle
@@ -210,8 +211,8 @@ function buildChartOption() {
       ? { ...st.label, color: statusStyle.label.color, fontWeight: statusStyle.label.fontWeight }
       : st.label
 
-    // 状态标记前缀（让用户一眼看出需介入的状态）
-    const displayLabel = statusStyle?.badge ? `${statusStyle.badge} ${label}` : label
+    // 状态标记：节点 label 保持纯文本标题（状态由边框颜色+图例表达，不再用 emoji 前缀）
+    const displayLabel = label
 
     return {
       id: n.id,
@@ -247,21 +248,21 @@ function buildChartOption() {
         if (params.dataType !== 'node') return ''
         const d = params.data
         if (!d) return ''
+        // overlay[fix-pure-ink]: tooltip 状态文字不带 emoji，颜色交给状态色
         const statusLabels: Record<string, string> = {
-          blocked: '⛔ 阻塞 — 需人工取消阻塞',
-          todo: '📋 待办 — 需人工启动',
-          triage: '🔍 分诊 — 需人工细化/分流',
-          review: '👀 待审核 — 需人工审核',
-          scheduled: '⏰ 已排期',
-          ready: '✅ 就绪',
-          running: '🚀 进行中',
-          done: '✔️ 已完成',
-          archived: '📦 已归档',
+          blocked: '阻塞 — 需人工取消阻塞',
+          todo: '待办 — 需人工启动',
+          triage: '分诊 — 需人工细化/分流',
+          review: '待审核 — 需人工审核',
+          scheduled: '已排期',
+          ready: '就绪',
+          running: '进行中',
+          done: '已完成',
+          archived: '已归档',
         }
         const statusText = d._status ? (statusLabels[d._status] ?? d._status) : ''
-        // 去掉 label 中的 badge 前缀，显示完整标题
-        const rawName = typeof d.name === 'string' ? d.name.replace(/^[⛔📋🔍👀⏰✅🚀✔️📦]\s/, '') : ''
-        return statusText ? `<b>${rawName}</b><br/><span style="color:#666;font-size:11px">${statusText}</span>` : `<b>${rawName}</b>`
+        const rawName = typeof d.name === 'string' ? d.name : ''
+        return statusText ? `<b>${rawName}</b><br/><span style="font-size:11px;opacity:0.75">${statusText}</span>` : `<b>${rawName}</b>`
       },
     },
     series: [{
@@ -273,7 +274,7 @@ function buildChartOption() {
       emphasis: {
         focus: 'adjacency',
         label: { fontSize: 13, fontWeight: 'bold' },
-        lineStyle: { width: 2.5, color: '#666' },
+        lineStyle: { width: 2.5, color: resolveNeutrals().inkSecondary },
       },
       scaleLimit: { min: 0.5, max: 3 },
       data: nodes,
@@ -446,7 +447,7 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .cockpit-map { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; border-bottom: 1px solid var(--border-color); background: var(--bg-primary); }
 .cockpit-map__head { display: flex; align-items: center; gap: 8px; padding: 10px 44px 6px 16px; flex-shrink: 0; flex-wrap: wrap; }
-.cockpit-map__title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.cockpit-map__title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
 .cockpit-map__hint-inline { font-size: 10px; color: var(--text-muted); }
 .cockpit-map__chart { flex: 1 1 0; min-height: 100px; width: 100%; }
 .cockpit-map__empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; }
@@ -476,12 +477,12 @@ onUnmounted(() => {
   border: 2px solid currentColor;
   flex-shrink: 0;
 }
-.legend-blocked { color: #e74c3c; background: rgba(231,76,60,0.08); }
-.legend-blocked .legend-dot { background: #fdecea; }
-.legend-todo { color: #2471a3; background: rgba(52,152,219,0.08); }
-.legend-todo .legend-dot { background: #ebf5fb; }
-.legend-triage { color: #7d3c98; background: rgba(155,89,182,0.08); }
-.legend-triage .legend-dot { background: #f4ecf7; }
-.legend-review { color: #b9770e; background: rgba(230,126,34,0.08); }
-.legend-review .legend-dot { background: #fef5e7; }
+.legend-blocked { color: var(--error); background: rgba(var(--error-rgb, 198, 40, 40), 0.08); }
+.legend-blocked .legend-dot { background: rgba(var(--error-rgb, 198, 40, 40), 0.15); }
+.legend-todo { color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 51, 51, 51), 0.08); }
+.legend-todo .legend-dot { background: rgba(var(--accent-primary-rgb, 51, 51, 51), 0.12); }
+.legend-triage { color: var(--accent-info); background: rgba(var(--accent-info-rgb, 74, 144, 217), 0.08); }
+.legend-triage .legend-dot { background: rgba(var(--accent-info-rgb, 74, 144, 217), 0.15); }
+.legend-review { color: var(--warning); background: rgba(var(--warning-rgb, 245, 127, 23), 0.08); }
+.legend-review .legend-dot { background: rgba(var(--warning-rgb, 245, 127, 23), 0.15); }
 </style>
