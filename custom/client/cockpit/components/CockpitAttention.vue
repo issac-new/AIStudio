@@ -101,9 +101,9 @@ onUnmounted(() => { stopCountdown() })
   flex-shrink: 0;
   display: flex;
   align-items: stretch;
-  min-height: 40px;
+  min-height: 48px;
   border-bottom: 1px solid var(--border-color);
-  background: var(--bg-card);
+  background: var(--bg-secondary);
 }
 .cockpit-attention__label {
   flex-shrink: 0;
@@ -117,7 +117,7 @@ onUnmounted(() => { stopCountdown() })
   color: var(--text-secondary);
 }
 .cockpit-attention__refresh {
-  width: auto; min-width: 24px; height: 20px; border-radius: 4px; border: 1px solid var(--border-color);
+  width: auto; min-width: 24px; height: 20px; border-radius: 3px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-muted); cursor: pointer; flex-shrink: 0;
   display: inline-flex; align-items: center; gap: 2px; padding: 0 4px;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
@@ -175,7 +175,7 @@ onUnmounted(() => { stopCountdown() })
 .cockpit-attention__sev-bar {
   width: 3px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--text-muted);
   flex-shrink: 0;
 }

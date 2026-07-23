@@ -4,6 +4,7 @@ import { Solar } from 'lunar-typescript'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import type { ScheduleEvent } from '@/custom/cockpit/store/cockpit'
+import CockpitIcon from './CockpitIcon.vue'
 
 const store = useCockpitStore()
 const { t } = useI18n()
@@ -263,7 +264,7 @@ function miniTitle(c: MiniCell): string {
     <!-- 头部 -->
     <div class="cockpit-schedule__head">
       <div class="cockpit-schedule__head-left">
-        <span class="cockpit-schedule__title">📅 {{ t('cockpit.schedule') }}</span>
+        <span class="cockpit-schedule__title"><CockpitIcon name="calendar" /> {{ t('cockpit.schedule') }}</span>
         <button
           v-if="!showAddForm"
           type="button"
@@ -287,7 +288,7 @@ function miniTitle(c: MiniCell): string {
       />
       <div class="cockpit-schedule__add-row">
         <label class="cockpit-schedule__add-field">
-          <span class="cockpit-schedule__add-label">📅</span>
+          <span class="cockpit-schedule__add-label"><CockpitIcon name="calendar" :size="12" /></span>
           <input type="date" v-model="newTodoDate" class="cockpit-schedule__add-date" />
         </label>
         <label class="cockpit-schedule__add-field">
@@ -366,7 +367,7 @@ function miniTitle(c: MiniCell): string {
 
         <div class="cockpit-schedule__list">
           <div v-if="sortedEvents.length === 0" class="cockpit-schedule__empty">
-            <span class="cockpit-schedule__empty-icon">🗓</span>
+            <span class="cockpit-schedule__empty-icon"><CockpitIcon name="calendar" :size="24" /></span>
             <span class="cockpit-schedule__empty-text">{{ t('cockpit.scheduleEmpty') }}</span>
           </div>
           <div
@@ -431,7 +432,7 @@ function miniTitle(c: MiniCell): string {
 .cockpit-schedule__close {
   cursor: pointer; color: var(--text-muted); font-size: 16px;
   width: 24px; height: 24px; border: none; background: none;
-  display: flex; align-items: center; justify-content: center; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; border-radius: 3px;
   font: inherit; flex-shrink: 0;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
@@ -516,7 +517,7 @@ function miniTitle(c: MiniCell): string {
 }
 .cockpit-schedule__mini {
   display: flex; flex-direction: column; gap: 4px; padding: 6px 6px 4px;
-  border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card);
+  border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card);
   min-height: 0; transition: border-color 0.12s, background 0.12s;
   &.is-cur { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb), 0.04); }
 }
@@ -529,7 +530,7 @@ function miniTitle(c: MiniCell): string {
 .cockpit-schedule__mini-wk { display: flex; gap: 2px; flex: 1; }
 .cockpit-schedule__mini-d {
   flex: 1; min-width: 0; padding: 1px 0; border: none; background: none;
-  cursor: pointer; font-family: inherit; border-radius: 4px; position: relative;
+  cursor: pointer; font-family: inherit; border-radius: 3px; position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
   transition: background 0.1s;
   &:hover { background: var(--bg-secondary); }
@@ -561,7 +562,7 @@ function miniTitle(c: MiniCell): string {
 .cockpit-schedule__day-date { font-size: 12px; font-weight: 600; color: var(--text-primary); }
 .cockpit-schedule__day-count {
   font-size: 10px; font-weight: 700; color: var(--accent-primary);
-  background: rgba(var(--accent-primary-rgb), 0.1); padding: 1px 7px; border-radius: 8px;
+  background: rgba(var(--accent-primary-rgb), 0.1); padding: 1px 7px; border-radius: 6px;
 }
 .cockpit-schedule__list {
   flex: 1; overflow-y: auto; min-height: 120px; padding: 4px 0;
@@ -626,7 +627,7 @@ function miniTitle(c: MiniCell): string {
   flex-shrink: 0; width: 20px; height: 20px; padding: 0; border: none;
   background: none; color: var(--text-muted); cursor: pointer; font-size: 12px;
   line-height: 1; display: flex; align-items: center; justify-content: center;
-  border-radius: 4px; font-family: inherit;
+  border-radius: 3px; font-family: inherit;
   &:hover { background: var(--bg-secondary); color: var(--error); }
 }
 

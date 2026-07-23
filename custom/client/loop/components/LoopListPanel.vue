@@ -53,7 +53,7 @@ function statusLabel(status: string): string {
     <div v-if="attentionLoops.length > 0" class="loop-list__attention">
       <div v-for="loop in attentionLoops" :key="loop.id"
         class="loop-list__attention-item" @click="emit('select', loop.id)">
-        <span class="loop-list__attention-icon">{{ loop.status === 'awaiting-review' ? '⚠' : '▣' }}</span>
+        <span class="loop-list__attention-icon"><CockpitIcon :name=" loop.status === 'awaiting-review' ? 'status-warn' : 'block' " :size="12" /></span>
         <span class="loop-list__attention-name">{{ loop.name }}</span>
         <span class="loop-list__attention-status">
           {{ loop.status === 'awaiting-review' ? t('loop.attention.needsReview') : t('loop.attention.blocked') }}
@@ -84,9 +84,9 @@ function statusLabel(status: string): string {
           </div>
         </div>
         <div class="loop-list__item-actions" @click.stop>
-          <button @click="onTick(loop.id)" :title="t('graph.actions.run')">▶</button>
-          <button @click="onPause(loop.id)" :title="t('graph.actions.pause')">⏸</button>
-          <button @click="onDelete(loop.id)" :title="t('graph.actions.delete')">🗑</button>
+          <button @click="onTick(loop.id)" :title="t('graph.actions.run')"><CockpitIcon name="run" :size="10" /></button>
+          <button @click="onPause(loop.id)" :title="t('graph.actions.pause')"><CockpitIcon name="pause" :size="10" /></button>
+          <button @click="onDelete(loop.id)" :title="t('graph.actions.delete')"><CockpitIcon name="trash" :size="10" /></button>
         </div>
       </div>
     </div>
@@ -101,7 +101,7 @@ function statusLabel(status: string): string {
 .loop-list { display: flex; flex-direction: column; height: 100%; overflow: auto; }
 
 .loop-list__attention { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); background: rgba(245, 158, 11, 0.05); }
-.loop-list__attention-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem; cursor: pointer; border-radius: 4px; }
+.loop-list__attention-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem; cursor: pointer; border-radius: 3px; }
 .loop-list__attention-item:hover { background: var(--hover-bg); }
 .loop-list__attention-name { flex: 1; font-weight: 500; }
 .loop-list__attention-status { font-size: 0.85rem; color: var(--color-warning, #f59e0b); }
@@ -109,7 +109,7 @@ function statusLabel(status: string): string {
 .loop-list__items { flex: 1; overflow: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .loop-list__item {
   display: flex; align-items: center; gap: 1rem;
-  padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px;
+  padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;
   cursor: pointer;
 }
 .loop-list__item:hover { background: var(--hover-bg); border-color: var(--color-primary, #3b82f6); }
@@ -125,7 +125,7 @@ function statusLabel(status: string): string {
 .loop-list__status--failed { color: var(--color-danger, #e11d48); }
 .loop-list__status--idle, .loop-list__status--paused { color: var(--color-text-secondary, #878c99); }
 .loop-list__item-actions { display: flex; gap: 0.25rem; }
-.loop-list__item-actions button { padding: 0.3rem 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background: transparent; cursor: pointer; }
+.loop-list__item-actions button { padding: 0.3rem 0.5rem; border: 1px solid var(--border-color); border-radius: 3px; background: transparent; cursor: pointer; }
 .loop-list__item-actions button:hover { background: var(--hover-bg); }
 
 .loop-list__footer { padding: 0.75rem 1rem; border-top: 1px solid var(--border-color); }

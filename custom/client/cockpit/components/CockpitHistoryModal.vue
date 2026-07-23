@@ -40,7 +40,7 @@ const items = computed(() => store.filteredHistory)
     <div class="cockpit-history-modal__filters">
       <!-- Row 1: Search -->
       <div class="cockpit-history-modal__frow">
-        <span class="cockpit-history-modal__flabel">🔍</span>
+        <span class="cockpit-history-modal__flabel"><CockpitIcon name="search" :size="12" /></span>
         <input type="text" class="cockpit-history-modal__search"
           :value="store.historyFilters.search"
           @input="store.setHistorySearch(($event.target as HTMLInputElement).value)"
@@ -104,13 +104,13 @@ const items = computed(() => store.filteredHistory)
   &:focus { border-color: var(--accent-primary); }
   &::placeholder { color: var(--text-muted); }
 }
-.cockpit-history-modal__close { cursor: pointer; color: var(--text-muted); font-size: 16px; width: 24px; height: 24px; border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 4px; font: inherit;
+.cockpit-history-modal__close { cursor: pointer; color: var(--text-muted); font-size: 16px; width: 24px; height: 24px; border: none; background: none; display: flex; align-items: center; justify-content: center; border-radius: 3px; font: inherit;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .cockpit-history-modal__filters { padding: 12px 18px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
 .cockpit-history-modal__frow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .cockpit-history-modal__flabel { font-size: 10px; color: var(--text-muted); width: 44px; flex-shrink: 0; font-weight: 600; }
-.cockpit-history-modal__chip { font-size: 10px; padding: 2px 9px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font: inherit;
+.cockpit-history-modal__chip { font-size: 10px; padding: 2px 9px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font: inherit;
   &:hover { border-color: var(--text-muted); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 }

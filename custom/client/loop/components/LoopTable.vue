@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { toLoopTableRow } from '@/custom/loop/adapters/loop-adapter'
 import type { LoopStatus } from '@/custom/loop/types'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const store = useLoopStore()
 const { t } = useI18n()
@@ -43,9 +44,9 @@ const rows = computed(() => {
       <span class="loop-table__col">{{ row.progress }}</span>
       <span class="loop-table__col" :class="{ 'loop-table__cost--warning': row.costWarning }">{{ row.cost }}</span>
       <span class="loop-table__col loop-table__actions">
-        <button @click.stop="store.tickLoop(row.id).catch(() => {})">▶</button>
-        <button @click.stop="store.pauseLoop(row.id).catch(() => {})">⏸</button>
-        <button @click.stop="store.deleteLoop(row.id).catch(() => {})">🗑</button>
+        <button @click.stop="store.tickLoop(row.id).catch(() => {})" :title="t('graph.actions.run')"><CockpitIcon name="run" :size="10" /></button>
+        <button @click.stop="store.pauseLoop(row.id).catch(() => {})" :title="t('graph.actions.pause')"><CockpitIcon name="pause" :size="10" /></button>
+        <button @click.stop="store.deleteLoop(row.id).catch(() => {})" :title="t('graph.actions.delete')"><CockpitIcon name="trash" :size="10" /></button>
       </span>
     </div>
   </div>
