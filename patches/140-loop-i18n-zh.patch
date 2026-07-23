@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index f970ed36..736a2438 100644
+index f970ed36..493abbf7 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -245,6 +245,122 @@ export default {
+@@ -245,6 +245,196 @@ export default {
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -68,6 +68,52 @@ index f970ed36..736a2438 100644
 +      writeBoundary: '写边界',
 +      create: '创建',
 +      cancel: '取消',
++      back: '返回',
++      selectScenario: '想让循环帮你做什么？',
++      scenarioHint: '选一个场景——其他都已为你预配置好。',
++      schedule: '调度',
++      advanced: '高级选项',
++      namePlaceholder: '我的循环',
++      costLow: '低成本',
++      costMedium: '中成本',
++      costHigh: '高成本',
++      scenarios: {
++        'daily-triage': {
++          name: '每天检查我的 issues',
++          desc: '每天早上扫描 open issues 和 CI 失败，自动修复能修的。',
++          schedule: '每天 9:00',
++        },
++        'ci-sweeper': {
++          name: '自动修复 CI 失败',
++          desc: '持续监控 CI 运行，失败一出现就修。',
++          schedule: '每 10 分钟',
++        },
++        'dep-sweeper': {
++          name: '保持依赖更新',
++          desc: '定期扫描过期依赖并提交更新 PR。',
++          schedule: '每 6 小时',
++        },
++        'issue-triage': {
++          name: '分诊新 issues',
++          desc: '自动为新 issues 分类和打标签。',
++          schedule: '每 2 小时',
++        },
++        'pr-babysitter': {
++          name: '盯着我的 PR',
++          desc: '监控 open PR 的 CI 状态和评审反馈。',
++          schedule: '每 15 分钟',
++        },
++        'changelog-drafter': {
++          name: '草拟变更日志',
++          desc: '每周从最近的提交生成变更日志草稿。',
++          schedule: '每周一',
++        },
++        'post-merge-cleanup': {
++          name: '合并后清理',
++          desc: '合并后清理过期分支和 worktree。',
++          schedule: '每天 18:00',
++        },
++      },
 +    },
 +    approval: {
 +      title: '人工审批',
@@ -76,6 +122,34 @@ index f970ed36..736a2438 100644
 +      approve: '批准',
 +      reject: '拒绝',
 +      changesRequested: '退回修改',
++    },
++    status: {
++      running: '运行中',
++      awaitingReview: '待审批',
++      blocked: '阻塞',
++      completed: '已完成',
++      failed: '已失败',
++      paused: '已暂停',
++      idle: '空闲',
++    },
++    tasks: '任务',
++    nextTickAt: '下次运行',
++    recentActivity: '最近活动',
++    stats: '统计',
++    activity: {
++      stageTransition: '{from} → {to}',
++      taskDiscovered: '发现：{summary}',
++      taskHandedOff: '交接到 worktree {worktree}',
++      verifyPass: '验证通过',
++      verifyFail: '验证失败',
++      persisted: '已持久化 {artifact}',
++      tickComplete: '第 {iteration} 轮完成',
++      budgetWarning: '预算已达 {pct}%',
++      stuck: '卡住：{reason}',
++      completed: '循环已完成',
++      running: '正在{stage}…',
++      awaitingReview: '等待你的审批',
++      idle: '空闲中——下次运行 {next}',
 +    },
 +    stages: {
 +      discovery: '发现',
@@ -95,12 +169,12 @@ index f970ed36..736a2438 100644
 +      title: '循环工程',
 +      desc: '定义一个递归目标——系统按你设定的节奏，自动发现问题、派发 agent、验证修复并合并。',
 +      step1: {
-+        title: '选择模式',
-+        desc: '每日分诊、CI 清理、依赖更新等——每种预填目标、调度和成本档位。',
++        title: '选择场景',
++        desc: '每日 issue 检查、CI 自动修复、依赖更新等——每种预填目标、调度和成本档位。',
 +      },
 +      step2: {
 +        title: '配置循环',
-+        desc: '设置目标、停止条件、cron 调度、自治级别和预算护栏。',
++        desc: '设置目标、停止条件、调度、自治级别和预算护栏。',
 +      },
 +      step3: {
 +        title: '观察运行',

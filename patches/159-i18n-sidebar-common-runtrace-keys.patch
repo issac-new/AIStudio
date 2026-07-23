@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index c4d5978d..6b76ccdc 100644
+index e1e6d67a..e8234484 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -77,6 +77,10 @@ export default {
@@ -23,7 +23,7 @@ index c4d5978d..6b76ccdc 100644
  
    loop: {
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 736a2438..960eb33e 100644
+index 493abbf7..b1d908ae 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -247,6 +247,8 @@ export default {

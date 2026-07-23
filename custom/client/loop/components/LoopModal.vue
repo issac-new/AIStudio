@@ -1,15 +1,56 @@
 <!-- overlay/custom/client/loop/components/LoopModal.vue -->
-<!-- LoopModal — 循环工程全屏弹窗（位于 AI 协作中心顶栏下方，不遮挡注意力栏） -->
+<!-- LoopModal — 循环工程全屏弹窗（统一任务流：创建 → 看它跑 → 看结果 → 审批） -->
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
-import LoopSpineView from '@/custom/loop/views/LoopSpineView.vue'
+import { useLoopStore } from '@/custom/loop/store/loop'
+import LoopListPanel from '@/custom/loop/components/LoopListPanel.vue'
+import LoopDetailPanel from '@/custom/loop/components/LoopDetailPanel.vue'
+import LoopCreateWizard from '@/custom/loop/components/LoopCreateWizard.vue'
 
 const { t } = useI18n()
-const store = useCockpitStore()
+const cockpit = useCockpitStore()
+const store = useLoopStore()
+
+const viewMode = ref<'list' | 'detail'>('list')
+const selectedLoopId = ref<string | null>(null)
+const showWizard = ref(false)
+
+onMounted(() => { store.fetchLoops() })
+onUnmounted(() => { store.disconnectSocket() })
+
+function onSelectLoop(id: string) {
+  selectedLoopId.value = id
+  viewMode.value = 'detail'
+}
+
+function onBack() {
+  viewMode.value = 'list'
+  selectedLoopId.value = null
+  store.disconnectSocket()
+  void store.fetchLoops()
+}
+
+function onCreate() {
+  showWizard.value = true
+}
+
+// 创建成功：立即运行一次并跳到详情页看它跑
+async function onWizardCreated() {
+  showWizard.value = false
+  const created = store.currentLoop
+  if (created) {
+    selectedLoopId.value = created.id
+    viewMode.value = 'detail'
+    // 立即跑一次，让用户看到效果
+    await store.tickLoop(created.id).catch(() => {})
+  }
+}
 
 function onClose() {
-  store.closeLoop()
+  store.disconnectSocket()
+  cockpit.closeLoop()
 }
 </script>
 
@@ -21,8 +62,18 @@ function onClose() {
         <button class="loop-modal__close" @click="onClose">×</button>
       </div>
       <div class="loop-modal__body">
-        <LoopSpineView />
+        <LoopListPanel
+          v-if="viewMode === 'list'"
+          @select="onSelectLoop"
+          @create="onCreate"
+        />
+        <LoopDetailPanel
+          v-else-if="selectedLoopId"
+          :loop-id="selectedLoopId"
+          @back="onBack"
+        />
       </div>
+      <LoopCreateWizard v-if="showWizard" @close="showWizard = false" @created="onWizardCreated" />
     </div>
   </div>
 </template>
@@ -30,8 +81,7 @@ function onClose() {
 <style scoped>
 .loop-modal {
   position: fixed;
-  /* TopBar (44px) + Attention bar (40px) + 12px gap — attention bar stays visible */
-  top: 96px;
+  top: 96px; /* TopBar 44 + Attention 40 + gap 12 — 不遮挡注意力栏 */
   left: 24px;
   right: 24px;
   bottom: 24px;
@@ -65,8 +115,5 @@ function onClose() {
   color: var(--text-secondary);
 }
 .loop-modal__close:hover { background: var(--hover-bg); }
-.loop-modal__body {
-  flex: 1;
-  overflow: auto;
-}
+.loop-modal__body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 </style>

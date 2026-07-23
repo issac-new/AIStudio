@@ -56,11 +56,16 @@ function onCreate() {
   showWizard.value = true
 }
 
-// 创建成功后跳转到详情页
+// 创建成功后跳转到详情页并立即运行一次
 async function onWizardClose() {
   showWizard.value = false
-  // 如果刚创建了 loop，跳转到它的详情页
+}
+
+// 创建成功：立即运行并跳转详情页
+async function onWizardCreated() {
+  showWizard.value = false
   if (store.currentLoop) {
+    await store.tickLoop(store.currentLoop.id).catch(() => {})
     router.push({ name: 'hermes.loopDetail', params: { id: store.currentLoop.id } })
   }
 }
@@ -132,7 +137,7 @@ function stageCount(status: LoopStatus): number {
       </template>
     </div>
 
-    <LoopCreateWizard v-if="showWizard" @close="onWizardClose" />
+    <LoopCreateWizard v-if="showWizard" @close="onWizardClose" @created="onWizardCreated" />
   </div>
 </template>
 
