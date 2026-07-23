@@ -10,6 +10,7 @@ import LoopTable from '@/custom/loop/components/LoopTable.vue'
 import LoopGraph from '@/custom/loop/components/LoopGraph.vue'
 import LoopOnboarding from '@/custom/loop/components/LoopOnboarding.vue'
 import LoopCreateWizard from '@/custom/loop/components/LoopCreateWizard.vue'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import type { LoopStatus } from '@/custom/loop/types'
 
 const store = useLoopStore()
@@ -97,7 +98,7 @@ function stageCount(status: LoopStatus): number {
           <h4>{{ t('loop.attention.title') }} ({{ attentionLoops.length }})</h4>
           <div v-for="loop in attentionLoops" :key="loop.id"
             class="loop-spine__attention-item" @click="onSelect(loop.id)">
-            <span class="loop-spine__attention-icon">{{ loop.status === 'awaiting-review' ? '⚠' : '▣' }}</span>
+            <span class="loop-spine__attention-icon"><CockpitIcon :name="loop.status === 'awaiting-review' ? 'status-warn' : 'block'" :size="12" /></span>
             <span class="loop-spine__attention-name">{{ loop.name }}</span>
             <span class="loop-spine__attention-status">{{ loop.status === 'awaiting-review' ? t('loop.attention.needsReview') : t('loop.attention.blocked') }}</span>
             <LoopGraph :current-stage="loop.stage" :status="loop.status" :events="[]" compact />
@@ -128,9 +129,9 @@ function stageCount(status: LoopStatus): number {
               ${{ loop.stats.totalCost.toFixed(2) }}
             </span>
             <span class="loop-spine__actions">
-              <button @click.stop="onTick(loop.id)" :title="t('graph.actions.run')">▶</button>
-              <button @click.stop="onPause(loop.id)" :title="t('graph.actions.pause')">⏸</button>
-              <button @click.stop="onDelete(loop.id)" :title="t('graph.actions.delete')">🗑</button>
+              <button @click.stop="onTick(loop.id)" :title="t('graph.actions.run')"><CockpitIcon name="run" :size="10" /></button>
+              <button @click.stop="onPause(loop.id)" :title="t('graph.actions.pause')"><CockpitIcon name="pause" :size="10" /></button>
+              <button @click.stop="onDelete(loop.id)" :title="t('graph.actions.delete')"><CockpitIcon name="trash" :size="10" /></button>
             </span>
           </div>
         </div>
@@ -144,7 +145,7 @@ function stageCount(status: LoopStatus): number {
 <style scoped>
 .loop-spine { display: flex; height: 100%; }
 .loop-spine__sidebar { width: 200px; padding: 1rem; border-right: 1px solid var(--border-color); }
-.loop-spine__new { margin-top: 1rem; width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; background: var(--color-primary, #3b82f6); color: white; border: none; }
+.loop-spine__new { margin-top: 1rem; width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 3px; cursor: pointer; background: var(--color-primary, #3b82f6); color: white; border: none; }
 .loop-spine__main { flex: 1; padding: 1rem; overflow: auto; }
 .loop-spine__title { margin: 0 0 1rem; }
 .loop-spine__spinner { padding: 2rem; text-align: center; }
@@ -158,13 +159,13 @@ function stageCount(status: LoopStatus): number {
 .loop-spine__attention h4 { margin: 0 0 0.5rem; color: var(--color-warning, #f59e0b); }
 .loop-spine__attention-item {
   display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem;
-  cursor: pointer; border-radius: 4px;
+  cursor: pointer; border-radius: 3px;
 }
 .loop-spine__attention-item:hover { background: var(--hover-bg); }
 .loop-spine__attention-name { flex: 1; font-weight: 500; }
 .loop-spine__attention-status { font-size: 0.85rem; color: var(--color-warning, #f59e0b); }
 
-.loop-spine__table { border: 1px solid var(--border-color); border-radius: 4px; }
+.loop-spine__table { border: 1px solid var(--border-color); border-radius: 3px; }
 .loop-spine__header, .loop-spine__row { display: flex; align-items: center; padding: 0.5rem 0.75rem; gap: 0.75rem; }
 .loop-spine__header { font-weight: bold; border-bottom: 2px solid var(--border-color); font-size: 0.85rem; opacity: 0.7; }
 .loop-spine__row { border-bottom: 1px solid var(--border-color); cursor: pointer; }

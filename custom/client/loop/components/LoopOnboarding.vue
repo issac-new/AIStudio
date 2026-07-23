@@ -2,14 +2,15 @@
 <!-- LoopOnboarding — 空状态引导卡片：让用户 3 步理解并使用循环工程 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const emit = defineEmits<{ (e: 'create'): void }>()
 const { t } = useI18n()
 
 const steps = [
-  { icon: '🎯', key: 'step1' },
-  { icon: '🔍', key: 'step2' },
-  { icon: '🔁', key: 'step3' },
+  { icon: 'specify', key: 'step1' },
+  { icon: 'search', key: 'step2' },
+  { icon: 'loop', key: 'step3' },
 ]
 </script>
 
@@ -19,7 +20,7 @@ const steps = [
     <p class="loop-onboarding__desc">{{ t('loop.onboarding.desc') }}</p>
     <div class="loop-onboarding__steps">
       <div v-for="step in steps" :key="step.key" class="loop-onboarding__step">
-        <span class="loop-onboarding__icon">{{ step.icon }}</span>
+        <span class="loop-onboarding__icon"><CockpitIcon :name="step.icon" :size="24" /></span>
         <div class="loop-onboarding__text">
           <strong>{{ t(`loop.onboarding.${step.key}.title`) }}</strong>
           <p>{{ t(`loop.onboarding.${step.key}.desc`) }}</p>
@@ -34,7 +35,7 @@ const steps = [
 .loop-onboarding {
   padding: 2rem;
   border: 1px dashed var(--border-color);
-  border-radius: 8px;
+  border-radius: 6px;
   text-align: center;
   max-width: 640px;
   margin: 2rem auto;

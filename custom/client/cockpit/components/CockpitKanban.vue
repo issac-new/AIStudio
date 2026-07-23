@@ -315,15 +315,12 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__head-actions {
   margin-left: auto; display: flex; align-items: center; gap: 4px; flex-shrink: 0;
 }
-.cockpit-kanban__head-actions {
-  margin-left: auto; display: flex; align-items: center; gap: 4px; flex-shrink: 0;
-}
 .cockpit-kanban__head-boards {
   display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding-bottom: 4px;
 }
 .cockpit-kanban__head-boards-spacer { flex: 1; }
 .cockpit-kanban__fold {
-  width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color);
+  width: 24px; height: 24px; border-radius: 3px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-muted); cursor: pointer; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
@@ -340,7 +337,7 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__frow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .cockpit-kanban__flabel { font-size: 10px; color: var(--text-muted); width: 30px; flex-shrink: 0; font-weight: 600; text-transform: uppercase; }
 .cockpit-kanban__tag {
-  font-size: 11px; padding: 3px 9px; border-radius: 10px; border: 1px solid var(--border-color);
+  font-size: 11px; padding: 3px 9px; border-radius: 12px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-family: inherit;
   &:hover { border-color: var(--text-muted); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
@@ -385,7 +382,7 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__tenant-sel :deep(.n-base-select-option__content) { overflow: visible; white-space: normal; word-break: break-all; }
 .cockpit-kanban__date {
   font-size: 11px; padding: 2px 5px; border: 1px solid var(--border-color);
-  border-radius: 4px; background: var(--bg-card); color: var(--text-secondary);
+  border-radius: 3px; background: var(--bg-card); color: var(--text-secondary);
   font-family: inherit; width: 92px;
 }
 .cockpit-kanban__date-sep { font-size: 11px; color: var(--text-muted); }
@@ -397,8 +394,8 @@ function statusBucketLabel(s: string): string {
 
 .cockpit-kanban__id {
   font-family: monospace; font-size: 10px; color: var(--text-muted);
-  cursor: copy; padding: 0 3px; border-radius: 2px; flex-shrink: 0;
-  &:hover { color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 0), 0.08); }
+  cursor: copy; padding: 0 3px; border-radius: 3px; flex-shrink: 0;
+  &:hover { color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 64, 120, 192), 0.08); }
 }
 
 /* ── 租户 ── */
@@ -416,13 +413,13 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__stat { font-size: 11px; color: var(--text-muted); }
 .cockpit-kanban__sortbar-right { display: flex; align-items: center; gap: 8px; }
 .cockpit-kanban__clear {
-  font-size: 11px; padding: 2px 8px; border-radius: 4px; border: none;
+  font-size: 11px; padding: 2px 8px; border-radius: 3px; border: none;
   background: transparent; color: var(--text-muted); cursor: pointer; font-family: inherit;
   &:hover { color: var(--error); }
 }
 .cockpit-kanban__sorts { display: flex; gap: 6px; }
 .cockpit-kanban__sortbtn {
-  font-size: 11px; padding: 3px 9px; border-radius: 10px; border: 1px solid var(--border-color);
+  font-size: 11px; padding: 3px 9px; border-radius: 12px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-family: inherit;
   &:hover { border-color: var(--text-muted); }
   &.is-on { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
@@ -444,7 +441,7 @@ function statusBucketLabel(s: string): string {
 }
 .cockpit-kanban__pager-btn {
   width: 26px; height: 26px; padding: 0; border: 1px solid var(--border-color);
-  border-radius: 4px; background: var(--bg-card); color: var(--text-secondary);
+  border-radius: 3px; background: var(--bg-card); color: var(--text-secondary);
   cursor: pointer; font-size: 11px; font-family: inherit; display: flex;
   align-items: center; justify-content: center;
   &:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }

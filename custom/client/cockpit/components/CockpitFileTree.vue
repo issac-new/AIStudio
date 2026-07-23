@@ -54,7 +54,7 @@ onUnmounted(stopPoll)
       <span class="cockpit-file-tree__sub">{{ t('cockpit.currentTaskWorkspace') }}</span>
       <code v-if="hasTask" class="cockpit-file-tree__root">{{ workspace }}</code>
       <div v-if="hasTask && (summary.files || summary.dirs)" class="cockpit-file-tree__summary">
-        <span>{{ summary.dirs }} 📁 / {{ summary.files }} 📄</span>
+        <span>{{ summary.dirs }} <CockpitIcon name="folder" :size="10" /> / {{ summary.files }} <CockpitIcon name="file" :size="10" /></span>
         <span>{{ formatSize(summary.totalSize) }}</span>
       </div>
       <input v-model="filter" class="cockpit-file-tree__filter" :placeholder="t('cockpit.filterFiles')">

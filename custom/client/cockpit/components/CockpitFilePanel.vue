@@ -95,7 +95,7 @@ onMounted(() => {
       {{ t('common.loading', '加载中…') }}
     </div>
     <div v-else-if="errorState" class="cockpit-file-panel__error">
-      <span class="cockpit-file-panel__error-icon">⚠️</span>
+      <span class="cockpit-file-panel__error-icon"><CockpitIcon name="status-warn" :size="16" /></span>
       <span class="cockpit-file-panel__error-text">{{ errorState.message }}</span>
       <button type="button" class="cockpit-file-panel__error-retry" @click="syncWorkspaceRoot()">
         {{ t('cockpit.retry', '重试') }}

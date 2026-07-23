@@ -127,8 +127,8 @@ const costPct = computed(() => {
           <span class="loop-detail-panel__approval-src">{{ c.source?.type }} · {{ c.source?.ref }}</span>
         </div>
         <div class="loop-detail-panel__approval-actions">
-          <button class="is-approve" @click="onApprove(c.id)">✓ {{ t('loop.approval.approve') }}</button>
-          <button class="is-reject" @click="onReject(c.id)">✗ {{ t('loop.approval.reject') }}</button>
+          <button class="is-approve" @click="onApprove(c.id)"><CockpitIcon name="check" :size="12" /> {{ t('loop.approval.approve') }}</button>
+          <button class="is-reject" @click="onReject(c.id)"><CockpitIcon name="close" :size="12" /> {{ t('loop.approval.reject') }}</button>
         </div>
       </div>
     </div>
@@ -195,7 +195,7 @@ const costPct = computed(() => {
 .loop-detail-panel__back { border: none; background: transparent; cursor: pointer; font-size: 0.9rem; color: var(--color-primary, #3b82f6); }
 .loop-detail-panel__name { font-size: 1.1rem; font-weight: bold; flex: 1; }
 .loop-detail-panel__status { font-size: 0.85rem; font-weight: 600; }
-.loop-detail-panel__btn { padding: 0.4rem 1rem; border: 1px solid var(--border-color); border-radius: 4px; background: transparent; cursor: pointer; }
+.loop-detail-panel__btn { padding: 0.4rem 1rem; border: 1px solid var(--border-color); border-radius: 3px; background: transparent; cursor: pointer; }
 
 .loop-detail-panel__live { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(59, 130, 246, 0.06); border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
 .loop-detail-panel__live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-secondary, #878c99); }
@@ -207,7 +207,7 @@ const costPct = computed(() => {
 .loop-detail-panel__approval-info { flex: 1; }
 .loop-detail-panel__approval-src { display: block; font-size: 0.8rem; opacity: 0.6; }
 .loop-detail-panel__approval-actions { display: flex; gap: 0.5rem; }
-.loop-detail-panel__approval-actions button { padding: 0.4rem 1rem; border-radius: 4px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; }
+.loop-detail-panel__approval-actions button { padding: 0.4rem 1rem; border-radius: 3px; cursor: pointer; border: 1px solid var(--border-color); background: transparent; }
 .loop-detail-panel__approval-actions .is-approve { border-color: var(--color-success, #28bf5c); color: var(--color-success, #28bf5c); }
 .loop-detail-panel__approval-actions .is-reject { border-color: var(--color-danger, #e11d48); color: var(--color-danger, #e11d48); }
 

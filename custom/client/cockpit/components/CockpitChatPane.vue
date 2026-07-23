@@ -68,7 +68,7 @@ function openFull() {
 .cockpit-chat-pane { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .cockpit-chat-pane__header { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
 .cockpit-chat-pane__label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.cockpit-chat-pane__kind { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--bg-secondary); color: var(--text-muted); text-transform: uppercase; }
+.cockpit-chat-pane__kind { font-size: 10px; padding: 1px 6px; border-radius: 6px; background: var(--bg-secondary); color: var(--text-muted); text-transform: uppercase; }
 .cockpit-chat-pane__open { margin-left: auto; border: none; background: none; cursor: pointer; color: var(--text-muted); font-size: 14px; }
 .cockpit-chat-pane__messages { flex: 1; overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
 .cockpit-chat-pane__msg { font-size: 13px; }

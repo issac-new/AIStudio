@@ -47,13 +47,13 @@ function goChat() {
       class="cockpit-mode-bar__mode"
       :class="{ 'is-on': !chatNames.has(route.name as string) && store.workspaceMode === 'work' }"
       @click="goWork"
-    >⚡ {{ t('cockpit.modeWork') }}</button>
+    ><CockpitIcon name="specify" :size="12" /> {{ t('cockpit.modeWork') }}</button>
     <button
       type="button"
       class="cockpit-mode-bar__mode"
       :class="{ 'is-on': !chatNames.has(route.name as string) && store.workspaceMode === 'workspace' }"
       @click="goWorkspace"
-    >📁 {{ t('cockpit.modeWorkspace') }}</button>
+    ><CockpitIcon name="folder" :size="12" /> {{ t('cockpit.modeWorkspace') }}</button>
     <button
       type="button"
       class="cockpit-mode-bar__mode"
@@ -65,7 +65,7 @@ function goChat() {
       class="cockpit-mode-bar__mode"
       :class="{ 'is-on': chatNames.has(route.name as string) }"
       @click="goChat"
-    >💬 Chat</button>
+    ><CockpitIcon name="message" :size="12" /> Chat</button>
     <span class="cockpit-mode-bar__spacer" />
     <button
       type="button"
@@ -92,7 +92,7 @@ function goChat() {
   &:hover { color: var(--text-primary); }
   &.is-on { color: var(--text-primary); border-bottom-color: var(--accent-primary); }
 }
-.cockpit-mode-bar__count { font-size: 10px; color: var(--text-muted); background: var(--bg-secondary); border-radius: 8px; padding: 0 5px; }
+.cockpit-mode-bar__count { font-size: 10px; color: var(--text-muted); background: var(--bg-secondary); border-radius: 6px; padding: 0 5px; }
 .is-on .cockpit-mode-bar__count { background: var(--accent-primary); color: var(--text-on-accent); }
 .cockpit-mode-bar__spacer { flex: 1; }
 .cockpit-mode-bar__max {
@@ -102,7 +102,7 @@ function goChat() {
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .cockpit-mode-bar__fold {
-  width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color);
+  width: 24px; height: 24px; border-radius: 3px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-muted); cursor: pointer; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
   transition: background 0.12s, color 0.12s, border-color 0.12s;

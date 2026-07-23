@@ -47,7 +47,7 @@ watch(() => props.show, (v) => {
 <style scoped lang="scss">
 .cockpit-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .cockpit-modal__mask { position: absolute; inset: 0; background: rgba(0,0,0,0.45); }
-.cockpit-modal__box { position: relative; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px 20px; max-width: 480px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+.cockpit-modal__box { position: relative; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px; max-width: 480px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
 .cockpit-modal__title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
 .cockpit-modal__hint { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
 .cockpit-modal__textarea { width: 100%; font-family: inherit; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; background: var(--bg-card); color: var(--text-primary); min-height: 80px; resize: vertical; box-sizing: border-box; }

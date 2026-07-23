@@ -330,13 +330,13 @@ function decodeText(text?: string): string {
 .trace-timeline-panel__group-head small { font-size: 9px; color: var(--text-muted); font-weight: 400; margin-left: auto; }
 .trace-timeline-panel__group-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-primary); }
 .trace-timeline-panel__items { display: flex; flex-direction: column; gap: 3px; padding-left: 5px; border-left: 2px solid var(--border-color); margin-left: 2px; }
-.trace-timeline-panel__seq { min-width: 18px; height: 18px; border-radius: 9px; background: var(--accent-primary); color: #fff; font-size: 9px; font-weight: 700; line-height: 18px; text-align: center; flex-shrink: 0; padding: 0 4px; }
-.trace-timeline-panel__item { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); cursor: pointer; text-align: left; font-family: inherit; transition: background 0.12s; flex-wrap: wrap;
+.trace-timeline-panel__seq { min-width: 18px; height: 18px; border-radius: 12px; background: var(--accent-primary); color: #fff; font-size: 9px; font-weight: 700; line-height: 18px; text-align: center; flex-shrink: 0; padding: 0 4px; }
+.trace-timeline-panel__item { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-primary); cursor: pointer; text-align: left; font-family: inherit; transition: background 0.12s; flex-wrap: wrap;
   &:hover { background: var(--bg-secondary); border-color: var(--text-muted); }
   &.is-active { border-color: var(--accent-primary); background: rgba(var(--accent-primary-rgb, 64,120,192), 0.1); box-shadow: 0 0 0 2px var(--accent-primary); }
 }
 .trace-timeline-panel__time { font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; flex-shrink: 0; width: 52px; }
-.trace-timeline-panel__kind-tag { font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 2px; flex-shrink: 0; min-width: 36px; text-align: center; }
+.trace-timeline-panel__kind-tag { font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px; flex-shrink: 0; min-width: 36px; text-align: center; }
 .trace-timeline-panel__kind-tag.is-ingress { background: var(--bg-secondary); color: var(--text-muted); }
 .trace-timeline-panel__kind-tag.is-workflow { background: rgba(64,120,192,0.15); color: var(--accent-primary); }
 .trace-timeline-panel__kind-tag.is-agent { background: rgba(76,175,80,0.15); color: var(--success); }
@@ -351,15 +351,15 @@ function decodeText(text?: string): string {
 .trace-timeline-panel__detail-text { white-space: normal !important; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .trace-timeline-panel__item.is-timeline-item { background: var(--bg-secondary); border-style: dashed; opacity: 0.85; }
 .trace-timeline-panel__dur { font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-.trace-timeline-panel__profile { font-size: 8px; color: var(--text-muted); padding: 0 3px; border-radius: 2px; background: var(--bg-secondary); flex-shrink: 0; text-transform: uppercase; }
-.trace-timeline-panel__status { font-size: 8px; padding: 0 3px; border-radius: 2px; flex-shrink: 0; }
+.trace-timeline-panel__profile { font-size: 8px; color: var(--text-muted); padding: 0 3px; border-radius: 3px; background: var(--bg-secondary); flex-shrink: 0; text-transform: uppercase; }
+.trace-timeline-panel__status { font-size: 8px; padding: 0 3px; border-radius: 3px; flex-shrink: 0; }
 .trace-timeline-panel__status.is-running { background: rgba(76,175,80,0.15); color: var(--success); }
 .trace-timeline-panel__status.is-ok { background: rgba(76,175,80,0.1); color: var(--success); }
 .trace-timeline-panel__status.is-error { background: rgba(214,90,107,0.15); color: var(--error); }
 .trace-timeline-panel__status.is-cancelled { background: var(--bg-secondary); color: var(--text-muted); }
 .trace-timeline-panel__expand { font-size: 10px; color: var(--text-muted); flex-shrink: 0; margin-left: 2px; }
-.trace-timeline-panel__sub-detail { margin: 2px 0 4px 8px; padding: 6px 8px; border: 1px dashed var(--border-color); border-radius: 4px; background: var(--bg-secondary); }
-.trace-timeline-panel__sub-item { display: flex; align-items: center; gap: 5px; padding: 4px 7px; margin: 2px 0 2px 20px; border: 1px dashed var(--border-color); border-radius: 4px; background: var(--bg-secondary); cursor: pointer; font-size: 10px; flex-wrap: wrap;
+.trace-timeline-panel__sub-detail { margin: 2px 0 4px 8px; padding: 6px 8px; border: 1px dashed var(--border-color); border-radius: 3px; background: var(--bg-secondary); }
+.trace-timeline-panel__sub-item { display: flex; align-items: center; gap: 5px; padding: 4px 7px; margin: 2px 0 2px 20px; border: 1px dashed var(--border-color); border-radius: 3px; background: var(--bg-secondary); cursor: pointer; font-size: 10px; flex-wrap: wrap;
   &:hover { background: var(--bg-card); }
 }
 .trace-timeline-panel__children-list { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-color); }
@@ -367,7 +367,7 @@ function decodeText(text?: string): string {
   &:last-child { border-bottom: none; }
 }
 .trace-timeline-panel__child-time { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: 9px; width: 50px; flex-shrink: 0; }
-.trace-timeline-panel__child-kind { font-size: 8px; font-weight: 700; padding: 0 3px; border-radius: 2px; background: var(--bg-primary); color: var(--text-secondary); flex-shrink: 0; }
+.trace-timeline-panel__child-kind { font-size: 8px; font-weight: 700; padding: 0 3px; border-radius: 3px; background: var(--bg-primary); color: var(--text-secondary); flex-shrink: 0; }
 .trace-timeline-panel__child-text { color: var(--text-primary); word-break: break-word; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-timeline-panel__row { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; font-size: 11px; border-bottom: 1px dashed var(--border-color);
   &:last-child { border-bottom: none; }

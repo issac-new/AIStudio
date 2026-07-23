@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
 import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
@@ -38,7 +39,7 @@ const countdown = ref(30)
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 const PLATFORM_ICONS: Record<string, string> = {
-  api_server: '🔌', matrix: '👥', email: '📧',
+  api_server: 'plug', matrix: 'users', email: 'mail',
 }
 
 function formatTimeAgo(iso: string): string {
@@ -73,7 +74,7 @@ let lastStates: Record<string, string> = {}
 	      const key = `${name}:${state}`
 	      if (lastStates[name] !== key) changed = true
 	      lastStates[name] = key
-	      newPlatforms.push({ name, icon: PLATFORM_ICONS[name] || '📡', state, updated: formatTimeAgo(info.updated_at || '') })
+	      newPlatforms.push({ name, icon: PLATFORM_ICONS[name] || 'radar', state, updated: formatTimeAgo(info.updated_at || '') })
 	    }
 	    if (changed || platforms.value.length !== newPlatforms.length) {
 	      platforms.value = newPlatforms
@@ -121,29 +122,30 @@ async function manualProbe() {
     <div class="cockpit-top__brand">
       <ThemeSwitch />
       <LanguageSwitch />
-      <span class="cockpit-top__conn" :class="appStore.connected ? 'is-ok' : 'is-err'"
-        :title="appStore.connected ? t('cockpit.connected') : t('cockpit.disconnected')"
-      >{{ appStore.connected ? '🟢' : '🔴' }}</span>
+      <span class="cockpit-top__conn"
+        :title="appStore.connected ? t('cockpit.connected') : t('cockpit.disconnected')">
+        <span class="cockpit-top__dot" :class="appStore.connected ? 'is-ok' : 'is-err'" />
+      </span>
       {{ t('cockpit.brandTitle') }}
       <span class="cockpit-top__sub">Swarm Studio</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('schedule', $event.currentTarget as HTMLElement)">
-      📅 {{ t('cockpit.schedule') }}
+      <CockpitIcon name="calendar" /> {{ t('cockpit.schedule') }}
       <span v-if="scheduleCount" class="cockpit-top__bdg">{{ scheduleCount }}</span>
     </button>
     <button type="button" class="cockpit-top__btn" @click="emit('loop')" title="Loop Engineering — 循环工程">
-      🔄 {{ t('sidebar.loop') }}
+      <CockpitIcon name="loop" /> {{ t('sidebar.loop') }}
     </button>
     <button type="button" class="cockpit-top__btn" @click="emit('runtrace')" title="Run Observatory — 运行观察台">
-      🔭 Run Observatory
+      <CockpitIcon name="activity" /> Run Observatory
     </button>
     <div class="cockpit-top__clock">
       <span class="cockpit-top__cdate">{{ dateStr() }}</span>
       <span class="cockpit-top__ctime">{{ timeStr() }}</span>
     </div>
     <div class="cockpit-top__search">
-      <span class="cockpit-top__search-icon">🔍</span>
+      <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>
       <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
         :placeholder="t('cockpit.searchPlaceholder')" @input="store.runSearch(($event.target as HTMLInputElement).value)" />
       <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>
@@ -153,16 +155,16 @@ async function manualProbe() {
     <div class="cockpit-top__grp" :title="t('cockpit.gatewayProbeTitle')" @click.stop="manualProbe">
       <span class="cockpit-top__cd" :title="t('cockpit.countdownTitle')">{{ countdown }}s</span>
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
-        {{ gatewayState === 'running' ? '🟢' : gatewayState === 'stopped' ? '🔴' : '⚪' }}
-        Gateway{{ refreshing ? ' ⏳' : '' }}
+        <span class="cockpit-top__dot" :class="gatewayState === 'running' ? 'is-ok' : gatewayState === 'stopped' ? 'is-err' : 'is-idle'" />
+        Gateway{{ refreshing ? '…' : '' }}
       </span>
       <span v-for="pl in platforms" :key="pl.name" class="cockpit-top__ustat"
         :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
-      >{{ pl.icon }} {{ pl.name }}{{ pl.state === 'connected' ? '' : ' ⚠' }}</span>
+      ><CockpitIcon :name="pl.icon" :size="12" /> {{ pl.name }}<span v-if="pl.state !== 'connected'" class="cockpit-top__warn">!</span></span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('notify')">
-      {{ t('cockpit.notifications') }}
+      <CockpitIcon name="bell" /> {{ t('cockpit.notifications') }}
       <span v-if="notifyCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ notifyCount }}</span>
     </button>
     <button type="button" class="cockpit-top__user" @click="emit('settings')">
@@ -181,7 +183,10 @@ async function manualProbe() {
         <div class="cockpit-probe__row">
           <span class="cockpit-probe__label">Gateway</span>
           <span class="cockpit-probe__val" :class="rawData.gateway_state === 'running' ? 'is-ok' : 'is-err'">
-            {{ rawData.gateway_state === 'running' ? '🟢 running' : '🔴 ' + (rawData.gateway_state || 'stopped') }}
+            <span :class="rawData.gateway_state === 'running' ? 'is-ok' : 'is-err'">
+              <span class="cockpit-top__dot" :class="rawData.gateway_state === 'running' ? 'is-ok' : 'is-err'" />
+              {{ rawData.gateway_state === 'running' ? 'running' : (rawData.gateway_state || 'stopped') }}
+            </span>
           </span>
         </div>
         <div class="cockpit-probe__row">
@@ -191,7 +196,7 @@ async function manualProbe() {
         <div v-if="rawData.platforms" class="cockpit-probe__section">
           <div class="cockpit-probe__section-title">Platforms</div>
           <div v-for="(info, name) in rawData.platforms" :key="name" class="cockpit-probe__row">
-            <span class="cockpit-probe__label">{{ PLATFORM_ICONS[name as string] || '📡' }} {{ name }}</span>
+            <span class="cockpit-probe__label"><CockpitIcon :name="PLATFORM_ICONS[name as string] || 'radar'" :size="12" /> {{ name }}</span>
             <span class="cockpit-probe__val" :class="info.state === 'connected' ? 'is-ok' : 'is-err'">
               {{ info.state || 'unknown' }}
             </span>
@@ -215,14 +220,18 @@ async function manualProbe() {
 <style scoped lang="scss">
 .cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; padding: 0 16px; position: relative; z-index: 10; }
 .cockpit-top__brand { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; white-space: nowrap; color: var(--text-primary); }
-.cockpit-top__mark { width: 8px; height: 8px; border-radius: 2px; background: var(--accent-primary); display: inline-block; }
+.cockpit-top__mark { width: 8px; height: 8px; border-radius: 3px; background: var(--accent-primary); display: inline-block; }
 .cockpit-top__sub { font-weight: 400; font-size: 11px; color: var(--text-muted); }
 .cockpit-top__conn { font-size: 10px; flex-shrink: 0; }
 .cockpit-top__div { width: 1px; height: 20px; background: var(--border-color); margin: 0 4px; }
 .cockpit-top__btn { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; font-family: inherit; position: relative;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
-.cockpit-top__bdg { position: absolute; top: -3px; right: -3px; background: var(--accent-primary); color: var(--text-on-accent); font-size: 8px; font-weight: 700; min-width: 13px; height: 13px; border-radius: 7px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--bg-card); padding: 0 3px; }
+.cockpit-top__dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cockpit-top__dot.is-ok { background: var(--success); }
+.cockpit-top__dot.is-err { background: var(--error); }
+.cockpit-top__dot.is-idle { background: var(--text-muted); }
+.cockpit-top__bdg { position: absolute; top: -3px; right: -3px; background: var(--accent-primary); color: var(--text-on-accent); font-size: 8px; font-weight: 700; min-width: 13px; height: 13px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--bg-card); padding: 0 3px; }
 .cockpit-top__bdg--err { background: var(--error); }
 .cockpit-top__clock { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cockpit-top__cdate { font-size: 11px; color: var(--text-muted); }
@@ -239,7 +248,7 @@ async function manualProbe() {
 }
 .cockpit-top__ustat { font-size: 11px; color: var(--text-muted); }
 .cockpit-top__cd { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
-.cockpit-top__user { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 4px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; font-family: inherit;
+.cockpit-top__user { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 4px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; font-family: inherit;
   &:hover { background: var(--bg-secondary); }
 }
 .cockpit-top__avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-primary); color: var(--text-on-accent); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
@@ -247,7 +256,7 @@ async function manualProbe() {
 .cockpit-top__caret { font-size: 9px; color: var(--text-muted); }
 
 /* 探测结果下拉面板 */
-.cockpit-probe { position: absolute; top: 100%; right: 16px; min-width: 320px; max-width: 420px; max-height: 400px; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 999; }
+.cockpit-probe { position: absolute; top: 100%; right: 16px; min-width: 320px; max-width: 420px; max-height: 400px; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 999; }
 .cockpit-probe__head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-color); font-size: 12px; font-weight: 600; color: var(--text-primary); }
 .cockpit-probe__close { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0 4px; &:hover { color: var(--text-primary); } }
 .cockpit-probe__body { padding: 8px 14px 12px; }

@@ -1,8 +1,16 @@
 // 驾驶舱样式 · Pure Ink（仅用 CSS 变量，无自定义色值）
 // 统一选中态语言：左侧 3px 色条 + 浅底
-// 间距：8 倍数 4/8/12/16/24/32；圆角 6/8/12
+// 间距：8 倍数 4/8/12/16/24/32；圆角收敛：micro 3 / standard 6 / large 12 / pill 999
 // 色彩纪律：仅两档背景——工作区(--bg-primary) 与 面板面(--bg-card)；
 //          侧栏不再使用 --bg-sidebar，与工作区同面，靠分隔线区分。
+
+// 圆角令牌（收敛所有散落值到 4 档）
+:root {
+  --radius-micro: 3px;    // 标签、色条、徽标
+  --radius-standard: 6px; // 按钮、卡片、输入框
+  --radius-large: 12px;   // 模态、大面板
+  --radius-pill: 999px;   // 胶囊、圆形头像
+}
 
 .cockpit {
   height: calc(100 * var(--vh, 1vh));
@@ -31,9 +39,10 @@
 
   // 默认宽度比例（折叠/最大化时覆盖）
   // 左/右栏统一使用 --bg-primary，与中栏同面，消除背景断层
-  &--left { flex: 1 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
-  &--mid { flex: 1.5 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); }
-  &--right { flex: 2 1 0; min-width: 360px; background: var(--bg-primary); }
+  // 比例 1 : 1.6 : 2 — 中栏(协作图)略增,平衡三栏视觉权重
+  &--left { flex: 1 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); min-width: 280px; }
+  &--mid { flex: 1.6 1 0; border-right: 1px solid var(--border-color); background: var(--bg-primary); min-width: 320px; }
+  &--right { flex: 2 1 0; min-width: 340px; background: var(--bg-primary); }
 
   // 折叠：宽度收为 32px 竖条
   &.is-collapsed { flex: 0 0 32px !important; min-width: 0; }
@@ -52,6 +61,21 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+// ── 空状态公共类 ──
+// 统一所有面板的"无数据"占位样式,避免每个组件重复定义
+.cockpit-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 40px 16px;
+  text-align: center;
 }
 
 // 折叠竖条（贴边）

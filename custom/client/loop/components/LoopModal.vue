@@ -8,6 +8,7 @@ import { useLoopStore } from '@/custom/loop/store/loop'
 import LoopListPanel from '@/custom/loop/components/LoopListPanel.vue'
 import LoopDetailPanel from '@/custom/loop/components/LoopDetailPanel.vue'
 import LoopCreateWizard from '@/custom/loop/components/LoopCreateWizard.vue'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const { t } = useI18n()
 const cockpit = useCockpitStore()
@@ -58,7 +59,7 @@ function onClose() {
   <div class="loop-modal" @click.self="onClose">
     <div class="loop-modal__panel" @click.stop>
       <div class="loop-modal__head">
-        <span class="loop-modal__title">🔄 {{ t('loop.title') }}</span>
+        <span class="loop-modal__title"><CockpitIcon name="loop" /> {{ t('loop.title') }}</span>
         <button class="loop-modal__close" @click="onClose">×</button>
       </div>
       <div class="loop-modal__body">
