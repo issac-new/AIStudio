@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 2939c83f..c4d5978d 100644
+index 2939c83f..e1e6d67a 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -242,6 +242,122 @@ export default {
+@@ -242,6 +242,196 @@ export default {
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -68,6 +68,52 @@ index 2939c83f..c4d5978d 100644
 +      writeBoundary: 'Write Boundary',
 +      create: 'Create',
 +      cancel: 'Cancel',
++      back: 'Back',
++      selectScenario: 'What do you want the loop to do?',
++      scenarioHint: 'Pick a scenario — everything else is pre-configured for you.',
++      schedule: 'Schedule',
++      advanced: 'Advanced options',
++      namePlaceholder: 'My loop',
++      costLow: 'low cost',
++      costMedium: 'medium cost',
++      costHigh: 'high cost',
++      scenarios: {
++        'daily-triage': {
++          name: 'Check my issues daily',
++          desc: 'Scan open issues and CI failures every morning, fix what can be auto-fixed.',
++          schedule: 'Every day at 9:00',
++        },
++        'ci-sweeper': {
++          name: 'Auto-fix CI failures',
++          desc: 'Watch CI runs continuously and repair failures as they appear.',
++          schedule: 'Every 10 minutes',
++        },
++        'dep-sweeper': {
++          name: 'Keep dependencies updated',
++          desc: 'Scan for outdated dependencies and open update PRs periodically.',
++          schedule: 'Every 6 hours',
++        },
++        'issue-triage': {
++          name: 'Triage new issues',
++          desc: 'Classify and label incoming issues automatically.',
++          schedule: 'Every 2 hours',
++        },
++        'pr-babysitter': {
++          name: 'Watch my PRs',
++          desc: 'Monitor open PRs for CI status and review feedback.',
++          schedule: 'Every 15 minutes',
++        },
++        'changelog-drafter': {
++          name: 'Draft changelogs',
++          desc: 'Generate changelog drafts from recent commits weekly.',
++          schedule: 'Every Monday',
++        },
++        'post-merge-cleanup': {
++          name: 'Post-merge cleanup',
++          desc: 'Clean up stale branches and worktrees after merges.',
++          schedule: 'Every day at 18:00',
++        },
++      },
 +    },
 +    approval: {
 +      title: 'Human Approval',
@@ -76,6 +122,34 @@ index 2939c83f..c4d5978d 100644
 +      approve: 'Approve',
 +      reject: 'Reject',
 +      changesRequested: 'Request Changes',
++    },
++    status: {
++      running: 'Running',
++      awaitingReview: 'Awaiting review',
++      blocked: 'Blocked',
++      completed: 'Completed',
++      failed: 'Failed',
++      paused: 'Paused',
++      idle: 'Idle',
++    },
++    tasks: 'tasks',
++    nextTickAt: 'Next run',
++    recentActivity: 'Recent activity',
++    stats: 'Stats',
++    activity: {
++      stageTransition: '{from} → {to}',
++      taskDiscovered: 'Discovered: {summary}',
++      taskHandedOff: 'Handed off to worktree {worktree}',
++      verifyPass: 'Verification passed',
++      verifyFail: 'Verification failed',
++      persisted: 'Persisted {artifact}',
++      tickComplete: 'Tick #{iteration} complete',
++      budgetWarning: 'Budget at {pct}%',
++      stuck: 'Stuck: {reason}',
++      completed: 'Loop completed',
++      running: 'Running {stage}…',
++      awaitingReview: 'Waiting for your approval',
++      idle: 'Idle — next run {next}',
 +    },
 +    stages: {
 +      discovery: 'Discovery',
@@ -95,12 +169,12 @@ index 2939c83f..c4d5978d 100644
 +      title: 'Loop Engineering',
 +      desc: 'Define a recursive goal — the system discovers issues, dispatches agents, verifies fixes, and merges them, on a schedule you set.',
 +      step1: {
-+        title: 'Pick a pattern',
-+        desc: 'Daily Triage, CI Sweeper, Dep Sweeper, and more — each pre-fills goal, schedule, and cost profile.',
++        title: 'Pick a scenario',
++        desc: 'Daily issue check, CI auto-fix, dependency updates — each pre-fills goal, schedule, and cost profile.',
 +      },
 +      step2: {
 +        title: 'Configure your loop',
-+        desc: 'Set the goal, stop condition, cron schedule, autonomy level, and budget guard.',
++        desc: 'Set the goal, stop condition, schedule, autonomy level, and budget guard.',
 +      },
 +      step3: {
 +        title: 'Watch it run',
