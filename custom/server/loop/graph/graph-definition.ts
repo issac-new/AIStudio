@@ -3,7 +3,7 @@
 
 import type {
   GraphDef, NodeDef, EdgeDef, StateSchema, Channel, StateValues,
-  NodeResult, NodeContext, EdgeCondition,
+  NodeResult, NodeContext, EdgeCondition, Reducer,
 } from './types'
 import { reducers } from './types'
 
@@ -25,7 +25,7 @@ export class GraphBuilder {
   addChannel<T>(name: string, channel?: Partial<Channel<T>>): this {
     this.stateSchema[name] = {
       name,
-      reducer: channel?.reducer ?? reducers.overwrite<T>(),
+      reducer: channel?.reducer as Reducer<unknown> ?? reducers.overwrite<T>() as Reducer<unknown>,
       default: channel?.default,
     }
     return this
