@@ -30,6 +30,86 @@ const taskSummary = computed(() => detail.value?.latest_summary ?? detail.value?
 
 // ── 区域2: Kanban 详情字段（暂存草稿模式）──
 const task = computed(() => detail.value?.task ?? null)
+
+// ── v0.19 运维状态只读字段（P3）──
+const workerHealth = computed(() => {
+  const t = task.value
+  if (!t) return null
+  const pid = t.worker_pid
+  if (!pid) return null
+  return {
+    pid,
+    heartbeat: t.last_heartbeat_at ?? null,
+    runId: t.current_run_id ?? null,
+    maxRuntime: t.max_runtime_seconds ?? null,
+  }
+})
+const failureCircuit = computed(() => {
+  const t = task.value
+  if (!t) return null
+  const cf = t.consecutive_failures ?? 0
+  if (cf === 0 && !t.last_failure_error) return null
+  return {
+    count: cf,
+    max: t.max_retries ?? null,
+    error: t.last_failure_error ?? null,
+    tripped: t.max_retries != null && cf >= t.max_retries,
+  }
+})
+const claimLock = computed(() => {
+  const t = task.value
+  if (!t?.claim_lock) return null
+  return { lock: t.claim_lock, expires: t.claim_expires ?? null }
+})
+const workflowMeta = computed(() => {
+  const t = task.value
+  if (!t) return null
+  if (!t.workflow_template_id && !t.current_step_key && !t.model_override && !t.goal_mode) return null
+  return {
+    template: t.workflow_template_id ?? null,
+    step: t.current_step_key ?? null,
+    model: t.model_override ?? null,
+    goalMode: t.goal_mode ?? false,
+    goalMaxTurns: t.goal_max_turns ?? null,
+  }
+})
+const derivation = computed(() => {
+  const t = task.value
+  if (!t) return null
+  if (!t.session_id && !t.idempotency_key && !t.branch_name && !t.block_kind && !t.block_recurrences) return null
+  return {
+    sessionId: t.session_id ?? null,
+    idempotencyKey: t.idempotency_key ?? null,
+    branch: t.branch_name ?? null,
+    blockKind: t.block_kind ?? null,
+    blockRecurrences: t.block_recurrences ?? 0,
+  }
+})
+const events = computed(() => store.selectedTaskDetail?.events ?? [])
+const runs = computed(() => store.selectedTaskDetail?.runs ?? [])
+
+function timeAgo(ts: number | null | undefined): string {
+  if (!ts) return '-'
+  const secs = Math.floor((Date.now() / 1000) - ts)
+  if (secs < 60) return `${secs}s`
+  if (secs < 3600) return `${Math.floor(secs / 60)}m`
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h`
+  return `${Math.floor(secs / 86400)}d`
+}
+function formatRuntime(sec: number | null | undefined): string {
+  if (!sec) return '-'
+  if (sec < 60) return `${sec}s`
+  return `${Math.floor(sec / 60)}m${sec % 60}s`
+}
+function formatTime(ts: number | null | undefined): string {
+  if (!ts) return '-'
+  try {
+    return new Date(ts * 1000).toLocaleString()
+  } catch {
+    return String(ts)
+  }
+}
+
 const workItem = computed(() => store.workItemForSelectedTask)
 
 // 当前生效值（草稿优先，回退到 detail.task）
@@ -497,6 +577,48 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         <KanbanDiagnosticsSection v-if="task" :task="task" :diagnostics="diagItems" :assignees="assigneeList" @refresh="refreshDiagnostics" />
       </div>
 
+      <!-- v0.19 Worker 健康 -->
+      <div v-if="workerHealth" class="cockpit-workspace__flow-row">
+        <span class="cockpit-workspace__field-label">{{ t('cockpit.workerHealth') }}</span>
+        <span class="cockpit-workspace__field-val">PID {{ workerHealth.pid }}</span>
+        <span class="cockpit-workspace__field-val--muted">· {{ t('cockpit.heartbeat') }} {{ timeAgo(workerHealth.heartbeat) }}</span>
+        <span v-if="workerHealth.runId" class="cockpit-workspace__field-val--muted">· run #{{ workerHealth.runId }}</span>
+        <span v-if="workerHealth.maxRuntime" class="cockpit-workspace__field-val--muted">· {{ t('cockpit.maxRuntime') }} {{ formatRuntime(workerHealth.maxRuntime) }}</span>
+      </div>
+
+      <!-- v0.19 失败熔断 -->
+      <div v-if="failureCircuit" class="cockpit-workspace__flow-row" :class="{ 'is-error': failureCircuit.tripped }">
+        <span class="cockpit-workspace__field-label">{{ t('cockpit.failureCircuit') }}</span>
+        <span class="cockpit-workspace__field-val">{{ failureCircuit.count }}{{ failureCircuit.max != null ? ` / ${failureCircuit.max}` : '' }}</span>
+        <span v-if="failureCircuit.tripped" class="cockpit-workspace__field-val" style="color: var(--error)">⚠ {{ t('cockpit.circuitTripped') }}</span>
+        <span v-if="failureCircuit.error" class="cockpit-workspace__field-val--muted" :title="failureCircuit.error">{{ failureCircuit.error.slice(0, 60) }}</span>
+      </div>
+
+      <!-- v0.19 Claim 锁 -->
+      <div v-if="claimLock" class="cockpit-workspace__flow-row">
+        <span class="cockpit-workspace__field-label">{{ t('cockpit.claimLock') }}</span>
+        <span class="cockpit-workspace__field-val">{{ claimLock.lock }}</span>
+        <span v-if="claimLock.expires" class="cockpit-workspace__field-val--muted">· exp {{ timeAgo(claimLock.expires) }}</span>
+      </div>
+
+      <!-- v0.19 Workflow 编排 -->
+      <div v-if="workflowMeta" class="cockpit-workspace__flow-row">
+        <span class="cockpit-workspace__field-label">{{ t('cockpit.workflow') }}</span>
+        <span v-if="workflowMeta.template" class="cockpit-workspace__field-val--muted">{{ workflowMeta.template }}</span>
+        <span v-if="workflowMeta.step" class="cockpit-workspace__field-val--muted">· step {{ workflowMeta.step }}</span>
+        <span v-if="workflowMeta.model" class="cockpit-workspace__field-val--muted">· {{ workflowMeta.model }}</span>
+        <span v-if="workflowMeta.goalMode" class="cockpit-workspace__field-val">· {{ t('cockpit.goalMode') }}{{ workflowMeta.goalMaxTurns ? ` (${workflowMeta.goalMaxTurns}t)` : '' }}</span>
+      </div>
+
+      <!-- v0.19 派生溯源 -->
+      <div v-if="derivation" class="cockpit-workspace__flow-row">
+        <span class="cockpit-workspace__field-label">{{ t('cockpit.derivation') }}</span>
+        <span v-if="derivation.sessionId" class="cockpit-workspace__field-val--muted" :title="derivation.sessionId">sess {{ derivation.sessionId.slice(0, 8) }}</span>
+        <span v-if="derivation.idempotencyKey" class="cockpit-workspace__field-val--muted">· idem {{ derivation.idempotencyKey.slice(0, 8) }}</span>
+        <span v-if="derivation.branch" class="cockpit-workspace__field-val--muted">· {{ derivation.branch }}</span>
+        <span v-if="derivation.blockKind" class="cockpit-workspace__field-val--muted">· {{ derivation.blockKind }}{{ derivation.blockRecurrences > 0 ? ` ×${derivation.blockRecurrences}` : '' }}</span>
+      </div>
+
       <!-- Row: Home-channel 通知订阅 -->
       <div v-if="homeChannels.length" class="cockpit-workspace__flow-row">
         <button v-for="ch in homeChannels" :key="ch.platform" type="button" class="cockpit-workspace__btn-mini" :class="{ 'is-on': ch.subscribed }" :disabled="homeBusy[ch.platform]" @click="toggleHomeSubscription(ch)">
@@ -521,6 +643,32 @@ async function toggleHomeSubscription(ch: HomeChannel) {
           :show="completionShow"
           @submit="handleCompletionSubmit"
           @cancel="completionShow = false" />
+
+        <!-- ═══ Events ═══ -->
+        <div class="cockpit-workspace__section">
+          <label class="cockpit-workspace__section-title">{{ t('cockpit.events') }}</label>
+          <div v-if="!events.length" class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</div>
+          <div v-else class="cockpit-workspace__event-list">
+            <div v-for="ev in events.slice(0, 20)" :key="ev.id" class="cockpit-workspace__event">
+              <span class="cockpit-workspace__event-kind">{{ ev.kind }}</span>
+              <span class="cockpit-workspace__event-ts">{{ formatTime(ev.created_at) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ Run History ═══ -->
+        <div class="cockpit-workspace__section">
+          <label class="cockpit-workspace__section-title">{{ t('cockpit.runHistory') }}</label>
+          <div v-if="!runs.length" class="cockpit-workspace__field-val--muted">{{ t('cockpit.none') }}</div>
+          <div v-else class="cockpit-workspace__run-list">
+            <div v-for="r in runs.slice(0, 10)" :key="r.id" class="cockpit-workspace__run">
+              <span class="cockpit-workspace__run-id">#{{ r.id }}</span>
+              <span class="cockpit-workspace__run-profile">{{ r.profile || '-' }}</span>
+              <span class="cockpit-workspace__run-status">{{ r.status }}{{ r.outcome ? `/${r.outcome}` : '' }}</span>
+              <span class="cockpit-workspace__field-val--muted">{{ formatTime(r.started_at) }}</span>
+            </div>
+          </div>
+        </div>
 
         <!-- ═══ Worker Log ═══ -->
         <div class="cockpit-workspace__section">
@@ -637,6 +785,29 @@ async function toggleHomeSubscription(ch: HomeChannel) {
 .cockpit-workspace__action-msg { font-size: 11px; margin-top: 6px; padding: 4px 8px; border-radius: 3px; width: 100%; }
 .cockpit-workspace__action-msg.is-ok { color: var(--success, #52c41a); background: rgba(82,196,26,0.08); }
 .cockpit-workspace__action-msg.is-err { color: var(--error); background: rgba(255,77,79,0.08); }
+
+/* v0.19 运维状态 meta 行 + events/runs 区段（P3） */
+.cockpit-workspace__flow-row.is-error {
+  background: rgba(var(--error-rgb, 255, 77, 79), 0.06);
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+.cockpit-workspace__event-list,
+.cockpit-workspace__run-list {
+  display: flex; flex-direction: column; gap: 3px; max-height: 200px; overflow-y: auto;
+}
+.cockpit-workspace__event,
+.cockpit-workspace__run {
+  display: flex; align-items: center; gap: 8px; font-size: 11px; padding: 2px 4px;
+}
+.cockpit-workspace__event-kind {
+  font-family: ui-monospace, monospace; font-size: 10px; padding: 1px 6px;
+  border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary);
+}
+.cockpit-workspace__event-ts { color: var(--text-muted); font-family: ui-monospace, monospace; }
+.cockpit-workspace__run-id { font-family: ui-monospace, monospace; color: var(--text-muted); }
+.cockpit-workspace__run-profile { color: var(--accent-primary); }
+.cockpit-workspace__run-status { color: var(--text-secondary); }
 
 /* Footer（原尺寸） */
 .cockpit-workspace__foot { flex-shrink: 0; padding: 12px 16px; border-top: 1px solid var(--border-color); background: var(--bg-card); display: flex; gap: 8px; }
