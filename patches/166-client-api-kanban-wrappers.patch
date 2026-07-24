@@ -1,0 +1,100 @@
+diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+--- a/packages/client/src/api/hermes/kanban.ts
++++ b/packages/client/src/api/hermes/kanban.ts
+@@ -701,3 +701,96 @@ export async function unsubscribeHomeChannel(
+     { method: 'DELETE' },
+   )
+ }
++
++// ─── Artifact（读取任务 workspace 内文件）──────────────────────
++
++export async function readArtifact(taskId: string, path: string, opts?: KanbanBoardOptions): Promise<Blob> {
++  const params = boardParams(opts?.board)
++  params.set('task_id', taskId)
++  params.set('path', path)
++  const res = await fetch(appendQuery('/api/hermes/kanban/artifact', params))
++  if (!res.ok) throw new Error(`readArtifact failed: ${res.status}`)
++  return res.blob()
++}
++
++// ─── Home channels（调试）───────────────────────────────────────
++
++export async function debugHomeChannels(opts?: KanbanBoardOptions): Promise<unknown> {
++  const res = await request<unknown>(appendQuery('/api/hermes/kanban/debug-home-channels', boardParams(opts?.board)))
++  return res
++}
++
++// ─── 从 cockpit-extras 迁入主 client（统一数据路径）─────────────
++
++export interface SessionSearchResult {
++  id: string
++  title?: string
++  [k: string]: unknown
++}
++
++// FileNode.id 是相对任务 workspace 根的路径（由 mapEntries 从 parent 拼接计算）。
++// 后端 GET /workspace-files 返回的 RawFileEntry 无 id 字段（见 controllers/hermes/kanban.ts
++// 的 WorkspaceFileEntry：仅 name/isDir/size/modified/children），故客户端需用
++// mapEntries 补齐 id，保持原 cockpit-extras 行为（调用方 CockpitFileNode.vue 依赖
++// node.id 做选中/导航）。
++export interface FileNode {
++  id: string
++  name: string
++  isDir: boolean
++  size: number
++  modified: number
++  children?: FileNode[]
++}
++
++export interface TimelineItem {
++  source: 'event' | 'comment'
++  id: string
++  taskId: string
++  taskTitle: string
++  taskArchived: boolean
++  ts: number
++  kind?: string
++  payload?: Record<string, unknown> | null
++  author?: string
++  body?: string
++}
++
++interface RawFileEntry {
++  name: string
++  isDir: boolean
++  size: number
++  modified: number
++  children?: RawFileEntry[]
++}
++
++function mapEntries(entries: RawFileEntry[], parentPath: string): FileNode[] {
++  return entries.map((e) => {
++    const id = parentPath ? `${parentPath}/${e.name}` : e.name
++    const node: FileNode = { id, name: e.name, isDir: e.isDir, size: e.size ?? 0, modified: e.modified ?? 0 }
++    if (e.isDir && e.children) node.children = mapEntries(e.children, id)
++    return node
++  })
++}
++
++export async function searchSessions(taskId: string, profile: string): Promise<SessionSearchResult[]> {
++  const q = new URLSearchParams({ task_id: taskId, profile })
++  const res = await request<{ results: SessionSearchResult[] }>(`/api/hermes/kanban/search-sessions?${q}`)
++  return res.results ?? []
++}
++
++export async function listWorkspaceFiles(taskId: string, board?: string, sub = '', depth = 2): Promise<FileNode[]> {
++  const q = new URLSearchParams({ task_id: taskId, depth: String(depth) })
++  if (sub) q.set('path', sub)
++  if (board) q.set('board', board)
++  const res = await request<{ path: string; entries: RawFileEntry[] }>(`/api/hermes/kanban/workspace-files?${q}`)
++  return mapEntries(res.entries ?? [], sub)
++}
++
++export async function getTimeline(opts: { limit?: number; since?: number } = {}): Promise<{ items: TimelineItem[]; total: number }> {
++  const q = new URLSearchParams()
++  if (opts.limit != null) q.set('limit', String(opts.limit))
++  if (opts.since != null) q.set('since', String(opts.since))
++  const qs = q.toString()
++  const path = `/api/hermes/kanban/timeline${qs ? `?${qs}` : ''}`
++  return request<{ items: TimelineItem[]; total: number }>(path)
++}
