@@ -162,3 +162,7 @@
 161-i18n-cockpit-missing-keys.patch
 162-i18n-missing-graph-loop-kanban-keys.patch
 163-i18n-missing-loop-kanban-keys.patch
+
+# P1 — KanbanTask 接口 v0.19 运维状态字段补齐（hermes-agent v0.19.0 Task dataclass）
+164-client-api-kanban-task-fields.patch
+165-server-service-hermes-kanban-task-fields.patch
