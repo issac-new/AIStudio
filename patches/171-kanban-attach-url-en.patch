@@ -1,0 +1,14 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1383,3 +1383,5 @@ export const en = {
+       loadDiagnostics: 'Load Diagnostics',
+     },
++    attachFromUrl: 'From URL',
++    attachFromUrlPlaceholder: 'https://...',
+     message: {
+@@ -1394,2 +1396,3 @@ export const en = {
+       taskReassigned: 'Task reassigned',
++      attachUrlFailed: 'Attach from URL failed',
+       taskSpecified: 'Task specified',
+

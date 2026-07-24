@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
 --- a/packages/client/src/api/hermes/kanban.ts
 +++ b/packages/client/src/api/hermes/kanban.ts
-@@ -701,3 +701,96 @@ export async function unsubscribeHomeChannel(
+@@ -701,3 +701,110 @@ export async function unsubscribeHomeChannel(
      { method: 'DELETE' },
    )
  }
@@ -97,4 +97,18 @@ diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/
 +  const qs = q.toString()
 +  const path = `/api/hermes/kanban/timeline${qs ? `?${qs}` : ''}`
 +  return request<{ items: TimelineItem[]; total: number }>(path)
++}
++
++// ─── Attach from URL（P4：SSRF-guarded 服务端下载）──────────────
++
++export async function uploadAttachmentFromUrl(
++  taskId: string,
++  url: string,
++  opts?: KanbanBoardOptions & { filename?: string; contentType?: string },
++): Promise<KanbanAttachment> {
++  const res = await request<{ attachment: KanbanAttachment }>(
++    appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/attachments/url`, boardParams(opts?.board)),
++    { method: 'POST', body: JSON.stringify({ url, filename: opts?.filename, content_type: opts?.contentType }) },
++  )
++  return res.attachment
 +}
