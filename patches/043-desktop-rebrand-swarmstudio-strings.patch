@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
-index 9fdcfda5..e32110a0 100644
+index a596f6ef..974607b0 100644
 --- a/packages/desktop/build/installer.nsh
 +++ b/packages/desktop/build/installer.nsh
 @@ -1,7 +1,7 @@
@@ -11,9 +11,9 @@ index 9fdcfda5..e32110a0 100644
 +    DetailPrint "Stopping SwarmStudio..."
 +    nsExec::ExecToLog '"$INSTDIR\SwarmStudio.exe" --quit'
      Pop $0
-     Sleep 1500
  
-@@ -53,7 +53,7 @@
+     InitPluginsDir
+@@ -52,7 +52,7 @@
      FileWrite $0 "  return $$roots | Select-Object -Unique$\r$\n"
      FileWrite $0 "}$\r$\n"
      FileWrite $0 "function Get-HermesStudioProcess {$\r$\n"
@@ -22,7 +22,7 @@ index 9fdcfda5..e32110a0 100644
      FileWrite $0 "    try { $$_.ExecutablePath -and ([System.IO.Path]::GetFullPath($$_.ExecutablePath) -ieq $$target) } catch { $$false }$\r$\n"
      FileWrite $0 "  }$\r$\n"
      FileWrite $0 "}$\r$\n"
-@@ -89,13 +89,13 @@
+@@ -93,20 +93,20 @@
      FileWrite $0 "exit 1$\r$\n"
      FileClose $0
  
@@ -38,6 +38,14 @@ index 9fdcfda5..e32110a0 100644
      Pop $0
    hermesStudioStopDone:
  !macroend
+ 
+ !macro repairHermesStudioUninstaller
+   IfFileExists "$INSTDIR\${UNINSTALL_FILENAME}" 0 hermesStudioRepairDone
+-    DetailPrint "Repairing Hermes Studio uninstaller..."
++    DetailPrint "Repairing SwarmStudio uninstaller..."
+     SetOutPath "$INSTDIR"
+     Delete "$INSTDIR\${UNINSTALL_FILENAME}.hermes-repair"
+     ClearErrors
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
 index c7db567b..41f9cb9c 100644
 --- a/packages/desktop/src/main/cli-shim.ts
@@ -186,10 +194,10 @@ index c7db567b..41f9cb9c 100644
    }
  }
 diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
-index b4b145c2..8a68caf7 100644
+index 70ed9a99..b875b91e 100644
 --- a/packages/desktop/src/main/desktop-i18n.ts
 +++ b/packages/desktop/src/main/desktop-i18n.ts
-@@ -60,36 +60,36 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
+@@ -62,36 +62,36 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
  
  const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
    en: {
@@ -236,8 +244,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': 'Download from GitHub',
      'desktop.downloadGithubDetail': 'Use the release asset directly from GitHub.',
      'desktop.failedPrepareRuntime': 'Failed to prepare Hermes runtime',
-@@ -106,7 +106,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': 'Cancel',
+@@ -110,7 +110,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': 'Select region',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
 -    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
@@ -245,7 +253,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -114,36 +114,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -118,36 +118,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    zh: {
@@ -292,8 +300,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': '从 GitHub 下载',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 资源。',
      'desktop.failedPrepareRuntime': '准备 Hermes 运行时失败',
-@@ -160,7 +160,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': '取消',
+@@ -166,7 +166,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': '框选区域',
      'loginReset.confirmTitle': '重置登录',
      'loginReset.confirmMessage': '确认将登录重置为 admin / 123456？',
 -    'loginReset.confirmDetail': 'Hermes Studio 会重启本地 Web UI 服务、清除登录失败锁，然后回到登录页。',
@@ -301,7 +309,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': '正在重置登录...',
      'loginReset.successTitle': '登录已重置',
      'loginReset.successMessage': '登录已重置为 {username} / {password}。',
-@@ -168,36 +168,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -174,36 +174,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '无法重置桌面端登录。',
    },
    'zh-TW': {
@@ -348,8 +356,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': '從 GitHub 下載',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 資源。',
      'desktop.failedPrepareRuntime': '準備 Hermes 運行時失敗',
-@@ -214,7 +214,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': '取消',
+@@ -222,7 +222,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': '框選區域',
      'loginReset.confirmTitle': '重置登入',
      'loginReset.confirmMessage': '確認將登入重置為 admin / 123456？',
 -    'loginReset.confirmDetail': 'Hermes Studio 會重新啟動本地 Web UI 服務、清除登入失敗鎖，然後回到登入頁。',
@@ -357,7 +365,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': '正在重置登入...',
      'loginReset.successTitle': '登入已重置',
      'loginReset.successMessage': '登入已重置為 {username} / {password}。',
-@@ -222,36 +222,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -230,36 +230,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '無法重置桌面端登入。',
    },
    ja: {
@@ -404,8 +412,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': 'GitHub からダウンロード',
      'desktop.downloadGithubDetail': 'GitHub のリリースアセットを直接使用します。',
      'desktop.failedPrepareRuntime': 'Hermes ランタイムの準備に失敗しました',
-@@ -268,7 +268,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': 'Cancel',
+@@ -278,7 +278,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': '領域を選択',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
 -    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
@@ -413,7 +421,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -276,36 +276,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -286,36 +286,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    ko: {
@@ -460,8 +468,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': 'GitHub에서 다운로드',
      'desktop.downloadGithubDetail': 'GitHub 릴리스 자산을 직접 사용합니다.',
      'desktop.failedPrepareRuntime': 'Hermes 런타임 준비 실패',
-@@ -322,7 +322,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': 'Cancel',
+@@ -334,7 +334,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': '영역 선택',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
 -    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
@@ -469,7 +477,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -330,36 +330,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -342,36 +342,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    fr: {
@@ -516,8 +524,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': 'Telecharger depuis GitHub',
      'desktop.downloadGithubDetail': 'Utilise directement l asset de release GitHub.',
      'desktop.failedPrepareRuntime': 'Echec de la preparation du runtime Hermes',
-@@ -376,7 +376,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': 'Cancel',
+@@ -390,7 +390,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': 'Sélectionner une zone',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
 -    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
@@ -525,7 +533,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -384,36 +384,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -398,36 +398,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    es: {
@@ -572,8 +580,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': 'Descargar desde GitHub',
      'desktop.downloadGithubDetail': 'Usa directamente el recurso de release de GitHub.',
      'desktop.failedPrepareRuntime': 'No se pudo preparar el runtime de Hermes',
-@@ -430,7 +430,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': 'Cancel',
+@@ -446,7 +446,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': 'Seleccionar región',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
 -    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
@@ -581,7 +589,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -438,36 +438,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -454,36 +454,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    de: {
@@ -628,8 +636,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': 'Von GitHub herunterladen',
      'desktop.downloadGithubDetail': 'Verwendet das Release-Asset direkt von GitHub.',
      'desktop.failedPrepareRuntime': 'Hermes Runtime konnte nicht vorbereitet werden',
-@@ -484,7 +484,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': 'Cancel',
+@@ -502,7 +502,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': 'Bereich auswählen',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
 -    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
@@ -637,7 +645,7 @@ index b4b145c2..8a68caf7 100644
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -492,36 +492,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+@@ -510,36 +510,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    pt: {
@@ -684,8 +692,8 @@ index b4b145c2..8a68caf7 100644
      'desktop.downloadGithubTitle': 'Baixar pelo GitHub',
      'desktop.downloadGithubDetail': 'Usa diretamente o asset de release do GitHub.',
      'desktop.failedPrepareRuntime': 'Falha ao preparar o runtime Hermes',
-@@ -538,7 +538,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
-     'common.cancel': 'Cancel',
+@@ -558,7 +558,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
+     'browser.selectRegion': 'Selecionar região',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
 -    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
@@ -694,10 +702,10 @@ index b4b145c2..8a68caf7 100644
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 6779b252..18f71bcc 100644
+index 113d3fcb..579a794e 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -425,7 +425,7 @@ function createTray() {
+@@ -447,7 +447,7 @@ function createTray() {
          quality: 'best',
        })
    tray = new Tray(icon)
@@ -706,7 +714,7 @@ index 6779b252..18f71bcc 100644
    tray.on('click', () => {
      showMainWindow()
      updateTrayMenu()
-@@ -439,7 +439,7 @@ async function createWindow(): Promise<void> {
+@@ -461,7 +461,7 @@ async function createWindow(): Promise<void> {
      height: 820,
      minWidth: 960,
      minHeight: 600,
@@ -715,7 +723,7 @@ index 6779b252..18f71bcc 100644
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -541,7 +541,7 @@ function installMicrophonePermissionHandler() {
+@@ -594,7 +594,7 @@ function installMicrophonePermissionHandler() {
  function splashHtml(label = t('desktop.startingLocalServices')): string {
    const startingLabel = escapeHtml(label)
    const pageBackground = process.platform === 'win32' ? 'transparent' : '#1a1a1a'
@@ -724,7 +732,7 @@ index 6779b252..18f71bcc 100644
  <style>
    html,body{margin:0;height:100%;background:${pageBackground};color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
    .surface{height:100%;background:#1a1a1a}
-@@ -558,7 +558,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
+@@ -611,7 +611,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
    @keyframes progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
    h1{font-weight:500;margin:0;font-size:18px}
  </style></head><body><main class="surface"><div class="wrap">
@@ -733,7 +741,7 @@ index 6779b252..18f71bcc 100644
  <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
  <div id="label" class="label">${startingLabel}</div>
  <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
-@@ -622,7 +622,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -675,7 +675,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
          <pre>${safeError}</pre>
         </section>`
      : ''
@@ -742,7 +750,7 @@ index 6779b252..18f71bcc 100644
  <style>
    :root{color-scheme:dark}
    *{box-sizing:border-box}
-@@ -650,7 +650,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -703,7 +703,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
      button{min-height:78px}
    }
  </style></head><body><main class="surface"><div class="wrap">
@@ -751,7 +759,7 @@ index 6779b252..18f71bcc 100644
  <p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
  ${errorBlock}
  <div class="actions">
-@@ -844,7 +844,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+@@ -999,7 +999,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
  
    const title = typeof payload?.title === 'string' && payload.title.trim()
      ? payload.title.trim()

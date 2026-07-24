@@ -10,9 +10,9 @@ index cde69b6..1231467 100644
  import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId } from '@/api/coding-agents'
  import { getDownloadUrl } from '@/api/hermes/download'
  import type { ProviderApiMode } from '@/api/hermes/system'
-@@ -743,6 +743,7 @@ export const useChatStore = defineStore('chat', () => {
-   const isRunActive = computed(() => isStreaming.value)
- 
+@@ -1130,6 +1131,7 @@ export const useChatStore = defineStore('chat', () => {
+   }
+
    async function fetchRuntimeSessions(profile?: string | null): Promise<SessionSummary[]> {
 +    if (!hasApiKey()) return []
      const scopedProfile = profile || undefined
