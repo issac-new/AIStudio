@@ -1,0 +1,29 @@
+diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/server/src/services/hermes/hermes-kanban.ts
+--- a/packages/server/src/services/hermes/hermes-kanban.ts
++++ b/packages/server/src/services/hermes/hermes-kanban.ts
+@@ -46,5 +46,25 @@ export interface KanbanTask {
+   tenant: string | null
+   project_id: string | null
+   result: string | null
+   skills: string[] | null
++  // ─── v0.19 运维状态字段（overlay 补齐，均 optional/nullable，向后兼容）───
++  branch_name?: string | null
++  idempotency_key?: string | null
++  consecutive_failures?: number
++  worker_pid?: number | null
++  last_failure_error?: string | null
++  max_runtime_seconds?: number | null
++  last_heartbeat_at?: number | null
++  current_run_id?: number | null
++  workflow_template_id?: string | null
++  current_step_key?: string | null
++  model_override?: string | null
++  max_retries?: number | null
++  goal_mode?: boolean
++  goal_max_turns?: number | null
++  session_id?: string | null
++  block_kind?: string | null
++  block_recurrences?: number
++  claim_lock?: string | null
++  claim_expires?: number | null
+ }
