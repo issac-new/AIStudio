@@ -1,0 +1,23 @@
+diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+--- a/packages/client/src/stores/hermes/kanban.ts
++++ b/packages/client/src/stores/hermes/kanban.ts
+@@ -690,4 +690,15 @@ export const useKanbanStore = defineStore('kanban', () => {
+     return result
+   }
+ 
++  async function uploadTaskAttachmentFromUrl(taskId: string, url: string, opts?: { filename?: string; contentType?: string }) {
++    const board = selectedBoard.value
++    const result = await kanbanApi.uploadAttachmentFromUrl(taskId, url, { board, filename: opts?.filename, contentType: opts?.contentType })
++    if (board === selectedBoard.value) {
++      const list = attachments.value[taskId] || []
++      list.push(result)
++      attachments.value[taskId] = list
++    }
++    return result
++  }
++
+   async function deleteTaskAttachment(taskId: string, attachmentId: number) {
+@@ -798,2 +809,3 @@ export const useKanbanStore = defineStore('kanban', () => {
+     uploadTaskAttachment,
++    uploadTaskAttachmentFromUrl,
+     deleteTaskAttachment,

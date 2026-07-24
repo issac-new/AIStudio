@@ -15,6 +15,8 @@ const store = useKanbanStore()
 
 const loading = ref(false)
 const uploadLoading = ref(false)
+const urlInput = ref('')
+const urlUploading = ref(false)
 
 const attachmentList = computed(() => store.attachments[props.taskId] || [])
 
@@ -43,6 +45,22 @@ async function handleUpload(file: File) {
     uploadLoading.value = false
   }
   return false
+}
+
+async function handleUploadFromUrl() {
+  const url = urlInput.value.trim()
+  if (!url || !props.taskId) return
+  urlUploading.value = true
+  try {
+    await store.uploadTaskAttachmentFromUrl?.(props.taskId, url)
+    message.success(t('kanban.message.attachmentUploaded', 'Attachment uploaded'))
+    urlInput.value = ''
+    await store.fetchAttachments?.(props.taskId)
+  } catch (err: any) {
+    message.error(err?.message || t('kanban.message.attachUrlFailed', 'Attach from URL failed'))
+  } finally {
+    urlUploading.value = false
+  }
 }
 
 async function handleDownload(att: KanbanAttachment) {
@@ -93,6 +111,22 @@ store.fetchAttachments(props.taskId).finally(() => {
           {{ t('kanban.uploadFile', 'Upload file') }}
         </NButton>
       </NUpload>
+    </div>
+
+    <div class="url-input-row">
+      <NInput
+        v-model:value="urlInput"
+        size="tiny"
+        :placeholder="t('kanban.attachFromUrlPlaceholder', 'https://...')"
+      />
+      <NButton
+        size="tiny"
+        :loading="urlUploading"
+        :disabled="!urlInput.trim()"
+        @click="handleUploadFromUrl"
+      >
+        {{ t('kanban.attachFromUrl', 'From URL') }}
+      </NButton>
     </div>
 
     <NSpin v-if="loading" size="small" />
@@ -191,5 +225,11 @@ store.fetchAttachments(props.taskId).finally(() => {
   font-size: 11px;
   color: $text-muted;
   white-space: nowrap;
+}
+
+.url-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 </style>

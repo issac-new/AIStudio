@@ -1,0 +1,13 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1384,3 +1384,5 @@ export const zh = {
+       loadDiagnostics: '加载诊断',
+     },
++    attachFromUrl: '从 URL',
++    attachFromUrlPlaceholder: 'https://...',
+     message: {
+@@ -1395,2 +1397,3 @@ export const zh = {
+       taskReassigned: '任务已重新分配',
++      attachUrlFailed: '从 URL 添加附件失败',
+       taskSpecified: '任务已细化',
