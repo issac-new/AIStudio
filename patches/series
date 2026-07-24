@@ -169,3 +169,7 @@
 
 # P2 — 补 5 个缺失 HTTP wrapper + 迁入 cockpit-extras（readArtifact/debugHomeChannels/listWorkspaceFiles/getTimeline/searchSessions + FileNode/TimelineItem/SessionSearchResult）
 166-client-api-kanban-wrappers.patch
+
+# P3 — CockpitWorkspace v0.19 运维状态只读 meta 行 + events/runs 区段（i18n 补 en/zh keys）
+167-cockpit-kanban-fields-en.patch
+168-cockpit-kanban-fields-zh.patch
