@@ -1,0 +1,21 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -3123,6 +3123,17 @@
+     title: '标题',
+     type: '类型',
+     unassignedTask: '未分配',
++    workerHealth: 'Worker',
++    heartbeat: '心跳',
++    maxRuntime: '最长运行',
++    failureCircuit: '失败',
++    circuitTripped: '熔断',
++    claimLock: 'Claim 锁',
++    workflow: '工作流',
++    goalMode: 'goal 模式',
++    derivation: '溯源',
++    events: '事件',
++    runHistory: '运行历史',
+     unspecified: '未指定',
+   },
+   graph: {

@@ -1,0 +1,21 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -3124,6 +3124,17 @@
+     title: 'Title',
+     type: 'Type',
+     unassignedTask: 'Unassigned',
++    workerHealth: 'Worker',
++    heartbeat: 'heartbeat',
++    maxRuntime: 'max runtime',
++    failureCircuit: 'Failures',
++    circuitTripped: 'circuit tripped',
++    claimLock: 'Claim',
++    workflow: 'Workflow',
++    goalMode: 'goal mode',
++    derivation: 'Origin',
++    events: 'Events',
++    runHistory: 'Run history',
+     unspecified: 'Unspecified',
+   },
+   graph: {
