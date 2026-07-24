@@ -38,6 +38,17 @@ SwarmStudio 0.6.33（基于 hermes-studio v0.6.33 + overlay 二次开发）
 - `scripts/sync-upstream.sh` 改用「优先取最新 stable release tag」策略（与 upstream 目录更新规则一致），无 tag 时 fallback `origin/main`
 - 116 个 active patch 全部 inject 通过；build:full 成功；单测 500 pass / 3 fail（3 个为 i18n 措辞预先存在的失败，与本次升级无关）
 
+## hermes-agent v0.19.0 kanban 能力对账（patch 164-173）
+
+把 hermes-agent v0.19.0 kanban 能力缺口迁移到「Swarm kanban」与「AI 协作中心」工作区页面，分 4 阶段：
+
+- **P1 — KanbanTask 接口 +19 字段**（patch 164/165）：`branch_name`/`idempotency_key`/`consecutive_failures`/`worker_pid`/`last_failure_error`/`max_runtime_seconds`/`last_heartbeat_at`/`current_run_id`/`workflow_template_id`/`current_step_key`/`model_override`/`max_retries`/`goal_mode`/`goal_max_turns`/`session_id`/`block_kind`/`block_recurrences`/`claim_lock`/`claim_expires`，对应 Python `Task` dataclass。均 optional/nullable，向后兼容。
+- **P2 — 补 5 个缺失 HTTP wrapper**（patch 166）：`readArtifact`/`debugHomeChannels`/`listWorkspaceFiles`/`getTimeline`/`searchSessions` + 3 类型 `FileNode`/`TimelineItem`/`SessionSearchResult`（从 cockpit-extras 迁入主 client，cockpit-extras 改 re-export 保兼容）。
+- **P3 — CockpitWorkspace 运维状态 meta 行 + events/runs**（patch 167/168 + custom .vue）：工作区加 5 个只读 meta 行（Worker 健康/失败熔断/Claim 锁/Workflow 编排/派生溯源）+ events + run history 两区段。i18n 补 en/zh。
+- **P4 — attach-from-URL**（patch 169-173 + patch 166 追加）：新增 `POST /api/hermes/kanban/:id/attachments/url`，service 端全局 fetch 下载 + 25MB 双校验 + `assertSafeOutboundUrl` SSRF 守卫（复用 `url-guard.ts`）。KanbanAttachments.vue 加「从 URL」输入行。
+
+验证：server `tsc --noEmit` 0 errors；client `vue-tsc` 9 个 pre-existing baseline errors（0 引用本次新增字段/wrapper/UI）；kanban/cockpit vitest 全绿。
+
 ## Overlay Patch 体系
 
 - **Active patches**: 116 个（100% inject 通过率）
