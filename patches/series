@@ -166,3 +166,6 @@
 # P1 — KanbanTask 接口 v0.19 运维状态字段补齐（hermes-agent v0.19.0 Task dataclass）
 164-client-api-kanban-task-fields.patch
 165-server-service-hermes-kanban-task-fields.patch
+
+# P2 — 补 5 个缺失 HTTP wrapper + 迁入 cockpit-extras（readArtifact/debugHomeChannels/listWorkspaceFiles/getTimeline/searchSessions + FileNode/TimelineItem/SessionSearchResult）
+166-client-api-kanban-wrappers.patch
