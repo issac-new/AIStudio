@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index 9b3062b2..60eb8b1d 100644
+index af7d3352..4b396568 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -11,7 +11,7 @@ import GroupChatInput from './GroupChatInput.vue'
+@@ -12,7 +12,7 @@ import GroupChatInput from './GroupChatInput.vue'
  import FolderPicker from '@/components/hermes/chat/FolderPicker.vue'
  import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
  import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
@@ -11,26 +11,25 @@ index 9b3062b2..60eb8b1d 100644
  import { copyToClipboard } from '@/utils/clipboard'
  import type { Attachment } from '@/stores/hermes/chat'
  import type { RoomAgent, RoomInfo } from '@/api/hermes/group-chat'
-@@ -27,6 +27,7 @@ const router = useRouter()
- const message = useMessage()
+@@ -32,6 +32,7 @@ const message = useMessage()
+ const appStore = useAppStore()
  const store = useGroupChatStore()
  const profilesStore = useProfilesStore()
 +const authStore = useAuthStore()
  const filesStore = useFilesStore()
  const toolPanelStore = useToolPanelStore()
  
-@@ -216,10 +217,6 @@ function openPageSidebar() {
+@@ -261,9 +262,6 @@ function openPageSidebar() {
      showSidebar.value = true
  }
  
 -function openSettingsPage() {
 -    router.push({ name: 'hermes.settings' })
 -}
--
+ 
  function hasDraggedFiles(event: DragEvent) {
      return Array.from(event.dataTransfer?.types || []).includes('Files')
- }
-@@ -642,14 +639,14 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
+@@ -715,14 +713,14 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
                  </div>
              </div>
              <div class="page-sidebar-bottom">

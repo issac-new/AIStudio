@@ -1,7 +1,8 @@
 diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
+index 41f9cb9c..a03fb2f6 100644
 --- a/packages/desktop/src/main/cli-shim.ts
 +++ b/packages/desktop/src/main/cli-shim.ts
-@@ -235,6 +235,7 @@
+@@ -235,6 +235,7 @@ export function createMcpShimContent(
        `rem ${MCP_SHIM_MARKER}`,
        `set "NODE=${nodePath}"`,
        `set "SCRIPT=${scriptPath}"`,
@@ -9,7 +10,7 @@ diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/c
        'if not exist "%NODE%" (',
        '  echo SwarmStudio Node runtime not found at "%NODE%" 1>&2',
        '  echo Open SwarmStudio once to finish runtime setup, then retry hermes-studio-mcp. 1>&2',
-@@ -263,6 +264,7 @@
+@@ -263,6 +264,7 @@ export function createMcpShimContent(
      `# ${MCP_SHIM_MARKER}`,
      `NODE=${shellQuote(nodePath)}`,
      `SCRIPT=${shellQuote(scriptPath)}`,
