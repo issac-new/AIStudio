@@ -1,0 +1,8 @@
+diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+--- a/packages/server/src/routes/hermes/kanban.ts
++++ b/packages/server/src/routes/hermes/kanban.ts
+@@ -33,3 +33,4 @@ kanbanRoutes.get('/api/hermes/kanban/:id/attachments', ctrl.listAttachments)
+ kanbanRoutes.post('/api/hermes/kanban/:id/attachments', ctrl.uploadAttachment)
++kanbanRoutes.post('/api/hermes/kanban/:id/attachments/url', ctrl.uploadAttachmentFromUrl)
+ kanbanRoutes.get('/api/hermes/kanban/attachments/:id', ctrl.downloadAttachment)
+ kanbanRoutes.delete('/api/hermes/kanban/attachments/:id', ctrl.removeAttachment)

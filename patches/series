@@ -173,3 +173,10 @@
 # P3 — CockpitWorkspace v0.19 运维状态只读 meta 行 + events/runs 区段（i18n 补 en/zh keys）
 167-cockpit-kanban-fields-en.patch
 168-cockpit-kanban-fields-zh.patch
+
+# P4 — attach-from-URL 新 HTTP 路由 + UI + SSRF 守卫
+169-server-controllers-kanban-attach-url.patch
+170-server-routes-kanban-attach-url.patch
+171-kanban-attach-url-en.patch
+172-kanban-attach-url-zh.patch
+173-client-store-kanban-attach-url.patch
