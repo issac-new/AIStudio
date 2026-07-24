@@ -6,15 +6,15 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
  import { readFile, stat, copyFile } from 'fs/promises'
  import { resolve, normalize, isAbsolute } from 'path'
  import { homedir } from 'os'
+ import * as kanbanCli from '../../services/hermes/hermes-kanban'
+ import { isPathWithin } from '../../services/hermes/hermes-path'
 +// HERMES_CUSTOM[AttachUrl] BEGIN: SSRF-guarded URL attachment
 +import { assertSafeOutboundUrl, UnsafeUrlError } from '../../custom/security/url-guard'
 +// HERMES_CUSTOM[AttachUrl] END
- import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { isPathWithin } from '../../services/hermes/hermes-path'
  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
  import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../custom/services/hermes/task-workspace-cache'
  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
-@@ -1397,6 +1403,88 @@ export async function unsubscribeHome(ctx: Context) {
+@@ -1397,6 +1403,133 @@ export async function unsubscribeHome(ctx: Context) {
      ctx.body = { ok: true, task_id: taskId }
    } catch (err: any) {
      ctx.status = 500
@@ -29,6 +29,11 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +// 全局 fetch（Node 18+）下载 URL 到内存，复用既有 addAttachment() 写入 task
 +// 附件目录，对齐 agent 的 _download_url_with_cap（25MB 上限 + http/https +
 +// SSRF 守卫）。SSRF 复用 overlay/custom/server/security/url-guard.ts。
++//
++// 重定向加固（对齐 agent _download_url_with_cap 的 follow_redirects=False +
++// 每跳 is_safe_url）：用 redirect:'manual' 手动跟每一跳 Location，每跳都
++// 重新过 assertSafeOutboundUrl，防止公网 host 302 到内网元数据端点绕过
++// 初始校验（redirect-replay SSRF）。最多 5 跳（_MAX_ATTACH_URL_REDIRECTS）。
 +export async function uploadAttachmentFromUrl(ctx: Context) {
 +  const taskId = ctx.params.id
 +  const board = ctx.query.board as string | undefined
@@ -40,55 +45,20 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +  const contentType = optionalString(body, 'content_type')
 +  if (rejectBadRequest(ctx, url.error)) return
 +
-+  // SSRF 守卫：协议白名单 http/https + 拒绝内网/回环/链路本地
-+  let safeOrigin: string
 +  try {
-+    safeOrigin = await assertSafeOutboundUrl(url.value!, { allowHttp: true })
-+  } catch (err: unknown) {
-+    ctx.status = 400
-+    ctx.body = { error: err instanceof UnsafeUrlError ? err.message : 'Invalid URL' }
-+    return
-+  }
++    // 逐跳下载：每跳都过 SSRF 守卫，手动处理 3xx，对齐 agent 的
++    // _download_url_with_cap（follow_redirects=False + 每跳 is_safe_url）。
++    const { buf, resolvedContentType, leafPathname } =
++      await _downloadUrlWithCapAndSsrf(url.value!, MAX_ATTACHMENT_BYTES)
 +
-+  // 重新拼接 path/query（assertSafeOutboundUrl 返回规范化 origin）
-+  let parsedUrl: URL
-+  try {
-+    parsedUrl = new URL(url.value!)
-+  } catch {
-+    ctx.status = 400
-+    ctx.body = { error: 'Invalid URL' }
-+    return
-+  }
-+  const targetUrl = safeOrigin + parsedUrl.pathname + parsedUrl.search
-+
-+  try {
-+    const resp = await fetch(targetUrl, { redirect: 'follow' })
-+    if (!resp.ok) {
-+      ctx.status = 502
-+      ctx.body = { error: `Fetch failed: ${resp.status}` }
-+      return
-+    }
-+    const contentLength = Number(resp.headers.get('content-length') || 0)
-+    if (contentLength > MAX_ATTACHMENT_BYTES) {
-+      ctx.status = 413
-+      ctx.body = { error: `Attachment too large (max ${MAX_ATTACHMENT_BYTES} bytes)` }
-+      return
-+    }
-+    const buf = Buffer.from(await resp.arrayBuffer())
-+    if (buf.length > MAX_ATTACHMENT_BYTES) {
-+      ctx.status = 413
-+      ctx.body = { error: `Attachment too large (max ${MAX_ATTACHMENT_BYTES} bytes)` }
-+      return
-+    }
-+
-+    const safeName = safeAttachmentName(filename.value || parsedUrl.pathname.split('/').pop() || 'download')
++    const safeName = safeAttachmentName(filename.value || leafPathname || 'download')
 +    const destDir = taskAttachmentsDir(taskId, board)
 +    await mkdir(destDir, { recursive: true })
 +    const record = await addAttachment({
 +      task_id: taskId,
 +      filename: safeName,
 +      stored_path: join(destDir, safeName),
-+      content_type: contentType.value || resp.headers.get('content-type') || null,
++      content_type: contentType.value || resolvedContentType || null,
 +      size: buf.length,
 +      uploaded_by: requestedProfile(ctx) || 'url',
 +      created_at: Math.floor(Date.now() / 1000),
@@ -98,8 +68,83 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +    await syncAttachmentToWorkspace(taskId, board, safeName, record.stored_path)
 +    ctx.body = { attachment: record }
 +  } catch (err: any) {
++    if (err instanceof UnsafeUrlError) {
++      ctx.status = 400
++      ctx.body = { error: err.message }
++      return
++    }
++    if (err instanceof AttachUrlTooLargeError) {
++      ctx.status = 413
++      ctx.body = { error: err.message }
++      return
++    }
++    if (err instanceof AttachUrlFetchError) {
++      ctx.status = 502
++      ctx.body = { error: err.message }
++      return
++    }
 +    ctx.status = 500
 +    ctx.body = { error: err.message }
 +  }
++}
++
++// ─── attach-from-URL 内部：逐跳 SSRF 守卫下载 ──────────────────
++// 对齐 agent tools/kanban_tools.py:_download_url_with_cap：每跳都过
++// assertSafeOutboundUrl，手动跟 redirect Location，25MB 上限双校验。
++const _MAX_ATTACH_URL_REDIRECTS = 5
++
++class AttachUrlTooLargeError extends Error {
++  constructor(msg: string) { super(msg); this.name = 'AttachUrlTooLargeError' }
++}
++class AttachUrlFetchError extends Error {
++  constructor(msg: string) { super(msg); this.name = 'AttachUrlFetchError' }
++}
++
++async function _downloadUrlWithCapAndSsrf(
++  rawUrl: string,
++  maxBytes: number,
++): Promise<{ buf: Buffer; resolvedContentType: string | null; leafPathname: string }> {
++  let currentUrl = rawUrl
++  for (let i = 0; i <= _MAX_ATTACH_URL_REDIRECTS; i++) {
++    // 每跳 SSRF 守卫（含初始 URL）
++    let safeOrigin: string
++    try {
++      safeOrigin = await assertSafeOutboundUrl(currentUrl, { allowHttp: true })
++    } catch (err: unknown) {
++      throw err instanceof UnsafeUrlError ? err : new UnsafeUrlError('Invalid URL')
++    }
++    let parsed: URL
++    try {
++      parsed = new URL(currentUrl)
++    } catch {
++      throw new UnsafeUrlError('Invalid URL')
++    }
++    const targetUrl = safeOrigin + parsed.pathname + parsed.search
++
++    const resp = await fetch(targetUrl, { redirect: 'manual' })
++    // 3xx：手动跟 Location（redirect:'manual' 下 status/headers 仍可读）
++    if (resp.status >= 300 && resp.status < 400) {
++      const location = resp.headers.get('location')
++      if (!location) throw new AttachUrlFetchError(`redirect without Location header from ${currentUrl}`)
++      // 相对 Location 用当前 URL 解析为绝对
++      currentUrl = new URL(location, currentUrl).toString()
++      continue
++    }
++    if (!resp.ok) {
++      throw new AttachUrlFetchError(`Fetch failed: ${resp.status}`)
++    }
++    const contentLength = Number(resp.headers.get('content-length') || 0)
++    if (contentLength > maxBytes) {
++      throw new AttachUrlTooLargeError(`Attachment too large (max ${maxBytes} bytes)`)
++    }
++    const buf = Buffer.from(await resp.arrayBuffer())
++    if (buf.length > maxBytes) {
++      throw new AttachUrlTooLargeError(`Attachment too large (max ${maxBytes} bytes)`)
++    }
++    const resolvedContentType = (resp.headers.get('content-type') || '').split(';')[0].trim() || null
++    const leafPathname = parsed.pathname.split('/').pop() || ''
++    return { buf, resolvedContentType, leafPathname }
++  }
++  throw new AttachUrlFetchError(`too many redirects fetching ${rawUrl}`)
 +}
 +// HERMES_CUSTOM[AttachUrl] END
