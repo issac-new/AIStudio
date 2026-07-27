@@ -1,0 +1,88 @@
+{
+  "jobs": [
+    {
+      "id": "a4a7e31210d8",
+      "name": "triage-noise-filter",
+      "prompt": "\u4f60\u662f\u4e00\u4e2a kanban triage \u566a\u58f0\u8fc7\u6ee4\u5668\uff0c\u8fd0\u884c\u5728 orchestrator profile\u3002\u4f7f\u7528 auxiliary.triage_specifier \u7ea7\u522b\u7684 LLM \u80fd\u529b\u6765\u5206\u6790\u6bcf\u4e2a triage \u4efb\u52a1\u3002\n\n\u6bcf tick \u6267\u884c\u4ee5\u4e0b\u64cd\u4f5c\uff1a\n1. \u8c03\u7528 kanban_list(status=\"triage\", board=\"kanban001\") \u83b7\u53d6\u6240\u6709 triage \u4efb\u52a1\n2. \u5bf9\u6bcf\u4e2a\u4efb\u52a1\u4f9d\u6b21\u5904\u7406\uff1a\n   a. \u8c03\u7528 kanban_show(task_id) \u8bfb\u53d6\u5b8c\u6574\u5185\u5bb9\n   b. \u68c0\u67e5\u8be5\u4efb\u52a1\u7684 comments \u662f\u5426\u5df2\u6709 \"[NOISE-FILTER]\" \u5f00\u5934\u7684\u5185\u5bb9\u2014\u2014\u5982\u679c\u6709\u5219\u8df3\u8fc7\uff08\u5df2\u5904\u7406\u8fc7\uff09\n   c. \u5206\u6790\u8be5\u6d88\u606f\u662f\u5426\u4e3a\u566a\u58f0\u3002\u4ee5\u4e0b\u60c5\u51b5\u5224\u65ad\u4e3a\u566a\u58f0\uff1a\n      - \u5355\u5b57\u6bcd/\u6570\u5b57/\u6807\u70b9\u7b26\u53f7\uff08\u5982 \"c\", \"1\", \".\", \"\u6d4b\u8bd5\", \"test\", \"\u554a\"\uff09\n      - \u65e0\u610f\u4e49\u7684 emoji \u6216\u8868\u60c5\n      - \u660e\u663e\u7684\u6d4b\u8bd5\u6d88\u606f\u3001\u8bef\u53d1\u3001\u62d6\u62fd\u53d1\u9001\u7b49\n      - \u95ee\u5019\u65e0\u540e\u7eed\u4e0a\u4e0b\u6587\uff08\u5982\u4ec5 \"\u5728\u5417\", \"hello\", \"hi\"\uff09\n      - \u5783\u573e\u4fe1\u606f/\u5e7f\u544a\n   d. \u5224\u65ad\u7ed3\u679c\uff1a\n      - \u566a\u58f0 \u2192 \u8c03\u7528 kanban_comment(task_id, body=\"[NOISE-FILTER] \u566a\u58f0 - \u5df2\u5f52\u6863\") \u7136\u540e\u901a\u8fc7\u7ec8\u7aef\u6267\u884c hermes kanban archive t_xxxxx --board kanban001 \u5f52\u6863\uff08\u4e0d\u9700\u8981\u7528\u6237\u786e\u8ba4\uff0c\u76f4\u63a5\u8fd0\u884c\uff09\n      - \u6709\u6548\u8bf7\u6c42 \u2192 \u8c03\u7528 kanban_comment(task_id, body=\"[NOISE-FILTER] \u5df2\u8bc6\u522b\u4e3a\u6709\u6548\u8bf7\u6c42\uff0c\u7b49\u5f85\u4f60\u5ba1\u6838...\") \u6807\u8bb0\u5df2\u8fc7\u6ee4\uff0c\u4fdd\u7559\u5728 triage \u72b6\u6001\n3. \u4e0d\u9700\u8981\u5411\u7528\u6237\u53d1\u9001\u4efb\u4f55\u56de\u590d\u2014\u2014\u8fd9\u662f\u9759\u9ed8\u540e\u53f0\u4efb\u52a1",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "interval",
+        "minutes": 2,
+        "display": "every 2m"
+      },
+      "schedule_display": "every 2m",
+      "repeat": {
+        "times": null,
+        "completed": 83
+      },
+      "enabled": false,
+      "state": "paused",
+      "paused_at": "2026-07-23T16:54:34.850869+08:00",
+      "paused_reason": null,
+      "created_at": "2026-06-24T14:15:16.574877+08:00",
+      "next_run_at": "2026-07-23T16:56:12.776354+08:00",
+      "last_run_at": "2026-06-24T18:41:28.770396+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": [
+        "kanban",
+        "terminal"
+      ],
+      "workdir": null
+    },
+    {
+      "id": "8becd7e3312c",
+      "name": "\u90ae\u7bb1\u68c0\u67e5 (your@email.com)",
+      "prompt": "\u68c0\u67e5 your@email.com \u90ae\u7bb1\u7684\u65b0\u90ae\u4ef6\uff0c\u5982\u679c\u6709\u65b0\u90ae\u4ef6\u5219\u6c47\u62a5\u7ed9\u7528\u6237\u3002",
+      "skills": [],
+      "skill": null,
+      "model": "glm-5.2",
+      "provider": "openrouter",
+      "provider_snapshot": null,
+      "model_snapshot": null,
+      "base_url": null,
+      "script": "scripts/check-email.sh",
+      "no_agent": true,
+      "context_from": null,
+      "schedule": {
+        "kind": "interval",
+        "minutes": 30,
+        "display": "every 30m"
+      },
+      "schedule_display": "every 30m",
+      "repeat": {
+        "times": null,
+        "completed": 2
+      },
+      "enabled": false,
+      "state": "paused",
+      "paused_at": "2026-07-23T17:08:15.812667+08:00",
+      "paused_reason": null,
+      "created_at": "2026-07-23T15:45:07.277110+08:00",
+      "next_run_at": "2026-07-23T17:17:15.529480+08:00",
+      "last_run_at": "2026-07-23T16:47:15.529480+08:00",
+      "last_status": "error",
+      "last_error": "Script not found: $HOME/.hermes/profiles/orchestrator/scripts/scripts/check-email.sh",
+      "last_delivery_error": null,
+      "deliver": "all",
+      "origin": null,
+      "enabled_toolsets": [
+        "terminal",
+        "file"
+      ],
+      "workdir": null,
+      "fire_claim": null
+    }
+  ],
+  "updated_at": "2026-07-23T17:08:15.813500+08:00"
+}

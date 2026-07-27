@@ -1,0 +1,67 @@
+# Global .gitignore — excludes secrets & runtime data from the entire repo
+
+# Credentials & secrets — NEVER commit
+auth.json
+.env
+.env.EXAMPLE
+.env.common
+
+# Runtime databases & state
+*.db
+*.db-shm
+*.db-wal
+gateway.pid
+gateway_state.json
+processes.json
+auth.lock
+active_profile
+update_check
+
+# User data — NEVER commit
+memories/
+sessions/
+logs/
+plans/
+workspace/
+home/
+
+# Caches & generated artifacts
+image_cache/
+audio_cache/
+document_cache/
+browser_screenshots/
+cache/
+
+# Infrastructure
+hermes-agent/
+.worktrees/
+bin/
+node_modules/
+
+# Local customization
+local/
+
+# Checkpoints & backups
+checkpoints/
+sandboxes/
+backups/
+errors.log
+.hermes_history
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Curator state
+.curator_backups/
+.curator_state
+.hub/

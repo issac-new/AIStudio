@@ -1,0 +1,270 @@
+model:
+  default: glm-5.2
+  provider: damoxing
+  base_url: ${DAMOXING_BASE_URL}
+providers:
+  damoxing:
+    base_url: ${DAMOXING_BASE_URL}
+    api_key: ${DAMOXING_API_KEY}
+    api_mode: ${DAMOXING_API_MODE}
+    context_length: 1048576
+    models:
+    - glm-5
+    - glm-5.1
+    - glm-5.1-20260408
+    - glm-5.2
+    - glm-5.2-20260613
+    - GLM-5.2-C
+custom_providers:
+- name: kimicode
+  base_url: https://api.kimi.com/coding
+  api_key: ${KIMI_API_KEY}
+  api_mode: anthropic_messages
+  context_length: 1048576
+  models:
+    k3:
+      name: k3
+  model: k3
+toolsets:
+- hermes-cli
+- acp
+- kanban
+- memory
+agent:
+  max_turns: 90
+  reasoning_effort: xhigh
+  tool_use_enforcement: auto
+  task_completion_guidance: true
+  parallel_tool_call_guidance: true
+  environment_probe: false
+  environment_hint: ~/.hermes/profiles/worker-reviewer/worker-reviewer_rules.md
+terminal:
+  backend: local
+  cwd: ~/hermes-docker-sandbox/workspace
+  timeout: 180
+  persistent_shell: true
+compression:
+  enabled: true
+  threshold: 0.5
+  target_ratio: 0.2
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  provider: hindsight
+kanban:
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60
+  failure_limit: 2
+  max_in_progress_per_profile: 4
+  auto_decompose: false
+  orchestrator_profile: orchestrator
+  default_assignee: worker-reviewer
+display:
+  skin: daylight
+  language: zh
+  personality: kawaii
+security:
+  redact_secrets: true
+  tirith_enabled: true
+privacy:
+  redact_pii: true
+approvals:
+  mode: smart
+auxiliary:
+  title_generation:
+    provider: damoxing
+    model: glm-5.2
+  compression:
+    provider: damoxing
+    model: glm-5.2
+  session_search:
+    provider: damoxing
+    model: glm-5.2
+  web_extract:
+    provider: damoxing
+    model: glm-5.2
+  vision:
+    provider: custom:kimicode
+    model: k3
+  approval:
+    provider: deepseek
+    model: deepseek-v4-flash
+fallback_providers:
+- provider: damoxing
+  model: glm-5.1
+- provider: deepseek
+  model: deepseek-v4-flash
+platforms:
+  api_server:
+    enabled: false
+  matrix:
+    enabled: false
+plugins:
+  disabled: []
+  enabled:
+  - acp-client
+  - hindsight
+  - observability/langfuse
+  - run-trace
+extra:
+  skills_enabled_by_category:
+  - software-development
+  - github
+  - mlops
+  - devops
+  - autonomous-ai-agents
+  - research
+  - cybersecurity
+  - mcp
+skills:
+  disabled:
+  - ai-music-generation
+  - airtable
+  - apple-ecosystem
+  - apple-macos
+  - apple-notes
+  - apple-reminders
+  - architecture-diagram
+  - ascii-art
+  - ascii-tools
+  - ascii-video
+  - baoyu-article-illustrator
+  - baoyu-comic
+  - baoyu-infographic
+  - claude-design
+  - comfyui
+  - creative-ideation
+  - design-md
+  - docx
+  - excalidraw
+  - findmy
+  - gif-search
+  - godmode
+  - google-workspace
+  - heartmula
+  - hermes-messaging
+  - himalaya
+  - humanizer
+  - imessage
+  - jupyter-live-kernel
+  - linear
+  - macos-computer-use
+  - manim-video
+  - maps
+  - minecraft-modpack-server
+  - music-and-audio
+  - nano-pdf
+  - notion
+  - obsidian
+  - ocr-and-documents
+  - openhue
+  - p5js
+  - pdf
+  - petdex
+  - pixel-art
+  - pokemon-player
+  - popular-web-designs
+  - powerpoint
+  - pretext
+  - python-data-visualization
+  - sketch
+  - songsee
+  - songwriting-and-ai-music
+  - spotify
+  - teams-meeting-pipeline
+  - touchdesigner-mcp
+  - tui-widgets
+  - xitter
+  - xlsx
+  - xurl
+  - youtube-content
+mcp_servers:
+  hermes-studio-api:
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    args:
+    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+    - api
+    env:
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: worker-reviewer
+      HERMES_MCP_SERVER_NAME: hermes-studio-api
+      HERMES_MCP_TOOLSET: api
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+    enabled: true
+  hermes-studio-browser:
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    args:
+    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+    - browser
+    env:
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: worker-reviewer
+      HERMES_MCP_SERVER_NAME: hermes-studio-browser
+      HERMES_MCP_TOOLSET: browser
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+    enabled: true
+  hermes-studio-devices:
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    args:
+    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+    - devices
+    env:
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: worker-reviewer
+      HERMES_MCP_SERVER_NAME: hermes-studio-devices
+      HERMES_MCP_TOOLSET: devices
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+    enabled: true
+  hermes-studio-use:
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    args:
+    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+    - use
+    env:
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: worker-reviewer
+      HERMES_MCP_SERVER_NAME: hermes-studio-use
+      HERMES_MCP_TOOLSET: use
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+    enabled: true
+platform_toolsets:
+  cli:
+  - browser
+  - clarify
+  - code_execution
+  - computer_use
+  - cronjob
+  - delegation
+  - file
+  - image_gen
+  - kanban
+  - memory
+  - messaging
+  - session_search
+  - skills
+  - terminal
+  - todo
+  - tts
+  - vision
+  - web
+known_plugin_toolsets:
+  cli:
+  - spotify
+onboarding:
+  seen:
+    openclaw_residue_cleanup: true
+    tool_progress_prompt: true
+  profile_build: ask
+updates:
+  pre_update_backup: false
+  backup_keep: 5
+  non_interactive_local_changes: stash
+_config_version: 29

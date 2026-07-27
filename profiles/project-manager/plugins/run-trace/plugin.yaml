@@ -1,0 +1,17 @@
+name: run-trace
+version: "1.0.0"
+description: "Local observability plugin for RunTraceView - writes JSONL trace files for L2 evidence"
+author: overlay-team
+kind: standalone
+optional_env:
+  - name: HERMES_RUN_TRACE_DIR
+    description: "Directory to store JSONL trace files (default: ~/.hermes/traces)"
+hooks:
+  - on_session_start
+  - on_session_end
+  - pre_api_request
+  - post_api_request
+  - post_tool_call
+  - subagent_start
+  - subagent_stop
+manifest_version: 1
