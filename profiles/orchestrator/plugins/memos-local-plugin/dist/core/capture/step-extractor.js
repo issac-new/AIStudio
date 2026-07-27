@@ -1,0 +1,373 @@
+/**
+ * `step-extractor` — the first stage of the capture pipeline.
+ *
+ * Converts an `EpisodeSnapshot` (from `core/session`) into a list of
+ * `StepCandidate`s.
+ *
+ * V7 §0.1 granularity: one step ≈ one agent decision point:
+ *   - A tool call (model thinking → tool input → tool output) is ONE step.
+ *   - The final text response to the user is a SEPARATE step.
+ *   - A pure assistant reply with no tool calls is ONE step (unchanged).
+ *
+ * For a turn where the agent called 5 tools then responded, the
+ * extractor produces 6 sub-steps (5 tool + 1 response). Each tool
+ * sub-step carries:
+ *   - `userText`  = the original user message (shared context / state)
+ *   - `agentText` = "" (the action is the tool call itself)
+ *   - `toolCalls` = [single ToolCallDTO with input + output]
+ *   - `agentThinking` = model thinking for the final response, when
+ *     the host provides a turn-level reasoning blob. Tool-call reasoning
+ *     lives on `toolCalls[].thinkingBefore`.
+ *   - `meta.turnId` = the user turn's `ts`. Stable identifier shared
+ *     by every sub-step that came from the same user message — the
+ *     viewer uses it to collapse the row of sub-steps back into a
+ *     single "one round = one memory" card while the algorithm pipe-
+ *     line keeps operating on the step-level traces.
+ *
+ * This matches the algorithm spec `f(1)_{k,t} = (s, a, o, ρ, r)` where
+ * each tool invocation is an independent action `a` with its own
+ * observation `o`, reflection `ρ`, and value `r`.
+ *
+ * The extractor is purely in-memory — no DB, no LLM.
+ */
+import { rootLogger } from "../logger/index.js";
+import { liteCaptureTurnCursor, } from "../episode/turn-anchor.js";
+export function extractSteps(episode, options) {
+    const log = rootLogger.child({ channel: "core.capture.extractor" });
+    const out = [];
+    const turns = episode.turns;
+    if (turns.length === 0)
+        return [];
+    // Strategy: split on user-role turns (same as before).
+    const segments = [];
+    let current = [];
+    for (const turn of turns) {
+        if (turn.role === "user" && current.length > 0) {
+            segments.push(current);
+            current = [];
+        }
+        current.push(turn);
+    }
+    if (current.length > 0)
+        segments.push(current);
+    const anchorTurnId = options?.anchorTurnId;
+    for (const segTurns of segments) {
+        out.push(...segmentToSteps(segTurns, episode, {
+            ...options,
+            ...(anchorTurnId !== undefined ? { anchorTurnId } : {}),
+        }));
+    }
+    if (out.length === 0) {
+        log.debug("extractor.synthetic_step", { episodeId: episode.id });
+        const firstUser = turns.find((t) => t.role === "user");
+        if (firstUser) {
+            out.push({
+                key: `${episode.id}:0`,
+                ts: firstUser.ts,
+                userText: firstUser.content,
+                agentText: "",
+                agentThinking: null,
+                toolCalls: [],
+                rawReflection: null,
+                depth: depthFromMeta(episode.meta),
+                isSubagent: Boolean(episode.meta.isSubagent),
+                meta: {
+                    synthetic: true,
+                    turnId: anchorTurnId ?? firstUser.ts,
+                },
+            });
+        }
+    }
+    return out;
+}
+/**
+ * Lite capture only processes turns added since the previous successful
+ * `runLite`. The first pass uses the full episode; later passes extract from
+ * new turns only and never re-attach the task prompt to tool rows.
+ */
+export function extractIncrementalSteps(episode) {
+    const cursor = liteCaptureTurnCursor(episode);
+    if (cursor <= 0) {
+        return extractSteps(episode);
+    }
+    if (cursor >= episode.turns.length) {
+        return [];
+    }
+    const firstUser = episode.turns.find((t) => t.role === "user");
+    const newTurns = episode.turns.slice(cursor);
+    const syntheticTurns = firstUser ? [firstUser, ...newTurns] : newTurns;
+    return extractSteps({ ...episode, turns: syntheticTurns }, { omitSegmentUserText: true });
+}
+// ─── Segment → sub-steps ────────────────────────────────────────────────────
+/**
+ * Convert one segment (user turn + tool/assistant turns) into sub-steps.
+ *
+ * When tool turns are present, each tool call becomes its own step so
+ * the batch scorer can assign individual reflections and α scores —
+ * matching the algorithm spec's per-decision-point granularity.
+ */
+function segmentToSteps(turns, episode, options) {
+    // ─── Classify turns ────────────────────────────────────────────
+    const userTexts = [];
+    const toolTurns = [];
+    let lastAssistant = null;
+    const thinkingParts = [];
+    let rawReflection = null;
+    let segMeta = {};
+    // Stable id shared by every sub-step of the same user message.
+    // Defaults to the first user turn's `ts`; falls back to the first
+    // turn's `ts` for assistant-only segments (rare, but the synthetic
+    // step path also relies on this).
+    let turnId = null;
+    for (const turn of turns) {
+        switch (turn.role) {
+            case "user":
+                userTexts.push(turn.content);
+                if (turnId === null)
+                    turnId = turn.ts;
+                break;
+            case "tool":
+                toolTurns.push(turn);
+                break;
+            case "assistant": {
+                lastAssistant = turn;
+                const m = turn.meta;
+                if (!rawReflection) {
+                    const r = m?.reflection;
+                    if (typeof r === "string" && r.trim())
+                        rawReflection = r.trim();
+                }
+                const th = m?.agentThinking;
+                if (typeof th === "string" && th.trim())
+                    thinkingParts.push(th.trim());
+                if (m)
+                    segMeta = { ...segMeta, ...m };
+                break;
+            }
+            // system turns are intentionally skipped
+        }
+    }
+    if (!lastAssistant)
+        return [];
+    const userText = joinNonEmpty(userTexts, "\n---\n");
+    const depth = depthFromMeta({ ...episode.meta, ...segMeta });
+    const isSubagent = Boolean(segMeta.isSubagent ?? episode.meta.isSubagent);
+    const fullThinking = thinkingParts.join("\n\n").trim() || null;
+    // Prefer the episode anchor so gateway replay timestamps cannot fork
+    // `turnId` away from the first user message.
+    const segTurnId = options?.anchorTurnId ?? (turnId ?? turns[0].ts);
+    const attachUserText = !options?.omitSegmentUserText;
+    // ─── No tool calls → single step ──────────────────────────────
+    if (toolTurns.length === 0) {
+        const assistantTexts = turns
+            .filter((t) => t.role === "assistant")
+            .map((t) => t.content);
+        const agentText = joinNonEmpty(assistantTexts, "\n\n");
+        const metaToolCalls = collectToolCallsFromMeta(turns);
+        return [{
+                key: `${episode.id}:${lastAssistant.ts}`,
+                ts: lastAssistant.ts,
+                userText,
+                agentText,
+                agentThinking: fullThinking,
+                toolCalls: metaToolCalls,
+                rawReflection,
+                depth,
+                isSubagent,
+                meta: { ...segMeta, turnId: segTurnId },
+            }];
+    }
+    // ─── Tool calls present → one sub-step per tool call ──────────
+    const out = [];
+    const assistantText = lastAssistant.content.trim();
+    const hasResponse = assistantText.length > 0;
+    const total = toolTurns.length + (hasResponse ? 1 : 0);
+    // Guard against duplicate timestamps when tool turns are added
+    // in a tight synchronous loop (Date.now() has ms resolution).
+    const usedTs = new Set();
+    function uniqueTs(base) {
+        let t = base;
+        while (usedTs.has(t))
+            t = (t + 1);
+        usedTs.add(t);
+        return t;
+    }
+    for (let i = 0; i < toolTurns.length; i++) {
+        const tt = toolTurns[i];
+        const tc = toolCallFromTurn(tt);
+        if (!tc)
+            continue;
+        const ts = uniqueTs(tt.ts);
+        out.push({
+            key: `${episode.id}:${ts}:tool:${i}`,
+            ts,
+            // Only the first sub-step carries the user query; subsequent
+            // sub-steps leave `userText` empty so the viewer's flattenChat
+            // doesn't render the same user bubble N times. The turn's
+            // provenance (episodeId) still links them together.
+            userText: attachUserText && i === 0 ? userText : "",
+            agentText: "",
+            agentThinking: !hasResponse && i === 0 ? fullThinking : null,
+            toolCalls: [tc],
+            rawReflection: null,
+            depth,
+            isSubagent,
+            meta: {
+                ...segMeta,
+                subStep: true,
+                subStepIdx: i,
+                subStepTotal: total,
+                turnId: segTurnId,
+            },
+        });
+    }
+    if (hasResponse) {
+        const ts = uniqueTs(lastAssistant.ts);
+        out.push({
+            key: `${episode.id}:${ts}:response`,
+            ts,
+            userText: "",
+            agentText: assistantText,
+            agentThinking: fullThinking,
+            toolCalls: [],
+            rawReflection,
+            depth,
+            isSubagent,
+            meta: {
+                ...segMeta,
+                subStep: true,
+                subStepIdx: toolTurns.length,
+                subStepTotal: total,
+                turnId: segTurnId,
+            },
+        });
+    }
+    return out;
+}
+// ─── Helpers ────────────────────────────────────────────────────────────────
+/**
+ * Fallback: collect tool calls from assistant `meta.toolCalls` for
+ * adapters that don't write separate `role: "tool"` turns.
+ */
+function collectToolCallsFromMeta(turns) {
+    const tcs = [];
+    for (const turn of turns) {
+        if (turn.role !== "assistant")
+            continue;
+        const metaTcs = turn.meta?.toolCalls;
+        if (!Array.isArray(metaTcs))
+            continue;
+        for (const raw of metaTcs) {
+            const tc = coerceToolCall(raw);
+            if (tc)
+                tcs.push(tc);
+        }
+    }
+    return tcs;
+}
+function toolCallFromTurn(turn) {
+    const meta = (turn.meta ?? {});
+    const direct = coerceToolCall({
+        name: meta.name ?? meta.tool,
+        input: meta.input ?? meta.args,
+        output: turn.content || meta.output || meta.result,
+        errorCode: meta.errorCode,
+        toolCallId: meta.toolCallId,
+        startedAt: meta.startedAt,
+        endedAt: meta.endedAt,
+        thinkingBefore: meta.thinkingBefore,
+        assistantTextBefore: meta.assistantTextBefore,
+    });
+    const nested = firstToolCall(meta.toolCalls);
+    const fromContent = firstToolCall(parseJson(turn.content));
+    const fallback = (direct && direct.name !== "unknown_tool" ? direct : null) ??
+        (nested ? { ...nested, output: nested.output ?? turn.content } : null) ??
+        direct ??
+        fromContent;
+    const tc = unwrapUnknownToolCall(fallback, turn.content);
+    if (tc)
+        return tc;
+    return {
+        name: "unknown_tool",
+        input: meta.input ?? meta.args ?? undefined,
+        output: turn.content,
+        errorCode: typeof meta.errorCode === "string" ? meta.errorCode : undefined,
+        toolCallId: typeof meta.toolCallId === "string" ? meta.toolCallId : undefined,
+        startedAt: typeof meta.startedAt === "number" ? meta.startedAt : undefined,
+        endedAt: typeof meta.endedAt === "number" ? meta.endedAt : undefined,
+        thinkingBefore: typeof meta.thinkingBefore === "string" ? meta.thinkingBefore : undefined,
+        assistantTextBefore: typeof meta.assistantTextBefore === "string" ? meta.assistantTextBefore : undefined,
+    };
+}
+/**
+ * Best-effort coercion of an `assistant.meta.toolCalls[i]` blob into a
+ * `ToolCallDTO`. We accept the rich shape the orchestrator writes
+ * (`{ name, input, output, errorCode, startedAt, endedAt }`) plus the
+ * lossy raw shape some adapters surface (`{ tool, args, result }`).
+ */
+function coerceToolCall(raw) {
+    if (!raw || typeof raw !== "object")
+        return null;
+    const r = raw;
+    const name = typeof r.name === "string"
+        ? r.name
+        : typeof r.tool === "string"
+            ? r.tool
+            : null;
+    if (!name)
+        return null;
+    const input = r.input ?? r.args ?? undefined;
+    const output = r.output ?? r.result ?? undefined;
+    const errorCode = typeof r.errorCode === "string" ? r.errorCode : undefined;
+    const toolCallId = typeof r.toolCallId === "string" ? r.toolCallId : undefined;
+    const startedAt = typeof r.startedAt === "number" ? r.startedAt : undefined;
+    const endedAt = typeof r.endedAt === "number" ? r.endedAt : undefined;
+    const thinkingBefore = typeof r.thinkingBefore === "string" ? r.thinkingBefore : undefined;
+    const assistantTextBefore = typeof r.assistantTextBefore === "string" ? r.assistantTextBefore : undefined;
+    return { name, input, output, errorCode, toolCallId, startedAt, endedAt, thinkingBefore, assistantTextBefore };
+}
+function firstToolCall(raw) {
+    if (Array.isArray(raw)) {
+        for (const item of raw) {
+            const tc = coerceToolCall(item);
+            if (tc)
+                return tc;
+        }
+        return null;
+    }
+    return coerceToolCall(raw);
+}
+function unwrapUnknownToolCall(tc, rawContent) {
+    if (!tc || tc.name !== "unknown_tool")
+        return tc;
+    const nested = firstToolCall(tc.output) ??
+        firstToolCall(parseJson(typeof tc.output === "string" ? tc.output : rawContent));
+    if (!nested || nested.name === "unknown_tool")
+        return tc;
+    return {
+        ...nested,
+        thinkingBefore: nested.thinkingBefore ?? tc.thinkingBefore,
+        assistantTextBefore: nested.assistantTextBefore ?? tc.assistantTextBefore,
+    };
+}
+function parseJson(raw) {
+    const s = raw.trim();
+    if (!s)
+        return null;
+    try {
+        return JSON.parse(s);
+    }
+    catch {
+        return null;
+    }
+}
+function depthFromMeta(meta) {
+    const raw = meta.depth ?? meta.traceDepth ?? meta.subagentDepth;
+    if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0)
+        return Math.floor(raw);
+    return 0;
+}
+function joinNonEmpty(parts, sep) {
+    return parts.map((s) => s.trim()).filter((s) => s.length > 0).join(sep);
+}
+//# sourceMappingURL=step-extractor.js.map

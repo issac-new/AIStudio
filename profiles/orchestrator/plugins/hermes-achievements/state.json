@@ -1,0 +1,44 @@
+{
+  "unlocks": {
+    "claude_confidant": {
+      "evidence": null,
+      "first_tier": "Gold",
+      "unlocked_at": 1780031290
+    },
+    "config_surgeon": {
+      "evidence": null,
+      "first_tier": "Copper",
+      "unlocked_at": 1781687214
+    },
+    "model_sommelier": {
+      "evidence": null,
+      "first_tier": "Silver",
+      "unlocked_at": 1780031290
+    },
+    "night_shift_operator": {
+      "evidence": null,
+      "first_tier": "Copper",
+      "unlocked_at": 1781087146
+    },
+    "provider_polyglot": {
+      "evidence": null,
+      "first_tier": "Silver",
+      "unlocked_at": 1781687214
+    },
+    "rebase_acrobat": {
+      "evidence": null,
+      "first_tier": "Copper",
+      "unlocked_at": 1780031290
+    },
+    "test_suite_tamer": {
+      "evidence": null,
+      "first_tier": "Copper",
+      "unlocked_at": 1781687214
+    },
+    "toolset_cartographer": {
+      "evidence": null,
+      "first_tier": "Copper",
+      "unlocked_at": 1781001181
+    }
+  }
+}

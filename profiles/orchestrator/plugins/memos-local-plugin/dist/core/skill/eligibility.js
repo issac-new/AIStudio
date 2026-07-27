@@ -1,0 +1,102 @@
+/**
+ * V7 §2.5.1 — Skill crystallization eligibility.
+ *
+ * A policy is eligible if **all** of:
+ *   1. `policy.status === "active"` — archived / candidate policies never
+ *      crystallize.
+ *   2. `policy.gain >= minGain` — rewards have shown positive lift.
+ *   3. `policy.support >= minSupport` — enough *distinct* episodes back it.
+ *   4. Feedback-derived avoidance policies must have at least one success
+ *      anchor before they can crystallize into a Skill.
+ *   5. It is not already represented by a non-archived skill, OR the existing
+ *      skill was built before the policy's latest `updatedAt` (→ rebuild).
+ *
+ * The check returns a structured verdict per policy so the orchestrator can
+ * emit a single rollup event. We never mutate anything here — this module is
+ * read-only on purpose to make it trivially unit-testable.
+ */
+export function evaluateEligibility(input, config) {
+    const decisions = [];
+    let eligibleCount = 0;
+    let skippedCount = 0;
+    for (const policy of input.policies) {
+        const existing = input.skillsByPolicy.get(policy.id) ?? null;
+        const decision = decide(policy, existing, config);
+        decisions.push(decision);
+        if (decision.action === "skip")
+            skippedCount += 1;
+        else
+            eligibleCount += 1;
+    }
+    return { decisions, eligibleCount, skippedCount };
+}
+function decide(policy, existing, cfg) {
+    if (policy.status !== "active") {
+        return {
+            policy,
+            existingSkill: existing,
+            action: "skip",
+            reason: `policy.status=${policy.status}`,
+        };
+    }
+    if (policy.gain < cfg.minGain) {
+        return {
+            policy,
+            existingSkill: existing,
+            action: "skip",
+            reason: `policy.gain=${fmt(policy.gain)}<${fmt(cfg.minGain)}`,
+        };
+    }
+    if (policy.support < cfg.minSupport) {
+        return {
+            policy,
+            existingSkill: existing,
+            action: "skip",
+            reason: `policy.support=${policy.support}<${cfg.minSupport}`,
+        };
+    }
+    if (!hasSuccessAnchor(policy)) {
+        return {
+            policy,
+            existingSkill: existing,
+            action: "skip",
+            reason: "policy has no success anchor",
+        };
+    }
+    if (existing && existing.status !== "archived") {
+        if (existing.updatedAt >= policy.updatedAt) {
+            return {
+                policy,
+                existingSkill: existing,
+                action: "skip",
+                reason: `skill.updatedAt>=policy.updatedAt`,
+            };
+        }
+        return {
+            policy,
+            existingSkill: existing,
+            action: "rebuild",
+            reason: `policy.updatedAt>skill.updatedAt`,
+        };
+    }
+    return {
+        policy,
+        existingSkill: existing,
+        action: "crystallize",
+        reason: "policy satisfies minSupport + minGain + status",
+    };
+}
+function hasSuccessAnchor(policy) {
+    if (policy.skillEligible === false)
+        return false;
+    const type = policy.experienceType ?? "success_pattern";
+    if (type === "failure_avoidance" || type === "repair_instruction" || type === "preference") {
+        return false;
+    }
+    const polarity = policy.evidencePolarity ?? "positive";
+    return polarity === "positive" || polarity === "mixed";
+}
+function fmt(n) {
+    return Number.isFinite(n) ? n.toFixed(3) : String(n);
+}
+//# sourceMappingURL=eligibility.js.map

@@ -1,0 +1,12 @@
+manifest_version: 1
+name: matrix-chat-info
+version: 1.0.0
+description: >
+  Patch Matrix adapter to fetch room name (m.room.name) and topic (m.room.topic)
+  from Matrix state events and pass them to SessionSource as chat_name and chat_topic.
+  This ensures tenant values show readable room names instead of raw room IDs.
+
+  Survives Hermes upgrades — reapplied automatically at each gateway startup.
+author: orchestrator
+license: MIT
+requires_env: []

@@ -1,0 +1,653 @@
+profiles:
+  orchestrator:
+    api_server:
+      enabled: true
+      port: 8650
+      host: 127.0.0.1
+    matrix:
+      enabled: true
+    email:
+      enabled: true
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    - messaging
+    kanban:
+      default_assignee: ''
+    environment_hint: '~/.hermes/profiles/orchestrator/orchestrator_rules.md
+
+      ~/.hermes/profiles/orchestrator/email_kanban_rules.md
+
+      '
+    env_extra:
+      MATRIX_ACCESS_TOKEN: syt_REDACTED_TOKEN
+      MATRIX_HOMESERVER: http://localhost:8008
+      MATRIX_USER_ID: '@swarm:matrix.test'
+      MATRIX_HOME_ROOM: '!<matrix-room-id>:matrix.test'
+      MATRIX_HOME_ROOM_THREAD_ID: '$XRDW_UwsDgQjOODLWyPuPSWD4-HT62dz9_IDyJqg_kw'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - matrix-chat-info
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - devops
+    - software-development
+    - github
+    - productivity
+    - research
+    - mcp
+  architect:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    kanban:
+      default_assignee: architect
+    environment_hint: ~/.hermes/profiles/architect/architect_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - creative
+    - mcp
+  project-manager:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    kanban:
+      default_assignee: ''
+    environment_hint: ~/.hermes/profiles/project-manager/project-manager_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - email
+  requirement-analyst:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    kanban:
+      default_assignee: requirement-analyst
+    environment_hint: ~/.hermes/profiles/requirement-analyst/requirement-analyst_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - creative
+    - mcp
+    - email
+  worker-coder:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: worker-coder
+    environment_hint: ~/.hermes/profiles/worker-coder/worker-coder_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - data-science
+    - mlops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mcp
+  worker-deployer:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: worker-deployer
+    environment_hint: ~/.hermes/profiles/worker-deployer/worker-deployer_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - mlops
+    - autonomous-ai-agents
+    - productivity
+    - mcp
+    - note-taking
+  worker-researcher:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: worker-researcher
+    environment_hint: ~/.hermes/profiles/worker-researcher/worker-researcher_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - data-science
+    - software-development
+    - github
+    - mlops
+    - devops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mcp
+  worker-reviewer:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: worker-reviewer
+    environment_hint: ~/.hermes/profiles/worker-reviewer/worker-reviewer_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - github
+    - mlops
+    - devops
+    - autonomous-ai-agents
+    - research
+    - cybersecurity
+    - mcp
+  worker-tester:
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: worker-tester
+    environment_hint: ~/.hermes/profiles/worker-tester/worker-tester_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - github
+    - mlops
+    - devops
+    - autonomous-ai-agents
+    - data-science
+    - mcp
+    - productivity
+  hack-recon:
+    model:
+      default: k3
+      provider: custom:kimicode
+      base_url: https://api.kimi.com/coding
+    # k3 配额+deepseek 双死时的不限量兜底(三层授权框架已压拒绝率),
+    # glm-5.2 高峰卡顿再退 glm-5.1。
+    fallback_providers:
+      - provider: deepseek
+        model: deepseek-v4-flash
+      - provider: damoxing
+        model: glm-5.2
+      - provider: damoxing
+        model: glm-5.1
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    kanban:
+      default_assignee: hack-recon
+    environment_hint: ~/.hermes/profiles/hack-recon/hack-recon_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - data-science
+    - cybersecurity
+    - red-teaming
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+  hack-exploit:
+    model:
+      default: k3
+      provider: custom:kimicode
+      base_url: https://api.kimi.com/coding
+    # k3 配额+deepseek 双死时的不限量兜底(三层授权框架已压拒绝率),
+    # glm-5.2 高峰卡顿再退 glm-5.1。
+    fallback_providers:
+      - provider: deepseek
+        model: deepseek-v4-flash
+      - provider: damoxing
+        model: glm-5.2
+      - provider: damoxing
+        model: glm-5.1
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: hack-exploit
+    environment_hint: ~/.hermes/profiles/hack-exploit/hack-exploit_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - data-science
+    - cybersecurity
+    - red-teaming
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+  hack-forensics:
+    model:
+      default: k3
+      provider: custom:kimicode
+      base_url: https://api.kimi.com/coding
+    # k3 配额+deepseek 双死时的不限量兜底(三层授权框架已压拒绝率),
+    # glm-5.2 高峰卡顿再退 glm-5.1。
+    fallback_providers:
+      - provider: deepseek
+        model: deepseek-v4-flash
+      - provider: damoxing
+        model: glm-5.2
+      - provider: damoxing
+        model: glm-5.1
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    kanban:
+      default_assignee: hack-forensics
+    environment_hint: ~/.hermes/profiles/hack-forensics/hack-forensics_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - data-science
+    - cybersecurity
+    - red-teaming
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+  hack-auditor:
+    model:
+      default: k3
+      provider: custom:kimicode
+      base_url: https://api.kimi.com/coding
+    # k3 配额+deepseek 双死时的不限量兜底(三层授权框架已压拒绝率),
+    # glm-5.2 高峰卡顿再退 glm-5.1。
+    fallback_providers:
+      - provider: deepseek
+        model: deepseek-v4-flash
+      - provider: damoxing
+        model: glm-5.2
+      - provider: damoxing
+        model: glm-5.1
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    kanban:
+      default_assignee: hack-auditor
+    environment_hint: ~/.hermes/profiles/hack-auditor/hack-auditor_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - data-science
+    - cybersecurity
+    - red-teaming
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+  hack-c2:
+    model:
+      default: k3
+      provider: custom:kimicode
+      base_url: https://api.kimi.com/coding
+    # k3 配额+deepseek 双死时的不限量兜底(三层授权框架已压拒绝率),
+    # glm-5.2 高峰卡顿再退 glm-5.1。
+    fallback_providers:
+      - provider: deepseek
+        model: deepseek-v4-flash
+      - provider: damoxing
+        model: glm-5.2
+      - provider: damoxing
+        model: glm-5.1
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: hack-c2
+    environment_hint: ~/.hermes/profiles/hack-c2/hack-c2_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - data-science
+    - cybersecurity
+    - red-teaming
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+  hack-weapons:
+    model:
+      default: k3
+      provider: custom:kimicode
+      base_url: https://api.kimi.com/coding
+    # k3 配额+deepseek 双死时的不限量兜底(三层授权框架已压拒绝率),
+    # glm-5.2 高峰卡顿再退 glm-5.1。
+    fallback_providers:
+      - provider: deepseek
+        model: deepseek-v4-flash
+      - provider: damoxing
+        model: glm-5.2
+      - provider: damoxing
+        model: glm-5.1
+    api_server:
+      enabled: false
+    matrix:
+      enabled: false
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    kanban:
+      default_assignee: hack-weapons
+    environment_hint: ~/.hermes/profiles/hack-weapons/hack-weapons_rules.md
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - data-science
+    - cybersecurity
+    - red-teaming
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+shared_config:
+  model:
+    default: glm-5.2
+    provider: damoxing
+    base_url: ${DAMOXING_BASE_URL}
+  providers:
+    damoxing:
+      base_url: ${DAMOXING_BASE_URL}
+      api_key: ${DAMOXING_API_KEY}
+      api_mode: ${DAMOXING_API_MODE}
+      context_length: 1048576
+      # 显式声明模型列表: 修复键入式 /model glm-5.2 解析——无声明时 switch_model
+      # 的 configured-provider 匹配找不到 glm-*, 静态目录将其映射到内置 zai
+      # provider(无凭据)导致"找不到模型"。列表与网关 /v1/models 实测一致。
+      models:
+        - glm-5
+        - glm-5.1
+        - glm-5.1-20260408
+        - glm-5.2
+        - glm-5.2-20260613
+        - GLM-5.2-C
+  # Kimi Code (k3) is declared as a legacy `custom_providers` list entry — NOT
+  # under `providers:` — so a bare `/model k3` resolves to exactly one slug
+  # (custom:kimicode). Putting it in the `providers:` dict instead makes
+  # _configured_provider_matches() see it under two slugs (kimicode AND
+  # custom:kimicode) and reject `/model k3` as ambiguous. Mirrors the root
+  # config.yaml layout where this already works.
+  custom_providers:
+    - name: kimicode
+      base_url: https://api.kimi.com/coding
+      api_key: ${KIMI_API_KEY}
+      api_mode: anthropic_messages
+      context_length: 1048576
+      models:
+        k3:
+          name: k3
+      model: k3
+  # Auxiliary tasks pinned to damoxing (GLM-5.2) — REQUIRED for k3-main profiles:
+  # api.kimi.com/coding speaks Anthropic wire format only, so aux tasks defaulting
+  # to the main provider fail with HTTP 404 (OpenAI chat.completions is rejected).
+  # GLM-5.2 is an unlimited monthly subscription → zero marginal cost for aux.
+  # Fallback chain for ALL profiles (2026-07-24):
+  # 1级 glm-5.1: GLM-5.2 高峰期卡顿时的免费降级(同 max 套餐, 网关实测可用),
+  #    零边际成本优先于付费 deepseek。
+  # 2级 deepseek-v4-flash: damoxing 整体故障时的异构容灾(最快+最高并发)。
+  #    触发场景多为 k3 月度配额耗尽的长窗口, v4-pro 价 3×flash 而智能仅 +7.5%, 选 flash。
+  fallback_providers:
+    - provider: damoxing
+      model: glm-5.1
+    - provider: deepseek
+      model: deepseek-v4-flash
+  auxiliary:
+    title_generation:
+      provider: damoxing
+      model: glm-5.2
+    compression:
+      provider: damoxing
+      model: glm-5.2
+    session_search:
+      provider: damoxing
+      model: glm-5.2
+    web_extract:
+      provider: damoxing
+      model: glm-5.2
+    vision:
+      # 多模态统一走 k3 (2026-07-24 用户决策): GLM-5.2 纯文本, deepseek 无视觉,
+      # k3 是唯一多模态。实测 api.kimi.com/coding 接受 OpenAI 格式视觉请求(HTTP 200),
+      # 404 仅针对 kimi-for-coding 别名。非视觉主模型遇图片时 vision_analyze 自动
+      # 旁路到 k3 取文字描述, 主会话模型不变。低频场景, K3 配额消耗可忽略。
+      provider: custom:kimicode
+      model: k3
+    approval:
+      # 审批是全系统唯一有人实时等待的 aux 任务 → 最快+最高并发的 v4-flash。
+      # 且 glm-4-flash 在 damoxing 网关不存在(503 model_not_found, 2026-07-24 实测)。
+      # 审批 prompt 短且重复, 缓存命中后输入 0.02¥/M, 单次成本忽略不计。
+      provider: deepseek
+      model: deepseek-v4-flash
+  agent:
+    max_turns: 90
+    reasoning_effort: xhigh
+    tool_use_enforcement: auto
+    task_completion_guidance: true
+    parallel_tool_call_guidance: true
+    environment_probe: false
+  terminal:
+    backend: local
+    cwd: ~/hermes-docker-sandbox/workspace
+    timeout: 180
+    persistent_shell: true
+  compression:
+    enabled: true
+    threshold: 0.5
+    target_ratio: 0.2
+  memory:
+    memory_enabled: true
+    user_profile_enabled: true
+    provider: hindsight
+  kanban:
+    dispatch_in_gateway: true
+    dispatch_interval_seconds: 60
+    failure_limit: 2
+    max_in_progress_per_profile: 4
+    auto_decompose: false
+    orchestrator_profile: orchestrator
+  display:
+    skin: daylight
+    language: zh
+    personality: kawaii
+  security:
+    redact_secrets: true
+    tirith_enabled: true
+  privacy:
+    redact_pii: true
+  approvals:
+    mode: smart
