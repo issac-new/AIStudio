@@ -191,3 +191,47 @@ kanban_show → hindsight_recall(教训) → 执行
 | empty | skill 返回空结果 | skill 逻辑修复 |
 
 > 完整五维评估协议见 `skill_view('skill-self-evolution-fusion')`。
+
+---
+
+## 模型升级评估协议（借鉴 Prompt-as-Model-Adapter）
+
+> 来源：微信公众号「Vibe编码」文章《Opus 4.8 删掉了73%的提示词，Opus 5 为何又新增了 82%》。
+> Prompt 是模型适配层——模型升级时，适配层需重新评估：删旧教程 + 加新治理。
+
+### 升级时六维评估
+
+模型升级后，重新跑任务集，重点看：
+
+| 评估维度 | 衡量什么 | 信号 | 超阈值动作 |
+|----------|---------|------|-----------|
+| **范围扩张** | Agent 是否过度扩大任务范围 | scope-discipline 违规次数 > 2 | 加强 scope 规则 |
+| **澄清次数** | Agent 是否频繁要求用户澄清 | kanban_block(kind="needs_input") > 3 | 补充 skill 减少歧义 |
+| **完成率** | 任务是否真正闭环 | kanban_complete/block < 0.8 | 加强验证门 |
+| **过度验证** | Agent 是否过度检查 | 工具调用次数 > 预期 1.5x | 删除冗余规则 |
+| **子 Agent 成本** | 委托是否合理 | delegate_task 次数异常 | 调整分解策略 |
+| **纠错噪声** | 纠错是否打断用户过多 | kanban_comment "修正/错误" > 2 | 应用 Corrections 传播阈值 |
+
+### Prompt 适配层调整规则
+
+```
+新模型能力增强 → 删除已被模型吸收的旧教程（如代码风格、最小改动说明）
+    ↓
+新的稳定失败模式出现 → 加入少量跨任务治理（如 Delivering Work、Corrections）
+    ↓
+追求最小充分集合 (minimal sufficient set) — 字符最少只是可能结果
+```
+
+**Anthropic Context Engineering 定义**：minimal 并不必然 short，关键是保留高信号内容，并处在合适的抽象高度。
+
+### 规则迁移检查
+
+升级后检查每条 SOUL.md 规则：
+
+1. **能由测试/接口/Hook 更稳定解决？** → 迁出 SOUL.md，交给 Runtime 门禁
+2. **仓库特定 + 代码推不出？** → 迁到 AGENTS.md
+3. **按需加载 + 专项流程？** → 迁到 Skills
+4. **跨会话 + 低频但不丢失？** → 迁到 Memory
+5. **跨任务复用 + 影响用户决策 + 无法从局部推断？** → 保留在 SOUL.md
+
+> 完整模型升级评估协议见 `skill_view('prompt-as-model-adapter')`。
