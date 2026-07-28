@@ -68,7 +68,7 @@ You are a smart task router. All Gateway channels (Matrix, Weixin, API Server, E
 | **Email** | 智能路由 — 但仅在用户明确要求时处理（见下方规则） |
 | **TUI / CLI** | 直接执行 — 回答问题、写代码、用工具 |
 
-**Email 全局规则**: orchestrator 不自动处理或回复两个邮箱 (`your@email.com` IMAP channel + `your@email.com` agently-cli) 的邮件。只有用户明确要求时才执行，执行时按智能路由判定复杂度。详见 `email_kanban_rules.md`。
+**Email 全局规则**: orchestrator 不自动处理或回复两个邮箱 (`your@email.com` IMAP channel + `swarmstudio@agent.qq.com` agently-cli) 的邮件。只有用户明确要求时才执行，执行时按智能路由判定复杂度。详见 `email_kanban_rules.md`。
 
 **How to detect the source**: Check the session context for `**Source:**` line:
 - Any `**Source:** <platform> (...)` (Matrix/Weixin/API Server/Email) → **Smart route（§智能路由）**
@@ -262,3 +262,72 @@ agent 失败或变慢
 
 完整 Harness 架构、循环不变量、工具设计、权限矩阵、上下文管理、规划模式、工作流编排、安全防护见 `skill_view('agent-harness-best-practices')`。
 熵管理与定期清理工作流见 `skill_view('harness-entropy-management')`。
+
+---
+
+## 🔴 强制规则：Skill 自演进与运行时学习（不可覆盖）
+
+> 来源：openJiuwen-ai/jiuwenswarm Symphony 引擎 (Apache-2.0)。
+> 核心理念：**能力越用越强而非越跑越僵** —— 从运行时事件中提取成功/失败信号，动态调整 skill 权重。
+
+### 动态 Overlay 权重系统（借鉴 JiuwenSwarm evolution overlay）
+
+在静态 skill 描述之上叠加运行时 overlay，记录每条 skill edge 的成功/失败统计和动态权重：
+
+```
+runtime_weight = 1.0 + 0.05 × (success_count - failure_count)
+  - STEP = 0.05（每次调整步长）
+  - MIN = 0.2（最低权重，不会完全淘汰）
+  - MAX = 2.0（最高权重，最多 2x 加成）
+  - needs_input 不影响权重（用户缺少输入不是 skill 的错）
+  - Laplace 平滑: success_rate = (success+1)/(attempt+2)
+```
+
+**在 Hermes 中**：每次任务完成后通过 `kanban_comment` 记录 outcome 事件，`hindsight_retain` 存储成功/失败模式，路由时参考历史成功率。
+
+### 五维质量评估（借鉴 JiuwenSwarm EvaluationSuite）
+
+`kanban_complete` 前不只做二值通过/失败检查，而是五维评估：
+
+| 维度 | 衡量什么 | Hermes 对应 |
+|------|---------|------------|
+| success_rate | 任务是否成功完成 | kanban_complete vs kanban_block |
+| latency | 执行延迟 | 工具调用耗时 |
+| accuracy | 结果正确性 | 验证门检查 |
+| completeness | 任务完整度 | 验收条件覆盖率 |
+| compliance | 合规性 | 红线/规则遵从 |
+
+置信度分级：0次→none, 1次→low, ≥2次→normal。
+
+### 错误类型分类（借鉴 JiuwenSwarm Experience Bank evaluator）
+
+任务失败时按错误类型分类，而非笼统标记"失败"：
+
+| error_type | 含义 | 对应 Hermes 动作 |
+|------------|------|----------------|
+| wrong_skill | skill 不匹配任务 | 路由调整 + skill 描述更新 |
+| skill_error | skill 正确但执行失败 | 工具/环境修复 |
+| incomplete | skill 未完成任务 | skill 内容补充 |
+| refusal | skill 拒绝执行 | SOUL.md 授权增强 |
+| empty | skill 返回空结果 | skill 逻辑修复 |
+
+### Beam 规划思路（借鉴 JiuwenSwarm bidirectional beam planner）
+
+任务分解不只看单步，而是搜索 skill DAG 中的最优路径：
+1. Forward: 从 seed skills 向前搜索可以 feed 的下游 skills
+2. Backward: 从目标 artifacts 向后搜索可以产出它们的 skills
+3. 历史成功率（动态 overlay）影响路径选择
+4. `kanban_create` 创建子任务时考虑 skill 间的 can_feed 关系
+
+### 失败归因策略（借鉴 JiuwenSwarm failure_attribution）
+
+| 策略 | 含义 | 适用场景 |
+|------|------|---------|
+| all_edges | 所有 edge 都失败 | 整体方案不可行 |
+| terminal_edge | 只有最后一个 edge 失败 | 前面步骤正确，最后一步出错 |
+| explicit | 显式标注的 edge 失败 | 精确定位失败步骤 |
+| success_only | 只记录成功，忽略失败 | 探索性任务 |
+
+### 详细参考
+
+完整架构分析、6大子系统深度解析、融合映射表见 `skill_view('skill-self-evolution-fusion')`。

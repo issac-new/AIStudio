@@ -30,7 +30,7 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 > ⚠️ **最高优先级**: orchestrator **不自动处理、不自动回复**两个邮箱的邮件，除非用户明确要求。
 
 - `your@email.com` — IMAP channel（gateway 原生 email adapter）
-- `your@email.com` — agently-cli（agent.qq.com OAuth）
+- `swarmstudio@agent.qq.com` — agently-cli（agent.qq.com OAuth）
 
 **"明确要求"判定**：
 - ✅ 用户在 TUI/CLI/Matrix 中直接说"检查邮件""读邮件""回复xxx的邮件""发邮件给xxx"
@@ -493,3 +493,54 @@ notification_sources: ['*']  # 或 ['orchestrator']
 ---
 
 > 📖 **实现示例** 已外置到 `references/implementation-examples.md` — 路由判定时用 `read_file` 按需加载。
+
+---
+
+## §0.6 Skill 自演进与运行时学习（借鉴 JiuwenSwarm Symphony）
+
+> 来源：openJiuwen-ai/jiuwenswarm (Apache-2.0) Symphony 引擎。
+> 核心理念：能力越用越强而非越跑越僵。
+
+### §0.6.1 动态 Overlay 权重
+
+每次任务完成后，通过 `kanban_comment` 记录 outcome 事件：
+```json
+{
+  "evolution_event": {
+    "plan_id": "<task_id>",
+    "outcome": "success|failure|needs_input",
+    "selected_skill_ids": ["skill-a", "skill-b"],
+    "failure_type": "wrong_skill|skill_error|incomplete|refusal|empty",
+    "failure_attribution": "all_edges|terminal_edge|explicit|success_only"
+  }
+}
+```
+
+路由决策时参考历史成功率（通过 `hindsight_recall` 检索）：
+- 高成功率 skill（runtime_weight > 1.0）→ 优先路由
+- 低成功率 skill（runtime_weight < 1.0）→ 需要改进或替代
+- needs_input 不影响权重（用户缺少输入不是 skill 的错）
+
+### §0.6.2 五维评估驱动的路由优化
+
+路由决策不只看任务复杂度（§0.2），还参考 skill 历史五维评估：
+- success_rate < 0.5 的 skill → 标注"低可靠"，路由时降级
+- compliance 不通过的 skill → 禁止路由
+- latency 过高的 skill → 标注"慢"，考虑替代
+
+### §0.6.3 Experience Bank 经验检索
+
+任务开始前，通过 `hindsight_recall` 检索相关经验模式：
+- 搜索同类任务的成功/失败模式
+- 提取 error_type 分类指导路由调整
+- 注入历史经验作为上下文
+
+### §0.6.4 Beam 规划增强
+
+任务分解不只创建单层子任务，而是搜索最优 skill 编排路径：
+1. Forward: 从已有 skills 向前搜索可以 feed 的下游
+2. Backward: 从目标 artifacts 向后搜索可以产出的 skills
+3. 历史成功率影响路径选择
+4. `kanban_create(parents=[...])` 表达 skill 间依赖
+
+> 完整协议见 `skill_view('skill-self-evolution-fusion')`。
