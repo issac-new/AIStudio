@@ -43,13 +43,13 @@
     "created_at": "2026-07-27T08:54:34.937474+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-07-27T08:54:34.941675+00:00",
-    "last_viewed_at": "2026-07-27T08:54:34.937492+00:00",
+    "last_used_at": "2026-07-28T03:41:37.800838+00:00",
+    "last_viewed_at": "2026-07-28T03:41:37.798567+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "agent-profile-lifecycle": {
     "archived_at": null,
@@ -714,6 +714,19 @@
     "use_count": 0,
     "view_count": 0
   },
+  "fusion-implementation-patterns": {
+    "archived_at": null,
+    "created_at": "2026-07-28T03:37:58.748041+00:00",
+    "created_by": "agent",
+    "last_patched_at": null,
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
+  },
   "gateway-crash-loop-troubleshooting": {
     "archived_at": null,
     "created_at": "2026-07-24T13:22:41.460616+00:00",
@@ -771,13 +784,13 @@
     "created_at": "2026-07-24T17:32:10.082600+00:00",
     "created_by": "agent",
     "last_patched_at": null,
-    "last_used_at": "2026-07-28T02:54:34.128189+00:00",
-    "last_viewed_at": "2026-07-28T02:54:34.126167+00:00",
+    "last_used_at": "2026-07-28T04:39:10.636320+00:00",
+    "last_viewed_at": "2026-07-28T04:39:10.633818+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 9,
-    "view_count": 9
+    "use_count": 11,
+    "view_count": 11
   },
   "github-repo-management": {
     "archived_at": null,
@@ -1668,13 +1681,13 @@
     "created_at": "2026-07-27T09:37:52.389965+00:00",
     "created_by": "agent",
     "last_patched_at": null,
-    "last_used_at": "2026-07-28T02:51:36.940398+00:00",
-    "last_viewed_at": "2026-07-28T02:51:36.938311+00:00",
+    "last_used_at": "2026-07-28T03:28:31.377904+00:00",
+    "last_viewed_at": "2026-07-28T03:28:31.375454+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 4,
+    "view_count": 4
   },
   "openhue": {
     "archived_at": null,
@@ -1865,6 +1878,19 @@
     "last_patched_at": null,
     "last_used_at": "2026-07-27T05:59:42.281086+00:00",
     "last_viewed_at": "2026-07-27T05:59:42.277278+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "prompt-as-model-adapter": {
+    "archived_at": null,
+    "created_at": "2026-07-28T03:44:16.127786+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-07-28T03:44:16.130134+00:00",
+    "last_viewed_at": "2026-07-28T03:44:16.127806+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
@@ -2110,13 +2136,13 @@
     "created_at": "2026-07-28T02:43:27.380522+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-07-28T02:43:27.382937+00:00",
-    "last_viewed_at": "2026-07-28T02:43:27.380547+00:00",
+    "last_used_at": "2026-07-28T02:58:34.953269+00:00",
+    "last_viewed_at": "2026-07-28T02:58:34.950921+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "soul-advanced-usage-deepening": {
     "archived_at": null,
