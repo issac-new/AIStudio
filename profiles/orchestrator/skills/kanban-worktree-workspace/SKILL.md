@@ -135,6 +135,43 @@ Workers entering a worktree workspace should:
    `git log` / `git diff`
 5. Merging back to main branch is by orchestrator/reviewer decision
 
+## Pitfall: board.json default_workdir must not be null
+
+If `default_workdir` is `null` in a board's `board.json`, ALL
+`workspace_kind="worktree"` tasks will fail immediately with:
+
+```
+workspace: task <id> has workspace_kind=worktree but no workspace_path,
+and board '<slug>' has no default_workdir set.
+```
+
+The dispatcher retries until the failure limit is exhausted, then marks
+the task `gave_up`. This is the #1 cause of worktree task failures.
+
+**Always verify default_workdir when setting up a new board:**
+
+```python
+import json, pathlib
+for slug in ["swarm", "hack", "product", "ops", "[已移除]"]:
+    p = pathlib.Path.home() / f".hermes/kanban/boards/{slug}/board.json"
+    if p.exists():
+        d = json.loads(p.read_text())
+        dw = d.get("default_workdir")
+        status = "✅" if dw else "❌ NULL — fix immediately"
+        print(f"  {slug}: default_workdir = {dw or 'NULL'} {status}")
+```
+
+Fix:
+```python
+d["default_workdir"] = str(pathlib.Path.home() / "hermes-docker-sandbox/workspace")
+p.write_text(json.dumps(d, ensure_ascii=False, indent=2))
+```
+
+This pitfall was observed on the swarm board (2026-07-26): `default_workdir`
+was `null` while hack/product/ops boards were correctly set. The task
+`t_ccad1e56` burned both retry attempts on spawn_failed before the
+root cause was identified.
+
 ## When to Use dir Instead
 
 `workspace_kind="dir"` remains valid for:

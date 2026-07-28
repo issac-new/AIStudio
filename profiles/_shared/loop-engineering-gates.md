@@ -152,3 +152,42 @@ kanban_show → hindsight_recall(教训) → 执行
 将重复指导转化为机械检查：Schema 验证器、策略检查器、结构测试、来源引用检查、新鲜度检查、成本预算。
 
 > 完整熵管理协议见 `skill_view('harness-entropy-management')`。
+
+---
+
+## 五维质量评估增强（借鉴 JiuwenSwarm EvaluationSuite）
+
+> 来源：openJiuwen-ai/jiuwenswarm Symphony 引擎。
+> 验证门不只做二值通过/失败，而是五维量化评估。
+
+### 五维评估模型
+
+| 维度 | 评估方法 | 通过标准 | 失败动作 |
+|------|---------|---------|---------|
+| **success_rate** | 任务是否达到 kanban_complete 标准 | 满足验收条件 | kanban_block |
+| **latency** | 工具调用总耗时 vs 预期 | 在合理范围内 | 标注但允许通过 |
+| **accuracy** | 验证门检查——产出是否正确 | 工具验证通过 | 重试（最多3轮） |
+| **completeness** | 验收条件覆盖率 | 100% 覆盖 | 补充缺失项 |
+| **compliance** | 红线/规则遵从 | 无违规 | kanban_block |
+
+### 置信度分级
+
+| 评估次数 | 置信度 | 含义 |
+|----------|--------|------|
+| 0 | none | 未评估 |
+| 1 | low | 单次评估，需更多数据 |
+| ≥2 | normal | 多次评估，可信 |
+
+### 错误类型分类（替代笼统"失败"标记）
+
+失败时在 `kanban_comment` 中标注 error_type：
+
+| error_type | 判定条件 | 后续动作 |
+|------------|---------|---------|
+| wrong_skill | skill 不匹配任务需求 | 路由调整 + skill 描述更新 |
+| skill_error | skill 正确但执行出错 | 工具/环境修复 |
+| incomplete | skill 未完成任务 | skill 内容补充 |
+| refusal | skill 拒绝执行 | SOUL.md 授权增强 |
+| empty | skill 返回空结果 | skill 逻辑修复 |
+
+> 完整五维评估协议见 `skill_view('skill-self-evolution-fusion')`。
