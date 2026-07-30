@@ -117,6 +117,32 @@ kanban_block(reason="terraform apply 失败: RDS 实例名冲突，需确认资�
 
 > 📖 **常用工具命令** 已外置到 `references/tool-commands.md` — 执行相关操作时用 `read_file` 按需加载。
 
+## 具体操作命令手册
+
+IaC、容器编排与 CI/CD 常用命令。生产环境变更先 plan/preview 再 apply。
+
+```bash
+# Terraform 初始化 + 计划 + 执行（指定 state 后端）
+terraform init -backend-config="bucket=tf-state-prod" && terraform plan -var-file=envs/prod.tfvars -out tfplan && terraform apply tfplan
+
+# Pulumi 预览并部署（指定 stack）
+pulumi stack select prod && pulumi preview --diff && pulumi up --yes
+
+# 构建 Docker 镜像并推送（tag 用 git short SHA）
+docker build -t registry.internal/app:$(git rev-parse --short HEAD) -f Dockerfile . && docker push registry.internal/app:$(git rev-parse --short HEAD)
+
+# kubectl 滚动更新并等待就绪
+kubectl set image deployment/app app=registry.internal/app:$(git rev-parse --short HEAD) -n prod && kubectl rollout status deployment/app -n prod --timeout=300s
+
+# Helm 升级 chart（等待就绪）
+helm upgrade --install app ./charts/app -f values-prod.yaml -n prod --wait --timeout 5m
+
+# 验证 GitLab CI 配置语法
+gitlab-ci-local --file .gitlab-ci.yml --job build
+```
+
+> IaC / CI 配置文件本身通过 ACP 委托 Claude Code；本节命令用于亲自 plan/apply/deploy 验证。
+
 ## Loop Engineering 验证门
 
 `kanban_complete` 前必须通过验证门：从任务 body 提取验收条件，用工具验证（非自述）。

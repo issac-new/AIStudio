@@ -156,6 +156,32 @@ kanban_block(reason="incident: 无法确认影响范围，需 SRE 提供 SLI 数
 
 > 📖 **事故响应常用命令** 已外置到 `references/tool-commands.md` — 执行相关操作时用 `read_file` 按需加载。
 
+## 具体操作命令手册
+
+事故响应与复盘常用命令。黄金信号优先：错误率 → 延迟 → 饱和度 → 流量。
+
+```bash
+# 拉取最近 1h 异常 Pod 事件（按时间排序）
+kubectl get events -n prod --sort-by='.lastTimestamp' | tail -50
+
+# 跨多 Pod 并行捞日志并过滤错误
+kubectl logs -n prod -l app=api --since=1h --tail=1000 | grep -iE 'error|panic|fatal' | head -100
+
+# 导出故障时间窗口 Deployment 状态快照
+kubectl get deploy -A -o wide > incident/snapshot-deploy-$(date +%s).txt
+
+# 查看节点资源压力（CPU/内存/磁盘）
+kubectl top nodes --sort-by=memory; df -h | grep -vE 'tmpfs|overlay'
+
+# 更新 Statuspage 事故状态（调查中）
+curl -X POST "https://api.statuspage.io/v1/pages/$PAGE_ID/incidents" -H "Authorization: OAuth $STATUSPAGE_TOKEN" -H "Content-Type: application/json" -d '{"incident":{"name":"API 5xx 升高","status":"investigating","impact_override":"major"}}'
+
+# 生成复盘文档骨架
+python scripts/gen_postmortem.py --incident INC-1234 --start "2026-07-30T10:00Z" --end "2026-07-30T11:30Z" --template templates/postmortem.md
+```
+
+> 复盘脚本本身通过 ACP 委托 Claude Code；本节命令用于亲自取证、协调与状态发布。
+
 ## Loop Engineering 验证门
 
 `kanban_complete` 前必须通过验证门：从任务 body 提取验收条件，用工具验证（非自述）。

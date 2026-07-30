@@ -111,6 +111,35 @@ kanban_block(reason="monitoring: Prometheus 远端不可达，无法验证告警
 
 > 📖 **常用工具命令** 已外置到 `references/tool-commands.md` — 执行相关操作时用 `read_file` 按需加载。
 
+## 具体操作命令手册
+
+SLO 监控、告警与故障排查常用命令。Prometheus/Alertmanager/Grafana 工具链。
+
+```bash
+# PromQL 即时查询最近 P99 延迟
+promtool query instant http://prometheus:9090 'histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))'
+
+# 检查 SLO 错误预算燃烧率
+promtool query instant http://prometheus:9090 'sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h]))'
+
+# 验证告警规则文件语法
+promtool check rules alerts/slo-alerts.yml
+
+# 查询 Alertmanager 当前活跃告警
+amtool --alertmanager.url=http://alertmanager:9093 alert query
+
+# 临时静音告警 1 小时（维护窗口）
+amtool --alertmanager.url=http://alertmanager:9093 silence add --duration=1h --comment="deploy window" alertname=HighLatency
+
+# 导出 Grafana 仪表盘为 JSON
+curl -s -H "Authorization: Bearer $GRAFANA_TOKEN" "http://grafana:3000/api/dashboards/uid/$DASH_UID" | jq '.dashboard' > dashboards/slo.json
+
+# 创建 Prometheus TSDB 快照用于离线分析
+curl -XPOST http://prometheus:9090/api/v1/admin/tsdb/snapshot
+```
+
+> 告警规则 / Grafana dashboard JSON 本身通过 ACP 委托 Claude Code；本节命令用于亲自查询、验证与排障。
+
 ## Loop Engineering 验证门
 
 `kanban_complete` 前必须通过验证门：从任务 body 提取验收条件，用工具验证（非自述）。
