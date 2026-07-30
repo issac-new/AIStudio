@@ -1,11 +1,11 @@
 # SwarmTeam
 
 > 29-agent Hermes cluster with multi-board Kanban collaboration, ACP integration, and skill self-evolution.
-> 5 teams · 29 profiles · 5 Kanban boards · 4,683+ skills · 5,666+ SOUL lines
+> 5 teams · 29 profiles · 5 Kanban boards · 4678+ skills · 5662+ SOUL lines
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Profiles](https://img.shields.io/badge/profiles-29-blue.svg)](#teams--profiles)
-[![Skills](https://img.shields.io/badge/skills-4683+-purple.svg)](#skills)
+[![Skills](https://img.shields.io/badge/skills-4678+-purple.svg)](#skills)
 [![Teams](https://img.shields.io/badge/teams-5-orange.svg)](#teams--profiles)
 
 [中文文档](README_zh.md) · **English**
@@ -39,10 +39,10 @@ SwarmTeam is a multi-agent system built on [Hermes Agent](https://hermes-agent.n
 
 | Profile | Title | Role Identity | SOUL Lines |
 |---------|-------|---------------|------------|
-| orchestrator | Orchestrator | Smart task router + cognitive engine | 333 |
+| orchestrator | Orchestrator | Smart router + cognitive engine | 407 |
 | architect | Architect (架构师) | System design, tech selection | 205 |
-| project-manager | Project Manager | Project execution coordinator | 126 |
-| requirement-analyst | Requirement Analyst | Requirement decomposition | 327 |
+| project-manager | Project Manager (项目经理) | Project execution coordinator | 126 |
+| requirement-analyst | Requirement Analyst (需求分析师) | Requirement decomposition | 327 |
 | worker-coder | Worker-Coder (开发工程师) | Implementer, not decision-maker | 229 |
 | worker-deployer | Worker-Deployer (部署工程师) | Final gatekeeper | 157 |
 | worker-researcher | Worker-Researcher (研究分析工程师) | Researcher, not decision-maker | 174 |
@@ -53,30 +53,30 @@ SwarmTeam is a multi-agent system built on [Hermes Agent](https://hermes-agent.n
 
 | Profile | Title | Role Identity | SOUL Lines |
 |---------|-------|---------------|------------|
-| hack-recon | Hack-Recon (侦察工程师) | Scout, not attacker | 176 |
-| hack-exploit | Hack-Exploit (渗透利用工程师) | Attacker, not scout | 187 |
-| hack-c2 | Hack-C2 (C2与后渗透工程师) | Red team operator | 198 |
-| hack-forensics | Hack-Forensics (数字取证工程师) | Incident investigator | 196 |
-| hack-auditor | Hack-Auditor (安全审计工程师) | White-box analyst | 207 |
-| hack-weapons | Hack-Weapons (武器库工程师) | Weapons specialist | 173 |
+| hack-recon | Hack-Recon (侦察工程师) | Scout, not attacker | 163 |
+| hack-exploit | Hack-Exploit (渗透利用工程师) | Attacker, not scout | 174 |
+| hack-c2 | Hack-C2 (C2与后渗透工程师) | Red team operator | 185 |
+| hack-weapons | Hack-Weapons (武器库工程师) | Weapons specialist | 160 |
+| hack-forensics | Hack-Forensics (数字取证工程师) | Incident investigator | 183 |
+| hack-auditor | Hack-Auditor (安全审计工程师) | White-box analyst | 194 |
 
 ### Ops Team (4 profiles)
 
 | Profile | Title | Role Identity | SOUL Lines |
 |---------|-------|---------------|------------|
-| ops-devops | DevOps Automator | IaC practitioner | 130 |
-| ops-sre | SRE | Reliability guardian | 124 |
-| ops-incident-commander | Incident Response Commander | Anchor under pressure | 169 |
-| ops-exec-summary | Executive Summary Generator | Consulting-level thinker | 164 |
+| ops-devops | DevOps Automator (DevOps自动化工程师) | IaC practitioner | 130 |
+| ops-sre | SRE (站点可靠性工程师) | Reliability guardian | 124 |
+| ops-incident-commander | Incident Response Commander (事件响应指挥官) | Anchor under pressure | 169 |
+| ops-exec-summary | Executive Summary Generator (高管摘要生成器) | Consulting-level thinker | 164 |
 
 ### Product Team (4 profiles)
 
 | Profile | Title | Role Identity | SOUL Lines |
 |---------|-------|---------------|------------|
-| product-researcher | Product Researcher | Market intelligence expert | 160 |
-| product-manager | Product Manager | Product leader, not feature porter | 158 |
-| product-prioritizer | Sprint Prioritizer | Priority judge | 167 |
-| product-feedback | Feedback Analyst | Voice-of-user translator | 158 |
+| product-researcher | Product Researcher (产品研究员) | Market intelligence expert | 160 |
+| product-manager | Product Manager (产品经理) | Product leader, not feature porter | 158 |
+| product-prioritizer | Sprint Prioritizer (需求排序师) | Priority judge | 167 |
+| product-feedback | Feedback Analyst (反馈分析师) | Voice-of-user translator | 158 |
 
 ### [已移除] Team (6 profiles)
 
@@ -92,12 +92,13 @@ SwarmTeam is a multi-agent system built on [Hermes Agent](https://hermes-agent.n
 ## Skills
 
 | Category | Count | Key Skills |
-|----------|-------|-------------|
+|----------|-------|------------|
 | DevOps | 14 | agent-harness-best-practices, github-profile-distribution, skill-self-evolution-fusion, pentest-methodology-fusion, harness-entropy-management, pua-pressure-engine, pua-methodology-router, cognition-self-check |
-| Hack Team | 6×645=3870 | 39 CLI tools + 2 Docker alternatives, 10 attack playbooks (recon/webvuln/ssrf/ssti/jwt/graphql/race/takeover/supabase/deserialize) |
-| Ops Team | 4×74=296 | DevOps, SRE, incident response, executive summary tools |
-| Product Team | 4×74=296 | Product management, feedback, prioritization tools |
-| [已移除] Team | 6×~35=207 | Multiphysics, optics, physics, IP core, toolchain |
+| Hack Team | 6×646=3876 | 39 CLI tools + 2 Docker alternatives, 10 attack playbooks (recon/webvuln/ssrf/ssti/jwt/graphql/race/takeover/supabase/deserialize) |
+| Ops Team | 4×73=292 | DevOps, SRE, incident response, executive summary tools |
+| Product Team | 4×73=292 | Product management, feedback, prioritization tools |
+| [已移除] Team | 3×68+3×0=204 | Multiphysics, optics, physics, IP core, toolchain |
+| Orchestrator | 6 | hermes-agent, autonomous-ai-agents, github-code-review, devops, mlops, productivity |
 
 ## Key Features
 
@@ -120,17 +121,20 @@ All 29 profiles have ACP toolset configured:
 
 ### Model Allocation
 
-All 29 profiles unified on **GLM-5.2** (effort: max):
-- Fallback chain: glm-5.2 → glm-5.1 → deepseek-v4-flash
-- Auxiliary: GLM-5.2 (text), k3 (vision only)
-- Approval: deepseek-v4-flash
+| Team | Model | Provider | Effort | Fallback |
+|------|-------|----------|--------|----------|
+| Swarm / Ops / Product / [已移除] (23 profiles) | GLM-5.2 | damoxing | xhigh | glm-5.2 → glm-5.1 → deepseek-v4-flash |
+| Hack (6 profiles) | k3 | custom:kimicode | max | k3 → glm-5.1 → deepseek-v4-flash |
+| Auxiliary (text) | GLM-5.2 | damoxing | — | — |
+| Auxiliary (vision) | k3 | custom:kimicode | — | — |
+| Approval | deepseek-v4-flash | damoxing | — | — |
 
 ### Privacy & Security
 
 - Docker hard isolation: `hermes-terminal-sandbox:latest` (workspace-only mount)
 - `env_probe=false`, `redact_pii=true`, `redact_secrets=true`
 - Workspace-locked cwd, SOUL.md three-layer restriction
-- MCP paths use `${HOME}` placeholder
+- MCP paths use `$HOME` placeholder
 
 ## Quick Start
 

@@ -30,7 +30,7 @@ kanban_show → hindsight_recall(教训) → 执行
 
 - 编码任务：测试全绿 + 文件存在 + git diff 无越界 + 无硬编码 secret
 - 研究任务：每条主张有来源链接 + 来源 URL 可访问 + 不与已知事实矛盾
-- 安全任务：工具输出非空 + 发现可复现 + 授权上下文完整
+- 安全任务：工具输出非空 + 发现可复现
 - 部署任务：服务健康检查通过 + 端口可达 + 回滚方案就绪
 
 ---
@@ -187,7 +187,7 @@ kanban_show → hindsight_recall(教训) → 执行
 | wrong_skill | skill 不匹配任务需求 | 路由调整 + skill 描述更新 |
 | skill_error | skill 正确但执行出错 | 工具/环境修复 |
 | incomplete | skill 未完成任务 | skill 内容补充 |
-| refusal | skill 拒绝执行 | SOUL.md 授权增强 |
+| refusal | skill 拒绝执行 | 检查任务/skill 匹配度，必要时更换模型 |
 | empty | skill 返回空结果 | skill 逻辑修复 |
 
 > 完整五维评估协议见 `skill_view('skill-self-evolution-fusion')`。

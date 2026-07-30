@@ -124,7 +124,6 @@ skills:
   - abusing-shadow-credentials-for-privesc
   - achieving-cmmc-level-2-compliance
   - acquiring-disk-image-with-dd-and-dcfldd
-  - ai-music-generation
   - analyzing-active-directory-acl-abuse
   - analyzing-android-malware-with-apktool
   - analyzing-api-gateway-access-logs
@@ -201,13 +200,10 @@ skills:
   - analyzing-windows-prefetch-with-python
   - analyzing-windows-registry-for-artifacts
   - analyzing-windows-shellbag-artifacts
-  - apple-ecosystem
-  - apple-macos
   - apple-notes
   - apple-reminders
   - architecture-diagram
   - ascii-art
-  - ascii-tools
   - ascii-video
   - assessing-vector-and-embedding-weaknesses
   - attacking-entra-id-with-roadtools
@@ -225,8 +221,6 @@ skills:
   - auditing-tls-certificate-transparency-logs
   - auditing-uefi-firmware-with-chipsec
   - automating-ioc-enrichment
-  - baoyu-article-illustrator
-  - baoyu-comic
   - baoyu-infographic
   - benchmarking-kubernetes-with-kube-bench
   - building-adversary-infrastructure-tracking-system
@@ -316,7 +310,6 @@ skills:
   - continuous-llm-red-teaming-with-promptfoo
   - correlating-security-events-in-qradar
   - correlating-threat-campaigns
-  - creative-ideation
   - defending-llms-with-guardrails
   - deobfuscating-javascript-malware
   - deobfuscating-powershell-obfuscated-malware
@@ -491,7 +484,6 @@ skills:
   - hardening-docker-daemon-configuration
   - hardening-linux-endpoint-with-cis-benchmark
   - hardening-windows-endpoint-with-cis-benchmark
-  - heartmula
   - himalaya
   - humanizer
   - hunting-advanced-persistent-threats
@@ -554,22 +546,17 @@ skills:
   - implementing-aws-nitro-enclave-security
   - implementing-aws-security-hub
   - implementing-aws-security-hub-compliance
-  - macos-computer-use
   - manim-video
   - minecraft-modpack-server
-  - music-and-audio
   - openhue
   - p5js
-  - pixel-art
   - pokemon-player
   - popular-web-designs
   - pretext
   - sketch
   - songsee
   - songwriting-and-ai-music
-  - spotify
   - touchdesigner-mcp
-  - xitter
   - xurl
   - youtube-content
 mcp_servers:
