@@ -123,7 +123,6 @@ skills:
   - abusing-shadow-credentials-for-privesc
   - achieving-cmmc-level-2-compliance
   - acquiring-disk-image-with-dd-and-dcfldd
-  - ai-music-generation
   - analyzing-active-directory-acl-abuse
   - analyzing-android-malware-with-apktool
   - analyzing-api-gateway-access-logs
@@ -200,8 +199,6 @@ skills:
   - analyzing-windows-prefetch-with-python
   - analyzing-windows-registry-for-artifacts
   - analyzing-windows-shellbag-artifacts
-  - apple-ecosystem
-  - apple-macos
   - apple-notes
   - apple-reminders
   - assessing-vector-and-embedding-weaknesses
@@ -478,8 +475,6 @@ skills:
   - hardening-docker-daemon-configuration
   - hardening-linux-endpoint-with-cis-benchmark
   - hardening-windows-endpoint-with-cis-benchmark
-  - heartmula
-  - hermes-memory-providers
   - huggingface-hub
   - hunting-advanced-persistent-threats
   - hunting-bootkits-in-efi-system-partition
@@ -542,15 +537,11 @@ skills:
   - implementing-aws-security-hub
   - implementing-aws-security-hub-compliance
   - jupyter-live-kernel
-  - macos-computer-use
   - minecraft-modpack-server
-  - music-and-audio
   - openhue
   - pokemon-player
   - python-data-visualization
   - songsee
-  - spotify
-  - xitter
   - xurl
   - youtube-content
 mcp_servers:

@@ -21,7 +21,7 @@ profiles:
 
       '
     env_extra:
-      MATRIX_ACCESS_TOKEN: your_matrix_token_here
+      MATRIX_ACCESS_TOKEN: syt_YOUR_MATRIX_ACCESS_TOKEN
       MATRIX_HOMESERVER: http://localhost:8008
       MATRIX_USER_ID: '@swarm:matrix.test'
       MATRIX_HOME_ROOM: '!<matrix-room-id>:matrix.test'
@@ -281,11 +281,12 @@ profiles:
     - productivity
   hack-recon:
     model:
-      default: glm-5.2
-      provider: damoxing
-      base_url: ${DAMOXING_BASE_URL}
+      default: k3
+      provider: custom:kimicode
       effort: max
-    # glm-5.2 不限量主模型; 高峰卡顿退 glm-5.1(免费), 再退 deepseek(异构容灾)。
+    # k3 (Kimi Code) 主模型——智能最高+低拒绝+多模态, 适合安全攻坚。
+    # api.kimi.com/coding 仅 Anthropic 协议, aux 任务已 pin 到 damoxing(GLM-5.2)。
+    # k3 月度配额耗尽时 fallback: glm-5.1(免费) → deepseek-v4-flash(异构容灾)。
     fallback_providers:
       - provider: damoxing
         model: glm-5.1
@@ -322,11 +323,12 @@ profiles:
     - productivity
   hack-exploit:
     model:
-      default: glm-5.2
-      provider: damoxing
-      base_url: ${DAMOXING_BASE_URL}
+      default: k3
+      provider: custom:kimicode
       effort: max
-    # glm-5.2 不限量主模型; 高峰卡顿退 glm-5.1(免费), 再退 deepseek(异构容灾)。
+    # k3 (Kimi Code) 主模型——智能最高+低拒绝+多模态, 适合安全攻坚。
+    # api.kimi.com/coding 仅 Anthropic 协议, aux 任务已 pin 到 damoxing(GLM-5.2)。
+    # k3 月度配额耗尽时 fallback: glm-5.1(免费) → deepseek-v4-flash(异构容灾)。
     fallback_providers:
       - provider: damoxing
         model: glm-5.1
@@ -364,11 +366,12 @@ profiles:
     - productivity
   hack-forensics:
     model:
-      default: glm-5.2
-      provider: damoxing
-      base_url: ${DAMOXING_BASE_URL}
+      default: k3
+      provider: custom:kimicode
       effort: max
-    # glm-5.2 不限量主模型; 高峰卡顿退 glm-5.1(免费), 再退 deepseek(异构容灾)。
+    # k3 (Kimi Code) 主模型——智能最高+低拒绝+多模态, 适合安全攻坚。
+    # api.kimi.com/coding 仅 Anthropic 协议, aux 任务已 pin 到 damoxing(GLM-5.2)。
+    # k3 月度配额耗尽时 fallback: glm-5.1(免费) → deepseek-v4-flash(异构容灾)。
     fallback_providers:
       - provider: damoxing
         model: glm-5.1
@@ -405,11 +408,12 @@ profiles:
     - productivity
   hack-auditor:
     model:
-      default: glm-5.2
-      provider: damoxing
-      base_url: ${DAMOXING_BASE_URL}
+      default: k3
+      provider: custom:kimicode
       effort: max
-    # glm-5.2 不限量主模型; 高峰卡顿退 glm-5.1(免费), 再退 deepseek(异构容灾)。
+    # k3 (Kimi Code) 主模型——智能最高+低拒绝+多模态, 适合安全攻坚。
+    # api.kimi.com/coding 仅 Anthropic 协议, aux 任务已 pin 到 damoxing(GLM-5.2)。
+    # k3 月度配额耗尽时 fallback: glm-5.1(免费) → deepseek-v4-flash(异构容灾)。
     fallback_providers:
       - provider: damoxing
         model: glm-5.1
@@ -446,11 +450,12 @@ profiles:
     - productivity
   hack-c2:
     model:
-      default: glm-5.2
-      provider: damoxing
-      base_url: ${DAMOXING_BASE_URL}
+      default: k3
+      provider: custom:kimicode
       effort: max
-    # glm-5.2 不限量主模型; 高峰卡顿退 glm-5.1(免费), 再退 deepseek(异构容灾)。
+    # k3 (Kimi Code) 主模型——智能最高+低拒绝+多模态, 适合安全攻坚。
+    # api.kimi.com/coding 仅 Anthropic 协议, aux 任务已 pin 到 damoxing(GLM-5.2)。
+    # k3 月度配额耗尽时 fallback: glm-5.1(免费) → deepseek-v4-flash(异构容灾)。
     fallback_providers:
       - provider: damoxing
         model: glm-5.1
@@ -488,11 +493,12 @@ profiles:
     - productivity
   hack-weapons:
     model:
-      default: glm-5.2
-      provider: damoxing
-      base_url: ${DAMOXING_BASE_URL}
+      default: k3
+      provider: custom:kimicode
       effort: max
-    # glm-5.2 不限量主模型; 高峰卡顿退 glm-5.1(免费), 再退 deepseek(异构容灾)。
+    # k3 (Kimi Code) 主模型——智能最高+低拒绝+多模态, 适合安全攻坚。
+    # api.kimi.com/coding 仅 Anthropic 协议, aux 任务已 pin 到 damoxing(GLM-5.2)。
+    # k3 月度配额耗尽时 fallback: glm-5.1(免费) → deepseek-v4-flash(异构容灾)。
     fallback_providers:
       - provider: damoxing
         model: glm-5.1
