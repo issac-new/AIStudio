@@ -30,7 +30,7 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 > ⚠️ **最高优先级**: orchestrator **不自动处理、不自动回复**两个邮箱的邮件，除非用户明确要求。
 
 - `your@email.com` — IMAP channel（gateway 原生 email adapter）
-- `your-agently@email.com` — agently-cli（agent.qq.com OAuth）
+- `your@email.com` — agently-cli（agent.qq.com OAuth）
 
 **"明确要求"判定**：
 - ✅ 用户在 TUI/CLI/Matrix 中直接说"检查邮件""读邮件""回复xxx的邮件""发邮件给xxx"
@@ -132,11 +132,11 @@ kanban_create(
 
 ---
 
-## 0.5 Board 路由规则（四看板统一调度）
+## 0.5 Board 路由规则（五看板统一调度）
 
 ### 域景
 
-系统当前有四个看板，由 orchestrator 统一路由：
+系统当前有五个看板，由 orchestrator 统一路由：
 
 | 看板 | slug | 用途 | profile_scope |
 |------|------|------|---------------|
@@ -144,11 +144,12 @@ kanban_create(
 | **Hack看板** | `hack` | 网络安全攻击/防御事件专用 | orchestrator, hack-recon, hack-exploit, hack-forensics, hack-auditor, hack-c2, hack-weapons |
 | **产品看板** | `product` | 产品管理、用户研究、需求优先级、反馈分析 | orchestrator, product-manager, product-researcher, product-feedback, product-prioritizer |
 | **运维看板** | `ops` | SRE、事件响应、DevOps自动化、高管摘要 | orchestrator, ops-sre, ops-incident-commander, ops-devops, ops-exec-summary |
+| **[已移除]看板** | `[已移除]` | 电子设计自动化：AI模型、IP核、多物理场、光学、物理、工具链 | orchestrator, [已移除], [已移除], [已移除], [已移除], [已移除], [已移除] |
 
 ### 0.5.1 路由判定流程
 
 ```
-Matrix / Email 消息到达
+Matrix / Email / Weixin / API Server 消息到达
     ↓
 [内容分析] 提取关键词、消息主题
     ↓
@@ -157,6 +158,7 @@ Matrix / Email 消息到达
    ├─ 安全/黑客领域？ → board="hack", 按 §0.5.3 分配 hack profile
    ├─ 产品/市场/用户研究？ → board="product", 按 §0.5.7 分配 product profile
    ├─ 运维/SRE/事件响应？ → board="ops", 按 §0.5.8 分配 ops profile
+   ├─ [已移除]/电子设计/芯片/仿真？ → board="[已移除]", 按 §0.5.9 分配 [已移除] profile
    └─ 其他（软件开发/研究/部署等） → board="swarm", 按常规 §4 分配 worker profile
 ```
 

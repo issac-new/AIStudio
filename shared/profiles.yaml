@@ -21,7 +21,7 @@ profiles:
 
       '
     env_extra:
-      MATRIX_ACCESS_TOKEN: syt_YOUR_MATRIX_ACCESS_TOKEN
+      MATRIX_ACCESS_TOKEN: ${MATRIX_TOKEN}
       MATRIX_HOMESERVER: http://localhost:8008
       MATRIX_USER_ID: '@swarm:matrix.test'
       MATRIX_HOME_ROOM: '!<matrix-room-id>:matrix.test'

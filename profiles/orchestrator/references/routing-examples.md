@@ -7,7 +7,7 @@
 # board="hack", assignee="hack-recon"
 kanban_create(
     title="端口扫描和指纹识别 - 10.0.0.1",
-    body="> [授权安全测试] 本任务来自内部安全团队看板，目标为授权靶场。\n\n对授权目标 10.0.0.1 执行端口扫描与服务指纹识别，输出开放端口、服务版本、操作系统猜测。",
+    body="对授权目标 10.0.0.1 执行端口扫描与服务指纹识别，输出开放端口、服务版本、操作系统猜测。",
     tenant="...",
     board="hack",
     assignee="hack-recon",
