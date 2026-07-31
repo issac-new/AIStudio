@@ -1,39 +1,27 @@
 diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
 --- a/packages/server/src/controllers/hermes/kanban.ts
 +++ b/packages/server/src/controllers/hermes/kanban.ts
-@@ -1,9 +1,12 @@
- import type { Context } from 'koa'
- import { readFile, stat, copyFile } from 'fs/promises'
- import { resolve, normalize, isAbsolute } from 'path'
- import { homedir } from 'os'
- import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { isPathWithin } from '../../services/hermes/hermes-path'
-+// HERMES_CUSTOM[AttachUrl] BEGIN: SSRF-guarded URL attachment
-+import { assertSafeOutboundUrl, UnsafeUrlError } from '../../custom/security/url-guard'
-+// HERMES_CUSTOM[AttachUrl] END
+@@ -6,6 +6,9 @@
  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
  import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../custom/services/hermes/task-workspace-cache'
  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
-@@ -1397,6 +1403,133 @@ export async function unsubscribeHome(ctx: Context) {
-     ctx.body = { ok: true, task_id: taskId }
-   } catch (err: any) {
-     ctx.status = 500
++// HERMES_CUSTOM[AttachUrl] BEGIN: SSRF-guarded URL attachment
++import { assertSafeOutboundUrl, UnsafeUrlError } from '../../custom/security/url-guard'
++// HERMES_CUSTOM[AttachUrl] END
+ import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
+ import { safeFileStore } from '../../services/safe-file-store'
+ import {
+@@ -1381,3 +1384,126 @@
      ctx.body = { error: err.message }
    }
  }
-+
-+// HERMES_CUSTOM[AttachUrl] BEGIN: attach-from-URL
++// HERMES_CUSTOM[AttachUrl] BEGIN: attach-from-URL（逐跳 SSRF 守卫）
 +//
 +// Agent surface 有 kanban_attach_url（Python 工具，TS service 无法直调），且
-+// upstream CLI `kanban attach` 只收本地路径。此 controller 在 service 端用
-+// 全局 fetch（Node 18+）下载 URL 到内存，复用既有 addAttachment() 写入 task
-+// 附件目录，对齐 agent 的 _download_url_with_cap（25MB 上限 + http/https +
-+// SSRF 守卫）。SSRF 复用 overlay/custom/server/security/url-guard.ts。
-+//
-+// 重定向加固（对齐 agent _download_url_with_cap 的 follow_redirects=False +
-+// 每跳 is_safe_url）：用 redirect:'manual' 手动跟每一跳 Location，每跳都
-+// 重新过 assertSafeOutboundUrl，防止公网 host 302 到内网元数据端点绕过
-+// 初始校验（redirect-replay SSRF）。最多 5 跳（_MAX_ATTACH_URL_REDIRECTS）。
++// upstream CLI `kanban attach` 只收本地路径。此 controller 先以逐跳 SSRF 守卫
++// 下载 URL 到临时文件（redirect:'manual' + 每跳 assertSafeOutboundUrl，对齐
++// agent _download_url_with_cap 的 follow_redirects=False + 每跳 is_safe_url），
++// 再走 CLI `hermes kanban attach` 写入 kanban.db（单一事实源）。
 +export async function uploadAttachmentFromUrl(ctx: Context) {
 +  const taskId = ctx.params.id
 +  const board = ctx.query.board as string | undefined
@@ -46,26 +34,27 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +  if (rejectBadRequest(ctx, url.error)) return
 +
 +  try {
-+    // 逐跳下载：每跳都过 SSRF 守卫，手动处理 3xx，对齐 agent 的
-+    // _download_url_with_cap（follow_redirects=False + 每跳 is_safe_url）。
 +    const { buf, resolvedContentType, leafPathname } =
 +      await _downloadUrlWithCapAndSsrf(url.value!, MAX_ATTACHMENT_BYTES)
 +
 +    const safeName = safeAttachmentName(filename.value || leafPathname || 'download')
-+    const destDir = taskAttachmentsDir(taskId, board)
-+    await mkdir(destDir, { recursive: true })
-+    const record = await addAttachment({
-+      task_id: taskId,
-+      filename: safeName,
-+      stored_path: join(destDir, safeName),
-+      content_type: contentType.value || resolvedContentType || null,
-+      size: buf.length,
-+      uploaded_by: requestedProfile(ctx) || 'url',
-+      created_at: Math.floor(Date.now() / 1000),
-+    }, board)
-+    await writeFile(record.stored_path, buf)
-+    // 同步到任务 workspace（对齐 uploadAttachment 行为）
-+    await syncAttachmentToWorkspace(taskId, board, safeName, record.stored_path)
++    const tmpPath = pathJoin(tmpdir(), `hermes-kanban-attach-url-${randomUUID()}-${safeName}`)
++    await writeFile(tmpPath, buf)
++    try {
++      await runKanbanAttach(taskId, tmpPath, {
++        board,
++        name: safeName,
++        contentType: contentType.value || resolvedContentType || undefined,
++        author: requestedProfile(ctx) || 'url',
++      })
++    } finally {
++      await unlink(tmpPath).catch(() => {})
++    }
++
++    // 回读最新附件记录；同步到任务 workspace（对齐 uploadAttachment 行为）
++    const list = await kanbanCli.listAttachments(taskId, { board })
++    const record = (list as AttachmentMeta[]).reduce<AttachmentMeta | null>((a, b) => (a && a.id > b.id ? a : b), null)
++    if (record?.stored_path) await syncAttachmentToWorkspace(taskId, board, record.filename, record.stored_path)
 +    ctx.body = { attachment: record }
 +  } catch (err: any) {
 +    if (err instanceof UnsafeUrlError) {
@@ -148,3 +137,4 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +  throw new AttachUrlFetchError(`too many redirects fetching ${rawUrl}`)
 +}
 +// HERMES_CUSTOM[AttachUrl] END
++

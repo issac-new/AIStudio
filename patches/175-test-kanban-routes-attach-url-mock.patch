@@ -1,0 +1,11 @@
+diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
+--- a/tests/server/kanban-routes.test.ts
++++ b/tests/server/kanban-routes.test.ts
+@@ -32,6 +32,7 @@
+   unsubscribeHome: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   listAttachments: vi.fn(async (ctx: any) => { ctx.body = { attachments: [] } }),
+   uploadAttachment: vi.fn(async (ctx: any) => { ctx.body = { attachment: {} } }),
++  uploadAttachmentFromUrl: vi.fn(async (ctx: any) => { ctx.body = { attachment: {} } }),
+   downloadAttachment: vi.fn(async (ctx: any) => { ctx.body = '' }),
+   removeAttachment: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   deleteTask: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),

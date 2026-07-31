@@ -3,7 +3,7 @@ new file mode 100644
 index 00000000..3640c773
 --- /dev/null
 +++ b/packages/client/src/stores/hermes/auth.ts
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,138 @@
 +import { defineStore } from 'pinia'
 +import { ref, computed } from 'vue'
 +import { getApiKey, setApiKey, clearApiKey, getMatrixCredentials, clearMatrixCredentials, storeMatrixCredentials } from '@/api/client'
@@ -71,9 +71,15 @@ index 00000000..3640c773
 +    isLoading.value = true
 +    error.value = null
 +    try {
-+      const token = await loginWithPassword(username, password)
-+      hermesToken.value = token
-+      setApiKey(token)
++      // v0.6.35 起 loginWithPassword 返回 LoginResponse（含 userId/theme）
++      const session = await loginWithPassword(username, password)
++      hermesToken.value = session.token
++      setApiKey(session.token)
++      // 激活用户主题（上游 v0.6.35 新增 per-user theme）
++      try {
++        const { useTheme } = await import('@/composables/useTheme')
++        useTheme().activateUserTheme(session.userId, session.theme)
++      } catch { /* theme 不可用时静默 */ }
 +
 +      const current = await fetchCurrentUser()
 +      user.value = buildUnifiedUser(current)

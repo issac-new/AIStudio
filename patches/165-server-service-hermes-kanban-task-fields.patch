@@ -1,8 +1,7 @@
 diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/server/src/services/hermes/hermes-kanban.ts
 --- a/packages/server/src/services/hermes/hermes-kanban.ts
 +++ b/packages/server/src/services/hermes/hermes-kanban.ts
-@@ -46,5 +46,25 @@ export interface KanbanTask {
-   tenant: string | null
+@@ -46,5 +46,24 @@ export interface KanbanTask {
    project_id: string | null
    result: string | null
    skills: string[] | null
@@ -19,11 +18,11 @@ diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/ser
 +  current_step_key?: string | null
 +  model_override?: string | null
 +  max_retries?: number | null
-+  goal_mode?: boolean
 +  goal_max_turns?: number | null
 +  session_id?: string | null
 +  block_kind?: string | null
 +  block_recurrences?: number
 +  claim_lock?: string | null
 +  claim_expires?: number | null
+   goal_mode?: boolean
  }
