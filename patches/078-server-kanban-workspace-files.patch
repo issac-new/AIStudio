@@ -1,15 +1,23 @@
 diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
-index 0000000..0000000 100644
 --- a/packages/server/src/controllers/hermes/kanban.ts
 +++ b/packages/server/src/controllers/hermes/kanban.ts
-@@ -1,5 +1,5 @@
+@@ -1,8 +1,12 @@
  import type { Context } from 'koa'
--import { readFile } from 'fs/promises'
-+import { readFile, stat, copyFile } from 'fs/promises'
- import { resolve, normalize } from 'path'
- import { homedir } from 'os'
+-import { readFile, stat, copyFile } from 'fs/promises'
+-import { join, resolve } from 'path'
++import { readFile, stat, copyFile, readdir } from 'fs/promises'
++import { homedir } from 'os'
++import { join, resolve, normalize } from 'path'
  import * as kanbanCli from '../../services/hermes/hermes-kanban'
-@@ -758,6 +758,30 @@ export async function readArtifact(ctx: Context) {
+-import { detectHermesRootHome, isRealPathWithin } from '../../services/hermes/hermes-path'
++import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../../services/hermes/hermes-path'
++// HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
++import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../custom/services/hermes/task-workspace-cache'
++// HERMES_CUSTOM[TaskWorkspaceAllowlist] END
+ import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
+ import { safeFileStore } from '../../services/safe-file-store'
+ import {
+@@ -943,6 +946,30 @@
    }
  }
  
@@ -40,9 +48,9 @@ index 0000000..0000000 100644
  export async function searchSessions(ctx: Context) {
    const { task_id, profile, q } = ctx.query as {
      task_id?: string
-@@ -950,6 +974,26 @@ import { mkdir, writeFile, unlink, readdir } from 'fs/promises'
- import { join, basename, dirname } from 'path'
- import { createHash } from 'crypto'
+@@ -1157,6 +1184,27 @@
+   return (list as any[]).find(a => Number(a?.id) === attachmentId) ?? null
+ }
  
 +async function syncAttachmentToWorkspace(taskId: string, board: string | undefined, filename: string, srcPath: string): Promise<void> {
 +  try {
@@ -64,28 +72,34 @@ index 0000000..0000000 100644
 +    await unlink(join(root, filename)).catch(() => {})
 +  } catch { }
 +}
- const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024 // 25 MB
- 
- function attachmentsRoot(board?: string): string {
-@@ -1117,6 +1161,7 @@ export async function uploadAttachment(ctx: Context) {
-     }
- 
-     await writeFile(destPath, uploadedFile.data)
-+    await syncAttachmentToWorkspace(taskId, board, candidate, destPath)
- 
-     const uploadedBy = ctx.state.user?.username || 'dashboard'
-     const record = await addAttachment({
-@@ -1196,6 +1241,7 @@ export async function removeAttachment(ctx: Context) {
-       return
-     }
-     ctx.body = { ok: true, id: attachmentId }
-+    await removeAttachmentFromWorkspace(record.task_id, board, record.filename)
++
+ export async function uploadAttachment(ctx: Context) {
+   const taskId = ctx.params.id
+   const board = ctx.query.board as string | undefined
+@@ -1226,6 +1274,7 @@
+     // CLI attach 不写 HTTP 返回；回读附件列表取最新一条返回（按 id 最大）
+     const list = await kanbanCli.listAttachments(taskId, { board })
+     const record = (list as AttachmentMeta[]).reduce<AttachmentMeta | null>((a, b) => (a && a.id > b.id ? a : b), null)
++    if (record?.stored_path) await syncAttachmentToWorkspace(taskId, board, record.filename, record.stored_path)
+     ctx.body = { attachment: record ?? { id: 0, filename: safeName, content_type: null, size: uploadedFile.size, uploaded_by: ctx.state.user?.username || 'dashboard', stored_path: '', created_at: Math.floor(Date.now() / 1000) } }
    } catch (err: any) {
      ctx.status = 500
-     ctx.body = { error: err.message }
-
+@@ -1236,7 +1285,13 @@
+ export async function removeAttachment(ctx: Context) {
+   const attachmentId = Number(ctx.params.id)
+   const board = ctx.query.board as string | undefined
+-  try {
++  const taskId = (ctx.query.task_id as string | undefined) || undefined
++  try {
++    // CLI 模型下 attach-rm 只收 attachment id；workspace 反向清理需先按 task_id 查到记录
++    if (taskId) {
++      const rec = await findAttachmentById(taskId, attachmentId, board)
++      if (rec) await removeAttachmentFromWorkspace(taskId, board, rec.filename)
++    }
+     await runKanbanAttachRm(attachmentId, board)
+     ctx.body = { ok: true }
+   } catch (err: any) {
 diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
-index 0000000..0000000 100644
 --- a/packages/server/src/routes/hermes/kanban.ts
 +++ b/packages/server/src/routes/hermes/kanban.ts
 @@ -22,6 +22,8 @@ kanbanRoutes.get('/api/hermes/kanban/orchestration', ctrl.getOrchestration)

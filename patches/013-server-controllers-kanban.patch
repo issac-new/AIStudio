@@ -1,26 +1,25 @@
 diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
-index 31545577..b3bb8dd4 100644
 --- a/packages/server/src/controllers/hermes/kanban.ts
 +++ b/packages/server/src/controllers/hermes/kanban.ts
-@@ -4,7 +4,8 @@ import { resolve, normalize } from 'path'
- import { homedir } from 'os'
+@@ -1,7 +1,8 @@
+ import type { Context } from 'koa'
+-import { readFile } from 'fs/promises'
++import { readFile, stat, copyFile } from 'fs/promises'
+ import { join, resolve } from 'path'
  import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { isPathWithin } from '../../services/hermes/hermes-path'
+ import { detectHermesRootHome, isRealPathWithin } from '../../services/hermes/hermes-path'
 -import { listProfileNamesFromDisk } from '../../services/hermes/hermes-profile'
 +import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
 +import { safeFileStore } from '../../services/safe-file-store'
  import {
-   searchSessionSummariesWithProfile,
-   getSessionDetailFromDbWithProfile,
-@@ -398,6 +399,7 @@ export async function create(ctx: Context) {
-   const assignee = optionalString(payload.assignee, 'assignee')
+@@ -461,5 +462,6 @@ export async function create(ctx: Context) {
    const priority = optionalInteger(payload.priority, 'priority')
    const tenant = optionalString(payload.tenant, 'tenant')
 +  const project = optionalString(payload.project, 'project')
    const workspace = optionalString(payload.workspace, 'workspace')
    const branch = optionalString(payload.branch, 'branch')
    const triage = optionalBoolean(payload.triage, 'triage')
-@@ -406,7 +408,7 @@ export async function create(ctx: Context) {
+@@ -468,6 +470,6 @@ export async function create(ctx: Context) {
    const maxRetries = optionalPositiveInteger(payload.maxRetries, 'maxRetries', 100)
    const goalMode = optionalBoolean(payload.goalMode, 'goalMode')
    const goalMaxTurns = optionalPositiveInteger(payload.goalMaxTurns, 'goalMaxTurns', 100)
@@ -28,8 +27,7 @@ index 31545577..b3bb8dd4 100644
 +  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || project.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error)) return
    const targetAssignee = assignee.value || requestedProfile(ctx) || undefined
    if (targetAssignee && denyProfileAccess(ctx, targetAssignee)) return
-   const board = requestBoard(ctx)
-@@ -418,6 +420,7 @@ export async function create(ctx: Context) {
+@@ -479,6 +481,7 @@ export async function create(ctx: Context) {
        assignee: targetAssignee,
        priority: priority.value,
        tenant: tenant.value,
@@ -37,10 +35,12 @@ index 31545577..b3bb8dd4 100644
        workspace: workspace.value,
        branch: branch.value,
        triage: triage.value,
-@@ -812,3 +815,532 @@ export async function searchSessions(ctx: Context) {
+@@ -999,3 +1002,322 @@ export async function searchSessions(ctx: Context) {
      ctx.body = { error: err.message }
    }
  }
++
++// ─── Task lifecycle（overlay 补充：delete/patch/decompose）─────────
 +
 +export async function deleteTask(ctx: Context) {
 +  try {
@@ -119,50 +119,14 @@ index 31545577..b3bb8dd4 100644
 +  const bodyResult = requestBody(ctx)
 +  if (rejectBadRequest(ctx, bodyResult.error)) return
 +  const body = bodyResult.body
-+
 +  try {
 +    const config = await readConfigYaml()
-+    const kanban = config.kanban || {}
-+
-+    // Validate profile names if provided
-+    const profiles = new Set(listProfileNamesFromDisk())
-+    if (hasOwn(body, 'orchestrator_profile')) {
-+      const orch = body.orchestrator_profile
-+      if (orch !== null && orch !== undefined && !profiles.has(orch as string)) {
-+        ctx.status = 400
-+        ctx.body = { error: `Profile "${orch}" does not exist` }
-+        return
-+      }
-+      if (orch === null || orch === undefined) {
-+        delete kanban.orchestrator_profile
-+      } else {
-+        kanban.orchestrator_profile = orch as string
-+      }
-+    }
-+    if (hasOwn(body, 'default_assignee')) {
-+      const def = body.default_assignee
-+      if (def !== null && def !== undefined && !profiles.has(def as string)) {
-+        ctx.status = 400
-+        ctx.body = { error: `Profile "${def}" does not exist` }
-+        return
-+      }
-+      if (def === null || def === undefined) {
-+        delete kanban.default_assignee
-+      } else {
-+        kanban.default_assignee = def as string
-+      }
-+    }
-+    if (hasOwn(body, 'auto_decompose')) {
-+      kanban.auto_decompose = !!body.auto_decompose
-+    }
-+    if (hasOwn(body, 'auto_promote_children')) {
-+      kanban.auto_promote_children = !!body.auto_promote_children
-+    }
-+
-+    config.kanban = kanban
++    if (!config.kanban) config.kanban = {}
++    if ('orchestrator_profile' in body) config.kanban.orchestrator_profile = body.orchestrator_profile || null
++    if ('default_assignee' in body) config.kanban.default_assignee = body.default_assignee || null
++    if ('auto_decompose' in body) config.kanban.auto_decompose = !!body.auto_decompose
++    if ('auto_promote_children' in body) config.kanban.auto_promote_children = !!body.auto_promote_children
 +    await writeConfigYaml(config)
-+
-+    // Return updated settings
 +    await getOrchestration(ctx)
 +  } catch (err: any) {
 +    ctx.status = 500
@@ -170,97 +134,66 @@ index 31545577..b3bb8dd4 100644
 +  }
 +}
 +
-+// ─── Attachments ──────────────────────────────────────────────
++// ─── Attachments（CLI 模型：hermes kanban attach / attach-rm）────────
++//
++// v0.6.35 上游已把 listAttachments/readAttachment 切到 service 层 CLI 模型
++// （kanban.db 单一事实源）。此段补全 upload/remove 两个缺口：
++//   upload → multipart 文件落临时盘 → hermes kanban attach
++//   remove → hermes kanban attach-rm
++// 不再维护 .attachments.json 旁路 meta store。
 +
-+import { mkdir, writeFile, unlink, readdir } from 'fs/promises'
-+import { join, basename, dirname } from 'path'
-+import { createHash } from 'crypto'
++import { mkdir, writeFile, unlink } from 'fs/promises'
++import { join as pathJoin, basename } from 'path'
++import { tmpdir } from 'os'
++import { randomUUID } from 'crypto'
++import { execHermes } from '../../services/hermes/hermes-process'
 +
-+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024 // 25 MB
++const execOpts = { windowsHide: true }
++const BOARD_SLUG_RE_ATTACH = /^[a-z0-9][a-z0-9_-]{0,63}$/
++const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024 // 25 MB（对齐 agent KANBAN_ATTACHMENT_MAX_BYTES）
 +
-+function attachmentsRoot(board?: string): string {
-+  const override = process.env.HERMES_KANBAN_ATTACHMENTS_ROOT?.trim()
-+  if (override) return resolve(override)
-+  const base = resolve(homedir(), '.hermes', 'kanban', 'attachments')
-+  if (!board || board === 'default') return base
-+  return join(base, board)
-+}
-+
-+function taskAttachmentsDir(taskId: string, board?: string): string {
-+  return join(attachmentsRoot(board), taskId)
++function boardArgsFor(board?: string | null): string[] {
++  const trimmed = (board ?? 'default').trim().toLowerCase() || 'default'
++  if (!BOARD_SLUG_RE_ATTACH.test(trimmed)) throw new Error('Invalid kanban board slug')
++  return ['kanban', '--board', trimmed]
 +}
 +
 +function safeAttachmentName(filename: string): string {
 +  const name = basename(filename).trim()
 +  if (!name || name.startsWith('.')) return 'unnamed'
-+  // Strip control characters and path separators
 +  return name.replace(/[\x00-\x1f\\/]/g, '_').slice(0, 255)
 +}
 +
-+interface AttachmentRecord {
++interface AttachmentMeta {
 +  id: number
-+  task_id: string
 +  filename: string
-+  stored_path: string
 +  content_type: string | null
 +  size: number
 +  uploaded_by: string | null
++  stored_path: string
 +  created_at: number
 +}
 +
-+// In-memory attachment store (simple JSON file per board)
-+async function readAttachmentsMeta(board?: string): Promise<AttachmentRecord[]> {
-+  const metaPath = join(attachmentsRoot(board), '.attachments.json')
-+  try {
-+    const raw = await readFile(metaPath, 'utf-8')
-+    return JSON.parse(raw)
-+  } catch {
-+    return []
-+  }
++async function runKanbanAttach(
++  taskId: string,
++  filePath: string,
++  opts: { board?: string; name?: string; contentType?: string; author?: string },
++): Promise<void> {
++  const args = [...boardArgsFor(opts.board), 'attach', taskId, filePath]
++  if (opts.name) args.push('--name', opts.name)
++  if (opts.contentType) args.push('--content-type', opts.contentType)
++  if (opts.author) args.push('--author', opts.author)
++  await execHermes(args, { maxBuffer: 10 * 1024 * 1024, ...execOpts })
 +}
 +
-+async function writeAttachmentsMeta(records: AttachmentRecord[], board?: string): Promise<void> {
-+  const metaPath = join(attachmentsRoot(board), '.attachments.json')
-+  await mkdir(dirname(metaPath), { recursive: true })
-+  await writeFile(metaPath, JSON.stringify(records, null, 2) + '\n')
++async function runKanbanAttachRm(attachmentId: number, board?: string): Promise<void> {
++  const args = [...boardArgsFor(board), 'attach-rm', String(attachmentId)]
++  await execHermes(args, { maxBuffer: 10 * 1024 * 1024, ...execOpts })
 +}
 +
-+async function addAttachment(record: Omit<AttachmentRecord, 'id'>, board?: string): Promise<AttachmentRecord> {
-+  const records = await readAttachmentsMeta(board)
-+  const id = records.length > 0 ? Math.max(...records.map(r => r.id)) + 1 : 1
-+  const newRecord = { ...record, id }
-+  records.push(newRecord)
-+  await writeAttachmentsMeta(records, board)
-+  return newRecord
-+}
-+
-+async function getAttachment(id: number, board?: string): Promise<AttachmentRecord | null> {
-+  const records = await readAttachmentsMeta(board)
-+  return records.find(r => r.id === id) || null
-+}
-+
-+async function deleteAttachment(id: number, board?: string): Promise<AttachmentRecord | null> {
-+  const records = await readAttachmentsMeta(board)
-+  const idx = records.findIndex(r => r.id === id)
-+  if (idx === -1) return null
-+  const [removed] = records.splice(idx, 1)
-+  await writeAttachmentsMeta(records, board)
-+  // Best-effort file deletion
-+  try { await unlink(removed.stored_path) } catch { /* ignore */ }
-+  return removed
-+}
-+
-+export async function listAttachments(ctx: Context) {
-+  const taskId = ctx.params.id
-+  const board = ctx.query.board as string | undefined
-+  try {
-+    const records = await readAttachmentsMeta(board)
-+    const attachments = records.filter(r => r.task_id === taskId)
-+    ctx.body = { attachments }
-+  } catch (err: any) {
-+    ctx.status = 500
-+    ctx.body = { error: err.message }
-+  }
++async function findAttachmentById(taskId: string, attachmentId: number, board?: string): Promise<AttachmentMeta | null> {
++  const list = await kanbanCli.listAttachments(taskId, { board })
++  return (list as any[]).find(a => Number(a?.id) === attachmentId) ?? null
 +}
 +
 +export async function uploadAttachment(ctx: Context) {
@@ -268,7 +201,6 @@ index 31545577..b3bb8dd4 100644
 +  const board = ctx.query.board as string | undefined
 +
 +  try {
-+    // Parse multipart form data manually (project uses custom parser)
 +    const contentType = ctx.get('content-type') || ''
 +    if (!contentType.startsWith('multipart/form-data')) {
 +      ctx.status = 400
@@ -299,7 +231,6 @@ index 31545577..b3bb8dd4 100644
 +    const parts = splitMultipart(raw, boundaryBuf)
 +
 +    let uploadedFile: { filename: string; data: Buffer; size: number } | null = null
-+
 +    for (const part of parts) {
 +      const headerEnd = part.indexOf(Buffer.from('\r\n\r\n'))
 +      if (headerEnd === -1) continue
@@ -309,7 +240,7 @@ index 31545577..b3bb8dd4 100644
 +      const filename = parseMultipartFilename(header)
 +      if (!filename) continue
 +      uploadedFile = { filename, data, size: data.length }
-+      break // Only process first file
++      break
 +    }
 +
 +    if (!uploadedFile) {
@@ -319,109 +250,34 @@ index 31545577..b3bb8dd4 100644
 +    }
 +
 +    const safeName = safeAttachmentName(uploadedFile.filename)
-+    const destDir = taskAttachmentsDir(taskId, board)
-+    await mkdir(destDir, { recursive: true })
-+
-+    // Collision resolution
-+    let candidate = safeName
-+    let destPath = join(destDir, candidate)
-+    let counter = 1
-+    while (true) {
-+      try {
-+        await readFile(destPath)
-+        // File exists, try next name
-+        const extIndex = safeName.lastIndexOf('.')
-+        const baseName = extIndex > 0 ? safeName.slice(0, extIndex) : safeName
-+        const ext = extIndex > 0 ? safeName.slice(extIndex) : ''
-+        candidate = `${baseName} (${counter})${ext}`
-+        destPath = join(destDir, candidate)
-+        counter++
-+      } catch {
-+        // File doesn't exist, we can use this path
-+        break
-+      }
++    const tmpPath = pathJoin(tmpdir(), `hermes-kanban-attach-${randomUUID()}-${safeName}`)
++    await writeFile(tmpPath, uploadedFile.data)
++    try {
++      await runKanbanAttach(taskId, tmpPath, {
++        board,
++        name: safeName,
++        author: ctx.state.user?.username || 'dashboard',
++      })
++    } finally {
++      await unlink(tmpPath).catch(() => {})
 +    }
 +
-+    await writeFile(destPath, uploadedFile.data)
-+
-+    const uploadedBy = ctx.state.user?.username || 'dashboard'
-+    const record = await addAttachment({
-+      task_id: taskId,
-+      filename: candidate,
-+      stored_path: destPath,
-+      content_type: null,
-+      size: uploadedFile.size,
-+      uploaded_by: uploadedBy,
-+      created_at: Date.now(),
-+    }, board)
-+
-+    ctx.body = { attachment: record }
++    // CLI attach 不写 HTTP 返回；回读附件列表取最新一条返回（按 id 最大）
++    const list = await kanbanCli.listAttachments(taskId, { board })
++    const record = (list as AttachmentMeta[]).reduce<AttachmentMeta | null>((a, b) => (a && a.id > b.id ? a : b), null)
++    ctx.body = { attachment: record ?? { id: 0, filename: safeName, content_type: null, size: uploadedFile.size, uploaded_by: ctx.state.user?.username || 'dashboard', stored_path: '', created_at: Math.floor(Date.now() / 1000) } }
 +  } catch (err: any) {
-+    ctx.status = 500
-+    ctx.body = { error: err.message }
-+  }
-+}
-+
-+export async function downloadAttachment(ctx: Context) {
-+  const attachmentId = parseInt(ctx.params.id, 10)
-+  const board = ctx.query.board as string | undefined
-+
-+  if (!Number.isFinite(attachmentId)) {
-+    ctx.status = 400
-+    ctx.body = { error: 'Invalid attachment ID' }
-+    return
-+  }
-+
-+  try {
-+    const record = await getAttachment(attachmentId, board)
-+    if (!record) {
-+      ctx.status = 404
-+      ctx.body = { error: 'Attachment not found' }
-+      return
-+    }
-+
-+    // Security check: ensure file is within attachments root
-+    const root = resolve(attachmentsRoot(board))
-+    const stored = resolve(record.stored_path)
-+    if (!stored.startsWith(root + '/') && stored !== root) {
-+      ctx.status = 403
-+      ctx.body = { error: 'Invalid attachment path' }
-+      return
-+    }
-+
-+    const content = await readFile(stored)
-+    ctx.set('Content-Disposition', `attachment; filename="${encodeURIComponent(record.filename)}"`)
-+    ctx.set('Content-Type', record.content_type || 'application/octet-stream')
-+    ctx.body = content
-+  } catch (err: any) {
-+    if (err.code === 'ENOENT') {
-+      ctx.status = 404
-+      ctx.body = { error: 'Attachment file not found' }
-+      return
-+    }
 +    ctx.status = 500
 +    ctx.body = { error: err.message }
 +  }
 +}
 +
 +export async function removeAttachment(ctx: Context) {
-+  const attachmentId = parseInt(ctx.params.id, 10)
++  const attachmentId = Number(ctx.params.id)
 +  const board = ctx.query.board as string | undefined
-+
-+  if (!Number.isFinite(attachmentId)) {
-+    ctx.status = 400
-+    ctx.body = { error: 'Invalid attachment ID' }
-+    return
-+  }
-+
 +  try {
-+    const record = await deleteAttachment(attachmentId, board)
-+    if (!record) {
-+      ctx.status = 404
-+      ctx.body = { error: 'Attachment not found' }
-+      return
-+    }
-+    ctx.body = { ok: true, id: attachmentId }
++    await runKanbanAttachRm(attachmentId, board)
++    ctx.body = { ok: true }
 +  } catch (err: any) {
 +    ctx.status = 500
 +    ctx.body = { error: err.message }
@@ -432,10 +288,8 @@ index 31545577..b3bb8dd4 100644
 +
 +export async function homeChannels(ctx: Context) {
 +  try {
-+    const taskId = ctx.query.task as string | undefined || null
-+    const board = requestBoard(ctx)
-+    if (board === null) return
-+
++    const taskId = (ctx.query.task as string) || null
++    const board = ctx.query.board as string | undefined
 +    const channels = await kanbanCli.getHomeChannels(taskId, { board })
 +    ctx.body = { home_channels: channels }
 +  } catch (err: any) {
@@ -446,59 +300,12 @@ index 31545577..b3bb8dd4 100644
 +
 +export async function debugHomeChannels(ctx: Context) {
 +  try {
-+    const profile = getActiveProfileName() || 'default'
-+    const configPath = join(getProfileDir(profile), 'config.yaml')
-+    
-+    let config: Record<string, any> = {}
-+    try {
-+      config = await safeFileStore.readYaml(configPath)
-+    } catch (err: any) {
-+      ctx.body = { error: `Failed to read config: ${err.message}`, configPath }
-+      return
-+    }
-+    
-+    const gatewayPlatforms = config.gateway?.platforms || {}
-+    const topLevelPlatforms = config.platforms || {}
-+    const platforms = { ...gatewayPlatforms, ...topLevelPlatforms }
-+    
-+    const homes: any[] = []
-+    for (const [platformName, platformCfg] of Object.entries(platforms)) {
-+      if (!platformCfg || typeof platformCfg !== 'object') continue
-+      const hc = (platformCfg as Record<string, any>).home_channel
-+      
-+      // Check env vars using the same mapping as listConfiguredHomeChannels
-+      const upper = platformName.toUpperCase().replace(/-/g, '_')
-+      const isMatrix = platformName === 'matrix'
-+      const isEmail = platformName === 'email'
-+      const envChatIdKey = isMatrix ? 'MATRIX_HOME_ROOM' : isEmail ? 'EMAIL_HOME_ADDRESS' : `${upper}_HOME_CHANNEL`
-+      const envNameKey = isMatrix ? 'MATRIX_HOME_ROOM_NAME' : isEmail ? 'EMAIL_HOME_ADDRESS_NAME' : `${upper}_HOME_CHANNEL_NAME`
-+      const envThreadIdKey = isMatrix ? 'MATRIX_HOME_ROOM_THREAD_ID' : isEmail ? 'EMAIL_HOME_ADDRESS_THREAD_ID' : `${upper}_HOME_CHANNEL_THREAD_ID`
-+      
-+      const envChatId = process.env[envChatIdKey]
-+      const envName = process.env[envNameKey]
-+      const envThreadId = process.env[envThreadIdKey]
-+      
-+      const chatId = envChatId || hc?.chat_id || ''
-+      if (chatId) {
-+        homes.push({
-+          platform: platformName,
-+          chat_id: chatId,
-+          thread_id: envThreadId || hc?.thread_id || '',
-+          name: envName || hc?.name || 'Home',
-+          source: envChatId ? 'env' : 'yaml',
-+          envKeys: { chatId: envChatIdKey, name: envNameKey, threadId: envThreadIdKey },
-+        })
-+      }
-+    }
-+    
++    const board = ctx.query.board as string | undefined
++    const channels = await kanbanCli.getHomeChannels(null, { board })
 +    ctx.body = {
-+      configPath,
-+      profile,
-+      configKeys: Object.keys(config),
-+      gatewayPlatformsKeys: Object.keys(gatewayPlatforms),
-+      topLevelPlatformsKeys: Object.keys(topLevelPlatforms),
-+      homesFound: homes.length,
-+      homes,
++      home_channels: channels,
++      active_profile: getActiveProfileName(),
++      profile_dir: getProfileDir(getActiveProfileName()),
 +    }
 +  } catch (err: any) {
 +    ctx.status = 500
@@ -507,32 +314,22 @@ index 31545577..b3bb8dd4 100644
 +}
 +
 +export async function subscribeHome(ctx: Context) {
-+  const taskId = ctx.params.id
-+  const platform = ctx.params.platform
-+  if (!taskId || !platform) {
-+    ctx.status = 400
-+    ctx.body = { error: 'Missing task_id or platform' }
-+    return
-+  }
-+
 +  try {
-+    // Fetch configured home channels to find the chat_id for this platform
-+    const homes = await kanbanCli.getHomeChannels(null)
-+    const home = homes.find(h => h.platform === platform)
++    const taskId = ctx.params.id
++    const platform = ctx.params.platform
++    const board = ctx.query.board as string | undefined
++    const channels = await kanbanCli.getHomeChannels(taskId, { board })
++    const home = channels.find(c => c.platform === platform)
 +    if (!home) {
 +      ctx.status = 404
-+      ctx.body = { error: `No home channel configured for platform "${platform}"` }
++      ctx.body = { error: `No home channel for platform: ${platform}` }
 +      return
 +    }
-+
-+    const board = requestBoard(ctx)
-+    if (board === null) return
-+
 +    await kanbanCli.subscribeHomeChannel(taskId, platform, home.chat_id, {
 +      board,
 +      threadId: home.thread_id || undefined,
 +    })
-+    ctx.body = { ok: true, task_id: taskId, home_channel: { platform, chat_id: home.chat_id, thread_id: home.thread_id, name: home.name } }
++    ctx.body = { ok: true, task_id: taskId }
 +  } catch (err: any) {
 +    ctx.status = 500
 +    ctx.body = { error: err.message }
@@ -540,26 +337,17 @@ index 31545577..b3bb8dd4 100644
 +}
 +
 +export async function unsubscribeHome(ctx: Context) {
-+  const taskId = ctx.params.id
-+  const platform = ctx.params.platform
-+  if (!taskId || !platform) {
-+    ctx.status = 400
-+    ctx.body = { error: 'Missing task_id or platform' }
-+    return
-+  }
-+
 +  try {
-+    const homes = await kanbanCli.getHomeChannels(null)
-+    const home = homes.find(h => h.platform === platform)
++    const taskId = ctx.params.id
++    const platform = ctx.params.platform
++    const board = ctx.query.board as string | undefined
++    const channels = await kanbanCli.getHomeChannels(taskId, { board })
++    const home = channels.find(c => c.platform === platform)
 +    if (!home) {
 +      ctx.status = 404
-+      ctx.body = { error: `No home channel configured for platform "${platform}"` }
++      ctx.body = { error: `No home channel for platform: ${platform}` }
 +      return
 +    }
-+
-+    const board = requestBoard(ctx)
-+    if (board === null) return
-+
 +    await kanbanCli.unsubscribeHomeChannel(taskId, platform, home.chat_id, {
 +      board,
 +      threadId: home.thread_id || undefined,

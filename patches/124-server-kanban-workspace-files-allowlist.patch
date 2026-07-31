@@ -1,21 +1,16 @@
 diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
 --- a/packages/server/src/controllers/hermes/kanban.ts
 +++ b/packages/server/src/controllers/hermes/kanban.ts
-@@ -1,9 +1,12 @@
+@@ -1,7 +1,7 @@
  import type { Context } from 'koa'
- import { readFile, stat, copyFile } from 'fs/promises'
--import { resolve, normalize } from 'path'
-+import { resolve, normalize, isAbsolute } from 'path'
+ import { readFile, stat, copyFile, readdir } from 'fs/promises'
  import { homedir } from 'os'
+-import { join, resolve, normalize } from 'path'
++import { join, resolve, normalize, isAbsolute } from 'path'
  import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { isPathWithin } from '../../services/hermes/hermes-path'
-+// HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
-+import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../custom/services/hermes/task-workspace-cache'
-+// HERMES_CUSTOM[TaskWorkspaceAllowlist] END
- import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
- import { safeFileStore } from '../../services/safe-file-store'
- import {
-@@ -771,8 +774,15 @@
+ import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../../services/hermes/hermes-path'
+ // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
+@@ -960,8 +960,15 @@
    const taskId = ctx.query.task_id as string | undefined; const board = (ctx.query.board as string | undefined) || 'default'; const sub = (ctx.query.path as string | undefined) ?? ''; const depthRaw = parseInt(ctx.query.depth as string, 10); const depth = Number.isFinite(depthRaw) ? Math.min(Math.max(depthRaw, 1), 4) : 2
    if (!taskId) { ctx.status = 400; ctx.body = { error: 'task_id is required' }; return }
    const detail = await kanbanCli.getTask(taskId, { board }); const wsPath = detail?.task?.workspace_path; if (!wsPath) { ctx.body = { path: '', entries: [] }; return }

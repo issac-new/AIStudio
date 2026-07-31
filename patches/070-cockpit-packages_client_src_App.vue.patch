@@ -1,5 +1,4 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index 076203d6..2a5a0184 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
 @@ -8,6 +8,7 @@ import { useTheme } from '@/composables/useTheme'
@@ -10,33 +9,32 @@ index 076203d6..2a5a0184 100644
  import AuthEventListener from '@/components/auth/AuthEventListener.vue'
  import { desktopBridge } from '@/utils/desktop-bridge'
  
-@@ -21,6 +22,7 @@ const WebPet = defineAsyncComponent(async () => (await import('@/components/herm
- const { isDark, isComic } = useTheme()
+@@ -27,6 +28,7 @@ const {
+ } = useTheme()
  const { t } = useI18n()
  const appStore = useAppStore()
 +const authStore = useAuthStore()
  const route = useRoute()
  const { sessionSearchOpen } = useSessionSearch()
  
-@@ -28,11 +30,12 @@ const themeOverrides = computed(() => getThemeOverrides(isDark.value, isComic.va
- const naiveTheme = computed(() => isDark.value ? darkTheme : null)
- 
+@@ -39,10 +41,11 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
  const isLoginPage = computed(() => route.name === 'login')
+ const isStandaloneChatPage = computed(() => route.meta?.standaloneChat === true)
 -const usesPageSidebar = computed(() =>
 -  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.workflow'].includes(route.name as string),
 -)
--const showAppSidebar = computed(() => !isLoginPage.value && !usesPageSidebar.value)
--const showMobileMenuButton = computed(() => !isLoginPage.value && (showAppSidebar.value || usesPageSidebar.value))
+-const showAppSidebar = computed(() => !isLoginPage.value && !isStandaloneChatPage.value && !usesPageSidebar.value)
+-const showMobileMenuButton = computed(() => !isLoginPage.value && !isStandaloneChatPage.value && (showAppSidebar.value || usesPageSidebar.value))
 +// Chat-related routes are now children of hermes.cockpit and render inside
 +// the cockpit layout. AppSidebar stays visible for all authenticated routes.
 +const usesPageSidebar = computed(() => false)
 +const isFullscreen = computed(() => route.meta?.fullscreen === true)
-+const showAppSidebar = computed(() => !isLoginPage.value && !isFullscreen.value)
-+const showMobileMenuButton = computed(() => !isLoginPage.value && !isFullscreen.value && showAppSidebar.value)
++const showAppSidebar = computed(() => !isLoginPage.value && !isStandaloneChatPage.value && !isFullscreen.value)
++const showMobileMenuButton = computed(() => !isLoginPage.value && !isStandaloneChatPage.value && !isFullscreen.value && showAppSidebar.value)
  
  const nodeVersionLow = computed(() => {
    const v = appStore.nodeVersion
-@@ -61,6 +64,8 @@ watch(isLoginPage, (loginPage) => {
+@@ -97,6 +102,8 @@ watch(isLoginPage, (loginPage) => {
      appStore.stopHealthPolling()
      return
    }
