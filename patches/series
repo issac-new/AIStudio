@@ -180,3 +180,12 @@
 171-kanban-attach-url-en.patch
 172-kanban-attach-url-zh.patch
 173-client-store-kanban-attach-url.patch
+
+# v0.6.35 适配：附件下载切到上游 readAttachment 路径 + delete 传 task_id
+174-client-kanban-attachment-download-path.patch
+
+# v0.6.35 适配：kanban-routes 测试 mock 补 uploadAttachmentFromUrl
+175-test-kanban-routes-attach-url-mock.patch
+
+# v0.6.35 适配：auth-routes-avatar 测试 mock 补 matrix 系列 controller
+176-test-auth-routes-avatar-matrix-mock.patch

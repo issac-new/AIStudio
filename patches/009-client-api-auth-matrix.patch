@@ -1,9 +1,8 @@
 diff --git a/packages/client/src/api/auth.ts b/packages/client/src/api/auth.ts
-index 6213ed03..29984d3f 100644
 --- a/packages/client/src/api/auth.ts
 +++ b/packages/client/src/api/auth.ts
-@@ -27,6 +27,29 @@ export async function loginWithPassword(username: string, password: string): Pro
-   return data.token
+@@ -34,6 +34,29 @@
+   return data as LoginResponse
  }
  
 +// ─── Matrix login via matrix-js-sdk ──────────────────────────
@@ -32,7 +31,7 @@ index 6213ed03..29984d3f 100644
  export interface CurrentUser {
    id: number
    username: string
-@@ -37,6 +60,12 @@ export interface CurrentUser {
+@@ -44,6 +67,12 @@ export interface CurrentUser {
    last_login_at: number | null
    avatar?: string
    requiresCredentialChange?: boolean
@@ -45,7 +44,8 @@ index 6213ed03..29984d3f 100644
  }
  
  export interface UserAvatar {
-@@ -124,6 +153,90 @@ export interface ManagedUsersResponse {
+@@ -129,7 +158,91 @@ export interface ManagedUsersResponse {
+   users: ManagedUser[]
    profiles: string[]
  }
  

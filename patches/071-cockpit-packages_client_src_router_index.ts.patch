@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
-index fbd6fa57..9aa39ec3 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -11,34 +11,72 @@ const router = createRouter({
+@@ -18,14 +18,57 @@
        meta: { public: true },
      },
      {
@@ -14,26 +13,6 @@ index fbd6fa57..9aa39ec3 100644
 -      path: '/hermes/session/:sessionId',
 -      name: 'hermes.session',
 -      component: () => import('@/views/hermes/ChatView.vue'),
--    },
--    {
--      path: '/hermes/history',
--      name: 'hermes.history',
--      component: () => import('@/views/hermes/HistoryView.vue'),
--    },
--    {
--      path: '/hermes/history/session/:sessionId',
--      name: 'hermes.historySession',
--      component: () => import('@/views/hermes/HistoryView.vue'),
--    },
--    {
--      path: '/hermes/global-agent',
--      name: 'hermes.globalAgent',
--      component: () => import('@/views/hermes/GlobalAgentView.vue'),
--    },
--    {
--      path: '/hermes/global-agent/session/:sessionId',
--      name: 'hermes.globalAgentSession',
--      component: () => import('@/views/hermes/GlobalAgentView.vue'),
 +      path: '/hermes/cockpit',
 +      name: 'hermes.cockpit',
 +      component: () => import('@/custom/cockpit/views/CockpitView.vue'),
@@ -75,21 +54,6 @@ index fbd6fa57..9aa39ec3 100644
 +          component: () => import('@/custom/kanban/components/KanbanPanel.vue'),
 +        },
 +        {
-+          path: 'workflow',
-+          name: 'hermes.workflow',
-+          component: () => import('@/views/hermes/WorkflowView.vue'),
-+        },
-+        {
-+          path: 'group-chat',
-+          name: 'hermes.groupChat',
-+          component: () => import('@/views/hermes/GroupChatView.vue'),
-+        },
-+        {
-+          path: 'group-chat/room/:roomId',
-+          name: 'hermes.groupChatRoom',
-+          component: () => import('@/views/hermes/GroupChatView.vue'),
-+        },
-+        {
 +          path: 'matrix-chat',
 +          name: 'hermes.matrixChat',
 +          component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
@@ -102,23 +66,51 @@ index fbd6fa57..9aa39ec3 100644
 +      ],
      },
      {
+       path: '/desktop-chat/:sessionId',
+@@ -34,26 +77,6 @@
+       meta: { standaloneChat: true },
+     },
+     {
+-      path: '/hermes/history',
+-      name: 'hermes.history',
+-      component: () => import('@/views/hermes/HistoryView.vue'),
+-    },
+-    {
+-      path: '/hermes/history/session/:sessionId',
+-      name: 'hermes.historySession',
+-      component: () => import('@/views/hermes/HistoryView.vue'),
+-    },
+-    {
+-      path: '/hermes/global-agent',
+-      name: 'hermes.globalAgent',
+-      component: () => import('@/views/hermes/GlobalAgentView.vue'),
+-    },
+-    {
+-      path: '/hermes/global-agent/session/:sessionId',
+-      name: 'hermes.globalAgentSession',
+-      component: () => import('@/views/hermes/GlobalAgentView.vue'),
+-    },
+-    {
        path: '/hermes/jobs',
-@@ -50,11 +88,6 @@ const router = createRouter({
-       name: 'hermes.kanban',
+       name: 'hermes.jobs',
+       component: () => import('@/views/hermes/JobsView.vue'),
+@@ -64,11 +87,6 @@
        component: () => import('@/views/hermes/KanbanView.vue'),
      },
--    {
+     {
 -      path: '/hermes/workflow',
 -      name: 'hermes.workflow',
 -      component: () => import('@/views/hermes/WorkflowView.vue'),
 -    },
-     {
+-    {
        path: '/hermes/models',
        name: 'hermes.models',
-@@ -124,16 +157,6 @@ const router = createRouter({
+       component: () => import('@/views/hermes/ModelsView.vue'),
+@@ -151,16 +169,6 @@
+       name: 'hermes.devices',
        component: () => import('@/views/hermes/DevicesView.vue'),
        meta: { requiresSuperAdmin: true },
-     },
+-    },
 -    {
 -      path: '/hermes/group-chat',
 -      name: 'hermes.groupChat',
@@ -128,12 +120,10 @@ index fbd6fa57..9aa39ec3 100644
 -      path: '/hermes/group-chat/room/:roomId',
 -      name: 'hermes.groupChatRoom',
 -      component: () => import('@/views/hermes/GroupChatView.vue'),
--    },
+     },
      {
        path: '/hermes/files',
-       name: 'hermes.files',
-@@ -219,8 +242,8 @@ router.beforeEach(async (to, _from, next) => {
-   // Public pages don't need auth
+@@ -219,7 +227,7 @@
    if (to.meta.public) {
      // Already has key, skip login
      if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
@@ -142,7 +132,7 @@ index fbd6fa57..9aa39ec3 100644
        return
      }
      next()
-@@ -177,7 +200,7 @@ router.beforeEach((to, _from, next) => {
+@@ -233,7 +241,7 @@
    }
  
    if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {

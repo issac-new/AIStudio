@@ -2,13 +2,12 @@ diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/cli
 index e429a02b..338581b2 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -12,17 +12,19 @@ import LanguageSwitch from "@/components/layout/LanguageSwitch.vue";
- import ThemeSwitch from "@/components/layout/ThemeSwitch.vue";
- import VersionManagementModal from "@/components/layout/VersionManagementModal.vue";
+@@ -15,16 +15,18 @@ import VersionManagementModal from "@/components/layout/VersionManagementModal.v
  import { changelog } from "@/data/changelog";
--import { getStoredUsername, isStoredSuperAdmin } from "@/api/client";
+-import { getStoredUserId, getStoredUsername, isStoredSuperAdmin } from "@/api/client";
++import { getStoredUserId, getStoredUsername } from "@/api/client";
 +import { useAuthStore } from "@/stores/hermes/auth";
-+import { getStoredUsername } from "@/api/client";
+ import { clearThemeBackgroundCache } from '@/api/theme'
  
  const { t } = useI18n();
  const message = useMessage();
