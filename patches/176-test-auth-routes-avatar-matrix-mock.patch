@@ -1,0 +1,17 @@
+diff --git a/tests/server/auth-routes-avatar.test.ts b/tests/server/auth-routes-avatar.test.ts
+--- a/tests/server/auth-routes-avatar.test.ts
++++ b/tests/server/auth-routes-avatar.test.ts
+@@ -16,6 +16,13 @@
+   createManagedUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   updateManagedUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   deleteManagedUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  matrixLogin: vi.fn(async (ctx: any) => { ctx.body = { token: 'x' } }),
++  listMatrixUsers: vi.fn(async (ctx: any) => { ctx.body = { users: [] } }),
++  createMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  updateMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  deleteMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  deactivateMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
++  resetMatrixUserPassword: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   listLockedIps: vi.fn(async (ctx: any) => { ctx.body = { locks: [] } }),
+   unlockIpHandler: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+ }))

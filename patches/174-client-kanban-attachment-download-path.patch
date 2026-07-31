@@ -1,0 +1,55 @@
+diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+--- a/packages/client/src/api/hermes/kanban.ts
++++ b/packages/client/src/api/hermes/kanban.ts
+@@ -606,10 +606,11 @@
+   return res.attachment
+ }
+ 
+-export async function downloadAttachment(attachmentId: number, opts?: KanbanBoardOptions): Promise<Blob> {
++export async function downloadAttachment(taskId: string, attachmentId: number, opts?: KanbanBoardOptions): Promise<Blob> {
+   const base = getBaseUrlValue()
+   const params = boardParams(opts?.board)
+-  const url = `${base}${appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, params)}`
++  // v0.6.35 上游 readAttachment 路径（含路径校验 + 授权）
++  const url = `${base}${appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/attachments/${attachmentId}`, params)}`
+   const headers: Record<string, string> = {}
+   const apiKey = getApiKey()
+   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
+@@ -618,9 +619,12 @@
+   return res.blob()
+ }
+ 
+-export async function deleteAttachment(attachmentId: number, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
++export async function deleteAttachment(attachmentId: number, opts?: KanbanBoardOptions & { taskId?: string }): Promise<{ ok: boolean }> {
++  const params = boardParams(opts?.board)
++  // task_id 供 controller 做 workspace 反向清理（CLI attach-rm 只收 attachment id）
++  if (opts?.taskId) params.set('task_id', opts.taskId)
+   return request<{ ok: boolean }>(
+-    appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, boardParams(opts?.board)),
++    appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, params),
+     {
+       method: 'DELETE',
+     },
+diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+--- a/packages/client/src/stores/hermes/kanban.ts
++++ b/packages/client/src/stores/hermes/kanban.ts
+@@ -694,7 +694,7 @@
+ 
+   async function deleteTaskAttachment(taskId: string, attachmentId: number) {
+     const board = selectedBoard.value
+-    await kanbanApi.deleteAttachment(attachmentId, { board })
++    await kanbanApi.deleteAttachment(attachmentId, { board, taskId })
+     if (board === selectedBoard.value) {
+       const list = attachments.value[taskId] || []
+       attachments.value[taskId] = list.filter(a => a.id !== attachmentId)
+@@ -705,8 +705,8 @@
+     return startEventStream()
+   }
+ 
+-  async function downloadTaskAttachment(attachmentId: number): Promise<Blob> {
+-    return kanbanApi.downloadAttachment(attachmentId, { board: selectedBoard.value })
++  async function downloadTaskAttachment(taskId: string, attachmentId: number): Promise<Blob> {
++    return kanbanApi.downloadAttachment(taskId, attachmentId, { board: selectedBoard.value })
+   }
+ 
+   async function saveProfileDescription(name: string, description: string) {

@@ -65,7 +65,7 @@ async function handleUploadFromUrl() {
 
 async function handleDownload(att: KanbanAttachment) {
   try {
-    const blob = await store.downloadTaskAttachment(att.id)
+    const blob = await store.downloadTaskAttachment(props.taskId, att.id)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
