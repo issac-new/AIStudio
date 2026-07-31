@@ -1,17 +1,46 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio 0.6.33（基于 hermes-studio v0.6.33 + overlay 二次开发）
+SwarmStudio 0.6.35（基于 hermes-studio v0.6.35 + overlay 二次开发）
 
 ## 上游版本
 
 | 仓库 | 版本 |
 |------|------|
-| hermes-studio | v0.6.33 |
-| hermes-agent | v0.19.0 |
+| hermes-studio | v0.6.35 |
+| hermes-agent | v0.19.1 |
 | element-web | v1.12.22 |
 
-## 本次升级（0.6.32 → 0.6.33）
+## 本次升级（0.6.33 → 0.6.35 + hermes-agent 0.19.0 → 0.19.1）
+
+上游 hermes-studio v0.6.35 含 24 个提交（224 个文件变更），hermes-agent v0.19.1 为 ~1000 PR rollup。主要适配：
+
+### kanban 对齐（上游 #2216 align kanban with Hermes 0.19）
+
+- **附件系统切换到 CLI 模型**（patch 013 重写）：uploadAttachment → `hermes kanban attach`、removeAttachment → `hermes kanban attach-rm`，kanban.db 单一事实源，与上游 service 层 listAttachments 对齐。废弃 .attachments.json 旁路 meta store。
+- **attach-from-URL 走 CLI**（patch 169 重写）：URL 下载到临时文件 → CLI attach，保留逐跳 SSRF 守卫。
+- **附件下载切上游 readAttachment 路径**（patch 174 新增）：`/api/hermes/kanban/:taskId/attachments/:attachmentId`，含路径校验 + 授权。
+- patch 010/013/014/035/037/164/165 锚点适配（上游 KanbanTask 已内置 `goal_mode`、createTask/接口新字段、controller 结构重写）。
+- 测试 mock 补齐（patch 175/176 新增）。
+
+### v0.6.35 新功能适配
+
+- **per-user theme**（patch 024/025）：localLogin 适配 `loginWithPassword` 返回 LoginResponse 对象，内联 `activateUserTheme`。
+- **desktop.chat 独立聊天窗口**（patch 071 重写）：router 保留顶层 desktop.chat 路由，其余迁入 cockpit children。
+- patch 009/042/070/072/087/088/078/124 适配（auth 返回类型、desktop 版本号、App.vue standaloneChat、AppSidebar 导入、group-chat/run-chat 新处理器、workspace-files allowlist）。
+
+### hermes-agent 0.19.1
+
+patch 117/118 恢复干净应用（0.19.0 时因 drift 跳过）。
+
+### 验证
+
+- 126 个 active patch 全部 inject 通过
+- server `tsc --noEmit` 0 errors；client `vue-tsc` 9 个 pre-existing baseline errors
+- kanban/avatar 测试 44/44 PASS；agent CLI smoke OK
+- 全量 vitest 63 个失败均为 overlay 有意变更与上游测试断言的既有冲突（login UI/files API/i18n 覆盖/rebrand 等，与 v0.6.33 同类）
+
+## 上一版（0.6.32 → 0.6.33）
 
 上游 v0.6.33 含 19 个提交（173 个文件变更），主要更新：
 
