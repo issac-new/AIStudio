@@ -62,4 +62,4 @@ Worker 进入 worktree workspace 后：
 > 规则版本: 2.0
 > 生效日期: 2026-07-24
 > 变更: workspace_kind 默认值从 "dir" 改为 "worktree"，主仓库初始化于 ~/hermes-docker-sandbox/workspace/
-> 适用范围: 所有 agent profile (orchestrator + swarm 9 + hack 6)
+> 适用范围: 所有 agent profile (orchestrator + swarm 9 + product 4 + ops 4)

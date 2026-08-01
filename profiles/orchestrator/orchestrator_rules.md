@@ -115,7 +115,7 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 
 #### 0.2.3 重型任务路由
 
-判定为"重型"时，按 §0.5 Board 路由规则确定 board（swarm/hack/product/ops），然后:
+判定为"重型"时，按 §0.5 Board 路由规则确定 board（swarm/product/ops），然后:
 
 ```python
 kanban_create(
@@ -141,10 +141,8 @@ kanban_create(
 | 看板 | slug | 用途 | profile_scope |
 |------|------|------|---------------|
 | **协作看板** | `swarm` | 常规软件开发、架构设计、代码审查、测试、部署 | orchestrator, architect, project-manager, requirement-analyst, worker-coder, worker-deployer, worker-researcher, worker-reviewer, worker-tester |
-| **Hack看板** | `hack` | 网络安全攻击/防御事件专用 | orchestrator, hack-recon, hack-exploit, hack-forensics, hack-auditor, hack-c2, hack-weapons |
 | **产品看板** | `product` | 产品管理、用户研究、需求优先级、反馈分析 | orchestrator, product-manager, product-researcher, product-feedback, product-prioritizer |
 | **运维看板** | `ops` | SRE、事件响应、DevOps自动化、高管摘要 | orchestrator, ops-sre, ops-incident-commander, ops-devops, ops-exec-summary |
-| **[已移除]看板** | `[已移除]` | 电子设计自动化：AI模型、IP核、多物理场、光学、物理、工具链 | orchestrator, [已移除], [已移除], [已移除], [已移除], [已移除], [已移除] |
 
 ### 0.5.1 路由判定流程
 
@@ -155,16 +153,13 @@ Matrix / Email / Weixin / API Server 消息到达
     ↓
 [多级分类判定]
     ↓
-   ├─ 安全/黑客领域？ → board="hack", 按 §0.5.3 分配 hack profile
    ├─ 产品/市场/用户研究？ → board="product", 按 §0.5.7 分配 product profile
    ├─ 运维/SRE/事件响应？ → board="ops", 按 §0.5.8 分配 ops profile
-   ├─ [已移除]/电子设计/芯片/仿真？ → board="[已移除]", 按 §0.5.9 分配 [已移除] profile
    └─ 其他（软件开发/研究/部署等） → board="swarm", 按常规 §4 分配 worker profile
 ```
 
 > 📖 **Board 路由关键词表** 已外置到 `references/board-keywords.md` — 路由判定时用 `read_file` 按需加载。
 
-> 📖 **Hack assignee 分配规则** 已外置到 `references/hack-assignee-rules.md` — 路由判定时用 `read_file` 按需加载。
 
 ### 0.5.4 Swarm 看板保持原逻辑
 
@@ -174,18 +169,13 @@ Matrix / Email / Weixin / API Server 消息到达
 
 > 📖 **Ops 看板路由规则** 已外置到 `references/ops-routing-rules.md` — 路由判定时用 `read_file` 按需加载。
 
-> 📖 **[已移除] 看板路由规则** 已外置到 `references/[已移除].md` — 路由判定时用 `read_file` 按需加载。
 
 > 📖 **路由示例** 已外置到 `references/routing-examples.md` — 路由判定时用 `read_file` 按需加载。
 
 ### 0.5.6 路由判定优先级
 
-1. **用户明确指定看板**: 消息中包含 `[hack]` / `[security]` / `[product]` / `[ops]` / `[[已移除]]` 前缀 → 强制路由到对应看板
-2. **用户明确指定 assignee**: 消息中 `@hack-recon` / `@product-manager` / `@ops-sre` / `@[已移除]` 等 → 路由到对应看板并分配该 assignee
-3. **安全关键词匹配**: 按 §0.5.2 关键词表匹配 → `hack` 看板
 4. **产品关键词匹配**: 按 §0.5.7 关键词表匹配 → `product` 看板
 5. **运维关键词匹配**: 按 §0.5.8 关键词表匹配 → `ops` 看板
-6. **[已移除] 关键词匹配**: 按 §0.5.9 关键词表匹配 → `[已移除]` 看板
 7. **默认**: 无匹配 → `swarm` 看板
 
 ### 0.5.10 方法论路由建议（PUA Methodology Router）
@@ -197,14 +187,12 @@ Matrix / Email / Weixin / API Server 消息到达
 
 | Hermes 看板 | 任务类型 | 推荐方法论 | 核心方法 |
 |------------|---------|-----------|---------|
-| **hack** | 渗透/漏洞/取证 | 🔴 华为 | RCA 5-Why + 蓝军自攻击 + 压强集中 |
 | **swarm** (编码) | build/create/implement | ⬛ Musk | The Algorithm: 质疑→删除→简化→加速→自动化 |
 | **swarm** (审查) | review/refactor | ⬜ Jobs | 减法优先 + 像素级完美 + DRI |
 | **swarm** (研究) | research/search | ⚫ 百度 | 搜索第一 + 信息检索 |
 | **swarm** (架构) | design/architecture | 🔶 Amazon | Working Backwards + 6-Pager |
 | **product** | 产品/用户研究 | 🟧 小米 | 参与感三三法则 + 和用户交朋友 |
 | **ops** | deploy/config/运维 | 🟠 阿里 | 定目标→追过程→拿结果 + 复盘四步法 |
-| **[已移除]** | 仿真/芯片设计 | 🔶 Amazon + 🟡 字节 | Working Backwards + A/B Test 数据驱动 |
 | **通用/模糊** | 无明确类型 | 🟠 阿里 | 通用闭环（默认） |
 
 **失败切换链**：worker 连续失败时，按失败模式切换方法论（不回头，不重复）：
@@ -239,7 +227,7 @@ Matrix 消息到达
     ↓
 [提取元数据] 群聊 roomId、room name、用户名称
     ↓
-[Board 路由判定] 按 §0.5 判定 → board="swarm" 或 board="hack"
+[Board 路由判定] 按 §0.5 判定 → board="swarm"
     ↓
 [创建 Kanban 任务] board=<判定结果>, tenant=<结构化 tenant 值>
     ↓
@@ -371,7 +359,6 @@ Orchestrator **不进行智能分类**（安全分类除外，见 §0.5），创
 |------|------|
 | 所有消息（默认） | assignee 留空，由后续流程处理 |
 | 明确指定 worker 的消息 | 按用户要求指定 assignee |
-| 安全类消息（路由到 hack 看板） | 按 §0.5.3 自动分配 hack profile |
 
 ### 4.2 可用 Workers
 
@@ -385,12 +372,6 @@ Orchestrator **不进行智能分类**（安全分类除外，见 §0.5），创
 - `worker-tester`: 测试、验证
 
 **Hack 看板**（见 §0.5.3 自动分配规则）:
-- `hack-recon`: 侦察、信息收集、OSINT、扫描、枚举
-- `hack-exploit`: 漏洞利用、exploit 开发、提权、后渗透
-- `hack-forensics`: 取证、应急响应、磁盘/内存分析、IOC 提取
-- `hack-auditor`: 安全审计、漏洞扫描、配置基线检查
-- `hack-c2`: C2 基础设施、持久化、隐蔽通信
-- `hack-weapons`: 钓鱼模板、payload 生成、字典、无线/DoS
 
 **Product 看板**（见 §0.5.7 自动分配规则）:
 - `product-manager`: 产品全生命周期、PRD、路线图、跨职能协调
