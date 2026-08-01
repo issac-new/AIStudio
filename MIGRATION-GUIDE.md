@@ -51,7 +51,6 @@ chmod +x install-all.sh
 
 # Or install a specific team
 ./install-all.sh --team swarm
-./install-all.sh --team hack
 ./install-all.sh --team product
 ./install-all.sh --team ops
 ```
@@ -162,7 +161,6 @@ The profiles are configured for these models:
 | Team | Model | Provider | Fallback |
 |------|-------|----------|----------|
 | swarm (9) | GLM-5.2 | Z.AI (custom) | GLM-5.1 → V4-Flash |
-| hack (6) | Kimi K3 | Moonshot | V4-Flash → GLM-5.2 |
 | product (4) | GLM-5.2 | Z.AI (custom) | GLM-5.1 → V4-Flash |
 | ops (4) | GLM-5.2 | Z.AI (custom) | GLM-5.1 → V4-Flash |
 | aux/vision | Kimi K3 | Moonshot | — |
