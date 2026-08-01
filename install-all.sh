@@ -2,12 +2,11 @@
 # ============================================================
 # SwarmTeam — Batch Install All Profiles
 # ============================================================
-# Installs all 23 SwarmTeam profiles as Hermes Agent distributions.
+# Installs all SwarmTeam profiles as Hermes Agent distributions.
 #
 # Usage:
 #   ./install-all.sh                # install all profiles
 #   ./install-all.sh --team swarm    # install only swarm team (9 profiles)
-#   ./install-all.sh --team hack     # install only hack team (6 profiles)
 #   ./install-all.sh --team product  # install only product team (4 profiles)
 #   ./install-all.sh --team ops      # install only ops team (4 profiles)
 #   ./install-all.sh --profile orchestrator  # install single profile
@@ -28,13 +27,13 @@ REPO="github.com/issac-new/SwarmTeam"
 
 # Team → profiles mapping
 declare -A TEAM_PROFILES
+TEAM_PROFILES[swarm]="${TEAM_PROFILES[swarm]:-}"
 TEAM_PROFILES[swarm]="orchestrator architect project-manager requirement-analyst worker-coder worker-deployer worker-researcher worker-reviewer worker-tester"
-TEAM_PROFILES[hack]="hack-recon hack-exploit hack-forensics hack-auditor hack-c2 hack-weapons"
 TEAM_PROFILES[product]="product-manager product-researcher product-prioritizer product-feedback"
 TEAM_PROFILES[ops]="ops-devops ops-sre ops-incident-commander ops-exec-summary"
 
 ALL_PROFILES=""
-for team in swarm hack product ops; do
+for team in swarm product ops; do
     ALL_PROFILES="${ALL_PROFILES} ${TEAM_PROFILES[$team]}"
 done
 
@@ -45,7 +44,7 @@ if [[ $# -eq 0 ]]; then
 elif [[ "$1" == "--team" ]]; then
     team="${2:-}"
     if [[ -z "${team}" ]] || [[ -z "${TEAM_PROFILES[$team]:-}" ]]; then
-        echo "Error: Unknown team '$team'. Available: swarm hack product ops"
+        echo "Error: Unknown team '$team'. Available: swarm product ops"
         exit 1
     fi
     TARGET_PROFILES="${TEAM_PROFILES[$team]}"
@@ -53,7 +52,7 @@ elif [[ "$1" == "--profile" ]]; then
     TARGET_PROFILES="$2"
 else
     echo "Usage: $0 [--team <team>|--profile <name>]"
-    echo "Teams: swarm hack product ops"
+    echo "Teams: swarm product ops"
     exit 1
 fi
 
