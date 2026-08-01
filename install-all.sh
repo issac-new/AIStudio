@@ -27,7 +27,6 @@ REPO="github.com/issac-new/SwarmTeam"
 
 # Team → profiles mapping
 declare -A TEAM_PROFILES
-TEAM_PROFILES[swarm]="${TEAM_PROFILES[swarm]:-}"
 TEAM_PROFILES[swarm]="orchestrator architect project-manager requirement-analyst worker-coder worker-deployer worker-researcher worker-reviewer worker-tester"
 TEAM_PROFILES[product]="product-manager product-researcher product-prioritizer product-feedback"
 TEAM_PROFILES[ops]="ops-devops ops-sre ops-incident-commander ops-exec-summary"
