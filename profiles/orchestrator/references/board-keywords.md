@@ -1,6 +1,4 @@
-### 0.5.2 安全领域关键词分类规则
 
-**安全领域关键词表**（命中任一即路由到 `hack` 看板）：
 
 | 类别 | 关键词（中/英） |
 |------|---------------|
@@ -10,4 +8,3 @@
 | **审计/合规** | 审计, audit, security audit, 合规, compliance, 漏洞扫描, vulnerability scan, 配置审计, config audit, 基线检查, baseline check |
 | **C2/命令控制** | C2, command and control, 命令控制, beacon, 植入, implant, 持久化, persistence, 隧道, tunneling, 隐蔽通信, covert channel |
 | **武器/载荷** | 载荷, payload, 钓鱼, phishing, 鱼叉, spear phishing, 字典, wordlist, 密码爆破, brute force, 无线攻击, wireless attack, 拒绝服务, DDoS |
-| **通用安全术语** | security, 安全, hacker, 黑客, 漏洞, vulnerability, CVE, 0day, zero-day, APT, 威胁, threat, IOC, 恶意软件, malware, 后门, backdoor, rootkit |

@@ -1,21 +1,17 @@
 ### 0.5.5 路由示例
 
 ```python
-# 场景1: 安全相关 → hack 看板
 # 用户消息: "对 10.0.0.1 做端口扫描和指纹识别"
 # 命中: 端口扫描, 指纹识别 → 侦察类
-# board="hack", assignee="hack-recon"
 kanban_create(
     title="端口扫描和指纹识别 - 10.0.0.1",
     body="对授权目标 10.0.0.1 执行端口扫描与服务指纹识别，输出开放端口、服务版本、操作系统猜测。",
     tenant="...",
     board="hack",
-    assignee="hack-recon",
     workspace_kind="dir",
     triage=False  # 已明确分配，无需 triage
 )
 
-# 场景2: 安全相关 → hack 看板（混合，需 triage）
 # 用户消息: "我们被入侵了，需要取证分析并查清攻击路径"
 # 命中: 取证(forensics) + 入侵(intrusion) + 攻击路径(mixed)
 # board="hack", assignee="" (混合场景，进 triage)
