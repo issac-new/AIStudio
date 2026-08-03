@@ -1,37 +1,15 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 6e6ab4f..2f30ef9 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -188,6 +188,9 @@ export default {
-     history: '历史',
-     jobs: '任务',
-     kanban: '看板',
+@@ -2871,4 +2871,21 @@
+     new_0_6_32_9: '桌面窗口控件已融入页面框架：macOS 红绿灯位于侧边栏，Windows 控件位于主内容上方，Linux 继续使用原生窗口装饰（#2162）',
+     new_0_6_32_10: '开发文档现在同时支持直接使用当前 checkout，并可按需采用隔离的 Git worktree（#2155）',
+   },
 +    swarmKanban: '协作看板',
 +    matrixChat: 'Matrix 聊天',
 +    cockpit: 'AI协作中心',
-     workflow: '工作流',
-     models: '模型',
-     profiles: '用户',
-@@ -1001,6 +1004,7 @@ export default {
-   // 看板
-   kanban: {
-     title: '看板',
 +    diagnostics: '诊断',
-     createTask: '新建任务',
-     noTasks: '暂无任务',
-     allStatuses: '全部状态',
-@@ -2232,6 +2236,7 @@ export default {
-       mimoStylePromptHint: '可选，用自然语言描述语音风格',
-       mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
-     },
 +    matrixIdentity: { title: 'Matrix 身份', userId: '用户 ID', displayName: '显示名称', homeserver: 'Homeserver', role: '角色', authSource: '认证来源', passwordManagedByMatrix: '密码由 Matrix homeserver 管理', changeMatrixPassword: '修改 Matrix 密码', passwordChanged: 'Matrix 密码已成功修改', },
-   },
-   githubPreview: {
-     title: "版本预览",
-@@ -2708,4 +2713,16 @@ export default {
-     new_0_6_27_6: '默认工作区收藏星标移动到文件夹选择器的已选路径行右侧，并补齐各语言文案，工作区选择界面更自然',
-     new_0_6_27_7: '工作区 diff 会跳过前后都是 0 字节且没有 patch 或行变化的空文件变更，避免出现 +0/-0 的无意义 diff 卡片',
-   },
 +
 +  matrix: {
 +    options: '选项', threadStartDisabled: '无法基于已有关系（回复/编辑）的消息发起话题', undecryptable: '无法解密此消息', historyLoadError: '服务器错误，无法加载更早的历史',

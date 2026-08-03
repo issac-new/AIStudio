@@ -1,10 +1,9 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 288bc9a..2a8dea7 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -2706,4 +2706,16 @@ export default {
-     new_0_6_27_6: 'Default workspace favorites now sit inside the folder picker selected-path row, with completed locale coverage for the workspace picker labels',
-     new_0_6_27_7: 'Workspace diff cards now skip zero-byte changes with no patch or line delta, avoiding meaningless +0/-0 changed-file cards',
+@@ -2869,4 +2869,16 @@
+     new_0_6_32_9: 'Desktop window controls are integrated into the page chrome: macOS traffic lights live in the sidebar, Windows controls sit above the main content, and Linux keeps native decorations (#2162)',
+     new_0_6_32_10: 'Developer documentation now supports both the current checkout and optional isolated Git worktrees (#2155)',
    },
 +
 +  matrix: {
