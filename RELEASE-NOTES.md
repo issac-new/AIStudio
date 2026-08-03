@@ -1,17 +1,46 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio 0.6.35（基于 hermes-studio v0.6.35 + overlay 二次开发）
+SwarmStudio 0.6.36（基于 hermes-studio v0.6.36 + overlay 二次开发）
 
 ## 上游版本
 
 | 仓库 | 版本 |
 |------|------|
-| hermes-studio | v0.6.35 |
+| hermes-studio | v0.6.36 |
 | hermes-agent | v0.19.1 |
 | element-web | v1.12.22 |
 
-## 本次升级（0.6.33 → 0.6.35 + hermes-agent 0.19.0 → 0.19.1）
+## 本次升级（0.6.35 → 0.6.36）
+
+上游 v0.6.36 含 40+ 提交（326 文件变更），主要更新：
+
+- **kanban task board 重设计**（#2296）：修复归档 + 重新设计任务板
+- **完整 RTL 布局支持**（#2294/#2270/#2269）：Arabic locale、Naive UI 镜像、方向感知 CSS
+- **MCU 同步语音字幕**（#2305）
+- **Ekko session workspaces**（#2289）+ compact 关系图（#2297）
+- **独立 headless app relay**（#2275）
+- **chat live reasoning 稳定化**（#2299）+ 工具抽屉精炼（#2283）
+- **桌面更新后使用打包 WebUI**（#2314）
+- 多项 i18n/voice/desktop 修复
+
+### Overlay 适配（10 patches 重写）
+
+- 025 重写：LoginView 适配 RTL `text-align: start`
+- 070 重写：App.vue 适配 `naiveRtl` + `locale`，保留 authStore + cockpit sidebar 逻辑
+- 074/075 重写：i18n locales 锚点适配（上游新增 Arabic + RTL keys）
+- 101/102 重写：MessageList/GroupMessageList 适配上游 scroll snapshot 重构 + banner 正确插入
+- 029 重写：SettingsView 适配上游移除 VoiceSettings + voice→models redirect
+- 042/043 版本号 + minWidth context 适配
+- 135 重写：index.ts 适配 `bodyParser→createRequestBodyParser` 重构
+
+### 验证
+
+- 127 patch 全 inject 通过
+- server `tsc --noEmit` 0 errors；client `vue-tsc` 15 baseline errors（0 new）
+- kanban/avatar 测试 44/44 PASS
+
+## 上一版（0.6.33 → 0.6.35 + hermes-agent 0.19.0 → 0.19.1）
 
 上游 hermes-studio v0.6.35 含 24 个提交（224 个文件变更），hermes-agent v0.19.1 为 ~1000 PR rollup。主要适配：
 
