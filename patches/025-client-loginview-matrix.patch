@@ -238,48 +238,58 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
        </form>
      </div>
    </div>
-@@ -137,10 +173,8 @@
+@@ -137,10 +173,6 @@
    }
  }
  
 -.login-logo {
-   margin-bottom: 24px;
- }
+-  margin-bottom: 24px;
+-}
 -
  .login-title {
    font-size: 26px;
    font-weight: 600;
-@@ -155,13 +189,11 @@
+@@ -153,13 +185,6 @@
+   color: $text-muted;
+   margin: 0 0 12px;
    line-height: 1.6;
+-}
+-
+-.login-default-hint {
+-  margin: 0 0 28px;
+-  font-family: $font-code;
+-  font-size: 13px;
+-  color: $text-secondary;
  }
  
--.login-default-hint {
-   margin: 0 0 28px;
-   font-family: $font-code;
-   font-size: 13px;
-   color: $text-secondary;
- }
--
  .login-form {
-   display: flex;
-   flex-direction: column;
-@@ -196,7 +228,6 @@
-   text-align: left;
+@@ -196,25 +221,6 @@
+   text-align: start;
  }
  
 -.login-lock-hint {
-   padding: 10px 12px;
-   border: 1px solid rgba(var(--warning-rgb), 0.35);
-   border-radius: $radius-sm;
-@@ -205,7 +236,6 @@
-   font-size: 12px;
-   line-height: 1.5;
-   text-align: left;
+-  padding: 10px 12px;
+-  border: 1px solid rgba(var(--warning-rgb), 0.35);
+-  border-radius: $radius-sm;
+-  background: rgba(var(--warning-rgb), 0.08);
+-  color: $text-secondary;
+-  font-size: 12px;
+-  line-height: 1.5;
+-  text-align: start;
 -
-   code {
-     display: block;
-     margin-top: 4px;
-@@ -236,4 +266,41 @@
+-  code {
+-    display: block;
+-    margin-top: 4px;
+-    color: $text-primary;
+-    font-family: $font-code;
+-    word-break: break-all;
+-  }
+-}
+-
+ .login-btn {
+   width: 100%;
+   padding: 14px;
+@@ -236,4 +242,41 @@
      cursor: not-allowed;
    }
  }
@@ -293,7 +303,7 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
 +  color: $text-secondary;
 +  font-size: 13px;
 +  line-height: 1.5;
-+  text-align: left;
++  text-align: start;
 +}
 +
 +.login-fallback-link {

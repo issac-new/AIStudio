@@ -1,24 +1,21 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index 9165ae9..0919bf8 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -5,6 +5,7 @@ import { useGroupChatStore } from '@/stores/hermes/group-chat'
+@@ -4,6 +4,7 @@
+ import { useGroupChatStore } from '@/stores/hermes/group-chat'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import GroupMessageItem from './GroupMessageItem.vue'
- import VirtualMessageList from '../chat/VirtualMessageList.vue'
 +import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
+ import VirtualMessageList from '../chat/VirtualMessageList.vue'
  
  const store = useGroupChatStore()
- const { t } = useI18n()
-@@ -12,11 +13,14 @@ const { toolTraceVisible } = useToolTraceVisibility()
+@@ -12,9 +13,14 @@
  const listRef = ref<InstanceType<typeof VirtualMessageList> | null>(null)
  const showScrollBottomButton = ref(false)
  const displayMessages = computed(() => store.sortedMessages.filter(msg =>
 -    msg.role !== 'tool' ||
 -    toolTraceVisible.value ||
--    msg.toolStatus === 'running' ||
--    msg.toolName === 'workspace_diff' ||
--    msg.tool_name === 'workspace_diff',
+-    msg.toolStatus === 'running',
 +    msg.systemType !== 'gateway' &&
 +    (
 +        msg.role !== 'tool' ||
@@ -30,11 +27,11 @@ index 9165ae9..0919bf8 100644
  ))
  const listPadding = computed(() => store.activePendingApproval ? '16px 20px 260px' : '16px 20px')
  let pendingInitialBottomRoomId: string | null = store.currentRoomId
-@@ -92,6 +96,7 @@ defineExpose({ scrollToBottom })
+@@ -90,6 +96,7 @@
  
  <template>
      <div class="group-message-list-shell">
-+        <GatewayNoticeBanner :session-id="store.currentRoomId" :messages="store.sortedMessages" />
++      <GatewayNoticeBanner :session-id="store.currentRoomId" :messages="store.sortedMessages" />
          <VirtualMessageList
              class="group-message-list"
              ref="listRef"
