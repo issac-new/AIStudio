@@ -1,23 +1,24 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -8,6 +8,7 @@ import { useTheme } from '@/composables/useTheme'
+@@ -8,6 +8,7 @@
  import { useKeyboard } from '@/composables/useKeyboard'
  import { useSessionSearch } from '@/composables/useSessionSearch'
  import { useAppStore } from '@/stores/hermes/app'
 +import { useAuthStore } from '@/stores/hermes/auth'
  import AuthEventListener from '@/components/auth/AuthEventListener.vue'
  import { desktopBridge } from '@/utils/desktop-bridge'
- 
-@@ -27,6 +28,7 @@ const {
- } = useTheme()
- const { t } = useI18n()
+ import { naiveRtlFor } from '@/constants/naiveRtl'
+@@ -29,6 +30,7 @@
+ const { t, locale } = useI18n()
+ const naiveRtl = computed(() => naiveRtlFor(locale.value))
  const appStore = useAppStore()
 +const authStore = useAuthStore()
  const route = useRoute()
  const { sessionSearchOpen } = useSessionSearch()
  
-@@ -39,10 +41,11 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
+@@ -39,11 +41,10 @@
+ 
  const isLoginPage = computed(() => route.name === 'login')
  const isStandaloneChatPage = computed(() => route.meta?.standaloneChat === true)
 -const usesPageSidebar = computed(() =>
@@ -25,8 +26,6 @@ diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
 -)
 -const showAppSidebar = computed(() => !isLoginPage.value && !isStandaloneChatPage.value && !usesPageSidebar.value)
 -const showMobileMenuButton = computed(() => !isLoginPage.value && !isStandaloneChatPage.value && (showAppSidebar.value || usesPageSidebar.value))
-+// Chat-related routes are now children of hermes.cockpit and render inside
-+// the cockpit layout. AppSidebar stays visible for all authenticated routes.
 +const usesPageSidebar = computed(() => false)
 +const isFullscreen = computed(() => route.meta?.fullscreen === true)
 +const showAppSidebar = computed(() => !isLoginPage.value && !isStandaloneChatPage.value && !isFullscreen.value)
@@ -34,11 +33,10 @@ diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
  
  const nodeVersionLow = computed(() => {
    const v = appStore.nodeVersion
-@@ -97,6 +102,8 @@ watch(isLoginPage, (loginPage) => {
+@@ -80,6 +81,7 @@
      appStore.stopHealthPolling()
      return
    }
-+  // Restore user session on page refresh (authStore.user is lost on reload)
 +  authStore.fetchUser()
    appStore.loadModels()
    appStore.startHealthPolling()
