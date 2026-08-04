@@ -145,12 +145,10 @@
 # Windows runtime + quit lifecycle fixes (Phase 3)
 145-desktop-explicit-system-hermes-and-run-agent-required.patch
 146-bridge-agent-root-optional-default.patch
-147-install-hermes-run-agent-hardfail.patch
 148-package-runtime-run-agent-check.patch
 149-runtime-manager-require-run-agent.patch
 150-updater-no-auto-install-on-quit.patch
 151-desktop-startup-quit-logging.patch
-152-mcp-shim-electron-run-as-node.patch
 153-bridge-import-fallback-for-missing-run-agent.patch
 154-cli-shim-powershell-encoded-command.patch
 155-gateway-windows-http-health-fallback.patch
@@ -189,3 +187,6 @@
 
 # v0.6.35 适配：auth-routes-avatar 测试 mock 补 matrix 系列 controller
 176-test-auth-routes-avatar-matrix-mock.patch
+
+# v0.6.37 适配：cli-shim.ts 重构后单独拆出 rebrand patch
+177-desktop-cli-shim-rebrand.patch
