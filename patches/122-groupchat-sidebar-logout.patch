@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-index af7d3352..4b396568 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -12,7 +12,7 @@ import GroupChatInput from './GroupChatInput.vue'
+@@ -12,7 +12,7 @@
  import FolderPicker from '@/components/hermes/chat/FolderPicker.vue'
  import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
  import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
@@ -10,42 +9,12 @@ index af7d3352..4b396568 100644
 +import { useAuthStore } from '@/stores/hermes/auth'
  import { copyToClipboard } from '@/utils/clipboard'
  import type { Attachment } from '@/stores/hermes/chat'
- import type { RoomAgent, RoomInfo } from '@/api/hermes/group-chat'
-@@ -32,6 +32,7 @@ const message = useMessage()
+ import type { MemberInfo, RoomAgent, RoomInfo, RoomSummaryAnchor, RoomSummaryConfig, RoomSummaryState } from '@/api/hermes/group-chat'
+@@ -44,6 +44,7 @@
+ const message = useMessage()
  const appStore = useAppStore()
  const store = useGroupChatStore()
- const profilesStore = useProfilesStore()
 +const authStore = useAuthStore()
+ const profilesStore = useProfilesStore()
  const filesStore = useFilesStore()
  const toolPanelStore = useToolPanelStore()
- 
-@@ -261,9 +262,6 @@ function openPageSidebar() {
-     showSidebar.value = true
- }
- 
--function openSettingsPage() {
--    router.push({ name: 'hermes.settings' })
--}
- 
- function hasDraggedFiles(event: DragEvent) {
-     return Array.from(event.dataTransfer?.types || []).includes('Files')
-@@ -715,14 +713,14 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
-                 </div>
-             </div>
-             <div class="page-sidebar-bottom">
--                <button class="page-sidebar-menu-btn" type="button" @click="openSettingsPage">
-+                <button class="page-sidebar-menu-btn" type="button" @click="authStore.logout()">
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
--                        <circle cx="12" cy="12" r="3" />
--                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-+                        <polyline points="16 17 21 12 16 7" />
-+                        <line x1="21" y1="12" x2="9" y2="12" />
-                     </svg>
--                    <span>{{ t('sidebar.settings') }}</span>
-+                    <span>{{ t('sidebar.logout') }}</span>
-                 </button>
--                <SettingsCircuitBadge />
-             </div>
-         </div>
- 

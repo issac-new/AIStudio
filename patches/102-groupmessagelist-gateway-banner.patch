@@ -2,17 +2,17 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.v
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 @@ -4,6 +4,7 @@
- import { useGroupChatStore } from '@/stores/hermes/group-chat'
+ import { groupAgentRunMessages, useGroupChatStore } from '@/stores/hermes/group-chat'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import GroupMessageItem from './GroupMessageItem.vue'
 +import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
+ import GroupAgentRunCard from './GroupAgentRunCard.vue'
  import VirtualMessageList from '../chat/VirtualMessageList.vue'
  
- const store = useGroupChatStore()
-@@ -12,9 +13,14 @@
- const listRef = ref<InstanceType<typeof VirtualMessageList> | null>(null)
- const showScrollBottomButton = ref(false)
- const displayMessages = computed(() => store.sortedMessages.filter(msg =>
+@@ -22,9 +23,14 @@
+     { name: 'Claude', src: '/coding-agents/claude-code.svg' },
+ ]
+ const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
 -    msg.role !== 'tool' ||
 -    toolTraceVisible.value ||
 -    msg.toolStatus === 'running',
@@ -24,10 +24,10 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.v
 +        msg.toolName === 'workspace_diff' ||
 +        msg.tool_name === 'workspace_diff'
 +    ),
- ))
- const listPadding = computed(() => store.activePendingApproval ? '16px 20px 260px' : '16px 20px')
- let pendingInitialBottomRoomId: string | null = store.currentRoomId
-@@ -90,6 +96,7 @@
+ )))
+ const summaryAnchorMessageId = computed(() => {
+     const roomId = store.currentRoomId
+@@ -111,6 +117,7 @@
  
  <template>
      <div class="group-message-list-shell">

@@ -1,0 +1,158 @@
+diff --git a/packages/desktop/src/main/cli-shim.ts b/packages/desktop/src/main/cli-shim.ts
+--- a/packages/desktop/src/main/cli-shim.ts	2026-08-04 13:46:55
++++ b/packages/desktop/src/main/cli-shim.ts	2026-08-04 13:46:55
+@@ -17,8 +17,8 @@
+ 
+ const SHIM_MARKER = 'HERMES_STUDIO_CLI_SHIM'
+ const MCP_SHIM_MARKER = 'HERMES_STUDIO_MCP_SHIM'
+-const PATH_MARKER_START = '# >>> Hermes Studio CLI shim >>>'
+-const PATH_MARKER_END = '# <<< Hermes Studio CLI shim <<<'
++const PATH_MARKER_START = '# >>> SwarmStudio CLI shim >>>'
++const PATH_MARKER_END = '# <<< SwarmStudio CLI shim <<<'
+ const WINDOWS_USER_PATH_ENV_B64 = 'HERMES_STUDIO_WINDOWS_USER_PATH_B64'
+ 
+ type ShimInstallStatus = 'installed' | 'updated' | 'unchanged' | 'skipped'
+@@ -106,7 +106,7 @@
+     "let python=path.join(virtualEnv,'Scripts','python.exe')",
+     "if(!fs.existsSync(python))python=path.join(virtualEnv,'python.exe')",
+     "if(!fs.existsSync(python)){virtualEnv=path.join(runtime,'python');python=path.join(virtualEnv,'python.exe')}",
+-    "if(!fs.existsSync(python)){console.error('Hermes Studio Python runtime not found at '+python);console.error('Open Hermes Studio once to finish runtime setup, then retry hermes-studio cli.');process.exit(127)}",
++    "if(!fs.existsSync(python)){console.error('SwarmStudio Python runtime not found at '+python);console.error('Open SwarmStudio once to finish runtime setup, then retry hermes-studio cli.');process.exit(127)}",
+     "const inheritedPath=process.env.PATH||process.env.Path||''",
+     'const env={...process.env,VIRTUAL_ENV:virtualEnv,UV_PROJECT_ENVIRONMENT:virtualEnv,UV_PYTHON:python,HERMES_AGENT_ROOT:path.join(runtime,\'python\'),HERMES_AGENT_NODE:path.join(runtime,\'node\',\'node.exe\'),HERMES_AGENT_NODE_ROOT:path.join(runtime,\'node\'),AGENT_BROWSER_HOME:path.join(runtime,\'python\',\'agent-browser\'),PLAYWRIGHT_BROWSERS_PATH:path.join(runtime,\'python\',\'ms-playwright\')}',
+     "for(const key of Object.keys(env))if(key.toLowerCase()==='path')delete env[key]",
+@@ -163,7 +163,7 @@
+     "  [Console]::Out.WriteLine('Usage: hermes-studio [command] [options]')",
+     "  [Console]::Out.WriteLine('')",
+     "  [Console]::Out.WriteLine('Commands:')",
+-    "  [Console]::Out.WriteLine('  (no command)       Open Hermes Studio desktop app')",
++    "  [Console]::Out.WriteLine('  (no command)       Open SwarmStudio desktop app')",
+     "  [Console]::Out.WriteLine('  cli [args...]      Run bundled Hermes Agent CLI')",
+     "  [Console]::Out.WriteLine('  web [args...]      Run bundled hermes-web-ui command')",
+     "  [Console]::Out.WriteLine('  help, -h, --help   Show this help message')",
+@@ -171,7 +171,7 @@
+     "switch ($Command.ToLowerInvariant()) {",
+     "  '' {",
+     '    if (!(Test-Path -LiteralPath $App -PathType Leaf)) {',
+-    "      [Console]::Error.WriteLine('Hermes Studio executable not found at ' + $App)",
++    "      [Console]::Error.WriteLine('SwarmStudio executable not found at ' + $App)",
+     '      exit 127',
+     '    }',
+     '    Start-Process -FilePath $App',
+@@ -182,8 +182,8 @@
+     "  '--help' { Show-HermesStudioHelp; exit 0 }",
+     "  'cli' {",
+     '    if (!(Test-Path -LiteralPath $Node -PathType Leaf)) {',
+-    "      [Console]::Error.WriteLine('Hermes Studio Node runtime not found at ' + $Node)",
+-    "      [Console]::Error.WriteLine('Open Hermes Studio once to finish runtime setup, then retry hermes-studio cli.')",
++    "      [Console]::Error.WriteLine('SwarmStudio Node runtime not found at ' + $Node)",
++    "      [Console]::Error.WriteLine('Open SwarmStudio once to finish runtime setup, then retry hermes-studio cli.')",
+     '      exit 127',
+     '    }',
+     '    & $Node -e $CliForwarder @ForwardArgs',
+@@ -191,8 +191,8 @@
+     '  }',
+     "  'web' {",
+     '    if (!(Test-Path -LiteralPath $Node -PathType Leaf)) {',
+-    "      [Console]::Error.WriteLine('Hermes Studio Node runtime not found at ' + $Node)",
+-    "      [Console]::Error.WriteLine('Open Hermes Studio once to finish runtime setup, then retry hermes-studio web.')",
++    "      [Console]::Error.WriteLine('SwarmStudio Node runtime not found at ' + $Node)",
++    "      [Console]::Error.WriteLine('Open SwarmStudio once to finish runtime setup, then retry hermes-studio web.')",
+     '      exit 127',
+     '    }',
+     '    if (!(Test-Path -LiteralPath $WebUiScript -PathType Leaf)) {',
+@@ -203,7 +203,7 @@
+     '    exit $LASTEXITCODE',
+     '  }',
+     '  default {',
+-    "    [Console]::Error.WriteLine('Unknown Hermes Studio command: ' + $Command)",
++    "    [Console]::Error.WriteLine('Unknown SwarmStudio command: ' + $Command)",
+     "    [Console]::Error.WriteLine('Run hermes-studio --help for usage.')",
+     '    exit 2',
+     '  }',
+@@ -235,14 +235,14 @@
+     'Usage: hermes-studio [command] [options]',
+     '',
+     'Commands:',
+-    '  (no command)       Open Hermes Studio desktop app',
++    '  (no command)       Open SwarmStudio desktop app',
+     '  cli [args...]      Run bundled Hermes Agent CLI',
+     '  web [args...]      Run bundled hermes-web-ui command',
+     '  help, -h, --help   Show this help message',
+     'EOF',
+     '}',
+     'if [ ! -x "$APP" ]; then',
+-    '  echo "Hermes Studio executable not found at $APP" >&2',
++    '  echo "SwarmStudio executable not found at $APP" >&2',
+     '  exit 127',
+     'fi',
+     'unset ELECTRON_RUN_AS_NODE',
+@@ -257,8 +257,8 @@
+     '  web)',
+     '    shift',
+     '    if [ ! -x "$NODE" ]; then',
+-    '      echo "Hermes Studio Node runtime not found at $NODE" >&2',
+-    '      echo "Open Hermes Studio once to finish runtime setup, then retry hermes-studio web." >&2',
++    '      echo "SwarmStudio Node runtime not found at $NODE" >&2',
++    '      echo "Open SwarmStudio once to finish runtime setup, then retry hermes-studio web." >&2',
+     '      exit 127',
+     '    fi',
+     '    if [ ! -f "$WEBUI_SCRIPT" ]; then',
+@@ -272,7 +272,7 @@
+     '    exit 0',
+     '    ;;',
+     '  *)',
+-    '    echo "Unknown Hermes Studio command: $1" >&2',
++    '    echo "Unknown SwarmStudio command: $1" >&2',
+     '    echo "Run hermes-studio --help for usage." >&2',
+     '    exit 2',
+     '    ;;',
+@@ -297,12 +297,12 @@
+     `NODE=${shellQuote(nodePath)}`,
+     `SCRIPT=${shellQuote(scriptPath)}`,
+     'if [ ! -x "$NODE" ]; then',
+-    '  echo "Hermes Studio Node runtime not found at $NODE" >&2',
+-    '  echo "Open Hermes Studio once to finish runtime setup, then retry hermes-studio-mcp." >&2',
++    '  echo "SwarmStudio Node runtime not found at $NODE" >&2',
++    '  echo "Open SwarmStudio once to finish runtime setup, then retry hermes-studio-mcp." >&2',
+     '  exit 127',
+     'fi',
+     'if [ ! -f "$SCRIPT" ]; then',
+-    '  echo "Hermes Studio MCP script not found at $SCRIPT" >&2',
++    '  echo "SwarmStudio MCP script not found at $SCRIPT" >&2',
+     '  exit 127',
+     'fi',
+     'if [ -z "${HERMES_WEB_UI_URL:-}" ]; then',
+@@ -333,12 +333,12 @@
+     `$Script = ${powershellUtf8Value(scriptPath)}`,
+     `$DefaultWebUiUrl = ${powershellUtf8Value(webUiUrl)}`,
+     'if (!(Test-Path -LiteralPath $Node -PathType Leaf)) {',
+-    "  [Console]::Error.WriteLine('Hermes Studio Node runtime not found at ' + $Node)",
+-    "  [Console]::Error.WriteLine('Open Hermes Studio once to finish runtime setup, then retry hermes-studio-mcp.')",
++    "  [Console]::Error.WriteLine('SwarmStudio Node runtime not found at ' + $Node)",
++    "  [Console]::Error.WriteLine('Open SwarmStudio once to finish runtime setup, then retry hermes-studio-mcp.')",
+     '  exit 127',
+     '}',
+     'if (!(Test-Path -LiteralPath $Script -PathType Leaf)) {',
+-    "  [Console]::Error.WriteLine('Hermes Studio MCP script not found at ' + $Script)",
++    "  [Console]::Error.WriteLine('SwarmStudio MCP script not found at ' + $Script)",
+     '  exit 127',
+     '}',
+     "if ([string]::IsNullOrWhiteSpace($env:HERMES_WEB_UI_URL)) {",
+@@ -550,7 +550,7 @@
+     shimPath,
+     status,
+     pathUpdated,
+-    reason: status === 'skipped' ? 'existing hermes-studio shim is not managed by Hermes Studio' : undefined,
++    reason: status === 'skipped' ? 'existing hermes-studio shim is not managed by SwarmStudio' : undefined,
+   }
+ }
+ 
+@@ -583,6 +583,6 @@
+     shimPath,
+     status,
+     pathUpdated,
+-    reason: status === 'skipped' ? 'existing hermes-studio-mcp shim is not managed by Hermes Studio' : undefined,
++    reason: status === 'skipped' ? 'existing hermes-studio-mcp shim is not managed by SwarmStudio' : undefined,
+   }
+ }
