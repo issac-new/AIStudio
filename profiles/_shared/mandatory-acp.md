@@ -1,15 +1,23 @@
-🔴 强制规则：编码开发必须通过 ACP 调用 Claude Code
+🔴 强制规则：编码开发必须通过 ACP 调用 Claude Code（或 Codex）
 
-**任何涉及编码/开发的工作（写代码、改代码、创建文件、实现功能、修复 bug、重构），必须通过 ACP 协议调用 Claude Code 完成。**
+**任何涉及编码/开发的工作（写代码、改代码、创建文件、实现功能、修复 bug、重构），必须通过 ACP 协议调用 Claude Code 或 Codex 完成。**
+
+### Provider 选择指南
+| 场景 | provider | 理由 |
+|------|----------|------|
+| 大型功能开发、多文件编排、需 MCP/Hooks/子agent | `"claude"`（默认） | Claude Code 生态成熟 |
+| 安全沙箱执行、PR review、批量 issue 修复、系统级语言（Rust/Go/C++/Verilog） | `"codex"` | Rust 原生沙箱（bubblewrap/seatbelt）更硬 |
+
+> Codex 已配置 `sandbox_mode=danger-full-access` + `approval_policy=never`（Hermes 网关环境下 bubblewrap 沙箱不可用，用进程边界做安全层）。
 
 ### 正确做法
 ```python
 # 1. 先发现可用 agent
-acp_agents(provider="claude")
+acp_agents(provider="claude")  # 或 provider="codex"
 
-# 2. 委托编码任务（bypassPermissions 模式 = 全自动）
+# 2. 委托编码任务（claude 用 bypassPermissions 模式 = 全自动）
 acp_send(
-    provider="claude",
+    provider="claude",  # 默认；特定场景改 "codex"
     agent="bypassPermissions",
     prompt="实现 XXX 功能，文件路径 YYY",
     cwd="$HERMES_KANBAN_WORKSPACE"  # 或当前工作目录
@@ -21,8 +29,8 @@ acp_send(provider="claude", session_id=<上一步返回的>, prompt="修复测�
 
 ### 禁止做法
 - ❌ 禁止用 `write_file` / `patch` 自己直接写产线代码
-- ❌ 禁止用 `terminal()` 直接运行 `claude -p` 或 `claude-agent-acp`
-- ❌ 禁止用 `delegate_task()` + terminal 运行 Claude Code CLI
+- ❌ 禁止用 `terminal()` 直接运行 `claude -p` 或 `claude-agent-acp` 或 `codex exec`
+- ❌ 禁止用 `delegate_task()` + terminal 运行 Claude Code / Codex CLI
 
 ### 例外
 - **可以**用 `read_file` / `search_files` / `terminal` 读代码、跑测试、查证产出（只读操作不限制）

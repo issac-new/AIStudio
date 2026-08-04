@@ -1,0 +1,410 @@
+diff --git a/ui-tui/src/components/appChrome.tsx b/ui-tui/src/components/appChrome.tsx
+index 1ff100f6d..29860c576 100644
+--- a/ui-tui/src/components/appChrome.tsx
++++ b/ui-tui/src/components/appChrome.tsx
+@@ -469,6 +469,7 @@ export function StatusRule({
+   cwdLabel,
+   cols,
+   busy,
++  ccExtra,
+   status,
+   statusColor,
+   model,
+@@ -602,6 +603,22 @@ export function StatusRule({
+   // so it consumes tail budget LAST and drops first on a narrow terminal.
+   const showDevCredits = !!devCreditsText && fits(SEP + stringWidth(devCreditsText))
+ 
++  // cc-switch usage + last-request line — lowest-priority tail segment.
++  // Drops first on narrow terminals (after dev-credits). Replaces the old
++  // standalone dock-top widget row by merging the same data in-flow.
++  // Unlike other segments, this one is allowed to truncate (not fully drop)
++  // when the terminal is too narrow — partial cc-switch info is more useful
++  // than none, because the user loses the only reliable view of which
++  // upstream provider is actually receiving traffic.
++  const ccExtraText = ccExtra?.text ?? ''
++  const ccExtraWidth = ccExtraText ? stringWidth(ccExtraText) : 0
++  const ccExtraFitsFully = !!ccExtra && fits(SEP + ccExtraWidth)
++  const ccExtraTruncated = !ccExtraFitsFully && !!ccExtra && tailBudget > SEP + 8
++
++  if (ccExtraTruncated) {
++    tailBudget = 0 // consume all remaining budget
++  }
++
+   // Focus-view badge. Pinned (not tail-budgeted) on purpose: the whole point of
+   // the indicator is that the user can never be in reduced-output mode without
+   // seeing it, so it must not drop off a narrow terminal.
+@@ -738,6 +755,23 @@ export function StatusRule({
+             {devCreditsText}
+           </Text>
+         ) : null}
++        {ccExtraFitsFully || ccExtraTruncated ? (
++          <Text wrap="truncate-end">
++            {' │ '}
++            {ccExtra?.segs.map((seg, i) => {
++              const color = seg.k === 'prov' ? t.color.label
++                : seg.k === 'usageBad' || seg.k === 'latencyBad' || seg.k === 'statusErr' ? t.color.error
++                : seg.k === 'usageWarn' || seg.k === 'latencyWarn' ? t.color.warn
++                : seg.k === 'usageOk' || seg.k === 'latencyOk' || seg.k === 'statusOk' ? t.color.statusGood
++                : seg.k === 'tokens' ? t.color.accent
++                : seg.k === 'ip' ? t.color.muted
++                : seg.k === 'sep' ? t.color.muted
++                : t.color.text
++
++              return <Text color={color} key={i}>{seg.t}</Text>
++            })}
++          </Text>
++        ) : null}
+         {/* SpawnHud isn't part of the tail budget (its width is dynamic), so it
+             renders last — any overflow truncates the HUD itself rather than the
+             budgeted segments before it. It self-hides when no delegation runs. */}
+@@ -857,6 +891,9 @@ interface StatusRuleProps {
+   // Focus view (/focus) badge — display-only reduced-output indicator.
+   focusView?: boolean
+   bgCount: number
++  // Compact cc-switch usage+last-request line, merged as the lowest-priority
++  // tail segment of the status bar (replaces the old dock-top widget row).
++  ccExtra?: { text: string; segs: Array<{ t: string; k?: string }> }
+   lastTurnEndedAt?: null | number
+   liveSessionCount: number
+   busy: boolean
+diff --git a/ui-tui/src/components/appLayout.tsx b/ui-tui/src/components/appLayout.tsx
+index 660fcb881..2b6599b0d 100644
+--- a/ui-tui/src/components/appLayout.tsx
++++ b/ui-tui/src/components/appLayout.tsx
+@@ -3,7 +3,7 @@ import '../sdk/apps/index.js'
+ 
+ import { AlternateScreen, Box, NoSelect, ScrollBox, Text } from '@hermes/ink'
+ import { useStore } from '@nanostores/react'
+-import { Fragment, memo, useEffect, useMemo, useRef } from 'react'
++import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
+ 
+ import { useGateway } from '../app/gatewayContext.js'
+ import type { AppLayoutProps } from '../app/interfaces.js'
+@@ -22,12 +22,297 @@ import {
+ } from '../lib/inputMetrics.js'
+ import { PerfPane } from '../lib/perfPane.js'
+ import { composerPromptText } from '../lib/prompt.js'
++import { fmtK } from '../lib/text.js'
+ import { ActiveWidgetSlot, AmbientDock, AmbientRail, useAmbientRailWidth } from '../sdk/host.js'
+ 
+ import { AgentsOverlay } from './agentsOverlay.js'
+ import { GoodVibesHeart, StatusRule, StickyPromptTracker, TranscriptScrollbar } from './appChrome.js'
+ import { FloatingOverlays, PromptZone } from './appOverlays.js'
+ import { Banner, Panel, SessionPanel } from './branding.js'
++
++// Poll the local cc switch proxy (127.0.0.1:15721) for the ACTUAL upstream
++// provider+model. The proxy ignores the requested model name and routes to
++// whichever provider is active in its failover queue, so the declared model
++// (e.g. "glm-5.2") is often wrong. Returns "provider/model" or '' on failure.
++function useCcSwitchModel(): string {
++  const [model, setModel] = useState('')
++
++  useEffect(() => {
++    let cancelled = false
++
++    async function poll() {
++      try {
++        const res = await fetch('http://127.0.0.1:15721/status', {
++          signal: AbortSignal.timeout(2500)
++        })
++
++        if (!res.ok) {return}
++        const j = await res.json() as { current_provider?: string }
++        const provider = j.current_provider || ''
++
++        if (!provider || cancelled) {return}
++        // Query the cc-switch SQLite DB for the actual model on this provider.
++        const { execSync } = await import('child_process')
++        const dbPath = (process.env.HOME || '') + '/.cc-switch/cc-switch.db'
++        const sql = `SELECT json_extract(p.settings_config, '$.env.ANTHROPIC_MODEL') as model FROM providers p WHERE p.app_type='claude' AND p.is_current=1 LIMIT 1;`
++        const out = execSync(`sqlite3 -json "${dbPath}" "${sql.replace(/\n/g, ' ')}"`, { timeout: 2000 }).toString().trim()
++        const rows = out ? JSON.parse(out) : []
++        const actualModel = rows.length ? rows[0].model : ''
++
++        if (!cancelled) {setModel(`${provider}/${actualModel}`)}
++      } catch {
++        // cc switch not running — leave model empty so ui.info.model is used
++      }
++    }
++
++    poll()
++    const id = setInterval(poll, 5000)
++
++    return () => { cancelled = true; clearInterval(id) }
++  }, [])
++
++  return model
++}
++
++// Cached public IP + weather string (refreshed every 10 min).
++type IpWeatherCache = { text: string; ts: number }
++
++async function fetchIpWeather(): Promise<string> {
++  const now = Date.now()
++
++  if (fetchIpWeather.cache && now - fetchIpWeather.cache.ts < 600000) {return fetchIpWeather.cache.text}
++
++  try {
++    const ipRes = await fetch('https://myip.ipip.net', { signal: AbortSignal.timeout(3000) })
++    const ipText = (await ipRes.text()).trim()
++    const ipAddr = ipText.match(/IP：(\S+)/)?.[1] || '-'
++    let weather = ''
++
++    try {
++      const wRes = await fetch('https://wttr.in/?format=%c+%t', { signal: AbortSignal.timeout(3000) })
++      weather = (await wRes.text()).trim()
++    } catch {
++      // weather optional
++    }
++
++    fetchIpWeather.cache = { text: [ipAddr, weather].filter(Boolean).join(' '), ts: now }
++
++    return fetchIpWeather.cache.text
++  } catch {
++    return '-'
++  }
++}
++
++fetchIpWeather.cache = null as (IpWeatherCache | null)
++
++// Volcengine (huoshan) coding-plan usage via V4 signature.
++async function fetchVolcengineUsage(ak: string, sk: string): Promise<string> {
++  const { createHmac, createHash } = await import('crypto')
++  const host = 'open.volcengineapi.com', service = 'ark', region = 'cn-beijing'
++  const ct = 'application/json; charset=utf-8', sh = 'host;x-date;x-content-sha256;content-type'
++  const now = new Date()
++  const xDate = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
++  const shortDate = xDate.slice(0, 8)
++  const hmac = (k: Buffer | string, d: string) => createHmac('sha256', k).update(d).digest()
++  const sha = (d: Buffer | string) => createHash('sha256').update(d).digest('hex')
++  const pairs = [['Action', 'GetCodingPlanUsage'], ['Region', region], ['Version', '2024-01-01']].sort((a, b) => a[0].localeCompare(b[0]))
++  const cq = pairs.map(([k, v]) => `${k}=${v}`).join('&')
++  const body = Buffer.alloc(0)
++  const xcs = sha(body.toString())
++  const ch = `host:${host}\nx-date:${xDate}\nx-content-sha256:${xcs}\ncontent-type:${ct}\n`
++  const cr = `POST\n/\n${cq}\n${ch}\n${sh}\n${xcs}`
++  const cs = `${shortDate}/${region}/${service}/request`
++  const sts = `HMAC-SHA256\n${xDate}\n${cs}\n${sha(Buffer.from(cr))}`
++  const kDate = hmac(Buffer.from(sk, 'utf-8'), shortDate)
++  const kSig = hmac(hmac(hmac(kDate, region), service), 'request')
++  const sig = hmac(kSig, sts).toString('hex')
++  const auth = `HMAC-SHA256 Credential=${ak}/${cs}, SignedHeaders=${sh}, Signature=${sig}`
++
++  const res = await fetch(`https://${host}/?${cq}`, {
++    method: 'POST',
++    headers: { Host: host, 'X-Date': xDate, 'X-Content-Sha256': xcs, 'Content-Type': ct, Authorization: auth },
++    body, signal: AbortSignal.timeout(5000),
++  })
++
++  if (!res.ok) {throw new Error(`HTTP ${res.status}`)}
++  const j = await res.json() as { Result?: { QuotaUsage?: Array<{ Level?: string; Percent?: number }> } }
++  const tiers: Record<string, string> = {}
++
++  for (const q of (j.Result?.QuotaUsage || [])) {tiers[q.Level || ''] = q.Percent?.toFixed(0) || '?'}
++
++  return `5h ${tiers.session || '-'}% │ 7d ${tiers.weekly || '-'}% │ mo ${tiers.monthly || '-'}%`
++}
++
++// A single colored segment of the cc-extra status line.
++// `t` is the text shown; `k` is a semantic key the renderer maps to a theme
++// color (prov | usage | usagePct | latency | tokens | status | statusOk |
++// statusErr | ip | sep). Numbers get urgency-based colors: high usage → warn,
++// slow latency → warn, non-200 status → error, 200 → good.
++type CcSegment = { t: string; k?: string }
++
++// Structured cc-switch status: `text` for width math, `segs` for colored render.
++type CcExtra = { text: string; segs: CcSegment[] }
++
++// Map a usage percentage to a semantic urgency key.
++function usageKey(pct: number | null): string {
++  if (pct == null) {return 'usage'}
++
++  if (pct >= 80) {return 'usageBad'}
++
++  if (pct >= 50) {return 'usageWarn'}
++
++  return 'usageOk'
++}
++
++// Map a latency in ms to a semantic urgency key.
++function latencyKey(ms: number | null): string {
++  if (ms == null) {return 'latency'}
++
++  if (ms >= 30000) {return 'latencyBad'}
++
++  if (ms >= 10000) {return 'latencyWarn'}
++
++  return 'latencyOk'
++}
++
++// Compact usage + last-request line for the active cc switch provider, merged
++// into the status bar's tail (lowest-priority segment, drops first on narrow
++// terminals). Replaces the old standalone dock-top widget row.
++function useCcSwitchExtra(): CcExtra {
++  const [extra, setExtra] = useState<CcExtra>({ text: '', segs: [] })
++
++  useEffect(() => {
++    let cancelled = false
++
++    async function tick() {
++      try {
++        const { execSync } = await import('child_process')
++        const dbPath = (process.env.HOME || '') + '/.cc-switch/cc-switch.db'
++        const sql = (s: string) => execSync(`sqlite3 -json "${dbPath}" "${s.replace(/\n/g, ' ')}"`, { timeout: 2000 }).toString().trim()
++        const rows = JSON.parse(sql(`SELECT json_extract(p.settings_config,'$.env.ANTHROPIC_AUTH_TOKEN') as token, p.name, p.id, p.meta FROM providers p WHERE p.app_type='claude' AND p.is_current=1 LIMIT 1;`) || '[]')
++
++        if (!rows.length) {return}
++        const r = rows[0]
++        const name = r.name || ''
++        const token = r.token || ''
++        let meta: any = {}
++
++        try {
++          meta = JSON.parse(r.meta || '{}')
++        } catch {
++          meta = {}
++        }
++
++        // public IP + weather (cached 10 min via fetchIpWeather)
++        const ipw = await fetchIpWeather()
++
++        // usage by provider type — collects raw % for color mapping
++        let usageText = ''
++        let usagePct: number | null = null
++
++        if (name === 'kimi-mid' || name === 'kimi-max') {
++          const u = await (await fetch('https://api.kimi.com/coding/v1/usages', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { usage?: { limit?: string; remaining?: string }; limits?: Array<{ detail?: { limit?: number; used?: number } }> }
++          const d7 = ((u.limits || [])[0] || {}).detail || {}
++          const d7Pct = u.usage?.limit !== '?' && u.usage?.remaining !== '?' ? Number(((1 - Number(u.usage?.remaining) / Number(u.usage?.limit)) * 100).toFixed(0)) : null
++          const h5Pct = d7.limit && d7.used ? Number((Number(d7.used) / Number(d7.limit) * 100).toFixed(0)) : null
++          usagePct = d7Pct ?? h5Pct
++          usageText = `5h ${h5Pct ?? '?'}% | 7d ${d7Pct ?? '?'}%`
++        } else if (name === 'bigmodel' || name === 'BigModel-coding-plan') {
++          const u = await (await fetch('https://open.bigmodel.cn/api/monitor/usage/quota/limit', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { data?: { limits?: Array<{ type?: string; unit?: number; percentage?: number }> } }
++          let h5 = '?', d7 = '?'
++
++          for (const l of (u.data?.limits || [])) {
++            if (l.type === 'TOKENS_LIMIT') {
++              if (l.unit === 3) {
++                h5 = `${l.percentage}%`
++              }
++
++              if (l.unit === 6) {
++                d7 = `${l.percentage}%`
++              }
++            }
++          }
++
++          usageText = `5h ${h5} | 7d ${d7}`
++        } else if (name === 'deepseek') {
++          const u = await (await fetch('https://api.deepseek.com/user/balance', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { balance_infos?: Array<{ total_balance?: string }> }
++          const info = (u.balance_infos || [])[0] || {}
++          usageText = `${info.total_balance || '-'} CNY`
++        } else if (name === 'huoshan') {
++          const us = meta?.usage_script
++
++          if (us?.accessKeyId && us?.secretAccessKey) {
++            usageText = await fetchVolcengineUsage(us.accessKeyId, us.secretAccessKey)
++          } else {
++            const reqs = JSON.parse(sql(`SELECT COUNT(*) as n FROM proxy_request_logs WHERE provider_id='${r.id}' AND created_at >= strftime('%s','now','-1 hour');`) || '[]')
++            const n = reqs.length ? Number(reqs[0].n) : 0
++            usagePct = Number((n / 500 * 100).toFixed(0))
++            usageText = `${usagePct}%`
++          }
++        } else {
++          // rate-limit proxy for weekly-z.ai / opus5 etc.
++          const reqs = JSON.parse(sql(`SELECT COUNT(*) as n FROM proxy_request_logs WHERE provider_id='${r.id}' AND created_at >= strftime('%s','now','-1 hour');`) || '[]')
++          const n = reqs.length ? Number(reqs[0].n) : 0
++          usagePct = Number((n / 500 * 100).toFixed(0))
++          usageText = `${usagePct}%`
++        }
++
++        // last request — tokens, latency, status, time (compact: ms→s, drop model)
++        const lr = JSON.parse(sql(`SELECT latency_ms, first_token_ms, input_tokens, output_tokens, status_code, error_message, datetime(created_at,'unixepoch','localtime') as ts FROM proxy_request_logs ORDER BY created_at DESC LIMIT 1;`) || '[]')
++        const lr0 = lr.length ? lr[0] : null
++        const latMs = lr0 ? lr0.latency_ms : null
++        const fmtMs = (ms: number | null) => ms == null ? '' : ms >= 1000 ? `${(ms / 1000).toFixed(0)}s` : `${ms}ms`
++        const lastL = fmtMs(latMs)
++        const lastFT = lr0 && lr0.first_token_ms != null ? `ttft${fmtMs(lr0.first_token_ms)}` : ''
++        const lastTok = lr0 ? `${fmtK(lr0.input_tokens || 0)}\u2192${fmtK(lr0.output_tokens || 0)}` : ''
++        const isOk = lr0 ? lr0.status_code === 200 : false
++        const lastSt = lr0 ? (isOk ? '\u2713' : `${lr0.status_code}\u2717`) : '-'
++        const lastErr = lr0 && lr0.error_message ? lr0.error_message.slice(0, 12) : ''
++        const lastT = lr0 ? (lr0.ts?.split(' ')[1]?.slice(0, 5) || '-') : '-'
++
++        // provider from the /status proxy (model+effort already shown in the
++        // pinned modelText segment by useCcSwitchModel, so no duplication here)
++        const provRes = await fetch('http://127.0.0.1:15721/status', { signal: AbortSignal.timeout(2500) }).then(r => r.ok ? r.json() as { current_provider?: string } : null).catch(() => null)
++        const prov = provRes?.current_provider || '-'
++
++        // Build compact colored segments: prov │ usage │ tok lat ttft status time │ ip
++        const latText = `${lastL}${lastFT ? ' ' + lastFT : ''}`.trim()
++        const stText = `${lastSt}${lastErr ? ' ' + lastErr : ''}`.trim()
++        const segs: CcSegment[] = [
++          { t: prov, k: 'prov' },
++          { t: ' \u2502 ', k: 'sep' },
++          { t: usageText, k: usageKey(usagePct) },
++          { t: ' \u2502 ', k: 'sep' },
++          { t: lastTok, k: 'tokens' },
++          { t: ' ', k: 'sep' },
++          { t: latText, k: latencyKey(latMs) },
++          { t: ' ', k: 'sep' },
++          { t: stText, k: isOk ? 'statusOk' : 'statusErr' },
++          { t: ' ', k: 'sep' },
++          { t: lastT, k: 'muted' },
++          { t: ' \u2502 ', k: 'sep' },
++          { t: ipw, k: 'ip' },
++        ]
++
++        const text = segs.map(s => s.t).join('')
++
++        if (!cancelled) {
++          setExtra({ text, segs })
++        }
++      } catch {
++        // silent — leave previous line
++      }
++    }
++
++    tick()
++    const id = setInterval(tick, 5000)
++
++    return () => { cancelled = true; clearInterval(id) }
++  }, [])
++
++  return extra
++}
++
+ import { FpsOverlay } from './fpsOverlay.js'
+ import { HelpHint } from './helpHint.js'
+ import { Journey } from './journey.js'
+@@ -480,6 +765,13 @@ const StatusRulePane = memo(function StatusRulePane({
+ }: Pick<AppLayoutProps, 'composer' | 'status'> & { at: 'bottom' | 'top' }) {
+   const ui = useStore($uiState)
+ 
++  // Fetch the ACTUAL upstream provider+model from the local cc switch proxy.
++  // The proxy ignores the requested model name and routes to whichever provider
++  // is active in its failover queue, so ui.info.model (e.g. "glm-5.2") is often
++  // wrong. This polls /status every 5s and overrides the status bar display.
++  const ccModel = useCcSwitchModel()
++  const ccExtra = useCcSwitchExtra()
++
+   if (ui.statusBar !== at) {
+     return null
+   }
+@@ -490,13 +782,14 @@ const StatusRulePane = memo(function StatusRulePane({
+         battery={ui.battery ? ui.batteryStatus : null}
+         bgCount={ui.bgTasks.size}
+         busy={ui.busy}
++        ccExtra={ccExtra}
+         cols={composer.cols}
+         cwdLabel={status.cwdLabel}
+         focusView={ui.focusView}
+         indicatorStyle={ui.indicatorStyle}
+         lastTurnEndedAt={status.lastTurnEndedAt}
+         liveSessionCount={ui.liveSessionCount}
+-        model={ui.info?.model ?? ''}
++        model={ccModel || (ui.info?.model ?? '')}
+         modelFast={ui.info?.fast || ui.info?.service_tier === 'priority'}
+         modelReasoningEffort={ui.info?.reasoning_effort}
+         notice={ui.notice}

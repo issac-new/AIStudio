@@ -148,7 +148,7 @@ PATTERNS = {
     "sk- API keys":         r'sk-[a-zA-Z0-9]{20,}',
     "gho_ GitHub tokens":   r'gho_[a-zA-Z0-9]{30,}',
     "syt_ Matrix tokens":   r'syt_[a-zA-Z0-9_]{20,}',
-    "TestPass123 password":  r'TestPass\d+',
+    "password pattern":  r'(Test|Sys)Pass\d+',
     "real email":           r'HK_MAIL@qq\.com',
     "username path":        r'/Users/<username>',
     "username in text":     r'<username>',
