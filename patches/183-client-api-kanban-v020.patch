@@ -1,0 +1,121 @@
+diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+index ace5968..68fe80e 100644
+--- a/packages/client/src/api/hermes/kanban.ts
++++ b/packages/client/src/api/hermes/kanban.ts
+@@ -33,6 +33,10 @@ export interface KanbanTask {
+   workflow_template_id?: string | null
+   current_step_key?: string | null
+   model_override?: string | null
++  // HERMES_CUSTOM[v020] BEGIN: per-task model provider + reasoning depth
++  provider_override?: string | null
++  reasoning_effort?: string | null
++  // HERMES_CUSTOM[v020] END
+   max_retries?: number | null
+   goal_max_turns?: number | null
+   session_id?: string | null
+@@ -141,6 +145,10 @@ export interface KanbanBoard {
+   archived: boolean
+   db_path?: string
+   is_current?: boolean
++  // HERMES_CUSTOM[v020] BEGIN: board project scope
++  project_id?: string | null
++  default_workdir?: string | null
++  // HERMES_CUSTOM[v020] END
+   counts: Record<string, number>
+   total: number
+ }
+@@ -152,6 +160,10 @@ export interface KanbanBoardCreateRequest {
+   icon?: string
+   color?: string
+   switchCurrent?: boolean
++  // HERMES_CUSTOM[v020] BEGIN: board project scope
++  project?: string
++  defaultWorkdir?: string
++  // HERMES_CUSTOM[v020] END
+ }
+ 
+ export interface KanbanCapabilityStatus {
+@@ -235,6 +247,11 @@ export interface KanbanCreateRequest {
+   maxRetries?: number
+   goalMode?: boolean
+   goalMaxTurns?: number
++  // HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins
++  model?: string
++  provider?: string
++  reasoning?: string
++  // HERMES_CUSTOM[v020] END
+ }
+ 
+ export interface KanbanBoardOptions {
+@@ -551,6 +568,13 @@ export interface KanbanTaskPatch {
+   result?: string
+   block_reason?: string
+   summary?: string
++  // HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins
++  model_override?: string | null
++  provider_override?: string | null
++  clear_model_override?: boolean
++  reasoning_effort?: string | null
++  clear_reasoning_effort?: boolean
++  // HERMES_CUSTOM[v020] END
+ }
+ 
+ export async function patchTask(taskId: string, patch: KanbanTaskPatch, opts?: KanbanBoardOptions): Promise<KanbanTask> {
+@@ -818,3 +842,57 @@ export async function uploadAttachmentFromUrl(
+   )
+   return res.attachment
+ }
++
++// ─── HERMES_CUSTOM[v020] BEGIN: estimate / projects / board project ────────
++
++export interface KanbanEstimateResult {
++  ok: boolean
++  est_tokens?: number
++  complexity?: 'S' | 'M' | 'L' | null
++  rationale?: string | null
++  model?: string | null
++  reason?: string
++}
++
++export interface KanbanProject {
++  id: string
++  slug: string
++  name: string
++  description?: string | null
++  icon?: string | null
++  color?: string | null
++  board_slug?: string | null
++  primary_path?: string | null
++  archived: boolean
++}
++
++/** Rough token + complexity estimate for an existing task (auxiliary model). */
++export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
++  return request<KanbanEstimateResult>(
++    appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/estimate`, boardParams(opts?.board)),
++    { method: 'POST' },
++  )
++}
++
++/** Estimate from raw title/body — used by the create dialog before a task exists. */
++export async function estimateText(title: string, body?: string): Promise<KanbanEstimateResult> {
++  return request<KanbanEstimateResult>('/api/hermes/kanban/estimate', {
++    method: 'POST',
++    body: JSON.stringify({ title, body }),
++  })
++}
++
++/** List first-class Hermes projects for board scoping. */
++export async function listProjects(): Promise<KanbanProject[]> {
++  const res = await request<{ projects: KanbanProject[] }>('/api/hermes/kanban/projects')
++  return res.projects ?? []
++}
++
++/** Patch a board — currently only the project scope is mutable (null clears). */
++export async function patchBoard(slug: string, patch: { project_id?: string | null }): Promise<{ ok: boolean }> {
++  return request<{ ok: boolean }>(`/api/hermes/kanban/boards/${encodeURIComponent(slug)}`, {
++    method: 'PATCH',
++    body: JSON.stringify(patch),
++  })
++}
++// ─── HERMES_CUSTOM[v020] END ──────────────────────────────────
