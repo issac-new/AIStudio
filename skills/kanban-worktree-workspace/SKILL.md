@@ -172,6 +172,68 @@ was `null` while hack/product/ops boards were correctly set. The task
 `t_ccad1e56` burned both retry attempts on spawn_failed before the
 root cause was identified.
 
+## Root-Cause Fix: API Default (Source Patch)
+
+The board-level fixes above only help when an agent explicitly sets
+`workspace_kind="worktree"`. But the **API default** in the Hermes source
+is `workspace_kind="scratch"`:
+
+- `tools/kanban_tools.py:1247` — `if workspace_kind is None: workspace_kind = "scratch"`
+- `hermes_cli/kanban_db.py:2888` — `create_task(..., workspace_kind: str = "scratch")`
+- `hermes_cli/kanban_swarm.py:89` — `create_swarm(..., workspace_kind: str = "scratch")`
+- `hermes_cli/kanban_db.py:6164` — child inheritance fallback `or "scratch"`
+- `hermes_cli/kanban_db.py:6633` — resolve_workspace fallback `or "scratch"`
+
+Any agent that omits `workspace_kind` (and the rules docs as written)
+silently gets scratch — output deleted on completion. To fix this at the
+root, patch all five defaults from `"scratch"` to `"worktree"`. The patch
+is protected against `hermes update` by
+`~/.hermes/patches/apply-kanban-worktree-default.sh` (idempotent,
+signature-checked) wired into `post-update-hook.sh` §3.
+
+**Do NOT patch line ~5533** (`(workspace_kind or "scratch") != "scratch"`)
+— that's the scratch-tip emitter and correctly defaults to scratch.
+
+## Pitfall: SwarmStudio desktop gateway uses BUNDLED python (not venv)
+
+The SwarmStudio desktop app spawns its gateway process with a **frozen,
+bundled** Python runtime — NOT the `~/.hermes/hermes-agent/venv/` python.
+Any source patch to `~/.hermes/hermes-agent/` is invisible to the
+SwarmStudio gateway process.
+
+```
+~/.hermes-web-ui/desktop-runtime/hermes/<version>/mac-arm64/
+  python/bin/python3                                  ← bundled interpreter
+  python/lib/python3.12/site-packages/
+    hermes_cli/kanban_db.py                           ← FROZEN COPY (separate)
+    hermes_cli/kanban_swarm.py
+    tools/kanban_tools.py
+```
+
+The venv-managed gateway (e.g. a launchd-spawned profile gateway) DOES
+read from `~/.hermes/hermes-agent/`. But the SwarmStudio-managed unified
+gateway @ port 8650 imports from the bundled site-packages. **You must
+patch BOTH copies.**
+
+Verify which python each running gateway uses:
+
+```bash
+# Check the gateway process command line
+ps aux | grep 'gateway run' | grep -v grep
+#   venv gateway:     .../hermes-agent/venv/bin/python -m hermes_cli.main ...
+#   SwarmStudio:      .../desktop-runtime/.../python/bin/python3 -m hermes_cli.main ...
+
+# Confirm the import source for a given interpreter
+<path-to-python> -c "from hermes_cli.kanban_db import create_task; import inspect; \
+  print(inspect.signature(create_task).parameters['workspace_kind'].default)"
+```
+
+The `apply-kanban-worktree-default.sh` patch script covers BOTH paths
+(venv + desktop-runtime) — section 4 iterates every version under
+`~/.hermes-web-ui/desktop-runtime/hermes/*/` and patches the bundled
+site-packages. The `post-update-hook.sh` §3 signature check probes both
+locations before deciding to re-apply.
+
 ## When to Use dir Instead
 
 `workspace_kind="dir"` remains valid for:
