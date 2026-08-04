@@ -1,0 +1,45 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index d43ee30..1190d5e 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1095,6 +1095,11 @@ export default {
+       archived: 'Board archived',
+       archiveConfirm: 'Archive the current board?',
+       defaultArchiveUnavailable: 'The default board cannot be archived',
++      // HERMES_CUSTOM[v020] BEGIN
++      project: 'Project',
++      noProject: 'No project',
++      projectHint: "default_workdir will mirror the project's primary folder",
++      // HERMES_CUSTOM[v020] END
+     },
+     columns: {
+       triage: 'Triage',
+@@ -1137,6 +1142,14 @@ export default {
+       maxRetriesPlaceholder: 'Number of retries',
+       goalMaxTurns: 'Goal max turns',
+       goalMaxTurnsPlaceholder: 'Maximum turns',
++      // HERMES_CUSTOM[v020] BEGIN
++      model: 'Model',
++      modelPlaceholder: 'Profile default',
++      provider: 'Provider',
++      providerPlaceholder: 'e.g. openai',
++      reasoning: 'Thinking depth',
++      profileDefault: 'Profile default',
++      // HERMES_CUSTOM[v020] END
+     },
+     card: {
+       assigneeTooltip: 'Assignee',
+@@ -1194,6 +1207,13 @@ export default {
+       loadLog: 'Load Log',
+       loadDiagnostics: 'Load Diagnostics',
+     },
++    // HERMES_CUSTOM[v020] BEGIN
++    estimate: 'Estimate',
++    reestimate: 'Re-estimate',
++    estimateDisclaimer: 'Rough guess via the auxiliary model',
++    estimateUnavailable: 'unavailable',
++    liveCommentHint: 'Notes are delivered to the running worker within seconds — no restart needed.',
++    // HERMES_CUSTOM[v020] END
+     message: {
+       taskCreated: 'Task created',
+       taskCompleted: 'Task completed',
