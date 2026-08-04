@@ -193,3 +193,6 @@
 # hermes-agent v0.20.0 kanban 迁移：CLI 动词补全（reasoning/estimate/board project/projects json）
 178-agent-kanban-cli-verbs.patch
 179-agent-projects-list-json.patch
+
+# hermes-agent v0.20.0 kanban 迁移：TS service 接入（model/reasoning/estimate/projects/board project）
+180-server-service-kanban-v020.patch
