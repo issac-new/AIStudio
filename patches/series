@@ -208,7 +208,3 @@
 # hermes-agent v0.20.0 kanban 迁移：i18n（en/zh model/reasoning/estimate/project/liveCommentHint）
 185-kanban-v020-i18n-en.patch
 186-kanban-v020-i18n-zh.patch
-
-# hermes-agent v0.20.0 kanban 迁移：i18n（en/zh model/reasoning/estimate/project/liveCommentHint）
-185-kanban-v020-i18n-en.patch
-186-kanban-v020-i18n-zh.patch

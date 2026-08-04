@@ -29,6 +29,47 @@ SwarmStudio 0.6.38（基于 hermes-studio v0.6.38 + overlay 二次开发）
 - server `tsc --noEmit` 0 errors；client `vue-tsc` 17 baseline errors（0 new）
 - kanban/avatar 测试 44/44 PASS；agent patch 117/118 干净应用
 
+## hermes-agent v0.20.0 kanban 能力迁移（patch 178-186）
+
+把 v0.19.0→v0.20.0 区间的 5 个 kanban 新功能迁移到 Swarm kanban 与 AI 协作中心，使两处 UI 与 hermes-agent v0.20.0 后端对齐。
+
+### 迁移内容
+
+- **A. 单卡 model + provider 钉选**：`create --model/--provider`、`set-model` CLI 动词全链路打通（CLI→service→routes→client→store→UI）。TaskForm 加 model/provider 输入；TaskDrawer Meta 区 Model 行可显示/编辑/清除。
+- **B. 单卡 reasoning_effort**：hermes-agent 补 `create --reasoning` + `set-reasoning` CLI 动词（patch 178）；`_task_to_dict` 序列化补 reasoning_effort。TaskForm/Drawer 加思考深度选择（minimal/low/medium/high/xhigh/max/ultra/none）。
+- **C. board 挂到 project**：`project list --json`（patch 179）+ `boards create --project`/`boards set-project` CLI 动词（patch 178）；TS `GET /projects`、`PATCH /boards/:slug`。Toolbar 建板对话框加 project 选择器（选中后 default_workdir 镜像 project 主目录）。
+- **D. effort estimate**：`kanban estimate` CLI 动词复刻 plugin `_run_estimate`（auxiliary model，ok:false 降级且 exit 0，对齐 REST 非错误语义）。TaskForm 建卡前 Estimate 按钮 + TaskDrawer 既有卡 Estimate 按钮，行内显示 `~15k tok · M`。
+- **E. 运行中 worker 评论即时送达**：后端零改动（comments POST 已通，worker 端 v0.20 自动轮询注入 live turn）。TaskDrawer 评论区运行中任务显示「评论将在数秒内送达运行中的 worker」提示文案。
+
+### 偏差（对照上游明示）
+
+- model 下拉：上游桌面端用 composer SDK picker + `GET /model-options`；Swarm 用自由文本 + provider 文本（hermes-studio 无 SDK picker，model-options 无 CLI 动词）。
+- board settings：上游有「Board settings…」对话框改既有板 project；Swarm 仅建板时可选 + PATCH API。
+- `hermes kanban repair`（运维 CLI）不做。
+
+### Patch 清单
+
+| patch | 内容 |
+|---|---|
+| 178 | hermes-agent kanban CLI 动词（create --reasoning / set-reasoning / estimate / boards create --project / boards set-project） |
+| 179 | hermes-agent `project list --json` |
+| 180 | TS service：KanbanTask/KanbanBoard 字段 + patchTask/createTask/createBoard 接入 + estimateTask/estimateText/listProjects/setBoardProject |
+| 181 | TS controllers：estimate/projects/patchBoard + create/createBoard 字段透传 |
+| 182 | TS routes：POST /estimate、POST /:id/estimate、GET /projects、PATCH /boards/:slug |
+| 183 | client API：types + wrappers（estimateTask/estimateText/listProjects/patchBoard） |
+| 184 | client store：projects state + 4 个 action |
+| 185/186 | i18n en/zh：kanban.form model/provider/reasoning、kanban.board project、kanban estimate/liveCommentHint |
+| custom | KanbanTaskForm/TaskDrawer/Toolbar.vue + SwarmKanbanView.vue + CockpitWorkspace.vue |
+
+### 验证
+
+- 全量 inject 136 patches，0 FAILED / 0 WARN（hermes-agent patch 干净应用）
+- CLI 冒烟（隔离 HERMES_HOME）：project/board/task create/reasoning/estimate 全路径通过
+- server `tsc --noEmit` 0 errors；client `vue-tsc` 16 errors（与 baseline 一致，0 new）
+- vitest 500 passed / 3 failed（cockpit-run-trace i18n，main 既有，非本次引入）
+
+参考：`docs/superpowers/specs/2026-08-04-hermes-agent-020-kanban-migration-design.md`、`docs/superpowers/plans/2026-08-04-hermes-agent-020-kanban-migration.md`
+
 ## 上一版（0.6.36 → 0.6.37 + hermes-agent 0.19.1 → 0.20.0）
 
 上游 v0.6.37 含 20+ 提交（210 文件变更），hermes-agent v0.20.0 rollup。主要更新：
