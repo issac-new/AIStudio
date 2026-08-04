@@ -65,3 +65,5 @@ __pycache__/
 .curator_backups/
 .curator_state
 .hub/
+state.db*
+kanban.db

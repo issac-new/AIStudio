@@ -75,6 +75,15 @@ to spawn workers, which triggers this isolation boundary. The guard exists
 to prevent stale or concurrent delegate_task children from corrupting the
 kanban state machine (race conditions on task claims, double-completes, etc.).
 
+## Related delegate_task failure modes (non-mutation)
+
+Mutation blocks are only one delegate_task failure class. Subagents also die
+from model stalls (`status=interrupted`) and iteration-budget exhaustion
+(`exit_reason=max_iterations` — often with the deliverable file never
+written). See `references/delegate-lifecycle-rescue.md` for the failure
+signatures, transcript-mining rescue patterns, the redispatch-with-context
+pattern, and incremental-write prevention.
+
 ## Related Skills
 
 - **kanban-handoff-contract** — The general completion protocol (exit with kanban_complete or kanban_block).
