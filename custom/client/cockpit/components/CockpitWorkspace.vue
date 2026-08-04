@@ -64,11 +64,15 @@ const claimLock = computed(() => {
 const workflowMeta = computed(() => {
   const t = task.value
   if (!t) return null
-  if (!t.workflow_template_id && !t.current_step_key && !t.model_override && !t.goal_mode) return null
+  // HERMES_CUSTOM[v020]: also surface provider_override / reasoning_effort
+  if (!t.workflow_template_id && !t.current_step_key && !t.model_override && !t.goal_mode
+      && !(t as any).provider_override && !(t as any).reasoning_effort) return null
   return {
     template: t.workflow_template_id ?? null,
     step: t.current_step_key ?? null,
     model: t.model_override ?? null,
+    provider: (t as any).provider_override ?? null,
+    reasoning: (t as any).reasoning_effort ?? null,
     goalMode: t.goal_mode ?? false,
     goalMaxTurns: t.goal_max_turns ?? null,
   }
@@ -606,7 +610,8 @@ async function toggleHomeSubscription(ch: HomeChannel) {
         <span class="cockpit-workspace__field-label">{{ t('cockpit.workflow') }}</span>
         <span v-if="workflowMeta.template" class="cockpit-workspace__field-val--muted">{{ workflowMeta.template }}</span>
         <span v-if="workflowMeta.step" class="cockpit-workspace__field-val--muted">· step {{ workflowMeta.step }}</span>
-        <span v-if="workflowMeta.model" class="cockpit-workspace__field-val--muted">· {{ workflowMeta.model }}</span>
+        <span v-if="workflowMeta.model" class="cockpit-workspace__field-val--muted">· {{ workflowMeta.provider ? workflowMeta.provider + ':' : '' }}{{ workflowMeta.model }}</span>
+        <span v-if="workflowMeta.reasoning" class="cockpit-workspace__field-val--muted">· {{ workflowMeta.reasoning }}</span>
         <span v-if="workflowMeta.goalMode" class="cockpit-workspace__field-val">· {{ t('cockpit.goalMode') }}{{ workflowMeta.goalMaxTurns ? ` (${workflowMeta.goalMaxTurns}t)` : '' }}</span>
       </div>
 

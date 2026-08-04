@@ -1,0 +1,45 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index aa2bed4..096f58e 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1095,6 +1095,11 @@ export default {
+       archived: '看板已归档',
+       archiveConfirm: '确定归档当前看板？',
+       defaultArchiveUnavailable: '默认看板不能归档',
++      // HERMES_CUSTOM[v020] BEGIN
++      project: '所属项目',
++      noProject: '无项目',
++      projectHint: 'default_workdir 将镜像项目主目录',
++      // HERMES_CUSTOM[v020] END
+     },
+     columns: {
+       triage: '待分拣',
+@@ -1137,6 +1142,14 @@ export default {
+       maxRetriesPlaceholder: '重试次数',
+       goalMaxTurns: '目标最大轮次',
+       goalMaxTurnsPlaceholder: '最大轮次',
++      // HERMES_CUSTOM[v020] BEGIN
++      model: '模型',
++      modelPlaceholder: '跟随 Profile',
++      provider: '提供商',
++      providerPlaceholder: '如 openai',
++      reasoning: '思考深度',
++      profileDefault: '跟随 Profile',
++      // HERMES_CUSTOM[v020] END
+     },
+     card: {
+       assigneeTooltip: '负责人',
+@@ -1194,6 +1207,13 @@ export default {
+       loadLog: '加载日志',
+       loadDiagnostics: '加载诊断',
+     },
++    // HERMES_CUSTOM[v020] BEGIN
++    estimate: '估算',
++    reestimate: '重新估算',
++    estimateDisclaimer: '辅助模型粗略估算',
++    estimateUnavailable: '不可用',
++    liveCommentHint: '评论将在数秒内送达运行中的 worker —— 无需重启。',
++    // HERMES_CUSTOM[v020] END
+     message: {
+       taskCreated: '任务已创建',
+       taskCompleted: '任务已完成',
