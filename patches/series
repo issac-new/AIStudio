@@ -189,3 +189,7 @@
 
 # v0.6.37 适配：cli-shim.ts 重构后单独拆出 rebrand patch
 177-desktop-cli-shim-rebrand.patch
+
+# hermes-agent v0.20.0 kanban 迁移：CLI 动词补全（reasoning/estimate/board project/projects json）
+178-agent-kanban-cli-verbs.patch
+179-agent-projects-list-json.patch

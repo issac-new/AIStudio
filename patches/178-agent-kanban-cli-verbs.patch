@@ -1,0 +1,340 @@
+diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
+index a08cb8f..372356c 100644
+--- a/hermes_cli/kanban.py
++++ b/hermes_cli/kanban.py
+@@ -78,6 +78,7 @@ def _task_to_dict(t: kb.Task) -> dict[str, Any]:
+         "max_retries": t.max_retries,
+         "model_override": t.model_override,
+         "provider_override": t.provider_override,
++        "reasoning_effort": t.reasoning_effort,  # HERMES_CUSTOM[v020]
+         "session_id": t.session_id,
+         "workflow_template_id": t.workflow_template_id,
+         "current_step_key": t.current_step_key,
+@@ -290,6 +291,12 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+                           help="Switch to the new board after creating it")
+     b_create.add_argument("--default-workdir", default=None,
+                           help="Default workspace path for tasks created on this board")
++    # HERMES_CUSTOM[v020] BEGIN: board project scope (v0.20 parity)
++    b_create.add_argument("--project", default=None,
++                          help="Scope the board to a project (id or slug): "
++                               "default_workdir mirrors the project's primary "
++                               "folder and new tasks inherit the project")
++    # HERMES_CUSTOM[v020] END
+ 
+     b_rm = boards_sub.add_parser(
+         "rm", aliases=["remove", "delete"],
+@@ -326,6 +333,16 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+     b_set_wd.add_argument("path", nargs="?", default=None,
+                           help="Absolute path to use as default workdir. Omit to clear.")
+ 
++    # HERMES_CUSTOM[v020] BEGIN: boards set-project verb
++    b_set_proj = boards_sub.add_parser(
++        "set-project",
++        help="Scope a board to a project (or clear the scope)",
++    )
++    b_set_proj.add_argument("slug")
++    b_set_proj.add_argument("project", nargs="?", default=None,
++                            help="Project id or slug. Omit or 'none' to clear.")
++    # HERMES_CUSTOM[v020] END
++
+     # --- create ---
+     p_create = sub.add_parser("create", help="Create a new task")
+     p_create.add_argument("title", help="Task title")
+@@ -380,6 +397,14 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+                           help="Provider the --model belongs to (passed as "
+                                "--provider <name> to the worker). Requires "
+                                "--model.")
++    # HERMES_CUSTOM[v020] BEGIN: per-task reasoning effort on create
++    p_create.add_argument("--reasoning", default=None, dest="reasoning_effort",
++                          metavar="LEVEL",
++                          help="Pin the worker's thinking depth for this task "
++                               "(minimal/low/medium/high/xhigh/max/ultra, or "
++                               "'none' for thinking off). Omit to use the "
++                               "assignee profile's agent.reasoning_effort.")
++    # HERMES_CUSTOM[v020] END
+     p_create.add_argument("--goal", action="store_true", dest="goal_mode",
+                           help="Run the worker in a goal loop: after each "
+                                "turn a judge checks the response against the "
+@@ -495,6 +520,30 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+              "--provider <name>). Cleared together with the model.",
+     )
+ 
++    # HERMES_CUSTOM[v020] BEGIN: set-reasoning + estimate verbs
++    p_set_reasoning = sub.add_parser(
++        "set-reasoning",
++        help="Set or clear a task's reasoning effort override "
++             "(takes effect on the next dispatch)",
++    )
++    p_set_reasoning.add_argument("task_id")
++    p_set_reasoning.add_argument(
++        "effort", nargs="?", default=None,
++        help="minimal/low/medium/high/xhigh/max/ultra, 'none' to pin thinking "
++             "off, or 'clear' to inherit the profile default",
++    )
++
++    p_estimate = sub.add_parser(
++        "estimate",
++        help="Rough token + complexity estimate via the auxiliary model",
++    )
++    p_estimate.add_argument("task_id", nargs="?", default=None,
++                            help="Existing task id; omit to estimate raw --title/--body")
++    p_estimate.add_argument("--title", default=None)
++    p_estimate.add_argument("--body", default=None)
++    p_estimate.add_argument("--json", action="store_true")
++    # HERMES_CUSTOM[v020] END
++
+     # --- reclaim / reassign (recovery) ---
+     p_reclaim = sub.add_parser(
+         "reclaim",
+@@ -1050,6 +1099,10 @@ def kanban_command(args: argparse.Namespace) -> int:
+             "show":     _cmd_show,
+             "assign":   _cmd_assign,
+             "set-model": _cmd_set_model,
++            # HERMES_CUSTOM[v020] BEGIN
++            "set-reasoning": _cmd_set_reasoning,
++            "estimate": _cmd_estimate,
++            # HERMES_CUSTOM[v020] END
+             "reclaim":  _cmd_reclaim,
+             "reassign": _cmd_reassign,
+             "diagnostics": _cmd_diagnostics,
+@@ -1154,6 +1207,7 @@ _DELEGATED_CHILD_DENIED_BOARD_ACTIONS: frozenset[str] = frozenset({
+     "use",
+     "rename",
+     "set-default-workdir",
++    "set-project",  # HERMES_CUSTOM[v020]
+ })
+ 
+ 
+@@ -1201,6 +1255,8 @@ def _dispatch_boards(args: argparse.Namespace) -> int:
+         return _cmd_boards_rename(args)
+     if sub == "set-default-workdir":
+         return _cmd_boards_set_default_workdir(args)
++    if sub == "set-project":  # HERMES_CUSTOM[v020]
++        return _cmd_boards_set_project(args)
+     print(f"kanban boards: unknown action {sub!r}", file=sys.stderr)
+     return 2
+ 
+@@ -1265,13 +1321,29 @@ def _cmd_boards_create(args: argparse.Namespace) -> int:
+         print("kanban boards create: slug is required", file=sys.stderr)
+         return 2
+     already = kb.board_exists(normed) and normed != kb.DEFAULT_BOARD
++    # HERMES_CUSTOM[v020] BEGIN: resolve --project scope
++    project_id = None
++    project_path = None
++    project_ref = getattr(args, "project", None)
++    if project_ref:
++        from hermes_cli import projects_db as pdb
++        with pdb.connect_closing() as pconn:
++            proj = pdb.get_project(pconn, project_ref.strip())
++        if proj is None:
++            print(f"kanban boards create: project {project_ref!r} does not exist",
++                  file=sys.stderr)
++            return 2
++        project_id = proj.id
++        project_path = proj.primary_path or None
++    # HERMES_CUSTOM[v020] END
+     meta = kb.create_board(
+         normed,
+         name=args.name,
+         description=args.description,
+         icon=args.icon,
+         color=args.color,
+-        default_workdir=args.default_workdir,
++        default_workdir=args.default_workdir or project_path,  # HERMES_CUSTOM[v020]
++        project_id=project_id,  # HERMES_CUSTOM[v020]
+     )
+     verb = "already exists" if already else "created"
+     print(f"Board {meta['slug']!r} {verb}.")
+@@ -1376,6 +1448,43 @@ def _cmd_boards_set_default_workdir(args: argparse.Namespace) -> int:
+     return 0
+ 
+ 
++# HERMES_CUSTOM[v020] BEGIN: boards set-project handler
++def _cmd_boards_set_project(args: argparse.Namespace) -> int:
++    try:
++        normed = kb._normalize_board_slug(args.slug)
++    except ValueError as exc:
++        print(f"kanban boards set-project: {exc}", file=sys.stderr)
++        return 2
++    if not normed or not kb.board_exists(normed):
++        print(f"kanban boards set-project: board {args.slug!r} does not exist",
++              file=sys.stderr)
++        return 1
++    ref = args.project
++    if ref is not None and ref.lower() in {"none", "-", "null", ""}:
++        ref = None
++    if ref is None:
++        kb.write_board_metadata(normed, project_id="")
++        print(f"Board {normed!r} project scope cleared.")
++        return 0
++    from hermes_cli import projects_db as pdb
++    with pdb.connect_closing() as pconn:
++        proj = pdb.get_project(pconn, ref.strip())
++    if proj is None:
++        print(f"kanban boards set-project: project {ref!r} does not exist",
++              file=sys.stderr)
++        return 2
++    meta = kb.write_board_metadata(
++        normed,
++        project_id=proj.id,
++        default_workdir=proj.primary_path or None,
++    )
++    print(f"Board {normed!r} scoped to project {proj.name!r} ({proj.slug}).")
++    if meta.get("default_workdir"):
++        print(f"  default_workdir: {meta['default_workdir']}")
++    return 0
++# HERMES_CUSTOM[v020] END
++
++
+ # ---------------------------------------------------------------------------
+ 
+ 
+@@ -1516,6 +1625,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
+             max_retries=max_retries,
+             model_override=getattr(args, "model_override", None),
+             provider_override=getattr(args, "provider_override", None),
++            reasoning_effort=getattr(args, "reasoning_effort", None),  # HERMES_CUSTOM[v020]
+             goal_mode=bool(getattr(args, "goal_mode", False)),
+             goal_max_turns=getattr(args, "goal_max_turns", None),
+             initial_status=getattr(args, "initial_status", "running"),
+@@ -1823,6 +1933,140 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
+     return 0
+ 
+ 
++# HERMES_CUSTOM[v020] BEGIN: set-reasoning + estimate handlers
++def _cmd_set_reasoning(args: argparse.Namespace) -> int:
++    effort = args.effort
++    if effort is not None and effort.lower() in {"clear", "-", "null", ""}:
++        effort = None
++    try:
++        with kb.connect_closing() as conn:
++            ok = kb.set_reasoning_effort(conn, args.task_id, effort)
++    except (ValueError, RuntimeError) as exc:
++        print(f"kanban: {exc}", file=sys.stderr)
++        return 2
++    if not ok:
++        print(f"no such task: {args.task_id}", file=sys.stderr)
++        return 1
++    if effort:
++        print(f"Set reasoning effort on {args.task_id}: {effort} "
++              "(applies on next dispatch)")
++    else:
++        print(f"Cleared reasoning effort on {args.task_id} "
++              "(worker uses its profile default)")
++    return 0
++
++
++_ESTIMATE_SYSTEM_PROMPT = (
++    "You estimate how much work an autonomous coding agent will spend on a "
++    "kanban task. Given the task title and description, respond with STRICT "
++    "JSON only (no prose, no code fence):\n"
++    '{"est_tokens": <integer total tokens across the whole run>, '
++    '"complexity": "S"|"M"|"L", '
++    '"rationale": "<one short sentence>"}\n'
++    "Base the token figure on a realistic multi-turn agent run (reading files, "
++    "tool calls, edits, retries) — not a single reply. S≈small/localized, "
++    "M≈multi-file, L≈broad or ambiguous. Be honest that this is a rough guess."
++)
++
++
++def _run_estimate(title: str, body: Optional[str]) -> dict:
++    """Mirror of plugins/kanban/dashboard/plugin_api.py::_run_estimate.
++
++    Kept self-contained (no plugin import) to avoid pulling FastAPI into the
++    CLI. Never raises — a bad config / parse / API error becomes
++    ``{"ok": False, "reason": ...}`` so callers can render it inline.
++    """
++    if not (title or "").strip():
++        return {"ok": False, "reason": "a title is required to estimate"}
++    try:
++        from agent.auxiliary_client import call_llm
++    except Exception:
++        return {"ok": False, "reason": "auxiliary client unavailable"}
++
++    def _cap(s, n):
++        s = (s or "").strip()
++        return s if len(s) <= n else s[:n] + "…"
++
++    user_msg = (
++        f"Title: {_cap(title, 400)}\n\n"
++        f"Description:\n{_cap(body, 4000) or '(none)'}"
++    )
++    try:
++        resp = call_llm(
++            task="kanban_estimator",
++            messages=[
++                {"role": "system", "content": _ESTIMATE_SYSTEM_PROMPT},
++                {"role": "user", "content": user_msg},
++            ],
++            temperature=0.0,
++            max_tokens=300,
++            timeout=60,
++        )
++    except Exception as exc:
++        return {"ok": False, "reason": f"LLM error: {type(exc).__name__}"}
++    try:
++        raw = (resp.choices[0].message.content or "").strip()
++        model = getattr(resp, "model", None)
++    except Exception:
++        raw, model = "", None
++    parsed = None
++    try:
++        import re as _re
++        blob = raw
++        if not blob.lstrip().startswith("{"):
++            m = _re.search(r"\{.*\}", blob, _re.DOTALL)
++            blob = m.group(0) if m else blob
++        obj = json.loads(blob)
++        if isinstance(obj, dict):
++            parsed = obj
++    except Exception:
++        parsed = None
++    if not parsed:
++        return {"ok": False, "reason": "could not parse an estimate from the model"}
++    try:
++        est_tokens = int(parsed.get("est_tokens") or 0)
++    except (TypeError, ValueError):
++        est_tokens = 0
++    complexity = str(parsed.get("complexity") or "").strip().upper()
++    if complexity not in {"S", "M", "L"}:
++        complexity = None
++    rationale = str(parsed.get("rationale") or "").strip() or None
++    return {
++        "ok": True,
++        "est_tokens": est_tokens,
++        "complexity": complexity,
++        "rationale": rationale,
++        "model": model,
++    }
++
++
++def _cmd_estimate(args: argparse.Namespace) -> int:
++    title, body = args.title, args.body
++    if args.task_id:
++        with kb.connect_closing() as conn:
++            task = kb.get_task(conn, args.task_id)
++        if task is None:
++            print(f"no such task: {args.task_id}", file=sys.stderr)
++            return 1
++        title, body = task.title, task.body
++    result = _run_estimate(title or "", body)
++    if getattr(args, "json", False):
++        print(json.dumps(result, indent=2, ensure_ascii=False))
++    elif result.get("ok"):
++        cx = result.get("complexity") or "?"
++        line = f"~{result.get('est_tokens', 0)} tokens · {cx}"
++        if result.get("rationale"):
++            line += f" — {result['rationale']}"
++        print(line)
++    else:
++        print(f"estimate failed: {result.get('reason')}", file=sys.stderr)
++    # Always exit 0 once the estimate ran: a non-OK outcome is carried in the
++    # payload (mirrors the REST endpoint, where ok:false is not an HTTP error)
++    # so CLI callers can render it inline instead of treating it as a failure.
++    return 0
++# HERMES_CUSTOM[v020] END
++
++
+ def _cmd_reclaim(args: argparse.Namespace) -> int:
+     with kb.connect_closing() as conn:
+         ok = kb.reclaim_task(
