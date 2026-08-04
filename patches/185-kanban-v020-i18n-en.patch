@@ -1,8 +1,8 @@
-diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index d43ee30..1190d5e 100644
---- a/packages/client/src/i18n/locales/en.ts
+diff --git a/en.ts b/en.ts
+index 506731b..f404fa0 100644
+--- b/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -1095,6 +1095,11 @@ export default {
+@@ -1288,6 +1288,11 @@ export default {
        archived: 'Board archived',
        archiveConfirm: 'Archive the current board?',
        defaultArchiveUnavailable: 'The default board cannot be archived',
@@ -14,7 +14,7 @@ index d43ee30..1190d5e 100644
      },
      columns: {
        triage: 'Triage',
-@@ -1137,6 +1142,14 @@ export default {
+@@ -1330,6 +1335,14 @@ export default {
        maxRetriesPlaceholder: 'Number of retries',
        goalMaxTurns: 'Goal max turns',
        goalMaxTurnsPlaceholder: 'Maximum turns',
@@ -29,10 +29,10 @@ index d43ee30..1190d5e 100644
      },
      card: {
        assigneeTooltip: 'Assignee',
-@@ -1194,6 +1207,13 @@ export default {
-       loadLog: 'Load Log',
-       loadDiagnostics: 'Load Diagnostics',
+@@ -1393,6 +1406,13 @@ export default {
      },
+     attachFromUrl: 'From URL',
+     attachFromUrlPlaceholder: 'https://...',
 +    // HERMES_CUSTOM[v020] BEGIN
 +    estimate: 'Estimate',
 +    reestimate: 'Re-estimate',

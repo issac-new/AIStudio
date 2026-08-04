@@ -1,8 +1,8 @@
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index aa2bed4..096f58e 100644
---- a/packages/client/src/i18n/locales/zh.ts
+diff --git a/zh.ts b/zh.ts
+index 2d09afc..937ceef 100644
+--- b/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -1095,6 +1095,11 @@ export default {
+@@ -1286,6 +1286,11 @@ export default {
        archived: '看板已归档',
        archiveConfirm: '确定归档当前看板？',
        defaultArchiveUnavailable: '默认看板不能归档',
@@ -14,7 +14,7 @@ index aa2bed4..096f58e 100644
      },
      columns: {
        triage: '待分拣',
-@@ -1137,6 +1142,14 @@ export default {
+@@ -1328,6 +1333,14 @@ export default {
        maxRetriesPlaceholder: '重试次数',
        goalMaxTurns: '目标最大轮次',
        goalMaxTurnsPlaceholder: '最大轮次',
@@ -29,10 +29,10 @@ index aa2bed4..096f58e 100644
      },
      card: {
        assigneeTooltip: '负责人',
-@@ -1194,6 +1207,13 @@ export default {
-       loadLog: '加载日志',
-       loadDiagnostics: '加载诊断',
+@@ -1391,6 +1404,13 @@ export default {
      },
+     attachFromUrl: '从 URL',
+     attachFromUrlPlaceholder: 'https://...',
 +    // HERMES_CUSTOM[v020] BEGIN
 +    estimate: '估算',
 +    reestimate: '重新估算',
