@@ -196,3 +196,7 @@
 
 # hermes-agent v0.20.0 kanban 迁移：TS service 接入（model/reasoning/estimate/projects/board project）
 180-server-service-kanban-v020.patch
+
+# hermes-agent v0.20.0 kanban 迁移：controllers + routes（estimate/projects/board PATCH/create 字段透传）
+181-server-controllers-kanban-v020.patch
+182-server-routes-kanban-v020.patch

@@ -1,0 +1,35 @@
+diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+index 330993e..e3bfd63 100644
+--- a/packages/server/src/routes/hermes/kanban.ts
++++ b/packages/server/src/routes/hermes/kanban.ts
+@@ -13,6 +13,9 @@ export const kanbanRoutes = new Router()
+ 
+ kanbanRoutes.get('/api/hermes/kanban/boards', ctrl.listBoards)
+ kanbanRoutes.post('/api/hermes/kanban/boards', ctrl.createBoard)
++// HERMES_CUSTOM[v020] BEGIN: board project scope
++kanbanRoutes.patch('/api/hermes/kanban/boards/:slug', ctrl.patchBoard)
++// HERMES_CUSTOM[v020] END
+ kanbanRoutes.delete('/api/hermes/kanban/boards/:slug', ctrl.archiveBoard)
+ kanbanRoutes.get('/api/hermes/kanban/capabilities', ctrl.capabilities)
+ kanbanRoutes.get('/api/hermes/kanban/stats', ctrl.stats)
+@@ -35,6 +38,10 @@ kanbanRoutes.delete('/api/hermes/kanban/:id/home-subscribe/:platform', ctrl.unsu
+ kanbanRoutes.post('/api/hermes/kanban/:id/attachments', ctrl.uploadAttachment)
+ kanbanRoutes.delete('/api/hermes/kanban/attachments/:id', ctrl.removeAttachment)
+ kanbanRoutes.post('/api/hermes/kanban/:id/attachments/url', ctrl.uploadAttachmentFromUrl)
++// HERMES_CUSTOM[v020] BEGIN: estimate + projects (must precede GET /:id)
++kanbanRoutes.post('/api/hermes/kanban/estimate', ctrl.estimateText)
++kanbanRoutes.get('/api/hermes/kanban/projects', ctrl.listProjects)
++// HERMES_CUSTOM[v020] END
+ kanbanRoutes.get('/api/hermes/kanban', ctrl.list)
+ kanbanRoutes.get('/api/hermes/kanban/:id/attachments', ctrl.listAttachments)
+ kanbanRoutes.get('/api/hermes/kanban/:id/attachments/:attachmentId', ctrl.readAttachment)
+@@ -45,6 +52,9 @@ kanbanRoutes.post('/api/hermes/kanban/unblock', ctrl.unblock)
+ kanbanRoutes.post('/api/hermes/kanban/:id/block', ctrl.block)
+ kanbanRoutes.post('/api/hermes/kanban/:id/assign', ctrl.assign)
+ kanbanRoutes.post('/api/hermes/kanban/:id/comments', ctrl.addComment)
++// HERMES_CUSTOM[v020] BEGIN: per-task estimate
++kanbanRoutes.post('/api/hermes/kanban/:id/estimate', ctrl.estimateTask)
++// HERMES_CUSTOM[v020] END
+ kanbanRoutes.get('/api/hermes/kanban/:id/log', ctrl.taskLog)
+ kanbanRoutes.post('/api/hermes/kanban/:id/reclaim', ctrl.reclaim)
+ kanbanRoutes.post('/api/hermes/kanban/:id/reassign', ctrl.reassign)
