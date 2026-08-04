@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { NButton, NInput, NSelect, NSpace, NCheckbox, NModal, NForm, NFormItem, NTooltip, NPopconfirm } from 'naive-ui'
-import type { KanbanAssignee, KanbanBoard } from '@/api/hermes/kanban'
+import type { KanbanAssignee, KanbanBoard, KanbanProject } from '@/api/hermes/kanban'
 import { useI18n } from 'vue-i18n'
+import { useKanbanStore } from '@/stores/hermes/kanban'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const props = defineProps<{
@@ -34,6 +35,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const kanbanStore = useKanbanStore()  // HERMES_CUSTOM[v020]
 
 function closeModal() {
   useCockpitStore().swarmKanbanVisible = false
@@ -48,13 +50,28 @@ const boardForm = ref({
   icon: '',
   color: '',
   switchCurrent: true,
+  project: '',  // HERMES_CUSTOM[v020]
 })
 const boardCreating = ref(false)
+
+// HERMES_CUSTOM[v020] BEGIN: projects for board scoping
+const projects = ref<KanbanProject[]>([])
+const projectOptions = computed(() => [
+  { label: t('kanban.board.noProject', 'No project'), value: '' },
+  ...projects.value.map(p => ({ label: `${p.name} (${p.slug})`, value: p.id })),
+])
+
+async function loadProjects() {
+  try { projects.value = await kanbanStore.listProjects() } catch { projects.value = [] }
+}
+onMounted(loadProjects)
+// HERMES_CUSTOM[v020] END
 
 const boardSlugValid = computed(() => /^[a-z0-9][a-z0-9_-]{0,63}$/.test(boardForm.value.slug.trim()))
 
 function openCreateBoard() {
-  boardForm.value = { slug: '', name: '', description: '', icon: '', color: '', switchCurrent: true }
+  boardForm.value = { slug: '', name: '', description: '', icon: '', color: '', switchCurrent: true, project: '' }
+  loadProjects()  // HERMES_CUSTOM[v020]
   showCreateBoard.value = true
 }
 
@@ -69,7 +86,8 @@ async function submitCreateBoard() {
       icon: boardForm.value.icon.trim() || undefined,
       color: boardForm.value.color.trim() || undefined,
       switchCurrent: boardForm.value.switchCurrent,
-    })
+      project: boardForm.value.project || undefined,  // HERMES_CUSTOM[v020]
+    } as any)
     showCreateBoard.value = false
   } finally {
     boardCreating.value = false
@@ -341,6 +359,19 @@ const hasActiveFilters = computed(() =>
             />
           </NFormItem>
         </div>
+        <!-- HERMES_CUSTOM[v020] BEGIN: board project scope -->
+        <NFormItem :label="t('kanban.board.project', 'Project')">
+          <NSelect
+            v-model:value="boardForm.project"
+            :options="projectOptions"
+            :placeholder="t('kanban.board.noProject', 'No project')"
+            clearable
+          />
+          <div v-if="boardForm.project" class="form-hint">
+            {{ t('kanban.board.projectHint', 'default_workdir will mirror the project\'s primary folder') }}
+          </div>
+        </NFormItem>
+        <!-- HERMES_CUSTOM[v020] END -->
         <NCheckbox v-model:checked="boardForm.switchCurrent">
           {{ t('kanban.board.switchToNew', 'Switch to the new board after creating') }}
         </NCheckbox>

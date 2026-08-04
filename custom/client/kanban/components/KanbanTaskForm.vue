@@ -2,10 +2,10 @@
 import { ref, computed, watch } from 'vue'
 import {
   NModal, NForm, NFormItem, NInput, NInputNumber, NSelect,
-  NCheckbox, NButton, NSpace, useMessage
+  NCheckbox, NButton, NSpace, NTooltip, useMessage
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
-import type { KanbanCreateRequest } from '@/api/hermes/kanban'
+import type { KanbanCreateRequest, KanbanEstimateResult } from '@/api/hermes/kanban'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 
 const props = defineProps<{
@@ -37,7 +37,44 @@ const formData = ref({
   maxRetries: 0,
   goalMode: false,
   goalMaxTurns: 0,
+  // HERMES_CUSTOM[v020] BEGIN
+  model: '',
+  provider: '',
+  reasoning: '',
+  // HERMES_CUSTOM[v020] END
 })
+
+const reasoningOptions = computed(() => [
+  { label: t('kanban.form.profileDefault', 'Profile default'), value: '' },
+  ...['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra', 'none'].map(v => ({ label: v, value: v })),
+])
+
+// HERMES_CUSTOM[v020] BEGIN: pre-create estimate
+const estimating = ref(false)
+const estimate = ref<KanbanEstimateResult | null>(null)
+
+function compactTokens(n?: number): string {
+  if (n == null) return '?'
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`
+  return `${(n / 1_000_000).toFixed(1)}M`
+}
+
+async function runEstimate() {
+  if (estimating.value) return
+  estimating.value = true
+  try {
+    estimate.value = await store.estimateText(
+      formData.value.title.trim(),
+      formData.value.body.trim() || undefined,
+    )
+  } catch (err: any) {
+    estimate.value = { ok: false, reason: err?.message || 'estimate failed' }
+  } finally {
+    estimating.value = false
+  }
+}
+// HERMES_CUSTOM[v020] END
 
 const assigneeOptions = computed(() => [
   { label: t('kanban.allAssignees'), value: '' },
@@ -67,7 +104,12 @@ watch(() => props.show, (show) => {
       maxRetries: 0,
       goalMode: false,
       goalMaxTurns: 0,
+      // HERMES_CUSTOM[v020]
+      model: '',
+      provider: '',
+      reasoning: '',
     }
+    estimate.value = null
   }
 })
 
@@ -97,6 +139,11 @@ async function handleSubmit() {
       maxRetries: formData.value.maxRetries || undefined,
       goalMode: formData.value.goalMode,
       goalMaxTurns: formData.value.goalMaxTurns || undefined,
+      // HERMES_CUSTOM[v020] BEGIN
+      model: formData.value.model.trim() || undefined,
+      provider: formData.value.provider.trim() || undefined,
+      reasoning: formData.value.reasoning || undefined,
+      // HERMES_CUSTOM[v020] END
     }
     await store.createTask(payload)
     message.success(t('kanban.message.taskCreated'))
@@ -212,6 +259,45 @@ async function handleSubmit() {
       <NFormItem v-if="formData.goalMode" :label="t('kanban.form.goalMaxTurns')">
         <NInputNumber v-model:value="formData.goalMaxTurns" :min="1" :max="200" />
       </NFormItem>
+
+      <!-- HERMES_CUSTOM[v020] BEGIN: model / provider / reasoning pins -->
+      <div class="form-row">
+        <NFormItem :label="t('kanban.form.model', 'Model')" class="flex-1">
+          <NInput
+            v-model:value="formData.model"
+            :placeholder="t('kanban.form.modelPlaceholder', 'Profile default')"
+          />
+        </NFormItem>
+        <NFormItem :label="t('kanban.form.provider', 'Provider')" class="model-provider-field">
+          <NInput
+            v-model:value="formData.provider"
+            :placeholder="t('kanban.form.providerPlaceholder', 'e.g. openai')"
+          />
+        </NFormItem>
+      </div>
+
+      <NFormItem :label="t('kanban.form.reasoning', 'Thinking depth')">
+        <div class="estimate-row">
+          <NSelect
+            v-model:value="formData.reasoning"
+            :options="reasoningOptions"
+            class="reasoning-select"
+          />
+          <NTooltip>
+            <template #trigger>
+              <NButton quaternary size="small" :loading="estimating" :disabled="!formData.title.trim()" @click="runEstimate">
+                {{ t('kanban.estimate', 'Estimate') }}
+              </NButton>
+            </template>
+            {{ t('kanban.estimateDisclaimer', 'Rough guess via the auxiliary model') }}
+          </NTooltip>
+          <span v-if="estimate" class="estimate-result">
+            <template v-if="estimate.ok">~{{ compactTokens(estimate.est_tokens) }} tok · {{ estimate.complexity || '?' }}</template>
+            <template v-else class="estimate-muted">{{ t('kanban.estimateUnavailable', 'unavailable') }}</template>
+          </span>
+        </div>
+      </NFormItem>
+      <!-- HERMES_CUSTOM[v020] END -->
     </NForm>
 
     <template #footer>
@@ -260,6 +346,35 @@ async function handleSubmit() {
 .workspace-path {
   flex: 1;
 }
+
+/* HERMES_CUSTOM[v020] BEGIN */
+.model-provider-field {
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.estimate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.reasoning-select {
+  flex: 1;
+}
+
+.estimate-result {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  white-space: nowrap;
+}
+
+.estimate-muted {
+  color: var(--text-muted, #aaa);
+  font-style: italic;
+}
+/* HERMES_CUSTOM[v020] END */
 
 .checkbox-row {
   display: flex;
