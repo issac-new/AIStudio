@@ -125,6 +125,34 @@ if (Test-Path $skillsSrc) {
 }
 Write-Host ""
 
+
+# --- 5b. Install third-party Python tools ---
+Write-Host "[5b] Installing third-party Python tools..." -ForegroundColor Yellow
+$toolsReq = Join-Path $ScriptDir "requirements-tools.txt"
+if (Test-Path $toolsReq) {
+    & pip install -r $toolsReq 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+    Write-Host "  OK: Python tools installed" -ForegroundColor Green
+} else {
+    Write-Host "  SKIP: requirements-tools.txt not found" -ForegroundColor DarkYellow
+}
+
+# --- 5c. Install third-party npm tools ---
+Write-Host "[5c] Installing third-party npm tools..." -ForegroundColor Yellow
+$npmAll = Join-Path $ScriptDir "package-all.json"
+if ((Test-Path $npmAll) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+    $npmDir = Join-Path $env:USERPROFILE ".hermes
+pm-global"
+    if (-not (Test-Path $npmDir)) { New-Item -ItemType Directory -Path $npmDir -Force | Out-Null }
+    Copy-Item $npmAll (Join-Path $npmDir "package.json") -Force
+    Set-Location $npmDir
+    & npm install 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+    Write-Host "  OK: npm tools installed" -ForegroundColor Green
+} elseif (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Host "  SKIP: npm not found (Node.js tools will be unavailable)" -ForegroundColor DarkYellow
+} else {
+    Write-Host "  SKIP: package-all.json not found" -ForegroundColor DarkYellow
+}
+Write-Host ""
 # --- 6. Install shared protocols + plugins + patches ---
 Write-Host "[6/7] Installing protocols, plugins, patches..." -ForegroundColor Yellow
 
