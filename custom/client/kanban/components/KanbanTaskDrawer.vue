@@ -48,6 +48,67 @@ const priorityEditValue = ref(0)
 const editingBody = ref(false)
 const bodyEditValue = ref('')
 
+// HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins + estimate
+const reasoningEffortOptions = [
+  { label: () => t('kanban.form.profileDefault', 'Profile default'), value: '' },
+  ...['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra', 'none'].map(v => ({ label: v, value: v })),
+]
+const editingModel = ref(false)
+const modelEditValue = ref('')
+const providerEditValue = ref('')
+const reasoningEditValue = ref('')
+const estimating = ref(false)
+const estimate = ref<kanbanApi.KanbanEstimateResult | null>(null)
+
+function startEditModel() {
+  if (!task.value) return
+  modelEditValue.value = task.value.model_override || ''
+  providerEditValue.value = task.value.provider_override || ''
+  reasoningEditValue.value = task.value.reasoning_effort || ''
+  editingModel.value = true
+}
+
+async function saveModel() {
+  if (!task.value) return
+  const patch: kanbanApi.KanbanTaskPatch = {}
+  const model = modelEditValue.value.trim()
+  const prevModel = task.value.model_override || ''
+  if (model) {
+    if (model !== prevModel) patch.model_override = model
+    if (providerEditValue.value.trim() !== (task.value.provider_override || '')) {
+      patch.provider_override = providerEditValue.value.trim()
+    }
+  } else if (prevModel) {
+    patch.clear_model_override = true
+  }
+  if (reasoningEditValue.value !== (task.value.reasoning_effort || '')) {
+    if (!reasoningEditValue.value) patch.clear_reasoning_effort = true
+    else patch.reasoning_effort = reasoningEditValue.value
+  }
+  editingModel.value = false
+  if (Object.keys(patch).length) await doPatch(patch)
+}
+
+async function runEstimate() {
+  if (!task.value || estimating.value) return
+  estimating.value = true
+  try {
+    estimate.value = await store.estimateTask(task.value.id)
+  } catch (err: any) {
+    estimate.value = { ok: false, reason: err?.message || 'estimate failed' }
+  } finally {
+    estimating.value = false
+  }
+}
+
+function compactTokens(n?: number): string {
+  if (n == null) return '?'
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`
+  return `${(n / 1_000_000).toFixed(1)}M`
+}
+// HERMES_CUSTOM[v020] END
+
 // Log state
 const logData = ref<KanbanTaskLog | null>(null)
 const logLoading = ref(false)
@@ -774,6 +835,45 @@ function statusDotClass(status: string): string {
             <span class="meta-value">{{ (task as any).goal_max_turns ? `on (max ${(task as any).goal_max_turns} turns)` : 'on' }}</span>
           </div>
 
+          <!-- HERMES_CUSTOM[v020] BEGIN: model / provider / reasoning pin -->
+          <div class="meta-row">
+            <span class="meta-label">{{ t('kanban.form.model', 'Model') }}</span>
+            <div v-if="editingModel" class="edit-row edit-row-wide">
+              <NInput v-model:value="modelEditValue" size="tiny" :placeholder="t('kanban.form.modelPlaceholder', 'Profile default')" style="width: 140px" />
+              <NInput v-model:value="providerEditValue" size="tiny" :placeholder="t('kanban.form.provider', 'Provider')" style="width: 100px" />
+              <NSelect
+                v-model:value="reasoningEditValue"
+                size="tiny"
+                :options="reasoningEffortOptions.map(o => ({ label: typeof o.label === 'function' ? o.label() : o.label, value: o.value }))"
+                style="width: 110px"
+              />
+              <NButton size="tiny" type="primary" @click="saveModel">{{ t('common.save') }}</NButton>
+            </div>
+            <span
+              v-else
+              class="meta-value editable"
+              :title="t('kanban.clickToEdit', 'Click to edit')"
+              @click="startEditModel"
+            >
+              <template v-if="task.model_override">
+                {{ task.provider_override ? task.provider_override + ':' : '' }}{{ task.model_override }}{{ task.reasoning_effort ? ' · ' + task.reasoning_effort : '' }}
+              </template>
+              <template v-else>{{ task.reasoning_effort ? t('kanban.form.profileDefault', 'Profile default') + ' · ' + task.reasoning_effort : t('kanban.form.profileDefault', 'Profile default') }}</template>
+            </span>
+          </div>
+
+          <div class="meta-row">
+            <span class="meta-label">{{ t('kanban.estimate', 'Estimate') }}</span>
+            <span v-if="estimate" class="meta-value">
+              <template v-if="estimate.ok">~{{ compactTokens(estimate.est_tokens) }} tok · {{ estimate.complexity || '?' }}</template>
+              <template v-else class="meta-value-muted">{{ t('kanban.estimateUnavailable', 'unavailable') }}</template>
+            </span>
+            <NButton size="tiny" :loading="estimating" quaternary @click="runEstimate">
+              {{ estimate && estimate.ok ? t('kanban.reestimate', 'Re-estimate') : t('kanban.estimate', 'Estimate') }}
+            </NButton>
+          </div>
+          <!-- HERMES_CUSTOM[v020] END -->
+
           <div v-if="task.created_by" class="meta-row">
             <span class="meta-label">{{ t('kanban.createdBy', 'Created by') }}</span>
             <span class="meta-value">{{ task.created_by }}</span>
@@ -1170,6 +1270,11 @@ function statusDotClass(status: string): string {
             </div>
           </div>
           <div class="comment-input-sticky" :style="{ width: drawerWidth }">
+            <!-- HERMES_CUSTOM[v020] BEGIN: live-comment-to-running-worker hint -->
+            <div v-if="task.status === 'running'" class="comment-live-hint">
+              {{ t('kanban.liveCommentHint', 'Notes are delivered to the running worker within seconds — no restart needed.') }}
+            </div>
+            <!-- HERMES_CUSTOM[v020] END -->
             <div class="comment-input-row">
               <NInput
                 v-model:value="newComment"
@@ -1296,6 +1401,15 @@ function statusDotClass(status: string): string {
   gap: 6px;
   flex: 1;
 }
+/* HERMES_CUSTOM[v020] BEGIN */
+.edit-row-wide { flex-wrap: wrap; }
+.comment-live-hint {
+  font-size: 11px;
+  color: $text-secondary;
+  margin-bottom: 4px;
+  padding: 2px 4px;
+}
+/* HERMES_CUSTOM[v020] END */
 
 .edit-actions {
   display: flex;

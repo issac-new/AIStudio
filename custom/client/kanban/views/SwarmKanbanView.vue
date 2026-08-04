@@ -326,7 +326,7 @@ function handleClearFilters() {
   includeArchived.value = false
 }
 
-async function handleCreateBoard(data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean }) {
+async function handleCreateBoard(data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean; project?: string }) {
   try {
     await store.createBoard({
       slug: data.slug,
@@ -335,6 +335,7 @@ async function handleCreateBoard(data: { slug: string; name?: string; descriptio
       icon: data.icon,
       color: data.color,
       switchCurrent: data.switchCurrent ?? true,
+      project: data.project,  // HERMES_CUSTOM[v020]
     })
     message.success(t('kanban.board.created', 'Board created'))
     await store.fetchTasks()
