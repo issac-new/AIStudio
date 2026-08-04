@@ -1,0 +1,117 @@
+diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
+index 5e78353..07ad404 100644
+--- a/packages/server/src/controllers/hermes/kanban.ts
++++ b/packages/server/src/controllers/hermes/kanban.ts
+@@ -331,7 +331,11 @@ export async function createBoard(ctx: Context) {
+   const icon = optionalString(body.icon, 'icon')
+   const color = optionalString(body.color, 'color')
+   const switchCurrent = optionalBoolean(body.switchCurrent, 'switchCurrent')
+-  if (rejectBadRequest(ctx, slug.error || name.error || description.error || icon.error || color.error || switchCurrent.error)) return
++  // HERMES_CUSTOM[v020] BEGIN: board project scope
++  const project = optionalString(body.project, 'project')
++  const defaultWorkdir = optionalString(body.defaultWorkdir, 'defaultWorkdir')
++  // HERMES_CUSTOM[v020] END
++  if (rejectBadRequest(ctx, slug.error || name.error || description.error || icon.error || color.error || switchCurrent.error || project.error || defaultWorkdir.error)) return
+   try {
+     const board = await kanbanCli.createBoard({
+       slug: slug.value!,
+@@ -340,6 +344,10 @@ export async function createBoard(ctx: Context) {
+       icon: icon.value,
+       color: color.value,
+       switchCurrent: switchCurrent.value,
++      // HERMES_CUSTOM[v020] BEGIN
++      project: project.value,
++      defaultWorkdir: defaultWorkdir.value,
++      // HERMES_CUSTOM[v020] END
+     })
+     ctx.body = { board }
+   } catch (err: any) {
+@@ -476,7 +484,12 @@ export async function create(ctx: Context) {
+   const maxRetries = optionalPositiveInteger(payload.maxRetries, 'maxRetries', 100)
+   const goalMode = optionalBoolean(payload.goalMode, 'goalMode')
+   const goalMaxTurns = optionalPositiveInteger(payload.goalMaxTurns, 'goalMaxTurns', 100)
+-  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || project.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error)) return
++  // HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins
++  const model = optionalString(payload.model, 'model')
++  const provider = optionalString(payload.provider, 'provider')
++  const reasoning = optionalString(payload.reasoning, 'reasoning')
++  // HERMES_CUSTOM[v020] END
++  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || project.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error || model.error || provider.error || reasoning.error)) return
+   const targetAssignee = assignee.value || requestedProfile(ctx) || undefined
+   if (targetAssignee && denyProfileAccess(ctx, targetAssignee)) return
+   const board = requestBoard(ctx)
+@@ -497,6 +510,11 @@ export async function create(ctx: Context) {
+       maxRetries: maxRetries.value,
+       goalMode: goalMode.value,
+       goalMaxTurns: goalMaxTurns.value,
++      // HERMES_CUSTOM[v020] BEGIN
++      model: model.value,
++      provider: provider.value,
++      reasoning: reasoning.value,
++      // HERMES_CUSTOM[v020] END
+     })
+     ctx.body = { task }
+   } catch (err: any) {
+@@ -1508,3 +1526,62 @@ async function _downloadUrlWithCapAndSsrf(
+ }
+ // HERMES_CUSTOM[AttachUrl] END
+ 
++
++// HERMES_CUSTOM[v020] BEGIN: estimate / projects / board project controllers
++
++/** POST /api/hermes/kanban/:id/estimate — rough token + complexity read via the auxiliary model. */
++export async function estimateTask(ctx: Context) {
++  try {
++    ctx.body = await kanbanCli.estimateTask(ctx.params.id, { board: ctx.query.board as string | undefined })
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++/** POST /api/hermes/kanban/estimate — estimate from raw title/body (create dialog). */
++export async function estimateText(ctx: Context) {
++  const bodyResult = requestBody(ctx)
++  if (rejectBadRequest(ctx, bodyResult.error)) return
++  const title = requiredNonEmptyString(bodyResult.body.title, 'title')
++  const body = optionalString(bodyResult.body.body, 'body')
++  if (rejectBadRequest(ctx, title.error || body.error)) return
++  try {
++    ctx.body = await kanbanCli.estimateText(title.value!, body.value)
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++/** GET /api/hermes/kanban/projects — first-class Hermes projects for board scoping. */
++export async function listProjects(ctx: Context) {
++  try {
++    ctx.body = { projects: await kanbanCli.listProjects() }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
++/** PATCH /api/hermes/kanban/boards/:slug — currently only the project scope is mutable. */
++export async function patchBoard(ctx: Context) {
++  const bodyResult = requestBody(ctx)
++  if (rejectBadRequest(ctx, bodyResult.error)) return
++  const hasProject = 'project_id' in (bodyResult.body || {})
++  const projectId = optionalString(bodyResult.body.project_id, 'project_id')
++  if (rejectBadRequest(ctx, projectId.error)) return
++  if (!hasProject) {
++    ctx.status = 400
++    ctx.body = { error: 'nothing to patch (supported: project_id)' }
++    return
++  }
++  try {
++    await kanbanCli.setBoardProject(ctx.params.slug, projectId.value || null)
++    ctx.body = { ok: true }
++  } catch (err: any) {
++    ctx.status = err.message?.includes('does not exist') ? 400 : 500
++    ctx.body = { error: err.message }
++  }
++}
++// HERMES_CUSTOM[v020] END
