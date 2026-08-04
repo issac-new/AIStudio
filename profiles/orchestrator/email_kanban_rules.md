@@ -34,7 +34,7 @@
 
 当用户明确要求处理邮件时，按以下规则执行：
 
-1. **Board 路由**: 按 `orchestrator_rules.md §0.5` 判定路由到 swarm 看板
+1. **Board 路由**: 按 `orchestrator_rules.md §0.5` 判定路由到 swarm 或 hack 看板
 2. **租户隔离**: 邮件使用 `email` 平台前缀的 tenant 格式
 3. **安全过滤**: agently-cli 已过滤 noreply/bounce 等自动发件人
 
@@ -91,7 +91,7 @@ Email 平台沿用全平台统一六段式 tenant（见 `orchestrator_rules.md �
 ### 4.1 基本任务创建
 
 ```python
-# board 由 orchestrator_rules.md §0.5 路由规则判定: "swarm"（默认）
+# board 由 orchestrator_rules.md §0.5 路由规则判定: "swarm"（默认）或 "hack"（安全类）
 kanban_create(
     title=f"[Email] {subject[:80]}",
     body=f"""
@@ -120,6 +120,7 @@ kanban_create(
 |----------|------|------|
 | 代码/技术相关 | swarm | worker-coder |
 | 研究/分析类 | swarm | worker-researcher |
+| 安全相关（命中 §0.5.2 关键词） | hack | 按 §0.5.3 分配 hack agent |
 | 营销/广告 | — | 直接归档，不创建任务 |
 | 个人通信 | swarm | worker-coder (默认) |
 

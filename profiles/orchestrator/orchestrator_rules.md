@@ -115,7 +115,7 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 
 #### 0.2.3 重型任务路由
 
-判定为"重型"时，按 §0.5 Board 路由规则确定 board（swarm/product/ops），然后:
+判定为"重型"时，按 §0.5 Board 路由规则确定 board（swarm/hack/product/ops），然后:
 
 ```python
 kanban_create(
@@ -136,13 +136,17 @@ kanban_create(
 
 ### 域景
 
-系统当前有五个看板，由 orchestrator 统一路由：
+系统当前有六个看板，由 orchestrator 统一路由（2026-07-31 重构后 33→20 profile）：
 
 | 看板 | slug | 用途 | profile_scope |
 |------|------|------|---------------|
-| **协作看板** | `swarm` | 常规软件开发、架构设计、代码审查、测试、部署 | orchestrator, architect, project-manager, requirement-analyst, worker-coder, worker-deployer, worker-researcher, worker-reviewer, worker-tester |
-| **产品看板** | `product` | 产品管理、用户研究、需求优先级、反馈分析 | orchestrator, product-manager, product-researcher, product-feedback, product-prioritizer |
-| **运维看板** | `ops` | SRE、事件响应、DevOps自动化、高管摘要 | orchestrator, ops-sre, ops-incident-commander, ops-devops, ops-exec-summary |
+| **协作看板** | `swarm` | 常规软件开发、架构设计、测试、部署（RA/architect/PM/deployer/reviewer 已降级为 skill） | orchestrator, worker-coder, worker-researcher, worker-tester |
+| **Hack看板** | `hack` | 网络安全攻击/防御事件专用（C2/weapons 已合并到 exploit） | orchestrator, hack-recon, hack-exploit, hack-forensics, hack-auditor |
+| **产品看板** | `product` | 产品管理、用户研究（prioritizer/feedback 已合并到 manager） | orchestrator, product-manager, product-researcher |
+| **运维看板** | `ops` | SRE、事件响应、DevOps自动化、评估（exec-summary 已降级为 skill） | orchestrator, ops-sre, ops-incident-commander, ops-devops, ops-eval |
+| **[已移除]看板** | `[已移除]` | 电子设计自动化：AI模型、IP核、物理建模、工具链（multiphysics/optics 已合并到 physics） | orchestrator, [已移除], [已移除], [已移除], [已移除] |
+| **平台看板** | `platform` | 平台双螺旋：skill 挖掘、ontology 维护（tool-builders 已合并到 miner） | orchestrator, platform-skill-miner, platform-ontology-curator |
+| **[已移除]教育看板** | `[已移除]` | 特级家庭教师团队：儿童教育、学科启蒙、品格培养 | [已移除]-orchestrator, [已移除], [已移除], [已移除], [已移除], [已移除] |
 
 ### 0.5.1 路由判定流程
 
@@ -153,13 +157,19 @@ Matrix / Email / Weixin / API Server 消息到达
     ↓
 [多级分类判定]
     ↓
+   ├─ 安全/黑客领域？ → board="hack", 按 §0.5.3 分配 hack profile
    ├─ 产品/市场/用户研究？ → board="product", 按 §0.5.7 分配 product profile
    ├─ 运维/SRE/事件响应？ → board="ops", 按 §0.5.8 分配 ops profile
+   ├─ [已移除]/电子设计/芯片/仿真？ → board="[已移除]", 按 §0.5.9 分配 [已移除] profile
+   ├─ [已移除]教育/儿童学习/亲子/学科启蒙？ → board="[已移除]", 按 §0.5.10 分配 [已移除] 教师 profile
    └─ 其他（软件开发/研究/部署等） → board="swarm", 按常规 §4 分配 worker profile
 ```
 
+> 📖 **[已移除] 教育路由规则** 已外置到 `references/[已移除]-routing-rules.md` — 路由判定时用 `read_file` 按需加载。[已移除] 看板由独立 gateway 进程（[已移除]-orchestrator profile，api_server port 8651）管理，第二个微信号接入。
+
 > 📖 **Board 路由关键词表** 已外置到 `references/board-keywords.md` — 路由判定时用 `read_file` 按需加载。
 
+> 📖 **Hack assignee 分配规则** 已外置到 `references/hack-assignee-rules.md` — 路由判定时用 `read_file` 按需加载。
 
 ### 0.5.4 Swarm 看板保持原逻辑
 
@@ -169,13 +179,18 @@ Matrix / Email / Weixin / API Server 消息到达
 
 > 📖 **Ops 看板路由规则** 已外置到 `references/ops-routing-rules.md` — 路由判定时用 `read_file` 按需加载。
 
+> 📖 **[已移除] 看板路由规则** 已外置到 `references/[已移除].md` — 路由判定时用 `read_file` 按需加载。
 
 > 📖 **路由示例** 已外置到 `references/routing-examples.md` — 路由判定时用 `read_file` 按需加载。
 
 ### 0.5.6 路由判定优先级
 
+1. **用户明确指定看板**: 消息中包含 `[hack]` / `[security]` / `[product]` / `[ops]` / `[[已移除]]` 前缀 → 强制路由到对应看板
+2. **用户明确指定 assignee**: 消息中 `@hack-recon` / `@product-manager` / `@ops-sre` / `@[已移除]` 等 → 路由到对应看板并分配该 assignee
+3. **安全关键词匹配**: 按 §0.5.2 关键词表匹配 → `hack` 看板
 4. **产品关键词匹配**: 按 §0.5.7 关键词表匹配 → `product` 看板
 5. **运维关键词匹配**: 按 §0.5.8 关键词表匹配 → `ops` 看板
+6. **[已移除] 关键词匹配**: 按 §0.5.9 关键词表匹配 → `[已移除]` 看板
 7. **默认**: 无匹配 → `swarm` 看板
 
 ### 0.5.10 方法论路由建议（PUA Methodology Router）
@@ -187,12 +202,13 @@ Matrix / Email / Weixin / API Server 消息到达
 
 | Hermes 看板 | 任务类型 | 推荐方法论 | 核心方法 |
 |------------|---------|-----------|---------|
+| **hack** | 渗透/漏洞/取证 | 🔴 华为 | RCA 5-Why + 蓝军自攻击 + 压强集中 |
 | **swarm** (编码) | build/create/implement | ⬛ Musk | The Algorithm: 质疑→删除→简化→加速→自动化 |
-| **swarm** (审查) | review/refactor | ⬜ Jobs | 减法优先 + 像素级完美 + DRI |
+| **swarm** (测试) | test/verify | ⬜ Jobs | 减法优先 + 像素级完美 + DRI |
 | **swarm** (研究) | research/search | ⚫ 百度 | 搜索第一 + 信息检索 |
-| **swarm** (架构) | design/architecture | 🔶 Amazon | Working Backwards + 6-Pager |
 | **product** | 产品/用户研究 | 🟧 小米 | 参与感三三法则 + 和用户交朋友 |
 | **ops** | deploy/config/运维 | 🟠 阿里 | 定目标→追过程→拿结果 + 复盘四步法 |
+| **[已移除]** | 仿真/芯片设计 | 🔶 Amazon + 🟡 字节 | Working Backwards + A/B Test 数据驱动 |
 | **通用/模糊** | 无明确类型 | 🟠 阿里 | 通用闭环（默认） |
 
 **失败切换链**：worker 连续失败时，按失败模式切换方法论（不回头，不重复）：
@@ -227,7 +243,7 @@ Matrix 消息到达
     ↓
 [提取元数据] 群聊 roomId、room name、用户名称
     ↓
-[Board 路由判定] 按 §0.5 判定 → board="swarm"
+[Board 路由判定] 按 §0.5 判定 → board="swarm" 或 board="hack"
     ↓
 [创建 Kanban 任务] board=<判定结果>, tenant=<结构化 tenant 值>
     ↓
@@ -359,31 +375,47 @@ Orchestrator **不进行智能分类**（安全分类除外，见 §0.5），创
 |------|------|
 | 所有消息（默认） | assignee 留空，由后续流程处理 |
 | 明确指定 worker 的消息 | 按用户要求指定 assignee |
+| 安全类消息（路由到 hack 看板） | 按 §0.5.3 自动分配 hack profile |
 
 ### 4.2 可用 Workers
 
-当前系统配置的 worker profiles:
+当前系统配置的 worker profiles（2026-07-31 重构后）：
 
-**Swarm 看板**:
-- `worker-coder`: 代码编写、技术实现、调试
+**Swarm 看板**（4 profile）:
+- `worker-coder`: 代码编写、架构设计、部署（吸收 architect/deployer/reviewer 能力）
 - `worker-researcher`: 研究分析、信息收集、总结报告
-- `worker-deployer`: 应用部署、环境配置
-- `worker-reviewer`: 代码审查、质量检查
-- `worker-tester`: 测试、验证
+- `worker-tester`: 测试、独立验证
+- 已降级为 skill：`requirement-analysis` / `architecture-design` / `mission-coordination` / `deployment-automation` / `code-review`
 
-**Hack 看板**（见 §0.5.3 自动分配规则）:
+**Hack 看板**（4 profile）:
+- `hack-recon`: 侦察、信息收集、OSINT、扫描、枚举
+- `hack-exploit`: 漏洞利用、exploit 开发、提权、后渗透、C2、武器生成（吸收 c2/weapons）
+- `hack-forensics`: 取证、应急响应、磁盘/内存分析、IOC 提取
+- `hack-auditor`: 安全审计、漏洞扫描、配置基线检查
+- 已降级为 skill：`weapon-generation`
 
-**Product 看板**（见 §0.5.7 自动分配规则）:
-- `product-manager`: 产品全生命周期、PRD、路线图、跨职能协调
+**Product 看板**（2 profile）:
+- `product-manager`: 产品全生命周期、PRD、路线图、RICE 排序、反馈分析（吸收 prioritizer/feedback）
 - `product-researcher`: 用户画像、竞品分析、TAM/SAM/SOM、趋势研究
-- `product-feedback`: 多渠道反馈收集、情感分析、痛点排序
-- `product-prioritizer`: RICE评分、待办列表排序、依赖映射
+- 已降级为 skill：`sprint-prioritization` / `feedback-analysis`
 
-**Ops 看板**（见 §0.5.8 自动分配规则）:
+**Ops 看板**（4 profile）:
 - `ops-sre`: SLO定义、错误预算、可观测性、混沌工程
 - `ops-incident-commander`: 严重度分类、协调响应、post-mortem
 - `ops-devops`: IaC、CI/CD流水线、K8s、零停机部署
-- `ops-exec-summary`: SCQA框架、高管摘要、决策支持
+- `ops-eval`: 6维评估、周报生成
+- 已降级为 skill：`executive-summary`
+
+**[已移除] 看板**（4 profile）:
+- `[已移除]`: AI+[已移除]（FNO/PINN/DeepONet）
+- `[已移除]`: RTL 设计（Verilog/SystemVerilog）
+- `[已移除]`: 物理建模、多物理场、光学计算（吸收 multiphysics/optics）
+- `[已移除]`: SI/PI/眼图/工具链
+- 已降级为 skill：`optical-computing`
+
+**Platform 看板**（2 profile）:
+- `platform-skill-miner`: skill 挖掘 + 封装（吸收 tool-builder）
+- `platform-ontology-curator`: ontology 维护
 
 ### 4.3 特殊场景
 
