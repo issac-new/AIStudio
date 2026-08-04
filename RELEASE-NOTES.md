@@ -1,17 +1,35 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio 0.6.37（基于 hermes-studio v0.6.37 + overlay 二次开发）
+SwarmStudio 0.6.38（基于 hermes-studio v0.6.38 + overlay 二次开发）
 
 ## 上游版本
 
 | 仓库 | 版本 |
 |------|------|
-| hermes-studio | v0.6.37 |
+| hermes-studio | v0.6.38 |
 | hermes-agent | v0.20.0 |
 | element-web | v1.12.22 |
 
-## 本次升级（0.6.36 → 0.6.37 + hermes-agent 0.19.1 → 0.20.0）
+## 本次升级（0.6.37 → 0.6.38）
+
+上游 v0.6.38 含 2 个提交（21 文件变更），主要是 Windows runtime 修复与 Hermes 0.19.0 网站兼容性恢复：
+
+- **Windows Runtime Python home 修复**（#2349）：修复 Windows 下 Python 运行时路径
+- **Hermes 0.19.0 网站兼容性恢复**（#2348）
+
+### Overlay 适配
+
+- 042 版本号 0.6.37 → 0.6.38
+- 无其他 patch 冲突（v0.6.38 为小版本）
+
+### 验证
+
+- 125 patch 全 inject 通过
+- server `tsc --noEmit` 0 errors；client `vue-tsc` 17 baseline errors（0 new）
+- kanban/avatar 测试 44/44 PASS；agent patch 117/118 干净应用
+
+## 上一版（0.6.36 → 0.6.37 + hermes-agent 0.19.1 → 0.20.0）
 
 上游 v0.6.37 含 20+ 提交（210 文件变更），hermes-agent v0.20.0 rollup。主要更新：
 
