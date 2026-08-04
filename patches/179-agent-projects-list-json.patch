@@ -1,0 +1,39 @@
+diff --git a/hermes_cli/projects_cmd.py b/hermes_cli/projects_cmd.py
+index 4e2655b..8ebf8be 100644
+--- a/hermes_cli/projects_cmd.py
++++ b/hermes_cli/projects_cmd.py
+@@ -14,6 +14,7 @@ from __future__ import annotations
+ 
+ import argparse
+ import functools
++import json  # HERMES_CUSTOM[v020]
+ import sys
+ 
+ from hermes_cli import projects_db as pdb
+@@ -59,6 +60,11 @@ def build_parser(
+         "--all", action="store_true", dest="include_archived",
+         help="Include archived projects",
+     )
++    # HERMES_CUSTOM[v020] BEGIN: machine-readable output for TS service
++    p_list.add_argument(
++        "--json", action="store_true", help="Emit JSON instead of the human table",
++    )
++    # HERMES_CUSTOM[v020] END
+ 
+     p_show = sub.add_parser("show", help="Show a project's details")
+     p_show.add_argument("project", help="Project id or slug")
+@@ -222,6 +228,14 @@ def _cmd_list(args: argparse.Namespace) -> int:
+         projs = pdb.list_projects(
+             conn, include_archived=getattr(args, "include_archived", False)
+         )
++    # HERMES_CUSTOM[v020] BEGIN: --json output
++    if getattr(args, "json", False):
++        print(json.dumps(
++            [p.to_dict() for p in projs],
++            indent=2, ensure_ascii=False,
++        ))
++        return 0
++    # HERMES_CUSTOM[v020] END
+     if not projs:
+         print("No projects yet. Create one with `hermes project create <name>`.")
+         return 0
