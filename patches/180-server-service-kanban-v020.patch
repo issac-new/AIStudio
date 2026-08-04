@@ -1,0 +1,210 @@
+diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/server/src/services/hermes/hermes-kanban.ts
+index ae721cf..e12cbf2 100644
+--- a/packages/server/src/services/hermes/hermes-kanban.ts
++++ b/packages/server/src/services/hermes/hermes-kanban.ts
+@@ -62,6 +62,10 @@ export interface KanbanTask {
+   workflow_template_id?: string | null
+   current_step_key?: string | null
+   model_override?: string | null
++  // HERMES_CUSTOM[v020] BEGIN: per-task model provider + reasoning depth
++  provider_override?: string | null
++  reasoning_effort?: string | null
++  // HERMES_CUSTOM[v020] END
+   max_retries?: number | null
+   goal_max_turns?: number | null
+   session_id?: string | null
+@@ -140,6 +144,10 @@ export interface KanbanBoard {
+   archived: boolean
+   db_path?: string
+   is_current?: boolean
++  // HERMES_CUSTOM[v020] BEGIN: board project scope
++  project_id?: string | null
++  default_workdir?: string | null
++  // HERMES_CUSTOM[v020] END
+   counts: Record<string, number>
+   total: number
+ }
+@@ -151,6 +159,10 @@ export interface KanbanBoardCreateOptions {
+   icon?: string
+   color?: string
+   switchCurrent?: boolean
++  // HERMES_CUSTOM[v020] BEGIN: board project scope
++  project?: string
++  defaultWorkdir?: string
++  // HERMES_CUSTOM[v020] END
+ }
+ 
+ export interface KanbanCapabilities {
+@@ -239,6 +251,10 @@ export async function createBoard(opts: KanbanBoardCreateOptions): Promise<Kanba
+   if (opts.icon?.trim()) args.push('--icon', opts.icon.trim())
+   if (opts.color?.trim()) args.push('--color', opts.color.trim())
+   if (opts.switchCurrent) args.push('--switch')
++  // HERMES_CUSTOM[v020] BEGIN: board project scope
++  if (opts.project?.trim()) args.push('--project', opts.project.trim())
++  if (opts.defaultWorkdir?.trim()) args.push('--default-workdir', opts.defaultWorkdir.trim())
++  // HERMES_CUSTOM[v020] END
+ 
+   try {
+     await execHermes(args, {
+@@ -583,6 +599,11 @@ export async function createTask(
+     maxRetries?: number
+     goalMode?: boolean
+     goalMaxTurns?: number
++    // HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins on create
++    model?: string
++    provider?: string
++    reasoning?: string
++    // HERMES_CUSTOM[v020] END
+   },
+ ): Promise<KanbanTask> {
+   const args = [...boardArgs(opts?.board), 'create', title, '--json']
+@@ -598,6 +619,11 @@ export async function createTask(
+   if (opts?.maxRetries !== undefined) args.push('--max-retries', String(opts.maxRetries))
+   if (opts?.goalMode) args.push('--goal')
+   if (opts?.goalMaxTurns !== undefined) args.push('--goal-max-turns', String(opts.goalMaxTurns))
++  // HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins on create
++  pushOptional(args, '--model', opts?.model)
++  pushOptional(args, '--provider', opts?.provider)
++  pushOptional(args, '--reasoning', opts?.reasoning)
++  // HERMES_CUSTOM[v020] END
+   for (const skill of opts?.skills || []) {
+     if (skill.trim()) args.push('--skill', skill.trim())
+   }
+@@ -833,6 +859,13 @@ export interface KanbanTaskPatchOptions extends KanbanBoardOptions {
+   result?: string
+   block_reason?: string
+   summary?: string
++  // HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins
++  model_override?: string | null
++  provider_override?: string | null
++  clear_model_override?: boolean
++  reasoning_effort?: string | null
++  clear_reasoning_effort?: boolean
++  // HERMES_CUSTOM[v020] END
+ }
+ 
+ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions): Promise<KanbanTask | null> {
+@@ -865,6 +898,22 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+   if (patch.priority !== undefined) {
+     await bulkUpdateTasks({ ids: [taskId], priority: patch.priority, board })
+   }
++  // HERMES_CUSTOM[v020] BEGIN: model/provider/reasoning pins via CLI verbs
++  if (patch.clear_model_override || patch.model_override !== undefined) {
++    const model = patch.clear_model_override ? 'none' : (patch.model_override || 'none')
++    const args = [...boardArgs(board), 'set-model', taskId, model]
++    pushOptional(args, '--provider', patch.provider_override)
++    await execKanbanMutation(args, 'Hermes CLI: kanban set-model failed', 'Failed to set model override')
++  }
++  if (patch.clear_reasoning_effort || patch.reasoning_effort !== undefined) {
++    const effort = patch.clear_reasoning_effort ? 'clear' : (patch.reasoning_effort || 'clear')
++    await execKanbanMutation(
++      [...boardArgs(board), 'set-reasoning', taskId, effort],
++      'Hermes CLI: kanban set-reasoning failed',
++      'Failed to set reasoning effort',
++    )
++  }
++  // HERMES_CUSTOM[v020] END
+   // For title/body edits, we don't have a direct CLI verb — use create+replace pattern
+   // is not available, so title/body edits fall back to re-fetching.
+   return (await getTask(taskId, { board }))?.task || null
+@@ -1054,3 +1103,100 @@ function parseDotEnv(raw: string): Record<string, string> {
+   }
+   return env
+ }
++
++// ─── HERMES_CUSTOM[v020] BEGIN: estimate / projects / board project ────────
++
++export interface KanbanEstimateResult {
++  ok: boolean
++  est_tokens?: number
++  complexity?: 'S' | 'M' | 'L' | null
++  rationale?: string | null
++  model?: string | null
++  reason?: string
++}
++
++/**
++ * Rough token + complexity estimate for an existing task via the agent's
++ * auxiliary model (`hermes kanban estimate <id> --json`, patch 178). A non-OK
++ * outcome is carried in the payload (exit code stays 0), never thrown.
++ */
++export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
++  try {
++    const { stdout } = await execHermes([...boardArgs(opts?.board), 'estimate', taskId, '--json'], {
++      maxBuffer: 1024 * 1024,
++      timeout: 90000,
++      ...execOpts,
++    })
++    return JSON.parse(stdout.trim())
++  } catch (err: any) {
++    logger.error(err, 'Hermes CLI: kanban estimate failed')
++    return { ok: false, reason: `estimate unavailable: ${err.message}` }
++  }
++}
++
++/**
++ * Estimate from raw title/body — used by the create dialog before a task
++ * exists yet (`hermes kanban estimate --title ... --json`).
++ */
++export async function estimateText(title: string, body?: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
++  const args = [...boardArgs(opts?.board), 'estimate', '--title', title, '--json']
++  pushOptional(args, '--body', body)
++  try {
++    const { stdout } = await execHermes(args, {
++      maxBuffer: 1024 * 1024,
++      timeout: 90000,
++      ...execOpts,
++    })
++    return JSON.parse(stdout.trim())
++  } catch (err: any) {
++    logger.error(err, 'Hermes CLI: kanban estimate failed')
++    return { ok: false, reason: `estimate unavailable: ${err.message}` }
++  }
++}
++
++export interface KanbanProject {
++  id: string
++  slug: string
++  name: string
++  description?: string | null
++  icon?: string | null
++  color?: string | null
++  board_slug?: string | null
++  primary_path?: string | null
++  archived: boolean
++}
++
++/** List first-class Hermes projects for board scoping (`hermes project list --json`, patch 179). */
++export async function listProjects(): Promise<KanbanProject[]> {
++  try {
++    const { stdout } = await execHermes(['project', 'list', '--json'], {
++      maxBuffer: 5 * 1024 * 1024,
++      timeout: 30000,
++      ...execOpts,
++    })
++    const parsed = JSON.parse(stdout.trim() || '[]')
++    return Array.isArray(parsed) ? parsed : []
++  } catch (err: any) {
++    logger.error(err, 'Hermes CLI: project list failed')
++    throw new Error(`Failed to list hermes projects: ${err.message}`)
++  }
++}
++
++/** Scope a board to a project (or clear with null) via `kanban boards set-project` (patch 178). */
++export async function setBoardProject(slugInput: string, projectRef: string | null): Promise<void> {
++  const slug = normalizeBoardSlug(slugInput)
++  const args = ['kanban', 'boards', 'set-project', slug]
++  args.push(projectRef?.trim() ? projectRef.trim() : 'none')
++  try {
++    await execHermes(args, {
++      maxBuffer: 1024 * 1024,
++      timeout: 30000,
++      ...execOpts,
++    })
++  } catch (err: any) {
++    logger.error(err, 'Hermes CLI: kanban boards set-project failed')
++    throw new Error(`Failed to set board project: ${err.message}`)
++  }
++}
++
++// ─── HERMES_CUSTOM[v020] END ──────────────────────────────────
