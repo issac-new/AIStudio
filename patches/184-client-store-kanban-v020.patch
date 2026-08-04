@@ -1,0 +1,79 @@
+diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+index 382da8d..dda8b0e 100644
+--- a/packages/client/src/stores/hermes/kanban.ts
++++ b/packages/client/src/stores/hermes/kanban.ts
+@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
+ import { computed, ref } from 'vue'
+ import * as kanbanApi from '@/api/hermes/kanban'
+ import { probeAuthViaRest } from '@/api/client'
+-import type { KanbanTask, KanbanTaskStatus, KanbanStats, KanbanAssignee, KanbanBoard, KanbanCapabilities, KanbanDiagnosticsOptions, KanbanDispatchOptions, KanbanBulkUpdateRequest, KanbanCreateRequest, KanbanDiagnostic, KanbanOrchestration, KanbanAttachment } from '@/api/hermes/kanban'
++import type { KanbanTask, KanbanTaskStatus, KanbanStats, KanbanAssignee, KanbanBoard, KanbanProject, KanbanCapabilities, KanbanDiagnosticsOptions, KanbanDispatchOptions, KanbanBulkUpdateRequest, KanbanCreateRequest, KanbanDiagnostic, KanbanOrchestration, KanbanAttachment } from '@/api/hermes/kanban'
+ 
+ export const KANBAN_SELECTED_BOARD_STORAGE_KEY = 'hermes.kanban.selectedBoard'
+ export const DEFAULT_KANBAN_BOARD = 'default'
+@@ -38,6 +38,9 @@ export const useKanbanStore = defineStore('kanban', () => {
+   const stats = ref<KanbanStats | null>(null)
+   const assignees = ref<KanbanAssignee[]>([])
+   const boards = ref<KanbanBoard[]>([])
++  // HERMES_CUSTOM[v020] BEGIN
++  const projects = ref<KanbanProject[]>([])
++  // HERMES_CUSTOM[v020] END
+   const capabilities = ref<KanbanCapabilities | null>(null)
+   const loading = ref(false)
+   const boardsLoading = ref(false)
+@@ -327,7 +330,7 @@ export const useKanbanStore = defineStore('kanban', () => {
+     await Promise.all([fetchBoards(), fetchTasks(), fetchStats(), fetchAssignees()])
+   }
+ 
+-  async function createBoard(data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean }) {
++  async function createBoard(data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean; project?: string; defaultWorkdir?: string }) {
+     const board = await kanbanApi.createBoard(data)
+     await fetchBoards()
+     setSelectedBoard(board.slug)
+@@ -732,11 +735,34 @@ export const useKanbanStore = defineStore('kanban', () => {
+     return result
+   }
+ 
++  // ─── HERMES_CUSTOM[v020] BEGIN: estimate / projects / board project
++  async function listProjects() {
++    const list = await kanbanApi.listProjects()
++    projects.value = list
++    return list
++  }
++
++  async function estimateTask(taskId: string) {
++    return kanbanApi.estimateTask(taskId, { board: selectedBoard.value })
++  }
++
++  async function estimateText(title: string, body?: string) {
++    return kanbanApi.estimateText(title, body)
++  }
++
++  async function patchBoardProject(slug: string, projectId: string | null) {
++    await kanbanApi.patchBoard(slug, { project_id: projectId })
++    await fetchBoards()
++  }
++  // ─── HERMES_CUSTOM[v020] END
++
+   return {
+     tasks,
+     stats,
+     assignees,
+     boards,
++    // HERMES_CUSTOM[v020]
++    projects,
+     capabilities,
+     activeBoards,
+     isCapabilitySupported,
+@@ -758,6 +784,11 @@ export const useKanbanStore = defineStore('kanban', () => {
+     fetchStats,
+     fetchAssignees,
+     createTask,
++    // HERMES_CUSTOM[v020]
++    listProjects,
++    estimateTask,
++    estimateText,
++    patchBoardProject,
+     createBoard,
+     archiveSelectedBoard,
+     completeTasks,
