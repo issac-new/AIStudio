@@ -1,0 +1,11 @@
+name: ops-eval
+version: 2.0.0
+description: "SwarmTeam distribution — ops-eval"
+hermes_requires: ">=0.12.0"
+author: "SwarmTeam"
+license: "MIT"
+env_requires:
+  - name: GLM_API_KEY
+    description: "Z.AI/GLM API key (primary LLM)"
+    required: true
+    default: ""
