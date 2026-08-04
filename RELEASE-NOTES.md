@@ -1,7 +1,9 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio 0.6.38（基于 hermes-studio v0.6.38 + overlay 二次开发）
+SwarmStudio **2.0**（基于 hermes-studio v0.6.38 + overlay 二次开发）
+
+> **2.0** — hermes-agent v0.20.0 kanban 五大新功能全量迁移（单卡 model/provider/reasoning 钉选、board project 作用域、effort estimate、运行中 worker 评论即时送达）+ i18n/测试技术债清理。
 
 ## 上游版本
 
@@ -63,12 +65,20 @@ SwarmStudio 0.6.38（基于 hermes-studio v0.6.38 + overlay 二次开发）
 
 ### 验证
 
-- 全量 inject 136 patches，0 FAILED / 0 WARN（hermes-agent patch 干净应用）
+- 全量 inject 138 patches，0 FAILED / 0 WARN（hermes-agent patch 干净应用）
 - CLI 冒烟（隔离 HERMES_HOME）：project/board/task create/reasoning/estimate 全路径通过
-- server `tsc --noEmit` 0 errors；client `vue-tsc` 16 errors（与 baseline 一致，0 new）
-- vitest 500 passed / 3 failed（cockpit-run-trace i18n，main 既有，非本次引入）
+- server `tsc --noEmit` 0 errors；client `vue-tsc` 8 errors（chat/matrix 既有，0 i18n）
+- vitest 503 passed / 0 failed / 6 skipped（67 test files，3 连跑稳定）
 
 参考：`docs/superpowers/specs/2026-08-04-hermes-agent-020-kanban-migration-design.md`、`docs/superpowers/plans/2026-08-04-hermes-agent-020-kanban-migration.md`
+
+### i18n / 测试修复（patch 187 + 测试断言修正）
+
+发版前清掉 main 既有技术债：
+
+- **patch 187**：去除 patch 159/161/162/163 注入残留导致的 8 个 TS1117 duplicate-key（`loop.onboarding.cta`/`kanban.action.archive`/`kanban.message.taskArchived` 重复、`accurate:` 顶格缩进、zh 侧 `swarmKanban/matrixChat/cockpit/diagnostics/matrixIdentity` 错放顶层）。vue-tsc **16 → 8 errors**。
+- **cockpit-run-trace-modal 3 例**：断言中文翻译值但 test setup 的 `useI18n` mock 返回 raw key，恒失败；改为断言 raw key。
+- **phase3-integration scheduler**：fire-and-forget tick flush 窗口 50ms 并行负载下 flake，扩到 250ms。
 
 ## 上一版（0.6.36 → 0.6.37 + hermes-agent 0.19.1 → 0.20.0）
 
