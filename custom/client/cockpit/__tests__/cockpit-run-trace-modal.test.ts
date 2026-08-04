@@ -284,7 +284,8 @@ describe('CockpitRunTraceModal', () => {
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
     expect(w.find('.trace-node-card.is-l1').exists()).toBe(true)
     await w.find('[data-node-id="skill:s1:auth:1"]').trigger('click')
-    expect(w.text()).toContain('推断')
+    // i18n is mocked in test setup to return the raw key; assert the key is rendered
+    expect(w.text()).toContain('cockpit.inference')
   })
 
   it('renders scrubber with live mode indicator', () => {
@@ -308,7 +309,7 @@ describe('CockpitRunTraceModal', () => {
     await w.vm.$nextTick()
     expect(w.find('[data-run-trace-overview]').exists()).toBe(true)
     expect(w.find('[data-run-trace-topology]').exists()).toBe(true)
-    expect(w.text()).toContain('kanban 任务树拓扑')
+    expect(w.text()).toContain('kanban cockpit.taskTopology')
     // echarts 节点数据在 setOption 中（canvas 渲染，不在 DOM 文本）
     const inst = (echartsMock.init as any).mock.results[0]?.value
     const opt = inst?.setOption.mock.calls.at(-1)?.[0]
@@ -330,7 +331,7 @@ describe('CockpitRunTraceModal', () => {
     const names0 = (opt0?.series?.[0]?.data ?? []).map((d: any) => d.name).join(' ')
     expect(names0).not.toContain('t_child')
     // 点击"已完成"标签 → 重新加载
-    const doneBtn = w.findAll('.run-trace-overview__filter').find(b => b.text().includes('已完成'))!
+    const doneBtn = w.findAll('.run-trace-overview__filter').find(b => b.text().includes('cockpit.completed'))!
     await doneBtn.trigger('click')
     await new Promise(r => setTimeout(r, 600))
     await w.vm.$nextTick()
