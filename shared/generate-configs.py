@@ -244,7 +244,7 @@ def generate_config_yaml(profile_name: str, profile_cfg: dict, existing_cfg: dic
             print(f"  ⚠ PLATFORM-DRIFT {profile_name}: ALL_CATEGORIES 中类目磁盘已不存在 {drift_gone} —— 请清理声明")
 
     shared = shared_config
-    # Per-profile model override (e.g. specialized profiles pinned to custom providers)
+    # Per-profile model override (e.g. hack profiles pinned to k3/custom:kimicode)
     # wins over shared_config.model; fall back to shared, then the built-in default.
     model_cfg = profile_cfg.get("model") or shared.get("model", {"default": "glm-5.2", "provider": "damoxing", "base_url": "${DAMOXING_BASE_URL}"})
     providers_cfg = shared.get("providers", {})

@@ -1,30 +1,22 @@
 model:
   default: glm-5.2
-  provider: damoxing
-  base_url: ${DAMOXING_BASE_URL}
-providers:
-  damoxing:
-    base_url: ${DAMOXING_BASE_URL}
-    api_key: ${DAMOXING_API_KEY}
-    api_mode: ${DAMOXING_API_MODE}
-    context_length: 1048576
-    models:
-    - glm-5
-    - glm-5.1
-    - glm-5.1-20260408
-    - glm-5.2
-    - glm-5.2-20260613
-    - GLM-5.2-C
+  provider: custom:cc-switch
+providers: {}
 custom_providers:
-- name: kimicode
-  base_url: https://api.kimi.com/coding
-  api_key: ${KIMI_API_KEY}
+- api_key: PROXY_MANAGED
   api_mode: anthropic_messages
+  base_url: http://127.0.0.1:15721
   context_length: 1048576
   models:
-    k3:
-      name: k3
-  model: k3
+    claude-opus-5:
+      name: claude-opus-5
+    deepseek-v4-flash:
+      name: deepseek-v4-flash
+    glm-5.2:
+      name: glm-5.2
+    kimi-k3:
+      name: kimi-k3
+  name: cc-switch
 toolsets:
 - hermes-cli
 - acp
@@ -32,7 +24,7 @@ toolsets:
 - memory
 agent:
   max_turns: 90
-  reasoning_effort: xhigh
+  reasoning_effort: ultra
   tool_use_enforcement: auto
   task_completion_guidance: true
   parallel_tool_call_guidance: true
@@ -84,16 +76,21 @@ auxiliary:
     provider: damoxing
     model: glm-5.2
   vision:
-    provider: custom:kimicode
+    provider: custom
     model: k3
-  approval:
-    provider: deepseek
-    model: deepseek-v4-flash
-fallback_providers:
-- provider: damoxing
-  model: glm-5.1
-- provider: deepseek
-  model: deepseek-v4-flash
+    base_url: https://api.kimi.com/coding
+    api_key: HK_KEY_K2
+    api_mode: anthropic_messages
+    timeout: 120
+    download_timeout: 30
+    fallback_chain:
+      - provider: custom
+        model: glm-4.5v
+        base_url: https://open.bigmodel.cn/api/anthropic
+        api_key: HK_KEY_B1
+        api_mode: anthropic_messages
+        timeout: 120
+fallback_providers: []
 platforms:
   api_server:
     enabled: false
