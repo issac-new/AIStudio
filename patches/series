@@ -143,7 +143,6 @@
 144-server-bridge-stderr-capture.patch
 
 # Windows runtime + quit lifecycle fixes (Phase 3)
-145-desktop-explicit-system-hermes-and-run-agent-required.patch
 146-bridge-agent-root-optional-default.patch
 148-package-runtime-run-agent-check.patch
 149-runtime-manager-require-run-agent.patch

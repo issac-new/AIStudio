@@ -1,19 +1,18 @@
 diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
 --- a/packages/desktop/src/main/paths.ts
 +++ b/packages/desktop/src/main/paths.ts
-@@ -8,12 +8,37 @@
+@@ -8,6 +8,7 @@
    type DesktopRuntimeResource,
  } from './runtime-paths'
  import { hermesAgentVersionFromRuntimeTag } from './runtime-version'
 +import { execFileSync } from 'node:child_process'
-+import { dirname, join, resolve } from 'node:path'
  
  const isWin = platform() === 'win32'
  const DEFAULT_HERMES_AGENT_VERSION = '0.20.0'
- const PACKAGED_RUNTIME_RELEASE_NAME = 'runtime-release.json'
- const ACTIVE_RUNTIME_VERSION_NAME = 'active-version.json'
- let incompleteActiveWebUiWarningPath = ''
-+
+@@ -42,10 +43,43 @@
+   webUiDirectory?: unknown
+ }
+ 
 +
 +function resolveExecutable(command: string): string | undefined {
 +  const trimmed = command.trim()
@@ -36,7 +35,21 @@ diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/path
 +    ?? resolveExecutable('hermes-agent')
 +    ?? undefined
 +}
- 
- export function isPackaged() {
-   return !!app?.isPackaged
-diff --git a/packages/desktop/src/main/hermes-cli.ts
++
++// overlay[explicit-system-hermes]: system Hermes must be explicitly opted in.
++// Without this env var, the desktop always uses the bundled runtime.
++function explicitSystemHermesEnabled(): boolean {
++  const raw = (process.env.HERMES_DESKTOP_USE_SYSTEM_HERMES || '').trim().toLowerCase()
++  if (!['1', 'true', 'yes', 'on'].includes(raw)) return false
++  return true
++}
++
+ function runtimeRequiredFiles(root: string): string[] {
+   const sourceRoot = join(root, 'python')
+   const environmentRoot = runtimePythonEnvironmentRoot(sourceRoot)
+   const python = runtimePythonExecutable(environmentRoot)
++  // overlay[run-agent-required]: run_agent.py is required at python root
++  const runAgentPy = join(sourceRoot, 'run_agent.py')
+   const hermes = isWin ? windowsHermesLauncher(environmentRoot) : join(environmentRoot, 'bin', 'hermes')
+   const node = isWin ? join(root, 'node', 'node.exe') : join(root, 'node', 'bin', 'node')
+   const files = [python, hermes, node]
