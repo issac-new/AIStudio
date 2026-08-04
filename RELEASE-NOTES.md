@@ -1,17 +1,44 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio 0.6.36（基于 hermes-studio v0.6.36 + overlay 二次开发）
+SwarmStudio 0.6.37（基于 hermes-studio v0.6.37 + overlay 二次开发）
 
 ## 上游版本
 
 | 仓库 | 版本 |
 |------|------|
-| hermes-studio | v0.6.36 |
-| hermes-agent | v0.19.1 |
+| hermes-studio | v0.6.37 |
+| hermes-agent | v0.20.0 |
 | element-web | v1.12.22 |
 
-## 本次升级（0.6.35 → 0.6.36）
+## 本次升级（0.6.36 → 0.6.37 + hermes-agent 0.19.1 → 0.20.0）
+
+上游 v0.6.37 含 20+ 提交（210 文件变更），hermes-agent v0.20.0 rollup。主要更新：
+
+- **cli-shim 重构**（214 行重写）：Windows runtime 修复 + storage migration
+- **GroupChatPanel 重构**（2380 行重写）+ GroupMessageList 重构（195 行）
+- **paths.ts runtime 重构**（#8314 bundle Hermes source runtime + Windows 更新修复）
+- **MCU 自动聆听模式**（#2338）+ Ekko voice 模式切换
+- **authorized provider OAuth runtime**（#2337）
+- **profile archive lifecycle 加固**（#2324）
+- **macOS signing keychain 修复**（#2315）
+- hermes-agent 0.20.0 rollup（1162 files）
+
+### Overlay 适配（11 patches 重写 + 3 obsolete）
+
+- 043/177：cli-shim rebrand 拆分（v0.6.37 cli-shim 214 行重写）
+- 085/102/122：group-chat store + GroupMessageList + GroupChatPanel 适配（2380+195 行重写）
+- 126/145/147：paths.ts/runtime 适配（147 obsolete——run_agent.py 模式被上游取代）
+- 152 obsolete（ELECTRON_RUN_AS_NODE 已内置）
+- 042/088 版本号 + deleteSession import 适配
+
+### 验证
+
+- 126 patch 全 inject 通过
+- server `tsc --noEmit` 0 errors；client `vue-tsc` 16 baseline errors（0 new）
+- kanban/avatar 测试 44/44 PASS
+
+## 上一版（0.6.36 → 0.6.36 保持版）
 
 上游 v0.6.36 含 40+ 提交（326 文件变更），主要更新：
 
