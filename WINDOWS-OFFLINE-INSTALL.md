@@ -1,198 +1,117 @@
 # Windows Offline Installation Guide / Windows 离线安装指南
 
-> **Environment**: Windows 10 x64, offline, pip + npm access only (no GitHub access)
+> **Environment**: Windows 10 x64, offline, **pip + npm access only**
+> **No bash/WSL/Git Bash required** — all scripts are pure PowerShell (.ps1) or batch (.bat)
 
 ## Overview / 概述
 
-This package contains everything needed to deploy the SwarmTeam multi-agent system on a Windows machine that can only reach `pip` and `npm` package sources. No GitHub access required — all profile files, skills, plugins, and patches are bundled.
+This package deploys the SwarmTeam multi-agent system on a Windows machine using only `pip` and `npm`. All patch scripts are PowerShell — no bash, WSL, or Git Bash needed.
 
-**Package contents**: 12 profiles + 278 skills + 5 plugins + 6 patches + 9 shared protocols (~15 MB total)
-
----
-
-## Step 1: Install Prerequisites / 安装前提
-
-### 1.1 Python 3.11+
-
-Download from https://www.python.org/downloads/ (or use winget if available):
-
-```powershell
-# Check if Python is installed
-python --version
-
-# If not, the offline machine should have Python from the IT package manager
-# or download the installer on a connected machine and transfer via USB
-```
-
-### 1.2 Git (for workspace repo + patches)
-
-```powershell
-# Git is needed for kanban worktree workspaces
-# Download from https://git-scm.com/download/win
-git --version
-```
-
-### 1.3 Node.js (OPTIONAL — only for TUI)
-
-```powershell
-# Only needed if you want the Ink TUI interface
-# CLI chat (`hermes chat`) works without Node.js
-node --version
-```
+**Package size**: ~5 MB (framework installed separately via pip)
 
 ---
 
-## Step 2: Run the Installer / 运行安装
+## Quick Start / 快速开始
 
-### Option A: Automated PowerShell Script
+### Method 1: Double-click (Easiest)
+
+1. Extract `SwarmTeam-offline.zip` to any folder (e.g. `C:\SwarmTeam`)
+2. **Double-click `install-windows.bat`**
+3. Follow on-screen prompts
+
+### Method 2: PowerShell
 
 ```powershell
-# Extract the SwarmTeam package to a temp folder
-# Then run:
-cd C:\path\to\SwarmTeam
+# Extract and run
+Expand-Archive SwarmTeam-offline.zip C:\SwarmTeam
+cd C:\SwarmTeam
 powershell -ExecutionPolicy Bypass -File install-windows.ps1
 ```
 
-The script will:
-1. ✅ Install `hermes-agent[all]` via pip (the framework, ~200MB)
-2. ✅ Initialize `~/.hermes/`
-3. ✅ Install all 12 SwarmTeam profiles via `hermes profile install`
-4. ✅ Copy 278 custom skills to `~/.hermes/skills/`
-5. ✅ Copy shared protocols (`_shared/`), plugins, and patches
-6. ✅ Initialize the workspace git repo
+### Method 3: Command Prompt
 
-### Option B: Manual Step-by-Step
-
-```powershell
-# 1. Install Hermes framework
-pip install "hermes-agent[all]>=0.20.0"
-
-# 2. Initialize
-hermes setup --skip-model
-
-# 3. Install each profile (repeat for all 12)
-hermes profile install .\profiles\orchestrator --alias -y
-hermes profile install .\profiles\worker-coder --alias -y
-hermes profile install .\profiles\worker-researcher --alias -y
-hermes profile install .\profiles\worker-tester --alias -y
-hermes profile install .\profiles\product-manager --alias -y
-hermes profile install .\profiles\product-researcher --alias -y
-hermes profile install .\profiles\ops-devops --alias -y
-hermes profile install .\profiles\ops-eval --alias -y
-hermes profile install .\profiles\ops-incident-commander --alias -y
-hermes profile install .\profiles\ops-sre --alias -y
-hermes profile install .\profiles\platform-skill-miner --alias -y
-hermes profile install .\profiles\platform-ontology-curator --alias -y
-
-# 4. Copy skills
-xcopy /E /I /Y skills\* %USERPROFILE%\.hermes\skills\
-
-# 5. Copy shared protocols
-xcopy /E /I /Y profiles\_shared\* %USERPROFILE%\.hermes\profiles\_shared\
-
-# 6. Copy plugins
-xcopy /E /I /Y profiles\orchestrator\plugins\* %USERPROFILE%\.hermes\profiles\orchestrator\plugins\
-
-# 7. Copy patches
-xcopy /E /I /Y patches\* %USERPROFILE%\.hermes\patches\
-
-# 8. Initialize workspace
-mkdir %USERPROFILE%\hermes-docker-sandbox\workspace
-cd %USERPROFILE%\hermes-docker-sandbox\workspace
-git init
-git add -A
-git commit -m "init"
+```cmd
+cd C:\SwarmTeam
+install-windows.bat
 ```
 
 ---
 
-## Step 3: Configure API Keys / 配置密钥
+## What the Installer Does / 安装步骤
+
+The installer runs 7 steps automatically:
+
+| Step | Action | Source |
+|------|--------|--------|
+| 1 | Check Python 3.11+ / pip / git | System check |
+| 2 | `pip install hermes-agent[all]` | **pip** (internet) |
+| 3 | `hermes setup` (init `~/.hermes/`) | Local |
+| 4 | Install 12 profiles via `hermes profile install` | Local (bundled) |
+| 5 | Copy 278 skills to `~/.hermes/skills/` | Local (bundled) |
+| 6 | Copy protocols + plugins + patches | Local (bundled) |
+| 7 | Init workspace repo + apply patches | Local |
+
+**Framework** (200MB) comes from pip; **customizations** (5MB) are bundled.
+
+---
+
+## Post-Install / 安装后
+
+### 1. Configure API Keys
 
 ```powershell
-# Edit the global .env file
 notepad %USERPROFILE%\.hermes\.env
 ```
 
-**Minimum required for offline use** (local model via Ollama):
-
+**Minimal config** (local model via Ollama):
 ```env
-# Use a local Ollama model (no internet API needed)
-# Install Ollama: https://ollama.com/download
 OLLAMA_BASE_URL=http://localhost:11434/v1
-
-# Set as default model
-# Then run: hermes config set model.default llama3.2 --profile orchestrator
 ```
 
-**With internet API access** (if the machine can reach API endpoints):
-
+**With API access**:
 ```env
-# Primary LLM
 DAMOXING_API_KEY=your-key
 DAMOXING_BASE_URL=https://your-endpoint
 DAMOXING_API_MODE=openai
-
-# Or DeepSeek
-DEEPSEEK_API_KEY=your-key
 ```
 
----
-
-## Step 4: Apply Patches (Optional) / 应用补丁
-
-The `patches/` directory contains infrastructure patches. These require **Git Bash** (installed with Git for Windows):
+### 2. Verify
 
 ```powershell
-# Open Git Bash and run:
-cd ~/.hermes
-
-# Kanban worktree default (all tasks use persistent git workspaces)
-bash patches/apply-kanban-worktree-default.sh
-
-# ACP Codex fix (enables Codex CLI as coding backend)
-bash patches/apply-acp-client-codex-fix.sh
-
-# TUI cc-switch status bar
-bash patches/apply-tui-patches.sh
-```
-
----
-
-## Step 5: Verify / 验证
-
-```powershell
-# List installed profiles
 hermes profile list
+hermes -p orchestrator chat -q "Hello"
+```
 
-# Check profile details
-hermes profile info orchestrator
+### 3. (Optional) Apply TUI Patches
 
-# Run a quick test
-hermes -p orchestrator chat -q "Hello, what can you do?"
+```powershell
+powershell -ExecutionPolicy Bypass -File %USERPROFILE%\.hermes\patches\apply-tui-patches.ps1
+```
 
-# Start the gateway (if using messaging platforms)
-hermes -p orchestrator gateway run
+### 4. (Optional) Install TUI Dependencies
+
+```powershell
+cd %USERPROFILE%\.hermes\hermes-agent\ui-tui
+copy %USERPROFILE%\.hermes\patches\..\..\ui-tui-package.json package.json
+npm install
 ```
 
 ---
 
-## Step 6: (Optional) Install TUI / 安装 TUI
+## Patch Scripts / 补丁脚本
 
+All patches are **PowerShell** (.ps1), not bash:
+
+| Script | Purpose |
+|--------|---------|
+| `apply-kanban-worktree-default.ps1` | workspace_kind defaults to "worktree" (persistent) |
+| `apply-acp-client-codex-fix.ps1` | ACP Codex CLI compatibility |
+| `apply-tui-patches.ps1` | TUI cc-switch status bar widget |
+| `post-update-hook.ps1` | Re-apply all patches after `hermes update` |
+
+**Auto-protection**: After `pip install --upgrade hermes-agent`, run:
 ```powershell
-# Only if Node.js is available and you want the terminal UI
-cd %USERPROFILE%\.hermes\hermes-agent\ui-tui
-
-# Use the bundled package.json
-copy <package-source>\ui-tui-package.json package.json
-
-# Install npm dependencies
-npm install
-
-# Enable TUI
-hermes config set display.interface tui
-
-# Launch
-hermes --tui
+powershell -ExecutionPolicy Bypass -File %USERPROFILE%\.hermes\patches\post-update-hook.ps1
 ```
 
 ---
@@ -201,13 +120,12 @@ hermes --tui
 
 | Problem | Solution |
 |---------|----------|
-| `pip install fails` | Ensure pip source is reachable: `pip config list`. Try `pip install --index-url <your-mirror> hermes-agent[all]` |
-| `hermes: command not found` | Add Python Scripts to PATH: `%USERPROFILE%\AppData\Local\Programs\Python\Python311\Scripts` |
-| `profile install: distribution.yaml not found` | Run the installer from the package root, not a subdirectory |
-| `git: command not found` | Install Git for Windows from https://git-scm.com/download/win |
-| `Ollama connection refused` | Start Ollama first: `ollama serve` |
-| Patches don't apply | Patches need Git Bash (not PowerShell). Run `bash patches/apply-*.sh` |
-| Models not responding | Check `hermes doctor` and verify API keys in `.env` |
+| `pip install fails` | Use mirror: `pip install -i https://your-mirror/simple hermes-agent[all]` |
+| `hermes not found` | Add to PATH: `%APPDATA%\Python\Scripts` or `%LOCALAPPDATA%\Programs\Python\Python311\Scripts` |
+| `ExecutionPolicy denied` | Use `-ExecutionPolicy Bypass` flag, or run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
+| `git not found` | Workspace repo + TUI patches skipped; core functionality still works |
+| `profile install fails` | Ensure running from the extracted folder with `profiles/` subdirectory |
+| Patches don't apply | Run `post-update-hook.ps1` manually after any hermes update |
 
 ---
 
@@ -215,17 +133,19 @@ hermes --tui
 
 ```
 SwarmTeam/
-├── profiles/              12 profiles (swarm/product/ops/platform)
-│   ├── _shared/           9 protocol files (ontology, gates, ACP, etc.)
-│   └── orchestrator/
-│       └── plugins/       5 plugins (acp-client, cluster-kanban, etc.)
-├── skills/                278 custom skills (34 categories, 12 MB)
-├── patches/               6 infrastructure patches
-├── shared/                profiles.yaml + generate-configs.py
-├── requirements.txt       pip dependencies
-├── ui-tui-package.json    npm dependencies (optional TUI)
-├── install-windows.ps1    PowerShell installer
-└── WINDOWS-OFFLINE-INSTALL.md  ← This file
+├── install-windows.bat        ← Double-click to install
+├── install-windows.ps1        ← PowerShell installer (7 steps)
+├── requirements.txt           ← pip dependencies
+├── ui-tui-package.json        ← npm dependencies (optional TUI)
+├── WINDOWS-OFFLINE-INSTALL.md ← This file
+├── profiles/                  12 profiles + _shared protocols
+│   ├── _shared/               ontology, gates, ACP rules
+│   └── orchestrator/plugins/  5 plugins
+├── skills/                    278 custom skills (34 categories)
+├── patches/                   PowerShell patch scripts (.ps1)
+│   ├── apply-kanban-worktree-default.ps1
+│   ├── apply-acp-client-codex-fix.ps1
+│   ├── apply-tui-patches.ps1
+│   └── post-update-hook.ps1
+└── shared/                    profiles.yaml + generate-configs.py
 ```
-
-**Total package size**: ~15 MB (framework installed separately via pip)
