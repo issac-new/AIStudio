@@ -1,9 +1,38 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.1**（基于 hermes-studio v0.6.39 + overlay 二次开发）
+SwarmStudio **2.1.1**（基于 hermes-studio v0.6.39 + overlay 二次开发）
+
+> **2.1.1** — runtime 统一（本地 hermes agent 安装优先，dev 态复用 `~/.hermes/hermes-agent/venv`）+ 修复 `verify-clean.mjs` 预存 bug（路径误写 `swarm-studio`/`swarm-agent` 导致 hermes-studio/hermes-agent 校验误报）+ 重新打包 mac arm64 DMG / x64 zip。
 
 > **2.1** — 三上游组件全量升级至最新稳定版（hermes-studio v0.6.38→v0.6.39、element-web v1.12.22→v1.12.25、hermes-agent 收敛到干净 tag v2026.8.3）。同步完成 patch rebase（136/138 干净应用，禁用 2 个被上游吸收/废弃的 patch）与验证。
+
+### 2.1.1 明细
+
+**1. verify-clean.mjs bug 修复**（预存，非 2.1 引入）
+
+`overlay/scripts/verify-clean.mjs` 校验上游工作树时路径写错：
+- `resolve(upstreamRoot, 'swarm-studio')` → `hermes-studio`（目录名不匹配 → `git status` 静默返回空 → 误报「工作树干净」）
+- `['element-web', 'swarm-agent']` → `['element-web', 'hermes-agent']`（hermes-agent 同样被跳过）
+
+修复后三仓状态正确报告（inject 后 hermes-studio / hermes-agent 应 WARN，element-web 应 OK）。
+
+**2. runtime 统一：本地 hermes agent 安装优先**（patch 188）
+
+新增 `patches/188-desktop-runtime-local-priority.patch`，改 `packages/desktop/src/main/paths.ts` + `runtime-manager.ts`：
+
+- 新增 `localHermesInstallDir()` / `usingLocalHermesInstall()`：检测 `~/.hermes/hermes-agent/venv/bin/hermes`（可被 `HERMES_LOCAL_AGENT_DIR` 覆盖、`HERMES_DESKTOP_USE_LOCAL_HERMES=0` 禁用）。
+- dev 态（`!isPackaged()`）下，`hermesBin()` / `bundledPython()` 指向本地 venv；`bundledNode()` / `nodeBinDir()` 走系统 node（`process.execPath` 所在目录）。
+- `rootRuntimeReady()`：本地 hermes 在场时直接返回 true → `isDesktopRuntimeReady()` 为 true → 启动跳过捆绑 runtime 下载。
+- **打包态（`isPackaged()`）守卫不变**：DMG/EXE 产物仍用捆绑 runtime 树，运行时行为不受影响；本地优先仅作用于开发态。
+
+**3. 验证**
+
+- inject：137 patches（原 136 + patch 188），0 FAILED / 0 WARN
+- desktop `tsc --noEmit`：0 errors（仅预存 TS5107 tsconfig 弃用 warn）
+- server `tsc --noEmit`：0 errors
+- vitest：503 passed / 0 failed / 6 skipped（无回归）
+- `npm run verify`（修复后）：hermes-studio / hermes-agent / element-web 三仓状态正确报告
 
 ## 上游版本
 
