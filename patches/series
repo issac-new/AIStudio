@@ -212,3 +212,6 @@
 # i18n duplicate-key 修复（patch 161/162/163 注入残留去重）
 187-i18n-dedup-en.patch
 187-i18n-dedup-zh.patch
+
+# runtime 统一：本地 hermes agent 安装优先（dev 态），其次 ~/.hermes-web-ui 捆绑 runtime
+188-desktop-runtime-local-priority.patch

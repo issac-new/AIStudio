@@ -17,8 +17,8 @@ function git(args, cwd) {
 
 let ok = true;
 
-// swarm-studio:核心校验对象
-const hsRoot = resolve(upstreamRoot, 'swarm-studio');
+// hermes-studio:核心校验对象
+const hsRoot = resolve(upstreamRoot, 'hermes-studio');
 const hsCommits = git('log --oneline origin/main..HEAD', hsRoot).trim();
 const hsStatus = git('status --porcelain', hsRoot).trim();
 if (hsCommits) {
@@ -33,8 +33,8 @@ if (hsStatus) {
   console.log('OK: upstream/hermes-studio 工作树干净');
 }
 
-// element-web / swarm-agent:应为纯上游
-for (const repo of ['element-web', 'swarm-agent']) {
+// element-web / hermes-agent:应为纯上游
+for (const repo of ['element-web', 'hermes-agent']) {
   const repoRoot = resolve(upstreamRoot, repo);
   const s = git('status --porcelain', repoRoot).trim();
   if (s) {
