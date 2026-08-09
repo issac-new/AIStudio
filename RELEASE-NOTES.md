@@ -34,6 +34,19 @@ SwarmStudio **2.1.1**（基于 hermes-studio v0.6.39 + overlay 二次开发）
 - vitest：503 passed / 0 failed / 6 skipped（无回归）
 - `npm run verify`（修复后）：hermes-studio / hermes-agent / element-web 三仓状态正确报告
 
+### 打包产物（mac，未签名）
+
+本机 darwin arm64 原生构建 arm64，跨架构构建 x64（electron-builder `--x64`）。均未代码签名（本地无 Developer ID；macOS 首次打开需右键「打开」放行）。
+
+| 产物 | 架构 | 大小 |
+|------|------|------|
+| `SwarmStudio-0.6.39-arm64.dmg` | mac arm64 | 338M |
+| `SwarmStudio-0.6.39-arm64.zip` | mac arm64 | 358M |
+| `SwarmStudio-0.6.39-x64.dmg` | mac x64 | 343M |
+| `SwarmStudio-0.6.39-x64.zip` | mac x64 | 363M |
+
+产物位置：`upstream/hermes-studio/packages/desktop/release/`
+
 ## 上游版本
 
 | 仓库 | 版本 |
