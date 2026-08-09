@@ -1,11 +1,64 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.1**（基于 hermes-studio v0.6.39 + overlay 二次开发）
+
+> **2.1** — 三上游组件全量升级至最新稳定版（hermes-studio v0.6.38→v0.6.39、element-web v1.12.22→v1.12.25、hermes-agent 收敛到干净 tag v2026.8.3）。同步完成 patch rebase（136/138 干净应用，禁用 2 个被上游吸收/废弃的 patch）与验证。
+
+## 上游版本
+
+| 仓库 | 版本 |
+|------|------|
+| hermes-studio | v0.6.39 |
+| hermes-agent | v0.20.0（v2026.8.3） |
+| element-web | v1.12.25 |
+
+## 本次升级（2.0 → 2.1）
+
+### 三上游升级摘要
+
+| 组件 | 2.0 | 2.1 | 关键上游变更 |
+|------|-----|-----|-------------|
+| hermes-studio | v0.6.38 | **v0.6.39** | Ekko agent（setupGlobalEkkoAgent + tool approval/clarification 拦截）、MCU 远程连接稳定化、model-run token 生命周期可配、runtime activation 错误暴露、group-chat typing 在线成员校验、runtimeRequiredFiles→runtimeRequiredFileGroups 重构 |
+| element-web | v1.12.22 | **v1.12.25** | matrix-js-sdk 升级、EventTile 迁移到 shared components、Seshat 5.0.0、compound-web 9.9.0、MSC3391/MSC3852 移除、macOS 32px 标题栏（仅参考源更新；dist 产出维持既有外部机制） |
+| hermes-agent | v0.20.0（HEAD ≥ tag） | v0.20.0（v2026.8.3） | 收敛到干净 release tag（HEAD 此前已 ≥ tag，无功能变更） |
+
+### Overlay patch 适配
+
+全量 138 patch 中 **136 干净应用，0 FAILED / 0 WARN**；禁用 2 个：
+
+| patch | 状态 | 原因 |
+|---|---|---|
+| 030-client-groupchatview | **禁用** | 上游 v0.6.39 已 `await store.connect()`（与本 patch 相同），patch 冗余 |
+| 126-desktop-system-hermes-agent-default | **禁用** | dead helpers（preferredSystemHermesCommand/explicitSystemHermesEnabled/resolveExecutable 全程无引用）；execFileSync 由 patch 144 覆盖；run_agent.py 检查由 patch 148 覆盖；上游 v0.6.39 重构 runtimeRequiredFiles→runtimeRequiredFileGroups 使本 patch 过时 |
+
+修订 2 个 patch 的上下文以对齐 v0.6.39：
+
+| patch | 修订 |
+|---|---|
+| 016-server-middleware-user-auth | hunk #3 上下文对齐 v0.6.39：`issueModelRunJwt` 体 `MODEL_RUN_EXPIRES_SECONDS`→`getModelRunJwtExpiresSeconds()`；toAuthenticatedUser 行号前移 |
+| 042-desktop-rebrand-swarmstudio-pkg | version 上下文 `0.6.38`→`0.6.39` |
+
+### 验证
+
+- inject：136 patches，0 FAILED / 0 WARN（hermes-studio + hermes-agent 全量干净应用）
+- server `tsc --noEmit`：**0 errors**（与 2.0 基线一致）
+- vitest：**503 passed / 0 failed / 6 skipped**（67 test files，与 2.0 基线一致，无回归）
+- inject 幂等：clean → inject → clean 可还原上游工作树
+
+### 已知环境提示（非本次引入）
+
+- 本地 Node v22.23.2 < hermes-studio engines `>=23.0.0`（v0.6.38 同要求，npm 仅 warn 不阻塞；tsc/vitest 均通过）
+
+---
+
+## 2.0（历史）
+
 SwarmStudio **2.0**（基于 hermes-studio v0.6.38 + overlay 二次开发）
 
 > **2.0** — hermes-agent v0.20.0 kanban 五大新功能全量迁移（单卡 model/provider/reasoning 钉选、board project 作用域、effort estimate、运行中 worker 评论即时送达）+ i18n/测试技术债清理。
 
-## 上游版本
+### 上游版本（2.0 时点）
 
 | 仓库 | 版本 |
 |------|------|
@@ -13,7 +66,7 @@ SwarmStudio **2.0**（基于 hermes-studio v0.6.38 + overlay 二次开发）
 | hermes-agent | v0.20.0 |
 | element-web | v1.12.22 |
 
-## 本次升级（0.6.37 → 0.6.38）
+### 0.6.37 → 0.6.38（2.0 历史明细）
 
 上游 v0.6.38 含 2 个提交（21 文件变更），主要是 Windows runtime 修复与 Hermes 0.19.0 网站兼容性恢复：
 
