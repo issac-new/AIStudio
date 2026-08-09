@@ -30,7 +30,7 @@ index cb47b6ee..f9e9f9bd 100644
      type: 'access',
      aud: JWT_AUDIENCE,
      iat,
-@@ -176,21 +178,22 @@ export function verifyUserJwt(token: string, secret: string, now = Date.now()):
+@@ -184,21 +187,22 @@ export async function issueUserJwt(user: Pick<UserRecord, 'id' | 'username' | 'r
    }
  }
  
@@ -43,7 +43,7 @@ index cb47b6ee..f9e9f9bd 100644
 -export async function issueModelRunJwt(user: Pick<UserRecord, 'id' | 'username' | 'role'>): Promise<string> {
 +export async function issueModelRunJwt(user: Pick<UserRecord, 'id' | 'username' | 'role' | 'matrix_user_id'>): Promise<string> {
    const secret = await getJwtSecret()
-   return signUserJwt(user, secret, Date.now(), MODEL_RUN_EXPIRES_SECONDS)
+   return signUserJwt(user, secret, Date.now(), getModelRunJwtExpiresSeconds())
  }
  
 -export function toAuthenticatedUser(user: Pick<UserRecord, 'id' | 'username' | 'role'>): AuthenticatedUser {
