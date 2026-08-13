@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/routes/hermes/download.ts b/packages/server/src/routes/hermes/download.ts
-index 87e0786d..9ec9a794 100644
+index 7e86627b..7ad656a4 100644
 --- a/packages/server/src/routes/hermes/download.ts
 +++ b/packages/server/src/routes/hermes/download.ts
 @@ -1,5 +1,5 @@
@@ -9,12 +9,13 @@ index 87e0786d..9ec9a794 100644
  import {
    createFileProvider,
    localProvider,
-@@ -7,7 +7,11 @@ import {
+@@ -7,8 +7,12 @@ import {
    validatePath,
    resolveHermesPath,
  } from '../../services/hermes/file-provider'
 -import { getActiveProfileName } from '../../services/hermes/hermes-profile'
 +import { getActiveProfileName, getActiveProfileDir, getProfileDir, getHermesBaseDir } from '../../services/hermes/hermes-profile'
+ import { createAppImagePreview } from '../../services/hermes/app-image-preview'
 +// HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
 +import { isPathWithin } from '../../services/hermes/hermes-path'
 +import { requireSuperAdmin } from '../../middleware/user-auth'
@@ -22,15 +23,15 @@ index 87e0786d..9ec9a794 100644
  
  export const downloadRoutes = new Router()
  
-@@ -70,6 +74,7 @@ function requestedProfile(ctx: any): string {
- downloadRoutes.get('/api/hermes/download', async (ctx) => {
+@@ -72,6 +76,7 @@ downloadRoutes.get('/api/hermes/download', async (ctx) => {
    const filePath = ctx.query.path as string | undefined
    const fileName = ctx.query.name as string | undefined
+   const variant = ctx.query.variant as string | undefined
 +  const root = (ctx.query.root as string | undefined)?.trim() || undefined
  
    if (!filePath) {
      ctx.status = 400
-@@ -80,8 +85,30 @@ downloadRoutes.get('/api/hermes/download', async (ctx) => {
+@@ -82,8 +87,30 @@ downloadRoutes.get('/api/hermes/download', async (ctx) => {
    try {
      const profile = requestedProfile(ctx)
      // Validate the path first

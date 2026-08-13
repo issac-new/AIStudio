@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 3ce6d2fb..d3df46f0 100644
+index 271c4166..6c20abd0 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -135,7 +135,10 @@ function webUiHashUrl(hashPath: string): string | null {
+@@ -190,7 +190,10 @@ function webUiHashUrl(hashPath: string): string | null {
  }
  
  function mainRouteUrl(): string | null {
@@ -14,10 +14,10 @@ index 3ce6d2fb..d3df46f0 100644
  }
  
  function petRouteUrl(): string | null {
-@@ -759,7 +762,13 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
-   }
-   notification.on('click', () => {
-     releaseNotification()
+@@ -1164,7 +1167,13 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+       } else showMainWindow()
+       return
+     }
 -    showMainWindow()
 +    // overlay[fix-window-raise]: notification click is an explicit user gesture,
 +    // so restoring the window is fine. But only do it when the window is

@@ -1,6 +1,72 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.2**（基于 hermes-studio v0.6.42 + overlay 二次开发）
+
+> **2.2** — hermes-studio v0.6.39 → v0.6.42 大跨度升级（59 commits / 500 文件，含 secure shared rooms、remote agents、file transfers、group-chat 大重构、notification clickUrl、Sharp/STT runtime）。同步完成 patch rebase（137 patches 0 FAILED）与验证。hermes-agent / element-web 已是最新，未动。
+
+### 2.2 明细
+
+**上游版本**
+
+| 仓库 | 版本 |
+|------|------|
+| hermes-studio | v0.6.42 |
+| hermes-agent | v0.20.0（v2026.8.3） |
+| element-web | v1.12.25 |
+
+**v0.6.39 → v0.6.42 主要上游变更**
+
+- **Secure shared rooms + remote agents**：group-chat 安全共享房间、远程 agent 接入、agent 间文件传输（file transfers）
+- **Notification clickUrl**：通知点击可导航到指定 URL（`safeNotificationClickUrl` + `webUiHashUrl`）
+- **登录 redirect 保真**：`resolveLoginRedirect(route.query.redirect)`，深度链接登录后保留目标页
+- **group-chat 大重构**：secure rooms、handoff chain、mentions、profile query 切换（3448 行 diff）
+- **运行时**：Sharp 图像处理、sherpa-onnx-node STT、lazy-load optional runtime、MCU 远程稳定化、model-run token 可配
+- **desktop**：`naiveLocaleFor`、`isInviteOnlyPage`、group-chat-agent popup、`setWindowOpenHandler`
+
+**Overlay patch 适配（137 patches，0 FAILED / 0 WARN）**
+
+本版冲突面 38 文件，远大于 2.1 的 21 文件，但经两个 Explore agent 逐文件核查，真实手工合并集中在以下 patch：
+
+| patch | 文件 | 冲突 | 修法 |
+|---|---|---|---|
+| 008 | server/index.ts | 上游加 `GET/HEAD` 方法守卫 + 删 `/webhook`，patch 加 `/element-web/` | 重新生成，保留上游方法守卫，手插回 `/element-web/` 排除 |
+| 025 | LoginView.vue | 上游加 `resolveLoginRedirect`，patch 整段重写 | 重新生成，移植 redirect 保真进 matrix/local 双 tab 登录流，默认跳 cockpit |
+| 027 | UserManagementSettings | 上游加 `fixed:'right'` 列固定 | context 对齐 |
+| 029 | SettingsView | 上游加 `WebhookSettings` import | context 对齐 |
+| 042 | desktop/package.json | version bump | context 0.6.39→0.6.42 |
+| 043 | desktop/index.ts (strings) | 上游加 `safeNotificationClickUrl` + clickUrl handler | 重新生成 index.ts 段 |
+| 070 | App.vue | 上游加 `naiveLocale` + `isInviteOnlyPage` | 重新生成，保留上游新增 computed |
+| 071 | router/index.ts | 上游加 2 条 share 路由 + `resolveLoginRedirect` guard | 重新生成，share 路由留顶层独立，guard 合成 cockpit 版 redirect |
+| 085 | group-chat store | 上游加 `pendingClarifies` 打断相邻性 | 重新生成，挪插入点 |
+| 088 | run-chat | 上游加 `randomUUID` import 打断相邻性 | context 对齐 |
+| 089 | chat store | 上游加 approval handling | 重新生成 |
+| 097 | download.ts | 上游加 `createAppImagePreview` import | context 对齐 |
+| 102 | GroupMessageList | 上游加 `RoomAgentHandoffChain` type import | context 对齐 |
+| 122 | GroupChatPanel | 上游加 `GroupChatMention`/`RoomAgentHandoffChain` type | 重新生成，保留 SettingsCircuitBadge + 加 useAuthStore |
+| 128 | desktop/index.ts (click handler) | 上游重写 notification click（clickUrl 分支） | 重新生成，条件 raise + clickUrl 流合并 |
+| 135 | server/index.ts | 上游重构 loopbackBaseUrl 位置 | context 对齐 |
+| 017/080/136/137/138 | package.json | adm-zip 版本 + sharp/sherpa 新增打破相邻性 | 全部重新生成 |
+
+**保留的上游新特性（融合进 overlay）**
+
+- 登录 redirect 保真（`resolveLoginRedirect`）已移植进 025 双 tab 登录流
+- share 路由（`/share/group-chat/:inviteCode?`、`/group-chat-link`）保留为顶层独立路由
+- notification clickUrl 导航保留
+- desktop `naiveLocale`/`isInviteOnlyPage`/WebhookSettings 等上游新增全部保留
+
+**验证**
+
+- inject：137 patches，0 FAILED / 0 WARN（hermes-studio + hermes-agent 全量干净应用）
+- server `tsc --noEmit`：0 errors
+- desktop `tsc --noEmit`：0 errors（仅预存 TS5107 tsconfig 弃用 warn）
+- vitest：503 passed / 0 failed / 6 skipped（与 2.1.1 基线一致，无回归）
+- inject 幂等：clean → inject 可重现
+
+---
+
+## 2.1.1（历史）
+
 SwarmStudio **2.1.1**（基于 hermes-studio v0.6.39 + overlay 二次开发）
 
 > **2.1.1** — runtime 统一（本地 hermes agent 安装优先，dev 态复用 `~/.hermes/hermes-agent/venv`）+ 修复 `verify-clean.mjs` 预存 bug（路径误写 `swarm-studio`/`swarm-agent` 导致 hermes-studio/hermes-agent 校验误报）+ 重新打包 mac arm64 DMG / x64 zip。
