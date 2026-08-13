@@ -1,10 +1,11 @@
 diff --git a/package.json b/package.json
+index fc60846c..3f6a589c 100644
 --- a/package.json
 +++ b/package.json
-@@ -87,6 +87,7 @@
-     "matrix-js-sdk": "^41.8.0-rc.0",
-     "node-edge-tts": "^1.2.10",
+@@ -89,6 +89,7 @@
      "node-pty": "^1.1.0",
+     "sharp": "^0.35.3",
+     "sherpa-onnx-node": "1.13.3",
 +    "proper-lockfile": "^4.1.2",
      "socket.io": "^4.8.3",
      "socket.io-client": "^4.8.3"

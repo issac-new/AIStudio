@@ -233,12 +233,13 @@ index 33adeab8..44270b53 100644
      minWidth: 140,
    },
    {
-@@ -194,10 +232,11 @@ const columns = computed<DataTableColumns<ManagedUser>>(() => [
+@@ -194,11 +232,12 @@ const columns = computed<DataTableColumns<ManagedUser>>(() => [
    {
      title: t('common.edit'),
      key: 'actions',
 -    width: 280,
 +    width: 340,
+     fixed: 'right',
      render: (row) => h(NSpace, { size: 8 }, {
        default: () => [
          h(NButton, { size: 'small', onClick: () => openEdit(row) }, { default: () => t('common.edit') }),

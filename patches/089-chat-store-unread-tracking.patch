@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 17f0c057..27c91fd7 100644
+index 3d06da74..902ce7c6 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -1020,6 +1020,11 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1242,6 +1242,11 @@ export const useChatStore = defineStore('chat', () => {
    const pendingForkCommands = ref<Set<string>>(new Set())
    /** Sessions that completed while the user was viewing another session. */
    const completedUnreadSessions = ref<Set<string>>(new Set())
@@ -14,7 +14,7 @@ index 17f0c057..27c91fd7 100644
    /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
    const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
    const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
-@@ -1113,6 +1118,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1356,6 +1361,8 @@ export const useChatStore = defineStore('chat', () => {
      runtimeMode.value = mode
      sessions.value = []
      completedUnreadSessions.value = new Set()
@@ -22,8 +22,8 @@ index 17f0c057..27c91fd7 100644
 +    unreadMessages.value = new Map()
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
-     pendingApprovals.value = new Map()
-@@ -1203,7 +1210,49 @@ export const useChatStore = defineStore('chat', () => {
+     queueInsertionStates.value = new Map()
+@@ -1456,7 +1463,49 @@ export const useChatStore = defineStore('chat', () => {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -73,7 +73,7 @@ index 17f0c057..27c91fd7 100644
  
    function clearActiveSession() {
      const sid = activeSessionId.value
-@@ -1607,6 +1656,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1811,6 +1860,8 @@ export const useChatStore = defineStore('chat', () => {
      if (legacyActiveKey) removeItem(legacyActiveKey)
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
@@ -82,7 +82,7 @@ index 17f0c057..27c91fd7 100644
  
      if (!activeSession.value) return
  
-@@ -3306,6 +3357,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3697,6 +3748,8 @@ export const useChatStore = defineStore('chat', () => {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -91,7 +91,7 @@ index 17f0c057..27c91fd7 100644
                }
  
                break
-@@ -3940,6 +3993,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4406,6 +4459,8 @@ export const useChatStore = defineStore('chat', () => {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -100,16 +100,16 @@ index 17f0c057..27c91fd7 100644
            }
  
            break
-@@ -4274,6 +4329,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4822,6 +4877,8 @@ export const useChatStore = defineStore('chat', () => {
  
    function handlePeerUserMessage(evt: RunEvent) {
      const sid = evt.session_id
 +    // Note: peer user messages are NOT counted as unread — only agent (assistant)
 +    // replies generate notifications (see accumulateUnread calls at run completion).
-     if (!sid || activeSessionId.value !== sid || !activeSession.value) return
- 
-     const peer = evt.message
-@@ -4537,6 +4594,13 @@ export const useChatStore = defineStore('chat', () => {
+     if (evt.event === 'approval.requested') return setPendingApproval(evt)
+     if (evt.event === 'approval.resolved') return clearPendingApproval(evt)
+     if (evt.event === 'clarify.requested') return setPendingClarify(evt)
+@@ -5095,6 +5152,13 @@ export const useChatStore = defineStore('chat', () => {
      isSessionLive,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

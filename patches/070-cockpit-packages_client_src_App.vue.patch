@@ -1,26 +1,27 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
+index f13cc68d..e2e7315f 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -8,6 +8,7 @@
+@@ -8,6 +8,7 @@ import { useTheme } from '@/composables/useTheme'
  import { useKeyboard } from '@/composables/useKeyboard'
  import { useSessionSearch } from '@/composables/useSessionSearch'
  import { useAppStore } from '@/stores/hermes/app'
 +import { useAuthStore } from '@/stores/hermes/auth'
  import AuthEventListener from '@/components/auth/AuthEventListener.vue'
  import { desktopBridge } from '@/utils/desktop-bridge'
- import { naiveRtlFor } from '@/constants/naiveRtl'
-@@ -29,6 +30,7 @@
- const { t, locale } = useI18n()
+ import { naiveLocaleFor } from '@/constants/naiveLocale'
+@@ -32,6 +33,7 @@ const { t, locale } = useI18n()
+ const naiveLocale = computed(() => naiveLocaleFor(locale.value))
  const naiveRtl = computed(() => naiveRtlFor(locale.value))
  const appStore = useAppStore()
 +const authStore = useAuthStore()
  const route = useRoute()
  const { sessionSearchOpen } = useSessionSearch()
  
-@@ -39,11 +41,10 @@
- 
+@@ -43,11 +45,10 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
  const isLoginPage = computed(() => route.name === 'login')
  const isStandaloneChatPage = computed(() => route.meta?.standaloneChat === true)
+ const isInviteOnlyPage = computed(() => route.meta?.inviteOnly === true)
 -const usesPageSidebar = computed(() =>
 -  ['hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.groupChat', 'hermes.groupChatRoom', 'hermes.workflow'].includes(route.name as string),
 -)
@@ -33,7 +34,7 @@ diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
  
  const nodeVersionLow = computed(() => {
    const v = appStore.nodeVersion
-@@ -80,6 +81,7 @@
+@@ -84,6 +85,7 @@ watch([isLoginPage, isInviteOnlyPage], ([loginPage, inviteOnlyPage]) => {
      appStore.stopHealthPolling()
      return
    }

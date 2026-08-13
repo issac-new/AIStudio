@@ -1,24 +1,26 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
+index b0378e96..a002583e 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
-@@ -2,111 +2,147 @@
+@@ -2,113 +2,155 @@
  import { ref, onMounted } from "vue";
- import { useRouter } from "vue-router";
+ import { useRoute, useRouter } from "vue-router";
  import { useI18n } from "vue-i18n";
 -import { setApiKey, clearApiKey, hasApiKey } from "@/api/client";
 -import { fetchAuthStatus, loginWithPassword } from "@/api/auth";
 -import { isDesktopShell } from "@/utils/desktop-bridge";
--import { useTheme } from "@/composables/useTheme";
 +import { useAuthStore } from "@/stores/hermes/auth";
+ import { resolveLoginRedirect } from "@/utils/login-redirect";
+-import { useTheme } from "@/composables/useTheme";
  
  const { t } = useI18n();
  const router = useRouter();
+ const route = useRoute();
 -const { activateUserTheme } = useTheme();
--
++const authStore = useAuthStore();
+ 
 -const username = ref("");
 -const password = ref("");
-+const authStore = useAuthStore();
-+
 +const activeTab = ref<'matrix' | 'local'>('matrix');
 +
 +const homeserverUrl = ref("http://localhost:8008");
@@ -34,17 +36,26 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
  const errorMsg = ref("");
 -const showLockResetHint = ref(false);
 -const desktopShell = isDesktopShell();
--
+ 
 -if (desktopShell) {
 -  // Desktop login is a recovery path. Drop stale JWTs before any background
 -  // request can reuse them and show an unrelated expiry notice.
 -  clearApiKey();
 -} else if (hasApiKey()) {
--  router.replace("/hermes/chat");
--}
--
+-  router.replace(resolveLoginRedirect(route.query.redirect));
++// overlay: 默认登录后跳 cockpit（而非上游的 /hermes/chat）；保留 query.redirect 保真能力。
++function loginRedirectTarget(): string {
++  const resolved = resolveLoginRedirect(route.query.redirect);
++  return resolved === '/hermes/chat' ? '/hermes/cockpit' : resolved;
+ }
+ 
 -onMounted(async () => {
-+
+-  try {
+-    await fetchAuthStatus();
+-  } catch {
+-    // Login remains available; the submit request will surface connection errors.
+-  }
+-});
 +const STORAGE_KEYS = {
 +  matrix: { user: 'matrix_remembered_username', pass: 'matrix_remembered_password' },
 +  local: { user: 'local_remembered_username', pass: 'local_remembered_password' },
@@ -53,11 +64,17 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
 +function encodePassword(pw: string): string {
 +  try { return btoa(pw); } catch { return ''; }
 +}
-+
+ 
+-async function handleLogin() {
+-  await handlePasswordLogin();
 +function decodePassword(encoded: string): string {
 +  try { return atob(encoded); } catch { return ''; }
-+}
-+
+ }
+ 
+-async function handlePasswordLogin() {
+-  if (!username.value.trim() || !password.value) {
+-    errorMsg.value = t("login.credentialsRequired");
+-    return;
 +function loadSavedCredentials(form: 'matrix' | 'local'): boolean {
 +  const keys = STORAGE_KEYS[form];
 +  const savedUser = localStorage.getItem(keys.user);
@@ -73,10 +90,13 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
 +      localRememberMe.value = true;
 +    }
 +    return true;
-+  }
+   }
 +  return false;
 +}
-+
+ 
+-  loading.value = true;
+-  errorMsg.value = "";
+-  showLockResetHint.value = false;
 +function saveCredentials(form: 'matrix' | 'local'): void {
 +  const keys = STORAGE_KEYS[form];
 +  const username = form === 'matrix' ? matrixUsername.value.trim() : localUsername.value.trim();
@@ -109,54 +129,20 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
 +  if (/Failed to fetch|NetworkError|ERR_CONNECTION|ERR_NETWORK|Load failed/i.test(msg)) return t("login.backendConnectionFailed");
 +  return msg || t("login.invalidCredentials");
 +}
-+
+ 
 +async function handleMatrixLogin() {
 +  if (!homeserverUrl.value.trim()) { errorMsg.value = t("login.homeserverRequired"); return; }
 +  if (!matrixUsername.value.trim() || !matrixPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
 +  loading.value = true; errorMsg.value = "";
    try {
--    await fetchAuthStatus();
--  } catch {
--    // Login remains available; the submit request will surface connection errors.
--  }
--});
--
--async function handleLogin() {
--  await handlePasswordLogin();
--}
--
--async function handlePasswordLogin() {
--  if (!username.value.trim() || !password.value) {
--    errorMsg.value = t("login.credentialsRequired");
--    return;
--  }
--
--  loading.value = true;
--  errorMsg.value = "";
--  showLockResetHint.value = false;
--
-+    await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
-+    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
-+    if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
-+    router.replace("/hermes/cockpit");
-+  } catch (err: any) {
-+    errorMsg.value = classifyLoginError(err);
-+    clearSavedCredentials('matrix');
-+    if (errorMsg.value === t("login.backendConnectionFailed")) activeTab.value = 'local';
-+  } finally { loading.value = false; }
-+}
-+
-+async function handleLocalLogin() {
-+  if (!localUsername.value.trim() || !localPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
-+  loading.value = true; errorMsg.value = "";
-   try {
 -    const session = await loginWithPassword(username.value.trim(), password.value);
 -    setApiKey(session.token);
 -    activateUserTheme(session.userId, session.theme);
--    router.replace("/hermes/chat");
-+    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
-+    if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
-+    router.replace("/hermes/cockpit");
+-    router.replace(resolveLoginRedirect(route.query.redirect));
++    await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
++    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
++    if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
++    router.replace(loginRedirectTarget());
    } catch (err: any) {
 -    if (err.status === 429 || err.status === 503) {
 -      errorMsg.value = t("login.tooManyAttempts");
@@ -167,6 +153,20 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
 -  } finally {
 -    loading.value = false;
 -  }
++    errorMsg.value = classifyLoginError(err);
++    clearSavedCredentials('matrix');
++    if (errorMsg.value === t("login.backendConnectionFailed")) activeTab.value = 'local';
++  } finally { loading.value = false; }
++}
++
++async function handleLocalLogin() {
++  if (!localUsername.value.trim() || !localPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
++  loading.value = true; errorMsg.value = "";
++  try {
++    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
++    if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
++    router.replace(loginRedirectTarget());
++  } catch (err: any) {
 +    errorMsg.value = err?.message || t("login.invalidCredentials");
 +    clearSavedCredentials('local');
 +  } finally { loading.value = false; }
@@ -198,14 +198,24 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
 -          :placeholder="t('login.passwordPlaceholder')"
 -          @keyup.enter="handleLogin"
 -        />
--
-+
+ 
 +      <!-- Matrix Login Form (default) -->
 +      <form v-if="activeTab === 'matrix'" class="login-form" @submit.prevent="handleMatrixLogin">
 +        <p class="login-desc">{{ t("login.matrixDescription") }}</p>
 +        <input v-model="homeserverUrl" type="url" class="login-input" :placeholder="t('login.homeserverPlaceholder')" autofocus />
 +        <input v-model="matrixUsername" type="text" class="login-input" :placeholder="t('login.matrixUsernamePlaceholder')" />
 +        <input v-model="matrixPassword" type="password" class="login-input" :placeholder="t('login.passwordPlaceholder')" @keyup.enter="handleMatrixLogin" />
++        <div v-if="errorMsg" class="login-error">{{ errorMsg }}</div>
++        <label class="login-remember"><input v-model="matrixRememberMe" type="checkbox" />{{ t("login.rememberMe") }}</label>
++        <button type="submit" class="login-btn" :disabled="loading">{{ loading ? "..." : t("login.submit") }}</button>
++      </form>
++
++      <!-- Local Login Form (fallback) -->
++      <form v-else-if="activeTab === 'local'" class="login-form" @submit.prevent="handleLocalLogin">
++        <p class="login-fallback-hint">{{ t("login.fallbackToLocalHint") }}</p>
++        <p class="login-desc">{{ t("login.localDescription") }}</p>
++        <input v-model="localUsername" type="text" class="login-input" :placeholder="t('login.usernamePlaceholder')" autofocus />
++        <input v-model="localPassword" type="password" class="login-input" :placeholder="t('login.passwordPlaceholder')" @keyup.enter="handleLocalLogin" />
          <div v-if="errorMsg" class="login-error">{{ errorMsg }}</div>
 -        <div v-if="showLockResetHint" class="login-lock-hint">
 -          <template v-if="desktopShell">
@@ -221,24 +231,13 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
 -        <button type="submit" class="login-btn" :disabled="loading">
 -          {{ loading ? "..." : t("login.submit") }}
 -        </button>
-+        <label class="login-remember"><input v-model="matrixRememberMe" type="checkbox" />{{ t("login.rememberMe") }}</label>
-+        <button type="submit" class="login-btn" :disabled="loading">{{ loading ? "..." : t("login.submit") }}</button>
-+      </form>
-+
-+      <!-- Local Login Form (fallback) -->
-+      <form v-else-if="activeTab === 'local'" class="login-form" @submit.prevent="handleLocalLogin">
-+        <p class="login-fallback-hint">{{ t("login.fallbackToLocalHint") }}</p>
-+        <p class="login-desc">{{ t("login.localDescription") }}</p>
-+        <input v-model="localUsername" type="text" class="login-input" :placeholder="t('login.usernamePlaceholder')" autofocus />
-+        <input v-model="localPassword" type="password" class="login-input" :placeholder="t('login.passwordPlaceholder')" @keyup.enter="handleLocalLogin" />
-+        <div v-if="errorMsg" class="login-error">{{ errorMsg }}</div>
 +        <label class="login-remember"><input v-model="localRememberMe" type="checkbox" />{{ t("login.rememberMe") }}</label>
 +        <button type="submit" class="login-btn" :disabled="loading">{{ loading ? "..." : t("login.submit") }}</button>
 +        <button type="button" class="login-fallback-link" @click="activeTab = 'matrix'">{{ t("login.useMatrixLogin") }}</button>
        </form>
      </div>
    </div>
-@@ -137,10 +173,6 @@
+@@ -139,10 +181,6 @@ async function handlePasswordLogin() {
    }
  }
  
@@ -249,21 +248,21 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
  .login-title {
    font-size: 26px;
    font-weight: 600;
-@@ -153,13 +185,6 @@
-   color: $text-muted;
-   margin: 0 0 12px;
+@@ -157,13 +195,6 @@ async function handlePasswordLogin() {
    line-height: 1.6;
--}
--
+ }
+ 
 -.login-default-hint {
 -  margin: 0 0 28px;
 -  font-family: $font-code;
 -  font-size: 13px;
 -  color: $text-secondary;
- }
- 
+-}
+-
  .login-form {
-@@ -196,25 +221,6 @@
+   display: flex;
+   flex-direction: column;
+@@ -198,25 +229,6 @@ async function handlePasswordLogin() {
    text-align: start;
  }
  
@@ -289,7 +288,7 @@ diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views
  .login-btn {
    width: 100%;
    padding: 14px;
-@@ -236,4 +242,41 @@
+@@ -238,4 +250,41 @@ async function handlePasswordLogin() {
      cursor: not-allowed;
    }
  }
