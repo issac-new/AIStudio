@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 7cc59ae0..b06fa2bc 100644
 --- a/packages/server/src/index.ts
 +++ b/packages/server/src/index.ts
-@@ -34,6 +34,8 @@
+@@ -41,6 +41,8 @@ import { getStaticCacheControl, SPA_ENTRY_CACHE_CONTROL } from './middleware/sta
  import { requireUserJwt, resolveUserProfile } from './middleware/user-auth'
  import { createCorsOriginResolver, securityHeaders } from './security'
  import type { ShutdownHandler } from './services/shutdown'
@@ -10,13 +11,13 @@ diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
  import { createRequestBodyParser } from './middleware/request-body-parser'
  
  // Injected by esbuild at build time; fallback to reading package.json in dev mode
-@@ -454,6 +456,9 @@
+@@ -378,6 +380,9 @@ export async function bootstrap() {
    petStateSocketServer = new PetStateSocketServer(groupChatServer.getIO())
    petStateSocketServer.init()
  
 +  // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
 +  setupLoopSocketNamespace(groupChatServer.getIO())
 +
-   const loopbackBaseUrl = getLoopbackBaseUrl(server)
    startGlobalAgentServer(groupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
    console.log('[bootstrap] global agent server ready')
+ 

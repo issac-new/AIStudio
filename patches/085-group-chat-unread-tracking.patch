@@ -1,9 +1,10 @@
 diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
+index fa171863..6fa61e88 100644
 --- a/packages/client/src/stores/hermes/group-chat.ts
 +++ b/packages/client/src/stores/hermes/group-chat.ts
-@@ -159,6 +159,12 @@
-     const autoPlaySpeechEnabled = ref(false)
-     const pendingApprovals = ref<Map<string, GroupPendingApproval>>(new Map())
+@@ -193,6 +193,12 @@ export const useGroupChatStore = defineStore('groupChat', () => {
+         return `${roomId}:${clarifyId}`
+     }
      const totalMessages = ref(0)
 +    // Unread tracking
 +    const unreadCounts = ref<Record<string, number>>({})
@@ -14,7 +15,9 @@ diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/s
      const loadedMessageCount = ref(0)
      const hasMoreBefore = ref(false)
      const isLoadingOlderMessages = ref(false)
-@@ -1042,2 +1049,7 @@
+@@ -1697,6 +1703,11 @@ export const useGroupChatStore = defineStore('groupChat', () => {
+     }
+ 
      return {
 +        unreadCounts,
 +        lastMessageMap,
@@ -22,3 +25,5 @@ diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/s
 +        clearAllUnread,
 +        getRoomUnread,
          // State
+         connected,
+         currentRoomId,

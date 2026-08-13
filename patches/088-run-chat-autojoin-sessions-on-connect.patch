@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/db/hermes/session-store.ts b/packages/server/src/db/hermes/session-store.ts
-index dcbfd653..cf249098 100644
+index 30cd0019..6fcd9308 100644
 --- a/packages/server/src/db/hermes/session-store.ts
 +++ b/packages/server/src/db/hermes/session-store.ts
 @@ -525,6 +525,20 @@ export function listSessions(profile?: string, source?: string, limit = 2000): H
@@ -24,11 +24,11 @@ index dcbfd653..cf249098 100644
    return value.replace(/[\\%_]/g, '\\$&')
  }
 diff --git a/packages/server/src/services/hermes/run-chat/index.ts b/packages/server/src/services/hermes/run-chat/index.ts
-index 624bfecb..053f1978 100644
+index b88b7028..879d1948 100644
 --- a/packages/server/src/services/hermes/run-chat/index.ts
 +++ b/packages/server/src/services/hermes/run-chat/index.ts
-@@ -10,7 +10,7 @@
- import type { Server, Socket } from 'socket.io'
+@@ -11,7 +11,7 @@ import type { Server, Socket } from 'socket.io'
+ import { randomUUID } from 'crypto'
  import { logger } from '../../logger'
  import { getSystemPrompt } from '../../../lib/llm-prompt'
 -import { clearSessionMessages, deleteSession, getSession, getSessionMetadata, listSessions, updateMessageDisplayContent } from '../../../db/hermes/session-store'

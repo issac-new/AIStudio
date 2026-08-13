@@ -1,8 +1,10 @@
 diff --git a/package.json b/package.json
+index fc60846c..5a28f552 100644
 --- a/package.json
 +++ b/package.json
-@@ -80,5 +80,6 @@
-     "adm-zip": "^0.5.17",
+@@ -82,6 +82,7 @@
+     "@vue-flow/node-resizer": "^1.5.1",
+     "adm-zip": "^0.6.0",
      "agent-browser": "^0.26.0",
 +    "echarts": "^6.1.0",
      "eventsource": "^4.1.0",
