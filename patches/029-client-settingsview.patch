@@ -1,10 +1,11 @@
 diff --git a/packages/client/src/views/hermes/SettingsView.vue b/packages/client/src/views/hermes/SettingsView.vue
 --- a/packages/client/src/views/hermes/SettingsView.vue
 +++ b/packages/client/src/views/hermes/SettingsView.vue
-@@ -19,13 +19,14 @@
+@@ -19,14 +19,15 @@
  import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
  import AccountSettings from "@/components/hermes/settings/AccountSettings.vue";
  import UserManagementSettings from "@/components/hermes/settings/UserManagementSettings.vue";
+ import WebhookSettings from "@/components/hermes/settings/WebhookSettings.vue";
 -import { isStoredSuperAdmin } from "@/api/client";
 +import { useAuthStore } from "@/stores/hermes/auth";
  import { useProfilesStore } from "@/stores/hermes/profiles";

@@ -1,16 +1,16 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+index e0735dfd..3e684cbb 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
-@@ -12,7 +12,7 @@
- import FolderPicker from '@/components/hermes/chat/FolderPicker.vue'
+@@ -23,6 +23,7 @@ import FolderPicker from '@/components/hermes/chat/FolderPicker.vue'
  import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
  import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
--import SettingsCircuitBadge from '@/components/layout/SettingsCircuitBadge.vue'
+ import SettingsCircuitBadge from '@/components/layout/SettingsCircuitBadge.vue'
 +import { useAuthStore } from '@/stores/hermes/auth'
  import { copyToClipboard } from '@/utils/clipboard'
  import type { Attachment } from '@/stores/hermes/chat'
- import type { MemberInfo, RoomAgent, RoomInfo, RoomSummaryAnchor, RoomSummaryConfig, RoomSummaryState } from '@/api/hermes/group-chat'
-@@ -44,6 +44,7 @@
+ import type { GroupChatMention, MemberInfo, RoomAgent, RoomAgentHandoffChain, RoomInfo, RoomSummaryAnchor, RoomSummaryConfig, RoomSummaryState } from '@/api/hermes/group-chat'
+@@ -65,6 +66,7 @@ const router = useRouter()
  const message = useMessage()
  const appStore = useAppStore()
  const store = useGroupChatStore()
