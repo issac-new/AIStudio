@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/middleware/user-auth.ts b/packages/server/src/middleware/user-auth.ts
-index cb47b6ee..f9e9f9bd 100644
+index f6726c1d..634e516e 100644
 --- a/packages/server/src/middleware/user-auth.ts
 +++ b/packages/server/src/middleware/user-auth.ts
-@@ -15,6 +15,7 @@ export interface AuthenticatedUser {
+@@ -21,6 +21,7 @@ export interface AuthenticatedUser {
    username: string
    role: UserRole
    profiles?: string[]
@@ -10,7 +10,7 @@ index cb47b6ee..f9e9f9bd 100644
  }
  
  export interface RequestProfile {
-@@ -136,16 +137,17 @@ function isProtectedHttpPath(path: string): boolean {
+@@ -158,16 +159,17 @@ function isProtectedHttpPath(path: string): boolean {
  }
  
  export function signUserJwt(
@@ -30,14 +30,17 @@ index cb47b6ee..f9e9f9bd 100644
      type: 'access',
      aud: JWT_AUDIENCE,
      iat,
-@@ -184,21 +187,22 @@ export async function issueUserJwt(user: Pick<UserRecord, 'id' | 'username' | 'r
-   }
+@@ -239,7 +241,7 @@ export function verifyUserJwt(token: string, secret: string, now = Date.now()):
+   return verifyUserJwtPayload(token, secret, now, false)
  }
  
 -export async function issueUserJwt(user: Pick<UserRecord, 'id' | 'username' | 'role'>): Promise<string> {
 +export async function issueUserJwt(user: Pick<UserRecord, 'id' | 'username' | 'role' | 'matrix_user_id'>): Promise<string> {
    const secret = await getJwtSecret()
    return signUserJwt(user, secret, Date.now(), getUserJwtExpiresSeconds())
+ }
+@@ -253,16 +255,17 @@ export async function issueAppJwt(
+   return signAppJwt(user, deviceCode, connectionType, secret, Date.now(), getUserJwtExpiresSeconds())
  }
  
 -export async function issueModelRunJwt(user: Pick<UserRecord, 'id' | 'username' | 'role'>): Promise<string> {

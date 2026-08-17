@@ -1,9 +1,10 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 3d4ab0c9..0225c5c9 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -2869,4 +2869,16 @@
-     new_0_6_32_9: 'Desktop window controls are integrated into the page chrome: macOS traffic lights live in the sidebar, Windows controls sit above the main content, and Linux keeps native decorations (#2162)',
-     new_0_6_32_10: 'Developer documentation now supports both the current checkout and optional isolated Git worktrees (#2155)',
+@@ -3253,4 +3253,16 @@ export default {
+     new_0_6_42_9: 'MiniMax image-to-video generation now supports Global and China official v1 endpoints, URL, base64, and local image inputs, task polling, and automatic download with Profile API keys (#2512)',
+     new_0_6_41_1: 'Local STT now works reliably in npm-installed Hermes Web UI by pinning sherpa-onnx native runtimes to the same version as the Node.js wrapper on macOS, Windows, and Linux (#2464)',
    },
 +
 +  matrix: {

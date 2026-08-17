@@ -1,6 +1,50 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.3**（基于 hermes-studio v0.6.43 + overlay 二次开发）
+
+> **2.3** — hermes-studio v0.6.42 → v0.6.43 升级（22 commits / 255 文件，+26039/-3390，群聊历史导航/跨设备撤回/语音输入、App 安全连接、coding-agent 斜杠命令桥接）。19 个 patch 适配重生成（133 patches 0 FAILED）。hermes-agent / element-web 已是最新，未动。
+
+### 2.3 明细
+
+**上游版本**
+
+| 仓库 | 版本 |
+|------|------|
+| hermes-studio | v0.6.43 |
+| hermes-agent | v0.20.0（v2026.8.3） |
+| element-web | v1.12.25 |
+
+**v0.6.42 → v0.6.43 主要上游变更**
+
+- **群聊（主线）**：完整历史导航与分页（#2568/#2565）、跨设备排队消息撤回（#2570）、语音输入 + 可取消执行队列（#2555）、交互响应按 runtime 降级（#2569）、@ 可见扫描排除发送者自身（#2525）、tool result 载荷上限（#2548）、Tools 跟随所属 Agent run（#2536）、handoff depth 停止安全呈现（#2519）、滚动摘要 cursor 安全（#2511）
+- **App 连接与安全**：App/设备安全连接（#2523）、按云账号隔离连接（#2557）、App entitlement 强制 + relay 恢复（#2561）、移动端下载中心（#2575）
+- **Coding Agents**：CLI `/compact` `/context` 命令桥接（#2566）、Codex tool_search 门控加固（#2576）、Pi RPC 集成（#2528）
+- **其他**：kanban 任务文本自选方向（#2545）、侧边栏分组与 workflow relay 修复（#2546）
+
+**Overlay 适配（19 个 patch 重生成/扩展）**
+
+| patch | 适配内容 |
+|---|---|
+| 002 | config.ts 上游新增 `getLanAdvertiseUrl`/`isAppEntitlementRequired`，`getDashboardUrl` 并存重生成 |
+| 005 / 012 / 016 | auth 链重生成；016 保留上游 `verifyUserJwtPayload` 重构与 `app_device_*` JWT 字段，matrix_user_id 注入不变 |
+| 020 | `ActiveSection` 并集上游新增 `connections` + 我方 `matrix` |
+| 031 / 085 / 087 / 101 / 102 / 122 | 群聊 client/server patch 重生成；087 保留 autojoin 块并采纳上游 join `historyLimit` 签名 |
+| 042 | 版本号 context 0.6.42 → 0.6.43 |
+| 070 / 071 | cockpit App.vue/router 重生成；维持 0.6.42 决策——上游重新加回的 group-chat 路由在 cockpit 下仍移除 |
+| 074 / 075 / 187-zh | i18n en/zh 基座重生成，下游 158/159/161/162/163/167/168/185/186/187-en 级联自愈 |
+| 135 | loop socket namespace 重生成 |
+| 175 | vitest 3.x（上游升级）对 mock 缺失 export 抛错，补齐 `patchBoard`/`estimateTask`/`estimateText`/`listProjects` 四个 mock 项 |
+
+**验证**
+
+- 133 patch 全 inject 通过（纯净 v0.6.43 树严格顺序重放 133/133，且与逐 patch 重放树零差异）
+- server `tsc --noEmit` 0 errors
+- overlay vitest 67 文件 503 passed / 6 skipped / 0 failed
+- patch 涉及的上游测试 9 文件 54/54 PASS（kanban-routes/controller、auth-routes-avatar、matrix ×5）
+
+## 上一版（v0.6.39 → v0.6.42，SwarmStudio 2.2）
+
 SwarmStudio **2.2**（基于 hermes-studio v0.6.42 + overlay 二次开发）
 
 > **2.2** — hermes-studio v0.6.39 → v0.6.42 大跨度升级（59 commits / 500 文件，含 secure shared rooms、remote agents、file transfers、group-chat 大重构、notification clickUrl、Sharp/STT runtime）。同步完成 patch rebase（137 patches 0 FAILED）与验证。hermes-agent / element-web 已是最新，未动。

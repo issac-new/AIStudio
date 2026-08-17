@@ -1,17 +1,17 @@
 diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
-index 58751c5d..beaa3797 100644
+index 1a258222..bb414bc9 100644
 --- a/packages/client/src/components/layout/PageSidebarNav.vue
 +++ b/packages/client/src/components/layout/PageSidebarNav.vue
 @@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
  import { useRouter } from 'vue-router'
  import { useSessionSearch } from '@/composables/useSessionSearch'
  
--type ActiveSection = 'chat' | 'history' | 'group' | 'global' | 'workflow'
-+type ActiveSection = 'chat' | 'history' | 'group' | 'global' | 'workflow' | 'matrix'
+-type ActiveSection = 'chat' | 'history' | 'connections' | 'group' | 'global' | 'workflow'
++type ActiveSection = 'chat' | 'history' | 'connections' | 'group' | 'global' | 'workflow' | 'matrix'
  
  const props = defineProps<{
    active: ActiveSection
-@@ -50,9 +50,9 @@ function openWorkflow() {
+@@ -55,9 +55,9 @@ function openWorkflow() {
    void router.push({ name: 'hermes.workflow' })
  }
  
@@ -24,25 +24,9 @@ index 58751c5d..beaa3797 100644
  }
  </script>
  
-@@ -125,23 +125,16 @@ function openApiRelay() {
-         </svg>
-         <span>{{ historyButtonLabel }}</span>
+@@ -171,7 +171,15 @@ function openApiRelay() {
+         <span>{{ t('sidebar.apiRelay') }}</span>
        </button>
--      <button class="page-sidebar-tab" type="button" @click="openApiRelay">
--        <svg
--          width="15"
--          height="15"
--          viewBox="0 0 24 24"
--          fill="none"
--          stroke="currentColor"
--          stroke-width="1.8"
--        >
--          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
--          <polyline points="15 3 21 3 21 9" />
--          <line x1="10" y1="14" x2="21" y2="3" />
--        </svg>
--        <span>{{ t('sidebar.apiRelay') }}</span>
--      </button>
      </div>
 -    <div v-if="showModeSwitch" class="conversation-switch conversation-switch--three" role="tablist" aria-label="Conversation type">
 +    <div v-if="showModeSwitch" class="conversation-switch conversation-switch--four" role="tablist" aria-label="Conversation type">
@@ -57,7 +41,7 @@ index 58751c5d..beaa3797 100644
        <NTooltip trigger="hover" placement="top">
          <template #trigger>
            <button
-@@ -274,6 +267,10 @@ function openApiRelay() {
+@@ -304,6 +312,10 @@ function openApiRelay() {
    grid-template-columns: repeat(3, minmax(0, 1fr));
  }
  

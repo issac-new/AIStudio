@@ -1,17 +1,17 @@
 diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
-index 7cc59ae0..b06fa2bc 100644
+index 7253b0e..328baa4 100644
 --- a/packages/server/src/index.ts
 +++ b/packages/server/src/index.ts
-@@ -41,6 +41,8 @@ import { getStaticCacheControl, SPA_ENTRY_CACHE_CONTROL } from './middleware/sta
+@@ -46,6 +46,8 @@ import { getStaticCacheControl, SPA_ENTRY_CACHE_CONTROL } from './middleware/sta
  import { requireUserJwt, resolveUserProfile } from './middleware/user-auth'
  import { createCorsOriginResolver, securityHeaders } from './security'
  import type { ShutdownHandler } from './services/shutdown'
 +// overlay[loop-socket]: Loop Engineering Socket.IO namespace
 +import { setupLoopSocketNamespace } from './custom/loop/services/loop-socket'
  import { createRequestBodyParser } from './middleware/request-body-parser'
- 
- // Injected by esbuild at build time; fallback to reading package.json in dev mode
-@@ -378,6 +380,9 @@ export async function bootstrap() {
+ import {
+   migratePersistedPiRuntimeMcpConfigs,
+@@ -508,6 +510,9 @@ export async function bootstrap() {
    petStateSocketServer = new PetStateSocketServer(groupChatServer.getIO())
    petStateSocketServer.init()
  
