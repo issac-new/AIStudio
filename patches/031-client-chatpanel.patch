@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index ca23aa2e..ec798b5a 100644
+index d6e92a28..a411bfa9 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -1966,23 +1966,14 @@ async function handleSessionModelCustomSubmit() {
+@@ -2104,21 +2104,13 @@ async function handleSessionModelCustomSubmit() {
          </template>
        </div>
        <div v-if="showSessions" class="page-sidebar-bottom">
@@ -28,7 +28,5 @@ index ca23aa2e..ec798b5a 100644
 -          <span>{{ t("sidebar.settings") }}</span>
 +          <span>{{ t('sidebar.logout') }}</span>
          </button>
--        <SettingsCircuitBadge />
        </div>
      </aside>
- 

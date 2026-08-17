@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
-index fa171863..6fa61e88 100644
+index 8b998bb9..9e039dd8 100644
 --- a/packages/client/src/stores/hermes/group-chat.ts
 +++ b/packages/client/src/stores/hermes/group-chat.ts
-@@ -193,6 +193,12 @@ export const useGroupChatStore = defineStore('groupChat', () => {
+@@ -209,6 +209,12 @@ export const useGroupChatStore = defineStore('groupChat', () => {
          return `${roomId}:${clarifyId}`
      }
      const totalMessages = ref(0)
@@ -14,8 +14,8 @@ index fa171863..6fa61e88 100644
 +    function getRoomUnread(roomId: string): number { return unreadCounts.value[roomId] ?? 0 }
      const loadedMessageCount = ref(0)
      const hasMoreBefore = ref(false)
-     const isLoadingOlderMessages = ref(false)
-@@ -1697,6 +1703,11 @@ export const useGroupChatStore = defineStore('groupChat', () => {
+     const historyTruncated = ref(false)
+@@ -1806,6 +1812,11 @@ export const useGroupChatStore = defineStore('groupChat', () => {
      }
  
      return {
