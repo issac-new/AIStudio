@@ -1,9 +1,10 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index af4e2a42..7feb8d58 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -2871,4 +2871,21 @@
-     new_0_6_32_9: '桌面窗口控件已融入页面框架：macOS 红绿灯位于侧边栏，Windows 控件位于主内容上方，Linux 继续使用原生窗口装饰（#2162）',
-     new_0_6_32_10: '开发文档现在同时支持直接使用当前 checkout，并可按需采用隔离的 Git worktree（#2155）',
+@@ -3295,4 +3295,21 @@ export default {
+     new_0_6_42_9: 'MiniMax 图生视频现支持 Global 与中国区官方 v1 接口，可接收 URL、base64 或本地图片，轮询任务并使用 Profile API Key 自动下载结果（#2512）',
+     new_0_6_41_1: '修复通过 npm 安装 Hermes Web UI 后本地 STT 无法可靠识别的问题：在 macOS、Windows 和 Linux 上将 sherpa-onnx 原生运行时固定为与 Node.js 封装相同的版本（#2464）',
    },
 +    swarmKanban: '协作看板',
 +    matrixChat: 'Matrix 聊天',

@@ -1,6 +1,8 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index ea8e9c8..feb088b 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -429,7 +429,6 @@
+@@ -430,7 +430,6 @@ export default {
          title: '观察运行',
          desc: '图上实时显示每个阶段。需要时审批修复，想实验就分叉。',
        },
@@ -8,7 +10,7 @@
      },
      attention: {
        title: '需要关注',
-@@ -1390,7 +1389,6 @@
+@@ -1531,7 +1530,6 @@ export default {
        block: '阻塞',
        blockReason: '阻塞原因',
        unblock: '解除阻塞',
@@ -16,7 +18,7 @@
        archiveConfirm: '确定归档这个已完成任务？',
        assign: '分配',
        assignTo: '分配给...',
-@@ -1436,7 +1434,6 @@
+@@ -1577,7 +1575,6 @@ export default {
        linkRemoved: '任务关联已移除',
        logFailed: '日志加载失败',
        moveFailed: '任务移动失败',
@@ -24,9 +26,9 @@
        taskDeleted: '任务已删除',
        taskMoved: '任务已移动',
        taskUpdated: '任务已更新',
-@@ -3168,11 +3165,6 @@
-     new_0_6_32_9: '桌面窗口控件已融入页面框架：macOS 红绿灯位于侧边栏，Windows 控件位于主内容上方，Linux 继续使用原生窗口装饰（#2162）',
-     new_0_6_32_10: '开发文档现在同时支持直接使用当前 checkout，并可按需采用隔离的 Git worktree（#2155）',
+@@ -3529,11 +3526,6 @@ export default {
+     new_0_6_42_9: 'MiniMax 图生视频现支持 Global 与中国区官方 v1 接口，可接收 URL、base64 或本地图片，轮询任务并使用 Profile API Key 自动下载结果（#2512）',
+     new_0_6_41_1: '修复通过 npm 安装 Hermes Web UI 后本地 STT 无法可靠识别的问题：在 macOS、Windows 和 Linux 上将 sherpa-onnx 原生运行时固定为与 Node.js 封装相同的版本（#2464）',
    },
 -    swarmKanban: '协作看板',
 -    matrixChat: 'Matrix 聊天',
@@ -36,7 +38,7 @@
  
    matrix: {
      options: '选项', threadStartDisabled: '无法基于已有关系（回复/编辑）的消息发起话题', undecryptable: '无法解密此消息', historyLoadError: '服务器错误，无法加载更早的历史',
-@@ -3180,7 +3172,7 @@
+@@ -3541,7 +3533,7 @@ export default {
  
    cockpit: {
      modeWorkspace: '工作区', editTitlePlaceholder: '标题', actions: '操作', specify: '细化', decompose: '分解', moveToTriage: '转入分诊', moveToReady: '转入就绪', moveToBlocked: '标记阻塞', moveToDone: '标记完成', moveToArchived: '归档', unblock: '取消阻塞', reclaim: '回收', reassign: '改派', reassignProfile: '改派 profile', recovery: '恢复', diagnostics: '诊断', notifyHomeChannels: '主页通知频道', subscribe: '订阅', unsubscribe: '退订', comments: '评论', addCommentPlaceholder: '写评论…', confirmDone: '确认将此任务标记为完成？', confirmArchive: '归档此任务？归档后可从看板隐藏但仍可恢复。', confirmBlocked: '标记此任务为阻塞？', completionSummaryRequired: '标记完成前必须填写完成摘要。', evaluation: '评估', saveDraft: '保存草稿', parentTasks: '父任务', childTasks: '子任务', parentIdPlaceholder: '父任务 id', childIdPlaceholder: '子任务 id', pendingLinksHint: '个待提交的关联变更', assignee: '负责人', selectAssignee: '选择负责人…', description: '描述', descriptionPlaceholder: '任务描述…', add: '添加', attachments: '附件', noAttachments: '暂无附件', uploadFile: '上传文件', none: '无', historySearchPlaceholder: '搜索历史事件…', historyToday: '今天', historyWeek: '本周', historyMonth: '本月', historyCategory: '类别', historyCatEvent: '事件', historyCatComment: '评论', historyActive: '进行中', historyDone: '已完成', notifyTitle: '通知', notifyUnread: '条未读', notifySource: '来源', notifyAll: '全部', notifyMatrix: 'Matrix', notifyChat: '单聊', notifyGroup: '群聊', notifyEmpty: '没有未读消息', notifyClickHint: '点击条目进入对应聊天', notifyReadAll: '全部标为已读', attention: '注意力', backToWork: '返回工作', openFull: '全屏打开', saySomething: '输入消息...', send: '发送', noTaskSelected: '未选择任务', collabWith: '协作对象', addCollab: '沟通协作', addCollabTitle: '添加协作者', collaborationMap: '协作地图', handleLater: '稍后处理', taskFiles: '任务文件', currentTaskWorkspace: '当前任务工作区', filterFiles: '过滤文件...', history: '历史', historyTitle: '历史记录', historyTime: '时间', historyAction: '操作', historyStatus: '状态', historyArchived: '已归档', restore: '恢复', maximize: '最大化', modeWork: '工作', modeTerm: '终端', schedule: '日程', today: '今天', scheduleEvents: '日程事件', scheduleEmpty: '此日期无事件', scheduleAddTodo: '添加待办', scheduleTodoPlaceholder: '需要做什么？', templateManager: '模板管理', templateName: '模板名称...', saveAsTemplate: '保存为模板', applyTemplate: '应用', deleteTemplate: '删除', noTemplates: '暂无保存的模板', termExit: '退出终端', timeline: '时间线', pending: '待处理', done: '已完成', olderHistory: '{n} 条更早记录', search: '搜索', priority: '优先级', yourDecision: '你的决定', recommend: '推荐', riskTags: '风险标签', agentPrefilled: 'Agent 预填', reviewOpinion: '审核意见', submit: '提交', newCollabFromArchive: '从模板新建协作', readOnly: '只读', noMessages: '暂无消息', connected: '已连接', disconnected: '未连接', brandTitle: 'AI协作中心', searchPlaceholder: '搜索 会话/任务/房间', gatewayProbeTitle: '点击查看 Connected Platforms 详情', countdownTitle: '下次自动检测倒计时', notifications: '通知', defaultUser: '你', refreshFailed: '刷新失败，点击重试', refreshAll: '刷新全部看板 ({n}s)', noAttention: '无待处理事项', mapHint: '滚轮缩放 · 拖拽节点/画布 · 点击联动', legendBlocked: '阻塞', legendTodo: '待办', legendTriage: '分诊', legendReview: '待审核', filterBoard: '看板', filterPriority: '优先', filterStatus: '状态', filterAssignee: '负责', filterTenant: '租户', totalCount: '共 {n} 条', clearFilters: '清除筛选', backToSessions: '返回会话列表', aggregateMode: '聚合模式：合并关联任务会话到同一视图', aggregate: '聚合', close: '关闭', justNow: '刚刚', minutesAgo: '{n}分钟前', hoursAgo: '{n}小时前', daysAgo: '{n}天前', weekPrefix: '周',

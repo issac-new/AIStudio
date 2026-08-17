@@ -1,7 +1,8 @@
 diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
+index b283c7a..03569e7 100644
 --- a/tests/server/kanban-routes.test.ts
 +++ b/tests/server/kanban-routes.test.ts
-@@ -32,6 +32,7 @@
+@@ -32,10 +32,16 @@ const handlers = {
    unsubscribeHome: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    listAttachments: vi.fn(async (ctx: any) => { ctx.body = { attachments: [] } }),
    uploadAttachment: vi.fn(async (ctx: any) => { ctx.body = { attachment: {} } }),
@@ -9,3 +10,12 @@ diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.tes
    downloadAttachment: vi.fn(async (ctx: any) => { ctx.body = '' }),
    removeAttachment: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
    deleteTask: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+   patchTask: vi.fn(async (ctx: any) => { ctx.body = { task: {} } }),
++  // v0.6.43: vitest 3.x 对 mock 缺失 export 直接抛错，补齐 v0.20 新增 controller 动词
++  patchBoard: vi.fn(async (ctx: any) => { ctx.body = { board: {} } }),
++  estimateTask: vi.fn(async (ctx: any) => { ctx.body = { estimate: {} } }),
++  estimateText: vi.fn(async (ctx: any) => { ctx.body = { estimate: {} } }),
++  listProjects: vi.fn(async (ctx: any) => { ctx.body = { projects: [] } }),
+   decomposeTask: vi.fn(async (ctx: any) => { ctx.body = { result: {} } }),
+   listWorkspaceFiles: vi.fn(async (ctx: any) => { ctx.body = { files: [] } }),
+   listTimeline: vi.fn(async (ctx: any) => { ctx.body = { timeline: [] } }),
