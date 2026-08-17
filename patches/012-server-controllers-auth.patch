@@ -1,6 +1,8 @@
+diff --git a/packages/server/src/controllers/auth.ts b/packages/server/src/controllers/auth.ts
+index 949c4727..5a88e801 100644
 --- a/packages/server/src/controllers/auth.ts
 +++ b/packages/server/src/controllers/auth.ts
-@@ -6,14 +6,19 @@
+@@ -6,14 +6,19 @@ import {
    bootstrapDefaultSuperAdmin,
    countActiveSuperAdmins,
    countUsers,
@@ -20,8 +22,8 @@
    updateUser,
    updateUsername,
    updateUserPassword,
-@@ -25,9 +30,23 @@
- import { issueUserJwt } from '../middleware/user-auth'
+@@ -28,6 +33,20 @@ import { getUserJwtExpiresSeconds, issueAppJwt, issueUserJwt } from '../middlewa
+ import { consumeAppAuthorizationCode, upsertAppConnection, type AppConnectionType } from '../db/hermes/app-connections-store'
  import { listProfileNamesFromDisk } from '../services/hermes/hermes-profile'
  import { startOutboundRelayClient, stopOutboundRelayClient } from '../services/global-agent/outbound-relay-client'
 +// HERMES_CUSTOM[MatrixAuth] BEGIN: Matrix 管理员服务集成
@@ -41,10 +43,7 @@
  import { getLanEndpointKind } from '../services/lan-discovery'
  import { getPublicSystemInfo } from '../services/system-info'
  import { config } from '../config'
- 
- /**
-  * GET /api/auth/status
-@@ -43,6 +62,9 @@
+@@ -49,6 +68,9 @@ export async function authStatus(ctx: Context) {
   */
  export async function currentUser(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -54,7 +53,7 @@
    const user = userId ? findUserById(userId) : null
    if (!user) {
      ctx.status = 404
-@@ -62,6 +84,11 @@
+@@ -68,6 +90,11 @@ export async function currentUser(ctx: Context) {
        requiresCredentialChange: process.env.HERMES_DESKTOP === 'true'
          ? false
          : user.username === DEFAULT_USERNAME && verifyPassword(DEFAULT_PASSWORD, user.password_hash),
@@ -66,7 +65,7 @@
      },
    }
  }
-@@ -93,7 +120,7 @@
+@@ -99,7 +126,7 @@ function isValidAvatarPayload(value: unknown): { ok: true; json: string } | { ok
   */
  export async function getMyAvatar(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -75,12 +74,10 @@
      ctx.status = 401
      ctx.body = { error: 'Unauthorized' }
      return
-@@ -403,9 +430,414 @@
-   const available = new Set(listProfileNamesFromDisk())
-   const missing = profiles.find(profile => !available.has(profile))
+@@ -606,6 +633,411 @@ function validateProfiles(profiles: string[]): string | null {
    return missing || null
-+}
-+
+ }
+ 
 +// Helper: get admin token from config or current user
 +function getMatrixAdminToken(ctx: Context): string | null {
 +  // For now, use the current user's Matrix accessToken if they are admin
@@ -406,9 +403,9 @@
 +
 +  deleteUser(hermesUser.id)
 +  ctx.body = { success: true }
- }
- 
- /**
++}
++
++/**
 + * POST /api/auth/matrix-users/:id/deactivate
 + * Activate or deactivate a Matrix user.
 + */
@@ -486,7 +483,6 @@
 +  ctx.body = { success: true }
 +}
 +
-+/**
+ /**
   * GET /api/auth/users
   * Super admin user management list.
-  */

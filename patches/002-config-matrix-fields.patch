@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/config.ts b/packages/server/src/config.ts
-index 10e4e38b..66420cfa 100644
+index 4e421eb..339cf23 100644
 --- a/packages/server/src/config.ts
 +++ b/packages/server/src/config.ts
 @@ -25,6 +25,9 @@ import { homedir } from 'os'
@@ -12,8 +12,8 @@ index 10e4e38b..66420cfa 100644
   * - HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART: Disable Web UI gateway autostart checks and config-driven gateway start/stop reconciliation.
   * - HERMES_WEB_UI_MANAGED_GATEWAY: Web UI-managed Hermes gateway handling. Enabled by default; set 0/false/off to use CLI start.
   * - HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: Whether Web UI shutdown also stops managed gateways.
-@@ -60,6 +63,21 @@ export function getCorsOrigins(env: Record<string, string | undefined> = process
-   return env.CORS_ORIGINS?.trim() || ''
+@@ -81,6 +84,21 @@ export function isAppEntitlementRequired(env: Record<string, string | undefined>
+   return !['0', 'false', 'no', 'off'].includes(value)
  }
  
 +/**
@@ -33,4 +33,4 @@ index 10e4e38b..66420cfa 100644
 +
  const appHome = getWebUiHome()
  const remoteRelay = {
-   url: 'https://api.hermes-studio.ai',
+   url: process.env.HERMES_REMOTE_RELAY_URL?.trim() || 'https://api.hermes-studio.ai',

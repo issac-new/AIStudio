@@ -1,16 +1,16 @@
 diff --git a/packages/server/src/routes/auth.ts b/packages/server/src/routes/auth.ts
-index 897d064b..89ce33a3 100644
+index d1961934..7e9c455d 100644
 --- a/packages/server/src/routes/auth.ts
 +++ b/packages/server/src/routes/auth.ts
-@@ -7,6 +7,7 @@ export const authPublicRoutes = new Router()
- authPublicRoutes.get('/api/auth/status', ctrl.authStatus)
+@@ -8,6 +8,7 @@ authPublicRoutes.get('/api/auth/status', ctrl.authStatus)
  authPublicRoutes.post('/api/auth/login', ctrl.login)
+ authPublicRoutes.post('/api/auth/app-login', ctrl.appLogin)
  authPublicRoutes.post('/api/auth/mcu-login', ctrl.microcontrollerLogin)
 +authPublicRoutes.post('/api/auth/matrix-login', ctrl.matrixLogin) // NEW
  
  // Protected routes (auth required)
  export const authProtectedRoutes = new Router()
-@@ -17,9 +18,20 @@ authProtectedRoutes.post('/api/auth/change-username', ctrl.changeUsername)
+@@ -18,9 +19,20 @@ authProtectedRoutes.post('/api/auth/change-username', ctrl.changeUsername)
  authProtectedRoutes.get('/api/auth/avatar', ctrl.getMyAvatar)
  authProtectedRoutes.put('/api/auth/avatar', ctrl.updateMyAvatar)
  authProtectedRoutes.delete('/api/auth/password', ctrl.removePassword)

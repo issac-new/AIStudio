@@ -1,16 +1,16 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index 2d411edf..1641a0ca 100644
+index fbf43254..cf940a59 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -5,6 +5,7 @@ import { groupAgentRunMessages, useGroupChatStore } from '@/stores/hermes/group-
- import type { RoomAgentHandoffChain } from '@/api/hermes/group-chat'
+@@ -6,6 +6,7 @@ import type { RoomAgentHandoffChain } from '@/api/hermes/group-chat'
+ import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff-presentation'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import GroupMessageItem from './GroupMessageItem.vue'
 +import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
  import GroupAgentRunCard from './GroupAgentRunCard.vue'
  import VirtualMessageList from '../chat/VirtualMessageList.vue'
- 
-@@ -30,9 +31,14 @@ const emptyStateAgents = [
+ import HistoryArchiveLink from '../chat/HistoryArchiveLink.vue'
+@@ -34,9 +35,14 @@ const emptyStateAgents = [
      { name: 'Claude', src: '/coding-agents/claude-code.svg' },
  ]
  const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
@@ -28,7 +28,7 @@ index 2d411edf..1641a0ca 100644
  )))
  const summaryAnchorMessageId = computed(() => {
      const roomId = store.currentRoomId
-@@ -136,6 +142,7 @@ defineExpose({ scrollToBottom })
+@@ -155,6 +161,7 @@ defineExpose({ scrollToBottom })
  
  <template>
      <div class="group-message-list-shell">

@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/services/hermes/group-chat/index.ts b/packages/server/src/services/hermes/group-chat/index.ts
-index 28699a1..6e2a110 100644
+index 897a19c0..94d8f000 100644
 --- a/packages/server/src/services/hermes/group-chat/index.ts
 +++ b/packages/server/src/services/hermes/group-chat/index.ts
-@@ -478,6 +478,16 @@ class ChatStorage {
+@@ -1978,6 +1978,16 @@ class ChatStorage {
          return this.mapStoredMessageRow(row)
      }
  
@@ -19,7 +19,7 @@ index 28699a1..6e2a110 100644
      addMessage(msg: ChatMessage): void {
          this.upsertMessage(msg)
      }
-@@ -1152,4 +1162,40 @@ export class GroupChatServer {
+@@ -3873,6 +3883,42 @@ export class GroupChatServer {
  
          logger.debug(`[GroupChat] Connected: ${userName} (socket=${socket.id}, user=${userId})`)
  
@@ -59,4 +59,6 @@ index 28699a1..6e2a110 100644
 +        }
 +        // HERMES_CUSTOM[GroupChatAutoJoin] END
 +
-         socket.on('join', (data: { roomId?: string; name?: string }, ack?: (response?: unknown) => void) => this.handleJoin(socket, data, ack))
+         socket.on('join', (data: { roomId?: string; name?: string; historyLimit?: number }, ack?: (response?: unknown) => void) => this.handleJoin(socket, data, ack))
+         socket.on('load_pending_approvals', (_data: unknown, ack?: (response?: unknown) => void) => {
+             ack?.({ pendingApprovals: this.pendingApprovalSnapshots(null, socket) })
