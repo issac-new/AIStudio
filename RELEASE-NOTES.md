@@ -43,10 +43,11 @@ SwarmStudio **2.3**（基于 hermes-studio v0.6.43 + overlay 二次开发）
 - overlay vitest 67 文件 503 passed / 6 skipped / 0 failed
 - patch 涉及的上游测试 9 文件 54/54 PASS（kanban-routes/controller、auth-routes-avatar、matrix ×5）
 
-**打包产物（mac arm64）**
+**打包产物（mac arm64 + win x64）**
 
 - `SwarmStudio-0.6.43-arm64.dmg`（369.5 MB，sha256 `8112f929…31b0b183`）
 - `SwarmStudio-0.6.43-arm64.zip`（389.7 MB，sha256 `2e42a1b1…94ab6f13`）
+- `SwarmStudio-0.6.43-x64.zip`（405.0 MB，Windows x64，sha256 `6910b127…507dfa5`；mac 主机跨平台构建，electron 42.3.0 win-x64，node-pty prebuild 按目标修剪）
 - 位置：`upstream/hermes-studio/packages/desktop/release/`；未签名/notarize（沿 2.x 惯例）
 - 打包时补修 patch 122：上游 #2523 删除了 `SettingsCircuitBadge.vue`，去掉 122 中无模板用法的死 import（`useAuthStore` 登出逻辑不变）
 
