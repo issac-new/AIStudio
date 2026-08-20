@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index 338581b2..51f3c6ed 100644
+index 72dfe99..facbab4 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -18,6 +18,7 @@ import { getStoredUsername } from "@/api/client";
+@@ -19,6 +19,7 @@ import { clearThemeBackgroundCache } from '@/api/theme'
  const { t } = useI18n();
  const message = useMessage();
  const route = useRoute();
@@ -10,7 +10,7 @@ index 338581b2..51f3c6ed 100644
  const router = useRouter();
  const appStore = useAppStore();
  const authStore = useAuthStore();
-@@ -297,7 +298,7 @@ function openVersionManagement() {
+@@ -342,7 +343,7 @@ function handleUpdateClick() {
      <ProfileSelector />
      <ModelSelector />
  
