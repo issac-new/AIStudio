@@ -32,6 +32,13 @@ SwarmStudio **2.4**（基于 hermes-studio v0.6.44 + overlay 二次开发）
 | 113 | settings hide-sidebar-footer 重生成 |
 | 124 | kanban workspace-files allowlist 重生成（0.6.44 该文件内部重构） |
 
+**打包产物（mac arm64 + win x64）**
+
+- `SwarmStudio-0.6.44-arm64.dmg`（369.5 MB，sha256 `03c20587…9d6224b77`）
+- `SwarmStudio-0.6.44-arm64.zip`（389.7 MB，sha256 `43bdc884…8784044eb`）
+- `SwarmStudio-0.6.44-x64.zip`（405.0 MB，Windows x64，sha256 `8437de71…79c8c94c`）
+- 位置：`upstream/hermes-studio/packages/desktop/release/`；未签名/notarize（沿 2.x 惯例）
+
 **验证**
 
 - 133 patch 全 inject 通过（纯净 v0.6.44 树严格顺序重放 133/133）
