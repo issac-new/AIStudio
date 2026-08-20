@@ -1,6 +1,44 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.5**（基于 hermes-studio v0.6.44 + hermes-agent v0.20.4 + overlay 二次开发）
+
+> **2.5** — hermes-agent v0.20.0 → v0.20.4 升级（3016 commits / 3386 文件，含 v0.20.1/0.20.2/0.20.3 三个中间版本）。上游 hermes-studio 与 element-web 已是最新，未动。overlay 4 个 hermes-agent patch（117/118/178/179）**无需重生成**——目标代码路径（`hermes_cli/kanban*.py` / `profiles.py` / `projects_cmd.py` / `plugins/kanban/...`）在 0.20.4 跨度内虽被上游 60 个 commit 触碰，但 patch 上下文边界未漂移，纯净 v0.20.4 严格顺序重放 4/4 全过。
+
+### 2.5 明细
+
+**上游版本**
+
+| 仓库 | 版本 |
+|------|------|
+| hermes-studio | v0.6.44 |
+| hermes-agent | v0.20.4（v2026.8.18） |
+| element-web | v1.12.25 |
+
+**hermes-agent v0.20.0 → v0.20.4 主要子跨度 | 备注**
+
+| release | tag | commits | 备注 |
+|---|---|---:|---|
+| v0.20.1 | v2026.8.13 | 1620 | refactor(usage) simplify-pass follow-ups |
+| v0.20.2 | v2026.8.16 | 979 | release v0.20.2 |
+| v0.20.3 | v2026.8.16.2 | 258 | release v0.20.3 |
+| v0.20.4 | v2026.8.18 | 159 | 最新 stable |
+
+**Overlay patch 适配（4 个 hermes-agent patch，0 FAILED）**
+
+- 117-agent-default-workspace-kind-dir：defaults.py / kanban_db.py / kanban_swarm.py / plugin_api.py 默认 workspace kind + dir 注入；上游改动 0 patch 边界触碰
+- 118-profile-default-run-trace：profiles.py 默认 profile run trace 注入；上游 4 commits 触碰但行号偏移在 git apply 容差内
+- 178-agent-kanban-cli-verbs：kanban.py `--reasoning` / `set-reasoning` / `estimate` / `boards set-project` 注入
+- 179-agent-projects-list-json：projects_cmd.py 顶部 `project list --json` 注入
+
+**验证**
+
+- 注入：133 patch 全 inject 通过（hermes-studio 133 + hermes-agent 4，0 FAILED）
+- server `tsc --noEmit` 0 errors
+- overlay vitest 67 文件 503 passed / 6 skipped / 0 failed
+
+## 上一版（v0.6.43 → v0.6.44，SwarmStudio 2.4）
+
 SwarmStudio **2.4**（基于 hermes-studio v0.6.44 + overlay 二次开发）
 
 > **2.4** — hermes-studio v0.6.43 → v0.6.44 升级（15 commits / 90 文件，群聊实时房间完整历史、tool panel 上移、跨房间活跃 Agent runs、App profile 紧凑头像、LAN QR 码去 VPN 地址、agent bridge fallback providers）。7 个 patch 适配重生成（133 patches 0 FAILED）。hermes-agent / element-web 已是最新，未动。
