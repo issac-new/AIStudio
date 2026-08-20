@@ -1,11 +1,47 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.4**（基于 hermes-studio v0.6.44 + overlay 二次开发）
+
+> **2.4** — hermes-studio v0.6.43 → v0.6.44 升级（15 commits / 90 文件，群聊实时房间完整历史、tool panel 上移、跨房间活跃 Agent runs、App profile 紧凑头像、LAN QR 码去 VPN 地址、agent bridge fallback providers）。7 个 patch 适配重生成（133 patches 0 FAILED）。hermes-agent / element-web 已是最新，未动。
+
+### 2.4 明细
+
+**上游版本**
+
+| 仓库 | 版本 |
+|------|------|
+| hermes-studio | v0.6.44 |
+| hermes-agent | v0.20.0（v2026.8.3） |
+| element-web | v1.12.25 |
+
+**v0.6.43 → v0.6.44 主要上游变更**
+
+- **群聊**：实时房间加载完整历史（#2594）、tool panel 上移至 transcript 之上（#2572）、跨房间展示活跃 Agent runs（#2573）、历史允许折叠活跃房间（#2584）
+- **App/连接**：App profile 列表紧凑头像（#2592）、LAN QR 码排除 VPN 地址（#2591）、app relay 预连接生命周期修复（#2598）
+- **agent bridge**：重复 bridge 预持久化用户消息去重（#2601）、fallback providers 应用（#2599）
+- **其他**：provider 无 model catalog 不再误判连接失败（#2587）、文件名以点开头的路径穿越误判修复（#2586）、折叠的 provider 分组保留（#2585）、网站隐私政策（#2590）
+
+**Overlay 适配（7 个 patch 重生成）**
+
+| patch | 适配内容 |
+|---|---|
+| 042 | 版本号 context 0.6.43 → 0.6.44 |
+| 070 / 071 | cockpit App.vue/router 重生成；维持历史决策——上游 group-chat 路由在 cockpit 下仍移除（0.6.44 的 redirect 目标微调） |
+| 085 / 102 | 群聊 unread-tracking / gateway-banner 重生成（0.6.44 群聊历史与房间管理重构） |
+| 113 | settings hide-sidebar-footer 重生成 |
+| 124 | kanban workspace-files allowlist 重生成（0.6.44 该文件内部重构） |
+
+**验证**
+
+- 133 patch 全 inject 通过（纯净 v0.6.44 树严格顺序重放 133/133）
+- server `tsc --noEmit` 0 errors
+- overlay vitest 67 文件 503 passed / 6 skipped / 0 failed
+- patch 涉及的上游测试 10 文件 74/74 PASS（kanban-routes/controller/hermes-kanban-service、auth-routes-avatar、matrix ×6）
+
+## 上一版（v0.6.42 → v0.6.43，SwarmStudio 2.3）
+
 SwarmStudio **2.3**（基于 hermes-studio v0.6.43 + overlay 二次开发）
-
-> **2.3** — hermes-studio v0.6.42 → v0.6.43 升级（22 commits / 255 文件，+26039/-3390，群聊历史导航/跨设备撤回/语音输入、App 安全连接、coding-agent 斜杠命令桥接）。19 个 patch 适配重生成（133 patches 0 FAILED）。hermes-agent / element-web 已是最新，未动。
-
-### 2.3 明细
 
 **上游版本**
 
