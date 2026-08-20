@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index fbf43254..cf940a59 100644
+index 140adfa..c529bb9 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 @@ -6,6 +6,7 @@ import type { RoomAgentHandoffChain } from '@/api/hermes/group-chat'
@@ -9,8 +9,8 @@ index fbf43254..cf940a59 100644
 +import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
  import GroupAgentRunCard from './GroupAgentRunCard.vue'
  import VirtualMessageList from '../chat/VirtualMessageList.vue'
- import HistoryArchiveLink from '../chat/HistoryArchiveLink.vue'
-@@ -34,9 +35,14 @@ const emptyStateAgents = [
+ 
+@@ -33,9 +34,14 @@ const emptyStateAgents = [
      { name: 'Claude', src: '/coding-agents/claude-code.svg' },
  ]
  const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
@@ -28,7 +28,7 @@ index fbf43254..cf940a59 100644
  )))
  const summaryAnchorMessageId = computed(() => {
      const roomId = store.currentRoomId
-@@ -155,6 +161,7 @@ defineExpose({ scrollToBottom })
+@@ -156,6 +162,7 @@ defineExpose({ scrollToBottom })
  
  <template>
      <div class="group-message-list-shell">
