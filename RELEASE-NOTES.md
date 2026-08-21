@@ -1,7 +1,54 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.5**（基于 hermes-studio v0.6.44 + hermes-agent v0.20.4 + overlay 二次开发）
+SwarmStudio **2.6**（基于 hermes-studio v0.6.44 + hermes-agent v0.20.5 源码跟踪 + overlay 二次开发）
+
+> **2.6** — 三组件对齐 GitHub 最新稳定版：hermes-agent v0.20.4 → **v0.20.5**（v2026.8.19，804 commits，4 patch 纯净树重放全过、零重生成）、element-web v1.12.25 → **v1.12.26**；hermes-studio **v0.6.44 仍为最新稳定版未动**（仓内 `v1.0.0` tag 系 2026-08-16 的历史祖先 tag，非新版本）。**关键配套**：重启用 patch 108，把 app 内 runtime pin 从滞后的 `hermes-0.20.0-runtime` 提升到当前已发布的 `hermes-0.20.4-runtime`（`hermes-0.20.5-runtime` 上游尚未发布，发布后需再 bump）。产物沿用 `0.6.44` 版本名（electron-builder 4 段版本会拆成 `0.6.4-4.2` 故弃用 0.6.44.2），与 2.4 产物同名不同 sha，以 release tag + sha256 区分。
+
+### 2.6 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.6.44 | 不变（仍为 Latest release） |
+| hermes-agent | v0.20.5（v2026.8.19） | v0.20.4 → v0.20.5 |
+| element-web | v1.12.26 | v1.12.25 → v1.12.26 |
+
+**hermes-agent v0.20.4 → v0.20.5（804 commits，feat/fix 计 566）**
+
+- **desktop**（107 fix + 62 feat，最大头）：native_compaction 预检查点裁剪保留压缩摘要消息、catalog 漂移同步（OpenRouter 免费模型进出）、keyless provider 全链路视为已认证（opencode-free 出现在 /model 与桌面 picker）
+- **relay / bot-mode / gateway / cli / update / cron**：durableGroupChatRooms 远端合并持久化路径丢弃 tombstone 与 roomId、relay/gateway 稳定性修复、更新器与 cron 修复
+- SwarmStudio 运行时 runtime 暂保持 **0.20.4**：`hermes-0.20.5-runtime` 发行包上游未发布（探测 404），app 内 Runtime Versions UI 将在上游发布后可直接拉取
+
+**element-web v1.12.25 → v1.12.26**
+
+- Timeline MVVM 共享 TimelineView、自定义用户状态、房间列表分区展开/折叠持久化、注册限流提示
+- 修复：macOS 登录页 homeserver 无法修改、置顶消息编辑后 banner 更新、暗色主题代码高亮、音频 WAV fallback 等
+- （element-web 不打进 app 包，patch 008 middleware 静态服务；本仓仅跟踪源码版本）
+
+**Overlay 适配**
+
+| 项 | 内容 |
+|---|---|
+| patch 108（重启用） | runtime pin `hermes-0.20.0-runtime` → `hermes-0.20.4-runtime`；`DEFAULT_HERMES_AGENT_VERSION`/cli-shim 两处 fallback `0.20.0` → `0.20.4`。全新安装首启直接拉取当前 agent runtime；现有安装 cached==expected 不触发重下 |
+| agent patch 117/118/178/179 | **零重生成**（804 commits 跨度下 hunk 锚点存活，纯净 v2026.8.19 顺序重放 4/4 PASS） |
+| 测试修复 | `cockpit-schedule-modal.test.ts` 午夜窗口 flaky：fixture `now-1h` 在 00:00–01:00 运行时跨天致日面板只剩 1 条；改为锚定当天 08:00/20:00 |
+
+**打包产物（mac arm64 + win x64，未签名沿 2.x 惯例）**
+
+- `SwarmStudio-0.6.44-arm64.dmg`（387.4 MB，sha256 `4c11da5f…2a40f24`，与 2.4 同名产物 sha 不同）
+- `SwarmStudio-0.6.44-x64.zip`（424.7 MB，Windows x64，sha256 `1faceb1b…cfcd3da`，与 2.4 同名产物 sha 不同）
+- 位置：`upstream/hermes-studio/packages/desktop/release/`
+
+**验证**
+
+- inject 138 patch 全过（含重启用 108；hermes-agent 4/4）
+- server `tsc --noEmit` 0 errors
+- overlay vitest 67 文件 503 passed / 6 skipped / 0 failed（与基线一致）
+- `build:full` 真实 vite 构建通过
+
+## 上一版（hermes-agent v0.20.4 runtime 升级，SwarmStudio 2.5）
 
 > **2.5** — hermes-agent v0.20.0 → v0.20.4 升级（3016 commits / 3386 文件，含 v0.20.1/0.20.2/0.20.3 三个中间版本）。上游 hermes-studio 与 element-web 已是最新，未动。overlay 4 个 hermes-agent patch（117/118/178/179）**无需重生成**——目标代码路径（`hermes_cli/kanban*.py` / `profiles.py` / `projects_cmd.py` / `plugins/kanban/...`）在 0.20.4 跨度内虽被上游 60 个 commit 触碰，但 patch 上下文边界未漂移，纯净 v0.20.4 严格顺序重放 4/4 全过。
 
