@@ -91,7 +91,8 @@
 #105-kanban-i18n-zh.patch  # v0.6.20: keys already in upstream
 #106-desktop-installer-targets.patch  # v0.6.30: merged into 041 (notarize + artifactName)
 107-agent-health-proxy.patch
-# 108-update-runtime-version.patch  # v0.6.22: upstream already bumped runtime to 0.17.0
+# 2.6 re-enabled 108: upstream pin lags (0.20.0); pin hermes-0.20.4-runtime (newest published). Bump when hermes-0.20.5-runtime ships
+108-update-runtime-version.patch
 #109-windows-zip-target.patch  # v0.6.30: upstream already added zip target for win
 110-sidebar-logout-consistency.patch
 113-settings-hide-sidebar-footer.patch

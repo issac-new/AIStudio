@@ -190,11 +190,13 @@ describe('CockpitScheduleModal', () => {
 
   it('renders events sorted by time ascending in day panel', async () => {
     mockKanbanTasks.length = 0
-    const now = Date.now()
+    // 锚定到今天 08:00/20:00,避免午夜前后 1 小时内 now-1h 落到昨天导致日面板只剩 1 条
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+    const base = dayStart.getTime()
     // 两个任务，later 在前 push 但时间更晚 → 右栏应按时间升序（earlier 在上）
     mockKanbanTasks.push(
-      kt({ id: 't-late', title: '晚任务', status: 'todo', priority: 0, created_at: now }),
-      kt({ id: 't-early', title: '早任务', status: 'todo', priority: 0, created_at: now - 3600_000 }),
+      kt({ id: 't-late', title: '晚任务', status: 'todo', priority: 0, created_at: base + 20 * 3600_000 }),
+      kt({ id: 't-early', title: '早任务', status: 'todo', priority: 0, created_at: base + 8 * 3600_000 }),
     )
     const store = useCockpitStore()
     store.openSchedule()
