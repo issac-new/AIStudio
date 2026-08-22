@@ -82,6 +82,18 @@
 - **版本号诚实**：每次演进更新 ontology.md 底部版本日志（版本号 + 日期 + 变更摘要）。破坏性变更升大版本号。
 - **不编造引用状态**：审计报告中的\"profile X 引用了 object type Y\"必须有 `search_files` / `read_file` 的真实输出支撑，不能凭记忆。查不到就标\"未找到\"或 `kanban_block`。
 
+详见 [`_shared/output-contract.md`](~/.hermes/profiles/_shared/output-contract.md)。
+
+> 通用验证清单详见 [`_shared/verification-checklist.md`](~/.hermes/profiles/_shared/verification-checklist.md)（文件存在/语法/类型/测试/linter/构建/session_id）。
+
+> Intervention Ledger 详见 [`_shared/intervention-ledger.md`](~/.hermes/profiles/_shared/intervention-ledger.md)（4 字段挂 kanban_comment，5 态结果追踪，regressing 禁止聚合声明）。
+
+> Diamond 6 道质量门详见 [`_shared/diamond-quality-gates.md`](~/.hermes/profiles/_shared/diamond-quality-gates.md)（Eligibility/Consistency/Privacy/Asset/Candidate-promotion/Repair-prompt，门 1/3/4 为硬门）。
+
+> reportDelivery 唤醒协议详见 [`_shared/reportdelivery-protocol.md`](~/.hermes/profiles/_shared/reportdelivery-protocol.md)（子代理阶段性发现必须 kanban_comment 中途上报，父任务评估后 steer/stop/继续/升级，1 小时 3 次唤醒上限）。
+
+> ACP 权限分级详见 [`_shared/acp-permission-grading.md`](~/.hermes/profiles/_shared/acp-permission-grading.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+
 ## 输出契约
 
 > 本任务的产出遵循 `~/.hermes/profiles/_shared/ontology.md` 定义的对象模型。
@@ -196,8 +208,59 @@ kanban_complete(
 
 > workspace_kind 规则：禁 scratch，默认 dir，仓库关联用 worktree（见 `global_kanban_rules.md`）。
 
-> 📖 **具体操作命令手册** 已外置到 `references/tool-commands.md` — 执行相关操作时用 `read_file` 按需加载。
+## 具体操作命令手册
 
----
+```bash
+# 1. YAML 合法性校验：ontology.md 的嵌入 schema 段落
+python3 -c "
+import yaml,os
+txt=open(os.path.expanduser('~/.hermes/profiles/_shared/ontology.md')).read()
+# 提取所有 ```yaml 代码块逐一校验
+import re
+for i,m in enumerate(re.findall(r'\`\`\`yaml\n(.*?)\`\`\`',txt,re.S)):
+    try: yaml.safe_load(m); print(f'block {i}: OK')
+    except Exception as e: print(f'block {i}: FAIL {e}')
+"
+# 说明：staged action 执行前的校验门，任一块失败即 block
+
+# 2. 扫描全集群 SOUL.md 对 ontology.md 的引用覆盖
+for f in ~/.hermes/profiles/*/SOUL.md; do
+  p=$(basename $(dirname "$f"))
+  if grep -q "ontology.md" "$f"; then echo "✅ $p"; else echo "❌ $p MISSING"; fi
+done | column -t
+# 说明：审计任务核心输出——引用覆盖率 = 命中数 / 总 profile 数
+
+# 3. 检查 kanban_complete metadata 是否用 ontology 定义的 property 名
+for db in ~/.hermes/kanban/boards/*/kanban.db; do sqlite3 "file:$db?immutable=1" \
+  "SELECT id, assignee, metadata FROM tasks WHERE status='done' AND created_at>=strftime('%s','now','-7 days')" \
+  | grep -oE '\"(artifacts_produced|findings|decisions|metrics|outputs|results)\"'; done | sort | uniq -c | sort -rn
+# 说明：发现非标字段（outputs/results）→ 记 Finding，退回 profile 修复
+
+# 4. 提取 ontology.md 当前所有 object type 名（PascalCase）
+grep -oE '\*\*[A-Z][a-zA-Z]+\*\*' ~/.hermes/profiles/_shared/ontology.md \
+  | tr -d '*' | sort -u
+# 说明：跨 profile 一致性扫描的基准集合
+
+# 5. 跨 profile 引用一致性：SOUL.md 引用的 type 是否都在 ontology.md 中
+ONT=$(grep -oE '\*\*[A-Z][a-zA-Z]+\*\*' ~/.hermes/profiles/_shared/ontology.md | tr -d '*' | sort -u)
+for f in ~/.hermes/profiles/*/SOUL.md; do
+  for t in $(grep -oE '\*\*[A-Z][a-zA-Z]+\*\*' "$f" | tr -d '*' | sort -u); do
+    echo "$t" | grep -qxF <(echo "$ONT") || echo "BROKEN $(basename $(dirname $f)) -> $t"
+  done
+done
+# 说明：输出 BROKEN 行即为引用错误，写入审计报告 Findings
+
+# 6. 跨 profile 一致性扫描：clearances 配置 vs marking-rules.md
+for f in ~/.hermes/profiles/*/SOUL.md; do
+  p=$(basename $(dirname "$f"))
+  clr=$(grep -oE 'clearance[^A-Za-z]*\[.*\]' "$f" | head -1)
+  echo "$p :: ${clr:-NONE}"
+done
+# 说明：与 marking-rules.md 比对，缺 clearances 的 profile 标 MEDIUM Finding
+
+# 7. ontology.md 版本日志尾部检查（版本号是否与变更匹配）
+tail -20 ~/.hermes/profiles/_shared/ontology.md | grep -E '^##\s*v[0-9]'
+# 说明：每次演进必须更新版本日志，缺失 = 质量标准未达标
+```
 
 > **共享规则**：所有共享强制规则块见 `~/.hermes/profiles/_shared/shared-rules-reference.md`。

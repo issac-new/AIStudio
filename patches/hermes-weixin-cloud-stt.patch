@@ -1,0 +1,66 @@
+diff --git a/gateway/platforms/weixin.py b/gateway/platforms/weixin.py
+index 68a0e0a9e..bbfec7203 100644
+--- a/gateway/platforms/weixin.py
++++ b/gateway/platforms/weixin.py
+@@ -979,24 +979,23 @@ def _extract_text(item_list: List[Dict[str, Any]]) -> str:
+             return text
+     for item in item_list:
+         if item.get("type") == ITEM_VOICE:
+-            # #27300: Tencent Cloud's `voice_item.text` is their STT output,
+-            # which is wrong for any non-Chinese audio (the original report
+-            # was a Russian voice message that came back as English
+-            # gibberish). Return empty so the central STT pipeline in
+-            # ``gateway/run.py`` produces the body from the downloaded
+-            # audio instead.
+             voice_item = item.get("voice_item") or {}
+-            if not (voice_item.get("media") or {}):
+-                # No raw audio to download — Weixin supplied only its own
+-                # speech-to-text result. Use it, but preserve the voice
+-                # origin so the agent can distinguish this from text the
+-                # user typed (#65022).
+-                voice_text = str(voice_item.get("text") or "")
+-                if voice_text:
+-                    return (
+-                        "[Voice transcription provided by Weixin]\n"
+-                        f"{voice_text}"
+-                    )
++            media = voice_item.get("media") or {}
++            voice_text = str(voice_item.get("text") or "").strip()
++            # Primary: use Weixin's own cloud STT result when available —
++            # it is instant (zero local compute) and accurate for Chinese,
++            # which is the dominant use case. The raw .silk audio is still
++            # downloaded by _collect_media() so gateway/run.py's central
++            # pipeline can re-transcribe as a FALLBACK if the cloud text
++            # is empty or obviously truncated.
++            if voice_text:
++                return (
++                    "[Voice transcription provided by Weixin]\n"
++                    f"{voice_text}"
++                )
++            # No cloud STT — let _collect_media download the audio and the
++            # central STT pipeline (Qwen3-ASR via HERMES_LOCAL_STT_COMMAND)
++            # will transcribe it as fallback.
+             continue
+     return ""
+ 
+@@ -1620,10 +1619,16 @@ class WeixinAdapter(BasePlatformAdapter):
+                 media_paths.append(path)
+                 media_types.append(mime)
+         elif item_type == ITEM_VOICE:
+-            voice_path = await self._download_voice(item)
+-            if voice_path:
+-                media_paths.append(voice_path)
+-                media_types.append("audio/silk")
++            # Skip downloading .silk audio when the cloud STT text is already
++            # used as the primary transcript (set in _extract_text). Only
++            # download when we need the local STT fallback.
++            voice_item = item.get("voice_item") or {}
++            voice_text = str(voice_item.get("text") or "").strip()
++            if not voice_text:
++                voice_path = await self._download_voice(item)
++                if voice_path:
++                    media_paths.append(voice_path)
++                    media_types.append("audio/silk")
+ 
+     async def _download_image(self, item: Dict[str, Any]) -> Optional[str]:
+         media = _media_reference(item, "image_item")

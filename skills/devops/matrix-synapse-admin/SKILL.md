@@ -40,7 +40,7 @@ temp-admin registration pattern.
 - `registration_shared_secret` in `homeserver.yaml`.
 - Hermes bot account token in `~/.hermes/shared/.env.common`:
   `MATRIX_ACCESS_TOKEN` (for `@swarm:matrix.test` — renamed from `@testuser3`).
-- Permanent admin account: `@sysadmin:matrix.test` (password `${PASSWORD}`).
+- Permanent admin account: `@sysadmin:matrix.test` (password `SysAdmin123!`).
 - Element Web on port 8081 (`matrix-element` container).
 
 ## Key Concept: Matrix User IDs (MXIDs) are IMMUTABLE

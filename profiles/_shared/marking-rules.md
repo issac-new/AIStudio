@@ -211,3 +211,31 @@ markings 校验仅对 orchestrator 路由（跨 board / 跨 profile）生效。T
 ## 版本
 
 - v1.0 (2026-07-31): 初始版本
+
+---
+
+## 六、标记沿调用链传播（机器执法增强，2026-08-06）
+
+> 来源：swarm-yuan 决策 28（`--stable-diff` 传播 warn + 特征卡 §11g 下游影响域），kanban task t_25432cc9 融合。
+> 本节在既有**静态声明**之上补充**动态传播机制**。
+
+### 6.1 稳定单元变更的下游 1 跳 warn
+
+当任务修改被标记为"稳定单元"（stable API/公开接口/共享 schema/被 ≥2 任务依赖的 artifact）时：
+- worker 在 `kanban_complete(metadata)` 中列出**下游 1 跳影响域**（直接依赖方）
+- dispatcher/orchestrator 对下游任务发出 warn comment：`<file:line> 稳定单元变更，影响域: [...]`
+- 下游任务开工前必须确认已读 warn（在 comment 中 ack 或 `kanban_block` 求澄清）
+
+### 6.2 与静态 markings 的分工
+
+| 机制 | 层 | 触发 |
+|---|---|---|
+| 静态 markings（§一~§五） | 数据分类（TLP/PII/CUI…） | 跨 board 路由、clearance 校验 |
+| 动态传播（本节） | 变更影响域 | 稳定单元被修改时 |
+
+两者正交：静态管"谁能看"，动态管"谁受影响"。
+
+### 6.3 断言
+
+- 稳定单元变更未声明下游影响域 → reviewer 以 NEEDS_REVISION 打回（对应 swarm-yuan G16 断言精神）
+- 影响域声明格式：`impacted: [<task-id 或 file 路径>, ...]`

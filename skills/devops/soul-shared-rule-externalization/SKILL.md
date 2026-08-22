@@ -245,6 +245,69 @@ or always pass `offset=1, limit=300` to `read_file` inside execute_code.
 This is a tool-interaction quirk, not a file problem — the files are
 intact and patchable regardless.
 
+### The "通用模板覆盖率低" pitfall (savings estimate often 50% overstated)
+
+When planning externalization across N profiles, naive estimation
+treats every segment as "generic boilerplate" and promises the
+full byte count × N. In practice, **only 20-30% of profiles carry
+truly generic template text**. The rest have domain-specific examples
+embedded inside the "shared" section — OAuth2/JWT for worker-researcher,
+FNO/L2-error metrics for [已移除], PRD/NPS metrics for product-manager.
+
+**Real example (2026-08-18, 26 profile Q2-A/Q2-B plan)**:
+- Promised savings: 40KB across 26 SOUL.md files
+- Actually generic-template coverage: 5/26 profiles (worker-coder + 4 [已移除])
+- Real savings delivered: 21KB (≈50% of the estimate)
+
+**The classification matrix** — before any patch, score each profile's
+candidate section against these signals:
+
+| Signal | Generic (safe to externalize) | Domain-specific (keep inline) |
+|--------|-------------------------------|-------------------------------|
+| Universal boilerplate text | `无评论不完成`, `结构化 handoff 先进评论`, `files_changed` | — |
+| Domain concrete examples | — | `OAuth2/JWT`, `CNN/Cap`, `PRD/NPS`, `FNO/L2-error`, `PentesterFlow` |
+| Loop structure | Pure `kanban_show → cd → 验证 → kanban_complete` | Mixed with `web_search → web_extract`, `PentesterFlow 4-Phase`, `[已移除] 输入规格` |
+
+Score ≥ 2 generic indicators → safe to externalize whole section.
+Has any domain-specific example → keep template inline, only the
+"通用契约详见 _shared/..." 1-line reference can be appended (but see
+next pitfall — appending a reference paragraph still costs bytes).
+
+### Appending a "shared contract reference" paragraph INCREASES byte count
+
+When you can't fully externalize a section, the natural instinct is
+"append a `> 通用契约详见 _shared/...` paragraph at the end." This
+sounds like progress but the paragraph itself is ~100-160B per profile.
+For 10 profiles that's +1-1.6KB — the "externalization" round *grew*
+the corpus.
+
+**Verification before claiming savings**: after every patch batch,
+run `wc -c` before-vs-after on every touched file. Net change must
+be negative (bytes saved). Positive deltas = rollback and rethink
+the strategy (either full externalization or leave the section alone).
+
+### _shared/ block format: include copy-paste replacement text
+
+Every `_shared/<topic>.md` block should end with a "SOUL 内单行引用"
+section containing the literal replacement text the patcher should
+swap in. Without it, the next externalization pass has to handcraft
+the replacement string each time, defeating the "edit-once" goal.
+
+Good example:
+
+```markdown
+## SOUL 内单行引用
+
+```
+详见 [`_shared/output-contract.md`](~/.hermes/profiles/_shared/output-contract.md)。
+本 SOUL 不重复定义 — `kanban_complete` 前必先 `kanban_comment` 含四段（变更/验证/实现/决策）。
+```
+```
+
+Bad example (current anti-pattern in some earlier `_shared/` blocks):
+the file describes the contract but does not include the literal
+replacement string, forcing each externalization pass to invent one.
+
 ## The Aggregator File Pattern
 
 `_shared/shared-rules-reference.md` is the single import target. Its

@@ -131,7 +131,7 @@ for prof in orchestrator architect project-manager requirement-analyst \
   python3 -c "
 import json
 with open('$cfg') as f: c=json.load(f)
-c['bank_id']='hermes-b24d7ac5d9c4-swarm'
+c['bank_id']='hermes-XXXXXXXXXXXX-swarm'
 c['bank_id_template']=''
 with open('$cfg','w') as f: json.dump(c,f,indent=2)
 "
@@ -146,7 +146,7 @@ for prof in hack-recon hack-exploit hack-forensics hack-auditor hack-c2 hack-wea
   mkdir -p ~/.hermes/profiles/$prof/hindsight
   cat > ~/.hermes/profiles/$prof/hindsight/config.json << 'EOF'
 {
-  "bank_id": "hermes-b24d7ac5d9c4-hack",
+  "bank_id": "hermes-XXXXXXXXXXXX-hack",
   "bank_id_template": ""
 }
 EOF

@@ -343,6 +343,113 @@ time. Keep it inline even when externalizing everything else.
 - Profile config.yaml: worker re-dispatch (next kanban task picks it up)
 - Compression/tool_output: read at session start, NOT mid-conversation
 
+### The "调研估算" anti-pattern: byte count × N is NOT a savings estimate
+
+Naive savings projection multiplies the byte count of a candidate
+segment by its profile coverage ("8 segments × 26 profiles = 40KB").
+This **systematically overstates real savings by 50% or more** because
+it ignores three forces:
+
+1. **Only a fraction of profiles carry the canonical boilerplate**.
+   Many "shared" sections are actually domain-templated
+   (worker-researcher = OAuth2/JWT, [已移除] = FNO/L2-error, product-
+   manager = PRD/NPS). Externalizing those requires keeping the
+   template inline and only swapping the redundant prose.
+2. **Appending a 1-line `_shared/...` reference still costs bytes**.
+   A typical "通用契约详见" paragraph is 100-160B. For 10 profiles
+   that's +1-1.6KB — the round can grow the corpus, not shrink it.
+3. **Standard work loops diverge by domain** — worker-coder's 10
+   steps (acp_send → verify → acp_send loop) ≠ worker-researcher's
+   10 steps (web_search → web_extract) ≠ hack-recon's 11 steps
+   (PentesterFlow 4 phases). Externalizing the "shared" loop forces
+   a stripped-down 6-step skeleton that loses domain steps.
+
+**Real example (2026-08-18, 26-profile Q2 audit)**:
+- Naive estimate: 8 segments × ~5KB avg × 26 profiles = ~40KB
+- Classified candidates into generic vs domain-specific before patching
+- Actually generic-template coverage: 5/26 profiles (worker-coder + 4 [已移除])
+- Real savings delivered: 21KB (52% of estimate)
+- Skipped 2 segments entirely (标准作业循环 / 前线侦察协议) after realizing
+  they weren't safely externalizable
+
+**Mandatory step before reporting savings to user**: classify each
+profile × each candidate section as "generic" (safe to externalize)
+or "domain-specific" (must keep inline). Multiply by actual coverage.
+Report the *lower* number with a clear "通用模板覆盖率 20-30%" caveat.
+
+The full classification matrix is documented in
+`soul-shared-rule-externalization` SKILL.md (Pits section, "通用模板
+覆盖率低" pitfall) — read it before promising savings.
+
+### The "追加引用" pitfall: appending a reference line adds bytes, doesn't save
+
+After externalizing a section, the temptation is to keep the original
+section AND append a `_shared/...` reference line "for completeness".
+This **increases** the SOUL.md size instead of decreasing it.
+
+**Wrong**: Keep the full original section + add "> 详见 _shared/xxx.md"
+at the bottom. Net effect: +100-160B per section, -0% savings.
+
+**Right**: Replace the entire section body with a 1-line summary +
+`_shared/...` pointer. The section header stays, the body is replaced.
+Net effect: -section_size + 60B reference line.
+
+**Verification**: After each patch, check `wc -c` before vs after.
+If the file grew, you appended instead of replaced. Revert and redo.
+
+Real example (2026-08-18): Appending references to 10 domain-specific
+"输出契约" sections added +104B each (+1,040B total). Reverting and
+doing full replacement on 5 generic sections saved -2,171B each
+(-10,855B total). The difference: 12x savings.
+
+### The "语义替换" pitfall: externalizing a section whose _shared version differs
+
+When creating a new `_shared/*.md` block from multiple SOUL.md files,
+the temptation is to write a "canonical" version that merges all
+variants. This **silently replaces** domain-specific content.
+
+**Wrong**: Take worker-coder's "反模式三件套" (反过度设计/反应试/
+未读代码不表态) and write _shared/anti-patterns.md with different
+content (不重复失败调用/文本面板非汇报/完成靠工具不靠感觉).
+The worker SOUL now references the new _shared block but the original
+engineering craft rules are lost.
+
+**Right**: Before creating a new _shared block, diff the candidate
+sections across all N profiles. If they differ, either:
+- Keep the domain-specific section inline (don't externalize), OR
+- Write the _shared block as a superset that includes ALL variants
+  (e.g. add "工程 craft 反模式" section alongside "Anthropic 反模式")
+
+**Verification**: After creating a new _shared block, grep the .bak
+files for the original section content and confirm every distinctive
+phrase is still present in either the SOUL or the _shared block.
+
+Real example (2026-08-18): worker-coder .bak "反模式三件套" was
+engineering craft (反过度设计/反应试/未读代码不表态). New
+_shared/anti-patterns.md was Anthropic style (不重复失败/文本面板/
+完成靠工具). Blue-team reviewer caught the semantic replacement;
+fix was to restore the original section in 5 SOULs + add _shared
+reference, and add the 3 engineering craft items to _shared block.
+
+### The "蓝军 reviewer 截断" pitfall: delegate_task fallback on provider exhaustion
+
+When `delegate_task` spawns a blue-team reviewer with a fallback chain
+(glm-5.3 → deepseek-v4-flash), the reviewer may hit HTTP 402
+(Insufficient Balance) mid-task and return TRUNCATED results.
+
+**Mitigation**: The parent should:
+1. Not rely on the truncated review as complete — flag the gap
+2. Run the remaining verification items itself (e.g. `hermes profile
+   list` smoke test) and report which items were self-verified vs
+   reviewer-verified
+3. Consider pinning the reviewer to the primary model (glm-5.3) for
+   short audit tasks to avoid fallback exhaustion
+
+Real example (2026-08-18): Blue-team reviewer verified Items 1-4 but
+hit 402 on Item 5. Parent ran `hermes profile list` itself and
+reported "Item 5 self-verified (exit_code=0)" instead of claiming
+full reviewer coverage.
+
 ## Reference Files
 
 - `references/token-optimization-analysis-template.md` — diagnostic

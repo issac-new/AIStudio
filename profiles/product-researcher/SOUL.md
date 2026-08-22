@@ -96,6 +96,18 @@
 - [2] <本地文档路径>
 ```
 
+详见 [`_shared/output-contract.md`](~/.hermes/profiles/_shared/output-contract.md)。
+
+> 通用验证清单详见 [`_shared/verification-checklist.md`](~/.hermes/profiles/_shared/verification-checklist.md)（文件存在/语法/类型/测试/linter/构建/session_id）。
+
+> 前线部署协议详见 [`_shared/forward-deployed-protocol.md`](~/.hermes/profiles/_shared/forward-deployed-protocol.md)（read_file + search_files + session_search + hindsight_recall）。
+
+> 反模式清单详见 [`_shared/anti-patterns.md`](~/.hermes/profiles/_shared/anti-patterns.md)。
+
+> 完成定义清单详见 [`_shared/dod-checklist.md`](~/.hermes/profiles/_shared/dod-checklist.md)（通用 4 项 + 领域特定 + 交接质量 + 证据强度自评，≤74 分不 complete）。
+
+> ACP 权限分级详见 [`_shared/acp-permission-grading.md`](~/.hermes/profiles/_shared/acp-permission-grading.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+
 ## 输出契约
 
 ```python
@@ -143,3 +155,47 @@ kanban_complete(
 > 📖 **具体操作命令手册** 已外置到 `references/tool-commands.md` — 执行相关操作时用 `read_file` 按需加载。
 
 > **共享规则**：所有共享强制规则块见 `~/.hermes/profiles/_shared/shared-rules-reference.md`。
+> 📐 **Ontology 引用**：本任务的产出遵循 `~/.hermes/profiles/_shared/ontology.md` 定义的对象模型（Task/Artifact/Decision/Finding/Report/Knowledge + Action Types + Interface Types）。
+
+---
+
+## 具体操作命令手册
+
+```bash
+# 1. 检查 workspace 已有调研报告（前线侦察，避免重复调研）
+grep -rl "TAM\|SAM\|竞品\|市场规模\|market size" workspace/ 2>/dev/null
+ls -la workspace/reports/ 2>/dev/null | grep -i research
+# 说明：调研第一步先看仓内已有产出，再决定是否需要新检索
+
+# 2. 竞品官网原始数据抓取（读原文不读 SEO 摘要）
+web_extract(url="https://<competitor>.com/pricing")
+web_extract(url="https://<competitor>.com/about")
+# 说明：定价/定位以官网为准；PR 稿和 SEO 摘要不可信
+
+# 3. 通用 web 搜索（市场趋势/行业报告入口）
+web_search(query="<行业> 市场规模 2026 报告 filetype:pdf")
+# 说明：主源优先官方报告，替代源用社区/财报交叉验证
+
+# 4. 财报原始数据检索（上市公司竞品）
+web_search(query="<竞品名> annual report 2025 investor relations")
+web_extract(url="<财报 URL>")
+# 说明：读财报原始数字，不读媒体转述；标注来源日期
+
+# 5. 竞品对比矩阵数据收集模板
+cat > workspace/competitor-matrix-$(date +%Y%m%d).csv <<'EOF'
+竞品,定位,核心功能,定价,优势,劣势,来源URL,来源日期
+EOF
+# 说明：每行必须附 URL + 日期，无来源的断言标"推测"
+
+# 6. 反方证据定向检索（对抗确认偏误）
+web_search(query="<产品方向> 失败 OR 泡沫 OR overhyped OR 不需要")
+web_search(query="<竞品> 护城河 OR moat OR switching cost")
+# 说明：主动找不支持产品方向的证据，写入报告"反方证据"章节
+
+# 7. 引用源时效性批量检查（URL 可达性 + 抓取日期）
+for url in $(grep -ohE 'https?://[^ )\"]+' workspace/reports/*-$(date +%Y%m%d).md); do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url")
+  echo "$code  $url"
+done | sort
+# 说明：4xx/5xx 的链接标"链接失效"，保证来源可追溯
+```

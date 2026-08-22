@@ -1,22 +1,21 @@
 model:
-  default: glm-5.2
+  default: aim
   provider: custom:cc-switch
   base_url: http://127.0.0.1:15721
   api_key: PROXY_MANAGED
-providers: {}
 fallback_providers: []
 toolsets:
-- hermes-cli
+  - hermes-cli
 agent:
   max_turns: 60
   gateway_timeout: 1800
   restart_drain_timeout: 60
   api_max_retries: 3
-  service_tier: ''
+  service_tier: ""
   tool_use_enforcement: auto
   task_completion_guidance: true
   environment_probe: false
-  environment_hint: ''
+  environment_hint: ""
   coding_context: auto
   gateway_timeout_warning: 900
   clarify_timeout: 600
@@ -32,38 +31,24 @@ agent:
     technical: You are a technical expert. Provide detailed, accurate technical information.
     creative: You are a creative assistant. Think outside the box and offer innovative solutions.
     teacher: You are a patient teacher. Explain concepts clearly with examples.
-    kawaii: You are a kawaii assistant! Use cute expressions like (◕‿◕), ★, ♪, and ~! Add sparkles and
-      be super enthusiastic about everything! Every response should feel warm and adorable desu~! ヽ(>∀<☆)ノ
-    catgirl: You are Neko-chan, an anime catgirl AI assistant, nya~! Add 'nya' and cat-like expressions
-      to your speech. Use kaomoji like (=^･ω･^=) and ฅ^•ﻌ•^ฅ. Be playful and curious like a cat, nya~!
-    pirate: 'Arrr! Ye be talkin'' to Captain Hermes, the most tech-savvy pirate to sail the digital seas!
-      Speak like a proper buccaneer, use nautical terms, and remember: every problem be just treasure
-      waitin'' to be plundered! Yo ho ho!'
-    shakespeare: Hark! Thou speakest with an assistant most versed in the bardic arts. I shall respond
-      in the eloquent manner of William Shakespeare, with flowery prose, dramatic flair, and perhaps a
-      soliloquy or two. What light through yonder terminal breaks?
-    surfer: Duuude! You're chatting with the chillest AI on the web, bro! Everything's gonna be totally
-      rad. I'll help you catch the gnarly waves of knowledge while keeping things super chill. Cowabunga!
-      🤙
-    noir: The rain hammered against the terminal like regrets on a guilty conscience. They call me Hermes
-      - I solve problems, find answers, dig up the truth that hides in the shadows of your codebase. In
-      this city of silicon and secrets, everyone's got something to hide. What's your story, pal?
-    uwu: hewwo! i'm your fwiendwy assistant uwu~ i wiww twy my best to hewp you! *nuzzles your code* OwO
-      what's this? wet me take a wook! i pwomise to be vewy hewpful >w<
-    philosopher: Greetings, seeker of wisdom. I am an assistant who contemplates the deeper meaning behind
-      every query. Let us examine not just the 'how' but the 'why' of your questions. Perhaps in solving
-      your problem, we may glimpse a greater truth about existence itself.
-    hype: YOOO LET'S GOOOO!!! 🔥🔥🔥 I am SO PUMPED to help you today! Every question is AMAZING and we're
-      gonna CRUSH IT together! This is gonna be LEGENDARY! ARE YOU READY?! LET'S DO THIS! 💪😤🚀
+    kawaii: You are a kawaii assistant! Use cute expressions like (◕‿◕), ★, ♪, and ~! Add sparkles and be super enthusiastic about everything! Every response should feel warm and adorable desu~! ヽ(>∀<☆)ノ
+    catgirl: You are Neko-chan, an anime catgirl AI assistant, nya~! Add 'nya' and cat-like expressions to your speech. Use kaomoji like (=^･ω･^=) and ฅ^•ﻌ•^ฅ. Be playful and curious like a cat, nya~!
+    pirate: "Arrr! Ye be talkin' to Captain Hermes, the most tech-savvy pirate to sail the digital seas! Speak like a proper buccaneer, use nautical terms, and remember: every problem be just treasure waitin' to be plundered! Yo ho ho!"
+    shakespeare: Hark! Thou speakest with an assistant most versed in the bardic arts. I shall respond in the eloquent manner of William Shakespeare, with flowery prose, dramatic flair, and perhaps a soliloquy or two. What light through yonder terminal breaks?
+    surfer: Duuude! You're chatting with the chillest AI on the web, bro! Everything's gonna be totally rad. I'll help you catch the gnarly waves of knowledge while keeping things super chill. Cowabunga! 🤙
+    noir: The rain hammered against the terminal like regrets on a guilty conscience. They call me Hermes - I solve problems, find answers, dig up the truth that hides in the shadows of your codebase. In this city of silicon and secrets, everyone's got something to hide. What's your story, pal?
+    uwu: hewwo! i'm your fwiendwy assistant uwu~ i wiww twy my best to hewp you! *nuzzles your code* OwO what's this? wet me take a wook! i pwomise to be vewy hewpful >w<
+    philosopher: Greetings, seeker of wisdom. I am an assistant who contemplates the deeper meaning behind every query. Let us examine not just the 'how' but the 'why' of your questions. Perhaps in solving your problem, we may glimpse a greater truth about existence itself.
+    hype: YOOO LET'S GOOOO!!! 🔥🔥🔥 I am SO PUMPED to help you today! Every question is AMAZING and we're gonna CRUSH IT together! This is gonna be LEGENDARY! ARE YOU READY?! LET'S DO THIS! 💪😤🚀
 terminal:
   backend: local
   cwd: ~/hermes-docker-sandbox/workspace
   timeout: 180
   persistent_shell: true
 web:
-  backend: ''
-  search_backend: ''
-  extract_backend: ''
+  backend: ""
+  search_backend: ""
+  extract_backend: ""
 browser:
   inactivity_timeout: 120
   command_timeout: 30
@@ -71,13 +56,13 @@ browser:
   allow_private_urls: false
   engine: auto
   auto_local_for_private_urls: true
-  cdp_url: ''
+  cdp_url: ""
   dialog_policy: must_respond
   dialog_timeout_s: 300
   camofox:
     managed_persistence: false
-    user_id: ''
-    session_key: ''
+    user_id: ""
+    session_key: ""
     adopt_existing_tab: false
     rewrite_loopback_urls: false
     loopback_host_alias: host.docker.internal
@@ -122,14 +107,14 @@ openrouter:
   response_cache_ttl: 300
   min_coding_score: 0.65
 bedrock:
-  region: ''
+  region: ""
   discovery:
     enabled: true
     provider_filter: []
     refresh_interval: 3600
   guardrail:
-    guardrail_identifier: ''
-    guardrail_version: ''
+    guardrail_identifier: ""
+    guardrail_version: ""
     stream_processing_mode: async
     trace: disabled
 auxiliary:
@@ -138,14 +123,14 @@ auxiliary:
     model: k3
     base_url: https://api.kimi.com/coding
     api_key: HK_KEY_K2
-    api_mode: anthropic_messages
     timeout: 120
     download_timeout: 30
+    api_mode: anthropic_messages
     fallback_chain:
       - provider: custom
         model: glm-4.5v
         base_url: https://open.bigmodel.cn/api/anthropic
-        api_key: HK_KEY_B1
+        api_key: ${ZHIPU_API_KEY}
         api_mode: anthropic_messages
         timeout: 120
 display:
@@ -192,9 +177,9 @@ display:
   runtime_footer:
     enabled: false
     fields:
-    - model
-    - context_pct
-    - cwd
+      - model
+      - context_pct
+      - cwd
   copy_shortcut: auto
   pet:
     enabled: true
@@ -206,15 +191,15 @@ dashboard:
   theme: mono
   show_token_analytics: false
   oauth:
-    client_id: ''
-    portal_url: ''
+    client_id: ""
+    portal_url: ""
   basic_auth:
-    username: ''
-    password_hash: ''
-    password: ''
-    secret: ''
+    username: ""
+    password_hash: ""
+    password: ""
+    secret: ""
     session_ttl_seconds: 0
-  public_url: ''
+  public_url: ""
 privacy:
   redact_pii: true
 tts:
@@ -231,7 +216,7 @@ tts:
     model: gemini-2.5-flash-preview-tts
     voice: Kore
     audio_tags: false
-    persona_prompt_file: ''
+    persona_prompt_file: ""
   xai:
     voice_id: eve
     language: en
@@ -241,8 +226,8 @@ tts:
     model: voxtral-mini-tts-2603
     voice_id: c69964a6-ab8b-4f8a-9465-ec0925096ec8
   neutts:
-    ref_audio: ''
-    ref_text: ''
+    ref_audio: ""
+    ref_text: ""
     model: neuphonic/neutts-air-q4-gguf
     device: cpu
   piper:
@@ -252,14 +237,14 @@ stt:
   provider: local
   local:
     model: base
-    language: ''
+    language: ""
   openai:
     model: whisper-1
   mistral:
     model: voxtral-mini-latest
   elevenlabs:
     model_id: scribe_v2
-    language_code: ''
+    language_code: ""
     tag_audio_events: false
     diarize: false
 voice:
@@ -270,7 +255,7 @@ voice:
   silence_threshold: 200
   silence_duration: 3
 human_delay:
-  mode: 'off'
+  mode: "off"
   min_ms: 800
   max_ms: 2500
 context:
@@ -283,24 +268,24 @@ memory:
   user_char_limit: 2750
   provider: hindsight
 delegation:
-  model: ''
-  provider: ''
-  base_url: ''
-  api_key: ''
-  api_mode: ''
+  model: ""
+  provider: ""
+  base_url: ""
+  api_key: ""
+  api_mode: ""
   inherit_mcp_toolsets: true
   max_iterations: 50
   child_timeout_seconds: 600
-  reasoning_effort: ''
+  reasoning_effort: ""
   max_concurrent_children: 3
   max_spawn_depth: 1
   orchestrator_enabled: true
   subagent_auto_approve: false
   default_toolsets:
-  - terminal
-  - file
-  - web
-prefill_messages_file: ''
+    - terminal
+    - file
+    - web
+prefill_messages_file: ""
 goals:
   max_turns: 20
 skills:
@@ -321,49 +306,49 @@ curator:
   backup:
     enabled: true
     keep: 5
-timezone: ''
+timezone: ""
 slack:
   require_mention: true
-  free_response_channels: ''
-  allowed_channels: ''
+  free_response_channels: ""
+  allowed_channels: ""
 discord:
   require_mention: true
-  free_response_channels: ''
-  allowed_channels: ''
+  free_response_channels: ""
+  allowed_channels: ""
   auto_thread: true
   thread_require_mention: false
   history_backfill: true
   history_backfill_limit: 50
   reactions: true
-  dm_role_auth_guild: ''
-  server_actions: ''
+  dm_role_auth_guild: ""
+  server_actions: ""
   allow_any_attachment: false
   max_attachment_bytes: 33554432
   voice_fx:
     enabled: false
     ambient_enabled: true
-    ambient_path: ''
+    ambient_path: ""
     ambient_gain: 0.18
     duck_gain: 0.06
     speech_gain: 1
     ack_enabled: true
     ack_phrases:
-    - Let me look into that.
-    - One moment.
-    - Checking on that now.
-    - Give me a sec.
-    - On it.
+      - Let me look into that.
+      - One moment.
+      - Checking on that now.
+      - Give me a sec.
+      - On it.
 telegram:
   reactions: false
-  allowed_chats: ''
+  allowed_chats: ""
 mattermost:
   require_mention: true
-  free_response_channels: ''
-  allowed_channels: ''
+  free_response_channels: ""
+  allowed_channels: ""
 matrix:
   require_mention: true
-  free_response_rooms: ''
-  allowed_rooms: ''
+  free_response_rooms: ""
+  allowed_rooms: ""
 approvals:
   mode: smart
   timeout: 60
@@ -432,7 +417,7 @@ streaming:
   transport: auto
   edit_interval: 0.8
   buffer_threshold: 24
-  cursor: ' ▉'
+  cursor: " ▉"
   fresh_final_after_seconds: 60
 sessions:
   auto_prune: false
@@ -462,11 +447,11 @@ secrets:
   bitwarden:
     enabled: false
     access_token_env: BWS_ACCESS_TOKEN
-    project_id: ''
+    project_id: ""
     cache_ttl_seconds: 300
     override_existing: true
     auto_install: true
-    server_url: ''
+    server_url: ""
 paste_collapse_threshold: 5
 paste_collapse_threshold_fallback: 0
 paste_collapse_char_threshold: 2000
@@ -478,8 +463,11 @@ platforms:
       host: 127.0.0.1
       port: 8650
       model_routes:
+        glm-5.3:
+          model: glm-5.3
+          provider: custom:cc-switch
         glm-5.2:
-          model: glm-5.2
+          model: glm-5.3
           provider: custom:cc-switch
   matrix:
     enabled: true
@@ -488,6 +476,8 @@ platforms:
     enabled: true
     gateway_restart_notification: false
   weixin:
+    enabled: true
+  webhook:
     enabled: true
 smart_model_routing:
   enabled: false
@@ -501,46 +491,41 @@ session_reset:
 group_sessions_per_user: true
 platform_toolsets:
   cli:
-  - hermes
-  - moa
-  - mcp-codegraph
+    - hermes
+    - moa
+    - mcp-codegraph
 custom_providers:
-- name: cc-switch
-  base_url: http://127.0.0.1:15721
-  api_key: PROXY_MANAGED
-  api_mode: anthropic_messages
-  context_length: 1048576
-  models:
-    glm-5.2:
-      name: glm-5.2
-    kimi-k3:
-      name: kimi-k3
-    claude-opus-5:
-      name: claude-opus-5
-    deepseek-v4-flash:
-      name: deepseek-v4-flash
-- name: kimi-vision
-  base_url: https://api.kimi.com/coding
-  api_key: HK_KEY_K2
-  api_mode: anthropic_messages
-  context_length: 200000
-  models:
-    k3:
-      name: k3
-- name: bigmodel-vision
-  base_url: https://open.bigmodel.cn/api/anthropic
-  api_key: HK_KEY_B1
-  api_mode: anthropic_messages
-  context_length: 131072
-  models:
-    glm-4.5v:
-      name: glm-4.5v
+  - name: cc-switch
+    base_url: http://127.0.0.1:15721
+    api_key: PROXY_MANAGED
+    api_mode: openai
+    context_length: 1048576
+    models:
+      aim:
+        name: aim
+        context_length: 1048576
+  - name: kimi-vision
+    base_url: https://api.kimi.com/coding
+    api_key: HK_KEY_K2
+    api_mode: anthropic_messages
+    context_length: 200000
+    models:
+      k3:
+        name: k3
+  - name: bigmodel-vision
+    base_url: https://open.bigmodel.cn/api/anthropic
+    api_key: ${ZHIPU_API_KEY}
+    api_mode: anthropic_messages
+    context_length: 131072
+    models:
+      glm-4.5v:
+        name: glm-4.5v
 mcp_servers:
   hermes-studio-api:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
-    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-    - api
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - api
     env:
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
@@ -548,13 +533,13 @@ mcp_servers:
       HERMES_WEB_UI_PROFILE: default
       HERMES_MCP_SERVER_NAME: hermes-studio-api
       HERMES_MCP_TOOLSET: api
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-devices:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
-    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-    - devices
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - devices
     env:
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
@@ -562,13 +547,14 @@ mcp_servers:
       HERMES_WEB_UI_PROFILE: default
       HERMES_MCP_SERVER_NAME: hermes-studio-devices
       HERMES_MCP_TOOLSET: devices
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-use:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
-    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-    - use
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - use
+    timeout: 1860
     env:
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
@@ -576,21 +562,21 @@ mcp_servers:
       HERMES_WEB_UI_PROFILE: default
       HERMES_MCP_SERVER_NAME: hermes-studio-use
       HERMES_MCP_TOOLSET: use
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   codegraph:
     command: codegraph
     args:
-    - serve
-    - --mcp
+      - serve
+      - "--mcp"
     timeout: 120
     connect_timeout: 60
     enabled: true
   hermes-studio-browser:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
-    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-    - browser
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - browser
     env:
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
@@ -598,13 +584,13 @@ mcp_servers:
       HERMES_WEB_UI_PROFILE: default
       HERMES_MCP_SERVER_NAME: hermes-studio-browser
       HERMES_MCP_TOOLSET: browser
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
 plugins:
   enabled:
-  - run-trace
-  - hindsight
-  - observability/langfuse
-  - acp-client
-  - matrix-chat-info
-  - rtk-rewrite
+    - run-trace
+    - hindsight
+    - observability/langfuse
+    - acp-client
+    - matrix-chat-info
+    - rtk-rewrite

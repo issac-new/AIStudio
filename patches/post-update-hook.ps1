@@ -35,12 +35,33 @@ if ((Test-Path $acpRef) -and -not ((Get-Content $acpRef -Raw) -match 'sandbox_mo
 $tuiSrc = Join-Path $RepoDir "ui-tui\src\components\appChrome.tsx"
 if (Test-Path $tuiSrc) {
     $hasCcExtra = (Get-Content $tuiSrc -Raw) -match "ccExtraTruncated"
-    if (-not $hasCcExtra) {
+    $appLayoutSrc = Join-Path $RepoDir "ui-tui\src\components\appLayout.tsx"
+    $hasRtFix = $false
+    if (Test-Path $appLayoutSrc) {
+        $hasRtFix = (Get-Content $appLayoutSrc -Raw) -match "current_provider_id"
+    }
+    if (-not $hasCcExtra -or -not $hasRtFix) {
         $tuiPatch = Join-Path $PatchesDir "apply-tui-patches.ps1"
         if (Test-Path $tuiPatch) {
             Write-Host "  TUI patches missing, re-applying..." -ForegroundColor Yellow
             & $tuiPatch
         }
+    }
+}
+
+# 4. Hermes source fixes (BigModel 401 / Weixin cloud STT / npm loglevel)
+$srcFix = Join-Path $PatchesDir "apply-hermes-source-fixes.ps1"
+if (Test-Path $srcFix) {
+    $anthropic = Join-Path $RepoDir "agent\anthropic_adapter.py"
+    $weixin = Join-Path $RepoDir "gateway\platforms\weixin.py"
+    $main = Join-Path $RepoDir "hermes_cli\main.py"
+    $needsFix = $false
+    if ((Test-Path $anthropic) -and -not ((Get-Content $anthropic -Raw) -match "_is_bigmodel")) { $needsFix = $true }
+    if ((Test-Path $weixin) -and -not ((Get-Content $weixin -Raw) -match "Voice transcription provided by Weixin")) { $needsFix = $true }
+    if ((Test-Path $main) -and -not ((Get-Content $main -Raw) -match "loglevel=error")) { $needsFix = $true }
+    if ($needsFix) {
+        Write-Host "  Hermes source fixes missing, re-applying..." -ForegroundColor Yellow
+        & $srcFix
     }
 }
 

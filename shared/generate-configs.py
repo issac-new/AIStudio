@@ -96,6 +96,13 @@ def _resolve_skills_by_category(skills_dir, categories):
         cat_dir = skills_dir / cat
         if not cat_dir.is_dir():
             continue
+        if (cat_dir / "SKILL.md").exists():
+            # 顶层单例技能: 目录本身就是技能(无子技能) — 2026-08-18 补,
+            # 此前只扫子目录, 单例类目(matplotlib/cognition-lattice 等)漏展开
+            if cat not in seen:
+                seen.add(cat)
+                resolved.append(cat)
+            continue
         for entry in sorted(cat_dir.iterdir()):
             if entry.is_dir() and (entry / "SKILL.md").exists():
                 if entry.name not in seen:
@@ -135,24 +142,39 @@ def _apply_skills_curation(profile_cfg, skills_dir, cfg, report):
     if not isinstance(disabled_categories, list):
         disabled_categories = []
 
+    pinned = [s for s in profile_cfg.get("skills_pinned", []) if isinstance(s, str)]
     if enabled_categories:
-        # 未选中类目 = ALL_CATEGORIES 中既未启用也未显式屏蔽的部分。
-        # 这些类目下的具体 skill 名写入 config.yaml skills.disabled。
+        # 2026-08-18 重写: 未选中类目 = profile skills/ 磁盘顶层实际条目 ∪ ALL_CATEGORIES
+        # 基线, 再减去 (enabled_categories ∪ skills_pinned ∪ skills_disabled)。
+        # 旧实现只用硬编码 ALL_CATEGORIES 求差集, 对清单外的顶层目录(批量安装
+        # 的科研包、agent 自建单例技能)是盲区 → 默认启用、漂入提示词索引。
         selected = set(
             _resolve_skills_by_category(skills_dir, enabled_categories)
-        )
-        unselected_categories = [
-            c for c in ALL_CATEGORIES
-            if c not in enabled_categories and c not in disabled_categories
-        ]
+        ) | set(pinned)
+        unselected_categories = []
+        if skills_dir is not None and skills_dir.exists():
+            for e in sorted(skills_dir.iterdir()):
+                if not e.is_dir() or e.name.startswith("."):
+                    continue
+                if e.name in enabled_categories or e.name in pinned \
+                        or e.name in disabled_categories:
+                    continue
+                if e.name not in unselected_categories:
+                    unselected_categories.append(e.name)
+        for c in ALL_CATEGORIES:
+            if c not in enabled_categories and c not in pinned \
+                    and c not in disabled_categories and c not in unselected_categories:
+                unselected_categories.append(c)
         unselected = _resolve_disabled_skills_by_category(unselected_categories)
         disabled = sorted(name for name in unselected if name not in selected)
         extra = cfg.setdefault("extra", {})
         extra["skills_enabled_by_category"] = enabled_categories
+        extra["skills_pinned"] = pinned
         if disabled:
             cfg["skills"] = {"disabled": disabled}
         report["mode"] = "allowlist"
         report["enabled_categories"] = enabled_categories
+        report["pinned"] = pinned
         report["enabled_skill_count"] = len(selected)
         report["disabled_count"] = len(disabled)
     elif disabled_categories:
@@ -173,7 +195,7 @@ PROFILES_DIR = HERMES_HOME / "profiles"
 # config.yaml 中自动管理的段，生成器保留不动
 # 使用 list 而非 set 以保证输出顺序一致
 PRESERVE_KEYS = ["mcp_servers", "platform_toolsets", "known_plugin_toolsets",
-                 "onboarding", "updates", "_config_version"]
+                 "onboarding", "updates", "_config_version", "clearances"]
 
 
 def load_env_common(path: Path) -> dict[str, str]:
@@ -246,7 +268,7 @@ def generate_config_yaml(profile_name: str, profile_cfg: dict, existing_cfg: dic
     shared = shared_config
     # Per-profile model override (e.g. hack profiles pinned to k3/custom:kimicode)
     # wins over shared_config.model; fall back to shared, then the built-in default.
-    model_cfg = profile_cfg.get("model") or shared.get("model", {"default": "glm-5.2", "provider": "damoxing", "base_url": "${DAMOXING_BASE_URL}"})
+    model_cfg = profile_cfg.get("model") or shared.get("model", {"default": "glm-5.3", "provider": "damoxing", "base_url": "${DAMOXING_BASE_URL}"})
     providers_cfg = shared.get("providers", {})
     custom_providers_cfg = shared.get("custom_providers", [])
     agent_cfg = shared.get("agent", {})
@@ -266,7 +288,7 @@ def generate_config_yaml(profile_name: str, profile_cfg: dict, existing_cfg: dic
         "toolsets": profile_cfg.get("toolsets", []),
         "agent": agent_cfg if agent_cfg else {
             "max_turns": 90,
-            "reasoning_effort": "xhigh",
+            "reasoning_effort": "ultra",
             "tool_use_enforcement": "auto",
             "task_completion_guidance": True,
             "parallel_tool_call_guidance": True,

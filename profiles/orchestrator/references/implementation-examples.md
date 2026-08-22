@@ -36,12 +36,15 @@ kanban_create(
     triage=True
 )
 
+# 安全类消息示例 → hack 看板
 # 用户消息: "对目标做端口扫描和服务指纹识别"
+# 命中: 端口扫描 + 指纹识别 → 侦察类 → hack-recon
 kanban_create(
     title="端口扫描和指纹识别",
     body="...",
     tenant="跨团队协作群01:recon|端口扫描指纹识别:@testuser3:!<matrix-room-id>:$eventId:matrix",
     board="hack",  # 安全类 → hack
+    assignee="hack-recon",
     workspace_kind="worktree",
     triage=False  # 已明确分配
 )

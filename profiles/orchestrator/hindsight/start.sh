@@ -2,14 +2,18 @@
 # Hindsight API launcher script — 本地中英文模型离线模式
 set -e
 
-# Read API keys from .env — use DAMOXING proxy (DeepSeek direct key expired)
-DS_KEY=$(grep ^DAMOXING_API_KEY $HOME/.hermes/profiles/orchestrator/.env | head -1 | cut -d= -f2-)
-DS_BASE=$(grep ^DAMOXING_BASE_URL $HOME/.hermes/profiles/orchestrator/.env | head -1 | cut -d= -f2-)
-
-export HINDSIGHT_API_LLM_PROVIDER=openai
-export HINDSIGHT_API_LLM_API_KEY="$DS_KEY"
-export HINDSIGHT_API_LLM_MODEL=glm-5.2
-export HINDSIGHT_API_LLM_BASE_URL="${DS_BASE}/v1"
+# Route LLM through cc-switch claude queue (127.0.0.1:15721)
+# CRITICAL: use anthropic provider → /v1/messages → cc-switch routes to CLAUDE app_type
+# (openai provider → /v1/chat/completions → gets routed to CODEX app_type which has broken MKimi)
+# This ensures Hindsight uses the same claude failover queue as Hermes itself.
+export HINDSIGHT_API_LLM_PROVIDER=anthropic
+export HINDSIGHT_API_LLM_API_KEY="PROXY_MANAGED"
+export HINDSIGHT_API_LLM_MODEL=glm-5.3
+export HINDSIGHT_API_LLM_BASE_URL="http://127.0.0.1:15721"
+# cc-switch may route glm-5.3 to providers that reject explicit temperature
+# (e.g. HKimi/Kimi K3 only allows temperature=1). Omit it so the upstream
+# picks its own default.
+export HINDSIGHT_API_LLM_TEMPERATURE=none
 export HINDSIGHT_API_DATABASE_URL="postgresql://hindsight:hindsight_dev@localhost:5432/hindsight"
 export HINDSIGHT_API_MIGRATION_DATABASE_URL="postgresql+psycopg2://hindsight:hindsight_dev@127.0.0.1:5432/hindsight"
 export HINDSIGHT_API_HOST=0.0.0.0
@@ -32,7 +36,7 @@ export HINDSIGHT_API_RUN_MIGRATIONS=true
 export HF_ENDPOINT=https://hf-mirror.com
 
 echo "Starting Hindsight API (Local Models Mode)..."
-echo "  LLM:        $HINDSIGHT_API_LLM_PROVIDER/$HINDSIGHT_API_LLM_MODEL (API)"
+echo "  LLM:        $HINDSIGHT_API_LLM_PROVIDER/$HINDSIGHT_API_LLM_MODEL (via cc-switch 15721)"
 echo "  Port:       $HINDSIGHT_API_PORT"
 echo "  DB:         localhost:5432/hindsight"
 echo "  Embeddings: local BAAI/bge-large-zh-v1.5 (1024-dim, zh+en)"

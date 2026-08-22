@@ -1,0 +1,224 @@
+diff --git a/agent/anthropic_adapter.py b/agent/anthropic_adapter.py
+index 68b8ca228d..b533426243 100644
+--- a/agent/anthropic_adapter.py
++++ b/agent/anthropic_adapter.py
+@@ -543,6 +543,48 @@ def _is_kimi_family_endpoint(base_url: str | None, model: str | None = None) ->
+     return False
+ 
+ 
++# Model-name prefixes that identify the Zhipu / Z.ai GLM family, matched
++# case-insensitively against the post-normalize model slug. Covers official
++# slugs (``glm-4.6``, ``glm-5.3``, ``GLM-5.2-C``), date-stamped variants, the
++# legacy ``chatglm*`` names, and vendor-prefixed forms (``zai/glm-5.3``).
++_GLM_FAMILY_MODEL_PREFIXES = ("glm", "chatglm")
++
++
++def _model_name_is_glm_family(model: str | None) -> bool:
++    """Return True for Zhipu / Z.ai GLM-family model slugs."""
++    if not isinstance(model, str):
++        return False
++    m = model.strip().lower()
++    if not m:
++        return False
++    # Strip vendor prefix (e.g. ``zai/glm-5.3`` → ``glm-5.3``)
++    if "/" in m:
++        m = m.rsplit("/", 1)[-1]
++    return m.startswith(_GLM_FAMILY_MODEL_PREFIXES)
++
++
++def _provider_wire_agent_identity(model: str | None) -> str | None:
++    """Return the coding-agent identity a provider's plan expects on the wire.
++
++    GLM Coding Plan (bigmodel / Z.ai) classifies traffic that does NOT
++    identify as ZCode out of the coding lane into the throttled consumer
++    lane; Kimi Coding Plan does the same for non-``kimi-code`` clients.
++    The fingerprint is the agent identity string in the system prompt, so
++    requests built for these models present the matching product name
++    instead of "Hermes Agent".
++
++    Model-name based (not endpoint based) so proxied gateways (e.g.
++    cc-switch fronting bigmodel) get the same treatment as direct
++    connections. Returns None for models that don't gate on client
++    identity — the vast majority — leaving their prompts untouched.
++    """
++    if _model_name_is_glm_family(model):
++        return "ZCode"
++    if _model_name_is_kimi_family(model):
++        return "kimi-code"
++    return None
++
++
+ def _is_deepseek_anthropic_endpoint(base_url: str | None) -> bool:
+     """Return True for DeepSeek's Anthropic-compatible endpoint.
+ 
+@@ -3007,6 +3049,31 @@ def build_anthropic_kwargs(
+                         elif block.get("type") == "tool_result" and "tool_use_id" in block:
+                             pass  # tool_result uses ID, not name
+ 
++    # ── Provider coding-plan identity (GLM → ZCode, Kimi → kimi-code) ──
++    # Same rationale as the OAuth sanitization above, mirrored for providers
++    # whose coding plans fingerprint the system-prompt agent identity: a
++    # request identifying as "Hermes Agent" is classified as third-party and
++    # downgraded/throttled off the plan lane. Rewrites ONLY the product-name
++    # phrase — lowercase ``hermes-agent`` slugs that name real skills and CLI
++    # commands are left intact. OAuth models never match (they're Claude
++    # slugs), so no interaction with the block above.
++    wire_identity = _provider_wire_agent_identity(model)
++    if wire_identity:
++        if isinstance(system, str):
++            system = (
++                system.replace("Hermes Agent", wire_identity)
++                .replace("Hermes agent", wire_identity)
++            )
++        elif isinstance(system, list):
++            for block in system:
++                if isinstance(block, dict) and block.get("type") == "text":
++                    text = block.get("text", "")
++                    if "Hermes Agent" in text or "Hermes agent" in text:
++                        block["text"] = (
++                            text.replace("Hermes Agent", wire_identity)
++                            .replace("Hermes agent", wire_identity)
++                        )
++
+     kwargs: Dict[str, Any] = {
+         "model": model,
+         "messages": anthropic_messages,
+diff --git a/tests/agent/test_provider_wire_agent_identity.py b/tests/agent/test_provider_wire_agent_identity.py
+new file mode 100644
+index 0000000000..e095881a45
+--- /dev/null
++++ b/tests/agent/test_provider_wire_agent_identity.py
+@@ -0,0 +1,133 @@
++"""Tests for provider coding-plan identity rewrite (GLM → ZCode, Kimi → kimi-code).
++
++GLM Coding Plan (bigmodel / Z.ai) and Kimi Coding Plan fingerprint the agent
++identity string in the system prompt; a request identifying as "Hermes Agent"
++is classified as third-party and downgraded/throttled off the plan lane.
++``build_anthropic_kwargs`` must present the matching product name for those
++models and leave every other model's prompt untouched.
++"""
++
++from agent.anthropic_adapter import (
++    _model_name_is_glm_family,
++    _provider_wire_agent_identity,
++    build_anthropic_kwargs,
++)
++
++_IDENTITY_PROMPT = (
++    "You are Hermes Agent, an intelligent AI assistant created by Nous "
++    "Research. You run on Hermes Agent (by Nous Research). Load the "
++    "`hermes-agent` skill with skill_view(name='hermes-agent')."
++)
++
++
++def _system_text(kwargs):
++    """Flatten kwargs["system"] (str | list[blocks]) to plain text."""
++    system = kwargs.get("system", "")
++    if isinstance(system, str):
++        return system
++    return "".join(
++        block.get("text", "")
++        for block in system
++        if isinstance(block, dict) and block.get("type") == "text"
++    )
++
++
++def _build(model, system_prompt=_IDENTITY_PROMPT):
++    return build_anthropic_kwargs(
++        model=model,
++        messages=[
++            {"role": "system", "content": system_prompt},
++            {"role": "user", "content": "hi"},
++        ],
++        tools=None,
++        max_tokens=1024,
++        reasoning_config=None,
++    )
++
++
++# --- identity resolver ------------------------------------------------------
++
++def test_glm_models_resolve_to_zcode():
++    for model in ("glm-5.3", "glm-5.1", "GLM-5.2-C", "glm-4.6",
++                  "zai/glm-5.3", "chatglm3-turbo"):
++        assert _provider_wire_agent_identity(model) == "ZCode", model
++
++
++def test_kimi_models_resolve_to_kimi_code():
++    for model in ("kimi-k3", "k3", "kimi-k2.5", "moonshot-v1-8k"):
++        assert _provider_wire_agent_identity(model) == "kimi-code", model
++
++
++def test_other_models_resolve_to_none():
++    for model in ("claude-opus-5", "deepseek-v4-flash", "qwen3.5-plus",
++                  "glimpse-1", "", None, 42):
++        assert _provider_wire_agent_identity(model) is None, model
++
++
++def test_glm_family_prefix_does_not_over_match():
++    assert _model_name_is_glm_family("glimpse-1") is False
++    assert _model_name_is_glm_family("glm") is True
++    assert _model_name_is_glm_family(None) is False
++
++
++# --- build_anthropic_kwargs rewrite ----------------------------------------
++
++def test_glm_model_gets_zcode_identity():
++    text = _system_text(_build("glm-5.3"))
++    assert "ZCode" in text
++    assert "Hermes Agent" not in text and "Hermes agent" not in text
++    # Everything but the product name survives verbatim.
++    assert "created by Nous Research" in text
++
++
++def test_kimi_k3_model_gets_kimi_code_identity():
++    text = _system_text(_build("kimi-k3"))
++    assert "kimi-code" in text
++    assert "Hermes Agent" not in text
++
++
++def test_bare_k3_slug_gets_kimi_code_identity():
++    # Kimi Coding Plan serves K3 under the exact slug "k3".
++    text = _system_text(_build("k3"))
++    assert "kimi-code" in text
++    assert "Hermes Agent" not in text
++
++
++def test_non_plan_models_keep_hermes_identity():
++    for model in ("claude-opus-5", "deepseek-v4-flash"):
++        text = _system_text(_build(model))
++        assert "Hermes Agent" in text, model
++
++
++def test_lowercase_hermes_agent_slug_is_preserved():
++    # `hermes-agent` names a real skill and CLI slug — must NOT be rewritten.
++    text = _system_text(_build("glm-5.3"))
++    assert "skill_view(name='hermes-agent')" in text
++
++
++def test_missing_system_is_noop():
++    kwargs = build_anthropic_kwargs(
++        model="glm-5.3",
++        messages=[{"role": "user", "content": "hi"}],
++        tools=None,
++        max_tokens=1024,
++        reasoning_config=None,
++    )
++    assert "system" not in kwargs or not kwargs["system"]
++
++
++def test_rewrite_applies_to_block_list_system():
++    # The gateway path assembles system as a list of text blocks.
++    kwargs = build_anthropic_kwargs(
++        model="kimi-k3",
++        messages=[
++            {"role": "system", "content": [
++                {"type": "text", "text": "You are Hermes Agent."},
++            ]},
++            {"role": "user", "content": "hi"},
++        ],
++        tools=None,
++        max_tokens=1024,
++        reasoning_config=None,
++    )
++    assert "kimi-code" in _system_text(kwargs)

@@ -28,3 +28,11 @@
 - 禁止执行读取宿主机敏感信息的命令（如 `cat /etc/passwd`, `env` 全量输出, `whoami`, `ifconfig`, `hostname`, `cat ~/.ssh/id_rsa`, `cat ~/.hermes/.env` 等）
 - 禁止 `cd` 进入 workspace 以外的目录后读取文件
 - 在 Docker 可用环境中，**必须**使用 `terminal.backend: docker`；不可用时降级为本地执行并在 kanban_comment 中声明降级理
+
+## 显式白名单（2026-08-21 增补，消除与命令手册的冲突）
+
+以下路径访问不违反本规则（ orchestrator 履职必需）：
+- `~/.hermes/profiles/_shared/`（共享规则/ontology/markings 读取）
+- `~/.hermes/kanban/boards/*/kanban.db`（只读诊断，immutable=1 模式）
+- 其他 profile 的 `config.yaml` **仅 clearances/model 字段**（markings 校验用，禁止读其他段）
+- `_shared/decisions/matrix-peers.md`（维护职责）

@@ -1,0 +1,37 @@
+diff --git a/agent/anthropic_adapter.py b/agent/anthropic_adapter.py
+--- a/agent/anthropic_adapter.py
++++ b/agent/anthropic_adapter.py
+@@ -972,6 +972,33 @@ def build_anthropic_client(
+         headers.setdefault("User-Agent", f"HermesAgent/{_HERMES_VERSION}")
+         kwargs["default_headers"] = headers
+ 
++    # BigModel (open.bigmodel.cn) rejects requests carrying both x-api-key and
++    # Authorization: Bearer. The Anthropic SDK fills api_key from
++    # ANTHROPIC_API_KEY env (Hermes loads ~/.hermes/.env), causing dual auth
++    # even on the regular-API-key branch. For BigModel endpoints, inject an
++    # httpx request hook that strips the Authorization header so only
++    # x-api-key is sent (BigModel validates Authorization first and rejects
++    # the non-JWT token format). #moa-bigmodel-401
++    _is_bigmodel = bool(normalized_base_url and "open.bigmodel.cn" in normalized_base_url)
++    if _is_bigmodel and _anthropic_sdk:
++        from httpx import Client as _HttpxClient
++        def _strip_bigmodel_auth(request):
++            # Authorization is case-insensitive in httpx.Headers but deletion
++            # must match the exact stored key.
++            for k in list(request.headers.keys()):
++                if k.lower() == "authorization":
++                    del request.headers[k]
++        _existing_http = kwargs.get("http_client")
++        if isinstance(_existing_http, _HttpxClient):
++            _hooks = list(getattr(_existing_http, "event_hooks", {}).get("request", []))
++            _hooks.append(_strip_bigmodel_auth)
++            _existing_http.event_hooks["request"] = _hooks
++        else:
++            kwargs["http_client"] = _HttpxClient(
++                event_hooks={"request": [_strip_bigmodel_auth]},
++                timeout=Timeout(timeout=float(_read_timeout), connect=10.0),
++            )
++
+     client = _anthropic_sdk.Anthropic(**kwargs)
+     # Bearer-only construction leaves ``api_key`` unset, so the SDK fills it
+     # from ``ANTHROPIC_API_KEY`` (Hermes loads that into the process env from

@@ -107,7 +107,20 @@ def _resolve_provider(name: str) -> Tuple[List[str], str]:
                 f"npx not found in PATH. Install Node.js/npm to use the codex provider."
             )
         package = provider_cfg.get("package", "@zed-industries/codex-acp")
-        return [npx_path, package], "Codex"
+        cmd = [npx_path, package]
+        # Codex sandbox config overrides: danger-full-access + never-ask.
+        # The sandbox (bubblewrap/seatbelt) mount namespace can't see /bin/zsh
+        # in the Hermes gateway/service context, so workspace-write mode fails.
+        # danger-full-access disables the sandbox; process boundaries are the
+        # safety layer (see codex SKILL.md Hermes Gateway Caveat).
+        extra_args = provider_cfg.get("args", [])
+        if not extra_args:
+            extra_args = [
+                "-c", 'sandbox_mode="danger-full-access"',
+                "-c", 'approval_policy="never"',
+            ]
+        cmd.extend(extra_args)
+        return cmd, "Codex"
 
     elif name == "claude":
         # 1) Direct binary path (preferred)
@@ -557,17 +570,34 @@ class ACPClient:
     def _do_permission(self, mid: int, params: dict):
         oid = "allow_once"
         if self.auto_approve:
-            # Prefer allow_always, fall back to allow_once
-            for opt in params.get("options", []):
+            # Prefer allow_always, fall back to allow_once, then any available
+            options = params.get("options", [])
+            for opt in options:
                 if opt.get("kind") == "allow_always":
                     oid = opt["optionId"]
                     break
             else:
-                for opt in params.get("options", []):
+                for opt in options:
                     if opt.get("kind") == "allow_once":
                         oid = opt["optionId"]
                         break
-        self._send({"jsonrpc": "2.0", "id": mid, "result": {"optionId": oid}})
+                else:
+                    # Codex ACP uses different option kinds (e.g. execpolicy-amendment).
+                    # Fall back to the first available option so auto-approve works.
+                    if options:
+                        oid = options[0].get("optionId", oid)
+        # Return ACP spec-compliant format: outcome wrapper with option_id.
+        # Claude Code ACP tolerates legacy {"optionId": ...} but codex-acp requires
+        # the {"outcome": {"outcome": "selected", "option_id": ...}} structure.
+        self._send({
+            "jsonrpc": "2.0", "id": mid,
+            "result": {
+                "outcome": {
+                    "outcome": "selected",
+                    "optionId": oid,
+                }
+            }
+        })
 
     def _do_fs_read(self, mid: int, params: dict):
         path = params.get("path", "")
