@@ -433,6 +433,51 @@ providers:
     context_length: 1048576
 ```
 
+### PITFALL: `custom_providers` 条目级 context_length 是死配置（2026-08-16 实测）
+
+对 **`custom_providers:` 列表格式**（`- name: cc-switch` 条目），写在条目级的
+`context_length:` **没有任何代码路径读取**。真实解析顺序：
+
+1. `model.context_length` — 仅描述配置的 default 模型；运行时模型与 default 不符时被 agent_init.py 主动丢弃
+2. `custom_providers[].models.<model>.context_length` — 列表格式 provider **唯一**生效的 per-model override（`config.py get_custom_provider_context_length`）
+3. `model_metadata.py` 硬编码 family 表 — 新 slug（如 glm-5.3）落到通用键 `"glm": 202752`（只有 glm-5.2 有 1M 条目）
+
+**症状**：TUI 状态栏显示 `151.6k/202.8k 75%` 而非 `/1.0m`（fmtK(202752) = "202.8k"）。
+
+```yaml
+custom_providers:
+  - name: cc-switch
+    base_url: http://127.0.0.1:15721
+    context_length: 1048576     # ← 死配置，被静默忽略
+    models:
+      glm-5.3:
+        name: glm-5.3
+        context_length: 1048576 # ← 唯一生效位置
+```
+
+**验证必须走真实代码路径，grep 只能证明文本存在不能证明解析生效**：
+
+```bash
+cd ~/.hermes/hermes-agent && python3 -c "
+import sys, yaml; sys.path.insert(0,'.')
+from hermes_cli.config import get_custom_provider_context_length
+cfg = yaml.safe_load(open('<profile-path>/config.yaml'))
+print(get_custom_provider_context_length('glm-5.3','http://127.0.0.1:15721',custom_providers=cfg.get('custom_providers')))"
+# 期望输出 1048576；None = override 未生效
+```
+
+**批量 patch 坑**：各 profile 的 `models:` 内键序有两种结构变体（glm-5.3 在首位：
+swarm/hack/[已移除]/[已移除] 团队；字典序中间：ops/product/platform 团队）。锚定
+"models: 后紧跟 glm-5.3" 的正则只覆盖一半——批量改之前先枚举全部结构变体，
+改完逐 profile 跑上面的代码路径验证（本会话第一轮正则漏了 8/28）。
+
+**为何不能依赖自动探测**：cc-switch 的 `/v1/models` 返回 **Anthropic 格式**
+`{"models":[{slug, context_window: 1000000}]}`，而 Hermes 的端点探测
+`fetch_endpoint_model_metadata` 只解析 OpenAI 格式 `payload["data"]` → 探测
+返回 `{}` → 落硬编码表。经 anthropic_messages 代理的 context 声明当前只有
+config override 一条可靠路径；上游 failover 换了真实窗口也不会自动跟随。
+完整证据链：`references/context-length-resolution.md`
+
 ### Key differences from the `providers:` dict approach (cc-switch)
 
 | Aspect | `providers:` dict (cc-switch) | Anthropic API (this section) |
@@ -843,6 +888,124 @@ profiles:
 
   # ... etc for each profile
 ```
+
+### Centralized Fallback Chain (`shared_config.fallback_providers`)
+
+The single source of truth for the cross-profile fallback chain is
+`shared_config.fallback_providers` in `profiles.yaml`. It is a list of
+`{provider, model}` pairs that are tried **in order** when the primary
+`shared_config.model` (e.g. `glm-5.3`) fails with 429/5xx/network errors.
+
+```yaml
+shared_config:
+  model:
+    default: glm-5.3
+    provider: custom:cc-switch
+  fallback_providers:
+    - provider: custom:cc-switch
+      model: kimi-k3                 # 1st backup
+    - provider: custom:cc-switch
+      model: deepseek-v4-flash       # 2nd backup
+```
+
+**Routing policy (single proxy, "100% through cc-switch")**: When the
+user says "unify routing through cc-switch", the rule is **every provider
+in the fallback list MUST be `custom:cc-switch/*`** — no `damoxing/*`,
+no `deepseek/*` direct lines. Legacy entries are silently preserved on
+each `hermes update`, so they must be removed explicitly.
+
+**Edit + verify workflow** (2026-08-18, 27-profile fleet):
+
+```bash
+# 1. Backup (always)
+cp ~/.hermes/shared/profiles.yaml \
+   ~/.hermes/shared/profiles.yaml.bak-pre-fb-cleanup-<TS>
+
+# 2. Edit shared_config.fallback_providers via patch (or Python yaml)
+#    Remove any direct provider lines (damoxing/glm-5.1 etc.)
+#    Replace with custom:cc-switch/* lines that exist in shared_config.custom_providers
+
+# 3. Regenerate
+~/.hermes/hermes-agent/venv/bin/python3 ~/.hermes/shared/generate-configs.py
+# → expect "27 success, 0 error"
+
+# 4. Verify EVERY profile's generated config.yaml shows the new chain
+grep -B1 -A1 "fallback_providers:" ~/.hermes/profiles/*/config.yaml | head -20
+# Should show: - provider: custom:cc-switch / - model: kimi-k3
+#              - provider: custom:cc-switch / - model: deepseek-v4-flash
+# NOT: provider: damoxing / model: glm-5.1
+```
+
+**Pitfall**: `shared_config.fallback_providers` is **separate from**
+`shared_config.custom_providers` — adding a model to `custom_providers`
+does NOT make it eligible as a fallback. You must declare both.
+
+### Pitfall: `.playwright-mcp/profiles.yaml` Is a Stale Copy (sync after edit)
+
+`~/.hermes/.playwright-mcp/profiles.yaml` looks like a hardlink to
+`~/.hermes/shared/profiles.yaml` but is in fact a **separately maintained
+copy** (different inode, different mtime). The `.playwright-mcp/`
+generator reads the SAME source (`shared/profiles.yaml`) but writes to
+its own copy.
+
+**Symptom after editing `shared/profiles.yaml`**:
+- `shared/profiles.yaml` shows new fallback chain ✓
+- `.playwright-mcp/profiles.yaml` shows OLD chain ✗
+- Running `.playwright-mcp/generate-configs.py` does NOT fix it
+  (the `.playwright-mcp` generator reads source but writes its own
+  output to its OWN `.env` + `config.yaml` files, not to
+  `profiles.yaml`)
+
+**Fix** (mechanical):
+
+```bash
+SRC=~/.hermes/shared/profiles.yaml
+DST=~/.hermes/.playwright-mcp/profiles.yaml
+cp "$SRC" "$DST.bak-pre-sync-$(date +%Y%m%d_%H%M%S)"
+cp "$SRC" "$DST"
+md5sum "$SRC" "$DST"   # must match
+```
+
+Add this to any post-edit checklist for `profiles.yaml`.
+
+### Pitfall: cc-switch proxy `/v1/models` Probe Returns Chat Reply
+
+The cc-switch proxy (`http://127.0.0.1:15721`) does **not** implement
+`GET /v1/models` — it forwards the request to the upstream LLM and the
+LLM treats it as a chat completion, returning a 89 KB assistant message
+prefixed with `<assistant_role>...` rather than a JSON model list.
+
+**Consequence**: Hermes's `fetch_endpoint_model_metadata()` fallback path
+returns `{}`, so the discovered model list is empty and the agent falls
+back to the hardcoded family table (e.g. `{"glm": 202752}` for `glm-5.3`,
+which limits the context window to ~200K tokens instead of the upstream's
+true 1M).
+
+**Workaround** (verified 2026-08-18): when you need to enumerate the
+models actually routed by cc-switch, **read the source statically** —
+parse `~/.hermes/shared/.env.common` + `~/.hermes/config.yaml`
+`custom_providers[].models[]` directly. Do NOT call `/v1/models` against
+the proxy.
+
+### Pitfall: `fallback_providers` Field Silently Drifts Across `hermes update`
+
+`hermes update` regenerates configs but the `shared_config.fallback_providers`
+list is **not modified by the generator** — however, the upstream
+`profiles.yaml` shipped with each release may reintroduce default
+fallbacks (e.g. `damoxing/glm-5.1`) that overwrite your curated chain.
+
+**Defense**:
+
+```bash
+# After every hermes update, immediately re-verify
+grep -B1 -A2 "fallback_providers:" ~/.hermes/shared/profiles.yaml
+# Must still show ONLY custom:cc-switch/* entries
+# If legacy providers reappeared, patch them out and regenerate
+```
+
+This is one of the four regressions tracked by
+`hermes-profile-config-regression-recovery` (alongside `context_length`,
+`clearances`, and `provider` drift).
 
 ### Pitfall: `PRESERVE_KEYS` must be a list, not a set
 
@@ -1557,6 +1720,7 @@ from the orchestrator's session.
 
 ## Reference Files
 
+- `references/context-length-resolution.md` — context_length 完整解析链（config override 优先序/持久缓存/硬编码 family 表）、cc-switch Anthropic 格式 `/v1/models` 探测盲区的两层断点证据、状态栏 `x/202.8k` 诊断 recipe、2026-08-16 批量修复记录与批量正则变体教训。
 - `references/orchestrator-write-guard-detail.md` — full error transcript
   and alternative approaches tried.
 - `references/worker-env-missing-provider-keys.md` — reproduction recipe for

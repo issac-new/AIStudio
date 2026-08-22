@@ -176,6 +176,88 @@ print(f"All profiles OK: {all_ok and broken_shared == 0}")
    `default` profile (like `hermes-redundancy-cleanup`), use `write_file` with
    `cross_profile=true` to write to the physical path directly.
 
+8. **Never fabricate a profile/skill name from memory** — before any "delete this
+   profile" or "migrate this skill" plan, run:
+   ```bash
+   ls ~/.hermes/profiles/ | grep -i "<name>"
+   grep -l "<name>" ~/.hermes/skills/*/*/SKILL.md 2>/dev/null
+   grep "<name>" ~/.hermes/profiles.yaml 2>/dev/null
+   ```
+   Memory files describe *what was planned* or *what was discussed* without the
+   artifact ever being created. A user asking "why does this exist?" or
+   "什么时候多了 X" is often the first signal that a prior assistant invented
+   the name. See "Verification Before Acting" below for the full discipline.
+
+9. **When extracting a duplicated SOUL.md paragraph into a shared skill, treat
+   it as mechanical surgery**:
+   - **Backup first** to `~/.hermes/profiles-archive/YYYY-MM-DD-task-name/`
+     with timestamp suffix on each file. P3 祖训.
+   - **Anchor on unique heading + sentinel next-section heading**, e.g.
+     `### 过程性反馈话术...` followed by `### 成长型思维干预` — the regex
+     pattern captures the block in between.
+   - **Use `re.sub(pattern, replacement, content, count=1, flags=re.DOTALL)`**
+     not line-based editing. SOUL.md paragraphs span 5–30 lines and regex
+     with DOTALL handles block boundaries cleanly.
+   - **Replace ONLY the duplicated paragraph**; preserve everything after
+     (per-subject customizations stay where they are — they are
+     subject-specific, NOT redundant).
+   - **Verify with TWO independent checks** (never trust one alone):
+     - `wc -l` line count must equal pre-replacement count (no content loss).
+     - Content anchor checks via `python3 -c "...in content..."` for each
+       preserved section heading.
+   - `wc -c` byte count WILL differ by 14–59 bytes per replaced paragraph
+     (1-line table → 6-line blockquote) — that's expected and correct. Don't
+     treat byte delta as "content loss" (caught during 2026-08-19 mom-feedback
+     extraction; python heredoc indentation produced false `wc -c` reading).
+   - **After replacement, run smoke test**:
+     `HERMES_PROFILE=<p> hermes prompt-size --json` per affected profile and
+     confirm the new skill appears in `skills_breakdown` with non-zero
+     `index_line_bytes`.
+
+10. **Heredoc brace escaping**: when using Python `re.sub` with a replacement
+    string that contains `{}` placeholder syntax, call `.format(...)` ONLY
+    if you want substitution. Otherwise use string concatenation:
+    `replacement = "..." + var + "..."`. Forgetting to escape braces inside
+    a `.format()` call throws `NameError: name 'X' is not defined` (caught
+    during 2026-08-19 mom-feedback extraction, replacing 4 teacher profiles
+    in a single Python block).
+
+11. **`write_file` mirrors to `~/.hermes/hermes-agent/skills/`**, not to
+    `~/.hermes/profiles/<p>/skills/`. They are the SAME location via
+    symlink/canonical-path resolution — do NOT create the file twice in both
+    locations; that creates divergent copies that the next session will
+    inconsistently pick. Verify with `readlink -f` or `stat -f %i` (inode
+    check) before creating.
+
+## Verification Before Acting (事实虚构防线)
+
+> **Incident 2026-08-19**: assistant listed `mom-feedback-coaching` as a
+> separate agent profile based on memory alone — `ls ~/.hermes/profiles/`
+> proved it never existed. The user's "什么时候多了" question exposed
+> the fabrication. This is the **事实虚构红线** — memory captures intent
+> / discussion / plan state, NOT artifact state.
+
+**Operating discipline for any "delete X" / "modify Y" / "consolidate Z" plan**:
+
+| Step | Command | Purpose |
+|------|---------|---------|
+| 1. Confirm artifact exists | `ls ~/.hermes/profiles/<name>/` | profile directory |
+| | `grep -l "name: <x>" ~/.hermes/skills/*/*/SKILL.md 2>/dev/null` | skill file |
+| | `grep "<name>" ~/.hermes/profiles.yaml 2>/dev/null` | config registration |
+| 2. Confirm caller can act | `cat ~/.hermes/profiles/<name>/config.yaml` | perms + assignments |
+| 3. Plan, then ask user | surface options as ABC, wait for "执行" | avoid unilateral moves |
+| 4. Backup before mutation | `cp ... ~/.hermes/profiles-archive/YYYY-MM-DD-task/` | P3 祖训 |
+| 5. Smoke test after mutation | `hermes prompt-size --json` + content anchor checks | regression guard |
+
+**Failure modes to refuse (without disk-level proof)**:
+- "Delete profile X because it's redundant"
+- "Skill Y is duplicated 5x"
+- "Replace section Z in 6 files"
+- "Migrate this skill to that profile"
+
+**Memory vs disk resolution rule**: when memory says X exists but disk says
+no, memory is wrong. Memory is sticky plan state, not artifact inventory.
+
 ## Related Skills
 
 - **hermes-redundancy-cleanup** — (default profile) Broader ~/.hermes cleanup:
@@ -189,3 +271,9 @@ print(f"All profiles OK: {all_ok and broken_shared == 0}")
   deduplication (73–114 MB) is a subset.
 - **open-source-skill-fusion** — Fusion sessions create new custom skills that
   must be preserved in shared as real directories.
+- **mom-feedback-coaching** — Worked example (2026-08-19) of the
+  "Mechanical Surgery" pattern: 6 teacher profiles shared one duplicated
+  SOUL.md paragraph; extracted to a single shared skill, replaced 5 with
+  1-line references + 2-line subject-variant hints, kept [已移除] full
+  (it carries the P0 投壶事件 case study). Smoke test: 6/6 profiles load the
+  new skill, SOUL.md line count unchanged.

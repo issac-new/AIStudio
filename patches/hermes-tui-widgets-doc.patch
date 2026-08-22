@@ -1,0 +1,27 @@
+diff --git a/skills/autonomous-ai-agents/hermes-agent/references/tui-widgets.md b/skills/autonomous-ai-agents/hermes-agent/references/tui-widgets.md
+index c9eb6717f..78228f621 100644
+--- a/skills/autonomous-ai-agents/hermes-agent/references/tui-widgets.md
++++ b/skills/autonomous-ai-agents/hermes-agent/references/tui-widgets.md
+@@ -19,11 +19,20 @@ widgets.
+   classic CLI or messaging platforms.
+ - Network-backed widgets need whatever credentials their API needs; fetch
+   failures must land as an error phase, never a crash.
++- **Profile path gotcha**: In a profile session, `$HERMES_HOME` points to
++  `~/.hermes/profiles/<profile-name>/`, NOT `~/.hermes/`. The TUI scans
++  `$HERMES_HOME/tui-widgets/`, so widget files must go in
++  `~/.hermes/profiles/<profile-name>/tui-widgets/<name>.mjs`. Putting them
++  in `~/.hermes/tui-widgets/` will silently fail with "no user widgets
++  found". Verify the running TUI's `HERMES_HOME` with
++  `ps eww -p <TUI_PID> | tr ' ' '\n' | grep HERMES_HOME` if unsure.
+ 
+ ## How to Run
+ 
+-1. Use `write_file` to create `~/.hermes/tui-widgets/<name>.mjs` (see
+-   `templates/clock.mjs` for a complete working widget).
++1. Use `write_file` to create
++   `~/.hermes/profiles/<profile-name>/tui-widgets/<name>.mjs` (see
++   `templates/clock.mjs` for a complete working widget). In a non-profile
++  (default) session, use `~/.hermes/tui-widgets/<name>.mjs` instead.
+ 2. If the TUI is running it hot-loads the file within ~a second (the
+    widgets directory is watched); `/widgets-reload` forces a rescan.
+ 3. The widget's id becomes its slash command automatically (`/<id>`), with

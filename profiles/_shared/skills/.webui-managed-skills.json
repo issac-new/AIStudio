@@ -19,6 +19,11 @@
     "source_hash": "f12f7172293d5a6620ddac07bc7c501f15ba33fec0d85d4a3e9f5647686e5fb7",
     "installed_hash": "f12f7172293d5a6620ddac07bc7c501f15ba33fec0d85d4a3e9f5647686e5fb7"
   },
+  "minimax-image-to-video": {
+    "owner": "hermes-web-ui",
+    "source_hash": "048c08db1c22ba2a2f282d3b335af1981b38fc222f28a2e69eef4e98cb974131",
+    "installed_hash": "048c08db1c22ba2a2f282d3b335af1981b38fc222f28a2e69eef4e98cb974131"
+  },
   "remotion": {
     "owner": "hermes-web-ui",
     "source_hash": "1ace836e881489f18afcc30f5dc5365637b85bf6852128cb60068884dd3d66a2",

@@ -192,4 +192,63 @@ kanban_complete(
 - ✅ 默认使用 `workspace_kind="dir"` + `workspace_path`
 - ✅ 项目关联时使用 `workspace_kind="worktree"` + `project`
 
+---
+
+## 8. 三源融合增强（BMAD + maestro + swarm-yuan，2026-08-06）
+
+> 来源：kanban task t_25432cc9。完整内容见对应 skill。
+
+### 8.1 READY-FOR-DEV 六条（开工前逐条过，BMAD）
+
+`kanban_show` 后、开工前逐条检查：actionable / logical / testable / complete /
+sufficient / coherent。任一条不满足 → 不开工，`kanban_block(kind="needs_input")`
+并指出具体哪条失败。详见 skill `scale-adaptive-routing`。
+
+### 8.2 task_type 验证强度（swarm-yuan）
+
+任务卡 body 声明了 `task_type` 时，按类型决定验证档（详见 skill `task-type-gate-routing`）：
+- fix → 标准档 + 同类缺陷 siblings 检查（修一类不是修一个）
+- refactor → 标准档 + 行为等价（测试不变全绿）
+- chore/docs → 最小档
+- 任务卡带 `verify_command` 时：kanban_complete 前必须跑该脚本，exit 0 才算过
+  （agent 自报完成不算数，外部脚本验证才算——Oracle Gate）
+
+### 8.3 memlog 任务内记忆（BMAD）
+
+多 run / 长任务在 `$HERMES_KANBAN_WORKSPACE/.memlog.md` 记 append-only 盲写日志：
+一行一条、只追加、无状态位、写时不回读。resume 时（kanban_show 后）`tail -50` 恢复。
+关键事件（start/finding/decision/file-created/test-run/block/resume/complete）都应记录。
+详见 skill `memlog`。
+
+### 8.4 Extract-don't-ingest（BMAD，delegate_task 增补）
+
+- 源文档交给 subagent 提取，父 agent 只收 digest——不把大文件全文灌进自己上下文
+- reviewer subagent 只返回紧凑摘要（verdict + top findings + 文件路径），全文落盘
+- `delegate_task` 的 goal 中显式要求"返回 digest 而非全文"
+
+### 8.5 kanban_block 五要素模板（swarm-yuan UserChallenge）
+
+`kanban_block(kind="needs_input")` 前先在 comment 写五要素（详见 skill `decision-taxonomy`）：
+user_decision_needed / ai_suggestion / rationale / alternatives / missing_context / cost_if_wrong。
+不可逆决策（one-way）任何级别自动升级 UserChallenge，绝不擅自执行。
+
+### 8.6 决策与记忆的 confidence 标记（swarm-yuan 三级溯源）
+
+`hindsight_retain` 与 `kanban_complete(metadata)` 中的关键事实标注来源确定性：
+- `extracted`：字面证据（文件/命令输出直接给出）
+- `inferred`：合理推断（基于证据的推理链）
+- `ambiguous`：待人工确认
+防止后续会话把推断当事实。
+
+### 8.7 破窗台账（swarm-yuan windows ledger）
+
+引入技术债（stub/skipped-test/unrun-verify/waived-gate）时在任务 comment 记录：
+kind + ref(file:line) + introduced_by。父任务收尾时汇总 open_count，
+ship 前 open_count==0 或显式 waive（waive 走 UserChallenge 流程）。
+
+### 8.8 判断/机械分离（BMAD 全局工程原则）
+
+解析、合并、状态生成等机械工作走脚本出 JSON 契约；LLM 只做脚本做不到的判断。
+能写脚本的场景不用 prompt 凑数——BMAD 原话："把机械工作交给脚本……你的判断用在脚本做不到的地方。"
+
 > **全局默认根目录**：`~/hermes-docker-sandbox/workspace/`。使用 `workspace_kind="dir"` 时，若未指定 `workspace_path`，则在该目录下按任务 ID 创建子目录。

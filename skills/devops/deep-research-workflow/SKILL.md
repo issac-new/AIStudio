@@ -62,7 +62,12 @@ are running. See `scope-discipline` skill — "调研未完成不得提出具体
 
 ### Step 3: Mine failed subagent transcripts
 
-When a subagent hits iteration limit or provider error before writing
+**Prevent first (learned 2026-08-20, dsh rc.8 research)**: three of four deep-source subagents were interrupted after ~50-70 tool calls having read all the evidence but written nothing. Prevention beats recovery:
+- Instruct research subagents to **write the report file incrementally** (skeleton first, fill as they read) so even an interruption leaves a partial artifact, not zero.
+- **Shrink scope per subagent**: 1 focused question + ≤3 target packages/files each; a 4-question brief across a 55-package monorepo invites hitting the limit before writing.
+- **Feed prior evidence forward**: when re-dispatching after an interruption, pass the first run's collected findings in `context` so the retry verifies + completes instead of re-reading from scratch.
+
+When a subagent still hits iteration limit or provider error before writing
 its output file, its collected data is NOT lost. The live transcript at
 `~/.hermes/profiles/orchestrator/cache/delegation/live/<delegation_id>/task-0.log`
 contains all tool call results.
@@ -90,6 +95,14 @@ sections = re.findall(r'=== (\w+) ===\n(.+?)(?====|\Z)', content, re.DOTALL)
 Compile the recovered data into the report yourself. This pattern rescued
 194 GitHub repos + Wikipedia standards + arXiv papers from two subagents
 that both hit provider errors.
+
+**Reading subagent output** (applies to completed runs too): the final
+summary is saved at
+`~/.hermes/profiles/orchestrator/cache/delegation/subagent-summary-<N>-<ts>.txt`
+(one file per task, newest = final answer). The live `task-N.log` is
+append-only and long lines display truncated as `…(+N chars)` — a `tail`
+of the live log is NOT the final conclusion; always open the
+subagent-summary file for the complete report.
 
 ### Step 4: Use authenticated gh CLI for GitHub surveys
 

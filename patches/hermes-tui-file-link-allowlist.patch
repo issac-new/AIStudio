@@ -1,0 +1,117 @@
+diff --git a/ui-tui/src/lib/openExternalUrl.ts b/ui-tui/src/lib/openExternalUrl.ts
+index 6c095a8d16..4add835de1 100644
+--- a/ui-tui/src/lib/openExternalUrl.ts
++++ b/ui-tui/src/lib/openExternalUrl.ts
+@@ -1,4 +1,5 @@
+ import { spawn, type SpawnOptions } from 'node:child_process'
++import { homedir } from 'node:os'
+ import { platform } from 'node:os'
+ 
+ /**
+@@ -101,7 +102,11 @@ export function parseSafeUrl(value: string): null | URL {
+     return null
+   }
+ 
+-  // http(s) only — opening file://, data:, javascript:, vbscript:, etc.
++  if (parsed.protocol === 'file:') {
++    return parseSafeFileUrl(parsed)
++  }
++
++  // http(s) only for remote URLs — opening data:, javascript:, vbscript:, etc.
+   // would let a malicious model run a local handler with attacker-controlled
+   // input on a single click.
+   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+@@ -109,8 +114,8 @@ export function parseSafeUrl(value: string): null | URL {
+   }
+ 
+   // Reject empty or all-whitespace hostnames defensively. URL parsing
+-  // accepts URLs like 'http:///foo' on some Node versions; we don't want
+-  // to forward those to `open`.
++  // accepts URLs like 'http:///foo' on some Node versions; we don't want to
++  // forward those to `open`.
+   if (!parsed.hostname.trim()) {
+     return null
+   }
+@@ -118,6 +123,82 @@ export function parseSafeUrl(value: string): null | URL {
+   return parsed
+ }
+ 
++/**
++ * file:// allowlist: the TUI itself renders workspace artifacts (PDFs,
++ * reports, screenshots) as file:// links via MEDIA: lines (markdown.tsx
++ * wraps absolute paths as `file://<path>`), and clicking those links used
++ * to be silently swallowed because the opener only accepted http(s).
++ *
++ * Rather than rejecting file:// wholesale (which broke the legitimate
++ * artifact-click flow), we accept file:// URLs whose decoded path falls
++ * under one of these allowlisted directory roots:
++ *
++ *   1. $HERMES_KANBAN_WORKSPACE (dispatcher-spawned task workspaces)
++ *   2. Default workspace ~/hermes-docker-sandbox/workspace
++ *   3. $HERMES_FILE_LINK_ROOTS (colon-separated user-extension list)
++ *
++ * Everything else — /etc/passwd, ~/.ssh, arbitrary paths a hostile model
++ * might link — stays rejected, preserving the original security posture
++ * for paths outside the user's own working areas.
++ *
++ * Note: host must be empty (file:///path). file://host/path forms are
++ * rejected since we only ever open local files.
++ */
++export function parseSafeFileUrl(parsed: URL): null | URL {
++  if (parsed.hostname && parsed.hostname !== 'localhost') {
++    return null
++  }
++
++  let decodedPath: string
++
++  try {
++    decodedPath = decodeURIComponent(parsed.pathname)
++  } catch {
++    return null
++  }
++
++  if (!decodedPath.startsWith('/')) {
++    return null
++  }
++
++  for (const root of fileLinkRoots()) {
++    if (isPathInsideRoot(decodedPath, root)) {
++      return parsed
++    }
++  }
++
++  return null
++}
++
++function fileLinkRoots(): string[] {
++  const roots: string[] = []
++
++  const pushRoot = (raw: string | undefined) => {
++    const trimmed = raw?.trim()
++    if (trimmed) {
++      roots.push(trimmed)
++    }
++  }
++
++  pushRoot(process.env.HERMES_KANBAN_WORKSPACE)
++  pushRoot(`${homedir()}/hermes-docker-sandbox/workspace`)
++
++  const extra = process.env.HERMES_FILE_LINK_ROOTS
++  if (extra) {
++    for (const part of extra.split(':')) {
++      pushRoot(part)
++    }
++  }
++
++  return roots
++}
++
++function isPathInsideRoot(path: string, root: string): boolean {
++  const normalizedRoot = root.endsWith('/') ? root.slice(0, -1) : root
++
++  return path === normalizedRoot || path.startsWith(`${normalizedRoot}/`)
++}
++
+ type OpenCommand = { command: string; args: readonly string[] }
+ 
+ /**

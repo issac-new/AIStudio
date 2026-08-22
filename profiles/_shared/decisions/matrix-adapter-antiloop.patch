@@ -1,0 +1,111 @@
+diff --git a/plugins/platforms/matrix/adapter.py b/plugins/platforms/matrix/adapter.py
+index 0da6f37c96..dad93b2172 100644
+--- a/plugins/platforms/matrix/adapter.py
++++ b/plugins/platforms/matrix/adapter.py
+@@ -730,6 +730,29 @@ def _looks_like_matrix_media_filename(text: str) -> bool:
+     return suffix in _MATRIX_MEDIA_FILENAME_EXTS
+ 
+ 
++# >>> swarm:noise-filter >>>
++# AI 基础设施环境噪声过滤（matrix-collaboration-termination.md 第 7 层）。
++# 2026-08-20 方式 A 重构：通用逻辑抽到共享 util gateway/noise_filter.py，
++# matrix/weixin 等 adapter 共用（单一事实源）。本文件只保留平台适配调用。
++# 开关：MATRIX_NOISE_FILTER / MATRIX_NOISE_FILTER_{EMPTY,DECRYPT,HEARTBEAT,SINGLE_CHAR,SYNC_REPLAY}
++from gateway.noise_filter import noise_reason as _shared_noise_reason
++
++
++def _matrix_noise_reason(body: str, event_ts: float, startup_ts: float) -> Optional[str]:
++    """Matrix 噪声判定：委托共享 util，开启 matrix 特有的 decrypt/sync_replay。"""
++    return _shared_noise_reason(
++        body,
++        "matrix",
++        event_ts=event_ts,
++        startup_ts=startup_ts,
++        enable_decrypt=True,      # matrix 是 E2EE，有加密占位符噪声
++        enable_sync_replay=True,  # matrix 有同步重放机制
++        enable_stt_failure=False, # matrix 语音消息不经此路径
++        enable_recall=False,      # matrix 撤回由 m.redaction 处理，非文本噪声
++    )
++# <<< swarm:noise-filter <<<
++
++
+ def _matrix_event_timestamp_seconds(event: Any) -> float:
+     """Return a Matrix event timestamp in seconds, accepting ms or sec values."""
+     raw_ts = (
+@@ -3335,6 +3358,33 @@ class MatrixAdapter(BasePlatformAdapter):
+         if msgtype == "m.notice" and not self._process_notices:
+             return
+ 
++        # >>> swarm:anti-loop >>>
++        # 收端自标记检测（matrix-collaboration-termination.md 第 2 层）：
++        # 对端消息若带 auto_generated 标记（机器生成），默认不响应——
++        # 这是防 bot↔bot 死循环的关键，与发送者是人还是 bot 无关。
++        # 例外：消息显式 mention 了本 bot（m.mentions.user_ids 含本 bot MXID
++        # 或 body 含本 bot MXID 字符串）时仍响应——对端 bot 可能在显式调用本 bot。
++        # 可通过 MATRIX_IGNORE_AUTO_GENERATED=false 关闭本检测（默认 true 开启）。
++        if os.getenv("MATRIX_IGNORE_AUTO_GENERATED", "true").lower() in ("true", "1", "yes"):
++            if isinstance(source_content, dict) and source_content.get("auto_generated"):
++                _own_mxid = (self._user_id or "").strip().lower()
++                _mentions = source_content.get("m.mentions") or {}
++                _mention_ids = _mentions.get("user_ids") if isinstance(_mentions, dict) else None
++                _explicitly_called = bool(
++                    _own_mxid
++                    and (
++                        (_mention_ids and any(str(u).strip().lower() == _own_mxid for u in _mention_ids))
++                        or _own_mxid in str(source_content.get("body", "")).lower()
++                    )
++                )
++                if not _explicitly_called:
++                    logger.debug(
++                        "Matrix: skipping auto_generated message from %s in %s (anti-loop)",
++                        sender, room_id,
++                    )
++                    return
++        # <<< swarm:anti-loop <<<
++
+         # Dispatch by msgtype.
+         media_msgtypes = ("m.image", "m.audio", "m.video", "m.file")
+         if msgtype in media_msgtypes:
+@@ -3477,6 +3527,17 @@ class MatrixAdapter(BasePlatformAdapter):
+         body = source_content.get("body", "") or ""
+         if not body:
+             return
++        # >>> swarm:noise-filter >>>
++        # 基础设施环境噪声过滤（在触发 agent turn 之前拦截，省 token）。
++        # 每次过滤打 debug 日志（含原因），可观测；误杀用 MATRIX_NOISE_FILTER_* 单类关闭。
++        _noise = _matrix_noise_reason(body, event_ts, self._startup_ts)
++        if _noise:
++            logger.debug(
++                "Matrix: dropping %s noise from %s in %s (event %s): %.40r",
++                _noise, sender, room_id, event_id, body,
++            )
++            return
++        # <<< swarm:noise-filter <<<
+         body = _normalize_matrix_bang_command(body)
+ 
+         ctx = await self._resolve_message_context(
+@@ -4811,7 +4872,23 @@ class MatrixAdapter(BasePlatformAdapter):
+ 
+     def _build_text_message_content(self, text: str, msgtype: str = "m.text") -> Dict[str, Any]:
+         """Build Matrix text content with HTML and outbound mention metadata."""
+-        msg_content: Dict[str, Any] = {"msgtype": msgtype, "body": text}
++        # >>> swarm:anti-loop >>>
++        # 防 bot↔bot 死循环（matrix-collaboration-termination.md 第 1/2 层）：
++        # 1) auto_generated 自标记——显式声明"机器生成"，与发送者身份/msgtype 解耦，
++        #    收端检测到该字段则跳过（见 _handle_message 收端检测）。
++        # 2) MATRIX_BOT_REPLY_AS_NOTICE=true 时 bot 回复改发 m.notice——
++        #    Matrix 生态约定 bot 消息用 m.notice 且互不响应，从协议层掐断规范 bot 互回。
++        #    默认 false（保持 m.text，避免改变现有客户端表现/通知行为）。
++        _anti_loop_msgtype = msgtype
++        if msgtype == "m.text" and os.getenv("MATRIX_BOT_REPLY_AS_NOTICE", "").lower() in ("true", "1", "yes"):
++            _anti_loop_msgtype = "m.notice"
++        msg_content: Dict[str, Any] = {
++            "msgtype": _anti_loop_msgtype,
++            "body": text,
++            "auto_generated": True,
++            "x-swarm-bot": "orchestrator",
++        }
++        # <<< swarm:anti-loop <<<
+         mention_user_ids = self._extract_outbound_mentions(text)
+         room_mentioned = self._allow_room_mentions and self._has_outbound_room_mention(text)
+         if mention_user_ids:

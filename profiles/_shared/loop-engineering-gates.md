@@ -33,6 +33,21 @@ kanban_show → hindsight_recall(教训) → 执行
 - 安全任务：工具输出非空 + 发现可复现
 - 部署任务：服务健康检查通过 + 端口可达 + 回滚方案就绪
 
+## 证据强度四分级（融合自 codex goals/continuation.md，2026-08-21）
+
+验收时每条显式要求先定级，再决定放行：
+
+- **L4 证明**：真实工具输出直接证实（测试全绿输出/exit 0/文件存在 ls 输出）→ 放行
+- **L3 间接**：旁证成立但未直接验证（依赖自述/推断）→ 补验证，不放行
+- **L2 矛盾**：证据与完成声明冲突 → 打回 + 定位根因
+- **L1 缺失**：找不到证据 → 视为未完成，继续工作
+
+规则：
+1. **completion is unproven by default**——举证责任在 worker，不在 reviewer 找反例
+2. 证明范围须匹配要求范围（narrow check 不许支撑 broad claim）
+3. 不确定/间接证据 = not achieved（codex 原文：Treat uncertain or indirect evidence as not achieved）
+4. 【仅 goal_mode 长 goal 适用】blocked 上报需**同一阻塞条件在连续 3 个执行轮（含触发轮与自动续轮）**重复出现才许报；普通 run 按退出协议立即 kanban_block(needs_input)，不受本条限制（codex goals 判例，计量单位=goal turns）
+
 ---
 
 ## 四权分离防作弊（PUA Harness Governance）
@@ -235,3 +250,75 @@ kanban_show → hindsight_recall(教训) → 执行
 5. **跨任务复用 + 影响用户决策 + 无法从局部推断？** → 保留在 SOUL.md
 
 > 完整模型升级评估协议见 `skill_view('prompt-as-model-adapter')`。
+
+---
+
+## Model-visible 可追溯性审计（借鉴 DeepSeek Harness）
+
+> 来源：deepseek-ai/deepseek-harness `docs/architecture.md` 原则「Model-visible ⟺ logged」（2026-08-13）。
+> 原文：「Anything that reaches a model request must be reconstructable from the session log.」
+> 适配：Hermes 的 context assembly 不完全持久化，此段补强可追溯性验证。
+
+### 核心原则
+
+**任何到达 agent context 的信息，都必须有可追溯来源。**
+
+如果一个 agent 做了某个决策，其依据必须能从持久化记录（kanban DB / memory / session DB / skill 文件 / hindsight）重建，而非凭空出现。
+
+### Context 来源五分类
+
+| 来源类型 | 可追溯性 | 验证方法 |
+|---------|---------|---------|
+| **kanban task body** | ✅ 完全持久化 | `kanban_show()` 可读取 |
+| **SOUL.md / rules.md** | ✅ 完全持久化 | `read_file()` 可读取 |
+| **skill 内容** | ✅ 完全持久化 | `skill_view()` 可读取 |
+| **memory 注入** | ⚠️ 持久化但可能过时 | `memory` 工具可读取，但需检查时间戳 |
+| **hindsight 注入** | ⚠️ 语义检索，非精确 | `hindsight_recall` 可重放但结果可能不同 |
+
+### 验证门：Context Provenance 检查
+
+在 kanban_complete 前，对 agent 的关键决策追溯其 context 来源：
+
+```python
+# 在 kanban_complete metadata 中标注 context provenance
+kanban_complete(
+    summary="...",
+    metadata={
+        # ... 原有字段 ...
+        "context_provenance": {
+            "task_body": True,           # 来自 kanban_show
+            "soul_rules": ["ontology.md", "marking-rules.md"],  # 引用的共享规则
+            "skills_loaded": ["cot-leakage-audit"],  # 加载的 skill
+            "memory_used": ["微信身份识别"],  # 使用的 memory 条目
+            "hindsight_queries": ["deepseek harness"],  # hindsight 检索词
+            "external_sources": ["https://github.com/deepseek-ai/deepseek-harness"]  # 外部来源
+        }
+    }
+)
+```
+
+### 三级可追溯性要求
+
+| 任务复杂度 | 可追溯性要求 | 验证方式 |
+|-----------|------------|---------|
+| 轻量（≤2 工具调用） | 标注主要来源 | metadata 来源路径 |
+| 中等（3-5 工具调用） | 标注所有来源 + 验证可访问 | 来源 URL/路径 read_file 确认 |
+| 重型（≥6 工具调用） | 完整 provenance + 独立复现 | delegate_task 独立子代理重建 context |
+
+### 违规模式
+
+1. **幻觉来源** — agent 声称"根据文档X"但无法给出路径 → 验证门失败
+2. **过时来源** — agent 基于 memory 中 30 天前的条目做决策，但环境已变 → 检查 memory mtime
+3. **不可复现的 hindsight** — agent 基于 hindsight 检索结果做关键决策，但该结果无法重现 → 标注为低置信
+4. **隐式假设** — agent 的决策基于未声明的假设（如"用户偏好X"但未查 memory 确认）→ 追问来源
+
+### 与「外部锚点」原则的关系
+
+Loop Engineering 三原则之三「外部锚点」要求用工具验证。Model-visible 审计是其**上游补充**：
+
+```
+外部锚点：验证产出是否正确（跑测试/read_file 确认）
+Model-visible 审计：验证决策依据是否可追溯（context provenance）
+```
+
+两者共同构成「决策完整性」—— 既要知道结果对不对，也要知道依据从哪来。

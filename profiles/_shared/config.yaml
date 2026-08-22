@@ -1,6 +1,6 @@
 mcp_servers:
   hermes-studio-api:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - api
@@ -14,7 +14,7 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-browser:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - browser
@@ -28,7 +28,7 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-devices:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - devices
@@ -42,10 +42,11 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-use:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.19.0/mac-arm64/node/bin/node
+    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - use
+    timeout: 1860
     env:
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
       HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui

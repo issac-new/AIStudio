@@ -1,201 +1,98 @@
 #!/usr/bin/env python3
-"""worldmonitor-intel: 5 个情报分析算法（纯 stdlib，无依赖）
-
-移植自 https://github.com/koala73/worldmonitor (AGPL-3.0)
-
-用法:
-  python3 intel-analysis.py spike <keyword> [--stories stories.json]
-  python3 intel-analysis.py cluster [--stories stories.json]
-  python3 intel-analysis.py geo [--events events.json]
-  python3 intel-analysis.py focal [--mentions mentions.json]
-  python3 intel-analysis.py escalate --news N --cii N --geo N --military N [--baseline B]
-
-输入 JSON 格式:
-  stories:  [{"title": str, "source": str, "timestamp_ms": int}]
-  events:   [{"lat": float, "lon": float, "type": str, "timestamp_ms": int}]
-  mentions: {entity: {stream: count}}
+"""worldmonitor-intel 情报分析算法（从调研报告恢复，算法移植自 koala73/worldmonitor AGPL-3.0）
+用法：
+  intel-analysis.py spike "关键词" --stories stories.json
+  intel-analysis.py cluster --stories stories.json
+  intel-analysis.py geo --events events.json
+  intel-analysis.py focal --mentions mentions.json
+  intel-analysis.py escalate --news 80 --cii 45 --geo 60 --military 30
+数据格式：
+  stories.json: [{"title","source","timestamp_ms"}]
+  events.json:  [{"title","domain","lat","lon","timestamp_ms"}]
+  mentions.json:[{"entity","stream","timestamp_ms"}]  # stream ∈ news/military/cyber/economic
 """
-import argparse
-import json
-import math
-import sys
-import time
+import json, sys, argparse, math
+from collections import defaultdict
+from datetime import datetime
 
-# ============ Algorithm 1: Keyword Spike ============
-def detect_keyword_spikes(stories, keyword, rolling_window_ms=2*3600*1000,
-                          baseline_window_ms=7*24*3600*1000,
-                          min_spike_count=5, spike_multiplier=3,
-                          min_source_count=2):
-    if not stories:
-        return {'spike': False, 'reason': 'no stories'}
-    now = max(s['timestamp_ms'] for s in stories)
-    rolling = [s for s in stories if now - s['timestamp_ms'] <= rolling_window_ms]
-    baseline = [s for s in stories if now - s['timestamp_ms'] <= baseline_window_ms]
-    kw_lower = keyword.lower()
-    roll_hits = [s for s in rolling if kw_lower in s['title'].lower()]
-    base_hits = [s for s in baseline if kw_lower in s['title'].lower()]
-    roll_count = len(roll_hits)
-    base_rate = len(base_hits) / max(1, baseline_window_ms / rolling_window_ms)
-    if roll_count < min_spike_count:
-        return {'spike': False, 'reason': f'count {roll_count} < floor {min_spike_count}'}
-    sources = len({s['source'] for s in roll_hits})
-    if sources < min_source_count:
-        return {'spike': False, 'reason': f'sources {sources} < {min_source_count}'}
-    if base_rate > 0 and roll_count >= base_rate * spike_multiplier:
-        return {'spike': True, 'count': roll_count, 'baseline_rate': round(base_rate, 2),
-                'multiplier': round(roll_count / max(base_rate, 0.001), 2), 'sources': sources}
-    if base_rate == 0:
-        return {'spike': roll_count >= min_spike_count, 'count': roll_count,
-                'note': 'no baseline, frequency-only', 'sources': sources}
-    return {'spike': False, 'reason': f'count {roll_count} < {base_rate * spike_multiplier:.1f}'}
+# ---- Keyword Spike（keyword-spike-core.js 移植）----
+DEFAULT_MIN_SPIKE_COUNT = 5
+DEFAULT_SPIKE_MULTIPLIER = 3
+MIN_SPIKE_SOURCE_COUNT = 2
+WINDOW_MS = 2 * 3600 * 1000
+BASELINE_MS = 7 * 24 * 3600 * 1000
 
-# ============ Algorithm 2: News Clustering ============
-def jaccard_similarity(a, b):
-    ta, tb = set(a.lower().split()), set(b.lower().split())
-    if not ta or not tb:
-        return 0.0
-    return len(ta & tb) / len(ta | tb)
+def cmd_spike(kw, stories):
+    now = max((s["timestamp_ms"] for s in stories), default=0) or int(datetime.now().timestamp()*1000)
+    win = [s for s in stories if kw.lower() in s["title"].lower() and now - s["timestamp_ms"] <= WINDOW_MS]
+    base = [s for s in stories if kw.lower() in s["title"].lower() and now - s["timestamp_ms"] <= BASELINE_MS]
+    base_rate = len(base) / 84.0  # 7d=84 个 2h 桶
+    win_sources = {s["source"] for s in win}
+    if not base:
+        return {"keyword": kw, "spike": len(win) >= DEFAULT_MIN_SPIKE_COUNT,
+                "count_2h": len(win), "baseline_rate": None, "note": "无基线，退化为纯频率计数（已标注）"}
+    ratio = len(win) / base_rate if base_rate else float("inf")
+    spike = len(win) >= DEFAULT_MIN_SPIKE_COUNT and ratio >= DEFAULT_SPIKE_MULTIPLIER and len(win_sources) >= MIN_SPIKE_SOURCE_COUNT
+    return {"keyword": kw, "spike": spike, "count_2h": len(win), "sources": len(win_sources),
+            "baseline_rate_per_2h": round(base_rate, 2), "ratio": round(ratio, 1)}
 
-def cluster_news(items, threshold=0.45):
+# ---- News Clustering（news-clustering-core.js，Jaccard ~0.45）----
+CLUSTER_THRESHOLD = 0.45
+def _tok(t): return set(w for w in t.lower().split() if len(w) > 1)
+def _jaccard(a, b):
+    u = len(a | b); return len(a & b) / u if u else 0.0
+def cmd_cluster(stories):
     clusters = []
-    for item in items:
-        placed = False
+    for s in stories:
+        tk = _tok(s["title"])
         for c in clusters:
-            if jaccard_similarity(c['titles'][0], item['title']) >= threshold:
-                c['titles'].append(item['title'])
-                c['sources'].add(item['source'])
-                c['size'] += 1
-                placed = True
-                break
-        if not placed:
-            clusters.append({'titles': [item['title']], 'sources': {item['source']}, 'size': 1})
-    clusters.sort(key=lambda c: c['size'], reverse=True)
-    # Convert sets to sorted lists for JSON serialization
-    for c in clusters:
-        c['sources'] = sorted(c['sources'])
-    return clusters
-
-# ============ Algorithm 3: Geo Convergence ============
-def geo_convergence(events, threshold=3, window_ms=24*3600*1000):
-    if not events:
-        return []
-    now = max(e['timestamp_ms'] for e in events)
-    CELL_SIZE_DEG = 2.0
-    cells = {}
-    for e in events:
-        if now - e['timestamp_ms'] > window_ms:
-            continue
-        cx, cy = int(e['lat'] // CELL_SIZE_DEG), int(e['lon'] // CELL_SIZE_DEG)
-        cells.setdefault((cx, cy), set()).add(e['type'])
-    alerts = []
-    for (cx, cy), types in cells.items():
-        if len(types) >= threshold:
-            alerts.append({
-                'cell': (cx, cy),
-                'center_lat': round((cx + 0.5) * CELL_SIZE_DEG, 2),
-                'center_lon': round((cy + 0.5) * CELL_SIZE_DEG, 2),
-                'domains': sorted(types),
-                'domain_count': len(types),
-                'score': round(len(types) / 5.0, 2)
-            })
-    return sorted(alerts, key=lambda a: -a['score'])
-
-# ============ Algorithm 4: Focal Point ============
-def detect_focal_points(entity_mentions):
-    focal = []
-    for entity, streams in entity_mentions.items():
-        active = [s for s, c in streams.items() if c > 0]
-        n = len(active)
-        if n >= 5:
-            urgency = 'critical'
-        elif n >= 3:
-            urgency = 'elevated'
-        elif n >= 1:
-            urgency = 'watch'
+            if any(_jaccard(tk, _tok(m["title"])) >= CLUSTER_THRESHOLD for m in c):
+                c.append(s); break
         else:
-            continue
-        focal.append({
-            'entity': entity,
-            'streams': active,
-            'stream_count': n,
-            'urgency': urgency,
-            'total_mentions': sum(streams.values())
-        })
-    return sorted(focal, key=lambda f: f['stream_count'], reverse=True)
+            clusters.append([s])
+    return {"total": len(stories), "clusters": len(clusters),
+            "top": sorted(({"size": len(c), "titles": [m["title"][:60] for m in c[:3]]} for c in clusters), key=lambda x: -x["size"])[:5]}
 
-# ============ Algorithm 5: Escalation Score ============
-def escalation_score(news_activity=0, cii_score=None, geo_alert=0,
-                     military_activity=0, static_baseline=1.0, weights=None):
-    weights = weights or {'news': 0.35, 'cii': 0.25, 'geo': 0.25, 'military': 0.15}
+# ---- Geo Convergence（同一 cell 24h ≥3 不同领域）----
+CELL_DEG = 5.0
+def cmd_geo(events):
+    cells = defaultdict(list)
+    for e in events:
+        cells[(round(e["lat"]/CELL_DEG), round(e["lon"]/CELL_DEG))].append(e)
+    hot = [{"cell": k, "domains": sorted({e["domain"] for e in v}), "n_events": len(v)}
+           for k, v in cells.items() if len({e["domain"] for e in v}) >= 3]
+    return {"hotspots": sorted(hot, key=lambda x: -x["n_events"])[:10]}
 
-    def norm(v, max_v=100):
-        return min(100, max(0, v)) / max_v * 100
+# ---- Focal Point（跨流焦点实体）----
+def cmd_focal(mentions):
+    by_entity = defaultdict(set)
+    for m in mentions: by_entity[m["entity"]].add(m["stream"])
+    out = [{"entity": e, "streams": sorted(ss), "level": "critical" if len(ss) >= 4 else "elevated" if len(ss) >= 3 else "normal"}
+           for e, ss in by_entity.items()]
+    return {"entities": sorted(out, key=lambda x: -len(x["streams"]))[:20]}
 
-    components = {
-        'news': norm(news_activity),
-        'cii': norm(cii_score) if cii_score is not None else 0,
-        'geo': norm(geo_alert),
-        'military': norm(military_activity),
-    }
-    dynamic = sum(components[k] * w for k, w in weights.items())
-    combined = dynamic * 0.3 + static_baseline * 70
-    scale = 1 if combined < 20 else 2 if combined < 40 else 3 if combined < 60 else 4 if combined < 80 else 5
-    return {
-        'dynamic_score': round(dynamic, 1),
-        'combined_score': round(combined, 1),
-        'scale': scale,
-        'components': {k: round(v, 1) for k, v in components.items()}
-    }
+# ---- Hotspot Escalation（news 35 + cii 25 + geo 25 + military 15，1-5 刻度）----
+def cmd_escalate(news, cii, geo, military):
+    score = 0.35*news + 0.25*cii + 0.25*geo + 0.15*military
+    level = min(5, max(1, math.ceil(score / 20)))
+    return {"weighted": round(score, 1), "level_1to5": level}
 
-# ============ CLI ============
-def _load_json(path):
-    if not path:
-        return None
-    with open(path) as f:
-        return json.load(f)
+def load(p):
+    with open(p) as f: return json.load(f)
 
-def main():
-    parser = argparse.ArgumentParser(description='worldmonitor-intel 情报分析算法')
-    sub = parser.add_subparsers(dest='cmd', required=True)
-
-    p_spike = sub.add_parser('spike', help='关键词突增检测')
-    p_spike.add_argument('keyword')
-    p_spike.add_argument('--stories', help='stories JSON 文件路径')
-
-    p_cluster = sub.add_parser('cluster', help='新闻聚类去重')
-    p_cluster.add_argument('--stories', help='stories JSON 文件路径')
-
-    p_geo = sub.add_parser('geo', help='地理汇聚检测')
-    p_geo.add_argument('--events', help='events JSON 文件路径')
-
-    p_focal = sub.add_parser('focal', help='焦点实体检测')
-    p_focal.add_argument('--mentions', help='mentions JSON 文件路径')
-
-    p_esc = sub.add_parser('escalate', help='热度升级评分')
-    p_esc.add_argument('--news', type=float, default=0)
-    p_esc.add_argument('--cii', type=float, default=None)
-    p_esc.add_argument('--geo', type=float, default=0)
-    p_esc.add_argument('--military', type=float, default=0)
-    p_esc.add_argument('--baseline', type=float, default=1.0)
-
-    args = parser.parse_args()
-
-    if args.cmd == 'spike':
-        stories = _load_json(args.stories) or []
-        print(json.dumps(detect_keyword_spikes(stories, args.keyword), ensure_ascii=False, indent=2))
-    elif args.cmd == 'cluster':
-        items = _load_json(args.stories) or []
-        result = cluster_news(items)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-    elif args.cmd == 'geo':
-        events = _load_json(args.events) or []
-        print(json.dumps(geo_convergence(events), ensure_ascii=False, indent=2))
-    elif args.cmd == 'focal':
-        mentions = _load_json(args.mentions) or {}
-        print(json.dumps(detect_focal_points(mentions), ensure_ascii=False, indent=2))
-    elif args.cmd == 'escalate':
-        print(json.dumps(escalation_score(args.news, args.cii, args.geo, args.military, args.baseline),
-                         ensure_ascii=False, indent=2))
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p1 = sub.add_parser("spike"); p1.add_argument("kw"); p1.add_argument("--stories", required=True)
+    p2 = sub.add_parser("cluster"); p2.add_argument("--stories", required=True)
+    p3 = sub.add_parser("geo"); p3.add_argument("--events", required=True)
+    p4 = sub.add_parser("focal"); p4.add_argument("--mentions", required=True)
+    p5 = sub.add_parser("escalate")
+    for k in ("news","cii","geo","military"): p5.add_argument(f"--{k}", type=float, required=True)
+    a = ap.parse_args()
+    r = {"spike": lambda: cmd_spike(a.kw, load(a.stories)),
+         "cluster": lambda: cmd_cluster(load(a.stories)),
+         "geo": lambda: cmd_geo(load(a.events)),
+         "focal": lambda: cmd_focal(load(a.mentions)),
+         "escalate": lambda: cmd_escalate(a.news, a.cii, a.geo, a.military)}[a.cmd]()
+    print(json.dumps(r, ensure_ascii=False, indent=1))

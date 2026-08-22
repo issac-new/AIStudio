@@ -28,7 +28,10 @@ $alreadyApplied = $false
 if ((Test-Path $appChrome) -and (Test-Path $appLayout)) {
     $hasCcExtra = (Get-Content $appChrome -Raw) -match "ccExtraTruncated"
     $hasIpWeather = (Get-Content $appLayout -Raw) -match "fetchIpWeather"
-    if ($hasCcExtra -and $hasIpWeather) { $alreadyApplied = $true }
+    # Runtime-provider fix: hooks must read current_provider_id from /status,
+    # not the DB is_current flag (lags behind proxy failover/circuit-breaker).
+    $hasRtFix = (Get-Content $appLayout -Raw) -match "current_provider_id"
+    if ($hasCcExtra -and $hasIpWeather -and $hasRtFix) { $alreadyApplied = $true }
 }
 
 if ($alreadyApplied) {

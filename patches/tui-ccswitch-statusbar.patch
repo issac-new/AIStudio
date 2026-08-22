@@ -68,7 +68,7 @@ index 1ff100f6d..29860c576 100644
    liveSessionCount: number
    busy: boolean
 diff --git a/ui-tui/src/components/appLayout.tsx b/ui-tui/src/components/appLayout.tsx
-index 660fcb881..2b6599b0d 100644
+index 660fcb881..a5f7f0eb8 100644
 --- a/ui-tui/src/components/appLayout.tsx
 +++ b/ui-tui/src/components/appLayout.tsx
 @@ -3,7 +3,7 @@ import '../sdk/apps/index.js'
@@ -80,7 +80,7 @@ index 660fcb881..2b6599b0d 100644
  
  import { useGateway } from '../app/gatewayContext.js'
  import type { AppLayoutProps } from '../app/interfaces.js'
-@@ -22,12 +22,297 @@ import {
+@@ -22,12 +22,316 @@ import {
  } from '../lib/inputMetrics.js'
  import { PerfPane } from '../lib/perfPane.js'
  import { composerPromptText } from '../lib/prompt.js'
@@ -109,14 +109,21 @@ index 660fcb881..2b6599b0d 100644
 +        })
 +
 +        if (!res.ok) {return}
-+        const j = await res.json() as { current_provider?: string }
++        const j = await res.json() as { current_provider?: string; current_provider_id?: string }
 +        const provider = j.current_provider || ''
++        const providerId = j.current_provider_id || ''
 +
 +        if (!provider || cancelled) {return}
-+        // Query the cc-switch SQLite DB for the actual model on this provider.
++        // Query the cc-switch SQLite DB for the actual model on the RUNTIME
++        // current provider (from /status), NOT the DB is_current flag. The
++        // is_current flag reflects the user's manual selection and lags
++        // behind proxy failover/circuit-breaker switches — after a failover
++        // the proxy routes to a different provider while is_current still
++        // points at the old one, making the status bar show stale model+usage.
 +        const { execSync } = await import('child_process')
 +        const dbPath = (process.env.HOME || '') + '/.cc-switch/cc-switch.db'
-+        const sql = `SELECT json_extract(p.settings_config, '$.env.ANTHROPIC_MODEL') as model FROM providers p WHERE p.app_type='claude' AND p.is_current=1 LIMIT 1;`
++        const sqlWhere = providerId && /^[\w-]+$/.test(providerId) ? `p.id='${providerId}'` : `p.is_current=1`
++        const sql = `SELECT json_extract(p.settings_config, '$.env.ANTHROPIC_MODEL') as model FROM providers p WHERE p.app_type='claude' AND ${sqlWhere} LIMIT 1;`
 +        const out = execSync(`sqlite3 -json "${dbPath}" "${sql.replace(/\n/g, ' ')}"`, { timeout: 2000 }).toString().trim()
 +        const rows = out ? JSON.parse(out) : []
 +        const actualModel = rows.length ? rows[0].model : ''
@@ -251,11 +258,24 @@ index 660fcb881..2b6599b0d 100644
 +        const { execSync } = await import('child_process')
 +        const dbPath = (process.env.HOME || '') + '/.cc-switch/cc-switch.db'
 +        const sql = (s: string) => execSync(`sqlite3 -json "${dbPath}" "${s.replace(/\n/g, ' ')}"`, { timeout: 2000 }).toString().trim()
-+        const rows = JSON.parse(sql(`SELECT json_extract(p.settings_config,'$.env.ANTHROPIC_AUTH_TOKEN') as token, p.name, p.id, p.meta FROM providers p WHERE p.app_type='claude' AND p.is_current=1 LIMIT 1;`) || '[]')
++
++        // Resolve the RUNTIME current provider from the proxy's /status
++        // endpoint. The DB is_current flag lags behind proxy failover: after
++        // a circuit-breaker trip or manual failover, /status reports the new
++        // active provider while is_current still points at the old one. Querying
++        // by is_current would return the stale provider's model, usage, token,
++        // and last-request row — making the status bar freeze on old data.
++        const provRes = await fetch('http://127.0.0.1:15721/status', { signal: AbortSignal.timeout(2500) }).then(r => r.ok ? r.json() as { current_provider?: string; current_provider_id?: string } : null).catch(() => null)
++        const provId = provRes?.current_provider_id || ''
++        // Fallback to is_current if the proxy is unreachable or the id is absent.
++        const whereClause = provId && /^[\w-]+$/.test(provId) ? `p.id='${provId}'` : `p.is_current=1`
++
++        const rows = JSON.parse(sql(`SELECT json_extract(p.settings_config,'$.env.ANTHROPIC_AUTH_TOKEN') as token, json_extract(p.settings_config,'$.env.ANTHROPIC_BASE_URL') as baseUrl, p.name, p.id, p.meta FROM providers p WHERE p.app_type='claude' AND ${whereClause} LIMIT 1;`) || '[]')
 +
 +        if (!rows.length) {return}
 +        const r = rows[0]
 +        const name = r.name || ''
++        const baseUrl = (r.baseUrl || '').toLowerCase()
 +        const token = r.token || ''
 +        let meta: any = {}
 +
@@ -272,14 +292,14 @@ index 660fcb881..2b6599b0d 100644
 +        let usageText = ''
 +        let usagePct: number | null = null
 +
-+        if (name === 'kimi-mid' || name === 'kimi-max') {
++        if (baseUrl.includes('api.kimi.com')) {
 +          const u = await (await fetch('https://api.kimi.com/coding/v1/usages', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { usage?: { limit?: string; remaining?: string }; limits?: Array<{ detail?: { limit?: number; used?: number } }> }
 +          const d7 = ((u.limits || [])[0] || {}).detail || {}
 +          const d7Pct = u.usage?.limit !== '?' && u.usage?.remaining !== '?' ? Number(((1 - Number(u.usage?.remaining) / Number(u.usage?.limit)) * 100).toFixed(0)) : null
 +          const h5Pct = d7.limit && d7.used ? Number((Number(d7.used) / Number(d7.limit) * 100).toFixed(0)) : null
 +          usagePct = d7Pct ?? h5Pct
 +          usageText = `5h ${h5Pct ?? '?'}% | 7d ${d7Pct ?? '?'}%`
-+        } else if (name === 'bigmodel' || name === 'BigModel-coding-plan') {
++        } else if (baseUrl.includes('open.bigmodel.cn')) {
 +          const u = await (await fetch('https://open.bigmodel.cn/api/monitor/usage/quota/limit', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { data?: { limits?: Array<{ type?: string; unit?: number; percentage?: number }> } }
 +          let h5 = '?', d7 = '?'
 +
@@ -296,11 +316,11 @@ index 660fcb881..2b6599b0d 100644
 +          }
 +
 +          usageText = `5h ${h5} | 7d ${d7}`
-+        } else if (name === 'deepseek') {
++        } else if (baseUrl.includes('api.deepseek.com')) {
 +          const u = await (await fetch('https://api.deepseek.com/user/balance', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { balance_infos?: Array<{ total_balance?: string }> }
 +          const info = (u.balance_infos || [])[0] || {}
 +          usageText = `${info.total_balance || '-'} CNY`
-+        } else if (name === 'huoshan') {
++        } else if (name === 'huoshan' || baseUrl.includes('volcengine')) {
 +          const us = meta?.usage_script
 +
 +          if (us?.accessKeyId && us?.secretAccessKey) {
@@ -334,8 +354,7 @@ index 660fcb881..2b6599b0d 100644
 +
 +        // provider from the /status proxy (model+effort already shown in the
 +        // pinned modelText segment by useCcSwitchModel, so no duplication here)
-+        const provRes = await fetch('http://127.0.0.1:15721/status', { signal: AbortSignal.timeout(2500) }).then(r => r.ok ? r.json() as { current_provider?: string } : null).catch(() => null)
-+        const prov = provRes?.current_provider || '-'
++        const prov = provRes?.current_provider || r.name || '-'
 +
 +        // Build compact colored segments: prov │ usage │ tok lat ttft status time │ ip
 +        const latText = `${lastL}${lastFT ? ' ' + lastFT : ''}`.trim()
@@ -378,7 +397,7 @@ index 660fcb881..2b6599b0d 100644
  import { FpsOverlay } from './fpsOverlay.js'
  import { HelpHint } from './helpHint.js'
  import { Journey } from './journey.js'
-@@ -480,6 +765,13 @@ const StatusRulePane = memo(function StatusRulePane({
+@@ -480,6 +784,13 @@ const StatusRulePane = memo(function StatusRulePane({
  }: Pick<AppLayoutProps, 'composer' | 'status'> & { at: 'bottom' | 'top' }) {
    const ui = useStore($uiState)
  
@@ -392,7 +411,7 @@ index 660fcb881..2b6599b0d 100644
    if (ui.statusBar !== at) {
      return null
    }
-@@ -490,13 +782,14 @@ const StatusRulePane = memo(function StatusRulePane({
+@@ -490,13 +801,14 @@ const StatusRulePane = memo(function StatusRulePane({
          battery={ui.battery ? ui.batteryStatus : null}
          bgCount={ui.bgTasks.size}
          busy={ui.busy}

@@ -1,0 +1,210 @@
+diff --git a/gateway/noise_filter.py b/gateway/noise_filter.py
+new file mode 100644
+index 0000000000..f7e2abfe31
+--- /dev/null
++++ b/gateway/noise_filter.py
+@@ -0,0 +1,204 @@
++"""AI 基础设施环境噪声过滤（共享 util，matrix + weixin 等 adapter 共用）。
++
++设计目标：挡下混在消息流里的「伪消息」，避免触发 agent turn 烧 token。
++设计原则（matrix-collaboration-termination.md 第 7 层）：
++  - 可观测：每次过滤打 debug 日志（含原因）
++  - 可回退：单类开关 + 平台总开关
++  - 平台分级：高置信度噪声默认拦；语义级噪声（复读/纯表情等）默认只记日志
++
++平台开关命名：{PLATFORM}_NOISE_FILTER / {PLATFORM}_NOISE_FILTER_{CLASS}
++  例：MATRIX_NOISE_FILTER_HEARTBEAT / WEIXIN_NOISE_FILTER_SINGLE_CHAR
++
++「高置信度 vs 语义级」分级（2026-08-20 图爸决策：微信保守，只拦高置信度）：
++  - 高置信度（默认拦）：空消息/纯标点、加密失败占位符、单字符误发、
++    心跳/健康检查、同步重放回声、语音转文字失败、撤回回声
++  - 语义级（默认不拦只记日志）：纯表情、链接卡片无文字、复读、空转
++"""
++from __future__ import annotations
++
++import logging
++import os
++import string
++from typing import Optional, Sequence
++
++logger = logging.getLogger(__name__)
++
++# ---------------------------------------------------------------------------
++# 开关读取
++# ---------------------------------------------------------------------------
++
++def noise_env(platform: str, name: str, default: bool = True) -> bool:
++    """读取平台级噪声开关。env 名形如 WEIXIN_NOISE_FILTER_EMPTY。"""
++    val = os.getenv(f"{platform.upper()}_NOISE_FILTER_{name}", "")
++    if not val:  # 未设置 → 用平台默认
++        return default
++    return val.strip().lower() in ("true", "1", "yes", "on")
++
++
++def noise_enabled(platform: str) -> bool:
++    """平台总开关（{PLATFORM}_NOISE_FILTER），默认开启。"""
++    val = os.getenv(f"{platform.upper()}_NOISE_FILTER", "")
++    if not val:
++        return True
++    return val.strip().lower() in ("true", "1", "yes", "on")
++
++
++# ---------------------------------------------------------------------------
++# 特征库（小写匹配）
++# ---------------------------------------------------------------------------
++
++# 心跳/健康检查/状态上报
++HEARTBEAT_PATTERNS: Sequence[str] = (
++    "alive", "heartbeat", "ping", "pong", "health check", "healthcheck",
++    "status: ok", "status ok", "still running", "keep-alive", "keepalive",
++    "i'm alive", "im alive", "uptime", "心跳", "存活",
++)
++
++# 加密失败占位符（mautrix/E2EE 客户端解不出来时的占位文案）
++DECRYPT_FAILURE_PATTERNS: Sequence[str] = (
++    "unable to decrypt", "unable to locate", "decryption failed",
++    "megolm", "olm session", "could not decrypt", "waiting for this message",
++    "encrypted message", "无法解密", "解密失败",
++)
++
++# 语音转文字失败占位符（weixin 等 STT 失败时的占位）
++STT_FAILURE_PATTERNS: Sequence[str] = (
++    "[语音]", "语音转文字失败", "无法识别", "语音识别失败",
++    "transcription failed", "voice message",
++)
++
++# 撤回回声（revoke/recall 系统消息残片）
++RECALL_PATTERNS: Sequence[str] = (
++    "撤回了一条消息", "recalled a message", "message recalled",
++    "you recalled a message", "已撤回",
++)
++
++# 单字符无意义噪声（保留数字和命令）
++SINGLE_CHAR_NOISE: Sequence[str] = (
++    "c", "k", "z", "嗯", "啊", "哦", "呃", "哈", "哼",
++)
++
++# 纯标点 strip 字符集（中英标点 + 全角空格）
++_PUNCT_STRIP = string.punctuation + " \t\n\r　。，、！？…—·【】（）《》「」"
++
++
++# ---------------------------------------------------------------------------
++# 核心判定
++# ---------------------------------------------------------------------------
++
++def noise_reason(
++    body: str,
++    platform: str,
++    *,
++    event_ts: float = 0.0,
++    startup_ts: float = 0.0,
++    enable_decrypt: bool = True,
++    enable_sync_replay: bool = True,
++    enable_stt_failure: bool = True,
++    enable_recall: bool = True,
++) -> Optional[str]:
++    """判定一条文本消息是否为高置信度基础设施噪声。
++
++    返回噪声原因字符串（用于日志），非噪声返回 None。
++
++    平台差异通过关键字参数控制：
++      - enable_decrypt: E2EE 平台（matrix）开，非 E2EE（weixin）关
++      - enable_sync_replay: 有同步重放机制的平台（matrix）开，轮询（weixin）关
++      - enable_stt_failure / enable_recall: 有语音/撤回的平台（weixin）开
++
++    只拦高置信度噪声——语义级（复读/纯表情/链接卡片）由 semantic_reason 处理。
++    """
++    if not noise_enabled(platform):
++        return None
++
++    text = (body or "").strip()
++
++    # 1) 空消息 / 纯 whitespace / 纯标点
++    if noise_env(platform, "EMPTY", True):
++        if not text:
++            return "empty"
++        if not text.strip(_PUNCT_STRIP):
++            return "punctuation_only"
++
++    # 2) 加密失败占位符（E2EE 平台专用）
++    if enable_decrypt and noise_env(platform, "DECRYPT", True):
++        low = text.lower()
++        if any(p in low for p in DECRYPT_FAILURE_PATTERNS):
++            return "decrypt_failure"
++
++    # 3) 心跳 / 健康检查 / 状态上报
++    if noise_env(platform, "HEARTBEAT", True):
++        low = text.lower()
++        if low in HEARTBEAT_PATTERNS:
++            return "heartbeat_exact"
++        if len(text) < 30 and any(low.startswith(p) for p in HEARTBEAT_PATTERNS):
++            return "heartbeat_prefix"
++
++    # 4) 单字符误发（保留数字和命令）
++    if noise_env(platform, "SINGLE_CHAR", True):
++        if len(text) == 1 and not text.isalnum() and not text.startswith("/"):
++            return "single_char_symbol"
++        if len(text) == 1 and not text.isdigit() and text.lower() in SINGLE_CHAR_NOISE:
++            return "single_char_noise"
++
++    # 5) 同步重放回声（有同步机制的平台；event_ts 远早于启动窗口）
++    if enable_sync_replay and noise_env(platform, "SYNC_REPLAY", True):
++        if event_ts and startup_ts and event_ts < (startup_ts - 300):
++            return "sync_replay"
++
++    # 6) 语音转文字失败占位符（有 STT 的平台）
++    if enable_stt_failure and noise_env(platform, "STT_FAILURE", True):
++        low = text.lower()
++        if any(p in low for p in STT_FAILURE_PATTERNS):
++            return "stt_failure"
++
++    # 7) 撤回回声
++    if enable_recall and noise_env(platform, "RECALL", True):
++        low = text.lower()
++        if any(p in low for p in RECALL_PATTERNS):
++            return "recall_echo"
++
++    return None
++
++
++# 语义级噪声特征（默认不拦，只记日志——图爸 2026-08-20：微信保守）
++_EMOJI_ONLY_RANGES = (
++    "\U0001F300-\U0001FAFF",  # 各类 emoji 块
++    "\u2600-\u27BF",            # 杂项符号/装饰
++    "\uFE0F",                   # variation selector
++    "\u200D",                   # ZWJ
++)
++
++
++def semantic_reason(body: str, platform: str) -> Optional[str]:
++    """判定语义级噪声（默认不拦只记日志，除非显式开启对应开关）。
++
++    这类噪声可能是真实人类意图（妈妈发个表情、分享个链接），
++    所以默认只记日志观察，不拦截。要拦需显式设 {PLATFORM}_NOISE_FILTER_EMOJI=true 等。
++    """
++    if not noise_enabled(platform):
++        return None
++
++    text = (body or "").strip()
++    if not text:
++        return None
++
++    # 纯表情（默认只记日志，开关 SEMANTIC_EMOJI 默认 false 不拦）
++    import re as _re
++    emoji_pat = "[" + "".join(_EMOJI_ONLY_RANGES) + "]"
++    stripped = _re.sub(emoji_pat, "", text).strip(_PUNCT_STRIP)
++    if not stripped and _re.search(emoji_pat, text):
++        # 是否实际拦截由开关决定（默认 false = 只记日志不拦）
++        if noise_env(platform, "SEMANTIC_EMOJI", False):
++            return "emoji_only"
++        logger.debug("[%s] semantic-noise observed (not blocked): emoji_only %.30r", platform, text)
++        return None
++
++    # 链接卡片无文字（默认只记日志，开关 SEMANTIC_LINK_CARD 默认 false）
++    if text.startswith("http") and len(text) < 120 and " " not in text.strip():
++        if noise_env(platform, "SEMANTIC_LINK_CARD", False):
++            return "link_card_only"
++        logger.debug("[%s] semantic-noise observed (not blocked): link_card_only %.30r", platform, text)
++        return None
++
++    return None

@@ -1,0 +1,18 @@
+diff --git a/hermes_cli/main.py b/hermes_cli/main.py
+index 3d5883349..684f1a98a 100644
+--- a/hermes_cli/main.py
++++ b/hermes_cli/main.py
+@@ -2043,7 +2043,12 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
+             # npm `omit=dev` config would silently skip them and the TUI
+             # build would fail. See _run_npm_install_deterministic.
+             "--include=dev",
+-            "--silent",
++            # --silent would also swallow EBADENGINE error output, which
++            # maybe_repair_npm_engine() below needs to detect the engine
++            # mismatch and either self-upgrade a managed npm or print the
++            # manual fix. --loglevel=error keeps the install quiet on
++            # success but preserves errors for diagnosis/repair.
++            "--loglevel=error",
+             "--no-fund",
+             "--no-audit",
+             "--progress=false",
