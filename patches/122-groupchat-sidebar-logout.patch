@@ -9,7 +9,7 @@ index c79e148..74781bc 100644
 +import { useAuthStore } from '@/stores/hermes/auth'
  import { copyToClipboard } from '@/utils/clipboard'
  import type { Attachment } from '@/stores/hermes/chat'
- import type { GroupChatMention, MemberInfo, RoomAgent, RoomInfo, RoomSummaryAnchor, RoomSummaryConfig, RoomSummaryState } from '@/api/hermes/group-chat'
+ import type {
 @@ -66,6 +67,7 @@ const router = useRouter()
  const message = useMessage()
  const appStore = useAppStore()
