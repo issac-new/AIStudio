@@ -119,4 +119,4 @@ index 6c4e7e9c..24122e47 100644
 +    currentPath, currentProfile, currentWorkspaceSessionId, currentWorkspaceRoomId, entries, loading, workspaceRoot, sortBy, sortOrder,
      editingFile, previewFile,
      pathSegments, sortedEntries, hasUnsavedChanges,
-     fetchEntries, listEntries, fetchDirectory, navigateTo, navigateUp,
+     fetchEntries, listEntries, fetchDirectory, navigateTo, navigateUp, selectDirectory,

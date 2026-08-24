@@ -1,20 +1,4 @@
-diff --git a/packages/server/src/controllers/hermes/sessions.ts b/packages/server/src/controllers/hermes/sessions.ts
-index c73ad1b4..d025e9f5 100644
---- a/packages/server/src/controllers/hermes/sessions.ts
-+++ b/packages/server/src/controllers/hermes/sessions.ts
-@@ -474,8 +474,9 @@ export async function listHermesSessions(ctx: any) {
-   const normalizedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
-   const paginated = Boolean(source) || normalizedOffset > 0
-   const candidateLimit = paginated ? normalizedOffset + effectiveLimit + 1 : effectiveLimit
-+  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
-   const localSessions = localListSessions(profile, source, candidateLimit)
--  const allSessions = await listSessionSummaries(source, candidateLimit, profile)
-+  const allSessions = await listSessionSummaries(source, candidateLimit, profile, includeChildren)
-   const merged = mergeHermesHistorySessions(ctx, profile, allSessions, localSessions, source)
- 
-   if (paginated) {
 diff --git a/packages/server/src/db/hermes/sessions-db.ts b/packages/server/src/db/hermes/sessions-db.ts
-index 028876f9..d2ea02ad 100644
 --- a/packages/server/src/db/hermes/sessions-db.ts
 +++ b/packages/server/src/db/hermes/sessions-db.ts
 @@ -34,6 +34,7 @@ export interface HermesSessionRow {
@@ -25,7 +9,7 @@ index 028876f9..d2ea02ad 100644
  }
  
  export interface HermesSessionSearchRow extends HermesSessionRow {
-@@ -416,9 +417,11 @@ function compareSessionSummariesNewestFirst(a: HermesSessionRow, b: HermesSessio
+@@ -418,9 +419,11 @@ function compareSessionSummariesNewestFirst(a: HermesSessionRow, b: HermesSessio
  function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSessionInternalRow[]): HermesSessionRow {
    const latest = latestSessionInChain(chain)
    const firstPreview = chain.map(session => session.preview).find(Boolean) || root.preview
@@ -37,7 +21,7 @@ index 028876f9..d2ea02ad 100644
      id: latest.id,
      model: latest.model || root.model,
      title: latest.title || root.title || titleFromPreview(firstPreview),
-@@ -437,7 +440,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
+@@ -439,7 +442,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
      cost_status: latest.cost_status,
      preview: latest.preview || root.preview || firstPreview || '',
      last_active: latest.last_active || root.last_active,
@@ -46,7 +30,7 @@ index 028876f9..d2ea02ad 100644
  }
  
  // --- In-memory session index for chain traversal ---
-@@ -1493,7 +1496,7 @@ export async function getUsageStatsFromDb(
+@@ -1501,7 +1504,7 @@ export async function getUsageStatsFromDb(
    }
  }
  
@@ -55,15 +39,25 @@ index 028876f9..d2ea02ad 100644
    if (!SQLITE_AVAILABLE) {
      throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
    }
-@@ -1503,7 +1506,10 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
-   const db = new DatabaseSync(dbPath, { open: true, readOnly: true })
+@@ -1515,6 +1518,7 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
+     return [...idx.byId.values()]
+       .filter(session => !source || session.source === source)
+       .filter(session => !isCompressionContinuationChild(session, idx))
++      .filter(session => includeChildren || !session.parent_session_id)
+       .map(session => projectSessionSummary(session, collectSessionChain(session, idx)))
+       .sort(compareSessionSummariesNewestFirst)
+       .slice(0, limit)
+diff --git a/packages/server/src/controllers/hermes/sessions.ts b/packages/server/src/controllers/hermes/sessions.ts
+--- a/packages/server/src/controllers/hermes/sessions.ts
++++ b/packages/server/src/controllers/hermes/sessions.ts
+@@ -565,8 +565,9 @@ export async function listHermesSessions(ctx: any) {
+   const normalizedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
+   const paginated = Boolean(source) || normalizedOffset > 0
+   const candidateLimit = paginated ? normalizedOffset + effectiveLimit + 1 : effectiveLimit
++  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
+   const localSessions = localListSessions(profile, source, candidateLimit)
+-  const allSessions = await listSessionSummaries(source, candidateLimit, profile)
++  const allSessions = await listSessionSummaries(source, candidateLimit, profile, includeChildren)
+   const merged = mergeHermesHistorySessions(ctx, profile, allSessions, localSessions, source)
  
-   try {
--    const clauses = ["s.parent_session_id IS NULL", "s.source != 'tool'", "s.id NOT LIKE 'compress_%'"]
-+    const clauses = ["s.source != 'tool'", "s.id NOT LIKE 'compress_%'"]
-+    if (!includeChildren) {
-+      clauses.push("s.parent_session_id IS NULL")
-+    }
-     const params: any[] = []
-     if (source) {
-       clauses.push('s.source = ?')
+   if (paginated) {

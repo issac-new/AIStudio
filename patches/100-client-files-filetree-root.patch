@@ -1,20 +1,19 @@
 diff --git a/packages/client/src/components/hermes/files/FileTree.vue b/packages/client/src/components/hermes/files/FileTree.vue
-index e128dd5..67abad5 100644
 --- a/packages/client/src/components/hermes/files/FileTree.vue
 +++ b/packages/client/src/components/hermes/files/FileTree.vue
-@@ -67,6 +67,11 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => props
-   const nextTreeData = await loadChildren('')
+@@ -166,6 +166,11 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => files
    if (seq === rootLoadSeq) treeData.value = nextTreeData
  }, { immediate: true })
-+
+ 
 +// 当 workspaceRoot 变化时（切换到不同任务），重新加载根级目录树
 +watch(() => filesStore.workspaceRoot, async () => {
 +  treeData.value = await loadChildren('')
 +})
- </script>
- 
- <template>
-@@ -87,7 +92,11 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => props
++
+ watch(() => filesStore.entries, async () => {
+   if (!workspaceMode.value) return
+   const seq = ++rootLoadSeq
+@@ -203,7 +208,11 @@ watch(() => filesStore.entries, async () => {
        expand-on-click
        block-line
        @update:selected-keys="handleSelect"
@@ -27,9 +26,9 @@ index e128dd5..67abad5 100644
    </div>
  </template>
  
-@@ -122,4 +131,12 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => props
-   white-space: nowrap;
-   vertical-align: bottom;
+@@ -313,4 +322,12 @@ watch(() => filesStore.entries, async () => {
+ .root-status-badge {
+   margin-inline-start: auto;
  }
 +
 +.file-tree__empty {
