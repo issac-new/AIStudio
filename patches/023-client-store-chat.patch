@@ -1,24 +1,24 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index cde69b6..1231467 100644
+index 75a99711..4e714e0c 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -1,6 +1,6 @@
- import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, respondToolApproval, onPeerUserMessage, onSessionCommand, onSessionTitleUpdated, onSessionWorkspaceUpdated, respondClarify, type ChatRunTransport, type RunEvent, type ResumeSessionPayload, type StartRunRequest, type ContentBlock as ContentBlockImport } from '@/api/hermes/chat'
- import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, fetchWorkspaceRunChangeFile, fetchWorkspaceRunChangesForSession, setSessionModel, type HermesMessage, type SessionSummary, type WorkspaceRunChangeFileDetail, type WorkspaceRunChangeSummary } from '@/api/hermes/sessions'
+ import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, respondToolApproval, onPeerUserMessage, onSessionCommand, onSessionTitleUpdated, onSessionWorkspaceUpdated, onSessionSettingsUpdated, respondClarify, type ChatRunTransport, type RunEvent, type ResumeSessionPayload, type StartRunRequest, type ContentBlock as ContentBlockImport } from '@/api/hermes/chat'
+ import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, fetchWorkspaceRunChangeFile, fetchWorkspaceRunChangesForSession, setSessionModel, setSessionReasoningEffort as persistSessionReasoningEffort, type HermesMessage, type SessionSummary, type WorkspaceRunChangeFileDetail, type WorkspaceRunChangeSummary } from '@/api/hermes/sessions'
 -import { getActiveProfileName } from '@/api/client'
 +import { getActiveProfileName, hasApiKey } from '@/api/client'
  import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId } from '@/api/coding-agents'
  import { getDownloadUrl } from '@/api/hermes/download'
  import type { ProviderApiMode } from '@/api/hermes/system'
-@@ -1130,6 +1131,7 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1348,6 +1348,7 @@ export const useChatStore = defineStore('chat', () => {
    }
-
+ 
    async function fetchRuntimeSessions(profile?: string | null): Promise<SessionSummary[]> {
 +    if (!hasApiKey()) return []
      const scopedProfile = profile || undefined
      if (runtimeMode.value === 'global_agent') return fetchSessions('global_agent', undefined, scopedProfile)
  
-@@ -3887,6 +3888,7 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5098,6 +5099,7 @@ export const useChatStore = defineStore('chat', () => {
      window.setInterval(() => {
        if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
        if (isStreaming.value) return
