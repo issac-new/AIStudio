@@ -1,7 +1,56 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.6**（基于 hermes-studio v0.6.44 + hermes-agent v0.20.5 源码跟踪 + overlay 二次开发）
+SwarmStudio **2.8**（基于 hermes-studio v0.6.47 + hermes-agent v0.20.5 源码跟踪 + overlay 二次开发）
+
+> **2.8** — hermes-studio v0.6.46 → **v0.6.47**（2026-08-24 发布的 Latest，14 commits / 130 文件 / +10655−311，主体为全新 social-messages 模块）。hermes-agent v0.20.5（v2026.8.19）与 element-web v1.12.26 已是最新稳定版，本轮不动；`hermes-0.20.5-runtime` 上游仍未发布（probe 404），patch 108 的 runtime pin 维持 0.20.4。patch 基线迁移仅 **3 个 regen**（023/042/088，均为 import/version 区上下文并集，语义零变更），其余 131 个 studio patch 干净应用，134/134 按序全过。
+
+### 2.8 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.6.47 | v0.6.46 → v0.6.47 |
+| hermes-agent | v0.20.5（v2026.8.19） | 不变（仍为 Latest） |
+| element-web | v1.12.26 | 不变（仍为 Latest） |
+
+**上游 v0.6.47 主要内容**（14 commits）
+
+- 全新 standalone social message push（飞书/Telegram/微信 iLink 三适配器 + session-push + 绑定通知，约 40 个新文件）
+- claude-code-proxy / codex-proxy：多条 system message 合并为单条 leading message
+- GLM-5.3 reasoning effort 规范化修复后整体 revert（最终回落到上游原状）
+- 上传大小可配置（`HERMES_MAX_UPLOAD_SIZE`）；codex workspace 文件链接带行号预览
+- 群聊完整房间头像光晕修复；Gateway approval waiter 精确结算；App chat resume 条件缓存
+- App relay `If-Match` 转发修复
+
+**patch 迁移（3 regen / 131 clean）**
+
+| patch | 冲突点 | 解决 |
+|-------|--------|------|
+| 023-client-store-chat | import 区：上游新增 `setSessionPushEnabled` 与我们的 `fetchWorkspaceRunChangesForSession`/`hasApiKey` 同行 | 并集合并，3 hunk 语义不变 |
+| 042-desktop-rebrand | `version` 行：patch 曾 pin `0.6.46` | version 行改取上游（不再 pin），brand 字段保持 ours；今后 version bump 零冲突 |
+| 088-run-chat-autojoin | import 区：上游新增 `listWorkspaceRunChangesForAssistantMessages` 与我们的 `listSessionIdsByUserId` 同区 | 并集合并，2 hunk 语义不变 |
+
+**验证**
+
+- inject 138/138 全过（studio 134 + hermes-agent 4）
+- 真树注入结果与 pristine v0.6.47 + 134 patch 参照树 `diff -rq` 零差异
+- server `tsc --noEmit` 0 errors；desktop `build:main`（tsc）通过
+- overlay vitest 66 文件 484 passed / 6 skipped / 0 failed（custom 测试代码与 2.6 收口 bit-identical——git `diff 0b2766e HEAD -- custom/` 为空；历史 notes 的「67 文件 503 passed」计数口径已不可复现，以本版 484/6/0 为基线）
+- upstream patch 触及测试（kanban-routes/controller/service、auth-routes-avatar、matrix ×6）10 文件 74/74 通过
+- `build:full` 真实 vite 构建 + server esbuild 通过
+
+**构建产物**（sha256 见 GitHub release v2.8）
+
+- `SwarmStudio-0.6.47-arm64.dmg`（macOS arm64）
+- `SwarmStudio-0.6.47-x64.zip`（Windows x64）
+
+## 补记（hermes-studio v0.6.46，SwarmStudio 2.7）
+
+> **2.7** — hermes-studio v0.6.44 → **v0.6.46**（跨 0.6.45，31 commits / 291 文件）。10 个 B 类 patch 基线迁移（023/042/089/094/098/099/100/101/116/122），漂移根因：上游 chat.ts reasoning-effort 持久化、tool-run 折叠、Git-aware 文件树、agent presets 多行 import、`listSessionSummaries` 内存过滤重写；语义全部保留。element-web v1.12.26、hermes-agent v0.20.5 当时已是最新，未动。v2.7 发布于 2026-08-24，产物 `SwarmStudio-0.6.46-arm64.dmg` / `SwarmStudio-0.6.46-x64.zip`。（本段为收口后补记——2.7 当时漏写 RELEASE-NOTES 段落。）
+
+## 上一版（hermes-agent v0.20.5 + element-web v1.12.26，SwarmStudio 2.6）
 
 > **2.6** — 三组件对齐 GitHub 最新稳定版：hermes-agent v0.20.4 → **v0.20.5**（v2026.8.19，804 commits，4 patch 纯净树重放全过、零重生成）、element-web v1.12.25 → **v1.12.26**；hermes-studio **v0.6.44 仍为最新稳定版未动**（仓内 `v1.0.0` tag 系 2026-08-16 的历史祖先 tag，非新版本）。**关键配套**：重启用 patch 108，把 app 内 runtime pin 从滞后的 `hermes-0.20.0-runtime` 提升到当前已发布的 `hermes-0.20.4-runtime`（`hermes-0.20.5-runtime` 上游尚未发布，发布后需再 bump）。产物沿用 `0.6.44` 版本名（electron-builder 4 段版本会拆成 `0.6.4-4.2` 故弃用 0.6.44.2），与 2.4 产物同名不同 sha，以 release tag + sha256 区分。
 
