@@ -216,3 +216,9 @@
 
 # runtime 统一：本地 hermes agent 安装优先（dev 态），其次 ~/.hermes-web-ui 捆绑 runtime
 188-desktop-runtime-local-priority.patch
+
+# cockpit 终端多工具支持（Claude Code > Codex > DeepSeek Harness）：
+# 服务端工具探测路由 + cockpit i18n keys（termTool/termToolNotInstalled）
+189-server-routes-terminal-tools.patch
+190-client-i18n-terminal-tools-en.patch
+191-client-i18n-terminal-tools-zh.patch

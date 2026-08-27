@@ -3,7 +3,11 @@
  * CockpitTerminalPane — 基于 @xterm/xterm + WebSocket 的真实 PTY 终端。
  *
  * 连接 upstream swarm-studio 的 /api/hermes/terminal WebSocket 端点，
- * 在 session 创建后自动 cd 到当前任务 workspace 目录并启动 Claude Code agent。
+ * 在 session 创建后自动 cd 到当前任务 workspace 目录并启动所选编码工具。
+ *
+ * 支持三类工具（优先顺序）：Claude Code > Codex > DeepSeek Harness(dsh)。
+ * 默认按优先级自动选择本机已安装的工具（GET /api/hermes/terminal-tools 探测），
+ * 用户手动选择持久化到 localStorage；切换工具会重启终端会话。
  *
  * 根据服务端返回的 shell 类型自动选择命令语法：
  *   - Unix (bash/zsh) → subshell + env
@@ -21,6 +25,15 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import { getApiKey, getBaseUrlValue } from '@/api/client'
 import { useTheme } from '@/composables/useTheme'
+import {
+  TERMINAL_TOOLS,
+  TERMINAL_TOOL_STORAGE_KEY,
+  buildToolInitCommand,
+  isTerminalToolId,
+  pickDefaultTool,
+  type TerminalToolId,
+} from '@/custom/cockpit/terminal/terminal-tools'
+import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/cockpit/api/terminal-tools'
 
 const store = useCockpitStore()
 const { isDark } = useTheme()
@@ -76,6 +89,46 @@ let ws: WebSocket | null = null
 let resizeObserver: ResizeObserver | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let initialCdSent = false
+
+// ── 编码工具选择（Claude Code > Codex > DeepSeek Harness）──
+
+const selectedTool = ref<TerminalToolId>(
+  isTerminalToolId(localStorage.getItem(TERMINAL_TOOL_STORAGE_KEY))
+    ? (localStorage.getItem(TERMINAL_TOOL_STORAGE_KEY) as TerminalToolId)
+    : 'claude-code',
+)
+const toolStatuses = ref<TerminalToolStatus[]>([])
+
+const installedToolIds = computed(() =>
+  toolStatuses.value.filter((s) => s.installed).map((s) => s.id),
+)
+
+// 下拉选项：探测数据可用时禁用未安装项并标注；探测失败则全部可选（回退旧行为）
+const toolOptions = computed(() => {
+  const probed = new Map(toolStatuses.value.map((s) => [s.id as string, s]))
+  return TERMINAL_TOOLS.map((tool) => {
+    const status = probed.get(tool.id)
+    const knownMissing = !!status && !status.installed
+    return {
+      id: tool.id,
+      label: tool.label,
+      title: status?.path ?? tool.bin,
+      disabled: knownMissing,
+      suffix: knownMissing ? `（${t('cockpit.termToolNotInstalled')}）` : '',
+    }
+  })
+})
+
+function onToolChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  if (!isTerminalToolId(value) || value === selectedTool.value) return
+  selectedTool.value = value
+  localStorage.setItem(TERMINAL_TOOL_STORAGE_KEY, value)
+  // 切换工具 = 重启终端会话：旧会话中前一个工具可能正在前台运行，
+  // 直接注入新命令会排队到工具退出后，不可预期。
+  disposeTerminal()
+  nextTick(initTerminal)
+}
 
 // ── WebSocket URL ──
 
@@ -163,28 +216,11 @@ function sendRaw(data: string) {
 function handleControl(msg: any) {
   switch (msg.type) {
     case 'created':
-      // session 已创建，自动 cd 到任务 workspace 并启动 Claude Code agent
+      // session 已创建，自动 cd 到任务 workspace 并启动所选编码工具
       if (!initialCdSent) {
         initialCdSent = true
-        const wsPath = workspacePath.value || '~'
         const isWin = /powershell|pwsh/i.test(msg.shell ?? '')
-        const escapedPath = wsPath.replace(/"/g, '\\"')
-        const claudeArgs = `agents --dangerously-skip-permissions --effort max`
-
-        let initCmd: string
-        if (isWin) {
-          // Windows / PowerShell
-          initCmd = [
-            `Set-Location "${escapedPath}"`,
-            `$env:CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`,
-            `claude ${claudeArgs}`,
-          ].join('; ')
-        } else {
-          // Unix / bash / zsh
-          initCmd = `(cd "${escapedPath}" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude ${claudeArgs})`
-        }
-
-        sendRaw(`${initCmd}\r`)
+        sendRaw(`${buildToolInitCommand(selectedTool.value, workspacePath.value || '~', isWin)}\r`)
       }
       break
     case 'exited': {
@@ -262,7 +298,13 @@ watch(isDark, () => {
   nextTick(initTerminal)
 })
 
-onMounted(() => {
+onMounted(async () => {
+  // 先探测本机可用工具再开终端，保证首个 session 就启动正确的工具；
+  // 探测失败（旧服务端/网络错误）保持回退 claude-code，全部选项可选。
+  try {
+    toolStatuses.value = await fetchTerminalTools()
+  } catch { /* 探测失败不阻塞终端 */ }
+  selectedTool.value = pickDefaultTool(installedToolIds.value, localStorage.getItem(TERMINAL_TOOL_STORAGE_KEY))
   nextTick(initTerminal)
 })
 
@@ -273,6 +315,21 @@ onUnmounted(disposeTerminal)
   <div class="cockpit-terminal-pane" :style="chromeStyle">
     <div class="cockpit-terminal-pane__head" :style="chromeStyle">
       <span class="cockpit-terminal-pane__title">⌘ {{ t('cockpit.modeTerm') }}</span>
+      <select
+        class="cockpit-terminal-pane__tool"
+        data-action="tool-select"
+        :value="selectedTool"
+        :title="t('cockpit.termTool')"
+        @change="onToolChange"
+      >
+        <option
+          v-for="opt in toolOptions"
+          :key="opt.id"
+          :value="opt.id"
+          :disabled="opt.disabled"
+          :title="opt.title"
+        >{{ opt.label }}{{ opt.suffix }}</option>
+      </select>
       <code class="cockpit-terminal-pane__root">{{ workspacePath }}</code>
       <button
         type="button"
@@ -308,6 +365,20 @@ onUnmounted(disposeTerminal)
 .cockpit-terminal-pane__title {
   color: var(--term-fg, #e0e0e0);
   font-weight: 600;
+}
+.cockpit-terminal-pane__tool {
+  font: inherit;
+  font-size: 11px;
+  color: var(--term-fg, #e0e0e0);
+  background: var(--term-head-bg, #1a1a1a);
+  border: 1px solid var(--term-border, #333);
+  border-radius: 3px;
+  padding: 2px 4px;
+  cursor: pointer;
+  max-width: 170px;
+  &:focus {
+    outline: 1px solid var(--term-border, #555);
+  }
 }
 .cockpit-terminal-pane__root {
   font-size: 11px;
