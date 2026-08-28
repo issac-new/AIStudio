@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
@@ -267,5 +267,99 @@ describe('CockpitTerminalPane', () => {
     mockWebSockets[1].emitCreated()
     const sent = mockWebSockets[1].sent
     expect(sent[sent.length - 1]).toBe('(cd "~/ws/auth-svc" && dsh --profile tui)\r')
+  })
+})
+
+// ── PTY 泄漏回归（2026-08-28 事故：卸载后僵尸重连 → 服务端 PTY 永不释放）──
+
+describe('CockpitTerminalPane PTY 泄漏回归', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    mockKanbanTasks.splice(0, mockKanbanTasks.length)
+    mockWebSockets.splice(0, mockWebSockets.length)
+    storageBacking.clear()
+    Object.defineProperty(globalThis, 'localStorage', { value: storageStub, configurable: true, writable: true })
+    fetchTerminalTools.mockReset().mockImplementation(async () => [
+      { id: 'claude-code', installed: true, path: '/usr/local/bin/claude' },
+      { id: 'codex', installed: true, path: '/opt/homebrew/bin/codex' },
+      { id: 'deepseek-harness', installed: true, path: '/usr/local/bin/dsh' },
+    ])
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function seed() {
+    mockKanbanTasks.push(kt({ id: 't1', workspace_path: '~/ws/auth-svc' }))
+    const s = useCockpitStore()
+    ;(s as any).selectedTaskId = 't1'
+    return s
+  }
+
+  it('卸载后 3 秒不再产生僵尸连接（PTY 泄漏根因）', async () => {
+    seed()
+    const w = mount(CockpitTerminalPane)
+    await flushPromises()
+    expect(mockWebSockets.length).toBe(1)
+    const sock = mockWebSockets[0]
+
+    w.unmount()
+    // dispose 摘除事件处理器并关闭连接：迟到的 close 事件无 handler 可触发
+    expect(sock.readyState).toBe(3)
+    expect(sock.onclose).toBeNull()
+    expect(sock.onmessage).toBeNull()
+
+    vi.advanceTimersByTime(10000)
+    expect(mockWebSockets.length).toBe(1) // 没有僵尸重连
+  })
+
+  it('卸载前捕获的旧 onclose 闭包被身份守卫拦截', async () => {
+    seed()
+    const w = mount(CockpitTerminalPane)
+    await flushPromises()
+    const sock = mockWebSockets[0]
+    const staleClose = sock.onclose
+
+    w.unmount()
+    staleClose?.() // 极端情况：旧闭包仍被调用
+    vi.advanceTimersByTime(10000)
+    expect(mockWebSockets.length).toBe(1)
+  })
+
+  it('意外断线时仍正常重连（功能不回归）', async () => {
+    seed()
+    const w = mount(CockpitTerminalPane)
+    await flushPromises()
+    expect(mockWebSockets.length).toBe(1)
+
+    // 服务端异常断开 → 3 秒后重连
+    mockWebSockets[0].onclose?.()
+    vi.advanceTimersByTime(3000)
+    expect(mockWebSockets.length).toBe(2)
+    w.unmount()
+  })
+
+  it('切换工具的重启路径：旧 socket 迟到事件不影响新连接、不产生多余连接', async () => {
+    seed()
+    const w = mount(CockpitTerminalPane)
+    await flushPromises()
+    expect(mockWebSockets.length).toBe(1)
+    const oldSock = mockWebSockets[0]
+    const oldClose = oldSock.onclose
+
+    await w.find('[data-action="tool-select"]').setValue('codex')
+    await flushPromises()
+    expect(mockWebSockets.length).toBe(2)
+
+    // 旧 socket 的迟到 close（handler 已摘除，这里手动调旧闭包模拟极端情况）
+    oldClose?.()
+    // 新 socket 的身份守卫：它自己的 close 应正常触发重连语义
+    expect((mockWebSockets[1] as any).onclose).not.toBeNull()
+
+    vi.advanceTimersByTime(10000)
+    // oldClose 无效果；无任何额外连接产生
+    expect(mockWebSockets.length).toBe(2)
+    w.unmount()
   })
 })
