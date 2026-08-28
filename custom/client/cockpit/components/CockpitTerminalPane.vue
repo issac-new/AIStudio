@@ -89,6 +89,13 @@ let ws: WebSocket | null = null
 let resizeObserver: ResizeObserver | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let initialCdSent = false
+// PTY 泄漏防护（2026-08-28 事故）：ws.close() 是异步的，close 事件在
+// disposeTerminal/onUnmounted 返回之后才触发；旧实现里 onclose 无条件
+// 置空共享 ws 变量并重连，导致 (a) 组件卸载 3 秒后产生无人认领的僵尸
+// 连接，服务端为其自动创建的 PTY 永不释放；(b) 重启路径（主题/工具切换）
+// 中旧 socket 的迟到事件误杀新连接变量，造成双活连接孤儿。
+// 修复：disposed 标志 + socket 身份守卫 + dispose 时摘除事件处理器。
+let disposed = false
 
 // ── 编码工具选择（Claude Code > Codex > DeepSeek Harness）──
 
@@ -153,22 +160,25 @@ function buildWsUrl(): string {
 // ── WebSocket 连接管理 ──
 
 function connect() {
-  if (ws) return
+  if (ws || disposed) return
   initialCdSent = false
 
+  let sock: WebSocket
   try {
-    ws = new WebSocket(buildWsUrl())
+    sock = new WebSocket(buildWsUrl())
   } catch (err) {
     console.error('[CockpitTerminal] WebSocket creation failed:', err)
     scheduleReconnect()
     return
   }
+  ws = sock
 
-  ws.onopen = () => {
+  sock.onopen = () => {
     // 连接成功，server 会自动创建首个 session 并发送 created 消息
   }
 
-  ws.onmessage = (event) => {
+  sock.onmessage = (event) => {
+    if (ws !== sock) return // 已被 dispose 接管的迟到事件
     const data = typeof event.data === 'string' ? event.data : ''
     // JSON 控制消息以 { 开头 (0x7b)
     if (data.charCodeAt(0) === 0x7b) {
@@ -182,17 +192,19 @@ function connect() {
     }
   }
 
-  ws.onclose = () => {
+  sock.onclose = () => {
+    if (ws !== sock) return // 旧 socket 的迟到 close：不得动新连接、不得重连
     ws = null
-    scheduleReconnect()
+    if (!disposed) scheduleReconnect()
   }
 
-  ws.onerror = () => {
+  sock.onerror = () => {
     // onclose 会触发重连
   }
 }
 
 function scheduleReconnect() {
+  if (disposed) return
   if (reconnectTimer) return
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
@@ -239,6 +251,7 @@ function handleControl(msg: any) {
 
 function initTerminal() {
   if (!terminalRef.value) return
+  disposed = false // 重启路径（主题/工具切换）：重新允许连接
 
   term = new Terminal({
     cursorBlink: true,
@@ -278,14 +291,24 @@ function initTerminal() {
 }
 
 function disposeTerminal() {
+  disposed = true
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
   }
   resizeObserver?.disconnect()
   resizeObserver = null
-  ws?.close()
+  // 先摘除事件处理器再 close()：close() 异步，事件在函数返回后才触发，
+  // 留着 handler 会在卸载后触发僵尸重连（PTY 泄漏根因）。
+  const sock = ws
   ws = null
+  if (sock) {
+    sock.onopen = null
+    sock.onmessage = null
+    sock.onclose = null
+    sock.onerror = null
+    try { sock.close() } catch { /* 已在关闭中 */ }
+  }
   term?.dispose()
   term = null
   fitAddon = null

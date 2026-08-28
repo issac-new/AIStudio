@@ -222,3 +222,10 @@
 189-server-routes-terminal-tools.patch
 190-client-i18n-terminal-tools-en.patch
 191-client-i18n-terminal-tools-zh.patch
+
+# PTY 泄漏修复（2026-08-28 事故：252 个 PTY 耗尽系统池）：
+# 三个终端组件的 ws 生命周期守卫（卸载后不再重连、旧 socket 迟到事件不影响新连接）
+# + 服务端全局 PTY 并发上限 100 兜底
+192-client-terminalview-ws-lifecycle.patch
+193-client-terminalpanel-ws-lifecycle.patch
+194-server-terminal-session-cap.patch
