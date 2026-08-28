@@ -1,0 +1,70 @@
+--- a/packages/server/src/routes/hermes/terminal.ts
++++ b/packages/server/src/routes/hermes/terminal.ts
+@@ -92,6 +92,13 @@
+ 
+ // ─── Session types ──────────────────────────────────────────────
+ 
++// Hard cap on concurrently live PTY sessions across ALL connections.
++// macOS grants ~511 ptys system-wide; an unbounded server lets a buggy
++// client exhaust the pool for the whole OS (2026-08-28 incident: 252 leaked
++// PTYs starved posix_spawnp for every process on the machine).
++const MAX_CONCURRENT_SESSIONS = 100;
++const liveSessions = new Set<PtySession>();
++
+ interface PtySession {
+   id: string
+   pty: { pid: number; onData: (cb: (data: string) => void) => void; onExit: (cb: (e: { exitCode: number }) => void) => void; write: (data: string) => void; kill: (signal?: string) => void; resize: (cols: number, rows: number) => void }
+@@ -113,6 +120,11 @@
+ }
+ 
+ function createSession(shell: string): PtySession {
++  if (liveSessions.size >= MAX_CONCURRENT_SESSIONS) {
++    throw new Error(
++      `Terminal session limit reached (${liveSessions.size}/${MAX_CONCURRENT_SESSIONS}). Close unused terminal tabs or restart the app.`,
++    )
++  }
+   const id = generateId()
+   let ptyProcess: PtySession['pty']
+   try {
+@@ -133,6 +145,7 @@
+     pid: ptyProcess.pid,
+     createdAt: Date.now(),
+   }
++  liveSessions.add(session)
+ 
+   return session
+ }
+@@ -214,6 +227,7 @@
+ 
+       session.pty.onExit(({ exitCode }: { exitCode: number }) => {
+         conn.outputBuffers.delete(session.id)
++        liveSessions.delete(session)
+         if (ws.readyState === ws.OPEN) {
+           ws.send(JSON.stringify({ type: 'exited', id: session.id, exitCode }))
+         }
+@@ -303,6 +317,7 @@
+           const session = conn.sessions.get(sessionId)
+           if (!session) return
+           session.pty.kill()
++          liveSessions.delete(session)
+           conn.sessions.delete(sessionId)
+           conn.outputBuffers.delete(sessionId)
+           if (conn.activeSessionId === sessionId) {
+@@ -335,14 +350,16 @@
+     ws.on('close', () => {
+       for (const session of Array.from(conn.sessions.values())) {
+         try { session.pty.kill() } catch { }
++        liveSessions.delete(session)
+       }
+       conn.sessions.clear()
+-      logger.info('Connection closed, all sessions killed')
++      logger.info('Connection closed, all sessions killed (live total: %d)', liveSessions.size)
+     })
+ 
+     ws.on('error', () => {
+       for (const session of Array.from(conn.sessions.values())) {
+         try { session.pty.kill() } catch { }
++        liveSessions.delete(session)
+       }
+       conn.sessions.clear()
+     })
