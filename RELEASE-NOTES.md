@@ -1,7 +1,58 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.8**（基于 hermes-studio v0.6.47 + hermes-agent v0.20.5 源码跟踪 + overlay 二次开发）
+SwarmStudio **2.9**（基于 hermes-studio v0.6.47 + hermes-agent v0.20.6 源码跟踪 + overlay 二次开发）
+
+> **2.9** — hermes-agent v0.20.5 → **v0.20.6**（v2026.8.27，2026-08-27 发布的 Latest，1376 commits / feat 116 + fix 824 + test 124，6 个 patch 目标文件中上游触碰 2 个但均未落入我们的 hunk 上下文 → **4 个 agent patch 零 regen** 纯净树序列化重放全过）。hermes-studio v0.6.47 与 element-web v1.12.26 仍是最新稳定版，本轮不动；`hermes-0.20.5-runtime` / `0.20.6-runtime` 上游均未发布（probe 404），patch 108 的 runtime pin 维持 0.20.4。本版同时搭载 2.8 之后合入 main 的两项 overlay 功能：**Cockpit 终端多工具**（Claude Code > Codex > DeepSeek Harness 优先顺序）与 **PTY 泄漏修复**（2026-08-28 P0 事故：卸载后僵尸重连孤儿连接 + 服务端并发上限 100，patches 189–194）。产物名沿用 studio 基线 `0.6.47`（agent-only 升级，同 2.6 惯例），与 v2.8 同名不同 sha，以 release tag + sha256 区分。
+
+### 2.9 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.6.47 | 不变（仍为 Latest） |
+| hermes-agent | v0.20.6（v2026.8.27） | v0.20.5（v2026.8.19）→ v0.20.6 |
+| element-web | v1.12.26 | 不变（1.12.27 仅 rc） |
+
+**上游 v0.20.6 主要内容**（1376 commits）
+
+- **真实浏览器 Profile**：consent-gated 本地默认 Chromium real-profile（agent-browser copy + browser-use CDP）、Windows real-profile close-with-approval 流程
+- **托管 SSH 更新引擎**：main process 集成 managed update engine、per-connection SSH 更新、gateway 经 control socket 暂停而非 tree-kill、fleet profile rail（所有已注册 gateway 的 agent 同条展示）
+- **模型目录**：GLM-5.3-Flash（z.ai / OpenRouter / Nous Portal）、MiniMax M3 free / H3 Max（FAL t2v+i2v）、Inkling free models
+- **群聊/会话**：群聊回合 Stop 按钮、只读 stored-transcript resume、legacy NULL-profile 行一次性 owner backfill、browser_exec 行以首个 `#` 注释为标题（对齐 CLI/TUI）
+- **压缩**：lean tail retention 默认化（compaction 保留 10–25K verbatim 而非 100–240K）
+- kanban review handoff summary 带入唤醒回合；agent-as-provider 自身 tool work 折回回合；Slack unfurl_links/unfurl_media 控制；macOS Full Disk Access 一键引导
+
+**patch 迁移（0 regen / 4 clean）**
+
+| patch | 目标文件 | 上游触碰 | 结果 |
+|-------|----------|----------|------|
+| 117-agent-default-workspace-kind-dir | kanban_db.py / kanban_swarm.py / plugin_api.py | plugin_api.py（89 行） | 干净应用 |
+| 118-profile-default-run-trace | profiles.py | profiles.py（63 行） | 干净应用 |
+| 178-agent-kanban-cli-verbs | kanban.py | 无 | 干净应用 |
+| 179-agent-projects-list-json | projects_cmd.py | 无 | 干净应用 |
+
+**搭载的 overlay 功能（2.8 → 2.9 期间合入 main）**
+
+- Cockpit 终端多工具（`3b14abf`）：终端工具按 Claude Code > Codex > DeepSeek Harness 优先顺序自动选择
+- PTY 泄漏修复（`d0523a6`，2026-08-28 P0 事故 252 孤儿 PTY 的复盘修复）：TerminalView/Panel ws 生命周期守卫（patches 192/193）+ 服务端终端会话并发上限 100（patch 194）+ pane 直改；postmortem 见 `docs/superpowers/specs/2026-08-28-terminal-pty-leak-postmortem.md`
+
+**验证**
+
+- inject 144/144 全过（studio 140 + hermes-agent 4，后者直接落于 v2026.8.27 纯净基线）
+- server `tsc --noEmit` 0 errors；desktop `build:main`（tsc）通过
+- overlay vitest 69 文件 518 passed / 6 skipped / 0 failed（与 2.8 后基线一致）
+- `build:full` 真实 vite 构建 + server esbuild 通过
+
+**构建产物**（sha256 见 GitHub release v2.9；文件名与 v2.8 相同，以 tag 区分）
+
+- `SwarmStudio-0.6.47-arm64.dmg`（macOS arm64）
+- `SwarmStudio-0.6.47-x64.zip`（Windows x64）
+
+---
+
+## 上一版（hermes-studio v0.6.47，SwarmStudio 2.8）
 
 > **2.8** — hermes-studio v0.6.46 → **v0.6.47**（2026-08-24 发布的 Latest，14 commits / 130 文件 / +10655−311，主体为全新 social-messages 模块）。hermes-agent v0.20.5（v2026.8.19）与 element-web v1.12.26 已是最新稳定版，本轮不动；`hermes-0.20.5-runtime` 上游仍未发布（probe 404），patch 108 的 runtime pin 维持 0.20.4。patch 基线迁移仅 **3 个 regen**（023/042/088，均为 import/version 区上下文并集，语义零变更），其余 131 个 studio patch 干净应用，134/134 按序全过。
 
