@@ -1,0 +1,101 @@
+--- a/packages/client/src/components/hermes/chat/TerminalPanel.vue
++++ b/packages/client/src/components/hermes/chat/TerminalPanel.vue
+@@ -102,6 +102,10 @@
+ let resizeObserver: ResizeObserver | null = null;
+ let reconnectAttempts = 0;
+ const MAX_RECONNECT_ATTEMPTS = 3;
++// PTY leak guard: a pending reconnect timer must be cancellable on unmount,
++// and the async close event must not fire handlers from a dead component.
++let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
++let destroyed = false;
+ let touchScrollLastY: number | null = null;
+ let touchScrollRemainder = 0;
+ const TOUCH_SCROLL_LINE_PX = 18;
+@@ -154,6 +158,7 @@
+ }
+ 
+ function connect() {
++  if (destroyed) return;
+   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+     connectionError.value = t('terminal.connectionFailed');
+     isConnecting.value = false;
+@@ -165,14 +170,16 @@
+   isConnecting.value = true;
+   reconnectAttempts++;
+ 
+-  ws = new WebSocket(url);
++  const sock = new WebSocket(url);
++  ws = sock;
+ 
+-  ws.onopen = () => {
++  sock.onopen = () => {
+     isConnecting.value = false;
+     connectionError.value = null;
+   };
+ 
+-  ws.onmessage = (event) => {
++  sock.onmessage = (event) => {
++    if (ws !== sock) return; // stale event from a replaced socket
+     const data = typeof event.data === "string" ? event.data : "";
+     if (data.charCodeAt(0) === 0x7b) {
+       try {
+@@ -183,20 +190,22 @@
+     }
+   };
+ 
+-  ws.onclose = (event) => {
++  sock.onclose = (event) => {
++    if (ws !== sock) return; // stale close must not touch the live socket
+     isConnecting.value = false;
++    ws = null;
+ 
+     // 如果是正常关闭（code 1000）或认证失败，不重连
+-    if (event.code === 1000 || event.code === 1003 || event.code === 1008) {
++    if (destroyed || event.code === 1000 || event.code === 1003 || event.code === 1008) {
+       connectionError.value = t('terminal.connectionClosed');
+       return;
+     }
+ 
+-    // 其他情况尝试重连
+-    setTimeout(connect, 3000);
++    // 其他情况尝试重连（timer 可被 onUnmounted 取消）
++    reconnectTimer = setTimeout(connect, 3000);
+   };
+ 
+-  ws.onerror = (error) => {
++  sock.onerror = (error) => {
+     console.error('[Terminal] WebSocket error:', error);
+     connectionError.value = t('terminal.connectionError');
+   };
+@@ -439,6 +448,11 @@
+ }, { immediate: true });
+ 
+ onUnmounted(() => {
++  destroyed = true;
++  if (reconnectTimer) {
++    clearTimeout(reconnectTimer);
++    reconnectTimer = null;
++  }
+   for (const timer of initialCommandTimers) clearTimeout(timer);
+   initialCommandTimers.clear();
+   unmountActiveTerminal();
+@@ -448,8 +462,18 @@
+   termMap.clear();
+   activeTerm = null;
+   activeFitAddon = null;
+-  ws?.close();
++  // Strip handlers BEFORE close(): the close event fires asynchronously after
++  // this function returns; a surviving onclose would reconnect from a dead
++  // component and leak the server-side PTY.
++  const sock = ws;
+   ws = null;
++  if (sock) {
++    sock.onopen = null;
++    sock.onmessage = null;
++    sock.onclose = null;
++    sock.onerror = null;
++    try { sock.close(); } catch { /* already closing */ }
++  }
+ });
+ </script>
+ 
