@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/db/hermes/schemas.ts b/packages/server/src/db/hermes/schemas.ts
+diff --git a/packages/server/src/modules/studio/infrastructure/database/schemas.ts b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
 index 4c71fd1a..960afd5b 100644
---- a/packages/server/src/db/hermes/schemas.ts
-+++ b/packages/server/src/db/hermes/schemas.ts
+--- a/packages/server/src/modules/studio/infrastructure/database/schemas.ts
++++ b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
 @@ -128,6 +128,11 @@ export const USERS_SCHEMA: Record<string, string> = {
    updated_at: 'INTEGER NOT NULL',
    last_login_at: 'INTEGER',

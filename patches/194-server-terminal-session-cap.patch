@@ -1,6 +1,8 @@
---- a/packages/server/src/routes/hermes/terminal.ts
-+++ b/packages/server/src/routes/hermes/terminal.ts
-@@ -92,6 +92,13 @@
+diff --git a/packages/server/src/modules/hermes/sockets/terminal.ts b/packages/server/src/modules/hermes/sockets/terminal.ts
+index 840b889..77340a8 100644
+--- a/packages/server/src/modules/hermes/sockets/terminal.ts
++++ b/packages/server/src/modules/hermes/sockets/terminal.ts
+@@ -99,6 +99,13 @@ export function resolveTerminalCwd(
  
  // ─── Session types ──────────────────────────────────────────────
  
@@ -14,7 +16,7 @@
  interface PtySession {
    id: string
    pty: { pid: number; onData: (cb: (data: string) => void) => void; onExit: (cb: (e: { exitCode: number }) => void) => void; write: (data: string) => void; kill: (signal?: string) => void; resize: (cols: number, rows: number) => void }
-@@ -113,6 +120,11 @@
+@@ -120,6 +127,11 @@ function generateId(): string {
  }
  
  function createSession(shell: string): PtySession {
@@ -26,7 +28,7 @@
    const id = generateId()
    let ptyProcess: PtySession['pty']
    try {
-@@ -133,6 +145,7 @@
+@@ -140,6 +152,7 @@ function createSession(shell: string): PtySession {
      pid: ptyProcess.pid,
      createdAt: Date.now(),
    }
@@ -34,7 +36,15 @@
  
    return session
  }
-@@ -214,6 +227,7 @@
+@@ -148,6 +161,7 @@ function killPtySession(session: PtySession): void {
+   try {
+     killOwnedProcessTree(session.pid, () => session.pty.kill())
+   } catch { }
++  liveSessions.delete(session)
+ }
+ 
+ // ─── WebSocket server setup ─────────────────────────────────────
+@@ -231,6 +245,7 @@ export function setupTerminalWebSocket(httpServers: HttpServer | HttpServer[]) {
  
        session.pty.onExit(({ exitCode }: { exitCode: number }) => {
          conn.outputBuffers.delete(session.id)
@@ -42,29 +52,3 @@
          if (ws.readyState === ws.OPEN) {
            ws.send(JSON.stringify({ type: 'exited', id: session.id, exitCode }))
          }
-@@ -303,6 +317,7 @@
-           const session = conn.sessions.get(sessionId)
-           if (!session) return
-           session.pty.kill()
-+          liveSessions.delete(session)
-           conn.sessions.delete(sessionId)
-           conn.outputBuffers.delete(sessionId)
-           if (conn.activeSessionId === sessionId) {
-@@ -335,14 +350,16 @@
-     ws.on('close', () => {
-       for (const session of Array.from(conn.sessions.values())) {
-         try { session.pty.kill() } catch { }
-+        liveSessions.delete(session)
-       }
-       conn.sessions.clear()
--      logger.info('Connection closed, all sessions killed')
-+      logger.info('Connection closed, all sessions killed (live total: %d)', liveSessions.size)
-     })
- 
-     ws.on('error', () => {
-       for (const session of Array.from(conn.sessions.values())) {
-         try { session.pty.kill() } catch { }
-+        liveSessions.delete(session)
-       }
-       conn.sessions.clear()
-     })

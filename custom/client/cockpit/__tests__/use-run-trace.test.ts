@@ -14,12 +14,12 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('@/api/hermes/chat', () => ({
+vi.mock('@/api/studio/chat', () => ({
   connectChatRun: mocks.connectChatRun,
   resumeSession: vi.fn((_sid: string, onResumed: (data: any) => void) => mocks.socket),
 }))
 
-vi.mock('@/api/hermes/sessions', () => ({
+vi.mock('@/api/studio/sessions', () => ({
   fetchSessionMessagesPage: vi.fn(async () => ({ messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} })),
   fetchHermesSessions: vi.fn(async () => []),
   // also mock SessionSummary type for re-export compatibility
@@ -153,7 +153,7 @@ describe('useRunTrace', () => {
   it('loadRelatedSessions auto-loads sessions via fetchHermesSessions when allSessionsRef is empty', async () => {
     // 模拟 openRunTraceGlobal 单 session 直进：modal 未注入 allSessionsRef
     // loadRelatedSessions 应自调用 fetchHermesSessions 跨 profile 加载并发现关联会话
-    const { fetchHermesSessions } = await import('@/api/hermes/sessions')
+    const { fetchHermesSessions } = await import('@/api/studio/sessions')
     const { getTask } = await import('@/api/hermes/kanban')
     ;(fetchHermesSessions as any).mockImplementation(async (_src: any, _limit: any, profile: string) => {
       if (profile === 'orchestrator') {
@@ -194,7 +194,7 @@ describe('useRunTrace', () => {
   it('loadRelatedTraces rebuilds related session trace via processMessages (merged into main state)', async () => {
     // 通过 attachLive 触发完整聚合链路：
     // loadRelatedSessions 发现 s2 → loadRelatedTraces 用 processMessages 处理 s2 消息 → 主 state 含 s2 节点
-    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/hermes/sessions')
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/studio/sessions')
     const { getTask } = await import('@/api/hermes/kanban')
     ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
       if (profile === 'orchestrator') return [{ id: 's1', title: 'work kanban task t_abc', profile: 'orchestrator', ended_at: null }]
@@ -238,7 +238,7 @@ describe('useRunTrace', () => {
   })
 
   it('(匹配B) task.session_id 创建者会话被聚合为 creator 角色', async () => {
-    const { fetchHermesSessions } = await import('@/api/hermes/sessions')
+    const { fetchHermesSessions } = await import('@/api/studio/sessions')
     const { getTask } = await import('@/api/hermes/kanban')
     // orchestrator 创建者会话 s_creator，worker 会话 s_worker
     ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
@@ -278,7 +278,7 @@ describe('useRunTrace', () => {
   })
 
   it('(匹配E) 跨会话 delegate 边基于任务树构建', async () => {
-    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/hermes/sessions')
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/studio/sessions')
     const { getTask } = await import('@/api/hermes/kanban')
     ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
       if (profile === 'worker-coder') return [
@@ -310,7 +310,7 @@ describe('useRunTrace', () => {
   })
 
   it('空壳会话标记 isEmpty 并降级', async () => {
-    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/hermes/sessions')
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/studio/sessions')
     const { getTask } = await import('@/api/hermes/kanban')
     ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
       if (profile === 'worker-coder') return [

@@ -198,4 +198,4 @@ index 2939c83f..e1e6d67a 100644
 +    granularity: 'Event density',
    },
  
-   runtimeVersions: {
+   agentManager: {

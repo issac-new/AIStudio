@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
 index 330993e..e3bfd63 100644
---- a/packages/server/src/routes/hermes/kanban.ts
-+++ b/packages/server/src/routes/hermes/kanban.ts
+--- a/packages/server/src/modules/hermes/routes/kanban.ts
++++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -13,6 +13,9 @@ export const kanbanRoutes = new Router()
  
  kanbanRoutes.get('/api/hermes/kanban/boards', ctrl.listBoards)

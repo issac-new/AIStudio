@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/services/safe-file-store.ts b/packages/server/src/services/safe-file-store.ts
+diff --git a/packages/server/src/modules/studio/public/safe-file-store.ts b/packages/server/src/modules/studio/public/safe-file-store.ts
 index c457462..cb0562c 100644
---- a/packages/server/src/services/safe-file-store.ts
-+++ b/packages/server/src/services/safe-file-store.ts
+--- a/packages/server/src/modules/studio/public/safe-file-store.ts
++++ b/packages/server/src/modules/studio/public/safe-file-store.ts
 @@ -23,11 +23,11 @@ type MultiTextUpdater<T = void> = (
  ) => MultiTextUpdate | { files: MultiTextUpdate; result: T } | Promise<MultiTextUpdate | { files: MultiTextUpdate; result: T }>
  

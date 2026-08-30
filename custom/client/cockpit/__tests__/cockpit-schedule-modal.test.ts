@@ -41,8 +41,8 @@ vi.mock('@/api/hermes/kanban', async () => {
 })
 
 // ── mock sessions API ──
-vi.mock('@/api/hermes/sessions', async () => {
-  const actual = await vi.importActual<any>('@/api/hermes/sessions')
+vi.mock('@/api/studio/sessions', async () => {
+  const actual = await vi.importActual<any>('@/api/studio/sessions')
   return { ...actual, searchSessions: vi.fn(async (_q: string) => []) }
 })
 

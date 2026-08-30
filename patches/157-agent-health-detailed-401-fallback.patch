@@ -1,7 +1,8 @@
-diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
---- a/packages/server/src/index.ts
-+++ b/packages/server/src/index.ts
-@@ -393,11 +393,34 @@
+diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index 46f84d1..9878d6f 100644
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -544,11 +544,34 @@ export async function bootstrap() {
        console.log(`[agent-health] proxy ${ctx.method} ${ctx.path} -> ${probeUrl} (authKey=${hadKey ? 'yes' : 'no'})`)
        try {
          const res = await fetch(probeUrl, { headers: healthHeaders })

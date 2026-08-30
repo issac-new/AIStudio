@@ -1,6 +1,6 @@
-diff --git a/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py b/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py
---- a/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py
-+++ b/packages/server/src/services/hermes/agent-bridge/python/bridge_runtime.py
+diff --git a/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py b/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py
+--- a/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py
++++ b/packages/server/src/modules/hermes/services/bridge/python/bridge_runtime.py
 @@ -474,7 +474,11 @@
  
  

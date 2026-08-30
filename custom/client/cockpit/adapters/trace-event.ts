@@ -6,7 +6,7 @@
  *
  * @see AgentScope src/agentscope/event/_event.py (AgentEvent 判别联合)
  */
-import type { RunEvent } from '@/api/hermes/chat'
+import type { RunEvent } from '@/api/studio/chat'
 
 // ── 统一事件基类 ──
 

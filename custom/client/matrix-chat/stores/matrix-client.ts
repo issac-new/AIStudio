@@ -16,7 +16,7 @@ import {
   hasMatrixCredentials,
   type MatrixCredentials,
 } from '@/api/client'
-import { matrixSdkLogin } from '@/api/auth'
+import { matrixSdkLogin } from '@/api/studio/auth'
 import { matrixEventBus } from './matrix-events'
 
 export const useMatrixClientStore = defineStore('matrix-client', () => {

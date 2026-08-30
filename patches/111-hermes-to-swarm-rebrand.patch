@@ -61,10 +61,10 @@ index dc8105f2..9dcd134e 100644
    appStore.loadModels()
    appStore.startHealthPolling()
  }, {
-diff --git a/packages/client/src/api/auth.ts b/packages/client/src/api/auth.ts
+diff --git a/packages/client/src/api/studio/auth.ts b/packages/client/src/api/studio/auth.ts
 index 6213ed03..29984d3f 100644
---- a/packages/client/src/api/auth.ts
-+++ b/packages/client/src/api/auth.ts
+--- a/packages/client/src/api/studio/auth.ts
++++ b/packages/client/src/api/studio/auth.ts
 @@ -27,6 +27,29 @@ export async function loginWithPassword(username: string, password: string): Pro
    return data.token
  }
@@ -336,10 +336,10 @@ index 0e5664e8..3f3656ed 100644
 +export function hasMatrixCredentials(): boolean {
 +  return !!getMatrixCredentials()
 +}
-diff --git a/packages/client/src/api/hermes/files.ts b/packages/client/src/api/hermes/files.ts
+diff --git a/packages/client/src/api/studio/files.ts b/packages/client/src/api/studio/files.ts
 index 18117f2d..30aaa16e 100644
---- a/packages/client/src/api/hermes/files.ts
-+++ b/packages/client/src/api/hermes/files.ts
+--- a/packages/client/src/api/studio/files.ts
++++ b/packages/client/src/api/studio/files.ts
 @@ -19,57 +19,67 @@ export interface FileStat {
    permissions?: string
  }
@@ -766,10 +766,10 @@ index 4c47d7c0..140e032f 100644
  }
  
  export async function fetchProfileDetail(name: string): Promise<HermesProfileDetail> {
-diff --git a/packages/client/src/api/hermes/sessions.ts b/packages/client/src/api/hermes/sessions.ts
+diff --git a/packages/client/src/api/studio/sessions.ts b/packages/client/src/api/studio/sessions.ts
 index 5a9d2398..92ff15ad 100644
---- a/packages/client/src/api/hermes/sessions.ts
-+++ b/packages/client/src/api/hermes/sessions.ts
+--- a/packages/client/src/api/studio/sessions.ts
++++ b/packages/client/src/api/studio/sessions.ts
 @@ -96,7 +96,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
    if (profile) params.set('profile', profile)
    const query = params.toString()
@@ -4916,10 +4916,10 @@ index 343a6233..fdc99d40 100644
  const MIN_COMPATIBLE_WEB_UI_VERSION = '0.6.14'
  const PACKAGED_RUNTIME_RELEASE_NAME = 'runtime-release.json'
  const ACTIVE_RUNTIME_VERSION_NAME = 'active-version.json'
-diff --git a/packages/server/src/config.ts b/packages/server/src/config.ts
+diff --git a/packages/server/src/modules/studio/public/config.ts b/packages/server/src/modules/studio/public/config.ts
 index fcfc5dfc..9ea96779 100644
---- a/packages/server/src/config.ts
-+++ b/packages/server/src/config.ts
+--- a/packages/server/src/modules/studio/public/config.ts
++++ b/packages/server/src/modules/studio/public/config.ts
 @@ -24,6 +24,9 @@ import { homedir } from 'os'
   * - HERMES_GATEWAY_URL / GATEWAY_URL: Explicit Hermes gateway upstream URL for proxy routes.
   * - GATEWAY_HOST: Default Hermes gateway upstream host. Default: 127.0.0.1.
@@ -4952,10 +4952,10 @@ index fcfc5dfc..9ea96779 100644
  const appHome = getWebUiHome()
  
  export const config = {
-diff --git a/packages/server/src/controllers/auth.ts b/packages/server/src/controllers/auth.ts
+diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
 index 155822dd..f5adac67 100644
---- a/packages/server/src/controllers/auth.ts
-+++ b/packages/server/src/controllers/auth.ts
+--- a/packages/server/src/modules/studio/controllers/auth.ts
++++ b/packages/server/src/modules/studio/controllers/auth.ts
 @@ -6,14 +6,19 @@ import {
    bootstrapDefaultSuperAdmin,
    countActiveSuperAdmins,
@@ -5412,10 +5412,10 @@ index 155822dd..f5adac67 100644
  /**
   * GET /api/auth/users
   * Super admin user management list.
-diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
 index 31545577..759a6423 100644
---- a/packages/server/src/controllers/hermes/kanban.ts
-+++ b/packages/server/src/controllers/hermes/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -1,10 +1,11 @@
  import type { Context } from 'koa'
 -import { readFile } from 'fs/promises'
@@ -6041,10 +6041,10 @@ index 31545577..759a6423 100644
 +    ctx.body = { error: err.message }
 +  }
 +}
-diff --git a/packages/server/src/db/hermes/schemas.ts b/packages/server/src/db/hermes/schemas.ts
+diff --git a/packages/server/src/modules/studio/infrastructure/database/schemas.ts b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
 index ddbf9f1d..47734a43 100644
---- a/packages/server/src/db/hermes/schemas.ts
-+++ b/packages/server/src/db/hermes/schemas.ts
+--- a/packages/server/src/modules/studio/infrastructure/database/schemas.ts
++++ b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
 @@ -204,6 +204,11 @@ export const USERS_SCHEMA: Record<string, string> = {
    updated_at: 'INTEGER NOT NULL',
    last_login_at: 'INTEGER',
@@ -6081,10 +6081,10 @@ index ddbf9f1d..47734a43 100644
    }
  }
  
-diff --git a/packages/server/src/db/hermes/session-store.ts b/packages/server/src/db/hermes/session-store.ts
+diff --git a/packages/server/src/modules/studio/repositories/session-store.ts b/packages/server/src/modules/studio/repositories/session-store.ts
 index f3315e6c..e0f82ee5 100644
---- a/packages/server/src/db/hermes/session-store.ts
-+++ b/packages/server/src/db/hermes/session-store.ts
+--- a/packages/server/src/modules/studio/repositories/session-store.ts
++++ b/packages/server/src/modules/studio/repositories/session-store.ts
 @@ -439,6 +439,20 @@ export function listSessions(profile?: string, source?: string, limit = 2000): H
    return rows.map(mapSessionRow)
  }
@@ -6106,10 +6106,10 @@ index f3315e6c..e0f82ee5 100644
  export function searchSessions(profile: string | null | undefined, query: string, limit = 20): HermesSessionSearchRow[] {
    if (!isSqliteAvailable()) return []
    const profileFilter = profile?.trim()
-diff --git a/packages/server/src/db/hermes/sessions-db.ts b/packages/server/src/db/hermes/sessions-db.ts
+diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts b/packages/server/src/modules/hermes/services/history/sessions-db.ts
 index 67470d4e..9f88d26a 100644
---- a/packages/server/src/db/hermes/sessions-db.ts
-+++ b/packages/server/src/db/hermes/sessions-db.ts
+--- a/packages/server/src/modules/hermes/services/history/sessions-db.ts
++++ b/packages/server/src/modules/hermes/services/history/sessions-db.ts
 @@ -210,7 +210,7 @@ function normalizeTitleLikeQuery(query: string): string {
  function shouldUseLiteralContentSearch(query: string): boolean {
    const trimmed = query.trim()
@@ -6151,10 +6151,10 @@ index 67470d4e..9f88d26a 100644
  
    for (let i = 0; i < quotedParts.length; i += 1) {
      sanitized = sanitized.replace(`\u0000Q${i}\u0000`, quotedParts[i])
-diff --git a/packages/server/src/db/hermes/users-store.ts b/packages/server/src/db/hermes/users-store.ts
+diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
 index 0cc66828..158cae0f 100644
---- a/packages/server/src/db/hermes/users-store.ts
-+++ b/packages/server/src/db/hermes/users-store.ts
+--- a/packages/server/src/modules/studio/repositories/users-store.ts
++++ b/packages/server/src/modules/studio/repositories/users-store.ts
 @@ -16,6 +16,11 @@ export interface UserRecord {
    updated_at: number
    last_login_at: number | null
@@ -6399,10 +6399,10 @@ index 3415547f..10aadf6d 100644
        ctx.path !== '/health' &&
        ctx.path !== '/upload' &&
        ctx.path !== '/webhook') {
-diff --git a/packages/server/src/middleware/user-auth.ts b/packages/server/src/middleware/user-auth.ts
+diff --git a/packages/server/src/modules/studio/middleware/auth.ts b/packages/server/src/modules/studio/middleware/auth.ts
 index c45a093c..55ba8112 100644
---- a/packages/server/src/middleware/user-auth.ts
-+++ b/packages/server/src/middleware/user-auth.ts
+--- a/packages/server/src/modules/studio/middleware/auth.ts
++++ b/packages/server/src/modules/studio/middleware/auth.ts
 @@ -15,6 +15,7 @@ export interface AuthenticatedUser {
    username: string
    role: UserRole
@@ -6457,10 +6457,10 @@ index c45a093c..55ba8112 100644
    }
    if (user.role !== 'super_admin') {
      authenticated.profiles = listUserProfiles(user.id).map(profile => profile.profile_name)
-diff --git a/packages/server/src/routes/auth.ts b/packages/server/src/routes/auth.ts
+diff --git a/packages/server/src/modules/studio/routes/auth.ts b/packages/server/src/modules/studio/routes/auth.ts
 index 897d064b..89ce33a3 100644
---- a/packages/server/src/routes/auth.ts
-+++ b/packages/server/src/routes/auth.ts
+--- a/packages/server/src/modules/studio/routes/auth.ts
++++ b/packages/server/src/modules/studio/routes/auth.ts
 @@ -7,6 +7,7 @@ export const authPublicRoutes = new Router()
  authPublicRoutes.get('/api/auth/status', ctrl.authStatus)
  authPublicRoutes.post('/api/auth/login', ctrl.login)
@@ -6490,10 +6490,10 @@ index 897d064b..89ce33a3 100644
 +
  authProtectedRoutes.get('/api/auth/locked-ips', ctrl.listLockedIps)
  authProtectedRoutes.delete('/api/auth/locked-ips', ctrl.unlockIpHandler)
-diff --git a/packages/server/src/routes/hermes/download.ts b/packages/server/src/routes/hermes/download.ts
+diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
 index d67ca71a..fea0ec34 100644
---- a/packages/server/src/routes/hermes/download.ts
-+++ b/packages/server/src/routes/hermes/download.ts
+--- a/packages/server/src/modules/studio/controllers/download.ts
++++ b/packages/server/src/modules/studio/controllers/download.ts
 @@ -1,5 +1,5 @@
  import Router from '@koa/router'
 -import { basename, extname, isAbsolute } from 'path'
@@ -6525,10 +6525,10 @@ index d67ca71a..fea0ec34 100644
  
      // Choose provider: always use local for upload directory files
      let data: Buffer
-diff --git a/packages/server/src/routes/hermes/files.ts b/packages/server/src/routes/hermes/files.ts
+diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
 index f01227b3..75ce6333 100644
---- a/packages/server/src/routes/hermes/files.ts
-+++ b/packages/server/src/routes/hermes/files.ts
+--- a/packages/server/src/modules/studio/controllers/files.ts
++++ b/packages/server/src/modules/studio/controllers/files.ts
 @@ -1,10 +1,12 @@
  import Router from '@koa/router'
 +import { join, resolve } from 'path'
@@ -6597,10 +6597,10 @@ index f01227b3..75ce6333 100644
    } catch (err: any) {
      handleError(ctx, err)
    }
-diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
+diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
 index 254b117c..49253444 100644
---- a/packages/server/src/routes/hermes/kanban.ts
-+++ b/packages/server/src/routes/hermes/kanban.ts
+--- a/packages/server/src/modules/hermes/routes/kanban.ts
++++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -1,5 +1,13 @@
  import Router from '@koa/router'
  import * as ctrl from '../../controllers/hermes/kanban'
@@ -6668,10 +6668,10 @@ index e9402724..d4f7cd57 100644
    app.use(kanbanRoutes.routes())
    app.use(workflowRoutes.routes())
    app.use(ttsProtectedRoutes.routes())
-diff --git a/packages/server/src/services/hermes/group-chat/index.ts b/packages/server/src/services/hermes/group-chat/index.ts
+diff --git a/packages/server/src/modules/studio/sockets/group-chat.ts b/packages/server/src/modules/studio/sockets/group-chat.ts
 index 395022fc..b8c9aa95 100644
---- a/packages/server/src/services/hermes/group-chat/index.ts
-+++ b/packages/server/src/services/hermes/group-chat/index.ts
+--- a/packages/server/src/modules/studio/sockets/group-chat.ts
++++ b/packages/server/src/modules/studio/sockets/group-chat.ts
 @@ -409,6 +409,16 @@ class ChatStorage {
          return this.mapStoredMessageRow(row)
      }
@@ -6732,10 +6732,10 @@ index 395022fc..b8c9aa95 100644
          socket.on('join', (data: { roomId?: string; name?: string }, ack?: (response?: unknown) => void) => this.handleJoin(socket, data, ack))
          socket.on('message', (data: Partial<ChatMessage> & { roomId?: string; content: string | Array<Record<string, unknown>>; id?: string; mentionDepth?: number }, ack?: (response?: unknown) => void) => this.handleMessage(socket, data, ack))
          socket.on('message_stream_start', (data: { roomId?: string; id?: string; senderId?: string; senderName?: string; timestamp?: number }) => this.handleMessageStreamStart(socket, data))
-diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/server/src/services/hermes/hermes-kanban.ts
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 index e20dc99b..4edaf020 100644
---- a/packages/server/src/services/hermes/hermes-kanban.ts
-+++ b/packages/server/src/services/hermes/hermes-kanban.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -1,6 +1,9 @@
  import type { ChildProcess } from 'child_process'
  import { logger } from '../logger'
@@ -7049,10 +7049,10 @@ index e20dc99b..4edaf020 100644
 +  }
 +  return env
 +}
-diff --git a/packages/server/src/services/hermes/run-chat/index.ts b/packages/server/src/services/hermes/run-chat/index.ts
+diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
 index 1932a05b..1d9591ab 100644
---- a/packages/server/src/services/hermes/run-chat/index.ts
-+++ b/packages/server/src/services/hermes/run-chat/index.ts
+--- a/packages/server/src/modules/studio/sockets/chat-run.ts
++++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -10,7 +10,7 @@
  import type { Server, Socket } from 'socket.io'
  import { logger } from '../../logger'
@@ -7085,10 +7085,10 @@ index 1932a05b..1d9591ab 100644
      const currentProfile = () => socketProfile || getActiveProfileName() || 'default'
      const profileExists = (profile: string) => {
        if (!profile || profile === 'default') return true
-diff --git a/packages/server/src/services/hermes/run-chat/model-run-prompt.ts b/packages/server/src/services/hermes/run-chat/model-run-prompt.ts
+diff --git a/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts b/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts
 index f383b98d..2fd55b5f 100644
---- a/packages/server/src/services/hermes/run-chat/model-run-prompt.ts
-+++ b/packages/server/src/services/hermes/run-chat/model-run-prompt.ts
+--- a/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts
++++ b/packages/server/src/modules/studio/services/chat-run/model-run-prompt.ts
 @@ -21,7 +21,12 @@ export function modelRunProfileTokenPath(profile: string): string {
  
  export async function writeModelRunProfileToken(user: AuthenticatedUser | undefined, profile: string): Promise<void> {
@@ -7103,10 +7103,10 @@ index f383b98d..2fd55b5f 100644
    const tokenPath = modelRunProfileTokenPath(profile)
    const mkdirOptions: any = { recursive: true }
    const writeOptions: any = {}
-diff --git a/packages/server/src/services/safe-file-store.ts b/packages/server/src/services/safe-file-store.ts
+diff --git a/packages/server/src/modules/studio/public/safe-file-store.ts b/packages/server/src/modules/studio/public/safe-file-store.ts
 index 4ff74ad6..98f6160b 100644
---- a/packages/server/src/services/safe-file-store.ts
-+++ b/packages/server/src/services/safe-file-store.ts
+--- a/packages/server/src/modules/studio/public/safe-file-store.ts
++++ b/packages/server/src/modules/studio/public/safe-file-store.ts
 @@ -17,11 +17,11 @@ export interface SafeYamlOptions extends SafeWriteOptions {
  }
  
@@ -7145,7 +7145,7 @@ index 197f2831..0416d3fd 100644
 +  tmpdir: () => '/tmp',
  }))
  
- vi.mock('../../packages/server/src/services/hermes/hermes-kanban', () => ({
+ vi.mock('../../packages/server/src/modules/hermes/services/kanban/kanban-service', () => ({
 diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
 index 8aeadf24..e352e0cd 100644
 --- a/tests/server/kanban-routes.test.ts
