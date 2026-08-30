@@ -1,6 +1,6 @@
 import { ref, watch, onScopeDispose, type Ref } from 'vue'
-import { connectChatRun, resumeSession, type RunEvent, type ResumeSessionPayload } from '@/api/hermes/chat'
-import { fetchSessionMessagesPage, fetchHermesSessions, type SessionSummary } from '@/api/hermes/sessions'
+import { connectChatRun, resumeSession, type RunEvent, type ResumeSessionPayload } from '@/api/studio/chat'
+import { fetchSessionMessagesPage, fetchHermesSessions, type SessionSummary } from '@/api/studio/sessions'
 import * as kanbanApi from '@/api/hermes/kanban'
 import {
   applyRunEvent,

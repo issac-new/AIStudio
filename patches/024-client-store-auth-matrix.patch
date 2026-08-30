@@ -7,8 +7,8 @@ index 00000000..3640c773
 +import { defineStore } from 'pinia'
 +import { ref, computed } from 'vue'
 +import { getApiKey, setApiKey, clearApiKey, getMatrixCredentials, clearMatrixCredentials, storeMatrixCredentials } from '@/api/client'
-+import { matrixSdkLogin, hermesMatrixLogin, loginWithPassword, fetchCurrentUser } from '@/api/auth'
-+import type { CurrentUser } from '@/api/auth'
++import { matrixSdkLogin, hermesMatrixLogin, loginWithPassword, fetchCurrentUser } from '@/api/studio/auth'
++import type { CurrentUser } from '@/api/studio/auth'
 +
 +export interface UnifiedUser {
 +  id: number

@@ -1,4 +1,4 @@
-import type { RunEvent } from '@/api/hermes/chat'
+import type { RunEvent } from '@/api/studio/chat'
 import { request } from '@/api/client'
 import { normalizeRunEvent, type TraceEvent } from './trace-event'
 import { applyTraceEvent, type TraceMiddleware, defaultMiddlewares } from './trace-middlewares'

@@ -82,7 +82,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
 +
 +// ─── Orchestration ──────────────────────────────────────────────
 +
-+import { readConfigYaml, writeConfigYaml } from '../../services/config-helpers'
++import { readConfigYaml, writeConfigYaml } from '../services/profiles/config'
 +
 +export async function getOrchestration(ctx: Context) {
 +  try {
@@ -146,7 +146,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
 +import { join as pathJoin, basename } from 'path'
 +import { tmpdir } from 'os'
 +import { randomUUID } from 'crypto'
-+import { execHermes } from '../../services/hermes/hermes-process'
++import { execHermes } from '../services/runtime/process'
 +
 +const execOpts = { windowsHide: true }
 +const BOARD_SLUG_RE_ATTACH = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -208,7 +208,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
 +      return
 +    }
 +
-+    const { parseMultipartBoundary, parseMultipartFilename, splitMultipart } = await import('../../lib/multipart')
++    const { parseMultipartBoundary, parseMultipartFilename, splitMultipart } = await import('../../studio/public/multipart')
 +    const boundaryBuf = parseMultipartBoundary(contentType)
 +    if (!boundaryBuf) {
 +      ctx.status = 400

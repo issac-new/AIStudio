@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { normalizeRunEvent, type TraceEvent } from '../adapters/trace-event'
-import type { RunEvent } from '@/api/hermes/chat'
+import type { RunEvent } from '@/api/studio/chat'
 
 describe('normalizeRunEvent', () => {
   it('normalizes run.started to REPLY_START', () => {
