@@ -1,6 +1,6 @@
-diff --git a/packages/server/src/services/hermes/agent-bridge/python/hermes_bridge.py b/packages/server/src/services/hermes/agent-bridge/python/hermes_bridge.py
---- a/packages/server/src/services/hermes/agent-bridge/python/hermes_bridge.py
-+++ b/packages/server/src/services/hermes/agent-bridge/python/hermes_bridge.py
+diff --git a/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py b/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py
+--- a/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py
++++ b/packages/server/src/modules/hermes/services/bridge/python/hermes_bridge.py
 @@ -254,7 +254,11 @@
  def main(argv: list[str] | None = None) -> int:
      parser = argparse.ArgumentParser(description="Hermes AIAgent in-process bridge")

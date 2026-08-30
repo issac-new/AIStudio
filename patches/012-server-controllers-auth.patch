@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/controllers/auth.ts b/packages/server/src/controllers/auth.ts
+diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
 index 949c4727..5a88e801 100644
---- a/packages/server/src/controllers/auth.ts
-+++ b/packages/server/src/controllers/auth.ts
+--- a/packages/server/src/modules/studio/controllers/auth.ts
++++ b/packages/server/src/modules/studio/controllers/auth.ts
 @@ -6,14 +6,19 @@ import {
    bootstrapDefaultSuperAdmin,
    countActiveSuperAdmins,

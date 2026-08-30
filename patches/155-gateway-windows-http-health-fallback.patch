@@ -1,6 +1,6 @@
-diff --git a/packages/server/src/services/hermes/gateway-autostart.ts b/packages/server/src/services/hermes/gateway-autostart.ts
---- a/packages/server/src/services/hermes/gateway-autostart.ts
-+++ b/packages/server/src/services/hermes/gateway-autostart.ts
+diff --git a/packages/server/src/modules/hermes/services/gateway/autostart.ts b/packages/server/src/modules/hermes/services/gateway/autostart.ts
+--- a/packages/server/src/modules/hermes/services/gateway/autostart.ts
++++ b/packages/server/src/modules/hermes/services/gateway/autostart.ts
 @@ -401,6 +401,22 @@
      }
      if (output.trim()) {

@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/routes/hermes/download.ts b/packages/server/src/routes/hermes/download.ts
+diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
 index 7e86627b..7ad656a4 100644
---- a/packages/server/src/routes/hermes/download.ts
-+++ b/packages/server/src/routes/hermes/download.ts
+--- a/packages/server/src/modules/studio/controllers/download.ts
++++ b/packages/server/src/modules/studio/controllers/download.ts
 @@ -1,5 +1,5 @@
  import Router from '@koa/router'
 -import { basename, extname, isAbsolute } from 'path'
@@ -64,10 +64,10 @@ index 7e86627b..7ad656a4 100644
  
      // Choose provider: always use local for upload directory files
      let data: Buffer
-diff --git a/packages/server/src/routes/hermes/files.ts b/packages/server/src/routes/hermes/files.ts
+diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
 index ec1c3a5b..01617eec 100644
---- a/packages/server/src/routes/hermes/files.ts
-+++ b/packages/server/src/routes/hermes/files.ts
+--- a/packages/server/src/modules/studio/controllers/files.ts
++++ b/packages/server/src/modules/studio/controllers/files.ts
 @@ -1,10 +1,16 @@
  import Router from '@koa/router'
 +import { join, resolve } from 'path'

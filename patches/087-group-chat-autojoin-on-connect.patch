@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/services/hermes/group-chat/index.ts b/packages/server/src/services/hermes/group-chat/index.ts
+diff --git a/packages/server/src/modules/studio/sockets/group-chat.ts b/packages/server/src/modules/studio/sockets/group-chat.ts
 index 897a19c0..94d8f000 100644
---- a/packages/server/src/services/hermes/group-chat/index.ts
-+++ b/packages/server/src/services/hermes/group-chat/index.ts
+--- a/packages/server/src/modules/studio/sockets/group-chat.ts
++++ b/packages/server/src/modules/studio/sockets/group-chat.ts
 @@ -1978,6 +1978,16 @@ class ChatStorage {
          return this.mapStoredMessageRow(row)
      }

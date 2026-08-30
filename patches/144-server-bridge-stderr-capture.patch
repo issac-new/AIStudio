@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/services/hermes/agent-bridge/manager.ts b/packages/server/src/services/hermes/agent-bridge/manager.ts
+diff --git a/packages/server/src/modules/hermes/services/bridge/manager.ts b/packages/server/src/modules/hermes/services/bridge/manager.ts
 index a8c93816..36ec9034 100644
---- a/packages/server/src/services/hermes/agent-bridge/manager.ts
-+++ b/packages/server/src/services/hermes/agent-bridge/manager.ts
+--- a/packages/server/src/modules/hermes/services/bridge/manager.ts
++++ b/packages/server/src/modules/hermes/services/bridge/manager.ts
 @@ -1,7 +1,8 @@
  import { execFileSync, spawn, type ChildProcess } from 'child_process'
 -import { existsSync, readFileSync } from 'fs'

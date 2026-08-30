@@ -14,10 +14,10 @@ index 7a9b538..d8983f3 100644
    }
  }
  
-diff --git a/packages/server/src/services/hermes/ops-monitor.ts b/packages/server/src/services/hermes/ops-monitor.ts
+diff --git a/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts b/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts
 index 23348a1..9ef9695 100644
---- a/packages/server/src/services/hermes/ops-monitor.ts
-+++ b/packages/server/src/services/hermes/ops-monitor.ts
+--- a/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts
++++ b/packages/server/src/modules/studio/services/monitoring/ops-monitor.ts
 @@ -355,8 +355,24 @@ function sampleWindowsProcessCpuPercent(pid: number, cpuSeconds: number): number
    return clampPercent((cpuDelta / elapsedSeconds / safeCpuCount()) * 100)
  }

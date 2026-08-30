@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/db/hermes/session-store.ts b/packages/server/src/db/hermes/session-store.ts
+diff --git a/packages/server/src/modules/studio/repositories/session-store.ts b/packages/server/src/modules/studio/repositories/session-store.ts
 index 3831a6a..299bda6 100644
---- a/packages/server/src/db/hermes/session-store.ts
-+++ b/packages/server/src/db/hermes/session-store.ts
+--- a/packages/server/src/modules/studio/repositories/session-store.ts
++++ b/packages/server/src/modules/studio/repositories/session-store.ts
 @@ -550,6 +550,20 @@ export function listSessions(profile?: string, source?: string, limit = 2000): H
    return rows.map(mapSessionRow)
  }
@@ -23,10 +23,10 @@ index 3831a6a..299bda6 100644
  function escapeSessionSearchLike(value: string): string {
    return value.replace(/[\\%_]/g, '\\$&')
  }
-diff --git a/packages/server/src/services/hermes/run-chat/index.ts b/packages/server/src/services/hermes/run-chat/index.ts
+diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
 index 24c7145..3f01746 100644
---- a/packages/server/src/services/hermes/run-chat/index.ts
-+++ b/packages/server/src/services/hermes/run-chat/index.ts
+--- a/packages/server/src/modules/studio/sockets/chat-run.ts
++++ b/packages/server/src/modules/studio/sockets/chat-run.ts
 @@ -11,7 +11,7 @@ import type { Server, Socket } from 'socket.io'
  import { randomUUID } from 'crypto'
  import { logger } from '../../logger'

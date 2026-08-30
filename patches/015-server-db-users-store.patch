@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/db/hermes/users-store.ts b/packages/server/src/db/hermes/users-store.ts
+diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
 index 0cc66828..158cae0f 100644
---- a/packages/server/src/db/hermes/users-store.ts
-+++ b/packages/server/src/db/hermes/users-store.ts
+--- a/packages/server/src/modules/studio/repositories/users-store.ts
++++ b/packages/server/src/modules/studio/repositories/users-store.ts
 @@ -16,6 +16,11 @@ export interface UserRecord {
    updated_at: number
    last_login_at: number | null
