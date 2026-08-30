@@ -1,7 +1,56 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.9**（基于 hermes-studio v0.6.47 + hermes-agent v0.20.6 源码跟踪 + overlay 二次开发）
+SwarmStudio **2.10**（基于 hermes-studio v0.7.12 + hermes-agent v0.20.6 源码跟踪 + overlay 二次开发）
+
+> **2.10** — hermes-studio v0.6.47 → **v0.7.12**（2026-08-30 发布的 Latest，跨 minor 大版本：1521 文件 +69K/−22K 行，服务端全量模块化重构 + Ekko Agent 并入 Studio + API 前缀 hermes→studio）。hermes-agent v0.20.6（v2026.8.27）与 element-web v1.12.26 仍是最新稳定版，本轮不动；上游 desktop runtime 已原生 pin `hermes-0.20.6-runtime`（ref v2026.8.27）与我们跟踪的 agent 一致，patch 108 使命完成摘除。
+
+### 2.10 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.7.12 | v0.6.47 → v0.7.12（v0.7.0 / v0.7.1 / v0.7.11 / v0.7.12 四个 tag） |
+| hermes-agent | v0.20.6（v2026.8.27） | 不变（仍为 Latest） |
+| element-web | v1.12.26 | 不变（1.12.27 仅 rc） |
+
+**上游 v0.7.x 主要内容**（v0.6.47→v0.7.12，1521 文件）
+
+- **服务端模块化重构**（PR #2744 canonical module ownership）：`db/hermes`、`controllers/`、`routes/`、`services/` 全量迁入 `modules/studio|hermes`；REST API 前缀 `/api/hermes/*` → `/api/studio/*`（保留 legacy-app-api 别名中间件兼容旧调用）
+- **Ekko Agent 并入 Studio**（PR #2752/2760）：独立 ekko-agent 合并为 `packages/ekko-agent`，统一 agent runtime 管理，托管 memory/skills/MCP/全局配置、并行工具调用
+- **Agent Bridge 强化**：shell-wrapped 运行时启动修复、降级运行时模块自愈、Windows Hermes home 标准化与启动崩溃隔离
+- **desktop runtime 默认 Hermes 0.20.6**（PR #2781）+ 升级启动崩溃隔离、pending interaction 超时 UX 改进
+- **chat 体验**：DeepSeek thinking tool calls（Ekko）、chat-chain 相关 246 文档、global Coding Agent reasoning 控制收敛、附件传输与媒体预览改进
+
+**patch 迁移（142/142 全过 = studio 138 + hermes-agent 4）**
+
+| 类别 | 数量 | 说明 |
+|------|------|------|
+| 全局路径重写 | 36 文件 | 27 条 server 模块化映射（db/controllers/routes/services → modules/studio\|hermes）+ API studio 前缀 + mock 相对路径 |
+| 重生成 | 17 | 008→bootstrap/http、020（5-tab 会话切换）、025 LoginView、070 App.vue、071 router cockpit、072 AppSidebar、097/098/123/124（files root 沙箱）、107/157（agent-health 代理）、113、134/135/189（loop/terminal 路由→bootstrap/routes.ts）、194（PTY 上限，收编上游 killPtySession 中心化 helper） |
+| 上下文修复 | 22 | 011/012/013/014/023/024/026/027/034/035/038/042/078/088/089/101/115/116/139/140/141/144/169 |
+| 摘除 | 2 | 108（上游原生 pin hermes-0.20.6-runtime）、133（上游侧边栏重构后锚点消失，仅剩无实效注释） |
+| 干净应用 | 其余 | 含 hermes-agent 4 patch 直接落于 v2026.8.27 纯净基线 |
+
+**custom/（A 类）适配**：`@/api/hermes/{sessions,chat,files}` → `@/api/studio/*` 模块导入清扫（16 文件，运行时 URL 由上游 legacy 别名兜底）；files-root 测试断言同步 studio 前缀。
+
+**验证**
+
+- inject 142/142 全过（studio 138 + hermes-agent 4）
+- server `tsc` type-check 0 errors；desktop `build:main`（tsc）通过
+- overlay vitest 69 文件 518 passed / 6 skipped / 0 failed（与 2.9 基线一致）
+- `build:full` 真实 vite 构建 + server esbuild 通过；mac arm64 DMG + win x64 zip 双产物打包签名完成
+
+**构建产物**（sha256 见下）
+
+- `SwarmStudio-0.7.12-arm64.dmg`（macOS arm64，375MB）
+  `f4790d1675c066dd31a4dc7f8b3619b79e18d5a22680ceec6694efe88e2318ca`
+- `SwarmStudio-0.7.12-x64.zip`（Windows x64，411MB）
+  `742753505e0c2ca47fdff33cacfa35e871856e6f7f93b08ca945bf782884956f`
+
+### 2.9 归档说明（上一版，基于 hermes-studio v0.6.47）
+
 
 > **2.9** — hermes-agent v0.20.5 → **v0.20.6**（v2026.8.27，2026-08-27 发布的 Latest，1376 commits / feat 116 + fix 824 + test 124，6 个 patch 目标文件中上游触碰 2 个但均未落入我们的 hunk 上下文 → **4 个 agent patch 零 regen** 纯净树序列化重放全过）。hermes-studio v0.6.47 与 element-web v1.12.26 仍是最新稳定版，本轮不动；`hermes-0.20.5-runtime` / `0.20.6-runtime` 上游均未发布（probe 404），patch 108 的 runtime pin 维持 0.20.4。本版同时搭载 2.8 之后合入 main 的两项 overlay 功能：**Cockpit 终端多工具**（Claude Code > Codex > DeepSeek Harness 优先顺序）与 **PTY 泄漏修复**（2026-08-28 P0 事故：卸载后僵尸重连孤儿连接 + 服务端并发上限 100，patches 189–194）。产物名沿用 studio 基线 `0.6.47`（agent-only 升级，同 2.6 惯例），与 v2.8 同名不同 sha，以 release tag + sha256 区分。
 
