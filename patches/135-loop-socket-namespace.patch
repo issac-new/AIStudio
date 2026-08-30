@@ -1,23 +1,23 @@
-diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
-index 7253b0e..328baa4 100644
---- a/packages/server/src/index.ts
-+++ b/packages/server/src/index.ts
-@@ -46,6 +46,8 @@ import { getStaticCacheControl, SPA_ENTRY_CACHE_CONTROL } from './middleware/sta
- import { requireUserJwt, resolveUserProfile } from './middleware/user-auth'
- import { createCorsOriginResolver, securityHeaders } from './security'
- import type { ShutdownHandler } from './services/shutdown'
+diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index cf574cf..46f84d1 100644
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -15,6 +15,8 @@ import { startVersionCheck } from './health'
+ import { registerRoutes } from './routes'
+ import './chat-agent-runtime-adapter'
+ import { setGroupChatServer } from '../modules/studio/routes/group-chat'
 +// overlay[loop-socket]: Loop Engineering Socket.IO namespace
-+import { setupLoopSocketNamespace } from './custom/loop/services/loop-socket'
- import { createRequestBodyParser } from './middleware/request-body-parser'
++import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
+ import { setChatRunServer } from '../modules/studio/public/chat-run'
+ import { GroupChatServer } from '../modules/studio/public/group-chat'
  import {
-   migratePersistedPiRuntimeMcpConfigs,
-@@ -508,6 +510,9 @@ export async function bootstrap() {
-   petStateSocketServer = new PetStateSocketServer(groupChatServer.getIO())
+@@ -669,6 +671,9 @@ export async function bootstrap() {
+   petStateSocketServer = new PetStateSocketServer(activeGroupChatServer.getIO())
    petStateSocketServer.init()
  
 +  // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
-+  setupLoopSocketNamespace(groupChatServer.getIO())
++  setupLoopSocketNamespace(activeGroupChatServer.getIO())
 +
-   startGlobalAgentServer(groupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
+   startGlobalAgentServer(activeGroupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
    console.log('[bootstrap] global agent server ready')
  

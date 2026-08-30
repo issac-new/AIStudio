@@ -198,4 +198,4 @@ index f970ed36..493abbf7 100644
 +    granularity: '事件密度',
    },
  
-   runtimeVersions: {
+   agentManager: {

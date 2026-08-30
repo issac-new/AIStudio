@@ -1,29 +1,25 @@
 diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
-index 7e86627b..7ad656a4 100644
+index f21dd626..ff5c216d 100644
 --- a/packages/server/src/modules/studio/controllers/download.ts
 +++ b/packages/server/src/modules/studio/controllers/download.ts
-@@ -1,5 +1,5 @@
- import Router from '@koa/router'
+@@ -1,4 +1,4 @@
 -import { basename, extname, isAbsolute } from 'path'
-+import { basename, extname, isAbsolute, join, resolve } from 'path'
++import { basename, extname, isAbsolute, resolve } from 'path'
  import {
    createFileProvider,
    localProvider,
-@@ -7,8 +7,12 @@ import {
-   validatePath,
-   resolveHermesPath,
- } from '../../services/hermes/file-provider'
--import { getActiveProfileName } from '../../services/hermes/hermes-profile'
-+import { getActiveProfileName, getActiveProfileDir, getProfileDir, getHermesBaseDir } from '../../services/hermes/hermes-profile'
- import { createAppImagePreview } from '../../services/hermes/app-image-preview'
+@@ -7,6 +7,10 @@ import {
+   resolveProfileFilePath,
+ } from '../services/files/file-provider'
+ import { getActiveProfileName } from '../public/profile-config'
 +// HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
-+import { isPathWithin } from '../../services/hermes/hermes-path'
-+import { requireSuperAdmin } from '../../middleware/user-auth'
++import { isPathWithin } from '../../hermes/services/runtime/path'
++import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
 +// HERMES_CUSTOM[SecFileRootSandbox] END
+ import { createAppImagePreview } from '../services/files/app-image-preview'
  
- export const downloadRoutes = new Router()
- 
-@@ -72,6 +76,7 @@ downloadRoutes.get('/api/hermes/download', async (ctx) => {
+ // MIME type mapping for common extensions
+@@ -69,6 +73,7 @@ export async function download(ctx: any) {
    const filePath = ctx.query.path as string | undefined
    const fileName = ctx.query.name as string | undefined
    const variant = ctx.query.variant as string | undefined
@@ -31,12 +27,12 @@ index 7e86627b..7ad656a4 100644
  
    if (!filePath) {
      ctx.status = 400
-@@ -82,8 +87,30 @@ downloadRoutes.get('/api/hermes/download', async (ctx) => {
+@@ -79,8 +84,30 @@ export async function download(ctx: any) {
    try {
      const profile = requestedProfile(ctx)
      // Validate the path first
 -    // Support both absolute and relative paths
--    const validPath = isAbsolute(filePath) ? validatePath(filePath) : resolveHermesPath(filePath, profile)
+-    const validPath = isAbsolute(filePath) ? validatePath(filePath) : resolveProfileFilePath(filePath, profile)
 +    // Support both absolute and relative paths; when a root is provided,
 +    // resolve the relative path against it (same semantics as files/list).
 +    // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 必须落在 hermes base 沙箱内，且要求 super_admin
@@ -58,34 +54,29 @@ index 7e86627b..7ad656a4 100644
 +      }
 +      validPath = validatePath(candidate)
 +    } else {
-+      validPath = resolveHermesPath(filePath, profile)
++      validPath = resolveProfileFilePath(filePath, profile)
 +    }
 +    // HERMES_CUSTOM[SecFileRootSandbox] END
  
      // Choose provider: always use local for upload directory files
      let data: Buffer
 diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
-index ec1c3a5b..01617eec 100644
+index 32c38676..9b663546 100644
 --- a/packages/server/src/modules/studio/controllers/files.ts
 +++ b/packages/server/src/modules/studio/controllers/files.ts
-@@ -1,10 +1,16 @@
- import Router from '@koa/router'
-+import { join, resolve } from 'path'
+@@ -1,16 +1,38 @@
++import { join } from 'path'
  import {
    createFileProvider,
-   resolveHermesPath,
+   resolveProfileFilePath,
    isSensitivePath,
    MAX_EDIT_SIZE,
- } from '../../services/hermes/file-provider'
-+import { relativePathFromBase } from '../../services/hermes/hermes-path'
-+// HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
-+import { isPathWithin } from '../../services/hermes/hermes-path'
-+import { getActiveProfileDir, getProfileDir, getHermesBaseDir } from '../../services/hermes/hermes-profile'
-+// HERMES_CUSTOM[SecFileRootSandbox] END
- import { requireSuperAdmin } from '../../middleware/user-auth'
- import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../../lib/multipart'
- import * as ctrl from '../../controllers/hermes/file-preview'
-@@ -13,7 +19,26 @@ function requestedProfile(ctx: any): string | undefined {
+ } from '../services/files/file-provider'
++import { isPathWithin, relativePathFromBase } from '../../hermes/services/runtime/path'
++import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
+ import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../public/multipart'
+ 
+ function requestedProfile(ctx: any): string | undefined {
    return ctx.state?.profile?.name
  }
  
@@ -109,10 +100,10 @@ index ec1c3a5b..01617eec 100644
 +    return candidate
 +  }
 +  // HERMES_CUSTOM[SecFileRootSandbox] END
-   return resolveHermesPath(relativePath, requestedProfile(ctx))
+   return resolveProfileFilePath(relativePath, requestedProfile(ctx))
  }
  
-@@ -21,7 +46,21 @@ async function createRequestFileProvider(ctx: any) {
+@@ -18,7 +40,21 @@ async function createRequestFileProvider(ctx: any) {
    return createFileProvider(requestedProfile(ctx))
  }
  
@@ -123,7 +114,7 @@ index ec1c3a5b..01617eec 100644
 +// Re-base each entry's path against `root` when present; keep the provider's value otherwise.
 +function rebaseEntryPath<T extends { name: string; path: string }>(entry: T, dirAbsPath: string, root: string | undefined): T {
 +  if (!root) return entry
-+  const absEntry = resolve(dirAbsPath, entry.name)
++  const absEntry = join(dirAbsPath, entry.name)
 +  const rel = relativePathFromBase(absEntry, root)
 +  return { ...entry, path: rel ?? entry.name }
 +}
@@ -134,9 +125,9 @@ index ec1c3a5b..01617eec 100644
    return { ...entry, absolutePath: resolveRequestPath(ctx, entry.path) }
  }
  
-@@ -52,6 +91,14 @@ function handleError(ctx: any, err: any) {
- // GET /api/hermes/files/list?path=
- fileRoutes.get('/api/hermes/files/list', async (ctx) => {
+@@ -45,6 +81,14 @@ function handleError(ctx: any, err: any) {
+ // GET /api/studio/files/list?path=
+ export async function list(ctx: any) {
    const relativePath = (ctx.query.path as string) || ''
 +  const root = requestedRoot(ctx)
 +  // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
@@ -149,7 +140,7 @@ index ec1c3a5b..01617eec 100644
    try {
      const absPath = resolveRequestPath(ctx, relativePath)
      const provider = await createRequestFileProvider(ctx)
-@@ -60,7 +107,8 @@ fileRoutes.get('/api/hermes/files/list', async (ctx) => {
+@@ -53,7 +97,8 @@ export async function list(ctx: any) {
        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
        return a.name.localeCompare(b.name)
      })
@@ -159,7 +150,7 @@ index ec1c3a5b..01617eec 100644
    } catch (err: any) {
      handleError(ctx, err)
    }
-@@ -74,6 +122,13 @@ fileRoutes.get('/api/hermes/files/stat', async (ctx) => {
+@@ -67,6 +112,13 @@ export async function stat(ctx: any) {
      ctx.body = { error: 'Missing path parameter', code: 'missing_path' }
      return
    }

@@ -8,14 +8,14 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
 +import { readFile, stat, copyFile, readdir } from 'fs/promises'
 +import { homedir } from 'os'
 +import { join, resolve, normalize } from 'path'
- import * as kanbanCli from '../../services/hermes/hermes-kanban'
--import { detectHermesRootHome, isRealPathWithin } from '../../services/hermes/hermes-path'
-+import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../../services/hermes/hermes-path'
+ import * as kanbanCli from '../services/kanban/kanban-service'
+-import { detectHermesRootHome, isRealPathWithin } from '../services/runtime/path'
++import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../services/runtime/path'
 +// HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
-+import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../custom/services/hermes/task-workspace-cache'
++import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../../custom/services/hermes/task-workspace-cache'
 +// HERMES_CUSTOM[TaskWorkspaceAllowlist] END
- import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
- import { safeFileStore } from '../../services/safe-file-store'
+ import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../services/profiles/profile'
+ import { safeFileStore } from '../../studio/public/safe-file-store'
  import {
 @@ -943,6 +946,30 @@
    }
