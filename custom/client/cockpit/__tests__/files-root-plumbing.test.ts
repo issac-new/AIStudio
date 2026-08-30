@@ -2,7 +2,7 @@
 //
 // TDD red-green: locks in the "?root=" plumbing for the Workspace panel.
 // Covers two layers:
-//   1. API layer (@/api/hermes/files): every file op carries an optional `root`
+//   1. API layer (@/api/studio/files): every file op carries an optional `root`
 //      onto the request, so reads/writes/mutations target the task workspace,
 //      not the profile home.
 //   2. Store layer (useFilesStore): when workspaceRoot is set, every mutation
@@ -23,7 +23,7 @@ vi.mock('@/api/client', () => ({
   getBaseUrlValue: () => 'http://test' as string,
 }))
 
-import * as filesApi from '@/api/hermes/files'
+import * as filesApi from '@/api/studio/files'
 import { useFilesStore } from '@/stores/hermes/files'
 
 beforeEach(() => {
@@ -39,7 +39,7 @@ describe('files API — root plumbing', () => {
     requestMock.mockResolvedValue({ entries: [], path: '' })
     await filesApi.listFiles('sub', '/ws-root')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/list')
+    expect(url).toContain('/api/studio/files/list')
     expect(url).toContain('path=sub')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
@@ -48,7 +48,7 @@ describe('files API — root plumbing', () => {
     requestMock.mockResolvedValue({ content: 'x', path: 'a.ts', size: 1 })
     await filesApi.readFile('a.ts', '/ws-root')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/read')
+    expect(url).toContain('/api/studio/files/read')
     expect(url).toContain('path=' + encodeURIComponent('a.ts'))
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
@@ -56,7 +56,7 @@ describe('files API — root plumbing', () => {
   it('writeFile sends root as ?root= query (PUT)', async () => {
     await filesApi.writeFile('a.ts', 'content', '/ws-root')
     expect(requestMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/hermes/files/write'),
+      expect.stringContaining('/api/studio/files/write'),
       expect.objectContaining({ method: 'PUT' }),
     )
     const url = requestMock.mock.calls[0][0] as string
@@ -66,28 +66,28 @@ describe('files API — root plumbing', () => {
   it('deleteFile sends root as ?root= query (DELETE)', async () => {
     await filesApi.deleteFile('a.ts', false, '/ws-root')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/delete')
+    expect(url).toContain('/api/studio/files/delete')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
   it('renameFile sends root as ?root= query (POST)', async () => {
     await filesApi.renameFile('a.ts', 'b.ts', '/ws-root')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/rename')
+    expect(url).toContain('/api/studio/files/rename')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
   it('mkDir sends root as ?root= query (POST)', async () => {
     await filesApi.mkDir('newdir', '/ws-root')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/mkdir')
+    expect(url).toContain('/api/studio/files/mkdir')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
   it('copyFile sends root as ?root= query (POST)', async () => {
     await filesApi.copyFile('a.ts', 'b.ts', '/ws-root')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/copy')
+    expect(url).toContain('/api/studio/files/copy')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
@@ -98,14 +98,14 @@ describe('files API — root plumbing', () => {
     const file = new File(['x'], 'a.txt')
     await filesApi.uploadFiles('sub', [file], '/ws-root')
     const url = fetchMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/upload')
+    expect(url).toContain('/api/studio/files/upload')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
     vi.unstubAllGlobals()
   })
 
   it('getFileDownloadUrl includes root in download URL query', () => {
     const url = filesApi.getFileDownloadUrl('a.png', 'a.png', '/ws-root')
-    expect(url).toContain('/api/hermes/download')
+    expect(url).toContain('/api/studio/files/download')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
@@ -150,7 +150,7 @@ describe('useFilesStore — forwards workspaceRoot to API', () => {
     requestMock.mockResolvedValue({ ok: true })
     await s.saveEditor()
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/write')
+    expect(url).toContain('/api/studio/files/write')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
@@ -159,7 +159,7 @@ describe('useFilesStore — forwards workspaceRoot to API', () => {
     requestMock.mockResolvedValue({ ok: true })
     await s.createDir('newdir')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/mkdir')
+    expect(url).toContain('/api/studio/files/mkdir')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
@@ -168,7 +168,7 @@ describe('useFilesStore — forwards workspaceRoot to API', () => {
     requestMock.mockResolvedValue({ ok: true })
     await s.createFile('newfile.ts')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/write')
+    expect(url).toContain('/api/studio/files/write')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
@@ -178,7 +178,7 @@ describe('useFilesStore — forwards workspaceRoot to API', () => {
     const entry = { name: 'a.ts', path: 'a.ts', isDir: false, size: 0, modTime: '' } as any
     await s.deleteEntry(entry)
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/delete')
+    expect(url).toContain('/api/studio/files/delete')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
@@ -188,7 +188,7 @@ describe('useFilesStore — forwards workspaceRoot to API', () => {
     const entry = { name: 'a.ts', path: 'a.ts', isDir: false, size: 0, modTime: '' } as any
     await s.renameEntry(entry, 'b.ts')
     const url = requestMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/rename')
+    expect(url).toContain('/api/studio/files/rename')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
   })
 
@@ -199,7 +199,7 @@ describe('useFilesStore — forwards workspaceRoot to API', () => {
     const file = new File(['x'], 'a.txt')
     await s.uploadFiles([file])
     const url = fetchMock.mock.calls[0][0] as string
-    expect(url).toContain('/api/hermes/files/upload')
+    expect(url).toContain('/api/studio/files/upload')
     expect(url).toContain('root=' + encodeURIComponent('/ws-root'))
     vi.unstubAllGlobals()
   })

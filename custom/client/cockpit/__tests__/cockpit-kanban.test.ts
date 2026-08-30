@@ -28,8 +28,8 @@ vi.mock('@/api/hermes/kanban', async () => {
 const { mockSearchHermesSessions } = vi.hoisted(() => ({
   mockSearchHermesSessions: vi.fn(async (_q: string) => []),
 }))
-vi.mock('@/api/hermes/sessions', async () => {
-  const actual = await vi.importActual<any>('@/api/hermes/sessions')
+vi.mock('@/api/studio/sessions', async () => {
+  const actual = await vi.importActual<any>('@/api/studio/sessions')
   return { ...actual, searchSessions: mockSearchHermesSessions }
 })
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ loadSessions: vi.fn(async () => {}), messages: [], sendMessage: vi.fn(async () => {}), switchSession: vi.fn(async () => {}) }) }))

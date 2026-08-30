@@ -6,7 +6,7 @@
 import { ref } from 'vue'
 import * as kanbanApi from '@/api/hermes/kanban'
 import type { KanbanTask, KanbanTaskDetail, KanbanRun } from '@/api/hermes/kanban'
-import { fetchHermesSessions, fetchSessionMessagesPage, type SessionSummary } from '@/api/hermes/sessions'
+import { fetchHermesSessions, fetchSessionMessagesPage, type SessionSummary } from '@/api/studio/sessions'
 import {
   applyRunEvent,
   buildCrossSessionEdges,
@@ -19,7 +19,7 @@ import {
   type TraceState,
 } from '../adapters/run-trace-adapter'
 import { matchSessionTaskId, extractKanbanTaskId } from './sessionTaskId'
-import type { RunEvent } from '@/api/hermes/chat'
+import type { RunEvent } from '@/api/studio/chat'
 
 export interface TaskMeta {
   taskId: string

@@ -2,7 +2,7 @@
 // 全局聚合视图：跨所有 profile 加载全部会话，重建 trace 并合并为单一聚合 state。
 // 供 RunTraceOverview 组件使用——点击 Run Observatory 后直接展示所有跨任务会话聚合图。
 import { ref } from 'vue'
-import { fetchHermesSessions, fetchSessionMessagesPage, type SessionSummary } from '@/api/hermes/sessions'
+import { fetchHermesSessions, fetchSessionMessagesPage, type SessionSummary } from '@/api/studio/sessions'
 import {
   applyRunEvent,
   createTraceState,
@@ -14,7 +14,7 @@ import {
   type TraceState,
 } from '../adapters/run-trace-adapter'
 import { extractKanbanTaskId, matchSessionTaskId } from './sessionTaskId'
-import type { RunEvent } from '@/api/hermes/chat'
+import type { RunEvent } from '@/api/studio/chat'
 
 export interface OverviewSessionMeta {
   sessionId: string
