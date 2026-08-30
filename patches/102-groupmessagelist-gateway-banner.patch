@@ -2,7 +2,7 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.v
 index 140adfa..c529bb9 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -6,6 +6,7 @@ import type { RoomAgentHandoffChain } from '@/api/hermes/group-chat'
+@@ -6,6 +6,7 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
  import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff-presentation'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import GroupMessageItem from './GroupMessageItem.vue'

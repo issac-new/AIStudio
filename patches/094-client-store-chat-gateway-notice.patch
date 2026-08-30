@@ -3,8 +3,8 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -4,6 +4,7 @@ import { getActiveProfileName, hasApiKey } from '@/api/client'
  import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId } from '@/api/coding-agents'
- import { getDownloadUrl } from '@/api/hermes/download'
- import type { ProviderApiMode } from '@/api/hermes/system'
+ import { getDownloadUrl } from '@/api/studio/download'
+ import type { ProviderApiMode } from '@/api/studio/provider-api-mode'
 +import { tagGatewayNotice } from '@/custom/chat/gateway-notice'
  import { defineStore } from 'pinia'
  import { ref, computed } from 'vue'

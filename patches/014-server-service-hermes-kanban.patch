@@ -3,11 +3,11 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -4,6 +4,8 @@
  import { join } from 'path'
- import { logger } from '../logger'
- import { execHermes, spawnHermes } from './hermes-process'
-+import { safeFileStore } from '../safe-file-store'
-+import { getActiveProfileName, getProfileDir } from './hermes-profile'
- import { detectHermesRootHome } from './hermes-path'
+ import { logger } from '../../../studio/public/logging'
+ import { detectHermesRootHome } from '../runtime/path'
+ import { execHermes, spawnHermes } from '../runtime/process'
++import { safeFileStore } from '../../../studio/public/safe-file-store'
++import { getActiveProfileName, getProfileDir } from '../profiles/profile'
  
  const execOpts = { windowsHide: true }
 @@ -44,6 +46,7 @@ export interface KanbanTask {

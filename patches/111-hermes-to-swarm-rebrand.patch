@@ -7145,7 +7145,7 @@ index 197f2831..0416d3fd 100644
 +  tmpdir: () => '/tmp',
  }))
  
- vi.mock('../../packages/server/src/services/hermes/hermes-kanban', () => ({
+ vi.mock('../../packages/server/src/modules/hermes/services/kanban/kanban-service', () => ({
 diff --git a/tests/server/kanban-routes.test.ts b/tests/server/kanban-routes.test.ts
 index 8aeadf24..e352e0cd 100644
 --- a/tests/server/kanban-routes.test.ts

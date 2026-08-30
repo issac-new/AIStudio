@@ -2,11 +2,11 @@ diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-contro
 index 197f2831..0416d3fd 100644
 --- a/tests/server/kanban-controller.test.ts
 +++ b/tests/server/kanban-controller.test.ts
-@@ -36,6 +36,7 @@ vi.mock('fs/promises', () => ({
+@@ -36,6 +36,7 @@ vi.mock('fs/promises', async importOriginal => ({
  
  vi.mock('os', () => ({
    homedir: () => '/Users/tester',
 +  tmpdir: () => '/tmp',
  }))
  
- vi.mock('../../packages/server/src/services/hermes/hermes-kanban', () => ({
+ vi.mock('../../packages/server/src/modules/hermes/services/runtime/path', () => ({
