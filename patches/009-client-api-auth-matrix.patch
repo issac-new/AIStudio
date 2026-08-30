@@ -1,6 +1,6 @@
-diff --git a/packages/client/src/api/auth.ts b/packages/client/src/api/auth.ts
---- a/packages/client/src/api/auth.ts
-+++ b/packages/client/src/api/auth.ts
+diff --git a/packages/client/src/api/studio/auth.ts b/packages/client/src/api/studio/auth.ts
+--- a/packages/client/src/api/studio/auth.ts
++++ b/packages/client/src/api/studio/auth.ts
 @@ -34,6 +34,29 @@
    return data as LoginResponse
  }

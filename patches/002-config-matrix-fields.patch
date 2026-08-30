@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/config.ts b/packages/server/src/config.ts
+diff --git a/packages/server/src/modules/studio/public/config.ts b/packages/server/src/modules/studio/public/config.ts
 index 4e421eb..339cf23 100644
---- a/packages/server/src/config.ts
-+++ b/packages/server/src/config.ts
+--- a/packages/server/src/modules/studio/public/config.ts
++++ b/packages/server/src/modules/studio/public/config.ts
 @@ -25,6 +25,9 @@ import { homedir } from 'os'
   * - HERMES_GATEWAY_URL / GATEWAY_URL: Explicit Hermes gateway upstream URL for proxy routes.
   * - GATEWAY_HOST: Default Hermes gateway upstream host. Default: 127.0.0.1.

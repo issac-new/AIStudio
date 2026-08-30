@@ -37,7 +37,7 @@ const { todaySec, mockFetchHermesSessions, mockFetchSessionMessagesPage } = vi.h
     mockFetchSessionMessagesPage: vi.fn(async () => ({ messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} })),
   }
 })
-vi.mock('@/api/hermes/sessions', () => ({
+vi.mock('@/api/studio/sessions', () => ({
   fetchHermesSessions: mockFetchHermesSessions,
   fetchSessionMessagesPage: mockFetchSessionMessagesPage,
 }))
@@ -147,8 +147,8 @@ vi.mock('@/api/client', async () => {
   return { ...actual, request: vi.fn(async () => null) }
 })
 
-vi.mock('@/api/hermes/sessions', async () => {
-  const actual = await vi.importActual<any>('@/api/hermes/sessions')
+vi.mock('@/api/studio/sessions', async () => {
+  const actual = await vi.importActual<any>('@/api/studio/sessions')
   return { ...actual, fetchHermesSessions: mockFetchHermesSessions, fetchSessionMessagesPage: mockFetchSessionMessagesPage, searchSessions: vi.fn(async () => []) }
 })
 

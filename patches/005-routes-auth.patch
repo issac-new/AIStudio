@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/routes/auth.ts b/packages/server/src/routes/auth.ts
+diff --git a/packages/server/src/modules/studio/routes/auth.ts b/packages/server/src/modules/studio/routes/auth.ts
 index d1961934..7e9c455d 100644
---- a/packages/server/src/routes/auth.ts
-+++ b/packages/server/src/routes/auth.ts
+--- a/packages/server/src/modules/studio/routes/auth.ts
++++ b/packages/server/src/modules/studio/routes/auth.ts
 @@ -8,6 +8,7 @@ authPublicRoutes.get('/api/auth/status', ctrl.authStatus)
  authPublicRoutes.post('/api/auth/login', ctrl.login)
  authPublicRoutes.post('/api/auth/app-login', ctrl.appLogin)

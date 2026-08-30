@@ -12,7 +12,7 @@ const { mockSortedRooms, matrixGetRoomUnreadCount } = vi.hoisted(() => ({
 vi.mock('@/stores/hermes/kanban', () => ({ useKanbanStore: () => ({ tasks: [], fetchTasks: vi.fn(async () => {}), fetchAssignees: vi.fn(async () => {}), startEventStream: vi.fn() }) }))
 vi.mock('@/custom/cockpit/api/kanban-extras', () => ({ searchSessions: vi.fn(async () => []), listWorkspaceFiles: vi.fn(async () => []), getTimeline: vi.fn(async () => ({ items: [], total: 0 })) }))
 vi.mock('@/api/hermes/kanban', async () => { const a = await vi.importActual<any>('@/api/hermes/kanban'); return { ...a, getTask: vi.fn(async () => null), addComment: vi.fn(async () => ({})) } })
-vi.mock('@/api/hermes/sessions', async () => { const a = await vi.importActual<any>('@/api/hermes/sessions'); return { ...a, searchSessions: vi.fn(async () => []) } })
+vi.mock('@/api/studio/sessions', async () => { const a = await vi.importActual<any>('@/api/studio/sessions'); return { ...a, searchSessions: vi.fn(async () => []) } })
 vi.mock('@/stores/hermes/auth', () => ({ useAuthStore: () => ({ user: null }) }))
 const mockPush = vi.fn()
 vi.mock('vue-router', async () => {

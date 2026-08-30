@@ -1,16 +1,16 @@
-diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
---- a/packages/server/src/controllers/hermes/kanban.ts
-+++ b/packages/server/src/controllers/hermes/kanban.ts
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -1,7 +1,8 @@
  import type { Context } from 'koa'
 -import { readFile } from 'fs/promises'
 +import { readFile, stat, copyFile } from 'fs/promises'
  import { join, resolve } from 'path'
- import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { detectHermesRootHome, isRealPathWithin } from '../../services/hermes/hermes-path'
--import { listProfileNamesFromDisk } from '../../services/hermes/hermes-profile'
-+import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
-+import { safeFileStore } from '../../services/safe-file-store'
+ import * as kanbanCli from '../services/kanban/kanban-service'
+ import { detectHermesRootHome, isRealPathWithin } from '../services/runtime/path'
+-import { listProfileNamesFromDisk } from '../services/profiles/profile'
++import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../services/profiles/profile'
++import { safeFileStore } from '../../studio/public/safe-file-store'
  import {
 @@ -461,5 +462,6 @@ export async function create(ctx: Context) {
    const priority = optionalInteger(payload.priority, 'priority')
@@ -82,7 +82,7 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +
 +// ─── Orchestration ──────────────────────────────────────────────
 +
-+import { readConfigYaml, writeConfigYaml } from '../../services/config-helpers'
++import { readConfigYaml, writeConfigYaml } from '../services/profiles/config'
 +
 +export async function getOrchestration(ctx: Context) {
 +  try {
@@ -146,7 +146,7 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +import { join as pathJoin, basename } from 'path'
 +import { tmpdir } from 'os'
 +import { randomUUID } from 'crypto'
-+import { execHermes } from '../../services/hermes/hermes-process'
++import { execHermes } from '../services/runtime/process'
 +
 +const execOpts = { windowsHide: true }
 +const BOARD_SLUG_RE_ATTACH = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -208,7 +208,7 @@ diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/
 +      return
 +    }
 +
-+    const { parseMultipartBoundary, parseMultipartFilename, splitMultipart } = await import('../../lib/multipart')
++    const { parseMultipartBoundary, parseMultipartFilename, splitMultipart } = await import('../../studio/public/multipart')
 +    const boundaryBuf = parseMultipartBoundary(contentType)
 +    if (!boundaryBuf) {
 +      ctx.status = 400

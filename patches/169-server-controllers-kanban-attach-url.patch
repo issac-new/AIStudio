@@ -1,15 +1,15 @@
-diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
---- a/packages/server/src/controllers/hermes/kanban.ts
-+++ b/packages/server/src/controllers/hermes/kanban.ts
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -6,6 +6,9 @@
  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
- import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../custom/services/hermes/task-workspace-cache'
+ import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../../custom/services/hermes/task-workspace-cache'
  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
 +// HERMES_CUSTOM[AttachUrl] BEGIN: SSRF-guarded URL attachment
-+import { assertSafeOutboundUrl, UnsafeUrlError } from '../../custom/security/url-guard'
++import { assertSafeOutboundUrl, UnsafeUrlError } from '../../../custom/security/url-guard'
 +// HERMES_CUSTOM[AttachUrl] END
- import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
- import { safeFileStore } from '../../services/safe-file-store'
+ import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../services/profiles/profile'
+ import { safeFileStore } from '../../studio/public/safe-file-store'
  import {
 @@ -1381,3 +1384,126 @@
      ctx.body = { error: err.message }

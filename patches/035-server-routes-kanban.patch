@@ -1,10 +1,10 @@
-diff --git a/packages/server/src/routes/hermes/kanban.ts b/packages/server/src/routes/hermes/kanban.ts
---- a/packages/server/src/routes/hermes/kanban.ts
-+++ b/packages/server/src/routes/hermes/kanban.ts
+diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
+--- a/packages/server/src/modules/hermes/routes/kanban.ts
++++ b/packages/server/src/modules/hermes/routes/kanban.ts
 @@ -1,5 +1,13 @@
  import Router from '@koa/router'
- import * as ctrl from '../../controllers/hermes/kanban'
-+import { getDashboardUrl } from '../../config'
+ import * as ctrl from '../controllers/kanban'
++import { getDashboardUrl } from '../../studio/public/config'
 +
 +// Separate router for the dashboard-url endpoint so it is not shadowed by
 +// the /:id catch-all in the main kanban router.

@@ -1,6 +1,6 @@
-diff --git a/packages/server/src/db/hermes/sessions-db.ts b/packages/server/src/db/hermes/sessions-db.ts
---- a/packages/server/src/db/hermes/sessions-db.ts
-+++ b/packages/server/src/db/hermes/sessions-db.ts
+diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts b/packages/server/src/modules/hermes/services/history/sessions-db.ts
+--- a/packages/server/src/modules/hermes/services/history/sessions-db.ts
++++ b/packages/server/src/modules/hermes/services/history/sessions-db.ts
 @@ -34,6 +34,7 @@ export interface HermesSessionRow {
    cost_status: string
    preview: string
@@ -47,17 +47,21 @@ diff --git a/packages/server/src/db/hermes/sessions-db.ts b/packages/server/src/
        .map(session => projectSessionSummary(session, collectSessionChain(session, idx)))
        .sort(compareSessionSummariesNewestFirst)
        .slice(0, limit)
-diff --git a/packages/server/src/controllers/hermes/sessions.ts b/packages/server/src/controllers/hermes/sessions.ts
---- a/packages/server/src/controllers/hermes/sessions.ts
-+++ b/packages/server/src/controllers/hermes/sessions.ts
+diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packages/server/src/modules/studio/controllers/sessions.ts
+--- a/packages/server/src/modules/studio/controllers/sessions.ts
++++ b/packages/server/src/modules/studio/controllers/sessions.ts
 @@ -565,8 +565,9 @@ export async function listHermesSessions(ctx: any) {
    const normalizedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
    const paginated = Boolean(source) || normalizedOffset > 0
    const candidateLimit = paginated ? normalizedOffset + effectiveLimit + 1 : effectiveLimit
 +  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
    const localSessions = localListSessions(profile, source, candidateLimit)
--  const allSessions = await listSessionSummaries(source, candidateLimit, profile)
-+  const allSessions = await listSessionSummaries(source, candidateLimit, profile, includeChildren)
+-  const allSessions = isHermesAgentAvailable()
+-    ? await listHermesSessionSummaries(source, candidateLimit, profile)
+-    : []
++  const allSessions = isHermesAgentAvailable()
++    ? await listHermesSessionSummaries(source, candidateLimit, profile, includeChildren)
++    : []
    const merged = mergeHermesHistorySessions(ctx, profile, allSessions, localSessions, source)
  
    if (paginated) {
