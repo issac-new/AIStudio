@@ -7,10 +7,10 @@ index a8c93816..36ec9034 100644
 -import { existsSync, readFileSync } from 'fs'
 +import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
  import { createConnection, createServer } from 'net'
- import { dirname, isAbsolute, join, resolve } from 'path'
+ import { basename, dirname, isAbsolute, join, resolve } from 'path'
 +import { homedir } from 'os'
- import { logger } from '../../logger'
- import { detectHermesHome, getHermesBin } from '../hermes-path'
+ import { logger } from '../../../studio/public/logging'
+ import { detectHermesHome, getHermesBin } from '../runtime/path'
  import { AgentBridgeClient, DEFAULT_AGENT_BRIDGE_ENDPOINT } from './client'
 @@ -890,13 +891,32 @@ export class AgentBridgeManager {
      const env = buildAgentBridgeProcessEnv(this.endpoint, hermesHome, agentRoot)

@@ -1,8 +1,8 @@
-diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
-index 3524924a..56c568cc 100644
---- a/packages/server/src/index.ts
-+++ b/packages/server/src/index.ts
-@@ -350,6 +350,63 @@ export async function bootstrap() {
+diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index 0053738..cf574cf 100644
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -501,6 +501,63 @@ export async function bootstrap() {
      await next()
    })
  

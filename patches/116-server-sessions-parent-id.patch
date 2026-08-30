@@ -56,8 +56,12 @@ diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packag
    const candidateLimit = paginated ? normalizedOffset + effectiveLimit + 1 : effectiveLimit
 +  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
    const localSessions = localListSessions(profile, source, candidateLimit)
--  const allSessions = await listSessionSummaries(source, candidateLimit, profile)
-+  const allSessions = await listSessionSummaries(source, candidateLimit, profile, includeChildren)
+-  const allSessions = isHermesAgentAvailable()
+-    ? await listHermesSessionSummaries(source, candidateLimit, profile)
+-    : []
++  const allSessions = isHermesAgentAvailable()
++    ? await listHermesSessionSummaries(source, candidateLimit, profile, includeChildren)
++    : []
    const merged = mergeHermesHistorySessions(ctx, profile, allSessions, localSessions, source)
  
    if (paginated) {

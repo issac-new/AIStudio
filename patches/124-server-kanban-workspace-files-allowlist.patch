@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
-index 57c8a9b..07ad404 100644
+index a51c042..e73770e 100644
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -1,7 +1,7 @@
@@ -8,10 +8,10 @@ index 57c8a9b..07ad404 100644
  import { homedir } from 'os'
 -import { join, resolve, normalize } from 'path'
 +import { join, resolve, normalize, isAbsolute } from 'path'
- import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../../services/hermes/hermes-path'
+ import * as kanbanCli from '../services/kanban/kanban-service'
+ import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../services/runtime/path'
  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
-@@ -981,8 +981,15 @@ export async function listWorkspaceFiles(ctx: Context) {
+@@ -960,8 +960,15 @@ export async function listWorkspaceFiles(ctx: Context) {
    const taskId = ctx.query.task_id as string | undefined; const board = (ctx.query.board as string | undefined) || 'default'; const sub = (ctx.query.path as string | undefined) ?? ''; const depthRaw = parseInt(ctx.query.depth as string, 10); const depth = Number.isFinite(depthRaw) ? Math.min(Math.max(depthRaw, 1), 4) : 2
    if (!taskId) { ctx.status = 400; ctx.body = { error: 'task_id is required' }; return }
    const detail = await kanbanCli.getTask(taskId, { board }); const wsPath = detail?.task?.workspace_path; if (!wsPath) { ctx.body = { path: '', entries: [] }; return }

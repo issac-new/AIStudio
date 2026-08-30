@@ -129,7 +129,7 @@
 135-loop-socket-namespace.patch
 
 # Loop Engineering (Task 11): sidebar nav entry for Loop Engineering
-133-loop-nav-entry.patch
+#133-loop-nav-entry.patch  # v0.7.12 摘除：锚定的 hermes.models/memory 侧边栏项已被上游重构移除,patch 仅剩一条迁移注释无实效
 
 # Loop Engineering (Phase 3 Task 7): add pg dependency for SaaSStore
 138-pg-dep.patch
