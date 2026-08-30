@@ -7,7 +7,7 @@ index 9f893c48..bfc30fad 100644
  import { useRouter } from "vue-router";
  import { useI18n } from "vue-i18n";
 -import { setApiKey, hasApiKey } from "@/api/client";
--import { fetchAuthStatus, loginWithPassword } from "@/api/auth";
+-import { fetchAuthStatus, loginWithPassword } from "@/api/studio/auth";
 +import { useAuthStore } from "@/stores/hermes/auth";
  
  const { t } = useI18n();

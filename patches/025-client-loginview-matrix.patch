@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index b0378e96..a002583e 100644
+index 6a1816ac..a002583e 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -2,113 +2,155 @@
@@ -7,7 +7,7 @@ index b0378e96..a002583e 100644
  import { useRoute, useRouter } from "vue-router";
  import { useI18n } from "vue-i18n";
 -import { setApiKey, clearApiKey, hasApiKey } from "@/api/client";
--import { fetchAuthStatus, loginWithPassword } from "@/api/auth";
+-import { fetchAuthStatus, loginWithPassword } from "@/api/studio/auth";
 -import { isDesktopShell } from "@/utils/desktop-bridge";
 +import { useAuthStore } from "@/stores/hermes/auth";
  import { resolveLoginRedirect } from "@/utils/login-redirect";

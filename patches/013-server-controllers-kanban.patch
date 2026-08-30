@@ -6,11 +6,11 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
 -import { readFile } from 'fs/promises'
 +import { readFile, stat, copyFile } from 'fs/promises'
  import { join, resolve } from 'path'
- import * as kanbanCli from '../../services/hermes/hermes-kanban'
- import { detectHermesRootHome, isRealPathWithin } from '../../services/hermes/hermes-path'
--import { listProfileNamesFromDisk } from '../../services/hermes/hermes-profile'
-+import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../../services/hermes/hermes-profile'
-+import { safeFileStore } from '../../services/safe-file-store'
+ import * as kanbanCli from '../services/kanban/kanban-service'
+ import { detectHermesRootHome, isRealPathWithin } from '../services/runtime/path'
+-import { listProfileNamesFromDisk } from '../services/profiles/profile'
++import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../services/profiles/profile'
++import { safeFileStore } from '../../studio/public/safe-file-store'
  import {
 @@ -461,5 +462,6 @@ export async function create(ctx: Context) {
    const priority = optionalInteger(payload.priority, 'priority')

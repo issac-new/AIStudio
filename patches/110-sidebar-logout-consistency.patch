@@ -7,7 +7,7 @@ index 93ca28dd..183fe7de 100644
  import { useChatStore } from '@/stores/hermes/chat'
  import { useProfilesStore } from '@/stores/hermes/profiles'
 +import { useAuthStore } from '@/stores/hermes/auth'
- import { uploadRuntimeFiles } from '@/api/hermes/files'
+ import { uploadRuntimeFiles } from '@/api/studio/files'
  import {
    approveWorkflowNode,
 @@ -99,6 +100,7 @@ const { t } = useI18n()

@@ -3,7 +3,7 @@ index 0e5664e8..3f3656ed 100644
 --- a/packages/client/src/api/client.ts
 +++ b/packages/client/src/api/client.ts
 @@ -108,11 +108,54 @@ function isProfileWideSessionCollection(pathname: string): boolean {
-     pathname === '/api/hermes/sessions/conversations'
+     pathname === '/api/studio/sessions/conversations'
  }
  
 -function emitAuthNotice(kind: 'expired' | 'forbidden') {

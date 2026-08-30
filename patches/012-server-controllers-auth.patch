@@ -22,10 +22,10 @@ index 949c4727..5a88e801 100644
    updateUser,
    updateUsername,
    updateUserPassword,
-@@ -28,6 +33,20 @@ import { getUserJwtExpiresSeconds, issueAppJwt, issueUserJwt } from '../middlewa
- import { consumeAppAuthorizationCode, upsertAppConnection, type AppConnectionType } from '../db/hermes/app-connections-store'
- import { listProfileNamesFromDisk } from '../services/hermes/hermes-profile'
- import { startOutboundRelayClient, stopOutboundRelayClient } from '../services/global-agent/outbound-relay-client'
+@@ -28,6 +33,20 @@ import { getUserJwtExpiresSeconds, issueAppJwt, issueUserJwt } from '../public/a
+ import { consumeAppAuthorizationCode, upsertAppConnection, type AppConnectionType } from '../services/app-relay/app-connections'
+ import { listProfileNamesFromDisk } from '../public/profile-config'
+ import { startOutboundRelayClient, stopOutboundRelayClient } from '../public/global-agent'
 +// HERMES_CUSTOM[MatrixAuth] BEGIN: Matrix 管理员服务集成
 +import {
 +  validateMatrixToken,
@@ -35,14 +35,14 @@ index 949c4727..5a88e801 100644
 +  resetMatrixUserPassword as resetMatrixUserPasswordOnServer,
 +  setMatrixUserActive,
 +  deleteMatrixUser as deleteMatrixUserOnServer,
-+} from '../custom/matrix/admin-service'
++} from '../../../custom/matrix/admin-service'
 +// HERMES_CUSTOM[MatrixAuth] END
 +// HERMES_CUSTOM[SecSsrfGuard] BEGIN: SSRF 防护（登录速率限制函数已由 upstream auth.ts 顶部 import）
-+import { UnsafeUrlError, assertSafeOutboundUrl } from '../custom/security/url-guard'
++import { UnsafeUrlError, assertSafeOutboundUrl } from '../../../custom/security/url-guard'
 +// HERMES_CUSTOM[SecSsrfGuard] END
- import { getLanEndpointKind } from '../services/lan-discovery'
- import { getPublicSystemInfo } from '../services/system-info'
- import { config } from '../config'
+ import { getLanEndpointKind } from '../services/network/lan-discovery'
+ import { getPublicSystemInfo } from '../public/system-info'
+ import { config } from '../public/config'
 @@ -49,6 +68,9 @@ export async function authStatus(ctx: Context) {
   */
  export async function currentUser(ctx: Context) {

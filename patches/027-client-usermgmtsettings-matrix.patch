@@ -20,7 +20,7 @@ index 33adeab8..44270b53 100644
 +  type MatrixUser,
    type UserRole,
    type UserStatus,
- } from '@/api/auth'
+ } from '@/api/studio/auth'
 @@ -17,14 +19,17 @@ const message = useMessage()
  
  const loading = ref(false)
