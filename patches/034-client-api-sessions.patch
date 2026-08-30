@@ -1,7 +1,7 @@
-diff --git a/packages/client/src/api/hermes/sessions.ts b/packages/client/src/api/hermes/sessions.ts
+diff --git a/packages/client/src/api/studio/sessions.ts b/packages/client/src/api/studio/sessions.ts
 index 64ecce0c..ebab989b 100644
---- a/packages/client/src/api/hermes/sessions.ts
-+++ b/packages/client/src/api/hermes/sessions.ts
+--- a/packages/client/src/api/studio/sessions.ts
++++ b/packages/client/src/api/studio/sessions.ts
 @@ -167,7 +167,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
    if (profile) params.set('profile', profile)
    const query = params.toString()

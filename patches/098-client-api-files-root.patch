@@ -1,6 +1,6 @@
-diff --git a/packages/client/src/api/hermes/files.ts b/packages/client/src/api/hermes/files.ts
---- a/packages/client/src/api/hermes/files.ts
-+++ b/packages/client/src/api/hermes/files.ts
+diff --git a/packages/client/src/api/studio/files.ts b/packages/client/src/api/studio/files.ts
+--- a/packages/client/src/api/studio/files.ts
++++ b/packages/client/src/api/studio/files.ts
 @@ -52,62 +52,74 @@ function appendProfile(params: URLSearchParams, profile?: string | null): void {
    if (value) params.set('profile', value)
  }

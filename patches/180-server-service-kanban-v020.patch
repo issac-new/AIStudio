@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/server/src/services/hermes/hermes-kanban.ts
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 index ae721cf..e12cbf2 100644
---- a/packages/server/src/services/hermes/hermes-kanban.ts
-+++ b/packages/server/src/services/hermes/hermes-kanban.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -62,6 +62,10 @@ export interface KanbanTask {
    workflow_template_id?: string | null
    current_step_key?: string | null

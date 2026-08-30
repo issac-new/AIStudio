@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/middleware/user-auth.ts b/packages/server/src/middleware/user-auth.ts
+diff --git a/packages/server/src/modules/studio/middleware/auth.ts b/packages/server/src/modules/studio/middleware/auth.ts
 index f6726c1d..634e516e 100644
---- a/packages/server/src/middleware/user-auth.ts
-+++ b/packages/server/src/middleware/user-auth.ts
+--- a/packages/server/src/modules/studio/middleware/auth.ts
++++ b/packages/server/src/modules/studio/middleware/auth.ts
 @@ -21,6 +21,7 @@ export interface AuthenticatedUser {
    username: string
    role: UserRole

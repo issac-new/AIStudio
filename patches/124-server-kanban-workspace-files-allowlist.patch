@@ -1,7 +1,7 @@
-diff --git a/packages/server/src/controllers/hermes/kanban.ts b/packages/server/src/controllers/hermes/kanban.ts
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
 index 57c8a9b..07ad404 100644
---- a/packages/server/src/controllers/hermes/kanban.ts
-+++ b/packages/server/src/controllers/hermes/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
 @@ -1,7 +1,7 @@
  import type { Context } from 'koa'
  import { readFile, stat, copyFile, readdir } from 'fs/promises'

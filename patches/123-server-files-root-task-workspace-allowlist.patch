@@ -1,6 +1,6 @@
-diff --git a/packages/server/src/routes/hermes/download.ts b/packages/server/src/routes/hermes/download.ts
---- a/packages/server/src/routes/hermes/download.ts
-+++ b/packages/server/src/routes/hermes/download.ts
+diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
+--- a/packages/server/src/modules/studio/controllers/download.ts
++++ b/packages/server/src/modules/studio/controllers/download.ts
 @@ -11,6 +11,9 @@
  // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
  import { isPathWithin } from '../../services/hermes/hermes-path'
@@ -32,9 +32,9 @@ diff --git a/packages/server/src/routes/hermes/download.ts b/packages/server/src
          ctx.status = 403
          ctx.body = { error: 'Requested path is outside the hermes base sandbox', code: 'invalid_path' }
          return
-diff --git a/packages/server/src/routes/hermes/files.ts b/packages/server/src/routes/hermes/files.ts
---- a/packages/server/src/routes/hermes/files.ts
-+++ b/packages/server/src/routes/hermes/files.ts
+diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
+--- a/packages/server/src/modules/studio/controllers/files.ts
++++ b/packages/server/src/modules/studio/controllers/files.ts
 @@ -10,6 +10,9 @@
  // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
  import { isPathWithin } from '../../services/hermes/hermes-path'

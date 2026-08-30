@@ -1,6 +1,6 @@
-diff --git a/packages/server/src/services/hermes/hermes-kanban.ts b/packages/server/src/services/hermes/hermes-kanban.ts
---- a/packages/server/src/services/hermes/hermes-kanban.ts
-+++ b/packages/server/src/services/hermes/hermes-kanban.ts
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 @@ -46,5 +46,24 @@ export interface KanbanTask {
    project_id: string | null
    result: string | null
