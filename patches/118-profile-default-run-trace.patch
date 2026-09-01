@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/profiles.py b/hermes_cli/profiles.py
-index 7f7f3b262..7fbdc6555 100644
+index 91d997b..82ad87f 100644
 --- a/hermes_cli/profiles.py
 +++ b/hermes_cli/profiles.py
-@@ -968,6 +968,79 @@ def profiles_to_serve(multiplex: bool) -> List[Tuple[str, Path]]:
+@@ -1174,6 +1174,79 @@ def profiles_to_serve(
      return serve
  
  
@@ -82,7 +82,7 @@ index 7f7f3b262..7fbdc6555 100644
  def create_profile(
      name: str,
      clone_from: Optional[str] = None,
-@@ -1052,6 +1125,12 @@ def create_profile(
+@@ -1266,6 +1339,12 @@ def create_profile(
          profile_dir.mkdir(parents=True, exist_ok=True)
          for subdir in _PROFILE_DIRS:
              (profile_dir / subdir).mkdir(parents=True, exist_ok=True)
@@ -93,9 +93,9 @@ index 7f7f3b262..7fbdc6555 100644
 +        # — the config-merge step below still ensures run-trace is enabled).
 +        _seed_run_trace_plugin(profile_dir)
  
-         # Clone config files from source
-         if source_dir is not None:
-@@ -1157,6 +1236,12 @@ def create_profile(
+         if source_dir is None:
+             _seed_model_config(profile_dir)
+@@ -1374,6 +1453,12 @@ def create_profile(
      # unit-generation paths handle gateway lifecycle.
      _maybe_register_gateway_service(canon)
  

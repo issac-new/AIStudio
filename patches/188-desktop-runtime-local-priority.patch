@@ -1,23 +1,11 @@
-# overlay[runtime-local-priority]: 本地 hermes agent 安装优先。
-# 本地安装在 ~/.hermes/hermes-agent/（git 源码仓 + venv/bin/hermes，系统 Python，无捆绑 node/git）。
-# 检测到 venv/bin/hermes 存在时，hermes/python 走本地 venv；node 走系统 PATH；启动跳过捆绑 runtime 下载。
-# 仅 dev（非打包）态生效（isPackaged() 守卫）；打包产物仍用捆绑 runtime 树。
-# 环境变量：HERMES_LOCAL_AGENT_DIR 覆盖本地安装目录；HERMES_DESKTOP_USE_LOCAL_HERMES=0 显式禁用。
 diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
+index eb4cc82..760bff4 100644
 --- a/packages/desktop/src/main/paths.ts
 +++ b/packages/desktop/src/main/paths.ts
-@@ -1,6 +1,6 @@
- import { app } from 'electron'
- import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
--import { join, relative, resolve } from 'node:path'
-+import { dirname, join, relative, resolve } from 'node:path'
- import { homedir, platform } from 'node:os'
- import {
-   resolveRuntimeResourceDir,
-@@ -265,6 +265,26 @@ export function runtimeStorageRoot(): string {
+@@ -340,6 +340,26 @@ export function runtimeStorageRoot(): string {
    return configured ? resolve(configured) : join(webUiHome(), 'desktop-runtime')
  }
-
+ 
 +// overlay[runtime-local-priority]: 本地 hermes agent 安装优先。
 +// 本地安装在 ~/.hermes/hermes-agent/（git 源码仓 + venv/bin/hermes，系统 Python，无捆绑 node/git）。
 +// 检测到 venv/bin/hermes 存在时，hermes/python 走本地 venv；node 走系统 PATH（process.execPath 所在目录）。
@@ -41,9 +29,9 @@ diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/path
  export function desktopRuntimeDir(): string {
    const override = process.env.HERMES_DESKTOP_RUNTIME_DIR?.trim()
    if (override) return resolve(override)
-@@ -350,11 +370,19 @@ export function nodeDir(): string {
+@@ -425,11 +445,19 @@ export function nodeDir(): string {
  }
-
+ 
  export function nodeBinDir(): string {
 +  // overlay[runtime-local-priority]: 本地优先时用系统 node 目录（process.execPath 所在目录）。
 +  if (usingLocalHermesInstall()) {
@@ -52,7 +40,7 @@ diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/path
    const dir = nodeDir()
    return isWin ? dir : join(dir, 'bin')
  }
-
+ 
  export function bundledNode(): string {
 +  // overlay[runtime-local-priority]: 本地优先时返回系统 node。
 +  if (usingLocalHermesInstall()) {
@@ -60,10 +48,10 @@ diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/path
 +  }
    return isWin ? join(nodeDir(), 'node.exe') : join(nodeBinDir(), 'node')
  }
-
-@@ -424,11 +452,23 @@ export function pythonBinDir(): string {
+ 
+@@ -499,11 +527,23 @@ export function pythonBinDir(): string {
  }
-
+ 
  export function bundledPython(): string {
 +  // overlay[runtime-local-priority]: 本地优先时返回本地 venv 的 python。
 +  if (usingLocalHermesInstall()) {
@@ -73,7 +61,7 @@ diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/path
    const dir = pythonEnvironmentDir()
    return runtimePythonExecutable(dir)
  }
-
+ 
  export function hermesBin(): string {
 +  // overlay[runtime-local-priority]: 本地优先时直接返回本地 venv/bin/hermes。
 +  if (usingLocalHermesInstall()) {
@@ -84,8 +72,9 @@ diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/path
 +  }
    return isWin ? windowsHermesLauncher(pythonEnvironmentDir()) : join(pythonBinDir(), 'hermes')
  }
-
+ 
 diff --git a/packages/desktop/src/main/runtime-manager.ts b/packages/desktop/src/main/runtime-manager.ts
+index c1e23fc..8dc785b 100644
 --- a/packages/desktop/src/main/runtime-manager.ts
 +++ b/packages/desktop/src/main/runtime-manager.ts
 @@ -26,9 +26,11 @@ import { app } from 'electron'
@@ -100,9 +89,9 @@ diff --git a/packages/desktop/src/main/runtime-manager.ts b/packages/desktop/src
    webUiHome,
    webuiDir,
  } from './paths'
-@@ -225,6 +227,12 @@ function runtimeReady(): boolean {
+@@ -239,6 +241,12 @@ function runtimeReady(): boolean {
  }
-
+ 
  function rootRuntimeReady(root: string): boolean {
 +  // overlay[runtime-local-priority]: 本地 hermes 安装在场时直接视为 ready，
 +  // 使启动流程 isDesktopRuntimeReady() 为 true → 跳过捆绑 runtime 下载。

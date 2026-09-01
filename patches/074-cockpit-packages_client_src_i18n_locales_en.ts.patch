@@ -1,10 +1,10 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 3d4ab0c9..0225c5c9 100644
+index f6e1ccd..4f1e414 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -3253,4 +3253,16 @@ export default {
-     new_0_6_42_9: 'MiniMax image-to-video generation now supports Global and China official v1 endpoints, URL, base64, and local image inputs, task polling, and automatic download with Profile API keys (#2512)',
-     new_0_6_41_1: 'Local STT now works reliably in npm-installed Hermes Web UI by pinning sherpa-onnx native runtimes to the same version as the Node.js wrapper on macOS, Windows, and Linux (#2464)',
+@@ -3504,4 +3504,16 @@ export default {
+     new_0_7_0_10: 'The English and Chinese READMEs now document the five runtimes, three Agent families, module ownership, canonical APIs, and current development and validation workflows (#2745)',
+     new_0_7_0_11: 'Device Connections now shows only Android and iOS download cards; official Apple releases are labeled App Store instead of TestFlight · App Store',
    },
 +
 +  matrix: {

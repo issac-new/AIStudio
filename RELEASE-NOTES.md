@@ -1,7 +1,72 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.10**（基于 hermes-studio v0.7.12 + hermes-agent v0.20.6 源码跟踪 + overlay 二次开发）
+SwarmStudio **2.11**（基于 hermes-studio v0.7.15 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.11** — hermes-studio v0.7.12 → **v0.7.15**（2026-09-01 发布的 Latest，v0.7.13/14/15 三个 tag、9 commits、80 文件 +4053/−1074，全部集中在 runtime 稳定性）+ hermes-agent v0.20.6 → **v0.21.0**（v2026.8.31，"Pantheon" 大版本，911 commits：Bot Mode / hermes peer / cron 记忆 / 子代理实时转向 / MCP 指挥中心 / 桌面浏览器接管）。element-web v1.12.26 仍是最新稳定版（1.12.27 仅 rc），本轮不动。runtime pin：上游原生 `hermes-0.20.6-runtime`（`0.21.0-runtime` 截至 2026-09-01 仍未发布，probe 404），agent 源码跟踪 v0.21.0 与 runtime 0.20.6 暂时分离（同 2.6/2.9 惯例，0.21.0 runtime 发布后随上游 pin 自动跟进）。
+
+### 2.11 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.7.15 | v0.7.12 → v0.7.15（v0.7.13 / v0.7.14 / v0.7.15 三个 tag） |
+| hermes-agent | v0.21.0（v2026.8.31） | v0.20.6（v2026.8.27）→ v0.21.0，911 commits |
+| element-web | v1.12.26 | 不变（1.12.27 仅 rc） |
+
+**上游 v0.7.13–15 主要内容**（9 commits，runtime 稳定性专项）
+
+- **runtime 重启循环与离线版本检查修复**（#2822）：RuntimeRestartPrompt 确认式重启、Hermes 版本探测不再触发更新检查
+- **Hermes CLI 与 bridge runtime 选择统一**（#2808）：CLI/bridge/桌面三端 runtime 解析收敛到同一套选择逻辑
+- **无效 runtime 回退处理修复**（#2815）、**Windows runtime 文件系统重试**（#2801）
+- **ekko-agent 有界文件读取 + 原生命令**（#2812，安全加固）
+- **创建 Hermes 会话时复用 Agent 状态**（#2805）
+
+**上游 agent v0.21.0 主要内容**（"Pantheon"，911 commits）
+
+- **Bot Mode**：agent 社会化——命名 + 头像 + 共享 roster + Discord 式群聊（bots 互聊 + @提及）
+- **`hermes peer`**：bot 与 bot 之间跨 profile/gateway 的持久 DM
+- **cron 记忆与连续性**：定时任务加载/更新持久记忆、continuity 输出延续、durable notepad、monitor 无变化跳过 LLM
+- **子代理实时转向**：delegate_task 运行中列表 / 纠偏 / 提前止损收部分结果；子输出 JSON-schema 校验
+- **MCP 指挥中心**：server+catalog 合一桌面页、后台健康检查、fleet 成本面板、`hermes://` 深链装
+- **CLI**：Ctrl+P 命令面板、/status（reasoning/审批/上下文）、状态栏 cache-hit%/延迟/tokens-per-ticks、全局急停
+- **桌面浏览器接管**：agent 直接导航/点击/读取内置浏览器页面
+- **provider 浪潮**：Meta Model API（Muse Spark）/ CommandCode / Tencent TokenPlan / Nebius Token Factory / Ramp Router / Actual Computer；`model_overrides` 自助修 context/pricing
+- **安全**：AGENTS.md/skills/memory 写入强制审批（prompt-injection 防线）、泄密红线大扫除、Windows 破坏性命令审批、macOS TCC 稳定签名身份
+- **kanban**：上游原生 `boards export/import`（tar.gz 便携归档，与我们 patch 178 的 set-project 正交共存）
+
+**patch 迁移（10 regen / 1 退役 / 141 active）**
+
+初始干跑 19 失败，解开级联后真实冲突 5 处，其余自动 3-way 合入：
+
+| patch | 冲突点 | 解决 |
+|-------|--------|------|
+| 042-desktop-rebrand-pkg | package.json 版本行 0.7.12→0.7.15 vs 品牌 | 版本取上游 0.7.15，品牌取 ours（先例沿用） |
+| 144-server-bridge-stderr-capture | manager.ts import 块（上游 +execFileSync） | 两侧 import 并集 |
+| 149-runtime-manager-require-run-agent | runtime-manager.ts 必需文件列表 | **退役**：上游已原生含 run_agent.py/cli.py 检查（同 108 先例） |
+| 178-agent-kanban-cli-verbs | kanban.py 3 处（上游新增 export/import 撞 set-project） | 两侧并存（export/import + set-project），kb API（_normalize_board_slug 等）验证在位 |
+| 188-desktop-runtime-local-priority | paths.ts import（上游已含 dirname） | 取上游 import；本地优先逻辑 hunk 全部落位，runtime-manager.ts:247 活路径验证 |
+
+自动合并（干净 3-way）：074/075（cockpit i18n en/zh）、118（agent profiles run-trace）、141（win 文件日志）、143（bridge worker 端口）、187zh（i18n 去重 zh）。i18n 级联（161/162/167/168/187en/190/191）在 074/075 regen 后全部干净应用。
+
+**验证**
+
+- inject 141/141 全过（studio 137 + hermes-agent 4）；pristine v0.7.15/v2026.8.31 双树序列化重放 141/141 零干预
+- server `tsc` 0 errors；desktop `build:main` 通过
+- overlay vitest 69 文件 518 passed / 6 skipped / 0 failed（与 2.9/2.10 基线一致）
+- 上游 patch 触区测试 60/60（kanban-routes/controller/service + auth-routes-avatar + runtime-version-manager + web-ui-restart）
+- 上游全套（4797 tests）：4722 通过；68 失败已逐类归因——Pinia 初始化类（login-view/sidebar-search 等，patch 与测试字节同 2.10，2.10 既有）、HOME 泄漏类（runtime 测试在本机 ~/.hermes 存在时失败，沙箱 HOME 后 29/29 全过，打包态 isPackaged() 短路不受影响）、overlay 有意分叉类（上游测试断言原版行为，如 server user-auth/sessions-db 与 brand/sidebar）。无 2.11 迁移引入的回归。
+- `build:full` vite 构建 + electron-builder mac/win 双产物
+
+**构建产物**（sha256 见下）
+
+- `SwarmStudio-0.7.15-arm64.dmg`（macOS arm64，375MB）
+  `06d1f2f8fcab7f25f78193fbc69d2d74c18d7ace2d605d97dde7580c5352239e`
+- `SwarmStudio-0.7.15-x64.zip`（Windows x64，411MB）
+  `9dec92391ff06193734ad913b0f1cc32e484459b8850faf97f2789a510dce9a9`
+
+### 2.10 归档说明（上一版，基于 hermes-studio v0.7.12）
 
 > **2.10** — hermes-studio v0.6.47 → **v0.7.12**（2026-08-30 发布的 Latest，跨 minor 大版本：1521 文件 +69K/−22K 行，服务端全量模块化重构 + Ekko Agent 并入 Studio + API 前缀 hermes→studio）。hermes-agent v0.20.6（v2026.8.27）与 element-web v1.12.26 仍是最新稳定版，本轮不动；上游 desktop runtime 已原生 pin `hermes-0.20.6-runtime`（ref v2026.8.27）与我们跟踪的 agent 一致，patch 108 使命完成摘除。
 
