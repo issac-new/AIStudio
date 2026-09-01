@@ -1,10 +1,10 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index af4e2a42..7feb8d58 100644
+index 763b5db..8757607 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -3295,4 +3295,21 @@ export default {
-     new_0_6_42_9: 'MiniMax 图生视频现支持 Global 与中国区官方 v1 接口，可接收 URL、base64 或本地图片，轮询任务并使用 Profile API Key 自动下载结果（#2512）',
-     new_0_6_41_1: '修复通过 npm 安装 Hermes Web UI 后本地 STT 无法可靠识别的问题：在 macOS、Windows 和 Linux 上将 sherpa-onnx 原生运行时固定为与 Node.js 封装相同的版本（#2464）',
+@@ -3552,4 +3552,21 @@ export default {
+     new_0_7_0_10: '中英文 README 已更新，完整说明五种运行时、三类 Agent、模块归属、规范 API，以及当前开发和验证流程（#2745）',
+     new_0_7_0_11: '“设备互联”现仅显示 Android 和 iOS 下载卡片；Apple 正式版只标记为 App Store，不再显示 TestFlight · App Store',
    },
 +    swarmKanban: '协作看板',
 +    matrixChat: 'Matrix 聊天',
