@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index aa2019c4..894d5feb 100644
+index 29c2301..5bb0126 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -15,14 +15,14 @@ import {
+@@ -15,8 +15,8 @@ import {
    type OpenDialogOptions,
    type IpcMainInvokeEvent,
  } from 'electron'
@@ -12,14 +12,8 @@ index aa2019c4..894d5feb 100644
 +import { dirname, join } from 'node:path'
  import {
    getToken,
-   setWebUiRuntimeRestartHandler,
    setWebUiUnexpectedExitHandler,
-   startWebUiServer,
-   stopWebUiServer,
- } from './webui-server'
- import { bundledNode, desktopIcon, desktopMacTrayIcon, desktopRuntimeVersion, desktopWindowsTrayIcon, hermesBinExists, hermesBin, runtimeStorageRoot, webuiDir, webUiHome } from './paths'
- import { checkForDesktopUpdates, initAutoUpdater } from './updater'
-@@ -79,6 +79,75 @@ if (process.platform === 'win32') {
+@@ -92,6 +92,75 @@ if (process.platform === 'win32') {
    app.setAppUserModelId(APP_USER_MODEL_ID)
  }
  
