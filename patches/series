@@ -146,7 +146,7 @@
 # Windows runtime + quit lifecycle fixes (Phase 3)
 146-bridge-agent-root-optional-default.patch
 148-package-runtime-run-agent-check.patch
-149-runtime-manager-require-run-agent.patch
+#149-runtime-manager-require-run-agent.patch  # v0.7.15 上游已原生包含 run_agent.py/cli.py 必需文件检查,使命完成摘除(同 108 先例)
 150-updater-no-auto-install-on-quit.patch
 151-desktop-startup-quit-logging.patch
 153-bridge-import-fallback-for-missing-run-agent.patch

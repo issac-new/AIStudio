@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
-index a08cb8f..372356c 100644
+index e23eedc..dff1f4c 100644
 --- a/hermes_cli/kanban.py
 +++ b/hermes_cli/kanban.py
 @@ -78,6 +78,7 @@ def _task_to_dict(t: kb.Task) -> dict[str, Any]:
@@ -23,10 +23,10 @@ index a08cb8f..372356c 100644
  
      b_rm = boards_sub.add_parser(
          "rm", aliases=["remove", "delete"],
-@@ -326,6 +333,16 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
-     b_set_wd.add_argument("path", nargs="?", default=None,
-                           help="Absolute path to use as default workdir. Omit to clear.")
- 
+@@ -363,6 +370,15 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+     b_import.add_argument("--switch", action="store_true",
+                           help="Switch to the imported board afterwards")
+     b_import.add_argument("--json", action="store_true")
 +    # HERMES_CUSTOM[v020] BEGIN: boards set-project verb
 +    b_set_proj = boards_sub.add_parser(
 +        "set-project",
@@ -36,11 +36,10 @@ index a08cb8f..372356c 100644
 +    b_set_proj.add_argument("project", nargs="?", default=None,
 +                            help="Project id or slug. Omit or 'none' to clear.")
 +    # HERMES_CUSTOM[v020] END
-+
+ 
      # --- create ---
      p_create = sub.add_parser("create", help="Create a new task")
-     p_create.add_argument("title", help="Task title")
-@@ -380,6 +397,14 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+@@ -418,6 +434,14 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
                            help="Provider the --model belongs to (passed as "
                                 "--provider <name> to the worker). Requires "
                                 "--model.")
@@ -55,7 +54,7 @@ index a08cb8f..372356c 100644
      p_create.add_argument("--goal", action="store_true", dest="goal_mode",
                            help="Run the worker in a goal loop: after each "
                                 "turn a judge checks the response against the "
-@@ -495,6 +520,30 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+@@ -533,6 +557,30 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
               "--provider <name>). Cleared together with the model.",
      )
  
@@ -86,7 +85,7 @@ index a08cb8f..372356c 100644
      # --- reclaim / reassign (recovery) ---
      p_reclaim = sub.add_parser(
          "reclaim",
-@@ -1050,6 +1099,10 @@ def kanban_command(args: argparse.Namespace) -> int:
+@@ -1152,6 +1200,10 @@ def kanban_command(args: argparse.Namespace) -> int:
              "show":     _cmd_show,
              "assign":   _cmd_assign,
              "set-model": _cmd_set_model,
@@ -97,7 +96,7 @@ index a08cb8f..372356c 100644
              "reclaim":  _cmd_reclaim,
              "reassign": _cmd_reassign,
              "diagnostics": _cmd_diagnostics,
-@@ -1154,6 +1207,7 @@ _DELEGATED_CHILD_DENIED_BOARD_ACTIONS: frozenset[str] = frozenset({
+@@ -1259,6 +1311,7 @@ _DELEGATED_CHILD_DENIED_BOARD_ACTIONS: frozenset[str] = frozenset({
      "use",
      "rename",
      "set-default-workdir",
@@ -105,16 +104,16 @@ index a08cb8f..372356c 100644
  })
  
  
-@@ -1201,6 +1255,8 @@ def _dispatch_boards(args: argparse.Namespace) -> int:
-         return _cmd_boards_rename(args)
-     if sub == "set-default-workdir":
-         return _cmd_boards_set_default_workdir(args)
+@@ -1310,6 +1363,8 @@ def _dispatch_boards(args: argparse.Namespace) -> int:
+         return _cmd_boards_export(args)
+     if sub == "import":
+         return _cmd_boards_import(args)
 +    if sub == "set-project":  # HERMES_CUSTOM[v020]
 +        return _cmd_boards_set_project(args)
      print(f"kanban boards: unknown action {sub!r}", file=sys.stderr)
      return 2
  
-@@ -1265,13 +1321,29 @@ def _cmd_boards_create(args: argparse.Namespace) -> int:
+@@ -1374,13 +1429,29 @@ def _cmd_boards_create(args: argparse.Namespace) -> int:
          print("kanban boards create: slug is required", file=sys.stderr)
          return 2
      already = kb.board_exists(normed) and normed != kb.DEFAULT_BOARD
@@ -145,10 +144,10 @@ index a08cb8f..372356c 100644
      )
      verb = "already exists" if already else "created"
      print(f"Board {meta['slug']!r} {verb}.")
-@@ -1376,6 +1448,43 @@ def _cmd_boards_set_default_workdir(args: argparse.Namespace) -> int:
+@@ -1541,6 +1612,41 @@ def _cmd_boards_import(args: argparse.Namespace) -> int:
+     else:
+         print(f"  Switch to it with `hermes kanban boards switch {res['board']}`.")
      return 0
- 
- 
 +# HERMES_CUSTOM[v020] BEGIN: boards set-project handler
 +def _cmd_boards_set_project(args: argparse.Namespace) -> int:
 +    try:
@@ -184,12 +183,10 @@ index a08cb8f..372356c 100644
 +        print(f"  default_workdir: {meta['default_workdir']}")
 +    return 0
 +# HERMES_CUSTOM[v020] END
-+
-+
+ 
+ 
  # ---------------------------------------------------------------------------
- 
- 
-@@ -1516,6 +1625,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
+@@ -1683,6 +1789,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
              max_retries=max_retries,
              model_override=getattr(args, "model_override", None),
              provider_override=getattr(args, "provider_override", None),
@@ -197,7 +194,7 @@ index a08cb8f..372356c 100644
              goal_mode=bool(getattr(args, "goal_mode", False)),
              goal_max_turns=getattr(args, "goal_max_turns", None),
              initial_status=getattr(args, "initial_status", "running"),
-@@ -1823,6 +1933,140 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
+@@ -1993,6 +2100,140 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
      return 0
  
  
