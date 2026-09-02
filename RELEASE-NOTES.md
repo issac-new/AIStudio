@@ -1,7 +1,53 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.11**（基于 hermes-studio v0.7.15 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+SwarmStudio **2.12**（基于 hermes-studio v0.7.16 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.12** — hermes-studio v0.7.15 → **v0.7.16**（2026-09-02 发布的 Latest；同 commit 双标签 **v1.0.1**——上游在打 0.7.16 的同时补打了 1.0 线标签，内容完全一致；6 commits、122 文件 +3845/−332：Grok coding agent / coding-agents 隔离全局模式 / Windows 旧版数据安全迁移 / runtime 重启桥接修复）。hermes-agent 维持 **v0.21.0**（v2026.8.31 仍是最新 stable tag，本轮无新版本）。element-web v1.12.26 → **v1.12.27**（1.12.27 已正式发布，参考实现同步 checkout）。runtime pin 维持上游原生 `hermes-0.20.6-runtime`（`0.21.0-runtime` 仍未发布，agent 源码跟踪 0.21.0 与 runtime 0.20.6 分离惯例延续）。
+
+### 2.12 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.7.16（=v1.0.1） | v0.7.15 → v0.7.16（单 tag，6 commits；v1.0.1 为同 commit 双标签） |
+| hermes-agent | v0.21.0（v2026.8.31） | 不变（仍为最新 stable） |
+| element-web | v1.12.27 | v1.12.26 → v1.12.27（参考实现，非构建依赖） |
+
+**上游 v0.7.16 主要内容**（6 commits）
+
+- **Grok coding agent**（#2832）：coding-agents 阵容新增 Grok（内置 agents 空状态插画同步新增 Pi/Grok 形象）
+- **coding-agents 隔离全局模式**（#2828）：Studio 全局（跨 profile）支持 coding agent 隔离运行
+- **Windows 旧版 Hermes 数据安全迁移**（#2834 + #2836）：legacy Windows 数据目录迁移 + 迁移范围收紧（只动确认属于 Hermes 的数据）
+- **bridge 远程 runtime 重启桥接**（#2827）：runtime 重启事件正确透传到桌面端（RuntimeRestartPrompt 联动）
+
+**patch 迁移（3 regen / 141 active）**
+
+初次干跑仅 3 失败（2.11 同期为 19），上游 0.7.15→0.7.16 变更与 overlay 触面基本正交：
+
+| patch | 冲突点 | 解决 |
+|-------|--------|------|
+| 042-desktop-rebrand-pkg | package.json 版本行 0.7.15→0.7.16 vs 品牌 | 版本取上游 0.7.16，品牌取 ours（2.11 先例沿用） |
+| 102-groupmessagelist-gateway-banner | 上游 emptyStateAgents 新增 Pi/Grok 两行，hunk#2 上下文错位 | 过滤器逻辑不变，上下文重排后 regen |
+| 141-desktop-win-file-logging | index.ts import 块上游新增 setWebUiRestartRequestHandler，hunk#1 错位 | import 并集 regen（2.11 的 144 先例） |
+| 151-desktop-startup-quit-logging | 同文件级联失败 | 141 修复后零改动通过 |
+
+**验证**
+
+- `npm run inject` 141 patches 全量干净应用（clean → inject 端到端复跑）
+- `npm run build:full` 通过（client + server + openapi）
+- `npm test` 69 文件 518 passed / 6 skipped
+- `build:full` vite 构建 + electron-builder mac/win 双产物
+
+**构建产物**（sha256 见下）
+
+- `SwarmStudio-0.7.16-arm64.dmg`（macOS arm64，375MB）
+  `d3ea40218e49be74a11f63f35f31372174dcd77fe7a35cb79ba717e205777d8b`
+- `SwarmStudio-0.7.16-x64.zip`（Windows x64，411MB）
+  `3fda92c77c699c072fb96667800a685a75a491a33df52bc06d55fc540fc1c6f9`
+
+### 2.11 归档说明（上一版，基于 hermes-studio v0.7.15）
 
 > **2.11** — hermes-studio v0.7.12 → **v0.7.15**（2026-09-01 发布的 Latest，v0.7.13/14/15 三个 tag、9 commits、80 文件 +4053/−1074，全部集中在 runtime 稳定性）+ hermes-agent v0.20.6 → **v0.21.0**（v2026.8.31，"Pantheon" 大版本，911 commits：Bot Mode / hermes peer / cron 记忆 / 子代理实时转向 / MCP 指挥中心 / 桌面浏览器接管）。element-web v1.12.26 仍是最新稳定版（1.12.27 仅 rc），本轮不动。runtime pin：上游原生 `hermes-0.20.6-runtime`（`0.21.0-runtime` 截至 2026-09-01 仍未发布，probe 404），agent 源码跟踪 v0.21.0 与 runtime 0.20.6 暂时分离（同 2.6/2.9 惯例，0.21.0 runtime 发布后随上游 pin 自动跟进）。
 

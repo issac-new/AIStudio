@@ -6,7 +6,7 @@ index 6e330db..c3d7f26 100644
  {
 -  "name": "hermes-studio",
 +  "name": "swarmstudio",
-   "version": "0.7.15",
+   "version": "0.7.16",
 -  "description": "Hermes Studio desktop distribution with bundled Python runtime and hermes-agent",
 +  "description": "SwarmStudio desktop distribution with bundled Python runtime and hermes-agent",
    "homepage": "https://hermes-studio.ai",
