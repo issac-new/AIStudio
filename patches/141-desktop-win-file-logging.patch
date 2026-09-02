@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 29c2301..5bb0126 100644
+index 0385c151..bc3c7846 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
 @@ -15,8 +15,8 @@ import {
@@ -12,8 +12,8 @@ index 29c2301..5bb0126 100644
 +import { dirname, join } from 'node:path'
  import {
    getToken,
-   setWebUiUnexpectedExitHandler,
-@@ -92,6 +92,75 @@ if (process.platform === 'win32') {
+   setWebUiRestartRequestHandler,
+@@ -95,6 +95,75 @@ if (process.platform === 'win32') {
    app.setAppUserModelId(APP_USER_MODEL_ID)
  }
  
