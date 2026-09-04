@@ -27,7 +27,7 @@ SwarmStudio **2.13**（基于 hermes-studio v0.7.16 + hermes-agent v0.21.0 源�
 - patch 198 反转 071 的路由删除：恢复 `/hermes/workflow`、`/hermes/group-chat(+/room/:roomId/+2 redirect)`；GlobalPendingActions / PageSidebarNav 的群聊与工作流审批深链复活，服务端 40+ 端点的多 agent 群聊重新有 UI 入口（cockpit 的 groupStore 本就连着）。
 
 **回归与验证**
-- 干净基线（pristine v0.7.16）全量注入 **173/173** patch 通过；server `tsc --noEmit` 0 错；`build:full` 产出新鲜 dist。
+- 干净基线（pristine v0.7.16）全量注入 **147/147** patch 通过；server `tsc --noEmit` 0 错；`build:full` 产出新鲜 dist。
 - overlay vitest：**74 files / 541 pass / 6 skip / 0 fail**（2.12 基线 69/518/6/0，新增 5 个测试文件 +23 用例：fleet-tap / kanban-overview / teams-store / inbox-adapter / fleet-adapter；notify-modal 测试适配新收件箱语义）。
 - upstream i18n-coverage 维持既有失败面（26 个静态缺失键，数量与 2.12 一致，无新增）。
 
