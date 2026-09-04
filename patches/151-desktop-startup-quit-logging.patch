@@ -1,8 +1,8 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 894d5feb..b89b0c60 100644
+index 3e0e89e..2e58c58 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -147,6 +147,25 @@ function hookDesktopConsole(): void {
+@@ -163,6 +163,25 @@ function hookDesktopConsole(): void {
  
  hookDesktopConsole()
  
@@ -28,7 +28,7 @@ index 894d5feb..b89b0c60 100644
  
  function cancelWindowFade() {
    if (windowFadeTimer) {
-@@ -194,7 +213,9 @@ function showMainWindow() {
+@@ -210,7 +229,9 @@ function showMainWindow() {
    showWindowWithFade(true)
  }
  
@@ -36,10 +36,10 @@ index 894d5feb..b89b0c60 100644
 +function quitApp(reason?: 'tray' | 'second-instance-quit' | 'update-explicit' | 'os' | 'unknown') {
 +  quitReason = reason || 'tray'
 +  console.log(`[quit] quitApp reason=${quitReason}`)
-   isQuitting = true
-   app.quit()
+   appLifecycle.quit()
  }
-@@ -497,7 +518,7 @@ function updateTrayMenu() {
+ 
+@@ -521,7 +542,7 @@ function updateTrayMenu() {
      { type: 'separator' },
      {
        label: t('tray.quit'),
@@ -48,7 +48,7 @@ index 894d5feb..b89b0c60 100644
      },
    ])
    tray.setContextMenu(menu)
-@@ -1121,8 +1142,9 @@ function runDesktopApp() {
+@@ -1352,8 +1373,9 @@ function runDesktopApp() {
    }
  
    app.on('second-instance', (_event, argv, _workingDirectory, additionalData) => {
@@ -59,11 +59,11 @@ index 894d5feb..b89b0c60 100644
        return
      }
      // overlay[fix-second-instance]: a second SwarmStudio.exe launch must NOT
-@@ -1191,6 +1213,7 @@ function runDesktopApp() {
+@@ -1402,6 +1424,7 @@ function runDesktopApp() {
    })
  
    app.on('before-quit', async (e) => {
-+    console.log(`[quit] before-quit isQuitting=${isQuitting} reason=${quitReason}`)
-     if (!isQuitting && process.platform !== 'darwin') {
++    console.log(`[quit] before-quit isQuitting=${appLifecycle.isQuitting} reason=${quitReason}`)
+     if (!appLifecycle.isQuitting && process.platform !== 'darwin') {
        e.preventDefault()
        mainWindow?.hide()

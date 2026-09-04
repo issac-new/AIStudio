@@ -125,7 +125,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 ```
 ncwk/
 ├── upstream/                 # 上游原始项目（只读，禁止直接修改）
-│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.7.16）
+│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.7.17）
 │   ├── element-web/          #   Element Web Matrix 客户端参考实现
 │   └── hermes-agent/         #   Hermes AI Agent 运行时
 ├── overlay/                  # ← 本仓：二次开发代码（唯一被提交的地方）
@@ -324,7 +324,7 @@ SwarmStudio 基于以下三个上游开源项目二次开发：
 
 | 上游项目 | GitHub 仓库 | 用途 |
 |---------|-----------|------|
-| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v0.7.16） |
+| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v0.7.17） |
 | **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，源码跟踪 v0.21.0 / v2026.8.31，2 个 CLI patch 注入；桌面捆绑 runtime pin hermes-0.20.6-runtime，首次启动下载） |
 | **element-web** | https://github.com/element-hq/element-web | Element Web Matrix 客户端参考实现（v1.12.27） |
 
@@ -402,7 +402,7 @@ npm run dev                                           # 前台跑，Ctrl+C 停�
 
 ### 完整构建 + 桌面端打包（两个版本构建物）
 
-SwarmStudio 桌面端当前版本 **0.7.16**，构建产物分 **macOS** 与 **Windows** 两个版本。
+SwarmStudio 桌面端当前版本 **0.7.17**，构建产物分 **macOS** 与 **Windows** 两个版本。
 
 **方式 A — overlay 一键脚本（推荐，自动 inject + build:full + electron-builder）**
 
@@ -412,14 +412,14 @@ cd overlay
 # macOS 版（arm64 DMG + zip）
 npm run build:dmg:mac
 # 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.7.16-arm64.dmg
-#       └── SwarmStudio-0.7.16-arm64.zip
+#       ├── SwarmStudio-0.7.17-arm64.dmg
+#       └── SwarmStudio-0.7.17-arm64.zip
 
 # Windows 版（x64 zip + NSIS exe 安装器）
 npm run build:dmg:win
 # 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.7.16-x64.zip
-#       └── SwarmStudio-0.7.16-x64.exe
+#       ├── SwarmStudio-0.7.17-x64.zip
+#       └── SwarmStudio-0.7.17-x64.exe
 ```
 
 `build-dmg.mjs` 编排 5 步（自动完成，无需手动分步）：
@@ -519,7 +519,7 @@ patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。
 - **141** 个 active B 类 patch（100% inject 通过率）
 - **116** 个自定义 Vue 组件（Cockpit 34 / Matrix Chat 50 / Kanban 15 / Loop 16 / 其他 1）
 - **69** 个单测文件（vitest，custom/**）
-- 上游基础：hermes-studio v0.7.16 / hermes-agent v0.21.0 / element-web v1.12.27
+- 上游基础：hermes-studio v0.7.17 / hermes-agent v0.21.0 / element-web v1.12.27
 
 ## 设计文档
 

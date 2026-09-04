@@ -1,11 +1,12 @@
 diff --git a/package.json b/package.json
+index 9d9e3b6..c691232 100644
 --- a/package.json
 +++ b/package.json
-@@ -89,6 +89,7 @@
+@@ -97,6 +97,7 @@
      "node-pty": "^1.1.0",
      "sharp": "^0.35.3",
      "sherpa-onnx-node": "1.13.3",
 +    "pg": "^8.13.1",
      "proper-lockfile": "^4.1.2",
+     "smol-toml": "^1.8.0",
      "socket.io": "^4.8.3",
-     "socket.io-client": "^4.8.3"
