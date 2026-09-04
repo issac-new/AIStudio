@@ -1,9 +1,10 @@
 diff --git a/package.json b/package.json
+index b486cd6..9d9e3b6 100644
 --- a/package.json
 +++ b/package.json
-@@ -83,6 +83,7 @@
-     "adm-zip": "^0.6.0",
+@@ -87,6 +87,7 @@
      "agent-browser": "^0.26.0",
+     "boring-avatars-vanilla": "^1.0.2",
      "echarts": "^6.1.0",
 +    "cron-parser": "^5.1.1",
      "eventsource": "^4.1.0",

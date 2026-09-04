@@ -1,7 +1,63 @@
 # SwarmStudio 发布说明
 
 ## 版本
-SwarmStudio **2.13**（基于 hermes-studio v0.7.16 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+SwarmStudio **2.14**（基于 hermes-studio v0.7.17 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.14** — hermes-studio v0.7.16 → **v0.7.17**（20 commits、115 文件 +6909/−723：coding agent Skills/MCP 视图统一、Boring Avatars、桌面退出生命周期重构、Grok/Codex/Ekko 修复批次）。hermes-agent 维持 **v0.21.0**（v2026.8.31 仍是最新 stable tag）。element-web 维持 **v1.12.27**（仍是最新稳定版）。runtime pin 维持上游原生 `hermes-0.20.6-runtime`（v0.7.17 未改 pin；仓库已出现 hermes-0.21.0-runtime tag 但上游尚未引用，随上游后续 bump 自动跟进）。**2.13（指挥中心升级）未单独发布，随本轮 2.14 一并上车。**
+
+### 2.14 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.7.17 | v0.7.16 → v0.7.17（20 commits，115 文件 +6909/−723） |
+| hermes-agent | v0.21.0（v2026.8.31） | 不变（仍为最新 stable） |
+| element-web | v1.12.27 | 不变（仍为最新 stable） |
+
+**上游 v0.7.17 主要内容**（20 commits）
+
+- **coding agent 体验统一**：Skills 与 MCP 视图合并（#2871）、设置导航（#2854）、Grok 配置页对齐其他 agent（#2870/#2868）、Grok 失败会话续跑（#2857）、Grok/Codex 切官方 npm registry（#2855/#2881）
+- **头像更换 Boring Avatars**（#2875，替换生成式头像）
+- **app-relay / app-connections**：生产端点恢复（#2874）、entitlement 失败透出（#2872）、购买链接与失败本地化（#2873）
+- **桌面退出生命周期重构**：tray quit 可取消待执行重启（#2852，新增 `app-lifecycle` 模块）、已处理的重启提示持久化（#2842）
+- **Ekko 加固**：超大工具输出截断（#2847）、记忆与工作区处理加固（#2846）、provider 不安全 MCP 工具名代理过滤（#2849）
+- **其他**：TTS 启动时激活 provider 水合（#2839）、Skills 路径保留字符编码（#2845）、移动渠道版本支持（#2843）
+
+**patch 迁移（8 regen / 147 active）**
+
+初次干跑 12 失败，其中 4 个为 agent 仓 patch（studio 树上预期失败），实际冲突 8 处：
+
+| patch | 冲突点 | 解决 |
+|-------|--------|------|
+| 026-client-accountsettings-matrix | AccountSettings.vue 上游改动 | 3-way 干净合并，零手工 |
+| 042-desktop-rebrand-swarmstudio-pkg | 版本行 0.7.16→0.7.17 vs 品牌字段 | 版本取上游 0.7.17，品牌取 ours（先例沿用） |
+| 070-cockpit-App.vue | 上游 #2839 在 App.vue 用 profilesStore 替换了 authStore 位 | 双保留：upstream `profilesStore`（TTS 水合）+ ours `authStore`（fetchUser） |
+| 080/136/137/138 依赖 patch | 根 package.json 依赖块插入位偏移（上游新增 boring-avatars-vanilla 等） | 并集合并，双方依赖都保留 |
+| 151-desktop-startup-quit-logging | 上游 #2852 把退出逻辑抽成 `app-lifecycle` 模块，`quitApp`/`isQuitting` 结构变更 | 日志移植到新架构：`quitApp` 保留 reason 参数并委托 `appLifecycle.quit()`；before-quit 改用 `appLifecycle.isQuitting` |
+
+**2.13 功能随车发布**：2.13（指挥中心升级：舰队网格 / 看板服务端聚合 / 团队注册表 / 注意力收件箱 / 群聊与工作流回航）此前已合入 main 但未产出构建物，本轮与上游升级合并为 2.14 一次性发布。
+
+**验证**
+
+- `npm run inject` 147 patches 全量干净应用（143 studio + 4 agent）
+- Phase 0 交叉验证：v0.7.17 重放终树 vs 线上 2.13 注入树，差异 92 文件全部可由上游 v0.7.16→v0.7.17 变更解释，无 overlay 改动丢失
+- server `tsc --noEmit` 0 错误；`npm run build:full` 通过
+- overlay vitest：**74 files / 541 pass / 6 skip / 0 fail**（与 2.13 基线完全一致）
+- upstream patch 触碰面测试：kanban 三件套 + auth-routes-avatar（44 pass）、matrix ×6（30 pass）
+
+**构建产物**（macOS arm64 DMG + Windows x64 zip）
+
+- `SwarmStudio-0.7.17-arm64.dmg`（373.7MB）
+  `4e9cad848c35b2edf63edd6793a2b9cbf65627a940d55e34bb777b8ffe85a89d`
+- `SwarmStudio-0.7.17-x64.zip`（409.7MB）
+  `0e0802e975c538613b8c44e07c1bb8995cf29c6c466426aa0f3a6f3b356f9a7b`
+
+---
+
+## 历史版本
+
+SwarmStudio **2.13**（基于 hermes-studio v0.7.16 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发；未单独发布，随 2.14 上车）
 
 > **2.13 指挥中心升级（Command Post）** — 本轮为 overlay 功能版本：上游三仓维持 2.12 基线（hermes-studio v0.7.16 / hermes-agent v0.21.0 / element-web v1.12.27）不动，全部能力来自 overlay 追加（patch 195–200 + custom 代码 +3253 行）。目标：让 AI 协作中心成为多团队 × 多任务并行的日常主指挥岗位——补齐相对 hermes TUI / Claude Code 的核心差距（多会话同屏、跨团队组织、统一待办、群聊会话面）。
 
