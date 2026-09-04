@@ -36,12 +36,12 @@ beforeEach(() => {
   matrixGetRoomUnreadCount.mockReturnValue(0)
 })
 
-describe('CockpitNotifyModal (Matrix-only dropdown)', () => {
-  it('空态：无未读时显示 notifyEmpty', () => {
+describe('CockpitNotifyModal (统一收件箱 dropdown, 2.13)', () => {
+  it('空态：无待处理时显示 inboxClear', () => {
     const store = useCockpitStore()
     store.openNotify()
     const w = mount(CockpitNotifyModal)
-    expect(w.text()).toContain('notifyEmpty')
+    expect(w.text()).toContain('inboxClear')
   })
 
   it('渲染 matrix 未读条目 + 点击 → closeNotify + router.push 进入 matrix 聊天页', async () => {

@@ -25,6 +25,12 @@ import type { NotifyItem, NotifyKind } from '../adapters/notify-adapter'
 import type { ChatMessage } from '../adapters/chat-adapter'
 import type { KanbanTaskDetail } from '@/api/hermes/kanban'
 import type { RouteLocationRaw } from 'vue-router'
+import * as fleetAdapter from '../adapters/fleet-adapter'
+import type { FleetSession } from '../adapters/fleet-adapter'
+import * as teamsApi from '../adapters/teams-adapter'
+import type { TeamRecord } from '../adapters/teams-adapter'
+import * as inboxAdapter from '../adapters/inbox-adapter'
+import type { InboxItem } from '../adapters/inbox-adapter'
 
 // 重新导出类型（供组件继续从 store 导入）
 export type CockpitTask = taskAdapter.CockpitTask
@@ -44,7 +50,7 @@ export interface HistoryFilters {
   actions: string[]
   statuses: ('active' | 'done' | 'archived')[]
 }
-export type WorkspaceMode = 'work' | 'term' | 'workspace' | 'chat'
+export type WorkspaceMode = 'work' | 'term' | 'workspace' | 'chat' | 'fleet'
 export type ChannelKind = 'matrix' | 'chat' | 'group' | 'plain'
 export type WorkDecision = kv.WorkDecision
 export type DraftWorkItem = kv.DraftWorkItem
@@ -123,7 +129,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
     return kanban.tasks.map(t => taskAdapter.toCockpitTask(t, 'default'))
   })
   const attention = computed(() => {
-    return tasks.value
+    // 团队过滤（2.13）：activeTeam 限定 board 集合时，注意力条同域收窄
+    const teamBoards = _teamBoardSet.value
+    const source = teamBoards ? tasks.value.filter(t => teamBoards.has(t.boardSlug)) : tasks.value
+    return source
       .map(t => attentionAdapter.toAttention({ ...t, status: t.status } as any))
       .filter((x): x is AttentionItem => x !== null)
       .sort((a, b) => {
@@ -241,6 +250,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const filteredTasks = computed(() =>
     sortedTasks.value.filter(t => {
       const f = filters.value
+      // 团队过滤（2.13）：activeTeam 限定 board 集合
+      const teamBoards = _teamBoardSet.value
+      if (teamBoards && !teamBoards.has(t.boardSlug)) return false
       const okArr = <T,>(arr: T[], v: T) => arr.length === 0 || arr.includes(v)
       // 日期范围筛选（需求 #1）
       let dateOk = true
@@ -364,11 +376,35 @@ export const useCockpitStore = defineStore('cockpit', () => {
   )
   const relationsForSelectedTask = computed(() => topologyForSelectedTask.value.relations)
 
-  // ── 通知（仅 Matrix 未读消息）──
+  // ── 通知（Matrix 未读 + 会话未读 + 待办提醒）──
   const notifyOpen = ref(false)
 
+  // 会话未读（chat store 的 unreadMessages map → NotifyItem；2.13 并入通知面板）
+  const chatUnreadItems = computed<NotifyItem[]>(() => {
+    const unread = (chatStore as any).unreadMessages as Map<string, { count: number; lastPreview: string; lastRole: string; lastTs: number }> | undefined
+    if (!unread || typeof unread.entries !== 'function') return []
+    const sessions = (chatStore as any).sessions as Array<{ id: string; title?: string; profile?: string | null }> | undefined
+    const byId = new Map((sessions || []).map(s => [s.id, s]))
+    const items: NotifyItem[] = []
+    for (const [id, info] of unread.entries()) {
+      if (!info || !(info.count > 0)) continue
+      const session = byId.get(id)
+      const item = notifyAdapter.fromChatSession({
+        id,
+        title: session?.title || id,
+        profile: session?.profile || undefined,
+        unreadCount: info.count,
+        lastPreview: info.lastPreview,
+        lastRole: info.lastRole,
+        lastTs: info.lastTs,
+      })
+      if (item) items.push(item)
+    }
+    return items
+  })
+
   const notifyItems = computed<NotifyItem[]>(() => {
-    const items: NotifyItem[] = [...reminderNotifications.value]
+    const items: NotifyItem[] = [...reminderNotifications.value, ...chatUnreadItems.value]
     for (const room of (matrixRoom as any).sortedRooms ?? []) {
       const item = notifyAdapter.fromMatrixRoom(room, (r: any) => (matrixRoom as any).getRoomUnreadCount(r))
       if (item) items.push(item)
@@ -377,6 +413,129 @@ export const useCockpitStore = defineStore('cockpit', () => {
   })
 
   const notifyCount = computed(() => notifyItems.value.reduce((n, i) => n + i.count, 0))
+
+  // ── 2.13 指挥中心：舰队（跨 profile 会话实时快照）──
+  const fleetSessions = ref<FleetSession[]>([])
+  const fleetConnected = ref(false)
+  let _fleetStream: fleetAdapter.FleetStreamHandle | null = null
+  let _overviewStream: fleetAdapter.FleetStreamHandle | null = null
+  let _overviewDebounce: ReturnType<typeof setTimeout> | undefined
+
+  function initFleetStream() {
+    if (_fleetStream) return
+    _fleetStream = fleetAdapter.connectFleetStream({
+      onSnapshot: snapshot => { fleetSessions.value = snapshot.sessions },
+      onStatus: connected => { fleetConnected.value = connected },
+    })
+    // 看板聚合 WS：任一 board 有事件 → 去抖全量刷新（替代 30s 盲轮询的主力）
+    _overviewStream = fleetAdapter.connectOverviewStream({
+      onBoardEvent: () => {
+        if (_overviewDebounce) clearTimeout(_overviewDebounce)
+        _overviewDebounce = setTimeout(() => { void refreshAllBoards(true) }, 500)
+      },
+    })
+  }
+
+  function stopFleetStream() {
+    _fleetStream?.close()
+    _fleetStream = null
+    _overviewStream?.close()
+    _overviewStream = null
+    if (_overviewDebounce) {
+      clearTimeout(_overviewDebounce)
+      _overviewDebounce = undefined
+    }
+    fleetConnected.value = false
+  }
+
+  const fleetSessionsFiltered = computed(() => {
+    const profiles = teamProfileFilter.value
+    if (!profiles) return fleetSessions.value
+    const allow = new Set(profiles)
+    return fleetSessions.value.filter(s => allow.has(s.profile || 'default'))
+  })
+
+  /** 就地审批（跨 profile，2.13）：成功后本地摘除该审批，等下一拍快照对齐 */
+  async function respondFleetApproval(sessionId: string, approvalId: string, choice: 'once' | 'session' | 'always' | 'deny') {
+    try {
+      const result = await teamsApi.respondFleetApproval(sessionId, approvalId, choice)
+      if (result.resolved) {
+        fleetSessions.value = fleetSessions.value.map(s => s.id === sessionId
+          ? { ...s, approvals: s.approvals.filter(a => a.approval_id !== approvalId) }
+          : s)
+      }
+      return result
+    } catch (err) {
+      return { resolved: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async function respondFleetClarify(sessionId: string, clarifyId: string, answer: string) {
+    try {
+      const result = await teamsApi.respondFleetClarify(sessionId, clarifyId, answer)
+      if (result.resolved) {
+        fleetSessions.value = fleetSessions.value.map(s => s.id === sessionId
+          ? { ...s, clarifies: s.clarifies.filter(c => c.clarify_id !== clarifyId) }
+          : s)
+      }
+      return result
+    } catch (err) {
+      return { resolved: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  // ── 2.13 指挥中心：团队注册表 ──
+  const teams = ref<TeamRecord[]>([])
+  const activeTeamId = ref<string | null>(kv.getActiveTeam())
+  const activeTeam = computed(() => teams.value.find(t => t.id === activeTeamId.value) || null)
+  const teamProfileFilter = computed<string[] | null>(() => {
+    const team = activeTeam.value
+    if (!team || !team.profiles.length) return null
+    return team.profiles
+  })
+  const _teamBoardSet = computed<Set<string> | null>(() => {
+    const team = activeTeam.value
+    if (!team || !team.boards.length) return null
+    return new Set(team.boards)
+  })
+
+  async function loadTeams() {
+    try {
+      teams.value = await teamsApi.listTeams()
+    } catch {
+      teams.value = []
+    }
+  }
+
+  function setActiveTeam(id: string | null) {
+    activeTeamId.value = id
+    kv.setActiveTeam(id)
+  }
+
+  async function saveTeam(input: { id: string | null; name: string; description?: string; color?: string; profiles?: string[]; boards?: string[] }) {
+    const { id, ...body } = input
+    const team = id
+      ? await teamsApi.updateTeam(id, body)
+      : await teamsApi.createTeam(body as teamsApi.TeamInput)
+    await loadTeams()
+    if (activeTeamId.value === team.id) setActiveTeam(team.id) // 触发过滤重算
+    return team
+  }
+
+  async function deleteTeam(id: string) {
+    await teamsApi.removeTeam(id)
+    if (activeTeamId.value === id) setActiveTeam(null)
+    await loadTeams()
+  }
+
+  // ── 2.13 指挥中心：统一注意力收件箱 ──
+  const inboxItems = computed<InboxItem[]>(() => inboxAdapter.buildInboxItems({
+    attention: attention.value,
+    fleet: fleetSessionsFiltered.value,
+    chatUnreads: chatUnreadItems.value,
+    notifyItems: notifyItems.value,
+  }))
+  const inboxCount = computed(() => inboxItems.value.length)
 
   // ── 频道（按 kanban tenant 解析规则展示 room/session，点击跳转 matrix 房间）──
   const channels = computed<CollabChannel[]>(() => {
@@ -547,6 +706,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	    if (!force && now - _lastRefreshTs < 2000) return true // 2s 防抖，视为成功（不重复刷新）
 	    _lastRefreshTs = now
 	    try {
+	      // 2.13：优先走服务端聚合端点（一次请求全 board 任务；失败回落 N+1 旧路径）
+	      try {
+	        const overview = await teamsApi.fetchKanbanOverview()
+	        boards.value = overview.boards.length ? overview.boards : [{ slug: 'default', name: 'default', total: 0 }]
+	        cockpitTasks.value = overview.tasks
+	        return true
+	      } catch { /* 聚合端点不可用 → 回落旧路径 */ }
 	      const boardList = await kanbanApi.listBoards({ includeArchived: false })
 	      const active = (boardList || []).filter((b: any) => !b.archived)
 	      boards.value = active.map((b: any) => ({ slug: b.slug, name: b.name, total: (b as any).total ?? 0 }))
@@ -590,7 +756,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	      chatStore.loadSessions(),
 	      groupStore.connect().then(() => groupStore.loadRooms()).catch(() => {}),
 	      matrixClient.initClient(),
+	      loadTeams(),
 	    ])
+	    initFleetStream()
 	    if (cockpitTasks.value.length) await selectTask(cockpitTasks.value[0].id)
 	    kanban.startEventStream?.()
 	  }
@@ -990,6 +1158,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   })
   function disconnectOnUnmount() {
     try { groupStore.disconnect?.() } catch { /* ignore */ }
+    stopFleetStream()
   }
 
   // ── 历史 ──
@@ -1360,11 +1529,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	    if (_reminderTimer) { clearInterval(_reminderTimer); _reminderTimer = undefined }
 	  }
 
-	  // ── 定时轮询所有 board（注意力条/kabban 总览自动刷新）──
+	  // ── 定时轮询所有 board（兜底刷新；主力是 2.13 聚合 WS 推送）──
 	  let _pollTimer: ReturnType<typeof setInterval> | undefined
 	  function startCockpitPolling() {
 	    if (_pollTimer) return
-	    _pollTimer = setInterval(() => { refreshAllBoards() }, 30_000)
+	    _pollTimer = setInterval(() => { refreshAllBoards() }, 60_000)
 	  }
 	  function stopCockpitPolling() {
 	    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = undefined }
@@ -1424,6 +1593,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
     channels, channelsForSelectedTask, activeChannel,
     notifyOpen, notifyItems, notifyCount,
     openNotify, closeNotify,
+    // 2.13 指挥中心
+    fleetSessions, fleetConnected, fleetSessionsFiltered,
+    respondFleetApproval, respondFleetClarify,
+    teams, activeTeamId, activeTeam, setActiveTeam, saveTeam, deleteTeam, loadTeams,
+    inboxItems, inboxCount,
     filesForSelectedTask, workItemForSelectedTask, selectedTaskDetail, boardSlugOf,
     filteredHistory, messagesForActiveChannel, templates, currentUserName,
     // 客户端态

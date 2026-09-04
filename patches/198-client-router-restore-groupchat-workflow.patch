@@ -1,0 +1,51 @@
+diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+index 246e2341..73082693 100644
+--- a/packages/client/src/router/index.ts
++++ b/packages/client/src/router/index.ts
+@@ -101,6 +101,13 @@ const router = createRouter({
+       component: () => import('@/views/hermes/KanbanView.vue'),
+       meta: { hermesConfig: true },
+     },
++    // overlay[command-post]: 2.13 恢复 workflow 路由（071 曾删除；审批深链
++    // GlobalPendingActions 一直指向它，跨团队工作流审批需要可用入口）
++    {
++      path: '/hermes/workflow',
++      name: 'hermes.workflow',
++      component: () => import('@/views/hermes/WorkflowView.vue'),
++    },
+     {
+       path: '/hermes/models',
+       name: 'hermes.models',
+@@ -245,6 +252,32 @@ const router = createRouter({
+       path: '/hermes/agents',
+       redirect: { name: 'hermes.agentManager' },
+     },
++    // overlay[command-post]: 2.13 恢复 group-chat 路由（071 曾删除；服务端
++    // 多 agent 群聊一直在线、groupStore 已连，cockpit 需要原生跨团队会话面）
++    {
++      path: '/hermes/group-chat',
++      name: 'hermes.groupChat',
++      component: () => import('@/views/hermes/GroupChatView.vue'),
++    },
++    {
++      path: '/hermes/group-chat/room/:roomId',
++      name: 'hermes.groupChatRoom',
++      component: () => import('@/views/hermes/GroupChatView.vue'),
++    },
++    {
++      path: '/hermes/history/group-chat/:roomId',
++      redirect: to => ({
++        name: 'hermes.groupChatRoom',
++        params: { roomId: to.params.roomId },
++      }),
++    },
++    {
++      path: '/hermes/group-chat/history/:roomId',
++      redirect: to => ({
++        name: 'hermes.groupChatRoom',
++        params: { roomId: to.params.roomId },
++      }),
++    },
+     {
+       path: '/hermes/files',
+       name: 'hermes.files',
