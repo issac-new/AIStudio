@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/settings/AccountSettings.vue b/packages/client/src/components/hermes/settings/AccountSettings.vue
-index 0922e9b7..b24a0abe 100644
+index 6e2bc58..4d78d3c 100644
 --- a/packages/client/src/components/hermes/settings/AccountSettings.vue
 +++ b/packages/client/src/components/hermes/settings/AccountSettings.vue
 @@ -1,14 +1,18 @@
@@ -14,7 +14,7 @@ index 0922e9b7..b24a0abe 100644
 +import { changePassword, changeUsername, fetchCurrentUser, fetchLockedIps, unlockSpecificIp, unlockAllIps, fetchMyAvatar, updateMyAvatar, resetMyAvatar, resetMatrixUserPassword } from "@/api/studio/auth";
  import type { LockedIp, UserAvatar } from "@/api/studio/auth";
  import ProfileAvatar from "@/components/hermes/profiles/ProfileAvatar.vue";
- import multiavatar from "@multiavatar/multiavatar";
+ import boring from "boring-avatars-vanilla";
  
  const { t } = useI18n();
  const message = useMessage();

@@ -1,24 +1,24 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index c8e0cfab..0832582b 100644
+index 718c0d0..5bde87c 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -21,6 +21,7 @@ import { useTheme } from "@/composables/useTheme";
- import { useKeyboard } from "@/composables/useKeyboard";
- import { useSessionSearch } from "@/composables/useSessionSearch";
+@@ -23,6 +23,7 @@ import { useSessionSearch } from "@/composables/useSessionSearch";
+ import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHydration";
  import { useAppStore } from "@/stores/hermes/app";
+ import { useProfilesStore } from "@/stores/hermes/profiles";
 +import { useAuthStore } from "@/stores/hermes/auth";
  import AuthEventListener from "@/components/auth/AuthEventListener.vue";
  import { desktopBridge } from "@/utils/desktop-bridge";
  import { naiveLocaleFor } from "@/constants/naiveLocale";
-@@ -72,6 +73,7 @@ const { t, locale } = useI18n();
- const naiveLocale = computed(() => naiveLocaleFor(locale.value));
+@@ -83,6 +84,7 @@ const naiveLocale = computed(() => naiveLocaleFor(locale.value));
  const naiveRtl = computed(() => naiveRtlFor(locale.value));
  const appStore = useAppStore();
+ const profilesStore = useProfilesStore();
 +const authStore = useAuthStore();
  const route = useRoute();
  const { sessionSearchOpen } = useSessionSearch();
  
-@@ -85,22 +87,8 @@ const isStandaloneChatPage = computed(
+@@ -100,22 +102,8 @@ const isStandaloneChatPage = computed(
    () => route.meta?.standaloneChat === true,
  );
  const isInviteOnlyPage = computed(() => route.meta?.inviteOnly === true);
@@ -43,16 +43,16 @@ index c8e0cfab..0832582b 100644
  const usesHermesConfigSidebar = computed(
    () => route.meta?.hermesConfig === true,
  );
-@@ -111,7 +99,7 @@ const showAppSidebar = computed(
+@@ -129,7 +117,7 @@ const showAppSidebar = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
 -    !usesPageSidebar.value &&
 +    !isFullscreen.value &&
      !usesHermesConfigSidebar.value &&
-     !usesEkkoConfigSidebar.value,
- );
-@@ -119,8 +107,8 @@ const showMobileMenuButton = computed(
+     !usesEkkoConfigSidebar.value &&
+     !usesCodingAgentConfigSidebar.value,
+@@ -138,8 +126,8 @@ const showMobileMenuButton = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -60,9 +60,9 @@ index c8e0cfab..0832582b 100644
      (showAppSidebar.value ||
 -      usesPageSidebar.value ||
        usesHermesConfigSidebar.value ||
-       usesEkkoConfigSidebar.value),
- );
-@@ -180,6 +168,7 @@ watch(
+       usesEkkoConfigSidebar.value ||
+       usesCodingAgentConfigSidebar.value),
+@@ -202,6 +190,7 @@ watch(
        appStore.stopHealthPolling();
        return;
      }
