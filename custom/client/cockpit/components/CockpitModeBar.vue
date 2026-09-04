@@ -38,6 +38,10 @@ function goTerminal() {
 function goChat() {
   router.push({ name: 'hermes.matrixChat' })
 }
+function goFleet() {
+  if (chatNames.has(route.name as string)) router.push({ name: 'hermes.cockpit' })
+  store.setWorkspaceMode('fleet')
+}
 </script>
 
 <template>
@@ -54,6 +58,12 @@ function goChat() {
       :class="{ 'is-on': !chatNames.has(route.name as string) && store.workspaceMode === 'workspace' }"
       @click="goWorkspace"
     ><CockpitIcon name="folder" :size="12" /> {{ t('cockpit.modeWorkspace') }}</button>
+    <button
+      type="button"
+      class="cockpit-mode-bar__mode"
+      :class="{ 'is-on': !chatNames.has(route.name as string) && store.workspaceMode === 'fleet' }"
+      @click="goFleet"
+    ><CockpitIcon name="message" :size="12" /> {{ t('cockpit.modeFleet') }}<span v-if="store.inboxCount" class="cockpit-mode-bar__count">{{ store.inboxCount }}</span></button>
     <button
       type="button"
       class="cockpit-mode-bar__mode"

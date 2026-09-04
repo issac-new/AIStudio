@@ -1,6 +1,44 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.13**（基于 hermes-studio v0.7.16 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.13 指挥中心升级（Command Post）** — 本轮为 overlay 功能版本：上游三仓维持 2.12 基线（hermes-studio v0.7.16 / hermes-agent v0.21.0 / element-web v1.12.27）不动，全部能力来自 overlay 追加（patch 195–200 + custom 代码 +3253 行）。目标：让 AI 协作中心成为多团队 × 多任务并行的日常主指挥岗位——补齐相对 hermes TUI / Claude Code 的核心差距（多会话同屏、跨团队组织、统一待办、群聊会话面）。
+
+### 2.13 明细
+
+**A. 舰队网格（Fleet Grid）— 治"单会话视角"**
+- 新增服务端跨 profile 会话聚合：patch 195 把 ChatRunSocket 实例注册给 custom fleet-tap，快照 = 内存 sessionMap（isWorking/队列/最近 200 条事件/尾部预览）+ sessions DB 合并，零额外子进程。
+- 新 WS `/api/hermes/fleet/events`：1.5s tick 推送全量快照（按用户 profile 权限过滤、变化才发）；REST `GET /api/hermes/fleet/sessions`。
+- cockpit 右栏新模式"舰队"：网格卡片（状态点/profile 徽标/运行时长/尾部预览/队列徽标），**待审批可就地一键批准/拒绝、待澄清就地应答**（`POST /api/hermes/fleet/approval|clarify`，跨 profile），点击卡片秒切全量聊天（自动切 profile）。
+
+**B. 看板服务端聚合 — 治"N+1 轮询"**
+- 新 `GET /api/hermes/kanban/overview`：一次返回全部 board + 任务（board 级 10s 缓存 + in-flight 去重）。
+- 新 WS `/api/hermes/kanban/overview/events`：每 board 一个共享 `hermes kanban watch`（引用计数、闲置 5 分钟回收），事件扇出触发客户端去抖刷新；客户端 30s 盲轮询降为 60s 兜底。
+
+**C. 团队注册表 — 治"无团队实体"**
+- Team = { profiles, boards, pinnedSessions } 具名集合，JSON 原子存储于 `~/.hermes-web-ui/overlay/teams.json`，REST CRUD（`/api/hermes/teams`，super_admin 写）。
+- cockpit TopBar 团队切换器 + 管理弹窗；切换团队后看板列/注意力条/舰队/收件箱全部按 team 收窄；选择记忆（localStorage）。
+
+**D. 统一注意力收件箱 — 治"四套分散信号"**
+- 权重排序：审批 > 阻塞 > 澄清 > 待审 > 待分类 > 会话未读 > Matrix/群聊未读 > 待办提醒；原通知面板升级为"指挥收件箱"（徽标计数改为全源），审批/澄清就地处理，任务类点击选中对应看板任务。
+
+**E. 群聊 / 工作流回航 — 治"死链"**
+- patch 198 反转 071 的路由删除：恢复 `/hermes/workflow`、`/hermes/group-chat(+/room/:roomId/+2 redirect)`；GlobalPendingActions / PageSidebarNav 的群聊与工作流审批深链复活，服务端 40+ 端点的多 agent 群聊重新有 UI 入口（cockpit 的 groupStore 本就连着）。
+
+**回归与验证**
+- 干净基线（pristine v0.7.16）全量注入 **173/173** patch 通过；server `tsc --noEmit` 0 错；`build:full` 产出新鲜 dist。
+- overlay vitest：**74 files / 541 pass / 6 skip / 0 fail**（2.12 基线 69/518/6/0，新增 5 个测试文件 +23 用例：fleet-tap / kanban-overview / teams-store / inbox-adapter / fleet-adapter；notify-modal 测试适配新收件箱语义）。
+- upstream i18n-coverage 维持既有失败面（26 个静态缺失键，数量与 2.12 一致，无新增）。
+
+**已知边界（记录在案，后续版本）**
+- 舰队快照的"尾部预览"来自内存消息尾，历史会话只有 idle 状态 + lastActive；非 running 会话不回放事件流。
+- Loop 引擎真执行（E6）、终端指挥面扩容（E7）、cockpit 用户态全量服务端化（E10）未在本轮范围，见 `docs-cockpit-command-post-2.13.md` 非目标节。
+
+---
+
+## 历史版本
+
 SwarmStudio **2.12**（基于 hermes-studio v0.7.16 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
 
 > **2.12** — hermes-studio v0.7.15 → **v0.7.16**（2026-09-02 发布的 Latest；同 commit 双标签 **v1.0.1**——上游在打 0.7.16 的同时补打了 1.0 线标签，内容完全一致；6 commits、122 文件 +3845/−332：Grok coding agent / coding-agents 隔离全局模式 / Windows 旧版数据安全迁移 / runtime 重启桥接修复）。hermes-agent 维持 **v0.21.0**（v2026.8.31 仍是最新 stable tag，本轮无新版本）。element-web v1.12.26 → **v1.12.27**（1.12.27 已正式发布，参考实现同步 checkout）。runtime pin 维持上游原生 `hermes-0.20.6-runtime`（`0.21.0-runtime` 仍未发布，agent 源码跟踪 0.21.0 与 runtime 0.20.6 分离惯例延续）。
