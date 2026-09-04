@@ -48,8 +48,10 @@ SwarmStudio **2.14**（基于 hermes-studio v0.7.17 + hermes-agent v0.21.0 源�
 
 **构建产物**（macOS arm64 DMG + Windows x64 zip）
 
-- `SwarmStudio-0.7.17-arm64.dmg`
-- `SwarmStudio-0.7.17-x64.zip`
+- `SwarmStudio-0.7.17-arm64.dmg`（373.7MB）
+  `4e9cad848c35b2edf63edd6793a2b9cbf65627a940d55e34bb777b8ffe85a89d`
+- `SwarmStudio-0.7.17-x64.zip`（409.7MB）
+  `0e0802e975c538613b8c44e07c1bb8995cf29c6c466426aa0f3a6f3b356f9a7b`
 
 ---
 
