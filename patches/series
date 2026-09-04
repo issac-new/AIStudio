@@ -229,3 +229,13 @@
 192-client-terminalview-ws-lifecycle.patch
 193-client-terminalpanel-ws-lifecycle.patch
 194-server-terminal-session-cap.patch
+
+# 2.13 指挥中心（Command Post）：舰队聚合 / 看板服务端聚合 / 团队注册表
+# 服务端：chat-run 实例注册给 custom 舰队 tap + routes 挂载 fleet/overview/teams REST + http 挂载舰队/聚合 WS
+195-server-chatrun-fleet-tap.patch
+196-server-routes-command-post.patch
+197-server-http-command-post-ws.patch
+# 客户端：恢复 group-chat/workflow 路由（071 的删除反转，修审批死链）+ cockpit 指挥中心 i18n
+198-client-router-restore-groupchat-workflow.patch
+199-client-i18n-command-post-zh.patch
+200-client-i18n-command-post-en.patch

@@ -103,3 +103,17 @@ export function loadUserTodos(): UserTodo[] {
 export function saveUserTodos(todos: UserTodo[]): void {
   try { localStorage.setItem(KEY_TODOS, JSON.stringify(todos)) } catch { /* quota 静默 */ }
 }
+
+// ── 2.13 团队选择记忆（localStorage 记住上次团队；团队本体在服务端）──
+const KEY_ACTIVE_TEAM = 'cockpit.activeTeamId'
+
+export function getActiveTeam(): string | null {
+  try { return localStorage.getItem(KEY_ACTIVE_TEAM) } catch { return null }
+}
+
+export function setActiveTeam(id: string | null): void {
+  try {
+    if (id) localStorage.setItem(KEY_ACTIVE_TEAM, id)
+    else localStorage.removeItem(KEY_ACTIVE_TEAM)
+  } catch { /* quota 静默 */ }
+}
