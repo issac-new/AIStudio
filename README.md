@@ -18,7 +18,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 - **AI 运行过程缺乏可观测性与可追溯性**：推理链黑盒、工具调用无耗时、subagent 层级扁平、跨机协作无 trace。SwarmStudio 的 RunTraceView 让每一步推理可追溯、可回放、可导出，满足合规审计场景（金融 / 医疗 / 法律）。
 - **上游二次开发易陷「分叉泥潭」**：fork 后大改导致上游无法升级。SwarmStudio 用 overlay 注入架构（A 类纯新增 + B 类 patch）让三个上游仓 `.git` 永不污染，可独立 `git pull` 升级。
 
-> 工具的形态，决定了协作的效率。SwarmStudio 的答案：不要更多聊天框，要一个驾驶舱；不要更多终端，要一张证据图；不要更多切换，要一个多视角工作区。完整价值叙述见 `../SwarmStudio-公众号宣传稿-深度版.md`。
+> 工具的形态，决定了协作的效率。SwarmStudio 的答案：不要更多聊天框，要一个驾驶舱；不要更多终端，要一张证据图；不要更多切换，要一个多视角工作区。完整价值叙述见 `../docs/SwarmStudio-公众号宣传稿-深度版.md`。
 
 ---
 
@@ -53,7 +53,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 - **注意力条**：克制的「需要你」提醒（浅底 + 左色条 + 文字），重心始终在右栏工作区
 - **左栏**：Kanban 统筹入口，按优先级聚合三类工作（协作 / 管理 / 易用），支持筛选
 - **中栏**：协作图（图谱画布）+ 时序事件流（纵向时间线），呈现并行 / 派生 / 收敛
-- **右栏**：工作区重心，A2UI 表单 + 文件资源管理器，底部衔接 Claude Code / 提交
+- **右栏**：工作区重心，A2UI 表单 + 文件资源管理器，底部衔接终端（多工具探测：Claude Code > Codex > DeepSeek Harness）与提交
 - **模式切换**：⚡ 工作项 / 💬 协作 / ⌘ 编程，同一任务多视角处理
 - 视觉严格遵循 **Pure Ink** 黑白灰主题（仅 status 用 error / warning / success 三色），避免颜色过载
 
@@ -69,7 +69,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 
 ### 📋 SwarmKanban — 协作看板
 
-自定义组件（独立路由 `swarm-kanban`），与上游原生 KanbanView 并存：
+自定义组件（cockpit 子路由 `swarm-kanban`，经 patch 071 静态注册），与上游原生 KanbanView 并存：
 
 - 看板列 / 任务卡 / 任务抽屉 / 任务表单 / 内联创建
 - 批量操作栏、注意力条、编排面板、诊断区
@@ -90,6 +90,15 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 - **登录**：Homeserver URL + MXID + 密码，Remember Me 持久化 + 本地降级
 - **管理**：账号设置、用户管理（admin-service）
 - 服务端：Matrix 认证路由、数据库 schema 扩展（Matrix 列 + SQLite UNIQUE 约束）
+
+### 🔁 Loop Engineering — 循环工程
+
+递归目标自动循环：定义目标后，引擎按 discovery → handoff → validation → persistence → scheduling 五阶段自动推进，直至满足可验证的停止条件。
+
+- 状态存储适配器自动探测：`LOOP_STATE_ADAPTER` 覆盖 → PostgreSQL（SaaSStore）→ Matrix 凭据（MatrixStore）→ 本地兜底（LocalStore）
+- 连接器（GitHub / Webhook / 本地 Git）+ 预算守卫 / 卡死检测 / 团队审批 / verifier
+- 服务端 REST 路由 + Socket.IO namespace（patch 134/135）+ pg 依赖（patch 138）
+- 状态迁移：`scripts/loop-migrate.mjs`（Local → Matrix）、`loop-migrate-saas.mjs`（Matrix → PostgreSQL）
 
 ### 🎨 品牌与网关通知
 
@@ -116,7 +125,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 ```
 ncwk/
 ├── upstream/                 # 上游原始项目（只读，禁止直接修改）
-│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.6.42）
+│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.7.16）
 │   ├── element-web/          #   Element Web Matrix 客户端参考实现
 │   └── hermes-agent/         #   Hermes AI Agent 运行时
 ├── overlay/                  # ← 本仓：二次开发代码（唯一被提交的地方）
@@ -148,31 +157,44 @@ ncwk/
 overlay/
 ├── custom/
 │   ├── client/                    # 前端 A 类代码
-│   │   ├── cockpit/               #   驾驶舱（33 组件 + store + adapters + 样式）
+│   │   ├── cockpit/               #   驾驶舱（34 组件 + store + adapters + 样式）
 │   │   ├── matrix-chat/           #   Matrix 聊天（50 组件 + views）
 │   │   ├── kanban/                #   协作看板（15 组件 + utils + views）
+│   │   ├── loop/                  #   Loop 工程化（16 组件 + engine/graph + store）
 │   │   ├── chat/                  #   网关通知横幅
 │   │   ├── branding/              #   品牌注入
 │   │   └── test/                  #   测试桩
+│   ├── desktop/                   # 桌面端 A 类（node-pty prebuild 剪枝测试）
+│   ├── hermes-agent-plugins/      # hermes-agent Python 插件（run-trace OTel formatter）
 │   └── server/                    # 服务端 A 类代码
 │       ├── kanban/                #   看板服务
-│       └── matrix/                #   Matrix 认证路由 + admin-service
-├── patches/                       # B 类 patch（80 个 active + 归档）
+│       ├── matrix/                #   Matrix 认证路由 + admin-service
+│       ├── loop/                  #   Loop 引擎（engine / connectors / store / controllers）
+│       ├── controllers/           #   Hermes 扩展控制器（trace / 终端工具探测）
+│       ├── services/              #   Hermes 扩展服务（task workspace 缓存）
+│       └── security/              #   URL 守卫（SSRF 防护）
+├── patches/                       # B 类 patch（141 个 active + 归档）
 │   └── series                     #   patch 应用顺序清单
 ├── registries/
 │   ├── client/                    # 客户端注册中枢 + entry shim + bootstrap
 │   └── server/                    # 服务端 bootstrap（预留）
 ├── config/
 │   ├── features.ts                # 功能开关（VITE_* 环境变量控制）
+│   ├── loop-config.ts             # Loop 工程化配置（状态适配器探测）
 │   └── bootstrap.ts
 ├── scripts/
 │   ├── inject.mjs                 # 注入工具（应用 patch + 生成派生 config + 建符号链接）
+│   ├── ensure-injected.mjs        # dev/build 前置钩子（幂等确保已注入）
 │   ├── build.mjs                  # 完整构建编排
 │   ├── build-dmg.mjs              # 桌面端 dmg 打包
 │   ├── verify-clean.mjs           # 校验上游工作树干净
 │   ├── sync-upstream.sh           # 上游升级流程
-│   └── serve-server.sh            # 开发期后端启动
-└── tests/                         # 单测（vitest）
+│   ├── serve-server.sh            # 开发期后端启动
+│   ├── loop-migrate.mjs           # Loop 状态迁移（LocalStore → MatrixStore）
+│   ├── loop-migrate-saas.mjs      # Loop 状态迁移（MatrixStore → PostgreSQL）
+│   ├── add-i18n-keys.mjs          # locale 文件补齐缺失 i18n key
+│   └── add-matrixchat-i18n.mjs    # Matrix Chat i18n key 注入
+└── tests/                         # 单测源（matrix-chat 测试，经 patch 055-060 注入上游 tests/ 运行）
 ```
 
 ---
@@ -188,7 +210,7 @@ inject.mjs
   │
   ├─ 0. 清理自残留（旧 server/src/custom 符号链接 + 非 patch 的 build 产物）
   ├─ 1. 校验上游工作树干净（脏则报错，提示先 clean）
-  ├─ 2. 应用 B 类 patch ──── 按 patches/series 顺序 git apply 到 hermes-studio
+  ├─ 2. 应用 B 类 patch ──── 按 patches/series 顺序 git apply 到 hermes-studio / hermes-agent（按 patch 目标自动路由）
   ├─ 3. 建符号链接
   │     ├─ overlay/node_modules → upstream/hermes-studio/node_modules（复用上游依赖）
   │     └─ upstream/.../server/src/custom → overlay/custom/server（server 用相对路径 import）
@@ -252,6 +274,7 @@ entry.mts
 | branding | `VITE_CUSTOM_BRANDING=false` | 开 |
 | extendedI18n | `VITE_CUSTOM_EXTENDED_I18N=false` | 开 |
 | cockpit | `VITE_CUSTOM_COCKPIT=false` | 开 |
+| loopEngineering | `VITE_CUSTOM_LOOP=false` | 开 |
 
 ### 4. 完整构建流水线（`npm run build:full`）
 
@@ -283,7 +306,7 @@ Koa Server (上游 packages/server + custom/server 经符号链接)
   ├─ Kanban 服务 (custom/server/kanban)
   └─ element-web 中间件 (patch 008)
   │
-hermes-agent (运行时，首次启动下载)
+hermes-agent (运行时；本地安装优先，否则首次启动下载捆绑 runtime)
 ```
 
 ---
@@ -301,9 +324,9 @@ SwarmStudio 基于以下三个上游开源项目二次开发：
 
 | 上游项目 | GitHub 仓库 | 用途 |
 |---------|-----------|------|
-| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v0.6.42） |
-| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，运行时首次启动自动下载，v0.20.0 / v2026.8.3） |
-| **element-web** | https://github.com/element-hq/element-web | Element Web Matrix 客户端参考实现（v1.12.25） |
+| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v0.7.16） |
+| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，源码跟踪 v0.21.0 / v2026.8.31，2 个 CLI patch 注入；桌面捆绑 runtime pin hermes-0.20.6-runtime，首次启动下载） |
+| **element-web** | https://github.com/element-hq/element-web | Element Web Matrix 客户端参考实现（v1.12.27） |
 
 **独立安装运行（不依赖 overlay 二次开发）**
 
@@ -379,7 +402,7 @@ npm run dev                                           # 前台跑，Ctrl+C 停�
 
 ### 完整构建 + 桌面端打包（两个版本构建物）
 
-SwarmStudio 桌面端当前版本 **0.6.42**，构建产物分 **macOS** 与 **Windows** 两个版本。
+SwarmStudio 桌面端当前版本 **0.7.16**，构建产物分 **macOS** 与 **Windows** 两个版本。
 
 **方式 A — overlay 一键脚本（推荐，自动 inject + build:full + electron-builder）**
 
@@ -389,15 +412,14 @@ cd overlay
 # macOS 版（arm64 DMG + zip）
 npm run build:dmg:mac
 # 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.6.42-arm64.dmg
-#       └── SwarmStudio-0.6.42-arm64.zip
+#       ├── SwarmStudio-0.7.16-arm64.dmg
+#       └── SwarmStudio-0.7.16-arm64.zip
 
-# Windows 版（x64 exe + zip + msi）
+# Windows 版（x64 zip + NSIS exe 安装器）
 npm run build:dmg:win
 # 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.6.42-x64.exe
-#       ├── SwarmStudio-0.6.42-x64.zip
-#       └── __msi-x64/
+#       ├── SwarmStudio-0.7.16-x64.zip
+#       └── SwarmStudio-0.7.16-x64.exe
 ```
 
 `build-dmg.mjs` 编排 5 步（自动完成，无需手动分步）：
@@ -429,7 +451,7 @@ npm --prefix packages/desktop run dist -- --mac --win --publish never
 
 ```bash
 cd overlay
-npm run inject          # 应用 80 patch
+npm run inject          # 应用 141 patch
 npm run build:full      # 构建 dist/(openapi + client + server)，落到上游 dist/
 ```
 
@@ -445,7 +467,7 @@ npm run build:full      # 构建 dist/(openapi + client + server)，落到上游
 | `npm run build` | 仅构建 client bundle |
 | `npm run build:full` | 完整构建 web UI（openapi + client + server）→ 上游 dist/ |
 | `npm run build:dmg:mac` | macOS 版构建物（arm64 DMG + zip，一键 inject+build+打包） |
-| `npm run build:dmg:win` | Windows 版构建物（x64 exe + zip + msi，一键 inject+build+打包） |
+| `npm run build:dmg:win` | Windows 版构建物（x64 zip + exe 安装器，一键 inject+build+打包） |
 | `npm run build:dmg:linux` | Linux 版构建物（一键 inject+build+打包） |
 | `npm test` | 运行单测（vitest） |
 
@@ -485,19 +507,19 @@ patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。
 | 前端 | Vue 3 + Pinia + Vue Router + Vite + TypeScript |
 | UI | Naive UI + Pure Ink 自定义主题（黑白灰）+ ECharts |
 | 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
-| 后端 | Koa + SQLite |
+| 后端 | Koa + SQLite（Loop 工程化可选 PostgreSQL） |
 | 桌面 | Electron（hermes-studio packages/desktop） |
-| 测试 | Vitest（43 个测试文件） |
+| 测试 | Vitest（69 个测试文件） |
 | Agent | hermes-agent（运行时下载，OpenTelemetry GenAI 语义对齐） |
 
 ---
 
 ## 规模
 
-- **80** 个 active B 类 patch（100% inject 通过率）
-- **99** 个自定义 Vue 组件（Cockpit 33 / Matrix Chat 50 / Kanban 15 / 其他 1）
-- **43** 个单测文件
-- 上游基础：hermes-studio v0.6.42 / hermes-agent v0.20.0 / element-web v1.12.25
+- **141** 个 active B 类 patch（100% inject 通过率）
+- **116** 个自定义 Vue 组件（Cockpit 34 / Matrix Chat 50 / Kanban 15 / Loop 16 / 其他 1）
+- **69** 个单测文件（vitest，custom/**）
+- 上游基础：hermes-studio v0.7.16 / hermes-agent v0.21.0 / element-web v1.12.27
 
 ## 设计文档
 
