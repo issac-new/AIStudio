@@ -1,6 +1,62 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+SwarmStudio **2.14**（基于 hermes-studio v0.7.17 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.15** — hermes-studio v0.7.17 → **v0.7.18**（2026-09-06 发布的 Latest；31 commits、218 文件 +9017/−948：OpenCode coding agent、群聊云端中继远程 agent、移动端日历/定位一次性授权、会话操作菜单整合、Runtime 轮询收敛 super admin、Windows runtime 修复批次）。hermes-agent 维持 **v0.21.0**（v2026.8.31 仍是最新 stable tag）。element-web 维持 **v1.12.27**（仍是最新稳定版）。runtime pin 维持上游原生 `hermes-0.20.6-runtime`（v0.7.18 未改 pin，仓库的 hermes-0.21.0-runtime tag 仍未被上游引用）。
+
+### 2.15 明细
+
+**上游版本**
+
+| 仓库 | 版本 | 变化 |
+|------|------|------|
+| hermes-studio | v0.7.18 | v0.7.17 → v0.7.18（31 commits，218 文件 +9017/−948） |
+| hermes-agent | v0.21.0（v2026.8.31） | 不变（仍为最新 stable） |
+| element-web | v1.12.27 | 不变（仍为最新 stable） |
+
+**上游 v0.7.18 主要内容**（31 commits）
+
+- **OpenCode coding agent**：新增 OpenCode 支持（#2890）、失败 MCP runtime 隔离与移除清理（#2888）、OpenCode 图标贯通（bcf49d67）、chat-run 的 worker 分流纳入 opencode
+- **群聊云端中继**：远程 agent 云端传输（b5b2acd8）、远端输出批量有序 ack（91bb81a5）、群 agent socket 隔离与断线重连重加入（0d7c6c3e）、共享群访客可看已发布 agent 图片（27544731）、中继 payload 保留与 summary 状态恢复（f901f570）、工具折叠与移动端布局对齐单聊（#2927）、消息引用回复箭头恢复（#2903）
+- **移动端能力**：一次性定位请求（#2820）、日历/提醒整合与 consent（#2926，新增 mobile-device-target / mobile-calendar 服务）
+- **会话体验**：会话操作菜单整合（#2912）、移动菜单直接建分类（#2887）、分类折叠状态刷新保留（#2896）
+- **桌面/runtime**：空闲 Runtime 轮询停止且仅 super admin 可见（#2925，App.vue RuntimeRestartPrompt 加 `isStoredSuperAdmin` 门）、跨平台设置快捷键（#2910）、Windows tar 缺失回退 Node tar（d0e6f1cc）与解压隔离（3a122952）、split Hermes runtime 的 MCP bridge import 修复（cdfc1b14）、托管 MCP 启动 harness 强制 Node 模式（89e1bf7b/7905706f）
+- **聊天/文件 UX**：workspace Markdown 预览（#2908）、代码样式本地文件链接预览（62eb9049）、上传图片发送前预览（#2885）、消息引用改引号图标（#2893）、下载页购买 CTA（#2895）、Ekko 重复工具失败恢复（#2891）、server env parser 空值跨行正则修复（#2884）
+
+**patch 迁移（4 regen / 147 active）**
+
+初次顺序干跑（pristine v0.7.18 + 全系列重放）仅 4 处失败，全部为上下文漂移型冲突，逐个 3-way 合并解决：
+
+- **042**（desktop package.json rebrand）：version 行随上游 0.7.18，品牌字段（name/description/author）保持我方——新版 patch 不再触碰 version 行；
+- **070**（App.vue）：上游 #2925 新增 `isStoredSuperAdmin` import 与 RuntimeRestartPrompt 条件，与我方 authStore import 并存（双保留）；
+- **102**（GroupMessageList）：上游 emptyStateAgents 新增 OpenCode 行，与我方 gateway 消息过滤器/banner 改动错位共存；
+- **195**（chat-run fleet-tap）：上游 import 块新增 mobile-calendar 组，与我方 fleet-tap import 并存（双保留）。
+
+i18n 级联链（074/075 → 139/140 → 158–200 共 20 个 patch）全部干净通过，零冲突。
+
+**回归与验证**
+
+- progressive 树（v0.7.17 + 144 个 studio patch 逐个提交）重建 0 失败；regen 后在全新 v0.7.18 树全量重放 **0 失败**、终态与 regen HEAD 逐字节一致；真实树 clean 反向 **147/147**。
+- inject **147/147**（studio 144 + agent 3）；server `tsc --noEmit` 0 错；overlay vitest **74 files / 541 pass / 6 skip / 0 fail**（与 2.14 基线完全一致）；`build:full` 产出新鲜 dist。
+- 构建插曲：钥匙串出现两张同名 Apple Development 证书致 codesign 消歧失败，改用 identity 哈希显式指定（1D719C61…）后通过。
+
+**已知边界（沿袭 2.14）**
+
+- runtime pin 仍为 `hermes-0.20.6-runtime`：agent 0.21.0 源码创建的看板 DB 在旧 runtime CLI 下仍会报 `no such function: kanban_write_sanctioned`，待上游 bump `hermes-0.21.0-runtime` 后自动解决。
+
+**构建产物**（2 个构建物：mac arm64 DMG + Windows x64 zip）
+
+| 构建物 | 大小 | sha256 |
+|------|------|------|
+| SwarmStudio-0.7.18-arm64.dmg | 395,140,512 B（377.2 MiB） | `7cc0bf95edb212865857d656152b55d03387040b745bd8f0a5da9e03fd1d5777` |
+| SwarmStudio-0.7.18-x64.zip | 429,682,841 B（409.7 MiB） | `cb08cc0c67eb6ef5ac3330776ef94b7df4dd80d539b726f1945562c3f31ffe57` |
+
+（未发布副产品：arm64.zip `721c470f…a6b53`、x64.exe `c6212802…1b5ee`）
+
+---
+
 SwarmStudio **2.14**（基于 hermes-studio v0.7.17 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
 
 > **2.14** — hermes-studio v0.7.16 → **v0.7.17**（20 commits、115 文件 +6909/−723：coding agent Skills/MCP 视图统一、Boring Avatars、桌面退出生命周期重构、Grok/Codex/Ekko 修复批次）。hermes-agent 维持 **v0.21.0**（v2026.8.31 仍是最新 stable tag）。element-web 维持 **v1.12.27**（仍是最新稳定版）。runtime pin 维持上游原生 `hermes-0.20.6-runtime`（v0.7.17 未改 pin；仓库已出现 hermes-0.21.0-runtime tag 但上游尚未引用，随上游后续 bump 自动跟进）。**2.13（指挥中心升级）未单独发布，随本轮 2.14 一并上车。**
