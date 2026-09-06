@@ -1,17 +1,17 @@
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index d771599b..b5448cb6 100644
+index 7264ffb..229fb57 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
-@@ -55,6 +55,8 @@ import { userCanAccessProfile } from '../repositories/users-store'
- import { observeRunChatPetEvent } from '../public/pet-events'
- import { observeChatRunWebhookEvent, type ChatRunWebhookAgent } from '../services/webhooks'
- import { getAgentStatusSnapshot } from '../public/agent-status-registry'
+@@ -63,6 +63,8 @@ import {
+   type MobileCalendarResponse,
+   type MobileCalendarRequest,
+ } from '../services/chat-run/mobile-calendar'
 +// overlay[fleet-tap]: 2.13 指挥中心 —— 注册实例供 custom 舰队聚合服务读取
 +import { registerChatRunSocket, unregisterChatRunSocket } from '../../../custom/services/hermes/fleet-tap'
  
  type AgentBridgeBackgroundNotification = any
  type AgentBridgeBackgroundSession = any
-@@ -279,6 +281,12 @@ export class ChatRunSocket {
+@@ -526,6 +528,12 @@ export class ChatRunSocket {
      this.backgroundPollTimer.unref?.()
      void this.pollBackgroundWork()
      logger.info('[chat-run-socket] Socket.IO ready at /chat-run')
@@ -24,7 +24,7 @@ index d771599b..b5448cb6 100644
    }
  
    // --- Auth middleware ---
-@@ -2201,6 +2209,10 @@ export class ChatRunSocket {
+@@ -2677,6 +2685,10 @@ export class ChatRunSocket {
    async close() {
      if (this.closing) return
      this.closing = true
