@@ -40,7 +40,7 @@ i18n 级联链（074/075 → 139/140 → 158–200 共 20 个 patch）全部干�
 
 - progressive 树（v0.7.17 + 144 个 studio patch 逐个提交）重建 0 失败；regen 后在全新 v0.7.18 树全量重放 **0 失败**、终态与 regen HEAD 逐字节一致；真实树 clean 反向 **147/147**。
 - inject **147/147**（studio 144 + agent 3）；server `tsc --noEmit` 0 错；overlay vitest **74 files / 541 pass / 6 skip / 0 fail**（与 2.14 基线完全一致）；`build:full` 产出新鲜 dist。
-- 构建插曲：钥匙串出现两张同名 Apple Development 证书致 codesign 消歧失败，改用 identity 哈希显式指定（1D719C61…）后通过。
+- 构建插曲：钥匙串新出现两张同名 Apple Development 证书，electron-builder 自动拾取签名后 macOS 26 XProtect 将未公证签名应用判为恶意软件并启动时自动删除；最终按 2.x 惯例以 `CSC_IDENTITY_AUTO_DISCOVERY=false` 禁用签名重新构建（与 2.14 可用状态一致），GitHub/ModelScope 的 dmg 已替换为无签名版。
 
 **已知边界（沿袭 2.14）**
 
@@ -50,10 +50,10 @@ i18n 级联链（074/075 → 139/140 → 158–200 共 20 个 patch）全部干�
 
 | 构建物 | 大小 | sha256 |
 |------|------|------|
-| SwarmStudio-0.7.18-arm64.dmg | 395,140,512 B（377.2 MiB） | `7cc0bf95edb212865857d656152b55d03387040b745bd8f0a5da9e03fd1d5777` |
+| SwarmStudio-0.7.18-arm64.dmg | 391,898,109 B（373.8 MiB） | `df35af46e419f9656355bdf4f19f936be1cdde7e92bdf8945413586b8e7f0629` |
 | SwarmStudio-0.7.18-x64.zip | 429,682,841 B（409.7 MiB） | `cb08cc0c67eb6ef5ac3330776ef94b7df4dd80d539b726f1945562c3f31ffe57` |
 
-（未发布副产品：arm64.zip `721c470f…a6b53`、x64.exe `c6212802…1b5ee`）
+（未发布副产品：arm64.zip、x64.exe。**注意**：mac 构建按 2.x 惯例为无签名/未公证产物——钥匙串中出现 Apple Development 证书时 electron-builder 会自动拾取签名，而 macOS 26 XProtect 会将此类未公证签名应用判为恶意软件并在启动时自动删除；因此本轮以 `CSC_IDENTITY_AUTO_DISCOVERY=false` 显式禁用签名（与 2.14 的可用状态一致，TeamIdentifier=not set），已发布的 dmg 为无签名版。）
 
 ---
 
