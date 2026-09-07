@@ -1620,6 +1620,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,
     taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment, refreshFileTree,
+    // 生命周期仪表盘数据源（TaskLifecycleView 用，只读透传）
+    cockpitTasksAny: cockpitTasks,
+    detailCacheAny: _detailCache,
     // 日程
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth, userTodos,
     loopOpen,
