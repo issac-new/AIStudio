@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import LoopGraph from '@/custom/loop/components/LoopGraph.vue'
+import LoopHealthPanel from '@/custom/loop/components/LoopHealthPanel.vue'
 import VerifierPanel from '@/custom/loop/components/VerifierPanel.vue'
 import LoopApprovalDialog from '@/custom/loop/components/LoopApprovalDialog.vue'
 import { request } from '@/api/client'
@@ -123,6 +124,9 @@ const statusColor = computed(() => {
       :events="events"
       @select="onStageSelect"
     />
+
+    <!-- 循环健康度面板（iteration/预算/stuck/repair/熔断历史） -->
+    <LoopHealthPanel />
 
     <!-- 预算进度条 -->
     <div class="loop-detail__budget">
