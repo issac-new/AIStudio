@@ -1,200 +1,24 @@
 diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
-index e23eedc..dff1f4c 100644
+index 052c2ff..5774118 100644
 --- a/hermes_cli/kanban.py
 +++ b/hermes_cli/kanban.py
-@@ -78,6 +78,7 @@ def _task_to_dict(t: kb.Task) -> dict[str, Any]:
-         "max_retries": t.max_retries,
-         "model_override": t.model_override,
-         "provider_override": t.provider_override,
-+        "reasoning_effort": t.reasoning_effort,  # HERMES_CUSTOM[v020]
-         "session_id": t.session_id,
-         "workflow_template_id": t.workflow_template_id,
-         "current_step_key": t.current_step_key,
-@@ -290,6 +291,12 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
-                           help="Switch to the new board after creating it")
-     b_create.add_argument("--default-workdir", default=None,
-                           help="Default workspace path for tasks created on this board")
-+    # HERMES_CUSTOM[v020] BEGIN: board project scope (v0.20 parity)
-+    b_create.add_argument("--project", default=None,
-+                          help="Scope the board to a project (id or slug): "
-+                               "default_workdir mirrors the project's primary "
-+                               "folder and new tasks inherit the project")
-+    # HERMES_CUSTOM[v020] END
- 
-     b_rm = boards_sub.add_parser(
-         "rm", aliases=["remove", "delete"],
-@@ -363,6 +370,15 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
-     b_import.add_argument("--switch", action="store_true",
-                           help="Switch to the imported board afterwards")
-     b_import.add_argument("--json", action="store_true")
-+    # HERMES_CUSTOM[v020] BEGIN: boards set-project verb
-+    b_set_proj = boards_sub.add_parser(
-+        "set-project",
-+        help="Scope a board to a project (or clear the scope)",
-+    )
-+    b_set_proj.add_argument("slug")
-+    b_set_proj.add_argument("project", nargs="?", default=None,
-+                            help="Project id or slug. Omit or 'none' to clear.")
-+    # HERMES_CUSTOM[v020] END
- 
-     # --- create ---
-     p_create = sub.add_parser("create", help="Create a new task")
-@@ -418,6 +434,14 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
-                           help="Provider the --model belongs to (passed as "
-                                "--provider <name> to the worker). Requires "
-                                "--model.")
-+    # HERMES_CUSTOM[v020] BEGIN: per-task reasoning effort on create
-+    p_create.add_argument("--reasoning", default=None, dest="reasoning_effort",
-+                          metavar="LEVEL",
-+                          help="Pin the worker's thinking depth for this task "
-+                               "(minimal/low/medium/high/xhigh/max/ultra, or "
-+                               "'none' for thinking off). Omit to use the "
-+                               "assignee profile's agent.reasoning_effort.")
-+    # HERMES_CUSTOM[v020] END
-     p_create.add_argument("--goal", action="store_true", dest="goal_mode",
-                           help="Run the worker in a goal loop: after each "
-                                "turn a judge checks the response against the "
-@@ -533,6 +557,30 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
-              "--provider <name>). Cleared together with the model.",
-     )
- 
-+    # HERMES_CUSTOM[v020] BEGIN: set-reasoning + estimate verbs
-+    p_set_reasoning = sub.add_parser(
-+        "set-reasoning",
-+        help="Set or clear a task's reasoning effort override "
-+             "(takes effect on the next dispatch)",
-+    )
-+    p_set_reasoning.add_argument("task_id")
-+    p_set_reasoning.add_argument(
-+        "effort", nargs="?", default=None,
-+        help="minimal/low/medium/high/xhigh/max/ultra, 'none' to pin thinking "
-+             "off, or 'clear' to inherit the profile default",
-+    )
-+
-+    p_estimate = sub.add_parser(
-+        "estimate",
-+        help="Rough token + complexity estimate via the auxiliary model",
-+    )
-+    p_estimate.add_argument("task_id", nargs="?", default=None,
-+                            help="Existing task id; omit to estimate raw --title/--body")
-+    p_estimate.add_argument("--title", default=None)
-+    p_estimate.add_argument("--body", default=None)
-+    p_estimate.add_argument("--json", action="store_true")
-+    # HERMES_CUSTOM[v020] END
-+
-     # --- reclaim / reassign (recovery) ---
-     p_reclaim = sub.add_parser(
-         "reclaim",
-@@ -1152,6 +1200,10 @@ def kanban_command(args: argparse.Namespace) -> int:
-             "show":     _cmd_show,
-             "assign":   _cmd_assign,
-             "set-model": _cmd_set_model,
-+            # HERMES_CUSTOM[v020] BEGIN
-+            "set-reasoning": _cmd_set_reasoning,
-+            "estimate": _cmd_estimate,
-+            # HERMES_CUSTOM[v020] END
-             "reclaim":  _cmd_reclaim,
-             "reassign": _cmd_reassign,
-             "diagnostics": _cmd_diagnostics,
-@@ -1259,6 +1311,7 @@ _DELEGATED_CHILD_DENIED_BOARD_ACTIONS: frozenset[str] = frozenset({
-     "use",
-     "rename",
-     "set-default-workdir",
+@@ -222,6 +222,7 @@ _DELEGATED_CHILD_DENIED_ACTIONS: frozenset[str] = frozenset({
+ _DELEGATED_CHILD_DENIED_BOARD_ACTIONS: frozenset[str] = frozenset({
+     "create", "new", "rm", "remove", "delete", "switch", "use", "rename",
+     "set-default-workdir", "import",
 +    "set-project",  # HERMES_CUSTOM[v020]
  })
  
  
-@@ -1310,6 +1363,8 @@ def _dispatch_boards(args: argparse.Namespace) -> int:
-         return _cmd_boards_export(args)
-     if sub == "import":
-         return _cmd_boards_import(args)
-+    if sub == "set-project":  # HERMES_CUSTOM[v020]
-+        return _cmd_boards_set_project(args)
-     print(f"kanban boards: unknown action {sub!r}", file=sys.stderr)
-     return 2
- 
-@@ -1374,13 +1429,29 @@ def _cmd_boards_create(args: argparse.Namespace) -> int:
-         print("kanban boards create: slug is required", file=sys.stderr)
-         return 2
-     already = kb.board_exists(normed) and normed != kb.DEFAULT_BOARD
-+    # HERMES_CUSTOM[v020] BEGIN: resolve --project scope
-+    project_id = None
-+    project_path = None
-+    project_ref = getattr(args, "project", None)
-+    if project_ref:
-+        from hermes_cli import projects_db as pdb
-+        with pdb.connect_closing() as pconn:
-+            proj = pdb.get_project(pconn, project_ref.strip())
-+        if proj is None:
-+            print(f"kanban boards create: project {project_ref!r} does not exist",
-+                  file=sys.stderr)
-+            return 2
-+        project_id = proj.id
-+        project_path = proj.primary_path or None
-+    # HERMES_CUSTOM[v020] END
-     meta = kb.create_board(
-         normed,
-         name=args.name,
-         description=args.description,
-         icon=args.icon,
-         color=args.color,
--        default_workdir=args.default_workdir,
-+        default_workdir=args.default_workdir or project_path,  # HERMES_CUSTOM[v020]
-+        project_id=project_id,  # HERMES_CUSTOM[v020]
-     )
-     verb = "already exists" if already else "created"
-     print(f"Board {meta['slug']!r} {verb}.")
-@@ -1541,6 +1612,41 @@ def _cmd_boards_import(args: argparse.Namespace) -> int:
-     else:
-         print(f"  Switch to it with `hermes kanban boards switch {res['board']}`.")
-     return 0
-+# HERMES_CUSTOM[v020] BEGIN: boards set-project handler
-+def _cmd_boards_set_project(args: argparse.Namespace) -> int:
-+    try:
-+        normed = kb._normalize_board_slug(args.slug)
-+    except ValueError as exc:
-+        print(f"kanban boards set-project: {exc}", file=sys.stderr)
-+        return 2
-+    if not normed or not kb.board_exists(normed):
-+        print(f"kanban boards set-project: board {args.slug!r} does not exist",
-+              file=sys.stderr)
-+        return 1
-+    ref = args.project
-+    if ref is not None and ref.lower() in {"none", "-", "null", ""}:
-+        ref = None
-+    if ref is None:
-+        kb.write_board_metadata(normed, project_id="")
-+        print(f"Board {normed!r} project scope cleared.")
-+        return 0
-+    from hermes_cli import projects_db as pdb
-+    with pdb.connect_closing() as pconn:
-+        proj = pdb.get_project(pconn, ref.strip())
-+    if proj is None:
-+        print(f"kanban boards set-project: project {ref!r} does not exist",
-+              file=sys.stderr)
-+        return 2
-+    meta = kb.write_board_metadata(
-+        normed,
-+        project_id=proj.id,
-+        default_workdir=proj.primary_path or None,
-+    )
-+    print(f"Board {normed!r} scoped to project {proj.name!r} ({proj.slug}).")
-+    if meta.get("default_workdir"):
-+        print(f"  default_workdir: {meta['default_workdir']}")
-+    return 0
-+# HERMES_CUSTOM[v020] END
- 
- 
- # ---------------------------------------------------------------------------
-@@ -1683,6 +1789,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
-             max_retries=max_retries,
-             model_override=getattr(args, "model_override", None),
+@@ -369,6 +370,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
+             max_runtime_seconds=max_runtime, skills=getattr(args, "skills", None) or None,
+             max_retries=max_retries, model_override=getattr(args, "model_override", None),
              provider_override=getattr(args, "provider_override", None),
 +            reasoning_effort=getattr(args, "reasoning_effort", None),  # HERMES_CUSTOM[v020]
              goal_mode=bool(getattr(args, "goal_mode", False)),
              goal_max_turns=getattr(args, "goal_max_turns", None),
-             initial_status=getattr(args, "initial_status", "running"),
-@@ -1993,6 +2100,140 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
+             completion_contract=getattr(args, "completion_contract", None),
+@@ -596,6 +598,137 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
      return 0
  
  
@@ -204,14 +28,12 @@ index e23eedc..dff1f4c 100644
 +    if effort is not None and effort.lower() in {"clear", "-", "null", ""}:
 +        effort = None
 +    try:
-+        with kb.connect_closing() as conn:
++        with kbc.connect_closing() as conn:
 +            ok = kb.set_reasoning_effort(conn, args.task_id, effort)
 +    except (ValueError, RuntimeError) as exc:
-+        print(f"kanban: {exc}", file=sys.stderr)
-+        return 2
++        return _err(f"kanban: {exc}", 2)
 +    if not ok:
-+        print(f"no such task: {args.task_id}", file=sys.stderr)
-+        return 1
++        return _err(f"no such task: {args.task_id}", 1)
 +    if effort:
 +        print(f"Set reasoning effort on {args.task_id}: {effort} "
 +              "(applies on next dispatch)")
@@ -308,15 +130,14 @@ index e23eedc..dff1f4c 100644
 +def _cmd_estimate(args: argparse.Namespace) -> int:
 +    title, body = args.title, args.body
 +    if args.task_id:
-+        with kb.connect_closing() as conn:
++        with kbc.connect_closing() as conn:
 +            task = kb.get_task(conn, args.task_id)
 +        if task is None:
-+            print(f"no such task: {args.task_id}", file=sys.stderr)
-+            return 1
++            return _err(f"no such task: {args.task_id}", 1)
 +        title, body = task.title, task.body
 +    result = _run_estimate(title or "", body)
 +    if getattr(args, "json", False):
-+        print(json.dumps(result, indent=2, ensure_ascii=False))
++        _print_json(result)
 +    elif result.get("ok"):
 +        cx = result.get("complexity") or "?"
 +        line = f"~{result.get('est_tokens', 0)} tokens · {cx}"
@@ -333,5 +154,154 @@ index e23eedc..dff1f4c 100644
 +
 +
  def _cmd_reclaim(args: argparse.Namespace) -> int:
-     with kb.connect_closing() as conn:
-         ok = kb.reclaim_task(
+     with kbc.connect_closing() as conn:
+         ok = kb.reclaim_task(conn, args.task_id, reason=getattr(args, "reason", None))
+@@ -1232,6 +1365,7 @@ _HANDLERS = {
+     "init": _cmd_init, "create": _cmd_create, "swarm": _cmd_swarm,
+     "list": _cmd_list, "ls": _cmd_list, "show": _cmd_show,
+     "assign": _cmd_assign, "set-model": _cmd_set_model,
++    "set-reasoning": _cmd_set_reasoning, "estimate": _cmd_estimate,  # HERMES_CUSTOM[v020]
+     "reclaim": _cmd_reclaim, "reassign": _cmd_reassign,
+     "diagnostics": _cmd_diagnostics, "diag": _cmd_diagnostics,
+     "link": _cmd_link, "unlink": _cmd_unlink, "claim": _cmd_claim,
+diff --git a/hermes_cli/kanban_boards.py b/hermes_cli/kanban_boards.py
+index 0c6db18..f56274d 100644
+--- a/hermes_cli/kanban_boards.py
++++ b/hermes_cli/kanban_boards.py
+@@ -76,9 +76,23 @@ def _cmd_boards_create(args: argparse.Namespace) -> int:
+     if rc:
+         return rc
+     already = kb.board_exists(normed) and normed != kb.DEFAULT_BOARD
++    # HERMES_CUSTOM[v020] BEGIN: resolve --project scope
++    project_id = None
++    project_path = None
++    project_ref = getattr(args, "project", None)
++    if project_ref:
++        from hermes_cli import projects_db as pdb
++        with pdb.connect_closing() as pconn:
++            proj = pdb.get_project(pconn, project_ref.strip())
++        if proj is None:
++            return _err(f"kanban boards create: project {project_ref!r} does not exist", 2)
++        project_id = proj.id
++        project_path = proj.primary_path or None
++    # HERMES_CUSTOM[v020] END
+     meta = kb.create_board(
+         normed, name=args.name, description=args.description, icon=args.icon, color=args.color,
+-        default_workdir=args.default_workdir,
++        default_workdir=args.default_workdir or project_path,  # HERMES_CUSTOM[v020]
++        project_id=project_id,  # HERMES_CUSTOM[v020]
+     )
+     print(f"Board {meta['slug']!r} {'already exists' if already else 'created'}.\n"
+           f"  Display name: {meta.get('name', '')}\n"
+@@ -201,6 +215,35 @@ def _cmd_boards_import(args: argparse.Namespace) -> int:
+     return 0
+ 
+ 
++# HERMES_CUSTOM[v020] BEGIN: boards set-project handler
++def _cmd_boards_set_project(args: argparse.Namespace) -> int:
++    normed, rc = _board_slug_arg(args, "set-project", must_exist=True)
++    if rc:
++        return rc
++    ref = args.project
++    if ref is not None and ref.lower() in {"none", "-", "null", ""}:
++        ref = None
++    if ref is None:
++        kb.write_board_metadata(normed, project_id="")
++        print(f"Board {normed!r} project scope cleared.")
++        return 0
++    from hermes_cli import projects_db as pdb
++    with pdb.connect_closing() as pconn:
++        proj = pdb.get_project(pconn, ref.strip())
++    if proj is None:
++        return _err(f"kanban boards set-project: project {ref!r} does not exist", 2)
++    meta = kb.write_board_metadata(
++        normed,
++        project_id=proj.id,
++        default_workdir=proj.primary_path or None,
++    )
++    print(f"Board {normed!r} scoped to project {proj.name!r} ({proj.slug}).")
++    if meta.get("default_workdir"):
++        print(f"  default_workdir: {meta['default_workdir']}")
++    return 0
++# HERMES_CUSTOM[v020] END
++
++
+ _BOARD_HANDLERS = {
+     "list": _cmd_boards_list, "ls": _cmd_boards_list,
+     "create": _cmd_boards_create, "new": _cmd_boards_create,
+@@ -209,6 +252,7 @@ _BOARD_HANDLERS = {
+     "show": _cmd_boards_show, "current": _cmd_boards_show,
+     "rename": _cmd_boards_rename,
+     "set-default-workdir": _cmd_boards_set_default_workdir,
++    "set-project": _cmd_boards_set_project,  # HERMES_CUSTOM[v020]
+     "export": _cmd_boards_export,
+     "import": _cmd_boards_import,
+ }
+diff --git a/hermes_cli/kanban_output.py b/hermes_cli/kanban_output.py
+index c5abcce..27de649 100644
+--- a/hermes_cli/kanban_output.py
++++ b/hermes_cli/kanban_output.py
+@@ -20,6 +20,7 @@ _TASK_DICT_FIELDS = (
+     "workspace_kind", "workspace_path", "branch_name", "project_id",
+     "created_by", "created_at", "started_at", "completed_at", "result",
+     "skills", "max_retries", "model_override", "provider_override",
++    "reasoning_effort",  # HERMES_CUSTOM[v020]
+     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
+ )
+ _SHOW_RUN_FIELDS = (
+diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
+index 6d0b413..5e15264 100644
+--- a/hermes_cli/kanban_parser.py
++++ b/hermes_cli/kanban_parser.py
+@@ -95,6 +95,9 @@ _BOARD_SPECS = [
+         _arg("--color", help="Optional hex color (e.g. '#8b5cf6') for the dashboard"),
+         _arg("--switch", action="store_true", help="Switch to the new board after creating it"),
+         _arg("--default-workdir", help="Default workspace path for tasks created on this board"),
++        _arg("--project",  # HERMES_CUSTOM[v020]
++             help="Scope the board to a project (id or slug): default_workdir "
++                  "mirrors the project's primary folder and new tasks inherit the project"),
+     ], aliases=["new"], help="Create a new board"),
+     _cmd("rm", [
+         _SLUG,
+@@ -110,6 +113,11 @@ _BOARD_SPECS = [
+         _SLUG,
+         _arg("path", nargs="?", help="Absolute path to use as default workdir. Omit to clear."),
+     ], help="Set the default workspace path for tasks on a board"),
++    _cmd("set-project", [  # HERMES_CUSTOM[v020]
++        _SLUG,
++        _arg("project", nargs="?",
++             help="Project id or slug. Omit or 'none' to clear."),
++    ], help="Scope a board to a project (or clear the scope)"),
+     _cmd("export", [
+         _arg("slug", nargs="?", help="Board to export (default: the current board)"),
+         _arg("-o", "--output", help="Archive path (default: ./<slug>.tar.gz)"),
+@@ -186,6 +194,10 @@ _SPECS = [
+         _arg("--provider", dest="provider_override",
+              help="Provider the --model belongs to (passed as --provider <name> to "
+                   "the worker). Requires --model."),
++        _arg("--reasoning", default=None, dest="reasoning_effort", metavar="LEVEL",  # HERMES_CUSTOM[v020]
++             help="Pin the worker's thinking depth for this task "
++                  "(minimal/low/medium/high/xhigh/max/ultra, or 'none' for thinking "
++                  "off). Omit to use the assignee profile's agent.reasoning_effort."),
+         _arg("--completion-contract", metavar="CONTRACT",
+              help="local-only (default), OWNER/REPO for publication, or exact GitHub PR URL; required CI gates done."),
+         _arg("--goal", action="store_true", dest="goal_mode",
+@@ -240,6 +252,18 @@ _SPECS = [
+              help="Provider the model belongs to (worker is spawned with "
+                   "--provider <name>). Cleared together with the model."),
+     ], help="Set or clear a task's model/provider override (takes effect on the next dispatch)"),
++    _cmd("set-reasoning", [  # HERMES_CUSTOM[v020]
++        _TASK_ID,
++        _arg("effort", nargs="?",
++             help="minimal/low/medium/high/xhigh/max/ultra, 'none' to pin thinking "
++                  "off, or 'clear' to inherit the profile default"),
++    ], help="Set or clear a task's reasoning effort override (takes effect on the next dispatch)"),
++    _cmd("estimate", [  # HERMES_CUSTOM[v020]
++        _arg("task_id", nargs="?", help="Existing task id; omit to estimate raw --title/--body"),
++        _arg("--title"),
++        _arg("--body"),
++        _json_flag(),
++    ], help="Rough token + complexity estimate via the auxiliary model"),
+     _cmd("reclaim", [_TASK_ID, _RECLAIM_REASON], help="Release an active worker claim on a running task"),
+     _cmd("reassign", [
+         _TASK_ID,

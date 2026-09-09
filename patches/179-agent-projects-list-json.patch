@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/projects_cmd.py b/hermes_cli/projects_cmd.py
-index 4e2655b..8ebf8be 100644
+index 469de52..88f01bf 100644
 --- a/hermes_cli/projects_cmd.py
 +++ b/hermes_cli/projects_cmd.py
-@@ -14,6 +14,7 @@ from __future__ import annotations
+@@ -4,6 +4,7 @@ from __future__ import annotations
  
  import argparse
  import functools
@@ -10,22 +10,20 @@ index 4e2655b..8ebf8be 100644
  import sys
  
  from hermes_cli import projects_db as pdb
-@@ -59,6 +60,11 @@ def build_parser(
-         "--all", action="store_true", dest="include_archived",
-         help="Include archived projects",
-     )
+@@ -33,6 +34,9 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
+     p_create.add_argument("--use", action="store_true", help="Set as the active project")
+     p_list = sub.add_parser("list", aliases=["ls"], help="List projects")
+     p_list.add_argument("--all", action="store_true", dest="include_archived", help="Include archived projects")
 +    # HERMES_CUSTOM[v020] BEGIN: machine-readable output for TS service
-+    p_list.add_argument(
-+        "--json", action="store_true", help="Emit JSON instead of the human table",
-+    )
++    p_list.add_argument("--json", action="store_true", help="Emit JSON instead of the human table")
 +    # HERMES_CUSTOM[v020] END
  
-     p_show = sub.add_parser("show", help="Show a project's details")
-     p_show.add_argument("project", help="Project id or slug")
-@@ -222,6 +228,14 @@ def _cmd_list(args: argparse.Namespace) -> int:
-         projs = pdb.list_projects(
-             conn, include_archived=getattr(args, "include_archived", False)
-         )
+     def project_sub(name: str, help: str) -> argparse.ArgumentParser:
+         sp = sub.add_parser(name, help=help)
+@@ -151,6 +155,14 @@ def _cmd_create(args, conn) -> int:
+ def _cmd_list(args, conn):
+     active = pdb.get_active_id(conn)
+     projs = pdb.list_projects(conn, include_archived=getattr(args, "include_archived", False))
 +    # HERMES_CUSTOM[v020] BEGIN: --json output
 +    if getattr(args, "json", False):
 +        print(json.dumps(
@@ -35,5 +33,5 @@ index 4e2655b..8ebf8be 100644
 +        return 0
 +    # HERMES_CUSTOM[v020] END
      if not projs:
-         print("No projects yet. Create one with `hermes project create <name>`.")
-         return 0
+         return "No projects yet. Create one with `hermes project create <name>`."
+     for p in projs:

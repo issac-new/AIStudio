@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/package.json b/packages/desktop/package.json
-index 9aaf40a..12d2b34 100644
+index 82b4ee6..ceccb71 100644
 --- a/packages/desktop/package.json
 +++ b/packages/desktop/package.json
 @@ -1,11 +1,11 @@
@@ -7,11 +7,11 @@ index 9aaf40a..12d2b34 100644
 -  "name": "hermes-studio",
 +  "name": "swarmstudio",
    "version": "0.7.18",
--  "description": "Hermes Studio desktop distribution with bundled Python runtime and hermes-agent",
+-  "description": "Ekko Studio desktop distribution with bundled Python runtime and hermes-agent",
 +  "description": "SwarmStudio desktop distribution with bundled Python runtime and hermes-agent",
    "homepage": "https://hermes-studio.ai",
    "author": {
--    "name": "Hermes Studio Contributors",
+-    "name": "Ekko Studio Contributors",
 -    "email": "noreply@hermes-studio.local"
 +    "name": "SwarmStudio Contributors",
 +    "email": "noreply@swarmstudio.local"
