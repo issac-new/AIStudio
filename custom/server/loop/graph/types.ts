@@ -204,6 +204,14 @@ export type GraphEvent =
   | { type: 'graph.completed'; graphId: string; threadId: string; finalState: StateValues; totalCost: number; ts: string }
   | { type: 'graph.failed'; graphId: string; threadId: string; error: string; ts: string }
   | { type: 'graph.forked'; graphId: string; threadId: string; parentThreadId: string; ts: string }
+  /** 回边守卫：迭代次数超 maxIterations，该边被丢弃 */
+  | { type: 'edge.guard-exceeded'; graphId: string; threadId: string; edge: string; iterations: number; maxIterations: number; ts: string }
+  /** 回边守卫：breakCondition 命中，提前退出循环 */
+  | { type: 'edge.break'; graphId: string; threadId: string; edge: string; iterations: number; ts: string }
+  /** 节点最终失败但被 onError 路由到 fail-branch，run 不判失败 */
+  | { type: 'node.error-routed'; graphId: string; threadId: string; nodeId: string; target: string; error: string; ts: string }
+  /** 成本累计（recordCost 回调触发） */
+  | { type: 'cost.recorded'; graphId: string; threadId: string; amount: number; totalCost: number; ts: string }
 
 // ============================================================================
 // 依赖注入接口

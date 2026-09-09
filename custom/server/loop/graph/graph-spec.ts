@@ -38,8 +38,9 @@ export interface GraphSpec {
 
 export class GraphSpecError extends Error {}
 
-/** 静态拓扑：DFS 识别回边（v 是 u 的祖先，或自环），返回回边在 edges 中的下标集合 */
-function collectBackEdges(edges: Array<{ from: string; to: string }>, nodeIds: string[], entryNode: string): Set<number> {
+/** 静态拓扑：DFS 识别回边（v 是 u 的祖先，或自环），返回回边在 edges 中的下标集合。
+ *  导出供 GraphBuilder.build() 复用（内存 GraphDef 的轻量环检测）。 */
+export function collectBackEdges(edges: Array<{ from: string; to: string }>, nodeIds: string[], entryNode: string): Set<number> {
   const adj = new Map<string, number[]>()
   edges.forEach((e, i) => {
     if (!adj.has(e.from)) adj.set(e.from, [])
