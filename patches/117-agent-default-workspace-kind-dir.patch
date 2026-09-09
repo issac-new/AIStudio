@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 6150b1415..251b45df0 100644
+index df1cec0..8a063c8 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -1104,7 +1104,7 @@ CREATE TABLE IF NOT EXISTS tasks (
+@@ -860,7 +860,7 @@ CREATE TABLE IF NOT EXISTS tasks (
      created_at           INTEGER NOT NULL,
      started_at           INTEGER,
      completed_at         INTEGER,
@@ -11,20 +11,20 @@ index 6150b1415..251b45df0 100644
      workspace_path       TEXT,
      branch_name          TEXT,
      -- Optional link to a first-class Project (hermes_cli/projects_db). When set,
-@@ -2390,7 +2390,7 @@ def create_task(
-     body: Optional[str] = None,
-     assignee: Optional[str] = None,
-     created_by: Optional[str] = None,
--    workspace_kind: str = "scratch",
-+    workspace_kind: str = "dir",
-     workspace_path: Optional[str] = None,
-     branch_name: Optional[str] = None,
-     tenant: Optional[str] = None,
+@@ -1221,7 +1221,7 @@ def _normalize_task_skills(skills: Optional[Iterable[str]]) -> Optional[list[str
+ def create_task(
+     conn: sqlite3.Connection, *, title: str, body: Optional[str] = None,
+     assignee: Optional[str] = None, created_by: Optional[str] = None,
+-    workspace_kind: str = "scratch", workspace_path: Optional[str] = None,
++    workspace_kind: str = "dir", workspace_path: Optional[str] = None,
+     branch_name: Optional[str] = None, tenant: Optional[str] = None, priority: int = 0,
+     parents: Iterable[str] = (), triage: bool = False, idempotency_key: Optional[str] = None,
+     max_runtime_seconds: Optional[int] = None, skills: Optional[Iterable[str]] = None,
 diff --git a/hermes_cli/kanban_swarm.py b/hermes_cli/kanban_swarm.py
-index 4903d9127..7fc74374b 100644
+index e450f6d..ea99e9d 100644
 --- a/hermes_cli/kanban_swarm.py
 +++ b/hermes_cli/kanban_swarm.py
-@@ -86,7 +86,7 @@ def create_swarm(
+@@ -115,7 +115,7 @@ def create_swarm(
      synthesizer_title: str = "Synthesize swarm outputs",
      tenant: Optional[str] = None,
      created_by: str = "swarm-orchestrator",
@@ -34,10 +34,10 @@ index 4903d9127..7fc74374b 100644
      priority: int = 0,
      idempotency_key: Optional[str] = None,
 diff --git a/plugins/kanban/dashboard/plugin_api.py b/plugins/kanban/dashboard/plugin_api.py
-index e340aba97..f7a875cb6 100644
+index e29e589..6769e96 100644
 --- a/plugins/kanban/dashboard/plugin_api.py
 +++ b/plugins/kanban/dashboard/plugin_api.py
-@@ -583,7 +583,7 @@ class CreateTaskBody(BaseModel):
+@@ -355,7 +355,7 @@ class CreateTaskBody(BaseModel):
      assignee: Optional[str] = None
      tenant: Optional[str] = None
      priority: int = 0

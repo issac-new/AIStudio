@@ -1,8 +1,28 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.16**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发）
 SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
-SwarmStudio **2.14**（基于 hermes-studio v0.7.17 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.16** — hermes-studio v0.7.18 → **v1.0.2**（2026-09-09 发布的 Latest；15 commits、301 文件 +9281/−3545：上游品牌重塑 Ekko Studio + MCP 名称迁移、任务计划持久化与聊天内实时进度、聊天文件链接按引用行预览、浏览器标注删除/撤销、App 通知事件整合、host 级 Agent 更新策略基座、原生 OpenCode Free provider + 免 key 编码代理、技能开关默认恢复修复、MCP 触发的桌面重启循环修复、中继桥免确认关闭、桥接重启超时修复、TTS 语义符号保留、跳过思考块朗读）。hermes-agent v0.21.0 → **v0.21.1**（v2026.9.7，2026-09-07 发布；≈6000 commits：审批环境变量拆分转义与 argv0 操作数修复、kanban 唤醒/路由锚点/心跳生命周期/网关所有权一批加固、桌面 READY 哨兵合并缓冲修复）。element-web 维持 **v1.12.27**（仍是最新稳定版）。
+
+### 2.16 迁移工作（overlay 侧）
+
+- **11 个 patch regen**：studio 7（023/025/041/042/043/141/177 — 品牌三件套撞上游 Ekko Studio 改名，品牌字段按 042 先例保留 SwarmStudio；141/151 区域撞上游桌面重启循环修复；025 登录页去 logo 化维持）+ agent 4（117/118/178/179 — 上游把 kanban.py 拆分为 kanban_parser/kanban_boards/kanban_output 多模块，178 跨文件移植：任务动词留 kanban.py、boards 动词→kanban_boards.py、parser spec→kanban_parser.py、任务字段表→kanban_output.py；177 品牌字符串、118 run-trace 种子逻辑重挂上游重构后的 profile 创建流程、117 workspace_kind 默认值两行重放）
+- **新增 patch 201**（vue-tsc 迁移修复）：上游 v1.0.2 build 脚本新增 `vue-tsc -b` 严类型门禁（2.15 从未跑过），暴露并修复：`@/custom/*` 以通配 ambient 声明解析（custom 树维持 overlay vitest + vite 构建验证姿态，不进上游严格 vue-tsc）；**修复 2.15 起即存在的 `openMatrixChat` 未定义潜伏 bug**（侧栏 Matrix 按钮点击即报错）；chat.ts/ChatPanel/GroupChatPanel/WorkflowView 上游重构后的残留引用清理；GroupMessageList 网关告警过滤改用 `isGatewayNotice` 内容检测（group 消息链路无 systemType 打标）
+- **验证门禁**：inject 148/148 → server tsc 0 错误 → overlay vitest 560 pass/6 skip/0 fail（较 2.15 净增 19 个测试）→ vue-tsc 0 错误 → openapi 429 endpoints → vite build + build-server 全绿 → 上游 patch 触及区测试（kanban-routes/hermes-kanban-service/auth-routes-avatar 27 个 + matrix 六件 30 个）全过；agent 侧 4 patch 重放零失败 + 9 个触及文件 Python 语法校验 + `kanban --help` 冒烟可见 set-reasoning/estimate 动词
+- 本版构建产物（mac arm64 dmg + win x64 zip）**不上传** GitHub Release 与 ModelScope（按指示暂缓发布）
+
+
+
+### 2.16 构建产物（未发布，sha256 留档）
+
+```
+412cbffadf4f603ff7c93e12dbacc98b8775f5ec37676e57fbf51d76a4145f81  SwarmStudio-0.7.18-arm64.dmg
+5262612f3d8133b5bfd17c01d22e5e23d9e20ea27f4499410265d3e57b34ae04  SwarmStudio-0.7.18-x64.zip
+```
+
+（按指示未上传 GitHub Release 与 ModelScope；发布时以此 sha256 为准区分同名产物 SwarmStudio-0.7.18-*。）
 
 > **2.15** — hermes-studio v0.7.17 → **v0.7.18**（2026-09-06 发布的 Latest；31 commits、218 文件 +9017/−948：OpenCode coding agent、群聊云端中继远程 agent、移动端日历/定位一次性授权、会话操作菜单整合、Runtime 轮询收敛 super admin、Windows runtime 修复批次）。hermes-agent 维持 **v0.21.0**（v2026.8.31 仍是最新 stable tag）。element-web 维持 **v1.12.27**（仍是最新稳定版）。runtime pin 维持上游原生 `hermes-0.20.6-runtime`（v0.7.18 未改 pin，仓库的 hermes-0.21.0-runtime tag 仍未被上游引用）。
 

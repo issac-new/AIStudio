@@ -1,9 +1,9 @@
 diff --git a/hermes_cli/profiles.py b/hermes_cli/profiles.py
-index 91d997b..82ad87f 100644
+index e4a0d3b..41046b7 100644
 --- a/hermes_cli/profiles.py
 +++ b/hermes_cli/profiles.py
-@@ -1174,6 +1174,79 @@ def profiles_to_serve(
-     return serve
+@@ -810,6 +810,79 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path]) -> Non
+         _clone_file(source_dir, profile_dir, relpath)
  
  
 +# Overlay: ensure the run-trace plugin is available in every new profile.
@@ -80,12 +80,12 @@ index 91d997b..82ad87f 100644
 +
 +
  def create_profile(
-     name: str,
-     clone_from: Optional[str] = None,
-@@ -1266,6 +1339,12 @@ def create_profile(
-         profile_dir.mkdir(parents=True, exist_ok=True)
-         for subdir in _PROFILE_DIRS:
-             (profile_dir / subdir).mkdir(parents=True, exist_ok=True)
+     name: str, clone_from: Optional[str] = None, clone_all: bool = False, clone_config: bool = False,
+     no_alias: bool = False, no_skills: bool = False, description: Optional[str] = None,
+@@ -845,6 +918,12 @@ def create_profile(
+         _clone_all_into(source_dir, profile_dir, canon)
+     else:
+         _bootstrap_profile_dir(profile_dir, source_dir)
 +        # Overlay: seed the run-trace plugin into the new profile's plugins/
 +        # directory so L2 trace data is captured from the very first session.
 +        # Skipped for clone_all (it copytrees the whole source tree, including
@@ -93,18 +93,18 @@ index 91d997b..82ad87f 100644
 +        # — the config-merge step below still ensures run-trace is enabled).
 +        _seed_run_trace_plugin(profile_dir)
  
-         if source_dir is None:
-             _seed_model_config(profile_dir)
-@@ -1374,6 +1453,12 @@ def create_profile(
-     # unit-generation paths handle gateway lifecycle.
+     # Seed an empty .env so the profile owns a credentials file from day one. Without it,
+     # profile-scoped env writes (dashboard Channels/Keys pages, `hermes -p <name> auth add`)
+@@ -881,6 +960,12 @@ def create_profile(
+     # `hermes -p <profile> gateway start` supervises via `s6-svc -u` instead of a bare
+     # process. No-op on host (systemd/launchd/windows unit generation handles lifecycle).
      _maybe_register_gateway_service(canon)
- 
++
 +    # Overlay: ensure run-trace is in plugins.enabled. Done after any clone
 +    # so cloned configs also pick it up. For fresh profiles this writes a
 +    # minimal config.yaml; for cloned profiles it merges into the existing
 +    # plugins.enabled list without removing existing entries.
 +    _ensure_run_trace_enabled_in_config(profile_dir)
-+
      return profile_dir
  
  
