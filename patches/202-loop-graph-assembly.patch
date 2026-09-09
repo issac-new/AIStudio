@@ -1,0 +1,46 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index b7a3063..ef254ae 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -92,6 +92,8 @@ import { HookManager } from '../custom/loop/engine/hooks'
+ import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
+ import { emitLoopEvent } from '../custom/loop/services/loop-socket'
+ import { getGroupChatServer } from '../modules/studio/controllers/group-chat'
++// overlay[loop-graph-assembly]: P1 graph engine (GRAPH_ENGINE=legacy|shadow|on, 默认 legacy)
++import { createGraphAssembly } from '../custom/loop/graph/graph-assembly'
+ import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
+ 
+ let loopStore: any = null
+@@ -120,7 +122,31 @@ const loopEngine = new LoopEngine({
+   },
+ })
+ const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
+-const loopRouter = createLoopRouter(lazyStore, loopScheduler, loopWebhookConnector)
++const graphAssembly = createGraphAssembly({
++  io: () => {
++    try { const gcs = getGroupChatServer() as any; return gcs?.getIO?.() ?? null } catch { return null }
++  },
++  engineDeps: {
++    store: lazyStore,
++    dryRun: false,
++    connectors: [],
++    worktreeManager: new WorktreeManager(),
++    dispatcher: new SubagentDispatcher(),
++    verifier: new Verifier(),
++    // P1: 产物落库适配器（真实 kanban 写入随 P2 IA 装配注入）
++    persistence: { persist: async (contract: any) => `artifact:${contract.id}` },
++    log: (m: string) => { console.log(`[graph] ${m}`) },
++  },
++})
++// GRAPH_ENGINE=on：loop REST tick/webhook 分流到 RunSpawner；legacy/shadow 保持 patch 134 装配
++const loopRouter = createLoopRouter(
++  lazyStore,
++  graphAssembly.mode === 'on'
++    ? graphAssembly.loopTickTarget as unknown as typeof loopScheduler
++    : loopScheduler,
++  loopWebhookConnector,
++  { resumeApproval: (id, d) => graphAssembly.resumeApproval(id, d) },
++)
+ const graphRouter = createGraphRouter(lazyStore)
+ // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
+ // WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建

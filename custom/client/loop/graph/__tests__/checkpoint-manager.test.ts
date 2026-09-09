@@ -39,4 +39,29 @@ describe('CheckpointManager', () => {
     const m = new CheckpointManager(new InMemoryEventLogStore())
     await expect(m.fork('nope', 0, 'r2')).rejects.toThrow()
   })
+
+  // e 台账：fork 对 joinLedger 深隔离——mutate forked.joinLedger 不得影响源检查点
+  it('fork deep-isolates joinLedger from the source checkpoint', async () => {
+    const log = new InMemoryEventLogStore()
+    const m = new CheckpointManager(log)
+    const source: StoredCheckpoint = {
+      ...cp('r1', 3),
+      joinLedger: { completed: ['a'], completedAtStep: { a: 2 }, lastRunStep: { a: 2 } },
+    }
+    await m.save(source)
+    const forked = await m.fork('r1', 3, 'r2')
+    expect(forked.joinLedger?.completed).toEqual(['a'])
+    forked.joinLedger!.completed.push('b')
+    forked.joinLedger!.completedAtStep['b'] = 3
+    forked.joinLedger!.lastRunStep['a'] = 99
+    forked.state.count = 999
+    expect(source.joinLedger!.completed).toEqual(['a'])
+    expect(source.joinLedger!.completedAtStep).toEqual({ a: 2 })
+    expect(source.joinLedger!.lastRunStep).toEqual({ a: 2 })
+    expect(source.state.count).toBe(3)
+    // 源 run 的持久化副本同样不受 fork 侧突变影响
+    const srcStored = await m.getAt('r1', 3)
+    expect(srcStored!.joinLedger!.completed).toEqual(['a'])
+    expect(srcStored!.state.count).toBe(3)
+  })
 })

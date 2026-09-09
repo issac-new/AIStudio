@@ -100,6 +100,8 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 - 服务端 REST 路由 + Socket.IO namespace（patch 134/135）+ pg 依赖（patch 138）
 - 状态迁移：`scripts/loop-migrate.mjs`（Local → Matrix）、`loop-migrate-saas.mjs`（Matrix → PostgreSQL）
 
+**图引擎接管（P1，patch 202）**：LoopInstance 经编译器变为 GraphSpec（六节点：五阶段 + gate 质量门禁），由图内核执行——事件日志（`node:sqlite`，零新依赖）为唯一事实源，真 checkpoint/resume/fork、HITL interrupt 审批闭环、守卫 repair 回边、R2 workspace 上下文注入（GRAPH-CONTEXT.md）。`GRAPH_ENGINE` 环境变量三态切换：`legacy`（默认，旧引擎原样）/ `shadow`（双跑：新引擎 dryRun 对比事件序列，不写副作用）/ `on`（新引擎接管调度）。新 REST 面：`/api/graph/runs`（CRUD/resume/fork/replay）与 `/api/graph/specs`；socket `/graph` namespace 按 run 订阅。旧数据迁移：`node scripts/graph-migrate.mjs`（dry-run 默认，`--apply` 落库幂等）。设计文档：`docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md`。
+
 ### 🎨 品牌与网关通知
 
 - 桌面端 rebrand 为 SwarmStudio（config + package）

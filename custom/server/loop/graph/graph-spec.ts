@@ -38,6 +38,9 @@ export interface GraphSpec {
 
 export class GraphSpecError extends Error {}
 
+/** 自定义 reducer 表：appendById 等领域 reducer 经此注入（默认仅内置 reducers 合法） */
+export type CustomReducers = Record<string, (old: any, next: any) => any>
+
 /** 静态拓扑：DFS 识别回边（v 是 u 的祖先，或自环），返回回边在 edges 中的下标集合。
  *  导出供 GraphBuilder.build() 复用（内存 GraphDef 的轻量环检测）。 */
 export function collectBackEdges(edges: Array<{ from: string; to: string }>, nodeIds: string[], entryNode: string): Set<number> {
@@ -64,18 +67,27 @@ export function collectBackEdges(edges: Array<{ from: string; to: string }>, nod
   return back
 }
 
-export function validateGraphSpec(spec: GraphSpec): void {
+export function validateGraphSpec(spec: GraphSpec, customReducers?: CustomReducers): void {
   const nodeIds = new Set(spec.nodes.map(n => n.id))
   if (nodeIds.size !== spec.nodes.length) throw new GraphSpecError('Duplicate node id')
   if (!nodeIds.has(spec.entryNode)) throw new GraphSpecError(`Entry node not found: ${spec.entryNode}`)
   for (const [name, ch] of Object.entries(spec.channels)) {
-    if (!(ch.reducer in reducers)) throw new GraphSpecError(`Unknown reducer "${ch.reducer}" on channel "${name}"`)
+    // f1 台账：按自有属性判定——'constructor'/'toString' 等原型链键不得伪装成合法 reducer
+    if (!Object.hasOwn(reducers, ch.reducer) && !(customReducers && Object.hasOwn(customReducers, ch.reducer))) {
+      throw new GraphSpecError(`Unknown reducer "${ch.reducer}" on channel "${name}"`)
+    }
   }
   for (const e of spec.edges) {
     if (!nodeIds.has(e.from)) throw new GraphSpecError(`Edge from unknown node: ${e.from}`)
     if (!nodeIds.has(e.to)) throw new GraphSpecError(`Edge to unknown node: ${e.to}`)
     if (e.guard && (!Number.isInteger(e.guard.maxIterations) || e.guard.maxIterations < 1)) {
       throw new GraphSpecError(`guard.maxIterations must be >= 1 on edge ${e.from}->${e.to}`)
+    }
+  }
+  // f4 台账：onError goto/retry-goto 的 target 是 fail-branch 的运行时路由目标，编译期可校验
+  for (const n of spec.nodes) {
+    if (n.onError && n.onError.type !== 'fail' && !nodeIds.has(n.onError.target)) {
+      throw new GraphSpecError(`onError target unknown node "${n.onError.target}" on node "${n.id}"`)
     }
   }
   // 回边必须带 guard：DFS 树中后代指向祖先的边（含自环）构成环的闭合边
@@ -98,14 +110,17 @@ export function validateGraphSpec(spec: GraphSpec): void {
 }
 
 /** 把 GraphSpec 装配为运行时 GraphDef（PredicateExpr 编译为闭包，节点经 registry 装配） */
-export function hydrateGraphSpec(spec: GraphSpec, registry: NodeRegistry): GraphDef {
-  validateGraphSpec(spec)
+export function hydrateGraphSpec(spec: GraphSpec, registry: NodeRegistry, customReducers?: CustomReducers): GraphDef {
+  validateGraphSpec(spec, customReducers)
   const stateSchema: StateSchema = {}
   for (const [name, ch] of Object.entries(spec.channels)) {
+    const custom = customReducers?.[ch.reducer as string]
     const reducerFactory = (reducers as Record<string, () => unknown>)[ch.reducer as string]
+    const reducer = custom ?? (reducerFactory ? reducerFactory() : undefined)
+    if (!reducer) throw new GraphSpecError(`Unknown reducer "${ch.reducer}" on channel "${name}"`)
     stateSchema[name] = {
       name,
-      reducer: reducerFactory() as never,
+      reducer: reducer as never,
       default: ch.default,
     }
   }
