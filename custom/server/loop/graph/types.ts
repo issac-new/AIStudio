@@ -13,6 +13,23 @@
 // 状态模型 — LangGraph channel + reducer 模式
 // ============================================================================
 
+import type { PredicateExpr } from './predicate'
+
+/** 回边守卫：有限终止的循环级安全网 */
+export interface LoopGuard {
+  maxIterations: number
+  breakCondition?: PredicateExpr
+}
+
+/** 节点失败路由 */
+export type NodeErrorRoute =
+  | { type: 'fail' }
+  | { type: 'goto'; target: string }
+  | { type: 'retry-goto'; target: string; maxAttempts: number }
+
+/** 多入边激活语义：all=等全部前驱完成（默认） any=任一前驱完成即激活 */
+export type JoinMode = 'all' | 'any'
+
 /** Reducer 函数：合并旧值和新值。默认覆盖，可自定义（如 list append） */
 export type Reducer<T> = (old: T | undefined, next: T) => T
 
@@ -62,6 +79,10 @@ export interface NodeDef {
   cacheTtl?: number
   /** 子图引用（type='subgraph' 时使用） */
   subgraphId?: string
+  /** 失败路由（默认 fail） */
+  onError?: NodeErrorRoute
+  /** 多入边激活语义（默认 'all'） */
+  joinMode?: JoinMode
 }
 
 export interface NodeContext {
@@ -98,6 +119,8 @@ export interface EdgeDef {
   /** 静态边（无 condition）或动态边（有 condition） */
   condition?: EdgeCondition
   label?: string
+  /** 回边守卫（from 的后代指向祖先时必填） */
+  guard?: LoopGuard
 }
 
 // ============================================================================
@@ -120,28 +143,15 @@ export interface GraphDef {
   endCondition?: (state: StateValues) => boolean
   /** 最大 super-step 数（防无限循环） */
   maxSteps: number
+  /** L4 时长守卫 */
+  maxDurationMs?: number
   /** 预算 */
   budget?: { maxCost: number; maxTokens: number }
 }
 
 // ============================================================================
-// 检查点模型
+// 检查点模型 — 权威定义为 event-log-store.ts 的 StoredCheckpoint（含 iterCounters/joinLedger）
 // ============================================================================
-
-export interface Checkpoint {
-  id: string
-  graphId: string
-  threadId: string
-  superStep: number
-  state: StateValues
-  /** 下一步待执行的节点 */
-  nextNodes: string[]
-  /** interrupt 状态 */
-  pendingInterrupts: Array<{ nodeId: string; value: unknown; id: string }>
-  timestamp: string
-  /** 累计花费 */
-  totalCost: number
-}
 
 // ============================================================================
 // 图实例 / 运行状态
@@ -179,6 +189,16 @@ export type GraphEvent =
   | { type: 'graph.completed'; graphId: string; threadId: string; finalState: StateValues; totalCost: number; ts: string }
   | { type: 'graph.failed'; graphId: string; threadId: string; error: string; ts: string }
   | { type: 'graph.forked'; graphId: string; threadId: string; parentThreadId: string; ts: string }
+  /** 回边守卫：迭代次数超 maxIterations，该边被丢弃 */
+  | { type: 'edge.guard-exceeded'; graphId: string; threadId: string; edge: string; iterations: number; maxIterations: number; ts: string }
+  /** 回边守卫：breakCondition 命中，提前退出循环 */
+  | { type: 'edge.break'; graphId: string; threadId: string; edge: string; iterations: number; ts: string }
+  /** 节点最终失败但被 onError 路由到 fail-branch，run 不判失败 */
+  | { type: 'node.error-routed'; graphId: string; threadId: string; nodeId: string; target: string; error: string; ts: string }
+  /** 成本累计（recordCost 回调触发） */
+  | { type: 'cost.recorded'; graphId: string; threadId: string; amount: number; totalCost: number; ts: string }
+  /** join 屏障永久阻塞：run 即将结束时仍有部分前驱完成、但永远等不到全部前驱的节点 */
+  | { type: 'node.starved'; graphId: string; threadId: string; nodeId: string; missing: string[]; ts: string }
 
 // ============================================================================
 // 依赖注入接口
@@ -190,4 +210,8 @@ export interface GraphDeps {
   requestHumanInput?: (nodeId: string, value: unknown) => Promise<unknown>
   /** 记录花费 */
   recordCost?: (amount: number) => void
+  /** 子图递归执行（subgraph 节点使用）；未提供时 subgraph 节点抛错 */
+  subgraphRunner?: (subgraphId: string, state: StateValues, ctx: NodeContext) => Promise<NodeResult>
+  /** 函数表：function 节点 config.execute 为字符串时按名解析 */
+  fnTable?: Record<string, NodeDef['execute']>
 }

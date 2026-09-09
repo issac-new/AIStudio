@@ -1,86 +1,60 @@
 // overlay/custom/server/loop/graph/checkpoint-manager.ts
-// CheckpointManager — per-super-step 检查点持久化（LangGraph 模式）
-// 支持 resume（恢复同一线程）和 fork（分叉新线程，保留原史）
+// CheckpointManager — EventLogStore 之上的检查点薄封装（真快照读写）
+// 破坏性变更（已批准）：旧构造签名 constructor(store: LoopStateStore) 与
+// getLatest(graphId, threadId) 废弃；统一使用 StoredCheckpoint（Task 3 定义，含 joinLedger 透传）
+// fork = time-travel 最小可用形态：复制指定 superStep 的检查点到新 run，并记 run.forked 事件
 
-import type { Checkpoint, StateValues } from './types'
-import type { LoopStateStore } from '../store/state-store'
-import type { GraphEvent } from './types'
+import type { EventLogStore, StoredCheckpoint } from './event-log-store'
 
 export class CheckpointManager {
-  constructor(private store: LoopStateStore) {}
+  constructor(private log: EventLogStore) {}
 
-  /** 保存检查点 */
-  async save(checkpoint: Checkpoint): Promise<void> {
-    const event: GraphEvent = {
-      type: 'graph.checkpoint',
-      graphId: checkpoint.graphId,
-      threadId: checkpoint.threadId,
-      checkpointId: checkpoint.id,
-      step: checkpoint.superStep,
-      ts: checkpoint.timestamp,
-    }
-    // 用 store 的 appendEvent 持久化检查点事件
-    await this.store.appendEvent(event as any)
+  /** 保存检查点（委托 EventLogStore.saveCheckpoint，joinLedger 等字段原样透传） */
+  async save(c: StoredCheckpoint): Promise<void> {
+    await this.log.saveCheckpoint(c)
   }
 
-  /** 获取线程的最新检查点 */
-  async getLatest(graphId: string, threadId: string): Promise<Checkpoint | null> {
-    const events = await this.store.queryEvents(threadId, undefined, 100)
-    // 反向查找最近的 checkpoint 事件
-    for (let i = events.length - 1; i >= 0; i--) {
-      const evt = events[i] as any
-      if (evt.type === 'graph.checkpoint' && evt.graphId === graphId) {
-        // 在实际实现中，检查点的完整状态应该存储在专门的表中
-        // 这里简化：从事件中重建
-        return {
-          id: evt.checkpointId,
-          graphId: evt.graphId,
-          threadId: evt.threadId,
-          superStep: evt.step,
-          state: {},  // 实际从持久化存储读取
-          nextNodes: [],
-          pendingInterrupts: [],
-          timestamp: evt.ts,
-          totalCost: 0,
-        }
-      }
-    }
-    return null
+  /** 该 run 的最新检查点（superStep 最大者） */
+  async getLatest(runId: string): Promise<StoredCheckpoint | null> {
+    return this.log.getLatestCheckpoint(runId)
   }
 
-  /** fork — 从检查点创建新线程（CrewAI 模式） */
-  async fork(
-    graphId: string,
-    parentThreadId: string,
-    checkpoint: Checkpoint,
-  ): Promise<{ threadId: string; state: StateValues }> {
-    const newThreadId = `${parentThreadId}-fork-${Date.now()}`
-    const event: GraphEvent = {
-      type: 'graph.forked',
-      graphId,
-      threadId: newThreadId,
-      parentThreadId,
-      ts: new Date().toISOString(),
-    }
-    await this.store.appendEvent(event as any)
-    return { threadId: newThreadId, state: checkpoint.state }
+  /** 该 run 的全部检查点（按 superStep 升序） */
+  async list(runId: string): Promise<StoredCheckpoint[]> {
+    return this.log.listCheckpoints(runId)
   }
 
-  /** resume — 恢复线程到检查点状态 */
-  async resume(
-    graphId: string,
-    threadId: string,
-    interruptId: string,
-    resumeValue: unknown,
-  ): Promise<void> {
-    const event: GraphEvent = {
-      type: 'graph.resume',
-      graphId,
-      threadId,
-      interruptId,
-      resumeValue,
-      ts: new Date().toISOString(),
+  /** 取指定 superStep 的检查点；无则 null */
+  async getAt(runId: string, superStep: number): Promise<StoredCheckpoint | null> {
+    const all = await this.log.listCheckpoints(runId)
+    return all.find(c => c.superStep === superStep) ?? null
+  }
+
+  /**
+   * fork — 复制指定 superStep 的检查点到 newRunId（新 id、runId 替换、其余字段不变，含 joinLedger），
+   * 并向 newRunId 日志追加 run.forked（payload: fromRunId / fromSuperStep）。
+   * 源检查点不存在时抛错。
+   */
+  async fork(runId: string, superStep: number, newRunId: string): Promise<StoredCheckpoint> {
+    const src = await this.getAt(runId, superStep)
+    if (!src) {
+      throw new Error(`CheckpointManager.fork: checkpoint not found (runId=${runId}, superStep=${superStep})`)
     }
-    await this.store.appendEvent(event as any)
+    // 深拷贝隔离源对象，避免 fork 后共享 state/joinLedger 引用
+    const forked: StoredCheckpoint = JSON.parse(JSON.stringify({
+      ...src,
+      id: `${src.id}-fork-${newRunId}`,
+      runId: newRunId,
+    }))
+    await this.log.saveCheckpoint(forked)
+    await this.log.append({
+      runId: newRunId,
+      graphId: src.graphId,
+      ts: Date.now(),
+      kind: 'run.forked',
+      superStep,
+      payload: { fromRunId: runId, fromSuperStep: superStep },
+    })
+    return forked
   }
 }
