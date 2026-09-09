@@ -239,3 +239,13 @@
 198-client-router-restore-groupchat-workflow.patch
 199-client-i18n-command-post-zh.patch
 200-client-i18n-command-post-en.patch
+
+# v1.0.2 vue-tsc 迁移修复（上游 build 新增 vue-tsc -b 严门禁暴露的潜伏债）
+# - custom-modules.d.ts: @/custom/* 通配 ambient 声明（custom 树走 overlay vitest+构建验证,不进上游严格 vue-tsc）
+# - chat.ts: 移除上游已删除用法的 fetchWorkspaceRunChangesForSession 导入
+# - ChatPanel: 删上游已移除用法的 openSettingsPage;为登出按钮补 authStore 绑定
+# - GroupChatPanel: 删未使用的 authStore 声明
+# - GroupMessageList: 网关告警过滤改用 isGatewayNotice 内容检测(group 消息无 systemType 打标链路)
+# - PageSidebarNav: 补上模板引用却从未定义的 openMatrixChat(2.15 起潜伏的点击报错)
+# - WorkflowView: 删上游重构后未使用的 PageSidebarFooter 导入
+201-client-v102-vuetsc-fixes.patch
