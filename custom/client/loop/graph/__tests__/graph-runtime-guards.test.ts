@@ -383,3 +383,73 @@ describe('starved join signal', () => {
     expect((starved[0] as any).missing).toEqual(['slow'])
   })
 })
+
+// ============================================================================
+// 终审探针固化（2026-09-09 whole-branch review，notes §7k）
+// ============================================================================
+
+describe('join inside a loop body', () => {
+  // 循环体内的 join 每代必须恰好激活 1 次（回边 source 每次完成刷新 completedAtStep）
+  it('activates exactly once per iteration', async () => {
+    const order: string[] = []
+    const rt = new GraphRuntime({ emitEvent: () => {} })
+    const g = builder()
+      .addNode(fnNode('a', async (s: StateValues) => {
+        order.push('a')
+        return { update: { count: (s.count as number) + 1 } }
+      }))
+      .addNode(fnNode('b', async () => { order.push('b'); return {} }))
+      .addNode(fnNode('c', async () => { order.push('c'); return {} }))
+      .addNode(fnNode('join', async () => { order.push('join'); return {} }))
+      .setEntry('a')
+      .addEdge('a', 'b')
+      .addEdge('a', 'c')
+      .addEdge('b', 'join')
+      .addEdge('c', 'join')
+      .addEdge('join', 'a', 'loop', { maxIterations: 2 })
+      .setMaxSteps(20)
+      .build()
+    const inst = await rt.start(g, 'tjl')
+    expect(inst.status).toBe('completed')
+    expect(order.filter(x => x === 'join')).toHaveLength(3) // 初始代 + 2 次回边
+    expect(order.filter(x => x === 'a')).toHaveLength(3)
+    // 每代 join 都在 b、c 之后
+    const idx = (x: string, n: number) => order.map((v, i) => v === x ? i : -1).filter(i => i >= 0)[n]
+    for (let gen = 0; gen < 3; gen++) {
+      expect(idx('join', gen)).toBeGreaterThan(idx('b', gen))
+      expect(idx('join', gen)).toBeGreaterThan(idx('c', gen))
+    }
+  })
+})
+
+describe('guard counter across resume', () => {
+  // 回边预算跨 interrupt/resume 不重置、不多给：总迭代 = 初始 + maxIterations
+  it('does not reset guard iterations after resume', async () => {
+    const log = new InMemoryEventLogStore()
+    const rt = new GraphRuntime({ emitEvent: () => {} }, { eventLog: log, runId: 'grun' })
+    const g = builder()
+      .addNode(fnNode('a', async (s: StateValues) => ({ update: { count: (s.count as number) + 1 } })))
+      .addNode(fnNode('gate', async (_s, ctx) => {
+        // 只在第二代挂起（count===2 时），验证 resume 后守卫继续计数
+        if ((ctx as unknown as { deps: unknown } && true) && _s.count === 2 && !Object.keys(_s).some(k => k.startsWith('__resume:'))) {
+          return { interrupt: { value: { prompt: 'mid-loop' }, id: `gate-${ctx.threadId}-${ctx.superStep}` } }
+        }
+        return { update: {} }
+      }))
+      .setEntry('a')
+      .addEdge('a', 'gate')
+      .addEdge('gate', 'a', 'loop', { maxIterations: 3 })
+      .setMaxSteps(30)
+      .build()
+    const inst = await rt.start(g, 'grun')
+    expect(inst.status).toBe('awaiting-input')
+    expect(inst.state.count).toBe(2)
+
+    const cp = await log.getLatestCheckpoint('grun')
+    const rt2 = new GraphRuntime({ emitEvent: () => {} }, { eventLog: log, runId: 'grun' })
+    const inst2 = await rt2.resumeFromCheckpoint(g, cp!, 'go', cp!.pendingInterrupts[0].id)
+    expect(inst2.status).toBe('completed')
+    // gate→a 回边共放行 3 次（resume 前 1 次 + resume 后 2 次），a 总执行 1+3=4 次
+    expect(inst2.state.count).toBe(4)
+  })
+})
