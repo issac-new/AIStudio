@@ -170,6 +170,41 @@ export class GraphRuntime {
     )
   }
 
+  /**
+   * 从 checkpoint 继续执行（不应答任何 interrupt、不写 __resume 通道、不发 graph.resume）——
+   * fork 基底无 pendingInterrupts 时的续跑路径（P1 台账 a 裁决：fork 无隐式应答）。
+   * 从 checkpoint.superStep + 1 起按 nextNodes 续跑，join 簿记一并恢复（F2）。
+   */
+  async continueFromCheckpoint(
+    graphDef: GraphDef,
+    checkpoint: StoredCheckpoint,
+  ): Promise<GraphInstance> {
+    const threadId = checkpoint.runId
+    const instance: GraphInstance = {
+      id: `${graphDef.id}-${threadId}`,
+      graphDefId: graphDef.id,
+      threadId,
+      status: 'running',
+      currentStep: checkpoint.superStep,
+      state: { ...checkpoint.state },
+      totalCost: checkpoint.totalCost,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    const store = new ChannelStore(graphDef.stateSchema, checkpoint.state)
+
+    return this.runLoop(
+      graphDef, instance, store,
+      checkpoint.superStep + 1,
+      [...checkpoint.nextNodes],
+      checkpoint.pendingInterrupts.map(i => ({ ...i })),
+      { ...checkpoint.iterCounters },
+      checkpoint.startedAtMs,
+      checkpoint.joinLedger ?? emptyJoinLedger(),
+    )
+  }
+
   /** resume — 恢复被 interrupt 的图执行（旧签名保留：仅标记，不重跑） */
   async resume(
     graphDef: GraphDef,

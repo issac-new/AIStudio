@@ -57,6 +57,8 @@ export interface EventLogStore {
   saveCheckpoint(c: StoredCheckpoint): Promise<void>
   getLatestCheckpoint(runId: string): Promise<StoredCheckpoint | null>
   listCheckpoints(runId: string): Promise<StoredCheckpoint[]>
+  /** 全部已知 run（runId → graphId），供 GraphService 重启后重建注册表 */
+  listRuns(): Promise<Array<{ runId: string; graphId: string }>>
 }
 
 export class InMemoryEventLogStore implements EventLogStore {
@@ -99,6 +101,14 @@ export class InMemoryEventLogStore implements EventLogStore {
 
   async listCheckpoints(runId: string): Promise<StoredCheckpoint[]> {
     return [...(this.checkpoints.get(runId) ?? [])]
+  }
+
+  async listRuns(): Promise<Array<{ runId: string; graphId: string }>> {
+    const seen = new Map<string, string>()
+    for (const e of this.events) {
+      if (!seen.has(e.runId)) seen.set(e.runId, e.graphId)
+    }
+    return [...seen.entries()].map(([runId, graphId]) => ({ runId, graphId }))
   }
 }
 
@@ -180,6 +190,13 @@ class SqliteEventLogStore implements EventLogStore {
       `SELECT * FROM graph_checkpoints WHERE run_id = ? ORDER BY super_step`,
     ).all(runId) as Array<Record<string, unknown>>
     return rows.map(rowToCheckpoint)
+  }
+
+  async listRuns(): Promise<Array<{ runId: string; graphId: string }>> {
+    const rows = this.db.prepare(
+      `SELECT run_id, graph_id FROM graph_events GROUP BY run_id ORDER BY MIN(seq)`,
+    ).all() as Array<Record<string, unknown>>
+    return rows.map(r => ({ runId: r.run_id as string, graphId: r.graph_id as string }))
   }
 }
 
