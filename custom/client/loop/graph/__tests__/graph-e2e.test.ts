@@ -129,7 +129,7 @@ describe('E2E: GRAPH_ENGINE=on full loop', () => {
         log: () => {},
       } as never,
     })
-    assembly.start()
+    await assembly.start()
 
     const { runId } = await assembly.spawner!.tickNow('loop-1')
     await vi.waitFor(() => expect(store.getLoop('loop-1')).resolves.toMatchObject({ status: 'completed' }))

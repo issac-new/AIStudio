@@ -9,6 +9,8 @@
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import type { EventLogStore } from './event-log-store'
+import type { LoopStateStore } from '../store/state-store'
+import type { TaskContract } from '../types'
 
 export interface GraphContextInput {
   goal: string
@@ -17,7 +19,8 @@ export interface GraphContextInput {
   iteration: number
   upstreamSummary: string
   completionCriteria: string
-  budgetLeft: { steps: number; cost?: number }
+  /** steps 在 run 上下文外（如契约派发时刻）不可得，可省略——渲染时跳过 */
+  budgetLeft: { steps?: number; cost?: number }
   runUrl: string
 }
 
@@ -27,19 +30,21 @@ const AGENT_FILES = ['CLAUDE.md', 'AGENTS.md'] as const
 
 /** 幂等写 GRAPH-CONTEXT.md（覆写式，标注"自动生成勿手改"） */
 export async function writeGraphContext(workspacePath: string, ctx: GraphContextInput): Promise<void> {
-  const cost = ctx.budgetLeft.cost !== undefined ? ` / cost ${ctx.budgetLeft.cost}` : ''
-  const content = [
+  const budgetBits: string[] = []
+  if (ctx.budgetLeft.steps !== undefined) budgetBits.push(`steps ${ctx.budgetLeft.steps}`)
+  if (ctx.budgetLeft.cost !== undefined) budgetBits.push(`cost ${ctx.budgetLeft.cost}`)
+  const lines = [
     '# 任务上下文（自动生成，勿手改）',
     '',
     `- 目标（goal）：${ctx.goal}`,
     `- 当前节点：${ctx.nodeId}/${ctx.nodeLabel}，第 ${ctx.iteration} 轮迭代`,
     `- 上游产出：${ctx.upstreamSummary}`,
     `- 完成判定：${ctx.completionCriteria}`,
-    `- 剩余预算：steps ${ctx.budgetLeft.steps}${cost}`,
+    ...(budgetBits.length > 0 ? [`- 剩余预算：${budgetBits.join(' / ')}`] : []),
     `- 图回放：${ctx.runUrl}`,
     '',
-  ].join('\n')
-  await fs.writeFile(join(workspacePath, CONTEXT_FILE), content, 'utf-8')
+  ]
+  await fs.writeFile(join(workspacePath, CONTEXT_FILE), lines.join('\n'), 'utf-8')
 }
 
 /** CLAUDE.md / AGENTS.md 追加 @GRAPH-CONTEXT.md 引用行（已有则跳过；缺文件则创建单行文件） */
@@ -76,4 +81,49 @@ export async function summarizeUpstream(
   const lines = [...latest.entries()].map(([nodeId, keys]) =>
     keys.length > 0 ? `${nodeId}(${keys.join(', ')})` : nodeId)
   return lines.join(' → ').slice(0, 500)
+}
+
+// ---------------------------------------------------------------------------
+// 生产装配工厂（终审 Important 6）：patch 202 engineDeps.injectWorkspaceContext
+// ---------------------------------------------------------------------------
+
+/**
+ * 生成 PhaseNodeDeps.injectWorkspaceContext：handoff 派发 subagent 前，把 loop
+ * 台账 + 契约事实物化为 worktree 根的 GRAPH-CONTEXT.md，并给 CLAUDE.md/AGENTS.md
+ * 追加引用行。run 级字段（nodeId/iteration/runUrl）在编译期契约上不可得，按可用
+ * 事实填充：goal/预算差值取 loop 台账，上游摘要取契约 source，完成判定取
+ * requiredFiles / 程序化验证命令。store 未就绪（lazyStore 早期访问抛错）时降级为
+ * 契约自述，不阻断派发（handoff 节点还会兜一层 try/catch——上下文是增强不是依赖）。
+ */
+export function makeInjectWorkspaceContext(opts: {
+  store: Pick<LoopStateStore, 'getLoop'>
+  /** worktree 根目录，缺省 `.loop/worktrees`（与 verifier 同款 worktree 布局） */
+  worktreeRoot?: string
+}): (contract: TaskContract, worktreeId: string) => Promise<void> {
+  const root = opts.worktreeRoot ?? '.loop/worktrees'
+  return async (contract, worktreeId) => {
+    let loop: Awaited<ReturnType<LoopStateStore['getLoop']>> = null
+    try {
+      loop = await opts.store.getLoop(contract.loopId)
+    } catch { /* store 未就绪 → 契约自述降级 */ }
+    const workspacePath = join(root, worktreeId)
+    // worktree 目录尚不存在时先建（幂等）：注入顺序不应依赖 worktreeManager 的目录布局
+    await fs.mkdir(workspacePath, { recursive: true })
+    const progCommands = contract.verificationIntent.programmatic.map(p => p.command)
+    await writeGraphContext(workspacePath, {
+      goal: loop?.goal ?? contract.source.summary,
+      nodeId: 'handoff',
+      nodeLabel: `${loop?.name ?? contract.loopId}:handoff`,
+      iteration: loop?.stats.currentIteration ?? 0,
+      upstreamSummary: contract.source.summary,
+      completionCriteria: contract.resultTemplate.requiredFiles.length > 0
+        ? `required files: ${contract.resultTemplate.requiredFiles.join(', ')}`
+        : (progCommands.length > 0 ? progCommands.join(' && ') : `complete contract ${contract.id}`),
+      budgetLeft: {
+        cost: loop ? Math.max(0, loop.budget.maxCostTotal - loop.stats.totalCost) : undefined,
+      },
+      runUrl: '',
+    })
+    await ensureAgentReference(workspacePath)
+  }
 }
