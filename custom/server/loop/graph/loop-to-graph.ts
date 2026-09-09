@@ -1,5 +1,8 @@
 // overlay/custom/server/loop/graph/loop-to-graph.ts
 // Loop-to-Graph 映射器 — 把 LoopInstance 映射为 GraphInstance + GraphDef
+// @deprecated P1 起，可执行图定义走 graph-compiler.ts（compileLoopToSpec：LoopInstance →
+// GraphSpec 六节点 + 守卫 repair 回边）。本文件的只读投影仅为 controllers/graph.ts 的
+// GET 端点保持既有 REST 输出形状，节点 execute 为占位、不可执行。
 //
 // 核心概念：
 //   一个 Loop = 图中的一个 loop-node（5 阶段为子节点）
