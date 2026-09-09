@@ -160,7 +160,7 @@ describe('compiled graph end-to-end', () => {
     const loop = makeLoop()
     const mock = makeCompileDeps({
       discoverResult: [makeContract('task/a')],
-      gateCommands: [{ name: 'lint', cmd: 'true' }],
+      gateCommands: [{ name: 'lint', kind: 'validator', cmd: 'true' }],
     })
     const { service, events } = compileAndRun(loop, mock as unknown as CompileDeps)
     const { instance } = await service.startRun('loop-loop-1')
@@ -233,15 +233,15 @@ describe('compiled graph end-to-end', () => {
   it('gate validator failure enters repairQueue and terminates via guard (no hang)', async () => {
     const mock = makeCompileDeps({
       discoverResult: [makeContract('task/a')],
-      gateCommands: [{ name: 'typecheck', cmd: 'false' }],
+      gateCommands: [{ name: 'typecheck', kind: 'validator', cmd: 'false' }],
     })
     const deps = { ...mock, repairMaxAttempts: 1 } as unknown as CompileDeps
     const { service } = compileAndRun(makeLoop(), deps)
     const { instance } = await service.startRun('loop-loop-1')
 
     expect(['completed', 'failed']).toContain(instance.status)
-    const queue = instance.state[CH.repairQueue] as string[]
-    expect(queue).toContain('typecheck')
+    const queue = instance.state[CH.repairQueue] as Array<{ name: string }>
+    expect(queue.map(q => q.name)).toContain('typecheck')
   }, 20_000)
 
   it('contract at maxAttempts escalates instead of looping forever', async () => {
