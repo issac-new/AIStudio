@@ -1,8 +1,12 @@
 // overlay/custom/server/loop/graph/event-log-store.ts
 // EventLogStore — 图执行的 append-only 事实源
 // 默认 InMemory（无路径时的测试/内存形态）；
-// 生产经 createEventLogStore(path) 走 node:sqlite（Node 内置 DatabaseSync，零新依赖；
-// 创建失败降级 InMemory 并 console.warn 一次——Task 3 审查遗留：降级不许静默）
+// 生产经 createEventLogStore(path) 走 node:sqlite（Node 内置 DatabaseSync，零新依赖）
+//
+// 降级边界（台账 m 修正）：本文件对 node:sqlite 是顶层静态 import——
+// 运行时缺少该内置模块时（package.json engines 声明 node >=23），import 即抛、
+// 本模块加载失败，createEventLogStore 工厂根本不会执行；工厂的 try/catch 只兜
+// "模块存在但建库失败"（路径不可写 / 文件损坏等），此时降级 InMemory 并 console.warn 一次，不静默。
 
 import { DatabaseSync } from 'node:sqlite'
 import type { SQLInputValue } from 'node:sqlite'
@@ -57,6 +61,8 @@ export interface EventLogStore {
   saveCheckpoint(c: StoredCheckpoint): Promise<void>
   getLatestCheckpoint(runId: string): Promise<StoredCheckpoint | null>
   listCheckpoints(runId: string): Promise<StoredCheckpoint[]>
+  /** 全部已知 run（runId → graphId），供 GraphService 重启后重建注册表 */
+  listRuns(): Promise<Array<{ runId: string; graphId: string }>>
 }
 
 export class InMemoryEventLogStore implements EventLogStore {
@@ -99,6 +105,14 @@ export class InMemoryEventLogStore implements EventLogStore {
 
   async listCheckpoints(runId: string): Promise<StoredCheckpoint[]> {
     return [...(this.checkpoints.get(runId) ?? [])]
+  }
+
+  async listRuns(): Promise<Array<{ runId: string; graphId: string }>> {
+    const seen = new Map<string, string>()
+    for (const e of this.events) {
+      if (!seen.has(e.runId)) seen.set(e.runId, e.graphId)
+    }
+    return [...seen.entries()].map(([runId, graphId]) => ({ runId, graphId }))
   }
 }
 
@@ -180,6 +194,13 @@ class SqliteEventLogStore implements EventLogStore {
       `SELECT * FROM graph_checkpoints WHERE run_id = ? ORDER BY super_step`,
     ).all(runId) as Array<Record<string, unknown>>
     return rows.map(rowToCheckpoint)
+  }
+
+  async listRuns(): Promise<Array<{ runId: string; graphId: string }>> {
+    const rows = this.db.prepare(
+      `SELECT run_id, MIN(graph_id) AS graph_id FROM graph_events GROUP BY run_id ORDER BY MIN(seq)`,
+    ).all() as Array<Record<string, unknown>>
+    return rows.map(r => ({ runId: r.run_id as string, graphId: r.graph_id as string }))
   }
 }
 

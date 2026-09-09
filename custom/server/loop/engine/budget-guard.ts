@@ -1,12 +1,19 @@
 // overlay/custom/server/loop/engine/budget-guard.ts
 import type { LoopInstance, LoopEvent } from '../types'
+import { PATTERN_TEMPLATES } from '../types'
 
 export interface BudgetDecision {
   allow: boolean
   action?: 'throw' | 'notify' | 'kill'
 }
 
+const TICK_COST_BY_LEVEL: Record<string, number> = {
+  low: 0.5, medium: 2, high: 10, 'very-high': 30,
+}
+
 export class BudgetGuard {
+  private warnedUnknownPattern = false
+
   constructor(private emitEvent: (event: LoopEvent) => void) {}
 
   check(loop: LoopInstance): BudgetDecision {
@@ -27,10 +34,17 @@ export class BudgetGuard {
     return { allow: true }
   }
 
+  /** 台账 g 修复：按 PATTERN_TEMPLATES[pattern].costEstimate 查成本档表；
+   *  无匹配模板回落 medium 档并 warn 一次（旧实现拿 pattern 名索引档位表恒 miss 返回 1） */
   estimateTickCost(loop: LoopInstance): number {
-    const costMap: Record<string, number> = {
-      low: 0.5, medium: 2, high: 10, 'very-high': 30,
+    const template = PATTERN_TEMPLATES[loop.pattern]
+    if (!template) {
+      if (!this.warnedUnknownPattern) {
+        this.warnedUnknownPattern = true
+        console.warn(`[budget-guard] unknown pattern "${String(loop.pattern)}" on loop ${loop.id} — cost estimate falls back to medium`)
+      }
+      return TICK_COST_BY_LEVEL.medium
     }
-    return costMap[loop.pattern] ?? 1
+    return TICK_COST_BY_LEVEL[template.costEstimate] ?? TICK_COST_BY_LEVEL.medium
   }
 }

@@ -4,9 +4,11 @@
 
 import Router from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
-import type { LoopInstance, TaskContract, LoopEvent } from '../types'
+import type { TaskContract } from '../types'
 import type { GraphInstance, GraphEvent } from '../graph/types'
 import { loopToGraphInstance, loopToGraphDef, loopEventsToGraphEvents } from '../graph/loop-to-graph'
+// P1：tick/fork stub 已删除——运行级操作走 graph-rest（POST /api/graph/runs/:id/fork|resume|start），
+// loop 级 tick 走 /api/loop/loops/:id/tick（GRAPH_ENGINE=on 时由装配分流到 RunSpawner）
 
 export function createGraphRouter(store: LoopStateStore): Router {
   const router = new Router()
@@ -52,43 +54,7 @@ export function createGraphRouter(store: LoopStateStore): Router {
     ctx.body = { events: graphEvents }
   })
 
-  // POST /api/graph/graphs/:id/tick — 触发图执行（映射为 loop tick）
-  router.post('/api/graph/graphs/:id/tick', async (ctx) => {
-    const loopId = ctx.params.id.replace(/^graph-/, '')
-    if (!/^[A-Za-z0-9._-]+$/.test(loopId)) {
-      ctx.status = 400; ctx.body = { error: 'Invalid graph id' }; return
-    }
-    // 映射为 loop tick — 需要 scheduler，但 controller 没有 scheduler 引用
-    // 简化：返回 ok，由客户端调用 loop tick endpoint
-    ctx.body = { ok: true, note: 'Use /api/loop/loops/:id/tick for direct execution' }
-  })
 
-  // POST /api/graph/graphs/:id/fork — 从检查点分叉（LangGraph 模式）
-  router.post('/api/graph/graphs/:id/fork', async (ctx) => {
-    const loopId = ctx.params.id.replace(/^graph-/, '')
-    if (!/^[A-Za-z0-9._-]+$/.test(loopId)) {
-      ctx.status = 400; ctx.body = { error: 'Invalid graph id' }; return
-    }
-    const body = ctx.request.body as { name?: string }
-    const loop = await store.getLoop(loopId)
-    if (!loop) {
-      ctx.status = 404; ctx.body = { error: 'Graph not found' }; return
-    }
-    // 创建 fork：复制 loop，继承 state
-    const forkId = `${loopId}-fork-${Date.now()}`
-    const forked: LoopInstance = {
-      ...loop,
-      id: forkId,
-      name: body.name ?? `${loop.name} (fork)`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'idle',
-      stats: { ...loop.stats, currentIteration: 0, tasksDiscovered: 0, tasksCompleted: 0, tasksBlocked: 0, totalCost: 0 },
-    }
-    await store.createLoop(forked)
-    const contracts = await store.queryContracts(forkId)
-    ctx.body = { graph: loopToGraphInstance(forked, contracts) }
-  })
 
   return router
 }

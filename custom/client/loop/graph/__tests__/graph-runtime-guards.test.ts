@@ -422,6 +422,134 @@ describe('join inside a loop body', () => {
   })
 })
 
+// ============================================================================
+// Task 2 台账收口（k / l / n）
+// ============================================================================
+
+describe('L4 duration guard', () => {
+  // k 台账：maxDurationMs 熔断——极小时长上限 + 慢节点 → run 判 failed，error 含 duration
+  it('fails the run when maxDurationMs is exceeded, error mentions duration', async () => {
+    const events: GraphEvent[] = []
+    const rt = new GraphRuntime({ emitEvent: e => events.push(e) })
+    const g = builder()
+      .addNode(fnNode('slow', async () => {
+        await new Promise(r => setTimeout(r, 40))
+        return { update: {} }
+      }))
+      .setEntry('slow')
+      .addEdge('slow', 'slow', 'loop', { maxIterations: 10 })
+      .setMaxDurationMs(5)
+      .setMaxSteps(20)
+      .build()
+    const inst = await rt.start(g, 'tk1')
+    expect(inst.status).toBe('failed')
+    const failed = events.find(e => e.type === 'graph.failed') as unknown as { error: string }
+    expect(failed).toBeDefined()
+    expect(failed.error).toMatch(/duration/)
+  })
+})
+
+describe('retry-goto attempts counting', () => {
+  // k 台账：retry-goto 同 target 路由计数——超 maxAttempts 后不再路由，run 判 failed
+  it('fails the run once routing to the same target exceeds maxAttempts', async () => {
+    const events: GraphEvent[] = []
+    const rt = new GraphRuntime({ emitEvent: e => events.push(e) })
+    const g = builder()
+      .addNode({
+        id: 'risky', type: 'function', label: 'risky',
+        execute: async () => { throw new Error('boom') },
+        onError: { type: 'retry-goto', target: 'fixup', maxAttempts: 2 },
+      })
+      .addNode(fnNode('fixup', async () => ({ update: {} })))
+      .setEntry('risky')
+      .addEdge('risky', 'fixup')
+      .addEdge('fixup', 'risky', 'loop', { maxIterations: 5 })
+      .setMaxSteps(20)
+      .build()
+    const inst = await rt.start(g, 'tk2')
+    expect(inst.status).toBe('failed')
+    // 第 1 次失败路由到 fixup；第 2 次失败超 maxAttempts → fatal
+    const routed = events.filter(e => (e as any).type === 'node.error-routed' && (e as any).target === 'fixup')
+    expect(routed).toHaveLength(1)
+    const failed = events.find(e => e.type === 'graph.failed') as unknown as { error: string }
+    expect(failed).toBeDefined()
+    expect(failed.error).toMatch(/risky/)
+  })
+})
+
+describe('conditional edge guard at build()', () => {
+  // l 台账：条件边 target 求值前未知，无法静态判定是否闭合环。
+  // 保守近似：无 guard 条件边的 source 若自身位于静态环上（存在路径回到 source），build() 拒绝
+  it('rejects unguarded conditional edge whose source sits on a static cycle', () => {
+    expect(() => builder()
+      .addNode(fnNode('a', async () => ({})))
+      .addNode(fnNode('b', async () => ({})))
+      .setEntry('a')
+      .addEdge('a', 'b')
+      .addEdge('b', 'a', 'loop', { maxIterations: 3 })
+      .addConditionalEdge('a', when(() => true, 'b'))
+      .build(),
+    ).toThrow(/guard/i)
+  })
+
+  // l 台账：带 guard 的条件边豁免，guard 字段透传进 EdgeDef
+  it('accepts guarded conditional edge on a cyclic source and carries guard into EdgeDef', () => {
+    const g = builder()
+      .addNode(fnNode('a', async () => ({})))
+      .addNode(fnNode('b', async () => ({})))
+      .setEntry('a')
+      .addEdge('a', 'b')
+      .addEdge('b', 'a', 'loop', { maxIterations: 3 })
+      .addConditionalEdge('a', when(() => true, 'b'), 'cond', { maxIterations: 2 })
+      .build()
+    const cond = g.edges.find(e => e.condition)
+    expect(cond?.guard?.maxIterations).toBe(2)
+  })
+
+  it('still accepts unguarded conditional edge whose source is off any cycle', () => {
+    const g = builder()
+      .addNode(fnNode('start', async () => ({})))
+      .addNode(fnNode('check', async () => ({})))
+      .addNode(fnNode('join', async () => ({})))
+      .setEntry('start')
+      .addEdge('start', 'check')
+      .addConditionalEdge('check', when(() => true, 'join'))
+      .build()
+    expect(g.edges.some(e => e.condition)).toBe(true)
+  })
+})
+
+describe('starved join on endCondition completion', () => {
+  // n 台账：endCondition 满足结束 run 时，被阻塞的 join 同样补发 node.starved
+  it('emits node.starved when the run completes via endCondition with a blocked join', async () => {
+    const events: GraphEvent[] = []
+    const rt = new GraphRuntime({ emitEvent: e => events.push(e) })
+    const g = builder()
+      .addNode(fnNode('start', async () => ({})))
+      .addNode(fnNode('fast', async () => ({})))
+      .addNode({
+        id: 'slow', type: 'function', label: 'slow',
+        execute: async () => { throw new Error('boom') },
+        onError: { type: 'goto', target: 'fallback' },
+      })
+      .addNode(fnNode('fallback', async () => ({ update: { count: 1 } })))
+      .addNode(fnNode('join', async () => ({})))
+      .setEntry('start')
+      .addEdge('start', 'fast')
+      .addEdge('start', 'slow')
+      .addEdge('fast', 'join')
+      .addEdge('slow', 'join')
+      .setEndCondition(s => (s.count as number) >= 1)
+      .build()
+    const inst = await rt.start(g, 'tn1')
+    expect(inst.status).toBe('completed')
+    const starved = events.filter(e => (e as any).type === 'node.starved')
+    expect(starved).toHaveLength(1)
+    expect((starved[0] as any).nodeId).toBe('join')
+    expect((starved[0] as any).missing).toEqual(['slow'])
+  })
+})
+
 describe('guard counter across resume', () => {
   // 回边预算跨 interrupt/resume 不重置、不多给：总迭代 = 初始 + maxIterations
   it('does not reset guard iterations after resume', async () => {

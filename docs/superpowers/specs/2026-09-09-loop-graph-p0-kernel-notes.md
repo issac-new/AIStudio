@@ -132,3 +132,28 @@ n. **node.starved 只在自然排空路径发出**；endCondition/hasEnd 完成�
 
 - `npm test`：83 文件，611 过 / 6 skipped（Task 8 新增 node:sqlite 2 例后 613 过）；`npm run build` client 构建通过。
 - server 侧 tsc 以注入后上游工程为准；Task 3 遗留的 better-sqlite3 动态 require / 类型注解 2 条报错随 Task 8 消除。
+
+## 9. P1 核销（2026-09-10，生产切换完成）
+
+§7 台账逐条状态（分支 `feat/loop-graph-p1-production-switch`）：
+
+| 项 | 状态 | 落点 |
+|---|---|---|
+| a. fork 续跑语义 | ✅ 已定 | P1 Task 1：显式语义——基底有 pendingInterrupts 则 fork 产物直接 `awaiting-input` 等真人 resume，不自动应答 |
+| b. registry 重启重建 | ✅ | Task 1 `rebuildRegistryFromLog()`（运行中 run 重建为 paused） |
+| c. GraphService 三处收紧 | ✅ | Task 1（graphId 匹配 / interruptId ∈ pendingInterrupts / getRun 浅拷贝） |
+| d. 旧 Checkpoint 死代码 | ✅ | P0 终审删除，Task 2 验证无残留 |
+| e. joinLedger fork 隔离测试 | ✅ | Task 2 |
+| f. predicate/reducers 四处收紧 | ✅ | Task 2（Object.hasOwn / getPath 原型链 / PredicateError.name / and-or-not 结构校验） |
+| g. estimateTickCost 恒返回 1 | ✅ | P1 Task 6：按 `PATTERN_TEMPLATES[pattern].costEstimate` 查表，未知 pattern 回落 medium + warn 一次 |
+| h. interrupt 72h 超时 | ⚠️ 未落地 | 服务层时钟轮询未实现，**顺延 P2**（graph-rest 层兜底轮询的设计位保留）；human 节点 timeoutMs 仍只是执行超时 |
+| i. graph_specs 持久化 | ✅（口径微调） | `GraphSpecStore` JSON 文件（`.loop/graph-specs.json`）+ `GET/POST /api/graph/specs`；与 event-log 共库的 sqlite 表化留 P2（REST 形状已立） |
+| j. `__iter:<edgeId>` 偏差声明 | — | 偏差维持（实现为节点级 `__iteration`） |
+| k. 四条探针固化 | ✅ | Task 2（join-in-loop / guard 跨 resume / maxDurationMs 熔断 / retry-goto 计数） |
+| l. addConditionalEdge guard | ✅ | Task 2（带 guard 条件边豁免、无 guard 环上条件边 build() 拒绝） |
+| m. §5 降级表述 | ✅ | Task 2 修正头注释（顶层静态 import 的真实降级边界） |
+| n. starved 补发 | ✅ | Task 2（endCondition/hasEnd 完成路径统一 `emitStarvedJoins`） |
+
+§6 接线点落地：① patch 202 三态装配（`GRAPH_ENGINE=legacy|shadow|on`，legacy 默认零行为变化）② `graph-compiler.ts` LoopInstance→GraphSpec 六节点 + gate 内建 + 四断链修复 ③ `run-spawner.ts` 调度收敛（旧 Scheduler 保留给 legacy，双跑纪律）④ controllers/graph stub 删除、`graph-rest.ts` 真实化（runs CRUD/resume/fork/replay/specs）⑤ `/graph` socket namespace + `loop.*` 事件桥接（前端无感）。
+
+P1 新增文件（`custom/server/loop/graph/`）：`phase-nodes.ts`（五阶段节点工厂 + gate + stop-check + human 审批三元组）、`graph-compiler.ts`、`workspace-context.ts`（R2）、`next-tick.ts`、`run-spawner.ts`、`graph-rest.ts`、`graph-socket.ts`、`shadow-runner.ts`、`graph-assembly.ts`、`graph-migrate.ts`；patch `202-loop-graph-assembly.patch`；脚本 `scripts/graph-migrate.mjs`（vite-node 薄壳）+ `graph-shadow-report.mjs`。

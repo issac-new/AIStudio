@@ -296,6 +296,73 @@ LoopInstance ──compile──> GraphSpec
 
 ---
 
+## 7B. 角色习惯整合（用户补充，2026-09-10，基于 ZCode/Codex/Claude Code/VSCode/IDEA/禅道/Jira/Wiki 深度调研）
+
+> 调研核心结论：成熟工具全部收敛到同一骨架——**权限是模式不是弹窗、介入按代价分层、计划是可编辑数据、进度是分级视图、团队可见性靠绑定协作物（PR/IM 线程/工单）而非共享屏幕**。loop graph 的每个 run 都要回答这五件事在哪。
+
+### 7B.1 通用交互骨架（跨角色，P2/P3 落地）
+
+| 骨架 | 借鉴来源 | loop graph 落点 |
+|---|---|---|
+| 权限档徽标 + 全局热切换 | Claude 六档/Codex 三档/ZCode 四档 Shift+Tab | run 列表与详情页常驻权限档徽标；全局快捷键循环切换；**auto 档**=第二模型逐动作代理审批并留痕（长时无人值守默认档） |
+| 介入分层：peek / attach / 打断 / 排队纠偏 | Claude Agent view（Needs input/Working/Completed + 行级 peek） | 运行列表按"待我处理"优先排序；peek=行内看最新输出并直接回复审批；attach=进节点检查器全量接管；纠偏消息排队在当前节点完成后生效 |
+| 计划是数据：可编辑 + 三出口审批 | Claude plan mode（Ctrl+G 编辑计划；批准即定下游档位）、VSCode Plan agent（计划+todo 整体移交） | **plan 节点**（P4 编排器一等节点类型）：计划文本可编辑后放行；批准选项决定下游执行档（自动执行/逐项确认/打回改计划） |
+| 进度三级分辨率 | Claude transcript Normal/Verbose/Summary + workflows 阶段视图（agent 数/token/耗时下钻到单 agent） | 同一事件日志三种投影：Summary（看板/列表）、Normal（运行详情）、Verbose（节点检查器调试）；节点级 restart |
+| 绑定协作物 | Codex Slack 回帖+PR 链接、ZCode Bot Channel、Copilot coding agent issue 指派 | run 可声明绑定 PR/Matrix 线程/工作项；节点状态变更推卡片，**卡片带可追溯产物链接且回复即介入** |
+| 结果收件箱 | Codex Automations Inbox（待处理/已归档） | 无人值守 run 的产物进【介入】收件箱两态分类，不涌进聊天流 |
+
+### 7B.2 产品经理
+
+- **从模板实例化而非画图**（VSCode Plan agent / Copilot coding agent 案例照搬）：PM 用自然语言描述目标 → 系统出计划+todo → 审批后移交执行；P4 模板库提供"需求→开发→测试→交付"预设图。
+- **需求-任务分解树映射**（Jira Epic→Story→Sub-task 层级）：分解树的每个叶子可挂一个 run/节点，分解本身可成为一个编排模板。
+- **追溯矩阵自动建立**（禅道"失败用例一键转 Bug"+ Jira Smart Commit 锚点）：run 产生的每个工件（PR/commit/用例/缺陷）带类型化链接，需求详情页聚合为需求↔run↔代码↔测试双向矩阵——追溯在操作发生时顺手建立，不做事后补链。
+
+### 7B.3 项目经理
+
+- **状态/阶段双轴**（禅道需求研发阶段）：run 的生命周期状态（排队/运行/成功/失败/取消）与**业务阶段**（需求已明确→代码已生成→测试通过→已交付）是两根轴；业务阶段由下游节点完成度**自动推导**——PM 看阶段列即可读懂进度，无需理解图拓扑。
+- **转换是按钮，不是任意跳转**（禅道看板合法矩阵 + Jira transition）：run/节点只暴露有限合法操作集；转换可携带字段前提（如禅道"关闭原因=延期才可激活"）。
+- **守卫三分法细化为 gate 节点语义**（Jira condition/validator/post function）：condition=控制操作可见性（UI 层）；validator=数据校验，失败**停在原状态且副作用不执行**，失败消息说清"卡在哪个状态、差什么条件"；post function=成功后按固定顺序执行的副作用链（与 P1 phase-nodes 的 persistence 顺序对齐）。
+- **审批是节点上的配置**（JSM：进入状态即出现 Approve/Decline，全员同意自动流转，拒绝走专用转换）：审批人来源+通过策略（全体/多数/指定人）+拒绝去向，是 human/gate 节点的 config 三元组，不引入独立审批节点类型。
+- **并行分支作用域规则**（Jira Automation branch 铁律）：主流程上下文不进分支、分支间无顺序保证且不可互相依赖、分支产物不回写主上下文——P4 编排器把这四条做成**死图检测**校验。
+- **触发器分类学 + 熔断**（Jira Automation：事件/定时/webhook/人工带输入/DevOps 五类；scheduled 连续失败 10 次自动禁用）：run spawner 的入口按此分类；连续失败 N 次（默认 10）自动暂停 loop 并发告警。
+
+### 7B.4 团队负责人
+
+- **角色仪表盘卡片**（Jira Sprint Health 色码条/燃尽+范围变更/CFD/禅道按轮次缺陷统计）：【总览】按角色组装——负责人默认见 agent 吞吐量（run 数/成功率/耗时中位数/成本，参照 Copilot metrics API）、阻塞 Top、按轮次缺陷。核心指标必须可嵌入卡片（反面教材：Jira velocity 无原生 gadget）。
+- **策略下发一等公民**（Copilot 管理员策略+仓库 opt-out+rulesets、Claude managed settings）：权限模板、敏感路径清单（VSCode `chat.tools.edits.autoApprove` 反向清单思路）、AGENTS.md 级指令随图模板分发团队；负责人可对单个 loop opt-out 策略。
+- **闲时队列成本语义**（ZCode idle-time-tasks）：待触发节点可声明优先级与资源档位，调度器在算力空闲时批量执行。
+- **Triage 分诊 + 归档防腐坏**（Linear）：失败/待审 run 进每日分诊队列；完成 run 过期自动归档，运行列表不无限膨胀。
+
+### 7B.5 开发
+
+- **会话/任务面板 + 两级介入**（Claude Agent view）：peek（行内回复）≠ attach（全量接管），"看一眼"的代价不等于"全接管"。
+- **审批卡可编辑入参**（VSCode）：审批交互从"是/否"升级为"改完再跑"——修正命令行/路径/MCP 入参后放行，省一整轮打回。
+- **"Always allow"按操作类型记忆**（Junie）：同类节点（如"跑单元测试"）批准一次后同类自动通过——权限沉淀在节点类型层，不是会话级全放行。
+- **节点级回滚绑定 diff**（Junie Rollback）：改码节点失败恢复=回滚该节点的 diff（单文件/全量），失败动作直接调用节点快照回滚。
+- **Best-of-N 多方案 fan-out**（Codex）：关键决策节点支持分叉 N 条并行实现边→diff 两两对比→收敛到一条；图式编排优于线性会话的最直观卖点（P4）。
+- **worktree 策略分级**（Codex Auto/manual）：并行隔离策略是图全局配置——Auto 档 agent 建议拆分+人一键确认；manual 档强制先建分支。
+- **上下文污染防线**（Codex 官方警示）：一个节点一个 agent 一个目标；节点配置强制可继承上下文白名单（GRAPH-CONTEXT.md/指定文件），防止多 agent 共享会话历史串扰（与 R2 呼应）。
+- **fork 继承进度快照**（ZCode）：分叉携带父节点已完成状态（哪些已绿），不只继承文本。
+- **transcript 三级分辨率**：同 7B.1，开发调试用 Verbose 档。
+
+### 7B.6 测试
+
+- **gate 节点即测试轮次**（禅道 testtask）：按轮次组织验证——每轮 gate 产出结构化证据（通过/失败/exitCode/日志锚点/coverage），按轮次统计缺陷；失败用例一键转 repair 回边回 handoff（禅道 bug 生命周期闭环映射）。
+- **验证证据可视化**（IDEA 树状测试运行器/Coverage、VSCode Testing 视图）：gate/验证节点的检查器面板=树状用例结果+失败定位+日志引用，不是纯文本流。
+- **追溯矩阵**（禅道用例↔需求↔Bug 链条）：测试轮次产出的缺陷自动关联回触发 run 与需求（与 7B.2 共用追溯基建）。
+- **运行时验证节点（远期，P4+ 候选）**（Junie Debug mode）：验证节点可 attach 运行中程序做断点/求值/栈检查——对 Electron 桌面应用自身的自动化验证极具价值。
+
+### 7B.7 落地分期映射
+
+| 期 | 整合项 |
+|---|---|
+| P1（本期微调） | gate 节点区分 validator/post-function 语义；human 节点审批 config 三元组（审批人来源/通过策略/拒绝去向）；连续失败熔断参数进 run spawner |
+| P2 运行中心 | 三级分辨率、peek/attach、业务阶段列（双轴）、收件箱两态、绑定 IM 线程/PR、合法操作集（转换是按钮）、节点级 restart |
+| P3 新 IA | 角色仪表盘（负责人 metrics/阻塞 Top/按轮次缺陷）、Triage 分诊+自动归档、策略下发面板、追溯矩阵 |
+| P4 编排器 | plan 节点（可编辑计划+三出口）、Best-of-N fan-out、并行分支死图检测、worktree 策略配置、审批"Always allow"按类型记忆、模板内置权限档与敏感清单 |
+
+---
+
 ## 8. 新信息架构（从零重排，P3）
 
 登录后一级导航六个区域，取代三栏驾驶舱：

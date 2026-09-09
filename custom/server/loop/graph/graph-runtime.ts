@@ -45,7 +45,8 @@ export interface GraphRuntimeOptions {
 type PendingInterrupt = { nodeId: string; value: unknown; id: string }
 
 /** GraphEvent.type → 事件日志 kind（未列出者 kind = type 原样落盘） */
-const EVENT_KIND_MAP: Record<GraphEvent['type'], string> = {
+/** GraphEvent.type → 事件日志 kind（导出供 shadow 对比等装配层复用） */
+export const EVENT_KIND_MAP: Record<GraphEvent['type'], string> = {
   'graph.started': 'run.started',
   'graph.completed': 'run.completed',
   'graph.failed': 'run.failed',
@@ -132,6 +133,41 @@ export class GraphRuntime {
     resumeValue: unknown,
     interruptId: string,
   ): Promise<GraphInstance> {
+    return this.restoreAndRun(graphDef, checkpoint, { interruptId, value: resumeValue })
+  }
+
+  /**
+   * 从 checkpoint 继续执行（不应答任何 interrupt、不写 __resume 通道、不发 graph.resume）——
+   * fork 基底无 pendingInterrupts 时的续跑路径（P1 台账 a 裁决：fork 无隐式应答）。
+   * 从 checkpoint.superStep + 1 起按 nextNodes 续跑，join 簿记一并恢复（F2）。
+   */
+  async continueFromCheckpoint(
+    graphDef: GraphDef,
+    checkpoint: StoredCheckpoint,
+  ): Promise<GraphInstance> {
+    return this.restoreAndRun(graphDef, checkpoint)
+  }
+
+  /**
+   * start/fork 消费之外的"非 start 路径"补发 graph.started ——
+   * fork 产物被 startRun 消费时由 GraphService 调用：日志落 run.started
+   * （rebuildRegistryFromLog 据此判别 fork 是否已起跑），onEvent 订阅方同步可见。
+   */
+  emitStarted(graphDef: GraphDef, threadId: string): void {
+    this.emitEvent({
+      type: 'graph.started',
+      graphId: graphDef.id,
+      threadId,
+      ts: new Date().toISOString(),
+    })
+  }
+
+  /** resumeFromCheckpoint / continueFromCheckpoint 共用恢复骨架；resume 缺省 = 不应答、不发 graph.resume */
+  private async restoreAndRun(
+    graphDef: GraphDef,
+    checkpoint: StoredCheckpoint,
+    resume?: { interruptId: string; value: unknown },
+  ): Promise<GraphInstance> {
     const threadId = checkpoint.runId
     const instance: GraphInstance = {
       id: `${graphDef.id}-${threadId}`,
@@ -146,18 +182,20 @@ export class GraphRuntime {
     }
 
     const store = new ChannelStore(graphDef.stateSchema, checkpoint.state)
-    store.apply({ [`__resume:${interruptId}`]: resumeValue })
+    let pendingInterrupts = checkpoint.pendingInterrupts.map(i => ({ ...i }))
 
-    const pendingInterrupts = checkpoint.pendingInterrupts.filter(i => i.id !== interruptId)
-
-    this.emitEvent({
-      type: 'graph.resume',
-      graphId: graphDef.id,
-      threadId,
-      interruptId,
-      resumeValue,
-      ts: new Date().toISOString(),
-    })
+    if (resume) {
+      store.apply({ [`__resume:${resume.interruptId}`]: resume.value })
+      pendingInterrupts = pendingInterrupts.filter(i => i.id !== resume!.interruptId)
+      this.emitEvent({
+        type: 'graph.resume',
+        graphId: graphDef.id,
+        threadId,
+        interruptId: resume.interruptId,
+        resumeValue: resume.value,
+        ts: new Date().toISOString(),
+      })
+    }
 
     return this.runLoop(
       graphDef, instance, store,
@@ -540,7 +578,9 @@ export class GraphRuntime {
       }
 
       // 检查终止条件
+      // n 台账：hasEnd/endCondition 完成路径与 nextNodes 排空路径一致，run 结束前统一扫一次 join 饿死
       if (hasEnd || (graphDef.endCondition && graphDef.endCondition(store.getValues()))) {
+        emitStarvedJoins()
         return await this.complete(instance, graphDef, store)
       }
 
