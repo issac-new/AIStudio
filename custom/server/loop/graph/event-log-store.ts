@@ -194,7 +194,7 @@ class SqliteEventLogStore implements EventLogStore {
 
   async listRuns(): Promise<Array<{ runId: string; graphId: string }>> {
     const rows = this.db.prepare(
-      `SELECT run_id, graph_id FROM graph_events GROUP BY run_id ORDER BY MIN(seq)`,
+      `SELECT run_id, MIN(graph_id) AS graph_id FROM graph_events GROUP BY run_id ORDER BY MIN(seq)`,
     ).all() as Array<Record<string, unknown>>
     return rows.map(r => ({ runId: r.run_id as string, graphId: r.graph_id as string }))
   }

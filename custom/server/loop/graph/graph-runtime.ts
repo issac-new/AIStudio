@@ -132,42 +132,7 @@ export class GraphRuntime {
     resumeValue: unknown,
     interruptId: string,
   ): Promise<GraphInstance> {
-    const threadId = checkpoint.runId
-    const instance: GraphInstance = {
-      id: `${graphDef.id}-${threadId}`,
-      graphDefId: graphDef.id,
-      threadId,
-      status: 'running',
-      currentStep: checkpoint.superStep,
-      state: { ...checkpoint.state },
-      totalCost: checkpoint.totalCost,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    const store = new ChannelStore(graphDef.stateSchema, checkpoint.state)
-    store.apply({ [`__resume:${interruptId}`]: resumeValue })
-
-    const pendingInterrupts = checkpoint.pendingInterrupts.filter(i => i.id !== interruptId)
-
-    this.emitEvent({
-      type: 'graph.resume',
-      graphId: graphDef.id,
-      threadId,
-      interruptId,
-      resumeValue,
-      ts: new Date().toISOString(),
-    })
-
-    return this.runLoop(
-      graphDef, instance, store,
-      checkpoint.superStep + 1,
-      [...checkpoint.nextNodes],
-      pendingInterrupts,
-      { ...checkpoint.iterCounters },
-      checkpoint.startedAtMs,
-      checkpoint.joinLedger ?? emptyJoinLedger(),
-    )
+    return this.restoreAndRun(graphDef, checkpoint, { interruptId, value: resumeValue })
   }
 
   /**
@@ -178,6 +143,29 @@ export class GraphRuntime {
   async continueFromCheckpoint(
     graphDef: GraphDef,
     checkpoint: StoredCheckpoint,
+  ): Promise<GraphInstance> {
+    return this.restoreAndRun(graphDef, checkpoint)
+  }
+
+  /**
+   * start/fork 消费之外的"非 start 路径"补发 graph.started ——
+   * fork 产物被 startRun 消费时由 GraphService 调用：日志落 run.started
+   * （rebuildRegistryFromLog 据此判别 fork 是否已起跑），onEvent 订阅方同步可见。
+   */
+  emitStarted(graphDef: GraphDef, threadId: string): void {
+    this.emitEvent({
+      type: 'graph.started',
+      graphId: graphDef.id,
+      threadId,
+      ts: new Date().toISOString(),
+    })
+  }
+
+  /** resumeFromCheckpoint / continueFromCheckpoint 共用恢复骨架；resume 缺省 = 不应答、不发 graph.resume */
+  private async restoreAndRun(
+    graphDef: GraphDef,
+    checkpoint: StoredCheckpoint,
+    resume?: { interruptId: string; value: unknown },
   ): Promise<GraphInstance> {
     const threadId = checkpoint.runId
     const instance: GraphInstance = {
@@ -193,12 +181,26 @@ export class GraphRuntime {
     }
 
     const store = new ChannelStore(graphDef.stateSchema, checkpoint.state)
+    let pendingInterrupts = checkpoint.pendingInterrupts.map(i => ({ ...i }))
+
+    if (resume) {
+      store.apply({ [`__resume:${resume.interruptId}`]: resume.value })
+      pendingInterrupts = pendingInterrupts.filter(i => i.id !== resume!.interruptId)
+      this.emitEvent({
+        type: 'graph.resume',
+        graphId: graphDef.id,
+        threadId,
+        interruptId: resume.interruptId,
+        resumeValue: resume.value,
+        ts: new Date().toISOString(),
+      })
+    }
 
     return this.runLoop(
       graphDef, instance, store,
       checkpoint.superStep + 1,
       [...checkpoint.nextNodes],
-      checkpoint.pendingInterrupts.map(i => ({ ...i })),
+      pendingInterrupts,
       { ...checkpoint.iterCounters },
       checkpoint.startedAtMs,
       checkpoint.joinLedger ?? emptyJoinLedger(),

@@ -29,6 +29,8 @@ export interface GraphServiceOptions {
 }
 
 export interface RunInfo {
+  runId: string
+  graphId: string
   instance: GraphInstance
   status: GraphStatus
 }
@@ -87,6 +89,9 @@ export class GraphService {
       if (!rec.forkBase) throw new Error(`Run already started: ${runId}`)
       const { checkpoint } = rec.forkBase
       rec.forkBase = undefined
+      // 补发 run.started：fork 两条消费路径都不经 runtime.start，日志须留起跑事实——
+      // rebuildRegistryFromLog 据此判别 fork 是否已消费（防重启后静默重跑），onEvent 订阅方同步可见
+      rec.runtime.emitStarted(def, runId)
       if (checkpoint.pendingInterrupts.length > 0) {
         // 台账 a 裁决：不自动应答 interrupt——直接进入 awaiting-input 等真人 resume，
         // interrupt payload 原样保留在基底 checkpoint（fork 时已存为新 run 的起点 checkpoint）
@@ -180,8 +185,8 @@ export class GraphService {
   getRun(runId: string): RunInfo | null {
     const rec = this.runs.get(runId)
     if (!rec) return null
-    // 台账 c-3：浅拷贝防外部污染注册表内部状态
-    return { ...rec, instance: { ...rec.instance }, status: rec.instance.status }
+    // 台账 c-3：显式挑选字段 + instance 浅拷贝——既不泄 runtime 活引用/forkBase，也防外部污染内部状态
+    return { runId: rec.runId, graphId: rec.graphId, instance: { ...rec.instance }, status: rec.instance.status }
   }
 
   listRuns(): Array<{ runId: string; graphId: string; status: GraphStatus; updatedAt: string }> {
@@ -201,9 +206,12 @@ export class GraphService {
   /**
    * 进程重启后从事件日志重建注册表，返回重建条数。
    * 状态推导：有 run.completed/run.failed → 对应终态；
-   * 有未应答 interrupt.raised → awaiting-input；其余（含重启前 running）→ paused，
-   * 由人工或调度器决定续跑（重启后不可能仍在跑）。
-   * fork 产物（有 run.forked 无 run.started）重建 forkBase，保证 startRun(forkedId) 跨重启仍可消费。
+   * 有未应答 interrupt → awaiting-input（未应答集合 = 本 run 日志的 interrupt.raised
+   *   ∪ 最新 checkpoint 的 pendingInterrupts，减去 interrupt.resumed；fork 流的 interrupt
+   *   事实在父 run 日志里，本流只有 checkpoint 承载 pendingInterrupts，两源并集缺一不可）；
+   * 其余（含重启前 running）→ paused，由人工或调度器决定续跑（重启后不可能仍在跑）。
+   * fork 产物（有 run.forked 无 run.started）重建 forkBase，保证 startRun(forkedId) 跨重启仍可消费；
+   * fork 消费路径已补发 run.started，已起跑的 fork 不会带 forkBase 进注册表（防静默重跑）。
    * 已在注册表中的 runId 跳过不覆盖（本进程内活着的记录以内存为准）。
    */
   async rebuildRegistryFromLog(): Promise<number> {
@@ -212,6 +220,7 @@ export class GraphService {
     for (const { runId, graphId } of loggedRuns) {
       if (this.runs.has(runId)) continue
       const events = await this.eventLog.query(runId)
+      const checkpoint = await this.eventLog.getLatestCheckpoint(runId)
       const hasCompleted = events.some(e => e.kind === 'run.completed')
       const hasFailed = events.some(e => e.kind === 'run.failed')
       let status: GraphStatus
@@ -220,15 +229,15 @@ export class GraphService {
       } else if (hasFailed) {
         status = 'failed'
       } else {
-        const raised = new Set(
+        const pending = new Set(
           events.filter(e => e.kind === 'interrupt.raised').map(e => e.payload.interruptId),
         )
+        for (const i of checkpoint?.pendingInterrupts ?? []) pending.add(i.id)
         const resumed = new Set(
           events.filter(e => e.kind === 'interrupt.resumed').map(e => e.payload.interruptId),
         )
-        status = [...raised].some(id => !resumed.has(id)) ? 'awaiting-input' : 'paused'
+        status = [...pending].some(id => !resumed.has(id)) ? 'awaiting-input' : 'paused'
       }
-      const checkpoint = await this.eventLog.getLatestCheckpoint(runId)
       const lastTs = events.length > 0 ? events[events.length - 1].ts : Date.now()
       const updatedAt = new Date(lastTs).toISOString()
       const forkEvent = events.find(e => e.kind === 'run.forked')
