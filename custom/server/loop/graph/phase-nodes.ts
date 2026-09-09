@@ -61,6 +61,9 @@ export interface PhaseNodeDeps {
   persistence: PersistenceAdapter
   dryRun: boolean
   log?: (msg: string) => void
+  /** R2：派发前向 worktree 注入 GRAPH-CONTEXT.md（装配层绑定 workspace-context.ts；
+   *  失败不阻断派发——上下文是增强不是依赖） */
+  injectWorkspaceContext?: (contract: TaskContract, worktreeId: string) => Promise<void>
 }
 
 /** R3 质量门禁命令。kind=validator 失败阻断（repairQueue）；kind=post 失败仅 warn（§7B.7） */
@@ -181,6 +184,13 @@ async function runHandoff(
     }
     const worktreeId = await deps.worktreeManager.create(c)
     const withWorktree = { ...c, worktreeId, status: 'in-progress' as const }
+    if (deps.injectWorkspaceContext) {
+      try {
+        await deps.injectWorkspaceContext(c, worktreeId)
+      } catch (err) {
+        log(`workspace context injection failed for ${c.id} (non-blocking): ${err instanceof Error ? err.message : err}`)
+      }
+    }
     await deps.dispatcher.dispatch(withWorktree, 'maker')
     await deps.store.updateContract(c.id, { status: 'in-progress', worktreeId })
     emitLoopEvent(ctx, {
