@@ -3,9 +3,10 @@
 
 import type {
   GraphDef, NodeDef, EdgeDef, StateSchema, Channel, StateValues,
-  NodeResult, NodeContext, EdgeCondition, Reducer,
+  NodeResult, NodeContext, EdgeCondition, Reducer, LoopGuard,
 } from './types'
 import { reducers } from './types'
+import { collectBackEdges } from './graph-spec'
 
 export class GraphBuilder {
   private nodes: Map<string, NodeDef> = new Map()
@@ -13,6 +14,7 @@ export class GraphBuilder {
   private stateSchema: StateSchema = {}
   private entryNode: string = ''
   private maxSteps: number = 100
+  private maxDurationMs?: number
   private endCondition?: (state: StateValues) => boolean
 
   constructor(
@@ -43,9 +45,9 @@ export class GraphBuilder {
     return this
   }
 
-  /** 添加静态边 */
-  addEdge(source: string, target: string, label?: string): this {
-    this.edges.push({ source, target, label })
+  /** 添加静态边（回边必须带 guard，build() 校验） */
+  addEdge(source: string, target: string, label?: string, guard?: LoopGuard): this {
+    this.edges.push({ source, target, label, guard })
     return this
   }
 
@@ -67,6 +69,12 @@ export class GraphBuilder {
     return this
   }
 
+  /** 设置 L4 时长守卫（ms），超时 run 判 failed */
+  setMaxDurationMs(ms: number): this {
+    this.maxDurationMs = ms
+    return this
+  }
+
   /** 构建图定义 */
   build(): GraphDef {
     if (!this.entryNode) {
@@ -75,6 +83,17 @@ export class GraphBuilder {
     if (!this.nodes.has(this.entryNode)) {
       throw new Error(`Entry node not found: ${this.entryNode}`)
     }
+    // 轻量环检测（复用 graph-spec 的 DFS 回边识别）：无 guard 回边在编译期拒绝
+    const backEdges = collectBackEdges(
+      this.edges.map(e => ({ from: e.source, to: e.target })),
+      [...this.nodes.keys()],
+      this.entryNode,
+    )
+    this.edges.forEach((e, i) => {
+      if (backEdges.has(i) && !e.guard) {
+        throw new Error(`Unguarded back edge: ${e.source} -> ${e.target} (cycle requires guard.maxIterations)`)
+      }
+    })
     return {
       id: this.id,
       name: this.name,
@@ -85,6 +104,7 @@ export class GraphBuilder {
       entryNode: this.entryNode,
       endCondition: this.endCondition,
       maxSteps: this.maxSteps,
+      maxDurationMs: this.maxDurationMs,
     }
   }
 }
@@ -109,6 +129,8 @@ export function node(
     retry: opts?.retry,
     cacheTtl: opts?.cacheTtl,
     subgraphId: opts?.subgraphId,
+    onError: opts?.onError,
+    joinMode: opts?.joinMode,
   }
 }
 
