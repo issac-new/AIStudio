@@ -3,21 +3,27 @@
 //
 // 执行流程：
 // 1. 从入口节点开始，按 super-step 批次执行
-// 2. 每个 super-step 内，所有就绪节点并行执行（流式完成处理：
-//    节点完成即合并状态，多前驱 joinMode:'any' 节点即时调度，不等整批结束）
-// 3. 收集所有节点的部分更新，经 reducer 合并到 ChannelStore
+// 2. 每个 super-step 内，所有就绪节点并行执行；节点完成即入簿记，
+//    但状态更新按 launch 序（currentNodes 数组序 + 即时调度追加序）缓冲，
+//    待 step 内全部节点完成后统一 applyAll —— 恢复 BSP 确定性合并语义，
+//    并行节点写同一 channel 的结果不依赖完成先后（F3）
+// 3. 例外：joinMode:'any' 的多前驱节点在首个前驱完成时即时调度，
+//    其输入状态 = store 当前值 + 已完成节点的缓冲更新（launch 序 reducer 合并），
+//    这是 any 语义"首前驱完成即激活"的要求（F1/F3）
 // 4. 根据边条件 + 回边守卫 + join 屏障确定下一 super-step 的就绪节点
 // 5. 重复直到到达终止条件或 maxSteps
 //
 // 支持：
 // - interrupt：节点返回 interrupt 时暂停，等待 resume / resumeFromCheckpoint 真恢复
-// - fork：从检查点分叉新线程
-// - 检查点：每 super-step 结束自动保存（CheckpointManager + EventLogStore 双写）
+// - 检查点：每 super-step 结束自动保存（CheckpointManager + EventLogStore 双写）；
+//   join 簿记（JoinLedger）随 checkpoint 进出，resume 后不丢前驱完成事实（F2）
 // - 回边守卫：maxIterations / breakCondition（有限终止）
-// - 四层终止：L3 maxSteps（节点可读 __remainingSteps）+ L4 预算/时长
-// - join 屏障：多前驱节点默认等全部前驱完成过且自上次激活后有新前驱完成
+// - 四层终止：L3 maxSteps（节点可读 __remainingSteps）+ L4 预算/时长（先于一切完成路径判定，F5）
+// - join 屏障：多前驱节点（静态入边 ∪ 已解析的条件入边，F4）默认等全部前驱完成过
+//   且自上次激活后有新前驱完成；any 模式同代不重复激活（F1）
 // - 错误处理：节点失败触发 retry、fail-branch（onError goto/retry-goto）或 fail
-// - Send API：map-reduce 子任务同一 super-step 内 Promise.all 真并行
+// - Send API：map-reduce 子任务同一 super-step 内 Promise.all 真并行，补发 node.completed（F5）
+// - join 饿死可观测：run 即将结束时仍有部分前驱完成的阻塞节点发 node.starved（F5）
 // - 事件日志：装配 eventLog 时每个 GraphEvent 同步 append（同一调用点）
 
 import type {
@@ -27,7 +33,8 @@ import type {
 import { ChannelStore } from './channel-store'
 import { CheckpointManager } from './checkpoint-manager'
 import { evaluatePredicate } from './predicate'
-import type { EventLogStore, StoredCheckpoint, GraphLogEvent } from './event-log-store'
+import type { EventLogStore, StoredCheckpoint, GraphLogEvent, JoinLedger } from './event-log-store'
+import { emptyJoinLedger } from './event-log-store'
 
 export interface GraphRuntimeOptions {
   checkpointManager?: CheckpointManager
@@ -55,6 +62,7 @@ const EVENT_KIND_MAP: Record<GraphEvent['type'], string> = {
   'edge.break': 'edge.break',
   'node.error-routed': 'node.error-routed',
   'cost.recorded': 'cost.recorded',
+  'node.starved': 'node.starved',
 }
 
 /** 保证写入日志的 payload 可 JSON 序列化（循环引用降级为字符串） */
@@ -115,7 +123,8 @@ export class GraphRuntime {
   /**
    * 真 resume — 从 StoredCheckpoint 恢复完整执行现场并继续主循环。
    * resumeValue 写入 channel `__resume:<interruptId>`（schema 无此 key 时 ChannelStore 直写），
-   * 从 checkpoint.superStep + 1 继续；被应答的 interrupt 从 pendingInterrupts 移除。
+   * 从 checkpoint.superStep + 1 继续；被应答的 interrupt 从 pendingInterrupts 移除；
+   * join 簿记（JoinLedger）一并恢复，checkpoint 前完成的前驱在屏障判定中仍然有效（F2）。
    */
   async resumeFromCheckpoint(
     graphDef: GraphDef,
@@ -157,6 +166,7 @@ export class GraphRuntime {
       pendingInterrupts,
       { ...checkpoint.iterCounters },
       checkpoint.startedAtMs,
+      checkpoint.joinLedger ?? emptyJoinLedger(),
     )
   }
 
@@ -193,30 +203,35 @@ export class GraphRuntime {
     pendingInterrupts: PendingInterrupt[],
     iterCounters: Record<string, number>,
     startedAtMs: number,
+    ledgerSeed?: JoinLedger,
   ): Promise<GraphInstance> {
     const graphId = graphDef.id
     const threadId = instance.threadId
     let nextNodes = initialNextNodes
 
-    // ---- run 级簿记 ----
-    // join 屏障：completedThisRun（本 run 全部完成过的节点）+
-    // completedAtStep / lastRunStep（"自上次 N 完成后有新前驱完成"的判定依据）
-    const completedThisRun = new Set<string>()
-    const completedAtStep = new Map<string, number>()
-    const lastRunStep = new Map<string, number>()
+    // ---- run 级簿记（join 屏障三件套随 checkpoint 进出，F2） ----
+    const completedThisRun = new Set<string>(ledgerSeed?.completed ?? [])
+    const completedAtStep = new Map<string, number>(Object.entries(ledgerSeed?.completedAtStep ?? {}))
+    const lastRunStep = new Map<string, number>(Object.entries(ledgerSeed?.lastRunStep ?? {}))
     const completionCounts = new Map<string, number>()
     const errorRouteCounts = new Map<string, number>()
 
-    // 静态前驱表（条件边 target 运行时才知道，不参与静态屏障）
-    const predMap = new Map<string, Set<string>>()
+    // 静态前驱表 + 动态前驱表（条件边 source 在求值解析到 target 时补录，F4）
+    const staticPreds = new Map<string, Set<string>>()
     for (const e of graphDef.edges) {
       if (!e.target) continue
-      let s = predMap.get(e.target)
+      let s = staticPreds.get(e.target)
       if (!s) {
         s = new Set()
-        predMap.set(e.target, s)
+        staticPreds.set(e.target, s)
       }
       s.add(e.source)
+    }
+    const dynamicPreds = new Map<string, Set<string>>()
+    const getPreds = (nodeId: string): Set<string> => {
+      const merged = new Set<string>(staticPreds.get(nodeId) ?? [])
+      for (const s of dynamicPreds.get(nodeId) ?? []) merged.add(s)
+      return merged
     }
 
     // recordCost 包装注入：节点调用 ctx.deps.recordCost 时 runtime 同步累加 totalCost
@@ -237,22 +252,55 @@ export class GraphRuntime {
       },
     }
 
-    // join 屏障过滤：多 source 入边（≥2）且非 any 模式的候选 N，
-    // 要求其全部前驱本 run 完成过、自上次 N 运行后有前驱新完成、且 N 未在本 super-step 执行过
+    // join 屏障过滤（F1：代际判定与"本步未执行"去重对 any/all 两种模式都生效）：
+    // 多前驱（≥2，静态 ∪ 动态）候选 N ——
+    //   all（默认）：全部前驱本 run 完成过 ∧ 自上次 N 运行后有前驱新完成 ∧ N 本步未执行
+    //   any       ：自上次 N 运行后有前驱新完成 ∧ N 本步未执行（首前驱即时调度后同代不重复）
     const filterByJoinBarrier = (candidates: string[], scheduledThisStep: Set<string>): string[] => {
       const out: string[] = []
       for (const n of candidates) {
-        const preds = predMap.get(n)
         const node = graphDef.nodes.get(n)
-        if (node && preds && preds.size >= 2 && node.joinMode !== 'any') {
-          const allCompleted = [...preds].every(p => completedThisRun.has(p))
+        const preds = getPreds(n)
+        if (node && preds.size >= 2) {
           const lastRun = lastRunStep.get(n) ?? -1
           const hasFreshPred = [...preds].some(p => (completedAtStep.get(p) ?? -1) > lastRun)
-          if (!allCompleted || !hasFreshPred || scheduledThisStep.has(n)) continue
+          if (node.joinMode !== 'any') {
+            const allCompleted = [...preds].every(p => completedThisRun.has(p))
+            if (!allCompleted || !hasFreshPred || scheduledThisStep.has(n)) continue
+          } else {
+            if (!hasFreshPred || scheduledThisStep.has(n)) continue
+          }
         }
         out.push(n)
       }
       return out
+    }
+
+    const buildJoinLedger = (): JoinLedger => ({
+      completed: [...completedThisRun],
+      completedAtStep: Object.fromEntries(completedAtStep),
+      lastRunStep: Object.fromEntries(lastRunStep),
+    })
+
+    // run 即将结束（nextNodes 排空）时，对"部分前驱完成、但永远等不到全部前驱"的
+    // 多前驱节点发 node.starved —— fail-branch 与 join 组合导致的静默丢弃不再无声（F5）
+    const emitStarvedJoins = (): void => {
+      for (const [nodeId, node] of graphDef.nodes) {
+        if (node.joinMode === 'any') continue
+        const preds = getPreds(nodeId)
+        if (preds.size < 2) continue
+        const done = [...preds].filter(p => completedThisRun.has(p))
+        if (done.length > 0 && done.length < preds.size) {
+          this.emitEvent({
+            type: 'node.starved',
+            graphId,
+            threadId,
+            nodeId,
+            missing: [...preds].filter(p => !completedThisRun.has(p)),
+            ts: new Date().toISOString(),
+          })
+        }
+      }
     }
 
     // ---- 主循环 ----
@@ -261,6 +309,7 @@ export class GraphRuntime {
 
       if (nextNodes.length === 0) {
         if (pendingInterrupts.length === 0) {
+          emitStarvedJoins()
           return await this.complete(instance, graphDef, store)
         }
         instance.status = 'awaiting-input'
@@ -279,102 +328,64 @@ export class GraphRuntime {
         ts: new Date().toISOString(),
       })
 
-      // ---- super-step 内流式并行执行 ----
+      // ---- super-step 内并行执行：完成即入簿记，效果按 launch 序缓冲（F3） ----
       const scheduled = new Set<string>()
+      const launchOrder: string[] = []
+      const settled = new Map<string, NodeResult | Error>()
+      const updatesByNode = new Map<string, StateUpdate>()
       const pending = new Set<Promise<void>>()
-      const succeeded: string[] = []
-      const failedNodes: Array<{ nodeId: string; error: Error }> = []
-      const gotoTargets: string[] = []
-      const sendTasks: Array<{ node: string; state: StateUpdate }> = []
-      let hasInterrupt = false
-      let hasEnd = false
-      let endResult: unknown
+      let sawEnd = false
+      let sawInterrupt = false
 
-      const handleResult = (nodeId: string, result: NodeResult | Error): void => {
+      // 即时调度节点的输入状态：store 当前值 + 已完成节点缓冲更新（launch 序 reducer 合并）
+      const peekState = (): StateValues => {
+        const view = new ChannelStore(graphDef.stateSchema, store.getValues())
+        for (const id of launchOrder) {
+          const u = updatesByNode.get(id)
+          if (u) view.apply(u)
+        }
+        return view.getValues()
+      }
+
+      const onSettled = (nodeId: string, result: NodeResult | Error): void => {
         try {
-          if (result instanceof Error) {
-            failedNodes.push({ nodeId, error: result })
-            this.emitEvent({
-              type: 'graph.node-error',
-              graphId,
-              threadId,
-              nodeId,
-              step,
-              error: result.message,
-              ts: new Date().toISOString(),
-            })
-            return
-          }
-
-          const r = result
-          succeeded.push(nodeId)
+          settled.set(nodeId, result)
+          if (result instanceof Error) return
           completedThisRun.add(nodeId)
           completedAtStep.set(nodeId, step)
           completionCounts.set(nodeId, (completionCounts.get(nodeId) ?? 0) + 1)
-
-          // 状态流式合并：同 super-step 后续即时调度的节点可读到
-          if (r.update) store.apply(r.update)
-
-          if (r.interrupt) {
-            hasInterrupt = true
-            pendingInterrupts.push({ nodeId, value: r.interrupt.value, id: r.interrupt.id })
-            this.emitEvent({
-              type: 'graph.interrupt',
-              graphId,
-              threadId,
-              nodeId,
-              value: r.interrupt.value,
-              interruptId: r.interrupt.id,
-              ts: new Date().toISOString(),
-            })
-          }
-
-          if (r.end !== undefined) {
-            hasEnd = true
-            endResult = r.end
-          }
-
-          if (r.goto && r.goto.length > 0) gotoTargets.push(...r.goto)
-          if (r.send && r.send.length > 0) sendTasks.push(...r.send)
-
-          this.emitEvent({
-            type: 'graph.node-complete',
-            graphId,
-            threadId,
-            nodeId,
-            step,
-            result: r,
-            ts: new Date().toISOString(),
-          })
+          if (result.update) updatesByNode.set(nodeId, result.update)
+          if (result.end !== undefined) sawEnd = true
+          if (result.interrupt) sawInterrupt = true
 
           // joinMode:'any' 的多前驱节点即时调度：首个前驱完成即激活，不等整批
-          // （仅静态无守卫边参与即时调度；条件边/守卫边仍走 super-step 末统一计算）
-          if (hasEnd || hasInterrupt) return
+          // （仅静态无守卫边参与；条件边/守卫边仍走 super-step 末统一计算）
+          if (sawEnd || sawInterrupt) return
           for (const edge of graphDef.edges) {
             if (edge.source !== nodeId || edge.condition || edge.guard || !edge.target) continue
             const targetNode = graphDef.nodes.get(edge.target)
-            const preds = predMap.get(edge.target)
-            if (!targetNode || !preds || preds.size < 2 || targetNode.joinMode !== 'any') continue
+            if (!targetNode || getPreds(edge.target).size < 2 || targetNode.joinMode !== 'any') continue
             if (scheduled.has(edge.target)) continue
             launch(edge.target)
           }
         } catch {
-          // 结果处理永不抛出，保证执行泵可排空
+          // 结果入簿记永不抛出，保证执行泵可排空
         }
       }
 
       const launch = (nodeId: string): void => {
         scheduled.add(nodeId)
+        launchOrder.push(nodeId)
         lastRunStep.set(nodeId, step)
         const node = graphDef.nodes.get(nodeId)
         const run = async (): Promise<void> => {
           if (!node) {
-            handleResult(nodeId, new Error(`Node not found: ${nodeId}`))
+            onSettled(nodeId, new Error(`Node not found: ${nodeId}`))
             return
           }
-          // 节点可见 state = 当前通道值 + __remainingSteps（L3 倒计时）+ __iteration（该节点已完成次数）
+          // 节点可见 state = 通道值（即时调度者含缓冲更新）+ __remainingSteps + __iteration
           const nodeState: StateValues = {
-            ...store.getValues(),
+            ...peekState(),
             __remainingSteps: graphDef.maxSteps - step - 1,
             __iteration: completionCounts.get(nodeId) ?? 0,
           }
@@ -383,7 +394,7 @@ export class GraphRuntime {
             { graphId, threadId, superStep: step },
             wrappedDeps,
           ).catch(err => (err instanceof Error ? err : new Error(String(err))))
-          handleResult(nodeId, result)
+          onSettled(nodeId, result)
         }
         const p = run()
         pending.add(p)
@@ -395,6 +406,67 @@ export class GraphRuntime {
       while (pending.size > 0) {
         await Promise.race([...pending])
       }
+
+      // ---- launch 序统一处理执行效果（BSP 确定性：合并序 = launch 序，与完成先后无关） ----
+      const succeeded: string[] = []
+      const failedNodes: Array<{ nodeId: string; error: Error }> = []
+      const orderedUpdates: StateUpdate[] = []
+      const gotoTargets: string[] = []
+      const sendTasks: Array<{ node: string; state: StateUpdate }> = []
+      let hasInterrupt = false
+      let hasEnd = false
+      let endResult: unknown
+
+      for (const nodeId of launchOrder) {
+        const result = settled.get(nodeId)
+        if (result === undefined) continue
+        if (result instanceof Error) {
+          failedNodes.push({ nodeId, error: result })
+          this.emitEvent({
+            type: 'graph.node-error',
+            graphId,
+            threadId,
+            nodeId,
+            step,
+            error: result.message,
+            ts: new Date().toISOString(),
+          })
+          continue
+        }
+        succeeded.push(nodeId)
+        this.emitEvent({
+          type: 'graph.node-complete',
+          graphId,
+          threadId,
+          nodeId,
+          step,
+          result,
+          ts: new Date().toISOString(),
+        })
+        if (result.update) orderedUpdates.push(result.update)
+        if (result.interrupt) {
+          hasInterrupt = true
+          pendingInterrupts.push({ nodeId, value: result.interrupt.value, id: result.interrupt.id })
+          this.emitEvent({
+            type: 'graph.interrupt',
+            graphId,
+            threadId,
+            nodeId,
+            value: result.interrupt.value,
+            interruptId: result.interrupt.id,
+            ts: new Date().toISOString(),
+          })
+        }
+        if (result.end !== undefined) {
+          hasEnd = true
+          endResult = result.end
+        }
+        if (result.goto && result.goto.length > 0) gotoTargets.push(...result.goto)
+        if (result.send && result.send.length > 0) sendTasks.push(...result.send)
+      }
+
+      // 统一合并状态更新（launch 序）
+      store.applyAll(orderedUpdates)
 
       // ---- fail-branch：最终失败的节点按 onError 路由，不判 run failed ----
       const errorRoutedTargets: string[] = []
@@ -443,12 +515,7 @@ export class GraphRuntime {
         return instance
       }
 
-      // 检查终止条件
-      if (hasEnd || (graphDef.endCondition && graphDef.endCondition(store.getValues()))) {
-        return await this.complete(instance, graphDef, store)
-      }
-
-      // ---- L4 终止：成本预算 / 时长（每 super-step 末检查） ----
+      // ---- L4 终止：成本预算 / 时长（每 super-step 末、先于一切完成路径判定，F5） ----
       if (graphDef.budget && graphDef.budget.maxCost > 0 && instance.totalCost > graphDef.budget.maxCost) {
         instance.status = 'failed'
         this.emitEvent({
@@ -472,31 +539,37 @@ export class GraphRuntime {
         return instance
       }
 
+      // 检查终止条件
+      if (hasEnd || (graphDef.endCondition && graphDef.endCondition(store.getValues()))) {
+        return await this.complete(instance, graphDef, store)
+      }
+
       // 计算下一批候选（显式 goto 优先；否则走边 + 守卫 + join 屏障；fail-branch 路由并入）
       const computeCandidates = (): string[] => {
         const base = gotoTargets.length > 0
           ? gotoTargets
           : filterByJoinBarrier(
-              this.computeNextNodes(graphDef, succeeded, store.getValues(), iterCounters, { graphId, threadId, step }),
+              this.computeNextNodes(graphDef, succeeded, store.getValues(), iterCounters, dynamicPreds, { graphId, threadId, step }),
               scheduled,
             )
         return [...new Set([...base, ...errorRoutedTargets])]
       }
 
-      // interrupt：保存检查点（含 nextNodes / pendingInterrupts / iterCounters 现场）并等待 resume
+      // interrupt：保存检查点（含 nextNodes / pendingInterrupts / iterCounters / joinLedger 现场）并等待 resume
       if (hasInterrupt) {
         instance.status = 'awaiting-input'
         instance.state = store.snapshot()
         await this.saveCheckpoint(
           graphDef, instance, store, step,
           computeCandidates(),
-          pendingInterrupts, iterCounters, startedAtMs,
+          pendingInterrupts, iterCounters, startedAtMs, buildJoinLedger(),
         )
         return instance
       }
 
       // Send API — map-reduce 子任务同一 super-step 内 Promise.all 真并行，
-      // 各子任务用独立 ChannelStore 派生，完成后统一 apply 回主 store
+      // 各子任务用独立 ChannelStore 派生，完成后统一 apply 回主 store；
+      // 子任务补发 node-complete / node-error（F5）
       if (sendTasks.length > 0) {
         const sendUpdates = await Promise.all(sendTasks.map(async (task) => {
           const targetNode = graphDef.nodes.get(task.node)
@@ -507,12 +580,27 @@ export class GraphRuntime {
             __remainingSteps: graphDef.maxSteps - step - 1,
             __iteration: completionCounts.get(task.node) ?? 0,
           }
+          const taskThreadId = `${threadId}-send-${step}`
           const taskResult = await this.executeNode(
             graphDef, targetNode, taskState,
-            { graphId, threadId: `${threadId}-send-${step}`, superStep: step },
+            { graphId, threadId: taskThreadId, superStep: step },
             wrappedDeps,
           ).catch(err => (err instanceof Error ? err : new Error(String(err))))
-          if (taskResult instanceof Error) return undefined
+          if (taskResult instanceof Error) {
+            this.emitEvent({
+              type: 'graph.node-error',
+              graphId, threadId: taskThreadId, nodeId: task.node, step,
+              error: taskResult.message,
+              ts: new Date().toISOString(),
+            })
+            return undefined
+          }
+          this.emitEvent({
+            type: 'graph.node-complete',
+            graphId, threadId: taskThreadId, nodeId: task.node, step,
+            result: taskResult,
+            ts: new Date().toISOString(),
+          })
           return taskResult.update
         }))
         for (const update of sendUpdates) {
@@ -522,10 +610,10 @@ export class GraphRuntime {
 
       nextNodes = computeCandidates()
 
-      // 保存检查点（CheckpointManager + EventLogStore 双写）并发 graph.checkpoint
+      // 保存检查点（CheckpointManager + EventLogStore 双写，含 joinLedger）并发 graph.checkpoint
       await this.saveCheckpoint(
         graphDef, instance, store, step,
-        nextNodes, pendingInterrupts, iterCounters, startedAtMs,
+        nextNodes, pendingInterrupts, iterCounters, startedAtMs, buildJoinLedger(),
       )
 
       this.emitEvent({
@@ -614,12 +702,14 @@ export class GraphRuntime {
    * 计算下一 super-step 候选节点（仅由成功完成的节点出边推导）。
    * 回边守卫：命中边带 guard 时计数 from->to，超 maxIterations 丢弃并发 edge.guard-exceeded；
    * breakCondition 命中丢弃并发 edge.break。
+   * 条件边解析到 target 时把 source 补录进 dynamicPreds（F4：条件入边 source 参与 join 屏障）。
    */
   private computeNextNodes(
     graphDef: GraphDef,
     currentNodes: string[],
     state: StateValues,
     iterCounters: Record<string, number>,
+    dynamicPreds: Map<string, Set<string>>,
     ctx: { graphId: string; threadId: string; step: number },
   ): string[] {
     const next: string[] = []
@@ -634,6 +724,14 @@ export class GraphRuntime {
           const result = edge.condition(state)
           if (result) {
             targets = Array.isArray(result) ? result : [result]
+            for (const t of targets) {
+              let s = dynamicPreds.get(t)
+              if (!s) {
+                s = new Set()
+                dynamicPreds.set(t, s)
+              }
+              s.add(edge.source)
+            }
           }
         } else {
           // 静态边 — 始终跟随
@@ -677,7 +775,7 @@ export class GraphRuntime {
     return next
   }
 
-  /** 检查点双写：CheckpointManager（旧通道）+ EventLogStore（事实源），并发 graph.checkpoint */
+  /** 检查点双写：CheckpointManager（旧通道）+ EventLogStore（事实源，含 joinLedger），并发 graph.checkpoint */
   private async saveCheckpoint(
     graphDef: GraphDef,
     instance: GraphInstance,
@@ -687,6 +785,7 @@ export class GraphRuntime {
     pendingInterrupts: PendingInterrupt[],
     iterCounters: Record<string, number>,
     startedAtMs: number,
+    joinLedger: JoinLedger,
   ): Promise<void> {
     const checkpointId = `cp-${graphDef.id}-${instance.threadId}-${step}`
     const ts = new Date().toISOString()
@@ -719,6 +818,7 @@ export class GraphRuntime {
         totalCost: instance.totalCost,
         startedAtMs,
         createdAt: ts,
+        joinLedger,
       }
       await this.eventLog.saveCheckpoint(stored)
     }
@@ -819,6 +919,8 @@ export class GraphRuntime {
         return { target: event.target, error: event.error }
       case 'cost.recorded':
         return { amount: event.amount, totalCost: event.totalCost }
+      case 'node.starved':
+        return { missing: event.missing }
       default:
         return {}
     }
