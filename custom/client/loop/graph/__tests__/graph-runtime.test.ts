@@ -71,7 +71,7 @@ describe('GraphRuntime', () => {
       .setEntry('check')
       .addConditionalEdge('check', when((s) => (s.count as number) >= 3, 'done'))
       .addConditionalEdge('check', when((s) => (s.count as number) < 3, 'continue'))
-      .addEdge('continue', 'check') // loop back
+      .addEdge('continue', 'check', 'loop', { maxIterations: 10 }) // loop back (guarded)
       .setMaxSteps(10)
       .build()
 
@@ -122,7 +122,7 @@ describe('GraphRuntime', () => {
     const graph = makeBuilder()
       .addNode(fnNode('loop', async () => ({ update: { count: 1 } })))
       .setEntry('loop')
-      .addEdge('loop', 'loop')
+      .addEdge('loop', 'loop', 'loop', { maxIterations: 1000 })
       .setMaxSteps(5)
       .build()
 
@@ -141,7 +141,7 @@ describe('GraphRuntime', () => {
         update: { count: (state.count as number) + 1 },
       })))
       .setEntry('counter')
-      .addEdge('counter', 'counter')
+      .addEdge('counter', 'counter', 'loop', { maxIterations: 1000 })
       .setEndCondition((state) => (state.count as number) >= 5)
       .build()
 
