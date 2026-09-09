@@ -113,6 +113,7 @@ describe('CH channel keys', () => {
     expect(CH).toEqual({
       contracts: 'contracts', verifications: 'verifications', stage: 'stage',
       stopMet: 'stopMet', gateResults: 'gateResults', repairQueue: 'repairQueue',
+      repairNeeded: 'repairNeeded', persistedIds: 'persistedIds',
     })
   })
 })

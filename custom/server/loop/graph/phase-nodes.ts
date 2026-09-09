@@ -31,6 +31,10 @@ export const CH = {
   stopMet: 'stopMet',
   gateResults: 'gateResults',
   repairQueue: 'repairQueue',
+  /** 布尔路由信号：PredicateExpr 无法表达数组非空，repair 回边条件以此路由 */
+  repairNeeded: 'repairNeeded',
+  /** 已持久化契约 id（append）——repair 循环重入 persistence 时幂等去重 */
+  persistedIds: 'persistedIds',
 } as const
 
 /** 连接器最小接口（github/local-git/webhook 三实现的结构公共超集） */
@@ -153,7 +157,8 @@ async function runDiscovery(
   return {
     update: contracts.length === 0
       ? { [CH.contracts]: [], [CH.stage]: 'scheduling' as LoopStage }
-      : { [CH.contracts]: contracts },
+      // stage 是 discovery 出边的路由信号：有契约 → handoff，无契约 → scheduling 短路
+      : { [CH.contracts]: contracts, [CH.stage]: 'handoff' as LoopStage },
   }
 }
 
@@ -196,24 +201,77 @@ async function runValidation(
 ) {
   const contracts = (state[CH.contracts] as TaskContract[] | undefined) ?? []
   const records: VerificationRecord[] = []
+  const updated: TaskContract[] = []
+  const repairQueue: string[] = []
+  let escalatedCount = 0
 
   for (const c of contracts) {
-    const record = await deps.verifier.verify(c, loop)
-    if (record.overall === 'pending') {
-      // 审批断链修复：pending 人工审批 → graph interrupt，run 进 awaiting-input
-      return {
-        update: { [CH.verifications]: records },
-        interrupt: { id: `approval:${c.id}`, value: { contractId: c.id, loopId: loop.id } },
+    let record: VerificationRecord
+    // resume 消费：人工已裁决（approved/rejected/changes-requested）的契约不再走
+    // verifier 人工路径——剥离 human gate 重验程序化项，裁决合成进记录
+    const resumed = state[`__resume:approval:${c.id}`]
+    if (resumed === 'approved' || resumed === 'rejected' || resumed === 'changes-requested') {
+      const stripped = { ...c, verificationIntent: { ...c.verificationIntent, human: null } }
+      const base = await deps.verifier.verify(stripped, loop)
+      record = {
+        ...base,
+        overall: resumed === 'approved' && base.overall === 'passed' ? 'passed' : 'failed',
+        results: {
+          ...base.results,
+          human: { approver: 'resume', decision: resumed, comment: '', timestamp: now() },
+        },
+      }
+    } else {
+      record = await deps.verifier.verify(c, loop)
+      if (record.overall === 'pending') {
+        // 审批断链修复：pending 人工审批 → graph interrupt，run 进 awaiting-input。
+        // goto 指回 validation：resume 从 nextNodes 续跑（被打断节点不自动重跑），
+        // __resume:<interruptId> 注入 state 后由本节点消费裁决（见上方 resumed 分支）
+        return {
+          update: { [CH.verifications]: records, [CH.contracts]: updated },
+          interrupt: { id: `approval:${c.id}`, value: { contractId: c.id, loopId: loop.id } },
+          goto: ['validation'],
+        }
       }
     }
+
     if (!deps.dryRun) await deps.store.appendVerification(record)
     emitLoopEvent(ctx, {
       type: 'loop.verification-complete', contractId: c.id,
       passed: record.overall === 'passed', ts: now(),
     })
     records.push(record)
+
+    if (record.overall === 'failed') {
+      // repair 路由（对齐旧引擎 routeRepair）：attempts+1，封顶则升级不再回边
+      const attempts = c.attempts + 1
+      const escalated = attempts >= c.maxAttempts
+      if (!deps.dryRun) {
+        await deps.store.updateContract(c.id, {
+          attempts, status: escalated ? 'escalated' : 'queued',
+        })
+      }
+      if (escalated) escalatedCount++
+      else repairQueue.push(c.id)
+      updated.push({ ...c, attempts, status: escalated ? 'escalated' as const : 'queued' as const })
+    } else {
+      updated.push(c)
+    }
   }
-  return { update: { [CH.verifications]: records } }
+
+  if (!deps.dryRun && escalatedCount > 0) {
+    await deps.store.updateLoop(loop.id, {
+      stats: { ...loop.stats, tasksBlocked: loop.stats.tasksBlocked + escalatedCount },
+    })
+  }
+  return {
+    update: {
+      [CH.verifications]: records,
+      [CH.contracts]: updated,
+      [CH.repairQueue]: repairQueue,
+      [CH.repairNeeded]: repairQueue.length > 0,
+    },
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -225,19 +283,23 @@ async function runPersistence(
 ) {
   const contracts = (state[CH.contracts] as TaskContract[] | undefined) ?? []
   const verifications = (state[CH.verifications] as VerificationRecord[] | undefined) ?? []
+  const persistedIds = new Set((state[CH.persistedIds] as string[] | undefined) ?? [])
   const log = deps.log ?? (() => {})
+  const newlyPersisted: string[] = []
   let completed = 0
 
   for (const v of verifications) {
     if (v.overall !== 'passed') continue
     const contract = contracts.find(c => c.id === v.contractId)
     if (!contract) continue
+    if (persistedIds.has(contract.id)) continue // repair 循环重入：已持久化契约幂等跳过
     if (deps.dryRun) {
       log(`[dry-run] persistence skipped: persist for ${contract.id}`)
       continue
     }
     const artifact = await deps.persistence.persist(contract, v, loop, false)
     completed++
+    newlyPersisted.push(contract.id)
     emitLoopEvent(ctx, {
       type: 'loop.persisted', loopId: loop.id,
       contractId: contract.id, artifact, ts: now(),
@@ -248,7 +310,7 @@ async function runPersistence(
       stats: { ...loop.stats, tasksCompleted: loop.stats.tasksCompleted + completed },
     })
   }
-  return { update: {} }
+  return { update: newlyPersisted.length > 0 ? { [CH.persistedIds]: newlyPersisted } : {} }
 }
 
 // ---------------------------------------------------------------------------
@@ -299,7 +361,13 @@ export function createGateNode(
         results.push(result)
       }
       const repairQueue = results.filter(r => !r.passed && r.kind === 'validator').map(r => r.name)
-      return { update: { [CH.gateResults]: results, [CH.repairQueue]: repairQueue } }
+      return {
+        update: {
+          [CH.gateResults]: results,
+          [CH.repairQueue]: repairQueue,
+          [CH.repairNeeded]: repairQueue.length > 0,
+        },
+      }
     },
   }
 }
@@ -333,7 +401,8 @@ export function createStopConditionNode(
         type: 'loop.stage-transition', loopId: loop.id,
         from: 'persistence', to: 'scheduling', reason: `stop-check: ${stopMet}`, ts: now(),
       })
-      return { update: { [CH.stopMet]: stopMet } }
+      // 一个 run = 一个 tick：stop-check 即终点，重入由 RunSpawner 发起新 run
+      return { update: { [CH.stopMet]: stopMet }, end: true }
     },
   }
 }
