@@ -1,6 +1,6 @@
 // overlay/custom/client/loop/graph/__tests__/predicate.test.ts
 import { describe, it, expect } from 'vitest'
-import { evaluatePredicate, getPath } from '../../../../server/loop/graph/predicate'
+import { evaluatePredicate, getPath, PredicateError } from '../../../../server/loop/graph/predicate'
 import type { PredicateExpr } from '../../../../server/loop/graph/predicate'
 
 describe('getPath', () => {
@@ -10,6 +10,21 @@ describe('getPath', () => {
     expect(getPath(s, 'x')).toBe(0)
     expect(getPath(s, 'y')).toBe(false)
     expect(getPath(s, 'missing.deep')).toBeUndefined()
+  })
+
+  // 台账 f2：原型链属性不再命中（防 __proto__/constructor 探针读到原型对象）
+  it('does not resolve prototype-chain properties', () => {
+    expect(getPath({}, '__proto__')).toBeUndefined()
+    expect(getPath({}, 'constructor')).toBeUndefined()
+    expect(getPath({ a: {} }, 'a.constructor')).toBeUndefined()
+    const inherited = Object.create({ hidden: 1 }) as Record<string, unknown>
+    expect(getPath(inherited, 'hidden')).toBeUndefined()
+  })
+
+  it('still resolves own properties that shadow prototype names', () => {
+    const own = { constructor: 'mine', nested: { value: 7 } }
+    expect(getPath(own, 'constructor')).toBe('mine')
+    expect(getPath(own, 'nested.value')).toBe(7)
   })
 })
 
@@ -57,5 +72,25 @@ describe('evaluatePredicate', () => {
   it('malformed expr throws PredicateError with op name', () => {
     expect(() => evaluatePredicate({ op: 'cmp', path: 'x', cmp: 'bad' as never, value: 1 }, {}))
       .toThrow(/cmp/)
+  })
+
+  // 台账 f3：PredicateError 名补齐，便于日志/告警按 name 归类
+  it('PredicateError carries name "PredicateError"', () => {
+    try {
+      evaluatePredicate({ op: 'cmp', path: 'x', cmp: 'bad' as never, value: 1 }, {})
+      expect.unreachable()
+    } catch (err) {
+      expect(err).toBeInstanceOf(PredicateError)
+      expect((err as Error).name).toBe('PredicateError')
+    }
+  })
+
+  // 台账 f3：and/or/not 结构畸形（缺 exprs/expr）抛 PredicateError，而非裸 TypeError
+  it('structurally malformed and/or/not exprs throw PredicateError', () => {
+    expect(() => evaluatePredicate({ op: 'and' } as never, {})).toThrow(PredicateError)
+    expect(() => evaluatePredicate({ op: 'or' } as never, {})).toThrow(PredicateError)
+    expect(() => evaluatePredicate({ op: 'and', exprs: 'nope' } as never, {})).toThrow(PredicateError)
+    expect(() => evaluatePredicate({ op: 'not' } as never, {})).toThrow(PredicateError)
+    expect(() => evaluatePredicate({ op: 'not', expr: 42 } as never, {})).toThrow(PredicateError)
   })
 })

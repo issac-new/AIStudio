@@ -11,9 +11,16 @@ export type PredicateExpr =
   | { op: 'truthy'; path: string }
   | { op: 'exists'; path: string }
 
-export class PredicateError extends Error {}
+/** f3 台账：补 name，便于日志/告警按 name 归类（跨 realm instanceof 不可靠时按 name 兜底） */
+export class PredicateError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PredicateError'
+  }
+}
 
-/** 点路径取值：'a.b.0.c'。任何一段缺失/越界返回 undefined，不抛。 */
+/** f2 台账：点路径取值只读自有属性——原型链（__proto__/constructor/继承键）不命中，
+ *  防"可进数据库"的路径探针读到原型对象。任何一段缺失/越界返回 undefined，不抛。 */
 export function getPath(state: unknown, path: string): unknown {
   let cur: unknown = state
   for (const seg of path.split('.')) {
@@ -23,12 +30,21 @@ export function getPath(state: unknown, path: string): unknown {
       if (!Number.isInteger(idx)) return undefined
       cur = cur[idx]
     } else if (typeof cur === 'object') {
+      if (!Object.hasOwn(cur as object, seg)) return undefined
       cur = (cur as Record<string, unknown>)[seg]
     } else {
       return undefined
     }
   }
   return cur
+}
+
+/** f3 台账：and/or 结构校验——exprs 必须为数组，畸形抛 PredicateError 而非裸 TypeError */
+function exprsOf(expr: { op: 'and' | 'or'; exprs?: unknown }): PredicateExpr[] {
+  if (!Array.isArray(expr.exprs)) {
+    throw new PredicateError(`Malformed "${expr.op}" expression: "exprs" must be an array`)
+  }
+  return expr.exprs as PredicateExpr[]
 }
 
 export function evaluatePredicate(expr: PredicateExpr, state: StateValues): boolean {
@@ -51,9 +67,15 @@ export function evaluatePredicate(expr: PredicateExpr, state: StateValues): bool
       }
       return false
     }
-    case 'and': return expr.exprs.every(e => evaluatePredicate(e, state))
-    case 'or': return expr.exprs.some(e => evaluatePredicate(e, state))
-    case 'not': return !evaluatePredicate(expr.expr, state)
+    case 'and': return exprsOf(expr).every(e => evaluatePredicate(e, state))
+    case 'or': return exprsOf(expr).some(e => evaluatePredicate(e, state))
+    case 'not': {
+      // f3 台账：not 结构校验——expr 必须是谓词对象，畸形抛 PredicateError
+      if (typeof expr.expr !== 'object' || expr.expr === null) {
+        throw new PredicateError('Malformed "not" expression: "expr" must be a predicate object')
+      }
+      return !evaluatePredicate(expr.expr, state)
+    }
     case 'truthy': return Boolean(getPath(state, expr.path))
     case 'exists': return getPath(state, expr.path) !== undefined
     default: throw new PredicateError(`Unknown predicate op: ${String((expr as { op: unknown }).op)}`)

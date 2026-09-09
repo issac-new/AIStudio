@@ -69,13 +69,20 @@ export function validateGraphSpec(spec: GraphSpec): void {
   if (nodeIds.size !== spec.nodes.length) throw new GraphSpecError('Duplicate node id')
   if (!nodeIds.has(spec.entryNode)) throw new GraphSpecError(`Entry node not found: ${spec.entryNode}`)
   for (const [name, ch] of Object.entries(spec.channels)) {
-    if (!(ch.reducer in reducers)) throw new GraphSpecError(`Unknown reducer "${ch.reducer}" on channel "${name}"`)
+    // f1 台账：按自有属性判定——'constructor'/'toString' 等原型链键不得伪装成合法 reducer
+    if (!Object.hasOwn(reducers, ch.reducer)) throw new GraphSpecError(`Unknown reducer "${ch.reducer}" on channel "${name}"`)
   }
   for (const e of spec.edges) {
     if (!nodeIds.has(e.from)) throw new GraphSpecError(`Edge from unknown node: ${e.from}`)
     if (!nodeIds.has(e.to)) throw new GraphSpecError(`Edge to unknown node: ${e.to}`)
     if (e.guard && (!Number.isInteger(e.guard.maxIterations) || e.guard.maxIterations < 1)) {
       throw new GraphSpecError(`guard.maxIterations must be >= 1 on edge ${e.from}->${e.to}`)
+    }
+  }
+  // f4 台账：onError goto/retry-goto 的 target 是 fail-branch 的运行时路由目标，编译期可校验
+  for (const n of spec.nodes) {
+    if (n.onError && n.onError.type !== 'fail' && !nodeIds.has(n.onError.target)) {
+      throw new GraphSpecError(`onError target unknown node "${n.onError.target}" on node "${n.id}"`)
     }
   }
   // 回边必须带 guard：DFS 树中后代指向祖先的边（含自环）构成环的闭合边

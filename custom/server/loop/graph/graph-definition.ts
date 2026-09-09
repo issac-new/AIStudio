@@ -51,9 +51,9 @@ export class GraphBuilder {
     return this
   }
 
-  /** 添加动态边（条件路由） */
-  addConditionalEdge(source: string, condition: EdgeCondition, label?: string): this {
-    this.edges.push({ source, target: '', condition, label })
+  /** 添加动态边（条件路由）。target 求值前未知；l 台账——带 guard 的条件边构成回边时受 maxIterations 约束 */
+  addConditionalEdge(source: string, condition: EdgeCondition, label?: string, guard?: LoopGuard): this {
+    this.edges.push({ source, target: '', condition, label, guard })
     return this
   }
 
@@ -94,6 +94,26 @@ export class GraphBuilder {
         throw new Error(`Unguarded back edge: ${e.source} -> ${e.target} (cycle requires guard.maxIterations)`)
       }
     })
+    // l 台账：条件边 target 求值前未知，无法静态判定其是否闭合环。
+    // 保守近似：把无 guard 条件边 source 的静态可达集并入环检测——等价判定为
+    // 「source 自身位于静态环上（存在路径回到 source）」即拒绝：此时条件每次迭代
+    // 都可能绕过守卫回边反复路由；带 guard 的条件边豁免（guard 在运行时计数封顶）。
+    const staticAdj = new Map<string, Set<string>>()
+    for (const e of this.edges) {
+      if (!e.target) continue
+      let s = staticAdj.get(e.source)
+      if (!s) {
+        s = new Set()
+        staticAdj.set(e.source, s)
+      }
+      s.add(e.target)
+    }
+    for (const e of this.edges) {
+      if (!e.condition || e.guard) continue
+      if (reachesSelf(e.source, staticAdj)) {
+        throw new Error(`Unguarded conditional edge on cyclic source: ${e.source} (conditional target resolves at runtime; cycle requires guard.maxIterations)`)
+      }
+    }
     return {
       id: this.id,
       name: this.name,
@@ -107,6 +127,20 @@ export class GraphBuilder {
       maxDurationMs: this.maxDurationMs,
     }
   }
+}
+
+/** l 台账：source 沿静态边是否存在路径回到自身（环上节点判定，条件边不入邻接表——target 未解析） */
+function reachesSelf(id: string, adj: Map<string, Set<string>>): boolean {
+  const seen = new Set<string>()
+  const stack = [...(adj.get(id) ?? [])]
+  while (stack.length > 0) {
+    const cur = stack.pop()!
+    if (cur === id) return true
+    if (seen.has(cur)) continue
+    seen.add(cur)
+    for (const nxt of adj.get(cur) ?? []) stack.push(nxt)
+  }
+  return false
 }
 
 // ============================================================================

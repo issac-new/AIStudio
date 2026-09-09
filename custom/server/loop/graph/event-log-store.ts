@@ -1,8 +1,12 @@
 // overlay/custom/server/loop/graph/event-log-store.ts
 // EventLogStore — 图执行的 append-only 事实源
 // 默认 InMemory（无路径时的测试/内存形态）；
-// 生产经 createEventLogStore(path) 走 node:sqlite（Node 内置 DatabaseSync，零新依赖；
-// 创建失败降级 InMemory 并 console.warn 一次——Task 3 审查遗留：降级不许静默）
+// 生产经 createEventLogStore(path) 走 node:sqlite（Node 内置 DatabaseSync，零新依赖）
+//
+// 降级边界（台账 m 修正）：本文件对 node:sqlite 是顶层静态 import——
+// 运行时缺少该内置模块时（package.json engines 声明 node >=23），import 即抛、
+// 本模块加载失败，createEventLogStore 工厂根本不会执行；工厂的 try/catch 只兜
+// "模块存在但建库失败"（路径不可写 / 文件损坏等），此时降级 InMemory 并 console.warn 一次，不静默。
 
 import { DatabaseSync } from 'node:sqlite'
 import type { SQLInputValue } from 'node:sqlite'
