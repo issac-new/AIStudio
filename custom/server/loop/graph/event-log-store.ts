@@ -1,7 +1,10 @@
 // overlay/custom/server/loop/graph/event-log-store.ts
 // EventLogStore — 图执行的 append-only 事实源
-// 默认 InMemory（测试/Electron 无原生模块时降级）；
-// 生产经 createEventLogStore(path) 走 better-sqlite3（动态 require，未安装则降级并 warn）
+// 默认 InMemory（无路径时的测试/内存形态）；
+// 生产经 createEventLogStore(path) 走 node:sqlite（Node 内置 DatabaseSync，零新依赖；
+// 创建失败降级 InMemory 并 console.warn 一次——Task 3 审查遗留：降级不许静默）
+
+import { DatabaseSync } from 'node:sqlite'
 
 export interface GraphLogEvent {
   seq: number
@@ -98,9 +101,9 @@ export class InMemoryEventLogStore implements EventLogStore {
   }
 }
 
-/** better-sqlite3 实现（可选依赖；schema 见 spec §3.1，checkpoints 同库另表） */
+/** node:sqlite 实现（Node 内置 DatabaseSync，零新依赖；schema 见 spec §3.1，checkpoints 同库另表） */
 class SqliteEventLogStore implements EventLogStore {
-  constructor(private db: import('better-sqlite3').Database) {
+  constructor(private db: DatabaseSync) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS graph_events (
         seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -206,15 +209,14 @@ function rowToCheckpoint(r: Record<string, unknown>): StoredCheckpoint {
   }
 }
 
-/** 工厂：给路径且 better-sqlite3 可用 → SQLite；否则内存降级 */
+/** 工厂：给路径且 node:sqlite 可创建 → SQLite；否则降级 InMemory 并 warn 一次 */
 export function createEventLogStore(sqlitePath?: string): EventLogStore {
   if (sqlitePath) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const Database = require('better-sqlite3')
-      return new SqliteEventLogStore(new Database(sqlitePath))
-    } catch {
-      // 原生模块不可用时降级（Electron 未重建 / 测试环境）
+      return new SqliteEventLogStore(new DatabaseSync(sqlitePath))
+    } catch (err) {
+      // 创建失败（路径不可写 / node:sqlite 不可用）→ 显式告警后降级，不静默
+      console.warn(`[event-log-store] SQLite 创建失败，降级为 InMemory（path=${sqlitePath}）:`, err)
     }
   }
   return new InMemoryEventLogStore()
