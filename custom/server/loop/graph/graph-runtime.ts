@@ -15,7 +15,7 @@
 //
 // 支持：
 // - interrupt：节点返回 interrupt 时暂停，等待 resume / resumeFromCheckpoint 真恢复
-// - 检查点：每 super-step 结束自动保存（CheckpointManager + EventLogStore 双写）；
+// - 检查点：每 super-step 结束自动保存（CheckpointManager/EventLogStore，StoredCheckpoint 真快照）；
 //   join 簿记（JoinLedger）随 checkpoint 进出，resume 后不丢前驱完成事实（F2）
 // - 回边守卫：maxIterations / breakCondition（有限终止）
 // - 四层终止：L3 maxSteps（节点可读 __remainingSteps）+ L4 预算/时长（先于一切完成路径判定，F5）
@@ -28,7 +28,7 @@
 
 import type {
   GraphDef, GraphInstance, NodeDef, NodeResult, StateValues, StateUpdate,
-  GraphEvent, GraphDeps, Checkpoint, NodeContext,
+  GraphEvent, GraphDeps, NodeContext,
 } from './types'
 import { ChannelStore } from './channel-store'
 import { CheckpointManager } from './checkpoint-manager'
@@ -775,7 +775,7 @@ export class GraphRuntime {
     return next
   }
 
-  /** 检查点双写：CheckpointManager（旧通道）+ EventLogStore（事实源，含 joinLedger），并发 graph.checkpoint */
+  /** 检查点持久化：优先经 CheckpointManager（EventLogStore 薄封装，含 joinLedger）；未装配时直写 eventLog，并发 graph.checkpoint */
   private async saveCheckpoint(
     graphDef: GraphDef,
     instance: GraphInstance,
@@ -790,36 +790,24 @@ export class GraphRuntime {
     const checkpointId = `cp-${graphDef.id}-${instance.threadId}-${step}`
     const ts = new Date().toISOString()
 
-    if (this.checkpointManager) {
-      const checkpoint: Checkpoint = {
-        id: checkpointId,
-        graphId: graphDef.id,
-        threadId: instance.threadId,
-        superStep: step,
-        state: store.snapshot(),
-        nextNodes,
-        pendingInterrupts: [...pendingInterrupts],
-        timestamp: ts,
-        totalCost: instance.totalCost,
-      }
-      await this.checkpointManager.save(checkpoint)
+    const stored: StoredCheckpoint = {
+      id: checkpointId,
+      runId: this.runId ?? instance.threadId,
+      graphId: graphDef.id,
+      superStep: step,
+      state: store.snapshot(),
+      nextNodes: [...nextNodes],
+      pendingInterrupts: pendingInterrupts.map(i => ({ ...i })),
+      iterCounters: { ...iterCounters },
+      totalCost: instance.totalCost,
+      startedAtMs,
+      createdAt: ts,
+      joinLedger,
     }
 
-    if (this.eventLog) {
-      const stored: StoredCheckpoint = {
-        id: checkpointId,
-        runId: this.runId ?? instance.threadId,
-        graphId: graphDef.id,
-        superStep: step,
-        state: store.snapshot(),
-        nextNodes: [...nextNodes],
-        pendingInterrupts: pendingInterrupts.map(i => ({ ...i })),
-        iterCounters: { ...iterCounters },
-        totalCost: instance.totalCost,
-        startedAtMs,
-        createdAt: ts,
-        joinLedger,
-      }
+    if (this.checkpointManager) {
+      await this.checkpointManager.save(stored)
+    } else if (this.eventLog) {
       await this.eventLog.saveCheckpoint(stored)
     }
 
