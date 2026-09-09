@@ -41,6 +41,34 @@ describe('validateGraphSpec', () => {
     expect(() => validateGraphSpec(s)).toThrow(GraphSpecError)
   })
 
+  // 台账 f1：reducer 判定按自有属性——'constructor'/'toString' 等原型链键必须拒绝
+  it('rejects prototype-chain reducer names like "constructor"', () => {
+    const s = baseSpec(); s.channels.evil = { reducer: 'constructor' }
+    expect(() => validateGraphSpec(s)).toThrow(GraphSpecError)
+    expect(() => validateGraphSpec(s)).toThrow(/constructor/)
+    const s2 = baseSpec(); s2.channels.evil2 = { reducer: 'toString' }
+    expect(() => validateGraphSpec(s2)).toThrow(GraphSpecError)
+  })
+
+  // 台账 f4：onError.goto / retry-goto 的 target 必须是已知节点
+  it('rejects onError.goto target pointing at unknown node', () => {
+    const s = baseSpec()
+    s.nodes[1].onError = { type: 'goto', target: 'ghost' }
+    expect(() => validateGraphSpec(s)).toThrow(/ghost/)
+  })
+
+  it('rejects onError.retry-goto target pointing at unknown node', () => {
+    const s = baseSpec()
+    s.nodes[1].onError = { type: 'retry-goto', target: 'ghost', maxAttempts: 2 }
+    expect(() => validateGraphSpec(s)).toThrow(/ghost/)
+  })
+
+  it('accepts onError routes to known nodes', () => {
+    const s = baseSpec()
+    s.nodes[1].onError = { type: 'goto', target: 'a' }
+    expect(() => validateGraphSpec(s)).not.toThrow()
+  })
+
   it('accepts a guarded back edge (cycle with guard)', () => {
     const s = baseSpec()
     s.edges.push({ from: 'b', to: 'a', guard: { maxIterations: 3 } })

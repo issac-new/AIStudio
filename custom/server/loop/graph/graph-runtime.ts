@@ -577,7 +577,9 @@ export class GraphRuntime {
       }
 
       // 检查终止条件
+      // n 台账：hasEnd/endCondition 完成路径与 nextNodes 排空路径一致，run 结束前统一扫一次 join 饿死
       if (hasEnd || (graphDef.endCondition && graphDef.endCondition(store.getValues()))) {
+        emitStarvedJoins()
         return await this.complete(instance, graphDef, store)
       }
 
