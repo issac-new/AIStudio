@@ -9,6 +9,7 @@ import {
   approvalInterruptId, resumeChannel,
   type PhaseNodeDeps, type Connector, type PersistenceAdapter, type GateCommand,
 } from '../../../../server/loop/graph/phase-nodes'
+import { BudgetGuard } from '../../../../server/loop/engine/budget-guard'
 import type { NodeContext } from '../../../../server/loop/graph/types'
 import type { LoopInstance, TaskContract, VerificationRecord, LoopEvent } from '../../../../server/loop/types'
 
@@ -719,5 +720,82 @@ describe('gate validator/post ordering (injectable exec)', () => {
     expect(repair[0]).toMatchObject({ source: 'gate', name: 'typecheck' })
     expect(repair[0].message).toContain('ERR: TS2307')
     expect(res.update?.[CH.repairNeeded]).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 I7 — 成本断链闭合：阶段节点完成即按 BudgetGuard.estimateTickCost 档位计费
+// ---------------------------------------------------------------------------
+
+describe('phase cost accounting (I7)', () => {
+  function ctxWithCost(base: NodeContext, costs: number[]): NodeContext {
+    return { ...base, deps: { ...base.deps, recordCost: (n: number) => { costs.push(n) } } } as unknown as NodeContext
+  }
+
+  it('charges the estimateTickCost tier once per phase-node completion', async () => {
+    const loop = makeLoop()
+    const { deps, ctx } = makeDeps({ discoverResult: [makeContract('task/a')] })
+    const costs: number[] = []
+    const node = createPhaseNode('discovery', loop, deps)
+    await node.execute({}, ctxWithCost(ctx, costs))
+
+    const tier = new BudgetGuard(() => {}).estimateTickCost(loop) // 档位单一事实源
+    expect(costs).toEqual([tier])
+    expect(tier).toBeGreaterThan(0)
+  })
+
+  it('charges on the validation approval-interrupt early return too (programmatic verification ran)', async () => {
+    const loop = makeLoop()
+    const { deps, ctx } = makeDeps({ verifyResult: makeVerification('task/a', 'pending') })
+    const costs: number[] = []
+    const node = createPhaseNode('validation', loop, deps)
+    const res = await node.execute(
+      { [CH.contracts]: [makeContract('task/a', { status: 'in-progress' })] },
+      ctxWithCost(ctx, costs),
+    )
+    expect(res.interrupt).toBeDefined()
+    expect(costs).toHaveLength(1)
+  })
+
+  it('tolerates a missing recordCost dep (optional dep, harnesses without cost assertions)', async () => {
+    const loop = makeLoop()
+    const { deps, ctx } = makeDeps({ discoverResult: [] })
+    const node = createPhaseNode('discovery', loop, deps)
+    await expect(node.execute({}, ctx)).resolves.toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 Minor — stop-check stage-transition 的 from 取真实当前 stage
+// （原实现在 discovery 无契约短路路径发 from:'persistence' 的假迁移）
+// ---------------------------------------------------------------------------
+
+describe('stop-check stage-transition from (minor)', () => {
+  function stopCtx() {
+    const { ctx, graphEvents } = makeDeps()
+    return { ctx, graphEvents }
+  }
+  const stageTransitionOf = (graphEvents: unknown[]) =>
+    graphEvents.find(e => (e as { type: string }).type === 'loop.stage-transition') as
+      | { from: string; to: string; reason: string }
+      | undefined
+
+  it('discovery short-circuit path reports scheduling as from (real current stage)', async () => {
+    const loop = makeLoop()
+    const { ctx, graphEvents } = stopCtx()
+    const node = createStopConditionNode(loop, { evaluateStop: async () => true })
+    await node.execute({ [CH.stage]: 'scheduling', [CH.contracts]: [] }, ctx)
+    const st = stageTransitionOf(graphEvents)
+    expect(st?.from).toBe('scheduling')
+    expect(st?.to).toBe('scheduling')
+  })
+
+  it('normal path (entered after persistence) still reports persistence as from', async () => {
+    const loop = makeLoop()
+    const { ctx, graphEvents } = stopCtx()
+    const node = createStopConditionNode(loop, { evaluateStop: async () => true })
+    await node.execute({ [CH.stage]: 'persistence', [CH.contracts]: [makeContract('task/a')] }, ctx)
+    const st = stageTransitionOf(graphEvents)
+    expect(st?.from).toBe('persistence')
   })
 })

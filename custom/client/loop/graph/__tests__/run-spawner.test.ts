@@ -147,4 +147,80 @@ describe('RunSpawner', () => {
     await healthy.eventLog.append({ runId: 'r2', graphId: 'loop-loop-1', ts: 1, kind: 'node.completed', nodeId: 'n', payload: {} })
     expect(await healthy.spawner.isStuck('loop-1')).toBe(false)
   })
+
+  // -------------------------------------------------------------------------
+  // 修复波 I10 — 旧引擎 loop.tick-complete 兼容补发（前端/matrix-bot 消费）
+  // -------------------------------------------------------------------------
+
+  it('emits legacy-compatible loop.tick-complete via the bridge when a run completes (I10)', async () => {
+    const bridged: LoopEvent[] = []
+    const { spawner, byId } = makeSpawner([makeLoop()], makeGraph('loop-loop-1', { stopMet: false }), {
+      emitLoopEvent: e => bridged.push(e),
+    })
+    await spawner.poll()
+    await vi.waitFor(() => expect(byId.get('loop-1')?.status).toBe('idle'))
+
+    const evt = bridged.find(e => e.type === 'loop.tick-complete') as
+      | { loopId: string; iteration: number; stats: { currentIteration: number }; ts: string }
+      | undefined
+    expect(evt).toBeDefined()
+    expect(evt!.loopId).toBe('loop-1')
+    expect(evt!.iteration).toBe(1) // = stats.currentIteration（legacy LoopEngine 同口径）
+    expect(evt!.stats.currentIteration).toBe(1)
+    expect(typeof evt!.ts).toBe('string')
+  })
+
+  it('routes loop.completed / loop.stuck through the bridge when provided (socket fanout parity)', async () => {
+    const bridged: LoopEvent[] = []
+    const { spawner } = makeSpawner([makeLoop()], makeGraph('loop-loop-1', { stopMet: true }), {
+      emitLoopEvent: e => bridged.push(e),
+    })
+    await spawner.poll()
+    await vi.waitFor(() => expect(bridged.some(e => e.type === 'loop.completed')).toBe(true))
+
+    // 失败路径（熔断）：loop.stuck 也经桥接出站
+    const bridgedFail: LoopEvent[] = []
+    const breaker = makeSpawner([makeLoop()], makeGraph('loop-loop-1', { fail: true }), {
+      maxConsecutiveFailures: 1,
+      emitLoopEvent: e => bridgedFail.push(e),
+    })
+    await breaker.spawner.tickNow('loop-1')
+    await vi.waitFor(() => expect(bridgedFail.some(e => e.type === 'loop.stuck')).toBe(true))
+    // 失败 run 同样补发 tick-complete（前端 stats 刷新在失败时不失联）
+    expect(bridgedFail.some(e => e.type === 'loop.tick-complete')).toBe(true)
+  })
+
+  it('auto-resumes only whitelisted paused loops whose nextTickAt is overdue (I9)', async () => {
+    const pausedOrphan = makeLoop({ id: 'orphan', status: 'paused' })
+    const pausedUser = makeLoop({ id: 'user-paused', status: 'paused' })
+    const whitelist = new Set(['orphan'])
+    const { spawner, byId } = makeSpawner([pausedOrphan, pausedUser], makeGraph('loop-orphan'), {
+      autoResumeIds: whitelist,
+    })
+
+    await spawner.poll()
+    await vi.waitFor(() => expect(byId.get('orphan')?.status).toBe('idle'))
+    // 触发一次后移除出白名单（不会反复触发）
+    expect(whitelist.has('orphan')).toBe(false)
+    // 用户主动 paused 的 loop 原样不动
+    expect(byId.get('user-paused')?.status).toBe('paused')
+    spawner.stop()
+  })
+
+  it('does not resume a whitelisted paused loop whose nextTickAt is in the future (I9)', async () => {
+    const pausedFuture = makeLoop({
+      id: 'future', status: 'paused',
+      nextTickAt: new Date(Date.now() + 3600_000).toISOString(),
+    })
+    const whitelist = new Set(['future'])
+    const { spawner, compile, byId } = makeSpawner([pausedFuture], makeGraph('loop-future'), {
+      autoResumeIds: whitelist,
+    })
+    await spawner.poll()
+    await new Promise(r => setTimeout(r, 20))
+    expect(byId.get('future')?.status).toBe('paused')
+    expect(compile).not.toHaveBeenCalled()
+    expect(whitelist.has('future')).toBe(true)
+    spawner.stop()
+  })
 })
