@@ -15,6 +15,15 @@ SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源�
 
 
 
+### 2.16 构建产物（未发布，sha256 留档）
+
+```
+412cbffadf4f603ff7c93e12dbacc98b8775f5ec37676e57fbf51d76a4145f81  SwarmStudio-0.7.18-arm64.dmg
+5262612f3d8133b5bfd17c01d22e5e23d9e20ea27f4499410265d3e57b34ae04  SwarmStudio-0.7.18-x64.zip
+```
+
+（按指示未上传 GitHub Release 与 ModelScope；发布时以此 sha256 为准区分同名产物 SwarmStudio-0.7.18-*。）
+
 > **2.15** — hermes-studio v0.7.17 → **v0.7.18**（2026-09-06 发布的 Latest；31 commits、218 文件 +9017/−948：OpenCode coding agent、群聊云端中继远程 agent、移动端日历/定位一次性授权、会话操作菜单整合、Runtime 轮询收敛 super admin、Windows runtime 修复批次）。hermes-agent 维持 **v0.21.0**（v2026.8.31 仍是最新 stable tag）。element-web 维持 **v1.12.27**（仍是最新稳定版）。runtime pin 维持上游原生 `hermes-0.20.6-runtime`（v0.7.18 未改 pin，仓库的 hermes-0.21.0-runtime tag 仍未被上游引用）。
 
 ### 2.15 明细
