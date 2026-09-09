@@ -5,6 +5,7 @@
 // 创建失败降级 InMemory 并 console.warn 一次——Task 3 审查遗留：降级不许静默）
 
 import { DatabaseSync } from 'node:sqlite'
+import type { SQLInputValue } from 'node:sqlite'
 
 export interface GraphLogEvent {
   seq: number
@@ -139,7 +140,7 @@ class SqliteEventLogStore implements EventLogStore {
 
   async query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string }): Promise<GraphLogEvent[]> {
     let sql = `SELECT * FROM graph_events WHERE run_id = ?`
-    const args: unknown[] = [runId]
+    const args: SQLInputValue[] = [runId]
     if (opts?.sinceSeq !== undefined) { sql += ` AND seq > ?`; args.push(opts.sinceSeq) }
     if (opts?.kind !== undefined) { sql += ` AND kind = ?`; args.push(opts.kind) }
     sql += ` ORDER BY seq`
