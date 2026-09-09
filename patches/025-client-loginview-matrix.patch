@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 6a1816ac..a002583e 100644
+index 92c2eb0..a002583 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -2,113 +2,155 @@
@@ -177,7 +177,7 @@ index 6a1816ac..a002583e 100644
    <div class="login-view">
      <div class="login-card">
 -      <div class="login-logo">
--        <img src="/logo.png" alt="Hermes" width="80" height="80" />
+-        <img src="/logo.png" alt="Ekko Studio" width="80" height="80" />
 -      </div>
        <h1 class="login-title">{{ t("login.title") }}</h1>
 -      <p class="login-desc">{{ t("login.description") }}</p>

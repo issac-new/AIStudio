@@ -1,16 +1,16 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 3fc80009..a1145aa7 100644
+index 0dda62b..84330a5 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
 -appId: com.hermeswebui.studio
--productName: Hermes Studio
+-productName: Ekko Studio
 +appId: com.swarmstudio.app
 +productName: SwarmStudio
  copyright: Copyright © 2026
  
  directories:
-@@ -52,7 +52,11 @@ extraResources:
+@@ -61,7 +61,11 @@ extraResources:
      filter:
        - "**/*"
        # Drop other-platform node-pty prebuilds (saves ~45MB)
@@ -23,7 +23,7 @@ index 3fc80009..a1145aa7 100644
        # Linux has no bundled prebuild and loads the native module compiled by
        # `npm rebuild node-pty` from build/Release.
        - "!node-pty/build/**"
-@@ -65,28 +69,30 @@ asarUnpack:
+@@ -74,28 +78,30 @@ asarUnpack:
  mac:
    # Xcode 26 compiles this Icon Composer source into Assets.car and also
    # generates the legacy ICNS fallback for pre-Tahoe macOS releases.
@@ -44,8 +44,9 @@ index 3fc80009..a1145aa7 100644
    entitlements: build/entitlements.mac.plist
    entitlementsInherit: build/entitlements.mac.inherit.plist
    extendInfo:
-     NSMicrophoneUsageDescription: "Hermes Studio uses the microphone for voice conversations and speech transcription."
+-    NSMicrophoneUsageDescription: "Ekko Studio uses the microphone for voice conversations and speech transcription."
 -  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
++    NSMicrophoneUsageDescription: "Hermes Studio uses the microphone for voice conversations and speech transcription."
 +  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
  
  win:
@@ -60,7 +61,7 @@ index 3fc80009..a1145aa7 100644
  
  linux:
    icon: build/icons
-@@ -96,7 +102,7 @@ linux:
+@@ -105,7 +111,7 @@ linux:
      - target: deb
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development

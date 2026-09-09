@@ -1,68 +1,35 @@
 diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
+index e8443b5..52208b6 100644
 --- a/packages/desktop/build/installer.nsh
 +++ b/packages/desktop/build/installer.nsh
-@@ -1,7 +1,7 @@
- !macro stopHermesStudioProcesses
--  IfFileExists "$INSTDIR\Hermes Studio.exe" 0 hermesStudioStopDone
--    DetailPrint "Stopping Hermes Studio..."
--    nsExec::ExecToLog '"$INSTDIR\Hermes Studio.exe" --quit'
-+  IfFileExists "$INSTDIR\SwarmStudio.exe" 0 hermesStudioStopDone
-+    DetailPrint "Stopping SwarmStudio..."
-+    nsExec::ExecToLog '"$INSTDIR\SwarmStudio.exe" --quit'
-     Pop $0
- 
-     InitPluginsDir
-@@ -52,7 +52,7 @@
-     FileWrite $0 "  return $$roots | Select-Object -Unique$\r$\n"
-     FileWrite $0 "}$\r$\n"
-     FileWrite $0 "function Get-HermesStudioProcess {$\r$\n"
--    FileWrite $0 "  Get-CimInstance Win32_Process -Filter $\"Name = 'Hermes Studio.exe'$\" | Where-Object {$\r$\n"
-+    FileWrite $0 "  Get-CimInstance Win32_Process -Filter $\"Name = 'SwarmStudio.exe'$\" | Where-Object {$\r$\n"
-     FileWrite $0 "    try { $$_.ExecutablePath -and ([System.IO.Path]::GetFullPath($$_.ExecutablePath) -ieq $$target) } catch { $$false }$\r$\n"
-     FileWrite $0 "  }$\r$\n"
-     FileWrite $0 "}$\r$\n"
-@@ -93,20 +93,20 @@
-     FileWrite $0 "exit 1$\r$\n"
-     FileClose $0
- 
--    System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "$INSTDIR\Hermes Studio.exe") i .r0'
-+    System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "$INSTDIR\SwarmStudio.exe") i .r0'
-     System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_INSTALL_DIR", t "$INSTDIR") i .r0'
-     nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\stop-hermes-studio.ps1"'
-     Pop $0
-     System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_EXE", t "") i .r0'
-     System::Call 'kernel32::SetEnvironmentVariable(t "HERMES_STUDIO_INSTALL_DIR", t "") i .r0'
--    nsExec::ExecToLog 'taskkill.exe /IM "Hermes Studio.exe" /T /F'
-+    nsExec::ExecToLog 'taskkill.exe /IM "SwarmStudio.exe" /T /F'
-     Pop $0
-   hermesStudioStopDone:
- !macroend
+@@ -112,7 +112,7 @@
  
  !macro repairHermesStudioUninstaller
    IfFileExists "$INSTDIR\${UNINSTALL_FILENAME}" 0 hermesStudioRepairDone
--    DetailPrint "Repairing Hermes Studio uninstaller..."
+-    DetailPrint "Repairing Ekko Studio uninstaller..."
 +    DetailPrint "Repairing SwarmStudio uninstaller..."
      SetOutPath "$INSTDIR"
      Delete "$INSTDIR\${UNINSTALL_FILENAME}.hermes-repair"
      ClearErrors
-diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
+diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
+index ffcbd48..b875b91 100644
 --- a/packages/desktop/src/main/desktop-i18n.ts
 +++ b/packages/desktop/src/main/desktop-i18n.ts
-@@ -62,36 +62,36 @@
+@@ -62,36 +62,36 @@ const supportedLocales: DesktopLocale[] = ['en', 'zh', 'zh-TW', 'ja', 'ko', 'fr'
  
  const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
    en: {
--    'tray.show': 'Show Hermes Studio',
--    'tray.hide': 'Hide Hermes Studio',
+-    'tray.show': 'Show Ekko Studio',
+-    'tray.hide': 'Hide Ekko Studio',
 +    'tray.show': 'Show SwarmStudio',
 +    'tray.hide': 'Hide SwarmStudio',
      'tray.checkForUpdates': 'Check for Updates',
      'tray.resetLogin': 'Reset Login',
      'tray.openAtLogin': 'Open at Login',
--    'tray.quit': 'Quit Hermes Studio',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio is up to date.',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': 'Quit Ekko Studio',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio is up to date.',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': 'Quit SwarmStudio',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio is up to date.',
@@ -70,19 +37,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': 'Checking for updates...',
      'update.currentVersion': 'Current version: {version}',
      'update.availableTitle': 'Update available',
--    'update.availableMessage': 'Hermes Studio {version} is available.',
+-    'update.availableMessage': 'Ekko Studio {version} is available.',
 +    'update.availableMessage': 'SwarmStudio {version} is available.',
      'update.availableDetail': 'Choose whether to download this update.',
      'update.downloading': 'The update is downloading in the background.',
      'update.readyTitle': 'Update ready',
--    'update.readyMessage': 'Hermes Studio {version} is ready to install.',
+-    'update.readyMessage': 'Ekko Studio {version} is ready to install.',
 +    'update.readyMessage': 'SwarmStudio {version} is ready to install.',
      'update.readyDetail': 'Restart now to apply the update, or it will be installed on next quit.',
      'update.restartNow': 'Restart now',
      'update.download': 'Download',
      'update.later': 'Later',
      'update.failedTitle': 'Update check failed',
--    'update.failedMessage': 'Could not check for Hermes Studio updates.',
+-    'update.failedMessage': 'Could not check for Ekko Studio updates.',
 +    'update.failedMessage': 'Could not check for SwarmStudio updates.',
      'update.noUpdateInfoMessage': 'Update information is not available for this platform yet.',
      'update.packagedOnlyMessage': 'Automatic updates are only available in the packaged desktop app.',
@@ -90,35 +57,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': 'Select a runtime download source to start local services.',
      'desktop.downloadFailed': 'Download failed',
      'desktop.downloadCloudflareTitle': 'Download from Cloudflare',
--    'desktop.downloadCloudflareDetail': 'Use the Hermes Studio download proxy.',
+-    'desktop.downloadCloudflareDetail': 'Use the Ekko Studio download proxy.',
 +    'desktop.downloadCloudflareDetail': 'Use the SwarmStudio download proxy.',
      'desktop.downloadGithubTitle': 'Download from GitHub',
      'desktop.downloadGithubDetail': 'Use the release asset directly from GitHub.',
      'desktop.failedPrepareRuntime': 'Failed to prepare Hermes runtime',
-@@ -110,7 +110,7 @@
+@@ -110,7 +110,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Select region',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
--    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
+-    'loginReset.confirmDetail': 'Ekko Studio will restart its local Web UI service, clear login locks, and return to the login page.',
 +    'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -118,36 +118,36 @@
+@@ -118,36 +118,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    zh: {
--    'tray.show': '显示 Hermes Studio',
--    'tray.hide': '隐藏 Hermes Studio',
+-    'tray.show': '显示 Ekko Studio',
+-    'tray.hide': '隐藏 Ekko Studio',
 +    'tray.show': '显示 SwarmStudio',
 +    'tray.hide': '隐藏 SwarmStudio',
      'tray.checkForUpdates': '检查更新',
      'tray.resetLogin': '重置登录',
      'tray.openAtLogin': '开机启动',
--    'tray.quit': '退出 Hermes Studio',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio 已是最新版本。',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': '退出 Ekko Studio',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio 已是最新版本。',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': '退出 SwarmStudio',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio 已是最新版本。',
@@ -126,19 +93,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': '正在检查更新...',
      'update.currentVersion': '当前版本：{version}',
      'update.availableTitle': '发现新版本',
--    'update.availableMessage': 'Hermes Studio {version} 可用。',
+-    'update.availableMessage': 'Ekko Studio {version} 可用。',
 +    'update.availableMessage': 'SwarmStudio {version} 可用。',
      'update.availableDetail': '请选择是否下载此更新。',
      'update.downloading': '更新正在后台下载。',
      'update.readyTitle': '更新已就绪',
--    'update.readyMessage': 'Hermes Studio {version} 已准备好安装。',
+-    'update.readyMessage': 'Ekko Studio {version} 已准备好安装。',
 +    'update.readyMessage': 'SwarmStudio {version} 已准备好安装。',
      'update.readyDetail': '立即重启以应用更新，或下次退出时自动安装。',
      'update.restartNow': '立即重启',
      'update.download': '下载',
      'update.later': '稍后',
      'update.failedTitle': '检查更新失败',
--    'update.failedMessage': '无法检查 Hermes Studio 更新。',
+-    'update.failedMessage': '无法检查 Ekko Studio 更新。',
 +    'update.failedMessage': '无法检查 SwarmStudio 更新。',
      'update.noUpdateInfoMessage': '当前平台的更新信息暂不可用。',
      'update.packagedOnlyMessage': '自动更新仅在打包后的桌面应用中可用。',
@@ -146,35 +113,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': '请选择运行时下载源以启动本地服务。',
      'desktop.downloadFailed': '下载失败',
      'desktop.downloadCloudflareTitle': '从 Cloudflare 下载',
--    'desktop.downloadCloudflareDetail': '使用 Hermes Studio 下载代理。',
+-    'desktop.downloadCloudflareDetail': '使用 Ekko Studio 下载代理。',
 +    'desktop.downloadCloudflareDetail': '使用 SwarmStudio 下载代理。',
      'desktop.downloadGithubTitle': '从 GitHub 下载',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 资源。',
      'desktop.failedPrepareRuntime': '准备 Hermes 运行时失败',
-@@ -166,7 +166,7 @@
+@@ -166,7 +166,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '框选区域',
      'loginReset.confirmTitle': '重置登录',
      'loginReset.confirmMessage': '确认将登录重置为 admin / 123456？',
--    'loginReset.confirmDetail': 'Hermes Studio 会重启本地 Web UI 服务、清除登录失败锁，然后回到登录页。',
+-    'loginReset.confirmDetail': 'Ekko Studio 会重启本地 Web UI 服务、清除登录失败锁，然后回到登录页。',
 +    'loginReset.confirmDetail': 'SwarmStudio 会重启本地 Web UI 服务、清除登录失败锁，然后回到登录页。',
      'loginReset.resetting': '正在重置登录...',
      'loginReset.successTitle': '登录已重置',
      'loginReset.successMessage': '登录已重置为 {username} / {password}。',
-@@ -174,36 +174,36 @@
+@@ -174,36 +174,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '无法重置桌面端登录。',
    },
    'zh-TW': {
--    'tray.show': '顯示 Hermes Studio',
--    'tray.hide': '隱藏 Hermes Studio',
+-    'tray.show': '顯示 Ekko Studio',
+-    'tray.hide': '隱藏 Ekko Studio',
 +    'tray.show': '顯示 SwarmStudio',
 +    'tray.hide': '隱藏 SwarmStudio',
      'tray.checkForUpdates': '檢查更新',
      'tray.resetLogin': '重置登入',
      'tray.openAtLogin': '開機啟動',
--    'tray.quit': '結束 Hermes Studio',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio 已是最新版本。',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': '結束 Ekko Studio',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio 已是最新版本。',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': '結束 SwarmStudio',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio 已是最新版本。',
@@ -182,19 +149,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': '正在檢查更新...',
      'update.currentVersion': '目前版本：{version}',
      'update.availableTitle': '發現新版本',
--    'update.availableMessage': 'Hermes Studio {version} 可用。',
+-    'update.availableMessage': 'Ekko Studio {version} 可用。',
 +    'update.availableMessage': 'SwarmStudio {version} 可用。',
      'update.availableDetail': '請選擇是否下載此更新。',
      'update.downloading': '更新正在背景下載。',
      'update.readyTitle': '更新已就緒',
--    'update.readyMessage': 'Hermes Studio {version} 已準備好安裝。',
+-    'update.readyMessage': 'Ekko Studio {version} 已準備好安裝。',
 +    'update.readyMessage': 'SwarmStudio {version} 已準備好安裝。',
      'update.readyDetail': '立即重新啟動以套用更新，或下次結束時自動安裝。',
      'update.restartNow': '立即重新啟動',
      'update.download': '下載',
      'update.later': '稍後',
      'update.failedTitle': '檢查更新失敗',
--    'update.failedMessage': '無法檢查 Hermes Studio 更新。',
+-    'update.failedMessage': '無法檢查 Ekko Studio 更新。',
 +    'update.failedMessage': '無法檢查 SwarmStudio 更新。',
      'update.noUpdateInfoMessage': '目前平台的更新資訊暫不可用。',
      'update.packagedOnlyMessage': '自動更新僅可在打包後的桌面應用中使用。',
@@ -202,35 +169,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': '請選擇運行時下載來源以啟動本地服務。',
      'desktop.downloadFailed': '下載失敗',
      'desktop.downloadCloudflareTitle': '從 Cloudflare 下載',
--    'desktop.downloadCloudflareDetail': '使用 Hermes Studio 下載代理。',
+-    'desktop.downloadCloudflareDetail': '使用 Ekko Studio 下載代理。',
 +    'desktop.downloadCloudflareDetail': '使用 SwarmStudio 下載代理。',
      'desktop.downloadGithubTitle': '從 GitHub 下載',
      'desktop.downloadGithubDetail': '直接使用 GitHub Release 資源。',
      'desktop.failedPrepareRuntime': '準備 Hermes 運行時失敗',
-@@ -222,7 +222,7 @@
+@@ -222,7 +222,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '框選區域',
      'loginReset.confirmTitle': '重置登入',
      'loginReset.confirmMessage': '確認將登入重置為 admin / 123456？',
--    'loginReset.confirmDetail': 'Hermes Studio 會重新啟動本地 Web UI 服務、清除登入失敗鎖，然後回到登入頁。',
+-    'loginReset.confirmDetail': 'Ekko Studio 會重新啟動本地 Web UI 服務、清除登入失敗鎖，然後回到登入頁。',
 +    'loginReset.confirmDetail': 'SwarmStudio 會重新啟動本地 Web UI 服務、清除登入失敗鎖，然後回到登入頁。',
      'loginReset.resetting': '正在重置登入...',
      'loginReset.successTitle': '登入已重置',
      'loginReset.successMessage': '登入已重置為 {username} / {password}。',
-@@ -230,36 +230,36 @@
+@@ -230,36 +230,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': '無法重置桌面端登入。',
    },
    ja: {
--    'tray.show': 'Hermes Studio を表示',
--    'tray.hide': 'Hermes Studio を隠す',
+-    'tray.show': 'Ekko Studio を表示',
+-    'tray.hide': 'Ekko Studio を隠す',
 +    'tray.show': 'SwarmStudio を表示',
 +    'tray.hide': 'SwarmStudio を隠す',
      'tray.checkForUpdates': 'アップデートを確認',
      'tray.resetLogin': 'Reset Login',
      'tray.openAtLogin': 'ログイン時に開く',
--    'tray.quit': 'Hermes Studio を終了',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio は最新です。',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': 'Ekko Studio を終了',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio は最新です。',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': 'SwarmStudio を終了',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio は最新です。',
@@ -238,19 +205,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': 'アップデートを確認しています...',
      'update.currentVersion': '現在のバージョン: {version}',
      'update.availableTitle': 'アップデートがあります',
--    'update.availableMessage': 'Hermes Studio {version} が利用できます。',
+-    'update.availableMessage': 'Ekko Studio {version} が利用できます。',
 +    'update.availableMessage': 'SwarmStudio {version} が利用できます。',
      'update.availableDetail': 'このアップデートをダウンロードするか選択してください。',
      'update.downloading': 'アップデートをバックグラウンドでダウンロードしています。',
      'update.readyTitle': 'アップデートの準備ができました',
--    'update.readyMessage': 'Hermes Studio {version} をインストールできます。',
+-    'update.readyMessage': 'Ekko Studio {version} をインストールできます。',
 +    'update.readyMessage': 'SwarmStudio {version} をインストールできます。',
      'update.readyDetail': '今すぐ再起動して適用するか、次回終了時にインストールされます。',
      'update.restartNow': '今すぐ再起動',
      'update.download': 'ダウンロード',
      'update.later': '後で',
      'update.failedTitle': 'アップデート確認に失敗しました',
--    'update.failedMessage': 'Hermes Studio のアップデートを確認できませんでした。',
+-    'update.failedMessage': 'Ekko Studio のアップデートを確認できませんでした。',
 +    'update.failedMessage': 'SwarmStudio のアップデートを確認できませんでした。',
      'update.noUpdateInfoMessage': 'このプラットフォームのアップデート情報はまだ利用できません。',
      'update.packagedOnlyMessage': '自動アップデートはパッケージ版デスクトップアプリでのみ利用できます。',
@@ -258,35 +225,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': 'ローカルサービスを開始するためのランタイムダウンロード元を選択してください。',
      'desktop.downloadFailed': 'ダウンロードに失敗しました',
      'desktop.downloadCloudflareTitle': 'Cloudflare からダウンロード',
--    'desktop.downloadCloudflareDetail': 'Hermes Studio のダウンロードプロキシを使用します。',
+-    'desktop.downloadCloudflareDetail': 'Ekko Studio のダウンロードプロキシを使用します。',
 +    'desktop.downloadCloudflareDetail': 'SwarmStudio のダウンロードプロキシを使用します。',
      'desktop.downloadGithubTitle': 'GitHub からダウンロード',
      'desktop.downloadGithubDetail': 'GitHub のリリースアセットを直接使用します。',
      'desktop.failedPrepareRuntime': 'Hermes ランタイムの準備に失敗しました',
-@@ -278,7 +278,7 @@
+@@ -278,7 +278,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '領域を選択',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
--    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
+-    'loginReset.confirmDetail': 'Ekko Studio will restart its local Web UI service, clear login locks, and return to the login page.',
 +    'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -286,36 +286,36 @@
+@@ -286,36 +286,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    ko: {
--    'tray.show': 'Hermes Studio 표시',
--    'tray.hide': 'Hermes Studio 숨기기',
+-    'tray.show': 'Ekko Studio 표시',
+-    'tray.hide': 'Ekko Studio 숨기기',
 +    'tray.show': 'SwarmStudio 표시',
 +    'tray.hide': 'SwarmStudio 숨기기',
      'tray.checkForUpdates': '업데이트 확인',
      'tray.resetLogin': 'Reset Login',
      'tray.openAtLogin': '로그인 시 열기',
--    'tray.quit': 'Hermes Studio 종료',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio가 최신 버전입니다.',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': 'Ekko Studio 종료',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio가 최신 버전입니다.',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': 'SwarmStudio 종료',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio가 최신 버전입니다.',
@@ -294,19 +261,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': '업데이트를 확인하는 중...',
      'update.currentVersion': '현재 버전: {version}',
      'update.availableTitle': '업데이트 사용 가능',
--    'update.availableMessage': 'Hermes Studio {version}을 사용할 수 있습니다.',
+-    'update.availableMessage': 'Ekko Studio {version}을 사용할 수 있습니다.',
 +    'update.availableMessage': 'SwarmStudio {version}을 사용할 수 있습니다.',
      'update.availableDetail': '이 업데이트를 다운로드할지 선택하세요.',
      'update.downloading': '업데이트를 백그라운드에서 다운로드하고 있습니다.',
      'update.readyTitle': '업데이트 준비 완료',
--    'update.readyMessage': 'Hermes Studio {version}을 설치할 준비가 되었습니다.',
+-    'update.readyMessage': 'Ekko Studio {version}을 설치할 준비가 되었습니다.',
 +    'update.readyMessage': 'SwarmStudio {version}을 설치할 준비가 되었습니다.',
      'update.readyDetail': '지금 다시 시작해 업데이트를 적용하거나 다음 종료 시 설치합니다.',
      'update.restartNow': '지금 다시 시작',
      'update.download': '다운로드',
      'update.later': '나중에',
      'update.failedTitle': '업데이트 확인 실패',
--    'update.failedMessage': 'Hermes Studio 업데이트를 확인할 수 없습니다.',
+-    'update.failedMessage': 'Ekko Studio 업데이트를 확인할 수 없습니다.',
 +    'update.failedMessage': 'SwarmStudio 업데이트를 확인할 수 없습니다.',
      'update.noUpdateInfoMessage': '이 플랫폼의 업데이트 정보를 아직 사용할 수 없습니다.',
      'update.packagedOnlyMessage': '자동 업데이트는 패키징된 데스크톱 앱에서만 사용할 수 있습니다.',
@@ -314,35 +281,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': '로컬 서비스를 시작할 런타임 다운로드 소스를 선택하세요.',
      'desktop.downloadFailed': '다운로드 실패',
      'desktop.downloadCloudflareTitle': 'Cloudflare에서 다운로드',
--    'desktop.downloadCloudflareDetail': 'Hermes Studio 다운로드 프록시를 사용합니다.',
+-    'desktop.downloadCloudflareDetail': 'Ekko Studio 다운로드 프록시를 사용합니다.',
 +    'desktop.downloadCloudflareDetail': 'SwarmStudio 다운로드 프록시를 사용합니다.',
      'desktop.downloadGithubTitle': 'GitHub에서 다운로드',
      'desktop.downloadGithubDetail': 'GitHub 릴리스 자산을 직접 사용합니다.',
      'desktop.failedPrepareRuntime': 'Hermes 런타임 준비 실패',
-@@ -334,7 +334,7 @@
+@@ -334,7 +334,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': '영역 선택',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
--    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
+-    'loginReset.confirmDetail': 'Ekko Studio will restart its local Web UI service, clear login locks, and return to the login page.',
 +    'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -342,36 +342,36 @@
+@@ -342,36 +342,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    fr: {
--    'tray.show': 'Afficher Hermes Studio',
--    'tray.hide': 'Masquer Hermes Studio',
+-    'tray.show': 'Afficher Ekko Studio',
+-    'tray.hide': 'Masquer Ekko Studio',
 +    'tray.show': 'Afficher SwarmStudio',
 +    'tray.hide': 'Masquer SwarmStudio',
      'tray.checkForUpdates': 'Rechercher les mises a jour',
      'tray.resetLogin': 'Reset Login',
      'tray.openAtLogin': 'Ouvrir a la connexion',
--    'tray.quit': 'Quitter Hermes Studio',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio est a jour.',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': 'Quitter Ekko Studio',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio est a jour.',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': 'Quitter SwarmStudio',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio est a jour.',
@@ -350,19 +317,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': 'Recherche de mises a jour...',
      'update.currentVersion': 'Version actuelle : {version}',
      'update.availableTitle': 'Mise a jour disponible',
--    'update.availableMessage': 'Hermes Studio {version} est disponible.',
+-    'update.availableMessage': 'Ekko Studio {version} est disponible.',
 +    'update.availableMessage': 'SwarmStudio {version} est disponible.',
      'update.availableDetail': 'Choisissez si vous souhaitez telecharger cette mise a jour.',
      'update.downloading': 'La mise a jour se telecharge en arriere-plan.',
      'update.readyTitle': 'Mise a jour prete',
--    'update.readyMessage': 'Hermes Studio {version} est pret a etre installe.',
+-    'update.readyMessage': 'Ekko Studio {version} est pret a etre installe.',
 +    'update.readyMessage': 'SwarmStudio {version} est pret a etre installe.',
      'update.readyDetail': 'Redemarrez maintenant pour appliquer la mise a jour, ou elle sera installee a la prochaine fermeture.',
      'update.restartNow': 'Redemarrer maintenant',
      'update.download': 'Telecharger',
      'update.later': 'Plus tard',
      'update.failedTitle': 'Echec de la recherche de mise a jour',
--    'update.failedMessage': 'Impossible de rechercher les mises a jour de Hermes Studio.',
+-    'update.failedMessage': 'Impossible de rechercher les mises a jour de Ekko Studio.',
 +    'update.failedMessage': 'Impossible de rechercher les mises a jour de SwarmStudio.',
      'update.noUpdateInfoMessage': 'Les informations de mise a jour ne sont pas encore disponibles pour cette plateforme.',
      'update.packagedOnlyMessage': 'Les mises a jour automatiques ne sont disponibles que dans l application de bureau packagee.',
@@ -370,35 +337,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': 'Selectionnez une source de telechargement du runtime pour demarrer les services locaux.',
      'desktop.downloadFailed': 'Echec du telechargement',
      'desktop.downloadCloudflareTitle': 'Telecharger depuis Cloudflare',
--    'desktop.downloadCloudflareDetail': 'Utilise le proxy de telechargement Hermes Studio.',
+-    'desktop.downloadCloudflareDetail': 'Utilise le proxy de telechargement Ekko Studio.',
 +    'desktop.downloadCloudflareDetail': 'Utilise le proxy de telechargement SwarmStudio.',
      'desktop.downloadGithubTitle': 'Telecharger depuis GitHub',
      'desktop.downloadGithubDetail': 'Utilise directement l asset de release GitHub.',
      'desktop.failedPrepareRuntime': 'Echec de la preparation du runtime Hermes',
-@@ -390,7 +390,7 @@
+@@ -390,7 +390,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Sélectionner une zone',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
--    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
+-    'loginReset.confirmDetail': 'Ekko Studio will restart its local Web UI service, clear login locks, and return to the login page.',
 +    'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -398,36 +398,36 @@
+@@ -398,36 +398,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    es: {
--    'tray.show': 'Mostrar Hermes Studio',
--    'tray.hide': 'Ocultar Hermes Studio',
+-    'tray.show': 'Mostrar Ekko Studio',
+-    'tray.hide': 'Ocultar Ekko Studio',
 +    'tray.show': 'Mostrar SwarmStudio',
 +    'tray.hide': 'Ocultar SwarmStudio',
      'tray.checkForUpdates': 'Buscar actualizaciones',
      'tray.resetLogin': 'Reset Login',
      'tray.openAtLogin': 'Abrir al iniciar sesion',
--    'tray.quit': 'Salir de Hermes Studio',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio esta actualizado.',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': 'Salir de Ekko Studio',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio esta actualizado.',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': 'Salir de SwarmStudio',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio esta actualizado.',
@@ -406,19 +373,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': 'Buscando actualizaciones...',
      'update.currentVersion': 'Version actual: {version}',
      'update.availableTitle': 'Actualizacion disponible',
--    'update.availableMessage': 'Hermes Studio {version} esta disponible.',
+-    'update.availableMessage': 'Ekko Studio {version} esta disponible.',
 +    'update.availableMessage': 'SwarmStudio {version} esta disponible.',
      'update.availableDetail': 'Elige si deseas descargar esta actualizacion.',
      'update.downloading': 'La actualizacion se esta descargando en segundo plano.',
      'update.readyTitle': 'Actualizacion lista',
--    'update.readyMessage': 'Hermes Studio {version} esta listo para instalarse.',
+-    'update.readyMessage': 'Ekko Studio {version} esta listo para instalarse.',
 +    'update.readyMessage': 'SwarmStudio {version} esta listo para instalarse.',
      'update.readyDetail': 'Reinicia ahora para aplicar la actualizacion, o se instalara al salir.',
      'update.restartNow': 'Reiniciar ahora',
      'update.download': 'Descargar',
      'update.later': 'Mas tarde',
      'update.failedTitle': 'Error al buscar actualizaciones',
--    'update.failedMessage': 'No se pudieron buscar actualizaciones de Hermes Studio.',
+-    'update.failedMessage': 'No se pudieron buscar actualizaciones de Ekko Studio.',
 +    'update.failedMessage': 'No se pudieron buscar actualizaciones de SwarmStudio.',
      'update.noUpdateInfoMessage': 'La informacion de actualizacion aun no esta disponible para esta plataforma.',
      'update.packagedOnlyMessage': 'Las actualizaciones automaticas solo estan disponibles en la app de escritorio empaquetada.',
@@ -426,35 +393,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': 'Selecciona una fuente de descarga del runtime para iniciar los servicios locales.',
      'desktop.downloadFailed': 'Error de descarga',
      'desktop.downloadCloudflareTitle': 'Descargar desde Cloudflare',
--    'desktop.downloadCloudflareDetail': 'Usa el proxy de descarga de Hermes Studio.',
+-    'desktop.downloadCloudflareDetail': 'Usa el proxy de descarga de Ekko Studio.',
 +    'desktop.downloadCloudflareDetail': 'Usa el proxy de descarga de SwarmStudio.',
      'desktop.downloadGithubTitle': 'Descargar desde GitHub',
      'desktop.downloadGithubDetail': 'Usa directamente el recurso de release de GitHub.',
      'desktop.failedPrepareRuntime': 'No se pudo preparar el runtime de Hermes',
-@@ -446,7 +446,7 @@
+@@ -446,7 +446,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Seleccionar región',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
--    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
+-    'loginReset.confirmDetail': 'Ekko Studio will restart its local Web UI service, clear login locks, and return to the login page.',
 +    'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -454,36 +454,36 @@
+@@ -454,36 +454,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    de: {
--    'tray.show': 'Hermes Studio anzeigen',
--    'tray.hide': 'Hermes Studio ausblenden',
+-    'tray.show': 'Ekko Studio anzeigen',
+-    'tray.hide': 'Ekko Studio ausblenden',
 +    'tray.show': 'SwarmStudio anzeigen',
 +    'tray.hide': 'SwarmStudio ausblenden',
      'tray.checkForUpdates': 'Nach Updates suchen',
      'tray.resetLogin': 'Reset Login',
      'tray.openAtLogin': 'Beim Anmelden offnen',
--    'tray.quit': 'Hermes Studio beenden',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio ist auf dem neuesten Stand.',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': 'Ekko Studio beenden',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio ist auf dem neuesten Stand.',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': 'SwarmStudio beenden',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio ist auf dem neuesten Stand.',
@@ -462,19 +429,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': 'Suche nach Updates...',
      'update.currentVersion': 'Aktuelle Version: {version}',
      'update.availableTitle': 'Update verfugbar',
--    'update.availableMessage': 'Hermes Studio {version} ist verfugbar.',
+-    'update.availableMessage': 'Ekko Studio {version} ist verfugbar.',
 +    'update.availableMessage': 'SwarmStudio {version} ist verfugbar.',
      'update.availableDetail': 'Wahlen Sie, ob Sie dieses Update herunterladen mochten.',
      'update.downloading': 'Das Update wird im Hintergrund heruntergeladen.',
      'update.readyTitle': 'Update bereit',
--    'update.readyMessage': 'Hermes Studio {version} ist zur Installation bereit.',
+-    'update.readyMessage': 'Ekko Studio {version} ist zur Installation bereit.',
 +    'update.readyMessage': 'SwarmStudio {version} ist zur Installation bereit.',
      'update.readyDetail': 'Jetzt neu starten, um das Update anzuwenden, oder es wird beim nachsten Beenden installiert.',
      'update.restartNow': 'Jetzt neu starten',
      'update.download': 'Herunterladen',
      'update.later': 'Spater',
      'update.failedTitle': 'Update-Prufung fehlgeschlagen',
--    'update.failedMessage': 'Updates fur Hermes Studio konnten nicht gepruft werden.',
+-    'update.failedMessage': 'Updates fur Ekko Studio konnten nicht gepruft werden.',
 +    'update.failedMessage': 'Updates fur SwarmStudio konnten nicht gepruft werden.',
      'update.noUpdateInfoMessage': 'Update-Informationen sind fur diese Plattform noch nicht verfugbar.',
      'update.packagedOnlyMessage': 'Automatische Updates sind nur in der paketierten Desktop-App verfugbar.',
@@ -482,35 +449,35 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': 'Wahlen Sie eine Runtime-Downloadquelle aus, um lokale Dienste zu starten.',
      'desktop.downloadFailed': 'Download fehlgeschlagen',
      'desktop.downloadCloudflareTitle': 'Von Cloudflare herunterladen',
--    'desktop.downloadCloudflareDetail': 'Verwendet den Hermes Studio Download-Proxy.',
+-    'desktop.downloadCloudflareDetail': 'Verwendet den Ekko Studio Download-Proxy.',
 +    'desktop.downloadCloudflareDetail': 'Verwendet den SwarmStudio Download-Proxy.',
      'desktop.downloadGithubTitle': 'Von GitHub herunterladen',
      'desktop.downloadGithubDetail': 'Verwendet das Release-Asset direkt von GitHub.',
      'desktop.failedPrepareRuntime': 'Hermes Runtime konnte nicht vorbereitet werden',
-@@ -502,7 +502,7 @@
+@@ -502,7 +502,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Bereich auswählen',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
--    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
+-    'loginReset.confirmDetail': 'Ekko Studio will restart its local Web UI service, clear login locks, and return to the login page.',
 +    'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
-@@ -510,36 +510,36 @@
+@@ -510,36 +510,36 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'loginReset.failedMessage': 'Could not reset the desktop login.',
    },
    pt: {
--    'tray.show': 'Mostrar Hermes Studio',
--    'tray.hide': 'Ocultar Hermes Studio',
+-    'tray.show': 'Mostrar Ekko Studio',
+-    'tray.hide': 'Ocultar Ekko Studio',
 +    'tray.show': 'Mostrar SwarmStudio',
 +    'tray.hide': 'Ocultar SwarmStudio',
      'tray.checkForUpdates': 'Verificar atualizacoes',
      'tray.resetLogin': 'Reset Login',
      'tray.openAtLogin': 'Abrir ao iniciar sessao',
--    'tray.quit': 'Sair do Hermes Studio',
--    'update.upToDateTitle': 'Hermes Studio',
--    'update.upToDateMessage': 'Hermes Studio esta atualizado.',
--    'update.checkingTitle': 'Hermes Studio',
+-    'tray.quit': 'Sair do Ekko Studio',
+-    'update.upToDateTitle': 'Ekko Studio',
+-    'update.upToDateMessage': 'Ekko Studio esta atualizado.',
+-    'update.checkingTitle': 'Ekko Studio',
 +    'tray.quit': 'Sair do SwarmStudio',
 +    'update.upToDateTitle': 'SwarmStudio',
 +    'update.upToDateMessage': 'SwarmStudio esta atualizado.',
@@ -518,19 +485,19 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'update.checkingMessage': 'Verificando atualizacoes...',
      'update.currentVersion': 'Versao atual: {version}',
      'update.availableTitle': 'Atualizacao disponivel',
--    'update.availableMessage': 'Hermes Studio {version} esta disponivel.',
+-    'update.availableMessage': 'Ekko Studio {version} esta disponivel.',
 +    'update.availableMessage': 'SwarmStudio {version} esta disponivel.',
      'update.availableDetail': 'Escolha se deseja baixar esta atualizacao.',
      'update.downloading': 'A atualizacao esta sendo baixada em segundo plano.',
      'update.readyTitle': 'Atualizacao pronta',
--    'update.readyMessage': 'Hermes Studio {version} esta pronto para instalar.',
+-    'update.readyMessage': 'Ekko Studio {version} esta pronto para instalar.',
 +    'update.readyMessage': 'SwarmStudio {version} esta pronto para instalar.',
      'update.readyDetail': 'Reinicie agora para aplicar a atualizacao, ou ela sera instalada ao sair.',
      'update.restartNow': 'Reiniciar agora',
      'update.download': 'Baixar',
      'update.later': 'Depois',
      'update.failedTitle': 'Falha ao verificar atualizacoes',
--    'update.failedMessage': 'Nao foi possivel verificar atualizacoes do Hermes Studio.',
+-    'update.failedMessage': 'Nao foi possivel verificar atualizacoes do Ekko Studio.',
 +    'update.failedMessage': 'Nao foi possivel verificar atualizacoes do SwarmStudio.',
      'update.noUpdateInfoMessage': 'As informacoes de atualizacao ainda nao estao disponiveis para esta plataforma.',
      'update.packagedOnlyMessage': 'Atualizacoes automaticas estao disponiveis apenas no app desktop empacotado.',
@@ -538,102 +505,120 @@ diff --gitdiff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desk
      'desktop.selectRuntimeSource': 'Selecione uma fonte de download do runtime para iniciar os servicos locais.',
      'desktop.downloadFailed': 'Falha no download',
      'desktop.downloadCloudflareTitle': 'Baixar pelo Cloudflare',
--    'desktop.downloadCloudflareDetail': 'Usa o proxy de download do Hermes Studio.',
+-    'desktop.downloadCloudflareDetail': 'Usa o proxy de download do Ekko Studio.',
 +    'desktop.downloadCloudflareDetail': 'Usa o proxy de download do SwarmStudio.',
      'desktop.downloadGithubTitle': 'Baixar pelo GitHub',
      'desktop.downloadGithubDetail': 'Usa diretamente o asset de release do GitHub.',
      'desktop.failedPrepareRuntime': 'Falha ao preparar o runtime Hermes',
-@@ -558,7 +558,7 @@
+@@ -558,7 +558,7 @@ const translations: Record<DesktopLocale, Record<TranslationKey, string>> = {
      'browser.selectRegion': 'Selecionar região',
      'loginReset.confirmTitle': 'Reset login',
      'loginReset.confirmMessage': 'Reset the login to admin / 123456?',
--    'loginReset.confirmDetail': 'Hermes Studio will restart its local Web UI service, clear login locks, and return to the login page.',
+-    'loginReset.confirmDetail': 'Ekko Studio will restart its local Web UI service, clear login locks, and return to the login page.',
 +    'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 271c4166..ae174131 100644
+index 34f1ecc..21a9beb 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -455,7 +455,7 @@ function createTray() {
+@@ -54,7 +54,7 @@ const existingUserData = app.isPackaged
+   ? join(app.getPath('appData'), 'Hermes Studio')
+   : app.getPath('userData')
+ app.setPath('userData', existingUserData)
+-app.setName('Ekko Studio')
++app.setName('SwarmStudio')
+ 
+ const PORT = Number(process.env.HERMES_DESKTOP_PORT) || 8748
+ const START_HIDDEN = process.argv.includes('--hidden')
+@@ -480,7 +480,7 @@ function createTray() {
          quality: 'best',
        })
    tray = new Tray(icon)
--  tray.setToolTip('Hermes Studio')
+-  tray.setToolTip('Ekko Studio')
 +  tray.setToolTip('SwarmStudio')
    tray.on('click', () => {
      showMainWindow()
      updateTrayMenu()
-@@ -469,7 +469,7 @@ async function createWindow(): Promise<void> {
+@@ -494,7 +494,7 @@ async function createWindow(): Promise<void> {
      height: 820,
      minWidth: 769,
      minHeight: 600,
--    title: 'Hermes Studio',
+-    title: 'Ekko Studio',
 +    title: 'SwarmStudio',
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -563,7 +563,7 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
+@@ -607,7 +607,7 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
      height: 760,
      minWidth: 620,
      minHeight: 480,
--    title: 'Hermes Studio',
+-    title: 'Ekko Studio',
 +    title: 'SwarmStudio',
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -688,7 +688,7 @@ function installMicrophonePermissionHandler() {
+@@ -732,7 +732,7 @@ function installMicrophonePermissionHandler() {
  function splashHtml(label = t('desktop.startingLocalServices')): string {
    const startingLabel = escapeHtml(label)
    const pageBackground = process.platform === 'win32' ? 'transparent' : '#1a1a1a'
--  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hermes Studio</title>
+-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ekko Studio</title>
 +  const html = `<!doctype html><html><head><meta charset="utf-8"><title>SwarmStudio</title>
  <style>
    html,body{margin:0;height:100%;background:${pageBackground};color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
    .surface{height:100%;background:#1a1a1a}
-@@ -705,7 +705,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
+@@ -749,7 +749,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
    @keyframes progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
    h1{font-weight:500;margin:0;font-size:18px}
  </style></head><body><main class="surface"><div class="wrap">
--<h1>Hermes Studio</h1>
+-<h1>Ekko Studio</h1>
 +<h1>SwarmStudio</h1>
  <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
  <div id="label" class="label">${startingLabel}</div>
  <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
-@@ -769,7 +769,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -813,7 +813,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
          <pre>${safeError}</pre>
         </section>`
      : ''
--  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hermes Studio</title>
+-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ekko Studio</title>
 +  const html = `<!doctype html><html><head><meta charset="utf-8"><title>SwarmStudio</title>
  <style>
    :root{color-scheme:dark}
    *{box-sizing:border-box}
-@@ -797,7 +797,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -841,7 +841,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
      button{min-height:78px}
    }
  </style></head><body><main class="surface"><div class="wrap">
--<div class="brand">${logoUrl ? `<img class="mark" src="${logoUrl}" alt="Hermes Studio">` : ''}<h1>Hermes Studio</h1></div>
+-<div class="brand">${logoUrl ? `<img class="mark" src="${logoUrl}" alt="Ekko Studio">` : ''}<h1>Ekko Studio</h1></div>
 +<div class="brand">${logoUrl ? `<img class="mark" src="${logoUrl}" alt="SwarmStudio">` : ''}<h1>SwarmStudio</h1></div>
  <p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
  ${errorBlock}
  <div class="actions">
-@@ -885,7 +885,7 @@ async function installPackagedCommandShims(): Promise<void> {
+@@ -929,7 +929,7 @@ async function installPackagedCommandShims(): Promise<void> {
    for (const result of results) {
      if (result.status === 'rejected') {
        console.warn(
--        `[cli-shim] failed to install Hermes Studio command: `
+-        `[cli-shim] failed to install Ekko Studio command: `
 +        `[cli-shim] failed to install SwarmStudio command: `
          + `${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
        )
        continue
-@@ -1139,7 +1139,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+@@ -1243,7 +1243,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
  
    const title = typeof payload?.title === 'string' && payload.title.trim()
      ? payload.title.trim()
--    : 'Hermes Studio'
+-    : 'Ekko Studio'
 +    : 'SwarmStudio'
    const body = typeof payload?.body === 'string' ? payload.body.trim().slice(0, 240) : ''
    const icon = resolveNotificationIcon(payload?.icon)
    const clickUrl = safeNotificationClickUrl(payload?.clickUrl)
+@@ -1338,7 +1338,7 @@ function runDesktopApp() {
+     })
+   }).catch(error => {
+     console.error('[desktop] failed during Electron startup:', error)
+-    dialog.showErrorBox('Ekko Studio', String(error instanceof Error ? error.message : error))
++    dialog.showErrorBox('SwarmStudio', String(error instanceof Error ? error.message : error))
+     quitApp()
+   })
+ 
