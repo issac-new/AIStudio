@@ -45,7 +45,8 @@ export interface GraphRuntimeOptions {
 type PendingInterrupt = { nodeId: string; value: unknown; id: string }
 
 /** GraphEvent.type → 事件日志 kind（未列出者 kind = type 原样落盘） */
-const EVENT_KIND_MAP: Record<GraphEvent['type'], string> = {
+/** GraphEvent.type → 事件日志 kind（导出供 shadow 对比等装配层复用） */
+export const EVENT_KIND_MAP: Record<GraphEvent['type'], string> = {
   'graph.started': 'run.started',
   'graph.completed': 'run.completed',
   'graph.failed': 'run.failed',

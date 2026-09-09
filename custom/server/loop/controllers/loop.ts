@@ -27,10 +27,19 @@ import type { WebhookConnector } from '../connectors/webhook-connector'
 import type { LoopInstance } from '../types'
 import { PATTERN_TEMPLATES } from '../types'
 
+/** 图引擎审批桥接（P1 Task 7）：契约 id → graph interrupt resume。缺省走旧 stub */
+export interface GraphApprovalBridge {
+  resumeApproval(
+    contractId: string,
+    decision: 'approved' | 'rejected' | 'changes-requested',
+  ): Promise<{ ok: boolean; runId?: string }>
+}
+
 export function createLoopRouter(
   store: LoopStateStore,
   scheduler: Scheduler,
   webhookConnector: WebhookConnector,
+  graphBridge?: GraphApprovalBridge,
 ): Router {
   const router = new Router()
 
@@ -144,9 +153,18 @@ export function createLoopRouter(
     ctx.body = { events }
   })
 
-  // Human approval
+  // Human approval —— P1 起内部桥接到图引擎 resume（approval:<contractId> interrupt）；
+  // 无桥接（legacy 装配）时保持旧行为
   router.post('/api/loop/contracts/:id/approve', async (ctx) => {
     const body = ctx.request.body as { decision: string; approver: string; comment?: string }
+    const decision = body.decision as 'approved' | 'rejected' | 'changes-requested'
+    if (graphBridge && (decision === 'approved' || decision === 'rejected' || decision === 'changes-requested')) {
+      const result = await graphBridge.resumeApproval(ctx.params.id, decision)
+      if (result.ok) {
+        ctx.body = { ok: true, decision, bridged: 'graph', runId: result.runId }
+        return
+      }
+    }
     // The verifier will poll for this — store the approval
     // For now, append an event
     ctx.body = { ok: true, decision: body.decision }

@@ -113,7 +113,8 @@ describe('CH channel keys', () => {
     expect(CH).toEqual({
       contracts: 'contracts', verifications: 'verifications', stage: 'stage',
       stopMet: 'stopMet', gateResults: 'gateResults', repairQueue: 'repairQueue',
-      repairNeeded: 'repairNeeded', persistedIds: 'persistedIds',
+      repairNeeded: 'repairNeeded', approvalResult: 'approvalResult',
+      phaseProgress: 'phaseProgress',
     })
   })
 })
@@ -211,7 +212,7 @@ describe('handoff node', () => {
 describe('validation node', () => {
   it('verifies each contract, appends records and emits loop.verification-complete', async () => {
     const loop = makeLoop()
-    const contracts = [makeContract('task/a'), makeContract('task/b')]
+    const contracts = [makeContract('task/a', { status: 'in-progress' }), makeContract('task/b', { status: 'in-progress' })]
     const { deps, ctx, graphEvents, appendedVerifications } = makeDeps({ contracts })
     const node = createPhaseNode('validation', loop, deps)
     const res = await node.execute({ [CH.contracts]: contracts }, ctx)
@@ -225,7 +226,7 @@ describe('validation node', () => {
 
   it('bridges pending human approval to a graph interrupt (fixes the approval break)', async () => {
     const loop = makeLoop()
-    const contracts = [makeContract('task/a')]
+    const contracts = [makeContract('task/a', { status: 'in-progress' })]
     const { deps, ctx } = makeDeps({
       contracts,
       verifyResult: makeVerification('task/a', 'pending'),
@@ -234,12 +235,12 @@ describe('validation node', () => {
     const res = await node.execute({ [CH.contracts]: contracts }, ctx)
 
     expect(res.interrupt).toBeDefined()
-    expect(res.interrupt!.id).toBe(`approval:task/a`)
+    expect(res.interrupt!.id).toBe('approval:task/a@0') // attempts 后缀防 repair 轮次串扰
   })
 
   it('records verified contracts before interrupting on a later pending one', async () => {
     const loop = makeLoop()
-    const a = makeContract('task/a'), b = makeContract('task/b')
+    const a = makeContract('task/a', { status: 'in-progress' }), b = makeContract('task/b', { status: 'in-progress' })
     const { deps, ctx } = makeDeps({ contracts: [a, b] })
     ;(deps.verifier.verify as unknown as { mockImplementation: (f: (c: TaskContract) => Promise<VerificationRecord>) => void })
       .mockImplementation(async (c: TaskContract) =>
@@ -247,7 +248,7 @@ describe('validation node', () => {
     const node = createPhaseNode('validation', loop, deps)
     const res = await node.execute({ [CH.contracts]: [a, b] }, ctx)
 
-    expect(res.interrupt?.id).toBe('approval:task/b')
+    expect(res.interrupt?.id).toBe('approval:task/b@0')
     expect((res.update?.[CH.verifications] as VerificationRecord[]).map(v => v.contractId)).toEqual(['task/a'])
   })
 })
@@ -303,8 +304,8 @@ describe('gate node', () => {
   it('runs commands, reports gateResults with exitCode/duration; passing validator stays quiet', async () => {
     const loop = makeLoop()
     const commands: GateCommand[] = [
-      { name: 'lint', cmd: 'true' },
-      { name: 'test', cmd: 'true', timeoutMs: 5000 },
+      { name: 'lint', kind: 'validator', cmd: 'true' },
+      { name: 'test', kind: 'validator', cmd: 'true', timeoutMs: 5000 },
     ]
     const node = createGateNode(loop, { commands })
     const res = await node.execute({}, {
@@ -314,19 +315,22 @@ describe('gate node', () => {
     const results = res.update?.[CH.gateResults] as Array<{ name: string; passed: boolean; exitCode: number; durationMs: number }>
     expect(results.map(r => r.name)).toEqual(['lint', 'test'])
     expect(results.every(r => r.passed && r.exitCode === 0 && r.durationMs >= 0)).toBe(true)
-    expect((res.update?.[CH.repairQueue] as string[] | undefined) ?? []).toEqual([])
+    expect(res.update?.[CH.repairNeeded]).toBe(false)
   })
 
   it('failing validator lands in repairQueue (repair back-edge trigger), stderr summarized', async () => {
     const loop = makeLoop()
     const node = createGateNode(loop, {
-      commands: [{ name: 'typecheck', cmd: 'false' }],
+      commands: [{ name: 'typecheck', kind: 'validator', cmd: 'false' }],
     })
     const res = await node.execute({}, {
       graphId: 'g', threadId: 't', nodeId: 'gate', superStep: 1, deps: { emitEvent: () => {} },
     } as unknown as NodeContext)
 
-    expect(res.update?.[CH.repairQueue]).toEqual(['typecheck'])
+    expect(res.update?.[CH.repairNeeded]).toBe(true)
+    const queue = res.update?.[CH.repairQueue] as Array<{ source: string; name: string; message: string }>
+    expect(queue[0]?.name).toBe('typecheck')
+    expect(queue[0]?.message).toContain('gate')
     const result = (res.update?.[CH.gateResults] as Array<{ name: string; passed: boolean; exitCode: number }>)[0]
     expect(result.passed).toBe(false)
     expect(result.exitCode).not.toBe(0)
@@ -336,14 +340,14 @@ describe('gate node', () => {
     const loop = makeLoop()
     const logs: string[] = []
     const node = createGateNode(loop, {
-      commands: [{ name: 'notify', cmd: 'false', kind: 'post' }],
+      commands: [{ name: 'notify', kind: 'post', cmd: 'false' }],
       log: (m) => { logs.push(m) },
     })
     const res = await node.execute({}, {
       graphId: 'g', threadId: 't', nodeId: 'gate', superStep: 1, deps: { emitEvent: () => {} },
     } as unknown as NodeContext)
 
-    expect(res.update?.[CH.repairQueue] ?? []).toEqual([])
+    expect(res.update?.[CH.repairNeeded]).toBe(false)
     expect((res.update?.[CH.gateResults] as Array<{ passed: boolean }>)[0].passed).toBe(false)
     expect(logs.some(l => l.includes('notify'))).toBe(true)
   })
