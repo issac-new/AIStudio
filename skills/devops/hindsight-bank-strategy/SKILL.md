@@ -45,9 +45,10 @@ Hindsight bank IDs are resolved in `plugins/memory/hindsight/__init__.py`
 Config file: `~/.hermes/profiles/<profile>/hindsight/config.json`
 
 The `setup-hindsight-banks.py` script at `~/.hermes/shared/` auto-detects the
-machine MAC and sets `bank_id_template` to `hermes-{MAC}-{profile}` — giving
-per-profile isolation by default. To switch to team-shared banks, set `bank_id`
-statically and clear `bank_id_template`.
+machine MAC and sets `bank_id_template`. **2026-09-02 定稿：本集群采用
+Per-Team (Model C)** — `bank_id = hermes-<MAC>-<team>`（静态，template 置空），
+同 team 内多 profile 共享一个 bank。当前 8 team 8 bank：
+swarm/hack/product/ops/[已移除]/platform/[已移除]/aiteam。
 
 ## Three Sharing Models
 
@@ -131,7 +132,7 @@ for prof in orchestrator architect project-manager requirement-analyst \
   python3 -c "
 import json
 with open('$cfg') as f: c=json.load(f)
-c['bank_id']='hermes-XXXXXXXXXXXX-swarm'
+c['bank_id']='hermes-b24d7ac5d9c4-swarm'
 c['bank_id_template']=''
 with open('$cfg','w') as f: json.dump(c,f,indent=2)
 "
@@ -146,7 +147,7 @@ for prof in hack-recon hack-exploit hack-forensics hack-auditor hack-c2 hack-wea
   mkdir -p ~/.hermes/profiles/$prof/hindsight
   cat > ~/.hermes/profiles/$prof/hindsight/config.json << 'EOF'
 {
-  "bank_id": "hermes-XXXXXXXXXXXX-hack",
+  "bank_id": "hermes-b24d7ac5d9c4-hack",
   "bank_id_template": ""
 }
 EOF
@@ -173,7 +174,8 @@ done
 
 New banks auto-create on first memory write. Historical per-profile banks are
 preserved but no longer used. To migrate old memories, use Hindsight API to
-recall from old bank and retain to new.
+recall from old bank and retain to new (见 hindsight-cross-bank-sync；本集群
+2026-09-02 已完成 [已移除]→[已移除] 迁移 55 条并验账)。
 
 ## Pitfalls
 

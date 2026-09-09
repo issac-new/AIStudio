@@ -89,19 +89,68 @@ refresh it.
 
 ### §1b Genuine rate limit fix (errcode -2)
 
-Wait 30 seconds and retry. This is transient and needs no config change.
+`-2` means iLink's **server-side** frequency limiter rejected the send — the local
+30s cooldown circuit is just the adapter's reaction to it. Do NOT assume it is
+transient: verify with cheap read-only endpoints before choosing a strategy.
+
+**Classify duration first** (same token, direct curl — read endpoints bypass the
+sendmessage limiter):
+
+| Probe | Returns | Meaning |
+|-------|---------|---------|
+| `getupdates` / `getconfig` | ret 0 | Token + account healthy; only the sendmessage endpoint is throttled → account-level send throttle |
+| any probe | -14 | Session expired — treat as §1a |
+
+- **Short throttle** (minutes): queue writes are cheap and local — enqueue to a
+  persistent backlog file and retry on a low-frequency tick (≥20 min, stop the
+  tick on first failure so the cooldown is not renewed). Never let an auto-retry
+  script hammer sendmessage: every real attempt that gets -2 re-opens the local
+  cooldown and can extend the server-side throttle window.
+- **Throttle persisting >24h**: waiting is no longer the plan. Escalate to the
+  user to re-verify the WeChat client login state on the phone (QR re-scan
+  refreshes the session) — account-level send throttles at this duration are not
+  self-clearing in practice.
+
+Either way, **keep the email channel as the delivery bottom line** — it is
+unaffected by iLink throttling.
 
 ## §2 "No home channel set for weixin"
 
-`hermes send -t weixin` fails with this when no launchd plist manages
-the profile. The `--to weixin:chat_id` format is rejected the same way.
+`hermes send -t weixin` fails with this when the gateway config has no home
+channel for the platform. The `--to weixin:chat_id` format always works; the
+bare `weixin` form is what fails.
 
-**Fix**: Set the env var inline:
-```bash
-WEIXIN_HOME_CHANNEL='<chat_id>' hermes -p <profile> send -t weixin -f /tmp/msg.txt
+**Permanent fix** — write the home channel into `~/.hermes/config.yaml` (under
+`platforms.weixin`):
+
+```yaml
+platforms:
+  weixin:
+    enabled: true
+    home_channel:
+      platform: weixin
+      chat_id: '<chat_id>'
+      name: Home
 ```
+
+`hermes config set WEIXIN_HOME_CHANNEL <chat_id>` is NOT the permanent fix —
+it writes a custom top-level key that the gateway config does not read (it
+warns "not a recognized config key"). The resolution path for `hermes send` is
+`gateway.config.load_gateway_config().get_home_channel()`, which only reads the
+`platforms.weixin.home_channel` block.
+
+**Inline workaround** (one-shot, e.g. inside a wrapper script):
+```bash
+WEIXIN_HOME_CHANNEL='<chat_id>' hermes send -t weixin -f /tmp/msg.txt
+```
+
+**Operational consequence**: any auto-retry mechanism (backlog tick, cron
+push) resolves the target via the home channel. If it is missing, every retry
+fails on a dead path while burning the item's attempt counter — fix the config
+BEFORE re-queuing failed deliveries.
+
 The chat_id is in `~/.hermes/profiles/<profile>/channel_directory.json`
-under `platforms.weixin[].id`.
+under `platforms.weixin[].id` (or `hermes send --list weixin`).
 
 ## §3 gateway_state.json stale "running" after SIGTERM/SIGKILL
 

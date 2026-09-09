@@ -43,7 +43,7 @@ for p in ~/.hermes/profiles/*/; do name=$(basename "$p"); [ -d "$p/skills" ] && 
 find ~/.hermes/profiles/hack-auditor/skills -maxdepth 1 -type d ! -name skills | xargs -I{} basename {} | sort
 
 # which profiles carry a given skill (ownership check)
-find ~/.hermes/profiles -path "*productivity/<skill>/SKILL.md" | sed 's|$HOME/.hermes/profiles/||;s|/skills/productivity/.*||' | sort -u
+find ~/.hermes/profiles -path "*productivity/<skill>/SKILL.md" | sed 's|/Users/YOURNAME/.hermes/profiles/||;s|/skills/productivity/.*||' | sort -u
 
 # model baseline check (user rule: all profiles glm-5.2)
 python3 -c "import yaml; c=yaml.safe_load(open('$HOME/.hermes/profiles/<p>/config.yaml')); print(c.get('model'))"

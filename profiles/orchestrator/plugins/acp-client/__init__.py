@@ -157,9 +157,22 @@ def _resolve_provider(name: str) -> Tuple[List[str], str]:
             "  2) npx (Node.js) to run @agentclientprotocol/claude-agent-acp"
         )
 
+    elif name == "zcode":
+        # ZCode (GLM Coding Plan) — 夜间免费窗 23:00-09:00(北京) GLM-5.3-Flash 0 额度。
+        # 模型钉死在 providers.zcode.env.ZCODE_MODEL（见 config.yaml）；
+        # 模型经由 zcode-acp-server 的 env 透传（_get_client 注入，见 Popen env）。
+        binary = provider_cfg.get("binary", "/opt/homebrew/bin/zcode-acp-server")
+        binary = os.path.expanduser(binary)
+        if not os.path.isfile(binary):
+            raise FileNotFoundError(
+                f"ZCode ACP binary not found at '{binary}'. "
+                f"Install with: npm install -g zcode-acp-server"
+            )
+        return [binary], "ZCode"
+
     else:
         raise ValueError(
-            f"Unknown ACP provider: '{name}'. Available: opencode, codex, claude"
+            f"Unknown ACP provider: '{name}'. Available: opencode, codex, claude, zcode"
         )
 
 
@@ -172,11 +185,13 @@ class ACPClient:
     """Manage an ACP server subprocess with bidirectional JSON-RPC 2.0."""
 
     def __init__(self, cmd: List[str], default_cwd: str, auto_approve: bool = True,
-                 provider_name: str = "opencode"):
+                 provider_name: str = "opencode", extra_env: Optional[Dict[str, str]] = None):
         self.cmd = cmd
         self.default_cwd = os.path.expanduser(default_cwd)
         self.auto_approve = auto_approve
         self.provider_name = provider_name
+        # Per-provider env passthrough (e.g. zcode: ZCODE_MODEL pinning)
+        self.extra_env: Dict[str, str] = dict(extra_env or {})
         self.process: Optional[subprocess.Popen] = None
 
         # JSON-RPC bookkeeping
@@ -222,6 +237,13 @@ class ACPClient:
         if self.provider_name == "opencode":
             launch_cmd.extend(["--cwd", self.default_cwd])
 
+        # Provider-specific env passthrough (e.g. zcode: ZCODE_MODEL=GLM-5.3-Flash
+        # 钉模型——不钉则 adapter 默认取 models[0]=GLM-5.3，夜间照常扣费)
+        launch_env = None
+        if self.extra_env:
+            launch_env = dict(os.environ)
+            launch_env.update(self.extra_env)
+
         logger.info("Starting ACP subprocess: %s", " ".join(launch_cmd))
 
         self.process = subprocess.Popen(
@@ -229,6 +251,7 @@ class ACPClient:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=launch_env,
         )
 
         self._alive = True  # must be set BEFORE reader starts
@@ -773,6 +796,17 @@ class ACPClient:
             "sessionId": session_id, "modeId": mode_id,
         })
 
+    def set_config_option(self, session_id: str, config_id: str, value: str) -> dict:
+        """Switch a session config option (model/mode/thought).
+
+        For zcode + configId="model", the server routes through runtimeModel
+        (session/setModel with provider overlay). Plain modelId like
+        "GLM-5.3-Flash" resolves to the first enabled builtin provider.
+        """
+        return self._request("session/set_config_option", {
+            "sessionId": session_id, "configId": config_id, "value": value,
+        })
+
     def list_sessions(self, cwd: str = None) -> dict:
         """List existing sessions, optionally filtered by workspace."""
         params: dict = {}
@@ -815,7 +849,8 @@ def _get_client(provider: str = None) -> ACPClient:
     if pcfg.get("default_cwd"):
         cwd = pcfg["default_cwd"]
 
-    client = ACPClient(cmd, cwd, auto, provider_name=provider)
+    client = ACPClient(cmd, cwd, auto, provider_name=provider,
+                       extra_env=pcfg.get("env") or None)
     client.start()
 
     # Insert into dictionary under lock
@@ -1023,6 +1058,25 @@ def handle_acp_send(args: Dict[str, Any], **kwargs) -> str:
                 if "error" in mode_resp:
                     return json.dumps({
                         "error": f"Failed to set agent '{agent}': {mode_resp['error']}",
+                        "session_id": session_id,
+                    })
+
+            # Pin session model when provider config declares one (e.g. zcode:
+            # ZCODE_MODEL=GLM-5.3-Flash — the server default is GLM-5.3, the
+            # PAID tier; the env pin alone does NOT switch it). Fail-closed:
+            # pin failure aborts the call so billing-tier drift can't slip
+            # through silently on free-window routes.
+            pin_model = ""
+            try:
+                pcfg2 = _load_config().get("providers", {}).get(client.provider_name, {})
+                pin_model = str(pcfg2.get("model", "") or "").strip()
+            except Exception:
+                pin_model = ""
+            if pin_model:
+                pin_resp = client.set_config_option(session_id, "model", pin_model)
+                if "error" in pin_resp:
+                    return json.dumps({
+                        "error": f"model pin to '{pin_model}' failed: {pin_resp['error']}",
                         "session_id": session_id,
                     })
         elif agent:

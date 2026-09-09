@@ -1,64 +1,53 @@
 model:
-  default: aim
+  default: glm-5.3-flash
   provider: custom:cc-switch
-providers: null
 custom_providers:
-  - name: cc-switch
+  - api_key: PROXY_MANAGED
+    api_mode: anthropic_messages
     base_url: http://127.0.0.1:15721
-    api_key: PROXY_MANAGED
-    api_mode: anthropic_messages
     context_length: 1048576
     models:
-      aim:
-        name: aim
-        context_length: 1048576
-  - name: kimicode
-    base_url: https://api.kimi.com/coding
-    api_key: ${KIMI_API_KEY}
-    api_mode: anthropic_messages
-    context_length: 1048576
-    models:
-      k3:
-        name: k3
-    model: k3
+      glm-5.3-flash:
+        name: glm-5.3-flash
+    name: cc-switch
 toolsets:
   - hermes-cli
   - acp
   - kanban
   - memory
 agent:
-  max_turns: 90
-  reasoning_effort: ultra
-  tool_use_enforcement: auto
-  task_completion_guidance: true
-  parallel_tool_call_guidance: true
   environment_probe: false
-  environment_hint: ~/.hermes/profiles/ops-eval/ops-eval_rules.md
+  max_turns: 90
+  parallel_tool_call_guidance: true
+  reasoning_effort: ultra
+  task_completion_guidance: true
+  tool_use_enforcement: auto
+  environment_hint: ~/.hermes/profiles/ops-eval/SOUL.md
 terminal:
   backend: local
   cwd: ~/hermes-docker-sandbox/workspace
-  timeout: 180
   persistent_shell: true
+  timeout: 180
 compression:
   enabled: true
-  threshold: 0.5
-  target_ratio: 0.2
+  target_ratio: 0.15
+  threshold: 0.35
 memory:
   memory_enabled: true
-  user_profile_enabled: true
   provider: hindsight
+  user_profile_enabled: true
 kanban:
+  auto_decompose: false
   dispatch_in_gateway: true
   dispatch_interval_seconds: 60
   failure_limit: 2
   max_in_progress_per_profile: 4
-  auto_decompose: false
   orchestrator_profile: orchestrator
   default_assignee: ops-eval
 display:
-  skin: daylight
   language: zh
   personality: kawaii
+  skin: daylight
 security:
   redact_secrets: true
   tirith_enabled: true
@@ -67,24 +56,27 @@ privacy:
 approvals:
   mode: smart
 auxiliary:
-  title_generation:
-    provider: custom:cc-switch
-    model: aim
-  compression:
-    provider: custom:cc-switch
-    model: aim
-  session_search:
-    provider: custom:cc-switch
-    model: aim
-  web_extract:
-    provider: custom:cc-switch
-    model: aim
-  vision:
-    provider: custom:cc-switch
-    model: aim
   approval:
+    model: glm-5.3-flash
     provider: custom:cc-switch
-    model: aim
+  compression:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  session_search:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  title_generation:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  vision:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+  web_extract:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
+fallback_providers:
+  - provider: kimi-coding
+    model: k3
 platforms:
   api_server:
     enabled: false
@@ -107,64 +99,65 @@ extra:
     - mcp
   skills_pinned:
     - skill-recall
+    - cognition-lattice
 mcp_servers:
   hermes-studio-api:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - api
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    enabled: false
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
-      HERMES_WEB_UI_PROFILE: ops-eval
       HERMES_MCP_SERVER_NAME: hermes-studio-api
       HERMES_MCP_TOOLSET: api
-      HERMES_WEB_UI_MANAGED_MCP: "1"
-    enabled: true
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_PROFILE: ops-eval
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
   hermes-studio-browser:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - browser
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    enabled: false
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
-      HERMES_WEB_UI_PROFILE: ops-eval
       HERMES_MCP_SERVER_NAME: hermes-studio-browser
       HERMES_MCP_TOOLSET: browser
-      HERMES_WEB_UI_MANAGED_MCP: "1"
-    enabled: true
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_PROFILE: ops-eval
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
   hermes-studio-devices:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - devices
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    enabled: false
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
-      HERMES_WEB_UI_PROFILE: ops-eval
       HERMES_MCP_SERVER_NAME: hermes-studio-devices
       HERMES_MCP_TOOLSET: devices
-      HERMES_WEB_UI_MANAGED_MCP: "1"
-    enabled: true
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_PROFILE: ops-eval
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
   hermes-studio-use:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - use
-    timeout: 1860
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    enabled: false
     env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
-      HERMES_WEB_UI_PROFILE: ops-eval
       HERMES_MCP_SERVER_NAME: hermes-studio-use
       HERMES_MCP_TOOLSET: use
-      HERMES_WEB_UI_MANAGED_MCP: "1"
-    enabled: true
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_PROFILE: ops-eval
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+    timeout: 1860
 platform_toolsets:
   cli:
     - browser
@@ -189,16 +182,38 @@ known_plugin_toolsets:
   cli:
     - spotify
 onboarding:
+  profile_build: ask
   seen:
     openclaw_residue_cleanup: true
     tool_progress_prompt: true
-  profile_build: ask
 updates:
-  pre_update_backup: false
   backup_keep: 5
   non_interactive_local_changes: stash
-_config_version: 29
+  pre_update_backup: false
+_config_version: 41
 clearances:
   - TLP:GREEN
   - TLP:CLEAR
   - EYES-ONLY:ops
+
+# ── Fallback Model ────────────────────────────────────────────────────
+# Automatic provider failover when primary is unavailable.
+# Uncomment and configure to enable. Triggers on rate limits (429),
+# overload (529), service errors (503), or connection failures.
+#
+# Supported providers:
+#   openrouter   (OPENROUTER_API_KEY)  — routes to any model
+#   openai-codex (OAuth — hermes auth) — OpenAI Codex
+#   nous         (OAuth — hermes auth) — Nous Portal
+#   zai          (ZAI_API_KEY)         — Z.AI / GLM
+#   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot
+#   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)
+#   minimax      (MINIMAX_API_KEY)     — MiniMax
+#   minimax-cn   (MINIMAX_CN_API_KEY)  — MiniMax (China)
+#   bedrock      (AWS IAM / boto3)     — AWS Bedrock (Converse API)
+#
+# For custom OpenAI-compatible endpoints, add base_url and key_env.
+#
+# fallback_model:
+#   provider: openrouter
+#   model: anthropic/claude-sonnet-4

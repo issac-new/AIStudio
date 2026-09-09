@@ -59,7 +59,7 @@ for s in <执行层 skill...>; do mv "$S/devops/$s" "$S/devops-worker/$s"; done
 # 目标 profile 视角可见性
 find -L ~/.hermes/profiles/worker-coder/skills/devops-worker -maxdepth 1 -type d
 # 断链检查（必须 0）
-for l in $(find ~/.hermes/skills $HOME/.hermes/profiles/*/skills -maxdepth 1 -type l 2>/dev/null); do [ -e "$l" ] || echo "BROKEN: $l"; done
+for l in $(find ~/.hermes/skills /Users/YOURNAME/.hermes/profiles/*/skills -maxdepth 1 -type l 2>/dev/null); do [ -e "$l" ] || echo "BROKEN: $l"; done
 # 注册状态
 hermes skills list --source local -p orchestrator | grep -E "<skill>"
 ```

@@ -116,6 +116,39 @@ Before writing the framework section, read the source insight file
 framework details — if the source says "四个C", use exactly that; if it
 names a specific incident (投壶事件), reference it with date and provenance.
 
+## Batch Propagation for Large Fleets (N > ~10)
+
+Per-file `patch(cross_profile=true)` calls scale to about ten files. Beyond
+that, write ONE batch Python script and run it:
+
+1. **Anchor census first** — grep every profile's SOUL.md for each candidate
+   anchor heading and record which one it has. The census output drives the
+   whole patch: profiles legitimately differ in which section can host the
+   framework (shared-rules vs collaboration vs tools vs none), so the script
+   needs a per-profile anchor dict, not a single anchor.
+2. **Match anchors by exact stripped line** (`line.strip() == anchor`), never
+   substring — real fleets carry parenthetical-suffix variants of the same
+   heading, and substring matching inserts under the wrong heading.
+3. Insert with two primitives: insert-after-section (find the anchor line,
+   walk forward to the next `## ` heading, insert before it) and
+   insert-before-section. Put a unique marker keyword in every inserted block.
+4. **Verify marker count == fleet size** across all SOUL.md files. Profiles
+   missed by the first pass are almost always anchor suffix variants the
+   census missed — grep their actual heading text, add to the variant dict,
+   re-run for just those profiles, re-verify, then spot-check 3 files' inserted
+   content.
+
+Pitfalls:
+
+- Do NOT inline the batch Python in a bash heredoc when the inserted text
+  contains full-width (CJK) punctuation or nested quotes — shell escaping
+  corrupts the string and the script dies with SyntaxError mid-fleet. Write
+  the script to a file with a file-writing tool, then execute it.
+- The census and the patch script must share one anchor list. A first pass
+  handling only the dominant anchor variant silently skips minority profiles;
+  the count verification is the only thing that catches this, so never skip
+  step 4.
+
 ## Verification
 
 After patching all N files, grep each for every required element:

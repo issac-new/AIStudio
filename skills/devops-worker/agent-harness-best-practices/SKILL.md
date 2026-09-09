@@ -287,6 +287,36 @@ Claude Code 三代 System Prompt 演进（14,808→4,050→7,376字符）证明�
 
 **Anthropic Context Engineering 定义**：minimal 并不必然 short，关键是保留高信号内容，并处在合适的抽象高度。
 
+## 编排形态判定：单循环+skills vs subagent 路由（commerce-agents 融合，2026-09-04）
+
+> 来源：anthropics/commerce-agents（Apache-2.0）博客 "Skills, not subagents" + `docs/safety.md`。Anthropic 在多个企业部署中实测：**单 agent + skills 在质量上同时跑赢 one-big-prompt 和 subagent-per-domain 两种设计**，成本延迟常更低。
+> 关系：与「规则分层放置审计」互补——那条管**规则放哪层**，这条管**能力放单循环还是拆 subagent**。
+
+### 判定规则
+
+```
+新能力要接入编排 → 三问：
+1. 该能力是否与主会话共享状态（购物车/上下文/审批链）？
+   → 是：做成 skill（按需加载进主循环），禁止 subagent（每次 handoff 是 state-lossy：
+     token 数倍 + 秒级延迟 + 域很少干净分离）
+2. 是否窄且自包含（deep-research 式：子代理内搜索/试错，只回传紧凑结论）？
+   → 是：delegate_task 模式成立（delegate 拿 brief+handles，不拿会话历史，
+     返回 pydantic validated 结果；不能写状态/不能嵌套 delegate）
+3. 该域是否已有独立合规面（如 [已移除]-orchestrator 的领域网关）？
+   → 是：handoff 语义（域 agent 成为对话对手方，接管到任务完成），
+     不是 delegation（delegation 保持编排者为对手方，域代理在单 turn 内进出）
+```
+
+### Hermes 集群现状对照（2026-09-04）
+
+| Anthropic 论点 | Hermes 对应 | 判定 |
+|---|---|---|
+| 单循环 + skills 优于 subagent 路由 | orchestrator 单循环 + skill_view 按需加载 + skill-recall | ✅ 已同构 |
+| skill 按频率分层（≥1/3 流量进 prompt，其余 skill） | SOUL.md 全量注入，无频率数据 | ⚠️ 缺流量统计，规则：SOUL 只留每 turn 必用项 |
+| subagent 保留：窄自包含 + handoff 例外 | delegate_task（subagent）+ [已移除]-orchestrator（handoff 网关） | ✅ 两例外均已有语义正确的落地 |
+| prompt caching 三段式（global/session/volatile） | 框架层不可控 | n/a |
+| 异步记忆抽取（不占 turn 注意力，+13% 召回） | Hindsight 自动抽取（同构） | ✅ 已同构 |
+
 ## Harness 工程循环
 
 ```

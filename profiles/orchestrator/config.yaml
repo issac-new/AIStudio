@@ -1,7 +1,9 @@
 model:
-  default: aim
+  default: glm-5.3-flash
   provider: custom:cc-switch
-  base_url: http://127.0.0.1:15721
+fallback_providers:
+  - model: glm-5.3-flash
+    provider: custom:cc-switch
 toolsets:
   - hermes-cli
   - kanban
@@ -13,11 +15,7 @@ agent:
   task_completion_guidance: true
   parallel_tool_call_guidance: true
   environment_probe: false
-  environment_hint: '~/.hermes/profiles/orchestrator/orchestrator_rules.md
-
-    ~/.hermes/profiles/orchestrator/email_kanban_rules.md
-
-    '
+  environment_hint: ~/.hermes/profiles/orchestrator/SOUL.md
   reasoning_effort: ultra
 terminal:
   backend: local
@@ -26,303 +24,52 @@ terminal:
   persistent_shell: true
 compression:
   enabled: true
-  threshold: 0.5
-  target_ratio: 0.2
+  threshold: 0.35
+  target_ratio: 0.15
 auxiliary:
   vision:
     provider: custom:cc-switch
-    model: aim
-    reasoning_effort: none
-  web_extract:
-    provider: custom:cc-switch
-    model: aim
-    reasoning_effort: medium
+    model: glm-5.3-flash
   compression:
     provider: custom:cc-switch
-    model: aim
-    reasoning_effort: medium
+    model: glm-5.3-flash
   approval:
     provider: custom:cc-switch
-    model: aim
-    reasoning_effort: medium
+    model: glm-5.3-flash
   title_generation:
     provider: custom:cc-switch
-    model: aim
-    reasoning_effort: low
+    model: glm-5.3-flash
   session_search:
+    model: glm-5.3-flash
     provider: custom:cc-switch
-    model: aim
-    reasoning_effort: medium
+  web_extract:
+    model: glm-5.3-flash
+    provider: custom:cc-switch
 display:
   personality: kawaii
   skin: daylight
   language: zh
+  message_reactions: true
 privacy:
   redact_pii: true
 memory:
   memory_enabled: true
   user_profile_enabled: true
   provider: hindsight
-skills:
-  trusted_project_dirs:
-    - $HOME/.hermes/skills/devops/delegation-brief-format
-    - $HOME/.hermes/skills/devops/scale-adaptive-routing
-    - $HOME/.hermes/skills/devops/orchestrator-kanban-tracing
-    - $HOME/.hermes/skills/devops/kanban-triage-stall-recovery
-  disabled:
-    - a4-pdf-diagram-layout
-    - acp-bulk-deployment
-    - acp-provider-selection
-    - agent-profile-lifecycle
-    - agent-profile-skill-audit
-    - agent-soul-patching
-    - agent-team-deep-audit
-    - agent-team-restructure-execution
-    - agent-team-tool-integration
-    - airtable
-    - api-server-third-party-clients
-    - architecture-design
-    - arxiv
-    - aux-fallback-model-routing
-    - blocked-page-recovery
-    - blogwatcher
-    - box
-    - cc-switch-integration
-    - cc-switch-monitoring
-    - cc-switch-provider-troubleshooting
-    - cc-switch-proxy-monitoring
-    - cc-switch-stats-analysis
-    - cc-switch-throughput-benchmarks
-    - cc-switch-usage-analytics
-    - cc-switch-widget
-    - ccswitch-codex-provider-management
-    - ccswitch-failover-queue-management
-    - chinese-book-data-douban
-    - chinese-classics-book-resources
-    - chinese-image-api-integration
-    - chinese-resource-catalog-research
-    - chinese-web-fact-finding
-    - chinese-web-platform-research
-    - chinese-web-research
-    - claude-code
-    - claude-code-project-skills
-    - cloud-speech-provider-selection
-    - code-repository-leak-audit
-    - code-review
-    - codebase-inspection
-    - codex
-    - collaboration-team-soul-enrichment
-    - competitor-news-monitor
-    - conference-speaker-material-research
-    - config-yaml-corruption-diagnosis
-    - context-engineering-audit
-    - cot-leakage-audit
-    - cron-script-wrapper-pattern
-    - daily-intel-brief
-    - dashscope-realtime-asr
-    - deepseek-harness-research
-    - deployment-automation
-    - diagram-type-selection
-    - document-to-action-items
-    - docx
-    - dogfood
-    - domain-team-rules-authoring
-    - echarts-pdf-rendering
-    - [已移除]
-    - [已移除]
-    - [已移除]
-    - [已移除]
-    - [已移除]
-    - [已移除]
-    - [已移除]
-    - email-channel-configuration
-    - encrypted-git-backup
-    - executive-summary
-    - feedback-analysis
-    - forward-deployed-soul-enrichment
-    - fusion-implementation-patterns
-    - fusion-output-quality-gates
-    - fusion-skill-placement
-    - gateway-crash-loop-troubleshooting
-    - gateway-multi-account-deployment
-    - gateway-platform-management
-    - gateway-smart-routing
-    - github-auth
-    - github-code-review
-    - github-issue-to-pr
-    - github-issues
-    - github-pr-workflow
-    - github-repo-management
-    - google-workspace
-    - graphviz-pdf-diagrams
-    - grounded-citations
-    - hermes-agent-migration
-    - hermes-agent-skill-authoring
-    - hermes-credential-scoping
-    - hermes-disk-slimming
-    - hermes-docker-sandbox
-    - hermes-env-perspective-diagnostics
-    - hermes-incremental-offline-packaging
-    - hermes-moa-configuration
-    - hermes-offline-migration
-    - hermes-patch-watchdog
-    - hermes-profile-config-regression-recovery
-    - hermes-redundancy-cleanup
-    - hermes-skill-bulk-install
-    - hermes-skill-installation
-    - hermes-skills-update-protection
-    - hermes-source-patch-recovery
-    - hermes-tool-dependencies
-    - hermes-tui-customization
-    - hermes-tui-troubleshooting
-    - hermes-update-revert-forensics
-    - hermes-voice-configuration
-    - hermes-voice-offline-models
-    - hermes-voice-setup
-    - hermes-worker-lifecycle
-    - hindsight-backend-model-config
-    - hindsight-bank-strategy
-    - hindsight-cluster-audit
-    - hindsight-cross-bank-sync
-    - hindsight-fleet-audit
-    - hindsight-fleet-cleanup
-    - hindsight-fleet-operations
-    - hindsight-model-configuration
-    - historical-web-research
-    - html-to-pdf-charts
-    - in-session-profile-creation
-    - in-session-team-deployment
-    - inspecting-hermes-desktop-dom
-    - inter-agent-communication-architecture
-    - iterative-team-capability-audit
-    - [已移除]
-    - [已移除]-custom-learning-apps
-    - [已移除]-family-message-handling
-    - [已移除]-observation-archiving
-    - [已移除]-team-deployment
-    - kanban-orchestrator
-    - kanban-soul-authoring
-    - llm-wiki
-    - local-proxy-provider-unification
-    - local-resource-soul-enrichment
-    - local-skill-fusion-routing
-    - local-voice-model-selection
-    - longhorizon-harness-research
-    - macos-disk-cleanup
-    - macos-home-disk-cleanup
-    - macos-security-tool-install
-    - maps
-    - matrix-synapse-admin
-    - mcporter
-    - meeting-action-items
-    - memory-consolidation
-    - merge-reconciler
-    - mermaid-a4-diagram-design
-    - mermaid-pdf-report
-    - moa-bigmodel-401-fix
-    - moa-mixture-of-agents-setup
-    - model-allocation-strategy
-    - model-fleet-migration
-    - model-switch-troubleshooting
-    - modelscope-offline-distribution
-    - multi-agent-orchestration-design
-    - multi-board-expansion
-    - multi-board-team-deployment
-    - multi-model-role-allocation
-    - multi-profile-system-audit
-    - multi-team-soul-enrichment
-    - nano-pdf
-    - native-mcp
-    - node-inspect-debugger
-    - node-npm-install-mismatch
-    - notion
-    - ocr-and-documents
-    - open-source-skill-fusion-v2
-    - opencode
-    - orchestrator-board-routing
-    - orchestrator-soul-slimming
-    - orchestrator-team-hierarchy
-    - osint-asset-mapping
-    - partial-team-completion
-    - passive-subdomain-discovery
-    - pdf
-    - personnel-academic-footprint
-    - plan
-    - polymarket
-    - privacy-hardening
-    - product-price-monitor
-    - profile-config-sibling-reuse
-    - profile-skill-misplacement-detail
-    - prompt-ownership-boundary
-    - prompt-rule-enforcement
-    - provider-fallback-chain-management
-    - python-debugpy
-    - requesting-code-review
-    - research-article-soul-enrichment
-    - research-subagent-orchestration
-    - research-then-improve
-    - resource-catalog-verification
-    - sdlc-review
-    - security-architecture-evaluation
-    - security-engagement-decomposition
-    - security-team-soul-enrichment
-    - security-tool-landscape-tracking
-    - session-librarian
-    - simplify-code
-    - skill-board-scoping
-    - skill-library-slimming
-    - skill-recall
-    - sogou-wechat-batch-fetch
-    - soul-advanced-usage-deepening
-    - soul-audit-fix-execution
-    - soul-batch-patch-concurrency-safety
-    - soul-enrichment-advanced-usage
-    - soul-enrichment-command-manual
-    - soul-enrichment-pipeline
-    - soul-framework-propagation
-    - soul-md-privacy-section-patching
-    - soul-operability-quality-bar
-    - soul-protocol-block-insertion
-    - soul-protocol-reference-insertion
-    - soul-rule-enforceability-audit
-    - soul-shared-block-externalization
-    - soul-shared-rule-externalization
-    - soul-tool-gap-research
-    - spike
-    - subagent-api-limit-recovery
-    - swarmstudio-gateway-management
-    - system-improvement-execution
-    - systematic-debugging
-    - tauri-blocked-fetch-mirror-bypass
-    - team-model-routing
-    - teams-meeting-pipeline
-    - test-driven-development
-    - time-based-model-downgrade
-    - token-optimization
-    - token-optimization-v2
-    - tool-inventory-baseline
-    - tui-patch-persistence
-    - tui-source-edit-build-verify
-    - tui-status-bar-merge
-    - update-time-inventory-self-healing
-    - web-scraping-antibot
-    - webhook-subscriptions
-    - wechat-account-batch-survey
-    - wechat-batch-article-search
-    - wechat-batch-discovery
-    - wechat-local-data-recovery
-    - weekly-review-planning
-    - weixin-channel-configuration
-    - weixin-send-troubleshooting
 approvals:
   mode: smart
 command_allowlist:
-  - sudo with privilege flag (stdin/askpass/shell/list)
-  - overwrite project env/config via redirection
   - script execution via -e/-c flag
+  - git branch force delete
   - execute_code
-  - script execution via heredoc
-  - hermes update (restarts gateway, kills running agents)
+plugins:
+  disabled: []
+  enabled:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - matrix-chat-info
+    - run-trace
 security:
   redact_secrets: true
   tirith_enabled: true
@@ -334,36 +81,30 @@ kanban:
   default_assignee: ''
   max_in_progress_per_profile: 4
   auto_decompose: false
+gateway:
+  multiplex_profile_allowlist:
+    - [已移除]-orchestrator
+  multiplex_profiles: true
 onboarding:
   seen:
+    busy_input_prompt: true
     openclaw_residue_cleanup: true
     tool_progress_prompt: true
-    busy_input_prompt: true
   profile_build: ask
 updates:
   pre_update_backup: false
   backup_keep: 5
   non_interactive_local_changes: stash
-_config_version: 38
+_config_version: 41
 custom_providers:
-  - name: cc-switch
+  - api_key: PROXY_MANAGED
+    api_mode: anthropic_messages
     base_url: http://127.0.0.1:15721
-    api_key: PROXY_MANAGED
-    api_mode: anthropic_messages
     context_length: 1048576
     models:
-      aim:
-        name: aim
-        context_length: 1048576
-  - name: kimicode
-    base_url: https://api.kimi.com/coding
-    api_key: ${KIMI_API_KEY}
-    api_mode: anthropic_messages
-    context_length: 1048576
-    models:
-      k3:
-        name: k3
-    model: k3
+      glm-5.3-flash:
+        name: glm-5.3-flash
+    name: cc-switch
 platforms:
   api_server:
     enabled: true
@@ -373,15 +114,7 @@ platforms:
   matrix:
     enabled: true
   email:
-    enabled: true
-plugins:
-  disabled: []
-  enabled:
-    - acp-client
-    - hindsight
-    - observability/langfuse
-    - matrix-chat-info
-    - run-trace
+    enabled: false
 extra:
   skills_enabled_by_category:
     - autonomous-ai-agents
@@ -391,64 +124,74 @@ extra:
     - productivity
     - research
     - mcp
+    - devops-rd
   skills_pinned:
     - skill-recall
+    - cognition-lattice
 mcp_servers:
   hermes-studio-api:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    command: 
+      /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - api
     env:
+      ELECTRON_RUN_AS_NODE: '1'
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
       HERMES_MCP_SERVER_NAME: hermes-studio-api
       HERMES_MCP_TOOLSET: api
       HERMES_WEB_UI_MANAGED_MCP: '1'
     enabled: true
+  hermes-studio-browser:
+    command: 
+      /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    args:
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - browser
+    env:
+      ELECTRON_RUN_AS_NODE: '1'
+      HERMES_WEB_UI_URL: http://127.0.0.1:8748
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEB_UI_PROFILE: orchestrator
+      HERMES_MCP_SERVER_NAME: hermes-studio-browser
+      HERMES_MCP_TOOLSET: browser
+      HERMES_WEB_UI_MANAGED_MCP: '1'
+    enabled: true
   hermes-studio-devices:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    command: 
+      /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - devices
     env:
+      ELECTRON_RUN_AS_NODE: '1'
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
       HERMES_MCP_SERVER_NAME: hermes-studio-devices
       HERMES_MCP_TOOLSET: devices
       HERMES_WEB_UI_MANAGED_MCP: '1'
     enabled: true
   hermes-studio-use:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    command: 
+      /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - use
     timeout: 1860
     env:
+      ELECTRON_RUN_AS_NODE: '1'
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: orchestrator
       HERMES_MCP_SERVER_NAME: hermes-studio-use
       HERMES_MCP_TOOLSET: use
-      HERMES_WEB_UI_MANAGED_MCP: '1'
-    enabled: true
-  hermes-studio-browser:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
-    args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-      - browser
-    env:
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
-      HERMES_WEB_UI_PROFILE: orchestrator
-      HERMES_MCP_SERVER_NAME: hermes-studio-browser
-      HERMES_MCP_TOOLSET: browser
       HERMES_WEB_UI_MANAGED_MCP: '1'
     enabled: true
 platform_toolsets:
@@ -486,8 +229,7 @@ known_plugin_toolsets:
 clearances:
   - TLP:GREEN
   - TLP:CLEAR
-weixin:
-  token: ${WEIXIN_TOKEN}
+WEIXIN_HOME_CHANNEL: HK_DAD_WX@im.wechat
 
 # ── Fallback Model ────────────────────────────────────────────────────
 # Automatic provider failover when primary is unavailable.

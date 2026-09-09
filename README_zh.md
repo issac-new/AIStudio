@@ -76,11 +76,11 @@ Gateway 消息 (Matrix/Weixin/API Server/Email)
 git clone --depth 5 https://github.com/issac-new/SwarmTeam.git
 cd SwarmTeam
 
-# 安装全部 profile
-./install-all.sh
+# 安装全部 profile（Windows: install-windows.ps1 / install-windows.bat）
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
 
-# 或安装单个 profile
-cp -r profiles/orchestrator ~/.hermes/profiles/orchestrator
+# 或安装单个 profile（Hermes 原生导入）
+hermes profile install profiles/orchestrator --alias -y
 ```
 
 ## 版本
@@ -89,7 +89,7 @@ cp -r profiles/orchestrator ~/.hermes/profiles/orchestrator
 
 - 移除 hack 团队（6 个 profile）、[已移除] 团队（6 个 profile）的公开分发
 - 通过 git-filter-repo 彻底清除禁止发布团队的全部 git 历史
-- 更新 README、install-all.sh、shared/profiles.yaml 为 3 团队 / 17 profile 结构
+- 更新 README、install-windows.ps1、shared/profiles.yaml 为多团队结构
 - 清理 Matrix token、真实邮箱、用户名路径
 
 详见 [MIGRATION-GUIDE.md](MIGRATION-GUIDE.md)。

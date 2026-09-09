@@ -1,0 +1,134 @@
+{
+  "collected_at": "2026-09-04",
+  "host_arch": "arm64",
+  "flink_version_decision": {
+    "locked": "1.20.5",
+    "rejected": "2.3.0",
+    "reason": "Fluss 0.9.1 officially publishes Flink connectors only for 1.18/1.19/1.20; no Flink 2.x connector exists. Paimon 2.0.0 and Flink CDC 3.6 both support 1.20 and 2.x, but Fluss is the binding constraint.",
+    "evidence": [
+      "https://fluss.apache.org/docs/engine-flink/getting-started/",
+      "https://flink.apache.org/downloads/"
+    ]
+  },
+  "locked_stack": {
+    "flink": {
+      "version": "1.20.5",
+      "artifact": "flink-1.20.5-bin-scala_2.12.tgz",
+      "image": "flink:1.20.5-scala_2.12 (official) or apache/fluss-quickstart-flink:1.20-0.9.1-incubating (bundled connector)",
+      "arm64": true,
+      "evidence": [
+        "https://flink.apache.org/downloads/",
+        "https://hub.docker.com/r/apache/fluss-quickstart-flink/tags"
+      ]
+    },
+    "flink_cdc": {
+      "version": "3.6.0",
+      "artifact": "flink-sql-connector-mysql-cdc-3.6.0.jar",
+      "supported_flink": "1.20.*, 2.2.*",
+      "supported_mysql": "5.7, 8.0.x, 8.4+",
+      "arm64": "jar (arch-independent)",
+      "evidence": [
+        "https://nightlies.apache.org/flink/flink-cdc-docs-stable/docs/connectors/flink-sources/overview/",
+        "https://flink.apache.org/2026/03/30/apache-flink-cdc-3.6.0-release-announcement/"
+      ]
+    },
+    "paimon": {
+      "version": "2.0.0",
+      "artifact": "paimon-flink-1.20-2.0.0.jar",
+      "available_flink_suffixes": ["1.20", "2.0", "2.1", "2.2"],
+      "arm64": "jar (arch-independent)",
+      "evidence": [
+        "https://paimon.apache.org/docs/2.0/project/download/",
+        "https://repo1.maven.org/maven2/org/apache/paimon/"
+      ]
+    },
+    "fluss": {
+      "version": "0.9.1-incubating",
+      "image": "apache/fluss:0.9.1-incubating",
+      "quickstart_image": "apache/fluss-quickstart-flink:1.20-0.9.1-incubating",
+      "requires_zookeeper": true,
+      "zookeeper_version": "3.9.2",
+      "zookeeperless_mode": false,
+      "supported_flink": "1.18, 1.19, 1.20 (no 2.x connector)",
+      "arm64": true,
+      "evidence": [
+        "https://fluss.apache.org/docs/quickstart/flink/",
+        "https://fluss.apache.org/docs/install-deploy/deploying-with-docker/",
+        "https://hub.docker.com/r/apache/fluss/tags",
+        "https://hub.docker.com/r/apache/fluss-quickstart-flink/tags",
+        "https://cwiki.apache.org/confluence/spaces/FLUSS/pages/421957775/FIP-41+Fluss+Kubernetes+Operator"
+      ]
+    },
+    "zookeeper": {
+      "version": "3.9.2",
+      "image": "zookeeper:3.9.2",
+      "required_by": "fluss 0.9.1",
+      "arm64": true,
+      "evidence": [
+        "https://fluss.apache.org/docs/quickstart/flink/"
+      ]
+    },
+    "dinky": {
+      "version": "1.2.5",
+      "docker_tag": "dinkydocker/dinky-standalone-server:1.2.5-flink1.20",
+      "docker_tags_available": ["1.2.5-flink1.20", "1.2.5-flink1.19", "1.2.5-flink1.18", "1.2.5-flink1.17", "1.2.5-flink1.16", "1.2.5-flink1.15", "1.2.5-flink1.14", "1.2.4-flink1.20", "1.2-flink1.20"],
+      "has_flink120_variant": true,
+      "has_arm64": true,
+      "release_date": "2025-11-05",
+      "remote_submit_version_mismatch_official_statement": "未验证 — 官方文档仅说明需使用对应版本的 dlink-client.jar 才能稳定连接对应版本 Flink 集群 (https://www.dinky.org.cn/docs/0.7/extend/practice_guide/principle/)，未找到针对 1.19 内置版本远程提交到 1.20 集群的明确官方兼容声明。建议 client 与集群版本严格对齐 (选 flink1.20 tag)。",
+      "evidence": [
+        "https://github.com/DataLinkDC/dinky/releases",
+        "https://hub.docker.com/r/dinkydocker/dinky-standalone-server/tags"
+      ]
+    },
+    "mysql": {
+      "version": "8.4 (LTS)",
+      "image": "mysql:8.4",
+      "alias_tags": ["lts", "lts-oraclelinux9"],
+      "alternative": "8.0 (前一 LTS, 维护期)",
+      "cdc_support": "5.7, 8.0.x, 8.4+",
+      "arm64": true,
+      "evidence": [
+        "https://hub.docker.com/_/mysql/tags",
+        "https://nightlies.apache.org/flink/flink-cdc-docs-stable/docs/connectors/flink-sources/overview/"
+      ]
+    },
+    "redis": {
+      "version": "8.10.1",
+      "image": "redis:8.10 (lock minor) or redis:8 (lock major)",
+      "latest_alias": "8.10.1",
+      "legacy_lts": "7.4 (维护模式)",
+      "arm64": true,
+      "evidence": [
+        "https://hub.docker.com/_/redis",
+        "https://hub.docker.com/_/redis/tags"
+      ]
+    }
+  },
+  "fallback_stack": {
+    "description": "Flink 2.x 路线 — 2026-09 时点不可用",
+    "flink": "2.3.0",
+    "flink_cdc": "3.6.0 (supports 2.2)",
+    "paimon": "2.0.0 (has flink-2.2 jar)",
+    "fluss": "BLOCKED — no 2.x connector, waiting for 0.10/1.0",
+    "dinky": "no flink2.x tag exists",
+    "blocking_reason": "Fluss 0.9.1 has no Flink 2.x connector; Dinky has no flink2.x docker tag",
+    "evidence": [
+      "https://fluss.apache.org/docs/engine-flink/getting-started/",
+      "https://hub.docker.com/r/dinkydocker/dinky-standalone-server/tags"
+    ]
+  },
+  "unverified_items": [
+    {
+      "item": "Dinky 远程提交时内置 Flink 与集群版本不一致 (1.19 vs 1.20) 是否官方声明可用",
+      "reason": "官方文档与 FAQ 均未明确声明此场景兼容性; 仅找到 dlink-client.jar 多版本适配的通用说明",
+      "recommendation": "选 dinkydocker/dinky-standalone-server:1.2.5-flink1.20 使 client 与集群版本严格对齐"
+    }
+  ],
+  "download_commands": {
+    "flink": "wget https://dlcdn.apache.org/flink/flink-1.20.5/flink-1.20.5-bin-scala_2.12.tgz",
+    "paimon": "wget https://repo.maven.apache.org/maven2/org/apache/paimon/paimon-flink-1.20/2.0.0/paimon-flink-1.20-2.0.0.jar",
+    "fluss_connector": "wget https://repo1.maven.org/maven2/org/apache/fluss/fluss-flink-1.20/0.9.1-incubating/fluss-flink-1.20-0.9.1-incubating.jar",
+    "flink_cdc_mysql": "wget https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-mysql-cdc/3.6.0/flink-sql-connector-mysql-cdc-3.6.0.jar"
+  }
+}

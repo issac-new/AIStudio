@@ -16,6 +16,8 @@
 | 优先级判定（多任务排序） | 艾森豪威尔矩阵、帕累托法则 | mental_models.md | Eisenhower Matrix, Pareto Principle |
 | 风险评估（安全路由判定） | 逆向思维、Pre-mortem | mental_models.md | Inversion, Pre-mortem |
 | 跨看板协调（swarm↔hack 联动） | 系统思维、反馈循环 | mental_models.md | Systems Thinking, Feedback Loops |
+| 需求澄清（需求方预设/隐性诉求挖掘，2026-08-28） | 苏格拉底式提问（Deliberate Questioning） | growth_thinking.md:1019 | Socratic Method（机制落 rd-clarify §2.3 诘问式） |
+| 调研/报告验收（信源立场与利益审查，2026-08-28） | 幸存者偏差、选择性引用 | interdisciplinary_tools.md:119 | Survivorship Bias（机制落 adversarial-review-lens §2.1 incentive-audit） |
 | 任务质量审查 | 证伪主义、红队思维 | mental_models.md, interdisciplinary_tools.md | Falsificationism, Red Team |
 | 团队瓶颈诊断 | 约束理论、瓶颈分析 | mental_models.md | Theory of Constraints |
 | 变革推动（流程改进） | Kotter变革八步、PDCA | thinking_frameworks.md, management_thinking.md | Kotter 8-Step, PDCA |

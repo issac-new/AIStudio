@@ -113,7 +113,7 @@ def _session_key(session_id: str, task_id: Optional[str] = None) -> str:
 
 # ── Hook Handlers ──
 
-def _on_session_start(ctx: Any, payload: dict) -> None:
+def _on_session_start(**payload: Any) -> None:
     """Create new JSONL file, write header."""
     trace_dir = _ensure_trace_dir()
     if not trace_dir:
@@ -180,7 +180,7 @@ def _on_session_start(ctx: Any, payload: dict) -> None:
     logger.debug("Started trace session %s", session_id)
 
 
-def _on_session_end(ctx: Any, payload: dict) -> None:
+def _on_session_end(**payload: Any) -> None:
     """Write trailer, close file."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -225,7 +225,7 @@ def _on_session_end(ctx: Any, payload: dict) -> None:
     logger.debug("Ended trace session %s", session_id)
 
 
-def _pre_api_request(ctx: Any, payload: dict) -> None:
+def _pre_api_request(**payload: Any) -> None:
     """Write LLM span start chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -272,7 +272,7 @@ def _pre_api_request(ctx: Any, payload: dict) -> None:
     logger.debug("Pre API request %s for session %s", api_request_id, session_id)
 
 
-def _post_api_request(ctx: Any, payload: dict) -> None:
+def _post_api_request(**payload: Any) -> None:
     """Write LLM span end chunk with usage."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -329,7 +329,7 @@ def _post_api_request(ctx: Any, payload: dict) -> None:
     logger.debug("Post API request %s for session %s", api_request_id, session_id)
 
 
-def _post_tool_call(ctx: Any, payload: dict) -> None:
+def _post_tool_call(**payload: Any) -> None:
     """Write tool chunk with duration, args, result."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -384,7 +384,7 @@ def _post_tool_call(ctx: Any, payload: dict) -> None:
     logger.debug("Tool call %s (%s) for session %s", tool_call_id, payload.get("tool_name"), session_id)
 
 
-def _subagent_start(ctx: Any, payload: dict) -> None:
+def _subagent_start(**payload: Any) -> None:
     """Write subagent start chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")
@@ -427,7 +427,7 @@ def _subagent_start(ctx: Any, payload: dict) -> None:
     logger.debug("Subagent %s started for session %s", subagent_label, session_id)
 
 
-def _subagent_stop(ctx: Any, payload: dict) -> None:
+def _subagent_stop(**payload: Any) -> None:
     """Write subagent stop chunk."""
     session_id = payload.get("session_id", "")
     task_id = payload.get("task_id")

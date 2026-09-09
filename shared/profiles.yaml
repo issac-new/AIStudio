@@ -1,507 +1,1636 @@
 profiles:
-  # ── 单一事实源 (2026-08-18) ──
-  # skills_enabled=允许类目; skills_pinned=允许的顶层单例技能。
-  # 执行器: shared/skill-fence.py(update 后由 .git/hooks/post-merge 自动调用)。
-  # 主模型统一 shared_config.model(cc-switch), profile 内禁止 model 覆盖, 防漂移。
-  orchestrator:
+  aiteam-architecture:
     api_server:
-      enabled: true
-      port: 8650
-      host: 127.0.0.1
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/aiteam-architecture/SOUL.md
+    kanban:
+      default_assignee: aiteam-architecture
     matrix:
-      enabled: true
-    email:
-      enabled: true
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - memtensor
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
     toolsets:
-      - hermes-cli
-      - kanban
-      - memory
-      - messaging
+    - hermes-cli
+    - kanban
+    - memory
+  aiteam-embodied:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/aiteam-embodied/SOUL.md
+    kanban:
+      default_assignee: aiteam-embodied
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - memtensor
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  aiteam-multimodal:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/aiteam-multimodal/SOUL.md
+    kanban:
+      default_assignee: aiteam-multimodal
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - memtensor
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  aiteam-orchestrator:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/aiteam-orchestrator/SOUL.md
+    kanban:
+      default_assignee: aiteam-orchestrator
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - memtensor
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  aiteam-scout:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/aiteam-scout/SOUL.md
+    kanban:
+      default_assignee: aiteam-scout
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - memtensor
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  aiteam-training:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/aiteam-training/SOUL.md
+    kanban:
+      default_assignee: aiteam-training
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - memtensor
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    - mlops
+    - autonomous-ai-agents
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - mlops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - mlops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  hack-auditor:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/hack-auditor/SOUL.md
+    kanban:
+      default_assignee: hack-auditor
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - cybersecurity
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - hack-team
+    skills_pinned:
+    - skill-recall
+    - cognition-lattice
+    - computer-use
+    - wechat-article-extractor
+    - wechat-article-search
+    - hack-team
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  hack-exploit:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/hack-exploit/SOUL.md
+    kanban:
+      default_assignee: hack-exploit
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - cybersecurity
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - hack-team
+    skills_pinned:
+    - skill-recall
+    - cognition-lattice
+    - computer-use
+    - wechat-article-extractor
+    - wechat-article-search
+    - hack-team
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  hack-forensics:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/hack-forensics/SOUL.md
+    kanban:
+      default_assignee: hack-forensics
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - cybersecurity
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - cognition-lattice
+    - computer-use
+    - cybersecurity-forensics
+    - cybersecurity-detection
+    - wechat-article-extractor
+    - wechat-article-search
+    - hack-team
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  hack-recon:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/hack-recon/SOUL.md
+    kanban:
+      default_assignee: hack-recon
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - cybersecurity
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - hack-team
+    skills_pinned:
+    - skill-recall
+    - cognition-lattice
+    - computer-use
+    - wechat-article-extractor
+    - wechat-article-search
+    - hack-team
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - [已移除]
+    - markdown-viewer
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - [已移除]
+    - markdown-viewer
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - [已移除]
+    - markdown-viewer
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - [已移除]
+    - markdown-viewer
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - [已移除]
+    - markdown-viewer
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - [已移除]
+    - markdown-viewer
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  [已移除]-orchestrator:
+    api_server:
+      enabled: false
+      host: 127.0.0.1
+      port: 8651
+    email:
+      enabled: false
+      gateway_restart_notification: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: [已移除]
+      WEIXIN_ACCOUNT_ID: ${WEIXIN_ACCOUNT_ID}
+      WEIXIN_DM_POLICY: pairing
+      WEIXIN_GROUP_POLICY: disabled
+      WEIXIN_TOKEN: ${WEIXIN_TOKEN}
+    environment_hint: ~/.hermes/profiles/[已移除]-orchestrator/SOUL.md
     kanban:
       default_assignee: ''
-    environment_hint: "~/.hermes/profiles/orchestrator/orchestrator_rules.md\n~/.hermes/profiles/orchestrator/email_kanban_rules.md\n"
-    env_extra:
-      MATRIX_ACCESS_TOKEN: ${MATRIX_TOKEN}
-      MATRIX_HOMESERVER: http://localhost:8008
-      MATRIX_USER_ID: '@swarm:matrix.test'
-      MATRIX_HOME_ROOM: '!<matrix-room-id>:matrix.test'
-      MATRIX_HOME_ROOM_THREAD_ID: $XRDW_UwsDgQjOODLWyPuPSWD4-HT62dz9_IDyJqg_kw
-    plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - matrix-chat-info
-      - run-trace
-    skills_enabled:
-      - autonomous-ai-agents
-      - devops
-      - software-development
-      - github
-      - productivity
-      - research
-      - mcp
-    skills_pinned:
-      - skill-recall
-
-  worker-coder:
-    api_server:
-      enabled: false
     matrix:
       enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
-    kanban:
-      default_assignee: worker-coder
-    environment_hint: ~/.hermes/profiles/worker-coder/worker-coder_rules.md
-    env_extra:
-      API_SERVER_ENABLED: 'false'
     plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
+    - hindsight
+    - run-trace
     skills_enabled:
-      - software-development
-      - devops
-      - github
-      - research
-      - data-science
-      - mlops
-      - autonomous-ai-agents
-      - note-taking
-      - productivity
-      - mcp
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
     skills_pinned:
-      - skill-recall
-  worker-researcher:
-    api_server:
-      enabled: false
-    matrix:
-      enabled: false
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - [已移除]
+    - markdown-viewer
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
     toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
-    kanban:
-      default_assignee: worker-researcher
-    environment_hint: ~/.hermes/profiles/worker-researcher/worker-researcher_rules.md
-    env_extra:
-      API_SERVER_ENABLED: 'false'
-    plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
-    skills_enabled:
-      - research
-      - data-science
-      - software-development
-      - github
-      - mlops
-      - devops
-      - autonomous-ai-agents
-      - note-taking
-      - productivity
-      - mcp
-    skills_pinned:
-      - skill-recall
-  worker-tester:
-    api_server:
-      enabled: false
-    matrix:
-      enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
-    kanban:
-      default_assignee: worker-tester
-    environment_hint: ~/.hermes/profiles/worker-tester/worker-tester_rules.md
-    env_extra:
-      API_SERVER_ENABLED: 'false'
-    plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
-    skills_enabled:
-      - software-development
-      - github
-      - mlops
-      - devops
-      - autonomous-ai-agents
-      - data-science
-      - mcp
-      - productivity
-    skills_pinned:
-      - skill-recall
-
-  # ──────────────────────────────────────────────────────────────────────
-  # OPS / Product / Platform Teams (9 profiles, 补录声明 2026-08-18)
-  # 此前这 9 个 profile 未在 profiles.yaml 声明, 游离于单一事实源之外,
-  # 仅靠 post-merge 硬编码 board 保护。声明字段以其现有 config.yaml 为准。
-  # ──────────────────────────────────────────────────────────────────────
+    - hermes-cli
+    - kanban
+    - memory
+    - messaging
   ops-devops:
     api_server:
       enabled: false
-    matrix:
-      enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/ops-devops/SOUL.md
     kanban:
       default_assignee: ops-devops
-    environment_hint: ~/.hermes/profiles/ops-devops/ops-devops_rules.md
-    env_extra:
-      API_SERVER_ENABLED: 'false'
-    plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
-    skills_enabled:
-      - devops
-      - software-development
-      - github
-      - mlops
-      - autonomous-ai-agents
-      - productivity
-      - mcp
-    skills_pinned:
-      - skill-recall
-  ops-sre:
-    api_server:
-      enabled: false
     matrix:
       enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
-    kanban:
-      default_assignee: ops-sre
-    environment_hint: ~/.hermes/profiles/ops-sre/ops-sre_rules.md
-    env_extra:
-      API_SERVER_ENABLED: 'false'
     plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
     skills_enabled:
-      - devops
-      - software-development
-      - github
-      - autonomous-ai-agents
-      - productivity
-      - mcp
+    - devops
+    - software-development
+    - github
+    - mlops
+    - autonomous-ai-agents
+    - productivity
+    - mcp
+    - devops-rd
     skills_pinned:
-      - skill-recall
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
   ops-eval:
     api_server:
       enabled: false
-    matrix:
-      enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
-    kanban:
-      default_assignee: ops-eval
-    environment_hint: ~/.hermes/profiles/ops-eval/ops-eval_rules.md
     env_extra:
       API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/ops-eval/SOUL.md
+    kanban:
+      default_assignee: ops-eval
+    matrix:
+      enabled: false
     plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
     skills_enabled:
-      - devops
-      - software-development
-      - github
-      - autonomous-ai-agents
-      - productivity
-      - mcp
+    - devops
+    - software-development
+    - github
+    - autonomous-ai-agents
+    - productivity
+    - mcp
     skills_pinned:
-      - skill-recall
+    - skill-recall
+    - cognition-lattice
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
   ops-incident-commander:
     api_server:
       enabled: false
-    matrix:
-      enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/ops-incident-commander/SOUL.md
     kanban:
       default_assignee: ops-incident-commander
-    environment_hint: ~/.hermes/profiles/ops-incident-commander/ops-incident-commander_rules.md
-    env_extra:
-      API_SERVER_ENABLED: 'false'
-    plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
-    skills_enabled:
-      - devops
-      - software-development
-      - github
-      - autonomous-ai-agents
-      - productivity
-      - mcp
-    skills_pinned:
-      - skill-recall
-  product-manager:
-    api_server:
-      enabled: false
     matrix:
       enabled: false
-    toolsets:
-      - hermes-cli
-      - kanban
-      - memory
-    kanban:
-      default_assignee: product-manager
-    environment_hint: ~/.hermes/profiles/product-manager/product-manager_rules.md
-    env_extra:
-      API_SERVER_ENABLED: 'false'
     plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
     skills_enabled:
-      - product
-      - research
-      - software-development
-      - github
-      - autonomous-ai-agents
-      - productivity
-      - mcp
+    - devops
+    - software-development
+    - github
+    - autonomous-ai-agents
+    - productivity
+    - mcp
     skills_pinned:
-      - skill-recall
-  product-researcher:
+    - skill-recall
+    - cognition-lattice
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  ops-sre:
     api_server:
       enabled: false
-    matrix:
-      enabled: false
-    toolsets:
-      - hermes-cli
-      - kanban
-      - memory
-    kanban:
-      default_assignee: product-researcher
-    environment_hint: ~/.hermes/profiles/product-researcher/product-researcher_rules.md
     env_extra:
       API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/ops-sre/SOUL.md
+    kanban:
+      default_assignee: ops-sre
+    matrix:
+      enabled: false
     plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
     skills_enabled:
-      - product
-      - research
-      - software-development
-      - github
-      - autonomous-ai-agents
-      - productivity
-      - mcp
+    - devops
+    - software-development
+    - github
+    - autonomous-ai-agents
+    - productivity
+    - mcp
     skills_pinned:
-      - skill-recall
+    - skill-recall
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  orchestrator:
+    api_server:
+      enabled: true
+      host: 127.0.0.1
+      port: 8650
+    email:
+      enabled: false
+      gateway_restart_notification: false
+    env_extra:
+      MATRIX_ACCESS_TOKEN: ${MATRIX_ACCESS_TOKEN}
+      MATRIX_HOMESERVER: http://localhost:8008
+      MATRIX_HOME_ROOM: '!<matrix-room-id>:matrix.test'
+      MATRIX_HOME_ROOM_THREAD_ID: $XRDW_UwsDgQjOODLWyPuPSWD4-HT62dz9_IDyJqg_kw
+      MATRIX_USER_ID: '@swarm:matrix.test'
+    environment_hint: ~/.hermes/profiles/orchestrator/SOUL.md
+    gateway_extra:
+      multiplex_profile_allowlist:
+      - [已移除]-orchestrator
+      multiplex_profiles: true
+    kanban:
+      default_assignee: ''
+    matrix:
+      enabled: true
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - matrix-chat-info
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - devops
+    - software-development
+    - github
+    - productivity
+    - research
+    - mcp
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    - messaging
+  pay-clearing:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/pay-clearing/SOUL.md
+    kanban:
+      default_assignee: pay-clearing
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - research
+    - note-taking
+    - productivity
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  pay-fintech:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/pay-fintech/SOUL.md
+    kanban:
+      default_assignee: pay-fintech
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - research
+    - note-taking
+    - productivity
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  pay-infra:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/pay-infra/SOUL.md
+    kanban:
+      default_assignee: pay-infra
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - research
+    - note-taking
+    - productivity
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  pay-orchestrator:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/pay-orchestrator/SOUL.md
+    kanban:
+      default_assignee: ''
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - devops
+    - research
+    - productivity
+    - note-taking
+    - autonomous-ai-agents
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    - messaging
   platform-ontology-curator:
     api_server:
       enabled: false
-    matrix:
-      enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
-    kanban:
-      default_assignee: platform-ontology-curator
-    environment_hint: ~/.hermes/profiles/platform-ontology-curator/platform-ontology-curator_rules.md
     env_extra:
       API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/platform-ontology-curator/SOUL.md
+    kanban:
+      default_assignee: platform-ontology-curator
+    matrix:
+      enabled: false
     plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
     skills_enabled:
-      - devops
-      - software-development
-      - github
-      - mlops
-      - autonomous-ai-agents
-      - productivity
-      - research
-      - mcp
+    - devops
+    - software-development
+    - github
+    - mlops
+    - autonomous-ai-agents
+    - productivity
+    - research
+    - mcp
     skills_pinned:
-      - skill-recall
+    - skill-recall
+    - cognition-self-check
+    fallback_providers:
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
   platform-skill-miner:
     api_server:
       enabled: false
-    matrix:
-      enabled: false
-    toolsets:
-      - hermes-cli
-      - acp
-      - kanban
-      - memory
-      - skills
-    kanban:
-      default_assignee: platform-skill-miner
-    environment_hint: ~/.hermes/profiles/platform-skill-miner/platform-skill-miner_rules.md
     env_extra:
       API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/platform-skill-miner/SOUL.md
+    kanban:
+      default_assignee: platform-skill-miner
+    matrix:
+      enabled: false
     plugins:
-      - acp-client
-      - hindsight
-      - observability/langfuse
-      - run-trace
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
     skills_enabled:
-      - devops
-      - software-development
-      - github
-      - mlops
-      - autonomous-ai-agents
-      - productivity
-      - research
-      - mcp
+    - devops
+    - software-development
+    - github
+    - mlops
+    - autonomous-ai-agents
+    - productivity
+    - research
+    - mcp
     skills_pinned:
-      - skill-recall
-shared_config:
-  model:
-    default: glm-5.3
-    provider: custom:cc-switch
-  providers:
-    damoxing:
-      base_url: ${DAMOXING_BASE_URL}
-      api_key: ${DAMOXING_API_KEY}
-      api_mode: ${DAMOXING_API_MODE}
-      context_length: 1048576
-      # 显式声明模型列表: 修复键入式 /model glm-5.3 解析——无声明时 switch_model
-      # 的 configured-provider 匹配找不到 glm-*, 静态目录将其映射到内置 zai
-      # provider(无凭据)导致"找不到模型"。列表与网关 /v1/models 实测一致。
-      models:
-        - glm-5
-        - glm-5.1
-        - glm-5.1-20260408
-        - glm-5.3
-        - glm-5.2-20260613
-        - GLM-5.2-C
-  # Kimi Code (k3) is declared as a legacy `custom_providers` list entry — NOT
-  # under `providers:` — so a bare `/model k3` resolves to exactly one slug
-  # (custom:kimicode). Putting it in the `providers:` dict instead makes
-  # _configured_provider_matches() see it under two slugs (kimicode AND
-  # custom:kimicode) and reject `/model k3` as ambiguous. Mirrors the root
-  # config.yaml layout where this already works.
-  custom_providers:
-    - name: cc-switch
-      base_url: http://127.0.0.1:15721
-      api_key: PROXY_MANAGED
-      api_mode: anthropic_messages
-      context_length: 1048576
-      models:
-        glm-5.3:
-          name: glm-5.3
-        kimi-k3:
-          name: kimi-k3
-        claude-opus-5:
-          name: claude-opus-5
-        deepseek-v4-flash:
-          name: deepseek-v4-flash
-    - name: kimicode
-      base_url: https://api.kimi.com/coding
-      api_key: ${KIMI_API_KEY}
-      api_mode: anthropic_messages
-      context_length: 1048576
-      models:
-        k3:
-          name: k3
+    - skill-recall
+    - cognition-lattice
+    fallback_providers:
+    - provider: kimi-coding
       model: k3
-  # Auxiliary tasks pinned to damoxing (GLM-5.2) — REQUIRED for k3-main profiles:
-  # api.kimi.com/coding speaks Anthropic wire format only, so aux tasks defaulting
-  # to the main provider fail with HTTP 404 (OpenAI chat.completions is rejected).
-  # GLM-5.2 is an unlimited monthly subscription → zero marginal cost for aux.
-  # Fallback chain for ALL profiles (2026-07-24):
-  # 1级 glm-5.1: GLM-5.3 高峰期卡顿时的免费降级(同 max 套餐, 网关实测可用),
-  #    零边际成本优先于付费 deepseek。
-  # 2级 deepseek-v4-flash: damoxing 整体故障时的异构容灾(最快+最高并发)。
-  #    触发场景多为 k3 月度配额耗尽的长窗口, v4-pro 价 3×flash 而智能仅 +7.5%, 选 flash。
-  fallback_providers:
-    - provider: custom:cc-switch
-      model: kimi-k3
-    - provider: custom:cc-switch
-      model: deepseek-v4-flash
-  auxiliary:
-    title_generation:
-      provider: custom:cc-switch
-      model: glm-5.3
-    compression:
-      provider: custom:cc-switch
-      model: glm-5.3
-    session_search:
-      provider: custom:cc-switch
-      model: glm-5.3
-    web_extract:
-      provider: custom:cc-switch
-      model: glm-5.3
-    vision:
-      provider: custom:cc-switch
-      model: kimi-k3
-    approval:
-      provider: custom:cc-switch
-      model: deepseek-v4-flash
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+    - skills
+  product-manager:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/product-manager/SOUL.md
+    kanban:
+      default_assignee: product-manager
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    - github
+    - autonomous-ai-agents
+    - productivity
+    - mcp
+    skills_pinned:
+    - skill-recall
+    - cognition-lattice
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  product-researcher:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/product-researcher/SOUL.md
+    kanban:
+      default_assignee: product-researcher
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - product
+    - research
+    - software-development
+    - github
+    - autonomous-ai-agents
+    - productivity
+    - mcp
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  worker-coder:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/worker-coder/SOUL.md
+    kanban:
+      default_assignee: worker-coder
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - mlops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mcp
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  worker-researcher:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/worker-researcher/SOUL.md
+    kanban:
+      default_assignee: worker-researcher
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - research
+    - software-development
+    - github
+    - mlops
+    - devops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mcp
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  worker-tester:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/worker-tester/SOUL.md
+    kanban:
+      default_assignee: worker-tester
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - github
+    - mlops
+    - devops
+    - autonomous-ai-agents
+    - mcp
+    - productivity
+    - devops-rd
+    skills_pinned:
+    - skill-recall
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  data-orchestrator:
+    api_server: &id001
+      enabled: false
+    env_extra: &id002
+      API_SERVER_ENABLED: 'false'
+    kanban:
+      default_assignee: ''
+    matrix: &id003
+      enabled: false
+    plugins: &id004
+    - hindsight
+    - run-trace
+    skills_pinned: &id005
+    - skill-recall
+    environment_hint: ~/.hermes/profiles/data-orchestrator/SOUL.md
+    skills_enabled:
+    - devops
+    - research
+    - productivity
+    - note-taking
+    - autonomous-ai-agents
+    - devops-rd
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    - messaging
+  data-arch:
+    api_server: *id001
+    env_extra: *id002
+    kanban:
+      default_assignee: data-arch
+    matrix: *id003
+    plugins: *id004
+    skills_pinned: *id005
+    environment_hint: ~/.hermes/profiles/data-arch/SOUL.md
+    skills_enabled: &id006
+    - software-development
+    - devops
+    - research
+    - note-taking
+    - productivity
+    - devops-rd
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets: &id007
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  data-flink:
+    api_server: *id001
+    env_extra: *id002
+    kanban:
+      default_assignee: data-flink
+    matrix: *id003
+    plugins: *id004
+    skills_pinned: *id005
+    environment_hint: ~/.hermes/profiles/data-flink/SOUL.md
+    skills_enabled: *id006
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets: *id007
+  data-infra:
+    api_server: *id001
+    env_extra: *id002
+    kanban:
+      default_assignee: data-infra
+    matrix: *id003
+    plugins: *id004
+    skills_pinned: *id005
+    environment_hint: ~/.hermes/profiles/data-infra/SOUL.md
+    skills_enabled: *id006
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    toolsets: *id007
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: &id008
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: *id008
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: &id009
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mlops
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: *id009
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  [已移除]:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/[已移除]/SOUL.md
+    kanban:
+      default_assignee: [已移除]
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - [已移除]
+    fallback_providers:
+    - provider: alibaba
+      model: qwen3-max
+    - provider: kimi-coding
+      model: k3
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+shared_config:
   agent:
-    max_turns: 90
-    reasoning_effort: xhigh
-    tool_use_enforcement: auto
-    task_completion_guidance: true
-    parallel_tool_call_guidance: true
     environment_probe: false
-  terminal:
-    backend: local
-    cwd: ~/hermes-docker-sandbox/workspace
-    timeout: 180
-    persistent_shell: true
+    max_turns: 90
+    parallel_tool_call_guidance: true
+    reasoning_effort: ultra
+    task_completion_guidance: true
+    tool_use_enforcement: auto
+  approvals:
+    mode: smart
+  auxiliary:
+    approval:
+      model: glm-5.3-flash
+      provider: custom:cc-switch
+    compression:
+      model: glm-5.3-flash
+      provider: custom:cc-switch
+    session_search:
+      model: glm-5.3-flash
+      provider: custom:cc-switch
+    title_generation:
+      model: glm-5.3-flash
+      provider: custom:cc-switch
+    vision:
+      model: glm-5.3-flash
+      provider: custom:cc-switch
+    web_extract:
+      model: glm-5.3-flash
+      provider: custom:cc-switch
   compression:
     enabled: true
-    threshold: 0.5
-    target_ratio: 0.2
-  memory:
-    memory_enabled: true
-    user_profile_enabled: true
-    provider: hindsight
+    target_ratio: 0.15
+    threshold: 0.35
+  custom_providers:
+  - api_key: PROXY_MANAGED
+    api_mode: anthropic_messages
+    base_url: http://127.0.0.1:15721
+    context_length: 1048576
+    models:
+      glm-5.3-flash:
+        name: glm-5.3-flash
+    name: cc-switch
+  display:
+    language: zh
+    personality: kawaii
+    skin: daylight
+  fallback_providers:
+  - model: glm-5.3-flash
+    provider: custom:cc-switch
   kanban:
+    auto_decompose: false
     dispatch_in_gateway: true
     dispatch_interval_seconds: 60
     failure_limit: 2
     max_in_progress_per_profile: 4
-    auto_decompose: false
     orchestrator_profile: orchestrator
-  display:
-    skin: daylight
-    language: zh
-    personality: kawaii
+  memory:
+    memory_enabled: true
+    provider: hindsight
+    user_profile_enabled: true
+  model:
+    default: glm-5.3-flash
+    provider: custom:cc-switch
+  privacy:
+    redact_pii: true
   security:
     redact_secrets: true
     tirith_enabled: true
-  privacy:
-    redact_pii: true
-  approvals:
-    mode: smart
+  terminal:
+    backend: local
+    cwd: ~/hermes-docker-sandbox/workspace
+    persistent_shell: true
+    timeout: 180

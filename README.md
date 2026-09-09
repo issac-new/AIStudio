@@ -1,13 +1,13 @@
 # SwarmTeam — Hermes Agent Multi-Profile Distribution
 
 > A production-grade multi-agent system built on [Hermes Agent](https://hermes-agent.nousresearch.com).
-> **12 profiles** across 4 teams (swarm / product / ops / platform), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
+> **36 profiles** across 9 domain teams (swarm / product / ops / platform / aiteam / pay / data / [已移除] / worker), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
 
 ## Overview / 概览
 
 This repository distributes a multi-agent team configuration for Hermes Agent. Each profile has its own SOUL.md personality, config.yaml, and role-specific rules. The orchestrator is the single entry point for all Gateway messages (Matrix/Weixin/API Server/Email) and routes tasks to specialist profiles via Kanban boards.
 
-**12 profiles** · **4 teams** · **5 Kanban boards** · persistent worktree workspaces
+**36 profiles** · **9 teams** · **9 Kanban boards** · persistent worktree workspaces
 
 ### What changed in this release (v2.0)
 
@@ -17,6 +17,8 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 - **Workspace persistence**: All kanban tasks default to `workspace_kind="worktree"` — outputs survive task completion on independent git branches
 
 ## Profile Roster / Profile 名册
+
+> 本次发布 36 个 profile，横跨 9 个领域团队。[已移除] 家庭团队（7 个）与 hack 安全团队（4 个）因隐私/敏感性不在此仓库。
 
 ### Swarm Team (4 profiles) — Software Engineering
 
@@ -50,25 +52,72 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 | `platform-skill-miner` | 平台技能挖掘师 (Skill Miner) | 模式识别者 | Scan completed tasks; pattern clustering; skill extraction | 197 |
 | `platform-ontology-curator` | 本体策展师 (Ontology Curator) | 语义层守门人 | ontology.md maintenance; semantic layer evolution; marking propagation | 203 |
 
+### AI Team (6 profiles) — AI 研究
+
+| Profile | Role |
+|---------|------|
+| `aiteam-orchestrator` | 领域网关：模型架构/多模态/具身智能路由 |
+| `aiteam-architecture` | Transformer/MoE/推理引擎架构调研 |
+| `aiteam-multimodal` | 视觉-语言/多模态对齐调研 |
+| `aiteam-embodied` | 具身智能/世界模型调研 |
+| `aiteam-training` | 训练算法/对齐技术调研 |
+| `aiteam-scout` | arXiv/会议前沿侦察 |
+
+### Pay Team (4 profiles) — 支付清算
+
+| Profile | Role |
+|---------|------|
+| `pay-orchestrator` | 领域网关：支付/清算/结算/对账路由 |
+| `pay-infra` | 支付基础设施/核心系统 |
+| `pay-clearing` | 清算/对账/差错处理 |
+| `pay-fintech` | 跨境支付/合规/风控 |
+
+### Data Team (4 profiles) — 实时数据栈
+
+| Profile | Role |
+|---------|------|
+| `data-orchestrator` | 领域网关：Flink/Paimon/MinIO 运维路由 |
+| `data-infra` | 集群基础设施/容器化 |
+| `data-arch` | 数仓架构/数据建模 |
+| `data-flink` | Flink 流批处理调优 |
+
+### [已移除] Team (10 profiles) — IC 设计自动化
+
+| Profile | Role |
+|---------|------|
+| `[已移除]` | [已移除] 算法架构师 |
+| `[已移除]` | 器件物理/寄生提取 |
+| `[已移除]` | 工艺设计套件 |
+| `[已移除]` | 工具链/流程集成 |
+| `[已移除]` | 后端/签核/DFM |
+| `[已移除]` | 设计验证 |
+| `[已移除]` | IP 核集成 |
+| `[已移除]` | 封装测试 |
+| `[已移除]` | 模拟混合信号 |
+| `[已移除]` | AI for [已移除] |
+
+### Domain Gateway Pattern / 领域网关原则
+
+`aiteam` / `pay` / `data` / `[已移除]` 各有独立 orchestrator 作为领域网关，负责领域内子任务分解与路由；跨领域任务由顶层 `orchestrator` 统一调度，禁止跳过领域网关直派下游 worker。
+
 ## Architecture / 架构
 
 ```
 Gateway Messages (Matrix/Weixin/API Server/Email)
     ↓
 ┌─────────────────────────────────────────────────────┐
-│  Orchestrator (router + decomposer)                 │
+│  Orchestrator (顶层路由器 + 分解器)                  │
 │  Smart routing: light/medium/heavy by complexity    │
 │  workspace_kind="worktree" (persistent git branch)  │
 └──────────────────┬──────────────────────────────────┘
                    ↓
-    ┌──────────┬───┴───────┬──────────┐
-    ↓          ↓           ↓          ↓
-  swarm     product      ops      platform
-  board     board       board     board
-  (4 prof)  (2 prof)   (4 prof)  (2 prof)
+   ┌────┬────┬───┬────┬────┬────┬────┬────┬────┐
+   swarm  product ops platform aiteam pay  data  [已移除]  worker
+   board  board  board  board  board  board board board
+   (4)    (2)    (4)   (2)    (6)    (4)  (4)  (10)
 ```
 
-**5 Kanban Boards**: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `default` (fallback).
+**9 Kanban Boards**: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `[已移除]` (IC design), `worker` (general).
 
 ## Key Features / 核心特性
 
@@ -86,11 +135,11 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
 git clone --depth 5 https://github.com/issac-new/SwarmTeam.git
 cd SwarmTeam
 
-# Install all profiles
-./install-all.sh
+# Install all profiles (Windows: install-windows.ps1 / install-windows.bat)
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
 
-# Or install a single profile
-cp -r profiles/worker-coder ~/.hermes/profiles/
+# Or install a single profile via Hermes native import
+hermes profile install profiles/worker-coder --alias -y
 ```
 
 ### Prerequisites

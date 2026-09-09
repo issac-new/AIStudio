@@ -36,11 +36,14 @@ Backup snapshots live at `~/.hermes/tool-prune-backup-20260805/`
 | **lang runtimes** | go rust rustup python@3.11 openjdk@11 pipx pnpm yarn |
 | **system/net** | wget tmux zsh bash-completion coreutils unzip trash zeromq portaudio icu4c@76 pcre libxslt highs llama.cpp |
 
-### npm global (16)
+### npm global (25) — rebaselined 2026-09-02
 
-`@openai/codex` `claude-code-acp` `agently-cli`(QQ mail) `echarts`
-`harness-monitor` `hermes-web-ui` `kanban` `npm` `pptxgenjs` `promptfoo`
-`ruflo` `gitnexus` `@playwright/cli` `sharp`
+`@openai/codex` `@openai/codex-security` `@anthropic-ai/claude-code`
+`@zed-industries/claude-code-acp` `@deepseek-ai/dsh` `@deepseek-harness-tui/dsh-tui`
+`@fission-ai/openspec` `@alibaba-group/open-code-review` `@tencent-qqmail/agently-cli`(QQ mail)
+`@playwright/cli` `claude-mem`(Claude Code plugin, usage 2263) `cnpm`(npmmirror)
+`echarts` `harness-monitor` `hermes-web-ui` `kanban` `npm` `corepack`
+`pptxgenjs` `promptfoo` `ruflo` `gitnexus` `gitlab-ci-local` `sharp`
 
 ### pipx (10) — all hack-team
 
@@ -59,12 +62,14 @@ Backup snapshots live at `~/.hermes/tool-prune-backup-20260805/`
 - **Competing agent CLIs**: gemini-cli, ironclaw, zeroclaw, summarize, rtk,
   agy, nanobot, specify-cli, it2, graphifyy, flowise, n8n, continuedev,
   codegraph, agentscope-studio, iflow-cli, comet, synsci/*, deepseek-tui,
-  claude-mem, agency-orchestrator, oh-my-claude-sisyphus, tmux-ide
+  agency-orchestrator, oh-my-claude-sisyphus, tmux-ide
+  (claude-mem 移出本名单 2026-09-02：Claude Code 官方插件 usage 2263，有真实消费者，已入 npm 基线)
 - **Duplicate runtimes**: node@22/24/25/26 (node v26 lives in ~/.local/bin),
   python@3.10 (py312 conda + python@3.11 brew cover), scala×2, llvm@16, maven
 - **Desktop toys**: mpv, autojump, himalaya, cliclick, git-gui
 - **Global npm libs** (never CLIs): cheerio, dayjs, dotenv, reflect-metadata,
-  react*, @babel/*, cnpm, tyarn, yarn(dup)
+  react*, @babel/*, tyarn, yarn(dup)
+  (cnpm 移出本名单 2026-08-28：用户主动重装走 npmmirror registry，已入 npm 基线)
 - **conda experiments**: kotaemon, dbgpt_env, dra, py310, xinference
 
 Rationale: hermes is the agent runtime; competing CLIs split context and
@@ -83,7 +88,7 @@ echo "conda envs: $(conda env list | grep -c envs/)" # expect 3
 
 # orphan check — a leaf with no dependents AND no SOUL reference is a prune candidate
 for t in $(brew leaves); do
-  refs=$(grep -rl "\b$t\b" $HOME/.hermes/profiles/*/SOUL.md 2>/dev/null | wc -l)
+  refs=$(grep -rl "\b$t\b" /Users/YOURNAME/.hermes/profiles/*/SOUL.md 2>/dev/null | wc -l)
   deps=$(brew uses --installed $t 2>/dev/null | wc -l)
   [ "$refs" = "0" ] && [ "$deps" = "0" ] && echo "ORPHAN: $t"
 done

@@ -116,7 +116,7 @@ python3 has no yaml module.
 
 ```python
 import yaml
-path = '$HOME/.hermes/config.yaml'
+path = '/Users/YOURNAME/.hermes/config.yaml'
 c = yaml.safe_load(open(path))
 
 PROXY_URL = 'http://127.0.0.1:15721'

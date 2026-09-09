@@ -46,7 +46,7 @@ git commit -m "init"
 
 ## Installation / 安装
 
-### Option A: Batch Install (All 12 Profiles) — Recommended
+### Option A: Batch Install (All 36 Profiles) — Recommended
 
 ```powershell
 # Clone the repo
@@ -54,8 +54,9 @@ cd $env:TEMP
 git clone --depth 1 https://github.com/issac-new/SwarmTeam.git
 cd SwarmTeam
 
-# Run the installer (uses Git Bash, comes with Git for Windows)
-bash install-all.sh
+# Run the PowerShell installer (pure PowerShell, no bash needed)
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
+# Or double-click: install-windows.bat
 ```
 
 ### Option B: Install Individual Profiles
@@ -75,11 +76,15 @@ hermes profile install $env:TEMP\SwarmTeam\profiles\worker-researcher --alias -y
 ### Option C: Install a Single Team
 
 ```powershell
-# Install only the swarm team (4 profiles)
-bash install-all.sh --team swarm
+# Install only the aiteam team (6 profiles)
+Get-ChildItem "$env:TEMP\SwarmTeam\profiles\aiteam-*" -Directory | ForEach-Object {
+    hermes profile install $_.FullName --alias -y
+}
 
-# Install only the ops team (4 profiles)
-bash install-all.sh --team ops
+# Install only the pay team (4 profiles)
+Get-ChildItem "$env:TEMP\SwarmTeam\profiles\pay-*" -Directory | ForEach-Object {
+    hermes profile install $_.FullName --alias -y
+}
 ```
 
 ---
@@ -197,7 +202,7 @@ hermes profile update worker-coder
 
 ---
 
-## Profile Roster (12 profiles / 4 teams)
+## Profile Roster (36 profiles / 9 teams)
 
 | Team | Profiles | Purpose |
 |------|----------|---------|
@@ -205,5 +210,11 @@ hermes profile update worker-coder
 | **product** (2) | product-manager, product-researcher | Product management |
 | **ops** (4) | ops-sre, ops-incident-commander, ops-devops, ops-eval | DevOps & SRE |
 | **platform** (2) | platform-skill-miner, platform-ontology-curator | Self-improving system |
+| **aiteam** (6) | aiteam-orchestrator + architecture/multimodal/embodied/training/scout | AI research domain |
+| **pay** (4) | pay-orchestrator, pay-infra, pay-clearing, pay-fintech | Payment & clearing domain |
+| **data** (4) | data-orchestrator, data-infra, data-arch, data-flink | Realtime data stack (Flink/Paimon/MinIO) |
+| **[已移除]** (10) | [已移除]/physics/pdk/toolchain/backend/dv/ipcore/packtest/ams/ai | [已移除] / IC design automation |
+
+> [已移除] (7) and hack (4) profiles are excluded from this public distribution for privacy/security reasons.
 
 See `README.md` for detailed capabilities of each profile.

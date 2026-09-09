@@ -42,7 +42,7 @@ gh repo view <owner/repo> --json name,description,stargazerCount,primaryLanguage
 ```bash
 # 定位所有副本
 mdfind -name "<project>" 2>/dev/null | head -20
-find $HOME -maxdepth 3 -iname "*<project>*" 2>/dev/null | grep -v Library
+find /Users/YOURNAME -maxdepth 3 -iname "*<project>*" 2>/dev/null | grep -v Library
 
 # 对比副本差异，确定权威版本
 diff -rq <path_a> <path_b> | head -20
@@ -190,3 +190,54 @@ benchmark 核心数字，图片只是图表渲染，配额没了可跳过不影�
 - **被 patch 文件里的既有死链**（引用不存在的 skill）：patch 触碰该文件时
   顺手 `test -d` 核查其引用的技能路径，死链注明移除——否则蓝军越界扫描
   会把它算进你的修改账上。
+
+### 12. 融合前必查既有融合（2026-09-02 mattpocock/skills 融合实测）
+同一上游项目可能已被先前会话部分融合过。本次 patch systematic-debugging 时
+发现其 v1.1 已含 10 方法反馈环清单（Phase 1 §2，来源即 mattpocock/skills
+diagnosing-bugs）——盲 patch 会产生重复块（本会话注入 37 行后删除重来）。
+**纪律：patch 任何现有 skill 前先 `grep` 上游关键句/关键机制名**，确认未融合再动手；
+已融合则只补增量（本次实际增补的是 completion criterion + cleanup checklist 两条，
+10 方法清单维持原样）。判定基线用「关键机制名 grep 命中数=0 才算未融合」。
+
+### 13. fence 真目录与 symlink 混合挂载的分发差异（2026-09-02 实测）
+新 skill 落 master（`~/.hermes/skills/<cat>/<name>/`）后，各 profile 可见性分两路：
+- **symlink profile**（整类 symlink 指向 master）：立即自动可见，无需操作
+- **fence 真目录 profile**（skill-fence 按白名单拷贝的实体目录）：不会自动同步，
+  需 `ln -sfn ~/.hermes/skills/<cat> ~/.hermes/profiles/<p>/skills/<cat>` 补整类链接，
+  或等 fence 下次 apply 时同步
+实测本部署 33 profile = 20 symlink + 13 fence 真目录混合；6 个新 skill 落 master 后
+经一次批量补链 + fence 自动同步，33/33 全可达（md5 全比对 NONE mismatch）。
+**验证口径**：`os.path.isfile(profiles/<p>/skills/<cat>/<name>/SKILL.md)` 逐 profile 穿透检查，
+别只看 symlink 存在与否。
+
+### 14. 「调研分析 GitHub 项目」禁止止步于网页碎片（2026-09-03 OpenExecutive 实测）
+
+用户说「调研 https://github.com/X/Y」时，**禁止只用 web_extract 抓 README/docs 页就出报告**——
+GitHub 页面抓取给的是碎片（README 截断、docs 目录页只有文件名表），漏掉全部代码层机制。
+实测教训：首轮网页碎片分析 OpenExecutive，漏掉 Committee 对抗评审、outbound_guard、
+动态工作流引擎、failures/ 案例库、monitoring 管线 5 个核心机制，eval 场景数错（29→42），
+用户两次「重新分析下」后才改为 tarball clone + 源码深读。
+**纪律**：
+- Step 1「深度调研」的 clone 是**硬要求**——tarball 直下（pitfall #9）→ 分层映射
+  （`find -maxdepth 1 -type d` + 各模块 `wc -l` 排序找大头）→ 定向深读大模块源码。
+- 报告关键声明必须 file:line 可追溯（如 `committee.py:38-66`），禁「文档说有」式转述。
+- 网页抓取只用于 Step 0a 消歧和 LICENSE/README 元数据，不用于机制分析。
+- 分析完清理 /tmp clone，核心内容落 `references/<project>-source-analysis.md` 持久化。
+
+### 16. SOUL.md 受保护文件 guard 在无人值守会话会 approval 超时（2026-09-08 ARL-Next 实测）
+patch 任何 profile 的 SOUL.md 时 protected-file guard 会弹审批，headless/TUI 无人响应即 BLOCKED（"Silence is not consent"），且明令禁止换路径重试。**纪律**：SOUL 接线类变更放任务末尾单独做，被拦后立即 kanban_comment 挂起项详情（变更位置+内容+已落盘清单）+ kanban_create 留痕卡记录待批状态，绝不绕行（terminal/execute_code 改 SOUL 同属违规）。内容备好等用户批准后一次性补齐。
+
+### 15b. 「框架定义字段」≠「插件实际填充」（README 富元数据宣传陷阱）
+ARL-Next xing 框架 BasePlugin 定义 severity/description/remediation 字段，README 据此宣传富元数据 PoC 库，但 grep 实测仅 2/219 插件填充。**纪律**：评估「可移植的元数据体系」前必须统计实际填充率（grep -rl 计数/总数），定义存在（Present）与被使用（Wired）分开计分——移植时按实态描述，不按 README。
+
+### 15. 源码机制 → Hermes 落地的首选形态：协议层文档，非改源码（2026-09-03 实测）
+
+OpenExecutive 七机制融合全部落在 `_shared/` 协议文档 + config 约定 + 现有 kanban 原语组合，
+**零 Hermes 源码改动**：
+- 「工作流引擎」= YAML 定义文件 + kanban parents 依赖悬挂（approval_gate=卡 block 即天然暂停）
+- 「WaitForHuman」= kanban_block(kind="needs_input") 语义约定，不改状态机
+- 「出站防骚扰」= `_shared/outbound-guard.md` 协议 + config.yaml gateway 段参数
+- 「权限门」= action-risk.md 增补双维矩阵，未配置 profile 一律安全默认
+判定顺序：能用 prompt/协议层表达就不改源码；能用现有 kanban 原语组合就不造新引擎。
+批量接线模式：新 _shared 协议写完后，对引用既有姊妹文件（如 review-gates.md）的 profile
+批量插入 `> 详见 [_shared/X.md]` 引用行（本会话 27/27 profile 一轮 python 脚本完成）。

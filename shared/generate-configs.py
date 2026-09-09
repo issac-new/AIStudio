@@ -377,6 +377,16 @@ def generate_config_yaml(profile_name: str, profile_cfg: dict, existing_cfg: dic
         "enabled": profile_cfg.get("plugins", []),
     }
 
+    # gateway 段扩展: multiplex_profiles / multiplex_profile_allowlist 等
+    # (profiles.yaml 各 profile 的 gateway_extra → 生成 config.yaml 的 gateway:)
+    gw_extra = profile_cfg.get("gateway_extra") or {}
+    if gw_extra:
+        gw = cfg.setdefault("gateway", {})
+        if not isinstance(gw, dict):
+            gw = cfg["gateway"] = {}
+        for k, v in gw_extra.items():
+            gw[k] = v
+
     # Skills 收敛：支持两种声明（见 _apply_skills_curation 注释）：
     # - skills_enabled: 允许列表（推荐，抗平台新增技能静默渗入）
     # - skills_disabled: 屏蔽列表（旧模式，仅当未声明 skills_enabled 时生效）
@@ -501,6 +511,85 @@ def main():
         print(f"\n✅ Done. {len(profiles)} profiles generated.")
         print(f"   Source: {SHARED_DIR}/.env.common + {SHARED_DIR}/profiles.yaml")
         print(f"   Restart gateway: hermes -p orchestrator gateway run --replace")
+        _check_model_change_and_prompt_evals(profiles_data)
+
+
+def _check_model_change_and_prompt_evals(profiles_data: dict) -> None:
+    """模型变更检测 + Evals 提示（2026-08-27，来源 AI Native SDLC Playbook GAP-4 落地）。
+
+    对比本次生成前的模型快照与生成后的实际模型；发生变化则：
+      1. 打印醒目告警（换模型后必须先跑 _shared/evals/baseline.md 10 题回归）
+      2. 在 swarm 板建一张 [evals-required] 提醒卡（assignee=orchestrator）
+    只读对比 + 建卡，不阻塞生成流程（evals 通过线 8/10 的强制门在提醒卡里由
+    orchestrator 执行，本脚本不做模型调用）。
+    """
+    snapshot_path = SHARED_DIR / ".model-snapshot.json"
+
+    def _collect_models(data: dict) -> dict:
+        out = {}
+        shared_model = (data.get("shared_config") or {}).get("model")
+        for name, cfg in (data.get("profiles") or {}).items():
+            if isinstance(cfg, dict):
+                out[name] = cfg.get("model") or shared_model or "default"
+        return out
+
+    current = _collect_models(profiles_data)
+    previous = None
+    if snapshot_path.exists():
+        try:
+            import json
+            previous = json.loads(snapshot_path.read_text()).get("models")
+        except Exception:
+            previous = None
+
+    # 写新快照（幂等：内容相同则不重写）
+    import json
+    new_snap = json.dumps({"models": current}, ensure_ascii=False, indent=1)
+    try:
+        if snapshot_path.read_text() != new_snap + "\n":
+            snapshot_path.write_text(new_snap + "\n")
+    except FileNotFoundError:
+        snapshot_path.write_text(new_snap + "\n")
+
+    if previous is None:
+        print("  ℹ️ 模型快照初始化（首次运行，不触发 evals 提醒）")
+        return
+
+    changed = {p: (previous.get(p), m) for p, m in current.items() if previous.get(p) != m}
+    if not changed:
+        return
+
+    print("\n" + "!" * 60)
+    print("⚠️  检测到模型变更 —— 投产前必须先跑换模型 Evals 回归！")
+    for p, (old, new) in sorted(changed.items()):
+        print(f"   {p}: {old} → {new}")
+    print("   基准集: ~/.hermes/profiles/_shared/evals/baseline.md (10 题, 通过线 8/10)")
+    print("!" * 60 + "\n")
+
+    # 建 [evals-required] 提醒卡（best-effort，失败不阻塞）
+    try:
+        import sqlite3, time
+        db = HERMES_HOME / "kanban" / "boards" / "swarm" / "kanban.db"
+        con = sqlite3.connect(str(db), timeout=5)
+        task_id = f"t_evals{int(time.time())}"[:16]
+        detail = "\n".join(f"- {p}: {o} → {n}" for p, (o, n) in sorted(changed.items()))
+        body = (
+            "## [evals-required] 模型变更后强制回归\n\n"
+            f"变更明细:\n{detail}\n\n"
+            "按 _shared/evals/baseline.md 跑 10 题基准（delegate_task 并行），"
+            "≥8/10 方可投产；任一题编造数据直接不通过。"
+            "结果回帖本卡。来源: generate-configs.py 自动检测（Playbook GAP-4）。"
+        )
+        con.execute(
+            "INSERT INTO tasks (id, title, body, status, assignee, priority, created_at) "
+            "VALUES (?, ?, ?, 'ready', 'orchestrator', 25, ?)",
+            (task_id, "[evals-required] 换模型回归（自动生成）", body, int(time.time())),
+        )
+        con.commit()
+        con.close()
+        print(f"  📋 已建提醒卡: swarm/{task_id}")
+    except Exception as e:
+        print(f"  ⚠️ 建卡失败（不阻塞生成）: {e}")
 
 
 if __name__ == "__main__":

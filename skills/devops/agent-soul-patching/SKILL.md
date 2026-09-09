@@ -165,6 +165,37 @@ configuration files, so cross_profile restrictions don't apply). For
 skill updates, create a new orchestrator-profile skill (like this one)
 to capture the learning.
 
+### rg lookahead needs --pcre2 (silent zero-results trap)
+
+Default ripgrep engine rejects `(?![\w.-])` lookahead. Without `--pcre2`,
+rg errors and returns **0 matches**, which a naive script reads as "pattern
+not present, all clean" (hit in the 2026-09 path-relocation migration).
+
+**Rule**: batch-edit scans using lookahead MUST pass `--pcre2`; cross-check a
+zero-result scan by re-running the bare literal — if the literal hits but the
+lookahead version doesn't, the engine failed, not the data.
+
+### Bulk path-relocation migration (many files)
+
+When a shared-dir refactor moves docs and dozens of files reference old
+paths, per-file `patch` calls don't scale. Scripted exact-token replacement
+worked (103 files / 990 replacements, zero failures):
+
+1. Scan `rg --pcre2 '<old>(?![\w.-])'` — lookahead prevents matching
+   `.bak` / `.rollback_*` suffixed names.
+2. Classify hits: live rule files (SOUL.md/skills/_shared docs/references/
+   active cron jobs.json) vs append-only history (sessions/cache/logs/
+   spawn-trees/cron output/.rollback/.bak). Migrate live only — rewriting
+   history files is falsification; exempt them.
+3. tar backup ALL targets first (profiles/ is not a git repo); verify entry
+   count + sha256 samples before editing.
+4. Replace longest-token-first (sort patterns by length desc); per-file
+   assert old-token count 0 after; json.loads/yaml.safe_load guard
+   structured files.
+5. Final verify must be an independent re-scan script; link checkers must
+   prove discriminative power first — a regex matching nothing yields a
+   hollow "links=0 missing=0 PASS".
+
 ### Appending to a file read with pagination
 
 If you read a file with `offset` to check its end, then try to patch by

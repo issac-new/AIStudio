@@ -82,6 +82,27 @@ for cat in devops cybersecurity ...; do
 done
 ```
 
+## Mode 4: Tool-Bindability Audit（换工具可迁移性，2026-09-06 FDE 文18 融合）
+
+> 来源：FDE 文18「验证三问」之三：换工具带不走 = 只是从一个供应商换到另一个供应商，锁定问题没解决。
+> Hermes 等价问句：**换掉 ACP provider（claude/codex/zcode）、TUI 或 Gateway，本体层沉淀能否原样带走？**
+
+Run quarterly or before provider changes — audit steps:
+
+```bash
+# 1. 找出「工具绑定」型 skill/配置——内容里硬编码了特定 provider/端口/路径
+grep -rln "GLM-5.3-Flash\|127.0.0.1:15721\|claude.*bypassPermissions" \
+  ~/.hermes/skills/devops/ 2>/dev/null | head -20
+# 2. 判定：硬编码应集中在「路由/配置层文件」（config.yaml、fallback chain），
+#    skill 本体应写「协议语义」（如「夜间免费通道」「本地代理」）而非具体端点。
+#    命中的 skill 若属方法论本体（应可迁移）→ 记 hotspot，改写为环境无关表述+引用配置层。
+# 3. 快照完整性：skills/ + profiles/*/SOUL.md + profiles/_shared/ 三处
+#    tar 快照后，在 ~/hermes-docker-sandbox/workspace 等非 ~/.hermes 路径可解包即视为可迁移。
+```
+
+判定纪律（对齐文18 验证三问）：①企业认不认 → 用户是否持续使用该 skill（引用面）；②沉淀了多少 →
+reusable_pattern/derived_from 标记密度（asset-compound-metrics.py 复用率代理）；③带不带得走 → 本 Mode。
+
 ## Category Classification
 
 ### Must be REAL directories (custom skills, not in hermes-agent)
@@ -229,6 +250,16 @@ print(f"All profiles OK: {all_ok and broken_shared == 0}")
     inconsistently pick. Verify with `readlink -f` or `stat -f %i` (inode
     check) before creating.
 
+12. **`extra.skills_enabled_by_category` in config.yaml is DORMANT — never use
+    it as evidence of what loads** (proven 2026-08-27, t_2f7729e4). The runtime
+    skill switch is the `<profile>/skills/<category>` symlink (or real dir).
+    hack-forensics has `cybersecurity` listed in that config key yet loads ZERO
+    cybersecurity skills (no symlink); a stray symlink loads a category the
+    config never mentions. **Default keep policy for dedup: keep the variant
+    under the category the profile ACTUALLY loads, verified with
+    `hermes --profile <p> prompt-size --json` → `skills_breakdown` paths —
+    config keys are documentation, not switches.**
+
 ## Verification Before Acting (事实虚构防线)
 
 > **Incident 2026-08-19**: assistant listed `mom-feedback-coaching` as a
@@ -277,3 +308,57 @@ no, memory is wrong. Memory is sticky plan state, not artifact inventory.
   1-line references + 2-line subject-variant hints, kept [已移除] full
   (it carries the P0 投壶事件 case study). Smoke test: 6/6 profiles load the
   new skill, SOUL.md line count unchanged.
+
+## Cleanup Log (dedup outcomes)
+
+> Each entry records a real dedup pass: trigger, what was removed, what was
+> kept, and the pre/post `skill-health-audit.sh` Phase-3 duplicate count.
+
+### 2026-08-26 — t_7d6e4cbd (11 dup pairs, P1-4)
+- **Trigger**: `skill-health-audit.sh` reported 11 name-duplicated skill pairs.
+- **Strategy discovery**: task brief favored `cybersecurity-defense/` as the
+  keep path, but the harness actually loads skills for hack profiles from the
+  `cybersecurity/` tree (symlinked into profiles; `cybersecurity-defense/` is
+  NOT enabled in any `config.yaml` `skills_enabled_by_category` and is absent
+  from hack profile prompt snapshots). To avoid mutating runtime behavior and
+  breaking skill loads, we kept the **runtime-loaded** variant and removed the
+  redundant physical copy.
+- **Keep (11)**: `cybersecurity/...` (9 skills across subdomains:
+  identity-access-management, vulnerability-management, supply-chain-security,
+  root) + `cybersecurity-compliance/conducting-cyber-risk-assessment-…` +
+  `cybersecurity/identity-access-management/building-identity-governance-…`.
+- **Removed (11 physical dup dirs)** from `~/.hermes/skills`:
+  `cybersecurity-defense/` (9 skills), `cybersecurity/compliance-governance/
+  conducting-cyber-risk-assessment-with-nist-800-30`, and
+  `cybersecurity-compliance/building-identity-governance-lifecycle-process`.
+- **Content note**: 10/11 pairs differed in frontmatter only (richer desc kept),
+  1/11 (`conducting-cyber-risk-assessment-with-nist-800-30`) was byte-identical
+  — restored the within-`cybersecurity/compliance-governance/` copy after an
+  initial mis-keep so the count stayed 0 AND hack-recon retained visibility.
+- **Safety**: `scan_soul.py` + grep of `SOUL.md`/`config.yaml` showed no removal
+  would drop a skill from any profile's loaded set — the kept path is the one
+  that loads.
+- **Backup (P3 祖训)**: 22 dirs + category inventories →
+  `~/.hermes/profiles-archive/2026-08-26-235428-t_7d6e4cbd-skill-dedup/`.
+- **Verification**: re-ran `bash bin/skill-health-audit.sh`; Phase-3 dupe count
+  **11 → 0**; total skills 713 → 702; all 11 kept copies resolve via the
+  `cybersecurity` symlink into hack profiles.
+- **Open flags**:
+  1. `hack-exploit/SOUL.md` (L254, L262) references kept paths — no break, but
+     doc should be reconciled if category layout changes.
+  2. `cybersecurity-defense/` category itself remains (147 skills) and NOT
+     loaded by any profile — larger orphan-category cleanup is a separate
+     task, not this dedup.
+  3. **Doc↔runtime conflict — RESOLVED 2026-08-27 (t_2f7729e4, Direction B)**:
+     mechanical evidence showed `extra.skills_enabled_by_category` in
+     config.yaml is a **dormant key** (0% correlation with what loads —
+     hack-forensics has `cybersecurity` enabled in config yet loads ZERO
+     cybersecurity skills because no `skills/cybersecurity` symlink exists).
+     The actual runtime switch is the `<profile>/skills/<category>` symlink.
+     **Default keep policy: keep the category the profile ACTUALLY loads**,
+     verified via `hermes --profile <p> prompt-size --json` → skills_breakdown.
+     Direction A (editing the dormant config key) would be a no-op. A stray
+     `cybersecurity-defense` symlink (created 2026-08-27 18:59 by an unknown
+     session) silently added 147 skills to hack-exploit's prompt; removed with
+     restore instructions in the t_2f7729e4 card. Lesson: dedup keep-decisions
+     MUST be made against prompt-size evidence, not config keys.

@@ -1,11 +1,20 @@
 name: ops-eval
-version: 2.0.0
-description: "SwarmTeam distribution — ops-eval"
+version: 3.0.0
+description: "Workflow evaluator — metrics & improvement"
 hermes_requires: ">=0.12.0"
 author: "SwarmTeam"
 license: "MIT"
+team: ops
 env_requires:
-  - name: GLM_API_KEY
-    description: "Z.AI/GLM API key (primary LLM)"
-    required: true
+  - name: MATRIX_ACCESS_TOKEN
+    description: "Matrix access token (gateway, optional)"
+    required: false
+    default: ""
+  - name: WEIXIN_TOKEN
+    description: "WeChat bot token (optional)"
+    required: false
+    default: ""
+  - name: WEIXIN_ACCOUNT_ID
+    description: "WeChat bot account id (optional)"
+    required: false
     default: ""

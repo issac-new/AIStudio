@@ -24,7 +24,7 @@ skill is the multi-profile ops layer.
 - One hindsight-api daemon on :8888 serves ALL profiles. Only the orchestrator has a
   `hindsight/start.sh`; every other profile needs only `hindsight/config.json` pointing
   at `http://localhost:8888` with `mode=local_external`.
-- Team-shared banks: `hermes-XXXXXXXXXXXX-{team}` — `b24d7ac5d9c4` is the machine id,
+- Team-shared banks: `hermes-b24d7ac5d9c4-{team}` — `b24d7ac5d9c4` is the machine id,
   NOT the MAC address. Teams: swarm(4), hack(4), ops(4), product(2), [已移除](4), [已移除](6),
   [已移除](1), platform(2).
 - Do NOT run `~/.hermes/shared/setup-hindsight-banks.py` — it reverts config to
@@ -55,7 +55,7 @@ Audit recipe:
 - DELETE exists: `curl -X DELETE http://127.0.0.1:8888/v1/default/banks/{bank_id}` →
   `{"success":true,"deleted_count":N}`.
 - KEEP: active team banks still referenced by config.json. DELETE: old per-profile banks
-  from a superseded scheme (e.g. `hermes-XXXXXXXXXXXX-orchestrator`), the empty default
+  from a superseded scheme (e.g. `hermes-b24d7ac5d9c4-orchestrator`), the empty default
   `hermes` bank, and any bank belonging to archived profiles.
 - Archive profile dirs before deleting: `tar czf ~/hermes-archived-backup-<date>/archived-profiles.tar.gz *.archived/`.
 - Check kanban/gateway/launchd references to archived profiles before `rm -rf` (this
