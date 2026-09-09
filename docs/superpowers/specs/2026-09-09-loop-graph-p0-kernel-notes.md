@@ -118,6 +118,16 @@ e. **joinLedger fork 隔离测试补强**（Task 5 minor）：fork 后两个 run
 f. **predicate/reducers 四处收紧**（Task 1/2 minor）：reducers 判定改 `Object.hasOwn`；`getPath` 原型链收口；`PredicateError.name` 补齐；and/or/not 结构校验。
 g. **`estimateTickCost` 既有 bug**（loop 引擎 `budget-guard.ts:34`）：用 `loop.pattern`（'daily-triage' 等模板名）索引按成本等级（low/medium/high/very-high）建键的 costMap，永不命中、恒返回 1；`LoopInstance` 上根本没有成本等级字段（在 `PatternTemplate.costEstimate` 上）。P1 预算守卫接线时一并修（成本等级需落到 LoopInstance 或查模板表）。
 
+**终审补记（2026-09-09 whole-branch review 新增，原 a-g 之外）**：
+
+h. **interrupt 超时策略**（spec §4 承诺的 72h 默认 + onTimeout: escalate/auto-approve-with-log/fail）P0 未实现且此前漏列——human 节点 timeoutMs 是执行超时，不覆盖 awaiting-input 挂起态；需服务层时钟语义，属 P1 装配面。
+i. **`graph_specs` 持久化表**（spec §3.1 承诺 GraphSpec 纯 JSON 存表含 version）P0 只有进程内 registerGraph；P1 编译器落地前必须补存储落点。
+j. **偏差声明**：spec §2.2 L2 承诺的 `__iter:<edgeId>` 每回边迭代计数 channel，实现为节点级 `__iteration` 注入（语义近似、形态不同），本行即偏差声明。
+k. **两个已探针实证正确但缺 committed 回归测试的交互**（终审探针验证过行为正确）：join-with-loop（循环体内 join 每代恰激活 1 次）、guard 计数跨 resume（不重置不多给）；P1 把探针固化进 guards 测试。另有 maxDurationMs 熔断与 retry-goto 计数两条无测试路径。
+l. **Builder 动态边逃逸环检测**：`addConditionalEdge` 无 guard 参数，Builder 路径条件回边不过 build() 校验（hydrate/Spec 路径无此洞）；P1 给 addConditionalEdge 加 guard 参数。
+m. **notes §5 一句不准确**："Electron 内嵌 Node 版本不同 → 工厂降级兜底"不成立——`node:sqlite` 是顶层静态 import，模块缺失时 import 即抛、工厂不会执行；engines >=23 下可接受，P1 改动态 import 或修正表述。
+n. **node.starved 只在自然排空路径发出**；endCondition/hasEnd 完成路径下饿死的 join 不可观测——P1 声明语义或补发。
+
 ## 8. 门禁基线（P0 收口时）
 
 - `npm test`：83 文件，611 过 / 6 skipped（Task 8 新增 node:sqlite 2 例后 613 过）；`npm run build` client 构建通过。

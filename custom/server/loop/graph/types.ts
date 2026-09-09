@@ -150,23 +150,8 @@ export interface GraphDef {
 }
 
 // ============================================================================
-// 检查点模型
+// 检查点模型 — 权威定义为 event-log-store.ts 的 StoredCheckpoint（含 iterCounters/joinLedger）
 // ============================================================================
-
-export interface Checkpoint {
-  id: string
-  graphId: string
-  threadId: string
-  superStep: number
-  state: StateValues
-  /** 下一步待执行的节点 */
-  nextNodes: string[]
-  /** interrupt 状态 */
-  pendingInterrupts: Array<{ nodeId: string; value: unknown; id: string }>
-  timestamp: string
-  /** 累计花费 */
-  totalCost: number
-}
 
 // ============================================================================
 // 图实例 / 运行状态
