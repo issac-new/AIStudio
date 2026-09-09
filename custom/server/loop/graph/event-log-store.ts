@@ -15,6 +15,20 @@ export interface GraphLogEvent {
   payload: Record<string, unknown>
 }
 
+/** join 屏障簿记（可序列化）：随 checkpoint 进出，保证 resume 后 join 判定不丢前驱完成事实 */
+export interface JoinLedger {
+  /** 本 run 中已成功完成的节点 */
+  completed: string[]
+  /** 节点 → 最近一次完成的 superStep */
+  completedAtStep: Record<string, number>
+  /** 节点 → 最近一次被调度执行的 superStep */
+  lastRunStep: Record<string, number>
+}
+
+export function emptyJoinLedger(): JoinLedger {
+  return { completed: [], completedAtStep: {}, lastRunStep: {} }
+}
+
 export interface StoredCheckpoint {
   id: string
   runId: string
@@ -27,6 +41,8 @@ export interface StoredCheckpoint {
   totalCost: number
   startedAtMs: number
   createdAt: string
+  /** join 屏障簿记（Task 4 F2 引入；旧 checkpoint 可无此字段，读取方按 emptyJoinLedger 兜底） */
+  joinLedger?: JoinLedger
 }
 
 export interface EventLogStore {
@@ -97,10 +113,17 @@ class SqliteEventLogStore implements EventLogStore {
         id TEXT PRIMARY KEY, run_id TEXT NOT NULL, graph_id TEXT NOT NULL,
         super_step INTEGER NOT NULL, state TEXT NOT NULL, next_nodes TEXT NOT NULL,
         pending_interrupts TEXT NOT NULL, iter_counters TEXT NOT NULL,
-        total_cost REAL NOT NULL, started_at_ms INTEGER NOT NULL, created_at TEXT NOT NULL
+        total_cost REAL NOT NULL, started_at_ms INTEGER NOT NULL, created_at TEXT NOT NULL,
+        join_ledger TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_graph_cp_run ON graph_checkpoints(run_id, super_step);
     `)
+    // 已存在旧表（无 join_ledger 列）时容错升级；新表走 CREATE 带列，ALTER 必失败则忽略
+    try {
+      db.exec(`ALTER TABLE graph_checkpoints ADD COLUMN join_ledger TEXT`)
+    } catch {
+      // 列已存在（新表或已升级过的旧表）
+    }
   }
 
   async append(e: Omit<GraphLogEvent, 'seq'>): Promise<number> {
@@ -134,10 +157,11 @@ class SqliteEventLogStore implements EventLogStore {
   async saveCheckpoint(c: StoredCheckpoint): Promise<void> {
     this.db.prepare(
       `INSERT INTO graph_checkpoints
-       (id, run_id, graph_id, super_step, state, next_nodes, pending_interrupts, iter_counters, total_cost, started_at_ms, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, run_id, graph_id, super_step, state, next_nodes, pending_interrupts, iter_counters, total_cost, started_at_ms, created_at, join_ledger)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(c.id, c.runId, c.graphId, c.superStep, JSON.stringify(c.state), JSON.stringify(c.nextNodes),
-      JSON.stringify(c.pendingInterrupts), JSON.stringify(c.iterCounters), c.totalCost, c.startedAtMs, c.createdAt)
+      JSON.stringify(c.pendingInterrupts), JSON.stringify(c.iterCounters), c.totalCost, c.startedAtMs, c.createdAt,
+      JSON.stringify(c.joinLedger ?? emptyJoinLedger()))
   }
 
   async getLatestCheckpoint(runId: string): Promise<StoredCheckpoint | null> {
@@ -177,6 +201,8 @@ function rowToCheckpoint(r: Record<string, unknown>): StoredCheckpoint {
     totalCost: r.total_cost as number,
     startedAtMs: r.started_at_ms as number,
     createdAt: r.created_at as string,
+    // 旧行无 join_ledger 列值（NULL）→ 兜底空簿记
+    joinLedger: r.join_ledger ? JSON.parse(r.join_ledger as string) as JoinLedger : emptyJoinLedger(),
   }
 }
 

@@ -212,6 +212,8 @@ export type GraphEvent =
   | { type: 'node.error-routed'; graphId: string; threadId: string; nodeId: string; target: string; error: string; ts: string }
   /** 成本累计（recordCost 回调触发） */
   | { type: 'cost.recorded'; graphId: string; threadId: string; amount: number; totalCost: number; ts: string }
+  /** join 屏障永久阻塞：run 即将结束时仍有部分前驱完成、但永远等不到全部前驱的节点 */
+  | { type: 'node.starved'; graphId: string; threadId: string; nodeId: string; missing: string[]; ts: string }
 
 // ============================================================================
 // 依赖注入接口

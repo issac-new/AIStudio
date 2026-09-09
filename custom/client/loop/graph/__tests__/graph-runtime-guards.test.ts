@@ -1,7 +1,7 @@
 // overlay/custom/client/loop/graph/__tests__/graph-runtime-guards.test.ts
 import { describe, it, expect } from 'vitest'
 import { GraphRuntime } from '../../../../server/loop/graph/graph-runtime'
-import { GraphBuilder, fnNode } from '../../../../server/loop/graph/graph-definition'
+import { GraphBuilder, fnNode, when } from '../../../../server/loop/graph/graph-definition'
 import { reducers, type GraphEvent, type StateValues } from '../../../../server/loop/graph/types'
 import { InMemoryEventLogStore } from '../../../../server/loop/graph/event-log-store'
 
@@ -146,6 +146,8 @@ describe('join barrier', () => {
     const inst = await rt.start(g, 't6')
     expect(inst.status).toBe('completed')
     expect(order.indexOf('join')).toBeLessThan(order.indexOf('slow'))
+    // F1 回归：同代不重复激活——join 恰好执行 1 次
+    expect(order.filter(x => x === 'join')).toHaveLength(1)
   })
 })
 
@@ -220,5 +222,164 @@ describe('true resume', () => {
     const kinds = (await log.query('run-9')).map(e => e.kind)
     expect(kinds).toContain('interrupt.raised')
     expect(kinds).toContain('interrupt.resumed')
+  })
+
+  // F2 回归：join 前驱 fast 在 interrupt checkpoint 前完成，resume 后簿记恢复，join 正常激活
+  it('resume restores join ledger so cross-checkpoint join still fires', async () => {
+    const log = new InMemoryEventLogStore()
+    const rt = new GraphRuntime({ emitEvent: () => {} }, { eventLog: log, runId: 'run-join' })
+    const order: string[] = []
+    const g = builder()
+      .addNode(fnNode('start', async () => { order.push('start'); return {} }))
+      .addNode(fnNode('fast', async () => { order.push('fast'); return {} }))
+      .addNode(fnNode('gate', async (_s, ctx) => {
+        order.push('gate')
+        return { interrupt: { value: 'ok?', id: `gate-${ctx.threadId}-${ctx.superStep}` } }
+      }))
+      .addNode(fnNode('slow', async () => { order.push('slow'); return {} }))
+      .addNode(fnNode('join', async () => { order.push('join'); return {} }))
+      .setEntry('start')
+      .addEdge('start', 'fast')
+      .addEdge('start', 'gate')
+      .addEdge('gate', 'slow')
+      .addEdge('fast', 'join')
+      .addEdge('slow', 'join')
+      .build()
+    const inst = await rt.start(g, 'tj')
+    expect(inst.status).toBe('awaiting-input')
+    expect(order).toEqual(['start', 'fast', 'gate'])
+
+    const cp = await log.getLatestCheckpoint('run-join')
+    expect(cp).not.toBeNull()
+    // join 簿记随 checkpoint 持久化：fast 的完成事实不丢
+    expect(cp!.joinLedger?.completed).toContain('fast')
+
+    const rt2 = new GraphRuntime({ emitEvent: () => {} }, { eventLog: log, runId: 'run-join' })
+    const inst2 = await rt2.resumeFromCheckpoint(g, cp!, 'go', cp!.pendingInterrupts[0].id)
+    expect(inst2.status).toBe('completed')
+    expect(order).toEqual(['start', 'fast', 'gate', 'slow', 'join'])
+    expect(order.filter(x => x === 'join')).toHaveLength(1)
+  })
+})
+
+// F4 回归：条件边的 source 也纳入 join 屏障簿记
+describe('join barrier with conditional edges', () => {
+  it('conditional edge source counts as join predecessor', async () => {
+    const order: string[] = []
+    const rt = new GraphRuntime({ emitEvent: () => {} })
+    const g = builder()
+      .addNode(fnNode('start', async () => { order.push('start'); return {} }))
+      .addNode(fnNode('check', async () => { order.push('check'); return {} }))
+      .addNode(fnNode('a', async () => { order.push('a'); return {} }))
+      .addNode(fnNode('fast', async () => { order.push('fast'); return {} }))
+      .addNode(fnNode('join', async () => { order.push('join'); return {} }))
+      .setEntry('start')
+      .addEdge('start', 'check')
+      .addEdge('start', 'a')
+      .addEdge('a', 'fast')
+      .addConditionalEdge('check', when(() => true, 'join'))
+      .addEdge('fast', 'join')
+      .build()
+    const inst = await rt.start(g, 'tf4')
+    expect(inst.status).toBe('completed')
+    // join 必须等条件边前驱 check 与静态前驱 fast 都完成，且只执行一次
+    expect(order.filter(x => x === 'join')).toHaveLength(1)
+    expect(order.indexOf('join')).toBeGreaterThan(order.indexOf('check'))
+    expect(order.indexOf('join')).toBeGreaterThan(order.indexOf('fast'))
+  })
+})
+
+// F3 回归：同 super-step 并行节点写同一 channel 的合并序 = launch 序（BSP 语义），与完成先后无关
+describe('deterministic merge order', () => {
+  it('parallel nodes merge channel updates in launch order', async () => {
+    const rt = new GraphRuntime({ emitEvent: () => {} })
+    const g = builder()
+      .addNode(fnNode('start', async () => ({})))
+      .addNode(fnNode('a', async () => {
+        await new Promise(r => setTimeout(r, 20))
+        return { update: { log: ['A'], count: 1 } }
+      }))
+      .addNode(fnNode('b', async () => ({ update: { log: ['B'], count: 2 } })))
+      .setEntry('start')
+      .addEdge('start', 'a')
+      .addEdge('start', 'b')
+      .build()
+    const inst = await rt.start(g, 'tf3')
+    expect(inst.status).toBe('completed')
+    expect(inst.state.log).toEqual(['A', 'B'])  // append：launch 序（b 先完成但排在后）
+    expect(inst.state.count).toBe(2)            // overwrite：launch 序后者胜
+  })
+})
+
+describe('L4 checks precede completion paths', () => {
+  // F5 回归：最后一步 endCondition 满足但预算超支，仍判 failed 而非 completed
+  it('budget check fires even when endCondition would complete on the same step', async () => {
+    const rt = new GraphRuntime({ emitEvent: () => {}, recordCost: () => {} })
+    const g = builder()
+      .addNode(fnNode('spend', async (_s, ctx) => {
+        ctx.deps.recordCost?.(10)
+        return { update: { count: 1 } }
+      }))
+      .setEntry('spend')
+      .addEdge('spend', 'spend', 'loop', { maxIterations: 100 })
+      .setEndCondition(s => (s.count as number) >= 1)
+      .build()
+    g.budget = { maxCost: 5, maxTokens: 0 }
+    const inst = await rt.start(g, 'tf5a')
+    expect(inst.status).toBe('failed')
+  })
+})
+
+describe('send subtask events', () => {
+  // F5 回归：Send 子任务补发 node.completed（executeNode 已发 node.started）
+  it('send subtasks emit node.started and node.completed', async () => {
+    const events: GraphEvent[] = []
+    const rt = new GraphRuntime({ emitEvent: e => events.push(e) })
+    const g = builder()
+      .addNode(fnNode('dispatch', async () => ({
+        send: [
+          { node: 'worker', state: { count: 1 } },
+          { node: 'worker', state: { count: 2 } },
+        ],
+      })))
+      .addNode(fnNode('worker', async () => ({ update: {} })))
+      .setEntry('dispatch')
+      .build()
+    const inst = await rt.start(g, 'tf5b')
+    expect(inst.status).toBe('completed')
+    const started = events.filter(e => e.type === 'graph.node-start' && (e as any).nodeId === 'worker')
+    const completed = events.filter(e => e.type === 'graph.node-complete' && (e as any).nodeId === 'worker')
+    expect(started).toHaveLength(2)
+    expect(completed).toHaveLength(2)
+  })
+})
+
+describe('starved join signal', () => {
+  // F5 回归：fail-branch 与 join 组合——slow 失败被路由走，join 永远等不到 slow，run 结束时发 node.starved
+  it('emits node.starved when a join is permanently blocked by a failed predecessor', async () => {
+    const events: GraphEvent[] = []
+    const rt = new GraphRuntime({ emitEvent: e => events.push(e) })
+    const g = builder()
+      .addNode(fnNode('start', async () => ({})))
+      .addNode(fnNode('fast', async () => ({})))
+      .addNode({
+        id: 'slow', type: 'function', label: 'slow',
+        execute: async () => { throw new Error('boom') },
+        onError: { type: 'goto', target: 'fallback' },
+      })
+      .addNode(fnNode('fallback', async () => ({})))
+      .addNode(fnNode('join', async () => ({})))
+      .setEntry('start')
+      .addEdge('start', 'fast')
+      .addEdge('start', 'slow')
+      .addEdge('fast', 'join')
+      .addEdge('slow', 'join')
+      .build()
+    const inst = await rt.start(g, 'tf5c')
+    expect(inst.status).toBe('completed')
+    const starved = events.filter(e => (e as any).type === 'node.starved')
+    expect(starved).toHaveLength(1)
+    expect((starved[0] as any).nodeId).toBe('join')
+    expect((starved[0] as any).missing).toEqual(['slow'])
   })
 })
