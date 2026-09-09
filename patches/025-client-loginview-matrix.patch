@@ -24,8 +24,8 @@ index 92c2eb0..a002583 100644
 +const activeTab = ref<'matrix' | 'local'>('matrix');
 +
 +const homeserverUrl = ref("http://localhost:8008");
-+const matrixUsername = ref("testuser1:matrix.test");
-+const matrixPassword = ref("");
++const matrixUsername = ref("@swarm:matrix.test");
++const matrixPassword = ref("TestPass123!");
 +
 +const localUsername = ref("");
 +const localPassword = ref("");
