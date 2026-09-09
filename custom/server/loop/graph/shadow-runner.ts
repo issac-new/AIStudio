@@ -91,10 +91,11 @@ export class ShadowRunner {
 // 序列对比（E2E 验收 + graph-shadow-report.mjs 共用规则）
 // ---------------------------------------------------------------------------
 
-/** legacy 事件可比词汇表：新引擎日志里同类事件的 kind（时间戳外的全部差异忽略）。
- *  stage-transition 是阶段记账（与任务级事件重复锚定同一节点），不进对比；
- *  gate/stop-check 是 R3/P1 新能力，legacy 无对应物，shadow 侧同样排除。 */
-const COMPARABLE_KINDS = new Set(['run.started', 'node.completed', 'run.completed'])
+/** legacy 事件可比词汇表：五阶段节点级 node.completed（时间戳外的全部差异忽略）。
+ *  排除项及理由：stage-transition=阶段记账（与任务级事件重复锚定）；
+ *  run.started/run.completed=生命周期边界（legacy 的 created/completed 在 tick 之外，
+ *  且 legacy tick 不必然 completed——stopMet 语义两代不同）；gate/stop-check=R3/P1 新能力。 */
+const COMPARABLE_KINDS = new Set(['node.completed'])
 const LEGACY_NODE_IDS = new Set(['discovery', 'handoff', 'validation', 'persistence'])
 
 function kindOfGraphEvent(type: string): string {
