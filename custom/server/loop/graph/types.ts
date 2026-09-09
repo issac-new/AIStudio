@@ -225,4 +225,8 @@ export interface GraphDeps {
   requestHumanInput?: (nodeId: string, value: unknown) => Promise<unknown>
   /** 记录花费 */
   recordCost?: (amount: number) => void
+  /** 子图递归执行（subgraph 节点使用）；未提供时 subgraph 节点抛错 */
+  subgraphRunner?: (subgraphId: string, state: StateValues, ctx: NodeContext) => Promise<NodeResult>
+  /** 函数表：function 节点 config.execute 为字符串时按名解析 */
+  fnTable?: Record<string, NodeDef['execute']>
 }
