@@ -55,6 +55,8 @@ export interface GraphAssemblyOpts {
 
 export interface GraphAssembly {
   mode: GraphEngineMode
+  /** 主/影子事件日志（e2e 回放与 shadow 对比用） */
+  eventLogs: { main: EventLogStore; shadow: EventLogStore }
   graphService: GraphService
   shadowGraphService: GraphService | null
   router: Router
@@ -123,6 +125,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
 
   const assembly: GraphAssembly = {
     mode,
+    eventLogs: { main: eventLog, shadow: shadowEventLog },
     graphService,
     shadowGraphService,
     router,

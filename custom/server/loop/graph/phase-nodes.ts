@@ -547,7 +547,13 @@ async function runPersistence(
     const contract = contracts.find(c => c.id === v.contractId)
     if (!contract) continue
     if (deps.dryRun) {
+      // shadow 对齐：discovery/handoff 同样在 dryRun 下发标记事件（dryrun: 前缀），
+      // persistence 缺席会破坏双跑序列对比——事件只进 shadow 日志，非真实副作用
       log(`[dry-run] persistence skipped: persist for ${contract.id}`)
+      emitLoopEvent(ctx, {
+        type: 'loop.persisted', loopId: loop.id,
+        contractId: contract.id, artifact: `dryrun:${contract.id}`, ts: now(),
+      })
       continue
     }
     const artifact = await deps.persistence.persist(contract, v, loop, deps.dryRun)

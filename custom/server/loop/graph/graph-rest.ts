@@ -171,13 +171,14 @@ export async function resumeApprovalForContract(
   decision: 'approved' | 'rejected' | 'changes-requested',
 ): Promise<{ ok: boolean; runId?: string }> {
   if (!ID_RE.test(contractId) && !contractId.includes('/')) return { ok: false }
-  const interruptId = `approval:${contractId}`
+  const prefix = `approval:${contractId}` // phase-nodes 新版 id 带 attempts 后缀（approval:<id>@<n>）
   const runs = await deps.eventLog.listRuns()
   for (const { runId } of runs) {
     const cp = await deps.eventLog.getLatestCheckpoint(runId)
     if (!cp) continue
-    if (cp.pendingInterrupts.some(i => i.id === interruptId)) {
-      await deps.graphService.resumeRun(runId, interruptId, decision)
+    const hit = cp.pendingInterrupts.find(i => i.id === prefix || i.id.startsWith(`${prefix}@`))
+    if (hit) {
+      await deps.graphService.resumeRun(runId, hit.id, decision)
       return { ok: true, runId }
     }
   }
