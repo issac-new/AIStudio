@@ -1,4 +1,7 @@
 // P1 Task 7 — 生产装配：GRAPH_ENGINE 三态 / graph REST 真实化 / socket 转发 / 审批桥接
+// P1 修复波（2026-09-09 终审）——装配层缺陷修复：
+// C2 start() 生命周期 / C3 scheduleLoop 桥接 / C4 /graph socket 惰性绑定 /
+// I7 成本断链 / I9 崩溃恢复 + running loop 自动恢复 / I10 兼容事件（spawner 侧见其专属测试）
 import { describe, it, expect, vi } from 'vitest'
 import { createGraphAssembly, readEngineMode, type GraphAssemblyOpts } from '../../../../server/loop/graph/graph-assembly'
 import { createGraphRunRouter, resumeApprovalForContract, GraphSpecStore } from '../../../../server/loop/graph/graph-rest'
@@ -8,6 +11,9 @@ import { GraphService } from '../../../../server/loop/graph/graph-service'
 import { InMemoryEventLogStore } from '../../../../server/loop/graph/event-log-store'
 import { GraphBuilder, fnNode } from '../../../../server/loop/graph/graph-definition'
 import { reducers } from '../../../../server/loop/graph/types'
+import { compileLoopToDef } from '../../../../server/loop/graph/graph-compiler'
+import { appendContractsById } from '../../../../server/loop/graph/phase-nodes'
+import { BudgetGuard } from '../../../../server/loop/engine/budget-guard'
 import type { Router } from '@koa/router'
 import type { LoopInstance, TaskContract, LoopEvent } from '../../../../server/loop/types'
 import type { LoopStateStore } from '../../../../server/loop/store/state-store'
@@ -26,6 +32,30 @@ function makeLoop(): LoopInstance {
     budget: { maxCostPerTick: 1, maxCostTotal: 10, killMode: 'notify', warningThreshold: 0.8 },
     stats: { totalIterations: 0, tasksDiscovered: 0, tasksCompleted: 0, tasksBlocked: 0, totalCost: 0, currentIteration: 0 },
   }
+}
+
+/** 可记录的 store mock：loops 可预置，updateLoop/appendEvent 均生效并可断言 */
+function makeRecordingStore(loops: LoopInstance[] = []) {
+  const byId = new Map(loops.map(l => [l.id, { ...l }]))
+  const updates: Array<{ id: string; patch: Partial<LoopInstance> }> = []
+  const events: LoopEvent[] = []
+  const store: LoopStateStore = {
+    createLoop: async (l) => { byId.set(l.id, { ...l }) },
+    getLoop: async id => byId.get(id) ?? null,
+    listLoops: async () => [...byId.values()],
+    updateLoop: async (id, patch) => {
+      updates.push({ id, patch })
+      const cur = byId.get(id)
+      if (cur) byId.set(id, { ...cur, ...patch, stats: patch.stats ?? cur.stats } as LoopInstance)
+    },
+    deleteLoop: async () => {},
+    appendContract: async () => {}, getContract: async () => null,
+    queryContracts: async () => [], updateContract: async () => {},
+    appendVerification: async () => {},
+    appendEvent: async e => { events.push(e) },
+    queryEvents: async () => [], detectDrift: async () => ({ hasDrift: false, details: '' }),
+  } as LoopStateStore
+  return { store, byId, updates, events }
 }
 
 function makeStore(): LoopStateStore {
@@ -129,10 +159,10 @@ describe('createGraphAssembly', () => {
     expect(a.router.stack.some(l => l.path === '/api/graph/runs')).toBe(true)
   })
 
-  it('on mode: spawner wired, tick target routes to spawner', () => {
+  it('on mode: spawner wired, tick target routes to spawner', async () => {
     const a = createGraphAssembly(assemblyOpts({ mode: 'on' }))
     expect(a.spawner).not.toBeNull()
-    expect(a.loopTickTarget.manualTick('nope')).resolves.toEqual(null) // loop 不存在 → null 不抛
+    await expect(a.loopTickTarget.manualTick('nope')).resolves.toEqual(null) // loop 不存在 → null 不抛
   })
 
   it('shadow mode: shadow runner bound to a separate event log with dryRun deps', () => {
@@ -345,5 +375,233 @@ describe('compareEventSequences', () => {
     ]
     const result = compareEventSequences(legacyEvents, shadowEvents, 'l')
     expect(result.matchRate).toBeLessThan(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 C1 — 路由面契约（patch 202 挂载 graphAssembly.router 所依赖的最小面）
+// patch 侧挂载由 git apply --check / inject 门禁验证；此处钉住路由形状
+// ---------------------------------------------------------------------------
+
+describe('graph REST surface contract (C1)', () => {
+  it('router exposes runs CRUD/resume/fork/replay + specs', () => {
+    const a = createGraphAssembly(assemblyOpts({ mode: 'legacy' }))
+    const paths = a.router.stack.map(l => l.path)
+    expect(paths).toContain('/api/graph/runs')
+    expect(paths).toContain('/api/graph/runs/:id')
+    expect(paths).toContain('/api/graph/runs/:id/resume')
+    expect(paths).toContain('/api/graph/runs/:id/fork')
+    expect(paths).toContain('/api/graph/runs/:id/replay')
+    expect(paths).toContain('/api/graph/specs')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 C4 — /graph namespace 惰性绑定（routes.ts 模块加载时 io 必为 null）
+// ---------------------------------------------------------------------------
+
+function makeIOLike() {
+  const rooms = new Map<string, Array<{ event: string; payload: unknown }>>()
+  const io: SocketIOLike = {
+    of: () => ({
+      on: (_e, listener) => {
+        listener({ on: () => {}, join: () => {}, leave: () => {}, emit: () => {} })
+      },
+      to: (room: string) => ({
+        emit: (event: string, payload: unknown) => {
+          const list = rooms.get(room) ?? []
+          list.push({ event, payload })
+          rooms.set(room, list)
+        },
+      }),
+    }),
+  }
+  return { io, rooms }
+}
+
+describe('graph socket lazy binding (C4)', () => {
+  it('binds lazily once the io factory starts returning an instance', async () => {
+    let ioInstance: SocketIOLike | null = null
+    const a = createGraphAssembly(assemblyOpts({
+      mode: 'legacy',
+      io: () => ioInstance,
+      socketRetryMs: 1,
+      socketRetryMax: 50,
+    }))
+    // 模块加载期 getGroupChatServer() 尚为 null → 首次绑定必然失败，进入重试
+    expect(a.socketConnected()).toBe(false)
+    ioInstance = makeIOLike().io
+    await vi.waitFor(() => expect(a.socketConnected()).toBe(true))
+    a.stop()
+  })
+
+  it('caps retries and warns exactly once via the assembly log channel', async () => {
+    const log = vi.fn()
+    const a = createGraphAssembly(assemblyOpts({
+      io: () => null,
+      socketRetryMs: 1,
+      socketRetryMax: 3,
+      log,
+    }))
+    await vi.waitFor(() =>
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('not bound after 3 retries')))
+    expect(log.mock.calls.filter(c => String(c[0]).includes('not bound'))).toHaveLength(1)
+    a.stop()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 C3 — scheduleLoop 桥接（on 模式下 controllers/loop.ts 创建/更新 loop 后调用）
+// ---------------------------------------------------------------------------
+
+function cronSchedule(): LoopInstance['schedule'] {
+  return { mode: 'cron', cron: '*/5 * * * *', timezone: 'UTC' }
+}
+
+/** 永不停机谓词：stopMet channel 恒 false → run 结束后 idle + 重排（区别于空串停机条件的启发式兜底） */
+const NEVER_STOP = JSON.stringify({ op: 'truthy', path: 'stopMet' })
+
+describe('loopTickTarget.scheduleLoop (C3)', () => {
+  function onAssembly(rec: ReturnType<typeof makeRecordingStore>) {
+    return createGraphAssembly(assemblyOpts({
+      mode: 'on',
+      engineDeps: { ...makeEngineDeps(), store: rec.store } as unknown as GraphAssemblyOpts['engineDeps'],
+    }))
+  }
+
+  it('ticks a due idle loop immediately (scheduleLoop → spawner.tickNow)', async () => {
+    const loop = makeLoop()
+    loop.stopCondition = NEVER_STOP
+    loop.schedule = cronSchedule()
+    loop.nextTickAt = new Date(Date.now() - 60_000).toISOString()
+    const rec = makeRecordingStore([loop])
+    const a = onAssembly(rec)
+    a.loopTickTarget.scheduleLoop(loop)
+    // run 全链路（discovery 空 → stop-check end）→ 回 idle + 重排 + 迭代数 +1
+    await vi.waitFor(() => {
+      const cur = rec.byId.get('loop-1')!
+      expect(cur.status).toBe('idle')
+      expect(cur.stats.currentIteration).toBe(1)
+      expect(new Date(cur.nextTickAt!).getTime()).toBeGreaterThan(Date.now())
+    })
+    expect(rec.updates.some(u => u.patch.status === 'running')).toBe(true)
+    a.stop()
+  })
+
+  it('ignores manual schedule, future nextTickAt and non-idle loops', async () => {
+    const manual = makeLoop()
+    const future = makeLoop(); future.id = 'future'
+    future.schedule = cronSchedule()
+    future.nextTickAt = new Date(Date.now() + 3600_000).toISOString()
+    const running = makeLoop(); running.id = 'running'
+    running.schedule = cronSchedule()
+    running.nextTickAt = new Date(Date.now() - 60_000).toISOString()
+    running.status = 'running'
+    const rec = makeRecordingStore([manual, future, running])
+    const a = onAssembly(rec)
+    a.loopTickTarget.scheduleLoop(manual)
+    a.loopTickTarget.scheduleLoop(future)
+    a.loopTickTarget.scheduleLoop(running)
+    await new Promise(r => setTimeout(r, 20))
+    expect(rec.updates).toHaveLength(0)
+    a.stop()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 C2 + I9 — start()：注册表重建 + running loop 孤儿恢复 + 轮询启动
+// ---------------------------------------------------------------------------
+
+describe('assembly start(): crash recovery (C2/I9)', () => {
+  function onAssembly(rec: ReturnType<typeof makeRecordingStore>, over: Partial<GraphAssemblyOpts> = {}) {
+    return createGraphAssembly(assemblyOpts({
+      mode: 'on',
+      engineDeps: { ...makeEngineDeps(), store: rec.store } as unknown as GraphAssemblyOpts['engineDeps'],
+      ...over,
+    }))
+  }
+
+  it('rebuilds the run registry, rewrites stale running loops to paused and arms auto-resume', async () => {
+    const loop = makeLoop()
+    loop.status = 'running'
+    loop.stopCondition = NEVER_STOP
+    loop.schedule = cronSchedule()
+    const rec = makeRecordingStore([loop])
+    const eventLog = new InMemoryEventLogStore()
+    await eventLog.append({ runId: 'run-loop-loop-1-7', graphId: 'loop-loop-1', ts: 1, kind: 'run.started', payload: {} })
+    const a = onAssembly(rec, { eventLog })
+    await a.start()
+
+    // 注册表重建：重启前的 run 重新可查（awaiting-input 的仍可 resume）
+    expect(a.graphService.getRun('run-loop-loop-1-7')).not.toBeNull()
+    // 崩溃孤儿：running → paused + 过期 nextTickAt（恢复标记）+ restart-recovery 台账事件
+    const recovered = rec.byId.get('loop-1')!
+    expect(recovered.status).toBe('paused')
+    expect(new Date(recovered.nextTickAt!).getTime()).toBeLessThanOrEqual(Date.now())
+    expect(rec.events.some(e =>
+      e.type === 'loop.stuck' && String((e as { reason?: string }).reason).includes('restart-recovery'))).toBe(true)
+
+    // spawner 轮询命中白名单 → 自动恢复触发一次，跑完回 idle + 重排
+    await a.spawner!.poll()
+    await vi.waitFor(() => {
+      const cur = rec.byId.get('loop-1')!
+      expect(cur.status).toBe('idle')
+      expect(new Date(cur.nextTickAt!).getTime()).toBeGreaterThan(Date.now())
+    })
+    // 白名单一次性：loop 已 idle，重复 poll 不再触发（无新迭代）
+    const iterations = rec.byId.get('loop-1')!.stats.currentIteration
+    await a.spawner!.poll()
+    await new Promise(r => setTimeout(r, 20))
+    expect(rec.byId.get('loop-1')!.stats.currentIteration).toBe(iterations)
+    a.stop()
+  })
+
+  it('never auto-resumes user-paused loops (absent from the recovery whitelist)', async () => {
+    const loop = makeLoop()
+    loop.status = 'paused'
+    loop.schedule = cronSchedule()
+    loop.nextTickAt = new Date(Date.now() - 60_000).toISOString()
+    const rec = makeRecordingStore([loop])
+    const a = onAssembly(rec)
+    await a.start()
+    await a.spawner!.poll()
+    await new Promise(r => setTimeout(r, 20))
+    expect(rec.byId.get('loop-1')!.status).toBe('paused')
+    expect(rec.updates.filter(u => u.id === 'loop-1')).toHaveLength(0)
+    a.stop()
+  })
+
+  it('is idempotent: a second start() neither re-rebuilds nor re-arms recovery', async () => {
+    const loop = makeLoop()
+    loop.status = 'running'
+    const rec = makeRecordingStore([loop])
+    const a = onAssembly(rec)
+    await a.start()
+    const stuckCount = rec.events.filter(e => e.type === 'loop.stuck').length
+    await a.start()
+    expect(rec.events.filter(e => e.type === 'loop.stuck')).toHaveLength(stuckCount)
+    a.stop()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 I7 — 成本断链闭合：phase 节点 → recordCost → run 累计 + cost.recorded 事件日志
+// ---------------------------------------------------------------------------
+
+describe('cost wiring (I7)', () => {
+  it('streams phase-node cost into the run: recordCost calls, cost.recorded events, totalCost', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const costs: number[] = []
+    const service = new GraphService({ eventLog, deps: { recordCost: (n: number) => costs.push(n) } })
+    const def = compileLoopToDef(makeLoop(), makeEngineDeps() as never, { appendById: appendContractsById })
+    service.registerGraph(def)
+    const { runId } = await service.startRun(def.id)
+
+    const tier = new BudgetGuard(() => {}).estimateTickCost(makeLoop())
+    expect(costs.length).toBeGreaterThanOrEqual(1) // discovery 至少计费一次
+    expect(costs.every(c => c === tier)).toBe(true) // 档位单一事实源 = BudgetGuard.estimateTickCost
+    const events = await eventLog.query(runId)
+    expect(events.some(e => e.kind === 'cost.recorded')).toBe(true)
+    expect(service.getRun(runId)!.instance.totalCost).toBe(tier * costs.length)
   })
 })

@@ -1,17 +1,19 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index b7a3063..ef254ae 100644
+index b7a3063d..7eaa0539 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -92,6 +92,8 @@ import { HookManager } from '../custom/loop/engine/hooks'
+@@ -92,6 +92,10 @@ import { HookManager } from '../custom/loop/engine/hooks'
  import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
  import { emitLoopEvent } from '../custom/loop/services/loop-socket'
  import { getGroupChatServer } from '../modules/studio/controllers/group-chat'
 +// overlay[loop-graph-assembly]: P1 graph engine (GRAPH_ENGINE=legacy|shadow|on, 默认 legacy)
 +import { createGraphAssembly } from '../custom/loop/graph/graph-assembly'
++import { createProductionVerifierDeps } from '../custom/loop/graph/verifier-bridge'
++import { makeInjectWorkspaceContext } from '../custom/loop/graph/workspace-context'
  import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
  
  let loopStore: any = null
-@@ -120,7 +122,31 @@ const loopEngine = new LoopEngine({
+@@ -120,7 +124,42 @@ const loopEngine = new LoopEngine({
    },
  })
  const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
@@ -23,16 +25,27 @@ index b7a3063..ef254ae 100644
 +  engineDeps: {
 +    store: lazyStore,
 +    dryRun: false,
-+    connectors: [],
++    // I8（终审）: 与 patch 134 同源 connector 装配——WebhookConnector 单例（webhook REST
++    // 入队 payload 经 discover 排空为契约）。GitHub/本地 Git 连接器需 repo/token 配置面，
++    // P1 未引入配置源，与 legacy 生产一致（仅 webhook 发现）。
++    connectors: [loopWebhookConnector],
 +    worktreeManager: new WorktreeManager(),
 +    dispatcher: new SubagentDispatcher(),
-+    verifier: new Verifier(),
-+    // P1: 产物落库适配器（真实 kanban 写入随 P2 IA 装配注入）
++    // I5（终审）: 人工审批门禁闭环——requestHumanApproval 返回 'pending'，validation
++    // 节点转 approval:<contractId>@<n> interrupt（run → awaiting-input），真人经
++    // POST /api/loop/contracts/:id/approve（下方 resumeApproval 桥）或
++    // POST /api/graph/runs/:id/resume 应答。judge 在 P1 无模型调用方，不注入（桥内 warn 一次）。
++    verifier: new Verifier(createProductionVerifierDeps()),
++    // P1 交付机制：产物落库为 stub（`artifact:<id>` 占位，不写真实 kanban）；
++    // 真实 kanban 写入随 P2 IA 装配注入（README caveat 已同步声明）。
 +    persistence: { persist: async (contract: any) => `artifact:${contract.id}` },
++    // I6（终审）: R2 workspace 上下文注入——handoff 派发前物化 GRAPH-CONTEXT.md 进
++    // worktree（并给 CLAUDE.md/AGENTS.md 追加引用行）；失败不阻断派发（handoff 节点兜底）
++    injectWorkspaceContext: makeInjectWorkspaceContext({ store: lazyStore }),
 +    log: (m: string) => { console.log(`[graph] ${m}`) },
 +  },
 +})
-+// GRAPH_ENGINE=on：loop REST tick/webhook 分流到 RunSpawner；legacy/shadow 保持 patch 134 装配
++// GRAPH_ENGINE=on：loop REST tick/webhook/schedule 分流到 RunSpawner；legacy/shadow 保持 patch 134 装配
 +const loopRouter = createLoopRouter(
 +  lazyStore,
 +  graphAssembly.mode === 'on'
@@ -44,3 +57,17 @@ index b7a3063..ef254ae 100644
  const graphRouter = createGraphRouter(lazyStore)
  // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
  // WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建
+@@ -223,6 +262,13 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
++  // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
++  // 此前只建未挂载 → 生产 404
++  app.use(graphAssembly.router.routes())
++  // C2（终审）: 启动 spawner/shadow 轮询 + 崩溃恢复重建（幂等）。bootstrap 无外部可注册的
++  // 优雅停机步骤（http.ts additionalShutdownSteps 模块私有），进程退出即停（interval 不跨
++  // 进程）；graphAssembly.stop() 预留给后续停机钩子接线。
++  graphAssembly.start().catch(e => console.error('[graph] assembly start failed:', e))
+   app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队
+   initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
+ }

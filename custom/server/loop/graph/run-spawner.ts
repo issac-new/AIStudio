@@ -9,7 +9,7 @@
 //   - failed  → 连续失败熔断（§7B.7：默认 10 次自动暂停 loop 并告警），未达阈值则重排
 // 一个 run = 一个 tick（stop-check 节点 end 终止），跨 tick 无常驻图状态。
 
-import type { LoopInstance, LoopEvent } from '../types'
+import type { LoopInstance, LoopEvent, LoopStats } from '../types'
 import type { LoopStateStore } from '../store/state-store'
 import type { GraphService } from './graph-service'
 import type { GraphDef, GraphEvent } from './types'
@@ -25,6 +25,17 @@ export interface RunSpawnerOpts {
   intervalMs?: number
   /** §7B.7 连续失败熔断阈值，默认 10（Jira Automation scheduled 规则同款语义） */
   maxConsecutiveFailures?: number
+  /**
+   * loop.* 兼容事件出口（装配层桥接：store 台账 + loop socket 房间，前端/matrix-bot 消费）。
+   * 缺省直写 store（不走 socket）——仅为无装配的单测兜底。
+   */
+  emitLoopEvent?: (event: LoopEvent) => void
+  /**
+   * 崩溃恢复白名单（I9）：装配启动时由 status=running 重建为 paused 的 loop id。
+   * poll 命中白名单且 nextTickAt 已过 → 自动恢复触发一次（触发后移除）。
+   * 用户主动 paused 的 loop 永不入白名单，不会被误恢复。
+   */
+  autoResumeIds?: Set<string>
   log?: (msg: string) => void
 }
 
@@ -63,11 +74,19 @@ export class RunSpawner {
     this.webhookTimers.clear()
   }
 
-  /** 30s 轮询：到期且 idle 的 loop → 发起 run */
+  /** 30s 轮询：到期且 idle 的 loop → 发起 run；崩溃恢复白名单内的 paused loop 同判据自动恢复 */
   async poll(): Promise<void> {
     const loops = await this.opts.store.listLoops()
     const now = Date.now()
     for (const loop of loops) {
+      if (loop.status === 'paused') {
+        if (!this.opts.autoResumeIds?.has(loop.id)) continue
+        if (!loop.nextTickAt) continue
+        if (new Date(loop.nextTickAt).getTime() > now) continue
+        this.opts.autoResumeIds.delete(loop.id)
+        await this.tickNow(loop.id, { resumePaused: true })
+        continue
+      }
       if (loop.status !== 'idle') continue
       if (!loop.nextTickAt) continue
       if (new Date(loop.nextTickAt).getTime() > now) continue
@@ -76,14 +95,22 @@ export class RunSpawner {
     }
   }
 
-  /** 手动 tick（REST POST /api/loop/loops/:id/tick 在 GRAPH_ENGINE=on 时改走这里） */
-  async tickNow(loopId: string): Promise<{ runId: string } | null> {
+  /** 该 loop 是否正有 run 在本进程内执行——崩溃恢复扫描据此跳过本进程刚发起的 tick */
+  isTicking(loopId: string): boolean {
+    return this.ticking.has(loopId)
+  }
+
+  /** 手动 tick（REST POST /api/loop/loops/:id/tick 在 GRAPH_ENGINE=on 时改走这里）。
+   *  resumePaused：崩溃恢复专用——poll 从白名单触发时放行 paused 状态（用户主动暂停
+   *  的 loop 走不到这条路径，见 autoResumeIds 注释）。 */
+  async tickNow(loopId: string, opts?: { resumePaused?: boolean }): Promise<{ runId: string } | null> {
     if (this.ticking.has(loopId)) return null
     this.ticking.add(loopId)
     try {
       const loop = await this.opts.store.getLoop(loopId)
       if (!loop) throw new Error(`Loop not found: ${loopId}`)
-      if (loop.status !== 'idle') return null
+      const tickable = loop.status === 'idle' || (opts?.resumePaused === true && loop.status === 'paused')
+      if (!tickable) return null
 
       const def = this.opts.compile(loop)
       this.graphToLoop.set(def.id, loopId)
@@ -134,6 +161,29 @@ export class RunSpawner {
 
   // ---------------------------------------------------------------------------
 
+  /** loop.* 兼容事件出口：装配桥（store 台账 + loop socket）优先，缺省直写 store */
+  private emitCompat(event: LoopEvent): void {
+    if (this.opts.emitLoopEvent) {
+      this.opts.emitLoopEvent(event)
+      return
+    }
+    this.opts.store.appendEvent(event).catch(() => {})
+  }
+
+  /**
+   * 旧引擎 loop.tick-complete 兼容补发（I10）：legacy LoopEngine 每个 tick 结束都发
+   * `loop.tick-complete`（loopId/iteration/stats/ts），前端 LoopDetailView/store 与
+   * matrix-bot 消费它刷新 stats。图引擎一个 run = 一个 tick，run 落终态
+   * （completed/failed）时在此补发同形状事件，消费方零改动。
+   */
+  private emitTickComplete(loopId: string, stats: LoopStats): void {
+    this.emitCompat({
+      type: 'loop.tick-complete', loopId,
+      iteration: stats.currentIteration,
+      stats, ts: new Date().toISOString(),
+    })
+  }
+
   private async handleGraphEvent(e: GraphEvent): Promise<void> {
     if (e.type !== 'graph.completed' && e.type !== 'graph.failed') return
     const loopId = this.graphToLoop.get(e.graphId)
@@ -149,15 +199,16 @@ export class RunSpawner {
           status: 'completed', stage: 'scheduling', nextTickAt: null,
           stats: { ...loop.stats },
         })
-        this.opts.store.appendEvent({
+        this.emitCompat({
           type: 'loop.completed', loopId, finalStats: loop.stats, ts: new Date().toISOString(),
-        } satisfies LoopEvent).catch(() => {})
+        })
       } else {
         await this.opts.store.updateLoop(loopId, {
           status: 'idle', stage: 'scheduling', nextTickAt: computeNextTick(loop),
           stats: { ...loop.stats },
         })
       }
+      this.emitTickComplete(loopId, loop.stats)
       return
     }
 
@@ -166,11 +217,11 @@ export class RunSpawner {
     this.consecutiveFailures.set(loopId, failures)
     if (failures >= this.maxConsecutiveFailures) {
       await this.opts.store.updateLoop(loopId, { status: 'paused', nextTickAt: null })
-      await this.opts.store.appendEvent({
+      this.emitCompat({
         type: 'loop.stuck', loopId,
         reason: `circuit breaker: ${failures} consecutive failed runs`,
         ts: new Date().toISOString(),
-      } satisfies LoopEvent)
+      })
       this.consecutiveFailures.set(loopId, 0)
       this.log(`run-spawner circuit breaker paused loop ${loopId} after ${failures} consecutive failures`)
     } else {
@@ -178,5 +229,6 @@ export class RunSpawner {
         status: 'idle', nextTickAt: computeNextTick(loop),
       })
     }
+    this.emitTickComplete(loopId, loop.stats)
   }
 }

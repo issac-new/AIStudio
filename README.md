@@ -100,7 +100,13 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 - 服务端 REST 路由 + Socket.IO namespace（patch 134/135）+ pg 依赖（patch 138）
 - 状态迁移：`scripts/loop-migrate.mjs`（Local → Matrix）、`loop-migrate-saas.mjs`（Matrix → PostgreSQL）
 
-**图引擎接管（P1，patch 202）**：LoopInstance 经编译器变为 GraphSpec（六节点：五阶段 + gate 质量门禁），由图内核执行——事件日志（`node:sqlite`，零新依赖）为唯一事实源，真 checkpoint/resume/fork、HITL interrupt 审批闭环、守卫 repair 回边、R2 workspace 上下文注入（GRAPH-CONTEXT.md）。`GRAPH_ENGINE` 环境变量三态切换：`legacy`（默认，旧引擎原样）/ `shadow`（双跑：新引擎 dryRun 对比事件序列，不写副作用）/ `on`（新引擎接管调度）。新 REST 面：`/api/graph/runs`（CRUD/resume/fork/replay）与 `/api/graph/specs`；socket `/graph` namespace 按 run 订阅。旧数据迁移：`node scripts/graph-migrate.mjs`（dry-run 默认，`--apply` 落库幂等）。设计文档：`docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md`。
+**图引擎接管（P1，patch 202）**：LoopInstance 经编译器变为 GraphSpec（六节点：五阶段 + gate 质量门禁），由图内核执行——事件日志（`node:sqlite`，零新依赖）为唯一事实源，真 checkpoint/resume/fork、HITL interrupt 审批闭环、守卫 repair 回边、R2 workspace 上下文注入（GRAPH-CONTEXT.md）。`GRAPH_ENGINE` 环境变量三态切换：`legacy`（默认，旧引擎原样）/ `shadow`（双跑：新引擎 dryRun 对比事件序列，不写副作用）/ `on`（新引擎接管调度，详见下方 caveat）。新 REST 面：`/api/graph/runs`（CRUD/resume/fork/replay）与 `/api/graph/specs`；socket `/graph` namespace 按 run 订阅。旧数据迁移：`node scripts/graph-migrate.mjs`（dry-run 默认，`--apply` 落库幂等）。设计文档：`docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md`。
+
+**P1 图引擎 caveat（终审修复波后仍成立的交付边界）**：
+- `on` 模式接管调度，但失败语义与 legacy 有偏移：run 失败时 loop 重写为 `idle` 并按 `computeNextTick` 重排（连续失败达 10 次熔断转 `paused`）；legacy 的 tick 异常会把 loop 置 `status='failed'`。前端按 `paused/idle` 展示 on 模式失败态。
+- `on` 模式产物落库为 stub（`persist` 返回 `artifact:<id>` 占位，不写真实 kanban）——P1 交付机制，真实 kanban 写入随 P2 IA 装配注入。
+- judge 验证在 P1 未接线（无可用模型调用方）：契约带 judge intent 时 judge 项跳过，程序化 + 人工门禁照常生效（装配时 warn 一次）；人工审批门禁已闭环（`requestHumanApproval` → `pending` → validation 节点 interrupt → REST resume）。
+- connector 发现与 legacy 生产同源（仅 webhook；GitHub/本地 Git 连接器待配置面引入后接入）。
 
 ### 🎨 品牌与网关通知
 

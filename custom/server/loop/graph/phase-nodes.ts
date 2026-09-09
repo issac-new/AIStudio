@@ -26,8 +26,19 @@ import type { LoopStateStore } from '../store/state-store'
 import type { WorktreeManager } from '../engine/worktree-manager'
 import type { SubagentDispatcher } from '../engine/subagent-dispatcher'
 import type { Verifier } from '../engine/verifier'
+import { BudgetGuard } from '../engine/budget-guard'
 
 const execFileAsync = promisify(execFile)
+
+/** I7 成本断链闭合：阶段节点完成即按 BudgetGuard.estimateTickCost 的档位计费
+ *  （档位表单一事实源在 budget-guard，不在此复制）。runtime 的 recordCost 包装
+ *  负责 run 维度累计（instance.totalCost）并把 cost.recorded 事件写进事件日志。
+ *  dryRun（shadow 双跑）同样计费——成本序列同属双跑观测面，且不产生对外副作用。 */
+const costEstimator = new BudgetGuard(() => {})
+
+function recordPhaseCost(loop: LoopInstance, ctx: NodeContext): void {
+  ctx.deps.recordCost?.(costEstimator.estimateTickCost(loop))
+}
 
 /** 编译器与节点共用的 channel 键约定。
  *  reducer 约定：contracts（appendContractsById）/ verifications / gateResults / repairQueue /
@@ -291,10 +302,16 @@ export function createPhaseNode(
   const execute = async (state: StateValues, ctx: NodeContext) => {
     await transition(loop, deps, ctx, from, to, `${phase} node start`)
 
-    if (phase === 'discovery') return runDiscovery(loop, deps, ctx)
-    if (phase === 'handoff') return runHandoff(loop, deps, ctx, state)
-    if (phase === 'validation') return runValidation(loop, deps, ctx, state)
-    return runPersistence(loop, deps, ctx, state)
+    // 阶段工作完成即计费（含 validation 的审批 interrupt 早退——程序化验证已真实执行）
+    const result = phase === 'discovery'
+      ? await runDiscovery(loop, deps, ctx)
+      : phase === 'handoff'
+        ? await runHandoff(loop, deps, ctx, state)
+        : phase === 'validation'
+          ? await runValidation(loop, deps, ctx, state)
+          : await runPersistence(loop, deps, ctx, state)
+    recordPhaseCost(loop, ctx)
+    return result
   }
 
   return {
@@ -723,9 +740,12 @@ export function createStopConditionNode(
     execute: async (state: StateValues, ctx: NodeContext) => {
       const evaluate = deps.evaluateStop ?? defaultEvaluateStop
       const stopMet = await evaluate(loop.stopCondition, state)
+      // from 取状态通道里的真实当前阶段：discovery 无契约短路直入本节点时
+      // stage='scheduling'，正常路径 persistence 节点已把 stage 写为 'persistence'
+      const from = (state[CH.stage] as LoopStage | undefined) ?? 'persistence'
       emitLoopEvent(ctx, {
         type: 'loop.stage-transition', loopId: loop.id,
-        from: 'persistence', to: 'scheduling', reason: `stop-check: ${stopMet}`, ts: now(),
+        from, to: 'scheduling', reason: `stop-check: ${stopMet}`, ts: now(),
       })
       // 一个 run = 一个 tick：stop-check 即终点，重入由 RunSpawner 发起新 run
       return { update: { [CH.stopMet]: stopMet }, end: true }
