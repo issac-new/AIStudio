@@ -62,11 +62,11 @@ adding one symlink if ever needed): `cybersecurity-defense`,
 ## Apply / Repair Procedure
 
 ```bash
-S=$HOME/.hermes/skills
+S=/Users/YOURNAME/.hermes/skills
 
 apply_board() {
   local prof="$1"; shift
-  local P=$HOME/.hermes/profiles/$prof/skills
+  local P=/Users/YOURNAME/.hermes/profiles/$prof/skills
   mkdir -p "$P"
   find "$P" -maxdepth 1 -type l -delete          # clear stale links, keep real dirs
   for cat in "$@"; do
@@ -90,13 +90,13 @@ Back up the board first: `ls $P > /tmp/$prof.before.txt`.
 
 ```bash
 # per-profile indexed count — compare against baselines below
-for p in $HOME/.hermes/profiles/*/skills; do
+for p in /Users/YOURNAME/.hermes/profiles/*/skills; do
   prof=$(basename $(dirname "$p")); case "$prof" in *.archived|_shared) continue;; esac
   echo "$prof: $(find -L "$p" -maxdepth 3 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')"
 done
 
 # broken links (must be 0)
-for base in $HOME/.hermes/skills $HOME/.hermes/profiles/*/skills; do
+for base in /Users/YOURNAME/.hermes/skills /Users/YOURNAME/.hermes/profiles/*/skills; do
   for l in $(find "$base" -maxdepth 1 -type l 2>/dev/null); do
     [ -e "$l" ] || echo "BROKEN: $l"
   done

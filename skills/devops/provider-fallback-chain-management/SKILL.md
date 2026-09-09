@@ -116,7 +116,7 @@ Use the Hermes venv python (NOT system python3 — no yaml module). Replace
 
 ```python
 import yaml
-path = '$HOME/.hermes/config.yaml'
+path = '/Users/YOURNAME/.hermes/config.yaml'
 c = yaml.safe_load(open(path))
 
 c['model'] = {'default': 'glm-5.2', 'provider': 'custom:weekly-zai'}

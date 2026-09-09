@@ -48,6 +48,20 @@ If step 3 still refuses because the card is in `triage`:
 - `kanban_comment(task_id=t0, body=<decomposition summary + child ids>)` so the audit trail exists.
 - Leave the card for the operator / specifier profile to move out of triage — that is what the triage queue is for.
 
+## Post-completion correction path (defects found after kanban_complete)
+
+Acceptance review may find defects only after the worker already completed the card. Two kernel behaviors block the naive correction flow:
+
+- `kanban_request_changes` is refused for terminal (`done`) cards — it only applies to cards in the review lane / non-terminal states. The error surfaces as `task not found` even though the id still resolves in SQL.
+- `kanban_create(parents=[<done card>])` is refused with `unknown parent task(s)` — terminal cards cannot anchor new children at create time.
+
+Working pattern:
+
+1. `kanban_comment` on the done card: the full correction task-book — per-finding fix instructions, the boundary of what must NOT change (already-verified parts), acceptance criteria, and a hardened closing contract ("留逐项对照 comment 后等待复核，勿自行 complete"). This preserves the audit trail on the original card.
+2. `kanban_create` a fresh correction card with NO `parents=`; duplicate the task-book in the body (workers cannot be assumed to read the old card), same `assignee` and same `workspace_path` so artifacts are corrected in place.
+3. Harden the closing contract on the correction card — require per-item response and explicit wait-for-review — because the original card failed exactly that gate.
+4. Re-verify the correction with the same independent mechanical checks as the first review; do not accept the fix on self-report.
+
 ## What NOT to do
 
 - **Do NOT `sqlite3 ... UPDATE tasks SET status='done'`** to force-complete a stuck card. It bypasses the kernel's run-row accounting, heartbeat/reclaim bookkeeping, and event log. A direct SQL write makes the dashboard lie about how the card finished. (Done once under time pressure; recorded here so it isn't repeated.)

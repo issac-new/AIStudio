@@ -140,8 +140,7 @@ if (Test-Path $toolsReq) {
 Write-Host "[5c] Installing third-party npm tools..." -ForegroundColor Yellow
 $npmAll = Join-Path $ScriptDir "package-all.json"
 if ((Test-Path $npmAll) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
-    $npmDir = Join-Path $env:USERPROFILE ".hermes
-pm-global"
+    $npmDir = Join-Path $env:USERPROFILE ".hermes\npm-global"
     if (-not (Test-Path $npmDir)) { New-Item -ItemType Directory -Path $npmDir -Force | Out-Null }
     Copy-Item $npmAll (Join-Path $npmDir "package.json") -Force
     Set-Location $npmDir
@@ -156,13 +155,35 @@ Write-Host ""
 # --- 6. Install shared protocols + plugins + patches ---
 Write-Host "[6/7] Installing protocols, plugins, patches..." -ForegroundColor Yellow
 
-# _shared
+# _shared — six-layer structure (01-scheduling-bus ... 06-observability + knowledge/assets)
+# Copy layer dirs, knowledge assets, and top-level files; skip curator state & archives.
 $sharedSrc = Join-Path $ScriptDir "profiles\_shared"
 $sharedDst = Join-Path $HermesHome "profiles\_shared"
 if (Test-Path $sharedSrc) {
     if (-not (Test-Path $sharedDst)) { New-Item -ItemType Directory -Path $sharedDst -Force | Out-Null }
-    Copy-Item -Path "$sharedSrc\*" -Destination $sharedDst -Recurse -Force
-    Write-Host "  OK: _shared/ protocols" -ForegroundColor Green
+    $layerDirs = @("01-scheduling-bus","02-org-orchestration","03-evolution-memory","04-pro-capability","05-eng-execution","06-observability","decisions","knowledge","skill-proposals","skills","templates","workflows")
+    foreach ($d in $layerDirs) {
+        $src = Join-Path $sharedSrc $d
+        if (Test-Path $src) {
+            Copy-Item -Path $src -Destination $sharedDst -Recurse -Force
+        }
+    }
+    # top-level reference files
+    $topFiles = @("action-contracts.yaml","config.yaml","constraint-policy.md","hack-knowledge-index.md","hack-tool-registry.md")
+    foreach ($f in $topFiles) {
+        $src = Join-Path $sharedSrc $f
+        if (Test-Path $src) { Copy-Item -Path $src -Destination $sharedDst -Force }
+    }
+    # hack-kb: knowledge base only (exclude intel runtime state)
+    $hackKbSrc = Join-Path $sharedSrc "hack-kb"
+    if (Test-Path $hackKbSrc) {
+        Copy-Item -Path $hackKbSrc -Destination $sharedDst -Recurse -Force
+        $intelDir = Join-Path $sharedDst "hack-kb\intel"
+        if (Test-Path $intelDir) {
+            Get-ChildItem -Path $intelDir -Include *.json,*.log -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Write-Host "  OK: _shared/ protocols (6-layer structure)" -ForegroundColor Green
 }
 
 # Plugins

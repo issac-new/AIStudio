@@ -92,7 +92,7 @@ description_auto: false
 ### 6. Create skill category symlinks (if new categories needed)
 
 ```bash
-ln -s $HOME/.hermes/skills/<category> \
+ln -s /Users/YOURNAME/.hermes/skills/<category> \
       ~/.hermes/profiles/<new-name>/skills/<category>
 ```
 

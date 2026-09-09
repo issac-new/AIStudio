@@ -161,7 +161,64 @@ grep -rn "$OLD" ~/.hermes/profiles/*/SOUL.md ~/.hermes/profiles/*/*_rules.md \
 launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway-orchestrator
 ```
 
+## When Orchestrating a New Research Team
+
+### Research BEFORE creating profiles
+
+For a new domain-specific research team (e.g. `aiteam` for AI architecture / multimodal / embodied AI), do the web research **first**, capture the findings in the parent triage card body, and **then** fan out to `worker-researcher` (capability matrix) and `worker-coder` (profile/board creation) in parallel. This prevents the profiles from being designed around outdated assumptions and gives the decomposer concrete domain vocabulary to work with.
+
+### Add tool-landscape tasks when the user names tools
+
+If the user adds a tool list (e.g. MLX, LM Studio, Ollama, SGLang, vLLM, LLaMA-Factory), spawn a dedicated sub-task for tool-landscape research and make the capability-matrix task depend on it. The capability matrix should include real tool-chain mappings, not placeholder strings.
+
+### Triage cards cannot be completed directly
+
+A card created with `triage=True` must be promoted/unblocked before completion. Calling `kanban_complete` on a `triage` card returns `unknown id or already terminal`. Use `kanban_show` to confirm status; if it is still `triage`, either let the dispatcher promote it or call `kanban_unblock` if your role has orchestrator privileges.
+
 ## Pitfalls
+
+### Headless worker 无法写 profiles 目录的 SOUL.md（2026-09-01 aiteam 实例）
+
+无头 worker 直接 `write_file ~/.hermes/profiles/<p>/SOUL.md` 触发写审批
+（工作区外 + agent 身份文件双守卫），审批超时自动拒绝，worker 会无限重试烧迭代预算。
+rules.md 等非 SOUL 文件名不受此守卫限制。
+
+**绕行模式（workspace-staging）**：worker 把 SOUL 写成工作区内
+`aiteam-deploy/<p>/SOUL.staged.md`（staged 文件名不触发守卫），其余
+（rules/profiles.yaml 片段/board.json）同样落工作区，`kanban_complete`
+注明 `deploy_mode: workspace-staging`；安装（mv 改名 + cp + 合并）由
+TUI orchestrator 会话执行。给运行中 worker 发 steer 用 `kanban_comment`——
+但注意 **run 中途不刷新评论区**，comment 只在下次 spawn 注入；救卡死
+worker 靠 kill（dispatcher 自动重派，重派 run 能读到新 comment）。
+
+### profiles.yaml 合并禁用文本 append
+
+文本拼接 6+ 条目会撞块边界（插进上一 profile 块中间产生重复键）。
+用 PyYAML 正规合并：`yaml.safe_load` 两边 → `d['profiles'].update(append)` →
+`yaml.dump(sort_keys=False)` 写回，先备份。合并后必须
+`python3 -c "yaml.safe_load(open(...))"` 全文件 parse + 逐条目字段断言。
+AI 生成的 YAML 常见隐形错误（字段拼错/幻觉 toolset 名/`default_assignee: ''` 空值）。
+
+### 会话 kanban 工具可能落在根库（board=default），dispatcher 不扫描
+
+TUI 会话里 `kanban_create` 不带 `board=` 时任务可能写进根级
+`~/.hermes/kanban.db`——dispatcher 只扫 boards/*/kanban.db 分库，
+卡片永远不被拾取（`task_runs` 空即是症状）。诊断：遍历分库查
+`SELECT count(*) FROM tasks WHERE id='<tid>'`；修复：根库标记
+`archived` + 真实板上重建（带 `board=` 参数）。
+
+### 父任务 triage=True 会锁死整条子任务链
+
+triage 状态永不拾取（无 specifier 即死胡同），其子任务 parent-gate
+永不释放。团队组建类分解任务不要用 `triage=True`；让无依赖子卡直接
+`ready`，有依赖的用 `parents=` 门控。
+
+### roster 隔离已接线（commit b34174e410，2026-09-01）
+
+`kanban_decompose._build_roster()` 现消费活动板 `board.json` 的
+`profile_scope`（声明即隔离；未声明/文件损坏降级为全量）。注意上游
+`kb.board_metadata_path()` 无参调用落 default 板——必须
+`kb.board_metadata_path(kb.get_current_board())` 显式传当前板。
 
 ### profile.yaml descriptions require Hermes venv Python
 

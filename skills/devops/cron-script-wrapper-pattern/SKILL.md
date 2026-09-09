@@ -6,11 +6,32 @@ triggers:
   - "Script not found"
   - "cron job fails with script path containing space"
   - "no_agent cron job fails"
+  - "Blocked: script path resolves outside the scripts directory"
+  - "cron script symlink 被拦截"
   - "ccswitch peak toggle"
   - "scheduled script with arguments"
 ---
 
 # Cron Script Wrapper Pattern
+
+## 🔴 Pitfall：symlink 修法无效（2026-09-04 实锤）
+
+no_agent job 报 `Script not found` 时，**用 symlink 把外部脚本链进 scripts 目录是无效修法**：
+scheduler 有路径逃逸防护，script 经 realpath 解析后必须落在 `HERMES_HOME/scripts/` **之内**，
+报错形如 `Blocked: script path resolves outside the scripts directory: 'oel_aggregate.py'`。
+
+**正确修法 = 本体迁移**（参照 2026-08-28 worldmonitor-sentinel 判例）：
+
+```bash
+mv ~/.hermes/bin/<script>.py ~/.hermes/profiles/orchestrator/scripts/<script>.py
+ln -sfn ~/.hermes/profiles/orchestrator/scripts/<script>.py ~/.hermes/bin/<script>.py  # 反向链接保持人用入口
+```
+
+迁移后注意 wrapper 内部若引用旧绝对路径需同步改；直跑验证 exit=0 后再用 cronjob(action='run') 过
+scheduler 链路闭环。
+
+另注意两层告警语义区分：wrapper 约定 exit 0=静默健康、exit 1=有意报警（如 ontology CQ 有 GAP 时
+last_status 持续为 error 是设计行为），排查时先看 error 内容是「基础设施坏」还是「业务告警数据」。
 
 ## When to Use
 

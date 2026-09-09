@@ -1,0 +1,20 @@
+name: pay-infra
+version: 3.0.0
+description: "pay-infra — Payment & clearing domain"
+hermes_requires: ">=0.12.0"
+author: "SwarmTeam"
+license: "MIT"
+team: pay
+env_requires:
+  - name: MATRIX_ACCESS_TOKEN
+    description: "Matrix access token (gateway, optional)"
+    required: false
+    default: ""
+  - name: WEIXIN_TOKEN
+    description: "WeChat bot token (optional)"
+    required: false
+    default: ""
+  - name: WEIXIN_ACCOUNT_ID
+    description: "WeChat bot account id (optional)"
+    required: false
+    default: ""

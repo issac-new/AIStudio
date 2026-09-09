@@ -1,0 +1,278 @@
+# Hermes 能力建模图（capability graph）— 单一事实源
+# 生成: bin/capability-graph-gen.py（自动区每次覆盖；手工区 capabilities/substitutes/notes 保留）
+# 语义: nodes.agents[].reliability = task_runs 终态聚合 done/(done+failed)，None=无历史数据
+
+nodes:
+  agents:
+    - name: aiteam-architecture
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 2
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: aiteam-embodied
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 2
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: aiteam-multimodal
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 2
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: aiteam-orchestrator
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 2
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: aiteam-scout
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 2
+      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: aiteam-training
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 4
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: data-arch
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: data-flink
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: data-infra
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: data-orchestrator
+      toolsets: [hermes-cli, kanban, memory, messaging]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 7
+      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 7
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 7
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 7
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 7
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: [已移除]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 7
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: hack-auditor
+      capabilities: [compliance-audit, iam-audit, vuln-management, supply-chain, zero-trust]
+      substitutes: [ops-devops(partial)]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 9
+      runs: {done: 10, failed: 2, timed_out: 2, crashed: 0}
+      reliability: 0.833
+    - name: hack-exploit
+      capabilities: [web-exploit, container-escape, cloud-pentest, c2-infra, red-team]
+      substitutes: [hack-recon(partial)]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 9
+      runs: {done: 2, failed: 3, timed_out: 0, crashed: 3}
+      reliability: 0.4
+    - name: hack-forensics
+      capabilities: [memory-forensics, malware-analysis, cloud-forensics, incident-response, threat-hunting]
+      substitutes: [hack-recon(partial)]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 8
+      runs: {done: 2, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: hack-recon
+      capabilities: [osint, network-recon, threat-intel, cloud-asset-discovery, osint-automation]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 9
+      runs: {done: 4, failed: 1, timed_out: 1, crashed: 0}
+      reliability: 0.8
+    - name: [已移除]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 2, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: [已移除]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 4, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: [已移除]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: [已移除]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: [已移除]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 2, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: [已移除]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: [已移除]-orchestrator
+      capabilities: [[已移除], child-context, teacher-dispatch, parent-feedback, domain-gateway]
+      substitutes: [orchestrator(partial)]
+      toolsets: [hermes-cli, kanban, memory, messaging]
+      skills_count: 4
+      runs: {done: 24, failed: 5, timed_out: 0, crashed: 5}
+      reliability: 0.828
+    - name: ops-devops
+      capabilities: [ci-cd, container-orchestration, iac, deployment, infra-automation]
+      substitutes: [worker-coder(partial)]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 17, failed: 14, timed_out: 5, crashed: 7}
+      reliability: 0.548
+    - name: ops-eval
+      capabilities: [quality-baseline, eval-design, regression-test, benchmark, metrics-design]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: ops-incident-commander
+      capabilities: [incident-command, war-room, postmortem, stakeholder-comm, recovery-planning]
+      substitutes: [ops-sre(partial)]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: ops-sre
+      capabilities: [slo-monitoring, capacity-planning, incident-response, alerting, reliability-engineering]
+      substitutes: [ops-devops(partial)]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: orchestrator
+      capabilities: [routing, decomposition, dispatch, priority-judgment, cross-board-coordination]
+      substitutes: [[已移除]-orchestrator(partial)]
+      toolsets: [hermes-cli, kanban, memory, messaging]
+      skills_count: 8
+      runs: {done: 40, failed: 11, timed_out: 0, crashed: 11}
+      reliability: 0.784
+    - name: pay-clearing
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: pay-fintech
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 3, failed: 2, timed_out: 0, crashed: 2}
+      reliability: 0.6
+    - name: pay-infra
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 6
+      runs: {done: 2, failed: 2, timed_out: 0, crashed: 2}
+      reliability: 0.5
+    - name: pay-orchestrator
+      toolsets: [hermes-cli, kanban, memory, messaging]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: platform-ontology-curator
+      capabilities: [ontology-design, marking-rules, cq-regression, soul-audit, schema-evolution]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 27, failed: 4, timed_out: 0, crashed: 4}
+      reliability: 0.871
+    - name: platform-skill-miner
+      capabilities: [skill-mining, pattern-recognition, skill-fusion, knowledge-distillation, skill-governance]
+      toolsets: [hermes-cli, acp, kanban, memory, skills]
+      skills_count: 8
+      runs: {done: 35, failed: 19, timed_out: 0, crashed: 18}
+      reliability: 0.648
+    - name: product-manager
+      capabilities: [prd-writing, roadmap, stakeholder-management, prioritization, user-research]
+      substitutes: [product-researcher(partial)]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 6
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: product-researcher
+      capabilities: [market-research, competitive-analysis, user-interview, data-analysis, trend-scouting]
+      substitutes: [product-manager(partial)]
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 7
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: worker-coder
+      capabilities: [coding, code-review, acp-claude, debugging, refactoring]
+      substitutes: [worker-tester(partial), ops-devops(deploy)]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 10
+      runs: {done: 34, failed: 42, timed_out: 7, crashed: 28}
+      reliability: 0.447
+    - name: worker-researcher
+      capabilities: [deep-research, web-search, report-writing, evidence-collection, synthesis]
+      substitutes: [product-researcher(partial)]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 10
+      runs: {done: 32, failed: 14, timed_out: 4, crashed: 10}
+      reliability: 0.696
+    - name: worker-tester
+      capabilities: [testing, code-review, unit-test, integration-test, e2e-test]
+      substitutes: [worker-coder(partial)]
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 2, failed: 3, timed_out: 0, crashed: 3}
+      reliability: 0.4
+
+  # 技能依赖/组合关系（手工策展，论文 §5.1 capability substrate）
+  skill_relations:
+    # - from: deep-research-workflow
+    #   to: research-methodology
+    #   type: depends_on   # depends_on | composes_with | substitutes
+    []

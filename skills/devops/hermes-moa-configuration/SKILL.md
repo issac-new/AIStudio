@@ -15,6 +15,16 @@ MoA = N **reference models** (parallel advisors, no tools) → 1 **aggregator** 
 
 The aggregator is NOT also a reference (avoid role duplication).
 
+## Synthesis Fallacy Filters (aggregator-side, added 2026-09-08)
+
+Before presenting a synthesized answer, run three fallacy filters on the claims being merged from reference outputs:
+
+1. **Appeal to authority (诉诸权威)** — a claim backed only by "model X / official docs say so" without measurement stays flagged, never promoted to consensus.
+2. **Slippery slope (滑坡)** — a chain of unmediated consequences drawn from one data point gets cut back to the single step the evidence actually supports.
+3. **False dilemma (假两难)** — a forced either/or across reference outputs is checked for a third path before the aggregator picks a side.
+
+Source: synthesis-fusion-plan.md C1附属 / philosophy-logic-report.md §2.2 S12/S13/S14 (Copi, Introduction to Logic — fallacy checklist, three-source consistent; filter framework only).
+
 ## Critical Constraint: ccswitch Cannot Parallelize
 
 ccswitch (`127.0.0.1:15721`) is a **single-port, single-active-provider** proxy. Its SQLite schema has one `listen_port`; only one provider is `is_current` at a time. MoA's reference fan-out needs **concurrent** calls to different models — impossible through ccswitch.

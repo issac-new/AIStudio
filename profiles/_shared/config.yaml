@@ -1,58 +1,88 @@
 mcp_servers:
   hermes-studio-api:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - api
     env:
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
       HERMES_MCP_SERVER_NAME: hermes-studio-api
       HERMES_MCP_TOOLSET: api
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-browser:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - browser
     env:
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
       HERMES_MCP_SERVER_NAME: hermes-studio-browser
       HERMES_MCP_TOOLSET: browser
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-devices:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - devices
     env:
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
       HERMES_MCP_SERVER_NAME: hermes-studio-devices
       HERMES_MCP_TOOLSET: devices
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   hermes-studio-use:
-    command: $HOME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
+    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     args:
       - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
       - use
     timeout: 1860
     env:
+      ELECTRON_RUN_AS_NODE: "1"
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-      HERMES_WEB_UI_HOME: $HOME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: $HOME/.hermes-web-ui
+      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
+      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: _shared
       HERMES_MCP_SERVER_NAME: hermes-studio-use
       HERMES_MCP_TOOLSET: use
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
+auxiliary:
+  vision:
+    api_mode: anthropic_messages
+  compression:
+    api_mode: anthropic_messages
+  approval:
+    api_mode: anthropic_messages
+  title_generation:
+    api_mode: anthropic_messages
+  background_review:
+    api_mode: anthropic_messages
+  goal_judge:
+    api_mode: anthropic_messages
+  kanban_decomposer:
+    api_mode: anthropic_messages
+  moa_aggregator:
+    api_mode: anthropic_messages
+  moa_reference:
+    api_mode: anthropic_messages
+  profile_describer:
+    api_mode: anthropic_messages
+  triage_specifier:
+    api_mode: anthropic_messages
+fallback_providers:
+  - provider: custom:cc-switch
+    model: glm-5.3-flash

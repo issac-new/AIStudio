@@ -44,15 +44,13 @@ git clone https://github.com/issac-new/SwarmTeam.git
 cd SwarmTeam
 
 # Make installer executable
-chmod +x install-all.sh
+chmod +x install-windows.ps1
 
 # Install all 23 profiles
-./install-all.sh
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
 
 # Or install a specific team
-./install-all.sh --team swarm
-./install-all.sh --team product
-./install-all.sh --team ops
+# Single-team install: see WINDOWS-INSTALL.md Option C
 ```
 
 ### Option B: Install via `hermes profile install`

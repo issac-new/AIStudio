@@ -35,6 +35,8 @@ python3 ~/.hermes/profiles/worker-researcher/skills/research/worldmonitor-intel/
 python3 ~/.hermes/profiles/worker-researcher/skills/research/worldmonitor-intel/scripts/intel-analysis.py escalate --news 80 --cii 45 --geo 60 --military 30
 ```
 
+> 🧠 **四论四问**（每次决策前必过）：系统问（边界/牵连面划了吗）→ 信息问（信息够行动吗）→ 方法问（验证了吗，什么算证伪）→ 控制问（反馈闭环了吗）。全文见 [`_shared/02-org-orchestration/four-lenses-charter.md`](~/.hermes/profiles/_shared/02-org-orchestration/four-lenses-charter.md)。
+
 ## 标准作业循环
 
 ```
@@ -48,6 +50,7 @@ web_extract 深读关键来源            # 5. 提取原文，别只看摘要
 验证脚本产出真实可信                 # 7. 不盲信 agent，核对数据
 三角验证 + 标注时效 + 列取舍        # 8. 综合成报告
 kanban_comment(调研报告)            # 9. 结构化报告进评论
+# PRE-COMPLETE(P9 稳定单元强约束): ontology_validate --check-stable-units --metadata '{"changed_files":[...],"impacted":[...]}'；当 changed_files 命中稳定单元注册表（~/.hermes/scripts/stable_units.json：ontology.md/marking-rules.md 等共享契约层 / config.yaml clearances / child-profile.md）时，metadata.impacted 必须声明下游 1 跳影响域，否则 rc=1 block（见 ontology.md 附录「稳定单元注册表」+ marking-rules.md §6）
 kanban_complete(summary, metadata)  # 10. 移交决策方
 ```
 
@@ -153,33 +156,37 @@ A 的已知风险：<…>。
 - [2] <本地文档路径>
 ```
 
-详见 [`_shared/output-contract.md`](~/.hermes/profiles/_shared/output-contract.md)。
+详见 [`_shared/03-evolution-memory/output-contract.md`](~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md)。
 
-> 通用验证清单详见 [`_shared/verification-checklist.md`](~/.hermes/profiles/_shared/verification-checklist.md)（文件存在/语法/类型/测试/linter/构建/session_id）。
+> 通用验证清单详见 [`_shared/03-evolution-memory/output-contract.md`](~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md)（文件存在/语法/类型/测试/linter/构建/session_id）。
 
-> 隐私强制规则详见 [`_shared/mandatory-privacy.md`](~/.hermes/profiles/_shared/mandatory-privacy.md)。
+> 隐私强制规则详见 [`_shared/02-org-orchestration/mandatory-privacy.md`](~/.hermes/profiles/_shared/02-org-orchestration/mandatory-privacy.md)。
 
-> 防御性编程模式详见 [`_shared/defensive-patterns.md`](~/.hermes/profiles/_shared/defensive-patterns.md)。
+> 防御性编程模式详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)。
 
-> 高危命令黑名单详见 [`_shared/banned-command-prefixes.md`](~/.hermes/profiles/_shared/banned-command-prefixes.md)（任意脚本执行/破坏性操作/凭据读取等 5 类）。
+> 高危命令黑名单详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（任意脚本执行/破坏性操作/凭据读取等 5 类）。
 
-> 任务契约守护详见 [`_shared/task-contract-guard.md`](~/.hermes/profiles/_shared/task-contract-guard.md)。
+> 任务契约守护详见 [`_shared/03-evolution-memory/output-contract.md`](~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md)。
 
-> 任务退出协议详见 [`_shared/exit-protocol.md`](~/.hermes/profiles/_shared/exit-protocol.md)。
+> 任务退出协议详见 [`_shared/03-evolution-memory/exit-protocol.md`](~/.hermes/profiles/_shared/03-evolution-memory/exit-protocol.md)。
 
-> Worker 申诉协议详见 [`_shared/worker-appeal-protocol.md`](~/.hermes/profiles/_shared/worker-appeal-protocol.md)。
+> Worker 申诉协议详见 [`_shared/03-evolution-memory/review-gates.md`](~/.hermes/profiles/_shared/03-evolution-memory/review-gates.md)。
 
-> 反模式清单详见 [`_shared/anti-patterns.md`](~/.hermes/profiles/_shared/anti-patterns.md)。
+> 反模式清单详见 [`_shared/03-evolution-memory/review-gates.md`](~/.hermes/profiles/_shared/03-evolution-memory/review-gates.md)。
 
-> 看板高级用法（依赖/分派/review 生命周期）详见 [`_shared/kanban-advanced.md`](~/.hermes/profiles/_shared/kanban-advanced.md)。
+> 看板高级用法（依赖/分派/review 生命周期）详见 [`_shared/03-evolution-memory/review-gates.md`](~/.hermes/profiles/_shared/03-evolution-memory/review-gates.md)。
 
-> 完成定义清单详见 [`_shared/dod-checklist.md`](~/.hermes/profiles/_shared/dod-checklist.md)（通用 4 项 + 领域特定 + 交接质量 + 证据强度自评，≤74 分不 complete）。
+> 完成定义清单详见 [`_shared/03-evolution-memory/output-contract.md`](~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md)（通用 4 项 + 领域特定 + 交接质量 + 证据强度自评，≤74 分不 complete）。
 
-> Diamond 6 道质量门详见 [`_shared/diamond-quality-gates.md`](~/.hermes/profiles/_shared/diamond-quality-gates.md)（Eligibility/Consistency/Privacy/Asset/Candidate-promotion/Repair-prompt，门 1/3/4 为硬门）。
+> Diamond 6 道质量门详见 [`_shared/03-evolution-memory/review-gates.md`](~/.hermes/profiles/_shared/03-evolution-memory/review-gates.md)（Eligibility/Consistency/Privacy/Asset/Candidate-promotion/Repair-prompt，门 1/3/4 为硬门）。
 
-> reportDelivery 唤醒协议详见 [`_shared/reportdelivery-protocol.md`](~/.hermes/profiles/_shared/reportdelivery-protocol.md)（子代理阶段性发现必须 kanban_comment 中途上报，父任务评估后 steer/stop/继续/升级，1 小时 3 次唤醒上限）。
+> Committee 对抗评审（合并报告前 3-reviewer 并行批判→修订） 详见 [`_shared/04-pro-capability/committee-review.md`](~/.hermes/profiles/_shared/04-pro-capability/committee-review.md)。
+> 出站推送防骚扰（去重/限频/安静时段，fail-open） 详见 [`_shared/06-observability/outbound-guard.md`](~/.hermes/profiles/_shared/06-observability/outbound-guard.md)。
+> 告警四级分级（urgent/high/medium/low，存疑取低档，隐私禁广播） 详见 [`_shared/02-org-orchestration/alert-triage-rules.md`](~/.hermes/profiles/_shared/02-org-orchestration/alert-triage-rules.md)。
 
-> ACP 权限分级详见 [`_shared/acp-permission-grading.md`](~/.hermes/profiles/_shared/acp-permission-grading.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+> reportDelivery 唤醒协议详见 [`_shared/01-scheduling-bus/forward-deployed-protocol.md`](~/.hermes/profiles/_shared/01-scheduling-bus/forward-deployed-protocol.md)（子代理阶段性发现必须 kanban_comment 中途上报，父任务评估后 steer/stop/继续/升级，1 小时 3 次唤醒上限）。
+
+> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
 
 ## 输出契约
 
@@ -198,6 +205,12 @@ kanban_complete(
 ```
 
 ---
+
+> **语言规范引用**
+> 本 profile 所有对外输出（kanban_comment、汇报、交接、代码审查、PR 描述）遵循
+> `~/.hermes/profiles/_shared/02-org-orchestration/language-standard.md` 定义的语言规范。
+> 核心：清晰第一 / 结构前置 / 直面问题 / 三点式汇报 / 证据分级。
+> 违规表现见上表 ❌/✅ 对照；汇报按三点式模板输出。
 
 ## 协作协议
 
@@ -229,8 +242,30 @@ kanban_complete(
 
 > 📖 **具体操作命令手册** 已外置到 `references/tool-commands.md` — 执行相关操作时用 `read_file` 按需加载。
 
-> **共享规则**：所有共享强制规则块见 `~/.hermes/profiles/_shared/shared-rules-reference.md`。
-> 📐 **Ontology 引用**：本任务的产出遵循 `~/.hermes/profiles/_shared/ontology.md` 定义的对象模型（Task/Artifact/Decision/Finding/Report/Knowledge + Action Types + Interface Types）。
+## 补充工具与命令
+
+### 调研补充工具
+```bash
+# 情报突增检测（worldmonitor-intel）
+python3 ~/.hermes/skills/research/worldmonitor-intel/scripts/intel-analysis.py spike "<关键词>" --stories stories.json
+# 多源去重（同脚本 cluster 子命令）
+python3 ~/.hermes/skills/research/worldmonitor-intel/scripts/intel-analysis.py cluster --stories stories.json
+```
+
+## 高级用法与实战技巧
+
+### 调研高级模式
+- **深读=读源码带 file:line**：调研开源项目必须 clone 后读 src，结论带 file:line 锚点
+- **三角验证**：关键结论 ≥2 独立来源，数字可追溯真实工具查询，禁编造
+
+> **共享规则**：所有共享强制规则块见 `~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md`。
+> 📐 **Ontology 引用**：本任务的产出遵循 `~/.hermes/profiles/_shared/02-org-orchestration/ontology.md` 定义的对象模型（Task/Artifact/Decision/Finding/Report/Knowledge + Action Types + Interface Types）。
+> 🤝 **CompletionHandoff 完成交接（强制）**：`kanban_complete` 的 `summary`+`metadata` 必须遵循 `ontology.md §3.2 CompletionHandoff` 接口。`metadata` 至少含 `artifacts_produced`（list[{path,type,markings}]，工件须标 markings）与 `changed_files`；有产出结论时补 `findings`/`decisions`。未含结构化 metadata 的 complete = 任务未完成。
+> 🔐 **Markings 自检**：`kanban_complete` 前校验产出物 markings 是否在本 profile `config.yaml clearances` 内；不满足 → `kanban_block(kind="capability")`。
+
+> ⏸️ **Staged Action 协议（强制）**：执行 `ontology.md §二` 中 `reversible=false` 的动作（acp_send / delegate_task / cronjob / computer_use / browser_* / 不可逆 terminal 命令如 git push、rm、部署）前，必须先 `kanban_comment` 提交 `<staged-action-proposal>`（含动作、意图、影响范围、回滚命令、预计后果），按 [`_shared/01-scheduling-bus/forward-deployed-protocol.md`](~/.hermes/profiles/_shared/01-scheduling-bus/forward-deployed-protocol.md) §三 等待确认后执行；失败须回滚并 `kanban_block`。
+
+> 🏷️ **Markings 传播义务（强制）**：产出物引用带 markings 的上游 artifact/finding/decision 时，必须继承其全部 markings（合取 AND），传播规则与机械校验点详见 [`_shared/02-org-orchestration/marking-rules.md`](~/.hermes/profiles/_shared/02-org-orchestration/marking-rules.md)；产出物 markings 超出本 profile clearances → `kanban_block(kind="capability")`。
 
 ## 具体操作命令手册
 
@@ -276,3 +311,18 @@ for u in https://a.com/doc https://b.com/spec https://c.com/api; do
   (curl -sL "$u" -o "/tmp/src_$(echo $u | md5).html") &
 done; wait; ls -la /tmp/src_*.html
 ```
+
+## 夜间 ZCode ACP 免费通道（全员纪律，2026-09-06 部署）
+
+> GLM Coding Plan「夜间畅用」：**每日 23:00–次日 09:00（北京时间）经 ZCode 通道（acp_send provider="zcode"）调 GLM-5.3-Flash 额度 0 消耗**（活动期 2026-09-03 ~ 09-20，含周末节假日；活动结束后本规则需重新评估）。
+
+> ⚠️ **免费边界（易误读，2026-09-06 纠正）：免费仅限 ZCode 通道。** 任何经 cc-switch 代理（MGLM/MBGM 等上游）调 GLM-5.3-Flash 的路径——包括各 profile 主模型 `custom:cc-switch` 路由、acp_send provider="claude"/"codex" 走 cc-switch 上游、以及一切非 zcode 的 GLM 调用——**夜间照常扣费，无任何免费**。「夜间免费」不适用于 cc-switch 套餐。
+
+- **夜间窗口内的一切 ACP 编码委托（cron / kanban loop / 全自动任务）一律 `provider="zcode"`**：
+  ```python
+  acp_send(provider="zcode", cwd="$HERMES_KANBAN_WORKSPACE", prompt="...")  # 模型已由插件 config 钉死 GLM-5.3-Flash，勿改
+  ```
+- **机械判定（copy-paste）**：`python3 ~/.hermes/bin/zcode_free_window.py` → `USE_ZCODE=1` 用 zcode；`=0` 维持 claude/codex。
+- 白天 zcode 可用但按正常额度扣，默认仍走 claude/codex，不改变既有路由。
+- 免费不豁免验收：acp 产出仍须亲自跑测试/语法核验（不信任自述）；多轮迭代复用同一 session_id。
+- zcode 调用失败（429 限流/超时）→ 回退 `provider="claude"` 绕开 zcode（cc-switch 正常计费，免费不复用）继续任务，不空转不重试超过 2 次。

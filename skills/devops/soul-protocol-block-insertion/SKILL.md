@@ -7,7 +7,7 @@ description: >-
   variants (hack team code-block loops vs product team numbered-list loops),
   step-renumbering, per-role content customization, and batch verification.
   Use when adding ontology/protocol/recon references to SOUL.md files.
-version: 1.0.0
+version: 1.1.0
 platforms: [macos, linux]
 metadata:
   hermes:
@@ -101,6 +101,51 @@ pointer to `forward-deployed-protocol.md §2`.
 
 See `templates/recon-checklist.md` for the standard block text.
 
+### Point A-bis — Recon summary comment template + mechanical checks (2026-08-25, t_f4fd26da patch)
+
+> 背景：基线挖掘实测侦察摘要执行率仅 ~13%（7/53），且 7 个实例格式参差（同一任务 3 个 author 三种格式）。
+> t_a257ada7 解剖证明「有协议无模板无机械校验 = 执行率 ~10%」是跨协议共性。
+> 插入侦察步骤时**必须同时**把以下模板与校验点写进 SOUL，否则侦察结果只留在 worker 脑中。
+
+**统一 comment 模板**（插入 SOUL 时一并写入）：
+
+```markdown
+## 前线侦察摘要
+**任务目标**: <一句话复述>
+**上游交接物**: <parent task 的 artifacts/findings，或"无">
+**本地现状**: <实测文件/schema/行数，禁自述>
+**历史经验**: <session_search/hindsight 结果>
+**适用 skill**: <已加载 skill 名>
+**关键情报**: <任务书与现实的出入，如年龄修正/诊断过重>  # 可选但高价值
+**风险与约束**: <边界声明>
+**执行计划**: <编号步骤>
+```
+
+**机械校验点**（写进 SOUL 执行检查清单）：
+- 开工后第一个 kanban_comment 必须含 `## 前线侦察摘要` 标题
+- 摘要至少含 8 字段中的 5 个
+- 「本地现状」字段必须含至少 1 个实测值（行数/schema/文件大小），禁纯定性描述
+
+**多 author 场景纪律**：后续 author 的侦察摘要必须引用前者（`在 <author> 侦察基础上补充/修正`），禁平行重开。
+
+**审计探针**（季度回归用）：
+
+```bash
+sqlite3 "file:~/.hermes/kanban/boards/<board>/kanban.db?immutable=1" \
+  "SELECT count(DISTINCT task_id) FROM task_comments WHERE body LIKE '%前线侦察摘要%';"
+# 对照同期 done 任务数得执行率（2026-08-25 基线：13% = 7/53）
+```
+
+**陷阱**：
+- **模板是最小集不是全集**——[已移除] 的「教材参考」「年龄修正」、platform 的「认知自检」都是模板外高价值字段，字段可增不可减（少于 5 个核心字段才算违规）
+- **侦察摘要 ≠ 侦察行为**——即使写了 comment 也要抽查「本地现状」是否真为实测（防「自述式侦察」）
+- **不要追溯性补写**——摘要的时间价值在「开工前」，事后补写无防错功能（t_944ea2b0 的年龄修正只有在设计前发现才有意义）
+
+**生效验证**：
+- 抽查新完成任务：首个 comment 含 `## 前线侦察摘要` 且 ≥5 核心字段
+- 执行率从基线 13% 在下个扫描窗口可测量提升
+- 至少 1 个「关键情报」类修正被摘要捕获（证明摘要不是形式主义）
+
 ### Point B — Before the privacy section (ontology / output contract)
 
 Anchor on the `## Loop Engineering 验证门` block (the last content
@@ -192,6 +237,17 @@ grep -oE '# [0-9]+\.' SOUL.md | sort | uniq -c | awk '$1>1'
 
 ## Pitfalls
 
+### Anchor-text variants silently skip files (verify the FULL roster, not the patched count)
+
+Heading text varies across profiles: `## 共享规则引用` vs `## 共享规则引用（2026-08-22 补齐）` vs `## 共享规则`. A classifier or patcher that matches one exact string will silently skip every profile whose heading carries a suffix — the batch "succeeds" and the final count is short. Two defenses:
+
+1. Classify anchors with a SUBSTRING match (`grep -q "## 共享规则引用"` matches all three variants), then read each matched file to capture its exact heading before constructing the patch `old_string`.
+2. After the batch, count coverage against the FULL profile roster (every dir with a SOUL.md, excluding `_shared`/`_trash`), and list MISSING by name. A report of "37/47 patched" without the missing-names list hides the gap; with it, a second pass targeting the variant heading closes it in minutes.
+
+### Heading-text variants within one patch run (anchored patches)
+
+The same pitfall at patch time: `## 安全红线（不可违反）` vs `## 安全红线`. Always grep the exact heading in each target file before constructing `old_string`, or the patch matches the wrong location (or nothing).
+
 ### skill_manage cross_profile limitation
 
 The `soul-md-privacy-section-patching` skill (and other devops skills)
@@ -199,6 +255,29 @@ may live in the `default` profile. `skill_manage` from `orchestrator`
 cannot patch them even with `cross_profile=True`. If you need to extend
 a cross-profile skill, create a new skill in the active profile instead.
 This skill (`soul-protocol-block-insertion`) exists for that reason.
+
+### Batch insertion at fleet scale (47+ profiles): classify → script → full-roster verify
+
+For fleet-wide insertions (all profiles, not one team), do NOT patch
+files one-by-one with the patch tool — write a Python script that:
+1. Classifies each profile by anchor type via SUBSTRING match
+   (`共享规则引用` / `协作协议` / `补充工具与命令` / none), because heading
+   suffix variants (`（2026-08-22 补齐）`) make exact-match classifiers
+   silently skip files.
+2. For each class defines ONE insertion function (after-section /
+   before-section) and handles heading variants explicitly — a profile
+   whose heading is `## 共享规则引用（2026-08-22 补齐）` will not match an
+   exact `## 共享规则引用` old_string; add the variant as its own class.
+3. After the batch, greps a unique marker of the inserted block against
+   the FULL roster (every profile dir with a SOUL.md, excluding
+   `_shared`/`_trash`) and prints MISSING by name — then runs a second
+   pass keyed to the missed heading variant.
+
+Real case: substring classify + script pass hit 37/47; the 10 missed all
+shared the `…（2026-08-22 补齐）` variant heading; a second pass keyed to
+that heading closed it to 47/47. Keep the inserted block short (a uniform
+blockquote reference pointing at the `_shared/` source file, ≤6 lines) so
+SOUL.md size stays bounded.
 
 ### Assuming uniformity across profiles
 

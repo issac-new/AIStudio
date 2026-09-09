@@ -50,15 +50,17 @@ sqlite3 <db> "SELECT substr(content,1,2000) FROM messages WHERE session_id='<id>
 - sqlite 只读 WAL 库用 `file:$db?immutable=1`（-readonly 会报错 14）
 - 锚点粒度要诚实：有的窗口只能拿到"日期+主题"拿不到 session id，附录如实声明
 
-### 3. 按域重组为终态结构
+### 3. 分层产出：终态文档 ≠ 档案（用户第三次返工的最高优先教训）
 
-自上而下的认知顺序（非版本叠加）：
+> **用户原话级教训（2026-08-22）**："PDF 里面怎么包含了所有版本，我要的终态设计文档，不是里面包含了各种历史记录的终态——**那是档案而不是终态**"。
+> 当天把 33 页混合版（终态+演化史+考古+评审记录）重构为 5 页纯终态，用户接受。
 
-```
-系统定义（一句话+核心数字表）→ 设计哲学（从决策提炼，每条带跨时代证据链）
-→ 演化史（时代叙事）→ 架构终态（分层）→ 决策台账（按域重组，非时间平铺）
-→ 运行机制 → 债务与展望（诚实清单）→ 附录（数据源+局限声明）
-```
+**两层分离**：
+
+- **终态文档（as-is，~5 页）**：只描述"现在是什么、怎么运行"。全部现在时，零版本叙事。结构 = 系统定义（一句话+核心数字表）→ 设计哲学（每条带跨时代证据链——证据链是哲学的支撑，留在终态）→ 架构终态（分层）→ 运行机制 → 债务与观察 → **扩展方式（维护契约）**：新增设计按层追加，历史一律进档案层。
+- **档案层（research/ 目录）**：演化史/时代叙事/决策台账/考古报告/评审记录——终态文档头部一行指路即可，正文不混入。
+
+**纯度机械验收**（渲染后 pymupdf 提取全文、去空白后 grep）：不得含 演化史/时代叙事/考古/评审记录/版本修订链 等历史词（头部档案指路行与债务表中的"考古未覆盖"类事实陈述除外）。旧版含历史的 9 节结构（含"演化史""决策台账""附录数据源"节）只适用于**档案层文档**，不适用于终态文档。
 
 - 证据链锚点格式必须与源报告**实际编号体系一致**（报告用 D1-D22 时写 B10→B18 就是死引用）
 - 集群级计数声明分母口径（"11 个 cron"是单 profile 口径还是集群口径）
@@ -90,14 +92,15 @@ sqlite3 <db> "SELECT substr(content,1,2000) FROM messages WHERE session_id='<id>
 ## Pitfalls
 
 1. **单一透镜重组=无声丢史**（用户两次返工的根因）——先全史盘点再选结构
-2. **"全部带锚点"式过度声明**——粒度混合就写粒度混合
-3. **考古窗口有洞**（如某两日无标题会话密集）——附录诚实声明，不装穷尽
-4. **subagent final summary 在 live transcript 中被截断**（…+N chars）——需要全文时读 `cache/delegation/subagent-summary-*.txt` 或从 task log 的完整行提取
-5. **评审修正要两轮**——第一批报告送达后可能还有被截断隐藏的发现，完整 JSON 到达后复对一遍
+2. **"终态"里混历史=档案冒充终态**（用户第三次返工的根因）——考古与评审产出的丰富历史材料有强烈"都想保留"的引力，必须抵抗：历史进 research/ 档案层，终态只留 as-is；用纯度机械验收兜底
+3. **"全部带锚点"式过度声明**——粒度混合就写粒度混合
+4. **考古窗口有洞**（如某两日无标题会话密集）——附录诚实声明，不装穷尽
+5. **subagent final summary 在 live transcript 中被截断**（…+N chars）——需要全文时读 `cache/delegation/subagent-summary-*.txt` 或从 task log 的完整行提取
+6. **评审修正要两轮**——第一批报告送达后可能还有被截断隐藏的发现，完整 JSON 到达后复对一遍
 
 ## References
 
-- 实战范本：`workspace/research/hermes-complete-design-doc.md`（Final v1.1）+ `review-5lens-disposition.md`（两轮 17 项处置台账）
+- 终态范本（5 页纯 as-is）：`workspace/research/hermes-complete-design-doc.md` + `hermes-complete-design-doc-final.pdf`；两轮评审处置台账 `review-5lens-disposition.md`（17 项）；债务清理台账在 `teams-implementation-consistency-report.md` 尾部
 - 考古报告四份：`design-history-0801-0810.md` / `design-mining-0813-0820-maturity.md` / `cluster-history/july-foundation-design-mining.md` / `soul_audit/early-design-mining/`
 
 ## Related Skills

@@ -117,7 +117,7 @@ Verify success: `✓ weixin connected` and `Gateway running with 4 platform(s)`.
 ## Pitfalls
 
 - **iLink token format** is `account_id:secret` (e.g.
-  `${WEIXIN_ACCOUNT_ID}:0600...`) — the full string is the token, keep it intact.
+  `<main-bot-account-id>@im.bot:<token>...`) — the full string is the token, keep it intact.
 - **`hermes config set platforms.weixin.enabled`** writes to the PROFILE
   config when `active_profile` is set, NOT the global config the SwarmStudio
   startup check reads. Edit global `~/.hermes/config.yaml` directly
@@ -131,6 +131,10 @@ Verify success: `✓ weixin connected` and `Gateway running with 4 platform(s)`.
 - **Weixin adapter is JS/shell-free in gateway**: `check_weixin_requirements()`
   only needs `aiohttp` + `cryptography` installed in the SwarmStudio
   desktop-runtime python, not the Hermes venv.
+- **Multiplex: global config.yaml has platforms.weixin.enabled, profile config.yaml may not** — in `multiplex_profiles: true` mode, the gateway reads platform enablement from the **global** `~/.hermes/config.yaml` (under `gateway:` → `platforms:`), but credentials from the **active profile's** `.env`. If global has weixin enabled but profile .env lacks WEIXIN_TOKEN/WEIXIN_ACCOUNT_ID, the platform silently fails to connect (no "Connecting to weixin..." log line). Fix: ensure shared `.env.common` has the credentials so `generate-configs.py` propagates them to all profiles.
+- **Shared .env.common is the single source for credentials** — `generate-configs.py` merges `.env.common` + `profiles.yaml` env_extra into each profile's `.env`. If WEIXIN_TOKEN/WEIXIN_ACCOUNT_ID are only in global `~/.hermes/.env` (or only in one profile's `.env`), other profiles won't get them. The fix is adding them to `.env.common` (or to each profile's `env_extra` in `profiles.yaml`) and re-running `generate-configs.py`.
+- **Account file location is unified HERMES_HOME (`~/.hermes/weixin/accounts/`)**, not per-profile — even with multiplex, the weixin adapter looks only at `$HERMES_HOME/weixin/accounts/<account_id>.json` where `HERMES_HOME=~/.hermes`. If QR setup saved it under a profile home (`~/.hermes/profiles/<profile>/weixin/accounts/`), copy it to the unified location.
+- **SwarmStudio auto-restart after kill works** — kill the gateway PID (`kill -TERM <pid>`), SwarmStudio's `autoRestartEnabled` + `scheduleRestart` respawns it with the new config. Verify in logs: `✓ weixin connected` and `Gateway running with N platform(s)` including weixin.
 
 ## Related Skills
 

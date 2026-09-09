@@ -36,7 +36,7 @@ same functions the failing path invokes:
 ```python
 import os, sys, yaml
 os.environ["HERMES_HOME"] = os.path.expanduser("~/.hermes/profiles/<profile>")
-sys.path.insert(0, "$HOME/.hermes/hermes-agent")
+sys.path.insert(0, "/Users/YOURNAME/.hermes/hermes-agent")
 
 # ① cron delivery preflight (scheduler.py's own import)
 from hermes_cli.env_loader import load_hermes_dotenv
@@ -103,7 +103,7 @@ Recipe: `references/functional-deadlink-scan.md`.
 
 ## Engine patches die on `hermes update`
 
-Direct edits under `$HOME/.hermes/hermes-agent/` (e.g. the
+Direct edits under `/Users/YOURNAME/.hermes/hermes-agent/` (e.g. the
 2026-08-17 `vars(response)` __slots__ guard in
 `agent/conversation_loop.py` ~L3230) are overwritten by updates. Track
 them like TUI patches: keep the diff, re-apply after update, consider

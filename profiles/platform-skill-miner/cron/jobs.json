@@ -1,0 +1,102 @@
+{
+  "jobs": [
+    {
+      "id": "762bf6c7f6a9",
+      "name": "skill-health-weekly",
+      "prompt": "no_agent 模式：skill_health_weekly_silent.sh 直跑审计，Phase3 有重复或异常才输出，健康=静默",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "skill_health_weekly_silent.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 3 * * 0",
+        "display": "0 3 * * 0"
+      },
+      "schedule_display": "0 3 * * 0",
+      "repeat": {
+        "times": null,
+        "completed": 2
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-08-29T23:54:32.036829+08:00",
+      "next_run_at": "2026-09-13T03:00:00+08:00",
+      "last_run_at": "2026-09-06T03:01:04.995826+08:00",
+      "last_status": "error",
+      "last_error": "RuntimeError: [drift_skip:silent] Skipped to prevent unintended spend: global inference config drifted since this job was created (model 'aim' -> 'glm-5.3-flash'), and this job is unpinned. No inference call was made. To run on the new config, on the host running Hermes pin it explicitly: `hermes cron edit 762bf6c7f6a9 --provider <provider> --model <model>` (or pin the original values to keep them). This alert is sent once; the job stays skipped until the config is pinned or restored. See #44585.",
+      "last_delivery_error": null,
+      "failure_streak": 2,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "drift_alerted": true,
+      "last_dispatch": {
+        "scheduled_at": "2026-09-06T03:00:00+08:00",
+        "dispatched_at": "2026-09-06T03:00:52.972181+08:00",
+        "lateness_seconds": 53.0,
+        "kind": "on_time"
+      }
+    },
+    {
+      "id": "d5f34c5b3c87",
+      "name": "skill-full-backup-daily",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "skill-full-backup.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 4 * * *",
+        "display": "every day at 4am"
+      },
+      "schedule_display": "every day at 4am",
+      "repeat": {
+        "times": null,
+        "completed": 8
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-01T14:11:59.899224+08:00",
+      "next_run_at": "2026-09-10T04:00:00+08:00",
+      "last_run_at": "2026-09-09T04:00:47.551099+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "failure_streak": 0,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-09-09T04:00:00+08:00",
+        "dispatched_at": "2026-09-09T04:00:45.539067+08:00",
+        "lateness_seconds": 45.5,
+        "kind": "on_time"
+      },
+      "fire_claim": null
+    }
+  ],
+  "updated_at": "2026-09-09T04:00:47.551602+08:00"
+}

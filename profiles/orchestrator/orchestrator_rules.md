@@ -12,7 +12,7 @@
 
 ## 全局强制规则：编码开发必须通过 ACP 调用 Claude Code
 
-> 详见 `~/.hermes/profiles/_shared/mandatory-acp.md`（2026-08-21 勘正：SOUL.md 顶部无此章节，正文在共享文件）。本节不再重复，以下仅保留故障处理补充。
+> 详见 `~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md`（2026-08-21 勘正：SOUL.md 顶部无此章节，正文在共享文件）。本节不再重复，以下仅保留故障处理补充。
 
 ### 故障处理
 ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider 持续故障")` 并退出。
@@ -29,8 +29,8 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 
 > ⚠️ **最高优先级**: orchestrator **不自动处理、不自动回复**两个邮箱的邮件，除非用户明确要求。
 
-- `your@email.com` — IMAP channel（gateway 原生 email adapter）
-- `your@email.com` — agently-cli（agent.qq.com OAuth）
+- `your@example.com` — IMAP channel（gateway 原生 email adapter）
+- `your-bot@example.com` — agently-cli（agent.qq.com OAuth）
 
 **"明确要求"判定**：
 - ✅ 用户在 TUI/CLI/Matrix 中直接说"检查邮件""读邮件""回复xxx的邮件""发邮件给xxx"
@@ -39,6 +39,8 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 详见 `email_kanban_rules.md`。
 
 ### 0.2 智能路由规则（所有 Gateway 平台）
+
+> ⚠️ **口径镜像**：本节分级数字是 SOUL.md「智能路由留痕」表的镜像——**正典在 SOUL**，改阈值只改 SOUL，然后同步本表（`routing_threshold_check.py` 会机械校验两处一致，漂移即报警）。
 
 > **适用**: 所有 Gateway 渠道 — Matrix、Weixin、API Server、Email
 > **不适用**: TUI/CLI（始终直接执行，不创建看板任务）
@@ -110,8 +112,8 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 | Weixin | 群聊 | `技术交流群:API重构讨论:oWxn4S1uW3:gh_abc123:msg_001:weixin` |
 | Weixin | 私信 | `weixin-dm::oWxn4S1uW3:weixin-dm:msg_001:weixin` |
 | API Server | 调用 | `chat/completions:summary-request:api-key-prod:req_abc123:req_001:api_server` |
-| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:your@email.com:msg_xxx:email` |
-| Email | DM 本质 | `email-dm::zhangsan@example.com:your@email.com:msg_xxx:email` |
+| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:your@example.com:msg_xxx:email` |
+| Email | DM 本质 | `email-dm::zhangsan@example.com:your@example.com:msg_xxx:email` |
 
 #### 0.2.3 重型任务路由
 
@@ -130,6 +132,10 @@ kanban_create(
 
 回复用户: "已创建任务到 {board}: [task title]。任务完成后会在此收到通知。"
 
+**gate 读取义务（2026-08-22，融合自 Anthropic AI-Native SDLC Playbook L532-540）**：
+- orchestrator 分解前**必读卡 body 全文**（含验收标准 frozen 段 + 技能路由决策段）——"下一阶段以读取上一产物开始"，不读卡就分解 = 违规
+- 重型任务要求 worker 开工时落 plan.md（四节结构见 dod-checklist），Proof 节在完成时并入 kanban_comment 验证段
+
 ---
 
 ## 0.5 Board 路由规则（七看板统一调度：swarm/hack/product/ops/[已移除]/platform/[已移除]，2026-08-21 对齐实机）
@@ -147,6 +153,8 @@ kanban_create(
 | **[已移除]看板** | `[已移除]` | 电子设计自动化：AI模型、IP核、物理建模、工具链（multiphysics/optics 已合并到 physics） | orchestrator, [已移除], [已移除], [已移除], [已移除] |
 | **平台看板** | `platform` | 平台双螺旋：skill 挖掘、ontology 维护（tool-builders 已合并到 miner） | orchestrator, platform-skill-miner, platform-ontology-curator |
 | **[已移除]教育看板** | `[已移除]` | 特级家庭教师团队：儿童教育、学科启蒙、品格培养 | [已移除]-orchestrator, [已移除], [已移除], [已移除], [已移除], [已移除], [已移除] |（2026-08-21 补 [已移除]，与实机 6 师一致）
+| **支付看板** | `pay` | 支付清算域：报文标准、清算架构、金融科技合规（2026-09-03 上线） | pay-orchestrator, pay-infra, pay-clearing, pay-fintech |
+| **AI前沿研究看板** | `aiteam` | AI 前沿研究：架构（Transformer/SSM/Mamba/MoE）、多模态、具身智能、训练工程、情报监测（2026-09-03 上线） | aiteam-orchestrator, aiteam-architecture, aiteam-multimodal, aiteam-embodied, aiteam-training, aiteam-scout |（2026-09-04 接线）
 
 ### 0.5.0 能力组合判定（2026-08-21，融合自麦肯锡能力配置框架）
 
@@ -175,8 +183,12 @@ Matrix / Email / Weixin / API Server 消息到达
    ├─ 运维/SRE/事件响应？ → board="ops", 按 `references/ops-routing-rules.md`（原 §0.5.8 已外置） 分配 ops profile
    ├─ [已移除]/电子设计/芯片/仿真？ → board="[已移除]", 按 `references/[已移除].md`（原 §0.5.9 已外置） 分配 [已移除] profile
    ├─ [已移除]教育/儿童学习/亲子/学科启蒙？ → board="[已移除]", 按 `references/[已移除]-routing-rules.md`（原 §0.5.10 已外置） 分配 [已移除] 教师 profile
+   ├─ 支付/清算/报文标准/金融合规？ → board="pay", 分配 pay-* profile（pay-orchestrator 分解，2026-09-03 起）
+   ├─ AI前沿研究/论文调研/架构追踪/模型情报？ → board="aiteam", 分解后分配 aiteam-* profile（aiteam-orchestrator 分解：architecture/multimodal/embodied/training/scout 五岗，2026-09-04 接线）
    └─ 其他（软件开发/研究/部署等） → board="swarm", 按常规 §4 分配 worker profile
 ```
+
+> 📖 **aiteam/pay 域分工约定**（2026-09-04）：主 orchestrator 跨板 `kanban_create(board="aiteam"/"pay", triage=True, assignee=<域orchestrator>)`，由域 orchestrator 分解为域内子卡（`parents=[派单卡]`）并合并交付；域 profile 的 clearances 已含 `EYES-ONLY:aiteam`（aiteam 6 个，2026-09-04 补）。跨板依赖禁用 `parents`（哑链，见 §0.4），用子卡 body 引用父卡 ID + `context_from`。
 
 > 📖 **[已移除] 教育路由规则** 已外置到 `references/[已移除]-routing-rules.md` — 路由判定时用 `read_file` 按需加载。[已移除] 看板调度权统一在主 orchestrator（本 profile），可跨 board 直接 `kanban_create(board="[已移除]", assignee="[已移除]")`；[已移除]-orchestrator 为领域网关延伸，独占第二微信号（api_server port 8651），负责 [已移除] 领域上下文与日常消息路由。
 
@@ -184,7 +196,7 @@ Matrix / Email / Weixin / API Server 消息到达
 
 ### 0.5.2bis MEA 编排判据（LongHorizon-Harness 融合，2026-08-16）
 
-> 完整协议：`~/.hermes/profiles/_shared/task-contract-guard.md`。此处为 orchestrator 决策层的两条判据。
+> 完整协议：`~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md`。此处为 orchestrator 决策层的两条判据。
 
 **A. GUI/CLI 路由判据**（分解子任务时判断执行通道）：
 
@@ -200,7 +212,7 @@ Matrix / Email / Weixin / API Server 消息到达
 - 必须路由当前可完成的**最完整可执行子任务**
 - 无法诚实完成时用 ask（`kanban_block(kind="needs_input")`）/ blocked，禁止为用完预算而编排凑数轮次
 
-**C. 验收门提醒**（kanban_complete 前的路由决策）：重型任务的子任务完成验收，reviewer 须按 `task-contract-guard.md` §三/§五 出三行控制头 + 验收约束反查；`complete+clean+aligned` 三者同时成立才放行。证据强度须达 L4（直接证明）；L3 及以下不放行，按 `loop-engineering-gates.md` 证据强度四分级处理（融合自 codex goals，2026-08-21）。
+**C. 验收门提醒**（kanban_complete 前的路由决策）：重型任务的子任务完成验收，reviewer 须按 `output-contract.md` §三/§五 出三行控制头 + 验收约束反查；`complete+clean+aligned` 三者同时成立才放行。证据强度须达 L4（直接证明）；L3 及以下不放行，按 `review-gates.md` 证据强度四分级处理（融合自 codex goals，2026-08-21）。
 
 
 > 📖 **Hack assignee 分配规则** 已外置到 `references/hack-assignee-rules.md` — 路由判定时用 `read_file` 按需加载。
@@ -255,6 +267,17 @@ Matrix / Email / Weixin / API Server 消息到达
 - 思维固化 → 🪟 Microsoft → 🔵 美团 → ⬜ Jobs → ⬛ Musk
 
 > 详细路由表、切换规则、14种方法论速查见 `skill_view('pua-methodology-router')`。
+
+### 0.5.11 "第二次错误"强制沉淀触发（2026-08-22，融合自 Playbook L931-933/L1582-1590）
+
+> Playbook 的显式触发：同一错误**第二次**被 review 标记 → 写入 CLAUDE.md 等价物，"下一个 PR 起就能拦住"。比人工沉淀 hindsight 更锋利——不给"下次注意"留空间。
+
+**规则**：蓝军评审/kanban 验收/日常执行中，**同类问题第二次被标记**时（跨任务累计），必须当场执行其一：
+- 沉淀为 `_shared/` 规则补丁（若属全员纪律），或
+- 沉淀为对应 profile 的 skill_patch（若属领域知识），或
+- 写入该 profile SOUL.md 红线（若属一票否决行为）
+
+禁止：❌ 只在回复中口头纠正不落盘；❌ 沉淀到 memory（注入式记忆无法约束其他 profile）。
 
 ---
 
@@ -590,10 +613,10 @@ notification_sources: ['*']  # 或 ['orchestrator']
 
 ### §0.7.0 孩子记忆双写（2026-08-14确立，强制）
 
-orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（孩子）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
+orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（your-child）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
 
 **规则**：
-1. 用 `hindsight_retain` 存孩子相关记忆（含关键词：孩子/孩子/妈妈/爸爸/[已移除]/投壶/社交/感统/档案/亲戚等）后，**必须**触发双写同步：
+1. 用 `hindsight_retain` 存孩子相关记忆（含关键词：your-child/孩子/妈妈/爸爸/[已移除]/投壶/社交/感统/档案/亲戚等）后，**必须**触发双写同步：
    ```bash
    python3 ~/hermes-docker-sandbox/workspace/life-workbench/scripts/child_memory_sync.py
    ```
@@ -675,7 +698,7 @@ worker-coder 按类型决定验证强度；与 pua-methodology-router 并存（�
 
 ### §0.8.0 Matrix 协作终止规则（防循环/防刷屏，强制引用）
 
-所有 Matrix 消息收发遵循共享协议 [`_shared/matrix-collaboration-termination.md`](~/.hermes/profiles/_shared/matrix-collaboration-termination.md)：七层防线（①协议标记 m.notice ②自标记 ③内容指纹 ④收敛义务 ⑤人类裁决 ⑥熔断 N=8/上限30/超时30min ⑦噪声过滤；`MATRIX_IGNORE_USER_PATTERNS` 黑名单为辅助机制非主防层，2026-08-21 对齐）。对端 bot MXID 清单维护在 `_shared/decisions/matrix-peers.md`。
+所有 Matrix 消息收发遵循共享协议 [`_shared/01-scheduling-bus/matrix-collaboration-termination.md`](~/.hermes/profiles/_shared/01-scheduling-bus/matrix-collaboration-termination.md)：七层防线（①协议标记 m.notice ②自标记 ③内容指纹 ④收敛义务 ⑤人类裁决 ⑥熔断 N=8/上限30/超时30min ⑦噪声过滤；`MATRIX_IGNORE_USER_PATTERNS` 黑名单为辅助机制非主防层，2026-08-21 对齐）。对端 bot MXID 清单维护在 `_shared/knowledge/candidate/matrix-peers.md`（2026-08-25 从 `_shared/decisions/` 迁移）。
 
 ### §0.8.1 任务拆解 → 自动建对外协作房间 → 分发任务（orchestrator 职责）
 
@@ -712,10 +735,10 @@ worker-coder 按类型决定验证强度；与 pua-methodology-router 并存（�
 
 ## §0.9 Guardian 二审审批协议（2026-08-21，融合自 openai/codex）
 
-**触发**：HumanGate-HIGH 候选命令（`_shared/banned-command-prefixes.md` 命中）在 smart approval 自动放行后、执行前，必须走 Guardian 二审。**fail-closed**：二审超时（delegate_task 120s 无响应）/失败/格式错 = DENY。
+**触发**：HumanGate-HIGH 候选命令（`_shared/03-evolution-memory/action-risk.md` 命中）在 smart approval 自动放行后、执行前，必须走 Guardian 二审。**fail-closed**：二审超时（delegate_task 120s 无响应）/失败/格式错 = DENY。
 
 1. 组装三要素 brief（任务目标 1 句 + 待批命令原文 + 上下文，≤500 token）
-2. `delegate_task` 独立子代理裁决，三行裁决头输出：`APPROVE / DENY / ESCALATE_TO_USER`（verdict 变体，本地定义于 skill，**非** task-contract-guard.md §五 验收控制头）
+2. `delegate_task` 独立子代理裁决，三行裁决头输出：`APPROVE / DENY / ESCALATE_TO_USER`（verdict 变体，本地定义于 skill，**非** output-contract.md §五 验收控制头）
 3. 风险判例法（数据外泄/凭据探测/持久安全削弱/破坏性操作，4 类 11 条）见 `_shared/skills/codex-guardian-review/SKILL.md`
 4. DENY 后换路径重试同类命令 = 绕审违规，直接 ESCALATE_TO_USER
 5. 例外：用户明确说"直接执行"的单条命令可跳过，但须 `kanban_comment` 留痕

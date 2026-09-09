@@ -17,6 +17,7 @@ metadata:
       - evidence-based-research
       - scope-discipline
       - wechat-article-research
+      - research-methodology
 ---
 
 # Deep Research Workflow
@@ -62,8 +63,22 @@ are running. See `scope-discipline` skill — "调研未完成不得提出具体
 
 ### Step 3: Mine failed subagent transcripts
 
-**Prevent first (learned 2026-08-20, dsh rc.8 research)**: three of four deep-source subagents were interrupted after ~50-70 tool calls having read all the evidence but written nothing. Prevention beats recovery:
-- Instruct research subagents to **write the report file incrementally** (skeleton first, fill as they read) so even an interruption leaves a partial artifact, not zero.
+**Prevent first** — "research finished, report never written" is the most
+expensive failure mode: 100% of the collection cost is lost at the last
+step. Enforce it mechanically in the brief, not as advice:
+- **Skeleton-first must be a numbered step with a deadline**: "write the
+  report skeleton to its final absolute path within your first 10 tool
+  calls, then fill section by section after each dimension". A worker told
+  only "write incrementally" still burned its whole iteration budget
+  (90/90) with a fully-collected, 0%-written report; a retry told
+  "skeleton in first 10 calls" wrote the skeleton within minutes of
+  pickup. State the deadline, not the virtue.
+- **Put the iteration-budget split in the brief**: e.g. of a ~90 tool-call
+  budget — collection ≤55 / report writing & closing ≥20 / buffer ≥10.
+  Workers that can see the split stop collecting in time.
+- **Frame the acceptance floor as the target, not the ceiling**: "40 items
+  is the acceptance line — secure it first, then keep growing" beats a
+  bare "≥40", which workers read as do-40-last.
 - **Shrink scope per subagent**: 1 focused question + ≤3 target packages/files each; a 4-question brief across a 55-package monorepo invites hitting the limit before writing.
 - **Feed prior evidence forward**: when re-dispatching after an interruption, pass the first run's collected findings in `context` so the retry verifies + completes instead of re-reading from scratch.
 
@@ -186,6 +201,115 @@ For complex research (3+ articles + industry survey), split into:
 Each report cross-references the others. Total can reach 80-100KB across
 3 files without any single file being unmanageable.
 
+---
+
+## Variant: 整本扫描书 / 大部头扫描 PDF 全书精读（OCR 流水线）
+
+When the "source" is a **scanned book / large image-only PDF** (e.g. a 500-page
+methodology textbook the user wants 全书精读 to derive agent capability), the
+web-fetch steps above don't apply. Use this sub-workflow instead.
+
+**Trigger**: user attaches a large PDF and says "深入学习 / 全书精读", and the
+PDF turns out to be image-only (no text layer).
+
+### 1. Detect image-only first (before planning OCR)
+```python
+import fitz
+doc = fitz.open(path)
+print(doc.page_count, doc.metadata.get('title'))
+for p in sample_pages:            # a few content pages, not just p0
+    print(len(doc[p].get_text().strip()))   # 0 chars on ALL = image-only scan
+```
+Large scanned books (Pdg2Pic / FreePic2Pdf producers, >50MB, hundreds of pages)
+are usually image-only. `read_file` refuses >50MB, so probe with `fitz` directly.
+
+### 2. Pick the OCR engine by probing, not by assuming
+- `ocrmac` (Apple Vision) — **best for Chinese printed-book scans on macOS**:
+  ~5-6 s/page, near-perfect on 印刷体, no model download, no GPU. Verified on a
+  527-page 中文 textbook.
+- `rapidocr` / `easyocr` — cross-platform fallbacks.
+- `paddleocr` may be **broken in the local env** (`np.sctypes` removed in
+  NumPy 2.0) — probe import before relying on it; don't assume it works.
+
+### 3. Resumable per-chapter OCR pipeline (critical for hundreds of pages)
+Single-shot OCR of 500+ pages will hit timeouts and lose work. Build an
+**incremental, resumable** script — a ready-to-run one ships with this skill at
+`scripts/ocr_scanned_pdf.py` (pymupdf + ocrmac, resumable, per-chapter, pN anchors):
+- Track done-pages in a `_state.json`; skip already-done pages on re-run.
+- Split output **per chapter** using the PDF's TOC (`doc.get_toc()`), writing
+  `第N章….md` files; tag each page with a `<!-- pN -->` anchor so downstream
+  notes can cite `pN` page references (satisfies the 可追溯 / no-fabrication rule).
+- Run it in the **background** (`terminal background=true` + notify_on_complete)
+  and continue orchestrating while it runs; poll progress, don't block.
+
+### 4. Orchestrate the 精读 as a kanban fan-out (don't solo-read 500 pages)
+For a 全书精读 + "完善 agent 能力" ask, this is a 重型 routing task:
+- One orchestrator decomposition card; then **parallel per-篇/部分 精读 cards**
+  (worker-researcher), each producing structured notes anchored to `pN`.
+- A final **synthesis card** (worker-coder) gated on all 精读 cards via
+  `parents=[...]`, producing the 设计文档 + skill 落地.
+- Decompose by the book's natural parts (篇/部分), not page ranges — parts are
+  the independent workstreams (Graph Engineering "where does it fork").
+
+### 5. Goal-mode 调研卡「调研完未落盘」死法与恢复（2026-09-07 T5 识典古籍 run252 实证）
+
+症状：worker 心跳自报「68 典籍全部实证，准备写报告」→ 迭代预算耗尽（90/90）中断，报告零落盘，成果只存在于已终止会话内存。注意：dispatcher 超时通知里的 `max_runtime=0s` 可能是展示 bug，真因去 kanban.db `task_runs.error` 查（如 `Iteration budget exhausted`），wall-clock（7200s）根本没到。
+
+恢复四步（本次全程奏效，重试质量反超首跑）：
+1. **心跳即恢复包**：`task_events` 表 kind=heartbeat 的 payload.note 记录了 worker 每次的结构性发现（如三级分类体系/ID 段位规律/方法验证）——中断后第一步回收这些，别让重试 worker 从零探索
+2. 回收物写成 `recovery-context.md` 落盘到工作区
+3. `kanban_comment` 注入重试卡：标「未读不开工」+ 指向恢复包 + 死因纪律两条（前 10 个工具调用内落报告骨架；先保验收下限再增量）
+4. 效果实证：run256 骨架先行+资产复用声明，27 分钟完成，产出超验收线 75%（70 种典籍 vs 验收 40）
+
+预防（建卡时写进 body）：「报告骨架落盘」列为前置验收项，时序约束优于事后纪律约定。
+
+### Pitfalls (扫描书精读)
+- **Don't OCR before scoping**: confirm with the user 全书 vs 核心章节 — full-book
+  OCR of 500+ pages is ~1 hour; selective 精读 of the chapters that matter is
+  often the right call. But if the user says 全书, do 全书.
+- **Verify OCR quality on one page before the full run**: render one dense page
+  to PNG, OCR it, read the text. Garbage in = garbage notes.
+- **Anchors are mandatory**: per-page `<!-- pN -->` markers are what let the
+  精读 notes and the final skill carry verifiable `pN` citations.
+- **The synthesis is the deliverable, not the OCR**: OCR text is an intermediate;
+  the user wants the distilled 方法论 → agent-capability mapping + skill 落地.
+
+---
+
+## 调研方法论检查清单（《社会研究方法》精读注入，2026-08-25）
+
+> 完整 55 条清单见底座 skill **`research-methodology`**（开题 T1-T5 / 检索 S1-S10 /
+> 证据 E1-E16 / 三角验证 V1-V4 / 报告 R1-R12 / 伦理 L1-L8 + 12 判例对照表，
+> 全部带书源 pN 锚点）。本小节是骨架十条——**任何深研任务启动前与交付前各过一遍**。
+
+1. **开题分型**：探索/描述/解释——探索型标注"不具代表性"，解释型必须过因果三问（p111-113）。
+2. **概念化**：模糊问题先列维度+操作定义；比较前先对齐口径，口径不一禁止直接对比（p146-150, p43）。
+3. **抽样框声明**：每条结论附来源集合+未覆盖声明；框错了样本量再大无用（《文学文摘》教训，p198, p215）。
+4. **来源独立性**：同源转载链=1 个来源；交叉验证先查引用依赖（p332-333, p66-67）。
+5. **反方检索义务**：每个关键结论配一次反方检索（相反关键词/怀疑者视角），矛盾案例写进报告（p333-334）。
+6. **因果三问门禁**：有相关吗？时间顺序对吗？有第三变量吗？缺一则降级为"相关"（p114-116）。
+7. **一致性≠真实性**：信度不保证效度；全网转载同一错误=来源一致但全错（p162）。
+8. **报告三律**：披露局限 / 报告负面结果（搜不到=证据，写明"未找到 X 的公开证据"）/ 不把事后发现粉饰为预先计划（p91-93）。
+9. **计数必报基数**：百分比必须给总样本数与独立来源数（p332-333）。
+10. **不信自报**：来源自我声明（官网能力宣称/准确率/用户数）一律 Present 级以下，第三方实测才升级（p104）。
+
+涉及抓取合规、涉人数据、争议议题时，另过 `research-methodology` 第 6 节伦理清单
+（合规三问 / 数据敏感度分级 / 递归风险 / 议题价值不为方法免责两问）。
+
+## 消歧判例、报告互链与侦察纪律（2026-09-08 增补，知识底座融合 C8/D6/D8）
+
+**C8 消歧判例（同名异实的口径对齐训练案例）**：调研以书名/项目名/系统名等唯一输入开始时，同名多义是常态而非例外。判例：《心术全书》（通俗权谋汇编，1993，已绝版）与《管子》心术四篇（稷下道家哲学文献）是同名异实——前者是唯一书名精确匹配的出版物，后者是「心术」术语的哲学源头，且从未被任何来源称作《心术全书》这一书目。**双轨口径（用户裁决 1）**：凡引用《心术全书》必须带「通俗权谋汇编(1993,已绝版)」定性标注，价值取分类框架与对抗性视角、不作学术权威引用；凡哲学语境引「心术」一律指向《管子》四篇背景链。消歧产物是五类候选逐一定性的判例表（候选→身份→关键证据→判定），不是一句「已消歧」。
+>
+> 来源: synthesis-fusion-plan.md C8+§五裁决项1 / philosophy-logic-report.md §1.1（候选五类逐一判定实例，S1-S11）
+
+**D6 报告互链约定（交叉引用网络）**：同一任务族的报告拆成多份时，每份报告带「共享术语表 + 相关报告互链」：报告内锚点指向本报告章节，跨报告引用写明 `报告文件名#章节`；跨报告的共享数字（同一实体在不同报告中的计数）必须显式核对一致，口径不同的分列不混用。
+>
+> 来源: synthesis-fusion-plan.md D6 / math-3books-report.md §2.1（普林斯顿数学指南交叉引用网络：三层条目织成可按需进入的图结构，[7][15]）
+
+**D8 侦察先于行动（注脚）**：本 skill「调研完成后再创建团队」「Do NOT propose solutions while subagents are running」两条 Key Lessons 的古典同构——《孙子兵法·谋攻》「知彼知己，百战不殆」：派工（行动）之前先完成侦察（调研），基于真实调研数据决定团队规模与角色划分。
+>
+> 来源: synthesis-fusion-plan.md D8 / philosophy-logic-report.md §四 S46（ctext.org/sun-tzu/zhs 实测 200）
+
 ## Key Lessons
 
 ### "调研完成后再创建团队" means WAIT
@@ -218,6 +342,7 @@ final report was completed without re-dispatching.
 
 ## Related Skills
 
+- **research-methodology** — 调研方法论底座（55 条检查清单，本 skill 的方法论来源）
 - **evidence-based-research** — anti-hallucination citation rules
 - **scope-discipline** — research-then-propose sequence enforcement
 - **wechat-article-research** — WeChat article fetching with curl+regex

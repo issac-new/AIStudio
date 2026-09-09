@@ -1,0 +1,4 @@
+{"task_hash": "131392439780e4e8", "selected": {"primary": "autonomous-godmode-hunter", "supports": ["owasp-security", "attack-path-graph"]}, "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; format:target-url+1.5", "confidence": 0.5}
+{"task_hash": "28cdce8df789995b", "selected": {"primary": "scope-gate", "supports": ["skill-resolver", "target-scoped-workspace"]}, "reason": "phase:['enum', 'recon']+6.0", "confidence": 0.4}
+{"task_hash": "bc4c888ab8cc1bf1", "selected": {"primary": "security-auditor", "supports": ["llm-redteam", "skill-resolver"]}, "reason": "phase:['audit']+3.0; alias:['sast']+1.0; format:source-code+1.5", "confidence": 0.367}
+{"task_hash": "ca81c999f3c7e72b", "selected": {"primary": "autonomous-godmode-hunter", "supports": ["pentest-methodology-fusion", "scope-gate"]}, "reason": "phase:['enum', 'exploit', 'recon', 'report']+12.0; target_type:['network', 'web']+6.0; vuln_hints:['xss']+3.0; format:target-url+1.5", "confidence": 1.0}

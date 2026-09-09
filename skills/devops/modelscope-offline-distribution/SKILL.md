@@ -78,7 +78,7 @@ def sanitize_config(content: str) -> str:
 
 ## Scan patterns (real credentials — must be 0 hits)
 
-- Bailian full key: `<BAILIAN_KEY_ID>` (32-hex, `.suffix` allowed)
+- Bailian full key: `HK_KEY_B1_HEX` (32-hex, `.suffix` allowed)
 - Long sk- keys: `sk-[a-zA-Z0-9]{20,}`
 - ModelScope token: `ms-4225fbb3...`
 - **False positives to whitelist**: AD domain params `ms-DS-MachineAccountQuota`

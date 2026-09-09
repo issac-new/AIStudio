@@ -1,0 +1,21 @@
+---
+name: deep-research-synthesis
+title: 深度调研+对抗评审+综合交付
+description: N 路并行调研 → Committee 对抗评审 → 合并报告
+inputs:
+  topic: {type: string, required: true, description: 调研主题}
+  researcher_count: {type: integer, default: 3, min: 2, max: 6}
+steps:
+  - id: recon
+    type: specialist
+    assignee: worker-researcher
+    fanout: "{researcher_count}"
+    goal: "调研 {topic}，产出结构化报告（含 file:line / URL 锚点）"
+  - id: committee
+    type: review
+    depends_on: [recon]
+    reviewers: 3
+  - id: synthesis
+    type: synthesis
+    depends_on: [committee]
+    deliverable: true

@@ -21,7 +21,7 @@ Set up high-quality offline (or offline-fallback) voice for Hermes on Apple Sili
 
 ## Install order (do all 5)
 
-1. **Install deps into the Hermes venv** (NOT system python): `$HOME/.hermes/hermes-agent/venv/bin/pip install faster-whisper pilk qwen-asr modelscope sounddevice numpy`
+1. **Install deps into the Hermes venv** (NOT system python): `/Users/YOURNAME/.hermes/hermes-agent/venv/bin/pip install faster-whisper pilk qwen-asr modelscope sounddevice numpy`
    - `pilk` is the SILK→WAV codec for WeChat .silk voice notes (lazy-installed by Hermes on first use, but pre-installing avoids the first-message failure).
 2. **Download models from ModelScope** (HF is blocked; ModelScope works from China). See `references/modelscope-china-download.md`.
 3. **Bridge ModelScope cache → HuggingFace cache** so `from_pretrained("Qwen/Qwen3-ASR-1.7B")` finds them offline. See `references/modelscope-china-download.md` § "Cache bridging".
@@ -41,7 +41,7 @@ tts:
     voice: zh-CN-YunxiNeural   # male; zh-CN-XiaoxiaoNeural for female
 ```
 ```
-HERMES_LOCAL_STT_COMMAND=$HOME/.hermes/hermes-agent/venv/bin/python $HOME/.hermes/bin/qwen3_asr_stt.py {input_path} {output_dir} {language}
+HERMES_LOCAL_STT_COMMAND=/Users/YOURNAME/.hermes/hermes-agent/venv/bin/python /Users/YOURNAME/.hermes/bin/qwen3_asr_stt.py {input_path} {output_dir} {language}
 ```
 Env var must be in `profiles/orchestrator/.env` AND global `~/.hermes/.env` AND `shared/.env.common` (the three-source pattern — see hindsight on WEIXIN_TOKEN recurrence).
 

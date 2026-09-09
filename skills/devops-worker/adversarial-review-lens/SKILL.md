@@ -1,7 +1,7 @@
 ---
 name: adversarial-review-lens
-description: "对抗评审纪律：多 lens 并行+severity 父定+发现五分类+空结果重查+Goal-Backward FORCE 立场+逻辑剃刀谬误图谱+abstain 弃权语义。用于 code-review 与 kanban 验收。"
-version: 1.1.0
+description: "对抗评审纪律：多 lens 并行（含 incentive-audit 立场审查）+severity 父定+发现五分类+空结果重查+Goal-Backward FORCE 立场+逻辑剃刀谬误图谱+abstain 弃权语义。用于 code-review 与 kanban 验收。"
+version: 1.3.0
 metadata:
   hermes:
     tags: [devops, code-review, adversarial, logic-razor, bmad-fusion, swarm-yuan-fusion]
@@ -13,6 +13,20 @@ metadata:
 > 来源：BMAD-METHOD v6 `bmad-review` 多 lens 架构 + 并行对抗评审 + swarm-yuan `gsd-patterns.md` Goal-Backward + `logic-razor.md` 逻辑剃刀 + `review-methodology.md` Honest Verifier Abstain，适配 Hermes code-review。
 > 增补（2026-08-16）：LongHorizon-Harness（arXiv:2608.01964）三行控制头协议 + 验收约束反查，详见 `~/.hermes/profiles/_shared/task-contract-guard.md`。
 > 定位：**完成时防线**——防止"看起来做完了"被验收通过，给 reviewer 一套对抗性思维纪律。
+
+> **版本记录**：
+> - v1.2.0（2026-08-28）：增补 incentive-audit lens（批判性审查·立场层融合）。
+> - v1.3.0（2026-09-08）：教条排查裁决 #5——BMAD 移植机制收缩标注为「试用待定」，见下方状态总标注。
+
+## ⚠️ 状态总标注（2026-09-08 教条排查裁决 #5，dogma-audit 条目 12）
+
+以下 BMAD 移植机制：**「三行控制头」「intent_gap」「bad_spec」「lens 并行」**——均标注为：
+
+> **（试用待定 2026-09-08：集群真实验收零使用记录，dogma-audit 条目 12；下次 code-review 强制试用一次后定去留）**
+
+- 事实依据：上述核心执行词汇在 swarm/platform 两板 task_comments 全部 0 命中；`workspace_audit.py` 存在但全集群无调用留痕。
+- 本节为文件头唯一总标注，正文各机制表述保持原样（供试用与评估），不重复散落标注。
+- **已验证保留**（有真实事故来源，不受本次收缩影响）：`baseline-diff 四步法`（附录，源自 2026-08-24 真实事故 33 失败 vs 自报 4）与 `Goal-Backward FORCE 立场`（§1，swarm-yuan 事实来源）。
 
 ## 触发条件 / When to Use
 
@@ -38,16 +52,34 @@ metadata:
 
 多个 reviewer lens **并行发出、同步等待全部返回后才 triage**：
 
-| lens | 审查焦点 |
-|---|---|
-| edge-case-hunter | 边界条件、空值、并发、溢出 |
-| verification-gap | 声称做了但无测试/无验证证据的部分 |
-| intent-gap | 代码与任务卡验收标准的偏差 |
-| security-lens | 注入、密钥泄漏、越权 |
-| mechanical-separation | LLM 判断是否泄漏到该走脚本的机械层 |
+| lens | 审查焦点 | 适用域 |
+|---|---|---|
+| edge-case-hunter | 边界条件、空值、并发、溢出 | code |
+| verification-gap | 声称做了但无测试/无验证证据的部分 | both |
+| intent-gap | 代码与任务卡验收标准的偏差 | code |
+| security-lens | 注入、密钥泄漏、越权 | code |
+| mechanical-separation | LLM 判断是否泄漏到该走脚本的机械层 | both |
+| incentive-audit | 立场与利益——结论对谁有利、来源是否立场倾斜（见 2.1） | report |
 
 **严重度由父 agent（triage 者）定，lens reviewer 无权定级**——
 "operate under by-design information asymmetry"，lens 只报告发现，不排序。
+
+#### 2.1 incentive-audit lens（批判性审查·立场层融合，2026-08-28 v1.2）
+
+> 来源：微信文章《6套顶级思辨范式》批判性审查第四层「拆解作者底层立场」。用于调研报告/竞品分析/外部信源类验收——**结论是谁的立场、对谁有利**。代码类验收可选。
+
+**可采证据清单**（每条发现必须附证据锚点，禁止诛心推定）：
+1. 作者/机构归属与商业关联（谁的报告、谁付费）
+2. 文内引流/付费转化链接（结论是否导向自身产品/课程）
+3. 选择性引用（只引有利来源、隐去反面数据）
+4. 结论与来源利益的一致性模式（收益方向与结论方向重合）
+
+**输出纪律**：
+- 每条发现格式：`<证据锚点> → <立场模式> → <对验收的影响>`
+- 证据不足时输出 `verdict: abstain (reason: insufficient_evidence)`，映射 `kanban_block(kind="needs_input")`——**禁止以「动机可疑」推测定级**（接 §6 Honest Verifier Abstain）
+- 对内同事产出与对外信源同一标准：可采证据四类，不含主观动机揣测
+
+**阈值**：调研/报告类验收期望 ≥3 条立场类发现（对抗 lens，零发现触发 §4 复查；阈值按报告篇幅调整，代码类可选不设）。
 
 ### 3. 发现五分类（BMAD triage 输出）
 
@@ -63,6 +95,7 @@ metadata:
 
 - **对抗性 lens 零发现 = 可疑信号**，强制复查一次
 - 对抗 lens（edge-case/security）期望产出 ≥10 条发现才算充分审查（视代码量调整）
+- 对抗 lens（incentive-audit，2026-08-28 v1.2 增补）在调研/报告类验收期望 ≥3 条立场类发现（视报告篇幅调整）
 - 编辑性 lens（typo/style）允许零发现
 
 ### 5. 逻辑剃刀（swarm-yuan 论证质量维度）
@@ -156,3 +189,61 @@ python3 "$PY" diff --before /tmp/ws_before.json --root <工作区>    # 审计�
 ```
 
 任何 diff 非空 = 审计者篡改了工作区 → 三行控制头第二行强制 `完整性: violation`，该报告不能支撑任何 completed 判定。已验证：clean 工作区 exit 0；改+增+删三动作全部检出 exit 1。
+
+---
+
+## 附：worker 源码交付的回归核验法（baseline-diff，2026-08-24 实例）
+
+> 实例：worker-coder 改 hermes 源码 `kanban_db.py` 增 metadata 列，自报"4 个既有测试失败是 dirty 工作区无关改动"。orchestrator 实测是 **33 失败**，远超自报，最终查出 worker 混入了 3 处**任务范围外**的 `workspace_kind` 默认值改动（scratch→worktree）导致 18 个回归。自报的"无关回归"声明**不可信**，必须独立做基线对比。
+
+当 worker 改了**共享源码**并声称"某 N 个测试失败是无关/既有问题"时，**不要接受自述**，用以下四步机械核验：
+
+### 1. 全量跑受影响测试域，拿真实失败数（不信 worker 给的数）
+
+```bash
+cd <repo>
+<venv>/bin/python -m pytest tests/<domain>/ -k "<keyword>" -q 2>&1 | tail -3
+# 记录: X failed, Y passed
+```
+
+worker 报的"4 个失败"和实测"33 个失败"差距本身就是红旗。
+
+### 2. 做基线对比（核心：隔离 worker 改动，重跑同一批测试）
+
+```bash
+# 只 stash worker 改的那个文件（保留工作区其它无关 dirty 改动）
+git stash push -- <changed_file>
+<venv>/bin/python -m pytest tests/<domain>/ -k "<keyword>" -q 2>&1 | grep FAILED | sed 's/FAILED //' | sort > /tmp/baseline.txt
+git stash pop    # 恢复 worker 改动
+<venv>/bin/python -m pytest tests/<domain>/ -k "<keyword>" -q 2>&1 | grep FAILED | sed 's/FAILED //' | sort > /tmp/with_change.txt
+# 精确差值 = worker 真实引入的回归
+comm -23 /tmp/with_change.txt /tmp/baseline.txt
+```
+
+差值清单里若出现**功能关键测试**（complete_task/lifecycle/cap 等），就是真回归，不是噪声。
+
+### 3. 逐行审 diff，查"任务范围外改动"（scope-creep）
+
+worker 常在目标改动里顺手塞无关重构。把 diff 里**不含本任务关键词**的新增行全部捞出来审：
+
+```bash
+git diff <changed_file> > /tmp/c.diff
+grep -E "^[+]" /tmp/c.diff | grep -vE "<本任务关键词1>|<关键词2>"
+# 审输出: 凡是与本任务无关的逻辑改动 = scope-creep = 违规
+```
+
+### 4. 精确 revert 范围外改动，保留目标改动，重测确认零回归
+
+```bash
+# 用 python 精确替换那几处超范围改动（不要整个文件 revert，会误伤目标改动）
+# revert 后重跑全量 → 失败数应回落到 ≈基线
+# 再单跑 worker 新增的本任务测试 → 应仍全过
+```
+
+**判定**：撤掉超范围改动后失败数回落到基线水平 + 本任务新测试仍全过 = worker 核心目标零回归，超范围改动是回归根因。
+
+### 配套纪律
+
+- **worker 改共享源码的 SOUL 约束**：必须严格限定任务范围，禁顺手改无关逻辑；自报"无关回归"必须附**基线对比证据**（基线失败清单 vs 改后清单），否则视为未验证。
+- **集群规则与源码默认值解耦**：如"workspace_kind 禁 scratch"这类规则应通过**路由层**（orchestrator `kanban_create(workspace_kind=...)`）强制，而非改源码默认值——后者会波及所有既有测试与第三方调用方。要改源码默认值须另建独立任务评估爆炸半径。
+- 纠偏后在 kanban_comment 留痕：根因（scope-creep 的具体行）+ 基线对比数据 + revert 动作 + 重测结果，供后续 worker 与审计追溯。

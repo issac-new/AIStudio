@@ -149,6 +149,13 @@ Tell them what you created in plain prose, naming the actual profiles you used:
 >
 > The dispatcher will pick up T1 and T2 now. T3 starts when both finish. You'll get a gateway ping when T4 completes. Use the dashboard or `hermes kanban tail <id>` to follow along.
 
+### 方法论背书：多作者分章+单一统审 与 三层粒度分解（2026-09-08 增补，知识底座融合 B1/B2）
+
+- **B1 多作者分章+单一统审（分布式生产+集中质控）**：fan-out 把可并行的 lane 拆给多个 worker 各写一章，是正确形态；但合并质量依赖**显式指定单一统审者**——fan-out 卡与 synthesis/统审卡用 `parents=[...]` 连接，统审卡 body 写明「统一术语表 + 逐章口径核对」职责。判例原型：《物理学基础》7 位译者按章分工、张三慧一人统审校核全书；《普林斯顿数学指南》133 位作者、主编统一深度与风格。
+- **B2 三层粒度条目化分解**：长文（=独立子任务卡，可交付可审）+ 中篇（=阶段性里程碑/综述卡）+ 短条目（=共享词汇表——术语、接口名、口径定义放共享位置供各卡引用）。跨卡一致性的解法是统一词汇表先行，不是事后互相对齐。
+>
+> 来源: synthesis-fusion-plan.md B1/B2 / physics-3books-report.md ⑦（机工社官方页「译者的话」逐章分工原文，查询 2026-09-07）+ math-3books-report.md §2.1 [7][15]
+
 ## Common patterns
 
 **Fan-out + fan-in (research → synthesize):** N research-style cards with no parents, one synthesis card with all of them as parents.
@@ -174,6 +181,12 @@ Tell them what you created in plain prose, naming the actual profiles you used:
 **Reassignment vs. new task.** If a reviewer blocks with "needs changes," create a NEW task linked from the reviewer's task — don't re-run the same task with a stern look. The new task is assigned to the original implementer profile.
 
 **Argument order for links.** `kanban_link(parent_id=..., child_id=...)` — parent first. Mixing them up demotes the wrong task to `todo`.
+
+**Pass `board=` explicitly on EVERY kanban_* call.** Omitting it makes the tool resolve the active board from env/symlink defaults, which need not match the board you intended — and the mismatch can be SILENT on create: `kanban_create` returns a task_id but the card lands in the root `~/.hermes/kanban.db` while you keep querying `boards/<board>/kanban.db`. Symptom: every board-DB query for the id returns empty, `kanban_request_changes`/`kanban_show` fail "task not found", yet the dispatcher runs the card fine (worker log at `~/.hermes/kanban/logs/<id>.log`). Diagnosis rule: when a card id has no row in the board DB, query the root `~/.hermes/kanban.db` before declaring the card lost.
+
+**Done cards are terminal — corrections need a comment + fresh card.** `kanban_request_changes` fails ("task not found") on a card already in `done`, even though the card exists. When post-completion review finds defects: (1) post the full correction task-book as a comment on the done card — that comment is the durable audit trail; (2) `kanban_create` a fresh correction card in the SAME workspace_path that repeats the task-book inline (workers only reliably see their own card's body), with frozen acceptance criteria per defect and an explicit "leave a per-item comment and WAIT for re-review; do not self-complete" clause. Do not pass the done card in `parents=[...]` — parent lookup fails across DBs; reference its id in the body instead. Scope the card with a hard boundary list (what is already verified and must NOT be touched) to prevent drive-by rework of accepted parts.
+
+**Timeout notifications can misreport the cause.** A notice reading `timed_out (max_runtime=0s)` can fire while the real limit was 7200s and the actual exit reason was iteration-budget exhaustion. Read `task_runs.error` in the board DB for the true exit reason before choosing a remedy: budget exhaustion → recovery-context re-dispatch (research-subagent-orchestration Pattern 6); genuine wall-clock timeout → shrink scope or raise the budget.
 
 **Don't pre-create the whole graph if the shape depends on intermediate findings.** If T3's structure depends on what T1 and T2 find, let T3 exist as a "synthesize findings" task whose own first step is to read parent handoffs and plan the rest. Orchestrators can spawn orchestrators.
 
@@ -202,6 +215,8 @@ How it behaves:
 When to use it: long, multi-step, or "keep going until X is true" cards. When NOT to: cheap one-shot cards (translation of a single string, a quick lookup) — the judge overhead isn't worth it, and the dispatcher's existing retry/circuit-breaker already handles transient worker failures.
 
 Write the body as **explicit acceptance criteria** — the judge is only as good as the goal text. "Translate the README" is weaker than "Translate every section of the README to French; no English sentences remain."
+
+Two independent budgets govern a goal card, and the one you did not set is the one that fires: `goal_max_turns` (conversation turns, judge loop) and the worker loop's tool-call iteration budget (~90 calls — what actually runs out first on collection-heavy research cards). Split the iteration budget inside the card body (collection vs writing vs buffer) — the common goal-card death is a worker that finishes researching and runs out of calls before writing.
 
 ## Recovering stuck workers
 

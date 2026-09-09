@@ -94,6 +94,12 @@ def update_config(config_path: Path, mac: str, dry_run: bool = False) -> bool:
         print(f"  ✅ {config_path.parent.parent.name}: {old_template} → {new_template}")
     return True
 
+# 2026-09-02 定稿：本集群 bank 拓扑为「按 team 隔离、同 team 共享」
+# （bank_id = hermes-<MAC>-<team> 静态值）。本脚本把 template 改成
+# per-profile 格式，会 REVERT team-shared 拓扑 —— 仅供单机/单 profile
+# 场景使用；多团队集群请勿运行（如需批量重生成 team bank，按 team 表手工
+# 写 bank_id 静态值，参考 hindsight-bank-strategy skill Model C）。
+
 
 def main():
     parser = argparse.ArgumentParser(description="Setup Hindsight bank_id with MAC-based isolation")
