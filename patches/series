@@ -249,3 +249,6 @@
 # - PageSidebarNav: 补上模板引用却从未定义的 openMatrixChat(2.15 起潜伏的点击报错)
 # - WorkflowView: 删上游重构后未使用的 PageSidebarFooter 导入
 201-client-v102-vuetsc-fixes.patch
+# P1 Task 7: loop graph 生产装配——GRAPH_ENGINE=legacy|shadow|on 三态分流 +
+# graph REST(/api/graph/runs|specs) + /graph socket + 审批桥接(默认 legacy 零行为变化)
+202-loop-graph-assembly.patch
