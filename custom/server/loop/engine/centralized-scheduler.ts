@@ -1,5 +1,5 @@
 // overlay/custom/server/loop/engine/centralized-scheduler.ts
-import cronParser from 'cron-parser'
+import { computeNextTick } from '../graph/next-tick'
 import type { LoopStateStore } from '../store/state-store'
 import type { LoopEngine } from './loop-engine'
 import type { LoopInstance } from '../types'
@@ -56,14 +56,6 @@ export class CentralizedScheduler {
   }
 
   computeNextTick(loop: LoopInstance): string {
-    if (loop.schedule.mode === 'cron' && loop.schedule.cron) {
-      try {
-        const interval = cronParser.CronExpressionParser.parse(loop.schedule.cron, { tz: loop.schedule.timezone })
-        return interval.next().toISOString()
-      } catch {
-        return new Date(Date.now() + 3600_000).toISOString()
-      }
-    }
-    return new Date(Date.now() + 3600_000).toISOString()
+    return computeNextTick(loop)
   }
 }

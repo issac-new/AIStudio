@@ -42,4 +42,30 @@ describe('BudgetGuard', () => {
     const result = guard.check(loop)
     expect(result.action).toBe('kill')
   })
+
+  // 台账 g：estimateTickCost 原实现用 loop.pattern 直接索引成本档表（键是 cost 档位名），
+  // 恒 miss 返回 1——修复后按 PATTERN_TEMPLATES[pattern].costEstimate 查表
+  describe('estimateTickCost (台账 g fix)', () => {
+    it('maps pattern → template costEstimate → cost table', () => {
+      const guard = new BudgetGuard(vi.fn())
+      expect(guard.estimateTickCost(makeLoop(0))).toBe(0.5)            // daily-triage → low
+      const sweeper = makeLoop(0)
+      sweeper.pattern = 'ci-sweeper'
+      expect(guard.estimateTickCost(sweeper)).toBe(30)                 // ci-sweeper → very-high
+    })
+
+    it('unknown pattern falls back to medium and warns once', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        const guard = new BudgetGuard(vi.fn())
+        const loop = makeLoop(0)
+        ;(loop as { pattern: string }).pattern = 'no-such-pattern'
+        expect(guard.estimateTickCost(loop)).toBe(2)                   // medium 档
+        expect(guard.estimateTickCost(loop)).toBe(2)
+        expect(warn).toHaveBeenCalledTimes(1)                           // 只 warn 一次
+      } finally {
+        warn.mockRestore()
+      }
+    })
+  })
 })
