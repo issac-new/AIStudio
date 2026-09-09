@@ -4,7 +4,8 @@ import { mkdtemp, readFile, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
-  writeGraphContext, ensureAgentReference, summarizeUpstream, type GraphContextInput,
+  writeGraphContext, ensureAgentReference, summarizeUpstream, makeInjectWorkspaceContext,
+  type GraphContextInput,
 } from '../../../../server/loop/graph/workspace-context'
 import { InMemoryEventLogStore } from '../../../../server/loop/graph/event-log-store'
 import { CH, createPhaseNode, type PhaseNodeDeps } from '../../../../server/loop/graph/phase-nodes'
@@ -140,5 +141,77 @@ describe('handoff integration (R2 injection point)', () => {
     })
     await node.execute({ [CH.contracts]: [contract] }, ctx)
     expect(calls.filter(c => c.startsWith('dispatch:'))).toHaveLength(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 修复波 I6 — 生产装配工厂 makeInjectWorkspaceContext（patch 202 engineDeps 接线）
+// ---------------------------------------------------------------------------
+
+describe('makeInjectWorkspaceContext (I6)', () => {
+  function loopFixture() {
+    return {
+      id: 'loop-1', name: 'L', goal: 'ship the release', stopCondition: '', pattern: 'daily-triage',
+      schedule: { mode: 'manual', timezone: 'UTC' }, stage: 'handoff', status: 'running',
+      autonomyLevel: 'L1', stateAdapter: 'local', createdAt: '', updatedAt: '',
+      lastTickAt: null, nextTickAt: null,
+      budget: { maxCostPerTick: 1, maxCostTotal: 10, killMode: 'notify', warningThreshold: 0.8 },
+      stats: { totalIterations: 3, tasksDiscovered: 1, tasksCompleted: 0, tasksBlocked: 0, totalCost: 4, currentIteration: 3 },
+    } as LoopInstance
+  }
+  function contractFixture() {
+    return {
+      id: 'task/a', loopId: 'loop-1',
+      source: { type: 'git-commit', ref: 'sha', summary: 'unpushed fix', rawPayload: null },
+      readPlan: { requiredReads: [] }, writeBoundary: [],
+      verificationIntent: { programmatic: [], judge: null, human: null },
+      resultTemplate: { artifactType: 'patch', requiredFiles: ['packages/x/patch.diff'] },
+      worktreeId: null, assignee: 'maker', status: 'queued', attempts: 0, maxAttempts: 3,
+    } as TaskContract
+  }
+
+  it('materializes GRAPH-CONTEXT.md from loop ledger + contract facts and appends agent reference lines', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gctx-factory-'))
+    const inject = makeInjectWorkspaceContext({
+      store: { getLoop: async () => loopFixture() },
+      worktreeRoot: dir,
+    })
+    await inject(contractFixture(), 'wt-1')
+
+    const content = await readFile(join(dir, 'wt-1', 'GRAPH-CONTEXT.md'), 'utf-8')
+    expect(content).toContain('ship the release')            // goal ← loop 台账
+    expect(content).toContain('handoff/L:handoff')           // 节点锚
+    expect(content).toContain('第 3 轮迭代')                  // iteration ← loop.stats
+    expect(content).toContain('unpushed fix')                // 上游摘要 ← 契约 source
+    expect(content).toContain('required files: packages/x/patch.diff') // 完成判定 ← requiredFiles
+    expect(content).toContain('cost 6')                      // 预算差值 = maxCostTotal - totalCost
+    expect(await readFile(join(dir, 'wt-1', 'CLAUDE.md'), 'utf-8')).toContain('@GRAPH-CONTEXT.md')
+    expect(await readFile(join(dir, 'wt-1', 'AGENTS.md'), 'utf-8')).toContain('@GRAPH-CONTEXT.md')
+  })
+
+  it('degrades to contract self-description when the store is not ready (lazyStore early access)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gctx-factory-'))
+    const inject = makeInjectWorkspaceContext({
+      store: { getLoop: () => { throw new Error('Loop subsystem not yet initialized') } },
+      worktreeRoot: dir,
+    })
+    await inject(contractFixture(), 'wt-2')
+    const content = await readFile(join(dir, 'wt-2', 'GRAPH-CONTEXT.md'), 'utf-8')
+    expect(content).toContain('unpushed fix') // goal 回落契约 source
+    expect(content).not.toContain('剩余预算')  // 无 loop 台账 → 预算行省略
+  })
+
+  it('completionCriteria falls back to programmatic commands when no requiredFiles', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gctx-factory-'))
+    const contract = contractFixture()
+    contract.resultTemplate.requiredFiles = []
+    contract.verificationIntent.programmatic = [{ command: 'npm test', expectedExitCode: 0, timeout: 60_000 }]
+    const inject = makeInjectWorkspaceContext({
+      store: { getLoop: async () => loopFixture() },
+      worktreeRoot: dir,
+    })
+    await inject(contract, 'wt-3')
+    const content = await readFile(join(dir, 'wt-3', 'GRAPH-CONTEXT.md'), 'utf-8')
+    expect(content).toContain('npm test')
   })
 })
