@@ -13,6 +13,23 @@
 // 状态模型 — LangGraph channel + reducer 模式
 // ============================================================================
 
+import type { PredicateExpr } from './predicate'
+
+/** 回边守卫：有限终止的循环级安全网 */
+export interface LoopGuard {
+  maxIterations: number
+  breakCondition?: PredicateExpr
+}
+
+/** 节点失败路由 */
+export type NodeErrorRoute =
+  | { type: 'fail' }
+  | { type: 'goto'; target: string }
+  | { type: 'retry-goto'; target: string; maxAttempts: number }
+
+/** 多入边激活语义：all=等全部前驱完成（默认） any=任一前驱完成即激活 */
+export type JoinMode = 'all' | 'any'
+
 /** Reducer 函数：合并旧值和新值。默认覆盖，可自定义（如 list append） */
 export type Reducer<T> = (old: T | undefined, next: T) => T
 
@@ -62,6 +79,10 @@ export interface NodeDef {
   cacheTtl?: number
   /** 子图引用（type='subgraph' 时使用） */
   subgraphId?: string
+  /** 失败路由（默认 fail） */
+  onError?: NodeErrorRoute
+  /** 多入边激活语义（默认 'all'） */
+  joinMode?: JoinMode
 }
 
 export interface NodeContext {
@@ -98,6 +119,8 @@ export interface EdgeDef {
   /** 静态边（无 condition）或动态边（有 condition） */
   condition?: EdgeCondition
   label?: string
+  /** 回边守卫（from 的后代指向祖先时必填） */
+  guard?: LoopGuard
 }
 
 // ============================================================================
@@ -120,6 +143,8 @@ export interface GraphDef {
   endCondition?: (state: StateValues) => boolean
   /** 最大 super-step 数（防无限循环） */
   maxSteps: number
+  /** L4 时长守卫 */
+  maxDurationMs?: number
   /** 预算 */
   budget?: { maxCost: number; maxTokens: number }
 }
