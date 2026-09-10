@@ -37,6 +37,12 @@ export interface RunSpawnerOpts {
    */
   emitLoopEvent?: (event: LoopEvent) => void
   /**
+   * webhook payload 入队通道（2026-09-10 风险审查 #2 修复）：与 legacy Scheduler 对齐——
+   * payload 先入队 webhookConnector（discovery 经 discover 排空为契约），再去抖 tick。
+   * 缺省不注入时仅 tick（payload 无处可去，与 P1 行为一致）。
+   */
+  webhookEnqueue?: (loopId: string, entry: { source: string; eventType: string; payload: unknown }) => void
+  /**
    * 崩溃恢复白名单（I9）：装配启动时由 status=running 重建为 paused 的 loop id。
    * poll 命中白名单且 nextTickAt 已过 → 自动恢复触发一次（触发后移除）。
    * 用户主动 paused 的 loop 永不入白名单，不会被误恢复。
@@ -142,8 +148,11 @@ export class RunSpawner {
     }
   }
 
-  /** webhook 触发：5s 去抖（沿用 Scheduler.handleWebhook 语义） */
-  handleWebhook(loopId: string, source: string, eventType: string): void {
+  /** webhook 触发：5s 去抖（沿用 Scheduler.handleWebhook 语义）。
+   *  payload 先入队 webhookConnector（legacy scheduler.ts:64 同款：入队后去抖 tick，
+   *  discovery 经 discover 排空为契约）——缺 enqueue 通道时仅 tick（payload 丢弃，P1 原行为）。 */
+  handleWebhook(loopId: string, source: string, eventType: string, payload?: unknown): void {
+    this.opts.webhookEnqueue?.(loopId, { source, eventType, payload })
     const key = `${loopId}:${source}:${eventType}`
     const existing = this.webhookTimers.get(key)
     if (existing) clearTimeout(existing)

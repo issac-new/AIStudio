@@ -4,7 +4,7 @@
 // I7 成本断链 / I9 崩溃恢复 + running loop 自动恢复 / I10 兼容事件（spawner 侧见其专属测试）
 import { describe, it, expect, vi } from 'vitest'
 import { createGraphAssembly, readEngineMode, type GraphAssemblyOpts } from '../../../../server/loop/graph/graph-assembly'
-import { createGraphRunRouter, resumeApprovalForContract, GraphSpecStore } from '../../../../server/loop/graph/graph-rest'
+import { createGraphRunRouter, resumeApprovalForContract, stampApproverIdentity, GraphSpecStore } from '../../../../server/loop/graph/graph-rest'
 import { setupGraphSocketNamespace, type SocketIOLike, type SocketLike } from '../../../../server/loop/graph/graph-socket'
 import { ShadowRunner, compareEventSequences } from '../../../../server/loop/graph/shadow-runner'
 import { GraphService } from '../../../../server/loop/graph/graph-service'
@@ -109,7 +109,7 @@ function extractParams(actual: string, pattern: string): Record<string, string> 
   return params
 }
 
-async function invoke(router: Router, method: 'get' | 'post', actualPath: string, body?: unknown) {
+async function invoke(router: Router, method: 'get' | 'post', actualPath: string, body?: unknown, opts?: { state?: Record<string, unknown> }) {
   const layer = router.stack.find(l =>
     (l.methods as unknown as string[]).includes(method.toUpperCase()) && patternToRegExp(l.path).test(actualPath))
   if (!layer) throw new Error(`route not found: ${method} ${actualPath}`)
@@ -120,6 +120,7 @@ async function invoke(router: Router, method: 'get' | 'post', actualPath: string
     request: { body },
     body: undefined as unknown,
     status: 200,
+    state: opts?.state ?? {},
   }
   await handler(ctx)
   return ctx
@@ -310,6 +311,31 @@ describe('graph REST run lifecycle', () => {
     expect((ctx.body as { runId: string }).runId).not.toBe(runId)
   })
 
+  it('resume endpoint overrides the client-reported approver with the authenticated user (审查 #1)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+    service.registerGraph(new GraphBuilder('hitl-rest', 'H')
+      .addChannel('decision', { reducer: reducers.overwrite(), default: '' })
+      .addNode(fnNode('gate', async (state) => {
+        const v = state['__resume:approval:task/r']
+        if (v !== undefined) return { goto: ['finish'], update: { decision: JSON.stringify(v) } }
+        return { interrupt: { id: 'approval:task/r', value: {} }, goto: ['gate'] }
+      }))
+      .addNode(fnNode('finish', async () => ({ end: true })))
+      .setEntry('gate').addEdge('gate', 'finish').build())
+    const { runId } = await service.startRun('hitl-rest')
+
+    const router = createGraphRunRouter({ graphService: service, eventLog })
+    const ctx = await invoke(router, 'post', `/api/graph/runs/${runId}/resume`,
+      { interruptId: 'approval:task/r', value: { decision: 'approved', approver: 'mallory' } },
+      { state: { user: { username: 'alice', role: 'user' } } })
+    expect(ctx.status).toBe(200)
+    await vi.waitFor(() => expect(service.getRun(runId)?.instance.status).toBe('completed'))
+    const decision = (service.getRun(runId)?.instance.state as { decision?: string }).decision ?? ''
+    // 客户端自报的 mallory 被认证主体 alice 覆盖
+    expect(JSON.parse(decision)).toEqual({ decision: 'approved', approver: 'alice' })
+  })
+
   it('specs endpoints persist and list GraphSpecs (台账 i)', async () => {
     const specStore = new GraphSpecStore()
     const router = createGraphRunRouter({
@@ -354,6 +380,52 @@ describe('resumeApprovalForContract', () => {
     const result = await resumeApprovalForContract(
       { graphService: new GraphService({ eventLog }), eventLog }, 'task/none', 'approved')
     expect(result.ok).toBe(false)
+  })
+
+  it('forwards the authenticated approver as the resume decision value (审查 #1)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+    service.registerGraph(new GraphBuilder('hitl-approver', 'H')
+      .addChannel('decision', { reducer: reducers.overwrite(), default: '' })
+      .addNode(fnNode('gate', async (state) => {
+        const v = state['__resume:approval:task/z']
+        if (v !== undefined) return { goto: ['finish'], update: { decision: JSON.stringify(v) } }
+        return { interrupt: { id: 'approval:task/z', value: {} }, goto: ['gate'] }
+      }))
+      .addNode(fnNode('finish', async () => ({ end: true })))
+      .setEntry('gate').addEdge('gate', 'finish').build())
+    const { runId } = await service.startRun('hitl-approver')
+
+    const result = await resumeApprovalForContract(
+      { graphService: service, eventLog }, 'task/z', 'approved', 'alice')
+    expect(result).toEqual({ ok: true, runId })
+    await vi.waitFor(() => expect(service.getRun(runId)?.instance.status).toBe('completed'))
+    const decision = (service.getRun(runId)?.instance.state as { decision?: string }).decision ?? ''
+    expect(JSON.parse(decision)).toEqual({ decision: 'approved', approver: 'alice' })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 审批身份盖章（2026-09-10 风险审查 #1）
+// ---------------------------------------------------------------------------
+
+describe('stampApproverIdentity', () => {
+  it('wraps primitive decisions and overwrites self-reported approver', () => {
+    expect(stampApproverIdentity(true, 'alice')).toEqual({ decision: 'approved', approver: 'alice' })
+    expect(stampApproverIdentity('rejected', 'alice')).toEqual({ decision: 'rejected', approver: 'alice' })
+    expect(stampApproverIdentity({ decision: 'approved', approver: 'mallory' }, 'alice'))
+      .toEqual({ decision: 'approved', approver: 'alice' })
+    expect(stampApproverIdentity({ approved: true }, 'alice'))
+      .toEqual({ approved: true, approver: 'alice' })
+  })
+
+  it('stamps every entry of a bulk decisions array; leaves non-decision payloads untouched', () => {
+    expect(stampApproverIdentity(
+      { decisions: [{ decision: 'approved', approver: 'a' }, { decision: 'approved', approver: 'b' }] }, 'alice'))
+      .toEqual({ decisions: [{ decision: 'approved', approver: 'alice' }, { decision: 'approved', approver: 'alice' }] })
+    const payload = { timeout: { ms: 1000, onTimeout: 'escalate' }, loopId: 'l1' }
+    expect(stampApproverIdentity(payload, 'alice')).toBe(payload)
+    expect(stampApproverIdentity(null, 'alice')).toBeNull()
   })
 })
 
