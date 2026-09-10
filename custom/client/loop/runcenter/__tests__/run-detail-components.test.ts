@@ -169,8 +169,10 @@ describe('RunGraphCanvas (jsdom, vue-flow stub)', () => {
     expect(slots[3].classes()).toContain('is-failed')
     expect(slots[3].classes()).toContain('is-selected')
     expect(slots[4].classes()).toContain('is-skipped')
-    // 迭代徽标（iteration>0 显示）
+    // 迭代徽标（B-2 语义 = 节点完成次数，>1 才显示）
     expect(slots[1].text()).toContain('#3')
+    expect(slots[2].text()).toContain('#2')
+    expect(slots[0].text()).not.toContain('#1') // 单次完成不显示徽标
     expect(slots[4].text()).not.toContain('#0')
     // 时长标签
     expect(slots[0].text()).toContain('2.0s')
@@ -203,7 +205,8 @@ describe('RunDetailView (jsdom)', () => {
   const EVENTS = [
     { kind: 'run.started', ts: 1000 },
     { kind: 'node.started', nodeId: 'discovery', superStep: 1, ts: 1000 },
-    { kind: 'node.completed', nodeId: 'discovery', superStep: 1, payload: { goto: ['handoff'] }, ts: 3000 },
+    // superStep=7 ≠ 迭代数：B-2 锚定——iteration 是节点完成次数（1），不是全局步时钟
+    { kind: 'node.completed', nodeId: 'discovery', superStep: 7, payload: { goto: ['handoff'] }, ts: 3000 },
   ]
 
   it('装配：详情+回放并行拉取，spec 按 graphDefId 检索；图投影 done 节点；游标初始落全量', async () => {
@@ -224,9 +227,10 @@ describe('RunDetailView (jsdom)', () => {
 
     // 游标初始落全量（3/3）→ discovery 投影为 done
     expect(flowCapture.nodes).toHaveLength(2)
-    const discovery = flowCapture.nodes.find(n => n.id === 'discovery') as { data: { status: string; iteration: number } }
+    const discovery = flowCapture.nodes.find(n => n.id === 'discovery') as { data: { status: string; iteration: number; duration: string } }
     expect(discovery.data.status).toBe('done')
-    expect(discovery.data.iteration).toBe(1)
+    expect(discovery.data.iteration).toBe(1) // 完成次数，非 superStep(7)
+    expect(discovery.data.duration).toBe('2.0s') // B-1：started→completed 闭合区间
 
     // 时间轴收到 3 行投影（normal 档：run.started + started + completed）
     expect(w.findAll('.rt-row')).toHaveLength(3)

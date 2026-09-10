@@ -116,7 +116,10 @@ describe('buildRunGraph — 状态机投影（事件日志词汇）', () => {
       logEv({ kind: 'node.started', nodeId: 'validation', ts: 1000 }),
       logEv({ kind: 'interrupt.raised', nodeId: 'validation', payload: { interruptId: 'approval:c1' }, ts: 2000 }),
     ])
-    expect(g.nodes.find(n => n.id === 'validation')!.status).toBe('awaiting-input')
+    const validation = g.nodes.find(n => n.id === 'validation')!
+    expect(validation.status).toBe('awaiting-input')
+    // B-1：挂起时段不计入执行时长（started→interrupted 只算 1000ms，不累计到窗口末尾）
+    expect(validation.durationMs).toBe(1000)
 
     const g2 = buildRunGraph(SPEC, [
       logEv({ kind: 'node.started', nodeId: 'validation', ts: 1000 }),
@@ -124,9 +127,11 @@ describe('buildRunGraph — 状态机投影（事件日志词汇）', () => {
       logEv({ kind: 'interrupt.resumed', nodeId: 'validation', ts: 9000 }),
     ])
     expect(g2.nodes.find(n => n.id === 'validation')!.status).toBe('running')
+    // resume 后重新开区间，窗口末尾即 resume 时刻 → 不新增时长
+    expect(g2.nodes.find(n => n.id === 'validation')!.durationMs).toBe(1000)
   })
 
-  it('同节点多次完成：iteration 取最大、durationMs 累计', () => {
+  it('同节点多次完成：iteration 计完成次数、durationMs 累计', () => {
     const g = buildRunGraph(SPEC, [
       logEv({ kind: 'node.started', nodeId: 'handoff', superStep: 1, ts: 1000 }),
       logEv({ kind: 'node.completed', nodeId: 'handoff', superStep: 1, payload: { goto: ['validation'] }, ts: 2000 }),
@@ -134,7 +139,8 @@ describe('buildRunGraph — 状态机投影（事件日志词汇）', () => {
       logEv({ kind: 'node.completed', nodeId: 'handoff', superStep: 3, payload: { goto: ['validation'] }, ts: 7000 }),
     ])
     const handoff = g.nodes.find(n => n.id === 'handoff')!
-    expect(handoff.iteration).toBe(3)
+    // B-2：迭代 = 节点自身完成次数（2 次），不是全局 superStep（max(1,3)=3 语义已废）
+    expect(handoff.iteration).toBe(2)
     expect(handoff.durationMs).toBe(3000)
     expect(handoff.status).toBe('done')
   })
@@ -226,7 +232,52 @@ describe('buildRunGraph — socket 词汇等价投影', () => {
       sockEv({ type: 'graph.interrupt', nodeId: 'validation', interruptId: 'approval:c1', ts: '2026-09-10T00:00:02Z' }),
       sockEv({ type: 'graph.resume', interruptId: 'approval:c1', ts: '2026-09-10T00:05:00Z' }),
     ])
+    const validation = g.nodes.find(n => n.id === 'validation')!
+    expect(validation.status).toBe('running')
+    // B-1：挂起 3 分钟不计入执行时长
+    expect(validation.durationMs).toBe(1000)
+  })
+
+  it('B-3 并发双 interrupt：resume 按 interruptId 精确定位，另一路保持挂起', () => {
+    const events: ReplayEventLike[] = [
+      sockEv({ type: 'graph.node-start', nodeId: 'validation', ts: '2026-09-10T00:00:01Z' }),
+      sockEv({ type: 'graph.node-start', nodeId: 'gate', ts: '2026-09-10T00:00:01Z' }),
+      sockEv({ type: 'graph.interrupt', nodeId: 'validation', interruptId: 'approval:validation', ts: '2026-09-10T00:00:02Z' }),
+      sockEv({ type: 'graph.interrupt', nodeId: 'gate', interruptId: 'approval:gate', ts: '2026-09-10T00:00:03Z' }),
+    ]
+    // resume 先到的 validation（interruptId 精确命中）→ gate 仍挂起（挂起序折返会投影反转）
+    const g1 = buildRunGraph(SPEC, [
+      ...events,
+      sockEv({ type: 'graph.resume', interruptId: 'approval:validation', ts: '2026-09-10T00:05:00Z' }),
+    ])
+    expect(g1.nodes.find(n => n.id === 'validation')!.status).toBe('running')
+    expect(g1.nodes.find(n => n.id === 'gate')!.status).toBe('awaiting-input')
+
+    // 再 resume gate → 全部恢复
+    const g2 = buildRunGraph(SPEC, [
+      ...events,
+      sockEv({ type: 'graph.resume', interruptId: 'approval:validation', ts: '2026-09-10T00:05:00Z' }),
+      sockEv({ type: 'graph.resume', interruptId: 'approval:gate', ts: '2026-09-10T00:06:00Z' }),
+    ])
+    expect(g2.nodes.find(n => n.id === 'gate')!.status).toBe('running')
+  })
+
+  it('B-3 resume 无 interruptId 无 nodeId 时折返最后挂起节点（兜底不失效）', () => {
+    const g = buildRunGraph(SPEC, [
+      logEv({ kind: 'node.started', nodeId: 'validation', ts: 1000 }),
+      logEv({ kind: 'interrupt.raised', nodeId: 'validation', ts: 2000 }),
+      logEv({ kind: 'interrupt.resumed', ts: 9000 }),
+    ])
     expect(g.nodes.find(n => n.id === 'validation')!.status).toBe('running')
+    expect(g.nodes.find(n => n.id === 'validation')!.durationMs).toBe(1000)
+  })
+
+  it('B-4 socket 词汇 node.error-routed：target/error 在事件顶层同样可读', () => {
+    const g = buildRunGraph(SPEC, [
+      sockEv({ type: 'node.error-routed', nodeId: 'persistence', target: 'handoff', error: 'write fail', ts: '2026-09-10T00:00:01Z' }),
+    ])
+    const taken = g.edges.filter(e => e.taken).map(e => e.id)
+    expect(taken).toEqual(['persistence->handoff'])
   })
 })
 

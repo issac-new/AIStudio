@@ -145,4 +145,20 @@ describe('useRunReplay — 播放 / 暂停 / 倍速', () => {
     vi.advanceTimersByTime(2000)
     expect(r.cursorIndex.value).toBe(0) // dispose 后不再推进
   })
+
+  it('B-6 无活动 effect scope 时调用不触发 Vue warn', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      useRunReplay(EVENTS, { tickMs: 500 }) // 测试环境无活动 scope
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringMatching(/effect scope|onScopeDispose/i),
+        expect.anything(),
+      )
+      expect(warnSpy.mock.calls.some(args =>
+        args.some(a => typeof a === 'string' && /effect scope|onScopeDispose/i.test(a)),
+      )).toBe(false)
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
 })
