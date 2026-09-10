@@ -29,10 +29,9 @@ export interface KanbanPersistenceDeps {
   log?: (msg: string) => void
 }
 
-/** loop.tenant 防御读取：LoopInstance 尚无类型化 tenant 字段（matrix 来源的 loop 后续补齐），
- *  非字符串/空白归一为 null */
+/** loop.tenant 读取：类型化字段（P2 随修 2 起 create 白名单写入），空白/缺省归一为 null */
 export function readLoopTenant(loop: LoopInstance): string | null {
-  const raw = (loop as unknown as { tenant?: unknown }).tenant
+  const raw = loop.tenant
   if (typeof raw !== 'string') return null
   const trimmed = raw.trim()
   return trimmed ? trimmed : null
@@ -41,8 +40,9 @@ export function readLoopTenant(loop: LoopInstance): string | null {
 function slugify(raw: string): string | null {
   const slug = raw.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
   if (!BOARD_SLUG_RE.test(slug)) return null
-  // 纯数字/符号残段（如 '跨团队协作群01'→'01'）无辨识度且多群必撞名，视同解析不出
-  if (!/[a-z]/.test(slug)) return null
+  // 残段阈值（Minor）：纯数字/符号段（'跨团队协作群01'→'01'）与过短字母段（'开发群A'→'a'，
+  // '设计群A'→'a' 撞名）无辨识度，视同解析不出 → 回落 roomId
+  if (!/[a-z]/.test(slug) || slug.length < 3) return null
   return slug
 }
 

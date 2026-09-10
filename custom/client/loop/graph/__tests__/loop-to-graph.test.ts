@@ -71,21 +71,25 @@ describe('loopToGraphDef', () => {
     const def = loopToGraphDef(makeLoop())
     // 编译产物含 gate/stop-check，投影折叠进 scheduling；5 阶段一个不多不少
     expect([...def.nodes.keys()].sort()).toEqual(['discovery', 'handoff', 'persistence', 'scheduling', 'validation'])
-    // 边集合恰为 legacy 6 条：直连主干 4 条（无 label）+ repair（带条件）+ next tick 循环
+    // 边集合恰为 legacy 7 条：直连主干 4 条（无 label）+ repair 2 条（validation/persistence
+    // 失败回边，P2 Task 4 审查修复新增 persistence 侧）+ next tick 循环
     const bare = def.edges.filter(e => e.source === 'discovery' && e.target === 'handoff'
       || e.source === 'handoff' && e.target === 'validation'
       || e.source === 'validation' && e.target === 'persistence'
       || e.source === 'persistence' && e.target === 'scheduling')
     expect(bare).toHaveLength(4)
     expect(bare.every(e => e.label === undefined && e.condition === undefined)).toBe(true)
-    const repair = def.edges.find(e => e.label === 'repair')!
-    expect(repair.source).toBe('validation')
-    expect(repair.target).toBe('handoff')
-    expect(typeof repair.condition).toBe('function')
+    const validationRepair = def.edges.find(e => e.label === 'repair' && e.source === 'validation')!
+    expect(validationRepair.target).toBe('handoff')
+    expect(typeof validationRepair.condition).toBe('function')
+    // persistence 失败回边（Critical 修复）：与 validation 对称投影进 REST 视图
+    const persistenceRepair = def.edges.find(e => e.label === 'repair' && e.source === 'persistence')!
+    expect(persistenceRepair.target).toBe('handoff')
+    expect(typeof persistenceRepair.condition).toBe('function')
     const loopEdge = def.edges.find(e => e.label === 'next tick')!
     expect(loopEdge.source).toBe('scheduling')
     expect(loopEdge.target).toBe('discovery')
-    expect(def.edges).toHaveLength(6)
+    expect(def.edges).toHaveLength(7)
     // 编译期守卫/分支语义（guard.maxIterations、no-contracts、gate-repair）属可执行面，REST 视图不投影
     expect(def.edges.some(e => e.source === 'discovery' && e.target === 'scheduling')).toBe(false)
     expect(def.edges.some(e => e.source === 'scheduling' && e.target === 'handoff')).toBe(false)

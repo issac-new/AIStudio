@@ -49,6 +49,11 @@ export interface LoopInstance {
   status: LoopStatus
   autonomyLevel: AutonomyLevel
   stateAdapter: 'local' | 'matrix' | 'saas'
+  /** 租户标识（可选，P2 Task 4 随修 2）：创建请求显式携带（POST /api/loop/loops 的
+   *  body.tenant）。六段格式 `<群聊名称>:<话题摘要>:<user_id>:<room_id>:<session_id>:matrix`
+   *  ——persistence 的 KanbanPersistenceAdapter 据此解析目标 kanban board（缺省/旧格式
+   *  解析不出 → persist 跳过并告警）。 */
+  tenant?: string | null
   createdAt: string
   updatedAt: string
   lastTickAt: string | null
