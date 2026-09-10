@@ -20,7 +20,7 @@
 
 ---
 
-### Task A1: 调度收尾三连（P2 台账 ①②④）
+### Task 1: 调度收尾三连（P2 台账 ①②④）
 
 **Files:**
 - Modify: `custom/server/loop/graph/graph-assembly.ts`（scheduleLoop）、`run-spawner.ts`（熔断）、`graph-socket.ts` 或装配侧（tryBindSocket）
@@ -37,7 +37,7 @@
 
 ---
 
-### Task A2: interrupt 超时策略（P0 台账 h 项）
+### Task 2: interrupt 超时策略（P0 台账 h 项）
 
 **Files:**
 - Create: `custom/server/loop/graph/interrupt-timeout.ts`
@@ -57,7 +57,7 @@
 
 ---
 
-### Task A3: graph_specs 表化 + judge pending 结构（P2 台账 ③⑥）
+### Task 3: graph_specs 表化 + judge pending 结构（P2 台账 ③⑥）
 
 **Files:**
 - Modify: `custom/server/loop/graph/event-log-store.ts`（specs 表 CRUD）、`types.ts`（VerificationRecord 扩展）或 verifier 相关类型
@@ -73,7 +73,7 @@
 
 ---
 
-### Task A4: persistence 真实 kanban 写入（P2 台账 ④/⑤中之 persistence DI）
+### Task 4: persistence 真实 kanban 写入（P2 台账 ④/⑤中之 persistence DI）
 
 **Files:**
 - Create: `custom/server/loop/graph/kanban-persistence.ts`
@@ -94,7 +94,7 @@
 
 ---
 
-### Task B5: 运行列表（socket 客户端 + store + 视图骨架）
+### Task 5: 运行列表（socket 客户端 + store + 视图骨架）
 
 **Files:**
 - Create: `custom/client/loop/runcenter/api.ts`、`store/runs.ts`、`views/RunCenterView.vue`、`components/RunListTable.vue`、`components/RunStageBadge.vue`
@@ -116,7 +116,7 @@
 
 ---
 
-### Task B6: 运行详情——执行图画布 + 时间轴回放 + 三级分辨率
+### Task 6: 运行详情——执行图画布 + 时间轴回放 + 三级分辨率
 
 **Files:**
 - Create: `custom/client/loop/runcenter/views/RunDetailView.vue`、`components/RunGraphCanvas.vue`（vue-flow）、`components/RunTimeline.vue`、`composables/useRunReplay.ts`、`adapters/run-graph.ts`（事件日志→图布局数据）
@@ -134,7 +134,7 @@
 
 ---
 
-### Task B7: 节点检查器 + 介入收件箱（peek/attach）
+### Task 7: 节点检查器 + 介入收件箱（peek/attach）
 
 **Files:**
 - Create: `runcenter/components/NodeInspector.vue`、`runcenter/components/ApprovalPanel.vue`、`runcenter/components/InboxPanel.vue`
@@ -152,7 +152,7 @@
 
 ---
 
-### Task B8: R1 每日 Brief（结构化汇总版）
+### Task 8: R1 每日 Brief（结构化汇总版）
 
 **Files:**
 - Create: `custom/server/loop/graph/daily-brief.ts`
@@ -172,7 +172,7 @@
 
 ---
 
-### Task A5（收口）: P2 验收 + 文档
+### Task 9（收口）: P2 验收 + 文档
 
 - 全量门禁：`npm test` + `npm run clean && npm run inject && npm run build:full`（前端任务后必跑）
 - README：运行中心章节（入口/能力/三级分辨率说明）替换 Loop Engineering 章节相应段落
