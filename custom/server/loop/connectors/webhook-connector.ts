@@ -22,6 +22,8 @@ export class WebhookConnector {
     if (pending.length === 0) return []
     const contracts = pending.map(p => createContract({
       loopId: loop.id,
+      // P3 台账：契约重试上限随 loop 配置（三连接器同款，见 github-connector）
+      maxAttempts: loop.maxAttempts,
       source: { type: 'webhook', ref: `${p.source}:${p.eventType}`, summary: `${p.eventType} from ${p.source}`, rawPayload: p.payload },
       readPlan: { requiredReads: [] },
       writeBoundary: ['packages/**'],

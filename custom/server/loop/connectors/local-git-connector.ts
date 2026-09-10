@@ -15,6 +15,8 @@ export class LocalGitConnector {
     for (const commit of unpushed) {
       contracts.push(createContract({
         loopId: loop.id,
+        // P3 台账：契约重试上限随 loop 配置（三连接器同款，见 github-connector）
+        maxAttempts: loop.maxAttempts,
         source: { type: 'git-commit', ref: commit.sha, summary: `Unpushed: ${commit.message}`, rawPayload: commit },
         readPlan: { requiredReads: [] },
         writeBoundary: [],

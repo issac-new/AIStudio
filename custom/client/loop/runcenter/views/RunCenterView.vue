@@ -46,6 +46,12 @@ const pagedRuns = computed(() =>
 )
 watch([statusFilter, query], () => { page.value = 1 })
 
+// 批量订阅（P3 台账 #2）：订阅域 = 可见页——翻页/过滤后旧页 unsubscribe、新页 subscribe。
+// 数据合并（fetchRuns）不驱动订阅；此 watcher 是订阅的唯一驱动源。
+watch(pagedRuns, (list) => {
+  store.syncVisibleRunIds(list.map(r => r.runId))
+})
+
 function prevPage(): void { if (page.value > 1) page.value-- }
 function nextPage(): void { if (page.value < totalPages.value) page.value++ }
 

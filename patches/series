@@ -271,3 +271,6 @@
 # P3 Task 1: 台账清偿——运行详情导出 JSON 按钮文案
 213-client-i18n-runcenter-export-zh.patch
 214-client-i18n-runcenter-export-en.patch
+# P3 Task 2: 前端台账清偿——审批身份/检查器当前值/键盘可达 i18n
+215-client-i18n-runcenter-task2-zh.patch
+216-client-i18n-runcenter-task2-en.patch

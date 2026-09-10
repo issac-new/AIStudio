@@ -1,12 +1,13 @@
 <!-- overlay/custom/loop/runcenter/components/NodeInspector.vue -->
 <!-- NodeInspector — 节点检查器 attach 档（task-7）：选中执行图节点后在侧栏显示
      类型/状态/迭代（完成次数）/耗时、最近一次 update 的 channel 键值
-     （socket result.update 真实键值；事件日志 payload 仅键名——服务端日志契约）、
+     （socket result.update 真实键值；事件日志 payload 仅键名——服务端日志契约；
+     P3 台账：缺值键 join REST instance.state 显示"当前值"，并标注非事件当时值）、
      failed 时人类可读原因 + 建议动作（重跑整个 run = fork → startRun 显式起跑，
      "从失败重跑"），以及该节点关联事件列表（Verbose 档）。
      数据组织在 adapters/intervention.inspectNode（纯函数），本组件薄壳。 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDurationMs, inspectNode } from '../adapters/intervention'
 import { formatEventTs } from '../adapters/run-graph'
@@ -25,6 +26,34 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const insp = computed(() => (props.node ? inspectNode(props.events, props.node.id) : null))
+
+// ── run instance.state 当前值（P3 台账：lastUpdate 键 join 当前值）──
+// 日志词汇的 node.completed 只落 updateKeys（键名，服务端日志契约），缺值的键以
+// REST GET /api/graph/runs/:id 的 instance.state 当前值补显——标注"当前值（非事件
+// 当时值）"。拉取失败静默降级（只显键名，与旧行为一致）。
+const instanceState = ref<Record<string, unknown> | null>(null)
+
+async function loadInstanceState(): Promise<void> {
+  instanceState.value = null
+  try {
+    const res = await runRest.getRun(props.runId)
+    const state = (res.instance as { state?: unknown } | undefined)?.state
+    instanceState.value = state != null && typeof state === 'object'
+      ? state as Record<string, unknown>
+      : null
+  } catch {
+    instanceState.value = null // 详情端点不可用 → 只显键名，不炸面板
+  }
+}
+
+watch(() => props.runId, () => { void loadInstanceState() }, { immediate: true })
+
+/** 键的当前值（state 缺该键返回 undefined，模板据此不渲染值列） */
+function currentValueOf(k: string): { exists: boolean; value: unknown } {
+  const state = instanceState.value
+  if (!state || !(k in state)) return { exists: false, value: undefined }
+  return { exists: true, value: state[k] }
+}
 
 /** 节点状态 → i18n key（复用 task-6 的 runcenter.graph.nodeStatus.*） */
 const NODE_STATUS_KEY: Record<RunGraphNode['status'], string> = {
@@ -106,7 +135,8 @@ async function rerun(): Promise<void> {
         </div>
       </dl>
 
-      <!-- 最近一次 update 的 channel 键值（node.completed payload） -->
+      <!-- 最近一次 update 的 channel 键值（node.completed payload）；
+           缺值键以 instance.state 当前值补显（P3 台账，标注非事件当时值） -->
       <div class="ni-panel__section">
         <span class="ni-panel__section-title">{{ t('runcenter.inspector.lastUpdate') }}</span>
         <div v-if="!insp.lastUpdate" class="ni-panel__muted">{{ t('runcenter.inspector.noUpdate') }}</div>
@@ -117,6 +147,10 @@ async function rerun(): Promise<void> {
               v-if="insp.lastUpdate.update && k in insp.lastUpdate.update"
               class="ni-panel__update-value"
             >{{ valueLabel(insp.lastUpdate.update[k]) }}</code>
+            <template v-else-if="currentValueOf(k).exists">
+              <code class="ni-panel__update-value">{{ valueLabel(currentValueOf(k).value) }}</code>
+              <span class="ni-panel__update-note">{{ t('runcenter.inspector.currentValue') }}</span>
+            </template>
           </div>
         </div>
       </div>
@@ -220,7 +254,7 @@ async function rerun(): Promise<void> {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 11px;
 }
-.ni-panel__update-row { display: flex; gap: 8px; min-width: 0; }
+.ni-panel__update-row { display: flex; gap: 8px; min-width: 0; align-items: baseline; }
 .ni-panel__update-key { flex-shrink: 0; font-weight: 600; }
 .ni-panel__update-value {
   min-width: 0;
@@ -228,6 +262,14 @@ async function rerun(): Promise<void> {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-muted, var(--color-text-secondary, #878c99));
+}
+.ni-panel__update-note {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0 6px;
 }
 
 .ni-panel__error {
