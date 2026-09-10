@@ -91,8 +91,9 @@ export interface PhaseNodeDeps {
    *  失败不阻断派发——上下文是增强不是依赖） */
   injectWorkspaceContext?: (contract: TaskContract, worktreeId: string) => Promise<void>
   /** validation 人工门禁的审批三元组缺省：approvers 取自 contract.verificationIntent.human.approvers，
-   *  此处只配 policy / onReject（缺省 all / { goto: 'handoff' }，即守卫回边） */
-  approvals?: { policy?: ApprovalPolicy; onReject?: OnReject }
+   *  此处只配 policy / onReject（缺省 all / { goto: 'handoff' }，即守卫回边）；
+   *  timeout 同源透传（缺省 escalate + 72h，P2 台账 h） */
+  approvals?: { policy?: ApprovalPolicy; onReject?: OnReject; timeout?: InterruptTimeoutConfig }
 }
 
 // ---------------------------------------------------------------------------
@@ -103,10 +104,24 @@ export type ApproverSource = string[] | { from: 'channel' | 'assignee'; name?: s
 export type ApprovalPolicy = 'all' | 'majority' | 'any' | 'specified'
 export type OnReject = { goto: string } | 'fail'
 
+/** interrupt 超时策略（P2 台账 h）：审批 interrupt 无人应答达 ms 后的处置方式。
+ *  escalate=发 loop.escalated 告警并保持等待（默认）；auto-approve-with-log=自动通过并留痕；
+ *  fail=run 判失败。配置随 interrupt value 进 checkpoint（扫描器持久判定源）。 */
+export type InterruptTimeoutAction = 'escalate' | 'auto-approve-with-log' | 'fail'
+
+export interface InterruptTimeoutConfig {
+  /** 超时时长 ms；缺省用扫描器默认（72h） */
+  ms?: number
+  /** 超时策略；缺省 escalate */
+  onTimeout?: InterruptTimeoutAction
+}
+
 export interface ApprovalsConfig {
   approvers: ApproverSource
   policy: ApprovalPolicy
   onReject: OnReject
+  /** interrupt 超时策略（P2 台账 h）；缺省 escalate + 72h */
+  timeout?: InterruptTimeoutConfig
 }
 
 export interface ApprovalDecision {
@@ -278,6 +293,7 @@ function approvalTriple(deps: PhaseNodeDeps, contract: TaskContract): ApprovalsC
     approvers: contract.verificationIntent.human?.approvers ?? ['assignee'],
     policy: deps.approvals?.policy ?? 'all',
     onReject: deps.approvals?.onReject ?? { goto: 'handoff' },
+    timeout: deps.approvals?.timeout,
   }
 }
 
@@ -489,6 +505,9 @@ async function runValidation(
                 artifactType: c.resultTemplate.artifactType, attempts: c.attempts,
               },
               policy: triple,
+              // 超时策略随 value 进 checkpoint（P2 台账 h）：扫描器从 pendingInterrupts[].value 读，
+              // 不反查节点 config——checkpoint 是唯一持久事实源
+              timeout: triple.timeout,
             },
           },
           goto: ['validation'],
@@ -811,6 +830,8 @@ export function createHumanApprovalNode(deps: HumanApprovalNodeDeps): NodeDef {
             approvers: resolveApprovers(deps.approvals.approvers, state),
             policy: deps.approvals.policy,
             onReject: deps.approvals.onReject,
+            // 超时策略随 value 进 checkpoint（P2 台账 h），扫描器直接读
+            timeout: deps.approvals.timeout,
           },
         },
         goto: [nodeId],
