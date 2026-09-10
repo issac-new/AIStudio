@@ -11,6 +11,7 @@ import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import RunListTable from '@/custom/loop/runcenter/components/RunListTable.vue'
 import InboxPanel from '@/custom/loop/runcenter/components/InboxPanel.vue'
 import { filterRuns } from '@/custom/loop/runcenter/adapters'
+import { formatEventTs } from '@/custom/loop/runcenter/adapters/run-graph'
 import type { GraphEventLike, RunAction, RunStatus, RunSummary } from '@/custom/loop/runcenter/types'
 
 const store = useRunCenterStore()
@@ -96,15 +97,17 @@ async function onAction(payload: { kind: RunAction; run: RunSummary }): Promise<
 const replayVisible = ref(false)
 function closeReplay(): void { replayVisible.value = false }
 
+// 回放端点（GET /replay）返回日志词汇：事件名在 kind、ts 为 epoch ms；
+// socket 词汇（type / ISO ts / step）兼容保留——双词汇读取对照 run-graph.ts 词汇归一表
 function replayLine(e: GraphEventLike): string {
-  const step = typeof e.step === 'number' ? ` @${e.step}` : ''
-  return `${e.type}${step}`
+  const kind = e.kind ?? e.type ?? ''
+  const step = e.superStep ?? e.step
+  return `${kind}${typeof step === 'number' ? ` @${step}` : ''}`
 }
 
+// 时间标签走 formatEventTs（epoch ms / ISO 通吃，归一逻辑同 eventTsMs；非法落 —）
 function replayTime(e: GraphEventLike): string {
-  const ts = typeof e.ts === 'string' ? e.ts : ''
-  const m = ts.match(/^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}:\d{2})/)
-  return m ? m[1] : ts
+  return formatEventTs(e.ts)
 }
 </script>
 
