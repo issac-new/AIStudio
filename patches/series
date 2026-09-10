@@ -255,3 +255,6 @@
 # T1 子代理花名册: cockpit fleet 卡片子代理实时状态条(hermes-agent 0.21.1 delegation)
 205-client-i18n-fleet-subagents-zh.patch
 206-client-i18n-fleet-subagents-en.patch
+# T5: 桌面捆绑 runtime pin 0.20.6 -> 0.21.0(hermes-0.21.0-runtime tag 已存在于 EKKOLearnAI/hermes-studio;
+# vanilla 0.21.0 已原生含 specify/decompose/context 动词;上游 studio 升 pin 后本 patch 仿 108 先例退役)
+207-desktop-runtime-pin-0210.patch
