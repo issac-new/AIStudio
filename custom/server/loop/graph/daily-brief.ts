@@ -4,7 +4,8 @@
 // 人话化摘要标注为 P3+。
 //
 // 数据源（全持久，重启自然恢复）：
-// - 主事件日志：run.completed / run.failed / interrupt.raised（24h 窗口聚合）。
+// - 主事件日志：run.completed / run.failed 按 24h 窗口聚合；awaiting-input 是当前态
+//   快照、无窗口（未应答的审批无论挂起多久都属"等你决策"，不随 24h 窗口滑出）。
 //   跨 run 聚合走 listRuns() + 逐 run query——P2 量级（数十 run/日）足够，
 //   不给 EventLogStore 加 querySince（awaiting-input 判定本就需逐 run 读 checkpoint）。
 // - loop 台账：loop.stuck / loop.escalated 告警（熔断/升级）、idle 且 nextTickAt 已过
@@ -63,7 +64,8 @@ export function readBriefConfig(env: Record<string, string | undefined> = proces
   return { cron, room }
 }
 
-/** cron 表达式在 now 之前（含 now）最近的一次触发点；表达式不可解析 → null。
+/** cron 表达式严格早于 now 的最近一次触发点（cron-parser prev() 为排他语义：
+ *  now 恰落在触发点时刻时不含 now，下一轮 30s 轮询即命中）；表达式不可解析 → null。
  *  currentDate 显式注入：parse 不带 currentDate 时 cron-parser 从真实墙钟起算，
  *  fake clock（测试/回放）会完全失效。 */
 export function lastOccurrenceMs(expr: string, nowMs: number): number | null {
