@@ -87,7 +87,7 @@ function fromAttention(item: AttentionItem): InboxItem {
     preview: '',
     count: 1,
     ts: item.createdAt || 0,
-    routeTarget: { name: 'hermes.cockpit' },
+    routeTarget: { path: '/app' },   // Task 8 fix: cockpit 已删，指新 IA 总览
     taskId: item.taskId,
   }
 }

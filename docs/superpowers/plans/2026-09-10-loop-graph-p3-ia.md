@@ -70,7 +70,7 @@
 - **IaNav**：左侧窄栏一级导航（图标+文案，Pure Ink），当前区域高亮；键盘 `g then 1-6` 跳区域（可选，低优先）。
 - **区域壳**：Task 3 六个 View 为可用骨架——RunsView 直接内嵌 RunCenterView 既有内容（wrapper），CommsView 内嵌 matrix-chat router-view，TasksView 内嵌 SwarmKanban，InboxView 先占位（Task 5 实现），OverviewView 先占位（Task 4），OrchestrateView 先占位（Task 6）。
 - **兼容重定向**：`/hermes/cockpit` → `/app`；`/hermes/loop/runs` → `/app/runs`；`/hermes/loop/:id` → `/app/runs?loop=:id`（或保留原路由不删——实现者按迁移成本取舍并声明）。
-- **VITE_IA_RETRO**：置 1 时登录默认仍落 `/hermes/cockpit` 且侧栏入口双份（回退保险，默认关）。
+- **VITE_IA_RETRO**：置 1 时登录默认仍落 `/hermes/cockpit` 且侧栏入口双份（回退保险，默认关）。（Task 8 实施更新：cockpit 路由本体已退役删除，该开关语义收窄为「旧 `/hermes/loop*` 深链不强制迁移」；登录落点直改 `/app`，退役路径任何模式都重定向新 IA。）
 - **cockpit 不删**（Task 8 才退役）；本期只做新 IA 可用 + 默认切换。
 
 - [ ] Step 1-5: TDD（路由表/重定向/RETRO 开关/内嵌渲染冒烟）→ Commit `feat(ia2): 六区域导航骨架——/app 路由树+区域壳+兼容重定向`

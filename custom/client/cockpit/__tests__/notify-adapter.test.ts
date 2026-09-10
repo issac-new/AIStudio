@@ -20,7 +20,7 @@ describe('fromMatrixRoom', () => {
       preview: 'shi: hello',
       ts: 1000,
       count: 2,
-      routeTarget: { name: 'hermes.matrixChatRoom', params: { roomId: '!abc:server' } },
+      routeTarget: { name: 'ia2.commsRoom', params: { roomId: '!abc:server' } },   // Task 8 fix
     })
   })
   it('unread === 0 → null', () => {

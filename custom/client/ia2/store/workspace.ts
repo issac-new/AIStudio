@@ -25,7 +25,6 @@ import * as taskAdapter from '@/custom/cockpit/adapters/task-adapter'
 import type { CockpitTask, CockpitPriority } from '@/custom/cockpit/adapters/task-adapter'
 import * as fleetAdapter from '@/custom/cockpit/adapters/fleet-adapter'
 import * as teamsApi from '@/custom/cockpit/adapters/teams-adapter'
-import * as notifyAdapter from '@/custom/cockpit/adapters/notify-adapter'
 
 /** 日程事件（任务/待办两源；kind=timeline 随 cockpit 历史面板退役不再产出） */
 export interface ScheduleEvent {
@@ -90,8 +89,6 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
 
   // ── ② 用户待办 + 闹钟调度 ──
   const userTodos = ref<UserTodo[]>([])
-  /** 待办闹钟触发的应用内通知（并入日程/介入的提醒源；桌面横幅逻辑不变） */
-  const reminderNotifications = ref<ReturnType<typeof notifyAdapter.fromReminder>[]>([])
   let _reminderTimer: ReturnType<typeof setInterval> | undefined
 
   function loadTodos(): void {
@@ -113,14 +110,12 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   function removeUserTodo(id: string): void {
     userTodos.value = userTodos.value.filter(t => t.id !== id)
     saveUserTodos(userTodos.value)
-    // 同步移除其应用内提醒通知
-    reminderNotifications.value = reminderNotifications.value.filter(n => !n.id.startsWith(`reminder:${id}:`))
   }
 
   const MIN15 = 15 * 60 * 1000
   const MIN5 = 5 * 60 * 1000
 
-  /** 触发一次提醒：浏览器系统通知 + 应用内提醒条目（去重：同 stage 仅保留最新） */
+  /** 触发一次提醒：浏览器系统通知（应用内提醒面板随 cockpit 退役，Task 8 fix 一并清除只写态） */
   function fireReminder(todo: UserTodo, stage: 15 | 5): void {
     try {
       if (typeof Notification !== 'undefined') {
@@ -141,11 +136,6 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
         }
       }
     } catch { /* SSR/无权限环境静默 */ }
-    const item = notifyAdapter.fromReminder(todo, stage)
-    reminderNotifications.value = [
-      ...reminderNotifications.value.filter(n => n.id !== item.id),
-      item,
-    ]
   }
 
   /** 检查所有待办的提醒窗口，按需触发并持久化触发标记 */
@@ -294,7 +284,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     // ① 聚合
     tasks, boards, refreshAllBoards,
     // ② 待办/提醒
-    userTodos, reminderNotifications, loadTodos, addUserTodo, removeUserTodo,
+    userTodos, loadTodos, addUserTodo, removeUserTodo,
     startReminderScheduler, stopReminderScheduler,
     // ③ 日程
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth,
