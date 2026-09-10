@@ -371,4 +371,30 @@ describe('NodeInspector (jsdom)', () => {
     expect(w.find('.ni-panel__rerun-note').classes()).toContain('ni-panel__rerun-note--error')
     expect(w.find('.ni-panel__rerun-note').text()).toContain('start conflict')
   })
+
+  it('竞态守卫（审查 #7）：runId 快速切换时旧 run 的慢响应不覆盖新 run 的当前值', async () => {
+    const events = [
+      { kind: 'node.completed', nodeId: 'gate', payload: { updateKeys: ['contracts'] }, ts: 1000 },
+    ]
+    // run-1 的响应悬而未决（慢）；run-2 的响应即时
+    let resolveRun1!: (v: { runId: string; instance: { state: Record<string, unknown> } }) => void
+    rest.getRun.mockImplementation((rid: string) => rid === 'run-1'
+      ? new Promise(resolve => { resolveRun1 = resolve })
+      : Promise.resolve({ runId: 'run-2', instance: { state: { contracts: ['from-run-2'] } } }))
+
+    const w = mount(NodeInspector, {
+      props: { node: node({ id: 'gate', status: 'done' }), events, runId: 'run-1' },
+    })
+    await new Promise(r => setTimeout(r, 0))
+
+    // 快速切到 run-2：其响应先到 → 面板显示 run-2 的当前值
+    await w.setProps({ runId: 'run-2' })
+    await new Promise(r => setTimeout(r, 0))
+    expect(w.find('.ni-panel__update-value').text()).toBe('["from-run-2"]')
+
+    // 旧 run-1 的慢响应后到：不得以"当前值"名义写回本面板（修复前被覆盖为 stale 值）
+    resolveRun1({ runId: 'run-1', instance: { state: { contracts: ['stale-run-1'] } } })
+    await new Promise(r => setTimeout(r, 0))
+    expect(w.find('.ni-panel__update-value').text()).toBe('["from-run-2"]')
+  })
 })

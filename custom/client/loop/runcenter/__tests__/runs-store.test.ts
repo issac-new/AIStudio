@@ -644,3 +644,73 @@ describe('useRunCenterStore — 介入收件箱两态（task-7）', () => {
     expect(store.archivedInboxRuns).toHaveLength(0)
   })
 })
+
+describe('useRunCenterStore — socket 先行 run 保留与 seenKeys 键数上限（2026-09-10 风险审查 #6/#7）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+  })
+
+  it('fetchRuns 保留 REST 未列的 socket 先行 run（有事件缓冲），审批入口不丢', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    // socket 现场上线：带未决审批的 run，服务端台账尚未可见
+    sock().serverEmit('graph:event', ge('graph.interrupt', 'run-new', {
+      graphId: 'loop-loop9', interruptId: 'approval:c9@0', ts: '2026-09-10T00:02:00Z',
+    }))
+    expect(store.runs.find(r => r.runId === 'run-new')?.pendingInterruptId).toBe('approval:c9@0')
+
+    // REST 刷新仍不含 run-new → 不得整体丢弃（修复前：丢弃 + seenKeys 已登记 →
+    // 重连回放被 eid 去重，pendingInterruptId 永久丢失 → 审批面板 v-if 永不成立）
+    await store.fetchRuns()
+    const kept = store.runs.find(r => r.runId === 'run-new')
+    expect(kept).toBeTruthy()
+    expect(kept!.pendingInterruptId).toBe('approval:c9@0')
+
+    // 服务端落账后自然归位合并（不产生重复行）
+    rest.listRuns.mockResolvedValue([
+      item({ runId: 'run-1' }), item({ runId: 'run-new', graphId: 'loop-loop9' }),
+    ])
+    await store.fetchRuns()
+    expect(store.runs.filter(r => r.runId === 'run-new')).toHaveLength(1)
+    expect(store.runs.find(r => r.runId === 'run-new')!.events).toHaveLength(1) // 投影保留
+  })
+
+  it('无事件缓冲的 REST run 消失于列表时不保留（原语义：列表 = REST 投影）', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-2' })])
+    await store.fetchRuns()
+    expect(store.runs.map(r => r.runId)).toEqual(['run-2'])
+  })
+
+  it('seenKeys Map 键数封顶（SEEN_RUN_LIMIT），裁最旧 runId 防长会话慢性泄漏', async () => {
+    rest.listRuns.mockResolvedValue([])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    // 2000 上限 + 5 个新 runId：最旧的 5 个整集被裁
+    for (let i = 0; i < 2005; i++) {
+      sock().serverEmit('graph:event', {
+        type: 'graph.started', graphId: 'loop-loop1', threadId: `run-${i}`,
+        eid: `run-${i}-1`, ts: '2026-09-10T00:00:00Z',
+      })
+    }
+    expect(store.seenKeyRunCount()).toBe(2000)
+
+    // 被裁的最旧 run（run-0）重放同事件：不再去重 → 事件重新入缓冲（可接受的语义，
+    // 等同新页面加载）；未被裁的 run（run-100）同 eid 仍被去重
+    const evicted = { type: 'graph.started', graphId: 'loop-loop1', threadId: 'run-0', eid: 'run-0-1', ts: '2026-09-10T00:00:00Z' }
+    sock().serverEmit('graph:event', evicted)
+    expect(store.runs.find(r => r.runId === 'run-0')!.events).toHaveLength(2)
+
+    const kept = { type: 'graph.started', graphId: 'loop-loop1', threadId: 'run-100', eid: 'run-100-1', ts: '2026-09-10T00:00:00Z' }
+    sock().serverEmit('graph:event', kept)
+    expect(store.runs.find(r => r.runId === 'run-100')!.events).toHaveLength(1)
+    expect(store.seenKeyRunCount()).toBe(2000) // 裁一补一，总量守恒
+  })
+})

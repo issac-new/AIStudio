@@ -75,6 +75,12 @@ function toRow(run: RunSummary): Row {
 
 const rows = computed<Row[]>(() => props.runs.map(toRow))
 
+/** 展开行的当前页下标（2026-09-10 风险审查 #7 修复）：翻页/过滤后 expandedRunId 可能
+ *  指向不在本页的 run——findIndex 为 -1 时浮层若仍渲染，top 落 0px 处生成空壳遮挡
+ *  首行并吞点击。此时不渲染浮层（展开态本身由父层在翻页/过滤时重置）。 */
+const expandedIndex = computed(() =>
+  props.expandedRunId ? props.runs.findIndex(r => r.runId === props.expandedRunId) : -1)
+
 // ── 虚拟滚动（P3 台账）：行高固定 48px 的最小窗口渲染，零新依赖 ──
 const ROW_H = 48
 /** 窗口上下各多渲染的行数（滚动不闪空的缓冲） */
@@ -258,11 +264,12 @@ function togglePeek(run: RunSummary): void {
           </span>
         </div>
 
-        <!-- 行内展开（peek）：行下浮层（不占行高，虚拟定位不受影响） -->
+        <!-- 行内展开（peek）：行下浮层（不占行高，虚拟定位不受影响）。
+             expandedIndex < 0（展开的 run 不在当前页）时不渲染，避免空壳浮层遮挡首行 -->
         <div
-          v-if="expandedRunId"
+          v-if="expandedIndex >= 0"
           class="rc-table__peek"
-          :style="{ top: `${(props.runs.findIndex(r => r.runId === expandedRunId) + 1) * ROW_H}px` }"
+          :style="{ top: `${(expandedIndex + 1) * ROW_H}px` }"
           @click.stop
         >
           <template v-for="row in rows" :key="row.run.runId">

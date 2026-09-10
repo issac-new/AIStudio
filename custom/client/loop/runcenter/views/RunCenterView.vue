@@ -82,6 +82,16 @@ function togglePeek(runId: string): void {
   expandedRunId.value = expandedRunId.value === runId ? null : runId
 }
 
+// 翻页/过滤/数据收缩跨页界时重置展开态（2026-09-10 风险审查 #7）：展开的 run 不在
+// 当前页时，浮层组件按 expandedIndex<0 不渲染；这里把状态一并复位，避免回到原页时
+// 残留的展开态与最新列表错位。pagedRuns 由 page/statusFilter/query/store 列表派生，
+// 监听它一个源即覆盖全部页界变化（参照分支显式列四源的等价简化）。
+watch(pagedRuns, (list) => {
+  if (expandedRunId.value && !list.some(r => r.runId === expandedRunId.value)) {
+    expandedRunId.value = null
+  }
+})
+
 async function onAction(payload: { kind: RunAction; run: RunSummary }): Promise<void> {
   actionError.value = null
   const { kind, run } = payload
