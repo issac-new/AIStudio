@@ -282,3 +282,6 @@
 # P3 Task 4: 总览首屏——注意力+四卡片+角色指标+空态引导 i18n（ia2.overview 段）
 220-client-i18n-ia2-overview-zh.patch
 221-client-i18n-ia2-overview-en.patch
+# P3 Task 5: 介入中心——五源聚合+Triage 分诊+就地审批+自动归档 i18n（ia2.inbox 段）
+222-client-i18n-ia2-inbox-zh.patch
+223-client-i18n-ia2-inbox-en.patch

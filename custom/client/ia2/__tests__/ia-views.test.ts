@@ -28,7 +28,6 @@ import RunsView from '../views/RunsView.vue'
 import TasksView from '../views/TasksView.vue'
 import CommsView from '../views/CommsView.vue'
 import OrchestrateView from '../views/OrchestrateView.vue'
-import InboxView from '../views/InboxView.vue'
 import { buildIaRoutes } from '../routes'
 
 beforeEach(() => {
@@ -74,10 +73,9 @@ describe('区域壳内嵌接线', () => {
 })
 
 describe('占位区域（Task 5/6 实装前的可用骨架）', () => {
-  // OverviewView 已于 Task 4 实装（装配冒烟见 overview-components.test.ts）
+  // OverviewView 已于 Task 4 实装、InboxView 已于 Task 5 实装（装配冒烟见各自组件测试）
   it.each([
     [OrchestrateView, 'ia2.placeholder.orchestrate'],
-    [InboxView, 'ia2.placeholder.inbox'],
   ])('%# 占位渲染标题与说明（i18n key 直返 mock）', (view, key) => {
     const wrapper = mount(view as never)
     const text = wrapper.text()
