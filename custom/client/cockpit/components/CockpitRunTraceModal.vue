@@ -25,6 +25,24 @@ const drilldownSkillId = ref<string | null>(null)
 const focusedNode = computed(() => trace.nodes.value.find(n => n.id === (focusedId.value || trace.focusedNodeId.value)) ?? null)
 const drilldownSkill = computed(() => trace.nodes.value.find(n => n.id === drilldownSkillId.value && n.kind === 'skill') ?? null)
 
+function formatTokens(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+}
+
+/** 会话累计用量：优先 L2 汇总（跨运行连续），回退 L1 实时 usage */
+const usageSummary = computed<string | null>(() => {
+  const l2 = trace.l2Usage.value
+  if (l2 && (l2.input_tokens || l2.output_tokens || l2.api_calls)) {
+    const calls = l2.api_calls ? ` · ${l2.api_calls} calls` : ''
+    return `${formatTokens(l2.input_tokens)} in / ${formatTokens(l2.output_tokens)} out${calls}`
+  }
+  const l1 = trace.state.value?.usage
+  if (l1 && (l1.input_tokens || l1.output_tokens)) {
+    return `${formatTokens(l1.input_tokens)} in / ${formatTokens(l1.output_tokens)} out`
+  }
+  return null
+})
+
 // 是否处于"无会话选择"状态（sessionId 为空）
 const needsSessionSelect = computed(() => !sessionId.value)
 
@@ -274,6 +292,12 @@ function exportDossier() {
         <span class="run-trace-modal__dot" :class="trace.mode.value === 'live' ? 'is-live' : ''"></span>
         <div><b>Run Observatory</b><small>{{ sessionId }}</small></div>
         <span v-if="trace.l2Available.value" class="run-trace-modal__l2badge" title="Layer 2 data available">L2</span>
+        <!-- 会话累计用量（L2 llm_span 汇总，usage anchor 跨运行连续；L1 兜底） -->
+        <span
+          v-if="usageSummary"
+          class="run-trace-modal__usage"
+          :title="t('cockpit.traceUsageSummary')"
+        >▲ {{ usageSummary }}</span>
         <!-- 聚合模式开关 -->
         <label class="run-trace-modal__aggregate" :title="t('cockpit.aggregateMode')">
           <input type="checkbox" v-model="trace.aggregateMode.value" />
@@ -393,6 +417,11 @@ function exportDossier() {
   &.is-live { background: var(--success); animation: run-trace-live-pulse 1.5s ease-in-out infinite; }
 }
 .run-trace-modal__l2badge { font-size: 9px; padding: 2px 6px; border-radius: 3px; background: var(--accent-info); color: var(--text-on-accent); font-weight: 600; }
+.run-trace-modal__usage {
+  font-size: 10px; padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+  background: var(--bg-secondary); color: var(--text-secondary);
+  font-family: ui-monospace, monospace; border: 1px solid var(--border-color);
+}
 .run-trace-modal__export { margin-left: 8px !important; font-size: 14px; }
 .run-trace-modal__playback { display: flex; align-items: center; gap: 8px; padding: 4px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
 .run-trace-modal__play-btn { width: 26px; height: 26px; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }

@@ -216,6 +216,7 @@ vi.mock('../composables/useRunTrace', () => ({
     edges: { value: [{ id: 'e1', from: 'run:s1:r1', to: 'skill:s1:auth:1', kind: 'call', evidence: 'L1' }] },
     focusedNodeId: { value: 'run:s1:r1' },
     l2Available: { value: false },
+    l2Usage: { value: { input_tokens: 1234, output_tokens: 567, api_calls: 8 } },
     mode: { value: 'live' as const },
     scrubberTime: { value: Date.now() },
     replayProgress: { value: 0 },
@@ -264,6 +265,7 @@ describe('CockpitRunTraceModal', () => {
     const w = mount(CockpitRunTraceModal, { global: { stubs: { teleport: true } } })
     expect(w.find('[data-run-trace-modal]').exists()).toBe(true)
     expect(w.text()).toContain('Run Observatory')
+    expect(w.text()).toContain('1.2k in / 567 out · 8 calls') // L2 用量汇总 chip
     expect(w.find('[data-run-trace-graph]').exists()).toBe(true)
     expect(w.find('[data-run-trace-timeband]').exists()).toBe(true)
     expect(w.find('[data-run-trace-inspector]').exists()).toBe(true)
