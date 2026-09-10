@@ -1,8 +1,16 @@
 // overlay/custom/client/cockpit/composables/sessionTaskId.ts
 // 从会话标题提取 kanban 任务 ID 的纯工具函数。
 // 独立成模块，便于 useRunTrace 与 useRunTraceOverview 共享，且不受 composable mock 影响。
+//
+// ⚠️ DEPRECATED（P3 Task 7，spec §8）：标题正则提取是"会话标题缝合 taskId"的过渡手段，
+// 正被显式关联链取代——服务端 persistence 成功即写 loop.persisted(taskId, runId) +
+// 契约台账 persistedTaskId，任务↔run 反查走事件日志（ia2/adapters/traceability），
+// 会话元数据级关联待 hermes-agent 侧 L2 hook（本期不动 agent）。
+// 本模块按计划保留（存量 run-trace 视图仍消费），新代码禁止新增调用；宽泛 fallback
+// （extractKanbanTaskId 的格式 2/3）仅限 UI 显示等容忍误匹配场景。
 
 /**
+ * @deprecated P3 Task 7 起新代码禁用（见文件头）：宽泛 fallback 误匹配面大。
  * 从会话标题提取 kanban 任务 ID（支持多种格式，含宽泛 fallback）。
  * 仅用于 UI 显示等容忍误匹配的场景；聚合匹配请用 matchSessionTaskId。
  */

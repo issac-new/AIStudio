@@ -256,7 +256,7 @@ describe('OverviewView — 首屏装配', () => {
     expect(withRun.find('.ia-guide').exists()).toBe(false)
   })
 
-  it('卡片点击跳区域；注意力条目跳工作项区；日程卡打开原弹窗', async () => {
+  it('卡片点击跳区域；注意力条目跳工作项区带筛选预选（P3 Task 7）；日程卡打开原弹窗', async () => {
     cockpitStubs.state.tasks = [{ id: 't1', title: '待审任务', status: 'review', priority: null }]
     const { wrapper, router } = await mountView()
 
@@ -268,6 +268,8 @@ describe('OverviewView — 首屏装配', () => {
     await wrapper.find('.ia-attn__item').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/app/tasks')
+    // 深链预选：状态过滤器 + 任务搜索（TasksView 端消费写入看板过滤器）
+    expect(router.currentRoute.value.query).toEqual({ status: 'review', task: 't1' })
 
     // 日程卡：cockpit store 单例开弹窗（生产 store 为响应式代理，此处断言动作接线）
     await cards[2].trigger('click')

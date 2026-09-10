@@ -972,8 +972,14 @@ export class GraphRuntime {
         return { amount: event.amount, totalCost: event.totalCost }
       case 'node.starved':
         return { missing: event.missing }
-      default:
+      default: {
+        // P3 Task 7：loop.* 桥接事件整体透传（LoopEvent 本就 JSON 安全）——
+        // 旧实现落 {}，replay 端反查不到 artifact/taskId，run→任务链接无从建立
+        if (typeof event.type === 'string' && event.type.startsWith('loop.')) {
+          return jsonSafe(event) as Record<string, unknown>
+        }
         return {}
+      }
     }
   }
 

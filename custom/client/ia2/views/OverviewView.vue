@@ -84,6 +84,16 @@ const goTasks = () => void router.push('/app/tasks')
 const goOrchestrate = () => void router.push('/app/orchestrate')
 const openSchedule = () => cockpit.openSchedule()
 
+// 注意力条点击 → 工作项区带筛选预选（P3 Task 7 欠账清偿）：
+// status = 注意力梯队（blocked/review/triage 均为合法 kanban 状态，TasksView 端再做词表校验）
+// task = 搜索框预选该任务 id（看板过滤到目标任务，落点即焦点）
+function goTaskFromAttention(row: AttentionRow): void {
+  void router.push({
+    path: '/app/tasks',
+    query: { status: row.status, task: row.taskId },
+  })
+}
+
 const GUIDE_STEPS = ['ia2.overview.guideStep1', 'ia2.overview.guideStep2', 'ia2.overview.guideStep3']
 
 function planTimeLabel(at: number | null): string {
@@ -96,7 +106,7 @@ function planTimeLabel(at: number | null): string {
 
 <template>
   <div class="ia-area ia-overview">
-    <AttentionStrip :items="attentionRows" @select="goTasks" />
+    <AttentionStrip :items="attentionRows" @select="goTaskFromAttention" />
 
     <div class="ia-overview__body">
       <section v-if="showGuide" class="ia-guide" data-testid="ia-guide">

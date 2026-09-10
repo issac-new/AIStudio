@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { GraphRuntime } from '../../../../server/loop/graph/graph-runtime'
 import { GraphBuilder, fnNode, humanNode, when } from '../../../../server/loop/graph/graph-definition'
+import { InMemoryEventLogStore } from '../../../../server/loop/graph/event-log-store'
 import { reducers } from '../../../../server/loop/graph/types'
 import type { GraphEvent, StateValues } from '../../../../server/loop/graph/types'
 
@@ -222,5 +223,32 @@ describe('GraphRuntime', () => {
     const instance2 = await runtime.resume(graph, instance1, 'approval-thread-10-1', 'approved')
     expect(instance2.status).toBe('running')
     expect(events.some(e => e.type === 'graph.resume')).toBe(true)
+  })
+
+  it('loop.* 桥接事件 payload 透传进事件日志（P3 Task 7：run 反查产物任务的数据根）', async () => {
+    // 未装配 deps.emitEvent 时 loop.* 只进日志不桥接——此处断言日志行携带完整
+    // LoopEvent 形状（旧实现 payload 落 {}，replay 端反查不到 artifact/taskId）
+    const store = new InMemoryEventLogStore()
+    const runtime = new GraphRuntime(
+      { emitEvent: () => {} },
+      { eventLog: store, runId: 'run-loop-l1-1' },
+    )
+    const graph = makeBuilder()
+      .addNode(fnNode('persistence', async (_state: StateValues, ctx) => {
+        ctx.deps.emitEvent({
+          type: 'loop.persisted', loopId: 'l1',
+          contractId: 'task/a', artifact: 'kanban:t_9', taskId: 't_9', runId: 'run-loop-l1-1',
+          ts: new Date().toISOString(),
+        } as never)
+        return { update: { count: 1 } }
+      }))
+      .setEntry('persistence')
+      .build()
+
+    await runtime.start(graph, 'run-loop-l1-1')
+    const logged = await store.query('run-loop-l1-1')
+    const persisted = logged.find(e => e.kind === 'loop.persisted')
+    expect(persisted).toBeDefined()
+    expect(persisted?.payload).toMatchObject({ contractId: 'task/a', artifact: 'kanban:t_9', taskId: 't_9' })
   })
 })

@@ -113,12 +113,13 @@ describe('KanbanPersistenceAdapter', () => {
     expect(kanban.createTask).not.toHaveBeenCalled()
   })
 
-  it('真实写入：createTask 带 title `[loop.name] contract.id` + board/body/tenant，产物为 kanban:<id>', async () => {
+  it('真实写入：createTask 带 title `[loop.name] contract.id` + board/body/tenant，产物 = { artifact: kanban:<id>, taskId }', async () => {
     const kanban = makeKanbanCli()
     const adapter = makeAdapter(kanban, 'team-board')
     const l = { ...loop(), tenant: 'Team Alpha:topic:@u:!room:$sess:matrix' } as unknown as LoopInstance
     const result = await adapter.persist(contract(), verification(), l, false)
-    expect(result).toBe('kanban:kb-new')
+    // P3 Task 7：createTask 返回 id 显式透传（结构化结果），替代 artifact 字符串反解
+    expect(result).toEqual({ artifact: 'kanban:kb-new', taskId: 'kb-new' })
     expect(kanban.createTask).toHaveBeenCalledTimes(1)
     const [title, opts] = kanban.createTask.mock.calls[0] as [string, { board: string; body: string; tenant: string }]
     expect(title).toBe('[L] task/a')
@@ -132,12 +133,12 @@ describe('KanbanPersistenceAdapter', () => {
     expect(kanban.listTasks).toHaveBeenCalledWith({ board: 'team-board' })
   })
 
-  it('幂等：同契约重复 persist 命中同名 title → 跳过 createTask + warn，返回既有任务', async () => {
+  it('幂等：同契约重复 persist 命中同名 title → 跳过 createTask + warn，返回既有任务（同样带 taskId）', async () => {
     const kanban = makeKanbanCli({ existing: [{ id: 'kb-9', title: '[L] task/a' }] })
     const logs: string[] = []
     const adapter = makeAdapter(kanban, 'team-board', logs)
     const result = await adapter.persist(contract(), verification(), loop(), false)
-    expect(result).toBe('kanban:kb-9')
+    expect(result).toEqual({ artifact: 'kanban:kb-9', taskId: 'kb-9' })
     expect(kanban.createTask).not.toHaveBeenCalled()
     expect(logs.some(l => l.includes('task/a') && l.toLowerCase().includes('duplicate'))).toBe(true)
   })
