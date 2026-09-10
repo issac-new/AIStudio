@@ -64,6 +64,16 @@ export const runRest = {
   },
 
   /**
+   * GET /api/graph/specs — 已注册图规格列表（P3 Task 6 编排区模板库数据源）。
+   * 服务端 specStore.list() 原样返回全量 GraphSpec（含 nodes/edges/entryNode/limits），
+   * 空库返回空数组。编排区据此渲染模板卡片；单条检索仍走 getSpec。
+   */
+  listSpecs: async (): Promise<RunGraphTopologyLike[]> => {
+    const res = await request<{ specs: RunGraphTopologyLike[] }>('/api/graph/specs')
+    return res.specs
+  },
+
+  /**
    * GET /api/graph/specs/:id → 按 id 检索图规格（执行图拓扑来源，P3 台账 #25）。
    * 服务端返回 {id, version, spec}，404 表示规格不存在/未注册（返回 null，视图据此
    * 显示"图规格缺失"占位）。loop 场景 specId = `loop-<loopId>`（graph-compiler 约定，

@@ -285,3 +285,6 @@
 # P3 Task 5: 介入中心——五源聚合+Triage 分诊+就地审批+自动归档 i18n（ia2.inbox 段）
 222-client-i18n-ia2-inbox-zh.patch
 223-client-i18n-ia2-inbox-en.patch
+# P3 Task 6: 编排区实装——模板库只读列表+GraphSpec 可视化+实例化入口 i18n（ia2.orchestrate 段）
+224-client-i18n-ia2-orchestrate-zh.patch
+225-client-i18n-ia2-orchestrate-en.patch

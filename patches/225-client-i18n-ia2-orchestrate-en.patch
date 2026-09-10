@@ -1,0 +1,60 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -832,6 +832,56 @@ export default {
+       alarmHead: 'Breakers & stalls',
+       alarmEmpty: 'No breaker/stall alarms in the last 7 days',
+     },
++    orchestrate: {
++      title: 'Orchestrate',
++      listHint: 'Instantiate a loop from a compiled template in one click',
++      loadFailed: 'Failed to load the template library',
++      retry: 'Retry',
++      kind: {
++        'five-phase': 'Five-phase template',
++        'daily-brief': 'Daily Brief',
++        generic: 'Custom template',
++      },
++      desc: {
++        'five-phase': 'Five-phase execution graph — discovery, handoff, validation, persistence, gate — with repair back-edges',
++        'daily-brief': 'Aggregates the last 24 hours of run activity into a daily brief',
++        generic: 'Custom graph template',
++      },
++      nodes: 'nodes',
++      edges: 'edges',
++      createLoop: 'Create loop',
++      backToList: 'Back to templates',
++      jsonShow: 'View JSON',
++      jsonHide: 'Hide JSON',
++      exportJson: 'Export JSON',
++      exporting: 'Exporting…',
++      importJson: 'Import JSON',
++      importDisabledTip: 'Import arrives with the P4 canvas',
++      empty: {
++        title: 'The template library is empty',
++        hint: 'Once a loop runs, its compiled template shows up here',
++      },
++      form: {
++        title: 'Create a loop from template',
++        name: 'Name',
++        namePlaceholder: 'e.g. Morning check',
++        goal: 'Goal',
++        goalPlaceholder: 'What should this loop accomplish on each run',
++        cron: 'Schedule (cron)',
++        cronPlaceholder: '0 9 * * *',
++        tenant: 'Tenant (optional)',
++        tenantPlaceholder: 'Kanban board locator; leave empty to skip binding',
++        submit: 'Create & run',
++        submitting: 'Creating…',
++        cancel: 'Cancel',
++      },
++      err: {
++        nameRequired: 'Name is required',
++        goalRequired: 'Goal is required',
++        cronInvalid: 'Invalid cron: expected 5 (or 6) space-separated fields, e.g. 0 9 * * *',
++        submitFailed: 'Creation failed',
++      },
++    },
+   },
+ 
+   agentManager: {

@@ -55,3 +55,23 @@ describe('runRest.exportRun (P3 台账 #30)', () => {
     expect(got).toEqual(bundle)
   })
 })
+
+describe('runRest.listSpecs (P3 Task 6 编排区模板库)', () => {
+  beforeEach(() => { requestMock.mockReset() })
+
+  it('hits /api/graph/specs and unwraps {specs} → array', async () => {
+    const specs = [
+      { id: 'loop-1', nodes: [], edges: [], entryNode: 'discovery' },
+      { id: 'daily-brief', nodes: [], edges: [] },
+    ]
+    requestMock.mockResolvedValue({ specs })
+    const got = await runRest.listSpecs()
+    expect(requestMock).toHaveBeenCalledWith('/api/graph/specs')
+    expect(got).toEqual(specs)
+  })
+
+  it('propagates errors (empty library is {specs: []}, not a transport error)', async () => {
+    requestMock.mockRejectedValue(new Error('boom'))
+    await expect(runRest.listSpecs()).rejects.toThrow('boom')
+  })
+})
