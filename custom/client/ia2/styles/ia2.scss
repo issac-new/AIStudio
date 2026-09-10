@@ -106,3 +106,350 @@
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+// ── 总览首屏（P3 Task 4）——Pure Ink，仅 CSS 变量；卡片密度克制：一主数字 + 一副信息 ──
+.ia-overview {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ia-overview__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+// ── 注意力条 ──
+.ia-attn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.ia-attn__label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.ia-attn__items {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.ia-attn__empty {
+  font-size: 11px;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.ia-attn__item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-standard);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: var(--bg-hover, var(--bg-card));
+    border-color: var(--text-muted, var(--border-color));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color, var(--text-primary));
+    outline-offset: -2px;
+  }
+}
+
+.ia-attn__bar {
+  width: 3px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--text-muted, var(--border-color));
+  flex-shrink: 0;
+}
+
+.ia-attn__item--blocked .ia-attn__bar { background: var(--error, var(--text-primary)); }
+.ia-attn__item--review .ia-attn__bar { background: var(--warning, var(--text-secondary)); }
+.ia-attn__item--triage .ia-attn__bar { background: var(--success, var(--text-secondary)); }
+.ia-attn__item--high { font-weight: 600; }
+
+.ia-attn__tier {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.ia-attn__text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+// ── 四卡片一行 ──
+.ia-overview__cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ia-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-standard);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+
+  &:hover {
+    border-color: var(--text-muted, var(--border-color));
+    background: var(--bg-hover, var(--bg-card));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color, var(--text-primary));
+    outline-offset: -2px;
+  }
+
+  &--static {
+    cursor: default;
+
+    &:hover {
+      border-color: var(--border-color);
+      background: var(--bg-card);
+    }
+  }
+}
+
+.ia-card__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.ia-card__num {
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ia-card__sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+// ── 关键指标卡 ──
+.ia-metrics__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.ia-metrics__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ia-metrics__key {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.ia-metrics__val {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── 今日计划 ──
+.ia-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ia-plan__head {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ia-plan__empty {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 12px 0;
+}
+
+.ia-plan__list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-standard);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.ia-plan__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+
+  &:last-child { border-bottom: none; }
+}
+
+.ia-plan__item--overdue .ia-plan__title {
+  color: var(--error, var(--text-primary));
+  font-weight: 600;
+}
+
+.ia-plan__kind {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.ia-plan__title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.ia-plan__overdue {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--error, var(--text-primary));
+}
+
+.ia-plan__time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── 空态三步引导（R4 首屏不空）──
+.ia-guide {
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-standard);
+  background: var(--bg-card);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ia-guide__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ia-guide__steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ia-guide__step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ia-guide__num {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.ia-guide__text {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ia-guide__cta {
+  align-self: flex-start;
+  padding: 5px 14px;
+  border-radius: var(--radius-standard);
+  border: 1px solid var(--primary-color, var(--text-primary));
+  background: transparent;
+  color: var(--primary-color, var(--text-primary));
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+
+  &:hover {
+    background: var(--bg-hover, var(--bg-secondary));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color, var(--text-primary));
+    outline-offset: -2px;
+  }
+}
