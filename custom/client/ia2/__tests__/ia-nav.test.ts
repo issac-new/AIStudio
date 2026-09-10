@@ -107,6 +107,45 @@ describe('IaNav（左侧窄栏一级导航）', () => {
     expect(router.currentRoute.value.path).toBe('/app')
   })
 
+  it('输入框内 g+数字不跳区（审查 C-3：输入目标守卫）', async () => {
+    const router = makeRouter()
+    await mountShell(router)
+    // window 级监听会收到 input 冒泡的 keydown；聊天框打 "g2" 不得被劫持成跳区
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }))
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }))
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/app')
+    // 守卫只针对可编辑目标：window（非输入目标）上 g+3 仍正常跳区
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'g' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '3' }))
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.runs')
+    input.remove()
+  })
+
+  it('TEXTAREA 内 g+数字同样不跳区', async () => {
+    const router = makeRouter()
+    await mountShell(router)
+    const textarea = document.createElement('textarea')
+    document.body.appendChild(textarea)
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }))
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }))
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/app')
+    textarea.remove()
+  })
+
+  it('输入法合成中（isComposing）的按键不触发跳区', async () => {
+    const router = makeRouter()
+    await mountShell(router)
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', isComposing: true }))
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '3' }))
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/app')
+  })
+
   it('壳内渲染 router-view（当前区域视图）', async () => {
     const router = makeRouter()
     const wrapper = await mountShell(router)

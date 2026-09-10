@@ -52,4 +52,12 @@ export async function bootstrapClient(app: App): Promise<void> {
     const { registerMatrixChatRoutes } = await import('../../custom/client/matrix-chat')
     registerMatrixChatRoutes(router)
   }
+
+  // 冷启动补查（P3 Task 3 审查 C-2）：初始导航早于 overlay 守卫注册，已登录深链
+  // （#/hermes/cockpit 等）可能在无守卫窗口内定型。isReady 后补跑一次兼容重定向。
+  // 必须在上方 addRoute 之后（replace 目标 ia2.* 需已注册）。
+  {
+    const { applyIaColdStartRedirect } = await import('../../custom/client/ia2')
+    await applyIaColdStartRedirect(router)
+  }
 }

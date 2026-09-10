@@ -47,3 +47,16 @@ export function installIaCompatGuard(router: Router, retro: boolean): void {
     return redirect ?? true
   })
 }
+
+/**
+ * 冷启动补查（审查 C-2）：初始导航在 entry.mts 的 app.use(router) 即启动，早于
+ * bootstrap 注册 overlay 守卫——已登录 + bootstrap 延迟时，#/hermes/cockpit 等深链
+ * 在无守卫窗口内完成导航并定型（旧路由静态存在，matched.length>0，no-match 兜底不救）。
+ * isReady 后对 currentRoute 补跑一次兼容重定向。必须在新 IA 路由 addRoute 之后调用
+ * （replace 目标 ia2.* 需已注册）。
+ */
+export async function applyColdStartRedirect(router: Router, retro: boolean): Promise<void> {
+  await router.isReady()
+  const redirect = iaCompatRedirect(router.currentRoute.value, retro)
+  if (redirect) await router.replace(redirect)
+}

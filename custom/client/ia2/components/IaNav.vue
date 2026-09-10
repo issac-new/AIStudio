@@ -17,7 +17,21 @@ const G_ARM_TIMEOUT_MS = 1000
 let gArmTimer: ReturnType<typeof setTimeout> | null = null
 const gArmed = ref(false)
 
+/** 输入目标守卫（审查 C-3）：聊天/输入框内打字不触发区域跳转（window 级监听
+ *  会收到 input 冒泡的 keydown——"g2" 之类文本会被劫持成跳区） */
+function isEditableTarget(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement | null
+  if (!target) return false
+  return (
+    target.isContentEditable === true ||
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'SELECT'
+  )
+}
+
 function onKeydown(event: KeyboardEvent): void {
+  if (event.isComposing || isEditableTarget(event)) return
   if (event.key === 'g' && !event.metaKey && !event.ctrlKey && !event.altKey) {
     gArmed.value = true
     if (gArmTimer) clearTimeout(gArmTimer)

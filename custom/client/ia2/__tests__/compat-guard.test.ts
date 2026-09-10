@@ -4,10 +4,10 @@
 // 本守卫接力改落 /app）、旧运行中心、旧 loop 详情。
 import { describe, it, expect } from 'vitest'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
-import { iaCompatRedirect, installIaCompatGuard } from '../guard'
+import { iaCompatRedirect, installIaCompatGuard, applyColdStartRedirect } from '../guard'
 
-function stubRouter(retro: boolean): Router {
-  const router = createRouter({
+function makeRouter(): Router {
+  return createRouter({
     history: createMemoryHistory(),
     routes: [
       { path: '/hermes/cockpit', name: 'hermes.cockpit', component: { template: '<div old-cockpit />' } },
@@ -20,6 +20,10 @@ function stubRouter(retro: boolean): Router {
         ] },
     ],
   })
+}
+
+function stubRouter(retro: boolean): Router {
+  const router = makeRouter()
   installIaCompatGuard(router, retro)
   return router
 }
@@ -76,5 +80,46 @@ describe('installIaCompatGuard（真路由集成）', () => {
     await router.push('/hermes/loop/42')
     expect(router.currentRoute.value.name).toBe('hermes.loopDetail')
     expect(router.currentRoute.value.params.id).toBe('42')
+  })
+})
+
+describe('applyColdStartRedirect（冷深链竞态，审查 C-2）', () => {
+  it('初始导航（守卫未注册窗口内）定型在旧 cockpit 后，补查改落 /app 总览', async () => {
+    // 复刻生产竞态：app.use(router) 启动初始导航 → 守卫（bootstrap 内）尚未注册 →
+    // 已登录深链在旧路由上完成导航（matched.length>0，no-match 兜底不救）
+    const router = makeRouter()
+    await router.push('/hermes/cockpit')
+    expect(router.currentRoute.value.name).toBe('hermes.cockpit')
+    // bootstrap 此刻才装守卫 + 新路由已 addRoute → isReady 后补查
+    installIaCompatGuard(router, false)
+    await applyColdStartRedirect(router, false)
+    expect(router.currentRoute.value.name).toBe('ia2.overview')
+    expect(router.currentRoute.value.path).toBe('/app')
+  })
+
+  it('旧 loop 深链冷启动同样被补查（?loop= 保真）', async () => {
+    const router = makeRouter()
+    await router.push('/hermes/loop/42')
+    expect(router.currentRoute.value.name).toBe('hermes.loopDetail')
+    installIaCompatGuard(router, false)
+    await applyColdStartRedirect(router, false)
+    expect(router.currentRoute.value.name).toBe('ia2.runs')
+    expect(router.currentRoute.value.query.loop).toBe('42')
+  })
+
+  it('RETRO 下补查不迁移（回退保险）', async () => {
+    const router = makeRouter()
+    await router.push('/hermes/cockpit')
+    installIaCompatGuard(router, true)
+    await applyColdStartRedirect(router, true)
+    expect(router.currentRoute.value.name).toBe('hermes.cockpit')
+  })
+
+  it('当前已在 /app/runs 时补查为 no-op', async () => {
+    const router = makeRouter()
+    await router.push('/app/runs')
+    installIaCompatGuard(router, false)
+    await applyColdStartRedirect(router, false)
+    expect(router.currentRoute.value.name).toBe('ia2.runs')
   })
 })
