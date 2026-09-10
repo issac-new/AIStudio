@@ -21,6 +21,21 @@ export interface GraphSocketLike {
   disconnect(): void
 }
 
+/** GET /api/graph/engine 响应（graph-assembly.ts 只读导出，三态字段一致） */
+export interface GraphEnginePolicy {
+  mode: 'legacy' | 'shadow' | 'on'
+  policy: {
+    /** §7B.7 连续失败熔断阈值（默认 10） */
+    failureBreakerLimit: number
+    /** 停滞熔断阈值（P2 台账④，默认 = failureBreakerLimit） */
+    stagnationLimit: number
+    /** 审批 interrupt 默认超时（72h，P0 台账 h） */
+    interruptTimeoutMs: number
+    /** escalate 重发节流窗口（24h） */
+    escalationResendMs: number
+  }
+}
+
 const BASE = '/api/graph/runs'
 
 export const runRest = {
@@ -89,6 +104,15 @@ export const runRest = {
       if ((err as { status?: number }).status === 404) return null
       throw err
     }
+  },
+
+  /**
+   * GET /api/graph/engine → 图引擎策略快照（P3 Task 8 §7B.4 最小版）：
+   * 当前模式（legacy|shadow|on）+ 默认审批超时/熔断阈值（只读，策略文件化随 P4）。
+   * 设置页"图引擎策略"卡数据源。
+   */
+  getEnginePolicy: async (): Promise<GraphEnginePolicy> => {
+    return request<GraphEnginePolicy>('/api/graph/engine')
   },
 
   /**

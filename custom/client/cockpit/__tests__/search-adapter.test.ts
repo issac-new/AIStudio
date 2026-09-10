@@ -7,7 +7,7 @@ import {
   extractRoomIdFromTenant,
   mapSearchToTaskIds,
 } from '@/custom/cockpit/adapters/search-adapter'
-import type { CockpitTask } from '@/custom/cockpit/store/cockpit'
+import type { CockpitTask } from '../adapters/task-adapter'
 
 const t = (over: Partial<CockpitTask> = {}): CockpitTask => ({
   id: 't1', title: '测试任务', priority: 'P3', status: 'todo',

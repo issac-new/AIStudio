@@ -1,9 +1,9 @@
 <!-- overlay/custom/client/ia2/views/InboxView.vue -->
 <!-- 介入中心（P3 Task 5，§8 介入 + §7B.4 Triage + §7B.1 通知克制）：
      五源聚合收件箱——①审批/中断（runs store awaiting 域，既有 /graph 订阅）
-     ②阻塞 ③待审（cockpit 跨 board 聚合任务，既有聚合 WS）④熔断/停滞告警
+     ②阻塞 ③待审（workspace 跨 board 聚合任务，既有聚合 WS）④熔断/停滞告警
      （runs store fetchMetrics 的 loop 事件切片，5 分钟 TTL 既有通道）
-     ⑤待办提醒（cockpit userTodos，kv 单一事实源）——零新轮询。
+     ⑤待办提醒（workspace userTodos，kv 单一事实源）——零新轮询。
      布局：分组侧栏（按源筛选 + 告警列表）+ Triage 主视图（今日待分诊 /
      已分诊两态）。分诊标记与自动归档走本地 kv（日切重置 / 7 天衰减）；
      审批条目随 run 恢复离场时自动记档（批准后条目流转）。
@@ -14,8 +14,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
-import { loadUserTodos } from '@/custom/cockpit/store/cockpit-kv'
+import { useWorkspaceStore } from '../store/workspace'
 import TriageQueue from '../components/TriageQueue.vue'
 import AlarmList from '../components/AlarmList.vue'
 import {
@@ -31,7 +30,7 @@ const router = useRouter()
 const { t } = useI18n()
 const runsStore = useRunCenterStore()
 const loopStore = useLoopStore()
-const cockpit = useCockpitStore()
+const workspace = useWorkspaceStore()
 
 /** 视图时间锚：挂载时刻（等待时长/今日判定的稳定基准，随重挂载刷新） */
 const nowTick = ref(Date.now())
@@ -49,11 +48,12 @@ const resolvedMap = ref(
 onMounted(() => {
   writeTriagedMap(triagedMap.value)
   writeResolvedMap(resolvedMap.value)
-  // cockpit 待办：kv 单一事实源 + 既有闹钟调度/看板聚合 WS（与总览同款武装，幂等）
-  cockpit.userTodos = loadUserTodos()
-  cockpit.startReminderScheduler()
-  cockpit.initFleetStream()
-  void cockpit.refreshAllBoards()
+  // 待办：kv 单一事实源 + 既有闹钟调度/看板聚合 WS（与总览同款武装，幂等；
+  // cockpit store 已退役，本视图改挂 workspace store——Task 8 store 拆分）
+  workspace.loadTodos()
+  workspace.startReminderScheduler()
+  workspace.initFleetStream()
+  void workspace.refreshAllBoards()
   void boot()
 })
 
@@ -76,9 +76,9 @@ const loopNames = computed<Record<string, string>>(() =>
 const entries = computed<TriageEntry[]>(() =>
   buildTriageEntries({
     approvals: runsStore.awaitingRuns,
-    tasks: cockpit.tasks,
+    tasks: workspace.tasks,
     alarms: runsStore.metricsRaw?.loopEvents ?? [],
-    reminders: cockpit.userTodos,
+    reminders: workspace.userTodos,
   }, nowTick.value, dayKey.value, loopNames.value))
 
 /** 自动归档：审批条目随 run 恢复离场（批准/拒绝/超时）→ 记档快照，

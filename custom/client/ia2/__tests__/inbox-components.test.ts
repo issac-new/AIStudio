@@ -3,7 +3,8 @@
 // P3 Task 5 — 介入中心组件 jsdom 冒烟：TriageQueue 两视图 + 内联审批 + 分诊流转，
 // AlarmList，InboxView 五源装配 + 源筛选 + 深链 + 分诊 kv + 自动归档 + 日切重置。
 // i18n 走全局 setup 的 key 直返 mock；ApprovalPanel 桩化（本体在 runcenter 自测），
-// runs store 用真身（REST/loop-rest 桩），cockpit store 桩化（重图隔离）。
+// runs store 用真身（REST/loop-rest 桩），workspace store 桩化（重图隔离；
+// Task 8 store 拆分后视图依赖 ia2 workspace store，原 cockpit store 已退役）。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -40,21 +41,20 @@ vi.mock('@/custom/loop/runcenter/components/ApprovalPanel.vue', () => ({
   default: { props: ['run'], setup: () => { approvalPanel.count += 1 }, template: '<div class="approval-stub" />' },
 }))
 
-// ── cockpit store 桩 ──
-const cockpitStubs = vi.hoisted(() => {
+// ── workspace store 桩（Task 8：ia2 消费面独立模块）──
+const workspaceStubs = vi.hoisted(() => {
   const state = {
     tasks: [] as Array<{ id: string; title: string; status: string; priority: number | string | null; createdAt: number | null }>,
     userTodos: [] as Array<{ id: string; title: string; date: string; remindAt?: number | null; createdAt?: number }>,
     refreshAllBoards: vi.fn(async () => true),
     initFleetStream: vi.fn(),
     startReminderScheduler: vi.fn(),
+    loadTodos: vi.fn(),
+    watchKanbanTasks: vi.fn(),
   }
-  return { state, useCockpitStore: () => state }
+  return { state, useWorkspaceStore: () => state }
 })
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
-vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
-  loadUserTodos: vi.fn(() => cockpitStubs.state.userTodos),
-}))
+vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 
 import TriageQueue from '../components/TriageQueue.vue'
 import AlarmList from '../components/AlarmList.vue'
@@ -101,8 +101,8 @@ beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
   localStorage.clear()
-  cockpitStubs.state.tasks = []
-  cockpitStubs.state.userTodos = []
+  workspaceStubs.state.tasks = []
+  workspaceStubs.state.userTodos = []
   approvalPanel.count = 0
 })
 
@@ -210,12 +210,12 @@ describe('InboxView — 五源装配', () => {
       { id: 'l1', name: '晨检循环', status: 'running' },
     ])
     loopRest.getEvents.mockResolvedValue([{ type: 'loop.stuck', ts: new Date(Date.now() - 2 * HOUR).toISOString() }])
-    cockpitStubs.state.tasks = [
+    workspaceStubs.state.tasks = [
       { id: 't1', title: '修登录页', status: 'blocked', priority: 0, createdAt: Date.now() - 2 * HOUR },
       { id: 't2', title: '审文案', status: 'review', priority: null, createdAt: Date.now() - HOUR },
       { id: 't3', title: '进行中', status: 'doing', priority: null, createdAt: Date.now() - HOUR },
     ]
-    cockpitStubs.state.userTodos = [
+    workspaceStubs.state.userTodos = [
       { id: 'td1', title: '下午评审', date: TODAY, remindAt: null },
       { id: 'td2', title: '明日事务', date: '2027-01-01', remindAt: null },
     ]
@@ -353,8 +353,8 @@ describe('InboxView — 五源装配', () => {
     await mountView()
     expect(runRest.listRuns).toHaveBeenCalled()
     expect(runRest.replay).toHaveBeenCalled() // fetchMetrics 采样
-    expect(cockpitStubs.state.refreshAllBoards).toHaveBeenCalled()
-    expect(cockpitStubs.state.initFleetStream).toHaveBeenCalled()
-    expect(cockpitStubs.state.startReminderScheduler).toHaveBeenCalled()
+    expect(workspaceStubs.state.refreshAllBoards).toHaveBeenCalled()
+    expect(workspaceStubs.state.initFleetStream).toHaveBeenCalled()
+    expect(workspaceStubs.state.startReminderScheduler).toHaveBeenCalled()
   })
 })

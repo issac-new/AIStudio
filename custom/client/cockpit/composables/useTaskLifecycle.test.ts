@@ -112,7 +112,7 @@ describe('useTaskLifecycle', () => {
 
   it('STATUS_FLOW is ordered funnel', () => {
     expect(STATUS_FLOW).toEqual([
-      'triage', 'todo', 'scheduled', 'ready', 'running', 'review', 'done', 'archived',
+      'triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived',
     ])
   })
 })

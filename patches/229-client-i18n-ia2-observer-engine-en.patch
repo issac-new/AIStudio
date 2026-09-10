@@ -1,0 +1,50 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -806,6 +806,20 @@
+       guideStep2: 'Set the cadence: configure schedule and budget for the goal',
+       guideStep3: 'Run it: start the loop and its status aggregates back here',
+       guideCta: 'Go to Orchestrate',
++      statusDistTitle: 'Work item status distribution',
++      statusDistEmpty: 'No work items yet',
++      statusDistFilterHint: 'Open in Work Items filtered by status',
++      status: {
++        triage: 'Triage',
++        todo: 'Todo',
++        scheduled: 'Scheduled',
++        ready: 'Ready',
++        running: 'Running',
++        blocked: 'Blocked',
++        review: 'Review',
++        done: 'Done',
++        archived: 'Archived',
++      },
+     },
+     inbox: {
+       title: 'Intervention center',
+@@ -910,6 +924,17 @@
+       loadFailed: 'Failed to look up source runs',
+       open: 'Open run detail',
+       noRun: 'run unknown',
++    },
++    engine: {
++      title: 'Graph engine policy',
++      desc: 'Loop scheduling runs on the graph engine below mode; thresholds are build-time defaults.',
++      loading: 'Loading…',
++      unavailable: 'Graph engine policy unavailable (server not assembled)',
++      failureBreaker: 'Failure breaker · consecutive failed runs',
++      stagnation: 'Stagnation breaker · runs without output',
++      interruptTimeout: 'Approval interrupt default timeout',
++      escalationResend: 'Escalation re-notice cadence',
++      readonlyHint: 'Read-only · editable policy files land with P4',
+     },
+   },
+ 
+@@ -2852,6 +2877,7 @@
+       apiServer: 'API Server',
+       models: 'Models',
+       voice: 'Voice',
++      graph: 'Graph Engine',
+     },
+     webhooks: {
+       title: 'Webhooks',

@@ -33,8 +33,8 @@ vi.mock('@/custom/loop/runcenter/api', () => ({
 }))
 vi.mock('@/custom/loop/api/loop-rest', () => ({ loopRest }))
 
-// ── cockpit store 桩（重图隔离：聊天/矩阵/舰队全不实例化）──
-const cockpitStubs = vi.hoisted(() => {
+// ── workspace store 桩（重图隔离；Task 8 store 拆分后视图依赖 ia2 workspace）──
+const workspaceStubs = vi.hoisted(() => {
   const state = {
     tasks: [] as Array<{ id: string; title: string; status: string; priority: number | string | null; boardSlug?: string }>,
     userTodos: [] as Array<{ id: string; title: string; date: string; remindAt?: number | null }>,
@@ -44,14 +44,13 @@ const cockpitStubs = vi.hoisted(() => {
     startReminderScheduler: vi.fn(),
     openSchedule: vi.fn(),
     closeSchedule: vi.fn(),
+    loadTodos: vi.fn(),
+    watchKanbanTasks: vi.fn(),
   }
-  const useCockpitStore = () => state
-  return { state, useCockpitStore }
+  const useWorkspaceStore = () => state
+  return { state, useWorkspaceStore }
 })
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
-vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
-  loadUserTodos: vi.fn(() => cockpitStubs.state.userTodos),
-}))
+vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 
 // ── 日程弹窗桩（组件本体属 cockpit 域，装配接线单独断言）──
 const scheduleModal = vi.hoisted(() => ({ count: 0 }))
@@ -70,9 +69,9 @@ import { mergeAttention, type OverviewMetrics } from '../adapters/overview'
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
-  cockpitStubs.state.tasks = []
-  cockpitStubs.state.userTodos = []
-  cockpitStubs.state.scheduleOpen = false
+  workspaceStubs.state.tasks = []
+  workspaceStubs.state.userTodos = []
+  workspaceStubs.state.scheduleOpen = false
   scheduleModal.count = 0
 })
 
@@ -212,10 +211,10 @@ describe('OverviewView — 首屏装配', () => {
   }
 
   it('布局：注意力条 → 四卡片一行 → 今日计划；数据源武装只发既有订阅/一次性拉取', async () => {
-    cockpitStubs.state.tasks = [
+    workspaceStubs.state.tasks = [
       { id: 't1', title: '阻塞任务', status: 'blocked', priority: 0 },
     ]
-    cockpitStubs.state.userTodos = [{ id: 'td1', title: '评审', date: '2026-09-10', remindAt: null }]
+    workspaceStubs.state.userTodos = [{ id: 'td1', title: '评审', date: '2026-09-10', remindAt: null }]
     loopRest.listLoops.mockResolvedValue([
       { id: 'l1', name: '晨检循环', status: 'idle', nextTickAt: new Date(Date.now() - 3_600_000).toISOString() },
     ])
@@ -237,9 +236,9 @@ describe('OverviewView — 首屏装配', () => {
     // 数据源武装：一次性 REST + 既有聚合 WS + 介入域订阅；无新轮询定时器
     expect(runRest.listRuns).toHaveBeenCalled()
     expect(runRest.replay).toHaveBeenCalled()
-    expect(cockpitStubs.state.refreshAllBoards).toHaveBeenCalled()
-    expect(cockpitStubs.state.initFleetStream).toHaveBeenCalled()
-    expect(cockpitStubs.state.startReminderScheduler).toHaveBeenCalled()
+    expect(workspaceStubs.state.refreshAllBoards).toHaveBeenCalled()
+    expect(workspaceStubs.state.initFleetStream).toHaveBeenCalled()
+    expect(workspaceStubs.state.startReminderScheduler).toHaveBeenCalled()
   })
 
   it('空态三步引导：零 run 零任务时出现，任一 run 存在即消失', async () => {
@@ -257,7 +256,7 @@ describe('OverviewView — 首屏装配', () => {
   })
 
   it('卡片点击跳区域；注意力条目跳工作项区带筛选预选（P3 Task 7）；日程卡打开原弹窗', async () => {
-    cockpitStubs.state.tasks = [{ id: 't1', title: '待审任务', status: 'review', priority: null }]
+    workspaceStubs.state.tasks = [{ id: 't1', title: '待审任务', status: 'review', priority: null }]
     const { wrapper, router } = await mountView()
 
     const cards = wrapper.findAll('.ia-overview__cards > .ia-card')
@@ -274,11 +273,11 @@ describe('OverviewView — 首屏装配', () => {
     // 日程卡：cockpit store 单例开弹窗（生产 store 为响应式代理，此处断言动作接线）
     await cards[2].trigger('click')
     await flushPromises()
-    expect(cockpitStubs.state.openSchedule).toHaveBeenCalled()
+    expect(workspaceStubs.state.openSchedule).toHaveBeenCalled()
   })
 
   it('日程弹窗挂载：scheduleOpen 时视图内挂载原 CockpitScheduleModal（复用不复制）', async () => {
-    cockpitStubs.state.scheduleOpen = true
+    workspaceStubs.state.scheduleOpen = true
     const { wrapper } = await mountView()
     expect(wrapper.find('.schedule-modal-stub').exists()).toBe(true)
   })
