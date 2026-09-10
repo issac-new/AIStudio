@@ -21,6 +21,7 @@
 import type { RouteLocationRaw } from 'vue-router'
 import type { RunSummary } from '@/custom/loop/runcenter/types'
 import type { KvStorage } from '@/custom/loop/runcenter/adapters/inbox'
+import { parseApprovalInterrupt } from '@/custom/loop/runcenter/adapters/intervention'
 import { localDateStr } from './overview'
 
 // ---------------------------------------------------------------------------
@@ -96,13 +97,17 @@ function tsMsOf(value: string | number | null | undefined): number {
 // 五源归一
 // ---------------------------------------------------------------------------
 
-/** 审批源输入：awaiting-input RunSummary 的结构化子集（直接喂 RunSummary 亦可） */
+/** 审批源输入：awaiting-input RunSummary 的结构化子集（直接喂 RunSummary 亦可；
+ *  events 可选——提供时等待锚点取未决审批 interrupt 的 raisedAt，与行内
+ *  ApprovalPanel 的"已等待"同一解析函数（parseApprovalInterrupt），行内外一致） */
 export type ApprovalRunInput = Pick<RunSummary, 'runId' | 'graphId' | 'lastActivityAt' | 'updatedAt'>
+  & Partial<Pick<RunSummary, 'events'>>
 
 /** 源 ①——审批/中断：每个 awaiting run 一条（等待 = 挂起至今） */
 export function normalizeApprovals(runs: readonly ApprovalRunInput[], now: number): TriageEntry[] {
   return runs.map(r => {
-    const ts = tsMsOf(r.lastActivityAt) || tsMsOf(r.updatedAt)
+    const raisedAt = r.events ? parseApprovalInterrupt(r.events)?.raisedAt ?? null : null
+    const ts = tsMsOf(raisedAt) || tsMsOf(r.lastActivityAt) || tsMsOf(r.updatedAt)
     return {
       id: `approval:${r.runId}`,
       kind: 'approval' as const,
@@ -407,9 +412,11 @@ export interface ProjectTriageOptions {
 /**
  * projectTriage — 分诊两视图投影：
  * - pending：活条目去掉「今日已分诊」标记；归档条目若重现于活源（如同一 run
- *   再次中断）照常回待处理——归档语义是"离场快照"，不否定再现场次；
+ *   reject 后 repair 重开 interrupt）照常回待处理；
  * - done：今日标记的活条目（origin triaged）∪ 未衰减归档快照（origin archived，
- *   源已消失仍可渲染）；同 id 双态去重，手动标记优先（用户意图比自动归档新）。
+ *   源已消失仍可渲染）；活条目在场时其归档快照一律压制——否则同一 run 会同时
+ *   出现在两个 tab（待处理可操作 ∖ 已归档显示已了结），状态自相矛盾；
+ *   同 id 双态去重，手动标记优先（用户意图比自动归档新）。
  */
 export function projectTriage(entries: readonly TriageEntry[], opts: ProjectTriageOptions): TriageProjection {
   const maxAgeMs = opts.maxAgeMs ?? RESOLVE_DECAY_MS
@@ -417,6 +424,7 @@ export function projectTriage(entries: readonly TriageEntry[], opts: ProjectTria
 
   const triagedToday = new Set<string>()
   for (const [id, day] of Object.entries(opts.triaged)) if (day === opts.dayKey) triagedToday.add(id)
+  const liveIds = new Set(entries.map(e => e.id))
 
   const pending: TriageEntry[] = []
   const done: TriageProjection['done'] = []
@@ -425,7 +433,7 @@ export function projectTriage(entries: readonly TriageEntry[], opts: ProjectTria
     else pending.push(e)
   }
   for (const [id, r] of Object.entries(freshResolved)) {
-    if (triagedToday.has(id)) continue // 手动标记优先，活条目已入列
+    if (triagedToday.has(id) || liveIds.has(id)) continue // 手动标记优先 ∪ 活条目在场压制快照
     done.push({ entry: r.entry, origin: 'archived' })
   }
   return {
@@ -433,6 +441,6 @@ export function projectTriage(entries: readonly TriageEntry[], opts: ProjectTria
     done: [...done].sort((a, b) =>
       triageScore(b.entry) - triageScore(a.entry)
       || TRIAGE_KIND_WEIGHT[a.entry.kind] - TRIAGE_KIND_WEIGHT[b.entry.kind]
-      || (a.entry.id < b.entry.id ? -1 : 1)),
+      || (a.entry.id < b.entry.id ? -1 : a.entry.id > b.entry.id ? 1 : 0)),
   }
 }
