@@ -57,6 +57,32 @@ describe('normalizeApprovals — 源①审批/中断', () => {
     expect(e.route).toEqual({ name: 'ia2.runDetail', params: { runId: 'r1' } })
   })
 
+  it('等待锚点 = 未决审批 interrupt 的 raisedAt（与行内 ApprovalPanel 同一解析函数）', () => {
+    const RAISED = NOW - 3 * 3_600_000
+    const LATER = NOW - 3_600_000
+    const [e] = normalizeApprovals([{
+      runId: 'r1', graphId: 'g',
+      lastActivityAt: new Date(LATER).toISOString(), updatedAt: null,
+      events: [
+        { type: 'graph.interrupt', interruptId: 'i1', value: { kind: 'approval', prompt: 'ok' }, ts: RAISED },
+        { type: 'cost.recorded', totalCost: 1, ts: LATER },
+      ],
+    }], NOW)
+    expect(e.ts).toBe(RAISED)        // 不取更晚的 lastActivityAt——行内外"已等待"一致
+    expect(e.waitMs).toBe(3 * 3_600_000)
+
+    // interrupt 已被 resume 关闭 → 无未决，回落 lastActivityAt
+    const [closed] = normalizeApprovals([{
+      runId: 'r2', graphId: 'g',
+      lastActivityAt: new Date(LATER).toISOString(), updatedAt: null,
+      events: [
+        { type: 'graph.interrupt', interruptId: 'i1', value: { kind: 'approval', prompt: 'ok' }, ts: RAISED },
+        { type: 'graph.resume', interruptId: 'i1', ts: LATER },
+      ],
+    }], NOW)
+    expect(closed.ts).toBe(LATER)
+  })
+
   it('事件时刻缺失回落 updatedAt；两者皆坏 → waitMs 0 不为负', () => {
     const [fallback] = normalizeApprovals([{ runId: 'r1', graphId: '', lastActivityAt: null, updatedAt: '2026-09-10T09:00:00Z' }], NOW)
     expect(fallback.waitMs).toBe(3 * 3_600_000)
@@ -304,14 +330,23 @@ describe('projectTriage — 待处理/已分诊两视图', () => {
     expect(decayed.pending.map(e => e.id)).toEqual(['task:t1', 'todo:z'])
   })
 
-  it('归档条目重现于活源（同一 run 再次中断）→ 回待处理，不背归档包袱', () => {
+  it('归档条目重现于活源（reject→repair 重开）→ 回待处理，done 压制旧快照（双态不同屏）', () => {
     const resolved: Record<string, ResolvedRecord> = {
       'approval:r1': { ts: new Date(NOW - DAY).toISOString(), entry: live[0] },
     }
     const p = projectTriage(live, { triaged: {}, resolved, dayKey: TODAY, now: NOW })
     expect(p.pending.map(e => e.id)).toContain('approval:r1')
-    // done 只有快照，无 triaged 标记的活条目
-    expect(p.done.filter(d => d.origin === 'triaged')).toEqual([])
+    // 活条目在场 → 归档快照一并压制：两个 tab 不得同时出现同一 run
+    expect(p.done).toEqual([])
+  })
+
+  it('done 排序 comparator 合同：同分同权同 ts 的全等键按 id 确定性收尾（相等返回 0 非 1）', () => {
+    const a = entryOf({ id: 'approval:b', kind: 'approval', severity: 'high', waitMs: 3_600_000, ts: 100 })
+    const b = entryOf({ id: 'approval:a', kind: 'approval', severity: 'high', waitMs: 3_600_000, ts: 100 })
+    const p = projectTriage([a, b], {
+      triaged: { 'approval:b': TODAY, 'approval:a': TODAY }, resolved: {}, dayKey: TODAY, now: NOW,
+    })
+    expect(p.done.map(d => d.entry.id)).toEqual(['approval:a', 'approval:b'])
   })
 
   it('同 id 双态去重：手动分诊优先于归档', () => {

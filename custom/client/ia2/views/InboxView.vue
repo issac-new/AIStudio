@@ -82,11 +82,13 @@ const entries = computed<TriageEntry[]>(() =>
   }, nowTick.value, dayKey.value, loopNames.value))
 
 /** 自动归档：审批条目随 run 恢复离场（批准/拒绝/超时）→ 记档快照，
- *  已分诊视图保留 7 天；同一 run 再次中断则照常回待处理（adapter 语义） */
+ *  已分诊视图保留 7 天；同一 run 再次中断（reject→repair 重开 / escalation
+ *  重试）后二次离场时覆盖式重记——快照 ts 与内容始终是最近一次离场，
+ *  衰减窗口从最新离场起算，done 不残留首次旧 ts */
 watch(entries, (curr, prev) => {
   const currIds = new Set(curr.map(e => e.id))
   for (const e of prev) {
-    if (e.kind !== 'approval' || currIds.has(e.id) || resolvedMap.value[e.id]) continue
+    if (e.kind !== 'approval' || currIds.has(e.id)) continue
     resolvedMap.value = resolveEntry(e.id, e, new Date().toISOString())
   }
 })

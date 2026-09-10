@@ -313,6 +313,42 @@ describe('InboxView — 五源装配', () => {
     expect(wrapper.text()).toContain('ia2.inbox.originArchived')
   })
 
+  it('核心 HITL 流：reject→repair 重开 interrupt——回待处理且 done 无旧快照；二次离场快照覆盖刷新', async () => {
+    const { wrapper } = await mountView()
+    const store = useRunCenterStore()
+    const queueText = () => wrapper.findAll('.tq-row').map(r => r.text()).join()
+
+    // 第一次离场（批准/拒绝/超时同一 resume 投影）
+    store.applyEvent({ type: 'graph.resume', threadId: 'r1', ts: new Date().toISOString() })
+    await flushPromises()
+    expect(queueText()).not.toContain('r1')
+    await wrapper.findAll('.tq-panel__tab')[1].trigger('click')
+    expect(queueText()).toContain('r1') // 归档快照可见
+    const firstTs = JSON.parse(localStorage.getItem(RESOLVED_KEY)!)['approval:r1'].ts
+    await wrapper.findAll('.tq-panel__tab')[0].trigger('click')
+
+    // repair 重开 interrupt → 回到 awaiting-input
+    store.applyEvent({
+      type: 'graph.interrupt', threadId: 'r1', interruptId: 'i2',
+      value: { kind: 'approval', prompt: 'retry' }, ts: new Date().toISOString(),
+    })
+    await flushPromises()
+    expect(queueText()).toContain('r1') // 待处理可见、可再次审批
+    await wrapper.findAll('.tq-panel__tab')[1].trigger('click')
+    expect(queueText()).not.toContain('r1') // done 压制旧快照——双态不同屏
+    await wrapper.findAll('.tq-panel__tab')[0].trigger('click')
+
+    // 二次离场 → 覆盖式重记（ts 刷新，衰减从最新离场起算）
+    store.applyEvent({ type: 'graph.resume', threadId: 'r1', interruptId: 'i2', ts: new Date().toISOString() })
+    await flushPromises()
+    const second = JSON.parse(localStorage.getItem(RESOLVED_KEY)!)['approval:r1']
+    expect(Date.parse(second.ts)).toBeGreaterThanOrEqual(Date.parse(firstTs))
+    expect(second.entry.id).toBe('approval:r1')
+    expect(queueText()).not.toContain('r1')
+    await wrapper.findAll('.tq-panel__tab')[1].trigger('click')
+    expect(queueText()).toContain('r1')
+  })
+
   it('通知克制：武装动作只发既有订阅/一次性拉取（零新轮询为结构约束——新文件无定时器）', async () => {
     await mountView()
     expect(runRest.listRuns).toHaveBeenCalled()
