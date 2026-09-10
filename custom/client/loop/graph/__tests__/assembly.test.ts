@@ -177,6 +177,73 @@ describe('createGraphAssembly', () => {
     expect(a.shadowGraphService).not.toBeNull()
     expect(a.spawner).toBeNull()
     expect(a.interruptScanner).toBeNull() // shadow 只读双跑，不自动处置审批超时
+    expect(a.briefJob).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// R1 每日 Brief 装配（Task 8）：deliver 仅在"配置房间 + 注入传输"同时成立时接线——
+// 配房间但缺传输时不得把"什么都没发"记成 delivered:true（审计失真）
+// ---------------------------------------------------------------------------
+
+describe('daily brief wiring (R1)', () => {
+  async function seedCompletedRun(eventLog: InMemoryEventLogStore): Promise<void> {
+    const now = Date.now()
+    await eventLog.append({ runId: 'run-1', graphId: 'loop-x', ts: now - 1_000, kind: 'run.started', payload: {} })
+    await eventLog.append({ runId: 'run-1', graphId: 'loop-x', ts: now, kind: 'run.completed', payload: { totalCost: 0.1 } })
+  }
+
+  const briefAudit = async (eventLog: InMemoryEventLogStore) => {
+    const runs = (await eventLog.listRuns()).filter(r => r.graphId === 'daily-brief')
+    expect(runs).toHaveLength(1)
+    const events = await eventLog.query(runs[0]!.runId)
+    return events.find(e => e.kind === 'run.completed')!
+  }
+
+  it('legacy/shadow do not assemble the brief job; on mode does', () => {
+    expect(createGraphAssembly(assemblyOpts({ mode: 'legacy' })).briefJob).toBeNull()
+    expect(createGraphAssembly(assemblyOpts({ mode: 'shadow' })).briefJob).toBeNull()
+    expect(createGraphAssembly(assemblyOpts({ mode: 'on' })).briefJob).not.toBeNull()
+  })
+
+  it('room configured WITHOUT transport: warn once at assembly, audit keeps delivered:false', async () => {
+    vi.stubEnv('LOOP_BRIEF_ROOM', '!brief:example.org')
+    try {
+      const log = vi.fn()
+      const eventLog = new InMemoryEventLogStore()
+      const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog, log }))
+      expect(a.briefJob).not.toBeNull()
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('LOOP_BRIEF_ROOM is set but no briefDelivery transport injected'))
+
+      await seedCompletedRun(eventLog)
+      await a.briefJob!.runOnce() // 有数据日：审计必须落账，但不得记投递成功
+
+      const done = await briefAudit(eventLog)
+      expect(done.payload.delivered).toBe(false)
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('room configured WITH transport: text goes through briefDelivery, audit delivered:true', async () => {
+    vi.stubEnv('LOOP_BRIEF_ROOM', '!brief:example.org')
+    try {
+      const transport = vi.fn(async () => {})
+      const eventLog = new InMemoryEventLogStore()
+      const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog, briefDelivery: transport }))
+      expect(a.briefJob).not.toBeNull()
+
+      await seedCompletedRun(eventLog)
+      await a.briefJob!.runOnce()
+
+      expect(transport).toHaveBeenCalledTimes(1)
+      expect(transport.mock.calls[0]![0]).toBe('!brief:example.org')
+      expect(typeof transport.mock.calls[0]![1]).toBe('string')
+      const done = await briefAudit(eventLog)
+      expect(done.payload.delivered).toBe(true)
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })
 

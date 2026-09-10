@@ -210,29 +210,25 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
 
   // R1 每日 Brief（spec §7A）：三段式结构化汇总，零 LLM 依赖。仅 on 模式装配
   //（与 spawner/interruptScanner 同界——legacy 无图引擎 run 可聚合，shadow 只读不写）。
-  // LOOP_BRIEF_ROOM 配置且宿主注入 briefDelivery 传输时投递 Matrix 房间；
-  // 未配置/未注入只落事件日志（brief 自身以 graphId='daily-brief' 的 run 记录可回放审计）。
+  // 投递通道仅在"LOOP_BRIEF_ROOM 配置 + 宿主注入 briefDelivery 传输"同时成立时接线：
+  // 配了房间但缺传输时若接一个空实现闭包，dispatch 会把"什么都没发"记成
+  // delivered:true（审计失真）——此处直接不传 deliver，job 走 event-log-only
+  //（delivered:false）路径；装配时 warn 一次。
   const briefConfig = readBriefConfig()
-  let briefTransportWarned = false
-  const briefJob = mode === 'on'
-    ? new DailyBriefJob({
-        eventLog, store,
-        cron: briefConfig.cron,
-        deliver: briefConfig.room
-          ? (text) => {
-              if (!opts.briefDelivery) {
-                if (!briefTransportWarned) {
-                  briefTransportWarned = true
-                  log('[graph] LOOP_BRIEF_ROOM is set but no briefDelivery transport injected — brief stays event-log only')
-                }
-                return Promise.resolve()
-              }
-              return opts.briefDelivery(briefConfig.room!, text)
-            }
-          : undefined,
-        intervalMs: opts.intervalMs, log,
-      })
-    : null
+  let briefJob: DailyBriefJob | null = null
+  if (mode === 'on') {
+    if (briefConfig.room && !opts.briefDelivery) {
+      log('[graph] LOOP_BRIEF_ROOM is set but no briefDelivery transport injected — brief stays event-log only')
+    }
+    briefJob = new DailyBriefJob({
+      eventLog, store,
+      cron: briefConfig.cron,
+      deliver: briefConfig.room && opts.briefDelivery
+        ? (text) => opts.briefDelivery!(briefConfig.room!, text)
+        : undefined,
+      intervalMs: opts.intervalMs, log,
+    })
+  }
 
   const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore })
 
