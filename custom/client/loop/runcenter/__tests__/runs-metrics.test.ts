@@ -110,6 +110,30 @@ describe('fetchMetrics — 采集', () => {
     const raw = await store.fetchMetrics()
     expect(raw!.replays.map(r => r.runId)).toEqual(['ok'])
     expect(raw!.loopEvents.map(l => l.loopId)).toEqual(['l1'])
+    // 单 loop 事件切片失败 = 熔断计数输入不完整 → partial 标志（Task 4 审查 B-2）
+    expect(raw!.partial).toBe(true)
+  })
+
+  it('loop 列表拉取失败：熔断计数空采集且标 partial（部分数据，非完整零）', async () => {
+    runRest.listRuns.mockResolvedValue([row('ok', 'completed', NOW - DAY)])
+    runRest.replay.mockResolvedValue([])
+    loopRest.listLoops.mockRejectedValue(new Error('loops 500'))
+
+    const store = useRunCenterStore()
+    const raw = await store.fetchMetrics()
+    expect(raw).not.toBeNull()
+    expect(raw!.loopEvents).toHaveLength(0)
+    expect(raw!.partial).toBe(true)
+  })
+
+  it('完整采集：loop 列表与全部事件切片成功 → partial 缺省 false', async () => {
+    runRest.listRuns.mockResolvedValue([])
+    loopRest.listLoops.mockResolvedValue([{ id: 'l1' }])
+    loopRest.getEvents.mockResolvedValue([])
+
+    const store = useRunCenterStore()
+    const raw = await store.fetchMetrics()
+    expect(raw!.partial).toBe(false)
   })
 })
 
@@ -117,7 +141,7 @@ describe('fetchMetrics — 缓存与并发', () => {
   const NOW = Date.now()
 
   function freshRaw(collectedAt: number): MetricsRaw {
-    return { runs: [], replays: [], loopEvents: [], collectedAt }
+    return { runs: [], replays: [], loopEvents: [], collectedAt, partial: false }
   }
 
   it('TTL 内复用快照不再发请求；过期（>5min）后重采', async () => {

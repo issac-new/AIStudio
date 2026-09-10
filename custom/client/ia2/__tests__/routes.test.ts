@@ -1,9 +1,15 @@
 // overlay/custom/client/ia2/__tests__/routes.test.ts
 // P3 Task 3 — /app 六区域路由树：存在性 / 默认子路由 / 参数原样搬迁 / fullscreen / 区域投影。
-// 纯路由表断言用 router.resolve，不加载任何视图组件（懒组件保持函数态）。
-import { describe, it, expect } from 'vitest'
+// 纯路由表断言用 router.resolve，不加载任何视图组件（懒组件保持函数态）；
+// 唯一例外是 runDetail 的懒组件身份断言（Task 3 台账 Task 9 补：stub 替身核对装载目标）。
+import { describe, it, expect, vi } from 'vitest'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 import { buildIaRoutes, IA_AREAS, areaForPath } from '../routes'
+
+vi.mock('@/custom/loop/runcenter/views/RunDetailView.vue', () => ({
+  default: { template: '<div class="run-detail-stub" />' },
+}))
+import RunDetailView from '@/custom/loop/runcenter/views/RunDetailView.vue'
 
 function makeRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes: buildIaRoutes() })
@@ -40,6 +46,17 @@ describe('ia2 路由树（六区域）', () => {
     const resolved = router.resolve('/app/runs/run-abc')
     expect(resolved.name).toBe('ia2.runDetail')
     expect(resolved.params.runId).toBe('run-abc')
+  })
+
+  it('/app/runs/:runId 懒组件真实落到 runcenter RunDetailView（Task 3 台账 Task 9 补）', async () => {
+    const router = makeRouter()
+    const resolved = router.resolve('/app/runs/run-abc')
+    // matched 末位 = 参数路由记录本体（首位是 /app 壳）
+    const record = resolved.matched[resolved.matched.length - 1]
+    const loader = record.components?.default as unknown as () => Promise<{ default: unknown }>
+    expect(typeof loader).toBe('function')
+    const mod = await loader()
+    expect(mod.default).toBe(RunDetailView)
   })
 
   it('comms 吸收 matrix-chat 子路由：room/:roomId 路径参数原样搬迁', () => {

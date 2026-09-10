@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -832,6 +832,56 @@ export default {
+@@ -824,6 +824,56 @@ export default {
        alarmHead: 'Breakers & stalls',
        alarmEmpty: 'No breaker/stall alarms in the last 7 days',
      },

@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 index a2ae76d..756c3b3 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -749,6 +749,8 @@ export default {
+@@ -741,6 +741,8 @@ export default {
        events: '关联事件',
        noEvents: '暂无关联事件',
        currentValue: '当前值（非事件当时值）',
@@ -11,7 +11,7 @@ index a2ae76d..756c3b3 100644
      },
      keyboard: {
        hint: 'j/k 移动 · Enter 详情 · r 回放 · a 审批',
-@@ -880,6 +882,33 @@ export default {
+@@ -872,6 +874,33 @@ export default {
          submitFailed: '创建失败',
        },
      },

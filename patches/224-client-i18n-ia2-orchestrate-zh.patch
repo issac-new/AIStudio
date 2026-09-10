@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -830,6 +830,56 @@ export default {
+@@ -822,6 +822,56 @@ export default {
        alarmHead: '熔断与停滞',
        alarmEmpty: '近 7 天无熔断/停滞告警',
      },

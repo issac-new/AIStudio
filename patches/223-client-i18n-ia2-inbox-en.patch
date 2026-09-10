@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -805,6 +805,33 @@
+@@ -797,6 +797,33 @@
        guideStep3: 'Run it: start the loop and its status aggregates back here',
        guideCta: 'Go to Orchestrate',
      },

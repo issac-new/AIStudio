@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -804,6 +804,20 @@
+@@ -796,6 +796,20 @@
        guideStep2: '设节奏：为目标配置执行节奏与预算',
        guideStep3: '跑起来：启动循环，运行状态将回到这里聚合',
        guideCta: '去编排',
@@ -22,7 +22,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      inbox: {
        title: '介入中心',
-@@ -908,6 +922,17 @@
+@@ -900,6 +914,17 @@
        loadFailed: '来源 run 反查失败',
        open: '打开运行详情',
        noRun: 'run 未知',
@@ -40,7 +40,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
    },
  
-@@ -2882,6 +2907,7 @@
+@@ -2874,6 +2899,7 @@
        apiServer: 'API 服务器',
        models: '模型',
        voice: '语音',

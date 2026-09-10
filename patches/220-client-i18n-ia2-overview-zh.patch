@@ -1,10 +1,9 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 2cbaaea..74f0aa2 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -773,6 +773,36 @@ export default {
-       inbox: '介入',
-       inboxDesc: '介入收件箱建设中：审批、阻塞、告警与待办将在此聚合，按等待时长分诊。',
+@@ -765,6 +765,36 @@ export default {
+       tasks: '工作项',
+       comms: '沟通',
      },
 +    overview: {
 +      attentionLabel: '需要注意',
@@ -39,3 +38,4 @@ index 2cbaaea..74f0aa2 100644
    },
  
    agentManager: {
+

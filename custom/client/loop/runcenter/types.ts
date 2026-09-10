@@ -107,4 +107,9 @@ export interface MetricsRaw {
   loopEvents: MetricsLoopEventSlice[]
   /** 采集完成时刻（epoch ms；5 分钟 TTL 的时间锚） */
   collectedAt: number
+  /** 采集降级标志（Task 4 审查 B-2）：loop 列表拉取失败，或部分 loop 事件切片
+   *  拉取失败时置 true——此时 loopEvents 不完整，熔断计数是"部分数据"而非完整
+   *  零（UI 据此标注口径；缺省 false = 完整采集。平均耗时的采样口径由
+   *  durationSamples 样本数自描述，不走本标志）。 */
+  partial?: boolean
 }

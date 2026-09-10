@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index ff0a3a7..bfeda6b 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -751,6 +751,8 @@ export default {
+@@ -743,6 +743,8 @@ export default {
        events: 'Related events',
        noEvents: 'No related events',
        currentValue: 'Current value (not the value at event time)',
@@ -11,7 +11,7 @@ index ff0a3a7..bfeda6b 100644
      },
      keyboard: {
        hint: 'j/k move · Enter detail · r replay · a approve',
-@@ -882,6 +884,33 @@ export default {
+@@ -874,6 +876,33 @@ export default {
          submitFailed: 'Creation failed',
        },
      },

@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import RunListTable from '@/custom/loop/runcenter/components/RunListTable.vue'
@@ -17,6 +17,7 @@ import type { GraphEventLike, RunAction, RunStatus, RunSummary } from '@/custom/
 const store = useRunCenterStore()
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 
 // ── 视图 tab（运行列表 / 介入收件箱，task-7）──
 const activeTab = ref<'runs' | 'inbox'>('runs')
@@ -56,7 +57,14 @@ function prevPage(): void { if (page.value > 1) page.value-- }
 function nextPage(): void { if (page.value < totalPages.value) page.value++ }
 
 // ── 生命周期 ──
-onMounted(() => { store.fetchRuns() })
+onMounted(() => {
+  // 兼容深链消费（P3 台账，Task 9 补）：兼容守卫把旧 loop 详情重定向为
+  // /app/runs?loop=<loopId>；此处把 loop id 预填搜索框——filterRuns 按
+  // runId/graphId 包含匹配，graphId 即 loop id，落点即该 loop 的运行列表。
+  const loopParam = route.query.loop
+  if (typeof loopParam === 'string' && loopParam) query.value = loopParam
+  store.fetchRuns()
+})
 onBeforeUnmount(() => { store.disconnect() })
 
 // ── 操作分发（合法操作集 → 现有落点；无落点的动作不出现按钮）──

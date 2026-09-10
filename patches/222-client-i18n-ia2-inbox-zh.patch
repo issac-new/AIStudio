@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -803,6 +803,33 @@
+@@ -795,6 +795,33 @@
        guideStep3: '跑起来：启动循环，运行状态将回到这里聚合',
        guideCta: '去编排',
      },

@@ -344,8 +344,10 @@ export const useRunCenterStore = defineStore('runCenter', () => {
         if (res.status === 'fulfilled') replays.push({ runId: replayTargets[i].runId, events: res.value })
       })
 
-      // 各 loop 近窗事件（loop.stuck 熔断计数输入）；listLoops 失败 = 计数空采集
+      // 各 loop 近窗事件（loop.stuck 熔断计数输入）；列表或切片失败 = 计数输入
+      // 不完整 → partial 标志（UI 标"部分数据"，不把残缺采集伪装成完整零）
       const loopEvents: MetricsRaw['loopEvents'] = []
+      let partial = false
       try {
         const loops = await loopRest.listLoops()
         const since = new Date(windowStart).toISOString()
@@ -354,10 +356,11 @@ export const useRunCenterStore = defineStore('runCenter', () => {
         )
         eventResults.forEach((res, i) => {
           if (res.status === 'fulfilled') loopEvents.push({ loopId: loops[i].id, events: res.value })
+          else partial = true
         })
-      } catch { /* loop 列表不可用：熔断计数采集为空（聚合层得 0） */ }
+      } catch { partial = true /* loop 列表不可用：熔断计数采集为空（聚合层得 0，但标部分数据） */ }
 
-      const raw: MetricsRaw = { runs, replays, loopEvents, collectedAt: Date.now() }
+      const raw: MetricsRaw = { runs, replays, loopEvents, collectedAt: Date.now(), partial }
       metricsRaw.value = raw
       return raw
     } catch {
