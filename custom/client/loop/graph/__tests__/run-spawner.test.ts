@@ -135,6 +135,32 @@ describe('RunSpawner', () => {
     }
   })
 
+  it('webhook payload is enqueued before the debounced tick (legacy Scheduler parity)', async () => {
+    vi.useFakeTimers()
+    try {
+      // 2026-09-10 风险审查 #2 回归锚：mode=on 时 handleWebhook 必须把 payload 转交
+      // webhookEnqueue（discovery 经 connector discover 排空为契约），不得静默丢弃
+      const enqueue = vi.fn()
+      const { spawner, compile } = makeSpawner([makeLoop()], makeGraph('loop-loop-1'), { webhookEnqueue: enqueue })
+      const payload = { action: 'opened', number: 7 }
+      spawner.handleWebhook('loop-1', 'github', 'push', payload)
+      expect(enqueue).toHaveBeenCalledTimes(1)
+      expect(enqueue).toHaveBeenCalledWith('loop-1', { source: 'github', eventType: 'push', payload })
+      // 入队即时发生，tick 仍走 5s 去抖
+      expect(compile).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(6_000)
+      expect(compile).toHaveBeenCalledTimes(1)
+      // 无 enqueue 通道（缺省注入）时不抛错，仅 tick
+      const bare = makeSpawner([makeLoop()], makeGraph('loop-loop-1'))
+      expect(() => bare.spawner.handleWebhook('loop-1', 'github', 'push', payload)).not.toThrow()
+      await vi.advanceTimersByTimeAsync(6_000)
+      bare.spawner.stop()
+      spawner.stop()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('isStuck reads the event log: ≥3 node.failed in the latest 20 run events', async () => {
     const { spawner, eventLog } = makeSpawner([makeLoop()], makeGraph('loop-loop-1'))
     for (let i = 0; i < 3; i++) {

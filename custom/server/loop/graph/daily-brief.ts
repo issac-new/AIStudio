@@ -399,13 +399,16 @@ export class DailyBriefJob {
     return true
   }
 
-  /** 30s 轮询入口：到期才聚合/投递/落账。聚合失败不标记当日，下轮重试。 */
+  /** 30s 轮询入口：到期才聚合/投递/落账。聚合失败不标记当日，下轮重试。
+   *  isDue 一并纳入 try（2026-09-10 风险审查 #8）：其内部 eventLog 读库抛错时 poll
+   *  整体 reject，void 调用方无 catch——错误应走本模块专用日志并保留重试语义，
+   *  而非逃逸成进程级 unhandledRejection。 */
   async poll(): Promise<void> {
     if (this.running) return
     const nowMs = this.now()
-    if (!(await this.isDue(nowMs))) return
     this.running = true
     try {
+      if (!(await this.isDue(nowMs))) return
       const agg = await collectAggregate({ eventLog: this.opts.eventLog, store: this.opts.store }, this.now())
       this.evaluatedDateKey = dateKey(nowMs) // 固定时刻语义：当天只评估一次（成败均不再补发）
       await this.dispatch(agg, nowMs)
@@ -426,15 +429,20 @@ export class DailyBriefJob {
 
   // ------------------------------------------------------------------
 
-  /** 发送水位：事件日志中 brief 审计 run 的最近一次 run.started（持久，重启不丢） */
+  /** 发送水位：事件日志中 brief 审计 run 的最近一次 run.completed（持久，重启不丢）。
+   *  水位取 run.completed 而非 run.started（2026-09-10 风险审查 #4）：run.completed 在
+   *  投递完成后落账——若取 run.started（投递前落账），进程在两条审计之间被杀时重启会
+   *  误判"今日已发"，当日 Brief 静默丢失且无 delivered 审计；取 completed 则该窗口内
+   *  自然重试。投递失败仍写 completed（delivered:false），当日不重试（避免无传输配置
+   *  的 event-log-only 模式整天空转），失败经审计 payload 可见。 */
   private async lastSentAtMs(): Promise<number | null> {
     const runs = await this.opts.eventLog.listRuns()
     let last: number | null = null
     for (const r of runs) {
       if (r.graphId !== BRIEF_GRAPH_ID) continue
-      const started = await this.opts.eventLog.query(r.runId, { kind: 'run.started', limit: 1 })
-      if (started.length === 0) continue
-      last = last === null ? started[0]!.ts : Math.max(last, started[0]!.ts)
+      const completed = await this.opts.eventLog.query(r.runId, { kind: 'run.completed', limit: 1 })
+      if (completed.length === 0) continue
+      last = last === null ? completed[0]!.ts : Math.max(last, completed[0]!.ts)
     }
     return last
   }
