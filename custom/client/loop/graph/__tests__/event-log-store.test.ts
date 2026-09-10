@@ -53,6 +53,23 @@ describe('InMemoryEventLogStore', () => {
     expect(e.payload).toEqual({ nested: { arr: [1, 2] } })
     expect(() => JSON.stringify(e)).not.toThrow()
   })
+
+  it('saveSpec/getSpec/listSpecs round-trip and upsert by id (P2 台账⑥)', async () => {
+    const s = new InMemoryEventLogStore()
+    expect(await s.listSpecs()).toEqual([])
+    expect(await s.getSpec('spec-1')).toBeNull()
+    await s.saveSpec({ id: 'spec-1', version: 1, spec: { id: 'spec-1', nodes: ['a'] } })
+    await s.saveSpec({ id: 'spec-2', version: 3, spec: { id: 'spec-2', nodes: [] } })
+    expect(await s.getSpec('spec-1')).toEqual({ id: 'spec-1', version: 1, spec: { id: 'spec-1', nodes: ['a'] } })
+    const listed = await s.listSpecs()
+    expect(listed.map(r => r.id)).toEqual(['spec-1', 'spec-2'])
+    expect(listed[0].version).toBe(1)
+    expect(typeof listed[0].updatedAt).toBe('string')
+    // 同 id 重写 = upsert（旧 GraphSpecStore.save 的覆盖语义）
+    await s.saveSpec({ id: 'spec-1', version: 2, spec: { id: 'spec-1', nodes: ['a', 'b'] } })
+    expect(await s.getSpec('spec-1')).toEqual({ id: 'spec-1', version: 2, spec: { id: 'spec-1', nodes: ['a', 'b'] } })
+    expect(await s.listSpecs()).toHaveLength(2)
+  })
 })
 
 describe('createEventLogStore', () => {
@@ -112,6 +129,20 @@ describe.skipIf(!sqliteAvailable)('createEventLogStore via node:sqlite', () => {
     expect(latest?.iterCounters).toEqual({ 'b->a': 2 })
     expect((await s.listCheckpoints('r1')).map(c => c.superStep)).toEqual([1, 3])
     expect(await s.getLatestCheckpoint('nope')).toBeNull()
+  })
+
+  it('persists graph_specs in sqlite (P2 台账⑥): upsert + round-trip + list', async () => {
+    const s = createEventLogStore(':memory:')
+    expect(await s.listSpecs()).toEqual([])
+    expect(await s.getSpec('loop-a')).toBeNull()
+    await s.saveSpec({ id: 'loop-a', version: 1, spec: { id: 'loop-a', entryNode: 'discovery' } })
+    await s.saveSpec({ id: 'loop-b', version: 2, spec: { id: 'loop-b', entryNode: 'gate' } })
+    expect(await s.getSpec('loop-a')).toEqual({ id: 'loop-a', version: 1, spec: { id: 'loop-a', entryNode: 'discovery' } })
+    expect((await s.listSpecs()).map(r => r.id)).toEqual(['loop-a', 'loop-b'])
+    expect((await s.listSpecs())[0].updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    await s.saveSpec({ id: 'loop-a', version: 5, spec: { id: 'loop-a', entryNode: 'handoff' } })
+    expect((await s.getSpec('loop-a'))?.version).toBe(5)
+    expect(await s.listSpecs()).toHaveLength(2)
   })
 
   it('warns once and falls back to InMemory when the sqlite path cannot be opened', () => {

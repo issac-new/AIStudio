@@ -155,6 +155,7 @@ describe('createGraphAssembly', () => {
     expect(a.mode).toBe('legacy')
     expect(a.spawner).toBeNull()
     expect(a.shadowRunner).toBeNull()
+    expect(a.interruptScanner).toBeNull()
     expect(a.router.routes).toBeDefined()
     expect(a.router.stack.some(l => l.path === '/api/graph/runs')).toBe(true)
   })
@@ -162,6 +163,10 @@ describe('createGraphAssembly', () => {
   it('on mode: spawner wired, tick target routes to spawner', async () => {
     const a = createGraphAssembly(assemblyOpts({ mode: 'on' }))
     expect(a.spawner).not.toBeNull()
+    // P2 台账 h：interrupt 超时扫描器随 on 模式装配，start/stop 可起停
+    expect(a.interruptScanner).not.toBeNull()
+    await a.start()
+    a.stop()
     await expect(a.loopTickTarget.manualTick('nope')).resolves.toEqual(null) // loop 不存在 → null 不抛
   })
 
@@ -171,6 +176,74 @@ describe('createGraphAssembly', () => {
     expect(a.shadowRunner).not.toBeNull()
     expect(a.shadowGraphService).not.toBeNull()
     expect(a.spawner).toBeNull()
+    expect(a.interruptScanner).toBeNull() // shadow 只读双跑，不自动处置审批超时
+    expect(a.briefJob).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// R1 每日 Brief 装配（Task 8）：deliver 仅在"配置房间 + 注入传输"同时成立时接线——
+// 配房间但缺传输时不得把"什么都没发"记成 delivered:true（审计失真）
+// ---------------------------------------------------------------------------
+
+describe('daily brief wiring (R1)', () => {
+  async function seedCompletedRun(eventLog: InMemoryEventLogStore): Promise<void> {
+    const now = Date.now()
+    await eventLog.append({ runId: 'run-1', graphId: 'loop-x', ts: now - 1_000, kind: 'run.started', payload: {} })
+    await eventLog.append({ runId: 'run-1', graphId: 'loop-x', ts: now, kind: 'run.completed', payload: { totalCost: 0.1 } })
+  }
+
+  const briefAudit = async (eventLog: InMemoryEventLogStore) => {
+    const runs = (await eventLog.listRuns()).filter(r => r.graphId === 'daily-brief')
+    expect(runs).toHaveLength(1)
+    const events = await eventLog.query(runs[0]!.runId)
+    return events.find(e => e.kind === 'run.completed')!
+  }
+
+  it('legacy/shadow do not assemble the brief job; on mode does', () => {
+    expect(createGraphAssembly(assemblyOpts({ mode: 'legacy' })).briefJob).toBeNull()
+    expect(createGraphAssembly(assemblyOpts({ mode: 'shadow' })).briefJob).toBeNull()
+    expect(createGraphAssembly(assemblyOpts({ mode: 'on' })).briefJob).not.toBeNull()
+  })
+
+  it('room configured WITHOUT transport: warn once at assembly, audit keeps delivered:false', async () => {
+    vi.stubEnv('LOOP_BRIEF_ROOM', '!brief:example.org')
+    try {
+      const log = vi.fn()
+      const eventLog = new InMemoryEventLogStore()
+      const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog, log }))
+      expect(a.briefJob).not.toBeNull()
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('LOOP_BRIEF_ROOM is set but no briefDelivery transport injected'))
+
+      await seedCompletedRun(eventLog)
+      await a.briefJob!.runOnce() // 有数据日：审计必须落账，但不得记投递成功
+
+      const done = await briefAudit(eventLog)
+      expect(done.payload.delivered).toBe(false)
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('room configured WITH transport: text goes through briefDelivery, audit delivered:true', async () => {
+    vi.stubEnv('LOOP_BRIEF_ROOM', '!brief:example.org')
+    try {
+      const transport = vi.fn(async () => {})
+      const eventLog = new InMemoryEventLogStore()
+      const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog, briefDelivery: transport }))
+      expect(a.briefJob).not.toBeNull()
+
+      await seedCompletedRun(eventLog)
+      await a.briefJob!.runOnce()
+
+      expect(transport).toHaveBeenCalledTimes(1)
+      expect(transport.mock.calls[0]![0]).toBe('!brief:example.org')
+      expect(typeof transport.mock.calls[0]![1]).toBe('string')
+      const done = await briefAudit(eventLog)
+      expect(done.payload.delivered).toBe(true)
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })
 
@@ -504,6 +577,67 @@ describe('loopTickTarget.scheduleLoop (C3)', () => {
     a.loopTickTarget.scheduleLoop(running)
     await new Promise(r => setTimeout(r, 20))
     expect(rec.updates).toHaveLength(0)
+    a.stop()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// P2 Task 1 — 台账①②：cron loop 自启 + socket 事件补试
+// ---------------------------------------------------------------------------
+
+describe('P2 调度收尾（台账①②）', () => {
+  function onAssembly(rec: ReturnType<typeof makeRecordingStore>, over: Partial<GraphAssemblyOpts> = {}) {
+    return createGraphAssembly(assemblyOpts({
+      mode: 'on',
+      engineDeps: { ...makeEngineDeps(), store: rec.store } as unknown as GraphAssemblyOpts['engineDeps'],
+      ...over,
+    }))
+  }
+
+  it('台账①: scheduleLoop arms a brand-new cron loop — computes first nextTickAt, persists it, poll fires the first run', async () => {
+    const loop = makeLoop()
+    loop.stopCondition = NEVER_STOP
+    loop.schedule = cronSchedule() // */5 * * * * —— computeNextTick 必给未来时间
+    loop.nextTickAt = null // 新建 loop 从未 tick 过
+    const rec = makeRecordingStore([loop])
+    const a = onAssembly(rec)
+
+    a.loopTickTarget.scheduleLoop(loop)
+
+    // 首次时间落库（经 store 写回）
+    await vi.waitFor(() => expect(rec.byId.get('loop-1')!.nextTickAt).not.toBeNull())
+    const armed = new Date(rec.byId.get('loop-1')!.nextTickAt!).getTime()
+    expect(armed).toBeGreaterThan(Date.now())
+
+    // 到期后 poll 周期内触发首 run：跑完回 idle、迭代 +1
+    rec.byId.get('loop-1')!.nextTickAt = new Date(Date.now() - 1_000).toISOString()
+    await a.spawner!.poll()
+    await vi.waitFor(() => {
+      const cur = rec.byId.get('loop-1')!
+      expect(cur.status).toBe('idle')
+      expect(cur.stats.currentIteration).toBe(1)
+    })
+    a.stop()
+  })
+
+  it('台账②: a loop event retries the /graph socket binding after scheduled retries gave up (C4 补试)', async () => {
+    let ioInstance: SocketIOLike | null = null
+    const loop = makeLoop()
+    loop.stopCondition = NEVER_STOP
+    loop.schedule = cronSchedule()
+    loop.nextTickAt = new Date(Date.now() - 60_000).toISOString() // 已到期 → scheduleLoop 立即起 run
+    const rec = makeRecordingStore([loop])
+    const a = onAssembly(rec, {
+      io: () => ioInstance,
+      socketRetryMs: 60_000, // 定时重试窗口拉满——本次绑定只能靠事件补试
+      socketRetryMax: 1,
+    })
+    expect(a.socketConnected()).toBe(false)
+
+    ioInstance = makeIOLike().io
+    a.loopTickTarget.scheduleLoop(loop) // run 结束 → loop.tick-complete 经 bridgeLoopEvent 出站 → 补试绑定
+
+    await vi.waitFor(() => expect(a.socketConnected()).toBe(true))
     a.stop()
   })
 })

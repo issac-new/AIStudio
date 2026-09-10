@@ -44,13 +44,27 @@ export interface StoredCheckpoint {
   superStep: number
   state: Record<string, unknown>
   nextNodes: string[]
-  pendingInterrupts: Array<{ nodeId: string; value: unknown; id: string }>
+  /** raisedAtMs：interrupt 挂起时刻（P2 台账 h，超时策略判定用）；
+   *  旧 checkpoint 可无此字段，读取方回退 checkpoint.createdAt */
+  pendingInterrupts: Array<{ nodeId: string; value: unknown; id: string; raisedAtMs?: number }>
   iterCounters: Record<string, number>
   totalCost: number
   startedAtMs: number
   createdAt: string
   /** join 屏障簿记（Task 4 F2 引入；旧 checkpoint 可无此字段，读取方按 emptyJoinLedger 兜底） */
   joinLedger?: JoinLedger
+}
+
+export interface StoredGraphSpec {
+  id: string
+  version: number
+  spec: unknown
+}
+
+export interface StoredGraphSpecMeta {
+  id: string
+  version: number
+  updatedAt: string
 }
 
 export interface EventLogStore {
@@ -63,11 +77,16 @@ export interface EventLogStore {
   listCheckpoints(runId: string): Promise<StoredCheckpoint[]>
   /** 全部已知 run（runId → graphId），供 GraphService 重启后重建注册表 */
   listRuns(): Promise<Array<{ runId: string; graphId: string }>>
+  /** GraphSpec 持久化（P2 台账⑥：替换 .loop/graph-specs.json 文件）。同 id 重写 = upsert */
+  saveSpec(spec: StoredGraphSpec): Promise<void>
+  getSpec(id: string): Promise<StoredGraphSpec | null>
+  listSpecs(): Promise<StoredGraphSpecMeta[]>
 }
 
 export class InMemoryEventLogStore implements EventLogStore {
   private events: GraphLogEvent[] = []
   private checkpoints = new Map<string, StoredCheckpoint[]>()
+  private specs = new Map<string, StoredGraphSpec & { updatedAt: string }>()
 
   async append(e: Omit<GraphLogEvent, 'seq'>): Promise<number> {
     const seq = this.events.length + 1
@@ -114,6 +133,19 @@ export class InMemoryEventLogStore implements EventLogStore {
     }
     return [...seen.entries()].map(([runId, graphId]) => ({ runId, graphId }))
   }
+
+  async saveSpec(spec: StoredGraphSpec): Promise<void> {
+    this.specs.set(spec.id, { ...JSON.parse(JSON.stringify(spec)), updatedAt: new Date().toISOString() })
+  }
+
+  async getSpec(id: string): Promise<StoredGraphSpec | null> {
+    const s = this.specs.get(id)
+    return s ? { id: s.id, version: s.version, spec: s.spec } : null
+  }
+
+  async listSpecs(): Promise<StoredGraphSpecMeta[]> {
+    return [...this.specs.values()].map(s => ({ id: s.id, version: s.version, updatedAt: s.updatedAt }))
+  }
 }
 
 /** node:sqlite 实现（Node 内置 DatabaseSync，零新依赖；schema 见 spec §3.1，checkpoints 同库另表） */
@@ -135,6 +167,10 @@ class SqliteEventLogStore implements EventLogStore {
         join_ledger TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_graph_cp_run ON graph_checkpoints(run_id, super_step);
+      CREATE TABLE IF NOT EXISTS graph_specs (
+        id TEXT PRIMARY KEY, version INTEGER NOT NULL,
+        spec_json TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
     `)
     // 已存在旧表（无 join_ledger 列）时容错升级；新表走 CREATE 带列，ALTER 必失败则忽略
     try {
@@ -201,6 +237,26 @@ class SqliteEventLogStore implements EventLogStore {
       `SELECT run_id, MIN(graph_id) AS graph_id FROM graph_events GROUP BY run_id ORDER BY MIN(seq)`,
     ).all() as Array<Record<string, unknown>>
     return rows.map(r => ({ runId: r.run_id as string, graphId: r.graph_id as string }))
+  }
+
+  async saveSpec(spec: StoredGraphSpec): Promise<void> {
+    this.db.prepare(
+      `INSERT OR REPLACE INTO graph_specs (id, version, spec_json, updated_at) VALUES (?, ?, ?, ?)`,
+    ).run(spec.id, spec.version, JSON.stringify(spec.spec), new Date().toISOString())
+  }
+
+  async getSpec(id: string): Promise<StoredGraphSpec | null> {
+    const row = this.db.prepare(
+      `SELECT id, version, spec_json FROM graph_specs WHERE id = ?`,
+    ).get(id) as Record<string, unknown> | undefined
+    return row ? { id: row.id as string, version: row.version as number, spec: JSON.parse(row.spec_json as string) } : null
+  }
+
+  async listSpecs(): Promise<StoredGraphSpecMeta[]> {
+    const rows = this.db.prepare(
+      `SELECT id, version, updated_at FROM graph_specs ORDER BY rowid`,
+    ).all() as Array<Record<string, unknown>>
+    return rows.map(r => ({ id: r.id as string, version: r.version as number, updatedAt: r.updated_at as string }))
   }
 }
 

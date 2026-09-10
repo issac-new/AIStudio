@@ -51,6 +51,9 @@ export class MatrixBot {
       case 'loop.stuck':
         return `🚨 ${event.loopId}: STUCK — ${(event as any).reason}`
 
+      case 'loop.escalated':
+        return `🚨 ${event.loopId}: ESCALATED — ${(event as any).reason}`
+
       case 'loop.completed':
         return `🎉 ${event.loopId}: COMPLETED!`
 

@@ -88,6 +88,9 @@ export function createLoopRouter(
       status: 'idle',
       autonomyLevel: body.autonomyLevel ?? 'L1',
       stateAdapter: 'local',
+      // P2 Task 4 随修 2：tenant 显式白名单拷贝——persistence 的 kanban board 解析
+      // （KanbanPersistenceAdapter）以 loop.tenant 为唯一来源，不透传则写入永不发生
+      tenant: typeof body.tenant === 'string' && body.tenant.trim() ? body.tenant.trim() : null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       lastTickAt: null,

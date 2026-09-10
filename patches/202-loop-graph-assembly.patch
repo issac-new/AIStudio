@@ -2,7 +2,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
 index b7a3063d..7eaa0539 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -92,6 +92,10 @@ import { HookManager } from '../custom/loop/engine/hooks'
+@@ -92,6 +92,13 @@ import { HookManager } from '../custom/loop/engine/hooks'
  import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
  import { emitLoopEvent } from '../custom/loop/services/loop-socket'
  import { getGroupChatServer } from '../modules/studio/controllers/group-chat'
@@ -10,10 +10,13 @@ index b7a3063d..7eaa0539 100644
 +import { createGraphAssembly } from '../custom/loop/graph/graph-assembly'
 +import { createProductionVerifierDeps } from '../custom/loop/graph/verifier-bridge'
 +import { makeInjectWorkspaceContext } from '../custom/loop/graph/workspace-context'
++// overlay[loop-graph-p2]: persistence 真实 kanban 写入（Task 4，替换 P1 stub adapter）
++import { KanbanPersistenceAdapter, defaultKanbanBoardResolver } from '../custom/loop/graph/kanban-persistence'
++import * as kanbanCli from '../modules/hermes/services/kanban/kanban-service'
  import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
  
  let loopStore: any = null
-@@ -120,7 +124,42 @@ const loopEngine = new LoopEngine({
+@@ -120,7 +127,44 @@ const loopEngine = new LoopEngine({
    },
  })
  const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
@@ -36,9 +39,11 @@ index b7a3063d..7eaa0539 100644
 +    // POST /api/loop/contracts/:id/approve（下方 resumeApproval 桥）或
 +    // POST /api/graph/runs/:id/resume 应答。judge 在 P1 无模型调用方，不注入（桥内 warn 一次）。
 +    verifier: new Verifier(createProductionVerifierDeps()),
-+    // P1 交付机制：产物落库为 stub（`artifact:<id>` 占位，不写真实 kanban）；
-+    // 真实 kanban 写入随 P2 IA 装配注入（README caveat 已同步声明）。
-+    persistence: { persist: async (contract: any) => `artifact:${contract.id}` },
++    // P2 Task 4：产物落库为真实 kanban 写入（替换 P1 stub `artifact:<id>`）——按 loop.tenant
++    // 六段解析 board、title `[loop.name] contract.id` 查重幂等、CLI 失败收敛为
++    // loop.persist-failed 事件 + repair 队列守卫回边（失败不炸 run）。dryRun（shadow 双跑）
++    // 语义不变。kanbanCli 经 DI 注入（graph 模块自身零上游 import）。
++    persistence: new KanbanPersistenceAdapter({ kanban: kanbanCli, boardResolver: defaultKanbanBoardResolver }),
 +    // I6（终审）: R2 workspace 上下文注入——handoff 派发前物化 GRAPH-CONTEXT.md 进
 +    // worktree（并给 CLAUDE.md/AGENTS.md 追加引用行）；失败不阻断派发（handoff 节点兜底）
 +    injectWorkspaceContext: makeInjectWorkspaceContext({ store: lazyStore }),
@@ -57,7 +62,7 @@ index b7a3063d..7eaa0539 100644
  const graphRouter = createGraphRouter(lazyStore)
  // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
  // WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建
-@@ -223,6 +262,13 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -223,6 +267,13 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
    app.use(loopRouter.routes())
    app.use(graphRouter.routes())
