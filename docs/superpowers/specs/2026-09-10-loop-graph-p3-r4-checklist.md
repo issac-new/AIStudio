@@ -42,7 +42,7 @@
 ### 2.3 图引擎生产路径（唯一活跃推送面）
 
 - run 转 `awaiting-input`（interrupt = 等你决策）→ 介入中心五源聚合 + `/graph` socket 实时反映，**应用内聚合，不外推聊天**（`cb52539` Task 5、`4bcb1e8` Task 8）。
-- 审批长期无人应答 → `loop.escalated` 兼容事件，**24h 节流重发**（`custom/server/loop/graph/interrupt-timeout.ts`：`ESCALATION_THROTTLE_MS = 24h` + 水印落盘）。
+- 审批长期无人应答 → `loop.escalated` 兼容事件，**24h 节流重发**（`custom/server/loop/graph/interrupt-timeout.ts`：`ESCALATION_RESEND_INTERVAL_MS = 24h` + 水印落盘）。
 - 失败熔断（连续失败 N 次）→ loop `paused` + `loop.stuck` 事件进台账/socket，无聊天外推。
 - 总览/介入中心所有聚合组件为"只聚合不推送"（MetricsCards.vue 头注）。
 
