@@ -28,6 +28,10 @@ const EVENT_BUFFER_LIMIT = 100
 
 /** 单 run 去重键集上限（有界防泄漏；超出裁最旧——重放极旧事件可能再次入缓冲，可接受） */
 const SEEN_KEY_LIMIT = 400
+/** 去重键 Map 的 runId 键数上限（2026-09-10 风险审查 #6）：单 run 键集有界但键数无界，
+ *  长会话经历大量 run 后慢性增长。超出裁最旧 runId 的整集——该 run 若再现，history
+ *  重放会重新登记并以全量事件重建投影，语义等同新页面加载。 */
+const SEEN_RUN_LIMIT = 2000
 
 /** 状态承载事件 → run 状态（双词汇：socket type + 日志 kind，对照 EVENT_KIND_MAP；
  *  graph.forked / graph.step-start 日志同名落盘） */
@@ -113,12 +117,17 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     return `k:${type}|${String(e.ts)}|${typeof e.nodeId === 'string' ? e.nodeId : ''}`
   }
 
-  /** 首次见到返回 false 并登记；重复返回 true。键集按 run 隔离、有界。 */
+  /** 首次见到返回 false 并登记；重复返回 true。键集按 run 隔离有界，Map 键数整体有界。 */
   function markSeenOnce(runId: string, key: string): boolean {
     let set = seenKeys.get(runId)
     if (!set) {
       set = new Set()
       seenKeys.set(runId, set)
+      // 键数封顶：裁最旧 runId 的整集（Map 迭代序 = 插入序）
+      if (seenKeys.size > SEEN_RUN_LIMIT) {
+        const oldest = seenKeys.keys().next().value
+        if (oldest !== undefined) seenKeys.delete(oldest)
+      }
     }
     if (set.has(key)) return true
     set.add(key)
@@ -241,6 +250,15 @@ export const useRunCenterStore = defineStore('runCenter', () => {
           next.push(toRunSummary(row))
         }
       }
+      // socket 先行 run 保留（2026-09-10 风险审查 #7）：graph.started / graph.forked 先于
+      // REST 列表可见的 run，若本轮 REST 尚未含它而被整体丢弃，seenKeys 已登记其事件、
+      // 重连回放被 eid 去重 → pendingInterruptId 无法重建，审批入口永久丢失。有事件缓冲
+      // （经历过事件投影）但 REST 未列的 run 保留在列表尾，服务端落账后自然归位合并。
+      for (const existing of runs.value) {
+        if (existing.events.length > 0 && !next.some(r => r.runId === existing.runId)) {
+          next.push(existing)
+        }
+      }
       runs.value = next
       error.value = null
       // P3 台账 #2：fetchRuns 只做数据合并，不再全量订阅——订阅域由
@@ -319,5 +337,7 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     archiveRun, unarchiveRun, syncVisibleRunIds,
     // 测试与调试暴露（不发生产语义）
     applyEvent,
+    /** 去重键 Map 的 runId 键数（测试断言 pruneSeenKeys 用） */
+    seenKeyRunCount: () => seenKeys.size,
   }
 })

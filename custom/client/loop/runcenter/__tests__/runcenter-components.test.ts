@@ -413,6 +413,17 @@ describe('RunListTable 虚拟滚动与键盘可达（P3 台账）', () => {
     await body.trigger('keydown', { key: 'a' })
     expect(w.emitted('action')![0][0]).toMatchObject({ kind: 'approve', run: { runId: 'r-a' } })
   })
+
+  it('peek 浮层守卫（审查 #7）：expandedRunId 不在当前页不渲染空壳浮层；命中时定位行下', () => {
+    const runs = [row({ runId: 'r-1' }), row({ runId: 'r-2' })]
+    // 翻页/过滤后展开的 run 不在本页：findIndex=-1 → 不渲染（修复前 top=0px 空壳遮挡首行）
+    const w = mount(RunListTable, { props: { runs, expandedRunId: 'run-not-on-page' } })
+    expect(w.find('.rc-table__peek').exists()).toBe(false)
+
+    const w2 = mount(RunListTable, { props: { runs, expandedRunId: 'r-2' } })
+    expect(w2.find('.rc-table__peek').exists()).toBe(true)
+    expect(w2.find('.rc-table__peek').attributes('style')).toContain('top: 96px') // (1+1)×48
+  })
 })
 
 describe('RunCenterView 批量订阅（P3 台账 #2：订阅域 = 可见页）', () => {

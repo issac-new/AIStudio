@@ -70,6 +70,15 @@ function goRunDetail(run: RunSummary): void {
 // ── 行内 peek 展开（task-7）：approve/peek 动作与行首箭头同一路径，不进详情页 ──
 const expandedRunId = ref<string | null>(null)
 
+// 翻页/过滤/数据收缩跨页界时重置展开态（2026-09-10 风险审查 #7）：展开的 run 不在
+// 当前页时，浮层组件按 expandedIndex<0 不渲染；这里把状态一并复位，避免回到原页时
+// 残留的展开态与最新列表错位。
+watch([page, statusFilter, query, pagedRuns], () => {
+  if (expandedRunId.value && !pagedRuns.value.some(r => r.runId === expandedRunId.value)) {
+    expandedRunId.value = null
+  }
+})
+
 function togglePeek(runId: string): void {
   expandedRunId.value = expandedRunId.value === runId ? null : runId
 }
