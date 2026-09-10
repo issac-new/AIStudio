@@ -19,6 +19,11 @@ const router = useRouter()
 const showWizard = ref(false)
 const activeFilter = ref<LoopStatus | undefined>(undefined)
 
+// P2 Task 5：运行中心入口（/hermes/loop/runs）
+function onOpenRunCenter() {
+  router.push({ name: 'hermes.loopRuns' })
+}
+
 onMounted(() => { store.fetchLoops() })
 
 // 待办区：需要人工关注的 loop
@@ -84,7 +89,13 @@ function stageCount(status: LoopStatus): number {
     </div>
 
     <div class="loop-spine__main">
-      <h2 class="loop-spine__title">{{ t('loop.title') }}</h2>
+      <div class="loop-spine__titlebar">
+        <h2 class="loop-spine__title">{{ t('loop.title') }}</h2>
+        <button class="loop-spine__runcenter" @click="onOpenRunCenter">
+          <CockpitIcon name="activity" :size="13" />
+          {{ t('runcenter.title') }}
+        </button>
+      </div>
 
       <div v-if="store.loading" class="loop-spine__spinner" />
       <div v-else-if="store.error" class="loop-spine__error">{{ store.error }}</div>
@@ -147,7 +158,16 @@ function stageCount(status: LoopStatus): number {
 .loop-spine__sidebar { width: 200px; padding: 1rem; border-right: 1px solid var(--border-color); }
 .loop-spine__new { margin-top: 1rem; width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 3px; cursor: pointer; background: var(--color-primary, #3b82f6); color: white; border: none; }
 .loop-spine__main { flex: 1; padding: 1rem; overflow: auto; }
-.loop-spine__title { margin: 0 0 1rem; }
+.loop-spine__titlebar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.loop-spine__title { margin: 0; }
+.loop-spine__runcenter {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border-color); border-radius: 3px;
+  background: transparent; color: inherit;
+  cursor: pointer; font-size: 0.85rem; font-family: inherit;
+}
+.loop-spine__runcenter:hover { background: var(--hover-bg); }
 .loop-spine__spinner { padding: 2rem; text-align: center; }
 .loop-spine__error { padding: 1rem; color: var(--color-danger, #e11d48); }
 

@@ -25,6 +25,13 @@ export async function registerLoopEngineering(app: App): Promise<void> {
       component: () => import('./views/LoopSpineView.vue'),
     },
     {
+      // P2 Task 5 — 运行中心。静态段须排在 '/hermes/loop/:id' 之前（vue-router 4
+      // 排名机制下静态段本就优先，此处仍显式前置以免阅读歧义）。
+      path: '/hermes/loop/runs',
+      name: 'hermes.loopRuns',
+      component: () => import('./runcenter/views/RunCenterView.vue'),
+    },
+    {
       path: '/hermes/loop/:id',
       name: 'hermes.loopDetail',
       component: () => import('./views/LoopDetailView.vue'),
