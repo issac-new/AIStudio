@@ -301,6 +301,29 @@ describe('persistence node', () => {
       { [CH.contracts]: [a], [CH.verifications]: [makeVerification('task/a', 'passed')] }, ctx))
       .rejects.toThrow('kanban down')
   })
+
+  it('tasksCompleted 累差（P3 台账）：repair 回边多轮成功从 store 现值累加，不再少计', async () => {
+    const loop = makeLoop()
+    const a = makeContract('task/a'), b = makeContract('task/b')
+    const { deps, ctx } = makeDeps({ contracts: [a, b] })
+
+    // store 记账：updateLoop 把 stats 合进记录，getLoop 返回现值（含上一轮增量）
+    const record = { ...loop, stats: { ...loop.stats } }
+    ;(deps.store as { getLoop: unknown }).getLoop = async () => ({ ...record, stats: { ...record.stats } })
+    ;(deps.store as { updateLoop: unknown }).updateLoop = async (_id: string, patch: Partial<LoopInstance>) => {
+      if (patch.stats) record.stats = patch.stats
+    }
+
+    const node = createPhaseNode('persistence', loop, deps) // 闭包快照：loop.stats.tasksCompleted = 0
+    // 第 1 轮：task/a 落库
+    await node.execute(
+      { [CH.contracts]: [a, b], [CH.verifications]: [makeVerification('task/a', 'passed')] }, ctx)
+    expect(record.stats.tasksCompleted).toBe(1)
+    // 第 2 轮（repair 回边后重入）：task/b 落库——旧实现按闭包 0+1 再写 1，少计一轮
+    await node.execute(
+      { [CH.contracts]: [a, b], [CH.verifications]: [makeVerification('task/b', 'passed')] }, ctx)
+    expect(record.stats.tasksCompleted).toBe(2)
+  })
 })
 
 // ---------------------------------------------------------------------------

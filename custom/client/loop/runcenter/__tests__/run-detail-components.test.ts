@@ -48,6 +48,7 @@ const { rest } = vi.hoisted(() => ({
     getSpec: vi.fn(),
     forkRun: vi.fn(async () => ({ runId: 'run-1-fork-1', forkedFrom: 'run-1', superStep: 2 })),
     startRun: vi.fn(async () => ({ runId: 'run-1-fork-1', instance: {} })),
+    exportRun: vi.fn(),
   },
 }))
 vi.mock('@/custom/loop/runcenter/api', () => ({ runRest: rest }))
@@ -252,6 +253,40 @@ describe('RunDetailView (jsdom)', () => {
 
     await w.findAll('.stub-slot .rg-node')[0].trigger('click')
     expect(w.findAll('.stub-slot .rg-node')[0].classes()).toContain('is-selected')
+  })
+
+  it('导出 JSON 按钮（P3 台账 #30）：打包接口 → Blob 下载 run-<id>.json', async () => {
+    rest.getRun.mockResolvedValue({ runId: 'run-1', graphId: 'loop-loop1', instance: { status: 'completed' } })
+    rest.replay.mockResolvedValue(EVENTS)
+    rest.getSpec.mockResolvedValue(SPEC)
+    const bundle = { run: { runId: 'run-1' }, spec: SPEC, events: [{ kind: 'run.started' }] }
+    rest.exportRun.mockResolvedValue(bundle)
+
+    const createObjectURL = vi.fn(() => 'blob:mock')
+    const revokeObjectURL = vi.fn()
+    URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL
+    URL.revokeObjectURL = revokeObjectURL as unknown as typeof URL.revokeObjectURL
+    const clickSpy = vi.spyOn(HTMLElement.prototype, 'click').mockImplementation(() => {})
+
+    try {
+      const w = mount(RunDetailView)
+      await new Promise(r => setTimeout(r, 0))
+
+      expect(w.find('[data-export-run]').exists()).toBe(true)
+      await w.find('[data-export-run]').trigger('click')
+      await new Promise(r => setTimeout(r, 0))
+
+      expect(rest.exportRun).toHaveBeenCalledWith('run-1')
+      expect(createObjectURL).toHaveBeenCalledTimes(1)
+      const blob = createObjectURL.mock.calls[0]![0] as Blob
+      expect(blob.type).toBe('application/json')
+      expect(clickSpy).toHaveBeenCalledTimes(1)
+      const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement
+      expect(anchor.download).toBe(`run-${routeParams.value.runId}.json`)
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock')
+    } finally {
+      clickSpy.mockRestore()
+    }
   })
 
   it('节点检查器（task-7）：选中驱动 attach 档——未选时空态，选中显示类型/关联事件', async () => {

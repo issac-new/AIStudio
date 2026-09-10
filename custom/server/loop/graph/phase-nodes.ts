@@ -20,7 +20,7 @@ import type { NodeDef, NodeContext, StateValues, StateUpdate } from './types'
 import type { PredicateExpr } from './predicate'
 import { evaluatePredicate } from './predicate'
 import type {
-  LoopInstance, TaskContract, VerificationRecord, LoopEvent, LoopStage, ContractStatus,
+  LoopInstance, LoopStats, TaskContract, VerificationRecord, LoopEvent, LoopStage, ContractStatus,
 } from '../types'
 import { isJudgeFailed } from '../types'
 import type { LoopStateStore } from '../store/state-store'
@@ -274,6 +274,15 @@ export interface RepairEntry {
 function progressOf(state: StateValues): PhaseProgressEntry[] {
   const v = state[CH.phaseProgress]
   return Array.isArray(v) ? [...v as PhaseProgressEntry[]] : []
+}
+
+/** 台账累差基准（P3 Task 1）：闭包里的 loop.stats 是编译时快照，repair 回边使同一 run 内
+ *  validation/persistence 节点多次激活——按快照写会把上一轮已落库的增量覆盖掉（多轮成功
+ *  tasksCompleted 少计、多轮升级 tasksBlocked 少计）。写台账前先从 store 读现值作基准；
+ *  store 读不到（mock/旧装配）回退闭包快照，行为与旧实现一致。 */
+async function currentStats(loop: LoopInstance, deps: PhaseNodeDeps): Promise<LoopStats> {
+  const cur = await deps.store.getLoop(loop.id).catch(() => null)
+  return cur?.stats ?? loop.stats
 }
 
 const now = () => new Date().toISOString()
@@ -575,8 +584,9 @@ async function runValidation(
   }
 
   if (!deps.dryRun && escalatedCount > 0) {
+    const base = await currentStats(loop, deps)
     await deps.store.updateLoop(loop.id, {
-      stats: { ...loop.stats, tasksBlocked: loop.stats.tasksBlocked + escalatedCount },
+      stats: { ...base, tasksBlocked: base.tasksBlocked + escalatedCount },
     })
   }
   return { update: buildUpdate() }
@@ -657,11 +667,13 @@ async function runPersistence(
     })
   }
   if (!deps.dryRun && (completed > 0 || escalatedCount > 0)) {
+    // P3 台账：基准取 store 现值（见 currentStats），repair 多轮成功/升级不再互相覆盖
+    const base = await currentStats(loop, deps)
     await deps.store.updateLoop(loop.id, {
       stats: {
-        ...loop.stats,
-        tasksCompleted: loop.stats.tasksCompleted + completed,
-        tasksBlocked: loop.stats.tasksBlocked + escalatedCount,
+        ...base,
+        tasksCompleted: base.tasksCompleted + completed,
+        tasksBlocked: base.tasksBlocked + escalatedCount,
       },
     })
   }

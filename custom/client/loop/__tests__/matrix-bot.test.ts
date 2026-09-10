@@ -68,6 +68,21 @@ describe('MatrixBot', () => {
     expect(call[1].body).toContain('max-attempts')
   })
 
+  it('formats loop.persist-failed event (P3 台账 渲染补全，不再落 default 忽略)', async () => {
+    const event: LoopEvent = {
+      type: 'loop.persist-failed',
+      loopId: 'l1',
+      contractId: 'task/fix-ci',
+      error: 'kanban write timeout',
+      ts: new Date().toISOString(),
+    }
+    await bot.notify(event)
+    expect(client.sendMessage).toHaveBeenCalled()
+    const call = client.sendMessage.mock.calls[0]
+    expect(call[1].body).toContain('task/fix-ci')
+    expect(call[1].body).toContain('kanban write timeout')
+  })
+
   it('sends approval notification with mentions', async () => {
     await bot.notifyApprovalNeeded('l1', 'task/test-001', 'Fix bug', ['@alice:matrix.org'])
     expect(client.sendMessage).toHaveBeenCalled()

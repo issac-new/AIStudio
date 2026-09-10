@@ -1,9 +1,9 @@
 // overlay/custom/client/loop/runcenter/api.ts
 // 运行中心 REST + /graph socket 封装。
 //
-// REST：graph-rest.ts 的 P1 契约（GET /api/graph/runs、GET /api/graph/runs/:id、
-// POST resume/fork、GET replay），复用 @/api/client 的 token/baseUrl 通道
-// （参照 loop-rest.ts 模式）。
+// REST：graph-rest.ts 契约（GET /api/graph/runs、GET /api/graph/runs/:id、
+// POST resume/fork/start、GET replay/export、GET /api/graph/specs/:id），
+// 复用 @/api/client 的 token/baseUrl 通道（参照 loop-rest.ts 模式）。
 // Socket：/graph namespace 等价封装（参照 loop-socket.ts）；事件名沿用服务端
 // GraphEvent.type 原值（graph.node-complete 等），客户端 emit 'subscribe'/'unsubscribe'，
 // 服务端推 'graph:event'（单事件）与 'graph:history'（订阅回放最近 50 条）。
@@ -64,14 +64,30 @@ export const runRest = {
   },
 
   /**
-   * GET /api/graph/specs → 按 id 检索图规格（执行图拓扑来源）。
-   * 服务端现仅暴露列表端点（graph-rest.ts 无 /specs/:id 路由），客户端本地检索；
-   * P2 规模内规格数有限，一次列表拉取可接受。loop 场景 specId = `loop-<loopId>`
-   * （graph-compiler 约定，与 run 的 graphId / instance.graphDefId 同值域）。
+   * GET /api/graph/specs/:id → 按 id 检索图规格（执行图拓扑来源，P3 台账 #25）。
+   * 服务端返回 {id, version, spec}，404 表示规格不存在/未注册（返回 null，视图据此
+   * 显示"图规格缺失"占位）。loop 场景 specId = `loop-<loopId>`（graph-compiler 约定，
+   * 与 run 的 graphId / instance.graphDefId 同值域）。
    */
   getSpec: async (id: string): Promise<RunGraphTopologyLike | null> => {
-    const res = await request<{ specs: RunGraphTopologyLike[] }>('/api/graph/specs')
-    return res.specs.find(s => s.id === id) ?? null
+    try {
+      const res = await request<{ id: string; version: number; spec: RunGraphTopologyLike }>(
+        `/api/graph/specs/${encodeURIComponent(id)}`)
+      return res?.spec ?? null
+    } catch (err) {
+      // 404 = 规格未注册（合法缺失）；其他错误原样上抛
+      if ((err as { status?: number }).status === 404) return null
+      throw err
+    }
+  },
+
+  /**
+   * GET /api/graph/runs/:id/export → 运行导出包（P3 台账 #30）：run instance + 图规格 + 全事件。
+   * 服务端同时设置 Content-Disposition attachment（直开 URL 可下载）；此处取 JSON 后
+   * 由视图用 Blob 落盘（request 走授权头，<a href> 直链不带凭证）。
+   */
+  exportRun: async (id: string): Promise<{ run: Record<string, unknown>; spec: unknown; events: GraphEventLike[] }> => {
+    return request(`${BASE}/${encodeURIComponent(id)}/export`)
   },
 }
 
