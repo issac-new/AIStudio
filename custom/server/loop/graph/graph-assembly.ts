@@ -17,6 +17,7 @@ import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from 
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner } from './interrupt-timeout'
+import { DailyBriefJob, readBriefConfig } from './daily-brief'
 import { emitLoopEvent } from '../services/loop-socket'
 import type { Router } from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
@@ -62,6 +63,11 @@ export interface GraphAssemblyOpts {
   socketRetryMs?: number
   /** /graph namespace 绑定重试封顶次数，默认 30（~60s）；超过后 warn 一次 */
   socketRetryMax?: number
+  /**
+   * R1 每日 Brief 的 Matrix 传输（宿主注入：把文本以 m.loop.notification 发到房间）。
+   * 仅 LOOP_BRIEF_ROOM 配置时被调用；未注入或未配置房间 → brief 只落事件日志。
+   */
+  briefDelivery?: (roomId: string, text: string) => Promise<void>
   log?: (msg: string) => void
 }
 
@@ -77,6 +83,8 @@ export interface GraphAssembly {
   shadowRunner: ShadowRunner | null
   /** interrupt 超时扫描器（P2 台账 h，仅 mode=on 装配）：审批超时 escalate/auto-approve/fail */
   interruptScanner: InterruptTimeoutScanner | null
+  /** R1 每日 Brief 任务（仅 mode=on 装配）：三段式结构化汇总 + Matrix 投递（零 LLM 依赖） */
+  briefJob: DailyBriefJob | null
   /** loop REST tick/webhook/schedule 的图引擎分流目标（patch 在 mode=on 时用它替换 legacy scheduler 入参） */
   loopTickTarget: {
     manualTick(loopId: string): Promise<unknown>
@@ -200,6 +208,32 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       })
     : null
 
+  // R1 每日 Brief（spec §7A）：三段式结构化汇总，零 LLM 依赖。仅 on 模式装配
+  //（与 spawner/interruptScanner 同界——legacy 无图引擎 run 可聚合，shadow 只读不写）。
+  // LOOP_BRIEF_ROOM 配置且宿主注入 briefDelivery 传输时投递 Matrix 房间；
+  // 未配置/未注入只落事件日志（brief 自身以 graphId='daily-brief' 的 run 记录可回放审计）。
+  const briefConfig = readBriefConfig()
+  let briefTransportWarned = false
+  const briefJob = mode === 'on'
+    ? new DailyBriefJob({
+        eventLog, store,
+        cron: briefConfig.cron,
+        deliver: briefConfig.room
+          ? (text) => {
+              if (!opts.briefDelivery) {
+                if (!briefTransportWarned) {
+                  briefTransportWarned = true
+                  log('[graph] LOOP_BRIEF_ROOM is set but no briefDelivery transport injected — brief stays event-log only')
+                }
+                return Promise.resolve()
+              }
+              return opts.briefDelivery(briefConfig.room!, text)
+            }
+          : undefined,
+        intervalMs: opts.intervalMs, log,
+      })
+    : null
+
   const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore })
 
   if (!tryBindSocket()) scheduleSocketRetry()
@@ -214,6 +248,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     spawner,
     shadowRunner,
     interruptScanner,
+    briefJob,
     loopTickTarget: {
       manualTick: (loopId) => (spawner ? spawner.tickNow(loopId) : Promise.resolve(null)),
       // mode=on 时本对象作为 scheduler 传入 createLoopRouter：controllers/loop.ts 在
@@ -275,6 +310,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       spawner?.start()
       shadowRunner?.start()
       interruptScanner?.start()
+      briefJob?.start()
       if (!tryBindSocket()) scheduleSocketRetry()
       log(`[graph] engine mode: ${mode}`)
       return assembly
@@ -283,6 +319,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       spawner?.stop()
       shadowRunner?.stop()
       interruptScanner?.stop()
+      briefJob?.stop()
       if (socketTimer) {
         clearTimeout(socketTimer)
         socketTimer = null
