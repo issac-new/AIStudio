@@ -424,6 +424,25 @@ describe('validation resume consumption (approval triple)', () => {
     expect(value.policy).toEqual({ approvers: ['alice'], policy: 'all', onReject: { goto: 'handoff' } })
   })
 
+  it('carries the approvals timeout config into the interrupt value for the timeout scanner (台账 h)', async () => {
+    const loop = makeLoop()
+    const c = makeContract('task/a', { status: 'in-progress', ...humanGate })
+    const { deps, ctx } = makeDeps({
+      contracts: [c], verifyResult: makeVerification('task/a', 'pending'),
+      approvals: { policy: 'all', onReject: { goto: 'handoff' }, timeout: { ms: 4 * 3600_000, onTimeout: 'fail' } },
+    })
+    const node = createPhaseNode('validation', loop, deps)
+    const res = await node.execute({ [CH.contracts]: [c] }, ctx)
+
+    const value = res.interrupt!.value as Record<string, any>
+    expect(value.timeout).toEqual({ ms: 4 * 3600_000, onTimeout: 'fail' })
+    // 缺省不配 timeout 时 value 不带该键（扫描器走 72h + escalate 默认）
+    const bare = makeDeps({ contracts: [c], verifyResult: makeVerification('task/a', 'pending') })
+    const bareNode = createPhaseNode('validation', loop, bare.deps)
+    const bareRes = await bareNode.execute({ [CH.contracts]: [c] }, bare.ctx)
+    expect((bareRes.interrupt!.value as Record<string, any>).timeout).toBeUndefined()
+  })
+
   it('resume approve finalizes record per policy and appends approvalResult; no duplicate verify of verified contracts', async () => {
     const loop = makeLoop()
     const c = makeContract('task/a', { status: 'in-progress', ...humanGate })
@@ -622,6 +641,16 @@ describe('human approval node', () => {
     expect(value.onReject).toEqual({ goto: 'handoff' })
     expect(value.prompt).toContain('release')
     expect(res.update?.[CH.approvalResult]).toBeUndefined()
+  })
+
+  it('carries the timeout config into the interrupt value when configured (台账 h)', async () => {
+    const node = createHumanApprovalNode({
+      id: 'signoff',
+      approvals: { ...approvals, timeout: { ms: 3600_000, onTimeout: 'auto-approve-with-log' } },
+    })
+    const res = await node.execute({}, ctxFor('signoff'))
+    expect((res.interrupt!.value as Record<string, any>).timeout)
+      .toEqual({ ms: 3600_000, onTimeout: 'auto-approve-with-log' })
   })
 
   it('resume approved produces approvalResult channel entry', async () => {

@@ -16,6 +16,7 @@ import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
+import { InterruptTimeoutScanner } from './interrupt-timeout'
 import { emitLoopEvent } from '../services/loop-socket'
 import type { Router } from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
@@ -74,6 +75,8 @@ export interface GraphAssembly {
   specStore: GraphSpecStore
   spawner: RunSpawner | null
   shadowRunner: ShadowRunner | null
+  /** interrupt 超时扫描器（P2 台账 h，仅 mode=on 装配）：审批超时 escalate/auto-approve/fail */
+  interruptScanner: InterruptTimeoutScanner | null
   /** loop REST tick/webhook/schedule 的图引擎分流目标（patch 在 mode=on 时用它替换 legacy scheduler 入参） */
   loopTickTarget: {
     manualTick(loopId: string): Promise<unknown>
@@ -186,6 +189,16 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       })
     : null
 
+  // P2 台账 h：审批 interrupt 超时策略扫描（escalate/auto-approve/fail，默认 72h）。
+  // 仅 on 模式装配——shadow 只读不写（双跑护栏），legacy 无图引擎调度。
+  const interruptScanner = mode === 'on'
+    ? new InterruptTimeoutScanner({
+        graphService, eventLog,
+        emitLoopEvent: bridgeLoopEvent,
+        intervalMs: opts.intervalMs, log,
+      })
+    : null
+
   const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore })
 
   if (!tryBindSocket()) scheduleSocketRetry()
@@ -199,6 +212,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     specStore,
     spawner,
     shadowRunner,
+    interruptScanner,
     loopTickTarget: {
       manualTick: (loopId) => (spawner ? spawner.tickNow(loopId) : Promise.resolve(null)),
       // mode=on 时本对象作为 scheduler 传入 createLoopRouter：controllers/loop.ts 在
@@ -259,6 +273,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       }
       spawner?.start()
       shadowRunner?.start()
+      interruptScanner?.start()
       if (!tryBindSocket()) scheduleSocketRetry()
       log(`[graph] engine mode: ${mode}`)
       return assembly
@@ -266,6 +281,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     stop() {
       spawner?.stop()
       shadowRunner?.stop()
+      interruptScanner?.stop()
       if (socketTimer) {
         clearTimeout(socketTimer)
         socketTimer = null

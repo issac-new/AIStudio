@@ -155,6 +155,7 @@ describe('createGraphAssembly', () => {
     expect(a.mode).toBe('legacy')
     expect(a.spawner).toBeNull()
     expect(a.shadowRunner).toBeNull()
+    expect(a.interruptScanner).toBeNull()
     expect(a.router.routes).toBeDefined()
     expect(a.router.stack.some(l => l.path === '/api/graph/runs')).toBe(true)
   })
@@ -162,6 +163,10 @@ describe('createGraphAssembly', () => {
   it('on mode: spawner wired, tick target routes to spawner', async () => {
     const a = createGraphAssembly(assemblyOpts({ mode: 'on' }))
     expect(a.spawner).not.toBeNull()
+    // P2 台账 h：interrupt 超时扫描器随 on 模式装配，start/stop 可起停
+    expect(a.interruptScanner).not.toBeNull()
+    await a.start()
+    a.stop()
     await expect(a.loopTickTarget.manualTick('nope')).resolves.toEqual(null) // loop 不存在 → null 不抛
   })
 
@@ -171,6 +176,7 @@ describe('createGraphAssembly', () => {
     expect(a.shadowRunner).not.toBeNull()
     expect(a.shadowGraphService).not.toBeNull()
     expect(a.spawner).toBeNull()
+    expect(a.interruptScanner).toBeNull() // shadow 只读双跑，不自动处置审批超时
   })
 })
 

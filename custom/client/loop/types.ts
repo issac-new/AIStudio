@@ -145,6 +145,7 @@ export type LoopEvent =
   | { type: 'loop.tick-complete'; loopId: string; iteration: number; stats: LoopStats; ts: string }
   | { type: 'loop.budget-warning'; loopId: string; spent: number; limit: number; ts: string }
   | { type: 'loop.stuck'; loopId: string; reason: string; ts: string }
+  | { type: 'loop.escalated'; loopId: string; runId?: string; interruptId?: string; nodeId?: string; reason: string; ts: string }
   | { type: 'loop.completed'; loopId: string; finalStats: LoopStats; ts: string }
 
 export interface DriftReport {

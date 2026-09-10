@@ -189,6 +189,31 @@ export class GraphService {
     return { runId: rec.runId, graphId: rec.graphId, instance: { ...rec.instance }, status: rec.instance.status }
   }
 
+  /**
+   * 外部裁决置 failed（P2 interrupt 超时 fail 策略）：内存态 / 事件日志 / 订阅方三面同写——
+   * 事件日志落 run.failed 保证 rebuildRegistryFromLog 重启后仍判 failed，订阅方（RunSpawner
+   * 熔断计数等）经 emitServiceEvent 看到 graph.failed。run 不在注册表或已是终态时返回 null。
+   */
+  failRun(runId: string, error: string): GraphInstance | null {
+    const rec = this.runs.get(runId)
+    if (!rec) return null
+    if (rec.instance.status === 'completed' || rec.instance.status === 'failed') return null
+    const ts = new Date().toISOString()
+    rec.instance.status = 'failed'
+    rec.instance.updatedAt = ts
+    try {
+      const r = this.eventLog.append({
+        runId: rec.runId, graphId: rec.graphId, ts: Date.now(),
+        kind: 'run.failed', payload: { error },
+      })
+      if (r instanceof Promise) r.catch(() => {})
+    } catch {
+      // 日志写失败不阻断置态
+    }
+    this.emitServiceEvent({ type: 'graph.failed', graphId: rec.graphId, threadId: runId, error, ts })
+    return { ...rec.instance }
+  }
+
   listRuns(): Array<{ runId: string; graphId: string; status: GraphStatus; updatedAt: string }> {
     return [...this.runs.values()].map(r => ({
       runId: r.runId,

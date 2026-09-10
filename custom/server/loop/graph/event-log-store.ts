@@ -44,7 +44,9 @@ export interface StoredCheckpoint {
   superStep: number
   state: Record<string, unknown>
   nextNodes: string[]
-  pendingInterrupts: Array<{ nodeId: string; value: unknown; id: string }>
+  /** raisedAtMs：interrupt 挂起时刻（P2 台账 h，超时策略判定用）；
+   *  旧 checkpoint 可无此字段，读取方回退 checkpoint.createdAt */
+  pendingInterrupts: Array<{ nodeId: string; value: unknown; id: string; raisedAtMs?: number }>
   iterCounters: Record<string, number>
   totalCost: number
   startedAtMs: number
