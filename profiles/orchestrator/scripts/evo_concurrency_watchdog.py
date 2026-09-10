@@ -25,29 +25,23 @@ config.yaml 的 max_in_progress，本脚本改配置后 ≤60s 自动生效，�
   - 绝不 yaml round-trip 重写 config.yaml（会剥注释）——只做正则行内替换两个数字
   - L0 状态绝不写配置（基线归用户管）；降档时记录基线供恢复
   - 每天首写前备份 config.yaml.bak-evo-<MMDD>（一天一份）
-  - 状态文件幂等：只在档位变化时写配置+发邮件
+  - 状态文件幂等：只在档位变化时写配置+落日志；不发邮件（用户 2026-09-10 裁决：
+    【evo】并发降级/并发恢复 两类告警一律不进邮箱，只留 cron 执行记录）
   - 任何异常静默退出 0（看门狗自身不能成为告警源；DB 锁等瞬时错误跳过本轮）
 """
 import json
 import os
 import re
 import sqlite3
-import smtplib
-import ssl
 import sys
 import time
 from datetime import datetime
-from email.header import Header
-from email.mime.text import MIMEText
-from email.utils import formataddr
 
 HOME = os.path.expanduser("~")
 CC_DB = os.path.join(HOME, ".cc-switch", "cc-switch.db")
 CONFIG_YAML = os.path.join(HOME, ".hermes", "config.yaml")
 EVO_DIR = os.path.join(HOME, ".hermes", "evo")
 STATE_PATH = os.path.join(EVO_DIR, "cache", "concurrency_state.json")
-ENV_PATH = os.path.join(HOME, ".hermes", ".env")
-TO_EMAIL = "your@example.com"
 
 WINDOW_S = 900          # 降档信号窗口 15min
 CLEAN_WINDOW_S = 300    # 升档干净判定窗口 5min
@@ -68,42 +62,9 @@ def log(msg: str):
     print(msg, flush=True)
 
 
-def load_env() -> dict:
-    env = {}
-    try:
-        with open(ENV_PATH, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k, v = line.split("=", 1)
-                    env[k.strip()] = v.strip()
-    except OSError:
-        pass
-    return env
-
-
 def send_alert(subject: str, body: str):
-    if os.environ.get("EVO_CONC_NOEMAIL"):
-        log(f"[noemail] {subject}")
-        return
-    env = load_env()
-    user, pwd = env.get("EMAIL_ADDRESS"), env.get("EMAIL_PASSWORD")
-    host, port = env.get("EMAIL_SMTP_HOST"), env.get("EMAIL_SMTP_PORT", "465")
-    if not (user and pwd and host):
-        log(f"[email-skip] SMTP 凭据缺失: {subject}")
-        return
-    try:
-        msg = MIMEText(body, "plain", "utf-8")
-        msg["From"] = formataddr((str(Header("Hermes 并发看门狗", "utf-8")), user))
-        msg["To"] = TO_EMAIL
-        msg["Subject"] = Header(subject, "utf-8")
-        ctx = ssl.create_default_context()
-        with smtplib.SMTP_SSL(host, int(port), context=ctx, timeout=20) as s:
-            s.login(user, pwd)
-            s.sendmail(user, [TO_EMAIL], msg.as_string())
-        log(f"[email] {subject} -> {TO_EMAIL}")
-    except Exception as e:
-        log(f"[email-fail] {subject}: {e}")
+    """档位变化通知只落日志（cron 执行记录可查），不发邮件（用户 2026-09-10 裁决）。"""
+    log(f"[level-change] {subject} | {body.splitlines()[0] if body else ''}")
 
 
 def read_signals() -> dict:
