@@ -18,6 +18,9 @@ import {
   type FleetDbSession,
   type FleetLiveEntry,
   type FleetSession,
+  type FleetSubagent,
+  normalizeSubagentTask,
+  sortSubagents,
 } from './fleet-snapshot'
 
 interface InjectedDeps {
@@ -34,6 +37,8 @@ interface LiveSessionState {
   source?: string
   events?: Array<{ event: string; data: any }>
   messages?: Array<{ role?: string; content?: unknown; display_content?: unknown }>
+  /** bridge background_poll 写入的子代理花名册（upstream applyBackgroundSessionPoll） */
+  backgroundTasks?: Record<string, any>
 }
 
 let registeredInstance: any = null
@@ -108,6 +113,19 @@ export function extractLastPreview(
   return ''
 }
 
+/** 从 state.backgroundTasks 归一化出子代理花名册（running 在前，更新近的在前） */
+export function extractSubagents(
+  backgroundTasks: Record<string, unknown> | undefined,
+): FleetSubagent[] {
+  if (!backgroundTasks || typeof backgroundTasks !== 'object') return []
+  const list: FleetSubagent[] = []
+  for (const raw of Object.values(backgroundTasks)) {
+    const normalized = normalizeSubagentTask(raw)
+    if (normalized) list.push(normalized)
+  }
+  return sortSubagents(list)
+}
+
 function toLiveEntry(sessionId: string, state: LiveSessionState, fallbackProfile: string): FleetLiveEntry {
   const pending = extractPendingInteractions(state.events)
   return {
@@ -121,6 +139,7 @@ function toLiveEntry(sessionId: string, state: LiveSessionState, fallbackProfile
     lastPreview: extractLastPreview(state.messages),
     approvals: pending.approvals,
     clarifies: pending.clarifies,
+    subagents: extractSubagents(state.backgroundTasks),
   }
 }
 

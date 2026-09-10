@@ -57,3 +57,58 @@ describe('normalizeSnapshot', () => {
     expect(normalizeSnapshot({ sessions: 'not-array' }).sessions).toEqual([])
   })
 })
+
+describe('normalizeSnapshot subagents（0.21.1 delegation 花名册）', () => {
+  it('normalizes roster entries, running first, seconds timestamps to ms', () => {
+    const snapshot = normalizeSnapshot({
+      sessions: [{
+        id: 's1',
+        profile: 'p',
+        title: '委派会话',
+        status: 'idle',
+        subagents: [
+          {
+            subagent_id: 'sa-done',
+            goal: '收尾整理',
+            status: 'completed',
+            model: 'gpt-6',
+            duration_seconds: 12.4,
+            cost_usd: 0.021,
+            input_tokens: 900,
+            output_tokens: 300,
+            updated_at: 1757400000,
+            started_at: 1757399980,
+          },
+          {
+            subagent_id: 'sa-run',
+            goal: '调研上游变更',
+            status: 'running',
+            tool_count: 7,
+            last_tool: 'web_search',
+            updated_at: 1757400100,
+          },
+          { goal: '缺 subagent_id，应被丢弃' },
+          null,
+        ],
+      }],
+    })
+    const subs = snapshot.sessions[0].subagents
+    expect(subs).toHaveLength(2)
+    expect(subs[0]).toMatchObject({ subagent_id: 'sa-run', status: 'running', tool_count: 7, last_tool: 'web_search' })
+    expect(subs[0].updated_at).toBe(1757400100 * 1000)
+    expect(subs[0].started_at).toBeNull()
+    expect(subs[1]).toMatchObject({ subagent_id: 'sa-done', status: 'completed', duration_seconds: 12.4, cost_usd: 0.021 })
+    expect(subs[1].started_at).toBe(1757399980 * 1000)
+  })
+
+  it('defaults to empty roster and clips overlong goals', () => {
+    const snapshot = normalizeSnapshot({
+      sessions: [
+        { id: 's-no-subs', profile: 'p', title: 't' },
+        { id: 's-clip', profile: 'p', title: 't', subagents: [{ subagent_id: 'x', goal: '长'.repeat(300) }] },
+      ],
+    })
+    expect(snapshot.sessions[0].subagents).toEqual([])
+    expect(snapshot.sessions[1].subagents[0].goal.length).toBeLessThanOrEqual(161)
+  })
+})
