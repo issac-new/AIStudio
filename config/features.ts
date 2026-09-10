@@ -14,6 +14,9 @@ export interface FeatureConfig {
   extendedI18n: boolean;
   cockpit: boolean;
   loopEngineering: boolean;
+  /** P3 Task 3：IA 回退开关。VITE_IA_RETRO=1 时登录默认落回 /hermes/cockpit、
+   *  兼容重定向放行、侧栏双入口（回退保险，默认关=新 IA）。 */
+  iaRetro: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -25,6 +28,7 @@ export const features: FeatureConfig = {
   extendedI18n: import.meta.env.VITE_CUSTOM_EXTENDED_I18N !== 'false',
   cockpit: import.meta.env.VITE_CUSTOM_COCKPIT !== 'false',
   loopEngineering: import.meta.env.VITE_CUSTOM_LOOP !== 'false',
+  iaRetro: import.meta.env.VITE_IA_RETRO === '1',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {
