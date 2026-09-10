@@ -13,6 +13,9 @@ import {
   CH, createPhaseNode, isPersistFailure,
   type PhaseNodeDeps, type PersistenceAdapter,
 } from '../../../../server/loop/graph/phase-nodes'
+import { createGraphAssembly } from '../../../../server/loop/graph/graph-assembly'
+import { InMemoryEventLogStore } from '../../../../server/loop/graph/event-log-store'
+import type { LoopStateStore } from '../../../../server/loop/store/state-store'
 import type { NodeContext } from '../../../../server/loop/graph/types'
 import type { LoopInstance, TaskContract, VerificationRecord, LoopEvent } from '../../../../server/loop/types'
 
@@ -198,6 +201,18 @@ describe('defaultKanbanBoardResolver', () => {
     expect(defaultKanbanBoardResolver(l)).toBe('jdhqiaernzgtadvwaw')
   })
 
+  it('字母残段过短（<3，如 开发群A→a 与 设计群A→a 撞名）→ 回落 roomId 而非共用残段（Minor 碰撞阈值）', () => {
+    const a = { ...loop(), tenant: '开发群A:topic:@u:!room-dev:$s:matrix' } as unknown as LoopInstance
+    const b = { ...loop(), tenant: '设计群A:topic:@u:!room-design:$s:matrix' } as unknown as LoopInstance
+    expect(defaultKanbanBoardResolver(a)).toBe('room-dev')
+    expect(defaultKanbanBoardResolver(b)).toBe('room-design')
+  })
+
+  it('过短纯字母群聊名（ab）同样回落 roomId', () => {
+    const l = { ...loop(), tenant: 'ab:topic:@u:!room-x:$s:matrix' } as unknown as LoopInstance
+    expect(defaultKanbanBoardResolver(l)).toBe('room-x')
+  })
+
   it('旧格式（matrix 前缀三段）→ null（与 client tenant-parser isLegacy 语义对齐）', () => {
     const l = { ...loop(), tenant: 'matrix:!room:name' } as unknown as LoopInstance
     expect(defaultKanbanBoardResolver(l)).toBe(null)
@@ -221,6 +236,7 @@ function makeNodeDeps(persist: PersistenceAdapter['persist'], logs: string[] = [
   const loopEvents: LoopEvent[] = []
   const graphEvents: LoopEvent[] = []
   const updatedLoops: Array<{ id: string; patch: Partial<LoopInstance> }> = []
+  const updatedContracts: Array<{ id: string; patch: Partial<TaskContract> }> = []
   const deps: PhaseNodeDeps = {
     dryRun: false,
     connectors: [],
@@ -228,8 +244,8 @@ function makeNodeDeps(persist: PersistenceAdapter['persist'], logs: string[] = [
       createLoop: async () => {}, getLoop: async () => null, listLoops: async () => [],
       updateLoop: async (id, patch) => { updatedLoops.push({ id, patch }) }, deleteLoop: async () => {},
       appendContract: async () => {}, getContract: async () => null, queryContracts: async () => [],
-      updateContract: async () => {}, appendVerification: async () => {}, appendEvent: async () => {},
-      queryEvents: async () => [], detectDrift: async () => ({ hasDrift: false, details: '' }),
+      updateContract: async (id, patch) => { updatedContracts.push({ id, patch }) }, appendVerification: async () => {},
+      appendEvent: async () => {}, queryEvents: async () => [], detectDrift: async () => ({ hasDrift: false, details: '' }),
     } as unknown as PhaseNodeDeps['store'],
     worktreeManager: {} as PhaseNodeDeps['worktreeManager'],
     dispatcher: {} as PhaseNodeDeps['dispatcher'],
@@ -241,7 +257,7 @@ function makeNodeDeps(persist: PersistenceAdapter['persist'], logs: string[] = [
     graphId: 'loop-loop-1', threadId: 't1', nodeId: 'persistence', superStep: 0,
     deps: { emitEvent: (e: unknown) => { graphEvents.push(e as LoopEvent) } },
   } as unknown as NodeContext
-  return { deps, ctx, graphEvents, updatedLoops, logs }
+  return { deps, ctx, graphEvents, updatedLoops, updatedContracts, logs }
 }
 
 describe('persistence node × KanbanPersistenceAdapter 失败接入', () => {
@@ -260,8 +276,10 @@ describe('persistence node × KanbanPersistenceAdapter 失败接入', () => {
     expect(update[CH.repairQueue]).toEqual([{
       source: 'persistence', contractId: 'task/a', message: 'kanban cli down', ts: expect.any(String),
     }])
-    // 未标 persisted：repair 回边后 persistence 节点可重试
-    expect(update[CH.phaseProgress]).toBeUndefined()
+    // 未标 persisted：repair 回边后 persistence 节点可重试（progress 记失败轮次供封顶判定）
+    expect(update[CH.phaseProgress]).toEqual([
+      { kind: 'persist-failed', contractId: 'task/a', attempts: 1, ts: expect.any(String) },
+    ])
 
     const failed = graphEvents.find(e => e.type === 'loop.persist-failed') as
       | Extract<LoopEvent, { type: 'loop.persist-failed' }> | undefined
@@ -289,7 +307,10 @@ describe('persistence node × KanbanPersistenceAdapter 失败接入', () => {
     ) as { update: Record<string, unknown> }
 
     const progress = result.update[CH.phaseProgress] as Array<{ kind: string; contractId: string }>
-    expect(progress).toEqual([expect.objectContaining({ kind: 'persisted', contractId: 'task/b' })])
+    expect(progress).toEqual([
+      expect.objectContaining({ kind: 'persist-failed', contractId: 'task/a', attempts: 1 }),
+      expect.objectContaining({ kind: 'persisted', contractId: 'task/b' }),
+    ])
     expect(result.update[CH.repairNeeded]).toBe(true)
     expect(updatedLoops).toEqual([
       expect.objectContaining({ id: 'loop-1', patch: { stage: 'persistence' } }),
@@ -299,5 +320,169 @@ describe('persistence node × KanbanPersistenceAdapter 失败接入', () => {
     ])
     expect(graphEvents.filter(e => e.type === 'loop.persist-failed')).toHaveLength(1)
     expect(graphEvents.filter(e => e.type === 'loop.persisted')).toHaveLength(1)
+  })
+
+  it('重试封顶 → 契约 escalated 终态：不再置 repairNeeded、台账 tasksBlocked 计数、发 loop.escalated', async () => {
+    const a = makeContract('task/a', { maxAttempts: 3 })
+    const { deps, ctx, graphEvents, updatedLoops, updatedContracts } = makeNodeDeps(
+      async () => ({ ok: false, error: 'kanban down' }),
+    )
+    const node = createPhaseNode('persistence', loop(), deps)
+
+    // 模拟守卫回边重试：progress 逐轮累积（BSP 每轮把上一轮 update 写回 state）
+    let state: Record<string, unknown> = { [CH.contracts]: [a], [CH.verifications]: [verification()] }
+    for (let round = 1; round <= 3; round++) {
+      const { update } = (await node.execute(state as never, ctx)) as { update: Record<string, unknown> }
+      state = { ...state, ...update }
+      // contracts 通道 appendById 语义：escalated 轮合并契约状态
+      if (Array.isArray(update[CH.contracts])) {
+        const prev = (state[CH.contracts] as TaskContract[]).filter(c => c.id !== 'task/a')
+        state[CH.contracts] = [...prev, ...(update[CH.contracts] as TaskContract[])]
+      }
+      // repairQueue 通道 append 语义
+      if (Array.isArray(update[CH.repairQueue])) {
+        state[CH.repairQueue] = [...((state[CH.repairQueue] as unknown[]) ?? []), ...(update[CH.repairQueue] as unknown[])]
+      }
+    }
+
+    const progress = state[CH.phaseProgress] as Array<{ kind: string; contractId: string; attempts: number }>
+    expect(progress).toEqual([
+      { kind: 'persist-failed', contractId: 'task/a', attempts: 1, ts: expect.any(String) },
+      { kind: 'persist-failed', contractId: 'task/a', attempts: 2, ts: expect.any(String) },
+      { kind: 'persist-escalated', contractId: 'task/a', attempts: 3, ts: expect.any(String) },
+    ])
+    // 封顶轮：repairNeeded 清零（无谓重试停止）、repairQueue 不再追加、契约标 escalated
+    expect(state[CH.repairNeeded]).toBe(false)
+    expect(state[CH.repairQueue]).toHaveLength(2) // 仅前两轮失败入队
+    expect(updatedContracts).toEqual([{ id: 'task/a', patch: { status: 'escalated' } }])
+    // 台账：每轮入场的 stage 迁移写 + 封顶轮的 tasksBlocked 计数（tasksCompleted 不误计）
+    const statsUpdate = updatedLoops.find(u => u.patch.stats)
+    expect(statsUpdate).toEqual({ id: 'loop-1', patch: expect.objectContaining({
+      stats: expect.objectContaining({ tasksCompleted: 0, tasksBlocked: 1 }),
+    }) })
+    expect(updatedLoops.filter(u => !u.patch.stats)).toHaveLength(3)
+    expect(graphEvents.filter(e => e.type === 'loop.persist-failed')).toHaveLength(3)
+    expect(graphEvents.filter(e => e.type === 'loop.escalated')).toHaveLength(1)
+    // 第四轮：escalated 契约跳过——零 persist/escalation 事件（stage 迁移事件为节点入场固定行为）
+    const persistEventCount = () => graphEvents.filter(
+      e => e.type === 'loop.persisted' || e.type === 'loop.persist-failed' || e.type === 'loop.escalated',
+    ).length
+    const before = persistEventCount()
+    const { update } = (await node.execute(state as never, ctx)) as { update: Record<string, unknown> }
+    expect(update[CH.repairNeeded]).toBe(false)
+    expect(persistEventCount()).toBe(before)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 全图链路（审查 Critical 回归）：assembly → spawner → compile → runtime 全程，
+// 断言 persist 失败真实触发守卫回边重试，且失败不把 loop 假判 completed
+// ---------------------------------------------------------------------------
+
+function makeRecordingStore(loops: LoopInstance[]): LoopStateStore & {
+  contracts: Map<string, TaskContract>; loopEvents: LoopEvent[]
+} {
+  const byId = new Map(loops.map(l => [l.id, { ...l }]))
+  const contracts = new Map<string, TaskContract>()
+  const loopEvents: LoopEvent[] = []
+  const store: LoopStateStore = {
+    createLoop: async l => { byId.set(l.id, l) },
+    getLoop: async id => byId.get(id) ?? null,
+    listLoops: async () => [...byId.values()],
+    updateLoop: async (id, patch) => {
+      const cur = byId.get(id)
+      if (cur) byId.set(id, { ...cur, ...patch, stats: patch.stats ?? cur.stats } as LoopInstance)
+    },
+    deleteLoop: async () => {},
+    appendContract: async c => { contracts.set(c.id, c) },
+    getContract: async id => contracts.get(id) ?? null,
+    queryContracts: async loopId => [...contracts.values()].filter(c => c.loopId === loopId),
+    updateContract: async (id, patch) => {
+      const cur = contracts.get(id)
+      if (cur) contracts.set(id, { ...cur, ...patch })
+    },
+    appendVerification: async () => {},
+    appendEvent: async e => { loopEvents.push(e) },
+    queryEvents: async () => [],
+    detectDrift: async () => ({ hasDrift: false, details: '' }),
+  }
+  return Object.assign(store, { contracts, loopEvents })
+}
+
+/** 全图装配 harness：单契约、verifier 恒 passed、worktree/dispatch stub、默认 stop 判定 */
+async function startFailGraphRun(
+  contract: TaskContract,
+  persist: PersistenceAdapter['persist'],
+) {
+  const tickedLoop = { ...loop(), nextTickAt: new Date(Date.now() - 60_000).toISOString() }
+  const store = makeRecordingStore([tickedLoop])
+  const assembly = createGraphAssembly({
+    io: null, mode: 'on', store,
+    eventLog: new InMemoryEventLogStore(),
+    shadowEventLog: new InMemoryEventLogStore(),
+    engineDeps: {
+      store, dryRun: false,
+      connectors: [{ discover: async () => [contract] }],
+      worktreeManager: { create: async (c: TaskContract) => `wt-${c.id}`, remove: async () => {}, cleanupStale: async () => {} },
+      dispatcher: { dispatch: async () => {} },
+      verifier: {
+        verify: async (c: TaskContract) => ({
+          contractId: c.id, results: { programmatic: [], judge: null, human: null },
+          overall: 'passed' as const, finalResponseGuard: true,
+        }),
+      },
+      persistence: { persist },
+      // 不注入 evaluateStop：走 defaultEvaluateStop（escalated 契约阻断 stopMet 的守卫一并被验）
+      log: () => {},
+    } as never,
+  })
+  await assembly.start()
+  const { runId } = await assembly.spawner!.tickNow(tickedLoop.id)
+  await vi.waitFor(() => expect(assembly.graphService.getRun(runId!)?.instance.status).toBe('completed'))
+  return { assembly, store, runId: runId! }
+}
+
+describe('全图 persist-failure 路由（Critical：gate 擦除 repairNeeded 死路修复）', () => {
+  it('persist 恒失败：守卫回边真实重试（3 次）→ 封顶 escalated 终态 → stopMet=false，loop 不被假 completed', async () => {
+    const calls: string[] = []
+    const { assembly, store, runId } = await startFailGraphRun(
+      makeContract('task/g1', { maxAttempts: 3 }),
+      async (c) => { calls.push(c.id); return { ok: false, error: 'kanban down' } },
+    )
+
+    // 修复前：persist 只调 1 次、零重试、repairQueue 孤儿、loop 假 completed
+    expect(calls).toEqual(['task/g1', 'task/g1', 'task/g1'])
+    const run = assembly.graphService.getRun(runId)!
+    expect(run.instance.state[CH.stopMet]).toBe(false)
+    expect((await store.getContract('task/g1'))?.status).toBe('escalated')
+    const persistedLoop = await store.getLoop('loop-1')
+    expect(persistedLoop?.status).toBe('idle') // 非 completed：交付物未落库不得收敛
+    expect(persistedLoop?.nextTickAt).not.toBeNull()
+    expect(persistedLoop?.stats.tasksBlocked).toBe(1)
+    const types = store.loopEvents.map(e => e.type)
+    expect(types.filter(t => t === 'loop.persist-failed')).toHaveLength(3)
+    expect(types).toContain('loop.escalated')
+    expect(types).not.toContain('loop.completed')
+    assembly.stop()
+  })
+
+  it('persist 首败后成功：每轮覆写 repairNeeded（残留 true 不空转回边），重试成功后 run 正常收敛', async () => {
+    const calls: string[] = []
+    const { assembly, store, runId } = await startFailGraphRun(
+      makeContract('task/g2', { maxAttempts: 3 }),
+      async (c) => {
+        calls.push(c.id)
+        return calls.length === 1 ? { ok: false, error: 'transient' } : `kanban:${c.id}`
+      },
+    )
+
+    // 修复前（不覆写 repairNeeded）：成功后残留 true 空转回边，stop-check 永不执行 → loop 停 idle
+    expect(calls).toEqual(['task/g2', 'task/g2'])
+    const run = assembly.graphService.getRun(runId)!
+    expect(run.instance.state[CH.stopMet]).toBe(true)
+    expect(await store.getLoop('loop-1')).toMatchObject({ status: 'completed' })
+    expect(store.loopEvents.map(e => e.type)).toContain('loop.completed')
+    expect(store.loopEvents.map(e => e.type)).not.toContain('loop.escalated')
+    assembly.stop()
   })
 })

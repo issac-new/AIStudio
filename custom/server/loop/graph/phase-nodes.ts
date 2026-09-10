@@ -258,6 +258,10 @@ export function resumeChannel(interruptId: string): string {
 export type PhaseProgressEntry =
   | { kind: 'verified'; contractId: string; attempts: number; ts: string }
   | { kind: 'persisted'; contractId: string; ts: string }
+  /** persistence 写入失败（repair 重试中）：attempts 为本 run 内该契约的 persist 失败轮数 */
+  | { kind: 'persist-failed'; contractId: string; attempts: number; ts: string }
+  /** persistence 重试封顶升级（终态）：契约已标 escalated，不再重试 */
+  | { kind: 'persist-escalated'; contractId: string; attempts: number; ts: string }
 
 export interface RepairEntry {
   source: 'validation' | 'gate' | 'persistence'
@@ -590,11 +594,15 @@ async function runPersistence(
   const progress = progressOf(state)
   const log = deps.log ?? (() => {})
   let completed = 0
+  let escalatedCount = 0
   const repairQueue: RepairEntry[] = []
+  const updatedContracts: TaskContract[] = []
 
   for (const v of verifications) {
     if (v.overall !== 'passed') continue
     if (progress.some(e => e.kind === 'persisted' && e.contractId === v.contractId)) continue
+    // 重试封顶升级的契约已终态（escalated），不再重试
+    if (progress.some(e => e.kind === 'persist-escalated' && e.contractId === v.contractId)) continue
     const contract = contracts.find(c => c.id === v.contractId)
     if (!contract) continue
     if (deps.dryRun) {
@@ -608,16 +616,37 @@ async function runPersistence(
       continue
     }
     const artifact = await deps.persistence.persist(contract, v, loop, deps.dryRun)
-    // P2 Task 4：真实 kanban 写入失败不炸 run——发 loop.persist-failed + 进 repairQueue，
-    // repairNeeded 路由经既有 gate 守卫回边（guard.maxIterations 封顶）重试 persistence。
-    // 不标 persisted：repair 回边后本节点对该契约重试；台账 tasksCompleted 不误计。
+    // P2 Task 4（审查修复）：真实 kanban 写入失败不炸 run。失败轮发 loop.persist-failed 并
+    // 置 repairNeeded=true——编译器 persistence→handoff 双条件守卫边（与 validation 对称）
+    // 在同一 super-step 直接回边重试（BSP 先 apply 再求值出边，gate 的 repairNeeded:false
+    // 覆写碰不到本节点的信号）。不标 persisted：回边后本节点对该契约重试；台账不误计。
     if (isPersistFailure(artifact)) {
-      log(`persistence failed for ${contract.id} (queued for repair): ${artifact.error}`)
-      repairQueue.push({ source: 'persistence', contractId: contract.id, message: artifact.error, ts: now() })
       emitLoopEvent(ctx, {
         type: 'loop.persist-failed', loopId: loop.id,
         contractId: contract.id, error: artifact.error, ts: now(),
       })
+      const attempts = progress.filter(e => e.kind === 'persist-failed' && e.contractId === contract.id).length + 1
+      if (attempts >= contract.maxAttempts) {
+        // 随修 1：重试封顶须有终态（对齐 validation 语义）——契约标 escalated 进台账 +
+        // tasksBlocked 计数 + loop.escalated 事件；不再置 repairNeeded（无谓重试）。
+        // stop-check 对含 escalated 契约的 run 不判 stopMet（见 defaultEvaluateStop），
+        // 否则"验证 passed 但交付物未落库"的 run 会被假判 completed（交付物静默丢失）。
+        log(`persistence escalated for ${contract.id} after ${attempts} failed attempts: ${artifact.error}`)
+        escalatedCount++
+        progress.push({ kind: 'persist-escalated', contractId: contract.id, attempts, ts: now() })
+        const escalated = { ...contract, status: 'escalated' as const }
+        updatedContracts.push(escalated)
+        if (!deps.dryRun) await deps.store.updateContract(contract.id, { status: 'escalated' })
+        emitLoopEvent(ctx, {
+          type: 'loop.escalated', loopId: loop.id,
+          reason: `persistence failed after ${attempts} attempts for ${contract.id}: ${artifact.error}`,
+          ts: now(),
+        })
+      } else {
+        log(`persistence failed for ${contract.id} (attempt ${attempts}/${contract.maxAttempts}, queued for repair): ${artifact.error}`)
+        repairQueue.push({ source: 'persistence', contractId: contract.id, message: artifact.error, ts: now() })
+        progress.push({ kind: 'persist-failed', contractId: contract.id, attempts, ts: now() })
+      }
       continue
     }
     completed++
@@ -627,17 +656,24 @@ async function runPersistence(
       contractId: contract.id, artifact, ts: now(),
     })
   }
-  if (!deps.dryRun && completed > 0) {
+  if (!deps.dryRun && (completed > 0 || escalatedCount > 0)) {
     await deps.store.updateLoop(loop.id, {
-      stats: { ...loop.stats, tasksCompleted: loop.stats.tasksCompleted + completed },
+      stats: {
+        ...loop.stats,
+        tasksCompleted: loop.stats.tasksCompleted + completed,
+        tasksBlocked: loop.stats.tasksBlocked + escalatedCount,
+      },
     })
   }
-  const update: StateUpdate = { [CH.stage]: 'persistence' as LoopStage }
-  if (completed > 0) update[CH.phaseProgress] = progress
-  if (repairQueue.length > 0) {
-    update[CH.repairQueue] = repairQueue
-    update[CH.repairNeeded] = true
+  // repairNeeded / phaseProgress 每轮必须覆写（overwrite reducer）：成功轮若不显式清零，
+  // 上一失败轮残留的 repairNeeded=true 会让守卫回边空转到 guard 耗尽
+  const update: StateUpdate = {
+    [CH.stage]: 'persistence' as LoopStage,
+    [CH.phaseProgress]: progress,
+    [CH.repairNeeded]: repairQueue.length > 0,
   }
+  if (repairQueue.length > 0) update[CH.repairQueue] = repairQueue
+  if (updatedContracts.length > 0) update[CH.contracts] = updatedContracts
   return { update }
 }
 
@@ -763,13 +799,17 @@ export function createGateNode(
 // stop-check
 // ---------------------------------------------------------------------------
 
-/** 默认停止判定：stopCondition 是合法 JSON 谓词则求值，否则回落契约状态启发式 */
+/** 默认停止判定：stopCondition 是合法 JSON 谓词则求值，否则回落契约状态启发式。
+ *  前置守卫（随修 1）：run 内存在 escalated 契约（validation/persistence 重试封顶）时不判
+ *  收敛——验证 passed 但交付物未落库/未达标的 run 一旦 stopMet=true，spawner 会把 loop 标
+ *  completed，交付物静默丢失。显式谓词与启发式都被该守卫覆盖。 */
 export async function defaultEvaluateStop(stopCondition: string, state: StateValues): Promise<boolean> {
+  const contracts = (state[CH.contracts] as TaskContract[] | undefined) ?? []
+  if (contracts.some(c => c.status === 'escalated')) return false
   try {
     return evaluatePredicate(JSON.parse(stopCondition) as PredicateExpr, state)
   } catch {
     // 启发式兜底：无待办契约，或全部契约均有 passed 验证记录
-    const contracts = (state[CH.contracts] as TaskContract[] | undefined) ?? []
     const verifications = (state[CH.verifications] as VerificationRecord[] | undefined) ?? []
     if (contracts.length === 0) return true
     return contracts.every(c => verifications.some(v => v.contractId === c.id && v.overall === 'passed'))
