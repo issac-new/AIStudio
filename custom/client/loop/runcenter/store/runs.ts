@@ -14,6 +14,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { GraphEventLike, RunListItem, RunSummary } from '../types'
 import { latestOpenInterrupt, sortRuns, toRunSummary } from '../adapters'
+import { loadArchivedMap, markArchived, unmarkArchived } from '../adapters/inbox'
 import { connectGraph, disconnectGraph, runRest, type GraphSocketLike } from '../api'
 
 /** 单 run 事件缓冲上限（订阅回放 50 条 + 增量余量） */
@@ -52,6 +53,22 @@ export const useRunCenterStore = defineStore('runCenter', () => {
   const sortedRuns = computed(() => sortRuns(runs.value))
   const awaitingCount = computed(() => runs.value.filter(r => r.status === 'awaiting-input').length)
   const selectedRun = computed(() => runs.value.find(r => r.runId === selectedRunId.value) ?? null)
+
+  // ── 介入收件箱两态（task-7）：归档仅本地 kv 标记，不改 run 状态 ──
+  /** runId → 归档时刻 ISO（localStorage 持久，跨会话保留） */
+  const archivedMap = ref<Record<string, string>>(loadArchivedMap())
+  const awaitingRuns = computed(() => sortRuns(runs.value.filter(r => r.status === 'awaiting-input')))
+  const pendingInboxRuns = computed(() => awaitingRuns.value.filter(r => archivedMap.value[r.runId] === undefined))
+  const archivedInboxRuns = computed(() => awaitingRuns.value.filter(r => archivedMap.value[r.runId] !== undefined))
+
+  /** 归档（本地标记；两态都以 awaiting-input 为域，run 恢复后自动退出收件箱） */
+  function archiveRun(runId: string): void {
+    archivedMap.value = markArchived(runId, new Date().toISOString())
+  }
+  /** 取消归档 */
+  function unarchiveRun(runId: string): void {
+    archivedMap.value = unmarkArchived(runId)
+  }
 
   // ── 内部：投影重算（事件缓冲 → 派生字段，纯函数统一入口）──
   function recompute(run: RunSummary): void {
@@ -158,12 +175,22 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     selectedRunId.value = runId
   }
 
-  /** HITL 恢复：interruptId 取自事件投影的未决中断（无未决中断则拒绝） */
+  /** HITL 恢复：interruptId 取自事件投影的未决中断（无未决中断则拒绝）。
+   *  REST 成功后立即落一条本地 resume 事件（乐观投影，走 applyEvent 同一投影路径）：
+   *  状态 → running、未决中断关闭，不等 socket 回声；REST 失败则不落（状态不动）。 */
   async function resumeRun(runId: string, value?: unknown): Promise<void> {
     const run = runs.value.find(r => r.runId === runId)
     const interruptId = run?.pendingInterruptId
     if (!interruptId) throw new Error(`No pending interrupt for run ${runId}`)
     await runRest.resumeRun(runId, interruptId, value)
+    applyEvent({
+      type: 'graph.resume',
+      graphId: run.graphId,
+      threadId: runId,
+      interruptId,
+      resumeValue: value,
+      ts: new Date().toISOString(),
+    })
   }
 
   /** 从检查点分叉；刷新列表纳入 fork 产物，返回新 runId */
@@ -198,10 +225,13 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     // state
     runs, selectedRunId, loading, error, connection,
     replayRunId, replayEvents, replayLoading,
+    archivedMap,
     // getters
     sortedRuns, awaitingCount, selectedRun,
+    awaitingRuns, pendingInboxRuns, archivedInboxRuns,
     // actions
     fetchRuns, selectRun, resumeRun, forkRun, fetchReplay, disconnect,
+    archiveRun, unarchiveRun,
     // 测试与调试暴露（不发生产语义）
     applyEvent,
   }

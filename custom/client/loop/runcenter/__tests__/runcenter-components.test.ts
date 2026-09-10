@@ -44,6 +44,7 @@ const { FakeGraphSocket, fakeSocket, rest } = vi.hoisted(() => {
       getRun: vi.fn(async () => { throw new Error('not implemented') }),
       resumeRun: vi.fn(async () => ({ runId: 'x', instance: {} })),
       forkRun: vi.fn(async () => ({ runId: 'fork-1', forkedFrom: 'x', superStep: 0 })),
+      startRun: vi.fn(async () => ({ runId: 'fork-1', instance: {} })),
       replay: vi.fn(async () => [] as Array<{ type: string; ts: string; [key: string]: unknown }>),
     },
   }
@@ -156,6 +157,7 @@ describe('RunCenterView (jsdom)', () => {
     fakeSocket.current = null
     vi.clearAllMocks()
     pushMock.mockClear()
+    try { localStorage.clear() } catch { /* ignore */ }
   })
 
   it('挂载即拉取列表并渲染行；连接态徽标存在', async () => {
@@ -182,7 +184,7 @@ describe('RunCenterView (jsdom)', () => {
     expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loop' })
   })
 
-  it('状态筛选按钮过滤行；操作按钮 approve 路由到 loop 详情（loop- 前缀剥离）', async () => {
+  it('状态筛选按钮过滤行；approve 动作行内展开审批面板（不进 loop 详情页，task-7）', async () => {
     rest.listRuns.mockResolvedValue([
       { runId: 'run-1', graphId: 'loop-loop1', status: 'running', updatedAt: '2026-09-10T00:00:00Z' },
       { runId: 'run-2', graphId: 'loop-loop2', status: 'awaiting-input', updatedAt: '2026-09-10T00:00:00Z' },
@@ -192,13 +194,76 @@ describe('RunCenterView (jsdom)', () => {
 
     // 点击"等待输入"筛选（第 3 个按钮：全部/运行中/等待输入/已完成/已失败）
     await w.findAll('.rc-view__filter')[2].trigger('click')
-    const rows = w.findAll('.rc-table__row')
+    let rows = w.findAll('.rc-table__row')
     expect(rows).toHaveLength(1)
     expect(rows[0].classes()).toContain('rc-table__row--awaiting')
 
-    // awaiting-input 行的 approve 按钮 → loop 详情（loop-loop2 → loop2）
+    // awaiting-input 行未决审批 interrupt（socket 事件投影）
+    fakeSocket.current!.serverEmit('graph:event', {
+      type: 'graph.interrupt', graphId: 'loop-loop2', threadId: 'run-2',
+      interruptId: 'approval:c1@1', value: { kind: 'approval', prompt: 'approve me' },
+      ts: '2026-09-10T00:01:00Z',
+    })
+    await new Promise(r => setTimeout(r, 0))
+
+    // approve 按钮 → 行内展开（peek 行出现 + 审批面板），无路由跳转
+    rows = w.findAll('.rc-table__row')
     await rows[0].find('.rc-table__action').trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopDetail', params: { id: 'loop2' } })
+    expect(w.find('.rc-table__peek').exists()).toBe(true)
+    expect(w.find('[data-approval-panel]').exists()).toBe(true)
+    expect(pushMock).not.toHaveBeenCalled()
+
+    // 内联审批：approve → 乐观投影（行不再 awaiting）+ REST 携带结构化值
+    await w.find('.ap-panel__decision--approve').trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    expect(rest.resumeRun).toHaveBeenCalledWith('run-2', 'approval:c1@1', { decision: 'approved' })
+    expect(w.findAll('.rc-table__row--awaiting')).toHaveLength(0)
+  })
+
+  it('行首箭头同一切换路径：展开显示最新 3 条事件摘要，再点收起', async () => {
+    rest.listRuns.mockResolvedValue([
+      { runId: 'run-1', graphId: 'loop-loop1', status: 'completed', updatedAt: '2026-09-10T00:00:00Z' },
+    ])
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+    // 实时事件缓冲（4 条 → 只显示最新 3 条）
+    for (let i = 1; i <= 4; i++) {
+      fakeSocket.current!.serverEmit('graph:event', {
+        type: 'graph.node-complete', graphId: 'loop-loop1', threadId: 'run-1',
+        nodeId: 'discovery', step: i, ts: `2026-09-10T00:0${i}:00Z`,
+      })
+    }
+    await new Promise(r => setTimeout(r, 0))
+
+    await w.find('.rc-table__peek-toggle').trigger('click')
+    expect(w.find('.rc-table__peek').exists()).toBe(true)
+    const lines = w.findAll('.rc-table__peek-line')
+    expect(lines).toHaveLength(3)
+    expect(lines[0].text()).toContain('@2') // 最新 3 条（丢最旧 @1）
+    expect(lines[2].text()).toContain('@4')
+
+    await w.find('.rc-table__peek-toggle').trigger('click')
+    expect(w.find('.rc-table__peek').exists()).toBe(false)
+  })
+
+  it('收件箱 tab：切换渲染 InboxPanel；归档仅本地标记且从待处理消失', async () => {
+    rest.listRuns.mockResolvedValue([
+      { runId: 'run-2', graphId: 'loop-loop2', status: 'awaiting-input', updatedAt: '2026-09-10T00:00:00Z' },
+    ])
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+
+    await w.findAll('.rc-view__tab')[1].trigger('click') // 介入收件箱
+    expect(w.find('[data-inbox-panel]').exists()).toBe(true)
+    expect(w.findAll('.ib-row')).toHaveLength(1)
+    expect(w.findAll('.rc-table__row')).toHaveLength(0) // 列表已切走
+
+    await w.find('.ib-row__archive').trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    // 本地 kv 标记（run 状态不动）+ 待处理清空
+    expect(JSON.parse(localStorage.getItem('runcenter:inbox:archived')!)).toHaveProperty('run-2')
+    expect(w.findAll('.ib-row')).toHaveLength(0)
+    expect(w.find('.ib-panel__empty').text()).toContain('runcenter.inbox.empty')
   })
 
   it('fork 操作调用 REST 并刷新；回放操作打开回放面板', async () => {
@@ -235,7 +300,7 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.find('.rc-view__replay-body').text()).toContain('graph.started')
   })
 
-  it('行点击 / detail 动作 → 运行详情页；approve 仍走 loop 详情（审批 UI 在那边）', async () => {
+  it('行点击 / detail 动作 → 运行详情页；peek 动作行内展开', async () => {
     rest.listRuns.mockResolvedValue([
       { runId: 'run-9', graphId: 'loop-loop1', status: 'running', updatedAt: '2026-09-10T00:00:00Z' },
     ])
@@ -246,10 +311,11 @@ describe('RunCenterView (jsdom)', () => {
     await w.find('.rc-table__row').trigger('click')
     expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopRunDetail', params: { runId: 'run-9' } })
 
-    // running 行操作集 [peek, detail]：peek → loop 详情；detail → 运行详情
+    // running 行操作集 [peek, detail]：peek → 行内展开（task-7）；detail → 运行详情
     const buttons = w.findAll('.rc-table__row')[0].findAll('.rc-table__action')
     await buttons[0].trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopDetail', params: { id: 'loop1' } })
+    expect(w.find('.rc-table__peek').exists()).toBe(true)
+    expect(pushMock).toHaveBeenCalledTimes(1) // peek 不路由
     await buttons[1].trigger('click')
     expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopRunDetail', params: { runId: 'run-9' } })
   })

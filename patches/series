@@ -258,3 +258,6 @@
 # P2 Task 6: 运行详情——执行图画布 + 时间轴回放 + 三级分辨率 i18n
 205-client-i18n-runcenter-detail-zh.patch
 206-client-i18n-runcenter-detail-en.patch
+# P2 Task 7: 节点检查器 + 介入收件箱——peek/attach/审批/两态归档 i18n
+207-client-i18n-runcenter-intervention-zh.patch
+208-client-i18n-runcenter-intervention-en.patch
