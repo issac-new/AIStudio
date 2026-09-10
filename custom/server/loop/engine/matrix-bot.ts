@@ -38,6 +38,10 @@ export class MatrixBot {
       case 'loop.persisted':
         return `💾 ${event.loopId}: persisted ${(event as any).artifact}`
 
+      // P3 台账（渲染补全）：落库失败不再落 default 静默——room 里看得见重试原因
+      case 'loop.persist-failed':
+        return `⚠️ ${event.loopId}: ${(event as any).contractId} 落库失败，将自动重试：${(event as any).error}`
+
       case 'loop.tick-complete':
         return `✅ ${event.loopId}: tick #${(event as any).iteration} complete`
 

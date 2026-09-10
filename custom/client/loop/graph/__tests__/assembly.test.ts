@@ -120,6 +120,8 @@ async function invoke(router: Router, method: 'get' | 'post', actualPath: string
     request: { body },
     body: undefined as unknown,
     status: 200,
+    headers: {} as Record<string, string>,
+    set: (k: string, v: string) => { ctx.headers[k] = v },
   }
   await handler(ctx)
   return ctx
@@ -272,6 +274,39 @@ describe('graph REST run lifecycle', () => {
     expect((replay.body as { events: GraphLogEvent[] }).events.length).toBeGreaterThan(0)
   })
 
+  it('GET /api/graph/runs/:id/export bundles instance + spec + events as attachment (P3 台账 #30)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+    service.registerGraph(new GraphBuilder('gx', 'G')
+      .addChannel('x', { reducer: reducers.overwrite(), default: 0 })
+      .addNode(fnNode('a', async () => ({ end: true }))).setEntry('a').build())
+    const { runId } = await service.startRun('gx')
+
+    const specStore = new GraphSpecStore()
+    await specStore.save({ id: 'gx', version: 1, channels: {}, nodes: [], edges: [], entryNode: 'a', limits: { maxSteps: 5 } })
+    const router = createGraphRunRouter({ graphService: service, eventLog, specStore })
+
+    const ctx = await invoke(router, 'get', `/api/graph/runs/${runId}/export`)
+    expect(ctx.status).toBe(200)
+    expect(ctx.headers?.['Content-Disposition']).toBe(`attachment; filename=run-${runId}.json`)
+    const body = ctx.body as { run: { runId: string; instance: { status: string } }; spec: { id: string } | null; events: GraphLogEvent[] }
+    expect(body.run.runId).toBe(runId)
+    expect(body.run.instance.status).toBe('completed')
+    expect(body.spec?.id).toBe('gx')
+    expect(body.events.length).toBeGreaterThan(0)
+
+    // 无 specStore / 规格未注册 → spec 为 null，导出不失败
+    const routerNoSpec = createGraphRunRouter({ graphService: service, eventLog })
+    const ctx2 = await invoke(routerNoSpec, 'get', `/api/graph/runs/${runId}/export`)
+    expect(ctx2.status).toBe(200)
+    expect((ctx2.body as { spec: unknown }).spec).toBeNull()
+
+    // run 不存在 → 404 {error}
+    const miss = await invoke(router, 'get', '/api/graph/runs/run-nope-9/export')
+    expect(miss.status).toBe(404)
+    expect((miss.body as { error: string }).error).toBeTruthy()
+  })
+
   it('resume endpoint answers an interrupt and completes the run (HITL closed loop)', async () => {
     const eventLog = new InMemoryEventLogStore()
     const service = new GraphService({ eventLog })
@@ -323,6 +358,31 @@ describe('graph REST run lifecycle', () => {
     })
     const list = await invoke(router, 'get', '/api/graph/specs')
     expect((list.body as { specs: Array<{ id: string }> }).specs.map(s => s.id)).toEqual(['spec-1'])
+  })
+
+  it('GET /api/graph/specs/:id returns {id, version, spec}; 404 carries {error} (P3 台账 #25)', async () => {
+    const specStore = new GraphSpecStore()
+    await specStore.save({
+      id: 'spec-1', version: 2, channels: {}, nodes: [], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 },
+    })
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+
+    const hit = await invoke(router, 'get', '/api/graph/specs/spec-1')
+    expect(hit.status).toBe(200)
+    const body = hit.body as { id: string; version: number; spec: { id: string } }
+    expect(body).toEqual({
+      id: 'spec-1', version: 2,
+      spec: { id: 'spec-1', version: 2, channels: {}, nodes: [], edges: [], entryNode: 'a', limits: { maxSteps: 10 } },
+    })
+
+    const miss = await invoke(router, 'get', '/api/graph/specs/spec-404')
+    expect(miss.status).toBe(404)
+    expect((miss.body as { error: string }).error).toBeTruthy()
   })
 })
 

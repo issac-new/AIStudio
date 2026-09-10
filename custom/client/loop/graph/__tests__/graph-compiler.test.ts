@@ -1,9 +1,9 @@
 // P1 Task 4 — 编译器：LoopInstance → GraphSpec（六节点 + 守卫 repair 回边）
 // 断言：产物结构 / validateGraphSpec 通过 / hydrate 后全流程可跑 / repair 回边有 guard /
 //       审批 interrupt→resume 闭环 / 空发现短路 / loop.* 兼容事件在编译产物 run 上保持
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
-  compileLoopToSpec, makeLoopNodeRegistry, type CompileDeps,
+  compileLoopToSpec, makeLoopNodeRegistry, resetGuardFallbackWarnForTest, type CompileDeps,
 } from '../../../../server/loop/graph/graph-compiler'
 import { CH, appendContractsById, type PhaseNodeDeps, type Connector, type PersistenceAdapter } from '../../../../server/loop/graph/phase-nodes'
 import { validateGraphSpec, hydrateGraphSpec } from '../../../../server/loop/graph/graph-spec'
@@ -273,5 +273,52 @@ describe('loop.* event compatibility on compiled runs', () => {
 
     const loopEvents = events.filter(e => (e as unknown as { type: string }).type.startsWith('loop.')) as unknown as LoopEvent[]
     expect(loopEvents.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// guard/maxAttempts 对齐（P3 台账）：repair 回边 guard.maxIterations 取
+// max(loop 契约模板 maxAttempts, 3)——契约配 ≥5 时回边不再先耗尽
+// ---------------------------------------------------------------------------
+
+describe('repair back-edge guard vs contract maxAttempts (P3 台账)', () => {
+  const repairGuards = (spec: ReturnType<typeof compileLoopToSpec>): number[] =>
+    spec.edges
+      .filter(e => e.guard !== undefined)
+      .map(e => (e.guard as { maxIterations: number }).maxIterations)
+
+  beforeEach(() => {
+    resetGuardFallbackWarnForTest()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('loop.maxAttempts=5 → guard.maxIterations=5（契约配 ≥5 时回边不先耗尽）', () => {
+    const spec = compileLoopToSpec(makeLoop({ maxAttempts: 5 }), {})
+    const guards = repairGuards(spec)
+    expect(guards.length).toBeGreaterThanOrEqual(3) // validation/persistence/gate 三条 repair 回边
+    expect(guards.every(g => g === 5)).toBe(true)
+  })
+
+  it('loop.maxAttempts=2 仍取下限 3', () => {
+    const spec = compileLoopToSpec(makeLoop({ maxAttempts: 2 }), {})
+    expect(repairGuards(spec).every(g => g === 3)).toBe(true)
+  })
+
+  it('未配置模板 → 回退 3，同 loop 只 warn 一次（不逐 tick 刷屏）', () => {
+    const spec = compileLoopToSpec(makeLoop(), {})
+    expect(repairGuards(spec).every(g => g === 3)).toBe(true)
+    expect(console.warn).toHaveBeenCalledTimes(1)
+    // 同 loop 再编译（spawner 每 tick 编译一次）不再告警
+    compileLoopToSpec(makeLoop(), {})
+    expect(console.warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('显式 repairMaxAttempts 覆盖优先，且不触发回退告警', () => {
+    const spec = compileLoopToSpec(makeLoop({ maxAttempts: 5 }), { repairMaxAttempts: 7 })
+    expect(repairGuards(spec).every(g => g === 7)).toBe(true)
+    expect(console.warn).not.toHaveBeenCalled()
   })
 })

@@ -64,6 +64,10 @@ export interface LoopInstance {
    *  ——persistence 的 KanbanPersistenceAdapter 据此解析目标 kanban board（缺省/旧格式
    *  解析不出 → persist 跳过并告警）。 */
   tenant?: string | null
+  /** 契约模板重试上限（可选，P3 台账 guard/maxAttempts 对齐）：图编译器据此取
+   *  repair 回边 guard.maxIterations = max(该值, 3)，消除"契约配 ≥5 时回边先耗尽"边界。
+   *  缺省时编译器回退 3 并 warn 一次。 */
+  maxAttempts?: number
   createdAt: string
   updatedAt: string
   lastTickAt: string | null

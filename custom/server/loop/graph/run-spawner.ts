@@ -195,12 +195,15 @@ export class RunSpawner {
   }
 
   /** 熔断共用出口（§7B.7）：paused + loop.stuck 告警 + 双计数清零。
-   *  失败熔断与停滞熔断（台账④）走同一条路径，前端/bot 消费零差异。 */
+   *  失败熔断与停滞熔断（台账④）走同一条路径，前端/bot 消费零差异。
+   *  P3 台账⑦：消息附"因持续失败已暂停，需人工处理"口径（对齐 README）——
+   *  告警必须说清后果（loop 已停）与所需动作（人工介入）。 */
   private async tripBreaker(loopId: string, reason: string): Promise<void> {
     await this.opts.store.updateLoop(loopId, { status: 'paused', nextTickAt: null })
     this.emitCompat({
       type: 'loop.stuck', loopId,
-      reason, ts: new Date().toISOString(),
+      reason: `${reason} — 因持续失败已暂停，需人工处理`,
+      ts: new Date().toISOString(),
     })
     this.consecutiveFailures.set(loopId, 0)
     this.stagnantCount.set(loopId, 0)

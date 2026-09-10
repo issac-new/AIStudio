@@ -54,6 +54,17 @@ describe('InMemoryEventLogStore', () => {
     expect(() => JSON.stringify(e)).not.toThrow()
   })
 
+  it('generates eid = <runId>-<seq> on append and returns it through query (P3 台账 幂等)', async () => {
+    const s = new InMemoryEventLogStore()
+    await s.append(base)
+    await s.append({ ...base, nodeId: 'n1' })
+    const all = await s.query('r1')
+    expect(all.map(e => e.eid)).toEqual(['r1-1', 'r1-2'])
+    // eid 全局可去重：同 run 内唯一，跨 run 不碰撞
+    await s.append({ ...base, runId: 'r2' })
+    expect((await s.query('r2'))[0]?.eid).toBe('r2-3')
+  })
+
   it('saveSpec/getSpec/listSpecs round-trip and upsert by id (P2 台账⑥)', async () => {
     const s = new InMemoryEventLogStore()
     expect(await s.listSpecs()).toEqual([])
@@ -129,6 +140,14 @@ describe.skipIf(!sqliteAvailable)('createEventLogStore via node:sqlite', () => {
     expect(latest?.iterCounters).toEqual({ 'b->a': 2 })
     expect((await s.listCheckpoints('r1')).map(c => c.superStep)).toEqual([1, 3])
     expect(await s.getLatestCheckpoint('nope')).toBeNull()
+  })
+
+  it('generates eid = <runId>-<seq> in sqlite too (P3 台账 幂等)', async () => {
+    const s = createEventLogStore(':memory:')
+    await s.append(base)
+    await s.append({ ...base, runId: 'r2' })
+    expect((await s.query('r1'))[0]?.eid).toBe('r1-1')
+    expect((await s.query('r2'))[0]?.eid).toBe('r2-2')
   })
 
   it('persists graph_specs in sqlite (P2 台账⑥): upsert + round-trip + list', async () => {
