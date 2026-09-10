@@ -44,3 +44,42 @@ index 760bff4..94e9281 100644
  const PACKAGED_RUNTIME_RELEASE_NAME = 'runtime-release.json'
  const ACTIVE_RUNTIME_VERSION_NAME = 'active-version.json'
  let incompleteActiveWebUiWarningPath = ''
+diff --git a/tests/desktop/runtime-config.test.ts b/tests/desktop/runtime-config.test.ts
+index 1763467..d6131d3 100644
+--- a/tests/desktop/runtime-config.test.ts
++++ b/tests/desktop/runtime-config.test.ts
+@@ -9,9 +9,9 @@ import {
+ 
+ describe('desktop Hermes source configuration', () => {
+   it('pins an immutable upstream release by default', () => {
+-    expect(DEFAULT_HERMES_VERSION).toBe('0.20.6')
+-    expect(DEFAULT_HERMES_SOURCE_REF).toBe('v2026.8.27')
+-    expect(DEFAULT_HERMES_SOURCE_COMMIT).toBe('5fc308a70719a83cccdbba4c0e39c23f5a8239d5')
++    expect(DEFAULT_HERMES_VERSION).toBe('0.21.0')
++    expect(DEFAULT_HERMES_SOURCE_REF).toBe('v2026.8.31')
++    expect(DEFAULT_HERMES_SOURCE_COMMIT).toBe('29112bef099274229cadff79cdff7bf7b99c4b77')
+     expect(hermesSource({})).toEqual({
+       version: DEFAULT_HERMES_VERSION,
+       repository: DEFAULT_HERMES_SOURCE_REPOSITORY,
+diff --git a/tests/desktop/runtime-paths.test.ts b/tests/desktop/runtime-paths.test.ts
+index 1ce2a51..4741a97 100644
+--- a/tests/desktop/runtime-paths.test.ts
++++ b/tests/desktop/runtime-paths.test.ts
+@@ -185,7 +185,7 @@ describe('desktop runtime paths', () => {
+ 
+     expect(desktopRuntimeDir()).toBe(runtimeDir)
+     expect(webuiDir()).toBe(webUiDir)
+-    expect(targetDesktopRuntimeDir()).toBe(join(storageRoot, 'hermes', '0.20.6', runtimePlatformKey()))
++    expect(targetDesktopRuntimeDir()).toBe(join(storageRoot, 'hermes', '0.21.0', runtimePlatformKey()))
+   })
+ 
+   it('falls back to the bundled Web UI when the active Web UI directory is incomplete', async () => {
+@@ -333,7 +333,7 @@ describe('desktop runtime paths', () => {
+ 
+     const { runtimePlatformKey } = await import('../../packages/desktop/src/main/runtime-paths')
+     const runtimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.15.2', runtimePlatformKey())
+-    const targetRuntimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.20.6', runtimePlatformKey())
++    const targetRuntimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.21.0', runtimePlatformKey())
+     createRuntimeWithoutManifest(runtimeDir)
+ 
+     const { desktopRuntimeDir, targetDesktopRuntimeDir } = await import('../../packages/desktop/src/main/paths')
