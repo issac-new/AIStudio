@@ -287,8 +287,10 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.findAll('.rc-table__row')).toHaveLength(2)
 
     // 点 replay → 面板打开且拉取回放（fork 行最后活动更新会排在前面，须定位 run-1 行）
+    // 双词汇：socket 词汇（type + ISO ts）与 replay 端点日志词汇（kind + epoch ms）都要可见
     rest.replay.mockResolvedValue([
       { type: 'graph.started', graphId: 'loop-loop1', threadId: 'run-1', ts: '2026-09-10T00:00:00Z' },
+      { kind: 'run.completed', runId: 'run-1', ts: 1760102400000, superStep: 6 },
     ])
     const targetRow = w.findAll('.rc-table__row')
       .find(r => r.find('.rc-table__run-id').text() === 'run-1')
@@ -297,7 +299,9 @@ describe('RunCenterView (jsdom)', () => {
     await new Promise(r => setTimeout(r, 0))
     expect(rest.replay).toHaveBeenCalledWith('run-1')
     expect(w.find('.rc-view__replay').exists()).toBe(true)
-    expect(w.find('.rc-view__replay-body').text()).toContain('graph.started')
+    const replayBody = w.find('.rc-view__replay-body').text()
+    expect(replayBody).toContain('graph.started') // socket 词汇 type 通道
+    expect(replayBody).toContain('run.completed @6') // 日志词汇 kind + superStep 通道
   })
 
   it('行点击 / detail 动作 → 运行详情页；peek 动作行内展开', async () => {
