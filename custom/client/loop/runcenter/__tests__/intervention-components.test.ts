@@ -24,6 +24,14 @@ vi.mock('@/custom/loop/runcenter/api', () => ({
   disconnectGraph: () => {},
 }))
 
+// ── 上游 auth mock（P3 台账 #6）： ApprovalPanel 经 getStoredUsername 取审批人身份；
+// mock 掉 '@/api/client'（其 @/router import 会在 vue-router mock 下炸），
+// 身份由 authMock.username 控制（null = token 不可解析）──
+const { authMock } = vi.hoisted(() => ({ authMock: { username: null as string | null } }))
+vi.mock('@/api/client', () => ({
+  getStoredUsername: () => authMock.username,
+}))
+
 import ApprovalPanel from '@/custom/loop/runcenter/components/ApprovalPanel.vue'
 import InboxPanel from '@/custom/loop/runcenter/components/InboxPanel.vue'
 import NodeInspector from '@/custom/loop/runcenter/components/NodeInspector.vue'
@@ -73,8 +81,14 @@ const awaitingRun = (over: Partial<RunSummary> = {}): RunSummary => ({
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  authMock.username = null
   try { localStorage.clear() } catch { /* ignore */ }
 })
+
+/** 种下审批人身份（ApprovalPanel 决策按钮要求 token 可解析） */
+function seedIdentity(username = 'alice'): void {
+  authMock.username = username
+}
 
 // ---------------------------------------------------------------------------
 // ApprovalPanel
@@ -93,19 +107,21 @@ describe('ApprovalPanel (jsdom)', () => {
     expect(w.find('.ap-panel__waiting').text()).toContain('runcenter.approval.waiting')
   })
 
-  it('approve → store.resumeRun 携带结构化值；乐观投影立即生效（running/未决关闭）', async () => {
+  it('approve → store.resumeRun 携带结构化值 + approver 身份（P3 台账）；乐观投影立即生效', async () => {
+    seedIdentity('alice')
     const store = useRunCenterStore()
     store.runs.push(awaitingRun())
     const w = mount(ApprovalPanel, { props: { run: store.runs[0] } })
 
     await w.findAll('.ap-panel__decision')[0].trigger('click') // approve
 
-    expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c1@1', { decision: 'approved' })
+    expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c1@1', { decision: 'approved', approver: 'alice' })
     expect(store.runs[0].status).toBe('running') // 乐观：不等 socket
     expect(store.runs[0].pendingInterruptId).toBeNull()
   })
 
-  it('reject 必填原因：空原因不发请求并提示；填原因后发出 comment', async () => {
+  it('reject 必填原因：空原因不发请求并提示；填原因后发出 comment + approver', async () => {
+    seedIdentity('alice')
     const store = useRunCenterStore()
     store.runs.push(awaitingRun())
     const w = mount(ApprovalPanel, { props: { run: store.runs[0] } })
@@ -116,10 +132,27 @@ describe('ApprovalPanel (jsdom)', () => {
 
     await w.find('.ap-panel__reason').setValue('覆盖不足')
     await w.findAll('.ap-panel__decision')[1].trigger('click')
-    expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c1@1', { decision: 'rejected', comment: '覆盖不足' })
+    expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c1@1', { decision: 'rejected', comment: '覆盖不足', approver: 'alice' })
+  })
+
+  // P3 台账（specified 审批身份）：token 不可解析 → 无名可署，决策按钮置灰并 tooltip
+  it('无身份（token 缺失）：决策按钮置灰 + tooltip 说明，点击不发请求', async () => {
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun())
+    const w = mount(ApprovalPanel, { props: { run: store.runs[0] } })
+
+    const buttons = w.findAll('.ap-panel__decision')
+    expect(buttons).toHaveLength(2)
+    for (const b of buttons) {
+      expect(b.attributes('disabled')).toBeDefined()
+      expect(b.attributes('title')).toContain('runcenter.approval.noIdentity')
+    }
+    await buttons[0].trigger('click')
+    expect(rest.resumeRun).not.toHaveBeenCalled()
   })
 
   it('REST 失败显示错误且不误报成功', async () => {
+    seedIdentity('alice')
     const store = useRunCenterStore()
     store.runs.push(awaitingRun())
     rest.resumeRun.mockRejectedValueOnce(new Error('policy rejected'))
@@ -271,6 +304,40 @@ describe('NodeInspector (jsdom)', () => {
     })
     expect(w.find('.ni-panel__update').text()).toContain('contracts')
     expect(w.findAll('.ni-panel__update-value')).toHaveLength(0)
+  })
+
+  // P3 台账：缺值键 join REST instance.state 显示当前值 + "非事件当时值"标注；
+  // getRun 不可用时静默降级只显键名（上一条的回归前提）
+  it('缺值键 join instance.state 显示当前值并标注（getRun 失败只显键名）', async () => {
+    const events = [
+      { kind: 'node.completed', nodeId: 'gate', payload: { updateKeys: ['contracts', 'stage'] }, ts: 1000 },
+    ]
+    rest.getRun.mockResolvedValueOnce({
+      runId: 'run-1',
+      instance: { state: { contracts: ['c-1'], stage: 'validation', unrelated: 1 } },
+    })
+    const w = mount(NodeInspector, {
+      props: { node: node({ id: 'gate', status: 'done' }), events, runId: 'run-1' },
+    })
+    await new Promise(r => setTimeout(r, 0))
+
+    const values = w.findAll('.ni-panel__update-value')
+    expect(values).toHaveLength(2) // contracts/stage 都从 state 补显
+    expect(values[0].text()).toBe('["c-1"]')
+    expect(values[1].text()).toBe('"validation"')
+    // 每个补显值都带"当前值（非事件当时值）"标注
+    const notes = w.findAll('.ni-panel__update-note')
+    expect(notes).toHaveLength(2)
+    expect(notes[0].text()).toContain('runcenter.inspector.currentValue')
+
+    // getRun 失败 → 静默降级：不显示值列、不炸面板
+    rest.getRun.mockRejectedValueOnce(new Error('detail endpoint down'))
+    const w2 = mount(NodeInspector, {
+      props: { node: node({ id: 'gate', status: 'done' }), events, runId: 'run-1' },
+    })
+    await new Promise(r => setTimeout(r, 0))
+    expect(w2.findAll('.ni-panel__update-value')).toHaveLength(0)
+    expect(w2.find('.ni-panel__update').text()).toContain('contracts')
   })
 
   it('failed 节点：人类可读原因 + 建议动作 + 重跑按钮（fork → start 成功提示新 runId）', async () => {

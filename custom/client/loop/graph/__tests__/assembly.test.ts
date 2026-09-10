@@ -469,6 +469,67 @@ describe('graph socket namespace', () => {
     // 订阅回放（graph:history）在连接时发出
     expect((rooms.get('socket') ?? []).some(e => e.event === 'graph:history')).toBe(true)
   })
+
+  // P3 台账（前端去重的服务端前提）：实时 graph:event 补挂 eid（= 事件日志 append
+  // 生成的 `<runId>-<seq>`）——首连双发场景（history 50 条 ∩ 实时流）前端按 eid 去重，
+  // 要求两份拷贝携带同一 id。
+  it('attaches eid to live graph:event payloads (matches event log eids)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+
+    const rooms = new Map<string, Array<{ event: string; payload: unknown }>>()
+    const io: SocketIOLike = {
+      of: () => ({
+        on: (_e, listener) => {
+          listener({
+            on: (event, cb) => {
+              if (event === 'subscribe') (cb as (runId: string) => void)('run-1')
+            },
+            join: () => {}, leave: () => {},
+            emit: (event, payload) => {
+              const list = rooms.get('socket') ?? []
+              list.push({ event, payload })
+              rooms.set('socket', list)
+            },
+          })
+        },
+        to: (room: string) => ({
+          emit: (event, payload) => {
+            const list = rooms.get(room) ?? []
+            list.push({ event, payload })
+            rooms.set(room, list)
+          },
+        }),
+      }),
+    }
+
+    setupGraphSocketNamespace(io, service, eventLog)
+
+    service.registerGraph(new GraphBuilder('g', 'G')
+      .addChannel('x', { reducer: reducers.overwrite(), default: 0 })
+      .addNode(fnNode('a', async () => ({ update: { x: 1 }, end: true }))).setEntry('a').build())
+    const { runId } = await service.startRun('g')
+
+    // 双微任务链 flush（实现与 graph-socket 注释对齐）+ 宏任务兜底
+    await new Promise(r => setImmediate(r))
+    await new Promise(r => setTimeout(r, 0))
+
+    const logged = await eventLog.query(runId)
+    expect(logged.length).toBeGreaterThan(0)
+    expect(logged.every(e => typeof e.eid === 'string' && e.eid.length > 0)).toBe(true)
+
+    const runRoom = rooms.get(`run:${runId}`) ?? []
+    expect(runRoom.length).toBe(logged.length)
+    const loggedEids = new Set(logged.map(e => e.eid))
+    for (const msg of runRoom) {
+      const payload = msg.payload as { eid?: unknown }
+      expect(typeof payload.eid).toBe('string')
+      expect(loggedEids.has(payload.eid as string)).toBe(true) // 实时 eid = 日志 eid
+    }
+    // 同一 run 的实时事件 eid 互不相同（同 tick 多事件不串号）
+    const eids = runRoom.map(m => (m.payload as { eid: string }).eid)
+    expect(new Set(eids).size).toBe(eids.length)
+  })
 })
 
 // ---------------------------------------------------------------------------

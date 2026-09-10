@@ -105,19 +105,42 @@ describe('useRunCenterStore — 列表获取与订阅', () => {
     vi.clearAllMocks()
   })
 
-  it('fetchRuns 拉取 REST 列表并为每个 run 发一次 subscribe', async () => {
+  // P3 台账 #2（批量订阅）：fetchRuns 不再全量订阅——订阅域收敛为"可见页"，
+  // 由视图经 syncVisibleRunIds 驱动（翻页 unsubscribe 旧页）
+  it('fetchRuns 拉取 REST 列表但不自动订阅（订阅域 = 可见页）', async () => {
     rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2', status: 'completed' })])
     const store = useRunCenterStore()
     await store.fetchRuns()
     expect(store.runs.map(r => r.runId)).toEqual(['run-1', 'run-2'])
+    expect(sock().subscribedRooms()).toEqual([])
+  })
+
+  it('syncVisibleRunIds 只订阅可见页；翻页 unsubscribe 旧页', async () => {
+    rest.listRuns.mockResolvedValue([
+      item({ runId: 'run-1' }), item({ runId: 'run-2' }), item({ runId: 'run-3' }),
+    ])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    store.syncVisibleRunIds(['run-1', 'run-2'])
     expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2'])
+
+    // 翻页：页 2 只剩 run-3 → 旧页 unsubscribe，新页 subscribe
+    store.syncVisibleRunIds(['run-3'])
+    expect(sock().emitted.filter(e => e.event === 'unsubscribe').map(e => e.payload)).toEqual(['run-1', 'run-2'])
+    expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2', 'run-3'])
+    // 重入：同页重复 sync 不重发 subscribe
+    store.syncVisibleRunIds(['run-3'])
+    expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2', 'run-3'])
   })
 
   it('订阅去重：重复 fetchRuns（连接未断）不重复发 subscribe', async () => {
     rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
     const store = useRunCenterStore()
     await store.fetchRuns()
+    store.syncVisibleRunIds(['run-1'])
     await store.fetchRuns()
+    store.syncVisibleRunIds(['run-1'])
     expect(sock().subscribedRooms()).toEqual(['run-1'])
   })
 
@@ -249,21 +272,29 @@ describe('useRunCenterStore — 断线重连 + resubscribe 去重', () => {
     vi.clearAllMocks()
   })
 
-  it('重连后对全部已订阅 run 重新 subscribe；事件监听器不重复注册', async () => {
+  // P3 台账 #1 回归（首连双发）：socket 未连接时订阅 emit 由 socket.io 缓冲，
+  // 'connect' 后自动送达一次——connect 回调若再重发，服务端会对同一房间重放
+  // graph:history（首连双发）。修复后：首连跳过重发，仅断线重连才重发。
+  it('首连不重发 subscribe（回归：首连双发已修）；断线重连才重发', async () => {
+    // 预置未连接 socket（模拟真实连接时序：订阅 emit 先于连接建立）
+    fakeSocket.current = new FakeGraphSocket()
+    fakeSocket.current.connected = false
+
     rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2' })])
     const store = useRunCenterStore()
     await store.fetchRuns()
+    store.syncVisibleRunIds(['run-1', 'run-2'])
     expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2'])
 
-    // 初始连接（connect 回调首次触发：集合已含全部 id → 幂等重发，join 房间幂等）
+    // 首连：缓冲的 subscribe 自动送达，回调不再重发（修复前此处双发）
     sock().serverEmit('connect')
-    expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2', 'run-1', 'run-2'])
+    expect(store.connection).toBe('connected')
+    expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2'])
 
-    // 断线 → 重连：服务端房间丢失，connect 回调重发 subscribe
+    // 断线 → 重连：服务端房间可能已丢，connect 回调重发 subscribe
     sock().serverEmit('disconnect')
     expect(store.connection).toBe('disconnected')
     sock().serverEmit('connect')
-    expect(store.connection).toBe('connected')
     expect(sock().subscribedRooms().slice(-2)).toEqual(['run-1', 'run-2'])
 
     // 关键去重断言：graph:event 监听器全程只注册一次（对照 loop store 叠加缺陷）
@@ -279,10 +310,12 @@ describe('useRunCenterStore — 断线重连 + resubscribe 去重', () => {
     rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
     const store = useRunCenterStore()
     await store.fetchRuns()
+    store.syncVisibleRunIds(['run-1'])
     sock().serverEmit('disconnect')
     sock().serverEmit('connect') // 重连回调已重发 subscribe
     const before = sock().subscribedRooms().length
     await store.fetchRuns()
+    store.syncVisibleRunIds(['run-1'])
     expect(sock().subscribedRooms().length).toBe(before) // 集合内已存在，不重发
   })
 
@@ -290,15 +323,73 @@ describe('useRunCenterStore — 断线重连 + resubscribe 去重', () => {
     rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
     const store = useRunCenterStore()
     await store.fetchRuns()
+    store.syncVisibleRunIds(['run-1'])
     const s = sock()
     store.disconnect()
     expect(s.connected).toBe(false)
     expect(store.connection).toBe('disconnected')
     // 重新 fetchRuns 建立全新 socket（旧实例不再复用）
-    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
     await store.fetchRuns()
     expect(sock()).not.toBe(s)
     expect(sock().connected).toBe(true)
+  })
+})
+
+describe('useRunCenterStore — eid 去重（P3 台账 #1）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+  })
+
+  it('history 与实时双发同一 eid 只投影一次（首连双发主场景）', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    const eid = 'run-1-7'
+    sock().serverEmit('graph:history', [
+      { runId: 'run-1', graphId: 'loop-loop1', kind: 'interrupt.raised', ts: 1700000000000, eid, payload: { interruptId: 'approval:c1@1' } },
+    ])
+    // 实时流同事件（socket 词汇 + 同 eid）：历史与实时重叠窗口的双发拷贝
+    sock().serverEmit('graph:event', ge('graph.interrupt', 'run-1', { interruptId: 'approval:c1@1', eid, ts: '2026-09-10T00:02:00Z' }))
+
+    const run = store.runs.find(r => r.runId === 'run-1')!
+    expect(run.events).toHaveLength(1)
+    expect(run.status).toBe('awaiting-input')
+    expect(run.pendingInterruptId).toBe('approval:c1@1')
+  })
+
+  it('缺 eid 的重复事件回退 type+ts+nodeId 复合键去重；不同 ts 不误伤', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    const dup = { type: 'graph.node-complete', threadId: 'run-1', nodeId: 'gate', ts: '2026-09-10T00:01:00Z' }
+    sock().serverEmit('graph:event', dup)
+    sock().serverEmit('graph:event', { ...dup }) // 同复合键 → 丢弃
+    sock().serverEmit('graph:event', { ...dup, ts: '2026-09-10T00:01:01Z' }) // 不同 ts → 保留
+
+    expect(store.runs[0].events).toHaveLength(2)
+  })
+
+  it('去重键按 run 隔离；大量事件后重放末条仍被复合键去重', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    sock().serverEmit('graph:event', ge('graph.completed', 'run-1', { eid: 'run-1-9', ts: '2026-09-10T00:09:00Z' }))
+    sock().serverEmit('graph:event', ge('graph.completed', 'run-2', { eid: 'run-1-9', ts: '2026-09-10T00:09:00Z' }))
+    expect(store.runs.find(r => r.runId === 'run-1')!.events).toHaveLength(1)
+    expect(store.runs.find(r => r.runId === 'run-2')!.events).toHaveLength(1) // 同 eid 不同 run 不串
+
+    // 大量事件后（超出 seen 上限）重放最新事件仍被 eid 去重
+    for (let i = 0; i < 150; i++) {
+      sock().serverEmit('graph:event', ge('cost.recorded', 'run-1', { totalCost: i, ts: `2026-09-10T01:${String(Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}Z` }))
+    }
+    const before = store.runs.find(r => r.runId === 'run-1')!.events.length
+    sock().serverEmit('graph:event', ge('cost.recorded', 'run-1', { totalCost: 149, ts: '2026-09-10T01:02:29Z' }))
+    expect(store.runs.find(r => r.runId === 'run-1')!.events.length).toBe(before)
   })
 })
 

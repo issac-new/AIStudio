@@ -23,6 +23,8 @@ export interface GraphEventLike {
   type: string
   /** 日志词汇的事件名（interrupt.raised 等）——graph:history 载体；与 type 二选一 */
   kind?: string
+  /** 事件幂等 id（P3 台账）：`<runId>-<seq>`，history 与实时流同源；store 按 eid 去重 */
+  eid?: string
   graphId?: string
   /** 即 runId（服务端以 threadId 为 run 房间键） */
   threadId?: string

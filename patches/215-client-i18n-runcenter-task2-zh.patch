@@ -1,0 +1,22 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -716,6 +716,7 @@
+       reject: '拒绝',
+       rejectReasonPlaceholder: '拒绝必填原因…',
+       rejectReasonRequired: '请填写拒绝原因',
++      noIdentity: '无法获取当前用户身份，无法完成指定审批人（specified）匹配',
+     },
+     inbox: {
+       pending: '待处理',
+@@ -745,7 +746,11 @@
+       rerunDone: '已创建重跑 run',
+       events: '关联事件',
+       noEvents: '暂无关联事件',
++      currentValue: '当前值（非事件当时值）',
+     },
++    keyboard: {
++      hint: 'j/k 移动 · Enter 详情 · r 回放 · a 审批',
++    },
+   },
+ 
+   agentManager: {

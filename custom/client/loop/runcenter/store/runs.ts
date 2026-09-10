@@ -8,7 +8,13 @@
 // ensureSocket 中只注册一次（按 threadId 路由，绝不按 run 叠加监听器）；
 // 订阅集合 subscribed 记录已订阅 runId——连接期内不重发 subscribe；
 // 断线重连（'connect' 回调）时对集合内全部 runId 重发（服务端 join 幂等，
-// 房间可能已随服务端重启丢失）。
+// 房间可能已随服务端重启丢失）；首连不重发（订阅 emit 已由 socket.io 缓冲，
+// 连接即送达，重发会让服务端重放 graph:history——首连双发）。
+//
+// overlay[P3]（台账 #1/#2）：applyEvent 按 eid 去重（服务端 socket 层为实时事件
+// 补挂与 history 同源的 `<runId>-<seq>`；缺 eid 的旧事件回退 type+ts+nodeId 复合键），
+// history 回放 ∩ 实时流的首连双发拷贝不再重复投影；订阅域收敛为"可见页"——
+// 视图经 syncVisibleRunIds 驱动，翻页 unsubscribe 旧页（1000 run 台账量级项）。
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -19,6 +25,9 @@ import { connectGraph, disconnectGraph, runRest, type GraphSocketLike } from '..
 
 /** 单 run 事件缓冲上限（订阅回放 50 条 + 增量余量） */
 const EVENT_BUFFER_LIMIT = 100
+
+/** 单 run 去重键集上限（有界防泄漏；超出裁最旧——重放极旧事件可能再次入缓冲，可接受） */
+const SEEN_KEY_LIMIT = 400
 
 /** 状态承载事件 → run 状态（双词汇：socket type + 日志 kind，对照 EVENT_KIND_MAP；
  *  graph.forked / graph.step-start 日志同名落盘） */
@@ -56,6 +65,10 @@ export const useRunCenterStore = defineStore('runCenter', () => {
   // ── socket（非响应式内部态）──
   let socket: GraphSocketLike | null = null
   const subscribed = new Set<string>()
+  /** 首连标记：ensureSocket 时 socket 已连接（复用单例）视为首连已发生过 */
+  let sawConnect = false
+  /** runId → 已见事件去重键集（Set 迭代序 = 插入序，超限裁最旧） */
+  const seenKeys = new Map<string, Set<string>>()
 
   // ── getters ──
   /** 待我处理（awaiting-input）置顶 → 最后活动倒序 */
@@ -92,6 +105,34 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     run.pendingInterruptId = latestOpenInterrupt(run.events)
   }
 
+  // ── 内部：事件去重（P3 台账 #1）──
+  /** 去重键：eid 优先（服务端 socket 层补挂，与 history 同源）；缺 eid 回退复合键 */
+  function dedupeKeyOf(e: GraphEventLike): string {
+    if (typeof e.eid === 'string' && e.eid) return `eid:${e.eid}`
+    const type = typeof e.type === 'string' && e.type ? e.type : (e.kind ?? '')
+    return `k:${type}|${String(e.ts)}|${typeof e.nodeId === 'string' ? e.nodeId : ''}`
+  }
+
+  /** 首次见到返回 false 并登记；重复返回 true。键集按 run 隔离、有界。 */
+  function markSeenOnce(runId: string, key: string): boolean {
+    let set = seenKeys.get(runId)
+    if (!set) {
+      set = new Set()
+      seenKeys.set(runId, set)
+    }
+    if (set.has(key)) return true
+    set.add(key)
+    if (set.size > SEEN_KEY_LIMIT) {
+      const drop = set.size - SEEN_KEY_LIMIT
+      let dropped = 0
+      for (const k of set) {
+        set.delete(k)
+        if (++dropped >= drop) break
+      }
+    }
+    return false
+  }
+
   // ── 内部：事件增量（graph:event 与 graph:history 同一条投影路径）──
   function applyEvent(e: GraphEventLike): void {
     // 双词汇 run 字段：socket GraphEvent.threadId ∪ 日志 GraphLogEvent.runId
@@ -99,6 +140,8 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     const runId = typeof e.runId === 'string' && e.runId ? e.runId
       : typeof e.threadId === 'string' && e.threadId ? e.threadId : undefined
     if (!runId) return
+    // eid 去重：history 回放 ∩ 实时流的首连双发拷贝只投影一次
+    if (markSeenOnce(runId, dedupeKeyOf(e))) return
     let run = runs.value.find(r => r.runId === runId)
     if (!run) {
       // 新 run 现场上线（graph.started / graph.forked 先于 REST 列表可见）
@@ -124,9 +167,17 @@ export const useRunCenterStore = defineStore('runCenter', () => {
   function ensureSocket(): void {
     if (socket) return
     socket = connectGraph()
+    // 复用已连接的单例时首连已发生过——重连回调必须照常重发订阅
+    sawConnect = socket.connected
     // 监听器只注册一次——按 threadId 路由，杜绝 loop store 曾出现的监听器叠加
     socket.on('connect', () => {
       connection.value = 'connected'
+      if (!sawConnect) {
+        // 首连：订阅 emit 在 subscribeRun 时已发出（未连接则由 socket.io 缓冲，
+        // 连接即送达一次）——重发会让服务端对同一房间重放 graph:history（首连双发）
+        sawConnect = true
+        return
+      }
       // 断线重连：服务端房间可能已丢，对全部已订阅 runId 重发 subscribe（join 幂等）
       for (const id of subscribed) socket!.emit('subscribe', id)
     })
@@ -151,10 +202,29 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     socket.emit('subscribe', runId)
   }
 
+  // ── 批量订阅（P3 台账 #2）：订阅域 = 可见页 ──
+  /** 视图翻页/过滤后调用：订阅新可见页，退出不再可见的页（unsubscribe 旧页）。
+   *  事件驱动的现场新 run 仍走 applyEvent 内的即订阅（安全网，不与可见页冲突）。 */
+  function syncVisibleRunIds(runIds: string[]): void {
+    ensureSocket()
+    if (!socket) return
+    const want = new Set(runIds)
+    for (const id of [...subscribed]) {
+      if (!want.has(id)) {
+        subscribed.delete(id)
+        socket.emit('unsubscribe', id)
+      }
+    }
+    for (const id of runIds) subscribeRun(id)
+  }
+
   // ── actions ──
-  /** REST 拉全量列表并合并（保留既有 run 的事件缓冲与投影）；随后订阅全部已知 run */
+  /** REST 拉全量列表并合并（保留既有 run 的事件缓冲与投影）。
+   *  只建连不订阅（P3 台账 #2）：连接态徽标与重连重发机制在此武装，
+   *  订阅域由 syncVisibleRunIds（视图可见页）唯一驱动。 */
   async function fetchRuns(): Promise<void> {
     loading.value = true
+    ensureSocket()
     try {
       const list = await runRest.listRuns()
       const next: RunSummary[] = []
@@ -173,7 +243,8 @@ export const useRunCenterStore = defineStore('runCenter', () => {
       }
       runs.value = next
       error.value = null
-      for (const r of runs.value) subscribeRun(r.runId)
+      // P3 台账 #2：fetchRuns 只做数据合并，不再全量订阅——订阅域由
+      // syncVisibleRunIds（视图可见页）驱动
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -229,7 +300,9 @@ export const useRunCenterStore = defineStore('runCenter', () => {
   function disconnect(): void {
     disconnectGraph() // 关真实连接（module 级单例归 null）
     socket = null
+    sawConnect = false
     subscribed.clear()
+    // 去重键集不清空：重连重放的 history 仍按 eid 丢弃（有界，见 SEEN_KEY_LIMIT）
     connection.value = 'disconnected'
   }
 
@@ -243,7 +316,7 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     awaitingRuns, pendingInboxRuns, archivedInboxRuns,
     // actions
     fetchRuns, selectRun, resumeRun, forkRun, fetchReplay, disconnect,
-    archiveRun, unarchiveRun,
+    archiveRun, unarchiveRun, syncVisibleRunIds,
     // 测试与调试暴露（不发生产语义）
     applyEvent,
   }
