@@ -1,0 +1,31 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 013bfde8..ac07206b 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -753,6 +753,26 @@ export default {
+     },
+   },
+ 
++  ia2: {
++    brand: '工作台',
++    nav: {
++      overview: '总览',
++      orchestrate: '编排',
++      runs: '运行',
++      inbox: '介入',
++      tasks: '工作项',
++      comms: '沟通',
++    },
++    placeholder: {
++      overview: '总览',
++      overviewDesc: '角色仪表盘建设中：活跃运行、等你决策、今日日程与关键指标将在此聚合。',
++      orchestrate: '编排',
++      orchestrateDesc: '模板库与运行图建设中：五阶段模板、Spec 查看与一键实例化将在此提供。',
++      inbox: '介入',
++      inboxDesc: '介入收件箱建设中：审批、阻塞、告警与待办将在此聚合，按等待时长分诊。',
++    },
++  },
++
+   agentManager: {
+     title: 'Agent 管理',
+     subtitle: '统一发现和管理这台设备上的 Agent。',

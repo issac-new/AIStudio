@@ -1,0 +1,108 @@
+// overlay/custom/client/ia2/styles/ia2.scss
+// 六区域 IA 样式 · Pure Ink（仅用 CSS 变量，无自定义色值）。
+// 选中态语言与 cockpit 一致：左侧 3px 色条 + 浅底；
+// 间距 8 倍数；圆角收敛 4 档令牌（--radius-*，见 cockpit.scss :root）。
+
+.ia-shell {
+  display: flex;
+  height: calc(100 * var(--vh, 1vh));
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+// ── 左侧窄栏一级导航 ──
+.ia-nav {
+  flex: 0 0 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 8px;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.ia-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-standard);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-hover, var(--bg-card));
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color, var(--text-primary));
+    outline-offset: -2px;
+  }
+}
+
+.ia-nav__item--active {
+  border-left-color: var(--primary-color, var(--text-primary));
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.ia-nav__icon {
+  flex: 0 0 16px;
+}
+
+.ia-nav__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ── 区域主体 ──
+.ia-shell__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.ia-area {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+// 占位区（Task 4/5/6 实装前的骨架）
+.ia-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  text-align: center;
+}
+
+.ia-placeholder__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ia-placeholder__desc {
+  max-width: 480px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}

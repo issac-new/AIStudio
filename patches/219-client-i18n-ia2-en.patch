@@ -1,0 +1,31 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index a08ee854..13db0618 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -755,6 +755,26 @@ export default {
+     },
+   },
+ 
++  ia2: {
++    brand: 'Workspace',
++    nav: {
++      overview: 'Overview',
++      orchestrate: 'Orchestrate',
++      runs: 'Runs',
++      inbox: 'Inbox',
++      tasks: 'Work Items',
++      comms: 'Comms',
++    },
++    placeholder: {
++      overview: 'Overview',
++      overviewDesc: 'Role dashboard under construction: active runs, decisions due, the agenda for today and key metrics will aggregate here.',
++      orchestrate: 'Orchestrate',
++      orchestrateDesc: 'Template library under construction: five-stage templates, spec viewing and one-click instantiation will live here.',
++      inbox: 'Inbox',
++      inboxDesc: 'Intervention inbox under construction: approvals, blockers, alerts and reminders will aggregate here, triaged by wait time.',
++    },
++  },
++
+   agentManager: {
+     title: 'Agent Manager',
+     subtitle: 'Discover and manage the Agents available on this device.',

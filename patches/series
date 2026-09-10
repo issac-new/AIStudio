@@ -274,3 +274,8 @@
 # P3 Task 2: 前端台账清偿——审批身份/检查器当前值/键盘可达 i18n
 215-client-i18n-runcenter-task2-zh.patch
 216-client-i18n-runcenter-task2-en.patch
+# P3 Task 3: 六区域导航骨架——/app 路由树(dynamic 注册,零 router patch)+侧栏新 IA 入口+
+# ia2 i18n。登录默认落 /app 经 overlay 兼容守卫(custom/client/ia2/guard.ts)承接,不 patch router
+217-client-appsidebar-ia2-entry.patch
+218-client-i18n-ia2-zh.patch
+219-client-i18n-ia2-en.patch

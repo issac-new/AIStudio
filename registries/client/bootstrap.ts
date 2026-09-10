@@ -31,6 +31,14 @@ export async function bootstrapClient(app: App): Promise<void> {
     const { registerGraphEngineering } = await import('../../custom/client/loop/graph')
     await registerGraphEngineering(app)
   }
+  // P3 Task 3：六区域新 IA（/app 路由树 + 兼容重定向守卫）。
+  // 守卫依赖 router 实例，与 loop 的 addRoute 同样必须在 mount 前完成。
+  // 无条件注册：RETRO=1 时新 IA 路由仍要可达（侧栏双入口），只是守卫放行旧落点。
+  {
+    const { registerIa2, registerIaCompatGuard } = await import('../../custom/client/ia2')
+    await registerIa2(app)
+    registerIaCompatGuard(router)
+  }
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
   // 实际翻译是直接写在上游 locale 文件里的(现经 patch 044-053 注入)。无需运行时注册。
 
