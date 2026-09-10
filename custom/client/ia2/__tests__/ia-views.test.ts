@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/ia-views.test.ts
 // P3 Task 3 — 区域壳冒烟：RunsView 内嵌 RunCenterView、TasksView 内嵌 SwarmKanban、
-// CommsView 承载 matrix-chat 子路由、三个占位区渲染占位文案。
+// CommsView 承载 matrix-chat 子路由。
 // 重组件（runcenter/kanban/matrix-chat）一律 vi.mock 成桩，只验证"壳→内嵌"接线。
+// 占位区用例随实装逐批退场（Overview Task 4 / Inbox Task 5 / Orchestrate Task 6，
+// 装配冒烟见各自组件测试）；后续占位区实装时同步摘除对应断言。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -27,7 +29,6 @@ vi.mock('@/custom/matrix-chat/views/MatrixChatView.vue', () => ({
 import RunsView from '../views/RunsView.vue'
 import TasksView from '../views/TasksView.vue'
 import CommsView from '../views/CommsView.vue'
-import OrchestrateView from '../views/OrchestrateView.vue'
 import { buildIaRoutes } from '../routes'
 
 beforeEach(() => {
@@ -72,14 +73,3 @@ describe('区域壳内嵌接线', () => {
   })
 })
 
-describe('占位区域（Task 5/6 实装前的可用骨架）', () => {
-  // OverviewView 已于 Task 4 实装、InboxView 已于 Task 5 实装（装配冒烟见各自组件测试）
-  it.each([
-    [OrchestrateView, 'ia2.placeholder.orchestrate'],
-  ])('%# 占位渲染标题与说明（i18n key 直返 mock）', (view, key) => {
-    const wrapper = mount(view as never)
-    const text = wrapper.text()
-    expect(text).toContain(key)
-    expect(wrapper.find('.ia-placeholder').exists()).toBe(true)
-  })
-})
