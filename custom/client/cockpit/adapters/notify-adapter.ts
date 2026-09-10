@@ -37,7 +37,7 @@ export function fromMatrixRoom(room: any, getRoomUnreadCount: (r: any) => number
     preview: sender ? `${shorten(sender)}: ${preview}` : preview,
     ts,
     count,
-    routeTarget: { name: 'hermes.matrixChatRoom', params: { roomId: room.roomId } },
+    routeTarget: { name: 'ia2.commsRoom', params: { roomId: room.roomId } },   // Task 8 fix
   }
 }
 
@@ -115,7 +115,7 @@ export function fromReminder(
     preview: stage === 15 ? `15 分钟后提醒 · ${todo.date} ${timeStr}` : `5 分钟后提醒 · ${todo.date} ${timeStr}`,
     ts: Date.now(),
     count: 1,
-    routeTarget: { name: 'hermes.cockpit' },
+    routeTarget: { path: '/app' },   // Task 8 fix: cockpit 已删，指新 IA 总览
   }
 }
 

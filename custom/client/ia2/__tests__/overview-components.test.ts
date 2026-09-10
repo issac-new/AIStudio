@@ -281,4 +281,19 @@ describe('OverviewView — 首屏装配', () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('.schedule-modal-stub').exists()).toBe(true)
   })
+
+  it('状态分布行点击 → /app/tasks?status=:（装配级：emit payload 必须进路由 query，Task 8 修复回归）', async () => {
+    workspaceStubs.state.tasks = [
+      { id: 't1', title: 'a', status: 'blocked', priority: 0 },
+      { id: 't2', title: 'b', status: 'running', priority: 1 },
+    ]
+    const { wrapper, router } = await mountView()
+    const rows = wrapper.findAll('.ia-status-dist__row')
+    // 主链序：running 在 blocked 前（STATUS_FLOW）
+    expect(rows.map(r => r.attributes('data-status'))).toEqual(['running', 'blocked'])
+    await rows[1].trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/app/tasks')
+    expect(router.currentRoute.value.query).toEqual({ status: 'blocked' })
+  })
 })

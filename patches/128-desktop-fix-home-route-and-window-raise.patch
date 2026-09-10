@@ -7,10 +7,10 @@ index 271c4166..6c20abd0 100644
  
  function mainRouteUrl(): string | null {
 -  return webUiHashUrl('/hermes/chat')
-+  // overlay[fix-home-route]: load /hermes/cockpit (AI协作中心) as the desktop
-+  // home route. /hermes/chat is now a child of /hermes/cockpit (patch 071) and
-+  // is no longer a top-level route; loading it directly produced a blank page.
-+  return webUiHashUrl('/hermes/cockpit')
++  // overlay[ia2]: desktop home route loads the new IA overview (Task 8: the old
++  // /hermes/cockpit route body was retired; landing /app directly keeps the
++  // first window on a live route without relying on the compat guard).
++  return webUiHashUrl('/app')
  }
  
  function petRouteUrl(): string | null {

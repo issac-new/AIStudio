@@ -43,10 +43,10 @@ index 92c2eb0..a002583 100644
 -  clearApiKey();
 -} else if (hasApiKey()) {
 -  router.replace(resolveLoginRedirect(route.query.redirect));
-+// overlay: 默认登录后跳 cockpit（而非上游的 /hermes/chat）；保留 query.redirect 保真能力。
++// overlay[ia2]: 默认登录后跳新 IA 总览（Task 8 fix: 原落 cockpit，路由已删）；保留 query.redirect 保真。
 +function loginRedirectTarget(): string {
 +  const resolved = resolveLoginRedirect(route.query.redirect);
-+  return resolved === '/hermes/chat' ? '/hermes/cockpit' : resolved;
++  return resolved === '/hermes/chat' ? '/app' : resolved;
  }
  
 -onMounted(async () => {

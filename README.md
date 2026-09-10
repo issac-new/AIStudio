@@ -291,8 +291,9 @@ entry.mts
 | kanbanEnhancements | `VITE_CUSTOM_KANBAN_ENHANCEMENTS=false` | 开 |
 | branding | `VITE_CUSTOM_BRANDING=false` | 开 |
 | extendedI18n | `VITE_CUSTOM_EXTENDED_I18N=false` | 开 |
-| cockpit | `VITE_CUSTOM_COCKPIT=false` | 开 |
 | loopEngineering | `VITE_CUSTOM_LOOP=false` | 开 |
+
+> 注：`cockpit`（`VITE_CUSTOM_COCKPIT`）开关随 P3 Task 8 cockpit 退役一并移除（`/hermes/cockpit` 路由本体已删除，新 IA `/app` 为唯一一级界面）；`VITE_IA_RETRO=1` 仅保留旧 `/hermes/loop*` 深链不强制迁移的回退语义。
 
 ### 4. 完整构建流水线（`npm run build:full`）
 

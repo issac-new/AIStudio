@@ -34,7 +34,8 @@ export function parseTenant(tenant: string | null | undefined): ParsedTenant | n
       label: name,
       raw: tenant,
       routeTarget: {
-        name: prefix === 'matrix' ? 'hermes.matrixChatRoom' : 'hermes.groupChatRoom',
+        // Task 8 fix: matrix 房间 → /app/comms/room/:roomId（hermes.matrixChatRoom 随 cockpit 退役删除；group 顶层路由仍在）
+        name: prefix === 'matrix' ? 'ia2.commsRoom' : 'hermes.groupChatRoom',
         params: { roomId: id },
       },
     }

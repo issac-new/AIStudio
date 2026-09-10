@@ -83,6 +83,9 @@ const metricsLoading = computed(() => runsStore.metricsLoading && !runsStore.met
 const goRuns = () => void router.push('/app/runs')
 const goInbox = () => void router.push('/app/inbox')
 const goTasks = () => void router.push('/app/tasks')
+/** 状态分布行点击 → 工作项区带状态预选（TasksView.applyQuery 词表校验，非法忽略） */
+const goTaskByStatus = (status: string) =>
+  void router.push({ path: '/app/tasks', query: { status } })
 const goOrchestrate = () => void router.push('/app/orchestrate')
 const openSchedule = () => workspace.openSchedule()
 
@@ -133,7 +136,7 @@ function planTimeLabel(at: number | null): string {
 
       <!-- 观察者聚合最小版（P3 Task 8）：TaskLifecycleView 生命周期漏斗的等价收编
            ——跨任务状态分布条形图（useTaskLifecycle.statusCounts，纯前端聚合零新 API） -->
-      <StatusDistributionCard :tasks="workspace.tasks" @open="goTasks" />
+      <StatusDistributionCard :tasks="workspace.tasks" @open="goTaskByStatus" />
 
       <section class="ia-plan" data-testid="ia-plan">
         <div class="ia-plan__head">{{ t('ia2.overview.todayPlan') }}</div>
