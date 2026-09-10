@@ -1,0 +1,84 @@
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -586,6 +586,81 @@
+     granularity: 'Event density',
+   },
+ 
++  runcenter: {
++    title: 'Run Center',
++    toolbar: {
++      searchPlaceholder: 'Search runs / graph ids…',
++      refresh: 'Refresh',
++      all: 'All',
++    },
++    connection: {
++      connected: 'Live',
++      disconnected: 'Offline',
++    },
++    table: {
++      run: 'Run',
++      status: 'Status',
++      stage: 'Stage',
++      iteration: 'Iter',
++      lastActivity: 'Last Activity',
++      cost: 'Cost',
++      actions: 'Actions',
++      empty: 'No runs match the current filters',
++    },
++    status: {
++      idle: 'Idle',
++      running: 'Running',
++      paused: 'Paused',
++      awaitingInput: 'Awaiting Input',
++      completed: 'Completed',
++      failed: 'Failed',
++      unknown: 'Unknown',
++    },
++    stage: {
++      discovery: 'Discovery',
++      handoff: 'Handoff',
++      validation: 'Validation',
++      persistence: 'Persistence',
++      gate: 'Gate',
++      stop: 'Stop Check',
++    },
++    actions: {
++      approve: 'Review',
++      peek: 'Peek',
++      replay: 'Replay',
++      fork: 'Fork',
++      detail: 'Detail',
++    },
++    empty: {
++      title: 'No runs yet',
++      step1Title: 'Pick a template',
++      step1Desc: 'Choose a scenario template in Loop Engineering — goal and guardrails pre-configured.',
++      step2Title: 'Set the cadence',
++      step2Desc: 'Configure schedule (cron / webhook / manual) and budget guardrails.',
++      step3Title: 'Run it',
++      step3Desc: 'Runs appear here in real time; the ones waiting for your input stay on top.',
++      cta: 'Create a loop',
++    },
++    time: {
++      justNow: 'just now',
++      minutesAgo: '{n}m ago',
++      hoursAgo: '{n}h ago',
++      daysAgo: '{n}d ago',
++    },
++    pager: {
++      prev: 'Prev',
++      next: 'Next',
++      page: 'Page {page} / {pages}',
++    },
++    replay: {
++      title: 'Event Replay',
++      count: '{n} events',
++      loading: 'Loading…',
++      empty: 'No events',
++      close: 'Close',
++    },
++  },
++
+   agentManager: {
+     title: 'Agent Manager',
+     subtitle: 'Discover and manage the Agents available on this device.',

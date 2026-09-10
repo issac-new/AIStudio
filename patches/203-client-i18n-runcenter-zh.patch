@@ -1,0 +1,84 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -584,6 +584,81 @@
+     granularity: '事件密度',
+   },
+ 
++  runcenter: {
++    title: '运行中心',
++    toolbar: {
++      searchPlaceholder: '搜索 run / 图 ID…',
++      refresh: '刷新',
++      all: '全部',
++    },
++    connection: {
++      connected: '实时',
++      disconnected: '已断开',
++    },
++    table: {
++      run: 'Run',
++      status: '状态',
++      stage: '业务阶段',
++      iteration: '迭代',
++      lastActivity: '最后活动',
++      cost: '成本',
++      actions: '操作',
++      empty: '没有符合条件的运行',
++    },
++    status: {
++      idle: '空闲',
++      running: '运行中',
++      paused: '已暂停',
++      awaitingInput: '等待输入',
++      completed: '已完成',
++      failed: '已失败',
++      unknown: '未知',
++    },
++    stage: {
++      discovery: '发现',
++      handoff: '交接',
++      validation: '验证',
++      persistence: '持久化',
++      gate: '门禁',
++      stop: '停止检查',
++    },
++    actions: {
++      approve: '查看审批',
++      peek: '查看',
++      replay: '回放',
++      fork: '分叉',
++      detail: '详情',
++    },
++    empty: {
++      title: '还没有任何运行',
++      step1Title: '选模板',
++      step1Desc: '从循环工程挑一个场景模板——目标与护栏都已预配好。',
++      step2Title: '设节奏',
++      step2Desc: '设定调度（cron / webhook / 手动）与预算护栏。',
++      step3Title: '跑起来',
++      step3Desc: '启动循环后 run 会实时出现在这里，等待你输入的排最前。',
++      cta: '去创建循环',
++    },
++    time: {
++      justNow: '刚刚',
++      minutesAgo: '{n} 分钟前',
++      hoursAgo: '{n} 小时前',
++      daysAgo: '{n} 天前',
++    },
++    pager: {
++      prev: '上一页',
++      next: '下一页',
++      page: '第 {page} / {pages} 页',
++    },
++    replay: {
++      title: '事件回放',
++      count: '{n} 条事件',
++      loading: '加载中…',
++      empty: '暂无事件',
++      close: '关闭',
++    },
++  },
++
+   agentManager: {
+     title: 'Agent 管理',
+     subtitle: '统一发现和管理这台设备上的 Agent。',

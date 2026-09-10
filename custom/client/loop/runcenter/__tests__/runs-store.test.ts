@@ -1,0 +1,380 @@
+// overlay/custom/client/loop/runcenter/__tests__/runs-store.test.ts
+// 运行中心 Pinia store 单测：REST 列表合并、socket 订阅去重、事件增量投影、
+// 断线重连 resubscribe、回放/分叉/恢复动作。
+// socket 经 vi.mock('@/custom/loop/runcenter/api') 注入 FakeGraphSocket（结构化形状，
+// 与 socket.io-client 无耦合）。
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+
+// ── FakeGraphSocket：服务端行为模拟（subscribe 房间 + graph:event/graph:history 推送）──
+// vi.hoisted 内定义，供下方 vi.mock 工厂闭包引用（vi.mock 会被提升到 import 之前）。
+/** FakeGraphSocket 的结构类型（类本体定义在 vi.hoisted 内，外层只引用结构） */
+interface FakeGraphSocket {
+  connected: boolean
+  handlers: Map<string, Array<(...args: unknown[]) => void>>
+  emitted: Array<{ event: string; payload: unknown }>
+  on(event: string, cb: (...args: unknown[]) => void): void
+  emit(event: string, ...args: unknown[]): void
+  disconnect(): void
+  /** 测试辅助：模拟服务端推送 */
+  serverEmit(event: string, payload?: unknown): void
+  /** 测试辅助：统计某事件的客户端监听器数（断言不重复注册） */
+  listenerCount(event: string): number
+  /** 测试辅助：subscribe 房间名列表 */
+  subscribedRooms(): string[]
+}
+
+const { FakeGraphSocket, fakeSocket, rest } = vi.hoisted(() => {
+  class FakeGraphSocketImpl implements FakeGraphSocket {
+    connected = true
+    handlers = new Map<string, Array<(...args: unknown[]) => void>>()
+    emitted: Array<{ event: string; payload: unknown }> = []
+
+    on(event: string, cb: (...args: unknown[]) => void): void {
+      const list = this.handlers.get(event) ?? []
+      list.push(cb)
+      this.handlers.set(event, list)
+    }
+    emit(event: string, ...args: unknown[]): void {
+      this.emitted.push({ event, payload: args[0] })
+    }
+    disconnect(): void {
+      this.connected = false
+    }
+    serverEmit(event: string, payload?: unknown): void {
+      for (const cb of this.handlers.get(event) ?? []) cb(payload)
+    }
+    listenerCount(event: string): number {
+      return (this.handlers.get(event) ?? []).length
+    }
+    subscribedRooms(): string[] {
+      return this.emitted.filter(e => e.event === 'subscribe').map(e => String(e.payload))
+    }
+  }
+
+  const state: { current: FakeGraphSocket | null } = { current: null }
+  return {
+    FakeGraphSocket: FakeGraphSocketImpl as new () => FakeGraphSocket,
+    fakeSocket: state,
+    rest: {
+      listRuns: vi.fn(async () => [] as Array<{ runId: string; graphId: string; status: string; updatedAt: string | null }>),
+      getRun: vi.fn(async () => { throw new Error('not implemented in test') }),
+      resumeRun: vi.fn(async () => ({ runId: 'run-1', instance: {} })),
+      forkRun: vi.fn(async () => ({ runId: 'run-1-fork-1', forkedFrom: 'run-1', superStep: 0 })),
+      replay: vi.fn(async () => [] as Array<{ type: string; ts: string }>),
+    },
+  }
+})
+
+vi.mock('@/custom/loop/runcenter/api', () => ({
+  runRest: rest,
+  connectGraph: () => {
+    if (!fakeSocket.current) fakeSocket.current = new FakeGraphSocket()
+    return fakeSocket.current
+  },
+  disconnectGraph: () => {
+    fakeSocket.current?.disconnect()
+    fakeSocket.current = null
+  },
+}))
+
+import { useRunCenterStore } from '../store/runs'
+import type { RunListItem } from '../types'
+
+/** 取当前 FakeGraphSocket（connectGraph 惰性创建后的实例） */
+function sock(): FakeGraphSocket {
+  return fakeSocket.current as FakeGraphSocket
+}
+
+const item = (over: Partial<RunListItem> & { runId: string }): RunListItem => ({
+  graphId: 'loop-loop1',
+  status: 'running',
+  updatedAt: '2026-09-10T00:00:00Z',
+  ...over,
+})
+
+const ge = (type: string, threadId: string, over: Record<string, unknown> = {}) => ({
+  type, graphId: 'loop-loop1', threadId, ts: '2026-09-10T00:01:00Z', ...over,
+})
+
+describe('useRunCenterStore — 列表获取与订阅', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+  })
+
+  it('fetchRuns 拉取 REST 列表并为每个 run 发一次 subscribe', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2', status: 'completed' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    expect(store.runs.map(r => r.runId)).toEqual(['run-1', 'run-2'])
+    expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2'])
+  })
+
+  it('订阅去重：重复 fetchRuns（连接未断）不重复发 subscribe', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    await store.fetchRuns()
+    expect(sock().subscribedRooms()).toEqual(['run-1'])
+  })
+
+  it('REST unknown 状态不覆盖事件驱动的已知状态', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'unknown' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:event', ge('graph.interrupt', 'run-1', { interruptId: 'approval:c1', ts: '2026-09-10T00:02:00Z' }))
+    expect(store.runs[0].status).toBe('awaiting-input')
+
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'unknown', updatedAt: '2026-09-10T00:05:00Z' })])
+    await store.fetchRuns()
+    expect(store.runs[0].status).toBe('awaiting-input')
+  })
+
+  it('REST 权威状态覆盖（同 run 状态变化正常同步，且保留事件缓冲投影）', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'running' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:history', [
+      ge('graph.node-complete', 'run-1', { nodeId: 'handoff', step: 2, ts: '2026-09-10T00:01:00Z' }),
+    ])
+    expect(store.runs[0].stage).toBe('handoff')
+
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'completed', updatedAt: '2026-09-10T00:09:00Z' })])
+    await store.fetchRuns()
+    expect(store.runs[0].status).toBe('completed')
+    expect(store.runs[0].stage).toBe('handoff') // 事件缓冲保留，投影不丢
+  })
+})
+
+describe('useRunCenterStore — socket 事件增量投影', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+  })
+
+  it('graph:event 按 threadId 增量更新 status/stage/迭代/成本/最后活动', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    sock().serverEmit('graph:event', ge('graph.node-start', 'run-1', { nodeId: 'validation', step: 3, ts: '2026-09-10T00:05:00Z' }))
+    sock().serverEmit('graph:event', ge('cost.recorded', 'run-1', { totalCost: 1.5, ts: '2026-09-10T00:06:00Z' }))
+
+    const run = store.runs[0]
+    expect(run.status).toBe('running')
+    expect(run.stage).toBe('validation')
+    expect(run.iteration).toBe(3)
+    expect(run.cost).toBe(1.5)
+    expect(run.lastActivityAt).toBe('2026-09-10T00:06:00Z')
+  })
+
+  it('graph.interrupt → awaiting-input + pendingInterruptId；graph.resume → running + 关闭', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    sock().serverEmit('graph:event', ge('graph.interrupt', 'run-1', { interruptId: 'approval:c1@0', nodeId: 'validation', ts: '2026-09-10T00:02:00Z' }))
+    expect(store.runs[0].status).toBe('awaiting-input')
+    expect(store.runs[0].pendingInterruptId).toBe('approval:c1@0')
+    expect(store.awaitingCount).toBe(1)
+
+    sock().serverEmit('graph:event', ge('graph.resume', 'run-1', { interruptId: 'approval:c1@0', ts: '2026-09-10T00:03:00Z' }))
+    expect(store.runs[0].status).toBe('running')
+    expect(store.runs[0].pendingInterruptId).toBeNull()
+  })
+
+  it('graph.completed/failed → 终态', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:event', ge('graph.completed', 'run-1', { ts: '2026-09-10T00:09:00Z', totalCost: 2 }))
+    sock().serverEmit('graph:event', ge('graph.failed', 'run-2', { ts: '2026-09-10T00:09:00Z', error: 'boom' }))
+    expect(store.runs.find(r => r.runId === 'run-1')?.status).toBe('completed')
+    expect(store.runs.find(r => r.runId === 'run-2')?.status).toBe('failed')
+  })
+
+  it('未知 threadId 的 graph.started 现场新增 run 并即订阅', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    sock().serverEmit('graph:event', ge('graph.started', 'run-new', { graphId: 'loop-loop9', ts: '2026-09-10T00:00:00Z' }))
+    expect(store.runs.map(r => r.runId)).toEqual(['run-1', 'run-new'])
+    expect(store.runs.find(r => r.runId === 'run-new')?.status).toBe('running')
+    expect(store.runs.find(r => r.runId === 'run-new')?.graphId).toBe('loop-loop9')
+    expect(sock().subscribedRooms().slice(-1)).toEqual(['run-new'])
+  })
+
+  it('事件缓冲有界（100 条），投影仍基于缓冲内容', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    for (let i = 0; i < 130; i++) {
+      sock().serverEmit('graph:event', ge('cost.recorded', 'run-1', { totalCost: i, ts: `2026-09-10T00:${String(Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}Z` }))
+    }
+    expect(store.runs[0].events).toHaveLength(100)
+    expect(store.runs[0].cost).toBe(129) // 保留的是最新 100 条
+  })
+
+  it('畸形事件（无 threadId）被安全忽略', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:event', { type: 'graph.started', ts: '2026-09-10T00:00:00Z' })
+    expect(store.runs).toHaveLength(1)
+    expect(store.runs[0].events).toHaveLength(0)
+  })
+
+  it('graph:history 按 threadId 归位到对应 run', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:history', [
+      ge('graph.node-complete', 'run-2', { nodeId: 'gate', step: 1, ts: '2026-09-10T00:01:00Z' }),
+      ge('graph.started', 'run-1', { ts: '2026-09-10T00:00:00Z' }),
+    ])
+    expect(store.runs.find(r => r.runId === 'run-1')?.stage).toBe('discovery')
+    expect(store.runs.find(r => r.runId === 'run-2')?.stage).toBe('gate')
+  })
+})
+
+describe('useRunCenterStore — 断线重连 + resubscribe 去重', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+  })
+
+  it('重连后对全部已订阅 run 重新 subscribe；事件监听器不重复注册', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2'])
+
+    // 初始连接（connect 回调首次触发：集合已含全部 id → 幂等重发，join 房间幂等）
+    sock().serverEmit('connect')
+    expect(sock().subscribedRooms()).toEqual(['run-1', 'run-2', 'run-1', 'run-2'])
+
+    // 断线 → 重连：服务端房间丢失，connect 回调重发 subscribe
+    sock().serverEmit('disconnect')
+    expect(store.connection).toBe('disconnected')
+    sock().serverEmit('connect')
+    expect(store.connection).toBe('connected')
+    expect(sock().subscribedRooms().slice(-2)).toEqual(['run-1', 'run-2'])
+
+    // 关键去重断言：graph:event 监听器全程只注册一次（对照 loop store 叠加缺陷）
+    expect(sock().listenerCount('graph:event')).toBe(1)
+    expect(sock().listenerCount('graph:history')).toBe(1)
+
+    // 重连后事件仍只投递一次（无重复监听导致的重复投影）
+    sock().serverEmit('graph:event', ge('graph.interrupt', 'run-1', { interruptId: 'x', ts: '2026-09-10T00:02:00Z' }))
+    expect(store.runs[0].events).toHaveLength(1)
+  })
+
+  it('重连后再次 fetchRuns 不产生额外 subscribe（connect 已重发）', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('disconnect')
+    sock().serverEmit('connect') // 重连回调已重发 subscribe
+    const before = sock().subscribedRooms().length
+    await store.fetchRuns()
+    expect(sock().subscribedRooms().length).toBe(before) // 集合内已存在，不重发
+  })
+
+  it('disconnect() 关闭 socket、清空订阅集合与连接状态', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    const s = sock()
+    store.disconnect()
+    expect(s.connected).toBe(false)
+    expect(store.connection).toBe('disconnected')
+    // 重新 fetchRuns 建立全新 socket（旧实例不再复用）
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    await store.fetchRuns()
+    expect(sock()).not.toBe(s)
+    expect(sock().connected).toBe(true)
+  })
+})
+
+describe('useRunCenterStore — 排序 getter 与动作', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+  })
+
+  it('sortedRuns：awaiting-input 置顶 → 最后活动倒序', async () => {
+    rest.listRuns.mockResolvedValue([
+      item({ runId: 'r-slow', updatedAt: '2026-09-10T00:01:00Z' }),
+      item({ runId: 'r-await', status: 'awaiting-input', updatedAt: '2026-09-10T00:00:30Z' }),
+      item({ runId: 'r-fast', updatedAt: '2026-09-10T00:03:00Z' }),
+    ])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    expect(store.sortedRuns.map(r => r.runId)).toEqual(['r-await', 'r-fast', 'r-slow'])
+  })
+
+  it('selectRun 维护选中态与 selectedRun getter', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-2' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    expect(store.selectedRun).toBeNull()
+    store.selectRun('run-2')
+    expect(store.selectedRun?.runId).toBe('run-2')
+  })
+
+  it('resumeRun 用投影出的未决 interruptId 调 REST', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'awaiting-input' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:event', ge('graph.interrupt', 'run-1', { interruptId: 'approval:c3@1', ts: '2026-09-10T00:02:00Z' }))
+    await store.resumeRun('run-1', 'approved')
+    expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c3@1', 'approved')
+  })
+
+  it('resumeRun 无未决中断时不发请求并置 error', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'awaiting-input' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    await expect(store.resumeRun('run-1', 'approved')).rejects.toThrow(/No pending interrupt/)
+    expect(rest.resumeRun).not.toHaveBeenCalled()
+  })
+
+  it('forkRun 调 REST 分叉并刷新列表纳入 fork 产物', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' }), item({ runId: 'run-1-fork-1', status: 'paused' })])
+    const newId = await store.forkRun('run-1')
+    expect(newId).toBe('run-1-fork-1')
+    expect(rest.forkRun).toHaveBeenCalledWith('run-1', undefined)
+    expect(store.runs.map(r => r.runId)).toEqual(['run-1', 'run-1-fork-1'])
+  })
+
+  it('fetchReplay 拉取回放事件序列', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    rest.replay.mockResolvedValue([
+      ge('graph.started', 'run-1', { ts: '2026-09-10T00:00:00Z' }),
+      ge('graph.completed', 'run-1', { ts: '2026-09-10T00:05:00Z' }),
+    ])
+    await store.fetchReplay('run-1')
+    expect(rest.replay).toHaveBeenCalledWith('run-1')
+    expect(store.replayEvents).toHaveLength(2)
+    expect(store.replayRunId).toBe('run-1')
+  })
+
+  it('REST 失败置 error 不炸列表', async () => {
+    rest.listRuns.mockRejectedValue(new Error('server down'))
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    expect(store.error).toBe('server down')
+    expect(store.runs).toHaveLength(0)
+  })
+})
