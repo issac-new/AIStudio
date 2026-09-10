@@ -18,13 +18,26 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { GraphEventLike, RunListItem, RunSummary } from '../types'
+import type { GraphEventLike, MetricsRaw, MetricsReplaySlice, RunListItem, RunSummary } from '../types'
 import { latestOpenInterrupt, sortRuns, toRunSummary } from '../adapters'
 import { loadArchivedMap, markArchived, unmarkArchived } from '../adapters/inbox'
 import { connectGraph, disconnectGraph, runRest, type GraphSocketLike } from '../api'
+import { loopRest } from '../../api/loop-rest'
 
 /** 单 run 事件缓冲上限（订阅回放 50 条 + 增量余量） */
 const EVENT_BUFFER_LIMIT = 100
+
+/** fetchMetrics 指标快照 TTL（总览关键指标的采集节流；非轮询——由视图挂载驱动） */
+const METRICS_TTL_MS = 5 * 60 * 1000
+
+/** fetchMetrics 回放采样上限：近窗终态 run 按 updatedAt 倒序最多拉这么多条回放 */
+const METRICS_REPLAY_LIMIT = 20
+
+/** fetchMetrics 指标窗口：近 7 天 */
+const METRICS_WINDOW_MS = 7 * 24 * 3_600_000
+
+/** fetchMetrics 单 loop 事件拉取上限（近窗熔断计数输入；loop 事件量级远小于 run） */
+const METRICS_LOOP_EVENT_LIMIT = 500
 
 /** 单 run 去重键集上限（有界防泄漏；超出裁最旧——重放极旧事件可能再次入缓冲，可接受） */
 const SEEN_KEY_LIMIT = 400
@@ -61,6 +74,9 @@ export const useRunCenterStore = defineStore('runCenter', () => {
   const replayRunId = ref<string | null>(null)
   const replayEvents = ref<GraphEventLike[]>([])
   const replayLoading = ref(false)
+  /** 总览关键指标原始采集包（fetchMetrics 产物；聚合在 ia2/adapters/overview.ts） */
+  const metricsRaw = ref<MetricsRaw | null>(null)
+  const metricsLoading = ref(false)
 
   // ── socket（非响应式内部态）──
   let socket: GraphSocketLike | null = null
@@ -297,6 +313,70 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     }
   }
 
+  // ── 总览关键指标采集（P3 Task 4）──
+  // 服务端无现成 metrics 端点（graph-rest 仅 runs/specs CRUD），前端聚合：
+  // 本动作只"采集原始包"（MetricsRaw），成功率/平均耗时/熔断计数的推导在
+  // ia2/adapters/overview.ts aggregateMetrics 纯函数——store 不自算业务字段。
+  // 成本：1 次 listRuns + ≤20 次 replay（近窗终态倒序采样）+ 1 次 listLoops +
+  // 每 loop 1 次 getEvents（带 7 天 since 窗口），5 分钟 TTL 缓存，由总览挂载驱动
+  // （非轮询）；视图挂载期一次性调用。
+  let metricsInflight: Promise<MetricsRaw | null> | null = null
+
+  async function collectMetrics(): Promise<MetricsRaw | null> {
+    metricsLoading.value = true
+    try {
+      const runs = await runRest.listRuns()
+      const windowStart = Date.now() - METRICS_WINDOW_MS
+
+      // 近窗终态 run 倒序采样回放（平均耗时样本）；单 run 失败跳过不阻塞
+      const replayTargets = runs
+        .filter(r => r.status === 'completed' || r.status === 'failed')
+        .filter(r => {
+          if (!r.updatedAt) return false
+          const t = Date.parse(r.updatedAt)
+          return Number.isFinite(t) && t >= windowStart
+        })
+        .sort((a, b) => Date.parse(b.updatedAt!) - Date.parse(a.updatedAt!))
+        .slice(0, METRICS_REPLAY_LIMIT)
+      const replayResults = await Promise.allSettled(replayTargets.map(r => runRest.replay(r.runId)))
+      const replays: MetricsReplaySlice[] = []
+      replayResults.forEach((res, i) => {
+        if (res.status === 'fulfilled') replays.push({ runId: replayTargets[i].runId, events: res.value })
+      })
+
+      // 各 loop 近窗事件（loop.stuck 熔断计数输入）；listLoops 失败 = 计数空采集
+      const loopEvents: MetricsRaw['loopEvents'] = []
+      try {
+        const loops = await loopRest.listLoops()
+        const since = new Date(windowStart).toISOString()
+        const eventResults = await Promise.allSettled(
+          loops.map(l => loopRest.getEvents(l.id, since, METRICS_LOOP_EVENT_LIMIT)),
+        )
+        eventResults.forEach((res, i) => {
+          if (res.status === 'fulfilled') loopEvents.push({ loopId: loops[i].id, events: res.value })
+        })
+      } catch { /* loop 列表不可用：熔断计数采集为空（聚合层得 0） */ }
+
+      const raw: MetricsRaw = { runs, replays, loopEvents, collectedAt: Date.now() }
+      metricsRaw.value = raw
+      return raw
+    } catch {
+      // listRuns 整体失败：保留旧快照（陈旧指标好过空白），返回 null 供调用方感知
+      return null
+    } finally {
+      metricsLoading.value = false
+    }
+  }
+
+  /** 采集总览指标原始包（TTL 缓存 + 并发去重；force 绕过缓存但共享进行中请求） */
+  function fetchMetrics(force = false): Promise<MetricsRaw | null> {
+    const fresh = metricsRaw.value && Date.now() - metricsRaw.value.collectedAt < METRICS_TTL_MS
+    if (!force && fresh) return Promise.resolve(metricsRaw.value)
+    if (metricsInflight) return metricsInflight
+    metricsInflight = collectMetrics().finally(() => { metricsInflight = null })
+    return metricsInflight
+  }
+
   function disconnect(): void {
     disconnectGraph() // 关真实连接（module 级单例归 null）
     socket = null
@@ -311,12 +391,14 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     runs, selectedRunId, loading, error, connection,
     replayRunId, replayEvents, replayLoading,
     archivedMap,
+    metricsRaw, metricsLoading,
     // getters
     sortedRuns, awaitingCount, selectedRun,
     awaitingRuns, pendingInboxRuns, archivedInboxRuns,
     // actions
     fetchRuns, selectRun, resumeRun, forkRun, fetchReplay, disconnect,
     archiveRun, unarchiveRun, syncVisibleRunIds,
+    fetchMetrics,
     // 测试与调试暴露（不发生产语义）
     applyEvent,
   }

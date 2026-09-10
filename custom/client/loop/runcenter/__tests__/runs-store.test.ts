@@ -79,6 +79,17 @@ vi.mock('@/custom/loop/runcenter/api', () => ({
   },
 }))
 
+// P3 Task 4：runs store 新增 loop-rest 依赖（fetchMetrics 熔断计数采集）。
+// 本文件为 node 环境（无 jsdom/location），真实 loop-rest → @/api/client →
+// 上游 router 的模块链加载即崩，按桩替身隔离（fetchMetrics 行为另测于
+// runs-metrics.test.ts，不在本文件范围）。
+vi.mock('@/custom/loop/api/loop-rest', () => ({
+  loopRest: {
+    listLoops: vi.fn(async () => []),
+    getEvents: vi.fn(async () => []),
+  },
+}))
+
 import { useRunCenterStore } from '../store/runs'
 import type { RunListItem } from '../types'
 
