@@ -20,8 +20,10 @@ import { connectGraph, disconnectGraph, runRest, type GraphSocketLike } from '..
 /** 单 run 事件缓冲上限（订阅回放 50 条 + 增量余量） */
 const EVENT_BUFFER_LIMIT = 100
 
-/** 状态承载事件 → run 状态（graph.forked 对齐服务端 fork 实例起点 paused） */
+/** 状态承载事件 → run 状态（双词汇：socket type + 日志 kind，对照 EVENT_KIND_MAP；
+ *  graph.forked / graph.step-start 日志同名落盘） */
 const STATUS_BY_EVENT: Record<string, RunSummary['status']> = {
+  // socket 词汇（graph:event）
   'graph.started': 'running',
   'graph.step-start': 'running',
   'graph.node-start': 'running',
@@ -30,6 +32,13 @@ const STATUS_BY_EVENT: Record<string, RunSummary['status']> = {
   'graph.forked': 'paused',
   'graph.completed': 'completed',
   'graph.failed': 'failed',
+  // 日志词汇（graph:history，GraphLogEvent.kind）
+  'run.started': 'running',
+  'node.started': 'running',
+  'interrupt.raised': 'awaiting-input',
+  'interrupt.resumed': 'running',
+  'run.completed': 'completed',
+  'run.failed': 'failed',
 }
 
 export const useRunCenterStore = defineStore('runCenter', () => {
@@ -85,8 +94,11 @@ export const useRunCenterStore = defineStore('runCenter', () => {
 
   // ── 内部：事件增量（graph:event 与 graph:history 同一条投影路径）──
   function applyEvent(e: GraphEventLike): void {
-    const runId = (e as { threadId?: unknown }).threadId
-    if (typeof runId !== 'string' || !runId) return
+    // 双词汇 run 字段：socket GraphEvent.threadId ∪ 日志 GraphLogEvent.runId
+    // （审查修复：graph:history 推 GraphLogEvent，此前 threadId 门卫把历史事件全量丢弃）
+    const runId = typeof e.runId === 'string' && e.runId ? e.runId
+      : typeof e.threadId === 'string' && e.threadId ? e.threadId : undefined
+    if (!runId) return
     let run = runs.value.find(r => r.runId === runId)
     if (!run) {
       // 新 run 现场上线（graph.started / graph.forked 先于 REST 列表可见）
@@ -103,7 +115,7 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     if (run.events.length > EVENT_BUFFER_LIMIT) {
       run.events.splice(0, run.events.length - EVENT_BUFFER_LIMIT)
     }
-    const nextStatus = STATUS_BY_EVENT[e.type]
+    const nextStatus = STATUS_BY_EVENT[e.type] ?? STATUS_BY_EVENT[e.kind ?? '']
     if (nextStatus) run.status = nextStatus
     recompute(run)
   }
@@ -181,7 +193,7 @@ export const useRunCenterStore = defineStore('runCenter', () => {
   async function resumeRun(runId: string, value?: unknown): Promise<void> {
     const run = runs.value.find(r => r.runId === runId)
     const interruptId = run?.pendingInterruptId
-    if (!interruptId) throw new Error(`No pending interrupt for run ${runId}`)
+    if (!run || !interruptId) throw new Error(`No pending interrupt for run ${runId}`)
     await runRest.resumeRun(runId, interruptId, value)
     applyEvent({
       type: 'graph.resume',

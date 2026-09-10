@@ -153,9 +153,17 @@ describe('parseApprovalInterrupt — 审批 interrupt payload', () => {
     expect(view!.interruptId).toBe('b')
   })
 
-  it('value 缺失/畸形不炸：返回骨架视图（prompt 空、policy 未知）', () => {
-    const view = parseApprovalInterrupt([
+  it('value 缺失（非审批 interrupt）→ 返回 null 不渲染审批骨架；kind 标记的空 value 仍出骨架', () => {
+    // 无 value / 非 approval 形状 → null（审查修复：非审批类 interrupt 不渲染审批面板）
+    expect(parseApprovalInterrupt([
       ev({ type: 'graph.interrupt', nodeId: 'validation', interruptId: 'x', ts: 1 }),
+    ])).toBeNull()
+    expect(parseApprovalInterrupt([
+      ev({ type: 'graph.interrupt', nodeId: 'validation', interruptId: 'x', value: { note: 'hello' }, ts: 1 }),
+    ])).toBeNull()
+    // kind:'approval' 标记的空 value → 骨架视图（prompt 空、policy 未知），不抛错
+    const view = parseApprovalInterrupt([
+      ev({ type: 'graph.interrupt', nodeId: 'validation', interruptId: 'x', value: { kind: 'approval' }, ts: 1 }),
     ])
     expect(view).not.toBeNull()
     expect(view!.interruptId).toBe('x')

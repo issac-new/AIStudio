@@ -130,6 +130,25 @@ describe('ApprovalPanel (jsdom)', () => {
     expect(store.runs[0].status).toBe('awaiting-input') // 状态未被误改
   })
 
+  it('日志词汇（graph:history 形状：payload.value + epoch ms）同样渲染——验收主路径回归', () => {
+    // 全新打开运行中心的常见场景：run 已 awaiting-input，store 缓冲来自订阅回放的
+    // GraphLogEvent（runId/kind/epoch ts/payload），而非实时 graph:event
+    const run = awaitingRun({
+      events: [
+        { runId: 'run-1', kind: 'run.started', ts: 1700000000000, payload: {} },
+        {
+          runId: 'run-1', kind: 'interrupt.raised', nodeId: 'validation',
+          interruptId: 'approval:c1@1', ts: 1700000000060_000,
+          payload: { interruptId: 'approval:c1@1', value: approvalValue },
+        },
+      ],
+    } as Partial<RunSummary>)
+    const w = mount(ApprovalPanel, { props: { run } })
+    expect(w.text()).toContain('Approval required for contract c1')
+    // epoch-ms raisedAt 不再 Date.parse 失败——已等时长标签正常渲染
+    expect(w.find('.ap-panel__waiting').exists()).toBe(true)
+  })
+
   it('上一轮 resume 为超时自动通过时显示横幅（A2 联动：repair 后新 interrupt 重开）', () => {
     const run = awaitingRun({
       events: [

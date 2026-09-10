@@ -15,14 +15,24 @@ export type RunStage =
 export type RunAction = 'approve' | 'peek' | 'replay' | 'fork' | 'detail'
 
 /** /graph namespace 事件的最小结构形状（GraphEvent + loop.* 桥接事件的公共超集）。
- *  事件名沿用服务端 GraphEvent.type 原值（graph.node-complete 等），前端零翻译。 */
+ *  事件名沿用服务端 GraphEvent.type 原值（graph.node-complete 等），前端零翻译。
+ *  双词汇（审查修复）：graph:history 推的是事件日志 GraphLogEvent——runId/kind/epoch ts/
+ *  payload（event-log-store）；graph:event 推 GraphEvent——threadId/type/ISO ts。
+ *  store 与投影函数必须两词汇通吃，见 adapters 的词汇归一表。 */
 export interface GraphEventLike {
   type: string
+  /** 日志词汇的事件名（interrupt.raised 等）——graph:history 载体；与 type 二选一 */
+  kind?: string
   graphId?: string
   /** 即 runId（服务端以 threadId 为 run 房间键） */
   threadId?: string
-  ts: string
+  /** 日志词汇的 run 字段（GraphLogEvent.runId）；与 threadId 二选一 */
+  runId?: string
+  /** 事件时刻：socket 词汇 ISO 字符串 ∪ 日志词汇 epoch ms */
+  ts: string | number
   step?: number
+  /** 日志词汇的 super-step（与 step 同义） */
+  superStep?: number
   nodeId?: string
   interruptId?: string
   /** cost.recorded / graph.completed 的累计成本 */
@@ -30,6 +40,8 @@ export interface GraphEventLike {
   /** loop.stage-transition 的 legacy 业务阶段 */
   to?: string
   error?: string
+  /** 日志词汇的载荷（interrupt 值 / goto / updateKeys / error 在此） */
+  payload?: Record<string, unknown>
   [key: string]: unknown
 }
 

@@ -33,34 +33,59 @@ const STAGE_BY_LEGACY: Record<string, RunStage> = {
   scheduling: 'stop',
 }
 
-/** 承载阶段语义的事件类型（其余事件不影响阶段投影） */
+// ---------------------------------------------------------------------------
+// 事件日志投影
+// ---------------------------------------------------------------------------
+
+/** 承载阶段语义的事件类型（其余事件不影响阶段投影）；
+ *  双词汇：socket type（graph.*）+ 日志 kind（graph:history 的 GraphLogEvent） */
 const STAGE_EVENT_TYPES = new Set([
+  // socket 词汇
   'graph.node-start',
   'graph.node-complete',
   'graph.node-error',
   'graph.interrupt',
   'node.error-routed',
   'loop.stage-transition',
+  // 日志词汇（node.error-routed / loop.stage-transition 与 socket 同名，原样落盘）
+  'node.started',
+  'node.completed',
+  'node.failed',
+  'interrupt.raised',
 ])
 
-// ---------------------------------------------------------------------------
-// 事件日志投影
-// ---------------------------------------------------------------------------
+/** 事件词汇归一：socket type ∪ 日志 kind → 单一判定名（审查修复：graph:history 推
+ *  GraphLogEvent——kind/runId/epoch ts/payload，与 socket GraphEvent 的 type/threadId
+ *  双词汇并存，投影函数必须两词汇通吃） */
+function eventTypeOf(e: GraphEventLike): string {
+  return (e.type ?? e.kind) ?? ''
+}
+
+/** interruptId 读取：socket 顶层 ∪ 日志 payload（logPayload 对 graph.interrupt 落
+ *  payload.interruptId） */
+function interruptIdOf(e: GraphEventLike): string | null {
+  const raw = e.interruptId ?? e.payload?.interruptId
+  return typeof raw === 'string' && raw ? raw : null
+}
 
 /**
- * deriveStage — 从事件日志推导当前业务阶段（双轴投影）。
+ * deriveStage — 从事件日志推导当前业务阶段（双轴投影，双词汇）。
  * 按时间序扫描，取最后一个阶段承载事件：graph 节点事件的 nodeId 经 STAGE_BY_NODE
  * 映射，loop.stage-transition 的 to 经 STAGE_BY_LEGACY 映射；未知 nodeId（如
- * loop.stuck 桥接的 reason）不污染阶段。graph.started 视为进入 discovery，
- * 终态事件不清除阶段（定格在最后已知位置）。
+ * loop.stuck 桥接的 reason）不污染阶段。graph.started / run.started 视为进入
+ * discovery，终态事件不清除阶段（定格在最后已知位置）。
+ * 注：日志词汇的 loop.stage-transition 不携带 to（服务端 logPayload 落空 payload），
+ * 阶段由节点事件承载。
  */
 export function deriveStage(events: GraphEventLike[]): RunStage | null {
   let stage: RunStage | null = null
   for (const e of events) {
-    if (e.type === 'graph.started') { stage = 'discovery'; continue }
-    if (!STAGE_EVENT_TYPES.has(e.type)) continue
-    if (e.type === 'loop.stage-transition') {
-      stage = (typeof e.to === 'string' && STAGE_BY_LEGACY[e.to]) || stage
+    const t = eventTypeOf(e)
+    if (t === 'graph.started' || t === 'run.started') { stage = 'discovery'; continue }
+    if (!STAGE_EVENT_TYPES.has(t)) continue
+    if (t === 'loop.stage-transition') {
+      const to = e.to ?? e.payload?.to
+      stage = (typeof to === 'string' && STAGE_BY_LEGACY[to]) || stage
       continue
     }
     const byNode = typeof e.nodeId === 'string' ? STAGE_BY_NODE[e.nodeId] : undefined
@@ -69,49 +94,62 @@ export function deriveStage(events: GraphEventLike[]): RunStage | null {
   return stage
 }
 
-/** deriveIteration — 事件中的最大 super-step（无 step 事件返回 0） */
+/** deriveIteration — 事件中的最大 super-step（socket step ∪ 日志 superStep；无则 0） */
 export function deriveIteration(events: GraphEventLike[]): number {
   let max = 0
   for (const e of events) {
-    if (typeof e.step === 'number' && Number.isFinite(e.step) && e.step > max) max = e.step
+    const s = typeof e.step === 'number' ? e.step : e.superStep
+    if (typeof s === 'number' && Number.isFinite(s) && s > max) max = s
   }
   return max
 }
 
-/** deriveCost — 最后一个成本承载事件（cost.recorded / graph.completed）的累计 totalCost */
+/** deriveCost — 最后一个成本承载事件（cost.recorded / graph.completed）的累计成本
+ *  （socket 顶层 totalCost ∪ 日志 payload.totalCost） */
 export function deriveCost(events: GraphEventLike[]): number {
   let cost = 0
   for (const e of events) {
-    if ((e.type === 'cost.recorded' || e.type === 'graph.completed')
-      && typeof e.totalCost === 'number' && Number.isFinite(e.totalCost)) {
-      cost = e.totalCost
-    }
+    const t = eventTypeOf(e)
+    if (t !== 'cost.recorded' && t !== 'graph.completed' && t !== 'run.completed') continue
+    const raw = e.totalCost ?? e.payload?.totalCost
+    if (typeof raw === 'number' && Number.isFinite(raw)) cost = raw
   }
   return cost
 }
 
-/** deriveLastActivityAt — 事件最大 ts（ISO 字符串按时间比较；空日志返回 null） */
+/** deriveLastActivityAt — 事件最大 ts（ISO 字符串按原样保留，epoch 数转 ISO；
+ *  空日志/全部非法返回 null） */
 export function deriveLastActivityAt(events: GraphEventLike[]): string | null {
   let latest: string | null = null
+  let latestMs = Number.NEGATIVE_INFINITY
   for (const e of events) {
-    if (typeof e.ts !== 'string' || !e.ts) continue
-    if (!latest || Date.parse(e.ts) > Date.parse(latest)) latest = e.ts
+    const t = typeof e.ts === 'number' ? e.ts
+      : typeof e.ts === 'string' && e.ts ? Date.parse(e.ts) : Number.NaN
+    if (!Number.isFinite(t)) continue
+    if (t > latestMs) {
+      latestMs = t
+      latest = typeof e.ts === 'string' ? e.ts : new Date(t).toISOString()
+    }
   }
   return latest
 }
 
 /**
- * latestOpenInterrupt — 待我处理的 interruptId：最后一个 graph.interrupt 且其后
- * 没有同 id 的 graph.resume、也没有终态事件（completed/failed）关闭它。
+ * latestOpenInterrupt — 待我处理的 interruptId：最后一个 interrupt（socket
+ * graph.interrupt ∪ 日志 interrupt.raised）且其后没有同 id 的 resume（graph.resume ∪
+ * interrupt.resumed，id 取顶层 ∪ payload.interruptId）、也没有终态事件
+ * （completed/failed 双词汇）关闭它。
  */
 export function latestOpenInterrupt(events: GraphEventLike[]): string | null {
   let open: string | null = null
   for (const e of events) {
-    if (e.type === 'graph.interrupt' && typeof e.interruptId === 'string') {
-      open = e.interruptId
-    } else if (e.type === 'graph.resume' && e.interruptId === open) {
+    const t = eventTypeOf(e)
+    if (t === 'graph.interrupt' || t === 'interrupt.raised') {
+      const id = interruptIdOf(e)
+      if (id) open = id
+    } else if ((t === 'graph.resume' || t === 'interrupt.resumed') && interruptIdOf(e) === open) {
       open = null
-    } else if (e.type === 'graph.completed' || e.type === 'graph.failed') {
+    } else if (t === 'graph.completed' || t === 'run.completed' || t === 'graph.failed' || t === 'run.failed') {
       open = null
     }
   }
