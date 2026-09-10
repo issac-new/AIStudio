@@ -55,7 +55,13 @@ function loopIdOf(graphId: string): string {
   return graphId.replace(/^loop-/, '')
 }
 
-function goDetail(run: RunSummary): void {
+/** P2 Task 6：运行详情页（执行图 + 回放），行点击 / detail 动作的统一入口 */
+function goRunDetail(run: RunSummary): void {
+  router.push({ name: 'hermes.loopRunDetail', params: { runId: run.runId } })
+}
+
+/** 审批/查看走 loop 详情页（审批 UI LoopApprovalDialog 在那边） */
+function goLoopDetail(run: RunSummary): void {
   router.push({ name: 'hermes.loopDetail', params: { id: loopIdOf(run.graphId) } })
 }
 
@@ -66,8 +72,10 @@ async function onAction(payload: { kind: RunAction; run: RunSummary }): Promise<
     switch (kind) {
       case 'approve': // 审批 UI 在 loop 详情页（LoopApprovalDialog）
       case 'peek':
+        goLoopDetail(run)
+        break
       case 'detail':
-        goDetail(run)
+        goRunDetail(run)
         break
       case 'fork':
         await store.forkRun(run.runId)
@@ -166,7 +174,7 @@ function replayTime(e: GraphEventLike): string {
       <RunListTable
         :runs="pagedRuns"
         :loading="store.loading"
-        @select="(run) => store.selectRun(run.runId)"
+        @select="goRunDetail"
         @action="onAction"
       />
 

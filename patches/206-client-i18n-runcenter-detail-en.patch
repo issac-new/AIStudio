@@ -1,0 +1,38 @@
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -659,6 +659,35 @@
+       empty: 'No events',
+       close: 'Close',
+     },
++
++    detail: {
++      back: 'Back to runs',
++      loadFailed: 'Failed to load run detail',
++      noSpec: 'Graph spec unavailable — canvas disabled',
++    },
++    timeline: {
++      play: 'Play',
++      pause: 'Pause',
++      stepBack: 'Step back one event',
++      stepForward: 'Step forward one event',
++      replayTo: 'Replay to event {n} / {total}',
++      scrubber: 'Replay position',
++      modeSummary: 'Summary',
++      modeNormal: 'Normal',
++      modeVerbose: 'Verbose',
++      empty: 'No events before the cursor',
++      payload: 'payload',
++    },
++    graph: {
++      nodeStatus: {
++        idle: 'Idle',
++        running: 'Running',
++        done: 'Done',
++        failed: 'Failed',
++        awaitingInput: 'Awaiting input',
++        skipped: 'Skipped',
++      },
++    },
+   },
+ 
+   agentManager: {

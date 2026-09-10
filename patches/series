@@ -255,3 +255,6 @@
 # P2 Task 5: 运行中心——/graph socket 客户端 + Pinia runs store + 运行列表视图 i18n
 203-client-i18n-runcenter-zh.patch
 204-client-i18n-runcenter-en.patch
+# P2 Task 6: 运行详情——执行图画布 + 时间轴回放 + 三级分辨率 i18n
+205-client-i18n-runcenter-detail-zh.patch
+206-client-i18n-runcenter-detail-en.patch

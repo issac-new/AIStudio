@@ -11,6 +11,7 @@
 import { io } from 'socket.io-client'
 import { request, getApiKey, getBaseUrlValue } from '@/api/client'
 import type { GraphEventLike, RunListItem } from './types'
+import type { RunGraphTopologyLike } from './adapters/run-graph'
 
 /** /graph socket 的结构化最小形状（测试用 FakeGraphSocket 同构，不耦合 socket.io-client） */
 export interface GraphSocketLike {
@@ -54,6 +55,17 @@ export const runRest = {
   replay: async (id: string): Promise<GraphEventLike[]> => {
     const res = await request<{ runId: string; events: GraphEventLike[] }>(`${BASE}/${encodeURIComponent(id)}/replay`)
     return res.events
+  },
+
+  /**
+   * GET /api/graph/specs → 按 id 检索图规格（执行图拓扑来源）。
+   * 服务端现仅暴露列表端点（graph-rest.ts 无 /specs/:id 路由），客户端本地检索；
+   * P2 规模内规格数有限，一次列表拉取可接受。loop 场景 specId = `loop-<loopId>`
+   * （graph-compiler 约定，与 run 的 graphId / instance.graphDefId 同值域）。
+   */
+  getSpec: async (id: string): Promise<RunGraphTopologyLike | null> => {
+    const res = await request<{ specs: RunGraphTopologyLike[] }>('/api/graph/specs')
+    return res.specs.find(s => s.id === id) ?? null
   },
 }
 
