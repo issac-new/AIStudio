@@ -1,8 +1,34 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.17**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.16**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发）
 SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.17** — 三 upstream 复核（2026-09-10）：hermes-studio 仍 **v1.0.2**（Latest 标记在 v0.7.18 为上游维护者误置，v1.0.2 为实际最新）、hermes-agent 仍 **v2026.9.7 (v0.21.1)**、element-web 仍 **v1.12.27**（v1.12.28 仅 rc）——**零 upstream 升级**。本版为 **overlay 自有功能轮**：AI 协作中心 loop graph 彻底重构三期（P0 内核 + P1 生产切换 + P2 运行中心）全部合入 main（b556bdc → 209ecee，31 commits + P2 squash），148 patches 无 regen、无新增。desktop 捆绑 runtime pin 0.20.6 → **0.21.0**（P2 会话 T5）。
+
+### 2.17 明细（overlay 侧）
+
+- **Loop Graph 彻底重构**（spec: docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md）：
+  - **P0 图执行内核**：GraphSpec 可序列化 DSL + 守卫回边编译期校验、声明式谓词求值器 PredicateExpr、EventLogStore append-only 事实源（node:sqlite 内置驱动）、CheckpointManager 事件日志驱动 + 检查点 fork、四层有限终止 + join 屏障 + fail-branch + 真 resume、HITL 闭环
+  - **P1 生产切换**：LoopInstance→GraphSpec 编译器（六节点拓扑 + 守卫 repair 回边）、五阶段节点工厂、R2 workspace 上下文注入（GRAPH-CONTEXT.md）、RunSpawner 调度收敛、patch 202 生产装配（routes.ts 挂 graphAssembly + GRAPH_ENGINE 三态分流）、graph REST/Socket 真实化 + 数据迁移 + e2e；终审修复波 14/14（router 挂载/scheduleLoop 建环/socket 惰性绑定/verifier-bridge 审批闭环等）
+  - **P2 运行中心**：调度收尾（cron 自启/停滞熔断/socket 补试）、interrupt 72h 超时策略（escalate/auto-approve/fail）、graph_specs 表化 + judge pending、persistence 真实 kanban 写入（幂等 + 失败走 repair）、运行中心列表（双轴/合法操作集/待我处理排序）、运行详情（执行图画布 + 时间轴回放 + 三级分辨率）、节点检查器 + 介入收件箱（peek/attach/审批/两态归档）、R1 每日 Brief（三段式结构化汇总 + Matrix 投递）
+  - GRAPH_ENGINE 默认 legacy（shadow 浸泡后切 on）
+- **登录页默认值**（patch 025）：`@swarm:matrix.test` / `TestPass123!` 预填
+- **desktop 捆绑 runtime pin 0.20.6 → 0.21.0**（T5）
+
+### 2.17 验证门禁
+
+inject 158/158 → server tsc 0 错误 → overlay vitest **1015 pass / 6 skip / 0 fail**（104 文件；较 2.16 的 560 净增 455，P0-P2 新测试）→ `npm run build`（vue-tsc -b 严类型门禁 + vite + server tsc + build-server）全绿 → electron-builder mac dmg + win x64 zip 各自独立 invocation 成功。
+
+### 2.17 构建产物（**不上传**，sha256 留档）
+
+```
+d3e283b4db791268a1ca8e422b76b351a1b47e689abae1598da88e4c829cba49  SwarmStudio-0.7.18-arm64.dmg
+d0b6594613174a6cad3b07eda6fa0603480ccef73d7e6e4e5b25143249d567d1  SwarmStudio-0.7.18-x64.zip
+```
+
+（按指示本版 mac arm64 dmg + win x64 zip **不上传** GitHub Release 与 ModelScope；desktop bundle 版本号维持上游 0.7.18（v1.0.2 上游 quirk），与 2.16 同名，以 overlay 版本 + sha256 区分。）
 
 > **2.16** — hermes-studio v0.7.18 → **v1.0.2**（2026-09-09 发布的 Latest；15 commits、301 文件 +9281/−3545：上游品牌重塑 Ekko Studio + MCP 名称迁移、任务计划持久化与聊天内实时进度、聊天文件链接按引用行预览、浏览器标注删除/撤销、App 通知事件整合、host 级 Agent 更新策略基座、原生 OpenCode Free provider + 免 key 编码代理、技能开关默认恢复修复、MCP 触发的桌面重启循环修复、中继桥免确认关闭、桥接重启超时修复、TTS 语义符号保留、跳过思考块朗读）。hermes-agent v0.21.0 → **v0.21.1**（v2026.9.7，2026-09-07 发布；≈6000 commits：审批环境变量拆分转义与 argv0 操作数修复、kanban 唤醒/路由锚点/心跳生命周期/网关所有权一批加固、桌面 READY 哨兵合并缓冲修复）。element-web 维持 **v1.12.27**（仍是最新稳定版）。
 
