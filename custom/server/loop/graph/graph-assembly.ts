@@ -12,6 +12,7 @@ import { GraphService } from './graph-service'
 import { RunSpawner } from './run-spawner'
 import { compileLoopToDef, type CompileDeps } from './graph-compiler'
 import { appendContractsById } from './phase-nodes'
+import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
@@ -103,6 +104,12 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     void store.appendEvent(e).catch(() => {})
     const ioNow = resolveIo(opts.io)
     if (ioNow) emitLoopEvent(ioNow as never, e as never)
+    // P2 台账②：兑现"首条 loop.* 事件补试 /graph 绑定"的承诺——定时重试封顶后，
+    // 借本次事件再试一次 tryBindSocket（≥2s 时间戳节流，避免事件风暴空转）。
+    if (!socketBound && Date.now() - lastEventBindRetryAt >= socketRetryMs) {
+      lastEventBindRetryAt = Date.now()
+      tryBindSocket()
+    }
   }
 
   const graphService = new GraphService({
@@ -123,6 +130,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   let socketAttempts = 0
   let socketTimer: ReturnType<typeof setTimeout> | null = null
   let socketGiveUpWarned = false
+  /** 事件驱动的补试节流时间戳（P2 台账②）：上次借 loop.* 事件 tryBindSocket 的时刻 */
+  let lastEventBindRetryAt = 0
   const socketRetryMs = opts.socketRetryMs ?? SOCKET_RETRY_MS
   const socketRetryMax = opts.socketRetryMax ?? SOCKET_RETRY_MAX
 
@@ -199,7 +208,15 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       scheduleLoop: (loop) => {
         if (!spawner || loop.status !== 'idle') return
         if (loop.schedule?.mode === 'manual') return
-        const dueAt = loop.nextTickAt ? new Date(loop.nextTickAt).getTime() : NaN
+        // P2 台账①：on 模式新建 cron loop（未手动 tick 过 → nextTickAt 为 null）原本
+        // 对 null 取 NaN 直接跳过，poll 又因 !nextTickAt 永不命中 → loop 永不自启。
+        // 此处复用共享 computeNextTick 算出首次时间、经 store 写回，再统一走到期判断。
+        let dueIso = loop.nextTickAt
+        if (!dueIso && loop.schedule?.mode === 'cron' && loop.schedule.cron) {
+          dueIso = computeNextTick(loop)
+          void store.updateLoop(loop.id, { nextTickAt: dueIso }).catch(() => {})
+        }
+        const dueAt = dueIso ? new Date(dueIso).getTime() : NaN
         if (Number.isFinite(dueAt) && dueAt <= Date.now()) void spawner.tickNow(loop.id)
       },
       handleWebhook: (loopId, source, eventType) => { spawner?.handleWebhook(loopId, source, eventType) },
