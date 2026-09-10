@@ -125,7 +125,9 @@ bridge 协议（NDJSON action/ok）**无版本协商**，升级不会握手失�
 | T2 | RunTrace L2 用量汇总：`buildTraceGraph` 聚合 llm_span usage 进 `meta.usage`，Modal 头部 chip 展示（L2 优先 L1 兜底）。**范围修正**：compression 事件上游 chat 链路已全局消费展示（`api/studio/chat.ts:852` + `MessageList.vue:754`），cockpit 内嵌 ChatView 直接继承，无需重做 | ✅ commit b33a07f |
 | T3 | MCP 连接降级信号进收件箱：store 60s 轮询 `GET /api/hermes/mcp/servers`（设置页同款接口，零 server 改动），inbox 新增 'mcp' kind（权重在 blocked 之后 clarify 之前），点击跳 `hermes.mcp` | ✅ commit 9262f9f |
 | T4 | 历史全文检索接入 | ⛔ 不实施：门控核验发现等价能力已存在——cockpit 全局搜索（store `runSearch`，300ms 去抖 + 5min 缓存）已消费 `GET /api/studio/search/sessions`（含 profile 权限过滤与任务映射，store/cockpit.ts:995、routes/sessions.ts:19）；HistoryModal 的"搜索历史事件"是本地事件过滤，属另一维度。重复建设无增量 |
-| T5 | runtime pin 0.20.6 → hermes-0.21.0-runtime（patch 207，三处一致：runtime-config.mjs / runtime-release.json / paths.ts）。前置核验通过：vanilla v2026.8.31 原生含 specify/decompose/context；`hermes-0.21.1-runtime` tag 不存在，出现后 3 行跟进 | ✅ commit 5cd6504（发版冒烟留给发版流程） |
+| T5 | runtime pin 0.20.6 → hermes-0.21.0-runtime（patch 207，三处一致：runtime-config.mjs / runtime-release.json / paths.ts；回归面同步修正上游 runtime-config/runtime-paths 两测试文件的版本硬断言）。前置核验通过：vanilla v2026.8.31 原生含 specify/decompose/context；`hermes-0.21.1-runtime` tag 不存在，出现后 3 行跟进 | ✅ commit 2946907（发版冒烟留给发版流程） |
+
+**已知问题（非本轮引入，如实披露）**：上游 `tests/desktop/runtime-paths.test.ts` 的 "keeps the Hermes Git checkout separate from its bundled venv" 用例在 main 全量注入态下即失败（剔除 207 复测同样失败，二分定位与 patch 188 本地 runtime 优先逻辑和本机存在 `~/.hermes/hermes-agent` 源码 checkout 的交互有关）。本轮 patch 207 后零新增失败（三件套 20 pass + 该 1 既有 fail）。后续可单独开任务处理。
 
 **验证口径**：全量 vitest 745（main 基线）→ 757 passed + 6 skipped、0 fail；隔离沙箱（/Volumes/nvme2230/.rp-sandbox，同卷硬链接 clone 两上游仓 + overlay 拷贝平级布局，原生跑 inject.mjs）patch 重放 149 → 152 全绿。上游 tsc / vue-tsc / 主 checkout 全量门禁在合并时序点执行（P2 落地后）。
 
