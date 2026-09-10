@@ -168,6 +168,7 @@ export type LoopEvent =
   | { type: 'loop.verification-progress'; contractId: string; record: Partial<VerificationRecord>; ts: string }
   | { type: 'loop.verification-complete'; contractId: string; passed: boolean; ts: string }
   | { type: 'loop.persisted'; loopId: string; contractId: string; artifact: string; ts: string }
+  | { type: 'loop.persist-failed'; loopId: string; contractId: string; error: string; ts: string }
   | { type: 'loop.tick-complete'; loopId: string; iteration: number; stats: LoopStats; ts: string }
   | { type: 'loop.budget-warning'; loopId: string; spent: number; limit: number; ts: string }
   | { type: 'loop.stuck'; loopId: string; reason: string; ts: string }

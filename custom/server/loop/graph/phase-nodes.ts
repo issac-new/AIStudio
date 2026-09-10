@@ -69,14 +69,27 @@ export interface Connector {
   discover(loop: LoopInstance): Promise<TaskContract[]>
 }
 
-/** 持久化适配器：产物落 kanban/commit/PR（断链 2 的真实副作用出口） */
+/** 持久化失败结果（P2 Task 4）：适配器把 kanban 写入失败收敛为该值返回（不抛），
+ *  persistence 节点据此发 loop.persist-failed 并把契约推入 repairQueue 走守卫回边。 */
+export interface PersistFailure {
+  ok: false
+  error: string
+}
+
+export function isPersistFailure(r: unknown): r is PersistFailure {
+  return typeof r === 'object' && r !== null && (r as { ok?: unknown }).ok === false
+}
+
+/** 持久化适配器：产物落 kanban/commit/PR（断链 2 的真实副作用出口）。
+ *  返回 artifact 字符串；P2 Task 4 起可返回 PersistFailure（失败不炸 run）。
+ *  适配器自身抛出的异常仍向上传播（意外缺陷 fail-loud，与 kanban CLI 可预期失败区分）。 */
 export interface PersistenceAdapter {
   persist(
     contract: TaskContract,
     verification: VerificationRecord,
     loop: LoopInstance,
     dryRun: boolean,
-  ): Promise<string>
+  ): Promise<string | PersistFailure>
 }
 
 export interface PhaseNodeDeps {
@@ -247,7 +260,7 @@ export type PhaseProgressEntry =
   | { kind: 'persisted'; contractId: string; ts: string }
 
 export interface RepairEntry {
-  source: 'validation' | 'gate'
+  source: 'validation' | 'gate' | 'persistence'
   contractId?: string
   name?: string
   message: string
@@ -577,6 +590,7 @@ async function runPersistence(
   const progress = progressOf(state)
   const log = deps.log ?? (() => {})
   let completed = 0
+  const repairQueue: RepairEntry[] = []
 
   for (const v of verifications) {
     if (v.overall !== 'passed') continue
@@ -594,6 +608,18 @@ async function runPersistence(
       continue
     }
     const artifact = await deps.persistence.persist(contract, v, loop, deps.dryRun)
+    // P2 Task 4：真实 kanban 写入失败不炸 run——发 loop.persist-failed + 进 repairQueue，
+    // repairNeeded 路由经既有 gate 守卫回边（guard.maxIterations 封顶）重试 persistence。
+    // 不标 persisted：repair 回边后本节点对该契约重试；台账 tasksCompleted 不误计。
+    if (isPersistFailure(artifact)) {
+      log(`persistence failed for ${contract.id} (queued for repair): ${artifact.error}`)
+      repairQueue.push({ source: 'persistence', contractId: contract.id, message: artifact.error, ts: now() })
+      emitLoopEvent(ctx, {
+        type: 'loop.persist-failed', loopId: loop.id,
+        contractId: contract.id, error: artifact.error, ts: now(),
+      })
+      continue
+    }
     completed++
     progress.push({ kind: 'persisted', contractId: contract.id, ts: now() })
     emitLoopEvent(ctx, {
@@ -606,11 +632,13 @@ async function runPersistence(
       stats: { ...loop.stats, tasksCompleted: loop.stats.tasksCompleted + completed },
     })
   }
-  return {
-    update: completed > 0
-      ? { [CH.phaseProgress]: progress, [CH.stage]: 'persistence' as LoopStage }
-      : { [CH.stage]: 'persistence' as LoopStage },
+  const update: StateUpdate = { [CH.stage]: 'persistence' as LoopStage }
+  if (completed > 0) update[CH.phaseProgress] = progress
+  if (repairQueue.length > 0) {
+    update[CH.repairQueue] = repairQueue
+    update[CH.repairNeeded] = true
   }
+  return { update }
 }
 
 // ---------------------------------------------------------------------------
