@@ -104,7 +104,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 
 **P1 图引擎 caveat（终审修复波后仍成立的交付边界）**：
 - `on` 模式接管调度，但失败语义与 legacy 有偏移：run 失败时 loop 重写为 `idle` 并按 `computeNextTick` 重排（连续失败达 10 次熔断转 `paused`）；legacy 的 tick 异常会把 loop 置 `status='failed'`。前端按 `paused/idle` 展示 on 模式失败态。
-- `on` 模式产物落库为 stub（`persist` 返回 `artifact:<id>` 占位，不写真实 kanban）——P1 交付机制，真实 kanban 写入随 P2 IA 装配注入。
+- `on` 模式产物落库为真实 kanban 写入（P2 Task 4 替换 P1 stub）：`KanbanPersistenceAdapter` 按 `loop.tenant` 六段格式解析 board（群聊名 slug 化，不可用回落 roomId，解析不出跳过 + warn）、任务 title `[loop.name] contract.id` 按契约查重幂等（重复 persist 跳过）、kanban CLI 失败发 `loop.persist-failed` 事件并把契约推入 repair 队列走守卫回边重试（失败不炸 run）。`shadow` 双跑 dryRun 语义不变（零写入）。
 - judge 验证在 P1 未接线（无可用模型调用方）：契约带 judge intent 时 judge 项跳过，程序化 + 人工门禁照常生效（装配时 warn 一次）；人工审批门禁已闭环（`requestHumanApproval` → `pending` → validation 节点 interrupt → REST resume）。
 - connector 发现与 legacy 生产同源（仅 webhook；GitHub/本地 Git 连接器待配置面引入后接入）。
 
