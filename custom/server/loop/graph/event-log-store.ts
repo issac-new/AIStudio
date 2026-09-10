@@ -21,6 +21,9 @@ export interface GraphLogEvent {
   iteration?: number
   superStep?: number
   payload: Record<string, unknown>
+  /** 事件幂等 id（P3 台账：history 双发/重连去重的根）＝ `<runId>-<seq>`，
+   *  由 store 在 append 时生成并随事件持久化；前端按 eid 去重（Task 2 接线）。 */
+  eid?: string
 }
 
 /** join 屏障簿记（可序列化）：随 checkpoint 进出，保证 resume 后 join 判定不丢前驱完成事实 */
@@ -90,7 +93,7 @@ export class InMemoryEventLogStore implements EventLogStore {
 
   async append(e: Omit<GraphLogEvent, 'seq'>): Promise<number> {
     const seq = this.events.length + 1
-    this.events.push({ ...JSON.parse(JSON.stringify(e)), seq })
+    this.events.push({ ...JSON.parse(JSON.stringify(e)), seq, eid: `${e.runId}-${seq}` })
     return seq
   }
 
@@ -156,7 +159,7 @@ class SqliteEventLogStore implements EventLogStore {
         seq INTEGER PRIMARY KEY AUTOINCREMENT,
         run_id TEXT NOT NULL, graph_id TEXT NOT NULL, ts INTEGER NOT NULL,
         kind TEXT NOT NULL, node_id TEXT, iteration INTEGER, super_step INTEGER,
-        payload TEXT NOT NULL
+        payload TEXT NOT NULL, eid TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_graph_events_run ON graph_events(run_id, seq);
       CREATE TABLE IF NOT EXISTS graph_checkpoints (
@@ -178,6 +181,12 @@ class SqliteEventLogStore implements EventLogStore {
     } catch {
       // 列已存在（新表或已升级过的旧表）
     }
+    // P3 台账（事件幂等）：旧 graph_events 表补 eid 列（同 join_ledger 先例）
+    try {
+      db.exec(`ALTER TABLE graph_events ADD COLUMN eid TEXT`)
+    } catch {
+      // 列已存在
+    }
   }
 
   async append(e: Omit<GraphLogEvent, 'seq'>): Promise<number> {
@@ -185,7 +194,14 @@ class SqliteEventLogStore implements EventLogStore {
       `INSERT INTO graph_events (run_id, graph_id, ts, kind, node_id, iteration, super_step, payload)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(e.runId, e.graphId, e.ts, e.kind, e.nodeId ?? null, e.iteration ?? null, e.superStep ?? null, JSON.stringify(e.payload))
-    return Number(r.lastInsertRowid)
+    const seq = Number(r.lastInsertRowid)
+    // eid = <runId>-<seq>（seq 即 AUTOINCREMENT rowid）；回填同 insert 一样走本库，失败不阻断追加
+    try {
+      this.db.prepare(`UPDATE graph_events SET eid = ? WHERE seq = ?`).run(`${e.runId}-${seq}`, seq)
+    } catch {
+      // 旧库补列失败（理论上构造时已容错）→ eid 缺失，读取方按无 eid 处理
+    }
+    return seq
   }
 
   async query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string }): Promise<GraphLogEvent[]> {
@@ -268,6 +284,7 @@ function rowToEvent(r: Record<string, unknown>): GraphLogEvent {
     iteration: (r.iteration as number) ?? undefined,
     superStep: (r.super_step as number) ?? undefined,
     payload: JSON.parse(r.payload as string),
+    eid: (r.eid as string) ?? undefined,
   }
 }
 

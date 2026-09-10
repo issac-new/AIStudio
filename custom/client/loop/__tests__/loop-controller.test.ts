@@ -86,4 +86,62 @@ describe('Loop Controller (integration)', () => {
       server.close()
     }
   })
+
+  // P3 台账（Task 1 审查转来）：maxAttempts 写入通路——create 白名单拷贝 body.maxAttempts，
+  // 图编译器据此取 repair 回边 guard.maxIterations；缺省/非法值 → undefined（编译器回退 3）
+  it('POST /api/loop/loops persists body.maxAttempts (positive int); absent/invalid → undefined', async () => {
+    const { createLoopRouter } = await import('../../../server/loop/controllers/loop')
+    const { default: Koa } = await import('koa')
+    const created: Array<Record<string, unknown>> = []
+    const mockStore = {
+      listLoops: vi.fn().mockResolvedValue([]),
+      getLoop: vi.fn(), deleteLoop: vi.fn(),
+      createLoop: vi.fn(async (l: Record<string, unknown>) => { created.push(l) }),
+      updateLoop: vi.fn(), appendContract: vi.fn(), getContract: vi.fn(),
+      queryContracts: vi.fn().mockResolvedValue([]), updateContract: vi.fn(),
+      appendVerification: vi.fn(), appendEvent: vi.fn(),
+      queryEvents: vi.fn().mockResolvedValue([]), detectDrift: vi.fn(),
+    }
+    const mockSched = { scheduleLoop: vi.fn(), manualTick: vi.fn(), handleWebhook: vi.fn() }
+    const mockWC = { enqueue: vi.fn() }
+    const router = createLoopRouter(mockStore as any, mockSched as any, mockWC as any)
+
+    const app = new Koa()
+    app.use(async (ctx, next) => {
+      if (ctx.method === 'POST') {
+        const chunks: Buffer[] = []
+        for await (const chunk of ctx.req) chunks.push(chunk as Buffer)
+        ctx.request.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+      }
+      await next()
+    })
+    app.use(router.routes())
+    const server = app.listen(0)
+    const port = (server.address() as { port: number }).port
+    try {
+      const post = (body: Record<string, unknown>) => fetch(`http://127.0.0.1:${port}/api/loop/loops`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      const withMax = await post({ id: 'loop-max', name: 'T', goal: 'g', maxAttempts: 5 })
+      expect(withMax.status).toBe(200)
+      expect(created[0]?.maxAttempts).toBe(5)
+
+      const floatMax = await post({ id: 'loop-float', name: 'T', goal: 'g', maxAttempts: 4.8 })
+      expect(floatMax.status).toBe(200)
+      expect(created[1]?.maxAttempts).toBe(4) // 截断为正整数
+
+      const invalid = await post({ id: 'loop-invalid', name: 'T', goal: 'g', maxAttempts: 0 })
+      expect(invalid.status).toBe(200)
+      expect(created[2]?.maxAttempts).toBeUndefined() // 非法 → 缺省（编译器回退 3）
+
+      const absent = await post({ id: 'loop-no-max', name: 'T', goal: 'g' })
+      expect(absent.status).toBe(200)
+      expect(created[3]?.maxAttempts).toBeUndefined()
+    } finally {
+      server.close()
+    }
+  })
 })

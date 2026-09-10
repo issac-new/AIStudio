@@ -1,4 +1,4 @@
-import type { CockpitTask } from '@/custom/cockpit/store/cockpit'
+import type { CockpitTask } from '../adapters/task-adapter'
 
 export interface MatrixRoomSearchData {
   roomId: string

@@ -12,8 +12,11 @@ export interface FeatureConfig {
   kanbanEnhancements: boolean;
   branding: boolean;
   extendedI18n: boolean;
-  cockpit: boolean;
   loopEngineering: boolean;
+  /** P3 Task 3：IA 回退开关。VITE_IA_RETRO=1 时兼容守卫放行旧 loop 落点。
+   *  Task 8 语义收窄：cockpit 路由本体已退役删除（/hermes/cockpit 任何模式都
+   *  重定向 /app），retro 仅保留"旧 loop 深链不强制迁移"的回退保险。 */
+  iaRetro: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -23,8 +26,9 @@ export const features: FeatureConfig = {
   kanbanEnhancements: import.meta.env.VITE_CUSTOM_KANBAN_ENHANCEMENTS !== 'false',
   branding: import.meta.env.VITE_CUSTOM_BRANDING !== 'false',
   extendedI18n: import.meta.env.VITE_CUSTOM_EXTENDED_I18N !== 'false',
-  cockpit: import.meta.env.VITE_CUSTOM_COCKPIT !== 'false',
+  // P3 Task 8：cockpit 退役，VITE_CUSTOM_COCKPIT 开关随路由本体一并移除
   loopEngineering: import.meta.env.VITE_CUSTOM_LOOP !== 'false',
+  iaRetro: import.meta.env.VITE_IA_RETRO === '1',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {

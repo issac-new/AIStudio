@@ -1,0 +1,10 @@
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -663,5 +663,7 @@
+     detail: {
+       back: 'Back to runs',
+       loadFailed: 'Failed to load run detail',
+       noSpec: 'Graph spec unavailable — canvas disabled',
++      export: 'Export JSON',
++      exporting: 'Exporting…',
+     },

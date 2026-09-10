@@ -94,6 +94,12 @@ export function createLoopRouter(
       // P2 Task 4 随修 2：tenant 显式白名单拷贝——persistence 的 kanban board 解析
       // （KanbanPersistenceAdapter）以 loop.tenant 为唯一来源，不透传则写入永不发生
       tenant: typeof body.tenant === 'string' && body.tenant.trim() ? body.tenant.trim() : null,
+      // P3 台账（Task 1 审查转来）：maxAttempts 显式白名单拷贝——图编译器据此取 repair
+      // 回边 guard.maxIterations（resolveRepairMaxAttempts），不透传则创建请求配置的
+      // 契约重试上限静默丢失、回退 3。校验语义与编译器一致（正整数，非法即缺省）。
+      maxAttempts: typeof body.maxAttempts === 'number' && Number.isFinite(body.maxAttempts) && body.maxAttempts >= 1
+        ? Math.floor(body.maxAttempts)
+        : undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       lastTickAt: null,

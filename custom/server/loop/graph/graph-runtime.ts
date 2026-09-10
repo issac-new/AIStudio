@@ -883,13 +883,20 @@ export class GraphRuntime {
     return instance
   }
 
-  /** 事件单调用点：deps.emitEvent + eventLog append（装配时） */
+  /**
+   * 事件单调用点：eventLog append + deps.emitEvent（装配时）。
+   * P3 台账（事件幂等）：先落日志再广播——append 产生的 eid（`<runId>-<seq>`）由
+   * appendToEventLog 在 resolve 时回填到事件对象上，graph-socket 转发层经微任务链
+   * 等回填完成后下发，实时事件与 graph:history 携带同一 eid（前端按 eid 去重的根）。
+   * 顺序对换对订阅方无观察差异：append 同步发出（两个实现均同步执行），监听器仍在
+   * 同一同步块内被调用（异常在 GraphService 侧已 try/catch 包裹）。
+   */
   private emitEvent(event: GraphEvent): void {
+    this.appendToEventLog(event)
     const result = this.deps.emitEvent(event)
     if (result instanceof Promise) {
       result.catch(() => {})
     }
-    this.appendToEventLog(event)
   }
 
   private appendToEventLog(event: GraphEvent): void {
@@ -906,7 +913,14 @@ export class GraphRuntime {
     }
     try {
       const r = this.eventLog.append(entry)
-      if (r instanceof Promise) r.catch(() => {})
+      if (r instanceof Promise) {
+        // eid 回填到事件对象（同一引用已被监听器持有；graph-socket 微任务 flush 时读取）
+        r.then(seq => {
+          try {
+            ;(event as { eid?: string }).eid = `${entry.runId}-${seq}`
+          } catch { /* 回填失败不阻断图执行 */ }
+        }).catch(() => {})
+      }
     } catch {
       // 日志写入失败不阻断图执行
     }
@@ -958,8 +972,14 @@ export class GraphRuntime {
         return { amount: event.amount, totalCost: event.totalCost }
       case 'node.starved':
         return { missing: event.missing }
-      default:
+      default: {
+        // P3 Task 7：loop.* 桥接事件整体透传（LoopEvent 本就 JSON 安全）——
+        // 旧实现落 {}，replay 端反查不到 artifact/taskId，run→任务链接无从建立
+        if (typeof event.type === 'string' && event.type.startsWith('loop.')) {
+          return jsonSafe(event) as Record<string, unknown>
+        }
         return {}
+      }
     }
   }
 

@@ -1,117 +1,22 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
-index ac4a6b8b..246e2341 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -31,14 +31,57 @@ const router = createRouter({
-       meta: { standaloneChat: true },
-     },
-     {
--      path: '/hermes/chat',
--      name: 'hermes.chat',
--      component: () => import('@/views/hermes/ChatView.vue'),
--    },
--    {
--      path: '/hermes/session/:sessionId',
--      name: 'hermes.session',
--      component: () => import('@/views/hermes/ChatView.vue'),
-+      path: '/hermes/cockpit',
-+      name: 'hermes.cockpit',
-+      component: () => import('@/custom/cockpit/views/CockpitView.vue'),
-+      meta: { fullscreen: true },
-+      children: [
-+        {
-+          path: 'chat',
-+          name: 'hermes.chat',
-+          component: () => import('@/views/hermes/ChatView.vue'),
-+        },
-+        {
-+          path: 'session/:sessionId',
-+          name: 'hermes.session',
-+          component: () => import('@/views/hermes/ChatView.vue'),
-+        },
-+        {
-+          path: 'history',
-+          name: 'hermes.history',
-+          component: () => import('@/views/hermes/HistoryView.vue'),
-+        },
-+        {
-+          path: 'history/session/:sessionId',
-+          name: 'hermes.historySession',
-+          component: () => import('@/views/hermes/HistoryView.vue'),
-+        },
-+        {
-+          path: 'global-agent',
-+          name: 'hermes.globalAgent',
-+          component: () => import('@/views/hermes/GlobalAgentView.vue'),
-+        },
-+        {
-+          path: 'global-agent/session/:sessionId',
-+          name: 'hermes.globalAgentSession',
-+          component: () => import('@/views/hermes/GlobalAgentView.vue'),
-+        },
-+        {
-+          path: 'swarm-kanban',
-+          name: 'hermes.swarmKanban',
-+          component: () => import('@/custom/kanban/components/KanbanPanel.vue'),
-+        },
-+        {
-+          path: 'matrix-chat',
-+          name: 'hermes.matrixChat',
-+          component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
-+        },
-+        {
-+          path: 'matrix-chat/room/:roomId',
-+          name: 'hermes.matrixChatRoom',
-+          component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
-+        },
-+      ],
-     },
-     {
-       path: '/desktop-chat/:sessionId',
-@@ -46,26 +89,6 @@ const router = createRouter({
-       component: () => import('@/views/hermes/ChatView.vue'),
-       meta: { standaloneChat: true },
-     },
--    {
--      path: '/hermes/history',
--      name: 'hermes.history',
--      component: () => import('@/views/hermes/HistoryView.vue'),
--    },
--    {
--      path: '/hermes/history/session/:sessionId',
--      name: 'hermes.historySession',
--      component: () => import('@/views/hermes/HistoryView.vue'),
--    },
--    {
--      path: '/hermes/global-agent',
--      name: 'hermes.globalAgent',
--      component: () => import('@/views/hermes/GlobalAgentView.vue'),
--    },
--    {
--      path: '/hermes/global-agent/session/:sessionId',
--      name: 'hermes.globalAgentSession',
--      component: () => import('@/views/hermes/GlobalAgentView.vue'),
--    },
-     {
-       path: '/hermes/jobs',
-       name: 'hermes.jobs',
-@@ -78,11 +101,6 @@ const router = createRouter({
-       component: () => import('@/views/hermes/KanbanView.vue'),
+@@ -79,11 +79,6 @@
        meta: { hermesConfig: true },
      },
--    {
+     {
 -      path: '/hermes/workflow',
 -      name: 'hermes.workflow',
 -      component: () => import('@/views/hermes/WorkflowView.vue'),
 -    },
-     {
+-    {
        path: '/hermes/models',
        name: 'hermes.models',
-@@ -227,30 +245,6 @@ const router = createRouter({
-       path: '/hermes/agents',
+       component: () => import('@/views/hermes/ChatView.vue'),
+@@ -234,30 +229,6 @@
        redirect: { name: 'hermes.agentManager' },
      },
--    {
+     {
 -      path: '/hermes/group-chat',
 -      name: 'hermes.groupChat',
 -      component: () => import('@/views/hermes/GroupChatView.vue'),
@@ -135,26 +40,29 @@ index ac4a6b8b..246e2341 100644
 -        params: { roomId: to.params.roomId },
 -      }),
 -    },
-     {
+-    {
        path: '/hermes/files',
        name: 'hermes.files',
-@@ -308,7 +302,9 @@ router.beforeEach(async (to, _from, next) => {
+       component: () => import('@/views/hermes/FilesView.vue'),
+@@ -314,7 +285,10 @@
    if (to.meta.public) {
      // Already has key, skip login
      if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
 -      next(resolveLoginRedirect(to.query.redirect))
-+      // overlay: 默认跳 cockpit（而非上游的 /hermes/chat）；保留 query.redirect 保真。
++      // overlay[ia2]: 默认跳新 IA 总览（而非上游的 /hermes/chat）；保留 query.redirect 保真。
++      // Task 8: cockpit 路由本体已退役，登录默认落点由守卫直落 /app。
 +      const resolved = resolveLoginRedirect(to.query.redirect)
-+      next(resolved === '/hermes/chat' ? { name: 'hermes.cockpit' } : resolved)
++      next(resolved === '/hermes/chat' ? '/app' : resolved)
        return
      }
      next()
-@@ -322,7 +318,7 @@ router.beforeEach(async (to, _from, next) => {
+@@ -328,7 +302,8 @@
    }
  
    if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
 -    next({ name: 'hermes.chat' })
-+    next({ name: 'hermes.cockpit' })
++    // overlay[ia2]: 非 superadmin 兜底落新 IA 总览（Task 8: 原落 cockpit，路由已删）
++    next('/app')
      return
    }
  

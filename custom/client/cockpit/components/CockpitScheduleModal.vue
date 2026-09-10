@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
 import { Solar } from 'lunar-typescript'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useRouter } from 'vue-router'
+import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import { useI18n } from 'vue-i18n'
-import type { ScheduleEvent } from '@/custom/cockpit/store/cockpit'
+import type { ScheduleEvent } from '@/custom/ia2/store/workspace'
 import CockpitIcon from './CockpitIcon.vue'
+// 全局布局样式（弹窗遮罩/定位 token）——cockpit/index.ts 已随退役删除，
+// 本组件自包含导入（保留复用组件的唯一样式入口）。
+import '@/custom/cockpit/styles/cockpit.scss'
 
-const store = useCockpitStore()
+const store = useWorkspaceStore()
 const { t } = useI18n()
+const router = useRouter()
 
 const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
@@ -202,7 +207,8 @@ function goToToday() {
 
 function onEventClick(ev: ScheduleEvent) {
   if (ev.taskId) {
-    store.selectTask(ev.taskId)
+    // cockpit selectTask 已退役：任务事件点击 → 工作项区带搜索预选（TasksView 深链）
+    void router.push({ path: '/app/tasks', query: { task: ev.taskId } })
     store.closeSchedule()
   }
 }

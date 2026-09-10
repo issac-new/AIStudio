@@ -1,0 +1,41 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -765,6 +765,36 @@ export default {
+       tasks: '工作项',
+       comms: '沟通',
+     },
++    overview: {
++      attentionLabel: '需要注意',
++      attentionEmpty: '暂无阻塞、待审或待分类任务',
++      tierBlocked: '阻塞',
++      tierReview: '待审',
++      tierTriage: '待分类',
++      cardActiveRuns: '活跃运行',
++      awaitingPart: '待输入',
++      lastActive: '最近活动',
++      cardInbox: '等你决策',
++      waitLongest: '最久已等待',
++      cardSchedule: '今日日程',
++      scheduleEmpty: '今日暂无待办',
++      cardMetrics: '关键指标 · 近 7 天',
++      metricSuccess: '成功率',
++      metricDuration: '平均耗时',
++      metricStuck: '熔断次数',
++      metricLoading: '统计中…',
++      todayPlan: '今日计划',
++      planEmpty: '今日暂无到期循环或待办',
++      planKindLoop: '循环',
++      planKindTodo: '待办',
++      planOverdue: '已到期',
++      planNoTime: '未排时',
++      guideTitle: '三步跑起来',
++      guideStep1: '选模板：到编排区挑一个五阶段模板',
++      guideStep2: '设节奏：为目标配置执行节奏与预算',
++      guideStep3: '跑起来：启动循环，运行状态将回到这里聚合',
++      guideCta: '去编排',
++    },
+   },
+ 
+   agentManager: {
+

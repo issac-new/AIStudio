@@ -110,7 +110,7 @@ index 9f893c48..bfc30fad 100644
 +    // Persist the working homeserver so the user does not have to re-enter it.
 +    // Only saved on success, never on a failed attempt.
 +    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
-+    router.replace("/hermes/cockpit");
++    router.replace("/app");
    } catch (err: any) {
 -    if (err.status === 429 || err.status === 503) {
 -      errorMsg.value = t("login.tooManyAttempts");
@@ -142,7 +142,7 @@ index 9f893c48..bfc30fad 100644
 +
 +  try {
 +    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
-+    router.replace("/hermes/cockpit");
++    router.replace("/app");
 +  } catch (err: any) {
 +    errorMsg.value = err?.message || t("login.invalidCredentials");
 +  } finally {

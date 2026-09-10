@@ -1,0 +1,23 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index a08ee854..13db0618 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -755,6 +755,18 @@ export default {
+     },
+   },
+ 
++  ia2: {
++    brand: 'Workspace',
++    nav: {
++      overview: 'Overview',
++      orchestrate: 'Orchestrate',
++      runs: 'Runs',
++      inbox: 'Inbox',
++      tasks: 'Work Items',
++      comms: 'Comms',
++    },
++  },
++
+   agentManager: {
+     title: 'Agent Manager',
+     subtitle: 'Discover and manage the Agents available on this device.',

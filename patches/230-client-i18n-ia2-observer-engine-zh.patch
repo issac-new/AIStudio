@@ -1,0 +1,50 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -796,6 +796,20 @@
+       guideStep2: '设节奏：为目标配置执行节奏与预算',
+       guideStep3: '跑起来：启动循环，运行状态将回到这里聚合',
+       guideCta: '去编排',
++      statusDistTitle: '工作项状态分布',
++      statusDistEmpty: '暂无工作项',
++      statusDistFilterHint: '到工作项区按状态筛选',
++      status: {
++        triage: '待分类',
++        todo: '待办',
++        scheduled: '已排期',
++        ready: '就绪',
++        running: '进行中',
++        blocked: '阻塞',
++        review: '待审',
++        done: '完成',
++        archived: '归档',
++      },
+     },
+     inbox: {
+       title: '介入中心',
+@@ -900,6 +914,17 @@
+       loadFailed: '来源 run 反查失败',
+       open: '打开运行详情',
+       noRun: 'run 未知',
++    },
++    engine: {
++      title: '图引擎策略',
++      desc: '循环调度以如下模式的图引擎执行；阈值为构建期默认值。',
++      loading: '加载中…',
++      unavailable: '图引擎策略不可用（服务端未装配）',
++      failureBreaker: '失败熔断 · 连续失败 run 数',
++      stagnation: '停滞熔断 · 连续无产出 run 数',
++      interruptTimeout: '审批中断默认超时',
++      escalationResend: '升级告警重发间隔',
++      readonlyHint: '只读 · 可编辑策略文件随 P4 落地',
+     },
+   },
+ 
+@@ -2874,6 +2899,7 @@
+       apiServer: 'API 服务器',
+       models: '模型',
+       voice: '语音',
++      graph: '图引擎',
+     },
+     webhooks: {
+       title: 'Webhook',

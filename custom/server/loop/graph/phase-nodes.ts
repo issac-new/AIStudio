@@ -20,7 +20,7 @@ import type { NodeDef, NodeContext, StateValues, StateUpdate } from './types'
 import type { PredicateExpr } from './predicate'
 import { evaluatePredicate } from './predicate'
 import type {
-  LoopInstance, TaskContract, VerificationRecord, LoopEvent, LoopStage, ContractStatus,
+  LoopInstance, LoopStats, TaskContract, VerificationRecord, LoopEvent, LoopStage, ContractStatus,
 } from '../types'
 import { isJudgeFailed } from '../types'
 import type { LoopStateStore } from '../store/state-store'
@@ -80,8 +80,29 @@ export function isPersistFailure(r: unknown): r is PersistFailure {
   return typeof r === 'object' && r !== null && (r as { ok?: unknown }).ok === false
 }
 
+/** 持久化产物（P3 Task 7）：artifact 字符串 + 显式 taskId（替代按 `kanban:` 前缀反解）。
+ *  taskId 缺省 = 适配器产物无对应工作项（如 dryrun 标记）。 */
+export interface PersistedArtifact {
+  artifact: string
+  taskId?: string
+}
+
+/** 适配器成功返回值：纯字符串（旧形态兼容）或结构化产物 */
+export type PersistResult = string | PersistedArtifact
+
+/** 产物字符串读取（两种形态统一出口） */
+export function persistArtifactOf(r: PersistResult): string {
+  return typeof r === 'string' ? r : r.artifact
+}
+
+/** 显式 taskId 读取：字符串形态（旧适配器）无 taskId，不猜测不反解 */
+export function persistTaskIdOf(r: PersistResult): string | undefined {
+  return typeof r === 'string' ? undefined : r.taskId
+}
+
 /** 持久化适配器：产物落 kanban/commit/PR（断链 2 的真实副作用出口）。
- *  返回 artifact 字符串；P2 Task 4 起可返回 PersistFailure（失败不炸 run）。
+ *  返回 artifact（字符串或 PersistedArtifact 结构化产物，P3 Task 7 起携带显式 taskId）；
+ *  P2 Task 4 起可返回 PersistFailure（失败不炸 run）。
  *  适配器自身抛出的异常仍向上传播（意外缺陷 fail-loud，与 kanban CLI 可预期失败区分）。 */
 export interface PersistenceAdapter {
   persist(
@@ -89,7 +110,7 @@ export interface PersistenceAdapter {
     verification: VerificationRecord,
     loop: LoopInstance,
     dryRun: boolean,
-  ): Promise<string | PersistFailure>
+  ): Promise<PersistResult | PersistFailure>
 }
 
 export interface PhaseNodeDeps {
@@ -274,6 +295,15 @@ export interface RepairEntry {
 function progressOf(state: StateValues): PhaseProgressEntry[] {
   const v = state[CH.phaseProgress]
   return Array.isArray(v) ? [...v as PhaseProgressEntry[]] : []
+}
+
+/** 台账累差基准（P3 Task 1）：闭包里的 loop.stats 是编译时快照，repair 回边使同一 run 内
+ *  validation/persistence 节点多次激活——按快照写会把上一轮已落库的增量覆盖掉（多轮成功
+ *  tasksCompleted 少计、多轮升级 tasksBlocked 少计）。写台账前先从 store 读现值作基准；
+ *  store 读不到（mock/旧装配）回退闭包快照，行为与旧实现一致。 */
+async function currentStats(loop: LoopInstance, deps: PhaseNodeDeps): Promise<LoopStats> {
+  const cur = await deps.store.getLoop(loop.id).catch(() => null)
+  return cur?.stats ?? loop.stats
 }
 
 const now = () => new Date().toISOString()
@@ -575,8 +605,9 @@ async function runValidation(
   }
 
   if (!deps.dryRun && escalatedCount > 0) {
+    const base = await currentStats(loop, deps)
     await deps.store.updateLoop(loop.id, {
-      stats: { ...loop.stats, tasksBlocked: loop.stats.tasksBlocked + escalatedCount },
+      stats: { ...base, tasksBlocked: base.tasksBlocked + escalatedCount },
     })
   }
   return { update: buildUpdate() }
@@ -607,23 +638,26 @@ async function runPersistence(
     if (!contract) continue
     if (deps.dryRun) {
       // shadow 对齐：discovery/handoff 同样在 dryRun 下发标记事件（dryrun: 前缀），
-      // persistence 缺席会破坏双跑序列对比——事件只进 shadow 日志，非真实副作用
+      // persistence 缺席会破坏双跑序列对比——事件只进 shadow 日志，非真实副作用。
+      // runId 随事件透传（ctx.threadId 即 runId，graph-service 不变量）供双跑对比；
+      // 零真实写入 → 无 taskId。
       log(`[dry-run] persistence skipped: persist for ${contract.id}`)
       emitLoopEvent(ctx, {
         type: 'loop.persisted', loopId: loop.id,
-        contractId: contract.id, artifact: `dryrun:${contract.id}`, ts: now(),
+        contractId: contract.id, artifact: `dryrun:${contract.id}`,
+        runId: ctx.threadId, ts: now(),
       })
       continue
     }
-    const artifact = await deps.persistence.persist(contract, v, loop, deps.dryRun)
+    const persistResult = await deps.persistence.persist(contract, v, loop, deps.dryRun)
     // P2 Task 4（审查修复）：真实 kanban 写入失败不炸 run。失败轮发 loop.persist-failed 并
     // 置 repairNeeded=true——编译器 persistence→handoff 双条件守卫边（与 validation 对称）
     // 在同一 super-step 直接回边重试（BSP 先 apply 再求值出边，gate 的 repairNeeded:false
     // 覆写碰不到本节点的信号）。不标 persisted：回边后本节点对该契约重试；台账不误计。
-    if (isPersistFailure(artifact)) {
+    if (isPersistFailure(persistResult)) {
       emitLoopEvent(ctx, {
         type: 'loop.persist-failed', loopId: loop.id,
-        contractId: contract.id, error: artifact.error, ts: now(),
+        contractId: contract.id, error: persistResult.error, ts: now(),
       })
       const attempts = progress.filter(e => e.kind === 'persist-failed' && e.contractId === contract.id).length + 1
       if (attempts >= contract.maxAttempts) {
@@ -631,7 +665,7 @@ async function runPersistence(
         // tasksBlocked 计数 + loop.escalated 事件；不再置 repairNeeded（无谓重试）。
         // stop-check 对含 escalated 契约的 run 不判 stopMet（见 defaultEvaluateStop），
         // 否则"验证 passed 但交付物未落库"的 run 会被假判 completed（交付物静默丢失）。
-        log(`persistence escalated for ${contract.id} after ${attempts} failed attempts: ${artifact.error}`)
+        log(`persistence escalated for ${contract.id} after ${attempts} failed attempts: ${persistResult.error}`)
         escalatedCount++
         progress.push({ kind: 'persist-escalated', contractId: contract.id, attempts, ts: now() })
         const escalated = { ...contract, status: 'escalated' as const }
@@ -639,29 +673,41 @@ async function runPersistence(
         if (!deps.dryRun) await deps.store.updateContract(contract.id, { status: 'escalated' })
         emitLoopEvent(ctx, {
           type: 'loop.escalated', loopId: loop.id,
-          reason: `persistence failed after ${attempts} attempts for ${contract.id}: ${artifact.error}`,
+          reason: `persistence failed after ${attempts} attempts for ${contract.id}: ${persistResult.error}`,
           ts: now(),
         })
       } else {
-        log(`persistence failed for ${contract.id} (attempt ${attempts}/${contract.maxAttempts}, queued for repair): ${artifact.error}`)
-        repairQueue.push({ source: 'persistence', contractId: contract.id, message: artifact.error, ts: now() })
+        log(`persistence failed for ${contract.id} (attempt ${attempts}/${contract.maxAttempts}, queued for repair): ${persistResult.error}`)
+        repairQueue.push({ source: 'persistence', contractId: contract.id, message: persistResult.error, ts: now() })
         progress.push({ kind: 'persist-failed', contractId: contract.id, attempts, ts: now() })
       }
       continue
     }
     completed++
     progress.push({ kind: 'persisted', contractId: contract.id, ts: now() })
+    // P3 Task 7 显式关联链：artifact + taskId 结构化透传（适配器字符串形态无 taskId，
+    // 不按前缀反解）；runId 同事件留痕——任务详情反查 run / 追溯矩阵的数据根。
+    // taskId 有值时写契约台账（persistedTaskId），store 是反查的单一事实源。
+    const artifact = persistArtifactOf(persistResult)
+    const taskId = persistTaskIdOf(persistResult)
+    if (taskId && !deps.dryRun) {
+      await deps.store.updateContract(contract.id, { persistedTaskId: taskId })
+    }
     emitLoopEvent(ctx, {
       type: 'loop.persisted', loopId: loop.id,
-      contractId: contract.id, artifact, ts: now(),
+      contractId: contract.id, artifact,
+      ...(taskId !== undefined ? { taskId } : {}),
+      runId: ctx.threadId, ts: now(),
     })
   }
   if (!deps.dryRun && (completed > 0 || escalatedCount > 0)) {
+    // P3 台账：基准取 store 现值（见 currentStats），repair 多轮成功/升级不再互相覆盖
+    const base = await currentStats(loop, deps)
     await deps.store.updateLoop(loop.id, {
       stats: {
-        ...loop.stats,
-        tasksCompleted: loop.stats.tasksCompleted + completed,
-        tasksBlocked: loop.stats.tasksBlocked + escalatedCount,
+        ...base,
+        tasksCompleted: base.tasksCompleted + completed,
+        tasksBlocked: base.tasksBlocked + escalatedCount,
       },
     })
   }

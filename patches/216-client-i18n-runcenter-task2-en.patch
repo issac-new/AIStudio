@@ -1,0 +1,22 @@
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -718,6 +718,7 @@
+       reject: 'Reject',
+       rejectReasonPlaceholder: 'Reason is required to reject…',
+       rejectReasonRequired: 'Please provide a rejection reason',
++      noIdentity: 'Current user identity unavailable — cannot match the specified approvers list',
+     },
+     inbox: {
+       pending: 'Pending',
+@@ -747,7 +748,11 @@
+       rerunDone: 'Re-run created',
+       events: 'Related events',
+       noEvents: 'No related events',
++      currentValue: 'Current value (not the value at event time)',
+     },
++    keyboard: {
++      hint: 'j/k move · Enter detail · r replay · a approve',
++    },
+   },
+ 
+   agentManager: {

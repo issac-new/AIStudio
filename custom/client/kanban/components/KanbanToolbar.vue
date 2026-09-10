@@ -4,7 +4,6 @@ import { NButton, NInput, NSelect, NSpace, NCheckbox, NModal, NForm, NFormItem, 
 import type { KanbanAssignee, KanbanBoard, KanbanProject } from '@/api/hermes/kanban'
 import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const props = defineProps<{
   boards: KanbanBoard[]
@@ -36,10 +35,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const kanbanStore = useKanbanStore()  // HERMES_CUSTOM[v020]
-
-function closeModal() {
-  useCockpitStore().swarmKanbanVisible = false
-}
 
 // --- Board management (create + archive) ---------------------------------
 const showCreateBoard = ref(false)
@@ -222,14 +217,8 @@ const hasActiveFilters = computed(() =>
           </template>
           {{ t('kanban.board.archiveConfirm', { name: currentBoard }) }}
         </NPopconfirm>
-        <NButton
-          size="small"
-          quaternary
-          @click="closeModal"
-          :title="t('cockpit.close')"
-        >
-          ×
-        </NButton>
+<!-- overlay[ia2]: cockpit 全屏弹窗关闭按钮随 cockpit 退役删除（Task 8）——
+     看板现内嵌于 /app/tasks，无"关闭弹窗"语义 -->
       </div>
     </div>
 

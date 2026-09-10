@@ -3,10 +3,13 @@
      policy/approvers/已等时长/超时策略）+ approve/reject 决策（reject 必填原因）。
      提交走 store.resumeRun → REST 成功后 store 落本地 resume 事件（乐观投影，
      不等 socket 回声）。上一轮 resume 带 auto 标记时显示"超时自动通过"横幅（A2 联动）。
-     投影逻辑在 adapters/intervention.ts（纯函数），本组件只做展示与提交。 -->
+     P3 台账（specified 审批身份）：resume 值携带 approver = 当前用户名（上游 token
+     载荷解析，cockpit currentUserName 同源）；身份不可得时决策按钮置灰并 tooltip 说明
+     （specified 策略按 approver 匹配，无名可署等于无法裁决）。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { getStoredUsername } from '@/api/client'
 import { useRunCenterStore } from '../store/runs'
 import {
   formatDurationMs, latestResumeIsAuto, parseApprovalInterrupt,
@@ -18,6 +21,10 @@ const props = defineProps<{ run: RunSummary }>()
 
 const { t } = useI18n()
 const store = useRunCenterStore()
+
+/** 当前审批人身份（token 载荷 username；面板生命周期内取一次） */
+const approver: string | null = getStoredUsername()
+const hasIdentity = approver != null
 
 /** 未决审批 interrupt 的结构化视图（无未决中断 → null，面板只渲染空壳） */
 const view = computed(() => parseApprovalInterrupt(props.run.events))
@@ -48,9 +55,11 @@ async function submit(decision: 'approved' | 'rejected'): Promise<void> {
   reasonError.value = false
   busy.value = true
   try {
+    // P3 台账：resume 值带 approver（服务端 evaluateApprovalPolicy 的 specified
+    // 分支按 approver 匹配名单）；无身份时按钮已置灰，此路径不可达
     await store.resumeRun(props.run.runId, decision === 'approved'
-      ? { decision: 'approved' }
-      : { decision: 'rejected', comment: text })
+      ? { decision: 'approved', approver: approver ?? undefined }
+      : { decision: 'rejected', comment: text, approver: approver ?? undefined })
     reason.value = ''
   } catch (e) {
     submitError.value = e instanceof Error ? e.message : String(e)
@@ -126,18 +135,23 @@ const timeoutLabel = computed(() => {
       <div class="ap-panel__actions">
         <button
           class="ap-panel__decision ap-panel__decision--approve"
-          :disabled="busy"
+          :disabled="busy || !hasIdentity"
+          :title="hasIdentity ? undefined : t('runcenter.approval.noIdentity')"
           @click="submit('approved')"
         >
           {{ t('runcenter.approval.approve') }}
         </button>
         <button
           class="ap-panel__decision ap-panel__decision--reject"
-          :disabled="busy"
+          :disabled="busy || !hasIdentity"
+          :title="hasIdentity ? undefined : t('runcenter.approval.noIdentity')"
           @click="submit('rejected')"
         >
           {{ t('runcenter.approval.reject') }}
         </button>
+        <span v-if="!hasIdentity" class="ap-panel__no-identity">
+          {{ t('runcenter.approval.noIdentity') }}
+        </span>
       </div>
     </template>
   </div>
@@ -226,7 +240,11 @@ const timeoutLabel = computed(() => {
   color: var(--color-danger, #e11d48);
   word-break: break-all;
 }
-.ap-panel__actions { display: flex; gap: 8px; }
+.ap-panel__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ap-panel__no-identity {
+  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  font-size: 11px;
+}
 .ap-panel__decision {
   padding: 5px 14px;
   border: 1px solid var(--border-color);

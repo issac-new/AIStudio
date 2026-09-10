@@ -1,0 +1,41 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -767,6 +767,36 @@ export default {
+       tasks: 'Work Items',
+       comms: 'Comms',
+     },
++    overview: {
++      attentionLabel: 'Needs attention',
++      attentionEmpty: 'No blocked, review or triage tasks',
++      tierBlocked: 'Blocked',
++      tierReview: 'Review',
++      tierTriage: 'Triage',
++      cardActiveRuns: 'Active runs',
++      awaitingPart: 'Awaiting input',
++      lastActive: 'Last activity',
++      cardInbox: 'Decisions due',
++      waitLongest: 'Longest wait',
++      cardSchedule: 'Today',
++      scheduleEmpty: 'Nothing scheduled today',
++      cardMetrics: 'Key metrics · 7d',
++      metricSuccess: 'Success rate',
++      metricDuration: 'Avg duration',
++      metricStuck: 'Circuit breaks',
++      metricLoading: 'Crunching…',
++      todayPlan: 'Today plan',
++      planEmpty: 'No due loops or todos today',
++      planKindLoop: 'Loop',
++      planKindTodo: 'Todo',
++      planOverdue: 'Overdue',
++      planNoTime: 'Unscheduled',
++      guideTitle: 'Three steps to run',
++      guideStep1: 'Pick a template: choose a five-stage template in Orchestrate',
++      guideStep2: 'Set the cadence: configure schedule and budget for the goal',
++      guideStep3: 'Run it: start the loop and its status aggregates back here',
++      guideCta: 'Go to Orchestrate',
++    },
+   },
+ 
+   agentManager: {
+

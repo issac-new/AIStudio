@@ -24,13 +24,20 @@ const STAGE_BY_NODE: Record<string, RunStage> = {
   'stop-check': 'stop',
 }
 
-/** legacy 业务阶段（loop.stage-transition.to）→ 统一阶段：scheduling 末段折回 stop */
+/**
+ * legacy 业务阶段（loop.stage-transition.to）→ 统一阶段。
+ * P3 台账 #28（gate 双轴统一）：scheduling 折叠为 gate——与图轴 STAGE_BY_NODE.gate
+ * 同向。理由：图轴的 gate 节点就是 legacy 五段视图 scheduling 末段的承载者
+ * （loop-to-graph.ts COMPILED_TO_REST_STAGE 把 gate/stop-check 都投影为 scheduling），
+ * 列表对用户展示的"业务阶段"取 gate（门禁语义）；stop 段由图轴 stop-check 事件
+ * 独占承载，legacy 轴不存在单独的 stop-check 语义。
+ */
 const STAGE_BY_LEGACY: Record<string, RunStage> = {
   discovery: 'discovery',
   handoff: 'handoff',
   validation: 'validation',
   persistence: 'persistence',
-  scheduling: 'stop',
+  scheduling: 'gate',
 }
 
 // ---------------------------------------------------------------------------

@@ -16,9 +16,10 @@ export type LifecycleStatus =
   | 'triage' | 'todo' | 'scheduled' | 'ready' | 'running'
   | 'blocked' | 'review' | 'done' | 'archived'
 
-/** 状态流转主链（漏斗顺序） */
+/** 状态流转主链（漏斗顺序）。blocked 位于 running 与 review 之间——
+ *  P3 Task 8 收编状态分布时修正：blocked 是 9 值之一，原漏斗漏计。 */
 export const STATUS_FLOW: LifecycleStatus[] = [
-  'triage', 'todo', 'scheduled', 'ready', 'running', 'review', 'done', 'archived',
+  'triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived',
 ]
 
 export interface StatusCount { status: LifecycleStatus; count: number }

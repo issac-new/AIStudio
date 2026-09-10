@@ -62,9 +62,20 @@ vi.mock('@/custom/loop/runcenter/api', () => ({
   },
 }))
 
-const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn(async () => {}) }))
+// ── 上游 auth mock（P3 台账 #6）：审批面板经 getStoredUsername 取审批人身份；
+// mock 掉 '@/api/client'（其 @/router import 会在下方 vue-router mock 下炸）──
+const { authMock } = vi.hoisted(() => ({ authMock: { username: 'alice' as string | null } }))
+vi.mock('@/api/client', () => ({
+  getStoredUsername: () => authMock.username,
+}))
+
+const { pushMock, routeMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(async () => {}),
+  routeMock: { query: {} as Record<string, unknown> },
+}))
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
+  useRoute: () => routeMock,
 }))
 
 import RunStageBadge from '@/custom/loop/runcenter/components/RunStageBadge.vue'
@@ -157,6 +168,8 @@ describe('RunCenterView (jsdom)', () => {
     fakeSocket.current = null
     vi.clearAllMocks()
     pushMock.mockClear()
+    routeMock.query = {}
+    authMock.username = 'alice' // 审批人身份（P3 台账 #6）
     try { localStorage.clear() } catch { /* ignore */ }
   })
 
@@ -182,6 +195,21 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.findAll('.rc-view__step')).toHaveLength(3)
     await w.find('.rc-view__cta').trigger('click')
     expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loop' })
+  })
+
+  it('?loop= 深链预填搜索框：落点即该 loop 的运行列表（P3 台账，Task 9 补）', async () => {
+    routeMock.query = { loop: 'loop-abc' }
+    rest.listRuns.mockResolvedValue([
+      { runId: 'run-1', graphId: 'loop-abc', status: 'running', updatedAt: '2026-09-10T00:00:00Z' },
+      { runId: 'run-2', graphId: 'loop-other', status: 'running', updatedAt: '2026-09-10T00:00:00Z' },
+    ])
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+    // 搜索框预填 loop id，列表按 graphId 包含匹配只剩该 loop 的 run
+    expect((w.find('.rc-view__search').element as HTMLInputElement).value).toBe('loop-abc')
+    const rows = w.findAll('.rc-table__row')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].text()).toContain('run-1')
   })
 
   it('状态筛选按钮过滤行；approve 动作行内展开审批面板（不进 loop 详情页，task-7）', async () => {
@@ -216,7 +244,7 @@ describe('RunCenterView (jsdom)', () => {
     // 内联审批：approve → 乐观投影（行不再 awaiting）+ REST 携带结构化值
     await w.find('.ap-panel__decision--approve').trigger('click')
     await new Promise(r => setTimeout(r, 0))
-    expect(rest.resumeRun).toHaveBeenCalledWith('run-2', 'approval:c1@1', { decision: 'approved' })
+    expect(rest.resumeRun).toHaveBeenCalledWith('run-2', 'approval:c1@1', { decision: 'approved', approver: 'alice' })
     expect(w.findAll('.rc-table__row--awaiting')).toHaveLength(0)
   })
 
@@ -339,5 +367,109 @@ describe('RunCenterView (jsdom)', () => {
 
     await w.findAll('.rc-view__pager button')[1].trigger('click') // 下一页
     expect(w.findAll('.rc-table__row')).toHaveLength(5)
+  })
+})
+
+describe('RunListTable 虚拟滚动与键盘可达（P3 台账）', () => {
+  const row = (over: Partial<RunSummary> & { runId: string }): RunSummary => ({
+    graphId: 'loop-loop1',
+    status: 'running',
+    updatedAt: '2026-09-10T00:00:00Z',
+    stage: 'discovery',
+    iteration: 1,
+    lastActivityAt: '2026-09-10T00:01:00Z',
+    cost: 0,
+    events: [],
+    pendingInterruptId: null,
+    ...over,
+  })
+
+  it('虚拟滚动：1000 行只渲染窗口（≤ 兜底容量 + overscan），画布承载全量行高', () => {
+    const many = Array.from({ length: 1000 }, (_, i) => row({ runId: `run-${i}` }))
+    const w = mount(RunListTable, { props: { runs: many } })
+    // jsdom 视口不可量测 → 兜底容量 24 + overscan 8
+    const rendered = w.findAll('.rc-table__row').length
+    expect(rendered).toBeLessThanOrEqual(32)
+    expect(rendered).toBeGreaterThan(0)
+    expect(w.find('.rc-table__canvas').attributes('style')).toContain('48000px') // 1000 × 48
+  })
+
+  it('小列表全渲染；首行 translateY(0)（虚拟定位）', () => {
+    const w = mount(RunListTable, { props: { runs: [row({ runId: 'r-1' }), row({ runId: 'r-2' })] } })
+    expect(w.findAll('.rc-table__row')).toHaveLength(2)
+    expect(w.findAll('.rc-table__row')[0].attributes('style')).toContain('translateY(0px)')
+    expect(w.findAll('.rc-table__row')[1].attributes('style')).toContain('translateY(48px)')
+  })
+
+  it('键盘：j/k 移动焦点行、Enter 发 select、r 发 replay、a 发 peek', async () => {
+    const runs = [row({ runId: 'r-1' }), row({ runId: 'r-2' }), row({ runId: 'r-3', status: 'completed' })]
+    const w = mount(RunListTable, { props: { runs } })
+    const body = w.find('.rc-table__body')
+
+    await body.trigger('keydown', { key: 'j' })
+    const focused = w.findAll('.rc-table__row--focused')
+    expect(focused).toHaveLength(1)
+    expect(focused[0].text()).toContain('r-2')
+
+    await body.trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('select')![0][0]).toMatchObject({ runId: 'r-2' })
+
+    await body.trigger('keydown', { key: 'k' })
+    await body.trigger('keydown', { key: 'r' })
+    expect(w.emitted('action')![0][0]).toMatchObject({ kind: 'replay', run: { runId: 'r-1' } })
+
+    await body.trigger('keydown', { key: 'a' })
+    expect(w.emitted('action')![1][0]).toMatchObject({ kind: 'peek', run: { runId: 'r-1' } })
+  })
+
+  it('键盘 a 键：awaiting-input 行发 approve（同一 peek 展开路径）；k 在首行不越界', async () => {
+    const runs = [row({ runId: 'r-a', status: 'awaiting-input', pendingInterruptId: 'x' })]
+    const w = mount(RunListTable, { props: { runs } })
+    const body = w.find('.rc-table__body')
+
+    await body.trigger('keydown', { key: 'k' }) // 首行上移 → 夹在 0
+    expect(w.findAll('.rc-table__row--focused')).toHaveLength(1)
+
+    await body.trigger('keydown', { key: 'a' })
+    expect(w.emitted('action')![0][0]).toMatchObject({ kind: 'approve', run: { runId: 'r-a' } })
+  })
+})
+
+describe('RunCenterView 批量订阅（P3 台账 #2：订阅域 = 可见页）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+    pushMock.mockClear()
+    routeMock.query = {}
+    try { localStorage.clear() } catch { /* ignore */ }
+  })
+
+  it('首屏只订阅可见页；翻页 unsubscribe 旧页 + subscribe 新页', async () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({
+      runId: `run-${i + 1}`,
+      graphId: 'loop-loop1',
+      status: 'running',
+      updatedAt: '2026-09-10T00:00:00Z',
+    }))
+    rest.listRuns.mockResolvedValue(many)
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+
+    const emits = () => fakeSocket.current!.emitted
+    const subs = () => emits().filter(e => e.event === 'subscribe').map(e => String(e.payload))
+    const unsubs = () => emits().filter(e => e.event === 'unsubscribe').map(e => String(e.payload))
+
+    // 页 1：run-1..run-20（PAGE_SIZE）
+    expect(subs()).toHaveLength(20)
+    expect(subs()[0]).toBe('run-1')
+    expect(subs()[19]).toBe('run-20')
+
+    await w.findAll('.rc-view__pager button')[1].trigger('click') // 下一页
+    await new Promise(r => setTimeout(r, 0))
+
+    // 旧页 20 个全部 unsubscribe；新页只订阅 run-21..run-25
+    expect(unsubs()).toHaveLength(20)
+    expect(subs().slice(20)).toEqual(['run-21', 'run-22', 'run-23', 'run-24', 'run-25'])
   })
 })
