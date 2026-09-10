@@ -235,6 +235,25 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.find('.rc-view__replay-body').text()).toContain('graph.started')
   })
 
+  it('行点击 / detail 动作 → 运行详情页；approve 仍走 loop 详情（审批 UI 在那边）', async () => {
+    rest.listRuns.mockResolvedValue([
+      { runId: 'run-9', graphId: 'loop-loop1', status: 'running', updatedAt: '2026-09-10T00:00:00Z' },
+    ])
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+
+    // 行点击 → 运行详情（task-6）
+    await w.find('.rc-table__row').trigger('click')
+    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopRunDetail', params: { runId: 'run-9' } })
+
+    // running 行操作集 [peek, detail]：peek → loop 详情；detail → 运行详情
+    const buttons = w.findAll('.rc-table__row')[0].findAll('.rc-table__action')
+    await buttons[0].trigger('click')
+    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopDetail', params: { id: 'loop1' } })
+    await buttons[1].trigger('click')
+    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopRunDetail', params: { runId: 'run-9' } })
+  })
+
   it('分页：超过页大小截断 + 翻页', async () => {
     const many = Array.from({ length: 25 }, (_, i) => ({
       runId: `run-${i}`,

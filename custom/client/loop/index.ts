@@ -32,6 +32,12 @@ export async function registerLoopEngineering(app: App): Promise<void> {
       component: () => import('./runcenter/views/RunCenterView.vue'),
     },
     {
+      // P2 Task 6 — 运行详情（执行图 + 时间轴回放 + 三级分辨率）。
+      path: '/hermes/loop/runs/:runId',
+      name: 'hermes.loopRunDetail',
+      component: () => import('./runcenter/views/RunDetailView.vue'),
+    },
+    {
       path: '/hermes/loop/:id',
       name: 'hermes.loopDetail',
       component: () => import('./views/LoopDetailView.vue'),
