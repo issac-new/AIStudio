@@ -258,3 +258,13 @@
 # T5: 桌面捆绑 runtime pin 0.20.6 -> 0.21.0(hermes-0.21.0-runtime tag 已存在于 EKKOLearnAI/hermes-studio;
 # vanilla 0.21.0 已原生含 specify/decompose/context 动词;上游 studio 升 pin 后本 patch 仿 108 先例退役)
 207-desktop-runtime-pin-0210.patch
+# P2 Task 5: 运行中心——/graph socket 客户端 + Pinia runs store + 运行列表视图 i18n
+# (合并重编号: 原 205-208 与 T1/T5 撞号, 2026-09-10)
+203-client-i18n-runcenter-zh.patch
+204-client-i18n-runcenter-en.patch
+# P2 Task 6: 运行详情——执行图画布 + 时间轴回放 + 三级分辨率 i18n
+209-client-i18n-runcenter-detail-zh.patch
+210-client-i18n-runcenter-detail-en.patch
+# P2 Task 7: 节点检查器 + 介入收件箱——peek/attach/审批/两态归档 i18n
+211-client-i18n-runcenter-intervention-zh.patch
+212-client-i18n-runcenter-intervention-en.patch

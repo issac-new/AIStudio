@@ -6,12 +6,16 @@ import { resolve } from 'path'
 import type {
   TaskContract, LoopInstance, VerificationRecord, AutonomyLevel,
 } from '../types'
+import { isJudgeFailed } from '../types'
+import type { JudgeVerdict } from '../types'
 
 const execFileAsync = promisify(execFile)
 
 export interface VerifierDeps {
-  // Judge: call an independent model (different model family from maker)
-  callJudge?: (model: string, diff: string, rubric: string) => Promise<{ score: number; reasoning: string }>
+  // Judge: call an independent model (different model family from maker).
+  // 可返回 { status: 'pending', reason }：judge 暂无法裁决（如模型不可用）——
+  // verifier 记 status='pending'，该项按跳过处理（overall 由其余项决定），不烧穿 repair。
+  callJudge?: (model: string, diff: string, rubric: string) => Promise<JudgeVerdict>
   // Human: notify and await approval
   requestHumanApproval?: (contractId: string, approvers: string[]) => Promise<'approved' | 'rejected' | 'changes-requested' | 'pending'>
 }
@@ -48,20 +52,28 @@ export class Verifier {
       // Judge only sees the diff, not maker's reasoning trace
       const diff = await this.getWorktreeDiff(contract.worktreeId)
       const jr = await this.deps.callJudge(spec.judge.model, diff, spec.judge.rubric)
-      judgeResult = {
-        model: spec.judge.model,
-        score: jr.score,
-        reasoning: jr.reasoning,
-        passed: jr.score >= spec.judge.minScore,
+      if ('status' in jr) {
+        // P2 台账③前置：judge 暂无法裁决 → 记 pending（为 P3 真实 LLM judge 留结构），
+        // 语义与无 judge 相同：跳过该项，overall 由其余项决定；不烧穿 repair 循环
+        judgeResult = { model: spec.judge.model, status: 'pending', reason: jr.reason }
+      } else {
+        const passed = jr.score >= spec.judge.minScore
+        judgeResult = {
+          model: spec.judge.model,
+          score: jr.score,
+          reasoning: jr.reasoning,
+          passed,
+          status: passed ? 'passed' : 'failed',
+        }
       }
     }
 
-    const judgeFailed = judgeResult && !judgeResult.passed
+    const judgeFailed = isJudgeFailed(judgeResult)
 
     // --- Human gate ---
     let humanResult: VerificationRecord['results']['human'] = null
     if (spec.human) {
-      const needsHuman = this.needsHumanGate(level, spec.human.gate, progFailed, !!judgeFailed)
+      const needsHuman = this.needsHumanGate(level, spec.human.gate, progFailed, judgeFailed)
       if (needsHuman && this.deps.requestHumanApproval) {
         const decision = await this.deps.requestHumanApproval(contract.id, spec.human.approvers)
         if (decision === 'pending') {
@@ -82,7 +94,8 @@ export class Verifier {
     }
 
     // --- Determine overall ---
-    const allPassed = !progFailed && (!judgeResult || judgeResult.passed)
+    // judgeFailed 已含读取兼容（旧数据无 status 回退 passed 布尔；pending/skipped 不阻断）
+    const allPassed = !progFailed && !judgeFailed
       && (!humanResult || humanResult.decision === 'approved')
 
     // --- finalResponseGuard ---

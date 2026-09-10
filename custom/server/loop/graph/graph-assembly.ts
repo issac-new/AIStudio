@@ -12,9 +12,12 @@ import { GraphService } from './graph-service'
 import { RunSpawner } from './run-spawner'
 import { compileLoopToDef, type CompileDeps } from './graph-compiler'
 import { appendContractsById } from './phase-nodes'
+import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
+import { InterruptTimeoutScanner } from './interrupt-timeout'
+import { DailyBriefJob, readBriefConfig } from './daily-brief'
 import { emitLoopEvent } from '../services/loop-socket'
 import type { Router } from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
@@ -60,6 +63,11 @@ export interface GraphAssemblyOpts {
   socketRetryMs?: number
   /** /graph namespace 绑定重试封顶次数，默认 30（~60s）；超过后 warn 一次 */
   socketRetryMax?: number
+  /**
+   * R1 每日 Brief 的 Matrix 传输（宿主注入：把文本以 m.loop.notification 发到房间）。
+   * 仅 LOOP_BRIEF_ROOM 配置时被调用；未注入或未配置房间 → brief 只落事件日志。
+   */
+  briefDelivery?: (roomId: string, text: string) => Promise<void>
   log?: (msg: string) => void
 }
 
@@ -73,6 +81,10 @@ export interface GraphAssembly {
   specStore: GraphSpecStore
   spawner: RunSpawner | null
   shadowRunner: ShadowRunner | null
+  /** interrupt 超时扫描器（P2 台账 h，仅 mode=on 装配）：审批超时 escalate/auto-approve/fail */
+  interruptScanner: InterruptTimeoutScanner | null
+  /** R1 每日 Brief 任务（仅 mode=on 装配）：三段式结构化汇总 + Matrix 投递（零 LLM 依赖） */
+  briefJob: DailyBriefJob | null
   /** loop REST tick/webhook/schedule 的图引擎分流目标（patch 在 mode=on 时用它替换 legacy scheduler 入参） */
   loopTickTarget: {
     manualTick(loopId: string): Promise<unknown>
@@ -103,6 +115,12 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     void store.appendEvent(e).catch(() => {})
     const ioNow = resolveIo(opts.io)
     if (ioNow) emitLoopEvent(ioNow as never, e as never)
+    // P2 台账②：兑现"首条 loop.* 事件补试 /graph 绑定"的承诺——定时重试封顶后，
+    // 借本次事件再试一次 tryBindSocket（≥2s 时间戳节流，避免事件风暴空转）。
+    if (!socketBound && Date.now() - lastEventBindRetryAt >= socketRetryMs) {
+      lastEventBindRetryAt = Date.now()
+      tryBindSocket()
+    }
   }
 
   const graphService = new GraphService({
@@ -123,6 +141,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   let socketAttempts = 0
   let socketTimer: ReturnType<typeof setTimeout> | null = null
   let socketGiveUpWarned = false
+  /** 事件驱动的补试节流时间戳（P2 台账②）：上次借 loop.* 事件 tryBindSocket 的时刻 */
+  let lastEventBindRetryAt = 0
   const socketRetryMs = opts.socketRetryMs ?? SOCKET_RETRY_MS
   const socketRetryMax = opts.socketRetryMax ?? SOCKET_RETRY_MAX
 
@@ -152,7 +172,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     socketTimer.unref?.()
   }
 
-  const specStore = new GraphSpecStore(opts.specStorePath)
+  // P2 台账⑥：specs 持久化走 event-log 同库表；specStorePath 仅作旧 JSON 文件迁移兜底
+  const specStore = new GraphSpecStore(eventLog, opts.specStorePath)
   void specStore.load().catch(() => {})
 
   const spawner = mode === 'on'
@@ -177,6 +198,38 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       })
     : null
 
+  // P2 台账 h：审批 interrupt 超时策略扫描（escalate/auto-approve/fail，默认 72h）。
+  // 仅 on 模式装配——shadow 只读不写（双跑护栏），legacy 无图引擎调度。
+  const interruptScanner = mode === 'on'
+    ? new InterruptTimeoutScanner({
+        graphService, eventLog,
+        emitLoopEvent: bridgeLoopEvent,
+        intervalMs: opts.intervalMs, log,
+      })
+    : null
+
+  // R1 每日 Brief（spec §7A）：三段式结构化汇总，零 LLM 依赖。仅 on 模式装配
+  //（与 spawner/interruptScanner 同界——legacy 无图引擎 run 可聚合，shadow 只读不写）。
+  // 投递通道仅在"LOOP_BRIEF_ROOM 配置 + 宿主注入 briefDelivery 传输"同时成立时接线：
+  // 配了房间但缺传输时若接一个空实现闭包，dispatch 会把"什么都没发"记成
+  // delivered:true（审计失真）——此处直接不传 deliver，job 走 event-log-only
+  //（delivered:false）路径；装配时 warn 一次。
+  const briefConfig = readBriefConfig()
+  let briefJob: DailyBriefJob | null = null
+  if (mode === 'on') {
+    if (briefConfig.room && !opts.briefDelivery) {
+      log('[graph] LOOP_BRIEF_ROOM is set but no briefDelivery transport injected — brief stays event-log only')
+    }
+    briefJob = new DailyBriefJob({
+      eventLog, store,
+      cron: briefConfig.cron,
+      deliver: briefConfig.room && opts.briefDelivery
+        ? (text) => opts.briefDelivery!(briefConfig.room!, text)
+        : undefined,
+      intervalMs: opts.intervalMs, log,
+    })
+  }
+
   const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore })
 
   if (!tryBindSocket()) scheduleSocketRetry()
@@ -190,6 +243,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     specStore,
     spawner,
     shadowRunner,
+    interruptScanner,
+    briefJob,
     loopTickTarget: {
       manualTick: (loopId) => (spawner ? spawner.tickNow(loopId) : Promise.resolve(null)),
       // mode=on 时本对象作为 scheduler 传入 createLoopRouter：controllers/loop.ts 在
@@ -199,7 +254,15 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       scheduleLoop: (loop) => {
         if (!spawner || loop.status !== 'idle') return
         if (loop.schedule?.mode === 'manual') return
-        const dueAt = loop.nextTickAt ? new Date(loop.nextTickAt).getTime() : NaN
+        // P2 台账①：on 模式新建 cron loop（未手动 tick 过 → nextTickAt 为 null）原本
+        // 对 null 取 NaN 直接跳过，poll 又因 !nextTickAt 永不命中 → loop 永不自启。
+        // 此处复用共享 computeNextTick 算出首次时间、经 store 写回，再统一走到期判断。
+        let dueIso = loop.nextTickAt
+        if (!dueIso && loop.schedule?.mode === 'cron' && loop.schedule.cron) {
+          dueIso = computeNextTick(loop)
+          void store.updateLoop(loop.id, { nextTickAt: dueIso }).catch(() => {})
+        }
+        const dueAt = dueIso ? new Date(dueIso).getTime() : NaN
         if (Number.isFinite(dueAt) && dueAt <= Date.now()) void spawner.tickNow(loop.id)
       },
       handleWebhook: (loopId, source, eventType) => { spawner?.handleWebhook(loopId, source, eventType) },
@@ -242,6 +305,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       }
       spawner?.start()
       shadowRunner?.start()
+      interruptScanner?.start()
+      briefJob?.start()
       if (!tryBindSocket()) scheduleSocketRetry()
       log(`[graph] engine mode: ${mode}`)
       return assembly
@@ -249,6 +314,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     stop() {
       spawner?.stop()
       shadowRunner?.stop()
+      interruptScanner?.stop()
+      briefJob?.stop()
       if (socketTimer) {
         clearTimeout(socketTimer)
         socketTimer = null

@@ -42,7 +42,7 @@ export interface GraphRuntimeOptions {
   runId?: string
 }
 
-type PendingInterrupt = { nodeId: string; value: unknown; id: string }
+type PendingInterrupt = { nodeId: string; value: unknown; id: string; raisedAtMs?: number }
 
 /** GraphEvent.type → 事件日志 kind（未列出者 kind = type 原样落盘） */
 /** GraphEvent.type → 事件日志 kind（导出供 shadow 对比等装配层复用） */
@@ -484,7 +484,8 @@ export class GraphRuntime {
         if (result.update) orderedUpdates.push(result.update)
         if (result.interrupt) {
           hasInterrupt = true
-          pendingInterrupts.push({ nodeId, value: result.interrupt.value, id: result.interrupt.id })
+          // raisedAtMs：interrupt 挂起时刻随 checkpoint 持久（P2 台账 h，interrupt 超时策略判定源）
+          pendingInterrupts.push({ nodeId, value: result.interrupt.value, id: result.interrupt.id, raisedAtMs: Date.now() })
           this.emitEvent({
             type: 'graph.interrupt',
             graphId,
@@ -929,8 +930,16 @@ export class GraphRuntime {
         return {}
       case 'graph.interrupt':
         return { interruptId: event.interruptId, value: jsonSafe(event.value) }
-      case 'graph.resume':
-        return { interruptId: event.interruptId, value: jsonSafe(event.resumeValue) }
+      case 'graph.resume': {
+        // P2 台账 h：auto-approve（interrupt 超时策略）的 resume 值带 autoApproved 标记，
+        // 投影到日志 payload 顶层——消费方不必钻 value 即可判定"这条 resume 是自动审批"
+        const value = event.resumeValue
+        const payload: Record<string, unknown> = { interruptId: event.interruptId, value: jsonSafe(value) }
+        if (value != null && typeof value === 'object' && (value as { autoApproved?: unknown }).autoApproved === true) {
+          payload.autoApproved = true
+        }
+        return payload
+      }
       case 'graph.checkpoint':
         return { checkpointId: event.checkpointId }
       case 'graph.completed':

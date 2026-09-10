@@ -22,6 +22,7 @@ import { evaluatePredicate } from './predicate'
 import type {
   LoopInstance, TaskContract, VerificationRecord, LoopEvent, LoopStage, ContractStatus,
 } from '../types'
+import { isJudgeFailed } from '../types'
 import type { LoopStateStore } from '../store/state-store'
 import type { WorktreeManager } from '../engine/worktree-manager'
 import type { SubagentDispatcher } from '../engine/subagent-dispatcher'
@@ -68,14 +69,27 @@ export interface Connector {
   discover(loop: LoopInstance): Promise<TaskContract[]>
 }
 
-/** 持久化适配器：产物落 kanban/commit/PR（断链 2 的真实副作用出口） */
+/** 持久化失败结果（P2 Task 4）：适配器把 kanban 写入失败收敛为该值返回（不抛），
+ *  persistence 节点据此发 loop.persist-failed 并把契约推入 repairQueue 走守卫回边。 */
+export interface PersistFailure {
+  ok: false
+  error: string
+}
+
+export function isPersistFailure(r: unknown): r is PersistFailure {
+  return typeof r === 'object' && r !== null && (r as { ok?: unknown }).ok === false
+}
+
+/** 持久化适配器：产物落 kanban/commit/PR（断链 2 的真实副作用出口）。
+ *  返回 artifact 字符串；P2 Task 4 起可返回 PersistFailure（失败不炸 run）。
+ *  适配器自身抛出的异常仍向上传播（意外缺陷 fail-loud，与 kanban CLI 可预期失败区分）。 */
 export interface PersistenceAdapter {
   persist(
     contract: TaskContract,
     verification: VerificationRecord,
     loop: LoopInstance,
     dryRun: boolean,
-  ): Promise<string>
+  ): Promise<string | PersistFailure>
 }
 
 export interface PhaseNodeDeps {
@@ -91,8 +105,9 @@ export interface PhaseNodeDeps {
    *  失败不阻断派发——上下文是增强不是依赖） */
   injectWorkspaceContext?: (contract: TaskContract, worktreeId: string) => Promise<void>
   /** validation 人工门禁的审批三元组缺省：approvers 取自 contract.verificationIntent.human.approvers，
-   *  此处只配 policy / onReject（缺省 all / { goto: 'handoff' }，即守卫回边） */
-  approvals?: { policy?: ApprovalPolicy; onReject?: OnReject }
+   *  此处只配 policy / onReject（缺省 all / { goto: 'handoff' }，即守卫回边）；
+   *  timeout 同源透传（缺省 escalate + 72h，P2 台账 h） */
+  approvals?: { policy?: ApprovalPolicy; onReject?: OnReject; timeout?: InterruptTimeoutConfig }
 }
 
 // ---------------------------------------------------------------------------
@@ -103,10 +118,24 @@ export type ApproverSource = string[] | { from: 'channel' | 'assignee'; name?: s
 export type ApprovalPolicy = 'all' | 'majority' | 'any' | 'specified'
 export type OnReject = { goto: string } | 'fail'
 
+/** interrupt 超时策略（P2 台账 h）：审批 interrupt 无人应答达 ms 后的处置方式。
+ *  escalate=发 loop.escalated 告警并保持等待（默认）；auto-approve-with-log=自动通过并留痕；
+ *  fail=run 判失败。配置随 interrupt value 进 checkpoint（扫描器持久判定源）。 */
+export type InterruptTimeoutAction = 'escalate' | 'auto-approve-with-log' | 'fail'
+
+export interface InterruptTimeoutConfig {
+  /** 超时时长 ms；缺省用扫描器默认（72h） */
+  ms?: number
+  /** 超时策略；缺省 escalate */
+  onTimeout?: InterruptTimeoutAction
+}
+
 export interface ApprovalsConfig {
   approvers: ApproverSource
   policy: ApprovalPolicy
   onReject: OnReject
+  /** interrupt 超时策略（P2 台账 h）；缺省 escalate + 72h */
+  timeout?: InterruptTimeoutConfig
 }
 
 export interface ApprovalDecision {
@@ -229,9 +258,13 @@ export function resumeChannel(interruptId: string): string {
 export type PhaseProgressEntry =
   | { kind: 'verified'; contractId: string; attempts: number; ts: string }
   | { kind: 'persisted'; contractId: string; ts: string }
+  /** persistence 写入失败（repair 重试中）：attempts 为本 run 内该契约的 persist 失败轮数 */
+  | { kind: 'persist-failed'; contractId: string; attempts: number; ts: string }
+  /** persistence 重试封顶升级（终态）：契约已标 escalated，不再重试 */
+  | { kind: 'persist-escalated'; contractId: string; attempts: number; ts: string }
 
 export interface RepairEntry {
-  source: 'validation' | 'gate'
+  source: 'validation' | 'gate' | 'persistence'
   contractId?: string
   name?: string
   message: string
@@ -265,10 +298,10 @@ export function appendContractsById(old: TaskContract[] | undefined, next: TaskC
   return [...merged.values()]
 }
 
-/** 旧引擎 determineFailType 语义对齐 */
+/** 旧引擎 determineFailType 语义对齐（isJudgeFailed：pending/skipped 不算失败，旧数据回退 passed 布尔） */
 function failTypeOf(record: VerificationRecord): string {
   if (record.results.programmatic.some(p => !p.passed)) return 'programmatic'
-  if (record.results.judge && !record.results.judge.passed) return 'judge'
+  if (isJudgeFailed(record.results.judge)) return 'judge'
   if (record.results.human && record.results.human.decision !== 'approved') return 'human'
   return 'unknown'
 }
@@ -278,6 +311,7 @@ function approvalTriple(deps: PhaseNodeDeps, contract: TaskContract): ApprovalsC
     approvers: contract.verificationIntent.human?.approvers ?? ['assignee'],
     policy: deps.approvals?.policy ?? 'all',
     onReject: deps.approvals?.onReject ?? { goto: 'handoff' },
+    timeout: deps.approvals?.timeout,
   }
 }
 
@@ -489,6 +523,9 @@ async function runValidation(
                 artifactType: c.resultTemplate.artifactType, attempts: c.attempts,
               },
               policy: triple,
+              // 超时策略随 value 进 checkpoint（P2 台账 h）：扫描器从 pendingInterrupts[].value 读，
+              // 不反查节点 config——checkpoint 是唯一持久事实源
+              timeout: triple.timeout,
             },
           },
           goto: ['validation'],
@@ -557,10 +594,15 @@ async function runPersistence(
   const progress = progressOf(state)
   const log = deps.log ?? (() => {})
   let completed = 0
+  let escalatedCount = 0
+  const repairQueue: RepairEntry[] = []
+  const updatedContracts: TaskContract[] = []
 
   for (const v of verifications) {
     if (v.overall !== 'passed') continue
     if (progress.some(e => e.kind === 'persisted' && e.contractId === v.contractId)) continue
+    // 重试封顶升级的契约已终态（escalated），不再重试
+    if (progress.some(e => e.kind === 'persist-escalated' && e.contractId === v.contractId)) continue
     const contract = contracts.find(c => c.id === v.contractId)
     if (!contract) continue
     if (deps.dryRun) {
@@ -574,6 +616,39 @@ async function runPersistence(
       continue
     }
     const artifact = await deps.persistence.persist(contract, v, loop, deps.dryRun)
+    // P2 Task 4（审查修复）：真实 kanban 写入失败不炸 run。失败轮发 loop.persist-failed 并
+    // 置 repairNeeded=true——编译器 persistence→handoff 双条件守卫边（与 validation 对称）
+    // 在同一 super-step 直接回边重试（BSP 先 apply 再求值出边，gate 的 repairNeeded:false
+    // 覆写碰不到本节点的信号）。不标 persisted：回边后本节点对该契约重试；台账不误计。
+    if (isPersistFailure(artifact)) {
+      emitLoopEvent(ctx, {
+        type: 'loop.persist-failed', loopId: loop.id,
+        contractId: contract.id, error: artifact.error, ts: now(),
+      })
+      const attempts = progress.filter(e => e.kind === 'persist-failed' && e.contractId === contract.id).length + 1
+      if (attempts >= contract.maxAttempts) {
+        // 随修 1：重试封顶须有终态（对齐 validation 语义）——契约标 escalated 进台账 +
+        // tasksBlocked 计数 + loop.escalated 事件；不再置 repairNeeded（无谓重试）。
+        // stop-check 对含 escalated 契约的 run 不判 stopMet（见 defaultEvaluateStop），
+        // 否则"验证 passed 但交付物未落库"的 run 会被假判 completed（交付物静默丢失）。
+        log(`persistence escalated for ${contract.id} after ${attempts} failed attempts: ${artifact.error}`)
+        escalatedCount++
+        progress.push({ kind: 'persist-escalated', contractId: contract.id, attempts, ts: now() })
+        const escalated = { ...contract, status: 'escalated' as const }
+        updatedContracts.push(escalated)
+        if (!deps.dryRun) await deps.store.updateContract(contract.id, { status: 'escalated' })
+        emitLoopEvent(ctx, {
+          type: 'loop.escalated', loopId: loop.id,
+          reason: `persistence failed after ${attempts} attempts for ${contract.id}: ${artifact.error}`,
+          ts: now(),
+        })
+      } else {
+        log(`persistence failed for ${contract.id} (attempt ${attempts}/${contract.maxAttempts}, queued for repair): ${artifact.error}`)
+        repairQueue.push({ source: 'persistence', contractId: contract.id, message: artifact.error, ts: now() })
+        progress.push({ kind: 'persist-failed', contractId: contract.id, attempts, ts: now() })
+      }
+      continue
+    }
     completed++
     progress.push({ kind: 'persisted', contractId: contract.id, ts: now() })
     emitLoopEvent(ctx, {
@@ -581,16 +656,25 @@ async function runPersistence(
       contractId: contract.id, artifact, ts: now(),
     })
   }
-  if (!deps.dryRun && completed > 0) {
+  if (!deps.dryRun && (completed > 0 || escalatedCount > 0)) {
     await deps.store.updateLoop(loop.id, {
-      stats: { ...loop.stats, tasksCompleted: loop.stats.tasksCompleted + completed },
+      stats: {
+        ...loop.stats,
+        tasksCompleted: loop.stats.tasksCompleted + completed,
+        tasksBlocked: loop.stats.tasksBlocked + escalatedCount,
+      },
     })
   }
-  return {
-    update: completed > 0
-      ? { [CH.phaseProgress]: progress, [CH.stage]: 'persistence' as LoopStage }
-      : { [CH.stage]: 'persistence' as LoopStage },
+  // repairNeeded / phaseProgress 每轮必须覆写（overwrite reducer）：成功轮若不显式清零，
+  // 上一失败轮残留的 repairNeeded=true 会让守卫回边空转到 guard 耗尽
+  const update: StateUpdate = {
+    [CH.stage]: 'persistence' as LoopStage,
+    [CH.phaseProgress]: progress,
+    [CH.repairNeeded]: repairQueue.length > 0,
   }
+  if (repairQueue.length > 0) update[CH.repairQueue] = repairQueue
+  if (updatedContracts.length > 0) update[CH.contracts] = updatedContracts
+  return { update }
 }
 
 // ---------------------------------------------------------------------------
@@ -715,13 +799,17 @@ export function createGateNode(
 // stop-check
 // ---------------------------------------------------------------------------
 
-/** 默认停止判定：stopCondition 是合法 JSON 谓词则求值，否则回落契约状态启发式 */
+/** 默认停止判定：stopCondition 是合法 JSON 谓词则求值，否则回落契约状态启发式。
+ *  前置守卫（随修 1）：run 内存在 escalated 契约（validation/persistence 重试封顶）时不判
+ *  收敛——验证 passed 但交付物未落库/未达标的 run 一旦 stopMet=true，spawner 会把 loop 标
+ *  completed，交付物静默丢失。显式谓词与启发式都被该守卫覆盖。 */
 export async function defaultEvaluateStop(stopCondition: string, state: StateValues): Promise<boolean> {
+  const contracts = (state[CH.contracts] as TaskContract[] | undefined) ?? []
+  if (contracts.some(c => c.status === 'escalated')) return false
   try {
     return evaluatePredicate(JSON.parse(stopCondition) as PredicateExpr, state)
   } catch {
     // 启发式兜底：无待办契约，或全部契约均有 passed 验证记录
-    const contracts = (state[CH.contracts] as TaskContract[] | undefined) ?? []
     const verifications = (state[CH.verifications] as VerificationRecord[] | undefined) ?? []
     if (contracts.length === 0) return true
     return contracts.every(c => verifications.some(v => v.contractId === c.id && v.overall === 'passed'))
@@ -811,6 +899,8 @@ export function createHumanApprovalNode(deps: HumanApprovalNodeDeps): NodeDef {
             approvers: resolveApprovers(deps.approvals.approvers, state),
             policy: deps.approvals.policy,
             onReject: deps.approvals.onReject,
+            // 超时策略随 value 进 checkpoint（P2 台账 h），扫描器直接读
+            timeout: deps.approvals.timeout,
           },
         },
         goto: [nodeId],

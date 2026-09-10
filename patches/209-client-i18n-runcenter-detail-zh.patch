@@ -1,0 +1,38 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -657,6 +657,35 @@
+       empty: '暂无事件',
+       close: '关闭',
+     },
++
++    detail: {
++      back: '返回列表',
++      loadFailed: '加载运行详情失败',
++      noSpec: '图规格缺失，无法渲染执行图',
++    },
++    timeline: {
++      play: '播放',
++      pause: '暂停',
++      stepBack: '后退一事件',
++      stepForward: '前进一事件',
++      replayTo: '重放至第 {n} / {total} 事件',
++      scrubber: '回放进度',
++      modeSummary: '摘要',
++      modeNormal: '标准',
++      modeVerbose: '详细',
++      empty: '游标前暂无事件',
++      payload: 'payload 详情',
++    },
++    graph: {
++      nodeStatus: {
++        idle: '空闲',
++        running: '运行中',
++        done: '已完成',
++        failed: '失败',
++        awaitingInput: '等待输入',
++        skipped: '已跳过',
++      },
++    },
+   },
+ 
+   agentManager: {

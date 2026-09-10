@@ -7,8 +7,11 @@
 //      │无契约                                                        │gate 通过
 //      ▼                                                              ▼
 //    stop-check ◀─────────────────────────────────────────────── stop-check
-//   （repair 回边：validation 失败 / gate validator 失败 → handoff，
-//     guard.maxIterations = repairMaxAttempts，默认 3）
+//   （repair 回边：validation 失败 / persistence 失败 / gate validator 失败 → handoff，
+//     guard.maxIterations = repairMaxAttempts，默认 3。persistence 与 validation 对称
+//     双条件边——BSP 先 apply 更新再求值出边，若 persistence→gate 无条件，persistence 置的
+//     repairNeeded 会在下一 super-step 被 gate 的成功覆写（repairNeeded:false）吃掉，
+//     守卫回边恒 false → 失败契约零重试、交付物静默丢失（P2 Task 4 审查 Critical））
 //
 // 设计约束：
 // - routing 条件必须是 PredicateExpr（可序列化）：数组非空无法直接表达，
@@ -54,8 +57,12 @@ export const LOOP_NODE_TYPES = {
   stop: 'stop-check',
 } as const
 
+/** 拓扑编译所需的最小 deps：compileLoopToSpec 只读 repairMaxAttempts / approvalConfig，
+ *  不触碰执行期依赖（store/dispatcher/…）——只读投影（loop-to-graph.ts）与迁移器据此零依赖复用 */
+export type CompileTopologyDeps = Pick<CompileDeps, 'repairMaxAttempts' | 'approvalConfig'>
+
 /** LoopInstance → GraphSpec（纯拓扑 + 谓词，不含函数；执行函数经 makeLoopNodeRegistry 注入） */
-export function compileLoopToSpec(loop: LoopInstance, deps: CompileDeps): GraphSpec {
+export function compileLoopToSpec(loop: LoopInstance, deps: CompileTopologyDeps): GraphSpec {
   const maxAttempts = deps.repairMaxAttempts ?? 3
   const stageIsScheduling = { op: 'cmp', path: CH.stage, cmp: 'eq', value: 'scheduling' } as const
   const repairNeeded = { op: 'truthy', path: CH.repairNeeded } as const
@@ -67,7 +74,11 @@ export function compileLoopToSpec(loop: LoopInstance, deps: CompileDeps): GraphS
     { from: 'handoff', to: 'validation', label: 'dispatched' },
     { from: 'validation', to: 'persistence', label: 'passed', condition: notRepairNeeded },
     { from: 'validation', to: 'handoff', label: 'repair', condition: repairNeeded, guard: { maxIterations: maxAttempts } },
-    { from: 'persistence', to: 'gate', label: 'persisted' },
+    // 与 validation 对称的双条件边（P2 Task 4 审查 Critical）：persistence 置 repairNeeded=true
+    // 时本 super-step 直接回 handoff，不经过 gate——gate 成功路径的 repairNeeded:false 覆写
+    // 只对 gate 自身的 validator 失败语义负责
+    { from: 'persistence', to: 'gate', label: 'persisted', condition: notRepairNeeded },
+    { from: 'persistence', to: 'handoff', label: 'repair', condition: repairNeeded, guard: { maxIterations: maxAttempts } },
     { from: 'gate', to: 'stop-check', label: 'gate-passed', condition: notRepairNeeded },
     { from: 'gate', to: 'handoff', label: 'gate-repair', condition: repairNeeded, guard: { maxIterations: maxAttempts } },
   ]

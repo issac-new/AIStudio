@@ -12,9 +12,10 @@
 import type { LoopInstance, LoopEvent, LoopStats } from '../types'
 import type { LoopStateStore } from '../store/state-store'
 import type { GraphService } from './graph-service'
-import type { GraphDef, GraphEvent } from './types'
+import type { GraphDef, GraphEvent, StateValues } from './types'
 import type { EventLogStore } from './event-log-store'
 import { computeNextTick } from './next-tick'
+import { CH } from './phase-nodes'
 
 export interface RunSpawnerOpts {
   graphService: GraphService
@@ -25,6 +26,11 @@ export interface RunSpawnerOpts {
   intervalMs?: number
   /** §7B.7 连续失败熔断阈值，默认 10（Jira Automation scheduled 规则同款语义） */
   maxConsecutiveFailures?: number
+  /**
+   * 停滞熔断阈值（P2 台账④）：run 正常完成但产出通道（contracts/verifications）
+   * 无新增连续计次，达阈值即 paused + loop.stuck 告警。默认 = maxConsecutiveFailures。
+   */
+  stagnationLimit?: number
   /**
    * loop.* 兼容事件出口（装配层桥接：store 台账 + loop socket 房间，前端/matrix-bot 消费）。
    * 缺省直写 store（不走 socket）——仅为无装配的单测兜底。
@@ -47,15 +53,19 @@ export class RunSpawner {
   private ticking = new Set<string>()
   private webhookTimers = new Map<string, NodeJS.Timeout>()
   private consecutiveFailures = new Map<string, number>()
+  /** loopId → 连续无产出完成的 run 数（台账④停滞熔断计数） */
+  private stagnantCount = new Map<string, number>()
   /** graphId → loopId：onEvent 回写时反查（编译器产物 id 固定为 `loop-<loopId>`） */
   private graphToLoop = new Map<string, string>()
   private readonly intervalMs: number
   private readonly maxConsecutiveFailures: number
+  private readonly stagnationLimit: number
   private readonly log: (msg: string) => void
 
   constructor(private opts: RunSpawnerOpts) {
     this.intervalMs = opts.intervalMs ?? 30_000
     this.maxConsecutiveFailures = opts.maxConsecutiveFailures ?? 10
+    this.stagnationLimit = opts.stagnationLimit ?? this.maxConsecutiveFailures
     this.log = opts.log ?? (() => {})
     opts.graphService.onEvent(e => { void this.handleGraphEvent(e) })
   }
@@ -184,6 +194,26 @@ export class RunSpawner {
     })
   }
 
+  /** 熔断共用出口（§7B.7）：paused + loop.stuck 告警 + 双计数清零。
+   *  失败熔断与停滞熔断（台账④）走同一条路径，前端/bot 消费零差异。 */
+  private async tripBreaker(loopId: string, reason: string): Promise<void> {
+    await this.opts.store.updateLoop(loopId, { status: 'paused', nextTickAt: null })
+    this.emitCompat({
+      type: 'loop.stuck', loopId,
+      reason, ts: new Date().toISOString(),
+    })
+    this.consecutiveFailures.set(loopId, 0)
+    this.stagnantCount.set(loopId, 0)
+    this.log(`run-spawner circuit breaker paused loop ${loopId}: ${reason}`)
+  }
+
+  /** run 是否有新增产出：finalState 的 contracts/verifications 通道任一非空。
+   *  一个 run = 一个 tick，通道从默认空值起步，run 结束仍为空 = 本轮零产出。 */
+  private runProducedOutput(finalState: StateValues): boolean {
+    const produced = (v: unknown): boolean => Array.isArray(v) && v.length > 0
+    return produced(finalState[CH.contracts]) || produced(finalState[CH.verifications])
+  }
+
   private async handleGraphEvent(e: GraphEvent): Promise<void> {
     if (e.type !== 'graph.completed' && e.type !== 'graph.failed') return
     const loopId = this.graphToLoop.get(e.graphId)
@@ -194,6 +224,24 @@ export class RunSpawner {
     if (e.type === 'graph.completed') {
       this.consecutiveFailures.set(loopId, 0)
       const stopMet = e.finalState.stopMet === true
+      if (!stopMet) {
+        // 台账④：正常完成但不收敛的 run（stopMet 永假且 contracts/verifications
+        // 双空）原来只重置失败计数、无限重排。此处计入停滞，达阈值走与失败
+        // 熔断同一条 paused 路径；有产出（任一通道非空）即清零。
+        const stagnant = this.runProducedOutput(e.finalState)
+          ? 0
+          : (this.stagnantCount.get(loopId) ?? 0) + 1
+        this.stagnantCount.set(loopId, stagnant)
+        if (stagnant >= this.stagnationLimit) {
+          await this.tripBreaker(
+            loopId,
+            `circuit breaker: ${stagnant} consecutive stagnant runs (completed with no new contracts/verifications)`)
+          this.emitTickComplete(loopId, loop.stats)
+          return
+        }
+      } else {
+        this.stagnantCount.set(loopId, 0)
+      }
       if (stopMet) {
         await this.opts.store.updateLoop(loopId, {
           status: 'completed', stage: 'scheduling', nextTickAt: null,
@@ -216,14 +264,7 @@ export class RunSpawner {
     const failures = (this.consecutiveFailures.get(loopId) ?? 0) + 1
     this.consecutiveFailures.set(loopId, failures)
     if (failures >= this.maxConsecutiveFailures) {
-      await this.opts.store.updateLoop(loopId, { status: 'paused', nextTickAt: null })
-      this.emitCompat({
-        type: 'loop.stuck', loopId,
-        reason: `circuit breaker: ${failures} consecutive failed runs`,
-        ts: new Date().toISOString(),
-      })
-      this.consecutiveFailures.set(loopId, 0)
-      this.log(`run-spawner circuit breaker paused loop ${loopId} after ${failures} consecutive failures`)
+      await this.tripBreaker(loopId, `circuit breaker: ${failures} consecutive failed runs`)
     } else {
       await this.opts.store.updateLoop(loopId, {
         status: 'idle', nextTickAt: computeNextTick(loop),

@@ -100,12 +100,22 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 - 服务端 REST 路由 + Socket.IO namespace（patch 134/135）+ pg 依赖（patch 138）
 - 状态迁移：`scripts/loop-migrate.mjs`（Local → Matrix）、`loop-migrate-saas.mjs`（Matrix → PostgreSQL）
 
-**图引擎接管（P1，patch 202）**：LoopInstance 经编译器变为 GraphSpec（六节点：五阶段 + gate 质量门禁），由图内核执行——事件日志（`node:sqlite`，零新依赖）为唯一事实源，真 checkpoint/resume/fork、HITL interrupt 审批闭环、守卫 repair 回边、R2 workspace 上下文注入（GRAPH-CONTEXT.md）。`GRAPH_ENGINE` 环境变量三态切换：`legacy`（默认，旧引擎原样）/ `shadow`（双跑：新引擎 dryRun 对比事件序列，不写副作用）/ `on`（新引擎接管调度，详见下方 caveat）。新 REST 面：`/api/graph/runs`（CRUD/resume/fork/replay）与 `/api/graph/specs`；socket `/graph` namespace 按 run 订阅。旧数据迁移：`node scripts/graph-migrate.mjs`（dry-run 默认，`--apply` 落库幂等）。设计文档：`docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md`。
+**图引擎接管（P1 patch 202，P2 收口）**：LoopInstance 经编译器变为 GraphSpec（六节点：五阶段 + gate 质量门禁 + 守卫 repair 回边），由图内核执行——事件日志（`node:sqlite`，零新依赖）为唯一事实源，真 checkpoint/resume/fork、HITL interrupt 审批闭环、R2 workspace 上下文注入（GRAPH-CONTEXT.md）。`GRAPH_ENGINE` 环境变量三态切换：`legacy`（默认，旧引擎原样）/ `shadow`（双跑：新引擎 dryRun 对比事件序列，不写副作用）/ `on`（新引擎接管调度，详见下方 caveat）。`on` 模式额外装配两件守护：interrupt 超时扫描器（审批无人应答按 `escalate`/`auto-approve-with-log`/`fail` 三策略处置，缺省 72h + 节流水印落事件日志）与每日 Brief 任务（见下）。新 REST 面：`/api/graph/runs`（CRUD/resume/fork/replay）与 `/api/graph/specs`（specs 表化，随事件日志同库持久）；socket `/graph` namespace 按 run 订阅。旧数据迁移：`node scripts/graph-migrate.mjs`（dry-run 默认，`--apply` 落库幂等）。设计文档：`docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md`。
+
+**运行中心（P2）**：入口 `/hermes/loop/runs`（列表），详情 `/hermes/loop/runs/:runId`。
+
+- **运行列表**：阶段 × 状态双轴、状态驱动的合法操作集（不存在任意跳转）、`awaiting-input`（待我处理）恒置顶排序、状态筛选 + 搜索 + 分页、行内 peek 展开与内联审批
+- **介入收件箱**：汇集等待人工决策的 run，两态归档（本地打标，不改服务端 run 状态）
+- **运行详情**：左图右流——执行图画布（vue-flow 只读）+ 时间轴回放（游标 = 重放至第 N 事件，图与事件流共用前缀投影）；**三级分辨率**时间轴（`summary` 只看节点级结果 / `normal` 增加路由与耗时 / `verbose` 全量原始负载，逐级放开）
+- **节点检查器**：选中节点查看类型 / 状态 / 迭代 / 耗时与最近一次 update 的 channel 键值（attach 档）；唯一介入动作是 failed 节点的「重跑整个 run」（fork → startRun 显式起跑）——审批不在检查器，位于列表行 peek 展开与介入收件箱的审批面板
+- 数据面：`GET /api/graph/runs/:id` + `/replay`，socket `/graph` 实时推送
+
+**R1 每日 Brief（P2）**：`on` 模式下每日定时（`LOOP_BRIEF_CRON`，缺省 `0 9 * * *` 本地时区）聚合过去 24h 的图引擎事实，渲染三段式结构化简报——进展（完成 / 失败 / 熔断升级告警）、等你决策（awaiting-input 及等待时长）、今日计划（到期未触发的 loop）。零 LLM 依赖，纯持久数据源（事件日志 + loop 台账），重启自然恢复；brief 自身作为 `graphId='daily-brief'` 审计 run 落事件日志，可回放可审计。**诚实边界**：Matrix 聊天投递需要 `LOOP_BRIEF_ROOM` 配置与宿主注入的传输通道（`briefDelivery`，patch 202 预留注入点）同时成立——**当前两者均未接线，默认只落事件日志，聊天里收不到每日简报**；投递最后一公里待 bot 身份 / 凭据来源确认后补齐。
 
 **P1 图引擎 caveat（终审修复波后仍成立的交付边界）**：
 - `on` 模式接管调度，但失败语义与 legacy 有偏移：run 失败时 loop 重写为 `idle` 并按 `computeNextTick` 重排（连续失败达 10 次熔断转 `paused`）；legacy 的 tick 异常会把 loop 置 `status='failed'`。前端按 `paused/idle` 展示 on 模式失败态。
-- `on` 模式产物落库为 stub（`persist` 返回 `artifact:<id>` 占位，不写真实 kanban）——P1 交付机制，真实 kanban 写入随 P2 IA 装配注入。
-- judge 验证在 P1 未接线（无可用模型调用方）：契约带 judge intent 时 judge 项跳过，程序化 + 人工门禁照常生效（装配时 warn 一次）；人工审批门禁已闭环（`requestHumanApproval` → `pending` → validation 节点 interrupt → REST resume）。
+- `on` 模式产物落库为真实 kanban 写入（P2 Task 4 替换 P1 stub）：`KanbanPersistenceAdapter` 按 `loop.tenant` 六段格式解析 board（群聊名 slug 化——残段无字母或不足 3 字符时回落 roomId，解析不出跳过 + warn）、任务 title `[loop.name] contract.id` 按契约查重幂等（重复 persist 跳过）、kanban CLI 失败发 `loop.persist-failed` 事件并经 persistence→handoff 守卫回边重试（失败不炸 run）；重试达 `maxAttempts` 封顶则契约标 `escalated` + `tasksBlocked` 计数，含 escalated 契约的 run 不判收敛（loop 不会被假标 completed）。注意：`tenant` 由创建请求显式携带（`POST /api/loop/loops` 的 `body.tenant`，不传则解析不出 board、写入跳过）；新群聊首写可能命中尚不存在的 board——写入失败会进 repair 重试直至封顶 escalated。`shadow` 双跑 dryRun 语义不变（零写入）。
+- judge 验证仍未接线真实模型调用方（P2 已备好 pending 结构：VerificationRecord 记 `judge:{status:'pending', reason}` 且不阻断 overall，judge 未配置时装配 warn 一次显式声明降级）：契约带 judge intent 时 judge 项按 pending 记录，程序化 + 人工门禁照常生效；刻意不注入恒失败假 judge（会让 judge 意图契约 repair 循环烧穿 escalated）。
 - connector 发现与 legacy 生产同源（仅 webhook；GitHub/本地 Git 连接器待配置面引入后接入）。
 
 ### 🎨 品牌与网关通知
@@ -133,7 +143,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 ```
 ncwk/
 ├── upstream/                 # 上游原始项目（只读，禁止直接修改）
-│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.7.17）
+│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.7.18）
 │   ├── element-web/          #   Element Web Matrix 客户端参考实现
 │   └── hermes-agent/         #   Hermes AI Agent 运行时
 ├── overlay/                  # ← 本仓：二次开发代码（唯一被提交的地方）
@@ -168,7 +178,7 @@ overlay/
 │   │   ├── cockpit/               #   驾驶舱（34 组件 + store + adapters + 样式）
 │   │   ├── matrix-chat/           #   Matrix 聊天（50 组件 + views）
 │   │   ├── kanban/                #   协作看板（15 组件 + utils + views）
-│   │   ├── loop/                  #   Loop 工程化（16 组件 + engine/graph + store）
+│   │   ├── loop/                  #   Loop 工程化（26 组件：引擎视图 + 运行中心 + 执行图 + store）
 │   │   ├── chat/                  #   网关通知横幅
 │   │   ├── branding/              #   品牌注入
 │   │   └── test/                  #   测试桩
@@ -181,7 +191,7 @@ overlay/
 │       ├── controllers/           #   Hermes 扩展控制器（trace / 终端工具探测）
 │       ├── services/              #   Hermes 扩展服务（task workspace 缓存）
 │       └── security/              #   URL 守卫（SSRF 防护）
-├── patches/                       # B 类 patch（141 个 active + 归档）
+├── patches/                       # B 类 patch（155 个 active + 归档）
 │   └── series                     #   patch 应用顺序清单
 ├── registries/
 │   ├── client/                    # 客户端注册中枢 + entry shim + bootstrap
@@ -333,7 +343,7 @@ SwarmStudio 基于以下三个上游开源项目二次开发：
 | 上游项目 | GitHub 仓库 | 用途 |
 |---------|-----------|------|
 | **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v1.0.2） |
-| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，源码跟踪 v0.21.1 / v2026.9.7，4 个 CLI patch 注入；桌面捆绑 runtime pin hermes-0.20.6-runtime，首次启动下载） |
+| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，源码跟踪 v0.21.1 / v2026.9.7，4 个 CLI patch 注入；桌面捆绑 runtime pin hermes-0.21.0-runtime，首次启动下载） |
 | **element-web** | https://github.com/element-hq/element-web | Element Web Matrix 客户端参考实现（v1.12.27） |
 
 **独立安装运行（不依赖 overlay 二次开发）**
@@ -410,7 +420,7 @@ npm run dev                                           # 前台跑，Ctrl+C 停�
 
 ### 完整构建 + 桌面端打包（两个版本构建物）
 
-SwarmStudio 桌面端当前版本 **0.7.17**，构建产物分 **macOS** 与 **Windows** 两个版本。
+SwarmStudio 桌面端当前版本 **0.7.18**，构建产物分 **macOS** 与 **Windows** 两个版本。
 
 **方式 A — overlay 一键脚本（推荐，自动 inject + build:full + electron-builder）**
 
@@ -420,14 +430,14 @@ cd overlay
 # macOS 版（arm64 DMG + zip）
 npm run build:dmg:mac
 # 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.7.17-arm64.dmg
-#       └── SwarmStudio-0.7.17-arm64.zip
+#       ├── SwarmStudio-0.7.18-arm64.dmg
+#       └── SwarmStudio-0.7.18-arm64.zip
 
 # Windows 版（x64 zip + NSIS exe 安装器）
 npm run build:dmg:win
 # 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.7.17-x64.zip
-#       └── SwarmStudio-0.7.17-x64.exe
+#       ├── SwarmStudio-0.7.18-x64.zip
+#       └── SwarmStudio-0.7.18-x64.exe
 ```
 
 `build-dmg.mjs` 编排 5 步（自动完成，无需手动分步）：
@@ -459,7 +469,7 @@ npm --prefix packages/desktop run dist -- --mac --win --publish never
 
 ```bash
 cd overlay
-npm run inject          # 应用 141 patch
+npm run inject          # 应用 155 patch
 npm run build:full      # 构建 dist/(openapi + client + server)，落到上游 dist/
 ```
 
@@ -517,17 +527,17 @@ patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。
 | 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
 | 后端 | Koa + SQLite（Loop 工程化可选 PostgreSQL） |
 | 桌面 | Electron（hermes-studio packages/desktop） |
-| 测试 | Vitest（69 个测试文件） |
+| 测试 | Vitest（103 个测试文件） |
 | Agent | hermes-agent（运行时下载，OpenTelemetry GenAI 语义对齐） |
 
 ---
 
 ## 规模
 
-- **141** 个 active B 类 patch（100% inject 通过率）
-- **116** 个自定义 Vue 组件（Cockpit 34 / Matrix Chat 50 / Kanban 15 / Loop 16 / 其他 1）
-- **69** 个单测文件（vitest，custom/**）
-- 上游基础：hermes-studio v0.7.17 / hermes-agent v0.21.0 / element-web v1.12.27
+- **155** 个 active B 类 patch（100% inject 通过率）
+- **129** 个自定义 Vue 组件（Cockpit 37 / Matrix Chat 50 / Kanban 15 / Loop 26 / 其他 1）
+- **103** 个单测文件（vitest，custom/**）
+- 上游基础：hermes-studio v0.7.18 / hermes-agent v0.21.0 / element-web v1.12.27
 
 ## 设计文档
 

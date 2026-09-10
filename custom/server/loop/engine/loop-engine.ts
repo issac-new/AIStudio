@@ -4,6 +4,7 @@ import type {
   LoopInstance, TaskContract, LoopEvent, LoopStage, LoopStats,
   VerificationRecord,
 } from '../types'
+import { isJudgeFailed } from '../types'
 import type { LoopStateStore } from '../store/state-store'
 import type { GithubConnector } from '../connectors/github-connector'
 import type { LocalGitConnector } from '../connectors/local-git-connector'
@@ -223,7 +224,8 @@ export class LoopEngine {
   private determineFailType(record: VerificationRecord): string {
     const progFailed = record.results.programmatic.some(p => !p.passed)
     if (progFailed) return 'programmatic'
-    if (record.results.judge && !record.results.judge.passed) return 'judge'
+    // isJudgeFailed：新记录认 status==='failed'（pending/skipped 不算），旧记录回退 passed 布尔
+    if (isJudgeFailed(record.results.judge)) return 'judge'
     if (record.results.human && record.results.human.decision !== 'approved') return 'human'
     return 'unknown'
   }

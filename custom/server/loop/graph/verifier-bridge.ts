@@ -13,9 +13,10 @@
 //   已桥接 resumeApproval）或 POST /api/graph/runs/:id/resume 应答，节点重入消费裁决。
 // - callJudge 不注入：P1 无可用模型调用方，verifier 对未配置 judge 的既有语义是
 //   跳过 judge 项（程序化 + 人工门禁照常生效）。刻意不注入"恒失败"的假 judge——
-//   VerificationRecord 无 judge pending 态，score<minScore 会让 judge 意图契约
-//   永远失败，repair 循环烧穿 attempts 全部 escalated（生产死锁）。
-//   装配时 warn 一次显式声明降级，README caveat 同步（真实 judge 随 P2 接线）。
+//   score<minScore 会让 judge 意图契约永远失败，repair 循环烧穿 attempts 全部
+//   escalated（生产死锁）。P2 Task 3 已在 VerificationRecord/judge dep 上备好
+//   pending 结构（{status:'pending', reason} → 记 status='pending' 且不阻断 overall），
+//   真实模型调用仍待接线（judge 未配置时装配 warn 一次显式声明降级）。
 
 import type { VerifierDeps } from '../engine/verifier'
 

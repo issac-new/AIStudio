@@ -1,6 +1,7 @@
 // overlay/custom/client/loop/__tests__/verifier.test.ts
 import { describe, it, expect, vi } from 'vitest'
 import { Verifier } from '../../../server/loop/engine/verifier'
+import { isJudgeFailed } from '../types'
 import type { TaskContract, LoopInstance, VerificationRecord } from '../types'
 
 function makeContract(overrides: Partial<TaskContract> = {}): TaskContract {
@@ -128,5 +129,100 @@ describe('Verifier', () => {
     })
     const record = await v.verify(contract, makeLoop('L3'))
     expect(record.overall).toBe('pending')
+  })
+
+  // --- P2 台账③前置：judge pending 结构（为 P3 真实 LLM judge 预留） ---
+
+  it('judge pending: records status/reason, does not block overall (skipped-item semantics)', async () => {
+    const callJudge = vi.fn().mockResolvedValue({ status: 'pending' as const, reason: 'judge model unavailable' })
+    const v = new Verifier({ callJudge })
+    const contract = makeContract({
+      verificationIntent: {
+        programmatic: [],
+        judge: { model: 'judge-x', rubric: 'correctness', minScore: 80 },
+        human: null,
+      },
+      resultTemplate: { artifactType: 'report', requiredFiles: [] },
+    })
+    const record = await v.verify(contract, makeLoop('L3'))
+    expect(callJudge).toHaveBeenCalledOnce()
+    const judge = record.results.judge!
+    expect(judge.status).toBe('pending')
+    expect((judge as { reason?: string }).reason).toBe('judge model unavailable')
+    expect(judge.passed).toBeUndefined()
+    // pending = 跳过该项，overall 由其余项（程序化 + guard）决定
+    expect(record.overall).toBe('passed')
+  })
+
+  it('judge pending does not trigger on-fail human gate in L3 (same as no-judge)', async () => {
+    const requestApproval = vi.fn()
+    const v = new Verifier({
+      callJudge: async () => ({ status: 'pending' as const, reason: 'degraded' }),
+      requestHumanApproval: requestApproval,
+    })
+    const contract = makeContract({
+      verificationIntent: {
+        programmatic: [],
+        judge: { model: 'judge-x', rubric: 'r', minScore: 50 },
+        human: { gate: 'on-fail', approvers: ['alice'] },
+      },
+      resultTemplate: { artifactType: 'report', requiredFiles: [] },
+    })
+    const record = await v.verify(contract, makeLoop('L3'))
+    expect(requestApproval).not.toHaveBeenCalled()
+    expect(record.results.judge!.status).toBe('pending')
+    expect(record.overall).toBe('passed')
+  })
+
+  it('judge scoring path writes both status and legacy passed flag', async () => {
+    const v = new Verifier({ callJudge: async () => ({ score: 90, reasoning: 'solid' }) })
+    const contract = makeContract({
+      verificationIntent: {
+        programmatic: [],
+        judge: { model: 'judge-x', rubric: 'r', minScore: 80 },
+        human: null,
+      },
+      resultTemplate: { artifactType: 'report', requiredFiles: [] },
+    })
+    const record = await v.verify(contract, makeLoop('L3'))
+    expect(record.results.judge).toEqual({
+      model: 'judge-x', score: 90, reasoning: 'solid', passed: true, status: 'passed',
+    })
+    expect(record.overall).toBe('passed')
+  })
+
+  it('judge below minScore writes status failed and fails overall', async () => {
+    const v = new Verifier({ callJudge: async () => ({ score: 40, reasoning: 'weak' }) })
+    const contract = makeContract({
+      verificationIntent: {
+        programmatic: [],
+        judge: { model: 'judge-x', rubric: 'r', minScore: 80 },
+        human: null,
+      },
+      resultTemplate: { artifactType: 'report', requiredFiles: [] },
+    })
+    const record: VerificationRecord = await v.verify(contract, makeLoop('L3'))
+    expect(record.results.judge!.status).toBe('failed')
+    expect(record.results.judge!.passed).toBe(false)
+    expect(record.overall).toBe('failed')
+  })
+})
+
+describe('isJudgeFailed (old-data compat: missing status reads as skipped)', () => {
+  it('null/undefined judge never fails', () => {
+    expect(isJudgeFailed(null)).toBe(false)
+    expect(isJudgeFailed(undefined)).toBe(false)
+  })
+
+  it('new records: only status=failed fails; pending/skipped/passed do not', () => {
+    expect(isJudgeFailed({ status: 'failed' })).toBe(true)
+    expect(isJudgeFailed({ status: 'pending', reason: 'x' })).toBe(false)
+    expect(isJudgeFailed({ status: 'skipped' })).toBe(false)
+    expect(isJudgeFailed({ status: 'passed' })).toBe(false)
+  })
+
+  it('old records without status: fall back to the legacy passed boolean', () => {
+    expect(isJudgeFailed({ passed: false })).toBe(true)
+    expect(isJudgeFailed({ passed: true })).toBe(false)
   })
 })
