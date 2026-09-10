@@ -1,0 +1,37 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -795,6 +795,33 @@
+       guideStep3: '跑起来：启动循环，运行状态将回到这里聚合',
+       guideCta: '去编排',
+     },
++    inbox: {
++      title: '介入中心',
++      groupAll: '全部',
++      sidebarTitle: '来源',
++      kind: {
++        approval: '审批',
++        blocked: '阻塞',
++        review: '待审',
++        alarm: '告警',
++        reminder: '待办',
++      },
++      tabPending: '今日待分诊',
++      tabDone: '已分诊',
++      wait: '已等待',
++      triage: '标记分诊',
++      untriage: '撤销分诊',
++      open: '查看',
++      expand: '展开审批',
++      originTriaged: '已分诊',
++      originArchived: '已归档',
++      emptyPending: '今日暂无待分诊事项',
++      emptyPendingHint: '审批、阻塞、待审、告警与待办出现时会汇集到这里',
++      emptyDone: '今日还没有已分诊事项',
++      emptyDoneHint: '分诊与完成的条目在此保留 7 天后自动清走',
++      alarmHead: '熔断与停滞',
++      alarmEmpty: '近 7 天无熔断/停滞告警',
++    },
+   },
+ 
+   agentManager: {

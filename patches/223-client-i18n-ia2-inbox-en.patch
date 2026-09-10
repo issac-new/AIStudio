@@ -1,0 +1,37 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -797,6 +797,33 @@
+       guideStep3: 'Run it: start the loop and its status aggregates back here',
+       guideCta: 'Go to Orchestrate',
+     },
++    inbox: {
++      title: 'Intervention center',
++      groupAll: 'All',
++      sidebarTitle: 'Sources',
++      kind: {
++        approval: 'Approval',
++        blocked: 'Blocked',
++        review: 'Review',
++        alarm: 'Alarm',
++        reminder: 'Todo',
++      },
++      tabPending: 'Due today',
++      tabDone: 'Triaged',
++      wait: 'Waited',
++      triage: 'Mark triaged',
++      untriage: 'Undo',
++      open: 'Open',
++      expand: 'Expand approval',
++      originTriaged: 'Triaged',
++      originArchived: 'Archived',
++      emptyPending: 'Nothing to triage today',
++      emptyPendingHint: 'Approvals, blockers, reviews, alarms and todos gather here as they appear',
++      emptyDone: 'Nothing triaged today',
++      emptyDoneHint: 'Triaged and completed items stay here for 7 days',
++      alarmHead: 'Breakers & stalls',
++      alarmEmpty: 'No breaker/stall alarms in the last 7 days',
++    },
+   },
+ 
+   agentManager: {

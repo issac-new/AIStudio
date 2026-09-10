@@ -121,6 +121,8 @@ async function invoke(router: Router, method: 'get' | 'post', actualPath: string
     body: undefined as unknown,
     status: 200,
     state: opts?.state ?? {},
+    headers: {} as Record<string, string>,
+    set: (k: string, v: string) => { ctx.headers[k] = v },
   }
   await handler(ctx)
   return ctx
@@ -159,6 +161,23 @@ describe('createGraphAssembly', () => {
     expect(a.interruptScanner).toBeNull()
     expect(a.router.routes).toBeDefined()
     expect(a.router.stack.some(l => l.path === '/api/graph/runs')).toBe(true)
+  })
+
+  // P3 Task 8（spec §7B.4 最小版）：图引擎策略只读端点——模式 + 默认审批超时/熔断阈值。
+  it('GET /api/graph/engine exposes mode + read-only policy defaults（三态一致）', async () => {
+    for (const mode of ['legacy', 'shadow', 'on'] as const) {
+      const a = createGraphAssembly(assemblyOpts({ mode }))
+      const ctx = await invoke(a.router, 'get', '/api/graph/engine')
+      expect(ctx.body).toEqual({
+        mode,
+        policy: {
+          failureBreakerLimit: 10,       // §7B.7 连续失败熔断默认
+          stagnationLimit: 10,           // 台账④停滞熔断默认（= 失败熔断）
+          interruptTimeoutMs: 72 * 60 * 60 * 1000,  // 审批 interrupt 默认超时（P0 台账 h）
+          escalationResendMs: 24 * 60 * 60 * 1000,  // escalate 重发节流
+        },
+      })
+    }
   })
 
   it('on mode: spawner wired, tick target routes to spawner', async () => {
@@ -273,6 +292,39 @@ describe('graph REST run lifecycle', () => {
     expect((replay.body as { events: GraphLogEvent[] }).events.length).toBeGreaterThan(0)
   })
 
+  it('GET /api/graph/runs/:id/export bundles instance + spec + events as attachment (P3 台账 #30)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+    service.registerGraph(new GraphBuilder('gx', 'G')
+      .addChannel('x', { reducer: reducers.overwrite(), default: 0 })
+      .addNode(fnNode('a', async () => ({ end: true }))).setEntry('a').build())
+    const { runId } = await service.startRun('gx')
+
+    const specStore = new GraphSpecStore()
+    await specStore.save({ id: 'gx', version: 1, channels: {}, nodes: [], edges: [], entryNode: 'a', limits: { maxSteps: 5 } })
+    const router = createGraphRunRouter({ graphService: service, eventLog, specStore })
+
+    const ctx = await invoke(router, 'get', `/api/graph/runs/${runId}/export`)
+    expect(ctx.status).toBe(200)
+    expect(ctx.headers?.['Content-Disposition']).toBe(`attachment; filename=run-${runId}.json`)
+    const body = ctx.body as { run: { runId: string; instance: { status: string } }; spec: { id: string } | null; events: GraphLogEvent[] }
+    expect(body.run.runId).toBe(runId)
+    expect(body.run.instance.status).toBe('completed')
+    expect(body.spec?.id).toBe('gx')
+    expect(body.events.length).toBeGreaterThan(0)
+
+    // 无 specStore / 规格未注册 → spec 为 null，导出不失败
+    const routerNoSpec = createGraphRunRouter({ graphService: service, eventLog })
+    const ctx2 = await invoke(routerNoSpec, 'get', `/api/graph/runs/${runId}/export`)
+    expect(ctx2.status).toBe(200)
+    expect((ctx2.body as { spec: unknown }).spec).toBeNull()
+
+    // run 不存在 → 404 {error}
+    const miss = await invoke(router, 'get', '/api/graph/runs/run-nope-9/export')
+    expect(miss.status).toBe(404)
+    expect((miss.body as { error: string }).error).toBeTruthy()
+  })
+
   it('resume endpoint answers an interrupt and completes the run (HITL closed loop)', async () => {
     const eventLog = new InMemoryEventLogStore()
     const service = new GraphService({ eventLog })
@@ -349,6 +401,31 @@ describe('graph REST run lifecycle', () => {
     })
     const list = await invoke(router, 'get', '/api/graph/specs')
     expect((list.body as { specs: Array<{ id: string }> }).specs.map(s => s.id)).toEqual(['spec-1'])
+  })
+
+  it('GET /api/graph/specs/:id returns {id, version, spec}; 404 carries {error} (P3 台账 #25)', async () => {
+    const specStore = new GraphSpecStore()
+    await specStore.save({
+      id: 'spec-1', version: 2, channels: {}, nodes: [], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 },
+    })
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+
+    const hit = await invoke(router, 'get', '/api/graph/specs/spec-1')
+    expect(hit.status).toBe(200)
+    const body = hit.body as { id: string; version: number; spec: { id: string } }
+    expect(body).toEqual({
+      id: 'spec-1', version: 2,
+      spec: { id: 'spec-1', version: 2, channels: {}, nodes: [], edges: [], entryNode: 'a', limits: { maxSteps: 10 } },
+    })
+
+    const miss = await invoke(router, 'get', '/api/graph/specs/spec-404')
+    expect(miss.status).toBe(404)
+    expect((miss.body as { error: string }).error).toBeTruthy()
   })
 })
 
@@ -480,6 +557,67 @@ describe('graph socket namespace', () => {
     expect(runRoom.every(e => e.event === 'graph:event')).toBe(true)
     // 订阅回放（graph:history）在连接时发出
     expect((rooms.get('socket') ?? []).some(e => e.event === 'graph:history')).toBe(true)
+  })
+
+  // P3 台账（前端去重的服务端前提）：实时 graph:event 补挂 eid（= 事件日志 append
+  // 生成的 `<runId>-<seq>`）——首连双发场景（history 50 条 ∩ 实时流）前端按 eid 去重，
+  // 要求两份拷贝携带同一 id。
+  it('attaches eid to live graph:event payloads (matches event log eids)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+
+    const rooms = new Map<string, Array<{ event: string; payload: unknown }>>()
+    const io: SocketIOLike = {
+      of: () => ({
+        on: (_e, listener) => {
+          listener({
+            on: (event, cb) => {
+              if (event === 'subscribe') (cb as (runId: string) => void)('run-1')
+            },
+            join: () => {}, leave: () => {},
+            emit: (event, payload) => {
+              const list = rooms.get('socket') ?? []
+              list.push({ event, payload })
+              rooms.set('socket', list)
+            },
+          })
+        },
+        to: (room: string) => ({
+          emit: (event, payload) => {
+            const list = rooms.get(room) ?? []
+            list.push({ event, payload })
+            rooms.set(room, list)
+          },
+        }),
+      }),
+    }
+
+    setupGraphSocketNamespace(io, service, eventLog)
+
+    service.registerGraph(new GraphBuilder('g', 'G')
+      .addChannel('x', { reducer: reducers.overwrite(), default: 0 })
+      .addNode(fnNode('a', async () => ({ update: { x: 1 }, end: true }))).setEntry('a').build())
+    const { runId } = await service.startRun('g')
+
+    // 双微任务链 flush（实现与 graph-socket 注释对齐）+ 宏任务兜底
+    await new Promise(r => setImmediate(r))
+    await new Promise(r => setTimeout(r, 0))
+
+    const logged = await eventLog.query(runId)
+    expect(logged.length).toBeGreaterThan(0)
+    expect(logged.every(e => typeof e.eid === 'string' && e.eid.length > 0)).toBe(true)
+
+    const runRoom = rooms.get(`run:${runId}`) ?? []
+    expect(runRoom.length).toBe(logged.length)
+    const loggedEids = new Set(logged.map(e => e.eid))
+    for (const msg of runRoom) {
+      const payload = msg.payload as { eid?: unknown }
+      expect(typeof payload.eid).toBe('string')
+      expect(loggedEids.has(payload.eid as string)).toBe(true) // 实时 eid = 日志 eid
+    }
+    // 同一 run 的实时事件 eid 互不相同（同 tick 多事件不串号）
+    const eids = runRoom.map(m => (m.payload as { eid: string }).eid)
+    expect(new Set(eids).size).toBe(eids.length)
   })
 })
 

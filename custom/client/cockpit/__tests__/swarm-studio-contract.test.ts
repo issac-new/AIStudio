@@ -27,6 +27,76 @@ import { parseTenant, type ParsedTenant } from '../../kanban/utils/tenant-parser
 import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 import type { TeamRecord } from '../adapters/teams-adapter'
 
+// ── §8/§9 新 IA 信息架构契约（P3 Task 8 扩展）──
+// 六区域路由存在性 / 旧落点重定向正确性 / RETRO 开关行为。
+// 上方 vi.mock('vue-router') 只为组件链路服务；这里经 importActual 取真
+// createRouter 驱动真实路由解析（不加载任何视图组件，懒组件保持函数态）。
+
+const vr = await vi.importActual<typeof import('vue-router')>('vue-router')
+const { buildIaRoutes, IA_AREAS } = await import('../../ia2/routes')
+const guardModule = await import('../../ia2/guard')
+
+describe('contract: six-area IA routes (§8 六区域)', () => {
+
+  function makeRouter(): import('vue-router').Router {
+    return vr.createRouter({ history: vr.createMemoryHistory(), routes: buildIaRoutes() })
+  }
+
+  it('六区域路径全部存在，命名前缀 ia2.，顺序固定（总览=登录默认）', () => {
+    const router = makeRouter()
+    const order = ['overview', 'orchestrate', 'runs', 'inbox', 'tasks', 'comms']
+    expect(IA_AREAS.map(a => a.key)).toEqual(order)
+    for (const area of IA_AREAS) {
+      const resolved = router.resolve(area.path)
+      const expected = area.key === 'comms' ? 'ia2.commsHome' : area.name
+      expect(resolved.name, `${area.path} 必须可解析（契约：六区域存在性）`).toBe(expected)
+      expect(String(resolved.name).startsWith('ia2.')).toBe(true)
+    }
+    // /app 裸路径 = 总览（登录默认落点，071 守卫直落）
+    expect(router.resolve('/app').name).toBe('ia2.overview')
+    // fullscreen meta（壳自带 IaNav，上游 AppSidebar 隐藏）
+    expect(router.resolve('/app/runs').meta.fullscreen).toBe(true)
+  })
+
+  it('参数路由契约：run 详情 runId / matrix 房间 roomId 原样搬迁', () => {
+    const router = makeRouter()
+    expect(router.resolve('/app/runs/run-9').params.runId).toBe('run-9')
+    expect(router.resolve('/app/comms/room/!foo:bar').params.roomId).toBe('!foo:bar')
+  })
+})
+
+describe('contract: legacy landing redirects (§9 cockpit 退役)', () => {
+  const { iaCompatRedirect } = guardModule
+
+  it('旧落点 → 新 IA 目标固定（重定向正确性）', () => {
+    // cockpit 退役路径按 PATH 拦截（路由本体已删，任何模式都承接）
+    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, false)).toEqual({ name: 'ia2.overview' })
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, false)).toEqual({ name: 'ia2.commsHome' })
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat/room/!r:1' }, false))
+      .toEqual({ name: 'ia2.commsRoom', params: { roomId: '!r:1' } })
+    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, false)).toEqual({ name: 'ia2.tasks' })
+    // loop 旧落点按名称承接
+    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.runs' })
+    expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, false))
+      .toEqual({ name: 'ia2.runs', query: { loop: '42' } })
+  })
+})
+
+describe('contract: RETRO switch behavior (§9 回退保险)', () => {
+  const { iaCompatRedirect } = guardModule
+
+  it('RETRO=1：loop 旧落点放行（旧路由仍在，可回退）', () => {
+    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, true)).toBeNull()
+    expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, true)).toBeNull()
+  })
+
+  it('RETRO=1：cockpit 退役路径仍承接（路由本体已删，放行只会落空白页）', () => {
+    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, true)).toEqual({ name: 'ia2.overview' })
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, true)).toEqual({ name: 'ia2.commsHome' })
+    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, true)).toEqual({ name: 'ia2.tasks' })
+  })
+})
+
 // ── §1.1 Kanban Task 核心字段 ──
 
 const KANBAN_TASK_REQUIRED_FIELDS = [

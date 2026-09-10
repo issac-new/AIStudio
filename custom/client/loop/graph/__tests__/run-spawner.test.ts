@@ -121,6 +121,16 @@ describe('RunSpawner', () => {
     expect(events.some(e => e.type === 'loop.stuck' && e.reason?.includes('circuit breaker'))).toBe(true)
   })
 
+  it('熔断 loop.stuck 消息带"因持续失败已暂停，需人工处理"口径（P3 台账 ⑦）', async () => {
+    const { spawner, events } = makeSpawner(
+      [makeLoop()], makeGraph('loop-loop-1', { fail: true }), { maxConsecutiveFailures: 1 })
+    await spawner.tickNow('loop-1')
+    await vi.waitFor(() => expect(events.some(e => e.type === 'loop.stuck')).toBe(true))
+
+    const stuck = events.find(e => e.type === 'loop.stuck')!
+    expect(String(stuck.reason)).toContain('因持续失败已暂停，需人工处理')
+  })
+
   it('webhook trigger debounces to a single tick within 5s', async () => {
     vi.useFakeTimers()
     try {

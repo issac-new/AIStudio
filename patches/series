@@ -268,3 +268,32 @@
 # P2 Task 7: 节点检查器 + 介入收件箱——peek/attach/审批/两态归档 i18n
 211-client-i18n-runcenter-intervention-zh.patch
 212-client-i18n-runcenter-intervention-en.patch
+# P3 Task 1: 台账清偿——运行详情导出 JSON 按钮文案
+213-client-i18n-runcenter-export-zh.patch
+214-client-i18n-runcenter-export-en.patch
+# P3 Task 2: 前端台账清偿——审批身份/检查器当前值/键盘可达 i18n
+215-client-i18n-runcenter-task2-zh.patch
+216-client-i18n-runcenter-task2-en.patch
+# P3 Task 3: 六区域导航骨架——/app 路由树(dynamic 注册,零 router patch)+侧栏新 IA 入口+
+# ia2 i18n。登录默认落 /app 经 overlay 兼容守卫(custom/client/ia2/guard.ts)承接,不 patch router
+218-client-i18n-ia2-zh.patch
+219-client-i18n-ia2-en.patch
+# P3 Task 4: 总览首屏——注意力+四卡片+角色指标+空态引导 i18n（ia2.overview 段）
+220-client-i18n-ia2-overview-zh.patch
+221-client-i18n-ia2-overview-en.patch
+# P3 Task 5: 介入中心——五源聚合+Triage 分诊+就地审批+自动归档 i18n（ia2.inbox 段）
+222-client-i18n-ia2-inbox-zh.patch
+223-client-i18n-ia2-inbox-en.patch
+# P3 Task 6: 编排区实装——模板库只读列表+GraphSpec 可视化+实例化入口 i18n（ia2.orchestrate 段）
+224-client-i18n-ia2-orchestrate-zh.patch
+225-client-i18n-ia2-orchestrate-en.patch
+# P3 Task 7: 工作项↔run 双向关联+追溯矩阵——任务页签/来源 run/产物任务/追溯矩阵 i18n
+# （ia2.tasks+ia2.trace+ia2.runLinks 段 + runcenter.inspector 产物任务段）
+226-client-i18n-ia2-trace-zh.patch
+227-client-i18n-ia2-trace-en.patch
+228-client-settingsview-graph-engine-card.patch
+229-client-i18n-ia2-observer-engine-en.patch
+230-client-i18n-ia2-observer-engine-zh.patch
+# P3 Task 9: 收口——指标口径标注 i18n（平均耗时样本副注/熔断部分数据标志，ia2.overview 段）
+231-client-i18n-ia2-overview-caliber-zh.patch
+232-client-i18n-ia2-overview-caliber-en.patch

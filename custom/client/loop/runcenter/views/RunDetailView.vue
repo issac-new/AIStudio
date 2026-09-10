@@ -93,6 +93,29 @@ async function load(): Promise<void> {
 onMounted(load)
 watch(runId, () => { void load() })
 
+// ── 导出 JSON（P3 台账 #30）：取打包 JSON 后用 Blob 触发浏览器下载 ──
+// （REST 走授权头，<a href> 直链不带凭证；文件名与服务端 Content-Disposition 同口径）
+const exporting = ref(false)
+async function exportRun(): Promise<void> {
+  const id = runId.value
+  if (!id || exporting.value) return
+  exporting.value = true
+  try {
+    const bundle = await runRest.exportRun(id)
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `run-${id}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    exporting.value = false
+  }
+}
+
 function goBack(): void {
   router.push({ name: 'hermes.loopRuns' })
 }
@@ -115,6 +138,14 @@ function onSelectNode(id: string): void {
       <span v-if="!loading && total > 0" class="rd-view__count">
         {{ t('runcenter.replay.count', { n: total }) }}
       </span>
+      <button
+        class="rd-view__export"
+        data-export-run
+        :disabled="loading || exporting"
+        @click="exportRun"
+      >
+        {{ exporting ? t('runcenter.detail.exporting') : t('runcenter.detail.export') }}
+      </button>
     </div>
 
     <div v-if="error" class="rd-view__error">
@@ -203,6 +234,22 @@ function onSelectNode(id: string): void {
 .rd-view__count {
   font-size: 11px;
   color: var(--text-muted, var(--color-text-secondary, #878c99));
+}
+
+.rd-view__export {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+.rd-view__export:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .rd-view__error {

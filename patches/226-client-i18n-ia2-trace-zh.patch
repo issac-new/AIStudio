@@ -1,0 +1,47 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index a2ae76d..756c3b3 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -741,6 +741,8 @@ export default {
+       events: '关联事件',
+       noEvents: '暂无关联事件',
+       currentValue: '当前值（非事件当时值）',
++      persistedTasks: '产物任务',
++      openTask: '回工作项打开',
+     },
+     keyboard: {
+       hint: 'j/k 移动 · Enter 详情 · r 回放 · a 审批',
+@@ -872,6 +874,33 @@ export default {
+         submitFailed: '创建失败',
+       },
+     },
++    tasks: {
++      tabBoard: '看板',
++      tabTrace: '追溯',
++    },
++    trace: {
++      colRun: '运行',
++      colIter: '迭代',
++      colTask: '产出任务',
++      colRounds: '验证轮次',
++      noRuns: '此需求暂无产出 run',
++      noRun: '未归属 run',
++      unlinked: '未关联',
++      openRun: '打开运行详情',
++      openTask: '回看板定位任务',
++      loadFailed: '追溯数据加载失败',
++      retry: '重试',
++      emptyTitle: '暂无追溯数据',
++      emptyHint: 'loop 落库工作项后，这里汇总 需求 → run → 产出任务 → 验证轮次 的双向链路',
++    },
++    runLinks: {
++      title: '来源 run',
++      loading: '反查来源 run…',
++      empty: '该任务暂无来源 run 记录',
++      loadFailed: '来源 run 反查失败',
++      open: '打开运行详情',
++      noRun: 'run 未知',
++    },
+   },
+ 
+   agentManager: {

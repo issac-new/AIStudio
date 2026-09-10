@@ -57,13 +57,43 @@ export const LOOP_NODE_TYPES = {
   stop: 'stop-check',
 } as const
 
+/** "回退 3"告警去重集（P3 台账）：spawner 每 tick 编译一次，按 loopId 只 warn 一次防刷屏。
+ *  测试经 resetGuardFallbackWarnForTest() 清空。 */
+const guardFallbackWarned = new Set<string>()
+
+/** 测试专用：清空 guard 回退告警去重集（模块级单例，跨编译共享） */
+export function resetGuardFallbackWarnForTest(): void {
+  guardFallbackWarned.clear()
+}
+
+/**
+ * repair 回边 guard.maxIterations 取值（P3 台账 guard/maxAttempts 对齐）：
+ * - 显式 repairMaxAttempts 覆盖优先（既有语义，测试/迁移器可精确指定）；
+ * - 否则读 loop 的契约模板 maxAttempts，取 max(该值, 3)——契约配 ≥5 时回边不先耗尽；
+ * - 模板值不可得 → 回退 3 并按 loopId warn 一次（不逐 tick 刷屏）。
+ */
+function resolveRepairMaxAttempts(loop: LoopInstance, deps: CompileTopologyDeps): number {
+  if (deps.repairMaxAttempts !== undefined) return deps.repairMaxAttempts
+  const tpl = loop.maxAttempts
+  if (typeof tpl === 'number' && Number.isFinite(tpl) && tpl >= 1) {
+    return Math.max(Math.floor(tpl), 3)
+  }
+  if (!guardFallbackWarned.has(loop.id)) {
+    guardFallbackWarned.add(loop.id)
+    console.warn(
+      `[graph-compiler] loop ${loop.id} has no contract maxAttempts template — ` +
+      'repair back-edge guard falls back to 3 (contracts configured higher may exhaust the back-edge first)')
+  }
+  return 3
+}
+
 /** 拓扑编译所需的最小 deps：compileLoopToSpec 只读 repairMaxAttempts / approvalConfig，
  *  不触碰执行期依赖（store/dispatcher/…）——只读投影（loop-to-graph.ts）与迁移器据此零依赖复用 */
 export type CompileTopologyDeps = Pick<CompileDeps, 'repairMaxAttempts' | 'approvalConfig'>
 
 /** LoopInstance → GraphSpec（纯拓扑 + 谓词，不含函数；执行函数经 makeLoopNodeRegistry 注入） */
 export function compileLoopToSpec(loop: LoopInstance, deps: CompileTopologyDeps): GraphSpec {
-  const maxAttempts = deps.repairMaxAttempts ?? 3
+  const maxAttempts = resolveRepairMaxAttempts(loop, deps)
   const stageIsScheduling = { op: 'cmp', path: CH.stage, cmp: 'eq', value: 'scheduling' } as const
   const repairNeeded = { op: 'truthy', path: CH.repairNeeded } as const
   const notRepairNeeded = { op: 'not', expr: repairNeeded } as const

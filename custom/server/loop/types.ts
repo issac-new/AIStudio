@@ -64,6 +64,10 @@ export interface LoopInstance {
    *  ——persistence 的 KanbanPersistenceAdapter 据此解析目标 kanban board（缺省/旧格式
    *  解析不出 → persist 跳过并告警）。 */
   tenant?: string | null
+  /** 契约模板重试上限（可选，P3 台账 guard/maxAttempts 对齐）：图编译器据此取
+   *  repair 回边 guard.maxIterations = max(该值, 3)，消除"契约配 ≥5 时回边先耗尽"边界。
+   *  缺省时编译器回退 3 并 warn 一次。 */
+  maxAttempts?: number
   createdAt: string
   updatedAt: string
   lastTickAt: string | null
@@ -152,6 +156,9 @@ export interface TaskContract {
   status: ContractStatus
   attempts: number
   maxAttempts: number
+  /** P3 Task 7 显式关联：persistence 成功落库的 kanban 任务 id（runPersistence 写入；
+   *  追溯矩阵与任务详情反查的台账锚点，替代按 title 正则反查。旧契约无此字段） */
+  persistedTaskId?: string | null
 }
 
 export interface VerificationRecord {
@@ -182,7 +189,12 @@ export type LoopEvent =
   | { type: 'loop.task-handed-off'; loopId: string; contractId: string; worktreeId: string; ts: string }
   | { type: 'loop.verification-progress'; contractId: string; record: Partial<VerificationRecord>; ts: string }
   | { type: 'loop.verification-complete'; contractId: string; passed: boolean; ts: string }
-  | { type: 'loop.persisted'; loopId: string; contractId: string; artifact: string; ts: string }
+  | { type: 'loop.persisted'; loopId: string; contractId: string; artifact: string;
+      /** P3 Task 7 显式关联：产物 kanban 任务 id（KanbanPersistenceAdapter createTask 返回 id
+       *  透传；旧数据/legacy 引擎无此字段，读取方按缺失处理，不回退标题正则） */
+      taskId?: string;
+      /** 产出本事件的图 run id（runId 即 threadId，graph-service 不变量）；legacy 引擎无 */
+      runId?: string; ts: string }
   | { type: 'loop.persist-failed'; loopId: string; contractId: string; error: string; ts: string }
   | { type: 'loop.tick-complete'; loopId: string; iteration: number; stats: LoopStats; ts: string }
   | { type: 'loop.budget-warning'; loopId: string; spent: number; limit: number; ts: string }

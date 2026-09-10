@@ -46,17 +46,19 @@ describe('deriveStage — 双轴投影：graph 节点/loop 业务阶段 → 门�
     expect(deriveStage(events)).toBe('gate')
   })
 
-  it('loop.stage-transition 的 to 为 legacy 业务阶段；scheduling → stop', () => {
+  it('loop.stage-transition 的 to 为 legacy 业务阶段；scheduling → gate（P3 台账 #28 双轴统一）', () => {
     const events = [
       ev({ type: 'graph.node-complete', nodeId: 'validation', ts: '2026-09-10T00:01:00Z' }),
       ev({ type: 'loop.stage-transition', to: 'persistence', ts: '2026-09-10T00:02:00Z' }),
     ]
     expect(deriveStage(events)).toBe('persistence')
 
+    // P3 台账 #28：legacy 轴 scheduling 与图轴 gate 节点同向折叠（门禁语义），
+    // stop 段由图轴 stop-check 独占承载
     const events2 = [
       ev({ type: 'loop.stage-transition', to: 'scheduling', ts: '2026-09-10T00:02:00Z' }),
     ]
-    expect(deriveStage(events2)).toBe('stop')
+    expect(deriveStage(events2)).toBe('gate')
   })
 
   it('取最后一个阶段承载事件（时间序扫描，最后写入者胜出）', () => {

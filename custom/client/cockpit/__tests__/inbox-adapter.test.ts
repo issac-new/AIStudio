@@ -35,8 +35,8 @@ describe('buildInboxItems', () => {
       { id: 'chat:s2', kind: 'chat', title: '侦察', preview: '完成', ts: 800, count: 3, routeTarget: { name: 'hermes.session', params: { sessionId: 's2' }, query: { profile: 'scout' } } },
     ] as any[],
     notifyItems: [
-      { id: 'matrix:r1', kind: 'matrix', title: '房间', preview: 'hi', ts: 950, count: 1, routeTarget: { name: 'hermes.matrixChatRoom', params: { roomId: 'r1' } } },
-      { id: 'reminder:t1:15', kind: 'reminder', title: '⏰ x', preview: '', ts: 990, count: 1, routeTarget: { name: 'hermes.cockpit' } },
+      { id: 'matrix:r1', kind: 'matrix', title: '房间', preview: 'hi', ts: 950, count: 1, routeTarget: { name: 'ia2.commsRoom', params: { roomId: 'r1' } } },
+      { id: 'reminder:t1:15', kind: 'reminder', title: '⏰ x', preview: '', ts: 990, count: 1, routeTarget: { path: '/app' } },
     ] as any[],
   }
 

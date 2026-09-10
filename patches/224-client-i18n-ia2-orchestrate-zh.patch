@@ -1,0 +1,60 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -822,6 +822,56 @@ export default {
+       alarmHead: '熔断与停滞',
+       alarmEmpty: '近 7 天无熔断/停滞告警',
+     },
++    orchestrate: {
++      title: '编排',
++      listHint: '从编译模板一键实例化 loop',
++      loadFailed: '模板库加载失败',
++      retry: '重试',
++      kind: {
++        'five-phase': '五阶段模板',
++        'daily-brief': '每日 Brief',
++        generic: '自定义模板',
++      },
++      desc: {
++        'five-phase': '发现、派发、校验、持久化、门禁五阶段执行图，含失败修复回边',
++        'daily-brief': '聚合过去 24 小时运行动态，生成每日简报',
++        generic: '自定义图模板',
++      },
++      nodes: '节点',
++      edges: '边',
++      createLoop: '创建 loop',
++      backToList: '返回模板库',
++      jsonShow: '查看 JSON',
++      jsonHide: '收起 JSON',
++      exportJson: '导出 JSON',
++      exporting: '导出中…',
++      importJson: '导入 JSON',
++      importDisabledTip: '导入随 P4 画布提供',
++      empty: {
++        title: '模板库还是空的',
++        hint: '运行一个 loop 后，它的编译模板会出现在这里',
++      },
++      form: {
++        title: '从模板创建 loop',
++        name: '名称',
++        namePlaceholder: '例如：晨检循环',
++        goal: '目标',
++        goalPlaceholder: '这个 loop 每次运行要完成什么',
++        cron: '执行节奏（cron）',
++        cronPlaceholder: '0 9 * * *',
++        tenant: '租户（可选）',
++        tenantPlaceholder: 'kanban board 定位串，留空不绑定',
++        submit: '创建并运行',
++        submitting: '创建中…',
++        cancel: '取消',
++      },
++      err: {
++        nameRequired: '请填写名称',
++        goalRequired: '请填写目标',
++        cronInvalid: 'cron 格式不对：需 5 段（或 6 段）空格分隔的表达式，如 0 9 * * *',
++        submitFailed: '创建失败',
++      },
++    },
+   },
+ 
+   agentManager: {

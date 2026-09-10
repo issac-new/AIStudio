@@ -13,6 +13,8 @@
 > 注：已修表 #5 为 Task 9 收口时新发现并当场修复的构建阻断，非 Task 1-8 遗留。
 >
 > 编号沿革：终审修正轮（2026-09-10）起顺延表整体重编为 #6-#32、待决策条目重编为 #33，消除旧顺延表 #5 与已修表 #5 的编号双义（task-9-report.md 中的编号引用为重编前快照）；重编同时新增顺延表 #30（graph run 回放导出，spec §10 门禁项计划期裁剪未回写）。
+>
+> **P3 收口（2026-09-10）**：顺延 27 条已逐条复核处置——**12 条清偿 / 15 条顺延 P4**（#33 待决策维持），见第四节；P3 各任务台账（progress.md 汇总）核销状态表同见第四节第 2 部分。
 
 ---
 
@@ -75,6 +77,117 @@
 | # | 来源 | 条目 | 现状与方案 |
 |---|------|------|-----------|
 | 33 | Task 8 important-ledger | **R1 每日 Brief Matrix 投递最后一公里未接** | 投递函数（briefDelivery）注入点已在 patch 202 预留（当前 createGraphAssembly 未传该参数）；接线需 getMatrixClient 单例 + `LOOP_MATRIX_*` env 四件套 + patch 202 注入 ~15 行。**待用户确认 bot 身份与凭据来源后实施**。落地前诚实边界已在 README 声明：默认只落事件日志（graphId='daily-brief' 审计 run，delivered:false），聊天里收不到每日简报 |
+
+---
+
+## 四、P3 收口核销（2026-09-10，Task 9）
+
+### 4.1 P2 顺延表 #6-#32 逐条处置
+
+复核方法与 P2 收口相同：逐条在当前代码库重新 grep 验证（非照抄评审记录），锚点到 file:line。
+
+**已清偿（12 条）**
+
+| # | 处置锚点 |
+|---|---------|
+| 8 | failRun 竞态措辞已达标：interrupt-timeout.ts:168 `not in registry for fail policy`（说清对象与后果） |
+| 12 | `'status' in jr` 松判别已改显式比较：`isJudgeFailed`（custom/server/loop/types.ts:123-127，status==='failed' 显式判定 + 旧数据 passed 回退），phase-nodes.ts:332 failTypeOf 消费 |
+| 15 | runPersistence 少计已修（累差）：phase-nodes.ts:300-302 写台账前从 store 读现值作基准，:709 `base.tasksCompleted + completed` |
+| 16 | guard.maxIterations 与契约 maxAttempts 对齐：graph-compiler.ts:70-84 取 `max(契约 maxAttempts, 3)`，无契约模板时 warn |
+| 18 | 事件幂等根已立：event-log-store.ts append 生成 eid=`<runId>-<seq>`（SQLite 加 eid 列 + 旧表 ALTER 兜底），graph-socket.ts:35-40 延迟下发携带 eid，前端 runs store seenKeys 去重 |
+| 19 | gate 双轴折叠统一：adapters.ts:40 STAGE_BY_LEGACY `scheduling → 'gate'`，legacy 轴与图轴七段一致 |
+| 22 | 全量订阅改批量/增量：RunCenterView `syncVisibleRunIds`（订阅域=可见页，翻页/过滤重订阅）+ runs store subscribe/unsubscribe |
+| 26 | GET /api/graph/specs/:id 已补：graph-rest.ts:176，runRest.getSpec 前端直取（不再列表端 find） |
+| 27 | specified 审批身份已接：ApprovalPanel.vue `getStoredUsername()` → resume 值携带 approver，服务端 evaluateApprovalPolicy 按 approver 匹配 |
+| 28 | 乐观 resume 双显窗口：与 #18 同波（eid 幂等去重）消除 |
+| 29 | 检查器 join state 显示当前值：NodeInspector.vue attach 档叠加实时值（f2f5303） |
+| 30 | 回放导出已实现：runRest.exportRun（GET /api/graph/runs/:id/export，run+spec+全事件）+ RunDetailView 导出入口 + patch 213/214 文案 |
+
+**顺延 P4（15 条）**
+
+| # | 复核现状（2026-09-10） |
+|---|----------------------|
+| 6 | graph-assembly.ts:279 仍 `updateLoop(...).catch(() => {})` 静默 |
+| 7 | run-spawner.ts:270-277 失败分支仍无"停滞计数有意不清零"注释 |
+| 9 | escalate() 仍先 emitLoopEvent 后 eventLog.append 水印（:214-221），append 失败会重发 |
+| 10 | run-spawner.ts:94 仍直接 `Date.now()`；统一 clock 注入面未做（interrupt-timeout 的 clock 注入为 P2 既有） |
+| 11 | graph-migrate 本期未动，specs 灌入中途崩溃窗口仍在 |
+| 13 | InMemory getSpec 仍共享 spec 引用（event-log-store.ts:146-148 `spec: s.spec`，未返回副本） |
+| 14 | loop-to-graph 本期未动，投影静默丢弃无告警 |
+| 17 | loop-to-graph 本期未动，legacy REST 视图缺边仍在 |
+| 20 | 词表仍裸 Record（adapters.ts:18/35/213，静态字面量键、原型链风险低，未换 Map） |
+| 21 | RunListTable 虚拟滚动已具备，但 RunCenterView 仍分页（PAGE_SIZE=20）且页码不随列表收缩钳制到末页 |
+| 23 | vue-flow 边渲染断言仍缺（run-detail-components.test.ts 仅节点投影/选中/空图） |
+| 24 | layoutRunGraph 大图性能未动 |
+| 25 | scrubber seek 数值化有断言，scrubber→图前缀联动断言仍缺 |
+| 31 | inject.mjs 清理动作（step 0）仍先于工作树校验（step 1） |
+| 32 | hermes-agent verify-clean WARN 存量文档债未动 |
+
+#33（每日 Brief 投递）维持**待用户决策**，现状与方案不变。
+
+### 4.2 P3 各任务台账核销状态表（progress.md 汇总）
+
+处置口径：**已清偿**（落地并验证）/ **顺延 P4**（带下文移交）/ **接受**（确认为形态/裁剪而非缺陷，不再跟踪）/ **待决策**（待用户）。
+
+| 来源 | 条目 | 处置 | 锚点/说明 |
+|---|---|---|---|
+| T1 | controllers create 白名单补 maxAttempts 拷贝 + connectors 建契约消费 maxAttempts | 已清偿 | f2f5303：controllers/loop.ts、connectors×3 + loop-controller / connector-max-attempts 测试 |
+| T1 | graph:event 无 eid（去重策略） | 已清偿 | eid 于 event-log-store append 生成；graph-socket 下发携带；无 eid 场景 type+ts+nodeId 复合键兜底 |
+| T1 | SQLite eid 升级场景守门测试缺（两代 ALTER 同欠） | 顺延 P4 | event-log-store.ts 有旧表 ALTER 兜底（:184-189），缺旧库升级用例 |
+| T1 | tripBreaker 停滞场景后缀文案误导 | 已清偿 | run-spawner.ts:243-245 停滞出口独立文案（stagnant runs, completed with no new contracts/verifications）；:203-204 补口径注释 |
+| T1 | loop-to-graph fallback warn 噪音 | 已消解 | 现码 loop-to-graph.ts 无 fallback warn 路径；P4 若复现再立条 |
+| T1 | 导出 query 无 limit（超大规模流式） | 顺延 P4 | |
+| T2 | emitEvent 顺序约束 graph-socket 注释待补 | 已清偿 | graph-socket.ts:35-40 两步微任务链说明 |
+| T2 | 翻页不清 expandedRunId / scrollTop | 顺延 P4 | RunCenterView 分页仍在，翻页未清 peek 展开与滚动位 |
+| T2 | 页界 subscribe 抖动（罕见） | 顺延 P4 | |
+| T2 | seenKeys 长驻上界 | 已清偿 | runs.ts:43 `SEEN_KEY_LIMIT=400` + :141 修剪 |
+| T2 | graph.forked/graph.failed live 副本无 eid（低频） | 顺延 P4 | 复合键兜底已覆盖语义 |
+| T2 | stop-check 徽标 gate 瞬间 | 接受 | 方向选择固有代价，已在报告声明 |
+| T3 | 报告 i18n 键数 17 实为 13 | 核销 | 报告为存档快照不回改，正源以代码与本文为准 |
+| T3 | /app/runs/:runId 仅 resolve 级断言（Task 9 补） | 已清偿（Task 9） | routes.test.ts 懒组件身份断言：装载目标 = runcenter RunDetailView |
+| T3 | store.retro 无消费方（预留） | 顺延 P4 | 守卫实际走 features.iaRetro 单一事实源；ia store 内 retro ref 闲置 |
+| T4 | 指标近似口径 UI 标注（Task 9 收口前补） | 已清偿（Task 9） | MetricsCards 样本副注 + MetricsRaw.partial + OverviewMetrics.stuckPartial + i18n patch 231/232 + 4 处测试 |
+| T4 | saas-store 事件窗口截断（ASC+LIMIT 取最旧 → 熔断计数少计） | 顺延 P4 | saas-store.ts:242 仍 `ORDER BY ts ASC` + LIMIT；与 T7 getEvents 语义分叉合并为"服务端查询端点"任务 |
+| T4 | 注意力点击筛选欠账 | 已清偿 | OverviewView `goTaskFromAttention` → /app/tasks?status&task（overview-components 测试断言 query 预选） |
+| T4 | fleet WS 生命周期接管（stopFleetStream 无人调用） | 已清偿 | Task 8：IaShell unmount 承接（IaShell.vue:26） |
+| T4 | upstream NaN 排序 bug 记账 | 记账维持 | upstream 只读，留在本表 |
+| T4 | nowTick 冻结（长驻视图陈旧） | 顺延 P4 | |
+| T4 | fetchRuns 失败被空态吞没（error 未渲染） | 顺延 P4 | |
+| T4 | buildTodayPlan 只收 idle（blocked 到期不呈现） | 顺延 P4 | |
+| T4 | normalizePriority 双词汇倒置注释 | 已清偿 | overview.ts:57 注释与实现一致 |
+| T4 | cockpit attention priority 相减 NaN（upstream 潜伏） | 核销 | 面随 Task 8 cockpit 退役移除 |
+| T5 | 告警时效受 fetchMetrics 5min TTL | 接受 | 通道固有限制；改进（loop 事件并入 /graph）为 P4 候选 |
+| T5 | 自动归档仅覆盖 approval 源（需回写设计文档） | 顺延 P4 | **文档回写债**：本收口未回写 spec，诚实记账 |
+| T5 | 任务等待锚点 createdAt | 接受 | 数据契约限制 |
+| T5 | 跨视图批准无痕 | 顺延 P4 | |
+| T5 | done 测试标题名不副实（防御性分支） | 顺延 P4 | |
+| T6 | ia2.placeholder 键与 IaPlaceholder.vue 零消费方留存 | 已清偿（Task 9） | patch 218/219 移除 6+6 键（下游 12 个 locale patch 行号同步 -8）；删除孤儿 IaPlaceholder.vue |
+| T6 | ?loop= 参数只写不读（Task 9 补 RunCenterView 消费） | 已清偿（Task 9） | RunCenterView onMounted 消费 route.query.loop 预填搜索（graphId 包含匹配）+ 测试 |
+| T6 | SpecDetail 模板内直调 layoutFromSpec 非 computed | 顺延 P4 | |
+| T6 | cron 粗校拒字名/描述符但文案未说明 | 顺延 P4 | |
+| T6 | 模板卡片键盘不可达 | 顺延 P4 | a11y 随 P4 |
+| T6 | 首拉失败错误横幅与空态同屏 | 顺延 P4 | |
+| T6 | 模板语义不随实例化携带（所见非所得） | 顺延 P4 | 已列 P4 清单 |
+| T6 | 模板卡描述为种类级文案 | 顺延 P4 | 需服务端 GraphSpec 补 description 或模板注册表 |
+| T6 | specs 列表无分页 | 接受 | P3 规模内全量成立 |
+| T6 | 创建成功不锚定新 loop 的运行 | 顺延 P4 | |
+| T7 | getEvents 500 截断语义分叉（local 最新 / saas 最旧）+ 迭代推导退化 | 顺延 P4 | 与"按 taskId 服务端查询端点"合并为 P4 任务 |
+| T7 | 矩阵/RunLinks 无事件缓存 TTL | 接受 | P3 规模成立 |
+| T7 | loop-engine legacy persisted 事件无 taskId/runId | 接受 | legacy 不在图引擎面；「未归属」桶已显式标注 |
+| T7 | OverviewView 2 条类型债（scss side-effect import + initFleetStream store 类型） | 顺延 P4 | Task 8 workspace store 迁移消除 store 类型债；scss side-effect import 仍在（OverviewView.vue:26） |
+| T7 | sessionTaskId.ts deprecated 未删 | 顺延 P4 | cockpit 遗留树整体清扫随 P4（其消费方 useKanbanTaskGraph/useRunTrace* 同属遗留树） |
+| T7 | applyQuery 深链残留过滤器 | 已清偿 | 39b8140 状态行筛选落空修复：TasksView applyQuery + route watcher（traceability-components.test.ts:260 断言） |
+| T7 | intervention 测试 router warn | 顺延 P4 | 未重核 |
+| T7 | KANBAN_STATUSES 双源 | 顺延 P4 | 未重核 |
+| T7 | 报告两处失实（phase-persistence id 侥幸兼容 / 键计数虚高） | 核销 | 报告为存档快照，正源以代码与本文为准 |
+| T7 | iteration 注释不符 | 顺延 P4 | 未重核 |
+| T8 | A1 RETRO 语义收窄（回退=revert 4bcb1e8，回退窗口随 P4 关闭） | 待决策 | 本收口已在 README 如实声明（cockpit 退役声明），**计划级变更待用户追认** |
+| T8 | A2 command-post 舰队审批 UI 无落点 | 顺延 P4 | README 已注明"P4 重建" |
+| T8 | MatrixChatPanel openSettingsPage 死代码（push 退役路由名） | 顺延 P4 | MatrixChatPanel.vue:61 定义未消费，下轮清扫 |
+| T8 | PageSidebarNav openMatrixChat 死函数 | 顺延 P4 | 随 020 重写清 |
+| T8 | watchKanbanTasks 模块级 watch 永不卸 | 顺延 P4 | workspace.ts:271-279 已核实仍常驻 |
+
+统计：P3 台账 55 条（不含 T9 本身）——已清偿 13 / 已消解 1 / 接受 6 / 核销（报告存档·面退役）3 / 待决策 1 / 记账 1 / 顺延 P4 30。P4 待办入口：本表"顺延 P4"行 + 4.1 顺延 15 条 + #33（若用户拍板）。
 
 ---
 

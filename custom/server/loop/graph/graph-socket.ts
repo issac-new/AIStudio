@@ -31,11 +31,23 @@ export function setupGraphSocketNamespace(
 ): void {
   const nsp = io.of('/graph')
 
-  // 写侧：service 事件 → 订阅了该 run 的房间（threadId 即 runId）
+  // 写侧：service 事件 → 订阅了该 run 的房间（threadId 即 runId）。
+  // P3 台账（事件幂等）：runtime 先落日志后广播，append resolve 的微任务里把
+  // eid（`<runId>-<seq>`）回填到事件对象上；此处以两步微任务链延迟下发——
+  // 第二步在回填微任务之后入队，flush 时快照 {...e} 即携带 eid，与
+  // graph:history 的 eid 同源（前端按 eid 去重，首连双发不再重复投影）。
+  // 例外：graph.forked / graph.failed 走 service 直发路径，无 runtime append
+  // 回填——不带 eid 下发，前端按 type+ts+nodeId 复合键兜底。
   graphService.onEvent((e: GraphEvent) => {
     const runId = (e as { threadId?: string }).threadId
     if (!runId) return
-    nsp.to(`run:${runId}`).emit('graph:event', e)
+    queueMicrotask(() => {
+      queueMicrotask(() => {
+        try {
+          nsp.to(`run:${runId}`).emit('graph:event', { ...e })
+        } catch { /* 房间下发失败不影响图执行 */ }
+      })
+    })
   })
 
   // 读侧：订阅 + 回放最近 50 条日志事件

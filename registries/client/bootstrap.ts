@@ -21,15 +21,22 @@ export async function bootstrapClient(app: App): Promise<void> {
     const { registerBranding } = await import('../../custom/client/branding')
     await registerBranding(app)
   }
-  if (features.cockpit) {
-    const { registerCockpit } = await import('../../custom/client/cockpit')
-    await registerCockpit(app)
-  }
+  // P3 Task 8：cockpit 退役——registerCockpit/registerCockpitRoutes 随路由本体删除；
+  // 保留复用的组件（CockpitScheduleModal/CockpitIcon）与 adapter/kv/样式由消费方直接 import。
   if (features.loopEngineering) {
     const { registerLoopEngineering } = await import('../../custom/client/loop')
     await registerLoopEngineering(app)
     const { registerGraphEngineering } = await import('../../custom/client/loop/graph')
     await registerGraphEngineering(app)
+  }
+  // P3 Task 3：六区域新 IA（/app 路由树 + 兼容重定向守卫）。
+  // 守卫依赖 router 实例，与 loop 的 addRoute 同样必须在 mount 前完成。
+  // 无条件注册：登录默认落点已由 patch 071 守卫直落 /app；Task 8 后 RETRO=1
+  // 仅表示守卫放行旧 loop 落点（cockpit 路由本体已退役删除，无旧视图可回退）。
+  {
+    const { registerIa2, registerIaCompatGuard } = await import('../../custom/client/ia2')
+    await registerIa2(app)
+    registerIaCompatGuard(router)
   }
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
   // 实际翻译是直接写在上游 locale 文件里的(现经 patch 044-053 注入)。无需运行时注册。
@@ -43,5 +50,13 @@ export async function bootstrapClient(app: App): Promise<void> {
   if (features.matrixChat) {
     const { registerMatrixChatRoutes } = await import('../../custom/client/matrix-chat')
     registerMatrixChatRoutes(router)
+  }
+
+  // 冷启动补查（P3 Task 3 审查 C-2）：初始导航早于 overlay 守卫注册，已登录深链
+  // （#/hermes/cockpit 等）可能在无守卫窗口内定型。isReady 后补跑一次兼容重定向。
+  // 必须在上方 addRoute 之后（replace 目标 ia2.* 需已注册）。
+  {
+    const { applyIaColdStartRedirect } = await import('../../custom/client/ia2')
+    await applyIaColdStartRedirect(router)
   }
 }

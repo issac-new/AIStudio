@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index 099de4e1..1c93e916 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -10,11 +10,8 @@ import ProfileSelector from "@/components/layout/ProfileSelector.vue";
+@@ -10,11 +10,8 @@
  import LanguageSwitch from "@/components/layout/LanguageSwitch.vue";
  import ThemeSwitch from "@/components/layout/ThemeSwitch.vue";
  import { changelog } from "@/data/changelog";
@@ -16,7 +15,7 @@ index 099de4e1..1c93e916 100644
  import { clearThemeBackgroundCache } from "@/api/studio/theme";
  
  const { t } = useI18n();
-@@ -22,10 +19,11 @@ const message = useMessage();
+@@ -22,10 +19,13 @@
  const route = useRoute();
  const router = useRouter();
  const appStore = useAppStore();
@@ -25,18 +24,21 @@ index 099de4e1..1c93e916 100644
    return route.name as string;
  });
 -const isSuperAdmin = computed(() => isStoredSuperAdmin());
++// overlay[ia2]: P3 六区域新 IA 高亮（Task 8: cockpit 入口随退役移除，仅保留新 IA 项）
++const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
 +const isSuperAdmin = computed(() => authStore.isSuperAdmin);
  const currentUsername = computed(() => getStoredUsername());
  const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
  const isDesktopShell = computed(
-@@ -103,6 +101,28 @@ function handleUpdateClick() {
+@@ -103,8 +103,31 @@
      @click="handleSidebarClick"
    >
      <nav class="sidebar-nav">
-+      <RouteLinkItem
-+        class="nav-item"
-+        :to="{ name: 'hermes.cockpit' }"
-+        :active="selectedKey === 'hermes.cockpit'"
++      <!-- overlay[ia2]: 六区域新 IA 一级入口（P3 登录默认；Task 8 cockpit 退役后唯一入口） -->
+       <RouteLinkItem
+         class="nav-item"
++        :to="{ name: 'ia2.overview' }"
++        :active="isIa2Area"
 +      >
 +        <svg
 +          width="16"
@@ -48,22 +50,24 @@ index 099de4e1..1c93e916 100644
 +          stroke-linecap="round"
 +          stroke-linejoin="round"
 +        >
-+          <circle cx="12" cy="12" r="3" />
-+          <path
-+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-+          />
++          <rect x="3" y="3" width="7" height="7" rx="1" />
++          <rect x="14" y="3" width="7" height="7" rx="1" />
++          <rect x="3" y="14" width="7" height="7" rx="1" />
++          <rect x="14" y="14" width="7" height="7" rx="1" />
 +        </svg>
-+        <span>{{ t("cockpit.brandTitle") }}</span>
++        <span>{{ t("ia2.brand") }}</span>
 +      </RouteLinkItem>
-       <RouteLinkItem
-         class="nav-item"
++      <RouteLinkItem
++        class="nav-item"
          :to="{ name: 'hermes.logs' }"
-@@ -460,7 +480,7 @@ function handleUpdateClick() {
+         :active="selectedKey === 'hermes.logs'"
+       >
+@@ -460,7 +483,7 @@
      <div class="sidebar-top-actions">
        <RouteLinkItem
          class="nav-item sidebar-return-tab"
 -        :to="{ name: 'hermes.chat' }"
-+        :to="{ name: 'hermes.cockpit' }"
++        :to="'/app'"
          :title="t('sidebar.backToChat')"
        >
          <svg

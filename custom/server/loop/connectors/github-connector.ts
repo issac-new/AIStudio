@@ -29,6 +29,9 @@ export class GithubConnector {
     for (const issue of issues) {
       contracts.push(createContract({
         loopId: loop.id,
+        // P3 台账：契约重试上限随 loop 配置（createContract 缺省回退 3）——
+        // 与图编译器 resolveRepairMaxAttempts 同源，github/local-git/webhook 三连接器一致
+        maxAttempts: loop.maxAttempts,
         source: { type: 'github-issue', ref: `#${issue.number}`, summary: issue.title, rawPayload: issue },
         readPlan: { requiredReads: ['packages/**'] },
         writeBoundary: ['packages/**'],
@@ -39,6 +42,7 @@ export class GithubConnector {
     for (const ci of ciFails) {
       contracts.push(createContract({
         loopId: loop.id,
+        maxAttempts: loop.maxAttempts,
         source: { type: 'github-ci', ref: ci.workflowName, summary: `CI failure: ${ci.workflowName}`, rawPayload: ci },
         readPlan: { requiredReads: ['.github/workflows/**'] },
         writeBoundary: ['.github/workflows/**', 'packages/**'],
@@ -49,6 +53,7 @@ export class GithubConnector {
     for (const commit of recentCommits) {
       contracts.push(createContract({
         loopId: loop.id,
+        maxAttempts: loop.maxAttempts,
         source: { type: 'git-commit', ref: commit.sha, summary: commit.message, rawPayload: commit },
         readPlan: { requiredReads: [] },
         writeBoundary: [],

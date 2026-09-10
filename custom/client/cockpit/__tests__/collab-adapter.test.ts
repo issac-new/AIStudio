@@ -13,7 +13,8 @@ describe('parseTenant', () => {
     expect(r.kind).toBe('matrix')
     expect(r.label).toBe('Auth联调')
     expect(r.routeTarget).toEqual({
-      name: 'hermes.matrixChatRoom',
+      // Task 8 fix: matrix 房间改指 /app/comms/room/:roomId（ia2.commsRoom）
+      name: 'ia2.commsRoom',
       params: { roomId: '!abc:matrix.org' },
     })
   })

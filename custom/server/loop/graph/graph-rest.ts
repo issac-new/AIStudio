@@ -185,9 +185,31 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     }
   })
 
+  // GET /api/graph/runs/:id/export — 运行导出包（P3 台账 #30，spec 门禁缺口）：
+  // run 详情 + 图规格 + 全事件一次打包，Content-Disposition attachment 供直接下载。
+  router.get('/api/graph/runs/:id/export', async (ctx) => {
+    if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
+    const rec = deps.graphService.getRun(ctx.params.id)
+    if (!rec) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
+    const spec = deps.specStore?.get(rec.graphId) ?? null
+    const events = await deps.eventLog.query(ctx.params.id)
+    ctx.set('Content-Disposition', `attachment; filename=run-${ctx.params.id}.json`)
+    ctx.type = 'application/json'
+    ctx.body = { run: { runId: rec.runId, graphId: rec.graphId, instance: rec.instance }, spec, events }
+  })
+
   // GET /api/graph/specs — 已注册图规格
   router.get('/api/graph/specs', async (ctx) => {
     ctx.body = { specs: deps.specStore?.list() ?? [] }
+  })
+
+  // GET /api/graph/specs/:id — 单图规格（P3 台账 #25：前端按 id 直取，不再列表端 client 侧 find）
+  router.get('/api/graph/specs/:id', async (ctx) => {
+    if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return }
+    if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
+    const spec = deps.specStore.get(ctx.params.id)
+    if (!spec) { ctx.status = 404; ctx.body = { error: `Spec not found: ${ctx.params.id}` }; return }
+    ctx.body = { id: spec.id, version: spec.version, spec }
   })
 
   // POST /api/graph/specs — 登记图规格（台账 i 持久化）

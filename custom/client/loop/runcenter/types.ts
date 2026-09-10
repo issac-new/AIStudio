@@ -23,6 +23,8 @@ export interface GraphEventLike {
   type: string
   /** 日志词汇的事件名（interrupt.raised 等）——graph:history 载体；与 type 二选一 */
   kind?: string
+  /** 事件幂等 id（P3 台账）：`<runId>-<seq>`，history 与实时流同源；store 按 eid 去重 */
+  eid?: string
   graphId?: string
   /** 即 runId（服务端以 threadId 为 run 房间键） */
   threadId?: string
@@ -78,4 +80,36 @@ export interface RunSummary {
 export interface RelativeTimeToken {
   key: 'justNow' | 'minutesAgo' | 'hoursAgo' | 'daysAgo'
   n?: number
+}
+
+/** fetchMetrics 采集的单 run 回放切片（仅成功拉取的 run；平均耗时样本输入） */
+export interface MetricsReplaySlice {
+  runId: string
+  events: GraphEventLike[]
+}
+
+/** fetchMetrics 采集的单 loop 事件切片。结构化最小形状（type/ts 即所需全部），
+ *  不与 loop 模块的 LoopEvent 联合类型耦合（跨层只共享结构不共享模块）。 */
+export interface MetricsLoopEventSlice {
+  loopId: string
+  events: Array<{ type?: string; ts?: string | number; [key: string]: unknown }>
+}
+
+/** 近 7 天指标原始采集包（fetchMetrics 产物，store 只采集不计算——投影纪律）。
+ *  业务聚合（成功率/平均耗时/熔断计数）在消费侧纯函数：
+ *  ia2/adapters/overview.ts aggregateMetrics。 */
+export interface MetricsRaw {
+  /** REST listRuns 全量快照（成功率按状态聚合的输入） */
+  runs: RunListItem[]
+  /** 最近 N 个近窗终态 run 的回放（平均耗时样本） */
+  replays: MetricsReplaySlice[]
+  /** 各 loop 近窗事件切片（熔断 loop.stuck 计数输入） */
+  loopEvents: MetricsLoopEventSlice[]
+  /** 采集完成时刻（epoch ms；5 分钟 TTL 的时间锚） */
+  collectedAt: number
+  /** 采集降级标志（Task 4 审查 B-2）：loop 列表拉取失败，或部分 loop 事件切片
+   *  拉取失败时置 true——此时 loopEvents 不完整，熔断计数是"部分数据"而非完整
+   *  零（UI 据此标注口径；缺省 false = 完整采集。平均耗时的采样口径由
+   *  durationSamples 样本数自描述，不走本标志）。 */
+  partial?: boolean
 }
