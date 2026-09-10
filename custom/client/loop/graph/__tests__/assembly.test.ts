@@ -509,6 +509,67 @@ describe('loopTickTarget.scheduleLoop (C3)', () => {
 })
 
 // ---------------------------------------------------------------------------
+// P2 Task 1 — 台账①②：cron loop 自启 + socket 事件补试
+// ---------------------------------------------------------------------------
+
+describe('P2 调度收尾（台账①②）', () => {
+  function onAssembly(rec: ReturnType<typeof makeRecordingStore>, over: Partial<GraphAssemblyOpts> = {}) {
+    return createGraphAssembly(assemblyOpts({
+      mode: 'on',
+      engineDeps: { ...makeEngineDeps(), store: rec.store } as unknown as GraphAssemblyOpts['engineDeps'],
+      ...over,
+    }))
+  }
+
+  it('台账①: scheduleLoop arms a brand-new cron loop — computes first nextTickAt, persists it, poll fires the first run', async () => {
+    const loop = makeLoop()
+    loop.stopCondition = NEVER_STOP
+    loop.schedule = cronSchedule() // */5 * * * * —— computeNextTick 必给未来时间
+    loop.nextTickAt = null // 新建 loop 从未 tick 过
+    const rec = makeRecordingStore([loop])
+    const a = onAssembly(rec)
+
+    a.loopTickTarget.scheduleLoop(loop)
+
+    // 首次时间落库（经 store 写回）
+    await vi.waitFor(() => expect(rec.byId.get('loop-1')!.nextTickAt).not.toBeNull())
+    const armed = new Date(rec.byId.get('loop-1')!.nextTickAt!).getTime()
+    expect(armed).toBeGreaterThan(Date.now())
+
+    // 到期后 poll 周期内触发首 run：跑完回 idle、迭代 +1
+    rec.byId.get('loop-1')!.nextTickAt = new Date(Date.now() - 1_000).toISOString()
+    await a.spawner!.poll()
+    await vi.waitFor(() => {
+      const cur = rec.byId.get('loop-1')!
+      expect(cur.status).toBe('idle')
+      expect(cur.stats.currentIteration).toBe(1)
+    })
+    a.stop()
+  })
+
+  it('台账②: a loop event retries the /graph socket binding after scheduled retries gave up (C4 补试)', async () => {
+    let ioInstance: SocketIOLike | null = null
+    const loop = makeLoop()
+    loop.stopCondition = NEVER_STOP
+    loop.schedule = cronSchedule()
+    loop.nextTickAt = new Date(Date.now() - 60_000).toISOString() // 已到期 → scheduleLoop 立即起 run
+    const rec = makeRecordingStore([loop])
+    const a = onAssembly(rec, {
+      io: () => ioInstance,
+      socketRetryMs: 60_000, // 定时重试窗口拉满——本次绑定只能靠事件补试
+      socketRetryMax: 1,
+    })
+    expect(a.socketConnected()).toBe(false)
+
+    ioInstance = makeIOLike().io
+    a.loopTickTarget.scheduleLoop(loop) // run 结束 → loop.tick-complete 经 bridgeLoopEvent 出站 → 补试绑定
+
+    await vi.waitFor(() => expect(a.socketConnected()).toBe(true))
+    a.stop()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // 修复波 C2 + I9 — start()：注册表重建 + running loop 孤儿恢复 + 轮询启动
 // ---------------------------------------------------------------------------
 

@@ -223,4 +223,82 @@ describe('RunSpawner', () => {
     expect(whitelist.has('future')).toBe(true)
     spawner.stop()
   })
+
+  // -------------------------------------------------------------------------
+  // P2 Task 1 — 台账④：停滞熔断（run 正常完成但产出通道无新增，连续 N 次）
+  // -------------------------------------------------------------------------
+
+  /** 带 contracts/verifications 产出通道的图：节点完成但可选地带产出 */
+  function makeChannelGraph(id: string, opts: { contracts?: unknown[]; verifications?: unknown[] } = {}): GraphDef {
+    return new GraphBuilder(id, id)
+      .addChannel('stopMet', { reducer: reducers.overwrite<boolean>(), default: false })
+      .addChannel('contracts', { reducer: reducers.append<unknown>(), default: [] })
+      .addChannel('verifications', { reducer: reducers.append<unknown>(), default: [] })
+      .addNode(fnNode('a', async () => ({
+        update: {
+          stopMet: false,
+          contracts: opts.contracts ?? [],
+          verifications: opts.verifications ?? [],
+        },
+        end: true,
+      })))
+      .setEntry('a')
+      .build()
+  }
+
+  it('stagnation breaker pauses a loop whose runs complete without any output N times in a row (台账④)', async () => {
+    const { spawner, byId, events } = makeSpawner(
+      [makeLoop()], makeChannelGraph('loop-loop-1'), { stagnationLimit: 2 })
+    const waitForTicks = (n: number) => vi.waitFor(() =>
+      expect(events.filter(e => e.type === 'loop.tick-complete')).toHaveLength(n))
+
+    await spawner.tickNow('loop-1') // 无产出 → stagnant=1
+    await waitForTicks(1)
+    expect(byId.get('loop-1')?.status).toBe('idle') // 未达阈值 → 照常重排
+    expect(events.some(e => e.type === 'loop.stuck')).toBe(false)
+
+    await spawner.tickNow('loop-1') // 无产出 → stagnant=2 → 与失败熔断同路径
+    await waitForTicks(2)
+    expect(byId.get('loop-1')?.status).toBe('paused')
+    expect(events.some(e =>
+      e.type === 'loop.stuck' && String(e.reason).includes('stagnant'))).toBe(true)
+    expect(byId.get('loop-1')?.nextTickAt).toBeNull()
+  })
+
+  it('resets the stagnation counter as soon as a run produces contracts or verifications', async () => {
+    // 产出可变的图：output.contracts 为空数组 = 本轮无产出
+    const output: { contracts: unknown[] } = { contracts: [] }
+    const mutableGraph = new GraphBuilder('loop-loop-1', 'loop-loop-1')
+      .addChannel('stopMet', { reducer: reducers.overwrite<boolean>(), default: false })
+      .addChannel('contracts', { reducer: reducers.append<unknown>(), default: [] })
+      .addNode(fnNode('a', async () => ({
+        update: { stopMet: false, contracts: output.contracts },
+        end: true,
+      })))
+      .setEntry('a')
+      .build()
+    const { spawner, byId, events } = makeSpawner(
+      [makeLoop()], mutableGraph, { stagnationLimit: 2 })
+
+    // 每个 run 恰好补发一条 loop.tick-complete —— 以它判定"该 run 已落终态"，消除竞态
+    const waitForTicks = (n: number) => vi.waitFor(() =>
+      expect(events.filter(e => e.type === 'loop.tick-complete')).toHaveLength(n))
+
+    await spawner.tickNow('loop-1') // 无产出 → stagnant=1
+    await waitForTicks(1)
+    expect(byId.get('loop-1')?.status).toBe('idle')
+
+    output.contracts = [{ id: 'c1' }] // 本轮有产出
+    await spawner.tickNow('loop-1') // → 清零
+    await waitForTicks(2)
+    expect(byId.get('loop-1')?.status).toBe('idle')
+    expect(events.some(e => e.type === 'loop.stuck')).toBe(false)
+
+    output.contracts = []
+    await spawner.tickNow('loop-1') // 又无产出 → stagnant=1（未达 2，证明上面清过零）
+    await waitForTicks(3)
+    expect(byId.get('loop-1')?.status).toBe('idle')
+    expect(events.some(e => e.type === 'loop.stuck')).toBe(false)
+    spawner.stop()
+  })
 })
