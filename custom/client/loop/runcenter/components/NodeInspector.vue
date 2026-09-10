@@ -52,14 +52,18 @@ const instanceState = ref<Record<string, unknown> | null>(null)
 
 async function loadInstanceState(): Promise<void> {
   instanceState.value = null
+  const runId = props.runId
   try {
     const res = await runRest.getRun(props.runId)
+    // 陈旧响应守卫（2026-09-10 风险审查 #7）：runId 快速切换时并发请求，慢响应后到
+    // 会把上一个 run 的 instance.state 以"当前值"名义写回本面板
+    if (props.runId !== runId) return
     const state = (res.instance as { state?: unknown } | undefined)?.state
     instanceState.value = state != null && typeof state === 'object'
       ? state as Record<string, unknown>
       : null
   } catch {
-    instanceState.value = null // 详情端点不可用 → 只显键名，不炸面板
+    if (props.runId === runId) instanceState.value = null // 详情端点不可用 → 只显键名，不炸面板
   }
 }
 

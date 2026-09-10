@@ -368,6 +368,34 @@ describe('RunCenterView (jsdom)', () => {
     await w.findAll('.rc-view__pager button')[1].trigger('click') // 下一页
     expect(w.findAll('.rc-table__row')).toHaveLength(5)
   })
+
+  it('翻页使展开 run 离开当前页时复位展开态：回到原页浮层不残留（审查 #7）', async () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({
+      runId: `run-${i}`,
+      graphId: 'loop-loop1',
+      status: 'completed',
+      updatedAt: '2026-09-10T00:00:00Z',
+    }))
+    rest.listRuns.mockResolvedValue(many)
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+
+    // 页 1 末行（run-19）行内展开 → 浮层出现
+    const rows = w.findAll('.rc-table__row')
+    expect(rows).toHaveLength(20)
+    await rows[19].find('.rc-table__peek-toggle').trigger('click')
+    expect(w.find('.rc-table__peek').exists()).toBe(true)
+
+    // 翻到页 2：展开的 run-19 不在当前页 → 浮层不渲染，展开态被复位
+    await w.findAll('.rc-view__pager button')[1].trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    expect(w.find('.rc-table__peek').exists()).toBe(false)
+
+    // 翻回页 1：复位后浮层不残留（修复前 expandedRunId 仍是 run-19 → 浮层重新出现）
+    await w.findAll('.rc-view__pager button')[0].trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    expect(w.find('.rc-table__peek').exists()).toBe(false)
+  })
 })
 
 describe('RunListTable 虚拟滚动与键盘可达（P3 台账）', () => {
@@ -432,6 +460,17 @@ describe('RunListTable 虚拟滚动与键盘可达（P3 台账）', () => {
 
     await body.trigger('keydown', { key: 'a' })
     expect(w.emitted('action')![0][0]).toMatchObject({ kind: 'approve', run: { runId: 'r-a' } })
+  })
+
+  it('peek 浮层守卫（审查 #7）：expandedRunId 不在当前页不渲染空壳浮层；命中时定位行下', () => {
+    const runs = [row({ runId: 'r-1' }), row({ runId: 'r-2' })]
+    // 翻页/过滤后展开的 run 不在本页：findIndex=-1 → 不渲染（修复前 top=0px 空壳遮挡首行）
+    const w = mount(RunListTable, { props: { runs, expandedRunId: 'run-not-on-page' } })
+    expect(w.find('.rc-table__peek').exists()).toBe(false)
+
+    const w2 = mount(RunListTable, { props: { runs, expandedRunId: 'r-2' } })
+    expect(w2.find('.rc-table__peek').exists()).toBe(true)
+    expect(w2.find('.rc-table__peek').attributes('style')).toContain('top: 96px') // (1+1)×48
   })
 })
 
