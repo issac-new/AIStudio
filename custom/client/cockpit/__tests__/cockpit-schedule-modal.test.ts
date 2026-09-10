@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+// P3 Task 8 重构：CockpitScheduleModal 弹窗本体复用（总览挂载），但挂载状态/
+// 待办/聚合任务改由 ia2 workspace store 承载（cockpit store 随路由退役删除）。
+// 组件→store 的交互面（导航/选日/加待办/关弹窗）与视觉断言保持原样。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -7,79 +10,7 @@ import { nextTick } from 'vue'
 // Mock global Vite define
 vi.stubGlobal('__APP_VERSION__', '0.0.0-test')
 
-// ── mock kanban store ──
-const { mockKanbanTasks, fetchTasks, fetchAssignees, startEventStream, fetchBoards, setSelectedBoard } = vi.hoisted(() => ({
-  mockKanbanTasks: [] as any[],
-  fetchTasks: vi.fn(async () => {}),
-  fetchAssignees: vi.fn(async () => {}),
-  startEventStream: vi.fn(),
-  fetchBoards: vi.fn(async () => {}),
-  setSelectedBoard: vi.fn(),
-}))
-vi.mock('@/stores/hermes/kanban', () => ({
-  useKanbanStore: () => ({
-    tasks: mockKanbanTasks,
-    boards: [{ slug: 'default', name: 'default', total: 0 }],
-    fetchTasks, fetchAssignees, startEventStream, fetchBoards, setSelectedBoard,
-  }),
-}))
-
-// ── mock kanban-extras ──
-const { getTimeline } = vi.hoisted(() => ({
-  getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
-}))
-vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
-  searchSessions: vi.fn(async () => []),
-  listWorkspaceFiles: vi.fn(async () => []),
-  getTimeline,
-}))
-
-// ── mock kanban api ──
-vi.mock('@/api/hermes/kanban', async () => {
-  const actual = await vi.importActual<any>('@/api/hermes/kanban')
-  return { ...actual, getTask: vi.fn(async () => null), addComment: vi.fn(async () => ({ ok: true })) }
-})
-
-// ── mock sessions API ──
-vi.mock('@/api/studio/sessions', async () => {
-  const actual = await vi.importActual<any>('@/api/studio/sessions')
-  return { ...actual, searchSessions: vi.fn(async (_q: string) => []) }
-})
-
-// ── mock chat/group/matrix stores ──
-vi.mock('@/stores/hermes/chat', () => ({
-  useChatStore: () => ({
-    loadSessions: vi.fn(async () => {}),
-    messages: [],
-    sendMessage: vi.fn(async () => {}),
-    switchSession: vi.fn(async () => {}),
-  }),
-}))
-vi.mock('@/stores/hermes/group-chat', () => ({
-  useGroupChatStore: () => ({
-    connect: vi.fn(async () => {}),
-    disconnect: vi.fn(),
-    loadRooms: vi.fn(async () => {}),
-    joinRoom: vi.fn(async () => {}),
-    sendMessage: vi.fn(async () => {}),
-    sortedMessages: [],
-  }),
-}))
-vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
-  useMatrixClientStore: () => ({ initClient: vi.fn(async () => {}), syncState: { value: 'PREPARED' } }),
-}))
-vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
-  useMatrixRoomStore: () => ({ selectRoom: vi.fn(), activeRoomMessages: [], roomList: [] }),
-}))
-vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
-  useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }),
-}))
-
-vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: (key: string) => key }),
-}))
-
-// Mock cockpit-kv to ensure loadUserTodos is available
+// ── mock cockpit-kv（待办持久层，workspace store extract-shared 同源）──
 vi.mock('@/custom/cockpit/store/cockpit-kv', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/custom/cockpit/store/cockpit-kv')>()
   return {
@@ -89,24 +20,47 @@ vi.mock('@/custom/cockpit/store/cockpit-kv', async (importOriginal) => {
   }
 })
 
-import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+}))
 
-// 任务工厂（与 cockpit-store.test.ts 的 kt 一致）
-const kt = (over: Record<string, any> = {}) => ({
-  id: 't1', title: 'T', body: null, assignee: 'alice', status: 'todo',
-  priority: 0, created_by: null, created_at: 0, started_at: null, completed_at: null,
-  workspace_kind: 'dir', workspace_path: '~/ws', tenant: null, project_id: null,
-  result: null, skills: null, latest_summary: null, ...over,
+const routerMocks = vi.hoisted(() => ({ push: vi.fn() }))
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: routerMocks.push }),
+  useRoute: () => ({ params: {}, query: {} }),
+}))
+
+// ── workspace store 的外部 IO 桩（重图隔离：kanban REST / 聚合 WS 不实例化）──
+vi.mock('@/api/hermes/kanban', () => ({
+  listBoards: vi.fn(async () => []),
+  listTasks: vi.fn(async () => []),
+}))
+vi.mock('@/custom/cockpit/adapters/teams-adapter', () => ({
+  fetchKanbanOverview: vi.fn(async () => ({ boards: [], tasks: [] })),
+}))
+vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => ({
+  connectOverviewStream: vi.fn(() => ({ close: vi.fn() })),
+  connectFleetStream: vi.fn(() => ({ close: vi.fn() })),
+}))
+
+import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
+import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
+import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+
+// CockpitTask 工厂（原用例经 kanban fallback 映射；现直接注入聚合形状）
+const ct = (over: Record<string, any> = {}): CockpitTask => ({
+  id: 't1', title: 'T', priority: 'P3', status: 'todo',
+  assignee: 'alice', workspace: '', tenant: null, boardSlug: 'default', createdAt: 0,
+  ...over,
 })
 
-describe('CockpitScheduleModal', () => {
+describe('CockpitScheduleModal（workspace store 承载）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   it('renders modal when schedule is open', async () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     await nextTick()
     const wrapper = mount(CockpitScheduleModal)
@@ -115,14 +69,14 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('shows empty state when no events for selected date', () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
     expect(wrapper.text()).toContain('cockpit.scheduleEmpty')
   })
 
   it('add todo button toggles input form', async () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
     // 添加按钮在头部「日程」文字右侧
@@ -135,7 +89,7 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('close button calls closeSchedule', async () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
     await wrapper.find('.cockpit-schedule__close').trigger('click')
@@ -143,7 +97,7 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('navigates years via nav buttons', async () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     store.scheduleViewYear = 2026
     const wrapper = mount(CockpitScheduleModal)
@@ -155,7 +109,7 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('today button resets to current month', async () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     store.scheduleViewYear = 2025
     store.scheduleViewMonth = 0
@@ -167,7 +121,7 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('renders two-column layout (calendar + day panel)', () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
     expect(wrapper.find('.cockpit-schedule__cal').exists()).toBe(true)
@@ -175,13 +129,12 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('marks a mini day with has-count when tasks exist for today', async () => {
-    mockKanbanTasks.length = 0
-    mockKanbanTasks.push(kt({ id: 't-ct', title: '计数任务', status: 'todo', priority: 3, created_at: Date.now() }))
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
+    store.tasks = [ct({ id: 't-ct', title: '计数任务', status: 'todo', priority: 'P0', createdAt: Date.now() })]
     store.openSchedule()
     await nextTick()
     const wrapper = mount(CockpitScheduleModal)
-    // 今日所在 mini 格子应带 has-count 且按 P0 着色（priority:3 → P0）
+    // 今日所在 mini 格子应带 has-count 且按 P0 着色
     const todayCell = wrapper.find('.cockpit-schedule__mini-d.is-today')
     expect(todayCell.exists()).toBe(true)
     expect(todayCell.classes()).toContain('has-count')
@@ -189,16 +142,15 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('renders events sorted by time ascending in day panel', async () => {
-    mockKanbanTasks.length = 0
     // 锚定到今天 08:00/20:00,避免午夜前后 1 小时内 now-1h 落到昨天导致日面板只剩 1 条
     const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
     const base = dayStart.getTime()
     // 两个任务，later 在前 push 但时间更晚 → 右栏应按时间升序（earlier 在上）
-    mockKanbanTasks.push(
-      kt({ id: 't-late', title: '晚任务', status: 'todo', priority: 0, created_at: base + 20 * 3600_000 }),
-      kt({ id: 't-early', title: '早任务', status: 'todo', priority: 0, created_at: base + 8 * 3600_000 }),
-    )
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
+    store.tasks = [
+      ct({ id: 't-late', title: '晚任务', status: 'todo', priority: 'P3', createdAt: base + 20 * 3600_000 }),
+      ct({ id: 't-early', title: '早任务', status: 'todo', priority: 'P3', createdAt: base + 8 * 3600_000 }),
+    ]
     store.openSchedule()
     await nextTick()
     const wrapper = mount(CockpitScheduleModal)
@@ -209,9 +161,8 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('applies priority visual classes to task event rows', async () => {
-    mockKanbanTasks.length = 0
-    mockKanbanTasks.push(kt({ id: 't-p0', title: 'P0任务', status: 'blocked', priority: 3, created_at: Date.now() }))
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
+    store.tasks = [ct({ id: 't-p0', title: 'P0任务', status: 'blocked', priority: 'P0', createdAt: Date.now() })]
     store.openSchedule()
     await nextTick()
     const wrapper = mount(CockpitScheduleModal)
@@ -223,7 +174,7 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('renders 12 mini months in the year overview', () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
     const minis = wrapper.findAll('.cockpit-schedule__mini')
@@ -234,7 +185,7 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('clicking a mini day selects that date', async () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     const wrapper = mount(CockpitScheduleModal)
     // 点击 1 月 15 日（第一个 mini 月的第 15 天）
@@ -250,7 +201,7 @@ describe('CockpitScheduleModal', () => {
   })
 
   it('renders lunar day label under each solar day', () => {
-    const store = useCockpitStore()
+    const store = useWorkspaceStore()
     store.openSchedule()
     store.scheduleViewYear = 2026
     const wrapper = mount(CockpitScheduleModal)
@@ -260,5 +211,18 @@ describe('CockpitScheduleModal', () => {
     expect(springFestival).toBeTruthy()
     expect(springFestival!.classes()).toContain('is-festival')
     expect(springFestival!.find('.cockpit-schedule__mini-lunar').text()).toBe('春节')
+  })
+
+  it('clicking a task event navigates to /app/tasks with task query（cockpit selectTask 已退役）', async () => {
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+    const store = useWorkspaceStore()
+    store.tasks = [ct({ id: 't-nav', title: '跳转任务', status: 'todo', priority: 'P3', createdAt: dayStart.getTime() + 3600_000 })]
+    store.openSchedule()
+    const wrapper = mount(CockpitScheduleModal)
+    const ev = wrapper.find('.cockpit-schedule__ev')
+    expect(ev.exists()).toBe(true)
+    await ev.trigger('click')
+    expect(routerMocks.push).toHaveBeenCalledWith({ path: '/app/tasks', query: { task: 't-nav' } })
+    expect(store.scheduleOpen).toBe(false)
   })
 })

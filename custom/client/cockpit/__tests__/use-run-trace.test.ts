@@ -37,10 +37,8 @@ vi.mock('@/api/client', () => ({
   getBaseUrlValue: () => '/api',
 }))
 
-// useRunTrace 动态 import cockpit store 获取 boardSlugOf；mock 避免真实 store 初始化。
-vi.mock('../store/cockpit', () => ({
-  useCockpitStore: () => ({ boardSlugOf: (id: string) => 'kanban001' }),
-}))
+// P3 Task 8：cockpit store 已退役删除，useRunTrace 的 boardResolver 改为
+// null（默认 board fallback），原 store mock 一并移除。
 
 /** flush all pending microtasks (await loadRelatedSessions etc.) */
 function flush() { return new Promise(r => setTimeout(r, 0)) }

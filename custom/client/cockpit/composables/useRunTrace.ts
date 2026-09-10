@@ -262,14 +262,10 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     sessionTaskMap = new Map()
 
     if (primaryTaskId) {
-      // 解析 board：通过 cockpit store 的 boardSlugOf 查询（100%确定）。
-      // 任务可能在 kanban001 等非默认 board，getTask 必须传 board 否则 500。
-      let boardResolver: ((id: string) => string | undefined) | null = null
-      try {
-        const { useCockpitStore } = await import('../store/cockpit')
-        const cockpitStore = (useCockpitStore as any)() as { boardSlugOf?: (id: string) => string | undefined }
-        if (typeof cockpitStore.boardSlugOf === 'function') boardResolver = cockpitStore.boardSlugOf.bind(cockpitStore)
-      } catch { /* cockpit store 未初始化 */ }
+      // 解析 board：cockpit store（boardSlugOf）已随 P3 Task 8 退役删除，
+      // boardResolver 置空走默认 board fallback；P4 回放引擎重建时改接
+      // ia2 workspace store 的跨 board 任务索引。
+      const boardResolver: ((id: string) => string | undefined) | null = null
 
       try {
         // BFS 遍历任务树：上溯 parents + 下探 children，visited 防环，深度限制 20。

@@ -19,7 +19,7 @@ index 40a521b9..11ddb879 100644
 +    <div class="conversation-switch conversation-switch--five" role="tablist" aria-label="Conversation type">
 +      <NTooltip trigger="hover" placement="top">
 +        <template #trigger>
-+          <button class="conversation-switch-tab" :class="{ active: active === 'matrix' }" type="button" role="tab" :aria-label="t('sidebar.matrixChat')" :aria-selected="active === 'matrix'" @click="openMatrixChat">
++          <button class="conversation-switch-tab" :class="{ active: active === 'matrix' }" type="button" role="tab" :aria-label="t('sidebar.matrixChat')" :aria-selected="active === 'matrix'" @click="router.push('/app/comms')">
 +            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
 +          </button>
 +        </template>

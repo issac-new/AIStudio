@@ -162,6 +162,23 @@ describe('createGraphAssembly', () => {
     expect(a.router.stack.some(l => l.path === '/api/graph/runs')).toBe(true)
   })
 
+  // P3 Task 8（spec §7B.4 最小版）：图引擎策略只读端点——模式 + 默认审批超时/熔断阈值。
+  it('GET /api/graph/engine exposes mode + read-only policy defaults（三态一致）', async () => {
+    for (const mode of ['legacy', 'shadow', 'on'] as const) {
+      const a = createGraphAssembly(assemblyOpts({ mode }))
+      const ctx = await invoke(a.router, 'get', '/api/graph/engine')
+      expect(ctx.body).toEqual({
+        mode,
+        policy: {
+          failureBreakerLimit: 10,       // §7B.7 连续失败熔断默认
+          stagnationLimit: 10,           // 台账④停滞熔断默认（= 失败熔断）
+          interruptTimeoutMs: 72 * 60 * 60 * 1000,  // 审批 interrupt 默认超时（P0 台账 h）
+          escalationResendMs: 24 * 60 * 60 * 1000,  // escalate 重发节流
+        },
+      })
+    }
+  })
+
   it('on mode: spawner wired, tick target routes to spawner', async () => {
     const a = createGraphAssembly(assemblyOpts({ mode: 'on' }))
     expect(a.spawner).not.toBeNull()

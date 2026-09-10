@@ -62,6 +62,10 @@ export class RunSpawner {
   private readonly stagnationLimit: number
   private readonly log: (msg: string) => void
 
+  /** 生效熔断阈值（P3 Task 8 策略卡只读导出；未注入阈值 = 类内默认） */
+  get effectiveFailureBreakerLimit(): number { return this.maxConsecutiveFailures }
+  get effectiveStagnationLimit(): number { return this.stagnationLimit }
+
   constructor(private opts: RunSpawnerOpts) {
     this.intervalMs = opts.intervalMs ?? 30_000
     this.maxConsecutiveFailures = opts.maxConsecutiveFailures ?? 10

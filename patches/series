@@ -276,7 +276,6 @@
 216-client-i18n-runcenter-task2-en.patch
 # P3 Task 3: 六区域导航骨架——/app 路由树(dynamic 注册,零 router patch)+侧栏新 IA 入口+
 # ia2 i18n。登录默认落 /app 经 overlay 兼容守卫(custom/client/ia2/guard.ts)承接,不 patch router
-217-client-appsidebar-ia2-entry.patch
 218-client-i18n-ia2-zh.patch
 219-client-i18n-ia2-en.patch
 # P3 Task 4: 总览首屏——注意力+四卡片+角色指标+空态引导 i18n（ia2.overview 段）
@@ -292,3 +291,6 @@
 # （ia2.tasks+ia2.trace+ia2.runLinks 段 + runcenter.inspector 产物任务段）
 226-client-i18n-ia2-trace-zh.patch
 227-client-i18n-ia2-trace-en.patch
+228-client-settingsview-graph-engine-card.patch
+229-client-i18n-ia2-observer-engine-en.patch
+230-client-i18n-ia2-observer-engine-zh.patch

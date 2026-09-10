@@ -16,7 +16,7 @@ import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
-import { InterruptTimeoutScanner } from './interrupt-timeout'
+import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
 import { DailyBriefJob, readBriefConfig } from './daily-brief'
 import { emitLoopEvent } from '../services/loop-socket'
 import type { Router } from '@koa/router'
@@ -231,6 +231,22 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   }
 
   const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore })
+
+  // P3 Task 8（spec §7B.4 最小版）：图引擎策略只读端点——设置页"图引擎策略"卡数据源。
+  // 导出装配事实：当前模式 + 生效的默认审批超时/熔断阈值（只读展示；策略文件化
+  // 可编辑下发随 P4）。阈值来源：RunSpawner 未注入阈值时用类内默认（10/10），
+  // interrupt 超时用 InterruptTimeoutScanner 导出常量（72h / 24h 重发节流）。
+  router.get('/api/graph/engine', async (ctx) => {
+    ctx.body = {
+      mode,
+      policy: {
+        failureBreakerLimit: spawner?.effectiveFailureBreakerLimit ?? 10,
+        stagnationLimit: spawner?.effectiveStagnationLimit ?? 10,
+        interruptTimeoutMs: DEFAULT_INTERRUPT_TIMEOUT_MS,
+        escalationResendMs: ESCALATION_RESEND_INTERVAL_MS,
+      },
+    }
+  })
 
   if (!tryBindSocket()) scheduleSocketRetry()
 

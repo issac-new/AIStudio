@@ -1,23 +1,24 @@
 <!-- overlay/custom/client/ia2/views/OverviewView.vue -->
 <!-- 总览（登录默认落点）：注意力条 → 四卡片一行（活跃运行/等你决策/今日日程/
-     关键指标）→ 今日计划列表（到期 loop + 今日待办）→ 空态三步引导（R4 首屏不空）。
-     通知克制（R4/§7B.1）：只聚合不推送；挂载期一次性武装数据源，零新增轮询——
-     注意力走 cockpit 既有聚合 WS（board 事件 → 去抖刷新），awaiting 域走 runs
-     store /graph 订阅（可见页=介入集），指标走 fetchMetrics（5 分钟 TTL 缓存）。 -->
+     关键指标）+ 工作项状态分布 → 今日计划列表（到期 loop + 今日待办）→ 空态三步
+     引导（R4 首屏不空）。通知克制（R4/§7B.1）：只聚合不推送；挂载期一次性武装
+     数据源，零新增轮询——注意力走 workspace 既有聚合 WS（board 事件 → 去抖刷新），
+     awaiting 域走 runs store /graph 订阅（可见页=介入集），指标走 fetchMetrics
+     （5 分钟 TTL 缓存）。Task 8：cockpit store 退役，数据源改挂 workspace store。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
-import { loadUserTodos } from '@/custom/cockpit/store/cockpit-kv'
+import { useWorkspaceStore } from '../store/workspace'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import AttentionStrip from '../components/AttentionStrip.vue'
 import ActiveRunsCard from '../components/ActiveRunsCard.vue'
 import InboxPreviewCard from '../components/InboxPreviewCard.vue'
 import ScheduleCard from '../components/ScheduleCard.vue'
 import MetricsCards from '../components/MetricsCards.vue'
+import StatusDistributionCard from '../components/StatusDistributionCard.vue'
 import {
   aggregateActiveRuns, aggregateInbox, aggregateMetrics, buildTodayPlan, mergeAttention,
   type AttentionRow,
@@ -28,7 +29,7 @@ const router = useRouter()
 const { t } = useI18n()
 const runsStore = useRunCenterStore()
 const loopStore = useLoopStore()
-const cockpit = useCockpitStore()
+const workspace = useWorkspaceStore()
 
 /** 首屏时间锚：挂载时刻（相对时间/今日判定的稳定基准，随重挂载刷新） */
 const nowTick = ref(Date.now())
@@ -36,11 +37,12 @@ const nowTick = ref(Date.now())
 const booted = ref(false)
 
 onMounted(() => {
-  // cockpit 待办：kv 是单一事实源，装载词表与 cockpit 同一（复用 cockpit-kv，零复制）
-  cockpit.userTodos = loadUserTodos()
-  cockpit.startReminderScheduler()   // 待办闹钟调度（幂等；cockpit 同款"启动即生效"）
-  cockpit.initFleetStream()          // 既有 kanban 聚合 WS——board 事件驱动 refreshAllBoards
-  void cockpit.refreshAllBoards()    // 一次性看板拉取（内建 2s 防抖）
+  // workspace 待办：kv 是单一事实源，装载词表与 cockpit 同一（复用 cockpit-kv，零复制）
+  workspace.loadTodos()
+  workspace.startReminderScheduler()   // 待办闹钟调度（幂等）
+  workspace.watchKanbanTasks()         // 看板页编辑 → 轻量去抖同步聚合
+  workspace.initFleetStream()          // 既有 kanban 聚合 WS——board 事件驱动 refreshAllBoards
+  void workspace.refreshAllBoards()    // 一次性看板拉取（内建 2s 防抖）
   void bootRuns()
 })
 
@@ -56,7 +58,7 @@ async function bootRuns(): Promise<void> {
 
 // ── 视图投影（全部经 adapters 纯函数，视图不自算）──
 const attentionRows = computed<AttentionRow[]>(() =>
-  mergeAttention(cockpit.tasks.map(task => ({
+  mergeAttention(workspace.tasks.map(task => ({
     id: task.id,
     title: task.title,
     status: task.status,
@@ -69,11 +71,11 @@ const inboxAgg = computed(() => aggregateInbox(runsStore.runs, nowTick.value))
 const metrics = computed(() =>
   aggregateMetrics(runsStore.metricsRaw, runsStore.metricsRaw?.collectedAt ?? nowTick.value))
 
-const todayPlan = computed(() => buildTodayPlan(loopStore.loops, cockpit.userTodos, new Date(nowTick.value)))
+const todayPlan = computed(() => buildTodayPlan(loopStore.loops, workspace.userTodos, new Date(nowTick.value)))
 
 /** 空态引导（R4）：零 run 零任务时出现；任一数据存在即消失 */
 const showGuide = computed(() =>
-  booted.value && runsStore.runs.length === 0 && cockpit.tasks.length === 0)
+  booted.value && runsStore.runs.length === 0 && workspace.tasks.length === 0)
 
 const metricsLoading = computed(() => runsStore.metricsLoading && !runsStore.metricsRaw)
 
@@ -82,7 +84,7 @@ const goRuns = () => void router.push('/app/runs')
 const goInbox = () => void router.push('/app/inbox')
 const goTasks = () => void router.push('/app/tasks')
 const goOrchestrate = () => void router.push('/app/orchestrate')
-const openSchedule = () => cockpit.openSchedule()
+const openSchedule = () => workspace.openSchedule()
 
 // 注意力条点击 → 工作项区带筛选预选（P3 Task 7 欠账清偿）：
 // status = 注意力梯队（blocked/review/triage 均为合法 kanban 状态，TasksView 端再做词表校验）
@@ -125,9 +127,13 @@ function planTimeLabel(at: number | null): string {
       <div class="ia-overview__cards">
         <ActiveRunsCard :agg="activeAgg" :now="nowTick" @open="goRuns" />
         <InboxPreviewCard :agg="inboxAgg" :now="nowTick" @open="goInbox" />
-        <ScheduleCard :todos="cockpit.userTodos" :now-ms="nowTick" @open="openSchedule" />
+        <ScheduleCard :todos="workspace.userTodos" :now-ms="nowTick" @open="openSchedule" />
         <MetricsCards :metrics="metrics" :loading="metricsLoading" />
       </div>
+
+      <!-- 观察者聚合最小版（P3 Task 8）：TaskLifecycleView 生命周期漏斗的等价收编
+           ——跨任务状态分布条形图（useTaskLifecycle.statusCounts，纯前端聚合零新 API） -->
+      <StatusDistributionCard :tasks="workspace.tasks" @open="goTasks" />
 
       <section class="ia-plan" data-testid="ia-plan">
         <div class="ia-plan__head">{{ t('ia2.overview.todayPlan') }}</div>
@@ -150,7 +156,7 @@ function planTimeLabel(at: number | null): string {
       </section>
     </div>
 
-    <!-- 日程弹窗：cockpit 单例状态承载，弹窗本体复用（Task 8 退役前原样） -->
-    <CockpitScheduleModal v-if="cockpit.scheduleOpen" />
+    <!-- 日程弹窗：workspace 单例状态承载，弹窗本体复用（cockpit 组件保留复用） -->
+    <CockpitScheduleModal v-if="workspace.scheduleOpen" />
   </div>
 </template>

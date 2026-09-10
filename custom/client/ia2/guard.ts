@@ -1,32 +1,54 @@
 // overlay/custom/client/ia2/guard.ts
-// P3 Task 3 — 兼容重定向守卫（新 IA 默认开启后的旧落点承接）。
+// P3 Task 3 — 兼容重定向守卫（新 IA 默认开启后的旧落点承接）；Task 8 扩展为
+// 路径级承接——cockpit 路由本体已退役删除，旧深链按 PATH 拦截（name 拦截仅
+// 覆盖仍存在的路由记录）。
 //
 // 设计说明（为何用 overlay 侧 beforeEach 而非 patch 上游 router/index.ts）：
-// - 登录默认链：上游 071 守卫把无 redirect 的登录落在 hermes.cockpit（patch 073 的
-//   LoginView 同落点），本守卫按路由名接力改落 /app —— 三处上游落点全被单一守卫覆盖，
-//   不新增任何上游文件锚点（路由名比上下文行稳定得多）。
-// - 旧路由不删：cockpit 全树、loop 三路由原样保留；RETRO=1 时守卫整体放行，
-//   旧行为完整恢复（回退保险）。
-// - /hermes/loop（LoopSpineView 模板编排页）不在重定向之列：编排区 Task 6 才有等价
-//   能力，提前重定向会丢功能。
+// - 登录默认链：上游 071 守卫把无 redirect 的登录改落 '/app'（Task 8 起），
+//   旧书签深链按路径在本守卫接力 → 单一守卫覆盖全部旧落点。
+// - 旧路由不删（loop 三路由原样保留）；RETRO=1 时守卫放行 loop 旧落点（回退保险）。
+//   cockpit/matrix-chat/swarm-kanban 路径任何模式都重定向——路由本体已删除，
+//   放行只会落空白页，"放行"不再保真（features.ts 处已注明语义收窄）。
 import type { Router, RouteLocationNormalizedGeneric } from 'vue-router'
 
 /** 重定向目标（vue-router 位置描述的子集） */
 export interface IaRedirectLocation {
   name: string
+  params?: Record<string, string>
   query?: Record<string, string>
 }
 
-/** 纯函数：该导航是否应改落新 IA。retro=true 时一律放行（返回 null）。 */
+/**
+ * 纯函数：该导航是否应改落新 IA。
+ * Task 8：cockpit 退役路径（/hermes/cockpit、/hermes/matrix-chat[、/room]）与
+ * swarm-kanban 在任何模式（含 RETRO）下都承接——路由已删，无"旧行为"可回退。
+ * 其余旧落点（hermes.loopRuns/loopDetail）RETRO=true 时放行。
+ */
 export function iaCompatRedirect(
-  to: Pick<RouteLocationNormalizedGeneric, 'name' | 'params'>,
+  to: Pick<RouteLocationNormalizedGeneric, 'name' | 'path' | 'params'>,
   retro: boolean,
 ): IaRedirectLocation | null {
+  // ── cockpit 退役路径（路径级，先于 retro 判定）──
+  if (to.path === '/hermes/cockpit') return { name: 'ia2.overview' }
+  if (to.path === '/hermes/matrix-chat') return { name: 'ia2.commsHome' }
+  if (to.path === '/hermes/swarm-kanban') return { name: 'ia2.tasks' }
+  const roomMatch = /^\/hermes\/matrix-chat\/room\/(.+)$/.exec(to.path)
+  if (roomMatch) return { name: 'ia2.commsRoom', params: { roomId: roomMatch[1] } }
+  // 名称级兜底（路由记录仍存在时的场景 + 测试/冷启动窗口）
+
   if (retro) return null
   switch (to.name) {
     case 'hermes.cockpit':
       // 登录默认落点（071/073 链）与旧书签 → 总览
       return { name: 'ia2.overview' }
+    case 'hermes.matrixChat':
+      // 沟通升一级（spec §9 Matrix 升一级）
+      return { name: 'ia2.commsHome' }
+    case 'hermes.matrixChatRoom':
+      return { name: 'ia2.commsRoom', params: { roomId: String(to.params?.roomId ?? '') } }
+    case 'hermes.swarmKanban':
+      // 看板吸收进工作项区
+      return { name: 'ia2.tasks' }
     case 'hermes.loopRuns':
       // 旧运行中心 → /app/runs
       return { name: 'ia2.runs' }
