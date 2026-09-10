@@ -551,7 +551,7 @@ patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。
 | 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
 | 后端 | Koa + SQLite（Loop 工程化可选 PostgreSQL） |
 | 桌面 | Electron（hermes-studio packages/desktop） |
-| 测试 | Vitest（112 个测试文件） |
+| 测试 | Vitest（106 个测试文件，custom/**） |
 | Agent | hermes-agent（运行时下载，OpenTelemetry GenAI 语义对齐） |
 
 ---
@@ -559,8 +559,8 @@ patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。
 ## 规模
 
 - **177** 个 active B 类 patch（100% inject 通过率）
-- **114** 个自定义 Vue 组件（Matrix Chat 50 / IA2 22 / Loop 25 / Kanban 14 / Cockpit 复用 2 / 其他 1）
-- **112** 个单测文件（vitest，custom/** + tests/）
+- **113** 个自定义 Vue 组件（Matrix Chat 50 / IA2 21 / Loop 25 / Kanban 14 / Cockpit 复用 2 / 其他 1）
+- **106** 个单测文件（vitest，custom/**）
 - 上游基础：hermes-studio v0.7.18 / hermes-agent v0.21.0 / element-web v1.12.27
 
 ## 设计文档
