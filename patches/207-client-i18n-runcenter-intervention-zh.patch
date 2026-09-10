@@ -1,11 +1,15 @@
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -685,7 +685,63 @@
+@@ -685,7 +685,67 @@
          awaitingInput: '等待输入',
          skipped: '已跳过',
        },
      },
 +
++    tab: {
++      runs: '运行列表',
++      inbox: '介入收件箱',
++    },
 +    peek: {
 +      toggle: '展开事件详情',
 +      title: '最新事件',

@@ -184,6 +184,41 @@ describe('latestOpenInterrupt — 待我处理的 interruptId', () => {
     ]
     expect(latestOpenInterrupt(events)).toBeNull()
   })
+
+  // ── 日志词汇（graph:history 的 GraphLogEvent：kind + payload，审查修复回归）──
+  const logEv = (over: Partial<GraphEventLike> & { kind: string; ts: number }): GraphEventLike => ({
+    graphId: 'loop-loop1',
+    runId: 'run-1',
+    ...over,
+  } as GraphEventLike)
+
+  it('日志词汇 interrupt.raised 后未 resumed → 返回 payload.interruptId', () => {
+    const events = [
+      logEv({ kind: 'run.started', ts: 1, payload: {} }),
+      logEv({
+        kind: 'interrupt.raised', nodeId: 'validation', ts: 2,
+        payload: { interruptId: 'approval:c1@1', value: { kind: 'approval', prompt: 'approve me' } },
+      }),
+    ]
+    expect(latestOpenInterrupt(events)).toBe('approval:c1@1')
+  })
+
+  it('日志词汇 interrupt.resumed 同 id 关闭；run.completed/run.failed 终态同样清除', () => {
+    const raised = (id: string, ts: number) =>
+      logEv({ kind: 'interrupt.raised', ts, payload: { interruptId: id } })
+    expect(latestOpenInterrupt([
+      raised('a', 1),
+      logEv({ kind: 'interrupt.resumed', ts: 2, payload: { interruptId: 'a' } }),
+    ])).toBeNull()
+    expect(latestOpenInterrupt([raised('a', 1), logEv({ kind: 'run.completed', ts: 2, payload: {} })])).toBeNull()
+    expect(latestOpenInterrupt([raised('a', 1), logEv({ kind: 'run.failed', ts: 2, payload: {} })])).toBeNull()
+    // 双词汇混排（实时增量接在订阅回放后）同样正确
+    expect(latestOpenInterrupt([
+      raised('a', 1),
+      ev({ type: 'graph.resume', interruptId: 'a', ts: '2026-09-10T00:02:00Z' }),
+      raised('b', 3),
+    ])).toBe('b')
+  })
 })
 
 describe('sortRuns — 待我处理置顶 → 最后活动倒序', () => {

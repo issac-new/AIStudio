@@ -380,6 +380,71 @@ describe('useRunCenterStore — 排序 getter 与动作', () => {
   })
 })
 
+describe('useRunCenterStore — graph:history 日志词汇摄取（审查修复回归）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+    try { localStorage.clear() } catch { /* ignore */ }
+  })
+
+  /** GraphLogEvent（event-log-store 形状）：runId/kind/epoch ts/payload */
+  const logEvent = (over: { seq: number } & Partial<Record<string, unknown>>) => ({
+    runId: 'run-1',
+    graphId: 'loop-loop1',
+    ...over,
+  })
+
+  it('订阅回放（runId/kind 词汇）全量摄取：状态→awaiting-input、未决中断可投影（验收主路径）', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'unknown' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:history', [
+      logEvent({ seq: 1, ts: 1700000000000, kind: 'run.started', payload: {} }),
+      logEvent({ seq: 2, ts: 1700000000001, kind: 'node.started', nodeId: 'validation', superStep: 1, payload: {} }),
+      logEvent({
+        seq: 3, ts: 1700000000002, kind: 'interrupt.raised', nodeId: 'validation',
+        payload: { interruptId: 'approval:c1@1', value: { kind: 'approval', prompt: 'approve me' } },
+      }),
+    ])
+
+    const run = store.runs.find(r => r.runId === 'run-1')
+    expect(run).toBeTruthy()
+    expect(run!.events).toHaveLength(3) // 历史事件不再被 threadId 门卫丢弃
+    expect(run!.status).toBe('awaiting-input') // interrupt.raised → awaiting-input
+    expect(run!.pendingInterruptId).toBe('approval:c1@1') // 审批面板 v-if 的数据源
+  })
+
+  it('日志词汇终态：run.completed/run.failed 驱动状态并关闭未决中断', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'unknown' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:history', [
+      logEvent({ seq: 1, ts: 1, kind: 'interrupt.raised', payload: { interruptId: 'approval:c1@1' } }),
+      logEvent({ seq: 2, ts: 2, kind: 'run.failed', payload: { error: 'boom' } }),
+    ])
+    const run = store.runs.find(r => r.runId === 'run-1')
+    expect(run!.status).toBe('failed')
+    expect(run!.pendingInterruptId).toBeNull()
+  })
+
+  it('resumeRun 乐观投影在日志词汇缓冲上同样生效（runId 门卫不回退）', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'awaiting-input' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:history', [
+      logEvent({
+        seq: 1, ts: 1, kind: 'interrupt.raised', nodeId: 'validation',
+        payload: { interruptId: 'approval:c1@1', value: { kind: 'approval', prompt: 'approve me' } },
+      }),
+    ])
+    await store.resumeRun('run-1', { decision: 'approved' })
+    const run = store.runs.find(r => r.runId === 'run-1')
+    expect(run!.status).toBe('running')
+    expect(run!.pendingInterruptId).toBeNull()
+  })
+})
+
 describe('useRunCenterStore — 乐观 resume 投影（task-7）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

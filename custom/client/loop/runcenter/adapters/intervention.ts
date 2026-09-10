@@ -98,7 +98,9 @@ function approversLabelOf(raw: unknown): string {
 /**
  * parseApprovalInterrupt — 最后一个未决审批 interrupt 的结构化视图。
  * 未决判定与 latestOpenInterrupt 同一扫描语义（resume 同 id / 终态关闭）；
- * 无未决 interrupt 返回 null（面板不渲染）；value 畸形返回骨架视图不抛错。
+ * 最小审批判定：value 带 approval 标记（kind:'approval' / prompt / policy 任一）
+ * 才返回视图——非审批类 interrupt（服务端预留其他 kind）不渲染审批骨架（返回 null）；
+ * value 畸形返回骨架视图不抛错。
  */
 export function parseApprovalInterrupt(events: readonly ReplayEventLike[]): ApprovalInterruptView | null {
   let open: ReplayEventLike | null = null
@@ -119,6 +121,11 @@ export function parseApprovalInterrupt(events: readonly ReplayEventLike[]): Appr
   if (!open || !openId) return null
 
   const value = interruptValueOf(open)
+  // 最小审批判定（审查修复）：非审批 interrupt 不渲染审批骨架
+  const approvalShaped = value != null
+    && (value.kind === 'approval' || typeof value.prompt === 'string' || value.policy != null)
+  if (!approvalShaped) return null
+
   const policy = (value?.policy ?? null) as Record<string, unknown> | null
   const timeoutRaw = (policy?.timeout ?? null) as Record<string, unknown> | null
   return {

@@ -1,11 +1,15 @@
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -687,7 +687,63 @@
+@@ -687,7 +687,67 @@
          awaitingInput: 'Awaiting input',
          skipped: 'Skipped',
        },
      },
 +
++    tab: {
++      runs: 'Runs',
++      inbox: 'Interventions',
++    },
 +    peek: {
 +      toggle: 'Toggle event details',
 +      title: 'Latest events',

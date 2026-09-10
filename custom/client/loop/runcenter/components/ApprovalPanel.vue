@@ -11,6 +11,7 @@ import { useRunCenterStore } from '../store/runs'
 import {
   formatDurationMs, latestResumeIsAuto, parseApprovalInterrupt,
 } from '../adapters/intervention'
+import { eventTsMs } from '../adapters/run-graph'
 import type { RunSummary } from '../types'
 
 const props = defineProps<{ run: RunSummary }>()
@@ -22,12 +23,12 @@ const store = useRunCenterStore()
 const view = computed(() => parseApprovalInterrupt(props.run.events))
 /** 上一轮 resume 是否超时自动通过（A2：auto-approve-with-log 后 repair 重开新 interrupt） */
 const autoBanner = computed(() => latestResumeIsAuto(props.run.events))
-/** 已等时长（挂起时刻 → 现在；毫秒标签 locale 无关） */
+/** 已等时长（挂起时刻 → 现在；raisedAt 双词汇：ISO 字符串 ∪ 日志 epoch ms，统一归一 ms） */
 const waitingLabel = computed(() => {
   const v = view.value
   if (!v || v.raisedAt == null) return null
-  const raised = Date.parse(String(v.raisedAt))
-  if (!Number.isFinite(raised)) return null
+  const raised = eventTsMs({ ts: v.raisedAt })
+  if (!raised) return null
   return formatDurationMs(Math.max(0, Date.now() - raised))
 })
 
