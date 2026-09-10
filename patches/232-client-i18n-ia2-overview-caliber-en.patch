@@ -1,0 +1,12 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -812,6 +812,8 @@ export default {
+         done: 'Done',
+         archived: 'Archived',
+       },
++      metricDurationSamples: 'based on {n} samples',
++      metricPartial: 'partial data',
+     },
+     inbox: {
+       title: 'Intervention center',

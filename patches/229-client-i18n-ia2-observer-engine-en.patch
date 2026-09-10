@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -806,6 +806,20 @@
+@@ -798,6 +798,20 @@
        guideStep2: 'Set the cadence: configure schedule and budget for the goal',
        guideStep3: 'Run it: start the loop and its status aggregates back here',
        guideCta: 'Go to Orchestrate',
@@ -22,7 +22,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      inbox: {
        title: 'Intervention center',
-@@ -910,6 +924,17 @@
+@@ -902,6 +916,17 @@
        loadFailed: 'Failed to look up source runs',
        open: 'Open run detail',
        noRun: 'run unknown',
@@ -40,7 +40,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
    },
  
-@@ -2852,6 +2877,7 @@
+@@ -2844,6 +2869,7 @@
        apiServer: 'API Server',
        models: 'Models',
        voice: 'Voice',

@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index a08ee854..13db0618 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -755,6 +755,26 @@ export default {
+@@ -755,6 +755,18 @@ export default {
      },
    },
  
@@ -15,14 +15,6 @@ index a08ee854..13db0618 100644
 +      inbox: 'Inbox',
 +      tasks: 'Work Items',
 +      comms: 'Comms',
-+    },
-+    placeholder: {
-+      overview: 'Overview',
-+      overviewDesc: 'Role dashboard under construction: active runs, decisions due, the agenda for today and key metrics will aggregate here.',
-+      orchestrate: 'Orchestrate',
-+      orchestrateDesc: 'Template library under construction: five-stage templates, spec viewing and one-click instantiation will live here.',
-+      inbox: 'Inbox',
-+      inboxDesc: 'Intervention inbox under construction: approvals, blockers, alerts and reminders will aggregate here, triaged by wait time.',
 +    },
 +  },
 +

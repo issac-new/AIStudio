@@ -294,3 +294,6 @@
 228-client-settingsview-graph-engine-card.patch
 229-client-i18n-ia2-observer-engine-en.patch
 230-client-i18n-ia2-observer-engine-zh.patch
+# P3 Task 9: 收口——指标口径标注 i18n（平均耗时样本副注/熔断部分数据标志，ia2.overview 段）
+231-client-i18n-ia2-overview-caliber-zh.patch
+232-client-i18n-ia2-overview-caliber-en.patch

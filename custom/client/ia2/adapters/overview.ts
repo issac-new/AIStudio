@@ -164,9 +164,14 @@ export interface OverviewMetrics {
   failed: number
   /** 回放首尾事件差的均值；无样本为 null */
   avgDurationMs: number | null
+  /** 平均耗时的回放样本数（近似口径标注：UI 显示"基于 N 个样本"——样本只来自
+   *  最近 METRICS_REPLAY_LIMIT 个近窗终态 run，非全量） */
   durationSamples: number
   /** loop.stuck 事件计数（窗口内） */
   stuckCount: number
+  /** 熔断计数降级标志（Task 4 审查 B-2）：采集包 loopEvents 不完整（MetricsRaw
+   *  partial，见 types.ts）时为 true——UI 标"部分数据"，避免把残缺计数当完整值 */
+  stuckPartial: boolean
 }
 
 const DEFAULT_WINDOW_MS = 7 * 24 * 3_600_000
@@ -193,7 +198,8 @@ export function aggregateMetrics(
   windowMs: number = DEFAULT_WINDOW_MS,
 ): OverviewMetrics {
   const empty: OverviewMetrics = {
-    successRate: null, completed: 0, failed: 0, avgDurationMs: null, durationSamples: 0, stuckCount: 0,
+    successRate: null, completed: 0, failed: 0, avgDurationMs: null, durationSamples: 0,
+    stuckCount: 0, stuckPartial: false,
   }
   if (!raw) return empty
   const windowStart = now - windowMs
@@ -241,6 +247,7 @@ export function aggregateMetrics(
     avgDurationMs: samples > 0 ? totalMs / samples : null,
     durationSamples: samples,
     stuckCount: stuck,
+    stuckPartial: raw.partial === true,
   }
 }
 

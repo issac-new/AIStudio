@@ -229,8 +229,21 @@ describe('aggregateMetrics — 成功率/平均耗时/熔断计数', () => {
     expect(m.successRate).toBeNull()
     expect(m.stuckCount).toBe(0)
     expect(aggregateMetrics(null, NOW)).toEqual({
-      successRate: null, completed: 0, failed: 0, avgDurationMs: null, durationSamples: 0, stuckCount: 0,
+      successRate: null, completed: 0, failed: 0, avgDurationMs: null, durationSamples: 0,
+      stuckCount: 0, stuckPartial: false,
     })
+  })
+
+  it('采集降级（MetricsRaw.partial）透传为 stuckPartial；缺省 false（Task 4 审查 B-2）', () => {
+    const raw: MetricsRaw = {
+      runs: [], replays: [],
+      loopEvents: [{ loopId: 'l1', events: [{ type: 'loop.stuck', ts: iso(NOW - DAY) }] }],
+      collectedAt: NOW, partial: true,
+    }
+    expect(aggregateMetrics(raw, NOW).stuckPartial).toBe(true)
+    // 缺省（完整采集）不标
+    const full: MetricsRaw = { runs: [], replays: [], loopEvents: [], collectedAt: NOW }
+    expect(aggregateMetrics(full, NOW).stuckPartial).toBe(false)
   })
 })
 

@@ -169,12 +169,29 @@ describe('MetricsCards', () => {
     const metrics: OverviewMetrics = {
       successRate: 2 / 3, completed: 2, failed: 1,
       avgDurationMs: 1_200_000, durationSamples: 2, stuckCount: 3,
+      stuckPartial: false,
     }
     const wrapper = mount(MetricsCards, { props: { metrics } })
     expect(wrapper.text()).toContain('67%')
     expect(wrapper.text()).toContain('20m 00s')
     expect(wrapper.text()).toContain('3')
     expect(wrapper.findAll('.ia-metrics__row')).toHaveLength(3)
+    // 口径副注（Task 4 审查 B-2）：有均值标样本数；完整采集不标部分数据
+    // （i18n mock 把 {n} 插值直返样本数，断言副注即样本计数）
+    expect(wrapper.find('.ia-metrics__note').text()).toBe('2')
+    expect(wrapper.findAll('.ia-metrics__note')).toHaveLength(1)
+  })
+
+  it('口径标注：部分数据标志上屏；无均值不标样本副注', () => {
+    const metrics: OverviewMetrics = {
+      successRate: null, completed: 0, failed: 0,
+      avgDurationMs: null, durationSamples: 0, stuckCount: 0,
+      stuckPartial: true,
+    }
+    const wrapper = mount(MetricsCards, { props: { metrics } })
+    const notes = wrapper.findAll('.ia-metrics__note')
+    expect(notes).toHaveLength(1)
+    expect(notes[0].text()).toBe('ia2.overview.metricPartial')
   })
 
   it('无数据落 —（null 指标与 loading）', () => {
@@ -182,6 +199,7 @@ describe('MetricsCards', () => {
     expect(wrapper.text()).toContain('ia2.overview.metricLoading')
     const dashes = mount(MetricsCards, { props: { metrics: null, loading: false } })
     expect(dashes.text()).toContain('—')
+    expect(dashes.findAll('.ia-metrics__note')).toHaveLength(0)
   })
 })
 

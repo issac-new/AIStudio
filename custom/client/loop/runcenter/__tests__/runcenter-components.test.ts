@@ -69,9 +69,13 @@ vi.mock('@/api/client', () => ({
   getStoredUsername: () => authMock.username,
 }))
 
-const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn(async () => {}) }))
+const { pushMock, routeMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(async () => {}),
+  routeMock: { query: {} as Record<string, unknown> },
+}))
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
+  useRoute: () => routeMock,
 }))
 
 import RunStageBadge from '@/custom/loop/runcenter/components/RunStageBadge.vue'
@@ -164,6 +168,7 @@ describe('RunCenterView (jsdom)', () => {
     fakeSocket.current = null
     vi.clearAllMocks()
     pushMock.mockClear()
+    routeMock.query = {}
     authMock.username = 'alice' // 审批人身份（P3 台账 #6）
     try { localStorage.clear() } catch { /* ignore */ }
   })
@@ -190,6 +195,21 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.findAll('.rc-view__step')).toHaveLength(3)
     await w.find('.rc-view__cta').trigger('click')
     expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loop' })
+  })
+
+  it('?loop= 深链预填搜索框：落点即该 loop 的运行列表（P3 台账，Task 9 补）', async () => {
+    routeMock.query = { loop: 'loop-abc' }
+    rest.listRuns.mockResolvedValue([
+      { runId: 'run-1', graphId: 'loop-abc', status: 'running', updatedAt: '2026-09-10T00:00:00Z' },
+      { runId: 'run-2', graphId: 'loop-other', status: 'running', updatedAt: '2026-09-10T00:00:00Z' },
+    ])
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+    // 搜索框预填 loop id，列表按 graphId 包含匹配只剩该 loop 的 run
+    expect((w.find('.rc-view__search').element as HTMLInputElement).value).toBe('loop-abc')
+    const rows = w.findAll('.rc-table__row')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].text()).toContain('run-1')
   })
 
   it('状态筛选按钮过滤行；approve 动作行内展开审批面板（不进 loop 详情页，task-7）', async () => {
@@ -421,6 +441,7 @@ describe('RunCenterView 批量订阅（P3 台账 #2：订阅域 = 可见页）',
     fakeSocket.current = null
     vi.clearAllMocks()
     pushMock.mockClear()
+    routeMock.query = {}
     try { localStorage.clear() } catch { /* ignore */ }
   })
 

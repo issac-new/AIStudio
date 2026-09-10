@@ -1,0 +1,12 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -810,6 +810,8 @@ export default {
+         done: '完成',
+         archived: '归档',
+       },
++      metricDurationSamples: '基于 {n} 个样本',
++      metricPartial: '部分数据',
+     },
+     inbox: {
+       title: '介入中心',

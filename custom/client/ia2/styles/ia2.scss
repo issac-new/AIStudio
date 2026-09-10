@@ -305,6 +305,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+// 指标口径副注（样本数/部分数据）——弱化于键值行
+.ia-metrics__note {
+  font-size: 10px;
+  color: var(--text-tertiary, var(--text-secondary));
+  margin-top: -2px;
+}
+
 // ── 今日计划 ──
 .ia-plan {
   display: flex;

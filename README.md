@@ -23,6 +23,9 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 ---
 
 ## 运行效果图
+
+> 以下截图为 P3 前的 Cockpit 界面（2.17 及之前）。P3 起主界面切换为信息架构 2.0 六区域（见功能特色首节），截图待更新。
+
 ### 沟通区：
 <img width="1914" height="928" alt="d5515cbc-58fa-48d4-b66b-2edefd345b65" src="https://github.com/user-attachments/assets/786c5b94-1d63-4179-82c3-8f9946ffa420" />
 
@@ -45,17 +48,34 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 
 ## 功能特色
 
-### 🚀 Cockpit — AI 协作中心（主操作界面）
+### 🧭 信息架构 2.0 — 六区域新 IA（P3，登录默认落点 `/app`）
 
-登录后的首页，三段联动式布局（全貌 → 聚焦 → 处理）：
+P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区域信息架构（侧栏一级导航），登录直落总览。全程 Pure Ink 主题零新色板（节点状态只用 error / warning / success 三色 + 灰阶）、深浅色跟随系统、文案中文优先（新 UI i18n zh/en 全键对称）、键盘可达（运行中心 j/k 移动 / Enter 打开 / r 回放 / a 审批）。R4 体验验收逐条走查：`docs/superpowers/specs/2026-09-10-loop-graph-p3-r4-checklist.md`。
 
-- **顶栏**：品牌 · 日程 · 时钟 · 搜索 · 在线状态 · 通知 · 用户
-- **注意力条**：克制的「需要你」提醒（浅底 + 左色条 + 文字），重心始终在右栏工作区
-- **左栏**：Kanban 统筹入口，按优先级聚合三类工作（协作 / 管理 / 易用），支持筛选
-- **中栏**：协作图（图谱画布）+ 时序事件流（纵向时间线），呈现并行 / 派生 / 收敛
-- **右栏**：工作区重心，A2UI 表单 + 文件资源管理器，底部衔接终端（多工具探测：Claude Code > Codex > DeepSeek Harness）与提交
-- **模式切换**：⚡ 工作项 / 💬 协作 / ⌘ 编程，同一任务多视角处理
-- 视觉严格遵循 **Pure Ink** 黑白灰主题（仅 status 用 error / warning / success 三色），避免颜色过载
+**六区域导览（文字版）**：
+
+| 区域 | 路由 | 内容 |
+|------|------|------|
+| **总览** | `/app` | 注意力条（blocked / review / triage 三梯队，点击跳工作项区带筛选）→ 四卡片（活跃运行 / 等你决策 / 今日日程 / 关键指标）→ 工作项状态分布 → 今日计划（到期 loop + 今日待办）；零数据时出现三步引导（选模板 → 设节奏 → 跑起来），任一 run 存在即消失。关键指标标注近似口径：平均耗时显示"基于 N 个样本"（近 7 天窗口内最近 20 个终态 run 的回放采样），loop 事件采集降级时熔断计数标"部分数据" |
+| **编排** | `/app/orchestrate` | 模板库（五阶段模板只读列表）+ GraphSpec 可视化（与运行详情同源的画布投影）+ 一键实例化（cron 节奏 / 时区 / 租户，粗校交服务端 cron-parser） |
+| **运行中心** | `/app/runs` | P2 运行中心整体迁入（阶段 × 状态双轴、`awaiting-input` 恒置顶、执行图画布 + 时间轴回放、三级分辨率、节点检查器、介入收件箱——详见下文「Loop Engineering」） |
+| **介入中心** | `/app/inbox` | 五源聚合（awaiting 审批 / Triage 分诊队列 / 到期闹钟等）+ 就地审批 + 自动归档 |
+| **工作项** | `/app/tasks` | SwarmKanban 协作看板整体承接 + 任务↔run 双向关联 + 追溯矩阵 |
+| **沟通** | `/app/comms` | Matrix 聊天升一级（房间列表 + `/app/comms/room/:roomId` 房间路由） |
+
+**追溯矩阵（工作项区）**：run 产物落库事件携带 `taskId`（persisted 契约台账），矩阵按任务聚合「来源 run ↔ 产物 ↔ 验证轮次」双向可溯；无 taskId 的存量 run 归入「未归属」桶并显式标注（旧数据形态非缺陷）。
+
+**图引擎策略卡（设置页）**：`GRAPH_ENGINE` 三态模式与熔断 / 中断超时阈值的只读展示，策略当前为构建期默认值（可编辑策略文件随 P4）。
+
+**兼容与退役**：旧落点经兼容守卫重定向——`/hermes/cockpit` → 总览、`/hermes/matrix-chat` → 沟通、`/hermes/swarm-kanban` → 工作项、旧 loop 路由 → 运行中心（携带 `?loop=` 上下文）；冷启动深链兼容重查。`VITE_IA_RETRO=1` 回退开关在 P3 收窄为仅放行旧 loop 落点（Cockpit 视图已删，回退需 revert 退役提交，窗口随 P4 关闭）。
+
+### 🚀 Cockpit — AI 协作中心（**已退役**，P3）
+
+2.13–2.16 期间的主操作界面：三段联动式布局（全貌 → 聚焦 → 处理），含顶栏（品牌 · 日程 · 时钟 · 搜索 · 通知）、注意力条、左栏 Kanban 统筹、中栏协作图 + 时序事件流、右栏 A2UI 表单 + 文件资源管理器 + 终端、⚡💬⌘ 模式切换。P3 信息架构 2.0 上线后整体退役：
+
+- **能力去向**：日程弹窗（`CockpitScheduleModal` 原样复用于总览）、待办 + 闹钟（workspace store，kv 单一事实源）、注意力梯队模型（总览注意力条收编）、Kanban（工作项区承接）、Matrix 聊天（沟通区升一级）、指挥中心舰队聚合（审批 UI 暂无落点，P4 重建）
+- **RETRO 语义收窄（如实注明）**：`VITE_IA_RETRO=1` 开关本期收窄——Cockpit 视图代码已删，该开关不再能回到旧驾驶舱，仅放行旧 loop 落点；完整回退 = revert 退役提交（`4bcb1e8`），回退窗口随 P4 关闭
+- **目录遗留**：`custom/client/cockpit/` 保留 adapters / store / kv 与 2 个复用组件（新 IA 与运行中心仍在消费），视图与三栏布局已删除
 
 ### 🔭 RunTraceView — 运行全过程可观测性
 
@@ -69,7 +89,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 
 ### 📋 SwarmKanban — 协作看板
 
-自定义组件（cockpit 子路由 `swarm-kanban`，经 patch 071 静态注册），与上游原生 KanbanView 并存：
+自定义组件（原 cockpit 子路由 `swarm-kanban`，P3 起由新 IA 工作项区 `/app/tasks` 承接，旧路径经兼容守卫重定向），与上游原生 KanbanView 并存：
 
 - 看板列 / 任务卡 / 任务抽屉 / 任务表单 / 内联创建
 - 批量操作栏、注意力条、编排面板、诊断区
@@ -78,7 +98,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 
 ### 💬 Matrix Chat — 完整 Matrix 客户端
 
-50 个组件构成的完整即时通讯客户端，路由动态注册为 Cockpit 子路由：
+50 个组件构成的完整即时通讯客户端，路由动态注册（P3 起挂新 IA 沟通区 `/app/comms`）：
 
 - 房间列表 / 消息流 / 消息输入 / 上下文菜单 / 消息操作栏
 - 文件面板 / 成员列表 / 成员信息 / 邀请 / 转发 / 导出 / 加入 / 离开 / 创建房间
@@ -102,7 +122,7 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 
 **图引擎接管（P1 patch 202，P2 收口）**：LoopInstance 经编译器变为 GraphSpec（六节点：五阶段 + gate 质量门禁 + 守卫 repair 回边），由图内核执行——事件日志（`node:sqlite`，零新依赖）为唯一事实源，真 checkpoint/resume/fork、HITL interrupt 审批闭环、R2 workspace 上下文注入（GRAPH-CONTEXT.md）。`GRAPH_ENGINE` 环境变量三态切换：`legacy`（默认，旧引擎原样）/ `shadow`（双跑：新引擎 dryRun 对比事件序列，不写副作用）/ `on`（新引擎接管调度，详见下方 caveat）。`on` 模式额外装配两件守护：interrupt 超时扫描器（审批无人应答按 `escalate`/`auto-approve-with-log`/`fail` 三策略处置，缺省 72h + 节流水印落事件日志）与每日 Brief 任务（见下）。新 REST 面：`/api/graph/runs`（CRUD/resume/fork/replay）与 `/api/graph/specs`（specs 表化，随事件日志同库持久）；socket `/graph` namespace 按 run 订阅。旧数据迁移：`node scripts/graph-migrate.mjs`（dry-run 默认，`--apply` 落库幂等）。设计文档：`docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md`。
 
-**运行中心（P2）**：入口 `/hermes/loop/runs`（列表），详情 `/hermes/loop/runs/:runId`。
+**运行中心（P2）**：入口 `/app/runs`（列表），详情 `/app/runs/:runId`（P3 起新 IA 路由；旧落点 `/hermes/loop/runs`、`/hermes/loop/runs/:id` 经兼容守卫重定向并携带 loop 上下文）。
 
 - **运行列表**：阶段 × 状态双轴、状态驱动的合法操作集（不存在任意跳转）、`awaiting-input`（待我处理）恒置顶排序、状态筛选 + 搜索 + 分页、行内 peek 展开与内联审批
 - **介入收件箱**：汇集等待人工决策的 run，两态归档（本地打标，不改服务端 run 状态）
@@ -111,6 +131,8 @@ SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三�
 - 数据面：`GET /api/graph/runs/:id` + `/replay`，socket `/graph` 实时推送
 
 **R1 每日 Brief（P2）**：`on` 模式下每日定时（`LOOP_BRIEF_CRON`，缺省 `0 9 * * *` 本地时区）聚合过去 24h 的图引擎事实，渲染三段式结构化简报——进展（完成 / 失败 / 熔断升级告警）、等你决策（awaiting-input 及等待时长）、今日计划（到期未触发的 loop）。零 LLM 依赖，纯持久数据源（事件日志 + loop 台账），重启自然恢复；brief 自身作为 `graphId='daily-brief'` 审计 run 落事件日志，可回放可审计。**诚实边界**：Matrix 聊天投递需要 `LOOP_BRIEF_ROOM` 配置与宿主注入的传输通道（`briefDelivery`，patch 202 预留注入点）同时成立——**当前两者均未接线，默认只落事件日志，聊天里收不到每日简报**；投递最后一公里待 bot 身份 / 凭据来源确认后补齐。
+
+**信息架构与编排（P3）**：六区域新 IA（见功能特色首节）+ 编排区（模板库 / Spec 可视化 / 实例化）+ 介入中心五源聚合 + 追溯矩阵 + 图引擎策略卡；cockpit 退役（能力去向与 RETRO 收窄见功能特色退役声明）。事件面配套：`loop.persisted` 产物事件带 `taskId`/`runId`（追溯锚点），`graph-runtime` 对 `loop.*` 事件整体透传负载（回放可反查产物）。
 
 **P1 图引擎 caveat（终审修复波后仍成立的交付边界）**：
 - `on` 模式接管调度，但失败语义与 legacy 有偏移：run 失败时 loop 重写为 `idle` 并按 `computeNextTick` 重排（连续失败达 10 次熔断转 `paused`）；legacy 的 tick 异常会把 loop 置 `status='failed'`。前端按 `paused/idle` 展示 on 模式失败态。
@@ -175,10 +197,11 @@ ncwk/
 overlay/
 ├── custom/
 │   ├── client/                    # 前端 A 类代码
-│   │   ├── cockpit/               #   驾驶舱（34 组件 + store + adapters + 样式）
+│   │   ├── ia2/                   #   信息架构 2.0（六区域：22 组件/视图 + store + adapters + 守卫）
+│   │   ├── cockpit/               #   驾驶舱遗留（adapters/store/kv + 2 复用组件；视图已退役）
 │   │   ├── matrix-chat/           #   Matrix 聊天（50 组件 + views）
-│   │   ├── kanban/                #   协作看板（15 组件 + utils + views）
-│   │   ├── loop/                  #   Loop 工程化（26 组件：引擎视图 + 运行中心 + 执行图 + store）
+│   │   ├── kanban/                #   协作看板（14 组件 + utils + views）
+│   │   ├── loop/                  #   Loop 工程化（25 组件：引擎视图 + 运行中心 + 执行图 + store）
 │   │   ├── chat/                  #   网关通知横幅
 │   │   ├── branding/              #   品牌注入
 │   │   └── test/                  #   测试桩
@@ -187,11 +210,11 @@ overlay/
 │   └── server/                    # 服务端 A 类代码
 │       ├── kanban/                #   看板服务
 │       ├── matrix/                #   Matrix 认证路由 + admin-service
-│       ├── loop/                  #   Loop 引擎（engine / connectors / store / controllers）
+│       ├── loop/                  #   Loop 引擎（engine / connectors / store / controllers / graph 图引擎）
 │       ├── controllers/           #   Hermes 扩展控制器（trace / 终端工具探测）
 │       ├── services/              #   Hermes 扩展服务（task workspace 缓存）
 │       └── security/              #   URL 守卫（SSRF 防护）
-├── patches/                       # B 类 patch（155 个 active + 归档）
+├── patches/                       # B 类 patch（177 个 active + 归档）
 │   └── series                     #   patch 应用顺序清单
 ├── registries/
 │   ├── client/                    # 客户端注册中枢 + entry shim + bootstrap
@@ -470,7 +493,7 @@ npm --prefix packages/desktop run dist -- --mac --win --publish never
 
 ```bash
 cd overlay
-npm run inject          # 应用 155 patch
+npm run inject          # 应用 177 patch
 npm run build:full      # 构建 dist/(openapi + client + server)，落到上游 dist/
 ```
 
@@ -528,16 +551,16 @@ patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。
 | 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
 | 后端 | Koa + SQLite（Loop 工程化可选 PostgreSQL） |
 | 桌面 | Electron（hermes-studio packages/desktop） |
-| 测试 | Vitest（103 个测试文件） |
+| 测试 | Vitest（112 个测试文件） |
 | Agent | hermes-agent（运行时下载，OpenTelemetry GenAI 语义对齐） |
 
 ---
 
 ## 规模
 
-- **155** 个 active B 类 patch（100% inject 通过率）
-- **129** 个自定义 Vue 组件（Cockpit 37 / Matrix Chat 50 / Kanban 15 / Loop 26 / 其他 1）
-- **103** 个单测文件（vitest，custom/**）
+- **177** 个 active B 类 patch（100% inject 通过率）
+- **114** 个自定义 Vue 组件（Matrix Chat 50 / IA2 22 / Loop 25 / Kanban 14 / Cockpit 复用 2 / 其他 1）
+- **112** 个单测文件（vitest，custom/** + tests/）
 - 上游基础：hermes-studio v0.7.18 / hermes-agent v0.21.0 / element-web v1.12.27
 
 ## 设计文档
