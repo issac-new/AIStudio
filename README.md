@@ -332,8 +332,8 @@ SwarmStudio 基于以下三个上游开源项目二次开发：
 
 | 上游项目 | GitHub 仓库 | 用途 |
 |---------|-----------|------|
-| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v0.7.17） |
-| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，源码跟踪 v0.21.0 / v2026.8.31，2 个 CLI patch 注入；桌面捆绑 runtime pin hermes-0.20.6-runtime，首次启动下载） |
+| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v1.0.2） |
+| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，源码跟踪 v0.21.1 / v2026.9.7，4 个 CLI patch 注入；桌面捆绑 runtime pin hermes-0.20.6-runtime，首次启动下载） |
 | **element-web** | https://github.com/element-hq/element-web | Element Web Matrix 客户端参考实现（v1.12.27） |
 
 **独立安装运行（不依赖 overlay 二次开发）**
