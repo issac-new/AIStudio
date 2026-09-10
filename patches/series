@@ -288,3 +288,7 @@
 # P3 Task 6: 编排区实装——模板库只读列表+GraphSpec 可视化+实例化入口 i18n（ia2.orchestrate 段）
 224-client-i18n-ia2-orchestrate-zh.patch
 225-client-i18n-ia2-orchestrate-en.patch
+# P3 Task 7: 工作项↔run 双向关联+追溯矩阵——任务页签/来源 run/产物任务/追溯矩阵 i18n
+# （ia2.tasks+ia2.trace+ia2.runLinks 段 + runcenter.inspector 产物任务段）
+226-client-i18n-ia2-trace-zh.patch
+227-client-i18n-ia2-trace-en.patch

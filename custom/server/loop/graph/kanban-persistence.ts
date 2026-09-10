@@ -13,7 +13,7 @@
 //   <sessionId>:matrix，与 client/kanban/utils/tenant-parser 的六段格式服务端等价）解析 board。
 
 import type { LoopInstance, TaskContract, VerificationRecord } from '../types'
-import type { PersistenceAdapter, PersistFailure } from './phase-nodes'
+import type { PersistenceAdapter, PersistFailure, PersistResult } from './phase-nodes'
 
 /** kanban-service 模块类型（类型位引用，运行时零 import——路径自注入后的
  *  packages/server/src/custom/loop/graph/ 出发） */
@@ -92,7 +92,7 @@ export class KanbanPersistenceAdapter implements PersistenceAdapter {
     verification: VerificationRecord,
     loop: LoopInstance,
     dryRun: boolean,
-  ): Promise<string | PersistFailure> {
+  ): Promise<PersistResult | PersistFailure> {
     const title = `[${loop.name}] ${contract.id}`
 
     if (dryRun) {
@@ -119,7 +119,8 @@ export class KanbanPersistenceAdapter implements PersistenceAdapter {
       const duplicate = (existing ?? []).find(t => t.title === title)
       if (duplicate) {
         this.log(`persistence duplicate skipped for ${contract.id}: kanban task ${duplicate.id} already exists on '${board}'`)
-        return `kanban:${duplicate.id}`
+        // P3 Task 7：查重命中同样显式透传 taskId（repair 回边后的二次 persist 不丢关联）
+        return { artifact: `kanban:${duplicate.id}`, taskId: duplicate.id }
       }
       const task = await this.deps.kanban.createTask(title, {
         board,
@@ -127,7 +128,7 @@ export class KanbanPersistenceAdapter implements PersistenceAdapter {
         tenant: readLoopTenant(loop) ?? undefined,
       })
       this.log(`persistence wrote kanban task ${task.id} for ${contract.id} on '${board}'`)
-      return `kanban:${task.id}`
+      return { artifact: `kanban:${task.id}`, taskId: task.id }
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err)
       this.log(`persistence failed for ${contract.id} on '${board}': ${error}`)

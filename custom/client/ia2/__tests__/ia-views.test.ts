@@ -45,8 +45,15 @@ describe('区域壳内嵌接线', () => {
     expect(runCenterMounted.count).toBe(1)
   })
 
-  it('TasksView 内嵌 SwarmKanbanView', () => {
-    const wrapper = mount(TasksView)
+  it('TasksView 内嵌 SwarmKanbanView（P3 Task 7 起带页签 + 深链预选，需路由上下文）', async () => {
+    // TasksView 读 route.query 做筛选预选——挂最小路由（/app/tasks 落点）
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/app/tasks', name: 'ia2.tasks', component: TasksView }],
+    })
+    await router.push('/app/tasks')
+    await router.isReady()
+    const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(wrapper.find('.kanban-stub').exists()).toBe(true)
     expect(swarmKanbanMounted.count).toBe(1)
   })

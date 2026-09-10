@@ -12,6 +12,8 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
 import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
 import KanbanAttachments from '@/custom/kanban/components/KanbanAttachments.vue'
+// HERMES_CUSTOM[P3 Task 7] 来源 run 关联区块（任务 → run 反查，ia2/adapters/traceability 纯函数投影）
+import RunLinks from '@/custom/ia2/components/RunLinks.vue'
 
 const props = defineProps<{
   show: boolean
@@ -879,6 +881,10 @@ function statusDotClass(status: string): string {
             <span class="meta-value">{{ task.created_by }}</span>
           </div>
         </div>
+
+        <!-- HERMES_CUSTOM[P3 Task 7] BEGIN: 来源 run 关联（loop.persisted 按 taskId 显式反查 → runId 深链） -->
+        <RunLinks class="drawer-section" :task-id="task.id" :show="show" />
+        <!-- HERMES_CUSTOM[P3 Task 7] END -->
 
         <!-- Status Actions -->
         <div class="drawer-section">

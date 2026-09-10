@@ -1,0 +1,47 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index ff0a3a7..bfeda6b 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -751,6 +751,8 @@ export default {
+       events: 'Related events',
+       noEvents: 'No related events',
+       currentValue: 'Current value (not the value at event time)',
++      persistedTasks: 'Produced tasks',
++      openTask: 'Open in Work Items',
+     },
+     keyboard: {
+       hint: 'j/k move · Enter detail · r replay · a approve',
+@@ -882,6 +884,33 @@ export default {
+         submitFailed: 'Creation failed',
+       },
+     },
++    tasks: {
++      tabBoard: 'Board',
++      tabTrace: 'Traceability',
++    },
++    trace: {
++      colRun: 'Run',
++      colIter: 'Iter',
++      colTask: 'Produced task',
++      colRounds: 'Verification rounds',
++      noRuns: 'No runs produced work items yet',
++      noRun: 'unattributed',
++      unlinked: 'not linked',
++      openRun: 'Open run detail',
++      openTask: 'Locate on board',
++      loadFailed: 'Failed to load traceability data',
++      retry: 'Retry',
++      emptyTitle: 'No traceability data yet',
++      emptyHint: 'Once a loop persists work items, the goal → run → task → verification chain shows up here',
++    },
++    runLinks: {
++      title: 'Source runs',
++      loading: 'Looking up runs…',
++      empty: 'No source run recorded for this task',
++      loadFailed: 'Failed to look up source runs',
++      open: 'Open run detail',
++      noRun: 'run unknown',
++    },
+   },
+ 
+   agentManager: {

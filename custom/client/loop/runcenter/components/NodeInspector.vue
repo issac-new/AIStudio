@@ -5,12 +5,16 @@
      P3 台账：缺值键 join REST instance.state 显示"当前值"，并标注非事件当时值）、
      failed 时人类可读原因 + 建议动作（重跑整个 run = fork → startRun 显式起跑，
      "从失败重跑"），以及该节点关联事件列表（Verbose 档）。
+     P3 Task 7：persistence 节点显示产物任务链接（run → 任务方向；replay 事件
+     loop.persisted payload 显式 taskId，投影在 adapters/traceability 纯函数）。
      数据组织在 adapters/intervention.inspectNode（纯函数），本组件薄壳。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { formatDurationMs, inspectNode } from '../adapters/intervention'
 import { formatEventTs } from '../adapters/run-graph'
+import { persistedTaskLinksOfRun } from '@/custom/ia2/adapters/traceability'
 import { runRest } from '../api'
 import type { RunGraphNode, ReplayEventLike } from '../adapters/run-graph'
 
@@ -26,6 +30,19 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const insp = computed(() => (props.node ? inspectNode(props.events, props.node.id) : null))
+
+// ── 产物任务链接（P3 Task 7，run → 任务）──
+// persistence 节点选中且本 run 的事件流携带 loop.persisted payload（显式 taskId）时展示。
+// 编译器惯例 persistence 节点 id 为 'persistence'（loop-to-graph STAGES），自定义图按
+// id 含 'persist' 宽匹配。点击 → /app/tasks?task=<taskId>（TasksView 深链预选搜索）。
+const router = useRouter()
+const persistedTasks = computed(() => persistedTaskLinksOfRun(props.events))
+const showPersistedTasks = computed(() =>
+  !!props.node && props.node.id.includes('persist') && persistedTasks.value.length > 0)
+
+function openTask(taskId: string): void {
+  void router.push({ path: '/app/tasks', query: { task: taskId } })
+}
 
 // ── run instance.state 当前值（P3 台账：lastUpdate 键 join 当前值）──
 // 日志词汇的 node.completed 只落 updateKeys（键名，服务端日志契约），缺值的键以
@@ -182,6 +199,21 @@ async function rerun(): Promise<void> {
         </div>
       </template>
 
+      <!-- 产物任务（P3 Task 7，run → 任务双向关联） -->
+      <div v-if="showPersistedTasks" class="ni-panel__section" data-persisted-tasks>
+        <span class="ni-panel__section-title">{{ t('runcenter.inspector.persistedTasks') }}</span>
+        <button
+          v-for="link in persistedTasks"
+          :key="`${link.contractId}-${link.taskId}`"
+          type="button"
+          class="ni-panel__task-link"
+          :title="t('runcenter.inspector.openTask')"
+          @click="openTask(link.taskId)"
+        >
+          {{ link.taskId }}
+        </button>
+      </div>
+
       <!-- 关联事件（Verbose 档） -->
       <div class="ni-panel__section">
         <span class="ni-panel__section-title">{{ t('runcenter.inspector.events') }}</span>
@@ -245,6 +277,18 @@ async function rerun(): Promise<void> {
   color: var(--text-muted, var(--color-text-secondary, #878c99));
   font-size: 11px;
 }
+.ni-panel__task-link {
+  align-self: flex-start;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  cursor: pointer;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  padding: 2px 8px;
+}
+.ni-panel__task-link:hover { text-decoration: underline; }
 .ni-panel__muted { color: var(--text-muted, var(--color-text-secondary, #878c99)); }
 
 .ni-panel__update {
