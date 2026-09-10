@@ -17,6 +17,7 @@ function fleet(overrides: Partial<FleetSession>): FleetSession {
     lastPreview: '',
     approvals: [],
     clarifies: [],
+    subagents: [],
     ...overrides,
   }
 }
@@ -89,7 +90,46 @@ describe('fleetAttentionToInbox', () => {
 describe('INBOX_KIND_WEIGHT', () => {
   it('keeps decision-critical kinds on top', () => {
     expect(INBOX_KIND_WEIGHT.approval).toBeLessThan(INBOX_KIND_WEIGHT.blocked)
-    expect(INBOX_KIND_WEIGHT.blocked).toBeLessThan(INBOX_KIND_WEIGHT.review)
+    expect(INBOX_KIND_WEIGHT.blocked).toBeLessThan(INBOX_KIND_WEIGHT.mcp)
+    expect(INBOX_KIND_WEIGHT.mcp).toBeLessThan(INBOX_KIND_WEIGHT.clarify)
+    expect(INBOX_KIND_WEIGHT.clarify).toBeLessThan(INBOX_KIND_WEIGHT.review)
     expect(INBOX_KIND_WEIGHT.review).toBeLessThan(INBOX_KIND_WEIGHT.chat)
+  })
+})
+
+describe('mcpHealthToInbox（T3：MCP 降级信号）', () => {
+  it('只有降级服务器产生条目，健康的不进收件箱', () => {
+    const items = buildInboxItems({
+      attention: [],
+      fleet: [],
+      chatUnreads: [],
+      notifyItems: [],
+      mcpHealth: [
+        { name: 'healthy-server', connected: true, error: null, checkedAt: 1000 },
+        { name: 'broken-server', connected: false, error: 'connection refused', checkedAt: 1000 },
+        { name: 'err-server', connected: true, error: 'tool discovery failed', checkedAt: 1000 },
+      ],
+    })
+    expect(items).toHaveLength(2)
+    expect(items.every(i => i.kind === 'mcp')).toBe(true)
+    expect(items.map(i => i.title)).toEqual(['MCP · broken-server', 'MCP · err-server'])
+    expect(items[0].preview).toBe('connection refused')
+    expect(items[0].routeTarget).toEqual({ name: 'hermes.mcp' })
+  })
+
+  it('mcp 排在 blocked 之后、clarify 之前', () => {
+    const items = buildInboxItems({
+      attention: [{ id: 'att-t1', taskId: 't1', title: '阻塞任务', status: 'blocked', severity: 'high', createdAt: 500, priority: 2 }],
+      fleet: [fleet({ clarifies: [{ clarify_id: 'c1', question: 'q' }] })],
+      chatUnreads: [],
+      notifyItems: [],
+      mcpHealth: [{ name: 'down', connected: false, error: 'timeout', checkedAt: 1000 }],
+    })
+    expect(items.map(i => i.kind)).toEqual(['blocked', 'mcp', 'clarify'])
+  })
+
+  it('缺 mcpHealth 源时行为不变', () => {
+    const items = buildInboxItems({ attention: [], fleet: [], chatUnreads: [], notifyItems: [] })
+    expect(items).toEqual([])
   })
 })

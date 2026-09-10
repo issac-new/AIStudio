@@ -1,8 +1,8 @@
 // inbox-adapter.ts —— 统一注意力收件箱（纯函数合并 + 排序）
 //
-// 四套分散的"需要我"信号（治 E5）合并为一条按权重排序的收件箱：
-//   approval(0) > blocked(1) > clarify(2) > review(3) > triage(4)
-//   > chat 未读(5) > matrix 未读(6) > 待办提醒(7)
+// 分散的"需要我"信号（治 E5）合并为一条按权重排序的收件箱：
+//   approval(0) > blocked(1) > mcp 降级(2) > clarify(3) > review(4) > triage(5)
+//   > chat 未读(6) > matrix 未读(7) > 待办提醒(8)
 // 同级按 ts 降序。纯函数、无 IO —— 供 cockpit store 与单测直接使用。
 
 import type { RouteLocationRaw } from 'vue-router'
@@ -11,7 +11,7 @@ import type { NotifyItem } from './notify-adapter'
 import type { FleetSession } from './fleet-adapter'
 
 export type InboxKind =
-  | 'approval' | 'blocked' | 'clarify' | 'review' | 'triage'
+  | 'approval' | 'blocked' | 'mcp' | 'clarify' | 'review' | 'triage'
   | 'chat' | 'matrix' | 'group' | 'reminder'
 
 export interface InboxItem {
@@ -36,13 +36,22 @@ export interface InboxItem {
 export const INBOX_KIND_WEIGHT: Record<InboxKind, number> = {
   approval: 0,
   blocked: 1,
-  clarify: 2,
-  review: 3,
-  triage: 4,
-  chat: 5,
-  matrix: 6,
-  group: 6,
-  reminder: 7,
+  mcp: 2,
+  clarify: 3,
+  review: 4,
+  triage: 5,
+  chat: 6,
+  matrix: 7,
+  group: 7,
+  reminder: 8,
+}
+
+/** MCP 连接健康信号（0.21.1 profile 级健康；store 每 60s 轮询 /api/hermes/mcp/servers） */
+export interface McpHealthSource {
+  name: string
+  connected: boolean
+  error?: string | null
+  checkedAt: number
 }
 
 export interface InboxSources {
@@ -52,6 +61,8 @@ export interface InboxSources {
   chatUnreads: NotifyItem[]
   /** 既有通知项（matrix 未读 + 待办提醒等） */
   notifyItems: NotifyItem[]
+  /** MCP 连接健康（仅降级项会进收件箱） */
+  mcpHealth?: McpHealthSource[]
 }
 
 export interface InboxFilter {
@@ -146,6 +157,23 @@ function fromNotifyItem(item: NotifyItem): InboxItem {
   }
 }
 
+/** MCP 降级项 → 收件箱条目（健康的服务器不产生条目） */
+export function mcpHealthToInbox(health: McpHealthSource[]): InboxItem[] {
+  return health
+    .filter(entry => !entry.connected || entry.error)
+    .map(entry => ({
+      id: `mcp:${entry.name}`,
+      kind: 'mcp' as const,
+      weight: INBOX_KIND_WEIGHT.mcp,
+      severity: 'medium' as const,
+      title: `MCP · ${entry.name}`,
+      preview: entry.error || 'not connected',
+      count: 1,
+      ts: entry.checkedAt,
+      routeTarget: { name: 'hermes.mcp' } as RouteLocationRaw,
+    }))
+}
+
 /** 合并全部来源 → 统一收件箱（权重升序，同级 ts 降序） */
 export function buildInboxItems(sources: InboxSources, filter?: InboxFilter): InboxItem[] {
   const profiles = filter?.profiles ?? null
@@ -161,6 +189,8 @@ export function buildInboxItems(sources: InboxSources, filter?: InboxFilter): In
     ? (sources.fleet || []).filter(session => profiles.includes(session.profile || 'default'))
     : sources.fleet || []
   items.push(...fleetAttentionToInbox(fleetFiltered))
+
+  items.push(...mcpHealthToInbox(sources.mcpHealth || []))
 
   for (const item of sources.chatUnreads || []) {
     if (profiles) {

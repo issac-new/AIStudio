@@ -9,6 +9,8 @@ import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
 import * as extras from '@/custom/cockpit/api/kanban-extras'
+import { fetchMcpServers } from '@/api/hermes/mcp'
+import type { McpHealthSource } from '../adapters/inbox-adapter'
 import { searchSessions as searchHermesSessions } from '@/api/studio/sessions'
 import { mapSearchToTaskIds, type MatrixRoomSearchData } from '@/custom/cockpit/adapters/search-adapter'
 import * as kv from './cockpit-kv'
@@ -448,6 +450,45 @@ export const useCockpitStore = defineStore('cockpit', () => {
     fleetConnected.value = false
   }
 
+  // ── MCP 连接健康（0.21.1 profile 级健康；60s 轮询，降级项进收件箱）──
+  const mcpHealth = ref<McpHealthSource[]>([])
+  let _mcpHealthTimer: ReturnType<typeof setInterval> | undefined
+
+  async function refreshMcpHealth() {
+    try {
+      const resp = await fetchMcpServers()
+      if (!resp || !Array.isArray(resp.servers)) return
+      const checkedAt = Date.now()
+      if (!resp.ok && resp.error) {
+        // 运行时侧 MCP 模块不可用等整体故障 → 单条合成信号
+        mcpHealth.value = [{ name: 'runtime', connected: false, error: resp.error, checkedAt }]
+        return
+      }
+      mcpHealth.value = resp.servers.map(server => ({
+        name: server.name,
+        connected: server.connected === true,
+        error: server.error ?? null,
+        checkedAt,
+      }))
+    } catch {
+      // 网络失败/接口不可达：保持上次状态，不产生误报
+    }
+  }
+
+  function initMcpHealthPoll() {
+    if (_mcpHealthTimer) return
+    void refreshMcpHealth()
+    _mcpHealthTimer = setInterval(() => { void refreshMcpHealth() }, 60_000)
+  }
+
+  function stopMcpHealthPoll() {
+    if (_mcpHealthTimer) {
+      clearInterval(_mcpHealthTimer)
+      _mcpHealthTimer = undefined
+    }
+    mcpHealth.value = []
+  }
+
   const fleetSessionsFiltered = computed(() => {
     const profiles = teamProfileFilter.value
     if (!profiles) return fleetSessions.value
@@ -534,6 +575,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     fleet: fleetSessionsFiltered.value,
     chatUnreads: chatUnreadItems.value,
     notifyItems: notifyItems.value,
+    mcpHealth: mcpHealth.value,
   }))
   const inboxCount = computed(() => inboxItems.value.length)
 
@@ -759,6 +801,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	      loadTeams(),
 	    ])
 	    initFleetStream()
+	    initMcpHealthPoll()
 	    if (cockpitTasks.value.length) await selectTask(cockpitTasks.value[0].id)
 	    kanban.startEventStream?.()
 	  }
@@ -1159,6 +1202,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function disconnectOnUnmount() {
     try { groupStore.disconnect?.() } catch { /* ignore */ }
     stopFleetStream()
+    stopMcpHealthPoll()
   }
 
   // ── 历史 ──
@@ -1595,6 +1639,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     openNotify, closeNotify,
     // 2.13 指挥中心
     fleetSessions, fleetConnected, fleetSessionsFiltered,
+    mcpHealth, refreshMcpHealth,
     respondFleetApproval, respondFleetClarify,
     teams, activeTeamId, activeTeam, setActiveTeam, saveTeam, deleteTeam, loadTeams,
     inboxItems, inboxCount,
