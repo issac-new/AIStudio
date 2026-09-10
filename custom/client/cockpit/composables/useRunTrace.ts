@@ -75,6 +75,8 @@ export function useRunTrace(sessionId: Ref<string | null>) {
   const edges = ref<TraceState['edges']>(state.value?.edges ?? [])
   const focusedNodeId = ref<string | null>(state.value?.focusedNodeId ?? null)
   const l2Available = ref(false)  // Whether L2 trace data was fetched successfully
+  /** L2 llm_span 用量汇总（Σ in/out tokens + API 调用数；usage anchor 跨运行累计） */
+  const l2Usage = ref<{ input_tokens: number; output_tokens: number; api_calls: number } | null>(null)
 
   // Live/Replay mode state
   const mode = ref<TraceMode>('live')
@@ -138,6 +140,7 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     const merged = mergeLayer2Data(state.value, l2Data)
     sync(merged)
     l2Available.value = true
+    if (l2Data.meta?.usage) l2Usage.value = l2Data.meta.usage
     // Update session startedAt from L2 meta if available
     if (l2Data.meta?.started_at) sessionStartedAt.value = l2Data.meta.started_at * 1000
   }
@@ -701,7 +704,7 @@ export function useRunTrace(sessionId: Ref<string | null>) {
   onScopeDispose(detach)
 
   return {
-    state, nodes, edges, focusedNodeId, l2Available,
+    state, nodes, edges, focusedNodeId, l2Available, l2Usage,
     mode, scrubberTime, replayProgress, sessionStartedAt, sessionEnded,
     relatedSessions, relatedSessionIds, aggregateMode,
     route, fetchL2Data, switchToLive, switchToReplay, scrubTo, scrubEnd,

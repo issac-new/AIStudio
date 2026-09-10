@@ -297,14 +297,26 @@ function otelToLegacy(span: OTelSpan): JSONLHeader | JSONLChunk | JSONLTrailer {
 
 /**
  * Build TraceNode[] + TraceEdge[] from JSONL data.
+ *
+ * HERMES_CUSTOM[T2-usage]: 同时聚合 llm_span post 的 usage 为会话级汇总
+ * （Σ in/out tokens + API 调用数），作为 meta.usage 返回——对齐
+ * hermes-agent 0.21.1 的 usage anchor 语义（token 用量跨运行连续累计）。
  */
-function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trailer?: JSONLTrailer): {
+export interface TraceUsageSummary {
+  input_tokens: number
+  output_tokens: number
+  api_calls: number
+}
+
+export function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trailer?: JSONLTrailer): {
   nodes: TraceNode[]
   edges: TraceEdge[]
+  usage: TraceUsageSummary
 } {
   const nodes: TraceNode[] = []
   const edges: TraceEdge[] = []
   const seenIds = new Set<string>()
+  const usage: TraceUsageSummary = { input_tokens: 0, output_tokens: 0, api_calls: 0 }
 
   // Root workflow node
   const workflowId = `workflow:${header.session_id}`
@@ -340,7 +352,12 @@ function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trailer?: JS
     const startedAt = pre?.started_at || header.started_at
     const endedAt = post?.ended_at
     const durationMs = post?.duration_ms || (endedAt && startedAt ? Math.round((endedAt - startedAt) * 1000) : undefined)
-    const usage = post?.usage
+    const usageSpan = post?.usage
+    if (post) {
+      usage.api_calls += 1
+      usage.input_tokens += Number(usageSpan?.input_tokens) || 0
+      usage.output_tokens += Number(usageSpan?.output_tokens) || 0
+    }
 
     const nodeId = `llm:${header.session_id}:${apiRequestId}`
     if (!seenIds.has(nodeId)) {
@@ -348,7 +365,7 @@ function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trailer?: JS
         id: nodeId,
         kind: 'tool', // LLM calls are technically tool invocations in the trace
         label: `${pre?.model || 'LLM Call'} (${apiRequestId.slice(0, 8)})`,
-        detail: usage ? `in:${usage.input_tokens} out:${usage.output_tokens}` : undefined,
+        detail: usageSpan ? `in:${usageSpan.input_tokens} out:${usageSpan.output_tokens}` : undefined,
         status: post?.finish_reason === 'error' ? 'error' : (post ? 'ok' : 'running'),
         startedAt,
         endedAt,
@@ -453,7 +470,7 @@ function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trailer?: JS
     }
   }
 
-  return { nodes, edges }
+  return { nodes, edges, usage }
 }
 
 /**
@@ -505,7 +522,7 @@ router.get('/api/hermes/sessions/:id/trace', async (ctx) => {
       return
     }
 
-    const { nodes, edges } = buildTraceGraph(header, chunks, trailer)
+    const { nodes, edges, usage } = buildTraceGraph(header, chunks, trailer)
 
     ctx.body = {
       session_id: sessionId,
@@ -519,6 +536,7 @@ router.get('/api/hermes/sessions/:id/trace', async (ctx) => {
         model: header.model,
         provider: header.provider,
         outcome: trailer?.outcome,
+        usage,
       },
     }
   } catch {

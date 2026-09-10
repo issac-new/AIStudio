@@ -385,6 +385,8 @@ export async function fetchLayer2Trace(sessionId: string, profile?: string | nul
     model?: string
     provider?: string
     outcome?: string
+    /** L2 llm_span 用量汇总（hermes-agent 0.21.1 usage anchor 语义：跨运行累计） */
+    usage?: { input_tokens: number; output_tokens: number; api_calls: number }
   }
 } | null> {
   try {
