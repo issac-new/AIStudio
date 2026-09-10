@@ -339,6 +339,34 @@ describe('DailyBriefJob（触发判定 + 投递 + 审计落账）', () => {
     expect(await briefRuns(h.eventLog)).toHaveLength(1)
   })
 
+  it('treats a started-only brief audit (crash between the two audit writes) as not-sent and re-delivers', async () => {
+    const h = makeJob()
+    await seedRun(h.eventLog, { runId: 'run-a', graphId: 'loop-9', startedAtMs: T0 - 2 * HOUR, completedAtMs: T0 - HOUR })
+    // 崩溃残留（2026-09-10 风险审查 #4 回归锚）：上一实例在投递前只来得及写 run.started；
+    // 水位取 run.completed → 该残留不构成"今日已发"，本实例正常重发
+    await h.eventLog.append({
+      runId: 'run-crash', graphId: BRIEF_GRAPH_ID, ts: T0 + 500,
+      kind: 'run.started', payload: { trigger: 'daily' },
+    })
+    h.clock.now = T0 + 1_000
+    await h.job.poll()
+    expect(h.deliver).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps poll() from rejecting when the event-log read fails inside isDue', async () => {
+    const h = makeJob()
+    await seedRun(h.eventLog, { runId: 'run-a', graphId: 'loop-9', startedAtMs: T0 - 2 * HOUR, completedAtMs: T0 - HOUR })
+    const listSpy = vi.spyOn(h.eventLog, 'listRuns')
+      .mockRejectedValueOnce(new Error('sqlite busy'))
+    h.clock.now = T0 + 1_000
+    // isDue 在 try 内：读库失败走专用日志 + evaluatedDateKey 复位，不逃逸成 unhandledRejection
+    await expect(h.job.poll()).resolves.toBeUndefined()
+    expect(h.deliver).not.toHaveBeenCalled()
+    listSpy.mockRestore()
+    await h.job.poll()
+    expect(h.deliver).toHaveBeenCalledTimes(1)
+  })
+
   it('fires again the next day at the configured time', async () => {
     const h = makeJob({ cron: '30 14 * * *' })
     await seedRun(h.eventLog, { runId: 'run-a', graphId: 'loop-9', startedAtMs: T0, completedAtMs: T0 })

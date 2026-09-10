@@ -56,7 +56,10 @@ const selectedNode = computed(() =>
 
 async function load(): Promise<void> {
   const id = runId.value
-  if (!id) return
+  if (!id) {
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = null
   specMissing.value = false
@@ -67,17 +70,23 @@ async function load(): Promise<void> {
       runRest.getRun(id),
       runRest.replay(id),
     ])
+    // 陈旧响应守卫（2026-09-10 风险审查 #3）：路由复用本组件实例，快速 A→B 切换时
+    // 两个 load 并发，慢的 A 响应若不比对当前 runId 会覆盖 B 的数据并使游标错位
+    if (runId.value !== id) return
     events.value = replayEvents
     // 初始游标落全量：打开详情先看当前状态，回放是显式动作
     seek(replayEvents.length)
     status.value = ((detail.instance as { status?: RunStatus }).status) ?? 'unknown'
     const specId = ((detail.instance as { graphDefId?: string }).graphDefId) || detail.graphId
-    spec.value = await runRest.getSpec(specId)
+    const specDetail = await runRest.getSpec(specId)
+    if (runId.value !== id) return
+    spec.value = specDetail
     if (!spec.value) specMissing.value = true
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    if (runId.value === id) error.value = e instanceof Error ? e.message : String(e)
   } finally {
-    loading.value = false
+    // 仅本次 load 仍是当前请求时才收 loading——避免陈旧请求提前关闭新请求的加载态
+    if (runId.value === id) loading.value = false
   }
 }
 

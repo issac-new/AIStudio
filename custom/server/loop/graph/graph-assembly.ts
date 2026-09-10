@@ -89,10 +89,11 @@ export interface GraphAssembly {
   loopTickTarget: {
     manualTick(loopId: string): Promise<unknown>
     scheduleLoop(loop: LoopInstance): void
-    handleWebhook(loopId: string, source: string, eventType: string): void
+    handleWebhook(loopId: string, source: string, eventType: string, payload?: unknown): void
   }
-  /** 旧审批端点桥接：契约 id → pendingInterrupt approval:<id> → resume */
-  resumeApproval(contractId: string, decision: 'approved' | 'rejected' | 'changes-requested'): Promise<{ ok: boolean; runId?: string }>
+  /** 旧审批端点桥接：契约 id → pendingInterrupt approval:<id> → resume。
+   *  approver 由 REST 层从认证主体（ctx.state.user.username）注入，服务端不信任客户端自报身份。 */
+  resumeApproval(contractId: string, decision: 'approved' | 'rejected' | 'changes-requested', approver?: string): Promise<{ ok: boolean; runId?: string }>
   /** /graph namespace 是否已绑定（惰性绑定就绪即 true；供装配诊断/测试） */
   socketConnected(): boolean
   /** 启动轮询器 + 崩溃恢复（幂等）。legacy 模式无轮询器，仅做注册表重建（REST 只读面受益） */
@@ -176,11 +177,24 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   const specStore = new GraphSpecStore(eventLog, opts.specStorePath)
   void specStore.load().catch(() => {})
 
+  // webhook payload 通路（2026-09-10 风险审查 #2）：legacy Scheduler.handleWebhook 把
+  // payload enqueue 给 webhookConnector（discovery 经 connector discover 排空为契约），
+  // 图引擎 spawner 原本只转发 3 参、payload 被静默丢弃。从 engineDeps.connectors 找出
+  // 带 enqueue 的 webhook 连接器（Connector 接口只声明 discover，按方法 duck-type 判定），
+  // patch 202 注入的 connectors: [loopWebhookConnector] 单例即命中。
+  const connectors = opts.engineDeps.connectors ?? []
+  const webhookConnector = connectors.find(
+    c => typeof (c as { enqueue?: unknown }).enqueue === 'function',
+  ) as { enqueue(loopId: string, entry: { source: string; eventType: string; payload: unknown }): void } | undefined
+
   const spawner = mode === 'on'
     ? new RunSpawner({
         graphService, store, eventLog,
         compile: loop => compileLoopToDef(loop, opts.engineDeps, { appendById: appendContractsById }),
         emitLoopEvent: bridgeLoopEvent,
+        webhookEnqueue: webhookConnector
+          ? (loopId, entry) => { webhookConnector.enqueue(loopId, entry) }
+          : undefined,
         autoResumeIds,
         intervalMs: opts.intervalMs, log,
       })
@@ -265,9 +279,10 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
         const dueAt = dueIso ? new Date(dueIso).getTime() : NaN
         if (Number.isFinite(dueAt) && dueAt <= Date.now()) void spawner.tickNow(loop.id)
       },
-      handleWebhook: (loopId, source, eventType) => { spawner?.handleWebhook(loopId, source, eventType) },
+      handleWebhook: (loopId, source, eventType, payload) => { spawner?.handleWebhook(loopId, source, eventType, payload) },
     },
-    resumeApproval: (contractId, decision) => resumeApprovalForContract({ graphService, eventLog }, contractId, decision),
+    resumeApproval: (contractId, decision, approver) =>
+      resumeApprovalForContract({ graphService, eventLog }, contractId, decision, approver),
     socketConnected: () => socketBound,
     async start() {
       if (started) return assembly

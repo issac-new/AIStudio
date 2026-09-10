@@ -27,11 +27,14 @@ import type { WebhookConnector } from '../connectors/webhook-connector'
 import type { LoopInstance } from '../types'
 import { PATTERN_TEMPLATES } from '../types'
 
-/** 图引擎审批桥接（P1 Task 7）：契约 id → graph interrupt resume。缺省走旧 stub */
+/** 图引擎审批桥接（P1 Task 7）：契约 id → graph interrupt resume。缺省走旧 stub。
+ *  approver（2026-09-10 风险审查 #1）：REST 层从 ctx.state.user 注入的认证用户名，
+ *  服务端不信任客户端自报身份；缺省 undefined 保持旧 decision 直传行为。 */
 export interface GraphApprovalBridge {
   resumeApproval(
     contractId: string,
     decision: 'approved' | 'rejected' | 'changes-requested',
+    approver?: string,
   ): Promise<{ ok: boolean; runId?: string }>
 }
 
@@ -162,7 +165,10 @@ export function createLoopRouter(
     const body = ctx.request.body as { decision: string; approver: string; comment?: string }
     const decision = body.decision as 'approved' | 'rejected' | 'changes-requested'
     if (graphBridge && (decision === 'approved' || decision === 'rejected' || decision === 'changes-requested')) {
-      const result = await graphBridge.resumeApproval(ctx.params.id, decision)
+      // 审批身份以认证主体为准（requireUserJwt 写入 ctx.state.user，username 与前端
+      // getStoredUsername 同源）——body.approver 是可伪造的自报字段，仅作展示参考
+      const username = (ctx.state as { user?: { username?: string } }).user?.username
+      const result = await graphBridge.resumeApproval(ctx.params.id, decision, username)
       if (result.ok) {
         ctx.body = { ok: true, decision, bridged: 'graph', runId: result.runId }
         return

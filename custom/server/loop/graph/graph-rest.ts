@@ -14,6 +14,34 @@ import type { GraphSpec } from './graph-spec'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
+/**
+ * 审批身份服务端盖章（2026-09-10 风险审查 #1）：把 resume 值中的 approver 覆写为认证主体
+ * （ctx.state.user.username，由上游 requireUserJwt 写入；与前端 getStoredUsername 解码的
+ * 同一 JWT username 字段同源）。客户端自报的 approver 可任意伪造，而 specified/all/majority
+ * 策略（phase-nodes evaluateApprovalPolicy）建立在决策者身份上——不覆写等于任何持 token
+ * 用户可冒名满足审批。decision 形状归一与 phase-nodes normalizeDecisions 对齐：
+ * boolean/字符串包装为 { decision, approver }；{ decision|approved } 覆写 approver；
+ * { decisions: [...] } 逐条覆写；无 decision 标记的 payload（其他 interrupt 类型）原样保留。
+ * 无认证用户（server-token 通道）时不盖章，保留原值。
+ */
+export function stampApproverIdentity(value: unknown, approver: string): unknown {
+  const isDecisionShaped = (o: Record<string, unknown>): boolean =>
+    typeof o.decision === 'string' || typeof o.approved === 'boolean'
+  if (value == null) return value
+  if (typeof value === 'boolean') return { decision: value ? 'approved' : 'rejected', approver }
+  if (typeof value === 'string') return { decision: value === 'approved' ? 'approved' : 'rejected', approver }
+  if (Array.isArray(value)) return value.map(v => stampApproverIdentity(v, approver))
+  if (typeof value === 'object') {
+    const src = value as Record<string, unknown>
+    if (Array.isArray(src.decisions)) {
+      return { ...src, decisions: src.decisions.map(v => stampApproverIdentity(v, approver)) }
+    }
+    if (isDecisionShaped(src)) return { ...src, approver }
+    return value
+  }
+  return value
+}
+
 /** 台账⑥（P2）：GraphSpec 持久化切 event-log 同库 specs 表（重启可恢复）。
  *  filePath 降级为迁移兜底——表空时读一次 JSON 文件灌入表，之后以表为准；
  *  不传 eventLog 时维持 P1 内存/文件语义（既有 `new GraphSpecStore()` 调用方兼容）。 */
@@ -115,7 +143,10 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
       ctx.status = 400; ctx.body = { error: 'interruptId required' }; return
     }
     try {
-      const instance = await deps.graphService.resumeRun(ctx.params.id, body.interruptId, body.value)
+      // 审批身份盖章：见 stampApproverIdentity 注释——决策者身份以认证主体为准
+      const username = (ctx.state as { user?: { username?: string } }).user?.username
+      const value = username !== undefined ? stampApproverIdentity(body.value, username) : body.value
+      const instance = await deps.graphService.resumeRun(ctx.params.id, body.interruptId, value)
       ctx.body = { runId: ctx.params.id, instance }
     } catch (err) {
       ctx.status = 409
@@ -190,11 +221,13 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
 /**
  * 审批桥接（断链修复的 REST 面）：旧 POST /api/loop/contracts/:id/approve 的内部实现——
  * 契约 id → 事件日志里 pendingInterrupt `approval:<contractId>` → resumeRun。
+ * approver：REST 层从认证主体注入的用户名（缺省保持旧行为，decision 原样透传）。
  */
 export async function resumeApprovalForContract(
   deps: { graphService: GraphService; eventLog: EventLogStore },
   contractId: string,
   decision: 'approved' | 'rejected' | 'changes-requested',
+  approver?: string,
 ): Promise<{ ok: boolean; runId?: string }> {
   if (!ID_RE.test(contractId) && !contractId.includes('/')) return { ok: false }
   const prefix = `approval:${contractId}` // phase-nodes 新版 id 带 attempts 后缀（approval:<id>@<n>）
@@ -204,7 +237,7 @@ export async function resumeApprovalForContract(
     if (!cp) continue
     const hit = cp.pendingInterrupts.find(i => i.id === prefix || i.id.startsWith(`${prefix}@`))
     if (hit) {
-      await deps.graphService.resumeRun(runId, hit.id, decision)
+      await deps.graphService.resumeRun(runId, hit.id, approver ? { decision, approver } : decision)
       return { ok: true, runId }
     }
   }

@@ -57,7 +57,7 @@ index b7a3063d..7eaa0539 100644
 +    ? graphAssembly.loopTickTarget as unknown as typeof loopScheduler
 +    : loopScheduler,
 +  loopWebhookConnector,
-+  { resumeApproval: (id, d) => graphAssembly.resumeApproval(id, d) },
++  { resumeApproval: (id, d, approver) => graphAssembly.resumeApproval(id, d, approver) },
 +)
  const graphRouter = createGraphRouter(lazyStore)
  // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
