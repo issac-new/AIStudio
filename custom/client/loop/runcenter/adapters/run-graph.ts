@@ -135,15 +135,6 @@ function errorOf(e: ReplayEventLike): string | undefined {
   return typeof raw === 'string' && raw ? raw : undefined
 }
 
-/** 事件的迭代承载值：iteration / superStep / step 中最大的有限数值（无则 0） */
-function iterationOf(e: ReplayEventLike): number {
-  let max = 0
-  for (const v of [e.iteration, e.superStep, e.step]) {
-    if (typeof v === 'number' && Number.isFinite(v) && v > max) max = v
-  }
-  return max
-}
-
 // ---------------------------------------------------------------------------
 // buildRunGraph — 事件日志 → 图状态投影（纯函数）
 // ---------------------------------------------------------------------------
@@ -151,8 +142,9 @@ function iterationOf(e: ReplayEventLike): number {
 /**
  * buildRunGraph — 把拓扑（GraphSpec nodes/edges）与截断后的事件流投影为执行图：
  * - node.started → running；node.completed → done；node.failed → failed；
- *   interrupt.raised → awaiting-input；interrupt.resumed → running（续跑）；
- * - 同节点多次完成 iteration 取最大（迭代徽标）；
+ *   interrupt.raised → awaiting-input；interrupt.resumed → running（续跑，
+ *   按 interruptId 精确定位，折返仅作无 id 兜底）；
+ * - iteration = 节点自身完成次数（服务端 superStep 是全局步时钟，不充当节点迭代数）；
  * - 边 taken：completed 的 goto / error-routed 的 target 命中 `from->to`；
  * - run.completed 后从未启动的节点 → skipped；
  * - 未知 nodeId（legacy 桥接的 reason 等）不产生幽灵节点。
@@ -167,8 +159,9 @@ export function buildRunGraph(topology: RunGraphTopologyLike, events: readonly R
   const duration = new Map<string, number>(topology.nodes.map(n => [n.id, 0]))
   const openSince = new Map<string, number>() // started 未闭合区间的起点
   const taken = new Set<string>()
-  // 挂起中断所在节点：resume 事件常不带 nodeId（服务端 graph.resume 只有 interruptId），
-  // 按最后挂起节点折返 running（loop 图同时至多一个 pending interrupt）
+  // 挂起中断定位：interruptId → nodeId 映射（并发多 interrupt 精确折返），
+  // awaitingNode 仅作无 interruptId 事件兜底
+  const interruptNodeById = new Map<string, string>()
   let awaitingNode: string | null = null
 
   // 窗口内最后事件时刻：running 节点的未闭合区间按它收口（确定性，不取 Date.now()）
@@ -197,19 +190,40 @@ export function buildRunGraph(topology: RunGraphTopologyLike, events: readonly R
       }
     }
     if (kind === 'error-routed' && nodeId && nodeIds.has(nodeId)) {
-      const target = e.payload?.target
+      // 双词汇读取：日志 payload.target / socket 事件顶层 target
+      const target = e.payload?.target ?? e.target
       if (typeof target === 'string' && nodeIds.has(target)) taken.add(`${nodeId}->${target}`)
     }
 
-    if (!nodeId || !nodeIds.has(nodeId)) {
-      // resume 事件常不带 nodeId：仍要消费，折返最后挂起节点
-      if (kind === 'resumed' && awaitingNode) {
-        status.set(awaitingNode, 'running')
-        if (!openSince.has(awaitingNode)) openSince.set(awaitingNode, ts)
-        awaitingNode = null
+    // interrupt 双事件在 nodeId 守卫之前消费：resume 事件常不带 nodeId，
+    // 且并发多 interrupt 下须按 interruptId 精确定位（仅按挂起序折返会投影反转）
+    if (kind === 'interrupted' || kind === 'resumed') {
+      const rawId = e.interruptId ?? e.payload?.interruptId
+      const interruptId = typeof rawId === 'string' && rawId ? rawId : undefined
+      if (kind === 'interrupted') {
+        if (nodeId && nodeIds.has(nodeId)) {
+          status.set(nodeId, 'awaiting-input')
+          awaitingNode = nodeId
+          if (interruptId) interruptNodeById.set(interruptId, nodeId)
+          closeOpen(nodeId, ts) // 挂起时段不计入执行时长（B-1：interrupt 即闭合区间）
+        }
+      } else {
+        // resumed 定位：interruptId → 自身 nodeId → 最后挂起节点兜底
+        // （显式标注：与 awaitingNode 的回写比较会让控制流推断成环，TS7022）
+        const target: string | null | undefined = (interruptId && interruptNodeById.get(interruptId))
+          ?? (nodeId && nodeIds.has(nodeId) ? nodeId : undefined)
+          ?? awaitingNode
+        if (target) {
+          status.set(target, 'running')
+          if (!openSince.has(target)) openSince.set(target, ts) // 挂起时段不计入执行时长
+          if (interruptId) interruptNodeById.delete(interruptId)
+        }
+        if (target && target === awaitingNode) awaitingNode = null
       }
-      continue // 其余未知 nodeId 不产生幽灵节点
+      continue
     }
+
+    if (!nodeId || !nodeIds.has(nodeId)) continue // 未知 nodeId 不产生幽灵节点
 
     switch (kind) {
       case 'started':
@@ -218,25 +232,16 @@ export function buildRunGraph(topology: RunGraphTopologyLike, events: readonly R
         openSince.set(nodeId, ts)
         break
       case 'completed':
-      case 'failed':
-        status.set(nodeId, kind === 'completed' ? 'done' : 'failed')
-        iteration.set(nodeId, Math.max(iteration.get(nodeId) ?? 0, iterationOf(e)))
+        // 迭代徽标语义 = 节点自身完成次数（服务端 superStep 是全局步时钟，
+        // 不能当节点迭代数——否则每个节点首次完成就带徽标）
+        status.set(nodeId, 'done')
+        iteration.set(nodeId, (iteration.get(nodeId) ?? 0) + 1)
         closeOpen(nodeId, ts)
         break
-      case 'interrupted':
-        status.set(nodeId, 'awaiting-input')
-        awaitingNode = nodeId
+      case 'failed':
+        status.set(nodeId, 'failed')
+        closeOpen(nodeId, ts)
         break
-      case 'resumed': {
-        // resume 优先用自身 nodeId，缺省折返最后挂起节点
-        const resumeTarget = nodeIds.has(nodeId) ? nodeId : awaitingNode
-        if (resumeTarget) {
-          status.set(resumeTarget, 'running')
-          if (!openSince.has(resumeTarget)) openSince.set(resumeTarget, ts) // 挂起时段不计入执行时长
-        }
-        awaitingNode = null
-        break
-      }
       default:
         break // run.* / checkpoint / cost 等不改节点状态
     }

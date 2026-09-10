@@ -152,6 +152,8 @@ export const useRunCenterStore = defineStore('runCenter', () => {
     }
   }
 
+  /** 列表级选中态（P3 保留位）：Task 6 起行点击直达运行详情页，生产路径暂无消费者；
+   *  保留 API 与状态——B7 检查器 / 列表内嵌详情可能复用，删除前先清 runs-store 测试锚点 */
   function selectRun(runId: string | null): void {
     selectedRunId.value = runId
   }

@@ -6,7 +6,7 @@
 // 前缀，实现 time-travel。播放按固定节拍（tickMs / speed）单步推进，到尾
 // 自动暂停；到尾再 play 从头重放。定时器随作用域卸载或 dispose() 清理。
 
-import { computed, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { computed, getCurrentScope, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue'
 import type { ReplayEventLike } from '../adapters/run-graph'
 
 export interface UseRunReplayOptions {
@@ -116,7 +116,8 @@ export function useRunReplay(
     pause()
   }
 
-  onScopeDispose(dispose)
+  // 无活动 effect scope（纯调用/测试）时不注册清理钩子，避免 Vue warn
+  if (getCurrentScope()) onScopeDispose(dispose)
 
   return {
     cursorIndex, total, playing, speed, visibleEvents, atEnd,

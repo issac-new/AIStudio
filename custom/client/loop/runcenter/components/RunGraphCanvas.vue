@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/loop/runcenter/components/RunGraphCanvas.vue -->
 <!-- RunGraphCanvas — 执行图只读画布（task-6）。vue-flow 无编辑模式：
      节点状态着色（Pure Ink：done 灰实 / running 描边动画 / failed error /
-     awaiting-input warning / skipped 虚化）、迭代徽标（iteration 最大值）、
+     awaiting-input warning / skipped 虚化）、迭代徽标（节点完成次数，>1 显示）、
      回边虚线弧 + guard 徽标（maxIterations）、taken 边描色。
      布局为手写分层（layoutRunGraph 纯函数）：固定六节点列布局。
      点击节点 emit('select-node')——B7 检查器预留的消费口。 -->
@@ -41,7 +41,7 @@ const flowNodes = computed<Node[]>(() => {
         label: n.label,
         type: n.type,
         status: n.status,
-        iteration: n.iteration,
+        iteration: n.iteration, // 节点完成次数；徽标仅 >1 显示（多次完成才叫迭代）
         duration: durationLabel(n.durationMs),
         selected: n.id === props.selectedNodeId,
       },
@@ -109,7 +109,7 @@ function onSelect(id: string): void {
         >
           <div class="rg-node__head">
             <span class="rg-node__label">{{ nodeProps.data.label }}</span>
-            <span v-if="nodeProps.data.iteration > 0" class="rg-node__iteration">
+            <span v-if="nodeProps.data.iteration > 1" class="rg-node__iteration">
               #{{ nodeProps.data.iteration }}
             </span>
           </div>
