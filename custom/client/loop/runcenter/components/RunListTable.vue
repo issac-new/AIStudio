@@ -2,18 +2,25 @@
 <!-- RunListTable — 运行列表（Summary 档）。
      列：Run / 状态徽标 / 业务阶段（deriveStage 投影）/ 迭代 / 最后活动（相对时间）/ 成本 / 操作。
      操作按钮显隐由 legalActions(status) 映射表驱动——不存在任意跳转。
+     行内展开（peek，task-7）：最新 3 条事件摘要 + awaiting-input 时内联审批面板
+     （ApprovalPanel，审批不进详情页）。展开态由父层持有（expandedRunId）。
      组件薄壳：排序/过滤/投影已在 store+adapters 完成，此处只做展示与事件转发。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import RunStageBadge from './RunStageBadge.vue'
+import ApprovalPanel from './ApprovalPanel.vue'
 import { legalActions, relativeTime } from '../adapters'
+import { latestEvents } from '../adapters/intervention'
+import { formatEventTs } from '../adapters/run-graph'
 import type { RunAction, RunSummary } from '../types'
 
 const props = defineProps<{
   runs: RunSummary[]
   loading?: boolean
+  /** 行内展开（peek）的 runId；父层持有以支持操作按钮与展开箭头同一路径 */
+  expandedRunId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -67,6 +74,15 @@ const rows = computed<Row[]>(() => props.runs.map(toRow))
 function onAction(kind: RunAction, run: RunSummary): void {
   emit('action', { kind, run })
 }
+
+/** 行内展开（peek）最新 3 条事件摘要（adapters.latestEvents 投影） */
+function peekLines(run: RunSummary): ReturnType<typeof latestEvents> {
+  return latestEvents(run.events, 3)
+}
+
+function togglePeek(run: RunSummary): void {
+  onAction('peek', run)
+}
 </script>
 
 <template>
@@ -81,37 +97,72 @@ function onAction(kind: RunAction, run: RunSummary): void {
       <span class="rc-table__col rc-table__col--actions">{{ t('runcenter.table.actions') }}</span>
     </div>
 
-    <div
-      v-for="row in rows"
-      :key="row.run.runId"
-      class="rc-table__row"
-      :class="{ 'rc-table__row--awaiting': row.run.status === 'awaiting-input' }"
-      @click="emit('select', row.run)"
-    >
-      <span class="rc-table__col rc-table__col--run">
-        <span class="rc-table__run-id">{{ row.run.runId }}</span>
-        <span class="rc-table__graph-id">{{ row.run.graphId }}</span>
-      </span>
-      <span class="rc-table__col rc-table__col--status">
-        <RunStageBadge :status="row.run.status" />
-      </span>
-      <span class="rc-table__col rc-table__col--stage">{{ row.stageLabel }}</span>
-      <span class="rc-table__col rc-table__col--iter">{{ row.run.iteration }}</span>
-      <span class="rc-table__col rc-table__col--activity">{{ row.lastActivityLabel }}</span>
-      <span class="rc-table__col rc-table__col--cost">{{ row.costLabel }}</span>
-      <span class="rc-table__col rc-table__col--actions" @click.stop>
-        <button
-          v-for="kind in row.actions"
-          :key="kind"
-          class="rc-table__action"
-          :title="t(ACTION_META[kind].i18n)"
-          @click="onAction(kind, row.run)"
-        >
-          <CockpitIcon :name="ACTION_META[kind].icon" :size="11" />
-          <span class="rc-table__action-label">{{ t(ACTION_META[kind].i18n) }}</span>
-        </button>
-      </span>
-    </div>
+    <template v-for="row in rows" :key="row.run.runId">
+      <div
+        class="rc-table__row"
+        :class="{ 'rc-table__row--awaiting': row.run.status === 'awaiting-input' }"
+        @click="emit('select', row.run)"
+      >
+        <span class="rc-table__col rc-table__col--run">
+          <span class="rc-table__run-line">
+            <button
+              class="rc-table__peek-toggle"
+              :class="{ 'rc-table__peek-toggle--open': expandedRunId === row.run.runId }"
+              :title="t('runcenter.peek.toggle')"
+              @click.stop="togglePeek(row.run)"
+            >
+              <span class="rc-table__peek-chevron" aria-hidden="true" />
+            </button>
+            <span class="rc-table__run-id">{{ row.run.runId }}</span>
+          </span>
+          <span class="rc-table__graph-id">{{ row.run.graphId }}</span>
+        </span>
+        <span class="rc-table__col rc-table__col--status">
+          <RunStageBadge :status="row.run.status" />
+        </span>
+        <span class="rc-table__col rc-table__col--stage">{{ row.stageLabel }}</span>
+        <span class="rc-table__col rc-table__col--iter">{{ row.run.iteration }}</span>
+        <span class="rc-table__col rc-table__col--activity">{{ row.lastActivityLabel }}</span>
+        <span class="rc-table__col rc-table__col--cost">{{ row.costLabel }}</span>
+        <span class="rc-table__col rc-table__col--actions" @click.stop>
+          <button
+            v-for="kind in row.actions"
+            :key="kind"
+            class="rc-table__action"
+            :title="t(ACTION_META[kind].i18n)"
+            @click="onAction(kind, row.run)"
+          >
+            <CockpitIcon :name="ACTION_META[kind].icon" :size="11" />
+            <span class="rc-table__action-label">{{ t(ACTION_META[kind].i18n) }}</span>
+          </button>
+        </span>
+      </div>
+
+      <!-- 行内展开（peek）：最新 3 条事件摘要 + awaiting-input 内联审批 -->
+      <div v-if="expandedRunId === row.run.runId" class="rc-table__peek" @click.stop>
+        <div class="rc-table__peek-events">
+          <span class="rc-table__peek-title">{{ t('runcenter.peek.title') }}</span>
+          <div v-if="peekLines(row.run).length === 0" class="rc-table__peek-empty">
+            {{ t('runcenter.peek.empty') }}
+          </div>
+          <div v-for="(l, i) in peekLines(row.run)" v-else :key="i" class="rc-table__peek-line">
+            <span class="rc-table__peek-ts">{{ formatEventTs(l.ts) }}</span>
+            <span class="rc-table__peek-type">
+              {{ l.type }}<template v-if="l.step !== undefined"> @{{ l.step }}</template>
+              <template v-if="l.nodeId"> · {{ l.nodeId }}</template>
+            </span>
+            <span v-if="l.error" class="rc-table__peek-error">{{ l.error }}</span>
+            <span v-if="l.autoApproved" class="rc-table__peek-auto">
+              {{ t('runcenter.approval.timeoutAuto') }}
+            </span>
+          </div>
+        </div>
+        <ApprovalPanel
+          v-if="row.run.status === 'awaiting-input' && row.run.pendingInterruptId"
+          :run="row.run"
+        />
+      </div>
+    </template>
 
     <div v-if="rows.length === 0 && !loading" class="rc-table__empty">
       {{ t('runcenter.table.empty') }}
@@ -161,6 +212,77 @@ function onAction(kind: RunAction, run: RunSummary): void {
 .rc-table__col--activity { flex: 0 0 104px; }
 .rc-table__col--cost { flex: 0 0 76px; text-align: right; font-variant-numeric: tabular-nums; }
 .rc-table__col--actions { flex: 0 0 210px; display: flex; gap: 4px; justify-content: flex-end; }
+
+.rc-table__run-line { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.rc-table__peek-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.rc-table__peek-chevron {
+  display: inline-block;
+  border-left: 3px solid currentColor;
+  border-bottom: 3px solid transparent;
+  border-top: 3px solid transparent;
+  transition: transform 0.15s ease;
+}
+.rc-table__peek-toggle--open .rc-table__peek-chevron { transform: rotate(90deg); }
+
+/* 行内展开（peek） */
+.rc-table__peek {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 10px 28px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary, rgba(127, 127, 127, 0.04));
+}
+.rc-table__peek-events { display: flex; flex-direction: column; gap: 2px; }
+.rc-table__peek-title {
+  font-size: 11px;
+  color: var(--text-muted, var(--color-text-secondary, #878c99));
+}
+.rc-table__peek-empty { font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.rc-table__peek-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  min-width: 0;
+}
+.rc-table__peek-ts {
+  flex: 0 0 56px;
+  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  font-variant-numeric: tabular-nums;
+}
+.rc-table__peek-type {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  flex-shrink: 0;
+}
+.rc-table__peek-error {
+  color: var(--color-danger, #e11d48);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rc-table__peek-auto {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border: 1px solid var(--color-warning, #f59e0b);
+  border-radius: var(--radius-pill, 999px);
+  color: var(--color-warning, #f59e0b);
+  font-size: 11px;
+  white-space: nowrap;
+}
 
 .rc-table__run-id {
   font-family: var(--font-mono, ui-monospace, monospace);

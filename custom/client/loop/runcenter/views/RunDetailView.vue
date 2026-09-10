@@ -1,7 +1,8 @@
 <!-- overlay/custom/client/loop/runcenter/views/RunDetailView.vue -->
 <!-- RunDetailView — 运行详情页（task-6，路由 /hermes/loop/runs/:runId）。
-     左图右流：执行图画布（vue-flow 只读，B7 检查器经 select-node 预留口消费选中）
-     + 时间轴回放（useRunReplay 游标 = 重放至第 N 事件，图与事件流共用前缀投影）。
+     左图右流：执行图画布（vue-flow 只读）+ 时间轴回放（useRunReplay 游标 =
+     重放至第 N 事件，图与事件流共用前缀投影）；右栏下方挂节点检查器 attach 档
+     （task-7 NodeInspector，选中节点驱动，inspectNode 纯函数投影）。
      数据：GET /api/graph/runs/:id（instance.graphDefId → 图规格）+
      GET /api/graph/runs/:id/replay（P2 规模内一次拉全量）。 -->
 <script setup lang="ts">
@@ -12,6 +13,7 @@ import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import RunStageBadge from '@/custom/loop/runcenter/components/RunStageBadge.vue'
 import RunGraphCanvas from '@/custom/loop/runcenter/components/RunGraphCanvas.vue'
 import RunTimeline from '@/custom/loop/runcenter/components/RunTimeline.vue'
+import NodeInspector from '@/custom/loop/runcenter/components/NodeInspector.vue'
 import { useRunReplay } from '@/custom/loop/runcenter/composables/useRunReplay'
 import { buildRunGraph, projectEvents } from '@/custom/loop/runcenter/adapters/run-graph'
 import type { RunGraphData, RunGraphTopologyLike, ReplayEventLike, TimelineMode } from '@/custom/loop/runcenter/adapters/run-graph'
@@ -46,6 +48,11 @@ const graph = computed<RunGraphData>(() =>
   spec.value ? buildRunGraph(spec.value, visibleEvents.value) : EMPTY_GRAPH,
 )
 const rows = computed(() => projectEvents(visibleEvents.value, mode.value))
+
+/** 检查器（task-7）：选中节点的图投影产物（null = 未选中 → 检查器空态） */
+const selectedNode = computed(() =>
+  graph.value.nodes.find(n => n.id === selectedNodeId.value) ?? null,
+)
 
 async function load(): Promise<void> {
   const id = runId.value
@@ -119,19 +126,28 @@ function onSelectNode(id: string): void {
         />
       </div>
 
-      <div class="rd-view__timeline">
-        <RunTimeline
-          :rows="rows"
-          :cursor-index="cursorIndex"
-          :total="total"
-          :playing="playing"
-          :speed="speed"
-          :mode="mode"
-          :loading="loading"
-          @seek="seek"
-          @toggle-play="toggle"
-          @set-speed="setSpeed"
-          @set-mode="(m: TimelineMode) => (mode = m)"
+      <div class="rd-view__side">
+        <div class="rd-view__timeline">
+          <RunTimeline
+            :rows="rows"
+            :cursor-index="cursorIndex"
+            :total="total"
+            :playing="playing"
+            :speed="speed"
+            :mode="mode"
+            :loading="loading"
+            @seek="seek"
+            @toggle-play="toggle"
+            @set-speed="setSpeed"
+            @set-mode="(m: TimelineMode) => (mode = m)"
+          />
+        </div>
+        <!-- 节点检查器（attach 档，task-7）：选中图节点后显示 -->
+        <NodeInspector
+          class="rd-view__inspector"
+          :node="selectedNode"
+          :events="visibleEvents"
+          :run-id="runId"
         />
       </div>
     </div>
@@ -222,5 +238,12 @@ function onSelectNode(id: string): void {
   font-size: 12px;
 }
 
-.rd-view__timeline { min-height: 0; }
+.rd-view__side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+.rd-view__timeline { min-height: 0; flex: 1; }
+.rd-view__inspector { max-height: 300px; flex-shrink: 0; }
 </style>

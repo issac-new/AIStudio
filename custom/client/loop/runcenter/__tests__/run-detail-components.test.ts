@@ -46,6 +46,8 @@ const { rest } = vi.hoisted(() => ({
     getRun: vi.fn(),
     replay: vi.fn(),
     getSpec: vi.fn(),
+    forkRun: vi.fn(async () => ({ runId: 'run-1-fork-1', forkedFrom: 'run-1', superStep: 2 })),
+    startRun: vi.fn(async () => ({ runId: 'run-1-fork-1', instance: {} })),
   },
 }))
 vi.mock('@/custom/loop/runcenter/api', () => ({ runRest: rest }))
@@ -250,6 +252,57 @@ describe('RunDetailView (jsdom)', () => {
 
     await w.findAll('.stub-slot .rg-node')[0].trigger('click')
     expect(w.findAll('.stub-slot .rg-node')[0].classes()).toContain('is-selected')
+  })
+
+  it('节点检查器（task-7）：选中驱动 attach 档——未选时空态，选中显示类型/关联事件', async () => {
+    rest.getRun.mockResolvedValue({ runId: 'run-1', graphId: 'loop-loop1', instance: { status: 'running' } })
+    rest.replay.mockResolvedValue(EVENTS)
+    rest.getSpec.mockResolvedValue(SPEC)
+
+    const w = mount(RunDetailView)
+    await new Promise(r => setTimeout(r, 0))
+
+    // 未选中：检查器空态
+    expect(w.find('[data-node-inspector]').exists()).toBe(true)
+    expect(w.find('.ni-panel__empty').exists()).toBe(true)
+
+    // 选中 discovery → 类型/状态/最近 update 键值与关联事件出现
+    await w.findAll('.stub-slot .rg-node')[0].trigger('click')
+    const insp = w.find('[data-node-inspector]')
+    expect(w.find('.ni-panel__empty').exists()).toBe(false)
+    expect(insp.text()).toContain('discovery')
+    expect(insp.text()).toContain('phase-discovery')
+    expect(insp.text()).toContain('runcenter.graph.nodeStatus.done')
+    expect(insp.findAll('.ni-panel__event')).toHaveLength(2) // started + completed
+
+    // 画布重渲染（图投影更新）后检查器仍跟随选中节点；
+    // 该夹具的 completed 无 update payload → 显示"暂无 update"占位
+    expect(insp.text()).toContain('runcenter.inspector.noUpdate')
+  })
+
+  it('节点检查器：failed 节点显示错误 + 重跑（fork → start）', async () => {
+    rest.getRun.mockResolvedValue({ runId: 'run-1', graphId: 'loop-loop1', instance: { status: 'failed' } })
+    rest.replay.mockResolvedValue([
+      { kind: 'run.started', ts: 1000 },
+      { kind: 'node.started', nodeId: 'discovery', ts: 1000 },
+      { kind: 'node.failed', nodeId: 'discovery', payload: { error: 'boom: contract c1 failed' }, ts: 2000 },
+    ])
+    rest.getSpec.mockResolvedValue(SPEC)
+
+    const w = mount(RunDetailView)
+    await new Promise(r => setTimeout(r, 0))
+    await w.findAll('.stub-slot .rg-node')[0].trigger('click')
+
+    expect(w.find('.ni-panel__error').text()).toContain('boom: contract c1 failed')
+    expect(w.find('.ni-panel__hint').exists()).toBe(true)
+
+    await w.find('.ni-panel__rerun').trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    expect(rest.forkRun).toHaveBeenCalledWith('run-1')
+    expect(rest.startRun).toHaveBeenCalledWith('run-1-fork-1')
+    const note = w.find('.ni-panel__rerun-note')
+    expect(note.classes()).toContain('ni-panel__rerun-note--ok')
+    expect(note.text()).toContain('run-1-fork-1')
   })
 
   it('spec 缺失 → 画布占位提示（时间轴仍可用）；REST 失败 → 错误条', async () => {

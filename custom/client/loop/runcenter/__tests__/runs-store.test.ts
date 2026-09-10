@@ -61,6 +61,7 @@ const { FakeGraphSocket, fakeSocket, rest } = vi.hoisted(() => {
       getRun: vi.fn(async () => { throw new Error('not implemented in test') }),
       resumeRun: vi.fn(async () => ({ runId: 'run-1', instance: {} })),
       forkRun: vi.fn(async () => ({ runId: 'run-1-fork-1', forkedFrom: 'run-1', superStep: 0 })),
+      startRun: vi.fn(async () => ({ runId: 'run-1-fork-1', instance: {} })),
       replay: vi.fn(async () => [] as Array<{ type: string; ts: string }>),
     },
   }
@@ -376,5 +377,103 @@ describe('useRunCenterStore — 排序 getter 与动作', () => {
     await store.fetchRuns()
     expect(store.error).toBe('server down')
     expect(store.runs).toHaveLength(0)
+  })
+})
+
+describe('useRunCenterStore — 乐观 resume 投影（task-7）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+  })
+
+  const awaitRun = async (): Promise<ReturnType<typeof useRunCenterStore>> => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'run-1', status: 'awaiting-input' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    sock().serverEmit('graph:event', ge('graph.interrupt', 'run-1', {
+      interruptId: 'approval:c3@1',
+      value: { kind: 'approval', contractId: 'c3', prompt: 'approve me' },
+      ts: '2026-09-10T00:02:00Z',
+    }))
+    return store
+  }
+
+  it('REST 成功后立即落一条本地 resume 事件：状态→running、未决中断关闭、resumeValue 可投影', async () => {
+    const store = await awaitRun()
+    expect(store.runs[0].status).toBe('awaiting-input')
+    expect(store.runs[0].pendingInterruptId).toBe('approval:c3@1')
+
+    await store.resumeRun('run-1', { decision: 'approved' })
+
+    expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c3@1', { decision: 'approved' })
+    const run = store.runs[0]
+    expect(run.status).toBe('running') // 乐观投影：不等 socket 回声
+    expect(run.pendingInterruptId).toBeNull() // resume 关闭未决中断
+    const last = run.events[run.events.length - 1]
+    expect(last.type).toBe('graph.resume')
+    expect(last.interruptId).toBe('approval:c3@1')
+    expect(last.resumeValue).toEqual({ decision: 'approved' })
+  })
+
+  it('REST 失败不落本地投影：状态与未决中断保持 awaiting', async () => {
+    const store = await awaitRun()
+    rest.resumeRun.mockRejectedValueOnce(new Error('resume rejected by server'))
+    await expect(store.resumeRun('run-1', { decision: 'approved' })).rejects.toThrow('resume rejected by server')
+    expect(store.runs[0].status).toBe('awaiting-input')
+    expect(store.runs[0].pendingInterruptId).toBe('approval:c3@1')
+  })
+})
+
+describe('useRunCenterStore — 介入收件箱两态（task-7）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fakeSocket.current = null
+    vi.clearAllMocks()
+    // 归档标记落 localStorage，测试间隔离
+    try { localStorage.clear() } catch { /* ignore */ }
+  })
+
+  it('awaitingRuns = 全部 awaiting-input（待我处理排序）；非 awaiting 不进收件箱', async () => {
+    rest.listRuns.mockResolvedValue([
+      item({ runId: 'r-a', status: 'awaiting-input', updatedAt: '2026-09-10T00:00:30Z' }),
+      item({ runId: 'r-b', status: 'awaiting-input', updatedAt: '2026-09-10T00:01:00Z' }),
+      item({ runId: 'r-c', status: 'running' }),
+    ])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    expect(store.awaitingRuns.map(r => r.runId)).toEqual(['r-b', 'r-a']) // 最后活动倒序
+    expect(store.pendingInboxRuns).toHaveLength(2)
+    expect(store.archivedInboxRuns).toHaveLength(0)
+  })
+
+  it('archiveRun 只打本地标记（不改 run 状态），run 移入已归档；unarchiveRun 移回', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'r-a', status: 'awaiting-input' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+
+    store.archiveRun('r-a')
+    expect(store.runs[0].status).toBe('awaiting-input') // run 状态不变
+    expect(store.pendingInboxRuns).toHaveLength(0)
+    expect(store.archivedInboxRuns.map(r => r.runId)).toEqual(['r-a'])
+    // 持久化：localStorage 有标记
+    expect(JSON.parse(localStorage.getItem('runcenter:inbox:archived')!)).toHaveProperty('r-a')
+
+    store.unarchiveRun('r-a')
+    expect(store.pendingInboxRuns.map(r => r.runId)).toEqual(['r-a'])
+    expect(store.archivedInboxRuns).toHaveLength(0)
+    expect(JSON.parse(localStorage.getItem('runcenter:inbox:archived')!)).not.toHaveProperty('r-a')
+  })
+
+  it('已归档 run 若不再是 awaiting-input，自动退出已归档列表（两态都以 awaiting 为域）', async () => {
+    rest.listRuns.mockResolvedValue([item({ runId: 'r-a', status: 'awaiting-input' })])
+    const store = useRunCenterStore()
+    await store.fetchRuns()
+    store.archiveRun('r-a')
+    // 服务端侧 run 恢复（resume 事件）
+    sock().serverEmit('graph:event', ge('graph.resume', 'r-a', { ts: '2026-09-10T00:03:00Z' }))
+    expect(store.awaitingRuns).toHaveLength(0)
+    expect(store.pendingInboxRuns).toHaveLength(0)
+    expect(store.archivedInboxRuns).toHaveLength(0)
   })
 })

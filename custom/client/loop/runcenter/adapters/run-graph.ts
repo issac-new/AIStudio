@@ -59,7 +59,7 @@ export interface RunGraphNode {
   label: string
   type: string
   status: RunNodeStatus
-  /** 同节点多次完成取最大 super-step（迭代徽标） */
+  /** 节点自身完成次数（迭代徽标）；superStep 是全局步时钟，不充当节点迭代数 */
   iteration: number
   /** started→completed/failed 区间累计 ms；未闭合区间按窗口内最后事件 ts 收口 */
   durationMs: number

@@ -1,6 +1,7 @@
 <!-- overlay/custom/client/loop/runcenter/views/RunCenterView.vue -->
-<!-- RunCenterView — 运行中心视图骨架：工具条（状态筛选/搜索/刷新/连接态）+
-     运行列表 + 底部分页 + 空态三步引导（R4）+ 回放面板（终态 run）。 -->
+<!-- RunCenterView — 运行中心视图骨架：工具条（视图 tab/状态筛选/搜索/刷新/连接态）+
+     运行列表（行内 peek 展开 + 内联审批）+ 底部分页 + 空态三步引导（R4）+
+     介入收件箱（两态，task-7）+ 回放面板（终态 run）。 -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -8,12 +9,16 @@ import { useRouter } from 'vue-router'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import RunListTable from '@/custom/loop/runcenter/components/RunListTable.vue'
+import InboxPanel from '@/custom/loop/runcenter/components/InboxPanel.vue'
 import { filterRuns } from '@/custom/loop/runcenter/adapters'
 import type { GraphEventLike, RunAction, RunStatus, RunSummary } from '@/custom/loop/runcenter/types'
 
 const store = useRunCenterStore()
 const { t } = useI18n()
 const router = useRouter()
+
+// ── 视图 tab（运行列表 / 介入收件箱，task-7）──
+const activeTab = ref<'runs' | 'inbox'>('runs')
 
 // ── 工具条状态 ──
 const statusFilter = ref<'' | RunStatus>('')
@@ -50,19 +55,16 @@ onBeforeUnmount(() => { store.disconnect() })
 // ── 操作分发（合法操作集 → 现有落点；无落点的动作不出现按钮）──
 const actionError = ref<string | null>(null)
 
-/** graphId 形如 loop-<loopId>（loop-to-graph 编译器约定）→ loop 详情页 */
-function loopIdOf(graphId: string): string {
-  return graphId.replace(/^loop-/, '')
-}
-
 /** P2 Task 6：运行详情页（执行图 + 回放），行点击 / detail 动作的统一入口 */
 function goRunDetail(run: RunSummary): void {
   router.push({ name: 'hermes.loopRunDetail', params: { runId: run.runId } })
 }
 
-/** 审批/查看走 loop 详情页（审批 UI LoopApprovalDialog 在那边） */
-function goLoopDetail(run: RunSummary): void {
-  router.push({ name: 'hermes.loopDetail', params: { id: loopIdOf(run.graphId) } })
+// ── 行内 peek 展开（task-7）：approve/peek 动作与行首箭头同一路径，不进详情页 ──
+const expandedRunId = ref<string | null>(null)
+
+function togglePeek(runId: string): void {
+  expandedRunId.value = expandedRunId.value === runId ? null : runId
 }
 
 async function onAction(payload: { kind: RunAction; run: RunSummary }): Promise<void> {
@@ -70,9 +72,9 @@ async function onAction(payload: { kind: RunAction; run: RunSummary }): Promise<
   const { kind, run } = payload
   try {
     switch (kind) {
-      case 'approve': // 审批 UI 在 loop 详情页（LoopApprovalDialog）
+      case 'approve': // 行内展开审批面板（审批不进详情页，task-7）
       case 'peek':
-        goLoopDetail(run)
+        togglePeek(run.runId)
         break
       case 'detail':
         goRunDetail(run)
@@ -112,12 +114,30 @@ function replayTime(e: GraphEventLike): string {
     <div class="rc-view__toolbar">
       <h2 class="rc-view__title">{{ t('runcenter.title') }}</h2>
 
+      <div class="rc-view__tabs">
+        <button
+          class="rc-view__tab"
+          :class="{ 'rc-view__tab--active': activeTab === 'runs' }"
+          @click="activeTab = 'runs'"
+        >
+          {{ t('runcenter.tab.runs') }}
+        </button>
+        <button
+          class="rc-view__tab"
+          :class="{ 'rc-view__tab--active': activeTab === 'inbox' }"
+          @click="activeTab = 'inbox'"
+        >
+          {{ t('runcenter.tab.inbox') }}
+          <span v-if="store.awaitingCount > 0" class="rc-view__tab-count">{{ store.awaitingCount }}</span>
+        </button>
+      </div>
+
       <span class="rc-view__connection" :class="`rc-view__connection--${store.connection}`">
         <span class="rc-view__connection-dot" aria-hidden="true" />
         {{ t(`runcenter.connection.${store.connection}`) }}
       </span>
 
-      <div class="rc-view__filters">
+      <div v-if="activeTab === 'runs'" class="rc-view__filters">
         <button
           v-for="opt in FILTER_OPTIONS"
           :key="opt.value"
@@ -130,6 +150,7 @@ function replayTime(e: GraphEventLike): string {
       </div>
 
       <input
+        v-if="activeTab === 'runs'"
         v-model="query"
         class="rc-view__search"
         type="search"
@@ -144,8 +165,18 @@ function replayTime(e: GraphEventLike): string {
     <div v-if="store.error" class="rc-view__error">{{ store.error }}</div>
     <div v-if="actionError" class="rc-view__error">{{ actionError }}</div>
 
+    <!-- 介入收件箱（两态，task-7） -->
+    <InboxPanel
+      v-if="activeTab === 'inbox'"
+      :pending="store.pendingInboxRuns"
+      :archived="store.archivedInboxRuns"
+      @archive="(r: RunSummary) => store.archiveRun(r.runId)"
+      @unarchive="(r: RunSummary) => store.unarchiveRun(r.runId)"
+      @detail="goRunDetail"
+    />
+
     <!-- 空态三步引导（R4：选模板 → 设节奏 → 跑起来） -->
-    <div v-if="!store.loading && store.runs.length === 0" class="rc-view__onboarding">
+    <div v-else-if="!store.loading && store.runs.length === 0" class="rc-view__onboarding">
       <h3>{{ t('runcenter.empty.title') }}</h3>
       <div class="rc-view__steps">
         <div class="rc-view__step">
@@ -174,6 +205,7 @@ function replayTime(e: GraphEventLike): string {
       <RunListTable
         :runs="pagedRuns"
         :loading="store.loading"
+        :expanded-run-id="expandedRunId"
         @select="goRunDetail"
         @action="onAction"
       />
@@ -226,6 +258,33 @@ function replayTime(e: GraphEventLike): string {
   flex-wrap: wrap;
 }
 .rc-view__title { margin: 0; font-size: 16px; }
+
+/* 视图 tab（运行列表 / 介入收件箱） */
+.rc-view__tabs { display: flex; gap: 4px; }
+.rc-view__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+.rc-view__tab--active {
+  border-color: var(--accent-primary, var(--color-primary, #3b82f6));
+  background: var(--accent-bg, var(--hover-bg, rgba(127, 127, 127, 0.08)));
+}
+.rc-view__tab-count {
+  padding: 0 6px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-warning, #f59e0b);
+  color: #fff;
+  font-size: 11px;
+}
 
 .rc-view__connection {
   display: inline-flex;

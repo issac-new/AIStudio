@@ -51,6 +51,12 @@ export const runRest = {
     })
   },
 
+  /** POST /api/graph/runs/:id/start — fork 产物显式起跑（graph-rest.ts P1 台账 a 显式语义）；
+   *  "从失败重跑" = fork（新 runId，paused）→ startRun(newId) */
+  startRun: async (id: string): Promise<{ runId: string; instance: Record<string, unknown> }> => {
+    return request(`${BASE}/${encodeURIComponent(id)}/start`, { method: 'POST', body: JSON.stringify({}) })
+  },
+
   /** GET /api/graph/runs/:id/replay — 完整事件序列回放 */
   replay: async (id: string): Promise<GraphEventLike[]> => {
     const res = await request<{ runId: string; events: GraphEventLike[] }>(`${BASE}/${encodeURIComponent(id)}/replay`)
