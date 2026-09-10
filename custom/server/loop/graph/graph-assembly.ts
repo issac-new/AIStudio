@@ -164,7 +164,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     socketTimer.unref?.()
   }
 
-  const specStore = new GraphSpecStore(opts.specStorePath)
+  // P2 台账⑥：specs 持久化走 event-log 同库表；specStorePath 仅作旧 JSON 文件迁移兜底
+  const specStore = new GraphSpecStore(eventLog, opts.specStorePath)
   void specStore.load().catch(() => {})
 
   const spawner = mode === 'on'

@@ -22,6 +22,7 @@ import { evaluatePredicate } from './predicate'
 import type {
   LoopInstance, TaskContract, VerificationRecord, LoopEvent, LoopStage, ContractStatus,
 } from '../types'
+import { isJudgeFailed } from '../types'
 import type { LoopStateStore } from '../store/state-store'
 import type { WorktreeManager } from '../engine/worktree-manager'
 import type { SubagentDispatcher } from '../engine/subagent-dispatcher'
@@ -280,10 +281,10 @@ export function appendContractsById(old: TaskContract[] | undefined, next: TaskC
   return [...merged.values()]
 }
 
-/** 旧引擎 determineFailType 语义对齐 */
+/** 旧引擎 determineFailType 语义对齐（isJudgeFailed：pending/skipped 不算失败，旧数据回退 passed 布尔） */
 function failTypeOf(record: VerificationRecord): string {
   if (record.results.programmatic.some(p => !p.passed)) return 'programmatic'
-  if (record.results.judge && !record.results.judge.passed) return 'judge'
+  if (isJudgeFailed(record.results.judge)) return 'judge'
   if (record.results.human && record.results.human.decision !== 'approved') return 'human'
   return 'unknown'
 }

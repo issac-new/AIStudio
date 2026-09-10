@@ -54,8 +54,12 @@ export const LOOP_NODE_TYPES = {
   stop: 'stop-check',
 } as const
 
+/** 拓扑编译所需的最小 deps：compileLoopToSpec 只读 repairMaxAttempts / approvalConfig，
+ *  不触碰执行期依赖（store/dispatcher/…）——只读投影（loop-to-graph.ts）与迁移器据此零依赖复用 */
+export type CompileTopologyDeps = Pick<CompileDeps, 'repairMaxAttempts' | 'approvalConfig'>
+
 /** LoopInstance → GraphSpec（纯拓扑 + 谓词，不含函数；执行函数经 makeLoopNodeRegistry 注入） */
-export function compileLoopToSpec(loop: LoopInstance, deps: CompileDeps): GraphSpec {
+export function compileLoopToSpec(loop: LoopInstance, deps: CompileTopologyDeps): GraphSpec {
   const maxAttempts = deps.repairMaxAttempts ?? 3
   const stageIsScheduling = { op: 'cmp', path: CH.stage, cmp: 'eq', value: 'scheduling' } as const
   const repairNeeded = { op: 'truthy', path: CH.repairNeeded } as const

@@ -91,6 +91,22 @@ export interface JudgeCheck {
   minScore: number
 }
 
+/** judge 结果项状态（P2 台账③前置，为 P3 真实 LLM judge 预留）。
+ *  旧持久化数据无 status 字段 → 读取方按 'skipped' 兜底（见 isJudgeFailed）。 */
+export type JudgeStatus = 'passed' | 'failed' | 'pending' | 'skipped'
+
+/** judge 依赖的返回联合：真实打分，或暂无法裁决（如模型不可用）时显式 pending。
+ *  pending 由 verifier 记录为 status='pending'，语义与无 judge 相同（不阻断 overall）。 */
+export type JudgeVerdict = { score: number; reasoning: string } | { status: 'pending'; reason: string }
+
+/** 读取兼容判定：新记录只认 status==='failed'；旧记录（无 status）回退 legacy passed 布尔。
+ *  pending / skipped 不算失败——pending 项跳过，overall 由其余项决定。 */
+export function isJudgeFailed(judge: { status?: JudgeStatus; passed?: boolean } | null | undefined): boolean {
+  if (!judge) return false
+  if (judge.status !== undefined) return judge.status === 'failed'
+  return judge.passed === false
+}
+
 export interface HumanCheck {
   gate: 'always' | 'on-fail'
   approvers: string[]
@@ -127,7 +143,17 @@ export interface VerificationRecord {
   contractId: string
   results: {
     programmatic: Array<{ command: string; exitCode: number; stdout: string; passed: boolean }>
-    judge: { model: string; score: number; reasoning: string; passed: boolean } | null
+    /** P2 台账③前置：judge 项扩展 status（passed/failed/pending/skipped）。
+     *  score/reasoning/passed 为 legacy 字段——真实打分时继续写出；pending 时只有 reason。
+     *  旧数据无 status，读取方按 'skipped' 兜底（isJudgeFailed）。 */
+    judge: {
+      model: string
+      status?: JudgeStatus
+      score?: number
+      reasoning?: string
+      passed?: boolean
+      reason?: string
+    } | null
     human: { approver: string; decision: 'approved' | 'rejected' | 'changes-requested'; comment: string; timestamp: string } | null
   }
   overall: 'passed' | 'failed' | 'pending'

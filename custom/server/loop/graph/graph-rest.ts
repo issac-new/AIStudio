@@ -14,26 +14,52 @@ import type { GraphSpec } from './graph-spec'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
-/** 台账 i：GraphSpec 持久化。P1 用 JSON 文件（.loop/graph-specs.json）——零新依赖、
- *  重启可恢复；sqlite 表化与 event-log 共库留 P2（REST 形状先立）。 */
+/** 台账⑥（P2）：GraphSpec 持久化切 event-log 同库 specs 表（重启可恢复）。
+ *  filePath 降级为迁移兜底——表空时读一次 JSON 文件灌入表，之后以表为准；
+ *  不传 eventLog 时维持 P1 内存/文件语义（既有 `new GraphSpecStore()` 调用方兼容）。 */
 export class GraphSpecStore {
   private specs = new Map<string, GraphSpec>()
 
-  constructor(private filePath?: string) {}
+  constructor(private eventLog?: EventLogStore, private filePath?: string) {}
 
   async load(): Promise<void> {
-    if (!this.filePath) return
+    if (this.eventLog) {
+      const rows = await this.eventLog.listSpecs()
+      if (rows.length > 0) {
+        for (const row of rows) {
+          const got = await this.eventLog.getSpec(row.id)
+          if (got) this.specs.set(got.id, got.spec as GraphSpec)
+        }
+        return
+      }
+      // 表空 → 读一次旧 JSON 文件灌入表（迁移兜底；此后表为准，文件不再回读）
+      for (const spec of await this.readFileSpecs()) {
+        this.specs.set(spec.id, spec)
+        await this.eventLog.saveSpec({ id: spec.id, version: spec.version, spec })
+      }
+      return
+    }
+    for (const spec of await this.readFileSpecs()) this.specs.set(spec.id, spec)
+  }
+
+  private async readFileSpecs(): Promise<GraphSpec[]> {
+    if (!this.filePath) return []
     try {
       const raw = await fs.readFile(this.filePath, 'utf-8')
       const parsed = JSON.parse(raw) as GraphSpec[]
-      for (const spec of parsed) this.specs.set(spec.id, spec)
+      return Array.isArray(parsed) ? parsed : []
     } catch {
       // 无文件/损坏 → 空表起步
+      return []
     }
   }
 
   async save(spec: GraphSpec): Promise<void> {
     this.specs.set(spec.id, spec)
+    if (this.eventLog) {
+      await this.eventLog.saveSpec({ id: spec.id, version: spec.version, spec })
+      return
+    }
     if (this.filePath) {
       await fs.writeFile(this.filePath, JSON.stringify([...this.specs.values()], null, 2), 'utf-8')
     }
