@@ -116,18 +116,20 @@ bridge 协议（NDJSON action/ok）**无版本协商**，升级不会握手失�
 
 ## 7. 本轮迁移实施台账
 
-分支 `feat/agent-retro-cockpit-migration`（基于 main @ 6b66b8b），与 P2 运行中心会话零文件交集（P2 占 `custom/*/loop/` 与 patch 202-204，本任务新 patch 从 205 起）。
+分支 `feat/agent-retro-cockpit-migration`（基于 main @ 6b66b8b），与 P2 运行中心会话零文件交集（P2 占 `custom/*/loop/` 与 patch 202-204，本任务新 patch 205-207，series 追加尾部）。
 
 | 项 | 内容 | 状态 |
 |---|---|---|
-| T0 | 侧边栏 `sidebar.cockpit` i18n key 修复（patch 187 去重时误删，现仅存 `cockpit.brandTitle`） | 进行中 |
-| T1 | 子代理/委派可见性：fleet 链路透传 process_notes 与子代理实时字段，cockpit 展示 | 进行中 |
-| T2 | 压缩与用量可见性：时间线消费 compression 事件，RunTrace 补 usage anchor | 进行中 |
-| T3 | MCP profile 健康信号进 attention/inbox | 进行中 |
-| T4 | 历史全文检索接入（门控：先核验 FTS5 对外接口形态） | 门控核验中 |
-| T5 | runtime pin 0.20.6 → hermes-0.21.0-runtime patch（门控：vanilla 0.21.0 动词核验） | 门控核验中 |
+| T0 | 侧边栏 `sidebar.cockpit` i18n key 修复（改用 `cockpit.brandTitle`，patch 072 单点改动） | ✅ commit b313bfb |
+| T1 | 子代理/委派可见性：bridge `background_tasks` 花名册经 fleet-tap/snapshot 透传，FleetGrid 卡片实时展示（goal/model/last_tool/工具数；完成后时长/成本/token；hover 详情），i18n patch 205/206 | ✅ commit f7416b7 |
+| T2 | RunTrace L2 用量汇总：`buildTraceGraph` 聚合 llm_span usage 进 `meta.usage`，Modal 头部 chip 展示（L2 优先 L1 兜底）。**范围修正**：compression 事件上游 chat 链路已全局消费展示（`api/studio/chat.ts:852` + `MessageList.vue:754`），cockpit 内嵌 ChatView 直接继承，无需重做 | ✅ commit b33a07f |
+| T3 | MCP 连接降级信号进收件箱：store 60s 轮询 `GET /api/hermes/mcp/servers`（设置页同款接口，零 server 改动），inbox 新增 'mcp' kind（权重在 blocked 之后 clarify 之前），点击跳 `hermes.mcp` | ✅ commit 9262f9f |
+| T4 | 历史全文检索接入 | ⛔ 不实施：门控核验发现等价能力已存在——cockpit 全局搜索（store `runSearch`，300ms 去抖 + 5min 缓存）已消费 `GET /api/studio/search/sessions`（含 profile 权限过滤与任务映射，store/cockpit.ts:995、routes/sessions.ts:19）；HistoryModal 的"搜索历史事件"是本地事件过滤，属另一维度。重复建设无增量 |
+| T5 | runtime pin 0.20.6 → hermes-0.21.0-runtime（patch 207，三处一致：runtime-config.mjs / runtime-release.json / paths.ts）。前置核验通过：vanilla v2026.8.31 原生含 specify/decompose/context；`hermes-0.21.1-runtime` tag 不存在，出现后 3 行跟进 | ✅ commit 5cd6504（发版冒烟留给发版流程） |
 
-各项完成情况随收口在本表更新；未实施项会明确标注原因，不默认通过。
+**验证口径**：全量 vitest 745（main 基线）→ 757 passed + 6 skipped、0 fail；隔离沙箱（/Volumes/nvme2230/.rp-sandbox，同卷硬链接 clone 两上游仓 + overlay 拷贝平级布局，原生跑 inject.mjs）patch 重放 149 → 152 全绿。上游 tsc / vue-tsc / 主 checkout 全量门禁在合并时序点执行（P2 落地后）。
+
+**T2 涉及的存量修复**：trace.ts llm 节点 detail 引用了被改名遮蔽的变量（`usage` → `usageSpan`），已随 T2 修正。
 
 ## 8. Non-goals
 
