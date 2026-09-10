@@ -206,8 +206,13 @@ export function buildFleetSnapshot(options: BuildFleetSnapshotOptions): FleetSes
     const existing = byId.get(entry.id)
     const liveActiveAt = entry.isWorking ? now : existing?.lastActiveAt || now
     // 后台委派中（父会话 idle、子代理 running）的会话，活动时间取花名册最新更新，
-    // 避免其在快照排序里沉底。
-    const subActiveAt = entry.subagents.reduce((max, sub) => Math.max(max, sub.updated_at), 0)
+    // 避免其在快照排序里沉底。只统计 status='running' 的子代理（2026-09-10 风险审查
+    // #5）：completed 子代理的 updated_at 同样会抬升 lastActiveAt，使父会话在子代理
+    // 完成后仍被当"最近活跃"参与排序与时间窗过滤。
+    const subActiveAt = entry.subagents.reduce(
+      (max, sub) => (sub.status === 'running' ? Math.max(max, sub.updated_at) : max),
+      0,
+    )
     byId.set(entry.id, {
       id: entry.id,
       profile: entry.profile || existing?.profile || 'default',

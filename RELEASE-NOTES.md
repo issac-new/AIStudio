@@ -5,7 +5,7 @@ SwarmStudio **2.17**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码
 SwarmStudio **2.16**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发）
 SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
 
-> **2.17** — 三 upstream 复核（2026-09-10）：hermes-studio 仍 **v1.0.2**（Latest 标记在 v0.7.18 为上游维护者误置，v1.0.2 为实际最新）、hermes-agent 仍 **v2026.9.7 (v0.21.1)**、element-web 仍 **v1.12.27**（v1.12.28 仅 rc）——**零 upstream 升级**。本版为 **overlay 自有功能轮**：AI 协作中心 loop graph 彻底重构三期（P0 内核 + P1 生产切换 + P2 运行中心）全部合入 main（b556bdc → 209ecee，31 commits + P2 squash），148 patches 无 regen、无新增。desktop 捆绑 runtime pin 0.20.6 → **0.21.0**（P2 会话 T5）。
+> **2.17** — 三 upstream 复核（2026-09-10）：hermes-studio 仍 **v1.0.2**（Latest 标记在 v0.7.18 为上游维护者误置，v1.0.2 为实际最新）、hermes-agent 仍 **v2026.9.7 (v0.21.1)**、element-web 仍 **v1.12.27**（v1.12.28 仅 rc）——**零 upstream 升级**。本版为 **overlay 自有功能轮**：AI 协作中心 loop graph 彻底重构三期（P0 内核 + P1 生产切换 + P2 运行中心）全部合入 main（b556bdc → 209ecee，31 commits + P2 squash），patches 148 → **158**（新增 201-212 共 11 条，无 regen）。desktop 捆绑 runtime pin 0.20.6 → **0.21.0**（P2 会话 T5）。
 
 ### 2.17 明细（overlay 侧）
 
