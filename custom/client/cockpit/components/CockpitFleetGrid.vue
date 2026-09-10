@@ -8,7 +8,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
-import type { FleetSession } from '@/custom/cockpit/adapters/fleet-adapter'
+import type { FleetSession, FleetSubagent } from '@/custom/cockpit/adapters/fleet-adapter'
 
 const store = useCockpitStore()
 const { t } = useI18n()
@@ -24,9 +24,13 @@ const sessions = computed(() => {
     list = list.filter(s =>
       s.title.toLowerCase().includes(q)
       || s.profile.toLowerCase().includes(q)
-      || s.lastPreview.toLowerCase().includes(q))
+      || s.lastPreview.toLowerCase().includes(q)
+      || s.subagents.some(sub => `${sub.goal} ${sub.last_tool}`.toLowerCase().includes(q)))
   }
-  if (workingOnly.value) list = list.filter(s => s.status === 'working' || s.approvals.length > 0 || s.clarifies.length > 0)
+  if (workingOnly.value) {
+    list = list.filter(s => s.status === 'working' || s.approvals.length > 0 || s.clarifies.length > 0
+      || s.subagents.some(sub => sub.status === 'running'))
+  }
   return list
 })
 
@@ -57,6 +61,41 @@ function ago(ts: number): string {
   if (mins < 60) return t('cockpit.minutesAgo', { n: mins })
   if (mins < 1440) return t('cockpit.hoursAgo', { n: Math.floor(mins / 60) })
   return t('cockpit.daysAgo', { n: Math.floor(mins / 1440) })
+}
+
+// ── 子代理花名册（hermes-agent 0.21.1 delegation，数据经 fleet 快照透传）──
+
+const SUBAGENT_ROWS = 4
+
+function runningSubCount(session: FleetSession): number {
+  return session.subagents.filter(sub => sub.status === 'running').length
+}
+
+function visibleSubagents(session: FleetSession): FleetSubagent[] {
+  return session.subagents.slice(0, SUBAGENT_ROWS)
+}
+
+function subMeta(sub: FleetSubagent): string {
+  if (sub.status === 'running') {
+    return [sub.model, sub.last_tool, sub.tool_count ? `×${sub.tool_count}` : ''].filter(Boolean).join(' · ')
+  }
+  const parts: string[] = []
+  if (sub.duration_seconds != null) parts.push(`${Math.round(sub.duration_seconds)}s`)
+  if (sub.cost_usd != null) parts.push(`$${sub.cost_usd.toFixed(3)}`)
+  if (sub.input_tokens != null || sub.output_tokens != null) {
+    parts.push(`${sub.input_tokens ?? 0}+${sub.output_tokens ?? 0}tok`)
+  }
+  return parts.join(' · ')
+}
+
+function subTooltip(sub: FleetSubagent): string {
+  const lines = [sub.goal || sub.subagent_id, `status=${sub.status} model=${sub.model || '?'} depth=${sub.depth}`]
+  if (sub.input_tokens != null || sub.output_tokens != null) {
+    lines.push(`tokens: ${sub.input_tokens ?? 0} in / ${sub.output_tokens ?? 0} out`)
+  }
+  if (sub.cost_usd != null) lines.push(`cost: $${sub.cost_usd.toFixed(4)}`)
+  if (sub.summary) lines.push(sub.summary)
+  return lines.join('\n')
 }
 
 async function approve(session: FleetSession, approvalId: string, choice: 'once' | 'deny') {
@@ -109,6 +148,23 @@ async function clarify(session: FleetSession, clarifyId: string) {
           <span v-if="s.source" class="fleet-card__src">{{ s.source }}</span>
         </div>
         <div class="fleet-card__preview">{{ s.lastPreview || ' ' }}</div>
+        <div v-if="s.subagents.length" class="fleet-card__subs">
+          <div class="fleet-card__subs-head">
+            <span class="fleet-card__subs-label">{{ t('cockpit.fleetSubagents') }}</span>
+            <span v-if="runningSubCount(s)" class="fleet-card__subs-run">{{ t('cockpit.fleetSubagentsRun', { n: runningSubCount(s) }) }}</span>
+          </div>
+          <div
+            v-for="sub in visibleSubagents(s)"
+            :key="sub.subagent_id"
+            class="fleet-card__sub"
+            :class="{ 'is-done': sub.status !== 'running' }"
+            :title="subTooltip(sub)"
+          >
+            <span class="fleet-card__sub-goal">{{ sub.goal || sub.subagent_id }}</span>
+            <span class="fleet-card__sub-meta">{{ subMeta(sub) || ' ' }}</span>
+          </div>
+          <div v-if="s.subagents.length > SUBAGENT_ROWS" class="fleet-card__subs-more">+{{ s.subagents.length - SUBAGENT_ROWS }}</div>
+        </div>
         <div v-if="s.approvals.length || s.clarifies.length" class="fleet-card__actions" @click.stop>
           <div v-for="a in s.approvals" :key="a.approval_id" class="fleet-card__approval">
             <span class="fleet-card__approval-text" :title="a.preview">{{ t('cockpit.fleetApproval') }}: {{ a.preview || a.approval_id }}</span>
@@ -182,6 +238,26 @@ async function clarify(session: FleetSession, clarifyId: string) {
   overflow: hidden; word-break: break-all; white-space: pre-wrap;
 }
 .fleet-card__actions { display: flex; flex-direction: column; gap: 4px; }
+.fleet-card__subs {
+  display: flex; flex-direction: column; gap: 2px; padding: 4px 6px;
+  background: var(--bg-secondary); border-radius: 4px; border: 1px dashed var(--border-color);
+}
+.fleet-card__subs-head { display: flex; align-items: center; gap: 6px; }
+.fleet-card__subs-label { font-size: 9px; font-weight: 700; letter-spacing: .03em; color: var(--text-muted); }
+.fleet-card__subs-run {
+  font-size: 9px; font-weight: 700; color: #10b981;
+  background: rgba(16, 185, 129, .12); border-radius: 4px; padding: 0 4px;
+}
+.fleet-card__sub { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.fleet-card__sub-goal {
+  flex: 0 1 auto; min-width: 0; font-size: 10px; color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fleet-card__sub.is-done .fleet-card__sub-goal { color: var(--text-muted); }
+.fleet-card__sub-meta {
+  flex-shrink: 0; margin-left: auto; font-size: 9px; font-family: ui-monospace, monospace; color: var(--text-muted);
+}
+.fleet-card__subs-more { font-size: 9px; color: var(--text-muted); }
 .fleet-card__approval {
   display: flex; align-items: center; gap: 6px; background: rgba(239, 68, 68, .08);
   border: 1px solid rgba(239, 68, 68, .35); border-radius: 4px; padding: 4px 6px;

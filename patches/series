@@ -252,3 +252,6 @@
 # P1 Task 7: loop graph 生产装配——GRAPH_ENGINE=legacy|shadow|on 三态分流 +
 # graph REST(/api/graph/runs|specs) + /graph socket + 审批桥接(默认 legacy 零行为变化)
 202-loop-graph-assembly.patch
+# T1 子代理花名册: cockpit fleet 卡片子代理实时状态条(hermes-agent 0.21.1 delegation)
+205-client-i18n-fleet-subagents-zh.patch
+206-client-i18n-fleet-subagents-en.patch

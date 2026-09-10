@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   extractPendingInteractions,
   extractLastPreview,
+  extractSubagents,
   getFleetLiveEntries,
   registerChatRunSocket,
   unregisterChatRunSocket,
@@ -48,6 +49,60 @@ describe('extractLastPreview', () => {
   it('clips to 200 chars and returns empty on nothing readable', () => {
     expect(extractLastPreview([{ role: 'assistant', content: 'x'.repeat(500) }])).toHaveLength(200)
     expect(extractLastPreview(undefined)).toBe('')
+  })
+})
+
+describe('extractSubagents（bridge background_tasks → 花名册）', () => {
+  it('normalizes entries, drops invalid ones, running first', () => {
+    const tasks = {
+      'sa-done': {
+        subagent_id: 'sa-done', goal: '收尾整理', status: 'completed', model: 'gpt-6',
+        duration_seconds: 12.4, cost_usd: 0.021, input_tokens: 900, output_tokens: 300,
+        updated_at: 1757400000, started_at: 1757399980, completed_at: 1757400010,
+      },
+      'sa-run': {
+        subagent_id: 'sa-run', goal: '调研上游变更', status: 'running',
+        tool_count: 7, last_tool: 'web_search', updated_at: 1757400100, started_at: 1757400050,
+      },
+      invalid: { goal: '缺 subagent_id' },
+    }
+    const list = extractSubagents(tasks)
+    expect(list).toHaveLength(2)
+    expect(list[0]).toMatchObject({ subagent_id: 'sa-run', status: 'running', tool_count: 7 })
+    expect(list[0].updated_at).toBe(1757400100 * 1000)
+    expect(list[1]).toMatchObject({ subagent_id: 'sa-done', status: 'completed', cost_usd: 0.021 })
+    expect(list[1].completed_at).toBe(1757400010 * 1000)
+  })
+
+  it('returns empty roster for undefined/garbage input', () => {
+    expect(extractSubagents(undefined)).toEqual([])
+    expect(extractSubagents('nope' as unknown as Record<string, unknown>)).toEqual([])
+    expect(extractSubagents({ a: null })).toEqual([])
+  })
+
+  it('threads backgroundTasks through live entries into the snapshot', () => {
+    registerChatRunSocket(
+      {
+        sessionMap: new Map([
+          ['delegating', {
+            isWorking: false,
+            queue: [],
+            events: [],
+            messages: [],
+            backgroundTasks: {
+              'sa-1': { subagent_id: 'sa-1', goal: '后台巡检', status: 'running', tool_count: 3, updated_at: 1757400100 },
+            },
+          }],
+        ]),
+      },
+      { getSession: () => null, listSessions: () => [] },
+    )
+    const entries = getFleetLiveEntries()
+    expect(entries[0].subagents).toHaveLength(1)
+    expect(entries[0].subagents[0]).toMatchObject({ subagent_id: 'sa-1', goal: '后台巡检', status: 'running' })
+    const snapshot = buildFleetSnapshotFromTap()
+    expect(snapshot.find(s => s.id === 'delegating')!.subagents).toHaveLength(1)
+    unregisterChatRunSocket()
   })
 })
 
@@ -129,11 +184,34 @@ describe('buildFleetSnapshot (pure)', () => {
       agent: null,
     }))
     const snapshot = buildFleetSnapshot({
-      live: [{ id: 'live-x', profile: 'p', isWorking: true, isAborting: false, queueLength: 0, runStartedAt: null, source: '', lastPreview: '', approvals: [], clarifies: [] }],
+      live: [{ id: 'live-x', profile: 'p', isWorking: true, isAborting: false, queueLength: 0, runStartedAt: null, source: '', lastPreview: '', approvals: [], clarifies: [], subagents: [] }],
       dbSessions: db,
       now,
       limit: 3,
     })
     expect(snapshot.some(s => s.id === 'live-x')).toBe(true)
+  })
+
+  it('idle 会话有 running 子代理时 lastActiveAt 取花名册最新更新', () => {
+    const now = Date.now()
+    const subUpdated = now - 30_000
+    const snapshot = buildFleetSnapshot({
+      live: [{
+        id: 'delegating', profile: 'p', isWorking: false, isAborting: false, queueLength: 0,
+        runStartedAt: null, source: '', lastPreview: '', approvals: [], clarifies: [],
+        subagents: [{
+          subagent_id: 'sa', parent_id: '', depth: 0, goal: '后台巡检', model: '', status: 'running',
+          tool_count: 0, last_tool: '', preview: '', started_at: null, updated_at: subUpdated,
+          completed_at: null, duration_seconds: null, api_calls: null, input_tokens: null,
+          output_tokens: null, cost_usd: null, files_read: null, files_written: null, summary: '',
+        }],
+      }],
+      dbSessions: [{ id: 'delegating', profile: 'p', title: '委派', last_active: Math.floor((now - 7200_000) / 1000), source: '', agent: '' }],
+      now,
+    })
+    const session = snapshot.find(s => s.id === 'delegating')!
+    expect(session.status).toBe('idle')
+    expect(session.lastActiveAt).toBe(subUpdated)
+    expect(session.subagents).toHaveLength(1)
   })
 })

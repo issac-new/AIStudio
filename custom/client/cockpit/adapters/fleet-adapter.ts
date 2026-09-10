@@ -16,6 +16,84 @@ export interface FleetClarifyPreview {
   question: string
 }
 
+/** 子代理花名册条目（服务端 fleet-snapshot FleetSubagent 的客户端镜像） */
+export interface FleetSubagent {
+  subagent_id: string
+  parent_id: string
+  depth: number
+  goal: string
+  model: string
+  status: string
+  tool_count: number
+  last_tool: string
+  preview: string
+  started_at: number | null
+  updated_at: number
+  completed_at: number | null
+  duration_seconds: number | null
+  api_calls: number | null
+  input_tokens: number | null
+  output_tokens: number | null
+  cost_usd: number | null
+  files_read: number | null
+  files_written: number | null
+  summary: string
+}
+
+function clip(value: unknown, max: number): string {
+  const s = typeof value === 'string' ? value.trim() : ''
+  return s.length > max ? `${s.slice(0, max)}…` : s
+}
+
+function countOrNull(value: unknown): number | null {
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
+function msOrNull(value: unknown): number | null {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return null
+  return n < 1e12 ? n * 1000 : n
+}
+
+function normalizeSubagent(raw: any): FleetSubagent | null {
+  if (!raw || typeof raw !== 'object' || typeof raw.subagent_id !== 'string' || !raw.subagent_id) return null
+  return {
+    subagent_id: String(raw.subagent_id),
+    parent_id: clip(raw.parent_id, 64),
+    depth: num(raw.depth),
+    goal: clip(raw.goal, 160),
+    model: clip(raw.model, 64),
+    status: str(raw.status, 'running'),
+    tool_count: num(raw.tool_count),
+    last_tool: clip(raw.last_tool, 64),
+    preview: clip(raw.preview, 160),
+    started_at: msOrNull(raw.started_at),
+    updated_at: (() => { const n = Number(raw.updated_at); if (!Number.isFinite(n) || n <= 0) return 0; return n < 1e12 ? n * 1000 : n })(),
+    completed_at: msOrNull(raw.completed_at),
+    duration_seconds: countOrNull(raw.duration_seconds),
+    api_calls: countOrNull(raw.api_calls),
+    input_tokens: countOrNull(raw.input_tokens),
+    output_tokens: countOrNull(raw.output_tokens),
+    cost_usd: countOrNull(raw.cost_usd),
+    files_read: countOrNull(raw.files_read),
+    files_written: countOrNull(raw.files_written),
+    summary: clip(raw.summary, 200),
+  }
+}
+
+function normalizeSubagents(raw: unknown): FleetSubagent[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map(normalizeSubagent)
+    .filter((x): x is FleetSubagent => x !== null)
+    .sort((a, b) => {
+      const running = (x: FleetSubagent) => (x.status === 'running' ? 1 : 0)
+      if (running(a) !== running(b)) return running(b) - running(a)
+      return b.updated_at - a.updated_at
+    })
+}
+
 export interface FleetSession {
   id: string
   profile: string
@@ -30,6 +108,7 @@ export interface FleetSession {
   lastPreview: string
   approvals: FleetApprovalPreview[]
   clarifies: FleetClarifyPreview[]
+  subagents: FleetSubagent[]
 }
 
 export interface FleetSnapshot {
@@ -76,6 +155,7 @@ export function normalizeSnapshot(raw: unknown): FleetSnapshot {
           question: str(c.question),
         }))
         : [],
+      subagents: normalizeSubagents(item.subagents),
     }))
     : []
   return { ts: num(payload.ts), sessions }
