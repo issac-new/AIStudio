@@ -520,19 +520,10 @@ index ffcbd48..b875b91 100644
      'loginReset.successTitle': 'Login reset',
      'loginReset.successMessage': 'Login has been reset to {username} / {password}.',
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
-index 34f1ecc..21a9beb 100644
+index 9601f1a..97ee567 100644
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -54,7 +54,7 @@ const existingUserData = app.isPackaged
-   ? join(app.getPath('appData'), 'Hermes Studio')
-   : app.getPath('userData')
- app.setPath('userData', existingUserData)
--app.setName('Ekko Studio')
-+app.setName('SwarmStudio')
- 
- const PORT = Number(process.env.HERMES_DESKTOP_PORT) || 8748
- const START_HIDDEN = process.argv.includes('--hidden')
-@@ -480,7 +480,7 @@ function createTray() {
+@@ -477,7 +477,7 @@ function createTray() {
          quality: 'best',
        })
    tray = new Tray(icon)
@@ -541,7 +532,7 @@ index 34f1ecc..21a9beb 100644
    tray.on('click', () => {
      showMainWindow()
      updateTrayMenu()
-@@ -494,7 +494,7 @@ async function createWindow(): Promise<void> {
+@@ -491,7 +491,7 @@ async function createWindow(): Promise<void> {
      height: 820,
      minWidth: 769,
      minHeight: 600,
@@ -550,7 +541,7 @@ index 34f1ecc..21a9beb 100644
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -607,7 +607,7 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
+@@ -604,7 +604,7 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown):
      height: 760,
      minWidth: 620,
      minHeight: 480,
@@ -559,7 +550,7 @@ index 34f1ecc..21a9beb 100644
      backgroundColor: '#1a1a1a',
      autoHideMenuBar: true,
      show: false,
-@@ -732,7 +732,7 @@ function installMicrophonePermissionHandler() {
+@@ -729,7 +729,7 @@ function installMicrophonePermissionHandler() {
  function splashHtml(label = t('desktop.startingLocalServices')): string {
    const startingLabel = escapeHtml(label)
    const pageBackground = process.platform === 'win32' ? 'transparent' : '#1a1a1a'
@@ -568,7 +559,7 @@ index 34f1ecc..21a9beb 100644
  <style>
    html,body{margin:0;height:100%;background:${pageBackground};color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
    .surface{height:100%;background:#1a1a1a}
-@@ -749,7 +749,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
+@@ -746,7 +746,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
    @keyframes progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
    h1{font-weight:500;margin:0;font-size:18px}
  </style></head><body><main class="surface"><div class="wrap">
@@ -577,7 +568,7 @@ index 34f1ecc..21a9beb 100644
  <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
  <div id="label" class="label">${startingLabel}</div>
  <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
-@@ -813,7 +813,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -810,7 +810,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
          <pre>${safeError}</pre>
         </section>`
      : ''
@@ -586,7 +577,7 @@ index 34f1ecc..21a9beb 100644
  <style>
    :root{color-scheme:dark}
    *{box-sizing:border-box}
-@@ -841,7 +841,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
+@@ -838,7 +838,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
      button{min-height:78px}
    }
  </style></head><body><main class="surface"><div class="wrap">
@@ -595,7 +586,7 @@ index 34f1ecc..21a9beb 100644
  <p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
  ${errorBlock}
  <div class="actions">
-@@ -929,7 +929,7 @@ async function installPackagedCommandShims(): Promise<void> {
+@@ -926,7 +926,7 @@ async function installPackagedCommandShims(): Promise<void> {
    for (const result of results) {
      if (result.status === 'rejected') {
        console.warn(
@@ -604,7 +595,7 @@ index 34f1ecc..21a9beb 100644
          + `${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
        )
        continue
-@@ -1243,7 +1243,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
+@@ -1240,7 +1240,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?:
  
    const title = typeof payload?.title === 'string' && payload.title.trim()
      ? payload.title.trim()
@@ -613,7 +604,7 @@ index 34f1ecc..21a9beb 100644
    const body = typeof payload?.body === 'string' ? payload.body.trim().slice(0, 240) : ''
    const icon = resolveNotificationIcon(payload?.icon)
    const clickUrl = safeNotificationClickUrl(payload?.clickUrl)
-@@ -1338,7 +1338,7 @@ function runDesktopApp() {
+@@ -1340,7 +1340,7 @@ function runDesktopApp() {
      })
    }).catch(error => {
      console.error('[desktop] failed during Electron startup:', error)

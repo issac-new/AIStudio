@@ -1,15 +1,5 @@
-diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
---- a/packages/client/src/stores/hermes/chat.ts
-+++ b/packages/client/src/stores/hermes/chat.ts
-@@ -1,6 +1,6 @@
- import { mergeTaskPlanMessages, type TaskPlanSnapshot } from '@/utils/task-plan'
- import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, respondToolApproval, onPeerUserMessage, onSessionCommand, onSessionTitleUpdated, onSessionWorkspaceUpdated, onSessionSettingsUpdated, respondClarify, type ChatRunTransport, type RunEvent, type ResumeSessionPayload, type StartRunRequest, type ContentBlock as ContentBlockImport } from '@/api/studio/chat'
--import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, fetchWorkspaceRunChangeFile, fetchWorkspaceRunChangesForSession, setSessionModel, setSessionPushEnabled as persistSessionPushEnabled, setSessionReasoningEffort as persistSessionReasoningEffort, type HermesMessage, type SessionSummary, type WorkspaceRunChangeFileDetail, type WorkspaceRunChangeSummary } from '@/api/studio/sessions'
-+import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, fetchWorkspaceRunChangeFile, setSessionModel, setSessionPushEnabled as persistSessionPushEnabled, setSessionReasoningEffort as persistSessionReasoningEffort, type HermesMessage, type SessionSummary, type WorkspaceRunChangeFileDetail, type WorkspaceRunChangeSummary } from '@/api/studio/sessions'
- import { getActiveProfileName, hasApiKey } from '@/api/client'
- import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId } from '@/api/coding-agents'
- import { getDownloadUrl } from '@/api/studio/download'
 diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
+index a6d1004..ce212fa 100644
 --- a/packages/client/src/components/hermes/chat/ChatPanel.vue
 +++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
 @@ -16,6 +16,7 @@ import { fetchCodingAgentsStatus, inferCodingAgentApiMode, normalizeCodingAgentA
@@ -40,6 +30,7 @@ diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages
    e.preventDefault();
    showCategoryContextMenu.value = false;
 diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+index e48adfb..adeaeba 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
 @@ -36,7 +36,6 @@ import PendingInteractionCountdown from '@/components/hermes/chat/PendingInterac
@@ -59,6 +50,7 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
  const filesStore = useFilesStore()
  const toolPanelStore = useToolPanelStore()
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
+index 75cc6e0..39a9011 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 @@ -7,6 +7,7 @@ import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff
@@ -79,6 +71,7 @@ diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.v
          msg.role !== 'tool' ||
          toolTraceVisible.value ||
 diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
+index 0e21147..966237e 100644
 --- a/packages/client/src/components/layout/PageSidebarNav.vue
 +++ b/packages/client/src/components/layout/PageSidebarNav.vue
 @@ -54,6 +54,11 @@ function openGroupChat() {
@@ -93,7 +86,32 @@ diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages
  function openWorkflow() {
    if (props.active === 'workflow') return
    void router.push({ name: 'hermes.workflow' })
+diff --git a/packages/client/src/custom-modules.d.ts b/packages/client/src/custom-modules.d.ts
+new file mode 100644
+index 0000000..627a98b
+--- /dev/null
++++ b/packages/client/src/custom-modules.d.ts
+@@ -0,0 +1,6 @@
++// SwarmStudio overlay: custom modules live outside the upstream tree
++// (overlay/custom/client) and are verified by overlay vitest + vite build,
++// not by upstream's strict vue-tsc gate. Wildcard ambient declarations keep
++// imports type-resolved (as any) so the upstream build stays green.
++declare module '@/custom/*'
++declare module '@custom/*'
+diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index bee8dea..6ed9676 100644
+--- a/packages/client/src/stores/hermes/chat.ts
++++ b/packages/client/src/stores/hermes/chat.ts
+@@ -1,6 +1,6 @@
+ import { mergeTaskPlanMessages, type TaskPlanSnapshot } from '@/utils/task-plan'
+ import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, respondToolApproval, onPeerUserMessage, onSessionCommand, onSessionTitleUpdated, onSessionWorkspaceUpdated, onSessionSettingsUpdated, respondClarify, type ChatRunTransport, type RunEvent, type ResumeSessionPayload, type StartRunRequest, type ContentBlock as ContentBlockImport } from '@/api/studio/chat'
+-import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, fetchWorkspaceRunChangeFile, fetchWorkspaceRunChangesForSession, setSessionModel, setSessionPushEnabled as persistSessionPushEnabled, setSessionReasoningEffort as persistSessionReasoningEffort, type HermesMessage, type SessionSummary, type WorkspaceRunChangeFileDetail, type WorkspaceRunChangeSummary } from '@/api/studio/sessions'
++import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, fetchWorkspaceRunChangeFile, setSessionModel, setSessionPushEnabled as persistSessionPushEnabled, setSessionReasoningEffort as persistSessionReasoningEffort, type HermesMessage, type SessionSummary, type WorkspaceRunChangeFileDetail, type WorkspaceRunChangeSummary } from '@/api/studio/sessions'
+ import { getActiveProfileName, hasApiKey } from '@/api/client'
+ import { onAuthInvalidated } from '@/api/auth-invalidation'
+ import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId } from '@/api/coding-agents'
 diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
+index 1627050..cc2d9ff 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
 @@ -69,7 +69,6 @@ import ChatInput from '@/components/hermes/chat/ChatInput.vue'
@@ -104,15 +122,3 @@ diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client
  import { useAppStore } from '@/stores/hermes/app'
  import { useChatStore } from '@/stores/hermes/chat'
  import { useProfilesStore } from '@/stores/hermes/profiles'
-
-diff --git a/packages/client/src/custom-modules.d.ts b/packages/client/src/custom-modules.d.ts
-new file mode 100644
---- /dev/null
-+++ b/packages/client/src/custom-modules.d.ts
-@@ -0,0 +1,6 @@
-+// SwarmStudio overlay: custom modules live outside the upstream tree
-+// (overlay/custom/client) and are verified by overlay vitest + vite build,
-+// not by upstream's strict vue-tsc gate. Wildcard ambient declarations keep
-+// imports type-resolved (as any) so the upstream build stays green.
-+declare module '@/custom/*'
-+declare module '@custom/*'

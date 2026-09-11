@@ -1,17 +1,17 @@
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 7264ffb..229fb57 100644
+index d027fa7..3f22d41 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
-@@ -63,6 +63,8 @@ import {
-   type MobileCalendarResponse,
-   type MobileCalendarRequest,
- } from '../services/chat-run/mobile-calendar'
+@@ -73,6 +73,8 @@ import {
+   type MobileHealthResponse,
+   type MobileHealthRequest,
+ } from '../services/chat-run/mobile-health'
 +// overlay[fleet-tap]: 2.13 指挥中心 —— 注册实例供 custom 舰队聚合服务读取
 +import { registerChatRunSocket, unregisterChatRunSocket } from '../../../custom/services/hermes/fleet-tap'
  
  type AgentBridgeBackgroundNotification = any
  type AgentBridgeBackgroundSession = any
-@@ -526,6 +528,12 @@ export class ChatRunSocket {
+@@ -606,6 +608,12 @@ export class ChatRunSocket {
      this.backgroundPollTimer.unref?.()
      void this.pollBackgroundWork()
      logger.info('[chat-run-socket] Socket.IO ready at /chat-run')
@@ -24,7 +24,7 @@ index 7264ffb..229fb57 100644
    }
  
    // --- Auth middleware ---
-@@ -2677,6 +2685,10 @@ export class ChatRunSocket {
+@@ -2850,6 +2858,10 @@ export class ChatRunSocket {
    async close() {
      if (this.closing) return
      this.closing = true
