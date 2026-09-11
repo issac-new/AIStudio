@@ -194,7 +194,11 @@ export class InterruptTimeoutScanner {
     return last
   }
 
-  /** 兼容事件出站（loop 台账 + socket/matrix-bot）+ 事件日志水印落盘（节流依据 + 回放可见） */
+  /** 兼容事件出站（loop 台账 + socket/matrix-bot）+ 事件日志水印落盘（节流依据 + 回放可见）。
+   *  台账 #9（顺延 P4 清偿）：先 eventLog.append 落水印、成功后才 emitLoopEvent 出站——
+   *  原顺序先发后落，append 失败时水印缺失，下轮扫描在 24h 节流窗口内重复出站。
+   *  对换后的失败语义：append 抛错 → 本次不出站（scan 的单 run try/catch 记日志），
+   *  水印与出站保持"已出站必有水印"的不变量，重试由下轮扫描自然承接。 */
   private async escalate(
     runId: string,
     graphId: string,
@@ -211,11 +215,11 @@ export class InterruptTimeoutScanner {
     const event: LoopEvent = {
       type: 'loop.escalated', loopId, runId, interruptId, nodeId, reason, ts,
     }
-    this.opts.emitLoopEvent?.(event)
     await this.opts.eventLog.append({
       runId, graphId, ts: now, kind: ESCALATION_KIND, nodeId,
       payload: { interruptId, loopId, reason },
     })
+    this.opts.emitLoopEvent?.(event)
     this.log(`interrupt-timeout: escalated '${interruptId}' for run ${runId} (pending ${pendingForMs}ms)`)
   }
 }

@@ -149,6 +149,47 @@ describe('compileLoopToSpec — structure', () => {
     const gateRepair = spec.edges.find(e => e.from === 'gate' && e.to === 'handoff')
     expect(gateRepair?.condition).toEqual({ op: 'truthy', path: 'repairNeeded' })
   })
+
+  // T5（模板语义随实例化，2026-09-11）：编译产物 origin='template' + description
+  //（name/goal 合成）+ meta 透传——loop 自身语义（goal/cron）与实例化模板携带的
+  // loop.template.meta 都回到 spec.meta，前端模板卡/编辑器标题栏与实例化后所见一致。
+  it('stamps origin/description and projects loop semantics into spec.meta (T5)', () => {
+    const loop = makeLoop({
+      name: 'L', goal: 'g',
+      schedule: { mode: 'cron', cron: '0 9 * * *', timezone: 'UTC' },
+    })
+    const spec = compileLoopToSpec(loop, {})
+    expect(spec.origin).toBe('template')
+    expect(spec.description).toBe('L — g')
+    expect(spec.meta?.goal).toBe('g')
+    expect(spec.meta?.cron).toBe('0 9 * * *')
+    // 无模板溯源时，模板专属 meta 字段不出现
+    expect(spec.meta?.permissionLevel).toBeUndefined()
+    expect(spec.meta?.sensitivePaths).toBeUndefined()
+    expect(spec.meta?.worktreePolicy).toBeUndefined()
+    expect(spec.meta?.gateCommands).toBeUndefined()
+  })
+
+  it('passes loop.template.meta through to the compiled spec.meta (T5 模板语义随实例化)', () => {
+    const loop = makeLoop({
+      template: {
+        specId: 'spec-tpl',
+        meta: {
+          goal: 'tpl goal', permissionLevel: 'auto-edit', sensitivePaths: ['secrets/**'],
+          worktreePolicy: 'manual', gateCommands: ['npm test', 'npm run typecheck'],
+        },
+      },
+    })
+    const spec = compileLoopToSpec(loop, {})
+    // goal 以 loop 自身为准（创建时模板 goal 已缺省并入 loop.goal）；模板其余 meta 透传
+    expect(spec.meta?.goal).toBe('g')
+    expect(spec.meta?.permissionLevel).toBe('auto-edit')
+    expect(spec.meta?.sensitivePaths).toEqual(['secrets/**'])
+    expect(spec.meta?.worktreePolicy).toBe('manual')
+    expect(spec.meta?.gateCommands).toEqual(['npm test', 'npm run typecheck'])
+    // 产物仍过校验（origin 枚举/meta 为可选字段不破坏拓扑校验）
+    expect(() => validateGraphSpec(spec, { appendById: appendContractsById })).not.toThrow()
+  })
 })
 
 // ---------------------------------------------------------------------------

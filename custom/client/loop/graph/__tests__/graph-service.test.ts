@@ -73,4 +73,51 @@ describe('GraphService', () => {
     expect(seen).toContain('graph.started')
     expect(seen).toContain('graph.completed')
   })
+
+  // -------------------------------------------------------------------------
+  // P3 台账（T2 顺延 P4 清偿）：graph.forked / graph.failed 直发事件补 eid——
+  // 与 runtime 回填同格式 `<runId>-<seq>`，graph-socket 下发副本携带 eid，
+  // 前端按 eid 去重不再依赖 type+ts+nodeId 复合键兜底。
+  // -------------------------------------------------------------------------
+
+  it('graph.forked carries eid = <forkedId>-<seq of run.forked> (P3 台账 T2)', async () => {
+    const svc = new GraphService({ eventLog: new InMemoryEventLogStore() })
+    const captured: Array<{ type: string; eid?: string }> = []
+    svc.onEvent(e => { captured.push({ type: (e as { type: string }).type, eid: (e as { eid?: string }).eid }) })
+    svc.registerGraph(approvalGraph())
+    const { runId } = await svc.startRun('approval-flow')
+    const { runId: forkedId } = await svc.forkRun(runId, 1)
+
+    const forked = captured.find(e => e.type === 'graph.forked')!
+    // eid 格式 <forkedId>-<seq>（seq 为 store 全局计数器，不假定从 1 起）
+    expect(forked.eid?.startsWith(`${forkedId}-`)).toBe(true)
+    // eid 与 graph:history 同源：回放该流，run.forked 日志事件携带同一 eid 与 seq
+    const replay = await svc.replayRun(forkedId)
+    const forkedLog = replay.find(e => e.kind === 'run.forked')!
+    expect(forked.eid).toBe(forkedLog.eid)
+    expect(forked.eid).toBe(`${forkedId}-${forkedLog.seq}`)
+  })
+
+  it('graph.failed carries eid = <runId>-<seq of run.failed> after the append settles (P3 台账 T2)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const svc = new GraphService({ eventLog })
+    // 捕获事件引用（非快照）——eid 回填发生在 append resolve 的微任务里，
+    // 引用 held 的对象随后被 mutate，graph-socket 正是靠延迟快照读到它
+    const captured: unknown[] = []
+    svc.onEvent(e => { captured.push(e) })
+    // awaiting-input 的 run 才能 failRun（终态 run 直接返回 null）
+    svc.registerGraph(approvalGraph())
+    const { runId } = await svc.startRun('approval-flow')
+
+    svc.failRun(runId, 'interrupt timeout: test')
+    // eid 回填在 append resolve 的微任务里——两步微任务后（graph-socket 同款等待）可读
+    await new Promise(r => queueMicrotask(() => queueMicrotask(r)))
+    const failed = captured.find(e => (e as { type: string }).type === 'graph.failed') as { type: string; eid?: string }
+    expect(failed.eid?.startsWith(`${runId}-`)).toBe(true)
+    // 与日志侧 eid 同源：run.failed 日志事件携带同一 eid 与 seq
+    const replay = await svc.replayRun(runId)
+    const failedLog = replay.find(e => e.kind === 'run.failed')!
+    expect(failed.eid).toBe(failedLog.eid)
+    expect(failed.eid).toBe(`${runId}-${failedLog.seq}`)
+  })
 })

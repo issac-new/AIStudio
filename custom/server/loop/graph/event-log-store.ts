@@ -145,7 +145,10 @@ export class InMemoryEventLogStore implements EventLogStore {
 
   async getSpec(id: string): Promise<StoredGraphSpec | null> {
     const s = this.specs.get(id)
-    return s ? { id: s.id, version: s.version, spec: s.spec } : null
+    // 台账 #13（顺延 P4 清偿）：spec 返回深副本（saveCheckpoint/checkpoint 读侧同款
+    // JSON 往返）——SQLite 实现天然经 JSON 序列化隔离，InMemory 直泄内部引用会让
+    // 调用方改写共享结构（如 GraphSpecStore.load 灌表路径）污染 store 内存态。
+    return s ? { id: s.id, version: s.version, spec: JSON.parse(JSON.stringify(s.spec)) } : null
   }
 
   async listSpecs(): Promise<StoredGraphSpecMeta[]> {

@@ -73,6 +73,17 @@ export function loopToGraphInstance(loop: LoopInstance, contracts: Array<{ id: s
   }
 }
 
+/** 投影丢弃告警去重集（台账 #14，顺延 P4 清偿）：loopToGraphDef 是纯函数、无注入面，
+ *  沿用 graph-compiler guardFallbackWarned 的模块级 warn-once 先例——按 loopId|from→to
+ *  只 warn 一次，防 REST 读路径（GET /api/graph/graphs/:id）反复投影刷屏。
+ *  测试经 resetProjectionWarnForTest() 清空。 */
+const droppedEdgeWarned = new Set<string>()
+
+/** 测试专用：清空投影丢弃告警去重集（模块级单例，跨投影共享） */
+export function resetProjectionWarnForTest(): void {
+  droppedEdgeWarned.clear()
+}
+
 /** 把 LoopInstance 映射为 GraphDef（P2 Task 3：委托 compileLoopToSpec 编译，再投影 legacy REST 形状） */
 export function loopToGraphDef(loop: LoopInstance): GraphDef {
   const spec = compileLoopToSpec(loop, {})
@@ -95,15 +106,29 @@ export function loopToGraphDef(loop: LoopInstance): GraphDef {
 
   // 边（逐字段对齐 legacy 形状）：
   // - 直连主干边（投影后 target 恰为 source 的下一阶段）保留，去掉编译期 label
-  // - validation→handoff 的 repair 回边保留 label + legacy repair 通道条件
+  // - validation/persistence→handoff 的 repair 回边保留 label + legacy repair 通道条件
   //   （编译产物的 repairNeeded 谓词作用于图执行通道，legacy REST 视图无此通道，不投影）
-  // - gate→stop-check 自环、gate-repair/no-contracts 分支边在 5 阶段视图无对应物，不投影
+  // - 台账 #17（顺延 P4 清偿）：同折叠自环不再静默丢弃——gate→stop-check 双双折叠进
+  //   scheduling，投影为 scheduling 自环（保留编译期 label 'gate-passed'），折叠内部的
+  //   门禁→止停这一步在 legacy 视图可见（同 source+target+label 去重防重复边）
+  // - 台账 #14：非线性主干边（no-contracts 短路 / gate-repair 回边等）按既有裁剪不投影，
+  //   但丢弃必须可见——warn 一次列明 from→to（形状事实源：loop-to-graph 现有测试钉住
+  //   这两类边不在 REST 视图）
   // - legacy tick 循环边 scheduling→discovery 补回（编译语义里由 RunSpawner 每 tick 新起 run 承载）
   const edges: EdgeDef[] = []
+  const selfLoopKeys = new Set<string>()
   for (const e of spec.edges) {
     const source = COMPILED_TO_REST_STAGE[e.from] ?? e.from
     const target = COMPILED_TO_REST_STAGE[e.to] ?? e.to
-    if (source === target) continue // gate→stop-check 同折叠为 scheduling，自环不投影
+    if (source === target) {
+      // gate→stop-check 同折叠为 scheduling → 投影为自环（台账 #17）
+      const key = `${source}→${target}:${e.label ?? ''}`
+      if (!selfLoopKeys.has(key)) {
+        selfLoopKeys.add(key)
+        edges.push({ source, target, label: e.label })
+      }
+      continue
+    }
     if (e.label === 'repair') {
       edges.push({
         source,
@@ -113,6 +138,15 @@ export function loopToGraphDef(loop: LoopInstance): GraphDef {
       })
     } else if (stages.indexOf(target) === stages.indexOf(source) + 1) {
       edges.push({ source, target })
+    } else {
+      // 台账 #14：静默丢弃 → warn 一次（from→to 用编译产物节点 id，最易回溯拓扑）
+      const key = `${loop.id}|${e.from}→${e.to}`
+      if (!droppedEdgeWarned.has(key)) {
+        droppedEdgeWarned.add(key)
+        console.warn(
+          `[loop-to-graph] projection drops non-linear edge ${e.from}→${e.to}` +
+          ` (label=${e.label ?? 'none'}) for loop ${loop.id} — compiled topology is authoritative, legacy REST view omits it`)
+      }
     }
   }
   if (!edges.some(e => e.source === 'scheduling' && e.target === 'discovery')) {
