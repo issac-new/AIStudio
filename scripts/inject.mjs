@@ -316,6 +316,16 @@ function main() {
     })();
     const precheckRaw = git('status --porcelain', hermesStudioRoot).trim();
     const patches = readSeries();
+    // 非 patch 产物(openapi.json 等)若有脏行:放行但显式预告回滚——"拒绝时零删除"
+    // 对这类文件不成立,至少让用户在回滚发生前看见(2026-09-12 审查)。
+    const artifactDirty = precheckRaw
+      .split('\n')
+      .filter((l) => l.trim())
+      .filter((l) => l.includes('docs/openapi.json'));
+    if (artifactDirty.length > 0) {
+      console.warn('[inject] WARN: 非 patch 产物存在未提交修改,inject 将回滚(非 patch 目标不保留):');
+      for (const l of artifactDirty) console.warn(`  ${l}`);
+    }
     const precheck = precheckRaw
       .split('\n')
       .filter((l) => l.trim())

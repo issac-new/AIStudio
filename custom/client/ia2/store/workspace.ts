@@ -273,6 +273,9 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     if (_kanbanWatchInstalled) return
     _kanbanWatchInstalled = true
     void import('@/stores/hermes/kanban').then(({ useKanbanStore }) => {
+      // 2026-09-12 审查：动态 import 未决期间可能已 unwatch（快速进出视图）——
+      // 此时标志位已复位，不得再安装 watch（否则泄漏 + 下次进入重复安装）
+      if (!_kanbanWatchInstalled) return
       const kanban = useKanbanStore()
       // 台账 T8（模块级 watch 永不卸）：stop 句柄存 store，消费方卸载时 unwatchKanbanTasks
       const stop = watch(() => kanban.tasks, () => {

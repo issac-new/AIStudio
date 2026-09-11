@@ -24,11 +24,14 @@ const router = useRouter()
 const loading = ref(false)
 const failed = ref(false)
 const links = ref<PersistedLink[]>([])
+/** 请求序号：抽屉快速切换任务时丢弃迟到响应（同 NodeInspector 竞态守卫，2026-09-12 审查） */
+let loadSeq = 0
 
 /** 单 loop 事件拉取上限（loop.persisted 量级远小于此；对齐 runs store 指标采集口径） */
 const EVENT_LIMIT = 500
 
 async function load(taskId: string): Promise<void> {
+  const seq = ++loadSeq
   loading.value = true
   failed.value = false
   try {
@@ -36,6 +39,7 @@ async function load(taskId: string): Promise<void> {
     const results = await Promise.allSettled(
       loops.map(l => loopRest.getEvents(l.id, undefined, EVENT_LIMIT)),
     )
+    if (seq !== loadSeq) return // 期间已切到别的任务：整套结果作废
     const events = results.flatMap(r => (r.status === 'fulfilled' ? r.value : []))
     // 任一 loop 事件拉取失败且反查结果为空 → 视为失败（结果可能不完整，不静默报"无关联"）；
     // 已有命中时失败降级为部分结果（关联已找到，够用）
@@ -46,10 +50,11 @@ async function load(taskId: string): Promise<void> {
     }
     links.value = persistedLinksForTask(events, taskId)
   } catch {
+    if (seq !== loadSeq) return
     failed.value = true
     links.value = []
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
 
