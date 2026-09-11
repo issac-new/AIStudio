@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
-index 949c4727..5a88e801 100644
+index d949a5ec..7ced8697 100644
 --- a/packages/server/src/modules/studio/controllers/auth.ts
 +++ b/packages/server/src/modules/studio/controllers/auth.ts
 @@ -6,14 +6,19 @@ import {
@@ -22,7 +22,7 @@ index 949c4727..5a88e801 100644
    updateUser,
    updateUsername,
    updateUserPassword,
-@@ -28,6 +33,20 @@ import { getUserJwtExpiresSeconds, issueAppJwt, issueUserJwt } from '../public/a
+@@ -27,6 +32,23 @@ import { getUserJwtExpiresSeconds, issueAppJwt, issueUserJwt } from '../public/a
  import { consumeAppAuthorizationCode, upsertAppConnection, type AppConnectionType } from '../services/app-relay/app-connections'
  import { listProfileNamesFromDisk } from '../public/profile-config'
  import { startOutboundRelayClient, stopOutboundRelayClient } from '../public/global-agent'
@@ -40,10 +40,13 @@ index 949c4727..5a88e801 100644
 +// HERMES_CUSTOM[SecSsrfGuard] BEGIN: SSRF 防护（登录速率限制函数已由 upstream auth.ts 顶部 import）
 +import { UnsafeUrlError, assertSafeOutboundUrl } from '../../../custom/security/url-guard'
 +// HERMES_CUSTOM[SecSsrfGuard] END
++// HERMES_CUSTOM[MatrixSessionStore] BEGIN: R1 每日 Brief 投递身份——登录会话本机落盘
++import { saveMatrixSession } from '../../../custom/matrix/session-store'
++// HERMES_CUSTOM[MatrixSessionStore] END
  import { getLanEndpointKind } from '../services/network/lan-discovery'
  import { getPublicSystemInfo } from '../public/system-info'
  import { config } from '../public/config'
-@@ -49,6 +68,9 @@ export async function authStatus(ctx: Context) {
+@@ -48,6 +70,9 @@ export async function authStatus(ctx: Context) {
   */
  export async function currentUser(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -53,7 +56,7 @@ index 949c4727..5a88e801 100644
    const user = userId ? findUserById(userId) : null
    if (!user) {
      ctx.status = 404
-@@ -68,6 +90,11 @@ export async function currentUser(ctx: Context) {
+@@ -67,6 +92,11 @@ export async function currentUser(ctx: Context) {
        requiresCredentialChange: process.env.HERMES_DESKTOP === 'true'
          ? false
          : user.username === DEFAULT_USERNAME && verifyPassword(DEFAULT_PASSWORD, user.password_hash),
@@ -65,7 +68,7 @@ index 949c4727..5a88e801 100644
      },
    }
  }
-@@ -99,7 +126,7 @@ function isValidAvatarPayload(value: unknown): { ok: true; json: string } | { ok
+@@ -98,7 +128,7 @@ function isValidAvatarPayload(value: unknown): { ok: true; json: string } | { ok
   */
  export async function getMyAvatar(ctx: Context) {
    const userId = ctx.state.user?.id
@@ -74,7 +77,7 @@ index 949c4727..5a88e801 100644
      ctx.status = 401
      ctx.body = { error: 'Unauthorized' }
      return
-@@ -606,6 +633,411 @@ function validateProfiles(profiles: string[]): string | null {
+@@ -605,6 +635,422 @@ function validateProfiles(profiles: string[]): string | null {
    return missing || null
  }
  
@@ -179,6 +182,17 @@ index 949c4727..5a88e801 100644
 +    ctx.body = { error: 'Failed to create or update user record' }
 +    return
 +  }
++
++  // HERMES_CUSTOM[MatrixSessionStore] BEGIN: 会话本机落盘（fire-and-forget）
++  // token 已校验、用户已绑定——把本次登录会话写入 ~/.hermes-web-ui/matrix-session.json，
++  // 作为 R1 每日 Brief 的 Matrix 投递身份（brief-matrix-delivery 消费）。
++  // 失败仅 warn 不阻断登录；不落盘只影响 Brief 投递，不影响本请求。
++  try {
++    saveMatrixSession({ homeserverUrl: safeOrigin, userId: matrixUserId, accessToken: matrixAccessToken, deviceId })
++  } catch (err: any) {
++    console.warn('[matrix] persist matrix session failed:', err?.message || err)
++  }
++  // HERMES_CUSTOM[MatrixSessionStore] END
 +
 +  // 4. Issue Hermes JWT
 +  try {
