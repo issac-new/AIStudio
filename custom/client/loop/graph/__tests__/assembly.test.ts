@@ -425,12 +425,92 @@ describe('graph REST run lifecycle', () => {
       eventLog: new InMemoryEventLogStore(),
       specStore,
     })
-    await invoke(router, 'post', '/api/graph/specs', {
-      id: 'spec-1', version: 1, channels: {}, nodes: [], edges: [], entryNode: 'a',
-      limits: { maxSteps: 10 },
+    const saved = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'spec-1', version: 1,
+      channels: { done: { reducer: 'overwrite', default: false } },
+      nodes: [{ id: 'a', type: 'function', config: {} }],
+      edges: [], entryNode: 'a', limits: { maxSteps: 10 },
     })
+    expect(saved.status).toBe(200)
     const list = await invoke(router, 'get', '/api/graph/specs')
     expect((list.body as { specs: Array<{ id: string }> }).specs.map(s => s.id)).toEqual(['spec-1'])
+  })
+
+  it('POST /api/graph/specs validates structure (P4：保存即校验) + 标 origin=editor + 拒绝伪装 template', async () => {
+    const specStore = new GraphSpecStore()
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+    const bad = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'bad', version: 1, channels: {}, nodes: [], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 },
+    })
+    expect(bad.status).toBe(400)
+    expect((bad.body as { error: string }).error).toMatch(/entry/i)
+
+    const spoof = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'spoof', version: 1, channels: {},
+      nodes: [{ id: 'a', type: 'function', config: {} }], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 }, origin: 'template',
+    })
+    expect(spoof.status).toBe(400)
+
+    const good = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'good', version: 1, channels: {},
+      nodes: [{ id: 'a', type: 'function', config: {} }], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 },
+    })
+    expect(good.status).toBe(200)
+    expect(specStore.get('good')?.origin).toBe('editor')
+  })
+
+  it('DELETE /api/graph/specs/:id removes editor specs; 404 unknown (P4)', async () => {
+    const specStore = new GraphSpecStore()
+    await specStore.save({
+      id: 'editor-1', version: 1, channels: {},
+      nodes: [{ id: 'a', type: 'function', config: {} }], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 }, origin: 'editor',
+    })
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+    const hit = await invoke(router, 'delete', '/api/graph/specs/editor-1')
+    expect(hit.status).toBe(200)
+    expect(specStore.get('editor-1')).toBeUndefined()
+    const miss = await invoke(router, 'delete', '/api/graph/specs/editor-1')
+    expect(miss.status).toBe(404)
+  })
+
+  it('POST /api/graph/specs/:id/runs 走 specRuntime；未装配 501 (P4 试跑)', async () => {
+    const specStore = new GraphSpecStore()
+    const routerBare = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+    const unavailable = await invoke(routerBare, 'post', '/api/graph/specs/x1/runs')
+    expect(unavailable.status).toBe(501)
+
+    const started: string[] = []
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+      specRuntime: {
+        startRun: async (specId: string) => {
+          started.push(specId)
+          return { runId: 'run-1', instance: { status: 'running' } }
+        },
+      },
+    })
+    const ok = await invoke(router, 'post', '/api/graph/specs/x1/runs')
+    expect(ok.status).toBe(200)
+    expect((ok.body as { runId: string }).runId).toBe('run-1')
+    expect(started).toEqual(['x1'])
   })
 
   it('GET /api/graph/specs/:id returns {id, version, spec}; 404 carries {error} (P3 台账 #25)', async () => {

@@ -10,7 +10,7 @@ import { promises as fs } from 'fs'
 import type { GraphService } from './graph-service'
 import type { EventLogStore } from './event-log-store'
 import type { RunSpawner } from './run-spawner'
-import type { GraphSpec } from './graph-spec'
+import { validateGraphSpec, type GraphSpec } from './graph-spec'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
@@ -93,6 +93,17 @@ export class GraphSpecStore {
     }
   }
 
+  /** P4：删除（内存 + 持久层）；模板 spec 编译期派生、不入此表，删除面天然限定自建 spec */
+  async delete(id: string): Promise<boolean> {
+    if (!this.specs.has(id)) return false
+    this.specs.delete(id)
+    if (this.eventLog) await this.eventLog.deleteSpec(id)
+    else if (this.filePath) {
+      await fs.writeFile(this.filePath, JSON.stringify([...this.specs.values()], null, 2), 'utf-8')
+    }
+    return true
+  }
+
   list(): GraphSpec[] {
     return [...this.specs.values()]
   }
@@ -108,6 +119,8 @@ export interface GraphRestDeps {
   /** mode=on 时手动 tick 经 spawner（可选：legacy/shadow 下 runs 端点只读） */
   spawner?: RunSpawner | null
   specStore?: GraphSpecStore | null
+  /** P4：自建 spec 起跑器（编辑器"试跑"链路；缺省时 specs/:id/runs 返回 501） */
+  specRuntime?: { startRun(specId: string, initialState?: unknown): Promise<{ runId: string; instance: unknown }> } | null
 }
 
 export function createGraphRunRouter(deps: GraphRestDeps): Router {
@@ -212,15 +225,51 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     ctx.body = { id: spec.id, version: spec.version, spec }
   })
 
-  // POST /api/graph/specs — 登记图规格（台账 i 持久化）
+  // POST /api/graph/specs — 登记图规格（台账 i 持久化）。
+  // P4 深化：过 validateGraphSpec（结构化 400）；origin 缺省标 'editor'，
+  // 显式 'template' 拒绝——模板只能由 loop 编译派生，不得从编辑器/导入伪装
   router.post('/api/graph/specs', async (ctx) => {
     const spec = ctx.request.body as GraphSpec
     if (!spec || typeof spec.id !== 'string' || !Array.isArray(spec.nodes) || !Array.isArray(spec.edges)) {
       ctx.status = 400; ctx.body = { error: 'Invalid GraphSpec' }; return
     }
+    if (spec.origin === 'template') {
+      ctx.status = 400; ctx.body = { error: 'origin "template" is reserved for loop-compiled specs' }; return
+    }
+    if (spec.origin === undefined) spec.origin = 'editor'
+    try {
+      validateGraphSpec(spec)
+    } catch (err) {
+      ctx.status = 400
+      ctx.body = { error: err instanceof Error ? err.message : String(err) }
+      return
+    }
     if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
     await deps.specStore.save(spec)
     ctx.body = { ok: true, id: spec.id }
+  })
+
+  // DELETE /api/graph/specs/:id — 删除自建 spec（编辑器编辑面；不存在 404）
+  router.delete('/api/graph/specs/:id', async (ctx) => {
+    if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return }
+    if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
+    const ok = await deps.specStore.delete(ctx.params.id)
+    if (!ok) { ctx.status = 404; ctx.body = { error: `Spec not found: ${ctx.params.id}` }; return }
+    ctx.body = { ok: true, id: ctx.params.id }
+  })
+
+  // POST /api/graph/specs/:id/runs — P4 编辑器试跑：hydrate 自建 spec → 注册 → 起跑
+  router.post('/api/graph/specs/:id/runs', async (ctx) => {
+    if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return }
+    if (!deps.specRuntime) { ctx.status = 501; ctx.body = { error: 'Spec runtime not configured (GRAPH_ENGINE=on required)' }; return }
+    try {
+      const { runId, instance } = await deps.specRuntime.startRun(ctx.params.id)
+      ctx.body = { runId, instance }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      ctx.status = message.includes('not found') ? 404 : 400
+      ctx.body = { error: message }
+    }
   })
 
   // POST /api/graph/runs/:id/start — 消费 fork 产物显式起跑（P1 台账 a 显式语义的 REST 面）
