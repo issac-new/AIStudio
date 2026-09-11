@@ -24,7 +24,6 @@ import {
   type TriageEntry, type TriageKind, type TriageProjection,
 } from '../adapters/inbox-center'
 import { localDateStr } from '../adapters/overview'
-import '@/custom/ia2/styles/ia2.scss'
 
 const router = useRouter()
 const { t } = useI18n()

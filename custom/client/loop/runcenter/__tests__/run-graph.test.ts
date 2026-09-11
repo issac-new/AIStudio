@@ -102,6 +102,24 @@ describe('buildRunGraph — 状态机投影（事件日志词汇）', () => {
     expect(taken).toEqual(['discovery->handoff'])
   })
 
+  // 台账 #25（scrubber→图前缀联动）：同一 spec 下逐前缀重投影，taken 集合单调扩张——
+  // 回放 seek 任意位置时画布高亮前缀与时间轴游标一致（RunDetailView graph= computed(
+  // buildRunGraph(spec, visibleEvents)) 的联动语义锚点）
+  it('前缀联动（回放 seek）：事件前缀推进 → taken 集合单调扩张、节点状态随之演进', () => {
+    // 事件形状对齐词汇表：completed 的 payload.goto 是路由事实（taken 判定源）
+    const events = [
+      logEv({ kind: 'node.started', nodeId: 'discovery', superStep: 1, ts: 1000 }),
+      logEv({ kind: 'node.completed', nodeId: 'discovery', superStep: 1, payload: { goto: ['handoff'] }, ts: 2000 }),
+      logEv({ kind: 'node.started', nodeId: 'handoff', superStep: 2, ts: 3000 }),
+      logEv({ kind: 'node.completed', nodeId: 'handoff', superStep: 2, payload: { goto: ['validation'] }, ts: 4000 }),
+    ]
+    const takenAt = (n: number) =>
+      buildRunGraph(SPEC, events.slice(0, n)).edges.filter(e => e.taken).map(e => e.id)
+    expect(takenAt(1)).toEqual([])                       // seek 至 started：无路由事实
+    expect(takenAt(2)).toEqual(['discovery->handoff'])   // discovery 完成后出边点亮
+    expect(takenAt(4)).toEqual(['discovery->handoff', 'handoff->validation']) // 游标推进单调扩张
+  })
+
   it('node.failed → failed；payload.error 进投影', () => {
     const g = buildRunGraph(SPEC, [
       logEv({ kind: 'node.started', nodeId: 'validation', superStep: 2, ts: 1000 }),
@@ -407,5 +425,40 @@ describe('formatEventTs — 时间轴时间标签', () => {
   it('非法输入落 —', () => {
     expect(formatEventTs(Number.NaN)).toBe('—')
     expect(formatEventTs('not-a-date')).toBe('—')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 台账 #24 — 大图布局：折行形态 + 基准（300 节点纯函数耗时上界）
+// ---------------------------------------------------------------------------
+describe('layoutRunGraph — 大图折行与性能（台账 #24）', () => {
+  function bigFanout(n: number): RunGraphData {
+    const nodes = Array.from({ length: n + 2 }, (_, i) =>
+      i === 0 ? { id: 'root', label: 'root' } : i === n + 1 ? { id: 'sink', label: 'sink' } : { id: `n${i}`, label: `n${i}` })
+    const edges = [
+      ...Array.from({ length: n }, (_, i) => ({ from: 'root', to: `n${i + 1}` })),
+      ...Array.from({ length: n }, (_, i) => ({ from: `n${i + 1}`, to: 'sink' })),
+    ]
+    return { nodes, edges } as unknown as RunGraphData
+  }
+
+  it('300 节点 fan-out：全覆盖、无坐标重叠、子列折行（8 行/子列）', () => {
+    const data = bigFanout(300)
+    const t0 = performance.now()
+    const pos = layoutRunGraph(data)
+    const ms = performance.now() - t0
+    expect(pos.size).toBe(302)
+    // 折行：root 列 300 节点 → 38 个子列（300/8 向上取整），y 不超过 7 档
+    const ys = new Set([...pos.values()].map(p => p.y))
+    expect(ys.size).toBeLessThanOrEqual(8)
+    // 无重叠坐标（同 x 的节点 y 互异）
+    const seen = new Set<string>()
+    for (const p of pos.values()) {
+      const key = `${p.x},${p.y}`
+      expect(seen.has(key)).toBe(false)
+      seen.add(key)
+    }
+    // 纯函数性能上界（宽松：防意外 O(n²) 回归；CI 慢机余量 50 倍）
+    expect(ms).toBeLessThan(500)
   })
 })

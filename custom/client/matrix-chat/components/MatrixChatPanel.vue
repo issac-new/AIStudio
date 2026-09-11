@@ -58,9 +58,6 @@ function openPageSidebar() {
   showSidebar.value = true
 }
 
-function openSettingsPage() {
-  router.push({ name: 'hermes.cockpit' })
-}
 
 // Sync route params with store
 const routeRoomId = computed(() => {
