@@ -36,8 +36,10 @@ export function setupGraphSocketNamespace(
   // eid（`<runId>-<seq>`）回填到事件对象上；此处以两步微任务链延迟下发——
   // 第二步在回填微任务之后入队，flush 时快照 {...e} 即携带 eid，与
   // graph:history 的 eid 同源（前端按 eid 去重，首连双发不再重复投影）。
-  // 例外：graph.forked / graph.failed 走 service 直发路径，无 runtime append
-  // 回填——不带 eid 下发，前端按 type+ts+nodeId 复合键兜底。
+  // P3 台账（T2 顺延 P4 清偿）：graph.forked / graph.failed 走 service 直发路径，
+  // 无 runtime 回填——graph-service 侧已对齐同款 eid 注入（forked 在 emit 前同步
+  // 构造 `<forkedId>-<latestSeq>`；failed 的 run.failed append resolve 后微任务回填），
+  // 本链 flush 时同样携带 eid；回填失败的残余路径仍由前端 type+ts+nodeId 复合键兜底。
   graphService.onEvent((e: GraphEvent) => {
     const runId = (e as { threadId?: string }).threadId
     if (!runId) return

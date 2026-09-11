@@ -10,6 +10,9 @@
 // 的相对解析结果一致，两种上下文都能解析；client 侧反向 re-export（见
 // custom/client/loop/types.ts）由 vite/vitest 按物理真实路径解析，不受影响。
 
+// 模板 meta 形状单一事实源在 graph-spec（type-only import，运行时零依赖）
+import type { GraphSpecMeta } from './graph/graph-spec'
+
 export type LoopStage = 'discovery' | 'handoff' | 'validation' | 'persistence' | 'scheduling'
 export type LoopStatus = 'idle' | 'running' | 'paused' | 'blocked' | 'awaiting-review' | 'completed' | 'failed'
 export type AutonomyLevel = 'L1' | 'L2' | 'L3'
@@ -48,6 +51,19 @@ export interface WebhookEvent {
   filter?: string
 }
 
+/** 模板实例化溯源（T5 模板语义随实例化，2026-09-11）：创建 loop 时经 body.template
+ *  指定 GraphSpec 的 specId，其 meta 随 loop 持久化，编译时透传回编译产物 spec.meta
+ *  ——修复"模板卡所见与实例化后所得分叉"。字段消费情况：
+ *  - goal：创建时缺省并入 loop.goal（createLoop 控制器）
+ *  - gateCommands：装配层并入编译 deps（graph-assembly compile 闭包 → gate 节点白名单）
+ *  - permissionLevel / sensitivePaths / worktreePolicy：服务端暂无执行面消费点，
+ *    持久化于此并经编译产物 spec.meta 投影给前端（存而未消费，诚实记账）。
+ *  注：SaaSStore 列式落表不持久化本字段（与 tenant/maxAttempts 同现状，见其 INSERT）。 */
+export interface LoopTemplateRef {
+  specId: string
+  meta: GraphSpecMeta
+}
+
 export interface LoopInstance {
   id: string
   name: string
@@ -68,6 +84,9 @@ export interface LoopInstance {
    *  repair 回边 guard.maxIterations = max(该值, 3)，消除"契约配 ≥5 时回边先耗尽"边界。
    *  缺省时编译器回退 3 并 warn 一次。 */
   maxAttempts?: number
+  /** 模板实例化溯源（可选，T5）：body.template（specId）携带的模板 meta 持久化，
+   *  编译产物透传（见 LoopTemplateRef 注释） */
+  template?: LoopTemplateRef
   createdAt: string
   updatedAt: string
   lastTickAt: string | null

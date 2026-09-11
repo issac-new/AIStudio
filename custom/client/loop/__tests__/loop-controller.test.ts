@@ -144,4 +144,137 @@ describe('Loop Controller (integration)', () => {
       server.close()
     }
   })
+
+  // T5（模板语义随实例化，2026-09-11）：POST /api/loop/loops 增可选 body.template（specId）
+  // → 从模板源取 spec.meta：goal 缺省补 meta.goal；其余 meta 持久化进 loop.template
+  //（编译时透传 spec.meta / gateCommands 并入编译 deps，见 graph-compiler/graph-assembly）。
+  it('POST /api/loop/loops with body.template merges template meta into the loop config (T5)', async () => {
+    const { createLoopRouter } = await import('../../../server/loop/controllers/loop')
+    const { default: Koa } = await import('koa')
+    const created: Array<Record<string, unknown>> = []
+    const mockStore = {
+      listLoops: vi.fn().mockResolvedValue([]),
+      getLoop: vi.fn(), deleteLoop: vi.fn(),
+      createLoop: vi.fn(async (l: Record<string, unknown>) => { created.push(l) }),
+      updateLoop: vi.fn(), appendContract: vi.fn(), getContract: vi.fn(),
+      queryContracts: vi.fn().mockResolvedValue([]), updateContract: vi.fn(),
+      appendVerification: vi.fn(), appendEvent: vi.fn(),
+      queryEvents: vi.fn().mockResolvedValue([]), detectDrift: vi.fn(),
+    }
+    const mockSched = { scheduleLoop: vi.fn(), manualTick: vi.fn(), handleWebhook: vi.fn() }
+    const mockWC = { enqueue: vi.fn() }
+    const templateSource = {
+      getTemplate: vi.fn(async (specId: string) => specId === 'spec-tpl'
+        ? {
+            meta: {
+              goal: '模板目标：清偿技术债', permissionLevel: 'auto-edit',
+              sensitivePaths: ['secrets/**'], worktreePolicy: 'manual', gateCommands: ['npm test'],
+            },
+            description: '模板卡描述',
+          }
+        : null),
+    }
+    const router = createLoopRouter(mockStore as any, mockSched as any, mockWC as any, undefined, templateSource)
+
+    const app = new Koa()
+    app.use(async (ctx, next) => {
+      if (ctx.method === 'POST') {
+        const chunks: Buffer[] = []
+        for await (const chunk of ctx.req) chunks.push(chunk as Buffer)
+        ctx.request.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+      }
+      await next()
+    })
+    app.use(router.routes())
+    const server = app.listen(0)
+    const port = (server.address() as { port: number }).port
+    try {
+      const post = (body: Record<string, unknown>) => fetch(`http://127.0.0.1:${port}/api/loop/loops`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      // goal 缺省补 meta.goal；其余 meta 持久化进 loop.template
+      const withTemplate = await post({ id: 'loop-tpl', name: 'T', template: 'spec-tpl' })
+      expect(withTemplate.status).toBe(200)
+      expect(created[0]?.goal).toBe('模板目标：清偿技术债')
+      expect(created[0]?.template).toEqual({
+        specId: 'spec-tpl',
+        meta: {
+          goal: '模板目标：清偿技术债', permissionLevel: 'auto-edit',
+          sensitivePaths: ['secrets/**'], worktreePolicy: 'manual', gateCommands: ['npm test'],
+        },
+      })
+      expect(mockSched.scheduleLoop).toHaveBeenCalled()
+
+      // 显式 goal 优先（模板 goal 不覆写调用方显式值）
+      const explicit = await post({ id: 'loop-tpl-2', name: 'T', goal: '显式目标', template: 'spec-tpl' })
+      expect(explicit.status).toBe(200)
+      expect(created[1]?.goal).toBe('显式目标')
+
+      // 模板不存在 → 404
+      const miss = await post({ id: 'loop-miss', name: 'T', template: 'spec-nope' })
+      expect(miss.status).toBe(404)
+      expect(await miss.json()).toMatchObject({ error: expect.stringContaining('spec-nope') })
+
+      // 空 template → 400
+      const blank = await post({ id: 'loop-blank-tpl', name: 'T', template: '   ' })
+      expect(blank.status).toBe(400)
+    } finally {
+      server.close()
+    }
+  })
+
+  it('POST /api/loop/loops with body.template but no template source fails 400 explicitly (T5)', async () => {
+    const { createLoopRouter } = await import('../../../server/loop/controllers/loop')
+    const { default: Koa } = await import('koa')
+    const created: Array<Record<string, unknown>> = []
+    const mockStore = {
+      listLoops: vi.fn().mockResolvedValue([]),
+      getLoop: vi.fn(), deleteLoop: vi.fn(),
+      createLoop: vi.fn(async (l: Record<string, unknown>) => { created.push(l) }),
+      updateLoop: vi.fn(), appendContract: vi.fn(), getContract: vi.fn(),
+      queryContracts: vi.fn().mockResolvedValue([]), updateContract: vi.fn(),
+      appendVerification: vi.fn(), appendEvent: vi.fn(),
+      queryEvents: vi.fn().mockResolvedValue([]), detectDrift: vi.fn(),
+    }
+    const mockSched = { scheduleLoop: vi.fn(), manualTick: vi.fn(), handleWebhook: vi.fn() }
+    const mockWC = { enqueue: vi.fn() }
+    // 不注入 templateSource（patch 接线前的装配形态）
+    const router = createLoopRouter(mockStore as any, mockSched as any, mockWC as any)
+
+    const app = new Koa()
+    app.use(async (ctx, next) => {
+      if (ctx.method === 'POST') {
+        const chunks: Buffer[] = []
+        for await (const chunk of ctx.req) chunks.push(chunk as Buffer)
+        ctx.request.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+      }
+      await next()
+    })
+    app.use(router.routes())
+    const server = app.listen(0)
+    const port = (server.address() as { port: number }).port
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/loop/loops`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: 'loop-tpl-3', name: 'T', template: 'spec-tpl' }),
+      })
+      // 显式失败而非静默忽略（防"丢参回归"——所见非所得旧坑）
+      expect(res.status).toBe(400)
+      expect(created).toHaveLength(0)
+      // 无 template 的请求不受影响
+      const plain = await fetch(`http://127.0.0.1:${port}/api/loop/loops`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: 'loop-plain', name: 'T', goal: 'g' }),
+      })
+      expect(plain.status).toBe(200)
+      expect(created).toHaveLength(1)
+    } finally {
+      server.close()
+    }
+  })
 })

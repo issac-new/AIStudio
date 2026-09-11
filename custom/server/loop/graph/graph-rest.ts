@@ -42,6 +42,12 @@ export function stampApproverIdentity(value: unknown, approver: string): unknown
   return value
 }
 
+/** 台账 #11（顺延 P4 清偿）：旧 JSON 文件灌入的完成标记 id（specs 表内保留行，
+ *  不进 GraphSpecStore 内存表 / REST 列表）。灌入中途崩溃的半态 = 表有部分行而无标记——
+ *  重载时逐 spec 先查 getSpec 已存在则跳过（重启续跑语义），补落剩余后写标记；
+ *  标记在（或本就无文件可回读）→ 表为准，文件不再回读（防已删除 spec 从过期文件复活）。 */
+const SEED_MARKER_ID = '__file-seed-complete__'
+
 /** 台账⑥（P2）：GraphSpec 持久化切 event-log 同库 specs 表（重启可恢复）。
  *  filePath 降级为迁移兜底——表空时读一次 JSON 文件灌入表，之后以表为准；
  *  不传 eventLog 时维持 P1 内存/文件语义（既有 `new GraphSpecStore()` 调用方兼容）。 */
@@ -53,18 +59,28 @@ export class GraphSpecStore {
   async load(): Promise<void> {
     if (this.eventLog) {
       const rows = await this.eventLog.listSpecs()
-      if (rows.length > 0) {
+      const seeded = rows.some(r => r.id === SEED_MARKER_ID)
+      // 表完整（完成标记在，或无文件路径可回读）→ 以表为准，文件不再回读
+      if (seeded || !this.filePath) {
         for (const row of rows) {
+          if (row.id === SEED_MARKER_ID) continue
           const got = await this.eventLog.getSpec(row.id)
           if (got) this.specs.set(got.id, got.spec as GraphSpec)
         }
         return
       }
-      // 表空 → 读一次旧 JSON 文件灌入表（迁移兜底；此后表为准，文件不再回读）
+      // 表空（首灌）或灌入中途崩溃的半态（无标记）→ 读文件逐 spec 续跑：
+      // 已落表的跳过（保留表内版本），剩余补落，完成后写标记行
       for (const spec of await this.readFileSpecs()) {
+        const existing = await this.eventLog.getSpec(spec.id)
+        if (existing) {
+          this.specs.set(existing.id, existing.spec as GraphSpec)
+          continue
+        }
         this.specs.set(spec.id, spec)
         await this.eventLog.saveSpec({ id: spec.id, version: spec.version, spec })
       }
+      await this.eventLog.saveSpec({ id: SEED_MARKER_ID, version: 1, spec: { seedComplete: true } })
       return
     }
     for (const spec of await this.readFileSpecs()) this.specs.set(spec.id, spec)
@@ -200,15 +216,33 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
 
   // GET /api/graph/runs/:id/export — 运行导出包（P3 台账 #30，spec 门禁缺口）：
   // run 详情 + 图规格 + 全事件一次打包，Content-Disposition attachment 供直接下载。
+  // P3 台账（导出无 limit，顺延 P4 清偿）：?limit= 控制事件条数，默认 10000 且为上限——
+  // 超大规模 run 全量打包会拼出巨型 JSON 响应。截断取前 N 条（升序），与 graph:history
+  // 回放的 query(runId, {limit}) 同语义；响应附 eventsTotal/eventsTruncated 供消费方识别截断。
   router.get('/api/graph/runs/:id/export', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
+    const EXPORT_LIMIT_DEFAULT = 10_000
+    const EXPORT_LIMIT_MAX = 10_000
+    let limit = EXPORT_LIMIT_DEFAULT
+    if (ctx.query.limit !== undefined) {
+      const parsed = parseInt(String(ctx.query.limit), 10)
+      if (!Number.isFinite(parsed) || parsed < 1) {
+        ctx.status = 400; ctx.body = { error: 'limit must be a positive integer' }; return
+      }
+      limit = Math.min(parsed, EXPORT_LIMIT_MAX)
+    }
     const rec = deps.graphService.getRun(ctx.params.id)
     if (!rec) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
     const spec = deps.specStore?.get(rec.graphId) ?? null
-    const events = await deps.eventLog.query(ctx.params.id)
+    const events = await deps.eventLog.query(ctx.params.id, { limit })
+    const eventsTotal = await deps.eventLog.count(ctx.params.id)
     ctx.set('Content-Disposition', `attachment; filename=run-${ctx.params.id}.json`)
     ctx.type = 'application/json'
-    ctx.body = { run: { runId: rec.runId, graphId: rec.graphId, instance: rec.instance }, spec, events }
+    ctx.body = {
+      run: { runId: rec.runId, graphId: rec.graphId, instance: rec.instance },
+      spec, events,
+      eventsTotal, eventsTruncated: eventsTotal > events.length,
+    }
   })
 
   // GET /api/graph/specs — 已注册图规格

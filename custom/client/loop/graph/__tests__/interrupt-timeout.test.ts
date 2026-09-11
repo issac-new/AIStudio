@@ -277,4 +277,68 @@ describe('InterruptTimeoutScanner', () => {
       vi.useRealTimers()
     }
   })
+
+  // -------------------------------------------------------------------------
+  // 台账 #9（顺延 P4 清偿）：escalate 先落水印再出站——append 失败时兼容事件不发
+  // -------------------------------------------------------------------------
+
+  it('does not emit loop.escalated when the watermark append fails (台账 #9：append 先于出站)', async () => {
+    const h = makeHarness()
+    const runId = await seedAwaitingRun(h.eventLog, { createdAtMs: T0 })
+    await h.graphService.rebuildRegistryFromLog()
+    h.clock.now = T0 + 80 * HOUR
+
+    // 水印 append 失败的 store：loop.escalated kind 的 append 抛错（其余 kind 经原型链正常）
+    const flaky = Object.create(h.eventLog) as typeof h.eventLog
+    flaky.append = async (e) => {
+      if (e.kind === 'loop.escalated') throw new Error('watermark write failed')
+      return h.eventLog.append(e)
+    }
+    const logs: string[] = []
+    const flakyScanner = new InterruptTimeoutScanner({
+      graphService: h.graphService,
+      eventLog: flaky,
+      clock: () => h.clock.now,
+      emitLoopEvent: e => h.bridged.push(e),
+      log: m => logs.push(m),
+    })
+
+    await flakyScanner.scan()
+
+    // append 失败 → 不出站（防 24h 节流窗口内重发）；扫描不因单 run 失败中断
+    expect(h.bridged.filter(e => e.type === 'loop.escalated')).toHaveLength(0)
+    expect(logs.some(m => m.includes('watermark write failed'))).toBe(true)
+    expect(h.graphService.getRun(runId)!.status).toBe('awaiting-input')
+
+    // 水印恢复后下轮扫描自然重试 → 出站且水印在
+    h.clock.now = T0 + 81 * HOUR
+    await h.scanner.scan()
+    expect(await escalationsInLog(h.eventLog, runId)).toHaveLength(1)
+    expect(h.bridged.filter(e => e.type === 'loop.escalated')).toHaveLength(1)
+  })
+
+  it('watermark is persisted before the bridged event goes out (台账 #9 顺序不变量)', async () => {
+    const h = makeHarness()
+    await seedAwaitingRun(h.eventLog, { createdAtMs: T0 })
+    await h.graphService.rebuildRegistryFromLog()
+    h.clock.now = T0 + 80 * HOUR
+
+    // 出站时刻水印必须已可见：出站回调内查询事件日志应能看到 loop.escalated 水印
+    let watermarkVisibleAtEmit = false
+    let emitProbe = Promise.resolve()
+    const probeScanner = new InterruptTimeoutScanner({
+      graphService: h.graphService,
+      eventLog: h.eventLog,
+      clock: () => h.clock.now,
+      emitLoopEvent: () => {
+        emitProbe = (async () => {
+          watermarkVisibleAtEmit = (await escalationsInLog(h.eventLog, 'run-g-1')).length > 0
+        })()
+      },
+      log: () => {},
+    })
+    await probeScanner.scan()
+    await emitProbe
+    expect(watermarkVisibleAtEmit).toBe(true)
+  })
 })

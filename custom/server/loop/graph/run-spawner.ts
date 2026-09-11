@@ -48,6 +48,12 @@ export interface RunSpawnerOpts {
    * 用户主动 paused 的 loop 永不入白名单，不会被误恢复。
    */
   autoResumeIds?: Set<string>
+  /**
+   * 时钟注入（台账 #10 顺延 P4 清偿，注入先例：interrupt-timeout.clock）：
+   * 类内全部时间读取统一走本通道（poll 到期判断 / lastTickAt / 兼容事件 ts），
+   * 缺省 Date.now。测试注入 fake clock 后不再与真实时钟混用。
+   */
+  clock?: () => number
   log?: (msg: string) => void
 }
 
@@ -80,6 +86,11 @@ export class RunSpawner {
     opts.graphService.onEvent(e => { void this.handleGraphEvent(e) })
   }
 
+  /** 统一时间读取口（台账 #10）：注入 clock 优先，缺省真实时钟 */
+  private now(): number {
+    return this.opts.clock?.() ?? Date.now()
+  }
+
   start(): void {
     if (this.timer) return
     this.timer = setInterval(() => { void this.poll() }, this.intervalMs)
@@ -97,7 +108,7 @@ export class RunSpawner {
   /** 30s 轮询：到期且 idle 的 loop → 发起 run；崩溃恢复白名单内的 paused loop 同判据自动恢复 */
   async poll(): Promise<void> {
     const loops = await this.opts.store.listLoops()
-    const now = Date.now()
+    const now = this.now()
     for (const loop of loops) {
       if (loop.status === 'paused') {
         if (!this.opts.autoResumeIds?.has(loop.id)) continue
@@ -137,7 +148,7 @@ export class RunSpawner {
       this.opts.graphService.registerGraph(def)
       await this.opts.store.updateLoop(loopId, {
         status: 'running',
-        lastTickAt: new Date().toISOString(),
+        lastTickAt: new Date(this.now()).toISOString(),
         stats: { ...loop.stats, currentIteration: loop.stats.currentIteration + 1, totalIterations: loop.stats.totalIterations + 1 },
       })
       const { runId } = await this.opts.graphService.startRun(def.id)
@@ -203,7 +214,7 @@ export class RunSpawner {
     this.emitCompat({
       type: 'loop.tick-complete', loopId,
       iteration: stats.currentIteration,
-      stats, ts: new Date().toISOString(),
+      stats, ts: new Date(this.now()).toISOString(),
     })
   }
 
@@ -216,7 +227,7 @@ export class RunSpawner {
     this.emitCompat({
       type: 'loop.stuck', loopId,
       reason: `${reason} — 因持续失败已暂停，需人工处理`,
-      ts: new Date().toISOString(),
+      ts: new Date(this.now()).toISOString(),
     })
     this.consecutiveFailures.set(loopId, 0)
     this.stagnantCount.set(loopId, 0)
@@ -264,7 +275,7 @@ export class RunSpawner {
           stats: { ...loop.stats },
         })
         this.emitCompat({
-          type: 'loop.completed', loopId, finalStats: loop.stats, ts: new Date().toISOString(),
+          type: 'loop.completed', loopId, finalStats: loop.stats, ts: new Date(this.now()).toISOString(),
         })
       } else {
         await this.opts.store.updateLoop(loopId, {
@@ -277,6 +288,10 @@ export class RunSpawner {
     }
 
     // graph.failed → 熔断计数
+    // 台账 #7（顺延 P4 清偿）：此分支有意不清零 stagnantCount（与完成分支清零
+    // consecutiveFailures 不对称）。停滞与失败是两类独立退化信号：失败的 run 无产出
+    // 可言，若失败把停滞计数洗掉，"失败-无产出完成"交替出现时停滞熔断永不可达，
+    // 间歇性失败反而成为停滞证据的保护伞。两侧计数只在 tripBreaker 一并清零。
     const failures = (this.consecutiveFailures.get(loopId) ?? 0) + 1
     this.consecutiveFailures.set(loopId, failures)
     if (failures >= this.maxConsecutiveFailures) {

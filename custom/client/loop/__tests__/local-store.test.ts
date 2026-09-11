@@ -80,6 +80,30 @@ describe('LocalStore', () => {
     expect(events[0].type).toBe('loop.stage-transition')
   })
 
+  // P3 台账（T4/T7 合并，顺延 P4 清偿）：钉死 queryEvents 的窗口语义契约——
+  // limit 截断取"最新 N 条、升序返回"（slice(-limit)）。saas-store 已对齐（见
+  // saas-store.test.ts 同名组）；消费方（stuck 检测 1/20 条、loop socket 回放 50 条、
+  // 前端 getEvents 500 条）都以"最近事件"为窗口意图。
+  it('queryEvents limit takes the NEWEST N events and returns them ascending (P3 台账：窗口语义契约)', async () => {
+    await store.createLoop(makeLoop())
+    for (let i = 1; i <= 5; i++) {
+      await store.appendEvent({
+        type: 'loop.stage-transition', loopId: 'test-loop',
+        from: 'discovery', to: 'handoff', reason: `e${i}`,
+        ts: new Date(Date.UTC(2026, 8, 10, 0, 0, i)).toISOString(),
+      } as LoopEvent)
+    }
+    // 全量升序
+    const all = await store.queryEvents('test-loop')
+    expect(all.map(e => (e as { reason: string }).reason)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5'])
+    // limit 3 → 最新 3 条（e3/e4/e5），仍按时间升序返回
+    const newest3 = await store.queryEvents('test-loop', undefined, 3)
+    expect(newest3.map(e => (e as { reason: string }).reason)).toEqual(['e3', 'e4', 'e5'])
+    // limit 1 → 最新 1 条（stuck-detector 的取法）
+    const newest1 = await store.queryEvents('test-loop', undefined, 1)
+    expect(newest1.map(e => (e as { reason: string }).reason)).toEqual(['e5'])
+  })
+
   it('regenerates STATE.md after create', async () => {
     await store.createLoop(makeLoop())
     const mdPath = resolve(TEST_DIR, 'STATE.md')
