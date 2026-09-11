@@ -35,6 +35,7 @@ vi.mock('@/api/client', () => ({
 import ApprovalPanel from '@/custom/loop/runcenter/components/ApprovalPanel.vue'
 import InboxPanel from '@/custom/loop/runcenter/components/InboxPanel.vue'
 import NodeInspector from '@/custom/loop/runcenter/components/NodeInspector.vue'
+import { resetAutoFiredForTest } from '@/custom/loop/runcenter/adapters/always-allow'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import type { RunSummary } from '@/custom/loop/runcenter/types'
 import type { RunGraphNode } from '@/custom/loop/runcenter/adapters/run-graph'
@@ -83,6 +84,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.username = null
   try { localStorage.clear() } catch { /* ignore */ }
+  resetAutoFiredForTest()
 })
 
 /** 种下审批人身份（ApprovalPanel 决策按钮要求 token 可解析） */
@@ -265,6 +267,21 @@ describe('ApprovalPanel (jsdom)', () => {
     mount(ApprovalPanel, { props: { run: store.runs[1] } })
     await Promise.resolve()
     expect(rest.resumeRun).toHaveBeenCalledTimes(1) // 未增发
+  })
+
+  it('同一 interrupt 同屏两面板：模块级占坑只放首发一次（2026-09-12 审查防重发）', async () => {
+    seedIdentity('alice')
+    localStorage.setItem('loopAlwaysAllow', JSON.stringify({ validation: true }))
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun())
+    // 模拟 RunCenterView 同屏双入口：InboxPanel 内嵌与 RunListTable 展开各自挂一个面板
+    mount(ApprovalPanel, { props: { run: store.runs[0] } })
+    mount(ApprovalPanel, { props: { run: store.runs[0] } })
+    await flushPromises()
+    expect(rest.resumeRun).toHaveBeenCalledTimes(1)
+    expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c1@1', {
+      decision: 'approved', approver: 'always-allow:alice',
+    })
   })
 
   it('审批失败 → 规则不沉淀（规则只能由成功路径写入）', async () => {

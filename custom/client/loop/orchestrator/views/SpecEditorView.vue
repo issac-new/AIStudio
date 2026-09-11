@@ -164,6 +164,8 @@ function onImportFile(ev: Event): void {
   const file = input.files?.[0]
   input.value = '' // 同文件可重复导入
   if (!file) return
+  // 2026-09-12 审查：导入会整体顶掉当前编辑中文档——dirty 时先确认（复用通用未保存文案）
+  if (dirty.value && !window.confirm(t('files.unsavedChanges'))) return
   const reader = new FileReader()
   reader.onload = () => {
     try {
@@ -178,6 +180,12 @@ function onImportFile(ev: Event): void {
   }
   reader.onerror = () => { importError.value = 'read error' }
   reader.readAsText(file)
+}
+
+/** 2026-09-12 审查：返回会丢弃未保存编辑——dirty 时先确认 */
+function onBack(): void {
+  if (dirty.value && !window.confirm(t('files.unsavedChanges'))) return
+  emit('back')
 }
 
 function onExport(): void {
@@ -234,7 +242,7 @@ async function onTryRun(): Promise<void> {
   <div class="sev" data-spec-editor>
     <!-- 工具栏：返回 | 名称/描述 | 导入/导出 | 校验汇总 | 保存 | 试跑 -->
     <header class="sev__toolbar" data-editor-toolbar>
-      <button class="sev__btn" data-editor-back @click="emit('back')">
+      <button class="sev__btn" data-editor-back @click="onBack">
         {{ t('ia2.orchestrate.editor.toolbar.back') }}
       </button>
       <input

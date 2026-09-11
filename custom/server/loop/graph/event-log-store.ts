@@ -72,7 +72,7 @@ export interface StoredGraphSpecMeta {
 
 export interface EventLogStore {
   append(e: Omit<GraphLogEvent, 'seq'>): Promise<number>
-  query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string }): Promise<GraphLogEvent[]>
+  query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string; latest?: number }): Promise<GraphLogEvent[]>
   latestSeq(runId: string): Promise<number>
   count(runId: string): Promise<number>
   saveCheckpoint(c: StoredCheckpoint): Promise<void>
@@ -99,11 +99,14 @@ export class InMemoryEventLogStore implements EventLogStore {
     return seq
   }
 
-  async query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string }): Promise<GraphLogEvent[]> {
+  async query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string; latest?: number }): Promise<GraphLogEvent[]> {
     let out = this.events.filter(e => e.runId === runId)
     if (opts?.sinceSeq !== undefined) out = out.filter(e => e.seq > opts.sinceSeq!)
     if (opts?.kind !== undefined) out = out.filter(e => e.kind === opts.kind)
-    if (opts?.limit !== undefined) out = out.slice(0, opts.limit)
+    // latest：本 run 最新 N 条（升序返回，与缺省序一致）。seq 为跨 run 全局自增，
+    // 尾部窗口必须在存储层按 run 内序截取，调用方不能用全局 seq 做算术。
+    if (opts?.latest !== undefined && opts.latest > 0) out = out.slice(-opts.latest)
+    else if (opts?.limit !== undefined) out = out.slice(0, opts.limit)
     return out
   }
 
@@ -213,11 +216,16 @@ class SqliteEventLogStore implements EventLogStore {
     return seq
   }
 
-  async query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string }): Promise<GraphLogEvent[]> {
+  async query(runId: string, opts?: { sinceSeq?: number; limit?: number; kind?: string; latest?: number }): Promise<GraphLogEvent[]> {
     let sql = `SELECT * FROM graph_events WHERE run_id = ?`
     const args: SQLInputValue[] = [runId]
     if (opts?.sinceSeq !== undefined) { sql += ` AND seq > ?`; args.push(opts.sinceSeq) }
     if (opts?.kind !== undefined) { sql += ` AND kind = ?`; args.push(opts.kind) }
+    // latest：按 seq 倒序取最新 N 条再反转为升序（seq 为全局自增，窗口必须按 run 内序截取）
+    if (opts?.latest !== undefined && opts.latest > 0) {
+      sql += ` ORDER BY seq DESC LIMIT ?`; args.push(opts.latest)
+      return (this.db.prepare(sql).all(...args) as Array<Record<string, unknown>>).map(rowToEvent).reverse()
+    }
     sql += ` ORDER BY seq`
     if (opts?.limit !== undefined) { sql += ` LIMIT ?`; args.push(opts.limit) }
     return (this.db.prepare(sql).all(...args) as Array<Record<string, unknown>>).map(rowToEvent)

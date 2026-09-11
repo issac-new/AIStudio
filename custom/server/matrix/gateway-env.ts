@@ -25,7 +25,9 @@ export interface GatewayMatrixEnv {
 
 /**
  * 最小 dotenv 解析（零依赖）：逐行 trim；跳过空行与 # 注释；剥离 export 前缀；
- * 按首个 = 分割键值；值去一层成对单/双引号。无 = 行与空键行跳过不抛错。
+ * 按首个 = 分割键值；值去一层成对单/双引号；未加引号的值截掉行内 ` #` 注释
+ * （对齐主流 dotenv 语义——token 后跟 `# rotated` 之类的注释不再混进值，
+ * 2026-09-12 审查）。无 = 行与空键行跳过不抛错。
  */
 export function parseDotenv(text: string): Record<string, string> {
   const out: Record<string, string> = {}
@@ -41,6 +43,9 @@ export function parseDotenv(text: string): Record<string, string> {
     if (value.length >= 2
       && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
       value = value.slice(1, -1)
+    } else {
+      const commentAt = value.indexOf(' #')
+      if (commentAt >= 0) value = value.slice(0, commentAt).trim()
     }
     out[key] = value
   }

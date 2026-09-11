@@ -53,6 +53,22 @@ afterEach(async () => {
 })
 
 describe('GraphSpecStore via event-log specs table (P2 台账⑥)', () => {
+  it('delete 先持久层后内存：持久层失败时内存保持一致、可重试（2026-09-12 审查）', async () => {
+    const base: EventLogStore = new InMemoryEventLogStore()
+    // Object.create 沿原型链继承全部方法，仅覆写 deleteSpec 为故障注入
+    const failing: EventLogStore = Object.create(base)
+    failing.deleteSpec = async () => { throw new Error('db down') }
+    const store = new GraphSpecStore(failing)
+    await store.save(makeSpec('spec-1'))
+    await expect(store.delete('spec-1')).rejects.toThrow('db down')
+    // 内存未丢：REST 面/列表仍可见该 spec（不会"内存已删、DB 行仍在、重启复活"）
+    expect(store.get('spec-1')).toBeDefined()
+    // 持久层恢复后重试删除成功
+    ;(store as unknown as { eventLog?: EventLogStore }).eventLog = base
+    await expect(store.delete('spec-1')).resolves.toBe(true)
+    expect(store.get('spec-1')).toBeUndefined()
+  })
+
   it('save delegates to the table; load reads it back (InMemory deps)', async () => {
     const table: EventLogStore = new InMemoryEventLogStore()
     const store = new GraphSpecStore(table)
