@@ -130,7 +130,7 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 - **节点检查器**：选中节点查看类型 / 状态 / 迭代 / 耗时与最近一次 update 的 channel 键值（attach 档）；唯一介入动作是 failed 节点的「重跑整个 run」（fork → startRun 显式起跑）——审批不在检查器，位于列表行 peek 展开与介入收件箱的审批面板
 - 数据面：`GET /api/graph/runs/:id` + `/replay`，socket `/graph` 实时推送
 
-**R1 每日 Brief（P2）**：`on` 模式下每日定时（`LOOP_BRIEF_CRON`，缺省 `0 9 * * *` 本地时区）聚合过去 24h 的图引擎事实，渲染三段式结构化简报——进展（完成 / 失败 / 熔断升级告警）、等你决策（awaiting-input 及等待时长）、今日计划（到期未触发的 loop）。零 LLM 依赖，纯持久数据源（事件日志 + loop 台账），重启自然恢复；brief 自身作为 `graphId='daily-brief'` 审计 run 落事件日志，可回放可审计。**诚实边界**：Matrix 聊天投递需要 `LOOP_BRIEF_ROOM` 配置与宿主注入的传输通道（`briefDelivery`，patch 202 预留注入点）同时成立——**当前两者均未接线，默认只落事件日志，聊天里收不到每日简报**；投递最后一公里待 bot 身份 / 凭据来源确认后补齐。
+**R1 每日 Brief（P2，投递已于 P3 接线）**：`on` 模式下每日定时（`LOOP_BRIEF_CRON`，缺省 `0 9 * * *` 本地时区）聚合过去 24h 的图引擎事实，渲染三段式结构化简报——进展（完成 / 失败 / 熔断升级告警）、等你决策（awaiting-input 及等待时长）、今日计划（到期未触发的 loop）。零 LLM 依赖，纯持久数据源（事件日志 + loop 台账），重启自然恢复；brief 自身作为 `graphId='daily-brief'` 审计 run 落事件日志，可回放可审计。**Matrix 投递身份（用户拍板：使用本机配置的登录身份）**：应用内最近一次 Matrix 登录成功后（`POST /api/auth/matrix-login`，patch 012），会话以 0600 权限落盘本机 `~/.hermes-web-ui/matrix-session.json`（重登录自动轮换 token）；投递层（patch 202 注入 `createMatrixBriefDelivery()`）优先读该文件、未登录过回退 `LOOP_MATRIX_HOMESERVER` / `LOOP_MATRIX_TOKEN` / `LOOP_MATRIX_USER` env 三件套。**房间仍需 `LOOP_BRIEF_ROOM` 配置**；两者齐备即发 `m.text` 纯文本到配置房间，无凭据或无房间时保持 event-log-only（审计 run 记 `delivered:false`），发送失败同样经审计可见。投递身份取创建装配时的判定：进程启动后才完成首次 Matrix 登录的，需重启服务接通投递。
 
 **信息架构与编排（P3）**：六区域新 IA（见功能特色首节）+ 编排区（模板库 / Spec 可视化 / 实例化）+ 介入中心五源聚合 + 追溯矩阵 + 图引擎策略卡；cockpit 退役（能力去向与 RETRO 收窄见功能特色退役声明）。事件面配套：`loop.persisted` 产物事件带 `taskId`/`runId`（追溯锚点），`graph-runtime` 对 `loop.*` 事件整体透传负载（回放可反查产物）。
 
