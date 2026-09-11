@@ -1,0 +1,11 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -767,6 +767,7 @@ export default {
+       inbox: '介入',
+       tasks: '工作项',
+       comms: '沟通',
++      settings: '设置',
+     },
+     overview: {
+       attentionLabel: '需要注意',

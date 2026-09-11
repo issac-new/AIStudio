@@ -27,6 +27,8 @@ function makeRouter(): Router {
           { path: 'runs/:runId', name: 'ia2.runDetail', component: stub },
         ],
       },
+      // 用户设置页（生产为上游 hermes.settings 路由，测试用桩）
+      { path: '/hermes/settings', name: 'hermes.settings', component: stub },
     ],
   })
 }
@@ -58,6 +60,19 @@ describe('IaNav（左侧窄栏一级导航）', () => {
     const items = wrapper.findAll('.ia-nav__item')
     expect(items).toHaveLength(6)
     expect(items.map(i => i.text())).toEqual(IA_AREAS.map(a => a.labelKey))
+  })
+
+  it('用户设置入口：底部按钮直达 /hermes/settings（不占区域高亮）', async () => {
+    const router = makeRouter()
+    const wrapper = await mountShell(router)
+    const settingsBtn = wrapper.find('[data-ia-nav-settings]')
+    expect(settingsBtn.exists()).toBe(true)
+    expect(settingsBtn.text()).toContain('ia2.nav.settings')
+    // 设置入口不是区域项：不参与六区域计数/高亮投影
+    expect(settingsBtn.classes()).not.toContain('ia-nav__item')
+    await settingsBtn.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('hermes.settings')
   })
 
   it('当前区域高亮：/app/runs 时 runs 项带 active', async () => {
