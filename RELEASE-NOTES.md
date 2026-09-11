@@ -14,6 +14,7 @@ SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源�
 - **2.17 以来 main 并入的 overlay 功能首次进构建**：R1 Brief Matrix 投递（登录会话本机落盘 + 三段式每日 Brief + Matrix 投递 + gateway 凭据链 + HOME_ROOM 回落）、P3 IA 六区域导航（/app 路由树 + 总览首屏 + 介入中心 + 编排区实装 + 工作项↔run 追溯 + observer/engine 卡片）。
 - **验证门禁**：重放树 180/180 干净落位；inject 180/180；overlay vitest 110 文件 **1203 过/6 skip/0 fail**；上游完整 build（openapi + vue-tsc -b 严格门禁 + vite + server tsc + build-server）exit 0；上游新增测试 sessions-controller + studio-announcements **84/84**。
 - 已知沿用（2.16 决策）：非品牌关键面的上游 Ekko 文案（~600 处，i18n locale 与辅助字符串）保持上游原文不逐条替换。
+- **构建物（2026-09-11，未上传 GitHub/ModelScope，按用户指令）**：`SwarmStudio-0.7.19-arm64.dmg` 390,539,182 B（sha256 `6af9aaa4d8216cf7c70bce891a10b3c86e19f34ad688feb5973df392a7d00abc`）+ `SwarmStudio-0.7.19-x64.zip` 429,350,650 B（sha256 `c1dce287fa65fd253fa24f7ba964dcd4f9ab6415fd841dea6ecd84db45d404cc`），位于 upstream/hermes-studio/packages/desktop/release/。本机 /Applications 已装 2.18（0.7.19，webui :8748 HTTP 200 验证通过）。
 
 > **2.17** — 三 upstream 复核（2026-09-10）：hermes-studio 仍 **v1.0.2**（Latest 标记在 v0.7.18 为上游维护者误置，v1.0.2 为实际最新）、hermes-agent 仍 **v2026.9.7 (v0.21.1)**、element-web 仍 **v1.12.27**（v1.12.28 仅 rc）——**零 upstream 升级**。本版为 **overlay 自有功能轮**：AI 协作中心 loop graph 彻底重构三期（P0 内核 + P1 生产切换 + P2 运行中心）全部合入 main（b556bdc → 209ecee，31 commits + P2 squash），patches 148 → **158**（新增 201-212 共 11 条，无 regen）。desktop 捆绑 runtime pin 0.20.6 → **0.21.0**（P2 会话 T5）。
 
