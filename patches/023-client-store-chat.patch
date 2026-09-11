@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 042e83a..a994f71 100644
+index 24a9193..b68761b 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
 @@ -1,7 +1,7 @@
@@ -9,10 +9,10 @@ index 042e83a..a994f71 100644
 -import { getActiveProfileName } from '@/api/client'
 +import { archiveSession as archiveSessionApi, deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, fetchWorkspaceRunChangeFile, fetchWorkspaceRunChangesForSession, setSessionModel, setSessionPushEnabled as persistSessionPushEnabled, setSessionReasoningEffort as persistSessionReasoningEffort, type HermesMessage, type SessionSummary, type WorkspaceRunChangeFileDetail, type WorkspaceRunChangeSummary } from '@/api/studio/sessions'
 +import { getActiveProfileName, hasApiKey } from '@/api/client'
+ import { onAuthInvalidated } from '@/api/auth-invalidation'
  import { inferCodingAgentApiMode, normalizeCodingAgentApiMode, type ChatCodingAgentId } from '@/api/coding-agents'
  import { getDownloadUrl } from '@/api/studio/download'
- import type { ProviderApiMode } from '@/api/studio/provider-api-mode'
-@@ -1440,6 +1440,7 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1494,6 +1494,7 @@ export const useChatStore = defineStore('chat', () => {
    }
  
    async function fetchRuntimeSessions(profile?: string | null): Promise<SessionSummary[]> {
@@ -20,7 +20,7 @@ index 042e83a..a994f71 100644
      const scopedProfile = profile || undefined
      if (runtimeMode.value === 'global_agent') return fetchSessions('global_agent', undefined, scopedProfile)
  
-@@ -5240,6 +5241,7 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5317,6 +5318,7 @@ export const useChatStore = defineStore('chat', () => {
      window.setInterval(() => {
        if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
        if (isStreaming.value) return
