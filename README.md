@@ -67,14 +67,14 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 
 **图引擎策略卡（设置页）**：`GRAPH_ENGINE` 三态模式与熔断 / 中断超时阈值的只读展示，策略当前为构建期默认值（可编辑策略文件随 P4）。
 
-**兼容与退役**：旧落点经兼容守卫重定向——`/hermes/cockpit` → 总览、`/hermes/matrix-chat` → 沟通、`/hermes/swarm-kanban` → 工作项、旧 loop 路由 → 运行中心（携带 `?loop=` 上下文）；冷启动深链兼容重查。`VITE_IA_RETRO=1` 回退开关在 P3 收窄为仅放行旧 loop 落点（Cockpit 视图已删，回退需 revert 退役提交，窗口随 P4 关闭）。
+**兼容与双入口（P4 修订）**：`VITE_IA_RETRO=1` 回退开关仅放行旧 loop 落点。**P4（2026-09-11 用户裁决）：原有 AI 协作中心（cockpit）恢复功能，与新 `/app` 六区域 IA 平行共存**——侧栏双入口并列，`/hermes/cockpit` 及其子路由（chat/history/matrix-chat/swarm-kanban）直达旧驾驶舱；登录默认落点仍为 `/app` 总览；守卫不再改写 cockpit 家族落点，旧 loop 深链仍重定向运行中心（携带 `?loop=` 上下文）。
 
 ### 🚀 Cockpit — AI 协作中心（**已退役**，P3）
 
 2.13–2.16 期间的主操作界面：三段联动式布局（全貌 → 聚焦 → 处理），含顶栏（品牌 · 日程 · 时钟 · 搜索 · 通知）、注意力条、左栏 Kanban 统筹、中栏协作图 + 时序事件流、右栏 A2UI 表单 + 文件资源管理器 + 终端、⚡💬⌘ 模式切换。P3 信息架构 2.0 上线后整体退役：
 
 - **能力去向**：日程弹窗（`CockpitScheduleModal` 原样复用于总览）、待办 + 闹钟（workspace store，kv 单一事实源）、注意力梯队模型（总览注意力条收编）、Kanban（工作项区承接）、Matrix 聊天（沟通区升一级）、指挥中心舰队聚合（审批 UI 暂无落点，P4 重建）
-- **RETRO 语义收窄（如实注明）**：`VITE_IA_RETRO=1` 开关本期收窄——Cockpit 视图代码已删，该开关不再能回到旧驾驶舱，仅放行旧 loop 落点；完整回退 = revert 退役提交（`4bcb1e8`），回退窗口随 P4 关闭
+- **RETRO 语义（P4 修订）**：`VITE_IA_RETRO=1` 仅放行旧 loop 落点；P4 起 cockpit 视图本体已恢复（平行共存，patch 240/241），旧驾驶舱经侧栏「AI协作中心」入口直达，不再依赖 RETRO 开关
 - **目录遗留**：`custom/client/cockpit/` 保留 adapters / store / kv 与 2 个复用组件（新 IA 与运行中心仍在消费），视图与三栏布局已删除
 
 ### 🔭 RunTraceView — 运行全过程可观测性
@@ -132,7 +132,7 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 
 **R1 每日 Brief（P2，投递已于 P3 接线）**：`on` 模式下每日定时（`LOOP_BRIEF_CRON`，缺省 `0 9 * * *` 本地时区）聚合过去 24h 的图引擎事实，渲染三段式结构化简报——进展（完成 / 失败 / 熔断升级告警）、等你决策（awaiting-input 及等待时长）、今日计划（到期未触发的 loop）。零 LLM 依赖，纯持久数据源（事件日志 + loop 台账），重启自然恢复；brief 自身作为 `graphId='daily-brief'` 审计 run 落事件日志，可回放可审计。**Matrix 投递身份（用户拍板：使用本机配置的登录身份）**，凭据三级回落（每次投递重读，token 轮换即时生效）：应用内最近一次 Matrix 登录（`POST /api/auth/matrix-login`，patch 012）落盘的 `~/.hermes-web-ui/matrix-session.json`（0600）→ `LOOP_MATRIX_HOMESERVER` / `LOOP_MATRIX_TOKEN` / `LOOP_MATRIX_USER` env → gateway（hermes-agent）dotenv `~/.hermes/profiles/<profile>/.env` 的 `MATRIX_HOMESERVER` / `MATRIX_ACCESS_TOKEN` / `MATRIX_USER_ID`（profile 取 `LOOP_MATRIX_PROFILE` → `active_profile` 文件 → `orchestrator`）。**房间**：`LOOP_BRIEF_ROOM` → 回落 gateway `MATRIX_HOME_ROOM`（网关主房间）→ 均无则只落事件日志（审计 run 记 `delivered:false`）；房间值支持 `!room:server` 直发与 `#alias:server` 经 homeserver 解析（失败上抛走审计），发送失败同样经审计可见。投递身份取创建装配时的判定：进程启动后才完成首次 Matrix 登录的，需重启服务接通投递。
 
-**信息架构与编排（P3）**：六区域新 IA（见功能特色首节）+ 编排区（模板库 / Spec 可视化 / 实例化）+ 介入中心五源聚合 + 追溯矩阵 + 图引擎策略卡；cockpit 退役（能力去向与 RETRO 收窄见功能特色退役声明）。事件面配套：`loop.persisted` 产物事件带 `taskId`/`runId`（追溯锚点），`graph-runtime` 对 `loop.*` 事件整体透传负载（回放可反查产物）。
+**信息架构与编排（P3/P4）**：六区域新 IA（见功能特色首节）+ 编排区（模板库 / Spec 可视化 / 实例化）+ 介入中心五源聚合 + 追溯矩阵 + 图引擎策略卡；**P4 编排器**：可视化画布编辑器（节点面板 8 类 / 配置面板 / 编辑守卫实时校验 / JSON 导入导出 / 一键试跑）、plan 节点三出口审批、Best-of-N fan-out 收敛、loop 容器、死图检测四铁律、自建 spec 起跑（`POST /api/graph/specs/:id/runs`）；cockpit 恢复为与新 IA 平行共存（双入口，见上）。事件面配套：`loop.persisted` 产物事件带 `taskId`/`runId`（追溯锚点），`graph-runtime` 对 `loop.*` 事件整体透传负载（回放可反查产物）。
 
 **P1 图引擎 caveat（终审修复波后仍成立的交付边界）**：
 - `on` 模式接管调度，但失败语义与 legacy 有偏移：run 失败时 loop 重写为 `idle` 并按 `computeNextTick` 重排（连续失败达 10 次熔断转 `paused`）；legacy 的 tick 异常会把 loop 置 `status='failed'`。前端按 `paused/idle` 展示 on 模式失败态。
@@ -316,7 +316,7 @@ entry.mts
 | extendedI18n | `VITE_CUSTOM_EXTENDED_I18N=false` | 开 |
 | loopEngineering | `VITE_CUSTOM_LOOP=false` | 开 |
 
-> 注：`cockpit`（`VITE_CUSTOM_COCKPIT`）开关随 P3 Task 8 cockpit 退役一并移除（`/hermes/cockpit` 路由本体已删除，新 IA `/app` 为唯一一级界面）；`VITE_IA_RETRO=1` 仅保留旧 `/hermes/loop*` 深链不强制迁移的回退语义。
+> 注：P4 起 `cockpit`（`VITE_CUSTOM_COCKPIT`，默认开）恢复——`/hermes/cockpit` 旧驾驶舱与新 IA `/app` 平行共存（侧栏双入口）；关闭开关仅隐藏旧入口，不影响新 IA。`VITE_IA_RETRO=1` 仅保留旧 `/hermes/loop*` 深链不强制迁移的回退语义。
 
 ### 4. 完整构建流水线（`npm run build:full`）
 

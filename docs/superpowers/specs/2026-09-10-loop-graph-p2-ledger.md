@@ -196,3 +196,72 @@
 - 逐条对照 progress.md Task 1-8 的 minor/deferred 行，P2 收口时（Task 9）在代码库重新 grep 验证现状（如 #3 的 JSDoc、#2 的 resumeRun 调用方、#26 的路由表），非照抄评审记录；
 - 未列为本核销范围的 Task 1-8 主线缺陷（fix round 项）均已在各自修复轮收口，见 progress.md 对应 "fix round x/x (n addressed, 0 open)" 行；
 - P3 排期时按本文编号引用，避免二次转述失真。
+
+---
+
+## 五、P4 收口核销（2026-09-12）
+
+P4（可视化编排器 + 双入口平行共存）收口对第四节"顺延 P4"余项的逐条处置。逐条 grep 复核现状后落锚点，非照抄评审记录。
+
+### 5.1 P2 顺延表 §4.1 余项（服务端为主，T10 批）
+
+| # | 处置 | 锚点 |
+|---|------|------|
+| 6 | 已修：updateLoop 静默 catch 补 log | graph-assembly.ts（P4 T10） |
+| 7 | 已修：失败分支补"计数有意不清零"注释 | run-spawner.ts |
+| 9 | 已修：escalate 先落水印再发（append 失败不重发） | interrupt-timeout.ts |
+| 10 | 已修：RunSpawner clock 注入面统一 | run-spawner.ts |
+| 11 | 已修（位置修正）：真实窗口在 GraphSpecStore.load 文件灌表路径 → 完成标记行 + 逐 spec 续跑 | graph-rest.ts |
+| 13 | 已修：InMemory getSpec 返回深副本 | event-log-store.ts |
+| 14/17 | 已修：投影丢弃边 warn（模块级去重）；gate→stop-check 折叠为 scheduling 自环投影（取舍：编译拓扑无独立 stop-check 自环边） | loop-to-graph.ts |
+| 20 | 已修：词表 Object.create(null) | runcenter/adapters.ts |
+| 21 | 已修：页码随列表收缩钳制到末页 | RunCenterView.vue |
+| 23 | 已修：flowEdges 投影断言（源/目标/箭头/taken 描色/guard 徽标） | run-detail-components.test.ts |
+| 24 | 已修：单列 fan-out 折行（8 行/子列 + 累计 x 基线）+ 300 节点基准测试（重叠/全覆盖/耗时上界） | run-graph.ts / run-graph.test.ts |
+| 25 | 已修：前缀联动单调性断言（seek → taken 集合扩张） | run-graph.test.ts |
+| 31 | 已修：inject.mjs 脏树校验前置（拒绝时零删除，实测脏树拒绝→clean→注入成功） | inject.mjs main() |
+| 32 | 已核对（文档债定性）：WARN 源 = inject 语义内 4 patch 的 9 个 tracked 文件（全部存在）；非残留债。历史 progress.md 清单已随 .superpowers 清理，无从逐文件对账（诚实声明） | verify-clean.mjs / .overlay-injected.json |
+
+### 5.2 P3 顺延表 §4.2 余项（T11 批为主）
+
+| 条目 | 处置 |
+|---|---|
+| SQLite eid 升级守门测试 | 已补（旧 schema 建表→打开→新事件回填 eid） |
+| 导出无 limit | 已修（?limit= 默认/上限 10000 + eventsTruncated 标志） |
+| getEvents/saas-store 窗口语义分叉 | 已修（两实现统一"最新 N 条升序"；saas DESC 截取反转） |
+| graph.forked/failed live 副本无 eid | 已修（failRun/forkRun 补 eid，格式对齐 `<runId>-<seq>`） |
+| 翻页不清 expandedRunId/scrollTop | 已修（换页/钳制清 peek + 滚动复位，jsdom 守卫） |
+| 页界 subscribe 抖动 | 接受（syncVisibleRunIds 以可见页为域，抖动窗口无害） |
+| nowTick 冻结 | 已修（60s 步进 + 卸载清理） |
+| fetchRuns 失败被空态吞没 | 核销（store.error 渲染已在 P3 落地，复核确认） |
+| buildTodayPlan 只收 idle | 已修（paused 且今日到期进计划 + 测试） |
+| 跨视图批准无痕 | 接受（resume 事件带 approver 留痕；服务端 stampApproverIdentity 覆写） |
+| done 测试标题名不副实 | 核销（复核现测试标题与断言一致） |
+| cron 粗校文案 | 接受（粗校错误经表单错误行展示；详尽 cron 解析属服务端职责） |
+| 模板卡片键盘不可达 | 已修（role=button + tabindex + Enter/Space） |
+| 首拉失败错误横幅与空态同屏 | 已修（error prop：失败仅横幅，空态让位） |
+| 创建成功不锚定新 loop | 已修（跳转带 ?loop=<name>，RunCenterView 消费预填） |
+| OverviewView scss side-effect import | 已修（壳级 IaShell 统一引入，3 视图重复删除） |
+| sessionTaskId.ts deprecated 未删 | 重新定性：cockpit 平行共存恢复后消费方（useKanbanTaskGraph/useRunTrace）活跃 → 去 deprecated 标记 |
+| intervention 测试 router warn | 接受（jsdom vue-router 已知告警，断言全绿无噪声失败） |
+| KANBAN_STATUSES 双源 | 已修（Set<KanbanTaskStatus> 类型派生，上游词表变化编译期报错） |
+| iteration 注释不符 | 核销（复核服务端注释语义一致） |
+| MatrixChatPanel openSettingsPage 死代码 | 已修（删除） |
+| PageSidebarNav openMatrixChat | 已修（2.18 同步 patch 234，并行会话落） |
+| watchKanbanTasks 模块级 watch 永不卸 | 已修（store stop 句柄 + unwatchKanbanTasks，OverviewView 卸载解除） |
+| ia store retro ref 无消费方 | 接受（features.iaRetro 为活读取，retro ref 预留 RETRO 模式扩展） |
+| specStore 事件窗口/模板语义随实例化（T6） | 已修（createLoop template 参数 + origin=template + meta 透传 + patch 202 接线 getTemplate） |
+| A1 RETRO 回退窗口 | **计划级修订（用户裁决 2026-09-11）**：cockpit 恢复平行共存，"窗口随 P4 关闭"不再适用——旧驾驶舱常驻可达，README 已同步 |
+| A2 舰队审批 UI 重建 | 已修（cockpit 恢复后 CockpitFleetGrid 审批链路复活 + Always allow 'always' 档暴露 + runcenter 面板按类型记忆） |
+| matrix-bot 事件面收敛 / 失败通知 5min 合并窗口 | 顺延（通知通道改造，独立期，见 P4 计划"不做"节） |
+| T7 自动归档仅覆盖 approval 源（文档回写债） | 已回写（本表即核销记录；spec §7B.4 Triage 语义以实现为准） |
+| getEvents 500 截断迭代推导退化 | 已修（服务端查询端点统一，见上） |
+| 导出 query 流式 | 接受（limit 上限 10000 已够 P4 规模） |
+
+### 5.3 T10 新发现（未在台账，本收口立条并处置）
+
+- **graph:history 回放窗口取最旧 50 条**（与"最近 50 条"注释相反）：已修（latestSeq 定位尾部窗口）→ graph-socket.ts。
+- **SaaSStore 不持久化 loop.template**（createLoop 固定列）：接受（图引擎 + saas 形态下模板溯源重启即失；本地形态为主）。
+- **query(runId,{limit}) 语义为"最旧前 N"**：graph:history 已绕开；export 端点沿用前 N 语义（eventsTotal/eventsTruncated 透明化）。语义重定义顺延。
+
+统计：P4 收口处置 §5.1 14 条 + §5.2 31 条 + §5.3 3 条——已修 36 / 接受 6 / 顺延 2 / 重新定性 2 / 计划级修订 1 / 已核对 1。
