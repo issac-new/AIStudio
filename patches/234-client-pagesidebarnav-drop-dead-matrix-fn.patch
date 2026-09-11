@@ -1,0 +1,16 @@
+diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
+index 966237e..0e21147 100644
+--- a/packages/client/src/components/layout/PageSidebarNav.vue
++++ b/packages/client/src/components/layout/PageSidebarNav.vue
+@@ -54,11 +54,6 @@ function openGroupChat() {
+   void router.push({ name: 'hermes.groupChat' })
+ }
+ 
+-function openMatrixChat() {
+-  if (props.active === 'matrix') return
+-  void router.push({ name: 'hermes.matrixChat' })
+-}
+-
+ function openWorkflow() {
+   if (props.active === 'workflow') return
+   void router.push({ name: 'hermes.workflow' })
