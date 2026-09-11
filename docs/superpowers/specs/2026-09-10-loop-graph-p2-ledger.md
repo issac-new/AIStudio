@@ -76,7 +76,7 @@
 
 | # | 来源 | 条目 | 现状与方案 |
 |---|------|------|-----------|
-| 33 | Task 8 important-ledger | **R1 每日 Brief Matrix 投递最后一公里未接** | 投递函数（briefDelivery）注入点已在 patch 202 预留（当前 createGraphAssembly 未传该参数）；接线需 getMatrixClient 单例 + `LOOP_MATRIX_*` env 四件套 + patch 202 注入 ~15 行。**待用户确认 bot 身份与凭据来源后实施**。落地前诚实边界已在 README 声明：默认只落事件日志（graphId='daily-brief' 审计 run，delivered:false），聊天里收不到每日简报 |
+| 33 | Task 8 important-ledger | **R1 每日 Brief Matrix 投递最后一公里未接** | **已拍板接线（2026-09-10 用户拍板：使用本机配置的登录身份；实现 commit 见 overlay `feat/r1-brief-matrix`）**。落地形态：投递函数（briefDelivery）注入点已在 patch 202 预留 → 本次由 patch 202 注入 `createMatrixBriefDelivery()`；凭据=本机 `~/.hermes-web-ui/matrix-session.json`（patch 012 matrixLogin 成功路径落盘，session-store.ts 0600/原子写）→ `LOOP_MATRIX_HOMESERVER/TOKEN/USER` env 回退；无凭据走既有 warn-once + event-log-only 路径，房间仍由 `LOOP_BRIEF_ROOM` 配置 |
 
 ---
 
@@ -123,7 +123,7 @@
 | 31 | inject.mjs 清理动作（step 0）仍先于工作树校验（step 1） |
 | 32 | hermes-agent verify-clean WARN 存量文档债未动 |
 
-#33（每日 Brief 投递）维持**待用户决策**，现状与方案不变。
+#33（每日 Brief 投递）已于 2026-09-10 用户拍板并接线（见第三节该条拍板注记），不再待决策。
 
 ### 4.2 P3 各任务台账核销状态表（progress.md 汇总）
 
@@ -181,8 +181,8 @@
 | T7 | KANBAN_STATUSES 双源 | 顺延 P4 | 未重核 |
 | T7 | 报告两处失实（phase-persistence id 侥幸兼容 / 键计数虚高） | 核销 | 报告为存档快照，正源以代码与本文为准 |
 | T7 | iteration 注释不符 | 顺延 P4 | 未重核 |
-| T8 | A1 RETRO 语义收窄（回退=revert 4bcb1e8，回退窗口随 P4 关闭） | 待决策 | 本收口已在 README 如实声明（cockpit 退役声明），**计划级变更待用户追认** |
-| T8 | A2 command-post 舰队审批 UI 无落点 | 顺延 P4 | README 已注明"P4 重建" |
+| T8 | A1 RETRO 语义收窄（回退=revert 4bcb1e8，回退窗口随 P4 关闭） | 待决策 → **用户已追认（2026-09-10）** | 本收口已在 README 如实声明（cockpit 退役声明），**计划级变更待用户追认**——用户已追认，回退窗口维持随 P4 关闭 |
+| T8 | A2 command-post 舰队审批 UI 无落点 | 顺延 P4 → **用户已追认（2026-09-10）** | README 已注明"P4 重建"；追认范围含该重建排期（P4） |
 | T8 | MatrixChatPanel openSettingsPage 死代码（push 退役路由名） | 顺延 P4 | MatrixChatPanel.vue:61 定义未消费，下轮清扫 |
 | T8 | PageSidebarNav openMatrixChat 死函数 | 顺延 P4 | 随 020 重写清 |
 | T8 | watchKanbanTasks 模块级 watch 永不卸 | 顺延 P4 | workspace.ts:271-279 已核实仍常驻 |
