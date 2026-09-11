@@ -109,14 +109,18 @@ export class GraphSpecStore {
     }
   }
 
-  /** P4：删除（内存 + 持久层）；模板 spec 编译期派生、不入此表，删除面天然限定自建 spec */
+  /** P4：删除（内存 + 持久层）；模板 spec 编译期派生、不入此表，删除面天然限定自建 spec。
+   *  2026-09-12 审查：先持久层后内存——持久层失败（DB 故障）时内存与落盘保持一致
+   *  （进程内仍可见、可重试删除），不会出现"内存已失、DB 行仍在、重启后复活"的发散。 */
   async delete(id: string): Promise<boolean> {
     if (!this.specs.has(id)) return false
-    this.specs.delete(id)
     if (this.eventLog) await this.eventLog.deleteSpec(id)
     else if (this.filePath) {
-      await fs.writeFile(this.filePath, JSON.stringify([...this.specs.values()], null, 2), 'utf-8')
+      // filePath 分支序列化的是内存表——先剔除目标再落盘
+      await fs.writeFile(this.filePath, JSON.stringify(
+        [...this.specs.values()].filter(s => s.id !== id), null, 2), 'utf-8')
     }
+    this.specs.delete(id)
     return true
   }
 
@@ -266,6 +270,11 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     const spec = ctx.request.body as GraphSpec
     if (!spec || typeof spec.id !== 'string' || !Array.isArray(spec.nodes) || !Array.isArray(spec.edges)) {
       ctx.status = 400; ctx.body = { error: 'Invalid GraphSpec' }; return
+    }
+    // 2026-09-12 审查：id 形状与保留 id 守门——SEED_MARKER 行是"文件种子已完成"标记，
+    // upsert 覆写它会让 load() 判 seeded=true 并跳过该行，spec 重启后静默消失
+    if (!ID_RE.test(spec.id) || spec.id === SEED_MARKER_ID) {
+      ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return
     }
     if (spec.origin === 'template') {
       ctx.status = 400; ctx.body = { error: 'origin "template" is reserved for loop-compiled specs' }; return
