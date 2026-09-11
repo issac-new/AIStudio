@@ -18,6 +18,7 @@ import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
 import { DailyBriefJob, readBriefConfig } from './daily-brief'
+import { resolveBriefRoom } from './brief-matrix-delivery'
 import { emitLoopEvent } from '../services/loop-socket'
 import type { Router } from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
@@ -65,7 +66,8 @@ export interface GraphAssemblyOpts {
   socketRetryMax?: number
   /**
    * R1 每日 Brief 的 Matrix 传输（宿主注入：把文本以 m.loop.notification 发到房间）。
-   * 仅 LOOP_BRIEF_ROOM 配置时被调用；未注入或未配置房间 → brief 只落事件日志。
+   * 房间 LOOP_BRIEF_ROOM → gateway MATRIX_HOME_ROOM 回落（resolveBriefRoom）；
+   * 房间已配置但未注入传输 → brief 只落事件日志。
    */
   briefDelivery?: (roomId: string, text: string) => Promise<void>
   log?: (msg: string) => void
@@ -231,14 +233,19 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   const briefConfig = readBriefConfig()
   let briefJob: DailyBriefJob | null = null
   if (mode === 'on') {
-    if (briefConfig.room && !opts.briefDelivery) {
-      log('[graph] LOOP_BRIEF_ROOM is set but no briefDelivery transport injected — brief stays event-log only')
+    // R1 升级：房间 LOOP_BRIEF_ROOM → gateway MATRIX_HOME_ROOM 回落（resolveBriefRoom）。
+    // 凭据链第三级（gateway dotenv）在 brief-matrix-delivery 内部解析；此处只判房间有无。
+    const briefRoom = resolveBriefRoom()
+    if (briefRoom && !opts.briefDelivery) {
+      log(briefConfig.room
+        ? '[graph] LOOP_BRIEF_ROOM is set but no briefDelivery transport injected — brief stays event-log only'
+        : '[graph] brief room from gateway MATRIX_HOME_ROOM but no briefDelivery transport injected — brief stays event-log only')
     }
     briefJob = new DailyBriefJob({
       eventLog, store,
       cron: briefConfig.cron,
-      deliver: briefConfig.room && opts.briefDelivery
-        ? (text) => opts.briefDelivery!(briefConfig.room!, text)
+      deliver: briefRoom && opts.briefDelivery
+        ? (text) => opts.briefDelivery!(briefRoom, text)
         : undefined,
       intervalMs: opts.intervalMs, log,
     })
