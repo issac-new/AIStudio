@@ -502,6 +502,21 @@ describe('graph REST run lifecycle', () => {
     expect(specStore.get('good')?.origin).toBe('editor')
   })
 
+  it('POST /api/graph/specs 拒绝非法形状 id 与保留 id __file-seed-complete__（2026-09-12 审查：防覆写种子标记行致重启后 spec 静默消失）', async () => {
+    const specStore = new GraphSpecStore()
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+    const body = { version: 1, channels: {}, nodes: [{ id: 'a', type: 'function', config: {} }], edges: [], entryNode: 'a', limits: { maxSteps: 10 } }
+    const badShape = await invoke(router, 'post', '/api/graph/specs', { ...body, id: '../escape' })
+    expect(badShape.status).toBe(400)
+    const seed = await invoke(router, 'post', '/api/graph/specs', { ...body, id: '__file-seed-complete__' })
+    expect(seed.status).toBe(400)
+    expect(specStore.get('__file-seed-complete__')).toBeUndefined()
+  })
+
   it('DELETE /api/graph/specs/:id removes editor specs; 404 unknown (P4)', async () => {
     const specStore = new GraphSpecStore()
     await specStore.save({
