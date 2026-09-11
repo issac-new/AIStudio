@@ -3,6 +3,8 @@
      节点状态着色（Pure Ink：done 灰实 / running 描边动画 / failed error /
      awaiting-input warning / skipped 虚化）、迭代徽标（节点完成次数，>1 显示）、
      回边虚线弧 + guard 徽标（maxIterations）、taken 边描色。
+     P4 T8：spec 携带 containers 时为成员画包围框（容器框以专用节点类型
+     rg-container 挂进视口，随画布平移缩放；标签 = container.label 或 id）。
      布局为手写分层（layoutRunGraph 纯函数）：固定六节点列布局。
      点击节点 emit('select-node')——B7 检查器预留的消费口。 -->
 <script setup lang="ts">
@@ -13,11 +15,20 @@ import '@vue-flow/core/dist/theme-default.css'
 import { layoutRunGraph } from '../adapters/run-graph'
 import type { RunGraphData } from '../adapters/run-graph'
 
+/** P4 T8：容器可视化元数据（GraphSpec.containers 同构子集，结构性传入） */
+interface RunGraphContainerLike {
+  id: string
+  label?: string
+  nodeIds: string[]
+}
+
 const props = defineProps<{
   graph: RunGraphData
   /** 布局入口提示（缺省取零入边节点） */
   entryNode?: string
   selectedNodeId?: string | null
+  /** spec 携带的 loop 容器（成员包围框 + 标签） */
+  containers?: RunGraphContainerLike[]
 }>()
 
 const emit = defineEmits<{ (e: 'select-node', id: string): void }>()
@@ -29,14 +40,62 @@ function durationLabel(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
+/** 分层布局（节点与容器框共用同一坐标系） */
+const positions = computed(() => layoutRunGraph(props.graph, props.entryNode))
+
+// 容器框几何：节点卡片尺寸估计（.rg-node min/max 宽 + 两行内容高）+ 外扩留白。
+// 手写布局无真实量测（jsdom / SSR 同口径），估计值只影响框的呼吸感不影响拓扑。
+const CONTAINER_NODE_W = 176
+const CONTAINER_NODE_H = 58
+const CONTAINER_PAD = 14
+
+/** 容器包围框：成员位置极值 + 留白（绝对定位 div 框挂专用节点进视口） */
+const containerFrames = computed(() => {
+  if (!props.containers || props.graph.nodes.length === 0) return []
+  const frames: Array<{ key: string; containerId: string; label: string; x: number; y: number; w: number; h: number }> = []
+  for (const c of props.containers) {
+    const members = c.nodeIds
+      .map(id => positions.value.get(id))
+      .filter((p): p is { x: number; y: number } => Boolean(p))
+    if (members.length === 0) continue
+    const minX = Math.min(...members.map(m => m.x)) - CONTAINER_PAD
+    const minY = Math.min(...members.map(m => m.y)) - CONTAINER_PAD * 2
+    const maxX = Math.max(...members.map(m => m.x)) + CONTAINER_NODE_W + CONTAINER_PAD
+    const maxY = Math.max(...members.map(m => m.y)) + CONTAINER_NODE_H + CONTAINER_PAD
+    frames.push({
+      key: `container-${c.id}`,
+      containerId: c.id,
+      label: c.label || c.id,
+      x: minX,
+      y: minY,
+      w: maxX - minX,
+      h: maxY - minY,
+    })
+  }
+  return frames
+})
+
+/** 容器框挂成专用 vue-flow 节点（zIndex 压底、不可交互），随视口平移缩放 */
+const containerNodes = computed<Node[]>(() =>
+  containerFrames.value.map(f => ({
+    id: f.key,
+    type: 'rg-container',
+    position: { x: f.x, y: f.y },
+    data: { label: f.label, width: f.w, height: f.h, containerId: f.containerId },
+    zIndex: 0,
+    draggable: false,
+    selectable: false,
+    connectable: false,
+  })))
+
 const flowNodes = computed<Node[]>(() => {
-  const pos = layoutRunGraph(props.graph, props.entryNode)
-  return props.graph.nodes.map((n) => {
-    const p = pos.get(n.id) ?? { x: 0, y: 0 }
+  const content = props.graph.nodes.map((n) => {
+    const p = positions.value.get(n.id) ?? { x: 0, y: 0 }
     return {
       id: n.id,
       type: 'run-node',
       position: p,
+      zIndex: 1,
       data: {
         label: n.label,
         type: n.type,
@@ -52,6 +111,7 @@ const flowNodes = computed<Node[]>(() => {
       selectable: false,
     }
   })
+  return [...containerNodes.value, ...content]
 })
 
 const flowEdges = computed<Edge[]>(() => {
@@ -96,6 +156,18 @@ function onSelect(id: string): void {
       :zoom-on-scroll="true"
       :default-edge-options="{ markerEnd: MarkerType.ArrowClosed }"
     >
+      <template #node-rg-container="containerProps">
+        <div
+          class="rg-container"
+          :data-container-id="containerProps.data.containerId"
+          :style="{
+            width: `${containerProps.data.width}px`,
+            height: `${containerProps.data.height}px`,
+          }"
+        >
+          <span class="rg-container__label">{{ containerProps.data.label }}</span>
+        </div>
+      </template>
       <template #node-run-node="nodeProps">
         <div
           class="rg-node"
@@ -201,6 +273,27 @@ function onSelect(id: string): void {
 .rg-node.is-awaiting-input { border-color: var(--color-warning, #f59e0b); box-shadow: 0 0 0 1px var(--color-warning, #f59e0b); }
 .rg-node.is-skipped { border-style: dashed; opacity: 0.45; }
 .rg-node.is-selected { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); }
+
+/* P4 T8：loop 容器包围框（虚线 + 标签；压在节点层之下） */
+.rg-container {
+  position: relative;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--accent-primary, var(--color-primary, #3b82f6));
+  border-radius: var(--radius-standard, 8px);
+  background: rgba(59, 130, 246, 0.04);
+  pointer-events: none;
+}
+.rg-container__label {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bg-card, var(--color-bg-primary, #fff));
+  font-size: 10px;
+  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  white-space: nowrap;
+}
 
 @keyframes rg-node-running {
   0%, 100% { box-shadow: 0 0 0 0 rgba(40, 191, 92, 0.35); }

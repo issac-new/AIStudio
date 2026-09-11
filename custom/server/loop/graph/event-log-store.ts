@@ -84,6 +84,8 @@ export interface EventLogStore {
   saveSpec(spec: StoredGraphSpec): Promise<void>
   getSpec(id: string): Promise<StoredGraphSpec | null>
   listSpecs(): Promise<StoredGraphSpecMeta[]>
+  /** P4：删除自建 spec（编辑器 origin=editor 专用） */
+  deleteSpec(id: string): Promise<void>
 }
 
 export class InMemoryEventLogStore implements EventLogStore {
@@ -143,11 +145,18 @@ export class InMemoryEventLogStore implements EventLogStore {
 
   async getSpec(id: string): Promise<StoredGraphSpec | null> {
     const s = this.specs.get(id)
-    return s ? { id: s.id, version: s.version, spec: s.spec } : null
+    // 台账 #13（顺延 P4 清偿）：spec 返回深副本（saveCheckpoint/checkpoint 读侧同款
+    // JSON 往返）——SQLite 实现天然经 JSON 序列化隔离，InMemory 直泄内部引用会让
+    // 调用方改写共享结构（如 GraphSpecStore.load 灌表路径）污染 store 内存态。
+    return s ? { id: s.id, version: s.version, spec: JSON.parse(JSON.stringify(s.spec)) } : null
   }
 
   async listSpecs(): Promise<StoredGraphSpecMeta[]> {
     return [...this.specs.values()].map(s => ({ id: s.id, version: s.version, updatedAt: s.updatedAt }))
+  }
+
+  async deleteSpec(id: string): Promise<void> {
+    this.specs.delete(id)
   }
 }
 
@@ -273,6 +282,10 @@ class SqliteEventLogStore implements EventLogStore {
       `SELECT id, version, updated_at FROM graph_specs ORDER BY rowid`,
     ).all() as Array<Record<string, unknown>>
     return rows.map(r => ({ id: r.id as string, version: r.version as number, updatedAt: r.updated_at as string }))
+  }
+
+  async deleteSpec(id: string): Promise<void> {
+    this.db.prepare(`DELETE FROM graph_specs WHERE id = ?`).run(id)
   }
 }
 

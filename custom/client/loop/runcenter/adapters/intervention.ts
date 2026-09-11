@@ -63,6 +63,10 @@ export interface ApprovalInterruptView {
   timeout: { ms: number | null; onTimeout: string | null } | null
   /** interrupt 挂起时刻（已等时长起点） */
   raisedAt: string | number | null
+  /** 审批类别（P4 T9「Always allow 按类型记忆」的规则粒度）：
+   *  value.nodeType 显式声明优先（服务端预留），否则按载荷形状推导——
+   *  契约审批（validation 节点，带 contractSummary）vs 人工审批（human 节点） */
+  nodeType: string
 }
 
 /** interrupt value 读取：socket 顶层 value ∪ 日志 payload.value */
@@ -147,6 +151,9 @@ export function parseApprovalInterrupt(events: readonly ReplayEventLike[]): Appr
         }
       : null,
     raisedAt: open.ts,
+    nodeType: typeof value?.nodeType === 'string' && value.nodeType
+      ? value.nodeType
+      : value?.contractSummary != null ? 'validation' : 'human',
   }
 }
 

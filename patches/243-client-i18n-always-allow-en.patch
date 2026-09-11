@@ -1,0 +1,18 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 053c9c4e..38560183 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -722,6 +722,13 @@ export default {
+       rejectReasonPlaceholder: 'Reason is required to reject…',
+       rejectReasonRequired: 'Please provide a rejection reason',
+       noIdentity: 'Current user identity unavailable — cannot match the specified approvers list',
++      autoPassed: 'Auto-approved by an always-allow rule',
++      revokeAlwaysAllow: 'Revoke this rule',
++      alwaysAllow: 'Always allow {type} approvals',
++      type: {
++        human: 'human',
++        validation: 'contract',
++      },
+     },
+     inbox: {
+       pending: 'Pending',

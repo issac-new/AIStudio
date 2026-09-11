@@ -53,6 +53,20 @@ watch(pagedRuns, (list) => {
   store.syncVisibleRunIds(list.map(r => r.runId))
 })
 
+// 台账 #21 + T2：页码随列表收缩钳制到末页（run 被清理/过滤后 page 悬空出空页）；
+// 翻页/钳制换页时清 peek 展开与滚动位（残留展开与换页后内容错位）。
+watch(totalPages, (pages) => {
+  if (page.value > pages) {
+    page.value = Math.max(1, pages)
+    expandedRunId.value = null
+    resetScroll()
+  }
+})
+watch(page, () => {
+  expandedRunId.value = null
+  resetScroll()
+})
+
 function prevPage(): void { if (page.value > 1) page.value-- }
 function nextPage(): void { if (page.value < totalPages.value) page.value++ }
 
@@ -77,6 +91,12 @@ function goRunDetail(run: RunSummary): void {
 
 // ── 行内 peek 展开（task-7）：approve/peek 动作与行首箭头同一路径，不进详情页 ──
 const expandedRunId = ref<string | null>(null)
+/** 列表滚动容器（翻页/钳制换页时清滚动位，台账 T2） */
+const scrollArea = ref<HTMLElement | null>(null)
+/** 滚动复位（jsdom 无 scrollTo；能力缺失时静默跳过——测试环境零噪音） */
+function resetScroll(): void {
+  scrollArea.value?.scrollTo?.({ top: 0 })
+}
 
 function togglePeek(runId: string): void {
   expandedRunId.value = expandedRunId.value === runId ? null : runId
@@ -136,7 +156,7 @@ function replayTime(e: GraphEventLike): string {
 </script>
 
 <template>
-  <div class="rc-view">
+  <div ref="scrollArea" class="rc-view">
     <!-- 顶部工具条 -->
     <div class="rc-view__toolbar">
       <h2 class="rc-view__title">{{ t('runcenter.title') }}</h2>

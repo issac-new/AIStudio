@@ -1,9 +1,11 @@
 <!-- overlay/custom/client/ia2/components/SpecDetail.vue -->
-<!-- Spec 详情（P3 Task 6）：GraphSpec 只读可视化 + JSON 查看器 + 导出/导入。
+<!-- Spec 详情（P3 Task 6；P4 深化）：GraphSpec 只读可视化 + JSON 查看器 + 导出。
      画布复用 runcenter RunGraphCanvas（拓扑经 layoutFromSpec 喂同一布局器——
-     模板图与运行图形状可对照）；JSON 可折叠查看；导出走 Blob 下载
-     （与 RunDetailView 导出同款，REST 走授权头，直链不带凭证）；
-     导入 P4 画布配套，本期置灰 tooltip。组件薄壳：数据由父层注入。 -->
+     模板图与运行图形状可对照；P4 起 spec.containers 透传画包围框）；
+     JSON 可折叠查看；导出走 Blob 下载（与 RunDetailView 导出同款，REST 走
+     授权头，直链不带凭证；导出格式与编辑器一致 = spec JSON）；
+     origin==='editor' 的自建 spec 附加「试跑」入口（emit 交父层起跑跳转）；
+     导入在 P4 编辑器内提供，此处保持置灰。组件薄壳：数据由父层注入。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -19,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'back'): void
   (e: 'create', card: SpecCard): void
+  (e: 'try-run', card: SpecCard): void
 }>()
 
 const { t } = useI18n()
@@ -27,7 +30,10 @@ const showJson = ref(false)
 const jsonText = computed(() =>
   props.spec ? JSON.stringify(props.spec, null, 2) : '')
 
-// ── 导出 JSON（Blob 下载，RunDetailView 同款）──
+/** P4 T8：spec 携带的 loop 容器 → RunGraphCanvas 包围框 */
+const containers = computed(() => props.spec?.containers ?? [])
+
+// ── 导出 JSON（Blob 下载，RunDetailView 同款；与编辑器导出同为 spec JSON）──
 const exporting = ref(false)
 function exportJson(): void {
   const id = props.card.id
@@ -56,6 +62,14 @@ function exportJson(): void {
       <h3 class="spec-detail__title">{{ props.card.name }}</h3>
       <span v-if="props.card.version > 0" class="spec-detail__version">v{{ props.card.version }}</span>
       <span class="spec-detail__kind">{{ t(`ia2.orchestrate.kind.${props.card.kind}`) }}</span>
+      <button
+        v-if="props.card.origin === 'editor'"
+        class="spec-detail__tryrun"
+        data-spec-tryrun
+        @click="emit('try-run', props.card)"
+      >
+        {{ t('ia2.orchestrate.editor.tryRun') }}
+      </button>
       <button class="spec-detail__create" data-spec-create @click="emit('create', props.card)">
         {{ t('ia2.orchestrate.createLoop') }}
       </button>
@@ -65,6 +79,7 @@ function exportJson(): void {
       <RunGraphCanvas
         :graph="layoutFromSpec(props.spec)"
         :entry-node="props.spec?.entryNode"
+        :containers="containers"
       />
     </section>
 
@@ -131,6 +146,20 @@ function exportJson(): void {
   background: var(--bg-secondary);
   font-size: 11px;
   color: var(--text-secondary);
+}
+.spec-detail__tryrun {
+  padding: 4px 12px;
+  border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6));
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: var(--accent-primary, var(--color-primary, #3b82f6));
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.spec-detail__tryrun:hover {
+  background: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--color-on-accent, #fff);
 }
 .spec-detail__create {
   margin-left: auto;

@@ -81,6 +81,27 @@ describe('InMemoryEventLogStore', () => {
     expect(await s.getSpec('spec-1')).toEqual({ id: 'spec-1', version: 2, spec: { id: 'spec-1', nodes: ['a', 'b'] } })
     expect(await s.listSpecs()).toHaveLength(2)
   })
+
+  // 台账 #13（顺延 P4 清偿）：getSpec 返回深副本——调用方改写返回值不得污染 store 内存态
+  it('getSpec returns a deep copy: mutating the result does not corrupt the store (台账 #13)', async () => {
+    const s = new InMemoryEventLogStore()
+    await s.saveSpec({ id: 'spec-1', version: 1, spec: { id: 'spec-1', nodes: ['a'], meta: { gateCommands: ['npm test'] } } })
+
+    const got = await s.getSpec('spec-1')
+    ;(got!.spec as { nodes: string[] }).nodes.push('HACK')
+    ;((got!.spec as { meta: { gateCommands: string[] } }).meta).gateCommands.push('rm -rf /')
+    got!.version = 99
+
+    const reread = await s.getSpec('spec-1')
+    expect(reread!.version).toBe(1)
+    expect((reread!.spec as { nodes: string[] }).nodes).toEqual(['a'])
+    expect((reread!.spec as { meta: { gateCommands: string[] } }).meta.gateCommands).toEqual(['npm test'])
+    // 两次 getSpec 互不共享
+    const a = await s.getSpec('spec-1')
+    ;(a!.spec as { nodes: string[] }).nodes.push('X')
+    const b = await s.getSpec('spec-1')
+    expect((b!.spec as { nodes: string[] }).nodes).toEqual(['a'])
+  })
 })
 
 describe('createEventLogStore', () => {
@@ -173,6 +194,61 @@ describe.skipIf(!sqliteAvailable)('createEventLogStore via node:sqlite', () => {
       expect(warn).toHaveBeenCalledTimes(1)
     } finally {
       warn.mockRestore()
+    }
+  })
+
+  // P3 台账（T1 顺延 P4 清偿）：SQLite eid 升级守门——旧表（无 eid 列）打开后必须
+  // 容错补列，新写事件带 eid、查询返回 eid。手工建旧 schema 再经工厂打开，模拟
+  // "P3 eid 功能上线前创建的旧库升级"现场。
+  it('upgrades an old-schema db (no eid column): ALTER backfills eid for new writes (P3 台账 eid 升级守门)', async () => {
+    const { mkdtempSync, rmSync } = await import('fs')
+    const { tmpdir } = await import('os')
+    const { join } = await import('path')
+    const { DatabaseSync } = await import('node:sqlite')
+    const dir = mkdtempSync(join(tmpdir(), 'eid-upgrade-'))
+    const dbPath = join(dir, 'old-events.sqlite')
+    try {
+      // 手工建旧 schema：graph_events 无 eid 列（P3 eid 功能之前的形态）
+      const raw = new DatabaseSync(dbPath)
+      raw.exec(`
+        CREATE TABLE graph_events (
+          seq INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_id TEXT NOT NULL, graph_id TEXT NOT NULL, ts INTEGER NOT NULL,
+          kind TEXT NOT NULL, node_id TEXT, iteration INTEGER, super_step INTEGER,
+          payload TEXT NOT NULL
+        );
+        CREATE TABLE graph_checkpoints (
+          id TEXT PRIMARY KEY, run_id TEXT NOT NULL, graph_id TEXT NOT NULL,
+          super_step INTEGER NOT NULL, state TEXT NOT NULL, next_nodes TEXT NOT NULL,
+          pending_interrupts TEXT NOT NULL, iter_counters TEXT NOT NULL,
+          total_cost REAL NOT NULL, started_at_ms INTEGER NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE TABLE graph_specs (
+          id TEXT PRIMARY KEY, version INTEGER NOT NULL, spec_json TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+      `)
+      // 一条旧事件（无 eid 值可回填——读取方按无 eid 处理）
+      raw.prepare(
+        `INSERT INTO graph_events (run_id, graph_id, ts, kind, payload) VALUES (?, ?, ?, ?, ?)`,
+      ).run('r-old', 'g1', 1000, 'run.started', '{}')
+      raw.close()
+
+      // 经工厂打开：构造器 ALTER 兜底补 eid 列（与 join_ledger 先例同款）
+      const s = createEventLogStore(dbPath)
+      expect(s.constructor.name).toBe('SqliteEventLogStore')
+
+      // 旧事件可读，eid 缺省 undefined（前端按无 eid 兜底键）
+      const old = await s.query('r-old')
+      expect(old).toHaveLength(1)
+      expect(old[0].eid).toBeUndefined()
+
+      // 新写事件带 eid 且查询返回（升级后 append 的 UPDATE 回填路径可用）
+      await s.append({ runId: 'r-old', graphId: 'g1', ts: 2000, kind: 'node.completed', nodeId: 'n', payload: {} })
+      await s.append({ runId: 'r-new', graphId: 'g1', ts: 3000, kind: 'run.started', payload: {} })
+      expect((await s.query('r-old'))[1]?.eid).toBe('r-old-2')
+      expect((await s.query('r-new'))[0]?.eid).toBe('r-new-3')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
     }
   })
 })

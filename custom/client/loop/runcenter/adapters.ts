@@ -15,14 +15,14 @@ import type {
 // ---------------------------------------------------------------------------
 
 /** 图轴 nodeId → 业务阶段：stop-check 折叠为 stop，其余原值直通 */
-const STAGE_BY_NODE: Record<string, RunStage> = {
+const STAGE_BY_NODE: Record<string, RunStage> = Object.assign(Object.create(null), {
   discovery: 'discovery',
   handoff: 'handoff',
   validation: 'validation',
   persistence: 'persistence',
   gate: 'gate',
   'stop-check': 'stop',
-}
+})
 
 /**
  * legacy 业务阶段（loop.stage-transition.to）→ 统一阶段。
@@ -32,13 +32,13 @@ const STAGE_BY_NODE: Record<string, RunStage> = {
  * 列表对用户展示的"业务阶段"取 gate（门禁语义）；stop 段由图轴 stop-check 事件
  * 独占承载，legacy 轴不存在单独的 stop-check 语义。
  */
-const STAGE_BY_LEGACY: Record<string, RunStage> = {
+const STAGE_BY_LEGACY: Record<string, RunStage> = Object.assign(Object.create(null), {
   discovery: 'discovery',
   handoff: 'handoff',
   validation: 'validation',
   persistence: 'persistence',
   scheduling: 'gate',
-}
+})
 
 // ---------------------------------------------------------------------------
 // 事件日志投影

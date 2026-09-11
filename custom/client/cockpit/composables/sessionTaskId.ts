@@ -10,7 +10,7 @@
 // （extractKanbanTaskId 的格式 2/3）仅限 UI 显示等容忍误匹配场景。
 
 /**
- * @deprecated P3 Task 7 起新代码禁用（见文件头）：宽泛 fallback 误匹配面大。
+ * @active(P4: cockpit 平行共存恢复,消费方 useKanbanTaskGraph/useRunTrace 活跃) P3 Task 7 起新代码禁用（见文件头）：宽泛 fallback 误匹配面大。
  * 从会话标题提取 kanban 任务 ID（支持多种格式，含宽泛 fallback）。
  * 仅用于 UI 显示等容忍误匹配的场景；聚合匹配请用 matchSessionTaskId。
  */

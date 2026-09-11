@@ -11,9 +11,10 @@ import { createEventLogStore, type EventLogStore } from './event-log-store'
 import { GraphService } from './graph-service'
 import { RunSpawner } from './run-spawner'
 import { compileLoopToDef, type CompileDeps } from './graph-compiler'
-import { appendContractsById } from './phase-nodes'
+import { appendContractsById, type GateCommand } from './phase-nodes'
 import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
+import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
@@ -101,6 +102,23 @@ export interface GraphAssembly {
   /** 启动轮询器 + 崩溃恢复（幂等）。legacy 模式无轮询器，仅做注册表重建（REST 只读面受益） */
   start(): Promise<GraphAssembly>
   stop(): void
+}
+
+/** T5（模板语义随实例化，2026-09-11）：loop.template.meta.gateCommands（模板白名单，
+ *  创建时经 body.template 落进 loop 配置）并入编译 deps——compileLoopToDef 的 opts
+ *  链路：deps.gateCommands → makeLoopNodeRegistry → createGateNode 命令白名单（可达的
+ *  最深消费点）。与装配缺省取并集（模板叠加全局白名单，不缩减既有面），按 cmd 去重。
+ *  导出供装配单测直接断言合并语义。 */
+export function withTemplateDeps(base: CompileDeps, loop: LoopInstance): CompileDeps {
+  const tpl = loop.template?.meta.gateCommands
+  if (!Array.isArray(tpl) || tpl.length === 0) return base
+  const baseCmds = base.gateCommands ?? []
+  const extra: GateCommand[] = tpl
+    .filter((c): c is string => typeof c === 'string' && !!c)
+    .filter(c => !baseCmds.some(b => b.cmd === c))
+    .map(cmd => ({ name: cmd, kind: 'validator' as const, cmd }))
+  if (extra.length === 0) return base
+  return { ...base, gateCommands: [...baseCmds, ...extra] }
 }
 
 export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
@@ -192,7 +210,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   const spawner = mode === 'on'
     ? new RunSpawner({
         graphService, store, eventLog,
-        compile: loop => compileLoopToDef(loop, opts.engineDeps, { appendById: appendContractsById }),
+        // T5：模板 gateCommands 逐 loop 并入编译 deps（见 withTemplateDeps）
+        compile: loop => compileLoopToDef(loop, withTemplateDeps(opts.engineDeps, loop), { appendById: appendContractsById }),
         emitLoopEvent: bridgeLoopEvent,
         webhookEnqueue: webhookConnector
           ? (loopId, entry) => { webhookConnector.enqueue(loopId, entry) }
@@ -251,7 +270,20 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     })
   }
 
-  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore })
+  // P4：自建 spec 起跑器（编辑器试跑链路）。gate 命令白名单来自
+  // LOOP_GATE_COMMANDS（逗号分隔；未配置=空表，gate 节点带命令即拒——安全缺省）
+  const specRuntime = mode === 'on'
+    ? new CustomSpecRuntime({
+        specStore,
+        graphService,
+        registry: createSpecRuntimeRegistry({
+          gateCommands: (process.env.LOOP_GATE_COMMANDS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+        }),
+        log,
+      })
+    : null
+
+  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore, specRuntime })
 
   // P3 Task 8（spec §7B.4 最小版）：图引擎策略只读端点——设置页"图引擎策略"卡数据源。
   // 导出装配事实：当前模式 + 生效的默认审批超时/熔断阈值（只读展示；策略文件化
@@ -297,7 +329,11 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
         let dueIso = loop.nextTickAt
         if (!dueIso && loop.schedule?.mode === 'cron' && loop.schedule.cron) {
           dueIso = computeNextTick(loop)
-          void store.updateLoop(loop.id, { nextTickAt: dueIso }).catch(() => {})
+          // 台账 #6（顺延 P4 清偿）：写回失败不再静默吞掉——首启时间落表失败会让
+          // poll 永不命中（nextTickAt 仍为 null），log 一次留下排查线索
+          store.updateLoop(loop.id, { nextTickAt: dueIso }).catch(err => {
+            log(`[graph] scheduleLoop: persist nextTickAt for ${loop.id} failed: ${err instanceof Error ? err.message : err}`)
+          })
         }
         const dueAt = dueIso ? new Date(dueIso).getTime() : NaN
         if (Number.isFinite(dueAt) && dueAt <= Date.now()) void spawner.tickNow(loop.id)

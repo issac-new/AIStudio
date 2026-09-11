@@ -304,7 +304,9 @@ export function buildTodayPlan(
 
   const items: PlanItem[] = []
   for (const l of loops) {
-    if (l.status !== 'idle' || !l.nextTickAt) continue
+    // 台账 T4（blocked 到期不呈现）：paused（熔断/停滞暂停）且已有下次触发时刻的
+    // loop 同样进今日计划——用户看得到"卡住了且原本该跑"，而不是凭空消失
+    if ((l.status !== 'idle' && l.status !== 'paused') || !l.nextTickAt) continue
     const t = Date.parse(l.nextTickAt)
     if (!Number.isFinite(t) || t > endOfToday) continue
     items.push({ kind: 'loop', id: l.id, title: l.name, at: t, overdue: t < nowMs })

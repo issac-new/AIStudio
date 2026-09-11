@@ -273,7 +273,10 @@ describe('buildTodayPlan — 今日计划推导（到期未触发 idle loops + �
       { id: 'nt', name: '无排期', status: 'idle', nextTickAt: null },
       { id: 'bad', name: '坏时间', status: 'idle', nextTickAt: 'not-a-date' },
     ], [], now)
-    expect(items).toEqual([])
+    // paused 且今日到期的 loop 现在进计划（台账 T4：熔断/停滞暂停的用户可见性）
+    expect(items).toEqual([
+      { kind: 'loop', id: 'p', title: '已暂停', at: Date.parse(isoLocal(2026, 8, 10, 13, 0)), overdue: false },
+    ])
   })
 
   it('今日待办进计划（闹钟时刻排序用）；非今日待办与无闹钟待办 at 为 null 但保留', () => {
