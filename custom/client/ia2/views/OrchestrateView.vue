@@ -1,17 +1,23 @@
 <!-- overlay/custom/client/ia2/views/OrchestrateView.vue -->
-<!-- 编排区（P3 Task 6，spec §8 编排"先只读展示"，R4 三步内跑起来）：
-     ①模板库列表（GET /api/graph/specs → 模板卡片，五阶段编译模板 + 每日 Brief 可见）
+<!-- 编排区（P3 Task 6 建立，spec §8 编排；P4 编辑器深化）：
+     ①模板库列表（GET /api/graph/specs → 模板卡片，五阶段编译模板 + 每日 Brief 可见；
+       P4：origin==='editor' 的自建卡显示描述/编辑/删除）
      ②点卡片进详情（本地选中态，不增设子路由）——GraphSpec 只读可视化（复用
-       runcenter RunGraphCanvas 同一布局器）+ JSON 可折叠查看 + 导出（导入 P4 置灰）
+       runcenter RunGraphCanvas 同一布局器，containers 画包围框）+ JSON 可折叠
+       查看 + 导出；自建 spec 有「试跑」入口
      ③「创建 loop」弹层（名称/goal/执行节奏三字段 + 可选租户）→ POST /api/loop/loops
-       → 跳运行列表——模板可见、拓扑可读、三步可跑。
-     数据与校验经 adapters/orchestrate 纯函数；P4 画布编辑不在本期。 -->
+       → 跳运行列表；goal/cron 预填 spec.meta，payload 带 template 卡 id
+     ④「新建空白图」→ P4 画布编辑器（本地模式态切换，异步组件按需加载）：
+       编辑保存（POST /api/graph/specs）/ 删除（DELETE）/ 试跑（POST runs → 跳详情）。
+     数据与校验经 adapters/orchestrate 纯函数；画布编辑逻辑在
+     loop/orchestrator 模块（独立纯函数层 + 组件）。 -->
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { runRest } from '@/custom/loop/runcenter/api'
 import { loopRest } from '@/custom/loop/api/loop-rest'
+import type { GraphSpec } from '@/custom/loop/orchestrator/spec'
 import SpecList from '../components/SpecList.vue'
 import SpecDetail from '../components/SpecDetail.vue'
 import {
@@ -19,6 +25,10 @@ import {
   type GraphSpecLike, type SpecCard, type InstantiateError,
 } from '../adapters/orchestrate'
 import '@/custom/ia2/styles/ia2.scss'
+
+// P4 编辑器视图异步加载（vue-flow 依赖面与列表页隔离；不渲染不评估模块）
+const SpecEditorView = defineAsyncComponent(() =>
+  import('@/custom/loop/orchestrator/views/SpecEditorView.vue'))
 
 const router = useRouter()
 const { t } = useI18n()
@@ -59,6 +69,54 @@ function backToList(): void {
   selectedId.value = null
 }
 
+// ── P4 编辑器（本地模式态：list ⇄ editor；编辑对象 = 既有 spec 或空白图）──
+const mode = ref<'list' | 'editor'>('list')
+const editorSpec = ref<GraphSpecLike | null>(null)
+/** GraphSpecLike（API 宽形状）→ GraphSpec（编辑器输入）窄化：结构性子集，安全收窄 */
+const editorInitialSpec = computed<GraphSpec | null>(() => editorSpec.value as GraphSpec | null)
+
+function openNewEditor(): void {
+  editorSpec.value = null
+  mode.value = 'editor'
+}
+function openEditor(card: SpecCard): void {
+  editorSpec.value = specs.value.find(s => s.id === card.id) ?? null
+  mode.value = 'editor'
+}
+function backFromEditor(): void {
+  mode.value = 'list'
+  void loadSpecs() // 编辑器保存/删除可能已改库，返回时刷新
+}
+function onEditorSaved(): void {
+  void loadSpecs() // 保存成功即刷新列表数据（停留编辑器内继续编辑）
+}
+
+/** 自建卡删除：确认 → DELETE → 刷新（模板卡只读不可删） */
+async function onDeleteCard(card: SpecCard): Promise<void> {
+  if (card.origin !== 'editor') return
+  if (!window.confirm(t('ia2.orchestrate.editor.deleteConfirm'))) return
+  try {
+    await runRest.deleteSpec(card.id)
+    if (selectedId.value === card.id) selectedId.value = null
+    await loadSpecs()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  }
+}
+
+/** 详情页试跑（自建 spec）：POST runs → 跳 /app/runs/:runId；501/400 直显 */
+const tryRunError = ref<string | null>(null)
+async function onTryRun(card: SpecCard): Promise<void> {
+  if (card.origin !== 'editor') return
+  tryRunError.value = null
+  try {
+    const { runId } = await runRest.startSpecRun(card.id)
+    await router.push(`/app/runs/${runId}`)
+  } catch (e) {
+    tryRunError.value = e instanceof Error ? e.message : String(e)
+  }
+}
+
 // ── 实例化弹层（R4 三步的第 3 步：填三字段 → POST → 跳运行列表）──
 const createCard = ref<SpecCard | null>(null)
 const form = reactive({ name: '', goal: '', cron: '0 9 * * *', tenant: '' })
@@ -74,10 +132,10 @@ const ERROR_KEYS: Record<InstantiateError, string> = {
 
 function openCreate(card: SpecCard): void {
   createCard.value = card
-  // 预填：名称取模板名（可改），goal 留空必填，cron 落常用日调度
+  // 预填：名称取模板名（可改）；goal/cron 预填 spec.meta（P4 模板语义元数据）
   form.name = card.name
-  form.goal = ''
-  form.cron = '0 9 * * *'
+  form.goal = card.meta?.goal ?? ''
+  form.cron = card.meta?.cron ?? '0 9 * * *'
   form.tenant = ''
   errors.value = []
   submitError.value = null
@@ -87,13 +145,14 @@ function closeCreate(): void {
 }
 
 async function submitCreate(): Promise<void> {
-  if (submitting.value) return
+  if (submitting.value || !createCard.value) return
   submitError.value = null
   errors.value = validateInstantiateForm(form)
   if (errors.value.length > 0) return
   submitting.value = true
   try {
-    await loopRest.createLoop(buildCreatePayload(form, Date.now()))
+    // payload 带 template = 来源卡片 id（实例化溯源）
+    await loopRest.createLoop(buildCreatePayload(form, Date.now(), createCard.value.id))
     // R4：创建即达——运行列表聚合新 loop 的运行状态
     await router.push('/app/runs')
   } catch (e) {
@@ -108,19 +167,41 @@ async function submitCreate(): Promise<void> {
   <div class="ia-area ia-orchestrate">
     <header class="ia-orchestrate__head">
       <h2 class="ia-orchestrate__title">{{ t('ia2.orchestrate.title') }}</h2>
-      <span v-if="!selectedCard" class="ia-orchestrate__hint">{{ t('ia2.orchestrate.listHint') }}</span>
+      <span v-if="mode === 'list' && !selectedCard" class="ia-orchestrate__hint">{{ t('ia2.orchestrate.listHint') }}</span>
+      <button
+        v-if="mode === 'list' && !selectedCard"
+        class="ia-orchestrate__new"
+        data-new-blank-graph
+        @click="openNewEditor"
+      >
+        {{ t('ia2.orchestrate.editor.newBlank') }}
+      </button>
       <span v-if="error" class="ia-orchestrate__error">
         {{ t('ia2.orchestrate.loadFailed') }}<code>{{ error }}</code>
         <button class="ia-orchestrate__retry" @click="loadSpecs">{{ t('ia2.orchestrate.retry') }}</button>
       </span>
+      <span v-if="tryRunError" class="ia-orchestrate__error">
+        {{ t('ia2.orchestrate.editor.err.runFailed') }}<code>{{ tryRunError }}</code>
+      </span>
     </header>
 
+    <!-- P4 画布编辑器（列表 ⇄ 编辑器本地模式态） -->
+    <SpecEditorView
+      v-if="mode === 'editor'"
+      :key="editorSpec?.id ?? '__new__'"
+      :initial-spec="editorInitialSpec"
+      :existing-specs="specs.map(s => ({ id: s.id ?? '', version: s.version }))"
+      @back="backFromEditor"
+      @saved="onEditorSaved"
+    />
+
     <SpecDetail
-      v-if="selectedCard"
+      v-else-if="selectedCard"
       :card="selectedCard"
       :spec="selectedSpec"
       @back="backToList"
       @create="openCreate"
+      @try-run="onTryRun"
     />
     <SpecList
       v-else
@@ -128,6 +209,8 @@ async function submitCreate(): Promise<void> {
       :loading="loading && !booted"
       @open="openDetail"
       @create="openCreate"
+      @edit="openEditor"
+      @delete="onDeleteCard"
     />
 
     <!-- 实例化弹层 -->
@@ -200,6 +283,16 @@ async function submitCreate(): Promise<void> {
   color: var(--text-primary);
 }
 .ia-orchestrate__hint { font-size: 12px; color: var(--text-muted, var(--color-text-secondary, #878c99)); }
+.ia-orchestrate__new {
+  padding: 3px 12px;
+  border: none;
+  border-radius: var(--radius-micro, 3px);
+  background: var(--accent-primary, var(--color-primary, #3b82f6));
+  color: var(--color-on-accent, #fff);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
 .ia-orchestrate__error {
   display: inline-flex;
   align-items: baseline;

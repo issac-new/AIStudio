@@ -195,6 +195,56 @@ describe('RunGraphCanvas (jsdom, vue-flow stub)', () => {
   })
 })
 
+// ── P4 T8：容器包围框（containers → rg-container 专用节点挂视口）──
+describe('RunGraphCanvas — P4 容器框（jsdom, vue-flow stub）', () => {
+  it('containers 透传：成员包围框以 rg-container 节点进视口（标签= label 优先）', () => {
+    mount(RunGraphCanvas, {
+      props: {
+        graph: GRAPH,
+        entryNode: 'discovery',
+        containers: [{ id: 'c1', label: '修复环', nodeIds: ['handoff', 'validation'] }],
+      },
+    })
+    // 容器节点 + 5 内容节点（容器节点排在最前）
+    expect(flowCapture.nodes).toHaveLength(6)
+    const frame = flowCapture.nodes.find(n => n.type === 'rg-container')
+    expect(frame).toBeTruthy()
+    expect(frame!.id).toBe('container-c1')
+    expect(frame!.data).toMatchObject({ label: '修复环', containerId: 'c1' })
+    // 几何：包围两成员（宽高超过单节点估计尺寸）
+    const data = frame!.data as { width: number; height: number }
+    expect(data.width).toBeGreaterThanOrEqual(176)
+    expect(data.height).toBeGreaterThanOrEqual(58)
+    // 压底且不可交互
+    expect(frame!.zIndex).toBe(0)
+    expect(frame!.draggable).toBe(false)
+    expect(frame!.selectable).toBe(false)
+    // 内容节点 zIndex 抬到容器之上
+    expect(flowCapture.nodes.find(n => n.id === 'handoff')!.zIndex).toBe(1)
+  })
+
+  it('label 缺省用容器 id；成员全未知的容器不产生框', () => {
+    mount(RunGraphCanvas, {
+      props: {
+        graph: GRAPH,
+        containers: [
+          { id: 'c2', nodeIds: ['gate'] },            // label 缺省 → id
+          { id: 'c3', nodeIds: ['ghost-a', 'ghost-b'] }, // 成员不在图中 → 无框
+        ],
+      },
+    })
+    expect(flowCapture.nodes).toHaveLength(6) // 1 容器框 + 5 内容
+    const frame = flowCapture.nodes.find(n => n.type === 'rg-container')!
+    expect((frame.data as { label: string }).label).toBe('c2')
+  })
+
+  it('不传 containers 不产生容器节点（既有调用面零回归）', () => {
+    mount(RunGraphCanvas, { props: { graph: GRAPH, entryNode: 'discovery' } })
+    expect(flowCapture.nodes).toHaveLength(5)
+    expect(flowCapture.nodes.every(n => n.type !== 'rg-container')).toBe(true)
+  })
+})
+
 describe('RunDetailView (jsdom)', () => {
   const SPEC = {
     id: 'loop-loop1',

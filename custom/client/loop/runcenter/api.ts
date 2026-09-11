@@ -123,6 +123,41 @@ export const runRest = {
   exportRun: async (id: string): Promise<{ run: Record<string, unknown>; spec: unknown; events: GraphEventLike[] }> => {
     return request(`${BASE}/${encodeURIComponent(id)}/export`)
   },
+
+  // ── P4 编排器编辑器（graph-rest.ts 自建 spec 契约）─────────────────────────
+
+  /**
+   * POST /api/graph/specs — 登记自建图规格（编辑器保存）。服务端过 validateGraphSpec
+   * （结构非法 400 {error}，message 可直显）；origin 缺省自动标 'editor'——
+   * 编辑器序列化时已显式写 'editor'，此处原样提交。
+   */
+  saveSpec: async (spec: Record<string, unknown>): Promise<{ ok: boolean; id: string }> => {
+    return request('/api/graph/specs', {
+      method: 'POST',
+      body: JSON.stringify(spec),
+    })
+  },
+
+  /**
+   * DELETE /api/graph/specs/:id — 删除自建 spec（模板卡只读不可删；不存在 404）。
+   */
+  deleteSpec: async (id: string): Promise<{ ok: boolean; id: string }> => {
+    return request(`/api/graph/specs/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+  },
+
+  /**
+   * POST /api/graph/specs/:id/runs — 编辑器试跑：hydrate 自建 spec → 注册 → 起跑。
+   * 501 = 引擎未开（GRAPH_ENGINE 非 on）；400 {error} = spec 结构/语义校验失败
+   * （服务端 message 一针见血，可直显）；成功 {runId, instance} → 跳运行详情。
+   */
+  startSpecRun: async (id: string): Promise<{ runId: string; instance: Record<string, unknown> }> => {
+    return request(`/api/graph/specs/${encodeURIComponent(id)}/runs`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
 }
 
 let graphSocket: GraphSocketLike | null = null
