@@ -1,0 +1,33 @@
+diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
+--- a/packages/client/src/components/layout/AppSidebar.vue
++++ b/packages/client/src/components/layout/AppSidebar.vue
+@@ -127,8 +127,29 @@
+         </svg>
+         <span>{{ t("ia2.brand") }}</span>
+       </RouteLinkItem>
++      <!-- overlay[cockpit]: P4 平行共存——原有 AI 协作中心与新 IA 双入口并列 -->
+       <RouteLinkItem
+         class="nav-item"
++        :to="{ name: 'hermes.cockpit' }"
++        :active="selectedKey === 'hermes.cockpit'"
++      >
++        <svg
++          width="16"
++          height="16"
++          viewBox="0 0 24 24"
++          fill="none"
++          stroke="currentColor"
++          stroke-width="1.5"
++          stroke-linecap="round"
++          stroke-linejoin="round"
++        >
++          <circle cx="12" cy="12" r="9" />
++          <path d="M8 12h8" />
++        </svg>
++        <span>{{ t("cockpit.brandTitle") }}</span>
++      </RouteLinkItem>
++      <RouteLinkItem
++        class="nav-item"
+         :to="{ name: 'hermes.logs' }"
+         :active="selectedKey === 'hermes.logs'"
+       >
