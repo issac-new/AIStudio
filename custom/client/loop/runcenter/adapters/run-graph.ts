@@ -349,16 +349,26 @@ export function layoutRunGraph(
     : ids.find(id => !graph.edges.some(e => e.to === id && idSet.has(e.from))) ?? ids[0]
   if (entry && (col.get(entry) ?? 0) !== 0) col.set(entry, 0)
 
-  // 同列按节点输入序排行
+  // 同列按节点输入序排行；台账 #24（大图性能/形态）：单列 fan-out 数百行会把画布
+  // 拉成超长条——超过 ROWS_PER_SUBCOL 行折入下一子列（x 右移），纵横比可控。
+  const ROWS_PER_SUBCOL = 8
   const colRows = new Map<number, string[]>()
   for (const id of order) {
     const c = col.get(id) ?? 0
     colRows.set(c, [...(colRows.get(c) ?? []), id])
   }
+  // 各列子列数 → 累计 x 基线（折行子列右移后不再侵占后继拓扑列的 x 区间）
+  const xBase = new Map<number, number>()
+  let xAcc = 0
+  for (const c of [...colRows.keys()].sort((a, b) => a - b)) {
+    xBase.set(c, xAcc)
+    xAcc += Math.ceil((colRows.get(c)!.length) / ROWS_PER_SUBCOL)
+  }
   const pos = new Map<string, { x: number; y: number }>()
   for (const [c, rowIds] of colRows) {
     for (const [row, id] of rowIds.entries()) {
-      pos.set(id, { x: c * COL_STEP, y: row * ROW_STEP })
+      const sub = Math.floor(row / ROWS_PER_SUBCOL)
+      pos.set(id, { x: (xBase.get(c)! + sub) * COL_STEP, y: (row % ROWS_PER_SUBCOL) * ROW_STEP })
     }
   }
   return pos

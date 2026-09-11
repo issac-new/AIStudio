@@ -182,6 +182,14 @@ function descLabel(card: SpecCard): string {
   white-space: nowrap;
 }
 .spec-card__edit:hover { border-color: var(--accent-primary, var(--color-primary, #3b82f6)); color: inherit; }
+.spec-list__error {
+  padding: 10px 12px;
+  border: 1px solid var(--error, var(--color-danger, #e11d48));
+  border-radius: var(--radius-standard);
+  color: var(--error, var(--color-danger, #e11d48));
+  font-size: 13px;
+  word-break: break-all;
+}
 .spec-card__delete { color: var(--error, var(--color-danger, #e11d48)); }
 .spec-card__delete:hover { border-color: var(--error, var(--color-danger, #e11d48)); }
 .spec-card__create {

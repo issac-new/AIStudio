@@ -268,16 +268,25 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   // kanban store 内任务变化（看板页编辑）→ 轻量去抖同步聚合视图（2s 防抖由
   // refreshAllBoards 兜底；观察 kanban.tasks 需运行期 import，避免重图依赖进测试）
   let _kanbanWatchInstalled = false
+  let _kanbanWatchStop: (() => void) | null = null
   function watchKanbanTasks(): void {
     if (_kanbanWatchInstalled) return
     _kanbanWatchInstalled = true
     void import('@/stores/hermes/kanban').then(({ useKanbanStore }) => {
       const kanban = useKanbanStore()
-      watch(() => kanban.tasks, () => {
+      // 台账 T8（模块级 watch 永不卸）：stop 句柄存 store，消费方卸载时 unwatchKanbanTasks
+      const stop = watch(() => kanban.tasks, () => {
         if (_overviewDebounce) clearTimeout(_overviewDebounce)
         _overviewDebounce = setTimeout(() => { void refreshAllBoards() }, 500)
       }, { deep: false })
+      _kanbanWatchStop = stop
     }).catch(() => { /* kanban store 不可用（纯单测）时静默 */ })
+  }
+  /** 解除 kanban.tasks watch（消费方视图卸载时调用；未装/已卸为 no-op） */
+  function unwatchKanbanTasks(): void {
+    _kanbanWatchStop?.()
+    _kanbanWatchStop = null
+    _kanbanWatchInstalled = false
   }
 
   return {
@@ -291,6 +300,6 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     openSchedule, closeSchedule, setScheduleDate,
     scheduleEvents, scheduleEventsForSelectedSorted, scheduleCountsByDate, scheduleTopPriorityByDate,
     // ④ WS 生命周期
-    initFleetStream, stopFleetStream, watchKanbanTasks,
+    initFleetStream, stopFleetStream, watchKanbanTasks, unwatchKanbanTasks,
   }
 })

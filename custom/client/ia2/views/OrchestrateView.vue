@@ -24,7 +24,6 @@ import {
   projectSpecCard, validateInstantiateForm, buildCreatePayload,
   type GraphSpecLike, type SpecCard, type InstantiateError,
 } from '../adapters/orchestrate'
-import '@/custom/ia2/styles/ia2.scss'
 
 // P4 编辑器视图异步加载（vue-flow 依赖面与列表页隔离；不渲染不评估模块）
 const SpecEditorView = defineAsyncComponent(() =>
@@ -152,9 +151,11 @@ async function submitCreate(): Promise<void> {
   submitting.value = true
   try {
     // payload 带 template = 来源卡片 id（实例化溯源）
-    await loopRest.createLoop(buildCreatePayload(form, Date.now(), createCard.value.id))
-    // R4：创建即达——运行列表聚合新 loop 的运行状态
-    await router.push('/app/runs')
+    const payload = buildCreatePayload(form, Date.now(), createCard.value.id)
+    await loopRest.createLoop(payload)
+    // R4：创建即达——运行列表聚合新 loop 的运行状态；
+    // 台账 T6（创建成功不锚定新 loop）：?loop= 预填搜索，新 loop 的运行一眼可见
+    await router.push({ path: '/app/runs', query: { loop: payload.name } })
   } catch (e) {
     submitError.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -207,6 +208,7 @@ async function submitCreate(): Promise<void> {
       v-else
       :cards="cards"
       :loading="loading && !booted"
+      :error="error"
       @open="openDetail"
       @create="openCreate"
       @edit="openEditor"

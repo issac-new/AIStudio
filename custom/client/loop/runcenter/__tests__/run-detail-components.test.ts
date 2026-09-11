@@ -193,6 +193,22 @@ describe('RunGraphCanvas (jsdom, vue-flow stub)', () => {
     expect(w.find('.vue-flow-stub').exists()).toBe(false)
     expect(w.find('.rg-canvas__empty').exists()).toBe(true)
   })
+
+  it('边投影（台账 #23）：源/目标/端点箭头/taken 描色/guard 徽标进 vue-flow edges', () => {
+    mount(RunGraphCanvas, { props: { graph: GRAPH, entryNode: 'discovery' } })
+    expect(flowCapture.edges).toHaveLength(2)
+    const [taken, guard] = flowCapture.edges
+    // taken 边：端点 + 箭头 + 描色（active 路径）
+    expect(taken).toMatchObject({ id: 'discovery->handoff', source: 'discovery', target: 'handoff' })
+    expect((taken as Record<string, unknown>).markerEnd).toBeTruthy()
+    expect(((taken as Record<string, unknown>).style as Record<string, string>).stroke)
+      .toContain('--accent-primary')
+    // guard 回边：×N 徽标（B-2 语义 ×前缀）+ 未走默认描边
+    expect(guard).toMatchObject({ id: 'validation->handoff', source: 'validation', target: 'handoff' })
+    expect((guard as Record<string, unknown>).label).toBe('×3')
+    expect(((guard as Record<string, unknown>).style as Record<string, string>).stroke)
+      .toContain('--border-color')
+  })
 })
 
 // ── P4 T8：容器包围框（containers → rg-container 专用节点挂视口）──
