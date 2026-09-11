@@ -18,7 +18,7 @@ index b7a3063..025191a 100644
  import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
  
  let loopStore: any = null
-@@ -120,7 +129,49 @@ const loopEngine = new LoopEngine({
+@@ -120,7 +129,51 @@
    },
  })
  const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
@@ -65,6 +65,8 @@ index b7a3063..025191a 100644
 +    : loopScheduler,
 +  loopWebhookConnector,
 +  { resumeApproval: (id, d, approver) => graphAssembly.resumeApproval(id, d, approver) },
++  // P4 T5：模板语义随实例化——createLoop payload.template(specId)经 specStore 取 meta
++  { getTemplate: async id => graphAssembly.specStore.get(id) ?? null },
 +)
  const graphRouter = createGraphRouter(lazyStore)
  // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
