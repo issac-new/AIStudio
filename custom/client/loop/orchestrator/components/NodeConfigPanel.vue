@@ -128,10 +128,12 @@ function assemble(nodeType: string): Record<string, unknown> {
       if (collectChannel.value.trim()) config.collectChannel = collectChannel.value.trim()
       if (variant.value.trim()) config.variant = variant.value.trim()
       if (payloadParsed.value !== undefined) config.payload = payloadParsed.value
-      if (score.value !== null) config.score = score.value
+      if (typeof score.value === 'number' && Number.isFinite(score.value)) config.score = score.value
       break
     case 'converge':
-      config.expect = expect.value
+      // v-model.number 清空输入时回落为 ''（Vue 保留原始字符串）——非有限数一律回缺省，
+      // 防 '' 写进 spec 让服务端 `candidates.length < ''` 恒 false 破坏屏障语义
+      config.expect = typeof expect.value === 'number' && Number.isFinite(expect.value) ? expect.value : 2
       if (collectChannel.value.trim()) config.collectChannel = collectChannel.value.trim()
       if (winnerChannel.value.trim()) config.winnerChannel = winnerChannel.value.trim()
       config.pick = pick.value

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
@@ -23,7 +23,6 @@ const rightPanelStore = useMatrixRightPanelStore()
 const composerStore = useMatrixComposerStore()
 const authStore = useAuthStore()
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
 
 const productTitle = 'Swarm Studio'

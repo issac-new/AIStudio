@@ -16,9 +16,9 @@ export async function registerCockpit(_app: App) {
 
   console.log('[Custom] Cockpit (AI Collaboration Center) registered');
 
-  // Cockpit route is defined statically in router/index.ts (patch 071)
-  // with chat/group/history/workflow/swarm-kanban as nested children.
-  // Matrix chat room routes are added dynamically as cockpit children in bootstrap.
+  // Cockpit route is defined statically in router/index.ts (patch 240：cockpit 主体
+  // 与 chat/session/history/global-agent/swarm-kanban/matrix-chat 嵌套子路由)。
+  // 不再动态追加路由——注释与实现对齐（2026-09-12 审查移除空的 registerCockpitRoutes）。
 
   // Register sidebar navigation entry
   registerNavEntry({
@@ -26,8 +26,4 @@ export async function registerCockpit(_app: App) {
     label: 'AI Collaboration Center',
     section: 'agent',
   });
-}
-
-export function registerCockpitRoutes(_router: Router) {
-  // Routes registered via registerRoute above
 }

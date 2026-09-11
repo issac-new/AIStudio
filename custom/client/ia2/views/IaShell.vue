@@ -24,6 +24,9 @@ watch(
 
 onUnmounted(() => {
   workspace.stopFleetStream()
+  // 2026-09-12 审查：提醒调度器与 fleet 流同界——离开 /app 即停（此前 stop 全仓
+  // 零调用方，60s interval 跨区域常驻）
+  workspace.stopReminderScheduler()
 })
 </script>
 
