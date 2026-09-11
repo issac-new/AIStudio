@@ -281,9 +281,13 @@ function restoreNonPatchArtifacts(label) {
       }
     } catch { /* patch 文件读取失败,跳过 */ }
   }
+  // 注意:不能用 .trim() 再 split——porcelain 未暂存行前缀是 " M"(首空格),
+  // 整体 trim 会吃掉第一行的前导空格,导致 startsWith(' M') 失配、
+  // 首个脏文件(如 build 产物 docs/openapi.json)漏还原,inject 随后被自己的
+  // dirty-check 挡住。只按行拆分并去掉行尾换行,保留行首状态位。
   git('status --porcelain', hermesStudioRoot)
-    .trim()
     .split('\n')
+    .map((l) => l.replace(/\r$/, ''))
     .filter(Boolean)
     .forEach((line) => {
       const f = line.slice(3).trim();

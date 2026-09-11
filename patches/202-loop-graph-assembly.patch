@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
-index b7a3063d..7eaa0539 100644
+index b7a3063..025191a 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -92,6 +92,13 @@ import { HookManager } from '../custom/loop/engine/hooks'
+@@ -92,6 +92,15 @@ import { HookManager } from '../custom/loop/engine/hooks'
  import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
  import { emitLoopEvent } from '../custom/loop/services/loop-socket'
  import { getGroupChatServer } from '../modules/studio/controllers/group-chat'
@@ -13,10 +13,12 @@ index b7a3063d..7eaa0539 100644
 +// overlay[loop-graph-p2]: persistence 真实 kanban 写入（Task 4，替换 P1 stub adapter）
 +import { KanbanPersistenceAdapter, defaultKanbanBoardResolver } from '../custom/loop/graph/kanban-persistence'
 +import * as kanbanCli from '../modules/hermes/services/kanban/kanban-service'
++// overlay[loop-graph-r1]: 每日 Brief Matrix 投递传输——身份=本机最近一次应用内 Matrix 登录
++import { createMatrixBriefDelivery } from '../custom/loop/graph/brief-matrix-delivery'
  import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
  
  let loopStore: any = null
-@@ -120,7 +127,44 @@ const loopEngine = new LoopEngine({
+@@ -120,7 +129,49 @@ const loopEngine = new LoopEngine({
    },
  })
  const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
@@ -49,6 +51,11 @@ index b7a3063d..7eaa0539 100644
 +    injectWorkspaceContext: makeInjectWorkspaceContext({ store: lazyStore }),
 +    log: (m: string) => { console.log(`[graph] ${m}`) },
 +  },
++  // R1 每日 Brief Matrix 投递接线：身份=本机最近一次应用内 Matrix 登录
++  //（~/.hermes-web-ui/matrix-session.json，patch 012 matrixLogin 成功路径落盘），
++  // 未登录过回退 LOOP_MATRIX_HOMESERVER/TOKEN/USER env；无凭据返回 undefined，
++  // 装配层 warn 一次并保持 event-log-only（delivered:false 审计）。房间仍由 LOOP_BRIEF_ROOM 配置。
++  briefDelivery: createMatrixBriefDelivery(),
 +})
 +// GRAPH_ENGINE=on：loop REST tick/webhook/schedule 分流到 RunSpawner；legacy/shadow 保持 patch 134 装配
 +const loopRouter = createLoopRouter(
@@ -62,7 +69,7 @@ index b7a3063d..7eaa0539 100644
  const graphRouter = createGraphRouter(lazyStore)
  // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
  // WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建
-@@ -223,6 +267,13 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -223,6 +274,13 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
    app.use(loopRouter.routes())
    app.use(graphRouter.routes())
