@@ -307,7 +307,28 @@ function main() {
   }
 
   if (mode === 'inject') {
-    // 0. 清理 inject/build 自身可能遗留的产物,避免 dirty-check 被自己的残留挡住。
+    // 台账 #31:脏树校验前置——先探测,拒绝时零删除(旧序先删自身 symlink 再校验,
+    // 校验失败会留下"半态":symlink 已删而 patch 未应用)。
+    //    探测:porcelain 中排除自身残留(server/src/custom 符号链接、非 patch 产物),
+    //    其余脏文件存在 → 报错退出,不做任何清理动作。
+    const selfCustomResidual = (() => {
+      try { return lstatSync(upstreamServerCustom).isSymbolicLink(); } catch { return false; }
+    })();
+    const precheckRaw = git('status --porcelain', hermesStudioRoot).trim();
+    const patches = readSeries();
+    const precheck = precheckRaw
+      .split('\n')
+      .filter((l) => l.trim())
+      .filter((l) => !(selfCustomResidual && l.trimEnd().endsWith('packages/server/src/custom')))
+      .filter((l) => !l.includes('docs/openapi.json')) // restoreNonPatchArtifacts 管理的产物
+      .join('\n')
+      .trim();
+    if (precheck && patches.length > 0) {
+      console.error('[inject] 上游工作树不干净,先运行 npm run clean:');
+      console.error(precheck);
+      process.exit(1);
+    }
+    // 0. 校验通过 → 清理 inject/build 自身可能遗留的产物(此时删除是安全的)。
     //    a) server/src/custom 符号链接(inject 建的)
     try {
       if (lstatSync(upstreamServerCustom).isSymbolicLink()) {
@@ -317,14 +338,6 @@ function main() {
     } catch { /* 不存在,跳过 */ }
     //    b) 非 patch 目标的 build 产物
     restoreNonPatchArtifacts('inject');
-    // 1. 校验上游工作树状态(若有 patch 残留,提示先 clean)
-    const status = git('status --porcelain', hermesStudioRoot).trim();
-    const patches = readSeries();
-    if (status && patches.length > 0) {
-      console.error('[inject] 上游工作树不干净,先运行 npm run clean:');
-      console.error(status);
-      process.exit(1);
-    }
     // 2. 应用 B 类 patch
     const applied = applyPatches();
     // 3. 确保 overlay 能解析上游依赖(符号链接 node_modules)
