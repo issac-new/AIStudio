@@ -306,3 +306,23 @@
 
 # 2.18: 上游 v0.7.19 新增 sessions 测试断言 3 参调用;我方 116 patch 的 includeChildren 扩展传 4 参,同步两处断言
 235-server-sessions-tests-includechildren.patch
+# P4: 编排器编辑器 i18n（ia2.orchestrate.editor 段）——编号顺延：233/234 已被
+# 2.18 上游同步的 desktop-identity / pagesidebarnav 占用，本对 i18n patch 取 236/237
+236-client-i18n-ia2-orchestrator-zh.patch
+237-client-i18n-ia2-orchestrator-en.patch
+
+# P4: IaNav 用户设置入口 i18n（ia2.nav.settings）
+238-client-i18n-ia2-nav-settings-zh.patch
+239-client-i18n-ia2-nav-settings-en.patch
+
+# P4 平行共存（用户裁决 2026-09-11）: 原有 AI 协作中心（cockpit）恢复——路由嵌套归位 + 侧栏双入口
+240-cockpit-parallel-routes.patch
+241-appsidebar-cockpit-parallel-entry.patch
+
+# P4 T9: 审批面板「Always allow 按类型记忆」i18n（runcenter.approval.autoPassed 等键）
+242-client-i18n-always-allow-zh.patch
+243-client-i18n-always-allow-en.patch
+
+# P4 T9: 舰队审批「始终允许」档文案（cockpit.fleetAlways，服务端 always 选择暴露）
+244-client-i18n-fleet-always-zh.patch
+245-client-i18n-fleet-always-en.patch
