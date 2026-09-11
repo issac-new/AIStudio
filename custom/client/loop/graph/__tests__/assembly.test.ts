@@ -3,6 +3,9 @@
 // C2 start() 生命周期 / C3 scheduleLoop 桥接 / C4 /graph socket 惰性绑定 /
 // I7 成本断链 / I9 崩溃恢复 + running loop 自动恢复 / I10 兼容事件（spawner 侧见其专属测试）
 import { describe, it, expect, vi } from 'vitest'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
 import { createGraphAssembly, readEngineMode, type GraphAssemblyOpts } from '../../../../server/loop/graph/graph-assembly'
 import { createGraphRunRouter, resumeApprovalForContract, stampApproverIdentity, GraphSpecStore } from '../../../../server/loop/graph/graph-rest'
 import { setupGraphSocketNamespace, type SocketIOLike, type SocketLike } from '../../../../server/loop/graph/graph-socket'
@@ -263,6 +266,33 @@ describe('daily brief wiring (R1)', () => {
       expect(done.payload.delivered).toBe(true)
     } finally {
       vi.unstubAllEnvs()
+    }
+  })
+
+  it('room fallback: 无 LOOP_BRIEF_ROOM 时 gateway MATRIX_HOME_ROOM 接管（HERMES_HOME 注入隔离）', async () => {
+    const hermesHome = mkdtempSync(join(tmpdir(), 'assembly-gw-room-'))
+    try {
+      const profileDir = join(hermesHome, 'profiles', 'orchestrator')
+      mkdirSync(profileDir, { recursive: true })
+      writeFileSync(join(profileDir, '.env'), [
+        'MATRIX_HOMESERVER="http://localhost:8008"',
+        'MATRIX_ACCESS_TOKEN="syt_x"',
+        'MATRIX_USER_ID="@gateway:matrix.test"',
+        'MATRIX_HOME_ROOM="#brief-home:matrix.test"',
+      ].join('\n'))
+      vi.stubEnv('HERMES_HOME', hermesHome)
+      const log = vi.fn()
+      const eventLog = new InMemoryEventLogStore()
+      const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog, log }))
+      // 未注入 transport：房间来自 gateway → warn 走 gateway 文案，audit delivered:false
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('brief room from gateway MATRIX_HOME_ROOM'))
+      await seedCompletedRun(eventLog)
+      await a.briefJob!.runOnce()
+      const done = await briefAudit(eventLog)
+      expect(done.payload.delivered).toBe(false)
+    } finally {
+      vi.unstubAllEnvs()
+      rmSync(hermesHome, { recursive: true, force: true })
     }
   })
 })
