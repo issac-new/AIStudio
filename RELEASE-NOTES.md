@@ -1,9 +1,19 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.18**（基于 hermes-studio v0.7.19 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.17**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.16**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发）
 SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.18** — upstream 升级轮（2026-09-11）：hermes-studio **v1.0.2 → v0.7.19**（= v1.0.3 内容 + 0.7.19 版本切割，17 commits/159 文件 +4179/−323：OpenCode session headers 修复 #2996、mobile health data agent bridge #2972、Studio 公告对话框 #2989、会话列表按类别分页 #2977/#2982、Doubao TTS 语速控制 #2978、codex 多行 TOML 配置保留 #2969、workspace 树无隙折叠 #2965、后台委派保留侧栏活动 #2961、Ekko CLI/域名统一 + 圆角图标 #2980、Chromium profile 跨重命名保留 #2979、MCP/Windows 启动修复 #2988）。hermes-agent 仍 **v2026.9.7 (v0.21.1)**、element-web 仍 **v1.12.27**（v1.12.28 仅 rc）——零升级。desktop 包版本随上游 **0.7.18 → 0.7.19**（产物名 SwarmStudio-0.7.19-*，与 2.16/2.17 的 0.7.18 同名产物明确区分）。runtime pin 维持 **0.21.0**。
+
+### 2.18 明细
+
+- **patch 系列 177 → 180**：regen **11**（002 dashboard-env 文档块叠加上游 relay 域名切换；023 chat store import 双向扩展合并；025 登录页 logo-debrand 保持（上游加圆角样式随块删除）；042 版本行取上游 0.7.19、品牌字段保持 SwarmStudio；043 采纳上游 `configureDesktopIdentity` 重构替代我方 inline profile 保留块；088 上游新增 `countSessions` 与我方 `listSessionIdsByUserId` 共存；089/094 chat store 上下文漂移重生成；177 cli-shim 品牌串 7 处保持 SwarmStudio；195 上游 mobile-health import 与我方 fleet-tap import 共存；201 修复重生成丢失的 custom-modules.d.ts）+ 新增 **3**（**233** desktop-identity setName 翻回 SwarmStudio；**234** 删除上游侧栏重构后死代码 openMatrixChat（TS6133，matrix 入口由 ia2 /app/comms 内联路由承接）；**235** 上游 v0.7.19 新增 sessions 测试断言适配我方 116 includeChildren 四参扩展）。
+- **2.17 以来 main 并入的 overlay 功能首次进构建**：R1 Brief Matrix 投递（登录会话本机落盘 + 三段式每日 Brief + Matrix 投递 + gateway 凭据链 + HOME_ROOM 回落）、P3 IA 六区域导航（/app 路由树 + 总览首屏 + 介入中心 + 编排区实装 + 工作项↔run 追溯 + observer/engine 卡片）。
+- **验证门禁**：重放树 180/180 干净落位；inject 180/180；overlay vitest 110 文件 **1203 过/6 skip/0 fail**；上游完整 build（openapi + vue-tsc -b 严格门禁 + vite + server tsc + build-server）exit 0；上游新增测试 sessions-controller + studio-announcements **84/84**。
+- 已知沿用（2.16 决策）：非品牌关键面的上游 Ekko 文案（~600 处，i18n locale 与辅助字符串）保持上游原文不逐条替换。
 
 > **2.17** — 三 upstream 复核（2026-09-10）：hermes-studio 仍 **v1.0.2**（Latest 标记在 v0.7.18 为上游维护者误置，v1.0.2 为实际最新）、hermes-agent 仍 **v2026.9.7 (v0.21.1)**、element-web 仍 **v1.12.27**（v1.12.28 仅 rc）——**零 upstream 升级**。本版为 **overlay 自有功能轮**：AI 协作中心 loop graph 彻底重构三期（P0 内核 + P1 生产切换 + P2 运行中心）全部合入 main（b556bdc → 209ecee，31 commits + P2 squash），patches 148 → **158**（新增 201-212 共 11 条，无 regen）。desktop 捆绑 runtime pin 0.20.6 → **0.21.0**（P2 会话 T5）。
 

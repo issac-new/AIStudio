@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 3d06da74..902ce7c6 100644
+index b68761b..a76a4fd 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -1242,6 +1242,11 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1364,6 +1364,11 @@ export const useChatStore = defineStore('chat', () => {
    const pendingForkCommands = ref<Set<string>>(new Set())
    /** Sessions that completed while the user was viewing another session. */
    const completedUnreadSessions = ref<Set<string>>(new Set())
@@ -14,8 +14,8 @@ index 3d06da74..902ce7c6 100644
    /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
    const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
    const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
-@@ -1356,6 +1361,8 @@ export const useChatStore = defineStore('chat', () => {
-     runtimeMode.value = mode
+@@ -1521,6 +1526,8 @@ export const useChatStore = defineStore('chat', () => {
+     clearBackgroundObservers()
      sessions.value = []
      completedUnreadSessions.value = new Set()
 +    // HERMES_CUSTOM[ChatUnread]
@@ -23,7 +23,7 @@ index 3d06da74..902ce7c6 100644
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
      queueInsertionStates.value = new Map()
-@@ -1456,8 +1463,50 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1627,7 +1634,49 @@ export const useChatStore = defineStore('chat', () => {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -73,8 +73,7 @@ index 3d06da74..902ce7c6 100644
  
    function clearActiveSession() {
      activeSelectionSequence++
-     const sid = activeSessionId.value
-@@ -1811,6 +1860,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -2011,6 +2060,8 @@ export const useChatStore = defineStore('chat', () => {
      if (legacyActiveKey) removeItem(legacyActiveKey)
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
@@ -83,7 +82,7 @@ index 3d06da74..902ce7c6 100644
  
      if (!activeSession.value) return
  
-@@ -3697,6 +3748,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4135,6 +4186,8 @@ export const useChatStore = defineStore('chat', () => {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -92,7 +91,7 @@ index 3d06da74..902ce7c6 100644
                }
  
                break
-@@ -4406,6 +4459,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4798,6 +4851,8 @@ export const useChatStore = defineStore('chat', () => {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -101,7 +100,7 @@ index 3d06da74..902ce7c6 100644
            }
  
            break
-@@ -4822,6 +4877,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5159,6 +5214,8 @@ export const useChatStore = defineStore('chat', () => {
  
    function handlePeerUserMessage(evt: RunEvent) {
      const sid = evt.session_id
@@ -110,8 +109,7 @@ index 3d06da74..902ce7c6 100644
      if (evt.event === 'approval.requested') return setPendingApproval(evt)
      if (evt.event === 'approval.resolved') return clearPendingApproval(evt)
      if (evt.event === 'clarify.requested') return setPendingClarify(evt)
-@@ -5095,6 +5152,13 @@ export const useChatStore = defineStore('chat', () => {
-     isSessionLive,
+@@ -5481,6 +5538,13 @@ export const useChatStore = defineStore('chat', () => {
      runStartedAt,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index 92c2eb0..a002583 100644
+index 007105f..740d465 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
 @@ -2,113 +2,155 @@
@@ -93,10 +93,7 @@ index 92c2eb0..a002583 100644
    }
 +  return false;
 +}
- 
--  loading.value = true;
--  errorMsg.value = "";
--  showLockResetHint.value = false;
++
 +function saveCredentials(form: 'matrix' | 'local'): void {
 +  const keys = STORAGE_KEYS[form];
 +  const username = form === 'matrix' ? matrixUsername.value.trim() : localUsername.value.trim();
@@ -130,18 +127,35 @@ index 92c2eb0..a002583 100644
 +  return msg || t("login.invalidCredentials");
 +}
  
+-  loading.value = true;
+-  errorMsg.value = "";
+-  showLockResetHint.value = false;
 +async function handleMatrixLogin() {
 +  if (!homeserverUrl.value.trim()) { errorMsg.value = t("login.homeserverRequired"); return; }
 +  if (!matrixUsername.value.trim() || !matrixPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
++  loading.value = true; errorMsg.value = "";
++  try {
++    await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
++    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
++    if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
++    router.replace(loginRedirectTarget());
++  } catch (err: any) {
++    errorMsg.value = classifyLoginError(err);
++    clearSavedCredentials('matrix');
++    if (errorMsg.value === t("login.backendConnectionFailed")) activeTab.value = 'local';
++  } finally { loading.value = false; }
++}
+ 
++async function handleLocalLogin() {
++  if (!localUsername.value.trim() || !localPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
 +  loading.value = true; errorMsg.value = "";
    try {
 -    const session = await loginWithPassword(username.value.trim(), password.value);
 -    setApiKey(session.token);
 -    activateUserTheme(session.userId, session.theme);
 -    router.replace(resolveLoginRedirect(route.query.redirect));
-+    await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
-+    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
-+    if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
++    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
++    if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
 +    router.replace(loginRedirectTarget());
    } catch (err: any) {
 -    if (err.status === 429 || err.status === 503) {
@@ -153,20 +167,6 @@ index 92c2eb0..a002583 100644
 -  } finally {
 -    loading.value = false;
 -  }
-+    errorMsg.value = classifyLoginError(err);
-+    clearSavedCredentials('matrix');
-+    if (errorMsg.value === t("login.backendConnectionFailed")) activeTab.value = 'local';
-+  } finally { loading.value = false; }
-+}
-+
-+async function handleLocalLogin() {
-+  if (!localUsername.value.trim() || !localPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
-+  loading.value = true; errorMsg.value = "";
-+  try {
-+    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
-+    if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
-+    router.replace(loginRedirectTarget());
-+  } catch (err: any) {
 +    errorMsg.value = err?.message || t("login.invalidCredentials");
 +    clearSavedCredentials('local');
 +  } finally { loading.value = false; }
@@ -237,18 +237,22 @@ index 92c2eb0..a002583 100644
        </form>
      </div>
    </div>
-@@ -139,10 +181,6 @@ async function handlePasswordLogin() {
+@@ -139,14 +181,6 @@ async function handlePasswordLogin() {
    }
  }
  
 -.login-logo {
 -  margin-bottom: 24px;
+-
+-  img {
+-    border-radius: 25%;
+-  }
 -}
 -
  .login-title {
    font-size: 26px;
    font-weight: 600;
-@@ -157,13 +195,6 @@ async function handlePasswordLogin() {
+@@ -161,13 +195,6 @@ async function handlePasswordLogin() {
    line-height: 1.6;
  }
  
@@ -262,7 +266,7 @@ index 92c2eb0..a002583 100644
  .login-form {
    display: flex;
    flex-direction: column;
-@@ -198,25 +229,6 @@ async function handlePasswordLogin() {
+@@ -202,25 +229,6 @@ async function handlePasswordLogin() {
    text-align: start;
  }
  
@@ -288,7 +292,7 @@ index 92c2eb0..a002583 100644
  .login-btn {
    width: 100%;
    padding: 14px;
-@@ -238,4 +250,41 @@ async function handlePasswordLogin() {
+@@ -242,4 +250,41 @@ async function handlePasswordLogin() {
      cursor: not-allowed;
    }
  }

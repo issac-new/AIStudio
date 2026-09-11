@@ -1,9 +1,9 @@
 diff --git a/packages/server/src/modules/studio/repositories/session-store.ts b/packages/server/src/modules/studio/repositories/session-store.ts
-index 3831a6a..299bda6 100644
+index b1e45d2..8c444d0 100644
 --- a/packages/server/src/modules/studio/repositories/session-store.ts
 +++ b/packages/server/src/modules/studio/repositories/session-store.ts
-@@ -550,6 +550,20 @@ export function listSessions(profile?: string, source?: string, limit = 2000): H
-   return rows.map(mapSessionRow)
+@@ -587,6 +587,20 @@ export function countSessions(
+   return Number(row.total)
  }
  
 +// HERMES_CUSTOM[ChatRunAutoJoin] BEGIN: list session ids owned by a user, for socket auto-join
@@ -24,10 +24,10 @@ index 3831a6a..299bda6 100644
    return value.replace(/[\\%_]/g, '\\$&')
  }
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 24c7145..3f01746 100644
+index bc7c1b9..d027fa7 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
-@@ -11,7 +11,7 @@ import type { Server, Socket } from 'socket.io'
+@@ -15,7 +15,7 @@ import type { Server, Socket } from 'socket.io'
  import { randomUUID } from 'crypto'
  import { logger } from '../public/logging'
  import { getSystemPrompt } from '../public/runs/prompt'
