@@ -169,6 +169,14 @@ async function clarify(session: FleetSession, clarifyId: string) {
           <div v-for="a in s.approvals" :key="a.approval_id" class="fleet-card__approval">
             <span class="fleet-card__approval-text" :title="a.preview">{{ t('cockpit.fleetApproval') }}: {{ a.preview || a.approval_id }}</span>
             <button type="button" class="fleet-card__btn is-ok" @click="approve(s, a.approval_id, 'once')">{{ t('cockpit.fleetApprove') }}</button>
+            <!-- P4 T9（§7B.5）：服务端协议原生 'always' 档——批准并记住同类操作（服务端留痕） -->
+            <button
+              v-if="a.choices.includes('always')"
+              type="button"
+              class="fleet-card__btn is-ok"
+              data-fleet-always
+              @click="approve(s, a.approval_id, 'always')"
+            >{{ t('cockpit.fleetAlways') }}</button>
             <button type="button" class="fleet-card__btn is-no" @click="approve(s, a.approval_id, 'deny')">{{ t('cockpit.fleetDeny') }}</button>
           </div>
           <div v-for="c in s.clarifies" :key="c.clarify_id" class="fleet-card__approval">
