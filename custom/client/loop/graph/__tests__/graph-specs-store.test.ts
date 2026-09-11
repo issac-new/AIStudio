@@ -23,7 +23,9 @@ const sqliteAvailable = await (async () => {
 function makeSpec(id: string, version = 1): GraphSpec {
   return {
     id, version,
-    channels: {}, nodes: [], edges: [], entryNode: 'a',
+    channels: {},
+    nodes: [{ id: 'a', type: 'function', config: {} }],
+    edges: [], entryNode: 'a',
     limits: { maxSteps: 10 },
   }
 }
@@ -127,7 +129,8 @@ describe('REST GET /api/graph/specs unchanged on table-backed store', () => {
     const post = await invoke(router, 'post', '/api/graph/specs', spec)
     expect(post.status).toBe(200)
     const get1 = await invoke(router, 'get', '/api/graph/specs')
-    expect((get1.body as { specs: Array<{ id: string; version: number }> }).specs).toEqual([spec])
+    // P4：POST 落库时缺省 origin 标 'editor'
+    expect((get1.body as { specs: Array<{ id: string; version: number }> }).specs).toEqual([{ ...spec, origin: 'editor' }])
 
     // 重启（同一表重新装配 + load）后 GET 行为不变
     const store2 = new GraphSpecStore(createEventLogStore(dbPath))
@@ -138,6 +141,6 @@ describe('REST GET /api/graph/specs unchanged on table-backed store', () => {
       specStore: store2,
     })
     const get2 = await invoke(router2, 'get', '/api/graph/specs')
-    expect((get2.body as { specs: Array<{ id: string; version: number }> }).specs).toEqual([spec])
+    expect((get2.body as { specs: Array<{ id: string; version: number }> }).specs).toEqual([{ ...spec, origin: 'editor' }])
   })
 })

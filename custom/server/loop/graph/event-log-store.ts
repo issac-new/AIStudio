@@ -84,6 +84,8 @@ export interface EventLogStore {
   saveSpec(spec: StoredGraphSpec): Promise<void>
   getSpec(id: string): Promise<StoredGraphSpec | null>
   listSpecs(): Promise<StoredGraphSpecMeta[]>
+  /** P4：删除自建 spec（编辑器 origin=editor 专用） */
+  deleteSpec(id: string): Promise<void>
 }
 
 export class InMemoryEventLogStore implements EventLogStore {
@@ -148,6 +150,10 @@ export class InMemoryEventLogStore implements EventLogStore {
 
   async listSpecs(): Promise<StoredGraphSpecMeta[]> {
     return [...this.specs.values()].map(s => ({ id: s.id, version: s.version, updatedAt: s.updatedAt }))
+  }
+
+  async deleteSpec(id: string): Promise<void> {
+    this.specs.delete(id)
   }
 }
 
@@ -273,6 +279,10 @@ class SqliteEventLogStore implements EventLogStore {
       `SELECT id, version, updated_at FROM graph_specs ORDER BY rowid`,
     ).all() as Array<Record<string, unknown>>
     return rows.map(r => ({ id: r.id as string, version: r.version as number, updatedAt: r.updated_at as string }))
+  }
+
+  async deleteSpec(id: string): Promise<void> {
+    this.db.prepare(`DELETE FROM graph_specs WHERE id = ?`).run(id)
   }
 }
 

@@ -14,6 +14,7 @@ import { compileLoopToDef, type CompileDeps } from './graph-compiler'
 import { appendContractsById } from './phase-nodes'
 import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
+import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
@@ -251,7 +252,20 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     })
   }
 
-  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore })
+  // P4：自建 spec 起跑器（编辑器试跑链路）。gate 命令白名单来自
+  // LOOP_GATE_COMMANDS（逗号分隔；未配置=空表，gate 节点带命令即拒——安全缺省）
+  const specRuntime = mode === 'on'
+    ? new CustomSpecRuntime({
+        specStore,
+        graphService,
+        registry: createSpecRuntimeRegistry({
+          gateCommands: (process.env.LOOP_GATE_COMMANDS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+        }),
+        log,
+      })
+    : null
+
+  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore, specRuntime })
 
   // P3 Task 8（spec §7B.4 最小版）：图引擎策略只读端点——设置页"图引擎策略"卡数据源。
   // 导出装配事实：当前模式 + 生效的默认审批超时/熔断阈值（只读展示；策略文件化
