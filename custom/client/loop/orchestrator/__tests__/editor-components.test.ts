@@ -251,10 +251,15 @@ describe('SpecEditorView — 保存 / 试跑闭环', () => {
   })
 })
 
-/** FileReader 的 load 事件异步派发：等一个宏任务再冲微任务 */
+/** FileReader 的 load 事件异步派发：循环冲刷宏+微任务。
+ *  单等一个 setTimeout(0) 在全量并行（worker 满载）时可能早于 jsdom
+ *  FileReader 的 load 派发——导入未生效即点保存会被 canSave 拦住
+ *  （实测全量跑稳定复现、单文件跑不复现）。多轮冲刷与负载解耦。 */
 async function flushFile(): Promise<void> {
-  await new Promise(r => setTimeout(r, 0))
-  await flushPromises()
+  for (let i = 0; i < 10; i++) {
+    await new Promise(r => setTimeout(r, 0))
+    await flushPromises()
+  }
 }
 
 describe('SpecEditorView — 导入 / 导出 round-trip', () => {
