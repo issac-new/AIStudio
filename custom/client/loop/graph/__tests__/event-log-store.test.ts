@@ -29,6 +29,22 @@ describe('InMemoryEventLogStore', () => {
     expect(await s.query('r1', { kind: 'node.failed' })).toHaveLength(1)
   })
 
+  it('latest: per-run tail window under multi-run global-seq interleaving (2026-09-12 审查)', async () => {
+    const s = new InMemoryEventLogStore()
+    // seq 为跨 run 全局自增：r1 / r2 交错追加后，r1 的全局 seq 不连续
+    await s.append(base)                    // r1 seq=1
+    await s.append({ ...base, runId: 'r2' }) // r2 seq=2
+    await s.append({ ...base, nodeId: 'n1' }) // r1 seq=3
+    await s.append({ ...base, runId: 'r2' }) // r2 seq=4
+    await s.append({ ...base, runId: 'r2' }) // r2 seq=5
+    // r1 最新 2 条 = seq[1,3]，不受 r2 占据高位全局 seq 影响
+    const tail = await s.query('r1', { latest: 2 })
+    expect(tail.map(e => e.seq)).toEqual([1, 3])
+    // 升序返回；latest 覆盖 limit（互斥语义）
+    expect(await s.query('r2', { latest: 2, limit: 1 })).toHaveLength(2)
+    expect(await s.query('r1', { latest: 0 })).toHaveLength(2)
+  })
+
   it('saves and retrieves checkpoints in order', async () => {
     const s = new InMemoryEventLogStore()
     const cp = (n: number): StoredCheckpoint => ({
@@ -169,6 +185,18 @@ describe.skipIf(!sqliteAvailable)('createEventLogStore via node:sqlite', () => {
     await s.append({ ...base, runId: 'r2' })
     expect((await s.query('r1'))[0]?.eid).toBe('r1-1')
     expect((await s.query('r2'))[0]?.eid).toBe('r2-2')
+  })
+
+  it('latest: per-run tail window in sqlite under multi-run global-seq interleaving (2026-09-12 审查)', async () => {
+    const s = createEventLogStore(':memory:')
+    await s.append(base)                       // r1 seq=1
+    await s.append({ ...base, runId: 'r2' })   // r2 seq=2
+    await s.append({ ...base, nodeId: 'n1' })  // r1 seq=3
+    await s.append({ ...base, runId: 'r2' })   // r2 seq=4
+    const tail = await s.query('r1', { latest: 1 })
+    expect(tail.map(e => e.seq)).toEqual([3])
+    expect(tail[0]?.nodeId).toBe('n1')
+    expect(await s.query('r2', { latest: 10 })).toHaveLength(2)
   })
 
   it('persists graph_specs in sqlite (P2 台账⑥): upsert + round-trip + list', async () => {

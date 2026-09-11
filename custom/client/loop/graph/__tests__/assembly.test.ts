@@ -1097,22 +1097,26 @@ describe('cost wiring (I7)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// T5（模板语义随实例化，2026-09-11）：装配 compile 闭包把 loop.template.meta.gateCommands
-// 并入编译 deps（与装配缺省取并集、按 cmd 去重）——spawner 逐 loop 编译时模板白名单生效。
+// T5（模板语义随实例化，2026-09-11）→ 2026-09-12 审查收口：template.meta.gateCommands
+// 是 REST 可写数据（POST /loops body.template、PATCH /loops/:id），不得成为宿主机
+// execFile 执行来源——withTemplateDeps 一律返回原 deps，白名单之外的模板命令仅 warn。
 // ---------------------------------------------------------------------------
 
-describe('withTemplateDeps (T5: template gateCommands merged into compile deps)', () => {
-  it('merges template gateCommands into the base whitelist (union, deduped by cmd)', () => {
+describe('withTemplateDeps (template gateCommands never extend executable list)', () => {
+  it('drops template commands outside the configured whitelist and returns base deps untouched', () => {
     const base = { gateCommands: [{ name: 'lint', kind: 'validator' as const, cmd: 'npm run lint' }] }
     // 本文件 makeLoop() 无参数——template 以展开覆盖注入
     const loop: LoopInstance = {
       ...makeLoop(),
       template: { specId: 'spec-tpl', meta: { gateCommands: ['npm test', 'npm run lint'] } },
     }
-    const merged = withTemplateDeps(base as never, loop)
-    expect(merged.gateCommands!.map(c => c.cmd)).toEqual(['npm run lint', 'npm test'])
-    // 模板命令映射为 validator 档（gate 白名单语义）
-    expect(merged.gateCommands!.find(c => c.cmd === 'npm test')).toEqual({ name: 'npm test', kind: 'validator', cmd: 'npm test' })
+    const warns: string[] = []
+    const baseWithLog = { ...base, log: (m: string) => warns.push(m) }
+    const merged = withTemplateDeps(baseWithLog as never, loop)
+    // 执行清单不扩充：'npm test' 不在白名单 → 丢弃；deps 原样返回
+    expect(merged).toBe(baseWithLog as never)
+    expect(merged.gateCommands!.map(c => c.cmd)).toEqual(['npm run lint'])
+    expect(warns.some(w => w.includes('npm test'))).toBe(true)
   })
 
   it('no template gateCommands → deps untouched (same reference)', () => {

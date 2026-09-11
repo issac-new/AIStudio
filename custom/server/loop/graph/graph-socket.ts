@@ -57,15 +57,12 @@ export function setupGraphSocketNamespace(
     socket.on('subscribe', (runId: string) => {
       if (typeof runId !== 'string' || !RUN_ID_RE.test(runId)) return
       socket.join(`run:${runId}`)
-      // P4 修正（T10 新发现）：query 的 limit 语义是"最旧前 N 条"，与注释"最近 50 条"
-      // 相反——长 run 订阅回放的是开头而非尾部。改为按 latestSeq 定位尾部窗口。
-      Promise.all([eventLog.latestSeq(runId), eventLog.query(runId)])
-        .then(([latest, events]) => {
-          const tail = typeof latest === 'number' && latest > 50
-            ? events.filter(e => e.seq > latest - 50)
-            : events
-          socket.emit('graph:history', tail)
-        })
+      // P4 修正（T10 新发现）+ 2026-09-12 审查收口：query 的 limit 语义是"最旧前 N 条"，
+      // 与注释"最近 50 条"相反；而 latestSeq 是跨 run 全局 seq 的 MAX，用 `latest - 50`
+      // 做尾部窗口在多 run 交错时会把窗口压缩到任意少。改用存储层 latest 语义——
+      // 按 run 内序取本 run 最新 50 条，窗口正确且有界（不再全量拉取）。
+      eventLog.query(runId, { latest: 50 })
+        .then((events) => { socket.emit('graph:history', events) })
         .catch(() => { /* 回放失败不中断订阅 */ })
     })
     socket.on('unsubscribe', (runId: string) => {
