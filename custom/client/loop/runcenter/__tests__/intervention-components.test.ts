@@ -4,7 +4,7 @@
 // 超时自动通过横幅）/ InboxPanel 两态切换与空态 / NodeInspector attach 档与重跑动作。
 // i18n 用全局 setup 的 key 直返 mock；store 走真实 Pinia + REST mock。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
 // ── runcenter api mock（与 runs-store.test.ts 同一形状 + startRun）──
@@ -200,6 +200,106 @@ describe('ApprovalPanel (jsdom)', () => {
     const w = mount(ApprovalPanel, { props: { run } })
     expect(w.find('[data-approval-panel]').exists()).toBe(true)
     expect(w.findAll('.ap-panel__decision')).toHaveLength(0)
+  })
+
+  // ── P4 T9：Always allow 按类型记忆（§7B.5 / Junie Action Allowlist 收敛版）──
+
+  it('规则命中 → 自动批准留痕（approver=always-allow:<user>）+ 横幅提示，且横幅可撤销规则', async () => {
+    seedIdentity('alice')
+    localStorage.setItem('loopAlwaysAllow', JSON.stringify({ validation: true }))
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun())
+    const w = mount(ApprovalPanel, { props: { run: store.runs[0] } })
+    await w.vm.$nextTick()
+    await vi.waitFor(() => {
+      expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c1@1', {
+        decision: 'approved', approver: 'always-allow:alice',
+      })
+    })
+
+    const banner = w.find('[data-approval-auto-passed]')
+    expect(banner.exists()).toBe(true)
+    expect(banner.text()).toContain('runcenter.approval.autoPassed')
+
+    // submit 尾部的 save 在 resume called 之后仍挂在微任务链上——先冲刷完再撤销，
+    // 否则撤销写入的 {} 会被迟到的 save 覆盖回 {validation:true}
+    await flushPromises()
+    await banner.find('[data-approval-revoke-always-allow]').trigger('click')
+    expect(localStorage.getItem('loopAlwaysAllow')).toBe('{}')
+  })
+
+  it('勾选「始终允许」+ 手动批准成功 → 规则落盘；手动路径仍盖本人章', async () => {
+    seedIdentity('alice')
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun())
+    const w = mount(ApprovalPanel, { props: { run: store.runs[0] } })
+    expect(w.find('[data-approval-always-allow] input').exists()).toBe(true)
+
+    await w.find('[data-approval-always-allow] input').setValue(true)
+    await w.findAll('.ap-panel__decision')[0].trigger('click') // approve
+
+    // submit 成功路径：save 在 resumeRun 完成后——链条 = store.resumeRun(mock)→applyEvent→save；
+    // 同时断言 request 与落盘二者（任一掉队 waitFor 都会走到）
+    await vi.waitFor(() => {
+      expect(rest.resumeRun).toHaveBeenCalledWith('run-1', 'approval:c1@1', { decision: 'approved', approver: 'alice' })
+      expect(JSON.parse(localStorage.getItem('loopAlwaysAllow') ?? '{}')).toEqual({ validation: true })
+    })
+  })
+
+  it('规则撤销后同类 run 不再自动放行（on=false 分支）', async () => {
+    seedIdentity('alice')
+    localStorage.setItem('loopAlwaysAllow', JSON.stringify({ validation: true }))
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun())
+    mount(ApprovalPanel, { props: { run: store.runs[0] } })
+    await Promise.resolve()
+    expect(rest.resumeRun).toHaveBeenCalledTimes(1) // 第一轮自动放行
+
+    localStorage.setItem('loopAlwaysAllow', JSON.stringify({}))
+    const second = awaitingRun({ runId: 'run-2', pendingInterruptId: 'approval:c2@1' })
+    second.events = [{
+      type: 'graph.interrupt', threadId: 'run-2', nodeId: 'validation', interruptId: 'approval:c2@1',
+      value: { ...approvalValue, contractId: 'c2' }, ts: '2026-09-10T00:06:00Z',
+    } as RunSummary['events'][number]]
+    store.runs.push(second)
+    mount(ApprovalPanel, { props: { run: store.runs[1] } })
+    await Promise.resolve()
+    expect(rest.resumeRun).toHaveBeenCalledTimes(1) // 未增发
+  })
+
+  it('审批失败 → 规则不沉淀（规则只能由成功路径写入）', async () => {
+    seedIdentity('alice')
+    rest.resumeRun.mockRejectedValueOnce(new Error('run not found'))
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun())
+    const w = mount(ApprovalPanel, { props: { run: store.runs[0] } })
+
+    await w.find('[data-approval-always-allow] input').setValue(true)
+    await w.findAll('.ap-panel__decision')[0].trigger('click')
+
+    await vi.waitFor(() => {
+      expect(w.find('.ap-panel__error').text()).toContain('run not found')
+    })
+    expect(localStorage.getItem('loopAlwaysAllow')).toBeNull()
+  })
+
+  it('无身份 → 规则命中也不自动放行（specified 策略无名可署等于无法裁决）', async () => {
+    localStorage.setItem('loopAlwaysAllow', JSON.stringify({ validation: true }))
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun())
+    mount(ApprovalPanel, { props: { run: store.runs[0] } })
+    await Promise.resolve()
+    expect(rest.resumeRun).not.toHaveBeenCalled()
+  })
+
+  it('人工审批（无 contractSummary）归为 human 类型，与契约审批规则互不误伤', async () => {
+    seedIdentity('alice')
+    localStorage.setItem('loopAlwaysAllow', JSON.stringify({ human: true }))
+    const store = useRunCenterStore()
+    store.runs.push(awaitingRun()) // 契约审批（带 contractSummary）——human 规则不应命中
+    mount(ApprovalPanel, { props: { run: store.runs[0] } })
+    await Promise.resolve()
+    expect(rest.resumeRun).not.toHaveBeenCalled()
   })
 })
 

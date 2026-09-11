@@ -36,8 +36,10 @@ export function setupGraphSocketNamespace(
   // eid（`<runId>-<seq>`）回填到事件对象上；此处以两步微任务链延迟下发——
   // 第二步在回填微任务之后入队，flush 时快照 {...e} 即携带 eid，与
   // graph:history 的 eid 同源（前端按 eid 去重，首连双发不再重复投影）。
-  // 例外：graph.forked / graph.failed 走 service 直发路径，无 runtime append
-  // 回填——不带 eid 下发，前端按 type+ts+nodeId 复合键兜底。
+  // P3 台账（T2 顺延 P4 清偿）：graph.forked / graph.failed 走 service 直发路径，
+  // 无 runtime 回填——graph-service 侧已对齐同款 eid 注入（forked 在 emit 前同步
+  // 构造 `<forkedId>-<latestSeq>`；failed 的 run.failed append resolve 后微任务回填），
+  // 本链 flush 时同样携带 eid；回填失败的残余路径仍由前端 type+ts+nodeId 复合键兜底。
   graphService.onEvent((e: GraphEvent) => {
     const runId = (e as { threadId?: string }).threadId
     if (!runId) return
@@ -55,8 +57,15 @@ export function setupGraphSocketNamespace(
     socket.on('subscribe', (runId: string) => {
       if (typeof runId !== 'string' || !RUN_ID_RE.test(runId)) return
       socket.join(`run:${runId}`)
-      eventLog.query(runId, { limit: 50 })
-        .then(events => { socket.emit('graph:history', events) })
+      // P4 修正（T10 新发现）：query 的 limit 语义是"最旧前 N 条"，与注释"最近 50 条"
+      // 相反——长 run 订阅回放的是开头而非尾部。改为按 latestSeq 定位尾部窗口。
+      Promise.all([eventLog.latestSeq(runId), eventLog.query(runId)])
+        .then(([latest, events]) => {
+          const tail = typeof latest === 'number' && latest > 50
+            ? events.filter(e => e.seq > latest - 50)
+            : events
+          socket.emit('graph:history', tail)
+        })
         .catch(() => { /* 回放失败不中断订阅 */ })
     })
     socket.on('unsubscribe', (runId: string) => {

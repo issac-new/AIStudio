@@ -6,7 +6,7 @@
      awaiting 域走 runs store /graph 订阅（可见页=介入集），指标走 fetchMetrics
      （5 分钟 TTL 缓存）。Task 8：cockpit store 退役，数据源改挂 workspace store。 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
@@ -23,7 +23,6 @@ import {
   aggregateActiveRuns, aggregateInbox, aggregateMetrics, buildTodayPlan, mergeAttention,
   type AttentionRow,
 } from '../adapters/overview'
-import '@/custom/ia2/styles/ia2.scss'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -31,8 +30,15 @@ const runsStore = useRunCenterStore()
 const loopStore = useLoopStore()
 const workspace = useWorkspaceStore()
 
-/** 首屏时间锚：挂载时刻（相对时间/今日判定的稳定基准，随重挂载刷新） */
+/** 首屏时间锚：挂载时刻起步（相对时间/今日判定的稳定基准）。
+ *  台账 T4（nowTick 冻结）：长驻视图的"距今 X 分钟"会陈旧——60s 步进刷新，
+ *  组件卸载即停（视图隐藏代价为零）。 */
 const nowTick = ref(Date.now())
+let nowTickTimer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  nowTickTimer = setInterval(() => { nowTick.value = Date.now() }, 60_000)
+})
+onUnmounted(() => { if (nowTickTimer) clearInterval(nowTickTimer) })
 /** 首轮 runs 数据到位（空态引导防闪：首拉完成前不判空） */
 const booted = ref(false)
 
@@ -44,6 +50,10 @@ onMounted(() => {
   workspace.initFleetStream()          // 既有 kanban 聚合 WS——board 事件驱动 refreshAllBoards
   void workspace.refreshAllBoards()    // 一次性看板拉取（内建 2s 防抖）
   void bootRuns()
+})
+onUnmounted(() => {
+  // 台账 T8：watch 随首屏视图卸载解除（store 级句柄，防模块级常驻泄漏）
+  workspace.unwatchKanbanTasks()
 })
 
 async function bootRuns(): Promise<void> {

@@ -7,13 +7,16 @@
      载荷解析，cockpit currentUserName 同源）；身份不可得时决策按钮置灰并 tooltip 说明
      （specified 策略按 approver 匹配，无名可署等于无法裁决）。 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getStoredUsername } from '@/api/client'
 import { useRunCenterStore } from '../store/runs'
 import {
   formatDurationMs, latestResumeIsAuto, parseApprovalInterrupt,
 } from '../adapters/intervention'
+import {
+  alwaysAllowApprover, isAlwaysAllowed, loadAlwaysAllow, saveAlwaysAllow, withRule,
+} from '../adapters/always-allow'
 import { eventTsMs } from '../adapters/run-graph'
 import type { RunSummary } from '../types'
 
@@ -44,7 +47,53 @@ const reasonError = ref(false)
 const busy = ref(false)
 const submitError = ref<string | null>(null)
 
-async function submit(decision: 'approved' | 'rejected'): Promise<void> {
+// ── Always allow 按类型记忆（P4 T9 / §7B.5）──
+/** 复选框态：挂载/换 interrupt 时按规则表初始化；审批成功后按最终态沉淀或撤销 */
+const ruleChecked = ref(false)
+/** 本次面板生命周期内已自动放行的 interruptId（防 resume 失败后重试风暴） */
+const autoFiredFor = ref<string | null>(null)
+/** 自动放行的审批类别（撤销规则用——壳关闭后 view 已 null，不能再读） */
+const autoFiredType = ref<string | null>(null)
+/** 自动放行横幅（留痕说明） */
+const autoPassed = ref(false)
+/** 类别展示名（已知两类走 i18n，未知类型回原值） */
+const typeLabel = computed(() => {
+  const type = view.value?.nodeType
+  if (!type) return ''
+  const known: Record<string, string> = {
+    human: t('runcenter.approval.type.human'),
+    validation: t('runcenter.approval.type.validation'),
+  }
+  return known[type] ?? type
+})
+
+watch(() => view.value?.interruptId, id => {
+  // 仅在新 interrupt 出现时重置上一轮的横幅/勾选态；id=undefined 是壳关闭
+  // （resume 乐观投影），横幅与撤销入口须存活
+  if (id == null) return
+  autoPassed.value = false
+  ruleChecked.value = isAlwaysAllowed(loadAlwaysAllow(), view.value?.nodeType)
+  // 规则命中 + 有身份 → 自动批准并留痕（approver=always-allow:<user>）；
+  // 无身份不自动（specified 策略无名可署等于无法裁决）
+  if (id !== autoFiredFor.value && hasIdentity
+    && isAlwaysAllowed(loadAlwaysAllow(), view.value?.nodeType) && view.value) {
+    autoFiredFor.value = id
+    autoFiredType.value = view.value.nodeType
+    autoPassed.value = true
+    submit('approved', alwaysAllowApprover(approver ?? '')).catch(() => {})
+    // submit 内部已吞错落 submitError；catch 兜底防未处理拒绝噪音
+  }
+}, { immediate: true })
+
+/** 撤销「始终允许」规则（自动放行已发生，本条不回收；下一次同类不再自动） */
+function revokeRule(): void {
+  const type = autoFiredType.value ?? view.value?.nodeType
+  if (!type) return
+  saveAlwaysAllow(withRule(loadAlwaysAllow(), type, false))
+  ruleChecked.value = false
+}
+
+async function submit(decision: 'approved' | 'rejected', approverOverride?: string): Promise<void> {
   if (busy.value || !view.value) return
   submitError.value = null
   const text = reason.value.trim()
@@ -56,11 +105,23 @@ async function submit(decision: 'approved' | 'rejected'): Promise<void> {
   busy.value = true
   try {
     // P3 台账：resume 值带 approver（服务端 evaluateApprovalPolicy 的 specified
-    // 分支按 approver 匹配名单）；无身份时按钮已置灰，此路径不可达
+    // 分支按 approver 匹配名单）；无身份时按钮已置灰，此路径不可达。
+    // P4 T9：自动放行路径 approver 覆写为 always-allow:<user>（留痕可区分人与规则）。
+    // nodeType/勾选态先捕获——resume 成功的乐观投影会关闭未决 interrupt（view 变 null），
+    // await 之后再读 view 拿不到类别。
+    const nodeType = view.value.nodeType
+    const persistRule = ruleChecked.value
+    const effectiveApprover = approverOverride ?? approver ?? undefined
     await store.resumeRun(props.run.runId, decision === 'approved'
-      ? { decision: 'approved', approver: approver ?? undefined }
-      : { decision: 'rejected', comment: text, approver: approver ?? undefined })
+      ? { decision: 'approved', approver: effectiveApprover }
+      : { decision: 'rejected', comment: text, approver: effectiveApprover })
     reason.value = ''
+    // 审批成功才沉淀/撤销规则（失败不记——规则只能由成功路径写入）。
+    // 自动放行路径（approverOverride）不沉淀：规则已在表内，重写会在
+    // 「撤销规则 vs 迟到的 submit 完成」竞态下覆盖用户的撤销。
+    if (decision === 'approved' && nodeType && !approverOverride) {
+      saveAlwaysAllow(withRule(loadAlwaysAllow(), nodeType, persistRule))
+    }
   } catch (e) {
     submitError.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -77,6 +138,18 @@ const timeoutLabel = computed(() => {
 
 <template>
   <div class="ap-panel" data-approval-panel>
+    <!-- 自动放行横幅在未决 interrupt 壳之外：resume 成功的乐观投影会立刻关闭壳
+         （view 变 null），「已自动放行 + 可撤销规则」必须存活到下一次 interrupt -->
+    <div v-if="autoPassed" class="ap-panel__auto-passed" data-approval-auto-passed>
+      {{ t('runcenter.approval.autoPassed') }}
+      <button
+        class="ap-panel__revoke"
+        data-approval-revoke-always-allow
+        @click="revokeRule"
+      >
+        {{ t('runcenter.approval.revokeAlwaysAllow') }}
+      </button>
+    </div>
     <template v-if="view">
       <div class="ap-panel__head">
         <strong>{{ t('runcenter.approval.title') }}</strong>
@@ -152,6 +225,10 @@ const timeoutLabel = computed(() => {
         <span v-if="!hasIdentity" class="ap-panel__no-identity">
           {{ t('runcenter.approval.noIdentity') }}
         </span>
+        <label v-if="typeLabel" class="ap-panel__always-allow" data-approval-always-allow>
+          <input v-model="ruleChecked" type="checkbox" />
+          {{ t('runcenter.approval.alwaysAllow', { type: typeLabel }) }}
+        </label>
       </div>
     </template>
   </div>
@@ -224,6 +301,32 @@ const timeoutLabel = computed(() => {
   border: 1px solid var(--color-warning, #f59e0b);
   border-radius: var(--radius-micro, 3px);
   color: var(--color-warning, #f59e0b);
+}
+.ap-panel__auto-passed {
+  padding: 6px 8px;
+  border: 1px solid var(--color-success, #28bf5c);
+  border-radius: var(--radius-micro, 3px);
+  color: var(--color-success, #28bf5c);
+}
+.ap-panel__revoke {
+  margin-left: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.ap-panel__always-allow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted, var(--color-text-secondary, #878c99));
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
 }
 .ap-panel__reason {
   resize: vertical;

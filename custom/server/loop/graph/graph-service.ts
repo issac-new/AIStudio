@@ -152,13 +152,24 @@ export class GraphService {
     const forkedCheckpoint = await this.checkpointManager.fork(runId, superStep, forkedId)
 
     const ts = new Date().toISOString()
-    this.emitServiceEvent({
+    // P3 台账（T2：graph.forked live 副本无 eid）：fork 内已把 run.forked 落进
+    // forkedId 日志流，该流此刻 paused 无并发写入——latestSeq 即 run.forked 的 seq，
+    // 直接构造 eid 挂到事件对象上（与 runtime appendToEventLog 的回填同源同格式），
+    // graph-socket 微任务链 flush 时快照携带 eid，实时流与 graph:history 同源可去重。
+    const event: GraphEvent = {
       type: 'graph.forked',
       graphId: rec.graphId,
       threadId: forkedId,
       parentThreadId: runId,
       ts,
-    })
+    }
+    try {
+      const seq = await this.eventLog.latestSeq(forkedId)
+      if (seq > 0) (event as { eid?: string }).eid = `${forkedId}-${seq}`
+    } catch {
+      // latestSeq 失败 → 无 eid 下发，前端按 type+ts+nodeId 复合键兜底
+    }
+    this.emitServiceEvent(event)
 
     const instance: GraphInstance = {
       id: `${rec.graphId}-${forkedId}`,
@@ -201,16 +212,24 @@ export class GraphService {
     const ts = new Date().toISOString()
     rec.instance.status = 'failed'
     rec.instance.updatedAt = ts
+    // P3 台账（T2：graph.failed live 副本无 eid）：append 先于 emit（run.failed 落日志），
+    // append resolve 后把 eid 回填到事件对象（runtime appendToEventLog 同款）——
+    // graph-socket 两步微任务链 flush 时快照携带 eid，与 graph:history 同源。
+    const event: GraphEvent = { type: 'graph.failed', graphId: rec.graphId, threadId: runId, error, ts }
     try {
       const r = this.eventLog.append({
         runId: rec.runId, graphId: rec.graphId, ts: Date.now(),
         kind: 'run.failed', payload: { error },
       })
-      if (r instanceof Promise) r.catch(() => {})
+      if (r instanceof Promise) {
+        r.then(seq => {
+          try { (event as { eid?: string }).eid = `${rec.runId}-${seq}` } catch { /* 回填失败不阻断 */ }
+        }).catch(() => {})
+      }
     } catch {
       // 日志写失败不阻断置态
     }
-    this.emitServiceEvent({ type: 'graph.failed', graphId: rec.graphId, threadId: runId, error, ts })
+    this.emitServiceEvent(event)
     return { ...rec.instance }
   }
 

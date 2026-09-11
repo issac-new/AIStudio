@@ -239,11 +239,17 @@ export class SaaSStore implements LoopStateStore {
       params.push(since)
       sql += ` AND ts > $2`
     }
-    sql += ' ORDER BY ts ASC'
+    // P3 台账（T4/T7 合并：事件窗口语义分叉）：与 local-store 统一为"最新 N 条、升序返回"。
+    // 此处原 ASC+LIMIT 取最旧 N 条，saas 形态下消费方（stuck 检测取 1/20 条、loop socket
+    // 回放取 50 条）拿到的窗口整体偏旧——熔断/回放语义随之劣化。改为 DESC+LIMIT 截最新 N
+    // 后反转回升序（消费方返回序契约与 local 一致：时间升序）。id 作并列 ts 的稳定次序键。
     if (limit) {
       params.push(limit)
-      sql += ` LIMIT $${params.length}`
+      sql += ` ORDER BY ts DESC, id DESC LIMIT $${params.length}`
+      const res = await this.query(sql, params)
+      return res.rows.map((r: any) => r.payload as LoopEvent).reverse()
     }
+    sql += ' ORDER BY ts ASC, id ASC'
     const res = await this.query(sql, params)
     return res.rows.map((r: any) => r.payload as LoopEvent)
   }

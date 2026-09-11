@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { createGraphAssembly, readEngineMode, type GraphAssemblyOpts } from '../../../../server/loop/graph/graph-assembly'
+import { createGraphAssembly, readEngineMode, withTemplateDeps, type GraphAssemblyOpts } from '../../../../server/loop/graph/graph-assembly'
 import { createGraphRunRouter, resumeApprovalForContract, stampApproverIdentity, GraphSpecStore } from '../../../../server/loop/graph/graph-rest'
 import { setupGraphSocketNamespace, type SocketIOLike, type SocketLike } from '../../../../server/loop/graph/graph-socket'
 import { ShadowRunner, compareEventSequences } from '../../../../server/loop/graph/shadow-runner'
@@ -112,14 +112,14 @@ function extractParams(actual: string, pattern: string): Record<string, string> 
   return params
 }
 
-async function invoke(router: Router, method: 'get' | 'post', actualPath: string, body?: unknown, opts?: { state?: Record<string, unknown> }) {
+async function invoke(router: Router, method: 'get' | 'post', actualPath: string, body?: unknown, opts?: { state?: Record<string, unknown>; query?: Record<string, string> }) {
   const layer = router.stack.find(l =>
     (l.methods as unknown as string[]).includes(method.toUpperCase()) && patternToRegExp(l.path).test(actualPath))
   if (!layer) throw new Error(`route not found: ${method} ${actualPath}`)
   const handler = layer.stack[layer.stack.length - 1] as (ctx: unknown) => Promise<void>
   const ctx = {
     params: extractParams(actualPath, layer.path),
-    query: {},
+    query: opts?.query ?? {},
     request: { body },
     body: undefined as unknown,
     status: 200,
@@ -355,6 +355,42 @@ describe('graph REST run lifecycle', () => {
     expect((miss.body as { error: string }).error).toBeTruthy()
   })
 
+  // P3 台账（导出无 limit，顺延 P4 清偿）：?limit= 控制事件条数——默认 10000、上限
+  // 10000；响应附 eventsTotal/eventsTruncated 供消费方识别截断。
+  it('GET /api/graph/runs/:id/export honors ?limit= with default/max 10000 (P3 台账 导出 limit)', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+    service.registerGraph(new GraphBuilder('gl', 'G')
+      .addChannel('x', { reducer: reducers.overwrite(), default: 0 })
+      .addNode(fnNode('a', async () => ({ end: true }))).setEntry('a').build())
+    const { runId } = await service.startRun('gl')
+    const total = await eventLog.count(runId)
+    expect(total).toBeGreaterThan(0)
+    const router = createGraphRunRouter({ graphService: service, eventLog })
+
+    // 显式 limit=2 → 事件截为 2 条，eventsTotal 反映全量，eventsTruncated=true
+    const limited = await invoke(router, 'get', `/api/graph/runs/${runId}/export`, undefined, { query: { limit: '2' } })
+    expect(limited.status).toBe(200)
+    const body = limited.body as { events: GraphLogEvent[]; eventsTotal: number; eventsTruncated: boolean }
+    expect(body.events).toHaveLength(2)
+    expect(body.eventsTotal).toBe(total)
+    expect(body.eventsTruncated).toBe(true)
+
+    // 无 limit → 默认 10000（全量事件在此规模下不截断）
+    const full = await invoke(router, 'get', `/api/graph/runs/${runId}/export`)
+    const fullBody = full.body as { events: GraphLogEvent[]; eventsTotal: number; eventsTruncated: boolean }
+    expect(fullBody.events).toHaveLength(total)
+    expect(fullBody.eventsTruncated).toBe(false)
+
+    // 超上限值钳制到 10000（不报错）；非法值 → 400
+    const clamped = await invoke(router, 'get', `/api/graph/runs/${runId}/export`, undefined, { query: { limit: '999999999' } })
+    expect(clamped.status).toBe(200)
+    expect((clamped.body as { eventsTotal: number }).eventsTotal).toBe(total)
+    const bad = await invoke(router, 'get', `/api/graph/runs/${runId}/export`, undefined, { query: { limit: 'zero' } })
+    expect(bad.status).toBe(400)
+    expect((bad.body as { error: string }).error).toContain('limit')
+  })
+
   it('resume endpoint answers an interrupt and completes the run (HITL closed loop)', async () => {
     const eventLog = new InMemoryEventLogStore()
     const service = new GraphService({ eventLog })
@@ -425,12 +461,92 @@ describe('graph REST run lifecycle', () => {
       eventLog: new InMemoryEventLogStore(),
       specStore,
     })
-    await invoke(router, 'post', '/api/graph/specs', {
-      id: 'spec-1', version: 1, channels: {}, nodes: [], edges: [], entryNode: 'a',
-      limits: { maxSteps: 10 },
+    const saved = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'spec-1', version: 1,
+      channels: { done: { reducer: 'overwrite', default: false } },
+      nodes: [{ id: 'a', type: 'function', config: {} }],
+      edges: [], entryNode: 'a', limits: { maxSteps: 10 },
     })
+    expect(saved.status).toBe(200)
     const list = await invoke(router, 'get', '/api/graph/specs')
     expect((list.body as { specs: Array<{ id: string }> }).specs.map(s => s.id)).toEqual(['spec-1'])
+  })
+
+  it('POST /api/graph/specs validates structure (P4：保存即校验) + 标 origin=editor + 拒绝伪装 template', async () => {
+    const specStore = new GraphSpecStore()
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+    const bad = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'bad', version: 1, channels: {}, nodes: [], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 },
+    })
+    expect(bad.status).toBe(400)
+    expect((bad.body as { error: string }).error).toMatch(/entry/i)
+
+    const spoof = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'spoof', version: 1, channels: {},
+      nodes: [{ id: 'a', type: 'function', config: {} }], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 }, origin: 'template',
+    })
+    expect(spoof.status).toBe(400)
+
+    const good = await invoke(router, 'post', '/api/graph/specs', {
+      id: 'good', version: 1, channels: {},
+      nodes: [{ id: 'a', type: 'function', config: {} }], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 },
+    })
+    expect(good.status).toBe(200)
+    expect(specStore.get('good')?.origin).toBe('editor')
+  })
+
+  it('DELETE /api/graph/specs/:id removes editor specs; 404 unknown (P4)', async () => {
+    const specStore = new GraphSpecStore()
+    await specStore.save({
+      id: 'editor-1', version: 1, channels: {},
+      nodes: [{ id: 'a', type: 'function', config: {} }], edges: [], entryNode: 'a',
+      limits: { maxSteps: 10 }, origin: 'editor',
+    })
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+    const hit = await invoke(router, 'delete', '/api/graph/specs/editor-1')
+    expect(hit.status).toBe(200)
+    expect(specStore.get('editor-1')).toBeUndefined()
+    const miss = await invoke(router, 'delete', '/api/graph/specs/editor-1')
+    expect(miss.status).toBe(404)
+  })
+
+  it('POST /api/graph/specs/:id/runs 走 specRuntime；未装配 501 (P4 试跑)', async () => {
+    const specStore = new GraphSpecStore()
+    const routerBare = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+    })
+    const unavailable = await invoke(routerBare, 'post', '/api/graph/specs/x1/runs')
+    expect(unavailable.status).toBe(501)
+
+    const started: string[] = []
+    const router = createGraphRunRouter({
+      graphService: new GraphService({ eventLog: new InMemoryEventLogStore() }),
+      eventLog: new InMemoryEventLogStore(),
+      specStore,
+      specRuntime: {
+        startRun: async (specId: string) => {
+          started.push(specId)
+          return { runId: 'run-1', instance: { status: 'running' } }
+        },
+      },
+    })
+    const ok = await invoke(router, 'post', '/api/graph/specs/x1/runs')
+    expect(ok.status).toBe(200)
+    expect((ok.body as { runId: string }).runId).toBe('run-1')
+    expect(started).toEqual(['x1'])
   })
 
   it('GET /api/graph/specs/:id returns {id, version, spec}; 404 carries {error} (P3 台账 #25)', async () => {
@@ -977,5 +1093,33 @@ describe('cost wiring (I7)', () => {
     const events = await eventLog.query(runId)
     expect(events.some(e => e.kind === 'cost.recorded')).toBe(true)
     expect(service.getRun(runId)!.instance.totalCost).toBe(tier * costs.length)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T5（模板语义随实例化，2026-09-11）：装配 compile 闭包把 loop.template.meta.gateCommands
+// 并入编译 deps（与装配缺省取并集、按 cmd 去重）——spawner 逐 loop 编译时模板白名单生效。
+// ---------------------------------------------------------------------------
+
+describe('withTemplateDeps (T5: template gateCommands merged into compile deps)', () => {
+  it('merges template gateCommands into the base whitelist (union, deduped by cmd)', () => {
+    const base = { gateCommands: [{ name: 'lint', kind: 'validator' as const, cmd: 'npm run lint' }] }
+    // 本文件 makeLoop() 无参数——template 以展开覆盖注入
+    const loop: LoopInstance = {
+      ...makeLoop(),
+      template: { specId: 'spec-tpl', meta: { gateCommands: ['npm test', 'npm run lint'] } },
+    }
+    const merged = withTemplateDeps(base as never, loop)
+    expect(merged.gateCommands!.map(c => c.cmd)).toEqual(['npm run lint', 'npm test'])
+    // 模板命令映射为 validator 档（gate 白名单语义）
+    expect(merged.gateCommands!.find(c => c.cmd === 'npm test')).toEqual({ name: 'npm test', kind: 'validator', cmd: 'npm test' })
+  })
+
+  it('no template gateCommands → deps untouched (same reference)', () => {
+    const loop = makeLoop()
+    expect(withTemplateDeps({ gateCommands: undefined } as never, loop).gateCommands).toBeUndefined()
+    const withTplNoCommands: LoopInstance = { ...makeLoop(), template: { specId: 's', meta: { goal: 'g' } } }
+    const base = { gateCommands: [{ name: 'lint', kind: 'validator' as const, cmd: 'npm run lint' }] }
+    expect(withTemplateDeps(base as never, withTplNoCommands)).toBe(base)
   })
 })

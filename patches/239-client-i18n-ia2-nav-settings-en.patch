@@ -1,0 +1,11 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -769,6 +769,7 @@ export default {
+       inbox: 'Inbox',
+       tasks: 'Work Items',
+       comms: 'Comms',
++      settings: 'Settings',
+     },
+     overview: {
+       attentionLabel: 'Needs attention',

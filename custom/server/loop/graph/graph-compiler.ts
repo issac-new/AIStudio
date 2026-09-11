@@ -133,6 +133,22 @@ export function compileLoopToSpec(loop: LoopInstance, deps: CompileTopologyDeps)
   return {
     id: `loop-${loop.id}`,
     version: 1,
+    // T5（模板语义随实例化，2026-09-11）：编译产物打 origin='template'——loop 编译
+    // 模板对编辑器面只读（graph-rest POST /specs 对 'template' 保留的拒绝由此闭环）；
+    // description 为 name/goal 合成（模板卡/编辑器标题栏的人类可读来源）。
+    origin: 'template' as const,
+    description: `${loop.name} — ${loop.goal}`,
+    // T5：meta 透传——loop 自身语义（goal/cron）+ 实例化模板携带的 meta（loop.template，
+    //  创建时经 body.template 从 GraphSpec.meta 落进 loop 配置）原样回到编译产物，
+    //  前端 adapters/orchestrate 读 spec.meta 的展示面与模板卡所见一致。
+    meta: {
+      goal: loop.goal,
+      ...(loop.schedule.cron ? { cron: loop.schedule.cron } : {}),
+      ...(loop.template?.meta.permissionLevel ? { permissionLevel: loop.template.meta.permissionLevel } : {}),
+      ...(loop.template?.meta.sensitivePaths ? { sensitivePaths: loop.template.meta.sensitivePaths } : {}),
+      ...(loop.template?.meta.worktreePolicy ? { worktreePolicy: loop.template.meta.worktreePolicy } : {}),
+      ...(loop.template?.meta.gateCommands ? { gateCommands: loop.template.meta.gateCommands } : {}),
+    },
     channels: {
       [CH.contracts]: { reducer: 'appendById', default: [] },
       [CH.verifications]: { reducer: 'append', default: [] },

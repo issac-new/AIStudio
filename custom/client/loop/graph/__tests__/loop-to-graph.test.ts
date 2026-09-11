@@ -1,6 +1,8 @@
 // overlay/custom/client/loop/graph/__tests__/loop-to-graph.test.ts
-import { describe, it, expect } from 'vitest'
-import { loopToGraphInstance, loopToGraphDef, loopEventsToGraphEvents } from '../../../../server/loop/graph/loop-to-graph'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  loopToGraphInstance, loopToGraphDef, loopEventsToGraphEvents, resetProjectionWarnForTest,
+} from '../../../../server/loop/graph/loop-to-graph'
 import type { LoopInstance, LoopEvent } from '../../types'
 
 function makeLoop(): LoopInstance {
@@ -71,8 +73,9 @@ describe('loopToGraphDef', () => {
     const def = loopToGraphDef(makeLoop())
     // 编译产物含 gate/stop-check，投影折叠进 scheduling；5 阶段一个不多不少
     expect([...def.nodes.keys()].sort()).toEqual(['discovery', 'handoff', 'persistence', 'scheduling', 'validation'])
-    // 边集合恰为 legacy 7 条：直连主干 4 条（无 label）+ repair 2 条（validation/persistence
-    // 失败回边，P2 Task 4 审查修复新增 persistence 侧）+ next tick 循环
+    // 边集合恰为 legacy 8 条（台账 #17）：直连主干 4 条（无 label）+ repair 2 条（validation/
+    // persistence 失败回边，P2 Task 4 审查修复新增 persistence 侧）+ scheduling 自环 1 条
+    // （gate→stop-check 折叠内部步骤）+ next tick 循环
     const bare = def.edges.filter(e => e.source === 'discovery' && e.target === 'handoff'
       || e.source === 'handoff' && e.target === 'validation'
       || e.source === 'validation' && e.target === 'persistence'
@@ -86,13 +89,53 @@ describe('loopToGraphDef', () => {
     const persistenceRepair = def.edges.find(e => e.label === 'repair' && e.source === 'persistence')!
     expect(persistenceRepair.target).toBe('handoff')
     expect(typeof persistenceRepair.condition).toBe('function')
+    // 台账 #17：gate→stop-check 同折叠进 scheduling → 投影为自环（label 保留），不再静默丢弃
+    const selfLoop = def.edges.find(e => e.source === 'scheduling' && e.target === 'scheduling')!
+    expect(selfLoop.label).toBe('gate-passed')
     const loopEdge = def.edges.find(e => e.label === 'next tick')!
     expect(loopEdge.source).toBe('scheduling')
     expect(loopEdge.target).toBe('discovery')
-    expect(def.edges).toHaveLength(7)
+    expect(def.edges).toHaveLength(8)
     // 编译期守卫/分支语义（guard.maxIterations、no-contracts、gate-repair）属可执行面，REST 视图不投影
     expect(def.edges.some(e => e.source === 'discovery' && e.target === 'scheduling')).toBe(false)
     expect(def.edges.some(e => e.source === 'scheduling' && e.target === 'handoff')).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 台账 #14（顺延 P4 清偿）：投影丢弃非线性主干边必须 warn（from→to 列明，warn-once）
+// ---------------------------------------------------------------------------
+
+describe('loopToGraphDef — dropped-edge warning (台账 #14)', () => {
+  beforeEach(() => {
+    resetProjectionWarnForTest()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    resetProjectionWarnForTest()
+  })
+
+  it('warns once per dropped non-linear edge (no-contracts short-circuit + gate-repair back-edge)', () => {
+    loopToGraphDef(makeLoop())
+    const warns = (console.warn as ReturnType<typeof vi.fn>).mock.calls.map(c => String(c[0]))
+    const dropped = warns.filter(w => w.includes('drops non-linear edge'))
+    expect(dropped.some(w => w.includes('discovery→stop-check') && w.includes('no-contracts'))).toBe(true)
+    expect(dropped.some(w => w.includes('gate→handoff') && w.includes('gate-repair'))).toBe(true)
+
+    // warn-once：同 loop 再投影（REST 读路径反复调用）不刷屏
+    loopToGraphDef(makeLoop())
+    const again = (console.warn as ReturnType<typeof vi.fn>).mock.calls
+      .map(c => String(c[0])).filter(w => w.includes('drops non-linear edge'))
+    expect(again).toHaveLength(2)
+  })
+
+  it('same-fold self-loop is projected, not warned (台账 #17：gate→stop-check 折叠可见)', () => {
+    const def = loopToGraphDef(makeLoop())
+    expect(def.edges.some(e => e.source === 'scheduling' && e.target === 'scheduling')).toBe(true)
+    const warns = (console.warn as ReturnType<typeof vi.fn>).mock.calls.map(c => String(c[0]))
+    // 自环不进丢弃告警（gate-passed 边被投影，而非丢弃）
+    expect(warns.some(w => w.includes('gate→stop-check'))).toBe(false)
   })
 })
 

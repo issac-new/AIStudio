@@ -22,7 +22,9 @@
   background: var(--bg-primary);
 }
 
-.ia-nav__item {
+.ia-nav__item,
+.ia-nav__settings {
+  margin-top: auto;
   display: flex;
   align-items: center;
   gap: 8px;

@@ -26,6 +26,7 @@ import type { Scheduler } from '../engine/scheduler'
 import type { WebhookConnector } from '../connectors/webhook-connector'
 import type { LoopInstance } from '../types'
 import { PATTERN_TEMPLATES } from '../types'
+import type { GraphSpecMeta } from '../graph/graph-spec'
 
 /** 图引擎审批桥接（P1 Task 7）：契约 id → graph interrupt resume。缺省走旧 stub。
  *  approver（2026-09-10 风险审查 #1）：REST 层从 ctx.state.user 注入的认证用户名，
@@ -38,11 +39,20 @@ export interface GraphApprovalBridge {
   ): Promise<{ ok: boolean; runId?: string }>
 }
 
+/** 模板源（T5 模板语义随实例化，2026-09-11）：specId → 模板 GraphSpec 的只读视图。
+ *  由装配层注入（graphAssembly.specStore 的适配；patch 202 需同步传参——controller
+ *  保持与图引擎解耦，不直接 import graph 模块）。缺省注入时 body.template 请求 400
+ *  显式失败，不静默忽略（所见非所得的旧坑不再以丢参形态回归）。 */
+export interface TemplateSource {
+  getTemplate(specId: string): Promise<{ meta?: GraphSpecMeta; description?: string } | null>
+}
+
 export function createLoopRouter(
   store: LoopStateStore,
   scheduler: Scheduler,
   webhookConnector: WebhookConnector,
   graphBridge?: GraphApprovalBridge,
+  templateSource?: TemplateSource,
 ): Router {
   const router = new Router()
 
@@ -73,8 +83,27 @@ export function createLoopRouter(
 
   // Create loop
   router.post('/api/loop/loops', async (ctx) => {
-    const body = ctx.request.body as Partial<LoopInstance>
-    if (!body.id || !body.name || !body.goal) {
+    const body = ctx.request.body as Partial<LoopInstance> & { template?: string }
+    // T5（模板语义随实例化）：template=specId → 取模板 spec.meta 合成 loop 配置。
+    //  goal 缺省补 meta.goal；其余 meta 持久化进 loop.template（编译时透传/合成，
+    //  见 graph-assembly compile 闭包与 graph-compiler meta 投影）。
+    let templateMeta: GraphSpecMeta | undefined
+    if (body.template !== undefined) {
+      const specId = typeof body.template === 'string' ? body.template.trim() : ''
+      if (!specId) {
+        ctx.status = 400; ctx.body = { error: 'template must be a non-empty spec id' }; return
+      }
+      if (!templateSource) {
+        ctx.status = 400; ctx.body = { error: 'Template source not configured' }; return
+      }
+      const tpl = await templateSource.getTemplate(specId)
+      if (!tpl) {
+        ctx.status = 404; ctx.body = { error: `Template not found: ${specId}` }; return
+      }
+      templateMeta = tpl.meta ?? {}
+    }
+    const goal = body.goal ?? templateMeta?.goal
+    if (!body.id || !body.name || !goal) {
       ctx.status = 400; ctx.body = { error: 'Missing required fields: id, name, goal' }; return
     }
     if (!validateLoopId(body.id)) {
@@ -83,7 +112,7 @@ export function createLoopRouter(
     const loop: LoopInstance = {
       id: body.id,
       name: body.name,
-      goal: body.goal,
+      goal,
       stopCondition: body.stopCondition ?? '',
       pattern: body.pattern ?? 'daily-triage',
       schedule: body.schedule ?? { mode: 'manual', timezone: 'UTC' },
@@ -99,6 +128,10 @@ export function createLoopRouter(
       // 契约重试上限静默丢失、回退 3。校验语义与编译器一致（正整数，非法即缺省）。
       maxAttempts: typeof body.maxAttempts === 'number' && Number.isFinite(body.maxAttempts) && body.maxAttempts >= 1
         ? Math.floor(body.maxAttempts)
+        : undefined,
+      // T5：模板溯源持久化（编译产物 origin/description/meta 的数据源）
+      template: body.template !== undefined
+        ? { specId: body.template.trim(), meta: templateMeta ?? {} }
         : undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

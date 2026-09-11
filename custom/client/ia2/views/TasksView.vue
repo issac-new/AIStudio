@@ -1,3 +1,4 @@
+import type { KanbanTaskStatus } from '@/api/hermes/kanban'
 <!-- overlay/custom/client/ia2/views/TasksView.vue -->
 <!-- 工作项区：页签 1 = 内嵌 SwarmKanbanView 既有看板（swarm-kanban 吸收进 /app/tasks）；
      页签 2 = 追溯矩阵（P3 Task 7，§7B.2：需求 → run → 产出任务 → 验证轮次）。
@@ -19,8 +20,9 @@ const kanban = useKanbanStore()
 type TabKey = 'board' | 'trace'
 const tab = ref<TabKey>('board')
 
-/** kanban 任务状态词表（api/hermes/kanban KanbanTaskStatus 同表；query 预选校验用） */
-const KANBAN_STATUSES: ReadonlySet<string> = new Set([
+/** kanban 任务状态词表（台账 T7 双源收敛：由上游 KanbanTaskStatus 类型派生，
+ *  不再手抄字符串数组——上游词表变化时此处编译期报错，而非静默漂移） */
+const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>([
   'triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived',
 ])
 

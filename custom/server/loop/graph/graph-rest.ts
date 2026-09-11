@@ -10,7 +10,7 @@ import { promises as fs } from 'fs'
 import type { GraphService } from './graph-service'
 import type { EventLogStore } from './event-log-store'
 import type { RunSpawner } from './run-spawner'
-import type { GraphSpec } from './graph-spec'
+import { validateGraphSpec, type GraphSpec } from './graph-spec'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
@@ -42,6 +42,12 @@ export function stampApproverIdentity(value: unknown, approver: string): unknown
   return value
 }
 
+/** 台账 #11（顺延 P4 清偿）：旧 JSON 文件灌入的完成标记 id（specs 表内保留行，
+ *  不进 GraphSpecStore 内存表 / REST 列表）。灌入中途崩溃的半态 = 表有部分行而无标记——
+ *  重载时逐 spec 先查 getSpec 已存在则跳过（重启续跑语义），补落剩余后写标记；
+ *  标记在（或本就无文件可回读）→ 表为准，文件不再回读（防已删除 spec 从过期文件复活）。 */
+const SEED_MARKER_ID = '__file-seed-complete__'
+
 /** 台账⑥（P2）：GraphSpec 持久化切 event-log 同库 specs 表（重启可恢复）。
  *  filePath 降级为迁移兜底——表空时读一次 JSON 文件灌入表，之后以表为准；
  *  不传 eventLog 时维持 P1 内存/文件语义（既有 `new GraphSpecStore()` 调用方兼容）。 */
@@ -53,18 +59,28 @@ export class GraphSpecStore {
   async load(): Promise<void> {
     if (this.eventLog) {
       const rows = await this.eventLog.listSpecs()
-      if (rows.length > 0) {
+      const seeded = rows.some(r => r.id === SEED_MARKER_ID)
+      // 表完整（完成标记在，或无文件路径可回读）→ 以表为准，文件不再回读
+      if (seeded || !this.filePath) {
         for (const row of rows) {
+          if (row.id === SEED_MARKER_ID) continue
           const got = await this.eventLog.getSpec(row.id)
           if (got) this.specs.set(got.id, got.spec as GraphSpec)
         }
         return
       }
-      // 表空 → 读一次旧 JSON 文件灌入表（迁移兜底；此后表为准，文件不再回读）
+      // 表空（首灌）或灌入中途崩溃的半态（无标记）→ 读文件逐 spec 续跑：
+      // 已落表的跳过（保留表内版本），剩余补落，完成后写标记行
       for (const spec of await this.readFileSpecs()) {
+        const existing = await this.eventLog.getSpec(spec.id)
+        if (existing) {
+          this.specs.set(existing.id, existing.spec as GraphSpec)
+          continue
+        }
         this.specs.set(spec.id, spec)
         await this.eventLog.saveSpec({ id: spec.id, version: spec.version, spec })
       }
+      await this.eventLog.saveSpec({ id: SEED_MARKER_ID, version: 1, spec: { seedComplete: true } })
       return
     }
     for (const spec of await this.readFileSpecs()) this.specs.set(spec.id, spec)
@@ -93,6 +109,17 @@ export class GraphSpecStore {
     }
   }
 
+  /** P4：删除（内存 + 持久层）；模板 spec 编译期派生、不入此表，删除面天然限定自建 spec */
+  async delete(id: string): Promise<boolean> {
+    if (!this.specs.has(id)) return false
+    this.specs.delete(id)
+    if (this.eventLog) await this.eventLog.deleteSpec(id)
+    else if (this.filePath) {
+      await fs.writeFile(this.filePath, JSON.stringify([...this.specs.values()], null, 2), 'utf-8')
+    }
+    return true
+  }
+
   list(): GraphSpec[] {
     return [...this.specs.values()]
   }
@@ -108,6 +135,8 @@ export interface GraphRestDeps {
   /** mode=on 时手动 tick 经 spawner（可选：legacy/shadow 下 runs 端点只读） */
   spawner?: RunSpawner | null
   specStore?: GraphSpecStore | null
+  /** P4：自建 spec 起跑器（编辑器"试跑"链路；缺省时 specs/:id/runs 返回 501） */
+  specRuntime?: { startRun(specId: string, initialState?: unknown): Promise<{ runId: string; instance: unknown }> } | null
 }
 
 export function createGraphRunRouter(deps: GraphRestDeps): Router {
@@ -187,15 +216,33 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
 
   // GET /api/graph/runs/:id/export — 运行导出包（P3 台账 #30，spec 门禁缺口）：
   // run 详情 + 图规格 + 全事件一次打包，Content-Disposition attachment 供直接下载。
+  // P3 台账（导出无 limit，顺延 P4 清偿）：?limit= 控制事件条数，默认 10000 且为上限——
+  // 超大规模 run 全量打包会拼出巨型 JSON 响应。截断取前 N 条（升序），与 graph:history
+  // 回放的 query(runId, {limit}) 同语义；响应附 eventsTotal/eventsTruncated 供消费方识别截断。
   router.get('/api/graph/runs/:id/export', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
+    const EXPORT_LIMIT_DEFAULT = 10_000
+    const EXPORT_LIMIT_MAX = 10_000
+    let limit = EXPORT_LIMIT_DEFAULT
+    if (ctx.query.limit !== undefined) {
+      const parsed = parseInt(String(ctx.query.limit), 10)
+      if (!Number.isFinite(parsed) || parsed < 1) {
+        ctx.status = 400; ctx.body = { error: 'limit must be a positive integer' }; return
+      }
+      limit = Math.min(parsed, EXPORT_LIMIT_MAX)
+    }
     const rec = deps.graphService.getRun(ctx.params.id)
     if (!rec) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
     const spec = deps.specStore?.get(rec.graphId) ?? null
-    const events = await deps.eventLog.query(ctx.params.id)
+    const events = await deps.eventLog.query(ctx.params.id, { limit })
+    const eventsTotal = await deps.eventLog.count(ctx.params.id)
     ctx.set('Content-Disposition', `attachment; filename=run-${ctx.params.id}.json`)
     ctx.type = 'application/json'
-    ctx.body = { run: { runId: rec.runId, graphId: rec.graphId, instance: rec.instance }, spec, events }
+    ctx.body = {
+      run: { runId: rec.runId, graphId: rec.graphId, instance: rec.instance },
+      spec, events,
+      eventsTotal, eventsTruncated: eventsTotal > events.length,
+    }
   })
 
   // GET /api/graph/specs — 已注册图规格
@@ -212,15 +259,51 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     ctx.body = { id: spec.id, version: spec.version, spec }
   })
 
-  // POST /api/graph/specs — 登记图规格（台账 i 持久化）
+  // POST /api/graph/specs — 登记图规格（台账 i 持久化）。
+  // P4 深化：过 validateGraphSpec（结构化 400）；origin 缺省标 'editor'，
+  // 显式 'template' 拒绝——模板只能由 loop 编译派生，不得从编辑器/导入伪装
   router.post('/api/graph/specs', async (ctx) => {
     const spec = ctx.request.body as GraphSpec
     if (!spec || typeof spec.id !== 'string' || !Array.isArray(spec.nodes) || !Array.isArray(spec.edges)) {
       ctx.status = 400; ctx.body = { error: 'Invalid GraphSpec' }; return
     }
+    if (spec.origin === 'template') {
+      ctx.status = 400; ctx.body = { error: 'origin "template" is reserved for loop-compiled specs' }; return
+    }
+    if (spec.origin === undefined) spec.origin = 'editor'
+    try {
+      validateGraphSpec(spec)
+    } catch (err) {
+      ctx.status = 400
+      ctx.body = { error: err instanceof Error ? err.message : String(err) }
+      return
+    }
     if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
     await deps.specStore.save(spec)
     ctx.body = { ok: true, id: spec.id }
+  })
+
+  // DELETE /api/graph/specs/:id — 删除自建 spec（编辑器编辑面；不存在 404）
+  router.delete('/api/graph/specs/:id', async (ctx) => {
+    if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return }
+    if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
+    const ok = await deps.specStore.delete(ctx.params.id)
+    if (!ok) { ctx.status = 404; ctx.body = { error: `Spec not found: ${ctx.params.id}` }; return }
+    ctx.body = { ok: true, id: ctx.params.id }
+  })
+
+  // POST /api/graph/specs/:id/runs — P4 编辑器试跑：hydrate 自建 spec → 注册 → 起跑
+  router.post('/api/graph/specs/:id/runs', async (ctx) => {
+    if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return }
+    if (!deps.specRuntime) { ctx.status = 501; ctx.body = { error: 'Spec runtime not configured (GRAPH_ENGINE=on required)' }; return }
+    try {
+      const { runId, instance } = await deps.specRuntime.startRun(ctx.params.id)
+      ctx.body = { runId, instance }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      ctx.status = message.includes('not found') ? 404 : 400
+      ctx.body = { error: message }
+    }
   })
 
   // POST /api/graph/runs/:id/start — 消费 fork 产物显式起跑（P1 台账 a 显式语义的 REST 面）

@@ -1,7 +1,8 @@
 // overlay/custom/client/ia2/__tests__/compat-guard.test.ts
 // P3 Task 3 — 兼容重定向守卫：旧落点 → 新 IA；VITE_IA_RETRO=1 时 loop 旧落点放行。
-// Task 8 — cockpit 退役：/hermes/cockpit、/hermes/matrix-chat(/room/:roomId)、
-// /hermes/swarm-kanban 按 PATH 拦截（路由本体已删，任何模式都承接——放行只会落空白）。
+// P4 平行共存（2026-09-11 用户裁决）：原有 AI 协作中心（cockpit）恢复本体路由
+// 并与新 /app IA 共存——cockpit 家族落点（/hermes/cockpit、matrix-chat、swarm-kanban）
+// 任何模式都不再改写；守卫仅承接 loop 旧深链。
 // 覆盖链：登录默认（上游 071 守卫把无 redirect 的登录改落 /app）、旧书签深链、
 // 旧运行中心、旧 loop 详情。
 import { describe, it, expect } from 'vitest'
@@ -39,25 +40,21 @@ function stubRouter(retro: boolean): Router {
   return router
 }
 
-describe('iaCompatRedirect（纯函数）—— cockpit 退役路径（Task 8，路径级）', () => {
-  it('旧 cockpit 路径 → 总览（旧书签承接；登录默认链现由上游 071 直落 /app）', () => {
-    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, false)).toEqual({ name: 'ia2.overview' })
+describe('iaCompatRedirect（纯函数）—— cockpit 家族平行共存放行（P4）', () => {
+  it('cockpit/matrix/swarm-kanban 路径不改写（本体路由已恢复）', () => {
+    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, false)).toBeNull()
   })
 
-  it('旧 matrix-chat 路径 → /app/comms；房间路径参数原样', () => {
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, false)).toEqual({ name: 'ia2.commsHome' })
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat/room/!foo:bar' }, false))
-      .toEqual({ name: 'ia2.commsRoom', params: { roomId: '!foo:bar' } })
+  it('matrix-chat/房间/swarm-kanban 路径同样放行', () => {
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, false)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat/room/!foo:bar' }, false)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, false)).toBeNull()
   })
 
-  it('旧 swarm-kanban 路径 → 工作项区', () => {
-    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, false)).toEqual({ name: 'ia2.tasks' })
-  })
-
-  it('退役路径任何模式（含 RETRO）都承接——路由已删，放行即空白', () => {
-    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, true)).toEqual({ name: 'ia2.overview' })
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, true)).toEqual({ name: 'ia2.commsHome' })
-    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, true)).toEqual({ name: 'ia2.tasks' })
+  it('RETRO 模式与默认模式行为一致（cockpit 家族恒放行）', () => {
+    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, true)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, true)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, true)).toBeNull()
   })
 
   it('非 /hermes 退役路径不拦（/app 与未知路径放行）', () => {
@@ -68,8 +65,11 @@ describe('iaCompatRedirect（纯函数）—— cockpit 退役路径（Task 8，
 })
 
 describe('iaCompatRedirect（纯函数）—— 名称级（仍存在路由的承接）', () => {
-  it('默认模式：旧 cockpit 落点 → 总览（含登录默认链）', () => {
-    expect(iaCompatRedirect({ name: 'hermes.cockpit' }, false)).toEqual({ name: 'ia2.overview' })
+  it('cockpit 家族名称不改写（P4 平行共存）', () => {
+    expect(iaCompatRedirect({ name: 'hermes.cockpit' }, false)).toBeNull()
+    expect(iaCompatRedirect({ name: 'hermes.matrixChat' }, false)).toBeNull()
+    expect(iaCompatRedirect({ name: 'hermes.matrixChatRoom' }, false)).toBeNull()
+    expect(iaCompatRedirect({ name: 'hermes.swarmKanban' }, false)).toBeNull()
   })
 
   it('默认模式：旧运行中心 → /app/runs', () => {
@@ -95,24 +95,24 @@ describe('iaCompatRedirect（纯函数）—— 名称级（仍存在路由的�
 })
 
 describe('installIaCompatGuard（真路由集成）', () => {
-  it('默认模式：导航 /hermes/cockpit 实际落在 /app 总览', async () => {
+  it('默认模式：导航 /hermes/cockpit 留在 cockpit（P4 平行共存）', async () => {
     const router = stubRouter(false)
     await router.push('/hermes/cockpit')
-    expect(router.currentRoute.value.name).toBe('ia2.overview')
-    expect(router.currentRoute.value.path).toBe('/app')
+    expect(router.currentRoute.value.name).toBe('hermes.cockpit')
+    expect(router.currentRoute.value.path).toBe('/hermes/cockpit')
   })
 
-  it('默认模式：matrix-chat 房间深链 → /app/comms/room/:roomId（参数保真）', async () => {
+  it('默认模式：matrix-chat 房间深链留在 cockpit 子路由（P4 平行共存）', async () => {
     const router = stubRouter(false)
     await router.push('/hermes/matrix-chat/room/!foo:bar')
-    expect(router.currentRoute.value.name).toBe('ia2.commsRoom')
+    expect(router.currentRoute.value.name).toBe('hermes.matrixChatRoom')
     expect(router.currentRoute.value.params.roomId).toBe('!foo:bar')
   })
 
-  it('默认模式：/hermes/swarm-kanban → /app/tasks；/hermes/loop/runs → /app/runs', async () => {
+  it('默认模式：/hermes/swarm-kanban 留在 cockpit；/hermes/loop/runs → /app/runs', async () => {
     const router = stubRouter(false)
     await router.push('/hermes/swarm-kanban')
-    expect(router.currentRoute.value.name).toBe('ia2.tasks')
+    expect(router.currentRoute.value.name).toBe('hermes.swarmKanban')
     await router.push('/hermes/loop/runs')
     expect(router.currentRoute.value.name).toBe('ia2.runs')
   })
@@ -124,18 +124,18 @@ describe('installIaCompatGuard（真路由集成）', () => {
     expect(router.currentRoute.value.query.loop).toBe('42')
   })
 
-  it('RETRO 模式：loop 旧路由原样可用；退役 cockpit 路径仍承接（路由已删）', async () => {
+  it('RETRO 模式：loop 旧路由原样可用；cockpit 平行共存同样留原位（P4）', async () => {
     const router = stubRouter(true)
     await router.push('/hermes/loop/42')
     expect(router.currentRoute.value.name).toBe('hermes.loopDetail')
     expect(router.currentRoute.value.params.id).toBe('42')
     await router.push('/hermes/cockpit')
-    expect(router.currentRoute.value.name).toBe('ia2.overview')
+    expect(router.currentRoute.value.name).toBe('hermes.cockpit')
   })
 })
 
 describe('applyColdStartRedirect（冷深链竞态，审查 C-2）', () => {
-  it('初始导航（守卫未注册窗口内）定型在旧 cockpit 后，补查改落 /app 总览', async () => {
+  it('初始导航（守卫未注册窗口内）定型在 cockpit 后，补查不改写（P4 平行共存）', async () => {
     // 复刻生产竞态：app.use(router) 启动初始导航 → 守卫（bootstrap 内）尚未注册 →
     // 已登录深链在旧路由上完成导航（matched.length>0，no-match 兜底不救）
     const router = makeRouter()
@@ -144,8 +144,8 @@ describe('applyColdStartRedirect（冷深链竞态，审查 C-2）', () => {
     // bootstrap 此刻才装守卫 + 新路由已 addRoute → isReady 后补查
     installIaCompatGuard(router, false)
     await applyColdStartRedirect(router, false)
-    expect(router.currentRoute.value.name).toBe('ia2.overview')
-    expect(router.currentRoute.value.path).toBe('/app')
+    expect(router.currentRoute.value.name).toBe('hermes.cockpit')
+    expect(router.currentRoute.value.path).toBe('/hermes/cockpit')
   })
 
   it('旧 loop 深链冷启动同样被补查（?loop= 保真）', async () => {
