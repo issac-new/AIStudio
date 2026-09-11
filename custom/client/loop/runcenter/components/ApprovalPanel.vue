@@ -15,7 +15,7 @@ import {
   formatDurationMs, latestResumeIsAuto, parseApprovalInterrupt,
 } from '../adapters/intervention'
 import {
-  alwaysAllowApprover, isAlwaysAllowed, loadAlwaysAllow, saveAlwaysAllow, withRule,
+  alwaysAllowApprover, isAlwaysAllowed, loadAlwaysAllow, saveAlwaysAllow, tryMarkAutoFired, withRule,
 } from '../adapters/always-allow'
 import { eventTsMs } from '../adapters/run-graph'
 import type { RunSummary } from '../types'
@@ -50,7 +50,8 @@ const submitError = ref<string | null>(null)
 // ── Always allow 按类型记忆（P4 T9 / §7B.5）──
 /** 复选框态：挂载/换 interrupt 时按规则表初始化；审批成功后按最终态沉淀或撤销 */
 const ruleChecked = ref(false)
-/** 本次面板生命周期内已自动放行的 interruptId（防 resume 失败后重试风暴） */
+/** 本次面板生命周期内已自动放行的 interruptId（模块级 tryMarkAutoFired 承担跨面板
+ *  防重发；本 ref 保留作同实例内横幅语义锚点） */
 const autoFiredFor = ref<string | null>(null)
 /** 自动放行的审批类别（撤销规则用——壳关闭后 view 已 null，不能再读） */
 const autoFiredType = ref<string | null>(null)
@@ -73,10 +74,12 @@ watch(() => view.value?.interruptId, id => {
   if (id == null) return
   autoPassed.value = false
   ruleChecked.value = isAlwaysAllowed(loadAlwaysAllow(), view.value?.nodeType)
-  // 规则命中 + 有身份 → 自动批准并留痕（approver=always-allow:<user>）；
-  // 无身份不自动（specified 策略无名可署等于无法裁决）
-  if (id !== autoFiredFor.value && hasIdentity
-    && isAlwaysAllowed(loadAlwaysAllow(), view.value?.nodeType) && view.value) {
+  // 规则命中 + 有身份 + 模块级占坑成功 → 自动批准并留痕（approver=always-allow:<user>）；
+  // 无身份不自动（specified 策略无名可署等于无法裁决）。占坑在规则判定之后——
+  // 规则未命中不消费 id，后续「先勾选再复现」的路径不受影响。
+  if (hasIdentity && view.value
+    && isAlwaysAllowed(loadAlwaysAllow(), view.value.nodeType)
+    && tryMarkAutoFired(id)) {
     autoFiredFor.value = id
     autoFiredType.value = view.value.nodeType
     autoPassed.value = true
