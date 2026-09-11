@@ -8,24 +8,46 @@ export interface MatrixClientConfig {
   roomId: string
 }
 
-let clientInstance: MatrixClient | null = null
+/** 凭据指纹 → 客户端 的键控池（2026-09-12 审查）：此前纯单例会永久钉死首次凭据——
+ *  应用内重登录（token 轮换/旧 token 吊销）后 Brief 投递一直用死 token 静默 401，
+ *  或与 MatrixStore 身份串号。按指纹键控：同凭据复用连接，凭据变更即换新客户端；
+ *  上限 4 防指纹膨胀（现实至多 store + gateway 两套）。 */
+const clientPool = new Map<string, MatrixClient>()
+const CLIENT_POOL_MAX = 4
+
+function identityOf(config: MatrixClientConfig): string {
+  return `${config.userId}\n${config.homeserverUrl}\n${config.accessToken}`
+}
 
 export function getMatrixClient(config: MatrixClientConfig): MatrixClient {
-  if (clientInstance) return clientInstance
-  clientInstance = createClient({
+  const identity = identityOf(config)
+  const existing = clientPool.get(identity)
+  if (existing) return existing
+  const client = createClient({
     baseUrl: config.homeserverUrl,
     accessToken: config.accessToken,
     userId: config.userId,
   })
-  clientInstance.startClient({ initialSync: true } as any) as any as string
-  return clientInstance
+  client.startClient({ initialSync: true } as any) as any as string
+  clientPool.set(identity, client)
+  if (clientPool.size > CLIENT_POOL_MAX) {
+    const oldestKey = clientPool.keys().next().value
+    if (oldestKey !== undefined) {
+      const oldest = clientPool.get(oldestKey)
+      clientPool.delete(oldestKey)
+      if (oldest) {
+        try { oldest.stopClient() } catch { /* 退场失败不阻断新客户端 */ }
+      }
+    }
+  }
+  return client
 }
 
 export function disconnectMatrixClient(): void {
-  if (clientInstance) {
-    clientInstance.stopClient()
-    clientInstance = null
+  for (const client of clientPool.values()) {
+    try { client.stopClient() } catch { /* 逐个退场，互不阻断 */ }
   }
+  clientPool.clear()
 }
 
 export const LOOP_STATE_EVENT_TYPES = {

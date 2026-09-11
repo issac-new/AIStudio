@@ -154,8 +154,10 @@ async function submitCreate(): Promise<void> {
     const payload = buildCreatePayload(form, Date.now(), createCard.value.id)
     await loopRest.createLoop(payload)
     // R4：创建即达——运行列表聚合新 loop 的运行状态；
-    // 台账 T6（创建成功不锚定新 loop）：?loop= 预填搜索，新 loop 的运行一眼可见
-    await router.push({ path: '/app/runs', query: { loop: payload.name } })
+    // 台账 T6（创建成功不锚定新 loop）：?loop= 预填搜索，新 loop 的运行一眼可见。
+    // 2026-09-12 审查：搜索契约是 loop id（RunCenterView 兼容守卫同口径），
+    // 展示名会经 slugify 与 id 发散（中文/空格名必然落空过滤成空列表）。
+    await router.push({ path: '/app/runs', query: { loop: payload.id } })
   } catch (e) {
     submitError.value = e instanceof Error ? e.message : String(e)
   } finally {

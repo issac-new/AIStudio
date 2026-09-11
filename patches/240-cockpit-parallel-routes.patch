@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -30,43 +30,69 @@
+@@ -30,43 +30,78 @@
        component: () => import('@/views/hermes/GroupChatLinkView.vue'),
        meta: { standaloneChat: true },
      },
@@ -69,6 +69,15 @@ diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/in
 +        },
 +      ],
      },
++    // 2026-09-12 审查：系统通知/外部深链仍使用搬迁前绝对路径（GlobalPendingActions
++    // pendingSourceClickUrl → completion-notification hash 导航），补路径别名——
++    // name 归 cockpit 子路由所有，别名仅 path 级兼容。
++    { path: '/hermes/chat', component: () => import('@/views/hermes/ChatView.vue') },
++    { path: '/hermes/session/:sessionId', component: () => import('@/views/hermes/ChatView.vue') },
++    { path: '/hermes/history', component: () => import('@/views/hermes/HistoryView.vue') },
++    { path: '/hermes/history/session/:sessionId', component: () => import('@/views/hermes/HistoryView.vue') },
++    { path: '/hermes/global-agent', component: () => import('@/views/hermes/GlobalAgentView.vue') },
++    { path: '/hermes/global-agent/session/:sessionId', component: () => import('@/views/hermes/GlobalAgentView.vue') },
      {
        path: '/desktop-chat/:sessionId',
        name: 'desktop.chat',

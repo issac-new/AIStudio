@@ -85,6 +85,9 @@ const entries = computed<TriageEntry[]>(() =>
  *  重试）后二次离场时覆盖式重记——快照 ts 与内容始终是最近一次离场，
  *  衰减窗口从最新离场起算，done 不残留首次旧 ts */
 watch(entries, (curr, prev) => {
+  // 2026-09-12 审查：拉取进行中不判离场——REST 瞬时空列表（服务端重启/网络抖动
+  // 后的 loading 窗口）不应把在场审批批量记档
+  if (runsStore.loading) return
   const currIds = new Set(curr.map(e => e.id))
   for (const e of prev) {
     if (e.kind !== 'approval' || currIds.has(e.id)) continue

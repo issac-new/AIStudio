@@ -98,7 +98,7 @@ function subTooltip(sub: FleetSubagent): string {
   return lines.join('\n')
 }
 
-async function approve(session: FleetSession, approvalId: string, choice: 'once' | 'deny') {
+async function approve(session: FleetSession, approvalId: string, choice: 'once' | 'session' | 'always' | 'deny') {
   await store.respondFleetApproval(session.id, approvalId, choice)
 }
 

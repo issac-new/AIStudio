@@ -11,7 +11,7 @@ import { createEventLogStore, type EventLogStore } from './event-log-store'
 import { GraphService } from './graph-service'
 import { RunSpawner } from './run-spawner'
 import { compileLoopToDef, type CompileDeps } from './graph-compiler'
-import { appendContractsById, type GateCommand } from './phase-nodes'
+import { appendContractsById } from './phase-nodes'
 import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
@@ -104,21 +104,24 @@ export interface GraphAssembly {
   stop(): void
 }
 
-/** T5（模板语义随实例化，2026-09-11）：loop.template.meta.gateCommands（模板白名单，
- *  创建时经 body.template 落进 loop 配置）并入编译 deps——compileLoopToDef 的 opts
- *  链路：deps.gateCommands → makeLoopNodeRegistry → createGateNode 命令白名单（可达的
- *  最深消费点）。与装配缺省取并集（模板叠加全局白名单，不缩减既有面），按 cmd 去重。
- *  导出供装配单测直接断言合并语义。 */
+/** T5（模板语义随实例化，2026-09-11）→ 2026-09-12 审查收口：loop.template.meta.gateCommands
+ *  一律不进入可执行清单。gate commands 是宿主机 execFile 的真实执行项（phase-nodes
+ *  createGateNode 逐条 execFile），而 template.meta 可经 REST 写入（POST /loops body.template、
+ *  PATCH /loops/:id 直写 loop.template.meta）——若把模板命令并入编译 deps，任意已认证用户
+ *  即可在下次 tick 于宿主机执行任意命令。此前"与装配缺省取并集"的实现即该注入面，已移除：
+ *  模板命令只允许与装配层白名单（LOOP_GATE_COMMANDS → base.gateCommands）重合（重合项
+ *  本就在清单内，等价于无操作），白名单之外的一律丢弃并 warn 一次。meta 展示面透传不受影响
+ *  （graph-compiler 编译产物 meta 原样保留 gateCommands，仅展示）。导出供装配单测断言丢弃语义。 */
 export function withTemplateDeps(base: CompileDeps, loop: LoopInstance): CompileDeps {
   const tpl = loop.template?.meta.gateCommands
   if (!Array.isArray(tpl) || tpl.length === 0) return base
   const baseCmds = base.gateCommands ?? []
-  const extra: GateCommand[] = tpl
-    .filter((c): c is string => typeof c === 'string' && !!c)
-    .filter(c => !baseCmds.some(b => b.cmd === c))
-    .map(cmd => ({ name: cmd, kind: 'validator' as const, cmd }))
-  if (extra.length === 0) return base
-  return { ...base, gateCommands: [...baseCmds, ...extra] }
+  const dropped = tpl.filter(c => typeof c === 'string' && !!c && !baseCmds.some(b => b.cmd === c))
+  if (dropped.length > 0) {
+    const warn = base.log ?? console.warn
+    warn(`[graph] template meta.gateCommands outside configured whitelist dropped (not executed): ${dropped.join(', ')}`)
+  }
+  return base
 }
 
 export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {

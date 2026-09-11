@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useCockpitStore, type ColumnKey } from '@/custom/cockpit/store/cockpit'
+import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 // 全局布局样式（三列布局、折叠竖条、统一选中态）——必须在 CockpitView 中导入，
 // 因为 cockpit/index.ts 是异步 import 的，其 CSS 在生产构建中可能不被提取。
 import '@/custom/cockpit/styles/cockpit.scss'
@@ -28,6 +29,10 @@ import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import { useI18n } from 'vue-i18n'
 
 const store = useCockpitStore()
+// 日程弹窗（CockpitScheduleModal）内部全量挂在 ia2 workspace store（数据源/选中日期/
+// ✕/Esc 关闭）——开关也必须走同一 store，否则 cockpit.scheduleOpen 恒真关不掉、
+// workspace 的选中日期/待办初始化（openSchedule）永不执行（2026-09-12 审查 P1）。
+const workspace = useWorkspaceStore()
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
@@ -68,7 +73,7 @@ function onColCtrl(col: ColumnKey) {
       :notify-count="store.inboxCount"
       :schedule-count="store.scheduleDatesWithEvents.size"
       :user-name="store.currentUserName"
-      @schedule="(btn: HTMLElement) => store.openSchedule(btn)"
+      @schedule="() => workspace.openSchedule()"
       @loop="store.openLoop()"
       @notify="store.openNotify()"
       @settings="goSettings"
@@ -153,8 +158,8 @@ function onColCtrl(col: ColumnKey) {
 
     <div v-if="store.historyOpen" class="cockpit-overlay" @click="store.closeHistory()" />
     <CockpitHistoryModal v-if="store.historyOpen" class="cockpit-modal-anchor" />
-    <div v-if="store.scheduleOpen" class="cockpit-overlay" @click="store.closeSchedule()" />
-    <CockpitScheduleModal v-if="store.scheduleOpen" />
+    <div v-if="workspace.scheduleOpen" class="cockpit-overlay" @click="workspace.closeSchedule()" />
+    <CockpitScheduleModal v-if="workspace.scheduleOpen" />
     <LoopModal v-if="store.loopOpen" />
     <div v-if="store.notifyOpen" class="cockpit-overlay cockpit-overlay--clear" @click="store.closeNotify()" />
     <CockpitNotifyModal v-if="store.notifyOpen" />
