@@ -1,7 +1,9 @@
 <!-- overlay/custom/client/ia2/components/SpecList.vue -->
-<!-- 模板卡片列表（P3 Task 6，spec §8 编排"先只读展示"）：
-     卡片 = 名称/版本/节点数/模板种类描述，主动作「创建 loop」（R4 三步内跑起来
-     的第一步）。组件薄壳：数据由父层（OrchestrateView）注入，只展示与转发事件。 -->
+<!-- 模板卡片列表（P3 Task 6，spec §8 编排"先只读展示"；P4 编辑器深化）：
+     卡片 = 名称/版本/节点数/描述（spec.description 有则显示，否则种类描述），
+     主动作「创建 loop」（R4 三步内跑起来的第一步）。origin==='editor' 的
+     自建卡追加「编辑」「删除」（P4 画布编辑器入口）；模板卡保持只读。
+     组件薄壳：数据由父层（OrchestrateView）注入，只展示与转发事件。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { SpecCard, SpecTemplateKind } from '../adapters/orchestrate'
@@ -15,6 +17,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'open', card: SpecCard): void
   (e: 'create', card: SpecCard): void
+  (e: 'edit', card: SpecCard): void
+  (e: 'delete', card: SpecCard): void
 }>()
 
 const { t } = useI18n()
@@ -23,8 +27,8 @@ function kindLabel(kind: SpecTemplateKind): string {
   return t(`ia2.orchestrate.kind.${kind}`)
 }
 
-function descLabel(kind: SpecTemplateKind): string {
-  return t(`ia2.orchestrate.desc.${kind}`)
+function descLabel(card: SpecCard): string {
+  return card.description ?? t(`ia2.orchestrate.desc.${card.kind}`)
 }
 </script>
 
@@ -45,15 +49,34 @@ function descLabel(kind: SpecTemplateKind): string {
         @click="emit('open', card)"
       >
         <header class="spec-card__head">
-          <span class="spec-card__kind">{{ kindLabel(card.kind) }}</span>
+          <span class="spec-card__kind">
+            {{ card.origin === 'editor'
+              ? t('ia2.orchestrate.editor.cardBadge') : kindLabel(card.kind) }}
+          </span>
           <span v-if="card.version > 0" class="spec-card__version">v{{ card.version }}</span>
         </header>
         <h3 class="spec-card__name">{{ card.name }}</h3>
-        <p class="spec-card__desc">{{ descLabel(card.kind) }}</p>
+        <p class="spec-card__desc" :data-card-desc="card.description ? 'spec' : undefined">{{ descLabel(card) }}</p>
         <footer class="spec-card__foot">
           <span class="spec-card__meta">
             {{ card.nodeCount }} {{ t('ia2.orchestrate.nodes') }}
             · {{ card.edgeCount }} {{ t('ia2.orchestrate.edges') }}
+          </span>
+          <span v-if="card.origin === 'editor'" class="spec-card__editor-actions">
+            <button
+              class="spec-card__edit"
+              :data-card-edit="card.id"
+              @click.stop="emit('edit', card)"
+            >
+              {{ t('ia2.orchestrate.editor.cardEdit') }}
+            </button>
+            <button
+              class="spec-card__delete"
+              :data-card-delete="card.id"
+              @click.stop="emit('delete', card)"
+            >
+              {{ t('ia2.orchestrate.editor.cardDelete') }}
+            </button>
           </span>
           <button class="spec-card__create" @click.stop="emit('create', card)">
             {{ t('ia2.orchestrate.createLoop') }}
@@ -145,6 +168,22 @@ function descLabel(kind: SpecTemplateKind): string {
   padding-top: 6px;
 }
 .spec-card__meta { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.spec-card__editor-actions { display: inline-flex; gap: 4px; }
+.spec-card__edit,
+.spec-card__delete {
+  padding: 3px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-micro, 3px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.spec-card__edit:hover { border-color: var(--accent-primary, var(--color-primary, #3b82f6)); color: inherit; }
+.spec-card__delete { color: var(--error, var(--color-danger, #e11d48)); }
+.spec-card__delete:hover { border-color: var(--error, var(--color-danger, #e11d48)); }
 .spec-card__create {
   padding: 3px 10px;
   border: 1px solid var(--accent-primary, var(--color-primary, #3b82f6));

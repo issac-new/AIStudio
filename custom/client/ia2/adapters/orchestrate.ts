@@ -25,6 +25,14 @@ export interface GraphSpecLike {
   edges?: Array<{ from: string; to: string; label?: string; guard?: { maxIterations: number } | null }>
   entryNode?: string
   limits?: { maxSteps?: number; maxCost?: number }
+  /** P4：人类可读描述（模板卡副题；编辑器保存的 spec 有值） */
+  description?: string
+  /** P4：spec 来源——'editor'=画布编辑器自建（可编辑/可删），'template'/缺省=编译模板（只读） */
+  origin?: 'editor' | 'template'
+  /** P4：模板语义元数据（实例化弹层预填 goal/cron） */
+  meta?: { goal?: string; cron?: string; permissionLevel?: string; sensitivePaths?: string[]; worktreePolicy?: string; gateCommands?: string[] }
+  /** P4：loop 容器可视化元数据（RunGraphCanvas 包围框） */
+  containers?: Array<{ id: string; label?: string; nodeIds: string[] }>
 }
 
 /** 模板种类（卡片描述文案的 i18n 选择依据，视图层映射 ia2.orchestrate.kind.*） */
@@ -48,6 +56,12 @@ export interface SpecCard {
   entryNode: string
   /** limits.maxSteps；limits 缺失落 null（卡片不显示误导性 0） */
   maxSteps: number | null
+  /** P4：spec.description（有则显示为卡片副题，覆盖种类描述） */
+  description?: string
+  /** P4：'editor'=编辑器自建（编辑/删除/试跑口），'template'/缺省=只读模板 */
+  origin?: 'editor' | 'template'
+  /** P4：实例化弹层预填来源（goal/cron） */
+  meta?: { goal?: string; cron?: string }
 }
 
 /** projectSpecCard — 模板卡片投影（畸形输入零值兜底，不炸列表） */
@@ -68,6 +82,13 @@ export function projectSpecCard(spec: GraphSpecLike | null | undefined): SpecCar
     edgeCount: edges.length,
     entryNode: typeof spec?.entryNode === 'string' ? spec.entryNode : '',
     maxSteps,
+    ...(typeof spec?.description === 'string' && spec.description.trim()
+      ? { description: spec.description }
+      : {}),
+    ...(spec?.origin === 'editor' ? { origin: 'editor' as const } : {}),
+    ...(spec?.meta && (typeof spec.meta.goal === 'string' || typeof spec.meta.cron === 'string')
+      ? { meta: { goal: spec.meta.goal, cron: spec.meta.cron } }
+      : {}),
   }
 }
 
@@ -143,19 +164,22 @@ export interface CreateLoopPayload {
   goal: string
   schedule: { mode: 'cron'; cron: string; timezone: string }
   tenant: string | null
+  /** P4：来源模板卡 id（实例化溯源；服务端白名单外字段，透传不落库） */
+  template?: string
 }
 
 /**
  * buildCreatePayload — 实例化 POST 体（controllers/loop.ts create 白名单字段的
  * 前端同语义构造）：id = `loop-<slug>-<ts>`；schedule 固定 cron 模式（时区与
- * LoopCreateWizard 同款）；tenant 裁剪透传、空白归 null。
+ * LoopCreateWizard 同款）；tenant 裁剪透传、空白归 null；template = 来源卡片 id。
  */
-export function buildCreatePayload(form: InstantiateForm, now: number): CreateLoopPayload {
+export function buildCreatePayload(form: InstantiateForm, now: number, template?: string): CreateLoopPayload {
   return {
     id: `loop-${slugifyLoopName(form.name)}-${now}`,
     name: form.name.trim(),
     goal: form.goal.trim(),
     schedule: { mode: 'cron', cron: form.cron.trim(), timezone: 'Asia/Shanghai' },
     tenant: form.tenant && form.tenant.trim() ? form.tenant.trim() : null,
+    ...(template ? { template } : {}),
   }
 }
