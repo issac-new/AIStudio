@@ -21,8 +21,12 @@ export async function bootstrapClient(app: App): Promise<void> {
     const { registerBranding } = await import('../../custom/client/branding')
     await registerBranding(app)
   }
-  // P3 Task 8：cockpit 退役——registerCockpit/registerCockpitRoutes 随路由本体删除；
-  // 保留复用的组件（CockpitScheduleModal/CockpitIcon）与 adapter/kv/样式由消费方直接 import。
+  // P4 用户裁决（2026-09-11）：原有 AI 协作中心（cockpit）与新 /app 六区域 IA
+  // 平行共存——A 类注册（导航入口/样式/i18n 增量）恢复。
+  if (features.cockpit) {
+    const { registerCockpit } = await import('../../custom/client/cockpit')
+    await registerCockpit(app)
+  }
   if (features.loopEngineering) {
     const { registerLoopEngineering } = await import('../../custom/client/loop')
     await registerLoopEngineering(app)
@@ -31,8 +35,8 @@ export async function bootstrapClient(app: App): Promise<void> {
   }
   // P3 Task 3：六区域新 IA（/app 路由树 + 兼容重定向守卫）。
   // 守卫依赖 router 实例，与 loop 的 addRoute 同样必须在 mount 前完成。
-  // 无条件注册：登录默认落点已由 patch 071 守卫直落 /app；Task 8 后 RETRO=1
-  // 仅表示守卫放行旧 loop 落点（cockpit 路由本体已退役删除，无旧视图可回退）。
+  // 无条件注册：登录默认落点由 patch 071 守卫直落 /app；cockpit 平行共存后
+  // 兼容守卫不再改写 cockpit 家族落点（retro 仅管旧 loop 深链）。
   {
     const { registerIa2, registerIaCompatGuard } = await import('../../custom/client/ia2')
     await registerIa2(app)

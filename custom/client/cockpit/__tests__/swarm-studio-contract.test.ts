@@ -69,12 +69,11 @@ describe('contract: legacy landing redirects (§9 cockpit 退役)', () => {
   const { iaCompatRedirect } = guardModule
 
   it('旧落点 → 新 IA 目标固定（重定向正确性）', () => {
-    // cockpit 退役路径按 PATH 拦截（路由本体已删，任何模式都承接）
-    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, false)).toEqual({ name: 'ia2.overview' })
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, false)).toEqual({ name: 'ia2.commsHome' })
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat/room/!r:1' }, false))
-      .toEqual({ name: 'ia2.commsRoom', params: { roomId: '!r:1' } })
-    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, false)).toEqual({ name: 'ia2.tasks' })
+    // P4 平行共存（2026-09-11 用户裁决）：cockpit 家族本体路由恢复，不再改写
+    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, false)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, false)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat/room/!r:1' }, false)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, false)).toBeNull()
     // loop 旧落点按名称承接
     expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.runs' })
     expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, false))
@@ -90,10 +89,10 @@ describe('contract: RETRO switch behavior (§9 回退保险)', () => {
     expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, true)).toBeNull()
   })
 
-  it('RETRO=1：cockpit 退役路径仍承接（路由本体已删，放行只会落空白页）', () => {
-    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, true)).toEqual({ name: 'ia2.overview' })
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, true)).toEqual({ name: 'ia2.commsHome' })
-    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, true)).toEqual({ name: 'ia2.tasks' })
+  it('RETRO=1：cockpit 平行共存同样留原位（P4 本体路由恢复）', () => {
+    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, true)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, true)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, true)).toBeNull()
   })
 })
 
