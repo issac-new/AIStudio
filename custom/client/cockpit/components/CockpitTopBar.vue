@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
@@ -8,9 +9,14 @@ import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
 
 const { t } = useI18n()
+const router = useRouter()
 const emit = defineEmits<{ (e: 'schedule', btn: HTMLElement): void; (e: 'loop'): void; (e: 'notify'): void; (e: 'settings'): void; (e: 'runtrace'): void }>()
 const store = useCockpitStore()
 const appStore = useAppStore()
+
+// "Swarm Studio" 字样 = 循环工程图页入口（2026-09-12 用户指定）；
+// Loop Engineering 按钮冻结为旧 LoopModal 弹窗，两者不得互换。
+function goLoopGraph() { router.push({ name: 'hermes.loop' }) }
 
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
@@ -127,7 +133,8 @@ async function manualProbe() {
         <span class="cockpit-top__dot" :class="appStore.connected ? 'is-ok' : 'is-err'" />
       </span>
       {{ t('cockpit.brandTitle') }}
-      <span class="cockpit-top__sub">Swarm Studio</span>
+      <span class="cockpit-top__sub" role="link" tabindex="0" title="Loop Graph · 循环工程图"
+        @click="goLoopGraph" @keydown.enter="goLoopGraph">Swarm Studio</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('schedule', $event.currentTarget as HTMLElement)">
@@ -221,7 +228,9 @@ async function manualProbe() {
 .cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 6px; padding: 0 12px; position: relative; z-index: 10; }
 .cockpit-top__brand { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--text-primary); flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cockpit-top__mark { width: 8px; height: 8px; border-radius: 3px; background: var(--accent-primary); display: inline-block; }
-.cockpit-top__sub { font-weight: 400; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.cockpit-top__sub { font-weight: 400; font-size: 11px; color: var(--text-muted); flex-shrink: 0; cursor: pointer;
+  &:hover, &:focus-visible { color: var(--text-primary); text-decoration: underline; outline: none; }
+}
 .cockpit-top__conn { font-size: 10px; flex-shrink: 0; }
 .cockpit-top__div { width: 1px; height: 20px; background: var(--border-color); margin: 0 2px; flex-shrink: 0; }
 .cockpit-top__btn { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; font-family: inherit; position: relative; white-space: nowrap; flex-shrink: 0;
