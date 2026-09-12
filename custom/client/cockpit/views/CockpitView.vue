@@ -74,7 +74,7 @@ function onColCtrl(col: ColumnKey) {
       :schedule-count="store.scheduleDatesWithEvents.size"
       :user-name="store.currentUserName"
       @schedule="() => workspace.openSchedule()"
-      @loop="router.push({ name: 'hermes.loop' })"
+      @loop="store.openLoop()"
       @notify="store.openNotify()"
       @settings="goSettings"
       @runtrace="store.openRunTraceGlobal()"
