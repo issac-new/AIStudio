@@ -1,10 +1,24 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.19**（基于 hermes-studio v0.7.19 + hermes-agent v0.21.2 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.18**（基于 hermes-studio v0.7.19 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.17**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.16**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发）
 SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.19** — overlay 功能轮 + agent 源码跟踪升级（2026-09-12）：P4 可视化编排器全量合入（画布编排 / 自建 spec 起跑 / 审批 Always-allow / 台账 48 条清偿）+ cockpit 平行共存双入口 + 24h 审查修复 + Loop 入口两轮往返终态（Loop Engineering 按钮还原旧弹窗冻结；顶栏 "Swarm Studio" 字样新增为循环工程图页入口）。hermes-agent **v2026.9.7 (v0.21.1) → v2026.9.11 (v0.21.2)**（986 commits / 1650 文件 +103473/−14021：state.db 损坏分级与 FTS 修复簇（corruption 分类 / 隔离 / lost_and_found 挽救 / sessions repair --check-only 非零退出）、DeepSeek Flash 1M 窗口 + 原生视觉、desktop 本地媒体 range 请求与玻璃表面、local-models GPU 常驻推荐、web 损坏库 503 节流、revert Collective Wisdom V1）。hermes-studio 仍 **v0.7.19**、element-web 仍 **v1.12.27**——零升级。desktop 捆绑 runtime pin 维持 **0.21.0**。
+
+### 2.19 明细
+
+- **P4 可视化编排器**：T1 GraphSpec 元数据 + analyzeGraphSpec 死图检测四铁律；T2-T4 spec-runtime 编辑器节点注册表（plan 三出口 / Best-of-N fan-out / converge 选优 / gate 白名单）+ 自建 spec 起跑 REST + specs 校验/删除/origin；T6-T8 编排器客户端（画布 / 面板 / 守卫 / 导入导出 / 试跑 / 容器框 + 迭代徽标）；T9 审批 Always-allow 按类型记忆（runcenter 自动放行留痕 + 撤销防竞态 + 舰队审批 always 档）；T10/T11 台账服务端/前端批清偿；T12 台账收口核销（48 条逐条处置）。IaNav 底部用户设置入口（齿轮直达 /hermes/settings）。
+- **cockpit 平行共存（P4 用户裁决）**：/app IA 与 AI 协作中心（cockpit）双入口共存——视图层 53 文件复原、路由嵌套归位（patch 240）、侧栏双入口（patch 241）、守卫放行、RETRO 回退开关保留。
+- **24h 变更审查修复**（fix/24h-review-findings，20 项发现 P0×1 / P1×4 / P2×15 中 16 项修复合入）：gateCommands 模板注入面收口（P0）、graph history 尾窗 latest 语义、日程弹窗双 store 断裂、always-allow 跨面板防重发、specs 删除先持久后内存 + POST /specs id 形状守门、Matrix 客户端键控池、dotenv/inject 面等；2 项经用户裁决不修（always-allow 粒度、matrix-login 公开覆写）。
+- **Loop 入口终态（两轮往返）**：a019910 将 Loop Engineering 按钮改导航 /hermes/loop → d3a3d7c 按用户裁决还原旧 LoopModal 弹窗（冻结，再改须先问用户）；终态新增顶栏 "Swarm Studio" 字样入口（5855502）：点击 / Enter 导航 /hermes/loop（hermes.loop），守门测试三断言固化（点击导航 + 键盘可达 + 按钮冻结 emit 不走路由）。
+- **hermes-agent v0.21.2 源码跟踪升级 + patch 117 regen（混合解）**：保留上游 `workspace_kind: Optional[str] = None` 继承模型，"默认 dir" 意图收进 `create_task` 的 None 回退行（kanban_db.py ~L1272）+ schema DEFAULT 'dir'（~L863）；patch 从 3 文件缩为 2 文件 3 hunk（kanban_swarm.py 的 create_swarm 默认值改动随上游继承模型吸收，不再需要）。
+- **patch 系列 180 → 190**：新增 236-245（236/237 编排器 i18n zh/en、238/239 IaNav 设置入口 i18n zh/en、240 cockpit 平行路由、241 侧栏双入口、242/243 Always-allow i18n、244/245 Fleet always i18n）；无其他 regen。
+- **验证门禁**：overlay vitest 131 文件 **1489 过 / 6 skip / 0 fail**（含顶栏入口守门 3 断言新增）；上游 `vue-tsc -b` EXIT=0；全系列 190/190 inject 干净落位（26dcc34a 轮实测）；运行面实测：launchd 监管 gateway running、5 platforms connected、kanban 22 任务可读（agent CLI 直读）。
+- **构建物**：待构建后回填（2026-09-12，不上传 GitHub / ModelScope，按既定指令）。
 
 > **2.18** — upstream 升级轮（2026-09-11）：hermes-studio **v1.0.2 → v0.7.19**（= v1.0.3 内容 + 0.7.19 版本切割，17 commits/159 文件 +4179/−323：OpenCode session headers 修复 #2996、mobile health data agent bridge #2972、Studio 公告对话框 #2989、会话列表按类别分页 #2977/#2982、Doubao TTS 语速控制 #2978、codex 多行 TOML 配置保留 #2969、workspace 树无隙折叠 #2965、后台委派保留侧栏活动 #2961、Ekko CLI/域名统一 + 圆角图标 #2980、Chromium profile 跨重命名保留 #2979、MCP/Windows 启动修复 #2988）。hermes-agent 仍 **v2026.9.7 (v0.21.1)**、element-web 仍 **v1.12.27**（v1.12.28 仅 rc）——零升级。desktop 包版本随上游 **0.7.18 → 0.7.19**（产物名 SwarmStudio-0.7.19-*，与 2.16/2.17 的 0.7.18 同名产物明确区分）。runtime pin 维持 **0.21.0**。
 
