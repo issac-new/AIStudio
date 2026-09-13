@@ -1,0 +1,118 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 3b44cb2..c617a93 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -221,6 +221,16 @@ export default {
+     defaultCredentialMessage: '当前登录账户仍在使用默认用户名或默认密码。为了避免未授权访问，请尽快进入当前账户修改用户名和密码。',
+     defaultCredentialAction: '去修改',
+     defaultCredentialLater: '稍后提醒',
++    matrixDescription: '使用 Matrix 账号登录。',
++    matrixUsernamePlaceholder: 'Matrix 用户名（如 @user:matrix.example.com 或 user）',
++    homeserverPlaceholder: 'Matrix 服务器地址（https://matrix.example.com）',
++    homeserverRequired: '请输入 Matrix 服务器地址',
++    homeserverConnectionFailed: '无法连接 Matrix 服务器，请检查地址后重试',
++    backendConnectionFailed: '无法连接后端服务',
++    rememberMe: '记住我',
++    useMatrixLogin: '使用 Matrix 登录',
++    fallbackToLocalHint: '没有 Matrix 服务器？可改用本地账号登录。',
++    localDescription: '使用本地账号登录。',
+   },
+ 
+   users: {
+@@ -237,6 +247,11 @@ export default {
+     noProfiles: '未关联配置',
+     lastLogin: '最后登录',
+     newPasswordOptional: '新密码（留空不修改）',
++    matrixUserId: 'Matrix 用户 ID',
++    matrixUserIdPlaceholder: '@user:matrix.example.com',
++    displayName: '显示名称',
++    displayNamePlaceholder: '显示名称',
++    resetPassword: '重置密码',
+     loadFailed: '用户列表加载失败',
+     deleteConfirm: '确认删除该用户？',
+     enable: '启用',
+@@ -3024,6 +3039,17 @@ export default {
+     title: '设置',
+     saved: '已保存',
+     saveFailed: '保存失败',
++    matrixIdentity: {
++      title: 'Matrix 身份',
++      userId: 'Matrix 用户 ID',
++      displayName: '显示名称',
++      homeserver: '主服务器',
++      role: '角色',
++      authSource: '登录方式',
++      passwordManagedByMatrix: '密码由 Matrix 服务器管理',
++      changeMatrixPassword: '修改 Matrix 密码',
++      passwordChanged: 'Matrix 密码修改成功',
++    },
+     tabs: {
+       display: '显示',
+       account: '当前账户',
+@@ -4188,6 +4214,7 @@ export default {
+     fileTree: '文件树',
+     collapseTree: '收起文件树',
+     expandTree: '展开文件树',
++    noSubdirs: '无子目录',
+     tree: '目录树',
+     list: '文件列表',
+     breadcrumbRoot: '根目录',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 17724e3..8d2f777 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -221,6 +221,16 @@ export default {
+     defaultCredentialMessage: 'This account is still using the default username or password. To prevent unauthorized access, update the username and password as soon as possible.',
+     defaultCredentialAction: 'Update now',
+     defaultCredentialLater: 'Remind me later',
++    matrixDescription: 'Sign in with your Matrix account.',
++    matrixUsernamePlaceholder: 'Matrix user (e.g. @user:matrix.example.com or user)',
++    homeserverPlaceholder: 'Homeserver URL (https://matrix.example.com)',
++    homeserverRequired: 'Please enter the homeserver URL',
++    homeserverConnectionFailed: 'Cannot connect to the homeserver, check the URL and try again',
++    backendConnectionFailed: 'Cannot reach the backend server',
++    rememberMe: 'Remember me',
++    useMatrixLogin: 'Use Matrix login',
++    fallbackToLocalHint: 'No Matrix server? Sign in with a local account instead.',
++    localDescription: 'Sign in with a local account.',
+   },
+ 
+   users: {
+@@ -237,6 +247,11 @@ export default {
+     noProfiles: 'No profiles assigned',
+     lastLogin: 'Last Login',
+     newPasswordOptional: 'New Password (leave blank to keep)',
++    matrixUserId: 'Matrix User ID',
++    matrixUserIdPlaceholder: '@user:matrix.example.com',
++    displayName: 'Display Name',
++    displayNamePlaceholder: 'Display name',
++    resetPassword: 'Reset Password',
+     loadFailed: 'Failed to load users',
+     deleteConfirm: 'Delete this user?',
+     enable: 'Enable',
+@@ -2994,6 +3009,17 @@ export default {
+     title: 'Settings',
+     saved: 'Saved',
+     saveFailed: 'Save failed',
++    matrixIdentity: {
++      title: 'Matrix Identity',
++      userId: 'Matrix User ID',
++      displayName: 'Display Name',
++      homeserver: 'Homeserver',
++      role: 'Role',
++      authSource: 'Sign-in Method',
++      passwordManagedByMatrix: 'Password is managed by your Matrix homeserver',
++      changeMatrixPassword: 'Change Matrix Password',
++      passwordChanged: 'Matrix password changed successfully',
++    },
+     tabs: {
+       display: 'Display',
+       account: 'Current Account',
+@@ -4148,6 +4174,7 @@ export default {
+     fileTree: 'File Tree',
+     collapseTree: 'Collapse file tree',
+     expandTree: 'Expand file tree',
++    noSubdirs: 'No subdirectories',
+     tree: 'Directory Tree',
+     list: 'File List',
+     breadcrumbRoot: 'Home',

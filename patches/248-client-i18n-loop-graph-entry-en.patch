@@ -1,0 +1,12 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index a4c7841..17724e3 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -425,6 +425,7 @@ export default {
+     dockerUpdateNote: 'Your data will persist after the container is recreated.',
+     loop: 'Loop Engineering',
+     graph: 'Graph Engineering',
++    loopGraph: 'Loop Graph',
+     swarmKanban: 'Swarm Kanban',
+     matrixChat: 'Matrix Chat',
+   },
