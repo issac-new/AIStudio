@@ -1,0 +1,12 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 98f638c..3b44cb2 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -425,6 +425,7 @@ export default {
+     dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
+     loop: '循环工程',
+     graph: '图工程',
++    loopGraph: '循环工程图',
+   },
+ 
+   loop: {
