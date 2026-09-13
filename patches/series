@@ -326,3 +326,12 @@
 # P4 T9: 舰队审批「始终允许」档文案（cockpit.fleetAlways，服务端 always 选择暴露）
 244-client-i18n-fleet-always-zh.patch
 245-client-i18n-fleet-always-en.patch
+
+# Loop Graph 一级菜单入口（AppSidebar）：patch 133 于 v0.7.12 摘除后恢复；
+# 锚定 cockpit 入口之后，全 hermes.loop* 家族高亮。标签 sidebar.loopGraph
+# 有别于冻结的 sidebar.loop（cockpit 顶栏 Loop Engineering 按钮=旧 LoopModal）。
+246-appsidebar-loop-graph-entry.patch
+
+# Loop Graph 菜单入口 i18n（sidebar.loopGraph，其余语言回退 en）
+247-client-i18n-loop-graph-entry-zh.patch
+248-client-i18n-loop-graph-entry-en.patch
