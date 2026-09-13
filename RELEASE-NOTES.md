@@ -1,11 +1,21 @@
 # SwarmStudio 发布说明
 
 ## 版本
+SwarmStudio **2.20**（基于 hermes-studio v0.7.21 + hermes-agent v0.21.2 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.19**（基于 hermes-studio v0.7.19 + hermes-agent v0.21.2 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.18**（基于 hermes-studio v0.7.19 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.17**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.16**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发）
 SwarmStudio **2.15**（基于 hermes-studio v0.7.18 + hermes-agent v0.21.0 源码跟踪 + overlay 二次开发）
+
+> **2.20** — hermes-studio 升级轮（2026-09-13）：hermes-studio **v0.7.19 → v0.7.21**（14 commits / 261 文件：DSH（DeepSeek Harness）集成三件套——DSH chats 接入 / Web 插件面板 / Agent presets；DSH 配置 runtime Windows 启动修复；apikey domains 持久化启动任务修复；bridge session-key helpers 带 fallback 导入；移除不支持的 OpenCode compact 命令；Linux 图标圆角修复；Docker coding agent 安装持久化；全局 coding agent 用量与模型归因修复；Grok session 设置保留与刷新；Pi MCP 适配器自装时跳过捆绑 + 停止 pin Pi 包）。hermes-agent 仍 **v2026.9.11 (v0.21.2)**、element-web 仍 **v1.12.27**——均已最新稳定，零升级。desktop 捆绑 runtime pin 维持 **0.21.0**。
+> patch regen：**5 个**——042（手解：version 行取上游 0.7.21 / 品牌字段取 ours）+ 102/135/137/201（三方合并自动解）；138/197/234 为级联失败，前置修复后自然落位。验证：泄漏检查（target vs prog 差异 ⊆ upstream 变更集）+ 全新树全序列重放 0 失败 + inject 190/190 + server tsc 0 错 + overlay vitest 1489 通过/6 跳过（与基线一致）+ upstream patch 关联测试 287/288（1 失败为 patch 188 本地优先设计在本机的既有环境依赖行为，`HERMES_DESKTOP_USE_LOCAL_HERMES=0` 下 16/16 全绿）+ 真构建（openapi+vue-tsc+vite+server tsc+build-server）exit 0。构建物 mac arm64 dmg + win x64 zip 仅本机制作与安装，**暂不上传** GitHub / ModelScope。
+
+### 2.20 明细
+
+- **DSH（DeepSeek Harness）集成承接**：上游 0.7.20/0.7.21 主线为 DSH 集成（c3bc2724 chats/Web plugins/Agent presets + cb716634 Windows runtime 修复）。overlay 侧 patch 体系无 DSH 冲突面，全部自然吸收。
+- **升级面收敛**：本次 upstream 变更 261 文件中 33 个与 patch 目标交集，实际冲突仅 5 patch；`packages/desktop/src/main/paths.ts` 上游仅改 Linux 图标文件名（iconLinux.png），overlay 运行时优先级体系（126/145/188/207）不受影响。
+- **patch 102/201 的 emptyStateAgents 语境迁移**：上游把群聊空态 agent 列表的 OpenCode 位替换为 DeepSeek Harness（deepseek.svg），两 patch 的横幅/修复逻辑在新语境下重新落位。
 
 > **2.19** — overlay 功能轮 + agent 源码跟踪升级（2026-09-12）：P4 可视化编排器全量合入（画布编排 / 自建 spec 起跑 / 审批 Always-allow / 台账 48 条清偿）+ cockpit 平行共存双入口 + 24h 审查修复 + Loop 入口两轮往返终态（Loop Engineering 按钮还原旧弹窗冻结；顶栏 "Swarm Studio" 字样新增为循环工程图页入口）。hermes-agent **v2026.9.7 (v0.21.1) → v2026.9.11 (v0.21.2)**（986 commits / 1650 文件 +103473/−14021：state.db 损坏分级与 FTS 修复簇（corruption 分类 / 隔离 / lost_and_found 挽救 / sessions repair --check-only 非零退出）、DeepSeek Flash 1M 窗口 + 原生视觉、desktop 本地媒体 range 请求与玻璃表面、local-models GPU 常驻推荐、web 损坏库 503 节流、revert Collective Wisdom V1）。hermes-studio 仍 **v0.7.19**、element-web 仍 **v1.12.27**——零升级。desktop 捆绑 runtime pin 维持 **0.21.0**。
 
