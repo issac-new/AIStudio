@@ -3,6 +3,8 @@
 ## 版本
 SwarmStudio **2.20**（基于 hermes-studio v0.7.21 + hermes-agent v0.21.2 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.19**（基于 hermes-studio v0.7.19 + hermes-agent v0.21.2 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
+
+> **2.20 后增量（未发布重建轮，2026-09-14）** — main 演进 85e4c2a → bf16930/d5c1f40（patch 250：AI 协作中心顶栏健康探测仅展示 channel）→ 7fa1260/4b7473a（runss 修复：运行中心/介入中心 listRuns URL 误拼 `/api/graph/runss` 致实机 404，守门测试补 2 断言）。三上游零升级（hs v0.7.21 / agent v0.21.2 / ew v1.12.27 均为 GitHub 最新稳定）。三上游门禁重验：overlay vitest 133 文件全绿（1504 过/6 跳过；期间修复并行会话删除 worktree 遗留的 custom 符号链接断链）。构建物按用户指令**暂不上传** GitHub / ModelScope，本机产物对账：arm64 dmg（2026-09-14 12:49，391.4M，无签名 adhoc）+ arm64 zip（12:43）+ **win x64.zip 重建（13:11，410.3M，sha256 `ab6207a5…d072`，含 patch 250 + runss 修复；旧 09-13 包已作废）**。/Applications 已换装 12:42 构建（内容三验：无 runss typo 串 + CockpitView 含 loaded_platforms 投影 + webui :8748 `{"status":"ok"}`）。注：tag `v2.20`（→ d5c1f40）发布资产为 85e4c2a 内容，runss 修复在其后；下轮发布若要 4b7473a 内容须重建双资产换挂。
 SwarmStudio **2.18**（基于 hermes-studio v0.7.19 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.17**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发；desktop 捆绑 runtime 0.21.0）
 SwarmStudio **2.16**（基于 hermes-studio v1.0.2 + hermes-agent v0.21.1 源码跟踪 + overlay 二次开发）
