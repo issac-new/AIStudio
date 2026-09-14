@@ -1,7 +1,7 @@
 // overlay/custom/client/ia2/store/ia.ts
-// P3 Task 3 — 新 IA 全局状态：当前区域 + RETRO 回退开关。
+// 驾驶舱单页全局状态：当前区域 + RETRO 回退开关。
 // 当前区域由 IaShell 以 areaForPath 投影（routes.ts 纯函数为唯一事实源），
-// store 只持有结果，不自算；IaNav 读 store 高亮、经 goToArea 跳转。
+// store 只持有结果，不自算；子页头读 store 显隐（overview = 驾驶舱本体，无页头）。
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Router } from 'vue-router'
