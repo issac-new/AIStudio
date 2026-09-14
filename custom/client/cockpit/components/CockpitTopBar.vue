@@ -34,6 +34,7 @@ interface PlatformInfo {
   icon: string
   state: string
   updated: string
+  profile?: string
 }
 
 const gatewayState = ref<'checking' | 'running' | 'stopped'>('checking')
@@ -59,8 +60,32 @@ function formatTimeAgo(iso: string): string {
   return t('cockpit.daysAgo', { n: Math.floor(hrs / 24) })
 }
 
-// 保存上次状态，仅变化时更新 UI 避免闪动
-let lastStates: Record<string, string> = {}
+function projectLoadedPlatforms(data: unknown): PlatformInfo[] {
+  if (!data || typeof data !== 'object') return []
+  const loaded = (data as { loaded_platforms?: unknown }).loaded_platforms
+  if (!loaded || typeof loaded !== 'object' || Array.isArray(loaded)) return []
+  const profiles = new Set(
+    Array.isArray((data as { served_profiles?: unknown }).served_profiles)
+      ? (data as { served_profiles: unknown[] }).served_profiles.filter((profile): profile is string => typeof profile === 'string')
+      : [],
+  )
+  const projected: PlatformInfo[] = []
+  for (const [key, value] of Object.entries(loaded)) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+    const info = value as { state?: unknown; updated_at?: unknown }
+    const separator = key.indexOf(':')
+    const profile = separator > 0 ? key.slice(0, separator) : undefined
+    const name = separator > 0 ? key.slice(separator + 1) : key
+    if (!name || (profile && profiles.size > 0 && !profiles.has(profile))) continue
+    const state = typeof info.state === 'string' ? info.state : 'unknown'
+    const updated = typeof info.updated_at === 'string' ? info.updated_at : ''
+    projected.push({ name, profile, icon: PLATFORM_ICONS[name] || 'radar', state, updated: formatTimeAgo(updated) })
+  }
+  return projected
+}
+
+// 上次投影结果指纹，仅变化时更新 UI 避免闪动
+let lastLoaded = ''
 
 	async function fetchGatewayStatus(silent = true) {
 	  if (!silent) refreshing.value = true
@@ -72,19 +97,12 @@ let lastStates: Record<string, string> = {}
 	    const gw = data.gateway_state === 'running' ? 'running' as const : 'stopped' as const
 	    if (gw !== gatewayState.value) gatewayState.value = gw
 
-	    const pl = data.platforms || {}
-	    const newPlatforms: PlatformInfo[] = []
-	    let changed = false
-	    for (const [name, info] of Object.entries(pl) as [string, any][]) {
-	      const state = info.state || 'unknown'
-	      const key = `${name}:${state}`
-	      if (lastStates[name] !== key) changed = true
-	      lastStates[name] = key
-	      newPlatforms.push({ name, icon: PLATFORM_ICONS[name] || 'radar', state, updated: formatTimeAgo(info.updated_at || '') })
-	    }
-	    if (changed || platforms.value.length !== newPlatforms.length) {
-	      platforms.value = newPlatforms
-	    }
+	    const newPlatforms = projectLoadedPlatforms(data)
+    const key = JSON.stringify(newPlatforms)
+    if (lastLoaded !== key) {
+      lastLoaded = key
+      platforms.value = newPlatforms
+    }
 
 	    // 成功收到返回 → 重置倒计时
 	    countdown.value = 30
@@ -165,7 +183,7 @@ async function manualProbe() {
         <span class="cockpit-top__dot" :class="gatewayState === 'running' ? 'is-ok' : gatewayState === 'stopped' ? 'is-err' : 'is-idle'" />
         Gateway{{ refreshing ? '…' : '' }}
       </span>
-      <span v-for="pl in platforms" :key="pl.name" class="cockpit-top__ustat"
+      <span v-for="pl in platforms" :key="pl.name + (pl.profile ? ':' + pl.profile : '')" class="cockpit-top__ustat"
         :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
       ><CockpitIcon :name="pl.icon" :size="12" /> {{ pl.name }}<span v-if="pl.state !== 'connected'" class="cockpit-top__warn">!</span></span>
     </div>
@@ -200,14 +218,14 @@ async function manualProbe() {
           <span class="cockpit-probe__label">Active Agents</span>
           <span class="cockpit-probe__val">{{ rawData.active_agents ?? 0 }}</span>
         </div>
-        <div v-if="rawData.platforms" class="cockpit-probe__section">
+        <div v-if="platforms.length" class="cockpit-probe__section">
           <div class="cockpit-probe__section-title">Platforms</div>
-          <div v-for="(info, name) in rawData.platforms" :key="name" class="cockpit-probe__row">
-            <span class="cockpit-probe__label"><CockpitIcon :name="PLATFORM_ICONS[name as string] || 'radar'" :size="12" /> {{ name }}</span>
-            <span class="cockpit-probe__val" :class="info.state === 'connected' ? 'is-ok' : 'is-err'">
-              {{ info.state || 'unknown' }}
+          <div v-for="pl in platforms" :key="pl.name + (pl.profile ? ':' + pl.profile : '')" class="cockpit-probe__row">
+            <span class="cockpit-probe__label"><CockpitIcon :name="pl.icon" :size="12" /> {{ pl.profile ? pl.profile + ': ' : '' }}{{ pl.name }}</span>
+            <span class="cockpit-probe__val" :class="pl.state === 'connected' ? 'is-ok' : 'is-err'">
+              {{ pl.state }}
             </span>
-            <span v-if="info.updated_at" class="cockpit-probe__ago">{{ formatTimeAgo(info.updated_at) }}</span>
+            <span v-if="pl.updated" class="cockpit-probe__ago">{{ pl.updated }}</span>
           </div>
         </div>
         <div v-if="rawData.pid || rawData.version" class="cockpit-probe__footer">
