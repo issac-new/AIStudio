@@ -1,0 +1,65 @@
+diff --git a/gateway/platforms/api_server.py b/gateway/platforms/api_server.py
+index 501d3fb776..29572530c1 100644
+--- a/gateway/platforms/api_server.py
++++ b/gateway/platforms/api_server.py
+@@ -2202,10 +2202,24 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
+             configured_model=_resolve_gateway_model(), runtime_status=runtime,
+             active_api_runs=active_api_runs, process_completion_queue_depth=process_depth,
+             active_delegations=active_delegations)
++        # ``platforms`` is a persistent diagnostic map and may carry entries stamped by a
++        # previous gateway run (survived restarts) or another profile. Loaded set only keeps
++        # entries this process wrote, so dashboards cannot mistake stale/other-profile state
++        # for channels loaded by the current gateway.
++        current_start = runtime.get("start_time")
++        loaded_platforms = {
++            key: value for key, value in (runtime.get("platforms") or {}).items()
++            if isinstance(value, dict)
++            and value.get("writer_pid") == os.getpid()
++            and current_start is not None
++            and value.get("writer_start_time") == current_start
++        }
+         return web.json_response({
+             "status": readiness["status"], "readiness": readiness, "platform": "hermes-agent",
+             "version": _hermes_version(), "gateway_state": gw_state,
+-            "platforms": runtime.get("platforms", {}), "active_agents": gw_active,
++            "platforms": runtime.get("platforms", {}),
++            "loaded_platforms": loaded_platforms,
++            "served_profiles": runtime.get("served_profiles", []), "active_agents": gw_active,
+             "gateway_busy": derive_gateway_busy(
+                 gateway_running=True, gateway_state=gw_state, active_agents=gw_active),
+             "gateway_drainable": derive_gateway_drainable(
+diff --git a/tests/gateway/test_api_server.py b/tests/gateway/test_api_server.py
+index 8abb8daf90..8804c212ff 100644
+--- a/tests/gateway/test_api_server.py
++++ b/tests/gateway/test_api_server.py
+@@ -737,7 +737,12 @@ class TestHealthDetailedEndpoint:
+         app = _create_app(adapter)
+         with patch("gateway.status.read_runtime_status", return_value={
+             "gateway_state": "running",
+-            "platforms": {"telegram": {"state": "connected"}},
++            "start_time": 123.5,
++            "platforms": {
++                "telegram": {"state": "connected", "writer_pid": os.getpid(), "writer_start_time": 123.5},
++                "old:discord": {"state": "connected", "writer_pid": os.getpid() - 1, "writer_start_time": 99.0},
++            },
++            "served_profiles": ["default", "work"],
+             "active_agents": 2,
+             "exit_reason": None,
+             "updated_at": "2026-04-14T00:00:00Z",
+@@ -752,7 +757,15 @@ class TestHealthDetailedEndpoint:
+                 assert data["status"] == "ok"
+                 assert data["platform"] == "hermes-agent"
+                 assert data["gateway_state"] == "running"
+-                assert data["platforms"] == {"telegram": {"state": "connected"}}
++                # ``platforms`` is the full runtime map (may include stale / other-profile entries).
++                assert data["platforms"]["telegram"]["state"] == "connected"
++                assert data["platforms"]["old:discord"]["state"] == "connected"
++                # ``loaded_platforms`` only keeps entries stamped by this process.
++                assert data["loaded_platforms"] == {
++                    "telegram": {"state": "connected", "writer_pid": os.getpid(), "writer_start_time": 123.5}
++                }
++                assert "old:discord" not in data["loaded_platforms"]
++                assert data["served_profiles"] == ["default", "work"]
+                 assert data["active_agents"] == 2
+                 # Derived busy/drainable: this endpoint is served BY the live
+                 # gateway, so running + 2 agents ⇒ busy and drainable.
