@@ -16,6 +16,10 @@ vi.mock('@/custom/cockpit/store/cockpit', () => ({
 vi.mock('@/stores/hermes/app', () => ({ useAppStore: () => ({ connected: false }) }))
 vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeSwitch', template: '<span class="theme-stub" />' } }))
 vi.mock('@/components/layout/LanguageSwitch.vue', () => ({ default: { name: 'LanguageSwitch', template: '<span class="lang-stub" />' } }))
+// 团队切换器（2026-09-14 并入顶栏）有 store/profiles 依赖，换哑组件避免拉起上游 router
+vi.mock('@/custom/cockpit/components/CockpitTeamSwitcher.vue', () => ({
+  default: { name: 'CockpitTeamSwitcher', template: '<span class="team-switcher-stub" />' },
+}))
 
 import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
 

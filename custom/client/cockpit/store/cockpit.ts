@@ -273,6 +273,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
       }
       return okArr(f.priorities, t.priority)
         && okArr(f.statuses, taskAdapter.bucketStatus(t.status))
+        && (() => {
+          // 归档默认隐藏（2026-09-14 用户指定）：仅当「状态」筛选显式选中
+          // archived 时才显示归档任务；空筛选（=全部）也不含归档。
+          const bucket = taskAdapter.bucketStatus(t.status)
+          if (bucket === 'archived' && !f.statuses.includes('archived')) return false
+          return true
+        })()
         && okArr(f.assignees, t.assignee)
         && (() => {
           // 结构化字段筛选：若任一字段有筛选值，则要求 task 必须有 tenant
