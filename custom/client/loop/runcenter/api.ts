@@ -41,7 +41,7 @@ const BASE = '/api/graph/runs'
 export const runRest = {
   /** GET /api/graph/runs — 全部 run（含服务端状态推导；已卸载 run status='unknown'） */
   listRuns: async (): Promise<RunListItem[]> => {
-    const res = await request<{ runs: RunListItem[] }>(`${BASE}s`)
+    const res = await request<{ runs: RunListItem[] }>(BASE)
     return res.runs
   },
 
