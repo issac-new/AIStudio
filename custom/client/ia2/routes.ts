@@ -1,26 +1,26 @@
 // overlay/custom/client/ia2/routes.ts
-// P3 Task 3 — 六区域一级导航路由树（/app/*）。
+// 驾驶舱单页路由树（/app/*）—— 2026-09-14 重构：IaNav 六菜单栏退役，
+// 总览 = 循环驾驶舱单页（LoopCockpitView，与 /hermes/loop 同一视图）。
 //
-// 结构（总览为登录默认落点）：
-//   /app                → OverviewView（总览，Task 4 实装）
-//   /app/orchestrate    → OrchestrateView（编排，Task 6 实装）
+// 结构（驾驶舱为登录默认落点）：
+//   /app                → LoopCockpitView（循环驾驶舱单页）
+//   /app/orchestrate    → OrchestrateView（编排，slim 子页头）
 //   /app/runs           → RunsView（运行，内嵌 runcenter RunCenterView）
 //   /app/runs/:runId    → runcenter RunDetailView（参数名 runId 与旧路由一致）
-//   /app/inbox          → InboxView（介入，Task 5 实装）
+//   /app/inbox          → InboxView（介入）
 //   /app/tasks          → TasksView（工作项，内嵌 SwarmKanbanView）
 //   /app/comms          → CommsView（沟通，router-view 承载 matrix-chat）
 //     └─ room/:roomId   → MatrixChatView（路径参数与 cockpit 子路由原样一致）
 //
 // 纪律：
 // - 既有子路由"吸收"而非"搬迁删除"——旧路由（cockpit 子路由、/hermes/loop/*）原样
-//   保留，兼容重定向由 guard.ts 承接；cockpit 本体不删（Task 8 才退役）。
-// - 本文件只产纯路由描述与区域元数据，可被 router.resolve 级测试直接消费，
+//   保留，兼容重定向由 guard.ts 承接；cockpit 本体不删。
+// - 本文件只产纯路由描述和区域元数据，可被 router.resolve 级测试直接消费，
 //   不触发任何懒组件加载。
-// - 壳层 meta.fullscreen: true —— 上游 App.vue 对 fullscreen 路由隐藏 AppSidebar，
-//   区域自带 IaNav（与 cockpit 同机制）。
+// - 壳层 meta.fullscreen: true —— 上游 App.vue 对 fullscreen 路由隐藏 AppSidebar。
 import type { RouteRecordRaw } from 'vue-router'
 
-/** 六区域 key（IaNav 顺序即展示顺序） */
+/** 六区域 key（子页头标题与驾驶舱动作区的区域词表） */
 export type IaAreaKey =
   | 'overview'
   | 'orchestrate'
@@ -35,11 +35,11 @@ export interface IaAreaMeta {
   name: string
   /** 区域路径 */
   path: string
-  /** 侧栏/导航文案 i18n key */
+  /** 子页头/动作区文案 i18n key */
   labelKey: string
 }
 
-/** 六区域元数据（顺序 = 导航顺序 = g+1..6 键位序） */
+/** 区域元数据（IaNav 退役后仍保留：子页头标题 + 驾驶舱动作词表的事实源） */
 export const IA_AREAS: IaAreaMeta[] = [
   { key: 'overview', name: 'ia2.overview', path: '/app', labelKey: 'ia2.nav.overview' },
   { key: 'orchestrate', name: 'ia2.orchestrate', path: '/app/orchestrate', labelKey: 'ia2.nav.orchestrate' },
@@ -50,7 +50,7 @@ export const IA_AREAS: IaAreaMeta[] = [
 ]
 
 /**
- * 路径 → 当前区域 key。IaNav 高亮与 ia store 的唯一投影函数。
+ * 路径 → 当前区域 key。子页头显隐与 ia store 的唯一投影函数。
  * 最长前缀优先：/app/runs/:runId 归 runs、/app/comms/room/:roomId 归 comms；
  * 未知 /app 子路径回退总览；非 /app 路径返回 null（不在新 IA 内）。
  */
@@ -74,7 +74,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         {
           path: '',
           name: 'ia2.overview',
-          component: () => import('./views/OverviewView.vue'),
+          component: () => import('./views/LoopCockpitView.vue'),
         },
         {
           path: 'orchestrate',

@@ -1,0 +1,48 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 8d2f777d..c79c51dc 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1083,6 +1083,43 @@ export default {
+       readonlyHint: 'Read-only · editable policy files land with P4',
+     },
+   },
++  loopCockpit: {
++    title: 'Loop Cockpit',
++    tagline: 'Live loop growth',
++    back: 'Back to cockpit',
++    status: {
++      connected: 'Live',
++      disconnected: 'Offline',
++    },
++    kpi: {
++      loopsActive: 'Active loops',
++      runsRunning: 'Running',
++      awaiting: 'Awaiting',
++      done7d: 'Done · 7d',
++      avg7d: 'Avg · 7d',
++    },
++    inbox: {
++      title: 'Interventions',
++      empty: 'Nothing awaiting your decision',
++      all: 'All interventions',
++    },
++    loops: {
++      title: 'Loops',
++      newLoop: 'New loop',
++      deleteConfirm: 'Delete this loop? This cannot be undone.',
++    },
++    viz: {
++      core: 'Core',
++      empty: 'No loops growing yet — create one, or instantiate from a template in Orchestrate.',
++      emptyCta: 'New loop',
++      emptyCta2: 'Orchestrate',
++      legendRunning: 'Running',
++      legendAwaiting: 'Awaiting',
++      legendDone: 'Done',
++      legendFailed: 'Failed',
++      moreLoops: '{n} more loops hidden',
++    },
++  },
+ 
+   agentManager: {
+     title: 'Agent Manager',
