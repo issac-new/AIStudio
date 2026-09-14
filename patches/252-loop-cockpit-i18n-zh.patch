@@ -1,0 +1,48 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index c617a93f..651b6308 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1081,6 +1081,43 @@ export default {
+       readonlyHint: '只读 · 可编辑策略文件随 P4 落地',
+     },
+   },
++  loopCockpit: {
++    title: '循环驾驶舱',
++    tagline: '循环生长态势 · 实时',
++    back: '返回驾驶舱',
++    status: {
++      connected: '实时',
++      disconnected: '离线',
++    },
++    kpi: {
++      loopsActive: '活跃循环',
++      runsRunning: '运行中',
++      awaiting: '待介入',
++      done7d: '7日完成',
++      avg7d: '7日均耗时',
++    },
++    inbox: {
++      title: '介入收件箱',
++      empty: '没有等待你的决策',
++      all: '全部介入',
++    },
++    loops: {
++      title: '循环',
++      newLoop: '新建循环',
++      deleteConfirm: '确定删除该循环？此操作不可撤销。',
++    },
++    viz: {
++      core: '核心引擎',
++      empty: '还没有循环在生长——新建一个循环，或到编排区从模板实例化。',
++      emptyCta: '新建循环',
++      emptyCta2: '去编排',
++      legendRunning: '运行中',
++      legendAwaiting: '待介入',
++      legendDone: '已完成',
++      legendFailed: '失败',
++      moreLoops: '另有 {n} 个循环未展示',
++    },
++  },
+ 
+   agentManager: {
+     title: 'Agent 管理',
