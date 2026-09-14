@@ -75,3 +75,19 @@ describe('runRest.listSpecs (P3 Task 6 编排区模板库)', () => {
     await expect(runRest.listSpecs()).rejects.toThrow('boom')
   })
 })
+
+describe('runRest.listRuns（2026-09-14 实机缺陷守门）', () => {
+  beforeEach(() => { requestMock.mockReset() })
+
+  it('hits exactly /api/graph/runs（`/${BASE}s` 曾拼成 /api/graph/runss → 生产 404）', async () => {
+    requestMock.mockResolvedValue({ runs: [{ runId: 'r1' }] })
+    const got = await runRest.listRuns()
+    expect(requestMock).toHaveBeenCalledWith('/api/graph/runs')
+    expect(got).toEqual([{ runId: 'r1' }])
+  })
+
+  it('propagates errors (页面据此显示错误态，不得吞)', async () => {
+    requestMock.mockRejectedValue(new Error('boom'))
+    await expect(runRest.listRuns()).rejects.toThrow('boom')
+  })
+})
