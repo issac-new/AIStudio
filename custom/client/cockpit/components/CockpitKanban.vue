@@ -70,6 +70,11 @@ function setTenantFilterValues(key: typeof tenantFields[0]['filterKey'], vals: s
   store.$patch({ filters: { ...store.filters, [key]: [...vals] } })
 }
 
+// 负责（agent）下拉复选：与租户筛选同一 setter 模式
+function setAssigneeFilterValues(vals: string[]) {
+  store.$patch({ filters: { ...store.filters, assignees: [...vals] } })
+}
+
 // 动态 board slug 列表（需求 #1）：从 store.boards 取
 const boardOptions = computed(() => store.boards.map(b => b.slug))
 
@@ -218,9 +223,16 @@ function statusBucketLabel(s: string): string {
       </div>
       <div v-if="assigneeOptions.length > 0" class="cockpit-kanban__frow">
         <span class="cockpit-kanban__flabel">{{ t('cockpit.filterAssignee') }}</span>
-        <button v-for="a in assigneeOptions" :key="a" type="button"
-          class="cockpit-kanban__tag" :class="{ 'is-on': store.filters.assignees.includes(a) }"
-          @click="store.toggleFilter('assignees', a)">{{ a }}</button>
+        <!-- agent 数量多，tag 排会爆行——改下拉复选（与租户筛选同构） -->
+        <NSelect
+          :value="store.filters.assignees"
+          :options="assigneeOptions.map(a => ({ label: a, value: a }))"
+          multiple
+          size="tiny"
+          :teleported="false"
+          class="cockpit-kanban__assignee-sel"
+          @update:value="(v: any) => setAssigneeFilterValues(v)"
+        />
       </div>
       <div class="cockpit-kanban__frow cockpit-kanban__frow--tenant">
         <span class="cockpit-kanban__flabel">{{ t('cockpit.filterTenant') }}</span>
@@ -380,6 +392,7 @@ function statusBucketLabel(s: string): string {
 .cockpit-kanban__frow--tenant { flex-wrap: wrap; }
 .cockpit-kanban__tenant-selects { display: flex; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap; }
 .cockpit-kanban__tenant-sel { flex: 1; min-width: 100px; }
+.cockpit-kanban__assignee-sel { flex: 0 1 auto; min-width: 140px; max-width: 240px; }
 .cockpit-kanban__tenant-sel :deep(.n-base-select-option__content) { overflow: visible; white-space: normal; word-break: break-all; }
 .cockpit-kanban__date {
   font-size: 11px; padding: 2px 5px; border: 1px solid var(--border-color);

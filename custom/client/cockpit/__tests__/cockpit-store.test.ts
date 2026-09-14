@@ -240,6 +240,23 @@ describe('cockpit store bootstrap + 派生态', () => {
     expect(s.filteredTasks.map(t => t.id)).toEqual(['a'])
   })
 
+  it('filteredTasks 默认隐藏归档任务（2026-09-14 用户指定）', async () => {
+    mockKanbanTasks.push(kt({ id: 'a', status: 'todo' }), kt({ id: 'b', status: 'archived' }))
+    const s = useCockpitStore()
+    // 空筛选（=全部）也不含归档
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['a'])
+  })
+
+  it('filteredTasks 显式选中 archived 才显示归档任务', async () => {
+    mockKanbanTasks.push(kt({ id: 'a', status: 'todo' }), kt({ id: 'b', status: 'archived' }))
+    const s = useCockpitStore()
+    s.toggleFilter('statuses', 'archived')
+    expect(s.filteredTasks.map(t => t.id)).toEqual(['b'])
+    // 归档与其他状态并选时，两者都在
+    s.toggleFilter('statuses', 'todo')
+    expect(s.filteredTasks.map(t => t.id).sort()).toEqual(['a', 'b'])
+  })
+
   it('filteredTasks respects tenant filter', async () => {
     mockKanbanTasks.push(kt({ id: 'a', tenant: 'x' }), kt({ id: 'b', tenant: 'y' }))
     const s = useCockpitStore()

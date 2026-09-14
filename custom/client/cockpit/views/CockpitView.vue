@@ -23,7 +23,6 @@ import CockpitTemplateManager from '@/custom/cockpit/components/CockpitTemplateM
 import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import CockpitFleetGrid from '@/custom/cockpit/components/CockpitFleetGrid.vue'
-import CockpitTeamSwitcher from '@/custom/cockpit/components/CockpitTeamSwitcher.vue'
 import LoopModal from '@/custom/loop/components/LoopModal.vue'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import { useI18n } from 'vue-i18n'
@@ -79,9 +78,6 @@ function onColCtrl(col: ColumnKey) {
       @settings="goSettings"
       @runtrace="store.openRunTraceGlobal()"
     />
-    <div class="cockpit-teambar">
-      <CockpitTeamSwitcher />
-    </div>
     <CockpitAttention />
 
     <div class="cockpit__body" :class="{ 'has-max': store.maximized.left || store.maximized.mid || store.maximized.right }">
@@ -232,11 +228,6 @@ function onColCtrl(col: ColumnKey) {
 
 <style scoped lang="scss">
 .cockpit { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
-/* 2.13 团队切换条：TopBar 下方、注意力条上方，右对齐 */
-.cockpit-teambar {
-  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
-  padding: 2px 12px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);
-}
 .cockpit-readonly-badge { position: absolute; top: 8px; right: 14px; font-size: 10px; color: var(--text-muted); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 9px; z-index: 5; }
 .cockpit-col__ctrls {
   position: absolute; top: 6px; right: 8px; z-index: 100;

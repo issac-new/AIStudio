@@ -347,3 +347,9 @@
 # 与 served_profiles；前端投影后顶栏只展示 channel 名（profile 仅留详情面板）。
 # 注：inject.mjs 路由同步扩展 gateway/、tests/gateway/ → hermes-agent。
 250-agent-health-loaded-platforms.patch
+
+# 舰队/看板聚合 WS 实机断连修复：上游 http.ts catch-all upgrade 白名单仅
+# terminal/kanban-events/lan-peer/socket.io，overlay 的 fleet/events 与
+# kanban/overview/events 被同步 socket.destroy()（bare hang-up，无 401 响应）。
+# 舰队流自 2.13 引入起生产从未连通（catch-all 先于异步鉴权同步毁 socket）。
+251-server-http-fleet-ws-whitelist.patch
