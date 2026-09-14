@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
+import CockpitTeamSwitcher from '@/custom/cockpit/components/CockpitTeamSwitcher.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
 import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
@@ -14,9 +15,10 @@ const emit = defineEmits<{ (e: 'schedule', btn: HTMLElement): void; (e: 'loop'):
 const store = useCockpitStore()
 const appStore = useAppStore()
 
-// "Swarm Studio" 字样 = 循环工程图页入口（2026-09-12 用户指定）；
-// Loop Engineering 按钮冻结为旧 LoopModal 弹窗，两者不得互换。
-function goLoopGraph() { router.push({ name: 'hermes.loop' }) }
+// "Swarm Studio" 字样 = 「总览」页入口（2026-09-14 用户指定改指 ia2.overview，
+// 此前为 hermes.loop 循环工程列表页）；Loop Engineering 按钮冻结为旧
+// LoopModal 弹窗，两者不得互换。
+function goOverview() { router.push({ name: 'ia2.overview' }) }
 
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | null = null
@@ -151,8 +153,8 @@ async function manualProbe() {
         <span class="cockpit-top__dot" :class="appStore.connected ? 'is-ok' : 'is-err'" />
       </span>
       {{ t('cockpit.brandTitle') }}
-      <span class="cockpit-top__sub" role="link" tabindex="0" title="Loop Graph · 循环工程图"
-        @click="goLoopGraph" @keydown.enter="goLoopGraph">Swarm Studio</span>
+      <span class="cockpit-top__sub" role="link" tabindex="0" :title="t('ia2.nav.overview')"
+        @click="goOverview" @keydown.enter="goOverview">Swarm Studio</span>
     </div>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" @click="emit('schedule', $event.currentTarget as HTMLElement)">
@@ -177,6 +179,8 @@ async function manualProbe() {
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
     </div>
     <div class="cockpit-top__spacer" />
+    <!-- 团队切换与 Gateway 探测同一行（2026-09-14 用户指定，原独占 teambar 行已移除） -->
+    <CockpitTeamSwitcher />
     <div class="cockpit-top__grp" :title="t('cockpit.gatewayProbeTitle')" @click.stop="manualProbe">
       <span class="cockpit-top__cd" :title="t('cockpit.countdownTitle')">{{ countdown }}s</span>
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">

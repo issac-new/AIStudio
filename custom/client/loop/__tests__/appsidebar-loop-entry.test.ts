@@ -51,11 +51,13 @@ describe('AppSidebar 循环工程图一级入口（patch 246 守门）', () => {
     expect(logsIdx).toBeGreaterThan(loopIdx)
   })
 
-  it('顶栏 "Swarm Studio" 字样入口保持冻结共存（不得因菜单入口被移除）', () => {
+  it('顶栏 "Swarm Studio" 字样已改指总览页——Loop 入口唯一事实源=本菜单项', () => {
     const topbar = readFileSync(
       resolve(__dirname, '../../cockpit/components/CockpitTopBar.vue'),
       'utf8',
     )
-    expect(topbar).toContain(`router.push({ name: 'hermes.loop' })`)
+    // 2026-09-14 用户指定：顶栏字样改指 ia2.overview，不再承担 loop 入口
+    expect(topbar).toContain(`router.push({ name: 'ia2.overview' })`)
+    expect(topbar).not.toContain(`router.push({ name: 'hermes.loop' })`)
   })
 })
