@@ -353,3 +353,9 @@
 # kanban/overview/events 被同步 socket.destroy()（bare hang-up，无 401 响应）。
 # 舰队流自 2.13 引入起生产从未连通（catch-all 先于异步鉴权同步毁 socket）。
 251-server-http-fleet-ws-whitelist.patch
+
+# 循环驾驶舱单页重构（2026-09-14）：/hermes/loop 与 /app 总览合并为同一个
+# LoopCockpitView 单页；IaNav 六菜单栏退役。252/253 = 驾驶舱 i18n 键块（zh/en，
+# 其余语言经 mergeMessagesWithFallback(en) 自动回退，与 249 修复模式一致）。
+252-loop-cockpit-i18n-zh.patch
+253-loop-cockpit-i18n-en.patch

@@ -1,43 +1,38 @@
 // overlay/custom/client/ia2/styles/ia2.scss
-// 六区域 IA 样式 · Pure Ink（仅用 CSS 变量，无自定义色值）。
-// 选中态语言与 cockpit 一致：左侧 3px 色条 + 浅底；
-// 间距 8 倍数；圆角收敛 4 档令牌（--radius-*，见 cockpit.scss :root）。
+// 驾驶舱单页壳样式（2026-09-14 重构：IaNav 六菜单栏退役）· Pure Ink
+// （仅用 CSS 变量，无自定义色值；驾驶舱本体的深色科技底在
+// LoopCockpitView.vue scoped 内，不进全局）。
 
 .ia-shell {
   display: flex;
+  flex-direction: column;
   height: calc(100 * var(--vh, 1vh));
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
 }
 
-// ── 左侧窄栏一级导航 ──
-.ia-nav {
-  flex: 0 0 168px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 8px;
-  border-right: 1px solid var(--border-color);
-  background: var(--bg-primary);
-}
-
-.ia-nav__item,
-.ia-nav__settings {
-  margin-top: auto;
+// ── 子区域 slim 页头（驾驶舱区无页头） ──
+.ia-subhead {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  border-left: 3px solid transparent;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ia-subhead__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-standard);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 20px;
-  text-align: left;
+  font-size: 12.5px;
+  font-family: inherit;
   cursor: pointer;
 
   &:hover {
@@ -51,23 +46,11 @@
   }
 }
 
-.ia-nav__item--active {
-  border-left-color: var(--primary-color, var(--text-primary));
-  background: var(--bg-card);
-  color: var(--text-primary);
+.ia-subhead__title {
+  font-size: 13px;
   font-weight: 600;
-}
-
-.ia-nav__icon {
-  flex: 0 0 16px;
-}
-
-.ia-nav__label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  letter-spacing: 1px;
+  color: var(--text-primary);
 }
 
 // ── 区域主体 ──

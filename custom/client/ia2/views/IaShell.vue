@@ -1,20 +1,21 @@
 <!-- overlay/custom/client/ia2/views/IaShell.vue -->
-<!-- 六区域壳：左侧 IaNav 窄栏 + 右侧区域 router-view。
-     路由路径 → 当前区域的投影经 store.syncFromPath（IaNav 高亮唯一驱动）。
-     Task 8：fleet（看板聚合）WS 生命周期接管点——原 CockpitView unmount 调
-     stopFleetStream；cockpit 退役后由本壳 unmount 承接（离开 /app 即断，
-     区域间切换不断，与 Task 4 台账语义一致）。 -->
+<!-- 驾驶舱单页壳（2026-09-14 重构：IaNav 六菜单栏退役）。
+     overview 区 = 循环驾驶舱本体（自带页头与数据武装，无壳级页头）；
+     其余区域（编排/运行/介入/工作项/沟通）渲染 slim 子页头：返回驾驶舱 + 区域标题。
+     workspace 流生命周期随重构移入 LoopCockpitView（视图自武装自回收，
+     两处挂载点 /app 与 /hermes/loop 行为一致；InboxView 原本亦自行武装）。 -->
 <script setup lang="ts">
-import { onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import IaNav from '@/custom/ia2/components/IaNav.vue'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useIaStore } from '@/custom/ia2/store/ia'
-import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
+import { IA_AREAS } from '@/custom/ia2/routes'
 import '@/custom/ia2/styles/ia2.scss'
 
 const route = useRoute()
+const router = useRouter()
+const { t } = useI18n()
 const store = useIaStore()
-const workspace = useWorkspaceStore()
 
 watch(
   () => route.path,
@@ -22,17 +23,24 @@ watch(
   { immediate: true },
 )
 
-onUnmounted(() => {
-  workspace.stopFleetStream()
-  // 2026-09-12 审查：提醒调度器与 fleet 流同界——离开 /app 即停（此前 stop 全仓
-  // 零调用方，60s interval 跨区域常驻）
-  workspace.stopReminderScheduler()
-})
+/** 驾驶舱区无子页头；其余区域 → slim 页头元数据 */
+const subArea = computed(() =>
+  store.currentArea === 'overview'
+    ? null
+    : IA_AREAS.find(a => a.key === store.currentArea) ?? null)
 </script>
 
 <template>
   <div class="ia-shell">
-    <IaNav />
+    <header v-if="subArea" class="ia-subhead" data-testid="ia-subhead">
+      <button
+        type="button"
+        class="ia-subhead__back"
+        data-testid="ia-subhead-back"
+        @click="router.push({ name: 'ia2.overview' })"
+      >‹ {{ t('loopCockpit.back') }}</button>
+      <span class="ia-subhead__title">{{ t(subArea.labelKey) }}</span>
+    </header>
     <div class="ia-shell__main">
       <router-view />
     </div>
