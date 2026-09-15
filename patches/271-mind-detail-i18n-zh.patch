@@ -1,0 +1,29 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index f8e78633..9af15a4c 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1129,6 +1129,7 @@ export default {
+     viz: {
+       empty: '思维网络尚未形成——运行会自发生长，无需人工编排。',
+       emptyCta: '去看介入',
++      retry: '重新加载思维网络',
+     },
+     viewRuns: '查看运行',
+     view3d: '立体',
+@@ -1138,6 +1139,16 @@ export default {
+     protoB: '方案 B · 思维皮层原型',
+     clusterTasks: '{n} 个任务',
+     clusterTasksUnit: '个任务',
++    detail: {
++      title: '详情',
++      close: '收起',
++      status: '状态',
++      cluster: '所属族',
++      runs: '运行史',
++      relations: '关联',
++      retry: '重新加载',
++      refreshing: '加载中…',
++    },
+     status: {
+       running: '进行中',
+       blocked: '阻塞',

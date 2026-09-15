@@ -406,3 +406,8 @@
 268-desktop-linux-sandbox-fallback.patch
 269-desktop-linux-main-logging.patch
 270-desktop-cli-shim-gui-shell-fallback.patch
+
+# 力导向内聚 + 就地筛选 + 右栏详情说明（2026-09-15 用户裁决；编号顺延至
+# 271/272——265-270 已被并行会话的麒麟兼容轮占用）。
+271-mind-detail-i18n-zh.patch
+272-mind-detail-i18n-en.patch
