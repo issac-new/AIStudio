@@ -317,6 +317,9 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+// matrix-chat 本地：强调色底上的文字（上游 variables.scss 无此变量）
+$text-on-accent: var(--bg-primary);
+
 
 .invite-dialog-backdrop {
   position: fixed;
