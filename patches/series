@@ -369,3 +369,8 @@
 # loopMind.status.* 状态词（思想核/末梢的可读语义，zh/en，其余语言 en 回退）。
 256-mind-status-i18n-zh.patch
 257-mind-status-i18n-en.patch
+
+# 思维图谱本体论重设计（2026-09-15）：实体/关系/状态分区/时序四层语义 +
+# 分区弧 + 语义标签。258/259 = loopMind.zone.* 分区词（zh/en，其余语言 en 回退）。
+258-mind-zone-i18n-zh.patch
+259-mind-zone-i18n-en.patch

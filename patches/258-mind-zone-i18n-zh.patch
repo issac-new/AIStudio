@@ -1,0 +1,20 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 4da940af..63e8f868 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1142,6 +1142,15 @@ export default {
+       archived: '已归档',
+       unknown: '未知',
+     },
++    zone: {
++      running: '进行中',
++      awaiting: '待介入',
++      blocked: '阻塞',
++      failed: '失败',
++      completed: '已完成',
++      idle: '静止',
++      archived: '已归档',
++    },
+   },
+ 
+   agentManager: {

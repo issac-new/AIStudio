@@ -1,9 +1,10 @@
 <!-- overlay/custom/client/ia2/components/MindViz.vue -->
-<!-- 思维大脑渲染（2026-09-15 重设计 v2：语义优先 + 全局色彩一致）。
-     用户反馈修正：①色彩走全局 CSS 变量（浅色 Pure Ink 体系，与 app 一致）；
-     ②核心思维图必须有有效信息——每个思想核带可读任务名 + 状态词 + 运行计数，
-     末梢带状态色点 + 时长标签；图例升级为语义说明（什么颜色=什么状态）。
-     prefers-reduced-motion 降级为静态。 -->
+<!-- 思维图谱渲染（2026-09-15 本体论重设计 v3）。
+     用户反馈修正：①修渲染锚点 bug——旧版 keyframes 里的 transform 覆盖了
+     定位 transform，导致节点全堆到左上角；②按本体论重新设计——实体（任务/
+     运行）→ 关系（孕育/产生）→ 状态（分区）→ 时间（区内时序）四层显式语义，
+     分区弧 + 语义标签让「什么在跑/什么卡了/什么完了」一眼可读。
+     色彩走全局 Pure Ink CSS 变量（与 app 整体一致）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -24,7 +25,6 @@ function statusClass(status: string): string {
   }
 }
 
-/** 状态 → 可读语义词（i18n） */
 function statusLabel(status: string): string {
   return t(`loopMind.status.${status}`)
 }
@@ -32,6 +32,7 @@ function statusLabel(status: string): string {
 const coreNode = computed(() => props.scene.nodes.find(n => n.kind === 'core') ?? null)
 const thoughtNodes = computed(() => props.scene.nodes.filter(n => n.kind === 'thought'))
 const runNodes = computed(() => props.scene.nodes.filter(n => n.kind === 'run'))
+const zones = computed(() => props.scene.zones)
 
 function tooltip(node: MindNode): string {
   const label = node.kind === 'core' ? t('loopMind.core') : node.label
@@ -51,14 +52,28 @@ function edgeOpacity(edge: { strength: number }): number {
   return 0.18 + edge.strength * 0.5
 }
 
-function driftStyle(node: MindNode): Record<string, string> {
-  return {
-    '--drift-hz': String(node.driftHz),
-    transform: `translate(${node.x}px, ${node.y}px)`,
-  }
+/** 分区弧路径（语义分区可视化：一段环形扇区带） */
+function zoneArcPath(zone: { a0: number; a1: number; r0: number; r1: number }): string {
+  const cx = props.scene.width / 2
+  const cy = props.scene.height / 2
+  const large = zone.a1 - zone.a0 > Math.PI ? 1 : 0
+  const p = (a: number, r: number) => `${(cx + Math.cos(a) * r).toFixed(1)} ${(cy + Math.sin(a) * r).toFixed(1)}`
+  return `M ${p(zone.a0, zone.r1)} A ${zone.r1} ${zone.r1} 0 ${large} 1 ${p(zone.a1, zone.r1)} L ${p(zone.a1, zone.r0)} A ${zone.r0} ${zone.r0} 0 ${large} 0 ${p(zone.a0, zone.r0)} Z`
 }
 
-/** 末梢副标：运行时长（时长即生长体量，语义可读） */
+/** 分区标签锚点（扇区角平分线中点） */
+function zoneLabelPos(zone: { a0: number; a1: number; r0: number; r1: number }): { x: number; y: number } {
+  const cx = props.scene.width / 2
+  const cy = props.scene.height / 2
+  const a = (zone.a0 + zone.a1) / 2
+  const r = (zone.r0 + zone.r1) / 2
+  return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r }
+}
+
+function zoneLabel(key: string): string {
+  return t(`loopMind.zone.${key}`)
+}
+
 function runDurationLabel(node: MindNode): string {
   return node.sub ?? ''
 }
@@ -72,7 +87,25 @@ function runDurationLabel(node: MindNode): string {
     role="img"
     :aria-label="t('loopMind.title')"
   >
-    <!-- 突触（有机曲线 + 可塑性宽度）与沿边粒子 -->
+    <!-- 本体论分区弧 + 语义标签（什么状态在什么区，一眼可读） -->
+    <g class="lmv__zones" aria-hidden="false">
+      <path
+        v-for="zone in zones"
+        :key="zone.key"
+        class="lmv__zone"
+        :class="`lmv__zone--${zone.key}`"
+        :d="zoneArcPath(zone)"
+      />
+      <text
+        v-for="zone in zones"
+        :key="`label-${zone.key}`"
+        class="lmv__zone-label"
+        :x="zoneLabelPos(zone).x"
+        :y="zoneLabelPos(zone).y"
+      >{{ zoneLabel(zone.key) }} · {{ zone.count }}</text>
+    </g>
+
+    <!-- 关系边（孕育/产生）与沿边粒子 -->
     <g class="lmv__edges">
       <path
         v-for="edge in scene.edges"
@@ -113,21 +146,21 @@ function runDurationLabel(node: MindNode): string {
       />
     </g>
 
-    <!-- 核心神经元 -->
-    <g v-if="coreNode" class="lmv__core" :style="{ transform: `translate(${coreNode.x}px, ${coreNode.y}px)` }">
+    <!-- 核心（思维主体） -->
+    <g v-if="coreNode" class="lmv__core" :transform="`translate(${coreNode.x}, ${coreNode.y})`">
       <circle class="lmv__core-halo" :r="coreNode.r + 10" />
       <circle class="lmv__core-body" :r="coreNode.r" />
       <circle class="lmv__core-nucleus" :r="9" />
-      <text class="lmv__core-label" :y="coreNode.r + 22">{{ t('loopMind.core') }}</text>
+      <text class="lmv__core-label" :y="coreNode.r + 20">{{ t('loopMind.core') }}</text>
     </g>
 
-    <!-- 思想核（任务）：带可读语义标签——任务名 + 状态词 + 运行计数 -->
+    <!-- 思想核（任务实体）：语义标签组——任务名 + 状态词 + 运行计数 -->
     <g
       v-for="node in thoughtNodes"
       :key="node.id"
       class="lmv__thought"
       :class="[statusClass(node.status), { 'lmv__thought--click': !!node.to, 'lmv__thought--hot': node.pulse, 'lmv__thought--alert': node.highlight }]"
-      :style="driftStyle(node)"
+      :transform="`translate(${node.x}, ${node.y})`"
       :role="node.to ? 'button' : undefined"
       tabindex="-1"
       @click="onNodeClick(node)"
@@ -136,20 +169,19 @@ function runDurationLabel(node: MindNode): string {
       <circle class="lmv__thought-aura" :r="node.r + 8" />
       <circle class="lmv__thought-body" :r="node.r" />
       <circle class="lmv__thought-dot" :r="4" />
-      <!-- 语义标签组：任务名（截断）+ 状态词 + 运行计数 -->
-      <g class="lmv__thought-tag" :transform="`translate(0, ${node.r + 8})`">
-        <text class="lmv__thought-name" y="0">{{ node.label.length > 14 ? node.label.slice(0, 14) + '…' : node.label }}</text>
+      <g class="lmv__thought-tag" :transform="`translate(0, ${node.r + 9})`">
+        <text class="lmv__thought-name" y="0">{{ node.label.length > 16 ? node.label.slice(0, 16) + '…' : node.label }}</text>
         <text class="lmv__thought-status" y="13">{{ statusLabel(node.status) }}<tspan v-if="node.sub" class="lmv__thought-count"> · {{ node.sub }}</tspan></text>
       </g>
     </g>
 
-    <!-- 末梢运行（突触末梢）：状态色点 + 时长副标 -->
+    <!-- 末梢运行（运行尝试实体）：状态色点 + 时长副标 -->
     <g
       v-for="node in runNodes"
       :key="node.id"
       class="lmv__run"
       :class="[statusClass(node.status), { 'lmv__run--hot': node.pulse, 'lmv__run--alert': node.highlight }]"
-      :style="driftStyle(node)"
+      :transform="`translate(${node.x}, ${node.y})`"
       role="button"
       tabindex="-1"
       @click="onNodeClick(node)"
@@ -163,10 +195,27 @@ function runDurationLabel(node: MindNode): string {
 </template>
 
 <style scoped>
-/* ── 全局色彩一致（Pure Ink CSS 变量，浅色体系；不自定义色值） ── */
+/* ── 全局色彩一致（Pure Ink CSS 变量，浅色体系） ── */
 .lmv { display: block; width: 100%; height: 100%; background: transparent; }
 
-/* ── 突触边（语义着色：用全局状态变量） ── */
+/* ── 本体论分区弧（语义分区可视化，淡色带） ── */
+.lmv__zone { opacity: 0.35; }
+.lmv__zone--running { fill: var(--color-primary, #3b82f6); opacity: 0.06; }
+.lmv__zone--awaiting { fill: var(--color-warning, #f59e0b); opacity: 0.07; }
+.lmv__zone--blocked { fill: var(--color-warning, #f59e0b); opacity: 0.05; }
+.lmv__zone--failed { fill: var(--color-danger, #e11d48); opacity: 0.06; }
+.lmv__zone--completed { fill: var(--color-success, #28bf5c); opacity: 0.06; }
+.lmv__zone--idle { fill: var(--color-text-secondary, #878c99); opacity: 0.05; }
+.lmv__zone--archived { fill: var(--color-text-secondary, #878c99); opacity: 0.03; }
+.lmv__zone-label {
+  fill: var(--text-secondary);
+  font-size: 10.5px;
+  text-anchor: middle;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* ── 关系边（孕育/产生）── */
 .lmv__edge {
   fill: none;
   stroke-linecap: round;
@@ -179,9 +228,9 @@ function runDurationLabel(node: MindNode): string {
 .lmv__edge.is-paused { stroke: var(--color-text-secondary, #878c99); }
 .lmv__edge.is-idle { stroke: var(--border-color); }
 
-.lmv__flow { fill: var(--color-primary, #3b82f6); opacity: 0.9; }
+.lmv__flow { fill: var(--color-primary, #3b82f6); opacity: 0.85; }
 
-/* ── 记忆脉冲：浮现→褪色 ── */
+/* ── 记忆脉冲 ── */
 .lmv__pulse {
   fill: var(--color-primary, #3b82f6);
   opacity: 0;
@@ -195,41 +244,17 @@ function runDurationLabel(node: MindNode): string {
   100% { opacity: 0; transform: scale(1.9); }
 }
 
-/* ── 核心神经元 ── */
-.lmv__core { transform-box: fill-box; transform-origin: center; }
-.lmv__core-halo {
-  fill: var(--color-primary, #3b82f6);
-  opacity: 0.08;
-  animation: lmv-breathe 3.8s ease-in-out infinite;
-}
-.lmv__core-body {
-  fill: var(--bg-card, var(--bg-primary));
-  stroke: var(--color-primary, #3b82f6);
-  stroke-width: 1.6;
-}
+/* ── 核心 ── */
+.lmv__core-halo { fill: var(--color-primary, #3b82f6); opacity: 0.08; animation: lmv-breathe 3.8s ease-in-out infinite; }
+.lmv__core-body { fill: var(--bg-card, var(--bg-primary)); stroke: var(--color-primary, #3b82f6); stroke-width: 1.6; }
 .lmv__core-nucleus { fill: var(--color-primary, #3b82f6); animation: lmv-breathe 2.2s ease-in-out infinite; }
-.lmv__core-label {
-  fill: var(--text-secondary);
-  font-size: 12px;
-  text-anchor: middle;
-  letter-spacing: 2px;
-}
-@keyframes lmv-breathe {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
+.lmv__core-label { fill: var(--text-secondary); font-size: 12px; text-anchor: middle; letter-spacing: 2px; }
+@keyframes lmv-breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-/* ── 思想核（任务）：语义标签可读 ── */
-.lmv__thought {
-  cursor: default;
-  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  animation: lmv-drift calc(1s / max(var(--drift-hz, 0.4), 0.001)) ease-in-out infinite alternate;
-}
+/* ── 思想核（任务实体）：语义标签可读 ── */
+.lmv__thought { cursor: default; transition: opacity 0.4s ease; }
 .lmv__thought--click { cursor: pointer; }
-.lmv__thought-body {
-  fill: var(--bg-card, var(--bg-primary));
-  stroke-width: 1.5;
-}
+.lmv__thought-body { fill: var(--bg-card, var(--bg-primary)); stroke-width: 1.5; }
 .lmv__thought.is-running .lmv__thought-body { stroke: var(--color-primary, #3b82f6); }
 .lmv__thought.is-awaiting .lmv__thought-body { stroke: var(--color-warning, #f59e0b); }
 .lmv__thought.is-failed .lmv__thought-body { stroke: var(--color-danger, #e11d48); }
@@ -246,30 +271,12 @@ function runDurationLabel(node: MindNode): string {
 .lmv__thought--alert .lmv__thought-aura { fill: var(--color-warning, #f59e0b); opacity: 0.12; animation: lmv-pulse 3.6s ease-in-out infinite; }
 .lmv__thought:hover .lmv__thought-body { stroke-width: 2.5; }
 
-/* 语义标签（任务名 + 状态词 + 计数） */
-.lmv__thought-name {
-  fill: var(--text-primary);
-  font-size: 12px;
-  font-weight: 600;
-  text-anchor: middle;
-}
-.lmv__thought-status {
-  fill: var(--text-secondary);
-  font-size: 10.5px;
-  text-anchor: middle;
-}
+.lmv__thought-name { fill: var(--text-primary); font-size: 12px; font-weight: 600; text-anchor: middle; }
+.lmv__thought-status { fill: var(--text-secondary); font-size: 10.5px; text-anchor: middle; }
 .lmv__thought-count { fill: var(--color-text-secondary, #878c99); }
-@keyframes lmv-drift {
-  from { transform: translate(-2px, 1.5px); }
-  to { transform: translate(2px, -1.5px); }
-}
 
-/* ── 末梢运行：状态色点 + 时长副标 ── */
-.lmv__run {
-  cursor: pointer;
-  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  animation: lmv-drift calc(1s / max(var(--drift-hz, 0.5), 0.001)) ease-in-out infinite alternate;
-}
+/* ── 末梢运行（运行尝试实体）── */
+.lmv__run { cursor: pointer; transition: opacity 0.4s ease; }
 .lmv__run-body { stroke-width: 1.2; fill: var(--bg-card, var(--bg-primary)); }
 .lmv__run.is-running .lmv__run-body { fill: var(--color-primary, #3b82f6); stroke: var(--color-primary, #3b82f6); }
 .lmv__run.is-awaiting .lmv__run-body { fill: var(--color-warning, #f59e0b); stroke: var(--color-warning, #f59e0b); }
@@ -281,18 +288,13 @@ function runDurationLabel(node: MindNode): string {
 .lmv__run--hot .lmv__run-aura { fill: var(--color-primary, #3b82f6); opacity: 0.14; animation: lmv-breathe 1.9s ease-in-out infinite; }
 .lmv__run--alert .lmv__run-aura { fill: var(--color-warning, #f59e0b); opacity: 0.16; animation: lmv-pulse 3s ease-in-out infinite; }
 .lmv__run:hover .lmv__run-body { stroke-width: 2.2; }
-.lmv__run-sub {
-  fill: var(--color-text-secondary, #878c99);
-  font-size: 9px;
-  text-anchor: middle;
-}
+.lmv__run-sub { fill: var(--color-text-secondary, #878c99); font-size: 9px; text-anchor: middle; }
 
 /* 动效降级 */
 @media (prefers-reduced-motion: reduce) {
   .lmv__core-halo, .lmv__core-nucleus,
   .lmv__thought--hot .lmv__thought-aura, .lmv__thought--alert .lmv__thought-aura,
-  .lmv__run--hot .lmv__run-aura, .lmv__run--alert .lmv__run-aura,
-  .lmv__thought, .lmv__run {
+  .lmv__run--hot .lmv__run-aura, .lmv__run--alert .lmv__run-aura {
     animation: none;
   }
   .lmv__edge { transition: none; }
