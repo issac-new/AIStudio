@@ -150,24 +150,24 @@ describe('LoopCockpitView — 单页装配', () => {
     expect(wrapper.find('[data-testid="lcp-new-loop"]').exists()).toBe(false)
   })
 
-  it('KPI 数字：运行中/待介入来自 runs 投影；活跃思想核/总数来自 kanban 投影', async () => {
-    runRest.listRuns.mockResolvedValue([
-      makeRunDto('r1', 'l1', 'running'),
-      makeRunDto('r2', 'l1', 'running'),
-      makeRunDto('r3', 'l2', 'awaiting-input'),
-    ] as never)
+  it('KPI 数字：运行中/待介入/完成来自 mind 投影运行；活跃思想核来自 thoughts', async () => {
     runRest.getMind.mockResolvedValue({
       available: true,
       thoughts: [
         { id: 't1', title: '晨检', status: 'running', createdAt: null, board: null },
         { id: 't2', title: '巡检', status: 'completed', createdAt: null, board: null },
       ],
-      runs: [],
+      runs: [
+        { runId: 'r1', thoughtId: 't1', status: 'running', durationSec: 60, startedAt: null, endedAt: null, outcome: null, summary: null },
+        { runId: 'r2', thoughtId: 't1', status: 'running', durationSec: 60, startedAt: null, endedAt: null, outcome: null, summary: null },
+        { runId: 'r3', thoughtId: 't2', status: 'awaiting-input', durationSec: 60, startedAt: null, endedAt: null, outcome: null, summary: null },
+        { runId: 'r4', thoughtId: 't2', status: 'completed', durationSec: 60, startedAt: null, endedAt: null, outcome: 'completed', summary: null },
+      ],
     } as never)
     const { wrapper } = await mountView()
     const nums = wrapper.findAll('.lcp-kpi__num').map(n => n.text())
-    expect(nums[0]).toBe('1')            // 活跃思想核（running）/ 总数 2
-    expect(nums[1]).toBe('2')            // 运行中（runs 投影）
+    expect(nums[0]).toBe('1')            // 活跃思想核（running）
+    expect(nums[1]).toBe('2')            // 运行中运行
     expect(nums[2]).toBe('1')            // 待介入
     expect(wrapper.text()).toContain('/ 2')
   })
