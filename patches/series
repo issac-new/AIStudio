@@ -382,3 +382,8 @@
 # 3D 思维图谱 i18n（2026-09-15）：261/262 = view3d/view2d/3dHint/zone.all（zh/en）。
 261-mind-3d-i18n-zh.patch
 262-mind-3d-i18n-en.patch
+
+# 方案 B 思维皮层原型 + A 方案关系边/审批负载/L3 详情层（2026-09-15）。
+# 263/264 = loopMind.viewCortex/protoB（皮层原型视图切换与标识，zh/en）。
+263-mind-cortex-i18n-zh.patch
+264-mind-cortex-i18n-en.patch

@@ -192,7 +192,10 @@ export function buildMind3DScene(projection: MindProjectionDto): Mind3DScene {
         strength: strengthOf(t.status),
         pulse: running,
         layer,
-        to: { name: 'ia2.tasks', query: { task: t.id } },
+        // 待介入（审批/待审）路由进介入中心（A3 审批负载）；其余进工作项预选
+        to: awaiting
+          ? { name: 'ia2.inbox', query: { task: t.id } }
+          : { name: 'ia2.tasks', query: { task: t.id } },
         highlight: awaiting,
         // 待介入专属通道：雷达脉冲环（跨房间召唤注意力；与 running 的呼吸脉冲分家）
         pendingAlert: awaiting,
@@ -248,6 +251,23 @@ export function buildMind3DScene(projection: MindProjectionDto): Mind3DScene {
           strength: strengthOf(run.status) * 0.8,
         })
       })
+    })
+  }
+
+  // ── 任务关系边（父子/委派，A2）：task_links 投影为思想核之间的有向语义边 ──
+  const nodePosById = new Map(nodes.map(n => [n.id, n]))
+  for (const rel of projection.relations ?? []) {
+    const parent = nodePosById.get(`thought:${rel.parentId}`)
+    const child = nodePosById.get(`thought:${rel.childId}`)
+    if (!parent || !child) continue // 被折叠/上限裁掉的端点不画
+    edges.push({
+      id: `rel:${rel.parentId}->${rel.childId}`,
+      from: parent.id, to: child.id,
+      fromPos: { x: parent.x, y: parent.y, z: parent.z },
+      toPos: { x: child.x, y: child.y, z: child.z },
+      status: 'delegate',
+      flow: false,
+      strength: 0.55,
     })
   }
 

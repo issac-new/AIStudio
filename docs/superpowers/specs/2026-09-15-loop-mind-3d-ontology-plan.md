@@ -78,6 +78,18 @@
 
 第二轮（顺延）：任务关系边、审批负载、运行内部 span 几何族、L2 时空螺旋、L3 2D 面板对接。
 
+## 收口记录（2026-09-15 后续轮次）
+
+**第一轮已实装**（845bc75）：通道解耦 + 雷达脉冲环 + 标签 LOD + 实时生长（workspace.onBoardEvent 订阅钩子驱动 mind 投影重拉）。
+
+**第二轮已实装**（本提交）：
+- **A2 任务关系边**：服务端 mind-projection 补 task_links 父子投影（relations 字段；表缺失容错空数组）；mind3d 渲染思想核间有向 delegate 边（缺失端点不画）。
+- **A3 审批负载**：待介入（awaiting-review/awaiting-input）思想核点击路由进介入中心（ia2.inbox）而非工作项——审批负载从图引擎 interrupt 经任务状态透出。
+- **A5 L3 2D 面板对接**：末梢点击在驾驶舱内开 KanbanTaskDrawer 任务详情抽屉（阅读任务不进 3D；思想核/审批仍走路由导航）。
+- **A4 不可行说明**：运行内部 span 几何族 + L2 时空螺旋**本机无数据**——kanban task_runs 无 token/成本字段；L2 traces（~/.hermes/traces/*.jsonl，173 个）实测全是 header/trailer 骨架（无 llm_span/tool_span/token 字段）。span 级可视化需等图引擎或 hermes-agent 产生真实 span 数据后再做，记为后续轮候选。
+
+**方案 B 思维皮层原型已落地**：mindcortex.ts（皮层柱拓扑：任务=皮层柱、粗细=运行史、高度=活跃度、完成结晶截顶、新任务萌芽生长动画、皮层地形脑回起伏、轴突束三类关系弧）+ MindCortex3D.vue（Three.js 渲染）+ 驾驶舱三态视图切换（3D 分层 / 皮层原型 / 2D 分区）。同一本体论数据的两种形态对照——用户实机对比后定终态。
+
 ## 验证
 
 - 维度通道修正与投影扩展走 mind3d-adapter 守门测试（纯函数）

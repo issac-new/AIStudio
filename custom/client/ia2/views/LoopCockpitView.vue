@@ -17,6 +17,8 @@ import AttentionStrip from '../components/AttentionStrip.vue'
 import StatusDistributionCard from '../components/StatusDistributionCard.vue'
 import MindViz from '../components/MindViz.vue'
 import MindViz3D from '../components/MindViz3D.vue'
+import MindCortex3D from '../components/MindCortex3D.vue'
+import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import { buildMindScene, type MindNode, type MindProjectionDto } from '../adapters/mind'
 import type { Mind3DNode } from '../adapters/mind3d'
 import { runRest } from '@/custom/loop/runcenter/api'
@@ -148,6 +150,13 @@ function onVizNode(node: MindNode): void {
   if (node.to) void router.push(node.to)
 }
 function onViz3DNode(node: Mind3DNode): void {
+  // L3 详情层（2026-09-15 规划）：末梢点击 → 2D 任务详情抽屉接管（阅读任务不进 3D），
+  // 3D 只提供空间上下文；思想核/审批仍走路由导航（工作项预选 / 介入中心）。
+  if (node.kind === 'run' && node.to?.query?.task) {
+    detailTaskId.value = node.to.query.task
+    detailOpen.value = true
+    return
+  }
   if (node.to) void router.push(node.to)
 }
 const goRuns = () => void router.push({ name: 'ia2.runs' })
@@ -158,8 +167,13 @@ function goThought(taskId: string): void {
   void router.push({ path: '/app/tasks', query: { task: taskId } })
 }
 
-/** 3D/2D 视图切换（默认 3D 立体图——用户裁决；2D 分区图为降级/对照） */
-const viz3D = ref(true)
+/** 视图三态（2026-09-15 用户裁决）：layered=3D 分层（默认）/ cortex=方案B 皮层原型 / flat=2D 分区 */
+const vizMode = ref<'layered' | 'cortex' | 'flat'>('layered')
+const viz3D = computed(() => vizMode.value !== 'flat')
+
+/** L3 详情层：任务详情抽屉（末梢点击接管；阅读任务不进 3D） */
+const detailOpen = ref(false)
+const detailTaskId = ref<string | null>(null)
 
 // ── 思想列表投影（kanban 任务 + 各自运行计数） ──
 const mindThoughts = computed(() => {
@@ -294,29 +308,42 @@ function planTimeLabel(at: number | null): string {
 
       <!-- 中：思维图谱舞台（3D 立体 / 2D 分区可切换） -->
       <section class="lcp-stage" data-testid="lcp-stage">
-        <!-- 2D/3D 切换 -->
+        <!-- 视图三态切换：3D 分层 / 皮层原型 / 2D 分区 -->
         <div class="lcp-viz-toggle" data-testid="lcp-viz-toggle">
           <button
             type="button"
             class="lcp-viz-toggle__btn"
-            :class="{ 'lcp-viz-toggle__btn--on': viz3D }"
+            :class="{ 'lcp-viz-toggle__btn--on': vizMode === 'layered' }"
             data-testid="lcp-viz-3d"
-            @click="viz3D = true"
+            @click="vizMode = 'layered'"
           >{{ t('loopMind.view3d') }}</button>
           <button
             type="button"
             class="lcp-viz-toggle__btn"
-            :class="{ 'lcp-viz-toggle__btn--on': !viz3D }"
+            :class="{ 'lcp-viz-toggle__btn--on': vizMode === 'cortex' }"
+            data-testid="lcp-viz-cortex"
+            @click="vizMode = 'cortex'"
+          >{{ t('loopMind.viewCortex') }}</button>
+          <button
+            type="button"
+            class="lcp-viz-toggle__btn"
+            :class="{ 'lcp-viz-toggle__btn--on': vizMode === 'flat' }"
             data-testid="lcp-viz-2d"
-            @click="viz3D = false"
+            @click="vizMode = 'flat'"
           >{{ t('loopMind.view2d') }}</button>
         </div>
 
         <MindViz3D
-          v-if="viz3D"
+          v-if="vizMode === 'layered'"
           :projection="mindData ?? { thoughts: [], runs: [], available: false }"
           @node-click="onViz3DNode"
-          @fallback-2d="viz3D = false"
+          @fallback-2d="vizMode = 'flat'"
+        />
+        <MindCortex3D
+          v-else-if="vizMode === 'cortex'"
+          :projection="mindData ?? { thoughts: [], runs: [], available: false }"
+          @node-click="onViz3DNode"
+          @fallback-2d="vizMode = 'flat'"
         />
         <MindViz v-else :scene="scene" @node-click="onVizNode" />
 
@@ -390,6 +417,13 @@ function planTimeLabel(at: number | null): string {
       </aside>
     </div>
 
+    <!-- L3 详情层：任务详情抽屉（末梢点击接管；复用 kanban 域 KanbanTaskDrawer，
+         阅读任务不进 3D——规划文档 L3 决策） -->
+    <KanbanTaskDrawer
+      v-model:show="detailOpen"
+      :task-id="detailTaskId"
+      @close="detailOpen = false"
+    />
   </div>
 </template>
 
