@@ -359,3 +359,8 @@
 # 其余语言经 mergeMessagesWithFallback(en) 自动回退，与 249 修复模式一致）。
 252-loop-cockpit-i18n-zh.patch
 253-loop-cockpit-i18n-en.patch
+
+# 思维大脑重设计（2026-09-15）：循环驾驶舱 = 动态增长的活动思维大脑，
+# 无人工编排。254/255 = loopMind i18n 键块（zh/en，其余语言 en 回退）。
+254-mind-i18n-zh.patch
+255-mind-i18n-en.patch
