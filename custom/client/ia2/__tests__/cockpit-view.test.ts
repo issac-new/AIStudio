@@ -150,7 +150,7 @@ describe('LoopCockpitView — 单页装配', () => {
     expect(wrapper.find('[data-testid="lcp-new-loop"]').exists()).toBe(false)
   })
 
-  it('KPI 数字：运行中/待介入/完成来自 mind 投影运行；活跃思想核来自 thoughts', async () => {
+  it('KPI 数字：运行中/待介入来自 mind 投影运行；完成按 7 日窗口；活跃思想核来自 thoughts', async () => {
     runRest.getMind.mockResolvedValue({
       available: true,
       thoughts: [
@@ -161,7 +161,9 @@ describe('LoopCockpitView — 单页装配', () => {
         { runId: 'r1', thoughtId: 't1', status: 'running', durationSec: 60, startedAt: null, endedAt: null, outcome: null, summary: null },
         { runId: 'r2', thoughtId: 't1', status: 'running', durationSec: 60, startedAt: null, endedAt: null, outcome: null, summary: null },
         { runId: 'r3', thoughtId: 't2', status: 'awaiting-input', durationSec: 60, startedAt: null, endedAt: null, outcome: null, summary: null },
-        { runId: 'r4', thoughtId: 't2', status: 'completed', durationSec: 60, startedAt: null, endedAt: null, outcome: 'completed', summary: null },
+        { runId: 'r4', thoughtId: 't2', status: 'completed', durationSec: 60, startedAt: null, endedAt: new Date().toISOString(), outcome: 'completed', summary: null },
+        // 8 天前的完成 run：落在 7 日窗口外，不得计入「7日完成」KPI（图例全量口径不受影响）
+        { runId: 'r5', thoughtId: 't2', status: 'completed', durationSec: 60, startedAt: null, endedAt: new Date(Date.now() - 8 * 24 * 3_600_000).toISOString(), outcome: 'completed', summary: null },
       ],
     } as never)
     const { wrapper } = await mountView()
@@ -169,6 +171,7 @@ describe('LoopCockpitView — 单页装配', () => {
     expect(nums[0]).toBe('1')            // 活跃思想核（running）
     expect(nums[1]).toBe('2')            // 运行中运行
     expect(nums[2]).toBe('1')            // 待介入
+    expect(nums[3]).toBe('1')            // 7日完成（r4 在窗内；r5 窗外被排除）
     expect(wrapper.text()).toContain('/ 2')
   })
 
