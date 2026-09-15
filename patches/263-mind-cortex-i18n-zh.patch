@@ -1,0 +1,15 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 6379b8d4..f0b0a7e6 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1132,8 +1132,10 @@ export default {
+     },
+     viewRuns: '查看运行',
+     view3d: '立体',
++    viewCortex: '皮层',
+     view2d: '平面',
+     '3dHint': '拖拽旋转 · 滚轮缩放 · 左侧切层',
++    protoB: '方案 B · 思维皮层原型',
+     status: {
+       running: '进行中',
+       blocked: '阻塞',

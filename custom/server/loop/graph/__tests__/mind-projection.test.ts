@@ -147,3 +147,26 @@ describe('projectMindFromKanban — 投影映射', () => {
     expect(r.c).toBe(1)
   })
 })
+
+describe('projectMindFromKanban — 任务关系边（A2）', () => {
+  it('task_links → relations 投影（父子委派）；无表 → 空数组容错', () => {
+    const db = openDb(dbPath)
+    db.exec(`CREATE TABLE task_links (parent_id TEXT, child_id TEXT)`)
+    insertTask(db, 't-parent')
+    insertTask(db, 't-child')
+    db.exec(`INSERT INTO task_links (parent_id, child_id) VALUES ('t-parent', 't-child')`)
+    db.close()
+    const p = projectMindFromKanban(dbPath)
+    expect(p.available).toBe(true)
+    expect(p.relations).toEqual([{ parentId: 't-parent', childId: 't-child' }])
+  })
+
+  it('task_links 表缺失（旧库）→ relations 空数组不报错', () => {
+    const db = openDb(dbPath)
+    insertTask(db, 't1')
+    db.close()
+    const p = projectMindFromKanban(dbPath)
+    expect(p.available).toBe(true)
+    expect(p.relations).toEqual([])
+  })
+})

@@ -40,9 +40,17 @@ export interface MindRun {
   summary: string | null
 }
 
+/** 任务关系边（task_links 父子委派投影） */
+export interface MindRelation {
+  parentId: string
+  childId: string
+}
+
 export interface MindProjection {
   thoughts: MindThought[]
   runs: MindRun[]
+  /** 任务父子/委派关系（task_links 只读投影；无表/无行 → 空数组） */
+  relations: MindRelation[]
   /** 数据源是否可用（库缺失/读失败时 false，前端落空态而非报错） */
   available: boolean
 }
@@ -86,7 +94,7 @@ export function projectMindFromKanban(dbPath?: string): MindProjection {
   try {
     db = new DatabaseSync(file, { open: true, readOnly: true } as never)
   } catch {
-    return { thoughts: [], runs: [], available: false }
+    return { thoughts: [], runs: [], relations: [], available: false }
   }
   try {
     const taskRows = db.prepare(
@@ -120,9 +128,16 @@ export function projectMindFromKanban(dbPath?: string): MindProjection {
       }
     })
 
-    return { thoughts, runs, available: true }
+    // 任务关系边（task_links 父子委派；表不存在 → 空数组容错）
+    let relations: MindRelation[] = []
+    try {
+      const linkRows = db.prepare(`SELECT parent_id, child_id FROM task_links`).all() as Array<Record<string, unknown>>
+      relations = linkRows.map(r => ({ parentId: String(r.parent_id), childId: String(r.child_id) }))
+    } catch { /* task_links 表缺失（旧库）→ 空关系 */ }
+
+    return { thoughts, runs, relations, available: true }
   } catch {
-    return { thoughts: [], runs: [], available: false }
+    return { thoughts: [], runs: [], relations: [], available: false }
   } finally {
     try { db?.close() } catch { /* 已关闭 */ }
   }

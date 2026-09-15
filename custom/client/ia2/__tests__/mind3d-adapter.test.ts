@@ -190,3 +190,44 @@ describe('buildMind3DScene — 2026-09-15 规划第一轮修正', () => {
     expect(wait.radialRecency!).toBeGreaterThan(0)
   })
 })
+
+describe('buildMind3DScene — A 方案第二轮（关系边 + 审批负载）', () => {
+  it('任务关系边：task_links 父子投影为思想核间有向边（delegate 语义）', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'parent' }),
+      makeThought({ id: 'child' }),
+      makeThought({ id: 'orphan' }),
+    ], []))
+    expect(scene.edges.filter(e => e.id.startsWith('rel:'))).toHaveLength(0)
+
+    const withRel = buildMind3DScene({
+      thoughts: [makeThought({ id: 'parent' }), makeThought({ id: 'child' })],
+      runs: [],
+      relations: [{ parentId: 'parent', childId: 'child' }],
+      available: true,
+    })
+    const relEdge = withRel.edges.find(e => e.id === 'rel:parent->child')
+    expect(relEdge).toBeDefined()
+    expect(relEdge!.from).toBe('thought:parent')
+    expect(relEdge!.to).toBe('thought:child')
+    expect(relEdge!.fromPos).toMatchObject({ x: expect.any(Number) })
+    const dangling = buildMind3DScene({
+      thoughts: [makeThought({ id: 'parent' })],
+      runs: [],
+      relations: [{ parentId: 'parent', childId: 'ghost' }],
+      available: true,
+    })
+    expect(dangling.edges.filter(e => e.id.startsWith('rel:'))).toHaveLength(0)
+  })
+
+  it('审批负载路由：待介入思想核导航进介入中心（非工作项）', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'wait', status: 'awaiting-review' }),
+      makeThought({ id: 'normal', status: 'running' }),
+    ], []))
+    expect(scene.nodes.find(n => n.id === 'thought:wait')!.to)
+      .toEqual({ name: 'ia2.inbox', query: { task: 'wait' } })
+    expect(scene.nodes.find(n => n.id === 'thought:normal')!.to)
+      .toEqual({ name: 'ia2.tasks', query: { task: 'normal' } })
+  })
+})

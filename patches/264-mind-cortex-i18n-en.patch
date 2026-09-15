@@ -1,0 +1,15 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index bf287023..71c4f7bf 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1134,8 +1134,10 @@ export default {
+     },
+     viewRuns: 'View runs',
+     view3d: '3D',
++    viewCortex: 'Cortex',
+     view2d: '2D',
+     '3dHint': 'Drag to orbit · Scroll to zoom · Switch layers on the left',
++    protoB: 'Plan B · Thinking cortex prototype',
+     status: {
+       running: 'Running',
+       blocked: 'Blocked',

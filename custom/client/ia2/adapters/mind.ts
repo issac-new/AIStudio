@@ -36,6 +36,8 @@ export interface MindRunDto {
 export interface MindProjectionDto {
   thoughts: MindThoughtDto[]
   runs: MindRunDto[]
+  /** 任务父子/委派关系（task_links 只读投影；无表/无行 → 空数组/undefined） */
+  relations?: Array<{ parentId: string; childId: string }>
   available: boolean
 }
 

@@ -63,6 +63,11 @@ vi.mock('@/custom/loop/components/LoopCreateWizard.vue', () => ({
   default: { name: 'WizardStub', emits: ['close', 'created'], template: '<div class="wizard-stub" />' },
 }))
 
+// ── 任务详情抽屉桩（L3 详情层；kanban 域组件在测试环境不解析，桩化隔离）──
+vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
+  default: { name: 'TaskDrawerStub', props: ['show', 'taskId'], emits: ['update:show', 'close', 'refresh'], template: '<div class="task-drawer-stub" />' },
+}))
+
 import LoopCockpitView from '../views/LoopCockpitView.vue'
 
 const AREA = { template: '<div class="area-stub" />' }
