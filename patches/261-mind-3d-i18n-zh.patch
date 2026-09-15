@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 63e8f868..6379b8d4 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1131,6 +1131,9 @@ export default {
+       emptyCta: '去看介入',
+     },
+     viewRuns: '查看运行',
++    view3d: '立体',
++    view2d: '平面',
++    '3dHint': '拖拽旋转 · 滚轮缩放 · 左侧切层',
+     status: {
+       running: '进行中',
+       blocked: '阻塞',
+@@ -1143,6 +1146,7 @@ export default {
+       unknown: '未知',
+     },
+     zone: {
++      all: '总览',
+       running: '进行中',
+       awaiting: '待介入',
+       blocked: '阻塞',

@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index e7a5b08b..bf287023 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1133,6 +1133,9 @@ export default {
+       emptyCta: 'View inbox',
+     },
+     viewRuns: 'View runs',
++    view3d: '3D',
++    view2d: '2D',
++    '3dHint': 'Drag to orbit · Scroll to zoom · Switch layers on the left',
+     status: {
+       running: 'Running',
+       blocked: 'Blocked',
+@@ -1145,6 +1148,7 @@ export default {
+       unknown: 'Unknown',
+     },
+     zone: {
++      all: 'All',
+       running: 'Running',
+       awaiting: 'Awaiting',
+       blocked: 'Blocked',

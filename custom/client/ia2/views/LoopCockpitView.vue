@@ -16,7 +16,9 @@ import { useWorkspaceStore } from '../store/workspace'
 import AttentionStrip from '../components/AttentionStrip.vue'
 import StatusDistributionCard from '../components/StatusDistributionCard.vue'
 import MindViz from '../components/MindViz.vue'
+import MindViz3D from '../components/MindViz3D.vue'
 import { buildMindScene, type MindNode, type MindProjectionDto } from '../adapters/mind'
+import type { Mind3DNode } from '../adapters/mind3d'
 import { runRest } from '@/custom/loop/runcenter/api'
 import {
   aggregateActiveRuns, aggregateInbox, aggregateMetrics, buildTodayPlan, formatDuration,
@@ -127,6 +129,9 @@ function goTaskFromAttention(row: AttentionRow): void {
 function onVizNode(node: MindNode): void {
   if (node.to) void router.push(node.to)
 }
+function onViz3DNode(node: Mind3DNode): void {
+  if (node.to) void router.push(node.to)
+}
 const goRuns = () => void router.push({ name: 'ia2.runs' })
 const goInbox = () => void router.push({ name: 'ia2.inbox' })
 const goTasks = (status: string) => void router.push({ path: '/app/tasks', query: { status } })
@@ -134,6 +139,9 @@ const goTasks = (status: string) => void router.push({ path: '/app/tasks', query
 function goThought(taskId: string): void {
   void router.push({ path: '/app/tasks', query: { task: taskId } })
 }
+
+/** 3D/2D 视图切换（默认 3D 立体图——用户裁决；2D 分区图为降级/对照） */
+const viz3D = ref(true)
 
 // ── 思想列表投影（kanban 任务 + 各自运行计数） ──
 const mindThoughts = computed(() => {
@@ -266,16 +274,41 @@ function planTimeLabel(at: number | null): string {
         </div>
       </aside>
 
-      <!-- 中：思维大脑舞台 -->
+      <!-- 中：思维图谱舞台（3D 立体 / 2D 分区可切换） -->
       <section class="lcp-stage" data-testid="lcp-stage">
-        <MindViz :scene="scene" @node-click="onVizNode" />
+        <!-- 2D/3D 切换 -->
+        <div class="lcp-viz-toggle" data-testid="lcp-viz-toggle">
+          <button
+            type="button"
+            class="lcp-viz-toggle__btn"
+            :class="{ 'lcp-viz-toggle__btn--on': viz3D }"
+            data-testid="lcp-viz-3d"
+            @click="viz3D = true"
+          >{{ t('loopMind.view3d') }}</button>
+          <button
+            type="button"
+            class="lcp-viz-toggle__btn"
+            :class="{ 'lcp-viz-toggle__btn--on': !viz3D }"
+            data-testid="lcp-viz-2d"
+            @click="viz3D = false"
+          >{{ t('loopMind.view2d') }}</button>
+        </div>
+
+        <MindViz3D
+          v-if="viz3D"
+          :projection="mindData ?? { thoughts: [], runs: [], available: false }"
+          @node-click="onViz3DNode"
+          @fallback-2d="viz3D = false"
+        />
+        <MindViz v-else :scene="scene" @node-click="onVizNode" />
+
         <div v-if="showGuide" class="lcp-stage__guide" data-testid="lcp-guide">
           <p class="lcp-stage__guide-text">{{ t('loopMind.viz.empty') }}</p>
           <div class="lcp-stage__guide-cta">
             <button type="button" class="lcp-btn" @click="goInbox">{{ t('loopMind.viz.emptyCta') }}</button>
           </div>
         </div>
-        <div class="lcp-legend" data-testid="lcp-legend">
+        <div v-if="!viz3D" class="lcp-legend" data-testid="lcp-legend">
           <span class="lcp-legend__item"><i class="lcp-dot lcp-dot--running" />{{ t('loopCockpit.viz.legendRunning') }} {{ statusCounts.running }}</span>
           <span class="lcp-legend__item"><i class="lcp-dot lcp-dot--awaiting-review" />{{ t('loopCockpit.viz.legendAwaiting') }} {{ statusCounts.awaiting }}</span>
           <span class="lcp-legend__item"><i class="lcp-dot lcp-dot--completed" />{{ t('loopCockpit.viz.legendDone') }} {{ statusCounts.done }}</span>
@@ -514,6 +547,21 @@ function planTimeLabel(at: number | null): string {
 .lcp-plan__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
 .lcp-plan__time { flex: 0 0 auto; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .lcp-plan__item--overdue .lcp-plan__time { color: var(--color-danger, #e11d48); }
+
+/* 2D/3D 视图切换 */
+.lcp-viz-toggle {
+  position: absolute; top: 10px; right: 10px; z-index: 6;
+  display: flex; gap: 2px;
+  border: 1px solid var(--border-color); border-radius: var(--radius-standard);
+  background: var(--bg-card, var(--bg-primary)); padding: 2px;
+}
+.lcp-viz-toggle__btn {
+  padding: 3px 10px; border: none; border-radius: calc(var(--radius-standard) - 2px);
+  background: transparent; color: var(--text-secondary);
+  font-size: 11px; font-family: inherit; cursor: pointer;
+}
+.lcp-viz-toggle__btn:hover { color: var(--color-primary, #3b82f6); }
+.lcp-viz-toggle__btn--on { background: var(--color-primary, #3b82f6); color: var(--bg-primary); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   .lcp-top__mark, .lcp-pill--on i { animation: none; }

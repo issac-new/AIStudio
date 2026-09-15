@@ -374,3 +374,11 @@
 # 分区弧 + 语义标签。258/259 = loopMind.zone.* 分区词（zh/en，其余语言 en 回退）。
 258-mind-zone-i18n-zh.patch
 259-mind-zone-i18n-en.patch
+
+# 3D 思维图谱（2026-09-15 用户裁决）：核心思维图升级 Three.js 立体图——可缩放/
+# 旋转/层级切换。260 = three 依赖（本体论分区映射到 3D 语义层：状态=高度层）。
+260-three-dep.patch
+
+# 3D 思维图谱 i18n（2026-09-15）：261/262 = view3d/view2d/3dHint/zone.all（zh/en）。
+261-mind-3d-i18n-zh.patch
+262-mind-3d-i18n-en.patch
