@@ -1,0 +1,25 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 651b6308..47021837 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1118,6 +1118,20 @@ export default {
+       moreLoops: '另有 {n} 个循环未展示',
+     },
+   },
++  loopMind: {
++    title: '思维大脑',
++    tagline: '活动思维 · 自适应生长',
++    core: '核心思维',
++    loops: {
++      title: '思维',
++      empty: '尚未形成思维活动',
++    },
++    viz: {
++      empty: '思维网络尚未形成——运行会自发生长，无需人工编排。',
++      emptyCta: '去看介入',
++    },
++    viewRuns: '查看运行',
++  },
+ 
+   agentManager: {
+     title: 'Agent 管理',
