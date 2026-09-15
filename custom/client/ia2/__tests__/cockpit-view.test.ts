@@ -127,7 +127,7 @@ describe('LoopCockpitView — 单页装配', () => {
   it('骨架：页头/KPI×5/三栏（收件箱·生长舞台·循环面板）/图例；旧 IaNav 菜单栏不存在', async () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-testid="loop-cockpit"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('loopCockpit.title')
+    expect(wrapper.text()).toContain('loopMind.title')
     expect(wrapper.findAll('.lcp-kpi')).toHaveLength(5)
     expect(wrapper.find('[data-testid="lcp-inbox-panel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="lcp-stage"]').exists()).toBe(true)
@@ -136,6 +136,9 @@ describe('LoopCockpitView — 单页装配', () => {
     // 去菜单守门：驾驶舱页内不渲染六区域导航栏
     expect(wrapper.find('.ia-nav').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('ia2.nav.overview')
+    // 活大脑裁决守门：驾驶舱无人工编排/新建循环入口
+    expect(wrapper.find('[data-testid="lcp-orchestrate"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="lcp-new-loop"]').exists()).toBe(false)
   })
 
   it('KPI 数字：运行中/待介入来自 runs 投影；活跃循环来自 loop store', async () => {
@@ -192,24 +195,25 @@ describe('LoopCockpitView — 介入收件箱', () => {
   })
 })
 
-describe('LoopCockpitView — 生长图舞台', () => {
+describe('LoopCockpitView — 思维大脑舞台', () => {
   it('SVG 渲染 + run 端点点击 → ia2.runDetail（数据驱动导航）', async () => {
     runRest.listRuns.mockResolvedValue([
       makeRunDto('grow-1', 'l1', 'running'),
     ] as never)
     loopRest.listLoops.mockResolvedValue([makeLoopDto('l1', 'running')] as never)
     const { wrapper, router } = await mountView()
-    expect(wrapper.find('.lgv').exists()).toBe(true)
-    const runNode = wrapper.find('.lgv__run')
+    expect(wrapper.find('.lmv').exists()).toBe(true)
+    const runNode = wrapper.find('.lmv__run')
     expect(runNode.exists()).toBe(true)
     await runNode.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.params.runId).toBe('grow-1')
   })
 
-  it('零循环零 run：空态引导覆盖层 + 双 CTA；有数据即消失', async () => {
+  it('零循环零 run：空态引导覆盖层（无编排 CTA——活大脑无需人工编排）；有数据即消失', async () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-testid="lcp-guide"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('ia2.nav.orchestrate')
 
     runRest.listRuns.mockResolvedValue([makeRunDto('r1', 'l1', 'completed')] as never)
     loopRest.listLoops.mockResolvedValue([makeLoopDto('l1')] as never)
@@ -247,25 +251,21 @@ describe('LoopCockpitView — 循环面板', () => {
     expect(loopRest.deleteLoop).toHaveBeenCalledWith('l1')
   })
 
-  it('零循环：右栏渲染 LoopOnboarding 空态', async () => {
+  it('零循环：右栏渲染空态文案（活大脑无新建循环向导）', async () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-testid="lcp-loops-empty"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('loopMind.loops.empty')
   })
 })
 
 describe('LoopCockpitView — 页头动作区', () => {
-  it('主按钮导航：编排/运行中心；新建循环打开向导', async () => {
+  it('主按钮导航：查看运行中心（活大脑无编排/新建循环主按钮）', async () => {
     const { wrapper, router } = await mountView()
-    await wrapper.find('[data-testid="lcp-orchestrate"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.orchestrate')
+    expect(wrapper.find('[data-testid="lcp-orchestrate"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="lcp-new-loop"]').exists()).toBe(false)
     await wrapper.find('[data-testid="lcp-all-runs"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.runs')
-
-    expect(wrapper.find('.wizard-stub').exists()).toBe(false)
-    await wrapper.find('[data-testid="lcp-new-loop"]').trigger('click')
-    expect(wrapper.find('.wizard-stub').exists()).toBe(true)
   })
 
   it('溢出菜单收拢次要入口：介入/工作项/沟通/设置', async () => {
