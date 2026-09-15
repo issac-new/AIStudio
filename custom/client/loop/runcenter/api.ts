@@ -116,6 +116,15 @@ export const runRest = {
   },
 
   /**
+   * GET /api/graph/mind → 思维大脑数据源（2026-09-15）：kanban 运行史只读投影
+   * （tasks=思想核 + task_runs=突触末梢）。图引擎自身 run 库可能为空，大脑基于
+   * 已有任务的运行数据长成。available:false 时前端落空态而非报错。
+   */
+  getMind: async (): Promise<import('@/custom/ia2/adapters/mind').MindProjectionDto> => {
+    return request('/api/graph/mind')
+  },
+
+  /**
    * GET /api/graph/runs/:id/export → 运行导出包（P3 台账 #30）：run instance + 图规格 + 全事件。
    * 服务端同时设置 Content-Disposition attachment（直开 URL 可下载）；此处取 JSON 后
    * 由视图用 Blob 落盘（request 走授权头，<a href> 直链不带凭证）。

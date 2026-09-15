@@ -16,13 +16,12 @@ import { useWorkspaceStore } from '../store/workspace'
 import AttentionStrip from '../components/AttentionStrip.vue'
 import StatusDistributionCard from '../components/StatusDistributionCard.vue'
 import MindViz from '../components/MindViz.vue'
-import LoopGraph from '@/custom/loop/components/LoopGraph.vue'
-import { buildMindScene, type MindNode } from '../adapters/mind'
+import { buildMindScene, type MindNode, type MindProjectionDto } from '../adapters/mind'
+import { runRest } from '@/custom/loop/runcenter/api'
 import {
   aggregateActiveRuns, aggregateInbox, aggregateMetrics, buildTodayPlan, formatDuration,
   mergeAttention, type AttentionRow,
 } from '../adapters/overview'
-import type { LoopStatus } from '@/custom/loop/types'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -38,6 +37,8 @@ const nowTick = ref(Date.now())
 let tickTimer: ReturnType<typeof setInterval> | null = null
 /** 首轮数据到位（空态引导防闪） */
 const booted = ref(false)
+/** 思维大脑数据源（kanban 运行史投影；null = 未加载/不可用 → 空态） */
+const mindData = ref<MindProjectionDto | null>(null)
 const clockLabel = computed(() => {
   const d = new Date(nowTick.value)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -71,6 +72,8 @@ async function boot(): Promise<void> {
   runsStore.syncVisibleRunIds([...awaiting, ...running].slice(0, SUBSCRIBE_CAP))
   void runsStore.fetchMetrics()
   void loopStore.fetchLoops()
+  // 思维大脑：kanban 运行史投影（已有任务的运行数据）。失败不阻断其余仪表。
+  try { mindData.value = await runRest.getMind() } catch { mindData.value = null }
   booted.value = true
 }
 
@@ -89,12 +92,15 @@ const inboxAgg = computed(() => aggregateInbox(runsStore.runs, nowTick.value))
 const metrics = computed(() =>
   aggregateMetrics(runsStore.metricsRaw, runsStore.metricsRaw?.collectedAt ?? nowTick.value))
 const todayPlan = computed(() => buildTodayPlan(loopStore.loops, workspace.userTodos, new Date(nowTick.value)))
-const scene = computed(() => buildMindScene(loopStore.loops, runsStore.runs))
+// 思维大脑场景：kanban 投影驱动（无数据/不可用 → 空场景，仅核心神经元）
+const scene = computed(() => buildMindScene(mindData.value ?? { thoughts: [], runs: [], available: false }))
 
-const activeLoopCount = computed(() => loopStore.loops.filter(l => l.status === 'running').length)
+/** 思想核活跃数（有进行中/待介入运行的任务） */
+const activeLoopCount = computed(() =>
+  (mindData.value?.thoughts ?? []).filter(t => t.status === 'running' || t.status === 'awaiting-review').length)
 const statusCounts = computed(() => {
   const c = { running: 0, awaiting: 0, done: 0, failed: 0 }
-  for (const r of runsStore.runs) {
+  for (const r of mindData.value?.runs ?? []) {
     if (r.status === 'running') c.running++
     else if (r.status === 'awaiting-input') c.awaiting++
     else if (r.status === 'completed') c.done++
@@ -110,10 +116,11 @@ const inboxRows = computed(() =>
     name: loopStore.loops.find(l => l.id === run.graphId)?.name ?? run.graphId,
   })))
 
+/** 空态引导（思维网络未形成：kanban 投影为空/不可用 + 无任何 run） */
 const showGuide = computed(() =>
-  booted.value && loopStore.loops.length === 0 && runsStore.runs.length === 0)
+  booted.value && (mindData.value == null || mindData.value.thoughts.length === 0) && runsStore.runs.length === 0)
 
-// ── 导航动作（活大脑只读观察：点击思想核/run 去看状态，不做人工编排） ──
+// ── 导航动作（活大脑只读观察：点击思想核/末梢去看任务详情，不做人工编排） ──
 function goTaskFromAttention(row: AttentionRow): void {
   void router.push({ path: '/app/tasks', query: { status: row.status, task: row.taskId } })
 }
@@ -123,16 +130,24 @@ function onVizNode(node: MindNode): void {
 const goRuns = () => void router.push({ name: 'ia2.runs' })
 const goInbox = () => void router.push({ name: 'ia2.inbox' })
 const goTasks = (status: string) => void router.push({ path: '/app/tasks', query: { status } })
-function goLoopRuns(id: string): void {
-  void router.push({ name: 'ia2.runs', query: { loop: id } })
+/** 思想核（任务）点击 → 工作项区预选该任务 */
+function goThought(taskId: string): void {
+  void router.push({ path: '/app/tasks', query: { task: taskId } })
 }
 
-// ── 循环面板动作 ──
-async function onTick(id: string): Promise<void> { await loopStore.tickLoop(id).catch(() => {}) }
-async function onPause(id: string): Promise<void> { await loopStore.pauseLoop(id).catch(() => {}) }
-async function onDelete(id: string): Promise<void> {
-  if (!window.confirm(t('loopCockpit.loops.deleteConfirm'))) return
-  await loopStore.deleteLoop(id).catch(() => {})
+// ── 思想列表投影（kanban 任务 + 各自运行计数） ──
+const mindThoughts = computed(() => {
+  const thoughts = mindData.value?.thoughts ?? []
+  // 活跃优先排序（与大脑皮层分布同一语义），再按标题稳定
+  const rank = (s: string) => s === 'running' ? 0 : s === 'awaiting-review' ? 1 : s === 'blocked' ? 2 : s === 'completed' ? 3 : s === 'idle' ? 4 : 5
+  return [...thoughts].sort((a, b) => rank(a.status) - rank(b.status) || a.title.localeCompare(b.title))
+})
+function thoughtRunCount(thoughtId: string): string {
+  const n = (mindData.value?.runs ?? []).filter(r => r.thoughtId === thoughtId).length
+  return n > 0 ? `×${n}` : ''
+}
+function thoughtDotClass(status: string): string {
+  return `lcp-dot--${status}`
 }
 
 // ── 溢出菜单（次要入口收拢；活大脑已不需人工编排，编排区移出驾驶舱主链） ──
@@ -151,9 +166,6 @@ function planTimeLabel(at: number | null): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function loopStatusClass(status: LoopStatus): string {
-  return `lcp-dot--${status}`
-}
 </script>
 
 <template>
@@ -208,7 +220,7 @@ function loopStatusClass(status: LoopStatus): string {
     <div class="lcp-kpis" data-testid="lcp-kpis">
       <div class="lcp-kpi">
         <span class="lcp-kpi__num">{{ activeLoopCount }}</span>
-        <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.loopsActive') }} / {{ loopStore.loops.length }}</span>
+        <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.loopsActive') }} / {{ mindThoughts.length }}</span>
       </div>
       <div class="lcp-kpi">
         <span class="lcp-kpi__num lcp-kpi__num--cyan">{{ activeAgg.running }}</span>
@@ -274,37 +286,32 @@ function loopStatusClass(status: LoopStatus): string {
         </div>
       </section>
 
-      <!-- 右：循环面板 + 状态分布 + 今日计划 -->
+      <!-- 右：思想列表面板（已有任务）+ 状态分布 + 今日计划 -->
       <aside class="lcp-panel lcp-panel--loops" data-testid="lcp-loops-panel">
         <div class="lcp-panel__head">
           <span>{{ t('loopMind.loops.title') }}</span>
-          <span class="lcp-panel__count">{{ loopStore.loops.length }}</span>
+          <span class="lcp-panel__count">{{ mindThoughts.length }}</span>
         </div>
 
         <div
-          v-if="loopStore.loops.length === 0 && !loopStore.loading"
+          v-if="mindThoughts.length === 0 && booted"
           class="lcp-panel__empty"
           data-testid="lcp-loops-empty"
         >{{ t('loopMind.loops.empty') }}</div>
         <template v-else>
           <div class="lcp-loops-scroll">
             <div
-              v-for="loop in loopStore.loops"
-              :key="loop.id"
+              v-for="thought in mindThoughts"
+              :key="thought.id"
               class="lcp-loop-row"
               role="button"
               tabindex="0"
-              @click="goLoopRuns(loop.id)"
-              @keydown.enter="goLoopRuns(loop.id)"
+              @click="goThought(thought.id)"
+              @keydown.enter="goThought(thought.id)"
             >
-              <span class="lcp-dot" :class="loopStatusClass(loop.status)" />
-              <span class="lcp-loop-row__name" :title="`${loop.name} · ${loop.goal}`">{{ loop.name }}</span>
-              <LoopGraph class="lcp-loop-row__graph" :current-stage="loop.stage" :status="loop.status" :events="[]" compact />
-              <span class="lcp-loop-row__actions" @click.stop @keydown.stop>
-                <button type="button" :title="t('graph.actions.run')" @click="onTick(loop.id)"><span class="lcp-ico lcp-ico--run" /></button>
-                <button type="button" :title="t('graph.actions.pause')" @click="onPause(loop.id)"><span class="lcp-ico lcp-ico--pause" /></button>
-                <button type="button" :title="t('graph.actions.delete')" @click="onDelete(loop.id)"><span class="lcp-ico lcp-ico--trash" /></button>
-              </span>
+              <span class="lcp-dot" :class="thoughtDotClass(thought.status)" />
+              <span class="lcp-loop-row__name" :title="thought.title">{{ thought.title }}</span>
+              <span class="lcp-loop-row__meta">{{ thoughtRunCount(thought.id) }}</span>
             </div>
           </div>
 
