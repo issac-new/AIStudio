@@ -3,6 +3,12 @@
 // "Pure Ink" black-and-white theme. Scope is the matrix-chat surface only;
 // the global theme variables (styles/variables.scss) are NOT changed.
 
+// matrix-chat 本地 sass 变量（上游 variables.scss 无此二项；组件内直接引用）。
+// $accent-info: 信息色（链接/图标 info 态）；$text-on-accent: 强调色底上的文字。
+// 注意：sass 变量是编译期符号——组件的 @use 链需能解析到本文件。
+$accent-info: var(--info, #38bdf8);
+$text-on-accent: var(--bg-primary);
+
 :root {
   // ── Spacing ramp (element $spacing-* ) ──
   --mx-space-1x: 4px;

@@ -273,6 +273,9 @@ const roomTopic = computed(() => {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+// matrix-chat 本地：信息色（上游 variables.scss 无此变量）
+$accent-info: var(--info, #38bdf8);
+
 
 .matrix-room-header {
   display: flex;

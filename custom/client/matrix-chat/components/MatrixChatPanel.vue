@@ -6,7 +6,6 @@ import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
-import { useAuthStore } from '@/stores/hermes/auth'
 import MatrixRoomList from './MatrixRoomList.vue'
 import MatrixMessagePanel from './MatrixMessagePanel.vue'
 import MatrixRightPanel from './MatrixRightPanel.vue'
@@ -21,7 +20,11 @@ const clientStore = useMatrixClientStore()
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
 const composerStore = useMatrixComposerStore()
-const authStore = useAuthStore()
+async function handleLogout(): Promise<void> {
+  // v0.7.21 移除 auth store；登出走上游现行模式（AppSidebar.handleLogout 同构）
+  localStorage.clear()
+  window.location.reload()
+}
 const route = useRoute()
 const { t } = useI18n()
 
@@ -122,7 +125,7 @@ onUnmounted(() => {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
           <span>{{ t('matrixChat.joinRoom') }}</span>
         </button>
-        <button class="page-sidebar-menu-btn" type="button" @click="authStore.logout()">
+        <button class="page-sidebar-menu-btn" type="button" @click="handleLogout">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />

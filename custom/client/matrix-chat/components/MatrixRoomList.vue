@@ -133,7 +133,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
 
 .room-list-header {
   padding: 12px;
-  border-bottom: 1px solid $border-color;
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -141,15 +141,15 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   width: 100%;
   height: 34px;
   padding: 6px 10px;
-  border: 1px solid $border-color;
-  border-radius: $radius-sm;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 3px);
   font-size: 13px;
-  color: $text-primary;
-  background: $bg-input;
+  color: var(--text-primary);
+  background: var(--bg-input, var(--bg-card));
   outline: none;
 
-  &::placeholder { color: $text-muted; }
-  &:focus { border-color: $accent-primary; }
+  &::placeholder { color: var(--text-secondary); }
+  &:focus { border-color: var(--color-primary, #3b82f6); }
 }
 
 .room-list-syncing {
@@ -158,15 +158,15 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   justify-content: center;
   gap: 8px;
   padding: 24px;
-  color: $text-muted;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid $border-color;
-  border-top-color: $accent-primary;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--color-primary, #3b82f6);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -180,7 +180,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  color: $text-muted;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -197,16 +197,16 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   gap: 10px;
   padding: var(--mx-space-1x, 4px);
   cursor: pointer;
-  transition: background-color $transition-fast;
+  transition: background-color var(--transition-fast, 0.15s);
   border-radius: var(--mx-room-tile-radius, 8px);
   margin-bottom: var(--mx-space-1x, 4px);
 
   &:hover {
-    background: var(--mx-room-tile-hover-bg, rgba($accent-primary-rgb, 0.04));
+    background: var(--mx-room-tile-hover-bg, rgba(var(--accent-primary-rgb), 0.04));
   }
 
   &--selected {
-    background: var(--mx-room-tile-active-bg, rgba($accent-primary-rgb, 0.08));
+    background: var(--mx-room-tile-active-bg, rgba(var(--accent-primary-rgb), 0.08));
   }
 
   &--unread {
@@ -234,8 +234,8 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: $bg-secondary;
-  color: $text-secondary;
+  background: var(--bg-secondary, var(--bg-card));
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -248,7 +248,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   bottom: -2px;
   right: -2px;
   font-size: 10px;
-  background: $bg-card;
+  background: var(--bg-card, var(--bg-primary));
   border-radius: 50%;
   width: 14px;
   height: 14px;
@@ -275,7 +275,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
 .mx_RoomTile_name {
   font-size: 14px;
   font-weight: 500;
-  color: $text-primary;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -286,8 +286,8 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
 .mx_RoomTile_badge {
   font-size: 11px;
   font-weight: 600;
-  color: $text-on-accent;
-  background: $accent-primary;
+  color: var(--bg-primary);
+  background: var(--color-primary, #3b82f6);
   border-radius: 10px;
   padding: 1px 6px;
   min-width: 18px;
@@ -297,8 +297,8 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
 
 // Mention / highlight level: stronger emphasis (Pure Ink — no red)
 .mx_RoomTile--mention .mx_RoomTile_badge {
-  background: $text-primary;
-  color: $text-on-accent;
+  background: var(--text-primary);
+  color: var(--bg-primary);
   font-weight: 700;
 }
 
@@ -308,7 +308,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
 
 .mx_RoomTile_preview {
   font-size: 12px;
-  color: $text-muted;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
