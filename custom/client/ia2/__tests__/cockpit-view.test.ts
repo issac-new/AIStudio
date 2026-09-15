@@ -21,6 +21,7 @@ const { runRest, loopRest } = vi.hoisted(() => ({
     startRun: vi.fn(async () => ({ runId: 'f', instance: {} })),
     exportRun: vi.fn(async () => ({ run: {}, spec: null, events: [] })),
     getSpec: vi.fn(async () => null),
+    getMind: vi.fn(async () => ({ thoughts: [], runs: [], available: true })),
   },
   loopRest: {
     listLoops: vi.fn(async () => [] as Array<Record<string, unknown>>),
@@ -120,6 +121,8 @@ beforeEach(() => {
   workspaceStubs.state.userTodos = []
   runRest.listRuns.mockResolvedValue([])
   loopRest.listLoops.mockResolvedValue([])
+  // 思维大脑投影默认空（前一测试的 getMind 覆盖不外泄——clearAllMocks 不清实现）
+  runRest.getMind.mockResolvedValue({ thoughts: [], runs: [], available: true })
   vi.stubGlobal('confirm', vi.fn(() => true))
 })
 
@@ -141,19 +144,24 @@ describe('LoopCockpitView — 单页装配', () => {
     expect(wrapper.find('[data-testid="lcp-new-loop"]').exists()).toBe(false)
   })
 
-  it('KPI 数字：运行中/待介入来自 runs 投影；活跃循环来自 loop store', async () => {
+  it('KPI 数字：运行中/待介入来自 runs 投影；活跃思想核/总数来自 kanban 投影', async () => {
     runRest.listRuns.mockResolvedValue([
       makeRunDto('r1', 'l1', 'running'),
       makeRunDto('r2', 'l1', 'running'),
       makeRunDto('r3', 'l2', 'awaiting-input'),
     ] as never)
-    loopRest.listLoops.mockResolvedValue([
-      makeLoopDto('l1', 'running'), makeLoopDto('l2', 'idle'),
-    ] as never)
+    runRest.getMind.mockResolvedValue({
+      available: true,
+      thoughts: [
+        { id: 't1', title: '晨检', status: 'running', createdAt: null, board: null },
+        { id: 't2', title: '巡检', status: 'completed', createdAt: null, board: null },
+      ],
+      runs: [],
+    } as never)
     const { wrapper } = await mountView()
     const nums = wrapper.findAll('.lcp-kpi__num').map(n => n.text())
-    expect(nums[0]).toBe('1')            // 活跃循环 / 总数 2
-    expect(nums[1]).toBe('2')            // 运行中
+    expect(nums[0]).toBe('1')            // 活跃思想核（running）/ 总数 2
+    expect(nums[1]).toBe('2')            // 运行中（runs 投影）
     expect(nums[2]).toBe('1')            // 待介入
     expect(wrapper.text()).toContain('/ 2')
   })
@@ -196,62 +204,74 @@ describe('LoopCockpitView — 介入收件箱', () => {
 })
 
 describe('LoopCockpitView — 思维大脑舞台', () => {
-  it('SVG 渲染 + run 端点点击 → ia2.runDetail（数据驱动导航）', async () => {
-    runRest.listRuns.mockResolvedValue([
-      makeRunDto('grow-1', 'l1', 'running'),
-    ] as never)
-    loopRest.listLoops.mockResolvedValue([makeLoopDto('l1', 'running')] as never)
+  it('SVG 渲染 + 末梢点击 → 工作项区预选该任务（kanban 投影驱动导航）', async () => {
+    runRest.getMind.mockResolvedValue({
+      available: true,
+      thoughts: [{ id: 'tk-1', title: '晨检任务', status: 'running', createdAt: null, board: null }],
+      runs: [{ runId: 'run-9', thoughtId: 'tk-1', status: 'running', durationSec: 120, startedAt: '2026-09-15T10:00:00Z', endedAt: null, outcome: null, summary: null }],
+    } as never)
     const { wrapper, router } = await mountView()
     expect(wrapper.find('.lmv').exists()).toBe(true)
     const runNode = wrapper.find('.lmv__run')
     expect(runNode.exists()).toBe(true)
     await runNode.trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.params.runId).toBe('grow-1')
+    expect(router.currentRoute.value.name).toBe('ia2.tasks')
+    expect(router.currentRoute.value.query).toEqual({ task: 'tk-1' })
   })
 
-  it('零循环零 run：空态引导覆盖层（无编排 CTA——活大脑无需人工编排）；有数据即消失', async () => {
+  it('零思想核零 run：空态引导覆盖层（无编排 CTA）；kanban 投影有数据即消失', async () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-testid="lcp-guide"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('ia2.nav.orchestrate')
 
-    runRest.listRuns.mockResolvedValue([makeRunDto('r1', 'l1', 'completed')] as never)
-    loopRest.listLoops.mockResolvedValue([makeLoopDto('l1')] as never)
+    runRest.getMind.mockResolvedValue({
+      available: true,
+      thoughts: [{ id: 'tk-1', title: '任务', status: 'completed', createdAt: null, board: null }],
+      runs: [],
+    } as never)
     const { wrapper: withData } = await mountView()
     expect(withData.find('[data-testid="lcp-guide"]').exists()).toBe(false)
   })
 })
 
-describe('LoopCockpitView — 循环面板', () => {
-  it('循环行点击 → /app/runs?loop=:id（与兼容守卫深链同构）', async () => {
-    loopRest.listLoops.mockResolvedValue([makeLoopDto('l9')] as never)
+describe('LoopCockpitView — 思想列表面板（kanban 任务）', () => {
+  it('任务行点击 → /app/tasks?task=:id（工作项预选）', async () => {
+    runRest.getMind.mockResolvedValue({
+      available: true,
+      thoughts: [{ id: 'tk-9', title: '发布巡检', status: 'running', createdAt: null, board: null }],
+      runs: [],
+    } as never)
     const { wrapper, router } = await mountView()
     await wrapper.find('.lcp-loop-row').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/app/runs')
-    expect(router.currentRoute.value.query).toEqual({ loop: 'l9' })
+    expect(router.currentRoute.value.path).toBe('/app/tasks')
+    expect(router.currentRoute.value.query).toEqual({ task: 'tk-9' })
   })
 
-  it('行内动作接线：运行/暂停直调；删除先确认，取消则不发', async () => {
-    loopRest.listLoops.mockResolvedValue([makeLoopDto('l1')] as never)
+  it('思想列表渲染真实任务标题 + 运行计数徽标（活跃优先排序）', async () => {
+    runRest.getMind.mockResolvedValue({
+      available: true,
+      thoughts: [
+        { id: 't1', title: '已完成任务', status: 'completed', createdAt: null, board: null },
+        { id: 't2', title: '进行中任务', status: 'running', createdAt: null, board: null },
+      ],
+      runs: [
+        { runId: 'r1', thoughtId: 't1', status: 'completed', durationSec: 60, startedAt: null, endedAt: null, outcome: 'completed', summary: null },
+        { runId: 'r2', thoughtId: 't1', status: 'completed', durationSec: 60, startedAt: null, endedAt: null, outcome: 'completed', summary: null },
+      ],
+    } as never)
     const { wrapper } = await mountView()
-    const buttons = wrapper.findAll('.lcp-loop-row__actions button')
-    expect(buttons).toHaveLength(3)
-    await buttons[0].trigger('click') // run
-    expect(loopRest.tickLoop).toHaveBeenCalledWith('l1')
-    await buttons[1].trigger('click') // pause
-    expect(loopRest.pauseLoop).toHaveBeenCalledWith('l1')
-
-    vi.mocked(window.confirm).mockReturnValue(false)
-    await buttons[2].trigger('click') // delete（拒绝确认）
-    expect(window.confirm).toHaveBeenCalled()
-    expect(loopRest.deleteLoop).not.toHaveBeenCalled()
-    vi.mocked(window.confirm).mockReturnValue(true)
-    await buttons[2].trigger('click')
-    expect(loopRest.deleteLoop).toHaveBeenCalledWith('l1')
+    const rows = wrapper.findAll('.lcp-loop-row')
+    expect(rows).toHaveLength(2)
+    // 活跃优先：running 任务排前
+    expect(rows[0].text()).toContain('进行中任务')
+    expect(rows[1].text()).toContain('已完成任务')
+    // 运行计数徽标（t1 有 2 条运行史）
+    expect(rows[1].text()).toContain('×2')
   })
 
-  it('零循环：右栏渲染空态文案（活大脑无新建循环向导）', async () => {
+  it('零任务：右栏渲染空态文案', async () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-testid="lcp-loops-empty"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('loopMind.loops.empty')

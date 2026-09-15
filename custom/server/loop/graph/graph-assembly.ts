@@ -14,6 +14,7 @@ import { compileLoopToDef, type CompileDeps } from './graph-compiler'
 import { appendContractsById } from './phase-nodes'
 import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
+import { projectMindFromKanban } from './mind-projection'
 import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
@@ -302,6 +303,14 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
         escalationResendMs: ESCALATION_RESEND_INTERVAL_MS,
       },
     }
+  })
+
+  // 思维大脑数据源（2026-09-15）：kanban 运行史只读投影——图引擎自身 run 库
+  // 可能为空（引擎未跑过），而大脑应基于已有任务的运行数据长成。直读
+  // ~/.hermes/kanban.db 的 tasks/task_runs 投影为思想核 + 突触末梢；
+  // 不动 kanban 本体、不写图引擎库。库缺失/读失败 → available:false（前端落空态）。
+  router.get('/api/graph/mind', async (ctx) => {
+    ctx.body = projectMindFromKanban()
   })
 
   if (!tryBindSocket()) scheduleSocketRetry()
