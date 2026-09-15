@@ -1,0 +1,29 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 85763d8d..c3126c2e 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1131,6 +1131,7 @@ export default {
+     viz: {
+       empty: 'The thinking network has not formed yet — runs grow on their own, no orchestration needed.',
+       emptyCta: 'View inbox',
++      retry: 'Reload mind network',
+     },
+     viewRuns: 'View runs',
+     view3d: '3D',
+@@ -1140,6 +1141,16 @@ export default {
+     protoB: 'Plan B · Thinking cortex prototype',
+     clusterTasks: '{n} tasks',
+     clusterTasksUnit: 'tasks',
++    detail: {
++      title: 'Detail',
++      close: 'Close',
++      status: 'Status',
++      cluster: 'Cluster',
++      runs: 'Runs',
++      relations: 'Relations',
++      retry: 'Reload',
++      refreshing: 'Loading…',
++    },
+     status: {
+       running: 'Running',
+       blocked: 'Blocked',
