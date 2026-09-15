@@ -1,0 +1,25 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index c79c51dc..032b61b1 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1120,6 +1120,20 @@ export default {
+       moreLoops: '{n} more loops hidden',
+     },
+   },
++  loopMind: {
++    title: 'Thinking Mind',
++    tagline: 'Living thought · self-growing',
++    core: 'Core mind',
++    loops: {
++      title: 'Thoughts',
++      empty: 'No thought activity yet',
++    },
++    viz: {
++      empty: 'The thinking network has not formed yet — runs grow on their own, no orchestration needed.',
++      emptyCta: 'View inbox',
++    },
++    viewRuns: 'View runs',
++  },
+ 
+   agentManager: {
+     title: 'Agent Manager',

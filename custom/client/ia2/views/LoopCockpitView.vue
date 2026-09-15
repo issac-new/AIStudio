@@ -1,11 +1,11 @@
 <!-- overlay/custom/client/ia2/views/LoopCockpitView.vue -->
-<!-- 循环驾驶舱 —— Loop Graph 单页重构（2026-09-14 用户裁决：去多菜单、整合一页、
-     动态循环生长图 + 智能驾驶舱科技感）。
-     同时挂载于 /app（ia2.overview，登录默认落点）与 /hermes/loop（AppSidebar
-     「循环工程图」入口）——两个入口一个页面，替代退役的 OverviewView/LoopSpineView。
-     信息架构：注意力条 → KPI 条 → 三栏（介入收件箱 | 生长图+图例 | 循环面板+状态分布+今日计划）。
-     数据武装沿用 OverviewView 语义：挂载期一次性武装（workspace 聚合 + runs/loops 拉取
-     + awaiting/running 订阅域），零新增轮询；驾驶舱容器自带深色霓虹底（科技感显式设计）。 -->
+<!-- 循环驾驶舱 —— 2026-09-15 重设计（用户裁决：这是一个动态增长的活动思维大脑，
+     不是人工编排的机械控制台）。
+     中央 = 思维大脑 MindViz：核心神经元 + 思想核（循环/自建图）+ 突触末梢（运行）
+     自适应生长——分支规模随阶段推进/迭代加成壮大、复用强度驱动突触可塑性、
+     事件以记忆脉冲浮现褪色；不做人工编排入口。
+     保留两侧驾驶舱读数（介入收件箱/KPI/循环面板）作为大脑的观测仪表。
+     挂载点不变：/app（ia2.overview，登录默认落点）与 /hermes/loop（AppSidebar）。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -15,11 +15,9 @@ import { useLoopStore } from '@/custom/loop/store/loop'
 import { useWorkspaceStore } from '../store/workspace'
 import AttentionStrip from '../components/AttentionStrip.vue'
 import StatusDistributionCard from '../components/StatusDistributionCard.vue'
-import LoopGrowthViz from '../components/LoopGrowthViz.vue'
+import MindViz from '../components/MindViz.vue'
 import LoopGraph from '@/custom/loop/components/LoopGraph.vue'
-import LoopOnboarding from '@/custom/loop/components/LoopOnboarding.vue'
-import LoopCreateWizard from '@/custom/loop/components/LoopCreateWizard.vue'
-import { buildGrowthScene, type GrowthNode } from '../adapters/growth'
+import { buildMindScene, type MindNode } from '../adapters/mind'
 import {
   aggregateActiveRuns, aggregateInbox, aggregateMetrics, buildTodayPlan, formatDuration,
   mergeAttention, type AttentionRow,
@@ -91,7 +89,7 @@ const inboxAgg = computed(() => aggregateInbox(runsStore.runs, nowTick.value))
 const metrics = computed(() =>
   aggregateMetrics(runsStore.metricsRaw, runsStore.metricsRaw?.collectedAt ?? nowTick.value))
 const todayPlan = computed(() => buildTodayPlan(loopStore.loops, workspace.userTodos, new Date(nowTick.value)))
-const scene = computed(() => buildGrowthScene(loopStore.loops, runsStore.runs))
+const scene = computed(() => buildMindScene(loopStore.loops, runsStore.runs))
 
 const activeLoopCount = computed(() => loopStore.loops.filter(l => l.status === 'running').length)
 const statusCounts = computed(() => {
@@ -115,16 +113,15 @@ const inboxRows = computed(() =>
 const showGuide = computed(() =>
   booted.value && loopStore.loops.length === 0 && runsStore.runs.length === 0)
 
-// ── 导航动作 ──
+// ── 导航动作（活大脑只读观察：点击思想核/run 去看状态，不做人工编排） ──
 function goTaskFromAttention(row: AttentionRow): void {
   void router.push({ path: '/app/tasks', query: { status: row.status, task: row.taskId } })
 }
-function onVizNode(node: GrowthNode): void {
+function onVizNode(node: MindNode): void {
   if (node.to) void router.push(node.to)
 }
 const goRuns = () => void router.push({ name: 'ia2.runs' })
 const goInbox = () => void router.push({ name: 'ia2.inbox' })
-const goOrchestrate = () => void router.push({ name: 'ia2.orchestrate' })
 const goTasks = (status: string) => void router.push({ path: '/app/tasks', query: { status } })
 function goLoopRuns(id: string): void {
   void router.push({ name: 'ia2.runs', query: { loop: id } })
@@ -138,18 +135,7 @@ async function onDelete(id: string): Promise<void> {
   await loopStore.deleteLoop(id).catch(() => {})
 }
 
-// ── 新建循环 ──
-const showWizard = ref(false)
-function onWizardCreated(): void {
-  showWizard.value = false
-  const created = loopStore.currentLoop
-  if (created) {
-    void loopStore.tickLoop(created.id).catch(() => {})
-    goLoopRuns(created.id)
-  }
-}
-
-// ── 溢出菜单（次要入口收拢） ──
+// ── 溢出菜单（次要入口收拢；活大脑已不需人工编排，编排区移出驾驶舱主链） ──
 const moreOpen = ref(false)
 const MORE_ITEMS = [
   { key: 'inbox', label: 'ia2.nav.inbox', go: goInbox },
@@ -177,8 +163,8 @@ function loopStatusClass(status: LoopStatus): string {
       <div class="lcp-top__brand">
         <span class="lcp-top__mark" aria-hidden="true" />
         <div class="lcp-top__titles">
-          <h2 class="lcp-top__title">{{ t('loopCockpit.title') }}</h2>
-          <span class="lcp-top__tagline">{{ t('loopCockpit.tagline') }}</span>
+          <h2 class="lcp-top__title">{{ t('loopMind.title') }}</h2>
+          <span class="lcp-top__tagline">{{ t('loopMind.tagline') }}</span>
         </div>
       </div>
 
@@ -190,14 +176,8 @@ function loopStatusClass(status: LoopStatus): string {
       </div>
 
       <div class="lcp-top__actions">
-        <button type="button" class="lcp-btn lcp-btn--primary" data-testid="lcp-new-loop" @click="showWizard = true">
-          {{ t('loopCockpit.loops.newLoop') }}
-        </button>
-        <button type="button" class="lcp-btn" data-testid="lcp-orchestrate" @click="goOrchestrate">
-          {{ t('ia2.nav.orchestrate') }}
-        </button>
         <button type="button" class="lcp-btn" data-testid="lcp-all-runs" @click="goRuns">
-          {{ t('ia2.nav.runs') }}
+          {{ t('loopMind.viewRuns') }}
         </button>
         <div class="lcp-more">
           <button
@@ -274,14 +254,13 @@ function loopStatusClass(status: LoopStatus): string {
         </div>
       </aside>
 
-      <!-- 中：生长图 + 图例 -->
+      <!-- 中：思维大脑舞台 -->
       <section class="lcp-stage" data-testid="lcp-stage">
-        <LoopGrowthViz :scene="scene" @node-click="onVizNode" />
+        <MindViz :scene="scene" @node-click="onVizNode" />
         <div v-if="showGuide" class="lcp-stage__guide" data-testid="lcp-guide">
-          <p class="lcp-stage__guide-text">{{ t('loopCockpit.viz.empty') }}</p>
+          <p class="lcp-stage__guide-text">{{ t('loopMind.viz.empty') }}</p>
           <div class="lcp-stage__guide-cta">
-            <button type="button" class="lcp-btn lcp-btn--primary" @click="showWizard = true">{{ t('loopCockpit.viz.emptyCta') }}</button>
-            <button type="button" class="lcp-btn" @click="goOrchestrate">{{ t('loopCockpit.viz.emptyCta2') }}</button>
+            <button type="button" class="lcp-btn" @click="goInbox">{{ t('loopMind.viz.emptyCta') }}</button>
           </div>
         </div>
         <div class="lcp-legend" data-testid="lcp-legend">
@@ -298,15 +277,15 @@ function loopStatusClass(status: LoopStatus): string {
       <!-- 右：循环面板 + 状态分布 + 今日计划 -->
       <aside class="lcp-panel lcp-panel--loops" data-testid="lcp-loops-panel">
         <div class="lcp-panel__head">
-          <span>{{ t('loopCockpit.loops.title') }}</span>
+          <span>{{ t('loopMind.loops.title') }}</span>
           <span class="lcp-panel__count">{{ loopStore.loops.length }}</span>
         </div>
 
-        <LoopOnboarding
+        <div
           v-if="loopStore.loops.length === 0 && !loopStore.loading"
+          class="lcp-panel__empty"
           data-testid="lcp-loops-empty"
-          @create="showWizard = true"
-        />
+        >{{ t('loopMind.loops.empty') }}</div>
         <template v-else>
           <div class="lcp-loops-scroll">
             <div
@@ -353,7 +332,6 @@ function loopStatusClass(status: LoopStatus): string {
       </aside>
     </div>
 
-    <LoopCreateWizard v-if="showWizard" @close="showWizard = false" @created="onWizardCreated" />
   </div>
 </template>
 
