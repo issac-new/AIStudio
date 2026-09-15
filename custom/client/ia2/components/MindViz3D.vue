@@ -1,10 +1,9 @@
 <!-- overlay/custom/client/ia2/components/MindViz3D.vue -->
-<!-- 3D 思维图谱（2026-09-15 形态重构 v2）：**无中心聚类景观**——用户裁决
-     「不会有思维原点，所有思维图都应聚类分类呈现」。
-     皮层地形（脑回起伏网格承载）+ 聚类柱群（任务按命名族/父子树分群散布，
-     粗细=运行史、高度=活跃度、顶面色相）+ 关系弧（父子/委派有机曲线）+
-     末梢运行点 + 族标签（聚类语义可读）。无核心柱、无思维原点。
-     交互：滚轮缩放、拖拽旋转、左侧族聚焦。色彩读全局 CSS 变量（浅色一致）。 -->
+<!-- 3D 思维图谱（2026-09-15 形态重构 v3）：**多维功能分区结构**——用户裁决
+     「皮层不对：像大脑那样有不同的功能分区，是一个多维结构，不是一个弯曲表面
+     的堆砌」。功能分区（聚类族 × 状态功能面 × 活跃度三维定位）= 半透明分区体，
+     内部任务柱群自治；分区之间由投射通路（跨区关系边拉起）连接；无中心原点。
+     交互：滚轮缩放、拖拽旋转、左侧分区聚焦。色彩读全局 CSS 变量（浅色一致）。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -22,7 +21,7 @@ const { t } = useI18n()
 const scene = computed<MindScene>(() => buildMind3DScene(props.projection))
 
 const containerRef = ref<HTMLDivElement | null>(null)
-const focusCluster = ref<string | null>(null)
+const focusRegion = ref<string | null>(null)
 
 let renderer: THREE.WebGLRenderer | null = null
 let threeScene: THREE.Scene | null = null
@@ -34,9 +33,10 @@ const pingRings: THREE.Mesh[] = []
 
 const orbit = {
   theta: Math.PI * 0.28,
-  phi: Math.PI * 0.38,
-  dist: 560,
+  phi: Math.PI * 0.4,
+  dist: 620,
   targetX: 0,
+  targetY: 30,
   targetZ: 0,
   dragging: false,
   lastX: 0,
@@ -132,7 +132,7 @@ function buildThree(): void {
   const height = containerRef.value.clientHeight
   threeScene = new THREE.Scene()
   threeScene.background = new THREE.Color(bgColor())
-  threeScene.fog = new THREE.Fog(bgColor(), 600, 1400)
+  threeScene.fog = new THREE.Fog(bgColor(), 700, 1500)
 
   camera = new THREE.PerspectiveCamera(46, width / height, 1, 4000)
   renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -140,41 +140,35 @@ function buildThree(): void {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   containerRef.value.appendChild(renderer.domElement)
 
-  threeScene.add(new THREE.AmbientLight(0xffffff, 0.8))
-  const dir = new THREE.DirectionalLight(0xffffff, 0.65)
+  threeScene.add(new THREE.AmbientLight(0xffffff, 0.85))
+  const dir = new THREE.DirectionalLight(0xffffff, 0.6)
   dir.position.set(300, 500, 400)
   threeScene.add(dir)
 
   const sc = scene.value
 
-  // 皮层地形（脑回起伏网格承载）
-  if (sc.terrain.length > 0) {
-    const terrainGeo = new THREE.PlaneGeometry(560, 560, 26, 26)
-    const posAttr = terrainGeo.attributes.position
-    for (let i = 0; i < posAttr.count; i++) {
-      const tp = sc.terrain[i]
-      if (tp) posAttr.setZ(i, tp.y)
-    }
-    terrainGeo.computeVertexNormals()
-    const terrainMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(statusColor('idle')).multiplyScalar(0.14),
+  // ── 功能分区体（半透明边界体 + 分区标签） ──
+  for (const region of sc.regions) {
+    // 分区体：半透明球壳标记功能分区边界（多维结构的「区」）
+    const boundGeo = new THREE.SphereGeometry(region.radius + 16, 20, 16)
+    const boundMat = new THREE.MeshStandardMaterial({
+      color: statusColor(region.dominantStatus),
       transparent: true,
-      opacity: 0.3,
-      wireframe: true,
+      opacity: 0.06,
+      side: THREE.BackSide,
+      depthWrite: false,
     })
-    const terrain = new THREE.Mesh(terrainGeo, terrainMat)
-    terrain.rotation.x = -Math.PI / 2
-    threeScene.add(terrain)
-  }
+    const bound = new THREE.Mesh(boundGeo, boundMat)
+    bound.position.set(region.cx, region.cy, region.cz)
+    threeScene.add(bound)
 
-  // 族标签（聚类语义可读）
-  for (const cluster of sc.clusters) {
-    const label = makeLabelSprite(cluster.label, `${cluster.count} ${t('loopMind.clusterTasksUnit')}`)
-    label.position.set(cluster.cx, 60, cluster.cz)
+    // 分区标签（族 · 功能面 · 计数）
+    const label = makeLabelSprite(region.label, `${region.count} ${t('loopMind.clusterTasksUnit')}`)
+    label.position.set(region.cx, region.cy + region.radius + 22, region.cz)
     threeScene.add(label)
   }
 
-  // 聚类柱群（任务实体）
+  // ── 分区柱群（任务实体：粗细=运行史、高度=活跃度） ──
   const LABEL_TOP_N = 6
   const columns = sc.nodes.filter(n => n.kind === 'column')
   const labelVisibleIds = new Set(
@@ -195,7 +189,7 @@ function buildThree(): void {
       opacity: node.status === 'archived' ? 0.45 : 0.88,
     })
     const mesh = new THREE.Mesh(geo, mat)
-    mesh.position.set(node.x, node.terrainY + node.h / 2, node.z)
+    mesh.position.set(node.x, node.y + node.h / 2, node.z)
     mesh.userData.mindNode = node
     if (node.budding) {
       mesh.scale.set(0.01, 0.01, 0.01)
@@ -206,7 +200,7 @@ function buildThree(): void {
 
     if (labelVisibleIds.has(node.id)) {
       const label = makeLabelSprite(node.label, node.sub)
-      label.position.set(node.x, node.terrainY + node.h + 12, node.z)
+      label.position.set(node.x, node.y + node.h + 10, node.z)
       threeScene.add(label)
     }
 
@@ -220,7 +214,7 @@ function buildThree(): void {
         depthTest: false,
       })
       const ring = new THREE.Mesh(ringGeo, ringMat)
-      ring.position.set(node.x, node.terrainY + node.h + 2, node.z)
+      ring.position.set(node.x, node.y + node.h + 2, node.z)
       ring.rotation.x = -Math.PI / 2
       ring.userData.pingRing = { baseR: node.r + 3, phase: hashPhase(node.id) }
       threeScene.add(ring)
@@ -228,7 +222,7 @@ function buildThree(): void {
     }
   }
 
-  // 末梢运行点
+  // ── 末梢运行点 ──
   for (const node of sc.nodes.filter(n => n.kind === 'run')) {
     const color = statusColor(node.status)
     const geo = new THREE.SphereGeometry(node.r, 12, 12)
@@ -243,7 +237,7 @@ function buildThree(): void {
     threeScene.add(mesh)
   }
 
-  // 关系弧（父子/委派有机曲线）
+  // ── 投射通路（跨区关系边拉起为区间通路；同区产生弧在柱顶） ──
   for (const edge of sc.edges) {
     const from = new THREE.Vector3(edge.fromPos.x, edge.fromPos.y, edge.fromPos.z)
     const to = new THREE.Vector3(edge.toPos.x, edge.toPos.y, edge.toPos.z)
@@ -258,7 +252,7 @@ function buildThree(): void {
     const mat = new THREE.LineBasicMaterial({
       color: statusColor(edge.status),
       transparent: true,
-      opacity: edge.relKind === 'delegate' ? 0.5 : 0.14 + edge.strength * 0.4,
+      opacity: edge.crossRegion ? 0.6 : 0.14 + edge.strength * 0.4,
       ...(edge.relKind === 'delegate' ? { dashSize: 6, gapSize: 4 } : {}),
     })
     const line = new THREE.Line(geo, mat)
@@ -266,7 +260,7 @@ function buildThree(): void {
     threeScene.add(line)
   }
 
-  // 拾取
+  // ── 拾取 ──
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
   const onClick = (ev: MouseEvent) => {
@@ -281,7 +275,7 @@ function buildThree(): void {
   }
   renderer.domElement.addEventListener('click', onClick)
 
-  // 轨道交互
+  // ── 轨道交互 ──
   const el = renderer.domElement
   const onDown = (e: MouseEvent) => { orbit.dragging = true; orbit.lastX = e.clientX; orbit.lastY = e.clientY }
   const onMove = (e: MouseEvent) => {
@@ -293,7 +287,7 @@ function buildThree(): void {
   const onUp = () => { orbit.dragging = false }
   const onWheel = (e: WheelEvent) => {
     e.preventDefault()
-    orbit.dist = Math.max(200, Math.min(1200, orbit.dist + e.deltaY * 0.6))
+    orbit.dist = Math.max(200, Math.min(1300, orbit.dist + e.deltaY * 0.6))
   }
   el.addEventListener('mousedown', onDown)
   window.addEventListener('mousemove', onMove)
@@ -304,10 +298,10 @@ function buildThree(): void {
     if (disposed || !renderer || !camera || !threeScene) return
     camera.position.set(
       orbit.targetX + Math.cos(orbit.theta) * Math.sin(orbit.phi) * orbit.dist,
-      Math.cos(orbit.phi) * orbit.dist,
+      orbit.targetY + Math.cos(orbit.phi) * orbit.dist,
       orbit.targetZ + Math.sin(orbit.theta) * Math.sin(orbit.phi) * orbit.dist,
     )
-    camera.lookAt(orbit.targetX, 0, orbit.targetZ)
+    camera.lookAt(orbit.targetX, orbit.targetY, orbit.targetZ)
 
     const now = performance.now()
     for (const mesh of buddingMeshes) {
@@ -347,14 +341,15 @@ function onResize(): void {
   renderer.setSize(w, h)
 }
 
-function onFocusCluster(key: string | null): void {
-  focusCluster.value = key
+/** 分区聚焦：注视点平移到分区质心 + 拉近 */
+function onFocusRegion(key: string | null): void {
+  focusRegion.value = key
   if (key == null) {
-    orbit.targetX = 0; orbit.targetZ = 0; orbit.dist = 560
+    orbit.targetX = 0; orbit.targetY = 30; orbit.targetZ = 0; orbit.dist = 620
   } else {
-    const c = scene.value.clusters.find(x => x.key === key)
-    if (c) {
-      orbit.targetX = c.cx; orbit.targetZ = c.cz; orbit.dist = 380
+    const r = scene.value.regions.find(x => x.key === key)
+    if (r) {
+      orbit.targetX = r.cx; orbit.targetY = r.cy; orbit.targetZ = r.cz; orbit.dist = 340
     }
   }
 }
@@ -382,23 +377,24 @@ watch(() => props.projection, () => {
 
 <template>
   <div class="lm3d">
-    <div class="lm3d__clusters" data-testid="lm3d-clusters">
+    <!-- 分区聚焦切换（功能分区视角：全网络 / 各功能分区） -->
+    <div class="lm3d__regions" data-testid="lm3d-regions">
       <button
         type="button"
-        class="lm3d__cluster-btn"
-        :class="{ 'lm3d__cluster-btn--on': focusCluster === null }"
-        data-testid="lm3d-cluster-all"
-        @click="onFocusCluster(null)"
+        class="lm3d__region-btn"
+        :class="{ 'lm3d__region-btn--on': focusRegion === null }"
+        data-testid="lm3d-region-all"
+        @click="onFocusRegion(null)"
       >{{ t('loopMind.zone.all') }}</button>
       <button
-        v-for="cluster in scene.clusters"
-        :key="cluster.key"
+        v-for="region in scene.regions"
+        :key="region.key"
         type="button"
-        class="lm3d__cluster-btn"
-        :class="{ 'lm3d__cluster-btn--on': focusCluster === cluster.key }"
-        :data-testid="`lm3d-cluster-${cluster.key}`"
-        @click="onFocusCluster(cluster.key)"
-      >{{ cluster.label }} · {{ cluster.count }}</button>
+        class="lm3d__region-btn"
+        :class="{ 'lm3d__region-btn--on': focusRegion === region.key }"
+        :data-testid="`lm3d-region-${region.key}`"
+        @click="onFocusRegion(region.key)"
+      >{{ region.label }} · {{ region.count }}</button>
     </div>
 
     <div ref="containerRef" class="lm3d__canvas" data-testid="lm3d-canvas" />
@@ -411,20 +407,20 @@ watch(() => props.projection, () => {
 .lm3d__canvas { flex: 1; min-height: 0; cursor: grab; }
 .lm3d__canvas:active { cursor: grabbing; }
 
-.lm3d__clusters {
+.lm3d__regions {
   position: absolute; top: 10px; left: 10px; z-index: 5;
   display: flex; flex-direction: column; gap: 4px;
   max-height: calc(100% - 20px); overflow-y: auto;
 }
-.lm3d__cluster-btn {
+.lm3d__region-btn {
   padding: 4px 10px; border-radius: var(--radius-standard);
   border: 1px solid var(--border-color);
   background: var(--bg-card, var(--bg-primary)); color: var(--text-secondary);
   font-size: 11.5px; font-family: inherit; cursor: pointer; text-align: left;
   white-space: nowrap;
 }
-.lm3d__cluster-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.lm3d__cluster-btn--on {
+.lm3d__region-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.lm3d__region-btn--on {
   border-color: var(--color-primary, #3b82f6);
   background: var(--color-primary, #3b82f6);
   color: var(--bg-primary);
