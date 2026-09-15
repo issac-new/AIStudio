@@ -24,7 +24,7 @@ import { relatedIdsOf, type MindNode as Mind3DNode } from '../adapters/mind3d'
 import { runRest } from '@/custom/loop/runcenter/api'
 import {
   aggregateActiveRuns, aggregateInbox, aggregateMetrics, buildTodayPlan, formatDuration,
-  mergeAttention, type AttentionRow,
+  mergeAttention, DEFAULT_WINDOW_MS, type AttentionRow,
 } from '../adapters/overview'
 
 const router = useRouter()
@@ -141,6 +141,21 @@ const statusCounts = computed(() => {
     else if (r.status === 'failed') c.failed++
   }
   return c
+})
+
+/** 完成 KPI（7 日窗口）：与「7日完成」标签同口径（窗口常量复用 overview 聚合，
+ * 单一事实源）。statusCounts.done 是全量口径，供图例与可视化场景一致使用；
+ * mind 投影的 runs 无服务端窗口，KPI 直接用它会把历史完成全算进"7 日"。 */
+const kpiDone7d = computed(() => {
+  const windowStart = nowTick.value - DEFAULT_WINDOW_MS
+  let done = 0
+  for (const r of mindData.value?.runs ?? []) {
+    if (r.status !== 'completed') continue
+    const t = Date.parse(r.endedAt ?? r.startedAt ?? '')
+    if (!Number.isFinite(t) || t < windowStart || t > nowTick.value) continue
+    done++
+  }
+  return done
 })
 
 /** 收件箱行（待决 run，最多 8 条；loop 名优先展示） */
@@ -340,7 +355,7 @@ function planTimeLabel(at: number | null): string {
         <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.awaiting') }}</span>
       </div>
       <div class="lcp-kpi">
-        <span class="lcp-kpi__num lcp-kpi__num--green">{{ statusCounts.done }}</span>
+        <span class="lcp-kpi__num lcp-kpi__num--green">{{ kpiDone7d }}</span>
         <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.done7d') }}</span>
       </div>
       <div class="lcp-kpi">
