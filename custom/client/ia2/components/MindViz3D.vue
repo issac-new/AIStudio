@@ -11,7 +11,7 @@ import * as THREE from 'three'
 import { buildMind3DScene, type MindNode, type MindScene } from '../adapters/mind3d'
 import type { MindProjectionDto } from '../adapters/mind'
 
-const props = defineProps<{ projection: MindProjectionDto }>()
+const props = defineProps<{ projection: MindProjectionDto; focusedIds?: Set<string> | null }>()
 const emit = defineEmits<{
   (e: 'node-click', node: MindNode): void
   (e: 'fallback-2d'): void
@@ -21,7 +21,7 @@ const { t } = useI18n()
 const scene = computed<MindScene>(() => buildMind3DScene(props.projection))
 
 const containerRef = ref<HTMLDivElement | null>(null)
-const focusRegion = ref<string | null>(null)
+const focusCluster = ref<string | null>(null)
 
 let renderer: THREE.WebGLRenderer | null = null
 let threeScene: THREE.Scene | null = null
@@ -147,24 +147,10 @@ function buildThree(): void {
 
   const sc = scene.value
 
-  // ── 功能分区体（半透明边界体 + 分区标签） ──
-  for (const region of sc.regions) {
-    // 分区体：半透明球壳标记功能分区边界（多维结构的「区」）
-    const boundGeo = new THREE.SphereGeometry(region.radius + 16, 20, 16)
-    const boundMat = new THREE.MeshStandardMaterial({
-      color: statusColor(region.dominantStatus),
-      transparent: true,
-      opacity: 0.06,
-      side: THREE.BackSide,
-      depthWrite: false,
-    })
-    const bound = new THREE.Mesh(boundGeo, boundMat)
-    bound.position.set(region.cx, region.cy, region.cz)
-    threeScene.add(bound)
-
-    // 分区标签（族 · 功能面 · 计数）
-    const label = makeLabelSprite(region.label, `${region.count} ${t('loopMind.clusterTasksUnit')}`)
-    label.position.set(region.cx, region.cy + region.radius + 22, region.cz)
+  // ── 簇界标（力导向收敛后的涌现团块；无手工边界体） ──
+  for (const cluster of sc.clusters) {
+    const label = makeLabelSprite(cluster.label, `${cluster.count} ${t('loopMind.clusterTasksUnit')}`)
+    label.position.set(cluster.cx, 70, cluster.cz)
     threeScene.add(label)
   }
 
@@ -181,12 +167,14 @@ function buildThree(): void {
     const geo = node.status === 'completed'
       ? new THREE.CylinderGeometry(node.r * 0.7, node.r, node.h, 8)
       : new THREE.CylinderGeometry(node.r, node.r, node.h, 20)
+    const focused = props.focusedIds
+    const dimmed = focused != null && !focused.has(node.id)
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: node.pulse ? color : 0x000000,
       emissiveIntensity: node.pulse ? 0.45 : 0,
       transparent: true,
-      opacity: node.status === 'archived' ? 0.45 : 0.88,
+      opacity: dimmed ? 0.08 : node.status === 'archived' ? 0.45 : 0.88,
     })
     const mesh = new THREE.Mesh(geo, mat)
     mesh.position.set(node.x, node.y + node.h / 2, node.z)
@@ -226,10 +214,14 @@ function buildThree(): void {
   for (const node of sc.nodes.filter(n => n.kind === 'run')) {
     const color = statusColor(node.status)
     const geo = new THREE.SphereGeometry(node.r, 12, 12)
+    const focused = props.focusedIds
+    const dimmed = focused != null && !focused.has(node.id)
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: node.pulse ? color : 0x000000,
       emissiveIntensity: node.pulse ? 0.6 : 0,
+      transparent: true,
+      opacity: dimmed ? 0.06 : 1,
     })
     const mesh = new THREE.Mesh(geo, mat)
     mesh.position.set(node.x, node.y, node.z)
@@ -249,10 +241,12 @@ function buildThree(): void {
     const curve = new THREE.QuadraticBezierCurve3(from, apex, to)
     const pts = curve.getPoints(24)
     const geo = new THREE.BufferGeometry().setFromPoints(pts)
+    const focused = props.focusedIds
+    const edgeDimmed = focused != null && !(focused.has(edge.from) && focused.has(edge.to))
     const mat = new THREE.LineBasicMaterial({
       color: statusColor(edge.status),
       transparent: true,
-      opacity: edge.crossRegion ? 0.6 : 0.14 + edge.strength * 0.4,
+      opacity: edgeDimmed ? 0.04 : edge.crossCluster ? 0.6 : 0.14 + edge.strength * 0.4,
       ...(edge.relKind === 'delegate' ? { dashSize: 6, gapSize: 4 } : {}),
     })
     const line = new THREE.Line(geo, mat)
@@ -342,14 +336,14 @@ function onResize(): void {
 }
 
 /** 分区聚焦：注视点平移到分区质心 + 拉近 */
-function onFocusRegion(key: string | null): void {
-  focusRegion.value = key
+function onFocusCluster(key: string | null): void {
+  focusCluster.value = key
   if (key == null) {
     orbit.targetX = 0; orbit.targetY = 30; orbit.targetZ = 0; orbit.dist = 620
   } else {
-    const r = scene.value.regions.find(x => x.key === key)
-    if (r) {
-      orbit.targetX = r.cx; orbit.targetY = r.cy; orbit.targetZ = r.cz; orbit.dist = 340
+    const c2 = scene.value.clusters.find(x => x.key === key)
+    if (c2) {
+      orbit.targetX = c2.cx; orbit.targetY = c2.cy; orbit.targetZ = c2.cz; orbit.dist = 340
     }
   }
 }
@@ -377,24 +371,24 @@ watch(() => props.projection, () => {
 
 <template>
   <div class="lm3d">
-    <!-- 分区聚焦切换（功能分区视角：全网络 / 各功能分区） -->
-    <div class="lm3d__regions" data-testid="lm3d-regions">
+    <!-- 簇聚焦切换（力导向涌现团块：全网络 / 各任务簇） -->
+    <div class="lm3d__clusters" data-testid="lm3d-regions">
       <button
         type="button"
-        class="lm3d__region-btn"
-        :class="{ 'lm3d__region-btn--on': focusRegion === null }"
-        data-testid="lm3d-region-all"
-        @click="onFocusRegion(null)"
+        class="lm3d__cluster-btn"
+        :class="{ 'lm3d__cluster-btn--on': focusCluster === null }"
+        data-testid="lm3d-cluster-all"
+        @click="onFocusCluster(null)"
       >{{ t('loopMind.zone.all') }}</button>
       <button
-        v-for="region in scene.regions"
-        :key="region.key"
+        v-for="region in scene.clusters"
+        :key="cluster.key"
         type="button"
-        class="lm3d__region-btn"
-        :class="{ 'lm3d__region-btn--on': focusRegion === region.key }"
-        :data-testid="`lm3d-region-${region.key}`"
-        @click="onFocusRegion(region.key)"
-      >{{ region.label }} · {{ region.count }}</button>
+        class="lm3d__cluster-btn"
+        :class="{ 'lm3d__cluster-btn--on': focusCluster === cluster.key }"
+        :data-testid="`lm3d-cluster-${cluster.key}`"
+        @click="onFocusCluster(cluster.key)"
+      >{{ cluster.label }} · {{ cluster.count }}</button>
     </div>
 
     <div ref="containerRef" class="lm3d__canvas" data-testid="lm3d-canvas" />
@@ -407,20 +401,20 @@ watch(() => props.projection, () => {
 .lm3d__canvas { flex: 1; min-height: 0; cursor: grab; }
 .lm3d__canvas:active { cursor: grabbing; }
 
-.lm3d__regions {
+.lm3d__clusters {
   position: absolute; top: 10px; left: 10px; z-index: 5;
   display: flex; flex-direction: column; gap: 4px;
   max-height: calc(100% - 20px); overflow-y: auto;
 }
-.lm3d__region-btn {
+.lm3d__cluster-btn {
   padding: 4px 10px; border-radius: var(--radius-standard);
   border: 1px solid var(--border-color);
   background: var(--bg-card, var(--bg-primary)); color: var(--text-secondary);
   font-size: 11.5px; font-family: inherit; cursor: pointer; text-align: left;
   white-space: nowrap;
 }
-.lm3d__region-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.lm3d__region-btn--on {
+.lm3d__cluster-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.lm3d__cluster-btn--on {
   border-color: var(--color-primary, #3b82f6);
   background: var(--color-primary, #3b82f6);
   color: var(--bg-primary);

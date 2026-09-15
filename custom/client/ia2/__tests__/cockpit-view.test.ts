@@ -242,7 +242,7 @@ describe('LoopCockpitView — 思维大脑舞台', () => {
 })
 
 describe('LoopCockpitView — 思想列表面板（kanban 任务）', () => {
-  it('任务行点击 → /app/tasks?task=:id（工作项预选）', async () => {
+  it('任务行点击 → 就地筛选关联项（不跳 kanban）+ 右栏打开详情说明', async () => {
     runRest.getMind.mockResolvedValue({
       available: true,
       thoughts: [{ id: 'tk-9', title: '发布巡检', status: 'running', createdAt: null, board: null }],
@@ -251,8 +251,18 @@ describe('LoopCockpitView — 思想列表面板（kanban 任务）', () => {
     const { wrapper, router } = await mountView()
     await wrapper.find('.lcp-loop-row').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/app/tasks')
-    expect(router.currentRoute.value.query).toEqual({ task: 'tk-9' })
+    // 不跳路由（就地筛选）
+    expect(router.currentRoute.value.path).not.toBe('/app/tasks')
+    // 右栏打开详情说明：点击链路生效（详情面板 DOM 出现 + 内容可读）
+    // 注：detailTaskId/detailOpen 是 setup 内 ref，不经 expose——断言走 DOM 而非 vm
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    const detail = wrapper.find('[data-testid="lcp-detail"]')
+    expect(detail.exists()).toBe(true)
+    // 再点同一行取消聚焦
+    await wrapper.find('[data-testid="lcp-detail-close"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="lcp-detail"]').exists()).toBe(false)
   })
 
   it('思想列表渲染真实任务标题 + 运行计数徽标（活跃优先排序）', async () => {
