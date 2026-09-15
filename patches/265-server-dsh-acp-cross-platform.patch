@@ -1,0 +1,91 @@
+diff --git a/packages/server/src/modules/coding-agents/services/runtime/child-env.ts b/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
+index dc1242a7..d2105d9a 100644
+--- a/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
++++ b/packages/server/src/modules/coding-agents/services/runtime/child-env.ts
+@@ -10,6 +10,19 @@ const CODING_AGENT_CHILD_ENV_KEYS = new Set([
+   'NODE_PATH', 'NODE_EXTRA_CA_CERTS',
+ ])
+ 
++const CODING_AGENT_CHILD_ENV_KEYS_WIN32 = new Set(
++  [...CODING_AGENT_CHILD_ENV_KEYS].map(key => key.toLowerCase()),
++)
++
++function isAllowedChildEnvKey(key: string): boolean {
++  // Windows env vars are case-insensitive but Object.entries preserves the
++  // registered casing (commonly `Path`, `windir`), which an exact-match
++  // allowlist silently drops. Compare case-insensitively there only; POSIX
++  // keys stay case-sensitive.
++  if (process.platform === 'win32') return CODING_AGENT_CHILD_ENV_KEYS_WIN32.has(key.toLowerCase())
++  return CODING_AGENT_CHILD_ENV_KEYS.has(key)
++}
++
+ export function isolatedCodingAgentChildEnv(
+   launchEnv: NodeJS.ProcessEnv = {},
+   sourceEnv: NodeJS.ProcessEnv = process.env,
+@@ -17,7 +30,7 @@ export function isolatedCodingAgentChildEnv(
+   const env: Record<string, string> = {}
+   for (const [key, value] of Object.entries(sourceEnv)) {
+     if (value === undefined) continue
+-    if (CODING_AGENT_CHILD_ENV_KEYS.has(key) || key.startsWith('LC_')) env[key] = value
++    if (isAllowedChildEnvKey(key) || key.startsWith('LC_')) env[key] = value
+   }
+   for (const [key, value] of Object.entries(launchEnv)) {
+     if (value !== undefined) env[key] = value
+diff --git a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
+index 81ec370d..011695dd 100644
+--- a/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
++++ b/packages/server/src/modules/coding-agents/services/dsh/acp-turn.ts
+@@ -23,6 +23,7 @@ export class DshAcpTurn {
+   private sessionId = ''
+   private attempts = new Map<string, StreamedText>()
+   private committed = new Map<string, StreamedText>()
++  private strayLines = 0
+ 
+   constructor(private child: ChildProcess, private callbacks: {
+     update(update: any): void
+@@ -38,7 +39,17 @@ export class DshAcpTurn {
+         while ((end = this.buffer.indexOf('\n')) >= 0) {
+           const line = this.buffer.slice(0, end).trim()
+           this.buffer = this.buffer.slice(end + 1)
+-          if (line) this.receive(JSON.parse(line))
++          if (!line) continue
++          try {
++            this.receive(JSON.parse(line))
++          } catch (error) {
++            // Windows cmd shims, antivirus wrappers and locale banners can print
++            // non-JSON lines to stdout; skip those instead of killing the turn.
++            // Real protocol breakage still surfaces once garbage dominates.
++            if (!(error instanceof SyntaxError)) throw error
++            this.strayLines += 1
++            if (this.strayLines > 64) throw new Error('DSH ACP stdout produced too many non-JSON lines')
++          }
+         }
+       } catch (error) { this.dispose(error instanceof Error ? error : new Error(String(error))) }
+     })
+diff --git a/packages/server/src/modules/coding-agents/services/dsh/host.ts b/packages/server/src/modules/coding-agents/services/dsh/host.ts
+index 33d591aa..6fc4f84d 100644
+--- a/packages/server/src/modules/coding-agents/services/dsh/host.ts
++++ b/packages/server/src/modules/coding-agents/services/dsh/host.ts
+@@ -45,6 +45,13 @@ export function createDshHost(host: DshHostCommands) {
+     const env = await host.commandEnv()
+     const command = await host.resolveCommandForExecution('dsh', env)
+     const execution = host.commandExecution(command, args)
++
++    // cmd.exe/PowerShell localize "command not found" ("'pnpm' 不是内部或外部命令",
++    // "pnpm: The term 'pnpm' is not recognized", "无法将“pnpm”项识别为 cmdlet"), so a
++    // plain /pnpm not found/ match misclassifies missing pnpm as a plugin failure.
++    const pnpmMissing = (stderr: string) => /ENOENT/.test(stderr)
++      || (/pnpm/i.test(stderr) && /not found|is not recognized|不是内部或外部命令|无法将|could not be found/i.test(stderr))
++
+     await new Promise<void>((resolve, reject) => {
+       const child = spawn(execution.command, execution.args, {
+         cwd: home, detached: process.platform !== 'win32', windowsHide: true,
+@@ -68,7 +75,7 @@ export function createDshHost(host: DshHostCommands) {
+         if (signal.aborted) reject(new DshPluginError(503, 'DSH_OPERATION_INTERRUPTED', 'Plugin operation interrupted'))
+         else if (timedOut) reject(new DshPluginError(503, 'DSH_OPERATION_TIMEOUT', 'Plugin operation timed out'))
+         else if (code === 0) resolve()
+-        else if (/pnpm not found|ENOENT/.test(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
++        else if (pnpmMissing(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
+         else reject(new DshPluginError(422, 'DSH_PLUGIN_OPERATION_FAILED', 'Web plugin operation failed; reload the list to inspect its current state'))
+       })
+     })

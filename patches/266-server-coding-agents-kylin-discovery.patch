@@ -1,0 +1,124 @@
+diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
+index fac6c05e..65b8a38c 100644
+--- a/packages/server/src/modules/coding-agents/services/index.ts
++++ b/packages/server/src/modules/coding-agents/services/index.ts
+@@ -16,6 +16,7 @@ import { getCompatibleCustomProviders } from '../../studio/contracts/provider-co
+ import { registerClaudeCodeProxyTarget } from './claude-code/proxy'
+ import { registerCodexProxyTarget, restoreCodexProxyTarget } from './codex/proxy'
+ import { compactCodexThread } from './runtime/codex-compact'
++import { scanPathForCommand } from './runtime/command-path-scan'
+ import { hermesPromptDocument, writeManagedPromptFile } from './prompt-file'
+ import type { ApiMode, CodingAgentImageInput } from '../protocol/types'
+ import { PROVIDER_PRESETS } from '../../studio/contracts/providers'
+@@ -550,6 +551,7 @@ function getDesktopCommonBinPaths(): string[] {
+   return [
+     join(home, '.npm-global', 'bin'),
+     join(home, '.local', 'bin'),
++    join(home, '.local', 'share', 'pnpm'),
+     join(home, '.yarn', 'bin'),
+     join(home, '.config', 'yarn', 'global', 'node_modules', '.bin'),
+     join(home, '.pnpm'),
+@@ -905,6 +907,8 @@ function getScopedRuntimeConfigRoot(
+   const sessionId = String(input.sessionId || '').trim()
+   const agentSessionId = String(input.agentSessionId || '').trim()
+   if ((!sessionId || !agentSessionId) && (id === 'pi' || id === 'dsh')) {
++    // 16 hex chars (64 bits) keep run dirs unique while staying inside the
++    // Windows 260-char MAX_PATH budget once profile/node_modules segments stack.
+     const runtimeKey = createHash('sha256')
+       .update(JSON.stringify([
+         sessionId || randomUUID(),
+@@ -913,12 +917,14 @@ function getScopedRuntimeConfigRoot(
+         Date.now(),
+       ]))
+       .digest('hex')
++      .slice(0, 16)
+     return join(rootDir, 'runs', runtimeKey)
+   }
+   if (!sessionId || !agentSessionId) return rootDir
+   const runtimeKey = createHash('sha256')
+     .update(JSON.stringify([sessionId, agentSessionId]))
+     .digest('hex')
++    .slice(0, 16)
+   return join(rootDir, 'runs', runtimeKey)
+ }
+ 
+@@ -2421,7 +2427,10 @@ async function commandExists(command: string): Promise<boolean> {
+       windowsHide: true,
+     })
+     return true
+-  } catch {
++  } catch (err: any) {
++    // ENOENT means the lookup binary itself is missing (minimal Kylin/container
++    // images ship no `which`); fall back to a direct PATH scan.
++    if (err?.code === 'ENOENT') return scanPathForCommand(command).length > 0
+     return false
+   }
+ }
+@@ -2474,8 +2483,12 @@ async function openNativeTerminal(shellCommand: string): Promise<string> {
+     const candidates: Array<{ command: string; args: string[] }> = [
+       { command: 'xdg-terminal-exec', args: ['bash', '-lc', shellCommand] },
+       { command: 'gnome-terminal', args: ['--', 'bash', '-lc', shellCommand] },
++      // Kylin V10 (UKUI) ships mate-terminal; qterminal covers LXQT-based builds.
++      { command: 'mate-terminal', args: ['--', 'bash', '-lc', shellCommand] },
++      { command: 'qterminal', args: ['-e', `bash -lc ${shellQuote(shellCommand)}`] },
+       { command: 'konsole', args: ['-e', 'bash', '-lc', shellCommand] },
+       { command: 'xfce4-terminal', args: ['--command', `bash -lc ${shellQuote(shellCommand)}`] },
++      { command: 'deepin-terminal', args: ['-e', `bash -lc ${shellQuote(shellCommand)}`] },
+       { command: 'kitty', args: ['bash', '-lc', shellCommand] },
+       { command: 'alacritty', args: ['-e', 'bash', '-lc', shellCommand] },
+       { command: 'xterm', args: ['-e', 'bash', '-lc', shellCommand] },
+@@ -2618,7 +2631,11 @@ async function findCommandPaths(command: string, env: NodeJS.ProcessEnv): Promis
+       env,
+     })
+     return stdout.split(/\r?\n/).map(line => normalizeWindowsCommandPath(line.trim())).filter(Boolean)
+-  } catch {
++  } catch (err: any) {
++    // ENOENT means the lookup binary itself is missing (minimal Kylin/container
++    // images ship no `which`), which used to masquerade as "DSH is not
++    // installed". Scan PATH directly so discovery still works there.
++    if (err?.code === 'ENOENT') return scanPathForCommand(command, env)
+     return []
+   }
+ }
+diff --git a/packages/server/src/modules/coding-agents/services/runtime/command-path-scan.ts b/packages/server/src/modules/coding-agents/services/runtime/command-path-scan.ts
+new file mode 100644
+index 00000000..3f932d7d
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/runtime/command-path-scan.ts
+@@ -0,0 +1,36 @@
++import { existsSync } from 'node:fs'
++import { delimiter, join } from 'node:path'
++
++/** PATH entries of an env, tolerant of the Windows `Path` casing. */
++export function pathEntries(env: NodeJS.ProcessEnv = process.env): string[] {
++  const pathKey = Object.keys(env).find(key => key.toLowerCase() === 'path') || 'PATH'
++  return String(env[pathKey] || '').split(delimiter).map(entry => entry.trim()).filter(Boolean)
++}
++
++function windowsExecutableSuffixes(env: NodeJS.ProcessEnv): string[] {
++  const pathExt = Object.keys(env).find(key => key.toLowerCase() === 'pathext')
++  const raw = pathExt ? String(env[pathExt]) : ''
++  const suffixes = raw.split(';').map(entry => entry.trim()).filter(Boolean)
++  if (!suffixes.length) return ['', '.com', '.exe', '.bat', '.cmd']
++  return suffixes.includes('') ? suffixes : ['', ...suffixes].map(suffix => suffix.toLowerCase())
++}
++
++export function scanPathForCommand(
++  command: string,
++  env: NodeJS.ProcessEnv = process.env,
++  exists: (path: string) => boolean = existsSync,
++): string[] {
++  const trimmed = command.trim()
++  // Only bare command names are resolvable through PATH; callers resolving
++  // explicit paths keep using their own existsSync checks.
++  if (!trimmed || trimmed.includes('/') || trimmed.includes('\\')) return []
++  const suffixes = process.platform === 'win32' ? windowsExecutableSuffixes(env) : ['']
++  const found: string[] = []
++  for (const dir of pathEntries(env)) {
++    for (const suffix of suffixes) {
++      const candidate = join(dir, trimmed + suffix)
++      if (exists(candidate) && !found.includes(candidate)) found.push(candidate)
++    }
++  }
++  return found
++}
