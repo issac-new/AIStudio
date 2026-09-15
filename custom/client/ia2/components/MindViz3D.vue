@@ -381,7 +381,7 @@ watch(() => props.projection, () => {
         @click="onFocusCluster(null)"
       >{{ t('loopMind.zone.all') }}</button>
       <button
-        v-for="region in scene.clusters"
+        v-for="cluster in scene.clusters"
         :key="cluster.key"
         type="button"
         class="lm3d__cluster-btn"

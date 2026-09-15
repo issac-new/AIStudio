@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/profiles.py b/hermes_cli/profiles.py
-index e4a0d3b..41046b7 100644
+index d3ad434..712d5ed 100644
 --- a/hermes_cli/profiles.py
 +++ b/hermes_cli/profiles.py
-@@ -810,6 +810,79 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path]) -> Non
+@@ -827,6 +827,79 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path]) -> Non
          _clone_file(source_dir, profile_dir, relpath)
  
  
@@ -82,20 +82,20 @@ index e4a0d3b..41046b7 100644
  def create_profile(
      name: str, clone_from: Optional[str] = None, clone_all: bool = False, clone_config: bool = False,
      no_alias: bool = False, no_skills: bool = False, description: Optional[str] = None,
-@@ -845,6 +918,12 @@ def create_profile(
-         _clone_all_into(source_dir, profile_dir, canon)
-     else:
-         _bootstrap_profile_dir(profile_dir, source_dir)
-+        # Overlay: seed the run-trace plugin into the new profile's plugins/
-+        # directory so L2 trace data is captured from the very first session.
-+        # Skipped for clone_all (it copytrees the whole source tree, including
-+        # any plugins/ dir, so seeding here would be overwritten immediately
-+        # — the config-merge step below still ensures run-trace is enabled).
-+        _seed_run_trace_plugin(profile_dir)
- 
-     # Seed an empty .env so the profile owns a credentials file from day one. Without it,
-     # profile-scoped env writes (dashboard Channels/Keys pages, `hermes -p <name> auth add`)
-@@ -881,6 +960,12 @@ def create_profile(
+@@ -879,6 +952,12 @@ def create_profile(
+             _clone_all_into(source_dir, staging, canon)
+         else:
+             _bootstrap_profile_dir(staging, source_dir)
++            # Overlay: seed the run-trace plugin into the new profile's staging
++            # tree so L2 trace data is captured from the very first session.
++            # Skipped for clone_all (it copytrees the whole source tree, including
++            # any plugins/ dir, so seeding here would be overwritten immediately
++            # — the config-merge step below still ensures run-trace is enabled).
++            _seed_run_trace_plugin(staging)
+         if source_dir is not None and not clone_channels:
+             from hermes_cli.profile_channels import strip_channel_settings
+             stripped = strip_channel_settings(staging, include_state=clone_all, source_dir=source_dir)
+@@ -894,6 +973,12 @@ def create_profile(
      # `hermes -p <profile> gateway start` supervises via `s6-svc -u` instead of a bare
      # process. No-op on host (systemd/launchd/windows unit generation handles lifecycle).
      _maybe_register_gateway_service(canon)
@@ -105,6 +105,6 @@ index e4a0d3b..41046b7 100644
 +    # minimal config.yaml; for cloned profiles it merges into the existing
 +    # plugins.enabled list without removing existing entries.
 +    _ensure_run_trace_enabled_in_config(profile_dir)
-     return profile_dir
- 
- 
+     # A running multiplexer enumerates profiles/ at boot: ask it to serve this one now (it also
+     # rescans periodically, so a missed signal only delays serving).
+     _notify_multiplexer(canon)
