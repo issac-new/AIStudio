@@ -1,35 +1,27 @@
 // overlay/custom/client/ia2/adapters/mind3d.ts
-// 3D 思维图谱纯投影（2026-09-15 形态重构 v3）：**多维功能分区结构**——用户裁决
-// 「皮层这个概念不对：像大脑那样有不同的功能分区，是一个多维结构，不是一个
-// 弯曲表面的堆砌」。去皮层表面堆砌，改为大脑功能分区式多维结构：
-//
-//   功能分区（region）= 任务的多维属性面交汇处：聚类族（语义归属）× 状态（活跃/待介入/
-//     沉降）× 活跃度（运行史规模）三维定位一个分区；每个分区是一个功能系统
-//     （有自己的内部结构：柱群 + 末梢环绕），不是表面上的一个点。
-//   分区体（region volume）：每个分区占据一个三维子空间（半透明边界体），
-//     内部任务柱群自治散布；分区之间由**投射通路**（projection tract）连接——
-//     跨区关系边（父子/委派跨族跨状态）显式拉起为区间通路，同区关系在区内消化。
-//   无中心原点：分区体在空间中多维散布（族=主散布维、状态=高度维、活跃度=纵深维），
-//     无一物居中——思维是分区协作的网络，不是从一个原点辐射。
-//
-// 本体论不变（任务=实体、运行=产生、关系=委派），形态语言换为「功能分区网络」。
+// 3D 思维图谱纯投影（2026-09-15 形态重构 v4）：**力导向内聚团块**——用户裁决
+// 「气泡和沉降不错，但形状和连线有点乱，没有力图那种内聚的感觉」。
+// 去手工散布（黄金角螺旋/分区体），改力导向自组织：
+//   节点（任务柱 + 运行末梢）经力导向模拟自组织成内聚团块——同族相吸、异族相斥、
+//   关系边拉拢、运行吸附所属任务；状态决定柱高（活跃高耸、沉降低矮，语义保留）；
+//   气泡=分区/族的涌现团块（力导向收敛后自然成簇），不是手工画的边界。
+// 本体论不变（任务=实体、运行=产生、关系=委派），形态语言换为「力导向内聚网络」。
 // 纯函数零 Three.js 依赖——视图只消费坐标/语义，渲染在组件侧。
 import type { MindProjectionDto, MindThoughtDto, MindRunDto } from './mind'
 
 export const MAX_THOUGHTS = 32
 export const RUNS_PER_THOUGHT = 4
 
-/** 状态 → 分区高度维（Y；语义：活跃在上、沉降在下） */
-const STATUS_Y: Record<string, number> = {
-  running: 120,
-  'awaiting-input': 80,
-  'awaiting-review': 80,
-  blocked: 60,
-  failed: 30,
-  completed: 10,
-  idle: -10,
-  archived: -30,
-  unknown: 0,
+const STATUS_HEIGHT: Record<string, number> = {
+  running: 84,
+  'awaiting-input': 66,
+  'awaiting-review': 66,
+  blocked: 58,
+  failed: 38,
+  completed: 28,
+  idle: 20,
+  archived: 12,
+  unknown: 16,
 }
 
 const STATUS_STRENGTH: Record<string, number> = {
@@ -60,8 +52,7 @@ export interface MindNode {
   sub?: string
   strength: number
   pulse: boolean
-  /** 所属功能分区 key */
-  region: string
+  cluster: string
   budding: boolean
   to?: { name: string; params?: Record<string, string>; query?: Record<string, string> }
   highlight?: boolean
@@ -79,32 +70,23 @@ export interface MindEdge {
   flow: boolean
   strength: number
   relKind: 'delegate' | 'spawn'
-  /** 跨区投射通路（跨分区的关系边显式标记，视图渲染为区间通路） */
-  crossRegion: boolean
+  crossCluster: boolean
 }
 
-/** 功能分区（region）：多维属性面交汇处的一个功能系统 */
-export interface MindRegion {
+export interface MindCluster {
   key: string
-  /** 分区语义标签（族名 + 主导状态） */
   label: string
   count: number
-  /** 分区体质心 */
   cx: number
   cy: number
   cz: number
-  /** 分区体半径（内部结构散布范围） */
-  radius: number
-  /** 主导状态（分区着色） */
   dominantStatus: string
-  /** 聚类族 */
-  cluster: string
 }
 
 export interface MindScene {
   nodes: MindNode[]
   edges: MindEdge[]
-  regions: MindRegion[]
+  clusters: MindCluster[]
   hiddenThoughts: number
 }
 
@@ -121,12 +103,16 @@ function strengthOf(status: string): number {
   return STATUS_STRENGTH[status] ?? 0.24
 }
 
+function heightOf(status: string): number {
+  return STATUS_HEIGHT[status] ?? 18
+}
+
 function runTimeKey(r: MindRunDto): string {
   return r.startedAt ?? ''
 }
 
-/** 聚类族：命名前缀族（[xxx] 约定）+ 父子树连通域兜底 + 单任务自成族 */
-function clusterKeyOf(t: MindThoughtDto, parentOf: Map<string, string>, childOf: Map<string, string[]>): string {
+function clusterKeyOf(t: MindThoughtDto | undefined, parentOf: Map<string, string>, childOf: Map<string, string[]>): string {
+  if (!t) return 'solo:unknown'
   const m = t.title.match(/^\[([^\]]+)\]/)
   if (m) return m[1].replace(/-\d+b?$/, '')
   let cur = t.id
@@ -140,24 +126,91 @@ function clusterKeyOf(t: MindThoughtDto, parentOf: Map<string, string>, childOf:
   return `solo:${t.id}`
 }
 
-/** 状态 → 分区的功能面（活跃系统/待介入系统/沉降系统） */
-function regionFaceOf(status: string): string {
-  if (status === 'running') return 'active'
-  if (status === 'awaiting-input' || status === 'awaiting-review' || status === 'blocked') return 'pending'
-  if (status === 'completed' || status === 'failed') return 'settled'
-  return 'dormant' // idle/archived/unknown
+function clusterLabel(key: string, thoughts: Map<string, MindThoughtDto>): string {
+  if (key.startsWith('solo:')) {
+    const t = thoughts.get(key.slice(5))
+    return t ? (t.title.length > 12 ? t.title.slice(0, 12) + '…' : t.title) : key
+  }
+  if (key.startsWith('tree:')) {
+    const root = thoughts.get(key.slice(5))
+    return root ? (root.title.length > 12 ? root.title.slice(0, 12) + '…' : root.title) : key
+  }
+  return key
 }
 
-/**
- * 构造多维功能分区场景（无中心原点；分区=功能系统，区间投射通路连接）。
- */
+interface SimNode {
+  id: string
+  x: number; z: number
+  vx: number; vz: number
+  cluster: string
+}
+
+/** 力导向模拟（确定性：固定种子初始位置 + 固定迭代；同输入必产同一布局） */
+function forceSimulate(simNodes: SimNode[], links: Array<{ a: number; b: number }>): void {
+  const ITER = 120
+  const REPULSION = 900
+  const ATTRACTION = 0.028
+  const CLUSTER_PULL = 0.016
+  const DAMPING = 0.82
+  const CENTER_PULL = 0.004
+
+  const clusterCenters = new Map<string, { x: number; z: number; n: number }>()
+
+  for (let iter = 0; iter < ITER; iter++) {
+    clusterCenters.clear()
+    for (const n of simNodes) {
+      const c = clusterCenters.get(n.cluster) ?? { x: 0, z: 0, n: 0 }
+      c.x += n.x; c.z += n.z; c.n++
+      clusterCenters.set(n.cluster, c)
+    }
+    for (const c of clusterCenters.values()) { c.x /= c.n; c.z /= c.n }
+
+    for (let i = 0; i < simNodes.length; i++) {
+      const a = simNodes[i]
+      let fx = 0, fz = 0
+      for (let j = 0; j < simNodes.length; j++) {
+        if (i === j) continue
+        const b = simNodes[j]
+        const dx = a.x - b.x
+        const dz = a.z - b.z
+        const d2 = dx * dx + dz * dz + 40
+        const f = REPULSION / d2
+        fx += dx * f / Math.sqrt(d2)
+        fz += dz * f / Math.sqrt(d2)
+      }
+      const cc = clusterCenters.get(a.cluster)
+      if (cc && cc.n > 1) {
+        fx += (cc.x - a.x) * CLUSTER_PULL
+        fz += (cc.z - a.z) * CLUSTER_PULL
+      }
+      fx += -a.x * CENTER_PULL
+      fz += -a.z * CENTER_PULL
+      a.vx = (a.vx + fx) * DAMPING
+      a.vz = (a.vz + fz) * DAMPING
+    }
+    for (const { a, b } of links) {
+      const na = simNodes[a]
+      const nb = simNodes[b]
+      const dx = nb.x - na.x
+      const dz = nb.z - na.z
+      na.vx += dx * ATTRACTION
+      na.vz += dz * ATTRACTION
+      nb.vx -= dx * ATTRACTION
+      nb.vz -= dz * ATTRACTION
+    }
+    for (const n of simNodes) {
+      n.x += n.vx
+      n.z += n.vz
+    }
+  }
+}
+
 export function buildMind3DScene(projection: MindProjectionDto): MindScene {
   const nodes: MindNode[] = []
   const edges: MindEdge[] = []
   const { thoughts, runs } = projection
   const relations = projection.relations ?? []
 
-  // ── run 按 thoughtId 分组 ──
   const byThought = new Map<string, MindRunDto[]>()
   for (const run of runs) {
     const list = byThought.get(run.thoughtId)
@@ -168,7 +221,6 @@ export function buildMind3DScene(projection: MindProjectionDto): MindScene {
     list.sort((a, b) => runTimeKey(b).localeCompare(runTimeKey(a)))
   }
 
-  // ── 父子映射 ──
   const parentOf = new Map<string, string>()
   const childOf = new Map<string, string[]>()
   for (const rel of relations) {
@@ -178,178 +230,186 @@ export function buildMind3DScene(projection: MindProjectionDto): MindScene {
     else childOf.set(rel.parentId, [rel.childId])
   }
 
-  // ── 多维分区：聚类族 × 功能面（状态）交汇成分区 ──
   const thoughtById = new Map(thoughts.map(t => [t.id, t]))
-  const regions = new Map<string, MindThoughtDto[]>()
-  for (const t of thoughts) {
-    const cluster = clusterKeyOf(t, parentOf, childOf)
-    const face = regionFaceOf(t.status)
-    const key = `${cluster}::${face}`
-    const list = regions.get(key)
-    if (list) list.push(t)
-    else regions.set(key, [t])
-  }
-
-  // ── 分区排序：最活跃分区优先（质心布局由内向外） ──
-  const regionActivity = (list: MindThoughtDto[]): number =>
-    Math.max(...list.map(t => strengthOf(t.status))) + Math.min(list.length, 8) * 0.05
-  const sortedRegions = [...regions.entries()].sort((a, b) => regionActivity(b[1]) - regionActivity(a[1]))
-
-  // ── 分区质心多维散布：族=主散布维（XZ 黄金角螺旋）、功能面=高度维（Y 分层）、
-  //    活跃度=纵深微调（活跃分区略上浮） ──
-  const regionPos = new Map<string, { cx: number; cy: number; cz: number }>()
-  const nRegions = sortedRegions.length
-  sortedRegions.forEach(([key, group], i) => {
-    const face = key.split('::')[1]
-    const faceY = face === 'active' ? 100 : face === 'pending' ? 60 : face === 'settled' ? 10 : -30
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5))
-    const angle = i * goldenAngle + hash01(`r:${key}`) * 0.5
-    const radius = nRegions > 1 ? 70 + Math.sqrt(i / (nRegions - 1)) * 200 : 0
-    const activityLift = regionActivity(group) * 8
-    regionPos.set(key, {
-      cx: Math.cos(angle) * radius,
-      cy: faceY + activityLift,
-      cz: Math.sin(angle) * radius,
-    })
-  })
-
   const hiddenThoughts = Math.max(0, thoughts.length - MAX_THOUGHTS)
-  let budget = MAX_THOUGHTS
-  const regionMetas: MindRegion[] = []
+  const visible = thoughts.slice(0, MAX_THOUGHTS)
 
-  for (const [key, group] of sortedRegions) {
-    const shown = group.slice(0, Math.max(0, budget))
-    budget -= shown.length
-    if (shown.length === 0) continue
-    const { cx, cy, cz } = regionPos.get(key)!
-    const cluster = key.split('::')[0]
-    const dominant = shown.reduce((a, b) => strengthOf(b.status) > strengthOf(a.status) ? b : a)
-    const regionRadius = 26 + Math.min(shown.length, 10) * 8
-    regionMetas.push({
-      key,
-      label: `${regionLabelOf(cluster, thoughtById)} · ${faceLabelOf(key.split('::')[1])}`,
-      count: group.length,
-      cx, cy, cz,
-      radius: regionRadius,
-      dominantStatus: dominant.status,
-      cluster,
-    })
+  // 力导向模拟：任务柱自组织成内聚团块
+  const simNodes: SimNode[] = visible.map((t) => {
+    const seed = hash01(`init:${t.id}`)
+    const angle = seed * Math.PI * 2
+    const radius = 40 + hash01(`initr:${t.id}`) * 120
+    return {
+      id: t.id,
+      x: Math.cos(angle) * radius,
+      z: Math.sin(angle) * radius,
+      vx: 0, vz: 0,
+      cluster: clusterKeyOf(t, parentOf, childOf),
+    }
+  })
+  const simIndex = new Map(simNodes.map((n, i) => [n.id, i]))
+  const simLinks: Array<{ a: number; b: number }> = []
+  for (const rel of relations) {
+    const a = simIndex.get(rel.parentId)
+    const b = simIndex.get(rel.childId)
+    if (a != null && b != null) simLinks.push({ a, b })
+  }
+  forceSimulate(simNodes, simLinks)
 
-    shown.forEach((t, j) => {
-      // 分区内散布：柱群围绕分区质心（分区体内部自治）
-      const angle = j * Math.PI * (3 - Math.sqrt(5)) + hash01(`a:${t.id}`) * 0.5
-      const r = shown.length > 1 ? Math.sqrt(j / (shown.length - 1)) * regionRadius : 0
-      const x = cx + Math.cos(angle) * r
-      const z = cz + Math.sin(angle) * r
-      const y = cy + (hash01(`y:${t.id}`) - 0.5) * 16
-      const thoughtRuns = byThought.get(t.id) ?? []
-      const running = t.status === 'running' || thoughtRuns.some(r2 => r2.status === 'running')
-      const awaiting = t.status === 'awaiting-review' || thoughtRuns.some(r2 => r2.status === 'awaiting-input')
-      const budding = t.createdAt != null && Date.now() - Date.parse(t.createdAt) < 24 * 3600_000
+  const clusterMembers = new Map<string, MindNode[]>()
+  for (const sim of simNodes) {
+    const t = thoughtById.get(sim.id)!
+    const thoughtRuns = byThought.get(t.id) ?? []
+    const running = t.status === 'running' || thoughtRuns.some(r => r.status === 'running')
+    const awaiting = t.status === 'awaiting-review' || thoughtRuns.some(r => r.status === 'awaiting-input')
+    const budding = t.createdAt != null && Date.now() - Date.parse(t.createdAt) < 24 * 3600_000
 
-      const colId = `column:${t.id}`
-      const colR = 7 + Math.min(thoughtRuns.length, 8) * 1.1
-      const colH = 14 + strengthOf(t.status) * 30
+    const colId = `column:${t.id}`
+    const colR = 8 + Math.min(thoughtRuns.length, 8) * 1.2
+    const colH = heightOf(t.status)
+    const node: MindNode = {
+      id: colId,
+      kind: 'column',
+      x: sim.x, y: 0, z: sim.z,
+      r: colR,
+      h: colH,
+      status: t.status,
+      label: t.title,
+      sub: thoughtRuns.length > 0 ? `×${thoughtRuns.length}` : undefined,
+      strength: strengthOf(t.status),
+      pulse: running,
+      cluster: sim.cluster,
+      budding,
+      to: awaiting
+        ? { name: 'ia2.inbox', query: { task: t.id } }
+        : { name: 'ia2.tasks', query: { task: t.id } },
+      highlight: awaiting,
+      pendingAlert: awaiting,
+    }
+    nodes.push(node)
+    const list = clusterMembers.get(sim.cluster)
+    if (list) list.push(node)
+    else clusterMembers.set(sim.cluster, [node])
+
+    const shownRuns = thoughtRuns.slice(0, RUNS_PER_THOUGHT)
+    shownRuns.forEach((run, j) => {
+      const orbitAngle = (j * Math.PI * 2) / shownRuns.length + hash01(`o:${run.runId}`) * 0.6
+      const orbitR = colR + 10 + Math.min(run.durationSec * 0.02, 14)
+      const rx = sim.x + Math.cos(orbitAngle) * orbitR
+      const rz = sim.z + Math.sin(orbitAngle) * orbitR
+      const runId = `run:${run.runId}`
+      const isRunning = run.status === 'running'
       nodes.push({
-        id: colId,
-        kind: 'column',
-        x, y, z,
-        r: colR,
-        h: colH,
-        status: t.status,
-        label: t.title,
-        sub: thoughtRuns.length > 0 ? `×${thoughtRuns.length}` : undefined,
-        strength: strengthOf(t.status),
-        pulse: running,
-        region: key,
-        budding,
-        to: awaiting
-          ? { name: 'ia2.inbox', query: { task: t.id } }
-          : { name: 'ia2.tasks', query: { task: t.id } },
-        highlight: awaiting,
-        pendingAlert: awaiting,
+        id: runId,
+        kind: 'run',
+        x: rx, y: colH + 5, z: rz,
+        r: isRunning ? 4 : 3,
+        h: 0,
+        status: run.status,
+        label: run.runId.slice(-4),
+        strength: strengthOf(run.status),
+        pulse: isRunning,
+        cluster: sim.cluster,
+        budding: false,
+        to: { name: 'ia2.tasks', query: { task: run.thoughtId } },
       })
-
-      // ── 末梢运行（柱顶环绕） ──
-      const shownRuns = thoughtRuns.slice(0, RUNS_PER_THOUGHT)
-      shownRuns.forEach((run, j2) => {
-        const orbitAngle = (j2 * Math.PI * 2) / shownRuns.length + hash01(`o:${run.runId}`) * 0.6
-        const orbitR = colR + 10 + Math.min(run.durationSec * 0.02, 14)
-        const rx = x + Math.cos(orbitAngle) * orbitR
-        const rz = z + Math.sin(orbitAngle) * orbitR
-        const runId = `run:${run.runId}`
-        const isRunning = run.status === 'running'
-        nodes.push({
-          id: runId,
-          kind: 'run',
-          x: rx, y: y + colH + 5, z: rz,
-          r: isRunning ? 4 : 3,
-          h: 0,
-          status: run.status,
-          label: run.runId.slice(-4),
-          strength: strengthOf(run.status),
-          pulse: isRunning,
-          region: key,
-          budding: false,
-          to: { name: 'ia2.tasks', query: { task: run.thoughtId } },
-        })
-        edges.push({
-          id: `${colId}->${runId}`,
-          from: colId, to: runId,
-          fromPos: { x, y: y + colH, z },
-          toPos: { x: rx, y: y + colH + 5, z: rz },
-          apexY: y + colH + 10,
-          status: run.status,
-          flow: isRunning,
-          strength: strengthOf(run.status) * 0.8,
-          relKind: 'spawn',
-          crossRegion: false,
-        })
+      edges.push({
+        id: `${colId}->${runId}`,
+        from: colId, to: runId,
+        fromPos: { x: sim.x, y: colH, z: sim.z },
+        toPos: { x: rx, y: colH + 5, z: rz },
+        apexY: colH + 10,
+        status: run.status,
+        flow: isRunning,
+        strength: strengthOf(run.status) * 0.8,
+        relKind: 'spawn',
+        crossCluster: false,
       })
     })
   }
 
-  // ── 投射通路：跨区关系边（父子/委派跨分区 → 区间通路显式拉起） ──
-  const nodeById = new Map(nodes.map(nd => [nd.id, nd]))
+  const clusterMetas: MindCluster[] = []
+  for (const [key, members] of clusterMembers.entries()) {
+    const cx = members.reduce((s, m) => s + m.x, 0) / members.length
+    const cz = members.reduce((s, m) => s + m.z, 0) / members.length
+    const dominant = members.reduce((a, b) => b.strength > a.strength ? b : a)
+    clusterMetas.push({
+      key,
+      label: clusterLabel(key, thoughtById),
+      count: members.length,
+      cx, cy: 0, cz,
+      dominantStatus: dominant.status,
+    })
+  }
+
+  const nodeById = new Map(nodes.filter(n => n.kind === 'column').map(nd => [nd.id, nd]))
   for (const rel of relations) {
     const parent = nodeById.get(`column:${rel.parentId}`)
     const child = nodeById.get(`column:${rel.childId}`)
     if (!parent || !child) continue
-    const cross = parent.region !== child.region
+    const cross = parent.cluster !== child.cluster
     edges.push({
       id: `rel:${rel.parentId}->${rel.childId}`,
       from: parent.id, to: child.id,
-      fromPos: { x: parent.x, y: parent.y + parent.h, z: parent.z },
-      toPos: { x: child.x, y: child.y + child.h, z: child.z },
-      apexY: Math.max(parent.y + parent.h, child.y + child.h) + (cross ? 50 : 20),
+      fromPos: { x: parent.x, y: parent.h, z: parent.z },
+      toPos: { x: child.x, y: child.h, z: child.z },
+      apexY: Math.max(parent.h, child.h) + (cross ? 46 : 18),
       status: 'delegate',
       flow: false,
-      strength: cross ? 0.75 : 0.5,
+      strength: cross ? 0.7 : 0.55,
       relKind: 'delegate',
-      crossRegion: cross,
+      crossCluster: cross,
     })
   }
 
-  return { nodes, edges, regions: regionMetas, hiddenThoughts }
+  return { nodes, edges, clusters: clusterMetas, hiddenThoughts }
 }
 
-function regionLabelOf(cluster: string, thoughts: Map<string, MindThoughtDto>): string {
-  if (cluster.startsWith('solo:')) {
-    const t = thoughts.get(cluster.slice(5))
-    return t ? (t.title.length > 10 ? t.title.slice(0, 10) + '…' : t.title) : cluster
-  }
-  if (cluster.startsWith('tree:')) {
-    const root = thoughts.get(cluster.slice(5))
-    return root ? (root.title.length > 10 ? root.title.slice(0, 10) + '…' : root.title) : cluster
-  }
-  return cluster
-}
+/**
+ * 关联项筛选投影（2026-09-15 用户裁决：点击节点不跳 kanban，就地筛选仅显示关联项）。
+ */
+export function relatedIdsOf(nodeId: string, projection: MindProjectionDto): Set<string> {
+  const related = new Set<string>()
+  const relations = projection.relations ?? []
+  const parentOf = new Map(relations.map(r => [r.childId, r.parentId]))
+  const childOf = relations.reduce((m, r) => {
+    const k = m.get(r.parentId)
+    if (k) k.push(r.childId)
+    else m.set(r.parentId, [r.childId])
+    return m
+  }, new Map<string, string[]>())
 
-function faceLabelOf(face: string): string {
-  switch (face) {
-    case 'active': return '活跃'
-    case 'pending': return '待介入'
-    case 'settled': return '已沉降'
-    default: return '静止'
+  const columnMatch = nodeId.match(/^column:(.+)$/)
+  if (columnMatch) {
+    const taskId = columnMatch[1]
+    if (!projection.thoughts.some(t => t.id === taskId)) return related
+    related.add(`column:${taskId}`)
+    const cluster = clusterKeyOf(projection.thoughts.find(t => t.id === taskId), parentOf, childOf)
+    for (const t of projection.thoughts) {
+      if (clusterKeyOf(t, parentOf, childOf) === cluster) related.add(`column:${t.id}`)
+    }
+    for (const r of projection.runs) {
+      if (r.thoughtId === taskId) related.add(`run:${r.runId}`)
+      const rt = projection.thoughts.find(t => t.id === r.thoughtId)
+      if (rt && related.has(`column:${rt.id}`)) related.add(`run:${r.runId}`)
+    }
+    for (const rel of relations) {
+      if (rel.parentId === taskId) related.add(`column:${rel.childId}`)
+      if (rel.childId === taskId) related.add(`column:${rel.parentId}`)
+    }
+    return related
   }
+  const runMatch = nodeId.match(/^run:(.+)$/)
+  if (runMatch) {
+    const runId = runMatch[1]
+    const run = projection.runs.find(r => r.runId === runId)
+    if (run) {
+      related.add(`run:${runId}`)
+      related.add(`column:${run.thoughtId}`)
+      for (const r of projection.runs) {
+        if (r.thoughtId === run.thoughtId) related.add(`run:${r.runId}`)
+      }
+    }
+  }
+  return related
 }
