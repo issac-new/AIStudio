@@ -1,0 +1,20 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 2d51d195..e7a5b08b 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1144,6 +1144,15 @@ export default {
+       archived: 'Archived',
+       unknown: 'Unknown',
+     },
++    zone: {
++      running: 'Running',
++      awaiting: 'Awaiting',
++      blocked: 'Blocked',
++      failed: 'Failed',
++      completed: 'Done',
++      idle: 'Idle',
++      archived: 'Archived',
++    },
+   },
+ 
+   agentManager: {
