@@ -41,6 +41,8 @@ let tickTimer: ReturnType<typeof setInterval> | null = null
 const booted = ref(false)
 /** 思维大脑数据源（kanban 运行史投影；null = 未加载/不可用 → 空态） */
 const mindData = ref<MindProjectionDto | null>(null)
+/** 看板事件退订句柄（思维大脑实时生长订阅） */
+let mindUnsubscribe: (() => void) | null = null
 const clockLabel = computed(() => {
   const d = new Date(nowTick.value)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -59,12 +61,26 @@ onMounted(() => {
 })
 onUnmounted(() => {
   if (tickTimer) clearInterval(tickTimer)
+  if (mindRefreshTimer) clearTimeout(mindRefreshTimer)
+  mindUnsubscribe?.()   // 思维大脑实时生长订阅退订（防泄漏）
+  mindUnsubscribe = null
   workspace.unwatchKanbanTasks()
   // workspace 流回收随 2026-09-14 重构由 IaShell 移入本视图（两处挂载点
   // /app 与 /hermes/loop 行为一致；InboxView 等子页自行武装，幂等停止）
   workspace.stopFleetStream()
   workspace.stopReminderScheduler()
 })
+
+/** 思维大脑投影刷新（实时生长：kanban 看板事件驱动重拉，非一次性快照） */
+let mindRefreshTimer: ReturnType<typeof setTimeout> | null = null
+async function refreshMind(): Promise<void> {
+  try { mindData.value = await runRest.getMind() } catch { mindData.value = null }
+}
+function scheduleMindRefresh(): void {
+  // 去抖 800ms（看板事件风暴不空转）
+  if (mindRefreshTimer) clearTimeout(mindRefreshTimer)
+  mindRefreshTimer = setTimeout(() => { void refreshMind() }, 800)
+}
 
 async function boot(): Promise<void> {
   await runsStore.fetchRuns()
@@ -75,7 +91,9 @@ async function boot(): Promise<void> {
   void runsStore.fetchMetrics()
   void loopStore.fetchLoops()
   // 思维大脑：kanban 运行史投影（已有任务的运行数据）。失败不阻断其余仪表。
-  try { mindData.value = await runRest.getMind() } catch { mindData.value = null }
+  await refreshMind()
+  // 实时生长：看板事件驱动投影重拉（大脑随任务活动活起来，非一次性快照）
+  mindUnsubscribe = workspace.onBoardEvent(scheduleMindRefresh)
   booted.value = true
 }
 

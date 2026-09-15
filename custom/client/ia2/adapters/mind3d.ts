@@ -57,6 +57,10 @@ export interface Mind3DNode {
   layer: number
   to?: { name: string; params?: Record<string, string>; query?: Record<string, string> }
   highlight?: boolean
+  /** 待介入专属通道：雷达脉冲环（与 running 呼吸脉冲分家） */
+  pendingAlert?: boolean
+  /** 区内时序显式化：径向距核距离（新近核、旧远核） */
+  radialRecency?: number
 }
 
 export interface Mind3DEdge {
@@ -179,7 +183,9 @@ export function buildMind3DScene(projection: MindProjectionDto): Mind3DScene {
         id: thoughtId,
         kind: 'thought',
         x, y, z,
-        r: running ? 13 : 10,
+        // 半径解耦（2026-09-15 规划）：半径只承载「体量」（运行史规模），
+        // 状态归色相、活跃归高度层、待介入归雷达脉冲环——不再一身二任。
+        r: 9 + Math.min(thoughtRuns.length, 8) * 0.9,
         status: t.status,
         label: t.title,
         sub: thoughtRuns.length > 0 ? `×${thoughtRuns.length}` : undefined,
@@ -188,6 +194,10 @@ export function buildMind3DScene(projection: MindProjectionDto): Mind3DScene {
         layer,
         to: { name: 'ia2.tasks', query: { task: t.id } },
         highlight: awaiting,
+        // 待介入专属通道：雷达脉冲环（跨房间召唤注意力；与 running 的呼吸脉冲分家）
+        pendingAlert: awaiting,
+        // 区内时序显式化：径向距核距离（新近核、旧远核；进图例）
+        radialRecency: Math.hypot(x, z),
       })
 
       // 关系：核心柱 → 任务（孕育）

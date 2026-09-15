@@ -173,6 +173,18 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     if (_reminderTimer) { clearInterval(_reminderTimer); _reminderTimer = undefined }
   }
 
+  // 看板事件订阅（2026-09-15 思维大脑实时生长）：消费方注册回调，看板事件触发
+  // 时逐一调用（与 refreshAllBoards 同一事件流，去抖由消费方自理）。
+  const _boardEventListeners = new Set<() => void>()
+  /** 订阅看板事件（返回退订函数；组件卸载必须退订防泄漏） */
+  function onBoardEvent(cb: () => void): () => void {
+    _boardEventListeners.add(cb)
+    return () => _boardEventListeners.delete(cb)
+  }
+  function _emitBoardEvent(): void {
+    for (const cb of _boardEventListeners) { try { cb() } catch { /* 单消费方异常不炸事件流 */ } }
+  }
+
   // ── ③ 日程弹窗状态 ──
   const scheduleOpen = ref(false)
   const scheduleSelectedDate = ref('')
@@ -249,6 +261,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     if (_overviewStream) return
     _overviewStream = fleetAdapter.connectOverviewStream({
       onBoardEvent: () => {
+        _emitBoardEvent()
         if (_overviewDebounce) clearTimeout(_overviewDebounce)
         _overviewDebounce = setTimeout(() => { void refreshAllBoards(true) }, 500)
       },
@@ -304,5 +317,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     scheduleEvents, scheduleEventsForSelectedSorted, scheduleCountsByDate, scheduleTopPriorityByDate,
     // ④ WS 生命周期
     initFleetStream, stopFleetStream, watchKanbanTasks, unwatchKanbanTasks,
+    // ⑤ 看板事件订阅（思维大脑实时生长等消费方）
+    onBoardEvent,
   }
 })

@@ -153,3 +153,40 @@ describe('buildMind3DScene — 本体论 → 3D 映射', () => {
     expect(scene.hiddenThoughts).toBe(6)
   })
 })
+
+describe('buildMind3DScene — 2026-09-15 规划第一轮修正', () => {
+  it('半径解耦：半径只承载体量（运行史规模），与状态无关（不再一身二任）', () => {
+    const runs = Array.from({ length: 5 }, (_, i) => makeRun({ runId: `r${i}`, thoughtId: 'busy' }))
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'busy-idle', status: 'idle' }),
+      makeThought({ id: 'busy-run', status: 'running' }),
+      makeThought({ id: 'quiet-run', status: 'running' }),
+    ], [
+      ...runs.map(r => ({ ...r, thoughtId: 'busy-idle' })),
+      ...runs.map(r => ({ ...r, runId: r.runId + 'x', thoughtId: 'busy-run' })),
+    ]))
+    const busyIdle = scene.nodes.find(n => n.id === 'thought:busy-idle')!
+    const busyRun = scene.nodes.find(n => n.id === 'thought:busy-run')!
+    const quietRun = scene.nodes.find(n => n.id === 'thought:quiet-run')!
+    // 同运行史规模 → 同半径（与状态无关）
+    expect(busyIdle.r).toBe(busyRun.r)
+    // 运行史多 → 半径大（体量语义）
+    expect(busyRun.r).toBeGreaterThan(quietRun.r)
+  })
+
+  it('待介入专属通道：pendingAlert 标记（与 running 的 pulse 分家）；径向时序显式化', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'wait', status: 'awaiting-review' }),
+      makeThought({ id: 'run', status: 'running' }),
+    ], []))
+    const wait = scene.nodes.find(n => n.id === 'thought:wait')!
+    const run = scene.nodes.find(n => n.id === 'thought:run')!
+    expect(wait.pendingAlert).toBe(true)
+    expect(wait.pulse).toBe(false)   // 待介入不是 running——呼吸脉冲分家
+    expect(run.pendingAlert).toBeFalsy()
+    expect(run.pulse).toBe(true)
+    // 径向时序（区内时序语义进节点，图例可读）
+    expect(typeof wait.radialRecency).toBe('number')
+    expect(wait.radialRecency!).toBeGreaterThan(0)
+  })
+})
