@@ -18,6 +18,7 @@ import StatusDistributionCard from '../components/StatusDistributionCard.vue'
 import MindViz from '../components/MindViz.vue'
 import MindViz3D from '../components/MindViz3D.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
+import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import { buildMindScene, type MindNode, type MindProjectionDto } from '../adapters/mind'
 import { relatedIdsOf, type MindNode as Mind3DNode } from '../adapters/mind3d'
 import { runRest } from '@/custom/loop/runcenter/api'
@@ -44,6 +45,10 @@ const booted = ref(false)
 const mindData = ref<MindProjectionDto | null>(null)
 /** 看板事件退订句柄（思维大脑实时生长订阅） */
 let mindUnsubscribe: (() => void) | null = null
+/** 卸载标记：boot 的 await 间隙用户可能已离开视图，之后不得再装订订阅 */
+let cockpitDisposed = false
+/** 稳定空投影（deep watch 按引用比较；内联字面量会让父级每轮重渲染都触发全场重建） */
+const EMPTY_MIND_PROJECTION: MindProjectionDto = { thoughts: [], runs: [], available: false }
 const clockLabel = computed(() => {
   const d = new Date(nowTick.value)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -61,13 +66,14 @@ onMounted(() => {
   void boot()
 })
 onUnmounted(() => {
+  cockpitDisposed = true
   if (tickTimer) clearInterval(tickTimer)
   if (mindRefreshTimer) clearTimeout(mindRefreshTimer)
   mindUnsubscribe?.()   // 思维大脑实时生长订阅退订（防泄漏）
   mindUnsubscribe = null
   workspace.unwatchKanbanTasks()
-  // workspace 流回收随 2026-09-14 重构由 IaShell 移入本视图（两处挂载点
-  // /app 与 /hermes/loop 行为一致；InboxView 等子页自行武装，幂等停止）
+  // workspace 流回收：本视图自回收 + IaShell 卸载兜底（2026-09-16 审查恢复——
+  // InboxView 等子页自行武装且不回收，只靠视图级停止拦不住"子页武装后离开 /app"）
   workspace.stopFleetStream()
   workspace.stopReminderScheduler()
 })
@@ -83,8 +89,14 @@ function scheduleMindRefresh(): void {
   mindRefreshTimer = setTimeout(() => { void refreshMind() }, 800)
 }
 
+/** 日程弹窗（今日计划写入入口：原总览收编时丢失，2026-09-16 审查还原） */
+function openSchedule(): void {
+  workspace.openSchedule()
+}
+
 async function boot(): Promise<void> {
   await runsStore.fetchRuns()
+  if (cockpitDisposed) return
   // 生长图实时域：待介入全量 + 运行中（阶段推进经 /graph 订阅实时生长）
   const awaiting = runsStore.awaitingRuns.map(r => r.runId)
   const running = runsStore.sortedRuns.filter(r => r.status === 'running').map(r => r.runId)
@@ -93,6 +105,7 @@ async function boot(): Promise<void> {
   void loopStore.fetchLoops()
   // 思维大脑：kanban 运行史投影（已有任务的运行数据）。失败不阻断其余仪表。
   await refreshMind()
+  if (cockpitDisposed) return   // 卸载后装订 = 单例 store 里的永久泄漏订阅
   // 实时生长：看板事件驱动投影重拉（大脑随任务活动活起来，非一次性快照）
   mindUnsubscribe = workspace.onBoardEvent(scheduleMindRefresh)
   booted.value = true
@@ -384,7 +397,7 @@ function planTimeLabel(at: number | null): string {
 
         <MindViz3D
           v-if="vizMode === 'landscape'"
-          :projection="mindData ?? { thoughts: [], runs: [], available: false }"
+          :projection="mindData ?? EMPTY_MIND_PROJECTION"
           :focused-ids="focusedIds"
           @node-click="onViz3DNode"
           @fallback-2d="vizMode = 'flat'"
@@ -467,7 +480,15 @@ function planTimeLabel(at: number | null): string {
           </div>
 
           <div class="lcp-panel__sub lcp-plan" data-testid="lcp-plan">
-            <div class="lcp-panel__subhead">{{ t('ia2.overview.todayPlan') }}</div>
+            <div class="lcp-panel__subhead">
+              {{ t('ia2.overview.todayPlan') }}
+              <button
+                type="button"
+                class="lcp-plan__open"
+                data-testid="lcp-plan-open"
+                @click="openSchedule"
+              >{{ t('ia2.overview.cardSchedule') }} ›</button>
+            </div>
             <div v-if="todayPlan.length === 0" class="lcp-panel__empty">{{ t('ia2.overview.planEmpty') }}</div>
             <div v-else class="lcp-plan__list">
               <div
@@ -493,6 +514,9 @@ function planTimeLabel(at: number | null): string {
       :task-id="detailTaskId"
       @close="detailOpen = false"
     />
+
+    <!-- 日程弹窗（待办增删唯一写入入口；cockpit store 退役后由 ia2 workspace 承载） -->
+    <CockpitScheduleModal v-if="workspace.scheduleOpen" />
   </div>
 </template>
 
@@ -601,7 +625,9 @@ function planTimeLabel(at: number | null): string {
 .lcp-panel__count { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .lcp-panel__empty { padding: 14px 12px; font-size: 12px; color: var(--text-secondary); }
 .lcp-panel__sub { flex: 0 0 auto; border-top: 1px solid var(--border-color); }
-.lcp-panel__subhead { padding: 8px 12px 2px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.lcp-panel__subhead { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 12px 2px; font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.lcp-plan__open { flex: 0 0 auto; border: none; background: none; padding: 0; font-size: 11px; font-weight: 500; color: var(--color-primary, #3b82f6); cursor: pointer; }
+.lcp-plan__open:hover { text-decoration: underline; }
 
 /* 收件箱行 */
 .lcp-inbox-row {
