@@ -2,13 +2,15 @@
 <!-- 驾驶舱单页壳（2026-09-14 重构：IaNav 六菜单栏退役）。
      overview 区 = 循环驾驶舱本体（自带页头与数据武装，无壳级页头）；
      其余区域（编排/运行/介入/工作项/沟通）渲染 slim 子页头：返回驾驶舱 + 区域标题。
-     workspace 流生命周期随重构移入 LoopCockpitView（视图自武装自回收，
-     两处挂载点 /app 与 /hermes/loop 行为一致；InboxView 原本亦自行武装）。 -->
+     workspace 流生命周期：视图自武装自回收（LoopCockpitView），壳级卸载兜底
+     停止（2026-09-16 审查恢复——InboxView 等子页只武装不回收，离开 /app 必须停）。
+     两处挂载点 /app 与 /hermes/loop 行为一致。 -->
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useIaStore } from '@/custom/ia2/store/ia'
+import { useWorkspaceStore } from '../store/workspace'
 import { IA_AREAS } from '@/custom/ia2/routes'
 import '@/custom/ia2/styles/ia2.scss'
 
@@ -16,6 +18,19 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const store = useIaStore()
+const workspace = useWorkspaceStore()
+
+watch(
+  () => route.path,
+  path => store.syncFromPath(path),
+  { immediate: true },
+)
+
+// 离开 /app 即停（幂等；视图级回收在 LoopCockpitView onUnmounted，先于本壳执行）
+onUnmounted(() => {
+  workspace.stopFleetStream()
+  workspace.stopReminderScheduler()
+})
 
 watch(
   () => route.path,

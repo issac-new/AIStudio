@@ -8,8 +8,9 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 
-// workspace store 桩（壳不再管理其生命周期——重构后归 LoopCockpitView；
-// 此处桩化只为隔离重图依赖，同时断言壳卸载不再触发停止动作）
+// workspace store 桩（流生命周期：视图自回收归 LoopCockpitView；壳卸载保留
+// 兜底停止——2026-09-16 审查恢复，InboxView 等子页只武装不回收。
+// 此处桩化只为隔离重图依赖，同时断言壳卸载触发停止动作）
 const workspaceStubs = vi.hoisted(() => {
   const state = {
     stopFleetStream: vi.fn(),
@@ -88,10 +89,10 @@ describe('IaShell — 去菜单守门', () => {
     expect(router.currentRoute.value.name).toBe('ia2.overview')
   })
 
-  it('壳卸载不再管理 workspace 流生命周期（已移入 LoopCockpitView）', async () => {
+  it('壳卸载兜底停止 workspace 流（2026-09-16 审查恢复：InboxView 只武装不回收，离开 /app 必须停）', async () => {
     const { wrapper } = await mountShell('/app/runs')
     wrapper.unmount()
-    expect(workspaceStubs.state.stopFleetStream).not.toHaveBeenCalled()
-    expect(workspaceStubs.state.stopReminderScheduler).not.toHaveBeenCalled()
+    expect(workspaceStubs.state.stopFleetStream).toHaveBeenCalled()
+    expect(workspaceStubs.state.stopReminderScheduler).toHaveBeenCalled()
   })
 })

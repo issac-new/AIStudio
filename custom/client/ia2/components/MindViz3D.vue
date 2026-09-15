@@ -110,9 +110,16 @@ function disposeScene(): void {
     threeScene.traverse(obj => {
       const mesh = obj as THREE.Mesh
       if (mesh.geometry) mesh.geometry.dispose()
+      // material.dispose() 不释放贴图：标签 CanvasTexture 必须显式 dispose，
+      // 否则每次投影刷新重建场景都泄漏一张 GPU 纹理
+      const disposeMat = (m: THREE.Material) => {
+        const map = (m as THREE.SpriteMaterial).map
+        if (map) map.dispose()
+        m.dispose()
+      }
       const mat = (mesh as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined
-      if (Array.isArray(mat)) mat.forEach(m => m.dispose())
-      else if (mat) mat.dispose()
+      if (Array.isArray(mat)) mat.forEach(disposeMat)
+      else if (mat) disposeMat(mat)
     })
   }
   renderer?.dispose()
@@ -124,6 +131,9 @@ function disposeScene(): void {
 
 function buildThree(): void {
   if (!containerRef.value || disposed) return
+  // 重建即回收上一轮资源（deep watch 每次投影刷新都会走到这里；
+  // 只靠 onUnmounted 会让 window 监听器与清理闭包随重建逐轮累积）
+  runCleanup()
   disposeScene()
   buddingMeshes.length = 0
   pingRings.length = 0
@@ -326,6 +336,12 @@ function buildThree(): void {
 
 const cleanupFns: Array<() => void> = []
 
+/** 执行并清空本轮累积的资源清理闭包（重建与卸载共用） */
+function runCleanup(): void {
+  for (const fn of cleanupFns) fn()
+  cleanupFns.length = 0
+}
+
 function onResize(): void {
   if (!renderer || !camera || !containerRef.value) return
   const w = containerRef.value.clientWidth
@@ -360,7 +376,7 @@ onMounted(() => {
 onUnmounted(() => {
   disposed = true
   window.removeEventListener('resize', onResize)
-  cleanupFns.forEach(fn => fn())
+  runCleanup()
   disposeScene()
 })
 
@@ -381,7 +397,7 @@ watch(() => props.projection, () => {
         @click="onFocusCluster(null)"
       >{{ t('loopMind.zone.all') }}</button>
       <button
-        v-for="region in scene.clusters"
+        v-for="cluster in scene.clusters"
         :key="cluster.key"
         type="button"
         class="lm3d__cluster-btn"
