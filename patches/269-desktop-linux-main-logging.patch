@@ -1,0 +1,37 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index 1f96a265..3fb45c71 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -101,9 +101,10 @@ if (process.platform === 'win32') {
+   app.setAppUserModelId(APP_USER_MODEL_ID)
+ }
+ 
+-// overlay[win-logging]: mirror console + uncaught errors to a rotating log
+-// file beside the exe on Windows (log/swarmstudio-main.log) so users can ship
+-// diagnostics when the gateway health check (8642) or window-raise misbehaves.
++// overlay[win-logging]: mirror console + uncaught errors to a rotating log file
++// (log/swarmstudio-main.log) so users can ship diagnostics when the gateway
++// health check (8642) or window-raise misbehaves. Windows: beside the exe;
++// Linux: XDG logs dir (stdout is lost on GUI launches).
+ // The Web UI server child already writes its own ~/.hermes-web-ui/server.log;
+ // this file captures the Electron *main* process only.
+ let desktopLogStream: WriteStream | null = null
+@@ -112,13 +113,16 @@ let desktopLogRotateTimer: NodeJS.Timeout | null = null
+ function desktopLogPath(): string {
+   // exe dir for NSIS installs = C:\\Users\\<u>\\AppData\\Local\\swarmstudio\\current.
+   // Putting logs there lets the user find them without digging into %APPDATA%.
++  // Linux GUI launches (Kylin/UKUI) drop stdout and AppImage mounts are
++  // read-only, so route to the XDG logs dir (~/.config/<name>/logs) instead.
++  if (process.platform === 'linux') return join(app.getPath('logs'), 'swarmstudio-main.log')
+   return join(dirname(process.execPath), 'log', 'swarmstudio-main.log')
+ }
+ 
+ function ensureDesktopLogStream(): WriteStream | null {
+   if (desktopLogStream) return desktopLogStream
+-  // Only enable for packaged Windows builds; dev runs keep stdout only.
+-  if (process.platform !== 'win32' || !app.isPackaged) return null
++  // Only enable for packaged Windows/Linux builds; dev runs keep stdout only.
++  if ((process.platform !== 'win32' && process.platform !== 'linux') || !app.isPackaged) return null
+   try {
+     const logFile = desktopLogPath()
+     mkdirSync(dirname(logFile), { recursive: true })
