@@ -174,7 +174,8 @@ export interface OverviewMetrics {
   stuckPartial: boolean
 }
 
-const DEFAULT_WINDOW_MS = 7 * 24 * 3_600_000
+/** 指标窗口（7 天）：驾驶舱各"7 日"口径 KPI 的单一事实源 */
+export const DEFAULT_WINDOW_MS = 7 * 24 * 3_600_000
 
 /** 事件 ts 双词汇解析：epoch ms 数字直通；ISO 字符串 Date.parse；坏值 null */
 function tsOf(value: string | number | undefined | null): number | null {
