@@ -332,15 +332,15 @@ function planTimeLabel(at: number | null): string {
         <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.loopsActive') }} / {{ mindThoughts.length }}</span>
       </div>
       <div class="lcp-kpi">
-        <span class="lcp-kpi__num lcp-kpi__num--cyan">{{ activeAgg.running }}</span>
+        <span class="lcp-kpi__num lcp-kpi__num--cyan">{{ statusCounts.running }}</span>
         <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.runsRunning') }}</span>
       </div>
-      <div class="lcp-kpi" :class="{ 'lcp-kpi--alert': inboxAgg.awaiting > 0 }">
-        <span class="lcp-kpi__num" :class="inboxAgg.awaiting > 0 ? 'lcp-kpi__num--amber' : ''">{{ inboxAgg.awaiting }}</span>
+      <div class="lcp-kpi" :class="{ 'lcp-kpi--alert': statusCounts.awaiting > 0 }">
+        <span class="lcp-kpi__num" :class="statusCounts.awaiting > 0 ? 'lcp-kpi__num--amber' : ''">{{ statusCounts.awaiting }}</span>
         <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.awaiting') }}</span>
       </div>
       <div class="lcp-kpi">
-        <span class="lcp-kpi__num lcp-kpi__num--green">{{ metrics.completed }}</span>
+        <span class="lcp-kpi__num lcp-kpi__num--green">{{ statusCounts.done }}</span>
         <span class="lcp-kpi__label">{{ t('loopCockpit.kpi.done7d') }}</span>
       </div>
       <div class="lcp-kpi">

@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index ec7f16f..921d0f0 100644
+index 91d6dc7..d414624 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
 @@ -860,7 +860,7 @@ CREATE TABLE IF NOT EXISTS tasks (
@@ -11,15 +11,30 @@ index ec7f16f..921d0f0 100644
      workspace_path       TEXT,
      branch_name          TEXT,
      -- Optional link to a first-class Project (hermes_cli/projects_db). When set,
-@@ -1269,7 +1269,7 @@ def create_task(
+@@ -1269,7 +1269,10 @@ def create_task(
          except Exception:
              pass
      if workspace_kind is None:
 -        workspace_kind = "scratch"
-+        workspace_kind = "dir"  # overlay: default to dir workspace, not scratch
++        # overlay: default to dir workspace on plain boards; project-scoped
++        # boards keep the upstream flow (scratch -> project worktree upgrade
++        # in _resolve_project_link, #106342).
++        workspace_kind = "scratch" if project_id is not None else "dir"
      if workspace_kind not in VALID_WORKSPACE_KINDS:
          raise ValueError(
              f"workspace_kind must be one of {sorted(VALID_WORKSPACE_KINDS)}, "
+@@ -1309,6 +1312,11 @@ def create_task(
+     # Retry once on the extremely unlikely id collision.
+     for attempt in range(2):
+         task_id = _new_task_id()
++        # Overlay: a default ``dir`` task created without an explicit path lands on
++        # the managed per-task workspace dir (absolute, path-stable, cleanup-guard
++        # safe). Upstream v0.21.3 raises at resolve time on dir-without-path.
++        if workspace_kind == "dir" and not workspace_path:
++            workspace_path = str(workspaces_root(board=board) / task_id)
+         try:
+             # allow_nested: graph builders compose create_task under one outer
+             # commit so the dispatcher never sees a half-built graph.
 diff --git a/plugins/kanban/dashboard/plugin_api.py b/plugins/kanban/dashboard/plugin_api.py
 index b15ed8a..e51f76d 100644
 --- a/plugins/kanban/dashboard/plugin_api.py

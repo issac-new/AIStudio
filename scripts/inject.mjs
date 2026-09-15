@@ -59,11 +59,13 @@ function applyPatches() {
 	        const targetPath = firstTargetMatch[1];
 	        // hermes-agent 特有的路径前缀 → 路由到 hermes-agent
 	        // gateway/、tests/gateway/ 见 patch 250（gateway/platforms/api_server.py 及其测试；
+	        // tests/hermes_cli/ 见 patch 273（hermes_cli 测试的 overlay 语义适配）；
 	        // tests/ 其余子树属于 hermes-studio，禁止整段路由）
-	        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') || 
+	        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') ||
 	            targetPath.startsWith('agent/') || targetPath.startsWith('apps/') ||
 	            targetPath.startsWith('assets/') || targetPath.startsWith('acp_') ||
-	            targetPath.startsWith('gateway/') || targetPath.startsWith('tests/gateway/')) {
+	            targetPath.startsWith('gateway/') || targetPath.startsWith('tests/gateway/') ||
+	            targetPath.startsWith('tests/hermes_cli/')) {
 	          targetRoot = hermesAgentRoot;
 	        }
 	        // hermes-studio 特有的路径前缀 → 保留默认
@@ -106,15 +108,17 @@ function reversePatches(patches) {
       const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
       if (firstTargetMatch) {
         const targetPath = firstTargetMatch[1];
-        // hermes-agent 特有的路径前缀 → 路由到 hermes-agent
-        // gateway/、tests/gateway/ 见 patch 250（gateway/platforms/api_server.py 及其测试；
-        // tests/ 其余子树属于 hermes-studio，禁止整段路由）
-        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') || 
-            targetPath.startsWith('agent/') || targetPath.startsWith('apps/') ||
-            targetPath.startsWith('assets/') || targetPath.startsWith('acp_') ||
-            targetPath.startsWith('gateway/') || targetPath.startsWith('tests/gateway/')) {
-          targetRoot = hermesAgentRoot;
-        }
+	        // hermes-agent 特有的路径前缀 → 路由到 hermes-agent
+	        // gateway/、tests/gateway/ 见 patch 250（gateway/platforms/api_server.py 及其测试；
+	        // tests/hermes_cli/ 见 patch 273（hermes_cli 测试的 overlay 语义适配）；
+	        // tests/ 其余子树属于 hermes-studio，禁止整段路由）
+	        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') ||
+	            targetPath.startsWith('agent/') || targetPath.startsWith('apps/') ||
+	            targetPath.startsWith('assets/') || targetPath.startsWith('acp_') ||
+	            targetPath.startsWith('gateway/') || targetPath.startsWith('tests/gateway/') ||
+	            targetPath.startsWith('tests/hermes_cli/')) {
+	          targetRoot = hermesAgentRoot;
+	        }
       }
     } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
     try {
