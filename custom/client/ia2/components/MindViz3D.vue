@@ -31,6 +31,18 @@ let threeScene: THREE.Scene | null = null
 let camera: THREE.PerspectiveCamera | null = null
 let animId = 0
 let disposed = false
+/** 待介入雷达脉冲环（渲染循环驱动扩圈） */
+const pingRings: THREE.Mesh[] = []
+
+/** id → 稳定相位（脉冲环错开，不同步闪） */
+function hashPhase(id: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return ((h >>> 0) % 1000) / 1000
+}
 
 // ── 相机轨道状态（自研轻量轨道：拖拽旋转 + 滚轮缩放 + 层聚焦平移） ──
 const orbit = {
@@ -179,7 +191,16 @@ function buildThree(): void {
     nodeById.set('core', core)
   }
 
-  // ── 思想核球体 + 标签精灵 ──
+  // ── 思想核球体 + 标签精灵（标签 LOD：只给活跃度 Top-N；待介入永给——警报不被藏） ──
+  const LABEL_TOP_N = 6
+  const thoughtByActivity = sc.nodes
+    .filter(n => n.kind === 'thought')
+    .sort((a, b) => b.strength - a.strength || (b.radialRecency ?? 0) - (a.radialRecency ?? 0))
+  const labelVisibleIds = new Set(
+    thoughtByActivity.slice(0, LABEL_TOP_N).map(n => n.id)
+      .concat(thoughtByActivity.filter(n => n.pendingAlert).map(n => n.id)),
+  )
+
   for (const node of sc.nodes.filter(n => n.kind === 'thought')) {
     const geo = new THREE.SphereGeometry(node.r, 22, 22)
     const color = statusColor(node.status)
@@ -196,9 +217,29 @@ function buildThree(): void {
     threeScene.add(mesh)
     nodeById.set(node.id, mesh)
 
-    const label = makeLabelSprite(node.label, node.sub)
-    label.position.set(node.x, node.y + node.r + 10, node.z)
-    threeScene.add(label)
+    if (labelVisibleIds.has(node.id)) {
+      const label = makeLabelSprite(node.label, node.sub)
+      label.position.set(node.x, node.y + node.r + 10, node.z)
+      threeScene.add(label)
+    }
+
+    // 待介入专属动效：雷达脉冲环（水平扩圈，跨房间召唤注意力；深度测试关 = 不被遮）
+    if (node.pendingAlert) {
+      const ringGeo = new THREE.RingGeometry(node.r + 3, node.r + 4.5, 40)
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: statusColor('awaiting-input'),
+        transparent: true,
+        opacity: 0.55,
+        side: THREE.DoubleSide,
+        depthTest: false,
+      })
+      const ring = new THREE.Mesh(ringGeo, ringMat)
+      ring.position.set(node.x, node.y, node.z)
+      ring.rotation.x = -Math.PI / 2
+      ring.userData.pingRing = { baseR: node.r + 3, phase: hashPhase(node.id) }
+      threeScene.add(ring)
+      pingRings.push(ring)
+    }
   }
 
   // ── 末梢运行点 ──
@@ -278,6 +319,18 @@ function buildThree(): void {
       Math.sin(orbit.theta) * Math.sin(orbit.phi) * orbit.dist,
     )
     camera.lookAt(0, cy, 0)
+
+    // 待介入雷达脉冲环：扩圈→淡出→重置（运动签名，等待越久越急）
+    const tSec = performance.now() / 1000
+    for (const ring of pingRings) {
+      const { baseR, phase } = ring.userData.pingRing as { baseR: number; phase: number }
+      const cycle = ((tSec * 0.8 + phase) % 1) // 0..1 循环
+      const scale = 1 + cycle * 1.8
+      ring.scale.setScalar(scale)
+      const m = ring.material as THREE.MeshBasicMaterial
+      m.opacity = 0.55 * (1 - cycle)
+    }
+
     renderer.render(threeScene, camera)
     animId = requestAnimationFrame(tick)
   }

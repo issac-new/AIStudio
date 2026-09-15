@@ -51,6 +51,7 @@ const workspaceStubs = vi.hoisted(() => {
     stopFleetStream: vi.fn(),
     watchKanbanTasks: vi.fn(),
     unwatchKanbanTasks: vi.fn(),
+    onBoardEvent: vi.fn(() => () => {}),
     refreshAllBoards: vi.fn(async () => true),
   }
   return { state, useWorkspaceStore: () => state }
