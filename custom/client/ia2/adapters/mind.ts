@@ -149,6 +149,14 @@ function scatterOffset(id: string, span: number): number {
   return (hash01(`off:${id}`) - 0.5) * span
 }
 
+/** 运行时长 → 可读标签（末梢副标语义：这条运行跑了多久） */
+function formatRunDuration(sec: number): string | undefined {
+  if (!Number.isFinite(sec) || sec <= 0) return undefined
+  if (sec < 60) return `${Math.round(sec)}s`
+  if (sec < 3600) return `${Math.floor(sec / 60)}m`
+  return `${Math.floor(sec / 3600)}h${Math.floor((sec % 3600) / 60)}m`
+}
+
 /** 有机曲线：三次贝塞尔，控制点沿弦向轴外随机移（同一 id 恒定） */
 function organicPath(
   x0: number, y0: number, x1: number, y1: number,
@@ -231,7 +239,8 @@ export function buildMindScene(projection: MindProjectionDto): MindScene {
       r: running ? 19 : 15,
       status: thought.status,
       label: thought.title,
-      sub: thought.board ?? undefined,
+      // 语义标签副行：运行计数（×N 次运行）——大脑图谱的有效信息载体
+      sub: thoughtRuns.length > 0 ? `×${thoughtRuns.length}` : undefined,
       strength,
       pulse: running,
       driftHz: 0.35 + hash01(`hz:${thought.id}`) * 0.4,
@@ -275,7 +284,8 @@ export function buildMindScene(projection: MindProjectionDto): MindScene {
         r: isRunning ? 7.5 : 5.5,
         status: run.status,
         label: run.runId.slice(-4),
-        sub: run.outcome ?? undefined,
+        // 末梢副标：运行时长（可读语义——这条运行跑了多久）
+        sub: formatRunDuration(run.durationSec),
         strength: strengthOf(run.status),
         pulse: isRunning,
         driftHz: 0.5 + hash01(`hz:${run.runId}`) * 0.6,

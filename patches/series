@@ -364,3 +364,8 @@
 # 无人工编排。254/255 = loopMind i18n 键块（zh/en，其余语言 en 回退）。
 254-mind-i18n-zh.patch
 255-mind-i18n-en.patch
+
+# 思维大脑语义化（2026-09-15）：色彩全局一致 + 思维图语义标签。256/257 =
+# loopMind.status.* 状态词（思想核/末梢的可读语义，zh/en，其余语言 en 回退）。
+256-mind-status-i18n-zh.patch
+257-mind-status-i18n-en.patch

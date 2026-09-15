@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 47021837..383a8feb 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1132,6 +1132,17 @@
+     },
+     viewRuns: '查看运行',
++    status: {
++      running: '进行中',
++      blocked: '阻塞',
++      'awaiting-review': '待审',
++      'awaiting-input': '待介入',
++      completed: '已完成',
++      failed: '失败',
++      idle: '空闲',
++      archived: '已归档',
++      unknown: '未知',
++    },
+   },
+ 
+   agentManager: {
+     title: 'Agent 管理',

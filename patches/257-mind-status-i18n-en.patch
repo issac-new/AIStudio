@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 032b61b1..653d0215 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1134,6 +1134,17 @@
+     },
+     viewRuns: 'View runs',
++    status: {
++      running: 'Running',
++      blocked: 'Blocked',
++      'awaiting-review': 'Awaiting review',
++      'awaiting-input': 'Awaiting input',
++      completed: 'Completed',
++      failed: 'Failed',
++      idle: 'Idle',
++      archived: 'Archived',
++      unknown: 'Unknown',
++    },
+   },
+ 
+   agentManager: {
+     title: 'Agent Manager',
