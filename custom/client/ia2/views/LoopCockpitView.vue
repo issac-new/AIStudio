@@ -19,7 +19,7 @@ import MindViz from '../components/MindViz.vue'
 import MindViz3D from '../components/MindViz3D.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import { buildMindScene, type MindNode, type MindProjectionDto } from '../adapters/mind'
-import type { Mind3DNode } from '../adapters/mind3d'
+import { relatedIdsOf, type MindNode as Mind3DNode } from '../adapters/mind3d'
 import { runRest } from '@/custom/loop/runcenter/api'
 import {
   aggregateActiveRuns, aggregateInbox, aggregateMetrics, buildTodayPlan, formatDuration,
@@ -148,22 +148,37 @@ function goTaskFromAttention(row: AttentionRow): void {
 function onVizNode(node: MindNode): void {
   if (node.to) void router.push(node.to)
 }
+/** 节点点击（2026-09-15 用户裁决）：不跳 kanban——就地筛选仅显示关联项 +
+ *  右侧栏打开该节点详情说明。再次点击同一节点取消聚焦。 */
 function onViz3DNode(node: Mind3DNode): void {
-  // L3 详情层（2026-09-15 规划）：末梢点击 → 2D 任务详情抽屉接管（阅读任务不进 3D），
-  // 3D 只提供空间上下文；思想核/审批仍走路由导航（工作项预选 / 介入中心）。
-  if (node.kind === 'run' && node.to?.query?.task) {
-    detailTaskId.value = node.to.query.task
-    detailOpen.value = true
+  if (mindData.value == null) return
+  if (focusedNodeId.value === node.id) {
+    clearFocus()
     return
   }
-  if (node.to) void router.push(node.to)
+  focusedNodeId.value = node.id
+  focusedIds.value = relatedIdsOf(node.id, mindData.value)
+  const taskId = node.kind === 'column'
+    ? node.id.replace(/^column:/, '')
+    : node.to?.query?.task ?? null
+  detailTaskId.value = taskId
+  detailOpen.value = taskId != null
 }
 const goRuns = () => void router.push({ name: 'ia2.runs' })
 const goInbox = () => void router.push({ name: 'ia2.inbox' })
 const goTasks = (status: string) => void router.push({ path: '/app/tasks', query: { status } })
-/** 思想核（任务）点击 → 工作项区预选该任务 */
+/** 思想核（任务）点击 → 就地筛选仅显示关联项（不跳 kanban——与 3D 节点点击同语义） */
 function goThought(taskId: string): void {
-  void router.push({ path: '/app/tasks', query: { task: taskId } })
+  const nodeId = `column:${taskId}`
+  if (focusedNodeId.value === nodeId) {
+    clearFocus()
+    return
+  }
+  focusedNodeId.value = nodeId
+  // 筛选集只在投影已武装时算（未武装 = 全景不筛选；数据后到自动聚焦）
+  focusedIds.value = mindData.value != null ? relatedIdsOf(nodeId, mindData.value) : null
+  detailTaskId.value = taskId
+  detailOpen.value = true
 }
 
 /** 视图切换（2026-09-15 形态重构：皮层并入立体图，去独立皮层视图）：
@@ -171,7 +186,9 @@ function goThought(taskId: string): void {
 const vizMode = ref<'landscape' | 'flat'>('landscape')
 const viz3D = computed(() => vizMode.value === 'landscape')
 
-/** L3 详情层：任务详情抽屉（末梢点击接管；阅读任务不进 3D） */
+/** 聚焦状态（2026-09-15 用户裁决：就地筛选仅显示关联项 + 右栏详情说明） */
+const focusedNodeId = ref<string | null>(null)
+const focusedIds = ref<Set<string> | null>(null)
 const detailOpen = ref(false)
 const detailTaskId = ref<string | null>(null)
 
@@ -188,6 +205,45 @@ function thoughtRunCount(thoughtId: string): string {
 }
 function thoughtDotClass(status: string): string {
   return `lcp-dot--${status}`
+}
+
+// ── 详情说明投影（选中节点所属任务；2026-09-15 用户裁决：右栏=详情说明） ──
+const detailTask = computed(() => {
+  if (!detailTaskId.value || mindData.value == null) return null
+  return mindData.value.thoughts.find(t => t.id === detailTaskId.value) ?? null
+})
+const detailRuns = computed(() => {
+  if (!detailTaskId.value || mindData.value == null) return []
+  return mindData.value.runs.filter(r => r.thoughtId === detailTaskId.value)
+})
+const detailRelations = computed(() => {
+  if (!detailTaskId.value || mindData.value == null) return []
+  const rels = mindData.value.relations ?? []
+  const out: Array<{ id: string; label: string }> = []
+  for (const rel of rels) {
+    if (rel.parentId === detailTaskId.value) {
+      const child = mindData.value.thoughts.find(t => t.id === rel.childId)
+      if (child) out.push({ id: `p-${rel.childId}`, label: `→ ${child.title}` })
+    }
+    if (rel.childId === detailTaskId.value) {
+      const parent = mindData.value.thoughts.find(t => t.id === rel.parentId)
+      if (parent) out.push({ id: `c-${rel.parentId}`, label: `↑ ${parent.title}` })
+    }
+  }
+  return out
+})
+const detailClusterLabel = computed(() => {
+  if (!detailTaskId.value || mindData.value == null) return ''
+  const t = mindData.value.thoughts.find(x => x.id === detailTaskId.value)
+  if (!t) return ''
+  const m = t.title.match(/^\[([^\]]+)\]/)
+  return m ? m[1].replace(/-\d+b?$/, '') : t.title.slice(0, 12)
+})
+function clearFocus(): void {
+  focusedNodeId.value = null
+  focusedIds.value = null
+  detailOpen.value = false
+  detailTaskId.value = null
 }
 
 // ── 溢出菜单（次要入口收拢；活大脑已不需人工编排，编排区移出驾驶舱主链） ──
@@ -329,6 +385,7 @@ function planTimeLabel(at: number | null): string {
         <MindViz3D
           v-if="vizMode === 'landscape'"
           :projection="mindData ?? { thoughts: [], runs: [], available: false }"
+          :focused-ids="focusedIds"
           @node-click="onViz3DNode"
           @fallback-2d="vizMode = 'flat'"
         />
@@ -351,19 +408,44 @@ function planTimeLabel(at: number | null): string {
         </div>
       </section>
 
-      <!-- 右：思想列表面板（已有任务）+ 状态分布 + 今日计划 -->
+      <!-- 右：详情说明（选中节点时）/ 思想列表（默认） -->
       <aside class="lcp-panel lcp-panel--loops" data-testid="lcp-loops-panel">
         <div class="lcp-panel__head">
-          <span>{{ t('loopMind.loops.title') }}</span>
-          <span class="lcp-panel__count">{{ mindThoughts.length }}</span>
+          <span>{{ detailOpen && detailTask ? t('loopMind.detail.title') : t('loopMind.loops.title') }}</span>
+          <button
+            v-if="detailOpen && detailTask"
+            type="button"
+            class="lcp-panel__more"
+            data-testid="lcp-detail-close"
+            @click="clearFocus"
+          >{{ t('loopMind.detail.close') }} ×</button>
+          <span v-else class="lcp-panel__count">{{ mindThoughts.length }}</span>
+        </div>
+
+        <!-- 详情说明（选中节点关联的任务） -->
+        <div v-if="detailOpen && detailTask" class="lcp-detail" data-testid="lcp-detail">
+          <div class="lcp-detail__title">{{ detailTask.title }}</div>
+          <div class="lcp-detail__row"><span class="lcp-detail__k">{{ t('loopMind.detail.status') }}</span><span>{{ t(`loopMind.status.${detailTask.status}`) }}</span></div>
+          <div class="lcp-detail__row"><span class="lcp-detail__k">{{ t('loopMind.detail.cluster') }}</span><span>{{ detailClusterLabel }}</span></div>
+          <div class="lcp-detail__row"><span class="lcp-detail__k">{{ t('loopMind.detail.runs') }}</span><span>{{ detailRuns.length }} {{ t('loopMind.clusterTasksUnit') }}</span></div>
+          <div v-if="detailRuns.length > 0" class="lcp-detail__runs">
+            <div v-for="run in detailRuns.slice(0, 6)" :key="run.runId" class="lcp-detail__run">
+              <span class="lcp-dot" :class="`lcp-dot--${run.status}`" />
+              <span class="lcp-detail__run-meta">{{ t(`loopMind.status.${run.status}`) }} · {{ formatDuration(run.durationSec * 1000) ?? run.outcome ?? '' }}</span>
+            </div>
+          </div>
+          <div v-if="detailRelations.length > 0" class="lcp-detail__rels">
+            <div class="lcp-detail__k">{{ t('loopMind.detail.relations') }}</div>
+            <div v-for="rel in detailRelations" :key="rel.id" class="lcp-detail__rel">{{ rel.label }}</div>
+          </div>
         </div>
 
         <div
-          v-if="mindThoughts.length === 0 && booted"
+          v-if="!detailOpen && mindThoughts.length === 0 && booted"
           class="lcp-panel__empty"
           data-testid="lcp-loops-empty"
         >{{ t('loopMind.loops.empty') }}</div>
-        <template v-else>
+        <template v-else-if="!detailOpen">
           <div class="lcp-loops-scroll">
             <div
               v-for="thought in mindThoughts"
@@ -601,6 +683,17 @@ function planTimeLabel(at: number | null): string {
 }
 .lcp-viz-toggle__btn:hover { color: var(--color-primary, #3b82f6); }
 .lcp-viz-toggle__btn--on { background: var(--color-primary, #3b82f6); color: var(--bg-primary); font-weight: 600; }
+
+/* ═══ 详情说明面板（选中节点关联任务） ═══ */
+.lcp-detail { padding: 10px 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.lcp-detail__title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; line-height: 1.4; }
+.lcp-detail__row { display: flex; gap: 8px; font-size: 12px; padding: 3px 0; color: var(--text-primary); }
+.lcp-detail__k { flex: 0 0 64px; color: var(--text-secondary); font-size: 11px; }
+.lcp-detail__runs { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.lcp-detail__run { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-secondary); }
+.lcp-detail__run-meta { font-variant-numeric: tabular-nums; }
+.lcp-detail__rels { margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 8px; }
+.lcp-detail__rel { font-size: 11.5px; color: var(--text-secondary); padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) {
   .lcp-top__mark, .lcp-pill--on i { animation: none; }
