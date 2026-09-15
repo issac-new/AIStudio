@@ -1,13 +1,14 @@
 // overlay/custom/client/ia2/__tests__/mind3d-adapter.test.ts
-// 3D 思维图谱纯投影守门（2026-09-15 用户裁决：Three.js 立体图——可缩放/旋转/
-// 层级切换）。断言本体论 → 3D 语义映射：状态→高度层、任务→层内平面节点、
-// 运行→附属点、核心柱贯穿、层界标计数、上限折叠、确定性。纯函数零 Three.js。
+// 3D 思维图谱纯投影守门（2026-09-15 形态重构：无中心聚类景观）。
+// 用户裁决：去核心轴/思维原点——没有「核心」，思维图按聚类分类呈现。
+// 断言：无核心节点、聚类分群（命名前缀族/父子树连通域/单任务族）、族质心散布、
+// 族内柱群、柱粗细=运行史/柱高=活跃度、关系弧（父子委派）、末梢环绕、萌芽标记、
+// 皮层地形、上限折叠、确定性。纯函数零 Three.js。
 import { describe, it, expect } from 'vitest'
 import {
-  buildMind3DScene, MIND3D_LAYER_GAP,
-  type MindProjectionDto,
+  buildMind3DScene, LANDSCAPE_R, MAX_THOUGHTS, RUNS_PER_THOUGHT,
 } from '../adapters/mind3d'
-import type { MindThoughtDto, MindRunDto } from '../adapters/mind'
+import type { MindProjectionDto, MindThoughtDto, MindRunDto } from '../adapters/mind'
 
 function makeThought(partial: Partial<MindThoughtDto> & { id: string }): MindThoughtDto {
   return {
@@ -31,203 +32,181 @@ function makeRun(partial: Partial<MindRunDto> & { runId: string; thoughtId: stri
   }
 }
 
-function proj(thoughts: MindThoughtDto[], runs: MindRunDto[]): MindProjectionDto {
-  return { thoughts, runs, available: true }
+function proj(thoughts: MindThoughtDto[], runs: MindRunDto[], relations?: Array<{ parentId: string; childId: string }>): MindProjectionDto {
+  return { thoughts, runs, relations, available: true }
 }
 
-describe('buildMind3DScene — 本体论 → 3D 映射', () => {
-  it('空投影 → 仅核心柱，无边无层', () => {
+describe('buildMind3DScene — 无中心聚类景观', () => {
+  it('空投影 → 无节点无边无族（无核心柱——思维原点已去除）', () => {
     const scene = buildMind3DScene(proj([], []))
-    expect(scene.nodes.map(n => n.kind)).toEqual(['core'])
+    expect(scene.nodes).toEqual([])
     expect(scene.edges).toEqual([])
-    expect(scene.layers).toEqual([])
+    expect(scene.clusters).toEqual([])
+    expect(scene.terrain.length).toBeGreaterThan(0)
+    expect(scene.hiddenThoughts).toBe(0)
   })
 
-  it('确定性：同一投影两次构造 deep equal', () => {
-    const p = proj([makeThought({ id: 'a', status: 'running' })], [makeRun({ runId: 'r1', thoughtId: 'a' })])
-    expect(buildMind3DScene(p)).toEqual(buildMind3DScene(p))
-  })
-
-  it('状态 → 高度层：running 顶、awaiting/blocked 中、completed/failed 下、idle/archived 底', () => {
-    const scene = buildMind3DScene(proj([
-      makeThought({ id: 'run', status: 'running' }),
-      makeThought({ id: 'wait', status: 'awaiting-review' }),
-      makeThought({ id: 'done', status: 'completed' }),
-      makeThought({ id: 'arch', status: 'archived' }),
-    ], []))
-    const y = (id: string) => scene.nodes.find(n => n.id === `thought:${id}`)!.y
-    expect(y('run')).toBe(3 * MIND3D_LAYER_GAP)
-    expect(y('wait')).toBe(2 * MIND3D_LAYER_GAP)
-    expect(y('done')).toBe(1 * MIND3D_LAYER_GAP)
-    expect(y('arch')).toBe(0)
-    // 层序单调（上 > 下）
-    expect(y('run')).toBeGreaterThan(y('wait'))
-    expect(y('wait')).toBeGreaterThan(y('done'))
-    expect(y('done')).toBeGreaterThan(y('arch'))
-  })
-
-  it('层界标：有任务的层产出 layer（含计数），空层不产出', () => {
+  it('无中心原点：不存在 core 节点，无柱精确落在 (0,*,0)', () => {
     const scene = buildMind3DScene(proj([
       makeThought({ id: 'a', status: 'running' }),
-      makeThought({ id: 'b', status: 'running' }),
-      makeThought({ id: 'c', status: 'completed' }),
+      makeThought({ id: 'b', status: 'idle' }),
     ], []))
-    const running = scene.layers.find(l => l.key === 'running')
-    expect(running).toBeDefined()
-    expect(running!.count).toBe(2)
-    expect(running!.y).toBe(3 * MIND3D_LAYER_GAP)
-    expect(scene.layers.find(l => l.key === 'done')!.count).toBe(1)
-    expect(scene.layers.find(l => l.key === 'awaiting')).toBeUndefined()
-  })
-
-  it('核心柱贯穿各层（y 居中于层区间）', () => {
-    const scene = buildMind3DScene(proj([makeThought({ id: 't1', status: 'running' })], []))
-    const core = scene.nodes.find(n => n.kind === 'core')!
-    expect(core.x).toBe(0)
-    expect(core.z).toBe(0)
-    expect(core.y).toBe(MIND3D_LAYER_GAP * 1.5)
-  })
-
-  it('思想核在层平面散布（XZ 平面；半径带内，不坍缩到中心）', () => {
-    const scene = buildMind3DScene(proj([
-      makeThought({ id: 'a', status: 'running' }),
-      makeThought({ id: 'b', status: 'running' }),
-      makeThought({ id: 'c', status: 'running' }),
-    ], []))
-    const thoughts = scene.nodes.filter(n => n.kind === 'thought')
-    expect(thoughts).toHaveLength(3)
-    for (const t of thoughts) {
-      expect(t.y).toBe(3 * MIND3D_LAYER_GAP)
-      const planarR = Math.hypot(t.x, t.z)
-      expect(planarR).toBeGreaterThan(30) // 不坍缩到中心轴
+    expect(scene.nodes.find(n => (n as { kind: string }).kind === 'core')).toBeUndefined()
+    for (const n of scene.nodes.filter(x => x.kind === 'column')) {
+      expect(Math.abs(n.x) > 1e-6 || Math.abs(n.z) > 1e-6).toBe(true)
     }
   })
 
-  it('末梢环绕所属任务（附属点，同一层）', () => {
+  it('确定性：同一投影两次构造 deep equal', () => {
+    const p = proj(
+      [makeThought({ id: 'a', title: '[aiteam-1] 设计', status: 'running' })],
+      [makeRun({ runId: 'r1', thoughtId: 'a' })],
+      [{ parentId: 'a', childId: 'b' }],
+    )
+    expect(buildMind3DScene(p)).toEqual(buildMind3DScene(p))
+  })
+})
+
+describe('buildMind3DScene — 聚类分类（核心语义）', () => {
+  it('命名前缀族聚类：[aiteam-*] 同族、[gap] 同族、无前缀自成族', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 't1', title: '[aiteam-1] 设计能力矩阵' }),
+      makeThought({ id: 't2', title: '[aiteam-2] 创建 board' }),
+      makeThought({ id: 't3', title: '[gap] platform: 会话无持久化' }),
+      makeThought({ id: 't4', title: '[gap] loop graph 静态快照' }),
+      makeThought({ id: 't5', title: '无前缀任务' }),
+    ], []))
+    const clusterOf = (id: string) => scene.nodes.find(n => n.id === `column:${id}`)!.cluster
+    expect(clusterOf('t1')).toBe(clusterOf('t2'))
+    expect(clusterOf('t3')).toBe(clusterOf('t4'))
+    expect(clusterOf('t1')).not.toBe(clusterOf('t3'))
+    expect(clusterOf('t5')).not.toBe(clusterOf('t1'))
+    expect(scene.clusters.find(c => c.label === 'aiteam')?.count).toBe(2)
+    expect(scene.clusters.find(c => c.label === 'gap')?.count).toBe(2)
+  })
+
+  it('父子树连通域聚类：无前缀任务归到根任务族', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'root', title: '根任务' }),
+      makeThought({ id: 'child', title: '子任务' }),
+      makeThought({ id: 'grandchild', title: '孙任务' }),
+    ], [], [
+      { parentId: 'root', childId: 'child' },
+      { parentId: 'child', childId: 'grandchild' },
+    ]))
+    const clusterOf = (id: string) => scene.nodes.find(n => n.id === `column:${id}`)!.cluster
+    expect(clusterOf('child')).toBe(clusterOf('root'))
+    expect(clusterOf('grandchild')).toBe(clusterOf('root'))
+  })
+
+  it('族质心散布在景观平面（族间分离，不坍缩到一点）', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'a', title: '[x] 任务a' }),
+      makeThought({ id: 'b', title: '[y] 任务b' }),
+      makeThought({ id: 'c', title: '[z] 任务c' }),
+    ], []))
+    expect(scene.clusters).toHaveLength(3)
+    const positions = scene.clusters.map(c => [c.cx, c.cz])
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const d = Math.hypot(positions[i][0] - positions[j][0], positions[i][1] - positions[j][1])
+        expect(d).toBeGreaterThan(1)
+      }
+    }
+  })
+})
+
+describe('buildMind3DScene — 皮层柱形态（任务实体）', () => {
+  it('柱粗细=运行史规模、柱高=活跃度（状态语义）', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'busy-run', status: 'running' }),
+      makeThought({ id: 'quiet-idle', status: 'idle' }),
+      makeThought({ id: 'busy-done', status: 'completed' }),
+    ], [
+      ...Array.from({ length: 5 }, (_, i) => makeRun({ runId: `a${i}`, thoughtId: 'busy-run' })),
+      ...Array.from({ length: 5 }, (_, i) => makeRun({ runId: `b${i}`, thoughtId: 'busy-done' })),
+    ]))
+    const busyRun = scene.nodes.find(n => n.id === 'column:busy-run')!
+    const quietIdle = scene.nodes.find(n => n.id === 'column:quiet-idle')!
+    const busyDone = scene.nodes.find(n => n.id === 'column:busy-done')!
+    expect(busyRun.r).toBe(busyDone.r)
+    expect(busyRun.r).toBeGreaterThan(quietIdle.r)
+    expect(busyRun.h).toBeGreaterThan(busyDone.h)
+    expect(busyDone.h).toBeGreaterThan(quietIdle.h)
+  })
+
+  it('皮层地形起伏（脑回高度场非零且确定）', () => {
+    const scene = buildMind3DScene(proj([], []))
+    const ys = scene.terrain.map(p => p.y)
+    expect(Math.max(...ys)).toBeGreaterThan(0)
+    expect(Math.min(...ys)).toBeLessThan(0)
+    expect(buildMind3DScene(proj([], [])).terrain).toEqual(scene.terrain)
+  })
+
+  it('萌芽标记：近 24h 新任务 budding=true；旧任务 false', () => {
+    const recent = new Date(Date.now() - 3600_000).toISOString()
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'new', createdAt: recent }),
+      makeThought({ id: 'old', createdAt: '2026-09-01T00:00:00Z' }),
+    ], []))
+    expect(scene.nodes.find(n => n.id === 'column:new')!.budding).toBe(true)
+    expect(scene.nodes.find(n => n.id === 'column:old')!.budding).toBe(false)
+  })
+
+  it('待介入专属通道：pendingAlert 标记 + 路由进介入中心', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'wait', status: 'awaiting-review' }),
+      makeThought({ id: 'run', status: 'running' }),
+    ], []))
+    const wait = scene.nodes.find(n => n.id === 'column:wait')!
+    expect(wait.pendingAlert).toBe(true)
+    expect(wait.pulse).toBe(false)
+    expect(wait.to).toEqual({ name: 'ia2.inbox', query: { task: 'wait' } })
+    expect(scene.nodes.find(n => n.id === 'column:run')!.pendingAlert).toBeFalsy()
+  })
+})
+
+describe('buildMind3DScene — 关系与末梢', () => {
+  it('父子委派弧：task_links → 柱间有向弧（delegate 语义，顶点高于两端）', () => {
+    const scene = buildMind3DScene(proj([
+      makeThought({ id: 'parent' }),
+      makeThought({ id: 'child' }),
+    ], [], [{ parentId: 'parent', childId: 'child' }]))
+    const edge = scene.edges.find(e => e.id === 'rel:parent->child')!
+    expect(edge.relKind).toBe('delegate')
+    expect(edge.from).toBe('column:parent')
+    expect(edge.to).toBe('column:child')
+    expect(edge.apexY).toBeGreaterThan(edge.fromPos.y)
+    expect(edge.apexY).toBeGreaterThan(edge.toPos.y)
+    const dangling = buildMind3DScene(proj([makeThought({ id: 'parent' })], [], [{ parentId: 'parent', childId: 'ghost' }]))
+    expect(dangling.edges.filter(e => e.id.startsWith('rel:'))).toHaveLength(0)
+  })
+
+  it('末梢环绕所属任务柱（同族同簇）；产生弧在柱顶', () => {
     const scene = buildMind3DScene(proj([makeThought({ id: 't1' })], [
       makeRun({ runId: 'r1', thoughtId: 't1' }),
       makeRun({ runId: 'r2', thoughtId: 't1' }),
     ]))
-    const thought = scene.nodes.find(n => n.id === 'thought:t1')!
+    const col = scene.nodes.find(n => n.id === 'column:t1')!
     for (const run of scene.nodes.filter(n => n.kind === 'run')) {
-      const d = Math.hypot(run.x - thought.x, run.z - thought.z)
+      expect(run.cluster).toBe(col.cluster)
+      const d = Math.hypot(run.x - col.x, run.z - col.z)
       expect(d).toBeGreaterThan(0)
-      expect(d).toBeLessThan(80) // 附属点在任务近旁
-      expect(Math.abs(run.y - thought.y)).toBeLessThan(20) // 同一层附近
+      expect(d).toBeLessThan(60)
+      expect(run.y).toBeGreaterThan(col.y)
     }
+    const spawn = scene.edges.find(e => e.id === 'column:t1->run:r1')!
+    expect(spawn.relKind).toBe('spawn')
   })
 
-  it('关系连线：core→任务（孕育）+ 任务→末梢（产生），端点坐标在边对象上', () => {
-    const scene = buildMind3DScene(proj([makeThought({ id: 't1' })], [makeRun({ runId: 'r1', thoughtId: 't1' })]))
-    const rootEdge = scene.edges.find(e => e.id === 'core->thought:t1')!
-    expect(rootEdge.from).toBe('core')
-    expect(rootEdge.fromPos.x).toBe(0)
-    expect(rootEdge.toPos).toMatchObject({ x: expect.any(Number), y: expect.any(Number), z: expect.any(Number) })
-    const leafEdge = scene.edges.find(e => e.id === 'thought:t1->run:r1')!
-    expect(leafEdge.from).toBe('thought:t1')
-  })
+  it(`单思想核末梢上限 ${RUNS_PER_THOUGHT}；思想核上限 ${MAX_THOUGHTS} 折叠`, () => {
+    const runs = Array.from({ length: RUNS_PER_THOUGHT + 2 }, (_, i) =>
+      makeRun({ runId: `r${i}`, thoughtId: 't1', startedAt: `2026-09-14T10:0${i}:00Z` }))
+    const scene = buildMind3DScene(proj([makeThought({ id: 't1' })], runs))
+    expect(scene.nodes.filter(n => n.kind === 'run')).toHaveLength(RUNS_PER_THOUGHT)
 
-  it('可塑性：运行多的任务孕育边更强', () => {
-    const busy = Array.from({ length: 4 }, (_, i) => makeRun({ runId: `b${i}`, thoughtId: 'busy' }))
-    const scene = buildMind3DScene(proj(
-      [makeThought({ id: 'busy', status: 'running' }), makeThought({ id: 'quiet', status: 'running' })],
-      busy,
-    ))
-    expect(scene.edges.find(e => e.id === 'core->thought:busy')!.strength)
-      .toBeGreaterThan(scene.edges.find(e => e.id === 'core->thought:quiet')!.strength)
-  })
-
-  it('末梢副标 = 运行时长；点击 → 工作项区预选该任务', () => {
-    const scene = buildMind3DScene(proj([makeThought({ id: 't1' })], [
-      makeRun({ runId: 'q', thoughtId: 't1', durationSec: 900 }),
-    ]))
-    const run = scene.nodes.find(n => n.id === 'run:q')!
-    expect(run.sub).toBe('15m')
-    expect(run.to).toEqual({ name: 'ia2.tasks', query: { task: 't1' } })
-  })
-
-  it('思想核上限 24：超出折叠进 hiddenThoughts', () => {
-    const thoughts = Array.from({ length: 30 }, (_, i) => makeThought({ id: `t${i}` }))
-    const scene = buildMind3DScene(proj(thoughts, []))
-    expect(scene.nodes.filter(n => n.kind === 'thought').length).toBeLessThanOrEqual(24)
-    expect(scene.hiddenThoughts).toBe(6)
-  })
-})
-
-describe('buildMind3DScene — 2026-09-15 规划第一轮修正', () => {
-  it('半径解耦：半径只承载体量（运行史规模），与状态无关（不再一身二任）', () => {
-    const runs = Array.from({ length: 5 }, (_, i) => makeRun({ runId: `r${i}`, thoughtId: 'busy' }))
-    const scene = buildMind3DScene(proj([
-      makeThought({ id: 'busy-idle', status: 'idle' }),
-      makeThought({ id: 'busy-run', status: 'running' }),
-      makeThought({ id: 'quiet-run', status: 'running' }),
-    ], [
-      ...runs.map(r => ({ ...r, thoughtId: 'busy-idle' })),
-      ...runs.map(r => ({ ...r, runId: r.runId + 'x', thoughtId: 'busy-run' })),
-    ]))
-    const busyIdle = scene.nodes.find(n => n.id === 'thought:busy-idle')!
-    const busyRun = scene.nodes.find(n => n.id === 'thought:busy-run')!
-    const quietRun = scene.nodes.find(n => n.id === 'thought:quiet-run')!
-    // 同运行史规模 → 同半径（与状态无关）
-    expect(busyIdle.r).toBe(busyRun.r)
-    // 运行史多 → 半径大（体量语义）
-    expect(busyRun.r).toBeGreaterThan(quietRun.r)
-  })
-
-  it('待介入专属通道：pendingAlert 标记（与 running 的 pulse 分家）；径向时序显式化', () => {
-    const scene = buildMind3DScene(proj([
-      makeThought({ id: 'wait', status: 'awaiting-review' }),
-      makeThought({ id: 'run', status: 'running' }),
-    ], []))
-    const wait = scene.nodes.find(n => n.id === 'thought:wait')!
-    const run = scene.nodes.find(n => n.id === 'thought:run')!
-    expect(wait.pendingAlert).toBe(true)
-    expect(wait.pulse).toBe(false)   // 待介入不是 running——呼吸脉冲分家
-    expect(run.pendingAlert).toBeFalsy()
-    expect(run.pulse).toBe(true)
-    // 径向时序（区内时序语义进节点，图例可读）
-    expect(typeof wait.radialRecency).toBe('number')
-    expect(wait.radialRecency!).toBeGreaterThan(0)
-  })
-})
-
-describe('buildMind3DScene — A 方案第二轮（关系边 + 审批负载）', () => {
-  it('任务关系边：task_links 父子投影为思想核间有向边（delegate 语义）', () => {
-    const scene = buildMind3DScene(proj([
-      makeThought({ id: 'parent' }),
-      makeThought({ id: 'child' }),
-      makeThought({ id: 'orphan' }),
-    ], []))
-    expect(scene.edges.filter(e => e.id.startsWith('rel:'))).toHaveLength(0)
-
-    const withRel = buildMind3DScene({
-      thoughts: [makeThought({ id: 'parent' }), makeThought({ id: 'child' })],
-      runs: [],
-      relations: [{ parentId: 'parent', childId: 'child' }],
-      available: true,
-    })
-    const relEdge = withRel.edges.find(e => e.id === 'rel:parent->child')
-    expect(relEdge).toBeDefined()
-    expect(relEdge!.from).toBe('thought:parent')
-    expect(relEdge!.to).toBe('thought:child')
-    expect(relEdge!.fromPos).toMatchObject({ x: expect.any(Number) })
-    const dangling = buildMind3DScene({
-      thoughts: [makeThought({ id: 'parent' })],
-      runs: [],
-      relations: [{ parentId: 'parent', childId: 'ghost' }],
-      available: true,
-    })
-    expect(dangling.edges.filter(e => e.id.startsWith('rel:'))).toHaveLength(0)
-  })
-
-  it('审批负载路由：待介入思想核导航进介入中心（非工作项）', () => {
-    const scene = buildMind3DScene(proj([
-      makeThought({ id: 'wait', status: 'awaiting-review' }),
-      makeThought({ id: 'normal', status: 'running' }),
-    ], []))
-    expect(scene.nodes.find(n => n.id === 'thought:wait')!.to)
-      .toEqual({ name: 'ia2.inbox', query: { task: 'wait' } })
-    expect(scene.nodes.find(n => n.id === 'thought:normal')!.to)
-      .toEqual({ name: 'ia2.tasks', query: { task: 'normal' } })
+    const many = buildMind3DScene(proj(Array.from({ length: MAX_THOUGHTS + 4 }, (_, i) => makeThought({ id: `t${i}` })), []))
+    expect(many.nodes.filter(n => n.kind === 'column').length).toBeLessThanOrEqual(MAX_THOUGHTS)
+    expect(many.hiddenThoughts).toBe(4)
   })
 })

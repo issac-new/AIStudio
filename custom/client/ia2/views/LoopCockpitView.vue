@@ -17,7 +17,6 @@ import AttentionStrip from '../components/AttentionStrip.vue'
 import StatusDistributionCard from '../components/StatusDistributionCard.vue'
 import MindViz from '../components/MindViz.vue'
 import MindViz3D from '../components/MindViz3D.vue'
-import MindCortex3D from '../components/MindCortex3D.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import { buildMindScene, type MindNode, type MindProjectionDto } from '../adapters/mind'
 import type { Mind3DNode } from '../adapters/mind3d'
@@ -167,9 +166,10 @@ function goThought(taskId: string): void {
   void router.push({ path: '/app/tasks', query: { task: taskId } })
 }
 
-/** 视图三态（2026-09-15 用户裁决）：layered=3D 分层（默认）/ cortex=方案B 皮层原型 / flat=2D 分区 */
-const vizMode = ref<'layered' | 'cortex' | 'flat'>('layered')
-const viz3D = computed(() => vizMode.value !== 'flat')
+/** 视图切换（2026-09-15 形态重构：皮层并入立体图，去独立皮层视图）：
+ *  3D 聚类景观（默认，无中心原点）/ 2D 分区图（降级对照）。 */
+const vizMode = ref<'landscape' | 'flat'>('landscape')
+const viz3D = computed(() => vizMode.value === 'landscape')
 
 /** L3 详情层：任务详情抽屉（末梢点击接管；阅读任务不进 3D） */
 const detailOpen = ref(false)
@@ -313,17 +313,10 @@ function planTimeLabel(at: number | null): string {
           <button
             type="button"
             class="lcp-viz-toggle__btn"
-            :class="{ 'lcp-viz-toggle__btn--on': vizMode === 'layered' }"
+            :class="{ 'lcp-viz-toggle__btn--on': vizMode === 'landscape' }"
             data-testid="lcp-viz-3d"
-            @click="vizMode = 'layered'"
+            @click="vizMode = 'landscape'"
           >{{ t('loopMind.view3d') }}</button>
-          <button
-            type="button"
-            class="lcp-viz-toggle__btn"
-            :class="{ 'lcp-viz-toggle__btn--on': vizMode === 'cortex' }"
-            data-testid="lcp-viz-cortex"
-            @click="vizMode = 'cortex'"
-          >{{ t('loopMind.viewCortex') }}</button>
           <button
             type="button"
             class="lcp-viz-toggle__btn"
@@ -334,13 +327,7 @@ function planTimeLabel(at: number | null): string {
         </div>
 
         <MindViz3D
-          v-if="vizMode === 'layered'"
-          :projection="mindData ?? { thoughts: [], runs: [], available: false }"
-          @node-click="onViz3DNode"
-          @fallback-2d="vizMode = 'flat'"
-        />
-        <MindCortex3D
-          v-else-if="vizMode === 'cortex'"
+          v-if="vizMode === 'landscape'"
           :projection="mindData ?? { thoughts: [], runs: [], available: false }"
           @node-click="onViz3DNode"
           @fallback-2d="vizMode = 'flat'"

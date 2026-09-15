@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index bf287023..849004f8 100644
+index bf287023..85763d8d 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -1134,8 +1134,11 @@ export default {
+@@ -1134,8 +1134,12 @@ export default {
      },
      viewRuns: 'View runs',
      view3d: '3D',
@@ -11,6 +11,7 @@ index bf287023..849004f8 100644
      '3dHint': 'Drag to orbit · Scroll to zoom · Switch layers on the left',
 +    protoB: 'Plan B · Thinking cortex prototype',
 +    clusterTasks: '{n} tasks',
++    clusterTasksUnit: 'tasks',
      status: {
        running: 'Running',
        blocked: 'Blocked',
