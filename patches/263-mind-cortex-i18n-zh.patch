@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 6379b8d4..78effff3 100644
+index 6379b8d4..f8e78633 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -1132,8 +1132,11 @@ export default {
+@@ -1132,8 +1132,12 @@ export default {
      },
      viewRuns: '查看运行',
      view3d: '立体',
@@ -11,6 +11,7 @@ index 6379b8d4..78effff3 100644
      '3dHint': '拖拽旋转 · 滚轮缩放 · 左侧切层',
 +    protoB: '方案 B · 思维皮层原型',
 +    clusterTasks: '{n} 个任务',
++    clusterTasksUnit: '个任务',
      status: {
        running: '进行中',
        blocked: '阻塞',

@@ -1,61 +1,48 @@
 <!-- overlay/custom/client/ia2/components/MindViz3D.vue -->
-<!-- 3D 思维图谱（2026-09-15 用户裁决：核心思维图升级 Three.js 立体图——
-     可缩放/旋转/层级切换）。
-     渲染 buildMind3DScene 纯函数场景（本体论分区映射到 3D 语义层）：
-     核心柱（中心轴）+ 思想核球体（层内散布，标签精灵可读任务名）+ 末梢点
-     + 关系连线 + 层平面网格。交互：滚轮缩放、拖拽旋转、按钮切层聚焦。
-     色彩走全局 CSS 变量（浅色一致；three 场景背景取 --bg-primary）。 -->
+<!-- 3D 思维图谱（2026-09-15 形态重构 v2）：**无中心聚类景观**——用户裁决
+     「不会有思维原点，所有思维图都应聚类分类呈现」。
+     皮层地形（脑回起伏网格承载）+ 聚类柱群（任务按命名族/父子树分群散布，
+     粗细=运行史、高度=活跃度、顶面色相）+ 关系弧（父子/委派有机曲线）+
+     末梢运行点 + 族标签（聚类语义可读）。无核心柱、无思维原点。
+     交互：滚轮缩放、拖拽旋转、左侧族聚焦。色彩读全局 CSS 变量（浅色一致）。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as THREE from 'three'
-import { buildMind3DScene, type Mind3DNode, type Mind3DScene, MIND3D_LAYER_GAP } from '../adapters/mind3d'
+import { buildMind3DScene, type MindNode, type MindScene } from '../adapters/mind3d'
 import type { MindProjectionDto } from '../adapters/mind'
 
 const props = defineProps<{ projection: MindProjectionDto }>()
 const emit = defineEmits<{
-  (e: 'node-click', node: Mind3DNode): void
-  /** WebGL 不可用 → 通知父级回退 2D 分区图（jsdom/旧 GPU/驱动禁用） */
+  (e: 'node-click', node: MindNode): void
   (e: 'fallback-2d'): void
 }>()
 const { t } = useI18n()
 
-const scene = computed<Mind3DScene>(() => buildMind3DScene(props.projection))
+const scene = computed<MindScene>(() => buildMind3DScene(props.projection))
 
 const containerRef = ref<HTMLDivElement | null>(null)
-/** 当前聚焦层（null = 全部层总览） */
-const focusLayer = ref<number | null>(null)
+const focusCluster = ref<string | null>(null)
 
 let renderer: THREE.WebGLRenderer | null = null
 let threeScene: THREE.Scene | null = null
 let camera: THREE.PerspectiveCamera | null = null
 let animId = 0
 let disposed = false
-/** 待介入雷达脉冲环（渲染循环驱动扩圈） */
+const buddingMeshes: THREE.Mesh[] = []
 const pingRings: THREE.Mesh[] = []
 
-/** id → 稳定相位（脉冲环错开，不同步闪） */
-function hashPhase(id: string): number {
-  let h = 0x811c9dc5
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  return ((h >>> 0) % 1000) / 1000
-}
-
-// ── 相机轨道状态（自研轻量轨道：拖拽旋转 + 滚轮缩放 + 层聚焦平移） ──
 const orbit = {
-  theta: Math.PI * 0.25,   // 方位角
-  phi: Math.PI * 0.32,     // 极角
-  dist: 620,               // 半径（缩放）
-  targetY: MIND3D_LAYER_GAP * 1.5, // 注视点（层聚焦时平移）
+  theta: Math.PI * 0.28,
+  phi: Math.PI * 0.38,
+  dist: 560,
+  targetX: 0,
+  targetZ: 0,
   dragging: false,
   lastX: 0,
   lastY: 0,
 }
 
-/** 语义色板：状态 → 颜色（读全局 CSS 变量，three 场景用 hex） */
 function statusColor(status: string): number {
   const cs = getComputedStyle(document.documentElement)
   const read = (v: string, fb: string) => {
@@ -67,46 +54,52 @@ function statusColor(status: string): number {
     case 'awaiting-input': case 'awaiting-review': return read('--color-warning', 'f59e0b')
     case 'blocked': case 'failed': return read('--color-danger', 'e11d48')
     case 'completed': return read('--color-success', '28bf5c')
-    case 'paused': return read('--color-text-secondary', '878c99')
+    case 'delegate': return read('--color-text-secondary', '878c99')
     default: return read('--color-text-secondary', '878c99')
   }
 }
 
 function bgColor(): number {
-  const cs = getComputedStyle(document.documentElement)
-  const val = cs.getPropertyValue('--bg-primary').trim()
+  const val = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim()
   return val ? parseInt(val.replace('#', ''), 16) : 0xffffff
 }
 
-/** 任务名 → 标签精灵（CanvasTexture 文本，语义可读） */
+function hashPhase(id: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return ((h >>> 0) % 1000) / 1000
+}
+
 function makeLabelSprite(text: string, sub?: string): THREE.Sprite {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
-  const fontSize = 28
-  const subSize = 20
+  const fontSize = 26
+  const subSize = 18
   ctx.font = `600 ${fontSize}px system-ui, sans-serif`
-  const name = text.length > 18 ? text.slice(0, 18) + '…' : text
-  const w = Math.max(ctx.measureText(name).width, sub ? ctx.measureText(sub).width : 0) + 24
+  const name = text.length > 16 ? text.slice(0, 16) + '…' : text
+  const w = Math.max(ctx.measureText(name).width, sub ? ctx.measureText(sub).width : 0) + 20
   canvas.width = Math.ceil(w)
-  canvas.height = sub ? fontSize + subSize + 18 : fontSize + 16
-  // 重设（canvas resize 清状态）
+  canvas.height = sub ? fontSize + subSize + 14 : fontSize + 12
   ctx.font = `600 ${fontSize}px system-ui, sans-serif`
   const cs = getComputedStyle(document.documentElement)
   const fg = cs.getPropertyValue('--text-primary').trim() || '#1f2329'
   const fgSub = cs.getPropertyValue('--text-secondary').trim() || '#878c99'
   ctx.textAlign = 'center'
   ctx.fillStyle = fg
-  ctx.fillText(name, canvas.width / 2, fontSize + 4)
+  ctx.fillText(name, canvas.width / 2, fontSize + 2)
   if (sub) {
     ctx.font = `${subSize}px system-ui, sans-serif`
     ctx.fillStyle = fgSub
-    ctx.fillText(sub, canvas.width / 2, fontSize + subSize + 10)
+    ctx.fillText(sub, canvas.width / 2, fontSize + subSize + 8)
   }
   const tex = new THREE.CanvasTexture(canvas)
   tex.minFilter = THREE.LinearFilter
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })
   const sprite = new THREE.Sprite(mat)
-  const scale = 0.16
+  const scale = 0.14
   sprite.scale.set(canvas.width * scale, canvas.height * scale, 1)
   return sprite
 }
@@ -132,98 +125,91 @@ function disposeScene(): void {
 function buildThree(): void {
   if (!containerRef.value || disposed) return
   disposeScene()
+  buddingMeshes.length = 0
+  pingRings.length = 0
 
   const width = containerRef.value.clientWidth
   const height = containerRef.value.clientHeight
   threeScene = new THREE.Scene()
   threeScene.background = new THREE.Color(bgColor())
-  threeScene.fog = new THREE.Fog(bgColor(), 700, 1400)
+  threeScene.fog = new THREE.Fog(bgColor(), 600, 1400)
 
   camera = new THREE.PerspectiveCamera(46, width / height, 1, 4000)
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+  renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(width, height)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   containerRef.value.appendChild(renderer.domElement)
 
-  // 灯光：环境光 + 方向光（浅色体系下的柔和立体）
-  threeScene.add(new THREE.AmbientLight(0xffffff, 0.75))
-  const dir = new THREE.DirectionalLight(0xffffff, 0.7)
+  threeScene.add(new THREE.AmbientLight(0xffffff, 0.8))
+  const dir = new THREE.DirectionalLight(0xffffff, 0.65)
   dir.position.set(300, 500, 400)
   threeScene.add(dir)
 
   const sc = scene.value
-  const nodeById = new Map<string, THREE.Object3D>()
 
-  // ── 层平面网格 + 层标签 ──
-  for (const layer of sc.layers) {
-    const gridColor = new THREE.Color(statusColor('idle')).multiplyScalar(0.9)
-    const grid = new THREE.GridHelper(560, 14, gridColor, gridColor)
-    ;(grid.material as THREE.Material).transparent = true
-    ;(grid.material as THREE.Material).opacity = 0.14
-    grid.position.y = layer.y
-    threeScene.add(grid)
+  // 皮层地形（脑回起伏网格承载）
+  if (sc.terrain.length > 0) {
+    const terrainGeo = new THREE.PlaneGeometry(560, 560, 26, 26)
+    const posAttr = terrainGeo.attributes.position
+    for (let i = 0; i < posAttr.count; i++) {
+      const tp = sc.terrain[i]
+      if (tp) posAttr.setZ(i, tp.y)
+    }
+    terrainGeo.computeVertexNormals()
+    const terrainMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(statusColor('idle')).multiplyScalar(0.14),
+      transparent: true,
+      opacity: 0.3,
+      wireframe: true,
+    })
+    const terrain = new THREE.Mesh(terrainGeo, terrainMat)
+    terrain.rotation.x = -Math.PI / 2
+    threeScene.add(terrain)
+  }
 
-    const label = makeLabelSprite(t(`loopMind.zone.${layer.key}`), `${layer.count}`)
-    label.position.set(-300, layer.y + 6, 0)
-    label.scale.multiplyScalar(0.9)
+  // 族标签（聚类语义可读）
+  for (const cluster of sc.clusters) {
+    const label = makeLabelSprite(cluster.label, `${cluster.count} ${t('loopMind.clusterTasksUnit')}`)
+    label.position.set(cluster.cx, 60, cluster.cz)
     threeScene.add(label)
   }
 
-  // ── 核心柱（中心轴，贯穿各层） ──
-  const coreNode = sc.nodes.find(n => n.kind === 'core')
-  if (coreNode) {
-    const pillarGeo = new THREE.CylinderGeometry(2.5, 2.5, MIND3D_LAYER_GAP * 3.4, 12)
-    const pillarMat = new THREE.MeshStandardMaterial({
-      color: statusColor('running'), transparent: true, opacity: 0.5,
-      emissive: statusColor('running'), emissiveIntensity: 0.3,
-    })
-    const pillar = new THREE.Mesh(pillarGeo, pillarMat)
-    pillar.position.set(coreNode.x, coreNode.y, coreNode.z)
-    threeScene.add(pillar)
-
-    const coreGeo = new THREE.SphereGeometry(coreNode.r, 24, 24)
-    const coreMat = new THREE.MeshStandardMaterial({
-      color: statusColor('running'), emissive: statusColor('running'), emissiveIntensity: 0.6,
-    })
-    const core = new THREE.Mesh(coreGeo, coreMat)
-    core.position.set(coreNode.x, coreNode.y, coreNode.z)
-    threeScene.add(core)
-    nodeById.set('core', core)
-  }
-
-  // ── 思想核球体 + 标签精灵（标签 LOD：只给活跃度 Top-N；待介入永给——警报不被藏） ──
+  // 聚类柱群（任务实体）
   const LABEL_TOP_N = 6
-  const thoughtByActivity = sc.nodes
-    .filter(n => n.kind === 'thought')
-    .sort((a, b) => b.strength - a.strength || (b.radialRecency ?? 0) - (a.radialRecency ?? 0))
+  const columns = sc.nodes.filter(n => n.kind === 'column')
   const labelVisibleIds = new Set(
-    thoughtByActivity.slice(0, LABEL_TOP_N).map(n => n.id)
-      .concat(thoughtByActivity.filter(n => n.pendingAlert).map(n => n.id)),
+    [...columns].sort((a, b) => b.strength - a.strength).slice(0, LABEL_TOP_N).map(n => n.id)
+      .concat(columns.filter(n => n.pendingAlert).map(n => n.id)),
   )
 
-  for (const node of sc.nodes.filter(n => n.kind === 'thought')) {
-    const geo = new THREE.SphereGeometry(node.r, 22, 22)
+  for (const node of columns) {
     const color = statusColor(node.status)
+    const geo = node.status === 'completed'
+      ? new THREE.CylinderGeometry(node.r * 0.7, node.r, node.h, 8)
+      : new THREE.CylinderGeometry(node.r, node.r, node.h, 20)
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: node.pulse ? color : 0x000000,
-      emissiveIntensity: node.pulse ? 0.5 : 0,
+      emissiveIntensity: node.pulse ? 0.45 : 0,
       transparent: true,
-      opacity: node.status === 'archived' ? 0.5 : 0.92,
+      opacity: node.status === 'archived' ? 0.45 : 0.88,
     })
     const mesh = new THREE.Mesh(geo, mat)
-    mesh.position.set(node.x, node.y, node.z)
+    mesh.position.set(node.x, node.terrainY + node.h / 2, node.z)
     mesh.userData.mindNode = node
+    if (node.budding) {
+      mesh.scale.set(0.01, 0.01, 0.01)
+      mesh.userData.budding = { t0: performance.now() }
+      buddingMeshes.push(mesh)
+    }
     threeScene.add(mesh)
-    nodeById.set(node.id, mesh)
 
     if (labelVisibleIds.has(node.id)) {
       const label = makeLabelSprite(node.label, node.sub)
-      label.position.set(node.x, node.y + node.r + 10, node.z)
+      label.position.set(node.x, node.terrainY + node.h + 12, node.z)
       threeScene.add(label)
     }
 
-    // 待介入专属动效：雷达脉冲环（水平扩圈，跨房间召唤注意力；深度测试关 = 不被遮）
     if (node.pendingAlert) {
       const ringGeo = new THREE.RingGeometry(node.r + 3, node.r + 4.5, 40)
       const ringMat = new THREE.MeshBasicMaterial({
@@ -234,7 +220,7 @@ function buildThree(): void {
         depthTest: false,
       })
       const ring = new THREE.Mesh(ringGeo, ringMat)
-      ring.position.set(node.x, node.y, node.z)
+      ring.position.set(node.x, node.terrainY + node.h + 2, node.z)
       ring.rotation.x = -Math.PI / 2
       ring.userData.pingRing = { baseR: node.r + 3, phase: hashPhase(node.id) }
       threeScene.add(ring)
@@ -242,39 +228,45 @@ function buildThree(): void {
     }
   }
 
-  // ── 末梢运行点 ──
+  // 末梢运行点
   for (const node of sc.nodes.filter(n => n.kind === 'run')) {
-    const geo = new THREE.SphereGeometry(node.r, 14, 14)
     const color = statusColor(node.status)
+    const geo = new THREE.SphereGeometry(node.r, 12, 12)
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: node.pulse ? color : 0x000000,
-      emissiveIntensity: node.pulse ? 0.7 : 0,
+      emissiveIntensity: node.pulse ? 0.6 : 0,
     })
     const mesh = new THREE.Mesh(geo, mat)
     mesh.position.set(node.x, node.y, node.z)
     mesh.userData.mindNode = node
     threeScene.add(mesh)
-    nodeById.set(node.id, mesh)
   }
 
-  // ── 关系连线（孕育/产生） ──
+  // 关系弧（父子/委派有机曲线）
   for (const edge of sc.edges) {
-    const pts = [
-      new THREE.Vector3(edge.fromPos.x, edge.fromPos.y, edge.fromPos.z),
-      new THREE.Vector3(edge.toPos.x, edge.toPos.y, edge.toPos.z),
-    ]
+    const from = new THREE.Vector3(edge.fromPos.x, edge.fromPos.y, edge.fromPos.z)
+    const to = new THREE.Vector3(edge.toPos.x, edge.toPos.y, edge.toPos.z)
+    const apex = new THREE.Vector3(
+      (edge.fromPos.x + edge.toPos.x) / 2,
+      edge.apexY,
+      (edge.fromPos.z + edge.toPos.z) / 2,
+    )
+    const curve = new THREE.QuadraticBezierCurve3(from, apex, to)
+    const pts = curve.getPoints(24)
     const geo = new THREE.BufferGeometry().setFromPoints(pts)
     const mat = new THREE.LineBasicMaterial({
       color: statusColor(edge.status),
       transparent: true,
-      opacity: 0.14 + edge.strength * 0.4,
-      linewidth: 1,
+      opacity: edge.relKind === 'delegate' ? 0.5 : 0.14 + edge.strength * 0.4,
+      ...(edge.relKind === 'delegate' ? { dashSize: 6, gapSize: 4 } : {}),
     })
-    threeScene.add(new THREE.Line(geo, mat))
+    const line = new THREE.Line(geo, mat)
+    if (edge.relKind === 'delegate') line.computeLineDistances()
+    threeScene.add(line)
   }
 
-  // ── 拾取（点击节点 → 语义导航） ──
+  // 拾取
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
   const onClick = (ev: MouseEvent) => {
@@ -284,13 +276,12 @@ function buildThree(): void {
     pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1
     raycaster.setFromCamera(pointer, camera)
     const hits = raycaster.intersectObjects(threeScene!.children.filter(o => o.userData.mindNode))
-    const hit = hits[0]?.object as THREE.Mesh | undefined
-    const node = hit?.userData.mindNode as Mind3DNode | undefined
+    const node = hits[0]?.object.userData.mindNode as MindNode | undefined
     if (node?.to) emit('node-click', node)
   }
   renderer.domElement.addEventListener('click', onClick)
 
-  // ── 轨道交互：拖拽旋转 + 滚轮缩放 ──
+  // 轨道交互
   const el = renderer.domElement
   const onDown = (e: MouseEvent) => { orbit.dragging = true; orbit.lastX = e.clientX; orbit.lastY = e.clientY }
   const onMove = (e: MouseEvent) => {
@@ -302,33 +293,34 @@ function buildThree(): void {
   const onUp = () => { orbit.dragging = false }
   const onWheel = (e: WheelEvent) => {
     e.preventDefault()
-    orbit.dist = Math.max(220, Math.min(1400, orbit.dist + e.deltaY * 0.6))
+    orbit.dist = Math.max(200, Math.min(1200, orbit.dist + e.deltaY * 0.6))
   }
   el.addEventListener('mousedown', onDown)
   window.addEventListener('mousemove', onMove)
   window.addEventListener('mouseup', onUp)
   el.addEventListener('wheel', onWheel, { passive: false })
 
-  // 渲染循环
   const tick = () => {
     if (disposed || !renderer || !camera || !threeScene) return
-    const cy = orbit.targetY
     camera.position.set(
-      Math.cos(orbit.theta) * Math.sin(orbit.phi) * orbit.dist,
-      cy + Math.cos(orbit.phi) * orbit.dist,
-      Math.sin(orbit.theta) * Math.sin(orbit.phi) * orbit.dist,
+      orbit.targetX + Math.cos(orbit.theta) * Math.sin(orbit.phi) * orbit.dist,
+      Math.cos(orbit.phi) * orbit.dist,
+      orbit.targetZ + Math.sin(orbit.theta) * Math.sin(orbit.phi) * orbit.dist,
     )
-    camera.lookAt(0, cy, 0)
+    camera.lookAt(orbit.targetX, 0, orbit.targetZ)
 
-    // 待介入雷达脉冲环：扩圈→淡出→重置（运动签名，等待越久越急）
-    const tSec = performance.now() / 1000
+    const now = performance.now()
+    for (const mesh of buddingMeshes) {
+      const t0 = (mesh.userData.budding as { t0: number }).t0
+      const k = Math.min((now - t0) / 1200, 1)
+      mesh.scale.setScalar(Math.max(1 - Math.pow(1 - k, 3), 0.01))
+    }
+    const tSec = now / 1000
     for (const ring of pingRings) {
       const { baseR, phase } = ring.userData.pingRing as { baseR: number; phase: number }
-      const cycle = ((tSec * 0.8 + phase) % 1) // 0..1 循环
-      const scale = 1 + cycle * 1.8
-      ring.scale.setScalar(scale)
-      const m = ring.material as THREE.MeshBasicMaterial
-      m.opacity = 0.55 * (1 - cycle)
+      const cycle = ((tSec * 0.8 + phase) % 1)
+      ring.scale.setScalar(1 + cycle * 1.8)
+      ;(ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - cycle)
     }
 
     renderer.render(threeScene, camera)
@@ -336,7 +328,6 @@ function buildThree(): void {
   }
   tick()
 
-  // 清理挂载（组件卸载时）
   cleanupFns.push(() => {
     el.removeEventListener('mousedown', onDown)
     window.removeEventListener('mousemove', onMove)
@@ -356,11 +347,16 @@ function onResize(): void {
   renderer.setSize(w, h)
 }
 
-/** 层聚焦：注视点平移到该层 + 适度拉近 */
-function onFocusLayer(y: number | null): void {
-  focusLayer.value = y
-  orbit.targetY = y ?? MIND3D_LAYER_GAP * 1.5
-  orbit.dist = y == null ? 620 : 420
+function onFocusCluster(key: string | null): void {
+  focusCluster.value = key
+  if (key == null) {
+    orbit.targetX = 0; orbit.targetZ = 0; orbit.dist = 560
+  } else {
+    const c = scene.value.clusters.find(x => x.key === key)
+    if (c) {
+      orbit.targetX = c.cx; orbit.targetZ = c.cz; orbit.dist = 380
+    }
+  }
 }
 
 onMounted(() => {
@@ -368,7 +364,6 @@ onMounted(() => {
     buildThree()
     window.addEventListener('resize', onResize)
   } catch {
-    // WebGL 不可用（jsdom/旧 GPU/驱动禁用）→ 降级：通知父级回退 2D 分区图
     emit('fallback-2d')
   }
 })
@@ -380,7 +375,6 @@ onUnmounted(() => {
   disposeScene()
 })
 
-// 投影变化 → 重建场景（数据驱动）
 watch(() => props.projection, () => {
   if (!disposed) buildThree()
 }, { deep: true })
@@ -388,30 +382,26 @@ watch(() => props.projection, () => {
 
 <template>
   <div class="lm3d">
-    <!-- 层切换器（语义层级视角：总览 / 各状态层） -->
-    <div class="lm3d__layers" data-testid="lm3d-layers">
+    <div class="lm3d__clusters" data-testid="lm3d-clusters">
       <button
         type="button"
-        class="lm3d__layer-btn"
-        :class="{ 'lm3d__layer-btn--on': focusLayer === null }"
-        data-testid="lm3d-layer-all"
-        @click="onFocusLayer(null)"
+        class="lm3d__cluster-btn"
+        :class="{ 'lm3d__cluster-btn--on': focusCluster === null }"
+        data-testid="lm3d-cluster-all"
+        @click="onFocusCluster(null)"
       >{{ t('loopMind.zone.all') }}</button>
       <button
-        v-for="layer in scene.layers"
-        :key="layer.key"
+        v-for="cluster in scene.clusters"
+        :key="cluster.key"
         type="button"
-        class="lm3d__layer-btn"
-        :class="{ 'lm3d__layer-btn--on': focusLayer === layer.y }"
-        :data-testid="`lm3d-layer-${layer.key}`"
-        @click="onFocusLayer(layer.y)"
-      >{{ t(`loopMind.zone.${layer.key}`) }} · {{ layer.count }}</button>
+        class="lm3d__cluster-btn"
+        :class="{ 'lm3d__cluster-btn--on': focusCluster === cluster.key }"
+        :data-testid="`lm3d-cluster-${cluster.key}`"
+        @click="onFocusCluster(cluster.key)"
+      >{{ cluster.label }} · {{ cluster.count }}</button>
     </div>
 
-    <!-- 3D 画布容器 -->
     <div ref="containerRef" class="lm3d__canvas" data-testid="lm3d-canvas" />
-
-    <!-- 操作提示 -->
     <div class="lm3d__hint">{{ t('loopMind.3dHint') }}</div>
   </div>
 </template>
@@ -421,18 +411,20 @@ watch(() => props.projection, () => {
 .lm3d__canvas { flex: 1; min-height: 0; cursor: grab; }
 .lm3d__canvas:active { cursor: grabbing; }
 
-.lm3d__layers {
+.lm3d__clusters {
   position: absolute; top: 10px; left: 10px; z-index: 5;
   display: flex; flex-direction: column; gap: 4px;
+  max-height: calc(100% - 20px); overflow-y: auto;
 }
-.lm3d__layer-btn {
+.lm3d__cluster-btn {
   padding: 4px 10px; border-radius: var(--radius-standard);
   border: 1px solid var(--border-color);
   background: var(--bg-card, var(--bg-primary)); color: var(--text-secondary);
   font-size: 11.5px; font-family: inherit; cursor: pointer; text-align: left;
+  white-space: nowrap;
 }
-.lm3d__layer-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
-.lm3d__layer-btn--on {
+.lm3d__cluster-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.lm3d__cluster-btn--on {
   border-color: var(--color-primary, #3b82f6);
   background: var(--color-primary, #3b82f6);
   color: var(--bg-primary);
