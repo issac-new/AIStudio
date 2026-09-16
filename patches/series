@@ -414,3 +414,7 @@
 # 273 = hermes_cli 测试语义适配——显式钉 workspace_kind="scratch"（四个测试针对 scratch 清理/回滚
 #       语义，不应依赖任务默认 kind；overlay 117 的 dir 默认现仅作用于普通板，项目板走上游 worktree 继承）
 273-agent-tests-pin-scratch-default.patch
+# 274 = 登录默认落点改为 AI 协作中心——上游 071 守卫的两处落点
+#       (/app → /hermes/cockpit)：已持有 key 访问 /login 的跳过重定向 + 非
+#       superadmin 兜底。2026-09-16 用户裁决。
+274-login-landing-cockpit.patch

@@ -1,0 +1,29 @@
+diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+index e75e8af..6890dad 100644
+--- a/packages/client/src/router/index.ts
++++ b/packages/client/src/router/index.ts
+@@ -358,10 +358,10 @@ router.beforeEach(async (to, _from, next) => {
+   if (to.meta.public) {
+     // Already has key, skip login
+     if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
+-      // overlay[ia2]: 默认跳新 IA 总览（而非上游的 /hermes/chat）；保留 query.redirect 保真。
+-      // Task 8: cockpit 路由本体已退役，登录默认落点由守卫直落 /app。
++      // overlay[ia2]: 默认跳 AI 协作中心（/hermes/cockpit，而非上游的 /hermes/chat）；
++      // 保留 query.redirect 保真。2026-09-16 用户裁决：登录默认落点改为驾驶舱。
+       const resolved = resolveLoginRedirect(to.query.redirect)
+-      next(resolved === '/hermes/chat' ? '/app' : resolved)
++      next(resolved === '/hermes/chat' ? '/hermes/cockpit' : resolved)
+       return
+     }
+     next()
+@@ -375,8 +375,8 @@ router.beforeEach(async (to, _from, next) => {
+   }
+ 
+   if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
+-    // overlay[ia2]: 非 superadmin 兜底落新 IA 总览（Task 8: 原落 cockpit，路由已删）
+-    next('/app')
++    // overlay[ia2]: 非 superadmin 兜底落 AI 协作中心（与登录默认落点一致）
++    next('/hermes/cockpit')
+     return
+   }
+ 
