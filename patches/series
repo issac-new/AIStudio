@@ -257,7 +257,7 @@
 206-client-i18n-fleet-subagents-en.patch
 # T5: 桌面捆绑 runtime pin 0.20.6 -> 0.21.0(hermes-0.21.0-runtime tag 已存在于 EKKOLearnAI/hermes-studio;
 # vanilla 0.21.0 已原生含 specify/decompose/context 动词;上游 studio 升 pin 后本 patch 仿 108 先例退役)
-207-desktop-runtime-pin-0210.patch
+207-desktop-runtime-pin.patch
 # P2 Task 5: 运行中心——/graph socket 客户端 + Pinia runs store + 运行列表视图 i18n
 # (合并重编号: 原 205-208 与 T1/T5 撞号, 2026-09-10)
 203-client-i18n-runcenter-zh.patch
