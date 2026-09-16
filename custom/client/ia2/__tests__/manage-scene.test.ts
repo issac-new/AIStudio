@@ -65,6 +65,8 @@ describe('ManageScene — 装配', () => {
     expect(wrapper.find('[data-testid="mscene-person-alice"]').text()).toContain('1')
     expect(wrapper.find('[data-testid="mscene-person-bob"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="mscene-person-none"]').exists()).toBe(true)
+    // 未指派桶非交互（评审 Important-1）：disabled 渲染，仅作存在性展示
+    expect(wrapper.find('[data-testid="mscene-person-none"]').attributes('disabled')).toBeDefined()
   })
 
   it('点击人员 → setAssigneeFilter 按人筛选；再点同人取消；卸载清理筛选', async () => {
@@ -74,6 +76,10 @@ describe('ManageScene — 装配', () => {
     await wrapper.find('[data-testid="mscene-person-alice"]').trigger('click')
     expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith(undefined)
     await wrapper.find('[data-testid="mscene-person-bob"]').trigger('click')
+    expect(kanbanStubs.setAssigneeFilter).toHaveBeenCalledWith('bob')
+    // 未指派 chip 非交互（评审 Important-1）：点击不触发 setAssigneeFilter（守卫拦截）
+    await wrapper.find('[data-testid="mscene-person-none"]').trigger('click')
+    expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith('bob')
     wrapper.unmount()
     expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith(undefined)
   })

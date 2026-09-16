@@ -22,6 +22,7 @@ const kanban = useKanbanStore()
 const people = computed(() => aggregateByAssignee(workspace.tasks))
 const activeAssignee = ref<string | null>(null)
 function filterAssignee(name: string): void {
+  if (name === '') return // 未指派桶非交互（评审 Important-1）：不可筛，'' 经上游 filterAssignee 归约 null 不可达
   const key = name === '' ? null : name
   const next = activeAssignee.value === key ? null : key
   activeAssignee.value = next
@@ -59,8 +60,9 @@ const goTrace = () => void router.push({ path: '/app/tasks', query: { tab: 'trac
         :key="p.name || '__none__'"
         type="button"
         class="mscene__person"
-        :class="{ 'mscene__person--on': activeAssignee === (p.name || null) }"
+        :class="{ 'mscene__person--on': p.name !== '' && activeAssignee === p.name }"
         :data-testid="`mscene-person-${p.name || 'none'}`"
+        :disabled="p.name === ''"
         @click="filterAssignee(p.name)"
       >
         <span class="mscene__person-name">{{ p.name || t('loopScenes.manage.unassigned') }}</span>
