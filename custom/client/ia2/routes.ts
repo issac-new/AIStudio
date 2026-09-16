@@ -1,9 +1,16 @@
 // overlay/custom/client/ia2/routes.ts
-// 驾驶舱单页路由树（/app/*）—— 2026-09-14 重构：IaNav 六菜单栏退役，
-// 总览 = 循环驾驶舱单页（LoopCockpitView，与 /hermes/loop 同一视图）。
+// 驾驶舱路由树（/app/*）—— 2026-09-14 重构：IaNav 六菜单栏退役；
+// 2026-09-16 多视图重构：总览不再是驾驶舱单页，/app 默认子路由 = LoopCockpitView 壳，
+// 四场景子路由（总览/管理/Code/运维）经 buildSceneChildren 挂载，
+// 与 /hermes/loop 双挂载点共用同一构造器。
 //
 // 结构（驾驶舱为登录默认落点）：
-//   /app                → LoopCockpitView（循环驾驶舱单页）
+//   /app                → IaShell（壳层）
+//     └─ ''             → LoopCockpitView 壳（默认子路由）
+//       ├─ ''（总览）   → OverviewScene
+//       ├─ manage       → ManageScene（管理）
+//       ├─ code         → CodeScene（Code）
+//       └─ ops          → OpsScene（运维）
 //   /app/orchestrate    → OrchestrateView（编排，slim 子页头）
 //   /app/runs           → RunsView（运行，内嵌 runcenter RunCenterView）
 //   /app/runs/:runId    → runcenter RunDetailView（参数名 runId 与旧路由一致）
