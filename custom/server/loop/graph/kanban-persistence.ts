@@ -15,15 +15,28 @@
 import type { LoopInstance, TaskContract, VerificationRecord } from '../types'
 import type { PersistenceAdapter, PersistFailure, PersistResult } from './phase-nodes'
 
-/** kanban-service 模块类型（类型位引用，运行时零 import——路径自注入后的
- *  packages/server/src/custom/loop/graph/ 出发） */
-export type KanbanServiceModule = typeof import('../../../modules/hermes/services/kanban/kanban-service')
+/** kanban 服务依赖的结构类型（本文件内定义，替代原 `typeof import('../../../modules/...')`
+ *  跨树类型引用——后者在 dev ts-node 经符号链接指向 overlay 时无法解析（TS2307），且
+ *  noImplicitAny 下连带的调用签名丢失会再报 TS7006。消费面只有 listTasks/createTask
+ *  两个方法，结构类型即可满足；工厂注入仍由 patch 202 在上游树传真实 kanban-service。 */
+export interface KanbanTaskLite {
+  id: string
+  title?: string
+}
+
+export interface KanbanPersistenceKanban {
+  listTasks(opts?: { board?: string }): Promise<KanbanTaskLite[]>
+  createTask(
+    title: string,
+    opts?: { board?: string; body?: string; tenant?: string },
+  ): Promise<KanbanTaskLite>
+}
 
 /** 与 upstream kanban-service normalizeBoardSlug 同规则（双处定义，各自守门测试断言） */
 const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
 
 export interface KanbanPersistenceDeps {
-  kanban: KanbanServiceModule
+  kanban: KanbanPersistenceKanban
   /** loop → kanban board slug；null = 解析不出（persist 跳过并 warn） */
   boardResolver: (loop: LoopInstance) => string | null
   log?: (msg: string) => void
@@ -116,7 +129,7 @@ export class KanbanPersistenceAdapter implements PersistenceAdapter {
     try {
       // 幂等查重：repair 回边/重跑会对同一契约再次 persist，按 title 精确匹配既有任务即跳过
       const existing = await this.deps.kanban.listTasks({ board })
-      const duplicate = (existing ?? []).find(t => t.title === title)
+      const duplicate = (existing ?? []).find((t: KanbanTaskLite) => t.title === title)
       if (duplicate) {
         this.log(`persistence duplicate skipped for ${contract.id}: kanban task ${duplicate.id} already exists on '${board}'`)
         // P3 Task 7：查重命中同样显式透传 taskId（repair 回边后的二次 persist 不丢关联）
