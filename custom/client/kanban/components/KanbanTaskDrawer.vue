@@ -14,6 +14,12 @@ import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosti
 import KanbanAttachments from '@/custom/kanban/components/KanbanAttachments.vue'
 // HERMES_CUSTOM[P3 Task 7] 来源 run 关联区块（任务 → run 反查，ia2/adapters/traceability 纯函数投影）
 import RunLinks from '@/custom/ia2/components/RunLinks.vue'
+import { defineAsyncComponent } from 'vue'
+import { useRouter } from 'vue-router'
+// HERMES_CUSTOM[loop-multiview] 任务↔群弱锚点（ia2/adapters/manage 纯函数）
+import { taskRoomPrefix, matchRoomByPrefix, type RoomLike } from '@/custom/ia2/adapters/manage'
+const MatrixCreateRoomDialog = defineAsyncComponent(
+  () => import('@/custom/matrix-chat/components/MatrixCreateRoomDialog.vue'))
 
 const props = defineProps<{
   show: boolean
@@ -30,6 +36,31 @@ const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
 const store = useKanbanStore()
+
+const router = useRouter()
+
+// ── 任务↔群弱锚点（[taskId前8位] 群名前缀约定；不持久化字段） ──
+const roomDialogOpen = ref(false)
+const matchedRoom = ref<RoomLike | null>(null)
+const roomPrefix = computed(() => (props.taskId ? taskRoomPrefix(props.taskId) : ''))
+const roomInitialName = computed(() => `${roomPrefix.value} ${task.value?.title ?? ''}`.trim())
+
+/** 匹配群刷新（matrix store 动态 import：抽屉在纯 kanban 测试环境不拉 matrix 重图） */
+async function refreshMatchedRoom(): Promise<void> {
+  matchedRoom.value = null
+  if (!props.show || !props.taskId) return
+  try {
+    const { useMatrixRoomStore } = await import('@/custom/matrix-chat/stores/matrix-room')
+    matchedRoom.value = matchRoomByPrefix(useMatrixRoomStore().sortedRooms as RoomLike[], roomPrefix.value)
+  } catch { /* matrix 未初始化：跳群按钮隐藏 */ }
+}
+watch(() => [props.show, props.taskId] as const, () => { void refreshMatchedRoom() }, { immediate: true })
+
+function gotoTaskRoom(): void {
+  if (!matchedRoom.value) return
+  void router.push({ name: 'ia2.commsRoom', params: { roomId: matchedRoom.value.roomId } })
+  emit('update:show', false)
+}
 
 const loading = ref(false)
 const detail = ref<KanbanTaskDetail | null>(null)
@@ -704,6 +735,19 @@ function statusDotClass(status: string): string {
           <span class="drawer-task-id">{{ taskId }}</span>
           <div class="drawer-header-actions">
             <NButton
+              v-if="matchedRoom"
+              size="tiny"
+              text
+              data-testid="drawer-goto-room"
+              @click="gotoTaskRoom"
+            >{{ t('kanban.gotoTaskRoom') }}</NButton>
+            <NButton
+              size="tiny"
+              text
+              data-testid="drawer-create-room"
+              @click="roomDialogOpen = true"
+            >{{ t('kanban.createTaskRoom') }}</NButton>
+            <NButton
               size="tiny"
               text
               :title="isMaximized ? t('kanban.restoreDrawer', 'Restore drawer') : t('kanban.maximizeDrawer', 'Maximize drawer')"
@@ -1301,6 +1345,12 @@ function statusDotClass(status: string): string {
 
       <NEmpty v-else :description="t('kanban.message.loadFailed')" />
     </NDrawerContent>
+
+    <MatrixCreateRoomDialog
+      v-if="roomDialogOpen"
+      :initial-name="roomInitialName"
+      @close="roomDialogOpen = false; void refreshMatchedRoom()"
+    />
   </NDrawer>
 
   <!-- Completion summary modal -->

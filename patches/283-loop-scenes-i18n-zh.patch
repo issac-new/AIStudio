@@ -1,0 +1,61 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index c66a79d5..210ecf7d 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1085,6 +1085,12 @@ export default {
+     title: '循环驾驶舱',
+     tagline: '循环生长态势 · 实时',
+     back: '返回驾驶舱',
++    scene: {
++      overview: '总览',
++      manage: '管理',
++      code: '编码',
++      ops: '运维',
++    },
+     status: {
+       connected: '实时',
+       disconnected: '离线',
+@@ -1118,6 +1124,34 @@ export default {
+       moreLoops: '另有 {n} 个循环未展示',
+     },
+   },
++  loopScenes: {
++    manage: {
++      people: '人员',
++      unassigned: '未指派',
++      gotoBoard: '全屏看板',
++      rooms: '任务群组',
++      noRooms: '暂无关联群组',
++      trace: '追溯矩阵',
++      openCount: '在办',
++    },
++    code: {
++      selectTask: '选择任务',
++      noTask: '从上方选择任务以打开工作区与终端',
++      noWorkspace: '任务尚未领取 workspace，等待 agent claim 后重试',
++      context: '任务上下文',
++      openDrawer: '任务详情',
++      openChat: '完整 Chat',
++      runs: '关联运行',
++    },
++    ops: {
++      duty: '值班台',
++      quickActions: '快捷动作',
++      newLoop: '新建循环',
++      schedule: '日程管理',
++      cockpitLink: '协作中心',
++      activeRuns: '进行中运行',
++    },
++  },
+   loopMind: {
+     title: '思维大脑',
+     tagline: '活动思维 · 自适应生长',
+@@ -2399,6 +2433,8 @@ export default {
+       total: '总计',
+       tasks: '任务数',
+     },
++    createTaskRoom: '建群沟通',
++    gotoTaskRoom: '进入群聊',
+   },
+ 
+   // 定时任务

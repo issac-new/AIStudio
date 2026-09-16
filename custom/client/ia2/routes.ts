@@ -1,9 +1,16 @@
 // overlay/custom/client/ia2/routes.ts
-// 驾驶舱单页路由树（/app/*）—— 2026-09-14 重构：IaNav 六菜单栏退役，
-// 总览 = 循环驾驶舱单页（LoopCockpitView，与 /hermes/loop 同一视图）。
+// 驾驶舱路由树（/app/*）—— 2026-09-14 重构：IaNav 六菜单栏退役；
+// 2026-09-16 多视图重构：总览不再是驾驶舱单页，/app 默认子路由 = LoopCockpitView 壳，
+// 四场景子路由（总览/管理/Code/运维）经 buildSceneChildren 挂载，
+// 与 /hermes/loop 双挂载点共用同一构造器。
 //
 // 结构（驾驶舱为登录默认落点）：
-//   /app                → LoopCockpitView（循环驾驶舱单页）
+//   /app                → IaShell（壳层）
+//     └─ ''             → LoopCockpitView 壳（默认子路由）
+//       ├─ ''（总览）   → OverviewScene
+//       ├─ manage       → ManageScene（管理）
+//       ├─ code         → CodeScene（Code）
+//       └─ ops          → OpsScene（运维）
 //   /app/orchestrate    → OrchestrateView（编排，slim 子页头）
 //   /app/runs           → RunsView（运行，内嵌 runcenter RunCenterView）
 //   /app/runs/:runId    → runcenter RunDetailView（参数名 runId 与旧路由一致）
@@ -72,9 +79,11 @@ export function buildIaRoutes(): RouteRecordRaw[] {
       meta: { fullscreen: true },
       children: [
         {
+          // 驾驶舱壳：四场景子路由的挂载点（ia2.overview 名称落在场景默认子路由上，
+          // IaShell 返回按钮 / 既有深链 router.push({name:'ia2.overview'}) 不变）
           path: '',
-          name: 'ia2.overview',
           component: () => import('./views/LoopCockpitView.vue'),
+          children: buildSceneChildren(IA2_SCENE_NAMES),
         },
         {
           path: 'orchestrate',
@@ -123,4 +132,56 @@ export function buildIaRoutes(): RouteRecordRaw[] {
       ],
     },
   ]
+}
+
+// ── 场景视图（2026-09-16 多视图重构）：驾驶舱壳 + 四场景，双挂载点共用构造器 ──
+export type SceneKey = 'overview' | 'manage' | 'code' | 'ops'
+
+export interface SceneMeta {
+  key: SceneKey
+  /** 场景相对路径（overview = '' 默认子路由） */
+  path: string
+  /** 切换条文案 i18n key */
+  labelKey: string
+}
+
+export const IA_SCENES: readonly SceneMeta[] = [
+  { key: 'overview', path: '', labelKey: 'loopCockpit.scene.overview' },
+  { key: 'manage', path: 'manage', labelKey: 'loopCockpit.scene.manage' },
+  { key: 'code', path: 'code', labelKey: 'loopCockpit.scene.code' },
+  { key: 'ops', path: 'ops', labelKey: 'loopCockpit.scene.ops' },
+]
+
+/** 双挂载点路由名表（单一事实源，防双份漂移） */
+export interface SceneNames {
+  overview: string
+  manage: string
+  code: string
+  ops: string
+}
+
+export const IA2_SCENE_NAMES: SceneNames = {
+  overview: 'ia2.overview', manage: 'ia2.manage', code: 'ia2.code', ops: 'ia2.ops',
+}
+export const LOOP_SCENE_NAMES: SceneNames = {
+  overview: 'hermes.loop', manage: 'hermes.loopManage', code: 'hermes.loopCode', ops: 'hermes.loopOps',
+}
+
+/** 场景子路由构造器：/app 与 /hermes/loop 双挂载点共用 */
+export function buildSceneChildren(names: SceneNames): RouteRecordRaw[] {
+  return [
+    { path: '', name: names.overview, component: () => import('./views/scenes/OverviewScene.vue') },
+    { path: 'manage', name: names.manage, component: () => import('./views/scenes/ManageScene.vue') },
+    { path: 'code', name: names.code, component: () => import('./views/scenes/CodeScene.vue') },
+    { path: 'ops', name: names.ops, component: () => import('./views/scenes/OpsScene.vue') },
+  ]
+}
+
+/** 路由名 → 场景 key（壳切换条高亮的唯一投影） */
+export function sceneForRouteName(name: string | null | undefined): SceneKey | null {
+  if (!name) return null
+  for (const scene of IA_SCENES) {
+    if (IA2_SCENE_NAMES[scene.key] === name || LOOP_SCENE_NAMES[scene.key] === name) return scene.key
+  }
+  return null
 }

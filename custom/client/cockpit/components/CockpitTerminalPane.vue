@@ -36,6 +36,14 @@ import {
 import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/cockpit/api/terminal-tools'
 
 const store = useCockpitStore()
+
+// loop Code 场景参数化（2026-09-16 多视图重构，裁决#6 就地参数化）：
+// workspacePath prop 提供时优先于 cockpit store 选中任务；prop 模式下隐藏
+// 退出按钮（退出语义 = cockpit workspaceMode 切换，loop 页无此概念）。
+const props = defineProps<{
+  workspacePath?: string
+}>()
+
 const { isDark } = useTheme()
 const { t } = useI18n()
 
@@ -67,7 +75,7 @@ function getTheme(dark: boolean): XtermTheme {
 }
 
 // 当前任务的 workspace 目录，回退 ~
-const workspacePath = computed(() => store.selectedTask?.workspace ?? '~')
+const workspacePath = computed(() => props.workspacePath ?? store.selectedTask?.workspace ?? '~')
 
 // 终端外壳配色：从 CSS 变量读取，与 App 主题一致
 const chromeStyle = computed(() => {
@@ -355,6 +363,7 @@ onUnmounted(disposeTerminal)
       </select>
       <code class="cockpit-terminal-pane__root">{{ workspacePath }}</code>
       <button
+        v-if="!props.workspacePath"
         type="button"
         data-action="exit"
         class="cockpit-terminal-pane__exit"
