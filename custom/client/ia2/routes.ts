@@ -124,3 +124,55 @@ export function buildIaRoutes(): RouteRecordRaw[] {
     },
   ]
 }
+
+// ── 场景视图（2026-09-16 多视图重构）：驾驶舱壳 + 四场景，双挂载点共用构造器 ──
+export type SceneKey = 'overview' | 'manage' | 'code' | 'ops'
+
+export interface SceneMeta {
+  key: SceneKey
+  /** 场景相对路径（overview = '' 默认子路由） */
+  path: string
+  /** 切换条文案 i18n key */
+  labelKey: string
+}
+
+export const IA_SCENES: readonly SceneMeta[] = [
+  { key: 'overview', path: '', labelKey: 'loopCockpit.scene.overview' },
+  { key: 'manage', path: 'manage', labelKey: 'loopCockpit.scene.manage' },
+  { key: 'code', path: 'code', labelKey: 'loopCockpit.scene.code' },
+  { key: 'ops', path: 'ops', labelKey: 'loopCockpit.scene.ops' },
+]
+
+/** 双挂载点路由名表（单一事实源，防双份漂移） */
+export interface SceneNames {
+  overview: string
+  manage: string
+  code: string
+  ops: string
+}
+
+export const IA2_SCENE_NAMES: SceneNames = {
+  overview: 'ia2.overview', manage: 'ia2.manage', code: 'ia2.code', ops: 'ia2.ops',
+}
+export const LOOP_SCENE_NAMES: SceneNames = {
+  overview: 'hermes.loop', manage: 'hermes.loopManage', code: 'hermes.loopCode', ops: 'hermes.loopOps',
+}
+
+/** 场景子路由构造器：/app 与 /hermes/loop 双挂载点共用 */
+export function buildSceneChildren(names: SceneNames): RouteRecordRaw[] {
+  return [
+    { path: '', name: names.overview, component: () => import('./views/scenes/OverviewScene.vue') },
+    { path: 'manage', name: names.manage, component: () => import('./views/scenes/ManageScene.vue') },
+    { path: 'code', name: names.code, component: () => import('./views/scenes/CodeScene.vue') },
+    { path: 'ops', name: names.ops, component: () => import('./views/scenes/OpsScene.vue') },
+  ]
+}
+
+/** 路由名 → 场景 key（壳切换条高亮的唯一投影） */
+export function sceneForRouteName(name: string | null | undefined): SceneKey | null {
+  if (!name) return null
+  for (const scene of IA_SCENES) {
+    if (IA2_SCENE_NAMES[scene.key] === name || LOOP_SCENE_NAMES[scene.key] === name) return scene.key
+  }
+  return null
+}
