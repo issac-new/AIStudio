@@ -418,3 +418,7 @@
 #       (/app → /hermes/cockpit)：已持有 key 访问 /login 的跳过重定向 + 非
 #       superadmin 兜底。2026-09-16 用户裁决。
 274-login-landing-cockpit.patch
+# 275 = 表单登录落点同步改驾驶舱——LoginView.loginRedirectTarget
+#       （/app → /hermes/cockpit），与 274 守卫两处构成完整登录链。
+#       2026-09-16 用户裁决。
+275-loginview-landing-cockpit.patch
