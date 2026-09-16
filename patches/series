@@ -433,3 +433,6 @@
 278-appsidebar-ide-entry.patch
 279-client-i18n-ide-zh.patch
 280-client-i18n-ide-en.patch
+# 281: electron-builder 的 node_modules 整目录直拷曾把 980MB .vite 构建缓存扫进 DMG
+#       （产物 597M vs 基线 390M）；打包面过滤 .vite/.vite-temp 缓存目录，杜绝复发。
+281-desktop-exclude-vite-cache.patch
