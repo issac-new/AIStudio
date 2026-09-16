@@ -260,7 +260,7 @@ function planTimeLabel(at: number | null): string {
 </script>
 
 <template>
-  <div class="lcp lcp--scene" data-testid="loop-cockpit">
+  <div class="lcps" data-testid="loop-cockpit">
     <!-- ═══ 注意力条（有内容才占高） ═══ -->
     <AttentionStrip v-if="attentionRows.length > 0" :items="attentionRows" @select="goTaskFromAttention" />
 
@@ -460,19 +460,28 @@ function planTimeLabel(at: number | null): string {
 </template>
 
 <style scoped>
-/* ── 驾驶舱容器：全局 Pure Ink 变量（浅色体系，与 app 整体一致；2026-09-15 用户
-     反馈修正——去除自带的深色科技底） ── */
-.lcp {
+/* ── 场景容器（2026-09-16 多视图重构）：padding 与背景由壳 .lcp 提供，
+     这里只管纵向布局填充壳的出口区（Task 10 视觉裁决：去双份 padding） ── */
+.lcps {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-width: 0;
-  padding: 12px 16px;
   gap: 10px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
   overflow: hidden;
+  color: var(--text-primary);
 }
+
+/* ── 空态引导 CTA 按钮（页头 .lcp-btn 样式随页头迁壳，scoped 样式跨组件
+     不生效——从 LoopCockpitView.vue 逐字复制，Task 10 视觉裁决） ── */
+.lcp-btn {
+  padding: 5px 12px; border-radius: var(--radius-standard); cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card, var(--bg-primary)); color: var(--text-primary);
+  font-size: 12.5px; font-family: inherit; white-space: nowrap;
+}
+.lcp-btn:hover { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.lcp-btn--ghost { padding: 5px 9px; }
 
 /* ═══ KPI 条 ═══ */
 .lcp-kpis { display: flex; gap: 10px; flex: 0 0 auto; }
