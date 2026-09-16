@@ -1,0 +1,18 @@
+diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
+index 740d465..4e97dd8 100644
+--- a/packages/client/src/views/LoginView.vue
++++ b/packages/client/src/views/LoginView.vue
+@@ -24,10 +24,11 @@ const localRememberMe = ref(false);
+ const loading = ref(false);
+ const errorMsg = ref("");
+ 
+-// overlay[ia2]: 默认登录后跳新 IA 总览（Task 8 fix: 原落 cockpit，路由已删）；保留 query.redirect 保真。
++// overlay[ia2]: 默认登录后跳 AI 协作中心（/hermes/cockpit）；保留 query.redirect 保真。
++// 2026-09-16 用户裁决：与上游 071+274 守卫落点一致。
+ function loginRedirectTarget(): string {
+   const resolved = resolveLoginRedirect(route.query.redirect);
+-  return resolved === '/hermes/chat' ? '/app' : resolved;
++  return resolved === '/hermes/chat' ? '/hermes/cockpit' : resolved;
+ }
+ 
+ const STORAGE_KEYS = {
