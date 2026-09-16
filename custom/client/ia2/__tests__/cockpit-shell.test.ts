@@ -140,6 +140,7 @@ describe('LoopCockpitView 壳 — 共享武装与回收', () => {
     expect(workspaceStubs.state.startReminderScheduler).toHaveBeenCalled()
     expect(workspaceStubs.state.watchKanbanTasks).toHaveBeenCalled()
     expect(workspaceStubs.state.initFleetStream).toHaveBeenCalled()
+    expect(workspaceStubs.state.refreshAllBoards).toHaveBeenCalled()
     expect(runRest.listRuns).toHaveBeenCalled()
     expect(loopRest.listLoops).toHaveBeenCalled()
     wrapper.unmount()
