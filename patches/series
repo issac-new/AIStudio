@@ -422,3 +422,14 @@
 #       （/app → /hermes/cockpit），与 274 守卫两处构成完整登录链。
 #       2026-09-16 用户裁决。
 275-loginview-landing-cockpit.patch
+# 276-280 = IDE 工作台主页面（/ide）——2026-09-16 用户裁决：IDE 成为登录默认
+#       落点与操作主页面（codex 源码底座 + zcode 会话 UI 全量复用，A 类本体在
+#       custom/client/ide/）。276/277 镜像 274/275 把三处登录落点
+#       /hermes/cockpit → /ide；278 侧边栏顶部一级入口（overlay[ide] 标记）；
+#       279/280 = sidebar.ideWorkspace + ide.* 全页文案键块（其余语言经
+#       mergeMessagesWithFallback(en) 自动回退，与 249 修复模式一致）。
+276-client-router-landing-ide.patch
+277-loginview-landing-ide.patch
+278-appsidebar-ide-entry.patch
+279-client-i18n-ide-zh.patch
+280-client-i18n-ide-en.patch
