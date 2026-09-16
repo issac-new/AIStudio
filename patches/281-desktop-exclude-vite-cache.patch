@@ -1,0 +1,16 @@
+diff --git a/packages/desktop/electron-builder.yml b/tmp/eb-injected.yml
+index a9f67646..43069719 100644
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -76,6 +76,11 @@ extraResources:
+       - "node-pty/build/Release/pty.node"
+       - "node-pty/build/Release/spawn-helper"
+       - "!**/*.md"
++      # Build caches must never ship in the packaged webui (2026-09-16: a 980MB
++      # node_modules/.vite dep-optimizer cache was swept into the DMG wholesale,
++      # inflating the artifact ~180MB over baseline).
++      - "!**/.vite/**"
++      - "!**/.vite-temp/**"
+ 
+ asarUnpack:
+   - "**/*.node"
