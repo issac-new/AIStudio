@@ -80,7 +80,8 @@ onMounted(() => {
   display: flex;
   min-height: 0;
 
-  :deep(.files-panel) {
+  /* FilesPanel 根类是 files-panel-drawer（上游 FilesPanel.vue），非 files-panel */
+  :deep(.files-panel-drawer) {
     flex: 1;
     min-width: 0;
   }
