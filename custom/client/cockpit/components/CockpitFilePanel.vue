@@ -24,7 +24,14 @@ const store = useCockpitStore()
 const filesStore = useFilesStore()
 const { t } = useI18n()
 
+// loop Code 场景参数化（2026-09-16 多视图重构）：workspacePath prop 提供时
+// 优先于 cockpit store 选中任务；watch 源同口径切换。
+const props = defineProps<{
+  workspacePath?: string
+}>()
+
 const hasWorkspace = computed(() => {
+  if (props.workspacePath) return true
   const detailWs = store.selectedTaskDetail?.task?.workspace_path
   const listWs = store.selectedTask?.workspace
   return !!(detailWs ?? listWs)
@@ -43,7 +50,8 @@ const syncing = ref(true)
 // kanban.tasks 变化触发的 watch 重建而被覆盖为旧值。
 // detail 不可用时回退到 cockpitTasks 的 workspace（兼容 detail.task 为 null 的场景）。
 async function syncWorkspaceRoot() {
-  const wsPath = store.selectedTaskDetail?.task?.workspace_path
+  const wsPath = props.workspacePath
+    ?? store.selectedTaskDetail?.task?.workspace_path
     ?? store.selectedTask?.workspace
   if (!wsPath) {
     filesStore.workspaceRoot = undefined
@@ -77,7 +85,7 @@ async function syncWorkspaceRoot() {
 // 因此即便点击中心节点重新选中同一任务（id 不变），watch 也会触发，
 // 把 Home 路径重新同步回该任务的 workspace。
 watch(
-  () => [store.selectedTaskId, store.selectionSeq] as const,
+  () => [props.workspacePath, store.selectedTaskId, store.selectionSeq] as const,
   () => { syncWorkspaceRoot() },
   { immediate: true },
 )
