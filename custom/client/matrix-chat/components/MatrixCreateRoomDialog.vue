@@ -7,10 +7,13 @@ const emit = defineEmits<{
   close: []
 }>()
 
+// 弱锚点建群（2026-09-16 loop 多视图）：调用方可预填群名（[taskId前8位] 前缀约定）
+const props = withDefaults(defineProps<{ initialName?: string }>(), { initialName: '' })
+
 const roomStore = useMatrixRoomStore()
 const { t } = useI18n()
 
-const roomName = ref('')
+const roomName = ref(props.initialName)
 const isPublic = ref(false)
 const creating = ref(false)
 

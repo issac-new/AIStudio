@@ -112,8 +112,8 @@ const storageStub = {
   clear: () => storageBacking.clear(),
 }
 
-async function mountPane() {
-  const w = mount(CockpitTerminalPane)
+async function mountPane(opts: { props?: Record<string, unknown> } = {}) {
+  const w = mount(CockpitTerminalPane, { props: opts.props })
   await flushPromises()
   return w
 }
@@ -361,5 +361,20 @@ describe('CockpitTerminalPane PTY 泄漏回归', () => {
     // oldClose 无效果；无任何额外连接产生
     expect(mockWebSockets.length).toBe(2)
     w.unmount()
+  })
+})
+
+// ── props 参数化（loop Code 场景，Task 4）──
+
+describe('CockpitTerminalPane — props 参数化（loop Code 场景）', () => {
+  it('workspacePath prop 注入时优先于 store 选中任务，且隐藏退出按钮', async () => {
+    const wrapper = await mountPane({ props: { workspacePath: '/tmp/code-scene-ws' } })
+    expect(wrapper.find('.cockpit-terminal-pane__root').text()).toBe('/tmp/code-scene-ws')
+    expect(wrapper.find('[data-action="exit"]').exists()).toBe(false)
+  })
+
+  it('缺省回落 store.selectedTask.workspace，退出按钮保留（现状不变）', async () => {
+    const wrapper = await mountPane()
+    expect(wrapper.find('[data-action="exit"]').exists()).toBe(true)
   })
 })
