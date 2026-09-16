@@ -72,9 +72,11 @@ export function buildIaRoutes(): RouteRecordRaw[] {
       meta: { fullscreen: true },
       children: [
         {
+          // 驾驶舱壳：四场景子路由的挂载点（ia2.overview 名称落在场景默认子路由上，
+          // IaShell 返回按钮 / 既有深链 router.push({name:'ia2.overview'}) 不变）
           path: '',
-          name: 'ia2.overview',
           component: () => import('./views/LoopCockpitView.vue'),
+          children: buildSceneChildren(IA2_SCENE_NAMES),
         },
         {
           path: 'orchestrate',
