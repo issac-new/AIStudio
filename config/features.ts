@@ -18,6 +18,9 @@ export interface FeatureConfig {
   /** P4 用户裁决（2026-09-11）：原有 AI 协作中心（cockpit）保留功能、与新 /app
    *  六区域 IA 平行共存——不再退役，旗标回归默认开启。 */
   cockpit: boolean;
+  /** IDE 工作台主页面（/ide）：codex 底座 + zcode 会话 UI 全量复用，
+   *  登录落点由 patch 276/277 指向 /ide（2026-09-16 用户裁决）。 */
+  ide: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -29,6 +32,7 @@ export const features: FeatureConfig = {
   extendedI18n: import.meta.env.VITE_CUSTOM_EXTENDED_I18N !== 'false',
   loopEngineering: import.meta.env.VITE_CUSTOM_LOOP !== 'false',
   cockpit: import.meta.env.VITE_CUSTOM_COCKPIT !== 'false',
+  ide: import.meta.env.VITE_CUSTOM_IDE !== 'false',
   iaRetro: import.meta.env.VITE_IA_RETRO === '1',
 };
 
