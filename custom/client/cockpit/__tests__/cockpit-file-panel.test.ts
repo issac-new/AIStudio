@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
 // ── mock kanban store ──
@@ -191,5 +191,30 @@ describe('CockpitFilePanel — Workspace Home path sync', () => {
     expect(filesState.workspaceRoot).toBe('/home/u/.hermes/kanban/workspaces/T-abc')
     expect(filesState.currentPath).toBe('')
     expect(filesState.fetchEntries).toHaveBeenCalledWith('')
+  })
+})
+
+// ── props 参数化（loop Code 场景，Task 4）──
+
+// props 参数化用例的挂载包装器：透传 props，返回组件包装器与 filesStore 桩
+async function mountPanel(opts: { props?: Record<string, unknown> } = {}) {
+  const wrapper = mount(CockpitFilePanel, { props: opts.props })
+  await flushPromises()
+  return { wrapper, filesStore: filesState }
+}
+
+describe('CockpitFilePanel — props 参数化（loop Code 场景）', () => {
+  it('workspacePath prop 注入时作为文件根目录并刷新', async () => {
+    const { wrapper, filesStore } = await mountPanel({ props: { workspacePath: '/tmp/code-scene-ws' } })
+    await flushPromises()
+    expect(filesStore.workspaceRoot).toBe('/tmp/code-scene-ws')
+    expect(filesStore.fetchEntries).toHaveBeenCalledWith('')
+    expect(wrapper.find('.cockpit-file-panel__no-workspace').exists()).toBe(false)
+  })
+
+  it('缺省回落 store 选中任务（现状不变）', async () => {
+    const { filesStore } = await mountPanel()
+    await flushPromises()
+    expect(filesStore.fetchEntries).toHaveBeenCalled()
   })
 })
