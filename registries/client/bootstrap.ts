@@ -33,6 +33,12 @@ export async function bootstrapClient(app: App): Promise<void> {
     const { registerGraphEngineering } = await import('../../custom/client/loop/graph')
     await registerGraphEngineering(app)
   }
+  // IDE 工作台主页面（/ide）：codex 底座 + zcode 会话 UI 全量复用。
+  // 注册顺序无关守卫，仅要求在下方 addRoute 循环（mount 前）之前。
+  if (features.ide) {
+    const { registerIde } = await import('../../custom/client/ide')
+    await registerIde(app)
+  }
   // P3 Task 3：六区域新 IA（/app 路由树 + 兼容重定向守卫）。
   // 守卫依赖 router 实例，与 loop 的 addRoute 同样必须在 mount 前完成。
   // 无条件注册：登录默认落点由 patch 071 守卫直落 /app；cockpit 平行共存后
