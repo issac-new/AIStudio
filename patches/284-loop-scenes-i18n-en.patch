@@ -1,0 +1,61 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 8285743f..9e231d84 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1087,6 +1087,12 @@ export default {
+     title: 'Loop Cockpit',
+     tagline: 'Live loop growth',
+     back: 'Back to cockpit',
++    scene: {
++      overview: 'Overview',
++      manage: 'Manage',
++      code: 'Code',
++      ops: 'Ops',
++    },
+     status: {
+       connected: 'Live',
+       disconnected: 'Offline',
+@@ -1120,6 +1126,34 @@ export default {
+       moreLoops: '{n} more loops hidden',
+     },
+   },
++  loopScenes: {
++    manage: {
++      people: 'Members',
++      unassigned: 'Unassigned',
++      gotoBoard: 'Full board',
++      rooms: 'Task rooms',
++      noRooms: 'No linked rooms',
++      trace: 'Traceability',
++      openCount: 'Open',
++    },
++    code: {
++      selectTask: 'Select task',
++      noTask: 'Select a task above to open the workspace and terminal',
++      noWorkspace: 'Workspace not claimed yet — waiting for the agent',
++      context: 'Task context',
++      openDrawer: 'Task detail',
++      openChat: 'Full chat',
++      runs: 'Related runs',
++    },
++    ops: {
++      duty: 'Duty desk',
++      quickActions: 'Quick actions',
++      newLoop: 'New loop',
++      schedule: 'Schedule',
++      cockpitLink: 'Cockpit',
++      activeRuns: 'Active runs',
++    },
++  },
+   loopMind: {
+     title: 'Thinking Mind',
+     tagline: 'Living thought · self-growing',
+@@ -2361,6 +2395,8 @@ export default {
+     noAttachments: 'No attachments',
+     unassigned: 'Unassigned',
+     taskNeedsAttention: 'Task needs attention',
++    createTaskRoom: 'Create room',
++    gotoTaskRoom: 'Open room',
+   },
+ 
+   // Jobs

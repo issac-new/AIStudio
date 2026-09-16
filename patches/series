@@ -436,3 +436,10 @@
 # 281: electron-builder 的 node_modules 整目录直拷曾把 980MB .vite 构建缓存扫进 DMG
 #       （产物 597M vs 基线 390M）；打包面过滤 .vite/.vite-temp 缓存目录，杜绝复发。
 281-desktop-exclude-vite-cache.patch
+# 283/284 = loop 多视图场景 i18n——壳切换条 + 管理/Code/运维场景面板 +
+#           kanban 抽屉建群/跳群按钮，zh/en 成对。2026-09-16。
+#           （编号顺延两次：main 276-280 被 feat/ide-main-page 占用，取 281/282；
+#           其后 main 281 又被 release-2.25 构建修复（desktop-exclude-vite-cache）
+#           占用，再顺延为 283/284。）
+283-loop-scenes-i18n-zh.patch
+284-loop-scenes-i18n-en.patch
