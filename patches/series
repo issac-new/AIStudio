@@ -255,8 +255,9 @@
 # T1 子代理花名册: cockpit fleet 卡片子代理实时状态条(hermes-agent 0.21.1 delegation)
 205-client-i18n-fleet-subagents-zh.patch
 206-client-i18n-fleet-subagents-en.patch
-# T5: 桌面捆绑 runtime pin 0.20.6 -> 0.21.0(hermes-0.21.0-runtime tag 已存在于 EKKOLearnAI/hermes-studio;
-# vanilla 0.21.0 已原生含 specify/decompose/context 动词;上游 studio 升 pin 后本 patch 仿 108 先例退役)
+# T5: 桌面捆绑 runtime pin(2026-09-16 随 upstream 0.7.22 升级轮原位改名并升 pin:
+# patch 体 0.20.6 -> 0.21.0 变为 0.21.0 -> 0.21.3,tag hermes-0.21.3-runtime / ref v2026.9.14;
+# 上游 studio 自升 pin 并携带同版资产前本 patch 保持活跃,不退役)
 207-desktop-runtime-pin.patch
 # P2 Task 5: 运行中心——/graph socket 客户端 + Pinia runs store + 运行列表视图 i18n
 # (合并重编号: 原 205-208 与 T1/T5 撞号, 2026-09-10)

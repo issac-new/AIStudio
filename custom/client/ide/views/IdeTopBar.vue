@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // IdeTopBar — IDE 顶栏：品牌 | workspace 显示 | agent 底座选择 | 功能链接 | 主题/语言。
 // fullscreen 路由下 AppSidebar 整体隐藏，故主题/语言切换在此提供。
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { NDropdown, NSelect } from 'naive-ui'
@@ -21,9 +21,10 @@ onMounted(async () => {
   agentOptions.value = await loadAgentOptions()
 })
 
-const agentSelectOptions = ref<Array<{ label: string; value: string; disabled?: boolean }>>([])
-function syncAgentSelectOptions() {
-  agentSelectOptions.value = agentOptions.value.length
+// computed 而非 ref 快照：标签含 t() 文案，locale 切换（本顶栏 LanguageSwitch）
+// 时必须随响应式刷新（2026-09-17 评审）。
+const agentSelectOptions = computed<Array<{ label: string; value: string; disabled?: boolean }>>(() =>
+  agentOptions.value.length
     ? agentOptions.value.map((option) => ({
         label: option.installed
           ? `${option.label}${option.version ? ` · ${option.version}` : ''}`
@@ -31,9 +32,8 @@ function syncAgentSelectOptions() {
         value: option.id,
         disabled: !option.installed,
       }))
-    : [{ label: 'codex', value: 'codex' }]
-}
-watch(agentOptions, syncAgentSelectOptions, { immediate: true })
+    : [{ label: 'codex', value: 'codex' }],
+)
 
 /** 功能链接：跳转既有页面（router-link 路由跳转，不新开） */
 const linkGroups: Array<{ key: string; label: string; to: { name: string } | { path: string } }> = [
@@ -50,7 +50,7 @@ const linkGroups: Array<{ key: string; label: string; to: { name: string } | { p
   { key: 'settings', label: 'ide.links.settings', to: { name: 'hermes.settings' } },
 ]
 
-const linkMenuOptions = ref<DropdownOption[]>(
+const linkMenuOptions = computed<DropdownOption[]>(() =>
   linkGroups.map((item) => ({
     key: item.key,
     label: t(item.label),

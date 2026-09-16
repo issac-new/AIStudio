@@ -9,7 +9,7 @@
 //
 // 纪律：不嵌入 ChatPanel 整面板（自带会话侧栏，嵌套导航）；消息面
 // 经 IdeChatPane 复用其子组件（MessageList/ChatInput/SubagentStreamPanel）。
-import { computed } from 'vue'
+import { computed, onUnmounted } from 'vue'
 import { useIdeStore } from '../store/ide'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdeTopBar from './IdeTopBar.vue'
@@ -31,7 +31,9 @@ const terminalPanelStyle = computed(() => ({
   height: `${ide.layout.terminalHeight}px`,
 }))
 
-// 会话列宽度拖拽（右缘把手）
+// 会话列宽度拖拽（右缘把手）。stop 闭包按次独立：共享单变量会让同把手
+// 第二次 pointerdown 覆写清理函数，第一套 pointermove 监听永久残留
+// （2026-09-17 评审）。卸载时兜底拆除。
 let chatDragStop: (() => void) | null = null
 function startChatResize(event: PointerEvent) {
   event.preventDefault()
@@ -46,21 +48,22 @@ function startChatResize(event: PointerEvent) {
     const width = startWidth + (startX - moveEvent.clientX)
     ide.layout.chatWidth = Math.min(720, Math.max(320, width))
   }
-  const onUp = () => chatDragStop?.()
-  chatDragStop = () => {
+  const stop = () => {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
     window.removeEventListener('pointercancel', onUp)
     document.body.style.cursor = previousCursor
     document.body.style.userSelect = previousUserSelect
-    chatDragStop = null
+    if (chatDragStop === stop) chatDragStop = null
   }
+  const onUp = () => stop()
+  chatDragStop = stop
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
   window.addEventListener('pointercancel', onUp)
 }
 
-// 终端面板高度拖拽（上缘把手）
+// 终端面板高度拖拽（上缘把手）。stop 闭包按次独立（同 startChatResize）。
 let terminalDragStop: (() => void) | null = null
 function startTerminalResize(event: PointerEvent) {
   event.preventDefault()
@@ -75,19 +78,25 @@ function startTerminalResize(event: PointerEvent) {
     const height = startHeight + (startY - moveEvent.clientY)
     ide.layout.terminalHeight = Math.min(640, Math.max(140, height))
   }
-  const onUp = () => terminalDragStop?.()
-  terminalDragStop = () => {
+  const stop = () => {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
     window.removeEventListener('pointercancel', onUp)
     document.body.style.cursor = previousCursor
     document.body.style.userSelect = previousUserSelect
-    terminalDragStop = null
+    if (terminalDragStop === stop) terminalDragStop = null
   }
+  const onUp = () => stop()
+  terminalDragStop = stop
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
   window.addEventListener('pointercancel', onUp)
 }
+
+onUnmounted(() => {
+  chatDragStop?.()
+  terminalDragStop?.()
+})
 </script>
 
 <template>
