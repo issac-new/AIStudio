@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-// overlay/custom/client/ia2/__tests__/cockpit-view.test.ts
-// 循环驾驶舱单页装配守门（2026-09-14 重构，替代 overview-components.test.ts）：
-// 页头动作区 / KPI 条 / 介入收件箱 / 生长图舞台 / 循环面板（动作+确认）/
-// 溢出菜单 / 空态引导 / 数据源武装与回收。
+// overlay/custom/client/ia2/__tests__/overview-scene.test.ts
+// 总览场景装配守门（2026-09-16 多视图重构：由 cockpit-view.test.ts 迁移；
+// 壳职责断言在 cockpit-shell.test.ts）：
+// KPI 条 / 介入收件箱 / 生长图舞台 / 循环面板（动作+确认）/
+// 空态引导 / 场景武装与回收。
 // i18n 走全局 setup 的 key 直返 mock；REST 与 workspace store 全部桩化
 // （runs store 真身，桩形状与旧 overview 测试一致）。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -44,6 +45,7 @@ const workspaceStubs = vi.hoisted(() => {
   const state = {
     tasks: [] as Array<{ id: string; title: string; status: string; priority: number | string | null }>,
     userTodos: [] as Array<{ id: string; title: string; date: string; remindAt?: number | null }>,
+    scheduleOpen: false,
     loadTodos: vi.fn(),
     startReminderScheduler: vi.fn(),
     stopReminderScheduler: vi.fn(),
@@ -53,6 +55,7 @@ const workspaceStubs = vi.hoisted(() => {
     unwatchKanbanTasks: vi.fn(),
     onBoardEvent: vi.fn(() => () => {}),
     refreshAllBoards: vi.fn(async () => true),
+    openSchedule: vi.fn(),
   }
   return { state, useWorkspaceStore: () => state }
 })
@@ -68,7 +71,8 @@ vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: { name: 'TaskDrawerStub', props: ['show', 'taskId'], emits: ['update:show', 'close', 'refresh'], template: '<div class="task-drawer-stub" />' },
 }))
 
-import LoopCockpitView from '../views/LoopCockpitView.vue'
+import OverviewScene from '../views/scenes/OverviewScene.vue'
+import { useLoopStore } from '@/custom/loop/store/loop'
 
 const AREA = { template: '<div class="area-stub" />' }
 
@@ -115,7 +119,7 @@ async function mountView(path = '/app') {
   const router = makeRouter()
   router.push(path)
   await router.isReady()
-  const wrapper = mount(LoopCockpitView, { global: { plugins: [router] }, attachTo: document.body })
+  const wrapper = mount(OverviewScene, { global: { plugins: [router] }, attachTo: document.body })
   await flushPromises()
   return { wrapper, router }
 }
@@ -132,11 +136,10 @@ beforeEach(() => {
   vi.stubGlobal('confirm', vi.fn(() => true))
 })
 
-describe('LoopCockpitView — 单页装配', () => {
-  it('骨架：页头/KPI×5/三栏（收件箱·生长舞台·循环面板）/图例；旧 IaNav 菜单栏不存在', async () => {
+describe('OverviewScene — 单页装配', () => {
+  it('骨架：KPI×5/三栏（收件箱·生长舞台·循环面板）/图例；旧 IaNav 菜单栏不存在', async () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-testid="loop-cockpit"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('loopMind.title')
     expect(wrapper.findAll('.lcp-kpi')).toHaveLength(5)
     expect(wrapper.find('[data-testid="lcp-inbox-panel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="lcp-stage"]').exists()).toBe(true)
@@ -175,26 +178,25 @@ describe('LoopCockpitView — 单页装配', () => {
     expect(wrapper.text()).toContain('/ 2')
   })
 
-  it('数据源武装与回收：挂载武装 workspace 聚合 + runs/loops 拉取；卸载停止', async () => {
+  it('场景武装与回收：挂载拉 runs + mind 投影并订阅看板事件；卸载退订', async () => {
+    const unsub = vi.fn()
+    workspaceStubs.state.onBoardEvent.mockReturnValue(unsub)
     const { wrapper } = await mountView()
-    expect(workspaceStubs.state.loadTodos).toHaveBeenCalled()
-    expect(workspaceStubs.state.initFleetStream).toHaveBeenCalled()
-    expect(workspaceStubs.state.refreshAllBoards).toHaveBeenCalled()
     expect(runRest.listRuns).toHaveBeenCalled()
-    expect(loopRest.listLoops).toHaveBeenCalled()
+    expect(runRest.getMind).toHaveBeenCalled()
+    expect(workspaceStubs.state.onBoardEvent).toHaveBeenCalled()
     wrapper.unmount()
-    expect(workspaceStubs.state.stopFleetStream).toHaveBeenCalled()
-    expect(workspaceStubs.state.stopReminderScheduler).toHaveBeenCalled()
-    expect(workspaceStubs.state.unwatchKanbanTasks).toHaveBeenCalled()
+    expect(unsub).toHaveBeenCalled()
   })
 })
 
-describe('LoopCockpitView — 介入收件箱', () => {
+describe('OverviewScene — 介入收件箱', () => {
   it('待决 run 渲染行（loop 名优先），点击 → ia2.runDetail；零待决渲染空态', async () => {
     runRest.listRuns.mockResolvedValue([
       makeRunDto('await-1', 'l1', 'awaiting-input'),
     ] as never)
-    loopRest.listLoops.mockResolvedValue([makeLoopDto('l1')] as never)
+    // loops 拉取已迁壳（bootShared）；场景测试直接预置共享 store 状态（壳武装的等价物）
+    useLoopStore().loops = [makeLoopDto('l1')] as never
     const { wrapper, router } = await mountView()
     const row = wrapper.find('.lcp-inbox-row')
     expect(row.text()).toContain('循环-l1')
@@ -212,7 +214,7 @@ describe('LoopCockpitView — 介入收件箱', () => {
   })
 })
 
-describe('LoopCockpitView — 思维大脑舞台', () => {
+describe('OverviewScene — 思维大脑舞台', () => {
   it('SVG 渲染 + 末梢点击 → 工作项区预选该任务（kanban 投影驱动导航）', async () => {
     runRest.getMind.mockResolvedValue({
       available: true,
@@ -244,7 +246,7 @@ describe('LoopCockpitView — 思维大脑舞台', () => {
   })
 })
 
-describe('LoopCockpitView — 思想列表面板（kanban 任务）', () => {
+describe('OverviewScene — 思想列表面板（kanban 任务）', () => {
   it('任务行点击 → 就地筛选关联项（不跳 kanban）+ 右栏打开详情说明', async () => {
     runRest.getMind.mockResolvedValue({
       available: true,
@@ -294,31 +296,5 @@ describe('LoopCockpitView — 思想列表面板（kanban 任务）', () => {
     const { wrapper } = await mountView()
     expect(wrapper.find('[data-testid="lcp-loops-empty"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('loopMind.loops.empty')
-  })
-})
-
-describe('LoopCockpitView — 页头动作区', () => {
-  it('主按钮导航：查看运行中心（活大脑无编排/新建循环主按钮）', async () => {
-    const { wrapper, router } = await mountView()
-    expect(wrapper.find('[data-testid="lcp-orchestrate"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="lcp-new-loop"]').exists()).toBe(false)
-    await wrapper.find('[data-testid="lcp-all-runs"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.runs')
-  })
-
-  it('溢出菜单收拢次要入口：介入/工作项/沟通/设置', async () => {
-    const { wrapper, router } = await mountView()
-    expect(wrapper.find('[data-testid="lcp-more-menu"]').exists()).toBe(false)
-    await wrapper.find('[data-testid="lcp-more"]').trigger('click')
-    const menu = wrapper.find('[data-testid="lcp-more-menu"]')
-    expect(menu.exists()).toBe(true)
-    expect(menu.findAll('.lcp-more__item')).toHaveLength(4)
-
-    await wrapper.find('[data-testid="lcp-more-inbox"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.inbox')
-    // 选择后菜单收起
-    expect(wrapper.find('[data-testid="lcp-more-menu"]').exists()).toBe(false)
   })
 })
