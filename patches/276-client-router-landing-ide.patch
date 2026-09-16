@@ -1,0 +1,28 @@
+diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+--- a/packages/client/src/router/index.ts
++++ b/packages/client/src/router/index.ts
+@@ -358,10 +358,10 @@ router.beforeEach(async (to, _from, next) => {
+   if (to.meta.public) {
+     // Already has key, skip login
+     if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
+-      // overlay[ia2]: 默认跳 AI 协作中心（/hermes/cockpit，而非上游的 /hermes/chat）；
+-      // 保留 query.redirect 保真。2026-09-16 用户裁决：登录默认落点改为驾驶舱。
++      // overlay[ide]: 默认跳 IDE 工作台（/ide，而非上游的 /hermes/chat）；
++      // 保留 query.redirect 保真。2026-09-16 用户裁决：登录默认落点改为 IDE。
+       const resolved = resolveLoginRedirect(to.query.redirect)
+-      next(resolved === '/hermes/chat' ? '/hermes/cockpit' : resolved)
++      next(resolved === '/hermes/chat' ? '/ide' : resolved)
+       return
+     }
+     next()
+@@ -375,8 +375,8 @@ router.beforeEach(async (to, _from, next) => {
+   }
+
+   if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
+-    // overlay[ia2]: 非 superadmin 兜底落 AI 协作中心（与登录默认落点一致）
+-    next('/hermes/cockpit')
++    // overlay[ide]: 非 superadmin 兜底落 IDE 工作台（与登录默认落点一致）
++    next('/ide')
+     return
+   }
+
