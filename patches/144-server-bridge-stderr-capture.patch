@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/modules/hermes/services/bridge/manager.ts b/packages/server/src/modules/hermes/services/bridge/manager.ts
-index c31e307..25ac497 100644
+index cd6a032..128fdd1 100644
 --- a/packages/server/src/modules/hermes/services/bridge/manager.ts
 +++ b/packages/server/src/modules/hermes/services/bridge/manager.ts
 @@ -1,7 +1,8 @@
@@ -11,9 +11,9 @@ index c31e307..25ac497 100644
 +import { basename, dirname, isAbsolute, join, resolve } from 'path'
 +import { homedir } from 'os'
  import { logger } from '../../../studio/public/logging'
+ import { OPENROUTER_APP_HEADERS } from '../../../studio/public/openrouter-attribution'
  import { resolveHermesInstallationEnvironment } from '../runtime/installation'
- import { detectHermesHome, getHermesBin } from '../runtime/path'
-@@ -993,13 +994,32 @@ export class AgentBridgeManager {
+@@ -994,13 +995,32 @@ export class AgentBridgeManager {
      const env = buildAgentBridgeProcessEnv(this.endpoint, hermesHome, agentRoot)
  
      logger.info('[agent-bridge] starting: %s %s', command.command, args.join(' '))
