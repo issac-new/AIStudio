@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index d027fa7..3f22d41 100644
+index 447e570..1d9c8d2 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
-@@ -73,6 +73,8 @@ import {
+@@ -75,6 +75,8 @@ import {
    type MobileHealthResponse,
    type MobileHealthRequest,
  } from '../services/chat-run/mobile-health'
@@ -11,7 +11,7 @@ index d027fa7..3f22d41 100644
  
  type AgentBridgeBackgroundNotification = any
  type AgentBridgeBackgroundSession = any
-@@ -606,6 +608,12 @@ export class ChatRunSocket {
+@@ -634,6 +636,12 @@ export class ChatRunSocket {
      this.backgroundPollTimer.unref?.()
      void this.pollBackgroundWork()
      logger.info('[chat-run-socket] Socket.IO ready at /chat-run')
@@ -24,10 +24,10 @@ index d027fa7..3f22d41 100644
    }
  
    // --- Auth middleware ---
-@@ -2850,6 +2858,10 @@ export class ChatRunSocket {
-   async close() {
+@@ -2901,6 +2909,10 @@ export class ChatRunSocket {
      if (this.closing) return
      this.closing = true
+     for (const sessionId of this.sessionMap.keys()) this.finishTaskPlanRun(sessionId, 'abort.completed')
 +    // overlay[fleet-tap]: 注销舰队聚合
 +    try {
 +      unregisterChatRunSocket()
