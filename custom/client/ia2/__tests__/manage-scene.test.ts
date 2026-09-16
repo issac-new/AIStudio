@@ -21,9 +21,10 @@ vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStu
 
 const kanbanStubs = vi.hoisted(() => ({
   setAssigneeFilter: vi.fn(),
+  incomingFilter: null as string | null,
 }))
 vi.mock('@/stores/hermes/kanban', () => ({
-  useKanbanStore: () => ({ setAssigneeFilter: kanbanStubs.setAssigneeFilter }),
+  useKanbanStore: () => ({ setAssigneeFilter: kanbanStubs.setAssigneeFilter, filterAssignee: kanbanStubs.incomingFilter }),
 }))
 vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
   default: { name: 'SwarmKanbanStub', template: '<div class="kanban-stub" />' },
@@ -58,6 +59,7 @@ describe('ManageScene — 装配', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    kanbanStubs.incomingFilter = null
   })
 
   it('人员条聚合在办：alice open1+blocked1 / bob review1 / 未指派 open1；done 不入桶', async () => {
@@ -80,6 +82,23 @@ describe('ManageScene — 装配', () => {
     // 未指派 chip 非交互（评审 Important-1）：点击不触发 setAssigneeFilter（守卫拦截）
     await wrapper.find('[data-testid="mscene-person-none"]').trigger('click')
     expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith('bob')
+    wrapper.unmount()
+    expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith(undefined)
+  })
+
+  it('带筛选进入：卸载归还原筛选，不清掉用户在 /app/tasks 的既有筛选', async () => {
+    kanbanStubs.incomingFilter = 'alice'
+    const { wrapper } = await mountScene()
+    await wrapper.find('[data-testid="mscene-person-bob"]').trigger('click')
+    expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith('bob')
+    wrapper.unmount()
+    expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith('alice')
+  })
+
+  it('筛选不外泄：场景内 store 级写入（内嵌看板工具条路径）卸载时不带出', async () => {
+    const { wrapper } = await mountScene()
+    // 模拟 SwarmKanbanView 工具条 handleAssigneeChange 直写 store（绕过 chip 路径）
+    kanbanStubs.setAssigneeFilter('carol')
     wrapper.unmount()
     expect(kanbanStubs.setAssigneeFilter).toHaveBeenLastCalledWith(undefined)
   })

@@ -5,7 +5,7 @@
      （任务↔群弱锚点列表 + 治理入口）。指派走看板既有 assignee 字段；
      建群在任务抽屉（Task 6 接线）。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
@@ -28,9 +28,13 @@ function filterAssignee(name: string): void {
   activeAssignee.value = next
   kanban.setAssigneeFilter(next ?? undefined)
 }
-// 筛选态属本场景临时视图态：离开即清，不外泄到 /app/tasks
+// 筛选态属本场景临时视图态：进入时快照外来的 store 筛选，离开时原样归还。
+// 覆盖双写路径（chip 与内嵌看板工具条 handleAssigneeChange 直写 store）：
+// 场景内改的筛选不外泄到 /app/tasks，用户原有筛选也不被清掉（2026-09-17 评审）。
+const incomingFilter: string | null = kanban.filterAssignee ?? null
+watch(() => kanban.filterAssignee, (v) => { activeAssignee.value = v ?? null })
 onUnmounted(() => {
-  if (activeAssignee.value !== null) kanban.setAssigneeFilter(undefined)
+  kanban.setAssigneeFilter(incomingFilter ?? undefined)
 })
 
 // ── 群栏目（弱锚点群 = 群名以 '[' 前缀约定开头；matrix 不可用则整栏隐藏） ──

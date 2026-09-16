@@ -11,10 +11,15 @@ import { resolve } from 'path';
 // realpathSync：worktree 场景（.claude/worktrees/<feat>/ 经符号链接指回
 // upstream）必须取真实绝对路径，否则 vite 会因 root(realpath) 与输入
 // html(符号链接路径) 不一致而构建失败（emitFile 相对路径逃逸）。
-const overlayRoot = realpathSync(resolve(import.meta.dirname, '..'));
+// 路径不存在时 realpath 抛 ENOENT——回退原样解析，交由 main() 的
+// 存在性守卫输出友好报错（2026-09-17 评审：不得在模块顶层裸抛）。
+const realpathOrSelf = (p) => {
+  try { return realpathSync(p); } catch { return p; }
+};
+const overlayRoot = realpathOrSelf(resolve(import.meta.dirname, '..'));
 const ncwkRoot = resolve(overlayRoot, '..');
 // upstream 可能经符号链接进入（worktree 场景），统一取真实路径。
-const upstreamRoot = realpathSync(resolve(ncwkRoot, 'upstream'));
+const upstreamRoot = realpathOrSelf(resolve(ncwkRoot, 'upstream'));
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');

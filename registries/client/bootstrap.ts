@@ -38,6 +38,10 @@ export async function bootstrapClient(app: App): Promise<void> {
   if (features.ide) {
     const { registerIde } = await import('../../custom/client/ide')
     await registerIde(app)
+  } else {
+    // patch 276/277 的登录守卫硬指向 /ide：开关关闭时注册重定向兜底，
+    // 避免登录后命中无匹配路由白屏（2026-09-17 24h 评审）。
+    router.addRoute({ path: '/ide', redirect: '/hermes/cockpit' })
   }
   // P3 Task 3：六区域新 IA（/app 路由树 + 兼容重定向守卫）。
   // 守卫依赖 router 实例，与 loop 的 addRoute 同样必须在 mount 前完成。
