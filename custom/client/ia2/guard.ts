@@ -5,8 +5,9 @@
 // loop 旧深链（hermes.loopRuns/loopDetail）。
 //
 // 设计说明（为何用 overlay 侧 beforeEach 而非 patch 上游 router/index.ts）：
-// - 登录默认链：上游 071 守卫把无 redirect 的登录改落 '/app'，
-//   旧书签深链按路径在本守卫接力 → 单一守卫覆盖全部旧落点。
+// - 登录默认链：上游 071 守卫（+ 274 修订）把无 redirect 的登录改落
+//   '/hermes/cockpit'（AI 协作中心），旧书签深链按路径在本守卫接力 →
+//   单一守卫覆盖全部旧落点。
 import type { Router, RouteLocationNormalizedGeneric } from 'vue-router'
 
 /** 重定向目标（vue-router 位置描述的子集） */
