@@ -4,13 +4,17 @@
 //
 // 注意:本脚本用 node 直跑(.mjs),不依赖 ts 加载器,因此路径在此内联计算,
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
-import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync } from 'fs';
 import { execSync } from 'child_process';
 import { resolve } from 'path';
 
-const overlayRoot = resolve(import.meta.dirname, '..');
+// realpathSync：worktree 场景（.claude/worktrees/<feat>/ 经符号链接指回
+// upstream）必须取真实绝对路径，否则 vite 会因 root(realpath) 与输入
+// html(符号链接路径) 不一致而构建失败（emitFile 相对路径逃逸）。
+const overlayRoot = realpathSync(resolve(import.meta.dirname, '..'));
 const ncwkRoot = resolve(overlayRoot, '..');
-const upstreamRoot = resolve(ncwkRoot, 'upstream');
+// upstream 可能经符号链接进入（worktree 场景），统一取真实路径。
+const upstreamRoot = realpathSync(resolve(ncwkRoot, 'upstream'));
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');
