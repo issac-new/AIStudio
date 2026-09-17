@@ -155,6 +155,57 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     }, { immediate: true })
   }
 
+  // 终审修复（同 team-registry.ts:260 模式）：ensureListening 在 store setup 顶层调用，
+  // watcher 落在 pinia 实例的 effect scope，不随组件卸载销毁。此前由 DispatchList
+  // onMounted 调用时 watcher 绑组件作用域——tab 切换卸载后 listening 旗标仍 true
+  // 但 watcher 已死，成员侧 assign 落地静默失效。组件侧不再调用（轮询 timer 仍属组件级）。
+  ensureListening()
+
+  // ── Important-2：历史回填（spec §10「Sync 全量补拉天然恢复」的落地）──
+  // 成员重启/首次打开 tab 前到达的 assign 不会触发 timeline 监听（监听只消费挂载后
+  // 的增量）。client 就绪且注册房间已知后，对房间做一次历史回放：取 live timeline
+  // 中的 assign/receipt 逐个走与增量监听相同的 handleTimelineEvent 流程。kv 防重
+  //（receiveAssign 已记录即跳过）+ 视图幂等（upsertAssign/mergeReceipt）保证重复
+  // 回放不重复建卡。scrollback 尽力扩大历史窗口（v41 签名 scrollback(room, limit)），
+  // 失败/不存在时以已同步的 live timeline 窗口为准。
+  const BACKFILL_SCROLLBACK_LIMIT = 100
+  // 已回填状态按 client 实例维度记录：登出重登（不刷新页面）后 client 是新实例，
+  // 房间相同也必须重新回放——sticky「房间→布尔」会让两次会话间隙到达的 assign
+  // 静默丢失（重登后 watch 触发但旗标命中直接 return）。
+  let backfilledFor: { client: MatrixClient; roomId: string } | null = null
+
+  async function backfillHistory(): Promise<void> {
+    const client = clientRef.value
+    const roomId = registryRoomIdRef.value
+    if (!client || !roomId || (backfilledFor?.client === client && backfilledFor.roomId === roomId)) return
+    const roomAwareClient = client as unknown as {
+      getRoom?: (id: string) => unknown
+      scrollback?: (room: unknown, limit?: number) => Promise<unknown>
+    }
+    let room: unknown
+    try {
+      room = roomAwareClient.getRoom?.(roomId) ?? null
+    } catch { return }
+    if (!room) return
+    backfilledFor = { client, roomId } // 房间已定位即置位：scrollback 失败也不反复重试
+    try {
+      if (typeof roomAwareClient.scrollback === 'function') {
+        room = await roomAwareClient.scrollback(room, BACKFILL_SCROLLBACK_LIMIT) ?? room
+      }
+    } catch { /* 历史分页失败：以已同步窗口为准 */ }
+    const events = (room as { getLiveTimeline?: () => { getEvents?: () => unknown[] } })
+      .getLiveTimeline?.()?.getEvents?.() ?? []
+    for (const ev of events) {
+      try {
+        await handleTimelineEvent(ev, room)
+      } catch { /* 单条回放失败跳过，不阻断其余历史 */ }
+    }
+  }
+
+  // client 与注册房间任一就绪变化都可能解锁回填（典型时序：登录 → 初始 sync →
+  // detectRegistry 写入 registryRoomId），watch immediate 覆盖实例化时已就绪的场景。
+  watch([clientRef, registryRoomIdRef], () => { void backfillHistory() }, { immediate: true })
+
   async function onTimeline(event: unknown, room: unknown): Promise<void> {
     const ev = event as { getType?: () => string }
     if (!ev.getType || !isSwarmStudioEventType(ev.getType())) return
@@ -180,5 +231,5 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     }
   }
 
-  return { dispatches, sendAssignment, handleTimelineEvent, receiveAssign, sendReceipt, ensureListening, pollAndReport }
+  return { dispatches, sendAssignment, handleTimelineEvent, receiveAssign, sendReceipt, ensureListening, backfillHistory, pollAndReport }
 })
