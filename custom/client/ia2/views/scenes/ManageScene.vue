@@ -1,11 +1,13 @@
 <!-- overlay/custom/client/ia2/views/scenes/ManageScene.vue -->
-<!-- 管理场景（2026-09-16 多视图重构）：研发管理治理——
-     顶部人员聚合条（assignee 在办分桶，点击按人筛选看板）+ 左看板主区
+<!-- 管理场景（2026-09-16 多视图重构；2026-09-17 Task 5 加二级 tab）：
+     顶部二级 tab（任务与值守 / Teams 管理）。值守 tab 为原视图——
+     人员聚合条（assignee 在办分桶，点击按人筛选看板）+ 左看板主区
      （SwarmKanbanView 自武装内嵌，/app/tasks 同款先例）+ 右群栏目
      （任务↔群弱锚点列表 + 治理入口）。指派走看板既有 assignee 字段；
-     建群在任务抽屉（Task 6 接线）。 -->
+     建群在任务抽屉（Task 6 接线）。Teams tab 挂 TeamsManagePanel
+     （Task 4，注册房间 + 成员账号树 + agent teams 声明）。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
@@ -17,6 +19,11 @@ const router = useRouter()
 const { t } = useI18n()
 const workspace = useWorkspaceStore()
 const kanban = useKanbanStore()
+
+// ── 二级 tab：任务与值守（原视图）/ Teams 管理（Task 5 挂载） ──
+const TeamsManagePanel = defineAsyncComponent(() =>
+  import('@/custom/matrix-teams/views/TeamsManagePanel.vue'))
+const sceneTab = ref<'duty' | 'teams'>('duty')
 
 // ── 人员聚合条（纯函数适配器，视图不自算） ──
 const people = computed(() => aggregateByAssignee(workspace.tasks))
@@ -56,6 +63,15 @@ const goTrace = () => void router.push({ path: '/app/tasks', query: { tab: 'trac
 
 <template>
   <section class="mscene" data-testid="scene-manage">
+    <!-- 二级 tab 条 -->
+    <div class="mscene__tabs" data-testid="mscene-tabs">
+      <button type="button" class="mscene__tab" :class="{ 'mscene__tab--on': sceneTab === 'duty' }"
+        data-testid="mscene-tab-duty" @click="sceneTab = 'duty'">{{ t('loopScenes.manage.tabDuty') }}</button>
+      <button type="button" class="mscene__tab" :class="{ 'mscene__tab--on': sceneTab === 'teams' }"
+        data-testid="mscene-tab-teams" @click="sceneTab = 'teams'">{{ t('loopScenes.manage.tabTeams') }}</button>
+    </div>
+
+    <template v-if="sceneTab === 'duty'">
     <!-- 人员聚合条 -->
     <div class="mscene__people" data-testid="mscene-people">
       <span class="mscene__people-label">{{ t('loopScenes.manage.people') }}</span>
@@ -108,11 +124,16 @@ const goTrace = () => void router.push({ path: '/app/tasks', query: { tab: 'trac
         </div>
       </aside>
     </div>
+    </template>
+    <TeamsManagePanel v-else />
   </section>
 </template>
 
 <style scoped>
 .mscene { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.mscene__tabs { flex: 0 0 auto; display: flex; gap: 6px; }
+.mscene__tab { border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); border-radius: var(--radius-standard); padding: 3px 14px; cursor: pointer; font-size: 12px; font-family: inherit; }
+.mscene__tab--on { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
 .mscene__people {
   flex: 0 0 auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-standard);

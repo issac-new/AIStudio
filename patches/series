@@ -450,3 +450,5 @@
 285-server-routes-ide-git.patch
 286-ide-parity-i18n-zh.patch
 287-ide-parity-i18n-en.patch
+288-client-i18n-matrix-teams-zh.patch
+289-client-i18n-matrix-teams-en.patch
