@@ -91,6 +91,8 @@ export const useIdeStore = defineStore('ide', () => {
   const agentId = ref<CodingAgentId>(loadAgent())
   const chatTab = ref<IdeChatTab>('messages')
   const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>(LAYOUT_KEY, DEFAULT_LAYOUT))
+  /** 命令面板（Cmd/Ctrl+K，对标 zcode quickPick/commandCenter） */
+  const paletteOpen = ref(false)
 
   function setWorkspace(path: string | null): void {
     workspace.value = path?.trim() ? path.trim() : null
@@ -104,6 +106,18 @@ export const useIdeStore = defineStore('ide', () => {
 
   function setChatTab(tab: IdeChatTab): void {
     chatTab.value = tab
+  }
+
+  function openPalette(): void {
+    paletteOpen.value = true
+  }
+
+  function closePalette(): void {
+    paletteOpen.value = false
+  }
+
+  function togglePalette(): void {
+    paletteOpen.value = !paletteOpen.value
   }
 
   watch(layout, (value) => {
@@ -120,9 +134,13 @@ export const useIdeStore = defineStore('ide', () => {
     agentId,
     chatTab,
     layout,
+    paletteOpen,
     terminalCwd,
     setWorkspace,
     setAgentId,
     setChatTab,
+    openPalette,
+    closePalette,
+    togglePalette,
   }
 })

@@ -1,0 +1,20 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 2ba643ec..94667877 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -70,6 +70,7 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
+ import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petdex'
+ import { petRoutes } from '../modules/studio/routes/pets'
+ import traceRoutes from '../custom/controllers/hermes/trace'
++import ideGitRoutes from '../custom/controllers/ide/git'
+ // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+ import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+@@ -276,6 +277,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(petRoutes.routes())
+   app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
+   app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
++  app.use(ideGitRoutes.routes())                   // IDE Git pane (status/diff/stage/commit)
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
+   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
