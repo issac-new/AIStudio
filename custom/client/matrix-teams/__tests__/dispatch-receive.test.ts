@@ -124,6 +124,24 @@ describe('receiveAssign', () => {
     expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt
       && e.content.status === 'created')).toHaveLength(1)
   })
+  it('createTask await 窗口内 kv 被并发写（轮询回执他人任务）→ 落盘合并新快照不回滚', async () => {
+    const otherTaskId = '99999999-2222-3333-4444-555555555555'
+    localStorage.setItem('matrix-teams.dispatchIndex', JSON.stringify({
+      [otherTaskId]: { localTaskId: 'kb-x', lastStatus: 'created', lastSyncedAt: 1 },
+    }))
+    // 模拟 pollAndReport 在 createTask 的 await 窗口内把他人任务推进到 running
+    kanbanApi.createTask.mockImplementationOnce(async (data: Record<string, unknown>) => {
+      const idx = JSON.parse(localStorage.getItem('matrix-teams.dispatchIndex')!)
+      idx[otherTaskId].lastStatus = 'running'
+      localStorage.setItem('matrix-teams.dispatchIndex', JSON.stringify(idx))
+      return { id: 'kb-1', status: 'ready', title: String(data.title) }
+    })
+    const store = useTaskDispatchStore()
+    await store.receiveAssign(assign())
+    // 新卡照常落盘；他人任务的 running 不得被旧快照回滚成 created
+    expect(loadDispatchIndex()['11111111-2222-3333-4444-555555555555']).toMatchObject({ localTaskId: 'kb-1' })
+    expect(loadDispatchIndex()[otherTaskId]).toMatchObject({ lastStatus: 'running' })
+  })
   it('目标解析失败 → failed 回执带 reason，不建卡', async () => {
     const store = useTaskDispatchStore()
     await store.receiveAssign(assign({ target: { account: '@nobody:sv' } }))

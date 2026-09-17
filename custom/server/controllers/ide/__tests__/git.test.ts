@@ -47,6 +47,34 @@ describe('parseGitStatus', () => {
     expect(status.detached).toBe(true)
     expect(status.branch).toBe('HEAD')
   })
+
+  it('unquotes C-style octal paths back to UTF-8 (core.quotepath 默认开启)', () => {
+    // "中文.txt" 的 UTF-8 字节：中=E4B8AD 文=E69687 → git 输出 \344\270\255\346\226\207
+    const status = parseGitStatus('/repo', [
+      '## main',
+      '?? "\\344\\270\\255\\346\\226\\207.txt"',
+    ].join('\n'))
+    expect(status.changes).toHaveLength(1)
+    expect(status.changes[0].file).toBe('中文.txt')
+  })
+
+  it('unquotes escaped quote/backslash inside quoted path', () => {
+    const status = parseGitStatus('/repo', [
+      '## main',
+      ' M "a\\"b\\\\c\\344\\270\\255.ts"',
+    ].join('\n'))
+    // \344\270\255 即「中」的 UTF-8 三字节
+    expect(status.changes[0].file).toBe('a"b\\c中.ts')
+  })
+
+  it('decodes rename source and target both sides', () => {
+    const status = parseGitStatus('/repo', [
+      '## main',
+      'R  "old\\344\\270\\255.ts" -> "new\\346\\226\\207.ts"',
+    ].join('\n'))
+    expect(status.changes[0].file).toBe('new文.ts')
+    expect(status.changes[0].renamedFrom).toBe('old中.ts')
+  })
 })
 
 describe('isSafeRelativeFile', () => {
@@ -96,6 +124,26 @@ describe('git e2e (real git in temp dir)', () => {
       expect(byFile['base.txt'].worktreeStatus).toBe('M')
       expect(byFile['added.txt'].indexStatus).toBe('A')
       expect(byFile['sub/u.ts'].kind).toBe('untracked')
+    } finally {
+      repo.cleanup()
+    }
+  })
+
+  it('non-ASCII filename: status 输出还原为 UTF-8 且还原路径可直接 stage（面板闭环）', () => {
+    const repo = makeRepo()
+    try {
+      const name = '中文文件.txt'
+      writeFileSync(join(repo.dir, name), '内容\n')
+      const git = (args: string[]) => execFileSync('git', args, { cwd: repo.dir })
+      const out = git(['status', '--porcelain=v1', '-b', '-uall']).toString()
+      expect(out).toContain('"\\344') // git 默认 quotepath 引用八进制转义
+      const status: GitStatus = parseGitStatus(repo.dir, out)
+      const decoded = status.changes.find((c) => c.file === name)
+      expect(decoded?.kind).toBe('untracked')
+      // 面板 stage 即用还原路径回传 git：还原错误时这里 pathspec 失配抛错
+      git(['add', '--', name])
+      const out2 = git(['status', '--porcelain=v1', '-b', '-uall']).toString()
+      expect(parseGitStatus(repo.dir, out2).changes[0].indexStatus).toBe('A')
     } finally {
       repo.cleanup()
     }

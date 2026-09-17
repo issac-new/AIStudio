@@ -150,4 +150,35 @@ describe('IdeGitPane', () => {
     expect(commit).toHaveBeenCalledWith('/tmp/repo', 'feat: test commit')
     expect((wrapper.find('.ide-git__commit-input').element as HTMLTextAreaElement).value).toBe('')
   })
+
+  it('过期 diff 响应晚归不覆盖新选择（out-of-order 响应按序号丢弃）', async () => {
+    const ide = useIdeStore()
+    ide.setWorkspace('/tmp/repo')
+    status.mockResolvedValue({
+      repoRoot: '/tmp/repo', branch: 'main', upstream: null, ahead: 0, behind: 0, detached: false,
+      changes: [
+        change({ file: 'a-slow.ts', indexStatus: ' ', worktreeStatus: 'M', kind: 'modified' }),
+        change({ file: 'b-fast.ts', indexStatus: ' ', worktreeStatus: 'M', kind: 'modified' }),
+      ],
+    })
+    let resolveSlow!: (v: { file: string; staged: boolean; diff: string }) => void
+    diff.mockImplementationOnce(() => new Promise((res) => { resolveSlow = res })) // a-slow 挂起
+    diff.mockResolvedValueOnce({ file: 'b-fast.ts', staged: false, diff: '+B-content' }) // b-fast 立即归
+    const wrapper = mountPane()
+    await flushPromises()
+
+    const rows = wrapper.findAll('.ide-git__change')
+    await rows[0].trigger('click') // 选中 a-slow，diff 挂起
+    await rows[1].trigger('click') // 选中 b-fast，diff 归来
+    await flushPromises()
+    expect(wrapper.find('.ide-git__diff-file').text()).toBe('b-fast.ts')
+    expect(wrapper.find('.ide-git__diff-body').text()).toContain('+B-content')
+
+    resolveSlow({ file: 'a-slow.ts', staged: false, diff: '+STALE-A' }) // 慢响应此刻才归
+    await flushPromises()
+    // 不得把 b-fast 的 diff 顶掉
+    expect(wrapper.find('.ide-git__diff-file').text()).toBe('b-fast.ts')
+    expect(wrapper.find('.ide-git__diff-body').text()).not.toContain('STALE-A')
+    expect(wrapper.find('.ide-git__diff-body').text()).toContain('+B-content')
+  })
 })
