@@ -1,0 +1,47 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 6cfbd41..75dc023 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1208,6 +1208,8 @@ export default {
+       noRooms: 'No linked rooms',
+       trace: 'Traceability',
+       openCount: 'Open',
++      tabDuty: 'Duties',
++      tabTeams: 'Teams',
+     },
+     code: {
+       selectTask: 'Select task',
+@@ -1227,6 +1229,33 @@ export default {
+       activeRuns: 'Active runs',
+     },
+   },
++  teams: {
++    title: 'Teams Management',
++    matrixOffline: 'Matrix offline; teams management unavailable',
++    registry: {
++      none: 'No team registry room configured',
++      create: 'Create registry room',
++      setName: 'Registry room name',
++      inviteIds: 'Invite members (Matrix IDs, comma separated, optional)',
++      candidates: 'Joined rooms with team data detected',
++      useThis: 'Use as registry',
++      room: 'Registry room',
++    },
++    accounts: 'Member accounts',
++    'accounts.empty': 'No member has declared agent teams yet',
++    'leader.badge': 'leader',
++    'leader.manage': 'Manage leaders',
++    'leader.add': 'Add leader',
++    'leader.remove': 'Remove',
++    invite: { placeholder: "{'@'}user:server", button: 'Invite' },
++    self: { hint: 'Edit agent teams of this account' },
++    agentTeams: 'Agent Teams',
++    'agentTeams.add': 'Add team',
++    'agentTeams.name': 'Name',
++    'agentTeams.profiles': 'Profiles',
++    'agentTeams.defaultProfile': 'Default profile',
++    'agentTeams.save': 'Save declaration',
++  },
+   loopMind: {
+     title: 'Thinking Mind',
+     tagline: 'Living thought · self-growing',
