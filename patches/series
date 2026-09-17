@@ -444,3 +444,9 @@
 #           占用，再顺延为 283/284。）
 283-loop-scenes-i18n-zh.patch
 284-loop-scenes-i18n-en.patch
+# 285/286/287 = /ide zcode 3.11.2 对齐缺口：Git 面板 server 挂载 + 命令面板/Git
+#           面板 i18n zh/en 成对。对照表见
+#           docs/superpowers/specs/2026-09-17-zcode-3112-parity-analysis.md。
+285-server-routes-ide-git.patch
+286-ide-parity-i18n-zh.patch
+287-ide-parity-i18n-en.patch
