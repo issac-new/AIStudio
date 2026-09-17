@@ -225,6 +225,11 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     }, { immediate: true })
   }
 
+  // Task 3 评审迁移：store setup 顶层即挂监听——watcher 落在 pinia 实例的 effect scope，
+  // 不随组件卸载销毁。此前由组件 onMounted 调用时 watcher 绑组件作用域，tab 切换卸载后
+  // listening 旗标仍 true 但 watcher 已死，二次进入 store 不再监听。组件侧不再调用。
+  ensureListening()
+
   function onTimeline(event: unknown, room: unknown): void {
     const ev = event as { getType?: () => string }
     const r = room as { roomId?: string } | undefined

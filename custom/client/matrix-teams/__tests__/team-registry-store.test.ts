@@ -85,6 +85,10 @@ beforeEach(() => {
   sdk.sent.stateEvents.length = 0
   sdk.sent.accountData.length = 0
   sdk.accountData.clear()
+  // ensureListening 迁移到 store setup 顶层后，每个用例实例化 store 即向模块级
+  // sdk.client 挂一个 Timeline 监听（mock 的 off 是 no-op 卸不掉）。用例间清空，
+  // 「只挂一次监听」断言度量本用例内的挂载次数。
+  sdk.listeners.clear()
 })
 
 describe('发现', () => {
