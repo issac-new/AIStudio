@@ -206,6 +206,38 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     }
   }
 
+  // ── 值守（leader 专属，PL 矩阵 duty=50）──
+  /** 覆盖写：state_key=被值守房间 id；读端 duties 以最后一次有效写入为准。 */
+  async function writeDuty(roomId: string, duty: { assigneeKind: 'account' | 'agentTeam'; assigneeId: string; roomName?: string }): Promise<boolean> {
+    const client = clientRef.value
+    if (!client || !registryRoomId.value || !isLeader.value) return false
+    try {
+      await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.duty, {
+        assigneeKind: duty.assigneeKind, assigneeId: duty.assigneeId, roomName: duty.roomName,
+        updatedBy: userIdRef.value ?? '', updatedAt: Date.now(),
+      }, roomId)
+      await rebuild()
+      return true
+    } catch (err) {
+      lastError.value = err instanceof Error ? err.message : String(err)
+      return false
+    }
+  }
+
+  /** 清除 = 空 content 覆盖同 state_key；读端 parseDutyContent({}) 返回 null 即视为无值守。 */
+  async function clearDuty(roomId: string): Promise<boolean> {
+    const client = clientRef.value
+    if (!client || !registryRoomId.value || !isLeader.value) return false
+    try {
+      await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.duty, {}, roomId)
+      await rebuild()
+      return true
+    } catch (err) {
+      lastError.value = err instanceof Error ? err.message : String(err)
+      return false
+    }
+  }
+
   // ── 监听 ──
   let listening = false
   /** 测试钩子：直接指定房间（绕过 account data 发现），并立即投影一次。 */
@@ -242,6 +274,6 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
   return {
     registryRoomId, accounts, leaders, undeclared, duties, ready, lastError, isLeader,
     ensureListening, rebuild, detectRegistry, registryCandidateRooms, setRegistryRoom,
-    createRegistryRoom, writeSelfAccount, writeLeaders, inviteMember, attachRoom,
+    createRegistryRoom, writeSelfAccount, writeLeaders, inviteMember, writeDuty, clearDuty, attachRoom,
   }
 })
