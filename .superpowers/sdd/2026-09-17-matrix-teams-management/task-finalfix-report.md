@@ -51,3 +51,15 @@
 2. **回填窗口上限 100**：scrollback limit 硬编 100；超出该窗口的更老历史仍不可恢复。如需更大窗口可调常量或后续接分页循环。
 3. **回填静默降级**：scrollback/单条回放失败均静默跳过（与仓库「单条失败静默、下轮重试」的既有容错口径一致），失败无用户可见信号，仅增量监听兜底。
 4. 仓库无 typecheck 门禁（无 tsconfig，仅 vitest 转换不校验类型）；本改动全部经显式 cast 收窄，但未过 vue-tsc。
+
+---
+
+## 补修（追加提交）：回填旗标按 client 实例维度判定
+
+**缺陷**：`backfilledForRoom` 粘性旗标在登出重登（不刷新页面）后跳过重回填。登出不清 `registryRoomId`，重登后 watch 再触发但 `backfilledForRoom === roomId` 直接 return，两次会话间隙到达的 assign 静默丢失——正是 Important-2 回填要堵的丢失类。
+
+**修法**（`custom/client/matrix-teams/stores/task-dispatch.ts`）：已回填状态从 sticky「房间→布尔」改为记录 `{ client, roomId }` 对；client 变化（含登出为 null 再重登的新实例）后同房间必须再次回填。同 client 同房间的重复触发仍幂等（kv 防重 + 视图幂等不变）。
+
+**守门测试**（`__tests__/task-dispatch-store.test.ts`）：mock client 改真实 vue ref 以支持响应式切换——首次就绪回填 → client→null（登出）→ 新 client 实例就绪 → 断言 `dispatches` 增至 2 且新实例 `scrollback` 被再次调用。TDD 验证：仅回退 store 修复后该测试红（超时，dispatches 恒为 1），其余 7 个测试不受影响；修复后 matrix-teams 71/71、全量 1720/1720 全绿。
+
+**未变**：零新增依赖、事件类型字符串零新增、既有断言未弱化。

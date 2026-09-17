@@ -3,7 +3,7 @@
 // 投递守门：发送带 uuid+issuedBy；外派视图 assign∪receipt 幂等合并（最新 reportedAt 胜）。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { nextTick } from 'vue'
+import { nextTick, ref, type Ref } from 'vue'
 import { TASK_EVENT_TYPES, TEAM_EVENT_TYPES, REGISTRY_ACCOUNT_DATA_TYPE, type AssignContent, type ReceiptContent } from '../protocol'
 
 const sentEvents: Array<{ roomId: string; type: string; content: unknown }> = []
@@ -23,8 +23,11 @@ const sdkClient = {
     getLiveTimeline: () => ({ getEvents: () => historyEvents }),
   }),
 }
+// 用真实 vue ref 暴露 client：登出（client→null）/重登（新实例）可响应式切换，
+// 驱动 store 内 watch([clientRef, registryRoomIdRef]) 重新触发回填。
+let clientRefMock: Ref<unknown> | undefined
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
-  useMatrixClientStore: () => ({ client: { value: sdkClient }, userId: { value: '@alice:sv' } }),
+  useMatrixClientStore: () => ({ client: clientRefMock ?? (clientRefMock = ref(sdkClient)), userId: { value: '@alice:sv' } }),
 }))
 vi.mock('../stores/team-registry', () => ({
   useTeamRegistryStore: () => ({ registryRoomId: { value: '!reg:sv' }, accounts: { value: [] }, isLeader: { value: true } }),
@@ -38,6 +41,7 @@ beforeEach(() => {
   historyEvents = []
   localStorage.clear()
   listeners.clear()
+  clientRefMock = undefined
 })
 
 const assignOf = (over: Partial<AssignContent>): AssignContent => ({
@@ -129,5 +133,23 @@ describe('历史回填', () => {
     await store.backfillHistory()
     await store.backfillHistory()
     expect(store.dispatches).toHaveLength(1)
+  })
+  it('登出重登（不刷新页面，client 换实例）后同房间再次回填', async () => {
+    historyEvents = [sdkEv(TASK_EVENT_TYPES.assign, assignOf({ taskId: 'sess-1' }))]
+    const store = useTaskDispatchStore()
+    await vi.waitFor(() => expect(store.dispatches).toHaveLength(1))
+    // 模拟登出：client → null，注册房间不变（登出不清 registryRoomId）
+    clientRefMock!.value = null
+    await nextTick()
+    // 两次会话间隙到达的 assign（仍在房间历史里）
+    historyEvents = [sdkEv(TASK_EVENT_TYPES.assign, assignOf({ taskId: 'sess-2' }))]
+    // 重登：新 client 实例，房间相同
+    const reloginClient = { ...sdkClient, scrollback: vi.fn(async (room: unknown) => room) }
+    clientRefMock!.value = reloginClient
+    // sticky「房间→布尔」旗标下此处永远不触发（旧代码必超时失败）；
+    // 按 client 实例维度判定后 watch 再触发 → 再次 scrollback + 回放。
+    await vi.waitFor(() => expect(store.dispatches).toHaveLength(2))
+    expect(store.dispatches[1].assign.taskId).toBe('sess-2')
+    expect(reloginClient.scrollback).toHaveBeenCalled()
   })
 })
