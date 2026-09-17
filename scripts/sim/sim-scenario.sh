@@ -13,7 +13,7 @@ source "$SCRIPT_DIR/sim-lib.sh"
 
 ROOM_ID=$(load_room)
 ALICE=$(load_token alice)
-STATE="$EVID_DIR/state.env"
+STATE="$SIM_ROOT/state.env"  # 放 SIM_ROOT 而非 evidence：evidence 会被清空重跑，state 必须跨轮存活（防重复建卡）
 SCEN_LOG="$EVID_DIR/scenario.log"
 mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
