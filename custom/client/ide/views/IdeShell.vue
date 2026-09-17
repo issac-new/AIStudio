@@ -18,10 +18,24 @@ import IdeWorkspacePane from './IdeWorkspacePane.vue'
 import IdeTerminalPanel from './IdeTerminalPanel.vue'
 import IdeChatPane from './IdeChatPane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
+import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 
 const ide = useIdeStore()
 const cockpitStore = useCockpitStore()
+
+// 命令面板快捷键：Cmd/Ctrl+K 开关（对标 zcode quickPick；终端面板聚焦时
+// xterm 可能吞键，面板入口在 TopBar 同步提供）。
+function onGlobalKeydown(event: KeyboardEvent): void {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    ide.togglePalette()
+  }
+}
+window.addEventListener('keydown', onGlobalKeydown)
+onUnmounted(() => {
+  window.removeEventListener('keydown', onGlobalKeydown)
+})
 
 const chatColumnStyle = computed(() => ({
   width: `${ide.layout.chatVisible ? ide.layout.chatWidth : 0}px`,
@@ -122,6 +136,7 @@ onUnmounted(() => {
     </div>
     <IdeStatusBar />
     <CockpitRunTraceModal />
+    <IdeCommandPalette />
   </div>
 </template>
 
