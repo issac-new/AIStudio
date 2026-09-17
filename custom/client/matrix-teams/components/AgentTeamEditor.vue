@@ -1,7 +1,7 @@
 <!-- overlay/custom/client/matrix-teams/components/AgentTeamEditor.vue -->
 <!-- 编辑本账号 agent teams：增删行、profiles 多选（本机 profiles）、默认 profile 单选。 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useProfilesStore } from '@/stores/hermes/profiles'
 import { slugify, type AgentTeam } from '../protocol'
@@ -10,7 +10,7 @@ const props = defineProps<{ initial: AgentTeam[] }>()
 const emit = defineEmits<{ (e: 'save', teams: AgentTeam[]): void }>()
 const { t } = useI18n()
 const profilesStore = useProfilesStore()
-const localProfiles = ref<string[]>(profilesStore.profiles.map(p => p.name))
+const localProfiles = computed(() => profilesStore.profiles.map(p => p.name))
 
 const rows = ref<Array<{ slug: string; name: string; profiles: string[]; defaultProfile: string }>>(
   props.initial.map(tm => ({ ...tm, defaultProfile: tm.defaultProfile ?? tm.profiles[0] ?? '' })),
