@@ -89,14 +89,54 @@ export function isSafeRelativeFile(file: string): boolean {
   return true
 }
 
-/** porcelain v1 的带引号路径还原（git 对含特殊字符路径 C 风格加引号） */
+/** git C 风格短转义映射（core.quotepath 默认开启时的引号路径内） */
+const GIT_SHORT_ESCAPES: Record<string, string> = {
+  a: '\x07', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v', '"': '"', '\\': '\\',
+}
+
+/** git C 风格转义还原：非 ASCII 字节以八进制 \NNN 出现（非法 JSON，不能走
+ *  JSON.parse——\3 首字符即抛 Bad escaped character），按字节收集后统一 UTF-8
+ *  解码；未知转义保留原字符。 */
+function unescapeGitPath(body: string): string {
+  if (!body.includes('\\')) return body
+  const bytes: number[] = []
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]
+    if (ch !== '\\') {
+      bytes.push(ch.charCodeAt(0))
+      continue
+    }
+    const next = body[i + 1]
+    if (next === undefined) {
+      bytes.push(ch.charCodeAt(0))
+      break
+    }
+    if (next >= '0' && next <= '7') {
+      let oct = next
+      let j = i + 2
+      while (oct.length < 3 && j < body.length && body[j] >= '0' && body[j] <= '7') {
+        oct += body[j]
+        j++
+      }
+      bytes.push(parseInt(oct, 8) & 0xff)
+      i = j - 1
+      continue
+    }
+    const mapped = GIT_SHORT_ESCAPES[next]
+    if (mapped !== undefined) {
+      bytes.push(mapped.charCodeAt(0))
+      i++
+    } else {
+      bytes.push(ch.charCodeAt(0))
+    }
+  }
+  return Buffer.from(bytes).toString('utf8')
+}
+
+/** porcelain v1 的带引号路径还原（git 对含非 ASCII/特殊字符路径 C 风格加引号） */
 function unquotePath(raw: string): string {
   if (raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"')) {
-    try {
-      return JSON.parse(raw) as string
-    } catch {
-      return raw.slice(1, -1)
-    }
+    return unescapeGitPath(raw.slice(1, -1))
   }
   return raw
 }
