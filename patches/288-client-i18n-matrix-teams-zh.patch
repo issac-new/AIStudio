@@ -11,7 +11,7 @@ index 1a30291..0dff35c 100644
      },
      code: {
        selectTask: '选择任务',
-@@ -1225,6 +1227,33 @@ export default {
+@@ -1225,6 +1227,32 @@ export default {
        activeRuns: '进行中运行',
      },
    },
@@ -32,8 +32,7 @@ index 1a30291..0dff35c 100644
 +    'leader.badge': 'leader',
 +    'leader.manage': 'leader 管理',
 +    'leader.add': '添加 leader',
-+    'leader.remove': '移除',
-+    invite: { placeholder: "{'@'}user:server", button: '邀请' },
++    invite: { button: '邀请' },
 +    self: { hint: '编辑本账号的 agent teams' },
 +    agentTeams: 'Agent Teams',
 +    'agentTeams.add': '新增 team',

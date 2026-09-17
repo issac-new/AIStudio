@@ -98,7 +98,12 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     } catch { return false }
   }
 
-  async function receiveAssign(assign: AssignContent): Promise<void> {
+  // in-flight 去重（终审 backlog）：同一 taskId 的并发 receiveAssign（增量监听与历史回填
+  // 重叠、消息重发）在 kv 落盘前的窗口内会重复建卡。taskId → Promise，首个调用建卡，
+  // 并发者复用同一 Promise；完成（含失败回执路径）即清槽，不阻塞后续重试。
+  const inFlightReceives = new Map<string, Promise<void>>()
+
+  async function doReceiveAssign(assign: AssignContent): Promise<void> {
     const index = loadDispatchIndex()
     if (index[assign.taskId]) return // kv 防重（spec §6.2）
     const profile = resolveTargetProfile(assign.target, accountsRef.value)
@@ -123,6 +128,14 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     } catch (err) {
       await sendReceipt(assign.taskId, 'failed', { reason: err instanceof Error ? err.message.slice(0, 200) : 'create-task-failed' })
     }
+  }
+
+  function receiveAssign(assign: AssignContent): Promise<void> {
+    const existing = inFlightReceives.get(assign.taskId)
+    if (existing) return existing
+    const p = doReceiveAssign(assign).finally(() => { inFlightReceives.delete(assign.taskId) })
+    inFlightReceives.set(assign.taskId, p)
+    return p
   }
 
   async function handleTimelineEvent(event: unknown, room: unknown): Promise<void> {

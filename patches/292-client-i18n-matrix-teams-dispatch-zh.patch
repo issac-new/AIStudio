@@ -1,13 +1,13 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -1261,6 +1261,23 @@
+@@ -1261,7 +1261,23 @@
        clear: '取消值守',
        mine: '值守',
+       assignFailed: '值守指派失败，请重试',
      },
 +    dispatch: {
 +      title: '外派任务',
-+      new: '指派任务',
 +      titleField: '标题',
 +      body: '描述',
 +      target: '目标账号',

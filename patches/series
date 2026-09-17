@@ -462,3 +462,8 @@
 #           zh/en 成对，插入 288/289 建立的 teams 命名空间内（290/291 之后）。
 292-client-i18n-matrix-teams-dispatch-zh.patch
 293-client-i18n-matrix-teams-dispatch-en.patch
+# 294/295 = matrix-teams 终审 backlog：teams.dispatch.status.pending 中性文案
+# （无回执时不声称「已建卡」，zh「待回执」/en「Awaiting」），
+# 插入 292/293 建立的 status 块内。
+294-client-i18n-matrix-teams-dispatch-pending-zh.patch
+295-client-i18n-matrix-teams-dispatch-pending-en.patch
