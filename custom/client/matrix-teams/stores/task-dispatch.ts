@@ -123,7 +123,9 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
         priority: prio,
       })
       const entry: DispatchIndexEntry = { localTaskId: task.id, lastStatus: 'created', lastSyncedAt: Date.now() }
-      saveDispatchIndex({ ...index, [assign.taskId]: entry })
+      // 落盘前重读：createTask await 窗口内轮询（pollAndReport）可能已写他人状态，
+      // 基于旧快照合并会静默回滚那次写入（同 pollAndReport:242 的新读合并口径）。
+      saveDispatchIndex({ ...loadDispatchIndex(), [assign.taskId]: entry })
       await sendReceipt(assign.taskId, 'created', { localTaskId: task.id })
     } catch (err) {
       await sendReceipt(assign.taskId, 'failed', { reason: err instanceof Error ? err.message.slice(0, 200) : 'create-task-failed' })
