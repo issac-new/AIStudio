@@ -94,6 +94,19 @@ function onLinkSelect(key: string | number) {
 
     <div class="ide-topbar__spacer" />
 
+    <button
+      type="button"
+      class="ide-topbar__links"
+      :title="t('ide.paletteOpen')"
+      @click="ide.openPalette()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <span>{{ t('ide.paletteOpen') }}</span>
+    </button>
+
     <NDropdown
       trigger="click"
       :options="linkMenuOptions"

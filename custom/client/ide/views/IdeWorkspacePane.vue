@@ -1,6 +1,9 @@
 <script setup lang="ts">
-// IdeWorkspacePane — IDE 工作区列：复用 upstream FilesPanel（文件树 + 列表 +
-// monaco 编辑器 + diff + 预览 + 右键菜单全家）。
+// IdeWorkspacePane — IDE 工作区列：双页签「文件 / Git」。
+//
+// 文件页复用 upstream FilesPanel（文件树 + 列表 + monaco 编辑器 + diff +
+// 预览 + 右键菜单全家）；Git 页为 IdeGitPane（zcode git.* MVP 子集，
+// 见 parity-analysis §二 G2）。
 //
 // root 语义与 CockpitFilePanel 相同：workspace 未设置时不传 root（浏览
 // profile home，服务端无沙箱问题）；设置后作为 filesStore.workspaceRoot
@@ -10,10 +13,13 @@ import { useI18n } from 'vue-i18n'
 import { useIdeStore } from '../store/ide'
 import { useFilesStore } from '@/stores/hermes/files'
 import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
+import IdeGitPane from './IdeGitPane.vue'
 
 const ide = useIdeStore()
 const filesStore = useFilesStore()
 const { t } = useI18n()
+
+const tab = ref<'files' | 'git'>('files')
 
 const errorState = ref<{ code: string; message: string } | null>(null)
 const syncing = ref(true)
@@ -62,22 +68,40 @@ onMounted(() => {
 
 <template>
   <div class="ide-workspace-pane">
-    <div v-if="syncing" class="ide-workspace-pane__state">
-      {{ t('ide.loading') }}
+    <div class="ide-workspace-pane__tabs" role="tablist">
+      <button
+        v-for="item in (['files', 'git'] as const)"
+        :key="item"
+        type="button"
+        role="tab"
+        class="ide-workspace-pane__tab"
+        :class="{ 'is-active': tab === item }"
+        :aria-selected="tab === item"
+        @click="tab = item"
+      >{{ t(`ide.workspaceTab_${item}`) }}</button>
     </div>
-    <div v-else-if="errorState" class="ide-workspace-pane__state ide-workspace-pane__state--error">
-      <span>{{ errorState.message }}</span>
-      <button type="button" class="ide-workspace-pane__reset" @click="ide.setWorkspace(null)">
-        {{ t('ide.workspaceReset') }}
-      </button>
-    </div>
-    <FilesPanel v-else />
+
+    <template v-if="tab === 'files'">
+      <div v-if="syncing" class="ide-workspace-pane__state">
+        {{ t('ide.loading') }}
+      </div>
+      <div v-else-if="errorState" class="ide-workspace-pane__state ide-workspace-pane__state--error">
+        <span>{{ errorState.message }}</span>
+        <button type="button" class="ide-workspace-pane__reset" @click="ide.setWorkspace(null)">
+          {{ t('ide.workspaceReset') }}
+        </button>
+      </div>
+      <FilesPanel v-else />
+    </template>
+
+    <IdeGitPane v-else class="ide-workspace-pane__git" />
   </div>
 </template>
 
 <style scoped lang="scss">
 .ide-workspace-pane {
   display: flex;
+  flex-direction: column;
   min-height: 0;
 
   /* FilesPanel 根类是 files-panel-drawer（上游 FilesPanel.vue），非 files-panel */
@@ -85,6 +109,34 @@ onMounted(() => {
     flex: 1;
     min-width: 0;
   }
+}
+
+.ide-workspace-pane__tabs {
+  flex-shrink: 0;
+  display: flex;
+  border-bottom: 1px solid var(--border-color, #26292f);
+}
+
+.ide-workspace-pane__tab {
+  flex: 1;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted, #9aa0aa);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+
+  &.is-active {
+    color: var(--text-primary, #e6e6e6);
+    border-bottom-color: var(--accent-primary, #4cc9f0);
+  }
+}
+
+.ide-workspace-pane__git {
+  flex: 1;
+  min-height: 0;
 }
 
 .ide-workspace-pane__state {
