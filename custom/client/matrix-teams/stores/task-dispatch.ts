@@ -169,12 +169,15 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
   // 回放不重复建卡。scrollback 尽力扩大历史窗口（v41 签名 scrollback(room, limit)），
   // 失败/不存在时以已同步的 live timeline 窗口为准。
   const BACKFILL_SCROLLBACK_LIMIT = 100
-  let backfilledForRoom: string | null = null
+  // 已回填状态按 client 实例维度记录：登出重登（不刷新页面）后 client 是新实例，
+  // 房间相同也必须重新回放——sticky「房间→布尔」会让两次会话间隙到达的 assign
+  // 静默丢失（重登后 watch 触发但旗标命中直接 return）。
+  let backfilledFor: { client: MatrixClient; roomId: string } | null = null
 
   async function backfillHistory(): Promise<void> {
     const client = clientRef.value
     const roomId = registryRoomIdRef.value
-    if (!client || !roomId || backfilledForRoom === roomId) return
+    if (!client || !roomId || (backfilledFor?.client === client && backfilledFor.roomId === roomId)) return
     const roomAwareClient = client as unknown as {
       getRoom?: (id: string) => unknown
       scrollback?: (room: unknown, limit?: number) => Promise<unknown>
@@ -184,7 +187,7 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
       room = roomAwareClient.getRoom?.(roomId) ?? null
     } catch { return }
     if (!room) return
-    backfilledForRoom = roomId // 房间已定位即置位：scrollback 失败也不反复重试
+    backfilledFor = { client, roomId } // 房间已定位即置位：scrollback 失败也不反复重试
     try {
       if (typeof roomAwareClient.scrollback === 'function') {
         room = await roomAwareClient.scrollback(room, BACKFILL_SCROLLBACK_LIMIT) ?? room
