@@ -1,0 +1,19 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 75dc023e..7135091a 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1255,6 +1255,14 @@ export default {
+     'agentTeams.profiles': 'Profiles',
+     'agentTeams.defaultProfile': 'Default profile',
+     'agentTeams.save': 'Save declaration',
++    duty: {
++      title: 'Room duties',
++      chooseRoom: 'Choose room',
++      to: 'Assign to',
++      assign: 'Assign',
++      clear: 'Clear',
++      mine: 'On duty',
++    },
+   },
+   loopMind: {
+     title: 'Thinking Mind',

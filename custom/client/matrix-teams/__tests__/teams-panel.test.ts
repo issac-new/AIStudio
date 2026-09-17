@@ -11,6 +11,7 @@ const registryState = vi.hoisted(() => ({
   accounts: { value: [] as Array<Record<string, unknown>> },
   leaders: { value: [] as string[] },
   undeclared: { value: [] as string[] },
+  duties: { value: {} as Record<string, unknown> },
   ready: { value: false },
   lastError: { value: null },
   isLeader: { value: false },
@@ -22,6 +23,8 @@ const registryState = vi.hoisted(() => ({
   writeSelfAccount: vi.fn(async () => true),
   writeLeaders: vi.fn(async () => true),
   inviteMember: vi.fn(async () => true),
+  writeDuty: vi.fn(async () => true),
+  clearDuty: vi.fn(async () => true),
   attachRoom: vi.fn(),
   rebuild: vi.fn(async () => {}),
 }))
@@ -31,10 +34,23 @@ const registryState = vi.hoisted(() => ({
 // 断言意图与断言本体不变。
 vi.mock('../stores/team-registry', async () => {
   const { ref, reactive } = await import('vue')
-  for (const k of ['registryRoomId', 'accounts', 'leaders', 'undeclared', 'ready', 'lastError', 'isLeader'] as const) {
+  for (const k of ['registryRoomId', 'accounts', 'leaders', 'undeclared', 'duties', 'ready', 'lastError', 'isLeader'] as const) {
     ;(registryState as unknown as Record<string, unknown>)[k] = ref((registryState as unknown as Record<string, { value: unknown }>)[k].value)
   }
   return { useTeamRegistryStore: () => reactive(registryState) }
+})
+// Task 7 接线后 tmp__side 挂 DutyAssignPanel，其消费 roomStore.sortedRooms；
+// 与 duty-panel.test.ts 同款 mock（真 store 在 jsdom 下 init 面不可控）。
+vi.mock('@/custom/matrix-chat/stores/matrix-room', async () => {
+  const { ref, reactive } = await import('vue')
+  return {
+    useMatrixRoomStore: () => reactive({
+      sortedRooms: ref([
+        { roomId: '!room1:sv', name: '客户一群', timeline: [] },
+        { roomId: '!room2:sv', name: '客户二群', timeline: [] },
+      ]),
+    }),
+  }
 })
 vi.mock('@/stores/hermes/profiles', async () => {
   const { ref, reactive } = await import('vue')

@@ -53,3 +53,18 @@ export function dutyAppliesToUser(duty: DutyContent, userId: string, accounts: T
   if (!own) return false
   return own.agentTeams.some(t => agentTeamGlobalId(userId, t.slug) === duty.assigneeId)
 }
+
+/** 当前用户命中的值守房间集合（Task 7）：房间列表徽标与后续值班台共用。
+ *  委托 dutyAppliesToUser（归属判定单一事实源），userId 为空（未登录）恒空集。 */
+export function onDutyRoomIds(
+  duties: Record<string, DutyContent>,
+  userId: string | null,
+  accounts: TeamAccountView[],
+): Set<string> {
+  const out = new Set<string>()
+  if (!userId) return out
+  for (const [roomId, duty] of Object.entries(duties)) {
+    if (dutyAppliesToUser(duty, userId, accounts)) out.add(roomId)
+  }
+  return out
+}
