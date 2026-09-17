@@ -12,9 +12,10 @@ import {
   type AssignContent, type ReceiptContent, type ReceiptStatus,
 } from '../protocol'
 import type { TeamAccountView } from '../adapters/accounts'
-import { createTask } from '@/api/hermes/kanban'
-import { resolveTargetProfile } from '../adapters/dispatch-target'
+import { createTask, getTask } from '@/api/hermes/kanban'
+import { resolveTargetProfile, mapKanbanStatusToReceipt } from '../adapters/dispatch-target'
 import { loadDispatchIndex, saveDispatchIndex, type DispatchIndexEntry } from '../store/dispatch-kv'
+import { unwrapRef } from '../utils'
 
 export interface DispatchView {
   assign: AssignContent
@@ -27,18 +28,11 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
   const dispatches = ref<DispatchView[]>([])
 
   // pinia 代理读取时已解包；测试 mock 的是 setup 原始返回（ref 形态 { value }）。
-  // 'value' in raw 判定 ref 形态并取 .value（含 null）；真实 MatrixClient/字符串无 .value 属性。
-  // 注意不能用 ?.value ?? raw：{ value: null } 会被 ?? 判空而回退成包装对象（真值），丢 null 语义。
-  function unwrap<T>(raw: unknown): T | null {
-    if (raw !== null && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)) {
-      return (raw as { value: unknown }).value as T | null
-    }
-    return (raw ?? null) as T | null
-  }
-  const clientRef = computed<MatrixClient | null>(() => unwrap<MatrixClient>((matrixClientStore as unknown as { client?: unknown }).client))
-  const userIdRef = computed<string | null>(() => unwrap<string>((matrixClientStore as unknown as { userId?: unknown }).userId))
-  const registryRoomIdRef = computed<string | null>(() => unwrap<string>((registry as unknown as { registryRoomId?: unknown }).registryRoomId))
-  const accountsRef = computed<TeamAccountView[]>(() => unwrap<TeamAccountView[]>((registry as unknown as { accounts?: unknown }).accounts) ?? [])
+  // 双形态解包统一走 unwrapRef（utils.ts 单一事实源）。
+  const clientRef = computed<MatrixClient | null>(() => unwrapRef<MatrixClient>((matrixClientStore as unknown as { client?: unknown }).client))
+  const userIdRef = computed<string | null>(() => unwrapRef<string>((matrixClientStore as unknown as { userId?: unknown }).userId))
+  const registryRoomIdRef = computed<string | null>(() => unwrapRef<string>((registry as unknown as { registryRoomId?: unknown }).registryRoomId))
+  const accountsRef = computed<TeamAccountView[]>(() => unwrapRef<TeamAccountView[]>((registry as unknown as { accounts?: unknown }).accounts) ?? [])
 
   async function sendAssignment(input: {
     title: string
@@ -66,15 +60,25 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     }
   }
 
+  // 孤儿回执暂存：receipt 先于 assign 到达（迟到排序/历史重放）时不丢，
+  // upsertAssign 补配到视图。view 内无消费方，非响应式 plain Map 即可。
+  const pendingReceipts = new Map<string, ReceiptContent>()
+
   function upsertAssign(assign: AssignContent): void {
     if (!dispatches.value.some(d => d.assign.taskId === assign.taskId)) {
-      dispatches.value = [...dispatches.value, { assign, receipt: null }]
+      const pending = pendingReceipts.get(assign.taskId) ?? null
+      if (pending) pendingReceipts.delete(assign.taskId)
+      dispatches.value = [...dispatches.value, { assign, receipt: pending }]
     }
   }
 
   function mergeReceipt(receipt: ReceiptContent): void {
     const view = dispatches.value.find(d => d.assign.taskId === receipt.taskId)
-    if (!view) return
+    if (!view) {
+      // 先于 assign 到达：暂存待补配，不丢。
+      pendingReceipts.set(receipt.taskId, receipt)
+      return
+    }
     if (view.receipt && view.receipt.reportedAt >= receipt.reportedAt) return
     dispatches.value = dispatches.value.map(d =>
       d.assign.taskId === receipt.taskId ? { ...d, receipt } : d)
@@ -102,11 +106,16 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
       await sendReceipt(assign.taskId, 'failed', { reason: 'no-such-profile' })
       return
     }
+    // priority 透传：协议层 AssignContent.priority 为 string，kanban 建卡要求 number——
+    // 数值字符串有限强转，非数值（含 undefined）不携带（不硬编 0：0 是有效优先级，undefined 才是"未指定"）。
+    const prio = assign.priority !== undefined && Number.isFinite(Number(assign.priority))
+      ? Number(assign.priority) : undefined
     try {
       const task = await createTask({
         title: `[外派-${assign.taskId.slice(0, 6)}] ${assign.title}`,
         body: assign.body,
         assignee: profile,
+        priority: prio,
       })
       const entry: DispatchIndexEntry = { localTaskId: task.id, lastStatus: 'created', lastSyncedAt: Date.now() }
       saveDispatchIndex({ ...index, [assign.taskId]: entry })
@@ -152,5 +161,24 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     await handleTimelineEvent(event, room)
   }
 
-  return { dispatches, sendAssignment, handleTimelineEvent, receiveAssign, sendReceipt, ensureListening }
+  /** 轮询回执上报（成员侧）：遍历 kv 索引 → 拉本地卡状态 → 变化才回执并落 kv。
+   *  单条失败静默跳过，下轮重试；发失败不回写 kv（下轮重发）。 */
+  async function pollAndReport(): Promise<void> {
+    const index = loadDispatchIndex()
+    for (const [taskId, entry] of Object.entries(index)) {
+      let status: string
+      try {
+        const task = await getTask(entry.localTaskId)
+        status = task.status
+      } catch { continue } // 单条失败静默，下轮重试
+      const mapped = mapKanbanStatusToReceipt(status)
+      if (mapped === entry.lastStatus) continue
+      const ok = await sendReceipt(taskId, mapped, { localTaskId: entry.localTaskId })
+      if (ok) {
+        saveDispatchIndex({ ...loadDispatchIndex(), [taskId]: { ...entry, lastStatus: mapped, lastSyncedAt: Date.now() } })
+      }
+    }
+  }
+
+  return { dispatches, sendAssignment, handleTimelineEvent, receiveAssign, sendReceipt, ensureListening, pollAndReport }
 })
