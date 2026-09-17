@@ -158,6 +158,17 @@ describe('DutyAssignPanel 组件', () => {
     expect(wState!.content).toMatchObject({ assigneeKind: 'agentTeam', assigneeId: '@bob:sv/ops', roomName: '客户二群', updatedBy: '@alice:sv' })
     expect(w.find('[data-testid="duty-list"]').text()).toContain('客户二群')
   })
+  it('选房间+目标（account 账号）→ 指派：assigneeKind 按 target.kind 判定为 account', async () => {
+    const w = mountPanel()
+    await flushPromises()
+    await w.find('[data-testid="duty-room-select"]').setValue('!room2:sv')
+    await w.find('[data-testid="duty-target-select"]').setValue('@bob:sv')
+    await w.find('[data-testid="duty-assign"]').trigger('click')
+    await flushPromises()
+    const wState = sentState.find(s => s.type === TEAM_EVENT_TYPES.duty && s.stateKey === '!room2:sv')
+    expect(wState).toBeTruthy()
+    expect(wState!.content).toMatchObject({ assigneeKind: 'account', assigneeId: '@bob:sv', roomName: '客户二群', updatedBy: '@alice:sv' })
+  })
   it('清除按钮 → 空 content 覆盖同 state_key，列表移除该行（解析失败视为无值守）', async () => {
     const w = mountPanel()
     await flushPromises()

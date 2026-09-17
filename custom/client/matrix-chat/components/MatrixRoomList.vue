@@ -3,12 +3,18 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
+import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
+import { onDutyRoomIds } from '@/custom/matrix-teams/adapters/accounts'
 
 const roomStore = useMatrixRoomStore()
 const clientStore = useMatrixClientStore()
+const teamRegistry = useTeamRegistryStore()
 const { t } = useI18n()
 
 const searchQuery = ref('')
+
+// 本账号命中的值守房间（Task 7）：命中条目渲染值守徽标。
+const onDuty = computed(() => onDutyRoomIds(teamRegistry.duties, clientStore.userId, teamRegistry.accounts))
 
 const filteredRooms = computed(() => {
   const query = searchQuery.value.toLowerCase().trim()
@@ -87,13 +93,14 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
         v-for="room in filteredRooms"
         :key="room.roomId"
         class="mx_RoomTile"
-          :class="{
-            'mx_RoomTile--selected': room.roomId === roomStore.activeRoomId,
-            'mx_RoomTile--unread': hasUnread(room),
-            'mx_RoomTile--mention': getRoomNotificationLevel(room) === 'highlight',
-          }"
-          @click="roomStore.selectRoom(room.roomId)"
-        >
+        :data-testid="`room-${room.roomId}`"
+        :class="{
+          'mx_RoomTile--selected': room.roomId === roomStore.activeRoomId,
+          'mx_RoomTile--unread': hasUnread(room),
+          'mx_RoomTile--mention': getRoomNotificationLevel(room) === 'highlight',
+        }"
+        @click="roomStore.selectRoom(room.roomId)"
+      >
         <div class="mx_RoomTile_avatar">
           <img v-if="getRoomAvatarUrl(room)" :src="getRoomAvatarUrl(room)!" alt="" class="room-avatar-real" />
           <div v-else class="room-avatar-placeholder">{{ room.name.charAt(0).toUpperCase() }}</div>
@@ -103,6 +110,8 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
         <div class="mx_RoomTile_info">
           <div class="mx_RoomTile_top">
             <span class="mx_RoomTile_name">{{ room.name }}</span>
+            <span v-if="onDuty.has(room.roomId)" class="room-duty-badge" data-testid="room-duty-badge">
+              {{ t('teams.duty.mine') }}</span>
             <span v-if="getRoomUnreadCount(room) > 0" class="mx_RoomTile_badge">
               {{ getRoomUnreadCount(room) }}
             </span>
@@ -300,6 +309,17 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   background: var(--text-primary);
   color: var(--bg-primary);
   font-weight: 700;
+}
+
+// 值守徽标：warning 色小圆角 pill（对齐 TeamsManagePanel tmp__leader 惯例）
+.room-duty-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  border: 1px solid var(--color-warning, #f59e0b);
+  color: var(--color-warning, #f59e0b);
+  border-radius: 999px;
+  padding: 2px 6px;
 }
 
 .mx_RoomTile_bottom {

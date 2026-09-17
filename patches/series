@@ -452,3 +452,8 @@
 287-ide-parity-i18n-en.patch
 288-client-i18n-matrix-teams-zh.patch
 289-client-i18n-matrix-teams-en.patch
+# 290/291 = matrix-teams Task 7：teams.duty.* 六键（title/chooseRoom/to/assign/
+#           clear/mine）zh/en 成对，插入 288/289 建立的 teams 命名空间内。
+#           基线为全 series 注入态（288/289 依赖更早 patch 的上下文，不可单独落）。
+290-client-i18n-matrix-teams-duty-zh.patch
+291-client-i18n-matrix-teams-duty-en.patch

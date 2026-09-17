@@ -15,20 +15,22 @@ const roomStore = useMatrixRoomStore()
 const selectedRoom = ref('')
 const selectedTarget = ref('')
 const rooms = computed(() => roomStore.sortedRooms.map(r => ({ roomId: r.roomId, name: r.name ?? r.roomId })))
+// kind 随 target 携带（Task 6 评审遗留：不做 '/' 字符串嗅探——Matrix ID 本身
+// 不含 '/' 但协议形态不该由字符串形状反推，判定只认枚举）。
 const targets = computed(() => registry.accounts.flatMap(a => [
-  { id: a.userId, label: a.displayName },
-  ...a.agentTeams.map(tm => ({ id: agentTeamGlobalId(a.userId, tm.slug), label: `${a.displayName}/${tm.slug}` })),
+  { id: a.userId, kind: 'account' as const, label: a.displayName },
+  ...a.agentTeams.map(tm => ({ id: agentTeamGlobalId(a.userId, tm.slug), kind: 'agentTeam' as const, label: `${a.displayName}/${tm.slug}` })),
 ]))
 const dutyRows = computed(() => Object.entries(registry.duties)
   .map(([roomId, d]) => ({ roomId, ...d })))
 
 async function assign(): Promise<void> {
-  if (!selectedRoom.value || !selectedTarget.value) return
-  const isTeam = selectedTarget.value.includes('/')
+  const target = targets.value.find(t => t.id === selectedTarget.value)
+  if (!selectedRoom.value || !target) return
   const room = rooms.value.find(r => r.roomId === selectedRoom.value)
   if (await registry.writeDuty(selectedRoom.value, {
-    assigneeKind: isTeam ? 'agentTeam' : 'account',
-    assigneeId: selectedTarget.value,
+    assigneeKind: target.kind,
+    assigneeId: target.id,
     roomName: room?.name,
   })) { selectedRoom.value = ''; selectedTarget.value = '' }
 }
