@@ -12,6 +12,9 @@ import {
   type AssignContent, type ReceiptContent, type ReceiptStatus,
 } from '../protocol'
 import type { TeamAccountView } from '../adapters/accounts'
+import { createTask } from '@/api/hermes/kanban'
+import { resolveTargetProfile } from '../adapters/dispatch-target'
+import { loadDispatchIndex, saveDispatchIndex, type DispatchIndexEntry } from '../store/dispatch-kv'
 
 export interface DispatchView {
   assign: AssignContent
@@ -77,9 +80,41 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
       d.assign.taskId === receipt.taskId ? { ...d, receipt } : d)
   }
 
-  /** 成员侧接收：Task 9 实现（resolveProfile → kanban 建卡 → kv → created 回执）。 */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async function receiveAssign(_assign: AssignContent): Promise<void> { /* Task 9 填充 */ }
+  async function sendReceipt(taskId: string, status: ReceiptStatus, extra?: { localTaskId?: string; reason?: string }): Promise<boolean> {
+    const client = clientRef.value
+    const roomId = registryRoomIdRef.value
+    if (!client || !roomId) return false
+    const selfId = userIdRef.value ?? ''
+    try {
+      await client.sendEvent(roomId, TASK_EVENT_TYPES.receipt, {
+        taskId, status, localTaskId: extra?.localTaskId, reason: extra?.reason,
+        reportedBy: selfId, reportedAt: Date.now(),
+      } as ReceiptContent)
+      return true
+    } catch { return false }
+  }
+
+  async function receiveAssign(assign: AssignContent): Promise<void> {
+    const index = loadDispatchIndex()
+    if (index[assign.taskId]) return // kv 防重（spec §6.2）
+    const profile = resolveTargetProfile(assign.target, accountsRef.value)
+    if (!profile) {
+      await sendReceipt(assign.taskId, 'failed', { reason: 'no-such-profile' })
+      return
+    }
+    try {
+      const task = await createTask({
+        title: `[外派-${assign.taskId.slice(0, 6)}] ${assign.title}`,
+        body: assign.body,
+        assignee: profile,
+      })
+      const entry: DispatchIndexEntry = { localTaskId: task.id, lastStatus: 'created', lastSyncedAt: Date.now() }
+      saveDispatchIndex({ ...index, [assign.taskId]: entry })
+      await sendReceipt(assign.taskId, 'created', { localTaskId: task.id })
+    } catch (err) {
+      await sendReceipt(assign.taskId, 'failed', { reason: err instanceof Error ? err.message.slice(0, 200) : 'create-task-failed' })
+    }
+  }
 
   async function handleTimelineEvent(event: unknown, room: unknown): Promise<void> {
     const ev = event as { getType?: () => string; isState?: () => boolean; getContent?: () => unknown }
@@ -117,5 +152,5 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     await handleTimelineEvent(event, room)
   }
 
-  return { dispatches, sendAssignment, handleTimelineEvent, receiveAssign, ensureListening }
+  return { dispatches, sendAssignment, handleTimelineEvent, receiveAssign, sendReceipt, ensureListening }
 })
