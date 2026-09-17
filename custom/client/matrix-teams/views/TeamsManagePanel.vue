@@ -8,6 +8,7 @@ import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { agentTeamGlobalId, type AgentTeam } from '../protocol'
 import AgentTeamEditor from '../components/AgentTeamEditor.vue'
 import DutyAssignPanel from '../components/DutyAssignPanel.vue'
+import DispatchList from '../components/DispatchList.vue'
 
 const { t } = useI18n()
 const registry = useTeamRegistryStore()
@@ -137,6 +138,10 @@ onMounted(() => {
           <section class="tmp__duty">
             <DutyAssignPanel />
           </section>
+
+          <section class="tmp__dispatch">
+            <DispatchList />
+          </section>
         </aside>
       </div>
     </template>
@@ -158,7 +163,7 @@ onMounted(() => {
 .tmp__body { flex: 1 1 auto; min-height: 0; display: flex; gap: 10px; }
 .tmp__accounts { flex: 1 1 auto; min-width: 0; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .tmp__side { flex: 0 0 360px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; }
-.tmp__self, .tmp__admin, .tmp__duty { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.tmp__self, .tmp__admin, .tmp__duty, .tmp__dispatch { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .tmp__sec { font-size: 12px; font-weight: 600; }
 .tmp__account { display: flex; flex-direction: column; gap: 3px; }
 .tmp__account-line1 { display: flex; align-items: center; gap: 8px; }

@@ -12,6 +12,7 @@ import {
   type AgentTeam, type DutyContent,
 } from '../protocol'
 import { projectAccounts, undeclaredMembers, type TeamAccountView, type RawStateEvent } from '../adapters/accounts'
+import { unwrapRef } from '../utils'
 
 /** 需要从房间 state 枚举的团队事件类型（协议中全部 state 型事件）。
  *  真实 SDK（v41 实测）RoomState.getStateEvents 必须带 eventType，无参调用恒返回 []；
@@ -57,15 +58,11 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
   const lastError = ref<string | null>(null)
 
   // matrix-client store 字段经 pinia 代理读取时是已解包值；测试 mock 的是 setup 原始返回
-  // （ref 形态 { value }）。raw?.value ?? raw 同时覆盖两种形态（真实 MatrixClient 无 .value 属性）。
-  const clientRef = computed<MatrixClient | null>(() => {
-    const raw = (matrixClientStore as unknown as { client?: unknown }).client
-    return ((raw as { value?: unknown } | null | undefined)?.value ?? raw) as MatrixClient | null
-  })
-  const userIdRef = computed<string | null>(() => {
-    const raw = (matrixClientStore as unknown as { userId?: unknown }).userId
-    return ((raw as { value?: unknown } | null | undefined)?.value ?? raw) as string | null
-  })
+  // （ref 形态 { value }）。双形态解包统一走 unwrapRef（utils.ts 单一事实源）。
+  const clientRef = computed<MatrixClient | null>(() =>
+    unwrapRef<MatrixClient>((matrixClientStore as unknown as { client?: unknown }).client))
+  const userIdRef = computed<string | null>(() =>
+    unwrapRef<string>((matrixClientStore as unknown as { userId?: unknown }).userId))
 
   const isLeader = computed(() => !!userIdRef.value && leaders.value.includes(userIdRef.value))
 

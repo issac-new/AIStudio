@@ -1,0 +1,27 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1263,6 +1263,23 @@
+       clear: 'Clear',
+       mine: 'On duty',
+     },
++    dispatch: {
++      title: 'Dispatched tasks',
++      new: 'Dispatch task',
++      titleField: 'Title',
++      body: 'Description',
++      target: 'Target account',
++      profile: 'Profile (optional)',
++      send: 'Send',
++      empty: 'No dispatched tasks',
++      status: {
++        created: 'Created',
++        running: 'Running',
++        done: 'Done',
++        failed: 'Failed',
++      },
++      issuedBy: 'Issued by',
++    },
+   },
+   loopMind: {
+     title: 'Thinking Mind',
