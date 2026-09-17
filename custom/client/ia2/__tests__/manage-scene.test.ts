@@ -39,6 +39,11 @@ vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
   useMatrixRoomStore: () => ({ sortedRooms: sortedRooms.value }),
 }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+vi.mock('@/custom/matrix-teams/views/TeamsManagePanel.vue', () => ({
+  // __esModule：defineAsyncComponent 依赖它解包 .default；Vitest mock 命名空间缺省不带，须显式声明
+  __esModule: true,
+  default: { name: 'TeamsPanelStub', template: '<div data-testid="teams-panel-stub" />' },
+}))
 
 import ManageScene from '../views/scenes/ManageScene.vue'
 
@@ -112,5 +117,18 @@ describe('ManageScene — 装配', () => {
     expect(wrapper.find('[data-testid="mscene-room-!r2:sv"]').exists()).toBe(false)
     await room.trigger('click')
     expect(push).toHaveBeenCalledWith({ name: 'ia2.commsRoom', params: { roomId: '!r1:sv' } })
+  })
+
+  it('二级 tab：默认任务与值守视图，切换后挂 TeamsManagePanel', async () => {
+    const { wrapper: w } = await mountScene()
+    expect(w.find('[data-testid="mscene-tab-duty"]').exists()).toBe(true)
+    expect(w.find('[data-testid="mscene-tab-teams"]').exists()).toBe(true)
+    expect(w.find('[data-testid="teams-panel-stub"]').exists()).toBe(false)
+    await w.find('[data-testid="mscene-tab-teams"]').trigger('click')
+    await flushPromises() // defineAsyncComponent 动态 import 异步解析，须排空微任务再断言
+    expect(w.find('[data-testid="teams-panel-stub"]').exists()).toBe(true)
+    expect(w.find('[data-testid="mscene-people"]').exists()).toBe(false)
+    await w.find('[data-testid="mscene-tab-duty"]').trigger('click')
+    expect(w.find('[data-testid="mscene-people"]').exists()).toBe(true)
   })
 })

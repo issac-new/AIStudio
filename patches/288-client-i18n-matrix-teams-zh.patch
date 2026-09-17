@@ -1,0 +1,47 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 1a30291..0dff35c 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1206,6 +1206,8 @@ export default {
+       noRooms: '暂无关联群组',
+       trace: '追溯矩阵',
+       openCount: '在办',
++      tabDuty: '任务与值守',
++      tabTeams: 'Teams 管理',
+     },
+     code: {
+       selectTask: '选择任务',
+@@ -1225,6 +1227,33 @@ export default {
+       activeRuns: '进行中运行',
+     },
+   },
++  teams: {
++    title: 'Teams 管理',
++    matrixOffline: 'Matrix 未连接，Teams 管理不可用',
++    registry: {
++      none: '尚未配置团队注册房间',
++      create: '创建注册房间',
++      setName: '注册房间名称',
++      inviteIds: '邀请成员（Matrix ID，逗号分隔，可留空）',
++      candidates: '检测到含团队数据的已加入房间',
++      useThis: '设为注册房间',
++      room: '注册房间',
++    },
++    accounts: '成员账号',
++    'accounts.empty': '暂无成员声明 agent teams',
++    'leader.badge': 'leader',
++    'leader.manage': 'leader 管理',
++    'leader.add': '添加 leader',
++    'leader.remove': '移除',
++    invite: { placeholder: "{'@'}user:server", button: '邀请' },
++    self: { hint: '编辑本账号的 agent teams' },
++    agentTeams: 'Agent Teams',
++    'agentTeams.add': '新增 team',
++    'agentTeams.name': '名称',
++    'agentTeams.profiles': 'Profiles',
++    'agentTeams.defaultProfile': '默认 profile',
++    'agentTeams.save': '保存声明',
++  },
+   loopMind: {
+     title: '思维大脑',
+     tagline: '活动思维 · 自适应生长',
