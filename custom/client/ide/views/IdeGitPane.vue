@@ -52,6 +52,7 @@ const branchLabel = computed(() => {
 
 async function refresh(): Promise<void> {
   const root = ide.workspace
+  diffRequestSeq++ // 刷新作废在途 diff 响应（列表已重建，选中态清空）
   selected.value = null
   diffText.value = ''
   if (!root) {
@@ -80,18 +81,25 @@ async function refresh(): Promise<void> {
   }
 }
 
+// diff 请求序号：慢响应晚归会覆盖新选择的内容（out-of-order response），
+// 每次新选择/刷新递增，过期响应按序号丢弃。
+let diffRequestSeq = 0
+
 async function selectChange(change: GitChange, staged: boolean): Promise<void> {
   if (!ide.workspace) return
+  const seq = ++diffRequestSeq
   selected.value = { file: change.file, staged }
   diffLoading.value = true
   diffText.value = ''
   try {
     const result = await ideGitApi.diff(ide.workspace, change.file, staged)
+    if (seq !== diffRequestSeq) return
     diffText.value = result.diff
   } catch (err) {
+    if (seq !== diffRequestSeq) return
     diffText.value = err instanceof Error ? err.message : String(err)
   } finally {
-    diffLoading.value = false
+    if (seq === diffRequestSeq) diffLoading.value = false
   }
 }
 
