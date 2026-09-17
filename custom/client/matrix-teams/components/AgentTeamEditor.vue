@@ -34,9 +34,22 @@ function toggleProfile(i: number, p: string): void {
   }
 }
 function submit(): void {
+  // slug 去重：同名多行 slugify 后撞车，后者加序号后缀（dev/dev-2/dev-3…），
+  // 否则写回 Matrix state 后同名团队的 agentTeamGlobalId 无法区分（spec §4.2 全局 id 唯一性）。
+  const used = new Set<string>()
   emit('save', rows.value
     .filter(r => r.name.trim() !== '' && r.profiles.length > 0)
-    .map(r => ({ slug: slugify(r.name), name: r.name.trim(), profiles: r.profiles, defaultProfile: r.defaultProfile || r.profiles[0] })))
+    .map(r => {
+      const base = slugify(r.name)
+      let slug = base
+      if (used.has(slug)) {
+        let n = 2
+        while (used.has(`${base}-${n}`)) n++
+        slug = `${base}-${n}`
+      }
+      used.add(slug)
+      return { slug, name: r.name.trim(), profiles: r.profiles, defaultProfile: r.defaultProfile || r.profiles[0] }
+    }))
 }
 </script>
 

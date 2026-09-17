@@ -1,0 +1,11 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1270,6 +1270,7 @@
+         running: '执行中',
+         done: '已完成',
+         failed: '失败',
++        pending: '待回执',
+       },
+       issuedBy: '指派人',
+     },

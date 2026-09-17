@@ -67,7 +67,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       <span class="dl__target">{{ d.assign.target.account }}</span>
       <span class="dl__issuer">{{ t('teams.dispatch.issuedBy') }}: {{ d.assign.issuedBy }}</span>
       <span class="dl__status" :class="`dl__status--${d.receipt?.status ?? 'pending'}`"
-        data-testid="dispatch-status">{{ t(`teams.dispatch.status.${d.receipt?.status ?? 'created'}`) }}</span>
+        data-testid="dispatch-status">{{ t(`teams.dispatch.status.${d.receipt?.status ?? 'pending'}`) }}</span>
     </div>
   </div>
 </template>

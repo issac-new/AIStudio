@@ -11,7 +11,7 @@ index 6cfbd41..75dc023 100644
      },
      code: {
        selectTask: 'Select task',
-@@ -1227,6 +1229,33 @@ export default {
+@@ -1227,6 +1229,32 @@ export default {
        activeRuns: 'Active runs',
      },
    },
@@ -32,8 +32,7 @@ index 6cfbd41..75dc023 100644
 +    'leader.badge': 'leader',
 +    'leader.manage': 'Manage leaders',
 +    'leader.add': 'Add leader',
-+    'leader.remove': 'Remove',
-+    invite: { placeholder: "{'@'}user:server", button: 'Invite' },
++    invite: { button: 'Invite' },
 +    self: { hint: 'Edit agent teams of this account' },
 +    agentTeams: 'Agent Teams',
 +    'agentTeams.add': 'Add team',
