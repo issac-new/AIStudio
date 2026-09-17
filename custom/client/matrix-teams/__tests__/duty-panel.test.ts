@@ -87,6 +87,7 @@ const i18n = createI18n({
   legacy: false, locale: 'zh', missingWarn: false, fallbackWarn: false,
   messages: { zh: { teams: { duty: {
     title: '群聊值守', chooseRoom: '选择房间', to: '值守给', assign: '指派', clear: '清除',
+    assignFailed: '指派失败',
   } } } },
 })
 
@@ -168,6 +169,19 @@ describe('DutyAssignPanel 组件', () => {
     const wState = sentState.find(s => s.type === TEAM_EVENT_TYPES.duty && s.stateKey === '!room2:sv')
     expect(wState).toBeTruthy()
     expect(wState!.content).toMatchObject({ assigneeKind: 'account', assigneeId: '@bob:sv', roomName: '客户二群', updatedBy: '@alice:sv' })
+  })
+  it('writeDuty 失败 → 展示 duty-error 错误提示（store.lastError 明细）', async () => {
+    const w = mountPanel()
+    await flushPromises()
+    const spy = vi.spyOn(sdk.client, 'sendStateEvent').mockRejectedValue(new Error('write exploded'))
+    await w.find('[data-testid="duty-room-select"]').setValue('!room2:sv')
+    await w.find('[data-testid="duty-target-select"]').setValue('@bob:sv/ops')
+    await w.find('[data-testid="duty-assign"]').trigger('click')
+    await flushPromises()
+    const err = w.find('[data-testid="duty-error"]')
+    expect(err.exists()).toBe(true)
+    expect(err.text()).toBe('write exploded')
+    spy.mockRestore()
   })
   it('清除按钮 → 空 content 覆盖同 state_key，列表移除该行（解析失败视为无值守）', async () => {
     const w = mountPanel()

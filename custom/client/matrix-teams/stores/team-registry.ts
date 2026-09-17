@@ -74,7 +74,15 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
 
   async function rebuild(): Promise<void> {
     const room = currentRoom()
-    if (!room) { ready.value = false; return }
+    if (!room) {
+      // 房间离开/客户端失效：投影与 ready 一并清空，杜绝"房间没了但旧团队数据滞留"。
+      ready.value = false
+      accounts.value = []
+      leaders.value = []
+      undeclared.value = []
+      duties.value = {}
+      return
+    }
     const events = extractStateEvents(room)
     const leadersEv = events.find(e => e.type === TEAM_EVENT_TYPES.leaders && e.stateKey === '')
     const parsedLeaders = parseLeadersContent(leadersEv?.content)?.leaders ?? []
@@ -166,6 +174,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     if (!client || !selfId || !registryRoomId.value) return false
     const displayName = selfId.split(':')[0].replace(/^@/, '')
     try {
+      lastError.value = null // 成功路径清旧错：失败后重试成功不应再显示旧错误
       await client.sendStateEvent(
         registryRoomId.value, TEAM_EVENT_TYPES.account,
         { displayName, agentTeams, updatedAt: Date.now() }, selfId,
@@ -182,6 +191,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     const client = clientRef.value
     if (!client || !registryRoomId.value) return false
     try {
+      lastError.value = null // 成功路径清旧错（同 writeSelfAccount）
       await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.leaders, { leaders: list }, '')
       await rebuild()
       return true
@@ -195,6 +205,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     const client = clientRef.value
     if (!client || !registryRoomId.value) return false
     try {
+      lastError.value = null // 成功路径清旧错（同 writeSelfAccount）
       await client.invite(registryRoomId.value, userId)
       return true
     } catch (err) {
@@ -209,6 +220,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     const client = clientRef.value
     if (!client || !registryRoomId.value || !isLeader.value) return false
     try {
+      lastError.value = null // 成功路径清旧错（同 writeSelfAccount）
       await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.duty, {
         assigneeKind: duty.assigneeKind, assigneeId: duty.assigneeId, roomName: duty.roomName,
         updatedBy: userIdRef.value ?? '', updatedAt: Date.now(),
@@ -226,6 +238,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     const client = clientRef.value
     if (!client || !registryRoomId.value || !isLeader.value) return false
     try {
+      lastError.value = null // 成功路径清旧错（同 writeSelfAccount）
       await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.duty, {}, roomId)
       await rebuild()
       return true

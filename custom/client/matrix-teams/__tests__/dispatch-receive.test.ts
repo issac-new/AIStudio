@@ -115,6 +115,15 @@ describe('receiveAssign', () => {
     expect(created).toHaveLength(0)
     expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt)).toHaveLength(0)
   })
+  it('并发同 taskId 两次 receiveAssign → in-flight 去重，只建一次卡', async () => {
+    const store = useTaskDispatchStore()
+    // 真实时序：createTask 是异步的，第二次调用落在第一次 await 未完成前——
+    // 无 in-flight 去重时 kv 尚未落盘，两次都会走到建卡。
+    await Promise.all([store.receiveAssign(assign()), store.receiveAssign(assign())])
+    expect(created).toHaveLength(1)
+    expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt
+      && e.content.status === 'created')).toHaveLength(1)
+  })
   it('目标解析失败 → failed 回执带 reason，不建卡', async () => {
     const store = useTaskDispatchStore()
     await store.receiveAssign(assign({ target: { account: '@nobody:sv' } }))
@@ -138,6 +147,15 @@ describe('历史回填恢复', () => {
     expect(loadDispatchIndex()['11111111-2222-3333-4444-555555555555']).toMatchObject({ localTaskId: 'kb-1', lastStatus: 'created' })
     const receipt = sentEvents.find(e => e.type === TASK_EVENT_TYPES.receipt)
     expect(receipt?.content).toMatchObject({ status: 'created', localTaskId: 'kb-1' })
+  })
+  it('scrollback 抛错 → 降级已同步 live timeline，仍回放建卡', async () => {
+    historyEvents = [sdkEv(TASK_EVENT_TYPES.assign, assign())]
+    const scrollbackSpy = vi.spyOn(sdkClient, 'scrollback').mockRejectedValue(new Error('pagination broken'))
+    useTaskDispatchStore()
+    await vi.waitFor(() => expect(created).toHaveLength(1))
+    expect(created[0]).toMatchObject({ title: '[外派-111111] 做蛋糕', assignee: 'pb2' })
+    expect(loadDispatchIndex()['11111111-2222-3333-4444-555555555555']).toMatchObject({ localTaskId: 'kb-1' })
+    scrollbackSpy.mockRestore()
   })
   it('kv 已记录的历史 assign → 回填跳过（幂等，不重复建卡不回执）', async () => {
     localStorage.setItem('matrix-teams.dispatchIndex', JSON.stringify({
