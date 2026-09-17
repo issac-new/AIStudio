@@ -115,7 +115,7 @@ const i18n = createI18n({ legacy: false, locale: 'en', missingWarn: false, fallb
   messages: { en: { teams: { dispatch: {
     title: 'Dispatched', new: 'Dispatch', titleField: 'Title', body: 'Desc', target: 'Target',
     profile: 'Profile', send: 'Send', empty: 'Empty', issuedBy: 'By',
-    status: { created: 'Created', running: 'Running', done: 'Done', failed: 'Failed' },
+    status: { created: 'Created', running: 'Running', done: 'Done', failed: 'Failed', pending: 'Awaiting' },
   } } } } })
 
 import DispatchList from '../components/DispatchList.vue'
@@ -134,8 +134,9 @@ describe('DispatchList', () => {
     registryState.state.isLeader = false
     const w = mount(DispatchList, { global: { plugins: [i18n] } })
     expect(w.find('[data-testid="dispatch-item-111111"]').exists()).toBe(true)
-    // test setup 全局 mock useI18n（t 返回键名），断言键名即验证状态映射兜底 'created'。
-    expect(w.find('[data-testid="dispatch-status"]').text()).toBe('teams.dispatch.status.created')
+    // test setup 全局 mock useI18n（t 返回键名），断言键名即验证无回执兜底为中性 pending 文案
+    //（终审 backlog：无回执 ≠ 已建卡，不声称 Created）。
+    expect(w.find('[data-testid="dispatch-status"]').text()).toBe('teams.dispatch.status.pending')
     expect(w.find('[data-testid="dispatch-empty"]').exists()).toBe(false)
     expect(w.find('[data-testid="dispatch-send"]').exists()).toBe(false)
     registryState.state.isLeader = true

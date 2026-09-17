@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 index 0dff35cd..d9258261 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -1253,6 +1253,14 @@ export default {
+@@ -1253,6 +1253,15 @@ export default {
      'agentTeams.profiles': 'Profiles',
      'agentTeams.defaultProfile': '默认 profile',
      'agentTeams.save': '保存声明',
@@ -13,6 +13,7 @@ index 0dff35cd..d9258261 100644
 +      assign: '指派',
 +      clear: '取消值守',
 +      mine: '值守',
++      assignFailed: '值守指派失败，请重试',
 +    },
    },
    loopMind: {

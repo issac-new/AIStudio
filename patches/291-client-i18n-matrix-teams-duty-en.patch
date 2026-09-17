@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index 75dc023e..7135091a 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -1255,6 +1255,14 @@ export default {
+@@ -1255,6 +1255,15 @@ export default {
      'agentTeams.profiles': 'Profiles',
      'agentTeams.defaultProfile': 'Default profile',
      'agentTeams.save': 'Save declaration',
@@ -13,6 +13,7 @@ index 75dc023e..7135091a 100644
 +      assign: 'Assign',
 +      clear: 'Clear',
 +      mine: 'On duty',
++      assignFailed: 'Duty assignment failed, please retry',
 +    },
    },
    loopMind: {

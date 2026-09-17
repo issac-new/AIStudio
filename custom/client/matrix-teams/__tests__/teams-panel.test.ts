@@ -108,6 +108,17 @@ describe('未配置注册房间', () => {
     await flushPromises()
     expect(registryState.createRegistryRoom).toHaveBeenCalledWith('Swarm Teams', [])
   })
+  it('邀请框多分隔符混排（半角逗号+全角逗号+空格）→ 解析为四个 Matrix ID', async () => {
+    registryState.createRegistryRoom.mockClear()
+    const w = mountPanel()
+    await flushPromises()
+    await w.find('[data-testid="teams-create-name"]').setValue('Swarm Teams')
+    await w.find('[data-testid="teams-create-invite"]').setValue('@a:sv,@b:sv，@c:sv  @d:sv')
+    await w.find('[data-testid="teams-create-submit"]').trigger('click')
+    await flushPromises()
+    expect(registryState.createRegistryRoom).toHaveBeenCalledWith('Swarm Teams',
+      ['@a:sv', '@b:sv', '@c:sv', '@d:sv'])
+  })
 })
 
 describe('已配置注册房间', () => {
@@ -137,6 +148,22 @@ describe('已配置注册房间', () => {
     await w.find('[data-testid="teams-editor-save"]').trigger('click')
     await flushPromises()
     expect(registryState.writeSelfAccount).toHaveBeenCalled()
+  })
+  it('编辑器同名两行 → save 出的 slug 去重（第二名加序号后缀）', async () => {
+    registryState.writeSelfAccount.mockClear()
+    registryState.accounts.value = [
+      { userId: '@alice:sv', displayName: 'alice', isLeader: false, declared: true, agentTeams: [
+        { slug: 'dev', name: 'Dev', profiles: ['alice'], defaultProfile: 'alice' },
+        { slug: 'ops', name: 'Dev', profiles: ['alice-2'], defaultProfile: 'alice-2' },
+      ] },
+    ]
+    const w = mountPanel()
+    await flushPromises()
+    await w.find('[data-testid="teams-editor-save"]').trigger('click')
+    await flushPromises()
+    expect(registryState.writeSelfAccount).toHaveBeenCalledTimes(1)
+    const saved = registryState.writeSelfAccount.mock.calls[0][0] as Array<{ slug: string }>
+    expect(saved.map(t => t.slug)).toEqual(['dev', 'dev-2'])
   })
   it('isLeader=true 显示邀请与 leader 管理；false 隐藏', async () => {
     const w = mountPanel()

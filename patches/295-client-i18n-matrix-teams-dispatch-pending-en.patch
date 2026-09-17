@@ -1,0 +1,11 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1272,6 +1272,7 @@
+         running: 'Running',
+         done: 'Done',
+         failed: 'Failed',
++        pending: 'Awaiting',
+       },
+       issuedBy: 'Issued by',
+     },

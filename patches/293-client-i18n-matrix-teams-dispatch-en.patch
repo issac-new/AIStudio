@@ -1,13 +1,13 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -1263,6 +1263,23 @@
+@@ -1263,7 +1263,23 @@
        clear: 'Clear',
        mine: 'On duty',
+       assignFailed: 'Duty assignment failed, please retry',
      },
 +    dispatch: {
 +      title: 'Dispatched tasks',
-+      new: 'Dispatch task',
 +      titleField: 'Title',
 +      body: 'Description',
 +      target: 'Target account',

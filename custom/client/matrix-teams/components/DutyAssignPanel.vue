@@ -14,6 +14,9 @@ const roomStore = useMatrixRoomStore()
 
 const selectedRoom = ref('')
 const selectedTarget = ref('')
+// writeDuty 失败提示（终审 backlog）：返回 false 时展示；文案优先 store.lastError
+// （SDK 异常明细），门禁型失败（非 leader/未配置房间）无明细时用固定 i18n 文案。
+const assignFailed = ref(false)
 const rooms = computed(() => roomStore.sortedRooms.map(r => ({ roomId: r.roomId, name: r.name ?? r.roomId })))
 // kind 随 target 携带（Task 6 评审遗留：不做 '/' 字符串嗅探——Matrix ID 本身
 // 不含 '/' 但协议形态不该由字符串形状反推，判定只认枚举）。
@@ -32,7 +35,12 @@ async function assign(): Promise<void> {
     assigneeKind: target.kind,
     assigneeId: target.id,
     roomName: room?.name,
-  })) { selectedRoom.value = ''; selectedTarget.value = '' }
+  })) {
+    selectedRoom.value = ''; selectedTarget.value = ''
+    assignFailed.value = false
+  } else {
+    assignFailed.value = true
+  }
 }
 
 onMounted(() => { void registry.detectRegistry() })
@@ -54,6 +62,8 @@ onMounted(() => { void registry.detectRegistry() })
       </select>
       <button type="button" class="dap__primary" data-testid="duty-assign"
         @click="assign">{{ t('teams.duty.assign') }}</button>
+      <div v-if="assignFailed" class="dap__error" data-testid="duty-error" role="alert">
+        {{ registry.lastError || t('teams.duty.assignFailed') }}</div>
     </div>
     <div class="dap__list" data-testid="duty-list">
       <div v-for="row in dutyRows" :key="row.roomId" class="dap__row">
@@ -78,5 +88,6 @@ onMounted(() => { void registry.detectRegistry() })
 .dap__room { font-weight: 600; }
 .dap__assignee { color: var(--color-primary, #3b82f6); }
 .dap__by { color: var(--text-secondary); font-size: 11px; }
+.dap__error { color: var(--color-danger, #e11d48); font-size: 12px; }
 .dap__clear { border: none; background: none; color: var(--color-danger, #e11d48); cursor: pointer; }
 </style>
