@@ -6,7 +6,9 @@ import { setActivePinia, createPinia } from 'pinia'
 
 const sentEvents: Array<{ roomId: string; type: string; content: unknown }> = []
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
-  useMatrixClientStore: () => ({ client: { value: { sendEvent: async (...args: unknown[]) => { sentEvents.push(args as never) } } }, userId: { value: '@alice:sv' } }),
+  // 终审修复后 store 在 setup 顶层挂监听（实例化即 client.on）：mock 补齐 EventEmitter
+  // 监听面（真实 MatrixClient 恒有 on/off），同 teams-panel.test.ts 的理由。
+  useMatrixClientStore: () => ({ client: { value: { on: () => {}, off: () => {}, sendEvent: async (...args: unknown[]) => { sentEvents.push(args as never) } } }, userId: { value: '@alice:sv' } }),
 }))
 vi.mock('../stores/team-registry', () => ({
   useTeamRegistryStore: () => ({ registryRoomId: { value: null }, accounts: { value: [] }, isLeader: { value: true } }),
