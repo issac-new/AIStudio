@@ -45,6 +45,8 @@ describe('mapKanbanStatusToReceipt', () => {
 // ── receiveAssign 落地路径 ──
 const created: Array<Record<string, unknown>> = []
 const sentEvents: Array<{ type: string; content: Record<string, unknown> }> = []
+// 历史窗口：「监听挂载前就在注册房间里」的 timeline 事件（模拟成员重启/首次打开前到达的 assign）。
+let historyEvents: unknown[] = []
 const kanbanApi = vi.hoisted(() => ({
   createTask: vi.fn(async (data: Record<string, unknown>) => {
     created.push(data)
@@ -52,9 +54,15 @@ const kanbanApi = vi.hoisted(() => ({
   }),
 }))
 vi.mock('@/api/hermes/kanban', () => kanbanApi)
+const historyRoom = {
+  roomId: '!reg:sv',
+  getLiveTimeline: () => ({ getEvents: () => historyEvents }),
+}
 const sdkClient = {
   on: () => {}, off: () => {},
   sendEvent: async (_roomId: string, type: string, content: Record<string, unknown>) => { sentEvents.push({ type, content }) },
+  scrollback: async (room: unknown) => room,
+  getRoom: (roomId: string) => roomId === '!reg:sv' ? historyRoom : undefined,
 }
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
   useMatrixClientStore: () => ({ client: { value: sdkClient }, userId: { value: '@bob:sv' } }),
@@ -68,7 +76,7 @@ import { loadDispatchIndex } from '../store/dispatch-kv'
 
 beforeEach(() => {
   setActivePinia(createPinia())
-  created.length = 0; sentEvents.length = 0; localStorage.clear()
+  created.length = 0; sentEvents.length = 0; historyEvents = []; localStorage.clear()
 })
 
 const assign = (over: Partial<AssignContent> = {}): AssignContent => ({
@@ -113,5 +121,41 @@ describe('receiveAssign', () => {
     expect(created).toHaveLength(0)
     const receipt = sentEvents.find(e => e.type === TASK_EVENT_TYPES.receipt)
     expect(receipt?.content).toMatchObject({ status: 'failed', reason: 'no-such-profile' })
+  })
+})
+
+// ── Important-2：历史回填（离线/重启迟到消息恢复，spec §10）──
+const sdkEv = (type: string, content: unknown) => ({
+  getType: () => type, isState: () => false, getContent: () => content,
+})
+
+describe('历史回填恢复', () => {
+  it('监听挂载前历史里的 assign → 走 receiveAssign 建卡 + kv + created 回执', async () => {
+    historyEvents = [sdkEv(TASK_EVENT_TYPES.assign, assign())]
+    useTaskDispatchStore() // store 实例化即触发回填（无需组件挂载）
+    await vi.waitFor(() => expect(created).toHaveLength(1))
+    expect(created[0]).toMatchObject({ title: '[外派-111111] 做蛋糕', assignee: 'pb2' })
+    expect(loadDispatchIndex()['11111111-2222-3333-4444-555555555555']).toMatchObject({ localTaskId: 'kb-1', lastStatus: 'created' })
+    const receipt = sentEvents.find(e => e.type === TASK_EVENT_TYPES.receipt)
+    expect(receipt?.content).toMatchObject({ status: 'created', localTaskId: 'kb-1' })
+  })
+  it('kv 已记录的历史 assign → 回填跳过（幂等，不重复建卡不回执）', async () => {
+    localStorage.setItem('matrix-teams.dispatchIndex', JSON.stringify({
+      '11111111-2222-3333-4444-555555555555': { localTaskId: 'kb-0', lastStatus: 'created', lastSyncedAt: 1 },
+    }))
+    historyEvents = [sdkEv(TASK_EVENT_TYPES.assign, assign())]
+    useTaskDispatchStore()
+    await new Promise(r => setTimeout(r, 20)) // 给回填异步一个跑完的机会
+    expect(created).toHaveLength(0)
+    expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt)).toHaveLength(0)
+    expect(loadDispatchIndex()['11111111-2222-3333-4444-555555555555']).toMatchObject({ localTaskId: 'kb-0' })
+  })
+  it('回填后同一 assign 经增量监听重放 → kv 防重，仍只有一张卡', async () => {
+    historyEvents = [sdkEv(TASK_EVENT_TYPES.assign, assign())]
+    const store = useTaskDispatchStore()
+    await vi.waitFor(() => expect(created).toHaveLength(1))
+    await store.handleTimelineEvent(sdkEv(TASK_EVENT_TYPES.assign, assign()), { roomId: '!reg:sv' })
+    expect(created).toHaveLength(1)
+    expect(store.dispatches).toHaveLength(1) // 视图同样幂等
   })
 })

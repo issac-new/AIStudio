@@ -28,8 +28,9 @@ async function send(): Promise<void> {
 }
 
 let timer: ReturnType<typeof setInterval> | null = null
+// 监听挂载在 task-dispatch store setup 顶层（pinia effect scope，终审修复）——
+// 组件不再调 ensureListening；这里只挂组件级轮询定时器，卸载即清。
 onMounted(() => {
-  dispatch.ensureListening()
   timer = setInterval(() => { void dispatch.pollAndReport() }, 30_000)
 })
 onUnmounted(() => { if (timer) clearInterval(timer) })
