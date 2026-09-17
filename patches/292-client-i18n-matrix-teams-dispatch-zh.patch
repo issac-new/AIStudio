@@ -1,0 +1,27 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1261,6 +1261,23 @@
+       clear: '取消值守',
+       mine: '值守',
+     },
++    dispatch: {
++      title: '外派任务',
++      new: '指派任务',
++      titleField: '标题',
++      body: '描述',
++      target: '目标账号',
++      profile: '指定 profile（可选）',
++      send: '发出',
++      empty: '暂无外派任务',
++      status: {
++        created: '已建卡',
++        running: '执行中',
++        done: '已完成',
++        failed: '失败',
++      },
++      issuedBy: '指派人',
++    },
+   },
+   loopMind: {
+     title: '思维大脑',

@@ -90,8 +90,16 @@ describe('receiveAssign', () => {
     const receipt = sentEvents.find(e => e.type === TASK_EVENT_TYPES.receipt)
     expect(receipt?.content).toMatchObject({ taskId: '11111111-2222-3333-4444-555555555555', status: 'created', localTaskId: 'kb-1', reportedBy: '@bob:sv' })
   })
-  it('kv 已记录（重复投递）→ 不建卡不回执', async () => {
-    localStorage.setItem('matrix-teams.dispatchIndex', JSON.stringify({
+  it('assign.priority 数值字符串 → 建卡透传为 number；缺省/非数值不携带', async () => {
+    const store = useTaskDispatchStore()
+    await store.receiveAssign(assign({ priority: '3' }))
+    expect(created[0]).toMatchObject({ priority: 3 })
+    await store.receiveAssign(assign({ taskId: '22222222-2222-3333-4444-555555555555', priority: 'high' }))
+    expect(created[1]).toMatchObject({ priority: undefined })
+    await store.receiveAssign(assign({ taskId: '33333333-2222-3333-4444-555555555555' }))
+    expect(created[2]).toMatchObject({ priority: undefined })
+  })
+  it('kv 已记录（重复投递）→ 不建卡不回执', async () => {    localStorage.setItem('matrix-teams.dispatchIndex', JSON.stringify({
       '11111111-2222-3333-4444-555555555555': { localTaskId: 'kb-0', lastStatus: 'created', lastSyncedAt: 1 },
     }))
     const store = useTaskDispatchStore()

@@ -59,8 +59,10 @@ vi.mock('@/stores/hermes/profiles', async () => {
 vi.mock('@/custom/matrix-chat/stores/matrix-client', async () => {
   const { ref, reactive } = await import('vue')
   return {
+    // Task 10 接线后右栏挂 DispatchList，onMounted → dispatch.ensureListening() → SDK on/off；
+    // mock client 补齐监听面（真 store 在 jsdom 下 init 面不可控，同 roomStore mock 理由）。
     useMatrixClientStore: () => reactive({
-      client: ref({}), userId: ref('@alice:sv'), authenticated: ref(true),
+      client: ref({ on: () => {}, off: () => {} }), userId: ref('@alice:sv'), authenticated: ref(true),
     }),
   }
 })
