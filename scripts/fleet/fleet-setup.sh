@@ -1,10 +1,13 @@
 #!/bin/bash
 # fleet-setup.sh — 一次性置备（幂等，全量三用户）
-#   1. Synapse 容器在跑；注册 6 个 Matrix 账号并确保有效 token（fleet 新会话）
-#   2. 每用户：独立 SwarmStudio.app 副本 + HOME 沙箱 + 预置 runtime（含 venv 装 pytest）
-#   3. 建 fleet 项目房间并 6 成员加入
-#   4. 每用户 .hermes profile（config.yaml + matrix 五件套 .env）
+#   0. 前置检查（本机应用安装、装源运行时、Synapse 容器）
+#   1. Matrix 账号 + fleet 有效 token（与 09-17 sim 同账号体系，fleet 另开新会话）
+#   2. fleet 项目房间并 6 成员加入
+#   3. 共享层：运行时全 fleet 一份（venv 装 pytest 一次）
+#      v1 迁移：清每用户 app 副本与运行时副本（回收约 6.7G）
+#   4. 每用户 HOME 沙箱：.hermes profile（config.yaml + matrix 五件套 .env）
 #   5. 中央 bare 仓库 + 基线 + 各用户 clone
+# 应用不复制：直接使用本机安装（/Applications/SwarmStudio.app，版本与所有安装一致）。
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/fleet-lib.sh"
@@ -12,10 +15,10 @@ source "$SCRIPT_DIR/fleet-lib.sh"
 mkdir -p "$FLEET_ROOT" "$LOGS_DIR" "$PIDS_DIR" "$EVID_DIR"
 
 # ── 0. 前置检查 ────────────────────────────────────────
-[[ -x "$SOURCE_APP/Contents/MacOS/SwarmStudio" ]] || fail "缺少源应用 ${SOURCE_APP}（先安装 SwarmStudio 2.27+）"
+[[ -x $(app_bin) ]] || fail "本机未安装 SwarmStudio: ${SOURCE_APP}（fleet 直接使用本机安装，不复制）"
 SRC_RT=$(source_runtime)
 [[ -x "$SRC_RT/python/venv/bin/hermes" && -x "$SRC_RT/node/bin/node" ]] \
-  || fail "源运行时不完整: ${SRC_RT}（缺 venv hermes 或 node；先跑一次真实应用让它落盘）"
+  || fail "装源运行时不完整: ${SRC_RT}（缺 venv hermes 或 node；先跑一次真实应用让它落盘）"
 docker inspect "$SYNAPSE_CONTAINER" >/dev/null 2>&1 || fail "docker 容器 $SYNAPSE_CONTAINER 不存在"
 docker start "$SYNAPSE_CONTAINER" >/dev/null 2>&1 || true
 for _ in $(seq 1 30); do
@@ -65,44 +68,40 @@ done
 NMEMBERS=$(mx_room_members "$ALICE_TOKEN" "$ROOM_ID" | grep -c .)
 [[ "$NMEMBERS" == "6" ]] || fail "房间成员不足 6 个（实际 ${NMEMBERS}）"
 
-# ── 3. 每用户沙箱：app 副本 + runtime + venv pytest ────
+# ── 3. 共享层：运行时全 fleet 一份 + v1 遗留清理 ───────
 PIP_INDEX_URL="${FLEET_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}"
+RT=$(shared_runtime)
+if [[ ! -x "$RT/python/venv/bin/hermes" ]]; then
+  log "建共享运行时 → ${RT}（约 1.4G，全 fleet 仅此一份，与装源同版 ${RUNTIME_VER}）"
+  mkdir -p "$(dirname "$RT")"
+  cp -a "$(source_runtime)" "$RT"
+else
+  log "共享运行时就绪: $RT"
+fi
+VPY=$(shared_python)
+if ! "$VPY" -c 'import pytest' >/dev/null 2>&1; then
+  log "共享 venv 安装 pytest（${PIP_INDEX_URL}，仅此一份）"
+  "$VPY" -m pip install -q --index-url "$PIP_INDEX_URL" pytest \
+    || fail "pytest 安装失败（可用 FLEET_PIP_INDEX_URL 换镜像）"
+fi
+"$VPY" -c 'import pytest' >/dev/null 2>&1 || fail "共享 venv 缺 pytest"
+
+# v1 → v2 迁移：清每用户 app 副本与运行时副本（共享就位后执行）
 for u in "${USERS[@]}"; do
-  ROOT=$(user_root "$u"); APP=$(app_copy "$u"); HOME_U=$(home_dir "$u")
-  mkdir -p "$ROOT/apps" "$(dirname "$(workspace "$u")")"
-  chmod 700 "$ROOT"
-
-  if [[ ! -x "$APP/Contents/MacOS/SwarmStudio" ]]; then
-    log "$u 拷贝独立应用副本 → ${APP}（约 1.3G）"
-    cp -a "$SOURCE_APP" "$APP"
-  else
-    log "$u 应用副本已存在，跳过"
-  fi
-
-  RT=$(runtime_dir "$u")
-  if [[ ! -x "$RT/python/venv/bin/hermes" ]]; then
-    log "$u 预置运行时 → ${RT}（约 1.4G）"
-    mkdir -p "$(dirname "$RT")"
-    cp -a "$SRC_RT" "$RT"
-  else
-    log "$u 运行时已存在，跳过"
-  fi
-
-  VPY=$(instance_python "$u")
-  if ! "$VPY" -c 'import pytest' >/dev/null 2>&1; then
-    log "$u 实例 venv 安装 pytest（${PIP_INDEX_URL}）"
-    "$VPY" -m pip install -q --index-url "$PIP_INDEX_URL" pytest \
-      || fail "$u pytest 安装失败（可用 FLEET_PIP_INDEX_URL 换镜像）"
-  fi
-  "$VPY" -c 'import pytest' >/dev/null 2>&1 || fail "$u 实例 venv 缺 pytest"
+  for d in "$(user_root "$u")/apps" "$(webui_home "$u")/desktop-runtime"; do
+    if [[ -d "$d" ]]; then
+      rm -rf "$d"
+      log "已清除 $u 的 v1 遗留副本: $d"
+    fi
+  done
 done
 
-# ── 4. 每用户 .hermes profile 配置 ─────────────────────
+# ── 4. 每用户 HOME 沙箱（配置与状态层）─────────────────
 API_KEY=$(api_server_key)
 [[ -n "$API_KEY" ]] || fail "取不到 API_SERVER_KEY（查 ~/.hermes/.env）"
 for u in "${USERS[@]}"; do
   HROOT=$(hermes_root "$u"); PROF=$(profile_dir "$u")
-  mkdir -p "$PROF"
+  mkdir -p "$PROF" "$(dirname "$(workspace "$u")")"
   chmod 700 "$(home_dir "$u")"
 
   echo "$u" > "$HROOT/active_profile"
@@ -140,7 +139,7 @@ ENVEOF
 
   # studio 侧 root .env（后端 API_SERVER_KEY 回落读，这里给目录完整性）
   [[ -f "$HROOT/.env" ]] || { echo "API_SERVER_KEY=$API_KEY" > "$HROOT/.env"; chmod 600 "$HROOT/.env"; }
-  log "用户 $u 沙箱就绪: app=$(app_copy "$u") studio :$(studio_port "$u") gateway :$(gateway_port "$u")"
+  log "用户 $u 沙箱就绪: home=$(home_dir "$u") studio :$(studio_port "$u") gateway :$(gateway_port "$u")（应用与运行时共享）"
 done
 
 # ── 5. 中央仓库 + 各用户 clone ─────────────────────────
@@ -188,4 +187,4 @@ for u in "${USERS[@]}"; do
   log "用户 $u workspace: $WS"
 done
 
-log "setup 完成。下一步: bash fleet-up.sh"
+log "setup 完成。下一步: FLEET_HIDDEN=1 bash fleet-up.sh"

@@ -100,7 +100,7 @@ kanban_create() { # <key> <title> <body> → task id（state 缓存避免重复�
 }
 kanban_status() { studio "$(studio_port alice)" PATCH "/api/hermes/kanban/$1" "$ALICE_JWT" "{\"status\":\"$2\"}" >/dev/null; }
 
-PY=$(instance_python alice)   # 导演复跑用 alice 实例自带 venv
+PY=$(shared_python)   # 导演复跑用共享 venv（全 fleet 一份）
 ALICE_JWT=$(studio_login alice)
 [[ -n "$ALICE_JWT" && "$ALICE_JWT" != "null" ]] || fail "alice 实例 studio 登录失败（应用是否已 fleet-up？）"
 
@@ -144,7 +144,7 @@ fi
 # ── 步骤 4：并行实现（bob-agent ∥ carol-agent，各自沙箱 venv）──
 if step_reached impl; then
   WS_BOB=$(workspace bob); WS_CAROL=$(workspace carol)
-  PY_BOB=$(instance_python bob); PY_CAROL=$(instance_python carol)
+  PY_BOB=$(shared_python); PY_CAROL=$(shared_python)
   dispatch_task bob "@bob-agent:matrix.test 认领任务 T1：实现 slugify。
 - 你的工作区（你这台「电脑」的本地检出）: ${WS_BOB}（remote central 已指向共享裸仓）
 - 实现 stringops/slugify.py 的 slugify(text)：小写、连续分隔符折叠为单个 -、去首尾 -；CJK 字符保留原样；空串/纯标点 → 空串
