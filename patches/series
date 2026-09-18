@@ -518,3 +518,7 @@
 #       311 = ChatInput 附件超限守门（PDF 20MB/视频 200MB，超限 toast 拒绝入列）。
 310-client-image-lightbox-pdf-preview.patch
 311-chat-input-attachment-limits.patch
+
+# 312 = M2 资源管理器路由挂载：/api/ide/storage/*（snapshot/clean/reveal），
+#       controller=custom/server/controllers/system/storage.ts（A 类）。
+312-server-routes-ide-storage.patch

@@ -43,6 +43,45 @@ type ChangeGroup = GitChangeGroup
 const groups = computed(() => (status.value ? toGroups(status.value.changes) : []))
 const stagedCount = computed(() => status.value?.changes.filter((c) => c.kind !== 'untracked' && c.indexStatus !== ' ').length ?? 0)
 const canCommit = computed(() => stagedCount.value > 0 && commitMessage.value.trim().length > 0 && !committing.value)
+// M4：分支切换 + push（/api/ide/git/branches|checkout|push）
+const branches = ref<Array<{ name: string; current: boolean }>>([])
+const branchMenuOpen = ref(false)
+const pushing = ref(false)
+async function loadBranches(): Promise<void> {
+  const root = ide.workspace
+  if (!root) return
+  try {
+    const res = await ideGitApi.branches(root)
+    branches.value = res.branches
+  } catch { branchMenuOpen.value = false }
+}
+async function checkout(branch: string): Promise<void> {
+  const root = ide.workspace
+  branchMenuOpen.value = false
+  if (!root) return
+  try {
+    await ideGitApi.checkout(root, branch)
+    await refresh()
+  } catch (err) {
+    errorMessage.value = err instanceof Error ? err.message : String(err)
+    errorCode.value = 'checkout_failed'
+  }
+}
+async function push(): Promise<void> {
+  const root = ide.workspace
+  if (!root || pushing.value) return
+  pushing.value = true
+  try {
+    await ideGitApi.push(root)
+    await refresh()
+  } catch (err) {
+    errorMessage.value = err instanceof Error ? err.message : String(err)
+    errorCode.value = 'push_failed'
+  } finally {
+    pushing.value = false
+  }
+}
+
 const branchLabel = computed(() => {
   const s = status.value
   if (!s) return ''
@@ -155,6 +194,15 @@ defineExpose({ refresh, toGroups })
   <div class="ide-git">
     <header class="ide-git__head">
       <span class="ide-git__branch" :title="status?.upstream ?? ''">{{ branchLabel || '—' }}</span>
+      <div class="ide-git__branch-switch">
+        <button type="button" class="ide-git__mini" data-testid="ide-git-branch-toggle" :title="t('ide.gitBranchSwitcher')" @click="branchMenuOpen = !branchMenuOpen; branchMenuOpen && loadBranches()">⎇</button>
+        <ul v-if="branchMenuOpen" class="ide-git__branch-menu" data-testid="ide-git-branch-menu">
+          <li v-for="b in branches" :key="b.name" :class="{ 'is-current': b.current }" @click="!b.current && checkout(b.name)">
+            {{ b.current ? '● ' : '' }}{{ b.name }}
+          </li>
+        </ul>
+      </div>
+      <button type="button" class="ide-git__mini" data-testid="ide-git-push" :disabled="pushing" :title="t('ide.gitPush')" @click="push">{{ pushing ? '…' : '↑' }}</button>
       <button
         type="button"
         class="ide-git__refresh"
@@ -461,6 +509,51 @@ defineExpose({ refresh, toGroups })
   border-radius: 4px;
   cursor: pointer;
 
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.ide-git__branch-switch { position: relative; display: inline-flex; }
+
+.ide-git__branch-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 160px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 2px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--border-color, #26292f);
+  border-radius: 7px;
+  background: var(--bg-secondary, #1b1e24);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  li {
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: var(--text-primary, #e6e6e6);
+    cursor: pointer;
+
+    &:hover { background: var(--bg-tertiary, #242830); }
+    &.is-current { color: var(--accent-primary, #4cc9f0); cursor: default; }
+  }
+}
+
+.ide-git__mini {
+  height: 20px;
+  min-width: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--border-color, #26292f);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { color: var(--text-primary, #e6e6e6); border-color: var(--accent-primary, #4cc9f0); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 </style>
