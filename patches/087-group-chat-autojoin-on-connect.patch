@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/sockets/group-chat.ts b/packages/server/src/modules/studio/sockets/group-chat.ts
-index 897a19c0..94d8f000 100644
+index 1e9846b..641af13 100644
 --- a/packages/server/src/modules/studio/sockets/group-chat.ts
 +++ b/packages/server/src/modules/studio/sockets/group-chat.ts
-@@ -1978,6 +1978,16 @@ class ChatStorage {
+@@ -2022,6 +2022,16 @@ class ChatStorage {
          return this.mapStoredMessageRow(row)
      }
  
@@ -19,7 +19,7 @@ index 897a19c0..94d8f000 100644
      addMessage(msg: ChatMessage): void {
          this.upsertMessage(msg)
      }
-@@ -3873,6 +3883,42 @@ export class GroupChatServer {
+@@ -4013,6 +4023,42 @@ export class GroupChatServer {
  
          logger.debug(`[GroupChat] Connected: ${userName} (socket=${socket.id}, user=${userId})`)
  
@@ -61,4 +61,5 @@ index 897a19c0..94d8f000 100644
 +
          socket.on('join', (data: { roomId?: string; name?: string; historyLimit?: number }, ack?: (response?: unknown) => void) => this.handleJoin(socket, data, ack))
          socket.on('load_pending_approvals', (_data: unknown, ack?: (response?: unknown) => void) => {
-             ack?.({ pendingApprovals: this.pendingApprovalSnapshots(null, socket) })
+             ack?.({
+

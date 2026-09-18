@@ -527,3 +527,11 @@
 #       reorder_queued_runs 事件 + reorderQueueByIds 纯函数；chatStore editQueuedMessage/
 #       reorderQueuedMessages；FloatPanel 内联编辑+拖拽重排；MessageList 接线。
 313-queue-edit-reorder.patch
+
+# 314 = server tsconfig exclude custom 测试目录：custom/__tests__ 45+1 类型债不阻打包链
+#       （生产端 custom 仍受 tsc 门禁；测试由 overlay vitest 运行时覆盖）。
+314-server-tsconfig-exclude-custom-tests.patch
+
+# 315 = 补上游 v0.7.23 缺键 common.close（ImagePreviewOverlay/MessageItem 引用未定义；
+#       en+zh 双补，其余语言 mergeMessagesWithFallback(en) 回退）——i18n 门禁抓获的上游缺陷。
+315-client-i18n-common-close.patch
