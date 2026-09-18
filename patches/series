@@ -534,4 +534,4 @@
 
 # 315 = 补上游 v0.7.23 缺键 common.close（ImagePreviewOverlay/MessageItem 引用未定义；
 #       en+zh 双补，其余语言 mergeMessagesWithFallback(en) 回退）——i18n 门禁抓获的上游缺陷。
-315-client-i18n-common-close.patch
+# 315（common.close 键）与 308 首个 hunk 完全重复（并行会话重复提交），退役删除。
