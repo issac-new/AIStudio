@@ -18,6 +18,8 @@ import {
   fetchSessionCategories,
   createSessionCategory,
   setSessionCategory,
+  renameSessionCategory,
+  deleteSessionCategory,
   exportSession,
   type SessionCategory,
 } from '@/api/studio/sessions'
@@ -53,6 +55,31 @@ async function createGroup(): Promise<void> {
     message.error(t('ide.task.groupCreateFailed'))
   }
 }
+const renameDraft = ref<{ id: number; name: string } | null>(null)
+async function commitRename(): Promise<void> {
+  const draft = renameDraft.value
+  renameDraft.value = null
+  if (!draft || !draft.name.trim() || draft.name.trim() === draft.name) {
+    if (draft) await loadCategories() // 还原显示
+    return
+  }
+  try {
+    await renameSessionCategory(draft.id, draft.name.trim())
+    await loadCategories()
+  } catch {
+    message.error(t('ide.task.groupRenameFailed'))
+  }
+}
+async function removeGroup(categoryId: number): Promise<void> {
+  try {
+    await deleteSessionCategory(categoryId)
+    for (const s of chat.sessions) if (s.categoryId === categoryId) s.categoryId = null
+    await loadCategories()
+  } catch {
+    message.error(t('ide.task.groupDeleteFailed'))
+  }
+}
+
 async function moveToGroup(sessionId: string, categoryId: number | null): Promise<void> {
   try {
     await setSessionCategory(sessionId, categoryId)
@@ -371,8 +398,24 @@ onMounted(async () => {
         >
           <header class="ide-taskbar__section-head ide-taskbar__section-head--toggle" @click="toggleGroup(g.key)">
             <span class="ide-taskbar__section-caret" :class="{ 'is-collapsed': collapsedGroups.has(g.key) }">▾</span>
-            <span class="ide-taskbar__section-title">{{ g.label }}</span>
-            <span class="ide-taskbar__section-count">{{ g.sessions.length }}</span>
+            <template v-if="renameDraft !== null && renameDraft.id === g.categoryId">
+              <input
+                v-model="renameDraft.name"
+                class="ide-taskbar__rename-input"
+                :data-testid="`ide-task-rename-${g.categoryId}`"
+                @click.stop
+                @keydown.enter.prevent="commitRename"
+                @keydown.esc.prevent="renameDraft = null; loadCategories()"
+              >
+            </template>
+            <template v-else>
+              <span class="ide-taskbar__section-title">{{ g.label }}</span>
+              <span v-if="g.categoryId != null" class="ide-taskbar__group-actions" @click.stop>
+                <button type="button" class="ide-taskbar__group-btn" :title="t('ide.task.renameGroup')" :aria-label="t('ide.task.renameGroup')" @click="renameDraft = { id: g.categoryId!, name: g.label }">✎</button>
+                <button type="button" class="ide-taskbar__group-btn ide-taskbar__group-btn--danger" :title="t('ide.task.deleteGroup')" :aria-label="t('ide.task.deleteGroup')" @click="removeGroup(g.categoryId!)">✕</button>
+              </span>
+              <span class="ide-taskbar__section-count">{{ g.sessions.length }}</span>
+            </template>
           </header>
           <ul v-show="!collapsedGroups.has(g.key)" class="ide-taskbar__list">
             <li
@@ -622,6 +665,39 @@ onMounted(async () => {
   font-size: 9px;
   transition: transform 0.12s ease;
   &.is-collapsed { transform: rotate(-90deg); }
+}
+
+.ide-taskbar__rename-input {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--accent-primary, #4cc9f0);
+  border-radius: 4px;
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #e6e6e6);
+  font-size: 11px;
+  outline: none;
+}
+
+.ide-taskbar__group-actions {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.ide-taskbar__group-btn {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 10px;
+  cursor: pointer;
+
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &--danger:hover { color: #e06c75; }
 }
 
 .ide-taskbar__section-count { margin-left: auto; opacity: 0.7; }

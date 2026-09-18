@@ -349,4 +349,86 @@ ideGitRouter.post('/commit', async (ctx) => {
   ctx.body = { ok: true, output: result.stdout.trim() }
 })
 
+
+// GET /api/ide/git/branches?root=  —— 本地分支列表（含当前指针）
+ideGitRouter.get('/branches', async (ctx) => {
+  const root = typeof ctx.query.root === 'string' ? ctx.query.root : ''
+  if (!root || !isAbsolute(root)) {
+    ctx.status = 400
+    ctx.body = errorBody('invalid_root', 'root must be an absolute path')
+    return
+  }
+  const repoRoot = await resolveRepo(root)
+  if (!repoRoot) {
+    ctx.status = 404
+    ctx.body = errorBody('not_a_repo', 'workspace is not inside a git repository')
+    return
+  }
+  const result = await runGit(['-C', repoRoot, 'branch', '--format=%(refname:short)%00%(HEAD)'], repoRoot)
+  if (result.code !== 0) {
+    ctx.status = 500
+    ctx.body = errorBody('git_failed', result.stderr.trim() || 'git branch failed')
+    return
+  }
+  const branches = result.stdout.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const [name, head] = l.split('\u0000')
+    return { name, current: head === '*' }
+  })
+  ctx.body = { branches }
+})
+
+// POST /api/ide/git/checkout  { root, branch }  —— 分支切换（拒绝脏工作区由 git 自身报错）
+ideGitRouter.post('/checkout', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { root?: unknown; branch?: unknown }
+  const root = typeof body.root === 'string' ? body.root : ''
+  const branch = typeof body.branch === 'string' ? body.branch.trim() : ''
+  if (!root || !isAbsolute(root)) {
+    ctx.status = 400
+    ctx.body = errorBody('invalid_root', 'root must be an absolute path')
+    return
+  }
+  if (!/^[\w./-]{1,100}$/.test(branch)) {
+    ctx.status = 400
+    ctx.body = errorBody('invalid_branch', 'branch must be 1-100 chars of [\w./-]')
+    return
+  }
+  const repoRoot = await resolveRepo(root)
+  if (!repoRoot) {
+    ctx.status = 404
+    ctx.body = errorBody('not_a_repo', 'workspace is not inside a git repository')
+    return
+  }
+  const result = await runGit(['-C', repoRoot, 'checkout', branch], repoRoot)
+  if (result.code !== 0) {
+    ctx.status = 409
+    ctx.body = errorBody('checkout_failed', result.stderr.trim() || 'git checkout failed')
+    return
+  }
+  ctx.body = { ok: true, branch, output: result.stdout.trim() }
+})
+
+// POST /api/ide/git/push  { root }  —— 推送当前分支（凭据走 git 自身配置）
+ideGitRouter.post('/push', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { root?: unknown }
+  const root = typeof body.root === 'string' ? body.root : ''
+  if (!root || !isAbsolute(root)) {
+    ctx.status = 400
+    ctx.body = errorBody('invalid_root', 'root must be an absolute path')
+    return
+  }
+  const repoRoot = await resolveRepo(root)
+  if (!repoRoot) {
+    ctx.status = 404
+    ctx.body = errorBody('not_a_repo', 'workspace is not inside a git repository')
+    return
+  }
+  const result = await runGit(['-C', repoRoot, 'push'], repoRoot)
+  if (result.code !== 0) {
+    ctx.status = 502
+    ctx.body = errorBody('push_failed', result.stderr.trim() || result.stdout.trim() || 'git push failed')
+    return
+  }
+  ctx.body = { ok: true, output: (result.stdout + result.stderr).trim() }
+})
+
 export default ideGitRouter
