@@ -1,8 +1,16 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index c808f35..1fed901 100644
+index c808f35..9d5344f 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -462,6 +462,142 @@ export default {
+@@ -268,6 +268,7 @@ export default {
+ 
+   // 通用
+   common: {
++    close: '关闭',
+     loading: '加载中...',
+     cancel: '取消',
+     delete: '删除',
+@@ -462,6 +463,146 @@ export default {
      railWorkspace: '工作区',
      railTerminal: '终端',
      railChat: '会话',
@@ -73,6 +81,7 @@ index c808f35..1fed901 100644
 +      tab_browser: '浏览器',
 +      tab_wiki: 'Wiki 引用',
 +      tab_assistant: '辅助对话',
++      addTab: '新增标签',
 +    },
 +    wiki: {
 +      panelTitle: '仓库 Wiki',
@@ -123,6 +132,9 @@ index c808f35..1fed901 100644
 +    },
 +    gitBranchSwitcher: '切换分支',
 +    gitPush: '推送当前分支',
++    working: '已工作',
++    min: '分',
++    sec: '秒',
 +    gitViewStatus: '状态',
 +    gitViewGraph: '图谱',
 +    gitGraphTitle: '提交图谱',
@@ -145,7 +157,7 @@ index c808f35..1fed901 100644
      loading: '加载中…',
      workspaceDefault: '默认工作区',
      workspaceOutsideSandbox: '该目录超出文件浏览沙箱（须在 ~/.hermes 内或为已知任务工作区）；终端与会话仍可使用该目录',
-@@ -480,6 +616,34 @@ export default {
+@@ -480,6 +621,34 @@ export default {
      chatTab_messages: '会话',
      chatTab_subagents: '子代理',
      chatSubagentsEmpty: '暂无子代理流。会话运行中触发子代理时，点击消息流中的子代理卡片即可在此查看。',
@@ -180,7 +192,7 @@ index c808f35..1fed901 100644
      statusRunning: '运行中',
      statusIdle: '空闲',
    },
-@@ -1902,6 +2066,19 @@ export default {
+@@ -1902,6 +2071,19 @@ export default {
      messageQueue: '消息队列',
      removeQueuedMessage: '移除队列消息',
      insertQueuedMessage: '插入排队消息',
@@ -200,3 +212,27 @@ index c808f35..1fed901 100644
      queueInsertionPending: '已有一条队列消息正在插入',
      queueInsertionWaitingTools: '正在等待当前工具执行完成',
      queueInsertionStopping: '正在停止当前回复',
+@@ -3332,7 +3514,7 @@ export default {
+         deliveryId: 'Delivery ID',
+       },
+       events: {
+-        messageCreated: '用户消息已创建',
++        runUpdated: '运行状态更新', planUpdated: '任务卡片进度更新', groupMessageCreated: '群聊消息已创建', messageCreated: '用户消息已创建',
+         runQueued: '运行已排队',
+         runStarted: '运行已开始',
+         toolStarted: '工具已开始',
+@@ -4534,6 +4716,14 @@ export default {
+ 
+   // 更新日志
+   changelog: {
++    new_0_7_23_1: '新增移动端持久终端会话，支持通过 App 中继连接，并改进输出推送与输入流量控制 (#3076, #3079)',
++    new_0_7_23_2: '新增 Coding Agent 澄清交互与群聊任务卡，任务计划可保存恢复，并固定显示在每轮消息末尾 (#3080, #3085)',
++    new_0_7_23_3: '会话置顶改为跨设备同步，置顶会话优先显示，并修复 App 分页时的置顶筛选 (#3091)',
++    new_0_7_23_4: '完善 App 通知的群聊活动与澄清状态恢复，持久保存运行快照，并新增任务进度通知事件及 Webhook 订阅选项 (#3090, #3093)',
++    new_0_7_23_5: '新增 ekko-studio npm 包与命令入口，保留 hermes-web-ui 安装的升级兼容性，并统一桌面安装包品牌 (#3084)',
++    new_0_7_23_6: '修复 Coding Agent 重放历史消息时丢失 DeepSeek 推理内容的问题 (#3078)',
++    new_0_7_23_7: '修复 Ekko 运行时未识别 MCP HTTP 传输别名，导致工具未加载的问题 (#3081)',
++    new_0_7_23_8: '修复技能元数据中的空值错误读取下一字段，同时保留多行描述与空行 (#3083)',
+     new_0_7_22_1: '新增独立任务计划 MCP，让 Hermes 和 Coding Agent 也能更新聊天中的任务计划，并在每轮对话刷新任务上下文 (#3053)',
+     new_0_7_22_2: '聊天思考状态改为显示对应 Agent 的图标 (#3052)',
+     new_0_7_22_3: '修复 Ekko Chat 工具调用与结果的历史记录配对，并兼容 MCP HTTP 传输方式的别名 (#3030, #3031)',

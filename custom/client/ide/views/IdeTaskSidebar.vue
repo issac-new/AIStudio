@@ -356,14 +356,26 @@ onMounted(async () => {
 
       <div class="ide-taskbar__organize" role="group" :aria-label="t('ide.task.organize')">
         <button
-          v-for="mode in (['grouped', 'project', 'timeline'] as const)"
-          :key="mode"
           type="button"
-          class="ide-taskbar__organize-btn"
-          :class="{ 'is-active': ide.sidebar.organize === mode }"
-          :data-testid="`ide-task-organize-${mode}`"
-          @click="ide.setOrganize(mode)"
-        >{{ t(`ide.task.organize_${mode}`) }}</button>
+          class="ide-taskbar__chip"
+          :class="{ 'is-active': ide.sidebar.organize === 'grouped' }"
+          data-testid="ide-task-organize-grouped"
+          @click="ide.setOrganize('grouped')"
+        ># {{ t('ide.task.organize_grouped') }}</button>
+        <button
+          type="button"
+          class="ide-taskbar__chip"
+          :class="{ 'is-active': ide.sidebar.organize === 'project' }"
+          data-testid="ide-task-organize-project"
+          @click="ide.setOrganize('project')"
+        >📁 {{ t('ide.task.organize_project') }}</button>
+        <button
+          type="button"
+          class="ide-taskbar__chip"
+          :class="{ 'is-active': ide.sidebar.organize === 'timeline' }"
+          data-testid="ide-task-organize-timeline"
+          @click="ide.setOrganize('timeline')"
+        >{{ t('ide.task.organize_timeline') }}</button>
       </div>
 
       <div class="ide-taskbar__scroll">
@@ -468,6 +480,8 @@ onMounted(async () => {
     </template>
 
     <footer class="ide-taskbar__foot">
+      <span class="ide-taskbar__avatar" aria-hidden="true">S</span>
+      <span class="ide-taskbar__account">SwarmStudio</span>
       <button
         type="button"
         class="ide-taskbar__foot-btn"
@@ -487,12 +501,12 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .ide-taskbar {
-  width: 264px;
+  width: 270px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary, #1b1e24);
-  border-right: 1px solid var(--border-color, #26292f);
+  background: var(--ide-bg-side, #1a1c20);
+  border-right: 1px solid var(--ide-border, #2a2d33);
   min-height: 0;
 }
 
@@ -513,12 +527,12 @@ onMounted(async () => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--ide-text, #d6d8dd);
   font-size: 13px;
   cursor: pointer;
   text-align: left;
 
-  &:hover { background: var(--bg-tertiary, #242830); }
+  &:hover { background: var(--ide-bg-card, #23262b); }
 }
 
 .ide-taskbar__action-label {
@@ -531,8 +545,8 @@ onMounted(async () => {
 
 .ide-taskbar__kbd {
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
-  background: var(--bg-tertiary, #242830);
+  color: var(--ide-text-muted, #8b8f97);
+  background: var(--ide-bg-card, #23262b);
   border: 1px solid var(--border-color, #26292f);
   border-radius: 4px;
   padding: 1px 5px;
@@ -545,7 +559,7 @@ onMounted(async () => {
   margin: 2px 8px 4px;
   padding: 2px;
   border-radius: 7px;
-  background: var(--bg-primary, #14161a);
+  background: var(--ide-bg-chat, #202226);
 }
 
 .ide-taskbar__viewtab {
@@ -554,14 +568,14 @@ onMounted(async () => {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--ide-text, #d6d8dd); }
   &.is-active {
-    background: var(--bg-tertiary, #242830);
-    color: var(--text-primary, #e6e6e6);
+    background: var(--ide-bg-card, #23262b);
+    color: var(--ide-text, #d6d8dd);
   }
 }
 
@@ -583,10 +597,10 @@ onMounted(async () => {
   min-width: 0;
   height: 26px;
   padding: 0 8px;
-  border: 1px solid var(--accent-primary, #4cc9f0);
+  border: 1px solid var(--ide-accent, #5b9cf6);
   border-radius: 5px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--ide-bg-chat, #202226);
+  color: var(--ide-text, #d6d8dd);
   font-size: 12px;
   outline: none;
 }
@@ -596,11 +610,11 @@ onMounted(async () => {
   height: 26px;
   border: none;
   border-radius: 5px;
-  background: var(--bg-tertiary, #242830);
-  color: var(--accent-primary, #4cc9f0);
+  background: var(--ide-bg-card, #23262b);
+  color: var(--ide-accent, #5b9cf6);
   cursor: pointer;
 
-  &:hover { background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 20%, transparent); }
+  &:hover { background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 20%, transparent); }
 }
 
 .ide-taskbar__filter { padding: 4px 8px 4px; }
@@ -611,13 +625,13 @@ onMounted(async () => {
   padding: 0 10px;
   border: 1px solid var(--border-color, #26292f);
   border-radius: 6px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--ide-bg-chat, #202226);
+  color: var(--ide-text, #d6d8dd);
   font-size: 12px;
   outline: none;
 
-  &::placeholder { color: var(--text-muted, #9aa0aa); }
-  &:focus { border-color: var(--accent-primary, #4cc9f0); }
+  &::placeholder { color: var(--ide-text-muted, #8b8f97); }
+  &:focus { border-color: var(--ide-accent, #5b9cf6); }
 }
 
 .ide-taskbar__organize {
@@ -626,21 +640,24 @@ onMounted(async () => {
   padding: 0 8px 4px;
 }
 
-.ide-taskbar__organize-btn {
+.ide-taskbar__chip {
   flex: 1;
-  height: 22px;
-  border: 1px solid var(--border-color, #26292f);
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  height: 24px;
+  border: none;
+  border-radius: 12px;
+  background: var(--ide-bg-card, #23262b);
+  color: var(--ide-text-muted, #8b8f97);
   font-size: 11px;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
 
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--ide-text, #d6d8dd); }
   &.is-active {
-    border-color: var(--accent-primary, #4cc9f0);
-    color: var(--accent-primary, #4cc9f0);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 8%, transparent);
+    color: var(--ide-text, #d6d8dd);
+    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 22%, var(--ide-bg-card, #23262b));
   }
 }
 
@@ -654,11 +671,11 @@ onMounted(async () => {
   gap: 5px;
   padding: 3px 8px;
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   text-transform: none;
   letter-spacing: 0.02em;
 
-  &--toggle { cursor: pointer; user-select: none; &:hover { color: var(--text-primary, #e6e6e6); } }
+  &--toggle { cursor: pointer; user-select: none; &:hover { color: var(--ide-text, #d6d8dd); } }
 }
 
 .ide-taskbar__section-caret {
@@ -672,10 +689,10 @@ onMounted(async () => {
   min-width: 0;
   height: 20px;
   padding: 0 6px;
-  border: 1px solid var(--accent-primary, #4cc9f0);
+  border: 1px solid var(--ide-accent, #5b9cf6);
   border-radius: 4px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--ide-bg-chat, #202226);
+  color: var(--ide-text, #d6d8dd);
   font-size: 11px;
   outline: none;
 }
@@ -692,11 +709,11 @@ onMounted(async () => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   font-size: 10px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
   &--danger:hover { color: #e06c75; }
 }
 
@@ -710,10 +727,10 @@ onMounted(async () => {
   border-radius: 6px;
   margin: 1px 0;
 
-  &:hover { background: var(--bg-tertiary, #242830); .ide-taskbar__item-more { opacity: 1; } }
+  &:hover { background: var(--ide-bg-card, #23262b); .ide-taskbar__item-more { opacity: 1; } }
   &.is-active {
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
-    .ide-taskbar__item-title { color: var(--accent-primary, #4cc9f0); }
+    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 12%, transparent);
+    .ide-taskbar__item-title { color: var(--ide-accent, #5b9cf6); }
   }
 }
 
@@ -726,7 +743,7 @@ onMounted(async () => {
   padding: 6px 8px;
   border: none;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--ide-text, #d6d8dd);
   font-size: 13px;
   cursor: pointer;
   text-align: left;
@@ -734,7 +751,7 @@ onMounted(async () => {
 
 .ide-taskbar__item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--text-muted, #9aa0aa); }
+.ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--ide-text-muted, #8b8f97); }
 
 .ide-taskbar__item-more {
   flex-shrink: 0;
@@ -746,24 +763,49 @@ onMounted(async () => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.1s ease;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-primary, #14161a); }
+  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-chat, #202226); }
   svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
 }
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
 
-.ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted, #9aa0aa); }
+.ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--ide-text-muted, #8b8f97); }
 
 .ide-taskbar__foot {
-  padding: 8px;
-  border-top: 1px solid var(--border-color, #26292f);
+  padding: 8px 10px;
+  border-top: 1px solid var(--ide-border, #2a2d33);
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+
+.ide-taskbar__avatar {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--ide-accent, #5b9cf6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ide-taskbar__account {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ide-text, #d6d8dd);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ide-taskbar__foot-btn {
@@ -775,10 +817,10 @@ onMounted(async () => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
   svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; }
 }
 </style>
