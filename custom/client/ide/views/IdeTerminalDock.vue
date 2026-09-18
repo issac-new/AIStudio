@@ -15,6 +15,8 @@ interface TermTab {
 let nextId = 1
 const tabs = ref<TermTab[]>([{ id: nextId++ }])
 const activeId = ref(tabs.value[0].id)
+/** 分屏模式（v4Pane 对应物）：全部终端并排展示，页签栏隐藏 */
+const split = ref(false)
 
 function addTab(): void {
   const tab: TermTab = { id: nextId++ }
@@ -35,7 +37,7 @@ function closeTab(id: number): void {
 
 <template>
   <div class="ide-termdock" data-testid="ide-termdock">
-    <div class="ide-termdock__tabs" role="tablist">
+    <div v-if="!split" class="ide-termdock__tabs" role="tablist">
       <div
         v-for="(tab, index) in tabs"
         :key="tab.id"
@@ -63,13 +65,23 @@ function closeTab(id: number): void {
         :aria-label="t('ide.terminalNewTab')"
         @click="addTab"
       >＋</button>
+      <button
+        type="button"
+        class="ide-termdock__add"
+        :class="{ 'is-active': split }"
+        data-testid="ide-termdock-split"
+        :title="t('ide.terminalSplit')"
+        :aria-label="t('ide.terminalSplit')"
+        @click="split = !split"
+      >◫</button>
     </div>
     <div class="ide-termdock__panes">
       <IdeTerminalPanel
         v-for="tab in tabs"
         :key="tab.id"
-        v-show="activeId === tab.id"
+        v-show="split || activeId === tab.id"
         class="ide-termdock__pane"
+        :class="{ 'is-split': split }"
       />
     </div>
   </div>
@@ -150,5 +162,10 @@ function closeTab(id: number): void {
   flex: 1;
   min-width: 0;
   min-height: 0;
+
+  &.is-split {
+    border-right: 1px solid var(--border-color, #26292f);
+    &:last-child { border-right: none; }
+  }
 }
 </style>

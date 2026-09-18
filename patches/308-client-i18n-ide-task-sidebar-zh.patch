@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index c808f35..7ef8480 100644
+index c808f35..1fed901 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -462,6 +462,141 @@ export default {
+@@ -462,6 +462,142 @@ export default {
      railWorkspace: '工作区',
      railTerminal: '终端',
      railChat: '会话',
@@ -130,6 +130,7 @@ index c808f35..7ef8480 100644
 +    gitGraphLoadFailed: '提交图谱加载失败',
 +    terminalNewTab: '新终端',
 +    terminalCloseTab: '关闭终端',
++    terminalSplit: '分屏',
 +    whiteboard: {
 +      pen: '画笔',
 +      eraser: '橡皮',
@@ -144,7 +145,7 @@ index c808f35..7ef8480 100644
      loading: '加载中…',
      workspaceDefault: '默认工作区',
      workspaceOutsideSandbox: '该目录超出文件浏览沙箱（须在 ~/.hermes 内或为已知任务工作区）；终端与会话仍可使用该目录',
-@@ -480,6 +615,34 @@ export default {
+@@ -480,6 +616,34 @@ export default {
      chatTab_messages: '会话',
      chatTab_subagents: '子代理',
      chatSubagentsEmpty: '暂无子代理流。会话运行中触发子代理时，点击消息流中的子代理卡片即可在此查看。',
@@ -179,7 +180,7 @@ index c808f35..7ef8480 100644
      statusRunning: '运行中',
      statusIdle: '空闲',
    },
-@@ -1902,6 +2065,19 @@ export default {
+@@ -1902,6 +2066,19 @@ export default {
      messageQueue: '消息队列',
      removeQueuedMessage: '移除队列消息',
      insertQueuedMessage: '插入排队消息',

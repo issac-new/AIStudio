@@ -81,6 +81,16 @@ describe('IdeTerminalDock（M4c 终端多开）', () => {
     await w.findAll('.ide-termdock__close')[0].trigger('click')
     expect(w.findAll('.ide-termdock__close').length).toBe(0)
   })
+
+  it('分屏模式（v4Pane 对应物）：切换后页签栏隐藏、全部终端并排', async () => {
+    const w = mount(IdeTerminalDock)
+    await w.find('[data-testid="ide-termdock-add"]').trigger('click')
+    expect(w.find('.ide-termdock__tabs').exists()).toBe(true)
+    await w.find('[data-testid="ide-termdock-split"]').trigger('click')
+    expect(w.find('.ide-termdock__tabs').exists()).toBe(false)
+    expect(w.findAll('.stub-term').length).toBe(2)
+    expect(w.findAll('.ide-termdock__pane.is-split').length).toBe(2)
+  })
 })
 
 describe('IdeWhiteboardPane（M4e 画板）', () => {
