@@ -204,3 +204,41 @@ export function parseGateContent(raw: unknown): GateContent | null {
     evidence: { kind, summary }, reason, decidedBy, at,
   }
 }
+
+// ── 发送者主体校验（应用层角色约束，spec §5；Matrix PL 只管类型不管主体归属） ──
+
+/** @<user>-agent 为集群 bot 命名约定（ncwk-sim §2.1）；非该后缀视为人类账号。 */
+export function isHumanAccount(userId: string): boolean {
+  const colon = userId.indexOf(':')
+  const local = userId.startsWith('@') ? userId.slice(1, colon >= 0 ? colon : undefined) : userId
+  return !local.endsWith('-agent')
+}
+
+function principalKey(userId: string): string {
+  const colon = userId.indexOf(':')
+  const domain = colon >= 0 ? userId.slice(colon) : ''
+  let local = userId.startsWith('@') ? userId.slice(1, colon >= 0 ? colon : undefined) : userId
+  if (local.endsWith('-agent')) local = local.slice(0, -'-agent'.length)
+  return `${local}${domain}`
+}
+
+/** 同一人类与其集群 bot 视为同主体（人类名去 -agent 后缀 + 域名一致）。 */
+export function samePrincipal(a: string, b: string): boolean {
+  return principalKey(a) === principalKey(b)
+}
+
+export function validateGateSender(content: GateContent, sender: string): string[] {
+  const errors: string[] = []
+  if ((HUMAN_GATES as readonly string[]).includes(content.gate) && !isHumanAccount(sender)) {
+    errors.push(`gate ${content.gate} requires human sender`)
+  }
+  if (!samePrincipal(content.decidedBy, sender)) {
+    errors.push('decidedBy is not the sender principal')
+  }
+  return errors
+}
+
+export function validateStageSender(content: StageContent, sender: string): string[] {
+  const ok = samePrincipal(content.worker.account, sender) && samePrincipal(content.reportedBy, sender)
+  return ok ? [] : ['stage sender does not match worker/reportedBy principal']
+}
