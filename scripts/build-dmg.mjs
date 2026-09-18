@@ -19,6 +19,12 @@ const platform = process.argv.includes('--win') ? 'win'
   : process.argv.includes('--linux') ? 'linux'
   : 'mac';
 
+// 签名禁用（2026-09-19）：本机 Apple Development 证书（plusprimer@me.com）已被
+// Apple 吊销，签出的包在执行时被 AMFI 在线校验 SIGKILL（症状=open 报 Launch
+// failed / posix 163、直接跑二进制 exit 137）。用户分发惯例本就是 unsigned
+// 安装，故固定禁用自动发现签名；恢复签名需先换有效证书并移除本环境变量。
+process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
+
 const electronBuilderFlags = {
   mac: '--mac --publish never',
   win: '--win --publish never',
