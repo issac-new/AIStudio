@@ -2,7 +2,7 @@
 <!-- 任务详情"来源 run"关联区块（P3 Task 7，任务 → run 方向）：
      按 taskId 在 loop 事件日志反查 loop.persisted（显式 taskId 匹配，配对逻辑在
      adapters/traceability.persistedLinksForTask 纯函数），渲染 runId 深链
-     （→ /app/runs/:runId）。挂在 kanban 任务抽屉（TasksView 内嵌看板的详情抽屉），
+     （→ ia2.runDetail 运行详情）。挂在 kanban 任务抽屉（TasksView 内嵌看板的详情抽屉），
      加载失败降级为错误提示不炸抽屉；无关联（旧数据/手动任务）显示空态。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
@@ -74,7 +74,8 @@ watch(
 const visible = computed(() => props.show && !!props.taskId)
 
 function openRun(runId: string | null): void {
-  if (runId) void router.push(`/app/runs/${runId}`)
+  // 2026-09-18 统一导航：运行详情挂 ia2.runDetail（/app/ops/runs/:runId）
+  if (runId) void router.push({ name: 'ia2.runDetail', params: { runId } })
 }
 </script>
 

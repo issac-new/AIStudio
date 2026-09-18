@@ -84,9 +84,11 @@ onBeforeUnmount(() => { store.disconnect() })
 // ── 操作分发（合法操作集 → 现有落点；无落点的动作不出现按钮）──
 const actionError = ref<string | null>(null)
 
-/** P2 Task 6：运行详情页（执行图 + 回放），行点击 / detail 动作的统一入口 */
+/** P2 Task 6：运行详情页（执行图 + 回放），行点击 / detail 动作的统一入口。
+ *  2026-09-18 统一导航：详情挂 ia2.runDetail（/app/ops/runs/:runId）——
+ *  hermes.loopRunDetail 旧名退役（运行中心作为运行场景枢纽 runs tab 内嵌）。 */
 function goRunDetail(run: RunSummary): void {
-  router.push({ name: 'hermes.loopRunDetail', params: { runId: run.runId } })
+  router.push({ name: 'ia2.runDetail', params: { runId: run.runId } })
 }
 
 // ── 行内 peek 展开（task-7）：approve/peek 动作与行首箭头同一路径，不进详情页 ──
@@ -242,7 +244,8 @@ function replayTime(e: GraphEventLike): string {
           <p>{{ t('runcenter.empty.step3Desc') }}</p>
         </div>
       </div>
-      <button class="rc-view__cta" @click="router.push({ name: 'hermes.loop' })">
+      <!-- 2026-09-18 统一导航：hermes.loop 壳已退役，空态引导落工程场景编排 tab -->
+      <button class="rc-view__cta" @click="router.push({ name: 'ia2.eng' })">
         {{ t('runcenter.empty.cta') }}
       </button>
     </div>

@@ -127,7 +127,7 @@ describe('buildMind3DScene — 力导向内聚团块', () => {
     ], []))
     const wait = scene.nodes.find(n => n.id === 'column:wait')!
     expect(wait.pendingAlert).toBe(true)
-    expect(wait.to).toEqual({ name: 'ia2.inbox', query: { task: 'wait' } })
+    expect(wait.to).toEqual({ name: 'ia2.ops', query: { tab: 'inbox', task: 'wait' } })
   })
 
   it(`单思想核末梢上限 ${RUNS_PER_THOUGHT}；思想核上限 ${MAX_THOUGHTS} 折叠`, () => {

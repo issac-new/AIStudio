@@ -98,8 +98,8 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/app/orchestrate', component: stub },
-      { path: '/app/runs', name: 'ia2.runs', component: stub },
-      { path: '/app/runs/:runId', name: 'ia2.runDetail', component: stub },
+      { path: '/app/ops', name: 'ia2.ops', component: stub },
+      { path: '/app/ops/runs/:runId', name: 'ia2.runDetail', component: stub },
     ],
   })
 }
@@ -210,7 +210,7 @@ describe('OrchestrateView — 详情页试跑与容器框', () => {
     await wrapper.find('[data-spec-tryrun]').trigger('click')
     await flushPromises()
     expect(runRest.startSpecRun).toHaveBeenCalledWith('my-graph')
-    expect(router.currentRoute.value.path).toBe('/app/runs/run-9')
+    expect(router.currentRoute.value.path).toBe('/app/ops/runs/run-9')
   })
 
   it('试跑失败：错误直显（501/400 message），不跳转', async () => {

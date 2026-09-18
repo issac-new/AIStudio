@@ -1,0 +1,13 @@
+diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
+index 64627e71..3e736adb 100644
+--- a/packages/desktop/src/preload/index.ts
++++ b/packages/desktop/src/preload/index.ts
+@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
+   notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:notify-completion', payload),
+   openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:open-external-url', url),
+   openChatWindow: (sessionId: string, profile?: string): Promise<void> => ipcRenderer.invoke('hermes-desktop:open-chat-window', sessionId, profile),
++  // overlay[wm]: 驾驶舱操作页弹出独立窗口（routePath 含 standalone=1 query）
++  openPanelWindow: (routePath: string, size?: { width?: number; height?: number }): Promise<void> => ipcRenderer.invoke('hermes-desktop:open-panel-window', routePath, size),
+   ensureAuth: async (): Promise<boolean> => {
+     const token = await ipcRenderer.invoke('hermes-desktop:get-token')
+     if (token) {

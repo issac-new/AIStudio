@@ -129,7 +129,7 @@ describe('normalizeAlarms — 源④熔断/停滞告警', () => {
     expect(entries).toHaveLength(2)
     expect(entries[0]).toMatchObject({ id: 'alarm:l1', kind: 'alarm', severity: 'medium', title: '晨检循环', ts: NOW - DAY })
     expect(entries[1]).toMatchObject({ id: 'alarm:l2', severity: 'high', title: '部署循环' })
-    expect(entries[0].route).toEqual({ path: '/app/runs', query: { loop: 'l1' } })
+    expect(entries[0].route).toEqual({ name: 'ia2.ops', query: { tab: 'runs', loop: 'l1' } })
   })
 
   it('同刻 escalated 与 stuck 并存取 escalated；全坏 ts / 无告警事件 → 不产条目', () => {

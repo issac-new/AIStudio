@@ -89,10 +89,9 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/app', component: stub },
-      { path: '/app/runs', name: 'ia2.runs', component: stub },
-      { path: '/app/runs/:runId', name: 'ia2.runDetail', component: stub },
+      { path: '/app/ops', name: 'ia2.ops', component: stub },
+      { path: '/app/ops/runs/:runId', name: 'ia2.runDetail', component: stub },
       { path: '/app/tasks', name: 'ia2.tasks', component: stub },
-      { path: '/app/inbox', name: 'ia2.inbox', component: stub },
     ],
   })
 }
@@ -177,7 +176,7 @@ describe('TriageQueue', () => {
 describe('AlarmList', () => {
   it('渲染告警条目（loop 名 + 等待）并 emit open；空态文案', async () => {
     const w = mount(AlarmList, {
-      props: { entries: [entry({ id: 'alarm:l1', kind: 'alarm', title: '晨检循环', waitMs: 2 * HOUR, route: { path: '/app/runs', query: { loop: 'l1' } } })] },
+      props: { entries: [entry({ id: 'alarm:l1', kind: 'alarm', title: '晨检循环', waitMs: 2 * HOUR, route: { name: 'ia2.ops', query: { tab: 'runs', loop: 'l1' } } })] },
     })
     expect(w.text()).toContain('ia2.inbox.alarmHead')
     expect(w.text()).toContain('晨检循环')
@@ -193,7 +192,7 @@ describe('AlarmList', () => {
 // ── InboxView 装配 ──
 async function mountView() {
   const router = makeRouter()
-  router.push('/app/inbox')
+  router.push('/app/ops')
   await router.isReady()
   const wrapper = mount(InboxView, { global: { plugins: [router] } })
   await flushPromises()
@@ -251,13 +250,13 @@ describe('InboxView — 五源装配', () => {
     expect(titles.length).toBeGreaterThan(1)
   })
 
-  it('深链：审批行 → /app/runs/:runId；任务行 → /app/tasks；告警 → /app/runs?loop=', async () => {
+  it('深链：审批行 → /app/ops/runs/:runId；任务行 → /app/tasks；告警 → 枢纽 runs tab?loop=', async () => {
     const { wrapper, router } = await mountView()
     const rows = wrapper.findAll('.tq-row')
     const approvalRow = rows.find(r => r.text().includes('r1'))!
     await approvalRow.find('.tq-row__action').trigger('click') // 第 1 钮 = 查看
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/app/runs/r1')
+    expect(router.currentRoute.value.path).toBe('/app/ops/runs/r1')
 
     const taskRow = wrapper.findAll('.tq-row').find(r => r.text().includes('修登录页'))!
     await taskRow.find('.tq-row__action').trigger('click')
@@ -266,7 +265,8 @@ describe('InboxView — 五源装配', () => {
 
     await wrapper.find('[data-alarm-list] .alarm-list__item').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/app/runs')
+    expect(router.currentRoute.value.name).toBe('ia2.ops')
+    expect(router.currentRoute.value.query.tab).toBe('runs')
     expect(router.currentRoute.value.query.loop).toBe('l1')
   })
 

@@ -103,14 +103,15 @@ async function onDeleteCard(card: SpecCard): Promise<void> {
   }
 }
 
-/** 详情页试跑（自建 spec）：POST runs → 跳 /app/runs/:runId；501/400 直显 */
+/** 详情页试跑（自建 spec）：POST runs → 跳 ia2.runDetail（统一导航后运行详情
+ *  挂 /app/ops/runs/:runId，路径 push 退役改路由名）；501/400 直显 */
 const tryRunError = ref<string | null>(null)
 async function onTryRun(card: SpecCard): Promise<void> {
   if (card.origin !== 'editor') return
   tryRunError.value = null
   try {
     const { runId } = await runRest.startSpecRun(card.id)
-    await router.push(`/app/runs/${runId}`)
+    await router.push({ name: 'ia2.runDetail', params: { runId } })
   } catch (e) {
     tryRunError.value = e instanceof Error ? e.message : String(e)
   }
@@ -153,11 +154,13 @@ async function submitCreate(): Promise<void> {
     // payload 带 template = 来源卡片 id（实例化溯源）
     const payload = buildCreatePayload(form, Date.now(), createCard.value.id)
     await loopRest.createLoop(payload)
-    // R4：创建即达——运行列表聚合新 loop 的运行状态；
+    // R4：创建即达——运行场景 runs tab 聚合新 loop 的运行状态；
     // 台账 T6（创建成功不锚定新 loop）：?loop= 预填搜索，新 loop 的运行一眼可见。
     // 2026-09-12 审查：搜索契约是 loop id（RunCenterView 兼容守卫同口径），
     // 展示名会经 slugify 与 id 发散（中文/空格名必然落空过滤成空列表）。
-    await router.push({ path: '/app/runs', query: { loop: payload.id } })
+    // 2026-09-18 统一导航：/app/runs 区域退役 → 运行场景枢纽 ?tab=runs 深链
+    // （RunCenterView 挂载时读 query.loop 预填搜索，语义保真）。
+    await router.push({ name: 'ia2.ops', query: { tab: 'runs', loop: payload.id } })
   } catch (e) {
     submitError.value = e instanceof Error ? e.message : String(e)
   } finally {

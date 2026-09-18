@@ -315,7 +315,7 @@ describe('RunDetailView (jsdom)', () => {
     await new Promise(r => setTimeout(r, 0))
 
     await w.find('.rd-view__back').trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopRuns' })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.ops', query: { tab: 'runs' } })
 
     await w.findAll('.stub-slot .rg-node')[0].trigger('click')
     expect(w.findAll('.stub-slot .rg-node')[0].classes()).toContain('is-selected')
