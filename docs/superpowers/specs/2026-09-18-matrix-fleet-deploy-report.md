@@ -61,6 +61,17 @@ bash fleet-scenario.sh && bash fleet-evidence.sh                # 全流程 + �
 
 ## 6. 遗留状态
 
-- 三实例现以隐藏模式**在跑**（托盘可见）；停止用 `bash fleet-down.sh`。
-- 旧 sim（ncwk-sim，8701 alice 实例）未动，与 fleet 并存。
+- 三实例已按用户指令全停（fleet 三实例 + 旧 sim 残留 + synapse 容器），ncwk-fleet 沙箱保留。
 - 模型代理并发限流是环境瓶颈：多实例长跑建议错峰派发任务（本轮实测 3 agent 同时开工可触发限速）。
+
+## 7. v2 共享化改造（同日，用户指令：应用共享省空间 + 版本与全机安装一致）
+
+| 项 | v1（首轮实测版） | v2（现行） |
+|---|---|---|
+| 应用 | 每实例一份 `.app` 副本（3×1.3G） | 直接以本机 `/Applications/SwarmStudio.app` 多开，零副本；升级后重启实例即跟随 |
+| 运行时 | 每实例一份（3×1.4G） | 全 fleet 共享单份 `shared/desktop-runtime`，实例经 `HERMES_DESKTOP_RUNTIME_DIR` 重定向（paths.ts:329-333）；pytest 只装一次 |
+| 每用户保留 | HOME 沙箱 + workspace | 不变（userData/`.hermes`/`.hermes-web-ui`/workspace 仍逐用户隔离） |
+| 占用 | 9.1G | 约 2.4G（省约 6.7G） |
+
+- 实例身份判别随之调整：进程断言从「`.app` 副本路径」改为「命令行含本实例 `--user-data-dir` 沙箱路径」；server 断言改为「端口监听进程命令行来自本机安装」。
+- 迁移由 fleet-setup 幂等完成：建共享运行时 + 清 v1 每用户副本；已实测 alice 冒烟复验（health/网关/matrix/server 来自本机安装）。
