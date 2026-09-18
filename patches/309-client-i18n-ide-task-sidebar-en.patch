@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index facc78f..931da9d 100644
+index facc78f..45c63b5 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -464,6 +464,39 @@ export default {
+@@ -464,6 +464,85 @@ export default {
      railWorkspace: 'Workspace',
      railTerminal: 'Terminal',
      railChat: 'Chat',
@@ -23,6 +23,30 @@ index facc78f..931da9d 100644
 +      hoursAgo: '{count} hr ago',
 +      daysAgo: '{count} days ago',
 +      more: 'More actions',
++      view_tasks: 'Tasks',
++      view_files: 'Files',
++      automations: 'Automations',
++      organize: 'View',
++      organize_grouped: 'Groups',
++      organize_project: 'Projects',
++      organize_timeline: 'Timeline',
++      ungrouped: 'Ungrouped',
++      moveToGroup: 'Move to group',
++      newGroup: 'New group…',
++      newGroupName: 'Group name',
++      groupCreated: 'Group created',
++      groupCreateFailed: 'Failed to create group',
++      groupMoveFailed: 'Failed to move to group',
++      shareExport: 'Share / export',
++      shareFailed: 'Export failed',
++      assistantHint: 'Assistant chat: compose your follow-up and bring it to the main session (standalone side session ships later)',
++      assistantKind_file: 'Ask about file',
++      assistantKind_code: 'Ask about code',
++      assistantKind_idea: 'Discuss idea',
++      assistantPlaceholder: 'What would you like to ask?',
++      assistantCopy: 'Copy follow-up',
++      assistantCopied: 'Follow-up copied; paste into the chat input to send',
++      assistantGoChat: 'Back to main chat',
 +    },
 +    modelInvalid: {
 +      title: 'Current model unavailable',
@@ -39,10 +63,32 @@ index facc78f..931da9d 100644
 +      copy: 'Copy diagnostics',
 +      copied: 'Copied',
 +    },
++    sidePane: {
++      togglePanel: 'Toggle panel',
++      collapse: 'Collapse side panel',
++      tab_review: 'Review',
++      tab_browser: 'Browser',
++      tab_wiki: 'Wiki reference',
++      tab_assistant: 'Assistant chat',
++    },
++    wiki: {
++      panelTitle: 'Repo Wiki',
++      referencePage: 'Reference page',
++      referenceWiki: 'Reference whole wiki',
++      generate: 'Generate wiki',
++      promptCopied: 'Generation prompt copied; paste it into the chat to run',
++      referenced: 'Reference copied',
++      copyFailed: 'Copy failed',
++      loading: 'Loading…',
++      loadFailed: 'Wiki load failed: {message}',
++      empty: 'No wiki pages yet. Click "Generate wiki" to copy the prompt, then paste it into the chat to generate docs/wiki/.',
++      needWorkspace: 'Set a workspace first (reads docs/wiki/ in the workspace)',
++      noSelection: 'Select a page to read',
++    },
      loading: 'Loading…',
      workspaceDefault: 'Default workspace',
      workspaceOutsideSandbox: 'This directory is outside the file browsing sandbox (must be within ~/.hermes or a known task workspace); terminal and chat sessions can still use it',
-@@ -482,6 +515,34 @@ export default {
+@@ -482,6 +561,34 @@ export default {
      chatTab_messages: 'Chat',
      chatTab_subagents: 'Subagents',
      chatSubagentsEmpty: 'No subagent stream yet. When a session spawns subagents, click the subagent card in the message stream to inspect it here.',
@@ -77,7 +123,7 @@ index facc78f..931da9d 100644
      statusRunning: 'Running',
      statusIdle: 'Idle',
    },
-@@ -1904,6 +1965,16 @@ export default {
+@@ -1904,6 +2011,16 @@ export default {
      messageQueue: 'Message queue',
      removeQueuedMessage: 'Remove queued message',
      insertQueuedMessage: 'Insert queued message',
