@@ -5,7 +5,7 @@
      零新增武装：runs/metrics/loops/workspace 流由壳统一武装（Task 3）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
@@ -24,7 +24,6 @@ import {
 import { buildTodayPlan, localDateStr } from '../../adapters/overview'
 import type { RunSummary } from '@/custom/loop/runcenter/types'
 
-const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const runsStore = useRunCenterStore()
@@ -96,11 +95,9 @@ const activeRuns = computed(() =>
     .filter(r => r.status === 'running' || r.status === 'awaiting-input')
     .slice(0, 12))
 
-/** 运行详情路由家族感知（/hermes/loop 挂载下跳 hermes.loopRunDetail） */
-const runDetailName = computed(() =>
-  String(route.name ?? '').startsWith('hermes.loop') ? 'hermes.loopRunDetail' : 'ia2.runDetail')
+// 运行详情路由（2026-09-18 统一导航：/hermes/loop 壳家族退役，恒走 ia2.runDetail）
 function onRunSelect(run: RunSummary): void {
-  void router.push({ name: runDetailName.value, params: { runId: run.runId } })
+  void router.push({ name: 'ia2.runDetail', params: { runId: run.runId } })
 }
 // 行内动作（approve/peek/replay 等）统一进详情页处理——详情页动作链完整，
 // 值班台不复制（MVP 取舍，已声明）
