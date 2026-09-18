@@ -172,3 +172,65 @@ describe('IaShell — 统一壳（页头 + 六场景条）', () => {
     expect(cockpitStubs.state.disconnectOnUnmount).toHaveBeenCalled()
   })
 })
+
+describe('IaShell — 窗口管理三态（/goal 追加）', () => {
+  it('独立窗口态（standalone=1）：精简页头在位，壳页头/场景条/dock 全隐', async () => {
+    const { wrapper } = await mountShell('/app?standalone=1')
+    expect(wrapper.find('[data-testid="ia-popout-bar"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(false)
+    expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-wm-dock"]').exists()).toBe(false)
+    expect(wrapper.find('.ia-shell__main').exists()).toBe(true)
+  })
+
+  it('独立窗口内跳转保持 standalone 标记（query 不随路由传播，壳自动补回）', async () => {
+    const { router } = await mountShell('/app?standalone=1')
+    await router.push('/app/ops')
+    await flushPromises()
+    expect(router.currentRoute.value.query.standalone).toBe('1')
+  })
+
+  it('最大化态（max=1）：壳页头/场景条隐藏，浮动还原胶囊在位；Esc 退出', async () => {
+    const { wrapper } = await mountShell('/app?max=1')
+    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(false)
+    expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(false)
+    const pill = wrapper.find('[data-testid="ia-wm-restore-pill"]')
+    expect(pill.exists()).toBe(true)
+    await pill.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(true)
+    // 再最大化后用 Esc 还原
+    const wrapper2 = (await mountShell('/app?max=1')).wrapper
+    expect(wrapper2.find('[data-testid="ia-scenes"]').exists()).toBe(false)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+    expect(wrapper2.find('[data-testid="ia-scenes"]').exists()).toBe(true)
+  })
+
+  it('最小化任务栏：入列渲染 chip，点击恢复导航并出列', async () => {
+    const { wrapper, router } = await mountShell('/app')
+    const { useWmStore } = await import('../wm/store')
+    useWmStore().minimize('/app/ops?tab=runs')
+    await flushPromises()
+    const chip = wrapper.find('[data-testid="ia-wm-dock-chip"]')
+    expect(chip.exists()).toBe(true)
+    await chip.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/app/ops?tab=runs')
+    expect(useWmStore().minimized).toHaveLength(0)
+  })
+
+  it('合并回流：独立窗口 storage 信号驱动主窗导航', async () => {
+    const { router } = await mountShell('/app')
+    localStorage.setItem(
+      'swarmstudio:wm-merge-back',
+      JSON.stringify({ path: '/app/collab', at: Date.now() }),
+    )
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'swarmstudio:wm-merge-back',
+      newValue: JSON.stringify({ path: '/app/collab', at: Date.now() }),
+    }))
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/app/collab')
+  })
+})

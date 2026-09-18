@@ -15,6 +15,7 @@ import CockpitTeamSwitcher from '@/custom/cockpit/components/CockpitTeamSwitcher
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
 import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
+import IaWindowControls from './IaWindowControls.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -182,6 +183,9 @@ onUnmounted(() => {
       <span class="cockpit-top__uname">{{ userName ?? t('cockpit.defaultUser') }}</span>
       <span class="cockpit-top__caret">▾</span>
     </button>
+    <!-- 窗口管理窗控（最大化/最小化/独立窗口）：作用于当前操作页（/goal 追加） -->
+    <div class="cockpit-top__div" />
+    <IaWindowControls />
     <!-- ⇄ IDE：固定最右侧（双壳互跳） -->
     <button type="button" class="cockpit-top__btn" data-testid="ia-header-ide" :title="t('ia2.shell.gotoIde')" @click="goIde">
       ⇄ {{ t('ia2.shell.gotoIde') }}
