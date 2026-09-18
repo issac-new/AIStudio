@@ -73,8 +73,11 @@ onMounted(() => {
   void bootShared()
   void cockpit.bootstrap()
   window.addEventListener('keydown', onKeydown)
-  // 独立窗口「合并回驾驶舱」：storage 事件跨窗口回流，主窗导航到该页
-  mergeBackOff = listenMergeBack(path => { void router.push(path) })
+  // 独立窗口「合并回驾驶舱」：storage 事件跨窗口广播，仅主壳导航。
+  // standalone 面板窗不得响应——否则别的面板合并回时本面板被导航劫持串台
+  mergeBackOff = listenMergeBack(path => {
+    if (!standaloneActive) void router.push(path)
+  })
 })
 onUnmounted(() => {
   shellDisposed = true
