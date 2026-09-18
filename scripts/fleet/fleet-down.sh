@@ -8,9 +8,9 @@ source "$SCRIPT_DIR/fleet-lib.sh"
 if (( $# == 0 )); then STOP=("${USERS[@]}"); else STOP=("$@"); fi
 
 for u in "${STOP[@]}"; do
-  # 1. 网关：用该实例自带 venv 的 hermes + 其 profile HERMES_HOME 优雅停止
+  # 1. 网关：用共享 venv 的 hermes + 该实例 profile HERMES_HOME 优雅停止
   PROF=$(profile_dir "$u")
-  IHERMES=$(instance_hermes "$u")
+  IHERMES=$(shared_hermes)
   if [[ -d "$PROF" && -x "$IHERMES" ]]; then
     HERMES_HOME="$PROF" "$IHERMES" gateway stop >/dev/null 2>&1 \
       && log "$u gateway 已停止" \

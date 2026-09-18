@@ -1,5 +1,7 @@
 #!/bin/bash
-# fleet-evidence.sh — 取证 + 验收门断言（独立应用形态专项 + 交付真值）
+# fleet-evidence.sh — 取证 + 验收门断言（独立实例形态专项 + 交付真值）
+# v2 共享化断言口径：应用=本机安装（/Applications/SwarmStudio.app），
+#   实例身份=--user-data-dir 沙箱；运行时=全 fleet 共享单份。
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/fleet-lib.sh"
@@ -19,23 +21,24 @@ check() { # <name> <ok:0/1> [detail]
 
 mkdir -p "$EVID_DIR"
 
-echo "== 1. 独立应用实例（fleet 形态专项）=="
+echo "== 1. 独立实例（共享应用 + 每用户沙箱）=="
 for u in "${USERS[@]}"; do
   code=$(curl -s -o "$EVID_DIR/$u-health.json" -w '%{http_code}' "http://127.0.0.1:$(studio_port "$u")/health/ready" || echo 000)
   check "$u 实例 /health/ready :$(studio_port "$u")" $([[ "$code" == "200" ]]; echo $?) "http=$code"
 
-  # 进程独立性：本实例 .app 副本路径的 Electron 进程在跑
-  NPROC=$(pgrep -f "$(app_copy "$u")/Contents/MacOS/SwarmStudio" | wc -l | tr -d ' ')
-  check "$u 独立应用进程存活（pgrep=${NPROC}）" $(( NPROC >= 1 ? 0 : 1 )) "pgrep=$NPROC"
+  # 实例进程独立性：命令行含本实例 --user-data-dir 沙箱路径（唯一标识，与真实安装互斥）
+  pgrep -f "user-data-dir=$(home_dir "$u")/Library/Application Support/SwarmStudio" >/dev/null
+  check "$u 实例进程存活（独立 userData）" $?
 
-  # server 子进程跑在自身副本的 Resources 下（自持服务，不寄生 dev 树/其他副本）
-  pgrep -f "$(app_copy "$u")/Contents/Resources/webui/dist/server/index.js" >/dev/null
-  check "$u server 由自身 .app 副本承载" $?
+  # server 由本机安装 /Applications/SwarmStudio.app 承载（版本与所有安装一致）
+  SPID=$(lsof -t -iTCP:"$(studio_port "$u")" -sTCP:LISTEN 2>/dev/null | head -1)
+  SOK=1
+  if [[ -n "$SPID" ]] && ps -o command= -p "$SPID" 2>/dev/null | grep -q "$SOURCE_APP"; then SOK=0; fi
+  check "$u server 由本机安装承载（pid=${SPID:-none}）" "$SOK"
 
   # userData 落在沙箱 HOME 内（HOME 隔离生效）
-  AS_DIR="$(home_dir "$u")/Library/Application Support"
-  NENTRY=$(ls -1 "$AS_DIR" 2>/dev/null | wc -l | tr -d ' ')
-  check "$u electron userData 落沙箱（${NENTRY} 项）" $(( NENTRY >= 1 ? 0 : 1 ))
+  AS_DIR="$(home_dir "$u")/Library/Application Support/SwarmStudio"
+  check "$u electron userData 落沙箱" $([[ -d "$AS_DIR" ]]; echo $?)
 
   # webui 状态库独立存在
   DB="$(webui_home "$u")/hermes-web-ui.db"
@@ -44,6 +47,9 @@ done
 # 三份 DB 互为不同文件（inode 级）
 INODES=$(for u in "${USERS[@]}"; do stat -f '%i' "$(webui_home "$u")/hermes-web-ui.db" 2>/dev/null; done | sort -u | wc -l | tr -d ' ')
 check "三实例 webui DB inode 全不同" $([[ "$INODES" == "3" ]]; echo $?) "distinct=$INODES"
+# 共享层：应用为本机安装、运行时全 fleet 一份
+check "应用=本机安装 $(app_bin)" $([[ -x $(app_bin) ]]; echo $?)
+check "共享运行时就绪（单份）" $([[ -x "$(shared_hermes)" && -x "$(shared_python)" ]]; echo $?) "$(shared_runtime)"
 
 echo "== 2. 网关集群 =="
 for u in "${USERS[@]}"; do
@@ -78,14 +84,14 @@ git -C "$CENTRAL_REPO" log --graph --oneline --all --decorate > "$EVID_DIR/git-l
 git -C "$CENTRAL_REPO" tag > "$EVID_DIR/git-tags.txt"
 grep -q "v0.1" "$EVID_DIR/git-tags.txt"; check "central 有 tag v0.1" $?
 for b in feat/slugify feat/truncate; do
-  git -C "$CENTRAL_REPO" rev-parse -verify -q "refs/heads/$b" >/dev/null; check "central 分支 $b" $?
+  git -C "$CENTRAL_REPO" rev-parse --verify -q "refs/heads/$b" >/dev/null; check "central 分支 $b" $?
 done
-# alice 工作区用其实例自带 venv 复跑（独立于 agent 自报）
+# alice 工作区用共享 venv 复跑（独立于 agent 自报）
 PYT=1
-if (cd "$(workspace alice)" && git pull -q central main 2>/dev/null; "$(instance_python alice)" -m pytest -q > "$EVID_DIR/pytest.txt" 2>&1); then
+if (cd "$(workspace alice)" && git pull -q central main 2>/dev/null; "$(shared_python)" -m pytest -q > "$EVID_DIR/pytest.txt" 2>&1); then
   PYT=0
 fi
-check "alice workspace pytest 复跑通过（实例 venv）" "$PYT" "$(tail -1 "$EVID_DIR/pytest.txt" 2>/dev/null | head -c 80)"
+check "alice workspace pytest 复跑通过（共享 venv）" "$PYT" "$(tail -1 "$EVID_DIR/pytest.txt" 2>/dev/null | head -c 80)"
 git -C "$(workspace alice)" show main:RELEASE.md > "$EVID_DIR/RELEASE.md" 2>/dev/null
 grep -q "stringops" "$EVID_DIR/RELEASE.md" 2>/dev/null; check "main 含 RELEASE.md" $?
 
