@@ -211,7 +211,7 @@ function onColCtrl(col: ColumnKey) {
 <style scoped lang="scss">
 .cockpit { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
 .cockpit-readonly-badge { position: absolute; top: 8px; right: 14px; font-size: 10px; color: var(--text-muted); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 9px; z-index: 5; }
-/* 场景 slim 工具条（风格对齐 ManageScene .mscene__tab） */
+/* 场景 slim 工具条（风格对齐场景二级 tab——旧管理场景同款，已退役） */
 .collab-tools {
   flex-shrink: 0; display: flex; gap: 6px; padding: 6px 12px;
   border-bottom: 1px solid var(--border-color); background: var(--bg-card);

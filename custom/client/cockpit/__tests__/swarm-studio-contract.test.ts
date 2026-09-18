@@ -81,9 +81,9 @@ describe('contract: legacy landing redirects (§9 旧路由直删)', () => {
   const { iaCompatRedirect } = guardModule
 
   it('loop 旧落点按名称承接（cockpit 家族已直删，守卫不再改写任何其他落点）', () => {
-    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.runs' })
+    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.ops', query: { tab: 'runs' } })
     expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, false))
-      .toEqual({ name: 'ia2.runs', query: { loop: '42' } })
+      .toEqual({ name: 'ia2.ops', query: { tab: 'runs', loop: '42' } })
     // 已删家族与未知落点一律不改写（catch-all 兜底，spec 决策 #3：不保留 redirect）
     expect(iaCompatRedirect({ name: 'ia2.collab' }, false)).toBeNull()
     expect(iaCompatRedirect({ path: '/hermes/anything-retired' }, false)).toBeNull()

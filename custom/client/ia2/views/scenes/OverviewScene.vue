@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/ia2/views/scenes/OverviewScene.vue -->
-<!-- 总览场景（2026-09-16 多视图重构：自 LoopCockpitView 原样提取，行为零变化——
+<!-- 总览场景（2026-09-16 多视图重构：自旧驾驶舱壳（已退役）原样提取，行为零变化——
      页头/溢出菜单/共享武装迁壳，本场景只管思维大脑投影订阅与驾驶舱读数）。
      循环驾驶舱 —— 2026-09-15 重设计（用户裁决：这是一个动态增长的活动思维大脑，
      不是人工编排的机械控制台）。
@@ -169,7 +169,8 @@ function onViz3DNode(node: Mind3DNode): void {
   detailTaskId.value = taskId
   detailOpen.value = taskId != null
 }
-const goInbox = () => void router.push({ name: 'ia2.inbox' })
+// 2026-09-18 统一导航 Task 4：介入中心收敛为运行场景枢纽 inbox tab
+const goInbox = () => void router.push({ name: 'ia2.ops', query: { tab: 'inbox' } })
 const goTasks = (status: string) => void router.push({ path: '/app/tasks', query: { status } })
 /** 思想核（任务）点击 → 就地筛选仅显示关联项（不跳 kanban——与 3D 节点点击同语义） */
 function goThought(taskId: string): void {
@@ -473,7 +474,7 @@ function planTimeLabel(at: number | null): string {
 }
 
 /* ── 空态引导 CTA 按钮（页头 .lcp-btn 样式随页头迁壳，scoped 样式跨组件
-     不生效——从 LoopCockpitView.vue 逐字复制，Task 10 视觉裁决） ── */
+     不生效——自旧驾驶舱壳逐字复制，Task 10 视觉裁决） ── */
 .lcp-btn {
   padding: 5px 12px; border-radius: var(--radius-standard); cursor: pointer;
   border: 1px solid var(--border-color);

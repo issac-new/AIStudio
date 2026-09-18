@@ -194,7 +194,7 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.find('.rc-view__onboarding').exists()).toBe(true)
     expect(w.findAll('.rc-view__step')).toHaveLength(3)
     await w.find('.rc-view__cta').trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loop' })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.eng' })
   })
 
   it('?loop= 深链预填搜索框：落点即该 loop 的运行列表（P3 台账，Task 9 补）', async () => {
@@ -341,7 +341,7 @@ describe('RunCenterView (jsdom)', () => {
 
     // 行点击 → 运行详情（task-6）
     await w.find('.rc-table__row').trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopRunDetail', params: { runId: 'run-9' } })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.runDetail', params: { runId: 'run-9' } })
 
     // running 行操作集 [peek, detail]：peek → 行内展开（task-7）；detail → 运行详情
     const buttons = w.findAll('.rc-table__row')[0].findAll('.rc-table__action')
@@ -349,7 +349,7 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.find('.rc-table__peek').exists()).toBe(true)
     expect(pushMock).toHaveBeenCalledTimes(1) // peek 不路由
     await buttons[1].trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.loopRunDetail', params: { runId: 'run-9' } })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.runDetail', params: { runId: 'run-9' } })
   })
 
   it('分页：超过页大小截断 + 翻页', async () => {

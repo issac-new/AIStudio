@@ -77,7 +77,7 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/app/orchestrate', component: stub },
-      { path: '/app/runs/:runId', name: 'ia2.runDetail', component: stub },
+      { path: '/app/ops/runs/:runId', name: 'ia2.runDetail', component: stub },
     ],
   })
 }
@@ -236,7 +236,7 @@ describe('SpecEditorView — 保存 / 试跑闭环', () => {
     await wrapper.find('[data-editor-tryrun]').trigger('click')
     await flushPromises()
     expect(rest.startSpecRun).toHaveBeenCalledWith('my-graph')
-    expect(router.currentRoute.value.path).toBe('/app/runs/run-42')
+    expect(router.currentRoute.value.path).toBe('/app/ops/runs/run-42')
   })
 
   it('试跑失败（501/400）：错误直显不跳转', async () => {

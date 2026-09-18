@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/ops-scene.test.ts
-// 运维场景守门：告警 + 工单分诊（inbox-center 同源 kv）+ 值班台 + 快捷动作。
+// 运行场景枢纽守门（2026-09-18 统一导航 Task 4）：三 tab（runs/inbox/duty）+
+// duty 默认选中 + 切 tab 生效 + ?tab= 深链预选 + 值守三栏原断言（告警/分诊/
+// 值班台/快捷动作）。重组件（RunCenterView/InboxView/wizard/modal）一律桩化。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -76,21 +78,28 @@ vi.mock('@/custom/loop/components/LoopCreateWizard.vue', () => ({
 vi.mock('@/custom/cockpit/components/CockpitScheduleModal.vue', () => ({
   default: { name: 'ScheduleStub', template: '<div class="schedule-stub" />' },
 }))
+vi.mock('@/custom/loop/runcenter/views/RunCenterView.vue', () => ({
+  default: { name: 'RunCenterStub', template: '<div data-testid="runcenter-stub" />' },
+}))
+vi.mock('../views/InboxView.vue', () => ({
+  default: { name: 'InboxStub', template: '<div data-testid="inbox-stub" />' },
+}))
 
 import OpsScene from '../views/scenes/OpsScene.vue'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
 
-async function mountScene() {
+async function mountScene(path = '/app/ops') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/app/runs/:runId', name: 'ia2.runDetail', component: { template: '<div />' } },
-      { path: '/hermes/loop/runs/:runId', name: 'hermes.loopRunDetail', component: { template: '<div />' } },
+      { path: '/app/ops', name: 'ia2.ops', component: { template: '<div />' } },
+      { path: '/app/ops/runs/:runId', name: 'ia2.runDetail', component: { template: '<div />' } },
       { path: '/app/collab', name: 'ia2.collab', component: { template: '<div />' } },
-      { path: '/app/runs', name: 'ia2.runs', component: { template: '<div />' } },
     ],
   })
+  router.push(path)
+  await router.isReady()
   const wrapper = mount(OpsScene, { global: { plugins: [router] }, attachTo: document.body })
   // 场景依赖壳武装的数据：测试里手动补一轮（壳测试已守门武装序列）
   await useRunCenterStore().fetchRuns()
@@ -99,7 +108,48 @@ async function mountScene() {
   return { wrapper, router }
 }
 
-describe('OpsScene — 装配', () => {
+describe('OpsScene — 三 tab 枢纽', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    workspaceStubs.state.scheduleOpen = false
+    localStorage.clear()
+  })
+
+  it('三枚 tab 渲染（运行/介入/值班台），label 用现存 i18n key', async () => {
+    const { wrapper } = await mountScene()
+    expect(wrapper.find('[data-testid="ops-tab-runs"]').text()).toBe('ia2.nav.runs')
+    expect(wrapper.find('[data-testid="ops-tab-inbox"]').text()).toBe('ia2.nav.inbox')
+    expect(wrapper.find('[data-testid="ops-tab-duty"]').text()).toBe('loopScenes.ops.duty')
+  })
+
+  it('默认选中 duty：三栏本体渲染，runs/inbox 面板不挂', async () => {
+    const { wrapper } = await mountScene()
+    expect(wrapper.find('[data-testid="ops-tab-duty"]').classes()).toContain('ia-tabs__btn--on')
+    expect(wrapper.find('[data-testid="runcenter-stub"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="inbox-stub"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ops-runs"]').exists()).toBe(true)
+  })
+
+  it('切 runs tab 挂 RunCenterView；切 inbox tab 挂 InboxView', async () => {
+    const { wrapper } = await mountScene()
+    await wrapper.find('[data-testid="ops-tab-runs"]').trigger('click')
+    expect(wrapper.find('[data-testid="runcenter-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ops-runs"]').exists()).toBe(false) // duty 本体让位
+    await wrapper.find('[data-testid="ops-tab-inbox"]').trigger('click')
+    expect(wrapper.find('[data-testid="inbox-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="runcenter-stub"]').exists()).toBe(false)
+  })
+
+  it('?tab= 深链预选：/app/ops?tab=runs 直进运行面板；非法值回退 duty', async () => {
+    const { wrapper } = await mountScene('/app/ops?tab=runs')
+    expect(wrapper.find('[data-testid="runcenter-stub"]').exists()).toBe(true)
+    const { wrapper: w2 } = await mountScene('/app/ops?tab=bogus')
+    expect(w2.find('[data-testid="ops-runs"]').exists()).toBe(true) // duty 默认
+  })
+})
+
+describe('OpsScene — duty 三栏装配', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
@@ -137,7 +187,7 @@ describe('OpsScene — 装配', () => {
     expect(push).toHaveBeenCalledWith({ name: 'ia2.collab' })
   })
 
-  it('runs 表选择跳运行详情（家族感知：默认 ia2.runDetail）', async () => {
+  it('runs 表选择跳运行详情（恒 ia2.runDetail）', async () => {
     const { wrapper, router } = await mountScene()
     const push = vi.spyOn(router, 'push')
     const table = wrapper.findComponent({ name: 'RunListTable' })

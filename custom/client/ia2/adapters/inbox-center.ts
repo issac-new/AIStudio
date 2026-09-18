@@ -185,7 +185,9 @@ export function normalizeAlarms(
       title: loopNames?.[slice.loopId] || slice.loopId,
       ts: latestTs,
       waitMs: Math.max(0, now - latestTs),
-      route: { path: '/app/runs', query: { loop: slice.loopId } },
+      // 2026-09-18 统一导航：运行列表收敛为运行场景枢纽 runs tab（?loop= 深链
+      // 由 RunCenterView 挂载时预填搜索，语义保真）
+      route: { name: 'ia2.ops', query: { tab: 'runs', loop: slice.loopId } },
       loopId: slice.loopId,
     })
   }

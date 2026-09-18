@@ -281,7 +281,8 @@ export function buildMind3DScene(projection: MindProjectionDto): MindScene {
       cluster: sim.cluster,
       budding,
       to: awaiting
-        ? { name: 'ia2.inbox', query: { task: t.id } }
+        // 2026-09-18 统一导航 Task 4：介入中心收敛为运行场景枢纽 inbox tab（task 上下文随行）
+        ? { name: 'ia2.ops', query: { tab: 'inbox', task: t.id } }
         : { name: 'ia2.tasks', query: { task: t.id } },
       highlight: awaiting,
       pendingAlert: awaiting,

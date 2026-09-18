@@ -18,6 +18,9 @@ export interface IaRedirectLocation {
 /**
  * 纯函数：该导航是否应改落新 IA。
  * 旧 loop 落点（hermes.loopRuns/loopDetail）RETRO=true 时放行，否则进 /app 对应区。
+ * 2026-09-18 统一导航 Task 4：运行区域收敛为运行场景枢纽（ia2.ops）页内 tab，
+ * 重定向目标由已退役的 ia2.runs 改为 ia2.ops?tab=runs（?loop= 上下文保真，
+ * RunCenterView 挂载时读 query.loop 预填搜索）。
  * 其余名称（含已删除的 cockpit 家族）一律不改写——无匹配路由由 catch-all 兜底。
  */
 export function iaCompatRedirect(
@@ -27,12 +30,12 @@ export function iaCompatRedirect(
   if (retro) return null
   switch (to.name) {
     case 'hermes.loopRuns':
-      // 旧运行中心 → /app/runs
-      return { name: 'ia2.runs' }
+      // 旧运行中心 → 运行场景枢纽 runs tab
+      return { name: 'ia2.ops', query: { tab: 'runs' } }
     case 'hermes.loopDetail': {
-      // 旧 loop 详情 → 运行列表并携带 loop 上下文（brief 指定 ?loop=:id）
+      // 旧 loop 详情 → 枢纽 runs tab 并携带 loop 上下文（brief 指定 ?loop=:id）
       const id = to.params?.id
-      return { name: 'ia2.runs', query: { loop: id == null ? '' : String(id) } }
+      return { name: 'ia2.ops', query: { tab: 'runs', loop: id == null ? '' : String(id) } }
     }
     default:
       return null
