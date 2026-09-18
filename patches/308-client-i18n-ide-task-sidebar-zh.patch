@@ -1,8 +1,33 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 5e23b9cc..1a302919 100644
+index c808f35..eee3807 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -484,6 +484,34 @@ export default {
+@@ -462,6 +462,24 @@ export default {
+     railWorkspace: '工作区',
+     railTerminal: '终端',
+     railChat: '会话',
++    task: {
++      sectionLabel: '任务',
++      new: '新建任务',
++      search: '搜索',
++      searchPlaceholder: '搜索任务…',
++      pinned: '已置顶',
++      archived: '已归档',
++      archivedEmpty: '暂无已归档任务',
++      archivedLoading: '加载中…',
++      archivedLoadFailed: '已归档任务加载失败',
++      untitled: '未命名任务',
++      defaultGroup: '默认',
++      justNow: '刚刚',
++      minutesAgo: '{count} 分钟前',
++      hoursAgo: '{count} 小时前',
++      daysAgo: '{count} 天前',
++      more: '更多操作',
++    },
+     loading: '加载中…',
+     workspaceDefault: '默认工作区',
+     workspaceOutsideSandbox: '该目录超出文件浏览沙箱（须在 ~/.hermes 内或为已知任务工作区）；终端与会话仍可使用该目录',
+@@ -480,6 +498,34 @@ export default {
      chatTab_messages: '会话',
      chatTab_subagents: '子代理',
      chatSubagentsEmpty: '暂无子代理流。会话运行中触发子代理时，点击消息流中的子代理卡片即可在此查看。',
