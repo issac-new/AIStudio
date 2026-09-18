@@ -432,8 +432,6 @@
 276-client-router-landing-ide.patch
 277-loginview-landing-ide.patch
 278-appsidebar-ide-entry.patch
-279-client-i18n-ide-zh.patch
-280-client-i18n-ide-en.patch
 # 281: electron-builder 的 node_modules 整目录直拷曾把 980MB .vite 构建缓存扫进 DMG
 #       （产物 597M vs 基线 390M）；打包面过滤 .vite/.vite-temp 缓存目录，杜绝复发。
 281-desktop-exclude-vite-cache.patch
@@ -444,12 +442,7 @@
 #           占用，再顺延为 283/284。）
 283-loop-scenes-i18n-zh.patch
 284-loop-scenes-i18n-en.patch
-# 285/286/287 = /ide zcode 3.11.2 对齐缺口：Git 面板 server 挂载 + 命令面板/Git
-#           面板 i18n zh/en 成对。对照表见
-#           docs/superpowers/specs/2026-09-17-zcode-3112-parity-analysis.md。
 285-server-routes-ide-git.patch
-286-ide-parity-i18n-zh.patch
-287-ide-parity-i18n-en.patch
 288-client-i18n-matrix-teams-zh.patch
 289-client-i18n-matrix-teams-en.patch
 # 290/291 = matrix-teams Task 7：teams.duty.* 六键（title/chooseRoom/to/assign/
@@ -496,5 +489,26 @@
 #       词表、sidebar.systemGroup 系统分组、ide.links.cockpitHome ⇄ 互跳；
 #       死键清理 sidebar.loop/graph/loopGraph、ide.links.workbench/cockpit/
 #       loopGraph、cockpit.brandTitle（零引用）。
+
+# 307 = /ide 侧栏归档区数据源：GET /api/studio/sessions/conversations 加
+#       archived=1 过滤分支（仅归档会话）；默认行为不变（该端点历史上不过滤
+#       归档，上游消费者零回归）。与 116 同文件，注入顺序在 116 之后。
+307-server-sessions-archived-flag.patch
+
+# 279/280 = /ide 基础 i18n（zh/en 成对）：ide.brand/links/railLabel 等
+279-client-i18n-ide-zh.patch
+280-client-i18n-ide-en.patch
+
+
+# 308/309 = /ide 富侧栏 i18n（zh/en 成对）：ide.task.* 词表（新建/搜索/置顶/
+#       workspace 分组/归档区/相对时间/更多操作）。增量 diff（279/280 注入态→目标态）。
+
+# 305/306 = 统一导航 i18n（zh/en 成对）：品牌 驾驶舱/Cockpit、六场景词表补
 305-client-i18n-unified-nav-zh.patch
 306-client-i18n-unified-nav-en.patch
+
+308-client-i18n-ide-task-sidebar-zh.patch  
+309-client-i18n-ide-task-sidebar-en.patch  
+
+# 286/287（ide-parity i18n 命令面板/Git 面板词表）已并入 308/309（增量
+#       hunk，基于 279/280+305/306 注入态生成），patch 文件退役删除。
