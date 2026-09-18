@@ -1,0 +1,30 @@
+diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
+index 631a24f..a56846f 100644
+--- a/packages/client/src/components/hermes/chat/ChatInput.vue
++++ b/packages/client/src/components/hermes/chat/ChatInput.vue
+@@ -868,8 +868,25 @@ function formatTokens(n: number): string {
+ 
+ // --- File attachment helpers ---
+ 
++// 附件大小上限（zcode chat.attachments.oversizedInline* 对齐）：PDF 20MB、视频 200MB。
++const PDF_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024
++const VIDEO_ATTACHMENT_MAX_BYTES = 200 * 1024 * 1024
++
++function formatMb(bytes: number): string {
++  return `${Math.round(bytes / (1024 * 1024))}MB`
++}
++
+ function addFile(file: File) {
+   if (attachments.value.find(a => a.name === file.name)) return
++  // 超限提示：拒绝入列并 toast（媒体预算类硬限制的诚实态）
++  if (/\.pdf$/i.test(file.name) && file.size > PDF_ATTACHMENT_MAX_BYTES) {
++    message.warning(t('chat.attachmentOversizedPdf', { limit: formatMb(PDF_ATTACHMENT_MAX_BYTES), size: formatMb(file.size) }))
++    return
++  }
++  if (isVideoFile(file) && file.size > VIDEO_ATTACHMENT_MAX_BYTES) {
++    message.warning(t('chat.attachmentOversizedVideo', { limit: formatMb(VIDEO_ATTACHMENT_MAX_BYTES), size: formatMb(file.size) }))
++    return
++  }
+   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+   const url = URL.createObjectURL(file)
+   attachments.value.push({
