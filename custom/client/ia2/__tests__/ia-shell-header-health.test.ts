@@ -11,7 +11,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useRoute: () => ({ path: '/app', fullPath: '/app', query: {} }),
+}))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
   useCockpitStore: () => ({ searchQuery: '', runSearch: vi.fn(), clearSearch: vi.fn(), _sessionSearching: false }),
 }))
@@ -24,6 +27,10 @@ vi.mock('@/custom/cockpit/components/CockpitTeamSwitcher.vue', () => ({
 }))
 
 import IaShellHeader from '../components/IaShellHeader.vue'
+import { setActivePinia, createPinia } from 'pinia'
+
+// 窗控簇（IaWindowControls）依赖 wm store
+setActivePinia(createPinia())
 
 function mockHealth(payload: unknown) {
   vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => payload })))
