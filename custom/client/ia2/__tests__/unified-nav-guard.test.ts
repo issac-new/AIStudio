@@ -59,12 +59,14 @@ describe('统一导航守门（六场景双壳）', () => {
     expect(router).toContain(`{ path: '/:pathMatch(.*)*', redirect: '/app' }`)
   })
 
-  it('双壳互跳：ide.links.cockpitHome / ia2.shell.gotoIde 键 zh/en 双侧存在', () => {
+  it('双壳互跳：ide.links.cockpitHome / ia2.shell.gotoIde / sidebar.systemGroup 键 zh/en 双侧存在', () => {
     const zh = readUpstream('i18n/locales/zh.ts')
     const en = readUpstream('i18n/locales/en.ts')
     for (const locale of [zh, en]) {
       expect(locale).toMatch(/cockpitHome:/)
       expect(locale).toMatch(/gotoIde:/)
+      // AppSidebar 分组头消费；en 侧缺键曾致非中文语言渲染裸键名（2026-09-18 修复）
+      expect(locale).toMatch(/^\s+systemGroup:/m)
       // 六场景词表键齐
       for (const key of ['collab', 'eng', 'ops']) {
         expect(locale).toMatch(new RegExp(`^\\s+${key}:`, 'm'))
