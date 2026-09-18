@@ -34,7 +34,7 @@ export function parseTenant(tenant: string | null | undefined): ParsedTenant | n
       label: name,
       raw: tenant,
       routeTarget: {
-        // Task 8 fix: matrix 房间 → /app/comms/room/:roomId（hermes.matrixChatRoom 随 cockpit 退役删除；group 顶层路由仍在）
+        // Task 8 fix: matrix 房间 → /app/comms/room/:roomId（matrixChat 家族随 cockpit 退役删除；group 顶层路由仍在）
         name: prefix === 'matrix' ? 'ia2.commsRoom' : 'hermes.groupChatRoom',
         params: { roomId: id },
       },
@@ -55,7 +55,8 @@ export function parseTenant(tenant: string | null | undefined): ParsedTenant | n
       label: name || sessionId,
       raw: tenant,
       routeTarget: {
-        name: 'hermes.session',
+        // 2026-09-18 统一导航 Task 3：旧 session 顶层路由随 cockpit 退役 → 协作场景嵌入会话页
+        name: 'ia2.collabSession',
         params: { sessionId },
         query: profile ? { profile } : {},
       },

@@ -34,7 +34,7 @@ describe('parseTenant', () => {
     expect(r.kind).toBe('session')
     expect(r.label).toBe('架构讨论')
     expect(r.routeTarget).toEqual({
-      name: 'hermes.session',
+      name: 'ia2.collabSession',
       params: { sessionId: 'sess_001' },
       query: { profile: 'arch' },
     })
@@ -44,7 +44,7 @@ describe('parseTenant', () => {
     const r = parseTenant('session:sess_002:讨论2')!
     expect(r.kind).toBe('session')
     expect(r.routeTarget).toEqual({
-      name: 'hermes.session',
+      name: 'ia2.collabSession',
       params: { sessionId: 'sess_002' },
       query: {},
     })

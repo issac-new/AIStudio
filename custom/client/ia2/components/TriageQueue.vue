@@ -4,7 +4,7 @@
      （今日手动标记 + 未衰减自动归档）。审批条目行内展开内嵌 runcenter
      ApprovalPanel（复用不复制：run 对象由 runs prop 提供，批准/拒绝走
      runs store 既有 resumeRun——REST 成功即离场，视图层记档后条目流转）。
-     组件薄壳：数据与分诊动作由父层（InboxView）注入，本组件只展示与转发事件。 -->
+     组件薄壳：数据与分诊动作由父层（运行场景 duty/inbox tab）注入，本组件只展示与转发事件。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

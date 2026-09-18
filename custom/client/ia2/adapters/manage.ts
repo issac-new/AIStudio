@@ -1,5 +1,6 @@
 // overlay/custom/client/ia2/adapters/manage.ts
-// 管理场景适配器（2026-09-16 多视图重构）：纯函数，视图不自算。
+// 管理域适配器（2026-09-16 多视图重构；2026-09-18 统一导航：管理场景退役，
+// 任务↔群弱锚点函数由 kanban 任务抽屉继续消费）：纯函数，视图不自算。
 
 export interface AssigneeTaskInput {
   assignee?: string | null

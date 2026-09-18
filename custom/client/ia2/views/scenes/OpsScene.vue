@@ -1,7 +1,13 @@
 <!-- overlay/custom/client/ia2/views/scenes/OpsScene.vue -->
-<!-- 运维场景（2026-09-16 多视图重构）：值班/告警/工单——
-     左 告警+工单分诊（inbox-center 五源聚合与 kv 分诊状态，/app/inbox 同源同键）；
-     中 值班台（今日计划 + 进行中/待介入 runs 表）；右 快捷动作。
+<!-- 运行场景枢纽（2026-09-16 多视图重构；2026-09-18 统一导航 Task 4 扩三 tab）：
+     二级 tab —— runs（RunCenterView 直接内嵌，原 RunsView wrapper 退役）/
+     inbox（InboxView 介入中心五源聚合）/ duty（原三栏本体：左 告警+工单分诊
+     （inbox-center 五源聚合与 kv 分诊状态，/app/inbox 同源同键）；
+     中 值班台（今日计划 + 进行中/待介入 runs 表）；右 快捷动作）。
+     深链：?tab=runs|inbox 预选（OrchestrateView 创建 loop 后跳
+     /app/ops?tab=runs&loop=:id，RunCenterView 挂载时按 query.loop 预填搜索）。
+     订阅续命：RunCenterView 卸载会 disconnect 共享 graph socket（其独立挂载的
+     生命周期语义），三 tab 共用 runs store——离开 runs tab 后按壳口径重建订阅。
      零新增武装：runs/metrics/loops/workspace 流由壳统一武装（Task 3）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
@@ -10,6 +16,8 @@ import { useI18n } from 'vue-i18n'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { useWorkspaceStore } from '../../store/workspace'
+import RunCenterView from '@/custom/loop/runcenter/views/RunCenterView.vue'
+import InboxView from '../InboxView.vue'
 import AlarmList from '../../components/AlarmList.vue'
 import TriageQueue from '../../components/TriageQueue.vue'
 import RunListTable from '@/custom/loop/runcenter/components/RunListTable.vue'
@@ -30,6 +38,31 @@ const { t } = useI18n()
 const runsStore = useRunCenterStore()
 const loopStore = useLoopStore()
 const workspace = useWorkspaceStore()
+
+// ── 二级 tab：runs（RunCenter）/ inbox（介入）/ duty（值守三栏，默认） ──
+type OpsTab = 'runs' | 'inbox' | 'duty'
+const OPS_TABS: Array<{ key: OpsTab; label: string }> = [
+  { key: 'runs', label: t('ia2.nav.runs') },
+  { key: 'inbox', label: t('ia2.nav.inbox') },
+  { key: 'duty', label: t('loopScenes.ops.duty') },
+]
+
+/** ?tab= 深链预选（非法值回退 duty）；同路由不同 query 时组件复用不重挂载，watch 跟随 */
+function tabFromQuery(q: unknown): OpsTab {
+  return q === 'runs' || q === 'inbox' ? q : 'duty'
+}
+const activeTab = ref<OpsTab>(tabFromQuery(route.query.tab))
+watch(() => route.query.tab, q => { activeTab.value = tabFromQuery(q) })
+
+// RunCenterView 卸载即 disconnect 共享 socket（独立挂载语义）；离开 runs tab 后
+// 按壳（IaShell.bootShared）同口径重建 awaiting∪running 订阅，duty/inbox 实时性不失。
+// flush: 'post'——等 RunCenterView 卸载完成后再重建，避免重建被同一轮 disconnect 拆掉。
+watch(activeTab, tab => {
+  if (tab === 'runs') return
+  const awaiting = runsStore.awaitingRuns.map(r => r.runId)
+  const running = runsStore.sortedRuns.filter(r => r.status === 'running').map(r => r.runId)
+  runsStore.syncVisibleRunIds([...awaiting, ...running].slice(0, 30))
+}, { flush: 'post' })
 
 /** 视图时间锚（与 InboxView 同语义：挂载时刻为稳定基准） */
 const nowTick = ref(Date.now())
@@ -96,11 +129,9 @@ const activeRuns = computed(() =>
     .filter(r => r.status === 'running' || r.status === 'awaiting-input')
     .slice(0, 12))
 
-/** 运行详情路由家族感知（/hermes/loop 挂载下跳 hermes.loopRunDetail） */
-const runDetailName = computed(() =>
-  String(route.name ?? '').startsWith('hermes.loop') ? 'hermes.loopRunDetail' : 'ia2.runDetail')
+// 运行详情路由（2026-09-18 统一导航：/hermes/loop 壳家族退役，恒走 ia2.runDetail）
 function onRunSelect(run: RunSummary): void {
-  void router.push({ name: runDetailName.value, params: { runId: run.runId } })
+  void router.push({ name: 'ia2.runDetail', params: { runId: run.runId } })
 }
 // 行内动作（approve/peek/replay 等）统一进详情页处理——详情页动作链完整，
 // 值班台不复制（MVP 取舍，已声明）
@@ -110,7 +141,8 @@ function onRunAction(payload: { kind: string; run: RunSummary }): void {
 
 // ── 快捷动作 ──
 const wizardOpen = ref(false)
-const goCockpit = () => void router.push('/hermes/cockpit')
+// 2026-09-18 统一导航 Task 3：协作中心落点 /hermes/cockpit 退役 → 协作场景
+const goCockpit = () => void router.push({ name: 'ia2.collab' })
 
 function planTimeLabel(at: number | null): string {
   if (at === null) return t('ia2.overview.planNoTime')
@@ -122,7 +154,27 @@ function planTimeLabel(at: number | null): string {
 
 <template>
   <section class="ops" data-testid="scene-ops">
-    <div class="ops__body">
+    <!-- 二级 tab 条（与 EngScene 同款类名，样式各自 scoped 复制） -->
+    <div class="ia-tabs" data-testid="ops-tabs">
+      <button
+        v-for="tab in OPS_TABS"
+        :key="tab.key"
+        type="button"
+        class="ia-tabs__btn"
+        :class="{ 'ia-tabs__btn--on': activeTab === tab.key }"
+        :data-testid="`ops-tab-${tab.key}`"
+        @click="activeTab = tab.key"
+      >{{ tab.label }}</button>
+    </div>
+
+    <!-- runs：RunCenter 直接内嵌（原 RunsView wrapper 退役） -->
+    <RunCenterView v-if="activeTab === 'runs'" class="ops__pane" />
+
+    <!-- inbox：介入中心（五源聚合，自足组件） -->
+    <InboxView v-else-if="activeTab === 'inbox'" class="ops__pane" />
+
+    <!-- duty：值守三栏本体 -->
+    <div v-else class="ops__body">
       <!-- 左：告警 + 工单分诊 -->
       <aside class="ops__left">
         <AlarmList :entries="alarmEntries" @open="onOpen" />
@@ -187,7 +239,16 @@ function planTimeLabel(at: number | null): string {
 
 <style scoped>
 .ops { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.ops__body { flex: 1 1 auto; min-height: 0; display: flex; gap: 10px; }
+/* 场景二级 tab 条（与 EngScene 同款类名，样式各自 scoped 复制） */
+.ia-tabs { flex: 0 0 auto; display: flex; gap: 6px; padding: 10px 12px 0; }
+.ia-tabs__btn {
+  border: 1px solid var(--border-color); background: transparent; color: var(--text-primary);
+  border-radius: var(--radius-standard); padding: 3px 14px; cursor: pointer;
+  font-size: 12px; font-family: inherit;
+}
+.ia-tabs__btn--on { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); font-weight: 600; }
+.ops__pane { flex: 1 1 auto; min-height: 0; }
+.ops__body { flex: 1 1 auto; min-height: 0; display: flex; gap: 10px; padding: 10px 12px; }
 .ops__left {
   flex: 0 0 320px; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
 }

@@ -1,0 +1,21 @@
+diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
+index e966c1ec..a31a7099 100644
+--- a/packages/client/src/components/layout/PageSidebarNav.vue
++++ b/packages/client/src/components/layout/PageSidebarNav.vue
+@@ -26,12 +26,14 @@ const primaryText = computed(() => props.primaryLabel || t('chat.newChat'))
+ 
+ function openChat() {
+   if (props.active === 'chat') return
+-  void router.push({ name: 'hermes.chat' })
++  // overlay[nav]: 协作会话页迁驾驶舱协作场景（/app/collab/chat）
++  void router.push({ name: 'ia2.collabChat' })
+ }
+ 
+ function openHistory() {
+   if (props.active === 'history') return
+-  void router.push({ name: 'hermes.history' })
++  // overlay[nav]: 会话历史迁驾驶舱协作场景（/app/collab/history）
++  void router.push({ name: 'ia2.collabHistory' })
+ }
+ 
+ function openConnections() {

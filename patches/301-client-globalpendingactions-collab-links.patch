@@ -1,0 +1,37 @@
+diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/packages/client/src/components/layout/GlobalPendingActions.vue
+index da7433ef..1823085c 100644
+--- a/packages/client/src/components/layout/GlobalPendingActions.vue
++++ b/packages/client/src/components/layout/GlobalPendingActions.vue
+@@ -152,7 +152,7 @@ function pendingSoundActionKeys(): string[] {
+ function pendingActions(suppressVisibleSources = true): GlobalPendingAction[] {
+   const actions: GlobalPendingAction[] = []
+   const profile = profilesStore.activeProfileName || 'default'
+-  const visibleChatSessionId = suppressVisibleSources && ['hermes.chat', 'hermes.session', 'hermes.globalAgent', 'hermes.globalAgentSession'].includes(String(route.name || ''))
++  const visibleChatSessionId = suppressVisibleSources && ['ia2.collabChat', 'ia2.collabSession', 'ia2.collabGlobalAgent', 'ia2.collabGlobalAgentSession'].includes(String(route.name || ''))
+     ? chatStore.activeSessionId
+     : null
+   const visibleGroupRoomId = suppressVisibleSources && route.name === 'hermes.groupChatRoom' ? groupChatStore.currentRoomId : null
+@@ -306,8 +306,9 @@ function openPendingSource(action: GlobalPendingAction) {
+   if (action.kind === 'chat-approval' || action.kind === 'chat-clarify') {
+     const sessionId = action.pending.sessionId
+     const session = chatStore.sessions.find(item => item.id === sessionId)
++    // overlay[nav]: 介入深链迁驾驶舱协作场景（ia2.collab* 家族）
+     void router.push({
+-      name: session?.source === 'global_agent' ? 'hermes.globalAgentSession' : 'hermes.session',
++      name: session?.source === 'global_agent' ? 'ia2.collabGlobalAgentSession' : 'ia2.collabSession',
+       params: { sessionId },
+     })
+     return
+@@ -335,9 +336,10 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
+   if (action.kind === 'chat-approval' || action.kind === 'chat-clarify') {
+     const sessionId = encodeURIComponent(action.pending.sessionId)
+     const session = chatStore.sessions.find(item => item.id === action.pending.sessionId)
++    // overlay[nav]: 通知点击 URL 同步迁 /app/collab 家族
+     return session?.source === 'global_agent'
+-      ? `/hermes/global-agent/session/${sessionId}${profileQuery}`
+-      : `/hermes/session/${sessionId}${profileQuery}`
++      ? `/app/collab/global-agent/session/${sessionId}${profileQuery}`
++      : `/app/collab/session/${sessionId}${profileQuery}`
+   }
+   if (action.kind === 'group-approval' || action.kind === 'group-clarify') {
+     return `/hermes/group-chat/room/${encodeURIComponent(action.pending.roomId)}${profileQuery}`

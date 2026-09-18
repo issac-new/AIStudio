@@ -228,7 +228,8 @@ async function onTryRun(): Promise<void> {
   runError.value = null
   try {
     const { runId } = await runRest.startSpecRun(savedId.value!)
-    await router.push(`/app/runs/${runId}`)
+    // 2026-09-18 统一导航：运行详情挂 ia2.runDetail（/app/ops/runs/:runId）
+    await router.push({ name: 'ia2.runDetail', params: { runId } })
   } catch (err) {
     // 501=引擎未开 / 400=spec 校验失败：服务端 message 一针见血，直显
     runError.value = err instanceof Error ? err.message : String(err)
