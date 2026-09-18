@@ -250,7 +250,7 @@ export function latestBy<T>(items: readonly T[], keyOf: (t: T) => string, atOf: 
   for (const it of items) {
     const k = keyOf(it)
     const prev = out.get(k)
-    if (!prev || atOf(it) >= atOf(prev)) out.set(k, it)
+    if (prev === undefined || atOf(it) >= atOf(prev)) out.set(k, it)
   }
   return out
 }

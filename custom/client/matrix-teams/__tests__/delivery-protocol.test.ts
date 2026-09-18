@@ -191,6 +191,14 @@ describe('幂等投影（spec §5：最新 at 覆盖，幂等语义同 receipt�
     expect(m.get('b')?.v).toBe('only')
     expect(m.size).toBe(2)
   })
+  it('latestBy：同 key 降序输入仍取 at 最大（防「恒取末元素」回归）', () => {
+    const items = [
+      { id: 'a', at: 9, v: 'new' },
+      { id: 'a', at: 2, v: 'stale' },
+    ]
+    const m = latestBy(items, x => x.id, x => x.at)
+    expect(m.get('a')?.v).toBe('new')
+  })
   it('latestBy：空输入返回空 Map', () => {
     expect(latestBy([], () => '', () => 0).size).toBe(0)
   })
