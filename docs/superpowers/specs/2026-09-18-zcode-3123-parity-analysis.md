@@ -11,6 +11,8 @@
 
 ## 一、版本差分总览（3.11.2 → 3.12.3，+441 键）
 
+> **落地进度（滚动更新，2026-09-18 晚）**：M1.1 富侧栏 ✅（main@e24c06c）；M1.3 PDF 预览/超限守门 ✅、M1.4 图片灯箱 ✅、M1.6 模型失效 ✅、M1.7 debugInfo ✅（patch 310/311 + overlay 组件）；M1.8 settings 盘点 ✅（notes/zcode-3123/settings-inventory.md）。**勘察修订**：M1.2 富排队——上游 MessageQueueFloatPanel 已具备 insert（=turnSteer 转向，接 queueInsertionStates 协议）与 remove，`chat.queue.*` 中 edit/drag/sendNow/paused 为剩余缺口（需 chatStore 队列 mutation API，5620 行热文件）→ 降入 M4；M1.5 审批——上游审批浮层已展示 description/command/三档按钮（操作拦截原因已可见），仅 chat.elicitation.planApproval 专属卡与配额族（云特性）为剩余差 → 降入 M4。
+
 | 维度 | 变化 |
 |---|---|
 | 新增命名空间 13 个 | conversationShare(165) resourceManager(65) startup(41) updateDialog(14) updateReady(8) markdownImage(8) forceUpdate(7) debugInfo(5) modelSelection(2) purchase(2) postUpdateReleaseNotes(2) updateAvailable(1) root(1) |
