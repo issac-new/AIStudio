@@ -6,6 +6,7 @@ import {
   CASE_ROOM_POWER_LEVELS, isDeliveryEventType,
   DELIVERY_STAGES, DELIVERY_GATES, HUMAN_GATES,
   parseCaseContent, parseIndexContent, parseStageContent, parseGateContent,
+  isHumanAccount, samePrincipal, validateGateSender, validateStageSender,
 } from '../delivery-protocol'
 
 describe('事件类型常量与 PL 矩阵', () => {
@@ -142,5 +143,34 @@ describe('parseGateContent', () => {
   it('summary 超 400 / reason 超 1000 → null', () => {
     expect(parseGateContent({ ...pass, evidence: { kind: 'human', summary: 'x'.repeat(401) } })).toBeNull()
     expect(parseGateContent({ ...rejected, reason: 'x'.repeat(1001) })).toBeNull()
+  })
+})
+
+describe('发送者主体校验', () => {
+  it('isHumanAccount：-agent 后缀 = bot，其余 = 人类', () => {
+    expect(isHumanAccount('@alice:matrix.test')).toBe(true)
+    expect(isHumanAccount('@alice-agent:matrix.test')).toBe(false)
+    expect(isHumanAccount('@agent:matrix.test')).toBe(true) // 本名就叫 agent，不带 -agent 后缀
+  })
+  it('samePrincipal：人类与其 bot 同主体，跨账号/跨域不同主体', () => {
+    expect(samePrincipal('@alice:matrix.test', '@alice-agent:matrix.test')).toBe(true)
+    expect(samePrincipal('@alice-agent:matrix.test', '@alice:matrix.test')).toBe(true)
+    expect(samePrincipal('@alice:matrix.test', '@bob:matrix.test')).toBe(false)
+    expect(samePrincipal('@alice:x', '@alice-agent:y')).toBe(false)
+  })
+  it('HumanGate（G1/G5）sender 是 bot → 报错（spec §5 负例）', () => {
+    const g1 = { schemaVersion: 1, caseId: 'c', gate: 'G1', verdict: 'pass', evidence: { kind: 'human', summary: 's' }, decidedBy: '@alice:matrix.test', at: 1 } as const
+    expect(validateGateSender(g1, '@alice:matrix.test')).toEqual([])
+    expect(validateGateSender(g1, '@alice-agent:matrix.test')).toEqual(['gate G1 requires human sender'])
+  })
+  it('非 HumanGate 门禁允许 bot sender，但 decidedBy 须同主体', () => {
+    const g4 = { schemaVersion: 1, caseId: 'c', gate: 'G4', verdict: 'conditional', evidence: { kind: 'command-exit', summary: 's' }, reason: 'r', decidedBy: '@carol:matrix.test', at: 1 } as const
+    expect(validateGateSender(g4, '@carol-agent:matrix.test')).toEqual([])
+    expect(validateGateSender(g4, '@bob-agent:matrix.test')).toEqual(['decidedBy is not the sender principal'])
+  })
+  it('stage：sender 须与 worker.account 和 reportedBy 同主体（spec §5 读端忽略依据）', () => {
+    const st = { schemaVersion: 1, caseId: 'c', stage: 'P3', worker: { account: '@bob:matrix.test' }, outcome: 'done', reportedBy: '@bob:matrix.test', at: 1 } as const
+    expect(validateStageSender(st, '@bob-agent:matrix.test')).toEqual([])
+    expect(validateStageSender(st, '@carol-agent:matrix.test')).toEqual(['stage sender does not match worker/reportedBy principal'])
   })
 })
