@@ -431,4 +431,45 @@ ideGitRouter.post('/push', async (ctx) => {
   ctx.body = { ok: true, output: (result.stdout + result.stderr).trim() }
 })
 
+// GET /api/ide/git/log?root=&limit=  —— 提交图谱数据（gitGraph 对应物：分叉简化为引用徽标列表）
+ideGitRouter.get('/log', async (ctx) => {
+  const root = typeof ctx.query.root === 'string' ? ctx.query.root : ''
+  const limitRaw = typeof ctx.query.limit === 'string' ? parseInt(ctx.query.limit, 10) : 100
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100
+  if (!root || !isAbsolute(root)) {
+    ctx.status = 400
+    ctx.body = errorBody('invalid_root', 'root must be an absolute path')
+    return
+  }
+  const repoRoot = await resolveRepo(root)
+  if (!repoRoot) {
+    ctx.status = 404
+    ctx.body = errorBody('not_a_repo', 'workspace is not inside a git repository')
+    return
+  }
+  const sep = '\u001f'
+  const result = await runGit([
+    '-C', repoRoot, 'log', `-n`, String(limit),
+    `--pretty=format:%H${sep}%h${sep}%an${sep}%at${sep}%D${sep}%s`,
+  ], repoRoot)
+  if (result.code !== 0) {
+    ctx.status = 500
+    ctx.body = errorBody('git_failed', result.stderr.trim() || 'git log failed')
+    return
+  }
+  const commits = result.stdout.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+    const [hash, short, author, timestamp, refs, subject] = line.split(sep)
+    return {
+      hash,
+      short,
+      author,
+      timestamp: Number(timestamp) * 1000,
+      refs: (refs || '').split(',').map(r => r.trim()).filter(r => r && r !== 'HEAD'),
+      isHead: (refs || '').includes('HEAD'),
+      subject: subject || '',
+    }
+  })
+  ctx.body = { commits }
+})
+
 export default ideGitRouter

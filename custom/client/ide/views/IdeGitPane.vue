@@ -7,6 +7,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useIdeStore } from '../store/ide'
+import IdeGitLog from './IdeGitLog.vue'
 import {
   ideGitApi,
   toGroups,
@@ -18,6 +19,7 @@ import {
 const ide = useIdeStore()
 const { t } = useI18n()
 
+const gitView = ref<'status' | 'graph'>('status')
 const status = ref<GitStatus | null>(null)
 const loading = ref(false)
 const errorCode = ref<string | null>(null)
@@ -194,6 +196,10 @@ defineExpose({ refresh, toGroups })
   <div class="ide-git">
     <header class="ide-git__head">
       <span class="ide-git__branch" :title="status?.upstream ?? ''">{{ branchLabel || '—' }}</span>
+      <div class="ide-git__viewtabs" role="tablist">
+        <button type="button" class="ide-git__viewtab" :class="{ 'is-active': gitView === 'status' }" data-testid="ide-git-view-status" @click="gitView = 'status'">{{ t('ide.gitViewStatus') }}</button>
+        <button type="button" class="ide-git__viewtab" :class="{ 'is-active': gitView === 'graph' }" data-testid="ide-git-view-graph" @click="gitView = 'graph'">{{ t('ide.gitViewGraph') }}</button>
+      </div>
       <div class="ide-git__branch-switch">
         <button type="button" class="ide-git__mini" data-testid="ide-git-branch-toggle" :title="t('ide.gitBranchSwitcher')" @click="branchMenuOpen = !branchMenuOpen; branchMenuOpen && loadBranches()">⎇</button>
         <ul v-if="branchMenuOpen" class="ide-git__branch-menu" data-testid="ide-git-branch-menu">
@@ -211,8 +217,9 @@ defineExpose({ refresh, toGroups })
         @click="refresh"
       >⟳</button>
     </header>
+    <IdeGitLog v-if="gitView === 'graph'" class="ide-git__graph" />
 
-    <div v-if="!ide.workspace" class="ide-git__state">{{ t('ide.gitNeedWorkspace') }}</div>
+    <div v-if="!ide.workspace && gitView === 'status'" class="ide-git__state">{{ t('ide.gitNeedWorkspace') }}</div>
     <div v-else-if="loading" class="ide-git__state">{{ t('ide.loading') }}</div>
     <div v-else-if="errorCode === 'not_a_repo'" class="ide-git__state">{{ t('ide.gitNotRepo') }}</div>
     <div v-else-if="errorCode" class="ide-git__state ide-git__state--error">
@@ -511,6 +518,30 @@ defineExpose({ refresh, toGroups })
 
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
+
+.ide-git__viewtabs {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 4px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--bg-primary, #14161a);
+}
+
+.ide-git__viewtab {
+  height: 18px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 11px;
+  cursor: pointer;
+
+  &.is-active { background: var(--bg-tertiary, #242830); color: var(--text-primary, #e6e6e6); }
+}
+
+.ide-git__graph { flex: 1; min-height: 0; }
 
 .ide-git__branch-switch { position: relative; display: inline-flex; }
 
