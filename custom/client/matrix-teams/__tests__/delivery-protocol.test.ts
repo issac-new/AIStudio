@@ -1,6 +1,8 @@
 // overlay/custom/client/matrix-teams/__tests__/delivery-protocol.test.ts
 // 交付协议守门：事件类型常量 + content schema 解析（容错返回 null）+ 幂等投影 + HumanGate 校验。
 import { describe, it, expect } from 'vitest'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   DELIVERY_SCHEMA_VERSION, DELIVERY_EVENT_TYPES, DELIVERY_INDEX_ACCOUNT_DATA_TYPE,
   CASE_ROOM_POWER_LEVELS, isDeliveryEventType,
@@ -209,5 +211,25 @@ describe('幂等投影（spec §5：最新 at 覆盖，幂等语义同 receipt�
     })
     const m = latestStageOutcomes([mk(5, 'started'), mk(9, 'done')])
     expect(m.get('c-001:P3')?.outcome).toBe('done')
+  })
+})
+
+describe('协议守门：delivery 事件类型字符串禁止内联', () => {
+  function collect(dir: string): string[] {
+    const out: string[] = []
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name)
+      if (statSync(p).isDirectory()) out.push(...collect(p))
+      else if (p.endsWith('.ts') || p.endsWith('.vue')) out.push(p)
+    }
+    return out
+  }
+  it('除 delivery-protocol.ts 与测试外，模块内不得出现 com.swarmstudio.delivery. 字面量', () => {
+    const root = join(__dirname, '..')
+    const offenders = collect(root).filter(
+      p => !p.endsWith('delivery-protocol.ts') && !p.includes('__tests__')
+        && readFileSync(p, 'utf8').includes('com.swarmstudio.delivery.'),
+    )
+    expect(offenders).toEqual([])
   })
 })
