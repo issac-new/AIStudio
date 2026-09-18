@@ -38,7 +38,7 @@ if (urlToken) {
 // === 启动 app(上游序列)===
 const app = createApp(App)
 app.use(createPinia())
-app.use(router)
+// 注意：app.use(router) 已移至 bootstrapClient 之后（见下方注释），此处不得提前安装。
 
 // === A 类注册(mount 前插入)===
 // 对应原 custom/index.ts 的 registerCustomFeatures,改为从 overlay/custom 注册。
@@ -50,6 +50,17 @@ i18nReady
   })
   .then(() => import('./bootstrap'))
   .then(({ bootstrapClient }) => bootstrapClient(app))
+  .then(() => {
+    // 冷启动时序修复（2026-09-18 驾驶舱黑屏回归）：app.use(router) 的 install 会
+    // 同步发起初次导航。此前 router 在 bootstrap 之前安装，而 /app 路由树要等
+    // bootstrapClient 里 registerIa2 才 addRoute——桌面壳落点 #/app 在安装瞬间只
+    // 能命中 patch 297 的 catch-all（redirect: '/app'），目标再次解析回 catch-all
+    // 自身，生产构建无重定向环保护，同步无限递归抛 RangeError: Maximum call
+    // stack size exceeded；初导航 promise 永不落定 → router.isReady() 悬空 →
+    // app.mount 永不执行 → 永久停留启动 logo 页。router 安装必须在全部
+    // addRoute 完成之后（守门：ia2/__tests__/entry-boot-order.test.ts）。
+    app.use(router)
+  })
   .then(() => router.isReady())
   .then(() => {
     // 动态路由(cockpit 子路由如 matrix-chat)在 bootstrap 中 addRoute,
