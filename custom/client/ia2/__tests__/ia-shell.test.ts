@@ -233,4 +233,16 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/app/collab')
   })
+
+  it('合并回流不劫持其它独立面板：standalone 窗不响应 merge-back 信号', async () => {
+    // storage 事件广播到所有同源窗口；若 standalone 面板窗也响应，别的面板
+    // 「合并回驾驶舱」会把本面板导航走并被 standalone 补标 watch 劫持内容
+    const { router } = await mountShell('/app/ops?standalone=1')
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'swarmstudio:wm-merge-back',
+      newValue: JSON.stringify({ path: '/app/collab', at: Date.now() }),
+    }))
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/app/ops')
+  })
 })
