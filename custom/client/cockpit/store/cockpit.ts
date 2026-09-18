@@ -792,7 +792,14 @@ export const useCockpitStore = defineStore('cockpit', () => {
     return { from: fmt(from), to: fmt(to) }
   }
 
+	  // bootstrap 幂等守卫（2026-09-18 统一导航 Task 2）：IaShell onMounted 调
+	  // bootstrap，壳内并发/重复挂载不得重复武装——loadAllBoards/matrixClient.initClient/
+	  // kanban.startEventStream 均非幂等。disconnectOnUnmount 复位守卫：离开 /app
+	  // 再进入时允许重新 bootstrap（重连 fleet/MCP/group 等被回收的资源）。
+	  let _bootstrapped = false
 	  async function bootstrap() {
+	    if (_bootstrapped) return
+	    _bootstrapped = true
 	    // 设置默认日期筛选（近 2 周）
 	    const dr = defaultDateRange()
 	    filters.value = { ...filters.value, dateRange: { from: dr.from, to: dr.to } }
@@ -1210,6 +1217,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     try { groupStore.disconnect?.() } catch { /* ignore */ }
     stopFleetStream()
     stopMcpHealthPoll()
+    _bootstrapped = false // 复位幂等守卫：再次进入 /app 时允许重新 bootstrap
   }
 
   // ── 历史 ──
