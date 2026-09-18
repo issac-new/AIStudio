@@ -167,6 +167,20 @@ describe('cockpit store bootstrap + 派生态', () => {
     expect(s.tasks[0].title).toBe('T1')
   })
 
+  it('bootstrap 幂等（2026-09-18 统一导航 Task 2 守卫）：重复调用不重复武装；disconnectOnUnmount 复位后可重新 bootstrap', async () => {
+    mockKanbanTasks.push(kt({ id: 't1' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    expect(fetchTasks).toHaveBeenCalledTimes(1)
+    // 同次挂载内重复 bootstrap（IaShell onMounted 并发/重复触发）→ 完全跳过
+    await s.bootstrap()
+    expect(fetchTasks).toHaveBeenCalledTimes(1)
+    // disconnect 复位守卫：离开 /app 再进入时重新武装
+    s.disconnectOnUnmount()
+    await s.bootstrap()
+    expect(fetchTasks).toHaveBeenCalledTimes(2)
+  })
+
   it('tasks is derived (computed) — not directly assignable', async () => {
     const s = useCockpitStore()
     mockKanbanTasks.push(kt({ id: 'x1' }))

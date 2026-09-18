@@ -1,7 +1,7 @@
 // overlay/custom/client/ia2/styles/ia2.scss
-// 驾驶舱单页壳样式（2026-09-14 重构：IaNav 六菜单栏退役）· Pure Ink
-// （仅用 CSS 变量，无自定义色值；驾驶舱本体的深色科技底在
-// LoopCockpitView.vue scoped 内，不进全局）。
+// 驾驶舱统一壳样式（2026-09-18 统一导航重构 Task 2：IaShell = 全局页头 +
+// 六场景条 + router-view；slim 子页头退役）· Pure Ink（仅用 CSS 变量，
+// 无自定义色值；页头样式在 IaShellHeader.vue scoped 内，不进全局）。
 
 .ia-shell {
   display: flex;
@@ -12,53 +12,61 @@
   overflow: hidden;
 }
 
-// ── 子区域 slim 页头（驾驶舱区无页头） ──
-.ia-subhead {
-  flex: 0 0 auto;
+// ── 六场景条（拷贝自退役 LoopCockpitView 的 .lcp-scenes，改名 .ia-scenes） ──
+.ia-scenes {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.ia-subhead__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
+  gap: 2px;
+  flex: 0 0 auto;
+  margin: 8px 16px 0;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-standard);
-  background: transparent;
+  background: var(--bg-card, var(--bg-primary));
+  padding: 2px;
+  align-self: flex-start;
+}
+
+.ia-scenes__btn {
+  padding: 4px 14px;
+  border-radius: calc(var(--radius-standard) - 2px);
   color: var(--text-secondary);
-  font-size: 12.5px;
-  font-family: inherit;
-  cursor: pointer;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
 
   &:hover {
-    background: var(--bg-hover, var(--bg-card));
-    color: var(--text-primary);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--primary-color, var(--text-primary));
-    outline-offset: -2px;
+    color: var(--color-primary, #3b82f6);
   }
 }
 
-.ia-subhead__title {
-  font-size: 13px;
+.ia-scenes__btn--on {
+  background: var(--color-primary, #3b82f6);
+  color: var(--bg-primary);
   font-weight: 600;
-  letter-spacing: 1px;
-  color: var(--text-primary);
 }
 
-// ── 区域主体 ──
+// ── 区域主体（flex column：场景根节点靠下方子项规则占满剩余高度，滚动自理） ──
 .ia-shell__main {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+// 场景出口占满剩余高度（沿用退役 LoopCockpitView 的 .lcp 子项规则）
+.ia-shell__main > :first-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// ── 全局弹窗遮罩（复用 cockpit overlay 语义：fixed 全屏 + 暗化） ──
+.ia-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 40;
 }
 
 .ia-area {
