@@ -30,6 +30,11 @@ function run(cmd, cwd, label) {
   execSync(cmd, { cwd, stdio: 'inherit' });
 }
 
+// === Step -1: Clean（上一轮注入残留会卡 inject 的 dirty-check，先反向还原）
+run('node scripts/inject.mjs --clean', overlayRoot, 'clean previous inject state');
+// clean 后可能残留 untracked patch 产物（旧版 clean 不删），统一清点
+run('git checkout -- .', upstream, 'restore upstream tracked files');
+
 // === Step 0: Inject (apply patches, create symlinks, generate overlay vite config) ===
 run('node scripts/inject.mjs', overlayRoot, 'inject patches → upstream');
 

@@ -147,9 +147,21 @@ onUnmounted(() => {
   height: calc(100 * var(--vh, 100vh));
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--ide-bg-chat, #202226);
+  color: var(--ide-text, #d6d8dd);
   overflow: hidden;
+
+  // ZCode 3.12.3 暗色令牌（pixel-spec.md §五，仅 /ide 作用域内生效）
+  --ide-bg-side: #1a1c20;
+  --ide-bg-chat: #202226;
+  --ide-bg-card: #23262b;
+  --ide-border: #2a2d33;
+  --ide-border-strong: #2f3238;
+  --ide-text: #d6d8dd;
+  --ide-text-muted: #8b8f97;
+  --ide-accent: #5b9cf6;
+  --ide-green: #6fbf73;
+  --ide-red: #e06c75;
 }
 
 .ide-shell__main {
@@ -163,8 +175,8 @@ onUnmounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border-color, #26292f);
-  border-right: 1px solid var(--border-color, #26292f);
+  border-left: 1px solid var(--ide-border, #2a2d33);
+  border-right: 1px solid var(--ide-border, #2a2d33);
 }
 
 .ide-shell__workspace-main {
@@ -176,7 +188,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   position: relative;
   display: flex;
-  border-top: 1px solid var(--border-color, #26292f);
+  border-top: 1px solid var(--ide-border, #2a2d33);
 }
 
 .ide-shell__terminal-handle {

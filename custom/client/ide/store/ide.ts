@@ -91,7 +91,7 @@ const DEFAULT_SIDEBAR: { view: IdeTaskView; organize: IdeOrganizeMode } = {
 const DEFAULT_SIDEPANE: IdeSidePanePrefs = {
   open: false,
   tab: 'wiki',
-  width: 380,
+  width: 480,
 }
 
 function loadJson<T>(key: string, fallback: T): T {
