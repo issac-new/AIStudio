@@ -58,7 +58,7 @@
 |---|---|
 | `fleet-lib.sh` | 路径/端口/Matrix/Studio 公共库（自包含，不依赖 dev 树） |
 | `fleet-setup.sh` | 幂等置备：app 副本、runtime+pytest、账号 token、房间、profile 配置、中央仓 |
-| `fleet-up.sh [user...]` | 启动实例（等 studio ready + 网关 health） |
+| `fleet-up.sh [user...]` | 启动实例（等 studio ready + 网关 health）；`FLEET_HIDDEN=1` 隐藏窗口启动（托盘保留） |
 | `fleet-down.sh [user...]` | 网关优雅停 + 应用进程收尾 + 端口兜底清扫 |
 | `fleet-scenario.sh` | 需求交付全流程七步（断点续跑 `START_STEP`） |
 | `fleet-evidence.sh` | 验收门断言 + 证据导出 + run-report.md |
@@ -74,14 +74,15 @@
 
 ## 7. 风险与对策
 
-| 风险 | 对策 |
-|---|---|
-| macOS Electron userData 是否跟随 `$HOME` | 冒烟单实例先行验证；若不跟随，追加 `--user-data-dir` 启动参数（Electron 原生支持） |
-| 三实例共享登录钥匙串 | AUTH_TOKEN 走 env、JWT 走各实例 localStorage，理论无冲突；冒烟观察，异常再隔离 |
-| 后台会话起 GUI 应用缺 WindowServer 权限 | 直启二进制优先；失败改 `open -na <app> --env` 通道（macOS 13+ 支持 --env） |
-| bundled venv 装 pytest 走外网失败 | `FLEET_PIP_INDEX_URL` 可换镜像；装不进则场景测试命令回落系统 python3 |
-| 与旧 sim（alice 8701 仍活）互扰 | 端口/房间/凭据目录全分离；同账号双会话（旧 token 在旧房间）Matrix 语义允许 |
-| LLM 回合不稳定 | 沿用 sim 对策：真值轮询 + `START_STEP` 断点续跑 + 不许谎报结论行 |
+| 风险 | 对策 | 实测结果（09-18 轮） |
+|---|---|---|
+| macOS Electron userData 是否跟随 `$HOME` | 冒烟单实例先行验证；若不跟随，追加 `--user-data-dir` 启动参数（Electron 原生支持） | **已发生**：HOME 覆盖不迁移 userData，单实例锁与真实实例共键秒退；`--user-data-dir` 指进沙箱后解决，已固化进 fleet-up |
+| 弹出的应用窗口被人工 Cmd+Q 退出 | `FLEET_HIDDEN=1` 传 `--hidden`（托盘保留，点开即显窗口）；场景断点续跑 | **已发生两轮**（非崩溃，before-quit isQuitting=false 的外部退出）；隐藏模式后未再复发 |
+| 三实例共享登录钥匙串 | AUTH_TOKEN 走 env、JWT 走各实例 localStorage，理论无冲突 | 未观察到冲突 |
+| 后台会话起 GUI 应用缺 WindowServer 权限 | 直启二进制优先；失败改 `open -na <app> --env` 通道 | 直启成功，未需兜底 |
+| bundled venv 装 pytest 走外网失败 | `FLEET_PIP_INDEX_URL` 可换镜像 | 清华镜像一次装成 |
+| 与旧 sim（alice 8701 仍活）互扰 | 端口/房间/凭据目录全分离；同账号双会话 Matrix 语义允许 | 无串扰（旧房间静默） |
+| LLM 回合不稳定 | 真值轮询 + `START_STEP` 断点续跑 + 不许谎报结论行 | **已发生**：三 agent 并发触发共享模型代理限速/空流，回合失败静默；错峰补派 + 代理自愈后通过 |
 
 ## 8. 使用（速查）
 
@@ -89,7 +90,8 @@
 cd overlay/scripts/fleet
 bash fleet-setup.sh                 # 置备（幂等，全量三用户）
 bash fleet-up.sh                    # 三实例起（冒烟可 bash fleet-up.sh alice）
-bash fleet-scenario.sh              # 七步交付全流程
+FLEET_HIDDEN=1 bash fleet-up.sh     # 长跑场景推荐：窗口不弹出（托盘可见）
+bash fleet-scenario.sh              # 七步交付全流程（断点续跑 START_STEP=impl）
 bash fleet-evidence.sh              # 验收门 + 证据
 bash fleet-down.sh                  # 收尾
 ```

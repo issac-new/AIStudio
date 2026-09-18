@@ -28,6 +28,9 @@ up_one() {
   # exec 确保 $! 就是 Electron 主进程。userData 必须显式 --user-data-dir 指进沙箱：
   # macOS 上 HOME 覆盖不影响 Electron userData 解析（不读 $HOME），单实例锁随 userData
   # 分键，与真实实例/其他副本隔离。HOME 仍注入以隔离其余家目录态。
+  # FLEET_HIDDEN=1 传 --hidden：窗口不弹出（托盘可见），避免长跑场景打扰桌面被人工退出。
+  local hidden_arg=""
+  [[ "${FLEET_HIDDEN:-0}" == "1" ]] && hidden_arg="--hidden"
   (
     cd "$home"
     exec env \
@@ -41,6 +44,7 @@ up_one() {
       BIND_HOST=127.0.0.1 \
       "$app/Contents/MacOS/SwarmStudio" \
       --user-data-dir="$home/Library/Application Support/SwarmStudio" \
+      $hidden_arg \
       >> "$LOGS_DIR/$u-app.log" 2>&1
   ) &
   echo $! > "$pidfile"
@@ -58,6 +62,8 @@ for u in "${START[@]}"; do
 done
 
 log "全部就绪。各用户独立应用入口:"
+MODE_DESC="应用窗口已打开"
+[[ "${FLEET_HIDDEN:-0}" == "1" ]] && MODE_DESC="应用隐藏运行（托盘可见，点开即显窗口）"
 for u in "${START[@]}"; do
-  log "  $u → 应用窗口自动打开；后端 http://127.0.0.1:$(studio_port "$u")（admin/123456, matrix $(human_mxid "$u")）"
+  log "  $u → ${MODE_DESC}；后端 http://127.0.0.1:$(studio_port "$u")（admin/123456, matrix $(human_mxid "$u")）"
 done
