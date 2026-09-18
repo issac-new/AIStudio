@@ -13,6 +13,16 @@ export interface GitChange {
   kind: GitChangeKind
 }
 
+export interface GitLogCommit {
+  hash: string
+  short: string
+  author: string
+  timestamp: number
+  refs: string[]
+  isHead: boolean
+  subject: string
+}
+
 export interface GitStatus {
   repoRoot: string
   branch: string
@@ -113,6 +123,9 @@ export const ideGitApi = {
   },
   checkout(root: string, branch: string): Promise<{ ok: boolean }> {
     return request('/api/ide/git/checkout', { method: 'POST', body: JSON.stringify({ root, branch }) })
+  },
+  log(root: string, limit = 100): Promise<{ commits: GitLogCommit[] }> {
+    return request(`/api/ide/git/log?root=${encodeURIComponent(root)}&limit=${limit}`)
   },
   push(root: string): Promise<{ ok: boolean; output: string }> {
     return request('/api/ide/git/push', { method: 'POST', body: JSON.stringify({ root }) })
