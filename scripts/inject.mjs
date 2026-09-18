@@ -287,19 +287,36 @@ function ensureServerCustomSymlink() {
   }
 }
 
-function restoreNonPatchArtifacts(label) {
-  // 还原所有"非 patch 目标"的 build 产物(如 docs/openapi.json)到 HEAD。
-  // 这些不是我们的 patch,留着会挡住 inject 的 dirty-check。
+// patch 会 touch 的文件集合（修改 + 新增），模块级缓存供 restore/precheck 共用。
+let _patchTargetsCache = null;
+function patchFileSets() {
+  if (_patchTargetsCache) return _patchTargetsCache;
   const patchTargets = new Set();
+  const patchNewFiles = new Set(); // patch 新增的 untracked 文件（--- /dev/null +++ b/path）
   for (const p of readSeries()) {
     try {
       const patchText = readFileSync(resolve(patchDir, p), 'utf8');
-      for (const line of patchText.split('\n')) {
+      const lines = patchText.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const m = line.match(/^(?:\+\+\+|---) b\/(.+)$/);
         if (m) patchTargets.add(m[1]);
+        // 新文件：--- /dev/null 后跟 +++ b/path
+        if (line.startsWith('--- /dev/null') && i + 1 < lines.length) {
+          const m2 = lines[i + 1].match(/^\+\+\+ b\/(.+)$/);
+          if (m2) patchNewFiles.add(m2[1]);
+        }
       }
     } catch { /* patch 文件读取失败,跳过 */ }
   }
+  _patchTargetsCache = { patchTargets, patchNewFiles };
+  return _patchTargetsCache;
+}
+
+function restoreNonPatchArtifacts(label) {
+  // 还原所有"非 patch 目标"的 build 产物(如 docs/openapi.json)到 HEAD。
+  // 这些不是我们的 patch,留着会挡住 inject 的 dirty-check。
+  const { patchTargets } = patchFileSets();
   // 注意:不能用 .trim() 再 split——porcelain 未暂存行前缀是 " M"(首空格),
   // 整体 trim 会吃掉第一行的前导空格,导致 startsWith(' M') 失配、
   // 首个脏文件(如 build 产物 docs/openapi.json)漏还原,inject 随后被自己的
@@ -350,6 +367,13 @@ function main() {
       .filter((l) => l.trim())
       .filter((l) => !(selfCustomResidual && l.trimEnd().endsWith('packages/server/src/custom')))
       .filter((l) => !l.includes('docs/openapi.json')) // restoreNonPatchArtifacts 管理的产物
+      .filter((l) => {
+        // patch 新增的 untracked 文件（?? 状态）在 clean 后仍可能存在（clean 不删
+        // untracked patch 产物），这些文件属于 patch 自身产出，不应阻塞 inject。
+        if (!l.startsWith('??')) return true;
+        const f = l.slice(3).trim();
+        return !patchFileSets().patchNewFiles.has(f);
+      })
       .join('\n')
       .trim();
     if (precheck && patches.length > 0) {
@@ -393,6 +417,17 @@ function main() {
     reversePatches(applied);
     // 还原非 patch 的 build 产物(如 openapi.json),保持上游完全干净
     restoreNonPatchArtifacts('clean');
+    // 删除 patch 新增的 untracked 文件（git apply -R 不会删新文件,只还原修改）
+    const { patchNewFiles } = patchFileSets();
+    for (const f of patchNewFiles) {
+      const p = resolve(hermesStudioRoot, f);
+      try {
+        if (existsSync(p) && !lstatSync(p).isSymbolicLink()) {
+          unlinkSync(p);
+          console.log(`[clean] removed patch-added file: ${f}`);
+        }
+      } catch { /* 已删或权限问题,跳过 */ }
+    }
     // 移除 inject 创建的 server/src/custom 符号链接(保持上游纯净)
     ensureServerCustomSymlink();
     console.log('[clean] done');
