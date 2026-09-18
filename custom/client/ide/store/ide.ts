@@ -72,7 +72,7 @@ const DEFAULT_LAYOUT: IdeLayoutPrefs = {
 export type IdeTaskView = 'tasks' | 'files'
 export type IdeOrganizeMode = 'grouped' | 'project' | 'timeline'
 
-export type IdeSidePaneTab = 'review' | 'browser' | 'wiki' | 'assistant'
+export type IdeSidePaneTab = 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory'
 
 export interface IdeSidePanePrefs {
   open: boolean

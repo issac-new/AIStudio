@@ -108,6 +108,15 @@ export const ideGitApi = {
       throw toGitError(err)
     }
   },
+  branches(root: string): Promise<{ branches: Array<{ name: string; current: boolean }> }> {
+    return request(`/api/ide/git/branches?root=${encodeURIComponent(root)}`)
+  },
+  checkout(root: string, branch: string): Promise<{ ok: boolean }> {
+    return request('/api/ide/git/checkout', { method: 'POST', body: JSON.stringify({ root, branch }) })
+  },
+  push(root: string): Promise<{ ok: boolean; output: string }> {
+    return request('/api/ide/git/push', { method: 'POST', body: JSON.stringify({ root }) })
+  },
 }
 
 function toGitError(err: unknown): GitApiError {

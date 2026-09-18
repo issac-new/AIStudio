@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index c808f35..0b51b6a 100644
+index c808f35..bc206ae 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -462,6 +462,85 @@ export default {
+@@ -462,6 +462,123 @@ export default {
      railWorkspace: '工作区',
      railTerminal: '终端',
      railChat: '会话',
@@ -47,8 +47,11 @@ index c808f35..0b51b6a 100644
 +      assistantCopy: '复制追问',
 +      assistantCopied: '追问已复制，粘贴到会话输入框即可发送',
 +      assistantGoChat: '回主会话',
-+    },
-+    modelInvalid: {
++      renameGroup: '重命名分组',
++      deleteGroup: '删除分组（任务移回未分组）',
++      groupRenameFailed: '重命名分组失败',
++      groupDeleteFailed: '删除分组失败',
++    },    modelInvalid: {
 +      title: '当前模型已不可用',
 +      hint: '该模型已从可用列表移除，请重新选择后继续',
 +      reselect: '去设置重选',
@@ -85,10 +88,45 @@ index c808f35..0b51b6a 100644
 +      needWorkspace: '设置工作区后可用（读取 workspace 的 docs/wiki/ 目录）',
 +      noSelection: '选择左侧页面阅读',
 +    },
++    storage: {
++      panelTitle: '资源管理器',
++      total: 'ZCode 总占用',
++      rescan: '重新计算',
++      scanning: '正在计算…',
++      reveal: '在文件管理器中显示',
++      clean: '清理',
++      cleanSuccess: '已释放 {size}',
++      cleanFailed: '清理失败',
++      loadFailed: '占用计算失败',
++      revealFailed: '打开目录失败',
++      confirmTitle: '清理「{category}」？',
++      confirmSize: '将删除约 {size}。',
++      cat_logs: '日志',
++      cat_backups: '备份',
++      cat_backup: '备份（旧）',
++      cat_trash: '清理暂存',
++      cat_audioCache: '语音缓存',
++      cat_cache: '通用缓存',
++      cat_sessionStore: '会话数据库',
++      cat_runtimes: 'Agent 运行时',
++      cat_assets: '静态资产',
++    },
++    memory: {
++      panelTitle: '工作区记忆',
++      refresh: '刷新',
++      loading: '正在加载记忆…',
++      empty: '暂无记忆文件（AGENTS.md / MEMORY.md / memory/ 目录）',
++      needWorkspace: '设置工作区后可用',
++      searchPlaceholder: '搜索记忆文件…',
++      noSelection: '选择左侧文件查看内容',
++      loadFailed: '记忆读取失败',
++    },
++    gitBranchSwitcher: '切换分支',
++    gitPush: '推送当前分支',
      loading: '加载中…',
      workspaceDefault: '默认工作区',
      workspaceOutsideSandbox: '该目录超出文件浏览沙箱（须在 ~/.hermes 内或为已知任务工作区）；终端与会话仍可使用该目录',
-@@ -480,6 +559,34 @@ export default {
+@@ -480,6 +597,34 @@ export default {
      chatTab_messages: '会话',
      chatTab_subagents: '子代理',
      chatSubagentsEmpty: '暂无子代理流。会话运行中触发子代理时，点击消息流中的子代理卡片即可在此查看。',
@@ -123,7 +161,7 @@ index c808f35..0b51b6a 100644
      statusRunning: '运行中',
      statusIdle: '空闲',
    },
-@@ -1902,6 +2009,16 @@ export default {
+@@ -1902,6 +2047,16 @@ export default {
      messageQueue: '消息队列',
      removeQueuedMessage: '移除队列消息',
      insertQueuedMessage: '插入排队消息',
