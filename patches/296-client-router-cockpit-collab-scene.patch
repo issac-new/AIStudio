@@ -1,0 +1,11 @@
+diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+--- a/packages/client/src/router/index.ts
++++ b/packages/client/src/router/index.ts
+@@ -36,6 +36,6 @@
+     {
+       path: '/hermes/cockpit',
+       name: 'hermes.cockpit',
+-      component: () => import('@/custom/cockpit/views/CockpitView.vue'),
++      component: () => import('@/custom/ia2/views/scenes/CollabScene.vue'),
+       meta: { fullscreen: true },
+       children: [

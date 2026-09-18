@@ -87,7 +87,7 @@ async function mountScene() {
     routes: [
       { path: '/app/runs/:runId', name: 'ia2.runDetail', component: { template: '<div />' } },
       { path: '/hermes/loop/runs/:runId', name: 'hermes.loopRunDetail', component: { template: '<div />' } },
-      { path: '/hermes/cockpit', name: 'hermes.cockpit', component: { template: '<div />' } },
+      { path: '/app/collab', name: 'ia2.collab', component: { template: '<div />' } },
       { path: '/app/runs', name: 'ia2.runs', component: { template: '<div />' } },
     ],
   })
@@ -124,7 +124,7 @@ describe('OpsScene — 装配', () => {
     expect(table.props('runs')).toHaveLength(2)
   })
 
-  it('快捷动作：新建循环开 wizard；日程走 workspace.openSchedule；协作中心跳 /hermes/cockpit', async () => {
+  it('快捷动作：新建循环开 wizard；日程走 workspace.openSchedule；协作中心跳协作场景', async () => {
     const { wrapper, router } = await mountScene()
     const push = vi.spyOn(router, 'push')
     expect(wrapper.find('.wizard-stub').exists()).toBe(false)
@@ -134,7 +134,7 @@ describe('OpsScene — 装配', () => {
     expect(workspaceStubs.state.openSchedule).toHaveBeenCalled()
     expect(wrapper.find('.schedule-stub').exists()).toBe(true)
     await wrapper.find('[data-testid="ops-cockpit"]').trigger('click')
-    expect(push).toHaveBeenCalledWith('/hermes/cockpit')
+    expect(push).toHaveBeenCalledWith({ name: 'ia2.collab' })
   })
 
   it('runs 表选择跳运行详情（家族感知：默认 ia2.runDetail）', async () => {

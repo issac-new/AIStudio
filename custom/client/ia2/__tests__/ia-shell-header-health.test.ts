@@ -1,27 +1,29 @@
 // @vitest-environment jsdom
-// AI 协作中心顶栏 Platforms 作用域守门（2026-09-13 用户指定）：
+// overlay/custom/client/ia2/__tests__/ia-shell-header-health.test.ts
+// IaShellHeader Platforms 作用域守门（2026-09-13 用户指定；2026-09-18 统一导航
+// Task 3 自 cockpit-topbar-health.test.ts 迁移——探测逻辑已随页头上移 IaShellHeader，
+// CockpitTopBar 删除）：
 // 只显示当前 gateway 本次启动加载的 channel（loaded_platforms），
 // 不显示 runtime 持久化 map 里的残留/其他 profile 条目（platforms 字段）；
-// 顶栏仅展示渠道名，profile 仅在详情下拉面板显示。
+// 页头仅展示渠道名，profile 仅在详情下拉面板显示。
 // 后端契约见 overlay patch 250（agent /health/detailed 新增 loaded_platforms/served_profiles）。
-// @ts-expect-error SFC shim absent in overlay-only typecheck
+// i18n 走全局 setup mock（t 直返 key）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
   useCockpitStore: () => ({ searchQuery: '', runSearch: vi.fn(), clearSearch: vi.fn(), _sessionSearching: false }),
 }))
 vi.mock('@/stores/hermes/app', () => ({ useAppStore: () => ({ connected: false }) }))
 vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeSwitch', template: '<span class="theme-stub" />' } }))
 vi.mock('@/components/layout/LanguageSwitch.vue', () => ({ default: { name: 'LanguageSwitch', template: '<span class="lang-stub" />' } }))
-// 团队切换器（2026-09-14 并入顶栏）有 store/profiles 依赖，换哑组件避免拉起上游 router
+// 团队切换器有 store/profiles 依赖，换哑组件避免拉起上游 router
 vi.mock('@/custom/cockpit/components/CockpitTeamSwitcher.vue', () => ({
   default: { name: 'CockpitTeamSwitcher', template: '<span class="team-switcher-stub" />' },
 }))
 
-import CockpitTopBar from '@/custom/cockpit/components/CockpitTopBar.vue'
+import IaShellHeader from '../components/IaShellHeader.vue'
 
 function mockHealth(payload: unknown) {
   vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => payload })))
@@ -29,8 +31,8 @@ function mockHealth(payload: unknown) {
 
 async function mountBar(payload: unknown) {
   mockHealth(payload)
-  const w = mount(CockpitTopBar, {
-    props: { notifyCount: 0, scheduleCount: 0, userName: 'tester' },
+  const w = mount(IaShellHeader, {
+    props: { notifyCount: 0, userName: 'tester' },
     global: { stubs: { ThemeSwitch: true, LanguageSwitch: true, CockpitIcon: true } },
   })
   await vi.waitFor(() => {
@@ -44,7 +46,7 @@ function grpText(w: ReturnType<typeof mount>) {
   return w.find('.cockpit-top__grp').text()
 }
 
-describe('CockpitTopBar Platforms loaded 作用域', () => {
+describe('IaShellHeader Platforms loaded 作用域', () => {
   beforeEach(() => { vi.unstubAllGlobals() })
 
   it('显示 loaded_platforms 的当前进程裸 channel（telegram）', async () => {
@@ -75,7 +77,7 @@ describe('CockpitTopBar Platforms loaded 作用域', () => {
     w.unmount()
   })
 
-  it('解析 <profile>:<platform> 命名空间：顶栏只显示渠道名（不含 profile，也不泄漏完整内部键）', async () => {
+  it('解析 <profile>:<platform> 命名空间：页头只显示渠道名（不含 profile，也不泄漏完整内部键）', async () => {
     const w = await mountBar({
       gateway_state: 'running',
       platforms: { 'research:matrix': { state: 'connected' } },
@@ -89,7 +91,7 @@ describe('CockpitTopBar Platforms loaded 作用域', () => {
     w.unmount()
   })
 
-  it('顶栏隐藏 profile，但详情面板保留 profile 语义', async () => {
+  it('页头隐藏 profile，但详情面板保留 profile 语义', async () => {
     const w = await mountBar({
       gateway_state: 'running',
       loaded_platforms: { 'research:matrix': { state: 'connected' } },
@@ -134,7 +136,7 @@ describe('CockpitTopBar Platforms loaded 作用域', () => {
     w.unmount()
   })
 
-  it('顶栏与详情面板使用同一投影（详情不再各渲染一套 rawData.platforms）', async () => {
+  it('页头与详情面板使用同一投影（详情不再各渲染一套 rawData.platforms）', async () => {
     const w = await mountBar({
       gateway_state: 'running',
       platforms: { telegram: { state: 'connected' }, stale: { state: 'fatal' } },

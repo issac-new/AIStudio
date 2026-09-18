@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 // mock parseTenant：matrix → 有 routeTarget；其他 → null
 vi.mock('@/custom/cockpit/adapters/collab-adapter', () => ({
   parseTenant: (t: string | null) => t && t.startsWith('matrix:')
-    ? { kind: 'matrix', label: t.split(':').slice(-1)[0], routeTarget: { name: 'hermes.matrixChatRoom', params: { roomId: '!r' } }, raw: t }
+    ? { kind: 'matrix', label: t.split(':').slice(-1)[0], routeTarget: { name: 'ia2.commsRoom', params: { roomId: '!r' } }, raw: t }
     : null,
 }))
 
@@ -79,7 +79,7 @@ describe('buildTopology', () => {
     const r = buildTopology(task({ tenant: 'matrix:!r:s.ms:Auth联调' }), null, [])
     const ch = r.nodes.find(n => n.kind === 'channel')
     expect(ch?.label).toBe('Auth联调')
-    expect(ch?.target?.routeTarget).toEqual({ name: 'hermes.matrixChatRoom', params: { roomId: '!r' } })
+    expect(ch?.target?.routeTarget).toEqual({ name: 'ia2.commsRoom', params: { roomId: '!r' } })
   })
 
   it('click target taskId set for ancestor/descendant', () => {

@@ -39,16 +39,14 @@ describe('AppSidebar IDE 工作台一级入口（patch 278 守门）', () => {
     expect(en).toMatch(/ideWorkspace:\s*'IDE Workspace'/)
   })
 
-  it('入口位于顶部：ide < 工作台(ia2) < AI协作中心(cockpit) < 循环工程图(loop) < logs', () => {
+  it('入口位于顶部：ide < 工作台(ia2) < 循环工程图(loop) < logs（AI协作中心入口随 cockpit 退役，Task 6 从上游侧栏移除）', () => {
     const ideIdx = src.indexOf(`:to="{ name: 'ide.shell' }"`)
     const ia2Idx = src.indexOf(`:to="{ name: 'ia2.overview' }"`)
-    const cockpitIdx = src.indexOf(`:to="{ name: 'hermes.cockpit' }"`)
     const loopIdx = src.indexOf(`:to="{ name: 'hermes.loop' }"`)
     const logsIdx = src.indexOf(`:to="{ name: 'hermes.logs' }"`)
     expect(ideIdx).toBeGreaterThan(-1)
     expect(ia2Idx).toBeGreaterThan(ideIdx)
-    expect(cockpitIdx).toBeGreaterThan(ia2Idx)
-    expect(loopIdx).toBeGreaterThan(cockpitIdx)
+    expect(loopIdx).toBeGreaterThan(ia2Idx)
     expect(logsIdx).toBeGreaterThan(loopIdx)
   })
 })

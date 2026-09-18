@@ -3,8 +3,9 @@
 // 一级菜单入口。
 //
 // 背景：Loop 的侧边栏导航条目原为 patch 133，v0.7.12 上游侧栏重构后锚点消失
-// 被摘除，此后 /hermes/loop 仅剩 cockpit 顶栏 "Swarm Studio" 字样入口
-// （cockpit-topbar-loop-entry.test.ts 守门）。本测试守住恢复的一级菜单入口。
+// 被摘除，此后 /hermes/loop 仅剩 cockpit 顶栏 "Swarm Studio" 字样入口。
+// 2026-09-18 统一导航 Task 3：CockpitTopBar 已随 cockpit 三栏迁移删除
+// （字样入口不复存在），本测试守住的一级菜单入口成为 loop 唯一入口。
 //
 // 断言对象是注入态上游文件（与 matrix-login-session.test.ts 同模式）：
 // 测试跑在 inject 之后，patch 丢失/漂移时当场 fail。
@@ -42,22 +43,12 @@ describe('AppSidebar 循环工程图一级入口（patch 246 守门）', () => {
     expect(en).toMatch(/loopGraph:\s*'Loop Graph'/)
   })
 
-  it('与 cockpit 入口并列（入口位于 cockpit 块之后、hermes.logs 之前）', () => {
-    const cockpitIdx = src.indexOf(`:to="{ name: 'hermes.cockpit' }"`)
+  it('入口位于工作台(ia2)之后、hermes.logs 之前', () => {
+    const ia2Idx = src.indexOf(`:to="{ name: 'ia2.overview' }"`)
     const loopIdx = src.indexOf(`:to="{ name: 'hermes.loop' }"`)
     const logsIdx = src.indexOf(`:to="{ name: 'hermes.logs' }"`)
-    expect(cockpitIdx).toBeGreaterThan(-1)
-    expect(loopIdx).toBeGreaterThan(cockpitIdx)
+    expect(ia2Idx).toBeGreaterThan(-1)
+    expect(loopIdx).toBeGreaterThan(ia2Idx)
     expect(logsIdx).toBeGreaterThan(loopIdx)
-  })
-
-  it('顶栏 "Swarm Studio" 字样已改指总览页——Loop 入口唯一事实源=本菜单项', () => {
-    const topbar = readFileSync(
-      resolve(__dirname, '../../cockpit/components/CockpitTopBar.vue'),
-      'utf8',
-    )
-    // 2026-09-14 用户指定：顶栏字样改指 ia2.overview，不再承担 loop 入口
-    expect(topbar).toContain(`router.push({ name: 'ia2.overview' })`)
-    expect(topbar).not.toContain(`router.push({ name: 'hermes.loop' })`)
   })
 })

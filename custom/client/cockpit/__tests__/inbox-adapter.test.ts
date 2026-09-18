@@ -32,7 +32,7 @@ describe('buildInboxItems', () => {
       fleet({ approvals: [{ approval_id: 'a1', preview: 'shell rm', choices: ['once'] }], clarifies: [{ clarify_id: 'c1', question: '继续?' }] }),
     ],
     chatUnreads: [
-      { id: 'chat:s2', kind: 'chat', title: '侦察', preview: '完成', ts: 800, count: 3, routeTarget: { name: 'hermes.session', params: { sessionId: 's2' }, query: { profile: 'scout' } } },
+      { id: 'chat:s2', kind: 'chat', title: '侦察', preview: '完成', ts: 800, count: 3, routeTarget: { name: 'ia2.collabSession', params: { sessionId: 's2' }, query: { profile: 'scout' } } },
     ] as any[],
     notifyItems: [
       { id: 'matrix:r1', kind: 'matrix', title: '房间', preview: 'hi', ts: 950, count: 1, routeTarget: { name: 'ia2.commsRoom', params: { roomId: 'r1' } } },
@@ -51,7 +51,7 @@ describe('buildInboxItems', () => {
     const items = buildInboxItems(sources)
     const approval = items.find(i => i.kind === 'approval')!
     expect(approval.approval).toMatchObject({ sessionId: 's1', approvalId: 'a1' })
-    expect(approval.routeTarget).toMatchObject({ name: 'hermes.session', params: { sessionId: 's1' }, query: { profile: 'aiteam-orchestrator' } })
+    expect(approval.routeTarget).toMatchObject({ name: 'ia2.collabSession', params: { sessionId: 's1' }, query: { profile: 'aiteam-orchestrator' } })
     const blocked = items.find(i => i.kind === 'blocked')!
     expect(blocked.taskId).toBe('T-1')
   })

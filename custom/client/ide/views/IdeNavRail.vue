@@ -59,7 +59,7 @@ const { t } = useI18n()
       class="ide-navrail__item"
       :title="t('ide.links.cockpit')"
       :aria-label="t('ide.links.cockpit')"
-      @click="router.push({ name: 'hermes.cockpit' })"
+      @click="router.push({ name: 'ia2.collab' })"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="9" />

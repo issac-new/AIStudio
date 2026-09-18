@@ -38,10 +38,10 @@ const agentSelectOptions = computed<Array<{ label: string; value: string; disabl
 /** 功能链接：跳转既有页面（router-link 路由跳转，不新开） */
 const linkGroups: Array<{ key: string; label: string; to: { name: string } | { path: string } }> = [
   { key: 'workbench', label: 'ide.links.workbench', to: { name: 'ia2.overview' } },
-  { key: 'cockpit', label: 'ide.links.cockpit', to: { name: 'hermes.cockpit' } },
+  { key: 'cockpit', label: 'ide.links.cockpit', to: { name: 'ia2.collab' } },
   { key: 'loopGraph', label: 'ide.links.loopGraph', to: { name: 'hermes.loop' } },
-  { key: 'kanban', label: 'ide.links.kanban', to: { path: '/hermes/cockpit/swarm-kanban' } },
-  { key: 'history', label: 'ide.links.history', to: { path: '/hermes/cockpit/history' } },
+  { key: 'kanban', label: 'ide.links.kanban', to: { name: 'ia2.tasks' } },
+  { key: 'history', label: 'ide.links.history', to: { name: 'ia2.collabHistory' } },
   { key: 'groupChat', label: 'ide.links.groupChat', to: { name: 'hermes.groupChat' } },
   { key: 'mcp', label: 'ide.links.mcp', to: { path: '/hermes/mcp' } },
   { key: 'skills', label: 'ide.links.skills', to: { path: '/hermes/skills' } },

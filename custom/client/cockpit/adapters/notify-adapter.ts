@@ -72,7 +72,8 @@ export function fromChatSession(session: {
     ts,
     count,
     routeTarget: {
-      name: 'hermes.session',
+      // 2026-09-18 统一导航 Task 3：旧 session 顶层路由随 cockpit 退役 → 协作场景嵌入会话页
+      name: 'ia2.collabSession',
       params: { sessionId: session.id },
       query: session.profile ? { profile: session.profile } : {},
     },
