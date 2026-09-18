@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index facc78f..f742dc6 100644
+index facc78f..78c7347 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -464,6 +464,123 @@ export default {
+@@ -464,6 +464,141 @@ export default {
      railWorkspace: 'Workspace',
      railTerminal: 'Terminal',
      railChat: 'Chat',
@@ -123,10 +123,28 @@ index facc78f..f742dc6 100644
 +    },
 +    gitBranchSwitcher: 'Switch branch',
 +    gitPush: 'Push current branch',
++    gitViewStatus: 'Status',
++    gitViewGraph: 'Graph',
++    gitGraphTitle: 'Commit graph',
++    gitGraphEmpty: 'No commits yet',
++    gitGraphLoadFailed: 'Failed to load commit graph',
++    terminalNewTab: 'New terminal',
++    terminalCloseTab: 'Close terminal',
++    whiteboard: {
++      pen: 'Pen',
++      eraser: 'Eraser',
++      color: 'Color',
++      width: 'Width',
++      undo: 'Undo',
++      redo: 'Redo',
++      clear: 'Clear',
++      export: 'Export PNG',
++      exported: 'Whiteboard exported',
++    },
      loading: 'Loading…',
      workspaceDefault: 'Default workspace',
      workspaceOutsideSandbox: 'This directory is outside the file browsing sandbox (must be within ~/.hermes or a known task workspace); terminal and chat sessions can still use it',
-@@ -482,6 +599,34 @@ export default {
+@@ -482,6 +617,34 @@ export default {
      chatTab_messages: 'Chat',
      chatTab_subagents: 'Subagents',
      chatSubagentsEmpty: 'No subagent stream yet. When a session spawns subagents, click the subagent card in the message stream to inspect it here.',
@@ -161,10 +179,13 @@ index facc78f..f742dc6 100644
      statusRunning: 'Running',
      statusIdle: 'Idle',
    },
-@@ -1904,6 +2049,16 @@ export default {
+@@ -1904,6 +2067,19 @@ export default {
      messageQueue: 'Message queue',
      removeQueuedMessage: 'Remove queued message',
      insertQueuedMessage: 'Insert queued message',
++    queueEdit: 'Edit queued message',
++    queueEditHint: 'Double-click to edit; drag to reorder',
++    queueSave: 'Save',
 +    imagePrev: 'Previous',
 +    imageNext: 'Next',
 +    imageZoomIn: 'Zoom in',

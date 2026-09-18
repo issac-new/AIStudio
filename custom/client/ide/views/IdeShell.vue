@@ -15,7 +15,7 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdeTopBar from './IdeTopBar.vue'
 import IdeTaskSidebar from './IdeTaskSidebar.vue'
 import IdeWorkspacePane from './IdeWorkspacePane.vue'
-import IdeTerminalPanel from './IdeTerminalPanel.vue'
+import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeChatPane from './IdeChatPane.vue'
 import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
@@ -127,7 +127,7 @@ onUnmounted(() => {
           :style="terminalPanelStyle"
         >
           <div class="ide-shell__terminal-handle" @pointerdown="startTerminalResize" />
-          <IdeTerminalPanel class="ide-shell__terminal-body" />
+          <IdeTerminalDock class="ide-shell__terminal-body" />
         </div>
       </div>
       <div v-if="ide.layout.chatVisible" class="ide-shell__chat" :style="chatColumnStyle">
