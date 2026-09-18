@@ -54,24 +54,13 @@ const { t } = useI18n()
 
     <div class="ide-navrail__divider" />
 
+    <!-- 统一导航（09-18 裁决）：跨页跳转收敛为单个「⇄ 驾驶舱」，与驾驶舱页头「⇄ IDE」镜像对称 -->
     <button
       type="button"
       class="ide-navrail__item"
-      :title="t('ide.links.cockpit')"
-      :aria-label="t('ide.links.cockpit')"
-      @click="router.push({ name: 'ia2.collab' })"
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
-      </svg>
-    </button>
-
-    <button
-      type="button"
-      class="ide-navrail__item"
-      :title="t('ide.links.workbench')"
-      :aria-label="t('ide.links.workbench')"
+      data-testid="ide-nav-cockpit"
+      :title="t('ide.links.cockpitHome')"
+      :aria-label="t('ide.links.cockpitHome')"
       @click="router.push({ name: 'ia2.overview' })"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -79,21 +68,6 @@ const { t } = useI18n()
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
         <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </svg>
-    </button>
-
-    <button
-      type="button"
-      class="ide-navrail__item"
-      :title="t('ide.links.loopGraph')"
-      :aria-label="t('ide.links.loopGraph')"
-      @click="router.push({ name: 'hermes.loop' })"
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="5" cy="6" r="2.5" />
-        <circle cx="19" cy="6" r="2.5" />
-        <circle cx="12" cy="18" r="2.5" />
-        <path d="M7.5 6h9M6 8.2l4.6 7.6M18 8.2l-4.6 7.6" />
       </svg>
     </button>
   </nav>
