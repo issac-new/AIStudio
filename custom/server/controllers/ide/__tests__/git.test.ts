@@ -8,6 +8,8 @@ import { execFileSync } from 'child_process'
 import {
   parseGitStatus,
   isSafeRelativeFile,
+  isSafeBranchName,
+  gitTimeoutMs,
   type GitStatus,
 } from '../git'
 
@@ -182,19 +184,33 @@ describe('git branches/checkout（M4 分支切换）', () => {
     }
   })
 
-  it('checkout 真实切换；端点同款分支名白名单正则拒绝注入', () => {
+  it('checkout 真实切换；端点同款分支名白名单（isSafeBranchName 单一事实源）拒绝注入', () => {
     const repo = makeRepo()
     try {
       repo.git(['checkout', '-b', 'feature-y'])
       repo.git(['checkout', 'main'])
       expect(repo.git(['rev-parse', '--abbrev-ref', 'HEAD']).toString().trim()).toBe('main')
-      // 与控制器 checkout 端点同款白名单（^[[\\w./-]{1,100}$）
-      const valid = /^[\w./-]{1,100}$/
-      expect(valid.test('feature/abc-v1.2')).toBe(true)
-      expect(valid.test('a;rm -rf')).toBe(false)
-      expect(valid.test('$(pwd)')).toBe(false)
+      // 与控制器 checkout 端点同源白名单（导入而非复制，防两处漂移）
+      expect(isSafeBranchName('feature/abc-v1.2')).toBe(true)
+      expect(isSafeBranchName('a;rm -rf')).toBe(false)
+      expect(isSafeBranchName('$(pwd)')).toBe(false)
+      // git 选项不得当分支名注入（--detach 会静默分离 HEAD）
+      expect(isSafeBranchName('--detach')).toBe(false)
+      expect(isSafeBranchName('--orphan')).toBe(false)
+      expect(isSafeBranchName('-b')).toBe(false)
     } finally {
       repo.cleanup()
     }
+  })
+
+  it('gitTimeoutMs：读类 10s，变更类 120s（-C <root> 前缀被跳过）', () => {
+    expect(gitTimeoutMs(['-C', '/repo', 'status', '--porcelain=v1'])).toBe(10_000)
+    expect(gitTimeoutMs(['-C', '/repo', 'diff', '--cached'])).toBe(10_000)
+    expect(gitTimeoutMs(['-C', '/repo', 'log', '-n', '100'])).toBe(10_000)
+    expect(gitTimeoutMs(['-C', '/repo', 'branch', '--format=x'])).toBe(10_000)
+    expect(gitTimeoutMs(['-C', '/repo', 'push'])).toBe(120_000)
+    expect(gitTimeoutMs(['-C', '/repo', 'checkout', 'feature-x'])).toBe(120_000)
+    expect(gitTimeoutMs(['-C', '/repo', 'commit', '-m', 'msg'])).toBe(120_000)
+    expect(gitTimeoutMs(['-C', '/repo', 'add', '--', 'a.ts'])).toBe(120_000)
   })
 })
