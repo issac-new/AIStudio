@@ -490,3 +490,11 @@
 302-desktop-main-panel-window.patch
 303-desktop-preload-panel-window.patch
 304-client-desktop-bridge-panel-window.patch
+
+# 305/306 = 统一导航 i18n（zh/en 成对）：品牌 驾驶舱/Cockpit、六场景词表补
+#       collab/eng/ops、新增 ia2.shell（gotoIde 缺失键修复）与 ia2.wm 窗口管理
+#       词表、sidebar.systemGroup 系统分组、ide.links.cockpitHome ⇄ 互跳；
+#       死键清理 sidebar.loop/graph/loopGraph、ide.links.workbench/cockpit/
+#       loopGraph、cockpit.brandTitle（零引用）。
+305-client-i18n-unified-nav-zh.patch
+306-client-i18n-unified-nav-en.patch
