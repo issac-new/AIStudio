@@ -481,3 +481,12 @@
 299-client-appsidebar-dual-entry-system-group.patch
 300-client-pagesidebarnav-collab-targets.patch
 301-client-globalpendingactions-collab-links.patch
+
+
+# 302-304 = 统一导航窗口管理（/goal 追加）：桌面 open-panel-window IPC——主进程
+#       openPanelWindow（BrowserWindow + preload + --hermes-window-kind=panel，路由
+#       路径白名单校验、去重聚焦、可信发送者纳入 panel 窗）、preload 暴露、
+#       client desktop-bridge 接口/windowKind 加 'panel'。
+302-desktop-main-panel-window.patch
+303-desktop-preload-panel-window.patch
+304-client-desktop-bridge-panel-window.patch
