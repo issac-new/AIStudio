@@ -49,9 +49,9 @@ const sessionState = computed(() =>
   gap: 16px;
   padding: 0 12px;
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
-  background: var(--bg-secondary, #1b1e24);
-  border-top: 1px solid var(--border-color, #26292f);
+  color: var(--ide-text-muted, #8b8f97);
+  background: var(--ide-bg-side, #1a1c20);
+  border-top: 1px solid var(--ide-border, #2a2d33);
 }
 
 .ide-statusbar__item {
@@ -79,17 +79,17 @@ const sessionState = computed(() =>
   gap: 4px;
   height: 18px;
   padding: 0 8px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--ide-border, #2a2d33);
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   font-size: 11px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); }
+  &:hover { color: var(--ide-text, #d6d8dd); }
   &.is-active {
-    color: var(--accent-primary, #4cc9f0);
-    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 50%, transparent);
+    color: var(--ide-accent, #5b9cf6);
+    border-color: color-mix(in srgb, var(--ide-accent, #5b9cf6) 50%, transparent);
   }
 }
 </style>

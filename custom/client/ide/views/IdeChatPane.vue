@@ -122,6 +122,35 @@ const debugInfo = computed(() => {
   ]
 })
 const debugCopied = ref(false)
+
+// ZCode「已工作 N 分 N 秒」状态条对应物（M1 布局对齐）
+const running = computed(() => Boolean(chatStore.isRunActive || chatStore.abortState))
+const runStartMap = computed(() => chatStore.runStartedAt as unknown as Map<string, number>)
+const runStartedAt = computed(() => {
+  const sid = chatStore.activeSessionId
+  return (sid && runStartMap.value?.get(sid)) || null
+})
+const nowTick = ref(Date.now())
+let runTimer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  runTimer = setInterval(() => { nowTick.value = Date.now() }, 1000)
+})
+onUnmounted(() => { if (runTimer) clearInterval(runTimer) })
+const runElapsed = computed(() => {
+  if (!runStartedAt.value) return ''
+  const total = Math.max(0, Math.floor((nowTick.value - runStartedAt.value) / 1000))
+  const m = Math.floor(total / 60)
+  const sec = total % 60
+  return m > 0 ? `${m} ${t('ide.min')} ${sec} ${t('ide.sec')}` : `${sec} ${t('ide.sec')}`
+})
+const lastCompletedSummary = computed(() => {
+  const session = chatStore.activeSession
+  if (!session?.messages?.length) return ''
+  const last = session.messages[session.messages.length - 1]
+  if (!last || last.role !== 'assistant') return ''
+  const text = typeof last.content === 'string' ? last.content.replace(/\s+/g, ' ').trim() : ''
+  return text.slice(0, 40)
+})
 async function copyDebugInfo(): Promise<void> {
   try {
     const text = debugInfo.value.map(item => `${item.key}: ${item.value}`).join('\n')
@@ -207,8 +236,8 @@ const modelDisabled = computed(() => true)
 <template>
   <section class="ide-chat">
     <header class="ide-chat__head">
+      <span class="ide-chat__agent-chip">{{ ide.agentId }}</span>
       <span class="ide-chat__title" :title="sessionTitle">{{ sessionTitle }}</span>
-      <span class="ide-chat__agent">{{ ide.agentId }}</span>
       <div class="ide-chat__actions">
         <button
           type="button"
@@ -263,6 +292,15 @@ const modelDisabled = computed(() => true)
       </span>
       <button type="button" class="ide-chat__model-invalid-btn" @click="goReselectModel">{{ t('ide.modelInvalid.reselect') }}</button>
       <button type="button" class="ide-chat__model-invalid-dismiss" :aria-label="t('ide.modelInvalid.dismiss')" @click="modelInvalidDismissed = true">✕</button>
+    </div>
+
+    <div class="ide-chat__runline" data-testid="ide-chat-runline">
+      <template v-if="running">
+        <span class="ide-chat__runline-time">{{ t('ide.working') }} {{ runElapsed }}</span>
+      </template>
+      <template v-else-if="lastCompletedSummary">
+        <span class="ide-chat__runline-done">✓ {{ lastCompletedSummary }}</span>
+      </template>
     </div>
 
     <div class="ide-chat__tabs" role="tablist">
@@ -341,6 +379,34 @@ const modelDisabled = computed(() => true)
   white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
+}
+
+.ide-chat__agent-chip {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 15%, transparent);
+  color: var(--ide-accent, #5b9cf6);
+  font-size: 11px;
+  font-family: Menlo, Monaco, monospace;
+}
+
+.ide-chat__runline {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  padding: 2px 12px;
+  font-size: 12px;
+  color: var(--ide-text-muted, #8b8f97);
+}
+
+.ide-chat__runline-done {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ide-green, #6fbf73);
 }
 
 .ide-chat__agent {
