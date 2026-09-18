@@ -1,34 +1,19 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index 98a01f01..a220a369 100644
+index 33cecde6..cbccb165 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -10,11 +10,8 @@ import ProfileSelector from "@/components/layout/ProfileSelector.vue";
- import LanguageSwitch from "@/components/layout/LanguageSwitch.vue";
- import ThemeSwitch from "@/components/layout/ThemeSwitch.vue";
- import { changelog } from "@/data/changelog";
--import {
--  getStoredUserId,
--  getStoredUsername,
--  isStoredSuperAdmin,
--} from "@/api/client";
-+import { getStoredUserId, getStoredUsername } from "@/api/client";
-+import { useAuthStore } from "@/stores/hermes/auth";
- import { clearThemeBackgroundCache } from "@/api/studio/theme";
- 
- const { t } = useI18n();
-@@ -22,10 +19,23 @@ const message = useMessage();
- const route = useRoute();
- const router = useRouter();
- const appStore = useAppStore();
-+const authStore = useAuthStore();
+@@ -23,12 +23,18 @@ const authStore = useAuthStore();
  const selectedKey = computed(() => {
    return route.name as string;
  });
--const isSuperAdmin = computed(() => isStoredSuperAdmin());
+-// overlay[ia2]: P3 六区域新 IA 高亮（Task 8: cockpit 入口随退役移除，仅保留新 IA 项）
 +// overlay[ia2]: 六区域新 IA 高亮（统一导航后唯一工作台一级入口）
-+const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
+ const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
+-// overlay[ide]: IDE 工作台（/ide）一级入口高亮（登录默认落点，2026-09-16 用户裁决）
 +// overlay[ide]: IDE 工作台（/ide）一级入口高亮（编程专业界面壳）
-+const isIdeArea = computed(() => String(route.name ?? "").startsWith("ide."));
+ const isIdeArea = computed(() => String(route.name ?? "").startsWith("ide."));
+-// overlay[loop]: 循环工程图（/hermes/loop 家族）一级入口高亮（patch 133 摘除后由 246 恢复）
+-const isLoopArea = computed(() => String(route.name ?? "").startsWith("hermes.loop"));
 +// overlay[nav]: 系统折叠分组（统一导航裁决）——低频运维/配置入口收敛；
 +// 当前命中系统页时默认展开
 +const SYSTEM_ROUTE_NAMES = [
@@ -37,108 +22,78 @@ index 98a01f01..a220a369 100644
 +  "hermes.profiles", "hermes.settings",
 +];
 +const systemOpen = ref(SYSTEM_ROUTE_NAMES.includes(String(route.name ?? "")));
-+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
+ const isSuperAdmin = computed(() => authStore.isSuperAdmin);
  const currentUsername = computed(() => getStoredUsername());
  const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
- const isDesktopShell = computed(
-@@ -33,6 +43,7 @@ const isDesktopShell = computed(
-     (window as typeof window & { hermesDesktop?: { isDesktop?: boolean } })
-       .hermesDesktop?.isDesktop === true,
- );
-+const isSettingsPage = computed(() => route.name === 'hermes.settings');
- const showChangelog = ref(false);
- const showDockerUpdateTip = ref(false);
- const isDockerRuntime = computed(() => appStore.isDocker);
-@@ -103,6 +114,88 @@ function handleUpdateClick() {
-     @click="handleSidebarClick"
-   >
-     <nav class="sidebar-nav">
-+      <!-- overlay[ide]: IDE 工作台一级入口（登录默认落点 /ide；codex 底座 + zcode 会话 UI） -->
-+      <RouteLinkItem
-+        class="nav-item"
-+        :to="{ name: 'ide.shell' }"
-+        :active="isIdeArea"
-+      >
-+        <svg
-+          width="16"
-+          height="16"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
-+          stroke-width="1.5"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
-+          <path d="M8 6 3 12l5 6" />
-+          <path d="M16 6l5 6-5 6" />
-+        </svg>
-+        <span>{{ t("sidebar.ideWorkspace") }}</span>
-+      </RouteLinkItem>
-+      <!-- overlay[ia2]: 六区域新 IA 一级入口（P3 登录默认；Task 8 cockpit 退役后唯一入口） -->
-+      <RouteLinkItem
-+        class="nav-item"
-+        :to="{ name: 'ia2.overview' }"
-+        :active="isIa2Area"
-+      >
-+        <svg
-+          width="16"
-+          height="16"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
-+          stroke-width="1.5"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
-+          <rect x="3" y="3" width="7" height="7" rx="1" />
-+          <rect x="14" y="3" width="7" height="7" rx="1" />
-+          <rect x="3" y="14" width="7" height="7" rx="1" />
-+          <rect x="14" y="14" width="7" height="7" rx="1" />
-+        </svg>
-+        <span>{{ t("ia2.brand") }}</span>
-+      </RouteLinkItem>
+@@ -152,11 +158,12 @@ function handleUpdateClick() {
+         </svg>
+         <span>{{ t("ia2.brand") }}</span>
+       </RouteLinkItem>
+-      <!-- overlay[cockpit]: P4 平行共存——原有 AI 协作中心与新 IA 双入口并列 -->
+-      <RouteLinkItem
+-        class="nav-item"
+-        :to="{ name: 'hermes.cockpit' }"
+-        :active="selectedKey === 'hermes.cockpit'"
 +      <!-- overlay[nav]: 系统折叠分组头（统一导航：一级仅 驾驶舱/IDE 双入口） -->
 +      <button
 +        class="nav-item sidebar-system-toggle"
++        data-testid="sidebar-system-toggle"
 +        :aria-expanded="systemOpen"
 +        @click="systemOpen = !systemOpen"
-+      >
-+        <svg
-+          width="16"
-+          height="16"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
-+          stroke-width="1.5"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
+       >
+         <svg
+           width="16"
+@@ -168,36 +175,28 @@ function handleUpdateClick() {
+           stroke-linecap="round"
+           stroke-linejoin="round"
+         >
+-          <circle cx="12" cy="12" r="9" />
+-          <path d="M8 12h8" />
 +          <circle cx="12" cy="12" r="3" />
 +          <path
 +            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
 +          />
-+        </svg>
+         </svg>
+-        <span>{{ t("cockpit.brandTitle") }}</span>
+-      </RouteLinkItem>
+-      <!-- overlay[loop]: Loop Graph 循环工程图一级入口（2.10 摘除 patch 133 后恢复） -->
+-      <RouteLinkItem
+-        class="nav-item"
+-        :to="{ name: 'hermes.loop' }"
+-        :active="isLoopArea"
+-      >
 +        <span>{{ t("sidebar.systemGroup") }}</span>
-+        <svg
+         <svg
+-          width="16"
+-          height="16"
 +          class="sidebar-system-toggle__arrow"
 +          :class="{ 'sidebar-system-toggle__arrow--open': systemOpen }"
 +          width="12"
 +          height="12"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+-          stroke-width="1.5"
 +          stroke-width="2"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
+           stroke-linecap="round"
+           stroke-linejoin="round"
+         >
+-          <circle cx="12" cy="4.5" r="2" />
+-          <circle cx="5" cy="17.5" r="2" />
+-          <circle cx="19" cy="17.5" r="2" />
+-          <path d="M10.5 6.2 6.3 15.8" />
+-          <path d="M13.5 6.2l4.2 9.6" />
+-          <path d="M7 17.5h10" />
 +          <polyline points="9 18 15 12 9 6" />
-+        </svg>
+         </svg>
+-        <span>{{ t("sidebar.loopGraph") }}</span>
+-      </RouteLinkItem>
 +      </button>
 +      <div v-show="systemOpen" class="sidebar-system-items">
        <RouteLinkItem
          class="nav-item"
          :to="{ name: 'hermes.logs' }"
-@@ -330,12 +423,13 @@ function handleUpdateClick() {
+@@ -425,6 +424,7 @@ function handleUpdateClick() {
          </svg>
          <span>{{ t("sidebar.settings") }}</span>
        </RouteLinkItem>
@@ -146,20 +101,13 @@ index 98a01f01..a220a369 100644
      </nav>
  
      <ProfileSelector />
-     <ModelSelector />
- 
--    <div class="sidebar-footer">
-+    <div v-if="!isSettingsPage" class="sidebar-footer">
-       <button class="nav-item logout-item" @click="handleLogout">
-         <svg
-           width="16"
-@@ -458,26 +552,7 @@ function handleUpdateClick() {
+@@ -553,26 +553,7 @@ function handleUpdateClick() {
      </div>
  
      <div class="sidebar-top-actions">
 -      <RouteLinkItem
 -        class="nav-item sidebar-return-tab"
--        :to="{ name: 'hermes.chat' }"
+-        :to="'/app'"
 -        :title="t('sidebar.backToChat')"
 -      >
 -        <svg
@@ -181,7 +129,7 @@ index 98a01f01..a220a369 100644
        <button
          class="collapse-btn"
          @click="appStore.toggleSidebarCollapsed()"
-@@ -631,11 +706,18 @@ function handleUpdateClick() {
+@@ -726,11 +707,18 @@ function handleUpdateClick() {
    border-top: 1px solid $border-color;
  }
  
@@ -205,7 +153,7 @@ index 98a01f01..a220a369 100644
  }
  
  .sidebar-footer {
-@@ -837,12 +919,6 @@ function handleUpdateClick() {
+@@ -932,12 +920,6 @@ function handleUpdateClick() {
      padding-top: 8px;
    }
  
