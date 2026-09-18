@@ -512,3 +512,9 @@
 
 # 286/287（ide-parity i18n 命令面板/Git 面板词表）已并入 308/309（增量
 #       hunk，基于 279/280+305/306 注入态生成），patch 文件退役删除。
+# 310/311 = M1.3/M1.4 会话面媒体增强（zcode markdownImage/attachments 对齐）：
+#       310 = ImagePreviewOverlay 灯箱（前后导航/缩放/下载/键盘）+ MessageItem 图集点击
+#             与 PDF 消息内预览（iframe 弹层，文件卡点击分流）；
+#       311 = ChatInput 附件超限守门（PDF 20MB/视频 200MB，超限 toast 拒绝入列）。
+310-client-image-lightbox-pdf-preview.patch
+311-chat-input-attachment-limits.patch

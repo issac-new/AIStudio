@@ -14,6 +14,7 @@
 // 自身登录，模型按钮禁用为诚实态；scoped 模式经 cockpit/聊天页配置）。
 import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import {
   useChatStore,
   type Session,
@@ -34,11 +35,13 @@ import {
   type OpenSubagentStreamDetail,
 } from '@/utils/hermes/subagent-stream'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
+import { isSessionModelInvalid } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const ide = useIdeStore()
 const chatStore = useChatStore()
 const appStore = useAppStore()
+const router = useRouter()
 const profilesStore = useProfilesStore()
 const settingsStore = useSettingsStore()
 const filesStore = useFilesStore()
@@ -94,6 +97,39 @@ watch(() => ide.agentId, () => {
   if (!ready.value) return
   ensureSession()
 })
+
+// ── M1.6 模型失效态（对标 zcode modelSelection.invalidated）──
+// scoped 会话携带具体 model；模型目录已加载却不含该 model → 顶部警示条
+// （global codingAgent 会话 model 为空，天然不触发；目录未加载不误报）。
+const modelInvalidDismissed = ref(false)
+const activeModelInvalid = computed(() =>
+  isSessionModelInvalid(chatStore.activeSession, appStore.modelGroups),
+)
+const showModelInvalid = computed(() => activeModelInvalid.value && !modelInvalidDismissed.value)
+function goReselectModel(): void {
+  router.push({ name: 'hermes.settings' })
+}
+
+// ── M1.7 会话诊断 popover（对标 zcode debugInfo：session/trace/task id + provider）──
+const debugOpen = ref(false)
+const debugInfo = computed(() => {
+  const session = chatStore.activeSession
+  return [
+    { key: 'ide.debugInfo.sessionId', value: session?.id ?? '—' },
+    { key: 'ide.debugInfo.agentSessionId', value: session?.agentSessionId ?? '—' },
+    { key: 'ide.debugInfo.model', value: session?.model || '—' },
+    { key: 'ide.debugInfo.provider', value: session?.provider || '—' },
+  ]
+})
+const debugCopied = ref(false)
+async function copyDebugInfo(): Promise<void> {
+  try {
+    const text = debugInfo.value.map(item => `${item.key}: ${item.value}`).join('\n')
+    await navigator.clipboard.writeText(text)
+    debugCopied.value = true
+    setTimeout(() => { debugCopied.value = false }, 1500)
+  } catch { /* 剪贴板不可用时静默 */ }
+}
 
 // ── 子代理页签（消息流中点击子代理工具卡 → window 事件，ChatPanel 同款）──
 
@@ -191,8 +227,43 @@ const modelDisabled = computed(() => true)
             <path d="M3 12h4l2-6 4 12 2-6h6" />
           </svg>
         </button>
+        <div class="ide-chat__debug">
+          <button
+            type="button"
+            class="ide-chat__action"
+            data-testid="ide-debug-info"
+            :title="t('ide.debugInfo.label')"
+            :aria-label="t('ide.debugInfo.label')"
+            @click="debugOpen = !debugOpen"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5M12 8h.01" />
+            </svg>
+          </button>
+          <div v-if="debugOpen" class="ide-chat__debug-popover" data-testid="ide-debug-popover">
+            <div class="ide-chat__debug-title">{{ t('ide.debugInfo.label') }}</div>
+            <dl>
+              <template v-for="item in debugInfo" :key="item.key">
+                <dt>{{ t(item.key) }}</dt>
+                <dd :title="item.value">{{ item.value }}</dd>
+              </template>
+            </dl>
+            <button type="button" class="ide-chat__debug-copy" data-testid="ide-debug-copy" @click="copyDebugInfo">
+              {{ debugCopied ? t('ide.debugInfo.copied') : t('ide.debugInfo.copy') }}
+            </button>
+          </div>
+        </div>
       </div>
     </header>
+
+    <div v-if="showModelInvalid" class="ide-chat__model-invalid" data-testid="ide-model-invalid">
+      <span class="ide-chat__model-invalid-text">
+        {{ t('ide.modelInvalid.title') }}（{{ chatStore.activeSession?.model }}）— {{ t('ide.modelInvalid.hint') }}
+      </span>
+      <button type="button" class="ide-chat__model-invalid-btn" @click="goReselectModel">{{ t('ide.modelInvalid.reselect') }}</button>
+      <button type="button" class="ide-chat__model-invalid-dismiss" :aria-label="t('ide.modelInvalid.dismiss')" @click="modelInvalidDismissed = true">✕</button>
+    </div>
 
     <div class="ide-chat__tabs" role="tablist">
       <button
@@ -381,5 +452,108 @@ const modelDisabled = computed(() => true)
   z-index: 5;
   display: flex;
   background: var(--bg-primary, #14161a);
+}
+
+/* M1.6 模型失效警示条 */
+.ide-chat__model-invalid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, #f0a44c 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, #f0a44c 30%, transparent);
+  color: #f0c98c;
+  font-size: 12px;
+}
+
+.ide-chat__model-invalid-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ide-chat__model-invalid-btn {
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, #f0a44c 50%, transparent);
+  border-radius: 5px;
+  background: transparent;
+  color: #f0c98c;
+  font-size: 12px;
+  padding: 2px 10px;
+  cursor: pointer;
+
+  &:hover { background: color-mix(in srgb, #f0a44c 15%, transparent); }
+}
+
+.ide-chat__model-invalid-dismiss {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #9aa0aa);
+  cursor: pointer;
+  font-size: 12px;
+
+  &:hover { color: var(--text-primary, #e6e6e6); }
+}
+
+/* M1.7 会话诊断 popover */
+.ide-chat__debug {
+  position: relative;
+  display: inline-flex;
+}
+
+.ide-chat__debug-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: 300px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #26292f);
+  border-radius: 8px;
+  background: var(--bg-secondary, #1b1e24);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.ide-chat__debug-title {
+  font-size: 12px;
+  color: var(--text-muted, #9aa0aa);
+  margin-bottom: 6px;
+}
+
+.ide-chat__debug-popover dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  font-size: 12px;
+}
+
+.ide-chat__debug-popover dt {
+  color: var(--text-muted, #9aa0aa);
+}
+
+.ide-chat__debug-popover dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, monospace;
+}
+
+.ide-chat__debug-copy {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid var(--border-color, #26292f);
+  border-radius: 5px;
+  background: var(--bg-tertiary, #242830);
+  color: var(--text-primary, #e6e6e6);
+  font-size: 12px;
+  padding: 4px 0;
+  cursor: pointer;
+
+  &:hover { border-color: var(--accent-primary, #4cc9f0); }
 }
 </style>
