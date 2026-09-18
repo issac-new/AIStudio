@@ -120,7 +120,13 @@ router.post('/reveal', async (ctx: any) => {
     ctx.body = { error: 'unknown_category' }
     return
   }
-  const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open'
+  // win x64 zip 是正式发布物：win32 必须走 explorer，xdg-open 在 Windows 不存在
+  const cmd =
+    process.platform === 'darwin'
+      ? 'open'
+      : process.platform === 'win32'
+        ? 'explorer'
+        : 'xdg-open'
   try {
     spawn(cmd, [cat.dir], { stdio: 'ignore', detached: true }).unref()
     ctx.body = { ok: true }

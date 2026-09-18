@@ -8,9 +8,17 @@ import { join } from 'path'
 
 const fakeHome = mkdtempSync(join(tmpdir(), 'ide-storage-test-'))
 
+const spawnMock = vi.fn(() => ({ unref: () => {} }))
+
 vi.mock('os', async (importOrig) => ({
   ...(await importOrig<typeof import('os')>()),
   homedir: () => fakeHome,
+}))
+
+// reveal 走 spawn 打开文件管理器：mock 掉以断言按平台选命令（win32=explorer）
+vi.mock('child_process', async (importOrig) => ({
+  ...(await importOrig<typeof import('child_process')>()),
+  spawn: (...args: unknown[]) => (spawnMock as (...a: unknown[]) => unknown)(...args),
 }))
 
 // mock 后再 import controller（homedir 在模块顶层求值）
@@ -73,6 +81,28 @@ describe('storage controller（M2 资源管理器）', () => {
     ctx.request.body = { category: 'nope' }
     await findHandler('POST', '/api/ide/storage/clean')(ctx)
     expect(ctx.status).toBe(400)
+  })
+
+  it('reveal：按平台选打开命令（win32=explorer / darwin=open / 其他=xdg-open）', async () => {
+    const platformOrig = process.platform
+    const setPlatform = (v: NodeJS.Platform) => Object.defineProperty(process, 'platform', { value: v })
+    try {
+      const ctx = makeCtx()
+      ctx.request.body = { category: 'logs' }
+      setPlatform('win32')
+      await findHandler('POST', '/api/ide/storage/reveal')(ctx)
+      expect(ctx.body).toEqual({ ok: true })
+      expect(spawnMock.mock.calls[0]![0]).toBe('explorer')
+      setPlatform('darwin')
+      await findHandler('POST', '/api/ide/storage/reveal')(ctx)
+      expect(spawnMock.mock.calls[1]![0]).toBe('open')
+      setPlatform('linux')
+      await findHandler('POST', '/api/ide/storage/reveal')(ctx)
+      expect(spawnMock.mock.calls[2]![0]).toBe('xdg-open')
+    } finally {
+      setPlatform(platformOrig)
+      spawnMock.mockClear()
+    }
   })
 })
 

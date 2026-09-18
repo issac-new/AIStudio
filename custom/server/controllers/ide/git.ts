@@ -22,8 +22,28 @@ import { spawn } from 'child_process'
 import { isAbsolute, normalize, sep } from 'path'
 
 const GIT_TIMEOUT_MS = 10_000
+/** 变更类命令（stage/commit/checkout/push）上限：10s 即 SIGKILL 会打断 checkout/commit
+ *  留下 index.lock 砖死面板，慢网络推送也必然超时，故单独放宽。 */
+const GIT_MUTATING_TIMEOUT_MS = 120_000
 const MAX_STAGE_FILES = 200
 const MAX_MESSAGE_CHARS = 5_000
+
+/** 按子命令分级超时：读类 10s，变更类 120s（纯函数，守门测试消费） */
+export function gitTimeoutMs(args: string[]): number {
+  // 带值的全局旗标（如 -C <repoRoot>）连同其值一起跳过，取到的首个位置参数才是子命令
+  const valueFlags = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--exec-path'])
+  const mutating = new Set(['add', 'restore', 'commit', 'checkout', 'push', 'pull', 'merge', 'rebase', 'clone', 'fetch'])
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (arg === '--') break
+    if (arg.startsWith('-')) {
+      if (valueFlags.has(arg)) i++
+      continue
+    }
+    return mutating.has(arg) ? GIT_MUTATING_TIMEOUT_MS : GIT_TIMEOUT_MS
+  }
+  return GIT_TIMEOUT_MS
+}
 
 export interface GitChange {
   /** 仓库相对路径（rename 为新路径） */
@@ -71,7 +91,7 @@ function runGit(args: string[], cwd: string): Promise<GitResult> {
     const timer = setTimeout(() => {
       child.kill('SIGKILL')
       finish({ code: -1, stdout, stderr: 'git command timed out' })
-    }, GIT_TIMEOUT_MS)
+    }, gitTimeoutMs(args))
     child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8') })
     child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
     child.on('error', (err) => finish({ code: -1, stdout, stderr: String(err) }))
@@ -87,6 +107,12 @@ export function isSafeRelativeFile(file: string): boolean {
   if (normalized.split(sep).includes('..')) return false
   if (normalized === '.') return false
   return true
+}
+
+/** checkout 分支名守卫：git 规范 ref 名不会以 - 或 . 开头，放行会把 git 选项
+ *  （--detach/--orphan 等）误当分支名注入。单一事实源，控制器与测试共用。 */
+export function isSafeBranchName(branch: string): boolean {
+  return /^\w[\w./-]{0,99}$/.test(branch)
 }
 
 /** git C 风格短转义映射（core.quotepath 默认开启时的引号路径内） */
@@ -387,9 +413,9 @@ ideGitRouter.post('/checkout', async (ctx) => {
     ctx.body = errorBody('invalid_root', 'root must be an absolute path')
     return
   }
-  if (!/^[\w./-]{1,100}$/.test(branch)) {
+  if (!isSafeBranchName(branch)) {
     ctx.status = 400
-    ctx.body = errorBody('invalid_branch', 'branch must be 1-100 chars of [\w./-]')
+    ctx.body = errorBody('invalid_branch', 'branch must be 1-100 chars of [\w./-] and not start with -')
     return
   }
   const repoRoot = await resolveRepo(root)
