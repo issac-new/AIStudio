@@ -242,3 +242,23 @@ export function validateStageSender(content: StageContent, sender: string): stri
   const ok = samePrincipal(content.worker.account, sender) && samePrincipal(content.reportedBy, sender)
   return ok ? [] : ['stage sender does not match worker/reportedBy principal']
 }
+
+// ── 幂等投影：事件按 key 归并，同 key 取 at 最新（at 相同取靠后元素，homeserver 定序兜底） ──
+
+export function latestBy<T>(items: readonly T[], keyOf: (t: T) => string, atOf: (t: T) => number): Map<string, T> {
+  const out = new Map<string, T>()
+  for (const it of items) {
+    const k = keyOf(it)
+    const prev = out.get(k)
+    if (!prev || atOf(it) >= atOf(prev)) out.set(k, it)
+  }
+  return out
+}
+
+export function latestGateVerdicts(gates: readonly GateContent[]): Map<string, GateContent> {
+  return latestBy(gates, g => `${g.caseId}:${g.gate}`, g => g.at)
+}
+
+export function latestStageOutcomes(stages: readonly StageContent[]): Map<string, StageContent> {
+  return latestBy(stages, s => `${s.caseId}:${s.stage}`, s => s.at)
+}

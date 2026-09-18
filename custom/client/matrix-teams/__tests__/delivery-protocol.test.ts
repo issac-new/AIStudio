@@ -7,6 +7,7 @@ import {
   DELIVERY_STAGES, DELIVERY_GATES, HUMAN_GATES,
   parseCaseContent, parseIndexContent, parseStageContent, parseGateContent,
   isHumanAccount, samePrincipal, validateGateSender, validateStageSender,
+  latestBy, latestGateVerdicts, latestStageOutcomes,
 } from '../delivery-protocol'
 
 describe('事件类型常量与 PL 矩阵', () => {
@@ -172,5 +173,41 @@ describe('发送者主体校验', () => {
     const st = { schemaVersion: 1, caseId: 'c', stage: 'P3', worker: { account: '@bob:matrix.test' }, outcome: 'done', reportedBy: '@bob:matrix.test', at: 1 } as const
     expect(validateStageSender(st, '@bob-agent:matrix.test')).toEqual([])
     expect(validateStageSender(st, '@carol-agent:matrix.test')).toEqual(['stage sender does not match worker/reportedBy principal'])
+  })
+})
+
+describe('幂等投影（spec §5：最新 at 覆盖，幂等语义同 receipt）', () => {
+  it('latestBy：同 key 取 at 最大；at 相同取靠后元素', () => {
+    const items = [
+      { id: 'a', at: 1, v: 'old' },
+      { id: 'b', at: 5, v: 'only' },
+      { id: 'a', at: 3, v: 'new' },
+      { id: 'a', at: 3, v: 'last-wins' },
+    ]
+    const m = latestBy(items, x => x.id, x => x.at)
+    expect(m.get('a')?.v).toBe('last-wins')
+    expect(m.get('b')?.v).toBe('only')
+    expect(m.size).toBe(2)
+  })
+  it('latestBy：空输入返回空 Map', () => {
+    expect(latestBy([], () => '', () => 0).size).toBe(0)
+  })
+  it('latestGateVerdicts：同案例同门禁取最新 verdict（打回后补验覆盖）', () => {
+    const mk = (at: number, verdict: 'reject' | 'pass') => ({
+      schemaVersion: 1 as const, caseId: 'c-001', gate: 'G4' as const, verdict,
+      evidence: { kind: 'command-exit' as const, summary: 's' },
+      ...(verdict === 'reject' ? { reason: '[REJECT:x] r' } : {}),
+      decidedBy: '@carol:matrix.test', at,
+    })
+    const m = latestGateVerdicts([mk(10, 'reject'), mk(12, 'pass')])
+    expect(m.get('c-001:G4')?.verdict).toBe('pass')
+  })
+  it('latestStageOutcomes：同案例同阶段取最新 outcome（started→done）', () => {
+    const mk = (at: number, outcome: 'started' | 'done') => ({
+      schemaVersion: 1 as const, caseId: 'c-001', stage: 'P3' as const,
+      worker: { account: '@bob:matrix.test' }, outcome, reportedBy: '@bob-agent:matrix.test', at,
+    })
+    const m = latestStageOutcomes([mk(5, 'started'), mk(9, 'done')])
+    expect(m.get('c-001:P3')?.outcome).toBe('done')
   })
 })
