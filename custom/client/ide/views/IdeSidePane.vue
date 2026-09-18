@@ -74,6 +74,14 @@ function focusMainChat(): void {
       >
         <span class="ide-sidepane__tab-icon" aria-hidden="true">{{ tab.icon }}</span>
       </button>
+      <button
+        type="button"
+        class="ide-sidepane__tab ide-sidepane__tab--add"
+        data-testid="ide-sidepane-add"
+        :title="t('ide.sidePane.addTab')"
+        :aria-label="t('ide.sidePane.addTab')"
+        @click="ide.toggleSidePane('wiki')"
+      >＋</button>
       <span class="ide-sidepane__spacer" />
       <button
         type="button"
@@ -128,7 +136,7 @@ function focusMainChat(): void {
   flex-direction: column;
   min-width: 280px;
   border-left: 1px solid var(--border-color, #26292f);
-  background: var(--bg-secondary, #1b1e24);
+  background: var(--ide-bg-side, #1a1c20);
   min-height: 0;
 }
 
@@ -137,7 +145,7 @@ function focusMainChat(): void {
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--ide-border, #2a2d33);
 }
 
 .ide-sidepane__tab {
@@ -149,19 +157,25 @@ function focusMainChat(): void {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
   &.is-active {
-    color: var(--accent-primary, #4cc9f0);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
+    color: var(--ide-accent, #5b9cf6);
+    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 12%, transparent);
   }
 
   &--close:hover { background: rgba(220, 60, 60, 0.4); }
 }
 
 .ide-sidepane__tab-icon { font-size: 13px; line-height: 1; }
+
+.ide-sidepane__tab--add {
+  color: var(--ide-text-muted, #8b8f97);
+
+  &:hover { color: var(--ide-accent, #5b9cf6); background: var(--ide-bg-card, #23262b); }
+}
 
 .ide-sidepane__spacer { flex: 1; }
 
@@ -181,7 +195,7 @@ function focusMainChat(): void {
 .ide-sidepane__assistant-hint {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   line-height: 1.5;
 }
 
@@ -193,13 +207,13 @@ function focusMainChat(): void {
   border: 1px solid var(--border-color, #26292f);
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
   font-size: 11px;
   cursor: pointer;
 
   &.is-active {
-    border-color: var(--accent-primary, #4cc9f0);
-    color: var(--accent-primary, #4cc9f0);
+    border-color: var(--ide-accent, #5b9cf6);
+    color: var(--ide-accent, #5b9cf6);
   }
 }
 
@@ -209,13 +223,13 @@ function focusMainChat(): void {
   padding: 8px;
   border: 1px solid var(--border-color, #26292f);
   border-radius: 6px;
-  background: var(--bg-primary, #14161a);
-  color: var(--text-primary, #e6e6e6);
+  background: var(--ide-bg-chat, #202226);
+  color: var(--ide-text, #d6d8dd);
   font-size: 12px;
   font-family: inherit;
   outline: none;
 
-  &:focus { border-color: var(--accent-primary, #4cc9f0); }
+  &:focus { border-color: var(--ide-accent, #5b9cf6); }
 }
 
 .ide-sidepane__assistant-actions { display: flex; gap: 6px; }
@@ -226,16 +240,16 @@ function focusMainChat(): void {
   border: 1px solid var(--border-color, #26292f);
   border-radius: 6px;
   background: transparent;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--ide-text, #d6d8dd);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { border-color: var(--accent-primary, #4cc9f0); }
+  &:hover:not(:disabled) { border-color: var(--ide-accent, #5b9cf6); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 
   &--primary {
-    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 50%, transparent);
-    color: var(--accent-primary, #4cc9f0);
+    border-color: color-mix(in srgb, var(--ide-accent, #5b9cf6) 50%, transparent);
+    color: var(--ide-accent, #5b9cf6);
   }
 }
 </style>

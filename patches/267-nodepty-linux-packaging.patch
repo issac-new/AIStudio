@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index a265ce34..a9f67646 100644
+index a265ce3..a9f6764 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -69,9 +69,12 @@ extraResources:
@@ -17,7 +17,7 @@ index a265ce34..a9f67646 100644
  
  asarUnpack:
 diff --git a/packages/desktop/scripts/after-pack-combined.cjs b/packages/desktop/scripts/after-pack-combined.cjs
-index b4774cdf..92cdfdd4 100644
+index b4774cd..92cdfdd 100644
 --- a/packages/desktop/scripts/after-pack-combined.cjs
 +++ b/packages/desktop/scripts/after-pack-combined.cjs
 @@ -1,7 +1,8 @@
@@ -135,18 +135,3 @@ index b4774cdf..92cdfdd4 100644
 +module.exports.SHARP_KEEP_ALWAYS = SHARP_KEEP_ALWAYS
 +module.exports.sharpKeepDirs = sharpKeepDirs
 +module.exports.listSharpPruneTargets = listSharpPruneTargets
-diff --git a/packages/server/src/modules/hermes/sockets/terminal.ts b/packages/server/src/modules/hermes/sockets/terminal.ts
-index 77340a83..6a3b6454 100644
---- a/packages/server/src/modules/hermes/sockets/terminal.ts
-+++ b/packages/server/src/modules/hermes/sockets/terminal.ts
-@@ -24,7 +24,9 @@ export function canOpenTerminal(user: { role?: string } | null | undefined): boo
- }
- 
- function ensureNodePtySpawnHelperExecutable() {
--  if (process.platform !== 'darwin') return
-+  // node-pty's Unix implementation execs spawn-helper; packaging or archive
-+  // extraction can strip the execute bit on any POSIX target.
-+  if (process.platform === 'win32') return
- 
-   try {
-     const nodePtyRoot = dirname(require.resolve('node-pty/package.json'))

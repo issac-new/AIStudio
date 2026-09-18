@@ -1,5 +1,5 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index 0dda62b..84330a5 100644
+index a81265b..9543312 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
@@ -10,7 +10,7 @@ index 0dda62b..84330a5 100644
  copyright: Copyright © 2026
  
  directories:
-@@ -61,7 +61,11 @@ extraResources:
+@@ -63,7 +63,11 @@ extraResources:
      filter:
        - "**/*"
        # Drop other-platform node-pty prebuilds (saves ~45MB)
@@ -23,7 +23,7 @@ index 0dda62b..84330a5 100644
        # Linux has no bundled prebuild and loads the native module compiled by
        # `npm rebuild node-pty` from build/Release.
        - "!node-pty/build/**"
-@@ -74,28 +78,30 @@ asarUnpack:
+@@ -76,28 +80,30 @@ asarUnpack:
  mac:
    # Xcode 26 compiles this Icon Composer source into Assets.car and also
    # generates the legacy ICNS fallback for pre-Tahoe macOS releases.
@@ -45,7 +45,7 @@ index 0dda62b..84330a5 100644
    entitlementsInherit: build/entitlements.mac.inherit.plist
    extendInfo:
 -    NSMicrophoneUsageDescription: "Ekko Studio uses the microphone for voice conversations and speech transcription."
--  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
+-  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
 +    NSMicrophoneUsageDescription: "Hermes Studio uses the microphone for voice conversations and speech transcription."
 +  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
  
@@ -56,17 +56,18 @@ index 0dda62b..84330a5 100644
 +      arch: [x64]
      - target: nsis
        arch: [x64]
--  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
+-  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
 +  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
  
  linux:
    icon: build/icons
-@@ -105,7 +111,7 @@ linux:
+@@ -107,7 +113,7 @@ linux:
      - target: deb
        arch: [x64]   # fpm has no arm64 binary; deb only on x64
    category: Development
--  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
+-  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
 +  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
  
  deb:
    afterInstall: build/linux-after-install.tpl
+

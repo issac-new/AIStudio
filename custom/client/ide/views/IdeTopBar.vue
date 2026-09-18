@@ -135,8 +135,8 @@ function onLinkSelect(key: string | number) {
   align-items: center;
   gap: 12px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--border-color, #26292f);
-  background: var(--bg-secondary, #1b1e24);
+  border-bottom: 1px solid var(--ide-border, #2a2d33);
+  background: var(--ide-bg-side, #1a1c20);
 }
 
 .ide-topbar__brand {
@@ -156,7 +156,7 @@ function onLinkSelect(key: string | number) {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  color: var(--accent-primary, #4cc9f0);
+  color: var(--ide-accent, #5b9cf6);
 }
 
 .ide-topbar__workspace {
@@ -166,10 +166,10 @@ function onLinkSelect(key: string | number) {
   min-width: 0;
   max-width: 360px;
   padding: 3px 10px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--ide-border, #2a2d33);
   border-radius: 4px;
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
 
   svg {
     width: 14px;
@@ -197,7 +197,7 @@ function onLinkSelect(key: string | number) {
 
 .ide-topbar__agent-label {
   font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
+  color: var(--ide-text-muted, #8b8f97);
 }
 
 .ide-topbar__spacer {
@@ -211,14 +211,14 @@ function onLinkSelect(key: string | number) {
   padding: 5px 10px;
   font: inherit;
   font-size: 12px;
-  color: var(--text-primary, #e6e6e6);
+  color: var(--ide-text, #d6d8dd);
   background: transparent;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--ide-border, #2a2d33);
   border-radius: 4px;
   cursor: pointer;
 
   &:hover {
-    border-color: var(--accent-primary, #4cc9f0);
+    border-color: var(--ide-accent, #5b9cf6);
   }
 
   svg {
