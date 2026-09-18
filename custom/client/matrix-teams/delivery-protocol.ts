@@ -73,6 +73,9 @@ function num(v: unknown): number | undefined {
 function knownVersion(raw: Record<string, unknown>): boolean {
   return raw.schemaVersion === DELIVERY_SCHEMA_VERSION
 }
+function isDeliveryStage(v: string): v is DeliveryStage {
+  return (DELIVERY_STAGES as readonly string[]).includes(v)
+}
 
 const MAX_TITLE = 200
 const MAX_ACCEPTANCE = 4000
@@ -93,7 +96,7 @@ export function parseCaseContent(raw: unknown): CaseContent | null {
   if (createdAt === undefined || updatedAt === undefined) return null
   if (title.length > MAX_TITLE) return null
   if (tier !== 'lite' && tier !== 'standard' && tier !== 'compliance') return null
-  if (!(DELIVERY_STAGES as readonly string[]).includes(stage)) return null
+  if (stage === undefined || !isDeliveryStage(stage)) return null
   const frozenAcceptance = str(raw.frozenAcceptance)
   if (frozenAcceptance !== undefined && frozenAcceptance.length > MAX_ACCEPTANCE) return null
   return {
