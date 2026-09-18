@@ -5,7 +5,7 @@ import {
   DELIVERY_SCHEMA_VERSION, DELIVERY_EVENT_TYPES, DELIVERY_INDEX_ACCOUNT_DATA_TYPE,
   CASE_ROOM_POWER_LEVELS, isDeliveryEventType,
   DELIVERY_STAGES, DELIVERY_GATES, HUMAN_GATES,
-  parseCaseContent, parseIndexContent,
+  parseCaseContent, parseIndexContent, parseStageContent, parseGateContent,
 } from '../delivery-protocol'
 
 describe('事件类型常量与 PL 矩阵', () => {
@@ -83,5 +83,64 @@ describe('parseIndexContent', () => {
     const { schemaVersion, ...rest } = ok
     expect(parseIndexContent(rest)).toBeNull()
     expect(parseIndexContent({ ...ok, updatedBy: undefined })).toBeNull()
+  })
+})
+
+describe('parseStageContent', () => {
+  const ok = {
+    schemaVersion: 1, caseId: 'c-001', stage: 'P3',
+    worker: { account: '@bob:matrix.test', agentTeam: 'backend', profile: 'worker-coder' },
+    outcome: 'done', artifactRef: 'git:main#abc123:docs/delivery/c-001/design.md',
+    reportedBy: '@bob-agent:matrix.test', at: 10,
+  }
+  it('合法 content 原样解析（可选项缺省容忍）', () => {
+    expect(parseStageContent(ok)).toEqual(ok)
+    const { artifactRef, ...rest } = ok
+    expect(parseStageContent(rest)).toEqual({ ...rest, artifactRef: undefined })
+  })
+  it('stage 非枚举 / outcome 非枚举 / worker 缺 account → null', () => {
+    expect(parseStageContent({ ...ok, stage: 'P9' })).toBeNull()
+    expect(parseStageContent({ ...ok, outcome: 'paused' })).toBeNull()
+    expect(parseStageContent({ ...ok, worker: { agentTeam: 'x' } })).toBeNull()
+    expect(parseStageContent({ ...ok, worker: null })).toBeNull()
+  })
+  it('schemaVersion 缺失 / at 非数 / artifactRef 超限 → null', () => {
+    expect(parseStageContent({ ...ok, schemaVersion: 99 })).toBeNull()
+    expect(parseStageContent({ ...ok, at: 'now' })).toBeNull()
+    expect(parseStageContent({ ...ok, artifactRef: 'x'.repeat(513) })).toBeNull()
+  })
+})
+
+describe('parseGateContent', () => {
+  const pass = {
+    schemaVersion: 1, caseId: 'c-001', gate: 'G1', verdict: 'pass',
+    evidence: { kind: 'human', summary: 'owner 冻结验收边界' },
+    decidedBy: '@alice:matrix.test', at: 20,
+  }
+  const rejected = {
+    ...pass, gate: 'G4', verdict: 'reject',
+    evidence: { kind: 'command-exit', summary: 'pytest exit 1: 2 failed' },
+    reason: '[REJECT:用例不足] 补边界用例后重验',
+    decidedBy: '@carol:matrix.test',
+  }
+  it('pass 合法（reason 可选）；reject 带 reason 合法', () => {
+    expect(parseGateContent(pass)).toEqual(pass)
+    expect(parseGateContent(rejected)).toEqual(rejected)
+  })
+  it('verdict=reject/conditional 而 reason 缺失 → null（spec §6 纪律 2：打回必附方向）', () => {
+    const { reason, ...noReason } = rejected
+    expect(parseGateContent(noReason)).toBeNull()
+    expect(parseGateContent({ ...rejected, verdict: 'conditional', reason: undefined })).toBeNull()
+  })
+  it('gate 非枚举 / verdict 非枚举 / evidence 非法 → null', () => {
+    expect(parseGateContent({ ...pass, gate: 'G7' })).toBeNull()
+    expect(parseGateContent({ ...pass, verdict: 'maybe' })).toBeNull()
+    expect(parseGateContent({ ...pass, evidence: null })).toBeNull()
+    expect(parseGateContent({ ...pass, evidence: { kind: 'vibes', summary: 's' } })).toBeNull()
+    expect(parseGateContent({ ...pass, evidence: { kind: 'human' } })).toBeNull()
+  })
+  it('summary 超 400 / reason 超 1000 → null', () => {
+    expect(parseGateContent({ ...pass, evidence: { kind: 'human', summary: 'x'.repeat(401) } })).toBeNull()
+    expect(parseGateContent({ ...rejected, reason: 'x'.repeat(1001) })).toBeNull()
   })
 })
