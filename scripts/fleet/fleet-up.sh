@@ -3,7 +3,9 @@
 # 用法: bash fleet-up.sh [user ...]   # 缺省全部；冒烟可只传 alice
 #
 # 隔离机制（设计文档 §3）：每实例注入独立 HOME + HERMES_HOME + HERMES_WEB_UI_HOME
-# + 独立 studio/gateway 端口。Electron 单实例锁按 userData 区分，HOME 不同即互不冲突。
+# + 独立 studio/gateway 端口；运行时经 HERMES_DESKTOP_RUNTIME_DIR 指向共享单份。
+# 应用共享本机安装（/Applications/SwarmStudio.app），实例身份由 --user-data-dir 区分
+#（Electron 单实例锁按 userData 分键，macOS 上 HOME 覆盖不迁移 userData，见设计文档 §7）。
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/fleet-lib.sh"
@@ -13,21 +15,22 @@ if (( $# == 0 )); then START=("${USERS[@]}"); else START=("$@"); fi
 up_one() {
   local u="$1" port gw_port app home
   port=$(studio_port "$u"); gw_port=$(gateway_port "$u")
-  app=$(app_copy "$u"); home=$(home_dir "$u")
+  app=$(app_bin); home=$(home_dir "$u")
   local pidfile="$PIDS_DIR/$u-app.pid"
 
-  [[ -x "$app/Contents/MacOS/SwarmStudio" ]] || fail "$u 缺应用副本 ${app}（先跑 fleet-setup.sh）"
+  [[ -x "$app" ]] || fail "本机未安装 SwarmStudio: $SOURCE_APP"
   [[ -f "$(profile_dir "$u")/.env" ]] || fail "$u 缺 profile 配置（先跑 fleet-setup.sh）"
+  [[ -x "$(shared_hermes)" ]] || fail "共享运行时未就绪: $(shared_runtime)（先跑 fleet-setup.sh）"
 
   if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
     log "$u 已在运行 (pid $(cat "$pidfile"))"
     return 0
   fi
 
-  log "$u 启动独立应用 :${port}（gateway api_server :${gw_port}）"
+  log "$u 启动实例 :${port}（gateway api_server :${gw_port}，应用=本机安装，运行时=共享）"
   # exec 确保 $! 就是 Electron 主进程。userData 必须显式 --user-data-dir 指进沙箱：
-  # macOS 上 HOME 覆盖不影响 Electron userData 解析（不读 $HOME），单实例锁随 userData
-  # 分键，与真实实例/其他副本隔离。HOME 仍注入以隔离其余家目录态。
+  # macOS 上 HOME 覆盖不影响 Electron userData 解析（不读 ${HOME}），单实例锁随 userData
+  # 分键，与真实实例/其他实例隔离。HOME 仍注入以隔离其余家目录态。
   # FLEET_HIDDEN=1 传 --hidden：窗口不弹出（托盘可见），避免长跑场景打扰桌面被人工退出。
   local hidden_arg=""
   [[ "${FLEET_HIDDEN:-0}" == "1" ]] && hidden_arg="--hidden"
@@ -39,10 +42,11 @@ up_one() {
       HERMES_WEB_UI_HOME="$home/.hermes-web-ui" \
       HERMES_WEBUI_STATE_DIR="$home/.hermes-web-ui" \
       HERMES_DESKTOP_PORT="$port" \
+      HERMES_DESKTOP_RUNTIME_DIR="$(shared_runtime)" \
       GATEWAY_PORT="$gw_port" \
       HERMES_AGENT_HEALTH_URL="http://127.0.0.1:$gw_port" \
       BIND_HOST=127.0.0.1 \
-      "$app/Contents/MacOS/SwarmStudio" \
+      "$app" \
       --user-data-dir="$home/Library/Application Support/SwarmStudio" \
       $hidden_arg \
       >> "$LOGS_DIR/$u-app.log" 2>&1
@@ -61,7 +65,7 @@ for u in "${START[@]}"; do
   wait_http "http://127.0.0.1:$(gateway_port "$u")/health" "$u gateway" 360
 done
 
-log "全部就绪。各用户独立应用入口:"
+log "全部就绪。各用户独立实例入口:"
 MODE_DESC="应用窗口已打开"
 [[ "${FLEET_HIDDEN:-0}" == "1" ]] && MODE_DESC="应用隐藏运行（托盘可见，点开即显窗口）"
 for u in "${START[@]}"; do

@@ -3,7 +3,12 @@
 # 设计文档: docs/superpowers/specs/2026-09-18-matrix-fleet-deploy-design.md
 #
 # 与 scripts/sim 的关系：sim 验证协议层（dev 树 server + 浏览器，已冻结归档）；
-# fleet 验证部署形态（独立 .app 副本 + HOME 沙箱）。本库自包含，不依赖 dev 树。
+# fleet 验证部署形态（独立实例 + HOME 沙箱）。本库自包含，不依赖 dev 树。
+#
+# v2 共享化（用户指令）：应用直接使用本机安装（/Applications/SwarmStudio.app，
+# 版本与所有安装保持一致，零副本）；运行时全 fleet 共享单份
+# $FLEET_ROOT/shared/desktop-runtime（实例经 HERMES_DESKTOP_RUNTIME_DIR 重定向）。
+# 每用户只保留 HOME 沙箱（配置与状态层）与 workspace。
 
 set -euo pipefail
 
@@ -20,6 +25,7 @@ HS="http://127.0.0.1:8008"
 SERVER_NAME="matrix.test"
 SYNAPSE_CONTAINER="matrix-synapse"
 
+SHARED_RUNTIME_ROOT="$FLEET_ROOT/shared/desktop-runtime"
 CREDS_DIR="$FLEET_ROOT/creds"
 LOGS_DIR="$FLEET_ROOT/logs"
 PIDS_DIR="$FLEET_ROOT/pids"
@@ -42,14 +48,14 @@ studio_port() { echo $(( 8761 + $(user_index "$1") )); }
 gateway_port() { echo $(( 8781 + $(user_index "$1") )); }
 user_root()    { echo "$FLEET_ROOT/users/$1"; }
 home_dir()     { echo "$(user_root "$1")/home"; }
-app_copy()     { echo "$(user_root "$1")/apps/SwarmStudio.app"; }
+app_bin()      { echo "$SOURCE_APP/Contents/MacOS/SwarmStudio"; }
 hermes_root()  { echo "$(home_dir "$1")/.hermes"; }        # studio 侧 HERMES_HOME
 profile_dir()  { echo "$(hermes_root "$1")/profiles/$1"; } # gateway 侧 HERMES_HOME
 webui_home()   { echo "$(home_dir "$1")/.hermes-web-ui"; }
-runtime_dir()  { echo "$(webui_home "$1")/desktop-runtime/hermes/$RUNTIME_VER/mac-arm64"; }
-instance_venv() { echo "$(runtime_dir "$1")/python/venv/bin"; } # 每实例自带工具链
-instance_python() { echo "$(instance_venv "$1")/python3"; }
-instance_hermes()  { echo "$(instance_venv "$1")/hermes"; }
+shared_runtime() { echo "$SHARED_RUNTIME_ROOT/hermes/$RUNTIME_VER/mac-arm64"; }
+shared_venv()    { echo "$(shared_runtime)/python/venv/bin"; }
+shared_python()  { echo "$(shared_venv)/python3"; }
+shared_hermes()  { echo "$(shared_venv)/hermes"; }
 source_runtime() { echo "$SOURCE_RUNTIME_ROOT/hermes/$RUNTIME_VER/mac-arm64"; }
 workspace()    { echo "$(user_root "$1")/workspace/stringops"; }
 
@@ -160,5 +166,5 @@ wait_http() { # <url> <name> <timeout-sec>
     curl -sf -o /dev/null "$1" && { log "$2 就绪: $1"; return 0; }
     sleep 3
   done
-  fail "$2 在 $3s 内未就绪: ${1}（查 ${LOGS_DIR}）"
+  fail "$2 在 $3s 内未就绪: $1（查 ${LOGS_DIR}）"
 }
