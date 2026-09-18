@@ -19,7 +19,8 @@
     "build:dmg": "node scripts/build-dmg.mjs",
     "build:dmg:mac": "node scripts/build-dmg.mjs --mac",
     "build:dmg:win": "node scripts/build-dmg.mjs --win",
-    "build:dmg:linux": "node scripts/build-dmg.mjs --linux"
+    "build:dmg:linux": "node scripts/build-dmg.mjs --linux",
+    "catalog-check": "node scripts/zcode-catalog-check.mjs"
   },
   "engines": {
     "node": ">=23.0.0"
