@@ -42,10 +42,10 @@ const activeIndex = ref(0)
 // 与 IdeTopBar.linkGroups 同源的功能页导航（键与路由保持一致，改一处须同步另一处）
 const NAV_TARGETS: Array<{ key: string; to: { name: string } | { path: string } }> = [
   { key: 'workbench', to: { name: 'ia2.overview' } },
-  { key: 'cockpit', to: { name: 'hermes.cockpit' } },
+  { key: 'cockpit', to: { name: 'ia2.collab' } },
   { key: 'loopGraph', to: { name: 'hermes.loop' } },
-  { key: 'kanban', to: { path: '/hermes/cockpit/swarm-kanban' } },
-  { key: 'history', to: { path: '/hermes/cockpit/history' } },
+  { key: 'kanban', to: { name: 'ia2.tasks' } },
+  { key: 'history', to: { name: 'ia2.collabHistory' } },
   { key: 'groupChat', to: { name: 'hermes.groupChat' } },
   { key: 'mcp', to: { path: '/hermes/mcp' } },
   { key: 'skills', to: { path: '/hermes/skills' } },

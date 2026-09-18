@@ -47,7 +47,7 @@ describe('fromChatSession', () => {
       preview: '助手: 修复完成',
       ts: 3000,
       count: 2,
-      routeTarget: { name: 'hermes.session', params: { sessionId: 's1' }, query: { profile: 'claude' } },
+      routeTarget: { name: 'ia2.collabSession', params: { sessionId: 's1' }, query: { profile: 'claude' } },
     })
   })
   it('unreadCount === 0 → null', () => {

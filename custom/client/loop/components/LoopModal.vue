@@ -3,7 +3,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import LoopListPanel from '@/custom/loop/components/LoopListPanel.vue'
 import LoopDetailPanel from '@/custom/loop/components/LoopDetailPanel.vue'
@@ -11,7 +10,8 @@ import LoopCreateWizard from '@/custom/loop/components/LoopCreateWizard.vue'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const { t } = useI18n()
-const cockpit = useCockpitStore()
+// 2026-09-18 统一导航 Task 3：cockpit store 的 loopOpen/openLoop/closeLoop 已随
+// CockpitTopBar/CockpitView 退役删除；本组件不再被任何视图渲染（Task 5 整文件删除）。
 const store = useLoopStore()
 
 const viewMode = ref<'list' | 'detail'>('list')
@@ -51,7 +51,6 @@ async function onWizardCreated() {
 
 function onClose() {
   store.disconnectSocket()
-  cockpit.closeLoop()
 }
 </script>
 

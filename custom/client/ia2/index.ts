@@ -9,6 +9,11 @@ import { features } from '../../../config/features'
 import { buildIaRoutes } from './routes'
 import { installIaCompatGuard, applyColdStartRedirect } from './guard'
 
+// cockpit 三栏/弹窗样式（CollabScene 与 IaShellHeader 的 cockpit-* 类唯一来源）——
+// 在本模块顶部同步导入（与 cockpit/index.ts 同款模式：bootstrap 动态 import 模块的
+// 顶层静态样式，避免样式挂在懒加载场景组件上导致首屏/生产提取时序问题）。
+import '@/custom/cockpit/styles/cockpit.scss'
+
 /** 兼容重定向守卫挂载（独立导出，便于测试与未来复用） */
 export function registerIaCompatGuard(router: Router): void {
   installIaCompatGuard(router, features.iaRetro)

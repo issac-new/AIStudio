@@ -107,7 +107,8 @@ function onRunAction(payload: { kind: string; run: RunSummary }): void {
 
 // ── 快捷动作 ──
 const wizardOpen = ref(false)
-const goCockpit = () => void router.push('/hermes/cockpit')
+// 2026-09-18 统一导航 Task 3：协作中心落点 /hermes/cockpit 退役 → 协作场景
+const goCockpit = () => void router.push({ name: 'ia2.collab' })
 
 function planTimeLabel(at: number | null): string {
   if (at === null) return t('ia2.overview.planNoTime')

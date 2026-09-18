@@ -467,3 +467,8 @@
 # 插入 292/293 建立的 status 块内。
 294-client-i18n-matrix-teams-dispatch-pending-zh.patch
 295-client-i18n-matrix-teams-dispatch-pending-en.patch
+
+# 296 = 统一导航 Task 3 过渡：cockpit 三栏迁入 ia2 协作场景（/app/collab），
+#       旧 CockpitView.vue 删除——/hermes/cockpit 父路由组件改指 CollabScene.vue
+#       保持注入树可构建；路由家族整删（含侧栏/登录落点）由 Task 6 patch 收口。
+296-client-router-cockpit-collab-scene.patch

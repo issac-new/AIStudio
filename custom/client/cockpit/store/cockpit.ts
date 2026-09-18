@@ -206,8 +206,6 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const scheduleViewMonth = ref(5)   // 0-indexed
   const userTodos = ref<UserTodo[]>([])
 
-  // ── 循环工程 ──
-  const loopOpen = ref(false)
   const scheduleAnchorLeft = ref<number | null>(null)   // 下拉横向定位（「日程」按钮 left）
   // 待办闹钟触发的应用内通知（合并进 notifyItems）
   const reminderNotifications = ref<NotifyItem[]>([])
@@ -605,7 +603,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
           taskId: t.id,
           kind: 'matrix',
           label,
-          routeTarget: { name: 'hermes.matrixChatRoom', params: { roomId } },
+          // 2026-09-18 统一导航 Task 3：matrixChat 家族随 cockpit 退役 → 沟通场景房间
+          routeTarget: { name: 'ia2.commsRoom', params: { roomId } },
         }]
       }
       return []
@@ -631,7 +630,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
       id: `ch-${t.id}`, taskId: t.id, kind: 'matrix',
       label,
       routeTarget: {
-        name: 'hermes.matrixChatRoom',
+        name: 'ia2.commsRoom',
         params: { roomId: parsed.roomId },
         query: parsed.sessionId ? { session: parsed.sessionId } : {},
       },
@@ -1486,9 +1485,6 @@ export const useCockpitStore = defineStore('cockpit', () => {
   function closeSchedule() { scheduleOpen.value = false }
   function setScheduleDate(d: string) { scheduleSelectedDate.value = d }
 
-  // ── 循环工程 ──
-  function openLoop() { loopOpen.value = true }
-  function closeLoop() { loopOpen.value = false }
   function navigateScheduleMonth(delta: number) {
     let m = scheduleViewMonth.value + delta
     let y = scheduleViewYear.value
@@ -1685,12 +1681,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
     detailCacheAny: _detailCache,
     // 日程
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth, userTodos,
-    loopOpen,
     scheduleAnchorLeft, reminderNotifications,
     scheduleEvents, scheduleEventsForSelected, scheduleEventsForSelectedSorted,
     scheduleDatesWithEvents, scheduleCountsByDate, scheduleTopPriorityByDate,
     openSchedule, closeSchedule, setScheduleDate, navigateScheduleMonth,
-    openLoop, closeLoop,
     addUserTodo, removeUserTodo, startReminderScheduler, stopReminderScheduler,
     startCockpitPolling, stopCockpitPolling, refreshAllBoards,
 

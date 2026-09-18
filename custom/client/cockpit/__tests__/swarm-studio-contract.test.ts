@@ -28,7 +28,9 @@ import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 import type { TeamRecord } from '../adapters/teams-adapter'
 
 // ── §8/§9 新 IA 信息架构契约（2026-09-18 统一导航重构：六区域 → 六场景）──
-// 六场景路由存在性 / 旧落点重定向正确性 / RETRO 开关行为。
+// 六场景路由存在性 / 旧 loop 落点重定向正确性 / RETRO 开关行为。
+// 品牌与 ⇄ IDE 双壳互跳契约由 ia2/__tests__/ia-shell-header.test.ts 守门
+// （ia2.brand 渲染 + ide.shell 跳转），本文件只守路由层契约。
 // 上方 vi.mock('vue-router') 只为组件链路服务；这里经 importActual 取真
 // createRouter 驱动真实路由解析（不加载任何视图组件，懒组件保持函数态）。
 
@@ -57,6 +59,17 @@ describe('contract: six-scene IA routes (§8 六场景)', () => {
     expect(router.resolve('/app/ops').meta.fullscreen).toBe(true)
   })
 
+  it('协作场景嵌入子路由契约：ia2.collab* 六名全部可解析（Task 3 cockpit 三栏迁入）', () => {
+    const router = makeRouter()
+    expect(router.resolve('/app/collab').name).toBe('ia2.collab')
+    expect(router.resolve('/app/collab/chat').name).toBe('ia2.collabChat')
+    expect(router.resolve('/app/collab/session/s1').name).toBe('ia2.collabSession')
+    expect(router.resolve('/app/collab/history').name).toBe('ia2.collabHistory')
+    expect(router.resolve('/app/collab/history/session/s1').name).toBe('ia2.collabHistorySession')
+    expect(router.resolve('/app/collab/global-agent').name).toBe('ia2.collabGlobalAgent')
+    expect(router.resolve('/app/collab/global-agent/session/s1').name).toBe('ia2.collabGlobalAgentSession')
+  })
+
   it('参数路由契约：run 详情 runId / matrix 房间 roomId 原样', () => {
     const router = makeRouter()
     expect(router.resolve('/app/ops/runs/run-9').params.runId).toBe('run-9')
@@ -64,19 +77,16 @@ describe('contract: six-scene IA routes (§8 六场景)', () => {
   })
 })
 
-describe('contract: legacy landing redirects (§9 cockpit 退役)', () => {
+describe('contract: legacy landing redirects (§9 旧路由直删)', () => {
   const { iaCompatRedirect } = guardModule
 
-  it('旧落点 → 新 IA 目标固定（重定向正确性）', () => {
-    // P4 平行共存（2026-09-11 用户裁决）：cockpit 家族本体路由恢复，不再改写
-    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, false)).toBeNull()
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, false)).toBeNull()
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat/room/!r:1' }, false)).toBeNull()
-    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, false)).toBeNull()
-    // loop 旧落点按名称承接
+  it('loop 旧落点按名称承接（cockpit 家族已直删，守卫不再改写任何其他落点）', () => {
     expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.runs' })
     expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, false))
       .toEqual({ name: 'ia2.runs', query: { loop: '42' } })
+    // 已删家族与未知落点一律不改写（catch-all 兜底，spec 决策 #3：不保留 redirect）
+    expect(iaCompatRedirect({ name: 'ia2.collab' }, false)).toBeNull()
+    expect(iaCompatRedirect({ path: '/hermes/anything-retired' }, false)).toBeNull()
   })
 })
 
@@ -86,12 +96,6 @@ describe('contract: RETRO switch behavior (§9 回退保险)', () => {
   it('RETRO=1：loop 旧落点放行（旧路由仍在，可回退）', () => {
     expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, true)).toBeNull()
     expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, true)).toBeNull()
-  })
-
-  it('RETRO=1：cockpit 平行共存同样留原位（P4 本体路由恢复）', () => {
-    expect(iaCompatRedirect({ path: '/hermes/cockpit' }, true)).toBeNull()
-    expect(iaCompatRedirect({ path: '/hermes/matrix-chat' }, true)).toBeNull()
-    expect(iaCompatRedirect({ path: '/hermes/swarm-kanban' }, true)).toBeNull()
   })
 })
 

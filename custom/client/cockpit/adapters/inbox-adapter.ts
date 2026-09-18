@@ -107,7 +107,8 @@ export function fleetAttentionToInbox(fleet: FleetSession[]): InboxItem[] {
         count: 1,
         ts: session.lastActiveAt || 0,
         routeTarget: {
-          name: 'hermes.session',
+          // 2026-09-18 统一导航 Task 3：旧 session 顶层路由随 cockpit 退役 → 协作场景嵌入会话页
+          name: 'ia2.collabSession',
           params: { sessionId: session.id },
           query: session.profile ? { profile: session.profile } : {},
         },
@@ -125,7 +126,7 @@ export function fleetAttentionToInbox(fleet: FleetSession[]): InboxItem[] {
         count: 1,
         ts: session.lastActiveAt || 0,
         routeTarget: {
-          name: 'hermes.session',
+          name: 'ia2.collabSession',
           params: { sessionId: session.id },
           query: session.profile ? { profile: session.profile } : {},
         },

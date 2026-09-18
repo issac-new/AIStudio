@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { COLLAB_EMBED_ROUTE_NAMES } from '@/custom/ia2/views/scenes/collab-embed-routes'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 
@@ -14,32 +15,28 @@ function onRightMaximize() {
   store.toggleMaximized('right')
 }
 
-// Chat 子路由名称集合 → 高亮 Chat 按钮
-const chatNames = new Set([
-  'hermes.chat', 'hermes.session', 'hermes.history', 'hermes.historySession',
-  'hermes.globalAgent', 'hermes.globalAgentSession',
-  'hermes.matrixChat', 'hermes.matrixChatRoom',
-  'hermes.groupChat', 'hermes.groupChatRoom',
-  'hermes.workflow', 'hermes.swarmKanban',
-])
+// 嵌入子路由名称集合（2026-09-18 统一导航 Task 3：词表单一事实源在
+// ia2/views/scenes/collab-embed-routes.ts）→ 高亮 Chat 按钮 + 回跳场景首页判定
+const chatNames = COLLAB_EMBED_ROUTE_NAMES
 
 function goWork() {
-  if (chatNames.has(route.name as string)) router.push({ name: 'hermes.cockpit' })
+  if (chatNames.has(route.name as string)) router.push({ name: 'ia2.collab' })
   store.setWorkspaceMode('work')
 }
 function goWorkspace() {
-  if (chatNames.has(route.name as string)) router.push({ name: 'hermes.cockpit' })
+  if (chatNames.has(route.name as string)) router.push({ name: 'ia2.collab' })
   store.setWorkspaceMode('workspace')
 }
 function goTerminal() {
-  if (chatNames.has(route.name as string)) router.push({ name: 'hermes.cockpit' })
+  if (chatNames.has(route.name as string)) router.push({ name: 'ia2.collab' })
   store.enterTerminal()
 }
 function goChat() {
-  router.push({ name: 'hermes.matrixChat' })
+  // Chat 按钮 → 协作场景嵌入会话页（matrix 已迁沟通场景 ia2.comms）
+  router.push({ name: 'ia2.collabChat' })
 }
 function goFleet() {
-  if (chatNames.has(route.name as string)) router.push({ name: 'hermes.cockpit' })
+  if (chatNames.has(route.name as string)) router.push({ name: 'ia2.collab' })
   store.setWorkspaceMode('fleet')
 }
 </script>
