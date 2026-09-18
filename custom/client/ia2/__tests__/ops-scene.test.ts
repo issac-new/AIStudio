@@ -147,6 +147,36 @@ describe('OpsScene — 三 tab 枢纽', () => {
     const { wrapper: w2 } = await mountScene('/app/ops?tab=bogus')
     expect(w2.find('[data-testid="ops-runs"]').exists()).toBe(true) // duty 默认
   })
+
+  it('query.tab 变化跟随（组件复用不重挂载）：合法值切面板、非法值回退 duty', async () => {
+    const { wrapper, router } = await mountScene()
+    expect(wrapper.find('[data-testid="ops-runs"]').exists()).toBe(true) // 起始 duty
+    await router.push('/app/ops?tab=runs')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="runcenter-stub"]').exists()).toBe(true)
+    await router.push('/app/ops?tab=inbox')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="inbox-stub"]').exists()).toBe(true)
+    await router.push('/app/ops?tab=bogus')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="ops-runs"]').exists()).toBe(true) // 非法回 duty
+  })
+
+  it('订阅续命：离开 runs tab 后按壳口径重建 graph 订阅（syncVisibleRunIds 再调用）', async () => {
+    const { wrapper } = await mountScene()
+    const store = useRunCenterStore()
+    const sync = vi.spyOn(store, 'syncVisibleRunIds')
+    await wrapper.find('[data-testid="ops-tab-runs"]').trigger('click')
+    expect(wrapper.find('[data-testid="runcenter-stub"]').exists()).toBe(true)
+    // 进入 runs 不重建（RunCenterView 自管可见页订阅域）
+    expect(sync).not.toHaveBeenCalled()
+    // 切走（runs → inbox）：post-flush watcher 重建 awaiting∪running 订阅
+    await wrapper.find('[data-testid="ops-tab-inbox"]').trigger('click')
+    await flushPromises()
+    // fixture：r1=awaiting-input、r2=running（awaiting 在前，与壳 bootShared 同口径，cap 30）
+    expect(sync).toHaveBeenCalledTimes(1)
+    expect(sync).toHaveBeenCalledWith(['r1', 'r2'])
+  })
 })
 
 describe('OpsScene — duty 三栏装配', () => {
