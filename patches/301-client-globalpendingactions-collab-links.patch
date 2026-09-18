@@ -1,7 +1,16 @@
 diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/packages/client/src/components/layout/GlobalPendingActions.vue
-index da7433ef..72154640 100644
+index da7433ef..1823085c 100644
 --- a/packages/client/src/components/layout/GlobalPendingActions.vue
 +++ b/packages/client/src/components/layout/GlobalPendingActions.vue
+@@ -152,7 +152,7 @@ function pendingSoundActionKeys(): string[] {
+ function pendingActions(suppressVisibleSources = true): GlobalPendingAction[] {
+   const actions: GlobalPendingAction[] = []
+   const profile = profilesStore.activeProfileName || 'default'
+-  const visibleChatSessionId = suppressVisibleSources && ['hermes.chat', 'hermes.session', 'hermes.globalAgent', 'hermes.globalAgentSession'].includes(String(route.name || ''))
++  const visibleChatSessionId = suppressVisibleSources && ['ia2.collabChat', 'ia2.collabSession', 'ia2.collabGlobalAgent', 'ia2.collabGlobalAgentSession'].includes(String(route.name || ''))
+     ? chatStore.activeSessionId
+     : null
+   const visibleGroupRoomId = suppressVisibleSources && route.name === 'hermes.groupChatRoom' ? groupChatStore.currentRoomId : null
 @@ -306,8 +306,9 @@ function openPendingSource(action: GlobalPendingAction) {
    if (action.kind === 'chat-approval' || action.kind === 'chat-clarify') {
      const sessionId = action.pending.sessionId
