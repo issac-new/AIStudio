@@ -57,8 +57,20 @@ vi.mock('@/stores/hermes/session-browser-prefs', () => ({
   }),
 }))
 
-const { unarchiveSession } = vi.hoisted(() => ({ unarchiveSession: vi.fn(async () => true) }))
-vi.mock('@/api/studio/sessions', () => ({ unarchiveSession }))
+const { unarchiveSession, fetchSessionCategories, createSessionCategory, setSessionCategory, exportSession } = vi.hoisted(() => ({
+  unarchiveSession: vi.fn(async () => true),
+  fetchSessionCategories: vi.fn(async () => [{ id: 7, name: '发布批', profile: null, sort_order: 0 }]),
+  createSessionCategory: vi.fn(async (name: string) => ({ id: 9, name, profile: null, sort_order: 0 })),
+  setSessionCategory: vi.fn(async () => {}),
+  exportSession: vi.fn(async () => {}),
+}))
+vi.mock('@/api/studio/sessions', () => ({
+  unarchiveSession,
+  fetchSessionCategories,
+  createSessionCategory,
+  setSessionCategory,
+  exportSession,
+}))
 
 const archived = [
   { id: 'arch-1', title: '已归档任务', last_active: 1758100000, workspace: '/lab/ncwk' },
@@ -68,7 +80,13 @@ vi.mock('../api/archivedSessions', () => ({
 }))
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }))
-vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }))
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push }),
+}))
+// 文件视图嵌上游 FileTree，其依赖链拉真实 router/api——测试挡为透传桩
+vi.mock('@/components/hermes/files/FileTree.vue', () => ({
+  default: { name: 'FileTree', template: '<div class="stub-filetree" data-testid="stub-filetree" />' },
+}))
 
 import IdeTaskSidebar from '../views/IdeTaskSidebar.vue'
 import { useIdeStore } from '../store/ide'
@@ -168,5 +186,59 @@ describe('IdeTaskSidebar', () => {
     const w = mountSidebar()
     await flushPromises()
     expect(w.find('[data-testid="ide-nav-cockpit"]').exists()).toBe(true)
+  })
+
+  it('任务/文件双视图：切文件渲染 FileTree，切回任务恢复列表', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(false)
+    await w.find('[data-testid="ide-task-view-files"]').trigger('click')
+    expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-task-view-tasks"]').trigger('click')
+    expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ide-task-pinned"], [data-testid^="ide-task-group-"]').exists()).toBe(true)
+  })
+
+  it('organize 三模式：grouped 按 category 分组渲染', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    // project（默认）= workspace 分组
+    expect(w.find('[data-testid="ide-task-group-ncwk"]').exists()).toBe(true)
+    // 切 grouped：出现 category「发布批」分组（s-pin-b 无 categoryId → 未分组桶）
+    await w.find('[data-testid="ide-task-organize-grouped"]').trigger('click')
+    expect(w.find('[data-testid="ide-task-group-发布批"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-task-group-ide.task.ungrouped"]').exists()).toBe(true)
+    // 切 timeline：单组平铺
+    await w.find('[data-testid="ide-task-organize-timeline"]').trigger('click')
+    expect(w.find('[data-testid="ide-task-group-ide.task.timeline"]').exists()).toBe(true)
+  })
+
+  it('移动到分组调 setSessionCategory；分享导出调 exportSession', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    const vm = w.vm as any
+    await vm.onSessionAction('move-cat-7', sessions[2])
+    expect(setSessionCategory).toHaveBeenCalledWith('s-active', 7)
+    await vm.onSessionAction('move-none', sessions[2])
+    expect(setSessionCategory).toHaveBeenCalledWith('s-active', null)
+    await vm.onSessionAction('share', sessions[3])
+    expect(exportSession).toHaveBeenCalledWith('s-other', 'full', 'json')
+  })
+
+  it('新建分组走 createSessionCategory 并刷新列表', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    const vm = w.vm as any
+    vm.newGroupDraft = '新分组'
+    await vm.createGroup()
+    expect(createSessionCategory).toHaveBeenCalledWith('新分组')
+    expect(vm.categories.some((c: any) => c.id === 9)).toBe(true)
+  })
+
+  it('自动化入口跳 JobsView', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    await w.find('[data-testid="ide-task-automations"]').trigger('click')
+    expect(push).toHaveBeenCalledWith({ name: 'hermes.jobs' })
   })
 })
