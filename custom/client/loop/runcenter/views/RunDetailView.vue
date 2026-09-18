@@ -117,7 +117,9 @@ async function exportRun(): Promise<void> {
 }
 
 function goBack(): void {
-  router.push({ name: 'hermes.loopRuns' })
+  // 2026-09-18 统一导航：运行中心落运行场景枢纽（ia2.ops runs tab），
+  // hermes.loopRuns 旧落点由守卫承接旧书签，页内返回直进枢纽
+  router.push({ name: 'ia2.ops', query: { tab: 'runs' } })
 }
 
 function onSelectNode(id: string): void {

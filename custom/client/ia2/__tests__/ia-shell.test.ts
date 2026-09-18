@@ -2,7 +2,7 @@
 // overlay/custom/client/ia2/__tests__/ia-shell.test.ts
 // 驾驶舱统一壳守门（2026-09-18 统一导航重构 Task 2，替代 slim 子页头守门）：
 // IaShell = IaShellHeader 全局页头 + 六场景条 + router-view。
-// 断言：场景条六入口渲染、active 态跟随路由、共享武装序列（自 LoopCockpitView
+// 断言：场景条六入口渲染、active 态跟随路由、共享武装序列（自旧驾驶舱壳
 // 上移，Task 1 评审指出的覆盖缺口）、卸载时 workspace/cockpit 双侧回收。
 // 挂载以根 <router-view/> 复刻 App.vue 深度；子组件（页头/弹窗）桩化隔离重图。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -147,7 +147,7 @@ describe('IaShell — 统一壳（页头 + 六场景条）', () => {
     expect(wrapper.find('[data-testid="ia-scene-ops"]').classes()).not.toContain('ia-scenes__btn--on')
   })
 
-  it('共享武装（自 LoopCockpitView 上移）：onMounted 调 workspace 四件套 + cockpit.bootstrap', async () => {
+  it('共享武装（自旧驾驶舱壳上移）：onMounted 调 workspace 四件套 + cockpit.bootstrap', async () => {
     const { wrapper } = await mountShell('/app')
     expect(workspaceStubs.state.loadTodos).toHaveBeenCalled()
     expect(workspaceStubs.state.startReminderScheduler).toHaveBeenCalled()

@@ -17,7 +17,7 @@ function makeRouter(): Router {
       { path: '/app', name: 'ia2.shell', component: { template: '<div shell />' },
         children: [
           { path: '', name: 'ia2.overview', component: { template: '<div overview />' } },
-          { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
+          { path: 'ops', name: 'ia2.ops', component: { template: '<div ops />' } },
           { path: 'tasks', name: 'ia2.tasks', component: { template: '<div tasks />' } },
         ] },
     ],
@@ -31,17 +31,17 @@ function stubRouter(retro: boolean): Router {
 }
 
 describe('iaCompatRedirect（纯函数）—— 名称级承接', () => {
-  it('默认模式：旧运行中心 → /app/runs', () => {
-    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.runs' })
+  it('默认模式：旧运行中心 → 运行场景枢纽 runs tab', () => {
+    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.ops', query: { tab: 'runs' } })
   })
 
-  it('默认模式：旧 loop 详情 → /app/runs?loop=:id', () => {
+  it('默认模式：旧 loop 详情 → 枢纽 runs tab 且 ?loop=:id 保真', () => {
     expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, false))
-      .toEqual({ name: 'ia2.runs', query: { loop: '42' } })
+      .toEqual({ name: 'ia2.ops', query: { tab: 'runs', loop: '42' } })
   })
 
   it('默认模式：新 IA 与无关路由放行（null）', () => {
-    expect(iaCompatRedirect({ name: 'ia2.runs' }, false)).toBeNull()
+    expect(iaCompatRedirect({ name: 'ia2.ops' }, false)).toBeNull()
     expect(iaCompatRedirect({ name: 'hermes.loop' }, false)).toBeNull()
     expect(iaCompatRedirect({ name: 'hermes.loopRunDetail' }, false)).toBeNull()
     expect(iaCompatRedirect({ name: undefined }, false)).toBeNull()
@@ -54,22 +54,24 @@ describe('iaCompatRedirect（纯函数）—— 名称级承接', () => {
 
   it('路径级导航不改写（守卫只按路由名承接）', () => {
     expect(iaCompatRedirect({ path: '/hermes/loop/runs' }, false)).toBeNull()
-    expect(iaCompatRedirect({ path: '/app/runs' }, false)).toBeNull()
+    expect(iaCompatRedirect({ path: '/app/ops' }, false)).toBeNull()
     expect(iaCompatRedirect({ path: '/hermes/unknown' }, false)).toBeNull()
   })
 })
 
 describe('installIaCompatGuard（真路由集成）', () => {
-  it('默认模式：/hermes/loop/runs → /app/runs', async () => {
+  it('默认模式：/hermes/loop/runs → /app/ops?tab=runs', async () => {
     const router = stubRouter(false)
     await router.push('/hermes/loop/runs')
-    expect(router.currentRoute.value.name).toBe('ia2.runs')
+    expect(router.currentRoute.value.name).toBe('ia2.ops')
+    expect(router.currentRoute.value.query.tab).toBe('runs')
   })
 
-  it('默认模式：/hermes/loop/42 → /app/runs?loop=42', async () => {
+  it('默认模式：/hermes/loop/42 → /app/ops?tab=runs&loop=42', async () => {
     const router = stubRouter(false)
     await router.push('/hermes/loop/42')
-    expect(router.currentRoute.value.name).toBe('ia2.runs')
+    expect(router.currentRoute.value.name).toBe('ia2.ops')
+    expect(router.currentRoute.value.query.tab).toBe('runs')
     expect(router.currentRoute.value.query.loop).toBe('42')
   })
 
@@ -91,7 +93,8 @@ describe('applyColdStartRedirect（冷深链竞态，审查 C-2）', () => {
     // bootstrap 此刻才装守卫 + 新路由已 addRoute → isReady 后补查
     installIaCompatGuard(router, false)
     await applyColdStartRedirect(router, false)
-    expect(router.currentRoute.value.name).toBe('ia2.runs')
+    expect(router.currentRoute.value.name).toBe('ia2.ops')
+    expect(router.currentRoute.value.query.tab).toBe('runs')
     expect(router.currentRoute.value.query.loop).toBe('42')
   })
 
@@ -103,11 +106,11 @@ describe('applyColdStartRedirect（冷深链竞态，审查 C-2）', () => {
     expect(router.currentRoute.value.name).toBe('hermes.loopDetail')
   })
 
-  it('当前已在 /app/runs 时补查为 no-op', async () => {
+  it('当前已在 /app/ops 时补查为 no-op', async () => {
     const router = makeRouter()
-    await router.push('/app/runs')
+    await router.push('/app/ops')
     installIaCompatGuard(router, false)
     await applyColdStartRedirect(router, false)
-    expect(router.currentRoute.value.name).toBe('ia2.runs')
+    expect(router.currentRoute.value.name).toBe('ia2.ops')
   })
 })

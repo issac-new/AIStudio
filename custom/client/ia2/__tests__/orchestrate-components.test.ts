@@ -90,7 +90,7 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/app/orchestrate', component: stub },
-      { path: '/app/runs', name: 'ia2.runs', component: stub },
+      { path: '/app/ops', name: 'ia2.ops', component: stub },
     ],
   })
 }
@@ -264,7 +264,9 @@ describe('OrchestrateView — 列表 → 详情 → 实例化', () => {
     expect(payload.schedule).toEqual({ mode: 'cron', cron: '0 8 * * 1-5', timezone: 'Asia/Shanghai' })
     expect(payload.tenant).toBe('room:topic')
     expect(String(payload.id)).toMatch(/^loop-alpha-\d+$/)
-    expect(router.currentRoute.value.path).toBe('/app/runs')
+    // 创建即达：运行场景枢纽 runs tab + ?loop= 预填搜索（统一导航 Task 4）
+    expect(router.currentRoute.value.name).toBe('ia2.ops')
+    expect(router.currentRoute.value.query).toEqual({ tab: 'runs', loop: String(payload.id) })
   })
 
   it('创建失败：错误上屏、留在编排区可重试', async () => {

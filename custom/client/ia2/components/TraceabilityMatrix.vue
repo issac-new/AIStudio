@@ -85,7 +85,8 @@ function runStatusOf(status: string | null): RunStatus | null {
 const emit = defineEmits<{ (e: 'open-task', taskId: string): void }>()
 
 function openRun(runId: string | null): void {
-  if (runId) void router.push(`/app/runs/${runId}`)
+  // 2026-09-18 统一导航：运行详情挂 ia2.runDetail（/app/ops/runs/:runId）
+  if (runId) void router.push({ name: 'ia2.runDetail', params: { runId } })
 }
 function openTask(row: TraceTaskRow): void {
   if (row.taskId) emit('open-task', row.taskId)

@@ -3,7 +3,7 @@
      卡片 = 名称/版本/节点数/描述（spec.description 有则显示，否则种类描述），
      主动作「创建 loop」（R4 三步内跑起来的第一步）。origin==='editor' 的
      自建卡追加「编辑」「删除」（P4 画布编辑器入口）；模板卡保持只读。
-     组件薄壳：数据由父层（OrchestrateView）注入，只展示与转发事件。 -->
+     组件薄壳：数据由父层（工程场景编排 tab）注入，只展示与转发事件。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { SpecCard, SpecTemplateKind } from '../adapters/orchestrate'

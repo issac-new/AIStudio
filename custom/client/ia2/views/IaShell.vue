@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/ia2/views/IaShell.vue -->
 <!-- 驾驶舱统一壳（2026-09-18 统一导航重构）：全局页头 IaShellHeader + 六场景条 + router-view。
-     共享武装（workspace 聚合/runs/loops）自 LoopCockpitView 上移；cockpit store 在此
+     共享武装（workspace 聚合/runs/loops）自旧驾驶舱壳（已退役）上移；cockpit store 在此
      bootstrap（页头通知/搜索依赖），卸载 disconnect。全局弹窗：通知/日程/RunTrace。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'

@@ -80,7 +80,7 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/app/tasks', name: 'ia2.tasks', component: { template: '<div tasks />' } },
-      { path: '/app/runs/:runId', name: 'ia2.runDetail', component: { template: '<div run />' } },
+      { path: '/app/ops/runs/:runId', name: 'ia2.runDetail', component: { template: '<div run />' } },
     ],
   })
 }
@@ -119,7 +119,7 @@ describe('RunLinks', () => {
     expect(item.text()).toContain('run-l1-1')
     await item.trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/runs/run-l1-1')
+    expect(router.currentRoute.value.fullPath).toBe('/app/ops/runs/run-l1-1')
   })
 
   it('无关联渲染空态；反查失败且零命中渲染失败态（不误报"无关联"）', async () => {
@@ -189,7 +189,7 @@ describe('TraceabilityMatrix', () => {
     expect(wrapper.emitted('open-task')![0]).toEqual(['t_1'])
     await wrapper.find('.ia-trace__runlink').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/runs/run-l1-1')
+    expect(router.currentRoute.value.fullPath).toBe('/app/ops/runs/run-l1-1')
   })
 
   it('listLoops 整体失败 → 失败态 + 重试；空 loop 列表 → 空态', async () => {

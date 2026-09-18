@@ -4,7 +4,7 @@
 // 导航条目由 patch 246 直接注入到上游 AppSidebar.vue（冻结），故此处无需
 // registerNavEntry。路由用 registerRoute 注册,bootstrap 在 mount 前统一挂载。
 //
-// 2026-09-18 统一导航重构（Task 1）：/hermes/loop 壳子树（LoopCockpitView 双挂载点）
+// 2026-09-18 统一导航重构（Task 1）：/hermes/loop 壳子树（旧驾驶舱壳双挂载点，已退役）
 // 随四场景双挂载架构一并退役——ia2/routes.ts 不再导出 buildSceneChildren /
 // LOOP_SCENE_NAMES，本文件随之不再 import ia2/routes 的任何符号。
 // 保留 runcenter 两条路由（/hermes/loop/runs、/hermes/loop/runs/:runId）与

@@ -84,10 +84,9 @@ function makeRouter(): Router {
         path: '/app',
         children: [
           { path: '', name: 'ia2.overview', component: AREA },
-          { path: 'runs', name: 'ia2.runs', component: AREA },
-          { path: 'runs/:runId', name: 'ia2.runDetail', component: AREA },
-          { path: 'orchestrate', name: 'ia2.orchestrate', component: AREA },
-          { path: 'inbox', name: 'ia2.inbox', component: AREA },
+          { path: 'eng', name: 'ia2.eng', component: AREA },
+          { path: 'ops', name: 'ia2.ops', component: AREA },
+          { path: 'ops/runs/:runId', name: 'ia2.runDetail', component: AREA },
           { path: 'tasks', name: 'ia2.tasks', component: AREA },
           { path: 'comms', name: 'ia2.comms', component: AREA },
         ],
