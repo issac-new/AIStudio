@@ -118,3 +118,89 @@ export function parseIndexContent(raw: unknown): IndexContent | null {
   }
   return { schemaVersion: DELIVERY_SCHEMA_VERSION, roomIds, updatedBy, updatedAt }
 }
+
+export type StageWorker = { account: string; agentTeam?: string; profile?: string }
+export type StageOutcome = 'started' | 'done' | 'failed'
+
+export interface StageContent {
+  schemaVersion: number
+  caseId: string
+  stage: DeliveryStage
+  worker: StageWorker
+  outcome: StageOutcome
+  /** 制品指针 git:<ref>#<commit>:<path>，本体在中央仓，不进事件（spec §4 边界规则 2）。 */
+  artifactRef?: string
+  reportedBy: string
+  at: number
+}
+
+export type GateVerdict = 'pass' | 'conditional' | 'reject'
+export type GateEvidenceKind = 'command-exit' | 'artifact' | 'human'
+
+export interface GateContent {
+  schemaVersion: number
+  caseId: string
+  gate: DeliveryGate
+  verdict: GateVerdict
+  evidence: { kind: GateEvidenceKind; summary: string }
+  /** reject/conditional 必填（打回必附方向）；pass 可选。 */
+  reason?: string
+  decidedBy: string
+  at: number
+}
+
+const MAX_REF = 512
+const MAX_SUMMARY = 400
+const MAX_REASON = 1000
+
+function isDeliveryGate(v: string): v is DeliveryGate {
+  return (DELIVERY_GATES as readonly string[]).includes(v)
+}
+
+function parseWorker(v: unknown): StageWorker | null {
+  if (!isRecord(v)) return null
+  const account = str(v.account)
+  if (!account) return null
+  return { account, agentTeam: str(v.agentTeam), profile: str(v.profile) }
+}
+
+export function parseStageContent(raw: unknown): StageContent | null {
+  if (!isRecord(raw) || !knownVersion(raw)) return null
+  const caseId = str(raw.caseId)
+  const stage = str(raw.stage)
+  const reportedBy = str(raw.reportedBy)
+  const outcome = str(raw.outcome)
+  const at = num(raw.at)
+  if (!caseId || !reportedBy || at === undefined) return null
+  if (stage === undefined || !isDeliveryStage(stage)) return null
+  if (outcome !== 'started' && outcome !== 'done' && outcome !== 'failed') return null
+  const worker = parseWorker(raw.worker)
+  if (!worker) return null
+  const artifactRef = str(raw.artifactRef)
+  if (artifactRef !== undefined && artifactRef.length > MAX_REF) return null
+  return { schemaVersion: DELIVERY_SCHEMA_VERSION, caseId, stage, worker, outcome, artifactRef, reportedBy, at }
+}
+
+export function parseGateContent(raw: unknown): GateContent | null {
+  if (!isRecord(raw) || !knownVersion(raw)) return null
+  const caseId = str(raw.caseId)
+  const gate = str(raw.gate)
+  const verdict = str(raw.verdict)
+  const decidedBy = str(raw.decidedBy)
+  const at = num(raw.at)
+  if (!caseId || !decidedBy || at === undefined) return null
+  if (gate === undefined || !isDeliveryGate(gate)) return null
+  if (verdict !== 'pass' && verdict !== 'conditional' && verdict !== 'reject') return null
+  if (!isRecord(raw.evidence)) return null
+  const kind = str(raw.evidence.kind)
+  const summary = str(raw.evidence.summary)
+  if (kind !== 'command-exit' && kind !== 'artifact' && kind !== 'human') return null
+  if (!summary || summary.length > MAX_SUMMARY) return null
+  const reason = str(raw.reason)
+  if (reason !== undefined && reason.length > MAX_REASON) return null
+  if ((verdict === 'reject' || verdict === 'conditional') && !reason) return null
+  return {
+    schemaVersion: DELIVERY_SCHEMA_VERSION, caseId, gate, verdict,
+    evidence: { kind, summary }, reason, decidedBy, at,
+  }
+}
