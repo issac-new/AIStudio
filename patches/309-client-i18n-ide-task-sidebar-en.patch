@@ -1,8 +1,33 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 9ab5fc81..6cfbd417 100644
+index facc78f..e038f44 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -486,6 +486,34 @@ export default {
+@@ -464,6 +464,24 @@ export default {
+     railWorkspace: 'Workspace',
+     railTerminal: 'Terminal',
+     railChat: 'Chat',
++    task: {
++      sectionLabel: 'Tasks',
++      new: 'New task',
++      search: 'Search',
++      searchPlaceholder: 'Search tasks…',
++      pinned: 'Pinned',
++      archived: 'Archived',
++      archivedEmpty: 'No archived tasks',
++      archivedLoading: 'Loading…',
++      archivedLoadFailed: 'Failed to load archived tasks',
++      untitled: 'Untitled task',
++      defaultGroup: 'Default',
++      justNow: 'Just now',
++      minutesAgo: '{count} min ago',
++      hoursAgo: '{count} hr ago',
++      daysAgo: '{count} days ago',
++      more: 'More actions',
++    },
+     loading: 'Loading…',
+     workspaceDefault: 'Default workspace',
+     workspaceOutsideSandbox: 'This directory is outside the file browsing sandbox (must be within ~/.hermes or a known task workspace); terminal and chat sessions can still use it',
+@@ -482,6 +500,34 @@ export default {
      chatTab_messages: 'Chat',
      chatTab_subagents: 'Subagents',
      chatSubagentsEmpty: 'No subagent stream yet. When a session spawns subagents, click the subagent card in the message stream to inspect it here.',

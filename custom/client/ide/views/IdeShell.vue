@@ -1,9 +1,9 @@
 <script setup lang="ts">
 // IdeShell — IDE 工作台主页面壳（/ide，fullscreen 自带壳）。
 //
-// 三列布局（zcode/Codex 形态）：
-//   IdeNavRail（活动栏） | 工作区列（IdeWorkspacePane + IdeTerminalPanel）
-//   | 会话列（IdeChatPane）
+// 布局（ZCode 3.12.3 对齐，09-18 用户裁定 A 案富侧栏，取代 9780cfe 收敛裁决）：
+//   IdeTaskSidebar（富侧栏：新建/搜索/置顶/workspace 分组/归档区 + 底部驾驶舱入口）
+//   | 工作区列（IdeWorkspacePane + IdeTerminalPanel）| 会话列（IdeChatPane）
 // 加 IdeTopBar / IdeStatusBar；RunTrace 弹窗复用 cockpit 组件（经
 // cockpitStore.openRunTrace 打开，store 惰性创建无重初始化成本）。
 //
@@ -13,7 +13,7 @@ import { computed, onUnmounted } from 'vue'
 import { useIdeStore } from '../store/ide'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdeTopBar from './IdeTopBar.vue'
-import IdeNavRail from './IdeNavRail.vue'
+import IdeTaskSidebar from './IdeTaskSidebar.vue'
 import IdeWorkspacePane from './IdeWorkspacePane.vue'
 import IdeTerminalPanel from './IdeTerminalPanel.vue'
 import IdeChatPane from './IdeChatPane.vue'
@@ -117,7 +117,7 @@ onUnmounted(() => {
   <div class="ide-shell">
     <IdeTopBar />
     <div class="ide-shell__main">
-      <IdeNavRail />
+      <IdeTaskSidebar />
       <div v-show="ide.layout.workspaceVisible" class="ide-shell__workspace">
         <IdeWorkspacePane class="ide-shell__workspace-main" />
         <div
