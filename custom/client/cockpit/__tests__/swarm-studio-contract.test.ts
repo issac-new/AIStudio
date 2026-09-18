@@ -27,16 +27,15 @@ import { parseTenant, type ParsedTenant } from '../../kanban/utils/tenant-parser
 import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 import type { TeamRecord } from '../adapters/teams-adapter'
 
-// ── §8/§9 新 IA 信息架构契约（2026-09-18 统一导航重构：六区域 → 六场景）──
-// 六场景路由存在性 / 旧 loop 落点重定向正确性 / RETRO 开关行为。
-// 品牌与 ⇄ IDE 双壳互跳契约由 ia2/__tests__/ia-shell-header.test.ts 守门
-// （ia2.brand 渲染 + ide.shell 跳转），本文件只守路由层契约。
+// ── §8 新 IA 信息架构契约（2026-09-18 统一导航重构：六区域 → 六场景）──
+// 六场景路由存在性守门。品牌与 ⇄ IDE 双壳互跳契约由 ia2/__tests__/ia-shell-header.test.ts
+// 守门（ia2.brand 渲染 + ide.shell 跳转），本文件只守路由层契约。
+// §9 旧路由承接契约随兼容守卫退役删除（Task 5：旧路由直删，无 redirect 承接）。
 // 上方 vi.mock('vue-router') 只为组件链路服务；这里经 importActual 取真
 // createRouter 驱动真实路由解析（不加载任何视图组件，懒组件保持函数态）。
 
 const vr = await vi.importActual<typeof import('vue-router')>('vue-router')
 const { buildIaRoutes, IA_AREAS } = await import('../../ia2/routes')
-const guardModule = await import('../../ia2/guard')
 
 describe('contract: six-scene IA routes (§8 六场景)', () => {
 
@@ -74,28 +73,6 @@ describe('contract: six-scene IA routes (§8 六场景)', () => {
     const router = makeRouter()
     expect(router.resolve('/app/ops/runs/run-9').params.runId).toBe('run-9')
     expect(router.resolve('/app/comms/room/!foo:bar').params.roomId).toBe('!foo:bar')
-  })
-})
-
-describe('contract: legacy landing redirects (§9 旧路由直删)', () => {
-  const { iaCompatRedirect } = guardModule
-
-  it('loop 旧落点按名称承接（cockpit 家族已直删，守卫不再改写任何其他落点）', () => {
-    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, false)).toEqual({ name: 'ia2.ops', query: { tab: 'runs' } })
-    expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, false))
-      .toEqual({ name: 'ia2.ops', query: { tab: 'runs', loop: '42' } })
-    // 已删家族与未知落点一律不改写（catch-all 兜底，spec 决策 #3：不保留 redirect）
-    expect(iaCompatRedirect({ name: 'ia2.collab' }, false)).toBeNull()
-    expect(iaCompatRedirect({ path: '/hermes/anything-retired' }, false)).toBeNull()
-  })
-})
-
-describe('contract: RETRO switch behavior (§9 回退保险)', () => {
-  const { iaCompatRedirect } = guardModule
-
-  it('RETRO=1：loop 旧落点放行（旧路由仍在，可回退）', () => {
-    expect(iaCompatRedirect({ name: 'hermes.loopRuns' }, true)).toBeNull()
-    expect(iaCompatRedirect({ name: 'hermes.loopDetail', params: { id: '42' } }, true)).toBeNull()
   })
 })
 
