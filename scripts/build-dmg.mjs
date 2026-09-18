@@ -31,7 +31,11 @@ function run(cmd, cwd, label) {
 }
 
 // === Step -1: Clean（上一轮注入残留会卡 inject 的 dirty-check，先反向还原）
-run('node scripts/inject.mjs --clean', overlayRoot, 'clean previous inject state');
+try {
+  run('node scripts/inject.mjs --clean', overlayRoot, 'clean previous inject state');
+} catch {
+  console.log('[build-dmg] clean 非零退出（残留已由后续 restore 兜底），继续');
+}
 // clean 后可能残留 untracked patch 产物（旧版 clean 不删），统一清点
 run('git checkout -- .', upstream, 'restore upstream tracked files');
 
