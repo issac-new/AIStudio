@@ -12,6 +12,7 @@ import IdeGitPane from './IdeGitPane.vue'
 import IdeWikiPane from './IdeWikiPane.vue'
 import IdeStoragePane from './IdeStoragePane.vue'
 import IdeMemoryPane from './IdeMemoryPane.vue'
+import IdeWhiteboardPane from './IdeWhiteboardPane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
 
 const { t } = useI18n()
@@ -25,6 +26,7 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'assistant', icon: '✦' },
   { key: 'storage', icon: '▤' },
   { key: 'memory', icon: '◈' },
+  { key: 'board', icon: '✎' },
 ]
 
 const paneStyle = computed(() => ({ width: `${ide.sidePane.width}px` }))
@@ -88,6 +90,7 @@ function focusMainChat(): void {
       <IdeWikiPane v-else-if="ide.sidePane.tab === 'wiki'" class="ide-sidepane__fill" />
       <IdeStoragePane v-else-if="ide.sidePane.tab === 'storage'" class="ide-sidepane__fill" />
       <IdeMemoryPane v-else-if="ide.sidePane.tab === 'memory'" class="ide-sidepane__fill" />
+      <IdeWhiteboardPane v-else-if="ide.sidePane.tab === 'board'" class="ide-sidepane__fill" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">

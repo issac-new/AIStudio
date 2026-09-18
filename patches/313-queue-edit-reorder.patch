@@ -1,0 +1,295 @@
+diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index 93c1be4..1b1596f 100644
+--- a/packages/client/src/stores/hermes/chat.ts
++++ b/packages/client/src/stores/hermes/chat.ts
+@@ -3120,6 +3120,38 @@ export const useChatStore = defineStore('chat', () => {
+     })
+   }
+ 
++  // overlay[queue-edit]：编辑排队消息内容（本地 + 服务端副本，下一次执行生效）
++  function editQueuedMessage(sessionId: string, messageId: string, content: string) {
++    const trimmed = content.trim()
++    if (!trimmed) return
++    updateQueuedUserMessage(sessionId, messageId, { content: trimmed })
++    getChatRunSocket(runtimeTransport())?.emit('update_queued_run', {
++      session_id: sessionId,
++      queue_id: messageId,
++      content: trimmed,
++    })
++  }
++
++  // overlay[queue-edit]：拖拽重排队列（本地 + 服务端）
++  function reorderQueuedMessages(sessionId: string, orderedIds: string[]) {
++    const queue = queuedUserMessages.value.get(sessionId)
++    if (!queue?.length || orderedIds.length < 2) return
++    const byId = new Map(queue.map(message => [message.id, message]))
++    const next: Message[] = []
++    for (const id of orderedIds) {
++      const item = byId.get(id)
++      if (item) { next.push(item); byId.delete(id) }
++    }
++    for (const message of queue) if (byId.has(message.id)) next.push(message)
++    const nextMap = new Map(queuedUserMessages.value)
++    nextMap.set(sessionId, next)
++    queuedUserMessages.value = nextMap
++    getChatRunSocket(runtimeTransport())?.emit('reorder_queued_runs', {
++      session_id: sessionId,
++      queue_ids: orderedIds,
++    })
++  }
++
+   function insertQueuedMessage(sessionId: string, messageId: string) {
+     if (!(queuedUserMessages.value.get(sessionId) || []).some(message => message.id === messageId)) return
+     getChatRunSocket(runtimeTransport())?.emit('insert_queued_run', {
+@@ -5579,6 +5611,8 @@ export const useChatStore = defineStore('chat', () => {
+     subagentStreams,
+     getSubagentStream,
+     removeQueuedMessage,
++    editQueuedMessage,
++    reorderQueuedMessages,
+     insertQueuedMessage,
+     setMessageReference,
+     clearMessageReference,
+diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
+index 1d9c8d2..087e262 100644
+--- a/packages/server/src/modules/studio/sockets/chat-run.ts
++++ b/packages/server/src/modules/studio/sockets/chat-run.ts
+@@ -397,6 +397,18 @@ function boundedMobileCalendarTimeout(value: unknown): number {
+   if (value == null || !Number.isFinite(numeric) || numeric <= 0) return MOBILE_CALENDAR_DEFAULT_TIMEOUT_MS
+   return Math.max(MOBILE_CALENDAR_MIN_TIMEOUT_MS, Math.min(MOBILE_CALENDAR_MAX_TIMEOUT_MS, numeric))
+ }
++/** overlay[queue-edit]：按给定 queue_id 顺序重排队列；未列出的保持原相对序排尾部 */
++export function reorderQueueByIds(queue: QueuedRun[], orderedIds: string[]): QueuedRun[] {
++  const byId = new Map(queue.map(q => [q.queue_id, q]))
++  const next: QueuedRun[] = []
++  for (const id of orderedIds) {
++    const item = byId.get(id)
++    if (item) { next.push(item); byId.delete(id) }
++  }
++  for (const q of queue) if (byId.has(q.queue_id)) next.push(q)
++  return next
++}
++
+ export class ChatRunSocket {
+   private nsp: ReturnType<Server['of']>
+   private bridge = createPrimaryAgentBridge()
+@@ -987,6 +999,49 @@ export class ChatRunSocket {
+         data.queue_id, data.session_id, state.queue.length)
+     })
+ 
++    // overlay[queue-edit]：编辑排队消息内容（下一次执行生效）
++    socket.on('update_queued_run', (data: { session_id?: string; queue_id?: string; content?: string }) => {
++      if (!data.session_id || !data.queue_id || typeof data.content !== 'string' || !data.content.trim()) return
++      try {
++        requireSocketSessionAccess(data.session_id)
++      } catch {
++        return
++      }
++      const state = this.sessionMap.get(data.session_id)
++      if (!state?.queue.length) return
++      const item = state.queue.find(q => q.queue_id === data.queue_id)
++      if (!item) return
++      item.input = data.content
++      item.displayInput = data.content
++      this.nsp.to(`session:${data.session_id}`).emit('run.queued', {
++        event: 'run.queued',
++        session_id: data.session_id,
++        queue_length: state.queue.length,
++        queued_messages: this.serializeQueuedMessages(state.queue),
++      })
++      logger.info('[chat-run-socket] updated queued run %s for session %s', data.queue_id, data.session_id)
++    })
++
++    // overlay[queue-edit]：拖拽重排队列
++    socket.on('reorder_queued_runs', (data: { session_id?: string; queue_ids?: string[] }) => {
++      if (!data.session_id || !Array.isArray(data.queue_ids) || data.queue_ids.length === 0) return
++      try {
++        requireSocketSessionAccess(data.session_id)
++      } catch {
++        return
++      }
++      const state = this.sessionMap.get(data.session_id)
++      if (!state?.queue.length) return
++      state.queue = reorderQueueByIds(state.queue, data.queue_ids)
++      this.nsp.to(`session:${data.session_id}`).emit('run.queued', {
++        event: 'run.queued',
++        session_id: data.session_id,
++        queue_length: state.queue.length,
++        queued_messages: this.serializeQueuedMessages(state.queue),
++      })
++      logger.info('[chat-run-socket] reordered queue for session %s (queue: %d)', data.session_id, state.queue.length)
++    })
++
+     socket.on('resume', async (data: { session_id?: string }) => {
+       if (!data.session_id) return
+       const sid = data.session_id
+diff --git a/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue b/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue
+index 93aefb9..17aa7a6 100644
+--- a/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue
++++ b/packages/client/src/components/hermes/chat/MessageQueueFloatPanel.vue
+@@ -1,4 +1,5 @@
+ <script setup lang="ts">
++import { ref } from 'vue'
+ import { useI18n } from 'vue-i18n'
+ 
+ export interface MessageQueueFloatItem {
+@@ -26,9 +27,40 @@ const props = withDefaults(defineProps<{
+ const emit = defineEmits<{
+   insert: [id: string]
+   remove: [id: string]
++  edit: [id: string, content: string]
++  reorder: [orderedIds: string[]]
+ }>()
+ const { t } = useI18n()
+ 
++// overlay[queue-edit]：内联编辑 + 拖拽重排（zcode chat.queue.edit/drag 对齐）
++const editingId = ref<string | null>(null)
++const editDraft = ref('')
++const dragId = ref<string | null>(null)
++
++function startEdit(item: MessageQueueFloatItem): void {
++  editingId.value = item.id
++  editDraft.value = item.text
++}
++
++function commitEdit(): void {
++  if (editingId.value && editDraft.value.trim()) {
++    emit('edit', editingId.value, editDraft.value.trim())
++  }
++  editingId.value = null
++}
++
++function onDrop(targetId: string): void {
++  const sourceId = dragId.value
++  dragId.value = null
++  if (!sourceId || sourceId === targetId) return
++  const ids = props.items.map(item => item.id)
++  const from = ids.indexOf(sourceId)
++  const to = ids.indexOf(targetId)
++  if (from < 0 || to < 0) return
++  ids.splice(to, 0, ids.splice(from, 1)[0])
++  emit('reorder', ids)
++}
++
+ function resolvedInsertTitle(item: MessageQueueFloatItem): string {
+   return props.insertTitle?.(item) || t('chat.insertQueuedMessage')
+ }
+@@ -56,11 +88,41 @@ function resolvedRemoveTitle(item: MessageQueueFloatItem): string {
+         v-for="(item, index) in items"
+         :key="item.id"
+         class="queue-float-item"
++        :class="{ 'is-dragging': dragId === item.id }"
+         :data-queue-id="item.id"
++        draggable="true"
++        data-testid="queue-float-item"
++        @dragstart="dragId = item.id"
++        @dragend="dragId = null"
++        @dragover.prevent
++        @drop.prevent="onDrop(item.id)"
+       >
+         <span class="queue-index">{{ item.position || index + 1 }}</span>
+         <span v-if="item.secondary" class="queue-agent">{{ item.secondary }}</span>
+-        <span class="queue-text">{{ item.text }}</span>
++        <template v-if="editingId === item.id">
++          <textarea
++            v-model="editDraft"
++            class="queue-edit-input"
++            rows="2"
++            data-testid="queue-edit-input"
++            @keydown.enter.prevent="commitEdit"
++            @keydown.esc.prevent="editingId = null"
++            @click.stop
++          />
++          <button type="button" class="queue-insert" :title="t('chat.queueSave')" :aria-label="t('chat.queueSave')" @click="commitEdit">✓</button>
++          <button type="button" class="queue-remove" :title="t('common.cancel')" :aria-label="t('common.cancel')" @click="editingId = null">✕</button>
++        </template>
++        <template v-else>
++          <span class="queue-text" :title="t('chat.queueEditHint')" @dblclick="startEdit(item)">{{ item.text }}</span>
++          <button
++            type="button"
++            class="queue-remove"
++            :title="t('chat.queueEdit')"
++            :aria-label="t('chat.queueEdit')"
++            data-testid="queue-edit-btn"
++            @click="startEdit(item)"
++          >✎</button>
++        </template>
+         <button
+           v-if="canInsert"
+           type="button"
+@@ -162,6 +224,42 @@ function resolvedRemoveTitle(item: MessageQueueFloatItem): string {
+   overflow-y: auto;
+ }
+ 
++.queue-edit-input {
++  flex: 1;
++  min-width: 0;
++  resize: vertical;
++  font: inherit;
++  font-size: 12px;
++  padding: 4px 6px;
++  border: 1px solid rgba(var(--accent-info-rgb), 0.6);
++  border-radius: 6px;
++  background: transparent;
++  color: inherit;
++  outline: none;
++}
++
++.queue-float-item.is-dragging {
++  opacity: 0.45;
++}
++
++
++.queue-edit-input {
++  flex: 1;
++  min-width: 0;
++  resize: vertical;
++  font: inherit;
++  font-size: 12px;
++  padding: 4px 6px;
++  border: 1px solid rgba(var(--accent-info-rgb), 0.6);
++  border-radius: 6px;
++  background: transparent;
++  color: inherit;
++  outline: none;
++}
++
++.queue-float-item.is-dragging {
++  opacity: 0.45;
++}
+ .queue-float-item {
+   display: flex;
+   align-items: center;
+diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
+index ccb87e5..58af5b8 100644
+--- a/packages/client/src/components/hermes/chat/MessageList.vue
++++ b/packages/client/src/components/hermes/chat/MessageList.vue
+@@ -384,6 +384,19 @@ function removeQueuedMessage(messageId: string) {
+   chatStore.removeQueuedMessage(sid, messageId);
+ }
+ 
++// overlay[queue-edit]：编辑/重排接线（store 双写本地+服务端）
++function editQueuedMessageHandler(messageId: string, content: string) {
++  const sid = chatStore.activeSessionId;
++  if (!sid) return;
++  chatStore.editQueuedMessage(sid, messageId, content);
++}
++
++function reorderQueuedMessagesHandler(orderedIds: string[]) {
++  const sid = chatStore.activeSessionId;
++  if (!sid) return;
++  chatStore.reorderQueuedMessages(sid, orderedIds);
++}
++
+ function insertQueuedMessage(messageId: string) {
+   const sid = chatStore.activeSessionId;
+   if (!sid || activeQueueInsertion.value) return;
+@@ -1035,6 +1048,8 @@ defineExpose({
+           :insert-title="item => queueInsertionTitle(item.id)"
+           @insert="insertQueuedMessage"
+           @remove="removeQueuedMessage"
++          @edit="editQueuedMessageHandler"
++          @reorder="reorderQueuedMessagesHandler"
+         />
+       </Transition>
+     </div>

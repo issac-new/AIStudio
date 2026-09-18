@@ -522,3 +522,8 @@
 # 312 = M2 资源管理器路由挂载：/api/ide/storage/*（snapshot/clean/reveal），
 #       controller=custom/server/controllers/system/storage.ts（A 类）。
 312-server-routes-ide-storage.patch
+
+# 313 = M4a 排队富操作（zcode chat.queue.edit/drag 对齐）：服务端 update_queued_run/
+#       reorder_queued_runs 事件 + reorderQueueByIds 纯函数；chatStore editQueuedMessage/
+#       reorderQueuedMessages；FloatPanel 内联编辑+拖拽重排；MessageList 接线。
+313-queue-edit-reorder.patch
