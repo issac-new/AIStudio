@@ -39,14 +39,24 @@ describe('AppSidebar IDE 工作台一级入口（patch 278 守门）', () => {
     expect(en).toMatch(/ideWorkspace:\s*'IDE Workspace'/)
   })
 
-  it('入口位于顶部：ide < 工作台(ia2) < 循环工程图(loop) < logs（AI协作中心入口随 cockpit 退役，Task 6 从上游侧栏移除）', () => {
+  it('入口位于顶部：ide < 驾驶舱(ia2) < 系统分组头 < logs；旧 cockpit/loopGraph 一级与返回 hack 已退役（patch 299 守门）', () => {
     const ideIdx = src.indexOf(`:to="{ name: 'ide.shell' }"`)
     const ia2Idx = src.indexOf(`:to="{ name: 'ia2.overview' }"`)
-    const loopIdx = src.indexOf(`:to="{ name: 'hermes.loop' }"`)
+    const sysIdx = src.indexOf('sidebar-system-toggle')
     const logsIdx = src.indexOf(`:to="{ name: 'hermes.logs' }"`)
     expect(ideIdx).toBeGreaterThan(-1)
     expect(ia2Idx).toBeGreaterThan(ideIdx)
-    expect(loopIdx).toBeGreaterThan(ia2Idx)
-    expect(logsIdx).toBeGreaterThan(loopIdx)
+    expect(sysIdx).toBeGreaterThan(ia2Idx)
+    expect(logsIdx).toBeGreaterThan(sysIdx)
+    // 旧一级入口与底部返回 hack 零残留
+    expect(src).not.toContain(`:to="{ name: 'hermes.cockpit' }"`)
+    expect(src).not.toContain(`:to="{ name: 'hermes.loop' }"`)
+    expect(src).not.toContain('sidebar-return-tab')
+  })
+
+  it('系统分组：折叠容器 display:contents + 命中系统页默认展开', () => {
+    expect(src).toContain('sidebar-system-items')
+    expect(src).toMatch(/\.sidebar-system-items\s*\{\s*display:\s*contents;/)
+    expect(src).toContain('const systemOpen = ref(')
   })
 })

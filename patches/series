@@ -472,3 +472,12 @@
 #       旧 CockpitView.vue 删除——/hermes/cockpit 父路由组件改指 CollabScene.vue
 #       保持注入树可构建；路由家族整删（含侧栏/登录落点）由 Task 6 patch 收口。
 296-client-router-cockpit-collab-scene.patch
+
+# 297-301 = 统一导航 Task 6：/hermes/cockpit 家族+6 条路径别名删除、catch-all → /app、
+#       登录/超管兜底落点 /app、侧边栏双入口+系统折叠分组（删 cockpit/loopGraph 一级
+#       与底部返回 hack）、PageSidebarNav/GlobalPendingActions 协作深链改指 ia2.collab*。
+297-client-router-cockpit-family-removal.patch
+298-client-login-landing-app.patch
+299-client-appsidebar-dual-entry-system-group.patch
+300-client-pagesidebarnav-collab-targets.patch
+301-client-globalpendingactions-collab-links.patch
