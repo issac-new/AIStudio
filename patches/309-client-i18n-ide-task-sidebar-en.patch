@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index facc78f..78c7347 100644
+index facc78f..1dc2f8d 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -464,6 +464,141 @@ export default {
+@@ -464,6 +464,142 @@ export default {
      railWorkspace: 'Workspace',
      railTerminal: 'Terminal',
      railChat: 'Chat',
@@ -130,6 +130,7 @@ index facc78f..78c7347 100644
 +    gitGraphLoadFailed: 'Failed to load commit graph',
 +    terminalNewTab: 'New terminal',
 +    terminalCloseTab: 'Close terminal',
++    terminalSplit: 'Split',
 +    whiteboard: {
 +      pen: 'Pen',
 +      eraser: 'Eraser',
@@ -144,7 +145,7 @@ index facc78f..78c7347 100644
      loading: 'Loading…',
      workspaceDefault: 'Default workspace',
      workspaceOutsideSandbox: 'This directory is outside the file browsing sandbox (must be within ~/.hermes or a known task workspace); terminal and chat sessions can still use it',
-@@ -482,6 +617,34 @@ export default {
+@@ -482,6 +618,34 @@ export default {
      chatTab_messages: 'Chat',
      chatTab_subagents: 'Subagents',
      chatSubagentsEmpty: 'No subagent stream yet. When a session spawns subagents, click the subagent card in the message stream to inspect it here.',
@@ -179,7 +180,7 @@ index facc78f..78c7347 100644
      statusRunning: 'Running',
      statusIdle: 'Idle',
    },
-@@ -1904,6 +2067,19 @@ export default {
+@@ -1904,6 +2068,19 @@ export default {
      messageQueue: 'Message queue',
      removeQueuedMessage: 'Remove queued message',
      insertQueuedMessage: 'Insert queued message',
