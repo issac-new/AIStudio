@@ -68,6 +68,32 @@ const DEFAULT_LAYOUT: IdeLayoutPrefs = {
   chatWidth: 440,
 }
 
+/** 侧栏任务视图模式（对标 zcode workspaceSidebar.organize：分组/项目/时间线） */
+export type IdeTaskView = 'tasks' | 'files'
+export type IdeOrganizeMode = 'grouped' | 'project' | 'timeline'
+
+export type IdeSidePaneTab = 'review' | 'browser' | 'wiki' | 'assistant'
+
+export interface IdeSidePanePrefs {
+  open: boolean
+  tab: IdeSidePaneTab
+  width: number
+}
+
+const SIDEBAR_KEY = 'hermes_ide_sidebar'
+const SIDEPANE_KEY = 'hermes_ide_sidepane'
+
+const DEFAULT_SIDEBAR: { view: IdeTaskView; organize: IdeOrganizeMode } = {
+  view: 'tasks',
+  organize: 'project',
+}
+
+const DEFAULT_SIDEPANE: IdeSidePanePrefs = {
+  open: false,
+  tab: 'wiki',
+  width: 380,
+}
+
 function loadJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key)
@@ -91,6 +117,10 @@ export const useIdeStore = defineStore('ide', () => {
   const agentId = ref<CodingAgentId>(loadAgent())
   const chatTab = ref<IdeChatTab>('messages')
   const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>(LAYOUT_KEY, DEFAULT_LAYOUT))
+  const sidebar = ref<{ view: IdeTaskView; organize: IdeOrganizeMode }>(
+    loadJson(SIDEBAR_KEY, DEFAULT_SIDEBAR),
+  )
+  const sidePane = ref<IdeSidePanePrefs>(loadJson<IdeSidePanePrefs>(SIDEPANE_KEY, DEFAULT_SIDEPANE))
   /** 命令面板（Cmd/Ctrl+K，对标 zcode quickPick/commandCenter） */
   const paletteOpen = ref(false)
 
@@ -126,6 +156,34 @@ export const useIdeStore = defineStore('ide', () => {
     } catch { /* 存储满等异常不阻塞 UI */ }
   }, { deep: true })
 
+  watch([sidebar, sidePane], () => {
+    try {
+      localStorage.setItem(SIDEBAR_KEY, JSON.stringify(sidebar.value))
+      localStorage.setItem(SIDEPANE_KEY, JSON.stringify(sidePane.value))
+    } catch { /* 存储满等异常不阻塞 UI */ }
+  }, { deep: true })
+
+  function setSidebarView(view: IdeTaskView): void {
+    sidebar.value.view = view
+  }
+
+  function setOrganize(mode: IdeOrganizeMode): void {
+    sidebar.value.organize = mode
+  }
+
+  function setSidePaneTab(tab: IdeSidePaneTab): void {
+    sidePane.value.tab = tab
+    sidePane.value.open = true
+  }
+
+  function toggleSidePane(tab?: IdeSidePaneTab): void {
+    if (tab && (!sidePane.value.open || sidePane.value.tab !== tab)) {
+      setSidePaneTab(tab)
+      return
+    }
+    sidePane.value.open = !sidePane.value.open
+  }
+
   /** 终端默认 cwd（与 CockpitTerminalPane 回退语义一致） */
   const terminalCwd = computed(() => workspace.value ?? '~')
 
@@ -134,11 +192,17 @@ export const useIdeStore = defineStore('ide', () => {
     agentId,
     chatTab,
     layout,
+    sidebar,
+    sidePane,
     paletteOpen,
     terminalCwd,
     setWorkspace,
     setAgentId,
     setChatTab,
+    setSidebarView,
+    setOrganize,
+    setSidePaneTab,
+    toggleSidePane,
     openPalette,
     closePalette,
     togglePalette,

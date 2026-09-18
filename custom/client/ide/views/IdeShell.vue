@@ -17,6 +17,7 @@ import IdeTaskSidebar from './IdeTaskSidebar.vue'
 import IdeWorkspacePane from './IdeWorkspacePane.vue'
 import IdeTerminalPanel from './IdeTerminalPanel.vue'
 import IdeChatPane from './IdeChatPane.vue'
+import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
@@ -133,6 +134,7 @@ onUnmounted(() => {
         <div class="ide-shell__chat-handle" @pointerdown="startChatResize" />
         <IdeChatPane class="ide-shell__chat-body" />
       </div>
+      <IdeSidePane />
     </div>
     <IdeStatusBar />
     <CockpitRunTraceModal />

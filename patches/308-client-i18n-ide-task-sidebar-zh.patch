@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index c808f35..15bd1c1 100644
+index c808f35..0b51b6a 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -462,6 +462,39 @@ export default {
+@@ -462,6 +462,85 @@ export default {
      railWorkspace: '工作区',
      railTerminal: '终端',
      railChat: '会话',
@@ -23,6 +23,30 @@ index c808f35..15bd1c1 100644
 +      hoursAgo: '{count} 小时前',
 +      daysAgo: '{count} 天前',
 +      more: '更多操作',
++      view_tasks: '任务',
++      view_files: '查看文件',
++      automations: '自动化',
++      organize: '视图',
++      organize_grouped: '分组',
++      organize_project: '项目',
++      organize_timeline: '时间线',
++      ungrouped: '未分组',
++      moveToGroup: '移动到分组',
++      newGroup: '新建分组…',
++      newGroupName: '分组名称',
++      groupCreated: '分组已创建',
++      groupCreateFailed: '创建分组失败',
++      groupMoveFailed: '移动到分组失败',
++      shareExport: '分享导出',
++      shareFailed: '导出失败',
++      assistantHint: '辅助对话：组织追问后带入主会话（独立侧边会话为后续版本项）',
++      assistantKind_file: '追问文件',
++      assistantKind_code: '追问代码',
++      assistantKind_idea: '探讨思路',
++      assistantPlaceholder: '想问什么？',
++      assistantCopy: '复制追问',
++      assistantCopied: '追问已复制，粘贴到会话输入框即可发送',
++      assistantGoChat: '回主会话',
 +    },
 +    modelInvalid: {
 +      title: '当前模型已不可用',
@@ -39,10 +63,32 @@ index c808f35..15bd1c1 100644
 +      copy: '复制诊断信息',
 +      copied: '已复制',
 +    },
++    sidePane: {
++      togglePanel: '切换面板',
++      collapse: '收起侧边面板',
++      tab_review: '审查',
++      tab_browser: '浏览器',
++      tab_wiki: 'Wiki 引用',
++      tab_assistant: '辅助对话',
++    },
++    wiki: {
++      panelTitle: '仓库 Wiki',
++      referencePage: '引用当前页',
++      referenceWiki: '引用整册',
++      generate: '生成 Wiki',
++      promptCopied: '生成提示词已复制，粘贴到会话即可执行',
++      referenced: '引用已复制',
++      copyFailed: '复制失败',
++      loading: '加载中…',
++      loadFailed: 'Wiki 读取失败：{message}',
++      empty: '暂无 Wiki 页。点击「生成 Wiki」复制提示词，粘贴到会话让 agent 生成到 docs/wiki/。',
++      needWorkspace: '设置工作区后可用（读取 workspace 的 docs/wiki/ 目录）',
++      noSelection: '选择左侧页面阅读',
++    },
      loading: '加载中…',
      workspaceDefault: '默认工作区',
      workspaceOutsideSandbox: '该目录超出文件浏览沙箱（须在 ~/.hermes 内或为已知任务工作区）；终端与会话仍可使用该目录',
-@@ -480,6 +513,34 @@ export default {
+@@ -480,6 +559,34 @@ export default {
      chatTab_messages: '会话',
      chatTab_subagents: '子代理',
      chatSubagentsEmpty: '暂无子代理流。会话运行中触发子代理时，点击消息流中的子代理卡片即可在此查看。',
@@ -77,7 +123,7 @@ index c808f35..15bd1c1 100644
      statusRunning: '运行中',
      statusIdle: '空闲',
    },
-@@ -1902,6 +1963,16 @@ export default {
+@@ -1902,6 +2009,16 @@ export default {
      messageQueue: '消息队列',
      removeQueuedMessage: '移除队列消息',
      insertQueuedMessage: '插入排队消息',
