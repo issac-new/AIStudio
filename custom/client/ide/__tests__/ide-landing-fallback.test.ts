@@ -2,6 +2,7 @@
 // 守门（2026-09-17 24h 评审）：patch 276/277 登录守卫硬指向 /ide，
 // features.ide 关闭时 bootstrap 必须注册 /ide 重定向兜底，否则登录后
 // 命中无匹配路由白屏。
+// 2026-09-18 统一导航 Task 5：兜底目标 /hermes/cockpit 已是死路由，改指 /app。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const featuresState = vi.hoisted(() => ({
@@ -10,8 +11,6 @@ const featuresState = vi.hoisted(() => ({
   kanbanEnhancements: false,
   branding: false,
   cockpit: false,
-  loopEngineering: false,
-  iaRetro: false,
 }))
 vi.mock('../../../../config/features', () => ({ features: featuresState }))
 
@@ -20,8 +19,6 @@ vi.mock('../../../../../upstream/hermes-studio/packages/client/src/router', () =
 
 const ia2Stubs = vi.hoisted(() => ({
   registerIa2: vi.fn(async () => {}),
-  registerIaCompatGuard: vi.fn(),
-  applyIaColdStartRedirect: vi.fn(async () => {}),
 }))
 vi.mock('../../../../custom/client/ia2', () => ia2Stubs)
 
@@ -42,10 +39,10 @@ describe('bootstrap /ide 落点兜底', () => {
     expect(routerStubs.addRoute).not.toHaveBeenCalledWith(expect.objectContaining({ path: '/ide' }))
   })
 
-  it('features.ide 关闭：注册 /ide → /hermes/cockpit 重定向兜底', async () => {
+  it('features.ide 关闭：注册 /ide → /app 重定向兜底', async () => {
     featuresState.ide = false
     await bootstrapClient({} as never)
     expect(ideStubs.registerIde).not.toHaveBeenCalled()
-    expect(routerStubs.addRoute).toHaveBeenCalledWith({ path: '/ide', redirect: '/hermes/cockpit' })
+    expect(routerStubs.addRoute).toHaveBeenCalledWith({ path: '/ide', redirect: '/app' })
   })
 })

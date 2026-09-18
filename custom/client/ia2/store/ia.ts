@@ -1,17 +1,14 @@
 // overlay/custom/client/ia2/store/ia.ts
-// 驾驶舱单页全局状态：当前区域 + RETRO 回退开关。
+// 驾驶舱单页全局状态：当前区域。
 // 当前区域由 IaShell 以 areaForPath 投影（routes.ts 纯函数为唯一事实源），
 // store 只持有结果，不自算；子页头读 store 显隐（overview = 驾驶舱本体，无页头）。
+// 2026-09-18 统一导航 Task 5：RETRO 回退开关随兼容守卫退役删除（零消费确认）。
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Router } from 'vue-router'
-import { features } from '../../../../config/features'
 import { IA_AREAS, areaForPath, type IaAreaKey } from '../routes'
 
 export const useIaStore = defineStore('ia2', () => {
-  /** 回退开关（VITE_IA_RETRO=1 时为 true，侧栏双入口、兼容守卫放行） */
-  const retro = features.iaRetro
-
   /** 当前区域（IaNav 高亮依据；默认总览） */
   const currentArea = ref<IaAreaKey>('overview')
 
@@ -27,5 +24,5 @@ export const useIaStore = defineStore('ia2', () => {
     if (area) void router.push(area.path)
   }
 
-  return { retro, currentArea, syncFromPath, goToArea }
+  return { currentArea, syncFromPath, goToArea }
 })

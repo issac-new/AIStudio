@@ -27,12 +27,8 @@ export async function bootstrapClient(app: App): Promise<void> {
     const { registerCockpit } = await import('../../custom/client/cockpit')
     await registerCockpit(app)
   }
-  if (features.loopEngineering) {
-    const { registerLoopEngineering } = await import('../../custom/client/loop')
-    await registerLoopEngineering(app)
-    const { registerGraphEngineering } = await import('../../custom/client/loop/graph')
-    await registerGraphEngineering(app)
-  }
+  // 2026-09-18 统一导航 Task 5：/hermes/loop 路由家族整体退役，
+  // loop 模块瘦身为纯组件/店铺库——runcenter 视图改由 ia2 运行场景（ia2.routes）挂载。
   // IDE 工作台主页面（/ide）：codex 底座 + zcode 会话 UI 全量复用。
   // 注册顺序无关守卫，仅要求在下方 addRoute 循环（mount 前）之前。
   if (features.ide) {
@@ -41,16 +37,14 @@ export async function bootstrapClient(app: App): Promise<void> {
   } else {
     // patch 276/277 的登录守卫硬指向 /ide：开关关闭时注册重定向兜底，
     // 避免登录后命中无匹配路由白屏（2026-09-17 24h 评审）。
-    router.addRoute({ path: '/ide', redirect: '/hermes/cockpit' })
+    router.addRoute({ path: '/ide', redirect: '/app' })
   }
-  // P3 Task 3：六区域新 IA（/app 路由树 + 兼容重定向守卫）。
-  // 守卫依赖 router 实例，与 loop 的 addRoute 同样必须在 mount 前完成。
-  // 无条件注册：登录默认落点由 patch 071 守卫直落 /app；cockpit 平行共存后
-  // 兼容守卫不再改写 cockpit 家族落点（retro 仅管旧 loop 深链）。
+  // P3 Task 3：六区域新 IA（/app 路由树）。无守卫依赖，仅要求在 mount 前完成。
+  // 2026-09-18 统一导航 Task 5：旧 loop 深链兼容守卫随 /hermes/loop 家族退役删除；
+  // 登录默认落点由 patch 071 守卫直落 /app。
   {
-    const { registerIa2, registerIaCompatGuard } = await import('../../custom/client/ia2')
+    const { registerIa2 } = await import('../../custom/client/ia2')
     await registerIa2(app)
-    registerIaCompatGuard(router)
   }
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
   // 实际翻译是直接写在上游 locale 文件里的(现经 patch 044-053 注入)。无需运行时注册。
@@ -64,13 +58,5 @@ export async function bootstrapClient(app: App): Promise<void> {
   if (features.matrixChat) {
     const { registerMatrixChatRoutes } = await import('../../custom/client/matrix-chat')
     registerMatrixChatRoutes(router)
-  }
-
-  // 冷启动补查（P3 Task 3 审查 C-2）：初始导航早于 overlay 守卫注册，已登录深链
-  // （#/hermes/cockpit 等）可能在无守卫窗口内定型。isReady 后补跑一次兼容重定向。
-  // 必须在上方 addRoute 之后（replace 目标 ia2.* 需已注册）。
-  {
-    const { applyIaColdStartRedirect } = await import('../../custom/client/ia2')
-    await applyIaColdStartRedirect(router)
   }
 }
