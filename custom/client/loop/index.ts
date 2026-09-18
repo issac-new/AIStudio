@@ -4,14 +4,15 @@
 // 导航条目由 patch 246 直接注入到上游 AppSidebar.vue（冻结），故此处无需
 // registerNavEntry。路由用 registerRoute 注册,bootstrap 在 mount 前统一挂载。
 //
-// 2026-09-16 多视图重构：/hermes/loop 与 /app 渲染同一个 LoopCockpitView 壳，
-// 四场景子路由经 ia2/routes.ts 的 buildSceneChildren 构造（双挂载点单一事实源，
-// hermes.loop 名称落在默认场景子路由上——AppSidebar isLoopArea 家族高亮不变）。
+// 2026-09-18 统一导航重构（Task 1）：/hermes/loop 壳子树（LoopCockpitView 双挂载点）
+// 随四场景双挂载架构一并退役——ia2/routes.ts 不再导出 buildSceneChildren /
+// LOOP_SCENE_NAMES，本文件随之不再 import ia2/routes 的任何符号。
+// 保留 runcenter 两条路由（/hermes/loop/runs、/hermes/loop/runs/:runId）与
+// /hermes/loop/:id 详情；整个文件由后续 Task 5 收口删除。
 import type { App } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
 import { registerRoute } from '../../../registries/client'
 import { features } from '../../../config/features'
-import { buildSceneChildren, LOOP_SCENE_NAMES } from '../ia2/routes'
 
 // 全局布局样式
 import './styles/loop.scss'
@@ -19,11 +20,6 @@ import './styles/loop.scss'
 /** 循环区路由表（纯函数导出：scene-routes 守门测试直接消费，不触发懒组件加载） */
 export function buildLoopRoutes(): RouteRecordRaw[] {
   return [
-    {
-      path: '/hermes/loop',
-      component: () => import('@/custom/ia2/views/LoopCockpitView.vue'),
-      children: buildSceneChildren(LOOP_SCENE_NAMES),
-    },
     {
       // P2 Task 5 — 运行中心。静态段须排在 '/hermes/loop/:id' 之前。
       path: '/hermes/loop/runs',

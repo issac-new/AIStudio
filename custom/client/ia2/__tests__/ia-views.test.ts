@@ -60,7 +60,7 @@ describe('区域壳内嵌接线', () => {
 
   it('CommsView 承载 matrix-chat 子路由：默认房间视图 + room/:roomId 同组件', async () => {
     // 只挂 comms 分支：与生产 routes.ts 同源取子路由定义
-    const commsBranch = buildIaRoutes()[0].children!.find(r => r.name === 'ia2.comms')!
+    const commsBranch = buildIaRoutes()[0].children!.find(r => r.path === 'comms')!
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [{ path: '/app/comms', component: CommsView, children: commsBranch.children }],

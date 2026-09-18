@@ -83,14 +83,14 @@ describe('IaShell — 去菜单守门', () => {
   )
 
   it('返回驾驶舱：点击回 ia2.overview', async () => {
-    const { wrapper, router } = await mountShell('/app/runs')
+    const { wrapper, router } = await mountShell('/app/ops')
     await wrapper.find('[data-testid="ia-subhead-back"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.overview')
   })
 
   it('壳卸载兜底停止 workspace 流（2026-09-16 审查恢复：InboxView 只武装不回收，离开 /app 必须停）', async () => {
-    const { wrapper } = await mountShell('/app/runs')
+    const { wrapper } = await mountShell('/app/ops')
     wrapper.unmount()
     expect(workspaceStubs.state.stopFleetStream).toHaveBeenCalled()
     expect(workspaceStubs.state.stopReminderScheduler).toHaveBeenCalled()
