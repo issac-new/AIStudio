@@ -1,0 +1,389 @@
+diff --git a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
+index 2505dfe..e6e1622 100644
+--- a/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
++++ b/packages/client/src/components/hermes/chat/ImagePreviewOverlay.vue
+@@ -1,17 +1,89 @@
+ <script setup lang="ts">
+-import { onMounted, onUnmounted } from 'vue'
++// ImagePreviewOverlay — 聊天图片查看器（zcode markdownImage 对齐）：
++// 上一张/下一张（图集模式）、放大/缩小（按钮 + 滚轮）、下载、Esc/背景点击关闭。
++// 兼容旧用法：仅传 src/alt 时为单图模式（无前后导航）。
++import { computed, onMounted, onUnmounted, ref } from 'vue'
++import { useI18n } from 'vue-i18n'
+ 
+-defineProps<{
++const props = withDefaults(defineProps<{
+   src: string
+-  alt: string
+-}>()
++  alt?: string
++  /** 图集模式：可前后导航的 url 列表（src 须为其中之一） */
++  images?: string[]
++  /** 图集模式初始索引 */
++  startIndex?: number
++  /** 下载文件名（缺省从 url 猜） */
++  downloadName?: string
++}>(), {
++  alt: '',
++  images: undefined,
++  startIndex: 0,
++  downloadName: undefined,
++})
+ 
+ const emit = defineEmits<{
+   close: []
+ }>()
+ 
++const { t } = useI18n()
++
++const gallery = computed(() => (props.images?.length ? props.images : [props.src]))
++const idx = ref(Math.max(0, Math.min(props.startIndex, gallery.value.length - 1)))
++const scale = ref(1)
++
++const currentSrc = computed(() => gallery.value[idx.value] ?? props.src)
++const inGallery = computed(() => gallery.value.length > 1)
++
++function clampScale(next: number): void {
++  scale.value = Math.min(4, Math.max(0.25, Math.round(next * 100) / 100))
++}
++
++function prev(): void {
++  if (!gallery.value.length) return
++  idx.value = (idx.value - 1 + gallery.value.length) % gallery.value.length
++  scale.value = 1
++}
++
++function next(): void {
++  if (!gallery.value.length) return
++  idx.value = (idx.value + 1) % gallery.value.length
++  scale.value = 1
++}
++
++function zoomIn(): void {
++  clampScale(scale.value * 1.25)
++}
++
++function zoomOut(): void {
++  clampScale(scale.value / 1.25)
++}
++
++function guessName(url: string): string {
++  if (props.downloadName) return props.downloadName
++  const m = url.match(/([^/?#]+)(?:[?#].*)?$/)
++  return m?.[1] || 'image'
++}
++
++function download(): void {
++  const a = document.createElement('a')
++  a.href = currentSrc.value
++  a.download = guessName(currentSrc.value)
++  document.body.appendChild(a)
++  a.click()
++  a.remove()
++}
++
+ function handleKeydown(event: KeyboardEvent) {
+   if (event.key === 'Escape') emit('close')
++  else if (event.key === 'ArrowLeft') { event.preventDefault(); prev() }
++  else if (event.key === 'ArrowRight') { event.preventDefault(); next() }
++  else if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomIn() }
++  else if (event.key === '-') { event.preventDefault(); zoomOut() }
++}
++
++function handleWheel(event: WheelEvent) {
++  event.preventDefault()
++  clampScale(scale.value * (event.deltaY < 0 ? 1.12 : 1 / 1.12))
+ }
+ 
+ onMounted(() => window.addEventListener('keydown', handleKeydown))
+@@ -26,8 +98,27 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
+       aria-modal="true"
+       :aria-label="alt"
+       @click.self="emit('close')"
++      @wheel.prevent="handleWheel"
+     >
+-      <img :src="src" :alt="alt" class="image-preview-img" @click="emit('close')" />
++      <img
++        :src="currentSrc"
++        :alt="alt"
++        class="image-preview-img"
++        :style="{ transform: `scale(${scale})` }"
++        @dblclick="scale = 1"
++      />
++
++      <div class="image-preview-toolbar" @click.stop>
++        <button v-if="inGallery" type="button" class="image-preview-btn" :title="t('chat.imagePrev')" :aria-label="t('chat.imagePrev')" @click="prev">‹</button>
++        <button type="button" class="image-preview-btn" :title="t('chat.imageZoomOut')" :aria-label="t('chat.imageZoomOut')" @click="zoomOut">−</button>
++        <span class="image-preview-scale">{{ Math.round(scale * 100) }}%</span>
++        <button type="button" class="image-preview-btn" :title="t('chat.imageZoomIn')" :aria-label="t('chat.imageZoomIn')" @click="zoomIn">+</button>
++        <button type="button" class="image-preview-btn" :title="t('chat.imageDownload')" :aria-label="t('chat.imageDownload')" @click="download">⤓</button>
++        <button v-if="inGallery" type="button" class="image-preview-btn" :title="t('chat.imageNext')" :aria-label="t('chat.imageNext')" @click="next">›</button>
++        <button type="button" class="image-preview-btn image-preview-btn--close" :title="t('common.close')" :aria-label="t('common.close')" @click="emit('close')">✕</button>
++      </div>
++
++      <div v-if="inGallery" class="image-preview-counter">{{ idx + 1 }} / {{ gallery.length }}</div>
+     </div>
+   </Teleport>
+ </template>
+@@ -42,7 +133,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
+   justify-content: center;
+   padding: 5vh 5vw;
+   background: rgba(0, 0, 0, 0.85);
+-  cursor: zoom-out;
+ }
+ 
+ .image-preview-img {
+@@ -52,5 +142,57 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
+   object-fit: contain;
+   border-radius: 6px;
+   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
++  transition: transform 0.12s ease;
++  user-select: none;
++}
++
++.image-preview-toolbar {
++  position: absolute;
++  bottom: 24px;
++  left: 50%;
++  transform: translateX(-50%);
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  padding: 6px 10px;
++  border-radius: 8px;
++  background: rgba(20, 22, 26, 0.9);
++  border: 1px solid rgba(255, 255, 255, 0.12);
++}
++
++.image-preview-btn {
++  width: 30px;
++  height: 30px;
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  border: none;
++  border-radius: 6px;
++  background: transparent;
++  color: #e6e6e6;
++  font-size: 16px;
++  cursor: pointer;
++
++  &:hover { background: rgba(255, 255, 255, 0.12); }
++
++  &--close:hover { background: rgba(220, 60, 60, 0.5); }
++}
++
++.image-preview-scale {
++  min-width: 44px;
++  text-align: center;
++  font-size: 12px;
++  color: #9aa0aa;
++}
++
++.image-preview-counter {
++  position: absolute;
++  top: 18px;
++  right: 22px;
++  font-size: 12px;
++  color: #9aa0aa;
++  background: rgba(20, 22, 26, 0.8);
++  border-radius: 6px;
++  padding: 3px 9px;
+ }
+ </style>
+diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
+index 29bb08c..aacd8ab 100644
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -222,6 +222,45 @@ function getContentFileUrl(file: DisplayContentFile): string {
+ const toolExpanded = ref(false);
+ const expandedWorkspaceChangeIds = ref(new Set<string>());
+ const previewUrl = ref<string | null>(null);
++// 图片查看器图集态（zcode markdownImage 对齐）：本条消息的图片集合 + 点击位索引
++const previewImages = ref<string[]>([]);
++const previewStartIndex = ref(0);
++const previewName = ref("");
++// PDF 消息内预览（zcode chat.previewCards.pdf 对齐）
++const pdfPreviewUrl = ref<string | null>(null);
++const pdfPreviewName = ref("");
++
++function isPdf(name: string): boolean {
++  return /\.pdf$/i.test(name);
++}
++
++function openUserAttachmentGallery(att: { url?: string | null; name: string }) {
++  const images = (props.message.attachments || [])
++    .filter(item => isImage(item.type) && item.url)
++    .map(item => item.url as string);
++  const idx = images.indexOf(att.url || "");
++  previewImages.value = images;
++  previewStartIndex.value = images.length > 1 ? Math.max(0, idx) : 0;
++  previewUrl.value = att.url || null;
++  previewName.value = att.name || "";
++}
++
++function openContentImageGallery(file: DisplayContentFile) {
++  const all = contentFiles.value || [];
++  const images = all.filter(item => item.type === 'image').map(item => getContentFileUrl(item)).filter(Boolean);
++  const idx = images.indexOf(getContentFileUrl(file));
++  previewImages.value = images;
++  previewStartIndex.value = images.length > 1 ? Math.max(0, idx) : 0;
++  previewUrl.value = getContentFileUrl(file) || null;
++  previewName.value = file.name || "";
++}
++
++function openPdfPreview(url: string | null | undefined, name: string) {
++  if (!url) return;
++  pdfPreviewUrl.value = url;
++  pdfPreviewName.value = name;
++}
++
+ const selectedToolChangeFileId = ref<number | null>(null);
+ 
+ const chatStore = useChatStore();
+@@ -1060,7 +1099,7 @@ onBeforeUnmount(() => {
+                     :src="att.url"
+                     :alt="att.name"
+                     class="msg-attachment-thumb"
+-                    @click="previewUrl = att.url"
++                    @click="openUserAttachmentGallery(att)"
+                   />
+                 </template>
+                 <template v-else-if="message.role === 'user' && isVideo(att.type, att.name) && att.url">
+@@ -1077,7 +1116,7 @@ onBeforeUnmount(() => {
+                   </div>
+                 </template>
+                 <template v-else>
+-                  <div class="msg-attachment-file" @click="handleAttachmentDownload(att)" style="cursor: pointer;" :title="t('download.downloadFile')">
++                  <div class="msg-attachment-file" @click="isPdf(att.name) && att.url ? openPdfPreview(att.url, att.name) : handleAttachmentDownload(att)" style="cursor: pointer;" :title="isPdf(att.name) && att.url ? t('chat.previewPdf') : t('download.downloadFile')">
+                     <svg
+                       width="16"
+                       height="16"
+@@ -1169,7 +1208,7 @@ onBeforeUnmount(() => {
+                         :src="getContentFileUrl(file)"
+                         :alt="file.name"
+                         class="msg-attachment-thumb"
+-                        @click="previewUrl = getContentFileUrl(file)"
++                        @click="openContentImageGallery(file)"
+                       />
+                     </template>
+                     <template v-else-if="file.type === 'video'">
+@@ -1187,9 +1226,9 @@ onBeforeUnmount(() => {
+                     <template v-else>
+                       <div
+                         class="msg-attachment-file"
+-                        @click="file.path && downloadFile(file.path, file.name).catch(err => toast.error(err.message || t('download.downloadFailed')))"
++                        @click="isPdf(file.name) ? openPdfPreview(getContentFileUrl(file), file.name) : (file.path && downloadFile(file.path, file.name).catch(err => toast.error(err.message || t('download.downloadFailed'))))"
+                         style="cursor: pointer;"
+-                        :title="t('download.downloadFile')"
++                        :title="isPdf(file.name) ? t('chat.previewPdf') : t('download.downloadFile')"
+                       >
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+@@ -1322,9 +1361,30 @@ onBeforeUnmount(() => {
+   <ImagePreviewOverlay
+     v-if="previewUrl"
+     :src="previewUrl"
+-    alt=""
++    :alt="previewName"
++    :download-name="previewName || undefined"
++    :images="previewImages.length ? previewImages : undefined"
++    :start-index="previewStartIndex"
+     @close="previewUrl = null"
+   />
++  <Teleport to="body">
++    <div
++      v-if="pdfPreviewUrl"
++      class="pdf-preview-overlay"
++      role="dialog"
++      aria-modal="true"
++      @click.self="pdfPreviewUrl = null"
++    >
++      <div class="pdf-preview-panel">
++        <div class="pdf-preview-head">
++          <span class="pdf-preview-name" :title="pdfPreviewName">{{ pdfPreviewName }}</span>
++          <a class="pdf-preview-open" :href="pdfPreviewUrl" target="_blank" rel="noopener">{{ t('chat.pdfOpenTab') }}</a>
++          <button type="button" class="pdf-preview-close" :aria-label="t('common.close')" @click="pdfPreviewUrl = null">✕</button>
++        </div>
++        <iframe class="pdf-preview-frame" :src="pdfPreviewUrl" :title="pdfPreviewName" />
++      </div>
++    </div>
++  </Teleport>
+ </template>
+ 
+ <style scoped lang="scss">
+@@ -2151,4 +2211,74 @@ onBeforeUnmount(() => {
+     padding-inline-end: 8px !important;
+   }
+ }
++
++/* PDF 消息内预览弹层（zcode chat.previewCards.pdf 对齐） */
++.pdf-preview-overlay {
++  position: fixed;
++  inset: 0;
++  z-index: 9998;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  padding: 4vh 4vw;
++  background: rgba(0, 0, 0, 0.75);
++}
++
++.pdf-preview-panel {
++  width: min(880px, 92vw);
++  height: 88vh;
++  display: flex;
++  flex-direction: column;
++  border-radius: 10px;
++  overflow: hidden;
++  background: var(--bg-secondary, #1b1e24);
++  border: 1px solid var(--border-color, #26292f);
++  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
++}
++
++.pdf-preview-head {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  padding: 8px 12px;
++  border-bottom: 1px solid var(--border-color, #26292f);
++  font-size: 12px;
++}
++
++.pdf-preview-name {
++  flex: 1;
++  min-width: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++  color: var(--text-primary, #e6e6e6);
++}
++
++.pdf-preview-open {
++  flex-shrink: 0;
++  color: var(--accent-primary, #4cc9f0);
++  text-decoration: none;
++
++  &:hover { text-decoration: underline; }
++}
++
++.pdf-preview-close {
++  flex-shrink: 0;
++  width: 24px;
++  height: 24px;
++  border: none;
++  border-radius: 5px;
++  background: transparent;
++  color: var(--text-muted, #9aa0aa);
++  cursor: pointer;
++  font-size: 12px;
++
++  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
++}
++
++.pdf-preview-frame {
++  flex: 1;
++  border: none;
++  background: var(--bg-primary, #14161a);
++}
+ </style>
