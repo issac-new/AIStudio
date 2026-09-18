@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index facc78f..45c63b5 100644
+index facc78f..f742dc6 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -464,6 +464,85 @@ export default {
+@@ -464,6 +464,123 @@ export default {
      railWorkspace: 'Workspace',
      railTerminal: 'Terminal',
      railChat: 'Chat',
@@ -47,8 +47,11 @@ index facc78f..45c63b5 100644
 +      assistantCopy: 'Copy follow-up',
 +      assistantCopied: 'Follow-up copied; paste into the chat input to send',
 +      assistantGoChat: 'Back to main chat',
-+    },
-+    modelInvalid: {
++      renameGroup: 'Rename group',
++      deleteGroup: 'Delete group (tasks move to ungrouped)',
++      groupRenameFailed: 'Failed to rename group',
++      groupDeleteFailed: 'Failed to delete group',
++    },    modelInvalid: {
 +      title: 'Current model unavailable',
 +      hint: 'This model was removed from the available list; please reselect to continue',
 +      reselect: 'Reselect in settings',
@@ -85,10 +88,45 @@ index facc78f..45c63b5 100644
 +      needWorkspace: 'Set a workspace first (reads docs/wiki/ in the workspace)',
 +      noSelection: 'Select a page to read',
 +    },
++    storage: {
++      panelTitle: 'Storage manager',
++      total: 'Total usage',
++      rescan: 'Rescan',
++      scanning: 'Scanning…',
++      reveal: 'Reveal in file manager',
++      clean: 'Clean',
++      cleanSuccess: 'Freed {size}',
++      cleanFailed: 'Clean failed',
++      loadFailed: 'Failed to scan storage',
++      revealFailed: 'Failed to open directory',
++      confirmTitle: 'Clean "{category}"?',
++      confirmSize: 'About {size} will be deleted.',
++      cat_logs: 'Logs',
++      cat_backups: 'Backups',
++      cat_backup: 'Backups (legacy)',
++      cat_trash: 'Cleanup staging',
++      cat_audioCache: 'Audio cache',
++      cat_cache: 'Cache',
++      cat_sessionStore: 'Session database',
++      cat_runtimes: 'Agent runtimes',
++      cat_assets: 'Assets',
++    },
++    memory: {
++      panelTitle: 'Workspace memory',
++      refresh: 'Refresh',
++      loading: 'Loading memory…',
++      empty: 'No memory files (AGENTS.md / MEMORY.md / memory/ directory)',
++      needWorkspace: 'Set a workspace first',
++      searchPlaceholder: 'Search memory files…',
++      noSelection: 'Select a file to view',
++      loadFailed: 'Failed to load memory',
++    },
++    gitBranchSwitcher: 'Switch branch',
++    gitPush: 'Push current branch',
      loading: 'Loading…',
      workspaceDefault: 'Default workspace',
      workspaceOutsideSandbox: 'This directory is outside the file browsing sandbox (must be within ~/.hermes or a known task workspace); terminal and chat sessions can still use it',
-@@ -482,6 +561,34 @@ export default {
+@@ -482,6 +599,34 @@ export default {
      chatTab_messages: 'Chat',
      chatTab_subagents: 'Subagents',
      chatSubagentsEmpty: 'No subagent stream yet. When a session spawns subagents, click the subagent card in the message stream to inspect it here.',
@@ -123,7 +161,7 @@ index facc78f..45c63b5 100644
      statusRunning: 'Running',
      statusIdle: 'Idle',
    },
-@@ -1904,6 +2011,16 @@ export default {
+@@ -1904,6 +2049,16 @@ export default {
      messageQueue: 'Message queue',
      removeQueuedMessage: 'Remove queued message',
      insertQueuedMessage: 'Insert queued message',

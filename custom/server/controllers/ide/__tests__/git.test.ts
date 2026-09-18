@@ -149,3 +149,52 @@ describe('git e2e (real git in temp dir)', () => {
     }
   })
 })
+
+
+// ── M4：分支列表 / 切换（与控制器同参数口径的真实 git e2e）──
+describe('git branches/checkout（M4 分支切换）', () => {
+  function makeRepo() {
+    const dir = mkdtempSync(join(tmpdir(), 'ide-git-branch-'))
+    const git = (args: string[]) => execFileSync('git', args, { cwd: dir })
+    git(['init', '-b', 'main'])
+    git(['config', 'user.email', 'ide@test'])
+    git(['config', 'user.name', 'ide-test'])
+    writeFileSync(join(dir, 'a.txt'), 'a\n')
+    git(['add', 'a.txt'])
+    git(['commit', '-m', 'init'])
+    return { dir, git, cleanup: () => rmSync(dir, { recursive: true, force: true }) }
+  }
+
+  it('branch --format 输出按 NUL 拆分（与 /branches 端点同口径），当前分支带 * 标记', () => {
+    const repo = makeRepo()
+    try {
+      repo.git(['checkout', '-b', 'feature-x'])
+      const out = repo.git(['branch', '--format=%(refname:short)%00%(HEAD)']).toString()
+      const rows = out.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+        const [name, head] = l.split('\u0000')
+        return { name, current: head === '*' }
+      })
+      expect(rows.map(r => r.name).sort()).toEqual(['feature-x', 'main'])
+      expect(rows.find(r => r.name === 'feature-x')?.current).toBe(true)
+      expect(rows.find(r => r.name === 'main')?.current).toBe(false)
+    } finally {
+      repo.cleanup()
+    }
+  })
+
+  it('checkout 真实切换；端点同款分支名白名单正则拒绝注入', () => {
+    const repo = makeRepo()
+    try {
+      repo.git(['checkout', '-b', 'feature-y'])
+      repo.git(['checkout', 'main'])
+      expect(repo.git(['rev-parse', '--abbrev-ref', 'HEAD']).toString().trim()).toBe('main')
+      // 与控制器 checkout 端点同款白名单（^[[\\w./-]{1,100}$）
+      const valid = /^[\w./-]{1,100}$/
+      expect(valid.test('feature/abc-v1.2')).toBe(true)
+      expect(valid.test('a;rm -rf')).toBe(false)
+      expect(valid.test('$(pwd)')).toBe(false)
+    } finally {
+      repo.cleanup()
+    }
+  })
+})

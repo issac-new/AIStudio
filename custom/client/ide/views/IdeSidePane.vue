@@ -10,6 +10,8 @@ import { useMessage } from 'naive-ui'
 import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
 import IdeGitPane from './IdeGitPane.vue'
 import IdeWikiPane from './IdeWikiPane.vue'
+import IdeStoragePane from './IdeStoragePane.vue'
+import IdeMemoryPane from './IdeMemoryPane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
 
 const { t } = useI18n()
@@ -21,6 +23,8 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'browser', icon: '◍' },
   { key: 'wiki', icon: 'W' },
   { key: 'assistant', icon: '✦' },
+  { key: 'storage', icon: '▤' },
+  { key: 'memory', icon: '◈' },
 ]
 
 const paneStyle = computed(() => ({ width: `${ide.sidePane.width}px` }))
@@ -82,6 +86,8 @@ function focusMainChat(): void {
       <IdeGitPane v-if="ide.sidePane.tab === 'review'" class="ide-sidepane__fill" data-testid="ide-sidepane-review" />
       <DesktopBrowserView v-else-if="ide.sidePane.tab === 'browser'" class="ide-sidepane__fill" />
       <IdeWikiPane v-else-if="ide.sidePane.tab === 'wiki'" class="ide-sidepane__fill" />
+      <IdeStoragePane v-else-if="ide.sidePane.tab === 'storage'" class="ide-sidepane__fill" />
+      <IdeMemoryPane v-else-if="ide.sidePane.tab === 'memory'" class="ide-sidepane__fill" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">
