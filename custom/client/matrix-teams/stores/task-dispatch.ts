@@ -7,14 +7,16 @@ import { RoomEvent, type MatrixClient } from 'matrix-js-sdk'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useTeamRegistryStore } from './team-registry'
 import {
-  TASK_EVENT_TYPES, isSwarmStudioEventType,
-  parseAssignContent, parseReceiptContent,
-  type AssignContent, type ReceiptContent, type ReceiptStatus,
+  TASK_EVENT_TYPES, AGENT_PROFILE_EVENT_TYPE, isSwarmStudioEventType,
+  parseAssignContent, parseReceiptContent, parseAgentProfileContent,
+  type AssignContent, type ReceiptContent, type ReceiptStatus, type AgentDescriptor,
 } from '../protocol'
 import type { TeamAccountView } from '../adapters/accounts'
 import { createTask, getTask } from '@/api/hermes/kanban'
 import { resolveTargetProfile, mapKanbanStatusToReceipt } from '../adapters/dispatch-target'
 import { loadDispatchIndex, saveDispatchIndex, type DispatchIndexEntry } from '../store/dispatch-kv'
+import { selectAgent, isLoadOccupying } from '../agent-router'
+import { buildSubtaskAssigns, type SubtaskSpec } from '../task-tree'
 import { unwrapRef } from '../utils'
 
 export interface DispatchView {
@@ -38,6 +40,11 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     title: string
     body?: string
     priority?: string
+    parentId?: string
+    capability?: string[]
+    phase?: string
+    dueAt?: number
+    dependsOn?: string[]
     target: { account: string; agentTeam?: string; profile?: string }
   }): Promise<boolean> {
     const client = clientRef.value
@@ -50,6 +57,11 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
         title: input.title,
         body: input.body,
         priority: input.priority,
+        dueAt: input.dueAt,
+        parentId: input.parentId,
+        capability: input.capability,
+        phase: input.phase,
+        dependsOn: input.dependsOn,
         target: { account: input.target.account, agentTeam: input.target.agentTeam, profile: input.target.profile },
         issuedBy: selfId,
         issuedAt: Date.now(),
@@ -58,6 +70,26 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     } catch {
       return false
     }
+  }
+
+  // M-B 拆解 fan-out：父任务 → N 张带 parentId 的子任务 assign（构造见 task-tree.ts 单一事实源）。
+  async function sendSubtasks(
+    parent: { taskId: string; phase?: string; dueAt?: number },
+    subs: readonly SubtaskSpec[],
+  ): Promise<number> {
+    const client = clientRef.value
+    const roomId = registryRoomIdRef.value
+    if (!client || !roomId) return 0
+    const selfId = userIdRef.value ?? ''
+    const contents = buildSubtaskAssigns(parent, subs, selfId)
+    let sent = 0
+    for (const content of contents) {
+      try {
+        await client.sendEvent(roomId, TASK_EVENT_TYPES.assign, content)
+        sent++
+      } catch { /* 单张失败跳过，返回已发计数 */ }
+    }
+    return sent
   }
 
   // 孤儿回执暂存：receipt 先于 assign 到达（迟到排序/历史重放）时不丢，
@@ -103,13 +135,52 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
   // 并发者复用同一 Promise；完成（含失败回执路径）即清槽，不阻塞后续重试。
   const inFlightReceives = new Map<string, Promise<void>>()
 
-  async function doReceiveAssign(assign: AssignContent): Promise<void> {
+  // ── M-B 能力路由状态 ──
+  // 本机 agent.profile 投影：注册房的 agent.profile state 事件经 timeline 监听与历史回填
+  // 双通道汇入（模式同 assign/receipt），last-write-wins。
+  const localAgents = ref<AgentDescriptor[]>([])
+  // 排队中的 assign（全部覆盖者达 maxParallel）：内存态即可——重启丢失后历史回填会
+  // 重新走 receiveAssign 再入队（kv 未记录，幂等成立）。
+  const queuedAssigns: AssignContent[] = []
+
+  function upsertLocalAgents(agents: readonly AgentDescriptor[]): void {
+    localAgents.value = [...agents]
+  }
+
+  /** 本机在途负载：kv 索引按 routedAgentId 归属计数（created/running/waiting-human 占额度）。 */
+  function agentLoads(): { agentId: string; running: number }[] {
     const index = loadDispatchIndex()
-    if (index[assign.taskId]) return // kv 防重（spec §6.2）
+    const counts = new Map<string, number>()
+    for (const entry of Object.values(index)) {
+      const agentId = (entry as { routedAgentId?: string }).routedAgentId
+      if (!agentId || !isLoadOccupying(entry.lastStatus)) continue
+      counts.set(agentId, (counts.get(agentId) ?? 0) + 1)
+    }
+    return [...counts.entries()].map(([agentId, running]) => ({ agentId, running }))
+  }
+
+  /** 落地结果：created 建卡成功 / failed 终态回执 / queued 无槽位留队 / skipped 防重跳过。 */
+  async function doReceiveAssign(assign: AssignContent): Promise<'created' | 'failed' | 'queued' | 'skipped'> {
+    const index = loadDispatchIndex()
+    if (index[assign.taskId]) return 'skipped' // kv 防重（spec §6.2）
     const profile = resolveTargetProfile(assign.target, accountsRef.value)
     if (!profile) {
       await sendReceipt(assign.taskId, 'failed', { reason: 'no-such-profile' })
-      return
+      return 'failed'
+    }
+    // M-B 能力路由：带 capability 标签的 assign 先过决策表（spec v1.2 §6）。
+    let routedAgentId: string | undefined
+    if (assign.capability?.length) {
+      const decision = selectAgent(assign, localAgents.value, agentLoads())
+      if (decision.kind === 'no-match') {
+        await sendReceipt(assign.taskId, 'failed', { reason: 'no-capability-match' })
+        return 'failed'
+      }
+      if (decision.kind === 'queued') {
+        if (!queuedAssigns.some(a => a.taskId === assign.taskId)) queuedAssigns.push(assign)
+        return 'queued'
+      }
+      routedAgentId = decision.agent.agentId
     }
     // priority 透传：协议层 AssignContent.priority 为 string，kanban 建卡要求 number——
     // 数值字符串有限强转，非数值（含 undefined）不携带（不硬编 0：0 是有效优先级，undefined 才是"未指定"）。
@@ -122,13 +193,15 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
         assignee: profile,
         priority: prio,
       })
-      const entry: DispatchIndexEntry = { localTaskId: task.id, lastStatus: 'created', lastSyncedAt: Date.now() }
+      const entry: DispatchIndexEntry & { routedAgentId?: string } = { localTaskId: task.id, lastStatus: 'created', lastSyncedAt: Date.now(), routedAgentId }
       // 落盘前重读：createTask await 窗口内轮询（pollAndReport）可能已写他人状态，
       // 基于旧快照合并会静默回滚那次写入（同 pollAndReport:242 的新读合并口径）。
       saveDispatchIndex({ ...loadDispatchIndex(), [assign.taskId]: entry })
       await sendReceipt(assign.taskId, 'created', { localTaskId: task.id })
+      return 'created'
     } catch (err) {
       await sendReceipt(assign.taskId, 'failed', { reason: err instanceof Error ? err.message.slice(0, 200) : 'create-task-failed' })
+      return 'failed'
     }
   }
 
@@ -156,6 +229,9 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     } else if (type === TASK_EVENT_TYPES.receipt) {
       const receipt = parseReceiptContent(ev.getContent())
       if (receipt) mergeReceipt(receipt)
+    } else if (type === AGENT_PROFILE_EVENT_TYPE) {
+      const profile = parseAgentProfileContent(ev.getContent())
+      if (profile) upsertLocalAgents(profile.agents)
     }
   }
 
@@ -228,8 +304,15 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
   }
 
   /** 轮询回执上报（成员侧）：遍历 kv 索引 → 拉本地卡状态 → 变化才回执并落 kv。
-   *  单条失败静默跳过，下轮重试；发失败不回写 kv（下轮重发）。 */
+   *  单条失败静默跳过，下轮重试；发失败不回写 kv（下轮重发）。
+   *  M-B：先排空能力路由排队（槽位可能已释放），排队项成功落地后同样进 kv 轮询。 */
   async function pollAndReport(): Promise<void> {
+    while (queuedAssigns.length > 0) {
+      const next = queuedAssigns[0]
+      const outcome = await doReceiveAssign(next)
+      if (outcome === 'queued') break // 仍无槽位：留队下轮，防死循环
+      queuedAssigns.shift() // created/failed/skipped 均出队
+    }
     const index = loadDispatchIndex()
     for (const [taskId, entry] of Object.entries(index)) {
       let status: string
@@ -246,5 +329,5 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     }
   }
 
-  return { dispatches, sendAssignment, handleTimelineEvent, receiveAssign, sendReceipt, ensureListening, backfillHistory, pollAndReport }
+  return { dispatches, localAgents, sendAssignment, sendSubtasks, handleTimelineEvent, receiveAssign, sendReceipt, ensureListening, backfillHistory, pollAndReport }
 })

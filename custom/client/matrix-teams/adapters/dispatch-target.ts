@@ -19,6 +19,7 @@ export function resolveTargetProfile(
 export function mapKanbanStatusToReceipt(status: string): ReceiptStatus {
   if (status === 'done' || status === 'archived') return 'done'
   if (status === 'blocked') return 'failed'
+  if (status === 'review') return 'waiting-human' // M-B 执行轴：待人评审 = HumanGate 挂起（spec v1.2 §5.3）
   if (status === 'triage' || status === 'todo' || status === 'scheduled' || status === 'ready') return 'created'
-  return 'running' // running|review 及未知状态兜底（简报接口契约：未知 → 'running'）
+  return 'running' // running 及未知状态兜底（简报接口契约：未知 → 'running'）
 }
