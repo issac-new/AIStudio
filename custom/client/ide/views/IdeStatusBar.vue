@@ -27,15 +27,6 @@ const sessionState = computed(() =>
       {{ ide.workspace ?? t('ide.workspaceDefault') }}
     </span>
     <span class="ide-statusbar__spacer" />
-    <button
-      type="button"
-      class="ide-statusbar__pane-toggle"
-      :class="{ 'is-active': ide.sidePane.open }"
-      data-testid="ide-statusbar-sidepane"
-      :title="t('ide.sidePane.togglePanel')"
-      :aria-label="t('ide.sidePane.togglePanel')"
-      @click="ide.toggleSidePane()"
-    >◫ {{ t('ide.sidePane.togglePanel') }}</button>
     <span class="ide-statusbar__item" :class="{ 'is-running': running }">{{ sessionState }}</span>
   </footer>
 </template>
@@ -72,24 +63,5 @@ const sessionState = computed(() =>
   flex: 1;
 }
 
-.ide-statusbar__pane-toggle {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 18px;
-  padding: 0 8px;
-  border: 1px solid var(--ide-border, #2a2d33);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
-  font-size: 11px;
-  cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); }
-  &.is-active {
-    color: var(--ide-accent, #5b9cf6);
-    border-color: color-mix(in srgb, var(--ide-accent, #5b9cf6) 50%, transparent);
-  }
-}
 </style>
