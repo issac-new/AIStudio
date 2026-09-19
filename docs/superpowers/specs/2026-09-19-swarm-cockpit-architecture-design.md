@@ -1,7 +1,7 @@
 # Swarm Studio 智能研发驾驶舱——架构需求设计
 
 日期：2026-09-19
-状态：已批 v1.1——§3 三项裁决与 §12 次级四项于 2026-09-19 批复（前三项按推荐；会签/甘特/催办经用户调整纳入 v1）
+状态：已批 v1.2——三裁决与次级四项 2026-09-19 批复；2026-09-20 M-A 实施细化回写 §5（dueAt 复用 / waiting-human 落 ReceiptStatus / 会签单 signoff 聚合），注册通道前置已实测闭环
 受众：overlay 实施者与评审者、hermes 集群维护者
 上游依据：需求整理稿（2026-09-19 会话版，含其 §19 八问裁决）、`2026-09-18-distributed-delivery-network-design.md`（已批 D1-D4）、《软件交付标准》v1.3.0（`~/.hermes/delivery/`）
 
@@ -82,7 +82,7 @@ flowchart TB
 ### 5.1 项目维度与任务树
 
 - `delivery.case` 事件 content 增加 `projectId`；新增 account data `com.swarmstudio.project`（结构同 `com.swarmstudio.delivery.index`，delivery-protocol.ts:14、56-61）：项目清单 → 案例房列表两级索引。现索引上限 MAX_ROOMS = 50（delivery-protocol.ts:82），多项目后需分级或分页，风险登记 §10。
-- team.assign（matrix-teams protocol.ts，2.27 已有）content 扩展五字段：`parentId`（任务树根指到案例或父任务）、`capability`（标签数组，裁决 B 路由依据）、`phase`（P1..P6 归属，供统计与看板聚合）、`dueDate`（截止时间，催办与逾期统计的判据）、`dependsOn[]`（前置任务引用，甘特与关键路径的数据源）。
+- team.assign（matrix-teams protocol.ts，2.27 已有）content 扩展五字段：`parentId`（任务树根指到案例或父任务）、`capability`（标签数组，裁决 B 路由依据）、`phase`（P1..P6 归属，供统计与看板聚合）、`dueAt`（截止时间——v1.2 细化：该字段已存在于 AssignContent，复用不新增 dueDate，催办与逾期统计的判据）、`dependsOn[]`（前置任务引用，甘特与关键路径的数据源）。
 
 ### 5.2 Agent 身份与能力注册
 
@@ -94,7 +94,7 @@ flowchart TB
 一个状态机塞 26 态是反模式，拆成两条正交轴：
 
 - 看板轴（任务对人的状态）：待处理、已指派、处理中、待评审、已完成、已阻塞、已取消、已归档。
-- 执行轴（回执对 Agent 的状态）：received、started、progress、waiting-human、done、failed。前三个沿用 stage outcome 语义（delivery-protocol.ts:123），waiting-human 对应 HumanGate 挂起。
+- 执行轴（回执对 Agent 的状态）：received、started、progress、waiting-human、done、failed。前三个沿用 stage outcome 语义（delivery-protocol.ts:123）；waiting-human 落 ReceiptStatus 新枚举（v1.2 细化：不新增回执事件族，扩一枚举收口六态），对应 HumanGate 挂起。
 
 两轴关系：看板态由门禁与评审事件投影得出，执行态是回执事件的属性；「待评审」= 执行轴停在 waiting-human 或 done 待裁。
 
@@ -102,7 +102,7 @@ flowchart TB
 
 - gate 事件的 gate 枚举从 G1-G6 扩为 G1-G6 + R1 需求评审、R2 设计评审、R3 代码评审、R4 验收回归。R 门复用 GateContent schema（verdict / evidence / reason / decidedBy）。
 - 人机纪律：R 门任何 verdict 的 sender 必须是人类账号，与 G1/G5 同一校验函数（delivery-protocol.ts:230-239 的 validateGateSender 扩枚举）；Agent 只能以 stage 事件提交评审证据，不能替人裁决。这落实需求稿问题 6 的「关键事项必须由人确认，必要时 team leader」。
-- 会签（多人评审）纳入 v1（2026-09-19 用户调整）：gate 事件 content 增 `signoffs[]`（每项为 `{decidedBy, verdict, at}`），投影规则「全员 pass 才 pass，任一 reject 即 reject」，单判定人退化为 signoffs 长度 1；R 门每条 signoff 的 sender 仍必须是人类账号。leader 复核沿用注册房紧急通道（09-18 spec §6 owner 覆盖写语义）。
+- 会签（多人评审）纳入 v1（2026-09-19 用户调整）：wire 形态为每事件单 signoff `signoff: { decidedBy, verdict, at }`（本人签核），多人会签 = 多条 gate 事件，投影按 decidedBy 聚合，规则「全员 pass 才 pass，任一 reject 即 reject」（v1.2 细化：sender 校验逐条生效，防冒语义更强，线上结果与单事件挂数组等价）；单判定人退化为无 signoff 事件本身。R 门每条事件的 sender 仍必须是人类账号。leader 复核沿用注册房紧急通道（09-18 spec §6 owner 覆盖写语义）。
 - 评审中心 UI：R/G 门事件在沟通视图渲染为评审卡片，在 ⚙管理台聚合成待审清单；需求稿 §6.1.5 的「评审请求消息」即 gate 事件的 UI 形态，不另造消息类型。
 
 ## 6. Orchestrator 调度语义（需求稿 §7 逐条归位）
