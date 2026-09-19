@@ -71,7 +71,7 @@ const commandItems = computed<PaletteItem[]>(() => {
     {
       id: 'cmd:toggle-terminal',
       labelKey: 'ide.paletteCmdToggleTerminal',
-      run: () => { ide.layout.terminalOpen = !ide.layout.terminalOpen },
+      run: () => { ide.toggleSidePane('terminal') },
     },
     {
       id: 'cmd:toggle-workspace',

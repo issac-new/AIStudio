@@ -19,9 +19,6 @@ const sessionState = computed(() =>
 
 <template>
   <footer class="ide-statusbar">
-    <span class="ide-statusbar__item">
-      {{ ide.layout.terminalOpen ? t('ide.terminalTitle') : t('ide.terminalClosed') }}
-    </span>
     <span class="ide-statusbar__item ide-statusbar__agent">{{ ide.agentId }}</span>
     <span class="ide-statusbar__item" :title="ide.workspace ?? ''">
       {{ ide.workspace ?? t('ide.workspaceDefault') }}
