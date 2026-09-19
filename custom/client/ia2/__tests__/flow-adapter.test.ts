@@ -38,7 +38,7 @@ describe('buildSessionRows — 会话∪单聊统一投影（按最近活动排�
     expect(rows.map(r => r.id)).toEqual(['c1', 'r1', 'r2'])
     expect(rows[1]).toMatchObject({
       kind: 'room', id: 'r1', name: '应急指挥中心',
-      unread: 2, taskCount: 2, teamTag: 'swarm', dutyName: null, lastActivityAt: 200,
+      unread: 2, taskIds: ['t1', 't2'], teamTag: 'swarm', dutyName: null, lastActivityAt: 200,
     })
     expect(rows[2]).toMatchObject({ dutyName: 'TL', lastActivityAt: null })
   })
