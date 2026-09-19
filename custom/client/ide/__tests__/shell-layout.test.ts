@@ -60,6 +60,7 @@ describe('IdeShell 布局守门', () => {
     ide.toggleFold('sidebar')
     await w.vm.$nextTick()
     expect(w.find('[data-testid="ide-fold-sidebar"]').exists()).toBe(true)
+    expect(document.querySelector('.ide-shell__sidebar').className).toContain('is-folded')
     ide.toggleFold('sidebar')
     await w.vm.$nextTick()
     expect(w.find('.ide-taskbar').isVisible()).toBe(true)
@@ -73,6 +74,17 @@ describe('IdeShell 布局守门', () => {
     await w.vm.$nextTick()
     await w.vm.$nextTick()
     expect(w.find('.ide-shell__sidebar').attributes('style') || '').not.toContain('display: none')
+  })
+
+  it('侧栏有折叠/最大化按钮（pane-tools）；chat 折叠态容器收缩为把手条', async () => {
+    const w = mountShell()
+    const ide = useIdeStore()
+    await w.vm.$nextTick()
+    expect(w.find('[data-testid="ide-fold-sidebar-btn"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-max-sidebar-btn"]').exists()).toBe(true)
+    ide.toggleFold('chat')
+    await w.vm.$nextTick()
+    expect(document.querySelector('.ide-shell__chat').className).toContain('is-folded')
   })
 
   it('工作区列已退役：shell 不再渲染 __workspace', async () => {

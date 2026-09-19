@@ -27,7 +27,9 @@ import { buildWaiting, type WaitItem } from '../adapters/waiting'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
+import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
+import type { ParticipantBadge } from '../components/flow/ParticipantsBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -218,6 +220,60 @@ function onAllTimeline(): void {
   cockpit.openRunTraceGlobal()
 }
 
+// ── 中栏 · 会话画布数据（链路条/参与方条）──
+
+const selectedSessionRow = computed(() => {
+  const sel = activeSel.value
+  if (!sel || sel.kind === 'loop') return null
+  return sessionRows.value.find(s => s.kind === sel.kind && s.id === sel.id) ?? null
+})
+
+/** 门节点标题：等我队列命中当前对象挂接任务时显示（验收中任务标题） */
+const gateTitle = computed(() => {
+  const sel = activeSel.value
+  if (!sel || sel.kind === 'loop') return null
+  const linked = new Set(linkedTasks.value.map(t => t.id))
+  const hit = waitItems.value.find(w => w.kind === 'task-review' && w.taskId && linked.has(w.taskId))
+  return hit ? t('ia2.chain.gateReview') : null
+})
+
+const participants = computed<ParticipantBadge[]>(() => {
+  const sel = activeSel.value
+  if (!sel || sel.kind === 'loop') return []
+  if (sel.kind === 'chat') {
+    const s = chatSessions.value.find(x => x.id === sel.id)
+    return s?.agent ? [{ kind: 'agent', name: s.agent }] : []
+  }
+  const badges: ParticipantBadge[] = []
+  try {
+    const members = matrixRoom.getRoomMemberList?.(sel.id)
+    for (const m of (members?.defaults ?? []).slice(0, 8)) {
+      badges.push({ kind: 'human', name: (m as { name?: string; userId?: string }).name || (m as { userId?: string }).userId || '?' })
+    }
+  } catch { /* 成员列表需就绪的 client；未就绪时留空 */ }
+  const duty = duties.value[sel.id]
+  if (duty?.assigneeKind === 'agentTeam') {
+    for (const a of accounts.value) {
+      for (const at of a.agentTeams) {
+        if (`${a.userId}/${at.slug}` === duty.assigneeId) {
+          badges.push({ kind: 'agent', name: at.name, team: at.slug })
+        }
+      }
+    }
+  }
+  return badges
+})
+
+function onCanvasOpenTask(taskId: string): void {
+  drawerTaskId.value = taskId
+  drawerOpen.value = true
+}
+
+function onCanvasInvite(): void {
+  const sel = activeSel.value
+  if (sel) flow.openGov('session', sel.kind === 'loop' ? undefined : sel.id)
+}
+
 // ── 面板事件 ──
 
 function onSelect(sel: StreamSelection): void {
@@ -258,8 +314,22 @@ function onNewLoop(): void {
       />
     </aside>
     <section class="wb__center" data-testid="wb-center">
-      <!-- Task 6/7：会话→对话画布（链路条+参与方+消息流）；循环→运行画布（实时|历史） -->
-      <div class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
+      <SessionCanvas
+        v-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
+        :key="`${activeSel.kind}:${activeSel.id}`"
+        :kind="activeSel.kind"
+        :object-name="selectedSessionRow.name"
+        :linked-tasks="linkedTasks"
+        :gate-title="gateTitle"
+        :participants="participants"
+        :duty-name="selectedSessionRow.dutyName"
+        @open-task="onCanvasOpenTask"
+        @open-timeline="onAllTimeline"
+        @open-ide="onOpenIde"
+        @invite="onCanvasInvite"
+      />
+      <!-- Task 7：循环 → 运行画布（实时|历史） -->
+      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
     <aside class="wb__right" data-testid="wb-right">
       <TaskDecisionPanel
