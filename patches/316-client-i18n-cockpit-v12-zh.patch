@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 index c33039b1..9a7a221b 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -443,6 +443,12 @@ export default {
+@@ -443,6 +443,17 @@ export default {
    },
  
    ide: {
@@ -10,6 +10,11 @@ index c33039b1..9a7a221b 100644
 +    dims: {
 +      workspace: '工作空间', task: '任务', project: '项目', session: '会话', chain: '链路',
 +      switchCollab: '沟通协作',
++    },
++    // M-E 任务上下文条（/ide 激活任务时显示）
++    taskCtx: {
++      current: '当前任务', noCard: '任务未投递（无事件）', chatAnchor: '聊天锚点',
++      diffPlaceholder: 'diff 指针…', confirmR3: 'diff 确认（R3）', submit: '提交回执',
 +    },
 +
      brand: 'IDE 工作台',
