@@ -101,7 +101,7 @@ function closeTab(id: number): void {
   align-items: center;
   gap: 2px;
   padding: 3px 6px 0;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-termdock__tab {
@@ -121,7 +121,7 @@ function closeTab(id: number): void {
   &:hover { color: var(--text-primary, #e6e6e6); }
   &.is-active {
     background: var(--bg-primary, #14161a);
-    border-color: var(--border-color, #26292f);
+    border-color: var(--border-color, #e0e0e0);
     color: var(--text-primary, #e6e6e6);
   }
 }
@@ -149,7 +149,7 @@ function closeTab(id: number): void {
   font-size: 13px;
   cursor: pointer;
 
-  &:hover { color: var(--accent-primary, #4cc9f0); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--accent-primary, #4cc9f0); background: var(--bg-tertiary, #ebebeb); }
 }
 
 .ide-termdock__panes {
@@ -164,7 +164,7 @@ function closeTab(id: number): void {
   min-height: 0;
 
   &.is-split {
-    border-right: 1px solid var(--border-color, #26292f);
+    border-right: 1px solid var(--border-color, #e0e0e0);
     &:last-child { border-right: none; }
   }
 }

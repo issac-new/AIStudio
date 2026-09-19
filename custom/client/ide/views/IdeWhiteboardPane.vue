@@ -211,14 +211,14 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   align-items: center;
   gap: 4px;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-board__btn {
   height: 24px;
   min-width: 26px;
   padding: 0 5px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);
@@ -238,7 +238,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   width: 24px;
   height: 24px;
   padding: 0;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: transparent;
   cursor: pointer;
@@ -259,7 +259,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   height: 100%;
   border-radius: 8px;
   background: var(--bg-primary, #14161a);
-  border: 1px dashed var(--border-color, #26292f);
+  border: 1px dashed var(--border-color, #e0e0e0);
   touch-action: none;
   cursor: crosshair;
 }

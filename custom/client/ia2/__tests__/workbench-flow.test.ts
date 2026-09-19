@@ -57,6 +57,7 @@ vi.mock('@/stores/hermes/kanban', () => ({ useKanbanStore: kanbanStubs.useKanban
 
 const workspaceStubs = vi.hoisted(() => ({
   state: {
+    refreshAllBoards: vi.fn(async () => true),
     tasks: [
       { id: 't-402', title: 'v2.28 发布', priority: 'P1', status: 'review', assignee: 'worker-coder', workspace: '', tenant: '群:话题:@u:!r1:sess-1:matrix', boardSlug: 'swarm', createdAt: 1000 },
       { id: 't-415', title: 'release notes', priority: 'P2', status: 'running', assignee: '你', workspace: '', tenant: null, boardSlug: 'swarm', createdAt: 2000 },
@@ -85,6 +86,12 @@ const cockpitStubs = vi.hoisted(() => {
   return { state, useCockpitStore: () => state }
 })
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
+
+const kanbanApiStubs = vi.hoisted(() => ({
+  completeTasks: vi.fn(async () => ({ results: [] })),
+  blockTask: vi.fn(async () => ({})),
+}))
+vi.mock('@/api/hermes/kanban', () => ({ completeTasks: kanbanApiStubs.completeTasks, blockTask: kanbanApiStubs.blockTask }))
 
 vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: { name: 'KanbanTaskDrawer', props: ['show', 'taskId'], template: '<div class="drawer-stub" v-if="show" :data-taskid="taskId" />' },
@@ -322,12 +329,14 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
     expect(wrapper.find('[data-testid="tdp-wait-fleet:fs-1:ap-1"]').exists()).toBe(true)
   })
 
-  it('动线④就地决策：验收→moveTask(done)；打回→blockTask(reason)；确认运行→resumeRun；确认 fleet→respondFleetApproval', async () => {
+  it('动线④就地决策：验收→completeTasks(任务所在板)；打回→blockTask(reason)；确认运行→resumeRun；确认 fleet→respondFleetApproval', async () => {
     const { wrapper } = await mountTdp('/app')
     await wrapper.find('[data-testid="tdp-approve-t-402"]').trigger('click')
-    expect(kanbanStubs.state.moveTask).toHaveBeenCalledWith('t-402', 'done')
+    await flushPromises()
+    expect(kanbanApiStubs.completeTasks).toHaveBeenCalledWith(['t-402'], undefined, { board: 'swarm' })
     await wrapper.find('[data-testid="tdp-reject-t-402"]').trigger('click')
-    expect(kanbanStubs.state.blockTask).toHaveBeenCalledWith('t-402', 'ia2.tdp.rejectReason')
+    await flushPromises()
+    expect(kanbanApiStubs.blockTask).toHaveBeenCalledWith('t-402', 'ia2.tdp.rejectReason', { board: 'swarm' })
     await wrapper.find('[data-testid="tdp-confirm-run-run-9"]').trigger('click')
     expect(runsStubs.state.resumeRun).toHaveBeenCalledWith('run-9', true)
     await wrapper.find('[data-testid="tdp-confirm-fleet-fs-1"]').trigger('click')

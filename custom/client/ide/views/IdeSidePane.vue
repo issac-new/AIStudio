@@ -146,7 +146,7 @@ function focusMainChat(): void {
   display: flex;
   flex-direction: column;
   min-width: 280px;
-  border-left: 1px solid var(--border-color, #26292f);
+  border-left: 1px solid var(--border-color, #e0e0e0);
   background: var(--bg-secondary, #1b1e24);
   min-height: 0;
 }
@@ -156,7 +156,7 @@ function focusMainChat(): void {
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-sidepane__tab {
@@ -171,7 +171,7 @@ function focusMainChat(): void {
   color: var(--text-muted, #9aa0aa);
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
   &.is-active {
     color: var(--accent-primary, #4cc9f0);
     background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
@@ -187,7 +187,7 @@ function focusMainChat(): void {
 .ide-sidepane__tab--add {
   color: var(--text-muted, #9aa0aa);
 
-  &:hover { color: var(--accent-primary, #4cc9f0); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--accent-primary, #4cc9f0); background: var(--bg-tertiary, #ebebeb); }
 }
 
 .ide-sidepane__spacer { flex: 1; }
@@ -217,7 +217,7 @@ function focusMainChat(): void {
 .ide-sidepane__kind {
   flex: 1;
   height: 24px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
@@ -234,7 +234,7 @@ function focusMainChat(): void {
   width: 100%;
   resize: vertical;
   padding: 8px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 6px;
   background: var(--bg-primary, #14161a);
   color: var(--text-primary, #e6e6e6);
@@ -250,7 +250,7 @@ function focusMainChat(): void {
 .ide-sidepane__assistant-btn {
   flex: 1;
   height: 28px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 6px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);

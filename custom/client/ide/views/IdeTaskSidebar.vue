@@ -577,7 +577,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary, #1b1e24);
-  border-right: 1px solid var(--border-color, #26292f);
+  border-right: 1px solid var(--border-color, #e0e0e0);
   min-height: 0;
 }
 
@@ -603,7 +603,7 @@ onMounted(async () => {
   cursor: pointer;
   text-align: left;
 
-  &:hover { background: var(--bg-tertiary, #242830); }
+  &:hover { background: var(--bg-tertiary, #ebebeb); }
 }
 
 .ide-taskbar__action-label {
@@ -616,9 +616,9 @@ onMounted(async () => {
 
 .ide-taskbar__kbd {
   font-size: 11px;
-  color: var(--text-muted, #9aa0aa);
-  background: var(--bg-tertiary, #242830);
-  border: 1px solid var(--border-color, #26292f);
+  color: var(--text-secondary, #9aa0aa);
+  background: var(--bg-tertiary, #ebebeb);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   padding: 1px 5px;
   font-family: inherit;
@@ -645,7 +645,7 @@ onMounted(async () => {
 
   &:hover { color: var(--text-primary, #e6e6e6); }
   &.is-active {
-    background: var(--bg-tertiary, #242830);
+    background: var(--bg-tertiary, #ebebeb);
     color: var(--text-primary, #e6e6e6);
   }
 }
@@ -668,7 +668,7 @@ onMounted(async () => {
 
   &:hover { color: var(--text-primary, #e6e6e6); }
   &.is-active {
-    background: var(--bg-tertiary, #242830);
+    background: var(--bg-tertiary, #ebebeb);
     color: var(--text-primary, #e6e6e6);
   }
 }
@@ -716,7 +716,7 @@ onMounted(async () => {
   height: 26px;
   border: none;
   border-radius: 5px;
-  background: var(--bg-tertiary, #242830);
+  background: var(--bg-tertiary, #ebebeb);
   color: var(--accent-primary, #4cc9f0);
   cursor: pointer;
 
@@ -729,7 +729,7 @@ onMounted(async () => {
   width: 100%;
   height: 28px;
   padding: 0 10px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 6px;
   background: var(--bg-primary, #14161a);
   color: var(--text-primary, #e6e6e6);
@@ -751,7 +751,7 @@ onMounted(async () => {
   height: 24px;
   border: none;
   border-radius: 12px;
-  background: var(--bg-tertiary, #242830);
+  background: var(--bg-tertiary, #ebebeb);
   color: var(--text-muted, #9aa0aa);
   font-size: 11px;
   cursor: pointer;
@@ -763,7 +763,7 @@ onMounted(async () => {
   &:hover { color: var(--text-primary, #e6e6e6); }
   &.is-active {
     color: var(--text-primary, #e6e6e6);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 22%, var(--bg-tertiary, #242830));
+    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 22%, var(--bg-tertiary, #ebebeb));
   }
 }
 
@@ -819,7 +819,7 @@ onMounted(async () => {
   font-size: 10px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
   &--danger:hover { color: #e06c75; }
 }
 
@@ -833,7 +833,7 @@ onMounted(async () => {
   border-radius: 6px;
   margin: 1px 0;
 
-  &:hover { background: var(--bg-tertiary, #242830); .ide-taskbar__item-more { opacity: 1; } }
+  &:hover { background: var(--bg-tertiary, #ebebeb); .ide-taskbar__item-more { opacity: 1; } }
   &.is-active {
     background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
     .ide-taskbar__item-title { color: var(--accent-primary, #4cc9f0); }
@@ -901,7 +901,7 @@ onMounted(async () => {
 
 .ide-taskbar__foot {
   padding: 6px 10px 8px;
-  border-top: 1px solid var(--border-color, #26292f);
+  border-top: 1px solid var(--border-color, #e0e0e0);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -932,7 +932,7 @@ onMounted(async () => {
   font-size: 13px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
   &.is-active {
     color: var(--accent-primary, #4cc9f0);
     background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 14%, transparent);
@@ -975,7 +975,7 @@ onMounted(async () => {
   color: var(--text-muted, #9aa0aa);
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
   svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; }
 }
 </style>

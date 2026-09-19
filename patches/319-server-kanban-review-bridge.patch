@@ -1,0 +1,37 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index 7f019e74..9eaaca98 100644
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -729,6 +729,16 @@ async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions
+       return unblockTasks([taskId], opts)
+     case 'archived':
+       return archiveTasks([taskId], opts)
++    case 'review': {
++      // HERMES_CUSTOM[v121]: 同 patchTask——bulk 链此前对 review 直接 throw，
++      // 看板拖拽/右栏动作静默失效（results ok:false 无消费）。
++      await execKanbanMutation(
++        [...boardArgs(opts.board), 'request-review', taskId, '--force'],
++        'Hermes CLI: kanban request-review failed',
++        'Failed to move task to review',
++      )
++      return
++    }
+     default:
+       throw new Error(`Bulk status ${opts.status} is not supported by the CLI bridge`)
+   }
+@@ -890,6 +900,15 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+     } else if (s === 'todo' || s === 'triage' || s === 'scheduled') {
+       // Use bulk update for direct status writes
+       await bulkUpdateTasks({ ids: [taskId], status: s as KanbanTaskStatus, board })
++    } else if (s === 'review') {
++      // HERMES_CUSTOM[v121]: request-review 桥——CLI 无通用 set-status 动词，
++      // review 态此前在此分支表缺失（静默无操作，前端乐观更新假成功后回滚）。
++      // --force 允许从 running/blocked 等任意态直入 review。
++      await execKanbanMutation(
++        [...boardArgs(board), 'request-review', taskId, '--force'],
++        'Hermes CLI: kanban request-review failed',
++        'Failed to move task to review',
++      )
+     }
+   }
+   if (patch.assignee !== undefined) {
