@@ -9,21 +9,42 @@
 //
 // 纪律：不嵌入 ChatPanel 整面板（自带会话侧栏，嵌套导航）；消息面
 // 经 IdeChatPane 复用其子组件（MessageList/ChatInput/SubagentStreamPanel）。
-import { computed, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { useIdeStore } from '../store/ide'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useChatStore } from '@/stores/hermes/chat'
 import IdeTopBar from './IdeTopBar.vue'
 import IdeTaskSidebar from './IdeTaskSidebar.vue'
 import IdeChatPane from './IdeChatPane.vue'
 import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
+import IdeDimsBar from '../components/IdeDimsBar.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const ide = useIdeStore()
 const cockpitStore = useCockpitStore()
+const chatStore = useChatStore()
+
+// ── v12 任务维度深链（/ide?task=<id>，工作台 ⌨ / 管理台 ⌨ 入口）──
+// 绑定任务维度并尽力切到任务挂靠的 agent 会话（session_id 命中即 switch）。
+watch(() => route.query.task, (taskId) => {
+  const id = typeof taskId === 'string' && taskId.trim() ? taskId.trim() : null
+  ide.setActiveTask(id)
+  if (id) ide.setDimension('task')
+}, { immediate: true })
+
+onMounted(() => {
+  const id = ide.activeTaskId
+  if (id) {
+    const hit = (chatStore.sessions ?? []).find(s => s.id === id || s.agentSessionId === id)
+    if (hit) chatStore.switchSession?.(hit.id)
+  }
+})
 
 // 命令面板快捷键：Cmd/Ctrl+K 开关（对标 zcode quickPick；终端面板聚焦时
 // xterm 可能吞键，面板入口在 TopBar 同步提供）。
@@ -57,6 +78,7 @@ onUnmounted(() => {
 <template>
   <div class="ide-shell">
     <IdeTopBar />
+    <IdeDimsBar />
     <div class="ide-shell__main" :class="mainClass">
       <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }">
         <div v-if="ide.layout.sidebar.folded" class="ide-shell__fold-handle" data-testid="ide-fold-sidebar" :title="t('ide.pane.expand')" @click="ide.toggleFold('sidebar')">
