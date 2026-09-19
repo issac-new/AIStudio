@@ -38,6 +38,18 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown)
 })
 
+// ── 三栏折叠/最大化（用户裁定：每栏可最大化/最小化/向侧边折叠）──
+type PaneKey = 'sidebar' | 'workspace' | 'chat'
+const anyMax = computed(() => (['sidebar', 'workspace', 'chat'] as PaneKey[]).some(k => ide.layout[k].maximized))
+const sidebarShown = computed(() => !anyMax.value || ide.layout.sidebar.maximized)
+const workspaceShown = computed(() => !anyMax.value || ide.layout.workspace.maximized)
+const chatShown = computed(() => !anyMax.value || ide.layout.chat.maximized)
+const mainClass = computed(() => ({
+  'has-max-sidebar': ide.layout.sidebar.maximized,
+  'has-max-workspace': ide.layout.workspace.maximized,
+  'has-max-chat': ide.layout.chat.maximized,
+}))
+
 const chatColumnStyle = computed(() => ({
   width: `${ide.layout.chatVisible ? ide.layout.chatWidth : 0}px`,
 }))
@@ -117,9 +129,22 @@ onUnmounted(() => {
 <template>
   <div class="ide-shell">
     <IdeTopBar />
-    <div class="ide-shell__main">
-      <IdeTaskSidebar />
-      <div v-show="ide.layout.workspaceVisible" class="ide-shell__workspace">
+    <div class="ide-shell__main" :class="mainClass">
+      <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }">
+        <div v-if="ide.layout.sidebar.folded" class="ide-shell__fold-handle" data-testid="ide-fold-sidebar" :title="t('ide.pane.expand')" @click="ide.toggleFold('sidebar')">
+          <span class="ide-shell__fold-label">‹</span>
+        </div>
+        <IdeTaskSidebar v-else />
+      </aside>
+      <div v-show="workspaceShown" class="ide-shell__workspace" :class="{ 'is-folded': ide.layout.workspace.folded }">
+        <div v-if="ide.layout.workspace.folded" class="ide-shell__fold-handle ide-shell__fold-handle--v" data-testid="ide-fold-workspace" :title="t('ide.pane.expand')" @click="ide.toggleFold('workspace')">
+          <span class="ide-shell__fold-label">‹</span>
+        </div>
+        <template v-else>
+        <div class="ide-shell__pane-tools">
+          <button type="button" class="ide-shell__tool" data-testid="ide-fold-workspace-btn" :title="t('ide.pane.fold')" @click="ide.toggleFold('workspace')">‹</button>
+          <button type="button" class="ide-shell__tool" data-testid="ide-max-workspace-btn" :title="t('ide.pane.maximize')" @click="ide.toggleMax('workspace')">{{ ide.layout.workspace.maximized ? '⤡' : '⤢' }}</button>
+        </div>
         <IdeWorkspacePane class="ide-shell__workspace-main" />
         <div
           v-if="ide.layout.terminalOpen"
@@ -129,10 +154,20 @@ onUnmounted(() => {
           <div class="ide-shell__terminal-handle" @pointerdown="startTerminalResize" />
           <IdeTerminalDock class="ide-shell__terminal-body" />
         </div>
+        </template>
       </div>
-      <div v-if="ide.layout.chatVisible" class="ide-shell__chat" :style="chatColumnStyle">
+      <div v-show="chatShown" class="ide-shell__chat" :class="{ 'is-folded': ide.layout.chat.folded }" :style="chatColumnStyle">
         <div class="ide-shell__chat-handle" @pointerdown="startChatResize" />
+        <div v-if="ide.layout.chat.folded" class="ide-shell__fold-handle ide-shell__fold-handle--v" data-testid="ide-fold-chat" :title="t('ide.pane.expand')" @click="ide.toggleFold('chat')">
+          <span class="ide-shell__fold-label">›</span>
+        </div>
+        <template v-else>
+        <div class="ide-shell__pane-tools ide-shell__pane-tools--chat">
+          <button type="button" class="ide-shell__tool" data-testid="ide-fold-chat-btn" :title="t('ide.pane.fold')" @click="ide.toggleFold('chat')">›</button>
+          <button type="button" class="ide-shell__tool" data-testid="ide-max-chat-btn" :title="t('ide.pane.maximize')" @click="ide.toggleMax('chat')">{{ ide.layout.chat.maximized ? '⤡' : '⤢' }}</button>
+        </div>
         <IdeChatPane class="ide-shell__chat-body" />
+        </template>
       </div>
       <IdeSidePane />
     </div>
@@ -169,6 +204,60 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
 }
+
+.ide-shell__sidebar {
+  flex-shrink: 0;
+  display: flex;
+  min-height: 0;
+}
+
+.ide-shell__fold-handle {
+  width: 14px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--ide-bg-side, #1a1c20);
+  border-right: 1px solid var(--ide-border, #2a2d33);
+  color: var(--ide-text-muted, #8b8f97);
+
+  &--v { width: 14px; }
+}
+
+.ide-shell__fold-label { font-size: 11px; user-select: none; }
+
+.ide-shell__pane-tools {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 2px;
+  background: var(--ide-bg-chat, #202226);
+  border-right: 1px solid var(--ide-border, #2a2d33);
+
+  &--chat { border-right: none; border-left: 1px solid var(--ide-border, #2a2d33); }
+}
+
+.ide-shell__tool {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ide-text-muted, #8b8f97);
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
+}
+
+.ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
+.ide-shell__main.has-max-workspace .ide-shell__workspace { flex: 1; }
+.ide-shell__main.has-max-chat .ide-shell__chat { flex: 1; }
 
 .ide-shell__workspace {
   flex: 1;

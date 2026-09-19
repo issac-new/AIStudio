@@ -13,13 +13,10 @@ import { useI18n } from 'vue-i18n'
 import { useIdeStore } from '../store/ide'
 import { useFilesStore } from '@/stores/hermes/files'
 import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
-import IdeGitPane from './IdeGitPane.vue'
 
 const ide = useIdeStore()
 const filesStore = useFilesStore()
 const { t } = useI18n()
-
-const tab = ref<'files' | 'git'>('files')
 
 const errorState = ref<{ code: string; message: string } | null>(null)
 const syncing = ref(true)
@@ -68,33 +65,16 @@ onMounted(() => {
 
 <template>
   <div class="ide-workspace-pane">
-    <div class="ide-workspace-pane__tabs" role="tablist">
-      <button
-        v-for="item in (['files', 'git'] as const)"
-        :key="item"
-        type="button"
-        role="tab"
-        class="ide-workspace-pane__tab"
-        :class="{ 'is-active': tab === item }"
-        :aria-selected="tab === item"
-        @click="tab = item"
-      >{{ t(`ide.workspaceTab_${item}`) }}</button>
+    <div v-if="syncing" class="ide-workspace-pane__state">
+      {{ t('ide.loading') }}
     </div>
-
-    <template v-if="tab === 'files'">
-      <div v-if="syncing" class="ide-workspace-pane__state">
-        {{ t('ide.loading') }}
-      </div>
-      <div v-else-if="errorState" class="ide-workspace-pane__state ide-workspace-pane__state--error">
-        <span>{{ errorState.message }}</span>
-        <button type="button" class="ide-workspace-pane__reset" @click="ide.setWorkspace(null)">
-          {{ t('ide.workspaceReset') }}
-        </button>
-      </div>
-      <FilesPanel v-else />
-    </template>
-
-    <IdeGitPane v-else class="ide-workspace-pane__git" />
+    <div v-else-if="errorState" class="ide-workspace-pane__state ide-workspace-pane__state--error">
+      <span>{{ errorState.message }}</span>
+      <button type="button" class="ide-workspace-pane__reset" @click="ide.setWorkspace(null)">
+        {{ t('ide.workspaceReset') }}
+      </button>
+    </div>
+    <FilesPanel v-else />
   </div>
 </template>
 
