@@ -26,9 +26,10 @@ const rows = computed(() => (teamRegistry.accounts ?? []).map(a => {
   return { account: a, profiles, open, dutyRooms }
 }))
 
-function goTasks(assignees: string[]): void {
-  // 看板深链面：首个 profile 预选（多 profile 取主；空则裸看板）
-  void router.push({ name: 'ia2.board', query: assignees[0] ? { task: '' } : {} })
+function goTasks(): void {
+  // 裸看板（v12.1 C1 简化：原 query {task: ''} 为残参——看板只认具体任务 id，
+  // assignee 过滤深链待看板支持后再补）
+  void router.push({ name: 'ia2.board' })
 }
 
 function goDutyRoom(roomId: string): void {
@@ -63,7 +64,10 @@ function roomName(roomId: string): string {
           </span>
         </span>
         <span class="gps__ops">
-          <button type="button" class="gps__op" :disabled="!r.profiles.length" @click="goTasks(r.profiles)">
+          <button
+            type="button" class="gps__op" :disabled="!r.profiles.length"
+            :data-testid="`gov-people-tasks-${r.account.userId}`" @click="goTasks"
+          >
             {{ t('ia2.gov.people.tasks') }}
           </button>
         </span>

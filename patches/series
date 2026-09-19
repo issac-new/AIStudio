@@ -552,3 +552,18 @@
 319-server-kanban-review-bridge.patch
 # 320: i18n 键块归位——chat.* 13 键从 ide 块迁回 chat 块（308/309 再生成时锚错父块，i18n 门禁抓获）+ common.close 双语补齐（上游 v0.7.23 已知缺键复发）
 320-client-i18n-chat-block-relocation.patch
+
+# 321: cockpit 补 completionSummary/completionSummaryHint 双语——看板任务抽屉完成弹窗
+#      原引用 kanban.* 缺键吃英文回退（中文界面显英文，C2 走查抓获）；既有 4 键
+#      （confirmDone/confirmArchive/confirmBlocked/completionSummaryRequired）改引 cockpit 命名空间。
+321-client-i18n-cockpit-completion-summary.patch
+
+# 322: kanban complete 守卫放行 review 态——等待队列「验收」对 review 任务恰被 409
+#      拦截（allowedStatuses 仅 running/ready/blocked），前端吞错=按钮没反应的
+#      第二半根因（与 319 同族：review 出口）。CLI complete 对 review 无需 --force。
+322-server-kanban-complete-allow-review.patch
+
+# 323: review 态打回桥（review→ready 重做）——CLI reopen-review 贯通 service/
+#      controller/route/client api；前端右栏打回按任务状态分流（review→reopenReview，
+#      其余→blockTask）。CLI 无 review→blocked 转移，直调 block 必 409（与 322 同族）。
+323-server-kanban-reopen-review-bridge.patch

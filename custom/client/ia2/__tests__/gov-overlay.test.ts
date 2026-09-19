@@ -122,6 +122,14 @@ describe('GovOverlay — 管理台覆盖层', () => {
     expect(router.currentRoute.value.name).toBe('ia2.commsRoom')
   })
 
+  it('员工区「任务」按钮 → 裸看板（无残留 query；v12.1 C1 简化）', async () => {
+    const { wrapper, router } = await mountGov('people')
+    await wrapper.find('[data-testid="gov-people-tasks-@tl:host"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.board')
+    expect(router.currentRoute.value.query.task).toBeUndefined()
+  })
+
   it('员工/智能体/团队三区渲染（含通道卡状态）', async () => {
     const people = (await mountGov('people')).wrapper
     expect(people.find('[data-testid="gov-people-@tl:host"]').exists()).toBe(true)

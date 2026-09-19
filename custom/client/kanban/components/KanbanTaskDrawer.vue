@@ -370,7 +370,7 @@ async function executePatch(patch: kanbanApi.KanbanTaskPatch) {
 function handleCompletionSubmit() {
   const trimmed = completionSummary.value.trim()
   if (!trimmed) {
-    message.warning(t('kanban.completionSummaryRequired', 'Completion summary is required before marking a task done.'))
+    message.warning(t('cockpit.completionSummaryRequired'))
     return
   }
   const patch = { ...pendingDonePatch.value, result: trimmed } as kanbanApi.KanbanTaskPatch
@@ -448,10 +448,12 @@ function canMoveTo(status: KanbanTaskStatus): boolean {
   }
 }
 
+// 确认文案走 cockpit 命名空间既有键（zh/en 双语在案；kanban.* 无此键，
+// 旧引用吃英文内联回退=中文界面显英文，2026-09-19 C2 走查抓获）
 const statusConfirmMessages: Record<string, string> = {
-  done: t('kanban.confirmDone', 'Mark this task as done? The worker\'s claim is released and dependent children become ready.'),
-  archived: t('kanban.confirmArchive', 'Archive this task? It disappears from the default board view.'),
-  blocked: t('kanban.confirmBlocked', 'Mark this task as blocked? The worker\'s claim is released.'),
+  done: t('cockpit.confirmDone'),
+  archived: t('cockpit.confirmArchive'),
+  blocked: t('cockpit.confirmBlocked'),
 }
 
 // Specify / Decompose
@@ -1357,11 +1359,11 @@ function statusDotClass(status: string): string {
   <NModal
     v-model:show="showCompletionModal"
     preset="dialog"
-    :title="t('kanban.completionSummary', 'Completion summary')"
+    :title="t('cockpit.completionSummary')"
   >
     <div style="display: flex; flex-direction: column; gap: 8px">
       <p style="font-size: 13px; color: var(--n-text-color-3); margin: 0">
-        {{ t('kanban.completionSummaryHint', 'Enter a summary for this task. This is stored as the task result.') }}
+        {{ t('cockpit.completionSummaryHint') }}
       </p>
       <NInput
         v-model:value="completionSummary"

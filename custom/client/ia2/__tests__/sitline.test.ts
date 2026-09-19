@@ -47,4 +47,16 @@ describe('SitlineBar — 态势条', () => {
     await w.find('[data-testid="sit-gov"]').trigger('click')
     expect(w.emitted('open-gov')).toHaveLength(1)
   })
+
+  it('五态势项可点击：各 emit select 自带段键（waiting/tasks/sessions/loops/online）', async () => {
+    const w = mountSit()
+    await w.find('[data-testid="sit-waiting"]').trigger('click')
+    await w.find('[data-testid="sit-tasks"]').trigger('click')
+    await w.find('[data-testid="sit-sessions"]').trigger('click')
+    await w.find('[data-testid="sit-loops"]').trigger('click')
+    await w.find('[data-testid="sit-online"]').trigger('click')
+    expect(w.emitted('select')).toEqual([
+      ['waiting'], ['tasks'], ['sessions'], ['loops'], ['online'],
+    ])
+  })
 })
