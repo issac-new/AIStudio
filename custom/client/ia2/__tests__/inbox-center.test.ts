@@ -106,7 +106,7 @@ describe('normalizeTasks — 源②阻塞/源③待审', () => {
       ['task:t2', 'review', 'medium'],
     ])
     expect(entries[0].waitMs).toBe(2 * DAY)
-    expect(entries[0].route).toEqual({ path: '/app/tasks' })
+    expect(entries[0].route).toEqual({ path: '/app/board' })
   })
 
   it('createdAt 不可考 → ts 0、waitMs 0（排同严重度末位，不炸）', () => {
@@ -129,7 +129,7 @@ describe('normalizeAlarms — 源④熔断/停滞告警', () => {
     expect(entries).toHaveLength(2)
     expect(entries[0]).toMatchObject({ id: 'alarm:l1', kind: 'alarm', severity: 'medium', title: '晨检循环', ts: NOW - DAY })
     expect(entries[1]).toMatchObject({ id: 'alarm:l2', severity: 'high', title: '部署循环' })
-    expect(entries[0].route).toEqual({ name: 'ia2.ops', query: { tab: 'runs', loop: 'l1' } })
+    expect(entries[0].route).toEqual({ name: 'ia2.runs', query: { tab: 'runs', loop: 'l1' } })
   })
 
   it('同刻 escalated 与 stuck 并存取 escalated；全坏 ts / 无告警事件 → 不产条目', () => {

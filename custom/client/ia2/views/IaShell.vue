@@ -1,5 +1,6 @@
 <!-- overlay/custom/client/ia2/views/IaShell.vue -->
-<!-- 驾驶舱统一壳（2026-09-18 统一导航重构）：全局页头 IaShellHeader + 六场景条 + router-view。
+<!-- 驾驶舱统一壳（2026-09-19 v12 统一视图）：全局页头 IaShellHeader + 双视图场景条
+     （沟通协作 /app + IDE 工作台 /ide 直链）+ router-view。
      共享武装（workspace 聚合/runs/loops）自旧驾驶舱壳（已退役）上移；cockpit store 在此
      bootstrap（页头通知/搜索依赖），卸载 disconnect。全局弹窗：通知/日程/RunTrace。
      窗口管理（/goal 追加）：standalone=1 → 精简独立窗口壳（IaPopoutBar，无页头/场景条）；
@@ -122,6 +123,12 @@ const activeArea = computed(() => store.currentArea)
           :class="{ 'ia-scenes__btn--on': activeArea === area.key }"
           :data-testid="`ia-scene-${area.key}`"
         >{{ t(area.labelKey) }}</router-link>
+        <!-- v12 双视图第二入口：IDE 工作台（独立壳 /ide，此处无高亮态） -->
+        <router-link
+          :to="{ name: 'ide.shell' }"
+          class="ia-scenes__btn ia-scenes__btn--ide"
+          data-testid="ia-scene-ide"
+        >{{ t('ia2.shell.gotoIde') }}</router-link>
       </nav>
     </template>
     <div class="ia-shell__main">
@@ -142,6 +149,12 @@ const activeArea = computed(() => store.currentArea)
 </template>
 
 <style scoped lang="scss">
+/* v12 双视图第二入口与首入口的间隔（设计稿 §2.3：隔 10px + 1px 竖分隔线） */
+.ia-scenes__btn--ide {
+  margin-left: 10px;
+  border-left: 1px solid var(--border-color);
+  padding-left: 14px;
+}
 .ia-shell__restore {
   position: fixed; top: 10px; right: 14px; z-index: 40;
   height: 28px; padding: 0 12px; display: flex; align-items: center; gap: 4px;

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/ia-shell.test.ts
-// 驾驶舱统一壳守门（2026-09-18 统一导航重构 Task 2，替代 slim 子页头守门）：
-// IaShell = IaShellHeader 全局页头 + 六场景条 + router-view。
-// 断言：场景条六入口渲染、active 态跟随路由、共享武装序列（自旧驾驶舱壳
-// 上移，Task 1 评审指出的覆盖缺口）、卸载时 workspace/cockpit 双侧回收。
+// 驾驶舱统一壳守门（2026-09-19 v12 统一视图）：IaShell = IaShellHeader 全局页头
+// + 双视图场景条（沟通协作 /app + IDE 工作台 /ide 直链）+ router-view。
+// 断言：场景条双入口渲染、active 态跟随路由、共享武装序列（自旧驾驶舱壳
+// 上移）、卸载时 workspace/cockpit 双侧回收。
 // 挂载以根 <router-view/> 复刻 App.vue 深度；子组件（页头/弹窗）桩化隔离重图。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -93,12 +93,21 @@ function makeRouter(): Router {
       {
         path: '/app',
         component: IaShell,
-        children: IA_AREAS.map(a => ({
-          path: a.path === '/app' ? '' : a.path.replace('/app/', ''),
-          name: a.name,
-          component: AREA,
-        })),
+        children: [
+          // 场景条循环渲染 IA_AREAS（v12 单视图 collab）
+          ...IA_AREAS.map(a => ({
+            path: a.path === '/app' ? '' : a.path.replace('/app/', ''),
+            name: a.name,
+            component: AREA,
+          })),
+          // 测试用到的工作页路径
+          { path: 'board', name: 'ia2.board', component: AREA },
+          { path: 'eng', name: 'ia2.eng', component: AREA },
+          { path: 'runs', name: 'ia2.runs', component: AREA },
+        ],
       },
+      // v12 双视图第二入口（场景条 IDE 直链的目标）
+      { path: '/ide', name: 'ide.shell', component: AREA },
     ],
   })
 }
@@ -117,18 +126,19 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('IaShell — 统一壳（页头 + 六场景条）', () => {
-  it('场景条渲染六入口（data-testid=ia-scene-<key>），全局页头在位', async () => {
+describe('IaShell — 统一壳（页头 + 双视图场景条）', () => {
+  it('场景条渲染双入口（沟通协作 + IDE 工作台），全局页头在位', async () => {
     const { wrapper } = await mountShell('/app')
     expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(true)
     for (const area of IA_AREAS) {
       expect(wrapper.find(`[data-testid="ia-scene-${area.key}"]`).exists()).toBe(true)
     }
+    expect(wrapper.find('[data-testid="ia-scene-ide"]').exists()).toBe(true)
     expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(true)
     expect(wrapper.find('.ia-shell__main').exists()).toBe(true)
   })
 
-  it.each(IA_AREAS.map(a => [a.key, a.path]))('active 态跟随路由：%s 区高亮', async (key, path) => {
+  it.each(IA_AREAS.map(a => [a.key, a.path]))('active 态跟随路由：%s 视图高亮', async (key, path) => {
     const { wrapper } = await mountShell(path as string)
     const btn = wrapper.find(`[data-testid="ia-scene-${key}"]`)
     expect(btn.classes()).toContain('ia-scenes__btn--on')
@@ -138,13 +148,12 @@ describe('IaShell — 统一壳（页头 + 六场景条）', () => {
     }
   })
 
-  it('路由切换时 active 态迁移（/app/ops → /app/eng）', async () => {
-    const { wrapper, router } = await mountShell('/app/ops')
-    expect(wrapper.find('[data-testid="ia-scene-ops"]').classes()).toContain('ia-scenes__btn--on')
-    await router.push('/app/eng')
+  it('工作页路由切换时场景条保持 collab 高亮（board → runs）', async () => {
+    const { wrapper, router } = await mountShell('/app/board')
+    expect(wrapper.find('[data-testid="ia-scene-collab"]').classes()).toContain('ia-scenes__btn--on')
+    await router.push('/app/runs')
     await flushPromises()
-    expect(wrapper.find('[data-testid="ia-scene-eng"]').classes()).toContain('ia-scenes__btn--on')
-    expect(wrapper.find('[data-testid="ia-scene-ops"]').classes()).not.toContain('ia-scenes__btn--on')
+    expect(wrapper.find('[data-testid="ia-scene-collab"]').classes()).toContain('ia-scenes__btn--on')
   })
 
   it('共享武装（自旧驾驶舱壳上移）：onMounted 调 workspace 四件套 + cockpit.bootstrap', async () => {
@@ -164,7 +173,7 @@ describe('IaShell — 统一壳（页头 + 六场景条）', () => {
   })
 
   it('卸载回收：workspace 三停 + cockpit.disconnectOnUnmount', async () => {
-    const { wrapper } = await mountShell('/app/ops')
+    const { wrapper } = await mountShell('/app/runs')
     wrapper.unmount()
     expect(workspaceStubs.state.unwatchKanbanTasks).toHaveBeenCalled()
     expect(workspaceStubs.state.stopFleetStream).toHaveBeenCalled()
@@ -185,7 +194,7 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
 
   it('独立窗口内跳转保持 standalone 标记（query 不随路由传播，壳自动补回）', async () => {
     const { router } = await mountShell('/app?standalone=1')
-    await router.push('/app/ops')
+    await router.push('/app/runs')
     await flushPromises()
     expect(router.currentRoute.value.query.standalone).toBe('1')
   })
@@ -210,13 +219,13 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
   it('最小化任务栏：入列渲染 chip，点击恢复导航并出列', async () => {
     const { wrapper, router } = await mountShell('/app')
     const { useWmStore } = await import('../wm/store')
-    useWmStore().minimize('/app/ops?tab=runs')
+    useWmStore().minimize('/app/runs?tab=runs')
     await flushPromises()
     const chip = wrapper.find('[data-testid="ia-wm-dock-chip"]')
     expect(chip.exists()).toBe(true)
     await chip.trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/ops?tab=runs')
+    expect(router.currentRoute.value.fullPath).toBe('/app/runs?tab=runs')
     expect(useWmStore().minimized).toHaveLength(0)
   })
 
@@ -224,25 +233,25 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
     const { router } = await mountShell('/app')
     localStorage.setItem(
       'swarmstudio:wm-merge-back',
-      JSON.stringify({ path: '/app/collab', at: Date.now() }),
+      JSON.stringify({ path: '/app/board', at: Date.now() }),
     )
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'swarmstudio:wm-merge-back',
-      newValue: JSON.stringify({ path: '/app/collab', at: Date.now() }),
+      newValue: JSON.stringify({ path: '/app/board', at: Date.now() }),
     }))
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/app/collab')
+    expect(router.currentRoute.value.path).toBe('/app/board')
   })
 
   it('合并回流不劫持其它独立面板：standalone 窗不响应 merge-back 信号', async () => {
     // storage 事件广播到所有同源窗口；若 standalone 面板窗也响应，别的面板
     // 「合并回驾驶舱」会把本面板导航走并被 standalone 补标 watch 劫持内容
-    const { router } = await mountShell('/app/ops?standalone=1')
+    const { router } = await mountShell('/app/runs?standalone=1')
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'swarmstudio:wm-merge-back',
-      newValue: JSON.stringify({ path: '/app/collab', at: Date.now() }),
+      newValue: JSON.stringify({ path: '/app/board', at: Date.now() }),
     }))
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/app/ops')
+    expect(router.currentRoute.value.path).toBe('/app/runs')
   })
 })

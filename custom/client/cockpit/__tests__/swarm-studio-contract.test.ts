@@ -27,52 +27,51 @@ import { parseTenant, type ParsedTenant } from '../../kanban/utils/tenant-parser
 import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
 import type { TeamRecord } from '../adapters/teams-adapter'
 
-// ── §8 新 IA 信息架构契约（2026-09-18 统一导航重构：六区域 → 六场景）──
-// 六场景路由存在性守门。品牌与 ⇄ IDE 双壳互跳契约由 ia2/__tests__/ia-shell-header.test.ts
-// 守门（ia2.brand 渲染 + ide.shell 跳转），本文件只守路由层契约。
-// §9 旧路由承接契约随兼容守卫退役删除（Task 5：旧路由直删，无 redirect 承接）。
-// 上方 vi.mock('vue-router') 只为组件链路服务；这里经 importActual 取真
-// createRouter 驱动真实路由解析（不加载任何视图组件，懒组件保持函数态）。
+// ── §8 新 IA 信息架构契约（2026-09-19 v12 统一视图：六场景 → 双视图）──
+// /app 收敛单视图 collab（沟通协作工作台）；IDE 侧独立壳。品牌与 ⇄ IDE 双壳互跳
+// 契约由 ia2/__tests__/ia-shell-header.test.ts 守门，本文件只守路由层契约。
+// §9 旧路由承接契约随兼容守卫退役删除；旧深链由迁移表路径重定向承接
+// （ia2/__tests__/unified-nav-guard.test.ts 实走守门）。
 
 const vr = await vi.importActual<typeof import('vue-router')>('vue-router')
 const { buildIaRoutes, IA_AREAS } = await import('../../ia2/routes')
 
-describe('contract: six-scene IA routes (§8 六场景)', () => {
+describe('contract: v12 unified IA routes (§8 双视图)', () => {
 
   function makeRouter(): import('vue-router').Router {
     return vr.createRouter({ history: vr.createMemoryHistory(), routes: buildIaRoutes() })
   }
 
-  it('六场景路径全部存在，命名前缀 ia2.，顺序固定（总览=登录默认）', () => {
+  it('双视图 /app 侧单场景存在，命名前缀 ia2.（沟通协作=登录默认落点）', () => {
     const router = makeRouter()
-    const order = ['overview', 'collab', 'eng', 'ops', 'tasks', 'comms']
-    expect(IA_AREAS.map(a => a.key)).toEqual(order)
+    expect(IA_AREAS.map(a => a.key)).toEqual(['collab'])
     for (const area of IA_AREAS) {
       const resolved = router.resolve(area.path)
-      expect(resolved.name, `${area.path} 必须可解析（契约：六场景存在性）`).toBe(area.name)
+      expect(resolved.name, `${area.path} 必须可解析（契约：视图存在性）`).toBe(area.name)
       expect(String(resolved.name).startsWith('ia2.')).toBe(true)
     }
-    // /app 裸路径 = 总览（登录默认落点，071 守卫直落）
-    expect(router.resolve('/app').name).toBe('ia2.overview')
+    // /app 裸路径 = 沟通协作工作台（登录默认落点，071 守卫直落）
+    expect(router.resolve('/app').name).toBe('ia2.collab')
     // fullscreen meta（壳自带场景条，上游 AppSidebar 隐藏）
-    expect(router.resolve('/app/ops').meta.fullscreen).toBe(true)
+    expect(router.resolve('/app/board').meta.fullscreen).toBe(true)
   })
 
-  it('协作场景嵌入子路由契约：ia2.collab* 六名全部可解析（Task 3 cockpit 三栏迁入）', () => {
+  it('工作台选择子路由契约：会话/房间/循环 + hermes 深链面全部可解析', () => {
     const router = makeRouter()
-    expect(router.resolve('/app/collab').name).toBe('ia2.collab')
-    expect(router.resolve('/app/collab/chat').name).toBe('ia2.collabChat')
-    expect(router.resolve('/app/collab/session/s1').name).toBe('ia2.collabSession')
-    expect(router.resolve('/app/collab/history').name).toBe('ia2.collabHistory')
-    expect(router.resolve('/app/collab/history/session/s1').name).toBe('ia2.collabHistorySession')
-    expect(router.resolve('/app/collab/global-agent').name).toBe('ia2.collabGlobalAgent')
-    expect(router.resolve('/app/collab/global-agent/session/s1').name).toBe('ia2.collabGlobalAgentSession')
+    expect(router.resolve('/app/s/chat').name).toBe('ia2.collabChat')
+    expect(router.resolve('/app/s/chat/s1').name).toBe('ia2.collabSession')
+    expect(router.resolve('/app/s/room/r1').name).toBe('ia2.commsRoom')
+    expect(router.resolve('/app/l/lp1').name).toBe('ia2.loopCanvas')
+    expect(router.resolve('/app/history').name).toBe('ia2.collabHistory')
+    expect(router.resolve('/app/history/session/s1').name).toBe('ia2.collabHistorySession')
+    expect(router.resolve('/app/agent').name).toBe('ia2.collabGlobalAgent')
+    expect(router.resolve('/app/agent/session/s1').name).toBe('ia2.collabGlobalAgentSession')
   })
 
   it('参数路由契约：run 详情 runId / matrix 房间 roomId 原样', () => {
     const router = makeRouter()
-    expect(router.resolve('/app/ops/runs/run-9').params.runId).toBe('run-9')
-    expect(router.resolve('/app/comms/room/!foo:bar').params.roomId).toBe('!foo:bar')
+    expect(router.resolve('/app/runs/run-9').params.runId).toBe('run-9')
+    expect(router.resolve('/app/s/room/!foo:bar').params.roomId).toBe('!foo:bar')
   })
 })
 

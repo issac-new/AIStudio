@@ -3,7 +3,7 @@
 // P3 Task 7 — 双向关联 + 追溯矩阵组件 jsdom 冒烟：
 //   RunLinks             任务详情"来源 run"（反查命中 → runId 深链 / 空态 / 失败态）
 //   TraceabilityMatrix   追溯矩阵（loop 分组表渲染 / run 深链 / 任务回看板 open-task / 失败重试）
-//   NodeInspector        persistence 节点产物任务链接（run → 任务深链 /app/tasks?task=）
+//   NodeInspector        persistence 节点产物任务链接（run → 任务深链 /app/board?task=）
 //   TasksView            页签切换 + 深链预选（?tab/status/task → kanban store 过滤器）
 // REST 与重 store 全桩（同 orchestrate/overview 冒烟纪律）。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -79,8 +79,8 @@ function makeRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/app/tasks', name: 'ia2.tasks', component: { template: '<div tasks />' } },
-      { path: '/app/ops/runs/:runId', name: 'ia2.runDetail', component: { template: '<div run />' } },
+      { path: '/app/board', name: 'ia2.tasks', component: { template: '<div tasks />' } },
+      { path: '/app/runs/:runId', name: 'ia2.runDetail', component: { template: '<div run />' } },
     ],
   })
 }
@@ -119,7 +119,7 @@ describe('RunLinks', () => {
     expect(item.text()).toContain('run-l1-1')
     await item.trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/ops/runs/run-l1-1')
+    expect(router.currentRoute.value.fullPath).toBe('/app/runs/run-l1-1')
   })
 
   it('无关联渲染空态；反查失败且零命中渲染失败态（不误报"无关联"）', async () => {
@@ -189,7 +189,7 @@ describe('TraceabilityMatrix', () => {
     expect(wrapper.emitted('open-task')![0]).toEqual(['t_1'])
     await wrapper.find('.ia-trace__runlink').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/ops/runs/run-l1-1')
+    expect(router.currentRoute.value.fullPath).toBe('/app/runs/run-l1-1')
   })
 
   it('listLoops 整体失败 → 失败态 + 重试；空 loop 列表 → 空态', async () => {
@@ -232,7 +232,7 @@ describe('NodeInspector 产物任务链接', () => {
     expect(section.find('.ni-panel__task-link').text()).toBe('t_9')
     await section.find('.ni-panel__task-link').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/tasks?task=t_9')
+    expect(router.currentRoute.value.fullPath).toBe('/app/board?task=t_9')
   })
 
   it('非 persistence 节点不渲染；payload 缺 taskId 的事件不产生链接', async () => {
@@ -259,7 +259,7 @@ describe('NodeInspector 产物任务链接', () => {
 describe('TasksView 页签与深链预选', () => {
   it('默认看板页签；切追溯页签挂矩阵；query 预选 status/task 写入看板过滤器', async () => {
     const router = makeRouter()
-    await router.push('/app/tasks?status=blocked&task=t_42')
+    await router.push('/app/board?status=blocked&task=t_42')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(kanbanState.filterStatus).toBe('blocked')
@@ -272,7 +272,7 @@ describe('TasksView 页签与深链预选', () => {
 
   it('非法 status/未知 tab 忽略不炸；追溯任务点击切回看板并预选搜索', async () => {
     const router = makeRouter()
-    await router.push('/app/tasks?status=not-a-status&tab=weird')
+    await router.push('/app/board?status=not-a-status&tab=weird')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(kanbanState.filterStatus).toBeNull()

@@ -41,7 +41,7 @@ describe('AppSidebar IDE 工作台一级入口（patch 278 守门）', () => {
 
   it('入口位于顶部：ide < 驾驶舱(ia2) < 系统分组头 < logs；旧 cockpit/loopGraph 一级与返回 hack 已退役（patch 299 守门）', () => {
     const ideIdx = src.indexOf(`:to="{ name: 'ide.shell' }"`)
-    const ia2Idx = src.indexOf(`:to="{ name: 'ia2.overview' }"`)
+    const ia2Idx = src.indexOf(`:to="{ name: 'ia2.collab' }"`)
     const sysIdx = src.indexOf('sidebar-system-toggle')
     const logsIdx = src.indexOf(`:to="{ name: 'hermes.logs' }"`)
     expect(ideIdx).toBeGreaterThan(-1)
