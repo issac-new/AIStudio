@@ -49,44 +49,7 @@ const mainClass = computed(() => ({
   'has-max-sidepane': ide.layout.sidepane.maximized,
 }))
 
-const chatColumnStyle = computed(() => ({
-  width: `${ide.layout.chatVisible ? ide.layout.chatWidth : 0}px`,
-}))
-
-// 会话列宽度拖拽（右缘把手）。stop 闭包按次独立：共享单变量会让同把手
-// 第二次 pointerdown 覆写清理函数，第一套 pointermove 监听永久残留
-// （2026-09-17 评审）。卸载时兜底拆除。
-let chatDragStop: (() => void) | null = null
-function startChatResize(event: PointerEvent) {
-  event.preventDefault()
-  const startX = event.clientX
-  const startWidth = ide.layout.chatWidth
-  const previousCursor = document.body.style.cursor
-  const previousUserSelect = document.body.style.userSelect
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-  const onMove = (moveEvent: PointerEvent) => {
-    // 右侧列：向左拖增宽
-    const width = startWidth + (startX - moveEvent.clientX)
-    ide.layout.chatWidth = Math.min(720, Math.max(320, width))
-  }
-  const stop = () => {
-    window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointerup', onUp)
-    window.removeEventListener('pointercancel', onUp)
-    document.body.style.cursor = previousCursor
-    document.body.style.userSelect = previousUserSelect
-    if (chatDragStop === stop) chatDragStop = null
-  }
-  const onUp = () => stop()
-  chatDragStop = stop
-  window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', onUp)
-  window.addEventListener('pointercancel', onUp)
-}
-
 onUnmounted(() => {
-  chatDragStop?.()
 })
 </script>
 
@@ -100,8 +63,7 @@ onUnmounted(() => {
         </div>
         <IdeTaskSidebar v-else />
       </aside>
-      <div v-show="chatShown" class="ide-shell__chat" :class="{ 'is-folded': ide.layout.chat.folded }" :style="chatColumnStyle">
-        <div class="ide-shell__chat-handle" @pointerdown="startChatResize" />
+      <div v-show="chatShown" class="ide-shell__chat" :class="{ 'is-folded': ide.layout.chat.folded }">
         <div v-if="ide.layout.chat.folded" class="ide-shell__fold-handle ide-shell__fold-handle--v" data-testid="ide-fold-chat" :title="t('ide.pane.expand')" @click="ide.toggleFold('chat')">
           <span class="ide-shell__fold-label">›</span>
         </div>
@@ -126,21 +88,10 @@ onUnmounted(() => {
   height: calc(100 * var(--vh, 100vh));
   display: flex;
   flex-direction: column;
-  background: var(--ide-bg-chat, #202226);
-  color: var(--ide-text, #d6d8dd);
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #e6e6e6);
   overflow: hidden;
 
-  // ZCode 3.12.3 暗色令牌（pixel-spec.md §五，仅 /ide 作用域内生效）
-  --ide-bg-side: #1a1c20;
-  --ide-bg-chat: #202226;
-  --ide-bg-card: #23262b;
-  --ide-border: #2a2d33;
-  --ide-border-strong: #2f3238;
-  --ide-text: #d6d8dd;
-  --ide-text-muted: #8b8f97;
-  --ide-accent: #5b9cf6;
-  --ide-green: #6fbf73;
-  --ide-red: #e06c75;
 }
 
 .ide-shell__main {
@@ -156,17 +107,19 @@ onUnmounted(() => {
 }
 
 .ide-shell__fold-handle {
-  width: 14px;
+  width: 18px;
   align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: var(--ide-bg-side, #1a1c20);
-  border-right: 1px solid var(--ide-border, #2a2d33);
-  color: var(--ide-text-muted, #8b8f97);
+  background: var(--bg-tertiary, #242830);
+  border-right: 1px solid var(--border-color, #26292f);
+  color: var(--accent-primary, #4cc9f0);
 
-  &--v { width: 14px; }
+  &:hover { background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 18%, var(--bg-tertiary, #242830)); }
+
+  &--v { width: 18px; }
 }
 
 .ide-shell__fold-label { font-size: 11px; user-select: none; }
@@ -177,10 +130,10 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 2px;
   padding: 4px 2px;
-  background: var(--ide-bg-chat, #202226);
-  border-right: 1px solid var(--ide-border, #2a2d33);
+  background: var(--bg-primary, #14161a);
+  border-right: 1px solid var(--border-color, #26292f);
 
-  &--chat { border-right: none; border-left: 1px solid var(--ide-border, #2a2d33); }
+  &--chat { border-right: none; border-left: 1px solid var(--border-color, #26292f); }
 }
 
 .ide-shell__tool {
@@ -192,11 +145,11 @@ onUnmounted(() => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   font-size: 11px;
   cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
 }
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
@@ -205,7 +158,8 @@ onUnmounted(() => {
 
 .ide-shell__chat {
   position: relative;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 320px;
   display: flex;
 }
 

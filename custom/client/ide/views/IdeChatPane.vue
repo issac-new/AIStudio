@@ -385,8 +385,8 @@ const modelDisabled = computed(() => true)
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 15%, transparent);
-  color: var(--ide-accent, #5b9cf6);
+  background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 15%, transparent);
+  color: var(--accent-primary, #4cc9f0);
   font-size: 11px;
   font-family: Menlo, Monaco, monospace;
 }
@@ -399,14 +399,14 @@ const modelDisabled = computed(() => true)
   min-height: 26px;
   padding: 2px 12px;
   font-size: 12px;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
 }
 
 .ide-chat__runline-done {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--ide-green, #6fbf73);
+  color: var(--success-color, #98c379);
 }
 
 .ide-chat__agent {
