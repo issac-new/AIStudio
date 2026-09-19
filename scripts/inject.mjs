@@ -139,8 +139,9 @@ function reversePatches(patches) {
         console.warn(`[clean] WARN: hermes-agent patch 反向失败,跳过: ${p}`);
         continue;
       }
-      console.error(`[clean] FAILED to reverse patch: ${p}`);
-      process.exit(1);
+      // 反向失败不中断：untracked patch 产物清理必须执行（否则 inject 死循环），
+      // tracked 残留由随后的 git checkout / restore 步兜底。
+      console.warn(`[clean] WARN: patch 反向失败,继续 untracked 清理: ${p}`);
     }
   }
 }
