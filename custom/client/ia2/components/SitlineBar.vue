@@ -1,7 +1,8 @@
 <!-- overlay/custom/client/ia2/components/SitlineBar.vue -->
 <!-- v12 态势条（2026-09-19 统一视图）：沟通协作视图顶部一行的全局态势——
      等我⚠ / 任务（进行·待审）/ 会话 / 循环（阻塞）/ 在线（人·智能体·机器）+
-     ⚙管理入口（动线⑥）。纯展示：计数经 props，装配方（WorkbenchView）聚合。 -->
+     ⚙管理入口（动线⑥）。计数经 props，装配方（WorkbenchView）聚合；
+     五态势项 emit select(segment)，跳转语义由装配方决定（v12.1）。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
@@ -20,7 +21,10 @@ defineProps<{
   onlineMachines: number
 }>()
 
-const emit = defineEmits<{ (e: 'open-gov'): void }>()
+const emit = defineEmits<{
+  (e: 'open-gov'): void
+  (e: 'select', segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'): void
+}>()
 const { t } = useI18n()
 </script>
 
@@ -29,22 +33,26 @@ const { t } = useI18n()
     <button
       type="button" class="sit__item sit__item--warn" data-testid="sit-waiting"
       :title="t('ia2.sit.waitingTitle')"
+      @click="emit('select', 'waiting')"
     >
       ⧖ {{ t('ia2.sit.waiting') }} {{ waitingCount }}
       <span v-if="oldestLabel" class="sit__sm">{{ t('ia2.sit.oldest') }} {{ oldestLabel }}</span>
     </button>
-    <button type="button" class="sit__item" data-testid="sit-tasks">
+    <button type="button" class="sit__item" data-testid="sit-tasks" @click="emit('select', 'tasks')">
       📋 {{ t('ia2.sit.tasks') }} {{ taskTotal }}
       <span class="sit__sm">{{ t('ia2.sit.running') }} {{ taskRunning }} · {{ t('ia2.sit.review') }} {{ taskReview }}</span>
     </button>
-    <button type="button" class="sit__item" data-testid="sit-sessions">
+    <button type="button" class="sit__item" data-testid="sit-sessions" @click="emit('select', 'sessions')">
       💬 {{ t('ia2.sit.sessions') }} {{ sessionCount }}
     </button>
-    <button type="button" class="sit__item" :class="{ 'sit__item--err': loopBlocked > 0 }" data-testid="sit-loops">
+    <button
+      type="button" class="sit__item" :class="{ 'sit__item--err': loopBlocked > 0 }" data-testid="sit-loops"
+      @click="emit('select', 'loops')"
+    >
       ▶ {{ t('ia2.sit.loops') }} {{ loopTotal }}
       <span v-if="loopBlocked" class="sit__sm">{{ t('ia2.sit.blocked') }} {{ loopBlocked }}</span>
     </button>
-    <button type="button" class="sit__item" data-testid="sit-online">
+    <button type="button" class="sit__item" data-testid="sit-online" @click="emit('select', 'online')">
       <span class="sit__dot sit__dot--ok" />{{ t('ia2.sit.online') }} {{ onlinePeople + onlineAgents + onlineMachines }}
       <span class="sit__sm">{{ t('ia2.sit.onlineDetail', { p: onlinePeople, a: onlineAgents, m: onlineMachines }) }}</span>
     </button>

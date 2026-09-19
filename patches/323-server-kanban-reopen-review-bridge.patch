@@ -1,0 +1,133 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -691,6 +691,16 @@
+     'Hermes CLI: kanban block failed',
+     'Failed to block kanban task',
+   )
++}
++
++export async function reopenReview(
++  taskIds: string[],
++  reason?: string,
++  opts?: KanbanBoardOptions,
++): Promise<void> {
++  const args = [...boardArgs(opts?.board), 'reopen-review', ...taskIds]
++  if (reason) args.push('--reason', reason)
++  await execKanbanMutation(args, 'Hermes CLI: kanban reopen-review failed', 'Failed to reopen review')
+ }
+ 
+ export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<void> {
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -571,6 +571,29 @@
+   }
+ }
+ 
++export async function reopenReview(ctx: Context) {
++  const bodyResult = requestBody(ctx)
++  const taskIds = requiredNonEmptyStringArray(bodyResult.body.task_ids, 'task_ids')
++  const reason = optionalString(bodyResult.body.reason, 'reason')
++  if (rejectBadRequest(ctx, taskIds.error || reason.error)) return
++  const board = requestBoard(ctx)
++  if (!board) return
++  try {
++    if (!await authorizeTaskIds(
++      ctx,
++      board,
++      taskIds.value!,
++      new Set<kanbanCli.KanbanTaskStatus>(['review']),
++      'reopen review',
++    )) return
++    await kanbanCli.reopenReview(taskIds.value!, reason.value ?? undefined, { board })
++    ctx.body = { ok: true }
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
+ export async function unblock(ctx: Context) {
+   const bodyResult = requestBody(ctx)
+   if (rejectBadRequest(ctx, bodyResult.error)) return
+diff --git a/packages/server/src/modules/hermes/routes/kanban.ts b/packages/server/src/modules/hermes/routes/kanban.ts
+--- a/packages/server/src/modules/hermes/routes/kanban.ts
++++ b/packages/server/src/modules/hermes/routes/kanban.ts
+@@ -49,6 +49,8 @@
+ kanbanRoutes.post('/api/hermes/kanban', ctrl.create)
+ kanbanRoutes.post('/api/hermes/kanban/complete', ctrl.complete)
+ kanbanRoutes.post('/api/hermes/kanban/unblock', ctrl.unblock)
++// HERMES_CUSTOM[v121]: review 态打回（等待队列「打回」动线，review→ready 重做）
++kanbanRoutes.post('/api/hermes/kanban/reopen-review', ctrl.reopenReview)
+ kanbanRoutes.post('/api/hermes/kanban/:id/block', ctrl.block)
+ kanbanRoutes.post('/api/hermes/kanban/:id/assign', ctrl.assign)
+ kanbanRoutes.post('/api/hermes/kanban/:id/comments', ctrl.addComment)
+diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+--- a/packages/client/src/api/hermes/kanban.ts
++++ b/packages/client/src/api/hermes/kanban.ts
+@@ -462,6 +462,13 @@
+   })
+ }
+ 
++export async function reopenReview(taskIds: string[], reason?: string, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
++  return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/reopen-review', boardParams(opts?.board)), {
++    method: 'POST',
++    body: JSON.stringify(reason ? { task_ids: taskIds, reason } : { task_ids: taskIds }),
++  })
++}
++
+ export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
+   return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/unblock', boardParams(opts?.board)), {
+     method: 'POST',
+diff --git a/tests/server/kanban-controller.test.ts b/tests/server/kanban-controller.test.ts
+--- a/tests/server/kanban-controller.test.ts
++++ b/tests/server/kanban-controller.test.ts
+@@ -16,6 +16,7 @@
+ const mockLinkTasks = vi.hoisted(() => vi.fn())
+ const mockUnlinkTasks = vi.hoisted(() => vi.fn())
+ const mockBulkUpdateTasks = vi.hoisted(() => vi.fn())
++const mockReopenReview = vi.hoisted(() => vi.fn())
+ const mockGetTaskLog = vi.hoisted(() => vi.fn())
+ const mockGetDiagnostics = vi.hoisted(() => vi.fn())
+ const mockReclaimTask = vi.hoisted(() => vi.fn())
+@@ -67,6 +68,7 @@
+   linkTasks: mockLinkTasks,
+   unlinkTasks: mockUnlinkTasks,
+   bulkUpdateTasks: mockBulkUpdateTasks,
++  reopenReview: mockReopenReview,
+   getTaskLog: mockGetTaskLog,
+   getDiagnostics: mockGetDiagnostics,
+   reclaimTask: mockReclaimTask,
+@@ -676,6 +678,31 @@
+     expect(exactSearchCtx.body.results[0]).toMatchObject({ id: 'session-2', title: 'Matched session' })
+   })
+ 
++  it('reopen-review：review 直通、非 review 409', async () => {
++    mockGetTask.mockResolvedValue({
++      task: { id: 'task-1', assignee: null, status: 'review' },
++      comments: [], events: [], runs: [],
++    })
++    const okCtx = ctx({
++      query: { board: 'project-a' },
++      request: { body: { task_ids: ['task-1'], reason: '重做' } },
++    })
++    await ctrl.reopenReview(okCtx)
++    expect(okCtx.status).not.toBe(409)
++    expect(mockReopenReview).toHaveBeenCalledWith(['task-1'], '重做', { board: 'project-a' })
++
++    mockGetTask.mockResolvedValue({
++      task: { id: 'task-2', assignee: null, status: 'todo' },
++      comments: [], events: [], runs: [],
++    })
++    const badCtx = ctx({
++      query: { board: 'project-a' },
++      request: { body: { task_ids: ['task-2'] } },
++    })
++    await ctrl.reopenReview(badCtx)
++    expect(badCtx.status).toBe(409)
++  })
++
+   it('allows completing a review-state task (验收动线) and bulk done from review', async () => {
+     mockGetTask.mockResolvedValue({
+       task: { id: 'task-1', assignee: null, status: 'review' },
