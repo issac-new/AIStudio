@@ -1,7 +1,7 @@
 // overlay/scripts/zcode-catalog-check.mjs — ZCode 桌面版词条快照漂移守门。
 //
 // 背景：/ide ↔ ZCode 1:1 对照表（docs/superpowers/specs/2026-09-18-zcode-3123-parity-analysis.md）
-// 以本机 /Applications/ZCode.app 的 asar 内嵌 zh-CN 词条为全量功能面事实源（3.12.3 =
+// 以本机 /Applications/ZCode.app 的 asar 内嵌 zh-CN 词条为全量功能面事实源（3.14.0 =
 // 5446 键/87 命名空间）。本机 ZCode 再升级时词条必然漂移，对照表即失真。
 //
 // 用法：npm run catalog-check（或 node scripts/zcode-catalog-check.mjs）
@@ -15,7 +15,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 const APP = '/Applications/ZCode.app'
-const NOTES = resolve(process.cwd(), 'docs/superpowers/notes/zcode-3123')
+const NOTES = resolve(process.cwd(), 'docs/superpowers/notes/zcode-3140')
 /** zh 目录内的独有锚点键（值是中文，可确认命中的是 zh 而非 en 目录） */
 const ANCHOR_KEY = 'startup.global.silent'
 
@@ -89,8 +89,8 @@ function extractLiveCatalog() {
 function main() {
   const failures = []
   const version = readAppVersion()
-  if (version !== '3.12.3') {
-    failures.push(`版本漂移：快照基于 3.12.3，本机现为 ${version}`)
+  if (version !== '3.14.0') {
+    failures.push(`版本漂移：快照基于 3.14.0，本机现为 ${version}`)
   }
 
   const snapshotKeys = readFileSync(resolve(NOTES, 'zh-CN-keys.txt'), 'utf8')

@@ -128,3 +128,31 @@
 1. **词条快照守门**：本对照表计数（87 ns/5446 键）与逐 ns 键数固化为守门测试输入（`docs/superpowers/notes/zcode-3123-catalog.json` 入库），防本机再升级后口径漂移。
 2. i18n zh/en 成对门禁（patch 286/287 机制）继续；不复制上游 4 键 zh 缺翻。
 3. 像素基线：实施计划 M0 采集 ZCode 3.12.3 固定视口逐面截图，与 /ide 同尺寸对照（用户 1:1 要求的验收载体）。
+
+
+## 七、ZCode 3.14.0 差分与三态裁决（09-19 增补，快照 notes/zcode-3140/）
+
+**差分总览**：3.12.3（5446 键/87 ns）→ 3.14.0（**6120 键/93 ns**），+760/-86；IPC 138→142。
+
+| 命名空间/功能 | 键数 | 裁决 |
+|---|---|---|
+| **workflows（新）** + chat.toolCall.workflow(375) + chat.permission.workflow(34) + chat.backgroundResult.workflow(11) + chat.workflowLaunch(9) + workflowDirectory(8) + taskList.workflowRun(4) + sidePane workflow(5) | ~546 | **对应物=循环工程/GraphSpec 引擎**（既有裁决：automations→Loop 引擎）。ZCode 工作流=项目内脚本化 md（元数据+参数+子代理编排+审批+产物+历史），与 Loop/GraphSpec 同构。完整 UI 复刻=上游级工程，列独立立项 backlog；本轮迁移其直接可用件：归档批量删除（已落地 §八） |
+| chat.composer(7) addWorkflow/快捷提示 | 7 | addWorkflow 按钮=工作流入口（随引擎立项）；@/#/、/$ 快捷提示=上游 composer 内部文案，不适用 |
+| **settings.shortcuts（新）** | 55 | **缺口 → 独立立项**：键盘快捷键管理页（按命令/按组合键搜索、逐项重置、全部恢复默认）。SwarmStudio 无快捷键自定义体系，迁移需先立 keybinding 基建 |
+| **settings.workspaceFileSearch（新）** | 15 | **缺口 → M4+**：.zcodeignore 编辑器（工作区搜索忽略规则，.gitignore 语法同步）。依赖 FilesPanel 全局搜索面 |
+| occupationOnboarding（新） | 43 | 不适用：UI 模式（编程/办公）产品引导，ZCode 私有产品分叉 |
+| chat.officeSuggestions(7)/settings.interfaceMode(4) | 11 | 不适用（同上，办公模式体系） |
+| bashOutput（新） | 9 | 缺口低优：后台任务输出查看器（依赖后台任务运行时，SwarmStudio 终端形态不同） |
+| startPlan(7)/marketingTouch(7)/rewards(5)/pluginCreator(4) | 23 | 不适用：云套餐/营销/插件市场（既定裁决） |
+| chat.contextOptimization(5) | 5 | 缺口低优：对话优化状态提示（对应上下文压缩事件，上游 MessageList 事件流未透出） |
+| chat.toolCall.submitResult/execute(6)、tokenDebug(+2)、zcode(+2)、desktopMenu(+1) 等 | ~12 | 对等（上游既有面细化，随上游升级自然吸收） |
+| **repoWiki(52)+wikiReference(20) 消失** | -72 | ZCode 已整体移除云 Wiki 功能；/ide 的 IdeWikiPane 为本地超集（本地 docs/wiki 阅读+引用+生成），**保留**并记为有意差异 |
+| taskList.deleteAllArchived 族（9） | 9 | **本轮已迁移**：侧栏归档区批量删除（§八） |
+| 移除键合计 -86 | | 多为 startPlanGuide/thoughtLevel 旧值/repoWiki 族——均无 /ide 动作 |
+
+**结论**：3.14.0 的功能主体=工作流系统（~546 键，对应物为既有 Loop/GraphSpec 引擎，完整 UI 复刻列独立立项）；本轮直接落地=归档批量删除；新立项队列=键盘快捷键管理（55）、.zcodeignore 搜索范围（15）、bashOutput（9）。快照守门已切 3.14.0 基线（6120 键/93 ns/142 IPC）。
+
+## 八、3.14.0 迁移实施（本轮）
+
+- **归档批量删除**（taskList.deleteAllArchived 1:1）：侧栏归档区节头增 🗑 入口（含确认内联框与归档计数徽标），确认后 batchDeleteSessions 批量删除并 toast「已删除/跳过/失败」结果；侧栏测试 +1。
+- 守门基线切 3.14.0：notes/zcode-3140/（6120 键/93 ns/142 IPC）+ catalog-check 版本校验 + 快照自洽测试更名 zcode-3140-snapshot。
