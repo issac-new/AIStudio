@@ -236,7 +236,6 @@ const modelDisabled = computed(() => true)
 <template>
   <section class="ide-chat">
     <header class="ide-chat__head">
-      <span class="ide-chat__agent-chip">{{ ide.agentId }}</span>
       <span class="ide-chat__title" :title="sessionTitle">{{ sessionTitle }}</span>
       <div class="ide-chat__actions">
         <button
@@ -381,15 +380,6 @@ const modelDisabled = computed(() => true)
   font-weight: 600;
 }
 
-.ide-chat__agent-chip {
-  flex-shrink: 0;
-  padding: 1px 8px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 15%, transparent);
-  color: var(--accent-primary, #4cc9f0);
-  font-size: 11px;
-  font-family: Menlo, Monaco, monospace;
-}
 
 .ide-chat__runline {
   flex-shrink: 0;
