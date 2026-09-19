@@ -194,6 +194,15 @@ function onApproveTask(taskId: string): void {
 }
 
 function onRejectTask(taskId: string): void {
+  const task = workspace.tasks.find(x => x.id === taskId)
+  if (task?.status === 'review') {
+    // review 态打回＝reopen-review 回 ready 重做（CLI 无 review→blocked 转移，
+    // 直调 block 会被守卫 409 且前端吞错＝按钮没反应）
+    void kanbanApi.reopenReview([taskId], t('ia2.tdp.rejectReason'), { board: boardOf(taskId) }).then(() => {
+      void workspace.refreshAllBoards(true)
+    })
+    return
+  }
   void kanbanApi.blockTask(taskId, t('ia2.tdp.rejectReason'), { board: boardOf(taskId) }).then(() => {
     void workspace.refreshAllBoards(true)
   })
@@ -373,6 +382,25 @@ async function onCreateRoom(name: string): Promise<void> {
 function onNewLoop(): void {
   void router.push({ name: 'ia2.eng' })
 }
+
+// ── 态势条五项跳转（v12.1 C1）：每项落到该态势的可操作面 ──
+// 等我→首个待决任务深链（同 onHandleTask 的 board?task=）；任务→看板；
+// 会话→回工作台默认选择（清子路径）；循环→工程面；在线→管理台员工区。
+
+function onSitSelect(segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'): void {
+  if (segment === 'waiting') {
+    const first = waitItems.value.find(w => w.taskId)
+    if (first?.taskId) void router.push({ name: 'ia2.board', query: { task: first.taskId } })
+  } else if (segment === 'tasks') {
+    void router.push({ name: 'ia2.board' })
+  } else if (segment === 'sessions') {
+    void router.push({ name: 'ia2.collab' })
+  } else if (segment === 'loops') {
+    void router.push({ name: 'ia2.eng' })
+  } else {
+    flow.openGov('people')
+  }
+}
 </script>
 
 <template>
@@ -390,6 +418,7 @@ function onNewLoop(): void {
       :online-agents="sitOnline.agents"
       :online-machines="sitOnline.machines"
       @open-gov="flow.openGov()"
+      @select="onSitSelect"
     />
     <div class="wb">
     <aside class="wb__left" data-testid="wb-left">
