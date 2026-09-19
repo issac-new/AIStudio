@@ -20,7 +20,7 @@ index 01c5b077..13300ac7 100644
      brand: 'IDE Workspace',
      agentLabel: 'Agent',
      agentNotInstalled: 'not installed',
-@@ -857,9 +863,124 @@ export default {
+@@ -857,9 +863,129 @@ export default {
  
    ia2: {
      brand: 'Cockpit',
@@ -85,7 +85,7 @@ index 01c5b077..13300ac7 100644
 +    gov: {
 +      title: 'Manage', back: 'Back',
 +      note: 'Governance overlays the screen; live badges in lists, history jumps to runs, actions on rows',
-+      section: { task: '📋 Tasks', session: '💬 Sessions', people: '👥 People', agent: '🤖 Agents', team: '🏢 Teams & Channels', review: '⚖️ Review' },
++      section: { task: '📋 Tasks', session: '💬 Sessions', people: '👥 People', agent: '🤖 Agents', team: '🏢 Teams & Channels', review: '⚖️ Review', stats: '📊 Stats' },
 +      detail: 'Detail', history: 'History', enter: 'Enter', realtime: 'Live',
 +      noSession: 'No linked session', runHistory: 'Runs · history', ideTask: 'IDE task space',
 +      detailTitle: 'Detail', detailEmpty: 'Select an object in the list to see details',
@@ -117,6 +117,11 @@ index 01c5b077..13300ac7 100644
 +        title: 'Review Center', sub: '· gate signoffs',
 +        pending: 'Pending', pendingEmpty: 'No pending gates',
 +        settled: 'Settled', settledEmpty: 'No settled gates',
++      },
++      stats: {
++        title: 'Stats & Reminders', totalUnit: 'tasks', blockedUnit: 'blocked',
++        overdue: 'Overdue', overdueEmpty: 'No overdue tasks', empty: 'No data',
++        byCase: 'By project (case)', byPhase: 'By phase', byAssignee: 'By assignee', byAgent: 'Agent load', open: 'open',
 +      },
 +    },
 +    review: {
