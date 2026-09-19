@@ -1,0 +1,126 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index c33039b1..9a7a221b 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -443,6 +443,12 @@ export default {
+   },
+ 
+   ide: {
++    // v12 工作空间维度条（任务/项目/会话/链路）
++    dims: {
++      workspace: '工作空间', task: '任务', project: '项目', session: '会话', chain: '链路',
++      switchCollab: '沟通协作',
++    },
++
+     brand: 'IDE 工作台',
+     agentLabel: 'Agent 底座',
+     agentNotInstalled: '未安装',
+@@ -855,9 +861,107 @@ export default {
+ 
+   ia2: {
+     brand: '驾驶舱',
++    // v12 统一视图（09-19）：工作台/态势/管理台词表
++    flow: {
++      title: '工作流',
++      filter: { all: '全部', session: '会话', loop: '循环' },
++      searchPlaceholder: '过滤 名称 / 任务号…',
++      groupSessions: '会话',
++      groupLoops: '循环',
++      empty: '暂无会话与循环',
++      newSession: '新会话',
++      newLoop: '新循环',
++      manage: '管理',
++      createPlaceholder: '房间名称…',
++      createOk: '创建',
++    },
++    loop: {
++      stage: {
++        discovery: '计划', handoff: '实现', validation: '评审',
++        persistence: '验收', scheduling: '交付',
++      },
++      status: {
++        completed: '已完成', failed: '失败', blocked: '阻塞', awaitingYou: '等你验收',
++        running: '运行中', paused: '已暂停', idle: '待进入',
++      },
++    },
++    tdp: {
++      title: '任务 · 决策',
++      waiting: '等我', all: '全部', linked: '挂接任务', newTask: '新任务',
++      feed: '任务动态', allTimeline: '全部时间线',
++      waitEmpty: '暂无等我事项', linkedEmpty: '暂无挂接任务', feedEmpty: '暂无动态',
++      approve: '验收', reject: '打回', confirm: '确认',
++      reassign: '改派', openIde: '在 IDE 打开', handle: '去处理',
++      rejectReason: '打回：需返工',
++      status: {
++        triage: '待分诊', todo: '待办', scheduled: '已排期', ready: '就绪',
++        running: '进行中', blocked: '受阻', review: '待审', done: '完成', archived: '已归档',
++      },
++    },
++    wait: { subReview: '待验收', subRun: '运行等确认', subFleet: 'fleet 审批' },
++    chain: { timeline: '时间线', openIde: '在 IDE 打开', gateReview: '等你验收' },
++    part: { title: '参与方', invite: '邀请', duty: '值守' },
++    canvas: {
++      noRoom: '未选择房间',
++      inputHint: "输入 · {'@'}提及 · /指派 #任务 给 {'@'}成员 · /挂 循环…",
++    },
++    rc: {
++      view: '视图', live: '实时', history: '历史 · 回放', board: '看板',
++      liveOn: 'LIVE', loading: '装载中…', noRun: '暂无运行——阶段卡即实况',
++      linkedTasks: '任务 · 挂接本循环', participants: '参与方', noParts: '暂无参与方',
++      stepBack: '后退一步（k）', stepForward: '前进一步（j）', play: '播放/暂停',
++      eventCount: '事件 {n}/{total} · j/k 步进',
++      noEvents: '暂无事件', export: '导出归档', roleExec: '执行',
++    },
++    sit: {
++      waiting: '等我', waitingTitle: '等我队列（右栏就地验收/打回）', oldest: '最久',
++      tasks: '任务', running: '进行', review: '待审', sessions: '会话',
++      loops: '循环', blocked: '阻塞', online: '在线',
++      onlineDetail: '{p} 人 · {a} 智能体 · {m} 机器', manage: '管理',
++    },
++    gov: {
++      title: '管理', back: '返回',
++      note: '管理台覆盖全屏；实时徽章进列表，历史跳「运行·历史」，操作在行上',
++      section: { task: '📋 任务', session: '💬 会话', people: '👥 员工', agent: '🤖 智能体', team: '🏢 团队与通道' },
++      detail: '详情', history: '历史', enter: '进入', realtime: '实时',
++      noSession: '未挂靠会话', runHistory: '运行·历史', ideTask: 'IDE 任务空间',
++      detailTitle: '详情', detailEmpty: '在列表中选择对象查看详情',
++      task: {
++        title: '任务管理', allStatus: '· 状态 ▾', allAssignees: '· 指派人 ▾', new: '＋ 新建',
++        colTask: '任务', colAssignee: '指派', colStatus: '状态', colOps: '操作',
++        empty: '暂无任务',
++      },
++      session: {
++        title: '会话管理', sub: '· 成员 / 挂接 / 归档候选',
++        colSession: '会话', colMembers: '成员', colTasks: '挂任务',
++        empty: '暂无会话', stale: '归档候选', staleTitle: '30 天无活动',
++      },
++      people: {
++        title: '员工', sub: '· 在线 / 负载', leader: 'TL', profiles: '个 profile',
++        open: '在办', tasks: '任务', empty: '暂无编制账户（matrix 注册簿未就绪）',
++      },
++      agent: {
++        title: '智能体', sub: '· 当前任务 / 心跳 / 通道',
++        fleetGroup: 'fleet 实时会话', fleetEmpty: '无活跃 fleet 会话',
++        fleetStatus: { working: '执行中', idle: '待命' }, queue: '队列',
++        registryGroup: '编制 agentTeam', registryEmpty: '无编制档案', owner: '属主',
++      },
++      team: {
++        title: '团队与通道', sub: '· 编制 / 通道',
++        teams: '团队', teamsEmpty: '暂无团队', boards: '看板', channels: '通道', offline: '断开',
++      },
++    },
++    feed: {
++      loopStage: '{loop} 进入 {to}', loopEscalated: '{loop} 已升级', loopStuck: '{loop} 停滞',
++      loopTask: '{loop} 发现任务', loopVerify: '{loop} 验证完成', loopPersisted: '{loop} 产出已入库',
++      loopCompleted: '{loop} 循环完成', loopGeneric: '{loop} · {type}',
++      runEvent: '运行 {run} · {node} {type}',
++      taskCreated: '#{id} 创建 · {title}', taskStarted: '#{id} 开始 · {title}', taskDone: '#{id} 完成 · {title}',
++    },
++
+     nav: {
+       overview: '总览',
+-      collab: '协作',
++      collab: '沟通协作',
+       eng: '工程',
+       ops: '运行',
+       orchestrate: '编排',
