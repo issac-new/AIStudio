@@ -38,7 +38,7 @@ const sessionState = computed(() =>
   font-size: 11px;
   color: var(--text-muted, #9aa0aa);
   background: var(--bg-secondary, #1b1e24);
-  border-top: 1px solid var(--border-color, #26292f);
+  border-top: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-statusbar__item {

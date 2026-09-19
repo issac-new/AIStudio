@@ -541,3 +541,14 @@
 #           zh/en 成对；键清单与组件 t() 调用一一对应（i18n-compile 与 coverage 门禁覆盖）。
 316-client-i18n-cockpit-v12-zh.patch
 317-client-i18n-cockpit-v12-en.patch
+
+# 318 = 补主题三级面变量 --bg-tertiary（浅 #ebebeb / 深 #2e2e2e）——ide 模块 24 处
+#      var(--bg-tertiary, #242830) 恒落深色 fallback，浅色主题下 ⌘ 徽章/选中页签/hover 成黑块。
+318-client-variables-bg-tertiary.patch
+
+# 319 = kanban CLI 桥补 review 态——patchTask 分支表与 applyBulkStatus 均缺 review
+#      （静默无操作/throw 被吞，前端乐观更新假成功后回滚＝「按钮没反应」根因）。
+#      桥接 CLI request-review --force（九态中 review 唯一无直写通道的状态）。
+319-server-kanban-review-bridge.patch
+# 320: i18n 键块归位——chat.* 13 键从 ide 块迁回 chat 块（308/309 再生成时锚错父块，i18n 门禁抓获）+ common.close 双语补齐（上游 v0.7.23 已知缺键复发）
+320-client-i18n-chat-block-relocation.patch
