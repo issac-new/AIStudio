@@ -539,8 +539,8 @@ onMounted(async () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--ide-bg-side, #1a1c20);
-  border-right: 1px solid var(--ide-border, #2a2d33);
+  background: var(--bg-secondary, #1b1e24);
+  border-right: 1px solid var(--border-color, #26292f);
   min-height: 0;
 }
 
@@ -561,12 +561,12 @@ onMounted(async () => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--ide-text, #d6d8dd);
+  color: var(--text-primary, #e6e6e6);
   font-size: 13px;
   cursor: pointer;
   text-align: left;
 
-  &:hover { background: var(--ide-bg-card, #23262b); }
+  &:hover { background: var(--bg-tertiary, #242830); }
 }
 
 .ide-taskbar__action-label {
@@ -579,8 +579,8 @@ onMounted(async () => {
 
 .ide-taskbar__kbd {
   font-size: 11px;
-  color: var(--ide-text-muted, #8b8f97);
-  background: var(--ide-bg-card, #23262b);
+  color: var(--text-muted, #9aa0aa);
+  background: var(--bg-tertiary, #242830);
   border: 1px solid var(--border-color, #26292f);
   border-radius: 4px;
   padding: 1px 5px;
@@ -593,7 +593,7 @@ onMounted(async () => {
   margin: 2px 8px 4px;
   padding: 2px;
   border-radius: 7px;
-  background: var(--ide-bg-chat, #202226);
+  background: var(--bg-primary, #14161a);
 }
 
 .ide-taskbar__viewtab {
@@ -602,14 +602,14 @@ onMounted(async () => {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); }
+  &:hover { color: var(--text-primary, #e6e6e6); }
   &.is-active {
-    background: var(--ide-bg-card, #23262b);
-    color: var(--ide-text, #d6d8dd);
+    background: var(--bg-tertiary, #242830);
+    color: var(--text-primary, #e6e6e6);
   }
 }
 
@@ -625,14 +625,14 @@ onMounted(async () => {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); }
+  &:hover { color: var(--text-primary, #e6e6e6); }
   &.is-active {
-    background: var(--ide-bg-card, #23262b);
-    color: var(--ide-text, #d6d8dd);
+    background: var(--bg-tertiary, #242830);
+    color: var(--text-primary, #e6e6e6);
   }
 }
 
@@ -640,7 +640,7 @@ onMounted(async () => {
   margin: 0;
   padding: 3px 12px;
   font-size: 10px;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -666,10 +666,10 @@ onMounted(async () => {
   min-width: 0;
   height: 26px;
   padding: 0 8px;
-  border: 1px solid var(--ide-accent, #5b9cf6);
+  border: 1px solid var(--accent-primary, #4cc9f0);
   border-radius: 5px;
-  background: var(--ide-bg-chat, #202226);
-  color: var(--ide-text, #d6d8dd);
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #e6e6e6);
   font-size: 12px;
   outline: none;
 }
@@ -679,11 +679,11 @@ onMounted(async () => {
   height: 26px;
   border: none;
   border-radius: 5px;
-  background: var(--ide-bg-card, #23262b);
-  color: var(--ide-accent, #5b9cf6);
+  background: var(--bg-tertiary, #242830);
+  color: var(--accent-primary, #4cc9f0);
   cursor: pointer;
 
-  &:hover { background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 20%, transparent); }
+  &:hover { background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 20%, transparent); }
 }
 
 .ide-taskbar__filter { padding: 4px 8px 4px; }
@@ -694,13 +694,13 @@ onMounted(async () => {
   padding: 0 10px;
   border: 1px solid var(--border-color, #26292f);
   border-radius: 6px;
-  background: var(--ide-bg-chat, #202226);
-  color: var(--ide-text, #d6d8dd);
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #e6e6e6);
   font-size: 12px;
   outline: none;
 
-  &::placeholder { color: var(--ide-text-muted, #8b8f97); }
-  &:focus { border-color: var(--ide-accent, #5b9cf6); }
+  &::placeholder { color: var(--text-muted, #9aa0aa); }
+  &:focus { border-color: var(--accent-primary, #4cc9f0); }
 }
 
 .ide-taskbar__organize {
@@ -714,8 +714,8 @@ onMounted(async () => {
   height: 24px;
   border: none;
   border-radius: 12px;
-  background: var(--ide-bg-card, #23262b);
-  color: var(--ide-text-muted, #8b8f97);
+  background: var(--bg-tertiary, #242830);
+  color: var(--text-muted, #9aa0aa);
   font-size: 11px;
   cursor: pointer;
   white-space: nowrap;
@@ -723,10 +723,10 @@ onMounted(async () => {
   text-overflow: ellipsis;
   padding: 0 8px;
 
-  &:hover { color: var(--ide-text, #d6d8dd); }
+  &:hover { color: var(--text-primary, #e6e6e6); }
   &.is-active {
-    color: var(--ide-text, #d6d8dd);
-    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 22%, var(--ide-bg-card, #23262b));
+    color: var(--text-primary, #e6e6e6);
+    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 22%, var(--bg-tertiary, #242830));
   }
 }
 
@@ -740,11 +740,11 @@ onMounted(async () => {
   gap: 5px;
   padding: 3px 8px;
   font-size: 11px;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   text-transform: none;
   letter-spacing: 0.02em;
 
-  &--toggle { cursor: pointer; user-select: none; &:hover { color: var(--ide-text, #d6d8dd); } }
+  &--toggle { cursor: pointer; user-select: none; &:hover { color: var(--text-primary, #e6e6e6); } }
 }
 
 .ide-taskbar__section-caret {
@@ -758,10 +758,10 @@ onMounted(async () => {
   min-width: 0;
   height: 20px;
   padding: 0 6px;
-  border: 1px solid var(--ide-accent, #5b9cf6);
+  border: 1px solid var(--accent-primary, #4cc9f0);
   border-radius: 4px;
-  background: var(--ide-bg-chat, #202226);
-  color: var(--ide-text, #d6d8dd);
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #e6e6e6);
   font-size: 11px;
   outline: none;
 }
@@ -778,11 +778,11 @@ onMounted(async () => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   font-size: 10px;
   cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
   &--danger:hover { color: #e06c75; }
 }
 
@@ -796,10 +796,10 @@ onMounted(async () => {
   border-radius: 6px;
   margin: 1px 0;
 
-  &:hover { background: var(--ide-bg-card, #23262b); .ide-taskbar__item-more { opacity: 1; } }
+  &:hover { background: var(--bg-tertiary, #242830); .ide-taskbar__item-more { opacity: 1; } }
   &.is-active {
-    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 12%, transparent);
-    .ide-taskbar__item-title { color: var(--ide-accent, #5b9cf6); }
+    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
+    .ide-taskbar__item-title { color: var(--accent-primary, #4cc9f0); }
   }
 }
 
@@ -812,7 +812,7 @@ onMounted(async () => {
   padding: 6px 8px;
   border: none;
   background: transparent;
-  color: var(--ide-text, #d6d8dd);
+  color: var(--text-primary, #e6e6e6);
   font-size: 13px;
   cursor: pointer;
   text-align: left;
@@ -820,7 +820,7 @@ onMounted(async () => {
 
 .ide-taskbar__item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--ide-text-muted, #8b8f97); }
+.ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--text-muted, #9aa0aa); }
 
 .ide-taskbar__item-more {
   flex-shrink: 0;
@@ -832,22 +832,22 @@ onMounted(async () => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.1s ease;
 
-  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-chat, #202226); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-primary, #14161a); }
   svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
 }
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
 
-.ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--ide-text-muted, #8b8f97); }
+.ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted, #9aa0aa); }
 
 .ide-taskbar__foot {
   padding: 6px 10px 8px;
-  border-top: 1px solid var(--ide-border, #2a2d33);
+  border-top: 1px solid var(--border-color, #26292f);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -874,14 +874,14 @@ onMounted(async () => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   font-size: 13px;
   cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
   &.is-active {
-    color: var(--ide-accent, #5b9cf6);
-    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 14%, transparent);
+    color: var(--accent-primary, #4cc9f0);
+    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 14%, transparent);
   }
 }
 
@@ -893,7 +893,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--ide-accent, #5b9cf6);
+  background: var(--accent-primary, #4cc9f0);
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -903,7 +903,7 @@ onMounted(async () => {
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  color: var(--ide-text, #d6d8dd);
+  color: var(--text-primary, #e6e6e6);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -918,10 +918,10 @@ onMounted(async () => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
   svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; }
 }
 </style>

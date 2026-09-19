@@ -147,7 +147,7 @@ function focusMainChat(): void {
   flex-direction: column;
   min-width: 280px;
   border-left: 1px solid var(--border-color, #26292f);
-  background: var(--ide-bg-side, #1a1c20);
+  background: var(--bg-secondary, #1b1e24);
   min-height: 0;
 }
 
@@ -156,7 +156,7 @@ function focusMainChat(): void {
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  border-bottom: 1px solid var(--ide-border, #2a2d33);
+  border-bottom: 1px solid var(--border-color, #26292f);
 }
 
 .ide-sidepane__tab {
@@ -168,13 +168,13 @@ function focusMainChat(): void {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   cursor: pointer;
 
-  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
   &.is-active {
-    color: var(--ide-accent, #5b9cf6);
-    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 12%, transparent);
+    color: var(--accent-primary, #4cc9f0);
+    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
   }
 
   &--close:hover { background: rgba(220, 60, 60, 0.4); }
@@ -185,9 +185,9 @@ function focusMainChat(): void {
 .ide-sidepane.is-max { flex: 1 !important; width: auto !important; min-width: 320px; }
 
 .ide-sidepane__tab--add {
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
 
-  &:hover { color: var(--ide-accent, #5b9cf6); background: var(--ide-bg-card, #23262b); }
+  &:hover { color: var(--accent-primary, #4cc9f0); background: var(--bg-tertiary, #242830); }
 }
 
 .ide-sidepane__spacer { flex: 1; }
@@ -208,7 +208,7 @@ function focusMainChat(): void {
 .ide-sidepane__assistant-hint {
   margin: 0;
   font-size: 12px;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   line-height: 1.5;
 }
 
@@ -220,13 +220,13 @@ function focusMainChat(): void {
   border: 1px solid var(--border-color, #26292f);
   border-radius: 5px;
   background: transparent;
-  color: var(--ide-text-muted, #8b8f97);
+  color: var(--text-muted, #9aa0aa);
   font-size: 11px;
   cursor: pointer;
 
   &.is-active {
-    border-color: var(--ide-accent, #5b9cf6);
-    color: var(--ide-accent, #5b9cf6);
+    border-color: var(--accent-primary, #4cc9f0);
+    color: var(--accent-primary, #4cc9f0);
   }
 }
 
@@ -236,13 +236,13 @@ function focusMainChat(): void {
   padding: 8px;
   border: 1px solid var(--border-color, #26292f);
   border-radius: 6px;
-  background: var(--ide-bg-chat, #202226);
-  color: var(--ide-text, #d6d8dd);
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #e6e6e6);
   font-size: 12px;
   font-family: inherit;
   outline: none;
 
-  &:focus { border-color: var(--ide-accent, #5b9cf6); }
+  &:focus { border-color: var(--accent-primary, #4cc9f0); }
 }
 
 .ide-sidepane__assistant-actions { display: flex; gap: 6px; }
@@ -253,16 +253,16 @@ function focusMainChat(): void {
   border: 1px solid var(--border-color, #26292f);
   border-radius: 6px;
   background: transparent;
-  color: var(--ide-text, #d6d8dd);
+  color: var(--text-primary, #e6e6e6);
   font-size: 12px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { border-color: var(--ide-accent, #5b9cf6); }
+  &:hover:not(:disabled) { border-color: var(--accent-primary, #4cc9f0); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 
   &--primary {
-    border-color: color-mix(in srgb, var(--ide-accent, #5b9cf6) 50%, transparent);
-    color: var(--ide-accent, #5b9cf6);
+    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 50%, transparent);
+    color: var(--accent-primary, #4cc9f0);
   }
 }
 </style>
