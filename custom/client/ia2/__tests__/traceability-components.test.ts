@@ -79,7 +79,7 @@ function makeRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/app/board', name: 'ia2.tasks', component: { template: '<div tasks />' } },
+      { path: '/app/board', name: 'ia2.board', component: { template: '<div tasks />' } },
       { path: '/app/runs/:runId', name: 'ia2.runDetail', component: { template: '<div run />' } },
     ],
   })
