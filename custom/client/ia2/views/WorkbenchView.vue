@@ -28,6 +28,7 @@ import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
+import RunCanvas from '../components/flow/RunCanvas.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import type { ParticipantBadge } from '../components/flow/ParticipantsBar.vue'
 
@@ -274,6 +275,37 @@ function onCanvasInvite(): void {
   if (sel) flow.openGov('session', sel.kind === 'loop' ? undefined : sel.id)
 }
 
+// ── 中栏 · 运行画布数据（循环面）──
+
+const loopLatestRunId = computed(() => {
+  const sel = activeSel.value
+  if (!sel || sel.kind !== 'loop') return null
+  // run.graphId === `loop-<loopId>`（graph-compiler 约定）
+  return (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)?.runId ?? null
+})
+
+const loopLiveConnected = computed(() => runsStore.connection === 'connected')
+
+const loopParticipants = computed(() => {
+  const sel = activeSel.value
+  if (!sel || sel.kind !== 'loop') return []
+  const byId = new Map(tasksForShow.value.map(x => [x.id, x]))
+  const seen = new Set<string>()
+  const out: Array<{ kind: 'agent'; name: string; role: string }> = []
+  for (const c of loopStore.currentContracts ?? []) {
+    const task = c.persistedTaskId ? byId.get(c.persistedTaskId) : null
+    if (task?.assignee && !seen.has(task.assignee)) {
+      seen.add(task.assignee)
+      out.push({ kind: 'agent', name: task.assignee, role: t('ia2.rc.roleExec') })
+    }
+  }
+  return out
+})
+
+function onGotoBoard(): void {
+  void router.push({ name: 'ia2.board' })
+}
+
 // ── 面板事件 ──
 
 function onSelect(sel: StreamSelection): void {
@@ -328,7 +360,22 @@ function onNewLoop(): void {
         @open-ide="onOpenIde"
         @invite="onCanvasInvite"
       />
-      <!-- Task 7：循环 → 运行画布（实时|历史） -->
+      <RunCanvas
+        v-else-if="activeSel?.kind === 'loop' && loopStore.currentLoop"
+        :key="`loop:${activeSel.id}`"
+        :loop="loopStore.currentLoop"
+        :loop-row="loopRows.find(l => l.id === activeSel.id) ?? { kind: 'loop', id: activeSel.id, name: loopStore.currentLoop.name, stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null }"
+        :linked-tasks="linkedTasks"
+        :latest-run-id="loopLatestRunId"
+        :live-connected="loopLiveConnected"
+        :participants="loopParticipants"
+        @open-task="onCanvasOpenTask"
+        @open-timeline="onAllTimeline"
+        @open-ide="onOpenIde"
+        @reassign="onReassign"
+        @handle-task="onHandleTask"
+        @goto-board="onGotoBoard"
+      />
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
     <aside class="wb__right" data-testid="wb-right">
