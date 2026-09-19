@@ -25,6 +25,7 @@ import IaMinimizedDock from '../components/IaMinimizedDock.vue'
 import CockpitNotifyModal from '@/custom/cockpit/components/CockpitNotifyModal.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
+import GovOverlay from '../components/gov/GovOverlay.vue'
 import { listenMergeBack } from '../wm/popout'
 import type { AttentionRow } from '../adapters/overview'
 import '@/custom/ia2/styles/ia2.scss'
@@ -187,6 +188,8 @@ const activeArea = computed(() => store.currentArea)
     <CockpitScheduleModal v-if="workspace.scheduleOpen" />
     <div v-if="cockpit.runTraceOpen" class="ia-overlay" @click="cockpit.closeRunTrace()" />
     <CockpitRunTraceModal />
+    <!-- v12 ⚙管理台：全局覆盖层（Esc/⇠返回/backdrop 关闭） -->
+    <GovOverlay v-if="flow.govOpen" />
   </div>
 </template>
 
