@@ -33,9 +33,9 @@ describe('projectId（M-A 计划 T3-2）', () => {
     expect(c?.projectId).toBe('proj-pay')
     expect(parseCaseContent({ ...caseV1, schemaVersion: 2 })?.projectId).toBeUndefined()
   })
-  it('projectId 超 64 / 非串 → null', () => {
+  it('projectId 超 64 → null；非串视为缺省容忍（沿 body/priority 容错约定）', () => {
     expect(parseCaseContent({ ...caseV1, schemaVersion: 2, projectId: 'x'.repeat(65) })).toBeNull()
-    expect(parseCaseContent({ ...caseV1, schemaVersion: 2, projectId: 7 })).toBeNull()
+    expect(parseCaseContent({ ...caseV1, schemaVersion: 2, projectId: 7 })?.projectId).toBeUndefined()
   })
 })
 
@@ -57,7 +57,7 @@ describe('R 门与 signoff（M-A 计划 T3-3/4）', () => {
     expect(parseGateContent({ ...r2, signoff: { decidedBy: '@bob:matrix.test', verdict: 'pass', at: 'now' } })).toBeNull()
   })
   it('R 门 sender 是 bot → human 要求错；signoff.decidedBy 参与主体校验', () => {
-    expect(validateGateSender(r2, '@alice:matrix.test')).toEqual(['gate R2 requires human sender'])
+    expect(validateGateSender(r2, '@bob-agent:matrix.test')).toEqual(['gate R2 requires human sender'])
     const signed = { ...r2, signoff: { decidedBy: '@carol:matrix.test', verdict: 'pass' as const, at: 9 } }
     expect(validateGateSender(signed, '@alice:matrix.test'))
       .toContain('decidedBy is not the sender principal')

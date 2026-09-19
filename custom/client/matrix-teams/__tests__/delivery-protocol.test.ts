@@ -18,7 +18,7 @@ describe('事件类型常量与 PL 矩阵', () => {
     expect(DELIVERY_EVENT_TYPES.stage).toBe('com.swarmstudio.delivery.stage')
     expect(DELIVERY_EVENT_TYPES.gate).toBe('com.swarmstudio.delivery.gate')
     expect(DELIVERY_INDEX_ACCOUNT_DATA_TYPE).toBe('com.swarmstudio.delivery.index')
-    expect(DELIVERY_SCHEMA_VERSION).toBe(1)
+    expect(DELIVERY_SCHEMA_VERSION).toBe(2)
   })
   it('PL：case=50（state），stage/gate=0（普通消息）', () => {
     expect(CASE_ROOM_POWER_LEVELS.events[DELIVERY_EVENT_TYPES.case]).toBe(50)
@@ -27,10 +27,10 @@ describe('事件类型常量与 PL 矩阵', () => {
     expect(CASE_ROOM_POWER_LEVELS.state_default).toBe(50)
     expect(CASE_ROOM_POWER_LEVELS.events_default).toBe(0)
   })
-  it('阶段/门禁枚举：P1-P6、G1-G6、人工门=G1/G5', () => {
+  it('阶段/门禁枚举：P1-P6、G1-G6+R1-R4、人工门=六门（v2）', () => {
     expect([...DELIVERY_STAGES]).toEqual(['P1', 'P2', 'P3', 'P4', 'P5', 'P6'])
-    expect([...DELIVERY_GATES]).toEqual(['G1', 'G2', 'G3', 'G4', 'G5', 'G6'])
-    expect([...HUMAN_GATES]).toEqual(['G1', 'G5'])
+    expect([...DELIVERY_GATES]).toEqual(['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'R1', 'R2', 'R3', 'R4'])
+    expect([...HUMAN_GATES]).toEqual(['G1', 'G5', 'R1', 'R2', 'R3', 'R4'])
   })
   it('isDeliveryEventType 按前缀识别，team.* 不误判', () => {
     expect(isDeliveryEventType('com.swarmstudio.delivery.case')).toBe(true)
@@ -52,10 +52,10 @@ describe('parseCaseContent', () => {
     const { frozenAcceptance, ...rest } = ok
     expect(parseCaseContent(rest)).toEqual({ ...rest, frozenAcceptance: undefined })
   })
-  it('schemaVersion 缺失或非 1 → null（未知版本降级只读）', () => {
+  it('schemaVersion 缺失或未知版本 → null（v1/v2 双认，未知降级只读）', () => {
     const { schemaVersion, ...rest } = ok
     expect(parseCaseContent(rest)).toBeNull()
-    expect(parseCaseContent({ ...ok, schemaVersion: 2 })).toBeNull()
+    expect(parseCaseContent({ ...ok, schemaVersion: 3 })).toBeNull()
     expect(parseCaseContent({ ...ok, schemaVersion: '1' })).toBeNull()
   })
   it('tier / stage 非枚举值 → null', () => {
