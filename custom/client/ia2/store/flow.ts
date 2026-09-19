@@ -7,10 +7,10 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { StreamSelection } from '../adapters/flow'
 
-/** 管理台六区词表（任务/会话/员工/智能体/团队/评审——M-C 增评审中心） */
-export type GovSection = 'task' | 'session' | 'people' | 'agent' | 'team' | 'review'
+/** 管理台七区词表（任务/会话/员工/智能体/团队/评审——M-C 增评审中心） */
+export type GovSection = 'task' | 'session' | 'people' | 'agent' | 'team' | 'review' | 'stats'
 
-export const GOV_SECTIONS: readonly GovSection[] = ['task', 'session', 'people', 'agent', 'team', 'review']
+export const GOV_SECTIONS: readonly GovSection[] = ['task', 'session', 'people', 'agent', 'team', 'review', 'stats']
 
 export const useFlowStore = defineStore('ia2-flow', () => {
   /** 当前选中对象（null=未选；WorkbenchView 以路由参数为准双向同步） */

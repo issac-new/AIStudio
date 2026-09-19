@@ -20,7 +20,7 @@ index c33039b1..9a7a221b 100644
      brand: 'IDE 工作台',
      agentLabel: 'Agent 底座',
      agentNotInstalled: '未安装',
-@@ -855,9 +861,124 @@ export default {
+@@ -855,9 +861,129 @@ export default {
  
    ia2: {
      brand: '驾驶舱',
@@ -85,7 +85,7 @@ index c33039b1..9a7a221b 100644
 +    gov: {
 +      title: '管理', back: '返回',
 +      note: '管理台覆盖全屏；实时徽章进列表，历史跳「运行·历史」，操作在行上',
-+      section: { task: '📋 任务', session: '💬 会话', people: '👥 员工', agent: '🤖 智能体', team: '🏢 团队与通道', review: '⚖️ 评审' },
++      section: { task: '📋 任务', session: '💬 会话', people: '👥 员工', agent: '🤖 智能体', team: '🏢 团队与通道', review: '⚖️ 评审', stats: '📊 统计' },
 +      detail: '详情', history: '历史', enter: '进入', realtime: '实时',
 +      noSession: '未挂靠会话', runHistory: '运行·历史', ideTask: 'IDE 任务空间',
 +      detailTitle: '详情', detailEmpty: '在列表中选择对象查看详情',
@@ -117,6 +117,11 @@ index c33039b1..9a7a221b 100644
 +        title: '评审中心', sub: '· 门禁签核 / 会签',
 +        pending: '待审', pendingEmpty: '暂无待审门禁',
 +        settled: '已裁决', settledEmpty: '暂无已裁决门禁',
++      },
++      stats: {
++        title: '统计与催办', totalUnit: '项任务', blockedUnit: '受阻',
++        overdue: '逾期催办', overdueEmpty: '无逾期任务', empty: '暂无数据',
++        byCase: '按项目（案例）', byPhase: '按阶段', byAssignee: '按负责人', byAgent: 'Agent 负载', open: '在办',
 +      },
 +    },
 +    review: {
