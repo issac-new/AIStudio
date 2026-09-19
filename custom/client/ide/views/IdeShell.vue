@@ -10,6 +10,7 @@
 // 纪律：不嵌入 ChatPanel 整面板（自带会话侧栏，嵌套导航）；消息面
 // 经 IdeChatPane 复用其子组件（MessageList/ChatInput/SubagentStreamPanel）。
 import { computed, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useIdeStore } from '../store/ide'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdeTopBar from './IdeTopBar.vue'
@@ -22,6 +23,7 @@ import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 
+const { t } = useI18n()
 const ide = useIdeStore()
 const cockpitStore = useCockpitStore()
 
