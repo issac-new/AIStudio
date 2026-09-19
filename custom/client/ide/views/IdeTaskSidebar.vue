@@ -12,7 +12,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useMessage, NDropdown, NTooltip, type DropdownOption } from 'naive-ui'
 import { useChatStore, type Session } from '@/stores/hermes/chat'
-import { useSessionBrowserPrefsStore } from '@/stores/hermes/session-browser-prefs'
+import { useIdePins } from '../utils/pins'
 import {
   unarchiveSession,
   fetchSessionCategories,
@@ -32,7 +32,11 @@ const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const chat = useChatStore()
-const prefs = useSessionBrowserPrefsStore()
+const prefs = useIdePins()
+// prefs.pinnedIds 非响应式（闭包数组），经触发器转响应式供 computed 依赖
+const pinsVersion = ref(0)
+prefs.onChange(() => { pinsVersion.value++ })
+const pinnedIds = computed(() => { void pinsVersion.value; return prefs.pinnedIds })
 const ide = useIdeStore()
 
 // ---- 分组（category）底座 ----
@@ -105,7 +109,7 @@ const visibleSessions = computed(() => chat.sessions.filter(s => matches(s)))
 
 // ---- 已置顶 ----
 const pinnedSessions = computed(() =>
-  visibleSessions.value.filter(s => prefs.pinnedIds.includes(s.id)),
+  visibleSessions.value.filter(s => pinnedIds.value.includes(s.id)),
 )
 
 // ---- 组织模式三分：分组(category) / 项目(workspace) / 时间线 ----
@@ -124,7 +128,7 @@ function toggleGroup(key: string): void {
   collapsedGroups.value = next
 }
 const unpinnedSessions = computed(() =>
-  visibleSessions.value.filter(s => !prefs.pinnedIds.includes(s.id)),
+  visibleSessions.value.filter(s => !pinnedIds.value.includes(s.id)),
 )
 const taskGroups = computed<TaskGroup[]>(() => {
   const rest = unpinnedSessions.value
@@ -480,21 +484,32 @@ onMounted(async () => {
     </template>
 
     <footer class="ide-taskbar__foot">
-      <span class="ide-taskbar__avatar" aria-hidden="true">S</span>
-      <span class="ide-taskbar__account">SwarmStudio</span>
-      <button
-        type="button"
-        class="ide-taskbar__foot-btn"
-        data-testid="ide-nav-cockpit"
-        :title="t('ide.links.cockpitHome')"
-        :aria-label="t('ide.links.cockpitHome')"
-        @click="router.push({ name: 'ia2.overview' })"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-        </svg>
-      </button>
+      <div class="ide-taskbar__account-row">
+        <span class="ide-taskbar__avatar" aria-hidden="true">S</span>
+        <span class="ide-taskbar__account">SwarmStudio</span>
+        <button
+          type="button"
+          class="ide-taskbar__foot-btn"
+          data-testid="ide-nav-cockpit"
+          :title="t('ide.links.cockpitHome')"
+          :aria-label="t('ide.links.cockpitHome')"
+          @click="router.push({ name: 'ia2.overview' })"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+        </button>
+      </div>
+      <div class="ide-taskbar__features" role="toolbar" :aria-label="t('ide.sidePane.togglePanel')">
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-review" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'review' }" :title="t('ide.sidePane.tab_review')" @click="ide.toggleSidePane('review')">⎇</button>
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-browser" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'browser' }" :title="t('ide.sidePane.tab_browser')" @click="ide.toggleSidePane('browser')">◍</button>
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-wiki" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'wiki' }" :title="t('ide.sidePane.tab_wiki')" @click="ide.toggleSidePane('wiki')">W</button>
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-assistant" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'assistant' }" :title="t('ide.sidePane.tab_assistant')" @click="ide.toggleSidePane('assistant')">✦</button>
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-storage" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'storage' }" :title="t('ide.storage.panelTitle')" @click="ide.toggleSidePane('storage')">▤</button>
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-memory" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'memory' }" :title="t('ide.memory.panelTitle')" @click="ide.toggleSidePane('memory')">◈</button>
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-board" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'board' }" :title="t('ide.whiteboard.title')" @click="ide.toggleSidePane('board')">✎</button>
+      </div>
     </footer>
   </aside>
 </template>
@@ -777,11 +792,43 @@ onMounted(async () => {
 .ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--ide-text-muted, #8b8f97); }
 
 .ide-taskbar__foot {
-  padding: 8px 10px;
+  padding: 6px 10px 8px;
   border-top: 1px solid var(--ide-border, #2a2d33);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ide-taskbar__account-row {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.ide-taskbar__features {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ide-taskbar__feat {
+  width: 30px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ide-text-muted, #8b8f97);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover { color: var(--ide-text, #d6d8dd); background: var(--ide-bg-card, #23262b); }
+  &.is-active {
+    color: var(--ide-accent, #5b9cf6);
+    background: color-mix(in srgb, var(--ide-accent, #5b9cf6) 14%, transparent);
+  }
 }
 
 .ide-taskbar__avatar {
