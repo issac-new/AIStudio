@@ -47,6 +47,13 @@ export function ideAgentToChatAgent(agentId: CodingAgentId): string {
   }
 }
 
+export interface IdePaneState {
+  /** 向侧边折叠（缩成把手，点击展开） */
+  folded: boolean
+  /** 最大化（独占 main 区，其余栏收起） */
+  maximized: boolean
+}
+
 export interface IdeLayoutPrefs {
   /** 左侧功能栏：工作区列是否可见 */
   workspaceVisible: boolean
@@ -58,6 +65,12 @@ export interface IdeLayoutPrefs {
   terminalHeight: number
   /** 会话列宽度（px） */
   chatWidth: number
+  /** 任务侧栏折叠/最大化 */
+  sidebar: IdePaneState
+  /** 工作区列折叠/最大化 */
+  workspace: IdePaneState
+  /** 会话列折叠/最大化 */
+  chat: IdePaneState
 }
 
 const DEFAULT_LAYOUT: IdeLayoutPrefs = {
@@ -66,6 +79,18 @@ const DEFAULT_LAYOUT: IdeLayoutPrefs = {
   terminalOpen: false,
   terminalHeight: 240,
   chatWidth: 440,
+  sidebar: { folded: false, maximized: false },
+  workspace: { folded: false, maximized: false },
+  chat: { folded: false, maximized: false },
+}
+
+/** 互斥最大化：某栏最大化时其余栏 maximized 复位 */
+function applyMaximized(layout: IdeLayoutPrefs, who: 'sidebar' | 'workspace' | 'chat'): void {
+  const target = layout[who]
+  const next = !target.maximized
+  for (const key of ['sidebar', 'workspace', 'chat'] as const) {
+    layout[key].maximized = key === who ? next : false
+  }
 }
 
 /** 侧栏任务视图模式（对标 zcode workspaceSidebar.organize：分组/项目/时间线） */
@@ -163,6 +188,15 @@ export const useIdeStore = defineStore('ide', () => {
     } catch { /* 存储满等异常不阻塞 UI */ }
   }, { deep: true })
 
+  function toggleFold(who: 'sidebar' | 'workspace' | 'chat'): void {
+    layout.value[who].folded = !layout.value[who].folded
+    if (layout.value[who].folded) layout.value[who].maximized = false
+  }
+
+  function toggleMax(who: 'sidebar' | 'workspace' | 'chat'): void {
+    applyMaximized(layout.value, who)
+  }
+
   function setSidebarView(view: IdeTaskView): void {
     sidebar.value.view = view
   }
@@ -199,6 +233,8 @@ export const useIdeStore = defineStore('ide', () => {
     setWorkspace,
     setAgentId,
     setChatTab,
+    toggleFold,
+    toggleMax,
     setSidebarView,
     setOrganize,
     setSidePaneTab,
