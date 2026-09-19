@@ -3,7 +3,7 @@
 //
 // 布局（ZCode 3.12.3 对齐，09-18 用户裁定 A 案富侧栏，取代 9780cfe 收敛裁决）：
 //   IdeTaskSidebar（富侧栏：新建/搜索/置顶/workspace 分组/归档区 + 底部驾驶舱入口）
-//   | 工作区列（IdeWorkspacePane + IdeTerminalPanel）| 会话列（IdeChatPane）
+//   | 会话列（IdeChatPane）| 右辅助面板（IdeSidePane，终端在其页签）
 // 加 IdeTopBar / IdeStatusBar；RunTrace 弹窗复用 cockpit 组件（经
 // cockpitStore.openRunTrace 打开，store 惰性创建无重初始化成本）。
 //
@@ -15,8 +15,6 @@ import { useIdeStore } from '../store/ide'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdeTopBar from './IdeTopBar.vue'
 import IdeTaskSidebar from './IdeTaskSidebar.vue'
-import IdeWorkspacePane from './IdeWorkspacePane.vue'
-import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeChatPane from './IdeChatPane.vue'
 import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
@@ -41,23 +39,18 @@ onUnmounted(() => {
 })
 
 // ── 三栏折叠/最大化（用户裁定：每栏可最大化/最小化/向侧边折叠）──
-type PaneKey = 'sidebar' | 'workspace' | 'chat'
-const anyMax = computed(() => (['sidebar', 'workspace', 'chat'] as PaneKey[]).some(k => ide.layout[k].maximized))
-const sidebarShown = computed(() => !anyMax.value || ide.layout.sidebar.maximized)
-const workspaceShown = computed(() => !anyMax.value || ide.layout.workspace.maximized)
+type PaneKey = 'sidebar' | 'chat' | 'sidepane'
+const anyMax = computed(() => (['sidebar', 'chat', 'sidepane'] as PaneKey[]).some(k => ide.layout[k].maximized))
 const chatShown = computed(() => !anyMax.value || ide.layout.chat.maximized)
+const sidepaneShown = computed(() => ide.layout.sidepane.maximized || (ide.sidePane.open && !anyMax.value))
 const mainClass = computed(() => ({
   'has-max-sidebar': ide.layout.sidebar.maximized,
-  'has-max-workspace': ide.layout.workspace.maximized,
   'has-max-chat': ide.layout.chat.maximized,
+  'has-max-sidepane': ide.layout.sidepane.maximized,
 }))
 
 const chatColumnStyle = computed(() => ({
   width: `${ide.layout.chatVisible ? ide.layout.chatWidth : 0}px`,
-}))
-
-const terminalPanelStyle = computed(() => ({
-  height: `${ide.layout.terminalHeight}px`,
 }))
 
 // 会话列宽度拖拽（右缘把手）。stop 闭包按次独立：共享单变量会让同把手
@@ -92,39 +85,8 @@ function startChatResize(event: PointerEvent) {
   window.addEventListener('pointercancel', onUp)
 }
 
-// 终端面板高度拖拽（上缘把手）。stop 闭包按次独立（同 startChatResize）。
-let terminalDragStop: (() => void) | null = null
-function startTerminalResize(event: PointerEvent) {
-  event.preventDefault()
-  const startY = event.clientY
-  const startHeight = ide.layout.terminalHeight
-  const previousCursor = document.body.style.cursor
-  const previousUserSelect = document.body.style.userSelect
-  document.body.style.cursor = 'row-resize'
-  document.body.style.userSelect = 'none'
-  const onMove = (moveEvent: PointerEvent) => {
-    // 底部面板：向上拖增高
-    const height = startHeight + (startY - moveEvent.clientY)
-    ide.layout.terminalHeight = Math.min(640, Math.max(140, height))
-  }
-  const stop = () => {
-    window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointerup', onUp)
-    window.removeEventListener('pointercancel', onUp)
-    document.body.style.cursor = previousCursor
-    document.body.style.userSelect = previousUserSelect
-    if (terminalDragStop === stop) terminalDragStop = null
-  }
-  const onUp = () => stop()
-  terminalDragStop = stop
-  window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', onUp)
-  window.addEventListener('pointercancel', onUp)
-}
-
 onUnmounted(() => {
   chatDragStop?.()
-  terminalDragStop?.()
 })
 </script>
 
@@ -138,26 +100,6 @@ onUnmounted(() => {
         </div>
         <IdeTaskSidebar v-else />
       </aside>
-      <div v-show="workspaceShown" class="ide-shell__workspace" :class="{ 'is-folded': ide.layout.workspace.folded }">
-        <div v-if="ide.layout.workspace.folded" class="ide-shell__fold-handle ide-shell__fold-handle--v" data-testid="ide-fold-workspace" :title="t('ide.pane.expand')" @click="ide.toggleFold('workspace')">
-          <span class="ide-shell__fold-label">‹</span>
-        </div>
-        <template v-else>
-        <div class="ide-shell__pane-tools">
-          <button type="button" class="ide-shell__tool" data-testid="ide-fold-workspace-btn" :title="t('ide.pane.fold')" @click="ide.toggleFold('workspace')">‹</button>
-          <button type="button" class="ide-shell__tool" data-testid="ide-max-workspace-btn" :title="t('ide.pane.maximize')" @click="ide.toggleMax('workspace')">{{ ide.layout.workspace.maximized ? '⤡' : '⤢' }}</button>
-        </div>
-        <IdeWorkspacePane class="ide-shell__workspace-main" />
-        <div
-          v-if="ide.layout.terminalOpen"
-          class="ide-shell__terminal"
-          :style="terminalPanelStyle"
-        >
-          <div class="ide-shell__terminal-handle" @pointerdown="startTerminalResize" />
-          <IdeTerminalDock class="ide-shell__terminal-body" />
-        </div>
-        </template>
-      </div>
       <div v-show="chatShown" class="ide-shell__chat" :class="{ 'is-folded': ide.layout.chat.folded }" :style="chatColumnStyle">
         <div class="ide-shell__chat-handle" @pointerdown="startChatResize" />
         <div v-if="ide.layout.chat.folded" class="ide-shell__fold-handle ide-shell__fold-handle--v" data-testid="ide-fold-chat" :title="t('ide.pane.expand')" @click="ide.toggleFold('chat')">
@@ -171,7 +113,7 @@ onUnmounted(() => {
         <IdeChatPane class="ide-shell__chat-body" />
         </template>
       </div>
-      <IdeSidePane />
+      <IdeSidePane v-show="sidepaneShown" :class="{ 'is-max': ide.layout.sidepane.maximized }" />
     </div>
     <IdeStatusBar />
     <CockpitRunTraceModal />
@@ -258,44 +200,8 @@ onUnmounted(() => {
 }
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
-.ide-shell__main.has-max-workspace .ide-shell__workspace { flex: 1; }
 .ide-shell__main.has-max-chat .ide-shell__chat { flex: 1; }
-
-.ide-shell__workspace {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid var(--ide-border, #2a2d33);
-  border-right: 1px solid var(--ide-border, #2a2d33);
-}
-
-.ide-shell__workspace-main {
-  flex: 1;
-  min-height: 0;
-}
-
-.ide-shell__terminal {
-  flex-shrink: 0;
-  position: relative;
-  display: flex;
-  border-top: 1px solid var(--ide-border, #2a2d33);
-}
-
-.ide-shell__terminal-handle {
-  position: absolute;
-  top: -3px;
-  left: 0;
-  right: 0;
-  height: 6px;
-  cursor: row-resize;
-  z-index: 2;
-}
-
-.ide-shell__terminal-body {
-  flex: 1;
-  min-height: 0;
-}
+.ide-shell__main.has-max-sidepane .ide-sidepane { flex: 1; width: auto !important; }
 
 .ide-shell__chat {
   position: relative;

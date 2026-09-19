@@ -71,6 +71,8 @@ export interface IdeLayoutPrefs {
   workspace: IdePaneState
   /** 会话列折叠/最大化 */
   chat: IdePaneState
+  /** 右辅助面板最大化（折叠由 sidePane.open 承载） */
+  sidepane: IdePaneState
 }
 
 const DEFAULT_LAYOUT: IdeLayoutPrefs = {
@@ -82,13 +84,14 @@ const DEFAULT_LAYOUT: IdeLayoutPrefs = {
   sidebar: { folded: false, maximized: false },
   workspace: { folded: false, maximized: false },
   chat: { folded: false, maximized: false },
+  sidepane: { folded: false, maximized: false },
 }
 
 /** 互斥最大化：某栏最大化时其余栏 maximized 复位 */
-function applyMaximized(layout: IdeLayoutPrefs, who: 'sidebar' | 'workspace' | 'chat'): void {
+function applyMaximized(layout: IdeLayoutPrefs, who: 'sidebar' | 'chat' | 'sidepane'): void {
   const target = layout[who]
   const next = !target.maximized
-  for (const key of ['sidebar', 'workspace', 'chat'] as const) {
+  for (const key of ['sidebar', 'chat', 'sidepane'] as const) {
     layout[key].maximized = key === who ? next : false
   }
 }
@@ -188,12 +191,12 @@ export const useIdeStore = defineStore('ide', () => {
     } catch { /* 存储满等异常不阻塞 UI */ }
   }, { deep: true })
 
-  function toggleFold(who: 'sidebar' | 'workspace' | 'chat'): void {
+  function toggleFold(who: 'sidebar' | 'chat'): void {
     layout.value[who].folded = !layout.value[who].folded
     if (layout.value[who].folded) layout.value[who].maximized = false
   }
 
-  function toggleMax(who: 'sidebar' | 'workspace' | 'chat'): void {
+  function toggleMax(who: 'sidebar' | 'chat' | 'sidepane'): void {
     applyMaximized(layout.value, who)
   }
 

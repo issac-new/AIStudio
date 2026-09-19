@@ -526,6 +526,7 @@ onMounted(async () => {
         <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-assistant" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'assistant' }" :title="t('ide.sidePane.tab_assistant')" @click="ide.toggleSidePane('assistant')">✦</button>
         <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-storage" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'storage' }" :title="t('ide.storage.panelTitle')" @click="ide.toggleSidePane('storage')">▤</button>
         <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-memory" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'memory' }" :title="t('ide.memory.panelTitle')" @click="ide.toggleSidePane('memory')">◈</button>
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-terminal" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'terminal' }" :title="t('ide.terminalTitle')" @click="ide.toggleSidePane('terminal')">⌨</button>
         <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-board" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'board' }" :title="t('ide.whiteboard.title')" @click="ide.toggleSidePane('board')">✎</button>
       </div>
     </footer>
