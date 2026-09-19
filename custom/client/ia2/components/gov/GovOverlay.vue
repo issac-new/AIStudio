@@ -11,11 +11,13 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useReviewCenterStore } from '@/custom/matrix-teams/stores/review-center'
 import GovTaskSection from './GovTaskSection.vue'
 import GovSessionSection from './GovSessionSection.vue'
 import GovPeopleSection from './GovPeopleSection.vue'
 import GovAgentSection from './GovAgentSection.vue'
 import GovTeamSection from './GovTeamSection.vue'
+import GovReviewSection from './GovReviewSection.vue'
 import GovDetailPanel from './GovDetailPanel.vue'
 
 const { t } = useI18n()
@@ -25,6 +27,7 @@ const matrixRoom = useMatrixRoomStore()
 const chatStore = useChatStore()
 const teamRegistry = useTeamRegistryStore()
 const cockpit = useCockpitStore()
+const reviewCenter = useReviewCenterStore()
 
 // ── 五区实时计数（徽章进列表）──
 
@@ -34,6 +37,7 @@ const counts = computed<Record<GovSection, number>>(() => ({
   people: teamRegistry.accounts?.length ?? 0,
   agent: (cockpit.fleetSessions?.length ?? 0) + agentTeamsFlat.value.length,
   team: cockpit.teams?.length ?? 0,
+  review: reviewCenter.pendingReviews.length,
 }))
 
 // ── 会话区行（房间∪agent 会话，同工作台左栏口径）──
@@ -93,7 +97,8 @@ function setSection(section: GovSection): void {
         <GovSessionSection v-else-if="flow.govSection === 'session'" :sessions="sessionRows" />
         <GovPeopleSection v-else-if="flow.govSection === 'people'" />
         <GovAgentSection v-else-if="flow.govSection === 'agent'" />
-        <GovTeamSection v-else />
+        <GovTeamSection v-else-if="flow.govSection === 'team'" />
+        <GovReviewSection v-else />
       </div>
 
       <div class="gov__right">

@@ -15,7 +15,7 @@ index 01c5b077..13300ac7 100644
      brand: 'IDE Workspace',
      agentLabel: 'Agent',
      agentNotInstalled: 'not installed',
-@@ -857,9 +863,107 @@ export default {
+@@ -857,9 +863,117 @@ export default {
  
    ia2: {
      brand: 'Cockpit',
@@ -80,7 +80,7 @@ index 01c5b077..13300ac7 100644
 +    gov: {
 +      title: 'Manage', back: 'Back',
 +      note: 'Governance overlays the screen; live badges in lists, history jumps to runs, actions on rows',
-+      section: { task: '📋 Tasks', session: '💬 Sessions', people: '👥 People', agent: '🤖 Agents', team: '🏢 Teams & Channels' },
++      section: { task: '📋 Tasks', session: '💬 Sessions', people: '👥 People', agent: '🤖 Agents', team: '🏢 Teams & Channels', review: '⚖️ Review' },
 +      detail: 'Detail', history: 'History', enter: 'Enter', realtime: 'Live',
 +      noSession: 'No linked session', runHistory: 'Runs · history', ideTask: 'IDE task space',
 +      detailTitle: 'Detail', detailEmpty: 'Select an object in the list to see details',
@@ -108,6 +108,16 @@ index 01c5b077..13300ac7 100644
 +        title: 'Teams & Channels', sub: '· roster / channels',
 +        teams: 'Teams', teamsEmpty: 'No teams', boards: 'boards', channels: 'Channels', offline: 'offline',
 +      },
++      review: {
++        title: 'Review Center', sub: '· gate signoffs',
++        pending: 'Pending', pendingEmpty: 'No pending gates',
++        settled: 'Settled', settledEmpty: 'No settled gates',
++      },
++    },
++    review: {
++      gate: 'Gate', state: { pending: 'Pending', pass: 'Passed', reject: 'Rejected' },
++      reason: 'Reason', reasonPlaceholder: 'Reject reason (required)', reasonRequired: 'A reason is required to reject',
++      actionPass: 'Pass', actionReject: 'Reject', actionConfirmReject: 'Confirm reject',
 +    },
 +    feed: {
 +      loopStage: '{loop} → {to}', loopEscalated: '{loop} escalated', loopStuck: '{loop} stuck',

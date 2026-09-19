@@ -15,7 +15,7 @@ index c33039b1..9a7a221b 100644
      brand: 'IDE 工作台',
      agentLabel: 'Agent 底座',
      agentNotInstalled: '未安装',
-@@ -855,9 +861,107 @@ export default {
+@@ -855,9 +861,117 @@ export default {
  
    ia2: {
      brand: '驾驶舱',
@@ -80,7 +80,7 @@ index c33039b1..9a7a221b 100644
 +    gov: {
 +      title: '管理', back: '返回',
 +      note: '管理台覆盖全屏；实时徽章进列表，历史跳「运行·历史」，操作在行上',
-+      section: { task: '📋 任务', session: '💬 会话', people: '👥 员工', agent: '🤖 智能体', team: '🏢 团队与通道' },
++      section: { task: '📋 任务', session: '💬 会话', people: '👥 员工', agent: '🤖 智能体', team: '🏢 团队与通道', review: '⚖️ 评审' },
 +      detail: '详情', history: '历史', enter: '进入', realtime: '实时',
 +      noSession: '未挂靠会话', runHistory: '运行·历史', ideTask: 'IDE 任务空间',
 +      detailTitle: '详情', detailEmpty: '在列表中选择对象查看详情',
@@ -108,6 +108,16 @@ index c33039b1..9a7a221b 100644
 +        title: '团队与通道', sub: '· 编制 / 通道',
 +        teams: '团队', teamsEmpty: '暂无团队', boards: '看板', channels: '通道', offline: '断开',
 +      },
++      review: {
++        title: '评审中心', sub: '· 门禁签核 / 会签',
++        pending: '待审', pendingEmpty: '暂无待审门禁',
++        settled: '已裁决', settledEmpty: '暂无已裁决门禁',
++      },
++    },
++    review: {
++      gate: '门禁', state: { pending: '待审', pass: '通过', reject: '驳回' },
++      reason: '原因', reasonPlaceholder: '驳回原因（必填）', reasonRequired: '驳回必须填写原因',
++      actionPass: '通过', actionReject: '驳回', actionConfirmReject: '确认驳回',
 +    },
 +    feed: {
 +      loopStage: '{loop} 进入 {to}', loopEscalated: '{loop} 已升级', loopStuck: '{loop} 停滞',
