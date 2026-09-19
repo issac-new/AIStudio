@@ -550,3 +550,5 @@
 #      （静默无操作/throw 被吞，前端乐观更新假成功后回滚＝「按钮没反应」根因）。
 #      桥接 CLI request-review --force（九态中 review 唯一无直写通道的状态）。
 319-server-kanban-review-bridge.patch
+# 320: i18n 键块归位——chat.* 13 键从 ide 块迁回 chat 块（308/309 再生成时锚错父块，i18n 门禁抓获）+ common.close 双语补齐（上游 v0.7.23 已知缺键复发）
+320-client-i18n-chat-block-relocation.patch
