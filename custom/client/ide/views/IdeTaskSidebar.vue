@@ -24,6 +24,7 @@ import {
   type SessionCategory,
 } from '@/api/studio/sessions'
 import FileTree from '@/components/hermes/files/FileTree.vue'
+import IdeGitPane from './IdeGitPane.vue'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archivedSessions'
 import { formatRelativeTime, workspaceLabel } from '../utils/time'
@@ -92,6 +93,15 @@ async function moveToGroup(sessionId: string, categoryId: number | null): Promis
   } catch {
     message.error(t('ide.task.groupMoveFailed'))
   }
+}
+
+// ---- 查看文件视图：文件树/Git 跟随所选任务的 workspace（用户裁定：
+// 「文件/Git」在查看文件里、具体任务/项目目录下） ----
+const filesWorkspace = ref<string | null>(ide.workspace)
+const filesTab = ref<'tree' | 'git'>('tree')
+function openTaskFiles(session: Session): void {
+  if (session.workspace) filesWorkspace.value = session.workspace
+  ide.setSidebarView('files')
 }
 
 // ---- 搜索/过滤（常驻，workspaceSidebar.searchTasks） ----
@@ -212,6 +222,8 @@ async function onOpen(id: string): Promise<void> {
   await chat.switchSession(id)
   ide.setChatTab('messages')
   if (!ide.layout.chatVisible) ide.layout.chatVisible = true
+  const target = chat.sessions.find(s => s.id === id)
+  if (target?.workspace) filesWorkspace.value = target.workspace
 }
 
 async function onNewTask(): Promise<void> {
@@ -328,7 +340,13 @@ onMounted(async () => {
 
     <!-- 文件视图：workspaceSidebar.showFileTree 对应物，嵌上游 FileTree -->
     <div v-if="ide.sidebar.view === 'files'" class="ide-taskbar__files">
-      <FileTree :profile="null" />
+      <div class="ide-taskbar__filetabs" role="tablist">
+        <button type="button" role="tab" class="ide-taskbar__filetab" :class="{ 'is-active': filesTab === 'tree' }" :aria-selected="filesTab === 'tree'" data-testid="ide-files-tab-tree" @click="filesTab = 'tree'">{{ t('ide.task.view_files') }}</button>
+        <button type="button" role="tab" class="ide-taskbar__filetab" :class="{ 'is-active': filesTab === 'git' }" :aria-selected="filesTab === 'git'" data-testid="ide-files-tab-git" @click="filesTab = 'git'">Git</button>
+      </div>
+      <p class="ide-taskbar__filescope" :title="filesWorkspace ?? ''">{{ filesWorkspace ? workspaceLabel(t, filesWorkspace) : t('ide.task.defaultGroup') }}</p>
+      <FileTree v-show="filesTab === 'tree'" :profile="null" :workspace-key="filesWorkspace" />
+      <IdeGitPane v-if="filesTab === 'git'" class="ide-taskbar__gitpane" />
     </div>
 
     <!-- 任务视图 -->
@@ -593,6 +611,41 @@ onMounted(async () => {
     color: var(--ide-text, #d6d8dd);
   }
 }
+
+.ide-taskbar__filetabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px 0;
+}
+
+.ide-taskbar__filetab {
+  flex: 1;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ide-text-muted, #8b8f97);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover { color: var(--ide-text, #d6d8dd); }
+  &.is-active {
+    background: var(--ide-bg-card, #23262b);
+    color: var(--ide-text, #d6d8dd);
+  }
+}
+
+.ide-taskbar__filescope {
+  margin: 0;
+  padding: 3px 12px;
+  font-size: 10px;
+  color: var(--ide-text-muted, #8b8f97);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ide-taskbar__gitpane { flex: 1; min-height: 0; }
 
 .ide-taskbar__files {
   flex: 1;
