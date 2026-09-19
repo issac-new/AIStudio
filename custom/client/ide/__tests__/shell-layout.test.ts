@@ -7,7 +7,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }), createRouter: () => ({ push: vi.fn() }), createWebHistory: () => ({}), createWebHashHistory: () => ({}) }))
+vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }), useRouter: () => ({ push: vi.fn() }), createRouter: () => ({ push: vi.fn() }), createWebHistory: () => ({}), createWebHashHistory: () => ({}) }))
 
 vi.mock('../store/ide', async () => {
   const actual = await vi.importActual<any>('../store/ide')

@@ -100,7 +100,10 @@ function applyMaximized(layout: IdeLayoutPrefs, who: 'sidebar' | 'chat' | 'sidep
 export type IdeTaskView = 'tasks' | 'files'
 export type IdeOrganizeMode = 'grouped' | 'project' | 'timeline'
 
-export type IdeSidePaneTab = 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board'
+/** v12 工作空间维度（任务/项目/会话/链路）：同一编码环境的四视角绑定 */
+export type IdeDimension = 'task' | 'project' | 'session' | 'chain'
+
+export type IdeSidePaneTab = 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'terminal'
 
 export interface IdeSidePanePrefs {
   open: boolean
@@ -110,6 +113,7 @@ export interface IdeSidePanePrefs {
 
 const SIDEBAR_KEY = 'hermes_ide_sidebar'
 const SIDEPANE_KEY = 'hermes_ide_sidepane'
+const DIM_KEY = 'hermes_ide_dim'
 
 const DEFAULT_SIDEBAR: { view: IdeTaskView; organize: IdeOrganizeMode } = {
   view: 'tasks',
@@ -151,6 +155,12 @@ export const useIdeStore = defineStore('ide', () => {
   const sidePane = ref<IdeSidePanePrefs>(loadJson<IdeSidePanePrefs>(SIDEPANE_KEY, DEFAULT_SIDEPANE))
   /** 命令面板（Cmd/Ctrl+K，对标 zcode quickPick/commandCenter） */
   const paletteOpen = ref(false)
+  /** v12 工作空间维度（默认任务；/ide?task= 深链落任务维度） */
+  const dimension = ref<IdeDimension>(
+    (localStorage.getItem(DIM_KEY) as IdeDimension | null)
+    ?? 'task')
+  /** 任务维度绑定的任务 id（工作台 ⌨ / 管理台 ⌨ 深链带入） */
+  const activeTaskId = ref<string | null>(null)
 
   function setWorkspace(path: string | null): void {
     workspace.value = path?.trim() ? path.trim() : null
@@ -164,6 +174,18 @@ export const useIdeStore = defineStore('ide', () => {
 
   function setChatTab(tab: IdeChatTab): void {
     chatTab.value = tab
+  }
+
+  function setDimension(dim: IdeDimension): void {
+    dimension.value = dim
+    try {
+      localStorage.setItem(DIM_KEY, dim)
+    } catch { /* 存储异常不阻塞 */ }
+  }
+
+  /** 任务维度绑定（工作台 ⌨ 深链）；null 清除 */
+  function setActiveTask(taskId: string | null): void {
+    activeTaskId.value = taskId?.trim() || null
   }
 
   function openPalette(): void {
@@ -232,10 +254,14 @@ export const useIdeStore = defineStore('ide', () => {
     sidebar,
     sidePane,
     paletteOpen,
+    dimension,
+    activeTaskId,
     terminalCwd,
     setWorkspace,
     setAgentId,
     setChatTab,
+    setDimension,
+    setActiveTask,
     toggleFold,
     toggleMax,
     setSidebarView,
