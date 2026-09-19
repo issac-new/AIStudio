@@ -31,9 +31,40 @@ export interface GraphEnginePolicy {
     stagnationLimit: number
     /** 审批 interrupt 默认超时（72h，P0 台账 h） */
     interruptTimeoutMs: number
-    /** escalate 重发节流窗口（24h） */
+    /** escalate 重发节流（24h，P0 台账 h） */
     escalationResendMs: number
   }
+}
+
+// ── /api/graph/mind 投影 DTO（2026-09-19 v12：随 MindViz 视图退役自 ia2/adapters/mind.ts
+//    就地搬迁——跨层契约只共享结构不共享模块，本地声明最小形状避免 custom→server import）──
+/** 服务端投影：思想核（kanban task 投影） */
+export interface MindThoughtDto {
+  id: string
+  title: string
+  status: 'running' | 'blocked' | 'awaiting-review' | 'completed' | 'idle' | 'archived'
+  createdAt: string | null
+  board: string | null
+}
+
+/** 服务端投影：突触末梢（kanban task_run 投影） */
+export interface MindRunDto {
+  runId: string
+  thoughtId: string
+  status: 'running' | 'completed' | 'failed' | 'awaiting-input' | 'idle'
+  durationSec: number
+  startedAt: string | null
+  endedAt: string | null
+  outcome: string | null
+  summary: string | null
+}
+
+export interface MindProjectionDto {
+  thoughts: MindThoughtDto[]
+  runs: MindRunDto[]
+  /** 任务父子/委派关系（task_links 只读投影；无表/无行 → 空数组/undefined） */
+  relations?: Array<{ parentId: string; childId: string }>
+  available: boolean
 }
 
 const BASE = '/api/graph/runs'
@@ -120,7 +151,7 @@ export const runRest = {
    * （tasks=思想核 + task_runs=突触末梢）。图引擎自身 run 库可能为空，大脑基于
    * 已有任务的运行数据长成。available:false 时前端落空态而非报错。
    */
-  getMind: async (): Promise<import('@/custom/ia2/adapters/mind').MindProjectionDto> => {
+  getMind: async (): Promise<MindProjectionDto> => {
     return request('/api/graph/mind')
   },
 

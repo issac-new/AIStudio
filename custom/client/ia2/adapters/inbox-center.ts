@@ -145,7 +145,7 @@ export function normalizeTasks(tasks: readonly TaskSourceInput[], now: number): 
       title: t.title,
       ts,
       waitMs: ts > 0 ? Math.max(0, now - ts) : 0,
-      route: { path: '/app/tasks' },
+      route: { path: '/app/board' },
       taskId: t.id,
     })
   }
@@ -187,7 +187,7 @@ export function normalizeAlarms(
       waitMs: Math.max(0, now - latestTs),
       // 2026-09-18 统一导航：运行列表收敛为运行场景枢纽 runs tab（?loop= 深链
       // 由 RunCenterView 挂载时预填搜索，语义保真）
-      route: { name: 'ia2.ops', query: { tab: 'runs', loop: slice.loopId } },
+      route: { name: 'ia2.runs', query: { tab: 'runs', loop: slice.loopId } },
       loopId: slice.loopId,
     })
   }

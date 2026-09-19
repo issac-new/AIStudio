@@ -160,7 +160,7 @@ async function submitCreate(): Promise<void> {
     // 展示名会经 slugify 与 id 发散（中文/空格名必然落空过滤成空列表）。
     // 2026-09-18 统一导航：/app/runs 区域退役 → 运行场景枢纽 ?tab=runs 深链
     // （RunCenterView 挂载时读 query.loop 预填搜索，语义保真）。
-    await router.push({ name: 'ia2.ops', query: { tab: 'runs', loop: payload.id } })
+    await router.push({ name: 'ia2.runs', query: { tab: 'runs', loop: payload.id } })
   } catch (e) {
     submitError.value = e instanceof Error ? e.message : String(e)
   } finally {

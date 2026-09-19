@@ -18,7 +18,7 @@ const { t } = useI18n()
 const linkGroups: Array<{ key: string; label: string; to: { name: string } | { path: string } }> = [
   // 统一导航（09-18）：workbench/cockpit/loopGraph 死链移除（⇄ 互跳归 NavRail 单按钮），
   // kanban/history 改指六场景目标
-  { key: 'kanban', label: 'ide.links.kanban', to: { name: 'ia2.tasks' } },
+  { key: 'kanban', label: 'ide.links.kanban', to: { name: 'ia2.board' } },
   { key: 'history', label: 'ide.links.history', to: { name: 'ia2.collabHistory' } },
   { key: 'groupChat', label: 'ide.links.groupChat', to: { name: 'hermes.groupChat' } },
   { key: 'mcp', label: 'ide.links.mcp', to: { path: '/hermes/mcp' } },

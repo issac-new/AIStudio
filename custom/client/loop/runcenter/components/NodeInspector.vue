@@ -41,7 +41,7 @@ const showPersistedTasks = computed(() =>
   !!props.node && props.node.id.includes('persist') && persistedTasks.value.length > 0)
 
 function openTask(taskId: string): void {
-  void router.push({ path: '/app/tasks', query: { task: taskId } })
+  void router.push({ path: '/app/board', query: { task: taskId } })
 }
 
 // ── run instance.state 当前值（P3 台账：lastUpdate 键 join 当前值）──

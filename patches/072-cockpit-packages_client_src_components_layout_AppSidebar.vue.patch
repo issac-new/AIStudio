@@ -37,7 +37,7 @@ diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/cli
 +      <!-- overlay[ia2]: 六区域新 IA 一级入口（P3 登录默认；Task 8 cockpit 退役后唯一入口） -->
        <RouteLinkItem
          class="nav-item"
-+        :to="{ name: 'ia2.overview' }"
++        :to="{ name: 'ia2.collab' }"
 +        :active="isIa2Area"
 +      >
 +        <svg

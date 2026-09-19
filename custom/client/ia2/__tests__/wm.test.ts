@@ -94,29 +94,29 @@ describe('popout 工具 — 弹出与回流', () => {
 describe('wm store — 最小化任务栏', () => {
   it('最小化入列（首列）并按路径去重', () => {
     const wm = useWmStore()
-    wm.minimize('/app/ops?tab=runs')
+    wm.minimize('/app/runs?tab=runs')
     wm.minimize('/app/eng')
-    wm.minimize('/app/ops?tab=runs')
-    expect(wm.minimized.map(p => p.path)).toEqual(['/app/ops?tab=runs', '/app/eng'])
+    wm.minimize('/app/runs?tab=runs')
+    expect(wm.minimized.map(p => p.path)).toEqual(['/app/runs?tab=runs', '/app/eng'])
   })
 
-  it('场景归属投影：/app/ops → ops，未知路径回退 overview', () => {
+  it('视图归属投影（v12 单视图）：/app 家族 → collab，非 /app 回退 collab', () => {
     const wm = useWmStore()
-    wm.minimize('/app/ops?tab=runs')
+    wm.minimize('/app/runs?tab=runs')
     wm.minimize('/somewhere')
-    expect(wm.minimized.find(p => p.path === '/app/ops?tab=runs')?.area).toBe('ops')
-    expect(wm.minimized.find(p => p.path === '/somewhere')?.area).toBe('overview')
+    expect(wm.minimized.find(p => p.path === '/app/runs?tab=runs')?.area).toBe('collab')
+    expect(wm.minimized.find(p => p.path === '/somewhere')?.area).toBe('collab')
   })
 
   it('恢复出列并返回面板；丢弃不导航；清空全收', () => {
     const wm = useWmStore()
-    wm.minimize('/app/ops')
+    wm.minimize('/app/runs')
     wm.minimize('/app/eng')
-    expect(wm.restore('/app/ops')?.path).toBe('/app/ops')
+    expect(wm.restore('/app/runs')?.path).toBe('/app/runs')
     expect(wm.minimized.map(p => p.path)).toEqual(['/app/eng'])
     wm.dismiss('/app/eng')
     expect(wm.minimized).toHaveLength(0)
-    wm.minimize('/app/tasks')
+    wm.minimize('/app/board')
     wm.clear()
     expect(wm.minimized).toHaveLength(0)
   })

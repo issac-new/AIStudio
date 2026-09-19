@@ -42,7 +42,7 @@ const activeIndex = ref(0)
 // 与 IdeTopBar.linkGroups 同源的功能页导航（键与路由保持一致，改一处须同步另一处）
 const NAV_TARGETS: Array<{ key: string; to: { name: string } | { path: string } }> = [
   // 统一导航（09-18）：workbench/cockpit/loopGraph 死链移除，kanban/history 指六场景
-  { key: 'kanban', to: { name: 'ia2.tasks' } },
+  { key: 'kanban', to: { name: 'ia2.board' } },
   { key: 'history', to: { name: 'ia2.collabHistory' } },
   { key: 'groupChat', to: { name: 'hermes.groupChat' } },
   { key: 'mcp', to: { path: '/hermes/mcp' } },

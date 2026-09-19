@@ -222,7 +222,7 @@ describe('CockpitScheduleModal（workspace store 承载）', () => {
     const ev = wrapper.find('.cockpit-schedule__ev')
     expect(ev.exists()).toBe(true)
     await ev.trigger('click')
-    expect(routerMocks.push).toHaveBeenCalledWith({ path: '/app/tasks', query: { task: 't-nav' } })
+    expect(routerMocks.push).toHaveBeenCalledWith({ path: '/app/board', query: { task: 't-nav' } })
     expect(store.scheduleOpen).toBe(false)
   })
 })

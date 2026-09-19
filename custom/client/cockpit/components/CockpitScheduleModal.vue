@@ -208,7 +208,7 @@ function goToToday() {
 function onEventClick(ev: ScheduleEvent) {
   if (ev.taskId) {
     // cockpit selectTask 已退役：任务事件点击 → 工作项区带搜索预选（TasksView 深链）
-    void router.push({ path: '/app/tasks', query: { task: ev.taskId } })
+    void router.push({ path: '/app/board', query: { task: ev.taskId } })
     store.closeSchedule()
   }
 }

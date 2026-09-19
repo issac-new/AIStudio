@@ -547,7 +547,7 @@ onMounted(async () => {
           data-testid="ide-nav-cockpit"
           :title="t('ide.links.cockpitHome')"
           :aria-label="t('ide.links.cockpitHome')"
-          @click="router.push({ name: 'ia2.overview' })"
+          @click="router.push({ name: 'ia2.collab' })"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />

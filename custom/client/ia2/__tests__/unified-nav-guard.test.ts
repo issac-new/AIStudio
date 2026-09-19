@@ -1,10 +1,12 @@
 // overlay/custom/client/ia2/__tests__/unified-nav-guard.test.ts
-// 统一导航总守门（2026-09-18 收口）：六场景单一事实源、旧路由名零残留、
-// catch-all 兜底、双壳互跳键、窗口管理挂载。patch/路由漂移时当场 fail。
+// v12 统一视图总守门（2026-09-19）：双视图单一事实源（/app collab + IDE 直链）、
+// 旧深链迁移表实走、退役路由名零残留、catch-all 兜底、双壳互跳键、
+// 窗口管理挂载。patch/路由漂移时当场 fail。
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { IA_AREAS, buildIaRoutes, areaForPath } from '../routes'
+import { createRouter, createMemoryHistory } from 'vue-router'
+import { IA_AREAS, buildIaRoutes, areaForPath, IA_LEGACY_REDIRECTS } from '../routes'
 
 // 自本文件 5 级到 ncwk 根（overlay/custom/client/ia2/__tests__），再进 upstream/hermes-studio
 const UPSTREAM_CLIENT = '../../../../../upstream/hermes-studio/packages/client/src'
@@ -18,27 +20,56 @@ const RETIRED_NAMES = [
   'hermes.cockpit', 'hermes.chat', 'hermes.session', 'hermes.history',
   'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.swarmKanban',
   'hermes.matrixChat', 'hermes.matrixChatRoom',
+  // v12 六场景退役名（2026-09-19）：overview/ops/tasks/comms 零残留
+  'ia2.overview', 'ia2.ops', 'ia2.tasks', 'ia2.comms',
 ]
 
-describe('统一导航守门（六场景双壳）', () => {
-  it('IA_AREAS 六场景与 buildIaRoutes 产物一一对应（路径可达）', () => {
+describe('v12 统一视图守门（双视图）', () => {
+  it('IA_AREAS 单场景 collab 与 buildIaRoutes 产物一一对应', () => {
     const routes = buildIaRoutes()
     const flat = JSON.stringify(routes)
     for (const area of IA_AREAS) {
       expect(routes.some(r => r.path === '/app')).toBe(true)
       expect(flat).toContain(`"name":"${area.name}"`)
     }
-    expect(IA_AREAS.map(a => a.key)).toEqual(
-      ['overview', 'collab', 'eng', 'ops', 'tasks', 'comms'],
-    )
+    expect(IA_AREAS.map(a => a.key)).toEqual(['collab'])
   })
 
-  it('areaForPath：六场景全覆盖 + 未知 /app 子路径回退总览 + 非 /app 返回 null', () => {
+  it('areaForPath：/app 家族全投影 collab + 非 /app 返回 null', () => {
     for (const area of IA_AREAS) expect(areaForPath(area.path)).toBe(area.key)
-    expect(areaForPath('/app/ops/runs/r-1')).toBe('ops')
-    expect(areaForPath('/app/unknown-deep')).toBe('overview')
+    expect(areaForPath('/app/board')).toBe('collab')
+    expect(areaForPath('/app/runs/run-1')).toBe('collab')
+    expect(areaForPath('/app/eng')).toBe('collab')
+    expect(areaForPath('/app/s/room/x')).toBe('collab')
+    expect(areaForPath('/app/unknown-deep')).toBe('collab')
     expect(areaForPath('/ide')).toBeNull()
     expect(areaForPath('/hermes/logs')).toBeNull()
+  })
+
+  it('旧深链迁移表实走重定向（query 语义不丢关键路径）', async () => {
+    // push 会解析目标记录的懒组件——替换为桩，避免拉起 RunCenterView/HistoryView
+    // 等重型视图的导入链（其内 upstream api/client 顶层 createWebHashHistory 在
+    // node 环境无 location 即炸；本守门只验重定向本身）
+    const Stub = { template: '<div />' }
+    const stubComponents = (records: ReturnType<typeof buildIaRoutes>): ReturnType<typeof buildIaRoutes> =>
+      records.map(r => {
+        const copy: Record<string, unknown> = { ...r }
+        if (copy.component) copy.component = Stub
+        if (Array.isArray(copy.children)) copy.children = stubComponents(copy.children as ReturnType<typeof buildIaRoutes>)
+        return copy as unknown as ReturnType<typeof buildIaRoutes>[number]
+      })
+    const router = createRouter({ history: createMemoryHistory(), routes: stubComponents(buildIaRoutes()) })
+    // 参数占位 → 具体样例（表驱动单一来源：迁移表本身）
+    const sample = (p: string): string => p
+      .replace(':runId', 'run-9')
+      .replace(':roomId', '!x:host')
+      .replaceAll(':sessionId', 's1')
+    const cases = IA_LEGACY_REDIRECTS.map(({ from, to }) => [sample(from), sample(to)] as [string, string])
+    for (const [from, to] of cases) {
+      await router.push(from)
+      expect(router.currentRoute.value.fullPath, `${from} 应重定向到 ${to}`)
+        .toBe(to)
+    }
   })
 
   it('退役路由名在 ia2 路由产物与注入态上游 router 中零出现', () => {
@@ -67,10 +98,8 @@ describe('统一导航守门（六场景双壳）', () => {
       expect(locale).toMatch(/gotoIde:/)
       // AppSidebar 分组头消费；en 侧缺键曾致非中文语言渲染裸键名（2026-09-18 修复）
       expect(locale).toMatch(/^\s+systemGroup:/m)
-      // 六场景词表键齐
-      for (const key of ['collab', 'eng', 'ops']) {
-        expect(locale).toMatch(new RegExp(`^\\s+${key}:`, 'm'))
-      }
+      // 双视图场景词表键齐
+      expect(locale).toMatch(/^\s+collab:/m)
     }
   })
 
@@ -87,14 +116,17 @@ describe('统一导航守门（六场景双壳）', () => {
     expect(shell).toContain("event.key === 'Escape'")
     expect(shell).toContain('<IaMinimizedDock')
     expect(shell).toContain('listenMergeBack')
+    // v12 双视图：场景条带 IDE 第二入口
+    expect(shell).toContain('data-testid="ia-scene-ide"')
   })
 
   it('上游 AppSidebar：一级仅 双入口+系统分组，无旧返回 hack（patch 299 守门）', () => {
     const sidebar = readUpstream('components/layout/AppSidebar.vue')
     expect(sidebar).toContain(`:to="{ name: 'ide.shell' }"`)
-    expect(sidebar).toContain(`:to="{ name: 'ia2.overview' }"`)
+    expect(sidebar).toContain(`:to="{ name: 'ia2.collab' }"`)
     expect(sidebar).toContain('sidebar-system-toggle')
     expect(sidebar).not.toContain(`:to="{ name: 'hermes.cockpit' }"`)
     expect(sidebar).not.toContain(`:to="{ name: 'hermes.loop' }"`)
+    expect(sidebar).not.toContain(`ia2.overview`)
   })
 })

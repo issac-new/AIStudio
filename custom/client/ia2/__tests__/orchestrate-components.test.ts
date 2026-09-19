@@ -90,7 +90,7 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/app/orchestrate', component: stub },
-      { path: '/app/ops', name: 'ia2.ops', component: stub },
+      { path: '/app/runs', name: 'ia2.runs', component: stub },
     ],
   })
 }
@@ -265,7 +265,7 @@ describe('OrchestrateView — 列表 → 详情 → 实例化', () => {
     expect(payload.tenant).toBe('room:topic')
     expect(String(payload.id)).toMatch(/^loop-alpha-\d+$/)
     // 创建即达：运行场景枢纽 runs tab + ?loop= 预填搜索（统一导航 Task 4）
-    expect(router.currentRoute.value.name).toBe('ia2.ops')
+    expect(router.currentRoute.value.name).toBe('ia2.runs')
     expect(router.currentRoute.value.query).toEqual({ tab: 'runs', loop: String(payload.id) })
   })
 
