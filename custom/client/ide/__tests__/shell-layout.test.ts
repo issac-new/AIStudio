@@ -30,6 +30,7 @@ vi.mock('../views/IdeSidePane.vue', () => ({ default: { name: 'IdeSidePane', tem
 vi.mock('../views/IdeTopBar.vue', () => ({ default: { name: 'IdeTopBar', template: '<div />' } }))
 vi.mock('../views/IdeStatusBar.vue', () => ({ default: { name: 'IdeStatusBar', template: '<div />' } }))
 vi.mock('../components/IdeCommandPalette.vue', () => ({ default: { name: 'IdeCommandPalette', template: '<div />' } }))
+vi.mock('../components/IdeTaskContextBar.vue', () => ({ default: { name: 'IdeTaskContextBar', template: '<div class="ide-taskctx-stub" />' } }))
 vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
 // v12.1 全局顶区（页头+注意力+切换器）单测外置（ia-shell/global-top 守门），
 // 此间桩化隔离其探测/武装重图依赖

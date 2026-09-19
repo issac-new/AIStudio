@@ -2,7 +2,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index 01c5b077..13300ac7 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -445,6 +445,12 @@ export default {
+@@ -445,6 +445,17 @@ export default {
    },
  
    ide: {
@@ -10,6 +10,11 @@ index 01c5b077..13300ac7 100644
 +    dims: {
 +      workspace: 'Workspace', task: 'Task', project: 'Project', session: 'Session', chain: 'Chain',
 +      switchCollab: 'Collaboration',
++    },
++    // M-E task context bar (visible when a task is active in /ide)
++    taskCtx: {
++      current: 'Current task', noCard: 'Task not dispatched (no event)', chatAnchor: 'Chat anchor',
++      diffPlaceholder: 'diff ref…', confirmR3: 'Confirm diff (R3)', submit: 'Submit receipt',
 +    },
 +
      brand: 'IDE Workspace',
