@@ -1,0 +1,126 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 01c5b077..13300ac7 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -445,6 +445,12 @@ export default {
+   },
+ 
+   ide: {
++    // v12 workspace dimension bar (task/project/session/chain)
++    dims: {
++      workspace: 'Workspace', task: 'Task', project: 'Project', session: 'Session', chain: 'Chain',
++      switchCollab: 'Collaboration',
++    },
++
+     brand: 'IDE Workspace',
+     agentLabel: 'Agent',
+     agentNotInstalled: 'not installed',
+@@ -857,9 +863,107 @@ export default {
+ 
+   ia2: {
+     brand: 'Cockpit',
++    // v12 unified view (09-19): workbench / sitline / governance vocabulary
++    flow: {
++      title: 'Workflow',
++      filter: { all: 'All', session: 'Sessions', loop: 'Loops' },
++      searchPlaceholder: 'Filter name / task id…',
++      groupSessions: 'Sessions',
++      groupLoops: 'Loops',
++      empty: 'No sessions or loops yet',
++      newSession: 'New session',
++      newLoop: 'New loop',
++      manage: 'Manage',
++      createPlaceholder: 'Room name…',
++      createOk: 'Create',
++    },
++    loop: {
++      stage: {
++        discovery: 'Plan', handoff: 'Build', validation: 'Review',
++        persistence: 'Accept', scheduling: 'Deliver',
++      },
++      status: {
++        completed: 'Completed', failed: 'Failed', blocked: 'Blocked', awaitingYou: 'Awaiting you',
++        running: 'Running', paused: 'Paused', idle: 'Idle',
++      },
++    },
++    tdp: {
++      title: 'Tasks · Decisions',
++      waiting: 'Waiting', all: 'All', linked: 'Linked tasks', newTask: 'New task',
++      feed: 'Activity', allTimeline: 'Full timeline',
++      waitEmpty: 'Nothing waiting on you', linkedEmpty: 'No linked tasks', feedEmpty: 'No activity',
++      approve: 'Approve', reject: 'Reject', confirm: 'Confirm',
++      reassign: 'Reassign', openIde: 'Open in IDE', handle: 'Handle',
++      rejectReason: 'Rejected: needs rework',
++      status: {
++        triage: 'Triage', todo: 'To do', scheduled: 'Scheduled', ready: 'Ready',
++        running: 'Running', blocked: 'Blocked', review: 'In review', done: 'Done', archived: 'Archived',
++      },
++    },
++    wait: { subReview: 'Awaiting acceptance', subRun: 'Run awaits confirmation', subFleet: 'Fleet approval' },
++    chain: { timeline: 'Timeline', openIde: 'Open in IDE', gateReview: 'Awaiting you' },
++    part: { title: 'Participants', invite: 'Invite', duty: 'On duty' },
++    canvas: {
++      noRoom: 'No room selected',
++      inputHint: "Type · {'@'}mention · /assign #task to {'@'}member · /attach loop…",
++    },
++    rc: {
++      view: 'View', live: 'Live', history: 'History · Replay', board: 'Board',
++      liveOn: 'LIVE', loading: 'Loading…', noRun: 'No runs yet — stage card is the live state',
++      linkedTasks: 'Tasks · linked to this loop', participants: 'Participants', noParts: 'No participants',
++      stepBack: 'Step back (k)', stepForward: 'Step forward (j)', play: 'Play/Pause',
++      eventCount: 'Event {n}/{total} · j/k step',
++      noEvents: 'No events', export: 'Export archive', roleExec: 'executing',
++    },
++    sit: {
++      waiting: 'Waiting', waitingTitle: 'Waiting queue (approve/reject in right panel)', oldest: 'oldest',
++      tasks: 'Tasks', running: 'running', review: 'review', sessions: 'Sessions',
++      loops: 'Loops', blocked: 'blocked', online: 'Online',
++      onlineDetail: '{p} people · {a} agents · {m} machines', manage: 'Manage',
++    },
++    gov: {
++      title: 'Manage', back: 'Back',
++      note: 'Governance overlays the screen; live badges in lists, history jumps to runs, actions on rows',
++      section: { task: '📋 Tasks', session: '💬 Sessions', people: '👥 People', agent: '🤖 Agents', team: '🏢 Teams & Channels' },
++      detail: 'Detail', history: 'History', enter: 'Enter', realtime: 'Live',
++      noSession: 'No linked session', runHistory: 'Runs · history', ideTask: 'IDE task space',
++      detailTitle: 'Detail', detailEmpty: 'Select an object in the list to see details',
++      task: {
++        title: 'Task management', allStatus: '· Status', allAssignees: '· Assignee', new: '＋ New',
++        colTask: 'Task', colAssignee: 'Assignee', colStatus: 'Status', colOps: 'Actions',
++        empty: 'No tasks',
++      },
++      session: {
++        title: 'Session management', sub: '· members / links / archive candidates',
++        colSession: 'Session', colMembers: 'Members', colTasks: 'Tasks',
++        empty: 'No sessions', stale: 'Archive candidate', staleTitle: 'inactive for 30 days',
++      },
++      people: {
++        title: 'People', sub: '· presence / load', leader: 'TL', profiles: 'profiles',
++        open: 'open', tasks: 'Tasks', empty: 'No registry accounts (matrix registry not ready)',
++      },
++      agent: {
++        title: 'Agents', sub: '· current task / heartbeat / channel',
++        fleetGroup: 'Fleet live sessions', fleetEmpty: 'No active fleet sessions',
++        fleetStatus: { working: 'Working', idle: 'Idle' }, queue: 'queue',
++        registryGroup: 'Registry agent teams', registryEmpty: 'No registry entries', owner: 'Owner',
++      },
++      team: {
++        title: 'Teams & Channels', sub: '· roster / channels',
++        teams: 'Teams', teamsEmpty: 'No teams', boards: 'boards', channels: 'Channels', offline: 'offline',
++      },
++    },
++    feed: {
++      loopStage: '{loop} → {to}', loopEscalated: '{loop} escalated', loopStuck: '{loop} stuck',
++      loopTask: '{loop} discovered a task', loopVerify: '{loop} verification complete', loopPersisted: '{loop} artifact persisted',
++      loopCompleted: '{loop} completed', loopGeneric: '{loop} · {type}',
++      runEvent: 'run {run} · {node} {type}',
++      taskCreated: '#{id} created · {title}', taskStarted: '#{id} started · {title}', taskDone: '#{id} done · {title}',
++    },
++
+     nav: {
+       overview: 'Overview',
+-      collab: 'Collab',
++      collab: 'Collaboration',
+       eng: 'Engineering',
+       ops: 'Ops',
+       orchestrate: 'Orchestrate',

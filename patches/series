@@ -535,3 +535,9 @@
 # 315 = 补上游 v0.7.23 缺键 common.close（ImagePreviewOverlay/MessageItem 引用未定义；
 #       en+zh 双补，其余语言 mergeMessagesWithFallback(en) 回退）——i18n 门禁抓获的上游缺陷。
 # 315（common.close 键）与 308 首个 hunk 完全重复（并行会话重复提交），退役删除。
+
+# 316/317 = v12 统一视图全量文案（工作流导航/任务决策右栏/链路条/参与方/运行画布/
+#           态势条/管理台五区/动态流/IDE 维度条）+ ia2.nav.collab 值改「沟通协作」。
+#           zh/en 成对；键清单与组件 t() 调用一一对应（i18n-compile 与 coverage 门禁覆盖）。
+316-client-i18n-cockpit-v12-zh.patch
+317-client-i18n-cockpit-v12-en.patch
