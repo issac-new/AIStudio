@@ -7,26 +7,36 @@
      数据底座：matrix 房间 + hermes agent 会话（会话不分类同列）、loop 实例、
      kanban 任务（tenant 六段式/契约挂接）；派生全走 adapters/flow 纯函数。 -->
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useFlowStore } from '../store/flow'
 import { useWorkspaceStore } from '../store/workspace'
 import { useLoopStore } from '@/custom/loop/store/loop'
+import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
+import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { useChatStore } from '@/stores/hermes/chat'
 import {
-  buildSessionRows, buildLoopRows, linkedTaskIdsOfSession,
+  buildSessionRows, buildLoopRows, linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
   type SessionSourceRow, type StreamSelection,
 } from '../adapters/flow'
+import { buildWaiting, type WaitItem } from '../adapters/waiting'
+import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
+import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
+import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const flow = useFlowStore()
 const workspace = useWorkspaceStore()
 const loopStore = useLoopStore()
+const runsStore = useRunCenterStore()
+const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
 const teamRegistry = useTeamRegistryStore()
 const kanban = useKanbanStore()
@@ -113,6 +123,101 @@ const activeSel = computed<StreamSelection | null>(() => routeSel.value ?? defau
 
 watch(activeSel, sel => flow.select(sel), { immediate: true })
 
+// 循环选中时装载该循环的契约/事件（运行画布与右栏挂接任务/动态共用）
+watch(activeSel, sel => {
+  if (sel?.kind === 'loop' && loopStore.currentLoop?.id !== sel.id) void loopStore.fetchLoop(sel.id)
+}, { immediate: true })
+
+// ── 右栏数据（任务与决策恒驻）──
+
+/** 展示任务源：workspace 聚合行（跨板块全量，含 tenant/状态/指派） */
+const tasksForShow = computed(() => workspace.tasks)
+
+const waitItems = computed(() => buildWaiting(
+  tasksForShow.value.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
+  runsStore.runs ?? [],
+  cockpit.fleetSessions ?? [],
+  Date.now(),
+))
+
+const linkedTasks = computed<CockpitTask[]>(() => {
+  const sel = activeSel.value
+  if (!sel) return recentOpenTasks.value
+  if (sel.kind === 'loop') {
+    return linkedTasksOfLoop(loopStore.currentContracts ?? [], tasksForShow.value)
+  }
+  const ids = new Set(linkedTaskIdsOfSession(sel, tasksForLink.value))
+  return tasksForShow.value.filter(x => ids.has(x.id))
+})
+
+/** 无选择/无挂接时的兜底：最近开放任务前 8（非 done/archived，按创建倒序） */
+const recentOpenTasks = computed<CockpitTask[]>(() =>
+  tasksForShow.value
+    .filter(x => x.status !== 'done' && x.status !== 'archived')
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 8))
+
+const feedRows = computed(() => mergeFeed(
+  loopStore.currentEvents ?? [],
+  (runsStore.sortedRuns ?? []).slice(0, 5).map(r => ({ runId: r.runId, events: r.events ?? [] })),
+  tasksForShow.value.map(x => ({
+    id: x.id, title: x.title, createdAt: x.createdAt,
+    startedAt: null, completedAt: null,
+  })),
+  Date.now(),
+))
+
+const linkedContext = computed(() => {
+  const sel = activeSel.value
+  if (!sel) return ''
+  if (sel.kind === 'loop') return loopStore.currentLoop?.name ?? sel.id
+  return sessionRows.value.find(s => s.kind === sel.kind && s.id === sel.id)?.name ?? ''
+})
+
+// ── 右栏动作（动线②指派 / ④决策 / ⑤编码）──
+
+function onApproveTask(taskId: string): void {
+  void kanban.moveTask(taskId, 'done')
+}
+
+function onRejectTask(taskId: string): void {
+  void kanban.blockTask(taskId, t('ia2.tdp.rejectReason'))
+}
+
+function onApproveRun(item: WaitItem): void {
+  if (item.runId) void runsStore.resumeRun(item.runId, true)
+}
+
+function onApproveFleet(item: WaitItem): void {
+  if (item.sessionId && item.approvalId) {
+    void cockpit.respondFleetApproval(item.sessionId, item.approvalId, 'once')
+  }
+}
+
+const drawerTaskId = ref<string | null>(null)
+const drawerOpen = ref(false)
+
+function onReassign(taskId: string): void {
+  drawerTaskId.value = taskId
+  drawerOpen.value = true
+}
+
+function onOpenIde(taskId: string): void {
+  void router.push({ name: 'ide.shell', query: { task: taskId } })
+}
+
+function onHandleTask(taskId: string): void {
+  void router.push({ name: 'ia2.board', query: { task: taskId } })
+}
+
+function onNewTask(): void {
+  void router.push({ name: 'ia2.board' })
+}
+
+function onAllTimeline(): void {
+  cockpit.openRunTraceGlobal()
+}
+
 // ── 面板事件 ──
 
 function onSelect(sel: StreamSelection): void {
@@ -157,9 +262,24 @@ function onNewLoop(): void {
       <div class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
     <aside class="wb__right" data-testid="wb-right">
-      <!-- Task 5：任务与决策（等我队列+挂接任务+动态）恒驻 -->
-      <div class="wb__canvas-ph" data-testid="wb-tdp-ph" />
+      <TaskDecisionPanel
+        :wait-items="waitItems"
+        :linked-tasks="linkedTasks"
+        :feed-rows="feedRows"
+        :linked-context="linkedContext"
+        @approve-task="onApproveTask"
+        @reject-task="onRejectTask"
+        @approve-run="onApproveRun"
+        @approve-fleet="onApproveFleet"
+        @reassign="onReassign"
+        @open-ide="onOpenIde"
+        @handle-task="onHandleTask"
+        @new-task="onNewTask"
+        @all-timeline="onAllTimeline"
+      />
     </aside>
+    <!-- 改派/详情：复用看板任务抽屉（含指派编辑） -->
+    <KanbanTaskDrawer v-model:show="drawerOpen" :task-id="drawerTaskId" />
   </div>
 </template>
 
