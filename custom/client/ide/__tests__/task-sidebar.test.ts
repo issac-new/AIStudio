@@ -253,6 +253,16 @@ describe('IdeTaskSidebar', () => {
     expect(vm.categories.some((c: any) => c.id === 9)).toBe(true)
   })
 
+  it('feature 条含终端入口（点击开 sidePane 终端页签）', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    expect(w.find('[data-testid="ide-feat-terminal"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-feat-terminal"]').trigger('click')
+    const ide = useIdeStore()
+    expect(ide.sidePane.open).toBe(true)
+    expect(ide.sidePane.tab).toBe('terminal')
+  })
+
   it('自动化入口跳 JobsView', async () => {
     const w = mountSidebar()
     await flushPromises()
