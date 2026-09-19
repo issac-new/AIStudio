@@ -159,7 +159,7 @@ onMounted(loadPages)
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-wiki__title {
@@ -174,7 +174,7 @@ onMounted(loadPages)
 
 .ide-wiki__btn {
   flex-shrink: 0;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);
@@ -209,7 +209,7 @@ onMounted(loadPages)
   margin: 0;
   padding: 4px;
   overflow-y: auto;
-  border-right: 1px solid var(--border-color, #26292f);
+  border-right: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-wiki__item {
@@ -222,7 +222,7 @@ onMounted(loadPages)
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  &:hover { background: var(--bg-tertiary, #242830); }
+  &:hover { background: var(--bg-tertiary, #ebebeb); }
   &.is-active {
     background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
     color: var(--accent-primary, #4cc9f0);

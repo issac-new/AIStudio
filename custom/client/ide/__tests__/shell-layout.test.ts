@@ -31,6 +31,9 @@ vi.mock('../views/IdeTopBar.vue', () => ({ default: { name: 'IdeTopBar', templat
 vi.mock('../views/IdeStatusBar.vue', () => ({ default: { name: 'IdeStatusBar', template: '<div />' } }))
 vi.mock('../components/IdeCommandPalette.vue', () => ({ default: { name: 'IdeCommandPalette', template: '<div />' } }))
 vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
+// v12.1 全局顶区（页头+注意力+切换器）单测外置（ia-shell/global-top 守门），
+// 此间桩化隔离其探测/武装重图依赖
+vi.mock('@/custom/ia2/components/IaGlobalTop.vue', () => ({ default: { name: 'IaGlobalTop', template: '<div class="ia-gtop-stub" />' } }))
 
 import IdeShell from '../views/IdeShell.vue'
 import { useIdeStore } from '../store/ide'

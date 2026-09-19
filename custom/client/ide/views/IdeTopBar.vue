@@ -7,8 +7,6 @@ import { useRouter } from 'vue-router'
 import { NDropdown } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
 import { useIdeStore } from '../store/ide'
-import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
-import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 
 const ide = useIdeStore()
 const router = useRouter()
@@ -87,10 +85,6 @@ function onLinkSelect(key: string | number) {
       </button>
     </NDropdown>
 
-    <div class="ide-topbar__switches">
-      <ThemeSwitch />
-      <LanguageSwitch />
-    </div>
   </header>
 </template>
 
@@ -102,7 +96,7 @@ function onLinkSelect(key: string | number) {
   align-items: center;
   gap: 12px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
   background: var(--bg-secondary, #1b1e24);
 }
 
@@ -133,7 +127,7 @@ function onLinkSelect(key: string | number) {
   min-width: 0;
   max-width: 360px;
   padding: 3px 10px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   font-size: 12px;
   color: var(--text-muted, #9aa0aa);
@@ -168,7 +162,7 @@ function onLinkSelect(key: string | number) {
   font-size: 12px;
   color: var(--text-primary, #e6e6e6);
   background: transparent;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   cursor: pointer;
 
@@ -186,9 +180,4 @@ function onLinkSelect(key: string | number) {
   }
 }
 
-.ide-topbar__switches {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 </style>

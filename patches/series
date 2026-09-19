@@ -541,3 +541,7 @@
 #           zh/en 成对；键清单与组件 t() 调用一一对应（i18n-compile 与 coverage 门禁覆盖）。
 316-client-i18n-cockpit-v12-zh.patch
 317-client-i18n-cockpit-v12-en.patch
+
+# 318 = 补主题三级面变量 --bg-tertiary（浅 #ebebeb / 深 #2e2e2e）——ide 模块 24 处
+#      var(--bg-tertiary, #242830) 恒落深色 fallback，浅色主题下 ⌘ 徽章/选中页签/hover 成黑块。
+318-client-variables-bg-tertiary.patch

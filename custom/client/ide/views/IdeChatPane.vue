@@ -367,7 +367,7 @@ const modelDisabled = computed(() => true)
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-chat__title {
@@ -403,7 +403,7 @@ const modelDisabled = computed(() => true)
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 10px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   font-size: 11px;
   color: var(--text-muted, #9aa0aa);
   font-family: Menlo, Monaco, 'Courier New', monospace;
@@ -424,7 +424,7 @@ const modelDisabled = computed(() => true)
   font-size: 14px;
   color: var(--text-muted, #9aa0aa);
   background: transparent;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   cursor: pointer;
 
@@ -452,7 +452,7 @@ const modelDisabled = computed(() => true)
 .ide-chat__tabs {
   flex-shrink: 0;
   display: flex;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-chat__tab {
@@ -567,7 +567,7 @@ const modelDisabled = computed(() => true)
   z-index: 30;
   width: 300px;
   padding: 10px 12px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 8px;
   background: var(--bg-secondary, #1b1e24);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -602,9 +602,9 @@ const modelDisabled = computed(() => true)
 .ide-chat__debug-copy {
   margin-top: 8px;
   width: 100%;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
-  background: var(--bg-tertiary, #242830);
+  background: var(--bg-tertiary, #ebebeb);
   color: var(--text-primary, #e6e6e6);
   font-size: 12px;
   padding: 4px 0;

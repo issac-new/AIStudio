@@ -16,6 +16,7 @@ import { useIdeStore } from '../store/ide'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useChatStore } from '@/stores/hermes/chat'
 import IdeTopBar from './IdeTopBar.vue'
+import IaGlobalTop from '@/custom/ia2/components/IaGlobalTop.vue'
 import IdeTaskSidebar from './IdeTaskSidebar.vue'
 import IdeChatPane from './IdeChatPane.vue'
 import IdeSidePane from './IdeSidePane.vue'
@@ -77,6 +78,8 @@ onUnmounted(() => {
 
 <template>
   <div class="ide-shell">
+    <!-- v12.1 全局顶区常驻双视图（用户裁定）：页头+注意力条+右上角视图切换器 -->
+    <IaGlobalTop @notify="cockpitStore.openNotify()" />
     <IdeTopBar />
     <IdeDimsBar />
     <div class="ide-shell__main" :class="mainClass">
@@ -142,11 +145,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: var(--bg-tertiary, #242830);
-  border-right: 1px solid var(--border-color, #26292f);
+  background: var(--bg-tertiary, #ebebeb);
+  border-right: 1px solid var(--border-color, #e0e0e0);
   color: var(--accent-primary, #4cc9f0);
 
-  &:hover { background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 18%, var(--bg-tertiary, #242830)); }
+  &:hover { background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 18%, var(--bg-tertiary, #ebebeb)); }
 
   &--v { width: 18px; }
 }
@@ -160,9 +163,9 @@ onUnmounted(() => {
   gap: 2px;
   padding: 4px 2px;
   background: var(--bg-primary, #14161a);
-  border-right: 1px solid var(--border-color, #26292f);
+  border-right: 1px solid var(--border-color, #e0e0e0);
 
-  &--chat { border-right: none; border-left: 1px solid var(--border-color, #26292f); }
+  &--chat { border-right: none; border-left: 1px solid var(--border-color, #e0e0e0); }
 }
 
 .ide-shell__tool {
@@ -178,7 +181,7 @@ onUnmounted(() => {
   font-size: 11px;
   cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #242830); }
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
 }
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }

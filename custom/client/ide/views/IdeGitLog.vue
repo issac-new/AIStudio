@@ -77,7 +77,7 @@ onMounted(load)
 .ide-gitlog__btn {
   height: 22px;
   padding: 0 10px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);
@@ -100,7 +100,7 @@ onMounted(load)
   margin-bottom: 2px;
   font-size: 12px;
 
-  &:hover { background: var(--bg-tertiary, #242830); }
+  &:hover { background: var(--bg-tertiary, #ebebeb); }
 }
 
 .ide-gitlog__dot {

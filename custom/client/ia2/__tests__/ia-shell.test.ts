@@ -96,6 +96,7 @@ vi.mock('@/custom/ia2/components/AttentionStrip.vue', () => ({
 
 import IaShell from '../views/IaShell.vue'
 import { useFlowStore } from '../store/flow'
+import { __resetSharedArmForTest } from '../composables/useSharedArm'
 import { IA_AREAS } from '../routes'
 
 const AREA = { template: '<div class="area-stub" />' }
@@ -139,6 +140,8 @@ async function mountShell(path: string) {
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  // 武装引用计数是模块级状态：跨用例复位，保证「共享武装」断言每次可验
+  __resetSharedArmForTest()
 })
 
 describe('IaShell — 统一壳（页头 + 双视图场景条）', () => {
