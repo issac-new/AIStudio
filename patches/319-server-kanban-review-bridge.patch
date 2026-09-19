@@ -1,23 +1,25 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-index 7f019e74..f0f34f83 100644
+index 7f019e74..9eaaca98 100644
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -729,6 +729,14 @@ async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions
+@@ -729,6 +729,16 @@ async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions
        return unblockTasks([taskId], opts)
      case 'archived':
        return archiveTasks([taskId], opts)
-+    case 'review':
++    case 'review': {
 +      // HERMES_CUSTOM[v121]: 同 patchTask——bulk 链此前对 review 直接 throw，
 +      // 看板拖拽/右栏动作静默失效（results ok:false 无消费）。
-+      return execKanbanMutation(
++      await execKanbanMutation(
 +        [...boardArgs(opts.board), 'request-review', taskId, '--force'],
 +        'Hermes CLI: kanban request-review failed',
 +        'Failed to move task to review',
 +      )
++      return
++    }
      default:
        throw new Error(`Bulk status ${opts.status} is not supported by the CLI bridge`)
    }
-@@ -890,6 +898,15 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+@@ -890,6 +900,15 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
      } else if (s === 'todo' || s === 'triage' || s === 'scheduled') {
        // Use bulk update for direct status writes
        await bulkUpdateTasks({ ids: [taskId], status: s as KanbanTaskStatus, board })
