@@ -18,6 +18,7 @@ import GovPeopleSection from './GovPeopleSection.vue'
 import GovAgentSection from './GovAgentSection.vue'
 import GovTeamSection from './GovTeamSection.vue'
 import GovReviewSection from './GovReviewSection.vue'
+import GovStatsSection from './GovStatsSection.vue'
 import GovDetailPanel from './GovDetailPanel.vue'
 
 const { t } = useI18n()
@@ -38,6 +39,7 @@ const counts = computed<Record<GovSection, number>>(() => ({
   agent: (cockpit.fleetSessions?.length ?? 0) + agentTeamsFlat.value.length,
   team: cockpit.teams?.length ?? 0,
   review: reviewCenter.pendingReviews.length,
+  stats: 0,
 }))
 
 // ── 会话区行（房间∪agent 会话，同工作台左栏口径）──
@@ -98,7 +100,8 @@ function setSection(section: GovSection): void {
         <GovPeopleSection v-else-if="flow.govSection === 'people'" />
         <GovAgentSection v-else-if="flow.govSection === 'agent'" />
         <GovTeamSection v-else-if="flow.govSection === 'team'" />
-        <GovReviewSection v-else />
+        <GovReviewSection v-else-if="flow.govSection === 'review'" />
+        <GovStatsSection v-else />
       </div>
 
       <div class="gov__right">
