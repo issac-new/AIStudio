@@ -9,12 +9,14 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import CockpitTeamSwitcher from '@/custom/cockpit/components/CockpitTeamSwitcher.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
 import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
+import { usePlatformsStore } from '../store/platforms'
 import IaWindowControls from './IaWindowControls.vue'
 
 const { t } = useI18n()
@@ -30,26 +32,11 @@ function goIde() { router.push({ name: 'ide.shell' }) }
 /** 用户按钮 → 设置页 */
 function goSettings() { router.push({ name: 'hermes.settings' }) }
 
-// ── Gateway 探测组（自 CockpitTopBar 整段搬运，未改逻辑） ──
-interface PlatformInfo {
-  name: string
-  icon: string
-  state: string
-  updated: string
-  profile?: string
-}
+// ── Gateway 探测组（2026-09-19 v12 上移 platforms store 共享轮询；展示语义不变）──
 
-const gatewayState = ref<'checking' | 'running' | 'stopped'>('checking')
-const platforms = ref<PlatformInfo[]>([])
-const refreshing = ref(false)
-const rawData = ref<any>(null)
+const platformsStore = usePlatformsStore()
+const { gatewayState, platforms, refreshing, countdown, rawData } = storeToRefs(platformsStore)
 const showDetail = ref(false)
-const countdown = ref(30)
-let countdownTimer: ReturnType<typeof setInterval> | null = null
-
-const PLATFORM_ICONS: Record<string, string> = {
-  api_server: 'plug', matrix: 'users', email: 'mail',
-}
 
 function formatTimeAgo(iso: string): string {
   if (!iso) return ''
@@ -62,58 +49,9 @@ function formatTimeAgo(iso: string): string {
   return t('cockpit.daysAgo', { n: Math.floor(hrs / 24) })
 }
 
-function projectLoadedPlatforms(data: unknown): PlatformInfo[] {
-  if (!data || typeof data !== 'object') return []
-  const loaded = (data as { loaded_platforms?: unknown }).loaded_platforms
-  if (!loaded || typeof loaded !== 'object' || Array.isArray(loaded)) return []
-  const profiles = new Set(
-    Array.isArray((data as { served_profiles?: unknown }).served_profiles)
-      ? (data as { served_profiles: unknown[] }).served_profiles.filter((profile): profile is string => typeof profile === 'string')
-      : [],
-  )
-  const projected: PlatformInfo[] = []
-  for (const [key, value] of Object.entries(loaded)) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) continue
-    const info = value as { state?: unknown; updated_at?: unknown }
-    const separator = key.indexOf(':')
-    const profile = separator > 0 ? key.slice(0, separator) : undefined
-    const name = separator > 0 ? key.slice(separator + 1) : key
-    if (!name || (profile && profiles.size > 0 && !profiles.has(profile))) continue
-    const state = typeof info.state === 'string' ? info.state : 'unknown'
-    const updated = typeof info.updated_at === 'string' ? info.updated_at : ''
-    projected.push({ name, profile, icon: PLATFORM_ICONS[name] || 'radar', state, updated: formatTimeAgo(updated) })
-  }
-  return projected
-}
-
-// 上次投影结果指纹，仅变化时更新 UI 避免闪动
-let lastLoaded = ''
-
-async function fetchGatewayStatus(silent = true) {
-  if (!silent) refreshing.value = true
-  try {
-    const res = await fetch('/agent-health/detailed')
-    const data = await res.json()
-    rawData.value = data
-
-    const gw = data.gateway_state === 'running' ? 'running' as const : 'stopped' as const
-    if (gw !== gatewayState.value) gatewayState.value = gw
-
-    const newPlatforms = projectLoadedPlatforms(data)
-    const key = JSON.stringify(newPlatforms)
-    if (lastLoaded !== key) {
-      lastLoaded = key
-      platforms.value = newPlatforms
-    }
-
-    // 成功收到返回 → 重置倒计时
-    countdown.value = 30
-  } catch {
-    if (gatewayState.value !== 'stopped') gatewayState.value = 'stopped'
-    // 收不到返回 → 倒计时保持不动（卡在 0s）
-  } finally {
-    if (!silent) refreshing.value = false
-  }
+/** 显示相对时间（store 保留 ISO，i18n 相对时间在组件层渲染） */
+function platformUpdated(pl: { updated: string }): string {
+  return formatTimeAgo(pl.updated)
 }
 
 /** 点击手动探测并弹出详情 */
@@ -121,25 +59,12 @@ async function manualProbe() {
   // 先切换显示状态，再异步刷新数据
   showDetail.value = !showDetail.value
   if (showDetail.value) {
-    await fetchGatewayStatus(false)
+    await platformsStore.fetchGatewayStatus(false)
   }
 }
 
-onMounted(() => {
-  fetchGatewayStatus()
-  // 倒计时驱动定时探测：归零时发起请求，成功则复位 30s，失败则卡在 0s
-  countdownTimer = setInterval(() => {
-    if (countdown.value > 0) {
-      countdown.value--
-      if (countdown.value === 0) {
-        fetchGatewayStatus(true)
-      }
-    }
-  }, 1000)
-})
-onUnmounted(() => {
-  if (countdownTimer) clearInterval(countdownTimer)
-})
+onMounted(() => platformsStore.retain())
+onUnmounted(() => platformsStore.release())
 </script>
 
 <template>
@@ -218,7 +143,7 @@ onUnmounted(() => {
             <span class="cockpit-probe__val" :class="pl.state === 'connected' ? 'is-ok' : 'is-err'">
               {{ pl.state }}
             </span>
-            <span v-if="pl.updated" class="cockpit-probe__ago">{{ pl.updated }}</span>
+            <span v-if="pl.updated" class="cockpit-probe__ago">{{ platformUpdated(pl) }}</span>
           </div>
         </div>
         <div v-if="rawData.pid || rawData.version" class="cockpit-probe__footer">

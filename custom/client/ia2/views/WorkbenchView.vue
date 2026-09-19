@@ -29,6 +29,7 @@ import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import RunCanvas from '../components/flow/RunCanvas.vue'
+import SitlineBar from '../components/SitlineBar.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import type { ParticipantBadge } from '../components/flow/ParticipantsBar.vue'
 
@@ -306,6 +307,37 @@ function onGotoBoard(): void {
   void router.push({ name: 'ia2.board' })
 }
 
+// ── 态势条计数（v12 sitline：等我/任务/会话/循环/在线 + ⚙管理）──
+
+function humanizeWait(ms: number): string {
+  if (ms <= 0) return ''
+  const mins = Math.floor(ms / 60000)
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h`
+  return `${Math.floor(hrs / 24)}d`
+}
+
+const oldestWaitLabel = computed(() => {
+  const oldest = waitItems.value.reduce((acc, w) => Math.min(acc, w.ts), Number.POSITIVE_INFINITY)
+  return Number.isFinite(oldest) && oldest > 0 ? humanizeWait(Date.now() - oldest) : ''
+})
+
+const sitTasks = computed(() => {
+  const list = tasksForShow.value
+  return {
+    total: list.length,
+    running: list.filter(x => x.status === 'running').length,
+    review: list.filter(x => x.status === 'review').length,
+  }
+})
+
+const sitOnline = computed(() => ({
+  people: accounts.value.length,
+  agents: accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0),
+  machines: (cockpit.fleetSessions ?? []).length,
+}))
+
 // ── 面板事件 ──
 
 function onSelect(sel: StreamSelection): void {
@@ -333,7 +365,22 @@ function onNewLoop(): void {
 </script>
 
 <template>
-  <div class="wb" data-testid="wb-root">
+  <div class="wb-page" data-testid="wb-root">
+    <SitlineBar
+      :waiting-count="waitItems.length"
+      :oldest-label="oldestWaitLabel"
+      :task-total="sitTasks.total"
+      :task-running="sitTasks.running"
+      :task-review="sitTasks.review"
+      :session-count="sessionRows.length"
+      :loop-total="loopRows.length"
+      :loop-blocked="loopRows.filter(l => l.blocked).length"
+      :online-people="sitOnline.people"
+      :online-agents="sitOnline.agents"
+      :online-machines="sitOnline.machines"
+      @open-gov="flow.openGov()"
+    />
+    <div class="wb">
     <aside class="wb__left" data-testid="wb-left">
       <FlowNavPanel
         :sessions="sessionRows"
@@ -397,16 +444,20 @@ function onNewLoop(): void {
     </aside>
     <!-- 改派/详情：复用看板任务抽屉（含指派编辑） -->
     <KanbanTaskDrawer v-model:show="drawerOpen" :task-id="drawerTaskId" />
+    </div>
   </div>
 </template>
 
 <style scoped lang="scss">
+.wb-page {
+  display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0;
+}
 /* v12 三栏铁律：250 | 自适应(≥320) | 240，永不换列不堆叠（窄屏由外层整体缩放） */
 .wb {
+  flex: 1; min-height: 0;
   display: grid;
   grid-template-columns: 250px minmax(320px, 1fr) 240px;
   gap: 10px;
-  height: 100%;
   min-width: 0;
 }
 .wb__left, .wb__right { min-height: 0; }

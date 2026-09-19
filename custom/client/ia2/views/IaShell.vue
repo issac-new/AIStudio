@@ -11,24 +11,29 @@ import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useIaStore } from '@/custom/ia2/store/ia'
+import { useFlowStore } from '@/custom/ia2/store/flow'
 import { useWorkspaceStore } from '../store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { IA_AREAS } from '@/custom/ia2/routes'
+import { buildWaiting, type WaitItem } from '../adapters/waiting'
 import IaShellHeader from '../components/IaShellHeader.vue'
+import AttentionStrip from '../components/AttentionStrip.vue'
 import IaPopoutBar from '../components/IaPopoutBar.vue'
 import IaMinimizedDock from '../components/IaMinimizedDock.vue'
 import CockpitNotifyModal from '@/custom/cockpit/components/CockpitNotifyModal.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import { listenMergeBack } from '../wm/popout'
+import type { AttentionRow } from '../adapters/overview'
 import '@/custom/ia2/styles/ia2.scss'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const store = useIaStore()
+const flow = useFlowStore()
 const workspace = useWorkspaceStore()
 const runsStore = useRunCenterStore()
 const loopStore = useLoopStore()
@@ -62,7 +67,39 @@ function exitMaximize(): void {
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && route.query.max === '1') exitMaximize()
+  if (event.key === 'Escape') {
+    // 管理台覆盖层优先吃 Esc（v12：⚙ 是全局覆盖层，Esc 即收）
+    if (flow.govOpen) { flow.closeGov(); return }
+    if (route.query.max === '1') exitMaximize()
+  }
+}
+
+// ── 注意力条（v12 壳层常驻置顶）：与右栏「等我」同源（buildWaiting 单一聚合）──
+
+const waitItems = computed<WaitItem[]>(() => buildWaiting(
+  workspace.tasks.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
+  runsStore.runs ?? [],
+  cockpit.fleetSessions ?? [],
+  Date.now(),
+))
+
+const attentionRows = computed<AttentionRow[]>(() =>
+  waitItems.value.map(w => ({
+    id: w.id,
+    taskId: w.taskId ?? '',
+    title: w.title,
+    status: w.kind === 'task-review' ? 'review' : 'triage',
+    severity: w.kind === 'task-review' ? 'medium' : 'low',
+    priority: 1,
+    createdAt: w.ts,
+  })))
+
+function onAttentionSelect(row: AttentionRow): void {
+  // 动线④：注意力条 → 等我对象（任务→看板预选；运行→运行详情；fleet→工作台）
+  const hit = waitItems.value.find(w => w.id === row.id)
+  if (hit?.taskId) void router.push({ name: 'ia2.board', query: { task: hit.taskId } })
+  else if (hit?.runId) void router.push({ name: 'ia2.runDetail', params: { runId: hit.runId } })
+  else void router.push({ path: '/app' })
 }
 
 onMounted(() => {
@@ -113,6 +150,11 @@ const activeArea = computed(() => store.currentArea)
         :notify-count="cockpit.inboxCount"
         :user-name="cockpit.currentUserName"
         @notify="cockpit.openNotify()"
+      />
+      <AttentionStrip
+        v-if="!isMaximized && attentionRows.length > 0"
+        :items="attentionRows"
+        @select="onAttentionSelect"
       />
       <nav v-if="!isMaximized" class="ia-scenes" data-testid="ia-scenes">
         <router-link
