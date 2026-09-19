@@ -15,7 +15,7 @@ index c33039b1..9a7a221b 100644
      brand: 'IDE 工作台',
      agentLabel: 'Agent 底座',
      agentNotInstalled: '未安装',
-@@ -855,9 +861,117 @@ export default {
+@@ -855,9 +861,124 @@ export default {
  
    ia2: {
      brand: '驾驶舱',
@@ -118,6 +118,13 @@ index c33039b1..9a7a221b 100644
 +      gate: '门禁', state: { pending: '待审', pass: '通过', reject: '驳回' },
 +      reason: '原因', reasonPlaceholder: '驳回原因（必填）', reasonRequired: '驳回必须填写原因',
 +      actionPass: '通过', actionReject: '驳回', actionConfirmReject: '确认驳回',
++    },
++    taskCard: {
++      status: { pending: '待处理', assigned: '已指派', running: '进行中', review: '待评审', done: '已完成', blocked: '已阻塞' },
++      opComplete: '完成', opBlock: '阻塞', opReopen: '重开', opReassign: '转派',
++    },
++    gantt: {
++      title: '甘特视图', timed: '项定时', deps: '条依赖', noTimed: '暂无到期任务', listOnly: '未排期（按列表）',
 +    },
 +    feed: {
 +      loopStage: '{loop} 进入 {to}', loopEscalated: '{loop} 已升级', loopStuck: '{loop} 停滞',

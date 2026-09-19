@@ -15,7 +15,7 @@ index 01c5b077..13300ac7 100644
      brand: 'IDE Workspace',
      agentLabel: 'Agent',
      agentNotInstalled: 'not installed',
-@@ -857,9 +863,117 @@ export default {
+@@ -857,9 +863,124 @@ export default {
  
    ia2: {
      brand: 'Cockpit',
@@ -118,6 +118,13 @@ index 01c5b077..13300ac7 100644
 +      gate: 'Gate', state: { pending: 'Pending', pass: 'Passed', reject: 'Rejected' },
 +      reason: 'Reason', reasonPlaceholder: 'Reject reason (required)', reasonRequired: 'A reason is required to reject',
 +      actionPass: 'Pass', actionReject: 'Reject', actionConfirmReject: 'Confirm reject',
++    },
++    taskCard: {
++      status: { pending: 'Pending', assigned: 'Assigned', running: 'Running', review: 'In review', done: 'Done', blocked: 'Blocked' },
++      opComplete: 'Complete', opBlock: 'Block', opReopen: 'Reopen', opReassign: 'Reassign',
++    },
++    gantt: {
++      title: 'Gantt', timed: 'timed', deps: 'deps', noTimed: 'No dated tasks', listOnly: 'Undated (list)',
 +    },
 +    feed: {
 +      loopStage: '{loop} → {to}', loopEscalated: '{loop} escalated', loopStuck: '{loop} stuck',
