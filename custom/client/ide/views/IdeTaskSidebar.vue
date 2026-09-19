@@ -15,6 +15,7 @@ import { useChatStore, type Session } from '@/stores/hermes/chat'
 import { useIdePins } from '../utils/pins'
 import {
   unarchiveSession,
+  batchDeleteSessions,
   fetchSessionCategories,
   createSessionCategory,
   setSessionCategory,
@@ -187,6 +188,7 @@ const taskGroups = computed<TaskGroup[]>(() => {
 })
 
 // ---- 归档区 ----
+const showDeleteAllConfirm = ref(false)
 const archivedOpen = ref(false)
 const archivedLoading = ref(false)
 const archivedLoaded = ref(false)
@@ -206,6 +208,23 @@ async function loadArchived(): Promise<void> {
     archivedLoading.value = false
   }
 }
+const deleteAllBusy = ref(false)
+async function onDeleteAllArchived(): Promise<void> {
+  if (deleteAllBusy.value || !archived.value.length) return
+  deleteAllBusy.value = true
+  try {
+    const targets = archived.value.map(a => ({ id: a.id }))
+    const res = await batchDeleteSessions(targets)
+    message.success(t('ide.task.deleteAllArchivedResult', { deleted: res.deleted, skipped: archived.value.length - res.deleted - res.failed, failed: res.failed }))
+    archived.value = []
+    await chat.loadSessions(chat.sessionProfileFilter)
+  } catch {
+    message.error(t('ide.task.deleteAllArchivedError'))
+  } finally {
+    deleteAllBusy.value = false
+  }
+}
+
 async function onUnarchive(id: string): Promise<void> {
   const ok = await unarchiveSession(id)
   if (!ok) {
@@ -476,7 +495,24 @@ onMounted(async () => {
           <header class="ide-taskbar__section-head ide-taskbar__section-head--toggle" @click="toggleArchived">
             <span class="ide-taskbar__section-caret" :class="{ 'is-collapsed': !archivedOpen }">▾</span>
             <span class="ide-taskbar__section-title">{{ t('ide.task.archived') }}</span>
+            <span v-if="archived.length" class="ide-taskbar__archived-count">{{ t('ide.task.archivedTaskCount', { count: archived.length }) }}</span>
+            <button
+              v-if="archived.length"
+              type="button"
+              class="ide-taskbar__group-btn ide-taskbar__group-btn--danger"
+              :disabled="deleteAllBusy"
+              data-testid="ide-task-delete-all-archived"
+              :title="t('ide.task.deleteAllArchivedMenu')"
+              @click.stop="showDeleteAllConfirm = true"
+            >🗑</button>
           </header>
+          <div v-if="showDeleteAllConfirm" class="ide-taskbar__confirm" data-testid="ide-task-delete-all-confirm">
+            <p>{{ t('ide.task.deleteAllArchivedTitle', { count: archived.length }) }}</p>
+            <div class="ide-taskbar__confirm-actions">
+              <button type="button" class="ide-taskbar__group-btn ide-taskbar__group-btn--danger" :disabled="deleteAllBusy" data-testid="ide-task-delete-all-ok" @click="onDeleteAllArchived(); showDeleteAllConfirm = false">{{ t('ide.task.deleteAllArchivedMenu') }}</button>
+              <button type="button" class="ide-taskbar__group-btn" @click="showDeleteAllConfirm = false">{{ t('common.cancel') }}</button>
+            </div>
+          </div>
           <div v-if="archivedOpen" class="ide-taskbar__archived-body">
             <p v-if="archivedLoading" class="ide-taskbar__hint">{{ t('ide.task.archivedLoading') }}</p>
             <p v-else-if="archivedLoaded && !archived.length" class="ide-taskbar__hint">{{ t('ide.task.archivedEmpty') }}</p>
@@ -840,6 +876,23 @@ onMounted(async () => {
   &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-primary, #14161a); }
   svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
 }
+
+.ide-taskbar__archived-count {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.ide-taskbar__confirm {
+  margin: 4px 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(224, 108, 117, 0.5);
+  border-radius: 7px;
+  background: var(--bg-secondary, #1b1e24);
+
+  p { margin: 0 0 6px; font-size: 12px; color: var(--text-primary, #e6e6e6); }
+}
+
+.ide-taskbar__confirm-actions { display: flex; gap: 6px; }
 
 .ide-taskbar__archived-body { padding-bottom: 4px; }
 

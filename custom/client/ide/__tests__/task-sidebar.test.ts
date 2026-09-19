@@ -58,12 +58,13 @@ vi.mock('../utils/pins', () => ({
   }),
 }))
 
-const { unarchiveSession, fetchSessionCategories, createSessionCategory, setSessionCategory, exportSession } = vi.hoisted(() => ({
+const { unarchiveSession, fetchSessionCategories, createSessionCategory, setSessionCategory, exportSession, batchDeleteSessions } = vi.hoisted(() => ({
   unarchiveSession: vi.fn(async () => true),
   fetchSessionCategories: vi.fn(async () => [{ id: 7, name: '发布批', profile: null, sort_order: 0 }]),
   createSessionCategory: vi.fn(async (name: string) => ({ id: 9, name, profile: null, sort_order: 0 })),
   setSessionCategory: vi.fn(async () => {}),
   exportSession: vi.fn(async () => {}),
+  batchDeleteSessions: vi.fn(async () => ({ deleted: 2, failed: 0, errors: [] })),
 }))
 vi.mock('@/api/studio/sessions', () => ({
   unarchiveSession,
@@ -71,6 +72,7 @@ vi.mock('@/api/studio/sessions', () => ({
   createSessionCategory,
   setSessionCategory,
   exportSession,
+  batchDeleteSessions,
 }))
 
 const archived = [
@@ -261,6 +263,20 @@ describe('IdeTaskSidebar', () => {
     const ide = useIdeStore()
     expect(ide.sidePane.open).toBe(true)
     expect(ide.sidePane.tab).toBe('terminal')
+  })
+
+  it('归档区批量删除：确认后调 batchDeleteSessions 并清空列表（zcode taskList.deleteAllArchived 对齐）', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    const vm = w.vm as any
+    await vm.toggleArchived()
+    await flushPromises()
+    expect(w.find('[data-testid="ide-task-delete-all-archived"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-task-delete-all-archived"]').trigger('click')
+    expect(w.find('[data-testid="ide-task-delete-all-confirm"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-task-delete-all-ok"]').trigger('click')
+    expect(batchDeleteSessions).toHaveBeenCalledTimes(1)
+    expect(vm.archived.length).toBe(0)
   })
 
   it('自动化入口跳 JobsView', async () => {
