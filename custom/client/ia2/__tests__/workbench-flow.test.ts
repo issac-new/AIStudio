@@ -18,6 +18,12 @@ const roomStubs = vi.hoisted(() => {
   const state = {
     sortedRooms: rooms,
     getRoomUnreadCount: (r: { roomId: string }) => (r.roomId === '!r1:host' ? 2 : 0),
+    getRoomMemberList: (roomId: string) => ({
+      admins: [], mods: [], invited: [],
+      defaults: roomId === '!r1:host'
+        ? [{ userId: '@you:host', name: '你' }, { userId: '@tl:host', name: 'TL' }]
+        : [{ userId: '@x:host', name: 'x' }],
+    }),
     createRoom: vi.fn(async () => { state.sortedRooms = [...rooms, { roomId: '!new:host', name: '新房间' }] }),
   }
   return { state, useMatrixRoomStore: () => state }
@@ -82,6 +88,12 @@ vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs
 
 vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: { name: 'KanbanTaskDrawer', props: ['show', 'taskId'], template: '<div class="drawer-stub" v-if="show" :data-taskid="taskId" />' },
+}))
+vi.mock('@/custom/matrix-chat/components/MatrixRoomCanvas.vue', () => ({
+  default: { name: 'MatrixRoomCanvas', template: '<div class="room-canvas-stub" data-testid="room-canvas-stub" />' },
+}))
+vi.mock('@/views/hermes/ChatView.vue', () => ({
+  default: { name: 'ChatView', template: '<div class="chat-view-stub" />' },
 }))
 
 const loopStubs = vi.hoisted(() => {

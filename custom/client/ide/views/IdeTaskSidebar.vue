@@ -573,6 +573,7 @@ onMounted(async () => {
 .ide-taskbar {
   width: 270px;
   flex-shrink: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary, #1b1e24);

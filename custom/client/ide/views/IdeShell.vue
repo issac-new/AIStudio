@@ -60,9 +60,15 @@ onUnmounted(() => {
     <div class="ide-shell__main" :class="mainClass">
       <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }">
         <div v-if="ide.layout.sidebar.folded" class="ide-shell__fold-handle" data-testid="ide-fold-sidebar" :title="t('ide.pane.expand')" @click="ide.toggleFold('sidebar')">
-          <span class="ide-shell__fold-label">‹</span>
+          <span class="ide-shell__fold-label">›</span>
         </div>
-        <IdeTaskSidebar v-else />
+        <template v-else>
+        <div class="ide-shell__pane-tools">
+          <button type="button" class="ide-shell__tool" data-testid="ide-fold-sidebar-btn" :title="t('ide.pane.fold')" @click="ide.toggleFold('sidebar')">‹</button>
+          <button type="button" class="ide-shell__tool" data-testid="ide-max-sidebar-btn" :title="t('ide.pane.maximize')" @click="ide.toggleMax('sidebar')">{{ ide.layout.sidebar.maximized ? '⤡' : '⤢' }}</button>
+        </div>
+        <IdeTaskSidebar class="ide-shell__sidebar-body" />
+        </template>
       </aside>
       <div v-show="chatShown" class="ide-shell__chat" :class="{ 'is-folded': ide.layout.chat.folded }">
         <div v-if="ide.layout.chat.folded" class="ide-shell__fold-handle ide-shell__fold-handle--v" data-testid="ide-fold-chat" :title="t('ide.pane.expand')" @click="ide.toggleFold('chat')">
@@ -156,6 +162,9 @@ onUnmounted(() => {
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
 .ide-shell__main.has-max-chat .ide-shell__chat { flex: 1; }
 .ide-shell__main.has-max-sidepane .ide-sidepane { flex: 1; width: auto !important; }
+
+.ide-shell__sidebar.is-folded,
+.ide-shell__chat.is-folded { flex: 0 0 18px; min-width: 0; overflow: hidden; }
 
 .ide-shell__chat {
   position: relative;
