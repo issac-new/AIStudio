@@ -49,11 +49,12 @@ vi.mock('@/stores/hermes/chat', () => ({
 }))
 
 const { togglePinned } = vi.hoisted(() => ({ togglePinned: vi.fn() }))
-vi.mock('@/stores/hermes/session-browser-prefs', () => ({
-  useSessionBrowserPrefsStore: () => ({
+vi.mock('../utils/pins', () => ({
+  useIdePins: () => ({
     pinnedIds: ['s-pin-a', 's-pin-b'],
     isPinned: (id: string) => id === 's-pin-a' || id === 's-pin-b',
     togglePinned,
+    onChange: () => () => {},
   }),
 }))
 
