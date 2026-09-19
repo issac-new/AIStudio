@@ -1,18 +1,18 @@
 # Swarm Studio 智能研发驾驶舱——架构需求设计
 
 日期：2026-09-19
-状态：讨论稿 v1——§3 三项裁决代拟待批，逐项可推翻
+状态：已批 v1.1——§3 三项裁决与 §12 次级四项于 2026-09-19 批复（前三项按推荐；会签/甘特/催办经用户调整纳入 v1）
 受众：overlay 实施者与评审者、hermes 集群维护者
 上游依据：需求整理稿（2026-09-19 会话版，含其 §19 八问裁决）、`2026-09-18-distributed-delivery-network-design.md`（已批 D1-D4）、《软件交付标准》v1.3.0（`~/.hermes/delivery/`）
 
 ## 0. 三句话主旨
 
-需求稿按绿地 PRD 写，实际系统已建成大半：账号与多用户沟通随 2.30 发布，交付案例事件协议已合 main，本设计把剩余五处增量（Agent 身份、消息与任务联动、评审中心、IDE 任务接线、测试执行）归位到 09-18 spec 已批的三层架构上，不新建中央服务、不动 upstream。全部增量被三个未决裁决卡住：任务状态以谁为准、Agent 集群归属怎么定、Agent 在 Matrix 上是什么身份。读毕请逐项批复 §3，批复即解锁 MVP 拆解轮。
+需求稿按绿地 PRD 写，实际系统已建成大半：账号与多用户沟通随 2.30 发布，交付案例事件协议已合 main，本设计把剩余五处增量（Agent 身份、消息与任务联动、评审中心、IDE 任务接线、测试执行）归位到 09-18 spec 已批的三层架构上，不新建中央服务、不动 upstream。全部增量曾卡在三个裁决上：任务状态以谁为准、Agent 集群归属怎么定、Agent 在 Matrix 上是什么身份——三项已批复（§3），本文为批复落款版，下一步是 MVP 拆解轮。读毕应能回答：跨机状态放在哪、谁拆解谁调度、人和 Agent 的身份怎么分。
 
 ## 1. 结论（第一屏）
 
 1. 需求稿 §16 的七个 MVP 切片中：MVP1（账号与沟通）建成，经三用户模拟验收 35/35 × 2 轮（`2026-09-17-multiuser-matrix-collab-sim-report.md`）；MVP3 的协议底座合 main（`delivery-protocol.ts` 三事件 + 幂等投影，31/31 测试）；MVP2 协议层有、UI 层无；MVP4/5 对应交付网络 M2-M4 未开工；MVP6 有界面、缺任务接线；MVP7 未动。
-2. 三项架构裁决（§3，均为代拟）：A 任务状态以案例房事件流为准，Swarm Studio 是投影；B 集群按用户（机器）组织，kanban 声明能力标签；C 附属 Agent 是 `@<user>-agent` 账号内的虚拟身份，不开独立账号。
+2. 三项架构裁决（§3，已批）：A 任务状态以案例房事件流为准，Swarm Studio 是投影；B 集群按用户（机器）组织，kanban 声明能力标签；C 附属 Agent 是 `@<user>-agent` 账号内的虚拟身份，不开独立账号。
 3. 三个前置风险：bot 账号注册策略未实测（原 M4 验证项，须提前到首个实施里程碑）；v12.1 壳层重排在 `fix/ide-light-theme-blocks` 在途未合，UI 挂点以其合 main 为准；协议升级 v2 走 schemaVersion + 旧端降级只读，先例已有。
 
 ## 2. 现状对账
@@ -30,12 +30,12 @@
 | Agent 调度 | hermes 集群本机机制完整（dispatch、kanban、留痕） | agent.profile 能力注册 + 标签路由 |
 | 测试与统计（MVP7） | ⚙管理台五区覆盖层（9570654） | 测试执行、缺陷流、项目维度统计 |
 
-## 3. 架构裁决（代拟，逐项可推翻）
+## 3. 架构裁决（2026-09-19 批复，均按推荐项）
 
 | # | 分叉 | 裁定 | 备选与否决理由 |
 |---|---|---|---|
 | A | 任务与案例状态的事实源 | 案例房事件流为准，Swarm Studio 各端做投影与缓存；一切写路径 = 向房间发事件 | 「某个 Swarm Studio 实例为权威」被否：每用户本机各部署一份，谁是权威无解，且该机离线即全网锁死；「新建中央任务服务」被否：09-18 spec D2 已否决（新增部署单点 + 最大开发量），homeserver 是现成同步通道 |
-| B | Agent 集群归属 | 集群按用户（机器）组织：一机一集群、一个 Orchestrator；kanban 与项目声明所需能力标签，Orchestrator 路由按标签匹配。指派默认落本账号，跨机调度为显式增强（后续期默认关闭） | 「每个 kanban 一独立集群」（需求稿 §1 原文）被否：一人参与五板需五套 Agent，与 Fleet v2 单份运行时收敛（9.1G → 1.9G）方向相反；板要的是能力不是集群。路由粒度沿用协议已有的 worker 三级 account/agentTeam/profile（delivery-protocol.ts:122） |
+| B | Agent 集群归属 | 集群按用户（机器）组织：一机一集群、一个 Orchestrator；kanban 与项目声明所需能力标签，Orchestrator 路由按标签匹配。指派默认落本账号，跨机调度为显式增强（v1 默认关闭） | 「每个 kanban 一独立集群」（需求稿 §1 原文）被否：一人参与五板需五套 Agent，与 Fleet v2 单份运行时收敛（9.1G → 1.9G）方向相反；板要的是能力不是集群。路由粒度沿用协议已有的 worker 三级 account/agentTeam/profile（delivery-protocol.ts:122） |
 | C | Agent 的 Matrix 身份 | 沿用单 bot 账号约定：每用户一个 `@<user>-agent` 集群账号由 Orchestrator 持号；附属 Agent（需求分析/架构/编码/测试等）是账号内虚拟身份，消息与事件 content 携带 agentId + agentType，UI 渲染两层徽章 | 「每 Agent 一独立账号」被否：N 用户 × M Agent 的账号与 token 管理面爆炸；且 isHumanAccount / samePrincipal 已按 `-agent` 后缀实现并有测试（delivery-protocol.ts:211-228），这是 HumanGate 人机判定的地基，推倒重来等于拆已验收协议 |
 
 三项裁决对需求稿 §19 的衔接说明：
@@ -82,7 +82,7 @@ flowchart TB
 ### 5.1 项目维度与任务树
 
 - `delivery.case` 事件 content 增加 `projectId`；新增 account data `com.swarmstudio.project`（结构同 `com.swarmstudio.delivery.index`，delivery-protocol.ts:14、56-61）：项目清单 → 案例房列表两级索引。现索引上限 MAX_ROOMS = 50（delivery-protocol.ts:82），多项目后需分级或分页，风险登记 §10。
-- team.assign（matrix-teams protocol.ts，2.27 已有）content 扩展三字段：`parentId`（任务树根指到案例或父任务）、`capability`（标签数组，裁决 B 路由依据）、`phase`（P1..P6 归属，供统计与看板聚合）。
+- team.assign（matrix-teams protocol.ts，2.27 已有）content 扩展五字段：`parentId`（任务树根指到案例或父任务）、`capability`（标签数组，裁决 B 路由依据）、`phase`（P1..P6 归属，供统计与看板聚合）、`dueDate`（截止时间，催办与逾期统计的判据）、`dependsOn[]`（前置任务引用，甘特与关键路径的数据源）。
 
 ### 5.2 Agent 身份与能力注册
 
@@ -102,7 +102,7 @@ flowchart TB
 
 - gate 事件的 gate 枚举从 G1-G6 扩为 G1-G6 + R1 需求评审、R2 设计评审、R3 代码评审、R4 验收回归。R 门复用 GateContent schema（verdict / evidence / reason / decidedBy）。
 - 人机纪律：R 门任何 verdict 的 sender 必须是人类账号，与 G1/G5 同一校验函数（delivery-protocol.ts:230-239 的 validateGateSender 扩枚举）；Agent 只能以 stage 事件提交评审证据，不能替人裁决。这落实需求稿问题 6 的「关键事项必须由人确认，必要时 team leader」。
-- 会签（多人评审）登记 backlog，v1 单判定人；leader 复核沿用注册房紧急通道（09-18 spec §6 owner 覆盖写语义）。
+- 会签（多人评审）纳入 v1（2026-09-19 用户调整）：gate 事件 content 增 `signoffs[]`（每项为 `{decidedBy, verdict, at}`），投影规则「全员 pass 才 pass，任一 reject 即 reject」，单判定人退化为 signoffs 长度 1；R 门每条 signoff 的 sender 仍必须是人类账号。leader 复核沿用注册房紧急通道（09-18 spec §6 owner 覆盖写语义）。
 - 评审中心 UI：R/G 门事件在沟通视图渲染为评审卡片，在 ⚙管理台聚合成待审清单；需求稿 §6.1.5 的「评审请求消息」即 gate 事件的 UI 形态，不另造消息类型。
 
 ## 6. Orchestrator 调度语义（需求稿 §7 逐条归位）
@@ -128,7 +128,7 @@ flowchart TB
 | 登录页 | 既有 LoginView（patches 005/009/012） | 无 |
 | 联系人页 | 沟通协作视图侧栏，账号树扩到三级（裁决 C） | 徽章渲染 |
 | 消息中心 | 沟通协作视图（v12.1 顶区常驻双视图） | agent.message、任务卡片 |
-| 任务看板 | 研发执行视图：任务决策栏 + 对象画布 | 聚合视图（项目/阶段/阻塞） |
+| 任务看板 | 研发执行视图：任务决策栏 + 对象画布 | 聚合视图（项目/阶段/阻塞）、甘特视图（dueDate/dependsOn 投影） |
 | Agent 调度台 | ⚙管理台新增分区 | 本机 agent 列表、执行日志、人工接管 |
 | 需求工作台 | 对象画布文档对象 + R1 评审卡片 | 新增 |
 | 架构设计工作台 | 对象画布文档对象 + R2 评审卡片 | 新增 |
@@ -154,7 +154,6 @@ flowchart TB
 - 不做每 Agent 独立 Matrix 账号（裁决 C 否决）。
 - 不做中央任务服务（裁决 A 否决，即 09-18 D2）。
 - 不做跨机 Agent 自由会话（09-18 spec §9 交互面收敛纪律：O(n²) 路径不可回溯）。
-- 不做会签、甘特视图、自动化催办：登记 backlog，v1 不入。
 - 本轮不写实施代码，不改 upstream。
 
 ## 10. 风险与对策
@@ -168,25 +167,28 @@ flowchart TB
 | getStateEvents 无参恒空等 SDK 坑 | matrix-teams P1-P3 已踩平并记录（2026-09-17 设计），实现轮照坑单施工 |
 | owner 离线致流程暂停 | 沿用 09-18 D3 已知代价 + leader 紧急通道，不新增机制 |
 | 多项目并发后统计口径漂移 | 统计全部从事件投影计算，不落第二份聚合状态；口径定义随 M-F 出对照表 |
+| 会签/甘特/催办入 v1 扩大协议与工期面 | 会签走 signoffs 字段投影，不新增事件类型；甘特与催办只依赖 §5.1 时间字段，先字段后视图；任一项受阻单独降级登记，不阻塞主链 |
 
 ## 11. 实施顺序建议（供 MVP 拆解轮取材）
 
 | 轮 | 内容 | 依赖 |
 |---|---|---|
-| M-A 协议 v2 | projectId / parentId / capability 字段、agent.profile、agent.message、R 门枚举 + 守门测试；纯 A 类 | 无（首个里程碑，含注册策略前置验证） |
+| M-A 协议 v2 | projectId / parentId / capability / dueDate / dependsOn 字段、agent.profile、agent.message、R 门枚举 + signoffs + 守门测试；纯 A 类 | 无（首个里程碑，含注册策略前置验证） |
 | M-B 路由与拆分 | Orchestrator 标签匹配、子任务 fan-out、执行轴回执 | M-A |
-| M-C 评审中心 | R/G 门卡片渲染 + 管理台待审清单 | M-A；UI 轮排 v12.1 合 main 后 |
-| M-D 消息任务联动 | 消息转任务、任务卡片操作（指派/完成/阻塞/重开） | M-A |
+| M-C 评审中心 | R/G 门卡片渲染 + 管理台待审清单 + 会签 signoffs 投影 | M-A；UI 轮排 v12.1 合 main 后 |
+| M-D 消息任务联动 | 消息转任务、任务卡片操作（指派/完成/阻塞/重开）、甘特视图（dueDate/dependsOn 投影） | M-A |
 | M-E IDE 接线 | 任务上下文进 /ide、diff 确认回写任务、ACP 会话挂任务 | M-D |
-| M-F 测试与统计 | 测试 Agent 执行、缺陷任务流、项目/人员/Agent 维度统计 | M-B |
+| M-F 测试、统计与催办 | 测试 Agent 执行、缺陷任务流、项目/人员/Agent 维度统计、逾期催办（dueDate 判据 + 通知） | M-B |
 
 每轮独立 feat 分支 → 测试全绿 → 合 overlay main（workspace 规则），与 09-18 spec §10 里程碑制式一致。
 
-## 12. 待批复清单
+## 12. 批复记录（2026-09-19）
 
-1. 裁决 A / B / C（§3），任一项推翻即回本文修订。
-2. R 系列评审门的范围与命名（§5.4）：R1-R4 是否覆盖需求稿问题 6 的全部关键评审点。
-3. 跨机调度默认关闭（§3-B）：首发版只做本账号路由，是否接受。
-4. backlog 确认：会签、甘特视图、自动化催办不入 v1。
+四项经用户逐项确认：
 
-批复之日即 MVP 拆解轮开工之时。第一个验收画面：需求分析 Agent 拆出的一张子任务卡片，以带 parentId 与 capability 的 team.assign 事件落到另一台机器的 kanban 上，产品人员在沟通视图里看到它戴上 Agent 徽章进入「待评审」——这条事件流走通，本设计的地基就算验完了。
+1. 裁决 A / B / C（§3）按推荐项通过。
+2. 评审门扩至 R1-R4，任何 verdict 的 sender 必须人类账号。
+3. 跨机调度 v1 默认关闭，做成显式开关。
+4. 会签、甘特视图、自动化催办纳入 v1——用户调整，推翻本文暂缓代拟；修订落点：§5.1（dueDate/dependsOn）、§5.4（signoffs）、§7（甘特视图）、§10（风险）、§11（M-C/M-D/M-F 扩容）。
+
+后续推翻任一项时回本文修订并升版本号。第一个验收画面：需求分析 Agent 拆出的一张子任务卡片，以带 parentId 与 capability 的 team.assign 事件落到 kanban 上（跨机开闸后即另一台机器），产品人员在沟通视图里看到它戴上 Agent 徽章进入「待评审」——这条事件流走通，本设计的地基就算验完了。
