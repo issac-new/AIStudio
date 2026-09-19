@@ -23,6 +23,7 @@ import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeDimsBar from '../components/IdeDimsBar.vue'
+import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 
 const { t } = useI18n()
@@ -82,6 +83,7 @@ onUnmounted(() => {
     <IaGlobalTop @notify="cockpitStore.openNotify()" />
     <IdeTopBar />
     <IdeDimsBar />
+    <IdeTaskContextBar />
     <div class="ide-shell__main" :class="mainClass">
       <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }">
         <div v-if="ide.layout.sidebar.folded" class="ide-shell__fold-handle" data-testid="ide-fold-sidebar" :title="t('ide.pane.expand')" @click="ide.toggleFold('sidebar')">
