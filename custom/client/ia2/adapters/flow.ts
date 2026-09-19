@@ -22,8 +22,8 @@ export interface FlowSessionRow {
   id: string
   name: string
   unread: number
-  /** 挂接任务数（📋N 徽章） */
-  taskCount: number
+  /** 挂接任务 id 列表（📋N 徽章 = taskIds.length；过滤按任务号匹配） */
+  taskIds: string[]
   /** 团队标签（duty/编制派生，无则空串） */
   teamTag: string
   /** 值守人（matrix-teams duty，无则 null） */
@@ -56,7 +56,7 @@ export function buildSessionRows(
       id: s.id,
       name: s.name,
       unread: hooks.unreadOf(s.id, s.kind),
-      taskCount: hooks.taskIdsOf(s.id, s.kind).length,
+      taskIds: hooks.taskIdsOf(s.id, s.kind),
       teamTag: hooks.teamTagOf(s.id),
       dutyName: hooks.dutyNameOf(s.id),
       lastActivityAt: s.lastActivityAt,
@@ -138,7 +138,8 @@ export interface FlowFilter {
 export interface FilterableRow {
   kind: StreamKind
   name: string
-  taskIds: readonly string[]
+  /** 循环行无挂接任务号时可缺省（仅按名称过滤） */
+  taskIds?: readonly string[]
 }
 
 export function filterStreams<T extends FilterableRow>(rows: readonly T[], f: FlowFilter): T[] {
@@ -148,7 +149,7 @@ export function filterStreams<T extends FilterableRow>(rows: readonly T[], f: Fl
     if (f.kind === 'loop' && r.kind !== 'loop') return false
     if (!q) return true
     if (r.name.toLowerCase().includes(q)) return true
-    return r.taskIds.some(id => id.toLowerCase() === q || id.toLowerCase().startsWith(q))
+    return (r.taskIds ?? []).some(id => id.toLowerCase() === q || id.toLowerCase().startsWith(q))
   })
 }
 
@@ -168,6 +169,11 @@ function roomOfTenant(tenant: string): string | null {
   return parts[0] === 'matrix' && parts[1] ? parts[1] : null
 }
 
+/** 房间匹配容错：tenant 房间段可能是本地部分（matrix 房间号含 ':server'，六段切分剥掉） */
+function roomMatches(tenantRoom: string, roomId: string): boolean {
+  return tenantRoom === roomId || roomId.startsWith(`${tenantRoom}:`)
+}
+
 /** 会话选择命中任务的条件：tenant 六段式 sessionId / 显式 session_id */
 function sessionOfTask(t: TaskLinkSource): string | null {
   if (t.session_id) return t.session_id
@@ -183,9 +189,11 @@ export function linkedTaskIdsOfSession(
   tasks: readonly TaskLinkSource[],
 ): string[] {
   return tasks
-    .filter(t => (sel.kind === 'room'
-      ? (t.tenant ? roomOfTenant(t.tenant) : null) === sel.id
-      : sessionOfTask(t) === sel.id))
+    .filter(t => {
+      if (sel.kind !== 'room') return sessionOfTask(t) === sel.id
+      const tenantRoom = t.tenant ? roomOfTenant(t.tenant) : null
+      return tenantRoom !== null && roomMatches(tenantRoom, sel.id)
+    })
     .map(t => t.id)
 }
 
