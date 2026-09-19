@@ -42,13 +42,47 @@ const kanbanStubs = vi.hoisted(() => {
       { id: 't-402', tenant: '群:话题:@u:!r1:sess-1:matrix', session_id: null },
       { id: 't-407', tenant: null, session_id: 'sess-2' },
     ],
+    moveTask: vi.fn(),
+    blockTask: vi.fn(),
   }
   return { state, useKanbanStore: () => state }
 })
 vi.mock('@/stores/hermes/kanban', () => ({ useKanbanStore: kanbanStubs.useKanbanStore }))
 
-const workspaceStubs = vi.hoisted(() => ({ state: { tasks: [] }, useWorkspaceStore: () => workspaceStubs.state }))
+const workspaceStubs = vi.hoisted(() => ({
+  state: {
+    tasks: [
+      { id: 't-402', title: 'v2.28 发布', priority: 'P1', status: 'review', assignee: 'worker-coder', workspace: '', tenant: '群:话题:@u:!r1:sess-1:matrix', boardSlug: 'swarm', createdAt: 1000 },
+      { id: 't-415', title: 'release notes', priority: 'P2', status: 'running', assignee: '你', workspace: '', tenant: null, boardSlug: 'swarm', createdAt: 2000 },
+    ],
+  },
+  useWorkspaceStore: () => workspaceStubs.state,
+}))
 vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
+
+const runsStubs = vi.hoisted(() => {
+  const state = {
+    runs: [{ runId: 'run-9', graphId: 'loop-lp-1', status: 'awaiting-input', updatedAt: null, stage: null, iteration: 0, lastActivityAt: null, cost: 0, events: [], pendingInterruptId: 'it-1' }],
+    sortedRuns: [],
+    resumeRun: vi.fn(),
+  }
+  return { state, useRunCenterStore: () => state }
+})
+vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: runsStubs.useRunCenterStore }))
+
+const cockpitStubs = vi.hoisted(() => {
+  const state = {
+    fleetSessions: [{ id: 'fs-1', profile: 'p', title: 'fleet 复验确认', status: 'idle', isAborting: false, queueLength: 0, runStartedAt: null, lastActiveAt: 42, source: '', agent: '', lastPreview: '', approvals: [{ approval_id: 'ap-1', preview: '', choices: [] }], clarifies: [], subagents: [] }],
+    respondFleetApproval: vi.fn(),
+    openRunTraceGlobal: vi.fn(),
+  }
+  return { state, useCockpitStore: () => state }
+})
+vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
+
+vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
+  default: { name: 'KanbanTaskDrawer', props: ['show', 'taskId'], template: '<div class="drawer-stub" v-if="show" :data-taskid="taskId" />' },
+}))
 
 const loopStubs = vi.hoisted(() => {
   const state = {
@@ -60,6 +94,12 @@ const loopStubs = vi.hoisted(() => {
       lastTickAt: null, nextTickAt: null,
       stats: { totalIterations: 3, tasksDiscovered: 4, tasksCompleted: 2, tasksBlocked: 0, totalCost: 0, currentIteration: 3 },
     }],
+    currentLoop: null,
+    currentContracts: [{ id: 'c1', loopId: 'lp-1', status: 'submitted', assignee: 'maker', persistedTaskId: 't-415' }],
+    currentEvents: [],
+    fetchLoop: vi.fn(async (id: string) => {
+      state.currentLoop = state.loops.find((l: { id: string }) => l.id === id) ?? null
+    }),
   }
   return { state, useLoopStore: () => state }
 })
@@ -222,5 +262,83 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     const { wrapper: w2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
     expect(useFlowStore().govOpen).toBe(true)
+  })
+})
+
+describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
+  function makeTdpRouter(): Router {
+    return createRouter({
+      history: createMemoryHistory(),
+      routes: [{
+        path: '/app',
+        component: { template: '<router-view />' },
+        children: [
+          { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
+          { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
+          { path: 'l/:loopId', name: 'ia2.loopCanvas', component: WorkbenchView },
+          { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
+        ],
+      }, {
+        path: '/ide',
+        name: 'ide.shell',
+        component: { template: '<div ide />' },
+      }],
+    })
+  }
+
+  async function mountTdp(path: string) {
+    const router = makeTdpRouter()
+    router.push(path)
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    await flushPromises()
+    return { wrapper, router }
+  }
+
+  it('等我三源渲染：review 任务（验收/打回）+ awaiting 运行（确认）+ fleet 审批（确认）', async () => {
+    const { wrapper } = await mountTdp('/app')
+    expect(wrapper.find('[data-testid="tdp-wait-task:t-402"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="tdp-wait-run:run-9"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="tdp-wait-fleet:fs-1:ap-1"]').exists()).toBe(true)
+  })
+
+  it('动线④就地决策：验收→moveTask(done)；打回→blockTask(reason)；确认运行→resumeRun；确认 fleet→respondFleetApproval', async () => {
+    const { wrapper } = await mountTdp('/app')
+    await wrapper.find('[data-testid="tdp-approve-t-402"]').trigger('click')
+    expect(kanbanStubs.state.moveTask).toHaveBeenCalledWith('t-402', 'done')
+    await wrapper.find('[data-testid="tdp-reject-t-402"]').trigger('click')
+    expect(kanbanStubs.state.blockTask).toHaveBeenCalledWith('t-402', 'ia2.tdp.rejectReason')
+    await wrapper.find('[data-testid="tdp-confirm-run-run-9"]').trigger('click')
+    expect(runsStubs.state.resumeRun).toHaveBeenCalledWith('run-9', true)
+    await wrapper.find('[data-testid="tdp-confirm-fleet-fs-1"]').trigger('click')
+    expect(cockpitStubs.state.respondFleetApproval).toHaveBeenCalledWith('fs-1', 'ap-1', 'once')
+  })
+
+  it('挂接任务随选择变化：会话（tenant 挂接）→ 循环（契约 persistedTaskId）；改派开抽屉；⌨跳 IDE', async () => {
+    const { wrapper, router } = await mountTdp('/app')
+    // 默认选择 !r1 → t-402（tenant 六段式挂接）；t-415 不在
+    expect(wrapper.find('[data-testid="tdp-task-t-402"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="tdp-task-t-415"]').exists()).toBe(false)
+    // 切到循环 → 契约挂 t-415
+    await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="tdp-task-t-415"]').exists()).toBe(true)
+    // 改派 → 抽屉开（task-id 透传）
+    await wrapper.find('[data-testid="tdp-reassign-t-415"]').trigger('click')
+    expect(wrapper.find('.drawer-stub').attributes('data-taskid')).toBe('t-415')
+    // ⌨ → ide.shell?task=
+    await wrapper.find('[data-testid="tdp-ide-t-415"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ide.shell')
+    expect(router.currentRoute.value.query.task).toBe('t-415')
+  })
+
+  it('全部时间线 → cockpit.openRunTraceGlobal；动态流渲染 FeedRow', async () => {
+    const { wrapper } = await mountTdp('/app')
+    await wrapper.find('[data-testid="tdp-timeline-all"]').trigger('click')
+    expect(cockpitStubs.state.openRunTraceGlobal).toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="tdp-feed"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('ia2.feed.taskCreated')
   })
 })
