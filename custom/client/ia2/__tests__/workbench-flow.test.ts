@@ -90,8 +90,9 @@ vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs
 const kanbanApiStubs = vi.hoisted(() => ({
   completeTasks: vi.fn(async () => ({ results: [] })),
   blockTask: vi.fn(async () => ({})),
+  reopenReview: vi.fn(async () => ({ ok: true })),
 }))
-vi.mock('@/api/hermes/kanban', () => ({ completeTasks: kanbanApiStubs.completeTasks, blockTask: kanbanApiStubs.blockTask }))
+vi.mock('@/api/hermes/kanban', () => ({ completeTasks: kanbanApiStubs.completeTasks, blockTask: kanbanApiStubs.blockTask, reopenReview: kanbanApiStubs.reopenReview }))
 
 vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: { name: 'KanbanTaskDrawer', props: ['show', 'taskId'], template: '<div class="drawer-stub" v-if="show" :data-taskid="taskId" />' },
@@ -336,7 +337,8 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
     expect(kanbanApiStubs.completeTasks).toHaveBeenCalledWith(['t-402'], undefined, { board: 'swarm' })
     await wrapper.find('[data-testid="tdp-reject-t-402"]').trigger('click')
     await flushPromises()
-    expect(kanbanApiStubs.blockTask).toHaveBeenCalledWith('t-402', 'ia2.tdp.rejectReason', { board: 'swarm' })
+    expect(kanbanApiStubs.reopenReview).toHaveBeenCalledWith(['t-402'], 'ia2.tdp.rejectReason', { board: 'swarm' })
+    expect(kanbanApiStubs.blockTask).not.toHaveBeenCalled()
     await wrapper.find('[data-testid="tdp-confirm-run-run-9"]').trigger('click')
     expect(runsStubs.state.resumeRun).toHaveBeenCalledWith('run-9', true)
     await wrapper.find('[data-testid="tdp-confirm-fleet-fs-1"]').trigger('click')
@@ -368,5 +370,66 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
     expect(cockpitStubs.state.openRunTraceGlobal).toHaveBeenCalled()
     expect(wrapper.find('[data-testid="tdp-feed"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('ia2.feed.taskCreated')
+  })
+})
+
+describe('WorkbenchView — 态势条五项跳转（v12.1 C1 补完）', () => {
+  function makeSitRouter(): Router {
+    return createRouter({
+      history: createMemoryHistory(),
+      routes: [{
+        path: '/app',
+        component: { template: '<router-view />' },
+        children: [
+          { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
+          { path: 'l/:loopId', name: 'ia2.loopCanvas', component: WorkbenchView },
+          { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
+          { path: 'eng', name: 'ia2.eng', component: { template: '<div eng />' } },
+        ],
+      }],
+    })
+  }
+
+  async function mountSit(path: string) {
+    const router = makeSitRouter()
+    router.push(path)
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    await flushPromises()
+    return { wrapper, router }
+  }
+
+  it('任务→看板；循环→工程面；等我→首个待决任务深链（board?task=）', async () => {
+    const { wrapper, router } = await mountSit('/app')
+    await wrapper.find('[data-testid="sit-tasks"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.board')
+    const { wrapper: w2, router: r2 } = await mountSit('/app')
+    await w2.find('[data-testid="sit-loops"]').trigger('click')
+    await flushPromises()
+    expect(r2.currentRoute.value.name).toBe('ia2.eng')
+    // 桩里唯一带 taskId 的等待项是 t-402（review 态）
+    const { wrapper: w3, router: r3 } = await mountSit('/app')
+    await w3.find('[data-testid="sit-waiting"]').trigger('click')
+    await flushPromises()
+    expect(r3.currentRoute.value.name).toBe('ia2.board')
+    expect(r3.currentRoute.value.query.task).toBe('t-402')
+  })
+
+  it('会话→回会话面（清子路径回默认首会话）；在线→管理台员工区', async () => {
+    const { wrapper, router } = await mountSit('/app')
+    // 先进循环画布（子路径选择），点会话项应回 ia2.collab
+    await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.loopCanvas')
+    await wrapper.find('[data-testid="sit-sessions"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.collab')
+    const { wrapper: w2 } = await mountSit('/app')
+    await w2.find('[data-testid="sit-online"]').trigger('click')
+    const flow = useFlowStore()
+    expect(flow.govOpen).toBe(true)
+    expect(flow.govSection).toBe('people')
   })
 })
