@@ -15,6 +15,15 @@ const { swarmKanbanMounted } = vi.hoisted(() => ({
 vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
   default: { setup: () => { swarmKanbanMounted.count += 1 }, template: '<div class="kanban-stub" />' },
 }))
+vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
+  default: { name: 'KanbanTaskDrawer', props: ['show', 'taskId'], template: '<div class="drawer-stub" v-if="show" />' },
+}))
+vi.mock('@/custom/matrix-chat/components/MatrixRoomCanvas.vue', () => ({
+  default: { name: 'MatrixRoomCanvas', template: '<div class="room-canvas-stub" />' },
+}))
+vi.mock('@/views/hermes/ChatView.vue', () => ({
+  default: { name: 'ChatView', template: '<div class="chat-view-stub" />' },
+}))
 
 import TasksView from '../views/TasksView.vue'
 import WorkbenchView from '../views/WorkbenchView.vue'
@@ -38,8 +47,15 @@ describe('视图壳内嵌接线', () => {
     expect(swarmKanbanMounted.count).toBe(1)
   })
 
-  it('WorkbenchView 三栏骨架（wb-left / wb-center / wb-right）恒在', () => {
-    const wrapper = mount(WorkbenchView)
+  it('WorkbenchView 三栏骨架（wb-left / wb-center / wb-right）恒在', async () => {
+    // WorkbenchView 读 route.params 推导选择——挂最小路由（/app 落点）
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/app', name: 'ia2.collab', component: WorkbenchView }],
+    })
+    await router.push('/app')
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
     expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wb-center"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
