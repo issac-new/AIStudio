@@ -85,6 +85,7 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push }),
 }))
 // 文件视图嵌上游 FileTree，其依赖链拉真实 router/api——测试挡为透传桩
+vi.mock('../views/IdeGitPane.vue', () => ({ default: { name: 'IdeGitPane', template: '<div class=\"stub-gitpane\" data-testid=\"stub-gitpane\" />' } }))
 vi.mock('@/components/hermes/files/FileTree.vue', () => ({
   default: { name: 'FileTree', template: '<div class="stub-filetree" data-testid="stub-filetree" />' },
 }))
@@ -189,15 +190,31 @@ describe('IdeTaskSidebar', () => {
     expect(w.find('[data-testid="ide-nav-cockpit"]').exists()).toBe(true)
   })
 
-  it('任务/文件双视图：切文件渲染 FileTree，切回任务恢复列表', async () => {
+  it('任务/文件双视图：切文件渲染 FileTree+双页签，切回任务恢复列表', async () => {
     const w = mountSidebar()
     await flushPromises()
     expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(false)
     await w.find('[data-testid="ide-task-view-files"]').trigger('click')
     expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(true)
+    // 文件/Git 双页签在查看文件视图内
+    expect(w.find('[data-testid="ide-files-tab-tree"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-files-tab-git"]').exists()).toBe(true)
     await w.find('[data-testid="ide-task-view-tasks"]').trigger('click')
     expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-task-pinned"], [data-testid^="ide-task-group-"]').exists()).toBe(true)
+  })
+
+  it('点击任务切换会话时文件视图 root 跟随任务 workspace', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    // 切到文件视图
+    await w.find('[data-testid="ide-task-view-files"]').trigger('click')
+    // 回任务视图点 other 任务（workspace=/lab/other）
+    await w.find('[data-testid="ide-task-view-tasks"]').trigger('click')
+    await w.find('[data-testid="ide-task-item-s-other"] .ide-taskbar__item-main').trigger('click')
+    expect(switchSession).toHaveBeenCalledWith('s-other')
+    const vm = w.vm as any
+    expect(vm.filesWorkspace).toBe('/lab/other')
   })
 
   it('organize 三模式：grouped 按 category 分组渲染', async () => {
