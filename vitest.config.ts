@@ -16,6 +16,12 @@ const upstreamClientSrc = resolve(overlayRoot, '../upstream/hermes-studio/packag
 
 export default defineConfig({
   plugins: [vue()],
+  // 上游 stores（app.ts 等）读 vite 构建期注入的 __APP_VERSION__；测试链无该
+  // define 时 import 即 ReferenceError（2026-09-19 v12：WorkbenchView 静态引
+  // ChatView → chat store 链首次在 vitest 命中）。
+  define: {
+    __APP_VERSION__: JSON.stringify('test'),
+  },
   resolve: {
     // ⚠️ 与 vite.config.overlay.ts 的 alias 数组保持同步。
     // 数组形式按声明顺序匹配——更具体的前缀（@/custom）必须在兜底（@）之前，
