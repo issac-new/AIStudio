@@ -13,6 +13,7 @@ import IdeWikiPane from './IdeWikiPane.vue'
 import IdeStoragePane from './IdeStoragePane.vue'
 import IdeMemoryPane from './IdeMemoryPane.vue'
 import IdeWhiteboardPane from './IdeWhiteboardPane.vue'
+import IdeTerminalDock from './IdeTerminalDock.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
 
 const { t } = useI18n()
@@ -27,6 +28,7 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'storage', icon: '▤' },
   { key: 'memory', icon: '◈' },
   { key: 'board', icon: '✎' },
+  { key: 'terminal', icon: '⌨' },
 ]
 
 const paneStyle = computed(() => ({ width: `${ide.sidePane.width}px` }))
@@ -58,7 +60,7 @@ function focusMainChat(): void {
 </script>
 
 <template>
-  <aside v-if="ide.sidePane.open" class="ide-sidepane" :style="paneStyle" data-testid="ide-sidepane">
+  <aside v-if="ide.sidePane.open" class="ide-sidepane" :class="{ 'is-max': ide.layout.sidepane.maximized }" :style="paneStyle" data-testid="ide-sidepane">
     <div class="ide-sidepane__tabs" role="tablist" :aria-label="t('ide.sidePane.togglePanel')">
       <button
         v-for="tab in TABS"
@@ -85,6 +87,14 @@ function focusMainChat(): void {
       <span class="ide-sidepane__spacer" />
       <button
         type="button"
+        class="ide-sidepane__tab"
+        data-testid="ide-sidepane-max"
+        :title="t('ide.pane.maximize')"
+        :aria-label="t('ide.pane.maximize')"
+        @click="ide.toggleMax('sidepane')"
+      >{{ ide.layout.sidepane.maximized ? '⤡' : '⤢' }}</button>
+      <button
+        type="button"
         class="ide-sidepane__tab ide-sidepane__tab--close"
         :title="t('ide.sidePane.collapse')"
         :aria-label="t('ide.sidePane.collapse')"
@@ -99,6 +109,7 @@ function focusMainChat(): void {
       <IdeStoragePane v-else-if="ide.sidePane.tab === 'storage'" class="ide-sidepane__fill" />
       <IdeMemoryPane v-else-if="ide.sidePane.tab === 'memory'" class="ide-sidepane__fill" />
       <IdeWhiteboardPane v-else-if="ide.sidePane.tab === 'board'" class="ide-sidepane__fill" />
+      <IdeTerminalDock v-else-if="ide.sidePane.tab === 'terminal'" class="ide-sidepane__fill" data-testid="ide-sidepane-terminal" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">
@@ -170,6 +181,8 @@ function focusMainChat(): void {
 }
 
 .ide-sidepane__tab-icon { font-size: 13px; line-height: 1; }
+
+.ide-sidepane.is-max { flex: 1 !important; width: auto !important; min-width: 320px; }
 
 .ide-sidepane__tab--add {
   color: var(--ide-text-muted, #8b8f97);

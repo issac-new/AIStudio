@@ -20,6 +20,7 @@ vi.mock('../views/IdeWikiPane.vue', () => ({ default: { name: 'IdeWikiPane', tem
 vi.mock('@/views/hermes/DesktopBrowserView.vue', () => ({ default: { name: 'DesktopBrowserView', template: '<div data-testid="stub-browser" />' } }))
 vi.mock('../views/IdeStoragePane.vue', () => ({ default: { name: 'IdeStoragePane', template: '<div data-testid="stub-storage" />' } }))
 vi.mock('../views/IdeMemoryPane.vue', () => ({ default: { name: 'IdeMemoryPane', template: '<div data-testid="stub-memory" />' } }))
+vi.mock('../views/IdeTerminalDock.vue', () => ({ default: { name: 'IdeTerminalDock', template: '<div data-testid="stub-termdock" />' } }))
 
 const writeText = vi.fn(async () => {})
 Object.assign(navigator, { clipboard: { writeText } })
@@ -65,7 +66,7 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     ide.sidePane.open = true
     ide.sidePane.tab = 'wiki'
     const w = mountPane()
-    for (const tab of ['review', 'browser', 'wiki', 'assistant', 'storage', 'memory']) {
+    for (const tab of ['review', 'browser', 'wiki', 'assistant', 'storage', 'memory', 'terminal']) {
       expect(w.find(`[data-testid="ide-sidepane-tab-${tab}"]`).exists()).toBe(true)
     }
     await w.find('.ide-sidepane__tab--close').trigger('click')
