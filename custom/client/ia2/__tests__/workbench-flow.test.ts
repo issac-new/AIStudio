@@ -95,6 +95,13 @@ vi.mock('@/custom/matrix-chat/components/MatrixRoomCanvas.vue', () => ({
 vi.mock('@/views/hermes/ChatView.vue', () => ({
   default: { name: 'ChatView', template: '<div class="chat-view-stub" />' },
 }))
+vi.mock('@/custom/loop/runcenter/api', () => ({
+  runRest: { getSpec: vi.fn(async () => null), replay: vi.fn(async () => []), exportRun: vi.fn(async () => ({})) },
+  connectGraph: vi.fn(), disconnectGraph: vi.fn(),
+}))
+vi.mock('@/custom/loop/runcenter/components/RunGraphCanvas.vue', () => ({
+  default: { name: 'RunGraphCanvas', props: ['graph', 'entryNode'], template: '<div class="rgc-stub" />' },
+}))
 
 const loopStubs = vi.hoisted(() => {
   const state = {
@@ -263,7 +270,7 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.loopCanvas')
-    expect(wrapper.find('[data-testid="wb-canvas-loop"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="run-canvas"]').exists()).toBe(true)
   })
 
   it('＋新循环 → /app/eng；⚙管理 → flow.govOpen', async () => {
