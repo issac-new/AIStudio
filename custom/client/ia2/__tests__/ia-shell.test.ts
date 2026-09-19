@@ -24,6 +24,8 @@ const workspaceStubs = vi.hoisted(() => {
     stopReminderScheduler: vi.fn(),
     scheduleOpen: false,
     closeSchedule: vi.fn(),
+    // 注意力条数据源（空数组=不渲染条）
+    tasks: [] as Array<{ id: string; title: string; status: string; assignee: string | null; createdAt: number }>,
   }
   return { state, useWorkspaceStore: () => state }
 })
@@ -41,6 +43,7 @@ const cockpitStubs = vi.hoisted(() => {
     closeNotify: vi.fn(),
     runTraceOpen: false,
     closeRunTrace: vi.fn(),
+    fleetSessions: [] as unknown[],
   }
   return { state, useCockpitStore: () => state }
 })
@@ -53,6 +56,7 @@ const runsStubs = vi.hoisted(() => {
     fetchRuns: vi.fn(async () => {}),
     awaitingRuns: [{ runId: 'r-await' }],
     sortedRuns: [{ runId: 'r-await', status: 'awaiting-input' }, { runId: 'r-run', status: 'running' }],
+    runs: [] as unknown[],
     syncVisibleRunIds: vi.fn(),
     fetchMetrics: vi.fn(async () => null),
     connection: 'disconnected',
@@ -79,8 +83,19 @@ vi.mock('@/custom/cockpit/components/CockpitScheduleModal.vue', () => ({
 vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({
   default: { name: 'CockpitRunTraceModal', template: '<div class="runtrace-modal-stub" />' },
 }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+// 注意力条单独有守门；此间桩化隔离（其数据源与壳同构）
+vi.mock('@/custom/ia2/components/AttentionStrip.vue', () => ({
+  default: {
+    name: 'AttentionStrip',
+    props: ['items'],
+    emits: ['select'],
+    template: '<div class="attn-stub" data-testid="ia-attn" v-if="items.length" @click="$emit(\'select\', items[0])" />',
+  },
+}))
 
 import IaShell from '../views/IaShell.vue'
+import { useFlowStore } from '../store/flow'
 import { IA_AREAS } from '../routes'
 
 const AREA = { template: '<div class="area-stub" />' }
@@ -253,5 +268,30 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
     }))
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/app/runs')
+  })
+})
+
+describe('IaShell — 注意力条与⚙管理台（v12 Task 8）', () => {
+  it('有等我事项时注意力条在位（页头下、场景条上）；点击 → 看板预选', async () => {
+    workspaceStubs.state.tasks = [{ id: 't-1', title: '验收 v2.28', status: 'review', assignee: null, createdAt: 1 }]
+    const { wrapper, router } = await mountShell('/app')
+    const attn = wrapper.find('[data-testid="ia-attn"]')
+    expect(attn.exists()).toBe(true)
+    await attn.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.board')
+    expect(router.currentRoute.value.query.task).toBe('t-1')
+    workspaceStubs.state.tasks = []
+  })
+
+  it('Esc 优先收管理台覆盖层（不退最大化）', async () => {
+    const { wrapper } = await mountShell('/app?max=1')
+    const flow = useFlowStore()
+    flow.openGov()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+    expect(flow.govOpen).toBe(false)
+    // max 态未被 Esc 触及（管理台优先吃 Esc）
+    expect(wrapper.find('[data-testid="ia-wm-restore-pill"]').exists()).toBe(true)
   })
 })
