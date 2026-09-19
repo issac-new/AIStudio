@@ -300,26 +300,6 @@ onUnmounted(disposeTerminal)
         <span class="ide-terminal__state" :class="{ 'is-on': connected }">
           {{ connected ? t('ide.terminalConnected') : t('ide.terminalConnecting') }}
         </span>
-        <select
-          class="ide-terminal__tool"
-          :value="selectedTool"
-          :title="t('ide.terminalToolTitle')"
-          @change="onToolChange"
-        >
-          <option
-            v-for="opt in toolOptions"
-            :key="opt.id"
-            :value="opt.id"
-            :disabled="opt.disabled"
-            :title="opt.title"
-          >{{ opt.label }}{{ opt.suffix }}</option>
-        </select>
-        <button
-          type="button"
-          class="ide-terminal__action"
-          :disabled="!connected"
-          @click="launchTool"
-        >{{ t('ide.terminalLaunchTool') }}</button>
         <code class="ide-terminal__cwd">{{ ide.terminalCwd }}</code>
         <button
           type="button"

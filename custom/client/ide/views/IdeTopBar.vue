@@ -1,39 +1,18 @@
 <script setup lang="ts">
 // IdeTopBar — IDE 顶栏：品牌 | workspace 显示 | agent 底座选择 | 功能链接 | 主题/语言。
 // fullscreen 路由下 AppSidebar 整体隐藏，故主题/语言切换在此提供。
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { NDropdown, NSelect } from 'naive-ui'
+import { NDropdown } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
 import { useIdeStore } from '../store/ide'
-import { loadAgentOptions, type IdeAgentOption } from '../api/agents'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
 import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 
 const ide = useIdeStore()
 const router = useRouter()
 const { t } = useI18n()
-
-const agentOptions = ref<IdeAgentOption[]>([])
-
-onMounted(async () => {
-  agentOptions.value = await loadAgentOptions()
-})
-
-// computed 而非 ref 快照：标签含 t() 文案，locale 切换（本顶栏 LanguageSwitch）
-// 时必须随响应式刷新（2026-09-17 评审）。
-const agentSelectOptions = computed<Array<{ label: string; value: string; disabled?: boolean }>>(() =>
-  agentOptions.value.length
-    ? agentOptions.value.map((option) => ({
-        label: option.installed
-          ? `${option.label}${option.version ? ` · ${option.version}` : ''}`
-          : `${option.label}（${t('ide.agentNotInstalled')}）`,
-        value: option.id,
-        disabled: !option.installed,
-      }))
-    : [{ label: 'codex', value: 'codex' }],
-)
 
 /** 功能链接：跳转既有页面（router-link 路由跳转，不新开） */
 const linkGroups: Array<{ key: string; label: string; to: { name: string } | { path: string } }> = [
@@ -77,18 +56,6 @@ function onLinkSelect(key: string | number) {
         <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z" />
       </svg>
       <span class="ide-topbar__workspace-path">{{ ide.workspace ?? t('ide.workspaceDefault') }}</span>
-    </div>
-
-    <div class="ide-topbar__agent">
-      <span class="ide-topbar__agent-label">{{ t('ide.agentLabel') }}</span>
-      <NSelect
-        :value="ide.agentId"
-        :options="agentSelectOptions"
-        size="small"
-        style="width: 200px"
-        :consistent-menu-width="false"
-        @update:value="ide.setAgentId($event as never)"
-      />
     </div>
 
     <div class="ide-topbar__spacer" />
@@ -186,18 +153,6 @@ function onLinkSelect(key: string | number) {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: Menlo, Monaco, 'Courier New', monospace;
-}
-
-.ide-topbar__agent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.ide-topbar__agent-label {
-  font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
 }
 
 .ide-topbar__spacer {

@@ -19,7 +19,6 @@ const sessionState = computed(() =>
 
 <template>
   <footer class="ide-statusbar">
-    <span class="ide-statusbar__item ide-statusbar__agent">{{ ide.agentId }}</span>
     <span class="ide-statusbar__item" :title="ide.workspace ?? ''">
       {{ ide.workspace ?? t('ide.workspaceDefault') }}
     </span>
@@ -52,9 +51,6 @@ const sessionState = computed(() =>
   }
 }
 
-.ide-statusbar__agent {
-  font-family: Menlo, Monaco, 'Courier New', monospace;
-}
 
 .ide-statusbar__spacer {
   flex: 1;
