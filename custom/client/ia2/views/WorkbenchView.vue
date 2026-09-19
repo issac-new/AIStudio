@@ -18,6 +18,7 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import * as kanbanApi from '@/api/hermes/kanban'
 import { useChatStore } from '@/stores/hermes/chat'
 import {
   buildSessionRows, buildLoopRows, linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
@@ -179,13 +180,23 @@ const linkedContext = computed(() => {
 })
 
 // ── 右栏动作（动线②指派 / ④决策 / ⑤编码）──
+// 板定位用任务自身 boardSlug（跨板聚合行的来源板），不走看板页遗留的
+// selectedBoard——否则非当前选中板任务的验收/打回会打到 default 板而静默失效。
+
+function boardOf(taskId: string): string | undefined {
+  return tasksForShow.value.find(x => x.id === taskId)?.boardSlug || undefined
+}
 
 function onApproveTask(taskId: string): void {
-  void kanban.moveTask(taskId, 'done')
+  void kanbanApi.completeTasks([taskId], undefined, { board: boardOf(taskId) }).then(() => {
+    void workspace.refreshAllBoards(true)
+  })
 }
 
 function onRejectTask(taskId: string): void {
-  void kanban.blockTask(taskId, t('ia2.tdp.rejectReason'))
+  void kanbanApi.blockTask(taskId, t('ia2.tdp.rejectReason'), { board: boardOf(taskId) }).then(() => {
+    void workspace.refreshAllBoards(true)
+  })
 }
 
 function onApproveRun(item: WaitItem): void {
