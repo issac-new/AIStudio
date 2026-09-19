@@ -306,7 +306,7 @@ defineExpose({ refresh, toGroups })
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-git__branch {
@@ -325,7 +325,7 @@ defineExpose({ refresh, toGroups })
   font: inherit;
   color: var(--text-muted, #9aa0aa);
   background: transparent;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   cursor: pointer;
 
@@ -346,7 +346,7 @@ defineExpose({ refresh, toGroups })
   flex-shrink: 0;
   max-height: 42%;
   overflow-y: auto;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-git__group-head {
@@ -431,7 +431,7 @@ defineExpose({ refresh, toGroups })
   align-items: center;
   gap: 6px;
   padding: 5px 10px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-git__diff-file {
@@ -481,7 +481,7 @@ defineExpose({ refresh, toGroups })
   display: flex;
   gap: 6px;
   padding: 8px 10px;
-  border-top: 1px solid var(--border-color, #26292f);
+  border-top: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-git__commit-error {
@@ -498,7 +498,7 @@ defineExpose({ refresh, toGroups })
   font-size: 12px;
   color: var(--text-primary, #e6e6e6);
   background: var(--bg-primary, #14161a);
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   outline: none;
 
@@ -538,7 +538,7 @@ defineExpose({ refresh, toGroups })
   font-size: 11px;
   cursor: pointer;
 
-  &.is-active { background: var(--bg-tertiary, #242830); color: var(--text-primary, #e6e6e6); }
+  &.is-active { background: var(--bg-tertiary, #ebebeb); color: var(--text-primary, #e6e6e6); }
 }
 
 .ide-git__graph { flex: 1; min-height: 0; }
@@ -556,7 +556,7 @@ defineExpose({ refresh, toGroups })
   margin: 2px 0 0;
   padding: 4px;
   list-style: none;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 7px;
   background: var(--bg-secondary, #1b1e24);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -568,7 +568,7 @@ defineExpose({ refresh, toGroups })
     color: var(--text-primary, #e6e6e6);
     cursor: pointer;
 
-    &:hover { background: var(--bg-tertiary, #242830); }
+    &:hover { background: var(--bg-tertiary, #ebebeb); }
     &.is-current { color: var(--accent-primary, #4cc9f0); cursor: default; }
   }
 }
@@ -577,7 +577,7 @@ defineExpose({ refresh, toGroups })
   height: 20px;
   min-width: 24px;
   padding: 0 6px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 4px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);

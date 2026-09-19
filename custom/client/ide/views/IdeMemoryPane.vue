@@ -116,7 +116,7 @@ onMounted(load)
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-memory__title { flex: 1; font-size: 12px; color: var(--text-muted, #9aa0aa); }
@@ -124,7 +124,7 @@ onMounted(load)
 .ide-memory__btn {
   height: 22px;
   padding: 0 10px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);
@@ -142,7 +142,7 @@ onMounted(load)
   width: 100%;
   height: 26px;
   padding: 0 8px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: var(--bg-primary, #14161a);
   color: var(--text-primary, #e6e6e6);
@@ -160,7 +160,7 @@ onMounted(load)
   margin: 0;
   padding: 4px;
   overflow-y: auto;
-  border-right: 1px solid var(--border-color, #26292f);
+  border-right: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-memory__item {
@@ -173,7 +173,7 @@ onMounted(load)
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  &:hover { background: var(--bg-tertiary, #242830); }
+  &:hover { background: var(--bg-tertiary, #ebebeb); }
   &.is-active {
     background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 12%, transparent);
     color: var(--accent-primary, #4cc9f0);

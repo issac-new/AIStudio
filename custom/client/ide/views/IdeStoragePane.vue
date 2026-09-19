@@ -105,7 +105,7 @@ onMounted(load)
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-storage__title { flex-shrink: 0; font-size: 12px; color: var(--text-muted, #9aa0aa); }
@@ -131,7 +131,7 @@ onMounted(load)
 .ide-storage__btn {
   height: 22px;
   padding: 0 10px;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);

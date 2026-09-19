@@ -109,15 +109,24 @@ describe('v12 统一视图守门（双视图）', () => {
       'utf8',
     )
     const shell = readFileSync(resolve(__dirname, '../views/IaShell.vue'), 'utf8')
+    const ideShell = readFileSync(resolve(__dirname, '../../ide/views/IdeShell.vue'), 'utf8')
+    const switcher = readFileSync(resolve(__dirname, '../components/IaViewSwitcher.vue'), 'utf8')
     expect(header).toContain('<IaWindowControls />')
     // standalone 精简壳 / max 隐藏壳页 + Esc / 最小化 dock / 合并回流监听
     expect(shell).toContain('IaPopoutBar v-if="isStandalone"')
-    expect(shell).toContain('v-if="!isMaximized"')
+    expect(shell).toContain('v-else-if="!isMaximized"')
     expect(shell).toContain("event.key === 'Escape'")
     expect(shell).toContain('<IaMinimizedDock')
     expect(shell).toContain('listenMergeBack')
-    // v12 双视图：场景条带 IDE 第二入口
-    expect(shell).toContain('data-testid="ia-scene-ide"')
+    // v12.1 全局顶区常驻双视图（用户裁定）：双壳均挂 IaGlobalTop；切换器在
+    // 注意力条下方右上角（ia-viewswitch-row），双入口 testid 保持守门兼容
+    expect(shell).toContain('<IaGlobalTop')
+    expect(ideShell).toContain('<IaGlobalTop')
+    expect(switcher).toContain('data-testid="ia-viewswitch-row"')
+    expect(switcher).toContain('data-testid="ia-scene-collab"')
+    expect(switcher).toContain('data-testid="ia-scene-ide"')
+    expect(switcher).toContain(`:to="{ name: 'ia2.collab' }"`)
+    expect(switcher).toContain(`:to="{ name: 'ide.shell' }"`)
   })
 
   it('上游 AppSidebar：一级仅 双入口+系统分组，无旧返回 hack（patch 299 守门）', () => {

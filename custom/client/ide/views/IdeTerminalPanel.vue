@@ -343,7 +343,7 @@ onUnmounted(disposeTerminal)
   padding: 4px 10px;
   font-size: 11px;
   background: var(--bg-secondary, #1b1e24);
-  border-bottom: 1px solid var(--border-color, #26292f);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
   color: var(--text-primary, #e6e6e6);
 }
 
@@ -364,7 +364,7 @@ onUnmounted(disposeTerminal)
   font-size: 11px;
   color: var(--text-primary, #e6e6e6);
   background: var(--bg-secondary, #1b1e24);
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 3px;
   padding: 2px 4px;
   cursor: pointer;
@@ -376,7 +376,7 @@ onUnmounted(disposeTerminal)
   font-size: 11px;
   color: var(--text-muted, #9aa0aa);
   background: transparent;
-  border: 1px solid var(--border-color, #26292f);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 3px;
   padding: 2px 8px;
   cursor: pointer;
