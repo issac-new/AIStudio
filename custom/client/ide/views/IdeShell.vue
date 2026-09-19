@@ -41,6 +41,7 @@ onUnmounted(() => {
 // ── 三栏折叠/最大化（用户裁定：每栏可最大化/最小化/向侧边折叠）──
 type PaneKey = 'sidebar' | 'chat' | 'sidepane'
 const anyMax = computed(() => (['sidebar', 'chat', 'sidepane'] as PaneKey[]).some(k => ide.layout[k].maximized))
+const sidebarShown = computed(() => !anyMax.value || ide.layout.sidebar.maximized)
 const chatShown = computed(() => !anyMax.value || ide.layout.chat.maximized)
 const sidepaneShown = computed(() => ide.layout.sidepane.maximized || (ide.sidePane.open && !anyMax.value))
 const mainClass = computed(() => ({
