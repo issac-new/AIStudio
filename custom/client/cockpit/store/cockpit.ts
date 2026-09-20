@@ -384,7 +384,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const relationsForSelectedTask = computed(() => topologyForSelectedTask.value.relations)
 
   // ── 通知（Matrix 未读 + 会话未读 + 待办提醒）──
-  const notifyOpen = ref(false)
+  // v12.3：通知居中模态退役（ia2 页头改下拉双页签），notifyOpen/openNotify/
+  // closeNotify 随 CockpitNotifyModal 一并删除（notifyItems/notifyCount 保留——
+  // 纯 computed 选择器，MatrixTimelinePanel 未读链仍依赖本 store 的重算）
 
   // 会话未读（chat store 的 unreadMessages map → NotifyItem；2.13 并入通知面板）
   const chatUnreadItems = computed<NotifyItem[]>(() => {
@@ -1178,8 +1180,6 @@ export const useCockpitStore = defineStore('cockpit', () => {
   }
 
   // ── 通知 ──
-  function openNotify() { notifyOpen.value = true }
-  function closeNotify() { notifyOpen.value = false }
   // 仅 Matrix：进入房间后 SDK 自动清零未读，无需额外操作
 
   // ── 频道（选中频道时切换到 chat 工作区）──
@@ -1646,8 +1646,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     timelineActorFilter, timelineActorOptions,
     topologyForSelectedTask, relationsForSelectedTask,
     channels, channelsForSelectedTask, activeChannel,
-    notifyOpen, notifyItems, notifyCount,
-    openNotify, closeNotify,
+    notifyItems, notifyCount,
     // 2.13 指挥中心
     fleetSessions, fleetConnected, fleetSessionsFiltered,
     mcpHealth, refreshMcpHealth,

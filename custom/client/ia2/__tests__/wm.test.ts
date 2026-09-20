@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/wm.test.ts
-// 窗口管理守门（2026-09-18 统一导航 /goal 追加）：
+// 窗口管理守门（2026-09-18 统一导航 /goal 追加；2026-09-20 v12.3 收窄）：
 // - popout 工具：standalone query 合并/剥离、web 降级 window.open、
 //   合并回流 storage 事件（含无效信号容错）
-// - wm store：最小化去重、恢复出列、丢弃、清空
+// - wm store（最小化任务栏）已随 v12.3 窗控改栏控退役——max=1 最小化
+//   链路删除，仅剩独立窗口 popout 链路在此守门
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import {
@@ -14,7 +15,6 @@ import {
   requestMergeBack,
   MERGE_BACK_KEY,
 } from '../wm/popout'
-import { useWmStore } from '../wm/store'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -88,36 +88,5 @@ describe('popout 工具 — 弹出与回流', () => {
     expect(JSON.parse(localStorage.getItem(MERGE_BACK_KEY) ?? '{}').path).toBe('/app/ops?tab=runs')
     expect(close).toHaveBeenCalled()
     vi.restoreAllMocks()
-  })
-})
-
-describe('wm store — 最小化任务栏', () => {
-  it('最小化入列（首列）并按路径去重', () => {
-    const wm = useWmStore()
-    wm.minimize('/app/runs?tab=runs')
-    wm.minimize('/app/eng')
-    wm.minimize('/app/runs?tab=runs')
-    expect(wm.minimized.map(p => p.path)).toEqual(['/app/runs?tab=runs', '/app/eng'])
-  })
-
-  it('视图归属投影（v12 单视图）：/app 家族 → collab，非 /app 回退 collab', () => {
-    const wm = useWmStore()
-    wm.minimize('/app/runs?tab=runs')
-    wm.minimize('/somewhere')
-    expect(wm.minimized.find(p => p.path === '/app/runs?tab=runs')?.area).toBe('collab')
-    expect(wm.minimized.find(p => p.path === '/somewhere')?.area).toBe('collab')
-  })
-
-  it('恢复出列并返回面板；丢弃不导航；清空全收', () => {
-    const wm = useWmStore()
-    wm.minimize('/app/runs')
-    wm.minimize('/app/eng')
-    expect(wm.restore('/app/runs')?.path).toBe('/app/runs')
-    expect(wm.minimized.map(p => p.path)).toEqual(['/app/eng'])
-    wm.dismiss('/app/eng')
-    expect(wm.minimized).toHaveLength(0)
-    wm.minimize('/app/board')
-    wm.clear()
-    expect(wm.minimized).toHaveLength(0)
   })
 })

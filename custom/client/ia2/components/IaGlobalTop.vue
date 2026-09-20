@@ -46,13 +46,17 @@ const attentionRows = computed<AttentionRow[]>(() => {
   return mergeAttention(inputs)
 })
 
-/** 动线④：注意力条 → 对象（任务→看板预选；循环→运行画布；运行→运行详情；其余→工作台） */
+/** 动线④：注意力条 → 对象（任务→看板预选；循环→运行画布；运行→运行详情；其余→工作台）。
+ *  mergeAttention 会把行 id 改写为 att- 前缀（且仅保留源输入 id 于 taskId），
+ *  选择时先剥前缀还原源 id，再对 waitItems（task:/run:/fleet: 前缀族）与
+ *  blocked 循环（loop: 前缀）分派——直接拿行 id 对 waitItems 查找永远落空。 */
 function onAttentionSelect(row: AttentionRow): void {
-  if (row.id.startsWith('loop:')) {
-    void router.push({ name: 'ia2.loopCanvas', params: { loopId: row.id.slice(5) } })
+  const base = row.id.replace(/^att-/, '')
+  if (base.startsWith('loop:')) {
+    void router.push({ name: 'ia2.loopCanvas', params: { loopId: base.slice(5) } })
     return
   }
-  const hit = waitItems.value.find(w => w.id === row.id)
+  const hit = waitItems.value.find(w => w.id === base)
   if (hit?.taskId) void router.push({ name: 'ia2.board', query: { task: hit.taskId } })
   else if (hit?.runId) void router.push({ name: 'ia2.runDetail', params: { runId: hit.runId } })
   else if (row.status === 'blocked') void router.push({ name: 'ia2.board', query: { task: row.taskId } })
