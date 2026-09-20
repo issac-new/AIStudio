@@ -28,10 +28,11 @@ import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import RunCanvas from '../components/flow/RunCanvas.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
-import type { ParticipantBadge } from '../components/flow/ParticipantsBar.vue'
+import type { ParticipantBadge } from '../components/flow/SessionWorkbenchPanel.vue'
 import { useSessionRows } from '../composables/useSessionRows'
 import { useSitCounts } from '../composables/useSitCounts'
 import { useDecisionActions } from '../composables/useDecisionActions'
+import { useIdeJump } from '../composables/useIdeJump'
 
 const route = useRoute()
 const router = useRouter()
@@ -48,14 +49,19 @@ const matrixRoom = useMatrixRoomStore()
 const { sessionRows, chatSessions, tasksForLink, duties, accounts } = useSessionRows()
 const { waitItems, loopRows } = useSitCounts()
 const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
+const { jumpIde } = useIdeJump()
 
 // ── 选择：路由是选择的唯一持久载体 ──
 
 const routeSel = computed<StreamSelection | null>(() => {
-  if (typeof route.params.roomId === 'string') return { kind: 'room', id: route.params.roomId }
-  if (typeof route.params.sessionId === 'string') return { kind: 'chat', id: route.params.sessionId }
-  if (typeof route.params.loopId === 'string') return { kind: 'loop', id: route.params.loopId }
-  return null
+  // 按路由名分派：s/room 与 s/group 的参数名同为 roomId，params 判别会互撞
+  switch (route.name) {
+    case 'ia2.commsRoom': return typeof route.params.roomId === 'string' ? { kind: 'room', id: route.params.roomId } : null
+    case 'ia2.groupRoom': return typeof route.params.roomId === 'string' ? { kind: 'group', id: route.params.roomId } : null
+    case 'ia2.collabSession': return typeof route.params.sessionId === 'string' ? { kind: 'chat', id: route.params.sessionId } : null
+    case 'ia2.loopCanvas': return typeof route.params.loopId === 'string' ? { kind: 'loop', id: route.params.loopId } : null
+    default: return null
+  }
 })
 
 // ── 默认选择与 store 同步（'' 无选择 → 首个会话，不写 URL）──
@@ -123,7 +129,7 @@ function onReassign(taskId: string): void {
 }
 
 function onOpenIde(taskId: string): void {
-  void router.push({ name: 'ide.shell', query: { task: taskId } })
+  jumpIde(taskId)
 }
 
 function onHandleTask(taskId: string): void {
@@ -162,6 +168,7 @@ const participants = computed<ParticipantBadge[]>(() => {
     const s = chatSessions.value.find(x => x.id === sel.id)
     return s?.agent ? [{ kind: 'agent', name: s.agent }] : []
   }
+  if (sel.kind === 'group') return [] // 群聊成员面在 GroupChatPanel 自有 UI，面板不投影
   const badges: ParticipantBadge[] = []
   try {
     const members = matrixRoom.getRoomMemberList?.(sel.id)
@@ -227,8 +234,19 @@ function onGotoBoard(): void {
 
 function onSelect(sel: StreamSelection): void {
   if (sel.kind === 'room') void router.push({ name: 'ia2.commsRoom', params: { roomId: sel.id } })
+  else if (sel.kind === 'group') void router.push({ name: 'ia2.groupRoom', params: { roomId: sel.id } })
   else if (sel.kind === 'chat') void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
   else void router.push({ name: 'ia2.loopCanvas', params: { loopId: sel.id } })
+}
+
+/** 任务簇 chip → 看板预选（R4a） */
+function onNavOpenTask(taskId: string): void {
+  void router.push({ name: 'ia2.board', query: { task: taskId } })
+}
+
+/** 行/任务 chip 双击 → IDE 工作台编码动线（R4a 动线⑤；无任务裸进） */
+function onNavJumpIde(taskId: string | null): void {
+  jumpIde(taskId)
 }
 
 async function onCreateRoom(name: string): Promise<void> {
@@ -264,6 +282,8 @@ function onNewLoop(): void {
         @create-room="onCreateRoom"
         @new-loop="onNewLoop"
         @open-gov="flow.openGov()"
+        @open-task="onNavOpenTask"
+        @jump-ide="onNavJumpIde"
       />
     </aside>
     <section class="wb__center" data-testid="wb-center">

@@ -107,6 +107,9 @@ vi.mock('@/custom/matrix-chat/components/MatrixRoomCanvas.vue', () => ({
 vi.mock('@/views/hermes/ChatView.vue', () => ({
   default: { name: 'ChatView', template: '<div class="chat-view-stub" />' },
 }))
+vi.mock('@/views/hermes/GroupChatView.vue', () => ({
+  default: { name: 'GroupChatView', template: '<div class="group-view-stub" data-testid="group-view-stub" />' },
+}))
 vi.mock('@/custom/loop/runcenter/api', () => ({
   runRest: { getSpec: vi.fn(async () => null), replay: vi.fn(async () => []), exportRun: vi.fn(async () => ({})) },
   connectGraph: vi.fn(), disconnectGraph: vi.fn(),
@@ -135,6 +138,12 @@ const loopStubs = vi.hoisted(() => {
   return { state, useLoopStore: () => state }
 })
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: loopStubs.useLoopStore }))
+
+const groupStubs = vi.hoisted(() => ({
+  state: { rooms: [{ id: 'gr-1', name: '产品群聊', lastActiveAt: 900 }] },
+  useGroupChatStore: () => groupStubs.state,
+}))
+vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: groupStubs.useGroupChatStore }))
 
 const registryStubs = vi.hoisted(() => {
   const state = {
@@ -216,6 +225,39 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(empty.find('[data-testid="flow-empty"]').exists()).toBe(true)
   })
 
+  it('R4a 聚类：会话按类型三小节（房间/群聊/会话），行 testid 不变', () => {
+    const w = mountPanel()
+    expect(w.find('[data-testid="flow-cluster-room"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-cluster-group"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-cluster-chat"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-session-!r1"]').exists()).toBe(true)
+    // 空簇隐藏（v-show）：仅 chat 簇有行时其余两簇不可见
+    const w2 = mountPanel({ sessions: [SESSIONS[1]] })
+    expect(w2.find('[data-testid="flow-cluster-chat"]').isVisible()).toBe(true)
+    expect(w2.find('[data-testid="flow-cluster-room"]').isVisible()).toBe(false)
+  })
+
+  it('R4a 任务簇：📋N 点击就地展开任务 chip；chip 点击 emit open-task、双击 emit jump-ide；行双击携带首个任务', async () => {
+    const w = mountPanel()
+    const row = w.find('[data-testid="flow-session-!r1"]')
+    expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(false)
+    await row.find('.flow-nav__cnt--btn').trigger('click')
+    expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(true)
+    const chip = w.find('[data-testid="flow-task-t-402"]')
+    expect(chip.exists()).toBe(true)
+    await chip.trigger('click')
+    expect(w.emitted('open-task')![0][0]).toBe('t-402')
+    await chip.trigger('dblclick')
+    expect(w.emitted('jump-ide')![0][0]).toBe('t-402')
+    await row.trigger('dblclick')
+    expect(w.emitted('jump-ide')![1][0]).toBe('t-402')
+    // 无挂接任务行双击：裸进（null）
+    await w.find('[data-testid="flow-session-c1"]').trigger('dblclick')
+    expect(w.emitted('jump-ide')![2][0]).toBe(null)
+    await row.find('.flow-nav__cnt--btn').trigger('click')
+    expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(false)
+  })
+
   it('栏底动作：内联新建（输入+确认 emit create-room）、＋新循环、⚙管理', async () => {
     const w = mountPanel()
     await w.find('[data-testid="flow-new-session"]').trigger('click')
@@ -239,10 +281,16 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
           { path: '', name: 'ia2.collab', component: WorkbenchView },
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
+          { path: 's/group/:roomId', name: 'ia2.groupRoom', component: WorkbenchView },
           { path: 'l/:loopId', name: 'ia2.loopCanvas', component: WorkbenchView },
           { path: 'eng', name: 'ia2.eng', component: { template: '<div class="eng-stub" />' } },
+          { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
         ],
         component: { template: '<router-view />' },
+      }, {
+        path: '/ide',
+        name: 'ide.shell',
+        component: { template: '<div ide />' },
       }],
     })
   }
@@ -293,6 +341,35 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     const { wrapper: w2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
     expect(useFlowStore().govOpen).toBe(true)
+  })
+
+  it('R4b 群聊入列与分派：群聊行在群聊簇 → 点击路由 ia2.groupRoom → 中栏 GroupChatView', async () => {
+    const { wrapper, router } = await mountAt('/app')
+    await wrapper.find('[data-testid="flow-session-gr-1"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.groupRoom')
+    expect(router.currentRoute.value.params.roomId).toBe('gr-1')
+    expect(wrapper.find('[data-testid="group-view-stub"]').exists()).toBe(true)
+  })
+
+  it('R4a 动线⑤：左栏任务簇 chip → 看板预选；行双击 → ide.shell?task=（useIdeJump）', async () => {
+    const { wrapper, router } = await mountAt('/app')
+    await wrapper.find('[data-testid="flow-session-!r1:host"] .flow-nav__cnt--btn').trigger('click')
+    await wrapper.find('[data-testid="flow-task-t-402"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.board')
+    expect(router.currentRoute.value.query.task).toBe('t-402')
+    const { wrapper: w2, router: r2 } = await mountAt('/app')
+    await w2.find('[data-testid="flow-session-!r1:host"]').trigger('dblclick')
+    await flushPromises()
+    expect(r2.currentRoute.value.name).toBe('ide.shell')
+    expect(r2.currentRoute.value.query.task).toBe('t-402')
+    // 无挂接任务行（!r2 无 tenant/session_id 挂接）双击：裸进 IDE
+    const { wrapper: w3, router: r3 } = await mountAt('/app')
+    await w3.find('[data-testid="flow-session-!r2:host"]').trigger('dblclick')
+    await flushPromises()
+    expect(r3.currentRoute.value.name).toBe('ide.shell')
+    expect(r3.currentRoute.value.query.task).toBeUndefined()
   })
 })
 

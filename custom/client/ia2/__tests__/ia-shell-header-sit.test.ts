@@ -107,6 +107,11 @@ const kanbanApiStubs = vi.hoisted(() => ({
 }))
 vi.mock('@/api/hermes/kanban', () => ({ completeTasks: kanbanApiStubs.completeTasks, blockTask: kanbanApiStubs.blockTask, reopenReview: kanbanApiStubs.reopenReview }))
 
+// 群聊 store 桩（R4b：useSessionRows 第三源；真 store 拉上游 router 链）
+vi.mock('@/stores/hermes/group-chat', () => ({
+  useGroupChatStore: () => ({ rooms: [] as unknown[] }),
+}))
+
 // 评审中心桩（useDecisionRows 的 gate 源；决策动作断言在 kanbanApi 层）
 vi.mock('@/custom/matrix-teams/stores/review-center', () => ({
   useReviewCenterStore: () => ({ pendingReviews: [], sendVerdict: vi.fn() }),
