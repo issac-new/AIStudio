@@ -1,6 +1,7 @@
 <!-- overlay/custom/client/ia2/components/IaGlobalTop.vue -->
-<!-- v12.1 全局顶区（2026-09-19 壳层重排，用户裁定）：页头 + 注意力条 + 右上角
-     视图切换器——在驾驶舱双视图（沟通协作 /app + IDE 工作台 /ide）常驻。
+<!-- v12.2 全局顶区（2026-09-20 用户裁定）：页头 + 注意力条。视图切换器
+     （沟通协作 | IDE 工作台）移入页头最右（IaShellHeader 内嵌 IaViewSwitcher），
+     原注意力条下方独立切换行退役。
      数据武装经 useSharedArm 引用计数（双壳共享单份流/调度器）；注意力条与
      右栏「等我」同源（buildWaiting 单一聚合）。 -->
 <script setup lang="ts">
@@ -15,7 +16,6 @@ import type { AttentionRow } from '../adapters/overview'
 import { useSharedArm } from '../composables/useSharedArm'
 import IaShellHeader from './IaShellHeader.vue'
 import AttentionStrip from './AttentionStrip.vue'
-import IaViewSwitcher from './IaViewSwitcher.vue'
 
 const router = useRouter()
 useSharedArm()
@@ -65,6 +65,5 @@ function onAttentionSelect(row: AttentionRow): void {
       :items="attentionRows"
       @select="onAttentionSelect"
     />
-    <IaViewSwitcher />
   </div>
 </template>

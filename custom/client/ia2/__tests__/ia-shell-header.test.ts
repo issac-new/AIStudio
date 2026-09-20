@@ -2,8 +2,9 @@
 // overlay/custom/client/ia2/__tests__/ia-shell-header.test.ts
 // 驾驶舱统一壳页头守门（2026-09-18 统一导航重构 Task 2）：
 // IaShellHeader = CockpitTopBar 裁剪迁移——品牌（连接点 + ia2.brand）/全局搜索/
-// 团队切换/Gateway 探测组（倒计时+详情面板）/主题语言/通知/用户，固定最右
-// ⇄ IDE 按钮跳 ide.shell；schedule/loop/runtrace 按钮、时钟、"Swarm Studio" 字样已裁。
+// 团队切换/Gateway 探测组（倒计时+详情面板）/主题语言/通知/用户；
+// v12.2（2026-09-20 用户裁定）：固定最右 ⇄IDE 跳转按钮退役，改嵌 IaViewSwitcher
+// 二视图切换器（沟通协作 | IDE 工作台，顶部右上角单入口）。
 // fetch mock 写法参照 cockpit-topbar-health.test.ts；i18n 走全局 setup mock（t 直返 key）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -38,7 +39,8 @@ async function mountHeader() {
   mockHealth({ gateway_state: 'running', loaded_platforms: {} })
   const w = mount(IaShellHeader, {
     props: { notifyCount: 3, userName: 'tester' },
-    global: { stubs: { CockpitIcon: true } },
+    // RouterLink 桩：切换器双入口 router-link 不拉真路由器（保留插槽文案）
+    global: { stubs: { CockpitIcon: true, RouterLink: { props: ['to'], template: '<a><slot /></a>' } } },
   })
   await w.vm.$nextTick()
   return w
@@ -54,13 +56,15 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('⇄ IDE 按钮固定最右渲染，点击跳 ide.shell', async () => {
+  it('v12.2 视图切换器固定最右（沟通协作 | IDE 工作台，⇄IDE 跳转按钮退役）', async () => {
     const w = await mountHeader()
-    const btn = w.find('[data-testid="ia-header-ide"]')
-    expect(btn.exists()).toBe(true)
-    expect(btn.text()).toContain('ia2.shell.gotoIde')
-    await btn.trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'ide.shell' })
+    expect(w.find('[data-testid="ia-header-ide"]').exists()).toBe(false)
+    const row = w.find('[data-testid="ia-viewswitch-row"]')
+    expect(row.exists()).toBe(true)
+    expect(row.find('[data-testid="ia-scene-collab"]').exists()).toBe(true)
+    expect(row.find('[data-testid="ia-scene-ide"]').exists()).toBe(true)
+    expect(row.text()).toContain('ia2.nav.collab')
+    expect(row.text()).toContain('ia2.shell.gotoIde')
     w.unmount()
   })
 

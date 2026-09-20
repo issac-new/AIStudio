@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/global-top.test.ts
-// v12.1 全局顶区守门（2026-09-19 壳层重排）：页头+注意力条+右上角视图切换器
-// 常驻双视图；切换器按当前路由自算高亮（/ide → ide，/app 家族 → collab）；
-// 注意力条与右栏「等我」同源。
+// v12.2 全局顶区守门（2026-09-20 用户裁定）：页头+注意力条；视图切换器
+// （沟通协作 | IDE 工作台）移入页头最右（IaShellHeader 内嵌），本组件不再含
+// 切换行。切换器高亮自算（/ide → ide，/app 家族 → collab）；注意力条与右栏「等我」同源。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -90,7 +90,8 @@ describe('IaGlobalTop — 全局顶区（双视图常驻）', () => {
   it('页头+切换器渲染；武装经 useSharedArm 引用计数执行', async () => {
     const { wrapper } = await mountAt('/app')
     expect(wrapper.find('.hdr-stub').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(true)
+    // v12.2：切换器已移入页头（IaShellHeader），全局顶区不再含切换行
+    expect(wrapper.find('[data-testid="ia-viewswitch-row"]').exists()).toBe(false)
     expect(workspaceStubs.state.loadTodos).toHaveBeenCalled()
     expect(cockpitStubs.state.bootstrap).toHaveBeenCalled()
     wrapper.unmount()
