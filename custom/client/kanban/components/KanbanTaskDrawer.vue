@@ -1013,7 +1013,7 @@ function statusDotClass(status: string): string {
         <div v-if="task.status === 'running'" class="drawer-section">
           <div class="section-head">
             {{ t('kanban.recovery', 'Recovery') }}
-            <span class="section-hint">{{ t('kanban.recovery.hint', 'Abort or reroute the active worker') }}</span>
+            <span class="section-hint">{{ t('kanban.recoveryHint', 'Abort or reroute the active worker') }}</span>
           </div>
           <div class="status-actions">
             <NButton

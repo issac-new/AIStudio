@@ -567,3 +567,11 @@
 #      controller/route/client api；前端右栏打回按任务状态分流（review→reopenReview，
 #      其余→blockTask）。CLI 无 review→blocked 转移，直调 block 必 409（与 322 同族）。
 323-server-kanban-reopen-review-bridge.patch
+
+# 324/325: kanban 自定义组件 i18n 缺键补全（zh/en 各 +151 键）——组件 t('kanban.*')
+#      内联英文兜底导致中文界面显示英文的存量缺口（session 实测 247 个静态引用、
+#      zh 缺 150/en 缺 146）；词表=组件内联兜底+上下文翻译；recovery.hint 改平铺
+#      recoveryHint 避开与平铺 recovery 键冲突；action 组并入既有组防覆盖。
+#      守门：custom/client/__tests__/kanban-i18n-coverage.test.ts 断言零缺键。
+324-client-i18n-kanban-missing-keys-zh.patch
+325-client-i18n-kanban-missing-keys-en.patch
