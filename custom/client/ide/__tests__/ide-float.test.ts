@@ -11,17 +11,21 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }))
 
 // ── chat store：当前会话消息（含两代任务计划）+ 三条子代理流（两条属当前会话）──
-const planOld = { plan_id: 'plan-old', revision: 1, execution_state: 'ended', plan: [{ id: 'a', step: '旧步骤', status: 'completed' }] }
-const planNew = { plan_id: 'plan-new', revision: 2, execution_state: 'running', plan: [{ id: 'b', step: '新步骤', status: 'in_progress' }] }
-const streamOf = (subagentId: string, status = 'running') => ({
-  sessionId: 's-1', subagentId, status, goal: `goal-${subagentId}`,
-  startedAt: 1, updatedAt: 2, entries: [],
+// vi.mock 工厂被提升执行，数据须经 vi.hoisted 才能在工厂内引用
+const { planOld, planNew, subagentStreams } = vi.hoisted(() => {
+  const planOld = { plan_id: 'plan-old', revision: 1, execution_state: 'ended', plan: [{ id: 'a', step: '旧步骤', status: 'completed' }] }
+  const planNew = { plan_id: 'plan-new', revision: 2, execution_state: 'running', plan: [{ id: 'b', step: '新步骤', status: 'in_progress' }] }
+  const streamOf = (subagentId: string, status = 'running') => ({
+    sessionId: 's-1', subagentId, status, goal: `goal-${subagentId}`,
+    startedAt: 1, updatedAt: 2, entries: [],
+  })
+  const subagentStreams = new Map<string, unknown>([
+    ['s-1:agent-1', streamOf('agent-1')],
+    ['s-1:agent-2', streamOf('agent-2', 'completed')],
+    ['s-2:agent-x', streamOf('agent-x')],
+  ])
+  return { planOld, planNew, subagentStreams }
 })
-const subagentStreams = new Map<string, unknown>([
-  ['s-1:agent-1', streamOf('agent-1')],
-  ['s-1:agent-2', streamOf('agent-2', 'completed')],
-  ['s-2:agent-x', streamOf('agent-x')],
-])
 vi.mock('@/stores/hermes/chat', () => {
   const activeSession = {
     id: 's-1', codingAgentId: 'codex', title: '浮窗测试会话', workspace: '/lab/ncwk',

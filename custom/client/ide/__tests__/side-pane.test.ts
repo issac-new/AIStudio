@@ -81,7 +81,8 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     const ide = useIdeStore()
     ide.setSidePaneTab('files')
     const w = mountPane()
-    expect(w.find('[data-testid="stub-filespane"]').exists()).toBe(true)
+    // 组件传的 data-testid 覆盖桩自带 testid（attr 合并规则），断言覆盖值
+    expect(w.find('[data-testid="ide-sidepane-files"]').exists()).toBe(true)
   })
 
   it('辅助对话：输入追问 → 复制结构化 prompt（带类型前缀）', async () => {
