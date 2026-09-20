@@ -1,6 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
+@@ -886,6 +886,9 @@
        manage: '管理',
        createPlaceholder: '房间名称…',
        createOk: '创建',
@@ -52,6 +53,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
+@@ -888,6 +888,9 @@
        manage: 'Manage',
        createPlaceholder: 'Room name…',
        createOk: 'Create',
