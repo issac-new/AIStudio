@@ -1,17 +1,19 @@
 <!-- overlay/custom/client/ia2/components/flow/WaitQueue.vue -->
 <!-- v12 右栏 · 等我队列（动线④决策就地完成）：review 任务=验收/打回；
-     awaiting-input 运行=确认恢复；fleet 审批=确认。行内动作，不出面板。 -->
+     awaiting-input 运行=确认恢复；fleet 审批=确认。行内动作，不出面板。
+     v12.4：口径对齐 DecisionRow（新增 gate-review 评审门行——无行内动作，
+     决策走评审区/通知下拉）。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { WaitItem } from '../../adapters/waiting'
+import type { DecisionRow } from '../../composables/useDecisionRows'
 
-defineProps<{ items: WaitItem[] }>()
+defineProps<{ items: DecisionRow[] }>()
 
 const emit = defineEmits<{
   (e: 'approve-task', taskId: string): void
   (e: 'reject-task', taskId: string): void
-  (e: 'approve-run', item: WaitItem): void
-  (e: 'approve-fleet', item: WaitItem): void
+  (e: 'approve-run', item: DecisionRow): void
+  (e: 'approve-fleet', item: DecisionRow): void
 }>()
 
 const { t } = useI18n()
@@ -26,7 +28,7 @@ const { t } = useI18n()
       class="wq__row"
       :data-testid="`tdp-wait-${w.id}`"
     >
-      <span class="wq__gate" :class="{ 'wq__gate--run': w.kind === 'run-approval', 'wq__gate--fleet': w.kind === 'fleet-approval' }" />
+      <span class="wq__gate" :class="{ 'wq__gate--run': w.kind === 'run-approval', 'wq__gate--fleet': w.kind === 'fleet-approval', 'wq__gate--gate': w.kind === 'gate-review' }" />
       <span class="wq__body">
         <span class="wq__title">{{ w.title }}</span>
         <span class="wq__sub">{{ t(w.subKey) }}</span>
@@ -48,7 +50,7 @@ const { t } = useI18n()
           @click="emit('approve-run', w)"
         >{{ t('ia2.tdp.confirm') }}</button>
         <button
-          v-else
+          v-else-if="w.kind === 'fleet-approval'"
           type="button" class="wq__btn wq__btn--ok" :data-testid="`tdp-confirm-fleet-${w.sessionId}`"
           @click="emit('approve-fleet', w)"
         >{{ t('ia2.tdp.confirm') }}</button>
@@ -67,6 +69,7 @@ const { t } = useI18n()
 .wq__gate { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--warning); }
 .wq__gate--run { background: var(--info); }
 .wq__gate--fleet { background: var(--primary); }
+.wq__gate--gate { background: var(--text-muted); }
 .wq__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .wq__title {
   font-size: 11px; color: var(--text-primary); font-weight: 600;

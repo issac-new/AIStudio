@@ -80,15 +80,29 @@ describe('IdeShell 布局守门', () => {
     expect(w.find('.ide-shell__sidebar').attributes('style') || '').not.toContain('display: none')
   })
 
-  it('侧栏有折叠/最大化按钮（pane-tools）；chat 折叠态容器收缩为把手条', async () => {
+  it('侧栏/会话列顶部控制条（v12.4 IaColumnControls）；chat 折叠态容器收缩为把手条', async () => {
     const w = mountShell()
     const ide = useIdeStore()
     await w.vm.$nextTick()
-    expect(w.find('[data-testid="ide-fold-sidebar-btn"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ide-max-sidebar-btn"]').exists()).toBe(true)
-    ide.toggleFold('chat')
+    // v12.4：栏控迁各栏顶部控制条右上角（旧竖排 pane-tools testid 退役）
+    expect(w.find('[data-testid="ide-col-sidebar-fold"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-sidebar-max"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-chat-fold"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-chat-max"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-chat-popout"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-fold-sidebar-btn"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ide-max-sidebar-btn"]').exists()).toBe(false)
+    expect(w.find('.ide-shell__pane-tools').exists()).toBe(false)
+    // 控制条折叠/最大化动作直通 ide store
+    await w.find('[data-testid="ide-col-chat-fold"]').trigger('click')
     await w.vm.$nextTick()
     expect(w.find('.ide-shell__chat').classes()).toContain('is-folded')
+    ide.toggleFold('chat')
+    await w.vm.$nextTick()
+    await w.find('[data-testid="ide-col-chat-max"]').trigger('click')
+    await w.vm.$nextTick()
+    expect(ide.layout.chat.maximized).toBe(true)
+    ide.toggleMax('chat')
   })
 
   it('工作区列已退役：shell 不再渲染 __workspace', async () => {

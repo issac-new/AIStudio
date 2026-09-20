@@ -42,13 +42,13 @@ export function useDecisionActions() {
     })
   }
 
-  /** 恢复中断运行（awaiting-input → 继续） */
-  function approveRun(item: WaitItem): void {
+  /** 恢复中断运行（awaiting-input → 继续）；v12.4 起接受 DecisionRow（结构子集） */
+  function approveRun(item: Pick<WaitItem, 'runId'>): void {
     if (item.runId) void runsStore.resumeRun(item.runId, true)
   }
 
-  /** fleet 审批（跨 profile 会话的就地批准） */
-  function approveFleet(item: WaitItem): void {
+  /** fleet 审批（跨 profile 会话的就地批准）；v12.4 起接受 DecisionRow（结构子集） */
+  function approveFleet(item: Pick<WaitItem, 'sessionId' | 'approvalId'>): void {
     if (item.sessionId && item.approvalId) {
       void cockpit.respondFleetApproval(item.sessionId, item.approvalId, 'once')
     }

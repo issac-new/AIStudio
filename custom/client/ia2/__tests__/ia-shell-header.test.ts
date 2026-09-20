@@ -7,8 +7,11 @@
 // v12.3（2026-09-20 用户裁定）页头四改：① IaLocaleToggle ZH/EN 直切（LanguageSwitch
 // 下拉退役）；② 恢复 📅 日程按钮（当日徽章）；③ 通知改下拉双页签（NotifyDropdownPanel，
 // 铃铛徽章 = useDecisionRows 待决策未读数）；④ 六态势 chips 迁入（SitlineBar）。
-// 重依赖桩化：composables（态势/决策聚合拉 chat/matrix/team 上游链）、IaWindowControls
-// （栏控依赖 ide store）、IaLocaleToggle（upstream switchLocale）；NotifyDropdownPanel
+// v12.4（2026-09-20 用户裁定）：语言/视图单按钮切换；态势 chips 收窄（删会话/
+// 循环/管理）；等我 = useDecisionRows 待我决策（任务及会话）；三栏栏控迁各栏
+// 顶部控制条（页头 IaWindowControls 退役）。
+// 重依赖桩化：composables（态势/决策聚合拉 chat/matrix/team 上游链）、
+// IaLocaleToggle（upstream switchLocale）；NotifyDropdownPanel
 // 用真组件——铃铛开合即本文件守门。fetch mock 写法参照 cockpit-topbar-health.test.ts；
 // i18n 走全局 setup mock（t 直返 key）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -52,16 +55,13 @@ vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeS
 vi.mock('../components/IaLocaleToggle.vue', () => ({
   default: { name: 'IaLocaleToggle', template: '<span class="locale-stub" data-testid="ia-locale-toggle" />' },
 }))
-// 栏控簇依赖 ide store + wm/popout，此间桩化（自身守门在 unified-nav-guard）
-vi.mock('../components/IaWindowControls.vue', () => ({
-  default: { name: 'IaWindowControls', template: '<div class="wm-stub" data-testid="ia-window-controls" />' },
-}))
 
-// v12.3 页头四改的重数据面桩化：态势/会话/决策聚合 + 决策动作
+// v12.4 页头重数据面桩化：态势/决策聚合 + 决策动作
 vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
   useSitCounts: () => ({
     waitItems: { value: [] },
-    tasks: { total: 0, running: 0, review: 0 },
+    tasks: { total: 5, running: 2, review: 1, byStatus: { running: 2, review: 1, todo: 2 } },
+    openTasks: { value: [] },
     sessionCount: { value: 0 },
     loopTotal: { value: 0 },
     loopBlocked: { value: 0 },
@@ -71,9 +71,6 @@ vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
     oldestWaitLabel: { value: '' },
   }),
 }))
-vi.mock('@/custom/ia2/composables/useSessionRows', () => ({
-  useSessionRows: () => ({ sessionRows: { value: [] } }),
-}))
 vi.mock('@/custom/ia2/composables/useDecisionRows', async () => {
   const { ref } = await import('vue')
   return {
@@ -82,6 +79,7 @@ vi.mock('@/custom/ia2/composables/useDecisionRows', async () => {
       decisionIds: ref([]),
       decisionUnread: ref(3),
       gateRows: ref([]),
+      oldestDecisionLabel: ref(''),
     }),
   }
 })
@@ -128,7 +126,7 @@ describe('IaShellHeader — 统一壳页头', () => {
     cockpitStubs.state.inboxItems = []
   })
 
-  it('品牌：连接点 + ia2.brand 文案（无 Swarm Studio 字样）；ZH/EN 直切在位（v12.3）', async () => {
+  it('品牌：连接点 + ia2.brand 文案（无 Swarm Studio 字样）；语言单按钮切换在位（v12.4）', async () => {
     const w = await mountHeader()
     expect(w.text()).toContain('ia2.brand')
     expect(w.text()).not.toContain('Swarm Studio')
@@ -136,15 +134,26 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('v12.2 视图切换器固定最右（沟通协作 | IDE 工作台，⇄IDE 跳转按钮退役）', async () => {
+  it('v12.4 视图切换器单按钮固定最右（/app 态显示目标视图 IDE 工作台，双按钮退役）', async () => {
     const w = await mountHeader()
     expect(w.find('[data-testid="ia-header-ide"]').exists()).toBe(false)
     const row = w.find('[data-testid="ia-viewswitch-row"]')
     expect(row.exists()).toBe(true)
-    expect(row.find('[data-testid="ia-scene-collab"]').exists()).toBe(true)
-    expect(row.find('[data-testid="ia-scene-ide"]').exists()).toBe(true)
-    expect(row.text()).toContain('ia2.nav.collab')
-    expect(row.text()).toContain('ia2.shell.gotoIde')
+    const btn = row.find('[data-testid="ia-view-toggle"]')
+    expect(btn.exists()).toBe(true)
+    // 单按钮：旧双入口 testid 退役
+    expect(row.find('[data-testid="ia-scene-collab"]').exists()).toBe(false)
+    expect(row.find('[data-testid="ia-scene-ide"]').exists()).toBe(false)
+    // /app 态显示目标视图（IDE 工作台），点击跳 ide.shell
+    expect(btn.text()).toContain('ia2.shell.gotoIde')
+    await btn.trigger('click')
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ide.shell' })
+    w.unmount()
+  })
+
+  it('v12.4 栏控迁三栏（页头 IaWindowControls 集中簇退役）', async () => {
+    const w = await mountHeader()
+    expect(w.find('[data-testid="ia-window-controls"]').exists()).toBe(false)
     w.unmount()
   })
 

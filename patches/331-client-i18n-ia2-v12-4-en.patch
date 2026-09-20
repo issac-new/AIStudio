@@ -1,0 +1,30 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -936,7 +936,7 @@
+       loops: 'Loops', blocked: 'blocked', online: 'Online',
+       onlineDetail: '{p} people · {a} agents · {m} machines', manage: 'Manage',
+       panelClose: 'Close', empty: 'Nothing here yet',
+-      actApprove: 'Approve', actReject: 'Reject', actContinue: 'Resume',
++      actApprove: 'Approve', actReject: 'Reject', actContinue: 'Resume', actGoReview: 'Open review',
+       panelPeople: 'People', panelAgents: 'Agents', panelMachines: 'Machines', openManage: 'Open management',
+     },
+     gov: {
+@@ -1026,6 +1026,8 @@
+       foldRight: 'Fold right pane',
+       maxCenter: 'Maximize center',
+       restoreCenter: 'Restore center',
++      unfoldLeft: 'Unfold left pane',
++      unfoldRight: 'Unfold right pane',
+       mergeBack: 'Merge Back',
+       standaloneTag: 'Standalone',
+       minimized: 'Minimized',
+@@ -1057,6 +1059,8 @@
+     },
+     overview: {
+       attentionLabel: 'Needs attention',
++      swarmKanbanLabel: 'swarm kanban',
++      swarmKanbanHint: 'Double-click to open the swarm kanban board (all tasks)',
+       attentionEmpty: 'No blocked, review or triage tasks',
+       tierBlocked: 'Blocked',
+       tierReview: 'Review',
