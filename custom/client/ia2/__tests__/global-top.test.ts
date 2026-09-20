@@ -38,10 +38,30 @@ vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: runsSt
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: () => ({ loops: [], fetchLoops: vi.fn(async () => {}) }) }))
 
 vi.mock('../components/IaShellHeader.vue', () => ({
-  default: { name: 'IaShellHeader', props: ['notifyCount', 'userName'], emits: ['notify'], template: '<div class="hdr-stub" />' },
+  default: { name: 'IaShellHeader', props: ['userName'], template: '<div class="hdr-stub" />' },
 }))
+// v12.3 R2：空态不消失（条即管理入口）——桩去 v-if、暴露 data-count 验数据流
 vi.mock('../components/AttentionStrip.vue', () => ({
-  default: { name: 'AttentionStrip', props: ['items'], emits: ['select'], template: '<div class="attn-stub" v-if="items.length" />' },
+  default: {
+    name: 'AttentionStrip',
+    props: ['items'],
+    emits: ['select', 'open-gov'],
+    template: '<div class="attn-stub" :data-count="items.length" />',
+  },
+}))
+// 态势计数单一聚合（v12.3）：经其拉 chat/matrix/team 上游链，此处桩化为空态
+vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
+  useSitCounts: () => ({
+    waitItems: { value: [] },
+    tasks: { total: 0, running: 0, review: 0 },
+    sessionCount: { value: 0 },
+    loopTotal: { value: 0 },
+    loopBlocked: { value: 0 },
+    loopRows: { value: [] },
+    accounts: { value: [] },
+    online: { people: 0, agents: 0, machines: 0 },
+    oldestWaitLabel: { value: '' },
+  }),
 }))
 
 import IaGlobalTop from '../components/IaGlobalTop.vue'
@@ -98,20 +118,15 @@ describe('IaGlobalTop — 全局顶区（双视图常驻）', () => {
     expect(cockpitStubs.state.disconnectOnUnmount).toHaveBeenCalled()
   })
 
-  it('有 review 任务时注意力条渲染（等我同源）；无事项时不渲染', async () => {
-    workspaceStubs.state.tasks = [{ id: 't-1', title: '验收 v2.30', status: 'review', assignee: null, createdAt: 1 }]
+  it('blocked 任务进注意力条（blocked 梯队）；空态条不消失（R2 管理入口常驻）', async () => {
+    workspaceStubs.state.tasks = [{ id: 't-1', title: '等外部凭据', status: 'blocked', assignee: null, createdAt: 1 }]
     const { wrapper } = await mountAt('/app')
     expect(wrapper.find('.attn-stub').exists()).toBe(true)
+    expect(wrapper.find('.attn-stub').attributes('data-count')).toBe('1')
     wrapper.unmount()
     workspaceStubs.state.tasks = []
     const { wrapper: w2 } = await mountAt('/app')
-    expect(w2.find('.attn-stub').exists()).toBe(false)
-  })
-
-  it('通知事件透传 emit notify', async () => {
-    const { wrapper } = await mountAt('/app')
-    wrapper.findComponent({ name: 'IaShellHeader' }).vm.$emit('notify')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.emitted('notify')).toHaveLength(1)
+    expect(w2.find('.attn-stub').exists()).toBe(true)
+    expect(w2.find('.attn-stub').attributes('data-count')).toBe('0')
   })
 })

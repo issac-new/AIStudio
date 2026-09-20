@@ -72,12 +72,26 @@ const loopStubs = vi.hoisted(() => {
 })
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: loopStubs.useLoopStore }))
 
+// 态势计数单一聚合（v12.3）：IaGlobalTop/页头经其拉 chat/matrix/team 上游链，
+// 壳测试只验壳自身——桩化；waitItems 暴露 getter 供「等我→看板预选」用例注入
+const sitStubs = vi.hoisted(() => ({ waitItems: [] as unknown[] }))
+vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
+  useSitCounts: () => ({
+    waitItems: { get value() { return sitStubs.waitItems } },
+    tasks: { total: 0, running: 0, review: 0 },
+    sessionCount: { value: 0 },
+    loopTotal: { value: 0 },
+    loopBlocked: { value: 0 },
+    loopRows: { value: [] },
+    accounts: { value: [] },
+    online: { people: 0, agents: 0, machines: 0 },
+    oldestWaitLabel: { value: '' },
+  }),
+}))
+
 // 子组件桩化：页头（fetch 探测/重图依赖）与三个全局弹窗单独有守门，此间只验壳自身
 vi.mock('@/custom/ia2/components/IaShellHeader.vue', () => ({
   default: { name: 'IaShellHeader', template: '<div class="ia-shell-header-stub" />' },
-}))
-vi.mock('@/custom/cockpit/components/CockpitNotifyModal.vue', () => ({
-  default: { name: 'CockpitNotifyModal', template: '<div class="notify-modal-stub" />' },
 }))
 vi.mock('@/custom/cockpit/components/CockpitScheduleModal.vue', () => ({
   default: { name: 'CockpitScheduleModal', template: '<div class="schedule-modal-stub" />' },
@@ -86,13 +100,14 @@ vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({
   default: { name: 'CockpitRunTraceModal', template: '<div class="runtrace-modal-stub" />' },
 }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
-// 注意力条单独有守门；此间桩化隔离（其数据源与壳同构）
+// 注意力条单独有守门；此间桩化隔离（其数据源与壳同构）。
+// v12.3 R2：空态不消失（条即管理入口）——桩去掉 v-if 并补 open-gov 事件
 vi.mock('@/custom/ia2/components/AttentionStrip.vue', () => ({
   default: {
     name: 'AttentionStrip',
     props: ['items'],
-    emits: ['select'],
-    template: '<div class="attn-stub" data-testid="ia-attn" v-if="items.length" @click="$emit(\'select\', items[0])" />',
+    emits: ['select', 'open-gov'],
+    template: '<div class="attn-stub" data-testid="ia-attn" @click="items.length && $emit(\'select\', items[0])"><button class="attn-gov-stub" @click.stop="$emit(\'open-gov\')" /></div>',
   },
 }))
 
@@ -198,33 +213,12 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
     expect(router.currentRoute.value.query.standalone).toBe('1')
   })
 
-  it('最大化态（max=1）：壳页头隐藏，浮动还原胶囊在位；Esc 退出', async () => {
+  it('v12.3 窗控改栏控：max=1 页级最大化退役——max query 不再隐藏壳页头，无还原胶囊', async () => {
     const { wrapper } = await mountShell('/app?max=1')
-    expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(false)
-    const pill = wrapper.find('[data-testid="ia-wm-restore-pill"]')
-    expect(pill.exists()).toBe(true)
-    await pill.trigger('click')
-    await flushPromises()
     expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(true)
-    // 再最大化后用 Esc 还原
-    const wrapper2 = (await mountShell('/app?max=1')).wrapper
-    expect(wrapper2.find('.ia-shell-header-stub').exists()).toBe(false)
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
-    await flushPromises()
-    expect(wrapper2.find('.ia-shell-header-stub').exists()).toBe(true)
-  })
-
-  it('最小化任务栏：入列渲染 chip，点击恢复导航并出列', async () => {
-    const { wrapper, router } = await mountShell('/app')
-    const { useWmStore } = await import('../wm/store')
-    useWmStore().minimize('/app/runs?tab=runs')
-    await flushPromises()
-    const chip = wrapper.find('[data-testid="ia-wm-dock-chip"]')
-    expect(chip.exists()).toBe(true)
-    await chip.trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/runs?tab=runs')
-    expect(useWmStore().minimized).toHaveLength(0)
+    expect(wrapper.find('[data-testid="ia-wm-restore-pill"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-wm-dock"]').exists()).toBe(false)
+    wrapper.unmount()
   })
 
   it('合并回流：独立窗口 storage 信号驱动主窗导航', async () => {
@@ -255,8 +249,8 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
 })
 
 describe('IaShell — 注意力条与⚙管理台（v12 Task 8）', () => {
-  it('有等我事项时注意力条在位（页头下、场景条上）；点击 → 看板预选', async () => {
-    workspaceStubs.state.tasks = [{ id: 't-1', title: '验收 v2.28', status: 'review', assignee: null, createdAt: 1 }]
+  it('有等我事项时注意力条在位（空态也在——R2 管理入口常驻）；点击 → 看板预选', async () => {
+    sitStubs.waitItems = [{ id: 'w-1', kind: 'task-review', title: '验收 v2.28', subKey: 'ia2.wait.taskReview', ts: 1, taskId: 't-1' }]
     const { wrapper, router } = await mountShell('/app')
     const attn = wrapper.find('[data-testid="ia-attn"]')
     expect(attn.exists()).toBe(true)
@@ -264,17 +258,17 @@ describe('IaShell — 注意力条与⚙管理台（v12 Task 8）', () => {
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.board')
     expect(router.currentRoute.value.query.task).toBe('t-1')
-    workspaceStubs.state.tasks = []
+    sitStubs.waitItems = []
   })
 
-  it('Esc 优先收管理台覆盖层（不退最大化）', async () => {
-    const { wrapper } = await mountShell('/app?max=1')
+  it('Esc 收管理台覆盖层（v12.3 max=1 退役：Esc 不再退页级最大化）', async () => {
+    const { wrapper } = await mountShell('/app')
     const flow = useFlowStore()
     flow.openGov()
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await flushPromises()
     expect(flow.govOpen).toBe(false)
-    // max 态未被 Esc 触及（管理台优先吃 Esc）
-    expect(wrapper.find('[data-testid="ia-wm-restore-pill"]').exists()).toBe(true)
+    // 壳页头常驻（无页级最大化可退）
+    expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(true)
   })
 })
