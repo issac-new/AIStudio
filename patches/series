@@ -575,3 +575,7 @@
 #      守门：custom/client/__tests__/kanban-i18n-coverage.test.ts 断言零缺键。
 324-client-i18n-kanban-missing-keys-zh.patch
 325-client-i18n-kanban-missing-keys-en.patch
+
+# 326: 态势条内联面板 i18n（v12.2 用户裁定：二级/三级功能整合同页不来回跳转）——
+#      SitDetailPanel 五段面板 + 页头视图切换器文案（sit 组 +9 键 zh/en）。
+326-client-i18n-sitline-inline-panel.patch

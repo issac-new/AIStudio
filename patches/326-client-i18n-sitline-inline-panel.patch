@@ -1,0 +1,28 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 6ad812c..ca7e978 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -924,6 +924,9 @@ export default {
+       tasks: '任务', running: '进行', review: '待审', sessions: '会话',
+       loops: '循环', blocked: '阻塞', online: '在线',
+       onlineDetail: '{p} 人 · {a} 智能体 · {m} 机器', manage: '管理',
++      panelClose: '关闭', empty: '暂无内容',
++      actApprove: '批准', actReject: '打回', actContinue: '继续',
++      panelPeople: '人', panelAgents: '智能体', panelMachines: '机器', openManage: '打开管理台',
+     },
+     gov: {
+       title: '管理', back: '返回',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index d07aab8..d2157be 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -926,6 +926,9 @@ export default {
+       tasks: 'Tasks', running: 'running', review: 'review', sessions: 'Sessions',
+       loops: 'Loops', blocked: 'blocked', online: 'Online',
+       onlineDetail: '{p} people · {a} agents · {m} machines', manage: 'Manage',
++      panelClose: 'Close', empty: 'Nothing here yet',
++      actApprove: 'Approve', actReject: 'Reject', actContinue: 'Resume',
++      panelPeople: 'People', panelAgents: 'Agents', panelMachines: 'Machines', openManage: 'Open management',
+     },
+     gov: {
+       title: 'Manage', back: 'Back',

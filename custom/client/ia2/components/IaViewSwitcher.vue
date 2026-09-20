@@ -1,7 +1,9 @@
 <!-- overlay/custom/client/ia2/components/IaViewSwitcher.vue -->
-<!-- v12.1 视图切换器（2026-09-19 壳层重排）：「沟通协作 | IDE 工作台」统一
-     在注意力条下方右上角（用户裁定）。自算当前视图（/ide → ide，其余 /app →
-     collab）；testid 沿用 ia-scenes / ia-scene-<key> 保持守门兼容。 -->
+<!-- v12.2 视图切换器（2026-09-20 用户裁定）：嵌页头最右（顶部右上角），
+     「沟通协作 | IDE 工作台」双视图切换。原注意力条下方独立切换行与页头
+     ⇄IDE 跳转按钮均退役（收敛为单一切换入口）。自算当前视图（/ide → ide，
+     其余 /app 家族 → collab）；testid 沿用 ia-viewswitch-row / ia-scenes /
+     ia-scene-<key> 保持守门兼容。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
@@ -16,7 +18,6 @@ const activeView = computed<'collab' | 'ide'>(() =>
 
 <template>
   <div class="ia-vsrow" data-testid="ia-viewswitch-row">
-    <span class="ia-vsrow__spacer" />
     <nav class="ia-scenes" data-testid="ia-scenes">
       <router-link
         :to="{ name: 'ia2.collab' }"
@@ -35,21 +36,19 @@ const activeView = computed<'collab' | 'ide'>(() =>
 </template>
 
 <style scoped lang="scss">
-/* v12.1：切换行右对齐（用户裁定：注意力条下方右上角统一切换） */
+/* v12.2：切换器嵌页头最右（用户裁定：顶部右上角二视图切换），随页头行高走 */
 .ia-vsrow {
-  display: flex; align-items: center; flex-shrink: 0;
-  padding: 6px 16px 0;
+  display: inline-flex; align-items: center; flex-shrink: 0; margin-left: 4px;
 }
-.ia-vsrow__spacer { flex: 1; }
 .ia-scenes {
   display: flex; gap: 2px; border: 1px solid var(--border-color);
   border-radius: var(--radius, 6px); background: var(--bg-card); padding: 2px;
 }
 .ia-scenes__btn {
-  padding: 4px 14px; border-radius: 4px; background: transparent;
+  padding: 3px 12px; border-radius: 4px; background: transparent;
   color: var(--text-secondary); font-size: 12px; text-decoration: none; white-space: nowrap;
   &:hover { color: var(--primary, #3b82f6); }
 }
 .ia-scenes__btn--on { background: var(--primary, #3b82f6); color: #fff; }
-.ia-scenes__btn--ide { margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 14px; }
+.ia-scenes__btn--ide { border-left: 1px solid var(--border-color); }
 </style>
