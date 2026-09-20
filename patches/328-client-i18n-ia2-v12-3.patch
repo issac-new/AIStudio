@@ -1,0 +1,104 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -886,6 +886,9 @@
+       manage: '管理',
+       createPlaceholder: '房间名称…',
+       createOk: '创建',
++      clusterRooms: '房间',
++      clusterGroups: '群聊',
++      clusterChats: '会话',
+     },
+     loop: {
+       stage: {
+@@ -1017,11 +1020,38 @@
+       restore: '还原',
+       minimize: '最小化',
+       popOut: '独立窗口',
++      foldLeft: '折叠左栏',
++      foldRight: '折叠右栏',
++      maxCenter: '最大化中栏',
++      restoreCenter: '还原中栏',
+       mergeBack: '合并回驾驶舱',
+       standaloneTag: '独立窗口',
+       minimized: '已最小化',
+       dismiss: '移除',
+       dockClear: '清空',
++    },
++    header: {
++      scheduleToday: '今日有日程',
++    },
++    notify: {
++      tabDecisions: '待人工决策',
++      tabMessages: '消息',
++      markAllTitle: '全部标记已读',
++      markAll: '全部已读',
++      clearReadTitle: '清除已读未读状态',
++      clearRead: '清除已读',
++      emptyDecisions: '暂无待人工决策事项',
++      emptyMessages: '暂无未读消息',
++      gatePass: '通过',
++      gateReject: '打回',
++      gateRejectReason: '通知下拉就地打回（评审门）',
++      subGate: '评审门会签',
++    },
++    swp: {
++      object: '对象',
++      tasks: '任务簇',
++      noTasks: '无挂接任务',
++      participants: '参与方',
+     },
+     overview: {
+       attentionLabel: '需要注意',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -888,6 +888,9 @@
+       manage: 'Manage',
+       createPlaceholder: 'Room name…',
+       createOk: 'Create',
++      clusterRooms: 'Rooms',
++      clusterGroups: 'Group Chats',
++      clusterChats: 'Agent Chats',
+     },
+     loop: {
+       stage: {
+@@ -1019,11 +1022,38 @@
+       restore: 'Restore',
+       minimize: 'Minimize',
+       popOut: 'Open in Window',
++      foldLeft: 'Fold left pane',
++      foldRight: 'Fold right pane',
++      maxCenter: 'Maximize center',
++      restoreCenter: 'Restore center',
+       mergeBack: 'Merge Back',
+       standaloneTag: 'Standalone',
+       minimized: 'Minimized',
+       dismiss: 'Dismiss',
+       dockClear: 'Clear',
++    },
++    header: {
++      scheduleToday: 'Scheduled today',
++    },
++    notify: {
++      tabDecisions: 'Decisions',
++      tabMessages: 'Messages',
++      markAllTitle: 'Mark all as read',
++      markAll: 'Mark all',
++      clearReadTitle: 'Clear read/unread states',
++      clearRead: 'Clear read',
++      emptyDecisions: 'No pending decisions',
++      emptyMessages: 'No unread messages',
++      gatePass: 'Pass',
++      gateReject: 'Reject',
++      gateRejectReason: 'Rejected from notify dropdown (review gate)',
++      subGate: 'Review gate signoff',
++    },
++    swp: {
++      object: 'Object',
++      tasks: 'Task Cluster',
++      noTasks: 'No linked tasks',
++      participants: 'Participants',
+     },
+     overview: {
+       attentionLabel: 'Needs attention',

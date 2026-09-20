@@ -584,15 +584,6 @@ describe('notify (Matrix unread only)', () => {
     expect(store.notifyItems).toHaveLength(0)
     expect(store.notifyCount).toBe(0)
   })
-
-  it('openNotify/closeNotify 开关', () => {
-    const store = useCockpitStore()
-    expect(store.notifyOpen).toBe(false)
-    store.openNotify()
-    expect(store.notifyOpen).toBe(true)
-    store.closeNotify()
-    expect(store.notifyOpen).toBe(false)
-  })
 })
 
 describe('cockpit store 工作项标题/评论草稿', () => {

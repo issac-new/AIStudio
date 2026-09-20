@@ -42,6 +42,18 @@ describe('buildSessionRows — 会话∪单聊统一投影（按最近活动排�
     })
     expect(rows[2]).toMatchObject({ dutyName: 'TL', lastActivityAt: null })
   })
+
+  it('R4b 群聊第三类：kind=group 透传投影（无挂接/无值守——群聊无 tenant/session_id 通道）', () => {
+    const rows = buildSessionRows(
+      [
+        { kind: 'group', id: 'g1', name: '产品群聊', lastActivityAt: 400 },
+        { kind: 'room', id: 'r1', name: '应急指挥中心', lastActivityAt: 200 },
+      ],
+      hooks,
+    )
+    expect(rows.map(r => `${r.kind}:${r.id}`)).toEqual(['group:g1', 'room:r1'])
+    expect(rows[0]).toMatchObject({ kind: 'group', id: 'g1', name: '产品群聊', unread: 0, taskIds: [], teamTag: '', dutyName: null })
+  })
 })
 
 // ── 循环行投影 ──

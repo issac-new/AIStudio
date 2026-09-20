@@ -103,7 +103,7 @@ describe('v12 统一视图守门（双视图）', () => {
     }
   })
 
-  it('窗口管理守门：页头窗控簇挂载 + 独立窗口/最大化/最小化三态语义', () => {
+  it('窗口管理守门：页头窗控簇挂载 + 独立窗口精简壳 + v12.3 max/dock 链路退役', () => {
     const header = readFileSync(
       resolve(__dirname, '../components/IaShellHeader.vue'),
       'utf8',
@@ -112,11 +112,14 @@ describe('v12 统一视图守门（双视图）', () => {
     const ideShell = readFileSync(resolve(__dirname, '../../ide/views/IdeShell.vue'), 'utf8')
     const switcher = readFileSync(resolve(__dirname, '../components/IaViewSwitcher.vue'), 'utf8')
     expect(header).toContain('<IaWindowControls />')
-    // standalone 精简壳 / max 隐藏壳页 + Esc / 最小化 dock / 合并回流监听
+    // standalone 精简壳 / Esc 收管理台 / 合并回流监听；
+    // v12.3 窗控改三栏栏控——页级 max=1 最大化与最小化 dock 链路退役（守门防回潮）
     expect(shell).toContain('IaPopoutBar v-if="isStandalone"')
-    expect(shell).toContain('v-else-if="!isMaximized"')
+    expect(shell).toContain('<IaGlobalTop v-else />')
     expect(shell).toContain("event.key === 'Escape'")
-    expect(shell).toContain('<IaMinimizedDock')
+    expect(shell).not.toContain('<IaMinimizedDock')
+    expect(shell).not.toContain('isMaximized')
+    expect(shell).not.toContain('ia-wm-restore-pill')
     expect(shell).toContain('listenMergeBack')
     // v12.2 全局顶区常驻双视图（用户裁定）：双壳均挂 IaGlobalTop；切换器嵌
     // 页头最右（IaShellHeader 内嵌 IaViewSwitcher，顶部右上角单入口），

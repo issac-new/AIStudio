@@ -4,8 +4,10 @@
      循环→运行画布[实时|历史]）；右=任务与决策（等我队列+挂接任务+动态）恒驻。
      选择态经路由子路径承载（s/chat/:sessionId | s/room/:roomId | l/:loopId），
      '' 无选择时自动选首个会话（不写 URL，刷新/深链直达不失真）。
-     数据底座：matrix 房间 + hermes agent 会话（会话不分类同列）、loop 实例、
-     kanban 任务（tenant 六段式/契约挂接）；派生全走 adapters/flow 纯函数。 -->
+     v12.3（2026-09-20 用户裁定）：六态势 chips 迁页头（SitlineBar + 内联面板
+     在 IaShellHeader，本视图不再渲染态势行）；行装配/决策动作/态势计数收编
+     composables（useSessionRows/useDecisionActions/useSitCounts 单一实现）；
+     三栏随 flow.layout 折叠（页头栏控驱动：左折/右折/中栏最大化=两侧齐折）。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -16,24 +18,21 @@ import { useLoopStore } from '@/custom/loop/store/loop'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
-import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
-import { useKanbanStore } from '@/stores/hermes/kanban'
-import * as kanbanApi from '@/api/hermes/kanban'
-import { useChatStore } from '@/stores/hermes/chat'
 import {
-  buildSessionRows, buildLoopRows, linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
-  type SessionSourceRow, type StreamSelection,
+  linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
+  type StreamSelection,
 } from '../adapters/flow'
-import { buildWaiting, type WaitItem } from '../adapters/waiting'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import RunCanvas from '../components/flow/RunCanvas.vue'
-import SitlineBar from '../components/SitlineBar.vue'
-import SitDetailPanel, { type SitSegment } from '../components/SitDetailPanel.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
-import type { ParticipantBadge } from '../components/flow/ParticipantsBar.vue'
+import type { ParticipantBadge } from '../components/flow/SessionWorkbenchPanel.vue'
+import { useSessionRows } from '../composables/useSessionRows'
+import { useSitCounts } from '../composables/useSitCounts'
+import { useDecisionActions } from '../composables/useDecisionActions'
+import { useIdeJump } from '../composables/useIdeJump'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,80 +43,26 @@ const loopStore = useLoopStore()
 const runsStore = useRunCenterStore()
 const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
-const teamRegistry = useTeamRegistryStore()
-const kanban = useKanbanStore()
-const chatStore = useChatStore()
-const kanbanTasks = computed(() => kanban.tasks ?? [])
+
+// ── 行装配与决策动作（composables 单一实现，页头态势/通知下拉同源）──
+
+const { sessionRows, chatSessions, tasksForLink, duties, accounts } = useSessionRows()
+const { waitItems, loopRows } = useSitCounts()
+const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
+const { jumpIde } = useIdeJump()
 
 // ── 选择：路由是选择的唯一持久载体 ──
 
 const routeSel = computed<StreamSelection | null>(() => {
-  if (typeof route.params.roomId === 'string') return { kind: 'room', id: route.params.roomId }
-  if (typeof route.params.sessionId === 'string') return { kind: 'chat', id: route.params.sessionId }
-  if (typeof route.params.loopId === 'string') return { kind: 'loop', id: route.params.loopId }
-  return null
-})
-
-// ── 会话源：matrix 房间 ∪ hermes agent 会话（不分类同列）──
-
-const chatSessions = computed(() => chatStore.sessions ?? [])
-
-const sessionSources = computed<SessionSourceRow[]>(() => {
-  // 房间侧 sortedRooms 已按最近消息倒序——用 rank 时戳保序（SDK Room 形状不直耦合
-  // 进纯函数）；会话侧 updatedAt 真值。两路经 buildSessionRows 统一重排。
-  const now = Date.now()
-  const rooms = (matrixRoom.sortedRooms ?? []) as Array<{ roomId: string; name?: string }>
-  const roomRows: SessionSourceRow[] = rooms.map((r, i) => ({
-    kind: 'room', id: r.roomId, name: r.name || r.roomId, lastActivityAt: now - i * 1000,
-  }))
-  const chatRows: SessionSourceRow[] = chatSessions.value.map(s => ({
-    kind: 'chat', id: s.id, name: s.title || s.id, lastActivityAt: s.updatedAt ?? null,
-  }))
-  return [...roomRows, ...chatRows]
-})
-
-// ── 任务挂接源（kanban 原始任务优先——带 session_id；退化用 workspace 聚合行）──
-
-const tasksForLink = computed(() => {
-  if (kanbanTasks.value?.length) {
-    return kanbanTasks.value.map(t => ({ id: t.id, tenant: t.tenant ?? null, session_id: t.session_id ?? null }))
+  // 按路由名分派：s/room 与 s/group 的参数名同为 roomId，params 判别会互撞
+  switch (route.name) {
+    case 'ia2.commsRoom': return typeof route.params.roomId === 'string' ? { kind: 'room', id: route.params.roomId } : null
+    case 'ia2.groupRoom': return typeof route.params.roomId === 'string' ? { kind: 'group', id: route.params.roomId } : null
+    case 'ia2.collabSession': return typeof route.params.sessionId === 'string' ? { kind: 'chat', id: route.params.sessionId } : null
+    case 'ia2.loopCanvas': return typeof route.params.loopId === 'string' ? { kind: 'loop', id: route.params.loopId } : null
+    default: return null
   }
-  return workspace.tasks.map(t => ({ id: t.id, tenant: t.tenant ?? null, session_id: null }))
 })
-
-// ── 行构建（纯函数 + 视图侧钩子）──
-
-const duties = computed(() => teamRegistry.duties ?? {})
-const accounts = computed(() => teamRegistry.accounts ?? [])
-
-function assigneeLabelOf(roomId: string): { dutyName: string | null; teamTag: string } {
-  const duty = duties.value[roomId]
-  if (!duty) return { dutyName: null, teamTag: '' }
-  const account = accounts.value.find(a =>
-    duty.assigneeKind === 'account' ? a.userId === duty.assigneeId
-      : a.agentTeams.some(at => `${a.userId}/${at.slug}` === duty.assigneeId))
-  const teamTag = account?.agentTeams[0]?.slug ?? ''
-  return { dutyName: account?.displayName ?? duty.roomName ?? null, teamTag }
-}
-
-const sessionRows = computed(() => buildSessionRows(sessionSources.value, {
-  unreadOf(id, kind) {
-    if (kind === 'chat') return chatStore.unreadMessages?.get(id)?.count ?? 0
-    const room = (matrixRoom.sortedRooms ?? []).find((r: { roomId: string }) => r.roomId === id)
-    return room ? matrixRoom.getRoomUnreadCount(room) : 0
-  },
-  taskIdsOf(id, kind) {
-    return linkedTaskIdsOfSession({ kind, id }, tasksForLink.value)
-  },
-  teamTagOf(id) {
-    return assigneeLabelOf(id).teamTag
-  },
-  dutyNameOf(id) {
-    return assigneeLabelOf(id).dutyName
-  },
-}))
-
-const loopRows = computed(() => buildLoopRows(loopStore.loops ?? [], Date.now()))
 
 // ── 默认选择与 store 同步（'' 无选择 → 首个会话，不写 URL）──
 
@@ -138,13 +83,6 @@ watch(activeSel, sel => {
 
 /** 展示任务源：workspace 聚合行（跨板块全量，含 tenant/状态/指派） */
 const tasksForShow = computed(() => workspace.tasks)
-
-const waitItems = computed(() => buildWaiting(
-  tasksForShow.value.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
-  runsStore.runs ?? [],
-  cockpit.fleetSessions ?? [],
-  Date.now(),
-))
 
 const linkedTasks = computed<CockpitTask[]>(() => {
   const sel = activeSel.value
@@ -180,44 +118,7 @@ const linkedContext = computed(() => {
   return sessionRows.value.find(s => s.kind === sel.kind && s.id === sel.id)?.name ?? ''
 })
 
-// ── 右栏动作（动线②指派 / ④决策 / ⑤编码）──
-// 板定位用任务自身 boardSlug（跨板聚合行的来源板），不走看板页遗留的
-// selectedBoard——否则非当前选中板任务的验收/打回会打到 default 板而静默失效。
-
-function boardOf(taskId: string): string | undefined {
-  return tasksForShow.value.find(x => x.id === taskId)?.boardSlug || undefined
-}
-
-function onApproveTask(taskId: string): void {
-  void kanbanApi.completeTasks([taskId], undefined, { board: boardOf(taskId) }).then(() => {
-    void workspace.refreshAllBoards(true)
-  })
-}
-
-function onRejectTask(taskId: string): void {
-  const task = workspace.tasks.find(x => x.id === taskId)
-  if (task?.status === 'review') {
-    // review 态打回＝reopen-review 回 ready 重做（CLI 无 review→blocked 转移，
-    // 直调 block 会被守卫 409 且前端吞错＝按钮没反应）
-    void kanbanApi.reopenReview([taskId], t('ia2.tdp.rejectReason'), { board: boardOf(taskId) }).then(() => {
-      void workspace.refreshAllBoards(true)
-    })
-    return
-  }
-  void kanbanApi.blockTask(taskId, t('ia2.tdp.rejectReason'), { board: boardOf(taskId) }).then(() => {
-    void workspace.refreshAllBoards(true)
-  })
-}
-
-function onApproveRun(item: WaitItem): void {
-  if (item.runId) void runsStore.resumeRun(item.runId, true)
-}
-
-function onApproveFleet(item: WaitItem): void {
-  if (item.sessionId && item.approvalId) {
-    void cockpit.respondFleetApproval(item.sessionId, item.approvalId, 'once')
-  }
-}
+// ── 右栏动作（动线②指派 / ④决策 / ⑤编码；决策实现=useDecisionActions）──
 
 const drawerTaskId = ref<string | null>(null)
 const drawerOpen = ref(false)
@@ -228,7 +129,7 @@ function onReassign(taskId: string): void {
 }
 
 function onOpenIde(taskId: string): void {
-  void router.push({ name: 'ide.shell', query: { task: taskId } })
+  jumpIde(taskId)
 }
 
 function onHandleTask(taskId: string): void {
@@ -267,6 +168,7 @@ const participants = computed<ParticipantBadge[]>(() => {
     const s = chatSessions.value.find(x => x.id === sel.id)
     return s?.agent ? [{ kind: 'agent', name: s.agent }] : []
   }
+  if (sel.kind === 'group') return [] // 群聊成员面在 GroupChatPanel 自有 UI，面板不投影
   const badges: ParticipantBadge[] = []
   try {
     const members = matrixRoom.getRoomMemberList?.(sel.id)
@@ -328,43 +230,23 @@ function onGotoBoard(): void {
   void router.push({ name: 'ia2.board' })
 }
 
-// ── 态势条计数（v12 sitline：等我/任务/会话/循环/在线 + ⚙管理）──
-
-function humanizeWait(ms: number): string {
-  if (ms <= 0) return ''
-  const mins = Math.floor(ms / 60000)
-  if (mins < 60) return `${mins}m`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h`
-  return `${Math.floor(hrs / 24)}d`
-}
-
-const oldestWaitLabel = computed(() => {
-  const oldest = waitItems.value.reduce((acc, w) => Math.min(acc, w.ts), Number.POSITIVE_INFINITY)
-  return Number.isFinite(oldest) && oldest > 0 ? humanizeWait(Date.now() - oldest) : ''
-})
-
-const sitTasks = computed(() => {
-  const list = tasksForShow.value
-  return {
-    total: list.length,
-    running: list.filter(x => x.status === 'running').length,
-    review: list.filter(x => x.status === 'review').length,
-  }
-})
-
-const sitOnline = computed(() => ({
-  people: accounts.value.length,
-  agents: accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0),
-  machines: (cockpit.fleetSessions ?? []).length,
-}))
-
 // ── 面板事件 ──
 
 function onSelect(sel: StreamSelection): void {
   if (sel.kind === 'room') void router.push({ name: 'ia2.commsRoom', params: { roomId: sel.id } })
+  else if (sel.kind === 'group') void router.push({ name: 'ia2.groupRoom', params: { roomId: sel.id } })
   else if (sel.kind === 'chat') void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
   else void router.push({ name: 'ia2.loopCanvas', params: { loopId: sel.id } })
+}
+
+/** 任务簇 chip → 看板预选（R4a） */
+function onNavOpenTask(taskId: string): void {
+  void router.push({ name: 'ia2.board', query: { task: taskId } })
+}
+
+/** 行/任务 chip 双击 → IDE 工作台编码动线（R4a 动线⑤；无任务裸进） */
+function onNavJumpIde(taskId: string | null): void {
+  jumpIde(taskId)
 }
 
 async function onCreateRoom(name: string): Promise<void> {
@@ -383,74 +265,15 @@ async function onCreateRoom(name: string): Promise<void> {
 function onNewLoop(): void {
   void router.push({ name: 'ia2.eng' })
 }
-
-// ── 态势条内联面板（v12.2 用户裁定：二级/三级功能整合同页，不来回跳转）──
-// 五段点击就地展开 SitDetailPanel：等我行上验收/打回；任务行开看板抽屉；
-// 会话/循环行选中即中栏换画布（工作台内子路径选择，非页面跳转）；
-// 在线三栏明细，管理台走 GovOverlay 覆盖层（同页）。再点同段/Esc 关闭。
-
-const sitPanel = ref<SitSegment | null>(null)
-
-function onSitSelect(segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'): void {
-  sitPanel.value = sitPanel.value === segment ? null : segment
-}
-
-function onPanelOpenTask(taskId: string): void {
-  sitPanel.value = null
-  drawerTaskId.value = taskId
-  drawerOpen.value = true
-}
-
-function onPanelSelectSession(sel: { kind: 'room' | 'chat'; id: string }): void {
-  sitPanel.value = null
-  onSelect(sel)
-}
-
-function onPanelSelectLoop(loopId: string): void {
-  sitPanel.value = null
-  onSelect({ kind: 'loop', id: loopId })
-}
 </script>
 
 <template>
-  <div class="wb-page" data-testid="wb-root">
-    <SitlineBar
-      :waiting-count="waitItems.length"
-      :oldest-label="oldestWaitLabel"
-      :task-total="sitTasks.total"
-      :task-running="sitTasks.running"
-      :task-review="sitTasks.review"
-      :session-count="sessionRows.length"
-      :loop-total="loopRows.length"
-      :loop-blocked="loopRows.filter(l => l.blocked).length"
-      :online-people="sitOnline.people"
-      :online-agents="sitOnline.agents"
-      :online-machines="sitOnline.machines"
-      :active="sitPanel"
-      @open-gov="flow.openGov()"
-      @select="onSitSelect"
-    />
-    <SitDetailPanel
-      v-if="sitPanel"
-      :segment="sitPanel"
-      :wait-items="waitItems"
-      :tasks="tasksForShow.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt }))"
-      :sessions="sessionRows"
-      :loops="loopRows"
-      :accounts="accounts.map(a => ({ userId: a.userId, displayName: a.displayName, agentTeams: (a.agentTeams ?? []).map(at => ({ slug: at.slug, name: at.name, profiles: at.profiles ?? [] })) }))"
-      :machines="(cockpit.fleetSessions ?? []).map(m => ({ id: m.id, profile: m.profile, title: m.title, status: m.status }))"
-      @close="sitPanel = null"
-      @open-task="onPanelOpenTask"
-      @approve-task="onApproveTask"
-      @reject-task="onRejectTask"
-      @approve-run="onApproveRun"
-      @approve-fleet="onApproveFleet"
-      @select-session="onPanelSelectSession"
-      @select-loop="onPanelSelectLoop"
-      @open-gov-people="flow.openGov('people')"
-    />
-    <div class="wb">
-    <aside class="wb__left" data-testid="wb-left">
+  <div
+    class="wb"
+    :class="{ 'wb--lf': flow.layout.leftFolded, 'wb--rf': flow.layout.rightFolded }"
+    data-testid="wb-root"
+  >
+    <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
       <FlowNavPanel
         :sessions="sessionRows"
         :loops="loopRows"
@@ -459,6 +282,8 @@ function onPanelSelectLoop(loopId: string): void {
         @create-room="onCreateRoom"
         @new-loop="onNewLoop"
         @open-gov="flow.openGov()"
+        @open-task="onNavOpenTask"
+        @jump-ide="onNavJumpIde"
       />
     </aside>
     <section class="wb__center" data-testid="wb-center">
@@ -494,16 +319,16 @@ function onPanelSelectLoop(loopId: string): void {
       />
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
-    <aside class="wb__right" data-testid="wb-right">
+    <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
       <TaskDecisionPanel
         :wait-items="waitItems"
         :linked-tasks="linkedTasks"
         :feed-rows="feedRows"
         :linked-context="linkedContext"
-        @approve-task="onApproveTask"
-        @reject-task="onRejectTask"
-        @approve-run="onApproveRun"
-        @approve-fleet="onApproveFleet"
+        @approve-task="approveTask"
+        @reject-task="rejectTask"
+        @approve-run="approveRun"
+        @approve-fleet="approveFleet"
         @reassign="onReassign"
         @open-ide="onOpenIde"
         @handle-task="onHandleTask"
@@ -513,22 +338,22 @@ function onPanelSelectLoop(loopId: string): void {
     </aside>
     <!-- 改派/详情：复用看板任务抽屉（含指派编辑） -->
     <KanbanTaskDrawer v-model:show="drawerOpen" :task-id="drawerTaskId" />
-    </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-.wb-page {
-  display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0;
-}
-/* v12 三栏铁律：250 | 自适应(≥320) | 240，永不换列不堆叠（窄屏由外层整体缩放） */
+/* v12 三栏铁律：250 | 自适应(≥320) | 240，永不换列不堆叠（窄屏由外层整体缩放）。
+ * v12.3 栏控折叠：左右栏 v-if 摘除 + 网格列同步收缩（wb--lf/wb--rf）；
+ * 中栏最大化 = 两侧齐折（flow.centerMaximized 派生态），由页头栏控驱动。 */
 .wb {
-  flex: 1; min-height: 0;
+  height: 100%; min-height: 0; min-width: 0;
   display: grid;
   grid-template-columns: 250px minmax(320px, 1fr) 240px;
   gap: 10px;
-  min-width: 0;
 }
+.wb--lf { grid-template-columns: minmax(320px, 1fr) 240px; }
+.wb--rf { grid-template-columns: 250px minmax(320px, 1fr); }
+.wb--lf.wb--rf { grid-template-columns: minmax(320px, 1fr); }
 .wb__left, .wb__right { min-height: 0; }
 .wb__center { min-height: 0; min-width: 0; }
 .wb__canvas-ph { height: 100%; border: 1px dashed var(--border-color); border-radius: 6px; }
