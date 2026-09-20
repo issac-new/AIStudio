@@ -34,7 +34,9 @@ export const useFlowStore = defineStore('ia2-flow', () => {
   const centerMaximized = computed(() => layout.value.leftFolded && layout.value.rightFolded)
 
   function toggleFold(side: 'left' | 'right'): void {
-    layout.value = { ...layout.value, [side]: !layout.value[side] }
+    // 键是 <side>Folded（非 side 本身——后者会新增错键而折叠位恒 false）
+    const key = side === 'left' ? 'leftFolded' : 'rightFolded'
+    layout.value = { ...layout.value, [key]: !layout.value[key] }
   }
 
   /** 中栏最大化/还原：开=两侧齐折；关=两侧齐展（不记忆中间态，语义直白） */
