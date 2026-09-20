@@ -1,32 +1,43 @@
 <!-- overlay/custom/client/ia2/components/IaShellHeader.vue -->
-<!-- 驾驶舱统一壳页头（2026-09-18 统一导航重构 Task 2）：CockpitTopBar 裁剪迁移。
-     搬运：品牌（连接点 + ia2.brand）/全局搜索/CockpitTeamSwitcher/Gateway 探测组
-     （倒计时 + 平台投影 + 详情面板，整段含样式）/ThemeSwitch/LanguageSwitch/通知/用户。
-     裁掉：schedule/loop/runtrace 按钮、时钟、"Swarm Studio" 字样。
-     v12.2（2026-09-20 用户裁定）：固定最右 ⇄ IDE 跳转按钮退役，改为页头最右
-     嵌 IaViewSwitcher（「沟通协作 | IDE 工作台」二视图切换，顶部右上角单入口）。 -->
+<!-- 驾驶舱统一壳页头。v12.3（2026-09-20 用户裁定）页头四改：
+     ① 语言仅留 ZH/EN 两按钮直切（IaLocaleToggle 替代下拉 LanguageSwitch）；
+     ② 恢复 📅 日程按钮（当日有事件亮徽章，开 CockpitScheduleModal）；
+       团队下拉 CockpitTeamSwitcher 退役（Team 管理走 ⚙管理台，在线态势接管展示）；
+     ③ 通知改下拉双页签（NotifyDropdownPanel：待人工决策 + 消息收件箱，
+       铃铛徽章 = 待决策未读数，居中模态 CockpitNotifyModal 退役）；
+     ④ 六态势 chips 迁入页头（SitlineBar；点击就地展开 SitDetailPanel 浮层）。
+     历史搬运（v12.1/2）：品牌/全局搜索/Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
-import CockpitTeamSwitcher from '@/custom/cockpit/components/CockpitTeamSwitcher.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
-import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
+import { useWorkspaceStore } from '../store/workspace'
+import { useFlowStore } from '../store/flow'
 import { usePlatformsStore } from '../store/platforms'
+import IaLocaleToggle from './IaLocaleToggle.vue'
 import IaWindowControls from './IaWindowControls.vue'
 import IaViewSwitcher from './IaViewSwitcher.vue'
+import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
+import SitlineBar from './SitlineBar.vue'
+import SitDetailPanel, { type SitSegment } from './SitDetailPanel.vue'
+import { useSitCounts } from '../composables/useSitCounts'
+import { useSessionRows } from '../composables/useSessionRows'
+import { useDecisionActions } from '../composables/useDecisionActions'
+import { useDecisionRows } from '../composables/useDecisionRows'
 
 const { t } = useI18n()
 const router = useRouter()
-const emit = defineEmits<{ (e: 'notify'): void }>()
 const store = useCockpitStore()
 const appStore = useAppStore()
+const workspace = useWorkspaceStore()
+const flow = useFlowStore()
 
-defineProps<{ notifyCount?: number; userName?: string }>()
+defineProps<{ userName?: string }>()
 
 /** 用户按钮 → 设置页 */
 function goSettings() { router.push({ name: 'hermes.settings' }) }
@@ -64,13 +75,66 @@ async function manualProbe() {
 
 onMounted(() => platformsStore.retain())
 onUnmounted(() => platformsStore.release())
+
+// ── 日程按钮（v12.3 恢复）：当日有事件亮徽章 ──
+
+const todayKey = computed(() => {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+})
+const scheduleTodayCount = computed(() => store.scheduleDatesWithEvents.has(todayKey.value) ? 1 : 0)
+
+// ── 通知下拉（v12.3）：铃铛徽章 = 待决策未读数（useDecisionRows 单一聚合）──
+
+const showNotify = ref(false)
+const { decisionUnread } = useDecisionRows()
+
+// ── 态势 chips + 内联面板（v12.3 自 WorkbenchView 迁入；计数 composable 共用）──
+
+const {
+  waitItems, tasks: sitTasks, sessionCount, loopTotal, loopBlocked, loopRows,
+  accounts, online, oldestWaitLabel,
+} = useSitCounts()
+const { sessionRows } = useSessionRows()
+const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
+
+/** 态势面板任务行（SitDetailPanel 纯展示形状；源 = workspace 跨板聚合） */
+const storeTasks = computed(() => workspace.tasks.map(x =>
+  ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })))
+const fleetMachines = computed(() => (store.fleetSessions ?? []).map(m =>
+  ({ id: m.id, profile: m.profile, title: m.title, status: m.status })))
+
+const sitPanel = ref<SitSegment | null>(null)
+
+function onSitSelect(segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'): void {
+  sitPanel.value = sitPanel.value === segment ? null : segment
+}
+
+/** 态势面板行点击 → 工作台子路径（页头无中栏画布，选择经路由落到工作台） */
+function onPanelSelectSession(sel: { kind: 'room' | 'chat'; id: string }): void {
+  sitPanel.value = null
+  if (sel.kind === 'room') void router.push({ name: 'ia2.commsRoom', params: { roomId: sel.id } })
+  else void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
+}
+
+function onPanelSelectLoop(loopId: string): void {
+  sitPanel.value = null
+  void router.push({ name: 'ia2.loopCanvas', params: { loopId } })
+}
+
+/** 面板任务行 → 看板预选（页头无抽屉，与通知下拉同动线） */
+function onPanelOpenTask(taskId: string): void {
+  sitPanel.value = null
+  void router.push({ name: 'ia2.board', query: { task: taskId } })
+}
 </script>
 
 <template>
   <div class="cockpit-top" data-testid="ia-shell-header">
     <div class="cockpit-top__brand">
       <ThemeSwitch />
-      <LanguageSwitch />
+      <IaLocaleToggle />
       <span class="cockpit-top__conn"
         :title="appStore.connected ? t('cockpit.connected') : t('cockpit.disconnected')">
         <span class="cockpit-top__dot" :class="appStore.connected ? 'is-ok' : 'is-err'" />
@@ -86,7 +150,24 @@ onUnmounted(() => platformsStore.release())
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
     </div>
     <div class="cockpit-top__spacer" />
-    <CockpitTeamSwitcher />
+    <div class="cockpit-top__sit">
+      <SitlineBar
+        :waiting-count="waitItems.length"
+        :oldest-label="oldestWaitLabel"
+        :task-total="sitTasks.total"
+        :task-running="sitTasks.running"
+        :task-review="sitTasks.review"
+        :session-count="sessionCount"
+        :loop-total="loopTotal"
+        :loop-blocked="loopBlocked"
+        :online-people="online.people"
+        :online-agents="online.agents"
+        :online-machines="online.machines"
+        :active="sitPanel"
+        @open-gov="flow.openGov()"
+        @select="onSitSelect"
+      />
+    </div>
     <div class="cockpit-top__grp" :title="t('cockpit.gatewayProbeTitle')" @click.stop="manualProbe">
       <span class="cockpit-top__cd" :title="t('cockpit.countdownTitle')">{{ countdown }}s</span>
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
@@ -97,21 +178,54 @@ onUnmounted(() => platformsStore.release())
         :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
       ><CockpitIcon :name="pl.icon" :size="12" /> {{ pl.name }}<span v-if="pl.state !== 'connected'" class="cockpit-top__warn">!</span></span>
     </div>
+    <button type="button" class="cockpit-top__btn" data-testid="ia-header-schedule"
+      :title="t('cockpit.scheduleTitle')" @click="workspace.openSchedule()"
+    >
+      <CockpitIcon name="calendar" />
+      <span v-if="scheduleTodayCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ t('ia2.header.scheduleToday') }}</span>
+    </button>
     <div class="cockpit-top__div" />
-    <button type="button" class="cockpit-top__btn" data-testid="ia-header-notify" @click="emit('notify')">
-      <CockpitIcon name="bell" /> {{ t('cockpit.notifications') }}
-      <span v-if="notifyCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ notifyCount }}</span>
+    <button type="button" class="cockpit-top__btn" data-testid="ia-header-notify" @click="showNotify = !showNotify">
+      <CockpitIcon name="bell" />
+      <span v-if="decisionUnread" class="cockpit-top__bdg cockpit-top__bdg--err" data-testid="ia-header-notify-badge">{{ decisionUnread }}</span>
     </button>
     <button type="button" class="cockpit-top__user" data-testid="ia-header-user" @click="goSettings">
       <span class="cockpit-top__avatar">{{ (userName ?? t('cockpit.defaultUser')).slice(0, 1) }}</span>
       <span class="cockpit-top__uname">{{ userName ?? t('cockpit.defaultUser') }}</span>
       <span class="cockpit-top__caret">▾</span>
     </button>
-    <!-- 窗口管理窗控（最大化/最小化/独立窗口）：作用于当前操作页（/goal 追加） -->
+    <!-- 三栏栏控（v12.3：窗控改栏控——/app flow.layout / /ide ide.layout） -->
     <div class="cockpit-top__div" />
     <IaWindowControls />
     <!-- v12.2 视图切换器固定最右（顶部右上角：沟通协作 | IDE 工作台） -->
     <IaViewSwitcher />
+
+    <!-- 态势内联面板（v12.3 迁页头；浮层贴页头下方） -->
+    <div v-if="sitPanel" class="cockpit-top__sitpanel">
+      <SitDetailPanel
+        :segment="sitPanel"
+        :wait-items="waitItems"
+        :tasks="storeTasks"
+        :sessions="sessionRows"
+        :loops="loopRows"
+        :accounts="accounts.map(a => ({ userId: a.userId, displayName: a.displayName, agentTeams: (a.agentTeams ?? []).map(at => ({ slug: at.slug, name: at.name, profiles: at.profiles ?? [] })) }))"
+        :machines="fleetMachines"
+        @close="sitPanel = null"
+        @open-task="onPanelOpenTask"
+        @approve-task="approveTask"
+        @reject-task="rejectTask"
+        @approve-run="approveRun"
+        @approve-fleet="approveFleet"
+        @select-session="onPanelSelectSession"
+        @select-loop="onPanelSelectLoop"
+        @open-gov-people="flow.openGov('people')"
+      />
+    </div>
+    <div v-if="sitPanel" class="cockpit-top__mask" @click="sitPanel = null" />
+
+    <!-- 通知下拉（v12.3：双页签，点击遮罩关闭） -->
+    <NotifyDropdownPanel v-if="showNotify" @close="showNotify = false" />
+    <div v-if="showNotify" class="cockpit-top__mask" @click="showNotify = false" />
 
     <!-- 探测结果下拉面板（必须在 cockpit-top 内部，才能相对其定位） -->
     <div v-if="showDetail" class="cockpit-probe" @click.stop>
@@ -178,6 +292,7 @@ onUnmounted(() => platformsStore.release())
 .cockpit-top__search-spinner { width: 10px; height: 10px; flex-shrink: 0; border: 1.5px solid var(--border-color); border-top-color: var(--accent-primary); border-radius: 50%; animation: cockpit-tspin 0.6s linear infinite; }
 @keyframes cockpit-tspin { to { transform: rotate(360deg); } }
 .cockpit-top__spacer { flex: 1; }
+.cockpit-top__sit { min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .cockpit-top__grp { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.12s; flex-shrink: 0; white-space: nowrap;
   &:hover { background: var(--bg-secondary); }
 }
@@ -189,6 +304,11 @@ onUnmounted(() => platformsStore.release())
 .cockpit-top__avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-primary); color: var(--text-on-accent); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
 .cockpit-top__uname { font-size: 11px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 .cockpit-top__caret { font-size: 9px; color: var(--text-muted); }
+
+/* 态势内联面板浮层（v12.3：贴页头下方，左对齐态势 chips 区） */
+.cockpit-top__sitpanel { position: absolute; top: 100%; left: 12px; width: min(760px, calc(100vw - 48px)); z-index: 999; }
+.cockpit-top__sitpanel :deep(.sitp) { margin: 6px 0 0; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
+.cockpit-top__mask { position: fixed; inset: 0; z-index: 998; }
 
 /* 探测结果下拉面板 */
 .cockpit-probe { position: absolute; top: 100%; right: 16px; min-width: 320px; max-width: 420px; max-height: 400px; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 999; }

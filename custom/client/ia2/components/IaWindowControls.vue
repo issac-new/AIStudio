@@ -1,36 +1,42 @@
 <!-- overlay/custom/client/ia2/components/IaWindowControls.vue -->
-<!-- 窗口管理窗控簇（2026-09-18 统一导航 /goal 追加）：作用于「当前操作页」——
-     最大化（URL max=1，壳隐藏页头/场景条）/ 最小化（收进底部任务栏，主区回总览）/
-     弹出独立窗口（桌面 IPC / web window.open，standalone=1）。 -->
+<!-- v12.3 栏控簇（2026-09-20 用户裁定：窗控改三栏栏控）：◀折叠左栏｜最大化中栏｜
+     折叠右栏▶｜⧉独立窗口。按当前视图分派——/app 沟通协作三栏（工作流|对象画布|
+     任务决策，flow.layout）；/ide 工作台三栏（侧栏|会话|辅助面板，ide.layout）。
+     独立=桌面 IPC/web window.open（standalone=1 精简壳），合入按钮仍在独立窗
+     IaPopoutBar。原页级 max=1 最小化任务栏入口退役（wm minimize 链路一并清理）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useWmStore } from '../wm/store'
+import { useFlowStore } from '../store/flow'
+import { useIdeStore } from '@/custom/ide/store/ide'
 import { openPanelWindow } from '../wm/popout'
 
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
-const wm = useWmStore()
+const flow = useFlowStore()
+const ide = useIdeStore()
 
-const isMaximized = computed(() => route.query.max === '1')
+const isIde = computed(() => route.path === '/ide' || route.path.startsWith('/ide/'))
+const isMax = computed(() => isIde.value ? ide.layout.chat.maximized : flow.centerMaximized)
 
-/** 最大化/还原：URL query 携带（可书签；弹出窗内同样生效） */
-function toggleMaximize(): void {
-  const query = { ...route.query }
-  if (isMaximized.value) delete query.max
-  else query.max = '1'
-  void router.replace({ query })
+function toggleFoldLeft(): void {
+  if (isIde.value) ide.toggleFold('sidebar')
+  else flow.toggleFold('left')
 }
 
-/** 最小化：当前页收进任务栏，主区回总览 */
-function minimizeCurrent(): void {
-  wm.minimize(route.fullPath)
-  if (route.path !== '/app') void router.push('/app')
+/** 右栏折叠：IDE 侧无 sidepane folded 位（折叠由 sidePane.open 承载） */
+function toggleFoldRight(): void {
+  if (isIde.value) ide.toggleSidePane()
+  else flow.toggleFold('right')
 }
 
-/** 弹出独立窗口承载当前操作页 */
+function toggleCenterMax(): void {
+  if (isIde.value) ide.toggleMax('chat')
+  else flow.toggleCenterMax()
+}
+
+/** 弹出独立窗口承载当前操作页（合入仍在独立窗内） */
 function popOutCurrent(): void {
   void openPanelWindow({ path: route.fullPath })
 }
@@ -38,13 +44,15 @@ function popOutCurrent(): void {
 
 <template>
   <div class="ia-wm" data-testid="ia-window-controls">
-    <button type="button" class="ia-wm__btn" data-testid="ia-wm-maximize"
-      :title="isMaximized ? t('ia2.wm.restore') : t('ia2.wm.maximize')"
-      @click="toggleMaximize"
-    >{{ isMaximized ? '⤡' : '⤢' }}</button>
-    <button type="button" class="ia-wm__btn" data-testid="ia-wm-minimize"
-      :title="t('ia2.wm.minimize')" @click="minimizeCurrent"
-    >▁</button>
+    <button type="button" class="ia-wm__btn" data-testid="ia-wm-fold-left"
+      :title="t('ia2.wm.foldLeft')" @click="toggleFoldLeft"
+    >◀</button>
+    <button type="button" class="ia-wm__btn" data-testid="ia-wm-max-center"
+      :title="isMax ? t('ia2.wm.restoreCenter') : t('ia2.wm.maxCenter')" @click="toggleCenterMax"
+    >{{ isMax ? '⤡' : '⤢' }}</button>
+    <button type="button" class="ia-wm__btn" data-testid="ia-wm-fold-right"
+      :title="t('ia2.wm.foldRight')" @click="toggleFoldRight"
+    >▶</button>
     <button type="button" class="ia-wm__btn" data-testid="ia-wm-popout"
       :title="t('ia2.wm.popOut')" @click="popOutCurrent"
     >⧉</button>
@@ -56,7 +64,7 @@ function popOutCurrent(): void {
 .ia-wm__btn {
   width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
   border: 1px solid transparent; border-radius: 6px; background: transparent;
-  color: var(--text-secondary); cursor: pointer; font-size: 13px; line-height: 1;
+  color: var(--text-secondary); cursor: pointer; font-size: 12px; line-height: 1;
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 </style>
