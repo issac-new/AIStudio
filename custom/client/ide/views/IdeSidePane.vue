@@ -8,6 +8,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
+import IdeFilesPane from './IdeFilesPane.vue'
 import IdeGitPane from './IdeGitPane.vue'
 import IdeWikiPane from './IdeWikiPane.vue'
 import IdeStoragePane from './IdeStoragePane.vue'
@@ -21,6 +22,7 @@ const ide = useIdeStore()
 const message = useMessage()
 
 const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
+  { key: 'files', icon: '🗁' },
   { key: 'review', icon: '⎇' },
   { key: 'browser', icon: '◍' },
   { key: 'wiki', icon: 'W' },
@@ -54,8 +56,7 @@ async function copyAssistantPrompt(): Promise<void> {
 }
 
 function focusMainChat(): void {
-  ide.setChatTab('messages')
-  ide.layout.chatVisible = true
+  ide.setChatFocus()
 }
 </script>
 
@@ -103,7 +104,8 @@ function focusMainChat(): void {
     </div>
 
     <div class="ide-sidepane__body">
-      <IdeGitPane v-if="ide.sidePane.tab === 'review'" class="ide-sidepane__fill" data-testid="ide-sidepane-review" />
+      <IdeFilesPane v-if="ide.sidePane.tab === 'files'" class="ide-sidepane__fill" data-testid="ide-sidepane-files" />
+      <IdeGitPane v-else-if="ide.sidePane.tab === 'review'" class="ide-sidepane__fill" data-testid="ide-sidepane-review" />
       <DesktopBrowserView v-else-if="ide.sidePane.tab === 'browser'" class="ide-sidepane__fill" />
       <IdeWikiPane v-else-if="ide.sidePane.tab === 'wiki'" class="ide-sidepane__fill" />
       <IdeStoragePane v-else-if="ide.sidePane.tab === 'storage'" class="ide-sidepane__fill" />
