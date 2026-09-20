@@ -86,6 +86,19 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }))
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push }),
 }))
+// 时间线优先级桥接：kanban 任务经 session_id 关联（口径同 bucketPriority）
+const { listTasks } = vi.hoisted(() => ({
+  listTasks: vi.fn(async () => [
+    { id: 'k1', session_id: 's-active', priority: 3 },
+    { id: 'k2', session_id: 's-other', priority: 1 },
+    { id: 'k3', session_id: 's-extra1', priority: 0 },
+  ]),
+}))
+vi.mock('@/api/hermes/kanban', () => ({ listTasks }))
+vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({
+  bucketPriority: (p: number | null | undefined): string =>
+    (p == null || p <= 0 ? 'P3' : p === 1 ? 'P2' : p === 2 ? 'P1' : 'P0'),
+}))
 // 文件视图嵌上游 FileTree，其依赖链拉真实 router/api——测试挡为透传桩
 vi.mock('../views/IdeGitPane.vue', () => ({ default: { name: 'IdeGitPane', template: '<div class=\"stub-gitpane\" data-testid=\"stub-gitpane\" />' } }))
 vi.mock('@/components/hermes/files/FileTree.vue', () => ({
@@ -192,31 +205,41 @@ describe('IdeTaskSidebar', () => {
     expect(w.find('[data-testid="ide-nav-cockpit"]').exists()).toBe(true)
   })
 
-  it('任务/文件双视图：切文件渲染 FileTree+双页签，切回任务恢复列表', async () => {
+  it('查看文件已右移右侧辅助栏：侧栏无文件视图与双页签，footer 按钮开 files 页签', async () => {
     const w = mountSidebar()
     await flushPromises()
+    // 侧栏固定任务视图：无 view tabs、无 FileTree
+    expect(w.find('[data-testid="ide-task-view-files"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ide-task-view-tasks"]').exists()).toBe(false)
     expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(false)
-    await w.find('[data-testid="ide-task-view-files"]').trigger('click')
-    expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(true)
-    // 文件/Git 双页签在查看文件视图内
-    expect(w.find('[data-testid="ide-files-tab-tree"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ide-files-tab-git"]').exists()).toBe(true)
-    await w.find('[data-testid="ide-task-view-tasks"]').trigger('click')
-    expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(false)
-    expect(w.find('[data-testid="ide-task-pinned"], [data-testid^="ide-task-group-"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-task-pinned"]').exists()).toBe(true)
+    // footer 查看文件按钮 → sidePane files 页签
+    expect(w.find('[data-testid="ide-feat-files"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-feat-files"]').trigger('click')
+    const ide = useIdeStore()
+    expect(ide.sidePane.open).toBe(true)
+    expect(ide.sidePane.tab).toBe('files')
   })
 
-  it('点击任务切换会话时文件视图 root 跟随任务 workspace', async () => {
+  it('时间线按任务优先级降序 → 更新时间逆序；关联会话显 P0-P3 徽标', async () => {
     const w = mountSidebar()
     await flushPromises()
-    // 切到文件视图
-    await w.find('[data-testid="ide-task-view-files"]').trigger('click')
-    // 回任务视图点 other 任务（workspace=/lab/other）
-    await w.find('[data-testid="ide-task-view-tasks"]').trigger('click')
-    await w.find('[data-testid="ide-task-item-s-other"] .ide-taskbar__item-main').trigger('click')
-    expect(switchSession).toHaveBeenCalledWith('s-other')
-    const vm = w.vm as any
-    expect(vm.filesWorkspace).toBe('/lab/other')
+    await w.find('[data-testid="ide-task-organize-timeline"]').trigger('click')
+    expect(listTasks).toHaveBeenCalled()
+    const items = w
+      .find('[data-testid="ide-task-group-ide.task.timeline"]')
+      .findAll('[data-testid^="ide-task-item-"]')
+      .map((n) => n.attributes('data-testid').slice('ide-task-item-'.length))
+    // 优先级：s-active(3) > s-other(1) > s-extra1(0)；无任务者按更新时间：
+    // s-none(now-5s) > s-extra2(1)
+    expect(items).toEqual(['s-active', 's-other', 's-extra1', 's-none', 's-extra2'])
+    // 徽标：P0/P2/P3（P3 因 priority=0 仍属「有任务」档）
+    expect(w.find('[data-testid="ide-task-prio-P0"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-task-prio-P2"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-task-prio-P1"]').exists()).toBe(false)
+    // 非 timeline 模式不显徽标
+    await w.find('[data-testid="ide-task-organize-project"]').trigger('click')
+    expect(w.find('[data-testid="ide-task-prio-P0"]').exists()).toBe(false)
   })
 
   it('organize 三模式：grouped 按 category 分组渲染', async () => {

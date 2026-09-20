@@ -21,6 +21,8 @@ vi.mock('@/views/hermes/DesktopBrowserView.vue', () => ({ default: { name: 'Desk
 vi.mock('../views/IdeStoragePane.vue', () => ({ default: { name: 'IdeStoragePane', template: '<div data-testid="stub-storage" />' } }))
 vi.mock('../views/IdeMemoryPane.vue', () => ({ default: { name: 'IdeMemoryPane', template: '<div data-testid="stub-memory" />' } }))
 vi.mock('../views/IdeTerminalDock.vue', () => ({ default: { name: 'IdeTerminalDock', template: '<div data-testid="stub-termdock" />' } }))
+// 查看文件页签（09-20 自左侧栏右移）：FileTree 依赖链挡为透传桩
+vi.mock('../views/IdeFilesPane.vue', () => ({ default: { name: 'IdeFilesPane', template: '<div data-testid="stub-filespane" />' } }))
 
 const writeText = vi.fn(async () => {})
 Object.assign(navigator, { clipboard: { writeText } })
@@ -61,16 +63,25 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     expect(w.find('[data-testid="stub-wikipane"]').exists()).toBe(true)
   })
 
-  it('四 tab 齐备（审查/浏览器/Wiki 引用/辅助对话）+ 关闭按钮收起', async () => {
+  it('九 tab 齐备（files 居首：查看文件右移）+ 关闭按钮收起', async () => {
     const ide = useIdeStore()
     ide.sidePane.open = true
     ide.sidePane.tab = 'wiki'
     const w = mountPane()
-    for (const tab of ['review', 'browser', 'wiki', 'assistant', 'storage', 'memory', 'terminal']) {
+    const tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
+    expect(tabs[0].attributes('data-testid')).toBe('ide-sidepane-tab-files')
+    for (const tab of ['files', 'review', 'browser', 'wiki', 'assistant', 'storage', 'memory', 'terminal']) {
       expect(w.find(`[data-testid="ide-sidepane-tab-${tab}"]`).exists()).toBe(true)
     }
     await w.find('.ide-sidepane__tab--close').trigger('click')
     expect(ide.sidePane.open).toBe(false)
+  })
+
+  it('files 页签渲染 IdeFilesPane（查看文件/Git 基于任务会话与项目）', async () => {
+    const ide = useIdeStore()
+    ide.setSidePaneTab('files')
+    const w = mountPane()
+    expect(w.find('[data-testid="stub-filespane"]').exists()).toBe(true)
   })
 
   it('辅助对话：输入追问 → 复制结构化 prompt（带类型前缀）', async () => {
