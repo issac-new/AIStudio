@@ -91,3 +91,15 @@ export function buildWaiting(
   }
   return out.sort((a, b) => KIND_WEIGHT[a.kind] - KIND_WEIGHT[b.kind] || b.ts - a.ts)
 }
+
+/** 等待时长人性化（3m/2h/4d；单位字母 locale 中立）——等我 chip 副注与
+ *  决策聚合（useDecisionRows）共用的时间格式单一事实源 */
+export function formatWaitAge(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return ''
+  const mins = Math.floor(ms / 60000)
+  if (mins < 1) return '<1m'
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h`
+  return `${Math.floor(hrs / 24)}d`
+}

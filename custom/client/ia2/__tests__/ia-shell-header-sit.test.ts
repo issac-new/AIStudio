@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/ia-shell-header-sit.test.ts
 // 页头态势面板守门（v12.3 2026-09-20 用户裁定：六态势 chips 自 WorkbenchView
-// 迁入 IaShellHeader，SitDetailPanel 就地浮层）。行为断言承接 v12.2 工作台
-// 内联面板（workbench-flow.test.ts 尾段退役守门），动线差异：页头无中栏画布
-// 与看板抽屉——任务行走看板预选路由（ia2.board?task=），会话/循环行同样经
-// 路由落到工作台子路径。数据面走真 composables（useSitCounts/useSessionRows/
-// useDecisionRows/useDecisionActions——store 桩注入；决策动作断言 kanbanApi 层，
-// 板定位=任务自身 boardSlug）。i18n 走全局 setup mock（t 直返 key）。
+// 迁入 IaShellHeader，SitDetailPanel 就地浮层）。
+// v12.4（2026-09-20 用户裁定）：chips 收窄为等我/任务/在线（会话/循环/管理
+// 退役）；任务口径=跨板未完成未归档 + 分状态统计；等我口径=useDecisionRows
+// 待我决策的任务及会话（review 任务/中断运行/fleet 审批/评审门）。数据面走真
+// composables（useSitCounts/useDecisionRows/useDecisionActions——store 桩注入；
+// 决策动作断言 kanbanApi 层，板定位=任务自身 boardSlug）。i18n 走全局 setup
+// mock（t 直返 key）。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -112,13 +113,19 @@ vi.mock('@/stores/hermes/group-chat', () => ({
   useGroupChatStore: () => ({ rooms: [] as unknown[] }),
 }))
 
-// 评审中心桩（useDecisionRows 的 gate 源；决策动作断言在 kanbanApi 层）
-vi.mock('@/custom/matrix-teams/stores/review-center', () => ({
-  useReviewCenterStore: () => ({ pendingReviews: [], sendVerdict: vi.fn() }),
+// 评审中心桩（useDecisionRows 的 gate 源；决策动作断言在 kanbanApi 层）——
+// v12.4 给 1 条 pending 评审门：等我计数必须收编（待我决策的任务及会话）
+const reviewStubs = vi.hoisted(() => ({
+  state: {
+    pendingReviews: [{ caseId: 'CASE-7', gate: 'G2', at: 1700, signoffs: [{ at: 1700 }], pending: true }],
+    sendVerdict: vi.fn(),
+  },
+  useReviewCenterStore: () => reviewStubs.state,
 }))
+vi.mock('@/custom/matrix-teams/stores/review-center', () => ({ useReviewCenterStore: reviewStubs.useReviewCenterStore }))
 
 // 轻组件桩：探测组（retain 轮询；storeToRefs 逐键要求 ref——值全 ref 化）/
-// 栏控（ide store 链）/语言直切/主题
+// 语言直切/主题
 vi.mock('../store/platforms', async () => {
   const { ref } = await import('vue')
   const state = {
@@ -138,7 +145,6 @@ vi.mock('../store/platforms', async () => {
 vi.mock('@/stores/hermes/app', () => ({ useAppStore: () => ({ connected: true }) }))
 vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeSwitch', template: '<span class="theme-stub" />' } }))
 vi.mock('../components/IaLocaleToggle.vue', () => ({ default: { name: 'IaLocaleToggle', template: '<span class="locale-stub" />' } }))
-vi.mock('../components/IaWindowControls.vue', () => ({ default: { name: 'IaWindowControls', template: '<div class="wm-stub" />' } }))
 
 import IaShellHeader from '../components/IaShellHeader.vue'
 import { useFlowStore } from '../store/flow'
@@ -159,25 +165,45 @@ async function mountHeader() {
   return w
 }
 
-describe('IaShellHeader — 态势 chips + 内联面板（v12.3 迁入）', () => {
-  it('六段 chips 在页头渲染（等我/任务/会话/循环/在线；计数自桩数据面）', async () => {
+describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () => {
+  it('三段 chips 在页头渲染（等我/任务/在线；计数自桩数据面；会话/循环/管理退役）', async () => {
     const w = await mountHeader()
-    // 等我=3（review t-402 + awaiting run-9 + fleet ap-1）；任务=2（1 运行）；
-    // 会话=2（房 1 + 会话 1）；循环=1；在线：人 1 / 机 1
-    expect(w.find('[data-testid="sit-waiting"]').text()).toContain('3')
+    // 等我=4（review t-402 + awaiting run-9 + fleet ap-1 + 评审门 CASE-7:G2）；
+    // 任务=2（开放态：review 1 + running 1）；在线：人 1 / 机 1 = 3
+    expect(w.find('[data-testid="sit-waiting"]').text()).toContain('4')
     expect(w.find('[data-testid="sit-tasks"]').text()).toContain('2')
-    expect(w.find('[data-testid="sit-sessions"]').text()).toContain('2')
-    expect(w.find('[data-testid="sit-loops"]').exists()).toBe(true)
     expect(w.find('[data-testid="sit-online"]').text()).toContain('3')
+    // v12.4 退役断言：会话/循环 chips 与 ⚙管理入口不再渲染
+    expect(w.find('[data-testid="sit-sessions"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sit-loops"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sit-gov"]').exists()).toBe(false)
     w.unmount()
   })
 
-  it('任务段：就地展开浮层；任务行 → 看板预选路由（页头无抽屉）；同段再点收起', async () => {
+  it('v12.4 评审门进等我：面板含 gate 行，行内按钮进评审区（flow.openGov review）', async () => {
+    const w = await mountHeader()
+    await w.find('[data-testid="sit-waiting"]').trigger('click')
+    await flushPromises()
+    const panel = w.find('[data-testid="sit-panel-waiting"]')
+    expect(panel.text()).toContain('CASE-7 · G2')
+    await w.find('[data-testid="sitp-gate-open"]').trigger('click')
+    const flow = useFlowStore()
+    expect(flow.govOpen).toBe(true)
+    expect(flow.govSection).toBe('review')
+    w.unmount()
+  })
+
+  it('任务段：分状态统计行 + 任务行 → 看板预选路由；同段再点收起', async () => {
     const w = await mountHeader()
     await w.find('[data-testid="sit-tasks"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)
     expect(w.find('[data-testid="sit-tasks"]').classes()).toContain('sit__item--on')
+    // v12.4：分状态统计（review 1 / running 1，词表序 running 在前）
+    const stats = w.find('[data-testid="sitp-task-stats"]')
+    expect(stats.exists()).toBe(true)
+    expect(stats.find('[data-testid="sitp-stat-review"]').text()).toContain('1')
+    expect(stats.find('[data-testid="sitp-stat-running"]').text()).toContain('1')
     expect(w.find('[data-testid="sitp-task-t-402"]').exists()).toBe(true)
     await w.find('[data-testid="sitp-task-t-402"]').trigger('click')
     await flushPromises()
@@ -201,24 +227,6 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.3 迁入）', () =
     await w.find('[data-testid="sitp-reject"]').trigger('click')
     await flushPromises()
     expect(kanbanApiStubs.reopenReview).toHaveBeenCalledWith(['t-402'], 'ia2.tdp.rejectReason', { board: 'swarm' })
-    w.unmount()
-  })
-
-  it('循环段：面板行 → 循环画布子路径；会话段：面板行 → 房间子路径（路由承载选择）', async () => {
-    const w = await mountHeader()
-    await w.find('[data-testid="sit-loops"]').trigger('click')
-    await flushPromises()
-    expect(w.find('[data-testid="sitp-loop-lp-1"]').exists()).toBe(true)
-    await w.find('[data-testid="sitp-loop-lp-1"]').trigger('click')
-    await flushPromises()
-    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.loopCanvas', params: { loopId: 'lp-1' } })
-    expect(w.find('[data-testid="sit-panel-loops"]').exists()).toBe(false)
-    await w.find('[data-testid="sit-sessions"]').trigger('click')
-    await flushPromises()
-    expect(w.find('[data-testid="sitp-session-room-!r1:host"]').exists()).toBe(true)
-    await w.find('[data-testid="sitp-session-room-!r1:host"]').trigger('click')
-    await flushPromises()
-    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.commsRoom', params: { roomId: '!r1:host' } })
     w.unmount()
   })
 

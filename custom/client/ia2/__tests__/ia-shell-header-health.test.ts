@@ -40,17 +40,15 @@ const workspaceStubs = vi.hoisted(() => {
 vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 vi.mock('@/stores/hermes/app', () => ({ useAppStore: () => ({ connected: false }) }))
 vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeSwitch', template: '<span class="theme-stub" />' } }))
-// v12.3 页头重依赖桩化（页头四改：语言直切/栏控/态势与决策聚合/评审中心）
+// v12.3/v12.4 页头重依赖桩化（语言直切/态势与决策聚合/评审中心）
 vi.mock('../components/IaLocaleToggle.vue', () => ({
   default: { name: 'IaLocaleToggle', template: '<span class="locale-stub" />' },
-}))
-vi.mock('../components/IaWindowControls.vue', () => ({
-  default: { name: 'IaWindowControls', template: '<div class="wm-stub" />' },
 }))
 vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
   useSitCounts: () => ({
     waitItems: { value: [] },
-    tasks: { total: 0, running: 0, review: 0 },
+    tasks: { total: 0, running: 0, review: 0, byStatus: {} },
+    openTasks: { value: [] },
     sessionCount: { value: 0 },
     loopTotal: { value: 0 },
     loopBlocked: { value: 0 },
@@ -60,9 +58,6 @@ vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
     oldestWaitLabel: { value: '' },
   }),
 }))
-vi.mock('@/custom/ia2/composables/useSessionRows', () => ({
-  useSessionRows: () => ({ sessionRows: { value: [] } }),
-}))
 vi.mock('@/custom/ia2/composables/useDecisionRows', async () => {
   const { ref } = await import('vue')
   return {
@@ -71,6 +66,7 @@ vi.mock('@/custom/ia2/composables/useDecisionRows', async () => {
       decisionIds: ref([]),
       decisionUnread: ref(0),
       gateRows: ref([]),
+      oldestDecisionLabel: ref(''),
     }),
   }
 })

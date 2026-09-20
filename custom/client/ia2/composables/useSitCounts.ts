@@ -12,7 +12,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
-import { buildWaiting } from '../adapters/waiting'
+import { buildWaiting, formatWaitAge } from '../adapters/waiting'
 import { buildLoopRows } from '../adapters/flow'
 import { useNowTick } from './useNowTick'
 
@@ -34,12 +34,20 @@ export function useSitCounts() {
     now.value,
   ))
 
+  /** 跨板开放态任务（未完成未归档）——v12.4 任务 chip/面板口径单一来源 */
+  const openTasks = computed(() =>
+    workspace.tasks.filter(x => x.status !== 'done' && x.status !== 'archived'))
+
+  /** 任务统计：开放态总数 + 分状态计数（9 值词表按序呈现，零计数不进） */
   const tasks = computed(() => {
-    const list = workspace.tasks
+    const list = openTasks.value
+    const byStatus: Record<string, number> = {}
+    for (const x of list) byStatus[x.status] = (byStatus[x.status] ?? 0) + 1
     return {
       total: list.length,
-      running: list.filter(x => x.status === 'running').length,
-      review: list.filter(x => x.status === 'review').length,
+      byStatus,
+      running: byStatus['running'] ?? 0,
+      review: byStatus['review'] ?? 0,
     }
   })
 
@@ -61,14 +69,8 @@ export function useSitCounts() {
   const oldestWaitLabel = computed(() => {
     const oldest = waitItems.value.reduce((acc, w) => Math.min(acc, w.ts), Number.POSITIVE_INFINITY)
     if (!Number.isFinite(oldest) || oldest <= 0) return ''
-    const ms = now.value - oldest
-    if (ms <= 0) return ''
-    const mins = Math.floor(ms / 60000)
-    if (mins < 60) return `${mins}m`
-    const hrs = Math.floor(mins / 60)
-    if (hrs < 24) return `${hrs}h`
-    return `${Math.floor(hrs / 24)}d`
+    return formatWaitAge(now.value - oldest)
   })
 
-  return { waitItems, tasks, sessionCount, loopTotal: computed(() => loopRows.value.length), loopBlocked, loopRows, accounts, online, oldestWaitLabel }
+  return { waitItems, tasks, openTasks, sessionCount, loopTotal: computed(() => loopRows.value.length), loopBlocked, loopRows, accounts, online, oldestWaitLabel }
 }

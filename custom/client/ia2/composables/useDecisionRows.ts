@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import { useReviewCenterStore } from '@/custom/matrix-teams/stores/review-center'
 import { useNotifyReadStore } from '../store/notify-read'
 import { useSitCounts } from './useSitCounts'
+import { formatWaitAge } from '../adapters/waiting'
 import type { WaitItem } from '../adapters/waiting'
 
 /** 待决策行统一形状（waiting 三源 + 评审门） */
@@ -18,6 +19,7 @@ export interface DecisionRow {
   ts: number
   taskId?: string
   runId?: string
+  interruptId?: string
   sessionId?: string
   approvalId?: string
 }
@@ -39,7 +41,7 @@ export function useDecisionRows() {
   const decisionRows = computed<DecisionRow[]>(() => {
     const rows: DecisionRow[] = waitItems.value.map(w => ({
       id: w.id, kind: w.kind, title: w.title, subKey: w.subKey, ts: w.ts,
-      taskId: w.taskId, runId: w.runId, sessionId: w.sessionId, approvalId: w.approvalId,
+      taskId: w.taskId, runId: w.runId, interruptId: w.interruptId, sessionId: w.sessionId, approvalId: w.approvalId,
     }))
     for (const g of gateRows.value) {
       rows.push({ id: g.id, kind: 'gate-review', title: g.title, subKey: 'ia2.notify.subGate', ts: g.ts })
@@ -50,5 +52,12 @@ export function useDecisionRows() {
   const decisionIds = computed(() => decisionRows.value.map(r => r.id))
   const decisionUnread = computed(() => read.unreadCount(decisionIds.value))
 
-  return { decisionRows, decisionIds, decisionUnread, gateRows }
+  /** 最久待决策标签（3h/2d；空=无待决）——v12.4 等我 chip 副注（含评审门） */
+  const oldestDecisionLabel = computed(() => {
+    const oldest = decisionRows.value.reduce((acc, r) => Math.min(acc, r.ts), Number.POSITIVE_INFINITY)
+    if (!Number.isFinite(oldest) || oldest <= 0) return ''
+    return formatWaitAge(Date.now() - oldest)
+  })
+
+  return { decisionRows, decisionIds, decisionUnread, gateRows, oldestDecisionLabel }
 }

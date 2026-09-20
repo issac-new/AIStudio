@@ -1,9 +1,8 @@
 <!-- overlay/custom/client/ia2/components/SitlineBar.vue -->
-<!-- v12 态势条（2026-09-19 统一视图）：沟通协作视图顶部一行的全局态势——
-     等我⚠ / 任务（进行·待审）/ 会话 / 循环（阻塞）/ 在线（人·智能体·机器）+
-     ⚙管理入口（动线⑥）。计数经 props，装配方（WorkbenchView）聚合；
-     v12.2（2026-09-20 用户裁定）：五态势项点击不再路由跳转——emit select(segment)
-     由装配方就地展开 SitDetailPanel 内联面板（active 高亮当前展开段）。 -->
+<!-- v12.4 态势条（2026-09-20 用户裁定：删会话/循环/管理）：页头一行全局态势
+     仅保留——等我⚠（待我决策的任务及会话）/ 任务（进行·待审，口径=跨板
+     未完成未归档全量）/ 在线（人·智能体·机器）。点击 emit select(segment)
+     就地展开 SitDetailPanel 内联面板（active 高亮当前展开段）。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
@@ -14,19 +13,15 @@ defineProps<{
   taskTotal: number
   taskRunning: number
   taskReview: number
-  sessionCount: number
-  loopTotal: number
-  loopBlocked: number
   onlinePeople: number
   onlineAgents: number
   onlineMachines: number
-  /** v12.2：当前展开的内联面板段（null=无） */
-  active?: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online' | null
+  /** 当前展开的内联面板段（null=无） */
+  active?: 'waiting' | 'tasks' | 'online' | null
 }>()
 
 const emit = defineEmits<{
-  (e: 'open-gov'): void
-  (e: 'select', segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'): void
+  (e: 'select', segment: 'waiting' | 'tasks' | 'online'): void
 }>()
 const { t } = useI18n()
 </script>
@@ -45,23 +40,9 @@ const { t } = useI18n()
       📋 {{ t('ia2.sit.tasks') }} {{ taskTotal }}
       <span class="sit__sm">{{ t('ia2.sit.running') }} {{ taskRunning }} · {{ t('ia2.sit.review') }} {{ taskReview }}</span>
     </button>
-    <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'sessions' }" data-testid="sit-sessions" @click="emit('select', 'sessions')">
-      💬 {{ t('ia2.sit.sessions') }} {{ sessionCount }}
-    </button>
-    <button
-      type="button" class="sit__item" :class="{ 'sit__item--on': active === 'loops', 'sit__item--err': loopBlocked > 0 }" data-testid="sit-loops"
-      @click="emit('select', 'loops')"
-    >
-      ▶ {{ t('ia2.sit.loops') }} {{ loopTotal }}
-      <span v-if="loopBlocked" class="sit__sm">{{ t('ia2.sit.blocked') }} {{ loopBlocked }}</span>
-    </button>
     <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'online' }" data-testid="sit-online" @click="emit('select', 'online')">
       <span class="sit__dot sit__dot--ok" />{{ t('ia2.sit.online') }} {{ onlinePeople + onlineAgents + onlineMachines }}
       <span class="sit__sm">{{ t('ia2.sit.onlineDetail', { p: onlinePeople, a: onlineAgents, m: onlineMachines }) }}</span>
-    </button>
-    <span class="sit__spacer" />
-    <button type="button" class="sit__gov" data-testid="sit-gov" @click="emit('open-gov')">
-      ⚙ {{ t('ia2.sit.manage') }}
     </button>
   </div>
 </template>
@@ -80,15 +61,7 @@ const { t } = useI18n()
 }
 .sit__item--warn { color: var(--warning); font-weight: 700; }
 .sit__item--on { background: var(--bg-secondary); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--primary, #3b82f6); }
-.sit__item--err .sit__sm { color: var(--error); font-weight: 600; }
 .sit__sm { font-size: 10px; color: var(--text-muted); }
 .sit__dot { width: 8px; height: 8px; border-radius: 50%; }
 .sit__dot--ok { background: var(--success); }
-.sit__spacer { flex: 1; min-width: 8px; }
-.sit__gov {
-  height: 26px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 13px;
-  background: var(--bg-card); color: var(--text-secondary); font-size: 12px; cursor: pointer;
-  white-space: nowrap; flex-shrink: 0;
-  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
-}
 </style>
