@@ -1,0 +1,30 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -934,7 +934,7 @@
+       loops: '循环', blocked: '阻塞', online: '在线',
+       onlineDetail: '{p} 人 · {a} 智能体 · {m} 机器', manage: '管理',
+       panelClose: '关闭', empty: '暂无内容',
+-      actApprove: '批准', actReject: '打回', actContinue: '继续',
++      actApprove: '批准', actReject: '打回', actContinue: '继续', actGoReview: '进评审',
+       panelPeople: '人', panelAgents: '智能体', panelMachines: '机器', openManage: '打开管理台',
+     },
+     gov: {
+@@ -1024,6 +1024,8 @@
+       foldRight: '折叠右栏',
+       maxCenter: '最大化中栏',
+       restoreCenter: '还原中栏',
++      unfoldLeft: '展开左栏',
++      unfoldRight: '展开右栏',
+       mergeBack: '合并回驾驶舱',
+       standaloneTag: '独立窗口',
+       minimized: '已最小化',
+@@ -1055,6 +1057,8 @@
+     },
+     overview: {
+       attentionLabel: '需要注意',
++      swarmKanbanLabel: 'swarm kanban',
++      swarmKanbanHint: '双击打开 swarm kanban 看板（全部任务）',
+       attentionEmpty: '暂无阻塞、待审或待分类任务',
+       tierBlocked: '阻塞',
+       tierReview: '待审',

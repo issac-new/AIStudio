@@ -589,3 +589,19 @@
 #      态势迁页头/左栏聚类任务簇双击/三聊天合一）——header+notify+swp 三段
 #      新建 +24 键、flow.cluster* +3、wm 栏控 +4，zh/en 双侧。
 328-client-i18n-ia2-v12-3.patch
+
+# 329: 驾驶舱 v12.4（09-20 用户裁定）全局品牌替换——"Ekko Studio" →
+#      "SwarmStudio"（64 文件：client 标题/manifest/12 locale/ChatView/连接面板；
+#      desktop 弹窗标题/更新器缓存名/linux desktop entry/installer.nsh 停机名单
+#      对齐 SwarmStudio.exe；ekko-agent 提示词/归因/presets/skills；server
+#      studio/coding-agents/ekko 模块文案；esp32 固件 manifest/README）。
+#      域名 ekkostudio.xyz 与 CLI 二进制名 ekko-studio* 是功能标识不替换；
+#      login-item-migration 的 'ekko studio.exe'（小写）是旧版安装检测器保留。
+329-global-brand-ekko-studio-to-swarmstudio.patch
+
+# 330: 驾驶舱 v12.4 i18n zh——sit.actGoReview 进评审、wm.unfoldLeft/unfoldRight
+#      折叠导轨展开、overview.swarmKanbanLabel/Hint 注意力条双击进看板（+5 键）。
+330-client-i18n-ia2-v12-4-zh.patch
+
+# 331: 驾驶舱 v12.4 i18n en——330 同键英文侧（zh/en 成对，编号相邻）。
+331-client-i18n-ia2-v12-4-en.patch

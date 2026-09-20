@@ -6,8 +6,10 @@
      '' 无选择时自动选首个会话（不写 URL，刷新/深链直达不失真）。
      v12.3（2026-09-20 用户裁定）：六态势 chips 迁页头（SitlineBar + 内联面板
      在 IaShellHeader，本视图不再渲染态势行）；行装配/决策动作/态势计数收编
-     composables（useSessionRows/useDecisionActions/useSitCounts 单一实现）；
-     三栏随 flow.layout 折叠（页头栏控驱动：左折/右折/中栏最大化=两侧齐折）。 -->
+     composables（useSessionRows/useDecisionActions/useSitCounts 单一实现）。
+     v12.4（2026-09-20 用户裁定）：三栏栏控迁各栏顶部控制条（IaColumnControls
+     左=折叠/中=最大化+独立窗口/右=折叠，页头集中簇退役；折叠态 18px 导轨
+     就地展开）；右栏「等我」对齐 useDecisionRows（待我决策的任务及会话）。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -27,12 +29,15 @@ import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import RunCanvas from '../components/flow/RunCanvas.vue'
+import IaColumnControls from '../components/IaColumnControls.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import type { ParticipantBadge } from '../components/flow/SessionWorkbenchPanel.vue'
 import { useSessionRows } from '../composables/useSessionRows'
 import { useSitCounts } from '../composables/useSitCounts'
+import { useDecisionRows } from '../composables/useDecisionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useIdeJump } from '../composables/useIdeJump'
+import { openPanelWindow } from '../wm/popout'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,7 +52,8 @@ const matrixRoom = useMatrixRoomStore()
 // ── 行装配与决策动作（composables 单一实现，页头态势/通知下拉同源）──
 
 const { sessionRows, chatSessions, tasksForLink, duties, accounts } = useSessionRows()
-const { waitItems, loopRows } = useSitCounts()
+const { loopRows } = useSitCounts()
+const { decisionRows: waitItems } = useDecisionRows()
 const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
 const { jumpIde } = useIdeJump()
 
@@ -230,6 +236,11 @@ function onGotoBoard(): void {
   void router.push({ name: 'ia2.board' })
 }
 
+/** 中栏独立窗口：弹出当前对象路由（standalone=1 精简壳；合入在独立窗内） */
+function onPopout(): void {
+  void openPanelWindow({ path: route.fullPath })
+}
+
 // ── 面板事件 ──
 
 function onSelect(sel: StreamSelection): void {
@@ -273,69 +284,99 @@ function onNewLoop(): void {
     :class="{ 'wb--lf': flow.layout.leftFolded, 'wb--rf': flow.layout.rightFolded }"
     data-testid="wb-root"
   >
+    <!-- 左栏：折叠态 18px 导轨（▶ 展开），展开态顶部控制条右端 ◀ 折叠 -->
     <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
-      <FlowNavPanel
-        :sessions="sessionRows"
-        :loops="loopRows"
-        :selection="activeSel"
-        @select="onSelect"
-        @create-room="onCreateRoom"
-        @new-loop="onNewLoop"
-        @open-gov="flow.openGov()"
-        @open-task="onNavOpenTask"
-        @jump-ide="onNavJumpIde"
-      />
+      <div class="wb__colbar">
+        <IaColumnControls testid="ia-col-left" fold="left" @fold="flow.toggleFold('left')" />
+      </div>
+      <div class="wb__colbody">
+        <FlowNavPanel
+          :sessions="sessionRows"
+          :loops="loopRows"
+          :selection="activeSel"
+          @select="onSelect"
+          @create-room="onCreateRoom"
+          @new-loop="onNewLoop"
+          @open-gov="flow.openGov()"
+          @open-task="onNavOpenTask"
+          @jump-ide="onNavJumpIde"
+        />
+      </div>
     </aside>
+    <div v-else class="wb__rail" data-testid="wb-rail-left">
+      <button type="button" class="wb__rail-btn" data-testid="wb-unfold-left"
+        :title="t('ia2.wm.unfoldLeft')" @click="flow.toggleFold('left')"
+      >▶</button>
+    </div>
     <section class="wb__center" data-testid="wb-center">
-      <SessionCanvas
-        v-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
-        :key="`${activeSel.kind}:${activeSel.id}`"
-        :kind="activeSel.kind"
-        :object-name="selectedSessionRow.name"
-        :linked-tasks="linkedTasks"
-        :gate-title="gateTitle"
-        :participants="participants"
-        :duty-name="selectedSessionRow.dutyName"
-        @open-task="onCanvasOpenTask"
-        @open-timeline="onAllTimeline"
-        @open-ide="onOpenIde"
-        @invite="onCanvasInvite"
-      />
-      <RunCanvas
-        v-else-if="activeSel?.kind === 'loop' && loopStore.currentLoop"
-        :key="`loop:${activeSel.id}`"
-        :loop="loopStore.currentLoop"
-        :loop-row="loopRows.find(l => l.id === activeSel.id) ?? { kind: 'loop', id: activeSel.id, name: loopStore.currentLoop.name, stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null }"
-        :linked-tasks="linkedTasks"
-        :latest-run-id="loopLatestRunId"
-        :live-connected="loopLiveConnected"
-        :participants="loopParticipants"
-        @open-task="onCanvasOpenTask"
-        @open-timeline="onAllTimeline"
-        @open-ide="onOpenIde"
-        @reassign="onReassign"
-        @handle-task="onHandleTask"
-        @goto-board="onGotoBoard"
-      />
-      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
+      <div class="wb__colbar wb__colbar--center">
+        <IaColumnControls
+          testid="ia-col-center" show-max :maximized="flow.centerMaximized" show-popout
+          @max="flow.toggleCenterMax()" @popout="onPopout"
+        />
+      </div>
+      <div class="wb__colbody">
+        <SessionCanvas
+          v-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
+          :key="`${activeSel.kind}:${activeSel.id}`"
+          :kind="activeSel.kind"
+          :object-name="selectedSessionRow.name"
+          :linked-tasks="linkedTasks"
+          :gate-title="gateTitle"
+          :participants="participants"
+          :duty-name="selectedSessionRow.dutyName"
+          @open-task="onCanvasOpenTask"
+          @open-timeline="onAllTimeline"
+          @open-ide="onOpenIde"
+          @invite="onCanvasInvite"
+        />
+        <RunCanvas
+          v-else-if="activeSel?.kind === 'loop' && loopStore.currentLoop"
+          :key="`loop:${activeSel.id}`"
+          :loop="loopStore.currentLoop"
+          :loop-row="loopRows.find(l => l.id === activeSel.id) ?? { kind: 'loop', id: activeSel.id, name: loopStore.currentLoop.name, stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null }"
+          :linked-tasks="linkedTasks"
+          :latest-run-id="loopLatestRunId"
+          :live-connected="loopLiveConnected"
+          :participants="loopParticipants"
+          @open-task="onCanvasOpenTask"
+          @open-timeline="onAllTimeline"
+          @open-ide="onOpenIde"
+          @reassign="onReassign"
+          @handle-task="onHandleTask"
+          @goto-board="onGotoBoard"
+        />
+        <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
+      </div>
     </section>
+    <!-- 右栏：折叠态 18px 导轨（◀ 展开），展开态顶部控制条右端 ▶ 折叠 -->
     <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
-      <TaskDecisionPanel
-        :wait-items="waitItems"
-        :linked-tasks="linkedTasks"
-        :feed-rows="feedRows"
-        :linked-context="linkedContext"
-        @approve-task="approveTask"
-        @reject-task="rejectTask"
-        @approve-run="approveRun"
-        @approve-fleet="approveFleet"
-        @reassign="onReassign"
-        @open-ide="onOpenIde"
-        @handle-task="onHandleTask"
-        @new-task="onNewTask"
-        @all-timeline="onAllTimeline"
-      />
+      <div class="wb__colbar">
+        <IaColumnControls testid="ia-col-right" fold="right" @fold="flow.toggleFold('right')" />
+      </div>
+      <div class="wb__colbody">
+        <TaskDecisionPanel
+          :wait-items="waitItems"
+          :linked-tasks="linkedTasks"
+          :feed-rows="feedRows"
+          :linked-context="linkedContext"
+          @approve-task="approveTask"
+          @reject-task="rejectTask"
+          @approve-run="approveRun"
+          @approve-fleet="approveFleet"
+          @reassign="onReassign"
+          @open-ide="onOpenIde"
+          @handle-task="onHandleTask"
+          @new-task="onNewTask"
+          @all-timeline="onAllTimeline"
+        />
+      </div>
     </aside>
+    <div v-else class="wb__rail" data-testid="wb-rail-right">
+      <button type="button" class="wb__rail-btn" data-testid="wb-unfold-right"
+        :title="t('ia2.wm.unfoldRight')" @click="flow.toggleFold('right')"
+      >◀</button>
+    </div>
     <!-- 改派/详情：复用看板任务抽屉（含指派编辑） -->
     <KanbanTaskDrawer v-model:show="drawerOpen" :task-id="drawerTaskId" />
   </div>
@@ -343,18 +384,32 @@ function onNewLoop(): void {
 
 <style scoped lang="scss">
 /* v12 三栏铁律：250 | 自适应(≥320) | 240，永不换列不堆叠（窄屏由外层整体缩放）。
- * v12.3 栏控折叠：左右栏 v-if 摘除 + 网格列同步收缩（wb--lf/wb--rf）；
- * 中栏最大化 = 两侧齐折（flow.centerMaximized 派生态），由页头栏控驱动。 */
+ * v12.4 栏控迁各栏顶部控制条（IaColumnControls，折叠=18px 导轨就地展开）；
+ * 中栏最大化 = 两侧齐折（flow.centerMaximized 派生态），中栏控制条驱动。 */
 .wb {
   height: 100%; min-height: 0; min-width: 0;
   display: grid;
   grid-template-columns: 250px minmax(320px, 1fr) 240px;
   gap: 10px;
 }
-.wb--lf { grid-template-columns: minmax(320px, 1fr) 240px; }
-.wb--rf { grid-template-columns: 250px minmax(320px, 1fr); }
-.wb--lf.wb--rf { grid-template-columns: minmax(320px, 1fr); }
-.wb__left, .wb__right { min-height: 0; }
-.wb__center { min-height: 0; min-width: 0; }
+.wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 240px; }
+.wb--rf { grid-template-columns: 250px minmax(320px, 1fr) 18px; }
+.wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
+.wb__left, .wb__right, .wb__center { min-height: 0; display: flex; flex-direction: column; }
+.wb__colbar {
+  flex-shrink: 0; height: 24px; display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 4px;
+}
+.wb__colbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.wb__rail {
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 4px; cursor: default;
+}
+.wb__rail-btn {
+  width: 16px; height: 40px; border: 1px solid var(--border-color); border-radius: 4px;
+  background: var(--bg-card); color: var(--text-muted); cursor: pointer;
+  font-size: 10px; line-height: 1; padding: 0;
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
+}
 .wb__canvas-ph { height: 100%; border: 1px dashed var(--border-color); border-radius: 6px; }
 </style>

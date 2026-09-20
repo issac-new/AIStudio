@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/global-top.test.ts
-// v12.2 全局顶区守门（2026-09-20 用户裁定）：页头+注意力条；视图切换器
-// （沟通协作 | IDE 工作台）移入页头最右（IaShellHeader 内嵌），本组件不再含
-// 切换行。切换器高亮自算（/ide → ide，/app 家族 → collab）；注意力条与右栏「等我」同源。
+// v12.4 全局顶区守门（2026-09-20 用户裁定）：页头+注意力条；视图切换器
+// 单按钮（显示目标视图，双按钮退役）；注意力条标签改 swarm kanban（双击进
+// 看板总览，右侧 ⚙管理退役）。切换器高亮自算（/ide → ide，/app 家族 → collab）；
+// 注意力条与右栏「等我」同源。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -40,12 +41,13 @@ vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: () => ({ loops: [], f
 vi.mock('../components/IaShellHeader.vue', () => ({
   default: { name: 'IaShellHeader', props: ['userName'], template: '<div class="hdr-stub" />' },
 }))
-// v12.3 R2：空态不消失（条即管理入口）——桩去 v-if、暴露 data-count 验数据流
+// v12.3 R2：空态不消失（条常驻）——桩去 v-if、暴露 data-count 验数据流；
+// v12.4：emits 收窄（open-gov → open-board）
 vi.mock('../components/AttentionStrip.vue', () => ({
   default: {
     name: 'AttentionStrip',
     props: ['items'],
-    emits: ['select', 'open-gov'],
+    emits: ['select', 'open-board'],
     template: '<div class="attn-stub" :data-count="items.length" />',
   },
 }))
@@ -93,16 +95,34 @@ beforeEach(() => {
   workspaceStubs.state.tasks = []
 })
 
-describe('IaViewSwitcher — 右上角视图切换器', () => {
-  it('/app 家族 → 沟通协作高亮；/ide → IDE 高亮（自算，双入口 router-link）', async () => {
+describe('IaViewSwitcher — 右上角视图切换器（v12.4 单按钮）', () => {
+  it('/app 家族 → 显示目标视图 IDE 工作台，点击跳 ide.shell（双按钮退役）', async () => {
     const { wrapper } = await mountAt('/app', IaViewSwitcher)
-    expect(wrapper.find('[data-testid="ia-scene-collab"]').classes()).toContain('ia-scenes__btn--on')
-    expect(wrapper.find('[data-testid="ia-scene-ide"]').classes()).not.toContain('ia-scenes__btn--on')
-    const { wrapper: w2 } = await mountAt('/ide', IaViewSwitcher)
-    expect(w2.find('[data-testid="ia-scene-ide"]').classes()).toContain('ia-scenes__btn--on')
-    expect(w2.find('[data-testid="ia-scene-collab"]').classes()).not.toContain('ia-scenes__btn--on')
-    const { wrapper: w3 } = await mountAt('/app/board', IaViewSwitcher)
-    expect(w3.find('[data-testid="ia-scene-collab"]').classes()).toContain('ia-scenes__btn--on')
+    const btn = wrapper.find('[data-testid="ia-view-toggle"]')
+    expect(btn.exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-scene-collab"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-scene-ide"]').exists()).toBe(false)
+    expect(btn.text()).toContain('ia2.shell.gotoIde')
+    await btn.trigger('click')
+    await flushPromises()
+    expect(wrapper.vm.$router.currentRoute.value.name).toBe('ide.shell')
+    wrapper.unmount()
+  })
+
+  it('/ide → 显示目标视图沟通协作，点击跳 ia2.collab', async () => {
+    const { wrapper } = await mountAt('/ide', IaViewSwitcher)
+    const btn = wrapper.find('[data-testid="ia-view-toggle"]')
+    expect(btn.text()).toContain('ia2.nav.collab')
+    await btn.trigger('click')
+    await flushPromises()
+    expect(wrapper.vm.$router.currentRoute.value.name).toBe('ia2.collab')
+    wrapper.unmount()
+  })
+
+  it('/app/board 家族也算 collab 态（显示 IDE 工作台目标）', async () => {
+    const { wrapper } = await mountAt('/app/board', IaViewSwitcher)
+    expect(wrapper.find('[data-testid="ia-view-toggle"]').text()).toContain('ia2.shell.gotoIde')
+    wrapper.unmount()
   })
 })
 

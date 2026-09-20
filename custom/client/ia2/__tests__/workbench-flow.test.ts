@@ -97,6 +97,13 @@ const kanbanApiStubs = vi.hoisted(() => ({
   reopenReview: vi.fn(async () => ({ ok: true })),
 }))
 vi.mock('@/api/hermes/kanban', () => ({ completeTasks: kanbanApiStubs.completeTasks, blockTask: kanbanApiStubs.blockTask, reopenReview: kanbanApiStubs.reopenReview }))
+// v12.4 中栏独立窗口走 wm/popout（web 降级 window.open）——桩住断言调用参数
+const popoutStubs = vi.hoisted(() => ({ openPanelWindow: vi.fn(async () => {}) }))
+vi.mock('../wm/popout', () => ({ openPanelWindow: popoutStubs.openPanelWindow }))
+// 评审中心桩（v12.4 WorkbenchView 等我口径收编 useDecisionRows 的 gate 源）
+vi.mock('@/custom/matrix-teams/stores/review-center', () => ({
+  useReviewCenterStore: () => ({ pendingReviews: [], sendVerdict: vi.fn() }),
+}))
 
 vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: { name: 'KanbanTaskDrawer', props: ['show', 'taskId'], template: '<div class="drawer-stub" v-if="show" :data-taskid="taskId" />' },
@@ -499,6 +506,37 @@ describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', (
     expect(wrapper.find('[data-testid="wb-center"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wb-root"]').classes()).not.toContain('wb--lf')
+  })
+
+  it('v12.4 三栏栏控迁各栏顶部控制条：折叠钮+18px 导轨展开；中栏最大化/独立窗口', async () => {
+    const { wrapper } = await mountWb('/app/s/chat/s1')
+    // 三栏各自控制条在位（左=折叠/中=最大化+独立/右=折叠）
+    expect(wrapper.find('[data-testid="ia-col-left-fold"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-left-max"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-col-center-max"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-center-popout"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-right-fold"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-right-popout"]').exists()).toBe(false)
+    // 左折 → 导轨出现，导轨 ▶ 展开恢复
+    await wrapper.find('[data-testid="ia-col-left-fold"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="wb-rail-left"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="wb-unfold-left"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(true)
+    // 中栏最大化 = 两侧齐折；右导轨 ◀ 展开恢复右栏（左仍折）
+    await wrapper.find('[data-testid="ia-col-center-max"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="wb-unfold-right"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
+    // 中栏独立窗口：弹当前对象路由
+    await wrapper.find('[data-testid="ia-col-center-popout"]').trigger('click')
+    expect(popoutStubs.openPanelWindow).toHaveBeenCalledWith({ path: '/app/s/chat/s1' })
   })
 
   it('栏控折叠：toggleFold(left) 摘左栏；toggleFold(right) 摘右栏；还原恢复', async () => {

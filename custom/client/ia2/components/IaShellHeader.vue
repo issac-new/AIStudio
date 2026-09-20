@@ -1,12 +1,15 @@
 <!-- overlay/custom/client/ia2/components/IaShellHeader.vue -->
-<!-- 驾驶舱统一壳页头。v12.3（2026-09-20 用户裁定）页头四改：
-     ① 语言仅留 ZH/EN 两按钮直切（IaLocaleToggle 替代下拉 LanguageSwitch）；
-     ② 恢复 📅 日程按钮（当日有事件亮徽章，开 CockpitScheduleModal）；
-       团队下拉 CockpitTeamSwitcher 退役（Team 管理走 ⚙管理台，在线态势接管展示）；
-     ③ 通知改下拉双页签（NotifyDropdownPanel：待人工决策 + 消息收件箱，
-       铃铛徽章 = 待决策未读数，居中模态 CockpitNotifyModal 退役）；
-     ④ 六态势 chips 迁入页头（SitlineBar；点击就地展开 SitDetailPanel 浮层）。
-     历史搬运（v12.1/2）：品牌/全局搜索/Gateway 探测组/ThemeSwitch/用户。 -->
+<!-- 驾驶舱统一壳页头。v12.4（2026-09-20 用户裁定）页头四改：
+     ① 语言单按钮切换（IaLocaleToggle 显示目标语言，ZH/EN 两按钮合并）；
+     ② 视图切换器单按钮（IaViewSwitcher 显示目标视图，沟通协作/IDE 工作台
+       两按钮合并）；
+     ③ 态势 chips 收窄（SitlineBar 删会话/循环/管理；任务口径=跨板未完成
+       未归档；等我口径=useDecisionRows 待我决策的任务及会话，与通知铃铛
+       的待人工决策同源）；
+     ④ 三栏栏控迁各栏顶部控制条（WorkbenchView/IdeShell 挂 IaColumnControls，
+       页头集中簇 IaWindowControls 退役）。
+     历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
+     Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -20,13 +23,11 @@ import { useWorkspaceStore } from '../store/workspace'
 import { useFlowStore } from '../store/flow'
 import { usePlatformsStore } from '../store/platforms'
 import IaLocaleToggle from './IaLocaleToggle.vue'
-import IaWindowControls from './IaWindowControls.vue'
 import IaViewSwitcher from './IaViewSwitcher.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
 import SitlineBar from './SitlineBar.vue'
 import SitDetailPanel, { type SitSegment } from './SitDetailPanel.vue'
 import { useSitCounts } from '../composables/useSitCounts'
-import { useSessionRows } from '../composables/useSessionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useDecisionRows } from '../composables/useDecisionRows'
 
@@ -88,45 +89,30 @@ const scheduleTodayCount = computed(() => store.scheduleDatesWithEvents.has(toda
 // ── 通知下拉（v12.3）：铃铛徽章 = 待决策未读数（useDecisionRows 单一聚合）──
 
 const showNotify = ref(false)
-const { decisionUnread } = useDecisionRows()
+const { decisionRows, decisionUnread, oldestDecisionLabel } = useDecisionRows()
 
-// ── 态势 chips + 内联面板（v12.3 自 WorkbenchView 迁入；计数 composable 共用）──
+// ── 态势 chips + 内联面板（v12.3 自 WorkbenchView 迁入；v12.4 口径修订）──
 
 const {
-  waitItems, tasks: sitTasks, sessionCount, loopTotal, loopBlocked, loopRows,
-  accounts, online, oldestWaitLabel,
+  tasks: sitTasks, openTasks, accounts, online,
 } = useSitCounts()
-const { sessionRows } = useSessionRows()
 const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
 
-/** 态势面板任务行（SitDetailPanel 纯展示形状；源 = workspace 跨板聚合） */
-const storeTasks = computed(() => workspace.tasks.map(x =>
+/** 态势面板任务行（SitDetailPanel 纯展示形状；源 = workspace 跨板聚合开放态） */
+const storeTasks = computed(() => openTasks.value.map(x =>
   ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })))
+
+/** 分状态统计行（开放态；词表序由 SitDetailPanel 排） */
+const taskStats = computed(() =>
+  Object.entries(sitTasks.value.byStatus).map(([status, count]) => ({ status, count })))
+
 const fleetMachines = computed(() => (store.fleetSessions ?? []).map(m =>
   ({ id: m.id, profile: m.profile, title: m.title, status: m.status })))
 
 const sitPanel = ref<SitSegment | null>(null)
 
-function onSitSelect(segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'): void {
+function onSitSelect(segment: 'waiting' | 'tasks' | 'online'): void {
   sitPanel.value = sitPanel.value === segment ? null : segment
-}
-
-/** 态势面板行点击 → 工作台子路径（页头无中栏画布，选择经路由落到工作台） */
-function onPanelSelectSession(sel: { kind: 'room' | 'chat'; id: string }): void {
-  sitPanel.value = null
-  if (sel.kind === 'room') void router.push({ name: 'ia2.commsRoom', params: { roomId: sel.id } })
-  else void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
-}
-
-function onPanelSelectLoop(loopId: string): void {
-  sitPanel.value = null
-  void router.push({ name: 'ia2.loopCanvas', params: { loopId } })
-}
-
-/** 面板任务行 → 看板预选（页头无抽屉，与通知下拉同动线） */
-function onPanelOpenTask(taskId: string): void {
-  sitPanel.value = null
-  void router.push({ name: 'ia2.board', query: { task: taskId } })
 }
 </script>
 
@@ -152,19 +138,15 @@ function onPanelOpenTask(taskId: string): void {
     <div class="cockpit-top__spacer" />
     <div class="cockpit-top__sit">
       <SitlineBar
-        :waiting-count="waitItems.length"
-        :oldest-label="oldestWaitLabel"
+        :waiting-count="decisionRows.length"
+        :oldest-label="oldestDecisionLabel"
         :task-total="sitTasks.total"
         :task-running="sitTasks.running"
         :task-review="sitTasks.review"
-        :session-count="sessionCount"
-        :loop-total="loopTotal"
-        :loop-blocked="loopBlocked"
         :online-people="online.people"
         :online-agents="online.agents"
         :online-machines="online.machines"
         :active="sitPanel"
-        @open-gov="flow.openGov()"
         @select="onSitSelect"
       />
     </div>
@@ -194,30 +176,27 @@ function onPanelOpenTask(taskId: string): void {
       <span class="cockpit-top__uname">{{ userName ?? t('cockpit.defaultUser') }}</span>
       <span class="cockpit-top__caret">▾</span>
     </button>
-    <!-- 三栏栏控（v12.3：窗控改栏控——/app flow.layout / /ide ide.layout） -->
+    <!-- v12.4：三栏栏控迁各栏顶部控制条（页头集中簇退役） -->
     <div class="cockpit-top__div" />
-    <IaWindowControls />
-    <!-- v12.2 视图切换器固定最右（顶部右上角：沟通协作 | IDE 工作台） -->
+    <!-- v12.4 视图切换器单按钮固定最右（显示目标视图：沟通协作 ⇄ IDE 工作台） -->
     <IaViewSwitcher />
 
     <!-- 态势内联面板（v12.3 迁页头；浮层贴页头下方） -->
     <div v-if="sitPanel" class="cockpit-top__sitpanel">
       <SitDetailPanel
         :segment="sitPanel"
-        :wait-items="waitItems"
+        :wait-items="decisionRows"
         :tasks="storeTasks"
-        :sessions="sessionRows"
-        :loops="loopRows"
+        :task-stats="taskStats"
         :accounts="accounts.map(a => ({ userId: a.userId, displayName: a.displayName, agentTeams: (a.agentTeams ?? []).map(at => ({ slug: at.slug, name: at.name, profiles: at.profiles ?? [] })) }))"
         :machines="fleetMachines"
         @close="sitPanel = null"
-        @open-task="onPanelOpenTask"
+        @open-task="taskId => { sitPanel = null; void router.push({ name: 'ia2.board', query: { task: taskId } }) }"
         @approve-task="approveTask"
         @reject-task="rejectTask"
         @approve-run="approveRun"
         @approve-fleet="approveFleet"
-        @select-session="onPanelSelectSession"
-        @select-loop="onPanelSelectLoop"
+        @open-review="flow.openGov('review')"
         @open-gov-people="flow.openGov('people')"
       />
     </div>
