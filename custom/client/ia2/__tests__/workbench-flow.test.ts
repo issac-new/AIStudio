@@ -373,7 +373,7 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
   })
 })
 
-describe('WorkbenchView — 态势条五项跳转（v12.1 C1 补完）', () => {
+describe('WorkbenchView — 态势条内联面板（v12.2 用户裁定：五段同页展开，不来回跳转）', () => {
   function makeSitRouter(): Router {
     return createRouter({
       history: createMemoryHistory(),
@@ -400,34 +400,75 @@ describe('WorkbenchView — 态势条五项跳转（v12.1 C1 补完）', () => {
     return { wrapper, router }
   }
 
-  it('任务→看板；循环→工程面；等我→首个待决任务深链（board?task=）', async () => {
+  it('任务段：就地展开面板不跳看板；任务行开看板抽屉（同页）并收面板', async () => {
     const { wrapper, router } = await mountSit('/app')
     await wrapper.find('[data-testid="sit-tasks"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.board')
-    const { wrapper: w2, router: r2 } = await mountSit('/app')
-    await w2.find('[data-testid="sit-loops"]').trigger('click')
+    // v12.2：点击不离开工作台（旧语义跳 ia2.board 已退役）
+    expect(router.currentRoute.value.name).toBe('ia2.collab')
+    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)
+    // 段高亮 + 桩任务行在面板中
+    expect(wrapper.find('[data-testid="sit-tasks"]').classes()).toContain('sit__item--on')
+    expect(wrapper.find('[data-testid="sitp-task-t-402"]').exists()).toBe(true)
+    // 行点击 → 看板任务抽屉（drawer 桩）+ 面板收起
+    await wrapper.find('[data-testid="sitp-task-t-402"]').trigger('click')
     await flushPromises()
-    expect(r2.currentRoute.value.name).toBe('ia2.eng')
-    // 桩里唯一带 taskId 的等待项是 t-402（review 态）
-    const { wrapper: w3, router: r3 } = await mountSit('/app')
-    await w3.find('[data-testid="sit-waiting"]').trigger('click')
-    await flushPromises()
-    expect(r3.currentRoute.value.name).toBe('ia2.board')
-    expect(r3.currentRoute.value.query.task).toBe('t-402')
+    expect(wrapper.find('.drawer-stub').attributes('data-taskid')).toBe('t-402')
+    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(false)
+    // 面板开着时再点同段 = 关（toggle）
+    await wrapper.find('[data-testid="sit-tasks"]').trigger('click')
+    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="sit-tasks"]').trigger('click')
+    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(false)
   })
 
-  it('会话→回会话面（清子路径回默认首会话）；在线→管理台员工区', async () => {
-    const { wrapper, router } = await mountSit('/app')
-    // 先进循环画布（子路径选择），点会话项应回 ia2.collab
-    await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
+  it('等我段：面板行上就地决策（验收走 completeTasks，任务所在板）', async () => {
+    const { wrapper } = await mountSit('/app')
+    await wrapper.find('[data-testid="sit-waiting"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.loopCanvas')
-    await wrapper.find('[data-testid="sit-sessions"]').trigger('click')
+    expect(wrapper.find('[data-testid="sit-panel-waiting"]').exists()).toBe(true)
+    // 桩里唯一带 taskId 的等待项是 t-402（review 态）——行上验收
+    await wrapper.find('[data-testid="sitp-approve"]').trigger('click')
+    await flushPromises()
+    expect(kanbanApiStubs.completeTasks).toHaveBeenCalledWith(['t-402'], undefined, { board: 'swarm' })
+    // 打回走 reopen-review（review 态桥，323 族）
+    await wrapper.find('[data-testid="sitp-reject"]').trigger('click')
+    await flushPromises()
+    expect(kanbanApiStubs.reopenReview).toHaveBeenCalledWith(['t-402'], 'ia2.tdp.rejectReason', { board: 'swarm' })
+  })
+
+  it('循环段：面板行选中即中栏切运行画布（工作台内子路径，非跳页）', async () => {
+    const { wrapper, router } = await mountSit('/app')
+    await wrapper.find('[data-testid="sit-loops"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.collab')
+    expect(wrapper.find('[data-testid="sitp-loop-lp-1"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="sitp-loop-lp-1"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.loopCanvas')
+    expect(router.currentRoute.value.params.loopId).toBe('lp-1')
+    expect(wrapper.find('[data-testid="sit-panel-loops"]').exists()).toBe(false)
+  })
+
+  it('会话段：面板行选中即左栏同款选择；在线段：三栏明细 + 管理台入口（覆盖层同页）', async () => {
+    const { wrapper, router } = await mountSit('/app')
+    await wrapper.find('[data-testid="sit-sessions"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="sit-panel-sessions"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="sitp-session-room-!r1:host"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.commsRoom')
+    expect(router.currentRoute.value.params.roomId).toBe('!r1:host')
     const { wrapper: w2 } = await mountSit('/app')
     await w2.find('[data-testid="sit-online"]').trigger('click')
+    await flushPromises()
+    expect(w2.find('[data-testid="sit-panel-online"]').exists()).toBe(true)
+    // 三栏明细渲染桩数据（TL 账号 / swarm 智能体队 / fs-1 机器 profile p）
+    expect(w2.find('[data-testid="sit-panel-online"]').text()).toContain('TL')
+    expect(w2.find('[data-testid="sit-panel-online"]').text()).toContain('swarm')
+    expect(w2.find('[data-testid="sit-panel-online"]').text()).toContain('p')
+    // 管理台走覆盖层（同页）
+    await w2.find('[data-testid="sitp-open-gov"]').trigger('click')
     const flow = useFlowStore()
     expect(flow.govOpen).toBe(true)
     expect(flow.govSection).toBe('people')

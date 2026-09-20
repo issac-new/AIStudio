@@ -118,10 +118,12 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(shell).toContain("event.key === 'Escape'")
     expect(shell).toContain('<IaMinimizedDock')
     expect(shell).toContain('listenMergeBack')
-    // v12.1 全局顶区常驻双视图（用户裁定）：双壳均挂 IaGlobalTop；切换器在
-    // 注意力条下方右上角（ia-viewswitch-row），双入口 testid 保持守门兼容
+    // v12.2 全局顶区常驻双视图（用户裁定）：双壳均挂 IaGlobalTop；切换器嵌
+    // 页头最右（IaShellHeader 内嵌 IaViewSwitcher，顶部右上角单入口），
+    // 双入口 testid 保持守门兼容；全局顶区不再挂独立切换行
     expect(shell).toContain('<IaGlobalTop')
     expect(ideShell).toContain('<IaGlobalTop')
+    expect(header).toContain('<IaViewSwitcher')
     expect(switcher).toContain('data-testid="ia-viewswitch-row"')
     expect(switcher).toContain('data-testid="ia-scene-collab"')
     expect(switcher).toContain('data-testid="ia-scene-ide"')
