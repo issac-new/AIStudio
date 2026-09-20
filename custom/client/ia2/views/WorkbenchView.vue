@@ -31,6 +31,7 @@ import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import RunCanvas from '../components/flow/RunCanvas.vue'
 import SitlineBar from '../components/SitlineBar.vue'
+import SitDetailPanel, { type SitSegment } from '../components/SitDetailPanel.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import type { ParticipantBadge } from '../components/flow/ParticipantsBar.vue'
 
@@ -383,23 +384,31 @@ function onNewLoop(): void {
   void router.push({ name: 'ia2.eng' })
 }
 
-// ── 态势条五项跳转（v12.1 C1）：每项落到该态势的可操作面 ──
-// 等我→首个待决任务深链（同 onHandleTask 的 board?task=）；任务→看板；
-// 会话→回工作台默认选择（清子路径）；循环→工程面；在线→管理台员工区。
+// ── 态势条内联面板（v12.2 用户裁定：二级/三级功能整合同页，不来回跳转）──
+// 五段点击就地展开 SitDetailPanel：等我行上验收/打回；任务行开看板抽屉；
+// 会话/循环行选中即中栏换画布（工作台内子路径选择，非页面跳转）；
+// 在线三栏明细，管理台走 GovOverlay 覆盖层（同页）。再点同段/Esc 关闭。
+
+const sitPanel = ref<SitSegment | null>(null)
 
 function onSitSelect(segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'): void {
-  if (segment === 'waiting') {
-    const first = waitItems.value.find(w => w.taskId)
-    if (first?.taskId) void router.push({ name: 'ia2.board', query: { task: first.taskId } })
-  } else if (segment === 'tasks') {
-    void router.push({ name: 'ia2.board' })
-  } else if (segment === 'sessions') {
-    void router.push({ name: 'ia2.collab' })
-  } else if (segment === 'loops') {
-    void router.push({ name: 'ia2.eng' })
-  } else {
-    flow.openGov('people')
-  }
+  sitPanel.value = sitPanel.value === segment ? null : segment
+}
+
+function onPanelOpenTask(taskId: string): void {
+  sitPanel.value = null
+  drawerTaskId.value = taskId
+  drawerOpen.value = true
+}
+
+function onPanelSelectSession(sel: { kind: 'room' | 'chat'; id: string }): void {
+  sitPanel.value = null
+  onSelect(sel)
+}
+
+function onPanelSelectLoop(loopId: string): void {
+  sitPanel.value = null
+  onSelect({ kind: 'loop', id: loopId })
 }
 </script>
 
@@ -417,8 +426,28 @@ function onSitSelect(segment: 'waiting' | 'tasks' | 'sessions' | 'loops' | 'onli
       :online-people="sitOnline.people"
       :online-agents="sitOnline.agents"
       :online-machines="sitOnline.machines"
+      :active="sitPanel"
       @open-gov="flow.openGov()"
       @select="onSitSelect"
+    />
+    <SitDetailPanel
+      v-if="sitPanel"
+      :segment="sitPanel"
+      :wait-items="waitItems"
+      :tasks="tasksForShow.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt }))"
+      :sessions="sessionRows"
+      :loops="loopRows"
+      :accounts="accounts.map(a => ({ userId: a.userId, displayName: a.displayName, agentTeams: (a.agentTeams ?? []).map(at => ({ slug: at.slug, name: at.name, profiles: at.profiles ?? [] })) }))"
+      :machines="(cockpit.fleetSessions ?? []).map(m => ({ id: m.id, profile: m.profile, title: m.title, status: m.status }))"
+      @close="sitPanel = null"
+      @open-task="onPanelOpenTask"
+      @approve-task="onApproveTask"
+      @reject-task="onRejectTask"
+      @approve-run="onApproveRun"
+      @approve-fleet="onApproveFleet"
+      @select-session="onPanelSelectSession"
+      @select-loop="onPanelSelectLoop"
+      @open-gov-people="flow.openGov('people')"
     />
     <div class="wb">
     <aside class="wb__left" data-testid="wb-left">

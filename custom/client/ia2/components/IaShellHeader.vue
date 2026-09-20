@@ -3,8 +3,8 @@
      搬运：品牌（连接点 + ia2.brand）/全局搜索/CockpitTeamSwitcher/Gateway 探测组
      （倒计时 + 平台投影 + 详情面板，整段含样式）/ThemeSwitch/LanguageSwitch/通知/用户。
      裁掉：schedule/loop/runtrace 按钮、时钟、"Swarm Studio" 字样。
-     新增：固定最右 ⇄ IDE 按钮跳 ide.shell（双壳互跳入口）。
-     场景条不在本组件——放 IaShell 第二行（简报实现选择）。 -->
+     v12.2（2026-09-20 用户裁定）：固定最右 ⇄ IDE 跳转按钮退役，改为页头最右
+     嵌 IaViewSwitcher（「沟通协作 | IDE 工作台」二视图切换，顶部右上角单入口）。 -->
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -18,6 +18,7 @@ import LanguageSwitch from '@/components/layout/LanguageSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
 import { usePlatformsStore } from '../store/platforms'
 import IaWindowControls from './IaWindowControls.vue'
+import IaViewSwitcher from './IaViewSwitcher.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -27,8 +28,6 @@ const appStore = useAppStore()
 
 defineProps<{ notifyCount?: number; userName?: string }>()
 
-/** ⇄ IDE 按钮：双壳互跳（驾驶舱 → IDE 工作台） */
-function goIde() { router.push({ name: 'ide.shell' }) }
 /** 用户按钮 → 设置页 */
 function goSettings() { router.push({ name: 'hermes.settings' }) }
 
@@ -111,10 +110,8 @@ onUnmounted(() => platformsStore.release())
     <!-- 窗口管理窗控（最大化/最小化/独立窗口）：作用于当前操作页（/goal 追加） -->
     <div class="cockpit-top__div" />
     <IaWindowControls />
-    <!-- ⇄ IDE：固定最右侧（双壳互跳） -->
-    <button type="button" class="cockpit-top__btn" data-testid="ia-header-ide" :title="t('ia2.shell.gotoIde')" @click="goIde">
-      ⇄ {{ t('ia2.shell.gotoIde') }}
-    </button>
+    <!-- v12.2 视图切换器固定最右（顶部右上角：沟通协作 | IDE 工作台） -->
+    <IaViewSwitcher />
 
     <!-- 探测结果下拉面板（必须在 cockpit-top 内部，才能相对其定位） -->
     <div v-if="showDetail" class="cockpit-probe" @click.stop>

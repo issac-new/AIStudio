@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ia2/__tests__/ia-shell.test.ts
-// 驾驶舱统一壳守门（2026-09-19 v12 统一视图）：IaShell = IaShellHeader 全局页头
-// + 双视图场景条（沟通协作 /app + IDE 工作台 /ide 直链）+ router-view。
-// 断言：场景条双入口渲染、active 态跟随路由、共享武装序列（自旧驾驶舱壳
+// 驾驶舱统一壳守门（2026-09-20 v12.2）：IaShell = IaGlobalTop（IaShellHeader
+// 页头 + 注意力条）+ router-view。视图切换器（沟通协作 | IDE 工作台）v12.2 起
+// 内嵌页头最右（IaShellHeader → IaViewSwitcher），壳层不再渲染独立场景条——
+// 切换器高亮语义守门移 global-top.test/ia-shell-header.test。本文件断言：
+// 壳结构、共享武装序列（自旧驾驶舱壳
 // 上移）、卸载时 workspace/cockpit 双侧回收。
 // 挂载以根 <router-view/> 复刻 App.vue 深度；子组件（页头/弹窗）桩化隔离重图。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -145,33 +147,12 @@ beforeEach(() => {
 })
 
 describe('IaShell — 统一壳（页头 + 双视图场景条）', () => {
-  it('场景条渲染双入口（沟通协作 + IDE 工作台），全局页头在位', async () => {
+  it('全局页头在位；切换器随页头内嵌（壳层无独立场景条，v12.2）', async () => {
     const { wrapper } = await mountShell('/app')
-    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(true)
-    for (const area of IA_AREAS) {
-      expect(wrapper.find(`[data-testid="ia-scene-${area.key}"]`).exists()).toBe(true)
-    }
-    expect(wrapper.find('[data-testid="ia-scene-ide"]').exists()).toBe(true)
     expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(true)
     expect(wrapper.find('.ia-shell__main').exists()).toBe(true)
-  })
-
-  it.each(IA_AREAS.map(a => [a.key, a.path]))('active 态跟随路由：%s 视图高亮', async (key, path) => {
-    const { wrapper } = await mountShell(path as string)
-    const btn = wrapper.find(`[data-testid="ia-scene-${key}"]`)
-    expect(btn.classes()).toContain('ia-scenes__btn--on')
-    // 其余入口不得高亮
-    for (const other of IA_AREAS.filter(a => a.key !== key)) {
-      expect(wrapper.find(`[data-testid="ia-scene-${other.key}"]`).classes()).not.toContain('ia-scenes__btn--on')
-    }
-  })
-
-  it('工作页路由切换时场景条保持 collab 高亮（board → runs）', async () => {
-    const { wrapper, router } = await mountShell('/app/board')
-    expect(wrapper.find('[data-testid="ia-scene-collab"]').classes()).toContain('ia-scenes__btn--on')
-    await router.push('/app/runs')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="ia-scene-collab"]').classes()).toContain('ia-scenes__btn--on')
+    // 切换器已移入 IaShellHeader（本测试页头为桩）——壳层不得再渲染场景条
+    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(false)
   })
 
   it('共享武装（自旧驾驶舱壳上移）：onMounted 调 workspace 四件套 + cockpit.bootstrap', async () => {
@@ -217,21 +198,20 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
     expect(router.currentRoute.value.query.standalone).toBe('1')
   })
 
-  it('最大化态（max=1）：壳页头/场景条隐藏，浮动还原胶囊在位；Esc 退出', async () => {
+  it('最大化态（max=1）：壳页头隐藏，浮动还原胶囊在位；Esc 退出', async () => {
     const { wrapper } = await mountShell('/app?max=1')
-    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(false)
     expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(false)
     const pill = wrapper.find('[data-testid="ia-wm-restore-pill"]')
     expect(pill.exists()).toBe(true)
     await pill.trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(true)
+    expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(true)
     // 再最大化后用 Esc 还原
     const wrapper2 = (await mountShell('/app?max=1')).wrapper
-    expect(wrapper2.find('[data-testid="ia-scenes"]').exists()).toBe(false)
+    expect(wrapper2.find('.ia-shell-header-stub').exists()).toBe(false)
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await flushPromises()
-    expect(wrapper2.find('[data-testid="ia-scenes"]').exists()).toBe(true)
+    expect(wrapper2.find('.ia-shell-header-stub').exists()).toBe(true)
   })
 
   it('最小化任务栏：入列渲染 chip，点击恢复导航并出列', async () => {
