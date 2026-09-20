@@ -1,12 +1,16 @@
 <script setup lang="ts">
 // IdeTaskSidebar — /ide 富侧栏（ZCode 3.12.3 实拍结构对齐，用户清单批扩展）：
 //   顶部：新建任务（⌘N）/ 搜索（⌘K 命令面板）/ 自动化（JobsView 对应物）
-//   视图：任务 | 文件（workspaceSidebar.showFileTree；文件视图嵌上游 FileTree）
-//   任务视图三模式（organize）：分组（category）/ 项目（workspace）/ 时间线
+//   组织模式三 chip（organize）：分组（任务会话标签 category）/ 项目（本机
+//   workspace 目录）/ 时间线（任务优先级 → 更新时间逆序）
 //   任务菜单：置顶 / 移动到分组（含新建分组）/ 归档 / 分享导出（exportSession）/ 删除
-//   归档区：展开加载已归档会话（恢复/打开）；底部 ⇄ 驾驶舱
+//   归档区：展开加载已归档会话（恢复/打开）；底部 ⇄ 驾驶舱 + 功能按钮组
+//   （查看文件右移右侧辅助栏，09-20 裁定：文件视图基于任务会话与项目，
+//   不与任务平行独立存在）。
 // 状态：置顶复用 sessionBrowserPrefs（与 HistoryView 全局一致）；分组走
-// /api/studio/session-categories（fetch/create/setSessionCategory）。
+// /api/studio/session-categories（fetch/create/setSessionCategory）；时间线
+// 优先级经 /api/hermes/kanban listTasks 的 session_id 桥接（口径同 cockpit
+// bucketPriority：数字越大越高）。
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -24,8 +28,8 @@ import {
   exportSession,
   type SessionCategory,
 } from '@/api/studio/sessions'
-import FileTree from '@/components/hermes/files/FileTree.vue'
-import IdeGitPane from './IdeGitPane.vue'
+import { listTasks } from '@/api/hermes/kanban'
+import { bucketPriority } from '@/custom/cockpit/adapters/task-adapter'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archivedSessions'
 import { formatRelativeTime, workspaceLabel } from '../utils/time'
@@ -96,13 +100,36 @@ async function moveToGroup(sessionId: string, categoryId: number | null): Promis
   }
 }
 
-// ---- 查看文件视图：文件树/Git 跟随所选任务的 workspace（用户裁定：
-// 「文件/Git」在查看文件里、具体任务/项目目录下） ----
-const filesWorkspace = ref<string | null>(ide.workspace)
-const filesTab = ref<'tree' | 'git'>('tree')
-function openTaskFiles(session: Session): void {
-  if (session.workspace) filesWorkspace.value = session.workspace
-  ide.setSidebarView('files')
+// ---- 时间线优先级桥接（kanban task.session_id ↔ chat session.id/agentSessionId）----
+// 口径同 cockpit bucketPriority：数字越大优先级越高（3+→P0，1→P2，
+// null/<=0→P3）；未关联任务的会话排最后（仅按更新时间逆序）。
+const taskPriorityBySession = ref<Map<string, number>>(new Map())
+async function loadTaskPriorities(): Promise<void> {
+  try {
+    const tasks = await listTasks()
+    const map = new Map<string, number>()
+    for (const task of tasks) {
+      const sid = task.session_id
+      if (!sid) continue
+      map.set(sid, Math.max(map.get(sid) ?? 0, task.priority ?? 0))
+    }
+    taskPriorityBySession.value = map
+  } catch { /* 看板不可达不阻塞会话列表 */ }
+}
+function sessionPriority(s: Session): number | null {
+  const map = taskPriorityBySession.value
+  const byId = map.get(s.id)
+  if (byId !== undefined) return byId
+  if (s.agentSessionId) {
+    const byAgent = map.get(s.agentSessionId)
+    if (byAgent !== undefined) return byAgent
+  }
+  return null
+}
+/** P0-P3 徽标文案；null = 无关联任务不显示徽标 */
+function sessionTier(s: Session): string | null {
+  const p = sessionPriority(s)
+  return p === null ? null : bucketPriority(p)
 }
 
 // ---- 搜索/过滤（常驻，workspaceSidebar.searchTasks） ----
@@ -144,11 +171,14 @@ const unpinnedSessions = computed(() =>
 const taskGroups = computed<TaskGroup[]>(() => {
   const rest = unpinnedSessions.value
   if (ide.sidebar.organize === 'timeline') {
-    return [{
-      key: '__timeline__',
-      label: t('ide.task.timeline'),
-      sessions: rest.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
-    }]
+    // 优先级降序（无任务者 -1 垫底）→ 最后更新时间逆序
+    const sessions = rest.slice().sort((a, b) => {
+      const pa = sessionPriority(a) ?? -1
+      const pb = sessionPriority(b) ?? -1
+      if (pa !== pb) return pb - pa
+      return (b.updatedAt || 0) - (a.updatedAt || 0)
+    })
+    return [{ key: '__timeline__', label: t('ide.task.timeline'), sessions }]
   }
   if (ide.sidebar.organize === 'grouped') {
     const groups: TaskGroup[] = categories.value.map(c => ({
@@ -239,10 +269,7 @@ async function onUnarchive(id: string): Promise<void> {
 // ---- 会话操作 ----
 async function onOpen(id: string): Promise<void> {
   await chat.switchSession(id)
-  ide.setChatTab('messages')
-  if (!ide.layout.chatVisible) ide.layout.chatVisible = true
-  const target = chat.sessions.find(s => s.id === id)
-  if (target?.workspace) filesWorkspace.value = target.workspace
+  ide.setChatFocus()
 }
 
 async function onNewTask(): Promise<void> {
@@ -253,8 +280,7 @@ async function onNewTask(): Promise<void> {
     source: 'coding_agent',
     workspace: ide.workspace,
   })
-  ide.setChatTab('messages')
-  if (!ide.layout.chatVisible) ide.layout.chatVisible = true
+  ide.setChatFocus()
 }
 
 async function onDelete(id: string): Promise<void> {
@@ -315,6 +341,7 @@ function onAutomationsClick(): void {
 onMounted(async () => {
   if (!chat.sessionsLoaded) await chat.loadSessions(chat.sessionProfileFilter)
   await loadCategories()
+  void loadTaskPriorities()
 })
 </script>
 
@@ -343,33 +370,8 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div class="ide-taskbar__viewtabs" role="tablist">
-      <button
-        v-for="v in (['tasks', 'files'] as const)"
-        :key="v"
-        type="button"
-        role="tab"
-        class="ide-taskbar__viewtab"
-        :class="{ 'is-active': ide.sidebar.view === v }"
-        :aria-selected="ide.sidebar.view === v"
-        :data-testid="`ide-task-view-${v}`"
-        @click="ide.setSidebarView(v)"
-      >{{ t(`ide.task.view_${v}`) }}</button>
-    </div>
-
-    <!-- 文件视图：workspaceSidebar.showFileTree 对应物，嵌上游 FileTree -->
-    <div v-if="ide.sidebar.view === 'files'" class="ide-taskbar__files">
-      <div class="ide-taskbar__filetabs" role="tablist">
-        <button type="button" role="tab" class="ide-taskbar__filetab" :class="{ 'is-active': filesTab === 'tree' }" :aria-selected="filesTab === 'tree'" data-testid="ide-files-tab-tree" @click="filesTab = 'tree'">{{ t('ide.task.view_files') }}</button>
-        <button type="button" role="tab" class="ide-taskbar__filetab" :class="{ 'is-active': filesTab === 'git' }" :aria-selected="filesTab === 'git'" data-testid="ide-files-tab-git" @click="filesTab = 'git'">Git</button>
-      </div>
-      <p class="ide-taskbar__filescope" :title="filesWorkspace ?? ''">{{ filesWorkspace ? workspaceLabel(t, filesWorkspace) : t('ide.task.defaultGroup') }}</p>
-      <FileTree v-show="filesTab === 'tree'" :profile="null" :workspace-key="filesWorkspace" />
-      <IdeGitPane v-if="filesTab === 'git'" class="ide-taskbar__gitpane" />
-    </div>
-
-    <!-- 任务视图 -->
-    <template v-else>
+    <!-- 任务视图（查看文件已右移 IdeSidePane files 页签，09-20 裁定） -->
+    <div>
       <div v-if="newGroupDraft !== null" class="ide-taskbar__newgroup">
         <input
           v-model="newGroupDraft"
@@ -479,6 +481,12 @@ onMounted(async () => {
               :data-testid="`ide-task-item-${s.id}`"
             >
               <button type="button" class="ide-taskbar__item-main" @click="onOpen(s.id)">
+                <span
+                  v-if="ide.sidebar.organize === 'timeline' && sessionTier(s)"
+                  class="ide-taskbar__prio"
+                  :class="`ide-taskbar__prio--${(sessionTier(s) || '').toLowerCase()}`"
+                  :data-testid="`ide-task-prio-${sessionTier(s)}`"
+                >{{ sessionTier(s) }}</span>
                 <span class="ide-taskbar__item-title">{{ s.title || t('ide.task.untitled') }}</span>
                 <span class="ide-taskbar__item-time">{{ formatRelativeTime(t, s.updatedAt || s.createdAt) }}</span>
               </button>
@@ -535,7 +543,7 @@ onMounted(async () => {
           </div>
         </section>
       </div>
-    </template>
+    </div>
 
     <footer class="ide-taskbar__foot">
       <div class="ide-taskbar__account-row">
@@ -556,6 +564,7 @@ onMounted(async () => {
         </button>
       </div>
       <div class="ide-taskbar__features" role="toolbar" :aria-label="t('ide.sidePane.togglePanel')">
+        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-files" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'files' }" :title="t('ide.task.view_files')" @click="ide.toggleSidePane('files')">🗁</button>
         <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-review" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'review' }" :title="t('ide.sidePane.tab_review')" @click="ide.toggleSidePane('review')">⎇</button>
         <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-browser" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'browser' }" :title="t('ide.sidePane.tab_browser')" @click="ide.toggleSidePane('browser')">◍</button>
         <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-wiki" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'wiki' }" :title="t('ide.sidePane.tab_wiki')" @click="ide.toggleSidePane('wiki')">W</button>
@@ -622,74 +631,6 @@ onMounted(async () => {
   border-radius: 4px;
   padding: 1px 5px;
   font-family: inherit;
-}
-
-.ide-taskbar__viewtabs {
-  display: flex;
-  gap: 2px;
-  margin: 2px 8px 4px;
-  padding: 2px;
-  border-radius: 7px;
-  background: var(--bg-primary, #14161a);
-}
-
-.ide-taskbar__viewtab {
-  flex: 1;
-  height: 26px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-muted, #9aa0aa);
-  font-size: 12px;
-  cursor: pointer;
-
-  &:hover { color: var(--text-primary, #e6e6e6); }
-  &.is-active {
-    background: var(--bg-tertiary, #ebebeb);
-    color: var(--text-primary, #e6e6e6);
-  }
-}
-
-.ide-taskbar__filetabs {
-  display: flex;
-  gap: 2px;
-  padding: 4px 8px 0;
-}
-
-.ide-taskbar__filetab {
-  flex: 1;
-  height: 24px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-muted, #9aa0aa);
-  font-size: 12px;
-  cursor: pointer;
-
-  &:hover { color: var(--text-primary, #e6e6e6); }
-  &.is-active {
-    background: var(--bg-tertiary, #ebebeb);
-    color: var(--text-primary, #e6e6e6);
-  }
-}
-
-.ide-taskbar__filescope {
-  margin: 0;
-  padding: 3px 12px;
-  font-size: 10px;
-  color: var(--text-muted, #9aa0aa);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ide-taskbar__gitpane { flex: 1; min-height: 0; }
-
-.ide-taskbar__files {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 0 4px 8px;
 }
 
 .ide-taskbar__newgroup {
@@ -858,6 +799,22 @@ onMounted(async () => {
 .ide-taskbar__item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .ide-taskbar__item-time { flex-shrink: 0; font-size: 11px; color: var(--text-muted, #9aa0aa); }
+
+/* 时间线优先级徽标（P0-P3，口径同 cockpit bucketPriority） */
+.ide-taskbar__prio {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  background: color-mix(in srgb, var(--text-muted, #9aa0aa) 18%, transparent);
+  color: var(--text-muted, #9aa0aa);
+
+  &--p0 { background: rgba(224, 108, 117, 0.18); color: #e06c75; }
+  &--p1 { background: rgba(240, 164, 76, 0.18); color: #f0a44c; }
+  &--p2 { background: rgba(76, 201, 240, 0.16); color: #4cc9f0; }
+}
 
 .ide-taskbar__item-more {
   flex-shrink: 0;
