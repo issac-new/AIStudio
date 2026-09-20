@@ -10,6 +10,7 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { buildWaiting } from '../adapters/waiting'
 import { buildLoopRows } from '../adapters/flow'
@@ -22,6 +23,7 @@ export function useSitCounts() {
   const loopStore = useLoopStore()
   const chatStore = useChatStore()
   const matrixRoom = useMatrixRoomStore()
+  const groupChat = useGroupChatStore()
   const teamRegistry = useTeamRegistryStore()
   const now = useNowTick()
 
@@ -42,7 +44,7 @@ export function useSitCounts() {
   })
 
   const sessionCount = computed(() =>
-    ((chatStore.sessions ?? []).length) + ((matrixRoom.sortedRooms ?? []).length))
+    ((chatStore.sessions ?? []).length) + ((matrixRoom.sortedRooms ?? []).length) + ((groupChat.rooms ?? []).length))
 
   const loopRows = computed(() => buildLoopRows(loopStore.loops ?? [], now.value))
   const loopBlocked = computed(() => loopRows.value.filter(l => l.blocked).length)

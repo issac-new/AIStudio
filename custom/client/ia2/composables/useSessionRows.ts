@@ -1,13 +1,16 @@
 // overlay/custom/client/ia2/composables/useSessionRows.ts
 // v12.3 会话行装配单一实现（自 WorkbenchView.vue 抽出，工作台/页头态势面板共用）。
-// 会话源 = matrix 房间 ∪ hermes agent 会话（不分类同列），两路经 buildSessionRows
-// 统一重排；任务挂接优先 kanban 原始任务（带 session_id），退化 workspace 聚合行。
+// 会话源 = matrix 房间 ∪ hermes 群聊 ∪ hermes agent 会话（R4b 三聊天合一，
+// 同列经 buildSessionRows 统一重排，左栏按类型聚类展示）；任务挂接优先 kanban
+// 原始任务（带 session_id），退化 workspace 聚合行；群聊无挂接通道（tenant/
+// session_id 均不指向群聊房间，taskIds 自然为空）。
 import { computed } from 'vue'
 import { useWorkspaceStore } from '../store/workspace'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import {
   buildSessionRows, linkedTaskIdsOfSession,
   type SessionSourceRow,
@@ -19,6 +22,7 @@ export function useSessionRows() {
   const matrixRoom = useMatrixRoomStore()
   const teamRegistry = useTeamRegistryStore()
   const kanban = useKanbanStore()
+  const groupChat = useGroupChatStore()
 
   const chatSessions = computed(() => chatStore.sessions ?? [])
 
@@ -33,7 +37,11 @@ export function useSessionRows() {
     const chatRowList: SessionSourceRow[] = chatSessions.value.map(s => ({
       kind: 'chat', id: s.id, name: s.title || s.id, lastActivityAt: s.updatedAt ?? null,
     }))
-    return [...roomRows, ...chatRowList]
+    // 群聊（R4b）：store.rooms 已按最近活跃倒序（joinRoom/loadRooms 维护），
+    // rank 保序与会话侧一致
+    const groupRows: SessionSourceRow[] = ((groupChat.rooms ?? []) as Array<{ id: string; name: string; lastActiveAt?: number }>)
+      .map((r, i) => ({ kind: 'group' as const, id: r.id, name: r.name || r.id, lastActivityAt: r.lastActiveAt ?? now - i * 1000 }))
+    return [...roomRows, ...groupRows, ...chatRowList]
   })
 
   const tasksForLink = computed(() => {
@@ -66,6 +74,7 @@ export function useSessionRows() {
     taskIdsOf(id, kind) {
       return linkedTaskIdsOfSession({ kind, id }, tasksForLink.value)
     },
+    // group：未读走 store 自有计数（无则 0）；挂接无通道自然空——见头注
     teamTagOf(id) {
       return assigneeLabelOf(id).teamTag
     },
