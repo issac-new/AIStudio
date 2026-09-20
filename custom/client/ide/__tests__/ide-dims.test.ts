@@ -1,15 +1,14 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ide/__tests__/ide-dims.test.ts
-// v12 IDE 工作空间维度条守门（2026-09-19 统一视图 Task 10）：四维度切换副作用 /
-// ⇄沟通协作 / 维度持久化 / 任务维度 chip 带 #id 前缀。
+// v12 IDE 工作空间维度条守门（09-20 重构三维化：链路维度退役）：三维切换
+// 副作用 / ⇄沟通协作 / 维度持久化 / 任务维度 chip 带 #id 前缀 /
+// project→右侧辅助面板 files 页签（查看文件右移）。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
-const cockpitStubs = vi.hoisted(() => ({ state: { openRunTraceGlobal: vi.fn() }, useCockpitStore: () => cockpitStubs.state }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 
 import IdeDimsBar from '../components/IdeDimsBar.vue'
 import { useIdeStore } from '../store/ide'
@@ -39,26 +38,28 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('IdeDimsBar — 工作空间维度条', () => {
-  it('四维度 chip + 默认任务维度高亮', async () => {
+describe('IdeDimsBar — 工作空间维度条（三维）', () => {
+  it('三维 chip 存在、链路维度已退役、默认任务维度高亮', async () => {
     const { wrapper } = await mountBar()
-    for (const d of ['task', 'project', 'session', 'chain']) {
+    for (const d of ['task', 'project', 'session']) {
       expect(wrapper.find(`[data-testid="ide-dim-${d}"]`).exists()).toBe(true)
     }
+    expect(wrapper.find('[data-testid="ide-dim-chain"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ide-dim-task"]').classes()).toContain('ide-dims__chip--on')
   })
 
-  it('维度切换副作用：project→侧栏文件树；session→会话页签；chain→RunTrace', async () => {
+  it('维度切换副作用：project→右侧面板 files 页签；session→中栏聚焦', async () => {
     const { wrapper } = await mountBar()
     const ide = useIdeStore()
     await wrapper.find('[data-testid="ide-dim-project"]').trigger('click')
     expect(ide.dimension).toBe('project')
-    expect(ide.sidebar.view).toBe('files')
+    expect(ide.sidePane.tab).toBe('files')
+    expect(ide.sidePane.open).toBe(true)
     expect(localStorage.getItem('hermes_ide_dim')).toBe('project')
+    ide.layout.chatVisible = false
     await wrapper.find('[data-testid="ide-dim-session"]').trigger('click')
-    expect(ide.chatTab).toBe('messages')
-    await wrapper.find('[data-testid="ide-dim-chain"]').trigger('click')
-    expect(cockpitStubs.state.openRunTraceGlobal).toHaveBeenCalled()
+    expect(ide.dimension).toBe('session')
+    expect(ide.layout.chatVisible).toBe(true)
   })
 
   it('任务维度 chip 带 #id 前缀；⇄ 沟通协作 → /app', async () => {

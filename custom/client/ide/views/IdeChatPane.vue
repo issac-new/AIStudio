@@ -4,9 +4,10 @@
 // 复用 upstream 子组件（不嵌 ChatPanel 整面板，避免其自带会话侧栏）：
 //   MessageList（消息流/工具调用卡/审批/澄清浮层/Todo/diff 内嵌）
 //   ChatInput（附件/slash/排队/语音命令）
-//   SubagentStreamPanel（子代理流，页签承载）
 //   WorkspaceDiffPreview / FilePreview（toolPanel overlay 宿主渲染，与
 //     ChatPanel 同款 watch 驱动）
+// 任务计划/子代理为浮窗（09-20 裁定，对标 zcode 模式）：头部开关按钮 +
+// IdeFloatPanel 壳（拖拽/右下锚定），不再占用页签。
 // RunTrace 弹窗经 cockpitStore.openRunTrace 复用（IdeShell 挂载 modal）。
 //
 // 会话生命周期 = ChatView 挂载配方 + newChat codex 配方（ChatPanel.vue
@@ -26,10 +27,8 @@ import { useFilesStore } from '@/stores/hermes/files'
 import { useToolPanelStore } from '@/stores/hermes/tool-panel'
 import MessageList from '@/components/hermes/chat/MessageList.vue'
 import ChatInput from '@/components/hermes/chat/ChatInput.vue'
-import SubagentStreamPanel from '@/components/hermes/chat/SubagentStreamPanel.vue'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
 import FilePreview from '@/components/hermes/files/FilePreview.vue'
-import { chatSessionAgentAvatar } from '@/utils/chat-agent-avatar'
 import {
   OPEN_SUBAGENT_STREAM_EVENT,
   type OpenSubagentStreamDetail,
@@ -37,6 +36,8 @@ import {
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { isSessionModelInvalid } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import IdePlanFloat from '../components/IdePlanFloat.vue'
+import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 
 const ide = useIdeStore()
 const chatStore = useChatStore()
@@ -160,20 +161,15 @@ async function copyDebugInfo(): Promise<void> {
   } catch { /* 剪贴板不可用时静默 */ }
 }
 
-// ── 子代理页签（消息流中点击子代理工具卡 → window 事件，ChatPanel 同款）──
+// ── 子代理浮窗（消息流中点击子代理工具卡 → window 事件，开浮窗并选中）──
 
-const selectedSubagent = ref<OpenSubagentStreamDetail | null>(null)
-
-const selectedSubagentStream = computed(() => {
-  const selected = selectedSubagent.value
-  return selected ? chatStore.getSubagentStream(selected.sessionId, selected.subagentId) : null
-})
+const pendingSubagentId = ref<string | null>(null)
 
 function handleOpenSubagentStreamRequest(event: Event) {
   const detail = (event as CustomEvent<OpenSubagentStreamDetail>).detail
   if (!detail?.sessionId || detail.sessionId !== chatStore.activeSessionId) return
-  selectedSubagent.value = detail
-  ide.setChatTab('subagents')
+  pendingSubagentId.value = detail.subagentId
+  ide.floats.agents = true
 }
 
 onMounted(() => {
@@ -183,11 +179,6 @@ onUnmounted(() => {
   window.removeEventListener(OPEN_SUBAGENT_STREAM_EVENT, handleOpenSubagentStreamRequest)
 })
 
-function closeSubagent() {
-  selectedSubagent.value = null
-  ide.setChatTab('messages')
-}
-
 // ── toolPanel overlay 宿主渲染（workspaceDiff / 文件预览；ChatPanel 同款 watch）──
 
 const showOverlay = computed(() => Boolean(toolPanelStore.workspaceDiff || filesStore.previewFile))
@@ -196,13 +187,6 @@ function closeOverlay() {
   if (toolPanelStore.workspaceDiff) toolPanelStore.closeWorkspaceDiff()
   if (filesStore.previewFile) filesStore.closePreview()
 }
-
-watch(
-  () => toolPanelStore.workspaceDiff,
-  (diff) => {
-    if (diff && ide.chatTab !== 'messages') ide.setChatTab('messages')
-  },
-)
 
 // ── 动作 ──
 
@@ -214,8 +198,8 @@ function newSession() {
     source: 'coding_agent',
     workspace: ide.workspace,
   })
-  selectedSubagent.value = null
-  ide.setChatTab('messages')
+  pendingSubagentId.value = null
+  ide.floats.agents = false
 }
 
 const canOpenTrace = computed(() => Boolean(chatStore.activeSessionId))
@@ -241,9 +225,39 @@ const modelDisabled = computed(() => true)
         <button
           type="button"
           class="ide-chat__action"
+          data-testid="ide-chat-new"
           :title="t('ide.chatNewSession')"
           @click="newSession"
         >＋</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          :class="{ 'is-on': ide.floats.plan }"
+          data-testid="ide-chat-float-plan"
+          :title="t('ide.float.planTitle')"
+          :aria-label="t('ide.float.planTitle')"
+          @click="ide.toggleFloat('plan')"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h2M4 12h2M4 18h2M9 6h11M9 12h11M9 18h11" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          :class="{ 'is-on': ide.floats.agents }"
+          data-testid="ide-chat-float-agents"
+          :title="t('ide.float.agentsTitle')"
+          :aria-label="t('ide.float.agentsTitle')"
+          @click="ide.toggleFloat('agents')"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+            <circle cx="17" cy="9" r="2.4" />
+            <path d="M14.8 19a4.6 4.6 0 0 1 5.7-4.4" />
+          </svg>
+        </button>
         <button
           type="button"
           class="ide-chat__action"
@@ -302,53 +316,30 @@ const modelDisabled = computed(() => true)
       </template>
     </div>
 
-    <div class="ide-chat__tabs" role="tablist">
-      <button
-        v-for="tab in (['messages', 'subagents'] as const)"
-        :key="tab"
-        type="button"
-        role="tab"
-        class="ide-chat__tab"
-        :class="{ 'is-active': ide.chatTab === tab }"
-        :aria-selected="ide.chatTab === tab"
-        @click="ide.setChatTab(tab)"
-      >{{ t(`ide.chatTab_${tab}`) }}</button>
-    </div>
-
     <div class="ide-chat__body">
-      <template v-if="ide.chatTab === 'messages'">
-        <MessageList
-          v-if="ready"
-          class="ide-chat__messages"
-          approval-portal-to-body
-          scroll-scope="ide"
-        />
-        <ChatInput :model-disabled="modelDisabled" persist-draft />
+      <MessageList
+        v-if="ready"
+        class="ide-chat__messages"
+        approval-portal-to-body
+        scroll-scope="ide"
+      />
+      <ChatInput :model-disabled="modelDisabled" persist-draft />
 
-        <!-- toolPanel overlay：会话 workspace diff / 文件预览（ChatPanel 宿主同款） -->
-        <div v-if="showOverlay" class="ide-chat__overlay">
-          <WorkspaceDiffPreview
-            v-if="toolPanelStore.workspaceDiff"
-            :custom-close="closeOverlay"
-          />
-          <FilePreview
-            v-else-if="filesStore.previewFile"
-            :custom-close="closeOverlay"
-          />
-        </div>
-      </template>
-
-      <div v-else-if="ide.chatTab === 'subagents'" class="ide-chat__subagents">
-        <SubagentStreamPanel
-          v-if="selectedSubagent && selectedSubagentStream"
-          :agent="chatSessionAgentAvatar(chatStore.activeSession)"
-          :stream="selectedSubagentStream"
-          @close="closeSubagent"
+      <!-- toolPanel overlay：会话 workspace diff / 文件预览（ChatPanel 宿主同款） -->
+      <div v-if="showOverlay" class="ide-chat__overlay">
+        <WorkspaceDiffPreview
+          v-if="toolPanelStore.workspaceDiff"
+          :custom-close="closeOverlay"
         />
-        <div v-else class="ide-chat__subagents-empty">
-          {{ t('ide.chatSubagentsEmpty') }}
-        </div>
+        <FilePreview
+          v-else-if="filesStore.previewFile"
+          :custom-close="closeOverlay"
+        />
       </div>
+
+      <!-- 浮窗（对标 zcode：任务计划 / 子代理名册，拖拽壳见 IdeFloatPanel） -->
+      <IdePlanFloat v-if="ide.floats.plan" />
+      <IdeSubagentsFloat v-if="ide.floats.agents" :focus-id="pendingSubagentId" />
     </div>
   </section>
 </template>
@@ -433,6 +424,13 @@ const modelDisabled = computed(() => true)
     border-color: var(--accent-primary, #4cc9f0);
   }
 
+  /* 浮窗开关激活态 */
+  &.is-on {
+    color: var(--accent-primary, #4cc9f0);
+    border-color: color-mix(in srgb, var(--accent-primary, #4cc9f0) 55%, transparent);
+    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 10%, transparent);
+  }
+
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -449,29 +447,6 @@ const modelDisabled = computed(() => true)
   }
 }
 
-.ide-chat__tabs {
-  flex-shrink: 0;
-  display: flex;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
-}
-
-.ide-chat__tab {
-  flex: 1;
-  padding: 6px 0;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-muted, #9aa0aa);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-
-  &.is-active {
-    color: var(--text-primary, #e6e6e6);
-    border-bottom-color: var(--accent-primary, #4cc9f0);
-  }
-}
-
 .ide-chat__body {
   flex: 1;
   min-height: 0;
@@ -483,23 +458,6 @@ const modelDisabled = computed(() => true)
 .ide-chat__messages {
   flex: 1;
   min-height: 0;
-}
-
-.ide-chat__subagents {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-
-.ide-chat__subagents-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  color: var(--text-muted, #9aa0aa);
-  font-size: 12px;
-  text-align: center;
 }
 
 .ide-chat__overlay {

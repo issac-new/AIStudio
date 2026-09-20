@@ -27,8 +27,8 @@ vi.mock('@/custom/cockpit/store/cockpit', () => ({
 vi.mock('../views/IdeTaskSidebar.vue', () => ({ default: { name: 'IdeTaskSidebar', template: '<aside class="ide-taskbar" />' } }))
 vi.mock('../views/IdeChatPane.vue', () => ({ default: { name: 'IdeChatPane', template: '<div class="ide-chat-stub" />' } }))
 vi.mock('../views/IdeSidePane.vue', () => ({ default: { name: 'IdeSidePane', template: '<aside class="ide-sidepane" />' } }))
-vi.mock('../views/IdeTopBar.vue', () => ({ default: { name: 'IdeTopBar', template: '<div />' } }))
 vi.mock('../views/IdeStatusBar.vue', () => ({ default: { name: 'IdeStatusBar', template: '<div />' } }))
+vi.mock('../components/IdeDimsBar.vue', () => ({ default: { name: 'IdeDimsBar', template: '<div />' } }))
 vi.mock('../components/IdeCommandPalette.vue', () => ({ default: { name: 'IdeCommandPalette', template: '<div />' } }))
 vi.mock('../components/IdeTaskContextBar.vue', () => ({ default: { name: 'IdeTaskContextBar', template: '<div class="ide-taskctx-stub" />' } }))
 vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
@@ -95,5 +95,12 @@ describe('IdeShell 布局守门', () => {
     const w = mountShell()
     await flushPromises()
     expect(w.find('.ide-shell__workspace').exists()).toBe(false)
+  })
+
+  it('顶区对齐沟通协作：IaGlobalTop 常驻、自有 IdeTopBar 已退役', async () => {
+    const w = mountShell()
+    await flushPromises()
+    expect(w.find('.ia-gtop-stub').exists()).toBe(true)
+    expect(w.find('.ide-topbar').exists()).toBe(false)
   })
 })

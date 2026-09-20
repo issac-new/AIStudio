@@ -27,12 +27,40 @@ describe('ide store（workspace/agent/布局持久化）', () => {
     const ide = useIdeStore()
     expect(ide.workspace).toBeNull()
     expect(ide.agentId).toBe('codex')
-    expect(ide.chatTab).toBe('messages')
     expect(ide.layout).toMatchObject({
       workspaceVisible: true,
       chatVisible: true,
       terminalOpen: false,
     })
+  })
+
+  it('浮窗开关默认关闭、toggleFloat 翻转（瞬态不持久化）', () => {
+    const ide = useIdeStore()
+    expect(ide.floats).toEqual({ plan: false, agents: false })
+    ide.toggleFloat('plan')
+    ide.toggleFloat('agents')
+    expect(ide.floats).toEqual({ plan: true, agents: true })
+    ide.toggleFloat('plan')
+    expect(ide.floats.plan).toBe(false)
+  })
+
+  it('维度持久化：历史残留 chain 回落 task（链路维度退役守门）', () => {
+    localStorage.setItem('hermes_ide_dim', 'chain')
+    setActivePinia(createPinia())
+    const ide = useIdeStore()
+    expect(ide.dimension).toBe('task')
+    ide.setDimension('project')
+    expect(localStorage.getItem('hermes_ide_dim')).toBe('project')
+  })
+
+  it('侧栏组织模式持久化：organize 往返（view 字段已退役）', () => {
+    const ide = useIdeStore()
+    expect(ide.sidebar.organize).toBe('project')
+    ide.setOrganize('timeline')
+    setActivePinia(createPinia())
+    const second = useIdeStore()
+    expect(second.sidebar.organize).toBe('timeline')
+    expect('view' in second.sidebar).toBe(false)
   })
 
   it('setWorkspace 持久化：设置/清空往返', () => {

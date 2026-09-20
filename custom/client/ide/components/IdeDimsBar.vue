@@ -1,40 +1,35 @@
 <!-- overlay/custom/client/ide/components/IdeDimsBar.vue -->
-<!-- v12 IDE 工作空间维度条（2026-09-19 统一视图）：任务/项目/会话/链路四维度
-     绑定同一编码环境 + ⇄ 沟通协作（动线⑤编码的双向互链）。
-     副作用：任务→侧栏任务视图；项目→侧栏文件树；会话→会话消息页签；
-     链路→RunTrace 全局时间线。 -->
+<!-- v12 IDE 工作空间维度条（2026-09-19 统一视图，09-20 重构三维化）：
+     任务/项目/会话三维度绑定同一编码环境。
+     副作用：任务→侧栏任务视图；项目→右侧辅助面板「查看文件」页签
+     （基于任务会话与项目的视图，09-20 裁定右移）；会话→中栏消息面。
+     链路维度已退役（RunTrace 入口 = 会话头部迹线按钮 + 命令面板）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useIdeStore, type IdeDimension } from '../store/ide'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
 const { t } = useI18n()
 const router = useRouter()
 const ide = useIdeStore()
-const cockpit = useCockpitStore()
 
-const DIMS: IdeDimension[] = ['task', 'project', 'session', 'chain']
+const DIMS: IdeDimension[] = ['task', 'project', 'session']
 
 const dimLabel = computed(() => ({
   task: ide.activeTaskId ? `${t('ide.dims.task')} · #${ide.activeTaskId.slice(0, 8)}` : t('ide.dims.task'),
   project: ide.workspace ? `${t('ide.dims.project')} · ${ide.workspace.split('/').pop() ?? ide.workspace}` : t('ide.dims.project'),
   session: t('ide.dims.session'),
-  chain: t('ide.dims.chain'),
 }) as Record<IdeDimension, string>)
 
 function pick(dim: IdeDimension): void {
   ide.setDimension(dim)
   if (dim === 'task') {
-    ide.setSidebarView('tasks')
-    ide.setChatTab('messages')
+    ide.setChatFocus()
   } else if (dim === 'project') {
-    ide.setSidebarView('files')
-  } else if (dim === 'session') {
-    ide.setChatTab('messages')
+    ide.setSidePaneTab('files')
   } else {
-    cockpit.openRunTraceGlobal()
+    ide.setChatFocus()
   }
 }
 

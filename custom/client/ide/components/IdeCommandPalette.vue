@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // IdeCommandPalette — 命令面板（Cmd/Ctrl+K，对标 zcode quickPick/commandCenter）。
 //
-// 三态两区 MVP：命令区（布局开关/新会话/RunTrace/功能页导航——导航项复用
-// IdeTopBar linkGroups 的既有路由与 i18n 键）+ 任务区（chatStore.sessions
-// 标题过滤 → switchSession，对标 zcode taskSearch）。文件区列 backlog
-// （需非递归目录 API 之外的树搜索通道，见 parity-analysis §二）。
+// 三态两区 MVP：命令区（布局开关/新会话/RunTrace/功能页导航——ide.links.*
+// 功能导航的唯一事实源，IdeTopBar 已于 09-20 重构退役）+ 任务区
+// （chatStore.sessions 标题过滤 → switchSession，对标 zcode taskSearch）。
+// 文件区列 backlog（需非递归目录 API 之外的树搜索通道，见 parity-analysis §二）。
 // 键盘：↑↓ 跨区扁平导航、Enter 执行、Esc 关闭；输入即时过滤。
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -39,7 +39,7 @@ const query = ref('')
 const inputEl = ref<HTMLInputElement | null>(null)
 const activeIndex = ref(0)
 
-// 与 IdeTopBar.linkGroups 同源的功能页导航（键与路由保持一致，改一处须同步另一处）
+// 功能页导航（ide.links.* 唯一事实源；「功能导航」下拉已随 IdeTopBar 退役）
 const NAV_TARGETS: Array<{ key: string; to: { name: string } | { path: string } }> = [
   // 统一导航（09-18）：workbench/cockpit/loopGraph 死链移除，kanban/history 指六场景
   { key: 'kanban', to: { name: 'ia2.board' } },
