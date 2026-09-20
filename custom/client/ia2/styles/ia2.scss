@@ -204,6 +204,26 @@
   max-width: 220px;
 }
 
+// v12.3（R2 注意力条改管理入口）：尾部 ⚙管理常驻、空态不消失
+.ia-attn__gov {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 13px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--text-muted, var(--border-color));
+  }
+}
+
 // ── 四卡片一行 ──
 .ia-overview__cards {
   display: grid;
