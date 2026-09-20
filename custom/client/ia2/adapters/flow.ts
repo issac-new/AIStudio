@@ -7,7 +7,10 @@ import { parseTenant } from '@/custom/kanban/utils/tenant-parser'
 import type { LoopInstance, TaskContract } from '@/custom/loop/types'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 
-export type StreamKind = 'room' | 'chat' | 'loop'
+/** 会话三类（v12.3 R4b 三聊天合一）：matrix 房间 / hermes 群聊 / agent 会话 */
+export type SessionKind = 'room' | 'group' | 'chat'
+
+export type StreamKind = SessionKind | 'loop'
 
 /** 工作台当前选择（左栏点击 → 中栏画布分派依据） */
 export interface StreamSelection {
@@ -15,10 +18,10 @@ export interface StreamSelection {
   id: string
 }
 
-// ── 会话行（房间 ∪ agent 会话，同列不分类）──
+// ── 会话行（房间 ∪ 群聊 ∪ agent 会话；v12.3 左栏按类型聚类展示）──
 
 export interface FlowSessionRow {
-  kind: 'room' | 'chat'
+  kind: SessionKind
   id: string
   name: string
   unread: number
@@ -33,15 +36,15 @@ export interface FlowSessionRow {
 
 /** 视图侧把 SDK Room / chat Session 归一成最小源行，适配器不耦合 SDK 形状 */
 export interface SessionSourceRow {
-  kind: 'room' | 'chat'
+  kind: SessionKind
   id: string
   name: string
   lastActivityAt: number | null
 }
 
 export interface SessionRowHooks {
-  unreadOf(id: string, kind: 'room' | 'chat'): number
-  taskIdsOf(id: string, kind: 'room' | 'chat'): string[]
+  unreadOf(id: string, kind: SessionKind): number
+  taskIdsOf(id: string, kind: SessionKind): string[]
   teamTagOf(id: string): string
   dutyNameOf(id: string): string | null
 }
@@ -185,7 +188,7 @@ function sessionOfTask(t: TaskLinkSource): string | null {
 }
 
 export function linkedTaskIdsOfSession(
-  sel: { kind: 'room' | 'chat'; id: string },
+  sel: { kind: SessionKind; id: string },
   tasks: readonly TaskLinkSource[],
 ): string[] {
   return tasks

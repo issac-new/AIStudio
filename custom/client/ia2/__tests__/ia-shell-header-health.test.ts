@@ -16,20 +16,75 @@ vi.mock('vue-router', () => ({
   useRoute: () => ({ path: '/app', fullPath: '/app', query: {} }),
 }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
-  useCockpitStore: () => ({ searchQuery: '', runSearch: vi.fn(), clearSearch: vi.fn(), _sessionSearching: false }),
+  useCockpitStore: () => ({
+    searchQuery: '', runSearch: vi.fn(), clearSearch: vi.fn(), _sessionSearching: false,
+    inboxItems: [] as unknown[], fleetSessions: [] as unknown[], scheduleDatesWithEvents: new Set<string>(),
+  }),
 }))
+// workspace store 桩：真 store 会拉上游 router 链（登录守卫），此间只验页头
+const workspaceStubs = vi.hoisted(() => {
+  const state = {
+    tasks: [] as Array<{ id: string; title: string; status: string; assignee: string | null; createdAt: number }>,
+    scheduleOpen: false,
+  }
+  return {
+    state,
+    useWorkspaceStore: () => ({
+      get tasks() { return state.tasks },
+      get scheduleOpen() { return state.scheduleOpen },
+      openSchedule() { state.scheduleOpen = true },
+      closeSchedule() { state.scheduleOpen = false },
+    }),
+  }
+})
+vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 vi.mock('@/stores/hermes/app', () => ({ useAppStore: () => ({ connected: false }) }))
 vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeSwitch', template: '<span class="theme-stub" />' } }))
-vi.mock('@/components/layout/LanguageSwitch.vue', () => ({ default: { name: 'LanguageSwitch', template: '<span class="lang-stub" />' } }))
-// 团队切换器有 store/profiles 依赖，换哑组件避免拉起上游 router
-vi.mock('@/custom/cockpit/components/CockpitTeamSwitcher.vue', () => ({
-  default: { name: 'CockpitTeamSwitcher', template: '<span class="team-switcher-stub" />' },
+// v12.3 页头重依赖桩化（页头四改：语言直切/栏控/态势与决策聚合/评审中心）
+vi.mock('../components/IaLocaleToggle.vue', () => ({
+  default: { name: 'IaLocaleToggle', template: '<span class="locale-stub" />' },
+}))
+vi.mock('../components/IaWindowControls.vue', () => ({
+  default: { name: 'IaWindowControls', template: '<div class="wm-stub" />' },
+}))
+vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
+  useSitCounts: () => ({
+    waitItems: { value: [] },
+    tasks: { total: 0, running: 0, review: 0 },
+    sessionCount: { value: 0 },
+    loopTotal: { value: 0 },
+    loopBlocked: { value: 0 },
+    loopRows: { value: [] },
+    accounts: { value: [] },
+    online: { people: 0, agents: 0, machines: 0 },
+    oldestWaitLabel: { value: '' },
+  }),
+}))
+vi.mock('@/custom/ia2/composables/useSessionRows', () => ({
+  useSessionRows: () => ({ sessionRows: { value: [] } }),
+}))
+vi.mock('@/custom/ia2/composables/useDecisionRows', async () => {
+  const { ref } = await import('vue')
+  return {
+    useDecisionRows: () => ({
+      decisionRows: ref([]),
+      decisionIds: ref([]),
+      decisionUnread: ref(0),
+      gateRows: ref([]),
+    }),
+  }
+})
+vi.mock('@/custom/ia2/composables/useDecisionActions', () => ({
+  useDecisionActions: () => ({ approveTask: vi.fn(), rejectTask: vi.fn(), approveRun: vi.fn(), approveFleet: vi.fn() }),
+}))
+vi.mock('@/custom/matrix-teams/stores/review-center', () => ({
+  useReviewCenterStore: () => ({ pendingReviews: [], sendVerdict: vi.fn() }),
 }))
 
 import IaShellHeader from '../components/IaShellHeader.vue'
 import { setActivePinia, createPinia } from 'pinia'
 
-// 窗控簇（IaWindowControls）依赖 wm store
+// 页头真 store：flow/workspace/notify-read/platforms（pinia 激活即可，无外呼）
 setActivePinia(createPinia())
 
 function mockHealth(payload: unknown) {
@@ -39,8 +94,8 @@ function mockHealth(payload: unknown) {
 async function mountBar(payload: unknown) {
   mockHealth(payload)
   const w = mount(IaShellHeader, {
-    props: { notifyCount: 0, userName: 'tester' },
-    global: { stubs: { ThemeSwitch: true, LanguageSwitch: true, CockpitIcon: true } },
+    props: { userName: 'tester' },
+    global: { stubs: { ThemeSwitch: true, CockpitIcon: true } },
   })
   await vi.waitFor(() => {
     expect((w.vm as unknown as { platforms: unknown[] }).platforms.length).toBeGreaterThanOrEqual(0)

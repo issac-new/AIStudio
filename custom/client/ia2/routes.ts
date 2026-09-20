@@ -104,6 +104,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: workbench,
         },
         {
+          // hermes 群聊画布（v12.3 R4b 三聊天合一：upstream GroupChatView 经
+          // 路由参数绑定，自装载 connect/loadRooms/joinRoom；roomId 缺席时
+          // GroupChatView 兜底跳上游群聊路由）
+          path: 's/group/:roomId',
+          name: 'ia2.groupRoom',
+          component: workbench,
+        },
+        {
           // 循环 → 运行画布（实时|历史）
           path: 'l/:loopId',
           name: 'ia2.loopCanvas',

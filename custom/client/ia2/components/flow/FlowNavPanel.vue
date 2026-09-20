@@ -1,8 +1,10 @@
 <!-- overlay/custom/client/ia2/components/flow/FlowNavPanel.vue -->
-<!-- v12 左栏 · 工作流导航（2026-09-19 统一视图）：会话∪循环统一列表——
-     过滤 chips（全部/会话/循环）+ 过滤框（名称/任务号）+ 会话分组（团队标签
-     📋N 挂接徽章 + 未读红点）+ 循环分组（阶段进度条 + 状态 meta）+ 栏底
-     ＋新会话/＋新循环/⚙管理。选中即换中栏（唯一导航轴，无透镜无二级导航）。 -->
+<!-- v12 左栏 · 工作流导航（2026-09-19 统一视图）：过滤 chips（全部/会话/循环）
+     + 过滤框（名称/任务号）+ 循环分组（阶段进度条 + 状态 meta）+ 栏底动作。
+     v12.3 R4a（2026-09-20 用户裁定）：会话区按类型聚类三小节（房间/群聊/会话，
+     群聊随 R4b 三聊天合一入列）；📋N 挂接徽章点击就地展开任务簇（任务 chip
+     点击→看板预选）；行双击 → IDE 工作台编码动线（携带首个挂接任务，动线⑤）。
+     单击语义不变：选中即换中栏（唯一导航轴，无透镜无二级导航）。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -19,6 +21,10 @@ const emit = defineEmits<{
   (e: 'create-room', name: string): void
   (e: 'new-loop'): void
   (e: 'open-gov'): void
+  /** 任务簇 chip 点击 → 看板预选（R4a） */
+  (e: 'open-task', taskId: string): void
+  /** 行/任务 chip 双击 → IDE 工作台（taskId 空则裸进，R4a 动线⑤） */
+  (e: 'jump-ide', taskId: string | null): void
 }>()
 
 const { t } = useI18n()
@@ -27,6 +33,8 @@ const query = ref('')
 /** 栏底内联新建房间（Electron renderer 无 window.prompt，就地输入） */
 const createOpen = ref(false)
 const createName = ref('')
+/** 任务簇展开态（会话行键 → 展开；徽章点击切换，不触发行选中） */
+const openCluster = ref<string | null>(null)
 
 const shownSessions = computed(() =>
   filterStreams(props.sessions, { kind: filterKind.value === 'loop' ? 'loop' : filterKind.value, query: query.value })
@@ -34,6 +42,17 @@ const shownSessions = computed(() =>
 const shownLoops = computed(() =>
   filterStreams(props.loops, { kind: filterKind.value === 'session' ? 'session' : filterKind.value, query: query.value })
     .filter(r => r.kind === 'loop') as FlowLoopRow[])
+
+/** 会话聚类三小节（R4a：房间/群聊/会话——类型是天然簇，随过滤联动） */
+const sessionClusters = computed(() => ({
+  room: { rows: shownSessions.value.filter(r => r.kind === 'room'), labelKey: 'ia2.flow.clusterRooms', icon: '#' },
+  group: { rows: shownSessions.value.filter(r => r.kind === 'group'), labelKey: 'ia2.flow.clusterGroups', icon: '👥' },
+  chat: { rows: shownSessions.value.filter(r => r.kind === 'chat'), labelKey: 'ia2.flow.clusterChats', icon: '💬' },
+}))
+
+function toggleCluster(rowKey: string): void {
+  openCluster.value = openCluster.value === rowKey ? null : rowKey
+}
 
 /** 阶段进度条分段调：已完成绿 / 当前调（run蓝·err红） / 未至灰 */
 function stageTones(l: FlowLoopRow): string[] {
@@ -76,24 +95,46 @@ function submitCreateRoom(): void {
     >
 
     <div class="flow-nav__scroll">
-      <div v-if="shownSessions.length" class="flow-nav__sec">
-        <div class="flow-nav__sec-head" data-testid="flow-group-sessions">
-          {{ t('ia2.flow.groupSessions') }}<span class="flow-nav__sec-n">{{ shownSessions.length }}</span>
+      <div
+        v-for="(cluster, ck) in sessionClusters" :key="ck"
+        v-show="cluster.rows.length" class="flow-nav__sec"
+        :data-testid="`flow-cluster-${ck}`"
+      >
+        <div class="flow-nav__sec-head">
+          {{ cluster.icon }} {{ t(cluster.labelKey) }}<span class="flow-nav__sec-n">{{ cluster.rows.length }}</span>
         </div>
-        <button
-          v-for="s in shownSessions"
-          :key="`${s.kind}:${s.id}`"
-          type="button"
-          class="flow-nav__row"
-          :class="{ 'flow-nav__row--on': selection?.kind === s.kind && selection.id === s.id }"
-          :data-testid="`flow-session-${s.id}`"
-          @click="emit('select', { kind: s.kind, id: s.id })"
-        >
-          <span class="flow-nav__name">{{ s.name }}</span>
-          <span v-if="s.teamTag" class="flow-nav__teamtag">{{ s.teamTag }}</span>
-          <span v-if="s.taskIds.length" class="flow-nav__cnt" :title="s.taskIds.join(', ')">📋{{ s.taskIds.length }}</span>
-          <span v-if="s.unread" class="flow-nav__unr">{{ s.unread > 99 ? '99+' : s.unread }}</span>
-        </button>
+        <template v-for="s in cluster.rows" :key="`${s.kind}:${s.id}`">
+          <button
+            type="button"
+            class="flow-nav__row"
+            :class="{ 'flow-nav__row--on': selection?.kind === s.kind && selection.id === s.id }"
+            :data-testid="`flow-session-${s.id}`"
+            @click="emit('select', { kind: s.kind, id: s.id })"
+            @dblclick="emit('jump-ide', s.taskIds[0] ?? null)"
+          >
+            <span class="flow-nav__name">{{ s.name }}</span>
+            <span v-if="s.teamTag" class="flow-nav__teamtag">{{ s.teamTag }}</span>
+            <span
+              v-if="s.taskIds.length"
+              class="flow-nav__cnt flow-nav__cnt--btn"
+              :title="s.taskIds.join(', ')"
+              @click.stop="toggleCluster(`${s.kind}:${s.id}`)"
+            >📋{{ s.taskIds.length }}{{ openCluster === `${s.kind}:${s.id}` ? ' ▴' : ' ▾' }}</span>
+            <span v-if="s.unread" class="flow-nav__unr">{{ s.unread > 99 ? '99+' : s.unread }}</span>
+          </button>
+          <!-- 任务簇（R4a）：挂接任务 chip 就地展开；chip 点击→看板预选，双击→IDE -->
+          <div
+            v-if="openCluster === `${s.kind}:${s.id}`"
+            class="flow-nav__cluster" :data-testid="`flow-cluster-tasks-${s.id}`"
+          >
+            <button
+              v-for="tid in s.taskIds" :key="tid" type="button" class="flow-nav__task"
+              :data-testid="`flow-task-${tid}`"
+              @click="emit('open-task', tid)"
+              @dblclick.stop="emit('jump-ide', tid)"
+            >#{{ tid.slice(0, 8) }}</button>
+          </div>
+        </template>
       </div>
 
       <div v-if="shownLoops.length" class="flow-nav__sec">
@@ -111,6 +152,7 @@ function submitCreateRoom(): void {
           }"
           :data-testid="`flow-loop-${l.id}`"
           @click="emit('select', { kind: 'loop', id: l.id })"
+          @dblclick="emit('jump-ide', null)"
         >
           <div class="flow-nav__loop-top">
             <span class="flow-nav__name">{{ l.name }}</span>
@@ -212,6 +254,14 @@ function submitCreateRoom(): void {
   font-size: 10px; display: inline-flex; align-items: center;
 }
 .flow-nav__cnt { flex-shrink: 0; font-size: 10px; color: var(--text-muted); }
+.flow-nav__cnt--btn { cursor: pointer; border-radius: 6px; padding: 1px 4px; &:hover { background: var(--bg-secondary); color: var(--text-primary); } }
+.flow-nav__cluster { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 8px 6px 20px; }
+.flow-nav__task {
+  height: 18px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: 9px;
+  background: var(--bg-secondary); color: var(--text-secondary); font-size: 10px;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+  &:hover { color: var(--primary); border-color: var(--primary); }
+}
 .flow-nav__unr {
   flex-shrink: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
   background: var(--error); color: #fff; font-size: 9px; font-weight: 700;

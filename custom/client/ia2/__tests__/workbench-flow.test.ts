@@ -2,8 +2,12 @@
 // overlay/custom/client/ia2/__tests__/workbench-flow.test.ts
 // v12 工作台守门（2026-09-19 统一视图 Task 4）：左栏工作流导航（面板纯交互）
 // + WorkbenchView 装配（行构建钩子/默认选择/路由跳转/挂接徽章）。
+// v12.3（2026-09-20）：态势条迁页头（工作台退役守门在尾段 describe）+
+// 三栏栏控折叠（flow.layout）；态势内联面板行为守门迁 ia-shell-header-sit.test.ts。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 
@@ -103,6 +107,9 @@ vi.mock('@/custom/matrix-chat/components/MatrixRoomCanvas.vue', () => ({
 vi.mock('@/views/hermes/ChatView.vue', () => ({
   default: { name: 'ChatView', template: '<div class="chat-view-stub" />' },
 }))
+vi.mock('@/views/hermes/GroupChatView.vue', () => ({
+  default: { name: 'GroupChatView', template: '<div class="group-view-stub" data-testid="group-view-stub" />' },
+}))
 vi.mock('@/custom/loop/runcenter/api', () => ({
   runRest: { getSpec: vi.fn(async () => null), replay: vi.fn(async () => []), exportRun: vi.fn(async () => ({})) },
   connectGraph: vi.fn(), disconnectGraph: vi.fn(),
@@ -131,6 +138,12 @@ const loopStubs = vi.hoisted(() => {
   return { state, useLoopStore: () => state }
 })
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: loopStubs.useLoopStore }))
+
+const groupStubs = vi.hoisted(() => ({
+  state: { rooms: [{ id: 'gr-1', name: '产品群聊', lastActiveAt: 900 }] },
+  useGroupChatStore: () => groupStubs.state,
+}))
+vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: groupStubs.useGroupChatStore }))
 
 const registryStubs = vi.hoisted(() => {
   const state = {
@@ -212,6 +225,39 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(empty.find('[data-testid="flow-empty"]').exists()).toBe(true)
   })
 
+  it('R4a 聚类：会话按类型三小节（房间/群聊/会话），行 testid 不变', () => {
+    const w = mountPanel()
+    expect(w.find('[data-testid="flow-cluster-room"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-cluster-group"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-cluster-chat"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-session-!r1"]').exists()).toBe(true)
+    // 空簇隐藏（v-show）：仅 chat 簇有行时其余两簇不可见
+    const w2 = mountPanel({ sessions: [SESSIONS[1]] })
+    expect(w2.find('[data-testid="flow-cluster-chat"]').isVisible()).toBe(true)
+    expect(w2.find('[data-testid="flow-cluster-room"]').isVisible()).toBe(false)
+  })
+
+  it('R4a 任务簇：📋N 点击就地展开任务 chip；chip 点击 emit open-task、双击 emit jump-ide；行双击携带首个任务', async () => {
+    const w = mountPanel()
+    const row = w.find('[data-testid="flow-session-!r1"]')
+    expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(false)
+    await row.find('.flow-nav__cnt--btn').trigger('click')
+    expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(true)
+    const chip = w.find('[data-testid="flow-task-t-402"]')
+    expect(chip.exists()).toBe(true)
+    await chip.trigger('click')
+    expect(w.emitted('open-task')![0][0]).toBe('t-402')
+    await chip.trigger('dblclick')
+    expect(w.emitted('jump-ide')![0][0]).toBe('t-402')
+    await row.trigger('dblclick')
+    expect(w.emitted('jump-ide')![1][0]).toBe('t-402')
+    // 无挂接任务行双击：裸进（null）
+    await w.find('[data-testid="flow-session-c1"]').trigger('dblclick')
+    expect(w.emitted('jump-ide')![2][0]).toBe(null)
+    await row.find('.flow-nav__cnt--btn').trigger('click')
+    expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(false)
+  })
+
   it('栏底动作：内联新建（输入+确认 emit create-room）、＋新循环、⚙管理', async () => {
     const w = mountPanel()
     await w.find('[data-testid="flow-new-session"]').trigger('click')
@@ -235,10 +281,16 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
           { path: '', name: 'ia2.collab', component: WorkbenchView },
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
+          { path: 's/group/:roomId', name: 'ia2.groupRoom', component: WorkbenchView },
           { path: 'l/:loopId', name: 'ia2.loopCanvas', component: WorkbenchView },
           { path: 'eng', name: 'ia2.eng', component: { template: '<div class="eng-stub" />' } },
+          { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
         ],
         component: { template: '<router-view />' },
+      }, {
+        path: '/ide',
+        name: 'ide.shell',
+        component: { template: '<div ide />' },
       }],
     })
   }
@@ -289,6 +341,35 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     const { wrapper: w2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
     expect(useFlowStore().govOpen).toBe(true)
+  })
+
+  it('R4b 群聊入列与分派：群聊行在群聊簇 → 点击路由 ia2.groupRoom → 中栏 GroupChatView', async () => {
+    const { wrapper, router } = await mountAt('/app')
+    await wrapper.find('[data-testid="flow-session-gr-1"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.groupRoom')
+    expect(router.currentRoute.value.params.roomId).toBe('gr-1')
+    expect(wrapper.find('[data-testid="group-view-stub"]').exists()).toBe(true)
+  })
+
+  it('R4a 动线⑤：左栏任务簇 chip → 看板预选；行双击 → ide.shell?task=（useIdeJump）', async () => {
+    const { wrapper, router } = await mountAt('/app')
+    await wrapper.find('[data-testid="flow-session-!r1:host"] .flow-nav__cnt--btn').trigger('click')
+    await wrapper.find('[data-testid="flow-task-t-402"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.board')
+    expect(router.currentRoute.value.query.task).toBe('t-402')
+    const { wrapper: w2, router: r2 } = await mountAt('/app')
+    await w2.find('[data-testid="flow-session-!r1:host"]').trigger('dblclick')
+    await flushPromises()
+    expect(r2.currentRoute.value.name).toBe('ide.shell')
+    expect(r2.currentRoute.value.query.task).toBe('t-402')
+    // 无挂接任务行（!r2 无 tenant/session_id 挂接）双击：裸进 IDE
+    const { wrapper: w3, router: r3 } = await mountAt('/app')
+    await w3.find('[data-testid="flow-session-!r2:host"]').trigger('dblclick')
+    await flushPromises()
+    expect(r3.currentRoute.value.name).toBe('ide.shell')
+    expect(r3.currentRoute.value.query.task).toBeUndefined()
   })
 })
 
@@ -373,8 +454,8 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
   })
 })
 
-describe('WorkbenchView — 态势条内联面板（v12.2 用户裁定：五段同页展开，不来回跳转）', () => {
-  function makeSitRouter(): Router {
+describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', () => {
+  function makeRouter(): Router {
     return createRouter({
       history: createMemoryHistory(),
       routes: [{
@@ -385,14 +466,13 @@ describe('WorkbenchView — 态势条内联面板（v12.2 用户裁定：五段�
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
           { path: 'l/:loopId', name: 'ia2.loopCanvas', component: WorkbenchView },
           { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
-          { path: 'eng', name: 'ia2.eng', component: { template: '<div eng />' } },
         ],
       }],
     })
   }
 
-  async function mountSit(path: string) {
-    const router = makeSitRouter()
+  async function mountWb(path: string) {
+    const router = makeRouter()
     router.push(path)
     await router.isReady()
     const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
@@ -400,77 +480,58 @@ describe('WorkbenchView — 态势条内联面板（v12.2 用户裁定：五段�
     return { wrapper, router }
   }
 
-  it('任务段：就地展开面板不跳看板；任务行开看板抽屉（同页）并收面板', async () => {
-    const { wrapper, router } = await mountSit('/app')
-    await wrapper.find('[data-testid="sit-tasks"]').trigger('click')
-    await flushPromises()
-    // v12.2：点击不离开工作台（旧语义跳 ia2.board 已退役）
-    expect(router.currentRoute.value.name).toBe('ia2.collab')
-    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)
-    // 段高亮 + 桩任务行在面板中
-    expect(wrapper.find('[data-testid="sit-tasks"]').classes()).toContain('sit__item--on')
-    expect(wrapper.find('[data-testid="sitp-task-t-402"]').exists()).toBe(true)
-    // 行点击 → 看板任务抽屉（drawer 桩）+ 面板收起
-    await wrapper.find('[data-testid="sitp-task-t-402"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('.drawer-stub').attributes('data-taskid')).toBe('t-402')
-    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(false)
-    // 面板开着时再点同段 = 关（toggle）
-    await wrapper.find('[data-testid="sit-tasks"]').trigger('click')
-    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)
-    await wrapper.find('[data-testid="sit-tasks"]').trigger('click')
-    expect(wrapper.find('[data-testid="sit-panel-tasks"]').exists()).toBe(false)
+  it('退役守门：六态势 chips 与内联面板迁页头——工作台源码不再渲染 SitlineBar/SitDetailPanel', () => {
+    const src = readFileSync(resolve(__dirname, '../views/WorkbenchView.vue'), 'utf8')
+    // 查 import/渲染语句而非裸词（迁移说明的注释允许提及组件名）
+    expect(src).not.toContain('import SitlineBar')
+    expect(src).not.toContain('<SitlineBar')
+    expect(src).not.toContain('import SitDetailPanel')
+    expect(src).not.toContain('<SitDetailPanel')
+    // 页头是唯一渲染点（IaShellHeader 内联面板浮层）
+    const header = readFileSync(resolve(__dirname, '../components/IaShellHeader.vue'), 'utf8')
+    expect(header).toContain('<SitlineBar')
+    expect(header).toContain('<SitDetailPanel')
   })
 
-  it('等我段：面板行上就地决策（验收走 completeTasks，任务所在板）', async () => {
-    const { wrapper } = await mountSit('/app')
-    await wrapper.find('[data-testid="sit-waiting"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="sit-panel-waiting"]').exists()).toBe(true)
-    // 桩里唯一带 taskId 的等待项是 t-402（review 态）——行上验收
-    await wrapper.find('[data-testid="sitp-approve"]').trigger('click')
-    await flushPromises()
-    expect(kanbanApiStubs.completeTasks).toHaveBeenCalledWith(['t-402'], undefined, { board: 'swarm' })
-    // 打回走 reopen-review（review 态桥，323 族）
-    await wrapper.find('[data-testid="sitp-reject"]').trigger('click')
-    await flushPromises()
-    expect(kanbanApiStubs.reopenReview).toHaveBeenCalledWith(['t-402'], 'ia2.tdp.rejectReason', { board: 'swarm' })
+  it('默认三栏在位（左 250 | 中自适应 | 右 240 铁律不破）', async () => {
+    const { wrapper } = await mountWb('/app')
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wb-center"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wb-root"]').classes()).not.toContain('wb--lf')
   })
 
-  it('循环段：面板行选中即中栏切运行画布（工作台内子路径，非跳页）', async () => {
-    const { wrapper, router } = await mountSit('/app')
-    await wrapper.find('[data-testid="sit-loops"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.collab')
-    expect(wrapper.find('[data-testid="sitp-loop-lp-1"]').exists()).toBe(true)
-    await wrapper.find('[data-testid="sitp-loop-lp-1"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.loopCanvas')
-    expect(router.currentRoute.value.params.loopId).toBe('lp-1')
-    expect(wrapper.find('[data-testid="sit-panel-loops"]').exists()).toBe(false)
-  })
-
-  it('会话段：面板行选中即左栏同款选择；在线段：三栏明细 + 管理台入口（覆盖层同页）', async () => {
-    const { wrapper, router } = await mountSit('/app')
-    await wrapper.find('[data-testid="sit-sessions"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="sit-panel-sessions"]').exists()).toBe(true)
-    await wrapper.find('[data-testid="sitp-session-room-!r1:host"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.commsRoom')
-    expect(router.currentRoute.value.params.roomId).toBe('!r1:host')
-    const { wrapper: w2 } = await mountSit('/app')
-    await w2.find('[data-testid="sit-online"]').trigger('click')
-    await flushPromises()
-    expect(w2.find('[data-testid="sit-panel-online"]').exists()).toBe(true)
-    // 三栏明细渲染桩数据（TL 账号 / swarm 智能体队 / fs-1 机器 profile p）
-    expect(w2.find('[data-testid="sit-panel-online"]').text()).toContain('TL')
-    expect(w2.find('[data-testid="sit-panel-online"]').text()).toContain('swarm')
-    expect(w2.find('[data-testid="sit-panel-online"]').text()).toContain('p')
-    // 管理台走覆盖层（同页）
-    await w2.find('[data-testid="sitp-open-gov"]').trigger('click')
+  it('栏控折叠：toggleFold(left) 摘左栏；toggleFold(right) 摘右栏；还原恢复', async () => {
+    const { wrapper } = await mountWb('/app')
     const flow = useFlowStore()
-    expect(flow.govOpen).toBe(true)
-    expect(flow.govSection).toBe('people')
+    flow.toggleFold('left')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="wb-center"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
+    flow.toggleFold('left')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(true)
+    flow.toggleFold('right')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(false)
+    flow.toggleFold('right')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
+  })
+
+  it('中栏最大化 = 两侧齐折（toggleCenterMax 派生态）；再切回全展', async () => {
+    const { wrapper } = await mountWb('/app')
+    const flow = useFlowStore()
+    flow.toggleCenterMax()
+    await flushPromises()
+    expect(flow.centerMaximized).toBe(true)
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="wb-center"]').exists()).toBe(true)
+    flow.toggleCenterMax()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
   })
 })

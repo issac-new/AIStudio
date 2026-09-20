@@ -584,3 +584,8 @@
 #      查看文件右移右栏/时间线优先级/计划子代理浮窗）——ide.float 组 +5 键、
 #      sidePane.tab_files，zh/en 双侧。
 327-client-i18n-ide-workbench-refactor.patch
+
+# 328: 驾驶舱 v12.3 i18n（09-20 六项裁定：语言直切/日程恢复/通知下拉双页签/
+#      态势迁页头/左栏聚类任务簇双击/三聊天合一）——header+notify+swp 三段
+#      新建 +24 键、flow.cluster* +3、wm 栏控 +4，zh/en 双侧。
+328-client-i18n-ia2-v12-3.patch
