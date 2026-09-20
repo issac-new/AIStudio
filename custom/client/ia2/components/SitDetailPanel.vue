@@ -3,9 +3,12 @@
      态势条五段（等我/任务/会话/循环/在线）点击后在态势条下方就地展开详情，
      全部操作不离开工作台——等我行上验收/打回/继续；任务行开看板抽屉；
      会话/循环行选中即中栏切换画布；在线三栏明细 + 管理台入口（覆盖层同页）。
-     纯展示组件：数据全经 props，动作全 emit，装配方（WorkbenchView）聚合。 -->
+     v12.3 R3（2026-09-20 用户裁定）：在线段改两级级联——点「人」过滤其
+     智能体队（再点回全量），点「队」行下展开 profile 明细 chips；机器列
+     保持静态（fleet 无更深层）。级联态面板内自持，随面板关闭复位。
+     纯展示组件：数据全经 props，动作全 emit，装配方聚合。 -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { WaitItem } from '../adapters/waiting'
 import type { FlowSessionRow, FlowLoopRow } from '../adapters/flow'
@@ -54,14 +57,29 @@ const taskRows = computed(() =>
     .slice(0, 60))
 
 const agentRows = computed(() => {
-  const rows: Array<{ key: string; account: string; team: string; profiles: number }> = []
+  const rows: Array<{ key: string; userId: string; account: string; team: string; profiles: number; profileNames: string[] }> = []
   for (const a of props.accounts) {
     for (const at of a.agentTeams) {
-      rows.push({ key: `${a.userId}/${at.slug}`, account: a.displayName, team: at.name || at.slug, profiles: at.profiles.length })
+      rows.push({
+        key: `${a.userId}/${at.slug}`, userId: a.userId, account: a.displayName,
+        team: at.name || at.slug, profiles: at.profiles.length,
+        profileNames: at.profiles.map(x => String(x)),
+      })
     }
   }
   return rows
 })
+
+// ── R3 在线级联：选中人 → 智能体队过滤；展开队 → profile 明细 ──
+const selUserId = ref<string | null>(null)
+const openTeamKey = ref<string | null>(null)
+const shownAgentRows = computed(() =>
+  selUserId.value ? agentRows.value.filter(r => r.userId === selUserId.value) : agentRows.value)
+
+function onPickPerson(userId: string): void {
+  selUserId.value = selUserId.value === userId ? null : userId
+  openTeamKey.value = null
+}
 
 function statusLabel(status: string): string {
   return t(`ia2.board.status.${status}`, status)
@@ -146,16 +164,29 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         </button>
       </template>
 
-      <!-- 在线：人/智能体/机器 三栏明细 + 管理台（覆盖层同页） -->
+      <!-- 在线（R3 级联）：点人过滤智能体队；点队展开 profile；机器静态 + 管理台 -->
       <template v-else>
         <div class="sitp__cols">
           <div class="sitp__col">
             <div class="sitp__col-title">👤 {{ t('ia2.sit.panelPeople') }} {{ accounts.length }}</div>
-            <div v-for="a in accounts" :key="a.userId" class="sitp__cell" :title="a.userId">{{ a.displayName }}</div>
+            <button
+              v-for="a in accounts" :key="a.userId" type="button" class="sitp__cell sitp__cell--btn"
+              :class="{ 'is-on': selUserId === a.userId }" :data-testid="`sitp-person-${a.userId}`"
+              :title="a.userId" @click="onPickPerson(a.userId)"
+            >{{ a.displayName }}</button>
           </div>
           <div class="sitp__col">
-            <div class="sitp__col-title">🤖 {{ t('ia2.sit.panelAgents') }} {{ agentRows.length }}</div>
-            <div v-for="r in agentRows" :key="r.key" class="sitp__cell" :title="r.account">{{ r.team }} <span class="sitp__sub">×{{ r.profiles }}</span></div>
+            <div class="sitp__col-title">🤖 {{ t('ia2.sit.panelAgents') }} {{ shownAgentRows.length }}</div>
+            <template v-for="r in shownAgentRows" :key="r.key">
+              <button
+                type="button" class="sitp__cell sitp__cell--btn"
+                :class="{ 'is-on': openTeamKey === r.key }" :data-testid="`sitp-team-${r.key}`"
+                :title="r.account" @click="openTeamKey = openTeamKey === r.key ? null : r.key"
+              >{{ r.team }} <span class="sitp__sub">×{{ r.profiles }}</span></button>
+              <div v-if="openTeamKey === r.key" class="sitp__profiles" :data-testid="`sitp-profiles-${r.key}`">
+                <span v-for="pn in r.profileNames" :key="pn" class="sitp__chip">{{ pn }}</span>
+              </div>
+            </template>
           </div>
           <div class="sitp__col">
             <div class="sitp__col-title">🖥 {{ t('ia2.sit.panelMachines') }} {{ machines.length }}</div>
@@ -235,6 +266,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   display: flex; align-items: center; gap: 5px;
   &:hover { background: var(--bg-secondary); }
+}
+.sitp__cell--btn {
+  width: 100%; border: none; background: transparent; cursor: pointer; font-family: inherit;
+  text-align: left;
+  &.is-on { background: var(--bg-secondary); color: var(--primary, #3b82f6); font-weight: 600; }
+}
+.sitp__profiles { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 4px 6px 14px; }
+.sitp__chip {
+  font-size: 10px; padding: 1px 7px; border-radius: 8px;
+  background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);
 }
 .sitp__dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .sitp__dot.is-ok { background: var(--success); }

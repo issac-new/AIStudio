@@ -217,7 +217,7 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.3 迁入）', () =
     w.unmount()
   })
 
-  it('在线段：三栏明细（人/智能体队/机器）+ 管理台入口开 people 区', async () => {
+  it('在线段（R3 级联）：点人过滤智能体队→点队展开 profile→再点人回全量；管理台开 people 区', async () => {
     const w = await mountHeader()
     await w.find('[data-testid="sit-online"]').trigger('click')
     await flushPromises()
@@ -225,7 +225,23 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.3 迁入）', () =
     expect(panel.exists()).toBe(true)
     expect(panel.text()).toContain('TL')
     expect(panel.text()).toContain('swarm')
-    expect(panel.text()).toContain('p')
+    expect(panel.text()).toContain('p') // 机器 profile（fleet 静态列）
+    // ① 点人 TL：智能体列过滤为 TL 的队（计数仍 1），队行在位
+    await w.find('[data-testid="sitp-person-@tl:host"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="sitp-person-@tl:host"]').classes()).toContain('is-on')
+    expect(w.find('[data-testid="sitp-team-@tl:host/swarm"]').exists()).toBe(true)
+    // ② 点队 swarm：行下展开 profile 明细 chips
+    expect(w.find('[data-testid="sitp-profiles-@tl:host/swarm"]').exists()).toBe(false)
+    await w.find('[data-testid="sitp-team-@tl:host/swarm"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="sitp-profiles-@tl:host/swarm"]').text()).toContain('p')
+    // ③ 再点同一个人：取消选中回全量（级联复位）
+    await w.find('[data-testid="sitp-person-@tl:host"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="sitp-person-@tl:host"]').classes()).not.toContain('is-on')
+    expect(w.find('[data-testid="sitp-team-@tl:host/swarm"]').exists()).toBe(true)
+    expect(w.find('[data-testid="sitp-profiles-@tl:host/swarm"]').exists()).toBe(false)
     await w.find('[data-testid="sitp-open-gov"]').trigger('click')
     const flow = useFlowStore()
     expect(flow.govOpen).toBe(true)
