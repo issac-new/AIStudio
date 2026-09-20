@@ -17,8 +17,8 @@ const WORKSPACE_KEY = 'hermes_ide_workspace'
 const AGENT_KEY = 'hermes_ide_agent'
 const LAYOUT_KEY = 'hermes_ide_layout'
 
-/** IDE 会话列的页签 */
-export type IdeChatTab = 'messages' | 'subagents' | 'trace'
+/** 中栏浮窗键（任务计划/子代理，对标 zcode 浮窗模式） */
+export type IdeFloatKey = 'plan' | 'agents'
 
 /** agent 底座默认值——用户指定的 codex 源码底座 */
 export const DEFAULT_IDE_AGENT: CodingAgentId = 'codex'
@@ -96,14 +96,13 @@ function applyMaximized(layout: IdeLayoutPrefs, who: 'sidebar' | 'chat' | 'sidep
   }
 }
 
-/** 侧栏任务视图模式（对标 zcode workspaceSidebar.organize：分组/项目/时间线） */
-export type IdeTaskView = 'tasks' | 'files'
+/** 侧栏任务组织模式（对标 zcode workspaceSidebar.organize：分组/项目/时间线） */
 export type IdeOrganizeMode = 'grouped' | 'project' | 'timeline'
 
-/** v12 工作空间维度（任务/项目/会话/链路）：同一编码环境的四视角绑定 */
-export type IdeDimension = 'task' | 'project' | 'session' | 'chain'
+/** v12 工作空间维度（任务/项目/会话）：链路维度已随 09-20 重构退役 */
+export type IdeDimension = 'task' | 'project' | 'session'
 
-export type IdeSidePaneTab = 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'terminal'
+export type IdeSidePaneTab = 'files' | 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'terminal'
 
 export interface IdeSidePanePrefs {
   open: boolean
@@ -115,8 +114,7 @@ const SIDEBAR_KEY = 'hermes_ide_sidebar'
 const SIDEPANE_KEY = 'hermes_ide_sidepane'
 const DIM_KEY = 'hermes_ide_dim'
 
-const DEFAULT_SIDEBAR: { view: IdeTaskView; organize: IdeOrganizeMode } = {
-  view: 'tasks',
+const DEFAULT_SIDEBAR: { organize: IdeOrganizeMode } = {
   organize: 'project',
 }
 
@@ -144,23 +142,28 @@ function loadAgent(): CodingAgentId {
     : DEFAULT_IDE_AGENT
 }
 
+/** 历史残留维度值（如已退役的 'chain'）回落任务维度 */
+function loadDimension(): IdeDimension {
+  const saved = localStorage.getItem(DIM_KEY)
+  return saved === 'task' || saved === 'project' || saved === 'session' ? saved : 'task'
+}
+
 export const useIdeStore = defineStore('ide', () => {
   const workspace = ref<string | null>(localStorage.getItem(WORKSPACE_KEY) || null)
   const agentId = ref<CodingAgentId>(loadAgent())
-  const chatTab = ref<IdeChatTab>('messages')
   const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>(LAYOUT_KEY, DEFAULT_LAYOUT))
-  const sidebar = ref<{ view: IdeTaskView; organize: IdeOrganizeMode }>(
+  const sidebar = ref<{ organize: IdeOrganizeMode }>(
     loadJson(SIDEBAR_KEY, DEFAULT_SIDEBAR),
   )
   const sidePane = ref<IdeSidePanePrefs>(loadJson<IdeSidePanePrefs>(SIDEPANE_KEY, DEFAULT_SIDEPANE))
   /** 命令面板（Cmd/Ctrl+K，对标 zcode quickPick/commandCenter） */
   const paletteOpen = ref(false)
   /** v12 工作空间维度（默认任务；/ide?task= 深链落任务维度） */
-  const dimension = ref<IdeDimension>(
-    (localStorage.getItem(DIM_KEY) as IdeDimension | null)
-    ?? 'task')
+  const dimension = ref<IdeDimension>(loadDimension())
   /** 任务维度绑定的任务 id（工作台 ⌨ / 管理台 ⌨ 深链带入） */
   const activeTaskId = ref<string | null>(null)
+  /** 中栏浮窗开关（任务计划/子代理名册；瞬态不持久化，对标 zcode 浮窗） */
+  const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false })
 
   function setWorkspace(path: string | null): void {
     workspace.value = path?.trim() ? path.trim() : null
@@ -170,10 +173,6 @@ export const useIdeStore = defineStore('ide', () => {
   function setAgentId(id: CodingAgentId): void {
     agentId.value = id
     localStorage.setItem(AGENT_KEY, id)
-  }
-
-  function setChatTab(tab: IdeChatTab): void {
-    chatTab.value = tab
   }
 
   function setDimension(dim: IdeDimension): void {
@@ -200,6 +199,16 @@ export const useIdeStore = defineStore('ide', () => {
     paletteOpen.value = !paletteOpen.value
   }
 
+  function toggleFloat(key: IdeFloatKey): void {
+    floats.value[key] = !floats.value[key]
+  }
+
+  /** 中栏聚焦：确保会话列可见（任务/会话维度动线共用） */
+  function setChatFocus(): void {
+    if (!layout.value.chatVisible) layout.value.chatVisible = true
+    if (layout.value.chat.folded) layout.value.chat.folded = false
+  }
+
   watch(layout, (value) => {
     try {
       localStorage.setItem(LAYOUT_KEY, JSON.stringify(value))
@@ -220,10 +229,6 @@ export const useIdeStore = defineStore('ide', () => {
 
   function toggleMax(who: 'sidebar' | 'chat' | 'sidepane'): void {
     applyMaximized(layout.value, who)
-  }
-
-  function setSidebarView(view: IdeTaskView): void {
-    sidebar.value.view = view
   }
 
   function setOrganize(mode: IdeOrganizeMode): void {
@@ -249,25 +254,25 @@ export const useIdeStore = defineStore('ide', () => {
   return {
     workspace,
     agentId,
-    chatTab,
     layout,
     sidebar,
     sidePane,
     paletteOpen,
     dimension,
     activeTaskId,
+    floats,
     terminalCwd,
     setWorkspace,
     setAgentId,
-    setChatTab,
     setDimension,
     setActiveTask,
     toggleFold,
     toggleMax,
-    setSidebarView,
     setOrganize,
     setSidePaneTab,
     toggleSidePane,
+    toggleFloat,
+    setChatFocus,
     openPalette,
     closePalette,
     togglePalette,
