@@ -103,7 +103,7 @@ describe('v12 统一视图守门（双视图）', () => {
     }
   })
 
-  it('窗口管理守门：页头窗控簇挂载 + 独立窗口精简壳 + v12.3 max/dock 链路退役', () => {
+  it('窗口管理守门：三栏栏控迁各栏顶部控制条 + 独立窗口精简壳 + 页头集中簇退役（v12.4）', () => {
     const header = readFileSync(
       resolve(__dirname, '../components/IaShellHeader.vue'),
       'utf8',
@@ -111,9 +111,21 @@ describe('v12 统一视图守门（双视图）', () => {
     const shell = readFileSync(resolve(__dirname, '../views/IaShell.vue'), 'utf8')
     const ideShell = readFileSync(resolve(__dirname, '../../ide/views/IdeShell.vue'), 'utf8')
     const switcher = readFileSync(resolve(__dirname, '../components/IaViewSwitcher.vue'), 'utf8')
-    expect(header).toContain('<IaWindowControls />')
+    const workbench = readFileSync(resolve(__dirname, '../views/WorkbenchView.vue'), 'utf8')
+    // v12.4：页头 IaWindowControls 集中簇退役——栏控迁三栏各自顶部控制条
+    // （IaColumnControls；左=折叠/中=最大化+独立/右=折叠，折叠态 18px 导轨展开）
+    expect(header).not.toContain('<IaWindowControls />')
+    expect(workbench).toContain('<IaColumnControls')
+    expect(workbench).toContain('testid="ia-col-left"')
+    expect(workbench).toContain('testid="ia-col-center"')
+    expect(workbench).toContain('testid="ia-col-right"')
+    expect(workbench).toContain('data-testid="wb-unfold-left"')
+    expect(workbench).toContain('data-testid="wb-unfold-right"')
+    expect(ideShell).toContain('<IaColumnControls')
+    expect(ideShell).toContain('testid="ide-col-sidebar"')
+    expect(ideShell).toContain('testid="ide-col-chat"')
     // standalone 精简壳 / Esc 收管理台 / 合并回流监听；
-    // v12.3 窗控改三栏栏控——页级 max=1 最大化与最小化 dock 链路退役（守门防回潮）
+    // v12.3 页级 max=1 最大化与最小化 dock 链路退役（守门防回潮）
     expect(shell).toContain('IaPopoutBar v-if="isStandalone"')
     expect(shell).toContain('<IaGlobalTop v-else />')
     expect(shell).toContain("event.key === 'Escape'")
@@ -121,17 +133,16 @@ describe('v12 统一视图守门（双视图）', () => {
     expect(shell).not.toContain('isMaximized')
     expect(shell).not.toContain('ia-wm-restore-pill')
     expect(shell).toContain('listenMergeBack')
-    // v12.2 全局顶区常驻双视图（用户裁定）：双壳均挂 IaGlobalTop；切换器嵌
-    // 页头最右（IaShellHeader 内嵌 IaViewSwitcher，顶部右上角单入口），
-    // 双入口 testid 保持守门兼容；全局顶区不再挂独立切换行
+    // v12.2 全局顶区常驻双视图（用户裁定）：双壳均挂 IaGlobalTop；
+    // v12.4 切换器单按钮（显示目标视图，双按钮/双入口 testid 退役）
     expect(shell).toContain('<IaGlobalTop')
     expect(ideShell).toContain('<IaGlobalTop')
     expect(header).toContain('<IaViewSwitcher')
     expect(switcher).toContain('data-testid="ia-viewswitch-row"')
-    expect(switcher).toContain('data-testid="ia-scene-collab"')
-    expect(switcher).toContain('data-testid="ia-scene-ide"')
-    expect(switcher).toContain(`:to="{ name: 'ia2.collab' }"`)
-    expect(switcher).toContain(`:to="{ name: 'ide.shell' }"`)
+    expect(switcher).toContain('data-testid="ia-view-toggle"')
+    expect(switcher).toContain(`{ name: isIde.value ? 'ia2.collab' : 'ide.shell' }`)
+    expect(switcher).not.toContain('data-testid="ia-scene-collab"')
+    expect(switcher).not.toContain('data-testid="ia-scene-ide"')
   })
 
   it('上游 AppSidebar：一级仅 双入口+系统分组，无旧返回 hack（patch 299 守门）', () => {

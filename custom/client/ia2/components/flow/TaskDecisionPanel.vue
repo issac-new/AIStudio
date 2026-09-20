@@ -6,7 +6,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { WaitItem } from '../../adapters/waiting'
+import type { DecisionRow } from '../../composables/useDecisionRows'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import type { FeedRow } from '../../adapters/flow'
 import WaitQueue from './WaitQueue.vue'
@@ -14,7 +14,7 @@ import LinkedTaskList from './LinkedTaskList.vue'
 import TaskFeed from './TaskFeed.vue'
 
 const props = defineProps<{
-  waitItems: WaitItem[]
+  waitItems: DecisionRow[]
   linkedTasks: CockpitTask[]
   feedRows: FeedRow[]
   /** 挂接任务节头副注（当前对象名，如 release-pipeline / 应急指挥中心） */
@@ -24,8 +24,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'approve-task', taskId: string): void
   (e: 'reject-task', taskId: string): void
-  (e: 'approve-run', item: WaitItem): void
-  (e: 'approve-fleet', item: WaitItem): void
+  (e: 'approve-run', item: DecisionRow): void
+  (e: 'approve-fleet', item: DecisionRow): void
   (e: 'reassign', taskId: string): void
   (e: 'open-ide', taskId: string): void
   (e: 'handle-task', taskId: string): void

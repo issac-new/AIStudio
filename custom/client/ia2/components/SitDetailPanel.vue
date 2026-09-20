@@ -1,26 +1,29 @@
 <!-- overlay/custom/client/ia2/components/SitDetailPanel.vue -->
 <!-- v12.2 态势内联面板（2026-09-20 用户裁定：二级/三级功能整合同页，不来回跳转）：
-     态势条五段（等我/任务/会话/循环/在线）点击后在态势条下方就地展开详情，
-     全部操作不离开工作台——等我行上验收/打回/继续；任务行开看板抽屉；
-     会话/循环行选中即中栏切换画布；在线三栏明细 + 管理台入口（覆盖层同页）。
-     v12.3 R3（2026-09-20 用户裁定）：在线段改两级级联——点「人」过滤其
-     智能体队（再点回全量），点「队」行下展开 profile 明细 chips；机器列
-     保持静态（fleet 无更深层）。级联态面板内自持，随面板关闭复位。
+     态势条段（等我/任务/在线）点击后在态势条下方就地展开详情，全部操作不离开
+     工作台——等我行上验收/打回/继续（评审门行点击进评审区）；任务段=跨板
+     未完成未归档全量+分状态统计，行点击开看板抽屉；在线三栏明细（R3 两级
+     级联）+ 管理台入口（覆盖层同页）。
+     v12.4（2026-09-20 用户裁定）：会话/循环段退役（chips 已删）；等我口径
+     对齐 useDecisionRows（review 任务/中断运行/fleet 审批/评审门 = 待我决策
+     的任务及会话）；任务口径改未完成未归档 + 分状态统计。
      纯展示组件：数据全经 props，动作全 emit，装配方聚合。 -->
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { WaitItem } from '../adapters/waiting'
-import type { FlowSessionRow, FlowLoopRow } from '../adapters/flow'
+import type { DecisionRow } from '../composables/useDecisionRows'
 
-export type SitSegment = 'waiting' | 'tasks' | 'sessions' | 'loops' | 'online'
+export type SitSegment = 'waiting' | 'tasks' | 'online'
+
+/** 任务状态呈现序（9 值词表；工作流从分诊到归档） */
+const STATUS_ORDER = ['triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived'] as const
 
 const props = defineProps<{
   segment: SitSegment
-  waitItems: WaitItem[]
+  waitItems: DecisionRow[]
   tasks: Array<{ id: string; title: string; status: string; assignee: string | null; createdAt: number }>
-  sessions: FlowSessionRow[]
-  loops: FlowLoopRow[]
+  /** 分状态统计（开放态；装配方自 useSitCounts.tasks.byStatus 投影） */
+  taskStats: Array<{ status: string; count: number }>
   accounts: Array<{ userId: string; displayName: string; agentTeams: Array<{ slug: string; name: string; profiles: unknown[] }> }>
   machines: Array<{ id: string; profile: string; title: string; status: string }>
 }>()
@@ -30,10 +33,9 @@ const emit = defineEmits<{
   (e: 'open-task', taskId: string): void
   (e: 'approve-task', taskId: string): void
   (e: 'reject-task', taskId: string): void
-  (e: 'approve-run', item: WaitItem): void
-  (e: 'approve-fleet', item: WaitItem): void
-  (e: 'select-session', sel: { kind: 'room' | 'chat'; id: string }): void
-  (e: 'select-loop', loopId: string): void
+  (e: 'approve-run', item: DecisionRow): void
+  (e: 'approve-fleet', item: DecisionRow): void
+  (e: 'open-review'): void
   (e: 'open-gov-people'): void
 }>()
 
@@ -42,19 +44,22 @@ const { t } = useI18n()
 const titleKey = computed(() => ({
   waiting: 'ia2.sit.waiting',
   tasks: 'ia2.sit.tasks',
-  sessions: 'ia2.sit.sessions',
-  loops: 'ia2.sit.loops',
   online: 'ia2.sit.online',
 }[props.segment]))
 
-/** 任务面板：开放态在前、创建时间倒序，封顶 60 行（全量看板走抽屉/管理台） */
+/** 任务面板：开放态（未完成未归档，props 已过滤）、创建时间倒序，封顶 60 行 */
 const taskRows = computed(() =>
   [...props.tasks]
-    .sort((a, b) => {
-      const open = (x: { status: string }) => (x.status === 'done' || x.status === 'archived' ? 1 : 0)
-      return open(a) - open(b) || b.createdAt - a.createdAt
-    })
+    .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, 60))
+
+/** 分状态统计行：按工作流词表序呈现（装配方给什么状态都归位） */
+const sortedStats = computed(() =>
+  [...props.taskStats].sort((a, b) => {
+    const ia = STATUS_ORDER.indexOf(a.status as (typeof STATUS_ORDER)[number])
+    const ib = STATUS_ORDER.indexOf(b.status as (typeof STATUS_ORDER)[number])
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+  }))
 
 const agentRows = computed(() => {
   const rows: Array<{ key: string; userId: string; account: string; team: string; profiles: number; profileNames: string[] }> = []
@@ -97,16 +102,19 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   <div class="sitp" :data-testid="`sit-panel-${segment}`">
     <div class="sitp__head">
       <span class="sitp__title">{{ t(titleKey) }}</span>
-      <span class="sitp__count">{{ segment === 'waiting' ? waitItems.length : segment === 'tasks' ? tasks.length : segment === 'sessions' ? sessions.length : segment === 'loops' ? loops.length : (accounts.length + agentRows.length + machines.length) }}</span>
+      <span class="sitp__count">{{ segment === 'waiting' ? waitItems.length : segment === 'tasks' ? tasks.length : (accounts.length + agentRows.length + machines.length) }}</span>
       <button type="button" class="sitp__close" data-testid="sit-panel-close" :title="t('ia2.sit.panelClose')" @click="emit('close')">×</button>
     </div>
 
     <div class="sitp__body">
-      <!-- 等我：行上就地决策，不离开工作台 -->
+      <!-- 等我：行上就地决策，不离开工作台；评审门行点击进评审区 -->
       <template v-if="segment === 'waiting'">
         <div v-if="!waitItems.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
         <div v-for="w in waitItems" :key="w.id" class="sitp__row sitp__row--wait">
-          <button type="button" class="sitp__main" :title="w.title" @click="w.taskId && emit('open-task', w.taskId)">
+          <button
+            type="button" class="sitp__main" :title="w.title"
+            @click="w.kind === 'gate-review' ? emit('open-review') : w.taskId && emit('open-task', w.taskId)"
+          >
             <span class="sitp__name">{{ w.title }}</span>
             <span class="sitp__sub">{{ t(w.subKey) }}</span>
           </button>
@@ -117,13 +125,21 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             </template>
             <button v-else-if="w.runId" type="button" class="sitp__act sitp__act--ok" data-testid="sitp-resume" @click="emit('approve-run', w)">{{ t('ia2.sit.actContinue') }}</button>
             <button v-else-if="w.sessionId && w.approvalId" type="button" class="sitp__act sitp__act--ok" data-testid="sitp-fleet-ok" @click="emit('approve-fleet', w)">{{ t('ia2.sit.actApprove') }}</button>
+            <button v-else-if="w.kind === 'gate-review'" type="button" class="sitp__act sitp__act--ok" data-testid="sitp-gate-open" @click="emit('open-review')">{{ t('ia2.sit.actGoReview') }}</button>
           </span>
         </div>
       </template>
 
-      <!-- 任务：行点击开看板任务抽屉（同页抽屉，不跳看板页） -->
+      <!-- 任务：分状态统计 + 行点击开看板任务抽屉（同页抽屉，不跳看板页） -->
       <template v-else-if="segment === 'tasks'">
         <div v-if="!taskRows.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
+        <div v-if="sortedStats.length" class="sitp__stats" data-testid="sitp-task-stats">
+          <span
+            v-for="s in sortedStats" :key="s.status"
+            class="sitp__stat" :class="`sitp__stat--${s.status}`"
+            :data-testid="`sitp-stat-${s.status}`"
+          >{{ statusLabel(s.status) }} {{ s.count }}</span>
+        </div>
         <button
           v-for="task in taskRows" :key="task.id" type="button" class="sitp__row"
           :data-testid="`sitp-task-${task.id}`" :title="task.title"
@@ -132,35 +148,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           <span class="sitp__name">{{ task.title }}</span>
           <span class="sitp__tag" :class="`sitp__tag--${task.status}`">{{ statusLabel(task.status) }}</span>
           <span class="sitp__sub">{{ task.assignee ? `@${task.assignee}` : '—' }}</span>
-        </button>
-      </template>
-
-      <!-- 会话：行选中即工作台左栏同款选择（中栏换画布，不换页） -->
-      <template v-else-if="segment === 'sessions'">
-        <div v-if="!sessions.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
-        <button
-          v-for="s in sessions" :key="`${s.kind}:${s.id}`" type="button" class="sitp__row"
-          :data-testid="`sitp-session-${s.kind}-${s.id}`" :title="s.name"
-          @click="emit('select-session', { kind: s.kind, id: s.id })"
-        >
-          <span class="sitp__name">{{ s.kind === 'room' ? '#' : '💬' }} {{ s.name }}</span>
-          <span v-if="s.teamTag" class="sitp__tag">{{ s.teamTag }}</span>
-          <span v-if="s.unread" class="sitp__badge">{{ s.unread }}</span>
-          <span v-if="s.taskIds.length" class="sitp__sub">📋{{ s.taskIds.length }}</span>
-        </button>
-      </template>
-
-      <!-- 循环：行选中即中栏切运行画布 -->
-      <template v-else-if="segment === 'loops'">
-        <div v-if="!loops.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
-        <button
-          v-for="l in loops" :key="l.id" type="button" class="sitp__row"
-          :data-testid="`sitp-loop-${l.id}`" :title="l.name"
-          @click="emit('select-loop', l.id)"
-        >
-          <span class="sitp__name">▶ {{ l.name }}</span>
-          <span class="sitp__tag" :class="{ 'sitp__tag--blocked': l.blocked }">{{ t(`ia2.loop.status.${l.statusKey}`) }}</span>
-          <span class="sitp__sub">{{ l.stageIndex + 1 }}/{{ l.stageTotal }} · {{ l.progressPct }}%</span>
         </button>
       </template>
 
@@ -244,6 +231,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   background: var(--bg-secondary); color: var(--text-secondary);
 }
 .sitp__tag--blocked { background: var(--error); color: #fff; }
+.sitp__stats {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px 6px;
+  border-bottom: 1px dashed var(--border-color); margin-bottom: 4px;
+}
+.sitp__stat {
+  font-size: 10px; padding: 1px 7px; border-radius: 8px;
+  background: var(--bg-secondary); color: var(--text-secondary);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.sitp__stat--blocked { background: var(--error); color: #fff; }
+.sitp__stat--review { background: var(--warning); color: var(--text-primary); }
+.sitp__stat--running { background: var(--primary, #3b82f6); color: #fff; }
 .sitp__badge {
   flex-shrink: 0; min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px;
   background: var(--error); color: #fff; font-size: 9px; font-weight: 700;

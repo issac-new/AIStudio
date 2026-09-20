@@ -10,7 +10,6 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useWorkspaceStore } from '../store/workspace'
-import { useFlowStore } from '../store/flow'
 import { useSitCounts } from '../composables/useSitCounts'
 import type { AttentionRow } from '../adapters/overview'
 import { mergeAttention } from '../adapters/overview'
@@ -23,7 +22,6 @@ useSharedArm()
 
 const cockpit = useCockpitStore()
 const workspace = useWorkspaceStore()
-const flow = useFlowStore()
 const { waitItems, loopRows } = useSitCounts()
 
 /** 注意力梯队（mergeAttention 单一排序：blocked → review → triage）：
@@ -62,6 +60,11 @@ function onAttentionSelect(row: AttentionRow): void {
   else if (row.status === 'blocked') void router.push({ name: 'ia2.board', query: { task: row.taskId } })
   else void router.push({ path: '/app' })
 }
+
+/** v12.4：标签双击 → swarm kanban 看板总览（全部任务，与原 AI协作中心同动线） */
+function onOpenBoard(): void {
+  void router.push({ name: 'ia2.board' })
+}
 </script>
 
 <template>
@@ -70,7 +73,7 @@ function onAttentionSelect(row: AttentionRow): void {
     <AttentionStrip
       :items="attentionRows"
       @select="onAttentionSelect"
-      @open-gov="flow.openGov()"
+      @open-board="onOpenBoard"
     />
   </div>
 </template>

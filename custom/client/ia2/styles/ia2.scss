@@ -130,11 +130,16 @@
   background: var(--bg-secondary);
 }
 
+// v12.4：标签改 swarm kanban 双击入口（交互态给指针与悬停反馈）
 .ia-attn__label {
   flex-shrink: 0;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+
+  &:hover { color: var(--text-primary); text-decoration: underline; }
 }
 
 .ia-attn__items {
