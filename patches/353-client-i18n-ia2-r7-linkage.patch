@@ -1,0 +1,42 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1059,6 +1059,7 @@
+       waitEmpty: '暂无等我事项', linkedEmpty: '暂无挂接任务', feedEmpty: '暂无动态',
+       approve: '验收', reject: '打回', confirm: '确认',
+       reassign: '改派', openIde: '在 IDE 打开', handle: '去处理',
++      session: '关联会话 {id}',
+       rejectReason: '打回：需返工',
+       status: {
+         triage: '待分诊', todo: '待办', scheduled: '已排期', ready: '就绪',
+@@ -1090,7 +1091,8 @@
+     },
+     att: {
+       title: '需关注', subTaskBlocked: '任务受阻', subRunFailed: '运行失败',
+-      subLoopStuck: '循环停滞', empty: '暂无需要关注的事项',
++      subLoopStuck: '循环停滞', subSessionFailed: '会话失败', subSessionBlocked: '会话受阻',
++      empty: '暂无需要关注的事项',
+     },
+     sit: {
+       waiting: '等我', waitingTitle: '等我队列（右栏就地验收/打回）', oldest: '最久',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1061,6 +1061,7 @@
+       waitEmpty: 'Nothing waiting on you', linkedEmpty: 'No linked tasks', feedEmpty: 'No activity',
+       approve: 'Approve', reject: 'Reject', confirm: 'Confirm',
+       reassign: 'Reassign', openIde: 'Open in IDE', handle: 'Handle',
++      session: 'Linked session {id}',
+       rejectReason: 'Rejected: needs rework',
+       status: {
+         triage: 'Triage', todo: 'To do', scheduled: 'Scheduled', ready: 'Ready',
+@@ -1092,7 +1093,8 @@
+     },
+     att: {
+       title: 'Attention', subTaskBlocked: 'Task blocked', subRunFailed: 'Run failed',
+-      subLoopStuck: 'Loop stuck', empty: 'Nothing needs attention',
++      subLoopStuck: 'Loop stuck', subSessionFailed: 'Session failed', subSessionBlocked: 'Session blocked',
++      empty: 'Nothing needs attention',
+     },
+     sit: {
+       waiting: 'Waiting', waitingTitle: 'Waiting queue (approve/reject in right panel)', oldest: 'oldest',
