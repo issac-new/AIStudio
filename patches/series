@@ -685,3 +685,7 @@
 
 # 352: R6 dispatch reason code 词汇表 i18n——ia2.dispatch.* 12 键（zh/en）。
 352-client-i18n-ia2-dispatch-reason.patch
+
+# 353: R7 归属链 + 开发回喂 i18n——ia2.att.subSession{Failed,Blocked} 2 键 +
+#      ia2.tdp.session 1 键（zh/en）。
+353-client-i18n-ia2-r7-linkage.patch

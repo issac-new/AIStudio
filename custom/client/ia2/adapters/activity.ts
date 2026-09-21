@@ -46,19 +46,30 @@ export function loopRunActivity(runs: readonly RunSummary[]): Map<string, LoopAc
 
 // ── ② 需关注分诊（右栏 attention 档）─────────────────────────────────
 
-export type AttentionKind = 'task-blocked' | 'run-failed' | 'loop-stuck'
+export type AttentionKind = 'task-blocked' | 'run-failed' | 'loop-stuck' | 'session-failed'
 
 export interface AttentionRow {
   kind: AttentionKind
-  /** 去重 id：task:<id> / run:<runId>（failed 与 stuck 同 run 去重取 stuck） */
+  /** 去重 id：task:<id> / run:<runId>（failed 与 stuck 同 run 去重取 stuck）/ session:<id> */
   id: string
-  /** 主标题（数据非 i18n：任务标题 / runId） */
+  /** 主标题（数据非 i18n：任务标题 / runId / 会话标题） */
   title: string
   /** 副文 i18n key */
   subKey: string
   ts: number
   taskId?: string
   runId?: string
+  sessionId?: string
+}
+
+/** R7-B 开发产出回喂：会话失败/受阻事件源（ide 完成/受阻 → ia2 协作感知） */
+export interface SessionAttentionInput {
+  id: string
+  title: string
+  /** failed = abortState.error/timedOut；blocked = 长时运行无产出（abortState 在） */
+  failed?: boolean
+  blocked?: boolean
+  updatedAt: number
 }
 
 /** lastActivityAt 归一 ms（ISO 串 ∪ ms 数 ∪ null → 0） */
@@ -100,6 +111,7 @@ export function buildAttention(
   tasks: readonly CockpitTask[],
   runs: readonly RunSummary[],
   _now: number,
+  sessions: readonly SessionAttentionInput[] = [],
 ): AttentionRow[] {
   const out: AttentionRow[] = []
   for (const t of tasks) {
@@ -107,6 +119,15 @@ export function buildAttention(
     out.push({
       kind: 'task-blocked', id: `task:${t.id}`, title: t.title,
       subKey: 'ia2.att.subTaskBlocked', ts: t.createdAt, taskId: t.id,
+    })
+  }
+  // R7-B：ide 会话失败/受阻 → 协作感知（开发产出回喂）
+  for (const s of sessions) {
+    if (!s.failed && !s.blocked) continue
+    out.push({
+      kind: 'session-failed', id: `session:${s.id}`, title: s.title || s.id.slice(0, 12),
+      subKey: s.failed ? 'ia2.att.subSessionFailed' : 'ia2.att.subSessionBlocked',
+      ts: s.updatedAt, sessionId: s.id,
     })
   }
   const seenRun = new Set<string>()

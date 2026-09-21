@@ -24,6 +24,7 @@ import { useLoopStore } from '@/custom/loop/store/loop'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { useChatStore } from '@/stores/hermes/chat'
 import {
   linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
   type StreamSelection,
@@ -53,6 +54,7 @@ const loopStore = useLoopStore()
 const runsStore = useRunCenterStore()
 const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
+const chatStore = useChatStore()
 
 // ── 行装配与决策动作（composables 单一实现，页头态势/通知下拉同源）──
 
@@ -136,13 +138,33 @@ const loopActivity = computed<Record<string, LoopActivity>>(() => {
   return Object.fromEntries(m)
 })
 
-const attentionRows = computed<AttentionRow[]>(() =>
-  buildAttention(tasksForShow.value, runsStore.sortedRuns ?? [], Date.now()))
+// R7-B 开发产出回喂：ide 会话失败/受阻 → 协作感知输入（abortStates 投影）
+const sessionAttention = computed(() => {
+  const out: Array<{ id: string; title: string; failed?: boolean; blocked?: boolean; updatedAt: number }> = []
+  for (const s of chatStore.sessions ?? []) {
+    const abort = (chatStore as unknown as { abortStates?: Map<string, { error?: string; timedOut?: boolean; aborting?: boolean }> }).abortStates?.get(s.id)
+    if (abort?.error || abort?.timedOut) {
+      out.push({ id: s.id, title: s.title, failed: true, updatedAt: s.updatedAt ?? Date.now() })
+    } else if (abort?.aborting && !abort.error) {
+      // 长时 aborting 未落定 = 受阻
+      out.push({ id: s.id, title: s.title, blocked: true, updatedAt: s.updatedAt ?? Date.now() })
+    }
+  }
+  return out
+})
 
-/** 需关注行点击分派：任务→看板预选；运行→所属循环画布；兜底全局时间线 */
+const attentionRows = computed<AttentionRow[]>(() =>
+  buildAttention(tasksForShow.value, runsStore.sortedRuns ?? [], Date.now(), sessionAttention.value))
+
+/** 需关注行点击分派：任务→看板预选；运行→所属循环画布；会话→ide 会话；兜底全局时间线 */
 function onOpenAttention(row: AttentionRow): void {
   if (row.taskId) {
     void router.push({ name: 'ia2.board', query: { task: row.taskId } })
+    return
+  }
+  // R7-B：会话失败/受阻 → ide 会话（开发产出回喂的反向跳）
+  if (row.sessionId) {
+    void router.push({ name: 'ide.shell', query: { session: row.sessionId } })
     return
   }
   if (row.runId) {

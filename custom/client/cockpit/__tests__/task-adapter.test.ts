@@ -48,6 +48,8 @@ describe('toCockpitTask', () => {
       id: 't9', title: 'Hello', priority: 'P0', status: 'review',
       assignee: 'bob', workspace: '~/ws/x', tenant: 'matrix:!r:s.ms:Auth',
       boardSlug: 'auth-svc', createdAt: 1000000,
+      // R7-A 归属链：session_id 透传（无 → null）
+      sessionId: null,
     })
     expect(t).not.toHaveProperty('category')
   })

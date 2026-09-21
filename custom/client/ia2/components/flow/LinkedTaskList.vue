@@ -15,6 +15,12 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+// R7-A workdir 短路径展示（取末两段，归属链区可读）
+function shortPath(p: string): string {
+  const parts = p.split('/').filter(Boolean)
+  return parts.slice(-2).join('/') || p
+}
+
 const TONE: Record<string, string> = {
   running: 'run', review: 'warn', blocked: 'err', done: 'ok',
   triage: 'info', todo: 'idle', scheduled: 'idle', ready: 'idle', archived: 'idle',
@@ -32,6 +38,11 @@ const TONE: Record<string, string> = {
         </span>
         <span class="ltl__sub">
           {{ t(`ia2.tdp.status.${task.status}`) }} · {{ task.assignee }}
+        </span>
+        <!-- R7-A 归属链：关联会话 + workdir（session_id 桥 + workspace 字段） -->
+        <span v-if="task.sessionId || task.workspace" class="ltl__linkage" data-testid="tdp-linkage">
+          <span v-if="task.sessionId" class="ltl__linkage-item" :title="t('ia2.tdp.session', { id: task.sessionId })">◉ {{ task.sessionId.slice(0, 8) }}</span>
+          <span v-if="task.workspace" class="ltl__linkage-item ltl__linkage-item--ws" :title="task.workspace">⎇ {{ shortPath(task.workspace) }}</span>
         </span>
       </span>
       <span class="ltl__avatar" :title="task.assignee">{{ (task.assignee || '?').slice(0, 1).toUpperCase() }}</span>
@@ -74,6 +85,17 @@ const TONE: Record<string, string> = {
 }
 .ltl__id { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .ltl__sub { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* R7-A 归属链区（会话 + workdir） */
+.ltl__linkage {
+  display: flex; gap: 6px; margin-top: 1px; font-size: 9px; font-family: ui-monospace, monospace;
+  color: var(--text-muted);
+}
+.ltl__linkage-item {
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #61afef;
+}
+.ltl__linkage-item--ws { color: #c678dd; }
 .ltl__avatar {
   flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
   background: var(--bg-secondary); color: var(--text-secondary);
