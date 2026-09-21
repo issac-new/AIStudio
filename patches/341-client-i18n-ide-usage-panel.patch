@@ -1,0 +1,82 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -510,6 +510,7 @@
+       cacheRead: '读',
+       cacheWrite: '写',
+       cacheInput: '输入',
++      lowContextToast: '上下文余量不足（剩 {remain}），建议压缩会话或新开会话',
+     },
+     mcp: {
+       title: 'MCP 服务器',
+@@ -522,6 +523,29 @@
+       configChatSent: '配置引导已注入当前会话',
+       manage: '管理页',
+       chatMissing: '无活跃会话',
++    },
++    usagePanel: {
++      title: '会话遥测',
++      costHint: '按官方价目折算的估算成本（未收录模型不计入）',
++      breakdownTitle: '上下文构成',
++      breakdownEstimate: '估算',
++      seg_user: '用户消息',
++      seg_assistant: '助手回复',
++      seg_tool: '工具往返',
++      seg_system: '系统与注入',
++      roundsTitle: '每轮用量',
++      roundsEmpty: '暂无轮级用量（完成一轮对话后生成）',
++      roundsLoadFailed: '轮级用量加载失败',
++      roundColTime: '时间',
++      roundColModel: '模型',
++      roundColIn: '输入',
++      roundColOut: '输出',
++      roundColCache: '缓存命中',
++      heatmapTitle: '用量热力图（84 天）',
++      heatmapStreak: '连续 {days} 天',
++      heatmapEmpty: '近期无用量记录',
++      lowTitle: '上下文余量不足',
++      lowBody: '建议压缩会话或新开会话',
+     },
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -512,6 +512,7 @@
+       cacheRead: 'read',
+       cacheWrite: 'write',
+       cacheInput: 'input',
++      lowContextToast: 'Context running low ({remain} left); compact the session or start a new one',
+     },
+     mcp: {
+       title: 'MCP servers',
+@@ -524,6 +525,29 @@
+       configChatSent: 'Config guide injected into the current session',
+       manage: 'Manage',
+       chatMissing: 'No active session',
++    },
++    usagePanel: {
++      title: 'Session telemetry',
++      costHint: 'Estimated cost from official pricing (unlisted models excluded)',
++      breakdownTitle: 'Context composition',
++      breakdownEstimate: 'estimated',
++      seg_user: 'User',
++      seg_assistant: 'Assistant',
++      seg_tool: 'Tool calls',
++      seg_system: 'System & injected',
++      roundsTitle: 'Per-run usage',
++      roundsEmpty: 'No per-run usage yet (appears after a completed run)',
++      roundsLoadFailed: 'Failed to load per-run usage',
++      roundColTime: 'Time',
++      roundColModel: 'Model',
++      roundColIn: 'In',
++      roundColOut: 'Out',
++      roundColCache: 'Cache',
++      heatmapTitle: 'Usage heatmap (84 days)',
++      heatmapStreak: '{days}-day streak',
++      heatmapEmpty: 'No usage in this period',
++      lowTitle: 'Context running low',
++      lowBody: 'Compact the session or start a new one',
+     },
+   },
+ 

@@ -55,6 +55,22 @@ export function cacheHitRate(
   return (read / total) * 100
 }
 
+// ── 低上下文余量（R1，dsh-TUI channel.ts 20k 绝对余量语义移植）──
+// dsh 用固定 20k 绝对余量告警；小窗口（<200k）下取 10% 窗口更符合比例，
+// 即 threshold = min(20k, 10% window)。恢复迟滞 5%（防临界抖动）。
+export const LOW_CONTEXT_ABS_TOKENS = 20000
+export const LOW_CONTEXT_RECOVER_PCT = 5
+
+export function lowContextThreshold(windowTokens: number): number {
+  if (!Number.isFinite(windowTokens) || windowTokens <= 0) return LOW_CONTEXT_ABS_TOKENS
+  return Math.min(LOW_CONTEXT_ABS_TOKENS, windowTokens * 0.1)
+}
+
+export function isLowContext(used: number, windowTokens: number): boolean {
+  if (!Number.isFinite(used) || !Number.isFinite(windowTokens) || windowTokens <= 0) return false
+  return Math.max(0, windowTokens - used) <= lowContextThreshold(windowTokens)
+}
+
 // ── TPS ─────────────────────────────────────────────────────────────────────
 
 export const TPS_FAST = 50
