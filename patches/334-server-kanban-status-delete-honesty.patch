@@ -1,0 +1,86 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -727,6 +727,32 @@
+   )
+ }
+ 
++// HERMES_CUSTOM[v126]: CLI schedule 动词（todo/ready/running/blocked → scheduled；
++// review/done/archived 由 CLI 拒绝并报错）。
++export async function scheduleTask(taskId: string, opts?: KanbanBoardOptions): Promise<void> {
++  await execKanbanMutation(
++    [...boardArgs(opts?.board), 'schedule', taskId],
++    'Hermes CLI: kanban schedule failed',
++    'Failed to schedule kanban task',
++  )
++}
++
++// HERMES_CUSTOM[v126]: CLI 状态机没有任意写 status 的动词——todo/triage 是父子
++// 门禁的落点（_landing_status_after_parents），只能按当前态组合既有动词。此前
++// 这两态在 bulk 链 default 分支 throw 被吞成 results ok:false，单任务 PATCH 链
++// 完全静默（装机轮记录的 "PATCH status:'todo' 静默无操作"）。显式化：能迁的迁
++// （落点 ready/todo 由父子门禁决定），组合不了的抛清晰错误而非假成功。
++async function returnTaskToBacklog(taskId: string, opts?: KanbanBoardOptions): Promise<void> {
++  const current = (await getTask(taskId, opts))?.task
++  const status = current?.status
++  if (status === undefined || status === 'todo' || status === 'triage') return
++  if (status === 'review') return reopenReview([taskId], undefined, opts)
++  if (status === 'blocked' || status === 'scheduled') return unblockTasks([taskId], opts)
++  throw new Error(
++    `kanban CLI state machine has no path from '${status}' to 'todo' — complete/archive it, or request-review first`,
++  )
++}
++
+ async function applyBulkStatus(taskId: string, opts: KanbanBulkTaskUpdateOptions): Promise<void> {
+   switch (opts.status) {
+     case undefined:
+@@ -749,6 +775,13 @@
+       )
+       return
+     }
++    case 'scheduled':
++      // HERMES_CUSTOM[v126]: 直连 CLI schedule 动词
++      return scheduleTask(taskId, opts)
++    case 'todo':
++    case 'triage':
++      // HERMES_CUSTOM[v126]: 按当前态组合动词；不可达组合抛清晰错误
++      return returnTaskToBacklog(taskId, opts)
+     default:
+       throw new Error(`Bulk status ${opts.status} is not supported by the CLI bridge`)
+   }
+@@ -843,10 +876,20 @@
+   }
+ }
+ 
++// HERMES_CUSTOM[v126]: CLI 无 `rm` 动词——此前 argv 直发 ['rm', taskId] 必然
++// "unknown action" 退出 → 路由 500，对所有状态一视同仁（review 仅是装机走查
++// 首撞场景）。CLI 的硬删语义 = archive（任意态→archived）+ archive --rm（仅
++// 已归档可 purge，两段式防误删）。已归档任务跳过第一步直接 purge。
+ export async function deleteTask(taskId: string, opts?: KanbanBoardOptions): Promise<boolean> {
+-  const args = [...boardArgs(opts?.board), 'rm', taskId, '--json']
++  const exec = () => ({ maxBuffer: 50 * 1024 * 1024, timeout: 30000, ...execOpts })
++  const purgeArgs = [...boardArgs(opts?.board), 'archive', '--rm', taskId]
++  const archiveArgs = [...boardArgs(opts?.board), 'archive', taskId]
+   try {
+-    await execHermes(args, { maxBuffer: 50 * 1024 * 1024, timeout: 30000, ...execOpts })
++    const current = (await getTask(taskId, opts))?.task
++    if (current?.status !== 'archived') {
++      await execHermes(archiveArgs, exec())
++    }
++    await execHermes(purgeArgs, exec())
+     return true
+   } catch (err: any) {
+     logger.error(err, 'Hermes CLI: kanban delete task failed')
+@@ -909,7 +952,11 @@
+       await archiveTasks([taskId], { board })
+     } else if (s === 'todo' || s === 'triage' || s === 'scheduled') {
+       // Use bulk update for direct status writes
+-      await bulkUpdateTasks({ ids: [taskId], status: s as KanbanTaskStatus, board })
++      // HERMES_CUSTOM[v126]: bulk 对单条失败不再可能静默——回检 results 并把
++      // 失败原因抛给路由层（此前 ok:false 被吞，PATCH 返回 200+旧任务）。
++      const bulk = await bulkUpdateTasks({ ids: [taskId], status: s as KanbanTaskStatus, board })
++      const failed = bulk.results.find(r => !r.ok)
++      if (failed) throw new Error(failed.error || `Failed to set task status to ${s}`)
+     } else if (s === 'review') {
+       // HERMES_CUSTOM[v121]: request-review 桥——CLI 无通用 set-status 动词，
+       // review 态此前在此分支表缺失（静默无操作，前端乐观更新假成功后回滚）。
