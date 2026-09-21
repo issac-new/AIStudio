@@ -17,12 +17,19 @@ function readUpstream(rel: string): string {
 
 const RETIRED_NAMES = [
   'hermes.loop', 'hermes.loopRuns', 'hermes.loopRunDetail', 'hermes.loopDetail',
-  'hermes.cockpit', 'hermes.chat', 'hermes.session', 'hermes.history',
-  'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.swarmKanban',
+  'hermes.cockpit', 'hermes.history',
+  'hermes.swarmKanban',
   'hermes.matrixChat', 'hermes.matrixChatRoom',
   // v12 六场景退役名（2026-09-19）：overview/ops/tasks/comms 零残留
   'ia2.overview', 'ia2.ops', 'ia2.tasks', 'ia2.comms',
 ]
+
+// 2026-09-22 驾驶舱回归修复（patch 351 CockpitChatRouteRestore）：以下命名路由
+// 曾因统一导航退役而缺失，致 ChatPanel SessionListItem :to="sessionHref()" 解析
+// 失败、协作中心(/app)与工作台渲染挂（No match for hermes.session）。现经 351
+// 恢复——它们是「恢复性路由」（path 不挂导航、会话深链由 ChatView 读 param），
+// 不算退役残留，须存在而非零出现。
+const RESTORED_NAMES = ['hermes.chat', 'hermes.session', 'hermes.globalAgent', 'hermes.globalAgentSession']
 
 describe('v12 统一视图守门（双视图）', () => {
   it('IA_AREAS 单场景 collab 与 buildIaRoutes 产物一一对应', () => {
@@ -81,8 +88,14 @@ describe('v12 统一视图守门（双视图）', () => {
     }
     // 旧路径别名与 cockpit 子树零残留
     expect(router).not.toContain(`path: '/hermes/cockpit'`)
-    expect(router).not.toContain(`path: '/hermes/chat'`)
     expect(router).not.toContain(`path: '/hermes/loop'`)
+  })
+
+  it('恢复性路由（patch 351）须存在：ChatPanel sessionHref 依赖这四条命名路由', () => {
+    const router = readUpstream('router/index.ts')
+    for (const name of RESTORED_NAMES) {
+      expect(router, `恢复性路由应含 name: '${name}'（缺失致协作/工作台渲染挂）`).toContain(`name: '${name}'`)
+    }
   })
 
   it('catch-all 兜底 → /app（旧深链不白屏）', () => {
