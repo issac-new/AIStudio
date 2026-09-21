@@ -1,0 +1,14 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -948,6 +948,10 @@
+       panelPeople: '人', panelAgents: '智能体', panelMachines: '机器', openManage: '打开管理台',
+       panelBoards: '板', onlineSearchPh: '检索账号 / 机器 / 看板 / profile',
+       taskJumpHint: '点击跳转：关联聊天会话 / 编码任务工作空间',
++      // HERMES_CUSTOM[v127] 态势面板任务段筛选/排序
++      filterByStatusHint: '点击筛选该状态（可多选并集；再点取消）',
++      emptyFiltered: '所选状态下暂无任务',
++      sortStatus: '状态序', sortPriority: '优先级', sortCreatedAt: '时间',
+     },
+     gov: {
+       title: '管理', back: '返回',

@@ -1,0 +1,14 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -950,6 +950,10 @@
+       panelPeople: 'People', panelAgents: 'Agents', panelMachines: 'Machines', openManage: 'Open management',
+       panelBoards: ' boards', onlineSearchPh: 'Search accounts / machines / boards / profiles',
+       taskJumpHint: 'Click to open: linked chat session / coding workspace',
++      // HERMES_CUSTOM[v127] sit panel task filter/sort
++      filterByStatusHint: 'Click to filter by this status (multi-select union; click again to clear)',
++      emptyFiltered: 'No tasks under the selected statuses',
++      sortStatus: 'Status', sortPriority: 'Priority', sortCreatedAt: 'Time',
+     },
+     gov: {
+       title: 'Manage', back: 'Back',
