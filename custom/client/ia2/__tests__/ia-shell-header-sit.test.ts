@@ -16,6 +16,8 @@ const pushMock = vi.hoisted(() => vi.fn())
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
   useRoute: () => ({ path: '/app', fullPath: '/app', query: {} }),
+  createRouter: () => ({ push: pushMock, install: () => {}, beforeEach: () => {}, afterEach: () => {} }),
+  createWebHashHistory: () => ({}),
 }))
 
 // ── store 桩（形状对齐 workbench-flow.test.ts，单一数据面）──
