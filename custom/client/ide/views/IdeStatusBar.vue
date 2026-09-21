@@ -2,16 +2,21 @@
 // IdeStatusBar — 底部状态栏：终端状态 | agent 底座 | workspace | 会话运行态
 // + 会话遥测簇（M2，dsh-TUI 语义移植）：上下文水位条 / TPS 仪表 / 缓存命中。
 // 只读投影（ide store + chat store + useSessionMetrics），不含动作。
-import { computed } from 'vue'
+// R1 扩展：遥测簇可点击展开 IdeMetricsPopover（G4 构成/G8 轮表/G7 热力图/
+// 成本估算）；低上下文余量主动 toast（dsh channel.ts 语义，带迟滞）。
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useMessage } from 'naive-ui'
 import { useIdeStore } from '../store/ide'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
-import { TPS_FLOOR, formatTokens } from '../utils/metrics'
+import { TPS_FLOOR, formatTokens, lowContextThreshold, LOW_CONTEXT_RECOVER_PCT } from '../utils/metrics'
+import IdeMetricsPopover from './IdeMetricsPopover.vue'
 
 const ide = useIdeStore()
 const chatStore = useChatStore()
 const { t } = useI18n()
+const message = useMessage()
 const metrics = useSessionMetrics()
 
 const running = computed(() => Boolean(chatStore.isRunActive || chatStore.abortState))
@@ -56,6 +61,32 @@ const cacheTitle = computed(() => {
     `${t('ide.metrics.cacheInput')} ${formatTokens(detail.inputTokens)}`,
   ].join(' · ')
 })
+
+// ── R1：遥测弹层（点击遥测簇开合；弹层自身 Esc/× 关闭）──
+const metricsOpen = ref(false)
+
+// ── R1：低上下文余量主动提醒（进入低水位 toast 一次；恢复越过
+// threshold×(1+5%) 迟滞线后重置可再告警；dsh 20k 绝对余量语义）──
+let lowNotified = false
+watch(
+  () => [metrics.contextUsed.value, metrics.contextLength.value] as const,
+  ([used, windowTokens]) => {
+    if (windowTokens <= 0) return
+    const remaining = Math.max(0, windowTokens - used)
+    const threshold = lowContextThreshold(windowTokens)
+    if (remaining <= threshold) {
+      if (!lowNotified) {
+        lowNotified = true
+        message.warning(
+          t('ide.metrics.lowContextToast', { remain: formatTokens(remaining) }),
+          { duration: 6000 },
+        )
+      }
+    } else if (lowNotified && remaining > threshold * (1 + LOW_CONTEXT_RECOVER_PCT / 100)) {
+      lowNotified = false
+    }
+  },
+)
 </script>
 
 <template>
@@ -64,50 +95,64 @@ const cacheTitle = computed(() => {
       {{ ide.workspace ?? t('ide.workspaceDefault') }}
     </span>
 
-    <!-- 会话遥测簇（dsh-TUI 移植：水位条 / TPS / 缓存） -->
+    <!-- 会话遥测簇（dsh-TUI 移植：水位条 / TPS / 缓存；R1：点击展开遥测面板） -->
     <span
-      v-if="metrics.showContext.value"
-      class="ide-statusbar__metric"
-      data-testid="ide-metrics-context"
-      :title="contextTitle"
+      class="ide-statusbar__cluster"
+      data-testid="ide-metrics-cluster"
+      role="button"
+      tabindex="0"
+      @click="metricsOpen = !metricsOpen"
+      @keydown.enter.prevent="metricsOpen = !metricsOpen"
     >
-      <span class="ide-statusbar__ctxbar">
-        <span
-          class="ide-statusbar__ctxfill"
-          :data-level="metrics.contextLevel.value"
-          :style="{ width: `${metrics.contextPct.value}%` }"
-        />
+      <span
+        v-if="metrics.showContext.value"
+        class="ide-statusbar__metric"
+        data-testid="ide-metrics-context"
+        :title="contextTitle"
+      >
+        <span class="ide-statusbar__ctxbar">
+          <span
+            class="ide-statusbar__ctxfill"
+            :data-level="metrics.contextLevel.value"
+            :style="{ width: `${metrics.contextPct.value}%` }"
+          />
+        </span>
+        {{ metrics.contextText.value }}
       </span>
-      {{ metrics.contextText.value }}
-    </span>
-    <span
-      v-if="tpsText"
-      class="ide-statusbar__metric"
-      data-testid="ide-metrics-tps"
-      :data-speed="metrics.tpsSpeed.value"
-      :title="tpsTitle"
-    >
-      <span class="ide-statusbar__tpsbar">
-        <span
-          class="ide-statusbar__tpsfill"
-          :data-speed="metrics.tpsSpeed.value"
-          :style="{ width: `${tpsGaugePct}%` }"
-        />
+      <span
+        v-if="tpsText"
+        class="ide-statusbar__metric"
+        data-testid="ide-metrics-tps"
+        :data-speed="metrics.tpsSpeed.value"
+        :title="tpsTitle"
+      >
+        <span class="ide-statusbar__tpsbar">
+          <span
+            class="ide-statusbar__tpsfill"
+            :data-speed="metrics.tpsSpeed.value"
+            :style="{ width: `${tpsGaugePct}%` }"
+          />
+        </span>
+        <span v-if="!running && metrics.tpsSpark.value" class="ide-statusbar__spark">{{ metrics.tpsSpark.value }}</span>
+        {{ tpsText }}
       </span>
-      <span v-if="!running && metrics.tpsSpark.value" class="ide-statusbar__spark">{{ metrics.tpsSpark.value }}</span>
-      {{ tpsText }}
-    </span>
-    <span
-      v-if="cacheText"
-      class="ide-statusbar__metric"
-      data-testid="ide-metrics-cache"
-      :title="cacheTitle"
-    >
-      {{ t('ide.metrics.cache') }} {{ cacheText }}
+      <span
+        v-if="cacheText"
+        class="ide-statusbar__metric"
+        data-testid="ide-metrics-cache"
+        :title="cacheTitle"
+      >
+        {{ t('ide.metrics.cache') }} {{ cacheText }}
+      </span>
     </span>
 
     <span class="ide-statusbar__spacer" />
     <span class="ide-statusbar__item" :class="{ 'is-running': running }">{{ sessionState }}</span>
+
+    <!-- R1 遥测面板（G4 构成 / G8 轮表 / G7 热力图 / 成本估算） -->
+    <Teleport to="body">
+      <IdeMetricsPopover v-if="metricsOpen" :metrics="metrics" @close="metricsOpen = false" />
+    </Teleport>
   </footer>
 </template>
 
@@ -140,6 +185,18 @@ const cacheTitle = computed(() => {
 }
 
 /* ── 会话遥测簇 ── */
+
+.ide-statusbar__cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:focus-visible {
+    outline: 1px solid var(--border-color, #4a90d9);
+  }
+}
 
 .ide-statusbar__metric {
   flex-shrink: 0;
