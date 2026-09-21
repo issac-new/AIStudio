@@ -95,6 +95,12 @@ export interface FlowLoopRow {
   awaitingYou: boolean
   blocked: boolean
   updatedAt: number | null
+  /** R6-A dispatch reason（multica dispatch/reason.go 语义）：最近一次分派
+   *  决策的稳定枚举 chip 数据源（该 loop 下任一 contract 的最新 reason）。
+   *  空=无拦截/无记录；chip 渲染方按 i18n key ia2.dispatch.<reason> 展示。 */
+  dispatchReason?: string | null
+  /** dispatch reason 人类可读补充 */
+  dispatchReasonDetail?: string | null
 }
 
 const LOOP_STATUS_TONE: Record<string, { tone: LoopStageTone; statusKey: string; awaitingYou?: boolean; blocked?: boolean }> = {
@@ -107,7 +113,23 @@ const LOOP_STATUS_TONE: Record<string, { tone: LoopStageTone; statusKey: string;
   idle: { tone: 'todo', statusKey: 'idle' },
 }
 
-export function buildLoopRows(loops: readonly LoopInstance[], _now: number): FlowLoopRow[] {
+export function buildLoopRows(
+  loops: readonly LoopInstance[],
+  _now: number,
+  contracts: readonly TaskContract[] = [],
+): FlowLoopRow[] {
+  // R6-A：loop → 其下 contract 的最新 dispatch reason 投影（chip 数据源）。
+  // 取该 loop 各 contract 中 reason 优先级最高者（拦截类 > handed_off > queued）。
+  const reasonByLoop = new Map<string, { code: string; detail: string | null }>()
+  const BLOCK_PRIORITY = ['runtime_offline', 'max_depth_exceeded', 'max_attempts_exceeded', 'board_concurrency_full', 'gate_pending_human', 'lease_conflict', 'blocked_dependency', 'self_trigger_suppressed', 'coalesced', 'requeued_after_repair', 'queued', 'handed_off']
+  for (const c of contracts) {
+    const code = (c as { dispatchReason?: string | null }).dispatchReason
+    if (!code) continue
+    const existing = reasonByLoop.get(c.loopId)
+    if (!existing || BLOCK_PRIORITY.indexOf(code) < BLOCK_PRIORITY.indexOf(existing.code)) {
+      reasonByLoop.set(c.loopId, { code, detail: (c as { dispatchReasonDetail?: string | null }).dispatchReasonDetail ?? null })
+    }
+  }
   return loops.map(l => {
     const idx = Math.max(0, LOOP_STAGE_ORDER.indexOf(l.stage))
     const total = LOOP_STAGE_ORDER.length
@@ -115,6 +137,7 @@ export function buildLoopRows(loops: readonly LoopInstance[], _now: number): Flo
     const progress = l.status === 'completed'
       ? 100
       : Math.round(((idx + (meta.tone === 'run' ? 0.5 : 1)) / total) * 100)
+    const reason = reasonByLoop.get(l.id)
     return {
       kind: 'loop' as const,
       id: l.id,
@@ -127,6 +150,8 @@ export function buildLoopRows(loops: readonly LoopInstance[], _now: number): Flo
       awaitingYou: meta.awaitingYou === true,
       blocked: meta.blocked === true,
       updatedAt: l.updatedAt ? Date.parse(l.updatedAt) : null,
+      dispatchReason: reason?.code ?? null,
+      dispatchReasonDetail: reason?.detail ?? null,
     }
   })
 }

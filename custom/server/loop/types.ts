@@ -178,6 +178,12 @@ export interface TaskContract {
   /** P3 Task 7 显式关联：persistence 成功落库的 kanban 任务 id（runPersistence 写入；
    *  追溯矩阵与任务详情反查的台账锚点，替代按 title 正则反查。旧契约无此字段） */
   persistedTaskId?: string | null
+  /** R6-A dispatch reason code（multica dispatch/reason.go 语义）：本次分派决策的
+   *  稳定枚举（queued/handed_off/runtime_offline/max_depth_exceeded/…），
+   *  任务卡/会话旁 chip 数据源。最新一次分派覆盖。 */
+  dispatchReason?: string | null
+  /** dispatch reason 的人类可读补充（如 "depth 6 > 5"） */
+  dispatchReasonDetail?: string | null
 }
 
 export interface VerificationRecord {
@@ -206,6 +212,7 @@ export type LoopEvent =
   | { type: 'loop.stage-transition'; loopId: string; from: LoopStage; to: LoopStage; reason: string; ts: string }
   | { type: 'loop.task-discovered'; loopId: string; contract: TaskContract; ts: string }
   | { type: 'loop.task-handed-off'; loopId: string; contractId: string; worktreeId: string; ts: string }
+  | { type: 'loop.dispatch-blocked'; loopId: string; contractId: string; reason: string; detail: string; ts: string }
   | { type: 'loop.verification-progress'; contractId: string; record: Partial<VerificationRecord>; ts: string }
   | { type: 'loop.verification-complete'; contractId: string; passed: boolean; ts: string }
   | { type: 'loop.persisted'; loopId: string; contractId: string; artifact: string;

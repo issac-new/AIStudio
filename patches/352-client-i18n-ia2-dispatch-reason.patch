@@ -1,0 +1,36 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1043,6 +1043,14 @@
+         completed: '已完成', failed: '失败', blocked: '阻塞', awaitingYou: '等你验收',
+         running: '运行中', paused: '已暂停', idle: '待进入',
+       },
++    },
++    dispatch: {
++      queued: '已入队', handed_off: '已交付', coalesced: '已合并调度',
++      requeued_after_repair: '修复后重排', runtime_offline: '运行时离线',
++      self_trigger_suppressed: '自触发已抑制', blocked_dependency: '依赖未就绪',
++      max_depth_exceeded: '嵌套深度超限', max_attempts_exceeded: '重试耗尽',
++      board_concurrency_full: '看板并发已满', gate_pending_human: '待人审',
++      lease_conflict: '租约冲突',
+     },
+     tdp: {
+       title: '任务 · 决策',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1045,6 +1045,14 @@
+         completed: 'Completed', failed: 'Failed', blocked: 'Blocked', awaitingYou: 'Awaiting you',
+         running: 'Running', paused: 'Paused', idle: 'Idle',
+       },
++    },
++    dispatch: {
++      queued: 'Queued', handed_off: 'Handed off', coalesced: 'Coalesced',
++      requeued_after_repair: 'Requeued after repair', runtime_offline: 'Runtime offline',
++      self_trigger_suppressed: 'Self-trigger suppressed', blocked_dependency: 'Dependency blocked',
++      max_depth_exceeded: 'Max depth exceeded', max_attempts_exceeded: 'Max attempts exceeded',
++      board_concurrency_full: 'Board concurrency full', gate_pending_human: 'Awaiting human review',
++      lease_conflict: 'Lease conflict',
+     },
+     tdp: {
+       title: 'Tasks · Decisions',

@@ -43,7 +43,7 @@ describe('LoopEngine', () => {
     const engine = new LoopEngine({
       store: store as any,
       verifier: { verify: vi.fn() } as any,
-      dispatcher: { dispatch: vi.fn() } as any,
+      dispatcher: { dispatch: vi.fn(), dispatchWithOutcome: vi.fn().mockResolvedValue({ ok: true, reason: { code: 'handed_off' } }) } as any,
       worktreeManager: { create: vi.fn(), remove: vi.fn() } as any,
       budgetGuard: { check: vi.fn().mockReturnValue({ allow: true }) } as any,
       stuckDetector: { check: vi.fn().mockResolvedValue(null), handleStuck: vi.fn() } as any,
@@ -71,7 +71,11 @@ describe('LoopEngine', () => {
     }
     const mockVerify = vi.fn().mockResolvedValue({
       contractId: 'task/test-001',
-      results: { programmatic: [], judge: null, human: null },
+      results: {
+        programmatic: [], judge: null,
+        // R6-B 人机分工门禁：human approved 才进 persistence（验证后 gateHumanReview）
+        human: { approver: 'human', decision: 'approved', comment: '', timestamp: new Date().toISOString() },
+      },
       overall: 'passed', finalResponseGuard: true,
     } as VerificationRecord)
 
@@ -79,7 +83,7 @@ describe('LoopEngine', () => {
       store: store as any,
       githubConnector: { discover: vi.fn().mockResolvedValue([mockContract]) } as any,
       verifier: { verify: mockVerify } as any,
-      dispatcher: { dispatch: vi.fn() } as any,
+      dispatcher: { dispatch: vi.fn(), dispatchWithOutcome: vi.fn().mockResolvedValue({ ok: true, reason: { code: 'handed_off' } }) } as any,
       worktreeManager: { create: vi.fn().mockResolvedValue('wt-1'), remove: vi.fn() } as any,
       budgetGuard: { check: vi.fn().mockReturnValue({ allow: true }) } as any,
       stuckDetector: { check: vi.fn().mockResolvedValue(null), handleStuck: vi.fn() } as any,
