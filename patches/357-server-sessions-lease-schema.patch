@@ -1,0 +1,50 @@
+diff --git a/packages/server/src/modules/studio/infrastructure/database/schemas.ts b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
+--- a/packages/server/src/modules/studio/infrastructure/database/schemas.ts
++++ b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
+@@ -102,6 +102,10 @@
+   workspace: 'TEXT',
+   category_id: 'INTEGER',
+   history_revision: 'INTEGER NOT NULL DEFAULT 0',
++  // R6 执行租约 daemon 形态（routa execution-backend.ts:54 语义）：会话运行归属
++  // 实例 + 租约到期（重启按租约接管，多实例协同最小充分机制）
++  owner_instance_id: 'TEXT NOT NULL DEFAULT \'\'',
++  lease_expires_at: 'INTEGER NOT NULL DEFAULT 0',
+ }
+ 
+ export const SESSIONS_INDEXES = {
+@@ -447,6 +451,11 @@
+   updated_at: 'INTEGER NOT NULL',
+   last_login_at: 'INTEGER',
+   avatar: "TEXT NOT NULL DEFAULT ''",
++  matrix_user_id: 'TEXT UNIQUE',
++  matrix_display_name: 'TEXT',
++  matrix_avatar_url: 'TEXT',
++  matrix_homeserver_url: 'TEXT',
++  auth_source: "TEXT NOT NULL DEFAULT 'local'",
+ }
+ 
+ export const USER_PROFILES_TABLE = 'user_profiles'
+@@ -1118,11 +1127,22 @@
+ 
+   for (const [columnName, columnDef] of Object.entries(schema)) {
+     if (existingColumns.has(columnName)) continue
++    // SQLite's ALTER TABLE ADD COLUMN cannot carry a UNIQUE constraint, so
++    // previously UNIQUE columns (e.g. users.matrix_user_id) were skipped on
++    // pre-existing tables, leaving login queries to fail with
++    // "no such column". Add the column without the constraint and enforce
++    // uniqueness via a separate unique index instead. Multiple NULLs are
++    // allowed under a SQLite unique index, so existing rows are unaffected.
+     if (!canAddColumnToExistingTable(columnDef)) {
+       console.warn(`[Schema] ${tableName}.${columnName} cannot be added safely to existing table; skipping`)
+       continue
+     }
+-    db.exec(`ALTER TABLE ${quoteIdentifier(tableName)} ADD COLUMN ${quoteIdentifier(columnName)} ${columnDef}`)
++    const bareDef = columnDef.replace(/\s+UNIQUE\b/i, '')
++    db.exec(`ALTER TABLE ${quoteIdentifier(tableName)} ADD COLUMN ${quoteIdentifier(columnName)} ${bareDef}`)
++    if (/\bUNIQUE\b/i.test(columnDef)) {
++      const indexName = `idx_${tableName}_${columnName}_unique`
++      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ${quoteIdentifier(indexName)} ON ${quoteIdentifier(tableName)} (${quoteIdentifier(columnName)})`)
++    }
+   }
+ }
+ 

@@ -697,3 +697,13 @@
 # 355: R6 @mention 总线——kanban addComment 入库后解析 [@agent]/@squad 为 agent
 #      enqueue run 并落系统行留痕（multica comment.go:3100；best-effort 不阻断）。
 355-server-kanban-mention-bus.patch
+
+# 356: R6 共享会话——bootstrap routes 挂载 /api/ide/session-share/{create,:token,
+#      :token/prompt}（invite token 四档模式 host/collaborator/viewer + prompt 审批，
+#      routa shared-session 语义，叠 matrix 账号）。
+356-server-ide-session-share.patch
+
+# 357: R6 执行租约 daemon 形态——sessions 表加 owner_instance_id + lease_expires_at
+#      两列（routa execution-backend.ts:54 语义；syncTable 自动加列迁移，多实例
+#      协同重启按租约接管的最小充分机制）。
+357-server-sessions-lease-schema.patch
