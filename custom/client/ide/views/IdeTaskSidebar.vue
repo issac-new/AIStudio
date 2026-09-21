@@ -33,6 +33,7 @@ import { bucketPriority } from '@/custom/cockpit/adapters/task-adapter'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archivedSessions'
 import { formatRelativeTime, workspaceLabel } from '../utils/time'
+import { bucketSessions } from '../utils/sessionBuckets'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -168,9 +169,33 @@ function toggleGroup(key: string): void {
 const unpinnedSessions = computed(() =>
   visibleSessions.value.filter(s => !pinnedIds.value.includes(s.id)),
 )
+
+// 三段视图（用户截图理念）：进行中/已完成/工作空间。
+// bucket 先分桶（active=流式或 24h 内活跃；done=其余非归档；workspace 不按状态分、
+// 按 workspace 分桶），桶内会话交给既有 organize 逻辑排。
+const sessionViewSessions = computed<Session[]>(() => {
+  const all = unpinnedSessions.value
+  const view = ide.sidebar.sessionView
+  if (view === 'workspace') return all // 工作空间视图展示全部，由 organize='project' 分桶
+  const buckets = bucketSessions(all, Date.now())
+  return view === 'active' ? buckets.active : buckets.done
+})
+
+// 各段计数（chip 角标用）
+const viewCounts = computed(() => {
+  const all = unpinnedSessions.value
+  const buckets = bucketSessions(all, Date.now())
+  return {
+    active: buckets.active.length,
+    done: buckets.done.length,
+    workspace: buckets.byWorkspace.length,
+  }
+})
+
 const taskGroups = computed<TaskGroup[]>(() => {
-  const rest = unpinnedSessions.value
-  if (ide.sidebar.organize === 'timeline') {
+  const rest = sessionViewSessions.value
+  const effectiveOrganize = ide.sidebar.sessionView === 'workspace' ? 'project' : ide.sidebar.organize
+  if (effectiveOrganize === 'timeline') {
     // 优先级降序（无任务者 -1 垫底）→ 最后更新时间逆序
     const sessions = rest.slice().sort((a, b) => {
       const pa = sessionPriority(a) ?? -1
@@ -180,7 +205,7 @@ const taskGroups = computed<TaskGroup[]>(() => {
     })
     return [{ key: '__timeline__', label: t('ide.task.timeline'), sessions }]
   }
-  if (ide.sidebar.organize === 'grouped') {
+  if (effectiveOrganize === 'grouped') {
     const groups: TaskGroup[] = categories.value.map(c => ({
       key: `cat-${c.id}`,
       label: c.name,
@@ -199,7 +224,7 @@ const taskGroups = computed<TaskGroup[]>(() => {
     }
     return groups
   }
-  // project：按 workspace 分组（M1.1 行为）
+  // project：按 workspace 分组（M1.1 行为；工作空间视图强制走此路）
   const byWorkspace = new Map<string, Session[]>()
   for (const s of rest) {
     const key = (s.workspace || '').trim()
@@ -397,7 +422,31 @@ onMounted(async () => {
         >
       </div>
 
-      <div class="ide-taskbar__organize" role="group" :aria-label="t('ide.task.organize')">
+      <div class="ide-taskbar__views" role="group" :aria-label="t('ide.task.views')">
+        <button
+          type="button"
+          class="ide-taskbar__view"
+          :class="{ 'is-active': ide.sidebar.sessionView === 'active' }"
+          data-testid="ide-task-view-active"
+          @click="ide.setSessionView('active')"
+        >{{ t('ide.task.view_active') }} <span class="ide-taskbar__view-count">{{ viewCounts.active }}</span></button>
+        <button
+          type="button"
+          class="ide-taskbar__view"
+          :class="{ 'is-active': ide.sidebar.sessionView === 'done' }"
+          data-testid="ide-task-view-done"
+          @click="ide.setSessionView('done')"
+        >{{ t('ide.task.view_done') }} <span class="ide-taskbar__view-count">{{ viewCounts.done }}</span></button>
+        <button
+          type="button"
+          class="ide-taskbar__view"
+          :class="{ 'is-active': ide.sidebar.sessionView === 'workspace' }"
+          data-testid="ide-task-view-workspace"
+          @click="ide.setSessionView('workspace')"
+        >{{ t('ide.task.view_workspace') }} <span class="ide-taskbar__view-count">{{ viewCounts.workspace }}</span></button>
+      </div>
+
+      <div v-if="ide.sidebar.sessionView !== 'workspace'" class="ide-taskbar__organize" role="group" :aria-label="t('ide.task.organize')">
         <button
           type="button"
           class="ide-taskbar__chip"
@@ -649,6 +698,44 @@ onMounted(async () => {
 
   &::placeholder { color: var(--text-muted, #9aa0aa); }
   &:focus { border-color: var(--accent-primary, #4cc9f0); }
+}
+
+/* 三段视图 chip 行（进行中/已完成/工作空间） */
+.ide-taskbar__views {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px 0;
+}
+
+.ide-taskbar__view {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--border-color, #3a3f4b);
+  background: none;
+  color: var(--text-secondary, #b0b5be);
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover { border-color: #61afef; }
+
+  &.is-active {
+    background: rgba(97, 175, 239, 0.12);
+    border-color: #61afef66;
+    color: #61afef;
+    font-weight: 600;
+  }
+}
+
+.ide-taskbar__view-count {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
 }
 
 .ide-taskbar__organize {

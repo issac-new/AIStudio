@@ -99,10 +99,13 @@ function applyMaximized(layout: IdeLayoutPrefs, who: 'sidebar' | 'chat' | 'sidep
 /** 侧栏任务组织模式（对标 zcode workspaceSidebar.organize：分组/项目/时间线） */
 export type IdeOrganizeMode = 'grouped' | 'project' | 'timeline'
 
+/** 侧栏会话三段视图（用户截图理念：进行中/已完成/工作空间）；与 organize 正交 */
+export type IdeSessionView = 'active' | 'done' | 'workspace'
+
 /** v12 工作空间维度（任务/项目/会话）：链路维度已随 09-20 重构退役 */
 export type IdeDimension = 'task' | 'project' | 'session'
 
-export type IdeSidePaneTab = 'files' | 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'mcp' | 'terminal'
+export type IdeSidePaneTab = 'files' | 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'mcp' | 'terminal' | 'hooks'
 
 export interface IdeSidePanePrefs {
   open: boolean
@@ -114,8 +117,9 @@ const SIDEBAR_KEY = 'hermes_ide_sidebar'
 const SIDEPANE_KEY = 'hermes_ide_sidepane'
 const DIM_KEY = 'hermes_ide_dim'
 
-const DEFAULT_SIDEBAR: { organize: IdeOrganizeMode } = {
+const DEFAULT_SIDEBAR: { organize: IdeOrganizeMode; sessionView: IdeSessionView } = {
   organize: 'project',
+  sessionView: 'active',
 }
 
 const DEFAULT_SIDEPANE: IdeSidePanePrefs = {
@@ -153,7 +157,7 @@ export const useIdeStore = defineStore('ide', () => {
   const workspace = ref<string | null>(localStorage.getItem(WORKSPACE_KEY) || null)
   const agentId = ref<CodingAgentId>(loadAgent())
   const layout = ref<IdeLayoutPrefs>(loadJson<IdeLayoutPrefs>(LAYOUT_KEY, DEFAULT_LAYOUT))
-  const sidebar = ref<{ organize: IdeOrganizeMode }>(
+  const sidebar = ref<{ organize: IdeOrganizeMode; sessionView: IdeSessionView }>(
     loadJson(SIDEBAR_KEY, DEFAULT_SIDEBAR),
   )
   const sidePane = ref<IdeSidePanePrefs>(loadJson<IdeSidePanePrefs>(SIDEPANE_KEY, DEFAULT_SIDEPANE))
@@ -236,6 +240,10 @@ export const useIdeStore = defineStore('ide', () => {
     sidebar.value.organize = mode
   }
 
+  function setSessionView(view: IdeSessionView): void {
+    sidebar.value.sessionView = view
+  }
+
   function setSidePaneTab(tab: IdeSidePaneTab): void {
     sidePane.value.tab = tab
     sidePane.value.open = true
@@ -270,6 +278,7 @@ export const useIdeStore = defineStore('ide', () => {
     toggleFold,
     toggleMax,
     setOrganize,
+    setSessionView,
     setSidePaneTab,
     toggleSidePane,
     toggleFloat,
