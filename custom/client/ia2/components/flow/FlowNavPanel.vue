@@ -13,6 +13,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { filterStreams, LOOP_STAGE_ORDER, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type StreamSelection } from '../../adapters/flow'
 import type { LoopActivity } from '../../adapters/activity'
+import type { AgentRosterRow } from '../../adapters/agents'
 
 const props = defineProps<{
   sessions: FlowSessionRow[]
@@ -20,6 +21,8 @@ const props = defineProps<{
   selection: StreamSelection | null
   /** 循环活动索引（v13：runs 聚合的运行中/待确认计数；可选向后兼容） */
   loopActivity?: Record<string, LoopActivity>
+  /** R7-C agent 名册（multica roster：在线/忙闲/在跑；可选向后兼容） */
+  agents?: AgentRosterRow[]
 }>()
 
 const emit = defineEmits<{
@@ -194,6 +197,25 @@ function submitCreateRoom(): void {
         </button>
       </div>
 
+      <!-- R7-C agent 名册（multica roster：在线/忙闲/在跑） -->
+      <div v-if="props.agents && props.agents.length" class="flow-nav__sec" data-testid="flow-agents-sec">
+        <div class="flow-nav__sec-head" data-testid="flow-group-agents">
+          {{ t('ia2.flow.groupAgents') }}<span class="flow-nav__sec-n">{{ props.agents.length }}</span>
+        </div>
+        <div
+          v-for="a in props.agents"
+          :key="a.name"
+          class="flow-nav__agent"
+          :class="`flow-nav__agent--${a.busyState}`"
+          :data-testid="`flow-agent-${a.name}`"
+        >
+          <span class="flow-nav__agent-dot" :class="`is-${a.busyState}`" />
+          <span class="flow-nav__agent-name">{{ a.name }}</span>
+          <span v-if="a.activeTask" class="flow-nav__agent-task" :title="a.activeTask">{{ a.activeTask }}</span>
+          <span v-else-if="a.sessionCount" class="flow-nav__agent-sess" :title="t('ia2.agents.sessions', { n: a.sessionCount })">◉{{ a.sessionCount }}</span>
+        </div>
+      </div>
+
       <div v-if="!shownSessions.length && !shownLoops.length" class="flow-nav__empty" data-testid="flow-empty">
         {{ t('ia2.flow.empty') }}
       </div>
@@ -256,6 +278,25 @@ function submitCreateRoom(): void {
   font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
 }
 .flow-nav__sec-n { min-width: 14px; height: 14px; padding: 0 4px; border-radius: 7px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 9px; display: inline-flex; align-items: center; justify-content: center; }
+
+/* R7-C agent 名册 */
+.flow-nav__agent {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 2px 6px; border-radius: 5px; font-size: 11px; color: var(--text-primary);
+}
+.flow-nav__agent-dot {
+  flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%;
+  &.is-busy { background: #4cc9f0; }
+  &.is-online { background: var(--success-color, #98c379); }
+  &.is-idle { background: var(--text-muted, #9aa0aa); }
+  &.is-offline { background: #e06c75; }
+}
+.flow-nav__agent-name { flex-shrink: 0; font-family: ui-monospace, monospace; font-size: 10px; }
+.flow-nav__agent-task {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; color: var(--text-muted);
+}
+.flow-nav__agent-sess { flex-shrink: 0; font-size: 9px; color: var(--text-muted); }
 .flow-nav__row {
   display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 8px;
   border: none; border-radius: 6px; background: transparent; color: var(--text-secondary);
