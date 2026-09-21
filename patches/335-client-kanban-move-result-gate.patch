@@ -1,0 +1,35 @@
+diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
+--- a/packages/client/src/stores/hermes/kanban.ts
++++ b/packages/client/src/stores/hermes/kanban.ts
+@@ -568,14 +568,27 @@
+       case 'archived':
+         // These statuses need an explicit PATCH via bulkUpdate, NOT unblock
+         // (unblock always sets status=ready server-side, which would desync)
+-        await kanbanApi.bulkUpdateTasks({ ids: [taskId], status: status as any }, { board })
++        // HERMES_CUSTOM[v126]: bulk 对单条失败返回 200 + results[].ok=false——
++        // 不回检则拖拽假成功（服务端状态未变，聚合刷新即回跳）。
++        {
++          const bulk = await kanbanApi.bulkUpdateTasks({ ids: [taskId], status: status as any }, { board })
++          const failed = bulk.results.find(r => !r.ok)
++          if (failed) throw new Error(failed.error || `bulk status ${status} failed for ${taskId}`)
++        }
+         break
+-      default:
+-        await kanbanApi.bulkUpdateTasks({ ids: [taskId], status: status as any }, { board })
++      default: {
++        const bulk = await kanbanApi.bulkUpdateTasks({ ids: [taskId], status: status as any }, { board })
++        const failed = bulk.results.find(r => !r.ok)
++        if (failed) throw new Error(failed.error || `bulk status ${status} failed for ${taskId}`)
++        break
++      }
+     }
+     if (board === selectedBoard.value) {
+       const task = tasks.value.find(t => t.id === taskId)
+-      if (task) task.status = status as KanbanTaskStatus
++      // HERMES_CUSTOM[v126]: todo/triage 的落点由父子门禁决定（可能落 ready），
++      // 不做乐观写入，拉真值回填
++      if (task && status !== 'todo' && status !== 'triage') task.status = status as KanbanTaskStatus
++      if (status === 'todo' || status === 'triage') await fetchTasks(true)
+       await Promise.all([fetchStats(), fetchBoards()])
+     }
+   }
