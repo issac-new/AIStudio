@@ -634,3 +634,12 @@
 # 339: IDE「MCP」页签 + 对话式 MCP 配置（M3 kimi /mcp-config 范式移植）——
 #      ide.sidePane.tab_mcp / ide.paletteCmdMcpConfig / ide.mcp.* 12 键。
 339-client-i18n-ide-mcp.patch
+
+# 340: IDE 遥测面板（R1/G8）——每轮用量只读端点：
+#      GET /api/studio/sessions/:id/usage/rounds（usage-store getUsageRounds 按 run_id
+#      聚合 + controllers usageRuns + routes 挂载；JSON 兜底无 run 维度返回空数组）。
+340-server-usage-rounds-endpoint.patch
+
+# 341: IDE 遥测面板（R1：G4 构成/G7 热力图/G8 轮表/低余量提醒/成本估算）i18n——
+#      ide.metrics.lowContextToast 1 键 + ide.usagePanel.* 22 键（zh/en 双语同步）。
+341-client-i18n-ide-usage-panel.patch
