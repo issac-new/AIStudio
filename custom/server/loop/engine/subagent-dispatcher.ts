@@ -50,15 +50,28 @@ export class SubagentDispatcher {
         ? `Goal: ${contract.source.summary}\nRead: ${contract.readPlan.requiredReads.join(', ')}\nWrite to: ${contract.writeBoundary.join(', ')}\nProduce: ${contract.resultTemplate.artifactType}`
         : `Review the work in this worktree. Verify against: ${JSON.stringify(contract.verificationIntent)}`
 
+      let invokeError: string | null = null
       if (this.deps.invokeAgent) {
-        await this.deps.invokeAgent(prompt, worktreePath, contract.readPlan.requiredReads, contract.writeBoundary)
+        try {
+          await this.deps.invokeAgent(prompt, worktreePath, contract.readPlan.requiredReads, contract.writeBoundary)
+        } catch (err) {
+          // R7-F 委派兜底（routa session-end 语义）：invoke 失败不静默吞——记
+          // session-end 兜底 reason 并放行（verifier 回收兜底会判缺产物走 repair）。
+          invokeError = err instanceof Error ? err.message : String(err)
+        }
       } else {
         // Fallback: invoke hermes-agent CLI
         try {
           await execFileAsync('hermes', ['--prompt', prompt, '--cwd', worktreePath], { timeout: 300_000 })
         } catch (err) {
-          // Agent invocation failure is non-fatal; verification will catch missing output
+          // R7-F 委派兜底：CLI 调用失败同样记 session-end 兜底 reason（不静默丢）
+          invokeError = err instanceof Error ? err.message : String(err)
         }
+      }
+      if (invokeError) {
+        const reason: DispatchReason = { code: 'requeued_after_repair', detail: `session-end fallback: ${invokeError.slice(0, 80)}` }
+        this.deps.onDispatchReason?.(contract.id, reason)
+        return { ok: true, reason }
       }
     } finally {
       this.depth--
