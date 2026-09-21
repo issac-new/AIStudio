@@ -14,6 +14,7 @@ defineProps<{ items: AttentionRow[] }>()
 const emit = defineEmits<{
   (e: 'select', row: AttentionRow): void
   (e: 'open-board'): void
+  (e: 'close'): void
 }>()
 
 const { t } = useI18n()
@@ -48,5 +49,10 @@ const TIER_LABEL: Record<AttentionRow['status'], string> = {
         <span class="ia-attn__text">{{ row.title }}</span>
       </button>
     </div>
+    <!-- v12.6：右上角关闭钮（会话内隐藏，刷新恢复） -->
+    <button
+      type="button" class="ia-attn__close" data-testid="ia-attn-close"
+      :aria-label="t('cockpit.close')" @click="emit('close')"
+    >×</button>
   </div>
 </template>

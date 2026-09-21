@@ -59,6 +59,23 @@ export function useSitCounts() {
 
   const accounts = computed(() => teamRegistry.accounts ?? [])
 
+  /** v12.5 在线级联：看板行（slug/name/开放任务数；任务里出现而板清单缺失的
+   *  slug 兜底补行）+ 团队（profiles↔boards 关联，cockpit.bootstrap 装载） */
+  const boardRows = computed(() => {
+    const openByBoard = new Map<string, number>()
+    for (const t of openTasks.value) openByBoard.set(t.boardSlug, (openByBoard.get(t.boardSlug) ?? 0) + 1)
+    const known = new Set((workspace.boards ?? []).map(b => b.slug))
+    const rows = (workspace.boards ?? []).map(b => ({ slug: b.slug, name: b.name, open: openByBoard.get(b.slug) ?? 0 }))
+    for (const [slug, open] of openByBoard) {
+      if (!known.has(slug)) rows.push({ slug, name: slug, open })
+    }
+    return rows
+  })
+
+  const teams = computed(() => (cockpit.teams ?? []).map(t => ({
+    name: t.name, profiles: t.profiles ?? [], boards: t.boards ?? [],
+  })))
+
   const online = computed(() => ({
     people: accounts.value.length,
     agents: accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0),
@@ -72,5 +89,5 @@ export function useSitCounts() {
     return formatWaitAge(now.value - oldest)
   })
 
-  return { waitItems, tasks, openTasks, sessionCount, loopTotal: computed(() => loopRows.value.length), loopBlocked, loopRows, accounts, online, oldestWaitLabel }
+  return { waitItems, tasks, openTasks, sessionCount, loopTotal: computed(() => loopRows.value.length), loopBlocked, loopRows, accounts, online, oldestWaitLabel, boardRows, teams }
 }

@@ -22,12 +22,14 @@ import { useAppStore } from '@/stores/hermes/app'
 import { useWorkspaceStore } from '../store/workspace'
 import { useFlowStore } from '../store/flow'
 import { usePlatformsStore } from '../store/platforms'
+import { taskLinkedSessionId } from '../adapters/flow'
 import IaLocaleToggle from './IaLocaleToggle.vue'
 import IaViewSwitcher from './IaViewSwitcher.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
 import SitlineBar from './SitlineBar.vue'
-import SitDetailPanel, { type SitSegment } from './SitDetailPanel.vue'
+import SitDetailPanel, { type SitSegment, type SitTaskRow } from './SitDetailPanel.vue'
 import { useSitCounts } from '../composables/useSitCounts'
+import { useSessionRows } from '../composables/useSessionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useDecisionRows } from '../composables/useDecisionRows'
 
@@ -91,16 +93,30 @@ const scheduleTodayCount = computed(() => store.scheduleDatesWithEvents.has(toda
 const showNotify = ref(false)
 const { decisionRows, decisionUnread, oldestDecisionLabel } = useDecisionRows()
 
-// ── 态势 chips + 内联面板（v12.3 自 WorkbenchView 迁入；v12.4 口径修订）──
+// ── 态势 chips + 内联面板（v12.3 自 WorkbenchView 迁入；v12.4/12.5 口径修订）──
 
 const {
-  tasks: sitTasks, openTasks, accounts, online,
+  tasks: sitTasks, openTasks, accounts, online, boardRows, teams,
 } = useSitCounts()
+const { sessionRows } = useSessionRows()
 const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
 
-/** 态势面板任务行（SitDetailPanel 纯展示形状；源 = workspace 跨板聚合开放态） */
-const storeTasks = computed(() => openTasks.value.map(x =>
-  ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })))
+/** 原始任务索引（id → {board, task}）：板名/优先级/挂接会话解析用 */
+const rawById = computed(() => {
+  const map = new Map<string, { board: string; task: any }>()
+  for (const e of workspace.rawTasks) map.set(e.task.id, e)
+  return map
+})
+
+/** 板名（slug → name） */
+const boardNameOf = computed(() => new Map((workspace.boards ?? []).map(b => [b.slug, b.name])))
+
+/** 态势面板任务行（SitTaskRow 增强形状：join 原始任务补板名/优先级） */
+const storeTasks = computed<SitTaskRow[]>(() => openTasks.value.map(x => ({
+  id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt,
+  boardName: boardNameOf.value.get(x.boardSlug) ?? x.boardSlug,
+  priority: x.priority,
+})))
 
 /** 分状态统计行（开放态；词表序由 SitDetailPanel 排） */
 const taskStats = computed(() =>
@@ -113,6 +129,21 @@ const sitPanel = ref<SitSegment | null>(null)
 
 function onSitSelect(segment: 'waiting' | 'tasks' | 'online'): void {
   sitPanel.value = sitPanel.value === segment ? null : segment
+}
+
+/** v12.5 任务行点击 → 三栏跳转：挂接 matrix 房间 → 房间画布；挂接 agent 会话
+ *  → IDE 工作台（会话列自动切到挂靠会话 + 编码任务工作空间上下文）；无挂接
+ *  → IDE 任务维度兜底。等我段（review 任务）仍走看板预选（就地验收动线）。 */
+function onPanelJumpTask(taskId: string): void {
+  sitPanel.value = null
+  const raw = rawById.value.get(taskId)?.task
+  const sessionId = raw ? taskLinkedSessionId(raw) : null
+  if (sessionId) {
+    const row = sessionRows.value.find(s => s.id === sessionId)
+    if (row?.kind === 'room') { void router.push({ name: 'ia2.commsRoom', params: { roomId: row.id } }); return }
+    if (row?.kind === 'group') { void router.push({ name: 'ia2.groupRoom', params: { roomId: row.id } }); return }
+  }
+  void router.push({ path: '/ide', query: { task: taskId } })
 }
 </script>
 
@@ -188,10 +219,13 @@ function onSitSelect(segment: 'waiting' | 'tasks' | 'online'): void {
         :wait-items="decisionRows"
         :tasks="storeTasks"
         :task-stats="taskStats"
-        :accounts="accounts.map(a => ({ userId: a.userId, displayName: a.displayName, agentTeams: (a.agentTeams ?? []).map(at => ({ slug: at.slug, name: at.name, profiles: at.profiles ?? [] })) }))"
+        :accounts="accounts.map(a => ({ userId: a.userId, displayName: a.displayName, isLeader: a.isLeader, agentTeams: (a.agentTeams ?? []).map(at => ({ slug: at.slug, name: at.name, profiles: at.profiles ?? [] })) }))"
         :machines="fleetMachines"
+        :boards="boardRows"
+        :teams="teams"
         @close="sitPanel = null"
         @open-task="taskId => { sitPanel = null; void router.push({ name: 'ia2.board', query: { task: taskId } }) }"
+        @jump-task="onPanelJumpTask"
         @approve-task="approveTask"
         @reject-task="rejectTask"
         @approve-run="approveRun"

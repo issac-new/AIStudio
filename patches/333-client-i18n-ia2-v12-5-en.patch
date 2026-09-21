@@ -1,0 +1,28 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -938,6 +938,8 @@
+       panelClose: 'Close', empty: 'Nothing here yet',
+       actApprove: 'Approve', actReject: 'Reject', actContinue: 'Resume', actGoReview: 'Open review',
+       panelPeople: 'People', panelAgents: 'Agents', panelMachines: 'Machines', openManage: 'Open management',
++      panelBoards: ' boards', onlineSearchPh: 'Search accounts / machines / boards / profiles',
++      taskJumpHint: 'Click to open: linked chat session / coding workspace',
+     },
+     gov: {
+       title: 'Manage', back: 'Back',
+@@ -2541,6 +2543,7 @@
+    archiveFailed: 'Failed to archive board',
+    color: 'Color',
+    colorPlaceholder: '#3b82f6',
++   filterLabel: 'Boards', filterAll: 'All',
+    createFailed: 'Failed to create board',
+    description: 'Description',
+    icon: 'Icon',
+@@ -2700,6 +2703,7 @@
+       taskDeleted: 'Task deleted',
+       taskMoved: 'Task moved',
+       taskUpdated: 'Task updated',
++      aggregateCreateHint: 'Check exactly one board to create tasks inline',
+       updateFailed: 'Failed to update task',
+    attachmentDeleted: 'Attachment deleted',
+    attachmentUploaded: 'Attachment uploaded',

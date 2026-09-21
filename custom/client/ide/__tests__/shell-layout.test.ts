@@ -28,7 +28,6 @@ vi.mock('../views/IdeTaskSidebar.vue', () => ({ default: { name: 'IdeTaskSidebar
 vi.mock('../views/IdeChatPane.vue', () => ({ default: { name: 'IdeChatPane', template: '<div class="ide-chat-stub" />' } }))
 vi.mock('../views/IdeSidePane.vue', () => ({ default: { name: 'IdeSidePane', template: '<aside class="ide-sidepane" />' } }))
 vi.mock('../views/IdeStatusBar.vue', () => ({ default: { name: 'IdeStatusBar', template: '<div />' } }))
-vi.mock('../components/IdeDimsBar.vue', () => ({ default: { name: 'IdeDimsBar', template: '<div />' } }))
 vi.mock('../components/IdeCommandPalette.vue', () => ({ default: { name: 'IdeCommandPalette', template: '<div />' } }))
 vi.mock('../components/IdeTaskContextBar.vue', () => ({ default: { name: 'IdeTaskContextBar', template: '<div class="ide-taskctx-stub" />' } }))
 vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
@@ -103,6 +102,32 @@ describe('IdeShell 布局守门', () => {
     await w.vm.$nextTick()
     expect(ide.layout.chat.maximized).toBe(true)
     ide.toggleMax('chat')
+  })
+
+  it('v12.6 维度条（工作空间行）退役：壳不再渲染 ide-dims', async () => {
+    const w = mountShell()
+    await flushPromises()
+    expect(w.find('[data-testid="ide-dims"]').exists()).toBe(false)
+  })
+
+  it('v12.6 三栏默认显示：无持久偏好时 sidepane 默认开（files 页签）', () => {
+    const ide = useIdeStore()
+    expect(ide.sidePane.open).toBe(true)
+    expect(ide.sidePane.tab).toBe('files')
+  })
+
+  it('v12.6 侧板收起态右缘导轨可重开（footer 功能行退役后的入口）', async () => {
+    const w = mountShell()
+    const ide = useIdeStore()
+    await flushPromises()
+    ide.sidePane.open = true
+    await w.vm.$nextTick()
+    expect(w.find('[data-testid="ide-sidepane-rail"]').exists()).toBe(false)
+    ide.sidePane.open = false
+    await w.vm.$nextTick()
+    expect(w.find('[data-testid="ide-sidepane-rail"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-sidepane-open"]').trigger('click')
+    expect(ide.sidePane.open).toBe(true)
   })
 
   it('工作区列已退役：shell 不再渲染 __workspace', async () => {

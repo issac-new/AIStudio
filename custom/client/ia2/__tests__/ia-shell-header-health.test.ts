@@ -58,6 +58,10 @@ vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
     oldestWaitLabel: { value: '' },
   }),
 }))
+// v12.5：任务跳转需要 sessionRows 判别会话类别——桩化（真 composable 拉上游 kanban store 的 createRouter 链）
+vi.mock('@/custom/ia2/composables/useSessionRows', () => ({
+  useSessionRows: () => ({ sessionRows: { value: [] } }),
+}))
 vi.mock('@/custom/ia2/composables/useDecisionRows', async () => {
   const { ref } = await import('vue')
   return {
