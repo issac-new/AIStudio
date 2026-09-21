@@ -37,13 +37,4 @@ describe('AttentionStrip — swarm kanban 标签（v12.4）', () => {
     expect(empty.text()).toContain('ia2.overview.attentionEmpty')
     empty.unmount()
   })
-
-  it('v12.6 右上角关闭钮：点击 emit close（会话内隐藏由装配方承接）', async () => {
-    const wrapper = mount(AttentionStrip, { props: { items: [ROW] } })
-    const close = wrapper.find('[data-testid="ia-attn-close"]')
-    expect(close.exists()).toBe(true)
-    await close.trigger('click')
-    expect(wrapper.emitted('close')).toHaveLength(1)
-    wrapper.unmount()
-  })
 })

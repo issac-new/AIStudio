@@ -130,8 +130,7 @@
   background: var(--bg-secondary);
 }
 
-// v12.4：标签改 swarm kanban 双击入口（交互态给指针与悬停反馈）；
-// v12.6：尾部关闭钮（会话内隐藏）
+// v12.4：标签改 swarm kanban 双击入口（交互态给指针与悬停反馈）
 .ia-attn__label {
   flex-shrink: 0;
   font-size: 11px;
@@ -141,14 +140,6 @@
   user-select: none;
 
   &:hover { color: var(--text-primary); text-decoration: underline; }
-}
-
-.ia-attn__close {
-  flex-shrink: 0; margin-left: 4px;
-  width: 20px; height: 20px; padding: 0;
-  border: none; border-radius: 5px; background: transparent;
-  color: var(--text-muted); font-size: 14px; line-height: 1; cursor: pointer;
-  &:hover { color: var(--text-primary); background: var(--bg-primary); }
 }
 
 .ia-attn__items {

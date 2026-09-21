@@ -42,12 +42,13 @@ vi.mock('../components/IaShellHeader.vue', () => ({
   default: { name: 'IaShellHeader', props: ['userName'], template: '<div class="hdr-stub" />' },
 }))
 // v12.3 R2：空态不消失（条常驻）——桩去 v-if、暴露 data-count 验数据流；
-// v12.4：emits 收窄（open-gov → open-board）；v12.6：加 close（会话内隐藏）
+// v12.4：emits 收窄（open-gov → open-board）；v12.6 误加 close 已撤回（看板页
+// 关闭钮与注意力条无关，用户澄清后回退）
 vi.mock('../components/AttentionStrip.vue', () => ({
   default: {
     name: 'AttentionStrip',
     props: ['items'],
-    emits: ['select', 'open-board', 'close'],
+    emits: ['select', 'open-board'],
     template: '<div class="attn-stub" :data-count="items.length" />',
   },
 }))
