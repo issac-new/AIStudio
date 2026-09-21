@@ -8,6 +8,7 @@ import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
+import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import * as extras from '@/custom/cockpit/api/kanban-extras'
 import { fetchMcpServers } from '@/api/hermes/mcp'
 import type { McpHealthSource } from '../adapters/inbox-adapter'
@@ -101,6 +102,11 @@ export interface ScheduleEvent {
 
 const PRIORITY_ORDER: Record<CockpitPriority, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
 
+/** 任务行指纹（watch 门控用）：比对会驱动 UI 的关键字段，无关字段变化不触发 detail 重拉 */
+function taskRowFingerprint(t: any): string {
+  return [t?.id, t?.status, t?.title, t?.assignee, t?.priority, t?.updated_at, t?.workspace_path].join('|')
+}
+
 export const useCockpitStore = defineStore('cockpit', () => {
   const kanban = useKanbanStore()
   const chatStore = useChatStore()
@@ -108,6 +114,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const matrixClient = useMatrixClientStore()
   const matrixRoom = useMatrixRoomStore()
   const matrixComposer = useMatrixComposerStore()
+  // v12 性能收敛（2026-09-21）：跨板任务聚合单一通路归 ia2 workspace store
+  // （useSharedArm 武装：聚合端点 + overview WS + 事件去抖刷新 + 指纹守卫）。
+  // cockpit 仅在 workspace 未武装（纯单测/旧契约）时回落自聚合。
+  const workspaceAggregate = useWorkspaceStore()
 
   // ── 跨 board 聚合数据（ref，bootstrap 时填充）──
   // useKanbanStore 是单 board 模型，cockpit 自己聚合所有 board 的任务
@@ -124,9 +134,10 @@ export const useCockpitStore = defineStore('cockpit', () => {
   let _searchTimer: ReturnType<typeof setTimeout> | undefined
 
   // ── 派生态（computed）──
-  // 优先读跨 board 聚合的 cockpitTasks；若未聚合（如单元测试直接 push mockKanbanTasks），
-  // fallback 读当前 kanban.tasks（映射为 default board），保持向后兼容
+  // 优先级：workspace 聚合（armed 时唯一数据源，事件驱动刷新）＞ cockpit 自聚合
+  // （loadAllBoards/refreshAllBoards 产物）＞ kanban 单板映射（单测直推 mockKanbanTasks 契约）
   const tasks = computed(() => {
+    if (workspaceAggregate.tasks.length) return workspaceAggregate.tasks
     if (cockpitTasks.value.length) return cockpitTasks.value
     return kanban.tasks.map(t => taskAdapter.toCockpitTask(t, 'default'))
   })
@@ -427,33 +438,36 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const fleetSessions = ref<FleetSession[]>([])
   const fleetConnected = ref(false)
   let _fleetStream: fleetAdapter.FleetStreamHandle | null = null
-  let _overviewStream: fleetAdapter.FleetStreamHandle | null = null
-  let _overviewDebounce: ReturnType<typeof setTimeout> | undefined
+  let _fleetFp = ''
+
+  /** 快照指纹守卫：会话级关键字段（状态/审批/澄清/队列）无变化时跳过赋值——
+   *  服务端 1.5s tick 的快照总是新数组新身份，直接赋值会令 waitItems/online/
+   *  inboxItems 等全量重算重渲染（身份抖动）。子代理明细不在 /app 消费面，不进指纹。 */
+  function applyFleetSnapshot(sessions: FleetSession[]) {
+    const fp = sessions
+      .map(s => [s.id, s.status, s.isAborting, s.queueLength,
+        s.approvals.map(a => a.approval_id).join(','), s.clarifies.map(c => c.clarify_id).join(',')]
+        .join('|'))
+      .join(';')
+    if (fp === _fleetFp) return
+    _fleetFp = fp
+    fleetSessions.value = sessions
+  }
 
   function initFleetStream() {
     if (_fleetStream) return
     _fleetStream = fleetAdapter.connectFleetStream({
-      onSnapshot: snapshot => { fleetSessions.value = snapshot.sessions },
+      onSnapshot: snapshot => { applyFleetSnapshot(snapshot.sessions) },
       onStatus: connected => { fleetConnected.value = connected },
     })
-    // 看板聚合 WS：任一 board 有事件 → 去抖全量刷新（替代 30s 盲轮询的主力）
-    _overviewStream = fleetAdapter.connectOverviewStream({
-      onBoardEvent: () => {
-        if (_overviewDebounce) clearTimeout(_overviewDebounce)
-        _overviewDebounce = setTimeout(() => { void refreshAllBoards(true) }, 500)
-      },
-    })
+    // v12 性能收敛（2026-09-21）：不再开第二条看板聚合 overview WS——该事件流
+    // 由 workspace store 单点持有（useSharedArm 武装），双连接=每个 board 事件双份
+    // 强制刷新 + 双份聚合请求。本 store 的 cockpitTasks 经 tasks computed 读 workspace。
   }
 
   function stopFleetStream() {
     _fleetStream?.close()
     _fleetStream = null
-    _overviewStream?.close()
-    _overviewStream = null
-    if (_overviewDebounce) {
-      clearTimeout(_overviewDebounce)
-      _overviewDebounce = undefined
-    }
     fleetConnected.value = false
   }
 
@@ -725,28 +739,35 @@ export const useCockpitStore = defineStore('cockpit', () => {
   )
 
 	  // ── bootstrap ──
-	  // 跨 board 聚合：拉所有 board，对每个 board 切换并拉任务，合并到 cockpitTasks
+	  // 跨 board 聚合：优先服务端聚合端点（1 请求全 board，不触碰 kanban store——
+	  // 旧 N+1 串行路径每板 setSelectedBoard+fetchTasks 会逐板改写 kanban.tasks，
+	  // 逐次触发双 store watch 再各自全量刷新，形成自放大请求风暴）；
+	  // 聚合端点不可用时回落旧路径。
 	  async function loadAllBoards() {
-	    try {
-	      await kanban.fetchBoards?.()
-	    } catch { /* boards 拉取失败，降级到 default */ }
-	    const kanbanBoards = (kanban as any).boards ?? []
-	    const boardList = Array.isArray(kanbanBoards) && kanbanBoards.length
-	      ? kanbanBoards.map((b: any) => ({ slug: b.slug, name: b.name, total: b.total ?? 0 }))
-	      : [{ slug: 'default', name: 'default', total: 0 }]
-	    boards.value = boardList
-	    const all: CockpitTask[] = []
-	    for (const b of boardList) {
-	      try {
-	        kanban.setSelectedBoard?.(b.slug)
-	        await kanban.fetchTasks()
-	        for (const t of kanban.tasks) {
-	          all.push(taskAdapter.toCockpitTask(t, b.slug))
-	        }
-	      } catch { /* 单 board 失败不阻塞其他 */ }
-	    }
-	    cockpitTasks.value = all
-	    _lastRefreshTs = Date.now()
+		    try {
+		      const ok = await refreshAllBoards(true)
+		      if (ok) return
+		    } catch { /* 聚合失败 → N+1 回落 */ }
+		    try {
+		      await kanban.fetchBoards?.()
+		    } catch { /* boards 拉取失败，降级到 default */ }
+		    const kanbanBoards = (kanban as any).boards ?? []
+		    const boardList = Array.isArray(kanbanBoards) && kanbanBoards.length
+		      ? kanbanBoards.map((b: any) => ({ slug: b.slug, name: b.name, total: b.total ?? 0 }))
+		      : [{ slug: 'default', name: 'default', total: 0 }]
+		    boards.value = boardList
+		    const all: CockpitTask[] = []
+		    for (const b of boardList) {
+		      try {
+		        kanban.setSelectedBoard?.(b.slug)
+		        await kanban.fetchTasks()
+		        for (const t of kanban.tasks) {
+		          all.push(taskAdapter.toCockpitTask(t, b.slug))
+		        }
+		      } catch { /* 单 board 失败不阻塞其他 */ }
+		    }
+		    cockpitTasks.value = all
+		    _lastRefreshTs = Date.now()
 	  }
 
 	  // ── 轻量全量刷新（并行 API、旁路 kanban store，不切 selectedBoard）──
@@ -943,31 +964,28 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
   }
 
-	  // WebSocket 联动：kanban.tasks 变化时，只做轻量同步（避免与 loadAllBoards 形成循环）
-	  // - 不再调用 loadAllBoards（它会改 kanban.tasks 触发死循环）
-	  // - 只更新 cockpitTasks 中当前 board 的任务片段 + 选中任务 detail invalidate
-	  // - 同时触发去抖的 refreshAllBoards（500ms），聚合所有 board 的 WS 事件
-	  let _wsDebounceTimer: ReturnType<typeof setTimeout> | undefined
-	  watch(() => kanban.tasks, (newTasks) => {
-	    const curBoard = (kanban as any).selectedBoard ?? 'default'
-	    // 用最新 tasks 替换 cockpitTasks 中属于当前 board 的部分（按 boardSlug 过滤）
-	    const others = cockpitTasks.value.filter(t => t.boardSlug !== curBoard)
-	    const mapped = newTasks.map(t => taskAdapter.toCockpitTask(t, curBoard))
-	    cockpitTasks.value = [...others, ...mapped]
-	    // 选中任务 detail invalidate
+	  // WebSocket 联动（v12 性能收敛 2026-09-21 瘦身）：
+	  // - 跨板聚合刷新由 workspace store 单点负责（其自身 watch + overview WS），
+	  //   本 watch 不再重建 cockpitTasks / 不再调度 refreshAllBoards——旧逻辑在
+	  //   kanban.tasks 每次替换时全量换数组身份并再排一次全量刷新，与 workspace
+	  //   侧形成双通路自放大。
+	  // - 仅保留选中任务 detail 失效，且加行指纹门控：选中行关键字段（状态/标题/
+	  //   指派/优先级等）未变时跳过 getTask+log+链路 BFS 连环重拉（无关 board 事件
+	  //   不再波及选中任务详情）。
+	  watch(() => kanban.tasks, (newTasks, oldTasks) => {
 	    const id = selectedTaskId.value
-	    if (id && _detailCache.value[id]) {
-	      delete _detailCache.value[id]
-	      loadTaskDetail(id).then(() => {
-	        // loadTaskDetail 不走 selectTask → selectionSeq 不自增。
-	        // 但 cockpitTasks 中 workspace 已被 kanban.tasks 的值覆盖，
-	        // 需要通知 CockpitFilePanel 等消费者重新读取已刷新的 workspace。
-	        if (selectedTaskId.value === id) selectionSeq.value++
-	      })
-	    }
-	    // WS 事件去抖：500ms 后刷新全部 board，保证注意力条/总览实时
-	    if (_wsDebounceTimer) clearTimeout(_wsDebounceTimer)
-	    _wsDebounceTimer = setTimeout(() => { refreshAllBoards() }, 500)
+	    if (!id || !_detailCache.value[id]) return
+	    const next = newTasks.find(t => t.id === id)
+	    if (!next) return
+	    const prev = oldTasks?.find(t => t.id === id)
+	    if (prev && taskRowFingerprint(prev) === taskRowFingerprint(next)) return
+	    delete _detailCache.value[id]
+	    loadTaskDetail(id).then(() => {
+	      // loadTaskDetail 不走 selectTask → selectionSeq 不自增。
+	      // cockpitTasks 中 workspace 已被覆盖，需通知 CockpitFilePanel 等消费者
+	      // 重新读取已刷新的 workspace。
+	      if (selectedTaskId.value === id) selectionSeq.value++
+	    })
 	  })
 
   // ── 工作区/折叠/筛选 ──
@@ -1592,7 +1610,6 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	  }
 	  function stopCockpitPolling() {
 	    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = undefined }
-	    if (_wsDebounceTimer) { clearTimeout(_wsDebounceTimer); _wsDebounceTimer = undefined }
 	  }
 
   // ── 附件 ──
