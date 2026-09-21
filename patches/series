@@ -621,3 +621,7 @@
 #      假成功；todo/triage 落点由父子门禁决定，不做乐观写入改拉真值。
 334-server-kanban-status-delete-honesty.patch
 335-client-kanban-move-result-gate.patch
+
+# 336: IDE 状态栏会话遥测簇（M2 dsh-TUI 移植）——ide.metrics 命名空间 8 键
+#      （context/tps/tpsEmpty/cache/cacheEmpty/cacheRead/cacheWrite/cacheInput）。
+336-client-i18n-ide-metrics.patch
