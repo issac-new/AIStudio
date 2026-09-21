@@ -13,6 +13,7 @@ import { useIdeStore } from '../store/ide'
 import { ideAgentToChatAgent } from '../store/ide'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 
 interface PaletteItem {
   id: string
@@ -89,6 +90,15 @@ const commandItems = computed<PaletteItem[]>(() => {
       id: 'cmd:run-trace',
       labelKey: 'ide.paletteCmdRunTrace',
       run: () => { cockpitStore.openRunTrace({ sessionId: chatStore.activeSessionId }) },
+    })
+    // M3 对话式 MCP 配置（kimi /mcp-config 范式）：注入引导提示词到当前会话
+    items.push({
+      id: 'cmd:mcp-config',
+      labelKey: 'ide.paletteCmdMcpConfig',
+      run: () => {
+        void chatStore.sendMessage(buildMcpConfigPrompt({ agentId: ide.agentId }))
+        ide.setChatFocus()
+      },
     })
   }
   for (const nav of NAV_TARGETS) {

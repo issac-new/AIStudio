@@ -625,3 +625,8 @@
 # 336: IDE 状态栏会话遥测簇（M2 dsh-TUI 移植）——ide.metrics 命名空间 8 键
 #      （context/tps/tpsEmpty/cache/cacheEmpty/cacheRead/cacheWrite/cacheInput）。
 336-client-i18n-ide-metrics.patch
+
+# 339: IDE「MCP」页签 + 对话式 MCP 配置（M3 kimi /mcp-config 范式移植）——
+#      ide.sidePane.tab_mcp / ide.paletteCmdMcpConfig / ide.mcp.* 12 键。
+#      注：337/338 为并行会话在途（ia2.sit 词表），合并后顺序 336→337→338→339。
+339-client-i18n-ide-mcp.patch
