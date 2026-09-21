@@ -38,6 +38,9 @@ import { isSessionModelInvalid } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
+import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
+import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
+import { showToast } from '../utils/toast'
 
 const ide = useIdeStore()
 const chatStore = useChatStore()
@@ -49,6 +52,9 @@ const filesStore = useFilesStore()
 const toolPanelStore = useToolPanelStore()
 const cockpitStore = useCockpitStore()
 const { t } = useI18n()
+
+// R2 会话钩子：runaway-guard 失控检测 + 子代理结果反注入 + 恢复 recap
+const { recap, dismissRecap, flaggedSubagents } = useIdeSessionHooks()
 
 // ChatPanel 上下文契约（ChatPanel.vue:84）——MessageList 的 workspace 文件
 // 预览依赖此 provide，缺失会静默降级。
@@ -110,6 +116,56 @@ const showModelInvalid = computed(() => activeModelInvalid.value && !modelInvali
 function goReselectModel(): void {
   router.push({ name: 'hermes.settings' })
 }
+
+// ── R2 批准即学习（codex ApprovedForSession + minimax 五档语义）──
+// MessageList 审批按钮发 overlay:approval-decision CustomEvent；此处记忆
+// session 批准，后续匹配记忆的新审批会弹浮层提示「本次匹配记忆 <宽度>」。
+interface ApprovalDecisionDetail {
+  choice: 'once' | 'session' | 'always' | 'deny'
+  sessionId: string | null
+  toolName: string
+  command: string
+}
+const approvalMemoryHint = ref<ApprovalMemoryEntry | null>(null)
+function onApprovalDecision(evt: Event): void {
+  const detail = (evt as CustomEvent<ApprovalDecisionDetail>).detail
+  if (!detail) return
+  if (detail.choice === 'session' && detail.sessionId) {
+    recordSessionApproval(detail.sessionId, detail.toolName, detail.command)
+    showToast(t('ide.approval.learned', { width: t(`ide.approval.width.${deriveWidthLabel(detail)}`) }), 'info', 4000)
+  }
+}
+function deriveWidthLabel(detail: ApprovalDecisionDetail): string {
+  const entry = detail.command ? matchMemory(detail.sessionId ?? '', detail.toolName, detail.command) : null
+  return entry?.width ?? (detail.command ? 'byArgvPrefix2' : 'wholeTool')
+}
+// 新审批浮层出现时检查是否匹配记忆（宽度提示；auto-approve 仍交后端 session 档）
+watch(
+  () => chatStore.activePendingApproval,
+  (pending) => {
+    if (!pending) {
+      approvalMemoryHint.value = null
+      return
+    }
+    approvalMemoryHint.value = matchMemory(pending.sessionId, pending.description, pending.command)
+  },
+)
+watch(
+  () => chatStore.activeSessionId,
+  (sid, prev) => {
+    if (sid !== prev) approvalMemoryHint.value = null
+  },
+)
+onMounted(() => window.addEventListener('overlay:approval-decision', onApprovalDecision))
+onUnmounted(() => window.removeEventListener('overlay:approval-decision', onApprovalDecision))
+// 会话清空时记忆随之重置（用户在 IDE 侧新开会话 = 新信任域）
+watch(
+  () => chatStore.activeSession?.createdAt,
+  (created, prev) => {
+    const sid = chatStore.activeSessionId
+    if (sid && created && prev && created > prev) clearMemory(sid)
+  },
+)
 
 // ── M1.7 会话诊断 popover（对标 zcode debugInfo：session/trace/task id + provider）──
 const debugOpen = ref(false)
@@ -307,6 +363,26 @@ const modelDisabled = computed(() => true)
       <button type="button" class="ide-chat__model-invalid-dismiss" :aria-label="t('ide.modelInvalid.dismiss')" @click="modelInvalidDismissed = true">✕</button>
     </div>
 
+    <!-- R2 会话恢复 recap（claude-code 2.1.108 语义：切回旧会话给“上次谈到哪”） -->
+    <div v-if="recap" class="ide-chat__recap" data-testid="ide-session-recap">
+      <span class="ide-chat__recap-kicker">{{ t('ide.recap.title') }}</span>
+      <span class="ide-chat__recap-last">{{ recap.lastUserText }}</span>
+      <span v-if="recap.items.length" class="ide-chat__recap-items" :title="recap.items.join('\n')">
+        {{ recap.items.slice(0, 3).join(' · ') }}
+      </span>
+      <button type="button" class="ide-chat__recap-dismiss" data-testid="ide-recap-dismiss" :aria-label="t('ide.recap.dismiss')" @click="dismissRecap">✕</button>
+    </div>
+
+    <!-- R2 子代理反注入：任一子代理命中注入指纹时的会话级提示条 -->
+    <div v-if="flaggedSubagents.size > 0" class="ide-chat__injection" data-testid="ide-injection-banner">
+      <span>{{ t('ide.injection.banner', { count: flaggedSubagents.size }) }}</span>
+    </div>
+
+    <!-- R2 批准即学习：新审批匹配本会话记忆时的宽度提示条 -->
+    <div v-if="approvalMemoryHint" class="ide-chat__approval-hint" data-testid="ide-approval-memory-hint">
+      <span>{{ t('ide.approval.memoryHint', { width: t(`ide.approval.width.${approvalMemoryHint.width}`) }) }}</span>
+    </div>
+
     <div class="ide-chat__runline" data-testid="ide-chat-runline">
       <template v-if="running">
         <span class="ide-chat__runline-time">{{ t('ide.working') }} {{ runElapsed }}</span>
@@ -381,6 +457,74 @@ const modelDisabled = computed(() => true)
   padding: 2px 12px;
   font-size: 12px;
   color: var(--text-muted, #9aa0aa);
+}
+
+/* R2：recap 横幅（恢复会话回笼摘要） */
+.ide-chat__recap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  background: color-mix(in srgb, #61afef 10%, transparent);
+  color: var(--text-secondary, #b0b5be);
+}
+
+.ide-chat__recap-kicker {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #61afef;
+}
+
+.ide-chat__recap-last {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ide-chat__recap-items {
+  margin-left: auto;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 11px;
+}
+
+.ide-chat__recap-dismiss {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted, #9aa0aa);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+
+  &:hover { color: var(--text-primary, #d7dae0); }
+}
+
+/* R2：子代理结果反注入提示条 */
+.ide-chat__injection {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #f0a44c;
+  background: rgba(240, 164, 76, 0.1);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+/* R2：批准即学习记忆命中提示条 */
+.ide-chat__approval-hint {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: #61afef;
+  background: rgba(97, 175, 239, 0.08);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .ide-chat__runline-done {
