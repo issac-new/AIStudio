@@ -38,6 +38,7 @@ import { isSessionModelInvalid } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
+import IdeRunResultCard from './IdeRunResultCard.vue'
 import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
@@ -391,6 +392,9 @@ const modelDisabled = computed(() => true)
         <span class="ide-chat__runline-done">✓ {{ lastCompletedSummary }}</span>
       </template>
     </div>
+
+    <!-- R3 轮结果卡（时长 + 验证 bullet + per-turn 文件变更） -->
+    <IdeRunResultCard />
 
     <div class="ide-chat__body">
       <MessageList
