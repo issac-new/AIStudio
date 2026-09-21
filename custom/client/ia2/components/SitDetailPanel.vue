@@ -200,7 +200,9 @@ const onlineCount = computed(() => {
 })
 
 function statusLabel(status: string): string {
-  return t(`ia2.board.status.${status}`, status)
+  // v12.7：状态词与 tdp/态势条共用 ia2.tdp.status.*（原 ia2.board.status.* 键
+  // 在词表中不存在——裸键渲染存量缺陷，本轮回修）
+  return t(`ia2.tdp.status.${status}`, status)
 }
 
 function onKeydown(event: KeyboardEvent): void {
