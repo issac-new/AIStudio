@@ -8,7 +8,13 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 const { push } = vi.hoisted(() => ({ push: vi.fn() }))
-vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }))
+// 模块链含 upstream router/index.ts（createRouter + beforeEach 链）→ mock 补全
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push }),
+  useRoute: () => ({ query: {} }),
+  createRouter: () => ({ push, install: () => {}, beforeEach: () => {}, afterEach: () => {} }),
+  createWebHashHistory: () => ({}),
+}))
 
 // ── chat store：当前会话消息（含两代任务计划）+ 三条子代理流（两条属当前会话）──
 // vi.mock 工厂被提升执行，数据须经 vi.hoisted 才能在工厂内引用

@@ -660,3 +660,7 @@
 
 # 346: IDE R5 i18n——ide.worktree/goal + wiki.pipeline 三块 9 键（zh/en）。
 346-client-i18n-ide-r5.patch
+
+# 347: IDE 会话三段视图（进行中/已完成/工作空间）i18n——ide.task.view_active/
+#      view_done/view_workspace/views 4 键（zh/en）。
+347-client-i18n-ide-session-views.patch

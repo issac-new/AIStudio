@@ -53,6 +53,14 @@ describe('ide store（workspace/agent/布局持久化）', () => {
     expect(localStorage.getItem('hermes_ide_dim')).toBe('project')
   })
 
+  it('旧偏好（仅 organize）加载回填 sessionView=active', () => {
+    localStorage.setItem('hermes_ide_sidebar', JSON.stringify({ organize: 'grouped' }))
+    setActivePinia(createPinia())
+    const ide = useIdeStore()
+    expect(ide.sidebar.organize).toBe('grouped')
+    expect(ide.sidebar.sessionView).toBe('active')
+  })
+
   it('侧栏组织模式持久化：organize 往返（view 字段已退役）', () => {
     const ide = useIdeStore()
     expect(ide.sidebar.organize).toBe('project')
@@ -61,6 +69,15 @@ describe('ide store（workspace/agent/布局持久化）', () => {
     const second = useIdeStore()
     expect(second.sidebar.organize).toBe('timeline')
     expect('view' in second.sidebar).toBe(false)
+  })
+
+  it('三段视图 sessionView 持久化：active→done 往返', () => {
+    const ide = useIdeStore()
+    expect(ide.sidebar.sessionView).toBe('active')
+    ide.setSessionView('done')
+    setActivePinia(createPinia())
+    const second = useIdeStore()
+    expect(second.sidebar.sessionView).toBe('done')
   })
 
   it('setWorkspace 持久化：设置/清空往返', () => {
