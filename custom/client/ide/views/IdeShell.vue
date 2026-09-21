@@ -25,7 +25,6 @@ import IdeChatPane from './IdeChatPane.vue'
 import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
-import IdeDimsBar from '../components/IdeDimsBar.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 
@@ -87,22 +86,20 @@ onUnmounted(() => {
 
 <template>
   <div class="ide-shell">
-    <!-- v12.1 全局顶区常驻双视图（用户裁定）：页头+注意力条+右上角视图切换器 -->
+    <!-- v12.1 全局顶区常驻双视图；v12.6 维度条（工作空间行）退役——与三栏
+         功能重叠（任务/会话在侧栏与会话列直达，辅助面板页签自持） -->
     <IaGlobalTop @notify="cockpitStore.openNotify()" />
-    <IdeDimsBar />
     <IdeTaskContextBar />
     <div class="ide-shell__main" :class="mainClass">
       <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }">
         <div v-if="ide.layout.sidebar.folded" class="ide-shell__fold-handle" data-testid="ide-fold-sidebar" :title="t('ide.pane.expand')" @click="ide.toggleFold('sidebar')">
           <span class="ide-shell__fold-label">›</span>
         </div>
-        <div v-else class="ide-shell__col">
-          <div class="ide-shell__colbar">
-            <IaColumnControls
-              testid="ide-col-sidebar" fold="left" show-max :maximized="ide.layout.sidebar.maximized"
-              @fold="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
-            />
-          </div>
+        <div v-else class="ide-shell__col ide-shell__col--sidebar">
+          <IaColumnControls
+            class="ide-shell__colctl" testid="ide-col-sidebar" fold="left" show-max :maximized="ide.layout.sidebar.maximized"
+            @fold="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
+          />
           <IdeTaskSidebar class="ide-shell__colbody" />
         </div>
       </aside>
@@ -110,17 +107,21 @@ onUnmounted(() => {
         <div v-if="ide.layout.chat.folded" class="ide-shell__fold-handle ide-shell__fold-handle--v" data-testid="ide-fold-chat" :title="t('ide.pane.expand')" @click="ide.toggleFold('chat')">
           <span class="ide-shell__fold-label">›</span>
         </div>
-        <div v-else class="ide-shell__col">
-          <div class="ide-shell__colbar">
-            <IaColumnControls
-              testid="ide-col-chat" fold="left" show-max :maximized="ide.layout.chat.maximized" show-popout
-              @fold="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
-            />
-          </div>
+        <div v-else class="ide-shell__col ide-shell__col--chat">
+          <IaColumnControls
+            class="ide-shell__colctl" testid="ide-col-chat" fold="left" show-max :maximized="ide.layout.chat.maximized" show-popout
+            @fold="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
+          />
           <IdeChatPane class="ide-shell__colbody" />
         </div>
       </div>
       <IdeSidePane v-show="sidepaneShown" :class="{ 'is-max': ide.layout.sidepane.maximized }" />
+      <!-- v12.6：侧板收起态右缘导轨（侧栏 footer 功能行退役后的重开入口） -->
+      <div v-if="!ide.sidePane.open && !anyMax" class="ide-shell__pane-rail" data-testid="ide-sidepane-rail">
+        <button type="button" class="ide-shell__rail-btn" data-testid="ide-sidepane-open"
+          :title="t('ide.sidePane.togglePanel')" @click="ide.sidePane.open = true"
+        >◀</button>
+      </div>
     </div>
     <IdeStatusBar />
     <CockpitRunTraceModal />
@@ -169,14 +170,26 @@ onUnmounted(() => {
 
 .ide-shell__fold-label { font-size: 11px; user-select: none; }
 
-/* v12.4 栏控迁各栏顶部控制条（右侧，IaColumnControls；竖排工具条退役） */
-.ide-shell__col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.ide-shell__colbar {
-  flex-shrink: 0; height: 24px; display: flex; align-items: center; justify-content: flex-end;
-  padding: 0 4px; background: var(--bg-primary, #14161a);
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+/* v12.6 栏控叠放各栏右上角（绝对定位不占行；面板首行右侧元素让位） */
+.ide-shell__col { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+.ide-shell__colctl {
+  position: absolute; top: 5px; right: 4px; z-index: 5;
+  background: var(--bg-primary, #14161a); border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px; padding: 1px 2px;
 }
+.ide-shell__col--sidebar :deep(.ide-taskbar__actions) { padding-right: 64px; }
+.ide-shell__col--chat :deep(.ide-chat__actions) { margin-right: 58px; }
 .ide-shell__colbody { flex: 1; min-height: 0; }
+.ide-shell__pane-rail {
+  flex-shrink: 0; width: 18px; display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 4px;
+}
+.ide-shell__rail-btn {
+  width: 16px; height: 40px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px;
+  background: var(--bg-primary, #14161a); color: var(--text-muted, #9aa0aa); cursor: pointer;
+  font-size: 10px; line-height: 1; padding: 0;
+  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
+}
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
 .ide-shell__main.has-max-chat .ide-shell__chat { flex: 1; }

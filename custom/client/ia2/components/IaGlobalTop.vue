@@ -6,7 +6,7 @@
      点击条目跳对象，尾部 ⚙管理常驻（空态不消失，条即管理入口）；
      计数随 useNowTick 30s 刷新（经 useSitCounts 共享时钟）。 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useWorkspaceStore } from '../store/workspace'
@@ -23,6 +23,9 @@ useSharedArm()
 const cockpit = useCockpitStore()
 const workspace = useWorkspaceStore()
 const { waitItems, loopRows } = useSitCounts()
+
+/** v12.6：注意力条关闭态（会话内隐藏，刷新恢复——不落盘防"找不回"） */
+const attnClosed = ref(false)
 
 /** 注意力梯队（mergeAttention 单一排序：blocked → review → triage）：
  *  blocked 任务（跨板聚合）+ blocked 循环 + 等我（review 任务/中断运行/fleet）。 */
@@ -71,9 +74,11 @@ function onOpenBoard(): void {
   <div class="ia-gtop" data-testid="ia-global-top">
     <IaShellHeader :user-name="cockpit.currentUserName" />
     <AttentionStrip
+      v-if="!attnClosed"
       :items="attentionRows"
       @select="onAttentionSelect"
       @open-board="onOpenBoard"
+      @close="attnClosed = true"
     />
   </div>
 </template>

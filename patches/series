@@ -605,3 +605,10 @@
 
 # 331: 驾驶舱 v12.4 i18n en——330 同键英文侧（zh/en 成对，编号相邻）。
 331-client-i18n-ia2-v12-4-en.patch
+
+# 332: 驾驶舱 v12.5 i18n zh——sit.panelBoards/onlineSearchPh/taskJumpHint（在线级联
+#      检索与任务跳转提示）、kanban.board.filterLabel/filterAll（板多选筛选条）。
+332-client-i18n-ia2-v12-5-zh.patch
+
+# 333: 驾驶舱 v12.5 i18n en——332 同键英文侧（zh/en 成对，编号相邻）。
+333-client-i18n-ia2-v12-5-en.patch

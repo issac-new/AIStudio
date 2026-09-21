@@ -1,0 +1,28 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -936,6 +936,8 @@
+       panelClose: '关闭', empty: '暂无内容',
+       actApprove: '批准', actReject: '打回', actContinue: '继续', actGoReview: '进评审',
+       panelPeople: '人', panelAgents: '智能体', panelMachines: '机器', openManage: '打开管理台',
++      panelBoards: '板', onlineSearchPh: '检索账号 / 机器 / 看板 / profile',
++      taskJumpHint: '点击跳转：关联聊天会话 / 编码任务工作空间',
+     },
+     gov: {
+       title: '管理', back: '返回',
+@@ -2585,6 +2587,7 @@
+    archiveFailed: '归档看板失败',
+    color: '颜色',
+    colorPlaceholder: '#3b82f6',
++   filterLabel: '看板', filterAll: '全部',
+    createFailed: '创建看板失败',
+    description: '描述',
+    icon: '图标',
+@@ -2744,6 +2747,7 @@
+       taskDeleted: '任务已删除',
+       taskMoved: '任务已移动',
+       taskUpdated: '任务已更新',
++      aggregateCreateHint: '勾选唯一看板后可就地新建任务',
+       updateFailed: '任务更新失败',
+    attachmentDeleted: '附件已删除',
+    attachmentUploaded: '附件已上传',

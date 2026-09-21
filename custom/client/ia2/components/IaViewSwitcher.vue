@@ -32,18 +32,19 @@ function toggleView(): void {
 </template>
 
 <style scoped lang="scss">
-/* v12.4：单按钮切换（用户裁定：双视图两按钮合并为一个切换态），随页头行高走 */
+/* v12.5：色彩风格对齐全局（与 IaLocaleToggle/页头按钮同款幽灵描边——
+ * v12.4 首版实心主色底与页头整体风格不统一，用户裁定收敛） */
 .ia-vsrow {
   display: inline-flex; align-items: center; flex-shrink: 0; margin-left: 4px;
 }
 .ia-scenes {
   display: flex; border: 1px solid var(--border-color);
-  border-radius: var(--radius, 6px); background: var(--bg-card); padding: 2px;
+  border-radius: var(--radius, 6px); background: transparent; padding: 0;
 }
 .ia-scenes__btn {
-  padding: 3px 12px; border: none; border-radius: 4px; cursor: pointer;
-  background: var(--primary, #3b82f6); color: #fff;
-  font-size: 12px; font-family: inherit; white-space: nowrap;
-  &:hover { opacity: 0.88; }
+  padding: 2px 10px; border: none; border-radius: 5px; cursor: pointer;
+  background: transparent; color: var(--text-muted);
+  font-size: 12px; font-family: inherit; white-space: nowrap; height: 20px;
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
 </style>

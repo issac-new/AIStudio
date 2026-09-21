@@ -284,24 +284,20 @@ function onNewLoop(): void {
     :class="{ 'wb--lf': flow.layout.leftFolded, 'wb--rf': flow.layout.rightFolded }"
     data-testid="wb-root"
   >
-    <!-- 左栏：折叠态 18px 导轨（▶ 展开），展开态顶部控制条右端 ◀ 折叠 -->
+    <!-- 左栏：折叠态 18px 导轨（▶ 展开）；栏控叠放栏内右上角（v12.6 不占行） -->
     <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
-      <div class="wb__colbar">
-        <IaColumnControls testid="ia-col-left" fold="left" @fold="flow.toggleFold('left')" />
-      </div>
-      <div class="wb__colbody">
-        <FlowNavPanel
-          :sessions="sessionRows"
-          :loops="loopRows"
-          :selection="activeSel"
-          @select="onSelect"
-          @create-room="onCreateRoom"
-          @new-loop="onNewLoop"
-          @open-gov="flow.openGov()"
-          @open-task="onNavOpenTask"
-          @jump-ide="onNavJumpIde"
-        />
-      </div>
+      <IaColumnControls class="wb__colctl" testid="ia-col-left" fold="left" @fold="flow.toggleFold('left')" />
+      <FlowNavPanel
+        :sessions="sessionRows"
+        :loops="loopRows"
+        :selection="activeSel"
+        @select="onSelect"
+        @create-room="onCreateRoom"
+        @new-loop="onNewLoop"
+        @open-gov="flow.openGov()"
+        @open-task="onNavOpenTask"
+        @jump-ide="onNavJumpIde"
+      />
     </aside>
     <div v-else class="wb__rail" data-testid="wb-rail-left">
       <button type="button" class="wb__rail-btn" data-testid="wb-unfold-left"
@@ -309,68 +305,60 @@ function onNewLoop(): void {
       >▶</button>
     </div>
     <section class="wb__center" data-testid="wb-center">
-      <div class="wb__colbar wb__colbar--center">
-        <IaColumnControls
-          testid="ia-col-center" show-max :maximized="flow.centerMaximized" show-popout
-          @max="flow.toggleCenterMax()" @popout="onPopout"
-        />
-      </div>
-      <div class="wb__colbody">
-        <SessionCanvas
-          v-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
-          :key="`${activeSel.kind}:${activeSel.id}`"
-          :kind="activeSel.kind"
-          :object-name="selectedSessionRow.name"
-          :linked-tasks="linkedTasks"
-          :gate-title="gateTitle"
-          :participants="participants"
-          :duty-name="selectedSessionRow.dutyName"
-          @open-task="onCanvasOpenTask"
-          @open-timeline="onAllTimeline"
-          @open-ide="onOpenIde"
-          @invite="onCanvasInvite"
-        />
-        <RunCanvas
-          v-else-if="activeSel?.kind === 'loop' && loopStore.currentLoop"
-          :key="`loop:${activeSel.id}`"
-          :loop="loopStore.currentLoop"
-          :loop-row="loopRows.find(l => l.id === activeSel.id) ?? { kind: 'loop', id: activeSel.id, name: loopStore.currentLoop.name, stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null }"
-          :linked-tasks="linkedTasks"
-          :latest-run-id="loopLatestRunId"
-          :live-connected="loopLiveConnected"
-          :participants="loopParticipants"
-          @open-task="onCanvasOpenTask"
-          @open-timeline="onAllTimeline"
-          @open-ide="onOpenIde"
-          @reassign="onReassign"
-          @handle-task="onHandleTask"
-          @goto-board="onGotoBoard"
-        />
-        <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
-      </div>
+      <IaColumnControls
+        class="wb__colctl" testid="ia-col-center" show-max :maximized="flow.centerMaximized" show-popout
+        @max="flow.toggleCenterMax()" @popout="onPopout"
+      />
+      <SessionCanvas
+        v-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
+        :key="`${activeSel.kind}:${activeSel.id}`"
+        :kind="activeSel.kind"
+        :object-name="selectedSessionRow.name"
+        :linked-tasks="linkedTasks"
+        :gate-title="gateTitle"
+        :participants="participants"
+        :duty-name="selectedSessionRow.dutyName"
+        @open-task="onCanvasOpenTask"
+        @open-timeline="onAllTimeline"
+        @open-ide="onOpenIde"
+        @invite="onCanvasInvite"
+      />
+      <RunCanvas
+        v-else-if="activeSel?.kind === 'loop' && loopStore.currentLoop"
+        :key="`loop:${activeSel.id}`"
+        :loop="loopStore.currentLoop"
+        :loop-row="loopRows.find(l => l.id === activeSel.id) ?? { kind: 'loop', id: activeSel.id, name: loopStore.currentLoop.name, stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null }"
+        :linked-tasks="linkedTasks"
+        :latest-run-id="loopLatestRunId"
+        :live-connected="loopLiveConnected"
+        :participants="loopParticipants"
+        @open-task="onCanvasOpenTask"
+        @open-timeline="onAllTimeline"
+        @open-ide="onOpenIde"
+        @reassign="onReassign"
+        @handle-task="onHandleTask"
+        @goto-board="onGotoBoard"
+      />
+      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
-    <!-- 右栏：折叠态 18px 导轨（◀ 展开），展开态顶部控制条右端 ▶ 折叠 -->
+    <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控叠放栏内右上角 -->
     <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
-      <div class="wb__colbar">
-        <IaColumnControls testid="ia-col-right" fold="right" @fold="flow.toggleFold('right')" />
-      </div>
-      <div class="wb__colbody">
-        <TaskDecisionPanel
-          :wait-items="waitItems"
-          :linked-tasks="linkedTasks"
-          :feed-rows="feedRows"
-          :linked-context="linkedContext"
-          @approve-task="approveTask"
-          @reject-task="rejectTask"
-          @approve-run="approveRun"
-          @approve-fleet="approveFleet"
-          @reassign="onReassign"
-          @open-ide="onOpenIde"
-          @handle-task="onHandleTask"
-          @new-task="onNewTask"
-          @all-timeline="onAllTimeline"
-        />
-      </div>
+      <IaColumnControls class="wb__colctl" testid="ia-col-right" fold="right" @fold="flow.toggleFold('right')" />
+      <TaskDecisionPanel
+        :wait-items="waitItems"
+        :linked-tasks="linkedTasks"
+        :feed-rows="feedRows"
+        :linked-context="linkedContext"
+        @approve-task="approveTask"
+        @reject-task="rejectTask"
+        @approve-run="approveRun"
+        @approve-fleet="approveFleet"
+        @reassign="onReassign"
+        @open-ide="onOpenIde"
+        @handle-task="onHandleTask"
+        @new-task="onNewTask"
+        @all-timeline="onAllTimeline"
+      />
     </aside>
     <div v-else class="wb__rail" data-testid="wb-rail-right">
       <button type="button" class="wb__rail-btn" data-testid="wb-unfold-right"
@@ -384,8 +372,8 @@ function onNewLoop(): void {
 
 <style scoped lang="scss">
 /* v12 三栏铁律：250 | 自适应(≥320) | 240，永不换列不堆叠（窄屏由外层整体缩放）。
- * v12.4 栏控迁各栏顶部控制条（IaColumnControls，折叠=18px 导轨就地展开）；
- * 中栏最大化 = 两侧齐折（flow.centerMaximized 派生态），中栏控制条驱动。 */
+ * v12.6 栏控叠放各栏右上角（绝对定位不占行；面板首行右对齐元素让位 62px）；
+ * 折叠态 18px 导轨就地展开；中栏最大化 = 两侧齐折（flow.centerMaximized）。 */
 .wb {
   height: 100%; min-height: 0; min-width: 0;
   display: grid;
@@ -395,12 +383,19 @@ function onNewLoop(): void {
 .wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 240px; }
 .wb--rf { grid-template-columns: 250px minmax(320px, 1fr) 18px; }
 .wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
-.wb__left, .wb__right, .wb__center { min-height: 0; display: flex; flex-direction: column; }
-.wb__colbar {
-  flex-shrink: 0; height: 24px; display: flex; align-items: center; justify-content: flex-end;
-  padding: 0 4px;
+.wb__left, .wb__right, .wb__center { min-height: 0; position: relative; }
+.wb__colctl {
+  position: absolute; top: 4px; right: 4px; z-index: 5;
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: 6px; padding: 1px 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
-.wb__colbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* 首行右对齐元素让位（栏控宽约 60px；悬停层不遮可点元素） */
+.wb__center :deep(.swp__block--acts) { margin-right: 64px; }
+.wb__center :deep(.chain) { padding-right: 64px; }
+.wb__center :deep(.rc__viewbar) { padding-right: 64px; }
+.wb__left :deep(.flow-nav__head) { padding-right: 58px; }
+.wb__right :deep(.tdp__head) { padding-right: 58px; }
 .wb__rail {
   display: flex; align-items: flex-start; justify-content: center;
   padding-top: 4px; cursor: default;

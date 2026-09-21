@@ -199,13 +199,15 @@ describe('IdeTaskSidebar', () => {
     expect(w.find('[data-testid="ide-task-archived-arch-1"]').exists()).toBe(false)
   })
 
-  it('底部保留 ⇄ 驾驶舱入口（ide-nav-cockpit testid 延续）', async () => {
+  it('v12.6 侧栏 footer 两行退役：无驾驶舱入口与功能行（重开侧板走壳层右缘导轨）', async () => {
     const w = mountSidebar()
     await flushPromises()
-    expect(w.find('[data-testid="ide-nav-cockpit"]').exists()).toBe(true)
+    expect(w.find('footer.ide-taskbar__foot').exists()).toBe(false)
+    expect(w.find('[data-testid="ide-nav-cockpit"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ide-feat-files"]').exists()).toBe(false)
   })
 
-  it('查看文件已右移右侧辅助栏：侧栏无文件视图与双页签，footer 按钮开 files 页签', async () => {
+  it('查看文件已右移右侧辅助栏：侧栏固定任务视图（无文件视图/双页签/FileTree）', async () => {
     const w = mountSidebar()
     await flushPromises()
     // 侧栏固定任务视图：无 view tabs、无 FileTree
@@ -213,12 +215,6 @@ describe('IdeTaskSidebar', () => {
     expect(w.find('[data-testid="ide-task-view-tasks"]').exists()).toBe(false)
     expect(w.find('[data-testid="stub-filetree"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-task-pinned"]').exists()).toBe(true)
-    // footer 查看文件按钮 → sidePane files 页签
-    expect(w.find('[data-testid="ide-feat-files"]').exists()).toBe(true)
-    await w.find('[data-testid="ide-feat-files"]').trigger('click')
-    const ide = useIdeStore()
-    expect(ide.sidePane.open).toBe(true)
-    expect(ide.sidePane.tab).toBe('files')
   })
 
   it('时间线按任务优先级降序 → 更新时间逆序；关联会话显 P0-P3 徽标', async () => {
@@ -276,16 +272,6 @@ describe('IdeTaskSidebar', () => {
     await vm.createGroup()
     expect(createSessionCategory).toHaveBeenCalledWith('新分组')
     expect(vm.categories.some((c: any) => c.id === 9)).toBe(true)
-  })
-
-  it('feature 条含终端入口（点击开 sidePane 终端页签）', async () => {
-    const w = mountSidebar()
-    await flushPromises()
-    expect(w.find('[data-testid="ide-feat-terminal"]').exists()).toBe(true)
-    await w.find('[data-testid="ide-feat-terminal"]').trigger('click')
-    const ide = useIdeStore()
-    expect(ide.sidePane.open).toBe(true)
-    expect(ide.sidePane.tab).toBe('terminal')
   })
 
   it('归档区批量删除：确认后调 batchDeleteSessions 并清空列表（zcode taskList.deleteAllArchived 对齐）', async () => {
