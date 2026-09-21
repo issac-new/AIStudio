@@ -664,3 +664,7 @@
 # 347: IDE 会话三段视图（进行中/已完成/工作空间）i18n——ide.task.view_active/
 #      view_done/view_workspace/views 4 键（zh/en）。
 347-client-i18n-ide-session-views.patch
+
+# 350: 沟通协作 v13 协作感知轮——locales 增键（act/att/sem 词表：活动脉冲
+#      tooltip/需关注节副文/语义块七类 + 耗时徽章 + 全部过滤）。
+350-client-i18n-comm-v13.patch

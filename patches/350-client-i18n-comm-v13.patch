@@ -1,0 +1,44 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1071,6 +1071,18 @@
+       stepBack: '后退一步（k）', stepForward: '前进一步（j）', play: '播放/暂停',
+       eventCount: '事件 {n}/{total} · j/k 步进',
+       noEvents: '暂无事件', export: '导出归档', roleExec: '执行',
++      elapsed: '已运行耗时', semAll: '全部',
++      sem: {
++        lifecycle: '生命周期', step: '步进', node: '节点', interrupt: '介入',
++        stage: '阶段', cost: '成本', other: '其他',
++      },
++    },
++    act: {
++      running: '运行中 {n} 个',
++    },
++    att: {
++      title: '需关注', subTaskBlocked: '任务受阻', subRunFailed: '运行失败',
++      subLoopStuck: '循环停滞', empty: '暂无需要关注的事项',
+     },
+     sit: {
+       waiting: '等我', waitingTitle: '等我队列（右栏就地验收/打回）', oldest: '最久',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1073,6 +1073,18 @@
+       stepBack: 'Step back (k)', stepForward: 'Step forward (j)', play: 'Play/Pause',
+       eventCount: 'Event {n}/{total} · j/k step',
+       noEvents: 'No events', export: 'Export archive', roleExec: 'executing',
++      elapsed: 'Elapsed', semAll: 'All',
++      sem: {
++        lifecycle: 'Lifecycle', step: 'Step', node: 'Node', interrupt: 'Interrupt',
++        stage: 'Stage', cost: 'Cost', other: 'Other',
++      },
++    },
++    act: {
++      running: '{n} running',
++    },
++    att: {
++      title: 'Attention', subTaskBlocked: 'Task blocked', subRunFailed: 'Run failed',
++      subLoopStuck: 'Loop stuck', empty: 'Nothing needs attention',
+     },
+     sit: {
+       waiting: 'Waiting', waitingTitle: 'Waiting queue (approve/reject in right panel)', oldest: 'oldest',

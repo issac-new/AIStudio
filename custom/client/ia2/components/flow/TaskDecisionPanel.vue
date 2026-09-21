@@ -2,14 +2,19 @@
 <!-- v12 右栏 · 任务与决策（2026-09-19 统一视图）：恒驻不随中栏选择消失。
      三节：等我（就地验收/打回/确认——动线④决策）· 挂接任务（改派/⌨/去处理）
      · 任务动态（混合事件流）。栏底 🕘 全部时间线。纯展示组件：数据经 props，
-     动作经 emits，装配与真实 API 接线在 WorkbenchView。 -->
+     动作经 emits，装配与真实 API 接线在 WorkbenchView。
+     v13（2026-09-21 协作感知轮）：「等我」与「挂接任务」之间插入「需关注」
+     节（multica 收件箱 severity 三档的 attention 档）——受阻任务/失败运行/
+     停滞循环：不需点击但要人过目；行点击路由分派在 WorkbenchView。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DecisionRow } from '../../composables/useDecisionRows'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import type { FeedRow } from '../../adapters/flow'
+import type { AttentionRow } from '../../adapters/activity'
 import WaitQueue from './WaitQueue.vue'
+import AttentionList from './AttentionList.vue'
 import LinkedTaskList from './LinkedTaskList.vue'
 import TaskFeed from './TaskFeed.vue'
 
@@ -17,6 +22,8 @@ const props = defineProps<{
   waitItems: DecisionRow[]
   linkedTasks: CockpitTask[]
   feedRows: FeedRow[]
+  /** 需关注行（v13 attention 档；缺省为空——面板行为向后兼容） */
+  attentionRows?: AttentionRow[]
   /** 挂接任务节头副注（当前对象名，如 release-pipeline / 应急指挥中心） */
   linkedContext?: string
 }>()
@@ -31,6 +38,7 @@ const emit = defineEmits<{
   (e: 'handle-task', taskId: string): void
   (e: 'new-task'): void
   (e: 'all-timeline'): void
+  (e: 'open-attention', row: AttentionRow): void
 }>()
 
 const { t } = useI18n()
@@ -65,6 +73,15 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
           @approve-run="item => emit('approve-run', item)"
           @approve-fleet="item => emit('approve-fleet', item)"
         />
+      </section>
+
+      <section class="tdp__sec">
+        <div class="tdp__sec-head">
+          <span>
+            {{ t('ia2.att.title') }}<span v-if="attentionRows?.length" class="tdp__n tdp__n--warn">{{ attentionRows.length }}</span>
+          </span>
+        </div>
+        <AttentionList :rows="attentionRows ?? []" @open="row => emit('open-attention', row)" />
       </section>
 
       <section class="tdp__sec">
@@ -118,6 +135,7 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
   border-radius: 8px; background: var(--error); color: #fff;
   font-size: 9px; font-weight: 700; text-transform: none;
 }
+.tdp__n--warn { background: var(--warning); }
 .tdp__link { border: none; background: none; color: var(--text-muted); font-size: 10px; cursor: pointer; &:hover { color: var(--primary); } }
 .tdp__foot {
   display: flex; align-items: center; padding: 8px 12px;

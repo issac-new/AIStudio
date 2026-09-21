@@ -4,16 +4,22 @@
      v12.3 R4a（2026-09-20 用户裁定）：会话区按类型聚类三小节（房间/群聊/会话，
      群聊随 R4b 三聊天合一入列）；📋N 挂接徽章点击就地展开任务簇（任务 chip
      点击→看板预选）；行双击 → IDE 工作台编码动线（携带首个挂接任务，动线⑤）。
-     单击语义不变：选中即换中栏（唯一导航轴，无透镜无二级导航）。 -->
+     单击语义不变：选中即换中栏（唯一导航轴，无透镜无二级导航）。
+     v13（2026-09-21 协作感知轮）：循环行加运行中活动脉冲（multica「agent 活动
+     指示器」的循环面投影）——loopActivity[loopId].running>0 时行右上 ●N 呼吸点，
+     title 提示运行数；awaiting 档已有 awaitingYou 表达，不重复投影。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { filterStreams, LOOP_STAGE_ORDER, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type StreamSelection } from '../../adapters/flow'
+import type { LoopActivity } from '../../adapters/activity'
 
 const props = defineProps<{
   sessions: FlowSessionRow[]
   loops: FlowLoopRow[]
   selection: StreamSelection | null
+  /** 循环活动索引（v13：runs 聚合的运行中/待确认计数；可选向后兼容） */
+  loopActivity?: Record<string, LoopActivity>
 }>()
 
 const emit = defineEmits<{
@@ -52,6 +58,11 @@ const sessionClusters = computed(() => ({
 
 function toggleCluster(rowKey: string): void {
   openCluster.value = openCluster.value === rowKey ? null : rowKey
+}
+
+/** 循环行活动摘要（v13：无索引/无计数时返回 null，行不渲染脉冲） */
+function activityOf(l: FlowLoopRow): LoopActivity | null {
+  return props.loopActivity?.[l.id] ?? null
 }
 
 /** 阶段进度条分段调：已完成绿 / 当前调（run蓝·err红） / 未至灰 */
@@ -156,6 +167,11 @@ function submitCreateRoom(): void {
         >
           <div class="flow-nav__loop-top">
             <span class="flow-nav__name">{{ l.name }}</span>
+            <span
+              v-if="activityOf(l)?.running"
+              class="flow-nav__pulse" :data-testid="`flow-pulse-${l.id}`"
+              :title="t('ia2.act.running', { n: activityOf(l)!.running })"
+            >●{{ activityOf(l)!.running }}</span>
             <span class="flow-nav__pct">{{ l.progressPct }}%</span>
           </div>
           <div class="flow-nav__stagebar">
@@ -276,6 +292,18 @@ function submitCreateRoom(): void {
 .flow-nav__row--on.flow-nav__loop { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
 .flow-nav__loop--err { border-color: rgba(198, 40, 40, .45); }
 .flow-nav__loop-top { display: flex; align-items: center; gap: 6px; }
+/* v13 运行脉冲：呼吸动画的存在感点（仅 running>0 渲染） */
+.flow-nav__pulse {
+  flex-shrink: 0; padding: 0 5px; height: 15px; border-radius: 8px;
+  background: rgba(34, 197, 94, .12); color: var(--success);
+  font-size: 9px; font-weight: 700; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; gap: 2px;
+  animation: flow-nav-breath 2s ease-in-out infinite;
+}
+@keyframes flow-nav-breath {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}
 .flow-nav__pct { flex-shrink: 0; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .flow-nav__stagebar { display: flex; gap: 2px; margin: 5px 0 4px; }
 .flow-nav__seg { flex: 1; height: 3px; border-radius: 2px; background: var(--border-color); }

@@ -2,7 +2,11 @@
 <!-- v12 中栏 · 对象工作区之循环面（2026-09-19 统一视图）：链路条 + 视图条
      （●实时 / 🕘历史·回放 / ▦看板→/app/board）+ LIVE 徽章。
      实时 = 阶段流 + 最新 run 迷你图（RunGraphCanvas，无 run 时阶段卡占位）+
-     挂接任务 + 参与方；历史 = 回放条（j/k 步进）+ 事件编年 + 导出归档。 -->
+     挂接任务 + 参与方；历史 = 回放条（j/k 步进）+ 事件编年 + 导出归档。
+     v13（2026-09-21 协作感知轮）：① 实时视图加运行耗时徽章（multica 执行日志
+     的每秒计时器；30s 共享时钟 useNowTick，不新增 interval）；② 历史编年按
+     语义类着色 + 过滤 chips + 语义分布条（routa 语义块时间线的图词汇对位，
+     分类器单一实现在 adapters/activity.ts classifyRunEvent）。 -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,6 +15,9 @@ import type { LoopInstance } from '@/custom/loop/types'
 import { runRest } from '@/custom/loop/runcenter/api'
 import { useRunReplay } from '@/custom/loop/runcenter/composables/useRunReplay'
 import { buildRunGraph, projectEvents, type ReplayEventLike } from '@/custom/loop/runcenter/adapters/run-graph'
+import { classifyRunEvent, semanticCounts, SEMANTIC_ORDER, type SemanticKind } from '../../adapters/activity'
+import { formatWaitAge } from '../../adapters/waiting'
+import { useNowTick } from '../../composables/useNowTick'
 import ChainBar from './ChainBar.vue'
 import StageFlow from './StageFlow.vue'
 import LinkedTaskList from './LinkedTaskList.vue'
@@ -23,6 +30,10 @@ const props = defineProps<{
   linkedTasks: CockpitTask[]
   /** 该循环最新 run（graphId === loop-<id>；无 run 为 null） */
   latestRunId: string | null
+  /** v13 耗时徽章：最新 run 现状（running 时渲染 ⏱） */
+  latestRunStatus?: string | null
+  /** v13 耗时徽章：最新 run 首事件时刻（ms） */
+  latestRunStartMs?: number | null
   liveConnected: boolean
   participants: Array<{ kind: 'human' | 'agent'; name: string; team?: string; role?: string }>
 }>()
@@ -73,6 +84,43 @@ watch(() => [props.loop.id, props.latestRunId], () => { void loadGraph() }, { im
 const replay = useRunReplay(events)
 // verbose 全量（事件编年=完整史册，summary/normal 会折叠 result/raw 级）
 const chronicle = computed(() => projectEvents(replay.visibleEvents.value, 'verbose'))
+
+// ── v13 语义块：编年分类着色 + 过滤 + 分布条（分类器在 adapters/activity）──
+
+/** 当前过滤的语义类（null=全部） */
+const semFilter = ref<SemanticKind | null>(null)
+
+/** 编年行（含语义类），过滤后供渲染 */
+const chronicleSem = computed(() =>
+  chronicle.value.map(row => ({ row, kind: classifyRunEvent(String(row.type)) })))
+
+const visibleChronicle = computed(() =>
+  semFilter.value == null
+    ? chronicleSem.value
+    : chronicleSem.value.filter(r => r.kind === semFilter.value))
+
+/** 语义分布（chips + 占比条数据；零计数省略） */
+const semProfile = computed(() => semanticCounts(chronicle.value.map(r => String(r.type))))
+
+const semTotal = computed(() => semProfile.value.reduce((acc, x) => acc + x.n, 0))
+
+/** 语义类 → 图标（词表固定；着色经 CSS 类 rc__sem--<kind>） */
+const SEM_ICON: Record<SemanticKind, string> = {
+  lifecycle: '◉', step: '⇥', node: '▪', interrupt: '✋', stage: '⏩', cost: '＄', other: '·',
+}
+
+function toggleSem(kind: SemanticKind): void {
+  semFilter.value = semFilter.value === kind ? null : kind
+}
+
+// ── v13 运行耗时徽章（共享 30s 时钟；running 态渲染）──
+
+const now = useNowTick()
+
+const elapsedLabel = computed(() => {
+  if (props.latestRunStatus !== 'running' || !props.latestRunStartMs) return ''
+  return formatWaitAge(now.value - props.latestRunStartMs)
+})
 
 function onKeydown(e: KeyboardEvent): void {
   if (viewMode.value !== 'hist') return
@@ -133,6 +181,10 @@ function fmtEventTs(ts: string | number | undefined): string {
       >▦ {{ t('ia2.rc.board') }}</button>
       <span class="rc__spacer" />
       <span
+        v-if="elapsedLabel"
+        class="rc__elapsed" data-testid="rc-elapsed" :title="t('ia2.rc.elapsed')"
+      >⏱ {{ elapsedLabel }}</span>
+      <span
         v-if="viewMode === 'live' && liveConnected"
         class="rc__livebadge" data-testid="rc-live-badge"
       >● {{ t('ia2.rc.liveOn') }}</span>
@@ -179,7 +231,7 @@ function fmtEventTs(ts: string | number | undefined): string {
       </div>
     </div>
 
-    <!-- 历史：回放条 + 事件编年 + 导出 -->
+    <!-- 历史：回放条 + 语义分布条/过滤 + 事件编年 + 导出 -->
     <div v-else class="rc__hist" data-testid="rc-hist">
       <div class="rc__rpl" data-testid="rc-replay">
         <button type="button" class="rc__rbtn" :title="t('ia2.rc.stepBack')" @click="replay.stepBack()">◀</button>
@@ -194,10 +246,35 @@ function fmtEventTs(ts: string | number | undefined): string {
           {{ t('ia2.rc.eventCount', { n: replay.cursorIndex.value, total: replay.total.value }) }}
         </span>
       </div>
+      <div v-if="semProfile.length" class="rc__sem" data-testid="rc-sem">
+        <div class="rc__sembar">
+          <i
+            v-for="c in semProfile" :key="c.kind"
+            class="rc__sembar-seg" :class="`rc__sem--${c.kind}`"
+            :style="{ flexGrow: semTotal ? c.n / semTotal : 0 }"
+          />
+        </div>
+        <div class="rc__semchips">
+          <button
+            type="button" class="rc__semchip"
+            :class="{ 'rc__semchip--on': semFilter == null }"
+            data-testid="rc-sem-all" @click="semFilter = null"
+          >{{ t('ia2.rc.semAll') }}</button>
+          <button
+            v-for="c in semProfile" :key="c.kind"
+            type="button" class="rc__semchip"
+            :class="[`rc__sem--${c.kind}`, { 'rc__semchip--on': semFilter === c.kind }]"
+            :data-testid="`rc-sem-chip-${c.kind}`" @click="toggleSem(c.kind)"
+          >{{ SEM_ICON[c.kind] }} {{ t(`ia2.rc.sem.${c.kind}`) }} {{ c.n }}</button>
+        </div>
+      </div>
       <div class="rc__chron" data-testid="rc-chronicle">
-        <div v-if="!chronicle.length" class="rc__chron-empty">{{ t('ia2.rc.noEvents') }}</div>
-        <div v-for="row in chronicle" :key="row.index" class="rc__chron-row" :data-testid="`rc-chron-${row.index}`">
-          <span class="rc__chron-ico">▶</span>
+        <div v-if="!visibleChronicle.length" class="rc__chron-empty">{{ t('ia2.rc.noEvents') }}</div>
+        <div
+          v-for="{ row, kind } in visibleChronicle" :key="row.index"
+          class="rc__chron-row" :class="`rc__chron-row--${kind}`" :data-testid="`rc-chron-${row.index}`"
+        >
+          <span class="rc__chron-ico" :class="`rc__sem--${kind}`">{{ SEM_ICON[kind] }}</span>
           <span class="rc__chron-txt">
             {{ row.type }}<template v-if="row.nodeId"> · {{ row.nodeId }}</template><template v-if="row.error"> · {{ row.error }}</template>
           </span>
@@ -238,6 +315,43 @@ function fmtEventTs(ts: string | number | undefined): string {
   color: var(--success); font-size: 10px; font-weight: 700;
   display: inline-flex; align-items: center; white-space: nowrap;
 }
+/* v13 运行耗时徽章（与 LIVE 徽章并排；running 态才渲染） */
+.rc__elapsed {
+  height: 20px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 10px;
+  color: var(--text-secondary); font-size: 10px; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; white-space: nowrap;
+}
+/* v13 语义类词表着色（chips/行图标/分布段共用） */
+.rc__sem--lifecycle { color: #8b5cf6; }
+.rc__sem--step { color: #0ea5e9; }
+.rc__sem--node { color: var(--primary, #3b82f6); }
+.rc__sem--interrupt { color: var(--warning, #f59e0b); }
+.rc__sem--stage { color: #14b8a6; }
+.rc__sem--cost { color: #eab308; }
+.rc__sem--other { color: var(--text-muted); }
+.rc__sem { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.rc__sembar {
+  display: flex; height: 6px; border-radius: 3px; overflow: hidden;
+  border: 1px solid var(--border-color); background: var(--bg-secondary);
+}
+.rc__sembar-seg { min-width: 2px; }
+.rc__sembar-seg.rc__sem--lifecycle { background: #8b5cf6; }
+.rc__sembar-seg.rc__sem--step { background: #0ea5e9; }
+.rc__sembar-seg.rc__sem--node { background: var(--primary, #3b82f6); }
+.rc__sembar-seg.rc__sem--interrupt { background: var(--warning, #f59e0b); }
+.rc__sembar-seg.rc__sem--stage { background: #14b8a6; }
+.rc__sembar-seg.rc__sem--cost { background: #eab308; }
+.rc__sembar-seg.rc__sem--other { background: var(--text-muted); }
+.rc__semchips { display: flex; flex-wrap: wrap; gap: 4px; }
+.rc__semchip {
+  height: 18px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: 9px;
+  background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+  &:hover { border-color: var(--text-muted); }
+}
+.rc__semchip--on { border-color: currentColor; font-weight: 700; background: var(--bg-secondary); }
+.rc__chron-row--interrupt { border-left: 2px solid var(--warning, #f59e0b); padding-left: 4px; }
+.rc__chron-row--node { border-left: 2px solid var(--primary, #3b82f6); padding-left: 4px; }
 .rc__live, .rc__hist { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px; gap: 10px; overflow-y: auto; }
 .rc__graph {
   flex: 1; min-height: 140px; border: 1px solid var(--border-color); border-radius: 6px;
