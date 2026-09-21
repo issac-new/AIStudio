@@ -657,3 +657,6 @@
 # 345: IDE R4 i18n——ide.hooks/inbox/modelSwitcher/termActions/sidePaneTab_hooks 五块
 #      17 键（zh/en）。
 345-client-i18n-ide-r4.patch
+
+# 346: IDE R5 i18n——ide.worktree/goal + wiki.pipeline 三块 9 键（zh/en）。
+346-client-i18n-ide-r5.patch
