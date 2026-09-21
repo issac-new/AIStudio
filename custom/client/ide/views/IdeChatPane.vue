@@ -41,6 +41,8 @@ import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
 import IdeModelSwitcher from './IdeModelSwitcher.vue'
 import IdeActivityInbox from './IdeActivityInbox.vue'
+import IdeWorktreeBadge from './IdeWorktreeBadge.vue'
+import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
 import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
@@ -280,8 +282,12 @@ const modelDisabled = computed(() => true)
   <section class="ide-chat">
     <header class="ide-chat__head">
       <span class="ide-chat__title" :title="sessionTitle">{{ sessionTitle }}</span>
+      <!-- R5 会话工作树隔离徽标（worktree 域显性化） -->
+      <IdeWorktreeBadge />
       <!-- R4 会话内模型切换器（antigravity 语义：切换+粘性） -->
       <IdeModelSwitcher />
+      <!-- R5 goal 预算浮层（zcode goal stats 语义：工具/迭代/上下文消耗面） -->
+      <IdeGoalBudgetFloat />
       <div class="ide-chat__actions">
         <button
           type="button"

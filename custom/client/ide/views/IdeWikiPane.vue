@@ -11,10 +11,13 @@ import { useMessage } from 'naive-ui'
 import { listFiles, readFile } from '@/api/studio/files'
 import MarkdownRenderer from '@/components/hermes/chat/MarkdownRenderer.vue'
 import { useIdeStore } from '../store/ide'
+import { useChatStore } from '@/stores/hermes/chat'
+import { buildWikiPipelinePrompt } from '../utils/wikiPipeline'
 
 const { t } = useI18n()
 const message = useMessage()
 const ide = useIdeStore()
+const chatStore = useChatStore()
 
 interface WikiPage {
   path: string
@@ -109,6 +112,14 @@ function copyGeneratePrompt(): void {
   void copyText(prompt, 'ide.wiki.promptCopied')
 }
 
+// R5 Repo Wiki 管线（Qoder 语义）：多子代理分派 + 增量更新 + 引用注入，
+// 直接注入当前会话执行（不再需要手贴——复制通道保留为兜底）。
+function runPipeline(): void {
+  if (!hasWorkspace.value) return
+  void chatStore.sendMessage(buildWikiPipelinePrompt({ existingPages: pages.value.map((p) => p.path) }))
+  ide.setChatFocus()
+}
+
 onMounted(loadPages)
 </script>
 
@@ -118,6 +129,7 @@ onMounted(loadPages)
       <span class="ide-wiki__title">{{ t('ide.wiki.panelTitle') }}</span>
       <button type="button" class="ide-wiki__btn" :title="t('ide.wiki.referenceWiki')" @click="referenceWhole">{{ t('ide.wiki.referenceWiki') }}</button>
       <button type="button" class="ide-wiki__btn" :disabled="!selected" :title="t('ide.wiki.referencePage')" @click="referencePage">{{ t('ide.wiki.referencePage') }}</button>
+      <button type="button" class="ide-wiki__btn" :disabled="!hasWorkspace" :title="t('ide.wiki.pipeline')" data-testid="ide-wiki-pipeline" @click="runPipeline">{{ t('ide.wiki.pipeline') }}</button>
       <button type="button" class="ide-wiki__btn ide-wiki__btn--primary" :title="t('ide.wiki.generate')" data-testid="ide-wiki-generate" @click="copyGeneratePrompt">{{ t('ide.wiki.generate') }}</button>
     </div>
 
