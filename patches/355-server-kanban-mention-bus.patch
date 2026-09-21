@@ -1,0 +1,27 @@
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -647,6 +647,23 @@
+   try {
+     if (!await authorizeTaskIds(ctx, board, [ctx.params.id])) return
+     ctx.body = await kanbanCli.addComment(ctx.params.id, body.value!, { board, author: author.value })
++    // HERMES_CUSTOM[MentionBus] BEGIN
++    // R6 @mention 总线（multica comment.go:3100）：评论入库后解析 [@agent]/
++    // @squad → 为 agent enqueue run 并落系统行留痕（为何触发/为何不跑可审计）。
++    // best-effort：总线失败不影响评论入库。
++    try {
++      const { runMentionBus } = await import('../../../custom/controllers/hermes/mention-bus')
++      const { getCommandPost } = await import('../../../custom/services/hermes/command-post')
++      const roster = (await getCommandPost()?.teams?.list?.()) ?? []
++      await runMentionBus(ctx.params.id, body.value!, {
++        isKnownAgent: (name) => roster.some((a: { name?: string }) => String(a.name ?? '').toLowerCase() === name.toLowerCase()),
++        isRuntimeHealthy: () => true,
++        appendSystemComment: async (taskId, text) => {
++          await kanbanCli.addComment(taskId, text, { board, author: 'mention-bus' })
++        },
++      })
++    } catch { /* mention-bus 失败不阻断评论入库 */ }
++    // HERMES_CUSTOM[MentionBus] END
+   } catch (err: any) {
+     ctx.status = 500
+     ctx.body = { error: err.message }
