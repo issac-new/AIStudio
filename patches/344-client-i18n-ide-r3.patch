@@ -1,0 +1,40 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -577,6 +577,16 @@
+       tool_storm: '单轮工具调用达 {detail} 次，可能失去聚焦',
+       repetitive_text: '检测到重复输出，可能打转',
+     },
++    runResult: {
++      title: '本轮结果',
++      files: '{count} 个文件',
++    },
++    plan: {
++      actImplement: '继续实施',
++      actFresh: '清空重来',
++      actLeave: '仅留档',
++    },
++    paletteCmdReview: '评审当前改动（只读）',
+   },
+ 
+   loop: {
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -579,6 +579,16 @@
+       tool_storm: '{detail} tool calls in one run; may have lost focus',
+       repetitive_text: 'Repeated output detected; may be spinning',
+     },
++    runResult: {
++      title: 'Run result',
++      files: '{count} file(s)',
++    },
++    plan: {
++      actImplement: 'Implement',
++      actFresh: 'Start fresh',
++      actLeave: 'Keep for later',
++    },
++    paletteCmdReview: 'Review current changes (read-only)',
+   },
+ 
+   loop: {

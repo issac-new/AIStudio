@@ -650,3 +650,6 @@
 
 # 343: IDE R2 i18n——ide.recap/injection/approval/agents/runaway 五块 18 键（zh/en）。
 343-client-i18n-ide-r2.patch
+
+# 344: IDE R3 i18n——ide.runResult/plan/paletteCmdReview 三块 6 键（zh/en）。
+344-client-i18n-ide-r3.patch
