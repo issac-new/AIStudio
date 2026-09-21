@@ -545,36 +545,6 @@ onMounted(async () => {
       </div>
     </div>
 
-    <footer class="ide-taskbar__foot">
-      <div class="ide-taskbar__account-row">
-        <span class="ide-taskbar__avatar" aria-hidden="true">S</span>
-        <span class="ide-taskbar__account">SwarmStudio</span>
-        <button
-          type="button"
-          class="ide-taskbar__foot-btn"
-          data-testid="ide-nav-cockpit"
-          :title="t('ide.links.cockpitHome')"
-          :aria-label="t('ide.links.cockpitHome')"
-          @click="router.push({ name: 'ia2.collab' })"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-        </button>
-      </div>
-      <div class="ide-taskbar__features" role="toolbar" :aria-label="t('ide.sidePane.togglePanel')">
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-files" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'files' }" :title="t('ide.task.view_files')" @click="ide.toggleSidePane('files')">🗁</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-review" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'review' }" :title="t('ide.sidePane.tab_review')" @click="ide.toggleSidePane('review')">⎇</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-browser" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'browser' }" :title="t('ide.sidePane.tab_browser')" @click="ide.toggleSidePane('browser')">◍</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-wiki" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'wiki' }" :title="t('ide.sidePane.tab_wiki')" @click="ide.toggleSidePane('wiki')">W</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-assistant" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'assistant' }" :title="t('ide.sidePane.tab_assistant')" @click="ide.toggleSidePane('assistant')">✦</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-storage" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'storage' }" :title="t('ide.storage.panelTitle')" @click="ide.toggleSidePane('storage')">▤</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-memory" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'memory' }" :title="t('ide.memory.panelTitle')" @click="ide.toggleSidePane('memory')">◈</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-terminal" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'terminal' }" :title="t('ide.terminalTitle')" @click="ide.toggleSidePane('terminal')">⌨</button>
-        <button type="button" class="ide-taskbar__feat" data-testid="ide-feat-board" :class="{ 'is-active': ide.sidePane.open && ide.sidePane.tab === 'board' }" :title="t('ide.whiteboard.title')" @click="ide.toggleSidePane('board')">✎</button>
-      </div>
-    </footer>
   </aside>
 </template>
 
@@ -856,83 +826,10 @@ onMounted(async () => {
 
 .ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted, #9aa0aa); }
 
-.ide-taskbar__foot {
-  padding: 6px 10px 8px;
-  border-top: 1px solid var(--border-color, #e0e0e0);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
-.ide-taskbar__account-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
-.ide-taskbar__features {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
 
-.ide-taskbar__feat {
-  width: 30px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted, #9aa0aa);
-  font-size: 13px;
-  cursor: pointer;
 
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
-  &.is-active {
-    color: var(--accent-primary, #4cc9f0);
-    background: color-mix(in srgb, var(--accent-primary, #4cc9f0) 14%, transparent);
-  }
-}
 
-.ide-taskbar__avatar {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--accent-primary, #4cc9f0);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-}
 
-.ide-taskbar__account {
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
-  color: var(--text-primary, #e6e6e6);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ide-taskbar__foot-btn {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted, #9aa0aa);
-  cursor: pointer;
-
-  &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
-  svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; }
-}
 </style>

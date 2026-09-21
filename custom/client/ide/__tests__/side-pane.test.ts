@@ -41,10 +41,17 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     vi.clearAllMocks()
   })
 
-  it('默认关闭不渲染；open 后按 tab 渲染对应面板', async () => {
+  it('v12.6 默认开（files 页签）；关后不渲染；open 后按 tab 渲染对应面板', async () => {
     const ide = useIdeStore()
     let w = mountPane()
+    // v12.6 用户裁定：三栏打开时默认显示（此前默认收起）
+    expect(w.find('[data-testid="ide-sidepane"]').exists()).toBe(true)
+    expect(ide.sidePane.tab).toBe('files')
+    ide.sidePane.open = false
+    await flushPromises()
+    w = mountPane()
     expect(w.find('[data-testid="ide-sidepane"]').exists()).toBe(false)
+    ide.sidePane.open = true
 
     ide.setSidePaneTab('review')
     await flushPromises()

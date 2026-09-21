@@ -48,6 +48,16 @@ const workspaceStubs = vi.hoisted(() => ({
     tasks: [
       { id: 't-402', title: 'v2.28 发布', priority: 'P1', status: 'review', assignee: 'worker-coder', workspace: '', tenant: null, boardSlug: 'swarm', createdAt: 1000 },
       { id: 't-415', title: 'release notes', priority: 'P2', status: 'running', assignee: '你', workspace: '', tenant: null, boardSlug: 'swarm', createdAt: 2000 },
+      { id: 't-460', title: '指挥室联动', priority: 'P3', status: 'todo', assignee: null, workspace: '', tenant: null, boardSlug: '[已移除]', createdAt: 3000 },
+    ],
+    boards: [
+      { slug: 'swarm', name: 'Swarm 主板', total: 2 },
+      { slug: '[已移除]', name: '[已移除]', total: 1 },
+    ],
+    rawTasks: [
+      { board: 'swarm', task: { id: 't-402', title: 'v2.28 发布', status: 'review', priority: 2, assignee: 'worker-coder', created_at: 1, tenant: null, session_id: null } },
+      { board: 'swarm', task: { id: 't-415', title: 'release notes', status: 'running', priority: 1, assignee: '你', created_at: 2, tenant: null, session_id: 'sess-1' } },
+      { board: '[已移除]', task: { id: 't-460', title: '指挥室联动', status: 'todo', priority: 0, assignee: null, created_at: 3, tenant: null, session_id: '!r1:host' } },
     ],
     scheduleOpen: false, openSchedule: vi.fn(), closeSchedule: vi.fn(),
   },
@@ -71,6 +81,7 @@ const cockpitStubs = vi.hoisted(() => ({
     fleetSessions: [{ id: 'fs-1', profile: 'p', title: 'fleet 复验确认', status: 'idle', isAborting: false, queueLength: 0, runStartedAt: null, lastActiveAt: 42, source: '', agent: '', lastPreview: '', approvals: [{ approval_id: 'ap-1', preview: '', choices: [] }], clarifies: [], subagents: [] }],
     respondFleetApproval: vi.fn(),
     scheduleDatesWithEvents: new Set<string>(),
+    teams: [{ id: 'team-1', name: '主力队', profiles: ['p'], boards: ['swarm'], pinnedSessions: [] }],
   },
   useCockpitStore: () => cockpitStubs.state,
 }))
@@ -193,22 +204,41 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     w.unmount()
   })
 
-  it('任务段：分状态统计行 + 任务行 → 看板预选路由；同段再点收起', async () => {
+  it('任务段：分状态统计 + 基本信息行（板名/优先级/指派）；行点击跳关联会话/编码工作空间', async () => {
     const w = await mountHeader()
     await w.find('[data-testid="sit-tasks"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)
     expect(w.find('[data-testid="sit-tasks"]').classes()).toContain('sit__item--on')
-    // v12.4：分状态统计（review 1 / running 1，词表序 running 在前）
+    // v12.4：分状态统计（review 1 / running 1 / todo 1，词表序）
     const stats = w.find('[data-testid="sitp-task-stats"]')
     expect(stats.exists()).toBe(true)
     expect(stats.find('[data-testid="sitp-stat-review"]').text()).toContain('1')
     expect(stats.find('[data-testid="sitp-stat-running"]').text()).toContain('1')
-    expect(w.find('[data-testid="sitp-task-t-402"]').exists()).toBe(true)
-    await w.find('[data-testid="sitp-task-t-402"]').trigger('click')
+    expect(stats.find('[data-testid="sitp-stat-todo"]').text()).toContain('1')
+    // v12.5：行基本信息（板名 + 优先级徽标 + 指派人）
+    const row = w.find('[data-testid="sitp-task-t-402"]')
+    expect(row.text()).toContain('Swarm 主板')
+    expect(row.text()).toContain('P1')
+    expect(row.text()).toContain('@worker-coder')
+    // 无挂接会话 → IDE 编码工作空间（任务维度 + 会话列自动切挂靠会话）
+    await row.trigger('click')
     await flushPromises()
-    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.board', query: { task: 't-402' } })
+    expect(pushMock).toHaveBeenCalledWith({ path: '/ide', query: { task: 't-402' } })
     expect(w.find('[data-testid="sit-panel-tasks"]').exists()).toBe(false)
+    // 挂接 matrix 房间 → 工作台房间画布（三栏左/中栏定位该会话）
+    await w.find('[data-testid="sit-tasks"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="sitp-task-t-460"]').trigger('click')
+    await flushPromises()
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.commsRoom', params: { roomId: '!r1:host' } })
+    // 挂接 agent 会话（sess-1）→ IDE（会话列 switch 命中）
+    await w.find('[data-testid="sit-tasks"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="sitp-task-t-415"]').trigger('click')
+    await flushPromises()
+    expect(pushMock).toHaveBeenCalledWith({ path: '/ide', query: { task: 't-415' } })
+    // 同段再点收起
     await w.find('[data-testid="sit-tasks"]').trigger('click')
     expect(w.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)
     await w.find('[data-testid="sit-tasks"]').trigger('click')
@@ -230,31 +260,36 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     w.unmount()
   })
 
-  it('在线段（R3 级联）：点人过滤智能体队→点队展开 profile→再点人回全量；管理台开 people 区', async () => {
+  it('在线段（v12.5 三级级联）：账号展开 → 机器 + 看板 → 板下 profile 清单；检索跨层过滤', async () => {
     const w = await mountHeader()
     await w.find('[data-testid="sit-online"]').trigger('click')
     await flushPromises()
-    const panel = w.find('[data-testid="sit-panel-online"]')
-    expect(panel.exists()).toBe(true)
-    expect(panel.text()).toContain('TL')
-    expect(panel.text()).toContain('swarm')
-    expect(panel.text()).toContain('p') // 机器 profile（fleet 静态列）
-    // ① 点人 TL：智能体列过滤为 TL 的队（计数仍 1），队行在位
-    await w.find('[data-testid="sitp-person-@tl:host"]').trigger('click')
+    // 检索框在位；账号 TL 行显示计数（机器/板/profile）
+    expect(w.find('[data-testid="sitp-online-search"]').exists()).toBe(true)
+    const acct = w.find('[data-testid="sitp-acct-@tl:host"]')
+    expect(acct.exists()).toBe(true)
+    expect(acct.text()).toContain('TL')
+    // ① 展开账号：机器行（fleet p）+ 看板行（Swarm 主板，teams profiles↔boards 关联）
+    await acct.trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="sitp-person-@tl:host"]').classes()).toContain('is-on')
-    expect(w.find('[data-testid="sitp-team-@tl:host/swarm"]').exists()).toBe(true)
-    // ② 点队 swarm：行下展开 profile 明细 chips
-    expect(w.find('[data-testid="sitp-profiles-@tl:host/swarm"]').exists()).toBe(false)
-    await w.find('[data-testid="sitp-team-@tl:host/swarm"]').trigger('click')
+    expect(w.find('[data-testid="sitp-machine-m:fs-1"]').exists()).toBe(true)
+    expect(w.find('[data-testid="sitp-machine-m:fs-1"]').text()).toContain('fleet 复验确认')
+    const board = w.find('[data-testid="sitp-board-b:swarm"]')
+    expect(board.exists()).toBe(true)
+    expect(board.text()).toContain('Swarm 主板')
+    // ② 展开板：profile 清单 chips
+    await board.trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="sitp-profiles-@tl:host/swarm"]').text()).toContain('p')
-    // ③ 再点同一个人：取消选中回全量（级联复位）
-    await w.find('[data-testid="sitp-person-@tl:host"]').trigger('click')
+    expect(w.find('[data-testid="sitp-board-profiles-b:swarm"]').text()).toContain('p')
+    // ③ 检索：命中 [已移除]（无关联）→ swarm 板行隐藏；清词复位
+    const search = w.find('[data-testid="sitp-online-search"]')
+    await search.setValue('[已移除]')
     await flushPromises()
-    expect(w.find('[data-testid="sitp-person-@tl:host"]').classes()).not.toContain('is-on')
-    expect(w.find('[data-testid="sitp-team-@tl:host/swarm"]').exists()).toBe(true)
-    expect(w.find('[data-testid="sitp-profiles-@tl:host/swarm"]').exists()).toBe(false)
+    expect(w.find('[data-testid="sitp-board-b:swarm"]').exists()).toBe(false)
+    await search.setValue('')
+    await flushPromises()
+    expect(w.find('[data-testid="sitp-board-b:swarm"]').exists()).toBe(true)
+    // 管理台开 people 区
     await w.find('[data-testid="sitp-open-gov"]').trigger('click')
     const flow = useFlowStore()
     expect(flow.govOpen).toBe(true)
