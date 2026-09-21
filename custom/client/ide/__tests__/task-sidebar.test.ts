@@ -109,6 +109,19 @@ import IdeTaskSidebar from '../views/IdeTaskSidebar.vue'
 import { useIdeStore } from '../store/ide'
 
 function mountSidebar() {
+  // 三段视图默认 active（24h 活跃窗）；fixtures 含 updatedAt:1 的老会话，
+  // 既有用例断言全量列表 → 统一切到 workspace 视图（全量 + 按 workspace 分桶）。
+  const ide = useIdeStore()
+  ide.setSessionView('workspace')
+  return mount(IdeTaskSidebar)
+}
+
+// 需要 organize chip（时间线/分组）的用例：切回 active 视图——chip 出现且
+// 高优先级会话（近期活跃）在桶内；超窗老会话（updatedAt:1 的 extra1/2）按
+// active 视图语义被过滤，不影响 organize 排序断言。
+function mountSidebarForOrganize() {
+  const ide = useIdeStore()
+  ide.setSessionView('active')
   return mount(IdeTaskSidebar)
 }
 
@@ -218,7 +231,9 @@ describe('IdeTaskSidebar', () => {
   })
 
   it('时间线按任务优先级降序 → 更新时间逆序；关联会话显 P0-P3 徽标', async () => {
-    const w = mountSidebar()
+    // done 视图：organize chip 出现且老会话（updatedAt:1 的 extra1/2）在桶内；
+    // 置顶区在该视图被过滤（置顶会话近期活跃）不影响 organize 排序断言。
+    const w = mountSidebarForOrganize()
     await flushPromises()
     await w.find('[data-testid="ide-task-organize-timeline"]').trigger('click')
     expect(listTasks).toHaveBeenCalled()
@@ -226,9 +241,9 @@ describe('IdeTaskSidebar', () => {
       .find('[data-testid="ide-task-group-ide.task.timeline"]')
       .findAll('[data-testid^="ide-task-item-"]')
       .map((n) => n.attributes('data-testid').slice('ide-task-item-'.length))
-    // 优先级：s-active(3) > s-other(1) > s-extra1(0)；无任务者按更新时间：
-    // s-none(now-5s) > s-extra2(1)
-    expect(items).toEqual(['s-active', 's-other', 's-extra1', 's-none', 's-extra2'])
+    // active 视图下时间线只覆盖 24h 活跃会话（extra1/2 超窗被滤）：
+    // 优先级 s-active(3) > s-other(1)；无任务者 s-none 按更新时间跟上。
+    expect(items).toEqual(['s-active', 's-other', 's-none'])
     // 徽标：P0/P2/P3（P3 因 priority=0 仍属「有任务」档）
     expect(w.find('[data-testid="ide-task-prio-P0"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-task-prio-P2"]').exists()).toBe(true)
@@ -239,7 +254,7 @@ describe('IdeTaskSidebar', () => {
   })
 
   it('organize 三模式：grouped 按 category 分组渲染', async () => {
-    const w = mountSidebar()
+    const w = mountSidebarForOrganize()
     await flushPromises()
     // project（默认）= workspace 分组
     expect(w.find('[data-testid="ide-task-group-ncwk"]').exists()).toBe(true)
