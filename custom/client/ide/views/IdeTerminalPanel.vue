@@ -287,6 +287,18 @@ onMounted(async () => {
 })
 
 onUnmounted(disposeTerminal)
+
+// R4 终端 actions 执行入口（codex-product 项目级一键命令）：
+// dock 监听 overlay:terminal-action 后调用本方法写入活动终端。
+// ws 未就绪时静默丢弃（事件为 best-effort，用户可再点一次）。
+function writeCommand(command: string): void {
+  if (!command) return
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(`${command}\r`)
+  }
+}
+
+defineExpose({ writeCommand })
 </script>
 
 <template>

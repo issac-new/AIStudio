@@ -4,7 +4,9 @@
 //   Wiki 引用（IdeWikiPane）/ 辅助对话（快速追问 MVP：多活跃会话架构为 M4 项，
 //   当前提供结构化追问复制 + 跳主会话）。
 // 开关经 ide.toggleSidePane（IdeStatusBar 面板切换按钮），宽高偏好持久化在 ide store。
-import { computed, ref } from 'vue'
+// R4 新增：hooks 只读页签（IdeHooksPane）+ 终端页签 actions 条（codex-product
+// 项目级一键命令：工作区级命名命令一键写入活动终端）。
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
@@ -16,7 +18,15 @@ import IdeMemoryPane from './IdeMemoryPane.vue'
 import IdeMcpPane from './IdeMcpPane.vue'
 import IdeWhiteboardPane from './IdeWhiteboardPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
+import IdeHooksPane from './IdeHooksPane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
+import {
+  loadTerminalActions,
+  addTerminalAction,
+  removeTerminalAction,
+  fireTerminalAction,
+  type TerminalAction,
+} from '../utils/terminalActions'
 
 const { t } = useI18n()
 const ide = useIdeStore()
@@ -33,7 +43,39 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'board', icon: '✎' },
   { key: 'mcp', icon: '⌗' },
   { key: 'terminal', icon: '⌨' },
+  { key: 'hooks', icon: '⚓' },
 ]
+
+// R4 终端 actions（工作区级；MVP localStorage，团队共享归 R5+）
+const termActions = ref<TerminalAction[]>([])
+const newActionLabel = ref('')
+const newActionCommand = ref('')
+
+watch(
+  () => ide.workspace,
+  (ws) => {
+    termActions.value = loadTerminalActions(ws ?? '')
+    newActionLabel.value = ''
+    newActionCommand.value = ''
+  },
+  { immediate: true },
+)
+
+function runAction(action: TerminalAction): void {
+  ide.terminalOpen = true
+  fireTerminalAction(action.command)
+}
+
+function addAction(): void {
+  if (!newActionLabel.value.trim() || !newActionCommand.value.trim()) return
+  termActions.value = addTerminalAction(ide.workspace ?? '', newActionLabel.value, newActionCommand.value)
+  newActionLabel.value = ''
+  newActionCommand.value = ''
+}
+
+function removeAction(id: string): void {
+  termActions.value = removeTerminalAction(ide.workspace ?? '', id)
+}
 
 const paneStyle = computed(() => ({ width: `${ide.sidePane.width}px` }))
 
@@ -114,7 +156,53 @@ function focusMainChat(): void {
       <IdeMemoryPane v-else-if="ide.sidePane.tab === 'memory'" class="ide-sidepane__fill" />
       <IdeWhiteboardPane v-else-if="ide.sidePane.tab === 'board'" class="ide-sidepane__fill" />
       <IdeMcpPane v-else-if="ide.sidePane.tab === 'mcp'" class="ide-sidepane__fill" data-testid="ide-sidepane-mcp" />
-      <IdeTerminalDock v-else-if="ide.sidePane.tab === 'terminal'" class="ide-sidepane__fill" data-testid="ide-sidepane-terminal" />
+      <template v-else-if="ide.sidePane.tab === 'terminal'">
+        <div class="ide-sidepane__termwrap">
+          <!-- R4 终端 actions 条（codex-product 项目级一键命令） -->
+          <div class="ide-sidepane__actions" data-testid="ide-terminal-actions">
+            <span v-for="a in termActions" :key="a.id" class="ide-sidepane__action-wrap">
+              <button
+                type="button"
+                class="ide-sidepane__action"
+                :title="a.command"
+                data-testid="ide-terminal-action"
+                @click="runAction(a)"
+              >▸ {{ a.label }}</button>
+              <button
+                type="button"
+                class="ide-sidepane__action-remove"
+                :title="t('ide.termActions.remove', { label: a.label })"
+                :data-testid="`ide-terminal-action-remove-${a.id}`"
+                @click="removeAction(a.id)"
+              >✕</button>
+            </span>
+            <template v-if="termActions.length < 12">
+              <input
+                v-model="newActionLabel"
+                class="ide-sidepane__action-input"
+                :placeholder="t('ide.termActions.labelPlaceholder')"
+                data-testid="ide-terminal-action-label"
+              >
+              <input
+                v-model="newActionCommand"
+                class="ide-sidepane__action-input is-cmd"
+                :placeholder="t('ide.termActions.commandPlaceholder')"
+                data-testid="ide-terminal-action-command"
+                @keydown.enter.prevent="addAction"
+              >
+            <button
+              type="button"
+              class="ide-sidepane__action ide-sidepane__action--add"
+              :disabled="!newActionLabel.trim() || !newActionCommand.trim()"
+              data-testid="ide-terminal-action-add"
+              @click="addAction"
+            >＋</button>
+          </template>
+        </div>
+          <IdeTerminalDock class="ide-sidepane__fill" data-testid="ide-sidepane-terminal" />
+        </div>
+      </template>
+      <IdeHooksPane v-else-if="ide.sidePane.tab === 'hooks'" class="ide-sidepane__fill" data-testid="ide-sidepane-hooks" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">
@@ -200,6 +288,75 @@ function focusMainChat(): void {
 .ide-sidepane__body { flex: 1; min-height: 0; display: flex; }
 
 .ide-sidepane__fill { flex: 1; min-width: 0; min-height: 0; }
+
+/* R4 终端页签容器 + actions 条 */
+.ide-sidepane__termwrap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ide-sidepane__actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color, #26292f);
+  font-size: 11px;
+}
+
+.ide-sidepane__action-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ide-sidepane__action {
+  border: 1px solid var(--border-color, #3a3f4b);
+  background: none;
+  color: var(--text-secondary, #b0b5be);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover { border-color: #61afef; color: #61afef; }
+
+  &--add {
+    padding: 2px 6px;
+
+    &:disabled { opacity: 0.4; cursor: default; }
+  }
+}
+
+.ide-sidepane__action-remove {
+  border: none;
+  background: none;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0 2px;
+
+  &:hover { color: #e06c75; }
+}
+
+.ide-sidepane__action-input {
+  width: 72px;
+  border: 1px solid var(--border-color, #3a3f4b);
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #d7dae0);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+
+  &.is-cmd { width: 130px; font-family: ui-monospace, monospace; }
+
+  &::placeholder { color: var(--text-muted, #9aa0aa); }
+}
 
 .ide-sidepane__assistant {
   flex: 1;
