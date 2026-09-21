@@ -49,6 +49,17 @@ const flaggedIds = computed<Set<string>>(() => {
 const steerableIds = computed<Set<string>>(
   () => new Set(agents.value.filter((a) => a.status === 'completed' || a.status === 'interrupted').map((a) => a.subagentId)),
 )
+
+// R5 子代理 steer 续话（hermes /steer 通道）：注入 `/steer <@subagentId> <text>`
+// 文本命令（session-command → bridge.steer → send_message），与 CLI 同一引擎。
+const steerDraft = ref('')
+watch(selectedId, () => { steerDraft.value = '' })
+function sendSteer(): void {
+  const text = steerDraft.value.trim()
+  if (!text || !selectedId.value) return
+  void chat.sendMessage(`/steer @${selectedId.value} ${text}`)
+  steerDraft.value = ''
+}
 const selected = computed(() => agents.value.find(a => a.subagentId === selectedId.value) ?? null)
 
 // 会话切换清选中；名册里选中项消失回落空态
@@ -107,6 +118,24 @@ function select(stream: SubagentStream): void {
         :stream="selected"
         @close="selectedId = null"
       />
+      <!-- R5 子代理 steer（hermes send_message / /steer 通道）：idle/中断子代理
+           续话输入，注入 /steer <@subagent> <text> 文本命令驱动同一引擎 -->
+      <div v-if="selected && steerableIds.has(selected.subagentId)" class="ide-agents__steer" data-testid="ide-agent-steer">
+        <input
+          v-model="steerDraft"
+          class="ide-agents__steer-input"
+          :placeholder="t('ide.agents.steerPlaceholder')"
+          data-testid="ide-agent-steer-input"
+          @keydown.enter.prevent="sendSteer"
+        >
+        <button
+          type="button"
+          class="ide-agents__steer-btn"
+          :disabled="!steerDraft.trim()"
+          data-testid="ide-agent-steer-send"
+          @click="sendSteer"
+        >{{ t('ide.agents.steerSend') }}</button>
+      </div>
     </div>
   </IdeFloatPanel>
 </template>
@@ -196,5 +225,40 @@ function select(stream: SubagentStream): void {
 .ide-agents__panel {
   border-top: 1px solid var(--border-color, #26292f);
   padding-top: 6px;
+}
+
+.ide-agents__steer {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-color, #26292f);
+}
+
+.ide-agents__steer-input {
+  flex: 1;
+  border: 1px solid var(--border-color, #3a3f4b);
+  background: var(--bg-primary, #14161a);
+  color: var(--text-primary, #d7dae0);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+
+  &::placeholder { color: var(--text-muted, #9aa0aa); }
+}
+
+.ide-agents__steer-btn {
+  flex-shrink: 0;
+  border: 1px solid #61afef66;
+  background: #61afef22;
+  color: #61afef;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: #61afef33; }
+  &:disabled { opacity: 0.4; cursor: default; }
+}
 }
 </style>
