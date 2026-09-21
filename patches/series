@@ -643,3 +643,10 @@
 # 341: IDE 遥测面板（R1：G4 构成/G7 热力图/G8 轮表/低余量提醒/成本估算）i18n——
 #      ide.metrics.lowContextToast 1 键 + ide.usagePanel.* 22 键（zh/en 双语同步）。
 341-client-i18n-ide-usage-panel.patch
+
+# 342: IDE 批准即学习（R2）——MessageList 审批按钮发 overlay:approval-decision
+#      CustomEvent（HERMES_CUSTOM[IdeApprovalLearning] 段包裹，无监听退化为直接响应）。
+342-client-approval-learning-event.patch
+
+# 343: IDE R2 i18n——ide.recap/injection/approval/agents/runaway 五块 18 键（zh/en）。
+343-client-i18n-ide-r2.patch
