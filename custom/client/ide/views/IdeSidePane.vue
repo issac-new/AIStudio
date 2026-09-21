@@ -13,6 +13,7 @@ import IdeGitPane from './IdeGitPane.vue'
 import IdeWikiPane from './IdeWikiPane.vue'
 import IdeStoragePane from './IdeStoragePane.vue'
 import IdeMemoryPane from './IdeMemoryPane.vue'
+import IdeMcpPane from './IdeMcpPane.vue'
 import IdeWhiteboardPane from './IdeWhiteboardPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
@@ -30,6 +31,7 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'storage', icon: '▤' },
   { key: 'memory', icon: '◈' },
   { key: 'board', icon: '✎' },
+  { key: 'mcp', icon: '⌗' },
   { key: 'terminal', icon: '⌨' },
 ]
 
@@ -111,6 +113,7 @@ function focusMainChat(): void {
       <IdeStoragePane v-else-if="ide.sidePane.tab === 'storage'" class="ide-sidepane__fill" />
       <IdeMemoryPane v-else-if="ide.sidePane.tab === 'memory'" class="ide-sidepane__fill" />
       <IdeWhiteboardPane v-else-if="ide.sidePane.tab === 'board'" class="ide-sidepane__fill" />
+      <IdeMcpPane v-else-if="ide.sidePane.tab === 'mcp'" class="ide-sidepane__fill" data-testid="ide-sidepane-mcp" />
       <IdeTerminalDock v-else-if="ide.sidePane.tab === 'terminal'" class="ide-sidepane__fill" data-testid="ide-sidepane-terminal" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
