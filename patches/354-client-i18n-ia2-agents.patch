@@ -1,0 +1,44 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1024,6 +1024,7 @@
+       searchPlaceholder: '过滤 名称 / 任务号…',
+       groupSessions: '会话',
+       groupLoops: '循环',
++      groupAgents: 'Agents',
+       empty: '暂无会话与循环',
+       newSession: '新会话',
+       newLoop: '新循环',
+@@ -1051,6 +1052,10 @@
+       max_depth_exceeded: '嵌套深度超限', max_attempts_exceeded: '重试耗尽',
+       board_concurrency_full: '看板并发已满', gate_pending_human: '待人审',
+       lease_conflict: '租约冲突',
++    },
++    agents: {
++      sessions: '挂靠会话 {n} 个',
++      busy: '在跑', online: '在线', idle: '空闲', offline: '离线',
+     },
+     tdp: {
+       title: '任务 · 决策',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1026,6 +1026,7 @@
+       searchPlaceholder: 'Filter name / task id…',
+       groupSessions: 'Sessions',
+       groupLoops: 'Loops',
++      groupAgents: 'Agents',
+       empty: 'No sessions or loops yet',
+       newSession: 'New session',
+       newLoop: 'New loop',
+@@ -1053,6 +1054,10 @@
+       max_depth_exceeded: 'Max depth exceeded', max_attempts_exceeded: 'Max attempts exceeded',
+       board_concurrency_full: 'Board concurrency full', gate_pending_human: 'Awaiting human review',
+       lease_conflict: 'Lease conflict',
++    },
++    agents: {
++      sessions: '{n} linked session(s)',
++      busy: 'Busy', online: 'Online', idle: 'Idle', offline: 'Offline',
+     },
+     tdp: {
+       title: 'Tasks · Decisions',
