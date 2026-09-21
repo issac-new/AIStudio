@@ -1,0 +1,80 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -546,6 +546,36 @@
+       heatmapEmpty: '近期无用量记录',
+       lowTitle: '上下文余量不足',
+       lowBody: '建议压缩会话或新开会话',
++    },
++    recap: {
++      title: '上次谈到',
++      dismiss: '关闭',
++    },
++    injection: {
++      banner: '{count} 个子代理的输出包含可疑指令指纹，请留意',
++      badgeTitle: '该子代理输出包含疑似注入内容',
++    },
++    approval: {
++      learned: '已记忆本会话批准：{width}',
++      memoryHint: '本次审批匹配本会话记忆：{width}',
++      width: {
++        exact: '同一条命令',
++        byFirstWord: '同命令首词',
++        byArgvPrefix2: '同命令前两词',
++        byDomain: '同一域名',
++        wholeTool: '同一工具',
++      },
++    },
++    agents: {
++      steerHint: '已完成/中断，可续话（通道待 R5）',
++    },
++    runaway: {
++      same_tool_args: '检测到工具调用打转：{detail}，建议关注或中断',
++      same_error: '同一错误连续出现：{detail}，建议关注或中断',
++      high_frequency: '工具调用频率异常：{detail}，建议关注',
++      long_silence: '已 {detail} 无工具活动，可能卡住',
++      tool_storm: '单轮工具调用达 {detail} 次，可能失去聚焦',
++      repetitive_text: '检测到重复输出，可能打转',
+     },
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -548,6 +548,36 @@
+       heatmapEmpty: 'No usage in this period',
+       lowTitle: 'Context running low',
+       lowBody: 'Compact the session or start a new one',
++    },
++    recap: {
++      title: 'Last topic',
++      dismiss: 'Dismiss',
++    },
++    injection: {
++      banner: '{count} subagent output(s) contain suspicious instruction fingerprints',
++      badgeTitle: 'This subagent output contains suspected injected content',
++    },
++    approval: {
++      learned: 'Remembered for this session: {width}',
++      memoryHint: 'Matches a remembered approval: {width}',
++      width: {
++        exact: 'exact command',
++        byFirstWord: 'same first word',
++        byArgvPrefix2: 'same first two words',
++        byDomain: 'same domain',
++        wholeTool: 'same tool',
++      },
++    },
++    agents: {
++      steerHint: 'Completed/interrupted — follow-up available (channel in R5)',
++    },
++    runaway: {
++      same_tool_args: 'Tool calls spinning: {detail}; consider interrupting',
++      same_error: 'Same error repeating: {detail}; consider interrupting',
++      high_frequency: 'Abnormal tool frequency: {detail}; keep an eye on it',
++      long_silence: 'No tool activity for {detail}; may be stuck',
++      tool_storm: '{detail} tool calls in one run; may have lost focus',
++      repetitive_text: 'Repeated output detected; may be spinning',
+     },
+   },
+ 

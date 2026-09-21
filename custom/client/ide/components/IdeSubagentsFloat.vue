@@ -2,6 +2,8 @@
 // IdeSubagentsFloat — 子代理名册浮窗：枚举 chatStore.subagentStreams 中当前
 // 会话的全部子代理（key = sessionId:subagentId），点选即在浮窗内展开上游
 // SubagentStreamPanel；focusId prop 承接消息流子代理工具卡的开窗请求。
+// R2：idle/completed 状态标「可续话」提示（steer 通道落 R5，当前仅标记）；
+// 命中注入指纹的子代理加来源徽标（claude-code 2.1.277 语义）。
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChatStore, type SubagentStream } from '@/stores/hermes/chat'
@@ -10,6 +12,7 @@ import { chatSessionAgentAvatar } from '@/utils/chat-agent-avatar'
 import IdeFloatPanel from './IdeFloatPanel.vue'
 import { useIdeStore } from '../store/ide'
 import { formatRelativeTime } from '../utils/time'
+import { scanInjection } from '../utils/subagentGuard'
 
 const props = defineProps<{ focusId?: string | null }>()
 const { t } = useI18n()
@@ -28,6 +31,24 @@ const agents = computed<SubagentStream[]>(() => {
 })
 
 const selectedId = ref<string | null>(null)
+
+// R2：命中注入指纹的子代理 id 集（摘要/末条文本任一命中即标记）
+const flaggedIds = computed<Set<string>>(() => {
+  const set = new Set<string>()
+  for (const a of agents.value) {
+    const texts: string[] = []
+    if (a.summary) texts.push(a.summary)
+    const lastText = [...a.entries].reverse().find((e) => e.kind === 'text' && e.text)
+    if (lastText?.text) texts.push(lastText.text)
+    if (texts.some((text) => scanInjection(text).length > 0)) set.add(a.subagentId)
+  }
+  return set
+})
+
+// R2：idle/完成态可续话标记（steer 通道落 R5，当前仅视觉提示）
+const steerableIds = computed<Set<string>>(
+  () => new Set(agents.value.filter((a) => a.status === 'completed' || a.status === 'interrupted').map((a) => a.subagentId)),
+)
 const selected = computed(() => agents.value.find(a => a.subagentId === selectedId.value) ?? null)
 
 // 会话切换清选中；名册里选中项消失回落空态
@@ -63,6 +84,17 @@ function select(stream: SubagentStream): void {
           >
             <span class="ide-agents__dot" :class="`is-${a.status}`" />
             <span class="ide-agents__name">{{ a.subagentId }}</span>
+            <span
+              v-if="flaggedIds.has(a.subagentId)"
+              class="ide-agents__badge ide-agents__badge--injection"
+              data-testid="ide-agent-injection-badge"
+              :title="t('ide.injection.badgeTitle')"
+            >⚠</span>
+            <span
+              v-if="steerableIds.has(a.subagentId)"
+              class="ide-agents__badge ide-agents__badge--steer"
+              :title="t('ide.agents.steerHint')"
+            >↩</span>
             <span class="ide-agents__time">{{ formatRelativeTime(t, a.updatedAt) }}</span>
           </button>
         </li>
@@ -126,6 +158,24 @@ function select(stream: SubagentStream): void {
   &.is-running { background: #4cc9f0; }
   &.is-completed { background: #98c379; }
   &.is-failed, &.is-error, &.is-cancelled, &.is-interrupted { background: #e06c75; }
+}
+
+.ide-agents__badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 3px;
+
+  &--injection {
+    color: #f0a44c;
+    background: rgba(240, 164, 76, 0.15);
+  }
+
+  &--steer {
+    color: #61afef;
+    background: rgba(97, 175, 239, 0.12);
+  }
 }
 
 .ide-agents__name {
