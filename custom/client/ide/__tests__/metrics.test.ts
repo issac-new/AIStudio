@@ -10,6 +10,10 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
+// R1：状态栏新增低余量 toast（useMessage）与遥测弹层（usage api）依赖
+vi.mock('naive-ui', () => ({ useMessage: () => ({ warning: vi.fn() }) }))
+vi.mock('../api/usage', () => ({ ideUsageApi: { rounds: vi.fn(async () => ({ rounds: [] })) } }))
+
 // chat store 桩：reactive 对象，activeSession 走 getter 投影 sessions
 vi.mock('@/stores/hermes/chat', () => {
   const fake = reactive({
@@ -26,6 +30,7 @@ vi.mock('@/stores/hermes/chat', () => {
 
 vi.mock('@/api/studio/sessions', () => ({
   fetchContextLength: vi.fn(async () => 64000),
+  fetchUsageStats: vi.fn(async () => ({ daily_usage: [] })),
   fetchSessions: vi.fn(async () => [
     {
       id: 's1',
