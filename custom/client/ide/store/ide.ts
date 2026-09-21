@@ -119,8 +119,9 @@ const DEFAULT_SIDEBAR: { organize: IdeOrganizeMode } = {
 }
 
 const DEFAULT_SIDEPANE: IdeSidePanePrefs = {
-  open: false,
-  tab: 'wiki',
+  // v12.6 用户裁定：三栏打开时默认显示（此前右侧辅助面板默认收起）
+  open: true,
+  tab: 'files',
   width: 480,
 }
 

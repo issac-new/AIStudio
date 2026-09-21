@@ -187,6 +187,12 @@ function sessionOfTask(t: TaskLinkSource): string | null {
   return null
 }
 
+/** v12.5 导出版：任务 → 挂接聊天会话 id（session_id 优先，tenant 六段式退化）——
+ *  页头任务下拉跳转（关联会话 vs 编码工作空间分派）复用同一判定 */
+export function taskLinkedSessionId(t: TaskLinkSource): string | null {
+  return sessionOfTask(t)
+}
+
 export function linkedTaskIdsOfSession(
   sel: { kind: SessionKind; id: string },
   tasks: readonly TaskLinkSource[],

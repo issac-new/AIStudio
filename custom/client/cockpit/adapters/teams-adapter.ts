@@ -74,6 +74,8 @@ export interface KanbanOverview {
 export interface KanbanOverviewMapped {
   boards: Array<{ slug: string; name: string; total: number }>
   tasks: CockpitTask[]
+  /** 原始跨板任务对（v12.5 聚合看板/任务跳转消费：session_id/workspace_path 等） */
+  rawTasks: Array<{ board: string; task: any }>
 }
 
 /** 拉聚合端点并映射为 cockpit 任务形状（boardSlug 已带） */
@@ -82,10 +84,10 @@ export async function fetchKanbanOverview(): Promise<KanbanOverviewMapped> {
   const boards = (overview?.boards || [])
     .filter(board => !board.archived)
     .map(board => ({ slug: board.slug, name: board.name, total: Number(board.total ?? 0) }))
-  const tasks = (overview?.tasks || [])
-    .filter(entry => entry && entry.task)
-    .map(entry => taskAdapter.toCockpitTask(entry.task, entry.board))
-  return { boards, tasks }
+  const entries = (overview?.tasks || []).filter(entry => entry && entry.task)
+  const tasks = entries.map(entry => taskAdapter.toCockpitTask(entry.task, entry.board))
+  const rawTasks = entries.map(entry => ({ board: entry.board, task: entry.task }))
+  return { boards, tasks, rawTasks }
 }
 
 // ── 舰队就地审批/澄清（跨 profile）──

@@ -53,6 +53,9 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   // ── ① 跨 board 任务聚合 ──
   const tasks = ref<CockpitTask[]>([])
   const boards = ref<{ slug: string; name: string; total: number }[]>([])
+  /** 原始跨板任务（v12.5）：{board, 原始 KanbanTask} 对——聚合看板渲染与任务
+   *  跳转需要 session_id/workspace_path/priority 数值等映射层丢掉的字段 */
+  const rawTasks = ref<Array<{ board: string; task: any }>>([])
 
   let _lastRefreshTs = 0
   async function refreshAllBoards(force = false): Promise<boolean> {
@@ -65,6 +68,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
         const overview = await teamsApi.fetchKanbanOverview()
         boards.value = overview.boards.length ? overview.boards : [{ slug: 'default', name: 'default', total: 0 }]
         tasks.value = overview.tasks
+        rawTasks.value = overview.rawTasks
         return true
       } catch { /* 聚合端点不可用 → 回落 */ }
       const boardList = await kanbanApi.listBoards({ includeArchived: false })
@@ -73,15 +77,22 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
       const results = await Promise.allSettled(
         active.map((b: any) =>
           kanbanApi.listTasks({ board: b.slug, includeArchived: true }).then(
-            list => list.map(t => taskAdapter.toCockpitTask(t, b.slug)),
+            list => list.map((t: any) => ({ board: b.slug, raw: t, mapped: taskAdapter.toCockpitTask(t, b.slug) })),
           ),
         ),
       )
       const all: CockpitTask[] = []
+      const raw: Array<{ board: string; task: any }> = []
       for (const r of results) {
-        if (r.status === 'fulfilled') all.push(...r.value)
+        if (r.status === 'fulfilled') {
+          for (const item of r.value) {
+            all.push(item.mapped)
+            raw.push({ board: item.board, task: item.raw })
+          }
+        }
       }
       tasks.value = all
+      rawTasks.value = raw
       return true
     } catch {
       return false
@@ -308,7 +319,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
 
   return {
     // ① 聚合
-    tasks, boards, refreshAllBoards,
+    tasks, boards, rawTasks, refreshAllBoards,
     // ② 待办/提醒
     userTodos, loadTodos, addUserTodo, removeUserTodo,
     startReminderScheduler, stopReminderScheduler,

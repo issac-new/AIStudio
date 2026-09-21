@@ -17,6 +17,8 @@ const props = defineProps<{
   laneByProfile?: boolean
   tenants?: string[]
   taskCount?: number
+  /** v12.5 聚合模式：隐藏单板选择与归档（板筛选由外层多选 chips 承载） */
+  hideBoardSelect?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -173,6 +175,7 @@ const hasActiveFilters = computed(() =>
     <div class="toolbar-top-row">
       <div class="toolbar-left">
         <NSelect
+          v-if="!hideBoardSelect"
           :value="currentBoard"
           :options="boardOptions"
           size="small"
@@ -203,7 +206,7 @@ const hasActiveFilters = computed(() =>
           + {{ t('kanban.board.create', 'New board') }}
         </NButton>
         <NPopconfirm
-          v-if="canArchiveCurrent"
+          v-if="canArchiveCurrent && !hideBoardSelect"
           @positive-click="emit('archiveBoard')"
         >
           <template #trigger>
