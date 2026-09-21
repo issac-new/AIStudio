@@ -626,7 +626,11 @@
 #      （context/tps/tpsEmpty/cache/cacheEmpty/cacheRead/cacheWrite/cacheInput）。
 336-client-i18n-ide-metrics.patch
 
+# 337/338: ia2.sit 词表（SitDetailPanel 过滤/排序五键：filterByStatusHint/
+#      emptyFiltered/sortStatus/sortPriority/sortCreatedAt，zh/en 成对）。
+337-client-i18n-ia2-v12-7-zh.patch
+338-client-i18n-ia2-v12-7-en.patch
+
 # 339: IDE「MCP」页签 + 对话式 MCP 配置（M3 kimi /mcp-config 范式移植）——
 #      ide.sidePane.tab_mcp / ide.paletteCmdMcpConfig / ide.mcp.* 12 键。
-#      注：337/338 为并行会话在途（ia2.sit 词表），合并后顺序 336→337→338→339。
 339-client-i18n-ide-mcp.patch

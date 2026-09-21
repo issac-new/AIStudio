@@ -63,11 +63,46 @@ const titleKey = computed(() => ({
   online: 'ia2.sit.online',
 }[props.segment]))
 
-/** 任务面板：开放态（未完成未归档，props 已过滤）、创建时间倒序，封顶 60 行 */
-const taskRows = computed(() =>
-  [...props.tasks]
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 60))
+/** 任务面板：开放态（未完成未归档，props 已过滤）→ 状态多选筛选 → 排序，封顶 60 行。
+ *  v12.7（用户裁定）：状态标签可点击筛选（多选 OR；点中即只显该态，再点取消；选多态
+ *  为并集）；排序三档——状态序（工作流推进）/优先级（P0 先）/创建时间（新先，默认）。 */
+const taskStatusFilter = ref<Set<string>>(new Set())
+type TaskSortKey = 'status' | 'priority' | 'createdAt'
+const taskSort = ref<TaskSortKey>('createdAt')
+
+function toggleTaskStatusFilter(status: string): void {
+  const next = new Set(taskStatusFilter.value)
+  if (next.has(status)) next.delete(status)
+  else next.add(status)
+  taskStatusFilter.value = next
+}
+
+function taskPriorityRank(priority?: string): number {
+  const map: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
+  return priority && map[priority] !== undefined ? map[priority] : 3
+}
+
+const taskRows = computed(() => {
+  const list = [...props.tasks].filter(x =>
+    taskStatusFilter.value.size === 0 || taskStatusFilter.value.has(x.status))
+  const key = taskSort.value
+  if (key === 'status') {
+    list.sort((a, b) => {
+      const ia = STATUS_ORDER.indexOf(a.status as (typeof STATUS_ORDER)[number])
+      const ib = STATUS_ORDER.indexOf(b.status as (typeof STATUS_ORDER)[number])
+      const ra = (ia === -1 ? 99 : ia), rb = (ib === -1 ? 99 : ib)
+      return ra !== rb ? ra - rb : b.createdAt - a.createdAt
+    })
+  } else if (key === 'priority') {
+    list.sort((a, b) => {
+      const ra = taskPriorityRank(a.priority), rb = taskPriorityRank(b.priority)
+      return ra !== rb ? ra - rb : b.createdAt - a.createdAt
+    })
+  } else {
+    list.sort((a, b) => b.createdAt - a.createdAt)
+  }
+  return list.slice(0, 60)
+})
 
 /** 分状态统计行：按工作流词表序呈现（装配方给什么状态都归位） */
 const sortedStats = computed(() =>
@@ -245,17 +280,35 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         </div>
       </template>
 
-      <!-- 任务：分状态统计 + 基本信息行（板/优先级/指派/创建）；行点击经装配方
-           跳转关联聊天会话或编码工作空间（v12.5 用户裁定） -->
+      <!-- 任务：分状态统计（点击筛选，多选并集）+ 排序三档 + 基本信息行 -->
       <template v-else-if="segment === 'tasks'">
-        <div v-if="!taskRows.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
         <div v-if="taskStats.length" class="sitp__stats" data-testid="sitp-task-stats">
-          <span
+          <button
             v-for="s in sortedStats" :key="s.status"
-            class="sitp__stat" :class="`sitp__stat--${s.status}`"
+            type="button" class="sitp__stat" :class="[`sitp__stat--${s.status}`, { 'is-on': taskStatusFilter.has(s.status) }]"
             :data-testid="`sitp-stat-${s.status}`"
-          >{{ statusLabel(s.status) }} {{ s.count }}</span>
+            :title="t('ia2.sit.filterByStatusHint')"
+            @click="toggleTaskStatusFilter(s.status)"
+          >{{ statusLabel(s.status) }} {{ s.count }}</button>
+          <span class="sitp__sort" data-testid="sitp-task-sort">
+            <button
+              type="button" class="sitp__sort-btn" :class="{ 'is-on': taskSort === 'status' }"
+              data-testid="sitp-sort-status" :title="t('ia2.sit.sortStatus')"
+              @click="taskSort = 'status'"
+            >{{ t('ia2.sit.sortStatus') }}</button>
+            <button
+              type="button" class="sitp__sort-btn" :class="{ 'is-on': taskSort === 'priority' }"
+              data-testid="sitp-sort-priority" :title="t('ia2.sit.sortPriority')"
+              @click="taskSort = 'priority'"
+            >{{ t('ia2.sit.sortPriority') }}</button>
+            <button
+              type="button" class="sitp__sort-btn" :class="{ 'is-on': taskSort === 'createdAt' }"
+              data-testid="sitp-sort-createdAt" :title="t('ia2.sit.sortCreatedAt')"
+              @click="taskSort = 'createdAt'"
+            >{{ t('ia2.sit.sortCreatedAt') }}</button>
+          </span>
         </div>
+        <div v-if="!taskRows.length" class="sitp__empty">{{ taskStatusFilter.size ? t('ia2.sit.emptyFiltered') : t('ia2.sit.empty') }}</div>
         <button
           v-for="task in taskRows" :key="task.id" type="button" class="sitp__row sitp__row--task"
           :data-testid="`sitp-task-${task.id}`" :title="t('ia2.sit.taskJumpHint')"
@@ -387,10 +440,23 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   font-size: 10px; padding: 1px 7px; border-radius: 8px;
   background: var(--bg-secondary); color: var(--text-secondary);
   font-variant-numeric: tabular-nums; white-space: nowrap;
+  /* v12.7 可点击筛选：无边框、统一不透明度；选中态加实色边 + 提权 */
+  border: 1px solid transparent; cursor: pointer; font-family: inherit;
+  &:hover { border-color: var(--text-muted); }
+  &.is-on { border-color: currentColor; font-weight: 700; }
 }
 .sitp__stat--blocked { background: var(--error); color: #fff; }
 .sitp__stat--review { background: var(--warning); color: var(--text-primary); }
 .sitp__stat--running { background: var(--primary, #3b82f6); color: #fff; }
+/* v12.7 排序控件：与状态标签同排右置 */
+.sitp__sort { display: inline-flex; gap: 2px; margin-left: auto; }
+.sitp__sort-btn {
+  height: 18px; padding: 0 7px; border-radius: 8px; border: 1px solid var(--border-color);
+  background: var(--bg-card); color: var(--text-muted); font-size: 10px;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
+  &.is-on { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--text-muted); font-weight: 700; }
+}
 .sitp__acts { display: inline-flex; gap: 4px; flex-shrink: 0; }
 .sitp__act {
   height: 22px; padding: 0 8px; border-radius: 4px; border: 1px solid var(--border-color);
