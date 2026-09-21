@@ -110,7 +110,9 @@ describe('worktree 编排（patch 348 server 控制器锚点）', () => {
     expect(patch).toContain('app.use(ideWorktreeRouter.routes())')
     const ctrl = readFileSync(resolve(overlayRoot, 'custom/server/controllers/ide/worktree.ts'), 'utf8')
     expect(ctrl).toContain('WorktreeManager')
-    expect(ctrl).toContain("updateSession(sessionId, { workspace })")
+    // 会话绑定复用既有 REST 端点（与 POST /api/studio/sessions/:id/workspace 同一存储字段）
+    expect(ctrl).toContain('/api/studio/sessions/')
+    expect(ctrl).toContain('/workspace')
     expect(ctrl).toContain('/api/ide/worktree/create')
     expect(ctrl).toContain('/api/ide/worktree/remove')
     expect(ctrl).toContain('/api/ide/worktree/list')
