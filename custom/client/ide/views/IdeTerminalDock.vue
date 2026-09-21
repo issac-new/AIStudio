@@ -2,9 +2,12 @@
 // IdeTerminalDock — 终端多开容器（M4c，对标 zcode 终端多实例/分屏）：
 // tab 条 + 每页签一个独立 IdeTerminalPanel 实例（script setup 闭包状态实例级
 // 隔离，每实例独立 PTY WebSocket）。v-show 保活切换不重连。
-import { ref } from 'vue'
+// R4 终端 actions：监听 overlay:terminal-action（IdeSidePane 按钮触发），
+// 把命令写入当前活动页签终端（panel 暴露 writeCommand）。
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IdeTerminalPanel from './IdeTerminalPanel.vue'
+import { TERMINAL_ACTION_EVENT } from '../utils/terminalActions'
 
 const { t } = useI18n()
 
@@ -17,6 +20,19 @@ const tabs = ref<TermTab[]>([{ id: nextId++ }])
 const activeId = ref(tabs.value[0].id)
 /** 分屏模式（v4Pane 对应物）：全部终端并排展示，页签栏隐藏 */
 const split = ref(false)
+
+const panelRefs = ref<Array<{ writeCommand?: (command: string) => void } | null>>([])
+
+function onTerminalAction(evt: Event): void {
+  const command = (evt as CustomEvent<{ command?: string }>).detail?.command
+  if (!command) return
+  const idx = tabs.value.findIndex((tab) => tab.id === activeId.value)
+  const panel = panelRefs.value[idx]
+  panel?.writeCommand?.(command)
+}
+
+onMounted(() => window.addEventListener(TERMINAL_ACTION_EVENT, onTerminalAction))
+onUnmounted(() => window.removeEventListener(TERMINAL_ACTION_EVENT, onTerminalAction))
 
 function addTab(): void {
   const tab: TermTab = { id: nextId++ }
@@ -77,8 +93,9 @@ function closeTab(id: number): void {
     </div>
     <div class="ide-termdock__panes">
       <IdeTerminalPanel
-        v-for="tab in tabs"
+        v-for="(tab, index) in tabs"
         :key="tab.id"
+        :ref="(el) => { panelRefs[index] = el as never }"
         v-show="split || activeId === tab.id"
         class="ide-termdock__pane"
         :class="{ 'is-split': split }"

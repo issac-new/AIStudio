@@ -1,0 +1,74 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -587,6 +587,33 @@
+       actLeave: '仅留档',
+     },
+     paletteCmdReview: '评审当前改动（只读）',
++    hooks: {
++      title: 'Hooks',
++      refresh: '刷新',
++      loadFailed: 'Hooks 加载失败',
++      empty: '未配置 hooks（~/.hermes/config.yaml 的 hooks: 段为空）',
++      failClosed: '失败即阻',
++      hint: '只读视图；批准与编辑请用 hermes hooks CLI（写入管理在后续轮次开放）',
++    },
++    inbox: {
++      title: '活动',
++      empty: '暂无活动',
++      running: '正在运行',
++      runDone: '运行完成',
++      waitingApproval: '等待审批',
++      waitingClarify: '等待澄清',
++    },
++    modelSwitcher: {
++      title: '切换模型',
++      empty: '默认模型',
++      loading: '模型目录加载中…',
++    },
++    termActions: {
++      labelPlaceholder: '名称',
++      commandPlaceholder: '命令',
++      remove: '删除「{label}」',
++    },
++    sidePaneTab_hooks: 'Hooks',
+   },
+ 
+   loop: {
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -589,6 +589,33 @@
+       actLeave: 'Keep for later',
+     },
+     paletteCmdReview: 'Review current changes (read-only)',
++    hooks: {
++      title: 'Hooks',
++      refresh: 'Refresh',
++      loadFailed: 'Failed to load hooks',
++      empty: 'No hooks configured (hooks: section in ~/.hermes/config.yaml is empty)',
++      failClosed: 'fail-closed',
++      hint: 'Read-only view; approve and edit with the hermes hooks CLI (write management lands in a later round)',
++    },
++    inbox: {
++      title: 'Activity',
++      empty: 'No activity yet',
++      running: 'Running',
++      runDone: 'Run finished',
++      waitingApproval: 'Waiting for approval',
++      waitingClarify: 'Waiting for clarification',
++    },
++    modelSwitcher: {
++      title: 'Switch model',
++      empty: 'Default model',
++      loading: 'Loading model catalog…',
++    },
++    termActions: {
++      labelPlaceholder: 'Label',
++      commandPlaceholder: 'Command',
++      remove: 'Remove "{label}"',
++    },
++    sidePaneTab_hooks: 'Hooks',
+   },
+ 
+   loop: {
