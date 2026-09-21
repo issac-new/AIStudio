@@ -9,7 +9,11 @@
      composables（useSessionRows/useDecisionActions/useSitCounts 单一实现）。
      v12.4（2026-09-20 用户裁定）：三栏栏控迁各栏顶部控制条（IaColumnControls
      左=折叠/中=最大化+独立窗口/右=折叠，页头集中簇退役；折叠态 18px 导轨
-     就地展开）；右栏「等我」对齐 useDecisionRows（待我决策的任务及会话）。 -->
+     就地展开）；右栏「等我」对齐 useDecisionRows（待我决策的任务及会话）。
+     v13（2026-09-21 协作感知轮，multica/routa 源码调研落地）：左栏循环行
+     运行脉冲（loopRunActivity）+右栏「需关注」节（buildAttention 分诊）+
+     运行画布耗时徽章与语义块回放（RunCanvas 内消费）；调研正本
+     docs/comm-collab-v13-research.md。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -24,6 +28,7 @@ import {
   linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
   type StreamSelection,
 } from '../adapters/flow'
+import { buildAttention, loopRunActivity, type AttentionRow, type LoopActivity } from '../adapters/activity'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
@@ -124,6 +129,33 @@ const linkedContext = computed(() => {
   return sessionRows.value.find(s => s.kind === sel.kind && s.id === sel.id)?.name ?? ''
 })
 
+// ── v13 协作感知：左栏活动索引 + 右栏需关注行（单一计算，两栏消费）──
+
+const loopActivity = computed<Record<string, LoopActivity>>(() => {
+  const m = loopRunActivity(runsStore.sortedRuns ?? [])
+  return Object.fromEntries(m)
+})
+
+const attentionRows = computed<AttentionRow[]>(() =>
+  buildAttention(tasksForShow.value, runsStore.sortedRuns ?? [], Date.now()))
+
+/** 需关注行点击分派：任务→看板预选；运行→所属循环画布；兜底全局时间线 */
+function onOpenAttention(row: AttentionRow): void {
+  if (row.taskId) {
+    void router.push({ name: 'ia2.board', query: { task: row.taskId } })
+    return
+  }
+  if (row.runId) {
+    const run = (runsStore.sortedRuns ?? []).find(r => r.runId === row.runId)
+    const loopId = run?.graphId.startsWith('loop-') ? run.graphId.slice(5) : null
+    if (loopId) {
+      void router.push({ name: 'ia2.loopCanvas', params: { loopId } })
+      return
+    }
+  }
+  cockpit.openRunTraceGlobal()
+}
+
 // ── 右栏动作（动线②指派 / ④决策 / ⑤编码；决策实现=useDecisionActions）──
 
 const drawerTaskId = ref<string | null>(null)
@@ -214,6 +246,26 @@ const loopLatestRunId = computed(() => {
   return (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)?.runId ?? null
 })
 
+/** v13 运行画布耗时徽章：最新 run 状态 + 首事件时刻（ISO∪ms 归一 ms） */
+const loopLatestRunStatus = computed(() => {
+  const sel = activeSel.value
+  if (!sel || sel.kind !== 'loop') return null
+  return (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)?.status ?? null
+})
+
+const loopLatestRunStartMs = computed(() => {
+  const sel = activeSel.value
+  if (!sel || sel.kind !== 'loop') return null
+  const run = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)
+  if (!run || !run.events.length) return null
+  let min = Number.POSITIVE_INFINITY
+  for (const e of run.events) {
+    const ms = typeof e.ts === 'number' ? e.ts : Date.parse(String(e.ts))
+    if (!Number.isNaN(ms) && ms < min) min = ms
+  }
+  return Number.isFinite(min) ? min : null
+})
+
 const loopLiveConnected = computed(() => runsStore.connection === 'connected')
 
 const loopParticipants = computed(() => {
@@ -291,6 +343,7 @@ function onNewLoop(): void {
         :sessions="sessionRows"
         :loops="loopRows"
         :selection="activeSel"
+        :loop-activity="loopActivity"
         @select="onSelect"
         @create-room="onCreateRoom"
         @new-loop="onNewLoop"
@@ -330,6 +383,8 @@ function onNewLoop(): void {
         :loop-row="loopRows.find(l => l.id === activeSel.id) ?? { kind: 'loop', id: activeSel.id, name: loopStore.currentLoop.name, stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null }"
         :linked-tasks="linkedTasks"
         :latest-run-id="loopLatestRunId"
+        :latest-run-status="loopLatestRunStatus"
+        :latest-run-start-ms="loopLatestRunStartMs"
         :live-connected="loopLiveConnected"
         :participants="loopParticipants"
         @open-task="onCanvasOpenTask"
@@ -346,6 +401,7 @@ function onNewLoop(): void {
       <IaColumnControls class="wb__colctl" testid="ia-col-right" fold="right" @fold="flow.toggleFold('right')" />
       <TaskDecisionPanel
         :wait-items="waitItems"
+        :attention-rows="attentionRows"
         :linked-tasks="linkedTasks"
         :feed-rows="feedRows"
         :linked-context="linkedContext"
@@ -358,6 +414,7 @@ function onNewLoop(): void {
         @handle-task="onHandleTask"
         @new-task="onNewTask"
         @all-timeline="onAllTimeline"
+        @open-attention="onOpenAttention"
       />
     </aside>
     <div v-else class="wb__rail" data-testid="wb-rail-right">
