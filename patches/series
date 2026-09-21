@@ -673,3 +673,7 @@
 # 349: IDE R5 引擎域 i18n——worktree 编排/goal 预算引擎/子代理 steer 三块
 #      24 键（zh/en）。
 349-client-i18n-ide-r5-engine.patch
+
+# 350: 沟通协作 v13 协作感知轮——locales 增键（act/att/sem 词表：活动脉冲
+#      tooltip/需关注节副文/语义块七类 + 耗时徽章 + 全部过滤）。
+350-client-i18n-comm-v13.patch

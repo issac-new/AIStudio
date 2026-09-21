@@ -122,3 +122,50 @@ describe('RunCanvas — 历史视图（回放+编年+导出）', () => {
     w.unmount()
   })
 })
+
+// ── v13 协作感知轮（语义块回放 + 运行耗时徽章）──
+
+describe('RunCanvas — v13 语义块回放', () => {
+  it('语义分布条 + chips 渲染（含计数）；chip 点击过滤编年行', async () => {
+    const w = mountCanvas()
+    await flushPromises()
+    await w.find('[data-testid="rc-view-hist"]').trigger('click')
+    const seek = w.find('.rc__seek')
+    await seek.setValue(3)
+    // 3 事件均为 graph.node-*（node 类）→ 分布条存在 + node chip 计数 3
+    expect(w.find('[data-testid="rc-sem"]').exists()).toBe(true)
+    const nodeChip = w.find('[data-testid="rc-sem-chip-node"]')
+    expect(nodeChip.text()).toContain('3')
+    // 过滤到 interrupt（无该类事件不渲染 chip）→ 用 all/node 验证开关语义
+    await nodeChip.trigger('click')
+    expect(w.find('[data-testid="rc-chronicle"]').findAll('.rc__chron-row')).toHaveLength(3)
+    // 切「全部」仍 3 条（开-关等价）
+    await w.find('[data-testid="rc-sem-all"]').trigger('click')
+    expect(w.find('[data-testid="rc-chronicle"]').findAll('.rc__chron-row')).toHaveLength(3)
+  })
+
+  it('编年行带语义类（node 行类名 + 图标类）', async () => {
+    const w = mountCanvas()
+    await flushPromises()
+    await w.find('[data-testid="rc-view-hist"]').trigger('click')
+    await w.find('.rc__seek').setValue(3)
+    const row = w.find('[data-testid="rc-chron-0"]')
+    expect(row.classes()).toContain('rc__chron-row--node')
+  })
+})
+
+describe('RunCanvas — v13 运行耗时徽章', () => {
+  it('running + 起始时刻 → ⏱ 徽章渲染（含时长文本）', async () => {
+    const w = mountCanvas({ latestRunStatus: 'running', latestRunStartMs: Date.now() - 5 * 60_000 - 5_000 })
+    await flushPromises()
+    const badge = w.find('[data-testid="rc-elapsed"]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toContain('5m')
+  })
+
+  it('非 running 态不渲染徽章', async () => {
+    const w = mountCanvas({ latestRunStatus: 'completed', latestRunStartMs: Date.now() - 60_000 })
+    await flushPromises()
+    expect(w.find('[data-testid="rc-elapsed"]').exists()).toBe(false)
+  })
+})
