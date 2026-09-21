@@ -4,7 +4,7 @@
 // 工作页）；WorkbenchView 三栏骨架在位（Task 4 起填充左中右）。
 // 重组件（kanban/matrix-chat）一律 vi.mock 成桩，只验证"壳→内嵌"接线。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
@@ -45,6 +45,26 @@ describe('视图壳内嵌接线', () => {
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(wrapper.find('.kanban-stub').exists()).toBe(true)
     expect(swarmKanbanMounted.count).toBe(1)
+  })
+
+  it('v12.6 看板页右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）→ 回沟通协作工作台', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/app', name: 'ia2.collab', component: { template: '<div />' } },
+        { path: '/app/board', name: 'ia2.board', component: TasksView },
+      ],
+    })
+    await router.push('/app/board')
+    await router.isReady()
+    const wrapper = mount(TasksView, { global: { plugins: [router] } })
+    const close = wrapper.find('[data-testid="ia-board-close"]')
+    expect(close.exists()).toBe(true)
+    await close.trigger('click')
+    await router.isReady()
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.collab')
+    wrapper.unmount()
   })
 
   it('WorkbenchView 三栏骨架（wb-left / wb-center / wb-right）恒在', async () => {

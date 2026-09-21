@@ -8,17 +8,24 @@ import type { KanbanTaskStatus } from '@/api/hermes/kanban'
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const kanban = useKanbanStore()
 
 type TabKey = 'board' | 'trace'
 const tab = ref<TabKey>('board')
+
+/** v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）——回到沟通协作
+ *  工作台（页头视图切换器同义的回退动线） */
+function closeBoard(): void {
+  void router.push({ name: 'ia2.collab' })
+}
 
 /** kanban 任务状态词表（台账 T7 双源收敛：由上游 KanbanTaskStatus 类型派生，
  *  不再手抄字符串数组——上游词表变化时此处编译期报错，而非静默漂移） */
@@ -77,6 +84,15 @@ function openTaskFromMatrix(taskId: string): void {
       >
         {{ t('ia2.tasks.tabTrace') }}
       </button>
+      <!-- v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关） -->
+      <button
+        type="button"
+        class="ia-tasks__close"
+        data-testid="ia-board-close"
+        :title="t('cockpit.close')"
+        :aria-label="t('cockpit.close')"
+        @click="closeBoard"
+      >×</button>
     </div>
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
@@ -102,6 +118,15 @@ function openTaskFromMatrix(taskId: string): void {
   padding: 8px 12px 0;
   border-bottom: 1px solid var(--border-color, #e5e7eb);
   flex-shrink: 0;
+  align-items: center;
+}
+
+.ia-tasks__close {
+  margin-left: auto; flex-shrink: 0;
+  width: 24px; height: 24px; padding: 0; margin-bottom: 2px;
+  border: none; border-radius: 5px; background: transparent;
+  color: var(--text-muted, #878c99); font-size: 16px; line-height: 1; cursor: pointer;
+  &:hover { color: var(--text-primary, inherit); background: var(--bg-secondary, #f1f2f4); }
 }
 
 .ia-tasks__tab {
