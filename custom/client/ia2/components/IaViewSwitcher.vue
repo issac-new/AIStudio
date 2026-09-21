@@ -37,14 +37,19 @@ function toggleView(): void {
 .ia-vsrow {
   display: inline-flex; align-items: center; flex-shrink: 0; margin-left: 4px;
 }
-.ia-scenes {
-  display: flex; border: 1px solid var(--border-color);
-  border-radius: var(--radius, 6px); background: transparent; padding: 0;
+/* v12.7 顶栏对齐：scoped 提高特异性压住全局 ia2.scss 的 .ia-scenes（padding 2px/
+ * margin 8px 16px 0 会把容器撑到 36px、按钮下沉 4px——v12.6 首修只改按钮高度
+ * 没碰容器，是「midY 仍 26」的真凶）。nav 与按钮同高 28px。 */
+.ia-vsrow .ia-scenes.ia-scenes {
+  display: flex; align-items: center; border: 1px solid var(--border-color);
+  border-radius: var(--radius, 6px); background: transparent;
+  padding: 0; margin: 0; height: 28px; box-sizing: border-box; align-self: auto;
 }
-.ia-scenes__btn {
-  padding: 2px 10px; border: none; border-radius: 5px; cursor: pointer;
+.ia-vsrow .ia-scenes .ia-scenes__btn.ia-scenes__btn {
+  padding: 0 10px; border: none; border-radius: 5px; cursor: pointer;
   background: transparent; color: var(--text-muted);
-  font-size: 12px; font-family: inherit; white-space: nowrap; height: 20px;
+  font-size: 12px; font-family: inherit; white-space: nowrap; height: 100%;
+  margin: 1px 0; align-self: center;
   &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
 </style>
