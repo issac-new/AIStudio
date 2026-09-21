@@ -3,7 +3,7 @@
 // 数据源全走既有 store：workspace.tasks / buildWaiting / loopStore.loops /
 // chatStore.sessions ∪ matrixRoom.sortedRooms / teamRegistry.accounts /
 // cockpit.fleetSessions。pinia 单例——多处 useStore 无重复成本。
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useWorkspaceStore } from '../store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -14,6 +14,8 @@ import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { buildWaiting, formatWaitAge } from '../adapters/waiting'
 import { buildLoopRows } from '../adapters/flow'
+import { loopRest } from '@/custom/loop/api/loop-rest'
+import type { TaskContract } from '@/custom/loop/types'
 import { useNowTick } from './useNowTick'
 
 export function useSitCounts() {
@@ -54,7 +56,22 @@ export function useSitCounts() {
   const sessionCount = computed(() =>
     ((chatStore.sessions ?? []).length) + ((matrixRoom.sortedRooms ?? []).length) + ((groupChat.rooms ?? []).length))
 
-  const loopRows = computed(() => buildLoopRows(loopStore.loops ?? [], now.value))
+  const loopContracts = ref<TaskContract[]>([])
+  watch(
+    () => (loopStore.loops ?? []).map(l => l.id).join(','),
+    async (ids) => {
+      if (!ids) {
+        loopContracts.value = []
+        return
+      }
+      // R6-A reason chip 数据源：拉各 loop contracts（并发，失败单 loop 不阻塞）
+      const list = ids.split(',').filter(Boolean)
+      const settled = await Promise.allSettled(list.map(id => loopRest.getContracts(id)))
+      loopContracts.value = settled.flatMap(s => (s.status === 'fulfilled' ? s.value : []))
+    },
+    { immediate: true },
+  )
+  const loopRows = computed(() => buildLoopRows(loopStore.loops ?? [], now.value, loopContracts.value))
   const loopBlocked = computed(() => loopRows.value.filter(l => l.blocked).length)
 
   const accounts = computed(() => teamRegistry.accounts ?? [])

@@ -108,7 +108,11 @@ describe('E2E: GRAPH_ENGINE=on full loop', () => {
     const persistence = recordingPersistence()
     const verifier = new Verifier()
     vi.spyOn(verifier, 'verify').mockImplementation(async (c: TaskContract) => ({
-      contractId: c.id, results: { programmatic: [], judge: null, human: null },
+      contractId: c.id,
+      results: {
+        programmatic: [], judge: null,
+        human: { approver: 'h', decision: 'approved', comment: '', timestamp: new Date().toISOString() },
+      },
       overall: 'passed' as const, finalResponseGuard: true,
     }))
 
@@ -171,7 +175,15 @@ describe('E2E: HITL approval via assembly bridge', () => {
       verifyCalls++
       return verifyCalls === 1
         ? { contractId: c.id, results: { programmatic: [], judge: null, human: null }, overall: 'pending' as const, finalResponseGuard: true }
-        : { contractId: c.id, results: { programmatic: [], judge: null, human: null }, overall: 'passed' as const, finalResponseGuard: true }
+        : {
+            contractId: c.id,
+            results: {
+              programmatic: [], judge: null,
+              // R6-B 人机分工门禁：human approved 才进 persistence
+              human: { approver: 'h', decision: 'approved', comment: '', timestamp: new Date().toISOString() },
+            },
+            overall: 'passed' as const, finalResponseGuard: true,
+          }
     })
 
     const assembly = createGraphAssembly({
@@ -218,7 +230,11 @@ describe('E2E: shadow parity legacy vs graph engine', () => {
       verifier: (() => {
         const v = new Verifier()
         vi.spyOn(v, 'verify').mockImplementation(async (c: TaskContract) => ({
-          contractId: c.id, results: { programmatic: [], judge: null, human: null },
+          contractId: c.id,
+          results: {
+            programmatic: [], judge: null,
+            human: { approver: 'h', decision: 'approved', comment: '', timestamp: new Date().toISOString() },
+          },
           overall: 'passed' as const, finalResponseGuard: true,
         }))
         return v
@@ -248,7 +264,11 @@ describe('E2E: shadow parity legacy vs graph engine', () => {
         verifier: (() => {
           const v = new Verifier()
           vi.spyOn(v, 'verify').mockImplementation(async (c: TaskContract) => ({
-            contractId: c.id, results: { programmatic: [], judge: null, human: null },
+            contractId: c.id,
+            results: {
+              programmatic: [], judge: null,
+              human: { approver: 'h', decision: 'approved', comment: '', timestamp: new Date().toISOString() },
+            },
             overall: 'passed' as const, finalResponseGuard: true,
           }))
           return v
@@ -308,7 +328,11 @@ describe('E2E: R1 daily brief manual runOnce', () => {
     const store = makeRecordingStore([makeLoop('loop-5')])
     const verifier = new Verifier()
     vi.spyOn(verifier, 'verify').mockImplementation(async (c: TaskContract) => ({
-      contractId: c.id, results: { programmatic: [], judge: null, human: null },
+      contractId: c.id,
+      results: {
+        programmatic: [], judge: null,
+        human: { approver: 'h', decision: 'approved', comment: '', timestamp: new Date().toISOString() },
+      },
       overall: 'passed' as const, finalResponseGuard: true,
     }))
 

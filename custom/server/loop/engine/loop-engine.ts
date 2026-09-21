@@ -31,6 +31,9 @@ export interface LoopEngineDeps {
 }
 
 export class LoopEngine {
+  /** 本次 tick 的验证记录缓存（供 gateHumanReview 读 human 判定链） */
+  private lastValidationRecords = new Map<string, VerificationRecord>()
+
   constructor(private deps: LoopEngineDeps) {}
 
   async tick(loopId: string): Promise<void> {
@@ -81,7 +84,12 @@ export class LoopEngine {
         const validations = await this.runValidation(loop, results)
 
         // Stage 4: Persistence (for passed contracts)
-        const passed = validations.filter(v => v.passed)
+        // R6-B 人机分工门禁（multica task.go:5996）：agent 验证过线只到 in_review，
+        // done/persistence 须人审 approved 或无争议放行——先过 gate 再持久化。
+        const passedRaw = validations.filter(v => v.passed)
+        const passed = passedRaw.length > 0
+          ? await this.gateHumanReview(loop, passedRaw, this.lastValidationRecords)
+          : []
         if (passed.length > 0) {
           await this.transition(loop, 'validation', 'persistence', `${passed.length} contracts passed`)
           await this.runPersistence(loop, passed)
@@ -93,8 +101,9 @@ export class LoopEngine {
           await this.routeRepair(loop, f.contractId, f.failType)
         }
 
-        if (passed.length > 0) {
-          await this.transition(loop, 'persistence', 'scheduling', 'artifacts persisted')
+        if (passed.length > 0 || passedRaw.some((p) => validations.find((v) => v.contractId === p.contractId)?.passed)) {
+          // 有 contract 过了门禁（persistence）或停 in_review（待人审）→ scheduling
+          await this.transition(loop, passed.length > 0 ? 'persistence' : 'validation', 'scheduling', passed.length > 0 ? 'artifacts persisted' : `${passedRaw.length - passed.length} awaiting human review`)
         } else {
           await this.transition(loop, 'validation', 'scheduling', 'no contracts passed')
         }
@@ -158,8 +167,24 @@ export class LoopEngine {
     const results: Array<{ contractId: string; worktreeId: string }> = []
     for (const c of contracts) {
       const worktreeId = await this.deps.worktreeManager.create(c)
-      await this.deps.dispatcher.dispatch(c, 'maker')
-      await this.deps.store.updateContract(c.id, { status: 'in-progress', worktreeId })
+      // R6-A：dispatchWithOutcome 带认领护栏 + reason 透传（multica/routa 语义）。
+      // 拦截（runtime_offline/max_depth_exceeded）→ 不进 in-progress，contract 留
+      // queued 并落 dispatch reason 到 contract，事件原样透传（卡/会话旁 chip 数据源）。
+      const outcome = await this.deps.dispatcher.dispatchWithOutcome(c, 'maker')
+      if (!outcome.ok) {
+        await this.deps.store.updateContract(c.id, {
+          status: 'queued',
+          dispatchReason: outcome.reason.code,
+          dispatchReasonDetail: outcome.reason.detail ?? null,
+        } as never)
+        this.deps.emitEvent({
+          type: 'loop.dispatch-blocked', loopId: loop.id,
+          contractId: c.id, reason: outcome.reason.code, detail: outcome.reason.detail ?? '',
+          ts: new Date().toISOString(),
+        } as never)
+        continue
+      }
+      await this.deps.store.updateContract(c.id, { status: 'in-progress', worktreeId, dispatchReason: 'handed_off' } as never)
       this.deps.emitEvent({
         type: 'loop.task-handed-off', loopId: loop.id,
         contractId: c.id, worktreeId, ts: new Date().toISOString(),
@@ -176,6 +201,7 @@ export class LoopEngine {
       if (!contract) continue
       const record = await this.deps.verifier.verify(contract, loop)
       await this.deps.store.appendVerification(record)
+      this.lastValidationRecords.set(r.contractId, record)
       this.deps.emitEvent({
         type: 'loop.verification-complete', contractId: r.contractId,
         passed: record.overall === 'passed', ts: new Date().toISOString(),
@@ -188,6 +214,46 @@ export class LoopEngine {
       }
     }
     return validations
+  }
+
+  /** R6-B 人机分工状态门禁（multica task.go:5996 语义）：
+   *  验证过线的 contract，agent 只能推到 in_review（待验收），done 留给人或
+   *  PR 合并——persistence 前必须经人工门禁（verifier 的 requestHumanApproval
+   *  已含 human 判定链；此处把「无 human spec 的 contract 也强制停在 in_review」
+   *  兜住，失败永不自动动 in_review/blocked）。
+   *  返回可进 persistence 的子集（human decision approved 或显式无需人审）。 */
+  private async gateHumanReview(
+    loop: LoopInstance,
+    passed: Array<{ contractId: string; passed: boolean }>,
+    records: Map<string, VerificationRecord>,
+  ): Promise<Array<{ contractId: string; passed: boolean }>> {
+    const ready: Array<{ contractId: string; passed: boolean }> = []
+    for (const p of passed) {
+      const contract = await this.deps.store.getContract(p.contractId)
+      if (!contract) continue
+      const record = records.get(p.contractId)
+      const humanDecision = record?.results?.human?.decision
+      // human spec 已有 approved/rejected 判定链（verifier 走 requestHumanApproval）：
+      // approved → 直接进 persistence；rejected/changes-requested → 视为失败走 repair。
+      if (humanDecision === 'approved') {
+        ready.push(p)
+        continue
+      }
+      if (humanDecision === 'rejected' || humanDecision === 'changes-requested') {
+        await this.routeRepair(loop, p.contractId, 'human')
+        continue
+      }
+      // 无 human spec（人未表态）：强制停 in_review（验收权在人），发门禁事件，
+      // 不进 persistence——人后续经 /api/loop/contracts/:id/approve 放行。
+      await this.deps.store.updateContract(p.contractId, { status: 'submitted' } as never)
+      this.deps.emitEvent({
+        type: 'loop.dispatch-blocked', loopId: loop.id,
+        contractId: p.contractId, reason: 'gate_pending_human',
+        detail: 'agent verified passed; awaiting human review before done',
+        ts: new Date().toISOString(),
+      } as never)
+    }
+    return ready
   }
 
   private async runPersistence(loop: LoopInstance, passed: Array<{ contractId: string; passed: boolean }>): Promise<void> {

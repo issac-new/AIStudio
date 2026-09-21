@@ -682,3 +682,6 @@
 #      （统一导航 111/240 退役后 ChatPanel SessionListItem 解析缺失致协作/工作台
 #      场景白屏；path 恢复性不挂导航，会话深链由 ChatView 读 param 定位）。
 351-client-cockpit-chat-route-restore.patch
+
+# 352: R6 dispatch reason code 词汇表 i18n——ia2.dispatch.* 12 键（zh/en）。
+352-client-i18n-ia2-dispatch-reason.patch
