@@ -664,3 +664,12 @@
 # 347: IDE 会话三段视图（进行中/已完成/工作空间）i18n——ide.task.view_active/
 #      view_done/view_workspace/views 4 键（zh/en）。
 347-client-i18n-ide-session-views.patch
+
+# 348: IDE worktree 编排（R5 任务级隔离）——bootstrap routes 挂载
+#      /api/ide/worktree/{create,remove,list}（loop WorktreeManager detached-HEAD
+#      建/回收 + 会话 workspace 绑定复用 updateSession）。
+348-server-ide-worktree-routes.patch
+
+# 349: IDE R5 引擎域 i18n——worktree 编排/goal 预算引擎/子代理 steer 三块
+#      24 键（zh/en）。
+349-client-i18n-ide-r5-engine.patch
