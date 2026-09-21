@@ -1,18 +1,21 @@
 <!-- overlay/custom/client/ia2/components/SitlineBar.vue -->
 <!-- v12.4 态势条（2026-09-20 用户裁定：删会话/循环/管理）：页头一行全局态势
-     仅保留——等我⚠（待我决策的任务及会话）/ 任务（进行·待审，口径=跨板
-     未完成未归档全量）/ 在线（人·智能体·机器）。点击 emit select(segment)
+     仅保留——等我⚠（待我决策的任务及会话）/ 任务（分状态分类汇总，口径=跨板
+     未完成未归档全量；v12.7 由「进行·待审」两项扩为 9 态词表全量，零计数跳过）/
+     在线（人·智能体·机器）。点击 emit select(segment)
      就地展开 SitDetailPanel 内联面板（active 高亮当前展开段）。 -->
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-defineProps<{
+const props = defineProps<{
   waitingCount: number
   /** 最久等待人类可读标签（如 3h；空则不显示副注） */
   oldestLabel?: string
   taskTotal: number
-  taskRunning: number
-  taskReview: number
+  /** v12.7：分状态计数（byStatus），替代原 taskRunning/taskReview 两项；
+   *  与 useSitCounts.tasks 同形，零计数状态不呈现 */
+  taskByStatus: Record<string, number>
   onlinePeople: number
   onlineAgents: number
   onlineMachines: number
@@ -24,6 +27,19 @@ const emit = defineEmits<{
   (e: 'select', segment: 'waiting' | 'tasks' | 'online'): void
 }>()
 const { t } = useI18n()
+
+/** 状态呈现顺序：与 SitDetailPanel STATUS_ORDER 同一词表序；done/archived
+ *  不进任务口径（openTasks 已过滤），防御性排除 */
+const STATUS_ORDER = ['triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review'] as const
+
+/** 任务按钮副注：9 态全量分类汇总，零计数跳过；
+ *  词条与 SitDetailPanel/tdp 共用 ia2.tdp.status.*（状态词单一事实源） */
+const taskStatusSummary = computed(() =>
+  STATUS_ORDER
+    .filter(s => (props.taskByStatus[s] ?? 0) > 0)
+    .map(s => `${t(`ia2.tdp.status.${s}`)} ${props.taskByStatus[s]}`)
+    .join(' · '),
+)
 </script>
 
 <template>
@@ -38,7 +54,7 @@ const { t } = useI18n()
     </button>
     <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'tasks' }" data-testid="sit-tasks" @click="emit('select', 'tasks')">
       📋 {{ t('ia2.sit.tasks') }} {{ taskTotal }}
-      <span class="sit__sm">{{ t('ia2.sit.running') }} {{ taskRunning }} · {{ t('ia2.sit.review') }} {{ taskReview }}</span>
+      <span v-if="taskStatusSummary" class="sit__sm" data-testid="sit-tasks-summary">{{ taskStatusSummary }}</span>
     </button>
     <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'online' }" data-testid="sit-online" @click="emit('select', 'online')">
       <span class="sit__dot sit__dot--ok" />{{ t('ia2.sit.online') }} {{ onlinePeople + onlineAgents + onlineMachines }}
