@@ -25,6 +25,8 @@ import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useChatStore } from '@/stores/hermes/chat'
+import { usePlatformsStore } from '../store/platforms'
+import { buildAgentRoster } from '../adapters/agents'
 import {
   linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
   type StreamSelection,
@@ -55,11 +57,24 @@ const runsStore = useRunCenterStore()
 const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
 const chatStore = useChatStore()
+const platformsStore = usePlatformsStore()
 
 // ── 行装配与决策动作（composables 单一实现，页头态势/通知下拉同源）──
 
 const { sessionRows, chatSessions, tasksForLink, duties, accounts } = useSessionRows()
 const { loopRows } = useSitCounts()
+
+// R7-C agent 名册统一面：在线/忙闲/在跑（multica roster 语义）——
+// 三源合并：platforms 在线探针 + kanban assignee 在跑 + 会话挂靠。
+const agentRoster = computed(() => {
+  const tasks = (tasksForLink.value ?? []).map(t => ({
+    id: t.id, title: t.title, assignee: t.assignee ?? null, status: t.status,
+  }))
+  const sessions = (chatStore.sessions ?? []).map(s => ({
+    id: s.id, agent: (s as { agent?: string | null }).agent ?? null,
+  }))
+  return buildAgentRoster(platformsStore.platforms ?? [], tasks, sessions)
+})
 const { decisionRows: waitItems } = useDecisionRows()
 const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
 const { jumpIde } = useIdeJump()
@@ -364,6 +379,7 @@ function onNewLoop(): void {
       <FlowNavPanel
         :sessions="sessionRows"
         :loops="loopRows"
+        :agents="agentRoster"
         :selection="activeSel"
         :loop-activity="loopActivity"
         @select="onSelect"

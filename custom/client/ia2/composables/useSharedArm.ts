@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '../store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { usePlatformsStore } from '../store/platforms'
 
 const SUBSCRIBE_CAP = 30
 
@@ -32,6 +33,8 @@ export function useSharedArm(): void {
     void workspace.refreshAllBoards()
     void bootShared()
     void cockpit.bootstrap()
+    // R7-C agent 名册数据源：platforms 在线探针（引用计数由 store 自管）
+    usePlatformsStore().retain()
   })
 
   onUnmounted(() => {
@@ -42,6 +45,7 @@ export function useSharedArm(): void {
     workspace.stopFleetStream()
     workspace.stopReminderScheduler()
     cockpit.disconnectOnUnmount()
+    usePlatformsStore().release()
   })
 
   async function bootShared(): Promise<void> {

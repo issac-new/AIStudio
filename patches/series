@@ -689,3 +689,7 @@
 # 353: R7 归属链 + 开发回喂 i18n——ia2.att.subSession{Failed,Blocked} 2 键 +
 #      ia2.tdp.session 1 键（zh/en）。
 353-client-i18n-ia2-r7-linkage.patch
+
+# 354: R7-C agent 名册 i18n——ia2.flow.groupAgents + ia2.agents.{sessions,busy,
+#      online,idle,offline} 6 键（zh/en）。
+354-client-i18n-ia2-agents.patch
