@@ -260,5 +260,4 @@ function select(stream: SubagentStream): void {
   &:hover:not(:disabled) { background: #61afef33; }
   &:disabled { opacity: 0.4; cursor: default; }
 }
-}
 </style>

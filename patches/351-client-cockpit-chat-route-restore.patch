@@ -1,0 +1,38 @@
+diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+--- a/packages/client/src/router/index.ts
++++ b/packages/client/src/router/index.ts
+@@ -32,6 +32,34 @@
+     },
+     // overlay[nav]: 2026-09-18 统一导航——/hermes/cockpit 家族与 6 条搬迁前路径
+     // 别名整体退役（三栏已迁 /app/collab，深链由 catch-all 兜底落 /app 总览）。
++    // HERMES_CUSTOM[CockpitChatRouteRestore] BEGIN
++    // 回归修复（驾驶舱回归 2026-09-22）：统一导航退役 /hermes/chat 家族后，
++    // ChatPanel 的 SessionListItem :to="sessionHref()" 与 router.push 仍按
++    // hermes.session / hermes.globalAgentSession 命名路由 resolve——路由缺失
++    // 致协作中心（/app）与工作台（/app）渲染挂起（No match for hermes.session
++    // ×N + parentNode null）。恢复两条命名路由指向 ChatView 修复；path 是
++    // 恢复性的（不挂导航），会话深链由 ChatView 读 query/param 自行定位。
++    {
++      path: '/hermes/chat',
++      name: 'hermes.chat',
++      component: () => import('@/views/hermes/ChatView.vue'),
++    },
++    {
++      path: '/hermes/session/:sessionId',
++      name: 'hermes.session',
++      component: () => import('@/views/hermes/ChatView.vue'),
++    },
++    {
++      path: '/hermes/global-agent',
++      name: 'hermes.globalAgent',
++      component: () => import('@/views/hermes/ChatView.vue'),
++    },
++    {
++      path: '/hermes/global-agent/session/:sessionId',
++      name: 'hermes.globalAgentSession',
++      component: () => import('@/views/hermes/ChatView.vue'),
++    },
++    // HERMES_CUSTOM[CockpitChatRouteRestore] END
+     {
+       path: '/desktop-chat/:sessionId',
+       name: 'desktop.chat',
