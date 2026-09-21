@@ -612,3 +612,12 @@
 
 # 333: 驾驶舱 v12.5 i18n en——332 同键英文侧（zh/en 成对，编号相邻）。
 333-client-i18n-ia2-v12-5-en.patch
+
+# 334: kanban 状态机诚实化（服务端）——DELETE 走 archive+--rm 两步硬删（CLI 无 rm 动词，
+#      此前必 500）；bulk/patch 链补 scheduled（CLI schedule 动词）与 todo/triage（按当前态
+#      组合 reopen-review/unblock，不可达组合抛清晰错误）；patchTask 回检 bulk results。
+#      修复装机轮在案缺口：PATCH status:'todo' 静默无操作 + review 任务 DELETE 500。
+# 335: kanban 状态机诚实化（客户端）——moveTask 回检 bulk results[].ok，失败抛错不再
+#      假成功；todo/triage 落点由父子门禁决定，不做乐观写入改拉真值。
+334-server-kanban-status-delete-honesty.patch
+335-client-kanban-move-result-gate.patch
