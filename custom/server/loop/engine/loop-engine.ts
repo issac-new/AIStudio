@@ -33,8 +33,25 @@ export interface LoopEngineDeps {
 export class LoopEngine {
   /** 本次 tick 的验证记录缓存（供 gateHumanReview 读 human 判定链） */
   private lastValidationRecords = new Map<string, VerificationRecord>()
+  /** R7-D 看板并发闸（routa kanban-session-queue 语义）：同 board 同刻只跑 1 个
+   *  handoff——board 维度互斥，其余 contract 留 queued 发 board_concurrency_full，
+   *  下轮 reconcile。静态跨实例共享（进程内 loop 引擎多单例场景安全）。 */
+  private static boardHandoffBusy = new Set<string>()
 
   constructor(private deps: LoopEngineDeps) {}
+
+  /** R7-D board 并发 key：tenant 首段 slug（与 graph defaultKanbanBoardResolver
+   *  同口径的轻量 slug，独立实现避免 graph↔engine 循环依赖）；无 tenant → loop.id
+   *  兜底（该 loop 独立互斥，不跨 loop 干扰）。 */
+  private boardKey(loop: LoopInstance): string {
+    const tenant = loop.tenant
+    if (tenant && typeof tenant === 'string') {
+      const first = tenant.split(':')[0] ?? ''
+      const slug = first.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
+      if (slug.length >= 2) return slug
+    }
+    return loop.id
+  }
 
   async tick(loopId: string): Promise<void> {
     const loop = await this.deps.store.getLoop(loopId)
@@ -166,30 +183,51 @@ export class LoopEngine {
   private async runHandoff(loop: LoopInstance, contracts: TaskContract[]): Promise<Array<{ contractId: string; worktreeId: string }>> {
     const results: Array<{ contractId: string; worktreeId: string }> = []
     for (const c of contracts) {
-      const worktreeId = await this.deps.worktreeManager.create(c)
-      // R6-A：dispatchWithOutcome 带认领护栏 + reason 透传（multica/routa 语义）。
-      // 拦截（runtime_offline/max_depth_exceeded）→ 不进 in-progress，contract 留
-      // queued 并落 dispatch reason 到 contract，事件原样透传（卡/会话旁 chip 数据源）。
-      const outcome = await this.deps.dispatcher.dispatchWithOutcome(c, 'maker')
-      if (!outcome.ok) {
+      // R7-D 看板并发闸（routa kanban-session-queue 语义）：同 board 同刻只跑 1 个
+      // handoff——占不到闸的 contract 留 queued 发 board_concurrency_full，下轮 reconcile。
+      const boardKey = this.boardKey(loop)
+      if (LoopEngine.boardHandoffBusy.has(boardKey)) {
         await this.deps.store.updateContract(c.id, {
           status: 'queued',
-          dispatchReason: outcome.reason.code,
-          dispatchReasonDetail: outcome.reason.detail ?? null,
+          dispatchReason: 'board_concurrency_full',
+          dispatchReasonDetail: `board ${boardKey} busy`,
         } as never)
         this.deps.emitEvent({
           type: 'loop.dispatch-blocked', loopId: loop.id,
-          contractId: c.id, reason: outcome.reason.code, detail: outcome.reason.detail ?? '',
+          contractId: c.id, reason: 'board_concurrency_full', detail: `board ${boardKey} busy`,
           ts: new Date().toISOString(),
         } as never)
         continue
       }
-      await this.deps.store.updateContract(c.id, { status: 'in-progress', worktreeId, dispatchReason: 'handed_off' } as never)
-      this.deps.emitEvent({
-        type: 'loop.task-handed-off', loopId: loop.id,
-        contractId: c.id, worktreeId, ts: new Date().toISOString(),
-      })
-      results.push({ contractId: c.id, worktreeId })
+      LoopEngine.boardHandoffBusy.add(boardKey)
+      try {
+        const worktreeId = await this.deps.worktreeManager.create(c)
+        // R6-A：dispatchWithOutcome 带认领护栏 + reason 透传（multica/routa 语义）。
+        // 拦截（runtime_offline/max_depth_exceeded）→ 不进 in-progress，contract 留
+        // queued 并落 dispatch reason 到 contract，事件原样透传（卡/会话旁 chip 数据源）。
+        const outcome = await this.deps.dispatcher.dispatchWithOutcome(c, 'maker')
+        if (!outcome.ok) {
+          await this.deps.store.updateContract(c.id, {
+            status: 'queued',
+            dispatchReason: outcome.reason.code,
+            dispatchReasonDetail: outcome.reason.detail ?? null,
+          } as never)
+          this.deps.emitEvent({
+            type: 'loop.dispatch-blocked', loopId: loop.id,
+            contractId: c.id, reason: outcome.reason.code, detail: outcome.reason.detail ?? '',
+            ts: new Date().toISOString(),
+          } as never)
+          continue
+        }
+        await this.deps.store.updateContract(c.id, { status: 'in-progress', worktreeId, dispatchReason: 'handed_off' } as never)
+        this.deps.emitEvent({
+          type: 'loop.task-handed-off', loopId: loop.id,
+          contractId: c.id, worktreeId, ts: new Date().toISOString(),
+        })
+        results.push({ contractId: c.id, worktreeId })
+      } finally {
+        LoopEngine.boardHandoffBusy.delete(boardKey)
+      }
     }
     return results
   }
