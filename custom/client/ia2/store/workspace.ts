@@ -58,17 +58,35 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   const rawTasks = ref<Array<{ board: string; task: any }>>([])
 
   let _lastRefreshTs = 0
+  // 任务指纹守卫（v12 性能收敛 2026-09-21）：刷新响应总是新数组新身份，直接赋值会令
+  // sessionRows/feedRows/waitItems/boardRows/decisionRows 等全量重算重渲染（身份抖动）。
+  // 关键字段指纹不变时跳过 tasks/rawTasks 赋值（boards 很小，恒更新）。
+  let _tasksFp = ''
+  function taskFingerprint(rows: Array<CockpitTask>): string {
+    const parts: string[] = []
+    for (const t of rows) {
+      parts.push([t.id, t.status, t.title, t.assignee, t.priority, t.tenant, t.boardSlug, t.createdAt, t.workspace].join('|'))
+    }
+    return parts.join(';')
+  }
+  function applyAggregateTasks(next: CockpitTask[], raw: Array<{ board: string; task: any }>): void {
+    const fp = taskFingerprint(next)
+    if (fp === _tasksFp) return
+    _tasksFp = fp
+    tasks.value = next
+    rawTasks.value = raw
+  }
+
   async function refreshAllBoards(force = false): Promise<boolean> {
     const now = Date.now()
-    if (!force && now - _lastRefreshTs < 2000) return true // 2s 防抖，视为成功
+    if (!force && now - _lastRefreshTs < 2000) return true // 2s 防抖，视为成功（不重复刷新）
     _lastRefreshTs = now
     try {
       // 优先走服务端聚合端点（一次请求全 board；失败回落 N+1 旧路径）
       try {
         const overview = await teamsApi.fetchKanbanOverview()
         boards.value = overview.boards.length ? overview.boards : [{ slug: 'default', name: 'default', total: 0 }]
-        tasks.value = overview.tasks
-        rawTasks.value = overview.rawTasks
+        applyAggregateTasks(overview.tasks, overview.rawTasks)
         return true
       } catch { /* 聚合端点不可用 → 回落 */ }
       const boardList = await kanbanApi.listBoards({ includeArchived: false })
@@ -91,8 +109,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
           }
         }
       }
-      tasks.value = all
-      rawTasks.value = raw
+      applyAggregateTasks(all, raw)
       return true
     } catch {
       return false

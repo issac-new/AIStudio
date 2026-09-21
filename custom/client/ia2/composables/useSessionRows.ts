@@ -55,6 +55,13 @@ export function useSessionRows() {
   const duties = computed(() => teamRegistry.duties ?? {})
   const accounts = computed(() => teamRegistry.accounts ?? [])
 
+  /** roomId → Room 索引：unreadOf 每行一次 find 的 O(行×房间) 降为 O(1) 查表 */
+  const roomById = computed(() => {
+    const m = new Map<string, unknown>()
+    for (const r of (matrixRoom.sortedRooms ?? []) as Array<{ roomId: string }>) m.set(r.roomId, r)
+    return m
+  })
+
   function assigneeLabelOf(roomId: string): { dutyName: string | null; teamTag: string } {
     const duty = duties.value[roomId]
     if (!duty) return { dutyName: null, teamTag: '' }
@@ -68,7 +75,7 @@ export function useSessionRows() {
   const sessionRows = computed(() => buildSessionRows(sessionSources.value, {
     unreadOf(id, kind) {
       if (kind === 'chat') return chatStore.unreadMessages?.get(id)?.count ?? 0
-      const room = (matrixRoom.sortedRooms ?? []).find((r: { roomId: string }) => r.roomId === id)
+      const room = roomById.value.get(id) as { roomId: string } | undefined
       return room ? matrixRoom.getRoomUnreadCount(room) : 0
     },
     taskIdsOf(id, kind) {

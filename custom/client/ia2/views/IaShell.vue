@@ -82,7 +82,9 @@ onUnmounted(() => {
     <div v-if="workspace.scheduleOpen" class="ia-overlay" @click="workspace.closeSchedule()" />
     <CockpitScheduleModal v-if="workspace.scheduleOpen" />
     <div v-if="cockpit.runTraceOpen" class="ia-overlay" @click="cockpit.closeRunTrace()" />
-    <CockpitRunTraceModal />
+    <!-- v12 性能收敛：仅打开时挂载。曾无条件挂载，其内部 watch(needsSessionSelect,
+         immediate) 会在冷启动即跨全 profile 扫会话（数十请求），即使弹窗从未打开。 -->
+    <CockpitRunTraceModal v-if="cockpit.runTraceOpen" />
     <!-- v12 ⚙管理台：全局覆盖层（Esc/⇠返回/backdrop 关闭） -->
     <GovOverlay v-if="flow.govOpen" />
   </div>
