@@ -14,6 +14,7 @@ import { ideAgentToChatAgent } from '../store/ide'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
+import { buildReviewPrompt } from '../utils/reviewPrompt'
 
 interface PaletteItem {
   id: string
@@ -97,6 +98,15 @@ const commandItems = computed<PaletteItem[]>(() => {
       labelKey: 'ide.paletteCmdMcpConfig',
       run: () => {
         void chatStore.sendMessage(buildMcpConfigPrompt({ agentId: ide.agentId }))
+        ide.setChatFocus()
+      },
+    })
+    // R3 /review 评审模式（codex-product 语义）：注入只读评审提示词到当前会话
+    items.push({
+      id: 'cmd:review',
+      labelKey: 'ide.paletteCmdReview',
+      run: () => {
+        void chatStore.sendMessage(buildReviewPrompt())
         ide.setChatFocus()
       },
     })
