@@ -17,6 +17,8 @@ export interface CockpitTask {
   tenant: string | null
   boardSlug: string         // 来源看板 slug（跨 board 聚合标记）
   createdAt: number         // 创建时间戳（日期筛选用）
+  /** R7-A 归属链：挂接会话（kanban session_id 桥）；无则 null */
+  sessionId?: string | null
 }
 
 export function bucketPriority(p: number | null | undefined): CockpitPriority {
@@ -43,6 +45,7 @@ export function toCockpitTask(t: KanbanTask, boardSlug: string = 'default'): Coc
     boardSlug,
     // kanban created_at 是秒级时间戳，统一转为毫秒（与 JS Date 一致）
     createdAt: toMs(t.created_at),
+    sessionId: t.session_id ?? null,
   }
 }
 

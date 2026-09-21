@@ -18,11 +18,12 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-/** 行首图标（attention 三类的固定词表） */
+/** 行首图标（attention 四类的固定词表；session-failed 为 R7-B 开发回喂） */
 const ICON: Record<AttentionRow['kind'], string> = {
   'task-blocked': '⛔',
   'run-failed': '✖',
   'loop-stuck': '🧱',
+  'session-failed': '💥',
 }
 
 function age(ts: number, now?: number): string {
@@ -62,7 +63,7 @@ function age(ts: number, now?: number): string {
   background: transparent; cursor: pointer; text-align: left;
   &:hover { background: var(--bg-secondary); }
 }
-.att__row--run-failed, .att__row--loop-stuck { border-left-color: var(--error); }
+.att__row--run-failed, .att__row--loop-stuck, .att__row--session-failed { border-left-color: var(--error); }
 .att__ico { flex-shrink: 0; font-size: 11px; }
 .att__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .att__title {
