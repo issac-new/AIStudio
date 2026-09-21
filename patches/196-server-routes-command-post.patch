@@ -33,10 +33,11 @@ index dd5f792c..b7a3063d 100644
  async function initLoopSubsystem(): Promise<void> {
    if (loopStore) return
    const { store, adapterType, detectedFrom } = await createStateStore()
-@@ -206,5 +223,6 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
-   app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
-   app.use(loopRouter.routes())
-   app.use(graphRouter.routes())
-+  app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队
-   initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
- }
+@@ -190,6 +207,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(jobRoutes.routes())
+   app.use(cronHistoryRoutes.routes())
+   app.use(kanbanDashboardUrlRoutes.routes())
++  app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队（须先于 kanbanRoutes 挂载：/api/hermes/kanban/overview 否则被上游 /api/hermes/kanban/:id 抢答 404，聚合端点失效触发客户端 N+1 风暴）
+   app.use(kanbanRoutes.routes())
+   app.use(workflowRoutes.routes())
+   app.use(ttsProtectedRoutes.routes())
