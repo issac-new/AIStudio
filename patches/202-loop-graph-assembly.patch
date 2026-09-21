@@ -71,7 +71,7 @@ index b7a3063..025191a 100644
  const graphRouter = createGraphRouter(lazyStore)
  // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
  // WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建
-@@ -223,6 +274,13 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+@@ -223,5 +274,12 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
    app.use(loopRouter.routes())
    app.use(graphRouter.routes())
@@ -82,6 +82,5 @@ index b7a3063..025191a 100644
 +  // 优雅停机步骤（http.ts additionalShutdownSteps 模块私有），进程退出即停（interval 不跨
 +  // 进程）；graphAssembly.stop() 预留给后续停机钩子接线。
 +  graphAssembly.start().catch(e => console.error('[graph] assembly start failed:', e))
-   app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队
    initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
  }
