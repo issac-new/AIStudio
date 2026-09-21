@@ -39,6 +39,8 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
+import IdeModelSwitcher from './IdeModelSwitcher.vue'
+import IdeActivityInbox from './IdeActivityInbox.vue'
 import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
@@ -278,6 +280,8 @@ const modelDisabled = computed(() => true)
   <section class="ide-chat">
     <header class="ide-chat__head">
       <span class="ide-chat__title" :title="sessionTitle">{{ sessionTitle }}</span>
+      <!-- R4 会话内模型切换器（antigravity 语义：切换+粘性） -->
+      <IdeModelSwitcher />
       <div class="ide-chat__actions">
         <button
           type="button"
@@ -353,6 +357,8 @@ const modelDisabled = computed(() => true)
             </button>
           </div>
         </div>
+        <!-- R4 活动收件箱（claude-code 通知耗时 + codex-product 三态语义） -->
+        <IdeActivityInbox />
       </div>
     </header>
 
