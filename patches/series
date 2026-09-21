@@ -693,3 +693,7 @@
 # 354: R7-C agent 名册 i18n——ia2.flow.groupAgents + ia2.agents.{sessions,busy,
 #      online,idle,offline} 6 键（zh/en）。
 354-client-i18n-ia2-agents.patch
+
+# 355: R6 @mention 总线——kanban addComment 入库后解析 [@agent]/@squad 为 agent
+#      enqueue run 并落系统行留痕（multica comment.go:3100；best-effort 不阻断）。
+355-server-kanban-mention-bus.patch
