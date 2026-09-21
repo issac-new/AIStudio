@@ -1,0 +1,98 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -567,7 +567,9 @@
+       },
+     },
+     agents: {
+-      steerHint: '已完成/中断，可续话（通道待 R5）',
++      steerHint: '已完成/中断，可续话',
++      steerPlaceholder: '对该子代理续话…',
++      steerSend: '续话',
+     },
+     runaway: {
+       same_tool_args: '检测到工具调用打转：{detail}，建议关注或中断',
+@@ -616,15 +618,32 @@
+     sidePaneTab_hooks: 'Hooks',
+     worktree: {
+       title: '隔离工作树：{path}',
++      create: '建隔离',
++      createHint: '为当前会话建 detached-HEAD 工作树并绑定',
++      created: '已建隔离工作树 {id} 并绑定会话',
++      createFailed: '建工作树失败：{message}',
++      remove: '回收工作树',
++      removed: '已回收工作树并解除绑定',
++      removeFailed: '回收失败：{message}',
+     },
+     goal: {
+-      title: 'Goal 消耗面',
++      title: 'Goal 预算引擎',
+       toolCalls: '工具调用',
+       iterations: '迭代轮次',
+       contextUsed: '上下文用量',
+       state: '状态',
+       running: '运行中',
+-      hint: '预算上限引擎在后续轮次；当前展示已达成的消耗面',
++      turns: 'Turn 进度',
++      setPlaceholder: '输入目标…',
++      turnsPlaceholder: 'max turns',
++      set: '设目标',
++      status: '状态',
++      pause: '暂停',
++      resume: '继续',
++      clear: '清除',
++      budgetWarn: 'Turn 预算已用超 80%，注意收敛',
++      budgetOver: 'Turn 预算已耗尽，goal 引擎将自动暂停',
++      engineHint: '引擎在 hermes GoalManager（turn 预算 + judge + 自动暂停）',
+     },
+   },
+ 
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -569,7 +569,9 @@
+       },
+     },
+     agents: {
+-      steerHint: 'Completed/interrupted — follow-up available (channel in R5)',
++      steerHint: 'Completed/interrupted — follow-up available',
++      steerPlaceholder: 'Follow up with this subagent…',
++      steerSend: 'Send',
+     },
+     runaway: {
+       same_tool_args: 'Tool calls spinning: {detail}; consider interrupting',
+@@ -618,15 +620,32 @@
+     sidePaneTab_hooks: 'Hooks',
+     worktree: {
+       title: 'Isolated worktree: {path}',
++      create: 'Isolate',
++      createHint: 'Create a detached-HEAD worktree for this session and bind it',
++      created: 'Created worktree {id} and bound the session',
++      createFailed: 'Failed to create worktree: {message}',
++      remove: 'Remove worktree',
++      removed: 'Worktree removed and unbound',
++      removeFailed: 'Failed to remove: {message}',
+     },
+     goal: {
+-      title: 'Goal consumption',
++      title: 'Goal budget engine',
+       toolCalls: 'Tool calls',
+       iterations: 'Iterations',
+       contextUsed: 'Context used',
+       state: 'State',
+       running: 'Running',
+-      hint: 'Budget engine lands in a later round; showing consumption achieved so far',
++      turns: 'Turn progress',
++      setPlaceholder: 'Enter a goal…',
++      turnsPlaceholder: 'max turns',
++      set: 'Set goal',
++      status: 'Status',
++      pause: 'Pause',
++      resume: 'Resume',
++      clear: 'Clear',
++      budgetWarn: 'Turn budget over 80%; consider converging',
++      budgetOver: 'Turn budget exhausted; the goal engine will auto-pause',
++      engineHint: 'Engine: hermes GoalManager (turn budget + judge + auto-pause)',
+     },
+   },
+ 
