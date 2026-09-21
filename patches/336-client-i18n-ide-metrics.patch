@@ -1,0 +1,42 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 5a92b359..20971cc0 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -503,6 +503,16 @@ export default {
+     },
+     statusRunning: 'Running',
+     statusIdle: 'Idle',
++    metrics: {
++      context: 'Context',
++      tps: 'Generation speed',
++      tpsEmpty: 'No measurable generation speed yet this session',
++      cache: 'Cache',
++      cacheEmpty: 'No cache hit data yet',
++      cacheRead: 'read',
++      cacheWrite: 'write',
++      cacheInput: 'input',
++    },
+   },
+ 
+   loop: {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 51f52300..e94ab3df 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -501,6 +501,16 @@ export default {
+     },
+     statusRunning: '运行中',
+     statusIdle: '空闲',
++    metrics: {
++      context: '上下文',
++      tps: '生成速率',
++      tpsEmpty: '本轮暂无可测生成速率',
++      cache: '缓存',
++      cacheEmpty: '暂无缓存命中数据',
++      cacheRead: '读',
++      cacheWrite: '写',
++      cacheInput: '输入',
++    },
+   },
+ 
+   loop: {
