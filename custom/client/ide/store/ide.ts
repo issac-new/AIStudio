@@ -102,7 +102,7 @@ export type IdeOrganizeMode = 'grouped' | 'project' | 'timeline'
 /** v12 工作空间维度（任务/项目/会话）：链路维度已随 09-20 重构退役 */
 export type IdeDimension = 'task' | 'project' | 'session'
 
-export type IdeSidePaneTab = 'files' | 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'terminal'
+export type IdeSidePaneTab = 'files' | 'review' | 'browser' | 'wiki' | 'assistant' | 'storage' | 'memory' | 'board' | 'mcp' | 'terminal'
 
 export interface IdeSidePanePrefs {
   open: boolean
