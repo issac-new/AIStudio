@@ -1,0 +1,38 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1105,6 +1105,7 @@
+       loops: '循环', blocked: '阻塞', online: '在线',
+       onlineDetail: '{p} 人 · {a} 智能体 · {m} 机器', manage: '管理',
+       panelClose: '关闭', empty: '暂无内容',
++      decideTitle: '待决策',
+       actApprove: '批准', actReject: '打回', actContinue: '继续', actGoReview: '进评审',
+       panelPeople: '人', panelAgents: '智能体', panelMachines: '机器', openManage: '打开管理台',
+       panelBoards: '板', onlineSearchPh: '检索账号 / 机器 / 看板 / profile',
+@@ -1215,6 +1216,7 @@
+     notify: {
+       tabDecisions: '待人工决策',
+       tabMessages: '消息',
++      totalHint: '待人工决策 {decisions} · 消息 {messages}',
+       markAllTitle: '全部标记已读',
+       markAll: '全部已读',
+       clearReadTitle: '清除已读未读状态',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1107,6 +1107,7 @@
+       loops: 'Loops', blocked: 'blocked', online: 'Online',
+       onlineDetail: '{p} people · {a} agents · {m} machines', manage: 'Manage',
+       panelClose: 'Close', empty: 'Nothing here yet',
++      decideTitle: 'Decide',
+       actApprove: 'Approve', actReject: 'Reject', actContinue: 'Resume', actGoReview: 'Open review',
+       panelPeople: 'People', panelAgents: 'Agents', panelMachines: 'Machines', openManage: 'Open management',
+       panelBoards: ' boards', onlineSearchPh: 'Search accounts / machines / boards / profiles',
+@@ -1217,6 +1218,7 @@
+     notify: {
+       tabDecisions: 'Decisions',
+       tabMessages: 'Messages',
++      totalHint: 'Decisions {decisions} · Messages {messages}',
+       markAllTitle: 'Mark all as read',
+       markAll: 'Mark all',
+       clearReadTitle: 'Clear read/unread states',

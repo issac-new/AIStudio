@@ -27,11 +27,14 @@ const TIER_LABEL: Record<AttentionRow['status'], string> = {
 
 <template>
   <div class="ia-attn" data-testid="ia-attn">
-    <span
-      class="ia-attn__label" data-testid="ia-attn-label" role="button" tabindex="0"
-      :title="t('ia2.overview.swarmKanbanHint')" @dblclick="emit('open-board')"
+    <!-- R6 补充：Swarm kanban 标签改按钮（对齐 AI协作中心注意力条按钮样式；
+         单击进看板总览，保留双击兼容 + Enter 键） -->
+    <button
+      type="button"
+      class="ia-attn__label ia-attn__label--btn" data-testid="ia-attn-label"
+      :title="t('ia2.overview.swarmKanbanHint')" @click="emit('open-board')" @dblclick="emit('open-board')"
       @keydown.enter="emit('open-board')"
-    >{{ t('ia2.overview.swarmKanbanLabel') }}</span>
+    >{{ t('ia2.overview.swarmKanbanLabel') }}</button>
     <div class="ia-attn__items">
       <span v-if="items.length === 0" class="ia-attn__empty">{{ t('ia2.overview.attentionEmpty') }}</span>
       <button
@@ -50,3 +53,18 @@ const TIER_LABEL: Record<AttentionRow['status'], string> = {
     </div>
   </div>
 </template>
+
+<style scoped lang="scss">
+.ia-attn { display: flex; align-items: center; gap: 8px; }
+
+/* R6 补充：Swarm kanban 标签改按钮（对齐 AI协作中心注意力条按钮样式） */
+.ia-attn__label {
+  flex-shrink: 0; display: inline-flex; align-items: center;
+  padding: 3px 10px; font-size: 11px; font-weight: 600;
+  color: var(--text-primary, #d7dae0); background: var(--bg-secondary, rgba(128,128,128,0.1));
+  border: 1px solid var(--border-color, #3a3f4b); border-radius: 6px;
+  cursor: pointer; font-family: inherit;
+  &:hover { border-color: #61afef; color: #61afef; }
+}
+.ia-attn__items { display: flex; align-items: center; gap: 6px; overflow-x: auto; }
+</style>
