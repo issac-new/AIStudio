@@ -96,10 +96,13 @@ onUnmounted(() => {
           <span class="ide-shell__fold-label">›</span>
         </div>
         <div v-else class="ide-shell__col ide-shell__col--sidebar">
-          <IaColumnControls
-            class="ide-shell__colctl" testid="ide-col-sidebar" fold="left" show-max :maximized="ide.layout.sidebar.maximized"
-            @fold="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
-          />
+          <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩） -->
+          <div class="ide-shell__colhead" data-testid="ide-colhead-sidebar">
+            <IaColumnControls
+              testid="ide-col-sidebar" fold="left" show-max :maximized="ide.layout.sidebar.maximized"
+              @fold="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
+            />
+          </div>
           <IdeTaskSidebar class="ide-shell__colbody" />
         </div>
       </aside>
@@ -108,10 +111,12 @@ onUnmounted(() => {
           <span class="ide-shell__fold-label">›</span>
         </div>
         <div v-else class="ide-shell__col ide-shell__col--chat">
-          <IaColumnControls
-            class="ide-shell__colctl" testid="ide-col-chat" fold="left" show-max :maximized="ide.layout.chat.maximized" show-popout
-            @fold="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
-          />
+          <div class="ide-shell__colhead" data-testid="ide-colhead-chat">
+            <IaColumnControls
+              testid="ide-col-chat" fold="left" show-max :maximized="ide.layout.chat.maximized" show-popout
+              @fold="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
+            />
+          </div>
           <IdeChatPane class="ide-shell__colbody" />
         </div>
       </div>
@@ -170,15 +175,15 @@ onUnmounted(() => {
 
 .ide-shell__fold-label { font-size: 11px; user-select: none; }
 
-/* v12.6 栏控叠放各栏右上角（绝对定位不占行；面板首行右侧元素让位） */
+/* v12.6 栏控迁独立控制条行（不占内容区，根治绝对定位遮罩，R6 补充） */
 .ide-shell__col { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
-.ide-shell__colctl {
-  position: absolute; top: 5px; right: 4px; z-index: 5;
-  background: var(--bg-primary, #14161a); border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 6px; padding: 1px 2px;
+.ide-shell__colhead {
+  flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center;
+  height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-primary, #14161a); border-radius: 6px 6px 0 0;
 }
-.ide-shell__col--sidebar :deep(.ide-taskbar__actions) { padding-right: 64px; }
-.ide-shell__col--chat :deep(.ide-chat__actions) { margin-right: 58px; }
+.ide-shell__colctl { display: none; }
+/* 旧绝对定位让位规则已退役（栏控迁 colhead 不占内容区） */
 .ide-shell__colbody { flex: 1; min-height: 0; }
 .ide-shell__pane-rail {
   flex-shrink: 0; width: 18px; display: flex; align-items: flex-start; justify-content: center;
