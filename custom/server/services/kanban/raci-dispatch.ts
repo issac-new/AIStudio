@@ -1,10 +1,14 @@
 // custom/server/services/kanban/raci-dispatch.ts
 // RACI 派发服务：根据 KanbanTask body 中的 RACI 块创建 Matrix 房间并按角色派发通知。
-// 挂载：B 类 patch 361 在 kanban-service.createTask 成功路径 best-effort 调用。
+// 挂载：B 类 patch 361 在 kanban-service.createTask、patch 366 在 assignTask 成功路径
+// best-effort 调用。同任务幂等：sidecar 记录 taskId→roomId，重复派发不再建群。
 // 约束：custom 树禁止 import upstream 模块（overlay 树内无该文件），任务对象用结构化类型承接。
 // 依赖：custom/server/matrix/gateway-env.ts（RACI 类型与角色映射）+
 //       custom/server/matrix/simulation.ts（Matrix 房间/消息内存模拟）。
 
+import { mkdir, readFile, rename, writeFile } from 'fs/promises'
+import { homedir } from 'os'
+import { dirname, join } from 'path'
 import {
   type RACITuple,
   type DispatchResult,
@@ -26,17 +30,52 @@ export interface RaciDispatchTask {
   status: string
 }
 
+// ─── 派发去重 sidecar（同 retry-store 的落盘惯例） ──────────────
+
+interface DispatchRecord {
+  roomId: string
+  dispatchedAt: number
+}
+
+type DedupeMap = Record<string, DispatchRecord>
+
+function defaultDedupePath(): string {
+  return join(homedir(), '.hermes-web-ui', 'overlay', 'aipaydev-raci-dispatch.json')
+}
+
+async function readDedupe(path: string): Promise<DedupeMap> {
+  try {
+    const parsed = JSON.parse(await readFile(path, 'utf8')) as DedupeMap
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+async function recordDispatch(path: string, taskId: string, roomId: string): Promise<void> {
+  const map = await readDedupe(path)
+  map[taskId] = { roomId, dispatchedAt: Date.now() }
+  await mkdir(dirname(path), { recursive: true })
+  const tmp = `${path}.tmp`
+  await writeFile(tmp, JSON.stringify(map, null, 2), 'utf8')
+  await rename(tmp, path)
+}
+
 // ─── RACI Dispatch 服务 ────────────────────────────────────
 
 export class RACIDispatchService {
   /**
    * 根据 task.body 中 JSON 的 raci 块触发派发
-   * 1. 解析 RACI tuple（缺省回落 assignee）
-   * 2. 创建 Matrix 房间（9 用户模拟态为内存房间）
-   * 3. 邀请 RACI 角色参与者
-   * 4. 发送任务摘要消息
+   * 1. sidecar 去重：同任务已派发 → 返回原 roomId（deduped）
+   * 2. 解析 RACI tuple（缺省回落 assignee）
+   * 3. 创建 Matrix 房间 + 邀请角色参与者 + 发送摘要
    */
-  static async dispatch(task: RaciDispatchTask): Promise<DispatchResult> {
+  static async dispatch(task: RaciDispatchTask, dedupePath = defaultDedupePath()): Promise<DispatchResult> {
+    const seen = (await readDedupe(dedupePath))[task.id]
+    if (seen?.roomId) {
+      return { ok: true, roomId: seen.roomId, deduped: true }
+    }
+
     const raci = RACIDispatchService.parseRACIFields(task)
     if (!raci) {
       return { ok: false, roomId: null, error: 'RACI 字段缺失：至少需要 responsible' }
@@ -52,6 +91,7 @@ export class RACIDispatchService {
       const roomId = await RACIDispatchService.createMatrixRoom(task)
       await RACIDispatchService.inviteParticipants(roomId, raci)
       await RACIDispatchService.sendDispatchMessage(roomId, task, raci)
+      await recordDispatch(dedupePath, task.id, roomId)
       return { ok: true, roomId }
     } catch (err) {
       return {

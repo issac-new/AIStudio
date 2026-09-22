@@ -142,6 +142,8 @@ export interface DispatchResult {
   ok: boolean
   roomId: string | null
   error?: string
+  /** 命中 sidecar 去重：同任务已派发过，返回原 roomId 不再建群 */
+  deduped?: boolean
 }
 
 /** Matrix 网关默认配置 */
