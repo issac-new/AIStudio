@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1106,6 +1106,7 @@
+       onlineDetail: '{p} 人 · {a} 智能体 · {m} 机器', manage: '管理',
+       panelClose: '关闭', empty: '暂无内容',
+       decideTitle: '待决策',
++      decideCount: '待决策 {n}',
+       actApprove: '批准', actReject: '打回', actContinue: '继续', actGoReview: '进评审',
+       panelPeople: '人', panelAgents: '智能体', panelMachines: '机器', openManage: '打开管理台',
+       panelBoards: '板', onlineSearchPh: '检索账号 / 机器 / 看板 / profile',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1108,6 +1108,7 @@
+       onlineDetail: '{p} people · {a} agents · {m} machines', manage: 'Manage',
+       panelClose: 'Close', empty: 'Nothing here yet',
+       decideTitle: 'Decide',
++      decideCount: '{n} to decide',
+       actApprove: 'Approve', actReject: 'Reject', actContinue: 'Resume', actGoReview: 'Open review',
+       panelPeople: 'People', panelAgents: 'Agents', panelMachines: 'Machines', openManage: 'Open management',
+       panelBoards: ' boards', onlineSearchPh: 'Search accounts / machines / boards / profiles',

@@ -28,13 +28,14 @@ function mountSit(overrides: Record<string, unknown> = {}) {
 }
 
 describe('SitlineBar — 态势条（v12.7 三项）', () => {
-  it('三态势项：等我（最久副注）/任务（分类汇总）/在线（明细）', () => {
+  it('两态势项（R6 合并）：任务（总数+待决策角标+分类汇总）/在线（明细）', () => {
     const w = mountSit()
-    const wait = w.find('[data-testid="sit-waiting"]')
-    expect(wait.text()).toContain('2')
-    expect(wait.text()).toContain('3h')
+    // R6：「等我」并入「任务」单 chip；waiting chip 已退役
+    expect(w.find('[data-testid="sit-waiting"]').exists()).toBe(false)
     const tasks = w.find('[data-testid="sit-tasks"]')
     expect(tasks.text()).toContain('12')
+    // 待决策角标（waitingCount 作为任务 chip 副注）
+    expect(w.find('[data-testid="sit-tasks-decide"]').text()).toContain('2')
     expect(w.find('[data-testid="sit-online"]').text()).toContain('17')
     expect(w.find('[data-testid="sit-online"]').text()).toContain('"p":5')
   })
@@ -70,13 +71,10 @@ describe('SitlineBar — 态势条（v12.7 三项）', () => {
     expect(w.find('[data-testid="sit-gov"]').exists()).toBe(false)
   })
 
-  it('三态势项可点击：各 emit select 自带段键（waiting/tasks/online）', async () => {
+  it('两态势项可点击：各 emit select 自带段键（tasks/online；waiting 已并入 tasks）', async () => {
     const w = mountSit()
-    await w.find('[data-testid="sit-waiting"]').trigger('click')
     await w.find('[data-testid="sit-tasks"]').trigger('click')
     await w.find('[data-testid="sit-online"]').trigger('click')
-    expect(w.emitted('select')).toEqual([
-      ['waiting'], ['tasks'], ['online'],
-    ])
+    expect(w.emitted('select')).toEqual([['tasks'], ['online']])
   })
 })

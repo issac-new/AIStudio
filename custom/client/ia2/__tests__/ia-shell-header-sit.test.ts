@@ -179,12 +179,13 @@ async function mountHeader() {
 }
 
 describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () => {
-  it('三段 chips 在页头渲染（等我/任务/在线；计数自桩数据面；会话/循环/管理退役）', async () => {
+  it('两段 chips 在页头渲染（任务/在线；R6 合并 waiting 入 tasks；会话/循环/管理退役）', async () => {
     const w = await mountHeader()
-    // 等我=4（review t-402 + awaiting run-9 + fleet ap-1 + 评审门 CASE-7:G2）；
-    // 任务=2（开放态：review 1 + running 1）；在线：人 1 / 机 1 = 3
-    expect(w.find('[data-testid="sit-waiting"]').text()).toContain('4')
+    // R6：waiting chip 已退役并入 tasks；tasks chip = 开放态任务总数 2，
+    // 待决策角标 = review t-402 + awaiting run-9 + fleet ap-1 + 评审门 CASE-7:G2 = 4
+    expect(w.find('[data-testid="sit-waiting"]').exists()).toBe(false)
     expect(w.find('[data-testid="sit-tasks"]').text()).toContain('2')
+    expect(w.find('[data-testid="sit-tasks-decide"]').text()).toContain('4')
     expect(w.find('[data-testid="sit-online"]').text()).toContain('3')
     // v12.4 退役断言：会话/循环 chips 与 ⚙管理入口不再渲染
     expect(w.find('[data-testid="sit-sessions"]').exists()).toBe(false)
@@ -193,13 +194,13 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     w.unmount()
   })
 
-  it('v12.4 评审门进等我：面板含 gate 行，行内按钮进评审区（flow.openGov review）', async () => {
+  it('v12.4 评审门进待决策区：tasks 面板含 gate 行，行内按钮进评审区（flow.openGov review）', async () => {
     const w = await mountHeader()
-    await w.find('[data-testid="sit-waiting"]').trigger('click')
+    await w.find('[data-testid="sit-tasks"]').trigger('click')
     await flushPromises()
-    const panel = w.find('[data-testid="sit-panel-waiting"]')
+    const panel = w.find('[data-testid="sitp-decide"]')
     expect(panel.text()).toContain('CASE-7 · G2')
-    await w.find('[data-testid="sitp-gate-open"]').trigger('click')
+    await w.find('[data-testid="sitp-decide-gate-open"]').trigger('click')
     const flow = useFlowStore()
     expect(flow.govOpen).toBe(true)
     expect(flow.govSection).toBe('review')
@@ -248,15 +249,15 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     w.unmount()
   })
 
-  it('等我段：面板行上就地决策（验收 completeTasks/打回 reopenReview，任务所在板）', async () => {
+  it('待决策区：行上就地决策（验收 completeTasks/打回 reopenReview，任务所在板）', async () => {
     const w = await mountHeader()
-    await w.find('[data-testid="sit-waiting"]').trigger('click')
+    await w.find('[data-testid="sit-tasks"]').trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="sit-panel-waiting"]').exists()).toBe(true)
-    await w.find('[data-testid="sitp-approve"]').trigger('click')
+    expect(w.find('[data-testid="sitp-decide"]').exists()).toBe(true)
+    await w.find('[data-testid="sitp-decide-approve"]').trigger('click')
     await flushPromises()
     expect(kanbanApiStubs.completeTasks).toHaveBeenCalledWith(['t-402'], undefined, { board: 'swarm' })
-    await w.find('[data-testid="sitp-reject"]').trigger('click')
+    await w.find('[data-testid="sitp-decide-reject"]').trigger('click')
     await flushPromises()
     expect(kanbanApiStubs.reopenReview).toHaveBeenCalledWith(['t-402'], 'ia2.tdp.rejectReason', { board: 'swarm' })
     w.unmount()

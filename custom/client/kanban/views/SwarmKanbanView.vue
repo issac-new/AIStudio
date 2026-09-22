@@ -51,7 +51,9 @@ function toggleBoard(slug: string): void {
 }
 
 function checkAllBoards(): void {
-  excludedBoards.value = new Set()
+  // R6 补充：「全部」按钮支持反选——有勾选时全不选（反选当前），无勾选时全选。
+  const hasChecked = boardList.value.some(b => boardChecked(b.slug))
+  excludedBoards.value = hasChecked ? new Set(boardList.value.map(b => b.slug)) : new Set()
 }
 
 /** 任务 → 来源板（全量 raw 索引，不限筛选态） */

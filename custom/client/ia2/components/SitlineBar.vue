@@ -9,6 +9,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
+  /** R6 补充：waiting 并入 tasks（单「任务」chip；待决策数作为副注角标） */
   waitingCount: number
   /** 最久等待人类可读标签（如 3h；空则不显示副注） */
   oldestLabel?: string
@@ -20,11 +21,11 @@ const props = defineProps<{
   onlineAgents: number
   onlineMachines: number
   /** 当前展开的内联面板段（null=无） */
-  active?: 'waiting' | 'tasks' | 'online' | null
+  active?: 'tasks' | 'online' | null
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', segment: 'waiting' | 'tasks' | 'online'): void
+  (e: 'select', segment: 'tasks' | 'online'): void
 }>()
 const { t } = useI18n()
 
@@ -44,16 +45,11 @@ const taskStatusSummary = computed(() =>
 
 <template>
   <div class="sit" data-testid="sitline">
-    <button
-      type="button" class="sit__item sit__item--warn" :class="{ 'sit__item--on': active === 'waiting' }" data-testid="sit-waiting"
-      :title="t('ia2.sit.waitingTitle')"
-      @click="emit('select', 'waiting')"
-    >
-      ⧖ {{ t('ia2.sit.waiting') }} {{ waitingCount }}
-      <span v-if="oldestLabel" class="sit__sm">{{ t('ia2.sit.oldest') }} {{ oldestLabel }}</span>
-    </button>
+    <!-- R6 补充：「等我」与「任务」合并为单「任务」chip（待决策数作为角标副注；
+         面板顶部仍有待决策区，决策动作在面板内） -->
     <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'tasks' }" data-testid="sit-tasks" @click="emit('select', 'tasks')">
       📋 {{ t('ia2.sit.tasks') }} {{ taskTotal }}
+      <span v-if="waitingCount" class="sit__sm sit__sm--warn" data-testid="sit-tasks-decide">{{ t('ia2.sit.decideCount', { n: waitingCount }) }}</span>
       <span v-if="taskStatusSummary" class="sit__sm" data-testid="sit-tasks-summary">{{ taskStatusSummary }}</span>
     </button>
     <button type="button" class="sit__item" :class="{ 'sit__item--on': active === 'online' }" data-testid="sit-online" @click="emit('select', 'online')">
@@ -76,6 +72,9 @@ const taskStatusSummary = computed(() =>
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 .sit__item--warn { color: var(--warning); font-weight: 700; }
+
+/* R6 待决策角标（任务 chip 副注，warning 色显性化） */
+.sit__sm--warn { color: var(--warning); font-weight: 700; }
 .sit__item--on { background: var(--bg-secondary); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--primary, #3b82f6); }
 .sit__sm { font-size: 10px; color: var(--text-muted); }
 .sit__dot { width: 8px; height: 8px; border-radius: 50%; }
