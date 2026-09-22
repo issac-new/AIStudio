@@ -4,12 +4,12 @@ index c4dca20..fcf4877 100644
 +++ b/packages/desktop/scripts/runtime-config.mjs
 @@ -1,7 +1,7 @@
 -export const DEFAULT_HERMES_VERSION = '0.20.6'
-+export const DEFAULT_HERMES_VERSION = '0.21.4'
++export const DEFAULT_HERMES_VERSION = '0.21.3'
  export const DEFAULT_HERMES_SOURCE_REPOSITORY = 'https://github.com/NousResearch/hermes-agent.git'
 -export const DEFAULT_HERMES_SOURCE_REF = 'v2026.8.27'
 -export const DEFAULT_HERMES_SOURCE_COMMIT = '5fc308a70719a83cccdbba4c0e39c23f5a8239d5'
-+export const DEFAULT_HERMES_SOURCE_REF = 'v2026.9.21'
-+export const DEFAULT_HERMES_SOURCE_COMMIT = 'dd2c35f4f6d14c518a46d8ceb5311f57851a1ee2'
++export const DEFAULT_HERMES_SOURCE_REF = 'v2026.9.14'
++export const DEFAULT_HERMES_SOURCE_COMMIT = '345cd2b057a452236de401d3534b8502a7465e8d'
  
  export function hermesVersion(env = process.env) {
    return env.HERMES_VERSION || DEFAULT_HERMES_VERSION
@@ -21,14 +21,14 @@ index 2b17a6b..41d6c4b 100644
  {
 -  "tag": "hermes-0.20.6-runtime",
 -  "hermesAgentVersion": "0.20.6",
-+  "tag": "hermes-0.21.4-runtime",
-+  "hermesAgentVersion": "0.21.4",
++  "tag": "hermes-0.21.3-runtime",
++  "hermesAgentVersion": "0.21.3",
    "hermesSource": {
      "repository": "https://github.com/NousResearch/hermes-agent.git",
 -    "ref": "v2026.8.27",
 -    "commit": "5fc308a70719a83cccdbba4c0e39c23f5a8239d5"
-+    "ref": "v2026.9.21",
-+    "commit": "dd2c35f4f6d14c518a46d8ceb5311f57851a1ee2"
++    "ref": "v2026.9.14",
++    "commit": "345cd2b057a452236de401d3534b8502a7465e8d"
    }
  }
 diff --git a/packages/desktop/src/main/paths.ts b/packages/desktop/src/main/paths.ts
@@ -40,7 +40,7 @@ index 760bff4..94e9281 100644
  
  const isWin = platform() === 'win32'
 -const DEFAULT_HERMES_AGENT_VERSION = '0.20.6'
-+const DEFAULT_HERMES_AGENT_VERSION = '0.21.4'
++const DEFAULT_HERMES_AGENT_VERSION = '0.21.3'
  const PACKAGED_RUNTIME_RELEASE_NAME = 'runtime-release.json'
  const ACTIVE_RUNTIME_VERSION_NAME = 'active-version.json'
  let incompleteActiveWebUiWarningPath = ''
@@ -55,9 +55,9 @@ index 1763467..d6131d3 100644
 -    expect(DEFAULT_HERMES_VERSION).toBe('0.20.6')
 -    expect(DEFAULT_HERMES_SOURCE_REF).toBe('v2026.8.27')
 -    expect(DEFAULT_HERMES_SOURCE_COMMIT).toBe('5fc308a70719a83cccdbba4c0e39c23f5a8239d5')
-+    expect(DEFAULT_HERMES_VERSION).toBe('0.21.4')
-+    expect(DEFAULT_HERMES_SOURCE_REF).toBe('v2026.9.21')
-+    expect(DEFAULT_HERMES_SOURCE_COMMIT).toBe('dd2c35f4f6d14c518a46d8ceb5311f57851a1ee2')
++    expect(DEFAULT_HERMES_VERSION).toBe('0.21.3')
++    expect(DEFAULT_HERMES_SOURCE_REF).toBe('v2026.9.14')
++    expect(DEFAULT_HERMES_SOURCE_COMMIT).toBe('345cd2b057a452236de401d3534b8502a7465e8d')
      expect(hermesSource({})).toEqual({
        version: DEFAULT_HERMES_VERSION,
        repository: DEFAULT_HERMES_SOURCE_REPOSITORY,
@@ -70,7 +70,7 @@ index 1ce2a51..4741a97 100644
      expect(desktopRuntimeDir()).toBe(runtimeDir)
      expect(webuiDir()).toBe(webUiDir)
 -    expect(targetDesktopRuntimeDir()).toBe(join(storageRoot, 'hermes', '0.20.6', runtimePlatformKey()))
-+    expect(targetDesktopRuntimeDir()).toBe(join(storageRoot, 'hermes', '0.21.4', runtimePlatformKey()))
++    expect(targetDesktopRuntimeDir()).toBe(join(storageRoot, 'hermes', '0.21.3', runtimePlatformKey()))
    })
  
    it('falls back to the bundled Web UI when the active Web UI directory is incomplete', async () => {
@@ -79,7 +79,7 @@ index 1ce2a51..4741a97 100644
      const { runtimePlatformKey } = await import('../../packages/desktop/src/main/runtime-paths')
      const runtimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.15.2', runtimePlatformKey())
 -    const targetRuntimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.20.6', runtimePlatformKey())
-+    const targetRuntimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.21.4', runtimePlatformKey())
++    const targetRuntimeDir = join(homeDir, 'desktop-runtime', 'hermes', '0.21.3', runtimePlatformKey())
      createRuntimeWithoutManifest(runtimeDir)
  
      const { desktopRuntimeDir, targetDesktopRuntimeDir } = await import('../../packages/desktop/src/main/paths')
