@@ -66,6 +66,14 @@ describe('R6 三栏宽度同步联动（colWidths 单一事实源）', () => {
     expect(events).toHaveLength(0)
   })
 
+  it('updateColWidth 非法侧名当场抛错（sidebar/sidepane 错配防回归）', () => {
+    // 运行时防线锚点：IdeShell 曾把栏位 id sidebar 直接传入，多余键被
+    // writeColWidths 摘键静默丢弃——拖了不生效。现在必须当场抛错。
+    expect(() => updateColWidth('sidebar' as 'left', 300)).toThrow(/invalid side/)
+    expect(() => updateColWidth('sidepane' as 'right', 300)).toThrow(/invalid side/)
+    expect(JSON.parse(localStorage.getItem('ncwk.cols') || 'null')).toBeNull()
+  })
+
   it('COL_WIDTHS_EVENT 常量稳定（跨 store 订阅同名事件）', () => {
     expect(COL_WIDTHS_EVENT).toBe('ncwk:cols-changed')
   })
