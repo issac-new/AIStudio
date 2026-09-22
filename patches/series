@@ -714,3 +714,7 @@
 
 # 359: 顶栏「等我」并入「任务」i18n——ia2.sit.decideCount（待决策角标）（zh/en）。
 359-client-i18n-sit-merge.patch
+
+# 360: 公告版本感知过滤——/api/studio/announcements 下发前过滤：引用版本号全部 ≤ 本机的
+#      公告视为过期丢弃（0.7.23 弹「请更新至0.7.20」实锤）；无版本号公告不误杀。
+360-server-announcement-version-filter.patch
