@@ -28,6 +28,10 @@ vi.mock('@/custom/cockpit/store/cockpit', () => ({
 vi.mock('@/stores/hermes/kanban', () => ({
   useKanbanStore: () => ({ tasks: [] }),
 }))
+vi.mock('@/api/hermes/kanban', () => ({
+  listBoards: vi.fn(async () => []),
+  listTasks: vi.fn(async () => []),
+}))
 vi.mock('../components/TaskBriefingPanel.vue', () => ({ default: { name: 'TaskBriefingPanel', template: '<aside class="brief-stub" />' } }))
 vi.mock('../api/git', () => ({
   ideGitApi: { status: vi.fn(async () => null), log: vi.fn(async () => ({ commits: [] })) },
