@@ -1,6 +1,16 @@
 import { describe, it, expect } from 'vitest'
+import { mkdtemp, rm } from 'fs/promises'
+import { tmpdir } from 'os'
+import { join } from 'path'
 import { evaluateRules, BlockPolicyCategory } from '../loop/engine/architecture-engine'
 import { RACIDispatchService } from '../services/kanban/raci-dispatch'
+
+let dedupePath = ''
+async function freshDedupePath(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'aipaydev-raci-'))
+  dedupePath = join(dir, 'dispatch.json')
+  return dedupePath
+}
 
 describe('Architecture Rules', () => {
   const baseTask = (overrides: Record<string, unknown> = {}) => ({
@@ -110,8 +120,28 @@ describe('RACI Dispatch', () => {
       status: 'todo',
       assignee: '@bob:localhost',
     }
-    const result = await RACIDispatchService.dispatch(task as any)
+    const result = await RACIDispatchService.dispatch(task as any, await freshDedupePath())
     expect(result.ok).toBe(true)
     expect(result.roomId).toMatch(/^!sim-\d+:localhost/)
+    await rm(dedupePath, { force: true }).catch(() => {})
+  })
+
+  it('dedupes repeat dispatch for the same task (patch 366 assign 幂等)', async () => {
+    const task = {
+      id: 'task-dedupe',
+      title: 'Dedupe Task',
+      body: JSON.stringify({ raci: { responsible: ['@bob:localhost'], approver: ['@carol:localhost'], consulted: [], informed: [] } }),
+      status: 'todo',
+      assignee: '@bob:localhost',
+    }
+    const path = await freshDedupePath()
+    const first = await RACIDispatchService.dispatch(task as any, path)
+    expect(first.ok).toBe(true)
+    expect(first.deduped).toBeFalsy()
+    const second = await RACIDispatchService.dispatch(task as any, path)
+    expect(second.ok).toBe(true)
+    expect(second.deduped).toBe(true)
+    expect(second.roomId).toBe(first.roomId)
+    await rm(dedupePath, { force: true }).catch(() => {})
   })
 })
