@@ -735,3 +735,9 @@
 
 # 365: IDE 侧栏页签 i18n 裸键修复——tab_storage/memory/board/hooks 四键 zh/en 双补（推演 CDP 实锤 ide-i18n-raw-keys）
 365-client-i18n-ide-sidepane-tabs.patch
+
+# 366: RACI 派发接 assign 时刻——assignTask 成功后 best-effort 派发（同任务 sidecar 幂等去重，方案步骤 10.4 触发点补全）
+
+# 366: RACI 派发接 assign 时刻——assignTask 成功后 best-effort 派发（同任务 sidecar 幂等去重，方案步骤 10.4 触发点补全）
+366-server-kanban-raci-assign-dispatch.patch
+
