@@ -30,6 +30,7 @@ import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import { listBoards, listTasks } from '@/api/hermes/kanban'
 import { ideGitApi } from '../api/git'
 
 const { t } = useI18n()
@@ -132,9 +133,19 @@ function onChatPopout(): void {
 }
 
 // ── aipaydev 缺口 5：任务简报抽屉（六区块，activeTask 驱动）──
+type BriefingTaskView = {
+  id: string
+  title: string
+  status: string
+  priority?: number
+  body: string | null
+  workspacePath: string | null
+}
 const briefingOpen = ref(false)
 const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
-const briefingTask = computed(() => {
+// 本板命中：kanbanStore.tasks 是单板作用域（默认板）；深链任务常在其它板
+// （推演实锤 ide-briefing-cross-board-empty），本地未命中时逐板解析（client-only）。
+const briefingTaskLocal = computed<BriefingTaskView | null>(() => {
   const id = ide.activeTaskId
   if (!id) return null
   const hit = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
@@ -148,6 +159,32 @@ const briefingTask = computed(() => {
     workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
   }
 })
+const briefingTaskRemote = ref<BriefingTaskView | null>(null)
+const briefingTask = computed(() => briefingTaskLocal.value ?? briefingTaskRemote.value)
+async function resolveBriefingTask(): Promise<void> {
+  briefingTaskRemote.value = null
+  if (ide.activeTaskId && !briefingTaskLocal.value) {
+    try {
+      const boards = await listBoards()
+      for (const b of boards) {
+        const tasks = await listTasks({ board: b.slug })
+        const hit = tasks.find(t => t.id === ide.activeTaskId || t.session_id === ide.activeTaskId)
+        if (hit) {
+          briefingTaskRemote.value = {
+            id: hit.id,
+            title: hit.title,
+            status: hit.status,
+            priority: typeof hit.priority === 'number' ? hit.priority : undefined,
+            body: hit.body ?? null,
+            workspacePath: hit.workspace_path ?? null,
+          }
+          break
+        }
+      }
+    } catch { /* 跨板解析失败保持空态 */ }
+  }
+  void loadBriefingGit()
+}
 // Git 活动块：打开抽屉或切换任务时拉一次（任务 workspace 即 git root；失败静默空态）
 async function loadBriefingGit(): Promise<void> {
   const root = briefingTask.value?.workspacePath
@@ -165,8 +202,8 @@ async function loadBriefingGit(): Promise<void> {
     }
   } catch { /* 简报 Git 块保持空态 */ }
 }
-watch([briefingOpen, () => briefingTask.value?.id], ([open]) => {
-  if (open) void loadBriefingGit()
+watch([briefingOpen, () => ide.activeTaskId], ([open]) => {
+  if (open) void resolveBriefingTask()
 })
 function onAuxSend(_text: string): void {
   // 辅助会话回传位：当前仅留事件口，后接 hermes 会话（数据源接线见 aipaydev 问题记录 #P5-3）
