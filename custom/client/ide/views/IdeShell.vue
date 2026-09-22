@@ -17,6 +17,7 @@ import { useRoute } from 'vue-router'
 import { useIdeStore } from '../store/ide'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useChatStore } from '@/stores/hermes/chat'
+import { readColWidths, updateColWidth, onColWidthsChange } from '@/custom/ia2/utils/colWidths'
 import IaGlobalTop from '@/custom/ia2/components/IaGlobalTop.vue'
 import IaColumnControls from '@/custom/ia2/components/IaColumnControls.vue'
 import { openPanelWindow } from '@/custom/ia2/wm/popout'
@@ -80,9 +81,20 @@ const sidebarWidthStyle = computed(() => ide.layout.sidebarWidth ? { width: `${i
 // 右辅助面板宽度样式（sidePane.width 拖拽持久化，走 sidePane 独立 ref）
 const sidepaneWidthStyle = computed(() => ide.sidePane.width ? { width: `${ide.sidePane.width}px`, flex: '0 0 auto' } : {})
 
-// ── R6 补充：三栏宽度拖拽（左/右分割位置调整布局宽度，layout 持久化）──
-const IDECOL_MIN = 180
-const IDECOL_MAX = 560
+// ── R6 补充：三栏宽度拖拽 + 同步联动（colWidths 单一事实源，协作沟通 ↔ IDE
+// 工作台共享同一套宽度；拖任一边另一边跟随）──
+const unsubscribeCols = onColWidthsChange((w) => {
+  ide.layout.sidebarWidth = w.left
+  ide.sidePane.width = w.right
+})
+onUnmounted(unsubscribeCols)
+// 初次挂载：若 layout/sidePane 与共享源不一致（历史值），以共享源为准回填
+{
+  const shared = readColWidths()
+  if (ide.layout.sidebarWidth !== shared.left) ide.layout.sidebarWidth = shared.left
+  if (ide.sidePane.width !== shared.right) ide.sidePane.width = shared.right
+}
+
 let ideDragCol: 'sidebar' | 'sidepane' | null = null
 let ideDragStartX = 0
 let ideDragStartW = 0
@@ -100,9 +112,8 @@ function onIdeDrag(e: MouseEvent): void {
   if (!ideDragCol) return
   const delta = e.clientX - ideDragStartX
   const w = Math.round(ideDragCol === 'sidebar' ? ideDragStartW + delta : ideDragStartW - delta)
-  const clamped = Math.min(IDECOL_MAX, Math.max(IDECOL_MIN, w))
-  if (ideDragCol === 'sidebar') ide.layout.sidebarWidth = clamped
-  else ide.sidePane.width = clamped
+  // 实时写共享源（广播同步到另一边；mouseup 即最终值）
+  updateColWidth(ideDragCol, w)
 }
 function endIdeDrag(): void {
   window.removeEventListener('mousemove', onIdeDrag)
