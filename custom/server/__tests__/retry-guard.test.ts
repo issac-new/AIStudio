@@ -1,17 +1,25 @@
 // custom/server/__tests__/retry-guard.test.ts
 // 防死循环守卫单测：sidecar 计数持久化 + Leader 介入阈值（3/5）
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtemp, readFile, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { RetryStore } from '../services/kanban/retry-store'
 import { RetryGuardService, RETRY_LEADER_THRESHOLD, RETRY_MAX } from '../services/kanban/retry-guard'
 
+const { spawnMock } = vi.hoisted(() => ({
+  spawnMock: vi.fn(() => ({ on: vi.fn(), unref: vi.fn() })),
+}))
+vi.mock('child_process', () => ({
+  spawn: spawnMock,
+}))
+
 let storePath = ''
 
 beforeEach(async () => {
   const dir = await mkdtemp(join(tmpdir(), 'aipaydev-retry-'))
   storePath = join(dir, 'retry.json')
+  vi.stubEnv('AIPAYDEV_LEADER_MATRIX_ID', '')
 })
 
 describe('RetryStore', () => {
@@ -54,6 +62,29 @@ describe('RetryGuardService', () => {
     expect(verdicts[4]?.maxExceeded).toBe(true)
     await RetryGuardService.reset('T-loop')
     expect(await RetryGuardService.countOf('T-loop')).toBe(0)
+  })
+
+  it('env 未设时不外呼；设置后经 hermes send 实弹送达（仅阈值轮）', async () => {
+    // env 未设：纯留痕，无 spawn
+    await RetryGuardService.onTestReject('T-quiet')
+    expect(spawnMock).not.toHaveBeenCalled()
+    // env 设定：达到阈值才外呼
+    vi.stubEnv('AIPAYDEV_LEADER_MATRIX_ID', '@lead:matrix.test')
+    const v1 = await RetryGuardService.onTestReject('T-notify')
+    expect(v1.leaderIntervention).toBe(false)
+    expect(spawnMock).not.toHaveBeenCalled()
+    const v2 = await RetryGuardService.onTestReject('T-notify')
+    const v3 = await RetryGuardService.onTestReject('T-notify')
+    expect(v3.leaderIntervention).toBe(true)
+    expect(spawnMock).toHaveBeenCalledTimes(1)
+    const [bin, args] = spawnMock.mock.calls[0]!
+    expect(String(bin)).toContain('hermes')
+    expect(args?.[0]).toBe('send')
+    expect(args?.[1]).toBe('--to')
+    expect(args?.[2]).toBe('matrix:@lead:matrix.test')
+    expect(String(args?.[3])).toContain('T-notify')
+    await RetryGuardService.reset('T-notify')
+    await RetryGuardService.reset('T-quiet')
   })
 })
 
