@@ -741,3 +741,7 @@
 # 366: RACI 派发接 assign 时刻——assignTask 成功后 best-effort 派发（同任务 sidecar 幂等去重，方案步骤 10.4 触发点补全）
 366-server-kanban-raci-assign-dispatch.patch
 
+# 367: v0.7.24 升级轮——AuthenticatedUser.matrix_user_id 放宽为 string|null。
+#      上游 #3144 起新通知族(live-activity/run-push/catchup)把 UserRecord 直接传入
+#      canReceiveAppEvent(AuthenticatedUser)，015 的可空列与 016 的 ?:string 不兼容。
+367-server-auth-matrix-userid-nullable.patch
