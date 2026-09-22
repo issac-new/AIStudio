@@ -43,8 +43,15 @@ jwt_of() { # <user> → studio JWT（优先 matrix-login，等价步骤 3 的自
   echo "$t"
 }
 
-kanban_list() { # <user> → json
-  studio "$(studio_port "$1")" GET "/api/hermes/kanban" "$(jwt_of "$1")"
+kanban_list() { # 跨板合并：agent 可能建专用板（如 aipay-rfd），默认板可能为空
+  local jwt; jwt=$(jwt_of "$1")
+  local boards; boards=$(studio "$(studio_port "$1")" GET "/api/hermes/kanban/boards" "$jwt" | jq -r '.boards[]?.slug' 2>/dev/null)
+  [[ -z "$boards" ]] && boards="default"
+  local slug out='{"tasks":[]}'
+  for slug in $boards; do
+    out=$(jq -s '.[0].tasks + (.[1].tasks // []) | {tasks: .}' <(echo "$out")       <(studio "$(studio_port "$1")" GET "/api/hermes/kanban?board=$slug" "$jwt" 2>/dev/null || echo '{"tasks":[]}'))
+  done
+  echo "$out"
 }
 
 kanban_has() { # <user> <needle> → 0/1（标题或 body 含 needle）
@@ -79,7 +86,7 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
   local rid
   rid=$(mx "$(load_token "$a")" POST createRoom "$(jq -n --arg t "$(human_mxid "$b")" \
     '{is_direct:true, preset:"trusted_private_chat", invite:[$t]}')" | jq -r '.room_id')
-  [[ "$rid" == '!'* ]] || fail "DM 建房失败 $a→$b: $rid"
+  [[ "$rid" == '!'* ]] || fail "DM 建房失败 ${a}→$b: $rid"
   mx_join "$(load_token "$b")" "$rid"
   sset "$key" "$rid"; echo "$rid"
 }
@@ -180,7 +187,7 @@ if step_reached dispatch; then
     WSF=$(workspace fanfan)
     M=$(mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 请处理需求 RFD-001（收单商户多端小程序支付收银台）。
 需求基本信息：为收单商户开发兼容微信/支付宝双端的小程序支付收银台，含统一下单、渠道适配（财付通/支付宝）、支付结果通知与对账字段支撑。
-需求文档：aipaydev 仓库 docs/requirements/RFD-001-payment-cashier.md（你本机克隆在 $WSF，先 git pull）
+需求文档：aipaydev 仓库 docs/requirements/RFD-001-payment-cashier.md（你本机克隆在 ${WSF}，先 git pull）
 请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单匹配、SMART 拆分与 RACI 派发。
 结论行以 ANALYSIS-DONE-RFD-001 或 ANALYSIS-BLOCKED-RFD-001 开头。不许谎报。" "$(agent_mxid fanfan)")
     sset dispatch_marker "$M"
