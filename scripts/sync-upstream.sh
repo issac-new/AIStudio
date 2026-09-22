@@ -14,12 +14,17 @@ cd ../upstream/hermes-studio
 git fetch origin --tags --force
 
 # 优先取最新非预发布 release tag;失败则 fallback 到 origin/main
-TAG=$(gh release view --repo "${HERMES_REPO}" --json tagName,isPrerelease 2>/dev/null \
-  | python3 -c 'import json,sys
+# Windows(Git Bash)无 python3 只有 python;两者都缺则跳过 gh 解析走 git describe 兜底
+PY="$(command -v python3 || command -v python || true)"
+TAG=""
+if [ -n "$PY" ]; then
+  TAG=$(gh release view --repo "${HERMES_REPO}" --json tagName,isPrerelease 2>/dev/null \
+    | "$PY" -c 'import json,sys
 try:
     d=json.load(sys.stdin)
     if not d.get("isPrerelease"): print(d["tagName"])
 except Exception: pass' 2>/dev/null)
+fi
 if [ -z "$TAG" ]; then
   echo "[sync]   未取到 gh release tag,fallback git describe origin/main"
   TAG=$(git describe --tags --abbrev=0 origin/main 2>/dev/null || true)

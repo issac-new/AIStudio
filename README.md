@@ -359,6 +359,7 @@ hermes-agent (运行时；本地安装优先，否则首次启动下载捆绑 ru
 
 - Node.js ≥ 23.0.0
 - 上游仓已 clone 到 `../upstream/`（hermes-studio / element-web / hermes-agent）
+- **Windows x64**：支持（2026-09-22 兼容轮起）。开发/构建/打包全链可在 Windows 原生跑，详细步骤见 [docs/windows-x64-setup.md](docs/windows-x64-setup.md)；注意 `git config core.autocrlf false`，win 安装包必须在 Windows 主机构建（sharp 平台二进制）。
 
 ### 上游依赖
 
@@ -405,6 +406,7 @@ mkdir -p dist
 
 cd ../../overlay
 bash scripts/serve-server.sh &                       # 3. 后端 :8647（ts-node 直跑上游 src/index.ts）
+                                                        #    Windows 用跨平台版：npm run serve（serve-server.mjs）
 npm run dev                                          # 4. 前端 :8649（vite，host + strictPort）
 ```
 

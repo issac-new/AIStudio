@@ -77,7 +77,9 @@ function applyDelta(delta) {
     const targetRoot = patchTargetRoot(p);
     const label = targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio';
     try {
-      execSync(`git apply --whitespace=nowarn "${patchPath}"`, { cwd: targetRoot, stdio: 'pipe' });
+      // win32 容差同 inject.mjs:autocrlf=true 的 CRLF 检出 vs patch LF 上下文。
+      const wsFlag = process.platform === 'win32' ? ' --ignore-whitespace' : '';
+      execSync(`git apply --whitespace=nowarn${wsFlag} "${patchPath}"`, { cwd: targetRoot, stdio: 'pipe' });
       console.log(`[ensure-injected] applied series-ahead patch: ${p} (to ${label})`);
     } catch (e) {
       console.error(`[ensure-injected] FAILED to apply series-ahead patch: ${p} (to ${label})`);

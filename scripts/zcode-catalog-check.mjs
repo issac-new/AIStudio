@@ -14,6 +14,12 @@
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
+// 事实源是本机 macOS 安装的 ZCode.app;其余平台无此事实源,明确退出而非 ENOENT 崩栈。
+if (process.platform !== 'darwin') {
+  console.error('[catalog-check] 仅支持 macOS(读取 /Applications/ZCode.app);当前平台无此事实源,退出。')
+  process.exit(1)
+}
+
 const APP = '/Applications/ZCode.app'
 const NOTES = resolve(process.cwd(), 'docs/superpowers/notes/zcode-3140')
 /** zh 目录内的独有锚点键（值是中文，可确认命中的是 zh 而非 en 目录） */

@@ -8,11 +8,12 @@ import type {
   DriftReport, LoopFilter, ContractFilter,
 } from '../types'
 import type { LoopStateStore } from './state-store'
-
-const DEFAULT_LOOP_DIR = '.loop'
+import { resolveLoopBaseDir } from '../paths'
 
 export class LocalStore implements LoopStateStore {
-  constructor(private baseDir: string = DEFAULT_LOOP_DIR) {}
+  // 缺省经 resolveLoopBaseDir:cwd 可写时等价 '.loop'(dev 语义不变),
+  // 不可写(Windows 打包态落只读目录)时降级 homedir,详见 loop/paths.ts。
+  constructor(private baseDir: string = resolveLoopBaseDir()) {}
 
   // --- path helpers (respect this.baseDir so tests/sandboxes don't pollute CWD) ---
   private loopDir(id: string): string {

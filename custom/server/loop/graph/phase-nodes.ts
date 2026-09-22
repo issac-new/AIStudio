@@ -14,8 +14,7 @@
 //   __resume:<interruptId> 通道后节点重入消费裁决；无 goto 自路由则 resume 直达下游节点，裁决无人消费
 // - human 节点审批 config 三元组（JSM 建模）：approvers（审批人来源）/policy（通过策略）/onReject（拒绝去向）
 
-import { execFile } from 'child_process'
-import { promisify } from 'util'
+import { execTemplateCommand } from '../../runtime/platform-exec'
 import type { NodeDef, NodeContext, StateValues, StateUpdate } from './types'
 import type { PredicateExpr } from './predicate'
 import { evaluatePredicate } from './predicate'
@@ -28,8 +27,6 @@ import type { WorktreeManager } from '../engine/worktree-manager'
 import type { SubagentDispatcher } from '../engine/subagent-dispatcher'
 import type { Verifier } from '../engine/verifier'
 import { BudgetGuard } from '../engine/budget-guard'
-
-const execFileAsync = promisify(execFile)
 
 /** I7 成本断链闭合：阶段节点完成即按 BudgetGuard.estimateTickCost 的档位计费
  *  （档位表单一事实源在 budget-guard，不在此复制）。runtime 的 recordCost 包装
@@ -755,9 +752,10 @@ export type GateExec = (cmd: string, opts: { cwd?: string; timeoutMs?: number })
 }>
 
 const defaultGateExec: GateExec = async (cmd, opts) => {
-  const parts = cmd.split(/\s+/).filter(Boolean)
   try {
-    await execFileAsync(parts[0], parts.slice(1), {
+    // execTemplateCommand:win32 下 npm/npx 等是 .cmd shim 不能 execFile 直调;
+    // POSIX 保持既有空白切分 + execFile 语义(见 runtime/platform-exec.ts)。
+    await execTemplateCommand(cmd, {
       cwd: opts.cwd ?? process.cwd(),
       timeout: opts.timeoutMs ?? 60_000,
       maxBuffer: 1024 * 1024,
