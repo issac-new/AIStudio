@@ -41,9 +41,12 @@ description: 金融支付（银行卡/网络支付/转接清算）领域背景�
 ### D. RACI 派发
 - 对每个任务：主责 R = 应用主责研发；A = 团队负责人（授权/确认）；C = 架构
   （跨模块接口时）；I = 产品经理。
-- 邀请全部关联账号进需求讨论群；逐条发 matrix 消息：@责任人-agent 与
-  @lead-agent，附任务明细（任务 ID/要求/文档 git 地址/初稿确认与深入分析
-  反馈要求）。
+- 邀请全部关联账号进需求讨论群（必须执行，不许跳过）：
+  `hermes matrix rooms` 拿目标房间 ID →
+  `hermes matrix invite --room <房间ID> --user @a:matrix.test,@b:matrix.test,...`
+  （整份名单一次发；已在群成员自动跳过，不是错误）。
+- 逐条发 matrix 消息：@责任人-agent 与 @lead-agent，附任务明细（任务 ID/要求/
+  文档 git 地址/初稿确认与深入分析反馈要求）。
 - 每条派发建一个跟踪子任务（`hermes kanban create` + `hermes kanban link
   <父> <子>`），仅追踪对方反馈进展；全部子任务完成后才关闭父任务。
 

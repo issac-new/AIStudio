@@ -77,16 +77,20 @@ PYEOF
   chmod 600 "$PROF/config.yaml"
 
   # gateway .env：MATRIX 五件套。HOME_ROOM 暂不设（房间在场景内由 fanfan 建），
-  # ALLOWED_ROOMS 放开为空 = 接受所有被邀请房间；ALLOWED_USERS 限编制内人类。
+  # ALLOWED_ROOMS 放开为空 = 接受所有被邀请房间；ALLOWED_USERS 限编制内人类
+  # 及其 AI 助理（协作派发由 agent 账号发起，白名单含 -agent 才能自动受邀进群）。
   AGENT_MXID=$(agent_mxid "$u")
   HUMANS=""
   for h in "${USERS[@]}"; do HUMANS="$HUMANS,$(human_mxid "$h")"; done
   HUMANS="${HUMANS#,}"
+  AGENTS=""
+  for h in "${USERS[@]}"; do AGENTS="$AGENTS,$(agent_mxid "$h")"; done
+  AGENTS="${AGENTS#,}"
   cat > "$PROF/.env" <<ENVEOF
 MATRIX_HOMESERVER=$HS
 MATRIX_ACCESS_TOKEN=$(load_token "$u-agent")
 MATRIX_USER_ID=$AGENT_MXID
-MATRIX_ALLOWED_USERS=$HUMANS
+MATRIX_ALLOWED_USERS=$HUMANS,$AGENTS
 MATRIX_E2EE_MODE=off
 MATRIX_AUTO_THREAD=true
 API_SERVER_KEY=$API_KEY
