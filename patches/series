@@ -347,7 +347,11 @@
 # loaded_platforms（仅本进程写入的 channel，writer_pid+writer_start_time 双钉）
 # 与 served_profiles；前端投影后顶栏只展示 channel 名（profile 仅留详情面板）。
 # 注：inject.mjs 路由同步扩展 gateway/、tests/gateway/ → hermes-agent。
-250-agent-health-loaded-platforms.patch
+# 250（2026-09-22 摘除）：hermes-agent v0.21.4 上游已原生含 loaded_platforms
+# （api_server.py:2281），使命完成退役——同 #108/#126 先例。
+# 117/118/178/179/273 v0.21.4 上下文失效（inject WARN 容忍跳过）：待 agent
+# 升级轮 regen（5173 commits 变更面分析 + 纯净/重放双对照，2.24/2.32 配方）。
+
 
 # 舰队/看板聚合 WS 实机断连修复：上游 http.ts catch-all upgrade 白名单仅
 # terminal/kanban-events/lan-peer/socket.io，overlay 的 fleet/events 与
