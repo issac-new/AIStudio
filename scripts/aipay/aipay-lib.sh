@@ -77,7 +77,7 @@ synapse_register() { # <localpart> <password>  幂等
     return 0
   fi
   docker exec "$SYNAPSE_CONTAINER" register_new_matrix_user \
-    -c /data/homeserver.yaml -u "$u" -p "$p" >/dev/null 2>&1 \
+    -c /data/homeserver.yaml -a -u "$u" -p "$p" >/dev/null 2>&1 \
     || fail "注册 matrix 用户 $u 失败"
   log "已注册 matrix 用户 @$u:$SERVER_NAME"
 }
@@ -294,4 +294,15 @@ EOF
     *) return 0 ;;
   esac
   chmod 600 "$dir/machine-manifest.json"
+}
+
+role_of() {
+  case "$1" in
+    admin) echo "管理员" ;; bella) echo "BA" ;; fanfan) echo "产品经理" ;;
+    wei) echo "后端团队负责人" ;; mei) echo "前端团队负责人" ;;
+    chen) echo "研发·csw-pay-core" ;; hu) echo "研发·csw-channel-wechat" ;;
+    lin) echo "研发·csw-channel-alipay" ;; xiao) echo "研发·csw-cashier-mp" ;;
+    qi) echo "测试·后端" ;; fei) echo "测试·前端" ;; arch) echo "架构治理" ;;
+    *) echo "未知" ;;
+  esac
 }

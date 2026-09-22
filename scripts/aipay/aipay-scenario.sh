@@ -95,7 +95,7 @@ auto_approve() { # 扫描各房间 agent 审批请求，以对应人类身份线
       mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
         "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$eid\"}}" >/dev/null || true
       echo "$eid" >> "$APPROVED_LOG"
-      note "[$u] 线程内回复 !approve（事件 $eid）"
+      note "[$u] 线程内回复 !approve（事件 ${eid}）"
     done
   done
 }
@@ -122,7 +122,7 @@ room_has_from() { # <room> <sender-mxid> <pattern>
     'map(select(.sender == $s and ((.content.body // "") | test($p)))) | any' >/dev/null 2>&1
 }
 
-note "===== aipaydev 推演开始（START_STEP=$START_STEP）====="
+note "===== aipaydev 推演开始（START_STEP=${START_STEP}）====="
 
 # ══ 步骤 1-5：账号/配置/登录/功能就绪冒烟 ═════════════
 if step_reached smoke; then
