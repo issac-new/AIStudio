@@ -71,8 +71,12 @@ const unsubscribeCols = onColWidthsChange((w) => {
 })
 onUnmounted(unsubscribeCols)
 
-const leftWidthStyle = computed(() => leftWidth.value ? { width: `${leftWidth.value}px`, flex: '0 0 auto' } : {})
-const rightWidthStyle = computed(() => rightWidth.value ? { width: `${rightWidth.value}px`, flex: '0 0 auto' } : {})
+// 栏宽必须进 grid 轨道：grid item 的内联 width 改不动固定轨道（2026-09-22
+// 「拖了不动」根因——aside 拖宽只是溢出轨道被中栏盖住/悬出屏外，可见边界不动）。
+// 折叠态 18px 导轨与 v12 铁律轨道同源。
+const wbGridStyle = computed(() => ({
+  gridTemplateColumns: `${flow.layout.leftFolded ? '18px' : `${leftWidth.value}px`} minmax(320px, 1fr) ${flow.layout.rightFolded ? '18px' : `${rightWidth.value}px`}`,
+}))
 
 // 拖拽：mousedown 起捕，mousemove 改宽（实时联动），mouseup 落盘
 let dragCol: 'left' | 'right' | null = null
@@ -410,10 +414,11 @@ function onNewLoop(): void {
   <div
     class="wb"
     :class="{ 'wb--lf': flow.layout.leftFolded, 'wb--rf': flow.layout.rightFolded }"
+    :style="wbGridStyle"
     data-testid="wb-root"
   >
     <!-- 左栏：折叠态 18px 导轨（▶ 展开）；栏控叠放栏内右上角（v12.6 不占行） -->
-    <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left" :style="leftWidthStyle">
+    <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
       <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） -->
       <div class="wb__colhead" data-testid="wb-colhead-left">
         <IaColumnControls testid="ia-col-left" fold="left" @fold="flow.toggleFold('left')" />
@@ -482,7 +487,7 @@ function onNewLoop(): void {
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
     <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控迁独立控制条行 -->
-    <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right" :style="rightWidthStyle">
+    <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
       <!-- R6 补充：右栏左缘拖拽分割条 -->
       <div class="wb__split wb__split--r" data-testid="wb-split-r" @mousedown="startDrag('right', $event)" />
       <div class="wb__colhead" data-testid="wb-colhead-right">
@@ -519,17 +524,19 @@ function onNewLoop(): void {
 </template>
 
 <style scoped lang="scss">
-/* v12 三栏铁律：250 | 自适应(≥320) | 240，永不换列不堆叠（窄屏由外层整体缩放）。
+/* v12 三栏铁律：栏宽可拖（180-560，colWidths 单一事实源）| 自适应(≥320) | 栏宽可拖，
+ * 永不换列不堆叠（窄屏由外层整体缩放）。此处静态轨道仅作挂载前兜底，数值对齐
+ * colWidths 默认 280/480；真实轨道由 wbGridStyle 内联绑定驱动（拖拽即改轨道）。
  * v12.6 栏控叠放各栏右上角（绝对定位不占行；面板首行右对齐元素让位 62px）；
  * 折叠态 18px 导轨就地展开；中栏最大化 = 两侧齐折（flow.centerMaximized）。 */
 .wb {
   height: 100%; min-height: 0; min-width: 0;
   display: grid;
-  grid-template-columns: 250px minmax(320px, 1fr) 240px;
+  grid-template-columns: 280px minmax(320px, 1fr) 480px;
   gap: 10px;
 }
-.wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 240px; }
-.wb--rf { grid-template-columns: 250px minmax(320px, 1fr) 18px; }
+.wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 480px; }
+.wb--rf { grid-template-columns: 280px minmax(320px, 1fr) 18px; }
 .wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
 .wb__left, .wb__right, .wb__center { min-height: 0; position: relative; }
 
