@@ -267,8 +267,8 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     auto_approve "$SCAN_ROOM" || true
     DEFECTS=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r '[.[] | select((.content.body // "") | startswith("【缺陷】")) | .event_id] | length')
     FIXED=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r '[.[] | select((.content.body // "") | contains("FIX-DONE"))] | length')
-    BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r '[.[] | select((.content.body // "") | test("TEST-(PASS|FAIL)-TEST-BE"))] | length') 
-    FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r '[.[] | select((.content.body // "") | test("TEST-(PASS|FAIL)-TEST-FE"))] | length')
+    BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --arg qi "$(agent_mxid qi)" '[.[] | select(.sender == $qi and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-BE"))] | length')
+    FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --arg fei "$(agent_mxid fei)" '[.[] | select(.sender == $fei and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-FE"))] | length')
     if (( DEFECTS > 0 && FIXED >= DEFECTS && BOTH_DONE > 0 && FE_DONE > 0 )); then
       note "[真值] 缺陷闭环完成（缺陷 $DEFECTS / 修复 ${FIXED}）✓"; break
     fi
