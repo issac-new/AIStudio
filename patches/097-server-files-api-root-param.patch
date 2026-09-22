@@ -1,14 +1,15 @@
 diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
-index f21dd626..ff5c216d 100644
+index 80fb44a..8005dc3 100644
 --- a/packages/server/src/modules/studio/controllers/download.ts
 +++ b/packages/server/src/modules/studio/controllers/download.ts
-@@ -1,4 +1,4 @@
+@@ -1,5 +1,5 @@
+ import { authorizeShareDownload } from '../services/session-shares/access'
 -import { basename, extname, isAbsolute } from 'path'
 +import { basename, extname, isAbsolute, resolve } from 'path'
  import {
    createFileProvider,
    localProvider,
-@@ -7,6 +7,10 @@ import {
+@@ -8,6 +8,10 @@ import {
    resolveProfileFilePath,
  } from '../services/files/file-provider'
  import { getActiveProfileName } from '../public/profile-config'
@@ -19,7 +20,7 @@ index f21dd626..ff5c216d 100644
  import { createAppImagePreview } from '../services/files/app-image-preview'
  
  // MIME type mapping for common extensions
-@@ -69,6 +73,7 @@ export async function download(ctx: any) {
+@@ -70,6 +74,7 @@ export async function download(ctx: any) {
    const filePath = ctx.query.path as string | undefined
    const fileName = ctx.query.name as string | undefined
    const variant = ctx.query.variant as string | undefined
@@ -27,17 +28,20 @@ index f21dd626..ff5c216d 100644
  
    if (!filePath) {
      ctx.status = 400
-@@ -79,8 +84,30 @@ export async function download(ctx: any) {
-   try {
+@@ -81,9 +86,32 @@ export async function download(ctx: any) {
      const profile = requestedProfile(ctx)
      // Validate the path first
--    // Support both absolute and relative paths
--    const validPath = isAbsolute(filePath) ? validatePath(filePath) : resolveProfileFilePath(filePath, profile)
+     // Support both absolute and relative paths
+-    const validPath = ctx.state?.sessionShare
+-      ? await authorizeShareDownload(ctx.state.sessionShare, filePath)
+-      : isAbsolute(filePath) ? validatePath(filePath) : resolveProfileFilePath(filePath, profile)
 +    // Support both absolute and relative paths; when a root is provided,
 +    // resolve the relative path against it (same semantics as files/list).
 +    // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 必须落在 hermes base 沙箱内，且要求 super_admin
 +    let validPath: string
-+    if (isAbsolute(filePath)) {
++    if (ctx.state?.sessionShare) {
++      validPath = await authorizeShareDownload(ctx.state.sessionShare, filePath)
++    } else if (isAbsolute(filePath)) {
 +      validPath = validatePath(filePath)
 +    } else if (root) {
 +      if (ctx.state.user?.role !== 'super_admin') {
@@ -61,7 +65,7 @@ index f21dd626..ff5c216d 100644
      // Choose provider: always use local for upload directory files
      let data: Buffer
 diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
-index 32c38676..9b663546 100644
+index 32c3867..9b66354 100644
 --- a/packages/server/src/modules/studio/controllers/files.ts
 +++ b/packages/server/src/modules/studio/controllers/files.ts
 @@ -1,16 +1,38 @@
