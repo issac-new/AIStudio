@@ -251,7 +251,10 @@ note "===== scenario 本批执行到 START_STEP=$START_STEP 之后的 gates；�
 
 # 后续步骤（anexec/review/close/plan/devimpl/defect/testpass/release/templates/ide）
 # 在独立脚本 aipay-scenario2.sh 中，避免单文件过长。
-if step_reached anexec; then
+# 修复：START_STEP 落在 anexec..ide 区间（如 review）经本脚本续跑时，
+# step_reached anexec 为假会秒退假完成（18:59 事故），须按位置比较放行进入下半场。
+step_pos() { echo $STEPS | tr ' ' '\n' | grep -n "^$1$" | cut -d: -f1; }
+if [[ "$(step_pos "$START_STEP")" -ge "$(step_pos anexec)" ]]; then
   exec bash "$SCRIPT_DIR/aipay-scenario2.sh"
 fi
 note "阶段一完成 ✅"
