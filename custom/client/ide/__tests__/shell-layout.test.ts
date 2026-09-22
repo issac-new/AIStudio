@@ -24,6 +24,11 @@ vi.mock('@/stores/hermes/chat', () => ({
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
   useCockpitStore: () => ({ openRunTrace: vi.fn() }),
 }))
+// aipaydev 缺口 5：IdeShell 新增 kanban store 依赖（简报抽屉任务源）+ 简报面板子组件桩
+vi.mock('@/stores/hermes/kanban', () => ({
+  useKanbanStore: () => ({ tasks: [] }),
+}))
+vi.mock('../components/TaskBriefingPanel.vue', () => ({ default: { name: 'TaskBriefingPanel', template: '<aside class="brief-stub" />' } }))
 vi.mock('../views/IdeTaskSidebar.vue', () => ({ default: { name: 'IdeTaskSidebar', template: '<aside class="ide-taskbar" />' } }))
 vi.mock('../views/IdeChatPane.vue', () => ({ default: { name: 'IdeChatPane', template: '<div class="ide-chat-stub" />' } }))
 vi.mock('../views/IdeSidePane.vue', () => ({ default: { name: 'IdeSidePane', template: '<aside class="ide-sidepane" />' } }))

@@ -1,4 +1,4 @@
-// overlay/custom/server/matrix/gateway-env.ts
+// custom/server/matrix/gateway-env.ts
 // R1 升级（2026-09-11）：gateway（hermes-agent）侧 Matrix 凭据作为 Brief 投递的
 // 第三级回落源。凭据落在 hermes dotenv：`${HERMES_HOME:-~/.hermes}/profiles/<profile>/.env`
 // （来源：hermes_cli/env_loader.py load_hermes_dotenv 的加载语义；plain KEY=VALUE，
@@ -104,4 +104,75 @@ export function readGatewayMatrixEnv(env: Record<string, string | undefined> = p
     ...(kv.MATRIX_HOME_ROOM ? { homeRoom: kv.MATRIX_HOME_ROOM } : {}),
     ...(kv.MATRIX_HOME_ROOM_THREAD_ID ? { homeRoomThreadId: kv.MATRIX_HOME_ROOM_THREAD_ID } : {}),
   }
+}
+
+// ─── RACI / Matrix 模拟扩展 ────────────────────────────────────
+
+/** 9 用户模拟环境 */
+export const SIMULATED_USERS = [
+  '@alice:localhost',
+  '@bob:localhost',
+  '@carol:localhost',
+  '@dave:localhost',
+  '@eve:localhost',
+  '@frank:localhost',
+  '@grace:localhost',
+  '@henry:localhost',
+  '@ivy:localhost',
+]
+
+/** 角色 → 用户映射 */
+export const ROLE_USER_MAP = {
+  responsible: SIMULATED_USERS.slice(0, 2),     // alice, bob
+  approver:    SIMULATED_USERS.slice(2, 3),     // carol
+  consulted:   SIMULATED_USERS.slice(3, 5),     // dave, eve
+  informed:    SIMULATED_USERS.slice(5, 9),     // frank … ivy
+}
+
+/** RACI 角色分配元组 */
+export interface RACITuple {
+  responsible: string[]
+  approver: string[]
+  consulted: string[]
+  informed: string[]
+}
+
+/** RACI 派发结果 */
+export interface DispatchResult {
+  ok: boolean
+  roomId: string | null
+  error?: string
+}
+
+/** Matrix 网关默认配置 */
+export const DEFAULT_GATEWAY_CONFIG = {
+  homeserverUrl: 'http://localhost:8008',
+  userId: '@leader:localhost',
+  roomPrefix: 'raci-task',
+}
+
+/** 生成房间名 */
+export function createRoomName(taskId: string, title: string): string {
+  return `${DEFAULT_GATEWAY_CONFIG.roomPrefix}-${taskId}-${title.slice(0, 20)}`
+}
+
+/** 生成房间 ID */
+export function generateRoomId(taskId: string): string {
+  return `!${DEFAULT_GATEWAY_CONFIG.roomPrefix}-${taskId}:localhost`
+}
+
+// ─── Matrix 实体类型（模拟层共享） ─────────────────────────────
+
+export interface MatrixUser {
+  id: string
+  displayName: string
+  deviceId?: string
+}
+
+export interface MatrixRoom {
+  roomId: string
+  name: string
+  preset: 'public_chat' | 'private_chat' | 'trusted_private_chat'
+  members: MatrixUser[]
+  createdAt: number
 }
