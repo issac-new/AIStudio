@@ -55,6 +55,12 @@ kanban_create_as() {
 }
 kanban_status_as() { studio "$(studio_port "$1")" PATCH "/api/hermes/kanban/$2" "$(jwt_of "$1")" "{\"status\":\"$3\"}" >/dev/null; }
 
+kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错）
+  local u="$1" id="$2" st
+  for st in todo running review done; do
+    kanban_status_as "$u" "$id" "$st" 2>/dev/null || true
+  done
+}
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
 auto_approve() {
   local room="$1"
@@ -151,13 +157,13 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
   # 线下人工评审（虚拟架构小组），导演代 fanfan 手工更新
   RID=$(kanban_list fanfan | jq -r '[.. | objects | select(has("title")) | select((.title // "") | contains("RFD-001-评审")) | .id][0] // empty')
   if [[ -n "$RID" ]]; then
-    kanban_status_as fanfan "$RID" done
+    kanban_walk_done fanfan "$RID"
     note "[fanfan] 线下评审结论：通过（虚拟架构小组人工评审），评审卡 $RID → done"
   else
     note "[观察] 评审卡未找到，导演直接登记并置 done"
     echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡" >> "$EVID_DIR/issues.log"
     RID=$(kanban_create_as fanfan review_rfd "RFD-001-评审（虚拟架构小组）" "线下人工评审：通过。概设 docs/design/RFD-001-architecture-design.md")
-    kanban_status_as fanfan "$RID" done
+    kanban_walk_done fanfan "$RID"
   fi
   sset review_done 1
 fi
