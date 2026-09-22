@@ -31,6 +31,11 @@ const tab = ref<'decisions' | 'messages'>('decisions')
 
 const messageRows = computed(() => cockpit.inboxItems ?? [])
 
+// R6 补充：消息未读计数（messages tab 徽章；与顶部通知徽章双计数同源）
+const messageUnread = computed(() =>
+  messageRows.value.reduce((n: number, i: { count?: number }) => n + (i.count ?? 0), 0),
+)
+
 /** 相对时间（分/时/天，i18n 词表复用 cockpit.justNow 族） */
 function timeAgo(ts: number): string {
   if (!ts) return ''
@@ -80,7 +85,10 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
       <button
         type="button" class="ndp__tab" :class="{ 'ndp__tab--on': tab === 'messages' }"
         data-testid="notify-tab-messages" @click="tab = 'messages'"
-      >{{ t('ia2.notify.tabMessages') }}</button>
+      >{{ t('ia2.notify.tabMessages') }}
+        <!-- R6 补充：消息未读计数（下拉对消息单独计数） -->
+        <span v-if="messageUnread" class="ndp__badge ndp__badge--msg" data-testid="notify-messages-badge">{{ messageUnread }}</span>
+      </button>
       <span class="ndp__spacer" />
       <button
         v-if="tab === 'decisions'" type="button" class="ndp__act"
@@ -159,6 +167,9 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
   min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px;
   background: var(--error); color: #fff; font-size: 9px; font-weight: 700;
 }
+
+/* R6 消息计数徽章（与决策红色区分，蓝色语义） */
+.ndp__badge--msg { background: #61afef; }
 .ndp__spacer { flex: 1; }
 .ndp__act {
   height: 22px; padding: 0 8px; border: none; border-radius: 4px; background: transparent;

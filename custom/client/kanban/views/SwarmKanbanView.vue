@@ -607,6 +607,20 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
   flex-shrink: 0;
 }
 .kanban-boardbar__label { font-size: 11px; color: var(--text-muted, #878c99); flex-shrink: 0; }
+
+/* R6 补充：「全部」按钮区分于板 chip（徽标样式，重置全选语义显性化；
+ *  用户反馈「只能单选无全部」= All 按钮被当成普通板 chip 不可辨） */
+.kanban-boardbar__chip--all {
+  font-weight: 700;
+  border: 1px dashed var(--primary-color, #3b82f6);
+  color: var(--primary-color, #3b82f6);
+  background: color-mix(in srgb, var(--primary-color, #3b82f6) 8%, transparent);
+}
+.kanban-boardbar__chip--all.is-on {
+  border-style: solid;
+  background: var(--primary-color, #3b82f6);
+  color: #fff;
+}
 .kanban-boardbar__chip {
   display: inline-flex; align-items: center; gap: 5px;
   height: 22px; padding: 0 10px;

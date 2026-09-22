@@ -50,7 +50,9 @@ const emit = defineEmits<{
   (e: 'approve-task', taskId: string): void
   (e: 'reject-task', taskId: string): void
   (e: 'approve-run', item: DecisionRow): void
+  (e: 'reject-run', item: DecisionRow): void
   (e: 'approve-fleet', item: DecisionRow): void
+  (e: 'reject-fleet', item: DecisionRow): void
   (e: 'open-review'): void
   (e: 'open-gov-people'): void
 }>()
@@ -220,6 +222,13 @@ function toggleBoard(key: string): void {
 /** 有检索词时自动全展开（可检索优先于手动展开态） */
 const autoExpand = computed(() => onlineQuery.value.trim() !== '')
 
+// R6 补充：matrix userId 短显（@alice:matrix.test → @alice；三级关系第一级身份面）
+function matrixShort(userId: string): string {
+  if (!userId) return ''
+  const m = userId.match(/^@([^:]+)/)
+  return m ? `@${m[1]}` : userId
+}
+
 function accountOpen(userId: string): boolean {
   return autoExpand.value || expandedAccounts.value.has(userId)
 }
@@ -280,8 +289,38 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         </div>
       </template>
 
-      <!-- 任务：分状态统计（点击筛选，多选并集）+ 排序三档 + 基本信息行 -->
+      <!-- 任务：顶部「待决策」区（等我行合并，R6 补充——与任务合一，非两个无别下拉）+
+           分状态统计（点击筛选，多选并集）+ 排序三档 + 基本信息行 -->
       <template v-else-if="segment === 'tasks'">
+        <!-- R6 合并：待决策区（等我行，行上就地决策不离开工作台） -->
+        <div v-if="waitItems.length" class="sitp__decide" data-testid="sitp-decide">
+          <div class="sitp__sec-head">{{ t('ia2.sit.decideTitle') }}</div>
+          <div v-for="w in waitItems" :key="`decide-${w.id}`" class="sitp__row sitp__row--wait">
+            <button
+              type="button" class="sitp__main" :title="w.title"
+              @click="w.kind === 'gate-review' ? emit('open-review') : w.taskId && emit('open-task', w.taskId)"
+            >
+              <span class="sitp__name">{{ w.title }}</span>
+              <span class="sitp__sub">{{ t(w.subKey) }}</span>
+            </button>
+            <span class="sitp__acts">
+              <template v-if="w.kind === 'task-review' && w.taskId">
+                <button type="button" class="sitp__act sitp__act--ok" data-testid="sitp-decide-approve" @click="emit('approve-task', w.taskId)">{{ t('ia2.sit.actApprove') }}</button>
+                <button type="button" class="sitp__act sitp__act--no" data-testid="sitp-decide-reject" @click="emit('reject-task', w.taskId)">{{ t('ia2.sit.actReject') }}</button>
+              </template>
+              <template v-else-if="w.runId">
+                <button type="button" class="sitp__act sitp__act--ok" data-testid="sitp-decide-resume" @click="emit('approve-run', w)">{{ t('ia2.sit.actContinue') }}</button>
+                <button type="button" class="sitp__act sitp__act--no" data-testid="sitp-decide-reject-run" @click="emit('reject-run', w)">{{ t('ia2.sit.actReject') }}</button>
+              </template>
+              <template v-else-if="w.sessionId && w.approvalId">
+                <button type="button" class="sitp__act sitp__act--ok" data-testid="sitp-decide-fleet-ok" @click="emit('approve-fleet', w)">{{ t('ia2.sit.actApprove') }}</button>
+                <button type="button" class="sitp__act sitp__act--no" data-testid="sitp-decide-fleet-no" @click="emit('reject-fleet', w)">{{ t('ia2.sit.actReject') }}</button>
+              </template>
+              <button v-else-if="w.kind === 'gate-review'" type="button" class="sitp__act sitp__act--ok" data-testid="sitp-decide-gate-open" @click="emit('open-review')">{{ t('ia2.sit.actGoReview') }}</button>
+            </span>
+          </div>
+        </div>
+
         <div v-if="taskStats.length" class="sitp__stats" data-testid="sitp-task-stats">
           <button
             v-for="s in sortedStats" :key="s.status"
@@ -347,6 +386,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             <span class="sitp__caret">{{ accountOpen(row.account.userId) ? '▾' : '▸' }}</span>
             <span class="sitp__dot sitp__dot--ok" />
             <span class="sitp__acct-name"><template v-if="row.account.isLeader">★ </template>{{ row.account.displayName }}</span>
+            <!-- R6 补充：matrix 账号显性化（三级关系第一级 = matrix 身份） -->
+            <span class="sitp__acct-matrix" :title="row.account.userId">{{ matrixShort(row.account.userId) }}</span>
             <span class="sitp__acct-sub">{{ row.machines.length }}{{ t('ia2.sit.panelMachines') }} · {{ row.boards.length }}{{ t('ia2.sit.panelBoards') }} · {{ row.account.profiles.length }} profile</span>
           </button>
           <div v-if="accountOpen(row.account.userId)" class="sitp__acct-body">
@@ -410,6 +451,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   &:hover { background: var(--bg-secondary); }
 }
 .sitp__row--wait { padding-right: 2px; }
+
+/* R6 合并：任务段顶部「待决策」区（等我行与任务合一） */
+.sitp__decide {
+  margin-bottom: 8px; padding: 4px 4px 2px;
+  border: 1px solid var(--warning, #f0a44c);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warning, #f0a44c) 8%, transparent);
+}
+.sitp__sec-head {
+  font-size: 10px; font-weight: 700; color: var(--warning, #f0a44c);
+  padding: 0 0 4px 2px; text-transform: uppercase; letter-spacing: .04em;
+}
 .sitp__row--task { align-items: flex-start; }
 .sitp__main {
   display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
@@ -489,6 +542,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 .sitp__caret { font-size: 9px; color: var(--text-muted); flex-shrink: 0; }
 .sitp__acct-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.sitp__acct-matrix { font-size: 10px; color: #61afef; font-family: ui-monospace, monospace; }
 .sitp__acct-sub { font-size: 10px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .sitp__acct-body { padding: 0 6px 4px 16px; }
 .sitp__node {
