@@ -7,6 +7,7 @@
 import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync } from 'fs';
 import { execSync } from 'child_process';
 import { resolve } from 'path';
+import { pathToFileURL } from 'url';
 
 // realpathSync：worktree 场景（.claude/worktrees/<feat>/ 经符号链接指回
 // upstream）必须取真实绝对路径，否则 vite 会因 root(realpath) 与输入
@@ -37,6 +38,16 @@ const mode = process.argv.includes('--clean') ? 'clean' : 'inject';
 function git(args, cwd) {
   return execSync(`git ${args}`, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
 }
+
+// 生成的 TS config 里嵌入路径的字符串字面量:JSON.stringify 保证 Windows 反斜杠
+// 被正确转义。裸 '${path}' 插值下 C:\repo 会被解析成 \r 回车/未知转义吞反斜杠,
+// 生成的 vite.config.overlay.ts 路径损坏,dev/build 全链在配置加载即崩。
+export const js = (p) => JSON.stringify(p);
+
+// Windows:Git for Windows 默认 core.autocrlf=true 时工作树为 CRLF 而 patch 上下文
+// 为 LF,首个内容 patch 即 does not apply。--ignore-whitespace 仅在 win32 启用,
+// POSIX 保持严格匹配、不放松现有门禁。
+const win32WsFlag = () => (process.platform === 'win32' ? ' --ignore-whitespace' : '');
 
 function readSeries() {
   if (!existsSync(patchSeriesFile)) return [];
@@ -83,7 +94,7 @@ function applyPatches() {
 	    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
 
     try {
-      git(`apply --whitespace=nowarn ${patchPath}`, targetRoot);
+      git(`apply --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, targetRoot);
       console.log(`[inject] applied patch: ${p} (to ${targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio'})`);
     } catch (e) {
       // hermes-agent 的 patch 失败时容错跳过（与桌面应用构建无关，不影响 hermes-studio）
@@ -131,7 +142,7 @@ function reversePatches(patches) {
       }
     } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
     try {
-      git(`apply --reverse --whitespace=nowarn ${patchPath}`, targetRoot);
+      git(`apply --reverse --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, targetRoot);
       console.log(`[clean] reversed patch: ${p} (from ${targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio'})`);
     } catch {
       // hermes-agent patch 反向失败时容错跳过
@@ -159,7 +170,7 @@ function generateOverlayViteConfig() {
   const cfg = `// 派生构建配置(inject 生成,已 gitignore)。勿手改,改 inject.mjs。
 import { defineConfig, mergeConfig } from 'vite';
 import { resolve } from 'path';
-import upstream from '${upstreamViteConfig}';
+import upstream from ${js(upstreamViteConfig)};
 
 const upstreamCfg =
   typeof upstream === 'function'
@@ -171,8 +182,8 @@ export default mergeConfig(
   defineConfig({
     // 关键:覆盖上游的相对 root/packages/client,改为绝对上游路径。
     // 上游 config 用相对路径,mergeConfig 后会被当作相对 overlay 解析(错)。
-    root: '${upstreamClientRoot}',
-    publicDir: resolve('${upstreamClientRoot}', 'public'),
+    root: ${js(upstreamClientRoot)},
+    publicDir: resolve(${js(upstreamClientRoot)}, 'public'),
     resolve: {
       // 用数组形式 alias(保证顺序:更具体的前缀先匹配)。
       // Vite 对象形式 alias 不保证顺序;数组形式按声明顺序匹配,故 '@/custom' 必须在 '@' 前。
@@ -181,12 +192,12 @@ export default mergeConfig(
         // 用字符串精确匹配 index.html 里的 /src/main.ts,使 Vite 以 index.html 为入口、
         // 但把 main 重定向到 overlay shim(保留 HTML 处理,生成 index.html)。
         // (字符串 find 做精确匹配;正则在模板插值里转义易错,故不用 RegExp。)
-        { find: '/src/main.ts', replacement: '${overlayClientEntry}' },
-        { find: '@/custom', replacement: '${overlayCustomClient}' },
-        { find: '@custom', replacement: '${overlayCustomClient}' },
-        { find: '@registries', replacement: '${overlayRegistries}' },
+        { find: '/src/main.ts', replacement: ${js(overlayClientEntry)} },
+        { find: '@/custom', replacement: ${js(overlayCustomClient)} },
+        { find: '@custom', replacement: ${js(overlayCustomClient)} },
+        { find: '@registries', replacement: ${js(overlayRegistries)} },
         // @ 兜底指向上游 client src(@/api、@/views、@/components 等解析到上游)
-        { find: '@', replacement: '${upstreamClientSrc}' },
+        { find: '@', replacement: ${js(upstreamClientSrc)} },
       ],
     },
     // outDir 必须显式覆盖为上游 dist/client 的绝对路径——上游 config 用相对
@@ -194,8 +205,8 @@ export default mergeConfig(
     // input 显式指向上游 index.html:覆盖 root 后,Vite 默认从 <root>/index.html 发现入口
     // 可能失效,显式 input 保证 HTML 被处理、生成 dist/client/index.html。
     build: {
-      outDir: '${upstreamDistClient}',
-      rollupOptions: { input: resolve('${upstreamClientRoot}', 'index.html') },
+      outDir: ${js(upstreamDistClient)},
+      rollupOptions: { input: resolve(${js(upstreamClientRoot)}, 'index.html') },
     },
     server: {
       proxy: {
@@ -244,11 +255,17 @@ function ensureNodeModulesSymlink() {
   }
   if (need) {
     try {
-      symlinkSync(upstreamNodeModules, overlayNodeModules);
+      // 'junction' 仅在 Windows 生效(目录联接,无需管理员/开发者模式即可建);
+      // POSIX 下 type 参数被忽略,行为与原 symlink 完全一致。
+      symlinkSync(upstreamNodeModules, overlayNodeModules, 'junction');
       console.log('[inject] linked overlay/node_modules → upstream/hermes-studio/node_modules');
     } catch (e) {
+      // 失败必须可见:用户先在 overlay 跑过 npm install 时会留下真实(空)
+      // node_modules/ 目录,旧的 existsSync 门会静默吞掉此告警,后续
+      // dev/build/test 全部报 'vite 不是内部或外部命令',极难定位。
+      console.warn('[inject] WARN: 无法创建 node_modules 链接:', e.message);
       if (!existsSync(overlayNodeModules)) {
-        console.warn('[inject] WARN: 无法创建 node_modules 符号链接:', e.message);
+        console.warn(`[inject]   Windows 手动兜底: mklink /J "${overlayNodeModules}" "${upstreamNodeModules}"`);
       }
     }
   }
@@ -268,11 +285,13 @@ function ensureServerCustomSymlink() {
   if (mode === 'inject') {
     if (isOursSymlink()) return; // 已链接
     try {
-      symlinkSync(overlayServerCustom, upstreamServerCustom);
+      // junction 同上:Windows 免特权目录链接。
+      symlinkSync(overlayServerCustom, upstreamServerCustom, 'junction');
       console.log('[inject] linked upstream/.../server/src/custom → overlay/custom/server');
     } catch (e) {
+      console.warn('[inject] WARN: 无法创建 server custom 链接:', e.message);
       if (!existsSync(upstreamServerCustom)) {
-        console.warn('[inject] WARN: 无法创建 server custom 符号链接:', e.message);
+        console.warn(`[inject]   Windows 手动兜底: mklink /J "${upstreamServerCustom}" "${overlayServerCustom}"`);
       }
     }
   } else {
@@ -396,6 +415,17 @@ function main() {
     } catch { /* 不存在,跳过 */ }
     //    b) 非 patch 目标的 build 产物
     restoreNonPatchArtifacts('inject');
+    // 1b. Windows autocrlf 可见化:CRLF 检出下靠 --ignore-whitespace 容差套用,
+    //     提前告知而非静默放松(根治 = git config core.autocrlf false 后重检出)。
+    if (process.platform === 'win32') {
+      try {
+        const autocrlf = execSync('git config core.autocrlf', { cwd: hermesStudioRoot, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+        if (autocrlf === 'true') {
+          console.warn('[inject] WARN: upstream core.autocrlf=true(CRLF 检出),已用 --ignore-whitespace 容差套 patch;');
+          console.warn('[inject]   建议 git config core.autocrlf false 后重新检出,恢复严格上下文匹配');
+        }
+      } catch { /* 未配置则无虞 */ }
+    }
     // 2. 应用 B 类 patch
     const applied = applyPatches();
     // 3. 确保 overlay 能解析上游依赖(符号链接 node_modules)
@@ -439,4 +469,7 @@ function main() {
   }
 }
 
-main();
+// 直跑守卫:测试 import 本模块(断言 js 转义/win32 分支)不触发注入副作用。
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main();
+}

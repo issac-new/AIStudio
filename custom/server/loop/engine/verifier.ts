@@ -8,6 +8,8 @@ import type {
 } from '../types'
 import { isJudgeFailed } from '../types'
 import type { JudgeVerdict } from '../types'
+import { loopWorktreeDir } from '../paths'
+import { execTemplateCommand } from '../../runtime/platform-exec'
 
 const execFileAsync = promisify(execFile)
 
@@ -120,9 +122,11 @@ export class Verifier {
     check: { command: string; expectedExitCode: number; timeout: number },
     worktreeId: string | null,
   ): Promise<{ command: string; exitCode: number; stdout: string; passed: boolean }> {
-    const cwd = worktreeId ? `.loop/worktrees/${worktreeId}` : process.cwd()
+    const cwd = worktreeId ? loopWorktreeDir(worktreeId) : process.cwd()
     try {
-      const { stdout } = await execFileAsync(check.command.split(' ')[0], check.command.split(' ').slice(1), {
+      // execTemplateCommand:win32 下 npm/npx 等是 .cmd shim,execFile 直调必
+      // ENOENT(CVE-2024-27980 后还禁直跑 .cmd);POSIX 保持空白切分语义。
+      const { stdout } = await execTemplateCommand(check.command, {
         cwd,
         timeout: check.timeout,
         maxBuffer: 1024 * 1024,
@@ -138,7 +142,7 @@ export class Verifier {
   private async getWorktreeDiff(worktreeId: string | null): Promise<string> {
     if (!worktreeId) return ''
     try {
-      const { stdout } = await execFileAsync('git', ['diff'], { cwd: `.loop/worktrees/${worktreeId}` })
+      const { stdout } = await execFileAsync('git', ['diff'], { cwd: loopWorktreeDir(worktreeId), windowsHide: true })
       return stdout
     } catch { return '' }
   }
@@ -148,7 +152,7 @@ export class Verifier {
     if (contract.resultTemplate.requiredFiles.length === 0) return true
     // Check requiredFiles exist and are non-empty
     if (!contract.worktreeId) return false
-    const wtPath = `.loop/worktrees/${contract.worktreeId}`
+    const wtPath = loopWorktreeDir(contract.worktreeId)
     for (const f of contract.resultTemplate.requiredFiles) {
       const p = resolve(wtPath, f)
       if (!existsSync(p)) return false

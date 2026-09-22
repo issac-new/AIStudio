@@ -95,7 +95,7 @@ const visible = computed(
           <span class="is-del">−{{ d.deletions }}</span>
         </span>
         <span class="ide-runresult__paths" :title="d.files.map((f) => f.path).join('\n')">
-          {{ d.files.slice(0, 2).map((f) => f.path.split('/').pop()).join(' · ') }}<template v-if="d.fileCount > 2">…</template>
+          {{ d.files.slice(0, 2).map((f) => f.path.split(/[\\/]/).pop()).join(' · ') }}<template v-if="d.fileCount > 2">…</template>
         </span>
       </li>
     </ul>

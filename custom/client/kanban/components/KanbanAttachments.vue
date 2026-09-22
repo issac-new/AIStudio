@@ -69,7 +69,9 @@ async function handleDownload(att: KanbanAttachment) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = att.filename
+    // 历史数据可能含 Windows 非法字符(:*?"<>|),Chromium 会静默改名导致与库内
+    // 记录不一致——主动替换与 server 端 safeAttachmentName 同款字符集。
+    a.download = att.filename.replace(/[\x00-\x1f\\/:*?"<>|]/g, '_')
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)

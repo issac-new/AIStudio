@@ -1,5 +1,6 @@
 // overlay/scripts/add-matrixchat-i18n.mjs
 import { readFileSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
 
 const matrixChatKeys = {
   actionDelete: 'Delete', actionEdit: 'Edit', actionReply: 'Reply',
@@ -161,5 +162,5 @@ function addMatrixChat(filePath) {
   console.log(`Added matrixChat section (${Object.keys(matrixChatKeys).length} keys) to ${filePath}`);
 }
 
-const enPath = '/Volumes/nvme2230/lab/ncwk/upstream/hermes-studio/packages/client/src/i18n/locales/en.ts';
+const enPath = resolve(import.meta.dirname, '../../upstream/hermes-studio/packages/client/src/i18n/locales/en.ts');
 addMatrixChat(enPath);
