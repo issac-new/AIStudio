@@ -32,7 +32,9 @@ describe('inject.mjs 路径转义(js)', () => {
 describe('build.mjs 不再引用 .bin shim(win32 是 sh 脚本)', () => {
   it('命令直指包内 JS 入口', () => {
     const text = readFileSync(resolve(overlayRoot, 'scripts/build.mjs'), 'utf8')
-    expect(text).not.toContain('.bin/')
+    // 只看代码行:注释里说明性提及 .bin 不算引用
+    const code = text.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+    expect(code).not.toContain('.bin/')
     expect(text).toContain("bin('vite/bin/vite.js')")
     expect(text).toContain("bin('typescript/bin/tsc')")
   })
