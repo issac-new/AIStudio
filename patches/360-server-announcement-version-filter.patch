@@ -1,0 +1,19 @@
+--- a/packages/server/src/modules/studio/controllers/announcements.ts
++++ b/packages/server/src/modules/studio/controllers/announcements.ts
+@@ -1,10 +1,15 @@
+ import type { Context } from 'koa'
+ import { fetchStudioAnnouncements } from '../services/notifications/announcements'
++import { getHermesWebUiVersion } from '../public/system-info'
++import { filterStaleAnnouncementPayload } from '../../../custom/studio/announcement-filter'
+ 
+ export async function getAnnouncements(ctx: Context): Promise<void> {
+   ctx.set('Cache-Control', 'no-store')
+   try {
+-    ctx.body = await fetchStudioAnnouncements(ctx.query.locale)
++    const payload = await fetchStudioAnnouncements(ctx.query.locale)
++    // 版本感知过滤：公告引用的全部 x.y.z ≤ 本机版本 → 过期不再下发
++    // （0.7.23 机器被弹「请更新至0.7.20」实锤；无版本号公告不过滤不误杀）
++    ctx.body = filterStaleAnnouncementPayload(payload, getHermesWebUiVersion())
+   } catch {
+     ctx.status = 502
+     ctx.body = { ok: false, error: 'announcement_fetch_failed' }
