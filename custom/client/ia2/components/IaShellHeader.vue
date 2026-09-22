@@ -93,6 +93,12 @@ const scheduleTodayCount = computed(() => store.scheduleDatesWithEvents.has(toda
 const showNotify = ref(false)
 const { decisionRows, decisionUnread, oldestDecisionLabel } = useDecisionRows()
 
+// R6 补充：消息未读合计（统一收件箱 inboxItems count 求和；通知徽章双计数）
+const messageUnread = computed(() =>
+  (store.inboxItems ?? []).reduce((n: number, i: { count?: number }) => n + (i.count ?? 0), 0),
+)
+const notifyTotal = computed(() => decisionUnread.value + messageUnread.value)
+
 // ── 态势 chips + 内联面板（v12.3 自 WorkbenchView 迁入；v12.4/12.5 口径修订）──
 
 const {
@@ -199,7 +205,8 @@ function onPanelJumpTask(taskId: string): void {
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" data-testid="ia-header-notify" @click="showNotify = !showNotify">
       <CockpitIcon name="bell" />
-      <span v-if="decisionUnread" class="cockpit-top__bdg cockpit-top__bdg--err" data-testid="ia-header-notify-badge">{{ decisionUnread }}</span>
+      <!-- R6 补充：通知徽章双计数（决策未读 + 消息未读合计；悬停分明细） -->
+      <span v-if="notifyTotal" class="cockpit-top__bdg cockpit-top__bdg--err" data-testid="ia-header-notify-badge" :title="t('ia2.notify.totalHint', { decisions: decisionUnread, messages: messageUnread })">{{ notifyTotal }}</span>
     </button>
     <button type="button" class="cockpit-top__user" data-testid="ia-header-user" @click="goSettings">
       <span class="cockpit-top__avatar">{{ (userName ?? t('cockpit.defaultUser')).slice(0, 1) }}</span>

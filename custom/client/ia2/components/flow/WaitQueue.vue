@@ -13,7 +13,9 @@ const emit = defineEmits<{
   (e: 'approve-task', taskId: string): void
   (e: 'reject-task', taskId: string): void
   (e: 'approve-run', item: DecisionRow): void
+  (e: 'reject-run', item: DecisionRow): void
   (e: 'approve-fleet', item: DecisionRow): void
+  (e: 'reject-fleet', item: DecisionRow): void
 }>()
 
 const { t } = useI18n()
@@ -44,16 +46,26 @@ const { t } = useI18n()
             @click="emit('reject-task', w.taskId!)"
           >{{ t('ia2.tdp.reject') }}</button>
         </template>
-        <button
-          v-else-if="w.kind === 'run-approval'"
-          type="button" class="wq__btn wq__btn--ok" :data-testid="`tdp-confirm-run-${w.runId}`"
-          @click="emit('approve-run', w)"
-        >{{ t('ia2.tdp.confirm') }}</button>
-        <button
-          v-else-if="w.kind === 'fleet-approval'"
-          type="button" class="wq__btn wq__btn--ok" :data-testid="`tdp-confirm-fleet-${w.sessionId}`"
-          @click="emit('approve-fleet', w)"
-        >{{ t('ia2.tdp.confirm') }}</button>
+        <template v-else-if="w.kind === 'run-approval'">
+          <button
+            type="button" class="wq__btn wq__btn--ok" :data-testid="`tdp-confirm-run-${w.runId}`"
+            @click="emit('approve-run', w)"
+          >{{ t('ia2.tdp.confirm') }}</button>
+          <button
+            type="button" class="wq__btn wq__btn--no" :data-testid="`tdp-reject-run-${w.runId}`"
+            @click="emit('reject-run', w)"
+          >{{ t('ia2.tdp.reject') }}</button>
+        </template>
+        <template v-else-if="w.kind === 'fleet-approval'">
+          <button
+            type="button" class="wq__btn wq__btn--ok" :data-testid="`tdp-confirm-fleet-${w.sessionId}`"
+            @click="emit('approve-fleet', w)"
+          >{{ t('ia2.tdp.confirm') }}</button>
+          <button
+            type="button" class="wq__btn wq__btn--no" :data-testid="`tdp-reject-fleet-${w.sessionId}`"
+            @click="emit('reject-fleet', w)"
+          >{{ t('ia2.tdp.reject') }}</button>
+        </template>
       </span>
     </div>
   </div>

@@ -59,6 +59,55 @@ const matrixRoom = useMatrixRoomStore()
 const chatStore = useChatStore()
 const platformsStore = usePlatformsStore()
 
+// ── R6 补充：三栏宽度拖拽（左中右分割位置可调，localStorage 持久化）──
+// 栏宽状态：左/右栏 px（中栏弹性 1fr 不占状态）；拖拽中实时改，松手写回。
+const LEFT_W_KEY = 'ncwk.wb.leftWidth'
+const RIGHT_W_KEY = 'ncwk.wb.rightWidth'
+const MIN_COL_W = 180
+const MAX_COL_W = 560
+const leftWidth = ref<number | null>(null)
+const rightWidth = ref<number | null>(null)
+try {
+  const lw = Number(localStorage.getItem(LEFT_W_KEY))
+  if (lw >= MIN_COL_W && lw <= MAX_COL_W) leftWidth.value = lw
+  const rw = Number(localStorage.getItem(RIGHT_W_KEY))
+  if (rw >= MIN_COL_W && rw <= MAX_COL_W) rightWidth.value = rw
+} catch { /* storage 不可用则用默认 */ }
+const leftWidthStyle = computed(() => leftWidth.value ? { width: `${leftWidth.value}px`, flex: '0 0 auto' } : {})
+const rightWidthStyle = computed(() => rightWidth.value ? { width: `${rightWidth.value}px`, flex: '0 0 auto' } : {})
+
+// 拖拽：mousedown 起捕，mousemove 改宽，mouseup 落盘
+let dragCol: 'left' | 'right' | null = null
+let dragStartX = 0
+let dragStartW = 0
+function startDrag(col: 'left' | 'right', e: MouseEvent): void {
+  dragCol = col
+  dragStartX = e.clientX
+  dragStartW = col === 'left'
+    ? (leftWidth.value ?? (e.currentTarget as HTMLElement).closest('aside')?.getBoundingClientRect().width ?? 250)
+    : (rightWidth.value ?? (e.currentTarget as HTMLElement).closest('aside')?.getBoundingClientRect().width ?? 240)
+  window.addEventListener('mousemove', onDrag)
+  window.addEventListener('mouseup', endDrag, { once: true })
+  e.preventDefault()
+}
+function onDrag(e: MouseEvent): void {
+  if (!dragCol) return
+  const delta = e.clientX - dragStartX
+  const w = Math.round(dragCol === 'left' ? dragStartW + delta : dragStartW - delta)
+  const clamped = Math.min(MAX_COL_W, Math.max(MIN_COL_W, w))
+  if (dragCol === 'left') leftWidth.value = clamped
+  else rightWidth.value = clamped
+}
+function endDrag(): void {
+  window.removeEventListener('mousemove', onDrag)
+  if (dragCol) {
+    try {
+      localStorage.setItem(dragCol === 'left' ? LEFT_W_KEY : RIGHT_W_KEY, String(dragCol === 'left' ? leftWidth.value : rightWidth.value))
+    } catch { /* ignore */ }
+  }
+  dragCol = null
+}
+
 // ── 行装配与决策动作（composables 单一实现，页头态势/通知下拉同源）──
 
 const { sessionRows, chatSessions, tasksForLink, duties, accounts } = useSessionRows()
@@ -76,7 +125,7 @@ const agentRoster = computed(() => {
   return buildAgentRoster(platformsStore.platforms ?? [], tasks, sessions)
 })
 const { decisionRows: waitItems } = useDecisionRows()
-const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
+const { approveTask, rejectTask, approveRun, rejectRun, approveFleet, rejectFleet } = useDecisionActions()
 const { jumpIde } = useIdeJump()
 
 // ── 选择：路由是选择的唯一持久载体 ──
@@ -374,8 +423,13 @@ function onNewLoop(): void {
     data-testid="wb-root"
   >
     <!-- 左栏：折叠态 18px 导轨（▶ 展开）；栏控叠放栏内右上角（v12.6 不占行） -->
-    <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
-      <IaColumnControls class="wb__colctl" testid="ia-col-left" fold="left" @fold="flow.toggleFold('left')" />
+    <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left" :style="leftWidthStyle">
+      <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） -->
+      <div class="wb__colhead" data-testid="wb-colhead-left">
+        <IaColumnControls testid="ia-col-left" fold="left" @fold="flow.toggleFold('left')" />
+      </div>
+      <!-- R6 补充：左栏右缘拖拽分割条 -->
+      <div class="wb__split wb__split--l" data-testid="wb-split-l" @mousedown="startDrag('left', $event)" />
       <FlowNavPanel
         :sessions="sessionRows"
         :loops="loopRows"
@@ -396,10 +450,13 @@ function onNewLoop(): void {
       >▶</button>
     </div>
     <section class="wb__center" data-testid="wb-center">
-      <IaColumnControls
-        class="wb__colctl" testid="ia-col-center" show-max :maximized="flow.centerMaximized" show-popout
-        @max="flow.toggleCenterMax()" @popout="onPopout"
-      />
+      <!-- R6 补充：中栏栏控迁独立控制条行 -->
+      <div class="wb__colhead wb__colhead--center" data-testid="wb-colhead-center">
+        <IaColumnControls
+          testid="ia-col-center" show-max :maximized="flow.centerMaximized" show-popout
+          @max="flow.toggleCenterMax()" @popout="onPopout"
+        />
+      </div>
       <SessionCanvas
         v-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
         :key="`${activeSel.kind}:${activeSel.id}`"
@@ -434,9 +491,13 @@ function onNewLoop(): void {
       />
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
-    <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控叠放栏内右上角 -->
-    <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
-      <IaColumnControls class="wb__colctl" testid="ia-col-right" fold="right" @fold="flow.toggleFold('right')" />
+    <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控迁独立控制条行 -->
+    <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right" :style="rightWidthStyle">
+      <!-- R6 补充：右栏左缘拖拽分割条 -->
+      <div class="wb__split wb__split--r" data-testid="wb-split-r" @mousedown="startDrag('right', $event)" />
+      <div class="wb__colhead" data-testid="wb-colhead-right">
+        <IaColumnControls testid="ia-col-right" fold="right" @fold="flow.toggleFold('right')" />
+      </div>
       <TaskDecisionPanel
         :wait-items="waitItems"
         :attention-rows="attentionRows"
@@ -446,7 +507,9 @@ function onNewLoop(): void {
         @approve-task="approveTask"
         @reject-task="rejectTask"
         @approve-run="approveRun"
+        @reject-run="rejectRun"
         @approve-fleet="approveFleet"
+        @reject-fleet="rejectFleet"
         @reassign="onReassign"
         @open-ide="onOpenIde"
         @handle-task="onHandleTask"
@@ -479,18 +542,26 @@ function onNewLoop(): void {
 .wb--rf { grid-template-columns: 250px minmax(320px, 1fr) 18px; }
 .wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
 .wb__left, .wb__right, .wb__center { min-height: 0; position: relative; }
-.wb__colctl {
-  position: absolute; top: 4px; right: 4px; z-index: 5;
-  background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: 6px; padding: 1px 2px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+
+/* R6 补充：栏控独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） */
+.wb__colhead {
+  flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center;
+  height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card); border-radius: 6px 6px 0 0;
 }
-/* 首行右对齐元素让位（栏控宽约 60px；悬停层不遮可点元素） */
-.wb__center :deep(.swp__block--acts) { margin-right: 64px; }
-.wb__center :deep(.chain) { padding-right: 64px; }
-.wb__center :deep(.rc__viewbar) { padding-right: 64px; }
-.wb__left :deep(.flow-nav__head) { padding-right: 58px; }
-.wb__right :deep(.tdp__head) { padding-right: 58px; }
+.wb__colhead--center { border-bottom-color: transparent; }
+
+/* R6 补充：栏宽拖拽分割条（左栏右缘/右栏左缘，hover 加粗可见） */
+.wb__split {
+  position: absolute; top: 0; bottom: 0; width: 6px; z-index: 6;
+  cursor: col-resize; background: transparent;
+  &:hover, &:active { background: color-mix(in srgb, #61afef 30%, transparent); }
+}
+.wb__split--l { right: -3px; }
+.wb__split--r { left: -3px; }
+
+/* 旧绝对定位 colctl 已不再挂载（迁 colhead），样式保留兼容；让位规则同步退役 */
+.wb__colctl { display: none; }
 .wb__rail {
   display: flex; align-items: flex-start; justify-content: center;
   padding-top: 4px; cursor: default;

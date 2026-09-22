@@ -707,3 +707,7 @@
 #      两列（routa execution-backend.ts:54 语义；syncTable 自动加列迁移，多实例
 #      协同重启按租约接管的最小充分机制）。
 357-server-sessions-lease-schema.patch
+
+# 358: 驾驶舱顶栏调整 i18n——ia2.sit.decideTitle（待决策区标题）+
+#      ia2.notify.totalHint（通知徽章双计数明细）（zh/en）。
+358-client-i18n-cockpit-fixes.patch

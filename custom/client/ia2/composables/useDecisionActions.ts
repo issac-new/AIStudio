@@ -47,6 +47,13 @@ export function useDecisionActions() {
     if (item.runId) void runsStore.resumeRun(item.runId, true)
   }
 
+  /** R6 补充：拒绝中断运行（awaiting-input → 打回）。
+   *  resume value=false 经 graph-rest 归一为 { decision:'rejected' }（与
+   *  approve 的 true→approved 同款闭环），非仅「继续/确认」单按钮。 */
+  function rejectRun(item: Pick<WaitItem, 'runId'>): void {
+    if (item.runId) void runsStore.resumeRun(item.runId, false)
+  }
+
   /** fleet 审批（跨 profile 会话的就地批准）；v12.4 起接受 DecisionRow（结构子集） */
   function approveFleet(item: Pick<WaitItem, 'sessionId' | 'approvalId'>): void {
     if (item.sessionId && item.approvalId) {
@@ -54,5 +61,12 @@ export function useDecisionActions() {
     }
   }
 
-  return { boardOf, approveTask, rejectTask, approveRun, approveFleet }
+  /** R6 补充：fleet 审批拒绝（deny 档位，非仅批准） */
+  function rejectFleet(item: Pick<WaitItem, 'sessionId' | 'approvalId'>): void {
+    if (item.sessionId && item.approvalId) {
+      void cockpit.respondFleetApproval(item.sessionId, item.approvalId, 'deny')
+    }
+  }
+
+  return { boardOf, approveTask, rejectTask, approveRun, rejectRun, approveFleet, rejectFleet }
 }
