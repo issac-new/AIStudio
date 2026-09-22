@@ -11,7 +11,7 @@
 //
 // 纪律：不嵌入 ChatPanel 整面板（自带会话侧栏，嵌套导航）；消息面
 // 经 IdeChatPane 复用其子组件（MessageList/ChatInput/SubagentStreamPanel）。
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useIdeStore } from '../store/ide'
@@ -27,13 +27,16 @@ import IdeSidePane from './IdeSidePane.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
+import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
+import { useKanbanStore } from '@/stores/hermes/kanban'
 
 const { t } = useI18n()
 const route = useRoute()
 const ide = useIdeStore()
 const cockpitStore = useCockpitStore()
 const chatStore = useChatStore()
+const kanbanStore = useKanbanStore()
 
 // ── v12 任务维度深链（/ide?task=<id>，工作台 ⌨ / 管理台 ⌨ 入口）──
 // 绑定任务维度并尽力切到任务挂靠的 agent 会话（session_id 命中即 switch）。
@@ -127,6 +130,25 @@ function onChatPopout(): void {
   void openPanelWindow({ path: route.fullPath })
 }
 
+// ── aipaydev 缺口 5：任务简报抽屉（六区块，activeTask 驱动）──
+const briefingOpen = ref(false)
+const briefingTask = computed(() => {
+  const id = ide.activeTaskId
+  if (!id) return null
+  const hit = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
+  if (!hit) return null
+  return {
+    id: hit.id,
+    title: hit.title,
+    status: hit.status,
+    priority: typeof hit.priority === 'number' ? hit.priority : undefined,
+    body: hit.body ?? null,
+  }
+})
+function onAuxSend(_text: string): void {
+  // 辅助会话回传位：当前仅留事件口，后接 hermes 会话（数据源接线见 aipaydev 问题记录 #P5-3）
+}
+
 onUnmounted(() => {
 })
 </script>
@@ -180,7 +202,26 @@ onUnmounted(() => {
           :title="t('ide.sidePane.togglePanel')" @click="ide.sidePane.open = true"
         >◀</button>
       </div>
+      <!-- aipaydev 缺口 5：任务简报导轨按钮（常驻右缘） -->
+      <div class="ide-shell__pane-rail" data-testid="ide-brief-rail">
+        <button type="button" class="ide-shell__rail-btn" data-testid="ide-briefing-toggle"
+          :class="{ 'is-active': briefingOpen }"
+          :title="t('ide.briefing.toggle', '任务简报')" @click="briefingOpen = !briefingOpen"
+        >📋</button>
+      </div>
     </div>
+    <!-- aipaydev 缺口 5：任务简报抽屉（右侧滑出，不占三栏布局） -->
+    <Transition name="brief-drawer">
+      <div v-if="briefingOpen" class="ide-shell__briefing" data-testid="ide-briefing-drawer">
+        <div class="ide-shell__brief-head">
+          <button type="button" class="ide-shell__brief-close" data-testid="ide-briefing-close"
+            :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
+          >×</button>
+        </div>
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" @aux-send="onAuxSend" />
+        <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
+      </div>
+    </Transition>
     <IdeStatusBar />
     <CockpitRunTraceModal />
     <IdeCommandPalette />
@@ -274,7 +315,73 @@ onUnmounted(() => {
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
 .ide-shell__main.has-max-chat .ide-shell__chat { flex: 1; }
+/* 最大化时 panewrap 须接管剩余空间——常态宽度在内联 style 上，不放开会钉死在拖拽宽 */
+.ide-shell__main.has-max-sidepane .ide-shell__panewrap { flex: 1; }
 .ide-shell__main.has-max-sidepane .ide-sidepane { flex: 1; width: auto !important; }
+
+/* aipaydev 缺口 5：任务简报抽屉（右侧滑出覆盖层，关闭时零占位零遮罩） */
+.ide-shell {
+  position: relative;
+}
+.ide-shell__rail-btn.is-active {
+  color: var(--accent-primary, #4cc9f0);
+  border-color: var(--accent-primary, #4cc9f0);
+}
+.ide-shell__briefing {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  max-width: 86vw;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary, #14161a);
+  border-left: 1px solid var(--border-color, #e0e0e0);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+}
+.ide-shell__brief-head {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+.ide-shell__brief-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  &:hover { color: var(--text-primary, #e6e6e6); }
+}
+.ide-shell__brief-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+}
+.ide-shell__brief-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 12px;
+  text-align: center;
+}
+.brief-drawer-enter-active,
+.brief-drawer-leave-active {
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+.brief-drawer-enter-from,
+.brief-drawer-leave-to {
+  transform: translateX(24px);
+  opacity: 0;
+}
 
 .ide-shell__sidebar.is-folded,
 .ide-shell__chat.is-folded { flex: 0 0 18px; min-width: 0; overflow: hidden; }

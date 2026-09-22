@@ -718,3 +718,6 @@
 # 360: 公告版本感知过滤——/api/studio/announcements 下发前过滤：引用版本号全部 ≤ 本机的
 #      公告视为过期丢弃（0.7.23 弹「请更新至0.7.20」实锤）；无版本号公告不误杀。
 360-server-announcement-version-filter.patch
+
+# 361: kanban RACI 派发——task 3.0.0 RACI 字段透传 + 9 用户 Matrix 房间派发 + 架构规则引擎
+361-server-kanban-raci-dispatch.patch

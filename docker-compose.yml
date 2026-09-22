@@ -1,0 +1,119 @@
+// docker-compose.yml
+// Docker 沙箱：完整服务编排
+// 依赖：无外部依赖
+
+version: '3.8'
+
+services:
+  # ─── Matrix 模拟服务器 ──────────────────────────
+  matrix-sim:
+    image: matrixorg/synapse:latest
+    container_name: matrix-sim
+    restart: unless-stopped
+    ports:
+      - "8008:8008"    # Matrix Client-Server API
+      - "8009:8009"    # Matrix Federation API
+    environment:
+      - SYNAPSE_SERVER_NAME=localhost
+      - SYNAPSE_REPORT_STATS=false
+      - SYNAPSE_LOG_LEVEL=INFO
+    volumes:
+      - matrix-data:/data
+    networks:
+      - ncwk-network
+
+  # ─── 自定义 Server ──────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: ncwk-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - MATRIX_HOMESERVER_URL=http://matrix-sim:8008
+      - MATRIX_ACCESS_TOKEN=simulated-token
+      - MATRIX_USER_ID=@bot:localhost
+      - MATRIX_SIMULATION=true
+      - NODE_ENV=production
+    depends_on:
+      - matrix-sim
+    volumes:
+      - ./custom/server:/app/custom/server
+    networks:
+      - ncwk-network
+
+  # ─── 自定义 IDE 客户端 ──────────────────────────
+  ide-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.ide
+    container_name: ncwk-ide
+    restart: unless-stopped
+    ports:
+      - "5173:5173"    # Vite dev server
+    environment:
+      - VITE_API_URL=http://server:3001
+      - VITE_MATRIX_URL=ws://matrix-sim:8008
+    depends_on:
+      - server
+    volumes:
+      - ./custom/client:/app/custom/client
+    networks:
+      - ncwk-network
+
+  # ─── PostgreSQL ─────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ncwk-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ncwk
+      - POSTGRES_USER=ncwk
+      - POSTGRES_PASSWORD=ncwk-secret
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - ncwk-network
+
+  # ─── Redis（缓存/队列）───────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ncwk-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - ncwk-network
+
+  # ─── Leader 介入通知服务 ─────────────────────────
+  leader-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.leader
+    container_name: ncwk-leader
+    restart: unless-stopped
+    environment:
+      - SERVER_URL=http://server:3001
+      - MATRIX_SIM_URL=ws://matrix-sim:8008
+    depends_on:
+      - server
+      - matrix-sim
+    volumes:
+      - ./custom/server/leader:/app/custom/server/leader
+    networks:
+      - ncwk-network
+
+volumes:
+  matrix-data:
+  pg-data:
+  redis-data:
+
+networks:
+  ncwk-network:
+    driver: bridge
