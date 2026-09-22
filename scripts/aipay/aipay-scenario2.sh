@@ -187,7 +187,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 工作区 $(workspace chen)（先 git pull）。按 docs/design/RFD-001-architecture-design.md 契约：
 1) git checkout -b feat/DEV-PAYCORE
 2) 实现 apps/csw-pay-core：支付单创建（merchantId+outTradeNo 幂等）、状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单、渠道回调接收入口（验签后更新状态机，重复回调幂等）；金额单位：分(int64)
-3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（$PYTEST_NOTE）
+3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
 4) push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
   wait_truth "origin 出现 feat/DEV-PAYCORE 分支" 3600 bash -c \
@@ -251,7 +251,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r '[.[] | select((.content.body // "") | test("TEST-(PASS|FAIL)-TEST-BE"))] | length') 
     FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r '[.[] | select((.content.body // "") | test("TEST-(PASS|FAIL)-TEST-FE"))] | length')
     if (( DEFECTS > 0 && FIXED >= DEFECTS && BOTH_DONE > 0 && FE_DONE > 0 )); then
-      note "[真值] 缺陷闭环完成（缺陷 $DEFECTS / 修复 $FIXED）✓"; break
+      note "[真值] 缺陷闭环完成（缺陷 $DEFECTS / 修复 ${FIXED}）✓"; break
     fi
     if (( DEFECTS == 0 && BOTH_DONE > 0 && FE_DONE > 0 )); then
       note "[真值] 零缺陷轮：双测试结论已出，缺陷流未触发（如实记录）"; break
