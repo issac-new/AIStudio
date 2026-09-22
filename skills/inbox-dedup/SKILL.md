@@ -17,8 +17,8 @@ description: 接收派单消息时的分诊登记、重复派单合并去重、�
 3. **去重判定**：若已存在同任务 ID 的卡片：
    - 内容一致 → 不新建，回复「任务 <ID> 已在 kanban（卡片 <cardId>），本次为重复派单，已合并」；
    - 要素有更新（期限/要求变更）→ 更新原卡片并回复说明更新了哪些字段。
-4. 不存在则登记到分诊台：`hermes kanban create --title "<标题>" --status triage`
-   （body 记任务 ID、发起方、来源房间 event 摘要）。
+4. 不存在则登记到分诊台：`hermes kanban create "<标题>" --body "<任务要素>" --triage`
+   （title 为位置参数，无 --title/--status 旗标；body 记任务 ID、发起方、来源房间 event 摘要）。
 
 ## 人工确认语义
 
