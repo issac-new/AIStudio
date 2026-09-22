@@ -65,6 +65,8 @@ export interface IdeLayoutPrefs {
   terminalHeight: number
   /** 会话列宽度（px） */
   chatWidth: number
+  /** 任务侧栏宽度（px，R6 补充：左栏拖拽分割调整布局宽度） */
+  sidebarWidth: number
   /** 任务侧栏折叠/最大化 */
   sidebar: IdePaneState
   /** 工作区列折叠/最大化 */
@@ -81,6 +83,7 @@ const DEFAULT_LAYOUT: IdeLayoutPrefs = {
   terminalOpen: false,
   terminalHeight: 240,
   chatWidth: 440,
+  sidebarWidth: 280,
   sidebar: { folded: false, maximized: false },
   workspace: { folded: false, maximized: false },
   chat: { folded: false, maximized: false },

@@ -6,7 +6,7 @@
  */
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { dispatchMention, type MentionBusDeps } from '../loop/engine/mention-bus'
+import { dispatchMention, type MentionBusDeps } from '../../loop/engine/mention-bus'
 
 const execFileAsync = promisify(execFile)
 
