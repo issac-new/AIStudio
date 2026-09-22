@@ -46,7 +46,7 @@ async function onSubmit(): Promise<void> {
     <span v-else class="itc__title itc__title--muted" data-testid="ide-task-context-title">{{ t('ide.taskCtx.noCard') }}</span>
 
     <span v-if="binding?.docRefs?.length" class="itc__docs" data-testid="ide-task-context-docs">
-      📄 {{ binding.docRefs.length }} <span v-for="(d, i) in binding.docRefs.slice(0, 3)" :key="d" class="itc__doc" :title="d">{{ d.split('/').pop() }}{{ i < Math.min(binding.docRefs.length, 3) - 1 ? ' ·' : '' }}</span>
+      📄 {{ binding.docRefs.length }} <span v-for="(d, i) in binding.docRefs.slice(0, 3)" :key="d" class="itc__doc" :title="d">{{ d.split(/[\\/]/).pop() }}{{ i < Math.min(binding.docRefs.length, 3) - 1 ? ' ·' : '' }}</span>
     </span>
     <span v-if="binding?.chatAnchor" class="itc__anchor" data-testid="ide-task-context-anchor" :title="binding.chatAnchor">💬 {{ t('ide.taskCtx.chatAnchor') }}</span>
     <span v-if="binding?.acpSessionId" class="itc__acp" data-testid="ide-task-context-acp">⇄ ACP</span>

@@ -93,7 +93,9 @@ ideWorktreeRouter.post('/api/ide/worktree/create', async (ctx) => {
   }
   const id = worktreeIdFor(sessionId)
   try {
-    await manager.create({ id: `task/${id.replace(/^wt-/, '')}` } as never)
+    // repoRoot 显式锚定:建/绑/回收同落 repo/.loop/worktrees(修 create 落
+    // cwd 与 bind 取 repo 的路径分叉;Windows 打包态 cwd 只读时尤为致命)。
+    await manager.create({ id: `task/${id.replace(/^wt-/, '')}` } as never, { repoRoot: repo })
   } catch (err) {
     ctx.status = 500
     ctx.body = { error: `worktree create failed: ${err instanceof Error ? err.message : String(err)}` }
@@ -123,7 +125,7 @@ ideWorktreeRouter.post('/api/ide/worktree/remove', async (ctx) => {
   }
   const id = worktreeIdFor(sessionId)
   try {
-    await manager.remove(id)
+    await manager.remove(id, { repoRoot: repo })
   } catch (err) {
     ctx.status = 500
     ctx.body = { error: `worktree remove failed: ${err instanceof Error ? err.message : String(err)}` }

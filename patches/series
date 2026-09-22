@@ -718,3 +718,9 @@
 # 360: 公告版本感知过滤——/api/studio/announcements 下发前过滤：引用版本号全部 ≤ 本机的
 #      公告视为过期丢弃（0.7.23 弹「请更新至0.7.20」实锤）；无版本号公告不误杀。
 360-server-announcement-version-filter.patch
+
+# 364: package.json 跨平台化——prepare 的 POSIX test 语法换 node -e(cmd.exe 下 '['
+#      不是命令,每次 install 被迫无条件全量 build);preview 的 NODE_ENV= 前缀换
+#      cross-env;并同步 package-lock(017/080/103/136/137/138/260 加的 6 个依赖
+#      此前不在锁内,干净机器 npm ci 必败)。win-x64 排查轮(2026-09-22)。
+364-package-json-win-crossplatform.patch

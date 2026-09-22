@@ -15,9 +15,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-// R7-A workdir 短路径展示（取末两段，归属链区可读）
+// R7-A workdir 短路径展示（取末两段，归属链区可读;[\\/] 兼容 win32 反斜杠路径）
 function shortPath(p: string): string {
-  const parts = p.split('/').filter(Boolean)
+  const parts = p.split(/[\\/]/).filter(Boolean)
   return parts.slice(-2).join('/') || p
 }
 

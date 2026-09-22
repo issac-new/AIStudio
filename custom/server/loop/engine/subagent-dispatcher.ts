@@ -3,6 +3,8 @@ import type { TaskContract } from '../types'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type { DispatchReason } from './dispatch-reason'
+import { loopWorktreeDir } from '../paths'
+import { resolveHermesInvocation } from '../../runtime/hermes-invocation'
 
 const execFileAsync = promisify(execFile)
 
@@ -45,7 +47,7 @@ export class SubagentDispatcher {
     this.depth++
 
     try {
-      const worktreePath = contract.worktreeId ? `.loop/worktrees/${contract.worktreeId}` : process.cwd()
+      const worktreePath = contract.worktreeId ? loopWorktreeDir(contract.worktreeId) : process.cwd()
       const prompt = role === 'maker'
         ? `Goal: ${contract.source.summary}\nRead: ${contract.readPlan.requiredReads.join(', ')}\nWrite to: ${contract.writeBoundary.join(', ')}\nProduce: ${contract.resultTemplate.artifactType}`
         : `Review the work in this worktree. Verify against: ${JSON.stringify(contract.verificationIntent)}`
@@ -62,7 +64,10 @@ export class SubagentDispatcher {
       } else {
         // Fallback: invoke hermes-agent CLI
         try {
-          await execFileAsync('hermes', ['--prompt', prompt, '--cwd', worktreePath], { timeout: 300_000 })
+          // Windows:hermes 可能是 venv 的 hermes.cmd(execFile 直跑 .cmd 抛
+          // EINVAL)或捆绑 hermes.exe(走 python -m)——统一经 invocation 解析。
+          const invocation = resolveHermesInvocation()
+          await execFileAsync(invocation.command, [...invocation.argsPrefix, '--prompt', prompt, '--cwd', worktreePath], { timeout: 300_000, windowsHide: true })
         } catch (err) {
           // R7-F 委派兜底：CLI 调用失败同样记 session-end 兜底 reason（不静默丢）
           invokeError = err instanceof Error ? err.message : String(err)
