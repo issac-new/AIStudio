@@ -113,7 +113,9 @@ function onIdeDrag(e: MouseEvent): void {
   const delta = e.clientX - ideDragStartX
   const w = Math.round(ideDragCol === 'sidebar' ? ideDragStartW + delta : ideDragStartW - delta)
   // 实时写共享源（广播同步到另一边；mouseup 即最终值）
-  updateColWidth(ideDragCol, w)
+  // 共享源侧名是 left/right：sidebar→left、sidepane→right（错配会被 writeColWidths
+  // 的 {left,right} 摘键静默丢弃，拖了不生效——曾真实发生）
+  updateColWidth(ideDragCol === 'sidebar' ? 'left' : 'right', w)
 }
 function endIdeDrag(): void {
   window.removeEventListener('mousemove', onIdeDrag)
