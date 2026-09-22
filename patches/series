@@ -721,3 +721,9 @@
 
 # 361: kanban RACI 派发——task 3.0.0 RACI 字段透传 + 9 用户 Matrix 房间派发 + 架构规则引擎
 361-server-kanban-raci-dispatch.patch
+
+# 362: 架构规则引擎派发闸——assignTask 前置 evaluateRules，BLOCKED_BY_POLICY 报错阻断（方案步骤 10.4 关卡）
+362-server-kanban-rule-engine-gate.patch
+
+# 363: 防死循环打回计数——reopenReview 后 retry+1，阈值 3 触发 LEADER_INTERVENTION 留痕（方案步骤 16.7）
+363-server-kanban-retry-guard.patch

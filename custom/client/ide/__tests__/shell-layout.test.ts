@@ -29,6 +29,9 @@ vi.mock('@/stores/hermes/kanban', () => ({
   useKanbanStore: () => ({ tasks: [] }),
 }))
 vi.mock('../components/TaskBriefingPanel.vue', () => ({ default: { name: 'TaskBriefingPanel', template: '<aside class="brief-stub" />' } }))
+vi.mock('../api/git', () => ({
+  ideGitApi: { status: vi.fn(async () => null), log: vi.fn(async () => ({ commits: [] })) },
+}))
 vi.mock('../views/IdeTaskSidebar.vue', () => ({ default: { name: 'IdeTaskSidebar', template: '<aside class="ide-taskbar" />' } }))
 vi.mock('../views/IdeChatPane.vue', () => ({ default: { name: 'IdeChatPane', template: '<div class="ide-chat-stub" />' } }))
 vi.mock('../views/IdeSidePane.vue', () => ({ default: { name: 'IdeSidePane', template: '<aside class="ide-sidepane" />' } }))
