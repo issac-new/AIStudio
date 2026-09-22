@@ -543,8 +543,13 @@ function onNewLoop(): void {
 
 /* R6 补充：栏宽拖拽分割条（左栏右缘/右栏左缘，hover 加粗可见） */
 .wb__split {
-  position: absolute; top: 0; bottom: 0; width: 6px; z-index: 6;
+  position: absolute; top: 0; bottom: 0; width: 6px; z-index: 100;
   cursor: col-resize; background: transparent;
+  /* 命中域加宽：视觉 6px 不变，两侧各外延 5px（6px 真实鼠标打不中；z-index
+     须压过栏内高层级内容——ide chat-input-area 是 z-80，曾盖住分割条右半） */
+  &::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px;
+  }
   &:hover, &:active { background: color-mix(in srgb, #61afef 30%, transparent); }
 }
 .wb__split--l { right: -3px; }
