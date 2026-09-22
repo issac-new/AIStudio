@@ -23,8 +23,15 @@ log "24 个 Matrix 账号就绪，token 已存 $CREDS_DIR"
 
 # roster（去 token）入中央仓；含 token 的 credentials.md 仅落各用户目录（步骤 1 交付物）
 (
+  # 中央仓缺失时先克隆（全新 SIM_ROOT 下本脚本此前直接 cd 进不存在的目录，
+  # 24 账号注册完后死在 cd，留半初始化状态）
+  if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
+    log "中央仓不存在，克隆到 $DIRECTOR_CLONE"
+    git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE"
+  fi
   cd "$DIRECTOR_CLONE"
   git pull -q origin main 2>/dev/null || true
+  mkdir -p docs/admin
   {
     echo "# Matrix 账号分配表（管理员签发，$(date +%F)）"
     echo
@@ -38,7 +45,14 @@ log "24 个 Matrix 账号就绪，token 已存 $CREDS_DIR"
       echo "| @$u:$SERVER_NAME | @$u-agent:$SERVER_NAME | $(role_of "$u") |"
     done
   } > docs/admin/roster.md
-  git add -A && git commit -qm "admin: matrix 账号分配表" && git push -q origin main
+  # 幂等：同日重跑内容不变，无可提交时不得让 commit 的退出码 1 杀死整个 setup
+  #（只 add roster 本身，不 git add -A 卷入 clone 里的无关文件）
+  git add docs/admin/roster.md
+  if git diff --cached --quiet docs/admin/roster.md; then
+    log "roster 无变化，跳过提交"
+  else
+    git commit -qm "admin: matrix 账号分配表" && git push -q origin main
+  fi
 )
 for u in "${INSTANCED_USERS[@]}"; do
   mkdir -p "$(user_root "$u")"
@@ -107,7 +121,9 @@ ENVEOF
   mkdir -p "$SKILLS_TARGET" "$PROF_SKILLS"
   install_skill() { # <skill-name>
     local s="$1"
-    if [[ ! -d "$SKILLS_TARGET/$s" ]]; then
+    # 以 SKILL.md 文件为幂等判据：目录存在但缺 SKILL.md（上次中断于 mkdir 与
+    # cp 之间）时必须补拷，否则 agent 静默缺技能
+    if [[ ! -f "$SKILLS_TARGET/$s/SKILL.md" ]]; then
       mkdir -p "$SKILLS_TARGET/$s"
       cp "$SKILLS_SRC/$s/SKILL.md" "$SKILLS_TARGET/$s/SKILL.md"
     fi
