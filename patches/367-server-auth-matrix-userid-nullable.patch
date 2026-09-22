@@ -1,0 +1,13 @@
+diff --git a/packages/server/src/modules/studio/middleware/auth.ts b/packages/server/src/modules/studio/middleware/auth.ts
+index 92618646..bae2e0a3 100644
+--- a/packages/server/src/modules/studio/middleware/auth.ts
++++ b/packages/server/src/modules/studio/middleware/auth.ts
+@@ -22,7 +22,7 @@ export interface AuthenticatedUser {
+   username: string
+   role: UserRole
+   profiles?: string[]
+-  matrix_user_id?: string
++  matrix_user_id?: string | null
+ }
+ 
+ export interface RequestProfile {
