@@ -34,7 +34,7 @@ while (( $(date +%s) < deadline )); do
   # 任一在册成员 token 都可读房间；用 fanfan-agent 的（GET 带 query，直连 curl——
   # mx 会无条件追加 ?access_token=，与 path 里已有 query 相撞成双问号 401）
   T=$(load_token fanfan-agent 2>/dev/null) || { sleep 20; continue; }
-  CHUNK=$(curl -sf "$HS/_matrix/client/v3/rooms/$RID/messages?dir=b&limit=25&access_token=$T" 2>/dev/null) || { sleep 20; continue; }
+  CHUNK=$(curl -sf "$HS/_matrix/client/v3/rooms/$RID/messages?dir=b&limit=50&access_token=$T" 2>/dev/null) || { sleep 20; continue; }
 
   # 遍历 ⚠️ 提示，未处理过的逐条以对应人类身份 react ✅
   while IFS=$'\t' read -r evid sender; do
@@ -46,7 +46,9 @@ while (( $(date +%s) < deadline )); do
       seen_add "$evid"
       log "approved $sender 提示 $evid"
     fi
-  done < <(echo "$CHUNK" | jq -r '.chunk[] | select((.type=="m.reaction") | not) | select(.content.msgtype=="m.text" and (.content.body | contains("needs your OK"))) | "\(.event_id)\t\(.sender)"' 2>/dev/null)
+  # agent 消息体可能混入终端控制字符（ANSI 转义），jq 严格解析会炸——先剥离控制字符
+  # （紧凑 JSON 无结构性换行，全剥安全）；只取 event_id 与 sender
+  done < <(echo "$CHUNK" | tr -d '\000-\037' | jq -r '.chunk[] | select((.type=="m.reaction") | not) | select(.content.msgtype=="m.text" and (.content.body | contains("needs your OK"))) | "\(.event_id)\t\(.sender)"' 2>/dev/null)
 
   sleep 20
 done
