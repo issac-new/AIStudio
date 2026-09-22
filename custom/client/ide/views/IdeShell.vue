@@ -30,6 +30,7 @@ import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import { ideGitApi } from '../api/git'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -132,6 +133,7 @@ function onChatPopout(): void {
 
 // ── aipaydev 缺口 5：任务简报抽屉（六区块，activeTask 驱动）──
 const briefingOpen = ref(false)
+const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
 const briefingTask = computed(() => {
   const id = ide.activeTaskId
   if (!id) return null
@@ -143,7 +145,28 @@ const briefingTask = computed(() => {
     status: hit.status,
     priority: typeof hit.priority === 'number' ? hit.priority : undefined,
     body: hit.body ?? null,
+    workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
   }
+})
+// Git 活动块：打开抽屉或切换任务时拉一次（任务 workspace 即 git root；失败静默空态）
+async function loadBriefingGit(): Promise<void> {
+  const root = briefingTask.value?.workspacePath
+  briefingGit.value = { branch: null, worktreePath: root ?? null, commits: [] }
+  if (!root) return
+  try {
+    const [st, lg] = await Promise.all([
+      ideGitApi.status(root).catch(() => null),
+      ideGitApi.log(root, 5).catch(() => ({ commits: [] })),
+    ])
+    briefingGit.value = {
+      branch: st?.branch ?? null,
+      worktreePath: root,
+      commits: (lg.commits ?? []).map(c => ({ hash: c.hash, subject: c.subject, at: c.timestamp })),
+    }
+  } catch { /* 简报 Git 块保持空态 */ }
+}
+watch([briefingOpen, () => briefingTask.value?.id], ([open]) => {
+  if (open) void loadBriefingGit()
 })
 function onAuxSend(_text: string): void {
   // 辅助会话回传位：当前仅留事件口，后接 hermes 会话（数据源接线见 aipaydev 问题记录 #P5-3）
@@ -218,7 +241,7 @@ onUnmounted(() => {
             :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
           >×</button>
         </div>
-        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" @aux-send="onAuxSend" />
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :git="briefingGit" @aux-send="onAuxSend" />
         <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
       </div>
     </Transition>
