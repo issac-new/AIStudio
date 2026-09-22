@@ -12,7 +12,7 @@ STATE="$SIM_ROOT/state.env"   # 跨轮存活（防重复建卡/建房）
 SCEN_LOG="$EVID_DIR/scenario.log"
 mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
-sget() { grep -s "^$1=" "$STATE" | head -1 | cut -d= -f2-; }
+sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
 note() { log "$*" | tee -a "$SCEN_LOG"; }
 
@@ -73,7 +73,8 @@ kanban_link_as() { # <user> <parentId> <childId>
 }
 
 dm_room() { # <fromUser> <toUser> → room_id（缓存）
-  local a="$1" b="$2" key="dm_${a}_${b}" cached
+  local a="$1" b="$2"
+  local key="dm_${a}_${b}" cached
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
   local rid
   rid=$(mx "$(load_token "$a")" POST createRoom "$(jq -n --arg t "$(human_mxid "$b")" \
