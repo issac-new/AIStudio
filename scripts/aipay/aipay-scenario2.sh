@@ -31,7 +31,16 @@ jwt_of() {
   [[ -n "$t" ]] || t=$(studio_login "$u")
   sset "jwt_$u" "$t"; echo "$t"
 }
-kanban_list() { studio "$(studio_port "$1")" GET "/api/hermes/kanban" "$(jwt_of "$1")"; }
+kanban_list() { # 跨板合并：agent 可能建专用板（如 aipay-rfd），默认板可能为空
+  local jwt; jwt=$(jwt_of "$1")
+  local boards; boards=$(studio "$(studio_port "$1")" GET "/api/hermes/kanban/boards" "$jwt" | jq -r '.boards[]?.slug' 2>/dev/null)
+  [[ -z "$boards" ]] && boards="default"
+  local slug out='{"tasks":[]}'
+  for slug in $boards; do
+    out=$(jq -s '.[0].tasks + (.[1].tasks // []) | {tasks: .}' <(echo "$out")       <(studio "$(studio_port "$1")" GET "/api/hermes/kanban?board=$slug" "$jwt" 2>/dev/null || echo '{"tasks":[]}'))
+  done
+  echo "$out"
+}
 kanban_has() { kanban_list "$1" | jq -e --arg n "$2" '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n))] | length > 0' >/dev/null 2>&1; }
 kanban_status_of() { kanban_list "$1" | jq -r --arg n "$2" '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .status][0] // empty'; }
 kanban_done() { kanban_list "$1" | jq -e --arg n "$2" '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .status] | map(select(. == "done")) | length >= 1' >/dev/null 2>&1; }
@@ -287,7 +296,7 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
               "REL-TAG|打 tag v1.0.0-cashier 并出 RELEASE.md|fanfan" \
               "REL-DELIVER|商户交付包与接入文档交付|fanfan"; do
     IFS='|' read -r k t owner <<< "$spec"
-    ID=$(kanban_create_as fanfan "$k" "RFD-001 $t" "线下执行；责任: $owner；关联 integration/RFD-001")
+    ID=$(kanban_create_as fanfan "$k" "RFD-001 $t" "线下执行；责任: ${owner}；关联 integration/RFD-001")
     kanban_status_as fanfan "$ID" todo || true
     note "[fanfan] 发布登记 $k → 卡 $ID"
   done
