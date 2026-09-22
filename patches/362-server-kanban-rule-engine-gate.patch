@@ -1,0 +1,29 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -8,5 +8,6 @@ import { detectHermesRootHome } from '../runtime/path'
+ import { safeFileStore } from '../../../studio/public/safe-file-store'
+ import { getActiveProfileName, getProfileDir } from '../profiles/profile'
+ import { RACIDispatchService } from '../../../../custom/services/kanban/raci-dispatch'
++import { evaluateRules } from '../../../../custom/loop/engine/architecture-engine'
+ 
+ const execOpts = { windowsHide: true }
+@@ -653,7 +654,18 @@ export async function assignTask(taskId: string, profile: string, opts?: KanbanB
+ export async function assignTask(taskId: string, profile: string, opts?: KanbanBoardOptions): Promise<void> {
++  // HERMES_CUSTOM[aipaydev] BEGIN: 架构规则引擎派发前校验（规则熔断：报错阻断，升级人工）
++  {
++    const current = (await getTask(taskId, opts))?.task
++    if (current) {
++      const verdict = await evaluateRules(current)
++      if (verdict && verdict.type === 'BLOCKED_BY_POLICY') {
++        throw new Error(`BLOCKED_BY_POLICY: ${verdict.message}（rule=${verdict.ruleId ?? 'n/a'}）——派发熔断，解除规则违例后重试`)
++      }
++    }
++  }
++  // HERMES_CUSTOM[aipaydev] END
+   await execKanbanMutation(
+     [...boardArgs(opts?.board), 'assign', taskId, profile],
+     'Hermes CLI: kanban assign failed',
+     'Failed to assign kanban task',
+   )
+ }
