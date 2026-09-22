@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
-index ff5c216..a72b2c4 100644
+index 8005dc3..5c88b4b 100644
 --- a/packages/server/src/modules/studio/controllers/download.ts
 +++ b/packages/server/src/modules/studio/controllers/download.ts
-@@ -10,6 +10,9 @@ import { getActiveProfileName } from '../public/profile-config'
+@@ -11,6 +11,9 @@ import { getActiveProfileName } from '../public/profile-config'
  // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
  import { isPathWithin } from '../../hermes/services/runtime/path'
  import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
@@ -12,7 +12,7 @@ index ff5c216..a72b2c4 100644
  // HERMES_CUSTOM[SecFileRootSandbox] END
  import { createAppImagePreview } from '../services/files/app-image-preview'
  
-@@ -83,6 +86,9 @@ export async function download(ctx: any) {
+@@ -84,6 +87,9 @@ export async function download(ctx: any) {
  
    try {
      const profile = requestedProfile(ctx)
@@ -20,9 +20,9 @@ index ff5c216..a72b2c4 100644
 +    if (root) await primeTaskWorkspaceCache()
 +    // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
      // Validate the path first
+     // Support both absolute and relative paths
      // Support both absolute and relative paths; when a root is provided,
-     // resolve the relative path against it (same semantics as files/list).
-@@ -98,7 +104,9 @@ export async function download(ctx: any) {
+@@ -102,7 +108,9 @@ export async function download(ctx: any) {
        }
        const hermesBase = getHermesBaseDir()
        const candidate = resolve(root, filePath)
