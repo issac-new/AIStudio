@@ -102,8 +102,6 @@
 036-server-routes-index.patch
 115-client-api-sessions-hermes-profile-wide.patch
 116-server-sessions-parent-id.patch
-117-agent-default-workspace-kind-dir.patch
-118-profile-default-run-trace.patch
 119-desktop-preload-no-strip-credential.patch
 120-server-restrict-query-token.patch
 121-desktop-electron-sandbox.patch
@@ -192,8 +190,6 @@
 177-desktop-cli-shim-rebrand.patch
 
 # hermes-agent v0.20.0 kanban 迁移：CLI 动词补全（reasoning/estimate/board project/projects json）
-178-agent-kanban-cli-verbs.patch
-179-agent-projects-list-json.patch
 
 # hermes-agent v0.20.0 kanban 迁移：TS service 接入（model/reasoning/estimate/projects/board project）
 180-server-service-kanban-v020.patch
@@ -347,10 +343,17 @@
 # loaded_platforms（仅本进程写入的 channel，writer_pid+writer_start_time 双钉）
 # 与 served_profiles；前端投影后顶栏只展示 channel 名（profile 仅留详情面板）。
 # 注：inject.mjs 路由同步扩展 gateway/、tests/gateway/ → hermes-agent。
-# 250（2026-09-22 摘除）：hermes-agent v0.21.4 上游已原生含 loaded_platforms
-# （api_server.py:2281），使命完成退役——同 #108/#126 先例。
-# 117/118/178/179/273 v0.21.4 上下文失效（inject WARN 容忍跳过）：待 agent
-# 升级轮 regen（5173 commits 变更面分析 + 纯净/重放双对照，2.24/2.32 配方）。
+# 117/118/178/179/250/273（2026-09-22 深夜 v0.21.4 适配审计）：语义逐字适用，
+# 保留 active。git apply 报 does not apply 的真因=共享树残留上一注入周期的
+# 已应用内容（checkout 切换未清），非语义漂移——clean -fd 后 -3 三方零冲突、
+# 导出 diff 与原 patch 逐行一致（610 行）实证。教训：内容验证法必须在 pristine
+# 树上做，脏树假阳性曾误判「已收编」。
+117-agent-default-workspace-kind-dir.patch
+118-profile-default-run-trace.patch
+178-agent-kanban-cli-verbs.patch
+179-agent-projects-list-json.patch
+250-agent-health-loaded-platforms.patch
+273-agent-tests-pin-scratch-default.patch
 
 
 # 舰队/看板聚合 WS 实机断连修复：上游 http.ts catch-all upgrade 白名单仅
@@ -418,7 +421,6 @@
 272-mind-detail-i18n-en.patch
 # 273 = hermes_cli 测试语义适配——显式钉 workspace_kind="scratch"（四个测试针对 scratch 清理/回滚
 #       语义，不应依赖任务默认 kind；overlay 117 的 dir 默认现仅作用于普通板，项目板走上游 worktree 继承）
-273-agent-tests-pin-scratch-default.patch
 # 274 = 登录默认落点改为 AI 协作中心——上游 071 守卫的两处落点
 #       (/app → /hermes/cockpit)：已持有 key 访问 /login 的跳过重定向 + 非
 #       superadmin 兜底。2026-09-16 用户裁决。
