@@ -202,8 +202,39 @@ async function loadBriefingGit(): Promise<void> {
     }
   } catch { /* 简报 Git 块保持空态 */ }
 }
+// 协作动态块：任务↔群弱锚点（群名前缀 [taskId 前 8 位]，manage.ts 裁决#4），
+// 匹配命中后直读 client /messages 最近一页（只读，不劫持全局 activeRoom）。
+const briefingCollab = ref<{ sender: string; excerpt: string; at?: number }[]>([])
+async function loadBriefingCollab(): Promise<void> {
+  briefingCollab.value = []
+  const id = ide.activeTaskId
+  if (!id) return
+  try {
+    const [{ useMatrixRoomStore }, { matchRoomByPrefix }, { useMatrixClientStore }] = await Promise.all([
+      import('@/custom/matrix-chat/stores/matrix-room'),
+      import('@/custom/ia2/adapters/manage'),
+      import('@/custom/matrix-chat/stores/matrix-client'),
+    ])
+    const room = matchRoomByPrefix(useMatrixRoomStore().sortedRooms as Array<{ roomId: string; name?: string | null }>, `[${id.slice(0, 8)}]`)
+    const client = useMatrixClientStore().client as any
+    if (!room || !client) return
+    const res = await client.createMessagesRequest(room.roomId, null, 10, 'b')
+    const chunk: any[] = res?.chunk ?? []
+    briefingCollab.value = chunk
+      .filter(ev => ev.type === 'm.room.message' && typeof ev.content?.body === 'string')
+      .slice(0, 6)
+      .map(ev => ({
+        sender: String(ev.sender ?? '').replace(/^@/, '').split(':')[0] ?? '',
+        excerpt: String(ev.content.body).slice(0, 80),
+        at: typeof ev.origin_server_ts === 'number' ? ev.origin_server_ts : undefined,
+      }))
+  } catch { /* 协作动态保持空态 */ }
+}
 watch([briefingOpen, () => ide.activeTaskId], ([open]) => {
-  if (open) void resolveBriefingTask()
+  if (open) {
+    void resolveBriefingTask()
+    void loadBriefingCollab()
+  }
 })
 function onAuxSend(_text: string): void {
   // 辅助会话回传位：当前仅留事件口，后接 hermes 会话（数据源接线见 aipaydev 问题记录 #P5-3）
@@ -278,7 +309,7 @@ onUnmounted(() => {
             :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
           >×</button>
         </div>
-        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :git="briefingGit" @aux-send="onAuxSend" />
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :git="briefingGit" :collab="briefingCollab" @aux-send="onAuxSend" />
         <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
       </div>
     </Transition>

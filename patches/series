@@ -732,3 +732,6 @@
 #      cross-env;并同步 package-lock(017/080/103/136/137/138/260 加的 6 个依赖
 #      此前不在锁内,干净机器 npm ci 必败)。win-x64 排查轮(2026-09-22)。
 364-package-json-win-crossplatform.patch
+
+# 365: IDE 侧栏页签 i18n 裸键修复——tab_storage/memory/board/hooks 四键 zh/en 双补（推演 CDP 实锤 ide-i18n-raw-keys）
+365-client-i18n-ide-sidepane-tabs.patch
