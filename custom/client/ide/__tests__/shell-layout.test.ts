@@ -142,4 +142,31 @@ describe('IdeShell 布局守门', () => {
     expect(w.find('.ia-gtop-stub').exists()).toBe(true)
     expect(w.find('.ide-topbar').exists()).toBe(false)
   })
+
+  it('三栏宽度拖拽：分割条拖拽实写 ncwk.cols 共享源且 store 联动（侧名错配防回归）', async () => {
+    // 防回归锚点：onIdeDrag 曾把组件栏位 id（sidebar/sidepane）直接传给
+    // updateColWidth（只认 left/right），多余键在 writeColWidths 摘键时被静默
+    // 丢弃——事件全通、localStorage 有写入、宽度却永远不变。
+    const w = mountShell()
+    const ide = useIdeStore()
+    await flushPromises()
+    // 空 localStorage → 共享源默认 left 280 / right 480，挂载回填进 store
+    expect(ide.layout.sidebarWidth).toBe(280)
+    expect(ide.sidePane.width).toBe(480)
+    // 左分割条：右拖 +40 → left 280→320
+    await w.find('[data-testid="ide-split-l"]').trigger('mousedown', { clientX: 300 })
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 340 }))
+    window.dispatchEvent(new MouseEvent('mouseup'))
+    let cols = JSON.parse(localStorage.getItem('ncwk.cols') || '{}')
+    expect(cols.left).toBe(320)
+    expect(ide.layout.sidebarWidth).toBe(320)
+    // 右分割条：左拖 -40 → right 480→520（sidepane 映射 right，反向）
+    await w.find('[data-testid="ide-split-r"]').trigger('mousedown', { clientX: 800 })
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 760 }))
+    window.dispatchEvent(new MouseEvent('mouseup'))
+    cols = JSON.parse(localStorage.getItem('ncwk.cols') || '{}')
+    expect(cols.right).toBe(520)
+    expect(ide.sidePane.width).toBe(520)
+    w.unmount()
+  })
 })

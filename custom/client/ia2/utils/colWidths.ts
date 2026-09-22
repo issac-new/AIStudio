@@ -77,6 +77,12 @@ export function writeColWidths(widths: ColWidths, opts: { silent?: boolean } = {
 
 /** 单边更新（left/right 其一），另一边保留现值 */
 export function updateColWidth(side: 'left' | 'right', width: number): ColWidths {
+  // 运行时防线：vite 无 vue-tsc，TS 类型在运行期不生效。非法侧名（如把组件内
+  // 栏位 id sidebar/sidepane 直接传入）会在 writeColWidths 摘键时被静默丢弃——
+  // 拖了不生效且无报错。此处当场抛错，把错配暴露在发生点。
+  if (side !== 'left' && side !== 'right') {
+    throw new Error(`updateColWidth: invalid side "${String(side)}" (expect "left" | "right")`)
+  }
   const cur = readColWidths()
   const next: ColWidths = { ...cur, [side]: clamp(width) }
   writeColWidths(next)
