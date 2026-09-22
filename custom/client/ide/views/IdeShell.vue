@@ -213,8 +213,13 @@ onUnmounted(() => {
 
 /* R6 补充：三栏宽度拖拽分割条（左栏右缘/右栏左缘，hover 加粗可见） */
 .ide-shell__split {
-  position: absolute; top: 0; bottom: 0; width: 6px; z-index: 6;
+  position: absolute; top: 0; bottom: 0; width: 6px; z-index: 100;
   cursor: col-resize; background: transparent;
+  /* 命中域加宽：视觉 6px 不变，两侧各外延 5px（6px 真实鼠标打不中；z-index
+     须压过 chat-input-area z-80——它曾盖住左分割条底部右半，真实拖拽落空） */
+  &::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px;
+  }
   &:hover, &:active { background: color-mix(in srgb, #61afef 30%, transparent); }
 }
 .ide-shell__split--l { right: -3px; }
