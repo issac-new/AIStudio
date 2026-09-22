@@ -28,14 +28,14 @@ log "24 个 Matrix 账号就绪，token 已存 $CREDS_DIR"
   {
     echo "# Matrix 账号分配表（管理员签发，$(date +%F)）"
     echo
-    echo "- 服务器（matrix 地址）: $HS （server_name: $SERVER_NAME）"
+    echo "- 服务器（matrix 地址）: ${HS}（server_name: ${SERVER_NAME}）"
     echo "- 各用户的 access token 与登录密码已通过安全渠道单独下发（本文件不含凭据）"
     echo
     echo "| 账号 | AI 助理账号 | 角色 |"
     echo "|---|---|---|"
     echo "| @admin:$SERVER_NAME | — | 管理员 |"
     for u in "${USERS[@]:1}"; do
-      echo "| @$u:$SERVER_NAME | @$u-agent:$SERVER_NAME | $(case $u in bella) echo BA;; fanfan) echo 产品经理;; wei) echo 后端团队负责人;; mei) echo 前端团队负责人;; chen) echo 研发·csw-pay-core;; hu) echo 研发·csw-channel-wechat;; lin) echo 研发·csw-channel-alipay;; xiao) echo 研发·csw-cashier-mp;; qi) echo 测试·后端;; fei) echo 测试·前端;; arch) echo 架构治理;; esac) |"
+      echo "| @$u:$SERVER_NAME | @$u-agent:$SERVER_NAME | $(role_of "$u") |"
     done
   } > docs/admin/roster.md
   git add -A && git commit -qm "admin: matrix 账号分配表" && git push -q origin main
