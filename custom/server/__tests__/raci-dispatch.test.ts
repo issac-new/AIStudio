@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mkdtemp, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { evaluateRules, BlockPolicyCategory } from '../loop/engine/architecture-engine'
+import { evaluateRules, BlockPolicyCategory, RULE_APPROVER_UNIQUENESS } from '../loop/engine/architecture-engine'
 import { RACIDispatchService } from '../services/kanban/raci-dispatch'
 
 let dedupePath = ''
@@ -34,12 +34,31 @@ describe('Architecture Rules', () => {
   })
 
   describe('Rule 1: Dependency Integrity', () => {
-    it('BLOCKs when depends_on is declared but upstream is not done', async () => {
+    it('BLOCKs when depends_on is declared and upstream is not done（状态查询注入）', async () => {
       const task = baseTask({ body: JSON.stringify({ depends_on: ['task-upstream'] }) })
-      const result = await evaluateRules(task)
+      const result = await evaluateRules(task, { getTaskStatus: async () => 'in-progress' })
       expect(result).not.toBeNull()
       expect(result?.type).toBe('BLOCKED_BY_POLICY')
       expect(result?.ruleId).toBe('arch-rule-001')
+    })
+
+    it('BLOCKs when upstream dep does not exist（查询返回 null 视为未完成）', async () => {
+      const task = baseTask({ body: JSON.stringify({ depends_on: ['task-ghost'] }) })
+      const result = await evaluateRules(task, { getTaskStatus: async () => null })
+      expect(result?.type).toBe('BLOCKED_BY_POLICY')
+      expect(result?.ruleId).toBe('arch-rule-001')
+    })
+
+    it('passes when all upstream deps are done（真实核验后放行）', async () => {
+      const task = baseTask({ body: JSON.stringify({ depends_on: ['task-a', 'task-b'] }) })
+      const result = await evaluateRules(task, { getTaskStatus: async () => 'done' })
+      expect(result).toBeNull()
+    })
+
+    it('does not block when status lookup is not injected（引擎无 upstream 通道，不凭空阻断）', async () => {
+      const task = baseTask({ body: JSON.stringify({ depends_on: ['task-upstream'] }) })
+      const result = await evaluateRules(task)
+      expect(result).toBeNull()
     })
 
     it('does not trigger when no depends_on', async () => {
@@ -64,15 +83,27 @@ describe('Architecture Rules', () => {
       const result = await evaluateRules(task)
       expect(result).toBeNull()
     })
+
+    it('passes plain-text task（无 raci 块的普通任务不归规则 002 管——assignTask 全产品路径回归）', async () => {
+      const plain = baseTask({ body: '普通文字任务描述，不带 RACI' })
+      expect(await evaluateRules(plain)).toBeNull()
+      const jsonNoRaci = baseTask({ body: JSON.stringify({ desc: 'JSON body but no raci key' }) })
+      expect(await evaluateRules(jsonNoRaci)).toBeNull()
+    })
   })
 
   describe('Rule 3: Approver Uniqueness', () => {
-    it('AUTO_FIXes when multiple approvers are present', async () => {
+    it('flags LEADER_INTERVENTION without claiming write-back（引擎无 store 通道不得假 AUTO_FIXED）', async () => {
       const task = baseTask({ body: JSON.stringify({ raci: { responsible: ['@bob:localhost'], approver: ['@carol:localhost', '@eve:localhost'], consulted: [], informed: [] } }) })
-      const result = await evaluateRules(task)
-      expect(result).not.toBeNull()
-      expect(result?.type).toBe('AUTO_FIXED')
-      expect(result?.ruleId).toBe('arch-rule-003')
+      const action = await RULE_APPROVER_UNIQUENESS.executor(task)
+      expect(action.type).toBe('LEADER_INTERVENTION')
+      expect(action.ruleId).toBe('arch-rule-003')
+      expect(action.message).toContain('2 位')
+    })
+
+    it('not surfaced as blocking verdict by evaluateRules（不阻断派发）', async () => {
+      const task = baseTask({ body: JSON.stringify({ raci: { responsible: ['@bob:localhost'], approver: ['@carol:localhost', '@eve:localhost'], consulted: [], informed: [] } }) })
+      expect(await evaluateRules(task)).toBeNull()
     })
   })
 

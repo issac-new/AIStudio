@@ -1,12 +1,16 @@
 // custom/server/services/kanban/retry-guard.ts
-// 防死循环熔断（方案步骤 16.7）：测试打回（review→ready reopen）计数，
-// 阈值 = 3 触发 Leader 介入标记、5 拒绝继续自动流转。
+// 防死循环熔断（方案步骤 16.7）：测试打回（review→ready reopen）计数。
+// 阈值语义：3 → Leader 介入通知（日志留痕 + 可选 Matrix 实弹）；5 → 熔断拒绝
+// （assertReopenAllowed 由 patch 363 在 reopen 变更前调用，第 5 次起 throw 阻断流转，
+// Leader 人工审查后 RetryGuardService.reset 解除）。
 // 上报通道：结构化日志留痕（LEADER_INTERVENTION 标记）；设置
 // AIPAYDEV_LEADER_MATRIX_ID 后经 `hermes send --to matrix:<id>` 实弹送达
-// （hermes 8d6548f 起 matrix CLI 补面；fire-and-forget，通知失败不阻断流转）。
+// （hermes 8d6548f 起 matrix CLI 补面；fire-and-forget，通知失败不阻断流转；
+// CLI 路径经 resolveHermesInvocation 跨平台解析，win32 .cmd 直跑抛 EINVAL）。
 
 import { spawn } from 'child_process'
 import { RetryStore } from './retry-store'
+import { assertCmdSafeArgs, resolveHermesInvocation } from '../../runtime/hermes-invocation'
 
 export const RETRY_LEADER_THRESHOLD = 3
 export const RETRY_MAX = 5
@@ -25,10 +29,17 @@ export function notifyLeader(taskId: string, count: number): void {
   const target = process.env.AIPAYDEV_LEADER_MATRIX_ID?.trim()
   if (!target) return
   try {
-    const bin = process.env.HERMES_BIN?.trim() || 'hermes'
+    const invocation = resolveHermesInvocation()
+    const args = [
+      'send',
+      '--to',
+      `matrix:${target}`,
+      `[aipaydev] LEADER_INTERVENTION task=${taskId} 连续打回 ${count} 次（阈值 ${RETRY_LEADER_THRESHOLD}），请人工审查`,
+    ]
+    assertCmdSafeArgs(invocation, args)
     const child = spawn(
-      bin,
-      ['send', '--to', `matrix:${target}`, `[aipaydev] LEADER_INTERVENTION task=${taskId} 连续打回 ${count} 次（阈值 ${RETRY_LEADER_THRESHOLD}），请人工审查`],
+      invocation.command,
+      [...invocation.argsPrefix, ...args],
       { stdio: 'ignore', detached: true },
     )
     child.on('error', () => { /* CLI 缺失/不可执行：留痕已够，静默 */ })
@@ -37,6 +48,17 @@ export function notifyLeader(taskId: string, count: number): void {
 }
 
 export class RetryGuardService {
+  /** reopen 前置熔断闸：第 RETRY_MAX 次打回起拒绝继续自动流转（patch 363 在 reopen 变更前调用） */
+  static async assertReopenAllowed(taskId: string): Promise<void> {
+    const count = await RetryStore.get(taskId)
+    if (count >= RETRY_MAX) {
+      throw new Error(
+        `BLOCKED_BY_POLICY: task=${taskId} 已连续打回 ${count} 次（上限 ${RETRY_MAX}），拒绝继续自动流转`
+        + '——请 Leader 人工审查后调用 RetryGuardService.reset 解除',
+      )
+    }
+  }
+
   /** 测试打回后调用：计数 +1 并给出熔断判定 */
   static async onTestReject(taskId: string): Promise<RetryVerdict> {
     const count = await RetryStore.increment(taskId)

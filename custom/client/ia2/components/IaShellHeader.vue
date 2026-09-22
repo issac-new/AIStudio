@@ -105,7 +105,7 @@ const {
   tasks: sitTasks, openTasks, accounts, online, boardRows, teams,
 } = useSitCounts()
 const { sessionRows } = useSessionRows()
-const { approveTask, rejectTask, approveRun, approveFleet } = useDecisionActions()
+const { approveTask, rejectTask, approveRun, rejectRun, approveFleet, rejectFleet } = useDecisionActions()
 
 /** 原始任务索引（id → {board, task}）：板名/优先级/挂接会话解析用 */
 const rawById = computed(() => {
@@ -235,7 +235,9 @@ function onPanelJumpTask(taskId: string): void {
         @approve-task="approveTask"
         @reject-task="rejectTask"
         @approve-run="approveRun"
+        @reject-run="rejectRun"
         @approve-fleet="approveFleet"
+        @reject-fleet="rejectFleet"
         @open-review="flow.openGov('review')"
         @open-gov-people="flow.openGov('people')"
       />

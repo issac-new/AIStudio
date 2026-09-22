@@ -195,6 +195,8 @@ async function loadBriefingGit(): Promise<void> {
       ideGitApi.status(root).catch(() => null),
       ideGitApi.log(root, 5).catch(() => ({ commits: [] })),
     ])
+    // stale 守卫：await 期间切换任务时丢弃旧响应（慢仓库乱序回写会串显到新任务）
+    if (briefingTask.value?.workspacePath !== root) return
     briefingGit.value = {
       branch: st?.branch ?? null,
       worktreePath: root,
@@ -220,6 +222,8 @@ async function loadBriefingCollab(): Promise<void> {
     if (!room || !client) return
     const res = await client.createMessagesRequest(room.roomId, null, 10, 'b')
     const chunk: any[] = res?.chunk ?? []
+    // stale 守卫：await 期间切换任务时丢弃旧响应（旧任务的群消息会串显到新任务）
+    if (ide.activeTaskId !== id) return
     briefingCollab.value = chunk
       .filter(ev => ev.type === 'm.room.message' && typeof ev.content?.body === 'string')
       .slice(0, 6)

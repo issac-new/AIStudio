@@ -52,13 +52,22 @@ async function readDedupe(path: string): Promise<DedupeMap> {
   }
 }
 
-async function recordDispatch(path: string, taskId: string, roomId: string): Promise<void> {
-  const map = await readDedupe(path)
-  map[taskId] = { roomId, dispatchedAt: Date.now() }
-  await mkdir(dirname(path), { recursive: true })
-  const tmp = `${path}.tmp`
-  await writeFile(tmp, JSON.stringify(map, null, 2), 'utf8')
-  await rename(tmp, path)
+// sidecar 是整文件读-改-写：并发 assign 时后写会覆盖先写丢记录（被丢任务下次
+// 重复建群）。写入经模块级队列串行化；进程内同任务并发由 in-flight 表合并。
+let dedupeWriteQueue: Promise<void> = Promise.resolve()
+const inFlightDispatch = new Map<string, Promise<DispatchResult>>()
+
+function recordDispatch(path: string, taskId: string, roomId: string): Promise<void> {
+  const run = dedupeWriteQueue.then(async () => {
+    const map = await readDedupe(path)
+    map[taskId] = { roomId, dispatchedAt: Date.now() }
+    await mkdir(dirname(path), { recursive: true })
+    const tmp = `${path}.tmp`
+    await writeFile(tmp, JSON.stringify(map, null, 2), 'utf8')
+    await rename(tmp, path)
+  })
+  dedupeWriteQueue = run.catch(() => {})
+  return run
 }
 
 // ─── RACI Dispatch 服务 ────────────────────────────────────
@@ -70,7 +79,18 @@ export class RACIDispatchService {
    * 2. 解析 RACI tuple（缺省回落 assignee）
    * 3. 创建 Matrix 房间 + 邀请角色参与者 + 发送摘要
    */
-  static async dispatch(task: RaciDispatchTask, dedupePath = defaultDedupePath()): Promise<DispatchResult> {
+  static dispatch(task: RaciDispatchTask, dedupePath = defaultDedupePath()): Promise<DispatchResult> {
+    // 同任务并发调用合并为一次执行（sidecar 读-检-写在跨进程幂等之外补进程内竞态）
+    const pending = inFlightDispatch.get(task.id)
+    if (pending) return pending
+    const run = RACIDispatchService.doDispatch(task, dedupePath).finally(() => {
+      inFlightDispatch.delete(task.id)
+    })
+    inFlightDispatch.set(task.id, run)
+    return run
+  }
+
+  private static async doDispatch(task: RaciDispatchTask, dedupePath: string): Promise<DispatchResult> {
     const seen = (await readDedupe(dedupePath))[task.id]
     if (seen?.roomId) {
       return { ok: true, roomId: seen.roomId, deduped: true }

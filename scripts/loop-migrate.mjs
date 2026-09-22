@@ -29,8 +29,10 @@ async function migrate() {
   // URL.pathname 产出 /C:/... 且空格被 percent-encode,ESM 动态 import 裸
   // Windows 路径抛 ERR_UNSUPPORTED_ESM_URL_SCHEME。
   const overlayRoot = fileURLToPath(new URL('..', import.meta.url))
-  const { LocalStore } = await import(pathToFileURL(resolve(overlayRoot, 'custom/server/loop/store/local-store.js')).href)
-  const { MatrixStore } = await import(pathToFileURL(resolve(overlayRoot, 'custom/server/loop/store/matrix-store.js')).href)
+  // custom 树只有 .ts 无编译产物：Node ≥23.6 原生 type-stripping 直接吃 .ts；
+  // 指向 .js 必抛 ERR_MODULE_NOT_FOUND（树内不存在该文件）
+  const { LocalStore } = await import(pathToFileURL(resolve(overlayRoot, 'custom/server/loop/store/local-store.ts')).href)
+  const { MatrixStore } = await import(pathToFileURL(resolve(overlayRoot, 'custom/server/loop/store/matrix-store.ts')).href)
 
   const localStore = new LocalStore(LOOP_DIR)
   const matrixStore = new MatrixStore({

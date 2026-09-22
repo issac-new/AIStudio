@@ -8,7 +8,7 @@
 //
 // 优先级:HERMES_LOOP_DIR 显式覆盖 > cwd 可写(cwd/.loop,dev 语义不变)
 // > ~/.hermes-web-ui/loop 降级(打一次 warn)。
-import { accessSync, constants } from 'fs'
+import { unlinkSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 
@@ -16,9 +16,15 @@ export const DEFAULT_LOOP_DIRNAME = '.loop'
 
 export type WritableProbe = (dir: string) => boolean
 
+// Windows 下 accessSync(W_OK) 只查 READONLY 属性不查 ACL（Node 官方文档明示
+// may report accessible under ACL restriction），Program Files 会被误判可写、
+// 降级永不触发，mkdir EPERM 500 原样复发。统一改真实试写（写入即删）：
+// 能落盘才算可写，与后续 mkdir 的真实语义一致。
 const defaultWritableProbe: WritableProbe = (dir) => {
   try {
-    accessSync(dir, constants.W_OK)
+    const probe = join(dir, `.loop-write-probe-${process.pid}`)
+    writeFileSync(probe, '')
+    unlinkSync(probe)
     return true
   } catch {
     return false
