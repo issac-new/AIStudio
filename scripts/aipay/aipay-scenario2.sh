@@ -8,7 +8,7 @@ source "$SCRIPT_DIR/aipay-lib.sh"
 
 STATE="$SIM_ROOT/state.env"
 SCEN_LOG="$EVID_DIR/scenario.log"
-sget() { grep -s "^$1=" "$STATE" | head -1 | cut -d= -f2-; }
+sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
 note() { log "$*" | tee -a "$SCEN_LOG"; }
 
@@ -98,15 +98,19 @@ if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
 5) 完成后在本群发【完成回执】（双兜底：@你的团队负责人-agent 与 @fanfan-agent），格式见 inbox-dedup 技能
 结论行以 AN-DONE-<任务ID> 开头。不许谎报。'
 
+  WS=$(workspace chen)
   dispatch_in_room chen "@chen-agent:matrix.test 执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）。
-${COMMON//%WS%/$(workspace chen)}" "$(agent_mxid chen),$(agent_mxid wei)"
+${COMMON//%WS%/$WS}" "$(agent_mxid chen),$(agent_mxid wei)"
+  WS=$(workspace xiao)
   dispatch_in_room xiao "@xiao-agent:matrix.test 执行任务 AN-MP（csw-cashier-mp 小程序收银台前端系分）。
-${COMMON//%WS%/$(workspace xiao)}" "$(agent_mxid xiao),$(agent_mxid mei)"
+${COMMON//%WS%/$WS}" "$(agent_mxid xiao),$(agent_mxid mei)"
   sleep 5
+  WS=$(workspace hu)
   dispatch_in_room hu "@hu-agent:matrix.test 执行任务 AN-CHWX（csw-channel-wechat 财付通渠道系分）。
-${COMMON//%WS%/$(workspace hu)}" "$(agent_mxid hu),$(agent_mxid wei)"
+${COMMON//%WS%/$WS}" "$(agent_mxid hu),$(agent_mxid wei)"
+  WS=$(workspace lin)
   dispatch_in_room lin "@lin-agent:matrix.test 执行任务 AN-CHALI（csw-channel-alipay 支付宝渠道系分）。
-${COMMON//%WS%/$(workspace lin)}" "$(agent_mxid lin),$(agent_mxid wei)"
+${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
 
   for t in AN-PAYCORE AN-MP AN-CHWX AN-CHALI; do
     wait_truth "仓库出现 docs/analysis/$t-analysis.md" 3600 repo_has "docs/analysis/$t-analysis.md" \
@@ -131,7 +135,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
 2) 消除歧义与冲突（重点：金额单位必须统一明确为「分」(int64)；接口契约字段命名统一 snake_case）
 3) 整理结构层次，按规范形成系统概设方案 docs/design/RFD-001-architecture-design.md（含跨模块接口契约与数据模型），提交 push
 4) 在你的 kanban 登记评审任务卡（标题含 RFD-001-评审，status=review）
-结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)")
+结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
     wait_truth "概设方案 docs/design/RFD-001-architecture-design.md 入库" 2400 \
       repo_has docs/design/RFD-001-architecture-design.md || fail "复核稿超时"
   fi
@@ -155,7 +159,7 @@ if step_reached close && [[ -z "$(sget close_done)" ]]; then
     dispatch_in_room fanfan "@fanfan-agent:matrix.test 评审已通过。请收尾 RFD-001 主任务：
 1) 把全部关联子任务与过程档案（4 份 AN-*.md、tasklist、概设方案 git 路径+commit）汇总登记进主任务卡 body，便于回溯审计
 2) 主任务卡 status 置 done（测试工作量按 0.3 系数叠加口径写入 body）
-结论行 CLOSE-DONE 开头。" "$(agent_mxid fanfan)")
+结论行 CLOSE-DONE 开头。" "$(agent_mxid fanfan)"
     wait_truth "fanfan kanban RFD-001 主卡 done" 1200 kanban_done fanfan "RFD-001" \
       || note "[观察] 主卡未置 done（记问题单）"
   fi
@@ -170,7 +174,7 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
 2) 开发任务 ID 固定：DEV-PAYCORE(chen) DEV-CHWX(hu) DEV-CHALI(lin) DEV-MP(xiao)；测试任务：TEST-BE(qi) TEST-FE(fei)
 3) kanban 建排期父任务，并为每个开发/测试任务建子任务（link 关联），卡片含时间窗口与工作量
 4) 逐条 matrix 派发：@责任人-agent 与 @其 lead-agent，附任务明细与本计划 git 地址
-结论行 PLAN-DONE-RFD-001 开头。不许谎报。" "$(agent_mxid fanfan)")
+结论行 PLAN-DONE-RFD-001 开头。不许谎报。" "$(agent_mxid fanfan)"
     wait_truth "docs/plan/RFD-001-schedule.md 入库" 2400 repo_has docs/plan/RFD-001-schedule.md || fail "排期超时"
   fi
   repo_pull
@@ -268,7 +272,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
 1) 在 integration/RFD-001 分支汇总测试结果，写 docs/test/RFD-001-test-report.md（范围/用例数/通过数/缺陷清单及状态/结论/通过时的 git commit id）
 2) push origin integration/RFD-001
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本机 kanban；其他机器的由你发 matrix 通知其 owner-agent 更新）
-结论行 REPORT-DONE 开头。" "$(agent_mxid qi)")
+结论行 REPORT-DONE 开头。" "$(agent_mxid qi)"
     wait_truth "测试报告入库" 2400 bash -c \
       "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' show origin/integration/RFD-001:docs/test/RFD-001-test-report.md" \
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
@@ -303,7 +307,7 @@ if step_reached templates && [[ -z "$(sget templates_done)" ]]; then
   # 完备性检查：任务分类/优先级/依赖 三口径核对（导演脚本，jq 核验）
   repo_pull
   {
-    echo "# RFD-001 任务完备性检查（$(date +%F %T）"
+    echo "# RFD-001 任务完备性检查（$(date +%F %T)）"
     echo
     echo "## kanban 任务覆盖（fanfan 板）"
     kanban_list fanfan | jq -r '.. | objects | select(has("title")) | "- [\(.status)] \(.title)"' | sort -u
