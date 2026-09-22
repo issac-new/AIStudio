@@ -7,6 +7,7 @@
   "scripts": {
     "inject": "node scripts/inject.mjs",
     "clean": "node scripts/inject.mjs --clean",
+    "serve": "node scripts/serve-server.mjs",
     "verify": "node scripts/verify-clean.mjs",
     "sync": "bash scripts/sync-upstream.sh",
     "ensure-injected": "node scripts/ensure-injected.mjs",

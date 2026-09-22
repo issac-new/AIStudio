@@ -35,7 +35,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
        workspace: workspace.value,
        branch: branch.value,
        triage: triage.value,
-@@ -999,3 +1002,322 @@ export async function searchSessions(ctx: Context) {
+@@ -999,3 +1002,324 @@ export async function searchSessions(ctx: Context) {
      ctx.body = { error: err.message }
    }
  }
@@ -161,7 +161,9 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
 +function safeAttachmentName(filename: string): string {
 +  const name = basename(filename).trim()
 +  if (!name || name.startsWith('.')) return 'unnamed'
-+  return name.replace(/[\x00-\x1f\\/]/g, '_').slice(0, 255)
++  // Windows 非法文件字符(: * ? " < > |)一并替换:NTFS 上 ":" 会变 ADS、
++  // 其余直接 EINVAL/EPERM,writeFile 500(2026-09-22 win-x64 排查 S10)。
++  return name.replace(/[\x00-\x1f\\/:*?"<>|]/g, '_').slice(0, 255)
 +}
 +
 +interface AttachmentMeta {

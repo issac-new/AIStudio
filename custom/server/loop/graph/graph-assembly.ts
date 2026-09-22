@@ -22,6 +22,8 @@ import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEN
 import { DailyBriefJob, readBriefConfig } from './daily-brief'
 import { resolveBriefRoom } from './brief-matrix-delivery'
 import { emitLoopEvent } from '../services/loop-socket'
+import { resolveLoopBaseDir } from '../paths'
+import { join } from 'path'
 import type { Router } from '@koa/router'
 import type { LoopStateStore } from '../store/state-store'
 import type { LoopInstance, LoopEvent } from '../types'
@@ -129,8 +131,12 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   const mode = opts.mode ?? readEngineMode()
   const log = opts.log ?? (() => {})
   const store: LoopStateStore = opts.engineDeps.store
-  const eventLog = opts.eventLog ?? createEventLogStore('.loop/graph-events.db')
-  const shadowEventLog = opts.shadowEventLog ?? createEventLogStore('.loop/graph-shadow.db')
+  // loop 数据根经 resolveLoopBaseDir:cwd 不可写(Windows 打包态落只读目录)时
+  // 降级 homedir,避免 SQLite 仅因落点只读就静默降级 InMemory
+  // (事件/重放/checkpoint 全部失持久化且无任何告警)。
+  const loopBase = resolveLoopBaseDir()
+  const eventLog = opts.eventLog ?? createEventLogStore(join(loopBase, 'graph-events.db'))
+  const shadowEventLog = opts.shadowEventLog ?? createEventLogStore(join(loopBase, 'graph-shadow.db'))
   const autoResumeIds = new Set<string>()
   let started = false
 
@@ -232,7 +238,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
         eventLog: shadowEventLog,
         store,
         engineDeps: opts.engineDeps,
-        reportPath: '.loop/graph-shadow-report.jsonl',
+        reportPath: join(loopBase, 'graph-shadow-report.jsonl'),
         intervalMs: opts.intervalMs, log,
       })
     : null

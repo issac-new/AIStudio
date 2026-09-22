@@ -8,6 +8,7 @@
 
 import { promises as fs } from 'fs'
 import { join } from 'path'
+import { resolveLoopBaseDir } from '../paths'
 import type { EventLogStore } from './event-log-store'
 import type { LoopStateStore } from '../store/state-store'
 import type { TaskContract } from '../types'
@@ -100,7 +101,7 @@ export function makeInjectWorkspaceContext(opts: {
   /** worktree 根目录，缺省 `.loop/worktrees`（与 verifier 同款 worktree 布局） */
   worktreeRoot?: string
 }): (contract: TaskContract, worktreeId: string) => Promise<void> {
-  const root = opts.worktreeRoot ?? '.loop/worktrees'
+  const root = opts.worktreeRoot ?? join(resolveLoopBaseDir(), 'worktrees')
   return async (contract, worktreeId) => {
     let loop: Awaited<ReturnType<LoopStateStore['getLoop']>> = null
     try {

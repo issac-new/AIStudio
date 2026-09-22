@@ -5662,8 +5662,8 @@ index 31545577..759a6423 100644
 +function safeAttachmentName(filename: string): string {
 +  const name = basename(filename).trim()
 +  if (!name || name.startsWith('.')) return 'unnamed'
-+  // Strip control characters and path separators
-+  return name.replace(/[\x00-\x1f\\/]/g, '_').slice(0, 255)
++  // Strip control characters, path separators and Windows-illegal chars (:*?"<>|)
++  return name.replace(/[\x00-\x1f\\/:*?"<>|]/g, '_').slice(0, 255)
 +}
 +
 +interface AttachmentRecord {

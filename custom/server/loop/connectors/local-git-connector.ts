@@ -29,7 +29,7 @@ export class LocalGitConnector {
 
   private async getUnpushedCommits(): Promise<Array<{ sha: string; message: string }>> {
     try {
-      const { stdout } = await execFileAsync('git', ['log', '--oneline', '-10', '--format=%H%n%s', '@{u}..HEAD'], { cwd: this.cwd })
+      const { stdout } = await execFileAsync('git', ['log', '--oneline', '-10', '--format=%H%n%s', '@{u}..HEAD'], { cwd: this.cwd, windowsHide: true })
       if (!stdout.trim()) return []
       const lines = stdout.trim().split('\n')
       const commits: Array<{ sha: string; message: string }> = []

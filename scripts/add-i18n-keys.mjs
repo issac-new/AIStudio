@@ -1,5 +1,6 @@
 // overlay/scripts/add-i18n-keys.mjs — add missing i18n keys to locale files
 import { readFileSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
 
 function addKeys(filePath) {
   let content = readFileSync(filePath, 'utf8');
@@ -119,5 +120,5 @@ function addKeys(filePath) {
   console.log(`Updated: ${filePath}`);
 }
 
-const enPath = '/Volumes/nvme2230/lab/ncwk/upstream/hermes-studio/packages/client/src/i18n/locales/en.ts';
+const enPath = resolve(import.meta.dirname, '../../upstream/hermes-studio/packages/client/src/i18n/locales/en.ts');
 addKeys(enPath);

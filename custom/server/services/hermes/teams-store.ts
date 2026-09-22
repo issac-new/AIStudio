@@ -14,6 +14,20 @@ import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { randomUUID } from 'crypto'
 
+// Windows 杀软/索引器短暂占用目标文件时 rename 抛 EPERM/EACCES(libuv
+// MoveFileExW 的锁语义差异),带退避重试;POSIX 首次即成功,零额外等待。
+async function renameWithRetry(from: string, to: string, attempts = 3): Promise<void> {
+  for (let i = 0; ; i++) {
+    try {
+      return await rename(from, to)
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      if (i >= attempts - 1 || (code !== 'EPERM' && code !== 'EACCES')) throw err
+      await new Promise((r) => setTimeout(r, 50 * (i + 1)))
+    }
+  }
+}
+
 export interface TeamRecord {
   id: string
   name: string
@@ -98,7 +112,7 @@ export function createTeamsStore(filePath?: string): TeamsStore {
     await mkdir(dirname(path), { recursive: true })
     const tmp = `${path}.tmp-${process.pid}-${Date.now()}`
     await writeFile(tmp, JSON.stringify({ teams }, null, 2), 'utf8')
-    await rename(tmp, path)
+    await renameWithRetry(tmp, path)
   }
 
   return {

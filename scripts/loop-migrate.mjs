@@ -5,6 +5,7 @@
 
 import { existsSync } from 'fs'
 import { resolve } from 'path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const args = process.argv.slice(2)
 const opts = {}
@@ -24,10 +25,12 @@ const LOOP_DIR = opts.dir || '.loop'
 
 async function migrate() {
   // Dynamic import the store modules (ESM). Use absolute paths so the script
-  // works regardless of the caller's cwd.
-  const overlayRoot = resolve(new URL('..', import.meta.url).pathname)
-  const { LocalStore } = await import(resolve(overlayRoot, 'custom/server/loop/store/local-store.js'))
-  const { MatrixStore } = await import(resolve(overlayRoot, 'custom/server/loop/store/matrix-store.js'))
+  // works regardless of the caller's cwd. URL 通道而非裸路径:Windows 下
+  // URL.pathname 产出 /C:/... 且空格被 percent-encode,ESM 动态 import 裸
+  // Windows 路径抛 ERR_UNSUPPORTED_ESM_URL_SCHEME。
+  const overlayRoot = fileURLToPath(new URL('..', import.meta.url))
+  const { LocalStore } = await import(pathToFileURL(resolve(overlayRoot, 'custom/server/loop/store/local-store.js')).href)
+  const { MatrixStore } = await import(pathToFileURL(resolve(overlayRoot, 'custom/server/loop/store/matrix-store.js')).href)
 
   const localStore = new LocalStore(LOOP_DIR)
   const matrixStore = new MatrixStore({

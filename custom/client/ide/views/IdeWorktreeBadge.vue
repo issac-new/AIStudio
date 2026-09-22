@@ -31,7 +31,7 @@ const worktreeName = computed(() => {
   for (const marker of WORKTREE_MARKERS) {
     const idx = ws.indexOf(marker)
     if (idx >= 0) {
-      const rest = ws.slice(idx + marker.length).split('/').filter(Boolean)
+      const rest = ws.slice(idx + marker.length).split(/[\\/]/).filter(Boolean)
       return rest[0] ?? ''
     }
   }
