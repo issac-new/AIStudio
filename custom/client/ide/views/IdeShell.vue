@@ -75,6 +75,40 @@ const mainClass = computed(() => ({
   'has-max-sidepane': ide.layout.sidepane.maximized,
 }))
 
+// 左栏宽度样式（sidebarWidth 拖拽持久化）
+const sidebarWidthStyle = computed(() => ide.layout.sidebarWidth ? { width: `${ide.layout.sidebarWidth}px`, flex: '0 0 auto' } : {})
+// 右辅助面板宽度样式（sidePane.width 拖拽持久化，走 sidePane 独立 ref）
+const sidepaneWidthStyle = computed(() => ide.sidePane.width ? { width: `${ide.sidePane.width}px`, flex: '0 0 auto' } : {})
+
+// ── R6 补充：三栏宽度拖拽（左/右分割位置调整布局宽度，layout 持久化）──
+const IDECOL_MIN = 180
+const IDECOL_MAX = 560
+let ideDragCol: 'sidebar' | 'sidepane' | null = null
+let ideDragStartX = 0
+let ideDragStartW = 0
+function startIdeDrag(col: 'sidebar' | 'sidepane', e: MouseEvent): void {
+  ideDragCol = col
+  ideDragStartX = e.clientX
+  ideDragStartW = col === 'sidebar'
+    ? ide.layout.sidebarWidth
+    : ide.sidePane.width
+  window.addEventListener('mousemove', onIdeDrag)
+  window.addEventListener('mouseup', endIdeDrag, { once: true })
+  e.preventDefault()
+}
+function onIdeDrag(e: MouseEvent): void {
+  if (!ideDragCol) return
+  const delta = e.clientX - ideDragStartX
+  const w = Math.round(ideDragCol === 'sidebar' ? ideDragStartW + delta : ideDragStartW - delta)
+  const clamped = Math.min(IDECOL_MAX, Math.max(IDECOL_MIN, w))
+  if (ideDragCol === 'sidebar') ide.layout.sidebarWidth = clamped
+  else ide.sidePane.width = clamped
+}
+function endIdeDrag(): void {
+  window.removeEventListener('mousemove', onIdeDrag)
+  ideDragCol = null
+}
+
 /** 会话栏独立窗口：弹出当前 /ide 路由（standalone=1；合入在独立窗内） */
 function onChatPopout(): void {
   void openPanelWindow({ path: route.fullPath })
@@ -91,7 +125,7 @@ onUnmounted(() => {
     <IaGlobalTop @notify="cockpitStore.openNotify()" />
     <IdeTaskContextBar />
     <div class="ide-shell__main" :class="mainClass">
-      <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }">
+      <aside v-show="sidebarShown" class="ide-shell__sidebar" :class="{ 'is-folded': ide.layout.sidebar.folded }" :style="sidebarWidthStyle">
         <div v-if="ide.layout.sidebar.folded" class="ide-shell__fold-handle" data-testid="ide-fold-sidebar" :title="t('ide.pane.expand')" @click="ide.toggleFold('sidebar')">
           <span class="ide-shell__fold-label">›</span>
         </div>
@@ -103,6 +137,8 @@ onUnmounted(() => {
               @fold="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
             />
           </div>
+          <!-- R6 补充：左栏右缘拖拽分割条（调整左栏宽度） -->
+          <div class="ide-shell__split ide-shell__split--l" data-testid="ide-split-l" @mousedown="startIdeDrag('sidebar', $event)" />
           <IdeTaskSidebar class="ide-shell__colbody" />
         </div>
       </aside>
@@ -120,7 +156,11 @@ onUnmounted(() => {
           <IdeChatPane class="ide-shell__colbody" />
         </div>
       </div>
-      <IdeSidePane v-show="sidepaneShown" :class="{ 'is-max': ide.layout.sidepane.maximized }" />
+      <div v-show="sidepaneShown" class="ide-shell__panewrap" :style="sidepaneWidthStyle">
+        <!-- R6 补充：右栏左缘拖拽分割条（调整右辅助面板宽度） -->
+        <div class="ide-shell__split ide-shell__split--r" data-testid="ide-split-r" @mousedown="startIdeDrag('sidepane', $event)" />
+        <IdeSidePane :class="{ 'is-max': ide.layout.sidepane.maximized }" />
+      </div>
       <!-- v12.6：侧板收起态右缘导轨（侧栏 footer 功能行退役后的重开入口） -->
       <div v-if="!ide.sidePane.open && !anyMax" class="ide-shell__pane-rail" data-testid="ide-sidepane-rail">
         <button type="button" class="ide-shell__rail-btn" data-testid="ide-sidepane-open"
@@ -155,6 +195,24 @@ onUnmounted(() => {
   flex-shrink: 0;
   display: flex;
   min-height: 0;
+  position: relative;
+}
+
+/* R6 补充：三栏宽度拖拽分割条（左栏右缘/右栏左缘，hover 加粗可见） */
+.ide-shell__split {
+  position: absolute; top: 0; bottom: 0; width: 6px; z-index: 6;
+  cursor: col-resize; background: transparent;
+  &:hover, &:active { background: color-mix(in srgb, #61afef 30%, transparent); }
+}
+.ide-shell__split--l { right: -3px; }
+.ide-shell__split--r { left: -3px; }
+
+/* R6 右辅助面板宽度容器（分割条 relative 父级） */
+.ide-shell__panewrap {
+  flex-shrink: 0;
+  display: flex;
+  min-height: 0;
+  position: relative;
 }
 
 .ide-shell__fold-handle {

@@ -375,6 +375,10 @@ function main() {
         const f = l.slice(3).trim();
         return !patchFileSets().patchNewFiles.has(f);
       })
+      // .loop/ 是 loop 工程运行态（graph-events.db 等由运行中的 server 持有句柄，
+      // 非任何 patch 的产物）：app 在跑时每次 inject 都会出现，豁免之。
+      // 与 docs/openapi.json 的"回滚管理"不同——这是活运行态，只能放行不能动。
+      .filter((l) => !(l.startsWith('??') && l.slice(3).trim().startsWith('.loop/')))
       .join('\n')
       .trim();
     if (precheck && patches.length > 0) {
