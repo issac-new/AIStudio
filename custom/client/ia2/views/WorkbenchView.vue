@@ -15,7 +15,7 @@
      运行画布耗时徽章与语义块回放（RunCanvas 内消费）；调研正本
      docs/comm-collab-v13-research.md。 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useFlowStore } from '../store/flow'
@@ -59,33 +59,29 @@ const matrixRoom = useMatrixRoomStore()
 const chatStore = useChatStore()
 const platformsStore = usePlatformsStore()
 
-// ── R6 补充：三栏宽度拖拽（左中右分割位置可调，localStorage 持久化）──
-// 栏宽状态：左/右栏 px（中栏弹性 1fr 不占状态）；拖拽中实时改，松手写回。
-const LEFT_W_KEY = 'ncwk.wb.leftWidth'
-const RIGHT_W_KEY = 'ncwk.wb.rightWidth'
-const MIN_COL_W = 180
-const MAX_COL_W = 560
-const leftWidth = ref<number | null>(null)
-const rightWidth = ref<number | null>(null)
-try {
-  const lw = Number(localStorage.getItem(LEFT_W_KEY))
-  if (lw >= MIN_COL_W && lw <= MAX_COL_W) leftWidth.value = lw
-  const rw = Number(localStorage.getItem(RIGHT_W_KEY))
-  if (rw >= MIN_COL_W && rw <= MAX_COL_W) rightWidth.value = rw
-} catch { /* storage 不可用则用默认 */ }
+// ── R6 补充：三栏宽度拖拽 + 同步联动（colWidths 单一事实源，协作沟通 ↔ IDE
+// 工作台共享同一套宽度；拖任一边另一边跟随，历史 key 迁移回填）──
+import { readColWidths, updateColWidth, onColWidthsChange } from '../utils/colWidths'
+const shared = readColWidths()
+const leftWidth = ref<number>(shared.left)
+const rightWidth = ref<number>(shared.right)
+const unsubscribeCols = onColWidthsChange((w) => {
+  leftWidth.value = w.left
+  rightWidth.value = w.right
+})
+onUnmounted(unsubscribeCols)
+
 const leftWidthStyle = computed(() => leftWidth.value ? { width: `${leftWidth.value}px`, flex: '0 0 auto' } : {})
 const rightWidthStyle = computed(() => rightWidth.value ? { width: `${rightWidth.value}px`, flex: '0 0 auto' } : {})
 
-// 拖拽：mousedown 起捕，mousemove 改宽，mouseup 落盘
+// 拖拽：mousedown 起捕，mousemove 改宽（实时联动），mouseup 落盘
 let dragCol: 'left' | 'right' | null = null
 let dragStartX = 0
 let dragStartW = 0
 function startDrag(col: 'left' | 'right', e: MouseEvent): void {
   dragCol = col
   dragStartX = e.clientX
-  dragStartW = col === 'left'
-    ? (leftWidth.value ?? (e.currentTarget as HTMLElement).closest('aside')?.getBoundingClientRect().width ?? 250)
-    : (rightWidth.value ?? (e.currentTarget as HTMLElement).closest('aside')?.getBoundingClientRect().width ?? 240)
+  dragStartW = col === 'left' ? leftWidth.value : rightWidth.value
   window.addEventListener('mousemove', onDrag)
   window.addEventListener('mouseup', endDrag, { once: true })
   e.preventDefault()
@@ -94,17 +90,11 @@ function onDrag(e: MouseEvent): void {
   if (!dragCol) return
   const delta = e.clientX - dragStartX
   const w = Math.round(dragCol === 'left' ? dragStartW + delta : dragStartW - delta)
-  const clamped = Math.min(MAX_COL_W, Math.max(MIN_COL_W, w))
-  if (dragCol === 'left') leftWidth.value = clamped
-  else rightWidth.value = clamped
+  // 实时写共享源（广播同步到另一边；mouseup 即最终值，无额外落盘步）
+  updateColWidth(dragCol, w)
 }
 function endDrag(): void {
   window.removeEventListener('mousemove', onDrag)
-  if (dragCol) {
-    try {
-      localStorage.setItem(dragCol === 'left' ? LEFT_W_KEY : RIGHT_W_KEY, String(dragCol === 'left' ? leftWidth.value : rightWidth.value))
-    } catch { /* ignore */ }
-  }
   dragCol = null
 }
 
