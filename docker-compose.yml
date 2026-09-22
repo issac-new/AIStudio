@@ -1,8 +1,7 @@
-// docker-compose.yml
-// Docker 沙箱：完整服务编排
-// 依赖：无外部依赖
+# docker-compose.yml 沙箱编排（aipaydev 推演步骤 16.4：MySQL/Redis/mock-gateway/app）
+# 结构与方案 V1.0 §16.4 docker-compose.sandbox.yml 对齐；镜像/Dockerfile 为占位声明，
+# 未经验证不得宣称可 up（问题记录 #4 同源诚实条款）
 
-version: '3.8'
 
 services:
   # ─── Matrix 模拟服务器 ──────────────────────────
