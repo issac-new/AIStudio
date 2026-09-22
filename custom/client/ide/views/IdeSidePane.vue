@@ -235,10 +235,13 @@ function focusMainChat(): void {
 
 <style scoped lang="scss">
 .ide-sidepane {
+  /* 跟随 panewrap 拖拽宽度：min-width 曾 280px，与 colWidths MIN_W=180 不齐——
+   * 拖到 280 以下可见面板冻住（2026-09-22 收口对齐）；显式 100% 防内容回缩留缝 */
+  width: 100%;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  min-width: 280px;
+  min-width: 0;
   border-left: 1px solid var(--border-color, #e0e0e0);
   background: var(--bg-secondary, #1b1e24);
   min-height: 0;

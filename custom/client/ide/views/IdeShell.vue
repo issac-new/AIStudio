@@ -274,6 +274,8 @@ onUnmounted(() => {
 
 .ide-shell__main.has-max-sidebar .ide-shell__sidebar { flex: 1; }
 .ide-shell__main.has-max-chat .ide-shell__chat { flex: 1; }
+/* 最大化时 panewrap 须接管剩余空间——常态宽度在内联 style 上，不放开会钉死在拖拽宽 */
+.ide-shell__main.has-max-sidepane .ide-shell__panewrap { flex: 1; }
 .ide-shell__main.has-max-sidepane .ide-sidepane { flex: 1; width: auto !important; }
 
 .ide-shell__sidebar.is-folded,

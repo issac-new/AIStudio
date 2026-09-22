@@ -599,8 +599,9 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .ide-taskbar {
-  width: 270px;
-  flex-shrink: 0;
+  /* 跟随 IdeShell 侧栏拖拽宽度：曾固定 270px——aside 拖动改变不了可见面板，
+   * 左分割条「拖了不动」根因（2026-09-22）。列 flex 交叉轴默认拉伸，此处显式 100%。 */
+  width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
