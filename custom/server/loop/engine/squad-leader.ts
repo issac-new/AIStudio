@@ -3,7 +3,18 @@
 // @squad 触发时 leader 被注入操作协议——按 roster 选人、mention 委托、
 // 每轮必录 action/no_action/failed 评估（会自省的协调者）。
 // leader 不干活只协调：委托给名册中的 agent，回收结果给评估，dispatch 完即停。
-import type { AgentRosterRow } from '@/custom/ia2/adapters/agents'
+// AgentRosterRow 的规范定义在 client 侧（custom/client/ia2/adapters/agents.ts），
+// 但 server tsc 经符号链接树看不到 custom/client 子树（custom 边界几何），
+// 故此处按同一形状本地声明；改字段时两侧同步。
+export type AgentBusyState = 'online' | 'busy' | 'idle' | 'offline'
+
+export interface AgentRosterRow {
+  name: string
+  busyState: AgentBusyState
+  activeTask?: string
+  sessionCount: number
+  source: 'platform' | 'assignee'
+}
 
 export type SquadAction = 'action' | 'no_action' | 'failed'
 
