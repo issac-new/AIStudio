@@ -133,7 +133,7 @@ const fleetMachines = computed(() => (store.fleetSessions ?? []).map(m =>
 
 const sitPanel = ref<SitSegment | null>(null)
 
-function onSitSelect(segment: 'waiting' | 'tasks' | 'online'): void {
+function onSitSelect(segment: 'tasks' | 'online'): void {
   sitPanel.value = sitPanel.value === segment ? null : segment
 }
 

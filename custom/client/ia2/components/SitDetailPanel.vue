@@ -13,7 +13,7 @@ import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DecisionRow } from '../composables/useDecisionRows'
 
-export type SitSegment = 'waiting' | 'tasks' | 'online'
+export type SitSegment = 'tasks' | 'online'
 
 /** 任务状态呈现序（9 值词表；工作流从分诊到归档） */
 const STATUS_ORDER = ['triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review', 'done', 'archived'] as const
@@ -60,7 +60,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const titleKey = computed(() => ({
-  waiting: 'ia2.sit.waiting',
   tasks: 'ia2.sit.tasks',
   online: 'ia2.sit.online',
 }[props.segment]))
@@ -261,37 +260,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   <div class="sitp" :data-testid="`sit-panel-${segment}`">
     <div class="sitp__head">
       <span class="sitp__title">{{ t(titleKey) }}</span>
-      <span class="sitp__count">{{ segment === 'waiting' ? waitItems.length : segment === 'tasks' ? tasks.length : onlineCount }}</span>
+      <span class="sitp__count">{{ segment === 'tasks' ? tasks.length : onlineCount }}</span>
       <button type="button" class="sitp__close" data-testid="sit-panel-close" :title="t('ia2.sit.panelClose')" @click="emit('close')">×</button>
     </div>
 
     <div class="sitp__body">
-      <!-- 等我：行上就地决策，不离开工作台；评审门行点击进评审区 -->
-      <template v-if="segment === 'waiting'">
-        <div v-if="!waitItems.length" class="sitp__empty">{{ t('ia2.sit.empty') }}</div>
-        <div v-for="w in waitItems" :key="w.id" class="sitp__row sitp__row--wait">
-          <button
-            type="button" class="sitp__main" :title="w.title"
-            @click="w.kind === 'gate-review' ? emit('open-review') : w.taskId && emit('open-task', w.taskId)"
-          >
-            <span class="sitp__name">{{ w.title }}</span>
-            <span class="sitp__sub">{{ t(w.subKey) }}</span>
-          </button>
-          <span class="sitp__acts">
-            <template v-if="w.kind === 'task-review' && w.taskId">
-              <button type="button" class="sitp__act sitp__act--ok" data-testid="sitp-approve" @click="emit('approve-task', w.taskId)">{{ t('ia2.sit.actApprove') }}</button>
-              <button type="button" class="sitp__act sitp__act--no" data-testid="sitp-reject" @click="emit('reject-task', w.taskId)">{{ t('ia2.sit.actReject') }}</button>
-            </template>
-            <button v-else-if="w.runId" type="button" class="sitp__act sitp__act--ok" data-testid="sitp-resume" @click="emit('approve-run', w)">{{ t('ia2.sit.actContinue') }}</button>
-            <button v-else-if="w.sessionId && w.approvalId" type="button" class="sitp__act sitp__act--ok" data-testid="sitp-fleet-ok" @click="emit('approve-fleet', w)">{{ t('ia2.sit.actApprove') }}</button>
-            <button v-else-if="w.kind === 'gate-review'" type="button" class="sitp__act sitp__act--ok" data-testid="sitp-gate-open" @click="emit('open-review')">{{ t('ia2.sit.actGoReview') }}</button>
-          </span>
-        </div>
-      </template>
-
       <!-- 任务：顶部「待决策」区（等我行合并，R6 补充——与任务合一，非两个无别下拉）+
            分状态统计（点击筛选，多选并集）+ 排序三档 + 基本信息行 -->
-      <template v-else-if="segment === 'tasks'">
+      <template v-if="segment === 'tasks'">
         <!-- R6 合并：待决策区（等我行，行上就地决策不离开工作台） -->
         <div v-if="waitItems.length" class="sitp__decide" data-testid="sitp-decide">
           <div class="sitp__sec-head">{{ t('ia2.sit.decideTitle') }}</div>
