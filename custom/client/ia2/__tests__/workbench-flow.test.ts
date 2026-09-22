@@ -431,6 +431,11 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
     expect(runsStubs.state.resumeRun).toHaveBeenCalledWith('run-9', true)
     await wrapper.find('[data-testid="tdp-confirm-fleet-fs-1"]').trigger('click')
     expect(cockpitStubs.state.respondFleetApproval).toHaveBeenCalledWith('fs-1', 'ap-1', 'once')
+    // 拒绝链守门（24h review 2026-09-23：emit 断链曾致 run/fleet 拒绝按钮静默无效）
+    await wrapper.find('[data-testid="tdp-reject-run-run-9"]').trigger('click')
+    expect(runsStubs.state.resumeRun).toHaveBeenCalledWith('run-9', false)
+    await wrapper.find('[data-testid="tdp-reject-fleet-fs-1"]').trigger('click')
+    expect(cockpitStubs.state.respondFleetApproval).toHaveBeenCalledWith('fs-1', 'ap-1', 'deny')
   })
 
   it('挂接任务随选择变化：会话（tenant 挂接）→ 循环（契约 persistedTaskId）；改派开抽屉；⌨跳 IDE', async () => {

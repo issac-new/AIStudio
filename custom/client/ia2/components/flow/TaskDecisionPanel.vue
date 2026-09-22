@@ -32,7 +32,9 @@ const emit = defineEmits<{
   (e: 'approve-task', taskId: string): void
   (e: 'reject-task', taskId: string): void
   (e: 'approve-run', item: DecisionRow): void
+  (e: 'reject-run', item: DecisionRow): void
   (e: 'approve-fleet', item: DecisionRow): void
+  (e: 'reject-fleet', item: DecisionRow): void
   (e: 'reassign', taskId: string): void
   (e: 'open-ide', taskId: string): void
   (e: 'handle-task', taskId: string): void
@@ -71,7 +73,9 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
           @approve-task="id => emit('approve-task', id)"
           @reject-task="id => emit('reject-task', id)"
           @approve-run="item => emit('approve-run', item)"
+          @reject-run="item => emit('reject-run', item)"
           @approve-fleet="item => emit('approve-fleet', item)"
+          @reject-fleet="item => emit('reject-fleet', item)"
         />
       </section>
 

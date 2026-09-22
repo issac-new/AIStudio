@@ -33,7 +33,7 @@ cd ncwk
 git clone https://github.com/EKKOLearnAI/hermes-studio upstream/hermes-studio
 git clone https://github.com/NousResearch/hermes-agent   upstream/hermes-agent
 cd upstream/hermes-studio
-git checkout v0.7.23            # 与 overlay 当前基线一致的稳定 tag
+git checkout v0.7.24            # 以 overlay/package.json version 的上游段为准（2.33 起 = 0.7.24；旧 tag 会让重生成 patch 整套 does not apply）
 
 # 2. 先装上游依赖(此时 package.json 未被 patch,lock 同步,干净安装)
 npm install --no-audit --no-fund --ignore-scripts
@@ -106,9 +106,10 @@ README 有加白名单指引。
 
 1. **loop 数据落点**:dev 态 loop 数据(`.loop/`)落 server cwd;打包态 cwd 只读时
    自动降级 `~/.hermes-web-ui/loop`(带告警),可用 `HERMES_LOOP_DIR` 显式指定。
-2. **Docker 路线**:overlay 根的 `docker-compose.yml`(Matrix 六服务编排)当前
-   是非法 YAML 且引用的 Dockerfile 不存在,任何平台都起不来;如需容器跑 agent
-   网关,用 hermes-agent 官方 `docker-compose.windows.yml`(Docker Desktop)。
+2. **Docker 路线**:overlay 根的 `docker-compose.yml`(Matrix 六服务编排)YAML
+   已合法化(895aa5f,`config -q` 校验过),但引用的 Dockerfile.* 仍不存在,
+   任何平台都 up 不起来;如需容器跑 agent 网关,用 hermes-agent 官方
+   `docker-compose.windows.yml`(Docker Desktop)。
 3. **Element Web 参考仓**与 `scripts/sim|fleet|aipay` 多用户推演脚本为 macOS
    本机工具,不在 Windows 部署面内。
 4. **runtime pin 0.21.4 未发布**是发布流程事项(需构建上传 runtime release),

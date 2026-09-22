@@ -18,6 +18,9 @@ step_reached() {
   local a b
   a=$(echo $STEPS | tr ' ' '\n' | grep -n "^$1$" | cut -d: -f1)
   b=$(echo $STEPS | tr ' ' '\n' | grep -n "^$START_STEP$" | cut -d: -f1)
+  # 校验 START_STEP 合法：手敲错值时 b 为空、(( a >= b )) 报错返回假，
+  # 全部门禁静默跳过后仍打印「下半场完成」假完成（与 scenario.sh 同款守卫）
+  [[ -n "$b" ]] || fail "未知 START_STEP: $START_STEP（合法值：$STEPS）"
   (( a >= b ))
 }
 
@@ -261,14 +264,20 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 1) 测试 csw-cashier-mp 逻辑层：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
 2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。" "$(agent_mxid fei),$(agent_mxid mei)"
 
+  # 派发时间戳（ms，持久化）：真值门禁只认派发之后的消息——历史轮残留的
+  # TEST-PASS/缺陷消息曾让门禁在派发后 1 秒即判「零缺陷轮真值」（假完成）
+  sset test_dispatch_ts $(( $(date +%s) * 1000 ))
+  SINCE_TS=$(sget test_dispatch_ts)
+
   # 缺陷流观测窗：房间出现【缺陷】则等待对应 FIX-DONE 回执
   DEFECT_WINDOW_END=$(( $(date +%s) + 5400 ))
   while (( $(date +%s) < DEFECT_WINDOW_END )); do
     auto_approve "$SCAN_ROOM" || true
-    DEFECTS=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r '[.[] | select((.content.body // "") | startswith("【缺陷】")) | .event_id] | length')
-    FIXED=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r '[.[] | select((.content.body // "") | contains("FIX-DONE"))] | length')
-    BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --arg qi "$(agent_mxid qi)" '[.[] | select(.sender == $qi and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-BE"))] | length')
-    FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --arg fei "$(agent_mxid fei)" '[.[] | select(.sender == $fei and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-FE"))] | length')
+    # 瞬时 Synapse/curl 失败经 pipefail 传导会中途杀脚本：失败本轮作废、续等
+    DEFECTS=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r --argjson since "$SINCE_TS" '[.[] | select(.origin_server_ts > $since and ((.content.body // "") | startswith("【缺陷】"))) | .event_id] | length') || { sleep 30; continue; }
+    FIXED=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 200 | jq -r --argjson since "$SINCE_TS" '[.[] | select(.origin_server_ts > $since and ((.content.body // "") | contains("FIX-DONE")))] | length') || { sleep 30; continue; }
+    BOTH_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg qi "$(agent_mxid qi)" '[.[] | select(.origin_server_ts > $since and .sender == $qi and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-BE")))] | length') || { sleep 30; continue; }
+    FE_DONE=$(mx_messages "$(load_token fanfan)" "$SCAN_ROOM" 300 | jq -r --argjson since "$SINCE_TS" --arg fei "$(agent_mxid fei)" '[.[] | select(.origin_server_ts > $since and .sender == $fei and ((.content.body // "") | test("(^|\\n)TEST-(PASS|FAIL)-TEST-FE")))] | length') || { sleep 30; continue; }
     if (( DEFECTS > 0 && FIXED >= DEFECTS && BOTH_DONE > 0 && FE_DONE > 0 )); then
       note "[真值] 缺陷闭环完成（缺陷 $DEFECTS / 修复 ${FIXED}）✓"; break
     fi
@@ -335,8 +344,31 @@ if step_reached templates && [[ -z "$(sget templates_done)" ]]; then
       if repo_has "$p"; then echo "- ✓ $p"; else echo "- ✗ 缺 $p"; fi
     done
   } > "$EVID_DIR/completeness-check.md"
-  cp "$EVID_DIR/completeness-check.md" "$DIRECTOR_CLONE/docs/delivery/RFD-001-completeness-check.md"
-  ( cd "$DIRECTOR_CLONE" && git add -A && git commit -qm "docs(delivery): RFD-001 完备性检查" && git push -q origin main ) || true
+  # 证据必须落 main：DIRECTOR_CLONE 常停在 integration/RFD-001（defect 步切出未回），
+  # 就地 commit + push origin main 实际推的是未动的本地 main 引用，证据永不落库
+  # （9-23 实锤，靠人工 cherry-pick 抢救）。改用独立 main worktree 提交推送。
+  DL_WT="$SIM_ROOT/var/templates-main-wt"
+  mkdir -p "$SIM_ROOT/var"
+  if ! ( cd "$DIRECTOR_CLONE" && git worktree add --force "$DL_WT" main ) 2>/dev/null; then
+    git -C "$DL_WT" pull -q --ff-only origin main 2>/dev/null || true
+  fi
+  if [[ -d "$DL_WT/.git" ]] || git -C "$DIRECTOR_CLONE" worktree list | grep -q "$DL_WT"; then
+    mkdir -p "$DL_WT/docs/delivery"
+    if cp "$EVID_DIR/completeness-check.md" "$DL_WT/docs/delivery/RFD-001-completeness-check.md" \
+       && ( cd "$DL_WT" && git add docs/delivery/RFD-001-completeness-check.md \
+            && { git diff --cached --quiet docs/delivery/RFD-001-completeness-check.md \
+                 || git commit -qm "docs(delivery): RFD-001 完备性检查"; } \
+            && git push -q origin main ); then
+      note "[归档] 完备性检查已推送 origin/main（docs/delivery/）"
+    else
+      echo "ISSUE|evidence-push|delivery|完备性检查推送 origin/main 失败（留存 $EVID_DIR/completeness-check.md）" >> "$EVID_DIR/issues.log"
+      note "[观察] 完备性检查推送失败，已记问题单（本地证据留存）"
+    fi
+    ( cd "$DIRECTOR_CLONE" && git worktree remove --force "$DL_WT" ) 2>/dev/null || true
+  else
+    echo "ISSUE|evidence-worktree|delivery|main worktree 不可用，完备性检查未归档（留存 $EVID_DIR/completeness-check.md）" >> "$EVID_DIR/issues.log"
+    note "[观察] main worktree 不可用，已记问题单（本地证据留存）"
+  fi
   sset templates_done 1
 fi
 

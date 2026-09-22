@@ -4,7 +4,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type { DispatchReason } from './dispatch-reason'
 import { loopWorktreeDir } from '../paths'
-import { resolveHermesInvocation } from '../../runtime/hermes-invocation'
+import { resolveHermesInvocation, assertCmdSafeArgs } from '../../runtime/hermes-invocation'
 
 const execFileAsync = promisify(execFile)
 
@@ -66,7 +66,9 @@ export class SubagentDispatcher {
         try {
           // Windows:hermes 可能是 venv 的 hermes.cmd(execFile 直跑 .cmd 抛
           // EINVAL)或捆绑 hermes.exe(走 python -m)——统一经 invocation 解析。
+          // prompt 含 LLM/用户可控文本：cmd.exe 通道先过元字符闸（防引号逃逸注入）。
           const invocation = resolveHermesInvocation()
+          assertCmdSafeArgs(invocation, ['--prompt', prompt, '--cwd', worktreePath])
           await execFileAsync(invocation.command, [...invocation.argsPrefix, '--prompt', prompt, '--cwd', worktreePath], { timeout: 300_000, windowsHide: true })
         } catch (err) {
           // R7-F 委派兜底：CLI 调用失败同样记 session-end 兜底 reason（不静默丢）

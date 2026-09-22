@@ -18,12 +18,14 @@ git fetch origin --tags --force
 PY="$(command -v python3 || command -v python || true)"
 TAG=""
 if [ -n "$PY" ]; then
+  # || true 兜底：Windows 下 command -v 可能命中 WindowsApps 商店占位 stub
+  # (执行即 9009 退出)，赋值失败会在 set -e 下于 clean 之后 checkout 之前中止
   TAG=$(gh release view --repo "${HERMES_REPO}" --json tagName,isPrerelease 2>/dev/null \
     | "$PY" -c 'import json,sys
 try:
     d=json.load(sys.stdin)
     if not d.get("isPrerelease"): print(d["tagName"])
-except Exception: pass' 2>/dev/null)
+except Exception: pass' 2>/dev/null || true)
 fi
 if [ -z "$TAG" ]; then
   echo "[sync]   未取到 gh release tag,fallback git describe origin/main"

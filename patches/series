@@ -743,8 +743,6 @@
 365-client-i18n-ide-sidepane-tabs.patch
 
 # 366: RACI 派发接 assign 时刻——assignTask 成功后 best-effort 派发（同任务 sidecar 幂等去重，方案步骤 10.4 触发点补全）
-
-# 366: RACI 派发接 assign 时刻——assignTask 成功后 best-effort 派发（同任务 sidecar 幂等去重，方案步骤 10.4 触发点补全）
 366-server-kanban-raci-assign-dispatch.patch
 
 # 367: v0.7.24 升级轮——AuthenticatedUser.matrix_user_id 放宽为 string|null。

@@ -64,6 +64,22 @@ describe('RetryGuardService', () => {
     expect(await RetryGuardService.countOf('T-loop')).toBe(0)
   })
 
+  it('assertReopenAllowed 在第 RETRY_MAX 次起拒绝 reopen（patch 363 前置熔断闸）', async () => {
+    // 未打回：放行
+    await expect(RetryGuardService.assertReopenAllowed('T-gate')).resolves.toBeUndefined()
+    for (let i = 0; i < RETRY_MAX - 1; i++) {
+      await RetryGuardService.onTestReject('T-gate')
+    }
+    // 4 次：仍放行
+    await expect(RetryGuardService.assertReopenAllowed('T-gate')).resolves.toBeUndefined()
+    await RetryGuardService.onTestReject('T-gate')
+    // 第 5 次：熔断拒绝
+    await expect(RetryGuardService.assertReopenAllowed('T-gate')).rejects.toThrow(/BLOCKED_BY_POLICY/)
+    // reset 解除后恢复放行
+    await RetryGuardService.reset('T-gate')
+    await expect(RetryGuardService.assertReopenAllowed('T-gate')).resolves.toBeUndefined()
+  })
+
   it('env 未设时不外呼；设置后经 hermes send 实弹送达（仅阈值轮）', async () => {
     // env 未设：纯留痕，无 spawn
     await RetryGuardService.onTestReject('T-quiet')

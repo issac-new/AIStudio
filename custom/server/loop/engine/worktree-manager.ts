@@ -21,14 +21,19 @@ export class WorktreeManager {
   // 不可写(Windows 打包态落只读目录)时降级 homedir,详见 loop/paths.ts。
   constructor(private baseDir: string = resolveLoopBaseDir()) {}
 
+  /** create/remove 的落点锚（repoRoot 显式时落 repoRoot/.loop，否则引擎缺省 base） */
+  private baseFor(opts: WorktreeRepoOpts): string {
+    return opts.repoRoot ? resolve(opts.repoRoot, '.loop') : this.baseDir
+  }
+
   async create(contract: TaskContract, opts: WorktreeRepoOpts = {}): Promise<string> {
     const worktreeId = contract.id.replace('task/', 'wt-')
     const repoRoot = opts.repoRoot ?? process.cwd()
-    const base = opts.repoRoot ? resolve(opts.repoRoot, '.loop') : this.baseDir
+    const base = this.baseFor(opts)
     const wtPath = resolve(base, 'worktrees', worktreeId)
 
-    // Prune if at max
-    await this.pruneOldWorktrees()
+    // Prune if at max（与 create 同一 base：repoRoot 流此前扫错目录，上限永不生效）
+    await this.pruneOldWorktrees(opts)
 
     if (existsSync(wtPath)) {
       await fs.rm(wtPath, { recursive: true, force: true })
@@ -39,13 +44,13 @@ export class WorktreeManager {
     await execFileAsync('git', ['-C', repoRoot, 'worktree', 'add', '--detach', wtPath, 'HEAD'], { windowsHide: true })
 
     // Copy .worktreeinclude files
-    await this.copyIncludedFiles(wtPath, repoRoot)
+    await this.copyIncludedFiles(wtPath, repoRoot, base)
 
     return worktreeId
   }
 
   async remove(worktreeId: string, opts: WorktreeRepoOpts = {}): Promise<void> {
-    const base = opts.repoRoot ? resolve(opts.repoRoot, '.loop') : this.baseDir
+    const base = this.baseFor(opts)
     const wtPath = resolve(base, 'worktrees', worktreeId)
     if (existsSync(wtPath)) {
       try {
@@ -56,8 +61,8 @@ export class WorktreeManager {
     }
   }
 
-  async cleanupStale(maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<void> {
-    const worktreesDir = resolve(this.baseDir, 'worktrees')
+  async cleanupStale(maxAgeMs: number = 24 * 60 * 60 * 1000, opts: WorktreeRepoOpts = {}): Promise<void> {
+    const worktreesDir = resolve(this.baseFor(opts), 'worktrees')
     if (!existsSync(worktreesDir)) return
     const entries = await fs.readdir(worktreesDir)
     const now = Date.now()
@@ -66,14 +71,14 @@ export class WorktreeManager {
       try {
         const stat = await fs.stat(p)
         if (now - stat.mtimeMs > maxAgeMs) {
-          await this.remove(entry)
+          await this.remove(entry, opts)
         }
       } catch {}
     }
   }
 
-  private async pruneOldWorktrees(): Promise<void> {
-    const worktreesDir = resolve(this.baseDir, 'worktrees')
+  private async pruneOldWorktrees(opts: WorktreeRepoOpts = {}): Promise<void> {
+    const worktreesDir = resolve(this.baseFor(opts), 'worktrees')
     if (!existsSync(worktreesDir)) return
     const entries = await fs.readdir(worktreesDir)
     if (entries.length < MAX_WORKTREES) return
@@ -85,12 +90,13 @@ export class WorktreeManager {
     stats.sort((a, b) => a.mtime - b.mtime)
     const toRemove = stats.slice(0, stats.length - MAX_WORKTREES + 1)
     for (const s of toRemove) {
-      await this.remove(s.name)
+      await this.remove(s.name, opts)
     }
   }
 
-  private async copyIncludedFiles(wtPath: string, repoRoot: string): Promise<void> {
-    const includePath = resolve(this.baseDir, '.worktreeinclude')
+  private async copyIncludedFiles(wtPath: string, repoRoot: string, base: string): Promise<void> {
+    // include 清单与落点同锚（repoRoot 流此前读引擎侧 baseDir，清单静默读空）
+    const includePath = resolve(base, '.worktreeinclude')
     if (!existsSync(includePath)) return
     const content = await fs.readFile(includePath, 'utf-8')
     const files = content.trim().split('\n').filter(Boolean)
