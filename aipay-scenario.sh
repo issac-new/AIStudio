@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/aipay-lib.sh"
 
-STATE="$SIM_ROOT/state.env"   # 跨轮存活（防重复建卡/建房）
+# STATE 由 aipay-lib.sh 按 RUN_ID 提供（跨轮存活靠 state 缓存防重复建卡/建房；换轮次给 RUN_ID 即另起一份）
 SCEN_LOG="$EVID_DIR/scenario.log"
 mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
@@ -151,19 +151,19 @@ fi
 
 # ══ 步骤 6：BA 需求分发 ═══════════════════════════════
 if step_reached ba; then
-  if ! repo_has docs/requirements/RFD-001-payment-cashier.md; then
-    cp "$SCRIPT_DIR/materials/RFD-001-payment-cashier.md" "$DIRECTOR_CLONE/docs/requirements/"
+  if ! repo_has ${RFD_DOC}; then
+    cp "$RFD_MATERIAL" "$DIRECTOR_CLONE/docs/requirements/"
     ( cd "$DIRECTOR_CLONE"
       git add -A
       git -c user.name="bella (BA)" -c user.email="bella@aipaydev.local" \
-        commit -qm "docs(requirements): RFD-001 多端小程序支付收银台需求说明书（BA 初稿）"
+        commit -qm "docs(requirements): ${RFD_ID} 多端小程序支付收银台需求说明书（BA 初稿）"
       git pull -q --rebase origin main; git push -q origin main )
-    note "[bella] RFD-001 已提交 aipaydev（email 通道禁用，以 matrix 私信替代送达）"
+    note "[bella] ${RFD_ID} 已提交 aipaydev（email 通道禁用，以 matrix 私信替代送达）"
   fi
   DM=$(dm_room bella fanfan)
   if [[ -z "$(sget ba_dm_marker)" ]]; then
-    M=$(mx_send "$(load_token bella)" "$DM" "fanfan 你好，客户需求文档已出：RFD-001 收单商户多端小程序支付收银台（依据财付通/支付宝公开技术手册）。
-仓库: github.com/issac-new/aipaydev → docs/requirements/RFD-001-payment-cashier.md
+    M=$(mx_send "$(load_token bella)" "$DM" "fanfan 你好，客户需求文档已出：${RFD_ID} 收单商户多端小程序支付收银台（依据财付通/支付宝公开技术手册）。
+仓库: github.com/issac-new/aipaydev → ${RFD_DOC}
 请产品团队接手做需求分析与分工。")
     sset ba_dm_marker "$M"
     note "[bella→fanfan] 需求私信已送达 ($M)"
@@ -185,11 +185,11 @@ if step_reached dispatch; then
   RID=$(sget room_analysis)
   if [[ -z "$(sget dispatch_marker)" ]]; then
     WSF=$(workspace fanfan)
-    M=$(mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 请处理需求 RFD-001（收单商户多端小程序支付收银台）。
+    M=$(mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 请处理需求 ${RFD_ID}（收单商户多端小程序支付收银台）。
 需求基本信息：为收单商户开发兼容微信/支付宝双端的小程序支付收银台，含统一下单、渠道适配（财付通/支付宝）、支付结果通知与对账字段支撑。
-需求文档：aipaydev 仓库 docs/requirements/RFD-001-payment-cashier.md（你本机克隆在 ${WSF}，先 git pull）
+需求文档：aipaydev 仓库 ${RFD_DOC}（你本机克隆在 ${WSF}，先 git pull）
 请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单匹配、SMART 拆分与 RACI 派发。
-结论行以 ANALYSIS-DONE-RFD-001 或 ANALYSIS-BLOCKED-RFD-001 开头。不许谎报。" "$(agent_mxid fanfan)")
+结论行以 ANALYSIS-DONE-${RFD_ID} 或 ANALYSIS-BLOCKED-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)")
     sset dispatch_marker "$M"
     note "[fanfan] 需求派发已发 ($M)"
   fi
@@ -199,14 +199,14 @@ fi
 SCAN_ROOM="$(sget room_analysis)"
 if step_reached register; then
   jwt_of fanfan >/dev/null
-  wait_truth "fanfan 本机 kanban 出现 RFD-001 任务卡" 900 kanban_has fanfan "RFD-001" \
+  wait_truth "fanfan 本机 kanban 出现 ${RFD_ID} 任务卡" 900 kanban_has fanfan "${RFD_ID}" \
     || fail "fanfan kanban 登记超时"
 fi
 
 # ══ 步骤 10：系统分析（要素评估/三清单/SMART 拆分/RACI 派发）══
 if step_reached analysis; then
   RID=$(sget room_analysis)
-  wait_truth "仓库出现 docs/analysis/RFD-001-tasklist.md" 2400 repo_has docs/analysis/RFD-001-tasklist.md \
+  wait_truth "仓库出现 docs/analysis/${RFD_ID}-tasklist.md" 2400 repo_has docs/analysis/${RFD_ID}-tasklist.md \
     || note "[降级] tasklist 未到仓，检查房间 agent 进度消息"
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
@@ -235,13 +235,13 @@ if step_reached triage; then
   RID=$(sget room_analysis)
   for u in chen hu lin xiao; do
     jwt_of "$u" >/dev/null
-    wait_truth "$u kanban 出现 RFD-001 任务卡（分诊台登记）" 1800 kanban_has "$u" "RFD-001" \
-      || { note "[观察] $u kanban 未见 RFD-001 卡（记问题单）"; \
-           echo "ISSUE|triage-missing|$u|分诊台未见 RFD-001 任务卡" >> "$EVID_DIR/issues.log"; }
+    wait_truth "$u kanban 出现 ${RFD_ID} 任务卡（分诊台登记）" 1800 kanban_has "$u" "${RFD_ID}" \
+      || { note "[观察] $u kanban 未见 ${RFD_ID} 卡（记问题单）"; \
+           echo "ISSUE|triage-missing|$u|分诊台未见 ${RFD_ID} 任务卡" >> "$EVID_DIR/issues.log"; }
   done
   # lead 人工确认（导演代 wei/mei 在各自看板把任务从 triage 推进 todo）
   for lead in wei mei; do
-    kanban_list "$lead" | jq -r '.. | objects | select(has("title") and has("id")) | select(((.title//"")+(.body//"")) | contains("RFD-001")) | .id' \
+    kanban_list "$lead" | jq -r --arg rfd "$RFD_ID" '.. | objects | select(has("title") and has("id")) | select(((.title//"")+(.body//"")) | contains($rfd)) | .id' \
       | while read -r id; do kanban_status_as "$lead" "$id" todo || true; done
     note "[$lead] lead 分诊确认完成（triage→todo）"
   done
