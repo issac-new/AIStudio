@@ -80,7 +80,7 @@ export function parseClaim(raw: unknown): Claim | null {
 function parseExecutor(raw: unknown): ExecutorSpec | null {
   if (!isRecord(raw)) return null
   const id = validId(raw.id)
-  const type = enumOf(raw.type, ['command', 'persistence'] as const)
+  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files'] as const)
   const evidenceType = validId(raw.evidenceType)
   if (!id || !type || !evidenceType) return null
   const out: ExecutorSpec = { id, type, evidenceType }
@@ -94,10 +94,17 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     if (expectExit !== undefined) out.expectExit = expectExit
     const timeoutMs = num(raw.timeoutMs)
     if (timeoutMs !== undefined && timeoutMs > 0) out.timeoutMs = timeoutMs
-  } else {
+  } else if (type === 'persistence') {
     const scenario = str(raw.scenario)
     if (scenario === undefined || scenario.length === 0) return null
     out.scenario = scenario
+  } else if (type === 'ontology') {
+    const scan = strList(raw.scan, 100)
+    if (scan !== undefined && scan.length > 0) out.scan = scan
+  } else if (type === 'files') {
+    const require = strList(raw.require, 200)
+    if (!require || require.length === 0) return null
+    out.require = require
   }
   return out
 }

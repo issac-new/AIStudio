@@ -1,0 +1,36 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: security.sast-audit
+  version: 0.1.0
+  description: >
+    L4.4 依赖安全审计：npm audit（audit-level=high 阻断档）。对齐交付标准 G5 供应商评估挂钩。
+    非 npm 项目用 .qgate/gates/ 同 id 覆盖为自己的审计命令。
+spec:
+  domain: L4
+  claims:
+    - security.no-high-dependency-vulns
+  appliesWhen:
+    changed:
+      any:
+        - "package.json"
+        - "package-lock.json"
+        - "pnpm-lock.yaml"
+        - "yarn.lock"
+  triggers:
+    - pre_commit
+    - release
+  executors:
+    - id: npm-audit
+      type: command
+      command: ["npm", "audit", "--audit-level=high"]
+      evidenceType: audit-result
+      timeoutMs: 120000
+  evidence:
+    required:
+      - audit-result
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 168

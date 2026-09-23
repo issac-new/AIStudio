@@ -20,6 +20,7 @@ export type EvidenceIndependence =
   | 'spec-derived'
   | 'existing-independent'
   | 'runtime-observed'
+  | 'ontology-derived'
   | 'human-reviewed'
 
 /** Agent 生命周期触发点（维度 B，v0.1 §5.2）。 */
@@ -47,7 +48,7 @@ export interface Claim {
 
 export interface ExecutorSpec {
   id: string
-  type: 'command' | 'persistence'
+  type: 'command' | 'persistence' | 'ontology' | 'files'
   /** command：argv 固定命令（无 shell 拼接，安全边界设计 §5.5）。 */
   command?: string[]
   /** command：cwd 相对工作目录前缀（默认项目根）。 */
@@ -58,6 +59,10 @@ export interface ExecutorSpec {
   timeoutMs?: number
   /** persistence：场景文件路径（相对 .qgate/ 或内置 pack scenarios/）。 */
   scenario?: string
+  /** ontology：内容扫描 glob（默认 docs 与 src 下的 md/ts 文件）。 */
+  scan?: string[]
+  /** files：必须存在的制品 glob 清单（present 级证据）。 */
+  require?: string[]
   /** 运行期由 loader 注入：所属 pack 名（场景文件回退解析用）。 */
   packHint?: string
   /** 该 executor 产出的 evidence type。 */
@@ -165,6 +170,9 @@ export interface ExceptionWaiver {
   scope?: string
   approver: string
   mitigation?: string
+  /** epoch ms；过期即失效（Exception 不能永久隐藏 Risk，v0.1 §17）。 */
   expiresAt: number
+  /** 复验方式：到期后按什么步骤重验。 */
+  revalidation?: string
   createdAt: number
 }

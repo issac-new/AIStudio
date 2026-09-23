@@ -1,0 +1,29 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: delivery.release-evidence
+  version: 0.1.0
+  description: >
+    L5.7 发布证据包检查：`qgate release-report` 生成的证据包 + 复盘工件存在性。
+    对齐交付标准 G5/G6（发布门禁 + 复盘闭环）。release profile 启用。
+spec:
+  domain: L5
+  claims:
+    - delivery.release-evidence-package-complete
+  triggers:
+    - release
+  executors:
+    - id: release-files
+      type: files
+      require:
+        - ".qgate/release-report.md"
+        - "docs/retrospective*.md"
+      evidenceType: release-evidence-present
+  evidence:
+    required:
+      - release-evidence-present
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 720

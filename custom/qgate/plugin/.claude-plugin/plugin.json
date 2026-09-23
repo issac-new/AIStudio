@@ -1,0 +1,16 @@
+{
+  "name": "qgate",
+  "version": "0.1.0",
+  "description": "Universal delivery gate: evidence-first quality gates for agent-driven development. Active only in projects with a .qgate/ directory.",
+  "author": {
+    "name": "ncwk"
+  },
+  "license": "MIT",
+  "keywords": [
+    "quality-gate",
+    "delivery",
+    "evidence",
+    "verification",
+    "hooks"
+  ]
+}

@@ -3,12 +3,13 @@ kind: Profile
 metadata:
   id: feature-close
   tier: standard
-  description: 任务收口全门集（对齐交付标准 standard 档）
+  description: 任务收口全门集（对齐交付标准 standard 档）：工程基线 + 持久化完整性 + 依赖审计 + 架构适应度。语义门与发布门按项目显式启用。
 spec:
   enable:
-    - L0.*
-    - L1.*
-    - L2.*
-    - L3.*
-    - L4.architecture
-  disable: []
+    - engineering.*
+    - data.persistence-integrity
+    - security.sast-audit
+    - architecture.fitness
+  disable:
+    - ontology.*
+    - L5

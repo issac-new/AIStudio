@@ -3,7 +3,7 @@ kind: Profile
 metadata:
   id: high-assurance
   tier: compliance
-  description: 高保障门集（对齐交付标准 compliance 档；INCONCLUSIVE 一律阻断）
+  description: 高保障门集（对齐交付标准 compliance 档）：INCONCLUSIVE 一律阻断，全域覆盖（语义门仍需项目配置 provider 后显式启用）。
 spec:
   enable:
     - L0.*
@@ -12,8 +12,12 @@ spec:
     - L3.*
     - L4.*
     - L5.*
-  disable: []
+  disable:
+    - ontology.*
   overrides:
     data.persistence-integrity:
+      policy:
+        inconclusive: block
+    engineering.basic-check:
       policy:
         inconclusive: block

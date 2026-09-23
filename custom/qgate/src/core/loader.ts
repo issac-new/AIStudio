@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import type { Claim, GateSpec, Profile } from './types.js'
 import { parseClaim, parseGateSpec, parseProfile, type Diagnostic } from './parse.js'
+import { parseOntologyConfig, type OntologyConfig } from '../ontology/provider.js'
 
 export interface QGateProjectConfig {
   profile?: string
@@ -14,6 +15,8 @@ export interface QGateProjectConfig {
   /** 项目自定义门（同 id 覆盖 pack 门）。 */
   gates: GateSpec[]
   evidenceCommit?: boolean
+  /** P6：语义 Provider 配置（off/缺省 = 关闭）。 */
+  ontology: OntologyConfig
 }
 
 export interface LoadResult {
@@ -97,7 +100,7 @@ function loadBuiltinGates(diagnostics: Diagnostic[]): GateSpec[] {
 function parseProjectConfig(raw: unknown): QGateProjectConfig | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const rec = raw as Record<string, unknown>
-  if (Object.keys(rec).length === 0) return { claims: [], gates: [] }
+  if (Object.keys(rec).length === 0) return { claims: [], gates: [], ontology: { provider: 'off', mappings: [] } }
   const profile = typeof rec.profile === 'string' ? rec.profile : undefined
   const evidenceCommit = rec.evidenceCommit === true
   let claims: Claim[] = []
@@ -107,7 +110,9 @@ function parseProjectConfig(raw: unknown): QGateProjectConfig | null {
     if (parsed.some((c) => c === null)) return null
     claims = parsed as Claim[]
   }
-  return { profile, claims, gates: [], evidenceCommit }
+  const ontology = parseOntologyConfig(rec.ontology)
+  if (ontology === null) return null
+  return { profile, claims, gates: [], evidenceCommit, ontology }
 }
 
 /** 加载项目 QGate 世界：未采纳（无 .qgate/）返回 null。 */
@@ -116,7 +121,7 @@ export function loadProject(projectRoot: string): LoadResult | null {
   if (!existsSync(qgateDir)) return null
   const diagnostics: Diagnostic[] = []
 
-  let config: QGateProjectConfig = { claims: [], gates: [] }
+  let config: QGateProjectConfig = { claims: [], gates: [], ontology: { provider: 'off', mappings: [] } }
   const configFile = join(qgateDir, 'qgate.yaml')
   if (existsSync(configFile)) {
     const res = readStructured(configFile)
