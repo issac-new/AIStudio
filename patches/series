@@ -805,3 +805,4 @@
 377-client-search-hotkey-cmdf.patch
 378-server-zcode-coding-agent.patch
 379-client-zcode-agent-ui.patch
+380-server-zcode-engine-health-route.patch
