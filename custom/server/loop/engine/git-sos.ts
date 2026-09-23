@@ -19,13 +19,18 @@ export interface SosDecision {
 
 /**
  * 检测合并冲突类型
+ * 真实 git 冲突标记按行分布（<<<<<<< / ======= / >>>>>>> 各占一行）——
+ * content 判左侧标记；structural 判分隔与右侧标记在标记集中成对出现；
+ * 其余归为 semantic（需人工理解意图）。
  */
 export function detectConflictType(conflictMarkers: string[]): 'content' | 'structural' | 'semantic' {
   // 检测冲突标记
   if (conflictMarkers.some(m => m.includes('<<<<<<<'))) {
     return 'content'
   }
-  if (conflictMarkers.some(m => m.includes('===') && m.includes('>>>'))) {
+  const hasSeparator = conflictMarkers.some(m => m.includes('==='))
+  const hasEnd = conflictMarkers.some(m => m.includes('>>>'))
+  if (hasSeparator && hasEnd) {
     return 'structural'
   }
   return 'semantic'
@@ -99,4 +104,35 @@ export async function executeSosAction(decision: SosDecision): Promise<void> {
       // 继续执行
       break
   }
+}
+
+// ─── 生产接线：IDE Git 面板 /status 的冲突态建议 ────────────────
+
+/** porcelain v1 冲突码 → 冲突类型：UU/AA（双方改/双方加）为 content
+ *  （文本重叠，可标记级解决）；DD/AU/UA/UD/DU（双方删、增删删改交错）为
+ *  structural（结构分歧）。非冲突码返回 null。 */
+export function porcelainConflictType(indexStatus: string, worktreeStatus: string): 'content' | 'structural' | null {
+  if (indexStatus === 'U' && worktreeStatus === 'U') return 'content'
+  if (indexStatus === 'A' && worktreeStatus === 'A') return 'content'
+  if (indexStatus === 'D' && worktreeStatus === 'D') return 'structural'
+  if (indexStatus === 'U' || worktreeStatus === 'U') return 'structural'
+  return null
+}
+
+/** 冲突态 SOS 建议（只读 advisory）：有 porcelain 冲突项时给出降级决策，
+ *  供 /api/ide/git/status 随状态返回；不在读路径执行 merge --abort——
+ *  动作执行留给引擎或人确认（executeSosAction）。 */
+export function sosAdvisoryForConflicts(
+  changes: Array<{ indexStatus: string; worktreeStatus: string }>,
+): SosDecision | null {
+  let structural = 0
+  let content = 0
+  for (const c of changes) {
+    const t = porcelainConflictType(c.indexStatus, c.worktreeStatus)
+    if (t === 'content') content++
+    else if (t === 'structural') structural++
+  }
+  if (content === 0 && structural === 0) return null
+  // structural 优先上报（结构分歧更难自动解决）；status 读路径无重试计数，按 0（首次建议）
+  return evaluateSos(structural > 0 ? 'structural' : 'content', 0, false)
 }

@@ -160,6 +160,10 @@ export interface ResultTemplate {
   artifactType: 'patch' | 'pr' | 'commit' | 'report'
   requiredFiles: string[]
   schema?: unknown
+  /** 交付分支（dev-branch-missing 硬闸门）：声明后 verifier 在完成判定前核验
+   *  `git ls-remote origin refs/heads/<pushBranch>` 与 worktree HEAD 一致——
+   *  本地已 commit 未 push 的交付不算完成（跨 agent 协作看不到）。未声明则跳过。 */
+  pushBranch?: string | null
 }
 
 export interface TaskContract {
@@ -202,6 +206,10 @@ export interface VerificationRecord {
       reason?: string
     } | null
     human: { approver: string; decision: 'approved' | 'rejected' | 'changes-requested'; comment: string; timestamp: string } | null
+    /** push 硬闸门结果（dev-branch-missing）：contract 声明 pushBranch 时才有值。
+     *  ok=false → overall 强制 failed（not-pushed/diverged/offline），repair 路由
+     *  failType='push'。旧记录无此字段，读取方按 null（未启用）处理。 */
+    pushEvidence?: { ok: boolean; reason: 'not-pushed' | 'diverged' | 'offline' | null; detail: string } | null
   }
   overall: 'passed' | 'failed' | 'pending'
   finalResponseGuard: boolean
