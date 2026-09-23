@@ -1,0 +1,359 @@
+diff --git a/packages/client/public/coding-agents/zcode.svg b/packages/client/public/coding-agents/zcode.svg
+new file mode 100644
+index 00000000..8422ab6b
+--- /dev/null
++++ b/packages/client/public/coding-agents/zcode.svg
+@@ -0,0 +1,4 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
++  <rect x="2" y="2" width="20" height="20" rx="5" fill="#4A69FF"/>
++  <path d="M8 8h8l-8 8h8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
++</svg>
+diff --git a/packages/client/src/api/agent-status.ts b/packages/client/src/api/agent-status.ts
+index f706be5f..62ee5081 100644
+--- a/packages/client/src/api/agent-status.ts
++++ b/packages/client/src/api/agent-status.ts
+@@ -1,6 +1,6 @@
+ import { request } from './client'
+ 
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
+ export type AgentStatusSource = 'managed-runtime' | 'user-cli' | 'built-in' | 'not-installed'
+ 
+ export interface AgentStatusRecord {
+@@ -43,6 +43,7 @@ const AGENT_STATUS_ALIASES: Record<string, AgentStatusId> = {
+   grok: 'grok',
+   opencode: 'opencode',
+   dsh: 'dsh',
++  zcode: 'zcode',
+ }
+ 
+ export function resolveAgentStatusId(agent: string): AgentStatusId | null {
+diff --git a/packages/client/src/api/coding-agents.ts b/packages/client/src/api/coding-agents.ts
+index e748f49b..a101b93e 100644
+--- a/packages/client/src/api/coding-agents.ts
++++ b/packages/client/src/api/coding-agents.ts
+@@ -1,7 +1,7 @@
+ import { request } from './client'
+ import type { ProviderApiMode } from './studio/provider-api-mode'
+ 
+-export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
++export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
+ export type ChatCodingAgentId = CodingAgentId | 'ekko-agent'
+ export const CODING_AGENT_API_MODES = [
+   'chat_completions',
+diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
+index 5c40e951..26aafbf7 100644
+--- a/packages/client/src/api/studio/chat.ts
++++ b/packages/client/src/api/studio/chat.ts
+@@ -137,7 +137,7 @@ export interface RunEvent {
+   }>
+   generation?: string
+   queue_id?: string
+-  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
++  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
+   phase?: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message' | 'cancelled'
+   guarantee?: 'strict' | 'immediate'
+   requested_at?: number
+@@ -191,7 +191,7 @@ export interface ResumeSessionPayload {
+     generation: string
+     run_id?: string
+     queue_id: string
+-    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
++    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
+     phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message'
+     guarantee: 'strict' | 'immediate'
+     requested_at: number
+diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
+index 89263dff..6c07d08a 100644
+--- a/packages/client/src/components/hermes/chat/ChatPanel.vue
++++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
+@@ -1004,6 +1004,7 @@ const newChatAgentOptions = computed(() => [
+   { label: "Ekko", value: "ekko-agent" },
+   { label: "Claude", value: "claude-code" },
+   { label: "Codex", value: "codex" },
++  { label: "ZCode", value: "zcode" },
+   { label: "Pi", value: "pi" },
+   { label: "Grok", value: "grok" },
+   { label: "OpenCode", value: "opencode" },
+diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
+index 8cad4b1d..70992bf3 100644
+--- a/packages/client/src/components/hermes/chat/MessageList.vue
++++ b/packages/client/src/components/hermes/chat/MessageList.vue
+@@ -299,7 +299,7 @@ const canInsertQueuedMessages = computed(() => {
+   if (agent === "ekko-agent") {
+     return session.source === "coding_agent" || session.source === "global_agent";
+   }
+-  if (agent === "codex" || agent === "pi" || agent === "grok" || (agent === "opencode" || agent === "dsh") || agent === "claude" || agent === "claude-code") return true;
++  if (agent === "codex" || agent === "pi" || agent === "grok" || (agent === "opencode" || agent === "dsh") || agent === "claude" || agent === "claude-code" || agent === "zcode") return true;
+   return !session.source || session.source === "cli" || session.source === "global_agent";
+ });
+ const visibleApproval = computed(() => chatStore.activePendingApproval);
+diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
+index 0fa18a4f..46224fe7 100644
+--- a/packages/client/src/i18n/locales/ar.ts
++++ b/packages/client/src/i18n/locales/ar.ts
+@@ -3401,7 +3401,7 @@ export default {
+     cacheHitRate: 'معدل إصابة الذاكرة المؤقتة',
+     modelBreakdown: 'التوزيع حسب النموذج',
+     agentBreakdown: 'التوزيع حسب الوكيل',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'غير معروف' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'غير معروف' },
+     dailyTrend: 'الاستخدام اليومي',
+     date: 'التاريخ',
+     tokens: 'التوكنات',
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+index aab5563e..3f72579c 100644
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -2687,7 +2687,7 @@ jobTriggered: 'Job ausgelost',
+     cacheHitRate: 'Cache-Trefferquote',
+     modelBreakdown: 'Modellaufschluesselung',
+     agentBreakdown: 'Agent-Aufschluesselung',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'Unbekannt' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Unbekannt' },
+     dailyTrend: 'Tagliche Nutzung',
+     date: 'Datum',
+     tokens: 'Tokens',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 2c8e7af0..9178ce2c 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -3420,7 +3420,7 @@ export default {
+     cacheHitRate: 'Cache Hit Rate',
+     modelBreakdown: 'Model Breakdown',
+     agentBreakdown: 'Agent Breakdown',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'Unknown' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Unknown' },
+     dailyTrend: 'Daily Usage',
+     date: 'Date',
+     tokens: 'Tokens',
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+index 33ca7f88..7d466cbe 100644
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -2687,7 +2687,7 @@ jobTriggered: 'Job ejecutado',
+     cacheHitRate: 'Tasa de acierto de cache',
+     modelBreakdown: 'Desglose por modelo',
+     agentBreakdown: 'Desglose por agente',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'Desconocido' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Desconocido' },
+     dailyTrend: 'Uso diario',
+     date: 'Fecha',
+     tokens: 'Tokens',
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+index 88dffbff..19bdb8e5 100644
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -2687,7 +2687,7 @@ jobTriggered: 'Job declenche',
+     cacheHitRate: 'Taux de succes du cache',
+     modelBreakdown: 'Repartition par modele',
+     agentBreakdown: 'Repartition par agent',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'Inconnu' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Inconnu' },
+     dailyTrend: 'Utilisation quotidienne',
+     date: 'Date',
+     tokens: 'Jetons',
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+index 33b5ab19..301197dd 100644
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -2686,7 +2686,7 @@ export default {
+     cacheHitRate: 'キャッシュヒット率',
+     modelBreakdown: 'モデル別内訳',
+     agentBreakdown: 'Agent 別内訳',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: '不明' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: '不明' },
+     dailyTrend: '日別使用量',
+     date: '日付',
+     tokens: 'トークン',
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+index d38a5f81..0a119009 100644
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -2686,7 +2686,7 @@ export default {
+     cacheHitRate: '캐시 적중률',
+     modelBreakdown: '모델별 분포',
+     agentBreakdown: 'Agent별 분포',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: '알 수 없음' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: '알 수 없음' },
+     dailyTrend: '일별 사용량',
+     date: '날짜',
+     tokens: '토큰',
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+index 7bc24741..2c955e89 100644
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -2687,7 +2687,7 @@ jobTriggered: 'Job acionado',
+     cacheHitRate: 'Taxa de acerto de cache',
+     modelBreakdown: 'Detalhamento por modelo',
+     agentBreakdown: 'Detalhamento por agente',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'Desconhecido' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Desconhecido' },
+     dailyTrend: 'Uso diario',
+     date: 'Data',
+     tokens: 'Tokens',
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+index 24027213..993352bc 100644
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -3056,7 +3056,7 @@ export default {
+     cacheHitRate: 'Попадания в кэш',
+     modelBreakdown: 'Распределение по моделям',
+     agentBreakdown: 'Распределение по агентам',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'Неизвестно' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Неизвестно' },
+     dailyTrend: 'Ежедневная динамика',
+     date: 'Дата',
+     tokens: 'Токены',
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+index 791aa1b2..acb133dd 100644
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -3362,7 +3362,7 @@ export default {
+     cacheHitRate: '快取命中率',
+     modelBreakdown: '模型分布',
+     agentBreakdown: 'Agent 分布',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: '未知' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: '未知' },
+     dailyTrend: '每日用量',
+     date: '日期',
+     tokens: 'Token',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index f2b69c3f..bf24173c 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -3468,7 +3468,7 @@ export default {
+     cacheHitRate: '缓存命中率',
+     modelBreakdown: '模型分布',
+     agentBreakdown: 'Agent 分布',
+-    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: '未知' },
++    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: '未知' },
+     dailyTrend: '每日用量',
+     date: '日期',
+     tokens: 'Token',
+diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index 49f1f54b..65e8787e 100644
+--- a/packages/client/src/stores/hermes/chat.ts
++++ b/packages/client/src/stores/hermes/chat.ts
+@@ -30,7 +30,7 @@ export type ContentBlock = ContentBlockImport
+ export const LIVE_CHAT_MESSAGE_PAGE_SIZE = 150
+ export const LIVE_CHAT_MAX_LOADED_MESSAGES = 300
+ const LEGACY_WORKSPACE_RUN_CHANGE_MESSAGE_PREFIX = 'workspace-run-change:'
+-type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko-agent'
++type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko-agent'
+ 
+ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
+   if (agent === 'codex') return 'codex'
+@@ -39,6 +39,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
+   if (agent === 'dsh') return 'dsh'
+   if (agent === 'opencode') return 'opencode'
+   if (agent === 'claude') return 'claude-code'
++  if (agent === 'zcode') return 'zcode'
+   if (agent === 'ekko-agent') return 'ekko-agent'
+   return undefined
+ }
+@@ -50,6 +51,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
+   if (id === 'dsh') return 'dsh'
+   if (id === 'opencode') return 'opencode'
+   if (id === 'claude-code') return 'claude'
++  if (id === 'zcode') return 'zcode'
+   if (id === 'ekko-agent') return 'ekko-agent'
+   return undefined
+ }
+@@ -3089,6 +3091,7 @@ export const useChatStore = defineStore('chat', () => {
+       runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
+       queueId,
+       runtime: raw.runtime === 'ekko'
++        || raw.runtime === 'zcode'
+         || raw.runtime === 'claude-code'
+         || raw.runtime === 'codex'
+         || raw.runtime === 'pi'
+@@ -3507,6 +3510,9 @@ export const useChatStore = defineStore('chat', () => {
+     if (codingAgentId === 'codex') {
+       return { icon: '/coding-agents/codex-openai.png' }
+     }
++    if (codingAgentId === 'zcode') {
++      return { icon: '/coding-agents/zcode.svg' }
++    }
+     if (codingAgentId === 'claude-code') {
+       return { icon: '/coding-agents/claude-code.svg' }
+     }
+diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
+index d29a5d89..d095015e 100644
+--- a/packages/client/src/utils/chat-agent-avatar.ts
++++ b/packages/client/src/utils/chat-agent-avatar.ts
+@@ -18,6 +18,7 @@ const AGENT_AVATARS = {
+   grok: { label: 'Grok', src: '/coding-agents/grok.svg' },
+   opencode: { label: 'OpenCode', src: '/coding-agents/opencode.png' },
+   dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
++  zcode: { label: 'ZCode', src: '/coding-agents/zcode.svg' },
+ } as const satisfies Record<string, ChatAgentAvatar>
+ 
+ export function chatSessionAgentAvatar(session?: ChatAgentSessionIdentity | null): ChatAgentAvatar {
+@@ -30,6 +31,7 @@ export function chatSessionAgentAvatar(session?: ChatAgentSessionIdentity | null
+   if (runtime === 'grok') return AGENT_AVATARS.grok
+   if (runtime === 'dsh') return AGENT_AVATARS.dsh
+   if (runtime === 'opencode') return AGENT_AVATARS.opencode
++  if (runtime === 'zcode') return AGENT_AVATARS.zcode
+   if (session?.source === 'coding_agent') return AGENT_AVATARS['claude-code']
+   return AGENT_AVATARS.hermes
+ }
+diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
+index 3f7a286e..e05a6d1b 100644
+--- a/packages/client/src/views/hermes/AgentManagerView.vue
++++ b/packages/client/src/views/hermes/AgentManagerView.vue
+@@ -86,6 +86,7 @@ const codingAgents: CodingAgentCard[] = [
+     packageName: 'opencode-ai',
+   },
+   { id: 'dsh', name: 'DeepSeek Harness', provider: 'DeepSeek', logo: '/coding-agents/deepseek.svg', command: 'dsh', packageName: '@deepseek-ai/dsh' },
++  { id: 'zcode', name: 'ZCode', provider: 'ZAI', logo: '/coding-agents/zcode.svg', command: 'node', packageName: 'zcode（受管底座，npm run zcode:ensure）' },
+ ]
+ 
+ const updatePolicies = ref<Record<string, AgentUpdatePolicyState>>({})
+@@ -122,9 +123,9 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
+ const aiHelpDrawerVisible = ref(false)
+ const aiHelpPrompt = ref('')
+ const legacyDataMigrationChecked = ref(false)
+-const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false })
+-const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false })
+-const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false })
++const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, zcode: false })
++const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, zcode: false })
++const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, zcode: false })
+ const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
+   'claude-code': null,
+   codex: null,
+@@ -132,6 +133,7 @@ const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
+   grok: null,
+   opencode: null,
+   dsh: null,
++  zcode: null,
+ })
+ 
+ const hermesStatus = computed(() => agentStatusSnapshot.value?.agents.find(agent => agent.id === 'hermes'))
+diff --git a/packages/client/src/components/hermes/chat/SessionSearchModal.vue b/packages/client/src/components/hermes/chat/SessionSearchModal.vue
+index 8463b383..d1979cff 100644
+--- a/packages/client/src/components/hermes/chat/SessionSearchModal.vue
++++ b/packages/client/src/components/hermes/chat/SessionSearchModal.vue
+@@ -134,7 +134,7 @@ async function openItem(item: SearchItem) {
+ 
+   await ensureChatSessionsLoaded()
+   if (!chatStore.sessions.some(session => session.id === item.id) && typeof chatStore.addOrUpdateSession === 'function') {
+-    const isCodingAgentSession = item.source === 'coding_agent' || item.agent === 'claude' || item.agent === 'codex' || item.agent === 'pi' || item.agent === 'grok' || (item.agent === 'opencode' || item.agent === 'dsh')
++    const isCodingAgentSession = item.source === 'coding_agent' || item.agent === 'claude' || item.agent === 'codex' || item.agent === 'pi' || item.agent === 'grok' || (item.agent === 'opencode' || item.agent === 'dsh') || item.agent === 'zcode'
+     const codingAgentId: Session['codingAgentId'] = item.agent === 'codex'
+       ? 'codex'
+       : item.agent === 'pi'
+diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/src/views/hermes/HistoryView.vue
+index a5f1492e..991edda4 100644
+--- a/packages/client/src/views/hermes/HistoryView.vue
++++ b/packages/client/src/views/hermes/HistoryView.vue
+@@ -197,7 +197,7 @@ function mapHistoryMessages(messages: HermesMessage[]): Session['messages'] {
+ }
+ 
+ function codingAgentFields(summary: SessionSummary): Pick<Session, 'agent' | 'agentSessionId' | 'agentNativeSessionId' | 'codingAgentId' | 'codingAgentMode'> {
+-  const isCodingAgentSession = summary.source === 'coding_agent' || summary.agent === 'claude' || summary.agent === 'codex' || summary.agent === 'pi' || summary.agent === 'grok' || (summary.agent === 'opencode' || summary.agent === 'dsh')
++  const isCodingAgentSession = summary.source === 'coding_agent' || summary.agent === 'claude' || summary.agent === 'codex' || summary.agent === 'pi' || summary.agent === 'grok' || (summary.agent === 'opencode' || summary.agent === 'dsh') || summary.agent === 'zcode'
+   return {
+     agent: summary.agent || undefined,
+     agentSessionId: summary.agent_session_id || undefined,

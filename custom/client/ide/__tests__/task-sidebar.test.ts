@@ -175,7 +175,7 @@ describe('IdeTaskSidebar', () => {
 
     await w.find('[data-testid="ide-task-new"]').trigger('click')
     expect(newChat).toHaveBeenCalledWith(expect.objectContaining({
-      codingAgentId: 'codex',
+      codingAgentId: 'zcode',
       codingAgentMode: 'global',
       source: 'coding_agent',
     }))

@@ -18,7 +18,7 @@ export interface McpConfigTarget {
 
 /** 生成注入当前会话的引导提示词（kimi <skill-loaded> 的对应物） */
 export function buildMcpConfigPrompt(target: McpConfigTarget): string {
-  const agent = target.agentId || 'codex'
+  const agent = target.agentId || 'zcode'
   return [
     `[mcp-config 对话式配置]（底座：${agent}；范式移植自 kimi-code /mcp-config）`,
     '',
