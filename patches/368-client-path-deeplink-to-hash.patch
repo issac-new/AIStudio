@@ -1,0 +1,19 @@
+diff --git a/packages/client/src/main.ts b/packages/client/src/main.ts
+--- a/packages/client/src/main.ts
++++ b/packages/client/src/main.ts
+@@ -8,3 +8,15 @@ import { desktopBridge } from '@/utils/desktop-bridge'
+
++// overlay[aipaydev]: hash 路由吞掉路径形态深链的 search 参数（/ide?task=x 落 /app 后
++// task 丢失，推演实锤 ide-deeplink-loses-task）。与下方 token 特例同构：在 router 初始化
++// 前把 pathname+search 迁移为 hash 形态（#/ide?task=x），通用兼容所有路径深链。
++// hash==='#/' 是 router 模块 import 初始化写的空路由默认值，须视为「未导航」。
++{
++  const { origin, pathname, search, hash } = window.location
++  const notNavigated = hash === '' || hash === '#' || hash === '#/'
++  if (search.length > 1 && notNavigated) {
++    window.location.replace(`${origin}/#${pathname}${search}`)
++  }
++}
++
+ // Apply theme classes before mount to prevent FOUC (Flash of Unstyled Content)
+ function storedPreference(key: string, fallback: string): string {

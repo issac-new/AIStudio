@@ -28,6 +28,20 @@ if (isDark) document.documentElement.classList.add('dark')
 if (isComic) document.documentElement.classList.add('comic')
 if (isDesktopShell) document.documentElement.classList.add('hermes-desktop-shell')
 
+// overlay[aipaydev]: hash 路由吞掉路径形态深链的 search 参数（/ide?task=x 落 /app 后
+// task 丢失，推演实锤 ide-deeplink-loses-task）。与 patches/368（upstream main.ts 侧）
+// 同步的同一迁移：router 初始化前把 pathname+search 迁为 hash 形态。
+// entry.mts 是 dev/运行时实际入口，此处是主落点；368 保 upstream 直入口路径兼容。
+// 注意 hash==='#/' 是 ESM import 链里 router 模块初始化写的空路由默认值（import 提升
+// 先于本模块体执行），须视为「未导航」；真路由（#/app 等）才豁免迁移。
+{
+  const { origin, pathname, search, hash } = window.location
+  const notNavigated = hash === '' || hash === '#' || hash === '#/'
+  if (search.length > 1 && notNavigated) {
+    window.location.replace(`${origin}/#${pathname}${search}`)
+  }
+}
+
 const urlParams = new URLSearchParams(window.location.search)
 const hashQuery = window.location.hash.split('?')[1]
 const urlToken = urlParams.get('token') || (hashQuery ? new URLSearchParams(hashQuery).get('token') : null)
