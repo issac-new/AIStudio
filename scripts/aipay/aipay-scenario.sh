@@ -131,6 +131,7 @@ room_has_from() { # <room> <sender-mxid> <pattern>
 }
 
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}）====="
+model_preflight_report   # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷
 
 # ══ 步骤 1-5：账号/配置/登录/功能就绪冒烟 ═════════════
 if step_reached smoke; then
