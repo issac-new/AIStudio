@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
+import { isHermesAgentPatchPath } from './inject.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
@@ -49,17 +50,13 @@ function readManifestApplied() {
   }
 }
 
-// hermes-agent 目标路由:前缀清单与 inject.mjs applyPatches 保持同步(改一处须同步另一处)
+// hermes-agent 目标路由:前缀判定复用 inject.mjs 导出的单一事实源谓词(2026-09-23 收敛)
 function patchTargetRoot(patchName) {
   try {
     const text = readFileSync(resolve(patchDir, patchName), 'utf8');
     const m = text.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
     const p = m ? m[1] : '';
-    if (
-      p.startsWith('hermes_cli/') || p.startsWith('plugins/') || p.startsWith('agent/') ||
-      p.startsWith('apps/') || p.startsWith('assets/') || p.startsWith('acp_') ||
-      p.startsWith('gateway/') || p.startsWith('tests/gateway/') || p.startsWith('tests/hermes_cli/')
-    ) {
+    if (isHermesAgentPatchPath(p)) {
       return hermesAgentRoot;
     }
   } catch { /* 读取失败按 hermes-studio 处理 */ }

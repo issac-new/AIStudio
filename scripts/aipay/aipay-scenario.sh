@@ -120,6 +120,28 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   return 1
 }
 
+verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造假
+  # 只认"可反向核验"的完成：结论行里的 commit 必须真在 aipaydev origin 上、
+  # 且该 commit 确实含分析稿；card 必须能在本机看板查到。空喊"完成"不计入。
+  local rfd="$1" body sha card
+  body=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 2>/dev/null \
+    | jq -r --arg p "ANALYSIS-DONE-$rfd" \
+      '[.[] | select((.content.body//"") | contains($p))] | last | .content.body // ""')
+  [[ -n "$body" ]] || { note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
+  sha=$(printf '%s' "$body" | grep -oE 'commit=[0-9a-fA-F]{7,40}' | head -1 | cut -d= -f2)
+  card=$(printf '%s' "$body" | grep -oE 'card=[^ ,；;]+' | head -1 | cut -d= -f2)
+  [[ -n "$sha" && -n "$card" ]] || { note "[凭证] DONE 行缺 commit/card 凭证：$body"; return 1; }
+  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  git -C "$DIRECTOR_CLONE" cat-file -e "$sha^{commit}" 2>/dev/null \
+    || { note "[凭证] commit $sha 不存在于 aipaydev —— 虚报"; return 1; }
+  git -C "$DIRECTOR_CLONE" ls-tree -r --name-only "$sha" 2>/dev/null | grep -q "${rfd}-tasklist.md" \
+    || { note "[凭证] commit $sha 里没有 ${rfd}-tasklist.md —— 虚报"; return 1; }
+  kanban_list fanfan | grep -q "$card" \
+    || { note "[凭证] 看板查无卡片 $card —— 虚报"; return 1; }
+  note "[凭证] $rfd 完成证据成立：commit=$sha card=$card"
+  return 0
+}
+
 repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1
@@ -190,7 +212,10 @@ if step_reached dispatch; then
 需求基本信息：${RFD_ONELINE}。
 需求文档：aipaydev 仓库 ${RFD_DOC}（你本机克隆在 ${WSF}，先 git pull）
 请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单匹配、SMART 拆分与 RACI 派发。
-结论行以 ANALYSIS-DONE-${RFD_ID} 或 ANALYSIS-BLOCKED-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)")
+结论行必须二选一并带凭证，无凭证一律视为未完成：
+  ANALYSIS-DONE-${RFD_ID} commit=<分析稿已推送的 commitId> card=<协作看板主卡ID>
+  ANALYSIS-BLOCKED-${RFD_ID} reason=<阻塞原因> done=<已完成部分清单>
+凭证会被反向核验：commit 必须真实存在于 aipaydev origin（git cat-file 可查），card 必须在你本机看板可查。动作若因输出长度被截断丢弃，就还没做完——此时只准报 BLOCKED，不得报 DONE。" "$(agent_mxid fanfan)")
     sset dispatch_marker "$M"
     note "[fanfan] 需求派发已发 ($M)"
   fi
@@ -207,8 +232,18 @@ fi
 # ══ 步骤 10：系统分析（要素评估/三清单/SMART 拆分/RACI 派发）══
 if step_reached analysis; then
   RID=$(sget room_analysis)
+  # 硬失败而非降级：tasklist 是后续 RACI 派发与追踪的唯一依据，缺了还往下跑，
+  # 等于在空前提上派单，产出的"完成"全部不可信（09-23 V2.0 实锤：agent 本机写了
+  # 分析稿却未提交，仍上报 DONE）。
   wait_truth "仓库出现 docs/analysis/${RFD_ID}-tasklist.md" 2400 repo_has docs/analysis/${RFD_ID}-tasklist.md \
-    || note "[降级] tasklist 未到仓，检查房间 agent 进度消息"
+    || { echo "ISSUE|analysis-artifacts-missing|fanfan-agent|${RFD_ID} 分析稿未入仓（本机可能有稿但未提交推送），派发依据缺失，中止本轮" >> "$EVID_DIR/issues.log"; \
+         fail "步骤 10 未完成：${RFD_ID}-tasklist.md 未入仓，不得继续派发"; }
+  # 产物到仓 ≠ 流程走完：还要 agent 自己交回可核验凭证（commit + 看板卡）。
+  # 两者任一造假或缺失，本轮按未完成处理，不带可疑前序进入分诊与派发。
+  wait_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在看板）" 600 \
+    verify_done_evidence "${RFD_ID}" \
+    || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 上报 DONE 但凭证缺失或造假（动作可能被输出长度截断丢弃）" >> "$EVID_DIR/issues.log"; \
+         fail "步骤 10 凭证核验未通过，中止本轮"; }
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
     wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 1200 bash -c \

@@ -792,4 +792,13 @@
 #      gateway 已鉴权 adapter（不碰 token），无 gateway 时回落 Client-Server API。
 #      守门测试 tests/gateway/test_matrix_room_tools.py（33 例）。
 374-agent-matrix-room-tools.patch
+# 375 基础运行时 semantica MCP 目录清单(2026-09-23 基础运行时轮)。
+#      单一事实源 overlay/runtime/semantica/manifest.yaml;本 patch 把它作为
+#      optional-mcps/semantica/ 新文件注入 hermes-agent 目录清单(presence =
+#      approval 语义),studio MCP 浏览器与 `hermes mcp install semantica` 直接
+#      消费。安装=git clone pinned tag v0.7.0 + venv + pip install;transport
+#      stdio semantica-mcp(15 知识图谱/决策溯源工具,实弹 tools/list 核对)。
+#      更新流程:改 runtime/ 单一事实源 → 重生成本 patch → npm run clean &&
+#      npm run inject 验证。
+375-runtime-semantica-mcp-catalog.patch
 376-client-i18n-missing-keys.patch

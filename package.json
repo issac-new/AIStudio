@@ -21,7 +21,10 @@
     "build:dmg:mac": "node scripts/build-dmg.mjs --mac",
     "build:dmg:win": "node scripts/build-dmg.mjs --win",
     "build:dmg:linux": "node scripts/build-dmg.mjs --linux",
-    "catalog-check": "node scripts/zcode-catalog-check.mjs"
+    "catalog-check": "node scripts/zcode-catalog-check.mjs",
+    "runtime:doctor": "node scripts/runtime/runtime-doctor.mjs",
+    "runtime:vendor-pua": "node scripts/runtime/vendor-pua.mjs",
+    "runtime:register": "node scripts/runtime/register-runtime.mjs"
   },
   "engines": {
     "node": ">=23.0.0"

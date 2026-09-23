@@ -64,5 +64,13 @@ description: 金融支付（银行卡/网络支付/转接清算）领域背景�
 
 ## 输出纪律
 
-- 结论行以 `ANALYSIS-DONE-<RFDID>` 或 `ANALYSIS-BLOCKED-<RFDID>` 开头。
+- 结论行必须带**可被反向核验的凭证**，空喊完成一律视为未完成：
+  - `ANALYSIS-DONE-<RFDID> commit=<分析稿已推送的commitId> card=<协作看板主卡ID>`
+  - `ANALYSIS-BLOCKED-<RFDID> reason=<原因> done=<已完成部分>`
+  - commit 必须真实存在于 aipaydev origin 且该 commit 确实含 `<RFDID>-tasklist.md`；
+    card 必须能在本机看板查到。核验方会 `git cat-file` 与查看板逐项对账。
+  - 若某一步的动作因输出长度被截断而未执行（工具回报"未运行不完整的动作/Nothing was changed"），
+    那一步就是**没做完**：只准报 BLOCKED 并列明缺项，严禁补一句 DONE。
+- 提交推送与建卡属于交付物本体，不是收尾附件：先 `git add/commit/push`、再建 kanban 卡，
+  最后才发结论行。分析稿只写在本地工作区而未推送，等同产物不存在。
 - 所有事实标注来源（文档路径/消息/清单条目）；不确定项进「待澄清清单」。

@@ -140,6 +140,21 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 - judge 验证仍未接线真实模型调用方（P2 已备好 pending 结构：VerificationRecord 记 `judge:{status:'pending', reason}` 且不阻断 overall，judge 未配置时装配 warn 一次显式声明降级）：契约带 judge intent 时 judge 项按 pending 记录，程序化 + 人工门禁照常生效；刻意不注入恒失败假 judge（会让 judge 意图契约 repair 循环烧穿 escalated）。
 - connector 发现与 legacy 生产同源（仅 webhook；GitHub/本地 Git 连接器待配置面引入后接入）。
 
+### 🧱 基础运行时层 — semantica 知识基础设施 + pua 行为技能（2026-09-23）
+
+外部运行时按不可变 pin 受管接入,零 agent 内核改动:
+- **semantica** v0.7.0(MCP stdio,14 工具):Context Graph/知识图谱/混合检索/RETE·Datalog
+  推理/PROV-O 决策溯源 —— 落《AI-Native 研发范式实践手册》的"企业知识库"能力位。
+  经 patch 375 进 hermes-agent MCP 目录,`hermes mcp install semantica` 或 studio
+  MCP 浏览器一键安装(git pinned tag + 独立 venv)。
+- **pua** @e6e6cd2(12 个 SKILL.md 技能):调试方法论五步法/抗借口/主动性强制/L0-L4
+  压力分级 —— 落"Skill 体系"能力位。`skills.external_dirs` 只读挂载,升级只改
+  overlay 一处。管理命令:`npm run runtime:doctor | runtime:vendor-pua | runtime:register`。
+
+详见 [runtime/README.md](runtime/README.md) 与
+[设计文档](../docs/superpowers/specs/2026-09-23-base-runtimes-design.md)(含手册七
+能力位差距分析与后续路线)。
+
 ### 🎨 品牌与网关通知
 
 - 桌面端 rebrand 为 SwarmStudio（config + package）
@@ -214,8 +229,11 @@ overlay/
 │       ├── controllers/           #   Hermes 扩展控制器（trace / 终端工具探测）
 │       ├── services/              #   Hermes 扩展服务（task workspace 缓存）
 │       └── security/              #   URL 守卫（SSRF 防护）
-├── patches/                       # B 类 patch（177 个 active + 归档）
+├── patches/                       # B 类 patch（178 个 active + 归档）
 │   └── series                     #   patch 应用顺序清单
+├── runtime/                       # 基础运行时层（受管 pin 镜像,单一事实源）
+│   ├── semantica/manifest.yaml    #   知识基础设施 MCP 目录清单（patch 375 注入 hermes-agent）
+│   └── pua/                       #   行为技能集镜像（12 技能 + PIN + ATTRIBUTION,脚本生成）
 ├── registries/
 │   ├── client/                    # 客户端注册中枢 + entry shim + bootstrap
 │   └── server/                    # 服务端 bootstrap（预留）
@@ -225,6 +243,10 @@ overlay/
 │   └── bootstrap.ts
 ├── scripts/
 │   ├── inject.mjs                 # 注入工具（应用 patch + 生成派生 config + 建符号链接）
+│   ├── runtime/                   # 基础运行时管理（vendor 同步 / profile 注册 / 健康门禁）
+│   │   ├── vendor-pua.mjs         #   pua 技能按 pin 从上游同步进 runtime/pua
+│   │   ├── register-runtime.mjs   #   把运行时注册进 HERMES_HOME（external_dirs 幂等写入）
+│   │   └── runtime-doctor.mjs     #   硬检查（schema/PIN 对账/patch 一致性）+ 软检查
 │   ├── ensure-injected.mjs        # dev/build 前置钩子（幂等确保已注入）
 │   ├── build.mjs                  # 完整构建编排
 │   ├── build-dmg.mjs              # 桌面端 dmg 打包
