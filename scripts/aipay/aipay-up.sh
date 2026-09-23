@@ -58,6 +58,7 @@ up_one() {
       HERMES_HOME="$(hermes_root "$u")" \
       HERMES_WEB_UI_HOME="$(webui_home "$u")" \
       HERMES_WEBUI_STATE_DIR="$(webui_home "$u")" \
+      HERMES_GATEWAY_LOCK_DIR="$(hermes_root "$u")/gateway-locks" \
       HERMES_AGENT_HEALTH_URL="http://127.0.0.1:$gw_port" \
       GATEWAY_PORT="$gw_port" \
       API_SERVER_KEY="$API_KEY" \
