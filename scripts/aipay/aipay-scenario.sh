@@ -125,8 +125,10 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   # 且该 commit 确实含分析稿；card 必须能在本机看板查到。空喊"完成"不计入。
   local rfd="$1" body sha card
   body=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 2>/dev/null \
+    # /messages?dir=b 返回顺序是"新→旧"，必须取 first；取 last 会拿到最旧那条
+    # 无凭证裸 DONE，把已重报的合格凭证误判为不合格（09-23 实锤 false negative）。
     | jq -r --arg p "ANALYSIS-DONE-$rfd" \
-      '[.[] | select((.content.body//"") | contains($p))] | last | .content.body // ""')
+      '[.[] | select((.content.body//"") | contains($p))] | first | .content.body // ""')
   [[ -n "$body" ]] || { note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
   sha=$(printf '%s' "$body" | grep -oE 'commit=[0-9a-fA-F]{7,40}' | head -1 | cut -d= -f2)
   card=$(printf '%s' "$body" | grep -oE 'card=[^ ,；;]+' | head -1 | cut -d= -f2)
