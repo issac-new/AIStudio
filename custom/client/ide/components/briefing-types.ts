@@ -43,3 +43,11 @@ export interface BriefingRecap {
   blockers: string[]
   todos: string[]
 }
+
+/** 辅助会话追问组装：带任务上下文前缀发往主会话（同 IdeTaskContextBar assistant 模式） */
+export function buildAuxMessage(task: BriefingTask | null | undefined, text: string): string {
+  const trimmed = text.trim()
+  if (!trimmed) return ''
+  const head = task ? `【任务简报·${task.id}】` : '【任务简报】'
+  return `${head} ${trimmed}`
+}
