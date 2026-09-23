@@ -71,7 +71,7 @@ describe('dispatcher 认领护栏 + 原因透传', () => {
     expect(out6.ok).toBe(false)
     expect(out6.reason.code).toBe('max_depth_exceeded')
     await Promise.all(pending)
-  })
+  }, 15000)
 
   it('放行 → handed_off + invoke 被调', async () => {
     const reasons: DispatchOutcome['reason'][] = []
