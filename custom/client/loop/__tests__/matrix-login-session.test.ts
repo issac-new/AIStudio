@@ -23,8 +23,23 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../server/matrix/session-store', () => ({ saveMatrixSession: mocks.saveMatrixSession }))
-
 vi.mock('../../../server/matrix/admin-service', () => ({
+  validateMatrixToken: mocks.validateMatrixToken,
+  getMatrixUserInfo: mocks.getMatrixUserInfo,
+  listMatrixUsers: vi.fn(),
+  createMatrixUser: vi.fn(),
+  resetMatrixUserPassword: vi.fn(),
+  setMatrixUserActive: vi.fn(),
+  deleteMatrixUser: vi.fn(),
+}))
+
+// 控制器（upstream 注入态）经 src/custom 符号链接导入同两个模块：符号链接
+// 路径与真实路径在 vitest 模块图里可能是两个模块 ID，两侧 specifier 都要
+// mock（0.7.24 刷新后单侧 mock 失配→真实 validateMatrixToken 打到本地
+// synapse 上→401，三用例连锁挂）。
+const UPSTREAM_CUSTOM = vi.hoisted(() => '../../../../../upstream/hermes-studio/packages/server/src/custom')
+vi.mock(`${UPSTREAM_CUSTOM}/matrix/session-store`, () => ({ saveMatrixSession: mocks.saveMatrixSession }))
+vi.mock(`${UPSTREAM_CUSTOM}/matrix/admin-service`, () => ({
   validateMatrixToken: mocks.validateMatrixToken,
   getMatrixUserInfo: mocks.getMatrixUserInfo,
   listMatrixUsers: vi.fn(),
