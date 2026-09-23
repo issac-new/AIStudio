@@ -1,0 +1,33 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: llm.review-reasoner
+  version: 0.1.0
+  description: >
+    LLM 评审插件门（OD-005）：让 LLM 按门声明的 Claims 做独立推理评审。
+    纪律：LLM 判定永远不会单独构成 PASS（判 pass 也降级 conditional）；
+    凭据 QGATE_LLM_API_KEY 缺失或网络失败 → INCONCLUSIVE 不 crash。
+    默认不在任何 Profile 启用——项目显式开启（enable llm.*）。
+spec:
+  domain: L4
+  claims:
+    - review.independent-reasoning
+  appliesWhen:
+    changed:
+      any:
+        - "src/**"
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: llm-reviewer
+      type: llm
+      evidenceType: llm-review-result
+  evidence:
+    required:
+      - llm-review-result
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
