@@ -328,6 +328,9 @@ export class LoopEngine {
   private determineFailType(record: VerificationRecord): string {
     const progFailed = record.results.programmatic.some(p => !p.passed)
     if (progFailed) return 'programmatic'
+    // push 硬闸门（dev-branch-missing）：本地已 commit 未 push 的交付不算完成，
+    // 路由回 handoff 重派（maker 补 push），与 programmatic/judge 并列的独立失败类。
+    if (record.results.pushEvidence && !record.results.pushEvidence.ok) return 'push'
     // isJudgeFailed：新记录认 status==='failed'（pending/skipped 不算），旧记录回退 passed 布尔
     if (isJudgeFailed(record.results.judge)) return 'judge'
     if (record.results.human && record.results.human.decision !== 'approved') return 'human'

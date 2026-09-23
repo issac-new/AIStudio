@@ -10,6 +10,7 @@ import { isJudgeFailed } from '../types'
 import type { JudgeVerdict } from '../types'
 import { loopWorktreeDir } from '../paths'
 import { execTemplateCommand } from '../../runtime/platform-exec'
+import { verifyPushResult } from './push-verify'
 
 const execFileAsync = promisify(execFile)
 
@@ -103,10 +104,13 @@ export class Verifier {
     // --- finalResponseGuard ---
     const guardPassed = await this.finalResponseGuard(contract)
 
+    // --- push 硬闸门（dev-branch-missing）：声明 pushBranch 的交付必须带远端 ref 证据 ---
+    const pushEvidence = await this.pushEvidenceGate(contract)
+
     return {
       contractId: contract.id,
-      results: { programmatic: progResults, judge: judgeResult, human: humanResult },
-      overall: allPassed && guardPassed ? 'passed' : 'failed',
+      results: { programmatic: progResults, judge: judgeResult, human: humanResult, pushEvidence },
+      overall: allPassed && guardPassed && (!pushEvidence || pushEvidence.ok) ? 'passed' : 'failed',
       finalResponseGuard: guardPassed,
     }
   }
@@ -147,8 +151,38 @@ export class Verifier {
     } catch { return '' }
   }
 
-  private async finalResponseGuard(contract: TaskContract): Promise<boolean> {
-    // Trivially passes when no required files were declared (nothing to verify).
+  /** push 硬闸门（dev-branch-missing）：核验远端 ref 与 worktree HEAD 一致。
+   *  未声明 pushBranch → null（闸门关闭，语义不变）。rev-parse 失败按 offline
+   *  （不许盲报完成）；ls-remote 未命中 ref 按 not-pushed。 */
+  private async pushEvidenceGate(contract: TaskContract): Promise<VerificationRecord['results']['pushEvidence']> {
+    const branch = contract.resultTemplate.pushBranch
+    if (!branch) return null
+    if (!contract.worktreeId) {
+      return { ok: false, reason: 'not-pushed', detail: 'no worktree; delivery branch never pushed' }
+    }
+    const wt = loopWorktreeDir(contract.worktreeId)
+    let localHead = ''
+    try {
+      const { stdout } = await execFileAsync('git', ['-C', wt, 'rev-parse', 'HEAD'], { windowsHide: true })
+      localHead = stdout.trim()
+    } catch (err: any) {
+      return { ok: false, reason: 'offline', detail: `git rev-parse HEAD failed: ${err?.message ?? err}` }
+    }
+    let remoteOk = true
+    let remoteRef = ''
+    try {
+      const { stdout } = await execFileAsync('git', ['-C', wt, 'ls-remote', 'origin', `refs/heads/${branch}`], { windowsHide: true })
+      remoteRef = stdout.trim()
+    } catch {
+      remoteOk = false
+    }
+    const verdict = verifyPushResult(localHead, remoteRef, remoteOk)
+    return verdict.ok
+      ? { ok: true, reason: null, detail: `remote refs/heads/${branch} @ ${verdict.sha.slice(0, 12)}` }
+      : { ok: false, reason: verdict.reason, detail: `refs/heads/${branch}: ${verdict.detail}` }
+  }
+
+  private async finalResponseGuard(contract: TaskContract): Promise<boolean> {    // Trivially passes when no required files were declared (nothing to verify).
     if (contract.resultTemplate.requiredFiles.length === 0) return true
     // Check requiredFiles exist and are non-empty
     if (!contract.worktreeId) return false

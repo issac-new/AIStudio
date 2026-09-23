@@ -20,6 +20,7 @@
 import Router from '@koa/router'
 import { spawn } from 'child_process'
 import { isAbsolute, normalize, sep } from 'path'
+import { sosAdvisoryForConflicts } from '../../loop/engine/git-sos'
 
 const GIT_TIMEOUT_MS = 10_000
 /** 变更类命令（stage/commit/checkout/push）上限：10s 即 SIGKILL 会打断 checkout/commit
@@ -275,7 +276,11 @@ ideGitRouter.get('/status', async (ctx) => {
     ctx.body = errorBody('git_failed', result.stderr.trim() || 'git status failed')
     return
   }
-  ctx.body = parseGitStatus(repoRoot, result.stdout)
+  const status = parseGitStatus(repoRoot, result.stdout)
+  // git-sos 接线（aipaydev 缺口 4 决策层）：冲突态随 status 带降级建议（只读
+  // advisory，不在读路径执行 merge --abort；动作执行留给引擎/人确认）。
+  const sos = sosAdvisoryForConflicts(status.changes)
+  ctx.body = sos ? { ...status, sos } : status
 })
 
 // GET /api/ide/git/diff?root=<abs>&file=<rel>&staged=<0|1>

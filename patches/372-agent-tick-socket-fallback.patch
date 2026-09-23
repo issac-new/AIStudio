@@ -1,0 +1,25 @@
+diff --git a/gateway/shutdown_watchdog.py b/gateway/shutdown_watchdog.py
+index 1db12ea15c..d43204ba81 100644
+--- a/gateway/shutdown_watchdog.py
++++ b/gateway/shutdown_watchdog.py
+@@ -23,6 +23,7 @@ from pathlib import Path
+ from typing import Any, Callable, Dict, Optional
+ 
+ from gateway.restart import GATEWAY_SERVICE_RESTART_EXIT_CODE
++from gateway.control_socket import _fits_sun_path, _fallback_socket_path  # HERMES_CUSTOM[tick-sock-fallback]
+ from hermes_constants import get_hermes_home, get_process_hermes_home
+ from utils import atomic_json_write
+ 
+@@ -186,7 +187,11 @@ def get_loop_tick_socket_path(home: Optional[Path] = None, pid: Optional[int] =
+     (#90502).
+     """
+     pid = int(pid if pid is not None else os.getpid())
+-    return _home(home) / "state" / f"gateway.loop-tick.{pid}.sock"
++    # HERMES_CUSTOM[tick-sock-fallback]: 深路径 home（如推演 SIM_ROOT 深层目录）下
++    # 直接路径超过 AF_UNIX sun_path 上限 → 复用 control_socket 同款短路径回落，
++    # 否则 tick 服务器 bind 抛 OSError(AF_UNIX path too long)、活跃度探针全程失效。
++    direct = _home(home) / "state" / f"gateway.loop-tick.{pid}.sock"
++    return direct if _fits_sun_path(direct) else _fallback_socket_path(home).with_name(f"loop-tick.{pid}.sock")
+ 
+ 
+ def get_shutdown_watchdog_dump_path(home: Optional[Path] = None) -> Path:
