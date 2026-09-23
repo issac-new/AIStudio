@@ -1,0 +1,174 @@
+diff --git a/packages/client/src/composables/useKeyboard.ts b/packages/client/src/composables/useKeyboard.ts
+index 05f9690c..47824eea 100644
+--- a/packages/client/src/composables/useKeyboard.ts
++++ b/packages/client/src/composables/useKeyboard.ts
+@@ -6,6 +6,14 @@ export function useKeyboard() {
+   const router = useRouter()
+   const { sessionSearchOpen, openSessionSearch, closeSessionSearch } = useSessionSearch()
+ 
++  function isEditableTarget(target: EventTarget | null): boolean {
++    const el = target instanceof Element ? target : null
++    if (!el) return false
++    if (el.closest('.monaco-editor')) return true
++    const tag = el.tagName
++    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
++  }
++
+   function handleKeydown(e: KeyboardEvent) {
+     const mod = e.ctrlKey || e.metaKey
+ 
+@@ -30,7 +38,10 @@ export function useKeyboard() {
+       return
+     }
+ 
+-    if (mod && e.key.toLowerCase() === 'k') {
++    // ⌘F opens session search (was ⌘K, which collided with the IDE command
++    // palette). Skip editable targets so monaco's in-editor find and text
++    // inputs keep the browser/editor-native behavior.
++    if (mod && e.key.toLowerCase() === 'f' && !isEditableTarget(e.target)) {
+       if (router.currentRoute.value.name === 'login') return
+       e.preventDefault()
+       openSessionSearch()
+diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
+index 0fa18a4f..6fae87a3 100644
+--- a/packages/client/src/i18n/locales/ar.ts
++++ b/packages/client/src/i18n/locales/ar.ts
+@@ -1027,7 +1027,7 @@ export default {
+     searchTitle: 'البحث في الجلسات',
+     searchSubtitle: 'ابحث بالعنوان أو بمحتوى الرسالة',
+     searchScope: 'نطاق البحث: قاعدة بيانات جلسات واجهة الويب المحلية فقط. جلسات سجل Hermes للقراءة فقط غير مضمّنة.',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchPlaceholder: 'البحث في الجلسات...',
+     searchEmpty: 'الجلسات الأخيرة',
+     searchRecent: 'جلسة أخيرة',
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+index aab5563e..004a91a0 100644
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -1098,7 +1098,7 @@ export default {
+     stopSpeech: 'Stoppen',
+     speechNotSupported: 'Sprachwiedergabe in diesem Browser nicht unterstützt',
+     searchEnterHint: 'Enter zum Öffnen · Esc zum Schließen',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchScope: 'Suchbereich: nur lokale Web-UI-Sitzungsdatenbank; schreibgeschützte Hermes-Verlaufssitzungen sind nicht enthalten.',
+     searchFailed: 'Sitzungssuche fehlgeschlagen',
+     searchNoSnippet: 'Keine Vorschau verfügbar',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 2c8e7af0..1dfc4628 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1034,7 +1034,7 @@ export default {
+     searchTitle: 'Search Sessions',
+     searchSubtitle: 'Search by title or message content',
+     searchScope: 'Search scope: Web UI local session database only. Read-only Hermes history sessions are not included.',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchPlaceholder: 'Search sessions...',
+     searchEmpty: 'Recent sessions',
+     searchRecent: 'Recent session',
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+index 33ca7f88..db3f3c80 100644
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -1098,7 +1098,7 @@ export default {
+     stopSpeech: 'Detener',
+     speechNotSupported: 'Reproducción de voz no soportada en este navegador',
+     searchEnterHint: 'Enter para abrir · Esc para cerrar',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchScope: 'Alcance de búsqueda: solo base de datos local de sesiones de Web UI; no incluye sesiones históricas Hermes de solo lectura.',
+     searchFailed: 'No se pudieron buscar sesiones',
+     searchNoSnippet: 'No hay resumen disponible',
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+index 88dffbff..d16da254 100644
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -1098,7 +1098,7 @@ export default {
+     stopSpeech: 'Arrêter',
+     speechNotSupported: 'Reproduction vocale non prise en charge dans ce navigateur',
+     searchEnterHint: 'Entrée pour ouvrir · Échap pour fermer',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchScope: 'Portée de recherche : base locale des sessions Web UI uniquement ; les sessions d’historique Hermes en lecture seule ne sont pas incluses.',
+     searchFailed: 'Échec de la recherche de sessions',
+     searchNoSnippet: 'Aucun extrait disponible',
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+index 33b5ab19..583c8993 100644
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -1098,7 +1098,7 @@ export default {
+     stopSpeech: '停止',
+     speechNotSupported: 'このブラウザは音声読み上げをサポートしていません',
+     searchEnterHint: 'Enter で開く · Esc で閉じる',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchScope: '検索範囲: Web UI のローカルセッション DB のみ。読み取り専用の Hermes 履歴セッションは含まれません。',
+     searchFailed: 'セッション検索に失敗しました',
+     searchNoSnippet: '表示できる要約がありません',
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+index d38a5f81..a62037b9 100644
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -1098,7 +1098,7 @@ export default {
+     stopSpeech: '중지',
+     speechNotSupported: '이 브라우저는 음성 재생을 지원하지 않습니다',
+     searchEnterHint: 'Enter로 열기 · Esc로 닫기',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchScope: '검색 범위: Web UI 로컬 세션 DB만 포함하며 읽기 전용 Hermes 기록 세션은 포함하지 않습니다.',
+     searchFailed: '세션 검색 실패',
+     searchNoSnippet: '표시할 요약이 없습니다',
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+index 7bc24741..3e666449 100644
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -1098,7 +1098,7 @@ export default {
+     stopSpeech: 'Parar',
+     speechNotSupported: 'Reprodução de voz não suportada neste navegador',
+     searchEnterHint: 'Enter para abrir · Esc para fechar',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchScope: 'Escopo da busca: apenas banco local de sessões da Web UI; sessões históricas Hermes somente leitura não são incluídas.',
+     searchFailed: 'Falha ao pesquisar sessões',
+     searchNoSnippet: 'Nenhum resumo disponível',
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+index 24027213..6fb4c926 100644
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -917,7 +917,7 @@ export default {
+     searchTitle: 'Поиск сеансов',
+     searchSubtitle: 'Поиск по заголовку или содержимому сообщений',
+     searchScope: 'Область поиска: только локальная библиотека сеансов Web UI; сеансы истории Hermes только для чтения не включаются.',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchPlaceholder: 'Поиск сеансов...',
+     searchEmpty: 'Недавние сеансы',
+     searchRecent: 'Недавние сеансы',
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+index 791aa1b2..a10f1b49 100644
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -1025,7 +1025,7 @@ export default {
+     searchTitle: '搜尋工作階段',
+     searchSubtitle: '依標題或訊息內容搜尋',
+     searchScope: '搜尋範圍：僅 Web UI 本地工作階段資料庫；不包含唯讀 Hermes 歷史工作階段。',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchPlaceholder: '搜尋工作階段...',
+     searchEmpty: '最近工作階段',
+     searchRecent: '最近工作階段',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index f2b69c3f..9eb0fca9 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1034,7 +1034,7 @@ export default {
+     searchTitle: '搜索会话',
+     searchSubtitle: '按标题或消息内容搜索',
+     searchScope: '搜索范围：仅 Web UI 本地会话库；不包含只读 Hermes 历史会话。',
+-    searchHint: 'Cmd/Ctrl+K',
++    searchHint: 'Cmd/Ctrl+F',
+     searchPlaceholder: '搜索会话...',
+     searchEmpty: '最近会话',
+     searchRecent: '最近会话',

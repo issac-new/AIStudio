@@ -6,6 +6,8 @@
 // 与标签常驻。
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
@@ -36,5 +38,16 @@ describe('AttentionStrip — swarm kanban 标签（v12.4）', () => {
     expect(empty.find('[data-testid="ia-attn-label"]').exists()).toBe(true)
     expect(empty.text()).toContain('ia2.overview.attentionEmpty')
     empty.unmount()
+  })
+
+  it('chip 整体限宽 160px（1280 视口 ~7 个；tier 补 ellipsis 上限）', () => {
+    // 2026-09-23 走查观察项：~305px chip 在 1280 视口只放 3-4 个。
+    // 守门断言 ia2.scss（chip 样式单一事实源），漂移即 fail。
+    const scss = readFileSync(resolve(__dirname, '../styles/ia2.scss'), 'utf8')
+    const itemBlock = scss.slice(scss.indexOf('.ia-attn__item {'), scss.indexOf('.ia-attn__bar {'))
+    expect(itemBlock).toContain('max-width: 160px')
+    const tierBlock = scss.slice(scss.indexOf('.ia-attn__tier {'), scss.indexOf('.ia-attn__text {'))
+    expect(tierBlock).toContain('text-overflow: ellipsis')
+    expect(tierBlock).toContain('max-width: 56px')
   })
 })
