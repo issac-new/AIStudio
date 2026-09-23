@@ -290,7 +290,7 @@ describe('L5.7 release-report', () => {
   })
 })
 
-describe.sequential('P8 MCP server（stdio JSON-RPC，真子进程）', () => {
+describe('P8 MCP server（stdio JSON-RPC，真子进程）', () => {
   it('initialize → tools/list(7) → tools/call gate.status', { timeout: 30_000 }, () => {
     const fx = tmpProject()
     try {

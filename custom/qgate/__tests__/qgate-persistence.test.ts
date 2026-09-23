@@ -31,7 +31,7 @@ function makeFixture(): { dir: string; qgateDir: string; spec: GateSpec } {
   return { dir, qgateDir, spec }
 }
 
-describe.sequential('persistence executor（payment-demo 真夹具）', () => {
+describe('persistence executor（payment-demo 真夹具）', () => {
   it('植入缺陷（amount 单位换算错）→ 门 FAIL：field-diff 与 invariant 双证据', { timeout: 60_000 }, async () => {
     const fx = makeFixture()
     try {
