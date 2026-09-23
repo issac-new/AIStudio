@@ -140,7 +140,7 @@
    - REL-DELIVER：商户接入文档 docs/delivery/merchant-onboarding-v1.0.0-cashier.md 入仓（715e362）
    - 三卡已置 done（t_66e5033b / t_e35704d9 / t_16abea25）
    - **坑**：置 done 不能走 PATCH status（completion 需 evidence，500），正确用法 `POST /api/hermes/kanban/complete {task_ids, summary}`。
-2. ~~15 项产品问题单待排期修复（room-invite-gap 与 IDE 任务简报/跳转优先级最高）~~ **已全部闭环（09-23 收口轮终态，见 §五-b/§五-c）**：14 修复/条款 + host-gateway-ownership 判读根因已修（patch 373）。另行立项的三个产品化项已各出设计文档（09-23 收口轮第四轮）：gateway 多 profile 托管（`2026-09-23-gateway-multiplex-design.md`，port-per-profile 实锤 + multiplex 未来态 + harness 门闸 AIPAY_GATEWAY_HOST_POLICY 已落地）、LLM 双通道备份路由（`2026-09-23-llm-dual-channel-failover-design.md`，上游能力契约）、每-agent 独立 node_modules store（`2026-09-23-per-agent-node-modules-design.md`，install-deps.sh 入口收敛 + 守门门禁）。
+2. ~~15 项产品问题单待排期修复（room-invite-gap 与 IDE 任务简报/跳转优先级最高）~~ **已全部闭环（09-23 收口轮终态，见 §五-b/§五-c）**：14 修复/条款 + host-gateway-ownership 判读根因已修（patch 373）。三个产品化项已按 **overlay 自家域**收口并各出文档（09-23 收口轮第四轮；multiplex/双通道为上游能力，本文不承诺上游排期）：gateway 多 profile 共存 overlay 终态（`2026-09-23-gateway-multiplex-design.md`，port-per-profile + patch 373 判读 + harness 门闸 AIPAY_GATEWAY_HOST_POLICY 已落地）、LLM 通道韧性 overlay 终态（`2026-09-23-llm-dual-channel-failover-design.md`，编排层可见性+fail-fast，通道切换实现归上游）、每-agent node_modules store（`2026-09-23-per-agent-node-modules-design.md`，aipaydev 仓 `scripts/install-deps.sh` 已落地：私有 store 哈希寻址+symlink 注入+守门自检，实测 4 包安装+52/52 绿，已推 aipaydev origin main `154b2b8`）。
 3. ~~defect 窗轮询逻辑（Q12）与 kanban-api-hang 待修复后重推演验证~~ Q12 已修（19d37ca sender 限源 + 44c15a2 since 时间过滤）；kanban-api-hang 已修（patch 369）。下一轮推演可直接复跑验证。
 4. 推演产物归档：SIM_ROOT=/Volumes/nvme2230/lab/ncwk-sim-aipay（evidence/ 含 11 板 kanban 快照、房间全量消息、issues.log、场景日志）。
 
