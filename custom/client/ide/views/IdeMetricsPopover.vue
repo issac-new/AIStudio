@@ -267,7 +267,7 @@ watch(
         </span>
       </div>
       <div v-if="heatState === 'loading'" class="ide-metrics-panel__state">…</div>
-      <div v-else-if="heatState === 'error'" class="ide-metrics-panel__state">{{ t('ide.usagePanel.heatmapEmpty') }}</div>
+      <div v-else-if="heatState === 'error'" class="ide-metrics-panel__state">{{ t('ide.usagePanel.heatmapLoadFailed') }}</div>
       <div v-else-if="heatState === 'empty'" class="ide-metrics-panel__state">{{ t('ide.usagePanel.heatmapEmpty') }}</div>
       <div v-else class="ide-metrics-panel__heat" data-testid="ide-metrics-heatmap">
         <span

@@ -57,6 +57,9 @@ export class WorktreeManager {
         await execFileAsync('git', ['-C', opts.repoRoot ?? process.cwd(), 'worktree', 'remove', '--force', wtPath], { windowsHide: true })
       } catch {
         await fs.rm(wtPath, { recursive: true, force: true })
+        // rm 兜底后 .git/worktrees/<name> 的注册残留会让后续同名 add 报
+        // "already registered"——prune 清掉死注册
+        await execFileAsync('git', ['-C', opts.repoRoot ?? process.cwd(), 'worktree', 'prune'], { windowsHide: true }).catch(() => { /* 非仓库等场景忽略 */ })
       }
     }
   }

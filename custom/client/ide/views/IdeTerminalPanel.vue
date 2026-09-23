@@ -321,7 +321,9 @@ defineExpose({ writeCommand })
         <button
           type="button"
           class="ide-terminal__action"
-          @click="ide.layout.terminalOpen = false"
+          :title="t('ide.terminalCloseTab')"
+          data-testid="ide-terminal-close"
+          @click="ide.toggleSidePane()"
         >✕</button>
       </div>
       <div ref="terminalRef" class="ide-terminal__body" />

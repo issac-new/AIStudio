@@ -6,11 +6,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick, reactive } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import { digestRunChanges } from '../api/runs'
 import { buildReviewPrompt } from '../utils/reviewPrompt'
-import type { WorkspaceRunChangeFileSummary } from '@/api/studio/sessions'
+import type { WorkspaceRunChangeSummary } from '@/api/studio/sessions'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k) }) }))
 
@@ -29,23 +29,9 @@ vi.mock('@/stores/hermes/chat', () => {
 })
 
 vi.mock('@/api/studio/sessions', () => ({
-  fetchWorkspaceRunChangesForSession: vi.fn(async () => [
-    {
-      id: 1, change_id: 'run-1', session_id: 's1', path: '/w/a.ts', old_path: null,
-      change_type: 'modified', additions: 12, deletions: 3, size_before: 100, size_after: 109,
-      patch_bytes: 200, truncated: false, binary: false, created_at: 1_700_000_000_000,
-    },
-    {
-      id: 2, change_id: 'run-1', session_id: 's1', path: '/w/b.ts', old_path: null,
-      change_type: 'added', additions: 40, deletions: 0, size_before: null, size_after: 400,
-      patch_bytes: 400, truncated: false, binary: false, created_at: 1_700_000_000_100,
-    },
-    {
-      id: 3, change_id: 'run-2', session_id: 's1', path: '/w/c.md', old_path: null,
-      change_type: 'added', additions: 5, deletions: 0, size_before: null, size_after: 50,
-      patch_bytes: 60, truncated: false, binary: false, created_at: 1_700_000_100_000,
-    },
-  ] satisfies WorkspaceRunChangeFileSummary[]),
+  // 契约守卫：mock 必须是 upstream 真实形态——按 run 聚合的 summary（自带
+  // files_changed/additions/deletions 与 files 子数组），不是扁平文件行。
+  fetchWorkspaceRunChangesForSession: vi.fn(async () => seedSummaries()),
 }))
 
 vi.mock('../store/ide', () => ({
@@ -54,29 +40,47 @@ vi.mock('../store/ide', () => ({
 
 import { useChatStore } from '@/stores/hermes/chat'
 
-function seedRunChanges(): WorkspaceRunChangeFileSummary[] {
+function seedSummaries(): WorkspaceRunChangeSummary[] {
   return [
     {
-      id: 1, change_id: 'run-1', session_id: 's1', path: '/w/a.ts', old_path: null,
-      change_type: 'modified', additions: 12, deletions: 3, size_before: 100, size_after: 109,
-      patch_bytes: 200, truncated: false, binary: false, created_at: 1_700_000_000_000,
+      change_id: 'chg-1', session_id: 's1', run_id: 'run-1', source: 'run',
+      workspace: '/w', workspace_kind: 'git',
+      started_at: 1_700_000_000_000, finished_at: 1_700_000_050_000,
+      files_changed: 2, additions: 52, deletions: 3,
+      truncated: false, total_patch_bytes: 600, created_at: 1_700_000_050_000,
+      files: [
+        {
+          id: 1, change_id: 'chg-1', session_id: 's1', path: '/w/a.ts', old_path: null,
+          change_type: 'modified', additions: 12, deletions: 3, size_before: 100, size_after: 109,
+          patch_bytes: 200, truncated: false, binary: false, created_at: 1_700_000_000_000,
+        },
+        {
+          id: 2, change_id: 'chg-1', session_id: 's1', path: '/w/b.ts', old_path: null,
+          change_type: 'added', additions: 40, deletions: 0, size_before: null, size_after: 400,
+          patch_bytes: 400, truncated: false, binary: false, created_at: 1_700_000_000_100,
+        },
+      ],
     },
     {
-      id: 2, change_id: 'run-1', session_id: 's1', path: '/w/b.ts', old_path: null,
-      change_type: 'added', additions: 40, deletions: 0, size_before: null, size_after: 400,
-      patch_bytes: 400, truncated: false, binary: false, created_at: 1_700_000_000_100,
-    },
-    {
-      id: 3, change_id: 'run-2', session_id: 's1', path: '/w/c.md', old_path: null,
-      change_type: 'added', additions: 5, deletions: 0, size_before: null, size_after: 50,
-      patch_bytes: 60, truncated: false, binary: false, created_at: 1_700_000_100_000,
+      change_id: 'chg-2', session_id: 's1', run_id: 'run-2', source: 'run',
+      workspace: '/w', workspace_kind: 'git',
+      started_at: 1_700_000_100_000, finished_at: 1_700_000_150_000,
+      files_changed: 1, additions: 5, deletions: 0,
+      truncated: false, total_patch_bytes: 60, created_at: 1_700_000_150_000,
+      files: [
+        {
+          id: 3, change_id: 'chg-2', session_id: 's1', path: '/w/c.md', old_path: null,
+          change_type: 'added', additions: 5, deletions: 0, size_before: null, size_after: 50,
+          patch_bytes: 60, truncated: false, binary: false, created_at: 1_700_000_100_000,
+        },
+      ],
     },
   ]
 }
 
-describe('轮变更 digest 聚合（dsh per-turn changed-files 语义）', () => {
-  it('按 run_id 聚合：run-1 两文件 +52/-3，run-2 单文件 +5；新→旧排序', () => {
-    const digests = digestRunChanges(seedRunChanges())
+describe('轮变更 digest 聚合（upstream 按 run 聚合 summary 契约）', () => {
+  it('run-1 两文件 +52/-3，run-2 单文件 +5；按 finished_at 新→旧排序', () => {
+    const digests = digestRunChanges(seedSummaries())
     expect(digests).toHaveLength(2)
     expect(digests[0].runId).toBe('run-2')
     expect(digests[1].runId).toBe('run-1')
@@ -86,9 +90,19 @@ describe('轮变更 digest 聚合（dsh per-turn changed-files 语义）', () =>
     expect(digests[1].files.map((f) => f.path)).toEqual(['/w/a.ts', '/w/b.ts'])
   })
 
-  it('空输入 → 空数组；缺 change_id 归 unknown 桶', () => {
+  it('数字后缀 run id 按时间排序不字典序错位（run-10 新于 run-9 时排前）', () => {
+    const base = seedSummaries()
+    const digests = digestRunChanges([
+      { ...base[0], run_id: 'run-9', finished_at: 1_700_000_050_000 },
+      { ...base[1], run_id: 'run-10', finished_at: 1_700_000_950_000 },
+    ])
+    expect(digests[0].runId).toBe('run-10')
+    expect(digests[1].runId).toBe('run-9')
+  })
+
+  it('空输入 → 空数组；缺 run_id/change_id 归 unknown 桶', () => {
     expect(digestRunChanges([])).toEqual([])
-    const rows = seedRunChanges().map((r) => ({ ...r, change_id: '' }))
+    const rows = seedSummaries().map((r) => ({ ...r, run_id: '', change_id: '' }))
     expect(digestRunChanges(rows)[0].runId).toBe('unknown')
   })
 })
@@ -166,6 +180,36 @@ describe('IdeRunResultCard 接线（codex-product 任务结果卡语义）', () 
     await flushJobs()
     expect(w.find('[data-testid="ide-run-result"]')).toBeTruthy()
   })
+
+  it('切换会话即重载：卡片不残留上一会话的变更行', async () => {
+    const fake = fakeStore()
+    fake.sessions = [
+      { id: 's1', updatedAt: 1_700_000_050_000, messages: [] },
+      { id: 's2', updatedAt: 1_700_000_060_000, messages: [] },
+    ]
+    fake.activeSessionId = 's1'
+    fake.runStartedAt.set('s1', 1_700_000_000_000)
+    // 显式重建 mock：上一用例 mockRejectedValueOnce 的 once 队列可能未被消费
+    // （watcher 在 mock 入队前已跑完），泄漏到本用例会让首个 fetch 意外 reject。
+    // 按会话参数化而非 once 队列：前序用例未 unmount 的组件实例也持有
+    // activeSessionId watcher，once 值会被谁消费取决于 watcher 注册顺序。
+    const { fetchWorkspaceRunChangesForSession } = await import('@/api/studio/sessions')
+    const fetchMock = vi.mocked(fetchWorkspaceRunChangesForSession)
+    fetchMock.mockReset()
+    fetchMock.mockImplementation(async (sid: string) => (sid === 's1' ? seedSummaries() : []))
+    const { default: IdeRunResultCard } = await import('../views/IdeRunResultCard.vue')
+    const w = mount(IdeRunResultCard)
+    await flushJobs()
+    expect(w.findAll('[data-testid="ide-run-result-runs"] li').length).toBe(2)
+
+    // 切到 s2：fetch 返回空（无变更），旧会话的 run 行不得残留
+    fake.activeSessionId = 's2'
+    fake.runStartedAt.set('s2', 1_700_000_010_000)
+    await flushJobs()
+    expect(w.findAll('[data-testid="ide-run-result-runs"] li').length).toBe(0)
+    // 且对新会话发起的是新请求
+    expect(fetchMock).toHaveBeenCalledWith('s2')
+  })
 })
 
 describe('patch 344 漂移守卫', () => {
@@ -180,7 +224,12 @@ describe('patch 344 漂移守卫', () => {
     expect(patch).toContain('locales/en.ts')
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('344-client-i18n-ide-r3.patch')
-    const manifest = JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
-    expect(manifest.appliedPatches).toContain('344-client-i18n-ide-r3.patch')
+    // manifest 只存在于执行过 npm run inject 的检出（主 overlay 根）；
+    // worktree/CI 检出无注入态时跳过该项，series 守卫已保下限
+    const manifestPath = resolve(overlayRoot, '.overlay-injected.json')
+    if (existsSync(manifestPath)) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+      expect(manifest.appliedPatches).toContain('344-client-i18n-ide-r3.patch')
+    }
   })
 })

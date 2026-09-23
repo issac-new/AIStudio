@@ -67,7 +67,7 @@ onMounted(load)
           <span class="ide-storage__name">{{ t(`ide.storage.cat_${cat.key}`) }}</span>
           <span class="ide-storage__size" :data-testid="`ide-storage-size-${cat.key}`">{{ cat.exists ? formatBytes(cat.bytes) : '—' }}</span>
         </div>
-        <div class="ide-storage__row-sub">{{ cat.hint }} · {{ cat.path }}</div>
+        <div class="ide-storage__row-sub">{{ cat.path }}</div>
         <div class="ide-storage__row-actions">
           <button v-if="cat.exists" type="button" class="ide-storage__btn" :data-testid="`ide-storage-reveal-${cat.key}`" @click="reveal(cat)">{{ t('ide.storage.reveal') }}</button>
           <button
