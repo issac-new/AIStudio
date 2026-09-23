@@ -1,0 +1,3 @@
+# zcode patch series (受管 fork,路由全部进 upstream/zcode)
+# 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
+001-server-cli-yazl-external.patch
