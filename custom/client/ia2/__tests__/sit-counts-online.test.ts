@@ -6,9 +6,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
-const { fleetSessionsRef, accountsRef } = vi.hoisted(() => ({
+const { fleetSessionsRef, accountsRef, kanbanTasksRef, matrixRoomsRef, joinedMembersRef } = vi.hoisted(() => ({
   fleetSessionsRef: { value: [] as Array<{ profile: string }> },
   accountsRef: { value: [] as Array<{ agentTeams?: Array<{ profiles: string[] }> }> },
+  kanbanTasksRef: { value: [] as Array<{ status: string; assignee?: string | null }> },
+  matrixRoomsRef: { value: [] as Array<{ roomId: string }> },
+  joinedMembersRef: { value: [] as Array<{ userId: string; presence: string }> },
 }))
 
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
@@ -22,11 +25,24 @@ vi.mock('@/custom/loop/api/loop-rest', () => ({
 }))
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ sessions: [] }) }))
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
-  useMatrixRoomStore: () => ({ sortedRooms: [] }),
+  useMatrixRoomStore: () => ({ sortedRooms: matrixRoomsRef.value }),
 }))
 vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => ({ rooms: [] }) }))
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: () => ({ loops: [] }) }))
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: () => ({ runs: [] }) }))
+vi.mock('@/stores/hermes/kanban', () => ({
+  useKanbanStore: () => ({ tasks: kanbanTasksRef.value }),
+}))
+vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
+  useMatrixClientStore: () => ({
+    client: {
+      getRoom: (roomId: string) => {
+        if (!matrixRoomsRef.value.some(r => r.roomId === roomId)) return null
+        return { getJoinedMembers: () => joinedMembersRef.value }
+      },
+    },
+  }),
+}))
 vi.mock('../store/workspace', () => ({
   useWorkspaceStore: () => ({ tasks: [], boards: [] }),
 }))
@@ -37,6 +53,9 @@ beforeEach(() => {
   setActivePinia(createPinia())
   fleetSessionsRef.value = []
   accountsRef.value = []
+  kanbanTasksRef.value = []
+  matrixRoomsRef.value = []
+  joinedMembersRef.value = []
 })
 
 describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
@@ -65,5 +84,34 @@ describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
   it('两者皆空保持 0（无实例在线是真实状态）', () => {
     const { online } = useSitCounts()
     expect(online.value).toEqual({ people: 0, agents: 0, machines: 0 })
+  })
+
+  it('动态探测：Matrix presence 在线账号计入 people（2026-09-23 用户裁决）', () => {
+    matrixRoomsRef.value = [{ roomId: '!room1:localhost' }]
+    joinedMembersRef.value = [
+      { userId: '@alice:localhost', presence: 'online' },
+      { userId: '@bob:localhost', presence: 'online' },
+      { userId: '@carol:localhost', presence: 'offline' },
+    ]
+    const { online } = useSitCounts()
+    expect(online.value.people).toBe(2)
+  })
+
+  it('动态探测：看板 running 任务 assignee 去重计入 agents（覆盖 gateway 跑任务非 studio 会话）', () => {
+    kanbanTasksRef.value = [
+      { status: 'running', assignee: 'chen' },
+      { status: 'running', assignee: 'xiao' },
+      { status: 'running', assignee: 'chen' },
+      { status: 'todo', assignee: 'qi' },
+    ]
+    const { online } = useSitCounts()
+    expect(online.value.agents).toBe(2)
+  })
+
+  it('动态探测与 fleet 兜底取大（agents 口径）', () => {
+    fleetSessionsRef.value = [{ profile: 'a' }, { profile: 'b' }, { profile: 'c' }]
+    kanbanTasksRef.value = [{ status: 'running', assignee: 'x' }]
+    const { online } = useSitCounts()
+    expect(online.value.agents).toBe(3)
   })
 })
