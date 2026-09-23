@@ -15,8 +15,8 @@ export interface IdeAgentOption {
   version: string
 }
 
-/** 展示顺序：codex 置顶（用户指定的底座），其余按 upstream 返回序 */
-const ORDER: CodingAgentId[] = ['codex', 'claude-code', 'dsh', 'pi', 'grok', 'opencode']
+/** 展示顺序：zcode 置顶（2026-09-23 源码底座切换），其余按 upstream 返回序 */
+const ORDER: CodingAgentId[] = ['zcode', 'codex', 'claude-code', 'dsh', 'pi', 'grok', 'opencode']
 
 /** 纯函数：工具状态列表 → IDE 选项（codex 优先，含未安装项以便展示状态） */
 export function toAgentOptions(tools: CodingAgentToolStatus[]): IdeAgentOption[] {

@@ -1,0 +1,708 @@
+diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
+index 2df868b6..5b0a0fd3 100644
+--- a/packages/server/src/modules/coding-agents/services/index.ts
++++ b/packages/server/src/modules/coding-agents/services/index.ts
+@@ -27,6 +27,7 @@ import { codingAgentRunManager } from './runtime/run-manager'
+ import { mergePiSettings, userSettingsProvidesPiMcpAdapter } from './pi/settings'
+ import { PI_EXTENDED_THINKING_LEVEL_MAP, piModelSupportsThinking } from './pi/thinking'
+ import { GROK_API_KEY_ENV, GROK_CODING_AGENT_DEFINITION, GROK_PROVIDER_ID } from './grok/definition'
++import { ZCODE_CODING_AGENT_DEFINITION, resolveZcodeCliEntry } from './zcode/definition'
+ import { getDisabledManagedMcpServers, getManagedMcpServerOverride } from './mcp-overrides'
+ import {
+   grokSettingsConfig,
+@@ -392,9 +393,11 @@ const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
+     command: 'dsh',
+     packageName: '@deepseek-ai/dsh',
+   },
++  ZCODE_CODING_AGENT_DEFINITION,
+ ]
+ 
+ const CONFIG_FILE_DEFINITIONS: Record<CodingAgentId, Array<Omit<CodingAgentConfigFileDefinition, 'absolutePath'> & { scopedPath: string }>> = {
++  zcode: [],
+   'claude-code': [
+     { key: 'settings', path: '~/.claude/settings.json', scopedPath: 'settings.json', language: 'json' },
+     { key: 'mcp', path: '~/.claude/mcp.json', scopedPath: 'mcp.json', language: 'json' },
+@@ -871,12 +874,13 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
+   return session?.provider === 'global' ? 'global' : 'scoped'
+ }
+ 
+-function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' {
++function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
+   if (id === 'codex') return 'codex'
+   if (id === 'pi') return 'pi'
+   if (id === 'grok') return 'grok'
+   if (id === 'dsh') return 'dsh'
+   if (id === 'opencode') return 'opencode'
++  if (id === 'zcode') return 'zcode'
+   return 'claude'
+ }
+ 
+@@ -2808,6 +2812,53 @@ export function getCodingAgentConfigFileDefinitions(id: string): CodingAgentConf
+ }
+ 
+ export async function getCodingAgentStatus(definition: CodingAgentDefinition): Promise<CodingAgentToolStatus> {
++  // overlay[zcode]：无全局 bin，探测对象是构建产物 cjs（node 直跑）。
++  if (definition.id === 'zcode') {
++    const cliEntry = resolveZcodeCliEntry()
++    if (!cliEntry) {
++      const missing: CodingAgentToolStatus = {
++        ...definition,
++        installed: false,
++        version: '',
++        rawVersion: '',
++        source: 'user-cli',
++        path: '',
++        error: 'zcode CLI 构建产物缺失：在 overlay 跑 npm run zcode:ensure',
++      }
++      recordCodingAgentStatus(missing)
++      return missing
++    }
++    try {
++      const { stdout, stderr } = await execFileAsync(process.execPath, [cliEntry, '--version'], {
++        encoding: 'utf-8',
++        timeout: 8000,
++        windowsHide: true,
++      })
++      const rawVersion = `${stdout || ''}${stderr || ''}`.trim()
++      const status: CodingAgentToolStatus = {
++        ...definition,
++        installed: true,
++        version: extractVersion(rawVersion),
++        rawVersion,
++        source: 'user-cli',
++        path: cliEntry,
++      }
++      recordCodingAgentStatus(status)
++      return status
++    } catch (err: any) {
++      const failed: CodingAgentToolStatus = {
++        ...definition,
++        installed: false,
++        version: '',
++        rawVersion: '',
++        source: 'user-cli',
++        path: cliEntry,
++        error: `zcode --version 探测失败: ${err?.message || err}`,
++      }
++      recordCodingAgentStatus(failed)
++      return failed
++    }
++  }
+   let resolvedCommand = ''
+   try {
+     const env = await commandEnv()
+@@ -2967,6 +3018,12 @@ export async function checkUpdateAgent(id: string): Promise<CodingAgentUpdateRes
+ }
+ 
+ export async function installCodingAgent(id: string): Promise<CodingAgentMutationResult> {
++  // overlay[zcode]：安装=构建本仓受管 fork（无 npm 包可装）。
++  if (id === 'zcode') {
++    const err = new Error('zcode 是本仓受管底座（upstream/zcode），不走 npm 安装：在 overlay 跑 npm run zcode:ensure 构建产物')
++    ;(err as any).status = 400
++    throw err
++  }
+   const tool = getCodingAgentDefinition(id)
+   if (!tool) {
+     const err = new Error('Unknown coding agent')
+@@ -3291,6 +3348,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+     let files: Array<{ key: string; path: string; absolutePath: string }> = []
+     let args: string[] = []
+     let env: Record<string, string> = {}
++    let command = tool.command
+ 
+     if (tool.id === 'claude-code') {
+       promptFile = join(rootDir, 'hermes-rules.md')
+@@ -3311,6 +3369,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+         { key: 'config', path: 'config.toml', absolutePath: join(rootDir, 'config.toml') },
+       ]
+       env = { CODEX_HOME: rootDir }
++    } else if (tool.id === 'zcode') {
++      // overlay[zcode] R3：global 模式走 zcode 自身登录/凭据（~/.zcode/v2），
++      // 无影子 home 与托管配置；systemPrompt 经回合 -p 拼装（MVP 不注入）。
++      const cliEntry = resolveZcodeCliEntry()
++      if (!cliEntry) throw new Error('zcode CLI 构建产物缺失：先在 overlay 跑 npm run zcode:ensure')
++      command = process.execPath
++      args = [cliEntry]
+     } else if (tool.id === 'grok') {
+       const prepared = await prepareGlobalGrokRuntime({
+         sourceHome: process.env.GROK_HOME?.trim() || join(getGlobalConfigHome(), '.grok'),
+@@ -3378,7 +3443,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+     const shellCommand = buildLaunchShellCommand({
+       workspaceDir,
+       env,
+-      command: tool.command,
++      command,
+       args,
+     })
+     return {
+@@ -3389,7 +3454,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+       model: '',
+       rootDir,
+       workspaceDir,
+-      command: tool.command,
++      command,
+       args,
+       env,
+       shellCommand,
+@@ -3451,6 +3516,14 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+   let args: string[] = []
+   let env: Record<string, string> = {}
+ 
++  if (tool.id === 'zcode') {
++    // overlay[zcode] R3：scoped（hermes 托管密钥/代理）模式不支持——
++    // zcode 走自身 provider 体系与登录凭据（~/.zcode/v2），仅 global 模式。
++    const err = new Error('ZCode 会话仅支持 global 模式（zcode 自身登录）')
++    ;(err as any).status = 400
++    throw err
++  }
++
+   if (tool.id === 'claude-code') {
+     const proxyTarget = baseUrl && (apiKey || freeRuntime)
+       ? registerClaudeCodeProxyTarget({
+diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+index dddefa95..be38071c 100644
+--- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
++++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+@@ -29,6 +29,9 @@ import { compactCodexThread } from './codex-compact'
+ import { updateManagedPromptFileSync } from '../prompt-file'
+ import { grokSessionExists, startGrokTurnProcess } from '../grok/turn-process'
+ import { applyGrokStreamEvent } from '../grok/event-adapter'
++import { startZcodeTurnProcess } from '../zcode/turn-process'
++import { applyZcodeStreamEvent } from '../zcode/event-adapter'
++import { resolveZcodeCliEntry } from '../zcode/definition'
+ import { isolatedCodingAgentChildEnv } from './child-env'
+ import { NativeTurnUsage, type NativeUsageRow } from './native-usage'
+ import { readCodexTurnModel, readOpenCodeMessageModel } from './native-model'
+@@ -318,24 +321,26 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
+ }
+ 
+ function isPrintAgent(agentId: string): boolean {
+-  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh')
++  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
+ }
+ 
+-function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' {
++function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
+   if (agentId === 'codex') return 'codex'
+   if (agentId === 'pi') return 'pi'
+   if (agentId === 'grok') return 'grok'
+   if (agentId === 'dsh') return 'dsh'
+   if (agentId === 'opencode') return 'opencode'
++  if (agentId === 'zcode') return 'zcode'
+   return 'claude'
+ }
+ 
+-function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' {
++function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
+   if (agentId === 'codex') return 'codex'
+   if (agentId === 'pi') return 'pi'
+   if (agentId === 'grok') return 'grok'
+   if (agentId === 'dsh') return 'dsh'
+   if (agentId === 'opencode') return 'opencode'
++  if (agentId === 'zcode') return 'zcode'
+   return 'claude_code'
+ }
+ 
+@@ -497,6 +502,7 @@ function codingAgentDisplayName(agentId: string): string {
+   if (agentId === 'grok') return 'Grok'
+   if (agentId === 'opencode') return 'OpenCode'
+   if (agentId === 'dsh') return 'DeepSeek Harness'
++  if (agentId === 'zcode') return 'ZCode'
+   return 'Claude Code'
+ }
+ 
+@@ -748,6 +754,8 @@ export class CodingAgentRunManager {
+               ? 'OpenCode'
+             : launch.agentId === 'dsh'
+               ? 'DeepSeek Harness'
++            : launch.agentId === 'zcode'
++              ? 'ZCode'
+             : 'Claude Code'
+       this.emitTerminalStatus(run, `${agentName} chat runner ready.`)
+       logger.info({
+@@ -854,6 +862,10 @@ export class CodingAgentRunManager {
+       this.startGrokPrintTurn(run, text, systemPrompt, images)
+       return { runId: run.id, messageId }
+     }
++    if (run.launch.agentId === 'zcode') {
++      this.startZcodeExecTurn(run, text)
++      return { runId: run.id, messageId }
++    }
+     if (run.launch.agentId === 'dsh') {
+       this.startDshTurn(run, text, systemPrompt, images)
+       return { runId: run.id, messageId }
+@@ -2580,6 +2592,115 @@ export class CodingAgentRunManager {
+     }
+   }
+ 
++  // overlay[zcode] R3：zcode 无头 CLI 回合（grok 模式；prompt 经 argv，无 stdin/附件）。
++  private recordZcodeNativeSessionId(run: ManagedCodingAgentRun, nativeSessionId: string) {
++    if (!nativeSessionId) return
++    run.launch.agentNativeSessionId = nativeSessionId
++    run.nativeResumeReady = true
++    try {
++      updateSession(run.launch.sessionId, { agent_native_session_id: nativeSessionId })
++    } catch (err) {
++      logger.warn({ err, runId: run.id, sessionId: run.launch.sessionId }, '[coding-agent-run] failed to persist zcode native session id')
++    }
++  }
++
++  private startZcodeExecTurn(
++    run: ManagedCodingAgentRun,
++    input: string,
++  ) {
++    if (childIsRunning(run.currentChild)) throw new Error('ZCode is still processing the previous input')
++
++    const cliEntry = resolveZcodeCliEntry()
++    if (!cliEntry) throw new Error('zcode CLI 构建产物缺失：先在 overlay 跑 npm run zcode:ensure（或设 ZCODE_CLI_CJS）')
++
++    const responseId = `resp_${Date.now()}`
++    run.printResponseId = responseId
++    run.printMessageId = `msg_${responseId}`
++    run.printTextStarted = false
++    run.printText = ''
++    run.printCompleted = false
++    run.responseStartEmitted = false
++    run.terminalEventHandled = false
++    run.codexToolBlocks = new Map()
++    run.codexPendingUsage = undefined
++    run.codexPendingError = undefined
++    run.currentChildStderr = ''
++    run.runMarker = undefined
++    run.memoryExportStarted = false
++
++    this.handleClaudePrintResponseEvent(run, {
++      type: 'response.created',
++      data: {
++        type: 'response.created',
++        response: { id: responseId, object: 'response', status: 'in_progress', model: run.launch.model, output: [] },
++      },
++    })
++
++    const workspaceDir = existsSync(run.launch.workspaceDir) ? run.launch.workspaceDir : homedir()
++    const nativeSessionId = String(run.launch.agentNativeSessionId || '')
++    const child = startZcodeTurnProcess({
++      cliEntry,
++      workspaceDir,
++      env: run.launch.mode === 'global'
++        ? { ...process.env, ...(run.launch.env || {}) }
++        : isolatedCodingAgentChildEnv(run.launch.env),
++      nativeSessionId,
++      resume: run.nativeResumeReady === true,
++      input,
++      onEvent: (event) => {
++        this.touch(run)
++        applyZcodeStreamEvent(event, {
++          text: value => this.appendCodexText(run, value),
++          thought: value => this.appendCodexReasoning(run, value),
++          toolStarted: value => this.handleCodexItemStarted(run, {
++            type: 'mcp_tool_call',
++            id: value.id,
++            tool: value.name,
++            arguments: value.input,
++          }),
++          toolCompleted: value => this.handleCodexItemCompleted(run, {
++            type: 'mcp_tool_call',
++            id: value.id,
++            output: value.output,
++            ...(value.failed ? { error: { message: value.output } } : {}),
++          }),
++          usage: value => { run.codexPendingUsage = value },
++          session: sessionId => this.recordZcodeNativeSessionId(run, sessionId),
++          complete: usage => {
++            if (!run.printCompleted) this.completeClaudePrintTurn(run, usage || run.codexPendingUsage)
++          },
++          error: message => {
++            this.failCodexExecTurn(run, message, run.codexPendingUsage)
++          },
++          status: message => this.emitTerminalStatus(run, message),
++        })
++      },
++      onStderr: (chunk) => {
++        this.touch(run)
++        const text = appendChildStderr(run, chunk)
++        if (text) logger.debug({ runId: run.id, sessionId: run.launch.sessionId, text }, '[coding-agent-run] zcode stderr')
++      },
++      onError: (err) => {
++        run.currentChild = undefined
++        logger.warn({ err, runId: run.id, sessionId: run.launch.sessionId }, '[coding-agent-run] zcode failed to start')
++        if (!run.printCompleted) this.failCodexExecTurn(run, childProcessErrorMessage(err, run.launch.agentId))
++      },
++      onClose: (code) => {
++        run.currentChild = undefined
++        logger.info({ runId: run.id, sessionId: run.launch.sessionId, code }, '[coding-agent-run] zcode exited')
++        if (run.stoppedByUser) return
++        if (run.pendingChatCompletionEvent) {
++          void this.emitAndMarkPrintChatRunCompletedAfterUsage(run, run.pendingChatCompletionEvent, run.pendingChatCompletionPayload)
++          return
++        }
++        if (run.printCompleted) return
++        if (code === 0) this.completeClaudePrintTurn(run, run.codexPendingUsage)
++        else this.failCodexExecTurn(run, run.codexPendingError || exitErrorMessage('ZCode', code, run.currentChildStderr), run.codexPendingUsage)
++      },
++    })
++    run.currentChild = child
++  }
++
+   private startOpenCodeTurn(
+     run: ManagedCodingAgentRun,
+     input: string,
+diff --git a/packages/server/src/modules/coding-agents/services/zcode/definition.ts b/packages/server/src/modules/coding-agents/services/zcode/definition.ts
+new file mode 100644
+index 00000000..467c3062
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/zcode/definition.ts
+@@ -0,0 +1,26 @@
++// overlay[zcode] ZCode coding agent definition（受管 fork，见 overlay zcode-patches/）。
++// zcode 是本仓二开底座（specs/2026-09-23-zcode-foundation-design.md）：CLI 入口
++// 是 upstream/zcode 的构建产物 dist/zcode.cjs（node 直跑），无全局 bin——
++// command 固定为 node，cjs 路径在 launch prep 与探测处解析。
++import { existsSync } from 'fs'
++import { resolve } from 'path'
++
++export const ZCODE_CODING_AGENT_DEFINITION = {
++  id: 'zcode',
++  name: 'ZCode',
++  provider: 'ZAI',
++  command: 'node',
++  packageName: 'zcode',
++} as const
++
++/** 解析 zcode CLI 构建产物路径：ZCODE_CLI_CJS env 覆盖 > ncwk/upstream/zcode 相对 cwd。 */
++export function resolveZcodeCliEntry(): string | null {
++  const override = String(process.env.ZCODE_CLI_CJS || '').trim()
++  if (override) return override
++  // server 以 upstream/hermes-studio 为 cwd 启动（serve-server.mjs），
++  // zcode 仓与其同级。cwd 不匹配时返回 null → 探测报未安装（诚实态）。
++  const candidate = resolve(
++    process.cwd(), '../zcode/apps/zcode-cli/packages/cli/dist/zcode.cjs',
++  )
++  return existsSync(candidate) ? candidate : null
++}
+diff --git a/packages/server/src/modules/coding-agents/services/zcode/event-adapter.ts b/packages/server/src/modules/coding-agents/services/zcode/event-adapter.ts
+new file mode 100644
+index 00000000..6b455d13
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/zcode/event-adapter.ts
+@@ -0,0 +1,30 @@
++// overlay[zcode] zcode 引擎事件 → 通用回调面（对齐 grok event-adapter 模式；
++// 回调语义由 run-manager 的 codex 归一化工具消费：text/thought →
++// appendCodexText/appendCodexReasoning，toolStarted/Completed →
++// handleCodexItemStarted/Completed，session → native session 记录）。
++import type { ZcodeStreamEvent } from './streaming-json'
++
++export interface ZcodeEventCallbacks {
++  text: (delta: string) => void
++  thought: (delta: string) => void
++  toolStarted: (value: { id: string; name: string; input: string }) => void
++  toolCompleted: (value: { id: string; output: string; failed: boolean }) => void
++  usage: (usage: import('./streaming-json').ZcodeUsage) => void
++  session: (sessionId: string) => void
++  complete: (usage?: import('./streaming-json').ZcodeUsage) => void
++  error: (message: string) => void
++  status: (message: string) => void
++}
++
++export function applyZcodeStreamEvent(event: ZcodeStreamEvent, cb: ZcodeEventCallbacks): void {
++  switch (event.kind) {
++    case 'text': cb.text(event.delta); return
++    case 'thought': cb.thought(event.delta); return
++    case 'toolStarted': cb.toolStarted({ id: event.id, name: event.name, input: event.input }); return
++    case 'toolCompleted': cb.toolCompleted({ id: event.id, output: event.output, failed: event.failed }); return
++    case 'usage': cb.usage(event.usage); return
++    case 'session': cb.session(event.sessionId); return
++    case 'complete': cb.complete(event.usage); return
++    case 'status': cb.status(event.message); return
++  }
++}
+diff --git a/packages/server/src/modules/coding-agents/services/zcode/streaming-json.ts b/packages/server/src/modules/coding-agents/services/zcode/streaming-json.ts
+new file mode 100644
+index 00000000..a1188a9c
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/zcode/streaming-json.ts
+@@ -0,0 +1,98 @@
++// overlay[zcode] zcode CLI stream-json 行解析（事件信封与 payload 形状来自
++// R1 实证流 ncwk-sim-aipay/evidence/20260923-zcode-r1/headless-stream.jsonl）。
++// 每行一个 JSON：{type, eventId, sessionId, seq, timestamp, payload?}；
++// 终止行为顶层 {type:'result', sessionId, response, usage?, eventCount}，
++// 产出 session + complete 两条事件。
++export interface ZcodeUsage {
++  input_tokens?: number
++  output_tokens?: number
++  total_tokens?: number
++  cache_read_input_tokens?: number
++}
++
++export type ZcodeStreamEvent =
++  | { kind: 'text'; delta: string }
++  | { kind: 'thought'; delta: string }
++  | { kind: 'toolStarted'; id: string; name: string; input: string }
++  | { kind: 'toolCompleted'; id: string; output: string; failed: boolean }
++  | { kind: 'usage'; usage: ZcodeUsage }
++  | { kind: 'session'; sessionId: string }
++  | { kind: 'complete'; usage?: ZcodeUsage; response: string }
++  | { kind: 'status'; message: string }
++
++function mapUsage(raw: any): ZcodeUsage | undefined {
++  if (!raw || typeof raw !== 'object') return undefined
++  const pick = (v: unknown): number | undefined =>
++    typeof v === 'number' && v >= 0 ? v : undefined
++  const usage: ZcodeUsage = {
++    input_tokens: pick(raw.inputTokens ?? raw.input_tokens),
++    output_tokens: pick(raw.outputTokens ?? raw.output_tokens),
++    total_tokens: pick(raw.totalTokens ?? raw.total_tokens),
++    cache_read_input_tokens: pick(raw.cacheReadTokens ?? raw.cache_read_input_tokens),
++  }
++  return usage.total_tokens === undefined && usage.input_tokens === undefined
++    ? undefined
++    : usage
++}
++
++/** 解析一行 stream-json；无事件行返回空数组。 */
++export function parseZcodeStreamLineEvents(line: string): ZcodeStreamEvent[] {
++  const trimmed = line.trim()
++  if (!trimmed) return []
++  let event: any
++  try {
++    event = JSON.parse(trimmed)
++  } catch {
++    return []
++  }
++  if (!event || typeof event !== 'object') return []
++  const type = String(event.type || '').trim()
++
++  if (type === 'result') {
++    const out: ZcodeStreamEvent[] = []
++    const sessionId = String(event.sessionId || '').trim()
++    if (sessionId) out.push({ kind: 'session', sessionId })
++    out.push({ kind: 'complete', usage: mapUsage(event.usage), response: String(event.response || '') })
++    return out
++  }
++
++  const payload = event.payload || {}
++  if (type === 'model.streaming') {
++    const streamKind = String(payload.kind || '')
++    if (streamKind === 'text_delta') return [{ kind: 'text', delta: String(payload.delta || '') }]
++    if (streamKind === 'reasoning_delta') return [{ kind: 'thought', delta: String(payload.delta || '') }]
++    return []
++  }
++  if (type === 'tool.updated') {
++    const toolKind = String(payload.kind || '')
++    const id = String(payload.toolCallId || '').trim()
++    if (toolKind === 'scheduled') {
++      return [{ kind: 'toolStarted', id, name: String(payload.toolName || ''), input: String(payload.input || '') }]
++    }
++    if (toolKind === 'result' || toolKind === 'error') {
++      const resultRaw = payload.result ?? payload.error
++      let output: string
++      if (resultRaw && typeof resultRaw === 'object') {
++        const content = (resultRaw as any).content
++        output = typeof content === 'string' ? content : JSON.stringify(resultRaw)
++      } else {
++        output = String(resultRaw ?? '')
++      }
++      return [{ kind: 'toolCompleted', id, output, failed: toolKind === 'error' }]
++    }
++    return []
++  }
++  if (type === 'turn.completed') {
++    const usage = mapUsage(payload.usage || payload.tokenCount)
++    return usage ? [{ kind: 'usage', usage }] : []
++  }
++  if (type === 'session.created') {
++    const sessionId = String(event.sessionId || '').trim()
++    return sessionId ? [{ kind: 'session', sessionId }] : []
++  }
++  if (type === 'turn.started') {
++    return [{ kind: 'status', message: `turn ${payload.turnNumber ?? ''}`.trim() }]
++  }
++  // session.updated/session.titleUpdated/session.resumed/batch 等：无 UI 语义
++  return []
++}
+diff --git a/packages/server/src/modules/coding-agents/services/zcode/turn-process.ts b/packages/server/src/modules/coding-agents/services/zcode/turn-process.ts
+new file mode 100644
+index 00000000..b8bb27bc
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/zcode/turn-process.ts
+@@ -0,0 +1,55 @@
++// overlay[zcode] zcode 无头 CLI 回合进程：spawn node <cjs> -p … --output-format
++// stream-json（prompt 走 argv，非 stdin——与 codex exec 的 `-` 位置参数不同）。
++// 每回合一个进程；resume 用 --resume <sessionId>（sessionId 来自 result 行）。
++import { spawn, type ChildProcess } from 'child_process'
++import { parseZcodeStreamLineEvents, type ZcodeStreamEvent, type ZcodeUsage } from './streaming-json'
++
++export interface ZcodeTurnProcessInput {
++  cliEntry: string
++  workspaceDir: string
++  env: NodeJS.ProcessEnv
++  nativeSessionId: string
++  resume: boolean
++  input: string
++  onEvent: (event: ZcodeStreamEvent) => void
++  onStderr: (chunk: Buffer) => void
++  onError: (error: Error) => void
++  onClose: (code: number | null) => void
++}
++
++export function buildZcodeTurnArgs(input: ZcodeTurnProcessInput): string[] {
++  return [
++    input.cliEntry,
++    '--output-format', 'stream-json',
++    '--cwd', input.workspaceDir,
++    ...(input.nativeSessionId && input.resume ? ['--resume', input.nativeSessionId] : []),
++    '-p', input.input,
++  ]
++}
++
++export function startZcodeTurnProcess(input: ZcodeTurnProcessInput): ChildProcess {
++  const child = spawn(process.execPath, buildZcodeTurnArgs(input), {
++    cwd: input.workspaceDir,
++    env: input.env,
++    stdio: ['ignore', 'pipe', 'pipe'],
++    windowsHide: true,
++  })
++  let stdoutBuffer = ''
++  child.stdout?.on('data', (chunk: Buffer) => {
++    stdoutBuffer += chunk.toString('utf8')
++    const lines = stdoutBuffer.split(/\r?\n/)
++    stdoutBuffer = lines.pop() || ''
++    for (const line of lines) {
++      for (const event of parseZcodeStreamLineEvents(line)) input.onEvent(event)
++    }
++  })
++  child.stderr?.on('data', input.onStderr)
++  child.on('error', (error) => input.onError(error))
++  child.on('close', (code) => {
++    for (const event of parseZcodeStreamLineEvents(stdoutBuffer)) input.onEvent(event)
++    input.onClose(code)
++  })
++  return child
++}
++
++export type { ZcodeUsage }
+diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/packages/server/src/modules/studio/contracts/agents/runtime.ts
+index 6ca68193..f185b3d5 100644
+--- a/packages/server/src/modules/studio/contracts/agents/runtime.ts
++++ b/packages/server/src/modules/studio/contracts/agents/runtime.ts
+@@ -1,9 +1,9 @@
+ import type { AgentFamily } from './family'
+ 
+-export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh'] as const
++export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'zcode'] as const
+ 
+ export type AgentRuntime = typeof AGENT_RUNTIMES[number]
+-export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'>
++export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'>
+ 
+ const AGENT_RUNTIME_SET = new Set<string>(AGENT_RUNTIMES)
+ 
+@@ -16,6 +16,7 @@ const RUNTIME_FAMILIES: Record<AgentRuntime, AgentFamily> = {
+   grok: 'coding',
+   opencode: 'coding',
+   dsh: 'coding',
++  zcode: 'coding',
+ }
+ 
+ export function isAgentRuntime(value: unknown): value is AgentRuntime {
+diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/packages/server/src/modules/studio/contracts/runs/session.ts
+index 459cfa6d..0b384f3b 100644
+--- a/packages/server/src/modules/studio/contracts/runs/session.ts
++++ b/packages/server/src/modules/studio/contracts/runs/session.ts
+@@ -209,7 +209,7 @@ export interface BridgeContextState {
+ }
+ 
+ export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'global_agent' | 'workflow' | 'group_chat'
+-export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko-agent'
++export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko-agent'
+ 
+ export interface BridgeCompressionResult {
+   messages: ChatMessage[]
+diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
+index 71679895..b359e24c 100644
+--- a/packages/server/src/modules/studio/public/agent-status-registry.ts
++++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
+@@ -1,4 +1,4 @@
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
+ 
+ export type AgentStatusSource =
+   | 'managed-runtime'
+@@ -46,7 +46,7 @@ export interface AgentAvailabilitySnapshot {
+   agents: AgentAvailabilityRecord[]
+ }
+ 
+-const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh']
++const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'zcode']
+ 
+ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+   hermes: {
+@@ -61,6 +61,19 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+     error: '',
+     installations: [],
+   },
++  zcode: {
++    id: 'zcode',
++    name: 'ZCode',
++    provider: 'ZAI',
++    kind: 'coding-agent',
++    installed: false,
++    version: '',
++    source: 'not-installed',
++    path: '',
++    error: '',
++    installations: [],
++  },
++
+   'ekko-agent': {
+     id: 'ekko-agent',
+     name: 'Ekko',
+diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b/packages/server/src/modules/studio/services/agent-availability.ts
+index d585bdc0..46b6437f 100644
+--- a/packages/server/src/modules/studio/services/agent-availability.ts
++++ b/packages/server/src/modules/studio/services/agent-availability.ts
+@@ -25,6 +25,7 @@ const AGENT_NAMES: Record<AgentStatusId, string> = {
+   grok: 'Grok',
+   opencode: 'OpenCode',
+   dsh: 'DeepSeek Harness',
++  zcode: 'ZCode',
+ }
+ 
+ export const AGENT_NOT_INSTALLED = 'AGENT_NOT_INSTALLED'
+diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
+index 1384c4a8..7be73ffe 100644
+--- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
++++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
+@@ -13,7 +13,7 @@ export interface RecordSessionUsageInput {
+   sessionId: string
+   runId?: string | null
+   source: 'hermes' | 'coding_agent' | 'ekko_agent'
+-  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko_agent'
++  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko_agent'
+   profile?: string | null
+   model?: string | null
+   provider?: string | null
+diff --git a/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts b/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
+index a517df81..9f45a694 100644
+--- a/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
++++ b/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
+@@ -163,7 +163,7 @@ export async function handleCodingAgentRun(
+   try {
+     const codingInput = convertContentBlocksForCodingAgent(data.input)
+     await writeModelRunProfileToken(socketUser, profile)
+-    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh')
++    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
+     const runPrompt = [
+       groupSystemPrompt
+         ? [groupSystemPrompt, studioMcpUsageGuidelines(mcpCapabilities)].filter(Boolean).join('\n\n')
+diff --git a/packages/server/src/modules/studio/services/chat-run/types.ts b/packages/server/src/modules/studio/services/chat-run/types.ts
+index ac6f5878..1e848de4 100644
+--- a/packages/server/src/modules/studio/services/chat-run/types.ts
++++ b/packages/server/src/modules/studio/services/chat-run/types.ts
+@@ -3,6 +3,6 @@ export * from '../../contracts/runs/session'
+ 
+ export function codingAgentId(data: { coding_agent_id?: ChatCodingAgentId; agent_id?: ChatCodingAgentId }): Exclude<ChatCodingAgentId, 'ekko-agent'> {
+   const value = data.coding_agent_id || data.agent_id || 'claude-code'
+-  if (value === 'codex' || value === 'pi' || value === 'grok' || (value === 'opencode' || value === 'dsh')) return value
++  if (value === 'codex' || value === 'pi' || value === 'grok' || (value === 'opencode' || value === 'dsh') || value === 'zcode') return value
+   return 'claude-code'
+ }

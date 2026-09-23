@@ -1,14 +1,14 @@
 // overlay/custom/client/ide/__tests__/ide-store.test.ts
-// ide store 纯逻辑守门：默认值（codex 底座）、持久化往返、agent 映射。
+// ide store 纯逻辑守门：默认值（zcode 底座——2026-09-23 切换）、持久化往返、agent 映射。
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useIdeStore, ideAgentToChatAgent, DEFAULT_IDE_AGENT } from '../store/ide'
 
 describe('ideAgentToChatAgent（coding agent → chat agent 映射）', () => {
-  it('codex 默认底座映射正确（ChatPanel 新建会话配方抄送）', () => {
-    expect(DEFAULT_IDE_AGENT).toBe('codex')
-    expect(ideAgentToChatAgent('codex')).toBe('codex')
+  it('zcode 默认底座映射正确（ChatPanel 新建会话配方抄送）', () => {
+    expect(DEFAULT_IDE_AGENT).toBe('zcode')
+    expect(ideAgentToChatAgent('zcode')).toBe('zcode')
     expect(ideAgentToChatAgent('claude-code')).toBe('claude')
     expect(ideAgentToChatAgent('dsh')).toBe('dsh')
     expect(ideAgentToChatAgent('pi')).toBe('pi')
@@ -23,10 +23,10 @@ describe('ide store（workspace/agent/布局持久化）', () => {
     setActivePinia(createPinia())
   })
 
-  it('默认：workspace 空、agent=codex、三列布局默认值', () => {
+  it('默认：workspace 空、agent=zcode、三列布局默认值', () => {
     const ide = useIdeStore()
     expect(ide.workspace).toBeNull()
-    expect(ide.agentId).toBe('codex')
+    expect(ide.agentId).toBe('zcode')
     // v12.4 栏控语义：三列各有 folded/maximized；visible 族布尔已随死开关清理退役
     expect(ide.layout).toMatchObject({
       terminalHeight: 240,

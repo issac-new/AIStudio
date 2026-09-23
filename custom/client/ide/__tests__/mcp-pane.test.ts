@@ -42,9 +42,9 @@ import IdeMcpPane from '../views/IdeMcpPane.vue'
 
 describe('提示词资产（kimi mcp-config.md 对应物）', () => {
   it('注入底座身份，且四条编辑纪律在文内', () => {
-    const prompt = buildMcpConfigPrompt({ agentId: 'codex' })
+    const prompt = buildMcpConfigPrompt({ agentId: 'zcode' })
     expect(prompt).toContain('[mcp-config 对话式配置]')
-    expect(prompt).toContain('底座：codex')
+    expect(prompt).toContain('底座：zcode')
     // 解析失败即停（kimi：broken JSON aborts）
     expect(prompt).toContain('解析失败')
     expect(prompt).toContain('停止')
@@ -58,9 +58,9 @@ describe('提示词资产（kimi mcp-config.md 对应物）', () => {
     expect(prompt).toContain('/hermes/mcp')
   })
 
-  it('底座名进默认目标行，空底座回落 codex', () => {
+  it('底座名进默认目标行，空底座回落 zcode', () => {
     expect(buildMcpConfigPrompt({ agentId: 'dsh' })).toContain('~/.dsh/')
-    expect(buildMcpConfigPrompt({ agentId: '' })).toContain('底座：codex')
+    expect(buildMcpConfigPrompt({ agentId: '' })).toContain('底座：zcode')
   })
 })
 

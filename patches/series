@@ -803,3 +803,5 @@
 375-runtime-semantica-mcp-catalog.patch
 376-client-i18n-missing-keys.patch
 377-client-search-hotkey-cmdf.patch
+378-server-zcode-coding-agent.patch
+379-client-zcode-agent-ui.patch

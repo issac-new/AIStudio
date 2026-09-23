@@ -1,5 +1,5 @@
 // overlay/custom/client/ide/store/ide.ts
-// IDE 工作台页面状态：workspace、agent 底座选择（默认 codex）、布局偏好。
+// IDE 工作台页面状态：workspace、agent 底座选择（默认 zcode——2026-09-23 底座切换，取代 codex）、布局偏好。
 // 纯客户端状态 + localStorage 持久化，不持有服务端数据。
 //
 // workspace 语义：
@@ -20,8 +20,8 @@ const LAYOUT_KEY = 'hermes_ide_layout'
 /** 中栏浮窗键（任务计划/子代理，对标 zcode 浮窗模式） */
 export type IdeFloatKey = 'plan' | 'agents'
 
-/** agent 底座默认值——用户指定的 codex 源码底座 */
-export const DEFAULT_IDE_AGENT: CodingAgentId = 'codex'
+/** agent 底座默认值——zcode 源码底座（2026-09-23 用户裁定切换，原 codex） */
+export const DEFAULT_IDE_AGENT: CodingAgentId = 'zcode'
 
 /**
  * coding agent id → chat store 的 agent 值。
@@ -30,6 +30,8 @@ export const DEFAULT_IDE_AGENT: CodingAgentId = 'codex'
  */
 export function ideAgentToChatAgent(agentId: CodingAgentId): string {
   switch (agentId) {
+    case 'zcode':
+      return 'zcode'
     case 'codex':
       return 'codex'
     case 'claude-code':
