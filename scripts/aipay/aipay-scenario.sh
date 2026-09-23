@@ -256,10 +256,20 @@ if step_reached analysis; then
          fail "步骤 10 未完成：${RFD_ID}-tasklist.md 未入仓，不得继续派发"; }
   # 产物到仓 ≠ 流程走完：还要 agent 自己交回可核验凭证（commit + 看板卡）。
   # 两者任一造假或缺失，本轮按未完成处理，不带可疑前序进入分诊与派发。
-  wait_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在看板）" 600 \
-    verify_done_evidence "${RFD_ID}" \
-    || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 上报 DONE 但凭证缺失或造假（动作可能被输出长度截断丢弃）" >> "$EVID_DIR/issues.log"; \
-         fail "步骤 10 凭证核验未通过，中止本轮"; }
+  if ! wait_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在看板）" 600 \
+      verify_done_evidence "${RFD_ID}"; then
+    # 与步骤 9 同款回灌：只中止不告知，等于把"凭证错了"变成人肉重跑（09-23 实锤：
+    # agent 已建出真卡 t_4bee99f1 却没重报，房间里的 DONE 仍是旧的假卡号，被我方正确拒收，
+    # 但没人告诉它要重报，于是死锁在验收上）。
+    mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
+      "@$(agent_mxid fanfan) 凭证核验未通过：看板里其实已有 ${RFD_ID} 主卡，但你最后上报的 DONE 行里 card 仍是需求编号，不是真实卡 ID。
+      请重新发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID，形如 t_4bee99f1>。
+      只需补这一行，不要重做已完成的分析与登记。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    note "[拒收回灌] 已 @fanfan-agent 要求用真实卡 ID 重报结论行"
+    wait_truth "重报后凭证反向核验" 900 verify_done_evidence "${RFD_ID}" \
+      || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 两轮拒收后凭证仍缺失或造假" >> "$EVID_DIR/issues.log"; \
+           fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
+  fi
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
     wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 1200 bash -c \
