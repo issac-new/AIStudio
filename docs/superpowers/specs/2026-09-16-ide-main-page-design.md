@@ -1,5 +1,7 @@
 # IDE 工作台主页面设计（/ide）
 
+> **[2026-09-23 部分取代]** D4「agent 底座：codex 默认」已被 `specs/2026-09-23-zcode-foundation-design.md` 取代——引擎层改为以 upstream/zcode 源码为底座（用户裁定）。本文其余决策（D1 路由/D2 侧边栏/D3 页面结构/D5 验收）继续有效，UI 复用结论不变。
+
 **主旨**：新建一个 IDE 形态的操作主页面，以 upstream 既有 codex 集成为 agent 底座，全量复用 zcode 对应的会话 UI 能力，并链接全部既有功能页。写给本项目维护者，读后应能理解每个结构决策及其锚点。
 
 **受众与动作**：维护者评审本页结构与 patch 边界；实施按配套 plan `plans/2026-09-16-ide-main-page.md` 执行。
