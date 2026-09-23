@@ -302,7 +302,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
    * 且 initialSyncLimit(20)限制太多。改用 createMessagesRequest 直接拉 /messages,
    * 绕过 SDK 的 timelineSet 过滤(canContain 双重过滤 bug)。
    */
-  function refreshMessages() {
+  function refreshMessages(opts?: { force?: boolean }) {
     if (!activeRoom.value) {
       messageList.value = []
       return
@@ -313,7 +313,9 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
       const sdkTimeline = activeRoom.value.timeline.filter(isTimelineEvent)
       const existingIds = new Set(messageList.value.map(e => e.getId()))
       const newEvents = sdkTimeline.filter(e => !existingIds.has(e.getId()))
-      if (newEvents.length > 0) {
+      if (newEvents.length > 0 || opts?.force) {
+        // force=本地回显收敛（LocalEchoUpdated）：SDK 对同一事件对象原地换
+        // id/status，不替换数组则 v-for key 不重读、「发送中…」行不重挂。
         messageList.value = [...messageList.value, ...newEvents]
       }
       return
@@ -1287,6 +1289,7 @@ function getRoomStore() {
 }
 matrixEventBus.onRoomListChange.value = () => getRoomStore().refreshRoomList()
 matrixEventBus.onTimeline.value = () => getRoomStore().refreshMessages()
+matrixEventBus.onLocalEchoUpdated.value = () => getRoomStore().refreshMessages({ force: true })
 
 // 诊断快捷入口:浏览器控制台输入 __diagMatrix() 对比所有房间
 // 或 __diagMatrix('!bqMs...:matrix.test') 诊断单个房间

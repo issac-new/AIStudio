@@ -12,6 +12,7 @@
 import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DecisionRow } from '../composables/useDecisionRows'
+import { useSitCounts } from '../composables/useSitCounts'
 
 export type SitSegment = 'tasks' | 'online'
 
@@ -236,11 +237,14 @@ function boardOpen(key: string): boolean {
   return autoExpand.value || expandedBoards.value.has(key)
 }
 
-const onlineCount = computed(() => {
-  let n = props.accounts.length + props.machines.length
-  for (const row of onlineTree.value) n += row.boards.length
-  return n
-})
+// 在线计数与态势条 chip 同源同口径（D4 修复）：useSitCounts.online 的
+// 「人+智能体+机器」真值（presence/fleet 动态探测）。旧实现数的是
+// 「账号数+机器数+账号×板关联数」，与顶栏 chip 完全两套口径，弹层出现
+// 「在线 1 · 暂无内容」而 chip 显示「在线 3（1人·1智能体·1机器）」的割裂。
+const sitCounts = useSitCounts()
+const onlineCount = computed(() => sitCounts.online.value.people + sitCounts.online.value.agents + sitCounts.online.value.machines)
+const onlineDetailText = computed(() =>
+  t('ia2.sit.onlineDetail', { p: sitCounts.online.value.people, a: sitCounts.online.value.agents, m: sitCounts.online.value.machines }))
 
 function statusLabel(status: string): string {
   // v12.7：状态词与 tdp/态势条共用 ia2.tdp.status.*（原 ia2.board.status.* 键
@@ -261,6 +265,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <div class="sitp__head">
       <span class="sitp__title">{{ t(titleKey) }}</span>
       <span class="sitp__count">{{ segment === 'tasks' ? tasks.length : onlineCount }}</span>
+      <span v-if="segment === 'online'" class="sitp__count-detail">{{ onlineDetailText }}</span>
       <button type="button" class="sitp__close" data-testid="sit-panel-close" :title="t('ia2.sit.panelClose')" @click="emit('close')">×</button>
     </div>
 
@@ -413,6 +418,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 .sitp__title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
 .sitp__count { font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sitp__count-detail { font-size: 11px; color: var(--text-muted); font-weight: 400; }
 .sitp__close {
   margin-left: auto; border: none; background: none; color: var(--text-muted);
   font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1;
