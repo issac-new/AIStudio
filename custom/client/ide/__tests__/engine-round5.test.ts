@@ -137,6 +137,8 @@ describe('子代理 steer UI 接线（/steer 通道）', () => {
   })
 
   it('idle 子代理渲染 steer 输入；发送注入 /steer @<id> <text>', async () => {
+    // 全量并发（230+ 文件转换队列）下动态 import+mount 超默认 5s（推演收口轮 4 连挂实录）；
+    // 单独跑 <1s 必过。提超时至 15s 吸收并发负载，断言语义不变。
     const { default: IdeSubagentsFloat } = await import('../components/IdeSubagentsFloat.vue')
     const w = mount(IdeSubagentsFloat, {
       global: { stubs: { IdeFloatPanel: { template: '<div><slot /></div>' }, SubagentStreamPanel: { template: '<div />', props: ['agent', 'stream'] } } },
@@ -149,7 +151,7 @@ describe('子代理 steer UI 接线（/steer 通道）', () => {
     await w.find('[data-testid="ide-agent-steer-input"]').setValue('再补个测试')
     await w.find('[data-testid="ide-agent-steer-send"]').trigger('click')
     expect(fakeChat.sendMessage).toHaveBeenCalledWith('/steer @agent-1 再补个测试')
-  })
+  }, 15000)
 })
 
 describe('patch 349 漂移守卫', () => {
