@@ -27,9 +27,32 @@ GH_REPO="issac-new/aipaydev"
 CREDS_DIR="$SIM_ROOT/creds"
 LOGS_DIR="$SIM_ROOT/logs"
 PIDS_DIR="$SIM_ROOT/pids"
-EVID_DIR="$SIM_ROOT/evidence"
+# ── 推演轮次隔离（state / evidence 按 RUN_ID 分家）────────────
+# state.env 缓存了房间 ID、卡片 ID 与每一步的 *_done 闸门；原地复跑会让所有步骤
+# 被判为「已完成」而静默跳过——正是推演要防的"假完成"。新一轮必须给 RUN_ID。
+# V1.0 未启用该机制（RUN_ID 为空 → 沿用 SIM_ROOT 原路径），历史证据因此保持原位。
+RUN_ID="${RUN_ID:-}"
+if [[ -n "$RUN_ID" ]]; then
+  RUN_DIR="$SIM_ROOT/runs/$RUN_ID"
+  mkdir -p "$RUN_DIR/evidence"
+else
+  RUN_DIR="$SIM_ROOT"
+fi
+STATE="$RUN_DIR/state.env"
+EVID_DIR="$RUN_DIR/evidence"
 SKILLS_SRC="$NCWK/overlay/scripts/aipay/skills"
 DIRECTOR_CLONE="$SIM_ROOT/central/aipaydev"
+
+# ── 需求标识（推演轮次参数化）───────────────────────────────
+# 缺省沿用 RFD-001（V1.0 已推演并交付）。新一轮以
+#   RFD_ID=RFD-002 RFD_SLUG=refund-profitshare bash aipay-scenario.sh
+# 驱动；需求文档、tasklist/概设/排期产物名与 integration/<RFD_ID> 集成分支
+# 全部由这两个变量拼出，避免再出现"文案改了新需求、脚本仍跑旧需求"的漂移。
+RFD_ID="${RFD_ID:-RFD-001}"
+RFD_SLUG="${RFD_SLUG:-payment-cashier}"
+RFD_DOC="docs/requirements/${RFD_ID}-${RFD_SLUG}.md"
+_RFD_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RFD_MATERIAL="${RFD_MATERIAL:-$_RFD_SCRIPT_DIR/materials/${RFD_ID}-${RFD_SLUG}.md}"
 
 # 编制（顺序即序号 i=1..12；admin 不起实例）
 USERS=(admin bella fanfan wei mei chen hu lin xiao qi fei arch)
