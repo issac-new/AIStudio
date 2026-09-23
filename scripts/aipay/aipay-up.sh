@@ -10,6 +10,33 @@ source "$SCRIPT_DIR/aipay-lib.sh"
 if (( $# == 0 )); then START=("${INSTANCED_USERS[@]}"); else START=("$@"); fi
 API_KEY=$(api_server_key)
 
+# host 守卫门闸（host-gateway-ownership 收口）：推演多 profile 与宿主 orchestrator
+# 共处一机时，禁止静默抢占宿主 gateway。显式策略三档，缺省 isolated：
+#   isolated    宿主 orchestrator gateway 在线即 fail-fast（不推演、不抢占），
+#               指引错峰或显式降档——推演宁可不开局，也不挤掉真实环境。
+#   allow-force 运维者显式接受抢占语义（host 守卫 --force 路径），只在明确知道
+#               宿主 gateway 可被挤下线时使用。
+#   skip        不做检查（调试用；恢复 patch 373 之前的裸奔行为，不推荐）。
+AIPAY_GATEWAY_HOST_POLICY="${AIPAY_GATEWAY_HOST_POLICY:-isolated}"
+host_gateway_online() { # 宿主 orchestrator gateway（主环境 ~/.hermes 默认 8650）是否在线
+  curl -sf --max-time 2 "http://127.0.0.1:8650/health" >/dev/null 2>&1
+}
+case "$AIPAY_GATEWAY_HOST_POLICY" in
+  isolated)
+    if host_gateway_online; then
+      fail "宿主 orchestrator gateway(:8650) 在线。推演多 profile 共存应错峰或经 host 守卫显式裁决；确认要抢占宿主时设 AIPAY_GATEWAY_HOST_POLICY=allow-force 重跑（会挤下线宿主 gateway）。"
+    fi
+    log "host 守卫门闸：宿主 gateway 离线，按 port-per-profile 隔离布局放行（policy=isolated）"
+    ;;
+  allow-force)
+    log "host 守卫门闸：policy=allow-force——已显式接受抢占宿主 gateway 语义"
+    ;;
+  skip)
+    log "host 守卫门闸：policy=skip——跳过宿主占用检查（不推荐）"
+    ;;
+  *) fail "AIPAY_GATEWAY_HOST_POLICY 取值非法: $AIPAY_GATEWAY_HOST_POLICY（可选 isolated/allow-force/skip）" ;;
+esac
+
 up_one() {
   local u="$1" port gw_port
   port=$(studio_port "$u"); gw_port=$(gateway_port "$u")
