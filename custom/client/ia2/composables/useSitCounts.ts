@@ -12,6 +12,8 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
+import { useKanbanStore } from '@/stores/hermes/kanban'
+import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { buildWaiting, formatWaitAge } from '../adapters/waiting'
 import { buildLoopRows } from '../adapters/flow'
 import { loopRest } from '@/custom/loop/api/loop-rest'
@@ -27,7 +29,26 @@ export function useSitCounts() {
   const matrixRoom = useMatrixRoomStore()
   const groupChat = useGroupChatStore()
   const teamRegistry = useTeamRegistryStore()
+  const kanbanStore = useKanbanStore()
   const now = useNowTick()
+
+  /** aipaydev cockpit-online-zero 动态兜底：活跃房间 joined 成员 presence=online
+   *  的 Matrix 账号去重（matrix-sdk 自动维护 presence，非响应式——由 now tick
+   *  驱动重算）。连接未建立/无房间时为空集。 */
+  function collectPresencePeople(): Set<string> {
+    const out = new Set<string>()
+    try {
+      const client = useMatrixClientStore().client
+      if (!client) return out
+      for (const room of matrixRoom.sortedRooms ?? []) {
+        const members = client.getRoom(room.roomId)?.getJoinedMembers() ?? []
+        for (const member of members) {
+          if (member.presence === 'online' && member.userId) out.add(member.userId)
+        }
+      }
+    } catch { /* presence 探测失败按 0 处理 */ }
+    return out
+  }
 
   const waitItems = computed(() => buildWaiting(
     workspace.tasks.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
@@ -93,14 +114,16 @@ export function useSitCounts() {
     name: t.name, profiles: t.profiles ?? [], boards: t.boards ?? [],
   })))
 
-  /** v12.5 在线级联。口径（aipaydev 推演实锤 cockpit-online-zero）：
+  /** v12.5 在线级联。口径（aipaydev 推演实锤 cockpit-online-zero；2026-09-23
+   *  用户裁决：动态探测优先，不依赖静态注册表）：
    *  - machines：fleetSessions 快照数（跨 profile 活跃会话，1.5s tick，永远反映真实在线）。
-   *  - people/agents：team-registry 注册流（Matrix 注册房 state 事件）——registry 空
-   *    （未登录 Matrix / 团队未注册，如 aipaydev sim 各机独立部署）时恒 0，UI 显
-   *    0 people · 0 agents 误导。此时以 fleetSessions 聚合兜底：people=活跃 profile
-   *    去重数、agents=活跃会话去重数（每会话一个 agent runner）。registry 有数据
-   *    时维持原口径（注册面是权威）。 */
+   *  - people：registry（注册面权威）→ Matrix presence（活跃房间 joined 成员
+   *    presence=online 的账号去重，随连接动态维护）→ fleetSessions profile 去重兜底。
+   *  - agents：registry → max(fleetSessions 会话数, 看板 running 任务 assignee 去重
+   *    （看板运行态真值，覆盖 gateway 跑任务但非 studio 会话的场景）。
+   *  presence 读取经 now tick 驱动重算（matrix-sdk 内部状态非响应式）。 */
   const online = computed(() => {
+    void now.value
     const fleet = cockpit.fleetSessions ?? []
     const registryPeople = accounts.value.length
     const registryAgents = accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0)
@@ -108,7 +131,17 @@ export function useSitCounts() {
       return { people: registryPeople, agents: registryAgents, machines: fleet.length }
     }
     const profiles = new Set(fleet.map(s => s.profile || 'default'))
-    return { people: profiles.size, agents: fleet.length, machines: fleet.length }
+    const people = collectPresencePeople()
+    const runningAssignees = new Set(
+      (kanbanStore.tasks ?? [])
+        .filter((t: { status: string; assignee?: string | null }) => t.status === 'running' && t.assignee)
+        .map((t: { assignee?: string | null }) => t.assignee as string),
+    )
+    return {
+      people: Math.max(people.size, profiles.size),
+      agents: Math.max(fleet.length, runningAssignees.size),
+      machines: fleet.length,
+    }
   })
 
   /** 最久等待人类可读标签（3h / 2d；空=无等待项） */
