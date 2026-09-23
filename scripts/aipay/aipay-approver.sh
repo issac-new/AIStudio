@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/aipay-lib.sh"
 
 DURATION="${1:-7200}"
-RID="${2:-$(grep -E '^room_analysis=' "$SIM_ROOT/state.env" 2>/dev/null | cut -d= -f2-)}"
+RID="${2:-$(grep -E '^room_analysis=' "$STATE" 2>/dev/null | cut -d= -f2-)}"
 SEEN="$EVID_DIR/approver.seen"
 LOG="$LOGS_DIR/approver.log"
 touch "$SEEN"
