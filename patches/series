@@ -765,3 +765,13 @@
 #      （编号 370：369 被并行会话 exec-queue 占用，让号重登记）
 370-server-kanban-stock-runtime-compat.patch
 
+# 371: IDE 简报「打回次数」数据源——bootstrap routes 挂载 /api/ide/retry-count
+#      （custom/server/controllers/ide/retry-counts.ts，读 RetryStore sidecar，与 363 计数链同源）
+371-server-ide-retry-count-route.patch
+
+
+# 372: agent tick socket sun_path 回落——深路径 home（推演 SIM_ROOT）下直接路径
+#      >104B 致 bind 失败、loop 活跃探针全失效（推演实锤 tick-socket-path-overflow）；
+#      复用 control_socket 同款 _fits_sun_path/_fallback_socket_path 短路径回落。
+#      （编号 372：371 被并行会话 IDE retry-count 路由占用，让号重登记）
+372-agent-tick-socket-fallback.patch
