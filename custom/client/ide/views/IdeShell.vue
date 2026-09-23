@@ -28,6 +28,7 @@ import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
+import { buildAuxMessage } from '../components/briefing-types'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { listBoards, listTasks } from '@/api/hermes/kanban'
@@ -240,8 +241,11 @@ watch([briefingOpen, () => ide.activeTaskId], ([open]) => {
     void loadBriefingCollab()
   }
 })
-function onAuxSend(_text: string): void {
-  // 辅助会话回传位：当前仅留事件口，后接 hermes 会话（数据源接线见 aipaydev 问题记录 #P5-3）
+function onAuxSend(text: string): void {
+  // 辅助会话回传：组装任务上下文前缀发往主会话（chat.sendMessage 无活跃会话
+  // 时自动建会话；模式对齐 IdeTaskContextBar assistant「带入主会话」裁决）
+  const message = buildAuxMessage(briefingTask.value, text)
+  if (message) void chatStore.sendMessage(message)
 }
 
 onUnmounted(() => {
