@@ -1,0 +1,20 @@
+{
+  "id": "ev-90459498-5a0",
+  "runId": "run-20260923192014-d382318e",
+  "gateId": "engineering.basic-check",
+  "type": "unit-test-result",
+  "producer": "test",
+  "result": "pass",
+  "execution": "exercised",
+  "provenance": {
+    "startedAt": 1790191214488,
+    "endedAt": 1790191214648,
+    "command": "npm test --silent",
+    "cwd": "/Volumes/nvme2230/lab/ncwk/overlay/custom/qgate/examples/demo-clean",
+    "commit": "18a7ece325c1f555acfd6ad66566d99489de6c92",
+    "treeHash": "882ebaae61b04526b6cfdd61d4d28ab4c8793896",
+    "exitCode": 0
+  },
+  "independence": "implementation-derived",
+  "summary": "exit 0 (expected 0)"
+}

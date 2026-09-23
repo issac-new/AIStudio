@@ -10,8 +10,9 @@ export type GateVerdict =
   | 'WAIVED'
   | 'NOT_APPLICABLE'
 
-/** 交付标准证据三级：present=文件在 / wired=接进链 / exercised=真跑过（设计 §4.2）。 */
-export type EvidenceExecution = 'present' | 'wired' | 'exercised'
+/** 交付标准证据三级：present=文件在 / wired=接进链 / exercised=真跑过（设计 §4.2）。
+    cached=输入未变时复用上轮证据（§49）——缓存命中不等于真跑过，决策层照旧判定。 */
+export type EvidenceExecution = 'present' | 'wired' | 'exercised' | 'cached'
 
 /** 证据独立性（谁生成的），与 execution（跑没跑）正交（v0.1 §31）。 */
 export type EvidenceIndependence =

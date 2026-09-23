@@ -1,0 +1,17 @@
+{
+  "runId": "run-20260923192104-de86ad8d",
+  "gateId": "engineering.basic-check",
+  "gateVersion": "0.1.0",
+  "trigger": "task_close",
+  "workspace": "/Volumes/nvme2230/lab/ncwk/overlay/custom/qgate/examples/demo-persistence-mismatch",
+  "startedAt": 1790191264311,
+  "endedAt": 1790191264718,
+  "verdict": "PASS",
+  "evidenceIds": [
+    "ev-02aadaac-ab0",
+    "ev-7e3f6e8f-f70"
+  ],
+  "commit": "18a7ece325c1f555acfd6ad66566d99489de6c92",
+  "treeHash": "417048378dd3d2d90f4a6817509f1d053e9bb390",
+  "changedPaths": []
+}
