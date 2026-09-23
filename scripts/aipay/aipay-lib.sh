@@ -43,6 +43,66 @@ EVID_DIR="$RUN_DIR/evidence"
 SKILLS_SRC="$NCWK/overlay/scripts/aipay/skills"
 DIRECTOR_CLONE="$SIM_ROOT/central/aipaydev"
 
+# ── 模型额度预检 ────────────────────────────────────────
+# 推演的每一步都靠真实 LLM 回合驱动，额度耗尽时 wait_truth 只会报「kanban 登记超时」
+# 这类产品缺陷假象（09-23 V2.0 实锤：步骤 1-8 全绿，步骤 9 卡 900s 后失败，真因是
+# cc-switch 上游 5 小时额度 403 + kimi-direct 周额度 403 + aim 鉴权失败）。开局前
+# 直接探一次模型通道，把环境问题在产品结论之前如实报出来。
+# 返回：ok | quota | auth | unreachable | noreply
+model_preflight() { # <user>
+  local u="$1" cfg="${HERMES_AGENT_VENV:-$HOME/.hermes/hermes-agent/venv/bin/python}"
+  local conf; conf="$(hermes_root "$u")/profiles/$u/config.yaml"
+  [[ -f "$conf" ]] || { echo "unreachable"; return 0; }
+  [[ -x "$cfg" ]] || cfg=$(command -v python3 || true)
+  [[ -n "$cfg" ]] || { echo "unreachable"; return 0; }
+  "$cfg" - "$conf" <<'PY' 2>/dev/null || echo unreachable
+import json, sys, urllib.error, urllib.request
+try:
+    import yaml
+except ImportError:
+    print("unreachable"); raise SystemExit
+cfg = yaml.safe_load(open(sys.argv[1])) or {}
+m = cfg.get("model") or {}
+url = (m.get("base_url") or "").rstrip("/")
+key = m.get("api_key") or ""
+name = m.get("default") or ""
+if not url or not name:
+    print("unreachable"); raise SystemExit
+body = json.dumps({"model": name, "max_tokens": 4,
+                   "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}).encode()
+req = urllib.request.Request(url + "/v1/chat/completions", data=body,
+                             headers={"Content-Type": "application/json",
+                                      **({"Authorization": "Bearer " + key} if key else {})})
+try:
+    with urllib.request.urlopen(req, timeout=45) as r:
+        r.read()
+    print("ok")
+except urllib.error.HTTPError as e:
+    text = (e.read() or b"").decode("utf8", "replace").lower()
+    if e.status in (401, 403):
+        print("quota" if ("limit" in text or "quota" in text) else "auth")
+    elif e.status == 429:
+        print("quota")
+    else:
+        print("noreply")
+except Exception:
+    print("unreachable")
+PY
+}
+
+model_preflight_report() { # 检查全部实例，额度/鉴权异常即 fail
+  local bad=() u st
+  for u in "${INSTANCED_USERS[@]}"; do
+    st=$(model_preflight "$u")
+    [[ "$st" == "ok" ]] || bad+=("$u:$st")
+  done
+  if (( ${#bad[@]} > 0 )); then
+    log "模型通道预检未通过：${bad[*]}"
+    fail "推演需要真实 LLM 回合，模型通道不可用就不是产品缺陷。请先恢复额度/鉴权（quota=额度耗尽、auth=鉴权失败、unreachable=代理未起、noreply=通道可用但拒答）后重跑；已完成的轮次可用 START_STEP 从断点续推。"
+  fi
+  log "模型通道预检通过（${#INSTANCED_USERS[@]} 实例）"
+}
+
 # ── 需求标识（推演轮次参数化）───────────────────────────────
 # 缺省沿用 RFD-001（V1.0 已推演并交付）。新一轮以
 #   RFD_ID=RFD-002 RFD_SLUG=refund-profitshare bash aipay-scenario.sh
