@@ -132,6 +132,15 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
       matrixEventBus.onThreadUpdate.value?.()
     })
 
+    // ★ 本地回显收敛（D1 根治）：SDK 发送确认时对同一 MatrixEvent 原地翻转
+    // id（~local-* → 真实 id）与 status（SENDING → SENT），只发 LocalEchoUpdated
+    // 不发 Timeline——此前零监听，乐观回显的「发送中…」永不收敛（服务端实际
+    // 已落库），切房间/刷新才恢复。
+    matrixClient.on(RoomEvent.LocalEchoUpdated, () => {
+      matrixEventBus.onLocalEchoUpdated.value?.()
+      matrixEventBus.onRoomListChange.value?.()
+    })
+
     matrixClient.on(RoomEvent.MyMembership, (room: any, membership: string) => {
       if (membership === KnownMembership.Invite) {
         void matrixClient.joinRoom(room.roomId)

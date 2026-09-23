@@ -29,18 +29,29 @@ const routeRoomId = computed(() => {
   return typeof value === 'string' && value.trim() ? value : null
 })
 
+// 去同 id 守卫：selectRoom 幂等可重入（matrix-room.ts selectRoom 无同房间早退），
+// 路由层对"点已选房间"是空转（router.push 同路由被去重），守卫只会把恢复后的
+// 时间线永久拦在"未选择房间"。客户端未就绪时 selectRoom 会打到空——靠下面
+// syncState PREPARED 兜底重选（对齐 MatrixChatPanel）。
 watch(routeRoomId, (roomId) => {
-  if (roomId && roomStore.activeRoomId !== roomId) {
+  if (roomId) {
     roomStore.selectRoom(roomId)
   }
 }, { immediate: true })
 
-function openPageSidebar(): void {
-  window.dispatchEvent(new CustomEvent('hermes:open-page-sidebar'))
-}
+// client 就绪兜底：冷启动/深链时上面的 immediate watcher 跑在 initClient 之前，
+// activeRoom 因 client 未就绪缓存 null 且再无响应式依赖翻案；sync 完成 PREPARED
+// 时房间已入 client，重选一次让时间线自愈。
+watch(() => clientStore.syncState, (s) => {
+  if (s === 'PREPARED' && routeRoomId.value) {
+    roomStore.selectRoom(routeRoomId.value)
+  }
+})
+
+// hermes:open-page-sidebar 只由上游 App.vue 的移动端汉堡按钮发出；本画布无侧栏，
+// 不需要转发——原实现监听后同步再发同名事件会自激递归（Maximum call stack）。
 
 onMounted(() => {
-  window.addEventListener('hermes:open-page-sidebar', openPageSidebar)
   clientStore.refreshCredentials()
   if (clientStore.authenticated && !clientStore.client) {
     clientStore.initClient()
@@ -48,7 +59,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('hermes:open-page-sidebar', openPageSidebar)
   // 与 MatrixChatPanel 同律：Matrix 客户端跨导航保活，仅显式登出时断开
 })
 </script>
