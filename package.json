@@ -24,7 +24,9 @@
     "catalog-check": "node scripts/zcode-catalog-check.mjs",
     "runtime:doctor": "node scripts/runtime/runtime-doctor.mjs",
     "runtime:vendor-pua": "node scripts/runtime/vendor-pua.mjs",
-    "runtime:register": "node scripts/runtime/register-runtime.mjs"
+    "runtime:register": "node scripts/runtime/register-runtime.mjs",
+    "zcode:ensure": "node scripts/zcode-engine.mjs ensure",
+    "zcode:serve": "node scripts/zcode-engine.mjs serve"
   },
   "engines": {
     "node": ">=23.0.0"

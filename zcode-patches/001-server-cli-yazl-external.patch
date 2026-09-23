@@ -1,0 +1,12 @@
+diff --git a/packages/zcode-server-cli/tsup.config.ts b/packages/zcode-server-cli/tsup.config.ts
+index 4b1fd88..e48623b 100644
+--- a/packages/zcode-server-cli/tsup.config.ts
++++ b/packages/zcode-server-cli/tsup.config.ts
+@@ -33,6 +33,7 @@ export default defineConfig({
+     "node-pty",
+     "ssh2",
+     "yaml",
++    "yazl",
+     "node-forge",
+     "undici",
+     "axios",
