@@ -94,7 +94,12 @@
 
 ## 七、遗留事项
 
-1. REL-MERGE/REL-TAG/REL-DELIVER 三卡按方案线下执行（卡在 fanfan 板 ready 态）。
+1. ~~REL-MERGE/REL-TAG/REL-DELIVER 三卡按方案线下执行~~ **已执行完毕（09-23 补录）**：
+   - REL-MERGE：integration/RFD-001 no-ff 合入 main（6e34a95，129 文件 +17211 行）
+   - REL-TAG：tag v1.0.0-cashier 推送（0300c9d），RELEASE.md 入仓（7b12ffc）
+   - REL-DELIVER：商户接入文档 docs/delivery/merchant-onboarding-v1.0.0-cashier.md 入仓（715e362）
+   - 三卡已置 done（t_66e5033b / t_e35704d9 / t_16abea25）
+   - **坑**：置 done 不能走 PATCH status（completion 需 evidence，500），正确用法 `POST /api/hermes/kanban/complete {task_ids, summary}`。
 2. 15 项产品问题单待排期修复（room-invite-gap 与 IDE 任务简报/跳转优先级最高）。
 3. defect 窗轮询逻辑（Q12）与 kanban-api-hang 待修复后重推演验证。
 4. 推演产物归档：SIM_ROOT=/Volumes/nvme2230/lab/ncwk-sim-aipay（evidence/ 含 11 板 kanban 快照、房间全量消息、issues.log、场景日志）。

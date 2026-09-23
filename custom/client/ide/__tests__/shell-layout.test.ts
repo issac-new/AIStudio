@@ -8,6 +8,7 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }), useRouter: () => ({ push: vi.fn() }), createRouter: () => ({ push: vi.fn() }), createWebHistory: () => ({}), createWebHashHistory: () => ({}) }))
+const { chatSendMessage } = vi.hoisted(() => ({ chatSendMessage: vi.fn(async () => {}) }))
 
 vi.mock('../store/ide', async () => {
   const actual = await vi.importActual<any>('../store/ide')
@@ -19,6 +20,7 @@ vi.mock('@/stores/hermes/chat', () => ({
     sessionProfileFilter: null, loadSessions: vi.fn(async () => {}),
     isRunActive: false, abortState: null,
     getSubagentStream: vi.fn(() => null),
+    sendMessage: chatSendMessage,
   }),
 }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
@@ -179,6 +181,18 @@ describe('IdeShell 布局守门', () => {
     cols = JSON.parse(localStorage.getItem('ncwk.cols') || '{}')
     expect(cols.right).toBe(520)
     expect(ide.sidePane.width).toBe(520)
+    w.unmount()
+  })
+
+  it('aipaydev 缺口 5：简报 aux 回传经 buildAuxMessage 组装进 chat.sendMessage', async () => {
+    const w = mountShell()
+    await flushPromises()
+    expect(chatSendMessage).not.toHaveBeenCalled()
+    const { buildAuxMessage } = await import('@/custom/ide/components/briefing-types')
+    // 无任务上下文时用通用前缀；纯空白拒发
+    expect(buildAuxMessage(null, '  ')).toBe('')
+    expect(buildAuxMessage(null, '查一下退款')).toBe('【任务简报】 查一下退款')
+    expect(buildAuxMessage({ id: 'T-9', title: 't', status: 'todo' }, '查一下退款')).toBe('【任务简报·T-9】 查一下退款')
     w.unmount()
   })
 })
