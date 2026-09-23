@@ -58,6 +58,32 @@ function readSeries() {
     .filter((l) => l && !l.startsWith('#'));
 }
 
+// hermes-agent 特有的路径前缀 → patch 路由到 hermes-agent,其余落 hermes-studio。
+// apply/clean/ensure-injected 三方共用(此前三处内联重复,2026-09-23 收敛为单一
+// 事实源:本清单 + isHermesAgentPatchPath 谓词,ensure-injected.mjs import 复用)。
+//   - hermes_cli/ plugins/ agent/ apps/ assets/ acp_:基础路由(patch 117-118 起)
+//   - gateway/ tests/gateway/ tests/hermes_cli/:见 patch 250/273
+//   - optional-mcps/ optional-skills/:基础运行时目录清单(patch 375 起,
+//     semantica MCP 目录条目等)。tests/ 其余子树属于 hermes-studio,禁止整段路由。
+export const HERMES_AGENT_PATCH_PREFIXES = [
+  'hermes_cli/', 'plugins/', 'agent/', 'apps/', 'assets/', 'acp_',
+  'gateway/', 'tests/gateway/', 'tests/hermes_cli/',
+  'optional-mcps/', 'optional-skills/',
+];
+
+/** patch 目标路径(---/+++ 后的首段)是否路由到 hermes-agent。 */
+export function isHermesAgentPatchPath(targetPath) {
+  return HERMES_AGENT_PATCH_PREFIXES.some((p) => targetPath.startsWith(p));
+}
+
+// 由 patch 文本首个 ---/+++ 目标路径判定路由目标根目录。
+// 解析失败(读不到/无目标行)时默认 hermes-studio,与历史行为一致。
+export function resolvePatchTargetRoot(patchText) {
+  const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
+  if (!firstTargetMatch) return hermesStudioRoot;
+  return isHermesAgentPatchPath(firstTargetMatch[1]) ? hermesAgentRoot : hermesStudioRoot;
+}
+
 function applyPatches() {
   const patches = readSeries();
   if (patches.length === 0) {
@@ -70,27 +96,11 @@ function applyPatches() {
       console.error(`[inject] FAILED: patch 文件不存在: ${p}`);
       process.exit(1);
     }
-	    // 判断 patch 目标：hermes-agent 还是 hermes-studio
+	    // 判断 patch 目标：hermes-agent 还是 hermes-studio（规则单一事实源见 resolvePatchTargetRoot）
 	    let targetRoot = hermesStudioRoot;
 	    try {
 	      const patchText = readFileSync(patchPath, 'utf8');
-	      const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
-	      if (firstTargetMatch) {
-	        const targetPath = firstTargetMatch[1];
-	        // hermes-agent 特有的路径前缀 → 路由到 hermes-agent
-	        // gateway/、tests/gateway/ 见 patch 250（gateway/platforms/api_server.py 及其测试；
-	        // tests/hermes_cli/ 见 patch 273（hermes_cli 测试的 overlay 语义适配）；
-	        // tests/ 其余子树属于 hermes-studio，禁止整段路由）
-	        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') ||
-	            targetPath.startsWith('agent/') || targetPath.startsWith('apps/') ||
-	            targetPath.startsWith('assets/') || targetPath.startsWith('acp_') ||
-	            targetPath.startsWith('gateway/') || targetPath.startsWith('tests/gateway/') ||
-	            targetPath.startsWith('tests/hermes_cli/')) {
-	          targetRoot = hermesAgentRoot;
-	        }
-	        // hermes-studio 特有的路径前缀 → 保留默认
-	        // (paths like packages/, tests/, dist/, vite.config.ts, package.json etc.)
-	      }
+	      targetRoot = resolvePatchTargetRoot(patchText);
 	    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
 
     try {
@@ -121,25 +131,11 @@ function reversePatches(patches) {
       console.warn(`[clean] WARN: patch 文件不存在,跳过: ${p}`);
       continue;
     }
-    // 判断 patch 目标：hermes-agent 还是 hermes-studio
+    // 判断 patch 目标：hermes-agent 还是 hermes-studio（规则单一事实源见 resolvePatchTargetRoot）
     let targetRoot = hermesStudioRoot;
     try {
       const patchText = readFileSync(patchPath, 'utf8');
-      const firstTargetMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
-      if (firstTargetMatch) {
-        const targetPath = firstTargetMatch[1];
-	        // hermes-agent 特有的路径前缀 → 路由到 hermes-agent
-	        // gateway/、tests/gateway/ 见 patch 250（gateway/platforms/api_server.py 及其测试；
-	        // tests/hermes_cli/ 见 patch 273（hermes_cli 测试的 overlay 语义适配）；
-	        // tests/ 其余子树属于 hermes-studio，禁止整段路由）
-	        if (targetPath.startsWith('hermes_cli/') || targetPath.startsWith('plugins/') ||
-	            targetPath.startsWith('agent/') || targetPath.startsWith('apps/') ||
-	            targetPath.startsWith('assets/') || targetPath.startsWith('acp_') ||
-	            targetPath.startsWith('gateway/') || targetPath.startsWith('tests/gateway/') ||
-	            targetPath.startsWith('tests/hermes_cli/')) {
-	          targetRoot = hermesAgentRoot;
-	        }
-      }
+      targetRoot = resolvePatchTargetRoot(patchText);
     } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
     try {
       git(`apply --reverse --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, targetRoot);

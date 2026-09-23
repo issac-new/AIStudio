@@ -1,0 +1,62 @@
+# SwarmStudio base runtime: semantica (graph-native knowledge infrastructure).
+# Single source of truth — copied into hermes-agent optional-mcps/ by patch 375.
+# Consumed by the studio MCP catalog browser and `hermes mcp install semantica`.
+manifest_version: 1
+
+name: semantica
+description: Graph-native context & knowledge infrastructure — context graph, entity/relation extraction, hybrid retrieval, RETE/Datalog reasoning and PROV-O decision provenance for agents.
+source: https://github.com/semantica-agi/semantica
+
+# Install: clone the pinned tag, build a venv, pip install from the checkout
+# (heavy deps: numpy/pandas/scipy/grpcio/pyarrow; first install takes a few
+# minutes). semantica requires Python >=3.10,<3.14 — bootstrap prefers the
+# newest compatible interpreter and falls back to the system python3 (which is
+# already correct where the default is 3.10–3.13). Bootstrap lines target
+# POSIX shells — see post_install for Windows.
+install:
+  type: git
+  url: https://github.com/semantica-agi/semantica
+  ref: v0.7.0
+  bootstrap:
+    - python3.13 -m venv .venv || python3.12 -m venv .venv || python3.11 -m venv .venv || python3.10 -m venv .venv || python3 -m venv .venv
+    - .venv/bin/pip install --no-input --quiet --upgrade pip
+    - .venv/bin/pip install --no-input --quiet .
+
+transport:
+  type: stdio
+  command: "${INSTALL_DIR}/.venv/bin/semantica-mcp"
+  env:
+    SEMANTICA_LOG_LEVEL: INFO
+
+auth:
+  type: none
+
+post_install: |
+  Knowledge tools are available after a new session starts: extract_entities,
+  extract_relations, record_decision, query_decisions, find_precedents,
+  get_causal_chain, add_entity, add_relationship, run_reasoning,
+  get_graph_analytics, export_graph, get_graph_summary, query_graph,
+  update_node, delete_node.
+
+  The context graph is in-memory for the lifetime of the MCP server process.
+  To persist it across sessions as JSON, set env SEMANTICA_KG_PATH on
+  mcp_servers.semantica in config.yaml (an absolute path).
+
+  Extraction/reasoning run locally (pattern/regex modes by default) — no API
+  keys required. Richer NLP extraction (spaCy/transformers/LLM) is available
+  via semantica extras installed inside the clone's venv.
+
+  Windows: the bootstrap lines above target POSIX shells. In the clone at
+  ~/.hermes/mcp-installs/semantica run `python -m venv .venv` and
+  `.venv\Scripts\pip install --no-input .`, then set the command to
+  .venv\Scripts\semantica-mcp.exe in config.yaml.
+
+suggest:
+  keywords:
+    - knowledge graph
+    - context graph
+    - decision provenance
+    - knowledge base
+    - semantica
+  hosts:
+    - getsemantica.ai
