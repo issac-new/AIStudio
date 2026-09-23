@@ -28,6 +28,23 @@ human_token_for() {
   load_token "$name" 2>/dev/null
 }
 
+# loop 契约审批（approval-stall 根治）：「⚠️ Approval needed: <contractId>」消息
+# 仅靠房间 react 并不会解锁 loop 引擎的等待——引擎挂在 /api/loop/contracts/:id/approve
+# （graphBridge.resumeApproval）。这里解析 contractId 并真实调 REST 放行；
+# react ✅ 保留为房间内可视回执。API 不可达时仅 react（退回旧行为，不静默吞）。
+api_key() { grep -E '^API_SERVER_KEY=' "$HOME/.hermes/.env" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'; }
+approve_contract() { # <contractId> <studioPort> → 0=REST 放行成功
+  local cid="$1" port="$2" key
+  key=$(api_key) || return 1
+  [[ -n "$key" && -n "$port" ]] || return 1
+  curl -sf --max-time 5 -X POST "http://127.0.0.1:${port}/api/loop/contracts/${cid}/approve" \
+    -H "Authorization: Bearer ${key}" -H 'Content-Type: application/json' \
+    -d '{"decision":"approved","approver":"aipay-approver","comment":"auto-approved by guardian"}' >/dev/null 2>&1
+}
+
+# 导演 studio 端口（8702，admin）——loop REST 挂在各实例同构路由，任一在线实例皆可
+DIRECTOR_PORT="${AIPAY_APPROVER_PORT:-8702}"
+
 log "=== approver 启动: room=$RID duration=${DURATION}s ==="
 deadline=$(( $(date +%s) + DURATION ))
 while (( $(date +%s) < deadline )); do
@@ -36,19 +53,31 @@ while (( $(date +%s) < deadline )); do
   T=$(load_token fanfan-agent 2>/dev/null) || { sleep 20; continue; }
   CHUNK=$(curl -sf "$HS/_matrix/client/v3/rooms/$RID/messages?dir=b&limit=50&access_token=$T" 2>/dev/null) || { sleep 20; continue; }
 
-  # 遍历 ⚠️ 提示，未处理过的逐条以对应人类身份 react ✅
-  while IFS=$'\t' read -r evid sender; do
+  # 遍历审批提示，未处理过的逐条处理。两类格式都认：
+  #   loop 引擎审批：「⚠️ Approval needed: <contractId> (...) — Approvers: ...」（matrix-bot）
+  #   exec 审批：「... needs your OK ...」（旧终端审批，仅 react 提示人类已读）
+  while IFS=$'\t' read -r evid sender body; do
     [[ -z "$evid" ]] && continue
     seen_has "$evid" && continue
+    # loop 审批：解析 contractId 调 REST 真放行（approval-stall 根治）
+    CID=$(printf '%s' "$body" | sed -nE 's/.*Approval needed: ([^ ]+).*/\1/p' | head -1)
+    if [[ -n "$CID" ]]; then
+      if approve_contract "$CID" "$DIRECTOR_PORT"; then
+        log "REST approved contract=$CID ($sender 提示 $evid)"
+      else
+        log "REST approve 不可达，仅 react 兜底 contract=$CID（引擎可能仍未解锁，需查 $DIRECTOR_PORT）"
+      fi
+    fi
+    # react ✅ 作为房间内可视回执（两通路一致）
     HT=$(human_token_for "$sender") || { seen_add "$evid"; continue; }
-    BODY=$(printf '{"m.relates_to":{"rel_type":"m.annotation","event_id":"%s","key":"✅"}}' "$evid")
-    if mx "$HT" POST "rooms/$RID/send/m.reaction" "$BODY" >/dev/null 2>&1; then
+    RBODY=$(printf '{"m.relates_to":{"rel_type":"m.annotation","event_id":"%s","key":"✅"}}' "$evid")
+    if mx "$HT" POST "rooms/$RID/send/m.reaction" "$RBODY" >/dev/null 2>&1; then
       seen_add "$evid"
-      log "approved $sender 提示 $evid"
+      log "reacted $sender 提示 $evid${CID:+ (contract=$CID)}"
     fi
   # agent 消息体可能混入终端控制字符（ANSI 转义），jq 严格解析会炸——先剥离控制字符
-  # （紧凑 JSON 无结构性换行，全剥安全）；只取 event_id 与 sender
-  done < <(echo "$CHUNK" | tr -d '\000-\037' | jq -r '.chunk[] | select((.type=="m.reaction") | not) | select(.content.msgtype=="m.text" and (.content.body | contains("needs your OK"))) | "\(.event_id)\t\(.sender)"' 2>/dev/null)
+  # （紧凑 JSON 无结构性换行，全剥安全）；取 event_id/sender/body
+  done < <(echo "$CHUNK" | tr -d '\000-\037' | jq -r '.chunk[] | select((.type=="m.reaction") | not) | select(.content.msgtype=="m.text" and ((.content.body | contains("needs your OK")) or (.content.body | contains("Approval needed:")))) | "\(.event_id)\t\(.sender)\t\(.content.body | gsub("\n"; " "))"' 2>/dev/null)
 
   sleep 20
 done

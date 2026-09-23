@@ -782,3 +782,13 @@
 #      误读为已在跑，ensure 跳过启动，该 profile gateway 永远起不来；推演 ISSUE-04
 #      host-gateway-ownership）。纯函数+守门测试在 custom/loop/gateway/host-ownership。
 373-server-gateway-host-ownership.patch
+
+# 374: Matrix 房间运维 agent 工具（推演 P1 缺口 room-invite-gap 的真修复）。
+#      5d1cd7f 曾把该缺口记为「已修」，但只改了技能文案去调 `hermes matrix
+#      rooms|invite` —— 该 CLI 动词从不存在，adapter.invite_user 仍是无 CLI 无
+#      工具面的死 API，推演复跑必然复现。本 patch 按上游 deferred-platform 工具
+#      契约补齐：plugin.yaml 声明 provides_tools + plugins/platforms/matrix/tools.py
+#      提供 register_tools(ctx)，三个工具 matrix_room_create/invite/list 优先走
+#      gateway 已鉴权 adapter（不碰 token），无 gateway 时回落 Client-Server API。
+#      守门测试 tests/gateway/test_matrix_room_tools.py（33 例）。
+374-agent-matrix-room-tools.patch
