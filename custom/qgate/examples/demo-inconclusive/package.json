@@ -1,0 +1,9 @@
+{
+  "name": "demo-inconclusive",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "node -e 'process.exit(0)'",
+    "test": "node -e 'process.stdout.write(\"tests pass\\n\")'"
+  }
+}

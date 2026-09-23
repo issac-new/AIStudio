@@ -1,0 +1,19 @@
+{
+  "runId": "run-20260923184923-3c0dc0c5",
+  "gateId": "engineering.basic-check",
+  "gateVersion": "0.1.0",
+  "trigger": "task_close",
+  "workspace": "/Volumes/nvme2230/lab/ncwk/overlay/custom/qgate/examples/demo-clean",
+  "startedAt": 1790189363649,
+  "endedAt": 1790189364097,
+  "verdict": "PASS",
+  "evidenceIds": [
+    "ev-46be6817-530",
+    "ev-46d5ab93-1c7"
+  ],
+  "commit": "724de664acbac0d4e2f2c23849f83f805bc35ae6",
+  "treeHash": "724de664acbac0d4e2f2c23849f83f805bc35ae6",
+  "changedPaths": [
+    ""
+  ]
+}

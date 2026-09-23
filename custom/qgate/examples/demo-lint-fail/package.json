@@ -1,0 +1,9 @@
+{
+  "name": "demo-lint-fail",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --no-eslintrc --no-inline-config src/",
+    "test": "node unit.test.mjs"
+  }
+}
