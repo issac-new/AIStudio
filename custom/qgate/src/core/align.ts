@@ -37,11 +37,13 @@ export function tierOfProfile(profileId: string): DeliveryTier | undefined {
   return undefined
 }
 
-/** 证据强度全序：仅 exercised 可支撑 PASS（设计 §4.2 exercised 纪律）。 */
+/** 证据强度全序：仅 exercised 可支撑 PASS（设计 §4.2 exercised 纪律）。
+    cached 对决策层透明：不因缓存而降级（诚实语义），故仍按 exercised 计价（决策层只看 execution）。 */
 export const EXECUTION_STRENGTH: Record<EvidenceExecution, number> = {
   present: 0,
   wired: 1,
   exercised: 2,
+  cached: 2,
 }
 
 export function supportsPass(execution: EvidenceExecution): boolean {

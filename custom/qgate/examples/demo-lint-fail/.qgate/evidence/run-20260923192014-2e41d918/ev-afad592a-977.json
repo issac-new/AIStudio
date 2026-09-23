@@ -1,0 +1,20 @@
+{
+  "id": "ev-afad592a-977",
+  "runId": "run-20260923192014-2e41d918",
+  "gateId": "engineering.basic-check",
+  "type": "unit-test-result",
+  "producer": "test",
+  "result": "pass",
+  "execution": "exercised",
+  "provenance": {
+    "startedAt": 1790191214962,
+    "endedAt": 1790191215120,
+    "command": "npm test --silent",
+    "cwd": "/Volumes/nvme2230/lab/ncwk/overlay/custom/qgate/examples/demo-lint-fail",
+    "commit": "18a7ece325c1f555acfd6ad66566d99489de6c92",
+    "treeHash": "27d05949dc4cb52fc55c6c0d4fa212df328a7c7f",
+    "exitCode": 0
+  },
+  "independence": "implementation-derived",
+  "summary": "exit 0 (expected 0)"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "ev-8952b3a8-384",
+  "runId": "run-20260923192014-2e41d918",
+  "gateId": "engineering.basic-check",
+  "type": "lint-result",
+  "producer": "lint",
+  "result": "fail",
+  "execution": "exercised",
+  "provenance": {
+    "startedAt": 1790191214838,
+    "endedAt": 1790191214961,
+    "command": "npm run lint --silent",
+    "cwd": "/Volumes/nvme2230/lab/ncwk/overlay/custom/qgate/examples/demo-lint-fail",
+    "commit": "18a7ece325c1f555acfd6ad66566d99489de6c92",
+    "treeHash": "27d05949dc4cb52fc55c6c0d4fa212df328a7c7f",
+    "exitCode": 127
+  },
+  "independence": "implementation-derived",
+  "summary": "exit 127 (expected 0); stderr tail: sh: eslint: command not found\n"
+}

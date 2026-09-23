@@ -1,0 +1,18 @@
+{
+  "runId": "run-20260923192014-2e41d918",
+  "gateId": "engineering.basic-check",
+  "gateVersion": "0.1.0",
+  "trigger": "task_close",
+  "workspace": "/Volumes/nvme2230/lab/ncwk/overlay/custom/qgate/examples/demo-lint-fail",
+  "startedAt": 1790191214838,
+  "endedAt": 1790191215120,
+  "verdict": "FAIL",
+  "evidenceIds": [
+    "ev-8952b3a8-384",
+    "ev-afad592a-977"
+  ],
+  "commit": "18a7ece325c1f555acfd6ad66566d99489de6c92",
+  "treeHash": "27d05949dc4cb52fc55c6c0d4fa212df328a7c7f",
+  "changedPaths": [],
+  "failureSummary": "lint-result:fail"
+}
