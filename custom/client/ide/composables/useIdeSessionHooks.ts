@@ -75,22 +75,25 @@ export function useIdeSessionHooks() {
   const runawaySignal = ref<RunawaySignal | null>(null)
   watch(
     () => [chatStore.isRunActive, chatStore.activeSession?.messages?.length, chatStore.activeSession?.updatedAt] as const,
-    ([active, , updatedAt]) => {
+    ([active]) => {
       if (!active) {
         runawayNotifiedRun = ''
         runawaySignal.value = null
         return
       }
       const sid = chatStore.activeSessionId ?? ''
-      if (runawayNotifiedRun === `${sid}:${updatedAt ?? ''}`) return
+      if (runawayNotifiedRun === sid) return
       const messages = (chatStore.activeSession?.messages ?? []) as unknown as RunawayMessage[]
+      // runStartedAt 是 store 顶层的 Map<sessionId, ts>（chat.ts:1393），
+      // 不在 Session 对象上——此前读 activeSession.runStartedAt 恒 undefined，
+      // 导致 tool_storm 等按「单轮」口径的信号退化为整个会话口径误报
       const signal = detectRunaway(messages, {
         isRunning: true,
         nowMs: Date.now(),
-        runStartedAtMs: (chatStore.activeSession as { runStartedAt?: number } | null)?.runStartedAt,
+        runStartedAtMs: chatStore.runStartedAt?.get(sid) ?? undefined,
       })
       runawaySignal.value = signal
-      if (signal && runawayNotifiedRun !== sid) {
+      if (signal) {
         runawayNotifiedRun = sid
         showToast(
           t(`ide.runaway.${signal.kind}`, { detail: signal.detail }),
@@ -101,13 +104,16 @@ export function useIdeSessionHooks() {
     },
   )
 
-  // ── 子代理结果反注入：完成态子代理的 summary/末条文本扫描，命中标疑点 ──
+  // ── 子代理结果反注入：终态子代理的 summary/末条文本扫描，命中标疑点 ──
+  // 只扫终态（completed/failed/error/…）：running 中的半截流式文本可能瞬时
+  // 命中注入指纹，造成「可疑指令」标注闪现后自行消失的噪音
   const flaggedSubagents = computed<Map<string, string[]>>(() => {
     const map = new Map<string, string[]>()
     const sid = chatStore.activeSessionId
     if (!sid) return map
     for (const [key, stream] of chatStore.subagentStreams) {
       if (!key.startsWith(`${sid}:`)) continue
+      if (stream.status === 'running' || stream.status === 'started') continue
       const texts: string[] = []
       if (stream.summary) texts.push(stream.summary)
       const lastText = [...stream.entries].reverse().find((e) => e.kind === 'text' && e.text)

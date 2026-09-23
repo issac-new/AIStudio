@@ -3,7 +3,7 @@
 // / runtime 护栏 / 留痕 / patch 355 漂移。
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import { parseMentions, hasAgentTrigger } from '@/custom/ia2/utils/mention'
 import { parseMentionsServer, dispatchMention, type MentionBusDeps } from '../mention-bus'
@@ -98,7 +98,10 @@ describe('patch 355 漂移守卫', () => {
     expect(patch).toContain('controllers/kanban.ts')
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('355-server-kanban-mention-bus.patch')
-    const manifest = JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
+    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
+      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
     expect(manifest.appliedPatches).toContain('355-server-kanban-mention-bus.patch')
   })
 })

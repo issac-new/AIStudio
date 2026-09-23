@@ -11,7 +11,7 @@
 // /api/studio/session-categories（fetch/create/setSessionCategory）；时间线
 // 优先级经 /api/hermes/kanban listTasks 的 session_id 桥接（口径同 cockpit
 // bucketPriority：数字越大越高）。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useMessage, NDropdown, NTooltip, type DropdownOption } from 'naive-ui'
@@ -280,6 +280,14 @@ async function onDeleteAllArchived(): Promise<void> {
   }
 }
 
+// 确认框动作：成功才收起；失败保留确认框让用户重试（错误详情走 toast）。
+// 成功判定 = 归档列表变短（onDeleteAllArchived 成功路径会清空 archived）。
+async function confirmDeleteAllArchived(): Promise<void> {
+  const before = archived.value.length
+  await onDeleteAllArchived()
+  if (archived.value.length < before) showDeleteAllConfirm.value = false
+}
+
 async function onUnarchive(id: string): Promise<void> {
   const ok = await unarchiveSession(id)
   if (!ok) {
@@ -307,6 +315,17 @@ async function onNewTask(): Promise<void> {
   })
   ide.setChatFocus()
 }
+
+// ⌘N 新建任务：按钮旁的 kbd 提示此前无 handler（假快捷键）。
+// 输入框聚焦时 cmd+N 不劫持（与 ⌘K 同样只在非编辑态生效的口径）。
+function onTaskbarKeydown(event: KeyboardEvent): void {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n') {
+    event.preventDefault()
+    void onNewTask()
+  }
+}
+window.addEventListener('keydown', onTaskbarKeydown)
+onUnmounted(() => window.removeEventListener('keydown', onTaskbarKeydown))
 
 async function onDelete(id: string): Promise<void> {
   const ok = await chat.deleteSession(id)
@@ -566,7 +585,7 @@ onMounted(async () => {
           <div v-if="showDeleteAllConfirm" class="ide-taskbar__confirm" data-testid="ide-task-delete-all-confirm">
             <p>{{ t('ide.task.deleteAllArchivedTitle', { count: archived.length }) }}</p>
             <div class="ide-taskbar__confirm-actions">
-              <button type="button" class="ide-taskbar__group-btn ide-taskbar__group-btn--danger" :disabled="deleteAllBusy" data-testid="ide-task-delete-all-ok" @click="onDeleteAllArchived(); showDeleteAllConfirm = false">{{ t('ide.task.deleteAllArchivedMenu') }}</button>
+              <button type="button" class="ide-taskbar__group-btn ide-taskbar__group-btn--danger" :disabled="deleteAllBusy" data-testid="ide-task-delete-all-ok" @click="confirmDeleteAllArchived">{{ t('ide.task.deleteAllArchivedMenu') }}</button>
               <button type="button" class="ide-taskbar__group-btn" @click="showDeleteAllConfirm = false">{{ t('common.cancel') }}</button>
             </div>
           </div>

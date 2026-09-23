@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // IdeGitLog — 提交图谱（M4d，对标 zcode gitGraph 27 键的本地对应物）：
 // git log 提交列表 + refs 徽标（分支/tag/head），简化泳道为单列徽标色点。
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { ideGitApi, type GitLogCommit } from '../api/git'
@@ -36,6 +36,8 @@ function refClass(ref: string): string {
 }
 
 onMounted(load)
+// 工作区切换即重载：否则提交图谱一直显示旧仓库（对齐 IdeGitPane 同款 watch）
+watch(() => ide.workspace, () => void load())
 </script>
 
 <template>

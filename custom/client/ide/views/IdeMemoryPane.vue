@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // IdeMemoryPane — 工作区记忆查看器（M3，对标 zcode settings.memory.viewer 37 键）：
 // 读取 workspace 的记忆文件（AGENTS.md / MEMORY.md / memory 目录），只读浏览 + 搜索。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { listFiles, readFile } from '@/api/studio/files'
@@ -65,6 +65,8 @@ async function open(item: { path: string; name: string }): Promise<void> {
 }
 
 onMounted(load)
+// 工作区切换即重载：否则记忆面板继续读旧目录
+watch(() => ide.workspace, () => void load())
 </script>
 
 <template>

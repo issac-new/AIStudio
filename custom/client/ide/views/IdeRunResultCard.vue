@@ -53,14 +53,25 @@ async function load(): Promise<void> {
   if (!sid) return
   try {
     const rows = await ideRunsApi.changes(sid)
+    // 在途请求乱序守卫：resolve 时会话已切走则丢弃，避免旧会话数据串显
+    if (chatStore.activeSessionId !== sid) return
     digests.value = digestRunChanges(rows)
   } catch {
+    if (chatStore.activeSessionId !== sid) return
     digests.value = []
   } finally {
     loaded.value = true
   }
 }
 onMounted(load)
+// 会话切换即重载：卡片挂在 ChatPane 内不随会话重建，不 watch 会一直显示上一会话的变更
+watch(
+  () => chatStore.activeSessionId,
+  () => {
+    digests.value = []
+    void load()
+  },
+)
 watch(
   () => chatStore.isRunActive,
   (active, prev) => {

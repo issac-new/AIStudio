@@ -792,3 +792,4 @@
 #      gateway 已鉴权 adapter（不碰 token），无 gateway 时回落 Client-Server API。
 #      守门测试 tests/gateway/test_matrix_room_tools.py（33 例）。
 374-agent-matrix-room-tools.patch
+376-client-i18n-missing-keys.patch

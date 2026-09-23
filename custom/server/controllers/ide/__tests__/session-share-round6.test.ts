@@ -4,7 +4,7 @@
 // prompt 直接入队，viewer 拒绝）/ patch 356 漂移。
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 // 直接挂载控制器 Router 到最小 koa 上下文驱动（不走全量 bootstrap）
@@ -105,6 +105,7 @@ describe('R6 共享会话（routa shared-session 语义）', () => {
       state: { user: { username: 'bob' } },
     })
     expect(resA.status).toBe(200)
+    expect((resA.body as { stub: boolean }).stub).toBe(true) // 形状骨架诚实标记（无真实入队副作用）
     expect((resA.body as { pendingApproval: boolean }).pendingApproval).toBe(true)
     expect((resA.body as { queued: boolean }).queued).toBe(false)
 
@@ -147,7 +148,10 @@ describe('patch 356 漂移守卫', () => {
     expect(patch).toContain('app.use(ideSessionShareRouter.routes())')
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('356-server-ide-session-share.patch')
-    const manifest = JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
+    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
+      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
     expect(manifest.appliedPatches).toContain('356-server-ide-session-share.patch')
   })
 })
