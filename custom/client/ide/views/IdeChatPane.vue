@@ -329,7 +329,8 @@ const modelDisabled = computed(() => true)
           type="button"
           class="ide-chat__action"
           :disabled="!canOpenTrace"
-          :title="t('ide.chatTabTrace')"
+          :title="canOpenTrace ? t('ide.chatTabTrace') : t('ide.chatTabTraceDisabled')"
+          data-testid="ide-chat-trace-btn"
           @click="openRunTrace"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">

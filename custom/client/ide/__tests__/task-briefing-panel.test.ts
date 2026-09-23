@@ -44,7 +44,7 @@ describe('TaskBriefingPanel', () => {
     expect(headerText).toContain('dev-wang')
     expect(headerText).toContain('lead-zhang')
     const wfText = w.find('[data-testid="briefing-workflow-block"]').text()
-    expect(wfText).toContain('1/3')
+    expect(wfText).toContain('1/5')  // 分母=服务端熔断上限 RETRY_MAX
   })
 
   it('toggles a section collapsed and back', async () => {
@@ -66,6 +66,6 @@ describe('TaskBriefingPanel', () => {
   it('renders danger styling when retry count reaches leader threshold', () => {
     const w = mountPanel({ workflow: { stage: 'blocked', parentIds: [], childIds: [], blocked: true, retryCount: 3 } })
     const wfText = w.find('[data-testid="briefing-workflow-block"]').text()
-    expect(wfText).toContain('3/3')
+    expect(wfText).toContain('3/5')
   })
 })

@@ -111,7 +111,7 @@ describe('IdeWhiteboardPane（M4e 画板）', () => {
     const vm = w.vm as any
     expect(vm.canUndo).toBe(false)
     vm.drawing = true
-    vm.currentStroke = [{ x: 1, y: 1 }, { x: 2, y: 2 }]
+    vm.currentStroke = { points: [{ x: 1, y: 1 }, { x: 2, y: 2 }], tool: 'pen', color: '#ff0000', width: 3 }
     vm.onUp()
     await vm.$nextTick()
     expect(vm.canUndo).toBe(true)
@@ -120,5 +120,21 @@ describe('IdeWhiteboardPane（M4e 画板）', () => {
     expect([vm.strokes.length, vm.redoStack.length]).toEqual([0, 1])
     vm.redo()
     expect([vm.strokes.length, vm.redoStack.length]).toEqual([1, 0])
+  })
+
+  it('笔迹携带属性快照：换色/换橡皮后 undo+redo 不篡改历史笔迹属性', async () => {
+    const w = mount(IdeWhiteboardPane)
+    const vm = w.vm as any
+    // 第一笔：红、pen
+    vm.drawing = true
+    vm.currentStroke = { points: [{ x: 1, y: 1 }, { x: 2, y: 2 }], tool: 'pen', color: '#ff0000', width: 3 }
+    vm.onUp()
+    // 切换到蓝/橡皮后再 undo+redo，历史笔迹属性必须原样回归
+    vm.undo()
+    vm.redo()
+    expect(vm.strokes[0].color).toBe('#ff0000')
+    expect(vm.strokes[0].tool).toBe('pen')
+    expect(vm.strokes[0].width).toBe(3)
+    expect(vm.strokes[0].points).toEqual([{ x: 1, y: 1 }, { x: 2, y: 2 }])
   })
 })

@@ -136,6 +136,37 @@ describe('TpsTracker 状态机', () => {
     expect(tracker.liveTps(3600)).toBeCloseTo(166.67, 0)
   })
 
+  it('多消息 run：第二条流式消息的增量不被丢弃（agentic 一轮多 assistant）', () => {
+    const tracker = new TpsTracker()
+    tracker.startRun(0, undefined)
+    // 消息 1：0→2000ms 流式 4000 字符
+    tracker.onStreamDelta(0, 100)
+    tracker.onStreamDelta(1000, 2100)
+    tracker.onStreamDelta(2000, 4100)
+    // 工具间隙（末条不在流式）+ 消息 2：4000→6000ms 从头流式 3000 字符
+    tracker.onStreamDelta(2100, 0)
+    tracker.onStreamDelta(4000, 100)
+    tracker.onStreamDelta(5000, 1600)
+    tracker.onStreamDelta(6000, 3100)
+    const sample = tracker.endRun(6000)
+    expect(sample).not.toBeNull()
+    // 旧实现第 2 条消息全被单调守卫丢弃：4000/4/2s=500；新实现两条都计入
+    // burst2：(3100-100)/4 / 2s = 375 → Σ(500+375)/Σ(2s+2s) = 437.5
+    expect(sample!.tps).toBeCloseTo(437.5, 1)
+  })
+
+  it('reset 清样本：会话切换后 sparkline 不跨会话混样', () => {
+    const tracker = new TpsTracker()
+    tracker.startRun(0, 0)
+    tracker.onStreamDelta(0, 100)
+    tracker.onStreamDelta(2000, 4100)
+    tracker.endRun(2000)
+    expect(tracker.getSamples()).toHaveLength(1)
+    tracker.reset()
+    expect(tracker.getSamples()).toHaveLength(0)
+    expect(tracker.getLastRunTps()).toBeNull()
+  })
+
   it('轮结算：真实 output 增量优先于 chars/4 估计', () => {
     const tracker = new TpsTracker()
     tracker.startRun(0, 1000) // 会话累计基线

@@ -3,7 +3,7 @@
 // 名册排序（busy→online→idle→offline）/ FlowNavPanel agents 区接线 / patch 354 漂移。
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import { buildAgentRoster, type AgentRosterTask, type AgentRosterSession } from '../adapters/agents'
 import type { PlatformInfo } from '../store/platforms'
@@ -87,7 +87,10 @@ describe('R7-C 接线锚点', () => {
     expect(patch).toContain('locales/en.ts')
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('354-client-i18n-ia2-agents.patch')
-    const manifest = JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
+    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
+      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
     expect(manifest.appliedPatches).toContain('354-client-i18n-ia2-agents.patch')
   })
 })

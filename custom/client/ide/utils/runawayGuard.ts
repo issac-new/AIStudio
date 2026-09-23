@@ -16,7 +16,9 @@ export interface RunawayMessage {
   toolName?: string | null
   toolArgs?: unknown
   toolStatus?: string | null
-  toolError?: string | null
+  /** upstream Message 无 toolError 字段：错误文本落在 toolResult / toolPreview */
+  toolResult?: unknown
+  toolPreview?: string | null
   timestamp?: number
 }
 
@@ -49,8 +51,26 @@ function stableArgs(toolArgs: unknown): string {
   }
 }
 
+/** 从真实 Message 形态提取错误文本：toolStatus=error 时错误在
+ *  toolResult（string 或 {error} 或其他对象）或 toolPreview 预览里 */
+function errorText(msg: RunawayMessage): string {
+  if (msg.toolStatus !== 'error') return ''
+  const r = msg.toolResult
+  if (typeof r === 'string') return r.trim()
+  if (r && typeof r === 'object') {
+    const err = (r as { error?: unknown }).error
+    if (typeof err === 'string') return err.trim()
+    try {
+      return JSON.stringify(r).slice(0, 200)
+    } catch {
+      return ''
+    }
+  }
+  return (msg.toolPreview ?? '').trim()
+}
+
 function errorSignature(msg: RunawayMessage): string | null {
-  const text = (msg.toolError ?? '').trim()
+  const text = errorText(msg)
   if (!text) return null
   // 归一化：数字与路径抹平，抓同类错误族
   return text.toLowerCase().replace(/\/[^\s]+/g, '/…').replace(/\d+/g, '#').slice(0, 80)
@@ -67,7 +87,17 @@ export function detectRunaway(
   if (!opts.isRunning || !Array.isArray(messages) || messages.length === 0) return null
   const now = opts.nowMs
 
-  const tools = messages.filter((m) => m.role === 'tool')
+  // 轮界窗口：已知本轮起点时，打转/复读类信号（①②⑥）只扫本轮——上一轮以
+  // 异常收尾后，新一轮刚启动不该继承旧轮尾部信号误报。runStartedAtMs 缺失时
+  // （历史会话回放）退化为全会话扫描。
+  const runStart = opts.runStartedAtMs ?? 0
+  // 无时间戳的消息保守纳入（真实 Message.timestamp 必有；仅测试桩可能缺）
+  const inRunMessages = runStart > 0
+    ? messages.filter((m) => typeof m.timestamp !== 'number' || m.timestamp >= runStart)
+    : messages
+  if (inRunMessages.length === 0) return null
+
+  const tools = inRunMessages.filter((m) => m.role === 'tool')
   const toolTimes = tools.map((m) => (typeof m.timestamp === 'number' ? m.timestamp : 0)).filter(Boolean)
 
   // ① 同工具+同参数连续 N 次
@@ -127,14 +157,14 @@ export function detectRunaway(
   }
 
   // ⑤ 单轮工具风暴
-  const runStart = opts.runStartedAtMs ?? (toolTimes.length > 0 ? Math.min(...toolTimes) : 0)
-  const inRun = runStart > 0 ? tools.filter((m) => (m.timestamp ?? 0) >= runStart).length : tools.length
+  const stormRunStart = runStart > 0 ? runStart : (toolTimes.length > 0 ? Math.min(...toolTimes) : 0)
+  const inRun = stormRunStart > 0 ? tools.filter((m) => (m.timestamp ?? 0) >= stormRunStart).length : tools.length
   if (inRun > TOOL_STORM_LIMIT) {
     return { kind: 'tool_storm', detail: `${inRun}` }
   }
 
   // ⑥ 复读机：连续 assistant 文本头 120 字符全等（≥2 条即可判定，2 条以上更强）
-  const assistants = messages.filter((m) => m.role === 'assistant' && typeof m.content === 'string')
+  const assistants = inRunMessages.filter((m) => m.role === 'assistant' && typeof m.content === 'string')
   if (assistants.length >= REPETITIVE_TEXT_LIMIT + 1) {
     const tail = assistants.slice(-(REPETITIVE_TEXT_LIMIT + 1)).map((m) => (m.content ?? '').slice(0, 120))
     if (tail.every((t) => t.length >= 60 && t === tail[0])) {

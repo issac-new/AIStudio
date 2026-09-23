@@ -50,6 +50,35 @@ describe('parseGitStatus', () => {
     expect(status.branch).toBe('HEAD')
   })
 
+  it('空仓分支头「No commits yet on main」取尾段，不显示整句提示语', () => {
+    const status = parseGitStatus('/repo', '## No commits yet on main')
+    expect(status.branch).toBe('main')
+    expect(status.detached).toBe(false)
+  })
+
+  it('文件名字面含 " -> " 不误判 rename（引号段外的分隔才有效）', () => {
+    const status = parseGitStatus('/repo', [
+      '## main',
+      '?? "a -> b.txt"',
+      'R  "old \\"x\\"" -> "new -> keep.ts"',
+    ].join('\n'))
+    const untracked = status.changes.find((c) => c.file.includes('a -> b.txt'))
+    expect(untracked?.kind).toBe('untracked')
+    expect(untracked?.renamedFrom).toBeNull()
+    const renamed = status.changes.find((c) => c.file === 'new -> keep.ts')
+    expect(renamed?.kind).toBe('renamed')
+    expect(renamed?.renamedFrom).toBe('old "x"')
+  })
+
+  it('isSafeBranchName 放行中文/Unicode 分支名，仍拒选项注入位', () => {
+    expect(isSafeBranchName('功能/支付重构')).toBe(true)
+    expect(isSafeBranchName('feat/中文-分支_v2')).toBe(true)
+    expect(isSafeBranchName('-detach')).toBe(false)
+    expect(isSafeBranchName('.hidden')).toBe(false)
+    expect(isSafeBranchName('has space')).toBe(false)
+    expect(isSafeBranchName('bad~char')).toBe(false)
+  })
+
   it('unquotes C-style octal paths back to UTF-8 (core.quotepath 默认开启)', () => {
     // "中文.txt" 的 UTF-8 字节：中=E4B8AD 文=E69687 → git 输出 \344\270\255\346\226\207
     const status = parseGitStatus('/repo', [

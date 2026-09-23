@@ -48,13 +48,15 @@ export function useSessionMetrics() {
     if (key === contextKeyLoaded) return
     contextKeyLoaded = key
     try {
-      contextLength.value = await fetchContextLength(
+      const value = await fetchContextLength(
         session?.profile || undefined,
         session?.provider || undefined,
         session?.model || undefined,
       )
+      // 竞态守卫：快速切 model/profile 时先发后至的旧响应不得覆盖新值
+      if (key === contextKeyLoaded) contextLength.value = value
     } catch {
-      contextLength.value = FALLBACK_CONTEXT
+      if (key === contextKeyLoaded) contextLength.value = FALLBACK_CONTEXT
     }
   }
 
@@ -102,8 +104,7 @@ export function useSessionMetrics() {
     () => chatStore.activeSessionId,
     () => {
       // 会话切换：TPS 历史归属单会话，整体重置（水位/缓存走各自刷新）
-      tracker.startRun(0)
-      tracker.endRun(0)
+      tracker.reset()
       tpsLive.value = null
       tpsLast.value = null
       tpsPeak.value = null
@@ -130,8 +131,10 @@ export function useSessionMetrics() {
     },
   )
 
-  watch(feedStreamChars, (chars, prev) => {
-    if (chars > (prev ?? 0)) tracker.onStreamDelta(Date.now(), chars)
+  // 每个 tick 都喂给 tracker：值变小（新的流式条）与归零（工具间隙）由
+  // tracker 自行区分处理，这里不再预过滤（否则第 2 条流式消息全被丢弃）
+  watch(feedStreamChars, (chars) => {
+    tracker.onStreamDelta(Date.now(), chars)
   })
 
   watch(
@@ -177,28 +180,42 @@ export function useSessionMetrics() {
   const cacheDetail = ref<SessionCacheDetail | null>(null)
   let cacheFetching = false
   let cacheLastFetchAt = 0
+  let cachePendingSid: string | null = null
 
   async function refreshCache(): Promise<void> {
     const sid = chatStore.activeSessionId
-    if (!sid || cacheFetching) return
+    if (!sid) return
+    if (cacheFetching) {
+      // 在途请求属于旧会话时，标记待刷：在途结束后立即补一次
+      cachePendingSid = sid
+      return
+    }
     const now = Date.now()
-    if (now - cacheLastFetchAt < CACHE_REFRESH_MIN_INTERVAL_MS) return
+    if (now - cacheLastFetchAt < CACHE_REFRESH_MIN_INTERVAL_MS && cacheDetail.value !== null) return
     cacheFetching = true
     cacheLastFetchAt = now
     try {
       const list = await fetchSessions()
-      const summary = list.find((item) => item.id === sid)
-      cacheDetail.value = summary
-        ? {
-            inputTokens: Number(summary.input_tokens ?? 0),
-            cacheReadTokens: Number(summary.cache_read_tokens ?? 0),
-            cacheWriteTokens: Number(summary.cache_write_tokens ?? 0),
-          }
-        : null
+      // 竞态守卫：resolve 时会话已切走则丢弃，避免旧会话缓存数据串显
+      if (chatStore.activeSessionId === sid) {
+        const summary = list.find((item) => item.id === sid)
+        cacheDetail.value = summary
+          ? {
+              inputTokens: Number(summary.input_tokens ?? 0),
+              cacheReadTokens: Number(summary.cache_read_tokens ?? 0),
+              cacheWriteTokens: Number(summary.cache_write_tokens ?? 0),
+            }
+          : null
+      }
     } catch {
-      cacheDetail.value = null
+      if (chatStore.activeSessionId === sid) cacheDetail.value = null
     } finally {
       cacheFetching = false
+      if (cachePendingSid && cachePendingSid === chatStore.activeSessionId) {
+        cachePendingSid = null
+        cacheLastFetchAt = 0
+        void refreshCache()
+      }
     }
   }
 
@@ -206,6 +223,8 @@ export function useSessionMetrics() {
     () => chatStore.activeSessionId,
     () => {
       cacheDetail.value = null
+      // 切会话允许立即刷新（不受 3s 节流限制）
+      cacheLastFetchAt = 0
     },
   )
 

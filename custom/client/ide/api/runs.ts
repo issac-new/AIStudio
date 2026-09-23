@@ -4,7 +4,7 @@
 // 表；hermes 在 agent 每轮工具写盘后落一行）。R3 只做聚合展示，零新写。
 import {
   fetchWorkspaceRunChangesForSession,
-  type WorkspaceRunChangeFileSummary,
+  type WorkspaceRunChangeSummary,
 } from '@/api/studio/sessions'
 
 export interface RunChangesDigest {
@@ -15,31 +15,32 @@ export interface RunChangesDigest {
   files: Array<{ path: string; additions: number; deletions: number; changeType: string }>
 }
 
-/** 按 run_id 聚合成结果卡可用的 digest（新→旧排序） */
-export function digestRunChanges(rows: WorkspaceRunChangeFileSummary[]): RunChangesDigest[] {
-  const byRun = new Map<string, RunChangesDigest>()
-  for (const row of rows) {
-    const key = row.change_id || 'unknown'
-    let digest = byRun.get(key)
-    if (!digest) {
-      digest = { runId: key, fileCount: 0, additions: 0, deletions: 0, files: [] }
-      byRun.set(key, digest)
-    }
-    digest.fileCount += 1
-    digest.additions += row.additions ?? 0
-    digest.deletions += row.deletions ?? 0
-    digest.files.push({
-      path: row.path,
-      additions: row.additions ?? 0,
-      deletions: row.deletions ?? 0,
-      changeType: row.change_type,
-    })
-  }
-  return [...byRun.values()].sort((a, b) => b.runId.localeCompare(a.runId))
+/** 将 upstream 按 run 聚合的 summary 摊平为结果卡 digest（新→旧排序）。
+ *  契约注意：fetchWorkspaceRunChangesForSession 返回 WorkspaceRunChangeSummary[]——
+ *  每 run 一项，自身携带 run 级汇总（files_changed/additions/deletions）与 files
+ *  子数组，不是扁平文件行；排序按 finished_at 降序（run_id 字典序会有 run-10 <
+ *  run-9 的错序）。 */
+export function digestRunChanges(summaries: WorkspaceRunChangeSummary[]): RunChangesDigest[] {
+  return summaries
+    .map((s) => ({
+      runId: s.run_id || s.change_id || 'unknown',
+      fileCount: s.files_changed ?? s.files?.length ?? 0,
+      additions: s.additions ?? 0,
+      deletions: s.deletions ?? 0,
+      files: (s.files ?? []).map((f) => ({
+        path: f.path,
+        additions: f.additions ?? 0,
+        deletions: f.deletions ?? 0,
+        changeType: f.change_type,
+      })),
+      sortKey: s.finished_at ?? s.started_at ?? s.created_at ?? 0,
+    }))
+    .sort((a, b) => b.sortKey - a.sortKey || (a.runId < b.runId ? 1 : a.runId > b.runId ? -1 : 0))
+    .map(({ sortKey: _sortKey, ...digest }) => digest)
 }
 
 export const ideRunsApi = {
-  async changes(sessionId: string): Promise<WorkspaceRunChangeFileSummary[]> {
+  async changes(sessionId: string): Promise<WorkspaceRunChangeSummary[]> {
     return fetchWorkspaceRunChangesForSession(sessionId)
   },
 }

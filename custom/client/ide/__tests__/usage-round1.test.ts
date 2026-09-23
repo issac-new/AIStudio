@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick, reactive } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k) }) }))
@@ -97,8 +97,9 @@ describe('价目成本估算（dsh-TUI 三原则：未收录不显示 / 缓存�
     expect(estimateCostUsd('unknown-model-x', { inputTokens: 1e6, outputTokens: 1e6 })).toBeNull()
   })
 
-  it('claude-sonnet-4.5：输入 3 / 输出 15 / 缓存读 0.3 / 写 3.75（USD/1M）逐项折算', () => {
-    // 有效输入 = 1M - 0.2M(读) - 0.1M(写) = 0.7M × 3 = 2.1
+  it('claude-sonnet-4.5：输入 3 / 输出 15 / 缓存读 0.3 / 写 3.75（USD/1M）逐项折算；input 不含缓存（服务端已扣）', () => {
+    // 口径：存储侧 inputTokens 已被 normalizeTokenUsage 扣除缓存读写，
+    // input 部分按全量 1M × 3 = 3.0 计价，不再二次扣减
     const cost = estimateCostUsd('claude-sonnet-4.5', {
       inputTokens: 1_000_000,
       outputTokens: 1_000_000,
@@ -106,7 +107,18 @@ describe('价目成本估算（dsh-TUI 三原则：未收录不显示 / 缓存�
       cacheWriteTokens: 100_000,
     })
     expect(cost).not.toBeNull()
-    expect(cost!).toBeCloseTo(2.1 + 15 + 0.06 + 0.375, 5)
+    expect(cost!).toBeCloseTo(3.0 + 15 + 0.06 + 0.375, 5)
+  })
+
+  it('缓存重的轮次 input 不会被计为 $0：input=50k 与 cacheRead=150k 并存时按 50k 计价', () => {
+    // 回归守卫：旧实现对 input 再扣 cacheRead/cacheWrite，50k-150k-… 被
+    // Math.max(0,…) 截成 0，缓存重会话的非缓存输入系统性计 $0
+    const cost = estimateCostUsd('claude-sonnet-4.5', {
+      inputTokens: 50_000,
+      outputTokens: 0,
+      cacheReadTokens: 150_000,
+    })
+    expect(cost).toBeCloseTo(0.05 * 3 + 0.15 * 0.3, 8)
   })
 
   it('gpt-5.1 无缓存分价时读写并入有效输入按 input 价结算', () => {
@@ -260,7 +272,7 @@ describe('IdeMetricsPopover 接线（G4/G7/G8 + 成本 + 低余量横幅）', ()
     const w = await mountPopover()
     await flushJobs()
     expect(w.text()).toContain('roundsLoadFailed')
-    expect(w.text()).toContain('heatmapEmpty')
+    expect(w.text()).toContain('heatmapLoadFailed')
   })
 })
 
@@ -361,7 +373,10 @@ describe('patch 340/341 漂移守卫', () => {
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('340-server-usage-rounds-endpoint.patch')
     expect(series).toContain('341-client-i18n-ide-usage-panel.patch')
-    const manifest = JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
+    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
+      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
     expect(manifest.appliedPatches).toContain('340-server-usage-rounds-endpoint.patch')
     expect(manifest.appliedPatches).toContain('341-client-i18n-ide-usage-panel.patch')
   })

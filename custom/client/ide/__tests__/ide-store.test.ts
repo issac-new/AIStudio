@@ -27,11 +27,16 @@ describe('ide store（workspace/agent/布局持久化）', () => {
     const ide = useIdeStore()
     expect(ide.workspace).toBeNull()
     expect(ide.agentId).toBe('codex')
+    // v12.4 栏控语义：三列各有 folded/maximized；visible 族布尔已随死开关清理退役
     expect(ide.layout).toMatchObject({
-      workspaceVisible: true,
-      chatVisible: true,
-      terminalOpen: false,
+      terminalHeight: 240,
+      sidebar: { folded: false, maximized: false },
+      workspace: { folded: false, maximized: false },
+      chat: { folded: false, maximized: false },
     })
+    expect(ide.layout).not.toHaveProperty('workspaceVisible')
+    expect(ide.layout).not.toHaveProperty('chatVisible')
+    expect(ide.layout).not.toHaveProperty('terminalOpen')
   })
 
   it('浮窗开关默认关闭、toggleFloat 翻转（瞬态不持久化）', () => {

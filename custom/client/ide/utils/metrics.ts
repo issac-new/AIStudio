@@ -129,7 +129,12 @@ export class TpsTracker {
   private lastEventAt: number | null = null
   private burstFirstAt: number | null = null
   private burstBaseChars = 0
+  /** 本轮流式字符单调累计：每条消息内的增长 tick 逐次折入（跨消息可累计） */
   private streamChars = 0
+  /** 当前流式条内的原始长度（换条/暂停时归零换基线） */
+  private lastMsgTotal = 0
+  /** 末条消息不在流式（工具执行间隙/已定稿）：折起 burst，保留累计基线 */
+  private paused = false
   // burst 累加（dsh-TUI 解码折页：Σtoken / Σ解码时长，工具间隙不计入分母）
   private accChars = 0
   private accDurationMs = 0
@@ -146,6 +151,24 @@ export class TpsTracker {
     return this.lastRunTps
   }
 
+  /** 整体重置（会话切换）：样本与累计一并清空，sparkline 不跨会话混样 */
+  reset(): void {
+    this.running = false
+    this.firstDeltaAt = null
+    this.lastEventAt = null
+    this.burstFirstAt = null
+    this.burstBaseChars = 0
+    this.streamChars = 0
+    this.lastMsgTotal = 0
+    this.paused = false
+    this.accChars = 0
+    this.accDurationMs = 0
+    this.settledOutputBase = null
+    this.settledOutputLast = null
+    this.samples = []
+    this.lastRunTps = null
+  }
+
   startRun(now: number, baselineOutputTokens?: number): void {
     this.running = true
     this.firstDeltaAt = null
@@ -153,6 +176,8 @@ export class TpsTracker {
     this.burstFirstAt = null
     this.burstBaseChars = 0
     this.streamChars = 0
+    this.lastMsgTotal = 0
+    this.paused = false
     this.accChars = 0
     this.accDurationMs = 0
     this.settledOutputBase =
@@ -162,19 +187,39 @@ export class TpsTracker {
     this.settledOutputLast = this.settledOutputBase
   }
 
-  /** totalStreamChars：本轮开始以来流式 assistant 文本累计字符数（单调不减） */
-  onStreamDelta(now: number, totalStreamChars: number): void {
-    if (!this.running || !Number.isFinite(totalStreamChars) || totalStreamChars <= this.streamChars) return
+  /**
+   * msgTotalChars：当前流式 assistant 消息的文本长度（单条消息内口径）。
+   * agentic 一轮常含多条流式消息：值变小 = 新条开始，此前累计不丢、换基线
+   * 继续计；值归零 = 工具执行间隙，折起 burst 不清累计。
+   */
+  onStreamDelta(now: number, msgTotalChars: number): void {
+    if (!this.running || !Number.isFinite(msgTotalChars) || msgTotalChars < 0) return
+    if (msgTotalChars === 0) {
+      this.closeBurst()
+      this.paused = true
+      return
+    }
+    if (this.paused || msgTotalChars < this.lastMsgTotal) {
+      // 新的流式条开始：上一条字符已随增长 tick 折入 streamChars，此处只换基线
+      this.closeBurst()
+      this.lastMsgTotal = 0
+      this.paused = false
+    }
+    if (msgTotalChars <= this.lastMsgTotal) return
+    const delta = msgTotalChars - this.lastMsgTotal
+    const base = this.streamChars
+    this.streamChars = base + delta
     if (this.firstDeltaAt === null) {
       this.firstDeltaAt = now
       this.burstFirstAt = now
-      this.burstBaseChars = totalStreamChars
-    } else if (this.burstFirstAt !== null && now - this.lastEventAt! > TPS_BURST_GAP_MS) {
+      // 开口读数不计入 burst（含开口前已产出但未观察到的字符，dsh 同款近似）
+      this.burstBaseChars = this.streamChars
+    } else if (this.burstFirstAt === null || now - this.lastEventAt! > TPS_BURST_GAP_MS) {
       this.closeBurst()
       this.burstFirstAt = now
-      this.burstBaseChars = totalStreamChars
+      this.burstBaseChars = this.streamChars
     }
-    this.streamChars = totalStreamChars
+    this.lastMsgTotal = msgTotalChars
     this.lastEventAt = now
   }
 

@@ -27,6 +27,14 @@ const open = ref(false)
 
 // 完成事件流水（运行翻转 false 时记录一条；保留最近 20 条）
 const doneLog = ref<ActivityItem[]>([])
+// 头注口径是「会话内记忆」：切换会话清空，避免跨会话累积他场完成记录
+watch(
+  () => chatStore.activeSessionId,
+  () => {
+    doneLog.value = []
+    unreadDone.value = 0
+  },
+)
 watch(
   () => chatStore.isRunActive,
   (active, prev) => {

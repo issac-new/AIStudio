@@ -55,12 +55,6 @@ export interface IdePaneState {
 }
 
 export interface IdeLayoutPrefs {
-  /** 左侧功能栏：工作区列是否可见 */
-  workspaceVisible: boolean
-  /** 右侧会话列是否可见 */
-  chatVisible: boolean
-  /** 底部终端是否展开 */
-  terminalOpen: boolean
   /** 终端面板高度（px） */
   terminalHeight: number
   /** 会话列宽度（px） */
@@ -78,9 +72,6 @@ export interface IdeLayoutPrefs {
 }
 
 const DEFAULT_LAYOUT: IdeLayoutPrefs = {
-  workspaceVisible: true,
-  chatVisible: true,
-  terminalOpen: false,
   terminalHeight: 240,
   chatWidth: 440,
   sidebarWidth: 280,
@@ -213,7 +204,6 @@ export const useIdeStore = defineStore('ide', () => {
 
   /** 中栏聚焦：确保会话列可见（任务/会话维度动线共用） */
   function setChatFocus(): void {
-    if (!layout.value.chatVisible) layout.value.chatVisible = true
     if (layout.value.chat.folded) layout.value.chat.folded = false
   }
 

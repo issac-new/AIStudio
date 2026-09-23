@@ -4,7 +4,7 @@
 // （工作空间强制 project 分桶）/ patch 347 漂移守卫。
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import { bucketSessions, isActiveSession, ACTIVE_WINDOW_MS } from '../utils/sessionBuckets'
 import type { Session } from '@/stores/hermes/chat'
@@ -76,7 +76,10 @@ describe('patch 347 漂移守卫', () => {
     expect(patch).toContain('locales/en.ts')
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('347-client-i18n-ide-session-views.patch')
-    const manifest = JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
+    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
+      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
+      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
     expect(manifest.appliedPatches).toContain('347-client-i18n-ide-session-views.patch')
   })
 

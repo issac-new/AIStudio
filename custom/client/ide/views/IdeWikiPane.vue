@@ -5,7 +5,7 @@
 //   wikiReference.referencePage/referenceWiki）+ 「生成 Wiki」prompt 复制
 //   （生成引擎对应物 = 当前 codex 会话执行结构化 prompt，产物写回 docs/wiki/）。
 // 云端 wiki 引擎不照搬（spec §三裁决），此为本地诚实对应物。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { listFiles, readFile } from '@/api/studio/files'
@@ -59,7 +59,14 @@ async function loadPages(): Promise<void> {
     }
     pages.value = collected
   } catch (err) {
-    loadError.value = err instanceof Error ? err.message : String(err)
+    // docs/wiki 不存在（新工作区常态）是空态而非错误：files API 以 404 表达 ENOENT
+    const notFound = err instanceof Error && /404|ENOENT|not found/i.test(err.message)
+    if (notFound) {
+      pages.value = []
+      loadError.value = null
+    } else {
+      loadError.value = err instanceof Error ? err.message : String(err)
+    }
   } finally {
     loading.value = false
   }
@@ -121,6 +128,8 @@ function runPipeline(): void {
 }
 
 onMounted(loadPages)
+// 工作区切换即重载：否则 Wiki 面板继续读旧目录
+watch(() => ide.workspace, () => void loadPages())
 </script>
 
 <template>

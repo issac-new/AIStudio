@@ -21,6 +21,7 @@
 import Router from '@koa/router'
 import { WorktreeManager } from '../../loop/engine/worktree-manager'
 import { execFile } from 'child_process'
+import { createHash } from 'crypto'
 import { promisify } from 'util'
 import { existsSync, promises as fs } from 'fs'
 import { resolve } from 'path'
@@ -31,9 +32,30 @@ const manager = new WorktreeManager()
 interface CreateBody { sessionId?: string; repoRoot?: string }
 interface RemoveBody { sessionId?: string; repoRoot?: string }
 
+/**
+ * worktree id 派生：sessionId 全量 sha1 取前 12 hex 位。
+ * 此前取「洗净后的前 12 字符」——会话 id 是 `${Date.now().toString(36)}+随机6位`，
+ * 前 12 位里只有约 4 位随机（~20bit），同窗创建的两个会话可能撞 id，后者的
+ * create 会 rm 掉前者正在使用的 worktree（未提交工作丢失）；全非 ASCII id
+ * 则统一洗净成 'anon'，退化成必然碰撞。哈希派生两者皆除。
+ */
 function worktreeIdFor(sessionId: string): string {
-  const clean = sessionId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12) || 'anon'
-  return `wt-${clean}`
+  const hash = createHash('sha1').update(sessionId).digest('hex').slice(0, 12)
+  return `wt-${hash}`
+}
+
+/** 同 id 并发闸：双击「建隔离」时两个 create 并发通过 existsSync 检查后交错
+ * rm/add（半成品目录 / already exists 报错）。进程内按 id 串行。 */
+const createLocks = new Map<string, Promise<unknown>>()
+async function withCreateLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+  const prev = createLocks.get(id) ?? Promise.resolve()
+  const run = prev.then(fn, fn)
+  createLocks.set(id, run.catch(() => { /* 链条继续 */ }))
+  try {
+    return await run
+  } finally {
+    if (createLocks.get(id) === run) createLocks.delete(id)
+  }
 }
 
 async function resolveRepoRoot(repoRoot: string): Promise<string | null> {
@@ -95,19 +117,25 @@ ideWorktreeRouter.post('/api/ide/worktree/create', async (ctx) => {
   try {
     // repoRoot 显式锚定:建/绑/回收同落 repo/.loop/worktrees(修 create 落
     // cwd 与 bind 取 repo 的路径分叉;Windows 打包态 cwd 只读时尤为致命)。
-    await manager.create({ id: `task/${id.replace(/^wt-/, '')}` } as never, { repoRoot: repo })
+    // bind 失败时回滚刚建的 worktree——否则孤儿目录占 MAX_WORKTREES=20 名额。
+    await withCreateLock(id, async () => {
+      await manager.create({ id: `task/${id.replace(/^wt-/, '')}` } as never, { repoRoot: repo })
+      const wtPath = resolve(repo, '.loop/worktrees', id)
+      try {
+        await bindSessionWorkspace(ctx, sessionId, wtPath)
+      } catch {
+        await manager.remove(id, { repoRoot: repo }).catch(() => { /* 回滚尽力而为 */ })
+        throw new Error('bind workspace failed')
+      }
+    })
   } catch (err) {
-    ctx.status = 500
-    ctx.body = { error: `worktree create failed: ${err instanceof Error ? err.message : String(err)}` }
+    if (!ctx.body) {
+      ctx.status = 500
+      ctx.body = { error: `worktree create failed: ${err instanceof Error ? err.message : String(err)}` }
+    }
     return
   }
-  const wtPath = resolve(repo, '.loop/worktrees', id)
-  try {
-    await bindSessionWorkspace(ctx, sessionId, wtPath)
-  } catch {
-    return // bindSessionWorkspace 已置 ctx
-  }
-  ctx.body = { ok: true, worktreeId: id, path: wtPath }
+  ctx.body = { ok: true, worktreeId: id, path: resolve(repo, '.loop/worktrees', id) }
 })
 
 ideWorktreeRouter.post('/api/ide/worktree/remove', async (ctx) => {
