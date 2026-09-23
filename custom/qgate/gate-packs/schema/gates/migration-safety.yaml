@@ -1,0 +1,37 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: schema.migration-safety
+  version: 0.1.0
+  description: >
+    L2/L5.2 Schema 迁移安全：migration 必须 old→new 双向可验（不仅全新库）。
+    模板门——项目覆盖为真实迁移验证命令（如 migrate up+down 复演 / diff 检查）。
+    持久化行为正确性由 data.persistence-integrity 门管，本门只管迁移过程安全。
+spec:
+  domain: L2
+  claims:
+    - schema.migration-reversible
+  appliesWhen:
+    changed:
+      any:
+        - "db/**"
+        - "**/migrations/**"
+        - "**/*.sql"
+        - "**/schema.prisma"
+  triggers:
+    - pre_commit
+    - release
+  executors:
+    - id: migration-check
+      type: command
+      command: ["npm", "run", "db:migrate:check", "--silent"]
+      evidenceType: migration-check-result
+      timeoutMs: 300000
+  evidence:
+    required:
+      - migration-check-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

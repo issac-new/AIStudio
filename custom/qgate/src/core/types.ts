@@ -48,7 +48,7 @@ export interface Claim {
 
 export interface ExecutorSpec {
   id: string
-  type: 'command' | 'persistence' | 'ontology' | 'files'
+  type: 'command' | 'persistence' | 'ontology' | 'files' | 'llm'
   /** command：argv 固定命令（无 shell 拼接，安全边界设计 §5.5）。 */
   command?: string[]
   /** command：cwd 相对工作目录前缀（默认项目根）。 */
