@@ -1,0 +1,39 @@
+# 场景文件本体即场景（无外层 wrapper）：被 persistence executor 直接消费
+id: payment-create
+description: POST /payments 后逐字段校验 payment 行 + 跨表金额一致不变量
+server:
+  start: ["npm", "start"]
+  readyUrl: http://127.0.0.1:8901/healthz
+db:
+  driver: sqlite
+  path: data/payment.db
+setup:
+  - DELETE FROM ledger;
+  - DELETE FROM payment;
+execute:
+  http:
+    method: POST
+    url: http://127.0.0.1:8901/payments
+    json:
+      orderId: O1001
+      amount: 100
+      currency: CNY
+assert:
+  response:
+    status: 201
+  persistence:
+    payment:
+      table: payment
+      where:
+        order_id: O1001
+      fields:
+        amount: 100
+        currency: CNY
+        status: CREATED
+  invariants:
+    - id: amount-consistency
+      sql: SELECT p.id, p.amount AS payment_amount, l.amount AS ledger_amount FROM payment p JOIN ledger l ON l.payment_id = p.id WHERE p.amount <> l.amount
+      zeroRows: true
+snapshot:
+  - payment
+  - ledger

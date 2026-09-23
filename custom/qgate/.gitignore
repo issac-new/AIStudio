@@ -1,0 +1,7 @@
+dist/
+node_modules/
+.qgate/runs/
+.qgate/evidence/
+.qgate/risks/
+.qgate/cache/
+*.tsbuildinfo
