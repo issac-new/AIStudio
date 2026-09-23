@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "provider": "fibo",
+  "description": "FIBO 派生预处理语义索引（v0 小集，v0.1 §42 九概念 + 歧义演示对）。来源标注 FIBO 术语；不做运行时 RDF/OWL 推理（OD-004）。",
+  "concepts": [
+    {
+      "id": "fibo-payment",
+      "label": "Payment",
+      "aliases": ["支付", "payment"],
+      "definition": "资金从付款方到收款方的转移行为（FIBO: Payment）",
+      "distinctFrom": ["fibo-settlement", "fibo-authorization"],
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-account",
+      "label": "Account",
+      "aliases": ["账户", "account"],
+      "definition": "持有方与其余额关系的账务容器（FIBO: Account）",
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-party",
+      "label": "Party",
+      "aliases": ["参与方", "party"],
+      "definition": "交易中的自然人/组织/组织单元（FIBO: Party）",
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-transaction",
+      "label": "Transaction",
+      "aliases": ["交易", "transaction"],
+      "definition": "两个参与方之间的价值交换事件（FIBO: Transaction）",
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-obligation",
+      "label": "Obligation",
+      "aliases": ["义务", "obligation"],
+      "definition": "一方须向另一方履行的责任（FIBO: Obligation）",
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-identifier",
+      "label": "Identifier",
+      "aliases": ["标识", "identifier"],
+      "definition": "在其作用域内唯一指代某实体的序列（FIBO: Identifier）",
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-monetary-amount",
+      "label": "MonetaryAmount",
+      "aliases": ["金额", "amount"],
+      "definition": "带币种的量化金额（FIBO: MonetaryAmount）。语义上必须区分 authorized/captured/settled 语境",
+      "distinctFrom": [],
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-currency",
+      "label": "Currency",
+      "aliases": ["币种", "currency"],
+      "definition": "记账单位（FIBO: Currency）",
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-status",
+      "label": "Status",
+      "aliases": ["状态", "status"],
+      "definition": "实体在其生命周期中的处置情况（FIBO: Status）",
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-authorization",
+      "label": "Authorization",
+      "aliases": ["授权", "authorized", "authorization", "预授权"],
+      "definition": "对资金在履约前实施的可撤回保留（FIBO: Authorization）。授权额度 ≠ 已扣款额度",
+      "distinctFrom": ["fibo-capture", "fibo-settlement", "fibo-payment"],
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-capture",
+      "label": "Capture",
+      "aliases": ["扣款", "captured", "capture"],
+      "definition": "把已授权额度实际转为扣款的动作（FIBO 语境）",
+      "distinctFrom": ["fibo-authorization", "fibo-settlement"],
+      "source": "FIBO"
+    },
+    {
+      "id": "fibo-settlement",
+      "label": "Settlement",
+      "aliases": ["结算", "settled", "settlement"],
+      "definition": "债权债务最终清偿（FIBO: Settlement）。结算 ≠ 扣款完成",
+      "distinctFrom": ["fibo-capture", "fibo-authorization", "fibo-payment"],
+      "source": "FIBO"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "amount-refund-bound",
+      "expression": "refundAmount <= capturedAmount",
+      "severity": "warning",
+      "description": "退款不得超出已扣款金额（候选不变量，P5+ 由 persistence 门执行侧落地）"
+    },
+    {
+      "id": "amount-settle-bound",
+      "expression": "settledAmount <= capturedAmount",
+      "severity": "warning",
+      "description": "结算金额不得超出已扣款金额"
+    },
+    {
+      "id": "debit-credit-balance",
+      "expression": "SUM(debit) == SUM(credit)",
+      "severity": "warning",
+      "description": "分录借贷合计相等（复式记账不变量候选）"
+    }
+  ]
+}

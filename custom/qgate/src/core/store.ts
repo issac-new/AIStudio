@@ -4,7 +4,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Evidence, GateRun, Risk } from './types.js'
+import type { Evidence, ExceptionWaiver, GateRun, Risk } from './types.js'
 import { parseEvidence, parseRun } from './parse.js'
 import { globMatch } from './impact.js'
 
@@ -12,6 +12,8 @@ export interface StorePaths {
   runsDir: string
   evidenceDir: string
   risksDir: string
+  /** qgate 根（exceptions/ 与 risks/ 同级）。 */
+  qgateDir: string
   stateFile: string
 }
 
@@ -20,6 +22,7 @@ export function storePaths(qgateDir: string): StorePaths {
     runsDir: join(qgateDir, 'runs'),
     evidenceDir: join(qgateDir, 'evidence'),
     risksDir: join(qgateDir, 'risks'),
+    qgateDir,
     stateFile: join(qgateDir, 'state.json'),
   }
 }
@@ -85,6 +88,41 @@ export function loadRunEvidence(paths: StorePaths, runId: string): Evidence[] {
 
 export function saveRisk(paths: StorePaths, risk: Risk): void {
   writeJson(join(paths.risksDir, `${risk.id}.json`), risk)
+}
+
+// ── Exception / waiver（v0.1 §17：显式接受，必须可过期、可复验） ──
+
+export function saveWaiver(paths: StorePaths, waiver: ExceptionWaiver): void {
+  writeJson(join(paths.qgateDir, 'exceptions', `${waiver.id}.json`), waiver)
+}
+
+export function listWaivers(paths: StorePaths): ExceptionWaiver[] {
+  const dir = join(paths.qgateDir, 'exceptions')
+  if (!existsSync(dir)) return []
+  const out: ExceptionWaiver[] = []
+  for (const name of readdirSync(dir).sort()) {
+    if (!name.endsWith('.json')) continue
+    try {
+      const raw = JSON.parse(readFileSync(join(dir, name), 'utf8')) as Record<string, unknown>
+      if (
+        typeof raw.id === 'string' && typeof raw.gateId === 'string' &&
+        typeof raw.reason === 'string' && typeof raw.approver === 'string' &&
+        typeof raw.expiresAt === 'number' && typeof raw.createdAt === 'number'
+      ) {
+        out.push(raw as unknown as ExceptionWaiver)
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  return out
+}
+
+/** 当前时刻仍有效的 waiver（过期即不算——Exception 不能永久隐藏 Risk）。 */
+export function activeWaiverFor(paths: StorePaths, gateId: string, now = Date.now()): ExceptionWaiver | undefined {
+  return listWaivers(paths)
+    .filter((w) => w.gateId === gateId && w.expiresAt > now)
+    .sort((a, b) => b.expiresAt - a.expiresAt)[0]
 }
 
 export function listRisks(paths: StorePaths): Risk[] {

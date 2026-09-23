@@ -1,0 +1,30 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: delivery.operational-readiness
+  version: 0.1.0
+  description: >
+    L5.4 运维就绪检查：部署/回滚/排障文档与 runbook 的存在性。
+    证据语义演示：files executor 只产 present 级证据（文件在 ≠ 真跑过），
+    单凭本门最好也只能 CONDITIONAL——runbook 是否可执行要靠演练（exercised）。
+spec:
+  domain: L5
+  claims:
+    - delivery.runbooks-exist
+  triggers:
+    - release
+  executors:
+    - id: ops-files
+      type: files
+      require:
+        - "docs/runbook*.md"
+        - "docs/rollback*.md"
+      evidenceType: ops-artifacts-present
+  evidence:
+    required:
+      - ops-artifacts-present
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 720

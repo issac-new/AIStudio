@@ -1,0 +1,23 @@
+apiVersion: qgate/v1alpha1
+kind: Profile
+metadata:
+  id: release
+  description: 发布档：全域 + 运维就绪与发布证据包（先跑 qgate release-report 生成证据包）
+spec:
+  enable:
+    - L0.*
+    - L1.*
+    - L2.*
+    - L3.*
+    - L4.*
+    - L5.*
+    - delivery.*
+  disable:
+    - ontology.*
+  overrides:
+    data.persistence-integrity:
+      policy:
+        inconclusive: block
+    delivery.operational-readiness:
+      policy:
+        inconclusive: warn

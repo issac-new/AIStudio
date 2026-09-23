@@ -4,12 +4,15 @@
 // 退出码：0=全部 PASS/无阻断；1=存在 FAIL/INCONCLUSIVE 阻断；2=配置或环境错误。
 
 import { resolve } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { loadProject } from './core/loader.js'
 import { runGate, gitContext } from './core/run.js'
-import { storePaths, latestRuns, loadRun, loadRunEvidence, isFresh, listRisks } from './core/store.js'
+import { storePaths, latestRuns, loadRun, loadRunEvidence, isFresh, listRisks, saveWaiver, listWaivers } from './core/store.js'
 import { resolveProfile, findProfile, effectivePolicy } from './core/profile.js'
 import { selectGates, appliesToChanged } from './core/impact.js'
 import { tierOfProfile, VERDICT_TO_DELIVERY } from './core/align.js'
+import { buildReleaseReport, renderReleaseReportMd } from './core/report.js'
+import { writeFileSync, mkdirSync } from 'node:fs'
 import type { GateSpec, Trigger } from './core/types.js'
 
 const HELP = `qgate — universal delivery gate CLI
@@ -21,6 +24,10 @@ commands:
   explain <gateId>                    解释非 PASS 的原因
   evidence <gateId|runId>             列出证据
   risk                                列出登记的 Risk
+  waive <gateId> --reason --approver  登记豁免（WAIVED；必填 reason/approver，默认 24h 过期）
+    [--scope s] [--mitigation m] [--hours N] [--revalidation r]
+  exceptions                          列出豁免及有效性
+  release-report [--out <file>]       生成发布证据包（md + json）
   init                                在当前项目创建 .qgate/ 骨架`
 
 function fail(msg: string): never {
@@ -212,6 +219,61 @@ async function main(): Promise<void> {
       const risks = listRisks(paths)
       if (risks.length === 0) { process.stdout.write('(no risks registered)\n'); return }
       for (const r of risks) process.stdout.write(`${r.severity.toUpperCase()} ${r.id} [${r.status}] ${r.description}\n`)
+      return
+    }
+
+    case 'waive': {
+      const gateId = rest[0]
+      const reason = flag(rest, '--reason')
+      const approver = flag(rest, '--approver')
+      if (!gateId || !reason || !approver) fail('usage: waive <gateId> --reason <text> --approver <name> [--scope s] [--mitigation m] [--hours N] [--revalidation r]')
+      const spec = loaded.gates.find((g) => g.metadata.id === gateId)
+      if (!spec) fail(`gate not found: ${gateId}`)
+      if (spec.spec.policy.allowWaiver === false) fail(`gate ${gateId} forbids waiver (policy.allowWaiver=false)`)
+      const hours = Number(flag(rest, '--hours') ?? 24)
+      if (!Number.isFinite(hours) || hours <= 0) fail('--hours must be a positive number')
+      const waiver = {
+        id: `waiver-${randomUUID().slice(0, 8)}`,
+        gateId,
+        reason,
+        approver,
+        scope: flag(rest, '--scope'),
+        mitigation: flag(rest, '--mitigation'),
+        expiresAt: Date.now() + hours * 3_600_000,
+        revalidation: flag(rest, '--revalidation'),
+        createdAt: Date.now(),
+      }
+      saveWaiver(paths, waiver)
+      process.stdout.write(`waived ${gateId} until ${new Date(waiver.expiresAt).toISOString()} (${waiver.id})\n`)
+      process.stdout.write(`next 'qgate run ${gateId}' will record WAIVED (original verdict preserved in conditions)\n`)
+      return
+    }
+
+    case 'exceptions': {
+      const waivers = listWaivers(paths)
+      if (waivers.length === 0) { process.stdout.write('(no exceptions registered)\n'); return }
+      const now = Date.now()
+      for (const w of waivers) {
+        const active = w.expiresAt > now
+        process.stdout.write(
+          `${active ? 'ACTIVE' : 'EXPIRED'} ${w.id} ${w.gateId} by ${w.approver} — ${w.reason}` +
+          ` (expires ${new Date(w.expiresAt).toISOString()})\n`,
+        )
+      }
+      return
+    }
+
+    case 'release-report': {
+      const data = buildReleaseReport(loaded)
+      const md = renderReleaseReportMd(data)
+      const outFile = flag(rest, '--out') ?? resolve(loaded.qgateDir, 'release-report.md')
+      mkdirSync(resolve(outFile, '..'), { recursive: true })
+      writeFileSync(outFile, md, 'utf8')
+      writeFileSync(outFile.replace(/\.md$/, '.json'), JSON.stringify(data, null, 2) + '\n', 'utf8')
+      process.stdout.write(`release evidence package written: ${outFile} (+ .json)\n`)
+      const blocking = data.unresolved.length
+      for (const u of data.unresolved) process.stdout.write(`  unresolved: ${u}\n`)
+      process.exit(blocking > 0 ? 1 : 0)
       return
     }
 

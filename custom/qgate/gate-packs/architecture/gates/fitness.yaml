@@ -1,0 +1,35 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: architecture.fitness
+  version: 0.1.0
+  description: >
+    L4.1 架构适应度函数（Fitness Function）：把架构原则变成机器可执行规则。
+    本门是模板：默认命令占位，项目必须在 .qgate/gates/architecture.fitness.yaml 覆盖
+    为真实规则命令（如 dependency-cruiser / eslint-plugin-boundaries / 自研检查脚本）。
+    未覆盖时命令不可执行 → INCONCLUSIVE（诚实暴露，不假装通过）。
+spec:
+  domain: L4
+  claims:
+    - architecture.rules-machine-checked
+  appliesWhen:
+    changed:
+      any:
+        - "src/**"
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: arch-rules
+      type: command
+      command: ["npm", "run", "arch:check", "--silent"]
+      evidenceType: arch-fitness-result
+      timeoutMs: 180000
+  evidence:
+    required:
+      - arch-fitness-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
