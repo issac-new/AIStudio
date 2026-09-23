@@ -8,7 +8,9 @@ import type { Evidence, GateRun, GateSpec, Trigger } from './types.js'
 import { decide, type Decision } from './decision.js'
 import { runCommandExecutor } from '../executors/command.js'
 import { runPersistenceExecutor } from '../executors/persistence.js'
-import { saveRun, storePaths } from './store.js'
+import { runOntologyExecutor } from '../executors/ontology.js'
+import { runFilesExecutor } from '../executors/files.js'
+import { saveRun, storePaths, activeWaiverFor } from './store.js'
 
 export interface RunInput {
   spec: GateSpec
@@ -77,10 +79,32 @@ export async function runGate(input: RunInput): Promise<RunResult> {
       evidence.push((await runCommandExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit, treeHash: git.treeHash })).evidence)
     } else if (executor.type === 'persistence') {
       evidence.push(...(await runPersistenceExecutor(executor, { runId, gateId: spec.metadata.id, workspace, qgateDir, commit: git.commit })))
+    } else if (executor.type === 'ontology') {
+      evidence.push(await runOntologyExecutor(executor, { runId, gateId: spec.metadata.id, workspace, qgateDir, commit: git.commit }))
+    } else if (executor.type === 'files') {
+      evidence.push(runFilesExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
     }
   }
 
   const decision = decide(spec, evidence)
+
+  // P5 豁免：FAIL/INCONCLUSIVE 且存在有效 waiver 且 policy 允许 → WAIVED（v0.1 §17/§20）。
+  // 原始判定保留在 failureSummary/conditions 里——豁免不抹除事实。
+  const paths = storePaths(qgateDir)
+  let verdict = decision.verdict
+  let conditions = decision.conditions
+  if ((verdict === 'FAIL' || verdict === 'INCONCLUSIVE') && spec.spec.policy.allowWaiver !== false) {
+    const waiver = activeWaiverFor(paths, spec.metadata.id)
+    if (waiver) {
+      verdict = 'WAIVED'
+      conditions = [
+        `waived by ${waiver.approver}: ${waiver.reason}`,
+        `expires ${new Date(waiver.expiresAt).toISOString()}; revalidation: ${waiver.revalidation ?? 'not specified'}`,
+        ...(decision.conditions ?? []),
+      ]
+    }
+  }
+
   const run: GateRun = {
     runId,
     gateId: spec.metadata.id,
@@ -89,14 +113,14 @@ export async function runGate(input: RunInput): Promise<RunResult> {
     workspace,
     startedAt,
     endedAt: Date.now(),
-    verdict: decision.verdict,
-    conditions: decision.conditions,
+    verdict,
+    conditions,
     evidenceIds: evidence.map((e) => e.id),
     commit: git.commit,
     treeHash: git.treeHash,
     changedPaths,
     failureSummary: decision.failureSummary,
   }
-  saveRun(storePaths(qgateDir), run, evidence)
+  saveRun(paths, run, evidence)
   return { run, evidence, decision }
 }

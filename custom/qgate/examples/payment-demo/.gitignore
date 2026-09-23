@@ -1,7 +1,10 @@
 data/
 .qgate/runs/
 .qgate/evidence/
+.qgate/risks/
+.qgate/exceptions/
 .qgate/state.json
 .qgate/hooks.log
 .qgate/stop-state.json
-.qgate/risks/
+.qgate/release-report.md
+.qgate/release-report.json

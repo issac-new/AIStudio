@@ -1,7 +1,7 @@
 # QGate 通用交付门禁框架设计 v0.2（修正与落地方案）
 
 日期：2026-09-23
-状态：**P0-P4 全部收口**（2026-09-23 当日完成；验收证据 `custom/qgate/evidence/`，24 例单测并入 overlay 套件 2367/2367 绿）
+状态：**P0-P9 + 收尾件全部收口**（同日两轮；第一轮 P0-P4 见 `evidence/20260923-p0..p3p4`，第二轮 P5-P9 + Release Evidence Package + Claude Code 适配见 `evidence/20260923-p5-p9`；38 例单测并入 overlay 套件）
 受众：QGate 实施者与评审者；SwarmStudio 维护者
 上游依据：《Universal Delivery Gate Framework for ZCode》Draft v0.1（原文 `ncwk/docs/universal-delivery-gate-zcode-design-v0.1.md`，来自 ~/Documents）
 本文定位：v0.1 的修正案与落地方案，不重复其方法论论证；与 v0.1 冲突处以本文为准
@@ -164,13 +164,20 @@ Evidence 关联 `commit / treeHash / affectedPaths / configHash / startedAt`；�
 | OD-004 FIBO | 预处理语义索引（首版 9 概念小集） | 避免运行时 OWL 推理（本轮不实施，列 P5+） |
 | OD-005 LLM | executor 插件，非内核依赖 | 内核保持确定性优先（v0.1 §4.3） |
 
-## 8. 本轮不做（防扩散）
+## 8. 不做清单（终态；续轮后仅余三项）
 
-- FIBO/Ontology Provider（v0.1 Phase 6-7 → 本项目 P5+）
-- MCP 工具面（P6+）、Claude Code 等 Adapter（P7+）
-- Matrix delivery.gate 事件桥接（等 zcode-engine R4 统筹层）
-- Release Evidence Package 汇报（P4 后按需）
-- Claim/Risk/Exception 全对象 UI（CLI 查询即够）
+第一轮（P0-P4 收口时）的"本轮不做"五项中，四项已在续轮（用户指令"继续 完成所有"）落地：
+
+- ~~FIBO/Ontology Provider~~ → P6/P9 已落地：`src/ontology/` + `gate-packs/ontology/`（FIBO 12 概念预处理索引、MockProvider、可关可换、不可用→INCONCLUSIVE 不 crash）
+- ~~MCP 工具面~~ → P8 已落地：`src/mcp-server.ts` 七工具，插件 `plugin:qgate:qgate` 实机可见
+- ~~Claude Code 适配~~ → 已落地：`plugin/.claude-plugin/plugin.json` 双清单 + `${CLAUDE_PLUGIN_ROOT}` 双平台变量（hooks.json 单文件双宿主）
+- ~~Release Evidence Package~~ → L5.7 已落地：`qgate release-report` 六区块 md+json
+
+仍不做（外部依赖或防占位膨胀）：
+
+- **Matrix delivery.gate 事件桥接**——等 zcode-engine R4 统筹层（依赖外部工作流，非本框架范围）
+- api-contract / schema 专属门包——等真实项目需求（architecture.fitness 已示范"模板门+项目覆盖"模式）
+- LLM Reasoner executor——OD-005 维持插件位裁定，不进内核
 
 ## 9. 风险与对策
 
