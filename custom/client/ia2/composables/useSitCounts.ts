@@ -93,11 +93,23 @@ export function useSitCounts() {
     name: t.name, profiles: t.profiles ?? [], boards: t.boards ?? [],
   })))
 
-  const online = computed(() => ({
-    people: accounts.value.length,
-    agents: accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0),
-    machines: (cockpit.fleetSessions ?? []).length,
-  }))
+  /** v12.5 在线级联。口径（aipaydev 推演实锤 cockpit-online-zero）：
+   *  - machines：fleetSessions 快照数（跨 profile 活跃会话，1.5s tick，永远反映真实在线）。
+   *  - people/agents：team-registry 注册流（Matrix 注册房 state 事件）——registry 空
+   *    （未登录 Matrix / 团队未注册，如 aipaydev sim 各机独立部署）时恒 0，UI 显
+   *    0 people · 0 agents 误导。此时以 fleetSessions 聚合兜底：people=活跃 profile
+   *    去重数、agents=活跃会话去重数（每会话一个 agent runner）。registry 有数据
+   *    时维持原口径（注册面是权威）。 */
+  const online = computed(() => {
+    const fleet = cockpit.fleetSessions ?? []
+    const registryPeople = accounts.value.length
+    const registryAgents = accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0)
+    if (registryPeople > 0 || registryAgents > 0) {
+      return { people: registryPeople, agents: registryAgents, machines: fleet.length }
+    }
+    const profiles = new Set(fleet.map(s => s.profile || 'default'))
+    return { people: profiles.size, agents: fleet.length, machines: fleet.length }
+  })
 
   /** 最久等待人类可读标签（3h / 2d；空=无等待项） */
   const oldestWaitLabel = computed(() => {

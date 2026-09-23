@@ -50,6 +50,11 @@ description: 金融支付（银行卡/网络支付/转接清算）领域背景�
 - 每条派发建一个跟踪子任务（`hermes kanban create` + `hermes kanban link
   <父> <子>`），仅追踪对方反馈进展；全部子任务完成后才关闭父任务。
 
+### E. 评审卡登记（aipaydev 推演实锤 review-card-missing）
+- 汇总复核完成、概设方案定稿入库后，**必须**在 kanban 登记评审任务卡
+  （标题含 `<需求ID>-评审`，body 附概设文档 git 路径），状态置 review——
+  评审以卡为凭据，没有卡 = 评审流程未闭环，不得跳过。
+
 ## 输出纪律
 
 - 结论行以 `ANALYSIS-DONE-<RFDID>` 或 `ANALYSIS-BLOCKED-<RFDID>` 开头。
