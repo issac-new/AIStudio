@@ -1,0 +1,22 @@
+{
+  "name": "@ncwk/qgate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "QGate 通用交付门禁框架：Claim/Evidence/Gate/Risk/Exception 内核 + ZCode 插件适配。设计见 overlay/docs/superpowers/specs/2026-09-23-qgate-universal-delivery-gate-design.md",
+  "bin": {
+    "qgate": "./dist/cli.js"
+  },
+  "main": "./dist/core/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run __tests__",
+    "e2e": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

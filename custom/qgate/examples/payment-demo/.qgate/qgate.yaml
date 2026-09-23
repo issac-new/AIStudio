@@ -1,0 +1,10 @@
+profile: feature-close
+claims:
+  - id: persistence.request-fields-correct
+    statement: 每个成功创建的支付请求必须产生与请求一致的 payment 持久化记录（逐字段）。
+    domain: L2
+    criticality: high
+  - id: persistence.cross-table-consistent
+    statement: payment.amount 与 ledger.amount 必须一致（金额不变量）。
+    domain: L2
+    criticality: high

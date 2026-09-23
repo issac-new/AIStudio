@@ -1,0 +1,14 @@
+apiVersion: qgate/v1alpha1
+kind: Profile
+metadata:
+  id: vibe-fast
+  tier: lite
+  description: 快速迭代最小门集（对齐交付标准 lite 档；紧急走裁档不走跳门）
+spec:
+  enable:
+    - engineering.*
+  disable:
+    - L2.*
+    - L3.*
+    - L4.*
+    - L5.*

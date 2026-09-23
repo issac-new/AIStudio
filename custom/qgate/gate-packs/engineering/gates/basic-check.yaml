@@ -1,0 +1,46 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: engineering.basic-check
+  version: 0.1.0
+  description: >
+    L1 代码与工程正确性基线：项目自带 lint/test 任一存在即执行，退出码 0 才算过。
+    对齐交付标准 G3（本地门禁退出码 0 才可声明完成）。命令按项目可覆写（.qgate/gates/ 同 id 覆盖）。
+spec:
+  domain: L1
+  claims:
+    - engineering.lint-clean
+  appliesWhen:
+    changed:
+      any:
+        - "src/**"
+        - "**/*.ts"
+        - "**/*.js"
+        - "**/*.mjs"
+        - "**/*.vue"
+        - "**/*.py"
+  triggers:
+    - task_close
+    - pre_commit
+    - release
+  executors:
+    - id: lint
+      type: command
+      # 项目无 package.json/lint 脚本时该命令失败 → error 证据 → INCONCLUSIVE（No Evidence ≠ PASS）
+      command: ["npm", "run", "lint", "--silent"]
+      evidenceType: lint-result
+      timeoutMs: 180000
+    - id: test
+      type: command
+      command: ["npm", "test", "--silent"]
+      evidenceType: unit-test-result
+      timeoutMs: 600000
+  evidence:
+    required:
+      - lint-result
+      - unit-test-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

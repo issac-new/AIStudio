@@ -1,0 +1,4 @@
+{
+  "status": 201,
+  "body": "{\"paymentId\":3,\"orderId\":\"O1001\",\"amount\":100,\"currency\":\"CNY\",\"status\":\"CREATED\"}"
+}
