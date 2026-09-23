@@ -376,7 +376,12 @@ function onPopout(): void {
 // ── 面板事件 ──
 
 function onSelect(sel: StreamSelection): void {
-  if (sel.kind === 'room') void router.push({ name: 'ia2.commsRoom', params: { roomId: sel.id } })
+  if (sel.kind === 'room') {
+    // 直调 selectRoom 兜底（D3）：router.push 对同路由参数去重为空转，已选
+    // 房间首击永远无反馈；selectRoom 本身幂等（清未读 + 确保时间线挂载）
+    matrixRoom.selectRoom(sel.id)
+    void router.push({ name: 'ia2.commsRoom', params: { roomId: sel.id } })
+  }
   else if (sel.kind === 'group') void router.push({ name: 'ia2.groupRoom', params: { roomId: sel.id } })
   else if (sel.kind === 'chat') void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
   else void router.push({ name: 'ia2.loopCanvas', params: { loopId: sel.id } })
