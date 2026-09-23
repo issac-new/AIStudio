@@ -29,6 +29,8 @@ const roomStubs = vi.hoisted(() => {
         : [{ userId: '@x:host', name: 'x' }],
     }),
     createRoom: vi.fn(async () => { state.sortedRooms = [...rooms, { roomId: '!new:host', name: '新房间' }] }),
+    // D3 兜底：onSelect 对 room 直调 selectRoom（幂等清未读/确保时间线挂载）
+    selectRoom: vi.fn(),
   }
   return { state, useMatrixRoomStore: () => state }
 })
