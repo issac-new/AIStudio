@@ -1,0 +1,10 @@
+{
+  "name": "demo-persistence-mismatch",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node unit.test.mjs",
+    "lint": "node unit.test.mjs --lint-mode"
+  }
+}
