@@ -157,7 +157,21 @@ V2.0 准备时按现行上游（v0.21.4）实测复核 port-per-profile 布局�
 
 **重新归因**：V1.0 记录的「`--force` 反噬把宿主 orchestrator 挤下线」，机制上不是 force 杀进程，而更可能是两个 gateway 争用同一份 host rendezvous 记录（force 后写方覆盖，宿主路由/健康面被顶替）。据此，正解是 **`--force` + 每 profile 独立 `HERMES_GATEWAY_LOCK_DIR`**，而非放弃多实例。上游自己给出的合法条件也吻合：`a HERMES_HOME outside profiles/ needs --force`——sim 的 `SIM_ROOT/users/<u>/.hermes` 正属此类。
 
-**下轮开局前的未决项**（需人工定案，不宜由脚本静默决定）：studio 侧 spawn gateway 的代码要带 `--force` 并透传 `HERMES_GATEWAY_LOCK_DIR`；否则三条上游正路只有 `gateway migrate --multiplex`（把 12 个 profile 折进宿主一个进程，但 studio 的 per-user GATEWAY_PORT 寻址随之失效）与容器隔离可用。
+**已解（同日 14:19 实测）**：harness 补齐后多实例可与宿主并存，不必再抢占宿主。
+
+| 动作 | 结果 |
+|---|---|
+| 新增 `aipay-agent-sync.sh`：把 agent 侧 patch 部署进**实际运行**的安装树 | 372 部署成功；重启后 `AF_UNIX path too long` 归零（该错误最后一次在 13547 行，新进程起于 13548 行） |
+| `aipay-up.sh` 新增 `up_gateway`：每 profile 独立 `HERMES_GATEWAY_LOCK_DIR` + `--force` | bella :8722 新起、fanfan :8723 接管，8s 内双双健康 |
+| 宿主完整性 | 全程 `:8650` pid **31174 未变**、health 200，真实 orchestrator 未被挤下线 |
+| 门闸语义订正 | `isolated` 改为校验各 profile 锁目录可写并如实告知宿主在线；原 fail-fast 保留为 `require-host-off`；`allow-force` 并入 isolated 并注明 `--replace` 才是杀宿主那条路（本脚本永不使用） |
+| 顺带修的 harness 缺陷 | studio 只代理 agent-health、实测**不 autostart** gateway（V1.0 靠人肉/抢占）；pid 文件丢失时按端口+健康接管孤儿进程，免 EADDRINUSE 下双进程与"探到旧进程即算成功"的假通过 |
+
+**遗留（结构性，另行立项）**：`npm run inject` 只 patch 入仓构建用的 workspace 树，而推演执行
+`~/.hermes/hermes-agent` 安装树——两树互不相通，agent 侧 patch 长期对推演无效（安装树
+`HERMES_CUSTOM` 标记数曾为 0）。现以显式点名的 `aipay-agent-sync.sh` 作为部署通道；其余 6 条
+历史 agent patch 系照旧上游所写、对 v0.21.4 未必仍必要（如 178 补的 kanban 动词上游已自带），
+故不入缺省清单，逐条评估后再加。
 
 ## 六、关键数字与记忆点
 

@@ -23,18 +23,31 @@ host_gateway_online() { # 宿主 orchestrator gateway（主环境 ~/.hermes 默�
 }
 case "$AIPAY_GATEWAY_HOST_POLICY" in
   isolated)
+    # 09-23 实测订正：上游 host 守卫是**全机级**，但锁目录可用 HERMES_GATEWAY_LOCK_DIR 按
+    # profile 隔开（host_rendezvous.py:13）。单实例验证过：sim gateway :8723 健康、宿主
+    # :8650 的 pid 与健康全程未变。故"宿主在线"本身不再构成开局的阻塞条件——真正的隔离
+    # 是每 profile 独立锁目录，up_gateway 已按此构造。这里改为校验隔离到位。
+    for u in "${START[@]}"; do
+      d="$(hermes_root "$u")/gateway-locks"
+      mkdir -p "$d" 2>/dev/null || fail "$u 锁目录不可写：$d"
+    done
+    host_gateway_online && log "host 守卫门闸：宿主 orchestrator(:8650) 在线——各 profile 用独立锁目录并存，不抢占、不替换（如需零重叠设 require-host-off）" \
+                         || log "host 守卫门闸：宿主 gateway 离线，直接放行"
+    ;;
+  require-host-off)
+    # 原 isolated 语义（保守档）：宿主在线即不开局，彻底避免任何同机双 gateway。
     if host_gateway_online; then
-      fail "宿主 orchestrator gateway(:8650) 在线。推演多 profile 共存应错峰或经 host 守卫显式裁决；确认要抢占宿主时设 AIPAY_GATEWAY_HOST_POLICY=allow-force 重跑（会挤下线宿主 gateway）。"
+      fail "宿主 orchestrator gateway(:8650) 在线。要并存请回到缺省 policy=isolated（已实测不抢占）；要错峰推演请停宿主后再跑。"
     fi
-    log "host 守卫门闸：宿主 gateway 离线，按 port-per-profile 隔离布局放行（policy=isolated）"
+    log "host 守卫门闸：require-host-off——宿主 gateway 必须离线才开局"
     ;;
   allow-force)
-    log "host 守卫门闸：policy=allow-force——已显式接受抢占宿主 gateway 语义"
+    log "host 守卫门闸：policy=allow-force 已并入 isolated（--force 只是同机再起，不杀宿主；杀宿主的是 --replace，本脚本永不使用）"
     ;;
   skip)
-    log "host 守卫门闸：policy=skip——跳过宿主占用检查（不推荐）"
+    log "host 守卫门闸：policy=skip——跳过检查（不推荐）"
     ;;
-  *) fail "AIPAY_GATEWAY_HOST_POLICY 取值非法: $AIPAY_GATEWAY_HOST_POLICY（可选 isolated/allow-force/skip）" ;;
+  *) fail "AIPAY_GATEWAY_HOST_POLICY 取值非法: $AIPAY_GATEWAY_HOST_POLICY（可选 isolated/require-host-off/allow-force/skip）" ;;
 esac
 
 up_one() {
@@ -44,6 +57,15 @@ up_one() {
 
   if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
     log "$u studio 已在运行 (pid $(cat "$pidfile"))"
+    return 0
+  fi
+  # 接管孤儿实例：上一轮若非经本脚本重启，pid 文件会丢而端口仍在服务。此时再起一个
+  # 必然 EADDRINUSE，且 wait_http 探到的是旧进程——看似成功，实则留下双进程与死 pid 文件。
+  local orphan
+  orphan=$(lsof -tnP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | head -1 || true)
+  if [[ -n "$orphan" ]] && curl -sf --max-time 5 "http://127.0.0.1:$port/health/ready" >/dev/null 2>&1; then
+    echo "$orphan" > "$pidfile"
+    log "$u studio 接管孤儿进程 pid $orphan (:$port)"
     return 0
   fi
 
@@ -67,6 +89,31 @@ up_one() {
   echo $! > "$pidfile"
 }
 
+up_gateway() { # <user> — gateway 必须由推演自己拉起：studio 只做 agent-health 代理，实测不 autostart
+  # 上游 v0.21.4 的 host 守卫是**全机级**（一机一 gateway 服务所有 profile），故这里两件事缺一不可：
+  #   HERMES_GATEWAY_LOCK_DIR  → 每 profile 独立 rendezvous/锁目录，不与宿主 orchestrator 争用记录
+  #                        --force → 声明"我知道在同机再起一个 gateway"（只 warn，不杀宿主；杀宿主的是 --replace）
+  # 实锤记录见 docs/superpowers/specs/2026-09-22-aipaydev-fullchain-sim-report.md §五-e。
+  local u="$1" gw_port pidfile root
+  gw_port=$(gateway_port "$u"); pidfile="$PIDS_DIR/$u-gateway.pid"; root=$(hermes_root "$u")
+  if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+    log "$u gateway 已在运行 (pid $(cat "$pidfile"))"; return 0
+  fi
+  local orphan
+  orphan=$(lsof -tnP -iTCP:"$gw_port" -sTCP:LISTEN 2>/dev/null | head -1 || true)
+  if [[ -n "$orphan" ]] && curl -sf --max-time 5 "http://127.0.0.1:$gw_port/health" >/dev/null 2>&1; then
+    echo "$orphan" > "$pidfile"
+    log "$u gateway 接管孤儿进程 pid $orphan (:$gw_port)"; return 0
+  fi
+  log "$u 启动 gateway :$gw_port（独立锁目录 + --force）"
+  (
+    exec env HERMES_HOME="$root" HERMES_GATEWAY_LOCK_DIR="$root/gateway-locks" \
+      "$HERMES_BIN" -p "$u" gateway run --force \
+      >> "$LOGS_DIR/$u-gateway.log" 2>&1
+  ) &
+  echo $! > "$pidfile"
+}
+
 wait_http() { # <url> <name> <timeout-sec>
   local deadline=$(( $(date +%s) + $3 ))
   while (( $(date +%s) < deadline )); do
@@ -81,6 +128,8 @@ for u in "${START[@]}"; do up_one "$u"; sleep 2; done  # 错峰拉起，避免 c
 for u in "${START[@]}"; do
   wait_http "http://127.0.0.1:$(studio_port "$u")/health/ready" "$u studio" 180
 done
+# gateway 由本脚本显式拉起（studio 只做健康代理，实测不 autostart）
+for u in "${START[@]}"; do up_gateway "$u"; sleep 2; done
 for u in "${START[@]}"; do
   wait_http "http://127.0.0.1:$(gateway_port "$u")/health" "$u gateway" 300
 done
