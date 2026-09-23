@@ -15,10 +15,20 @@ const color = ref('#4cc9f0')
 const width = ref(3)
 const canUndo = ref(false)
 const canRedo = ref(false)
-const strokes = ref<Array<Array<{ x: number; y: number }>>>([])
-const redoStack = ref<Array<Array<{ x: number; y: number }>>>([])
+
+/** 笔迹自带属性快照：撤销/重做/导出的重绘必须按落笔时的工具与颜色，
+ *  而不是「当前」工具栏状态——否则换色后 undo/redo 会给历史笔迹统一改色，
+ *  切橡皮再 undo 甚至会把整幅画按 destination-out 擦掉 */
+interface Stroke {
+  points: Array<{ x: number; y: number }>
+  tool: 'pen' | 'eraser'
+  color: string
+  width: number
+}
+const strokes = ref<Stroke[]>([])
+const redoStack = ref<Stroke[]>([])
 let drawing = false
-let currentStroke: Array<{ x: number; y: number }> = []
+let currentStroke: Stroke | null = null
 
 function ctx2d(): CanvasRenderingContext2D | null {
   return canvasRef.value?.getContext('2d') ?? null
@@ -34,26 +44,34 @@ function repaint(): void {
   canRedo.value = redoStack.value.length > 0
 }
 
-function drawStroke(ctx: CanvasRenderingContext2D, stroke: Array<{ x: number; y: number }>): void {
-  if (stroke.length < 2) {
-    if (stroke.length === 1) {
-      ctx.fillStyle = color.value
+function applyStrokeStyle(ctx: CanvasRenderingContext2D, stroke: Stroke): void {
+  ctx.strokeStyle = stroke.color
+  ctx.fillStyle = stroke.color
+  ctx.lineWidth = stroke.tool === 'eraser' ? stroke.width * 6 : stroke.width
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over'
+}
+
+function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke): void {
+  if (stroke.points.length < 2) {
+    if (stroke.points.length === 1) {
+      ctx.save()
+      applyStrokeStyle(ctx, stroke)
       ctx.beginPath()
-      ctx.arc(stroke[0].x, stroke[0].y, width.value / 2, 0, Math.PI * 2)
+      ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.width / 2, 0, Math.PI * 2)
       ctx.fill()
+      ctx.restore()
     }
     return
   }
-  ctx.strokeStyle = color.value
-  ctx.lineWidth = tool.value === 'eraser' ? width.value * 6 : width.value
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.globalCompositeOperation = tool.value === 'eraser' ? 'destination-out' : 'source-over'
+  ctx.save()
+  applyStrokeStyle(ctx, stroke)
   ctx.beginPath()
-  ctx.moveTo(stroke[0].x, stroke[0].y)
-  for (const p of stroke.slice(1)) ctx.lineTo(p.x, p.y)
+  ctx.moveTo(stroke.points[0].x, stroke.points[0].y)
+  for (const p of stroke.points.slice(1)) ctx.lineTo(p.x, p.y)
   ctx.stroke()
-  ctx.globalCompositeOperation = 'source-over'
+  ctx.restore()
 }
 
 function pos(event: PointerEvent): { x: number; y: number } {
@@ -67,36 +85,32 @@ function pos(event: PointerEvent): { x: number; y: number } {
 function onDown(event: PointerEvent): void {
   drawing = true
   redoStack.value = []
-  currentStroke = [pos(event)]
+  // 落笔即快照当前工具属性
+  currentStroke = { points: [pos(event)], tool: tool.value, color: color.value, width: width.value }
 }
 
 function onMove(event: PointerEvent): void {
-  if (!drawing) return
-  currentStroke.push(pos(event))
+  if (!drawing || !currentStroke) return
+  currentStroke.points.push(pos(event))
   const ctx = ctx2d()
-  if (ctx) {
-    // 增量画最后一段（避免整幅重绘的卡顿）
-    const stroke = currentStroke
-    if (stroke.length >= 2) {
-      ctx.save()
-      ctx.strokeStyle = color.value
-      ctx.lineWidth = tool.value === 'eraser' ? width.value * 6 : width.value
-      ctx.lineCap = 'round'
-      ctx.globalCompositeOperation = tool.value === 'eraser' ? 'destination-out' : 'source-over'
-      ctx.beginPath()
-      ctx.moveTo(stroke[stroke.length - 2].x, stroke[stroke.length - 2].y)
-      ctx.lineTo(stroke[stroke.length - 1].x, stroke[stroke.length - 1].y)
-      ctx.stroke()
-      ctx.restore()
-    }
+  if (ctx && currentStroke.points.length >= 2) {
+    // 增量画最后一段（避免整幅重绘的卡顿），用该笔迹自己的属性快照
+    const pts = currentStroke.points
+    ctx.save()
+    applyStrokeStyle(ctx, currentStroke)
+    ctx.beginPath()
+    ctx.moveTo(pts[pts.length - 2].x, pts[pts.length - 2].y)
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y)
+    ctx.stroke()
+    ctx.restore()
   }
 }
 
 function onUp(): void {
   if (!drawing) return
   drawing = false
-  if (currentStroke.length) strokes.value = [...strokes.value, currentStroke]
-  currentStroke = []
+  if (currentStroke) strokes.value = [...strokes.value, currentStroke]
+  currentStroke = null
   canUndo.value = true
   canRedo.value = false
 }
@@ -159,7 +173,7 @@ defineExpose({
   get drawing() { return drawing },
   set drawing(v: boolean) { drawing = v },
   get currentStroke() { return currentStroke },
-  set currentStroke(v: Array<{ x: number; y: number }>) { currentStroke = v },
+  set currentStroke(v: Stroke | null) { currentStroke = v },
 })
 
 let resizeObserver: ResizeObserver | null = null

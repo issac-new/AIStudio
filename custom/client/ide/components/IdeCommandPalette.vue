@@ -78,12 +78,13 @@ const commandItems = computed<PaletteItem[]>(() => {
     {
       id: 'cmd:toggle-workspace',
       labelKey: 'ide.paletteCmdToggleWorkspace',
-      run: () => { ide.layout.workspaceVisible = !ide.layout.workspaceVisible },
+      // v12.4 栏控重构后布局语义是 folded/maximized；工作区列=左侧任务栏折叠
+      run: () => { ide.toggleFold('sidebar') },
     },
     {
       id: 'cmd:toggle-chat',
       labelKey: 'ide.paletteCmdToggleChat',
-      run: () => { ide.layout.chatVisible = !ide.layout.chatVisible },
+      run: () => { ide.toggleFold('chat') },
     },
   ]
   if (chatStore.activeSessionId) {

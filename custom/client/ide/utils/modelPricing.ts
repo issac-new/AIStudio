@@ -63,7 +63,11 @@ export interface CostUsage {
   cacheWriteTokens?: number
 }
 
-/** 按价目折算成本（USD）；未收录模型返回 null（调用方不得显示金额） */
+/** 按价目折算成本（USD）；未收录模型返回 null（调用方不得显示金额）。
+ *  口径契约：usage 各字段来自服务端 normalizeTokenUsage 之后的存储
+ *  （usage-recorder.ts：inputIncludesCache 时已做 input - cacheRead - cacheWrite），
+ *  即 inputTokens 不含缓存读写量，与 MetricsPopover 输入列的
+ *  input+cacheRead+cacheWrite 展示口径一致——这里不得再扣一次缓存。 */
 export function estimateCostUsd(model: string | null | undefined, usage: CostUsage): number | null {
   const price = findModelPrice(model)
   if (!price) return null
@@ -71,10 +75,8 @@ export function estimateCostUsd(model: string | null | undefined, usage: CostUsa
   const output = Math.max(0, Number(usage.outputTokens) || 0)
   const cacheRead = Math.max(0, Number(usage.cacheReadTokens) || 0)
   const cacheWrite = Math.max(0, Number(usage.cacheWriteTokens) || 0)
-  // 缓存读写量按分价结算、其余输入量按 input 价结算（读写量已含在输入计量内时不出负数）
-  const effectiveInput = Math.max(0, input - cacheRead - cacheWrite)
   const cost =
-    (effectiveInput / 1e6) * price.input +
+    (input / 1e6) * price.input +
     (output / 1e6) * price.output +
     (cacheRead / 1e6) * (price.cacheRead ?? price.input) +
     (cacheWrite / 1e6) * (price.cacheWrite ?? price.input)

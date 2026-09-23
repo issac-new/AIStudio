@@ -128,7 +128,8 @@ function sendAux(): void {
         </div>
         <div class="kv">
           <span class="k">{{ t('ide.briefing.retryCount', '打回次数') }}</span>
-          <span class="v" :class="{ danger: wfView.retryCount >= 3 }">{{ wfView.retryCount }}/3</span>
+          <!-- 分母=熔断上限 5（server retry-guard RETRY_MAX）；3 是 Leader 介入阈值，不是到顶 -->
+          <span class="v" :class="{ danger: wfView.retryCount >= 3 }">{{ wfView.retryCount }}/5</span>
         </div>
       </div>
     </section>

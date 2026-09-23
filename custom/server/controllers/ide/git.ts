@@ -77,9 +77,14 @@ interface GitResult {
   stderr: string
 }
 
+const GIT_OUTPUT_CAP = 10 * 1024 * 1024 // 单流 10MB 上限：巨仓 diff/log 不至于撑爆内存
+
 function runGit(args: string[], cwd: string): Promise<GitResult> {
   return new Promise((resolve) => {
-    const child = spawn('git', args, { cwd, windowsHide: true })
+    // detached + 进程组杀：超时只杀 git 主进程会留下 credential helper / hook
+    // 子进程挂到超时窗之外；POSIX 上 kill(-pid) 连进程组一并收掉（Windows
+    // 无进程组语义，回落 child.kill）
+    const child = spawn('git', args, { cwd, windowsHide: true, detached: process.platform !== 'win32' })
     let stdout = ''
     let stderr = ''
     let settled = false
@@ -90,14 +95,31 @@ function runGit(args: string[], cwd: string): Promise<GitResult> {
       resolve(result)
     }
     const timer = setTimeout(() => {
-      child.kill('SIGKILL')
+      try {
+        if (process.platform !== 'win32' && child.pid) process.kill(-child.pid, 'SIGKILL')
+        else child.kill('SIGKILL')
+      } catch { child.kill('SIGKILL') }
       finish({ code: -1, stdout, stderr: 'git command timed out' })
     }, gitTimeoutMs(args))
-    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8') })
-    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
+    child.stdout.on('data', (chunk: Buffer) => {
+      if (stdout.length < GIT_OUTPUT_CAP) stdout += chunk.toString('utf8')
+    })
+    child.stderr.on('data', (chunk: Buffer) => {
+      if (stderr.length < GIT_OUTPUT_CAP) stderr += chunk.toString('utf8')
+    })
     child.on('error', (err) => finish({ code: -1, stdout, stderr: String(err) }))
     child.on('close', (code) => finish({ code: code ?? -1, stdout, stderr }))
   })
+}
+
+/** 找到带引号路径（porcelain 转义形态）的收口引号：处理 \" 与 \\ 转义 */
+function findClosingQuote(s: string): number {
+  for (let i = 1; i < s.length; i++) {
+    const ch = s[i]
+    if (ch === '\\') { i++; continue }
+    if (ch === '"') return i
+  }
+  return -1
 }
 
 /** file 参数守卫：仓库相对路径，拒绝绝对路径与 `..` 段 */
@@ -113,7 +135,9 @@ export function isSafeRelativeFile(file: string): boolean {
 /** checkout 分支名守卫：git 规范 ref 名不会以 - 或 . 开头，放行会把 git 选项
  *  （--detach/--orphan 等）误当分支名注入。单一事实源，控制器与测试共用。 */
 export function isSafeBranchName(branch: string): boolean {
-  return /^\w[\w./-]{0,99}$/.test(branch)
+  // \p{L}\p{N} 放行中文等非 ASCII 分支名（git check-ref-format 本就允许）；
+  // 前导字符仍限字母/数字/_，挡住 --detach/--orphan 等选项注入位
+  return /^[\p{L}\p{N}_][\p{L}\p{N}./_-]{0,99}$/u.test(branch)
 }
 
 /** git C 风格短转义映射（core.quotepath 默认开启时的引号路径内） */
@@ -192,6 +216,12 @@ export function parseGitStatus(repoRoot: string, output: string): GitStatus {
       if (head === 'HEAD (no branch)') {
         status.detached = true
         status.branch = 'HEAD'
+      } else if (head.startsWith('No commits yet on ')) {
+        // 全新仓库：porcelain 头是整句提示语，取尾段作分支名（否则分支栏
+        // 显示整句「No commits yet on main」垃圾文案）
+        status.branch = head.slice('No commits yet on '.length).trim()
+        const upstreamPart = /\.+\.(.+?)(?: \[|$)/.exec(header)
+        status.upstream = upstreamPart ? upstreamPart[1].trim() : null
       } else {
         status.branch = head
         const upstreamPart = /\.+\.(.+?)(?: \[|$)/.exec(header)
@@ -205,7 +235,17 @@ export function parseGitStatus(repoRoot: string, output: string): GitStatus {
     const pathPart = line.slice(3)
     let file = pathPart
     let renamedFrom: string | null = null
-    const renameArrow = pathPart.indexOf(' -> ')
+    // rename 分隔符只在引号段外有效：文件名字面含 " -> "（如 a -> b.txt）
+    // 不能误判 rename。带引号形态形如 "old" -> "new"（或右侧裸路径）。
+    let renameArrow = -1
+    if (pathPart.startsWith('"')) {
+      const closing = findClosingQuote(pathPart)
+      if (closing >= 0 && pathPart.slice(closing + 1, closing + 5) === ' -> ') {
+        renameArrow = closing + 1
+      }
+    } else {
+      renameArrow = pathPart.indexOf(' -> ')
+    }
     if (renameArrow >= 0) {
       renamedFrom = unquotePath(pathPart.slice(0, renameArrow))
       file = unquotePath(pathPart.slice(renameArrow + 4))
@@ -495,8 +535,10 @@ ideGitRouter.get('/log', async (ctx) => {
       short,
       author,
       timestamp: Number(timestamp) * 1000,
-      refs: (refs || '').split(',').map(r => r.trim()).filter(r => r && r !== 'HEAD'),
-      isHead: (refs || '').includes('HEAD'),
+      // %D 输出 "HEAD -> main, origin/main"：剥 "HEAD -> " 前缀让 main 正常
+      // 进徽标列表（此前整段 "HEAD -> main" 被当本地分支原样显示）
+      refs: (refs || '').split(',').map(r => r.trim().replace(/^HEAD -> /, '')).filter(r => r && r !== 'HEAD'),
+      isHead: (refs || '').split(',').some(r => { const t = r.trim(); return t === 'HEAD' || t.startsWith('HEAD -> ') }),
       subject: subject || '',
     }
   })

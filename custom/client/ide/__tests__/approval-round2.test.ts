@@ -13,7 +13,7 @@ import {
 } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
 import { buildRecap } from '../composables/useIdeSessionHooks'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
@@ -43,13 +43,30 @@ describe('runaway-guard 六信号（minimax 语义前端版）', () => {
     expect(detectRunaway(varied, RUN_OPTS)?.kind).not.toBe('same_tool_args')
   })
 
-  it('② 同一错误签名连续 3 次命中（路径/数字归一化后同族；不同工具避开①短路）', () => {
+  it('② 同一错误签名连续 3 次命中（真实 Message 形态：toolStatus=error + toolResult；路径/数字归一化后同族；不同工具避开①短路）', () => {
     const msgs: RunawayMessage[] = [
-      { role: 'tool', toolName: 'bash', toolError: 'ENOENT /tmp/a12 no such file', timestamp: NOW - 3000 },
-      { role: 'tool', toolName: 'read_file', toolError: 'ENOENT /tmp/b99 no such file', timestamp: NOW - 2000 },
-      { role: 'tool', toolName: 'write_file', toolError: 'ENOENT /tmp/c1 no such file', timestamp: NOW - 1000 },
+      { role: 'tool', toolName: 'bash', toolStatus: 'error', toolResult: 'ENOENT /tmp/a12 no such file', timestamp: NOW - 3000 },
+      { role: 'tool', toolName: 'read_file', toolStatus: 'error', toolResult: { error: 'ENOENT /tmp/b99 no such file' }, timestamp: NOW - 2000 },
+      { role: 'tool', toolName: 'write_file', toolStatus: 'error', toolPreview: 'ENOENT /tmp/c1 no such file', timestamp: NOW - 1000 },
     ]
     expect(detectRunaway(msgs, RUN_OPTS)?.kind).toBe('same_error')
+    // 非 error 态的工具结果不参与错误签名
+    const okMsgs: RunawayMessage[] = msgs.map((m) => ({ ...m, toolStatus: 'done' as const }))
+    expect(detectRunaway(okMsgs, RUN_OPTS)?.kind ?? null).toBeNull()
+  })
+
+  it('②-b 轮界切分：上一轮的尾部信号不带入新一轮', () => {
+    // 上一轮以复读收尾（三连复读是会话末尾的 assistant）；新一轮只有一条
+    // user 输入。带轮界 → 不告警；不带轮界（历史回放口径）→ 复读信号可见
+    const text = 'x'.repeat(200)
+    const msgs: RunawayMessage[] = [
+      { role: 'assistant', content: text, timestamp: NOW - 150_000 },
+      { role: 'assistant', content: text, timestamp: NOW - 140_000 },
+      { role: 'assistant', content: text, timestamp: NOW - 130_000 },
+      { role: 'user', content: '继续下一步', timestamp: NOW - 50_000 },
+    ]
+    expect(detectRunaway(msgs, RUN_OPTS)).toBeNull()
+    expect(detectRunaway(msgs, { ...RUN_OPTS, runStartedAtMs: undefined })?.kind).toBe('repetitive_text')
   })
 
   it('③ 1 分钟内 >40 次工具调用命中高频', () => {
@@ -59,11 +76,14 @@ describe('runaway-guard 六信号（minimax 语义前端版）', () => {
     expect(detectRunaway(msgs, RUN_OPTS)?.kind).toBe('high_frequency')
   })
 
-  it('④ 最后一个工具距今 >10 分钟命中长静默', () => {
+  it('④ 最后一个工具距今 >10 分钟命中长静默（工具在本轮内）', () => {
     const msgs: RunawayMessage[] = [
       { role: 'tool', toolName: 'bash', toolArgs: { c: 1 }, timestamp: NOW - 11 * 60_000 },
     ]
-    expect(detectRunaway(msgs, RUN_OPTS)?.kind).toBe('long_silence')
+    // 轮界早于该工具：静默发生在本轮运行中，而不是继承上一轮的工具时间线
+    expect(detectRunaway(msgs, { ...RUN_OPTS, runStartedAtMs: NOW - 12 * 60_000 })?.kind).toBe('long_silence')
+    // 工具在轮界之前（上一轮遗留）：新一轮刚起步不该误报长静默
+    expect(detectRunaway(msgs, RUN_OPTS)?.kind ?? null).toBeNull()
   })
 
   it('⑤ 单轮工具总数 >50 命中风暴（时间分散避开③④短路）', () => {
@@ -186,8 +206,12 @@ describe('patch 342/343 漂移守卫', () => {
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('342-client-approval-learning-event.patch')
     expect(series).toContain('343-client-i18n-ide-r2.patch')
-    const manifest = JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
-    expect(manifest.appliedPatches).toContain('342-client-approval-learning-event.patch')
-    expect(manifest.appliedPatches).toContain('343-client-i18n-ide-r2.patch')
+    // manifest 只存在于执行过 npm run inject 的检出（主 overlay 根）
+    const manifestPath = resolve(overlayRoot, '.overlay-injected.json')
+    if (existsSync(manifestPath)) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+      expect(manifest.appliedPatches).toContain('342-client-approval-learning-event.patch')
+      expect(manifest.appliedPatches).toContain('343-client-i18n-ide-r2.patch')
+    }
   })
 })

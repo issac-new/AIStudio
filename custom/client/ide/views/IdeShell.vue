@@ -376,7 +376,7 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .ide-shell {
-  height: calc(100 * var(--vh, 100vh));
+  height: calc(var(--vh, 1vh) * 100);
   display: flex;
   flex-direction: column;
   background: var(--bg-primary, #14161a);

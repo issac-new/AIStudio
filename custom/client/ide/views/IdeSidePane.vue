@@ -62,7 +62,8 @@ watch(
 )
 
 function runAction(action: TerminalAction): void {
-  ide.terminalOpen = true
+  // 终端页签可见才有一键命令的落点（sidePane.open + terminal 页签）
+  ide.setSidePaneTab('terminal')
   fireTerminalAction(action.command)
 }
 
