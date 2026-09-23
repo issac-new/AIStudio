@@ -77,19 +77,16 @@ watch(
 </script>
 
 <template>
-  <!-- 面板移出 button：交互元素嵌套（button>button/input）违反 HTML 规范，
-       键盘 Tab/Enter 语义与读屏行为不可预期，此前仅靠 @click.stop 掩盖 -->
-  <div v-if="visible" class="ide-goal-wrap">
-    <button
-      type="button"
-      class="ide-goal"
-      :data-level="budgetLevel"
-      data-testid="ide-goal-budget"
-      :title="t('ide.goal.title')"
-      @click="open = !open"
-    >
-      ◎ <template v-if="goalProgress">{{ goalProgress.used }}/{{ goalProgress.max }}</template><template v-else>{{ stats!.toolCallCount }}·{{ stats!.iterationCount }}</template>
-    </button>
+  <button
+    v-if="visible"
+    type="button"
+    class="ide-goal"
+    :data-level="budgetLevel"
+    data-testid="ide-goal-budget"
+    :title="t('ide.goal.title')"
+    @click="open = !open"
+  >
+    ◎ <template v-if="goalProgress">{{ goalProgress.used }}/{{ goalProgress.max }}</template><template v-else>{{ stats!.toolCallCount }}·{{ stats!.iterationCount }}</template>
     <div v-if="open" class="ide-goal__panel" data-testid="ide-goal-panel" @click.stop>
       <!-- goal 引擎：turn 进度 + 预算警示 -->
       <div v-if="goalProgress" class="ide-goal__progress" data-testid="ide-goal-progress">
@@ -157,18 +154,13 @@ watch(
       </div>
       <p class="ide-goal__hint">{{ t('ide.goal.engineHint') }}</p>
     </div>
-  </div>
+  </button>
 </template>
 
 <style scoped lang="scss">
-.ide-goal-wrap {
-  position: relative;
-  flex-shrink: 0;
-  display: inline-flex;
-}
-
 .ide-goal {
   position: relative;
+  flex-shrink: 0;
   border: 1px solid var(--border-color, #3a3f4b);
   background: none;
   color: var(--text-secondary, #b0b5be);
