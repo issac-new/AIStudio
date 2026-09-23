@@ -178,6 +178,20 @@ V2.0 准备时按现行上游（v0.21.4）实测复核 port-per-profile 布局�
 3. ~~defect 窗轮询逻辑（Q12）与 kanban-api-hang 待修复后重推演验证~~ Q12 已修（19d37ca sender 限源 + 44c15a2 since 时间过滤）；kanban-api-hang 已修（patch 369）。下一轮推演可直接复跑验证。
 4. 推演产物归档：SIM_ROOT=/Volumes/nvme2230/lab/ncwk-sim-aipay（evidence/ 含 11 板 kanban 快照、房间全量消息、issues.log、场景日志）。
 
+## 五-f、收口轮终态（2026-09-23 第五轮：真实化修复 + 复跑准备）
+
+前五轮「已修」中三项为**文案/条款层修复**，本轮按真实能力面补齐：
+
+| 项 | 前五轮状态 | 本轮终态 |
+|---|---|---|
+| room-invite-gap | ✅ 已修（5d1cd7f，仅技能文案） | **真实化**：`raci-matrix.ts` 新模块——有 Matrix 凭据走真实 client-server 建群+邀人+发摘要（patch 374 同步补 agent 原生工具），无凭据回落模拟；守门 3 例 |
+| approval-stall | ✅ 已修（approver 守护 react ✅） | **根治**：approver 守护匹配 loop 审批「Approval needed: <contractId>」格式，解析 contractId 调 `/api/loop/contracts/:id/approve` REST 真放行（react 仅作可视兜底）；原先只 react 不解锁引擎等待（审批卡死的真根因） |
+| receipt/review-card | ✅ 条款 | **确认非悬空**：scenario 137-142 行回执核验、164-168 行评审卡核验已在（缺失即写 issues.log），条款+门禁双保险 |
+
+**multiplex 实锤**：hermes-agent 0.21.4 原生支持（`gateway.multiplex_profiles` + `/p/<profile>/` 前缀路由 + `migrate --multiplex`），上游能力无需 overlay 实现；推演侧 port-per-profile + host 门闸已够用。
+
+**复跑准备**：推演 cron 已建（每日 0:00，门闸 isolated 挡宿主抢占）；dist 需重建（build:full 已绿）。
+
 ---
 
 > 报告：aipaydev 推演会话（QA/监控会话 + 执行会话联合产出）
