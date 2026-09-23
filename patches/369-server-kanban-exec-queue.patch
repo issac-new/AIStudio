@@ -1,0 +1,269 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index 027cb1c5..27a29a13 100644
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -12,6 +12,45 @@ import { evaluateRules } from '../../../../custom/loop/engine/architecture-engin
+ import { RetryGuardService } from '../../../../custom/services/kanban/retry-guard'
+ 
+ const execOpts = { windowsHide: true }
++// HERMES_CUSTOM[kanban-exec-queue] BEGIN: kanban CLI exec 并发上限。
++// 推演实锤 kanban-api-hang-qi：多客户端轮询 + 时间线聚合（listTimeline 对全部
++// 任务 Promise.all getTask）触发 exec 风暴，CLI 子进程在 SQLite 锁上排队，
++// 后续请求连带挂起（health 正常而 /api/hermes/kanban* 整体无响应）。
++// 处置：进程内 FIFO 队列把 execHermes 并发压到 2；排队超过 queueTimeout 的
++// 请求直接报错（把挂起变成快速失败）。watchEvents 长连流不经过此队列。
++const KANBAN_EXEC_CONCURRENCY = 2
++const KANBAN_EXEC_QUEUE_TIMEOUT_MS = 45000
++const kanbanExecQueue: Array<() => void> = []
++let kanbanExecActive = 0
++function runQueuedKanbanExec<T>(fn: () => Promise<T>): Promise<T> {
++  return new Promise<T>((resolveExec, rejectExec) => {
++    const start = () => {
++      kanbanExecActive += 1
++      fn().then(resolveExec, rejectExec).finally(() => {
++        kanbanExecActive -= 1
++        kanbanExecQueue.shift()?.()
++      })
++    }
++    if (kanbanExecActive < KANBAN_EXEC_CONCURRENCY) {
++      start()
++      return
++    }
++    const timer = setTimeout(() => {
++      const idx = kanbanExecQueue.indexOf(queued)
++      if (idx >= 0) kanbanExecQueue.splice(idx, 1)
++      rejectExec(new Error(`kanban exec queue timeout after ${KANBAN_EXEC_QUEUE_TIMEOUT_MS}ms`))
++    }, KANBAN_EXEC_QUEUE_TIMEOUT_MS)
++    const queued = () => {
++      clearTimeout(timer)
++      start()
++    }
++    kanbanExecQueue.push(queued)
++  })
++}
++function execKanbanCli(args: readonly string[], options?: ExecFileOptions) {
++  return runQueuedKanbanExec(() => execHermes(args, options))
++}
++// HERMES_CUSTOM[kanban-exec-queue] END
+ const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+ const NO_WORKER_LOG_PATTERNS = [
+   /^\(no log for [^)]+?\s+—\s+task may not have spawned yet\)$/i,
+@@ -229,7 +268,7 @@ export async function listBoards(opts?: { includeArchived?: boolean }): Promise<
+   if (opts?.includeArchived) args.push('--all')
+ 
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -260,7 +299,7 @@ export async function createBoard(opts: KanbanBoardCreateOptions): Promise<Kanba
+   // HERMES_CUSTOM[v020] END
+ 
+   try {
+-    await execHermes(args, {
++    await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -279,7 +318,7 @@ export async function archiveBoard(slugInput: string): Promise<void> {
+   if (slug === 'default') throw new Error('Cannot archive the default kanban board')
+ 
+   try {
+-    await execHermes(['kanban', 'boards', 'rm', slug], {
++    await execKanbanCli(['kanban', 'boards', 'rm', slug], {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -350,7 +389,7 @@ async function execKanbanMutation(
+   options: ExecFileOptions = {},
+ ): Promise<string> {
+   try {
+-    const { stdout, stderr } = await execHermes(args, {
++    const { stdout, stderr } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -400,7 +439,7 @@ export async function addComment(taskId: string, body: string, opts?: KanbanBoar
+   const args = [...boardArgs(opts?.board), 'comment', taskId, body]
+   pushOptional(args, '--author', opts?.author)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -416,7 +455,7 @@ export async function getTaskLog(taskId: string, opts?: KanbanBoardOptions & { t
+   const args = [...boardArgs(opts?.board), 'log', taskId]
+   pushOptional(args, '--tail', opts?.tail)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -453,7 +492,7 @@ export async function getDiagnostics(opts?: KanbanBoardOptions & { task?: string
+   pushOptional(args, '--task', opts?.task)
+   pushOptional(args, '--severity', opts?.severity)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -469,7 +508,7 @@ export async function reclaimTask(taskId: string, opts?: KanbanBoardOptions & {
+   const args = [...boardArgs(opts?.board), 'reclaim', taskId]
+   pushOptional(args, '--reason', opts?.reason)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -486,7 +525,7 @@ export async function reassignTask(taskId: string, profile: string, opts?: Kanba
+   if (opts?.reclaim) args.push('--reclaim')
+   pushOptional(args, '--reason', opts?.reason)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -502,7 +541,7 @@ export async function specifyTask(taskId: string, opts?: KanbanBoardOptions & {
+   const args = [...boardArgs(opts?.board), 'specify', taskId, '--json']
+   pushOptional(args, '--author', opts?.author)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -520,7 +559,7 @@ export async function dispatch(opts?: KanbanBoardOptions & { dryRun?: boolean; m
+   pushOptional(args, '--max', opts?.max)
+   pushOptional(args, '--failure-limit', opts?.failureLimit)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -546,7 +585,7 @@ export async function listTasks(opts?: {
+   if (opts?.tenant) args.push('--tenant', opts.tenant)
+ 
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -560,7 +599,7 @@ export async function listTasks(opts?: {
+ 
+ export async function getTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanTaskDetail | null> {
+   try {
+-    const { stdout } = await execHermes([...boardArgs(opts?.board), 'show', taskId, '--json'], {
++    const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'show', taskId, '--json'], {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -632,7 +671,7 @@ export async function createTask(
+   }
+ 
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -855,7 +894,7 @@ export async function bulkUpdateTasks(opts: KanbanBulkTaskUpdateOptions): Promis
+ 
+ export async function getStats(opts?: KanbanBoardOptions): Promise<KanbanStats> {
+   try {
+-    const { stdout } = await execHermes([...boardArgs(opts?.board), 'stats', '--json'], {
++    const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'stats', '--json'], {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -899,7 +938,7 @@ export async function getStats(opts?: KanbanBoardOptions): Promise<KanbanStats>
+ 
+ export async function listAttachments(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanAttachment[]> {
+   try {
+-    const { stdout } = await execHermes([...boardArgs(opts?.board), 'attachments', taskId, '--json'], {
++    const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'attachments', taskId, '--json'], {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -914,7 +953,7 @@ export async function listAttachments(taskId: string, opts?: KanbanBoardOptions)
+ 
+ export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAssignee[]> {
+   try {
+-    const { stdout } = await execHermes([...boardArgs(opts?.board), 'assignees', '--json'], {
++    const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'assignees', '--json'], {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -937,9 +976,9 @@ export async function deleteTask(taskId: string, opts?: KanbanBoardOptions): Pro
+   try {
+     const current = (await getTask(taskId, opts))?.task
+     if (current?.status !== 'archived') {
+-      await execHermes(archiveArgs, exec())
++      await execKanbanCli(archiveArgs, exec())
+     }
+-    await execHermes(purgeArgs, exec())
++    await execKanbanCli(purgeArgs, exec())
+     return true
+   } catch (err: any) {
+     logger.error(err, 'Hermes CLI: kanban delete task failed')
+@@ -951,7 +990,7 @@ export async function decomposeTask(taskId: string, opts?: KanbanBoardOptions &
+   const args = [...boardArgs(opts?.board), 'decompose', taskId, '--json']
+   pushOptional(args, '--author', opts?.author)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 50 * 1024 * 1024,
+       timeout: 120000,
+       ...execOpts,
+@@ -1066,7 +1105,7 @@ export async function getHomeChannels(taskId: string | null, opts?: KanbanBoardO
+   if (taskId) {
+     try {
+       const args = [...boardArgs(opts?.board), 'notify-list', taskId, '--json']
+-      const { stdout } = await execHermes(args, { maxBuffer: 1024 * 1024, ...execOpts })
++      const { stdout } = await execKanbanCli(args, { maxBuffer: 1024 * 1024, timeout: 30000, ...execOpts })
+       const parsed = JSON.parse(stdout.trim())
+       subs = Array.isArray(parsed) ? parsed : []
+     } catch {
+@@ -1248,7 +1287,7 @@ export interface KanbanEstimateResult {
+  */
+ export async function estimateTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
+   try {
+-    const { stdout } = await execHermes([...boardArgs(opts?.board), 'estimate', taskId, '--json'], {
++    const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'estimate', taskId, '--json'], {
+       maxBuffer: 1024 * 1024,
+       timeout: 90000,
+       ...execOpts,
+@@ -1268,7 +1307,7 @@ export async function estimateText(title: string, body?: string, opts?: KanbanBo
+   const args = [...boardArgs(opts?.board), 'estimate', '--title', title, '--json']
+   pushOptional(args, '--body', body)
+   try {
+-    const { stdout } = await execHermes(args, {
++    const { stdout } = await execKanbanCli(args, {
+       maxBuffer: 1024 * 1024,
+       timeout: 90000,
+       ...execOpts,
+@@ -1295,7 +1334,7 @@ export interface KanbanProject {
+ /** List first-class Hermes projects for board scoping (`hermes project list --json`, patch 179). */
+ export async function listProjects(): Promise<KanbanProject[]> {
+   try {
+-    const { stdout } = await execHermes(['project', 'list', '--json'], {
++    const { stdout } = await execKanbanCli(['project', 'list', '--json'], {
+       maxBuffer: 5 * 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
+@@ -1314,7 +1353,7 @@ export async function setBoardProject(slugInput: string, projectRef: string | nu
+   const args = ['kanban', 'boards', 'set-project', slug]
+   args.push(projectRef?.trim() ? projectRef.trim() : 'none')
+   try {
+-    await execHermes(args, {
++    await execKanbanCli(args, {
+       maxBuffer: 1024 * 1024,
+       timeout: 30000,
+       ...execOpts,
