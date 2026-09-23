@@ -43,9 +43,7 @@ const KIND_CLASS: Record<GitChange['kind'], string> = {
 type ChangeGroup = GitChangeGroup
 
 const groups = computed(() => (status.value ? toGroups(status.value.changes) : []))
-// 未解决的冲突（kind=conflicted）不计入可提交数：git 对 unmerged 拒绝 commit，
-// 提前放行只会把 git 的报错挪到提交按钮上；解决（编辑后 git add）自动移出冲突组
-const stagedCount = computed(() => status.value?.changes.filter((c) => c.kind !== 'untracked' && c.kind !== 'conflicted' && c.indexStatus !== ' ').length ?? 0)
+const stagedCount = computed(() => status.value?.changes.filter((c) => c.kind !== 'untracked' && c.indexStatus !== ' ').length ?? 0)
 const canCommit = computed(() => stagedCount.value > 0 && commitMessage.value.trim().length > 0 && !committing.value)
 // M4：分支切换 + push（/api/ide/git/branches|checkout|push）
 const branches = ref<Array<{ name: string; current: boolean }>>([])
@@ -251,17 +249,7 @@ defineExpose({ refresh, toGroups })
             <span class="ide-git__file" :title="change.renamedFrom ? `${change.renamedFrom} → ${change.file}` : change.file">
               {{ change.file }}
             </span>
-            <!-- 冲突行：＋= 编辑解决后 git add 标记已解决；不给「−」——restore --staged
-                 会把 index 重置回 HEAD，对 unmerged 是误导操作 -->
             <span
-              v-if="group.key === 'conflicted'"
-              class="ide-git__stage-btn"
-              :title="t('ide.gitMarkResolved')"
-              data-testid="ide-git-conflict-resolve"
-              @click.stop="stage(change, true)"
-            >＋</span>
-            <span
-              v-else
               class="ide-git__stage-btn"
               :title="group.key === 'staged' ? t('ide.gitUnstage') : t('ide.gitStage')"
               @click.stop="stage(change, group.key !== 'staged')"

@@ -98,15 +98,6 @@ async function listWorktrees(repoRoot: string): Promise<Array<{ id: string; path
   return entries.filter((e) => e.isDirectory()).map((e) => ({ id: e.name, path: resolve(dir, e.name) }))
 }
 
-/** 过期清扫（默认 >24h 未动）：cleanupStale 此前无任何调用方，IDE worktree
- *  只靠 20 上限按 mtime 挤出，长期运行的仓库会积压半永久目录。挂在 list 与
- *  create 上惰性触发（徽标/面板轮询 list 即清扫），失败不阻塞主流程。 */
-async function sweepStaleWorktrees(repoRoot: string): Promise<void> {
-  try {
-    await manager.cleanupStale(24 * 60 * 60 * 1000, { repoRoot })
-  } catch { /* 清扫失败不影响列表/创建 */ }
-}
-
 const ideWorktreeRouter = new Router()
 
 ideWorktreeRouter.post('/api/ide/worktree/create', async (ctx) => {
@@ -122,7 +113,6 @@ ideWorktreeRouter.post('/api/ide/worktree/create', async (ctx) => {
     ctx.body = { error: 'not_a_git_repo' }
     return
   }
-  await sweepStaleWorktrees(repo)
   const id = worktreeIdFor(sessionId)
   try {
     // repoRoot 显式锚定:建/绑/回收同落 repo/.loop/worktrees(修 create 落
@@ -184,7 +174,6 @@ ideWorktreeRouter.get('/api/ide/worktree/list', async (ctx) => {
     ctx.body = { worktrees: [] }
     return
   }
-  await sweepStaleWorktrees(repo)
   ctx.body = { worktrees: await listWorktrees(repo) }
 })
 

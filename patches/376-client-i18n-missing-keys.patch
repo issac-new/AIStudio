@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index a507c16..676f618 100644
+index a507c16..3a003f1 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
 @@ -297,6 +297,9 @@ export default {
@@ -29,7 +29,7 @@ index a507c16..676f618 100644
        lowTitle: 'Context running low',
        lowBody: 'Compact the session or start a new one',
      },
-@@ -647,6 +651,43 @@ export default {
+@@ -647,6 +651,41 @@ export default {
        budgetOver: 'Turn budget exhausted; the goal engine will auto-pause',
        engineHint: 'Engine: hermes GoalManager (turn budget + judge + auto-pause)',
      },
@@ -68,12 +68,10 @@ index a507c16..676f618 100644
 +      auxPlaceholder: 'Free-form chat…',
 +      auxSend: 'Send',
 +    },
-+    gitConflicts: 'Conflicts',
-+    gitMarkResolved: 'Mark resolved (git add)',
    },
  
    loop: {
-@@ -2350,6 +2391,7 @@ export default {
+@@ -2350,6 +2389,7 @@ export default {
      newCliChat: 'New CLI',
      deleteSession: 'Delete this session?',
      sessionDeleted: 'Session deleted',
@@ -81,7 +79,7 @@ index a507c16..676f618 100644
      toggleBatchMode: 'Batch selection',
      selectAll: 'Select all',
      confirmBatchDelete: 'Delete {count} selected sessions?',
-@@ -5146,6 +5188,10 @@ export default {
+@@ -5146,6 +5186,10 @@ export default {
      fleetSubagents: 'Sub-agents', fleetSubagentsRun: '{n} running', traceUsageSummary: 'Session usage totals (L2 aggregate, continuous across runs)', inboxKind_mcp: 'MCP degraded',
      completionSummary: 'Completion summary',
      completionSummaryHint: 'Enter a summary for this task. It is stored as the task result.',
@@ -92,7 +90,7 @@ index a507c16..676f618 100644
      termTool: 'Terminal tool',
      termToolNotInstalled: 'not installed',
      accurate: 'Accurate',
-@@ -5290,6 +5336,6 @@ export default {
+@@ -5290,6 +5334,6 @@ export default {
    },
  
    matrixChat: {
@@ -101,7 +99,7 @@ index a507c16..676f618 100644
    },
  }
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index 450dbcf..208a863 100644
+index 450dbcf..7e23c8f 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
 @@ -297,6 +297,9 @@ export default {
@@ -140,7 +138,7 @@ index 450dbcf..208a863 100644
        lowTitle: '上下文余量不足',
        lowBody: '建议压缩会话或新开会话',
      },
-@@ -645,6 +651,43 @@ export default {
+@@ -645,6 +651,41 @@ export default {
        budgetOver: 'Turn 预算已耗尽，goal 引擎将自动暂停',
        engineHint: '引擎在 hermes GoalManager（turn 预算 + judge + 自动暂停）',
      },
@@ -179,12 +177,10 @@ index 450dbcf..208a863 100644
 +      auxPlaceholder: '自由对话…',
 +      auxSend: '发送',
 +    },
-+    gitConflicts: '冲突',
-+    gitMarkResolved: '标记已解决（git add）',
    },
  
    loop: {
-@@ -2348,6 +2391,7 @@ export default {
+@@ -2348,6 +2389,7 @@ export default {
      newCliChat: '新建 CLI',
      deleteSession: '确定删除此会话？',
      sessionDeleted: '会话已删除',
@@ -192,7 +188,7 @@ index 450dbcf..208a863 100644
      toggleBatchMode: '批量选择',
      selectAll: '全选',
      confirmBatchDelete: '确定删除选中的 {count} 个会话？',
-@@ -5192,6 +5236,10 @@ export default {
+@@ -5192,6 +5234,10 @@ export default {
      fleetSubagents: '子代理', fleetSubagentsRun: '{n} 运行中', traceUsageSummary: '会话累计用量（L2 汇总，跨运行连续）', inboxKind_mcp: 'MCP 降级',
      completionSummary: '完成摘要',
      completionSummaryHint: '输入此任务的摘要，将存为任务结果。',
@@ -203,7 +199,7 @@ index 450dbcf..208a863 100644
      termTool: '终端工具',
      termToolNotInstalled: '未安装',
      accurate: '精确',
-@@ -5336,6 +5384,6 @@ export default {
+@@ -5336,6 +5382,6 @@ export default {
    },
  
    matrixChat: {

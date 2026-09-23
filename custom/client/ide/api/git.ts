@@ -40,24 +40,18 @@ export interface GitDiff {
 }
 
 export interface GitChangeGroup {
-  key: 'conflicted' | 'staged' | 'unstaged' | 'untracked'
+  key: 'staged' | 'unstaged' | 'untracked'
   labelKey: string
   changes: GitChange[]
 }
 
-/** 纯函数：status 变更列表 → 四组（冲突单列置顶；untracked 单列，其余按 index 侧分组）。
- *  冲突（UU/AA 等）此前按 indexStatus!==' ' 落进「已暂存」——对冲突文件点
- *  「−」执行 restore --staged 会把 index 重置回 HEAD，用户以为能直接提交而
- *  git 实际拒绝 unmerged。独立分组 + 不计暂存数（未解决冲突不允许提交）。 */
+/** 纯函数：status 变更列表 → 三组（untracked 单列，其余按 index 侧分组） */
 export function toGroups(changes: GitChange[]): GitChangeGroup[] {
-  const conflicted: GitChange[] = []
   const staged: GitChange[] = []
   const unstaged: GitChange[] = []
   const untracked: GitChange[] = []
   for (const change of changes) {
-    if (change.kind === 'conflicted') {
-      conflicted.push(change)
-    } else if (change.kind === 'untracked') {
+    if (change.kind === 'untracked') {
       untracked.push(change)
     } else if (change.indexStatus !== ' ') {
       staged.push(change)
@@ -66,7 +60,6 @@ export function toGroups(changes: GitChange[]): GitChangeGroup[] {
     }
   }
   const groups: GitChangeGroup[] = []
-  if (conflicted.length) groups.push({ key: 'conflicted', labelKey: 'ide.gitConflicts', changes: conflicted })
   if (staged.length) groups.push({ key: 'staged', labelKey: 'ide.gitStaged', changes: staged })
   if (unstaged.length) groups.push({ key: 'unstaged', labelKey: 'ide.gitUnstaged', changes: unstaged })
   if (untracked.length) groups.push({ key: 'untracked', labelKey: 'ide.gitUntracked', changes: untracked })

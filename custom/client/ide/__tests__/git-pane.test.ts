@@ -50,15 +50,6 @@ describe('toGroups（变更分组纯函数）', () => {
     expect(toGroups([])).toEqual([])
     expect(toGroups([change({ file: 'x.ts' })]).map((g) => g.key)).toEqual(['unstaged'])
   })
-
-  it('冲突（UU 等）独立分组置顶，不再混入已暂存', () => {
-    const groups = toGroups([
-      change({ file: 'both.ts', indexStatus: 'U', worktreeStatus: 'U', kind: 'conflicted' }),
-      change({ file: 'staged.ts', indexStatus: 'M', worktreeStatus: ' ', kind: 'modified' }),
-    ])
-    expect(groups.map((g) => g.key)).toEqual(['conflicted', 'staged'])
-    expect(groups[0].labelKey).toBe('ide.gitConflicts')
-  })
 })
 
 describe('IdeGitPane', () => {
