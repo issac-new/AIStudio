@@ -1,0 +1,26 @@
+# 本文件由 scripts/runtime/vendor-pua.mjs 生成,勿手改。
+# 更新流程见 overlay/runtime/README.md(同步 SOP)。
+runtime: pua
+repository: https://github.com/tanweai/pua
+ref: main
+commit: e6e6cd237ad17750d179674bff52f8184abea8fd
+ref_date: "2026-09-09T18:27:33+08:00"
+vendored_at: "2026-09-23T08:07:46.052Z"
+skill_count: 12
+# 同步时做过 SKILL.md frontmatter 规范化的技能(YAML1.1 布尔裸值加引号,
+# 见 normalizeSkillMd;上游修复后此清单应回归为空)
+normalized:
+  - yes
+skills:
+  - ding
+  - mama
+  - p10
+  - p7
+  - p9
+  - pro
+  - pua
+  - pua-en
+  - pua-ja
+  - pua-loop
+  - shot
+  - yes
