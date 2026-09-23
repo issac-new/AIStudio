@@ -1,0 +1,11 @@
+// 内核公共面：平台无关 API（Adapter 只允许消费这里的导出）。
+export * from './types.js'
+export { parseClaim, parseGateSpec, parseProfile, parseEvidence, parseRun, isRecord } from './parse.js'
+export type { Diagnostic } from './parse.js'
+export { loadProject, builtinPacksRoot } from './loader.js'
+export { decide, describeResult } from './decision.js'
+export { runGate, gitContext } from './run.js'
+export { storePaths, saveRun, latestRuns, loadRun, loadRunEvidence, saveRisk, listRisks, isFresh } from './store.js'
+export { resolveProfile, findProfile, effectivePolicy } from './profile.js'
+export { selectGates, appliesToChanged, globMatch, globToRegExp } from './impact.js'
+export { VERDICT_TO_DELIVERY, DOMAIN_TO_GATES, TIER_TO_PROFILE, tierOfProfile, supportsPass } from './align.js'

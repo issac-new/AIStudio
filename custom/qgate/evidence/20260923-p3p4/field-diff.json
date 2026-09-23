@@ -1,0 +1,19 @@
+{
+  "payment": {
+    "amount": {
+      "expected": 100,
+      "actual": 10000,
+      "match": false
+    },
+    "currency": {
+      "expected": "CNY",
+      "actual": "CNY",
+      "match": true
+    },
+    "status": {
+      "expected": "CREATED",
+      "actual": "CREATED",
+      "match": true
+    }
+  }
+}

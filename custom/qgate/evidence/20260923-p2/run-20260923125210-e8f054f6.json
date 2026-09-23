@@ -1,0 +1,16 @@
+{
+  "runId": "run-20260923125210-e8f054f6",
+  "gateId": "engineering.basic-check",
+  "gateVersion": "0.1.0",
+  "trigger": "task_close",
+  "workspace": "/private/tmp/qgate-p2-probe",
+  "startedAt": 1790167931001,
+  "endedAt": 1790167931409,
+  "verdict": "FAIL",
+  "evidenceIds": [
+    "ev-d28ad177-626",
+    "ev-f7f8729d-e46"
+  ],
+  "changedPaths": [],
+  "failureSummary": "lint-result:fail"
+}

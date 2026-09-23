@@ -1,0 +1,12 @@
+{
+  "name": "payment-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "QGate Phase 4 演示：unit test 全绿 + persistence gate FAIL（amount 单位换算植入缺陷）",
+  "scripts": {
+    "start": "node server.mjs",
+    "lint": "node unit.test.mjs --lint-mode",
+    "test": "node unit.test.mjs"
+  }
+}

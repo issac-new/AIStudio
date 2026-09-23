@@ -1,0 +1,13 @@
+{
+  "amount-consistency": {
+    "pass": false,
+    "rows": [
+      {
+        "id": 3,
+        "payment_amount": 10000,
+        "ledger_amount": 100
+      }
+    ],
+    "semantics": "expect zero rows"
+  }
+}
