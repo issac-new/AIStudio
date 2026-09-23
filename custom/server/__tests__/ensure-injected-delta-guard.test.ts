@@ -6,6 +6,8 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+// inject.mjs 顶部无副作用(直跑守卫见其尾部),可静态 import 做行为断言。
+import * as injectModule from '../../../scripts/inject.mjs'
 
 const scriptPath = resolve(__dirname, '../../../scripts/ensure-injected.mjs')
 
@@ -29,15 +31,24 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
   })
 
   it('hermes-agent 目标路由与 inject.mjs 前缀集一致', () => {
-    const injectSrc = readFileSync(resolve(__dirname, '../../../scripts/inject.mjs'), 'utf8')
-    const prefixes = [
-      "startsWith('hermes_cli/')", "startsWith('plugins/')", "startsWith('agent/')",
-      "startsWith('apps/')", "startsWith('assets/')", "startsWith('acp_')",
-      "startsWith('gateway/')", "startsWith('tests/gateway/')", "startsWith('tests/hermes_cli/')",
+    // 2026-09-23 收敛:前缀集在 inject.mjs 以 HERMES_AGENT_PATCH_PREFIXES 单一导出,
+    // ensure-injected.mjs import 复用谓词。守卫从"两处文本一致"升级为:
+    // ① 清单内容行为断言(含基础运行时前缀);② ensure-injected 确实复用而非内联。
+    const { HERMES_AGENT_PATCH_PREFIXES } = injectModule
+    const expected = [
+      'hermes_cli/', 'plugins/', 'agent/', 'apps/', 'assets/', 'acp_',
+      'gateway/', 'tests/gateway/', 'tests/hermes_cli/',
+      'optional-mcps/', 'optional-skills/',
     ]
-    for (const p of prefixes) {
-      expect(src).toContain(p)
-      expect(injectSrc).toContain(p)
+    for (const p of expected) {
+      expect(HERMES_AGENT_PATCH_PREFIXES, `前缀 ${p}`).toContain(p)
     }
+    const injectSrc = readFileSync(resolve(__dirname, '../../../scripts/inject.mjs'), 'utf8')
+    expect(injectSrc).toContain('export const HERMES_AGENT_PATCH_PREFIXES')
+    // ensure-injected 不得再内联前缀(内联=恢复双源漂移面)
+    const ensureSrc = readFileSync(resolve(__dirname, '../../../scripts/ensure-injected.mjs'), 'utf8')
+    expect(ensureSrc).toContain("isHermesAgentPatchPath } from './inject.mjs'")
+    expect(ensureSrc).not.toContain("startsWith('hermes_cli/')")
   })
 })
+
