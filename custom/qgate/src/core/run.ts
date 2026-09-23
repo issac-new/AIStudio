@@ -10,6 +10,7 @@ import { runCommandExecutor } from '../executors/command.js'
 import { runPersistenceExecutor } from '../executors/persistence.js'
 import { runOntologyExecutor } from '../executors/ontology.js'
 import { runFilesExecutor } from '../executors/files.js'
+import { runLlmExecutor } from '../executors/llm.js'
 import { saveRun, storePaths, activeWaiverFor } from './store.js'
 
 export interface RunInput {
@@ -83,6 +84,8 @@ export async function runGate(input: RunInput): Promise<RunResult> {
       evidence.push(await runOntologyExecutor(executor, { runId, gateId: spec.metadata.id, workspace, qgateDir, commit: git.commit }))
     } else if (executor.type === 'files') {
       evidence.push(runFilesExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
+    } else if (executor.type === 'llm') {
+      evidence.push(await runLlmExecutor(executor, { runId, gateId: spec.metadata.id, workspace, gateSpec: spec, commit: git.commit, changedPaths }))
     }
   }
 

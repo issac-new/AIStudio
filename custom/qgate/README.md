@@ -2,7 +2,8 @@
 
 面向 Code Agent 的可裁剪软件交付质量门禁：**没有证据不得 PASS**。
 设计文档：`overlay/docs/superpowers/specs/2026-09-23-qgate-universal-delivery-gate-design.md`（v0.2，上游 v0.1 见 `ncwk/docs/universal-delivery-gate-zcode-design-v0.1.md`）。
-状态：**P0-P9 全部收口**（2026-09-23，两轮；38 例单测 + overlay 全量绿）。
+状态：**P0-P9 + 收尾件全部收口**（2026-09-23，三轮；38 例单测 + overlay 全量绿）。
+第三轮补完最后三项：api-contract/schema 模板门包、LLM Reasoner executor（插件位）、Matrix delivery.gate 桥接（client store 层）。
 
 ## 组成
 
@@ -124,4 +125,10 @@ zcode Stop 钩子续跑上限 3 次（`MAX_STOP_HOOK_CONTINUATIONS`）。QGate �
 
 ## 明确不做（设计 §8）
 
-Matrix delivery.gate 事件桥接（等 zcode-engine R4 统筹层）；api-contract/schema 专属门包（等真实项目需求）；LLM Reasoner executor（OD-005：插件位，非内核依赖）。
+全部路线图已闭合：~~Matrix 事件桥接~~（已落地 client store 层，见下）、~~api-contract/schema 门包~~（已落地模板门）、~~LLM Reasoner~~（已落地插件位）。
+
+**Matrix delivery.gate 桥接**（`custom/client/matrix-teams/stores/qgate-bridge.ts`）：QGate 六态判定按 align 表换算为 delivery gate 三态（PASS→pass / FAIL→reject / 其余→conditional，**INCONCLUSIVE 绝不冒 pass**），domain 映射 G1-G6 门号；判定来源统一 `decidedBy=qgate-bridge`（机器判定不冒人）；案例房从 delivery.case 事件学习，未知案例落注册房兜底。读端为既有 review-center 聚合投影。
+
+**LLM Reasoner（插件位，OD-005 兑现）**：`gate-packs/llm/`。凭据走 `QGATE_LLM_API_KEY`（不读 zcode 加密凭证）；核心纪律——**LLM 判定永远不会单独构成 PASS**（模型说 pass 也强转 conditional）；无凭据/网络失败/响应不可解析 → INCONCLUSIVE 不 crash。默认全 Profile 禁用，项目显式 `enable llm.*` 才开。
+
+**api.contract-alignment / schema.migration-safety**：模板门（默认命令占位，项目用 `.qgate/gates/` 同 id 覆盖为真实检查；未覆盖 → INCONCLUSIVE 诚实暴露）。
