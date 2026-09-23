@@ -61,6 +61,13 @@ description: 金融支付（银行卡/网络支付/转接清算）领域背景�
      failed 非空时须在同一轮内向发起人回报，不得静默跳过。
 - 逐条发 matrix 消息：@责任人-agent 与 @lead-agent，附任务明细（任务 ID/要求/
   文档 git 地址/初稿确认与深入分析反馈要求）。
+- **登记主卡与子卡必须显式给工作区路径**（`hermes kanban create ... --workspace worktree:<绝对路径>`
+  或确保所在板已配 default_workdir）。实锤教训：卡建成 `workspace_kind=worktree` 却没带
+  `workspace_path`、板又无默认工作目录时，网关 dispatcher 连败 2 次即触发 failure_limit 熔断，
+  主卡转 blocked/abandoned，后续 RACI 派发全部无处挂载，整轮白做。
+  拿不到可用工作区路径时，报 `ANALYSIS-BLOCKED` 并写明"缺 default_workdir/工作区路径"，
+  不要先建卡再指望系统兜底。
+
 - 每条派发建一个跟踪子任务（`hermes kanban create` + `hermes kanban link
   <父> <子>`），仅追踪对方反馈进展；全部子任务完成后才关闭父任务。
 
