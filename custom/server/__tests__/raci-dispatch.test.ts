@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtemp, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -11,6 +11,16 @@ async function freshDedupePath(): Promise<string> {
   dedupePath = join(dir, 'dispatch.json')
   return dedupePath
 }
+
+// 本文件断言模拟派发行为（房间 id !sim-*）：必须隔离真实 Matrix 凭据，
+// 否则宿主机 ~/.hermes 有配置时会走真实 client-server（room-invite-gap 修复后行为）。
+beforeEach(() => {
+  process.env.HERMES_HOME = join(tmpdir(), 'raci-dispatch-no-creds')
+  delete process.env.LOOP_MATRIX_PROFILE
+})
+afterEach(() => {
+  delete process.env.HERMES_HOME
+})
 
 describe('Architecture Rules', () => {
   const baseTask = (overrides: Record<string, unknown> = {}) => ({

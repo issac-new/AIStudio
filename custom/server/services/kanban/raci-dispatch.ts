@@ -2,9 +2,12 @@
 // RACI 派发服务：根据 KanbanTask body 中的 RACI 块创建 Matrix 房间并按角色派发通知。
 // 挂载：B 类 patch 361 在 kanban-service.createTask、patch 366 在 assignTask 成功路径
 // best-effort 调用。同任务幂等：sidecar 记录 taskId→roomId，重复派发不再建群。
+// 通道：有 Matrix 凭据（gateway dotenv 五件套）走真实 client-server 建群+邀人
+// （room-invite-gap 根治，原先只进内存模拟）；无凭据回落内存模拟（测试/无网关环境）。
 // 约束：custom 树禁止 import upstream 模块（overlay 树内无该文件），任务对象用结构化类型承接。
-// 依赖：custom/server/matrix/gateway-env.ts（RACI 类型与角色映射）+
-//       custom/server/matrix/simulation.ts（Matrix 房间/消息内存模拟）。
+// 依赖：custom/server/matrix/gateway-env.ts（凭据/RACI 类型）+
+//       custom/server/matrix/raci-matrix.ts（真实 Matrix HTTP 面）+
+//       custom/server/matrix/simulation.ts（无凭据回落的内存模拟）。
 
 import { mkdir, readFile, rename, writeFile } from 'fs/promises'
 import { homedir } from 'os'
@@ -12,7 +15,6 @@ import { dirname, join } from 'path'
 import {
   type RACITuple,
   type DispatchResult,
-  ROLE_USER_MAP,
   createRoomName,
   DEFAULT_GATEWAY_CONFIG,
 } from '../../matrix/gateway-env'
@@ -20,6 +22,14 @@ import {
   simulateCreateRoom,
   simulateSendMessage,
 } from '../../matrix/simulation'
+import {
+  resolveMatrixDispatchEnv,
+  matrixCreateTaskRoom,
+  matrixInviteUser,
+  matrixSendMessage,
+  raciInviteeIds,
+  type MatrixDispatchEnv,
+} from '../../matrix/raci-matrix'
 
 /** 派发所需的最小任务结构（KanbanTask 的结构化子集） */
 export interface RaciDispatchTask {
@@ -108,11 +118,9 @@ export class RACIDispatchService {
     }
 
     try {
-      const roomId = await RACIDispatchService.createMatrixRoom(task)
-      await RACIDispatchService.inviteParticipants(roomId, raci)
-      await RACIDispatchService.sendDispatchMessage(roomId, task, raci)
-      await recordDispatch(dedupePath, task.id, roomId)
-      return { ok: true, roomId }
+      const mode = await RACIDispatchService.dispatchToMatrix(task, raci)
+      await recordDispatch(dedupePath, task.id, mode.roomId)
+      return { ok: true, roomId: mode.roomId, mode: mode.mode }
     } catch (err) {
       return {
         ok: false,
@@ -120,6 +128,42 @@ export class RACIDispatchService {
         error: err instanceof Error ? err.message : 'Matrix 派发失败',
       }
     }
+  }
+
+  /** 建群+邀人+发摘要：有 Matrix 凭据走真实 client-server（room-invite-gap 根治），
+   *  无凭据（测试/无网关环境）回落内存模拟。返回 roomId 与实际走的通道。 */
+  private static async dispatchToMatrix(
+    task: RaciDispatchTask,
+    raci: RACITuple,
+  ): Promise<{ roomId: string; mode: 'matrix' | 'simulated' }> {
+    const env = resolveMatrixDispatchEnv()
+    if (env) {
+      return { roomId: await RACIDispatchService.dispatchReal(env, task, raci), mode: 'matrix' }
+    }
+    return { roomId: await RACIDispatchService.dispatchSimulated(task, raci), mode: 'simulated' }
+  }
+
+  /** 真实 Matrix 派发：建房（邀人随房提交）+ 逐个补邀幂等 + 发摘要 */
+  private static async dispatchReal(
+    env: MatrixDispatchEnv,
+    task: RaciDispatchTask,
+    raci: RACITuple,
+  ): Promise<string> {
+    const roomName = createRoomName(task.id, task.title)
+    const invitees = raciInviteeIds(raci)
+    const roomId = await matrixCreateTaskRoom(env, roomName, invitees)
+    // 补邀（建房 invite 已含，此处幂等兜底已在房/漏邀场景）
+    for (const uid of invitees) await matrixInviteUser(env, roomId, uid)
+    await matrixSendMessage(env, roomId, RACIDispatchService.buildDispatchText(task, raci))
+    return roomId
+  }
+
+  /** 内存模拟派发（无凭据环境；保留原行为供测试/无网关回落） */
+  private static async dispatchSimulated(task: RaciDispatchTask, raci: RACITuple): Promise<string> {
+    const roomName = createRoomName(task.id, task.title)
+    const room = await simulateCreateRoom(roomName, DEFAULT_GATEWAY_CONFIG.userId, raciInviteeIds(raci))
+    await simulateSendMessage(room.roomId, DEFAULT_GATEWAY_CONFIG.userId, RACIDispatchService.buildDispatchText(task, raci))
+    return room.roomId
   }
 
   /**
@@ -148,39 +192,8 @@ export class RACIDispatchService {
     return defaultRaci
   }
 
-  /**
-   * 创建 Matrix 房间并邀请 RACI 参与者（模拟态：内存房间）
-   */
-  private static async createMatrixRoom(task: RaciDispatchTask): Promise<string> {
-    const roomName = createRoomName(task.id, task.title)
-    const invitedUsers = [
-      ...ROLE_USER_MAP.responsible,
-      ...ROLE_USER_MAP.approver,
-      ...ROLE_USER_MAP.consulted,
-      ...ROLE_USER_MAP.informed,
-    ]
-    const room = await simulateCreateRoom(roomName, DEFAULT_GATEWAY_CONFIG.userId, invitedUsers)
-    return room.roomId
-  }
-
-  /**
-   * 角色权限位（模拟态已随建房邀请完成；生产态在此按角色设置 power_levels）
-   */
-  private static async inviteParticipants(
-    _roomId: string,
-    _raci: RACITuple,
-  ): Promise<void> {
-    // no-op：simulateCreateRoom 已完成邀请
-  }
-
-  /**
-   * 发送任务摘要消息到 Matrix 房间
-   */
-  private static async sendDispatchMessage(
-    roomId: string,
-    task: RaciDispatchTask,
-    raci: RACITuple,
-  ): Promise<void> {
+  /** 派发摘要文本（真实/模拟共用） */
+  private static buildDispatchText(task: RaciDispatchTask, raci: RACITuple): string {
     const lines = [
       `📋 **RACI 派发通知**`,
       ``,
@@ -196,7 +209,6 @@ export class RACIDispatchService {
       ``,
       `**Kanban 任务链接**：查看看板详情`,
     ].filter((l) => l !== '')
-
-    await simulateSendMessage(roomId, DEFAULT_GATEWAY_CONFIG.userId, lines.join('\n'))
+    return lines.join('\n')
   }
 }

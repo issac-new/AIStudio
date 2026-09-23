@@ -144,6 +144,8 @@ export interface DispatchResult {
   error?: string
   /** 命中 sidecar 去重：同任务已派发过，返回原 roomId 不再建群 */
   deduped?: boolean
+  /** 实际走的通道：matrix=真实 client-server（有凭据），simulated=内存模拟（无凭据回落） */
+  mode?: 'matrix' | 'simulated'
 }
 
 /** Matrix 网关默认配置 */
