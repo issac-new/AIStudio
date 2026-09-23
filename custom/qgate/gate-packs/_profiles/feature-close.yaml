@@ -12,4 +12,7 @@ spec:
     - architecture.fitness
   disable:
     - ontology.*
+    - llm.*
+    - api.*
+    - schema.*
     - L5

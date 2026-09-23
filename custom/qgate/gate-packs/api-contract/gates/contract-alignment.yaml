@@ -1,0 +1,39 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: api.contract-alignment
+  version: 0.1.0
+  description: >
+    L2 API 契约一致性：OpenAPI ↔ 实现 ↔ 测试。模板门——项目必须在
+    .qgate/gates/api.contract-alignment.yaml 覆盖为真实检查命令（如 openapi-diff /
+    schemathesis / 自研 contract test 脚本）。未覆盖时 INCONCLUSIVE（诚实暴露，不假装通过）。
+spec:
+  domain: L2
+  claims:
+    - api.contract-aligned
+  appliesWhen:
+    changed:
+      any:
+        - "**/openapi*.yaml"
+        - "**/openapi*.json"
+        - "**/*.controller.ts"
+        - "**/routes*.ts"
+        - "**/api/**"
+  triggers:
+    - task_close
+    - pre_commit
+    - release
+  executors:
+    - id: contract-check
+      type: command
+      command: ["npm", "run", "contract:check", "--silent"]
+      evidenceType: contract-check-result
+      timeoutMs: 180000
+  evidence:
+    required:
+      - contract-check-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

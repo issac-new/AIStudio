@@ -164,20 +164,15 @@ Evidence 关联 `commit / treeHash / affectedPaths / configHash / startedAt`；�
 | OD-004 FIBO | 预处理语义索引（首版 9 概念小集） | 避免运行时 OWL 推理（本轮不实施，列 P5+） |
 | OD-005 LLM | executor 插件，非内核依赖 | 内核保持确定性优先（v0.1 §4.3） |
 
-## 8. 不做清单（终态；续轮后仅余三项）
+## 8. 不做清单（终态：全部闭合）
 
-第一轮（P0-P4 收口时）的"本轮不做"五项中，四项已在续轮（用户指令"继续 完成所有"）落地：
+第一轮"本轮不做"的五项中，四项在续轮落地；续轮剩余三项也在第三轮（用户指令"完成全部"）闭合：
 
-- ~~FIBO/Ontology Provider~~ → P6/P9 已落地：`src/ontology/` + `gate-packs/ontology/`（FIBO 12 概念预处理索引、MockProvider、可关可换、不可用→INCONCLUSIVE 不 crash）
-- ~~MCP 工具面~~ → P8 已落地：`src/mcp-server.ts` 七工具，插件 `plugin:qgate:qgate` 实机可见
-- ~~Claude Code 适配~~ → 已落地：`plugin/.claude-plugin/plugin.json` 双清单 + `${CLAUDE_PLUGIN_ROOT}` 双平台变量（hooks.json 单文件双宿主）
-- ~~Release Evidence Package~~ → L5.7 已落地：`qgate release-report` 六区块 md+json
+- ~~Matrix delivery.gate 事件桥接~~ → **第三轮已落地**（不等 zcode-engine R4 的服务器统筹层，改为 client store 层直落）：`custom/client/matrix-teams/stores/qgate-bridge.ts`。换算表 QGATE_TO_DELIVERY 与 align 同源；INCONCLUSIVE 降 conditional 不冒 pass；`decidedBy=qgate-bridge` 机械来源不冒人；案例房从 delivery.case 事件学习，注册房兜底。读端复用 review-center 聚合投影，无需新读端。
+- ~~api-contract/schema 专属门包~~ → **第三轮已落地**模板门模式：`api.contract-alignment`、`schema.migration-safety`（默认命令占位，项目覆盖为真实检查；未覆盖 → INCONCLUSIVE 诚实暴露，与 architecture.fitness 同模式）。
+- ~~LLM Reasoner executor~~ → **第三轮已落地插件位**（OD-005 兑现）：`src/executors/llm.ts` + `gate-packs/llm/`。凭据 QGATE_LLM_API_KEY；**LLM 判定永不单独构成 PASS**（模型判 pass 强转 conditional）；不可用 → INCONCLUSIVE 不 crash；默认全 Profile 禁用。
 
-仍不做（外部依赖或防占位膨胀）：
-
-- **Matrix delivery.gate 事件桥接**——等 zcode-engine R4 统筹层（依赖外部工作流，非本框架范围）
-- api-contract / schema 专属门包——等真实项目需求（architecture.fitness 已示范"模板门+项目覆盖"模式）
-- LLM Reasoner executor——OD-005 维持插件位裁定，不进内核
+至此 v0.1 路线图（Phase 0-9 + §82 研发基线 15 项）全部闭合。后续演进只在真实需求驱动下加门包/Adapter，框架形态不再扩。
 
 ## 9. 风险与对策
 

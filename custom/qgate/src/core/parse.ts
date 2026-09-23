@@ -80,7 +80,7 @@ export function parseClaim(raw: unknown): Claim | null {
 function parseExecutor(raw: unknown): ExecutorSpec | null {
   if (!isRecord(raw)) return null
   const id = validId(raw.id)
-  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files'] as const)
+  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files', 'llm'] as const)
   const evidenceType = validId(raw.evidenceType)
   if (!id || !type || !evidenceType) return null
   const out: ExecutorSpec = { id, type, evidenceType }
