@@ -186,8 +186,8 @@ if step_reached dispatch; then
   RID=$(sget room_analysis)
   if [[ -z "$(sget dispatch_marker)" ]]; then
     WSF=$(workspace fanfan)
-    M=$(mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 请处理需求 ${RFD_ID}（收单商户多端小程序支付收银台）。
-需求基本信息：为收单商户开发兼容微信/支付宝双端的小程序支付收银台，含统一下单、渠道适配（财付通/支付宝）、支付结果通知与对账字段支撑。
+    M=$(mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 请处理需求 ${RFD_ID}。
+需求基本信息：${RFD_ONELINE}。
 需求文档：aipaydev 仓库 ${RFD_DOC}（你本机克隆在 ${WSF}，先 git pull）
 请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单匹配、SMART 拆分与 RACI 派发。
 结论行以 ANALYSIS-DONE-${RFD_ID} 或 ANALYSIS-BLOCKED-${RFD_ID} 开头。不许谎报。" "$(agent_mxid fanfan)")

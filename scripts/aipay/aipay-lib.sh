@@ -68,6 +68,9 @@ key = m.get("api_key") or ""
 name = m.get("default") or ""
 if not url or not name:
     print("unreachable"); raise SystemExit
+# base_url 可能已自带 /v1（如 DashScope compatible-mode），也可能是裸 origin（如本地
+# cc-switch 代理）。无条件再拼一次 /v1 会打出 404，被误判成"通道不可用"。
+url = url[:-3].rstrip("/") if url.endswith("/v1") else url
 body = json.dumps({"model": name, "max_tokens": 4,
                    "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}).encode()
 req = urllib.request.Request(url + "/v1/chat/completions", data=body,
@@ -113,6 +116,15 @@ RFD_SLUG="${RFD_SLUG:-payment-cashier}"
 RFD_DOC="docs/requirements/${RFD_ID}-${RFD_SLUG}.md"
 _RFD_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RFD_MATERIAL="${RFD_MATERIAL:-$_RFD_SCRIPT_DIR/materials/${RFD_ID}-${RFD_SLUG}.md}"
+# 派发消息里的"一行需求基本信息"（方案步骤 8）。缺省按需求号给准确摘要——
+# 早先写死的是 RFD-001 的下单/渠道/对账口径，RFD-002 复用时会让 agent 拿到的
+# 一句话与文档实际范围（退款/分账）不符，正撞步骤 10"务必确保不能有信息偏差"。
+if [[ -z "${RFD_ONELINE:-}" ]]; then
+  case "$RFD_ID" in
+    RFD-002) RFD_ONELINE="在已上线的收单商户小程序收银台之上，增加退款（整单/多次部分、原路退回）与分账（多接收方、比例/时窗/冻结解冻）两项资金能力，双端一致且不产生资损" ;;
+    *)       RFD_ONELINE="为收单商户开发兼容微信/支付宝双端的小程序支付收银台，含统一下单、渠道适配（财付通/支付宝）、支付结果通知与对账字段支撑" ;;
+  esac
+fi
 
 # 编制（顺序即序号 i=1..12；admin 不起实例）
 USERS=(admin bella fanfan wei mei chen hu lin xiao qi fei arch)
