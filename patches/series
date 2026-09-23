@@ -749,3 +749,7 @@
 #      上游 #3144 起新通知族(live-activity/run-push/catchup)把 UserRecord 直接传入
 #      canReceiveAppEvent(AuthenticatedUser)，015 的可空列与 016 的 ?:string 不兼容。
 367-server-auth-matrix-userid-nullable.patch
+
+# 368: 推演实锤 ide-deeplink-loses-task 根治——hash 路由吞路径形态深链 search 参数，
+#      router 初始化前把 pathname+search 迁移为 hash 形态（与 entry.mts shim 双侧同步）。
+368-client-path-deeplink-to-hash.patch
