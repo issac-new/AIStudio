@@ -9,7 +9,7 @@ mkdir -p "$OUT"
 
 # 1. 需求讨论群消息全量
 RID=$(cat "$CREDS_DIR/../state.env" 2>/dev/null | grep -s '^room_analysis=' | cut -d= -f2- || true)
-RID="${RID:-$(grep -s '^room_analysis=' "$SIM_ROOT/state.env" | cut -d= -f2- || true)}"
+RID="${RID:-$(grep -s '^room_analysis=' "$STATE" | cut -d= -f2- || true)}"
 if [[ -n "$RID" ]]; then
   curl -sf "$HS/_matrix/client/v3/rooms/$RID/messages?access_token=$(load_token fanfan)&dir=f&limit=500" \
     | jq '[.chunk[] | select(.type == "m.room.message") | {sender, ts: .origin_server_ts, body: .content.body}]' \
@@ -19,7 +19,7 @@ fi
 
 # 2. 每实例 kanban 快照
 for u in "${INSTANCED_USERS[@]}"; do
-  JWT=$(grep -s "^jwt_$u=" "$SIM_ROOT/state.env" | head -1 | cut -d= -f2- || true)
+  JWT=$(grep -s "^jwt_$u=" "$STATE" | head -1 | cut -d= -f2- || true)
   [[ -z "$JWT" ]] && continue
   curl -sf "http://127.0.0.1:$(studio_port "$u")/api/hermes/kanban" -H "Authorization: Bearer $JWT" \
     > "$OUT/kanban-$u.json" 2>/dev/null || true
