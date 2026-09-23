@@ -85,6 +85,30 @@
 | inbox-dedup 技能 kanban CLI 虚构 --title/--status 旗标（08a6030，本会话） | 改位置参数 + --triage，同步 11 实例 |
 | defect 窗首圈误判零缺陷（Q12，未修脚本，闭环由 agent 兜住） | 记录在案 |
 
+## 五-b、问题单排期修复闭环（2026-09-23 回填）
+
+15 项问题单处置状态（`95031e4` 为排期修复主 commit；并行会话另承担多项）：
+
+| 问题单 | 状态 | 处置 |
+|---|---|---|
+| room-invite-gap ×9 | ✅ 已修 | hermes `matrix invite` CLI + 技能接线（5d1cd7f，缺口会话） |
+| ide-brief | ✅ 已修 | TaskBriefingPanel 六区块（e99e9fe）+ recap 数据源（66800db）+ aux 回传（289703e） |
+| ide-task-param | ✅ 已修 | useIdeJump 全入口带 task 参数（早已在位，深链形态问题归下条） |
+| ide-deeplink-loses-task | ✅ 已修 | 路径形态 search 迁 hash：entry shim + patch 368 双落点（e952c63） |
+| ide-i18n-raw-keys | ✅ 已修 | patch 365 四键 zh/en（67b3fef） |
+| ide-briefing-cross-board-empty | ✅ 已修 | 简报抽屉跨板任务解析（1254c2f） |
+| kanban-api-hang-qi ×2 | ✅ 已修 | **patch 369**：kanban CLI exec FIFO 队列并发 2 + 排队 45s 快速失败 + notify-list 补 30s 超时（95031e4） |
+| cockpit-online-zero ×2 | ✅ 已修 | 在线计数多级回落：registry → Matrix presence → fleetSessions 聚合（95031e4 起步，并行会话 presence 增强接续） |
+| approval-stall ×2 | ✅ 已修 | 审批代答守护 aipay-approver（05fc959） |
+| shared-node-modules-wipe | ✅ 条款 | aipaydev-dev 技能补「依赖隔离」条款（95031e4） |
+| dev-branch-missing | ✅ 条款 | aipaydev-dev 技能补「及时推送」条款（95031e4） |
+| test-report-missing | ✅ 条款 | aipaydev-dev 技能补「测试报告是独立交付物」条款（95031e4） |
+| receipt-missing | ✅ 条款 | inbox-dedup 技能双兜底条款已在位（执行偏差，非规则缺失） |
+| review-card-missing | ✅ 条款 | requirements-analyst 技能补「E. 评审卡登记」条款（95031e4） |
+| host-gateway-ownership | ⏸️ 环境局限 | sim profile 与宿主 orchestrator gateway 抢占，属部署形态约束，产品化需 multiplex 迁移通道（另行立项） |
+
+排期修复门禁：server tsc 0 错 + overlay vitest 2248 全绿 + i18n-coverage 18 绿 + inject 312 patch 全套。
+
 ## 六、关键数字与记忆点
 
 - **47 commits**：从 BA 初稿到测试报告全在 git 上，每一步可回溯。
