@@ -2,6 +2,12 @@
 // 职责:1) 应用 B 类 patch(git apply) 2) 生成 overlay 派生构建 config
 // 幂等;--clean 反向还原。不触碰上游 .git。
 //
+// patch 体系两套(按目录路由,不用路径前缀——zcode 的 packages/apps 前缀
+// 与 hermes-agent 的路由前缀冲突,目录是唯一无歧义事实源):
+//   patches/            → hermes-studio / hermes-agent(前缀路由,见 resolvePatchTargetRoot)
+//   zcode-patches/      → upstream/zcode(全部;2026-09-23 zcode 源码底座轮起)
+// zcode 与 hermes-agent 同为"与 hermes-studio 构建无关"的可选树,失败容错跳过。
+//
 // 注意:本脚本用 node 直跑(.mjs),不依赖 ts 加载器,因此路径在此内联计算,
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
 import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync } from 'fs';
@@ -23,6 +29,9 @@ const ncwkRoot = resolve(overlayRoot, '..');
 const upstreamRoot = realpathOrSelf(resolve(ncwkRoot, 'upstream'));
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
+const zcodeRoot = resolve(upstreamRoot, 'zcode');
+const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
+const zcodeSeriesFile = resolve(zcodePatchDir, 'series');
 const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');
 const overlayNodeModules = resolve(overlayRoot, 'node_modules');
 // server 代码用相对路径 import '../custom/...'(非 @ alias,tsc/esbuild 无法经 alias 重定向),
@@ -124,8 +133,7 @@ function applyPatches() {
   return patches;
 }
 
-function reversePatches(patches) {
-  for (const p of [...patches].reverse()) {
+function reversePatches(patches) {  for (const p of [...patches].reverse()) {
     const patchPath = resolve(patchDir, p);
     if (!existsSync(patchPath)) {
       console.warn(`[clean] WARN: patch 文件不存在,跳过: ${p}`);
@@ -149,6 +157,80 @@ function reversePatches(patches) {
       // 反向失败不中断：untracked patch 产物清理必须执行（否则 inject 死循环），
       // tracked 残留由随后的 git checkout / restore 步兜底。
       console.warn(`[clean] WARN: patch 反向失败,继续 untracked 清理: ${p}`);
+    }
+  }
+}
+
+// ── zcode patch 管线(目录路由,全部进 upstream/zcode;容错语义同 hermes-agent) ──
+
+function readZcodeSeries() {
+  if (!existsSync(zcodeSeriesFile)) return [];
+  return readFileSync(zcodeSeriesFile, 'utf8')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
+}
+
+/** 解析 zcode patch 文本里的新增文件(clean 时 git apply -R 不删新文件,须手动清)。 */
+function zcodePatchNewFiles(patchText) {
+  const files = [];
+  const lines = patchText.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^diff --git a\/(.+) b\/(.+)$/);
+    if (m && /^new file mode/.test(lines[i + 1] ?? '')) files.push(m[2]);
+  }
+  return files;
+}
+
+function applyZcodePatches() {
+  if (!existsSync(zcodeRoot)) return [];
+  const patches = readZcodeSeries();
+  for (const p of patches) {
+    const patchPath = resolve(zcodePatchDir, p);
+    if (!existsSync(patchPath)) {
+      console.error(`[inject] FAILED: zcode patch 文件不存在: ${p}`);
+      process.exit(1);
+    }
+    try {
+      git(`apply --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, zcodeRoot);
+      console.log(`[inject] applied zcode patch: ${p} (to zcode)`);
+    } catch (e) {
+      // zcode 与 hermes-studio 构建无关,失败容错跳过(同 hermes-agent 语义)
+      console.warn(`[inject] WARN: zcode patch 失败,跳过: ${p}`);
+      const stderrStr = typeof e.stderr === 'string' ? e.stderr : (e.stderr?.toString?.() || '');
+      console.warn(`  ${stderrStr.trim() || e.message}`);
+    }
+  }
+  return patches;
+}
+
+function reverseZcodePatches(patches) {
+  if (!existsSync(zcodeRoot)) return;
+  for (const p of [...patches].reverse()) {
+    const patchPath = resolve(zcodePatchDir, p);
+    if (!existsSync(patchPath)) {
+      console.warn(`[clean] WARN: zcode patch 文件不存在,跳过: ${p}`);
+      continue;
+    }
+    try {
+      git(`apply --reverse --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, zcodeRoot);
+      console.log(`[clean] reversed zcode patch: ${p} (from zcode)`);
+    } catch {
+      console.warn(`[clean] WARN: zcode patch 反向失败,跳过: ${p}`);
+    }
+  }
+  // 删除 patch 新增的 untracked 文件(zcode 树内)
+  for (const p of patches) {
+    const patchPath = resolve(zcodePatchDir, p);
+    if (!existsSync(patchPath)) continue;
+    for (const f of zcodePatchNewFiles(readFileSync(patchPath, 'utf8'))) {
+      const abs = resolve(zcodeRoot, f);
+      try {
+        if (existsSync(abs) && !lstatSync(abs).isSymbolicLink()) {
+          unlinkSync(abs);
+          console.log(`[clean] removed zcode patch-added file: ${f}`);
+        }
+      } catch { /* 已删或权限问题,跳过 */ }
     }
   }
 }
@@ -424,6 +506,8 @@ function main() {
     }
     // 2. 应用 B 类 patch
     const applied = applyPatches();
+    // 2b. 应用 zcode patch(独立树,容错)
+    const appliedZcode = applyZcodePatches();
     // 3. 确保 overlay 能解析上游依赖(符号链接 node_modules)
     ensureNodeModulesSymlink();
     // 3b. server 代码用相对路径 import '../custom/...',需把 overlay custom/server 链接到上游
@@ -434,7 +518,7 @@ function main() {
     writeFileSync(
       manifestPath,
       JSON.stringify(
-        { appliedPatches: applied, generatedAt: new Date().toISOString() },
+        { appliedPatches: applied, appliedZcodePatches: appliedZcode, generatedAt: new Date().toISOString() },
         null,
         2,
       ),
@@ -442,9 +526,12 @@ function main() {
     console.log('[inject] done');
   } else {
     // clean
-    const applied = existsSync(manifestPath)
-      ? JSON.parse(readFileSync(manifestPath, 'utf8')).appliedPatches || []
-      : readSeries();
+    const manifest = existsSync(manifestPath)
+      ? JSON.parse(readFileSync(manifestPath, 'utf8'))
+      : {};
+    const applied = manifest.appliedPatches || readSeries();
+    // zcode patch 反向(独立树;manifest 缺项时回退 series 全量)
+    reverseZcodePatches(manifest.appliedZcodePatches || readZcodeSeries());
     reversePatches(applied);
     // 还原非 patch 的 build 产物(如 openapi.json),保持上游完全干净
     restoreNonPatchArtifacts('clean');
