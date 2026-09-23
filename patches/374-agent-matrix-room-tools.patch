@@ -1,0 +1,823 @@
+diff --git a/plugins/platforms/matrix/__init__.py b/plugins/platforms/matrix/__init__.py
+index d4f1d7bf0e..b9ada87394 100644
+--- a/plugins/platforms/matrix/__init__.py
++++ b/plugins/platforms/matrix/__init__.py
+@@ -1,3 +1,22 @@
+-from .adapter import register
++"""Matrix plugin: registers the inbound platform adapter and the room-ops agent tools
++(`matrix_room_create` / `matrix_room_invite` / `matrix_room_list`) through PluginContext."""
++
++from __future__ import annotations
++
++import logging
++
++logger = logging.getLogger(__name__)
+ 
+ __all__ = ["register"]
++
++
++def register(ctx) -> None:
++    """Plugin entry point. Room-ops tools register even if the adapter import fails,
++    so scripts and cron-driven turns can still manage rooms without a live gateway."""
++    try:
++        from .tools import register_tools
++        register_tools(ctx)
++    except Exception:  # noqa: BLE001 - a tools failure must not drop the platform
++        logger.warning("Matrix: failed to register room-ops tools", exc_info=True)
++    from .adapter import register as _register_platform
++    _register_platform(ctx)
+diff --git a/plugins/platforms/matrix/plugin.yaml b/plugins/platforms/matrix/plugin.yaml
+index 77d65d9339..54ecfa5a89 100644
+--- a/plugins/platforms/matrix/plugin.yaml
++++ b/plugins/platforms/matrix/plugin.yaml
+@@ -7,8 +7,15 @@ description: >
+   Connects to a Matrix homeserver via mautrix (with optional E2EE) and relays
+   messages between Matrix rooms/DMs and the Hermes agent. Supports threads,
+   HTML/markdown rendering, native media uploads, mention gating, free-response
+-  rooms, and per-room allowlists.
++  rooms, and per-room allowlists. Also exposes room-ops client tools so an agent
++  can create rooms and invite collaborators without a human intermediary.
+ author: NousResearch
++# Declared so the loader pre-registers these client tools even while the platform
++# adapter stays deferred (hermes_cli/plugins_loader.py::_register_deferred_platform_tools).
++provides_tools:
++  - matrix_room_create
++  - matrix_room_invite
++  - matrix_room_list
+ requires_env:
+   - name: MATRIX_HOMESERVER
+     description: "Matrix homeserver URL (e.g. https://matrix.org)"
+diff --git a/plugins/platforms/matrix/tools.py b/plugins/platforms/matrix/tools.py
+new file mode 100644
+index 0000000000..d3354d3821
+--- /dev/null
++++ b/plugins/platforms/matrix/tools.py
+@@ -0,0 +1,348 @@
++"""Matrix room-ops agent tools: create a room, list joined rooms, invite members.
++
++These close the gap where an Orchestrator agent had to ask a human to invite
++collaborators: the platform adapter already held `invite_user()`, but nothing on
++the agent-callable surface reached it. Delivery goes over the Client-Server API
++with aiohttp (same as `_standalone_send`) rather than the live mautrix client, so
++the tools work whether or not this profile's gateway is the calling process.
++
++Credentials come from the profile's own secret scope and are never accepted as
++tool arguments — a token must not reach argv, tool args, or logs.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import json
++import logging
++import re
++from typing import Any
++from urllib.parse import quote
++
++from gateway.platforms._shared import get_scoped_secret
++
++logger = logging.getLogger(__name__)
++
++_REQUEST_TIMEOUT_SECONDS = 30
++_MAX_INVITES_PER_CALL = 50
++_MAX_MEMBER_REPORT = 40
++
++_MXID_RE = re.compile(r"^@[A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
++_ROOM_REF_RE = re.compile(r"^[!#][A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
++_PRESETS = ("private_chat", "trusted_private_chat", "public_chat")
++
++
++def _flag(name: str) -> bool:
++    """Boolean gateway setting, read through the same scope as the credentials."""
++    return str(get_scoped_secret(name, "") or "").strip().lower() in ("1", "true", "yes", "on")
++
++
++def _creds() -> tuple[str, str, str] | None:
++    """Resolve (homeserver, access_token, user_id), preferring the live adapter.
++
++    Inside a gateway the adapter already holds this profile's credentials — it
++    resolved them from ``config.extra`` or its own secret scope at connect time —
++    so borrowing them keeps a secondary profile from reaching the default
++    profile's homeserver. Out of process (cron, CLI) there is no adapter and the
++    scope is the only source.
++    """
++    adapter = _live_matrix_adapter()
++    if adapter is not None:
++        homeserver = str(getattr(adapter, "_homeserver", "") or "").rstrip("/")
++        token = str(getattr(adapter, "_access_token", "") or "")
++        if homeserver and token:
++            return homeserver, token, str(getattr(adapter, "_user_id", "") or "")
++
++    homeserver = (get_scoped_secret("MATRIX_HOMESERVER", "", external_fallback=True) or "").rstrip("/")
++    token = get_scoped_secret("MATRIX_ACCESS_TOKEN", "", external_fallback=True) or ""
++    user_id = get_scoped_secret("MATRIX_USER_ID", "", external_fallback=True) or ""
++    if not homeserver or not token:
++        return None
++    return homeserver, token, user_id
++
++
++def _live_matrix_adapter():
++    """The gateway's authenticated adapter for this profile, or None when standalone.
++
++    Reusing it means credentials, join rules and E2EE state all come from the
++    connection the gateway already made — the tool never handles a token. Under
++    multiplexing this must be the *active profile's* adapter, which is exactly
++    what ``_live_adapter`` resolves (a bare ``runner.adapters`` hit would borrow
++    the default profile's identity).
++    """
++    try:
++        from gateway.config import Platform
++        from tools.send_message_senders import _live_adapter
++    except Exception:  # noqa: BLE001 - processes without a gateway are common
++        return None
++    try:
++        _, adapter = _live_adapter(Platform.MATRIX, lookup_failed_warning=(
++            "Matrix: live gateway adapter lookup failed; room-ops will use the Client-Server API"))
++    except Exception:  # noqa: BLE001 - no runner in this process
++        return None
++    return adapter
++
++
++def _room_ops_available() -> bool:
++    """check_fn: expose the tools only when Matrix credentials exist. Fail closed."""
++    try:
++        return _creds() is not None
++    except Exception:  # noqa: BLE001
++        return False
++
++
++def _error(message: str) -> str:
++    """Tool failure envelope.
++
++    Handlers must return a JSON *string* per the tool registry contract; the
++    platform's ``send_error`` helper returns a dict, which suits the
++    standalone-sender path but not this one. Keep messages concise and
++    token-free — an http/aiohttp exception string can carry a signed URL.
++    """
++    return json.dumps({"error": message}, ensure_ascii=False)
++
++
++async def _cs_request(homeserver: str, token: str, method: str, path: str,
++                      body: dict | None = None) -> tuple[int, Any]:
++    """One Client-Server API call. Returns (status, parsed json body).
++
++    The body is a dict for most endpoints but a bare list for room `/state`, so
++    callers must not assume a mapping.
++    """
++    import aiohttp
++
++    headers = {"Authorization": f"Bearer {token}"}
++    url = f"{homeserver}{path}"
++
++    async def _do() -> tuple[int, Any]:
++        async with aiohttp.ClientSession() as session:
++            async with session.request(method, url, headers=headers,
++                                       json=body if body is not None else None) as resp:
++                try:
++                    data = await resp.json()
++                except Exception:  # noqa: BLE001 - non-JSON error pages are not fatal
++                    data = {}
++                return resp.status, data
++
++    try:
++        # wait_for rather than aiohttp.ClientTimeout: this may run under
++        # run_coroutine_threadsafe, where a timeout context manager is not task-bound.
++        return await asyncio.wait_for(_do(), timeout=_REQUEST_TIMEOUT_SECONDS)
++    except asyncio.TimeoutError:
++        return 0, {"error": f"Matrix API timeout ({_REQUEST_TIMEOUT_SECONDS}s)"}
++
++
++async def _joined_rooms(homeserver: str, token: str) -> list[str] | None:
++    status, data = await _cs_request(homeserver, token, "GET", "/_matrix/client/v3/joined_rooms")
++    if status != 200 or not isinstance(data, dict):
++        return None
++    return [r for r in data.get("joined_rooms", []) if isinstance(r, str)]
++
++
++async def matrix_room_list(args: dict | None = None, **_: Any) -> str:
++    """List the rooms this Matrix account has joined, with names and current members."""
++    creds = _creds()
++    if not creds:
++        return _error("Matrix not configured (MATRIX_HOMESERVER, MATRIX_ACCESS_TOKEN required)")
++    homeserver, token, _ = creds
++
++    rooms = await _joined_rooms(homeserver, token)
++    if rooms is None:
++        return _error("Could not list joined rooms from the homeserver")
++
++    out = []
++    for room_id in rooms:
++        path = f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}"
++        # `/state/<type>` returns the event content directly; the untyped `/state`
++        # form returns a bare list of events, which is easy to mis-read as a dict.
++        _, name_content = await _cs_request(homeserver, token, "GET", f"{path}/state/m.room.name")
++        status, members = await _cs_request(homeserver, token, "GET", f"{path}/joined_members")
++        joined = list(members.get("joined", {})) if status == 200 and isinstance(members, dict) else []
++        out.append({
++            "room_id": room_id,
++            "name": (name_content.get("name") or "") if isinstance(name_content, dict) else "",
++            "member_count": len(joined),
++            "members": joined[:_MAX_MEMBER_REPORT],
++        })
++
++    return json.dumps({"count": len(out), "rooms": out}, ensure_ascii=False)
++
++
++async def _invite_via_adapter(adapter: Any, room_id: str, users: list[str]) -> str:
++    """Invite through the gateway's authenticated connection.
++
++    ``invite_user`` reports only success/failure, so a refusal is attributed to the
++    homeserver rather than dressed up as a reason the tool does not actually have.
++    """
++    self_id = str(getattr(adapter, "_user_id", "") or "")
++    invited, failed = [], []
++    for user in users:
++        if self_id and user.lower() == self_id.lower():
++            invited.append({"user": user, "result": "already this account"})
++            continue
++        if await adapter.invite_user(room_id, user):
++            invited.append({"user": user, "result": "invited"})
++        else:
++            failed.append({"user": user,
++                           "reason": "homeserver refused the invite (check this account's "
++                                     "room membership and power level)"})
++    return json.dumps({"room_id": room_id, "invited": invited, "failed": failed,
++                       "ok": not failed}, ensure_ascii=False)
++
++
++async def matrix_room_invite(args: dict | None = None, **_: Any) -> str:
++    """Invite one or more Matrix users into a room this account has joined."""
++    params = args or {}
++    room_id = str(params.get("room_id", "")).strip()
++    raw_users = params.get("users") or params.get("user_id") or []
++    if isinstance(raw_users, str):
++        raw_users = [u.strip() for u in re.split(r"[,\s]+", raw_users) if u.strip()]
++    if not _ROOM_REF_RE.match(room_id):
++        return _error("room_id must be a Matrix room ID (!...) or alias (#...)")
++    if not isinstance(raw_users, list) or not raw_users:
++        return _error("users must be a non-empty list of Matrix user IDs")
++    if len(raw_users) > _MAX_INVITES_PER_CALL:
++        return _error(f"users exceeds the {_MAX_INVITES_PER_CALL}-per-call limit")
++
++    # Validate every ID before touching the network: a malformed ID should report
++    # itself rather than be masked by an unrelated room-membership error.
++    users = [str(u).strip() for u in raw_users]
++    bad = [u for u in users if not _MXID_RE.match(u)]
++    if bad:
++        return _error(f"invalid Matrix user ID(s): {', '.join(bad)}")
++
++    adapter = _live_matrix_adapter()
++    if adapter is not None:
++        return await _invite_via_adapter(adapter, room_id, users)
++
++    creds = _creds()
++    if not creds:
++        return _error("Matrix not configured (MATRIX_HOMESERVER, MATRIX_ACCESS_TOKEN required)")
++    homeserver, token, self_id = creds
++
++    joined = await _joined_rooms(homeserver, token)
++    if joined is None:
++        return _error("Invite refused: the homeserver did not confirm this account's rooms")
++    if room_id not in joined:
++        return _error(f"This account is not joined to {room_id}; inviting would fail anyway")
++
++    invited, failed = [], []
++    for user in users:
++        if user.lower() == self_id.lower():
++            invited.append({"user": user, "result": "already this account"})
++            continue
++        status, data = await _cs_request(
++            homeserver, token, "POST",
++            f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}/invite",
++            {"user_id": user})
++        if status == 200:
++            invited.append({"user": user, "result": "invited"})
++        else:
++            reason = data.get("errcode") or f"HTTP {status}"
++            detail = data.get("error") or ""
++            failed.append({"user": user, "reason": f"{reason} {detail}".strip()})
++
++    return json.dumps({"room_id": room_id, "invited": invited, "failed": failed,
++                       "ok": not failed}, ensure_ascii=False)
++
++
++async def matrix_room_create(args: dict | None = None, **_: Any) -> str:
++    """Create a named room, optionally inviting members in the same call."""
++    params = args or {}
++    name = str(params.get("name", "")).strip()
++    topic = str(params.get("topic", "")).strip()
++    preset = str(params.get("preset", "private_chat")).strip() or "private_chat"
++    invite = params.get("invite") or []
++    if isinstance(invite, str):
++        invite = [u.strip() for u in re.split(r"[,\s]+", invite) if u.strip()]
++    if not name:
++        return _error("name is required")
++    if preset not in _PRESETS:
++        return _error(f"preset must be one of {', '.join(_PRESETS)}")
++    if not isinstance(invite, list):
++        return _error("invite must be a list of Matrix user IDs")
++    if len(invite) > _MAX_INVITES_PER_CALL:
++        return _error(f"invite exceeds the {_MAX_INVITES_PER_CALL}-per-call limit")
++
++    bad = [u for u in invite if not _MXID_RE.match(str(u).strip())]
++    if bad:
++        return _error(f"invalid Matrix user ID(s): {', '.join(bad)}")
++    users = [str(u).strip() for u in invite]
++
++    # Same gate the adapter enforces, so the two paths cannot disagree.
++    if preset == "public_chat" and not _flag("MATRIX_ALLOW_PUBLIC_ROOMS"):
++        return _error("public_chat is refused unless MATRIX_ALLOW_PUBLIC_ROOMS=true is set on this gateway")
++
++    adapter = _live_matrix_adapter()
++    if adapter is not None:
++        room_id = await adapter.create_room(name=name, topic=topic, invite=users, preset=preset)
++        if not room_id:
++            return _error("createRoom refused; see the gateway log for the homeserver error")
++        return json.dumps({"ok": True, "room_id": room_id, "name": name,
++                           "invited": len(users)}, ensure_ascii=False)
++
++    creds = _creds()
++    if not creds:
++        return _error("Matrix not configured (MATRIX_HOMESERVER, MATRIX_ACCESS_TOKEN required)")
++    homeserver, token, _ = creds
++
++    body: dict[str, Any] = {"name": name, "preset": preset, "invite": users}
++    if topic:
++        body["topic"] = topic
++    visibility = str(get_scoped_secret("MATRIX_ROOM_OPS_VISIBILITY", "") or "").strip()
++    if visibility in ("private", "world_readable"):
++        body["visibility"] = visibility
++
++    status, data = await _cs_request(homeserver, token, "POST", "/_matrix/client/v3/createRoom", body)
++    if status != 200:
++        return _error(f"createRoom failed: {data.get('errcode') or f'HTTP {status}'} "
++                      f"{data.get('error') or ''}".strip())
++    return json.dumps({"ok": True, "room_id": data.get("room_id"), "name": name,
++                       "invited": len(users)}, ensure_ascii=False)
++
++
++_TOOLS: dict[str, tuple] = {
++    "matrix_room_invite": (
++        matrix_room_invite,
++        "Invite Matrix users into a room the assistant is already a member of. Use after "
++        "splitting a requirement into per-owner tasks so each owner's account receives the "
++        "assignment in the shared room. Accepts a list of user IDs; reports per-user results.",
++        {"room_id": {"type": "string", "description": "Target room ID (!...) or alias (#...)."},
++         "users": {"type": "array", "items": {"type": "string"},
++                   "description": "Matrix user IDs to invite, e.g. ['@chen:matrix.test']."}},
++        ["room_id", "users"],
++        "📨",
++    ),
++    "matrix_room_create": (
++        matrix_room_create,
++        "Create a Matrix room (optionally named and with members invited in the same call). "
++        "Use for a per-requirement discussion room or a per-task tracking room.",
++        {"name": {"type": "string", "description": "Room display name."},
++         "topic": {"type": "string", "description": "Optional room topic / purpose line."},
++         "invite": {"type": "array", "items": {"type": "string"},
++                    "description": "Matrix user IDs to invite on creation."},
++         "preset": {"type": "string", "enum": list(_PRESETS),
++                    "description": "Default: private_chat."}},
++        ["name"],
++        "🏠",
++    ),
++    "matrix_room_list": (
++        matrix_room_list,
++        "List the Matrix rooms this account has joined, with names. Use to locate an existing "
++        "requirement room before creating a duplicate.",
++        {},
++        [],
++        "📋",
++    ),
++}
++
++
++def register_tools(ctx) -> None:
++    """Register the room-ops tools into the ``matrix`` toolset (credentials-gated)."""
++    for name, (handler, description, properties, required, emoji) in _TOOLS.items():
++        parameters: dict[str, Any] = {"type": "object", "properties": properties}
++        if required:
++            parameters["required"] = required
++        schema = {"name": name, "description": description, "parameters": parameters}
++        ctx.register_tool(name=name, toolset="matrix", handler=handler, description=description,
++                          schema=schema, emoji=emoji, check_fn=_room_ops_available)
+diff --git a/tests/gateway/test_matrix_room_tools.py b/tests/gateway/test_matrix_room_tools.py
+new file mode 100644
+index 0000000000..2742129146
+--- /dev/null
++++ b/tests/gateway/test_matrix_room_tools.py
+@@ -0,0 +1,414 @@
++"""Tests for the Matrix room-ops agent tools (plugins/platforms/matrix/tools.py).
++
++These tools exist because the RACI dispatch flow needs an Orchestrator to invite
++assignees into a requirement room on its own; the platform adapter already had
++``invite_user()`` but nothing on the agent-callable surface reached it.
++
++The HTTP layer is faked by replacing ``_cs_request`` so no test touches a
++homeserver. One regression guard covers the real bug found during development:
++room ``/state`` returns a bare JSON *list*, which an earlier revision mis-read as
++a mapping, so every room name silently came back blank.
++"""
++import asyncio
++import json
++import os
++from urllib.parse import unquote
++
++import pytest
++
++from plugins.platforms.matrix import tools as rt
++
++
++def _run(coro):
++    return asyncio.run(coro)
++
++
++class FakeHomeserver:
++    """Routes the CS-API paths the tools use; records every call."""
++
++    def __init__(self, joined_rooms=(), members=None, fail_invite=()):
++        self.joined_rooms = list(joined_rooms)
++        self.members = dict(members or {})
++        self.fail_invite = set(fail_invite)
++        self.calls = []
++        self.created = []
++
++    async def __call__(self, homeserver, token, method, path, body=None):
++        self.calls.append((method, path, body))
++        if path.endswith("/joined_rooms"):
++            return 200, {"joined_rooms": self.joined_rooms}
++        if path.endswith("/state/m.room.name"):
++            return 200, {"name": self._room(path).get("name", "")}
++        if path.endswith("/state"):
++            # The trap: a bare list, not a mapping.
++            return 200, [{"type": "m.room.name", "content": {"name": "ignored"}}]
++        if path.endswith("/joined_members"):
++            return 200, {"joined": {m: {} for m in self._room(path).get("joined", [])}}
++        if path.endswith("/invite"):
++            user = (body or {}).get("user_id", "")
++            if user in self.fail_invite:
++                return 403, {"errcode": "M_FORBIDDEN", "error": "You can't invite users to this room"}
++            return 200, {}
++        if path.endswith("/createRoom"):
++            self.created.append(body)
++            return 200, {"room_id": "!newroom:matrix.test"}
++        return 404, {"errcode": "M_UNRECOGNIZED"}
++
++    def _room(self, path: str) -> dict:
++        """Look up a room by the *decoded* ID — tools percent-encode it on the wire."""
++        room = unquote(path.split("/rooms/")[1].split("/")[0])
++        return self.members.get(room, {})
++
++
++@pytest.fixture(autouse=True)
++def no_live_adapter(monkeypatch):
++    """Default to the standalone path so these tests do not depend on whether some
++    gateway happens to be importable in the test process."""
++    monkeypatch.setattr(rt, "_live_matrix_adapter", lambda: None)
++
++
++@pytest.fixture
++def creds(monkeypatch):
++    monkeypatch.setenv("MATRIX_HOMESERVER", "http://hs.test")
++    monkeypatch.setenv("MATRIX_ACCESS_TOKEN", "syt_super_secret_token")
++    monkeypatch.setenv("MATRIX_USER_ID", "@fanfan:matrix.test")
++    # Resolve straight from the environment: whether a test process has a profile
++    # secret scope installed is incidental, and the env-fallback rung differs under it.
++    monkeypatch.setattr(rt, "get_scoped_secret",
++                        lambda name, default="", **kw: os.getenv(name, default))
++    return "syt_super_secret_token"
++
++
++def _install(monkeypatch, fake):
++    monkeypatch.setattr(rt, "_cs_request", fake)
++    return fake
++
++
++# ---- registration surface -------------------------------------------------
++
++def test_registers_three_named_tools():
++    class Ctx:
++        def __init__(self):
++            self.tools = {}
++
++        def register_tool(self, **kw):
++            self.tools[kw["name"]] = kw
++
++    ctx = Ctx()
++    rt.register_tools(ctx)
++    assert set(ctx.tools) == {"matrix_room_invite", "matrix_room_create", "matrix_room_list"}
++    for name, spec in ctx.tools.items():
++        assert spec["toolset"] == "matrix"
++        assert spec["schema"]["name"] == name
++        assert spec["schema"]["parameters"]["type"] == "object"
++        assert callable(spec["handler"])
++    assert ctx.tools["matrix_room_invite"]["schema"]["parameters"]["required"] == ["room_id", "users"]
++    assert ctx.tools["matrix_room_create"]["schema"]["parameters"]["required"] == ["name"]
++
++
++def test_tools_hidden_without_credentials(monkeypatch):
++    for key in ("MATRIX_HOMESERVER", "MATRIX_ACCESS_TOKEN"):
++        monkeypatch.delenv(key, raising=False)
++    monkeypatch.setattr(rt, "get_scoped_secret", lambda *a, **kw: "")
++    assert rt._room_ops_available() is False
++
++
++def test_homeserver_alone_is_not_enough(monkeypatch):
++    monkeypatch.setattr(rt, "get_scoped_secret",
++                        lambda name, *a, **kw: "http://hs.test" if name == "MATRIX_HOMESERVER" else "")
++    assert rt._room_ops_available() is False
++
++
++# ---- credentials ----------------------------------------------------------
++
++def test_credentials_read_from_scope_not_arguments(creds, monkeypatch):
++    """A token must never be an argument a model can pass or echo back."""
++    props = {}
++    class Ctx:
++        def register_tool(self, **kw):
++            props.update(kw["schema"]["parameters"]["properties"])
++    rt.register_tools(Ctx())
++    assert not any("token" in k.lower() for k in props), props
++    homeserver, token, user_id = rt._creds()
++    assert (homeserver, token, user_id) == ("http://hs.test", creds, "@fanfan:matrix.test")
++
++
++def test_trailing_slash_stripped_from_homeserver(creds, monkeypatch):
++    monkeypatch.setenv("MATRIX_HOMESERVER", "http://hs.test/")
++    assert rt._creds()[0] == "http://hs.test"
++
++
++# ---- invite ---------------------------------------------------------------
++
++def test_invite_happy_path(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver(joined_rooms=["!room:matrix.test"]))
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "!room:matrix.test", "users": ["@chen:matrix.test", "@wei:matrix.test"]})))
++    assert out["ok"] is True
++    assert [i["user"] for i in out["invited"]] == ["@chen:matrix.test", "@wei:matrix.test"]
++    invites = [c for c in fake.calls if c[0] == "POST" and c[1].endswith("/invite")]
++    assert len(invites) == 2
++
++
++def test_invite_accepts_csv_string(creds, monkeypatch):
++    _install(monkeypatch, FakeHomeserver(joined_rooms=["!room:matrix.test"]))
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "!room:matrix.test", "users": "@a:matrix.test,@b:matrix.test"})))
++    assert len(out["invited"]) == 2
++
++
++def test_invite_reports_per_user_failure(creds, monkeypatch):
++    _install(monkeypatch, FakeHomeserver(
++        joined_rooms=["!room:matrix.test"], fail_invite={"@blocked:matrix.test"}))
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "!room:matrix.test", "users": ["@ok:matrix.test", "@blocked:matrix.test"]})))
++    assert out["ok"] is False
++    assert out["invited"][0]["user"] == "@ok:matrix.test"
++    assert out["failed"] == [{"user": "@blocked:matrix.test",
++                             "reason": "M_FORBIDDEN You can't invite users to this room"}]
++
++
++def test_invite_rejects_non_member_of_the_room(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver(joined_rooms=["!other:matrix.test"]))
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "!notmine:matrix.test", "users": ["@chen:matrix.test"]})))
++    assert "not joined" in out["error"]
++    assert not [c for c in fake.calls if c[0] == "POST"], "must not attempt an invite"
++
++
++def test_malformed_user_id_error_precedes_membership_check(creds, monkeypatch):
++    """A typo'd MXID must report itself, not be masked by an unrelated room error."""
++    fake = _install(monkeypatch, FakeHomeserver(joined_rooms=[]))
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "!nope:matrix.test", "users": ["chen-no-at"]})))
++    assert out["error"] == "invalid Matrix user ID(s): chen-no-at"
++    assert fake.calls == [], "validation must happen before any network call"
++
++
++@pytest.mark.parametrize("room_id", ["not-a-room", "", "https://evil/!x", "!x:matrix.test/../admin"])
++def test_invalid_room_id_rejected(creds, monkeypatch, room_id):
++    fake = _install(monkeypatch, FakeHomeserver())
++    out = json.loads(_run(rt.matrix_room_invite({"room_id": room_id, "users": ["@a:matrix.test"]})))
++    assert "room_id" in out["error"]
++    assert fake.calls == []
++
++
++def test_room_id_is_url_encoded_on_the_wire(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver(joined_rooms=["!We1rd+Ch/=ar:matrix.test"]))
++    _run(rt.matrix_room_invite({"room_id": "!We1rd+Ch/=ar:matrix.test", "users": ["@a:matrix.test"]}))
++    invite = [c for c in fake.calls if c[1].endswith("/invite")][0][1]
++    assert "!We1rd+Ch/=ar" not in invite, "raw room ID leaked into the path"
++
++
++def test_self_invite_is_a_no_op(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver(joined_rooms=["!room:matrix.test"]))
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "!room:matrix.test", "users": ["@fanfan:matrix.test"]})))
++    assert out["invited"][0]["result"] == "already this account"
++    assert not [c for c in fake.calls if c[0] == "POST"]
++
++
++def test_invite_list_is_capped(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver(joined_rooms=["!room:matrix.test"]))
++    users = [f"@u{i}:matrix.test" for i in range(rt._MAX_INVITES_PER_CALL + 1)]
++    out = json.loads(_run(rt.matrix_room_invite({"room_id": "!room:matrix.test", "users": users})))
++    assert "limit" in out["error"]
++    assert fake.calls == []
++
++
++def test_empty_user_list_rejected(creds, monkeypatch):
++    _install(monkeypatch, FakeHomeserver(joined_rooms=["!room:matrix.test"]))
++    out = json.loads(_run(rt.matrix_room_invite({"room_id": "!room:matrix.test", "users": []})))
++    assert "non-empty" in out["error"]
++
++
++# ---- create ---------------------------------------------------------------
++
++def test_create_room_sets_name_topic_and_invite(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver())
++    out = json.loads(_run(rt.matrix_room_create({
++        "name": "支付收银台需求分析讨论群", "topic": "RFD-002",
++        "invite": ["@chen:matrix.test"]})))
++    assert out == {"ok": True, "room_id": "!newroom:matrix.test",
++                   "name": "支付收银台需求分析讨论群", "invited": 1}
++    body = fake.created[0]
++    assert body["preset"] == "private_chat"
++    assert body["topic"] == "RFD-002"
++
++
++def test_create_requires_name(creds, monkeypatch):
++    out = json.loads(_run(rt.matrix_room_create({"invite": ["@a:matrix.test"]})))
++    assert "name is required" in out["error"]
++
++
++def test_create_rejects_unknown_preset_before_network(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver())
++    out = json.loads(_run(rt.matrix_room_create({"name": "x", "preset": "public_everyone"})))
++    assert "preset" in out["error"]
++    assert fake.created == []
++
++
++def test_create_rejects_malformed_invite(creds, monkeypatch):
++    fake = _install(monkeypatch, FakeHomeserver())
++    out = json.loads(_run(rt.matrix_room_create({"name": "x", "invite": ["not-an-mxid"]})))
++    assert "invalid Matrix user ID" in out["error"]
++    assert fake.created == []
++
++
++def test_create_surfaces_server_error(creds, monkeypatch):
++    async def deny(*a, **kw):
++        return 403, {"errcode": "M_RESOURCE_LIMIT_EXCEEDED", "error": "limit"}
++    monkeypatch.setattr(rt, "_cs_request", deny)
++    out = json.loads(_run(rt.matrix_room_create({"name": "x"})))
++    assert "M_RESOURCE_LIMIT_EXCEEDED" in out["error"]
++
++
++# ---- list -----------------------------------------------------------------
++
++def test_list_reports_names_and_members(creds, monkeypatch):
++    _install(monkeypatch, FakeHomeserver(
++        joined_rooms=["!a:matrix.test"],
++        members={"!a:matrix.test": {"name": "支付收银台需求分析讨论群",
++                                    "joined": ["@fanfan:matrix.test", "@chen:matrix.test"]}}))
++    out = json.loads(_run(rt.matrix_room_list()))
++    assert out["count"] == 1
++    room = out["rooms"][0]
++    assert room["name"] == "支付收银台需求分析讨论群"
++    assert room["member_count"] == 2
++
++
++def test_list_does_not_misread_bare_state_list(creds, monkeypatch):
++    """Regression: untyped /state returns a JSON list; names must still resolve via
++    the typed endpoint instead of silently blanking out."""
++    seen = []
++    async def route(homeserver, token, method, path, body=None):
++        seen.append(path)
++        if path.endswith("/joined_rooms"):
++            return 200, {"joined_rooms": ["!r:matrix.test"]}
++        if path.endswith("/state/m.room.name"):
++            return 200, {"name": "named room"}
++        if path.endswith("/state"):
++            return 200, [{"type": "m.room.name", "content": {"name": "wrong source"}}]
++        if path.endswith("/joined_members"):
++            return 200, {"joined": {"@x:matrix.test": {}}}
++        return 404, {}
++    monkeypatch.setattr(rt, "_cs_request", route)
++    room = json.loads(_run(rt.matrix_room_list()))["rooms"][0]
++    assert room["name"] == "named room"
++
++
++def test_list_surfaces_unreachable_homeserver(creds, monkeypatch):
++    async def down(*a, **kw):
++        return 502, {"error": "bad gateway"}
++    monkeypatch.setattr(rt, "_cs_request", down)
++    out = json.loads(_run(rt.matrix_room_list()))
++    assert "Could not list joined rooms" in out["error"]
++
++
++# ---- live adapter preference ------------------------------------------------
++
++class FakeAdapter:
++    """Stands in for the gateway's authenticated MatrixAdapter."""
++
++    def __init__(self, ok_users=()):
++        self._user_id = "@fanfan:matrix.test"
++        self._homeserver = "http://hs.test"
++        self._access_token = "syt_super_secret_token"
++        self.ok = set(ok_users)
++        self.invited = []
++        self.created = []
++
++    async def invite_user(self, room_id, user):
++        self.invited.append((room_id, user))
++        return user in self.ok
++
++    async def create_room(self, name="", topic="", invite=None, is_direct=False,
++                          preset="private_chat"):
++        self.created.append({"name": name, "topic": topic,
++                             "invite": list(invite or []), "preset": preset})
++        return "!fromadapter:matrix.test"
++
++
++async def _no_http(*_a, **_kw):
++    raise AssertionError("Client-Server API must not be used while the gateway adapter is live")
++
++
++def test_invite_uses_live_adapter_not_the_http_api(creds, monkeypatch):
++    adapter = FakeAdapter(ok_users={"@chen:matrix.test"})
++    monkeypatch.setattr(rt, "_live_matrix_adapter", lambda: adapter)
++    monkeypatch.setattr(rt, "_cs_request", _no_http)
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "!room:matrix.test", "users": ["@chen:matrix.test", "@wei:matrix.test"]})))
++    assert adapter.invited == [("!room:matrix.test", "@chen:matrix.test"),
++                               ("!room:matrix.test", "@wei:matrix.test")]
++    assert out["ok"] is False
++    assert out["invited"][0]["result"] == "invited"
++    assert "homeserver refused" in out["failed"][0]["reason"]
++
++
++def test_create_uses_live_adapter(creds, monkeypatch):
++    adapter = FakeAdapter()
++    monkeypatch.setattr(rt, "_live_matrix_adapter", lambda: adapter)
++    monkeypatch.setattr(rt, "_cs_request", _no_http)
++    out = json.loads(_run(rt.matrix_room_create(
++        {"name": "RFD-002 需求分析", "invite": ["@chen:matrix.test"]})))
++    assert out["room_id"] == "!fromadapter:matrix.test"
++    assert adapter.created[0]["preset"] == "private_chat"
++    assert adapter.created[0]["invite"] == ["@chen:matrix.test"]
++
++
++def test_public_room_requires_the_gateway_flag(creds, monkeypatch):
++    _install(monkeypatch, FakeHomeserver())
++    out = json.loads(_run(rt.matrix_room_create({"name": "x", "preset": "public_chat"})))
++    assert "MATRIX_ALLOW_PUBLIC_ROOMS" in out["error"]
++    monkeypatch.setenv("MATRIX_ALLOW_PUBLIC_ROOMS", "true")
++    assert json.loads(_run(rt.matrix_room_create({"name": "x", "preset": "public_chat"})))["ok"]
++
++
++def test_creds_come_from_the_live_adapter(monkeypatch):
++    """A secondary profile must not fall through to the default profile's homeserver."""
++    monkeypatch.setattr(rt, "get_scoped_secret", lambda *a, **kw: "")
++    monkeypatch.setattr(rt, "_live_matrix_adapter", lambda: FakeAdapter())
++    assert rt._creds() == ("http://hs.test", "syt_super_secret_token", "@fanfan:matrix.test")
++    assert rt._room_ops_available() is True
++
++
++# ---- safety ---------------------------------------------------------------
++
++def test_handlers_return_json_strings(creds, monkeypatch):
++    """Regression: the registry requires a str from every handler. Delegating the
++    failure envelope to the platform's ``send_error`` returned a dict instead."""
++    _install(monkeypatch, FakeHomeserver(
++        joined_rooms=["!room:matrix.test"], fail_invite={"@x:matrix.test"}))
++    monkeypatch.setattr(rt, "get_scoped_secret", lambda *a, **kw: "")
++    results = [
++        _run(rt.matrix_room_list()),
++        _run(rt.matrix_room_invite({"room_id": "!room:matrix.test", "users": ["@x:matrix.test"]})),
++        _run(rt.matrix_room_create({"name": "x"})),
++        _run(rt.matrix_room_invite({"room_id": "bogus", "users": ["@x:matrix.test"]})),
++    ]
++    assert results and all(isinstance(r, str) for r in results)
++    assert all("error" in json.loads(r) for r in results)
++
++
++def test_token_never_applies_to_results(creds, monkeypatch):
++    """No result payload may echo the access token back into model context."""
++    _install(monkeypatch, FakeHomeserver(
++        joined_rooms=["!room:matrix.test"], fail_invite={"@x:matrix.test"}))
++    payloads = [
++        _run(rt.matrix_room_list()),
++        _run(rt.matrix_room_invite({"room_id": "!room:matrix.test", "users": ["@x:matrix.test"]})),
++        _run(rt.matrix_room_create({"name": "x", "invite": ["@a:matrix.test"]})),
++        _run(rt.matrix_room_invite({"room_id": "!nope:matrix.test", "users": ["@a:matrix.test"]})),
++    ]
++    for raw in payloads:
++        assert creds not in raw, raw
++
++
++def test_missing_credentials_fail_closed(monkeypatch):
++    monkeypatch.setattr(rt, "get_scoped_secret", lambda *a, **kw: "")
++    for coro in (rt.matrix_room_list(),
++                 rt.matrix_room_invite({"room_id": "!r:m", "users": ["@a:m"]}),
++                 rt.matrix_room_create({"name": "x"})):
++        out = json.loads(_run(coro))
++        assert "not configured" in out["error"]

@@ -122,10 +122,14 @@ ENVEOF
   install_skill() { # <skill-name>
     local s="$1"
     # 以 SKILL.md 文件为幂等判据：目录存在但缺 SKILL.md（上次中断于 mkdir 与
-    # cp 之间）时必须补拷，否则 agent 静默缺技能
-    if [[ ! -f "$SKILLS_TARGET/$s/SKILL.md" ]]; then
-      mkdir -p "$SKILLS_TARGET/$s"
+    # cp 之间）时必须补拷，否则 agent 静默缺技能。
+    # 已存在时按内容比对同步：技能源修好后，仅判存在会让 11 个实例继续跑旧版
+    # （09-23 实锤：requirements-analyst 的 matrix 工具改写若只判存在则不生效）。
+    mkdir -p "$SKILLS_TARGET/$s"
+    if [[ ! -f "$SKILLS_TARGET/$s/SKILL.md" ]] ||
+       ! cmp -s "$SKILLS_SRC/$s/SKILL.md" "$SKILLS_TARGET/$s/SKILL.md"; then
       cp "$SKILLS_SRC/$s/SKILL.md" "$SKILLS_TARGET/$s/SKILL.md"
+      log "技能已同步: $s"
     fi
     ln -sfn "$SKILLS_TARGET/$s" "$PROF_SKILLS/$s"
   }

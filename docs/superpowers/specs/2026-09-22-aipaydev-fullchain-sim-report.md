@@ -125,6 +125,24 @@
 
 补丁账本（本轮后 series 至 373）：369 kanban exec 队列 / 370 stock 运行时兼容 / 371 IDE retry-count 路由 / 372 agent tick socket 回落 / **373 studio host 守卫判读（本轮新增）**。
 
+## 五-d、勘误（2026-09-23 第二轮复核）
+
+**本报告 §五-b 记为「✅ 已修」的 room-invite-gap 实为虚假闭环。** 复核证据：
+
+| 检查 | 结果 |
+|---|---|
+| `hermes matrix` 是否存在（激活环境 v0.21.4） | **不存在**——`hermes: 'matrix' is not a hermes command` |
+| 5d1cd7f 改了什么 | 只把技能文案改成引用 `hermes matrix rooms` / `hermes matrix invite` 两个**不存在的命令** |
+| `adapter.invite_user`（adapter.py:2721→2659） | 仍是死 API：无 CLI 动词、无 agent 工具面 |
+| `patches/series` 是否补过 matrix CLI | 否（369-373 均为他项） |
+| 11 实例安装的技能版本 | 落后于仓内源（安装 09-22 17:21 vs 源改 09-22 22:51 / 09-23 09:09），`install_skill` 仅判文件存在、永不刷新 |
+
+即：**缺口的「修复」是把指令写给了一个不存在的工具面**，复跑必然复现同样 9 次人工兜底。同类病 08a6030 已犯过一次（inbox-dedup 虚构 `--title/--status`），当时只修了那一处，未做全量技能 CLI 审计。
+
+真修复见 patch **374-agent-matrix-room-tools**：按上游 deferred-platform 工具契约（`provides_tools` + `plugins/platforms/matrix/tools.py:register_tools(ctx)`）交付 `matrix_room_create` / `matrix_room_invite` / `matrix_room_list` 三个 agent 原生工具，优先复用 gateway 已鉴权 adapter（工具面不接触 token），无 gateway 进程时回落 Client-Server API；守门测试 33 例，经真实 `discover_plugins()` 路径确认三工具进入全局 registry 且 `matrix` toolset 可见。技能改引工具名并声明 failed 必须回报；`aipay-setup.sh` 的 `install_skill` 改为按内容比对同步，杜绝实例跑旧技能。
+
+**方法论订正**：推演报告中的「已修」必须以**能力面实测**（`--help` / registry / 真实调用）为凭，不能以「技能或文档已改写」为凭——文案改动不构成修复，且本次恰好改成了错的那一侧。
+
 ## 六、关键数字与记忆点
 
 - **47 commits**：从 BA 初稿到测试报告全在 git 上，每一步可回溯。
