@@ -1,0 +1,44 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: data.persistence-integrity
+  version: 0.1.0
+  description: >
+    L2 持久化行为验证（v0.1 §45/§46）：HTTP 200 ≠ 数据正确。快照 before/after + 字段级断言 +
+    跨表不变量，五类证据落盘。对齐交付标准 G4 证据强度 exercised（真跑过才算）。
+spec:
+  domain: L2
+  claims:
+    - persistence.request-fields-correct
+    - persistence.cross-table-consistent
+  appliesWhen:
+    changed:
+      any:
+        - "src/**/controller/**"
+        - "src/**/service/**"
+        - "src/**/repository/**"
+        - "db/**"
+        - "**/*.sql"
+        - "server.mjs"
+        - "db.mjs"
+  triggers:
+    - task_close
+    - pre_commit
+    - release
+  executors:
+    - id: persistence.payment-create
+      type: persistence
+      scenario: payment-create.yaml
+      evidenceType: field-diff
+  evidence:
+    required:
+      - integration-test-result
+      - db-before
+      - db-after
+      - field-diff
+      - invariant-result
+  policy:
+    failure: block
+    inconclusive: block
+    allowWaiver: true
+    maxAgeHours: 24

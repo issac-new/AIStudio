@@ -1,0 +1,14 @@
+apiVersion: qgate/v1alpha1
+kind: Profile
+metadata:
+  id: feature-close
+  tier: standard
+  description: 任务收口全门集（对齐交付标准 standard 档）
+spec:
+  enable:
+    - L0.*
+    - L1.*
+    - L2.*
+    - L3.*
+    - L4.architecture
+  disable: []

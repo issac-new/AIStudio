@@ -1,0 +1,15 @@
+{
+  "runId": "run-20260923125531-c64429de",
+  "gateId": "engineering.basic-check",
+  "gateVersion": "0.1.0",
+  "trigger": "task_close",
+  "workspace": "/private/tmp/qgate-p2-probe",
+  "startedAt": 1790168131421,
+  "endedAt": 1790168131872,
+  "verdict": "PASS",
+  "evidenceIds": [
+    "ev-d63d3d34-ca8",
+    "ev-8743323a-a6f"
+  ],
+  "changedPaths": []
+}

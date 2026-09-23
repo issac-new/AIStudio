@@ -1,0 +1,19 @@
+apiVersion: qgate/v1alpha1
+kind: Profile
+metadata:
+  id: high-assurance
+  tier: compliance
+  description: 高保障门集（对齐交付标准 compliance 档；INCONCLUSIVE 一律阻断）
+spec:
+  enable:
+    - L0.*
+    - L1.*
+    - L2.*
+    - L3.*
+    - L4.*
+    - L5.*
+  disable: []
+  overrides:
+    data.persistence-integrity:
+      policy:
+        inconclusive: block
