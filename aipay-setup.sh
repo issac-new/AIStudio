@@ -126,12 +126,19 @@ ENVEOF
     # 已存在时按内容比对同步：技能源修好后，仅判存在会让 11 个实例继续跑旧版
     # （09-23 实锤：requirements-analyst 的 matrix 工具改写若只判存在则不生效）。
     mkdir -p "$SKILLS_TARGET/$s"
-    if [[ ! -f "$SKILLS_TARGET/$s/SKILL.md" ]] ||
-       ! cmp -s "$SKILLS_SRC/$s/SKILL.md" "$SKILLS_TARGET/$s/SKILL.md"; then
-      cp "$SKILLS_SRC/$s/SKILL.md" "$SKILLS_TARGET/$s/SKILL.md"
-      log "技能已同步: $s"
+    if [[ -f "$SKILLS_TARGET/$s/SKILL.md" ]] && ! cmp -s "$SKILLS_SRC/$s/SKILL.md" "$SKILLS_TARGET/$s/SKILL.md"; then
+      # agent 按步骤 19 自改过技能：先留差异证据，再收敛到源，避免"改了被无声覆盖"
+      diff -u "$SKILLS_TARGET/$s/SKILL.md" "$SKILLS_SRC/$s/SKILL.md" \
+        > "$EVID_DIR/skill-drift-$(basename "$ROOT")-$s.diff" 2>/dev/null || true
+      log "技能漂移已存档待评审：$s（$(basename "$ROOT")）"
     fi
-    ln -sfn "$SKILLS_TARGET/$s" "$PROF_SKILLS/$s"
+    cp "$SKILLS_SRC/$s/SKILL.md" "$SKILLS_TARGET/$s/SKILL.md"
+    # 真实目录而非符号链接：hermes 的 skill_manage 只在 active profile 的技能目录内
+    # 寻址，软链到 profile 之外会被判 "Skill not found in active profile"，agent 想按
+    # 步骤 19 完善模板时整步失败（09-23 V2.0 实锤）。
+    rm -rf "$PROF_SKILLS/$s"
+    mkdir -p "$PROF_SKILLS/$s"
+    cp "$SKILLS_SRC/$s/SKILL.md" "$PROF_SKILLS/$s/SKILL.md"
   }
   case "$u" in
     fanfan) for s in capability-report requirements-analyst pm-planning inbox-dedup; do install_skill "$s"; done ;;
