@@ -9,14 +9,14 @@ import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 const overlayRoot = resolve(__dirname, '../../../..')
-const PATCH = '375-client-i18n-missing-keys.patch'
+const PATCH = '376-client-i18n-missing-keys.patch'
 
 function readPatch(): string {
   return readFileSync(resolve(overlayRoot, `patches/${PATCH}`), 'utf8')
 }
 
-describe('patch 375：i18n 缺键清剿（zh/en 成对）', () => {
-  it('series 已登记 375', () => {
+describe('patch 376：i18n 缺键清剿（zh/en 成对）', () => {
+  it('series 已登记 376', () => {
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain(PATCH)
   })
