@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${ZCODE_PLUGIN_ROOT}/hooks/session-start.mjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs\"",
             "async": false,
             "timeoutMs": 15000
           }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${ZCODE_PLUGIN_ROOT}/hooks/post-tool.mjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool.mjs\"",
             "async": true,
             "timeoutMs": 15000
           }
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${ZCODE_PLUGIN_ROOT}/hooks/stop.mjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stop.mjs\"",
             "async": false,
             "timeoutMs": 30000
           }

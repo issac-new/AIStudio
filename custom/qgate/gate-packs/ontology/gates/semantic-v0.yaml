@@ -1,0 +1,39 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: ontology.semantic-v0
+  version: 0.1.0
+  description: >
+    L3.7 语义门 v0（v0.1 §63）：术语歧义（Captured/Settled 混用）与概念错配的确定性检查，
+    warning 级（finding 非强阻断 → CONDITIONAL 带解除条件）。默认不启用：项目需在
+    qgate.yaml 配 ontology.provider 并显式 enable 本门。Provider 不可用 → INCONCLUSIVE 不 crash。
+spec:
+  domain: L3
+  claims:
+    - domain.terminology-unambiguous
+    - domain.mapping-consistent
+  appliesWhen:
+    changed:
+      any:
+        - "src/**"
+        - "docs/**/*.md"
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: ontology.scan
+      type: ontology
+      scan:
+        - "docs/**/*.md"
+        - "*.md"
+        - "src/**/*.ts"
+        - "src/**/*.js"
+      evidenceType: ontology-finding
+  evidence:
+    required:
+      - ontology-finding
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
