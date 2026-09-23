@@ -206,6 +206,12 @@ fi
 
 if step_reached dispatch; then
   RID=$(sget room_analysis)
+  # REDISPATCH=1 强制重发：续跑时派单标记若还在，旧版会静默跳过发信，于是后面每一步
+  # 都在等一个根本没被重新触发过的 agent——"重跑"实际等于干等 900s 再超时（09-23 连撞数轮）。
+  if [[ -n "${REDISPATCH:-}" && -n "$(sget dispatch_marker)" ]]; then
+    note "[重发] REDISPATCH=1，清除旧派单标记后重发需求"
+    sset dispatch_marker ""
+  fi
   if [[ -z "$(sget dispatch_marker)" ]]; then
     WSF=$(workspace fanfan)
     M=$(mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 请处理需求 ${RFD_ID}。
