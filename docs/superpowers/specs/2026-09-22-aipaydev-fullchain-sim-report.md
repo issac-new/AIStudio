@@ -143,6 +143,22 @@
 
 **方法论订正**：推演报告中的「已修」必须以**能力面实测**（`--help` / registry / 真实调用）为凭，不能以「技能或文档已改写」为凭——文案改动不构成修复，且本次恰好改成了错的那一侧。
 
+## 五-e、多实例网关拓扑实锤（2026-09-23 V2.0 准备期）
+
+V2.0 准备时按现行上游（v0.21.4）实测复核 port-per-profile 布局，结论与设计文档假设**不一致**，须在下轮开局前定案：
+
+| 事实 | 证据 |
+|---|---|
+| host 守卫是**全机级**，不是 per-home | 以隔离 HERMES_HOME 起 fanfan gateway 被拒：`❌ A gateway already owns this host … PID 31174 (launched by profile 'orchestrator'; serves: orchestrator, aiteam-*)`。"home 全隔离 → 占有退化为「本 home 的占有」，天然不冲突"（gateway-multiplex-design §二）在当前上游**不成立** |
+| 一个 profile 默认不给独立 gateway | `✗ Profile 'fanfan' does not get a gateway of its own. Exactly one gateway per host is the inbound process for every profile.` |
+| 锁目录可 env 隔离 | `gateway/host_rendezvous.py:13` — 锁落在 `$HERMES_GATEWAY_LOCK_DIR`，否则 `$XDG_STATE_HOME/hermes/gateway-locks`。这是本布局此前**从未接线**的关键隔离位 |
+| `--force` 不杀宿主 | `gateway/run.py:5450` 仅 `logger.warning("--force: starting a second gateway although %s owns this host")` 后照常启动 |
+| **`--replace` 才杀宿主** | `gateway/run.py:5196-5224`：写 takeover marker → `terminate_pid(existing_pid)` → 20s 内未退即 SIGKILL。**推演任何环节都不得对宿主使用** |
+
+**重新归因**：V1.0 记录的「`--force` 反噬把宿主 orchestrator 挤下线」，机制上不是 force 杀进程，而更可能是两个 gateway 争用同一份 host rendezvous 记录（force 后写方覆盖，宿主路由/健康面被顶替）。据此，正解是 **`--force` + 每 profile 独立 `HERMES_GATEWAY_LOCK_DIR`**，而非放弃多实例。上游自己给出的合法条件也吻合：`a HERMES_HOME outside profiles/ needs --force`——sim 的 `SIM_ROOT/users/<u>/.hermes` 正属此类。
+
+**下轮开局前的未决项**（需人工定案，不宜由脚本静默决定）：studio 侧 spawn gateway 的代码要带 `--force` 并透传 `HERMES_GATEWAY_LOCK_DIR`；否则三条上游正路只有 `gateway migrate --multiplex`（把 12 个 profile 折进宿主一个进程，但 studio 的 per-user GATEWAY_PORT 寻址随之失效）与容器隔离可用。
+
 ## 六、关键数字与记忆点
 
 - **47 commits**：从 BA 初稿到测试报告全在 git 上，每一步可回溯。
