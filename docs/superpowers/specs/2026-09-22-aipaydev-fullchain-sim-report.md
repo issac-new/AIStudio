@@ -83,7 +83,7 @@
 | dm_room 同句 local 引用未定义变量 set -u 崩（f165f18） | 拆两句 |
 | `$WSF` 裸变量粘连全角标点崩（f165f18） | brace 化 |
 | inbox-dedup 技能 kanban CLI 虚构 --title/--status 旗标（08a6030，本会话） | 改位置参数 + --triage，同步 11 实例 |
-| defect 窗首圈误判零缺陷（Q12，未修脚本，闭环由 agent 兜住） | 记录在案 |
+| defect 窗首圈误判零缺陷（Q12，闭环由 agent 兜住） | ✅ 已修（19d37ca sender 限源 + 44c15a2 since 时间过滤，双层防御在 main）|
 
 ## 五-b、问题单排期修复闭环（2026-09-23 回填）
 
@@ -101,13 +101,29 @@
 | cockpit-online-zero ×2 | ✅ 已修 | 在线计数多级回落：registry → Matrix presence → fleetSessions 聚合（95031e4 起步，并行会话 presence 增强接续） |
 | approval-stall ×2 | ✅ 已修 | 审批代答守护 aipay-approver（05fc959） |
 | shared-node-modules-wipe | ✅ 条款 | aipaydev-dev 技能补「依赖隔离」条款（95031e4） |
-| dev-branch-missing | ✅ 条款 | aipaydev-dev 技能补「及时推送」条款（95031e4） |
+| dev-branch-missing | ✅ 硬闸门 | 技能「及时推送」条款（95031e4）之上叠加代码闸门：verifier pushEvidenceGate + resultTemplate.pushBranch 声明 + failType 'push' 路由（收口轮，§五-c） |
 | test-report-missing | ✅ 条款 | aipaydev-dev 技能补「测试报告是独立交付物」条款（95031e4） |
 | receipt-missing | ✅ 条款 | inbox-dedup 技能双兜底条款已在位（执行偏差，非规则缺失） |
 | review-card-missing | ✅ 条款 | requirements-analyst 技能补「E. 评审卡登记」条款（95031e4） |
-| host-gateway-ownership | ⏸️ 环境局限 | sim profile 与宿主 orchestrator gateway 抢占，属部署形态约束，产品化需 multiplex 迁移通道（另行立项） |
+| host-gateway-ownership | 🔶 判读已修 | studio 侧误判根因已修：patch 373 host 守卫输出判 NOT-running，ensure 不再误跳过启动（收口轮，§五-c）；multiplex/--force 迁移通道仍另行立项 |
 
 排期修复门禁：server tsc 0 错 + overlay vitest 2248 全绿 + i18n-coverage 18 绿 + inject 312 patch 全套。
+
+## 五-c、收口轮落地（2026-09-23 第三轮：接线收口 + 终审）
+
+五会话（dbdb4ebf / e8fe54b1 / 5007f073 / 0744d374 / 71bdd5e3）汇总后的剩余工作全部落地：
+
+| 项 | 落点 | 验证 |
+|---|---|---|
+| push 硬闸门接线（原 ISSUE-08 悬空） | `custom/server/loop/engine/verifier.ts` pushEvidenceGate：声明 `pushBranch` 的交付必须 `ls-remote` ref == worktree HEAD；`loop-engine.ts` failType 'push' 路由回 handoff 重派 | 守门 6+4 例绿（task-completion-push-gate / push-verify） |
+| host 守卫判读接线（原 ISSUE-04 悬空） | **patch 373**：`isGatewayRunningForProfile` 对「他 profile owns this host / will not serve」判 NOT-running（成功路径与 catch 路径双守卫），纯函数在 `custom/loop/gateway/host-ownership.ts` | patch 双向 git apply 校验过；host-ownership 4 例绿 |
+| git-sos 决策层接线（原「生产调用点悬空」） | `/api/ide/git/status` 冲突态带 `sos` advisory（porcelain 冲突码→content/structural→降级建议，只读不自作 merge --abort）；detectConflictType 跨行判定修复（stash@{0} 落地） | git-sos 9 例绿 |
+| IDE retry 计数链收口 | IdeShell 补 `request` import（原 L296 裸引用）；**briefingTask 重复声明合并**（两套跨板实现在同文件撞车致 SFC 编译失败：保留 eager watch + setBoard 契约，抽 resolveBriefingCrossBoard 供深链 watch 与抽屉打开共用） | briefing-cross-board 4/4 绿（补 vue-router mock + 用例间 unmount 防污染） |
+| 测试报告真值验收 | `git fetch` 反查：c0a54b2 ∈ origin/main；TEST-BE-report.md 正式版已在 origin `test/TEST-BE-report.md`（qi 工作区 `docs/test/` 下另有一份未提交重复副本，非阻塞） | origin/main 035a3b7 |
+| Docker 沙箱终审 | aipaydev 仓无 Dockerfile / docker-compose / 容器化交付物——**沙箱实弹 as-is 不可行**，容器化属新立项而非缺口修补 | find 全仓核验 |
+| hermes-agent 侧 | tick socket 回退 22ceab7d36 在激活环境 main（领先 origin 1，外部上游不代推）；此前记录的 discord attachment 既有失败在当前两棵树均**无法定位该用例**，未复现、不做处置 | test_loop_tick_socket_fallback 4/4 绿 |
+
+补丁账本（本轮后 series 至 373）：369 kanban exec 队列 / 370 stock 运行时兼容 / 371 IDE retry-count 路由 / 372 agent tick socket 回落 / **373 studio host 守卫判读（本轮新增）**。
 
 ## 六、关键数字与记忆点
 
@@ -124,8 +140,8 @@
    - REL-DELIVER：商户接入文档 docs/delivery/merchant-onboarding-v1.0.0-cashier.md 入仓（715e362）
    - 三卡已置 done（t_66e5033b / t_e35704d9 / t_16abea25）
    - **坑**：置 done 不能走 PATCH status（completion 需 evidence，500），正确用法 `POST /api/hermes/kanban/complete {task_ids, summary}`。
-2. 15 项产品问题单待排期修复（room-invite-gap 与 IDE 任务简报/跳转优先级最高）。
-3. defect 窗轮询逻辑（Q12）与 kanban-api-hang 待修复后重推演验证。
+2. ~~15 项产品问题单待排期修复（room-invite-gap 与 IDE 任务简报/跳转优先级最高）~~ **已全部闭环（09-23 收口轮终态，见 §五-b/§五-c）**：14 修复/条款 + host-gateway-ownership 判读根因已修（patch 373）。真正另行立项的产品化项收敛为三个：host 守卫 multiplex/--force 迁移通道、LLM 双通道备份路由、每-agent 独立 node_modules store。
+3. ~~defect 窗轮询逻辑（Q12）与 kanban-api-hang 待修复后重推演验证~~ Q12 已修（19d37ca sender 限源 + 44c15a2 since 时间过滤）；kanban-api-hang 已修（patch 369）。下一轮推演可直接复跑验证。
 4. 推演产物归档：SIM_ROOT=/Volumes/nvme2230/lab/ncwk-sim-aipay（evidence/ 含 11 板 kanban 快照、房间全量消息、issues.log、场景日志）。
 
 ---
