@@ -753,3 +753,15 @@
 # 368: 推演实锤 ide-deeplink-loses-task 根治——hash 路由吞路径形态深链 search 参数，
 #      router 初始化前把 pathname+search 迁移为 hash 形态（与 entry.mts shim 双侧同步）。
 368-client-path-deeplink-to-hash.patch
+
+# 369: kanban CLI exec 并发队列——进程内 FIFO 把 execHermes 并发压到 2 + 排队 45s
+#      超时快速失败（推演实锤 kanban-api-hang-qi：exec 风暴下 CLI 排队致 API 整体
+#      挂起）；notify-list 裸 exec 补 30s 超时。watchEvents 长连流不经队列。
+369-server-kanban-exec-queue.patch
+
+# 370: stock hermes 运行时兼容层（用户裁决 2026-09-23：不动官方 CLI 只改 studio）——
+#      能力探测缓存（estimate --help 试探）+ estimate 诚实降级 + set-reasoning 降级报错
+#      + projects list 表格解析回落 + 板绑定走官方 project bind-board（clear 除外）。
+#      （编号 370：369 被并行会话 exec-queue 占用，让号重登记）
+370-server-kanban-stock-runtime-compat.patch
+
