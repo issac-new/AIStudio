@@ -11,6 +11,8 @@ sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0;
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
 note() { log "$*" | tee -a "$SCEN_LOG"; }
 
+model_preflight_report   # 下半场可单独续跑（START_STEP=anexec 等），同样先探通道
+
 STEPS="smoke ba room dispatch register analysis triage anexec review close plan devimpl defect testpass release templates ide"
 START_STEP="${START_STEP:-anexec}"
 step_reached() {
