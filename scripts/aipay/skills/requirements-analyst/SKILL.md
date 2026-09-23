@@ -41,10 +41,13 @@ description: 金融支付（银行卡/网络支付/转接清算）领域背景�
 ### D. RACI 派发
 - 对每个任务：主责 R = 应用主责研发；A = 团队负责人（授权/确认）；C = 架构
   （跨模块接口时）；I = 产品经理。
-- 邀请全部关联账号进需求讨论群（必须执行，不许跳过）：
-  `hermes matrix rooms` 拿目标房间 ID →
-  `hermes matrix invite --room <房间ID> --user @a:matrix.test,@b:matrix.test,...`
-  （整份名单一次发；已在群成员自动跳过，不是错误）。
+- 邀请全部关联账号进需求讨论群（必须执行，不许跳过）：用 Matrix 房间工具，
+  不是 CLI（`hermes matrix ...` 不存在）——
+  1. `matrix_room_list` 取本机已加入房间，按名称匹配到目标需求讨论群拿 room_id；
+     需要为新任务另开跟踪群时用 `matrix_room_create`（name + invite 一次成型）。
+  2. `matrix_room_invite`（room_id + users 数组），整份名单一次发。
+     工具逐人回报 invited/failed；自己或已在群成员被重复邀请不算错误。
+     failed 非空时须在同一轮内向发起人回报，不得静默跳过。
 - 逐条发 matrix 消息：@责任人-agent 与 @lead-agent，附任务明细（任务 ID/要求/
   文档 git 地址/初稿确认与深入分析反馈要求）。
 - 每条派发建一个跟踪子任务（`hermes kanban create` + `hermes kanban link
