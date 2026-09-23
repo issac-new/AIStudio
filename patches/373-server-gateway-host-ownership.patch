@@ -1,0 +1,37 @@
+diff --git a/packages/server/src/modules/hermes/services/gateway/autostart.ts b/packages/server/src/modules/hermes/services/gateway/autostart.ts
+--- a/packages/server/src/modules/hermes/services/gateway/autostart.ts
++++ b/packages/server/src/modules/hermes/services/gateway/autostart.ts
+@@ -9,6 +9,10 @@ import { getHermesBaseDir, getProfileDir, listProfileNamesFromDisk } from '../pr
+ import { parseGatewayStatusesFromProfileList } from '../profiles/profile-list-parser'
+ import { execHermesWithBin } from '../runtime/process'
+ import { retireManagedGatewayForProfile, startGatewayRunManaged } from './runner'
++// overlay[gateway-host-ownership]（推演 ISSUE-04 host-gateway-ownership）：
++// host 守卫报「他 profile 拥有本 host、不服务本 profile」时，这不是本 profile
++// 在跑——区分两类锁语义，纯函数与守门测试落在 custom/loop/gateway/host-ownership。
++import { gatewayStatusLooksHostOwned } from '../../../../custom/loop/gateway/host-ownership'
+ 
+ const execFileAsync = promisify(execFile)
+ const GATEWAY_RUNTIME_FILES = ['gateway.pid', 'gateway.lock', 'gateway_state.json'] as const
+@@ -413,9 +417,22 @@ export async function isGatewayRunningForProfile(hermesBin: string, profileDir:
+         HERMES_HOME: profileDir,
+       },
+     })
++    // overlay[gateway-host-ownership]: host 守卫输出（他 profile owns this host /
++    // will not serve）不因字面含 "running" 之类被误读为本 profile 在跑。
++    if (gatewayStatusLooksHostOwned(`${stdout}\n${stderr}`)) {
++      logger.warn({ profileDir }, 'Hermes gateway status reported host owned by another profile; treating as NOT running for this profile')
++      return false
++    }
+     return gatewayStatusLooksRunning(`${stdout}\n${stderr}`)
+   } catch (err: any) {
+     const output = `${err?.stdout || ''}\n${err?.stderr || ''}\n${err?.message || ''}`
++    // overlay[gateway-host-ownership]: 「他 profile 拥有本 host」优先于 runtime-lock
++    // 判读——那是别人的锁（host 守卫拒绝服务本 profile），不是本 profile 幂等在跑；
++    // 误判 true 会让 ensure 跳过启动，该 profile gateway 永远起不来（推演 ISSUE-04）。
++    if (gatewayStatusLooksHostOwned(output)) {
++      logger.warn({ profileDir }, 'Hermes gateway status reported host owned by another profile; treating as NOT running for this profile')
++      return false
++    }
+     if (gatewayStatusLooksRuntimeLocked(output)) {
+       logger.info({ profileDir }, 'Hermes gateway status reported runtime lock held; treating gateway as already running')
+       return true

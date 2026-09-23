@@ -32,6 +32,7 @@ import { buildAuxMessage } from '../components/briefing-types'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { listBoards, listTasks } from '@/api/hermes/kanban'
+import { request } from '@/api/client'
 import { ideGitApi } from '../api/git'
 
 const { t } = useI18n()
@@ -48,6 +49,62 @@ watch(() => route.query.task, (taskId) => {
   ide.setActiveTask(id)
   if (id) ide.setDimension('task')
 }, { immediate: true })
+
+// 深链绑定后跨板解析任务（aipaydev 推演 ide-briefing-cross-board-empty 立项）：
+// kanbanStore.tasks 只装当前选中板，agent 自建板（如 aipay-rfd）的任务会解析
+// 失败致简报抽屉空态。这里主动逐板查询（当前板缓存优先，一次深链最多 +N 次
+// 只读请求），命中后回填并把选中板切过去（简报后续数据均走正确板）。
+// resolveBriefingCrossBoard 同时供深链 watch（eager）与简报抽屉打开时兜底重试。
+const briefingTaskResolved = ref<null | {
+  id: string; title: string; status: string
+  priority?: number; body?: string | null; workspacePath?: string | null
+}>(null)
+async function resolveBriefingCrossBoard(id: string): Promise<void> {
+  const inStore = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
+  if (inStore) {
+    briefingTaskResolved.value = inStore as typeof briefingTaskResolved.value
+    return
+  }
+  try {
+    const boards = (await listBoards()).map(b => b.slug).filter(Boolean) as string[]
+    const order = [kanbanStore.selectedBoard ?? 'default', ...boards.filter(b => b !== kanbanStore.selectedBoard)]
+    for (const slug of [...new Set(order)]) {
+      const hit = (await listTasks({ board: slug }).catch(() => []))
+        .find(task => task.id === id || task.session_id === id)
+      if (hit) {
+        // stale 守卫：逐板请求期间深链又切了任务，旧结果不回填
+        if (ide.activeTaskId !== id) return
+        kanbanStore.setBoard(slug)
+        briefingTaskResolved.value = {
+          id: hit.id, title: hit.title, status: hit.status,
+          priority: typeof hit.priority === 'number' ? hit.priority : undefined,
+          body: hit.body ?? null,
+          workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
+        }
+        return
+      }
+    }
+  } catch { /* 解析失败保持空态，简报组件显示"当前无激活任务" */ }
+}
+watch(() => ide.activeTaskId, async (id) => {
+  briefingTaskResolved.value = null
+  if (id) await resolveBriefingCrossBoard(id)
+}, { immediate: true })
+const briefingTask = computed(() => {
+  if (briefingTaskResolved.value) return briefingTaskResolved.value
+  const id = ide.activeTaskId
+  if (!id) return null
+  const hit = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
+  if (!hit) return null
+  return {
+    id: hit.id,
+    title: hit.title,
+    status: hit.status,
+    priority: typeof hit.priority === 'number' ? hit.priority : undefined,
+    body: hit.body ?? null,
+    workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
+  }
+})
 
 onMounted(() => {
   const id = ide.activeTaskId
@@ -144,45 +201,11 @@ type BriefingTaskView = {
 }
 const briefingOpen = ref(false)
 const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
-// 本板命中：kanbanStore.tasks 是单板作用域（默认板）；深链任务常在其它板
-// （推演实锤 ide-briefing-cross-board-empty），本地未命中时逐板解析（client-only）。
-const briefingTaskLocal = computed<BriefingTaskView | null>(() => {
-  const id = ide.activeTaskId
-  if (!id) return null
-  const hit = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
-  if (!hit) return null
-  return {
-    id: hit.id,
-    title: hit.title,
-    status: hit.status,
-    priority: typeof hit.priority === 'number' ? hit.priority : undefined,
-    body: hit.body ?? null,
-    workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
-  }
-})
-const briefingTaskRemote = ref<BriefingTaskView | null>(null)
-const briefingTask = computed(() => briefingTaskLocal.value ?? briefingTaskRemote.value)
+// 抽屉打开时的兜底重试：eager watch 的跨板解析若因瞬时失败未命中，这里再试一次
+// （同一 resolveBriefingCrossBoard，当前板缓存优先零额外请求），随后刷新 Git 块。
 async function resolveBriefingTask(): Promise<void> {
-  briefingTaskRemote.value = null
-  if (ide.activeTaskId && !briefingTaskLocal.value) {
-    try {
-      const boards = await listBoards()
-      for (const b of boards) {
-        const tasks = await listTasks({ board: b.slug })
-        const hit = tasks.find(t => t.id === ide.activeTaskId || t.session_id === ide.activeTaskId)
-        if (hit) {
-          briefingTaskRemote.value = {
-            id: hit.id,
-            title: hit.title,
-            status: hit.status,
-            priority: typeof hit.priority === 'number' ? hit.priority : undefined,
-            body: hit.body ?? null,
-            workspacePath: hit.workspace_path ?? null,
-          }
-          break
-        }
-      }
-    } catch { /* 跨板解析失败保持空态 */ }
+  if (ide.activeTaskId && !briefingTask.value) {
+    await resolveBriefingCrossBoard(ide.activeTaskId)
   }
   void loadBriefingGit()
 }
@@ -235,9 +258,33 @@ async function loadBriefingCollab(): Promise<void> {
       }))
   } catch { /* 协作动态保持空态 */ }
 }
+// Kanban 状态块：retry 计数经 /api/ide/retry-count（patch 371 与 363 计数链同源），
+// 其余维度（阶段/阻塞/依赖）从任务本体推导。
+const briefingRetry = ref(0)
+async function loadBriefingRetry(): Promise<void> {
+  briefingRetry.value = 0
+  const id = briefingTask.value?.id
+  if (!id) return
+  try {
+    const res = await request<{ count: number }>(`/api/ide/retry-count?task=${encodeURIComponent(id)}`)
+    if (briefingTask.value?.id !== id) return // stale 守卫（同 Git/协作块）
+    briefingRetry.value = res.count ?? 0
+  } catch { /* 计数读取失败保持 0 */ }
+}
+const briefingWorkflow = computed(() => {
+  const task = briefingTask.value
+  if (!task) return { stage: '', parentIds: [], childIds: [], blocked: false, retryCount: 0 }
+  return {
+    stage: task.status,
+    parentIds: [],
+    childIds: [],
+    blocked: task.status === 'blocked',
+    retryCount: briefingRetry.value,
+  }
+})
 watch([briefingOpen, () => ide.activeTaskId], ([open]) => {
   if (open) {
-    void resolveBriefingTask()
+    void resolveBriefingTask().then(() => void loadBriefingRetry())
     void loadBriefingCollab()
   }
 })
@@ -317,7 +364,7 @@ onUnmounted(() => {
             :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
           >×</button>
         </div>
-        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :git="briefingGit" :collab="briefingCollab" @aux-send="onAuxSend" />
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" @aux-send="onAuxSend" />
         <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
       </div>
     </Transition>

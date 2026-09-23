@@ -775,3 +775,10 @@
 #      复用 control_socket 同款 _fits_sun_path/_fallback_socket_path 短路径回落。
 #      （编号 372：371 被并行会话 IDE retry-count 路由占用，让号重登记）
 372-agent-tick-socket-fallback.patch
+
+
+# 373: studio 侧 host 守卫判读——isGatewayRunningForProfile 对「他 profile owns
+#      this host / will not serve」输出判 NOT-running（此前被 runtime-lock 字样
+#      误读为已在跑，ensure 跳过启动，该 profile gateway 永远起不来；推演 ISSUE-04
+#      host-gateway-ownership）。纯函数+守门测试在 custom/loop/gateway/host-ownership。
+373-server-gateway-host-ownership.patch

@@ -34,6 +34,13 @@ vi.mock('@/api/hermes/kanban', () => ({
   listBoards: vi.fn(async () => []),
   listTasks: vi.fn(async () => []),
 }))
+// IdeShell retry 计数块经 '@/api/client' 取数；真模块会拉 router/index（模块级
+// beforeEach 注册），本套件的 vue-router 桩无该方法——mock 掉 request 即可。
+vi.mock('@/api/client', () => ({
+  request: vi.fn(async () => ({})),
+  getApiKey: () => 'test-key',
+  getBaseUrlValue: () => '',
+}))
 vi.mock('../components/TaskBriefingPanel.vue', () => ({ default: { name: 'TaskBriefingPanel', template: '<aside class="brief-stub" />' } }))
 vi.mock('../api/git', () => ({
   ideGitApi: { status: vi.fn(async () => null), log: vi.fn(async () => ({ commits: [] })) },

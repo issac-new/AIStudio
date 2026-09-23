@@ -303,6 +303,24 @@ describe('cockpit store selectTask + 联动加载', () => {
     expect(s.events).toEqual([])
   })
 
+  it('selectedTaskDetail returns cached KanbanTaskDetail', async () => {
+    getTask.mockResolvedValueOnce({
+      task: { id: 't1', title: 'T', body: 'desc body', assignee: 'arch', status: 'todo', priority: 2, created_by: null, created_at: 0, started_at: null, completed_at: null, workspace_kind: 'dir', workspace_path: '~/ws', tenant: null, project_id: null, result: null, skills: null },
+      latest_summary: '任务摘要',
+      parents: ['p1'],
+      children: ['c1'],
+      comments: [], events: [], runs: [],
+    })
+    mockKanbanTasks.push(kt({ id: 't1' }))
+    const s = useCockpitStore()
+    await s.bootstrap()
+    expect(s.selectedTaskDetail).not.toBeNull()
+    expect(s.selectedTaskDetail?.task?.body).toBe('desc body')
+    expect(s.selectedTaskDetail?.latest_summary).toBe('任务摘要')
+    expect(s.selectedTaskDetail?.parents).toEqual(['p1'])
+    expect(s.selectedTaskDetail?.children).toEqual(['c1'])
+  })
+
   it('selectTask sets selectedTaskId + selectedTask derived', async () => {
     mockKanbanTasks.push(kt({ id: 't1', title: 'Hello' }))
     const s = useCockpitStore()
