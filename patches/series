@@ -802,3 +802,4 @@
 #      npm run inject 验证。
 375-runtime-semantica-mcp-catalog.patch
 376-client-i18n-missing-keys.patch
+377-client-search-hotkey-cmdf.patch
