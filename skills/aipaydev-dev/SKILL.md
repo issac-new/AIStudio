@@ -25,11 +25,19 @@ description: aipaydev 仓库定制化研发技能（swarm-yuan 规范）：研�
 1. **worktree 并行**：任务开工先在任务 workspace 下建 worktree：
    `git worktree add ../wt-<taskId> -b feat/<taskId> origin/main`；
    完成合入 feature 分支后 push；不在 main 直接改。
-2. **workspace 归集**：任务材料（需求/设计文档路径、环境链接、历史文档）统一
+2. **依赖隔离**（aipaydev 推演实锤 shared-node-modules-wipe）：`npm ci` /
+   `npm install` 只在自己的 worktree 内跑，**禁止在仓根执行**——多 agent 并行时
+   仓根 node_modules 会被互相清空。依赖一律随各自 worktree 安装。
+3. **及时推送**（实锤 dev-branch-missing）：feature 分支每个稳定节点即 push——
+   未推送的提交对其他 agent 不存在，跨 agent 协作以 origin 为唯一事实源。
+4. **workspace 归集**：任务材料（需求/设计文档路径、环境链接、历史文档）统一
    放任务 workspace 的 `materials/` 子目录，供本机相关 agent 共享。
-3. **提交规范**：Conventional Commits；push 前本地测试全绿。
-4. **渠道 mock**：财付通/支付宝端点一律本地 mock（`apps/csw-*/test/mock*`），
+5. **提交规范**：Conventional Commits；push 前本地测试全绿。
+6. **渠道 mock**：财付通/支付宝端点一律本地 mock（`apps/csw-*/test/mock*`），
    禁止请求真实渠道。
+7. **测试报告是独立交付物**（实锤 test-report-missing）：测试任务完成必须产出
+   `docs/test/<需求ID>-test-report.md`（范围/用例数/通过数/缺陷清单及状态/
+   结论/通过时的 git commit id）并随测试分支 push——只在群里发结论行不算完成。
 
 ## 分析/设计产出（系分阶段）
 
