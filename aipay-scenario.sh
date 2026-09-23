@@ -215,7 +215,7 @@ if step_reached dispatch; then
 结论行必须二选一并带凭证，无凭证一律视为未完成：
   ANALYSIS-DONE-${RFD_ID} commit=<分析稿已推送的 commitId> card=<协作看板主卡ID>
   ANALYSIS-BLOCKED-${RFD_ID} reason=<阻塞原因> done=<已完成部分清单>
-凭证会被反向核验：commit 必须真实存在于 aipaydev origin（git cat-file 可查），card 必须在你本机看板可查。动作若因输出长度被截断丢弃，就还没做完——此时只准报 BLOCKED，不得报 DONE。" "$(agent_mxid fanfan)")
+card 必须取自建卡工具返回的真实卡 ID（形如 t_1a2b3c4d），填需求编号一律判为虚报。两个凭证都会被反向核验：commit 须真实存在于 aipaydev origin 且该提交含分析稿，card 须在你本机看板可查。动作若因输出长度被截断丢弃，就是还没做完——此时只准报 BLOCKED，不得报 DONE。" "$(agent_mxid fanfan)")
     sset dispatch_marker "$M"
     note "[fanfan] 需求派发已发 ($M)"
   fi
@@ -225,8 +225,18 @@ fi
 SCAN_ROOM="$(sget room_analysis)"
 if step_reached register; then
   jwt_of fanfan >/dev/null
-  wait_truth "fanfan 本机 kanban 出现 ${RFD_ID} 任务卡" 900 kanban_has fanfan "${RFD_ID}" \
-    || fail "fanfan kanban 登记超时"
+  # 超时不直接退出：把拒收原因回灌给 agent 再等一轮。否则核验方默默失败、agent 以为已
+  # 交活，整轮只能靠人肉重跑（09-23 三连超时皆因此，第三次更是拿需求编号冒充卡ID）。
+  if ! wait_truth "fanfan 本机 kanban 出现 ${RFD_ID} 任务卡" 900 kanban_has fanfan "${RFD_ID}"; then
+    mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
+      "@$(agent_mxid fanfan) 验收拒收：你的结论行上报了完成，但本机看板查无 ${RFD_ID} 任务卡。
+      请先用协作看板登记主卡（建卡工具会返回真实卡 ID），再以 ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<该卡ID> 重报。
+      填需求编号当卡 ID 会被判虚报。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    note "[拒收回灌] 已 @fanfan-agent 告知缺看板卡，要求补登记后重报凭证"
+    wait_truth "补登记后 kanban 出现 ${RFD_ID} 任务卡" 900 kanban_has fanfan "${RFD_ID}" \
+      || { echo "ISSUE|kanban-registration-skipped|fanfan-agent|两轮拒收后仍未登记 ${RFD_ID} 看板卡" >> "$EVID_DIR/issues.log"; \
+           fail "fanfan kanban 登记超时（已回灌拒收仍未补做）"; }
+  fi
 fi
 
 # ══ 步骤 10：系统分析（要素评估/三清单/SMART 拆分/RACI 派发）══
