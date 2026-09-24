@@ -57,7 +57,7 @@ watch(() => route.query.task, (taskId) => {
 // resolveBriefingCrossBoard 同时供深链 watch（eager）与简报抽屉打开时兜底重试。
 const briefingTaskResolved = ref<null | {
   id: string; title: string; status: string
-  priority?: number; assignee?: string | null; body?: string | null; workspacePath?: string | null
+  priority?: number; assignee?: string | null; body?: string | null; workspacePath?: string | null; raci?: Record<string, string[]> | null
 }>(null)
 async function resolveBriefingCrossBoard(id: string): Promise<void> {
   const inStore = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
@@ -80,6 +80,7 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
           priority: typeof hit.priority === 'number' ? hit.priority : undefined,
           assignee: (hit as { assignee?: string | null }).assignee ?? null,
           body: hit.body ?? null,
+          raci: (hit as { raci?: Record<string, string[]> | null }).raci ?? null,
           workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
         }
         return
@@ -104,6 +105,7 @@ const briefingTask = computed(() => {
     priority: typeof hit.priority === 'number' ? hit.priority : undefined,
     assignee: (hit as { assignee?: string | null }).assignee ?? null,
     body: hit.body ?? null,
+    raci: (hit as { raci?: Record<string, string[]> | null }).raci ?? null,
     workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
   }
 })
