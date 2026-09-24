@@ -12,7 +12,6 @@ custom/qgate/
 ├── src/executors/    command（argv 白名单）/ persistence（SQLite 快照断言不变量）/ ontology（语义检查）/ files（制品存在性=present 级）/ llm（插件位，永不单独 PASS）
 ├── src/ontology/     OntologyProvider 接口 + FIBO 预处理索引加载 + MockProvider
 ├── src/cli.ts        CLI：plan / run / status / explain / evidence / risk / waive / exceptions / release-report / validate-config / init
-├── src/mcp-server.ts MCP stdio 服务（gate.plan/run/status/get_evidence/get_failures/get_risks/explain 七工具，零依赖手写）
 ├── plugin/           ZCode 插件（六事件钩子：SessionStart/PreToolUse/UserPromptSubmit/PostToolUse/PostToolUseFailure/Stop；命令×5 + 技能 + MCP）；.claude-plugin 双清单兼容 Claude Code
 ├── gate-packs/       engineering / persistence / ontology / security / architecture / delivery / api-contract / schema / llm + _profiles 四档
 ├── examples/         golden scenarios×5 + payment-demo
@@ -100,9 +99,13 @@ ontology:
 
 cache key = 门版本 + executor 面 + 输入锚（commit/treeHash/变更集）+ 门配置 + 环境；同输入二跑命中（execution=cached，判定不变）；输入或配置任一变化即 miss 重跑。缓存 FAIL 语义保持（不因缓存虚报 PASS）。守门测试 `__tests__/qgate-cache.test.ts` 3 例。
 
-## MCP 工具面
+## 架构形态（D4：不是独立服务）
 
-插件自带 `plugin:qgate:qgate` MCP 服务（zcode plugin list 可见），七工具让 Code Agent 主动询问门禁：`gate.plan / gate.run / gate.status / gate.get_evidence / gate.get_failures / gate.get_risks / gate.explain`。
+QGate 是**内嵌库 + 插件钩子 + 命令面**，无常驻进程：
+
+- **内核即库**（`src/core/`，平台无关，`package.json main` 可 import）——消费方是 overlay 自身工作流与未来的 zcode-engine 统筹层，不是独立进程；
+- **Agent 交互面 = 五个 `/qgate-*` 命令**（子进程调 CLI，即调即退）+ 六事件钩子（stdin→审计/阻断）；
+- **MCP stdio 服务已移除**（2026-09-24 D4 裁定）：与命令面功能重复，且持久进程形态违背内嵌原则；曾因 toolDef schema 违规致 GLM 1210 生产事故（8cbcfa1），移除后该类风险面归零。
 
 ## 发布证据包
 
