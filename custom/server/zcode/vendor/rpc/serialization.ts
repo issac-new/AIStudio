@@ -10,7 +10,7 @@
  * 小数字只需 1 byte，大数字按需扩展，比固定 4 byte 更紧凑。
  */
 
-import { VSBuffer } from "./buffer.js";
+import { VSBuffer } from "./buffer";
 
 // ============================================================================
 // Reader / Writer 接口

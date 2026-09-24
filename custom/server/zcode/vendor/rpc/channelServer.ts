@@ -1,14 +1,14 @@
-import { VSBuffer } from "./buffer.js";
-import { type IDisposable, CancellationTokenSource, toDisposable } from "./foundation.js";
-import { BufferReader, BufferWriter, deserialize, serialize } from "./serialization.js";
-import type { IMessagePassingProtocol } from "./protocol.js";
+import { VSBuffer } from "./buffer";
+import { type IDisposable, CancellationTokenSource, toDisposable } from "./foundation";
+import { BufferReader, BufferWriter, deserialize, serialize } from "./serialization";
+import type { IMessagePassingProtocol } from "./protocol";
 import {
   type IChannelServer,
   type IRawResponse,
   type IServerChannel,
   RequestType,
   ResponseType,
-} from "./channels.shared.js";
+} from "./channels.shared";
 
 export class ChannelServer<TContext = string> implements IChannelServer<TContext>, IDisposable {
   private channels = new Map<string, IServerChannel<TContext>>();
