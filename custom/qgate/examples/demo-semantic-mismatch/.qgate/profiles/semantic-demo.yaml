@@ -1,0 +1,13 @@
+apiVersion: qgate/v1alpha1
+kind: Profile
+metadata:
+  id: semantic-demo
+  description: 语义门演示档：仅启用内置 ontology.semantic-v0（默认全 Profile 禁用）。
+spec:
+  enable:
+    - ontology.semantic-v0
+  disable:
+    - engineering.*
+    - L2
+    - L4
+    - L5

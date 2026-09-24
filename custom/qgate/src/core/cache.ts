@@ -30,17 +30,18 @@ function sha256(s: string): string {
   return createHash('sha256').update(s).digest('hex').slice(0, 20)
 }
 
-/** 计算某 executor 的 cache key（§49 五要素降为实际可得的四要素：gate/executor/input/config/env）。 */
+/** 计算门的 cache key（§49 五要素：gate 版本 / executor 面 / 输入锚 / 门配置 / 环境）。
+ *  证据按整门缓存（一次 run 的证据列表为一条缓存），输入或配置任一变化即 key 漂移。 */
 export function cacheKeyFor(
   spec: GateSpec,
-  executor: ExecutorSpec,
+  executors: readonly ExecutorSpec[],
   ctx: CacheContext,
 ): string {
   const parts: CacheKeyParts = {
-    gateVersion: spec.metadata.version,
-    executorId: executor.id,
+    gateVersion: `${spec.metadata.id}@${spec.metadata.version}`,
+    executorId: executors.map((e) => `${e.type}:${e.id}`).sort().join(','),
     input: JSON.stringify({ commit: ctx.commit ?? '', treeHash: ctx.treeHash ?? '', changed: [...ctx.changedPaths].sort() }),
-    config: JSON.stringify({ policy: spec.spec.policy, evidence: spec.spec.evidence, executor: executor }),
+    config: JSON.stringify({ policy: spec.spec.policy, evidence: spec.spec.evidence, executors }),
     env: JSON.stringify({ node: process.version, cwd: ctx.workspace }),
   }
   return sha256(parts.gateVersion + '|' + parts.executorId + '|' + parts.input + '|' + parts.config + '|' + parts.env)

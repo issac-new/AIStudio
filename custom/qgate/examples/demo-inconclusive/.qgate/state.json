@@ -1,7 +1,10 @@
 {
   "engineering.basic-check": {
-    "runId": "run-20260923192015-c605510f",
-    "verdict": "PASS",
-    "startedAt": 1790191215309
+    "runId": "run-20260924030704-60ee38ac",
+    "verdict": "CONDITIONAL",
+    "startedAt": 1790219224262,
+    "conditions": [
+      "insufficient evidence accepted under warn policy: lint-result:error"
+    ]
   }
 }
