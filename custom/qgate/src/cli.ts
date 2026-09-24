@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { loadProject } from './core/loader.js'
 import { runGate, gitContext } from './core/run.js'
 import { storePaths, latestRuns, loadRun, loadRunEvidence, isFresh, listRisks, saveWaiver, listWaivers } from './core/store.js'
-import { resolveProfile, findProfile, effectivePolicy } from './core/profile.js'
+import { resolveProfile, findProfile, effectivePolicy, isBlockingVerdict } from './core/profile.js'
 import { selectGates, appliesToChanged } from './core/impact.js'
 import { tierOfProfile, VERDICT_TO_DELIVERY } from './core/align.js'
 import { buildReleaseReport, renderReleaseReportMd } from './core/report.js'
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
           verdict: entry?.verdict ?? 'INCONCLUSIVE',
           delivery: VERDICT_TO_DELIVERY[entry?.verdict ?? 'INCONCLUSIVE'],
           freshness: fresh ? freshness : undefined,
-          blocking: entry ? entry.verdict === 'FAIL' || entry.verdict === 'INCONCLUSIVE' : true,
+          blocking: isBlockingVerdict(entry?.verdict ?? 'INCONCLUSIVE', effectivePolicy(g, resolved)),
         }
         report.push(row)
         if (!json) {

@@ -78,3 +78,18 @@ describe('§49 缓存与增量执行（runGate 接线）', () => {
     }
   })
 })
+
+describe('isBlockingVerdict（status/Stop 阻断判定尊重 policy）', () => {
+  it('block 档：FAIL/INCONCLUSIVE 阻断；warn 档：均不阻断（advisory 语义）', async () => {
+    const { isBlockingVerdict } = await import('../src/core/profile.js')
+    const block = { failure: 'block' as const, inconclusive: 'block' as const }
+    const warn = { failure: 'warn' as const, inconclusive: 'warn' as const }
+    expect(isBlockingVerdict('FAIL', block)).toBe(true)
+    expect(isBlockingVerdict('INCONCLUSIVE', block)).toBe(true)
+    expect(isBlockingVerdict('FAIL', warn)).toBe(false)
+    expect(isBlockingVerdict('INCONCLUSIVE', warn)).toBe(false) // never-run 的 warn 档门不拦 Stop
+    expect(isBlockingVerdict('CONDITIONAL', block)).toBe(false)
+    expect(isBlockingVerdict('PASS', block)).toBe(false)
+    expect(isBlockingVerdict('WAIVED', block)).toBe(false)
+  })
+})

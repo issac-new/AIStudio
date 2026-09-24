@@ -8,7 +8,7 @@ import { createInterface } from 'node:readline'
 import { loadProject } from './core/loader.js'
 import { runGate, gitContext } from './core/run.js'
 import { storePaths, latestRuns, loadRun, loadRunEvidence, listRisks, listWaivers } from './core/store.js'
-import { resolveProfile, findProfile } from './core/profile.js'
+import { resolveProfile, findProfile, effectivePolicy, isBlockingVerdict } from './core/profile.js'
 import { selectGates } from './core/impact.js'
 
 const PROTOCOL_VERSION = '2024-11-05'
@@ -118,7 +118,12 @@ async function callTool(name: string, params: Record<string, unknown>): Promise<
         profile: resolved.profileId, tier: resolved.tier,
         gates: enabled.map((g) => {
           const entry = state[g.metadata.id]
-          return { gateId: g.metadata.id, domain: g.spec.domain, verdict: entry?.verdict ?? 'INCONCLUSIVE', blocking: entry ? entry.verdict === 'FAIL' || entry.verdict === 'INCONCLUSIVE' : true }
+          return {
+            gateId: g.metadata.id,
+            domain: g.spec.domain,
+            verdict: entry?.verdict ?? 'INCONCLUSIVE',
+            blocking: isBlockingVerdict(entry?.verdict ?? 'INCONCLUSIVE', effectivePolicy(g, resolved)),
+          }
         }),
       }, null, 2))
     }
