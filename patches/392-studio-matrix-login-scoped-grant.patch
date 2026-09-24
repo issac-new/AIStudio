@@ -1,0 +1,42 @@
+diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
+--- a/packages/server/src/modules/studio/controllers/auth.ts
++++ b/packages/server/src/modules/studio/controllers/auth.ts
+@@ -703,7 +703,8 @@
+ 
+   if (!user) {
+     const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
+-    const role = 'super_admin'
++    // HERMES_CUSTOM[MuxScopedGrant]: 自动建号不再授予 super_admin（多用户收敛为 admin）
++    const role = 'admin'
+     user = createFromMatrix({
+       matrixUserId,
+       username: localpart,
+@@ -713,9 +714,11 @@
+       role,
+     })
+     if (user) {
+-      // Ensure matrix user has access to all profiles (same permission as local admin)
++      // HERMES_CUSTOM[MuxScopedGrant]: 授权收敛——只授本账号同名 profile（找不到则
++      // default）。多路复用多用户下每个 matrix 账号只见自己的档案，不再全量授权。
+       const allProfiles = listProfileNamesFromDisk()
+-      replaceUserProfiles(user.id, allProfiles, allProfiles[0] || 'default')
++      const own = allProfiles.includes(localpart) ? localpart : 'default'
++      replaceUserProfiles(user.id, [own], own)
+       user = findByMatrixUserId(matrixUserId)
+     }
+   } else {
+@@ -725,9 +728,12 @@
+       avatarUrl: matrixInfo?.avatarUrl || undefined,
+       lastLoginAt: now,
+     })
+-    // Ensure matrix user has access to all profiles (same permission as local admin)
++    // HERMES_CUSTOM[MuxScopedGrant]: 授权收敛——登录时重申本账号同名 profile 授权
++    // （沿用原"登录时校正授权"时机），不再全量授权。
++    const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
+     const allProfiles = listProfileNamesFromDisk()
+-    replaceUserProfiles(user.id, allProfiles, allProfiles[0] || 'default')
++    const own = allProfiles.includes(localpart) ? localpart : 'default'
++    replaceUserProfiles(user.id, [own], own)
+     user = findByMatrixUserId(matrixUserId)
+   }
+ 
