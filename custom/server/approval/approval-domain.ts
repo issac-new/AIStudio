@@ -102,9 +102,10 @@ function ruleMatches(rule: ApprovalRule, call: ToolCallRequest): boolean {
 }
 
 function scopeVisible(rule: ApprovalRule, call: ToolCallRequest): boolean {
+  // 归属绑定判定归注入谓词（见 ScopeOwnershipPredicate），这里只看上下文存在性。
   if (rule.scope === 'global') return true
-  if (rule.scope === 'agent') return !!call.agentId && rule.tool !== '' && matchesAgent(rule, call)
-  return !!call.sessionId && matchesSession(rule, call)
+  if (rule.scope === 'agent') return !!call.agentId
+  return !!call.sessionId
 }
 
 // 作用域携带：agent/session 档规则把归属写进 argvPrefix 之外的扩展位会复杂化匹配；

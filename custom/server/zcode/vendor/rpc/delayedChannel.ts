@@ -1,5 +1,5 @@
-import { type CancellationToken, Event, Relay } from "./foundation.js";
-import type { IChannel } from "./channels.shared.js";
+import { type CancellationToken, Event, Relay } from "./foundation";
+import type { IChannel } from "./channels.shared";
 
 export function getDelayedChannel<T extends IChannel>(promise: Promise<T>): T {
   return {

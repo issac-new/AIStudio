@@ -1,4 +1,4 @@
-import type { CancellationToken, Event } from "./foundation.js";
+import type { CancellationToken, Event } from "./foundation";
 
 export interface IChannel {
   call<T>(command: string, arg?: any, cancellationToken?: CancellationToken): Promise<T>;
