@@ -75,6 +75,23 @@ done
 # default 板 = 串板哨兵（G2 门禁要求全程零任务）
 log "default 板保留为串板哨兵"
 
+# ── 5b. 中央仓克隆（导演真值反查）+ 每账号工作区 ──────────
+if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
+  mkdir -p "$(dirname "$DIRECTOR_CLONE")"
+  git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE" || fail "中央仓克隆失败（github token 见 gh_token 链）"
+  log "中央仓已克隆：$DIRECTOR_CLONE"
+fi
+for u in "${INSTANCED_USERS[@]}"; do
+  WS=$(workspace "$u")
+  if [[ ! -d "$WS/.git" ]]; then
+    mkdir -p "$(dirname "$WS")"
+    git clone -q "$(gh_clone_url)" "$WS" || fail "账号工作区克隆失败：$u"
+    git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.name "$u"
+    git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.email "$u@aipaydev.local"
+    log "账号工作区就绪：$u"
+  fi
+done
+
 # ── 6. fleet-manifest ───────────────────────────────────
 write_fleet_manifest
 log "fleet-manifest.json 就绪"
