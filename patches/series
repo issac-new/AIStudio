@@ -838,3 +838,13 @@
 #      的库/SDK/API 外搜通道。依据 specs/2026-09-24-mimo-code-coding-tools-research.md。
 395-agent-tool-fail-cascade.patch
 396-agent-exa-mcp-catalog.patch
+# 397 MiMo 补充调研 P2：hermes LSP 工具化（2026-09-24）。原编号 385，撞号重编。
+#      MiMo 的 lsp 工具 91 行九操作；hermes 基建更强（per-(server,root) 真实语言
+#      服务器子进程、多根 pyright、写后诊断）但模型此前不可调用。本补丁补五个
+#      只读操作：hover/definition/references/document_symbol/workspace_symbol
+#      （新 tools/lsp_tool.py 自动发现注册，toolsets file 组进 coding 姿态）；
+#      LSPService.navigation_sync 含 pyright references 必带 context、spawn 失败
+#      哨兵语义（≠空结果）、冷启动 1.5s 单次重试；错误全走描述性 JSON 不抛异常。
+#      真 pyright 冒烟五操作全通。含 14 例单测。
+#      依据 specs/2026-09-24-mimo-code-coding-tools-research.md P2。
+397-agent-lsp-tool.patch
