@@ -42,7 +42,7 @@
 9. **token-meter 三投影+StatsPills**（dsh）：tokenUsage/contextPressure/contextBreakdown 三段恒等 + TTFT/decode 逐 attempt 台账，与 zcode 既有 rounds 契约互校。
 10. **子代理目录+continuation 路由+角色名册**（dsh+codex+kimi 合并批）：send_message 转向/interrupt 只停当前轮 + agent roles 配置层/昵称池/并发深度护栏 + profile 五级来源。
 
-**第二批（架构级，需先行设计后单独裁决）**：ThreadItem 服务端投影+协议宏表治理（codex）、function-hooks 插件 API 契约形态（claude-code，概念级）、everything-is-a-plugin 内核（dsh）、视频/媒体间接引用链路（kimi）、事件日志会话存储（dsh）。
+**第二批（架构级，需先行设计后单独裁决）**：ThreadItem 服务端投影+协议宏表治理（codex）、function-hooks 插件 API 契约形态（claude-code，概念级）、everything-is-a-plugin 内核（dsh）、视频/媒体间接引用链路（kimi）、事件日志会话存储（dsh）。**已裁决（2026-09-25）**：2 不吸收（①③⑤ 中的架构位冲突/收益重叠类）+1 概念留档（②）+1 排队条件启动（④视频输入链路，台账钦点）——逐项理由见 `2026-09-25-ycode-absorption-matrix.md` §2。
 
 ### 1.3 手册八能力 × zcode 底座对齐
 
