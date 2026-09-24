@@ -906,3 +906,11 @@
 #      预算触顶（budget_exhausted）；HERMES_SESSION_CHECKPOINT=0 关。
 #      依据 specs/2026-09-24-{goal-judge-and-ngram-loop-guard,session-checkpoint-writer}.md。
 405-agent-ngram-checkpoint-writer.patch
+# 406 mimo P4 一期：记忆 FTS 索引视图——markdown 仍为唯一事实源，SQLite FTS5+BM25
+#      只做索引（<home>/memories/index.sqlite）；search 前 reconcile 全量对账（源条目
+#      受字符预算量小恒廉价），零侵入 MemoryStore（索引不挂写路径，坏只影响本查询）；
+#      中文查询 FTS 未命中退 LIKE 子串（unicode61 不切 CJK，排序退时间序如实标注）。
+#      memory_tool 增 action=search（content 为查询词，target 可限桶）。二期
+#      auto-dream/distill 自动沉淀维持分期。
+#      依据 2026-09-24-mimo-code-coding-tools-research.md §3.5 P4。
+406-agent-memory-fts-index.patch
