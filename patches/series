@@ -853,3 +853,13 @@
 #      zcode:<workspacePath> / +:s:<sessionId>，事件 zcode:event 携带词表 reason）。
 #      依据 plans/2026-09-23-zcode-foundation-r4.md P2 + specs/2026-09-23-zcode-foundation-design.md §1.2 #1。
 398-server-zcode-projection-socket.patch
+# 399 R4-P4：看板流转门禁四件套（吸收 routa transition-gates，第一批 #8）。
+#      声明式列门 gates.json（与板 DB 同目录）：requiredHumanApproval（正文须含
+#      APPROVED 裁决）/requiredChecklist（- [ ] 全勾）/validatorCommand（证据须含
+#      指定命令）/gateMode blocking|warning；挂 complete_task(done) /
+#      request_review(review) / promote_task(ready) 三流转点；拒绝走冻结词表
+#      GATE_REASONS（approval_required/checklist_incomplete/validator_failed），
+#      通过落 column_transition 事件（routa COLUMN_TRANSITION 协调总线件）。
+#      附 #2 认领围栏验收测试（同人双跑 per-profile cap 拦截）。
+#      依据 specs/2026-09-23-zcode-foundation-design.md §1.2 #8/#2 + routa.md。
+399-agent-kanban-column-gates.patch
