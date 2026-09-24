@@ -319,6 +319,39 @@ describe('P8 MCP server（stdio JSON-RPC，真子进程）', () => {
       expect(Array.isArray(parsed.gates)).toBe(true)
     } finally { rmSync(fx.dir, { recursive: true, force: true }) }
   })
+
+  // 回归（2026-09-24）：属性子 schema 内的 required（布尔）违反 JSON Schema 规范，
+  // GLM Anthropic 兼容层严格校验直接 1210「API 调用参数有误」，令 zcode 全量请求失败。
+  it('tools/list schema 合法：属性内不得出现 required，required 只能是对象层字符串数组', { timeout: 30_000 }, () => {
+    const send = [
+      { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: PROTOCOL, capabilities: {} } },
+      { jsonrpc: '2.0', method: 'notifications/initialized' },
+      { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+    ]
+    const res = spawnSync('node', [distMcp], {
+      input: send.map((m) => JSON.stringify(m)).join('\n') + '\n',
+      encoding: 'utf8',
+      timeout: 25_000,
+    })
+    expect(res.status).toBe(0)
+    const replies = res.stdout.trim().split('\n').map((l) => JSON.parse(l)) as Array<Record<string, unknown>>
+    const tools = ((replies.find((r) => r.id === 2)?.result as Record<string, unknown>)?.tools as Array<{
+      name: string
+      inputSchema: { type: string; properties: Record<string, Record<string, unknown>>; required?: unknown }
+    }>)
+    expect(tools.length).toBe(7)
+    for (const t of tools) {
+      for (const [pname, pdef] of Object.entries(t.inputSchema.properties)) {
+        expect(pdef, `${t.name}.${pname} 属性子 schema 不得携带 required`).not.toHaveProperty('required')
+      }
+      if (t.inputSchema.required !== undefined) {
+        expect(Array.isArray(t.inputSchema.required), `${t.name} required 必须是数组`).toBe(true)
+        expect((t.inputSchema.required as unknown[]).every((k) => typeof k === 'string')).toBe(true)
+      }
+    }
+    const explain = tools.find((t) => t.name === 'gate.explain')
+    expect(explain?.inputSchema.required).toEqual(['cwd', 'gateId'])
+  })
 })
 
 const PROTOCOL = '2024-11-05'
