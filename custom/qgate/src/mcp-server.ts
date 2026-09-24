@@ -23,10 +23,20 @@ interface JsonRpcRequest {
 
 function toolDef(name: string, description: string, props: Record<string, { type: string; description?: string; required?: boolean }>) {
   const required = Object.entries(props).filter(([, p]) => p.required).map(([k]) => k)
+  // JSON Schema 规范：required 只能作为对象层字符串数组出现；属性子 schema 内的
+  // 布尔 required 是非法形态，GLM Anthropic 兼容层严格校验会拒（1210，2026-09-24
+  // zcode 全量请求失败根因）。属性定义只保留 type/description，required 语义全部
+  // 收敛到上方对象层数组。
+  const properties = Object.fromEntries(
+    Object.entries(props).map(([k, p]) => {
+      const { required: _requiredFlag, ...rest } = p
+      return [k, rest]
+    }),
+  )
   return {
     name,
     description,
-    inputSchema: { type: 'object' as const, properties: props, ...(required.length ? { required } : {}) },
+    inputSchema: { type: 'object' as const, properties, ...(required.length ? { required } : {}) },
   }
 }
 
