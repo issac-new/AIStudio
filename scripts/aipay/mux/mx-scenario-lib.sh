@@ -19,7 +19,7 @@ note() { log "$*" | tee -a "$SCEN_LOG"; }
 
 # ── 步骤机（V3 生命周期 21 步：六阶段 L0-L5 × G1-G6 门禁，方案见
 #    2026-09-25-mux-v3-lifecycle-plan.md；templates 并入 ready）────────
-STEPS="smoke ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat retro ide"
+STEPS="smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide"
 START_STEP="${START_STEP:-smoke}"
 UNTIL_STEP="${UNTIL_STEP:-}"
 step_pos() { echo $STEPS | tr ' ' '\n' | grep -n "^$1$" | cut -d: -f1; }
@@ -233,6 +233,124 @@ gate_blocked() { # <gate-key> <step-name>：硬闸检查——闸门 state 键�
 }
 
 freeze_doc() { echo "docs/requirements/${RFD_ID}.freeze.md"; }
+
+# ── M1 应用初始化：资产登记表（docs/admin/app-registry.md 生成）────
+app_registry_gen() { # → stdout：registry 内容
+  echo "# 应用资产登记表（app-registry，$(date '+%F %T')）"
+  echo
+  echo "| 应用 | 负责人 | 专属看板 | 技术栈 | SLA 级 | 状态 | 门禁骨架 |"
+  echo "|---|---|---|---|---|---|---|"
+  apps_of | while IFS='|' read -r app owner board stack sla; do
+    skel="缺"
+    ls "$DIRECTOR_CLONE/apps/$app/"vitest.config.* >/dev/null 2>&1 && skel="✓"
+    echo "| $app | $owner | $board | $stack | $sla | 在役 | vitest ${skel} |"
+  done
+  echo
+  echo "- 初始化约定：新应用必须建 apps/<app>/ 脚手架（package.json+vitest 配置+README）、登记本表、挂负责人专属看板（board.json default_workdir 指向工作区）；退役应用置「退役」并归档看板。"
+}
+
+# ── M2 人员管理：组织与权限矩阵（docs/admin/org.md 生成 + 对账）────
+org_gen() { # → stdout：org.md 内容（编制×角色×汇报线×板×team×权限）
+  echo "# 研发组织与权限矩阵（org，$(date '+%F %T')）"
+  echo
+  echo "## 编制（角色×汇报线×板×team）"
+  echo "| 账号 | 角色 | 汇报线(lead) | 板（team） | matrix 账号 |"
+  echo "|---|---|---|---|---|"
+  echo "| admin | 主管（治理裁决） | — | — | @admin |"
+  for u in "${INSTANCED_USERS[@]}"; do
+    case "$u" in
+      bella) role="需求分析师（BA）"; lead="admin" ;;
+      fanfan) role="项目管理（PM）+ 系统分析主持" ; lead="admin" ;;
+      wei) role="支付后端 lead（系统分析师）"; lead="fanfan" ;;
+      mei) role="前端 lead"; lead="fanfan" ;;
+      chen|hu|lin|xiao) role="研发（系统分析执行+编码）"; lead="wei/mei" ;;
+      qi|fei) role="测试（独立验证）"; lead="fanfan" ;;
+      arch) role="系统架构（G2 架构治理）"; lead="admin" ;;
+      secops) role="安全管理（ISO27001/涉敏评估/发布安全）"; lead="admin" ;;
+      ops) role="运维管理（ITIL/服务目录/发布执行/回滚）"; lead="admin" ;;
+      audit) role="合规及审计管理（门禁留痕/凭证抽检/合规意见）"; lead="admin" ;;
+    esac
+    boards_fmt=$(boards_of "$u" | tr ' ' '\n' | sed 's/^\(.*\):\(.*\)$/\1(\2)/' | tr '\n' ' ')
+    echo "| $u | $role | $lead | ${boards_fmt} | @${u} / @${u}-agent |"
+  done
+  echo
+  echo "## 权限矩阵"
+  echo "- 看板可见性：studio ACL 按 matrix 账号收敛——每人只见本账号 profile 与账号板（patch 392）。"
+  echo "- 认领围栏：板 board.json profiles 白名单，板外 assignee 拒认领（patch 391）。"
+  echo "- 审批权：lead（wei/mei）分诊确认；G5 对外发布 HumanGate=导演批准；安全管理复核（secops）与审计意见（audit）为独立签名线。"
+  echo
+  echo "## 入职/转岗/离职流程"
+  echo "- 入职：mx-setup 幂等供给（matrix 账号+profile+技能+板授权+ACL+家族记忆 bank），入职卡登记本表。"
+  echo "- 转岗：改编制表（boards_of）后重跑 mx-setup + 本对账步。"
+  echo "- 离职：卡片 reassign 给接手人、板 owner 变更、账号禁用（synapse deactivate）、本表移除并在 audit 步留痕。"
+  echo
+  echo "## 能力矩阵"
+  echo "- capability-report 技能按 machine-manifest 上报；系分=requirements-analyst/aipaydev-dev、测试=defect-loop、安全=iso27001 检查单、运维=release-plan/ITIL。"
+}
+people_reconcile() { # 对账：org 生成源（编制表）↔ fleet-manifest ↔ profile/board 实况 → 0 一致
+  local bad=0 u
+  for u in "${INSTANCED_USERS[@]}"; do
+    [[ -d "$HERMES_ROOT/profiles/$u" ]] || { echo "profile 缺失: $u"; bad=1; }
+    for b in $(boards_of "$u" | tr ' ' '\n' | cut -d: -f1); do
+      [[ -f "$HERMES_ROOT/kanban/boards/$b/board.json" ]] || { echo "板缺失: $b"; bad=1; }
+    done
+  done
+  jq -e --argjson n "${#INSTANCED_USERS[@]}" '[.users[].user] | length == $n' "$SIM_ROOT/fleet-manifest.json" >/dev/null 2>&1 \
+    || { echo "fleet-manifest 用户数与编制不一致"; bad=1; }
+  return $bad
+}
+
+# ── M3 工作管理：跨板台账 + WIP/stale 治理（work-report 生成）────
+work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账号板）
+  local out="$EVID_DIR/work-report.md" u slug st total wip_warn=""
+  {
+    echo "# 工作管理台账（work-report，$(date '+%F %T')）"
+    echo
+    echo "## 按人 × 状态分布（跨全部账号板）"
+    echo "| 账号 | todo | running | review | done | 其他 | WIP(running) |"
+    echo "|---|---|---|---|---|---|---|"
+    for u in "${INSTANCED_USERS[@]}"; do
+      local todo=0 run=0 rev=0 done=0 other=0
+      for slug in $(account_boards "$u"); do
+        local db="$HERMES_ROOT/kanban/boards/$slug/kanban.db"
+        [[ -f "$db" ]] || continue
+        while IFS='|' read -r st n; do
+          case "$st" in
+            todo) todo=$((todo+n)) ;; running) run=$((run+n)) ;;
+            review) rev=$((rev+n)) ;; done) done=$((done+n)) ;;
+            *) other=$((other+n)) ;;
+          esac
+        done < <(sqlite3 "$db" "select status, count(*) from tasks where status != 'archived' group by status" 2>/dev/null)
+      done
+      local flag=""
+      if (( run > 2 )); then flag="⚠ 超 WIP 上限"; wip_warn=1; fi
+      echo "| $u | $todo | $run | $rev | $done | $other | $run ${flag} |"
+    done
+    echo
+    echo "## 治理口径"
+    echo "- WIP 上限：每人 running 并行 ≤2，超限记问题单（容量过载信号）。"
+    echo "- stale 卡：非 done 且 updated_at 超 72h 的卡清点（本轮 $(date +%s) 为基准）。"
+    echo "- 跨轮衔接：retro 后未完结卡由 PM（fanfan）决定挂起/移交下轮。"
+  } > "$out"
+  [[ -n "$wip_warn" ]] && echo "WIP_OVERLOAD"
+  echo "$out"
+}
+
+# ── 合规及审计（audit）：门禁留痕完整性 + 凭证抽检 + 合规意见书 ──
+audit_check() { # → 0 合规 / 1 有缺陷（输出审计发现）
+  local bad=0
+  # 门禁留痕：state 硬闸键已落的必须有对应仓内凭证
+  if [[ -n "$(sget g1_frozen)" ]] && ! repo_has "$(freeze_doc)"; then
+    echo "G1 已落键但 freeze 文件不在 origin/main"; bad=1
+  fi
+  # 问题单台账格式完整（ISSUE|类型|主体|描述 四段）
+  if awk -F'|' '/^ISSUE\|/ && NF < 4 {exit 1}' "$EVID_DIR/issues.log" 2>/dev/null; then :; else
+    echo "issues.log 存在字段缺失条目"; bad=1
+  fi
+  # 取证目录在位
+  [[ -d "$EVID_DIR" ]] || { echo "取证目录缺失"; bad=1; }
+  return $bad
+}
 
 reqgate_judge() { # 导演侧机械化判读 G1 四要素（不依赖 LLM）→ 0 全过 / 其他=缺失项清单
   local doc="$1" miss=""
