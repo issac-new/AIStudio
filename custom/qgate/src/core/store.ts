@@ -4,6 +4,31 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+
+// ── 脱敏（v0.1 §50）：Evidence/Run 落盘前打码 env 值与常见 secret 模式 ──
+const SECRET_NAME_RE = /(api[_-]?key|token|secret|password|authorization|credential)["']?\s*[:=]\s*["']?([\w.\-+/=]{6,})/gi
+function redactString(s: string): string {
+  let out = s.replace(SECRET_NAME_RE, (_m, name: string) => `${name}=***REDACTED***`)
+  // 环境变量值打码（防 token 经 env 泄入命令输出摘要）
+  for (const v of Object.values(process.env)) {
+    if (v && v.length >= 12 && out.includes(v)) out = out.split(v).join('***REDACTED***')
+  }
+  return out
+}
+function redactDeep(value: unknown): unknown {
+  if (typeof value === 'string') return redactString(value)
+  if (Array.isArray(value)) return value.map(redactDeep)
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = redactDeep(v)
+    return out
+  }
+  return value
+}
+/** 对外导出：证据与 run 落盘前的统一脱敏入口。 */
+export function redactForStore<T>(value: T): T {
+  return redactDeep(value) as T
+}
 import type { Evidence, ExceptionWaiver, GateRun, Risk } from './types.js'
 import { parseEvidence, parseRun } from './parse.js'
 import { globMatch } from './impact.js'
@@ -33,9 +58,9 @@ function writeJson(file: string, value: unknown): void {
 }
 
 export function saveRun(paths: StorePaths, run: GateRun, evidence: readonly Evidence[]): void {
-  writeJson(join(paths.runsDir, `${run.runId}.json`), run)
+  writeJson(join(paths.runsDir, `${run.runId}.json`), redactForStore(run))
   for (const ev of evidence) {
-    writeJson(join(paths.evidenceDir, run.runId, `${ev.id}.json`), ev)
+    writeJson(join(paths.evidenceDir, run.runId, `${ev.id}.json`), redactForStore(ev))
   }
   // state 索引：同门取 startedAt 最新
   const state = readState(paths)

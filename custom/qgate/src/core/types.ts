@@ -49,7 +49,7 @@ export interface Claim {
 
 export interface ExecutorSpec {
   id: string
-  type: 'command' | 'persistence' | 'ontology' | 'files' | 'llm'
+  type: 'command' | 'persistence' | 'ontology' | 'files' | 'llm' | 'scope'
   /** command：argv 固定命令（无 shell 拼接，安全边界设计 §5.5）。 */
   command?: string[]
   /** command：cwd 相对工作目录前缀（默认项目根）。 */
@@ -64,6 +64,10 @@ export interface ExecutorSpec {
   scan?: string[]
   /** files：必须存在的制品 glob 清单（present 级证据）。 */
   require?: string[]
+  /** files：文件存在之外还须包含指定标记串（格式在档检查，仍为 present 级）。 */
+  mustContain?: Array<{ file: string; markers: string[] }>
+  /** scope：检查模式——scope=声明范围 vs 实际 diff；acceptance=验收条目映射完备。 */
+  mode?: 'scope' | 'acceptance'
   /** 运行期由 loader 注入：所属 pack 名（场景文件回退解析用）。 */
   packHint?: string
   /** 该 executor 产出的 evidence type。 */

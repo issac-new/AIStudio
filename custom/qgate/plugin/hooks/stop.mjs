@@ -48,7 +48,10 @@ try {
   process.exit(0) // 框架自身故障 ≠ 阻断（v0.1 §69）
 }
 
-const blocking = (status.gates ?? []).filter((g) => g.blocking === true || g.verdict === 'FAIL' || g.verdict === 'INCONCLUSIVE')
+// 只认 CLI 计算好的 blocking 字段（isBlockingVerdict 已按 effectivePolicy 求值）——
+// 不再对原始 verdict 做 OR 兜底：那会把 warn 档（advisory）的 never-run/INCONCLUSIVE
+// 也拦下，违背 D5 内嵌 advisory 语义（claude 双宿主实测逮住的残余缺陷）。
+const blocking = (status.gates ?? []).filter((g) => g.blocking === true)
 const state = stopBudgetState(qgateDir, sessionId)
 
 if (blocking.length === 0) {

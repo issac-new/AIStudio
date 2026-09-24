@@ -13,9 +13,9 @@ custom/qgate/
 ├── src/ontology/     OntologyProvider 接口 + FIBO 预处理索引加载 + MockProvider
 ├── src/cli.ts        CLI：plan / run / status / explain / evidence / risk / waive / exceptions / release-report / validate-config / init
 ├── plugin/           ZCode 插件（六事件钩子：SessionStart/PreToolUse/UserPromptSubmit/PostToolUse/PostToolUseFailure/Stop；命令×5 + 技能 + MCP）；.claude-plugin 双清单兼容 Claude Code
-├── gate-packs/       engineering / persistence / ontology / security / architecture / delivery / api-contract / schema / llm + _profiles 四档
+├── gate-packs/       l0 / engineering / persistence / ontology / security / architecture / delivery / api-contract / schema / llm + _profiles 四档
 ├── examples/         golden scenarios×5 + payment-demo
-└── __tests__/        vitest（overlay 根 npm test 自动收）
+└── __tests__/        vitest 52 例（独立 vitest.config，standalone npm test 与 CI 均可跑）
 ```
 
 ## 快速开始
@@ -85,6 +85,16 @@ ontology:
 
 确定性三查（无 LLM）：字段级术语歧义（映射到 Capture 的字段名内嵌 settled）、同文件混用 distinctFrom 概念（captured/settled 同文档）、概念错配。finding 一律 warning 级 → CONDITIONAL 带解除条件（v0.1 §63）。Provider 不可用 → INCONCLUSIVE 不 crash。
 
+## L0 域门族（v0.1 §6.1，范围与需求完整性）
+
+| 门 | 检查 | 证据级 |
+|---|---|---|
+| `L0.scope-check` | `.qgate/scope.yaml` 声明范围 vs 实际变更，超范围文件 FAIL 点名 | exercised |
+| `L0.acceptance-coverage` | `.qgate/acceptance.yaml` 每条 criteria 须有 covered-by 映射 | exercised |
+| `L0.registers` | assumptions/decisions 登记在档且含必备标记段 | exercised（mustContain 真实内容检查） |
+
+未声明 scope/acceptance → INCONCLUSIVE（未声明 ≠ 通过）。默认随 Profile 启用（L0 是全域基线）。
+
 ## Golden Scenarios（examples/，v0.1 §68）
 
 | demo | 预期 | 实测 |
@@ -95,16 +105,22 @@ ontology:
 | demo-persistence-mismatch | 单测绿 + 持久化门红（field-diff + invariant） | ✓ |
 | demo-semantic-mismatch | FIBO 术语歧义 → CONDITIONAL（terminology-ambiguity[docs/prd.md]） | ✓ |
 
+## CI 与双宿主
+
+- **CI**：`.github/workflows/qgate.yml`（触及 custom/qgate 时 node24 + tsc + vitest；overlay 全量依赖注入态不可 CI 复现）。
+- **Claude Code 双宿主**：SessionStart/Stop 钩子同形态注入实测通过（执行+阻断发射均证；evidence/20260924-landing-w1w5）。
+- **脱敏（§50）**：证据落盘统一打码 secret 模式与 env 值；`evidenceCommit: true` 时 run 证据归档进 `docs/delivery-evidence/`（证据落卡）。
+
 ## 缓存与增量执行（§49，已接线 runGate）
 
-cache key = 门版本 + executor 面 + 输入锚（commit/treeHash/变更集）+ 门配置 + 环境；同输入二跑命中（execution=cached，判定不变）；输入或配置任一变化即 miss 重跑。缓存 FAIL 语义保持（不因缓存虚报 PASS）。守门测试 `__tests__/qgate-cache.test.ts` 3 例。
+cache key = 门版本 + executor 面 + 输入锚（commit/treeHash/变更集）+ 门配置 + 环境；同输入二跑命中（execution=cached，判定不变）；输入或配置任一变化即 miss 重跑。缓存 FAIL 语义保持（不因缓存虚报 PASS）。**适用面仅 argv 确定性 executor（command/llm）**——文件类门（files/scope/ontology/persistence）输入是工作区内容，非 git 目录下 key 不随内容漂移（demo-l0 实测逮住）。守门测试 `__tests__/qgate-cache.test.ts`。
 
 ## 架构形态（D4：不是独立服务）
 
 QGate 是**内嵌库 + 插件钩子 + 命令面**，无常驻进程：
 
 - **内核即库**（`src/core/`，平台无关，`package.json main` 可 import）——消费方是 overlay 自身工作流与未来的 zcode-engine 统筹层，不是独立进程；
-- **Agent 交互面 = 五个 `/qgate-*` 命令**（子进程调 CLI，即调即退）+ 六事件钩子（stdin→审计/阻断）；
+- **Agent 交互面 = 七个 `/qgate-*` 命令**（status/run/explain/plan/init/evidence/risk，子进程调 CLI 即调即退）+ 六事件钩子（stdin→审计/阻断）；
 - **MCP stdio 服务已移除**（2026-09-24 D4 裁定）：与命令面功能重复，且持久进程形态违背内嵌原则；曾因 toolDef schema 违规致 GLM 1210 生产事故（8cbcfa1），移除后该类风险面归零。
 
 ## 发布证据包
