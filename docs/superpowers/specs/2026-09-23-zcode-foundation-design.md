@@ -116,6 +116,8 @@ zcode 内核（core/adapters，只读复用）
 | R2 受管 fork + patch 机制 | `overlay/zcode-patches/`（series+inject/clean 脚本）+ zcode server 构建产物接入 SwarmStudio 启动链 | patch 往返幂等；SwarmStudio dev 链自动拉起 zcode server |
 | R3 /ide 会话列切 zcode | WS 通道 + v4 会话投影 + resume；IDE 默认引擎 zcode（DEFAULT_IDE_AGENT 迁移） | 走查：新建会话/发消息/工具卡/续跑全通；hermes 五引擎仍可选 |
 | R4 统筹级 service | 驾驶舱看板 × v4 workflow topic；第一批 #7 @mention、#8 看板门禁、#1/#2 dispatch 词表+认领围栏 | 看板列动即事件；@agent 派单可追溯到 run |
+| R4 统筹级 service ✅（2026-09-25 全四批落地：P2 patch 398 会话投影+词表 / P3 @mention 派单总线 / P4 patch 399 看板门禁四件套+围栏验收；E2E 实跑修复帧回调时序） |
+| R5 吸收批 ✅（2026-09-25：#3 patch 400 / #6 patch 401 / #4 patch 402 / #9 patch 403 / #10 patch 404 名册层+continuation 经核实原生已有（delegate background+action steer/stop） / #5 checkpoint-options 组合层；mimo P6 ngram+P7 写手 patch 405，goal 冷裁判原生已有；P4 记忆 FTS 按 spec 分期留独立轮） |
 | R5+ 功能吸收轮 | 第一批剩余（#3 compact/#4 审批/#5 checkpoint/#6 runaway-guard/#9 token-meter/#10 子代理名册），每轮 1-2 项 | 每项带守门测试 + 实机走查 |
 
 ## 5. 许可红线与风险
