@@ -17,7 +17,7 @@ const room = computed(() => roomStore.activeRoom)
 
 function handleSelectEvent(eventId: string) {
   // Jump to the event in the timeline, then cancel search
-  roomStore.selectEvent(eventId)
+  void roomStore.jumpToEvent(eventId)
   roomStore.cancelRoomSearch()
 }
 

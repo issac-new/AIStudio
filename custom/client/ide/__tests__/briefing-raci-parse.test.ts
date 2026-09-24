@@ -94,3 +94,17 @@ describe('briefing RACI 渲染（parseRaciFromTask → 面板）', () => {
     expect(text).toContain('A: wei')
   })
 })
+
+describe('C3 结构化 RACI 优先（task.raci / body-JSON raci > 正则）', () => {
+  it('task.raci 结构化字段优先于正文解析', () => {
+    const r = parseRaciFromTask({ ...scheduleCard, raci: { responsible: ['struct-r'], approver: ['struct-a'] } })
+    expect(r.responsible).toEqual(['struct-r'])
+    expect(r.approver).toEqual(['struct-a'])
+  })
+  it('body-JSON raci 优先于正则（既有 parseRACIFields 约定）', () => {
+    const card: BriefingTask = { id: 't_json', title: 'x', status: 'todo', body: JSON.stringify({ raci: { responsible: ['json-r'], informed: ['json-i'] }, text: '正文' }) }
+    const r = parseRaciFromTask(card)
+    expect(r.responsible).toEqual(['json-r'])
+    expect(r.informed).toEqual(['json-i'])
+  })
+})

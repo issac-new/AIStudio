@@ -8,6 +8,8 @@ export interface BriefingTask {
   priority?: number
   assignee?: string | null
   body?: string | null
+  /** C3 结构化 RACI（kanban raci 字段/建卡写入）；缺失时回退正文解析 */
+  raci?: Partial<BriefingRaci> | null
 }
 
 export interface BriefingRaci {
@@ -63,6 +65,20 @@ export function buildAuxMessage(task: BriefingTask | null | undefined, text: str
 export function parseRaciFromTask(task: BriefingTask | null | undefined): BriefingRaci {
   const empty: BriefingRaci = { responsible: [], approver: [], consulted: [], informed: [] }
   if (!task) return empty
+  // C3 结构化优先：① kanban raci 字段（根治，schema 落地后直读）② body-JSON raci（既有
+  // parseRACIFields 约定，见 overlay/custom/server/services/kanban/raci-dispatch.ts）③ 正则兜底。
+  const merge = (r: Partial<BriefingRaci> | null | undefined): BriefingRaci | null => {
+    if (!r) return null
+    const out = { responsible: [...(r.responsible ?? [])], approver: [...(r.approver ?? [])], consulted: [...(r.consulted ?? [])], informed: [...(r.informed ?? [])] }
+    return (out.responsible.length || out.approver.length || out.consulted.length || out.informed.length) ? out : null
+  }
+  const structured = merge(task.raci)
+  if (structured) return structured
+  try {
+    const parsed = JSON.parse(task.body ?? '')
+    const bodyRaci = merge(parsed?.raci ?? parsed?.meta?.raci)
+    if (bodyRaci) return bodyRaci
+  } catch { /* body 非 JSON，走正则兜底 */ }
   const body = task.body ?? ''
   // 值段=标签后到首个分隔符（，,｜|换行）；派单式正文两类标签常同行，
   // 故不做行首锚定，改用负向后顾防「团队负责人」被「责任人」误匹配。
