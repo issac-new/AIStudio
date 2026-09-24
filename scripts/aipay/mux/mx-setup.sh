@@ -17,9 +17,18 @@ docker exec "$SYNAPSE_CONTAINER" true 2>/dev/null || fail "synapse 容器 $SYNAP
 [[ -x "$HERMES_BIN" ]] || fail "HERMES_BIN 不可执行：$HERMES_BIN"
 [[ -f "$HOME/.hermes/config.yaml" ]] || fail "宿主 config.yaml 不存在（模型配置来源）"
 [[ -f "$STUDIO_DIST/server/index.js" ]] || fail "studio 构建产物缺失：$STUDIO_DIST/server/index.js（先 npm run build:full）"
+curl -sf -m 3 "${MX_HINDSIGHT_API:-http://localhost:8888}/health" >/dev/null \
+  || fail "hindsight 记忆服务（${MX_HINDSIGHT_API:-http://localhost:8888}）不可用——家族共享记忆依赖它（用户裁决 2026-09-25），请先拉起 hindsight-api 再跑"
 
 # ── 1. 运行时 patch（390/391 → 安装树）──────────────────
 mx_apply_agent_patches
+
+# ── 1b. overlay/runtime 部署（B1 结构化 raci 等 7 文件；与 inject 出口同源，
+#        mx 流程不经 inject 故显式幂等同步，失败只告警不阻断）─────────────
+if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
+  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply ) \
+    || log "runtime 部署告警（结构化 raci 等能力依赖它，需人工复核 deploy-agent-runtime）"
+fi
 
 # ── 2. matrix 账号（幂等）+ token ───────────────────────
 for u in "${USERS[@]}"; do
@@ -49,7 +58,7 @@ for u in "${INSTANCED_USERS[@]}"; do
   done
 done
 profile_count=$(find "$HERMES_ROOT/profiles" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-log "profiles 就绪：${profile_count} 个（11 Orchestrator + 22 agent，admin 不起实例）"
+log "profiles 就绪：${profile_count} 个（${#INSTANCED_USERS[@]} Orchestrator + agent，admin 不起实例）"
 
 # ── 5. 每账号 2 块独立 kanban + team 围栏 ───────────────
 for u in "${INSTANCED_USERS[@]}"; do
@@ -65,6 +74,23 @@ for u in "${INSTANCED_USERS[@]}"; do
 done
 # default 板 = 串板哨兵（G2 门禁要求全程零任务）
 log "default 板保留为串板哨兵"
+
+# ── 5b. 中央仓克隆（导演真值反查）+ 每账号工作区 ──────────
+if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
+  mkdir -p "$(dirname "$DIRECTOR_CLONE")"
+  git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE" || fail "中央仓克隆失败（github token 见 gh_token 链）"
+  log "中央仓已克隆：$DIRECTOR_CLONE"
+fi
+for u in "${INSTANCED_USERS[@]}"; do
+  WS=$(workspace "$u")
+  if [[ ! -d "$WS/.git" ]]; then
+    mkdir -p "$(dirname "$WS")"
+    git clone -q "$(gh_clone_url)" "$WS" || fail "账号工作区克隆失败：$u"
+    git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.name "$u"
+    git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.email "$u@aipaydev.local"
+    log "账号工作区就绪：$u"
+  fi
+done
 
 # ── 6. fleet-manifest ───────────────────────────────────
 write_fleet_manifest

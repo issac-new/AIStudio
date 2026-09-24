@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>支付收银台多智能体协作研发 · 端到端推演路演</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "PingFang SC", "Helvetica Neue", sans-serif; margin: 0; background: #f3f4f6; color: #1f2937; line-height: 1.7; }
+  .hero { background: linear-gradient(135deg, #1e3a8a 0%, #4f46e5 60%, #7c3aed 100%); color: #fff; padding: 56px 24px 44px; text-align: center; }
+  .hero h1 { margin: 0 0 10px; font-size: 30px; }
+  .hero p { margin: 4px 0; opacity: .92; }
+  .hero .tags { margin-top: 16px; }
+  .hero .tag { display: inline-block; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35); padding: 3px 12px; border-radius: 999px; font-size: 13px; margin: 3px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 20px 60px; }
+  .toc { background: #fff; border-radius: 12px; padding: 20px 26px; margin: -34px auto 30px; box-shadow: 0 6px 24px rgba(0,0,0,.08); position: relative; }
+  .toc b { color: #4f46e5; }
+  .toc ol { margin: 10px 0 0; padding-left: 22px; columns: 2; }
+  .toc li { font-size: 13.5px; margin: 3px 0; break-inside: avoid; }
+  .toc a { color: #2563eb; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .step { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.06); margin: 22px 0; overflow: hidden; }
+  .step-head { display: flex; align-items: baseline; gap: 12px; padding: 16px 22px; border-left: 5px solid #4f46e5; background: #f8f7ff; }
+  .step-head .num { font-size: 22px; font-weight: 800; color: #4f46e5; }
+  .step-head h2 { margin: 0; font-size: 19px; }
+  .step-head .who { margin-left: auto; font-size: 12.5px; color: #6b7280; white-space: nowrap; }
+  .step-body { padding: 6px 22px 20px; }
+  .step-body p { margin: 10px 0; font-size: 14.5px; }
+  .evidence { font-size: 13px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px; margin: 10px 0; color: #166534; }
+  .evidence b { color: #14532d; }
+  figure { margin: 14px 0; }
+  figure img { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; display: block; }
+  figcaption { font-size: 12.5px; color: #6b7280; margin-top: 6px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; }
+  th, td { border: 1px solid #e5e7eb; padding: 7px 10px; text-align: left; }
+  th { background: #f3f4f6; }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill-ok { background: #dcfce7; color: #166534; }
+  .pill-warn { background: #fef9c3; color: #854d0e; }
+  .pill-info { background: #dbeafe; color: #1e40af; }
+  .footer { text-align: center; color: #9ca3af; font-size: 12.5px; margin-top: 40px; }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; font-size: 13.5px; margin: 10px 0; }
+  .kv dt { color: #6b7280; }
+  .kv dd { margin: 0; }
+  h3.sub { font-size: 15px; margin: 16px 0 6px; color: #374151; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>支付收银台多智能体协作研发 · 端到端推演路演</h1>
+  <p>真实需求：依据财付通/支付宝公开技术手册，为收单商户开发兼容微信/支付宝双端的小程序支付收银台</p>
+  <p>11 人虚拟团队 × 24 个 Matrix 账号 × 11 套 SwarmStudio 实例 × 1 个 GitHub 中央仓 · 20 步全流程实弹推演</p>
+  <div class="tags">
+    <span class="tag">仓库 github.com/issac-new/aipaydev</span>
+    <span class="tag">51/51 集成测试全绿</span>
+    <span class="tag">6 项缺陷全闭环</span>
+    <span class="tag">v1.0.0-cashier 已发布</span>
+    <span class="tag">2026-09-22 ～ 09-24</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+<div class="toc">
+  <b>推演 20 步总览</b>（点击跳转；每一步均为真实系统截图 + 地面真值，无摆拍页面）
+  <ol>
+    <li><a href="#s1">① 管理员分配 24 个 Matrix 账号</a></li>
+    <li><a href="#s2">② 各用户配置 gateway Matrix channel</a></li>
+    <li><a href="#s3">③ SwarmStudio 登录（Matrix 账号）</a></li>
+    <li><a href="#s4">④ 进入驾驶舱，全部功能就绪</a></li>
+    <li><a href="#s5">⑤ 智能体初始化（hermes profiles）</a></li>
+    <li><a href="#s6">⑥ BA 需求文档私信分发</a></li>
+    <li><a href="#s7">⑦ 产品经理创建需求分析群</a></li>
+    <li><a href="#s8">⑧ @AI 助理下达需求任务</a></li>
+    <li><a href="#s9">⑨ Orchestrator 登记看板并分解</a></li>
+    <li><a href="#s10">⑩ 系统分析 + RACI 派发</a></li>
+    <li><a href="#s11">⑪ 分诊台登记 + 双兜底</a></li>
+    <li><a href="#s12">⑫ 研发系分（worktree 并行）</a></li>
+    <li><a href="#s13">⑬ 概设汇总定稿与架构评审</a></li>
+    <li><a href="#s14">⑭ 修正主任务并标记完成</a></li>
+    <li><a href="#s15">⑮ 排期计划与任务派发</a></li>
+    <li><a href="#s16">⑯ 并行开发 + 测试 + 缺陷环</a></li>
+    <li><a href="#s17">⑰ 测试通过，出具测试报告</a></li>
+    <li><a href="#s18">⑱ 变更发版与交付追踪</a></li>
+    <li><a href="#s19">⑲ 模板与完备性检查</a></li>
+    <li><a href="#s20">⑳ IDE 工作台（ZCode 底座）</a></li>
+  </ol>
+</div>
+
+<!-- ① -->
+<div class="step" id="s1">
+  <div class="step-head"><span class="num">①</span><h2>管理员分配 Matrix 账号</h2><span class="who">admin · 2026-09-22</span></div>
+  <div class="step-body">
+    <p>管理员在 Matrix Synapse（docker <code>matrix-synapse</code>，server_name <code>matrix.test</code>）上为 12 名团队成员各注册 1 个人类账号 + 1 个 AI 助理账号，共 <b>24 个账号</b>；access token 经安全渠道单独下发，分配表（不含凭据）登记中央仓。</p>
+    <div class="evidence"><b>地面真值：</b>中央仓 <code>docs/admin/roster.md</code>（commit <code>fe7b691</code>）；24 组 token 实测全部可登录（scenario.log 17:36）。</div>
+    <table>
+      <tr><th>账号</th><th>AI 助理</th><th>角色</th><th>账号</th><th>AI 助理</th><th>角色</th></tr>
+      <tr><td>@bella</td><td>@bella-agent</td><td>BA</td><td>@lin</td><td>@lin-agent</td><td>研发·支付宝渠道</td></tr>
+      <tr><td>@fanfan</td><td>@fanfan-agent</td><td>产品经理</td><td>@xiao</td><td>@xiao-agent</td><td>研发·小程序前端</td></tr>
+      <tr><td>@wei</td><td>@wei-agent</td><td>后端团队负责人</td><td>@qi</td><td>@qi-agent</td><td>测试·后端</td></tr>
+      <tr><td>@mei</td><td>@mei-agent</td><td>前端团队负责人</td><td>@fei</td><td>@fei-agent</td><td>测试·前端</td></tr>
+      <tr><td>@chen</td><td>@chen-agent</td><td>研发·pay-core</td><td>@arch</td><td>@arch-agent</td><td>架构治理</td></tr>
+      <tr><td>@hu</td><td>@hu-agent</td><td>研发·微信渠道</td><td>@admin</td><td>—</td><td>管理员</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ② -->
+<div class="step" id="s2">
+  <div class="step-head"><span class="num">②</span><h2>各用户配置 gateway 的 Matrix channel</h2><span class="who">11 套实例 · 端口 8702–8732</span></div>
+  <div class="step-body">
+    <p>每名成员一台"电脑"：独立的 <code>HERMES_HOME</code>、独立的 hermes profile、独立的 gateway 锁目录。gateway 的 Orchestrator agent channel 写入该用户的 Matrix 五件套（homeserver / access_token / user_id / home_room 等）。</p>
+    <div class="evidence"><b>地面真值：</b>11 个 Studio（8702–8712）+ 11 个 gateway（8722–8732）全部 <code>/health</code> 200；各 profile <code>.env</code> 含 MATRIX_HOMESERVER/ACCESS_TOKEN/USER_ID；宿主 orchestrator(:8650) 与推演 gateway 并存互不抢占。</div>
+  </div>
+</div>
+
+<!-- ③ -->
+<div class="step" id="s3">
+  <div class="step-head"><span class="num">③</span><h2>SwarmStudio 登录</h2><span class="who">Matrix 账号即登录态</span></div>
+  <div class="step-body">
+    <p>用户打开 SwarmStudio，默认以 gateway 已配置的 Matrix 账号自动登录；也可在登录页手输 homeserver / 账号 / 密码登录。登录后驾驶舱与该用户的 Matrix 消息、看板、智能体全部打通。</p>
+    <figure><img src="s00-login-page.png" alt="登录页"><figcaption>SwarmStudio 登录页：Sign in with your Matrix account（homeserver / 账号 / 密码）</figcaption></figure>
+  </div>
+</div>
+
+<!-- ④ -->
+<div class="step" id="s4">
+  <div class="step-head"><span class="num">④</span><h2>进入驾驶舱，全部功能就绪</h2><span class="who">fanfan · 8703</span></div>
+  <div class="step-body">
+    <p>登录后进入驾驶舱：左侧工作流（房间/会话/循环），中间协作区，右侧"任务·决策"（等我/需关注/挂接任务/任务动态）。下图为产品经理 fanfan 的驾驶舱实拍——任务动态里沉淀了整个推演过程的任务创建记录（评审、排期、跟踪、发版）。</p>
+    <figure><img src="s01-fanfan-cockpit-real.png" alt="fanfan 驾驶舱"><figcaption>fanfan 驾驶舱实拍：左栏房间列表（需求分析讨论群 99+ 未读），右栏任务动态为真实推演任务流</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑤ -->
+<div class="step" id="s5">
+  <div class="step-head"><span class="num">⑤</span><h2>智能体初始化（hermes profiles）</h2><span class="who">每用户 1 个 Orchestrator + 若干专职 agent</span></div>
+  <div class="step-body">
+    <p>hermes agent 安装后默认带一批智能体：每用户本机的 Orchestrator（显示名为"matrix 账户名"的 AI 助理，如 fanfan-agent）+ 系统分析/调研设计/专职研发/测试等 profile。推演技能（requirements-analyst、aipaydev-dev、inbox-dedup、pm-planning、defect-loop、capability-report）已预装到各 profile。</p>
+    <div class="evidence"><b>地面真值：</b><code>users/&lt;u&gt;/.hermes/profiles/&lt;u&gt;/</code> 11 套；技能包 <code>overlay/scripts/aipay/skills/*</code> 随 setup 下发。</div>
+  </div>
+</div>
+
+<!-- ⑥ -->
+<div class="step" id="s6">
+  <div class="step-head"><span class="num">⑥</span><h2>BA 需求文档私信分发</h2><span class="who">bella → fanfan · 09-22</span></div>
+  <div class="step-body">
+    <p>BA bella 完成客户需求文档 RFD-001 后，通过 Matrix 私信发给产品经理 fanfan，请产品团队接手分析与分工。下图为两人私信房间实拍（含房间创建、bella 调整权限、邀请加入的系统事件）。</p>
+    <figure><img src="s23-bella-dm.png" alt="bella 私信 fanfan"><figcaption>bella → fanfan 私信实拍："客户需求文档已出：RFD-001 收单商户多端小程序支付收银台（依据财付通/支付宝公开技术手册）。仓库：github.com/issac-new/aipaydev → docs/requirements/RFD-001-payment-cashier.md 请产品团队接手做需求分析与分工。"</figcaption></figure>
+    <h3 class="sub">产物证明 · 需求说明书原文</h3>
+    <figure><img src="s44-doc-rfd001.png" alt="RFD-001 需求说明书"><figcaption>RFD-001 需求说明书原文（docs/requirements/RFD-001-payment-cashier.md）：BA bella 初稿 v1.1，含背景/目标/公开手册合规引用/功能 F1–F5/非功能/验收标准/3 项待澄清闭环</figcaption></figure>
+    <div class="evidence"><b>地面真值：</b>RFD-001 入库 commit <code>fd04ede</code>；需求文档 <code>docs/requirements/RFD-001-payment-cashier.md</code>（BA 初稿 + fanfan 三项澄清闭环）。</div>
+  </div>
+</div>
+
+<!-- ⑦ -->
+<div class="step" id="s7">
+  <div class="step-head"><span class="num">⑦</span><h2>产品经理创建需求分析群并邀请 AI 助理</h2><span class="who">fanfan · 支付收银台需求分析讨论群</span></div>
+  <div class="step-body">
+    <p>fanfan 创建群聊"支付收银台需求分析讨论群"，邀请本机 Orchestrator（fanfan-agent）及全部相关人员与 AI 助理入群。房间最终 <b>18 名成员</b>、推演期间累计 <b>300+ 条消息</b>。</p>
+    <figure><img src="s02-matrix-chat-room-real.png" alt="需求分析讨论群"><figcaption>讨论群实拍：头部 18 名参与方（mei-agent / wei-agent / chen / qi / wei / hu-agent / lin-agent / fanfan-agent…），群消息为真实 agent 往来</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑧ -->
+<div class="step" id="s8">
+  <div class="step-head"><span class="num">⑧</span><h2>@AI 助理下达需求任务</h2><span class="who">fanfan @fanfan-agent · 09-22 晚</span></div>
+  <div class="step-body">
+    <p>fanfan 在群内 @自己的 AI 助理，一行需求基本信息 + 需求文档仓库地址，指令其加载 requirements-analyst 技能执行系统分析：</p>
+    <div class="evidence"><b>群内原文（证据包 room-analysis-messages.json #0）：</b>"@fanfan-agent:matrix.test 请处理需求 RFD-001（收单商户多端小程序支付收银台）。需求基本信息：为收单商户开发兼容微信/支付宝双端的小程序支付收银台，含统一下单、渠道适配（财付通/支付宝）、支付结果通知与对账字段支撑。需求文档：aipaydev 仓库 docs/requirements/RFD-001-payment-cashier.md…请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单…"</div>
+    <h3 class="sub">同型流程实拍 · RFD-002 需求派发（09-23）</h3>
+    <figure><img src="s34-room-rfd002-dispatch.png" alt="RFD-002 派发"><figcaption>RFD-002 派发实拍（同一流程的第二单）：fanfan @fanfan-agent "请处理需求 RFD-002…增加退款与分账两项资金能力，双端一致且不产生资损"；上方可见 agent "Working — iteration 8/60, receiving stream response" 的实时工作状态</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑨ -->
+<div class="step" id="s9">
+  <div class="step-head"><span class="num">⑨</span><h2>Orchestrator 登记看板并自动任务分解</h2><span class="who">fanfan-agent</span></div>
+  <div class="step-body">
+    <p>fanfan-agent 经 gateway 的 Matrix channel 收到 @指令，登记协作 kanban 任务，自动触发任务分解，调用本机系统分析智能体处理。fanfan 驾驶舱任务动态可见此后所有任务创建事件（评审卡、跟踪卡、排期卡、发版卡均为该链路的产物）。</p>
+    <figure><img src="s01-fanfan-cockpit-real.png" alt="任务动态"><figcaption>任务动态实拍（与 ④ 同屏不同读法）：#t_5c327c23 RFD-001-评审、#t_62343345/#t_9e5d5c93 等 T-003~T-006 跟踪卡、#t_199edbed 排期父任务、#t_66e5033b/#t_e35704d9/#t_16abea25 发版三卡——全部由 agent 真实创建</figcaption></figure>
+    <h3 class="sub">工作过程实拍 · 读技能 → 登记看板 → 凭证核验</h3>
+    <figure><img src="s36-room-rfd002-mid.png" alt="agent 读技能"><figcaption>agent 开工实拍：📚 Reading skill requirements-analyst → 📖 Reading roster.md → 📖 Reading RFD-002-refund-profitshare.md → 🐍 Running code（hermes_tools write_file）——系统分析技能真实加载执行</figcaption></figure>
+    <figure><img src="s37-room-rfd002-kanban.png" alt="kanban 登记与核验"><figcaption>登记与核验实拍："✅ Both credentials are verified: commit=ccd2f67… contains docs/analysis/RFD-002-assessment.md and docs/analysis/RFD-002-tasklist.md；card=t_4bee99f1 confirmed completed on the kanban board" → ANALYSIS-DONE-RFD-002</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑩ -->
+<div class="step" id="s10">
+  <div class="step-head"><span class="num">⑩</span><h2>系统分析 + RACI 逐条派发</h2><span class="who">系统分析智能体 → 全员</span></div>
+  <div class="step-body">
+    <p>系统分析智能体完成文档要素评估（参考需求模板），按<b>三清单</b>（人员 roster / 应用模块 org / 架构基线）做 SMART 拆分：T-001～T-011，并依 RACI 在群内逐条 @责任人 AI 助理 + 团队负责人派发，同时创建逐条跟踪卡与父任务形成父子依赖。</p>
+    <div class="evidence"><b>地面真值：</b><code>docs/analysis/RFD-001-tasklist.md</code>（三清单匹配 + SMART 任务表 + RACI 表）；群内派单消息如 #100："【派单】T-005 channel-alipay适配 责任人: @lin 的 AI 助理（@lin-agent），团队负责人 @wei（@wei-agent）…双兜底回执"。</div>
+    <h3 class="sub">产物证明 · SMART 任务清单 + RACI 派发</h3>
+    <figure><img src="s46-doc-tasklist-raci.png" alt="SMART/RACI 任务清单"><figcaption>RFD-001 任务分解清单原文（docs/analysis/RFD-001-tasklist.md）：T-001~T-011 SMART 任务表（责任人/时间盒）+ RACI 派发矩阵（R 主责 / A 团队负责人 / C 架构 / I 产品经理）</figcaption></figure>
+    <h3 class="sub">推演暴露的真实产品缺口（room-invite-gap 现场）</h3>
+    <figure><img src="s38-room-rfd002-raci-gap.png" alt="RACI 派发受阻"><figcaption>RFD-002 派发受阻实拍：fanfan-agent 如实上报 "The matrix_room_list and matrix_room_invite tools are not available in the current toolset… RACI dispatch requires inviting specific accounts… DISPATCH-BLOCKED-RFD-002"——该缺口后续修复为 hermes matrix invite CLI + overlay 技能动词（推演价值实证）</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑪ -->
+<div class="step" id="s11">
+  <div class="step-head"><span class="num">⑪</span><h2>分诊台登记 + 负责人确认 + 双兜底</h2><span class="who">chen / wei 等 · 09-22 18:31–18:39</span></div>
+  <div class="step-body">
+    <p>责任人 AI 助理收到派单后登记本机协作 kanban 分诊台；团队负责人人工确认后推进；任务完成后向负责人与发起人<b>双兜底回执</b>。下图为 chen（pay-core 研发）驾驶舱：ATTENTION 区一条受阻卡 + ACTIVITY 区 T-003 分解出的 5 张子任务（分析/实施/补测/双兜底回执/T-003 父卡）。</p>
+    <figure><img src="s11-chen-cockpit.png" alt="chen 驾驶舱"><figcaption>chen 驾驶舱实拍：#t_6cb1cd25 分析 RFD-001 并产出实施方案、#t_525f3547 实施代码改造、#t_a6f85ebb 补充测试、#t_b8c89e37 双兜底回执、#t_cae04b87 T-003 父卡</figcaption></figure>
+    <figure><img src="s12-chen-kanban.png" alt="chen 看板 To Do"><figcaption>chen 看板 To Do 列实拍：#t_b8c89e37「提交变更并向 @fanfan-agent 与 @wei-agent 双兜底回执」、#t_cae04b87「T-003 pay-core接口拓展」</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑫ -->
+<div class="step" id="s12">
+  <div class="step-head"><span class="num">⑫</span><h2>研发系分：worktree 并行 + AN 文档产出</h2><span class="who">chen / hu / lin / xiao</span></div>
+  <div class="step-body">
+    <p>各研发在任务 workspace 下创建 worktree 并行工作，按 aipaydev-dev 技能完成精准需求分析、跨模块接口与数据模型设计、工作量评估，产出四份 AN 系分文档；完成后状态流转到 Done。</p>
+    <figure><img src="s13-chen-kanban-right.png" alt="chen 看板 Done"><figcaption>chen 看板实拍：Blocked「为 pay-core 接口拓展补充测试并验证」；Done「分析 RFD-001 文档并产出实施方案」「实施 pay-core 接口拓展代码改造」——分析与实施完成、测试待测试角色接力</figcaption></figure>
+    <div class="evidence"><b>地面真值：</b><code>docs/analysis/AN-PAYCORE/CHWX/CHALI/MP-analysis.md</code> 四份（接口签名/幂等键/工作量人日）。</div>
+  </div>
+</div>
+
+<!-- ⑬ -->
+<div class="step" id="s13">
+  <div class="step-head"><span class="num">⑬</span><h2>概设汇总定稿 + 架构评审</h2><span class="who">fanfan 汇总 · arch 评审</span></div>
+  <div class="step-body">
+    <p>fanfan 汇总四份 AN 复核（消除 6 处跨文档歧义：金额统一 int64 分、契约 snake_case 等 R1–R6 裁决），形成《RFD-001 系统概设方案》并发起架构评审卡（虚拟架构小组，线下评审结论手工回填 kanban）。</p>
+    <div class="evidence"><b>地面真值：</b><code>docs/design/RFD-001-architecture-design.md</code>（commit <code>74641e6</code>，DESIGN-DONE-RFD-001）；评审卡 #t_5c327c23/#t_d6bfd99b 已关闭。</div>
+    <h3 class="sub">产物证明 · 系统概设方案</h3>
+    <figure><img src="s47-doc-architecture.png" alt="概设分层架构"><figcaption>系统概设方案原文（docs/design/RFD-001-architecture-design.md）：分层结构（接入层新增 csw-cashier-mp / BFF 层 / 核心层 pay-core / 渠道层双适配 / 清结算）+ 关键架构约束落实 + R1–R6 歧义冲突裁决记录</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑭ -->
+<div class="step" id="s14">
+  <div class="step-head"><span class="num">⑭</span><h2>修正主任务并标记完成（含测试 0.3 系数）</h2><span class="who">fanfan</span></div>
+  <div class="step-body">
+    <p>fanfan 将定稿概设、工作量评估（开发 15.0 人日 + 测试 4.5 人日=开发×0.3 + 2.9 缓冲）回填最初的需求系统分析主任务，登记全部子任务与过程档案，标记完成。</p>
+    <div class="evidence"><b>地面真值：</b><code>docs/design/RFD-001-architecture-design.md</code> §10 工作量口径；<code>docs/plan/RFD-001-schedule.md</code>（19.5 人日 + BUF-INT 2.9）。</div>
+  </div>
+</div>
+
+<!-- ⑮ -->
+<div class="step" id="s15">
+  <div class="step-head"><span class="num">⑮</span><h2>排期计划与任务派发</h2><span class="who">fanfan · D1–D12 甘特</span></div>
+  <div class="step-body">
+    <p>fanfan 依定稿概设 + 工作量 + 人员负载编制 D1–D12 排期（甘特图/里程碑 M1a–M4），生成带时间窗口的 kanban 排期卡并 @各主责与负责人派发。fanfan 看板"收单支付平台需求"板 27 卡 + Default 5 卡，合计 32 张任务卡全部完结。</p>
+    <figure><img src="s20-fanfan-kanban-done.png" alt="fanfan 看板已完成列"><figcaption>fanfan 看板实拍：32 张任务卡全部进入「已完成」列——RFD-002 两张新卡、RFD-001 发版三卡在内</figcaption></figure>
+    <h3 class="sub">产物证明 · 排期计划（甘特图 + 里程碑）</h3>
+    <figure><img src="s48-doc-schedule.png" alt="排期甘特图"><figcaption>排期计划原文（docs/plan/RFD-001-schedule.md）：D1–D12 甘特图（DEV-PAYCORE chen 4.5d / DEV-CHWX hu 3.5d / DEV-CHALI lin 3.0d / DEV-MP xiao 4.0d / TEST-BE qi 3.3d / TEST-FE fei 1.2d / 缓冲 2.9d）+ 里程碑 M1a–M4 + kanban 登记记录</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑯ -->
+<div class="step" id="s16">
+  <div class="step-head"><span class="num">⑯</span><h2>并行开发 + 独立测试 + 缺陷回流闭环</h2><span class="who">chen/hu/lin/xiao 开发 · qi/fei 测试</span></div>
+  <div class="step-body">
+    <p>四应用并行开发（真实代码 + vitest，分支 feat/DEV-*）→ 集成合并（integration/RFD-001）→ qi/fei 独立测试。<b>测试真实发现 6 项缺陷</b>：qi 判定 TEST-FAIL-TEST-BE（DEF-BE-001 支付宝契约未随冻结版迁移 P1、DEF-BE-002 跨包 instanceof 失效 P2）；fei/mei 判定 TEST-FAIL-TEST-FE（DEF-FE-1..4）。缺陷经 Matrix 回流，lin/chen/xiao 修复并回执，交叉复核后复测。</p>
+    <figure><img src="s29-qi-kanban-blocked.png" alt="qi 看板缺陷卡"><figcaption>qi 看板 Blocked 列实拍：#t_def_be001【缺陷】TEST-BE P1「csw-channel-alipay 契约未随 RFD-001 §2-R2/R3/§5.3 冻结版迁移（camelCase/amountFen/verifyNotify(raw,headers)/无 invoke_params）」、#t_22e79bf9 TEST-BE 后端测试卡</figcaption></figure>
+    <div class="evidence"><b>地面真值：</b>DEF-BE-001 修复 <code>5c34c61</code>（lin）、DEF-BE-002 修复 <code>7f8f115</code>（chen）、DEF-FE-1..4 修复 <code>2eca9f7</code>+<code>1ef390e</code>（xiao）；wei 以 lead 身份连署复核（RACI-A 实证）。</div>
+  </div>
+</div>
+
+<!-- ⑰ -->
+<div class="step" id="s17">
+  <div class="step-head"><span class="num">⑰</span><h2>测试通过，出具测试报告</h2><span class="who">qi 终测 · 09-23 凌晨</span></div>
+  <div class="step-body">
+    <p>qi 全量复测：<b>51/51 集成用例全绿 + tsc 零错误</b>，6 项缺陷 0 open，终稿测试报告落库并将通过 commit 登记到关联开发/测试/需求任务。下图为 IDE 中 aipaydev 仓库的提交图谱，可见测试报告与缺陷修复的真实提交链。</p>
+    <figure><img src="s32-chen-ide-git-graph.png" alt="git 提交图谱"><figcaption>IDE Git Graph 实拍：docs(delivery) 商户接入文档、v1.0.0-cashier tag、merge: RFD-001 integration 合入 main、报告终章 TEST-PASS-RFD-001——分支/tag/作者（chen/fanfan/sim-director）全部真实</figcaption></figure>
+    <h3 class="sub">产物证明 · 集成测试终稿报告</h3>
+    <figure><img src="s45-doc-test-report.png" alt="测试报告 51/51"><figcaption>测试终稿报告原文（docs/test/RFD-001-test-report.md @ c0a54b2）：被测分支 integration/RFD-001，六域 51 用例（下单幂等 10 / 调起参数 8 / 回调验签 10 / 重复回调 5 / 超时关单 10 / 契约一致性 8）全过 + tsc 零错误，测试执行 qi</figcaption></figure>
+    <div class="evidence"><b>地面真值：</b><code>docs/test/RFD-001-test-report.md</code> @ <code>c0a54b2</code>：六域 51 例（下单幂等/调起参数/回调验签/重复回调/超时关单/契约一致性）全过，TEST-PASS-RFD-001。</div>
+  </div>
+</div>
+
+<!-- ⑱ -->
+<div class="step" id="s18">
+  <div class="step-head"><span class="num">⑱</span><h2>变更发版与交付追踪</h2><span class="who">fanfan 发起 · REL 三卡</span></div>
+  <div class="step-body">
+    <p>全部工作完成后，fanfan 发起变更发版与交付（线下执行、kanban 登记追踪）：REL-MERGE（integration 合入 main）、REL-TAG（打 tag v1.0.0-cashier 并出 RELEASE.md）、REL-DELIVER（商户交付包与接入文档）。任务详情卡可见状态流转与关联信息。</p>
+    <figure><img src="s22-fanfan-task-detail.png" alt="REL-MERGE 任务详情"><figcaption>REL-MERGE 任务详情卡实拍：「RFD-001 integration/RFD-001 合入 main（变更发版）」状态=已完成，描述"线下执行；责任: chen；关联 integration/RFD-001"，含状态流转按钮与"建群沟通"入口</figcaption></figure>
+    <div class="evidence"><b>地面真值：</b>tag <code>v1.0.0-cashier</code>、<code>RELEASE.md</code>（<code>7b12ffc</code>）、商户接入文档（<code>715e362</code>）。</div>
+    <h3 class="sub">产物证明 · RELEASE v1.0.0-cashier</h3>
+    <figure><img src="s49-doc-release.png" alt="RELEASE"><figcaption>RELEASE.md 原文：发布日期 2026-09-23，通过 commit dcb2b28 → main 合并 6e34a95，交付范围四应用 + 集成测试台架，缺陷闭环 0 open（DEF-BE-001 修复 5c34c61 等六项）</figcaption></figure>
+  </div>
+</div>
+
+<!-- ⑲ -->
+<div class="step" id="s19">
+  <div class="step-head"><span class="num">⑲</span><h2>模板沿用与完备性检查</h2><span class="who">全程 · DELIVERY-STANDARD</span></div>
+  <div class="step-body">
+    <p>全程沿用 <code>DELIVERY-STANDARD-COMPLETE.md</code> 系列模板（需求/系分/概设/排期/测试报告/回执）；不满足处就地完善。所有任务自动分类、优先级排序、依赖分析与完备性检查，产出《RFD-001 完备性检查》防"多漏错重"。</p>
+    <div class="evidence"><b>地面真值：</b><code>docs/delivery/RFD-001-completeness-check.md</code>；推演问题台账 17 组（room-invite-gap 等）全归档 <code>docs/issues/</code>。</div>
+  </div>
+</div>
+
+<!-- ⑳ -->
+<div class="step" id="s20">
+  <div class="step-head"><span class="num">⑳</span><h2>IDE 工作台（ZCode 底座）介入具体开发</h2><span class="who">协作 ↔ IDE 一键切换</span></div>
+  <div class="step-body">
+    <p>"IDE 工作台"以 ZCode 为底座、吸收主流 coding 工具形成，与协作侧一键互跳（驾驶舱右上「IDE 工作台 ⇄ / 沟通协作 ⇄」）。从看板/任务跳转接入时经 <code>/ide?task=&lt;id&gt;</code> 深链绑定任务维度，<b>主动生成该任务的简报</b>（任务概览/需求上下文 RACI/Git 活动/Kanban 状态/协作动态/辅助会话六区块），用户可随即开展交互式编码、浏览文件与 git 图谱、切换模型。</p>
+    <h3 class="sub">任务简报实拍 · 任务关联信息自动带入</h3>
+    <figure><img src="s41-chen-ide-briefing.png" alt="T-003 任务简报"><figcaption>chen 的 IDE 任务简报（/ide?task=t_cae04b87）：任务概览 T-003 pay-core接口拓展（P0/todo）+ 需求上下文（发起方 @fanfan/@fanfan-agent、团队负责人 @wei/@wei-agent）+ Kanban 状态 + Git 活动 + 协作动态——研发接入即见全局</figcaption></figure>
+    <figure><img src="s40-ide-briefing-drawer.png" alt="排期卡任务简报"><figcaption>fanfan 的 IDE 任务简报（/ide?task=t_47374e48 排期 DEV-PAYCORE 卡）：需求上下文标明"排期跟踪卡（非执行载体）——执行在既有卡 t_5b889ee8「T-003 pay-core接口拓展」，两向引用"，含模块/责任人/工作量 4.5 人日/窗口 D1–D5</figcaption></figure>
+    <h3 class="sub">工作区 / Git / 模型</h3>
+    <figure><img src="s30-chen-ide-workspace.png" alt="IDE 工作台"><figcaption>chen 的 IDE 工作台实拍：左侧任务/项目（aipaydev），中间 ZCode 会话区（模型选择、256k 上下文），右侧文件树；底部状态栏显示工作区路径 …/users/chen/workspace/aipaydev</figcaption></figure>
+    <figure><img src="s31-chen-ide-git-status.png" alt="IDE git status"><figcaption>IDE Git Status 实拍：当前分支 feat/T-003-traceability（T-003 特性分支，↑0 ↓1），工作区干净</figcaption></figure>
+    <figure><img src="s24-ide-model-switcher.png" alt="IDE 模型设置"><figcaption>IDE 会话底部实拍：「设置」与「选择模型…」入口——模型随 Profile，可切换不同模型通道</figcaption></figure>
+  </div>
+</div>
+
+<!-- 总结 -->
+<div class="step">
+  <div class="step-head" style="border-left-color:#16a34a;background:#f0fdf4;"><span class="num" style="color:#16a34a;">✓</span><h2>推演结论与环境层发现</h2></div>
+  <div class="step-body">
+    <table>
+      <tr><th>维度</th><th>结果</th></tr>
+      <tr><td>20 步流程</td><td><span class="pill pill-ok">全部走通</span> 需求→系分→RACI→开发→集成→测试→缺陷闭环→发版</td></tr>
+      <tr><td>协作规模</td><td>24 Matrix 账号 / 11 实例 / 需求群 18 成员 300+ 消息 / 各角色私信与回执齐备</td></tr>
+      <tr><td>质量</td><td>51/51 集成测试全绿、tsc 零错误、6 项真实缺陷全闭环（0 open）</td></tr>
+      <tr><td>交付</td><td>v1.0.0-cashier tag + RELEASE.md + 商户接入文档；RFD-002 已接续启动</td></tr>
+      <tr><td>暴露并修复的产品问题</td><td>room-invite-gap（Orchestrator 自动邀人）、审批漏批（fast-approver）、看板跨板合并、缺陷观测窗正则、并发 node_modules 互清等 17 组全归档</td></tr>
+    </table>
+    <p style="color:#6b7280;font-size:13px;">说明：本报告全部截图为 2026-09-24 在运行中的 11 套实例上实拍；文字证据均可在中央仓 git 历史与各房间消息记录中复核。推演中模型通道故障（kimi 周配额/认证切换）与网关重启噪音亦为真实过程的一部分，未做删减。</p>
+  </div>
+</div>
+
+<!-- 审查附录 -->
+<div class="step">
+  <div class="step-head" style="border-left-color:#d97706;background:#fffbeb;"><span class="num" style="color:#d97706;">⚑</span><h2>设计实现审查：不合理与未实现（2026-09-24 复盘）</h2></div>
+  <div class="step-body">
+    <p>端到端复盘 20 步全流程，揪出 <b>5 项根因级缺陷</b>（均为"表面走通、细节断裂"型，靠实弹验证才发现），已全部修复并验证；另有 4 项架构问题 + 6 项流程缺口归档待决策。完整审查见 <code>overlay/docs/superpowers/specs/2026-09-24-aipaydev-flow-review.md</code>。</p>
+    <h3 class="sub">已修复并验证</h3>
+    <table>
+      <tr><th>缺陷</th><th>根因</th><th>验证</th></tr>
+      <tr><td>Matrix 房间工具未部署到运行时<br>（room-invite-gap 真正根因）</td><td>upstream 有 tools.py 修复，但安装树 ~/.hermes 从未部署；plugin.yaml 缺 provides_tools 注册</td><td><span class="pill pill-ok">DISPATCH-DONE-RFD-002</span> matrix_room_list 定位房间、9/9 派发在群、16/16 账号核验</td></tr>
+      <tr><td>tools.py 协程注册 bug<br>（upstream 修复从未端到端验证）</td><td>register_tools 未传 is_async=True，dispatch 不 await async handler→返回未解析协程</td><td><span class="pill pill-ok">agent 直连工具派发成功</span></td></tr>
+      <tr><td>简报 RACI 行恒空白</td><td>挂载点从不传 :raci + 无正文解析回退（恒显 R:—）</td><td><span class="pill pill-ok">8 例测试</span> 渲染实证 R: chen 而非 R: —</td></tr>
+      <tr><td>简报协作动态锚点零命中</td><td>[taskId] 群名前缀 vs 业务命名房间（"支付收银台需求分析讨论群"）</td><td>RFD- 需求码锚点回退</td></tr>
+      <tr><td>简报 Git 活动块空态</td><td>无 workspace_path 时整块空</td><td>workspace 回退链</td></tr>
+      <tr><td>vendored RPC 缺两文件致构建断</td><td>R4-P1 提交漏 channelServer/delayedChannel</td><td>补齐后 build:full 恢复</td></tr>
+    </table>
+    <h3 class="sub" style="color:#16a34a;">本轮已根治（4 项 · 2026-09-24 二轮复盘）</h3>
+    <table>
+      <tr><th>项</th><th>根治</th></tr>
+      <tr><td>B3 build 环境级阻塞</td><td><span class="pill pill-ok">patch 381</span> workflow 组件 NodeProps/EdgeProps 复杂 defineProps 改宽松具体类型 + typescript 漂移对齐回 ~6.0.2（装的 7.0.2 违反声明丢 findConfigFile）+ vue 插件注入 node:fs 兜底 → build:full 全绿（7966 模块+tsc+server）</td></tr>
+      <tr><td>B1 双树漂移根治</td><td><span class="pill pill-ok">runtime-manifest + deploy-agent-runtime</span> overlay/runtime 为运行时修复源，inject 出口自动幂等同步到 ~/.hermes（默认 dry-run）——并实证 tools.py 曾被运行时重置抹掉复发，正是此机制根治点</td></tr>
+      <tr><td>C2 matrix 账号自动登录</td><td><span class="pill pill-ok">patch 382 + /api/matrix/gateway-credentials</span> 读 gateway access_token 免密建会话（matrix-login 本就收 token 非密码），LoginView onMounted 触发</td></tr>
+      <tr><td>C1 csw-* 专职 agent 口径</td><td><span class="pill pill-ok">口径裁定</span> 人=同一 hermes agent 的 kanban team 下若干专职 agent（含 csw-* 应用研发 agent）+ capability-report 能力上报，消除步骤 10 歧义</td></tr>
+    </table>
+    <h3 class="sub" style="color:#16a34a;">二轮已根治（5 项 · 2026-09-24）</h3>
+    <table>
+      <tr><th>项</th><th>根治</th></tr>
+      <tr><td>B4 dev session</td><td><span class="pill pill-ok">devAutoLogin</span> dev 登录桩免密换 JWT（修 localStorage origin 隔离 + 无浏览器自动登录），/api 与终端 WS 鉴权一并打通</td></tr>
+      <tr><td>C5 终端可诊断</td><td><span class="pill pill-ok">node-pty 正常 + 前端健壮</span> 实测 node-pty 加载正常，卡"连接中"真因是 WS 鉴权（B4 同根）；加重连上限 + error 帧 + onopen 重置，失败明示而非无限转圈</td></tr>
+      <tr><td>C3 RACI 结构化</td><td><span class="pill pill-ok">结构化优先读</span> task.raci → body-JSON → 正则；BriefingTask.raci + IdeShell 映射已备，kanban raci 列（跨树 patch）已设计待落地</td></tr>
+      <tr><td>C6 房间回溯</td><td><span class="pill pill-ok">jumpToEvent</span> 修 scrollToEvent 只认已渲染 DOM 的断链，未加载先分页到命中再高亮 + 搜索跳转 → 可导航任意历史事件/锚点</td></tr>
+      <tr><td>C4 图片 OCR</td><td><span class="pill pill-ok">aipay-ocr-verify.sh</span> 样例 + tesseract 双路提取 + 探针无偏差勾稽，实测抓到 I/l 混淆真实偏差，折叠归一后 5/5 无偏差</td></tr>
+    </table>
+    <p style="color:#16a34a;font-size:13px;">三轮收口（2026-09-24）：C3 kanban <b>raci 数据库列已全链路落地</b>（overlay/runtime 7 文件 + B1 自动部署 + 实测 <code>hermes kanban create --raci → JSON 输出 raci</code>，旧库 ALTER 迁移验证通过）；C5 <b>terminal.ts 悬空 upgrade 503 根修</b>（patch 383）；C2 <b>自动登录端到端实测通过</b>——发现并接线了从未注册的 matrix 路由（patch 384），链路 gateway-credentials（无认证公开）→ matrix-login → JWT 签发（user=fanfan-agent role=admin）全通。仅 C4 的 vision_analyze 语义提取需 agent 视觉工具（脚本已预留 tesseract 严格 + diff 收敛）。</p>
+  </div>
+</div>
+
+<div class="footer">支付收银台多智能体协作研发推演 · 路演报告 · 生成于 2026-09-24 · 仓库 issac-new/aipaydev</div>
+</div>
+</body>
+</html>
