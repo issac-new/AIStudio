@@ -1,7 +1,12 @@
 # QGate 通用交付门禁框架设计 v0.2（修正与落地方案）
 
-日期：2026-09-23
-状态：**P0-P9 + 收尾件全部收口**（同日两轮；第一轮 P0-P4 见 `evidence/20260923-p0..p3p4`，第二轮 P5-P9 + Release Evidence Package + Claude Code 适配见 `evidence/20260923-p5-p9`；38 例单测并入 overlay 套件）
+日期：2026-09-23（2026-09-24 复盘轮修订）
+状态：**P0-P9 + 收尾件收口；09-24 复盘轮修正三处虚报并补内嵌融合**
+- 修正①：§34 六事件钩子面真实可用（此前 PreToolUse/UserPromptSubmit/PostToolUseFailure 三钩因 import 路径错从未工作，已按 stdin+审计日志模式重写并实测）
+- 修正②：§49 缓存真接线进 runGate（此前 cache.ts 为孤儿模块；现 cacheGet→miss→run→cachePut + 3 例守门测试）
+- 修正③：MCP tools schema 属性内 required 布尔违反 JSON Schema 规范致 GLM 1210 全量请求失败（生产事故，8cbcfa1 修复 + 回归测试）
+- 内嵌融合：`overlay/.qgate/` 随仓走（零 init，advisory 档起步），golden scenarios 五场景全实测合格
+- 验收证据：`evidence/20260923-p0..p3p4`、`evidence/20260923-p5-p9`、`evidence/20260923-final`
 受众：QGate 实施者与评审者；SwarmStudio 维护者
 上游依据：《Universal Delivery Gate Framework for ZCode》Draft v0.1（原文 `ncwk/docs/universal-delivery-gate-zcode-design-v0.1.md`，来自 ~/Documents）
 本文定位：v0.1 的修正案与落地方案，不重复其方法论论证；与 v0.1 冲突处以本文为准
