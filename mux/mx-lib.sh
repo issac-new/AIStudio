@@ -46,8 +46,11 @@ SYNAPSE_CONTAINER="${MX_SYNAPSE_CONTAINER:-matrix-synapse}"
 HOST_ORCH_HEALTH="${MX_HOST_ORCH_HEALTH:-http://127.0.0.1:8650/health}"
 
 # V1 编制不变（12 人类 + 12 -agent 机器人）
-USERS=(admin bella fanfan wei mei chen hu lin xiao qi fei arch)
-INSTANCED_USERS=(bella fanfan wei mei chen hu lin xiao qi fei arch)
+USERS=(admin bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit)
+INSTANCED_USERS=(bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit)
+# 编制含三大治理角色（用户裁决 2026-09-25）：secops=安全管理（ISO27001）/
+# ops=运维管理（ITIL/发布执行）/ audit=合规及审计管理；需求分析师=bella、
+# 系统分析师=fanfan-sys-analyst+AN-* 执行者、项目管理=fanfan、系统架构=arch。
 
 # ── 日志/凭据（沿用 V1 约定）────────────────────────────
 log()  { echo "[mux $(date +%H:%M:%S)] $*"; }
@@ -75,8 +78,20 @@ boards_of() { case "$1" in
   qi)   echo "qi-test-pay:tester qi-test-integration:researcher" ;;
   fei)  echo "fei-test-mp:tester fei-test-ui:researcher" ;;
   arch) echo "arch-governance:governance-reviewer arch-review:researcher" ;;
+  secops) echo "secops-iso27001:iso-reviewer secops-audit-trail:auditor" ;;
+  ops)    echo "ops-service-catalog:sre ops-release:release-manager" ;;
+  audit)  echo "audit-compliance:compliance-auditor audit-evidence:evidence-auditor" ;;
   *) echo "" ;;
 esac; }
+
+# ── 应用资产表（M1 应用初始化配置）：app/owner/板/栈/SLA 级 ──
+apps_of() { cat <<'APPEOF'
+csw-pay-core|chen|chen-pay-core|node/axios|Gold
+csw-channel-wechat|hu|hu-channel-wechat|node|Silver
+csw-channel-alipay|lin|lin-channel-alipay|node|Silver
+csw-cashier-mp|xiao|xiao-cashier-mp|miniprogram|Silver
+APPEOF
+}
 first_board_of()  { boards_of "$1" | awk '{print $1}' | cut -d: -f1; }
 agents_of() { boards_of "$1" | tr ' ' '\n' | sed 's/^[^:]*://' | tr ',' '\n' | sed '/^$/d' | sort -u | tr '\n' ' '; }
 agent_profile() { echo "$1-$2"; }

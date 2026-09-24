@@ -58,7 +58,7 @@ for u in "${INSTANCED_USERS[@]}"; do
   done
 done
 profile_count=$(find "$HERMES_ROOT/profiles" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-log "profiles 就绪：${profile_count} 个（11 Orchestrator + 22 agent，admin 不起实例）"
+log "profiles 就绪：${profile_count} 个（${#INSTANCED_USERS[@]} Orchestrator + agent，admin 不起实例）"
 
 # ── 5. 每账号 2 块独立 kanban + team 围栏 ───────────────
 for u in "${INSTANCED_USERS[@]}"; do
