@@ -126,6 +126,16 @@ kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错�
   done
 }
 
+kanban_raci_of() { # <user> <needle> → 首个匹配卡的结构化 raci JSON（空串=未填；B1 列）
+  local u="$1" n="$2" slug out
+  for slug in $(account_boards "$u"); do
+    out=$(sqlite3 "$HERMES_ROOT/kanban/boards/$slug/kanban.db" \
+      "select ifnull(raci,'') from tasks where (title like '%'||'$n'||'%' or body like '%'||'$n'||'%') and ifnull(raci,'')!='' limit 1" 2>/dev/null) || continue
+    [[ -n "$out" ]] && { echo "$out"; return 0; }
+  done
+  echo ""
+}
+
 # ── Matrix 私信/审批/真值等待 ───────────────────────────
 dm_room() { # <fromUser> <toUser> → room_id（缓存）
   local a="$1" b="$2"
