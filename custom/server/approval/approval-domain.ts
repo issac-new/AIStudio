@@ -115,6 +115,18 @@ export type ScopeOwnershipPredicate = (rule: ApprovalRule, call: ToolCallRequest
 
 const defaultOwnership: ScopeOwnershipPredicate = () => true
 
+// cc 2.1.281 概念吸收（专有许可只搬概念）：递归删除的目标含命令替换/反引号时，
+// 目标不可静态判定——任何 allow 规则都不得放行，强制 ask（"allow 规则不吞不可静态
+// 判定的破坏性命令"）。deny 仍最优先。
+const _RECURSIVE_DELETE_RE = /\b(rm\s+(-[a-z]*[rf][a-z]*\s+)+|rmdir\s+\/s|Remove-Item\s+.*)/i
+const _CMD_SUBSTITUTION_RE = /\$\(|`/
+
+export function hardAskOverride(call: ToolCallRequest): boolean {
+  if (!/terminal|bash|shell|exec/i.test(call.tool)) return false
+  const argv = call.argv.join(' ')
+  return _RECURSIVE_DELETE_RE.test(argv) && _CMD_SUBSTITUTION_RE.test(argv)
+}
+
 export type Verdict = { list: RuleList; rule?: ApprovalRule } | { list: 'default'; mode: DefaultMode }
 
 export type DefaultMode = 'ask' | 'deny' | 'allow'
@@ -132,6 +144,7 @@ export function evaluate(
   const visible = rules.filter((r) => scopeVisible(r, call) && ownership(r, call) && ruleMatches(r, call))
   const denied = visible.find((r) => r.list === 'deny')
   if (denied) return { list: 'deny', rule: denied }
+  if (hardAskOverride(call)) return { list: 'ask' } // 不可静态判定的递归删除：allow 也不放行
   const allowed = visible.find((r) => r.list === 'allow')
   if (allowed) return { list: 'allow', rule: allowed }
   const asked = visible.find((r) => r.list === 'ask')

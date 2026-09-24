@@ -914,3 +914,7 @@
 #      auto-dream/distill 自动沉淀维持分期。
 #      依据 2026-09-24-mimo-code-coding-tools-research.md §3.5 P4。
 406-agent-memory-fts-index.patch
+# 407 mimo P4 二期 v1：规则式 distill 自动沉淀——归一化去重 + 容量超线(0.9)最旧序
+#      剪枝 + 逐条报告；memory_tool 增 action=consolidate。确定性变换纪律（不做摘要/
+#      改写）；7d/30d auto-dream 节奏经既有 cron 运维面接（模块尾注释注册例）。
+407-agent-memory-distill-v1.patch

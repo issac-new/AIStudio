@@ -138,3 +138,23 @@ describe('控制器接线（patch 402）', () => {
     }
   })
 })
+
+describe('命令替换递归删除硬规则（cc 2.1.281 概念吸收）', () => {
+  const allowAll: ApprovalRule[] = [
+    { list: 'allow', scope: 'global', tool: 'terminal', learnedFrom: 'approved_scoped', createdAt: 1 },
+  ]
+  it('rm -rf "$(pwd)" 类：allow 全放行也强制 ask', () => {
+    expect(evaluate(call('terminal', ['rm', '-rf', '"$(pwd)"']), allowAll)).toMatchObject({ list: 'ask' })
+    expect(evaluate(call('terminal', ['rm', '-rf', '`pwd`/build']), allowAll)).toMatchObject({ list: 'ask' })
+  })
+  it('静态目标的 rm -rf 与无删除命令不受硬规则影响（allow 正常放行）', () => {
+    expect(evaluate(call('terminal', ['rm', '-rf', '/tmp/build']), allowAll)).toMatchObject({ list: 'allow' })
+    expect(evaluate(call('terminal', ['echo', '"$(date)"']), allowAll)).toMatchObject({ list: 'allow' })
+  })
+  it('deny 仍最优先于硬规则', () => {
+    const denyAll: ApprovalRule[] = [
+      { list: 'deny', scope: 'global', tool: 'terminal', learnedFrom: 'denied_for_session', createdAt: 1 },
+    ]
+    expect(evaluate(call('terminal', ['rm', '-rf', '"$(pwd)"']), denyAll)).toMatchObject({ list: 'deny' })
+  })
+})
