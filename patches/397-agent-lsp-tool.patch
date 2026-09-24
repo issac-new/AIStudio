@@ -1,0 +1,524 @@
+diff --git a/agent/lsp/client.py b/agent/lsp/client.py
+index 8d268b4..4c0d766 100644
+--- a/agent/lsp/client.py
++++ b/agent/lsp/client.py
+@@ -462,6 +462,14 @@ class LSPClient:
+                     raise
+                 await asyncio.sleep(RETRY_BASE_DELAY * (2 ** attempt))
+ 
++    async def navigation_request(self, method: str, params: Any, *, timeout: float) -> Any:
++        """Send a read-only navigation request (hover/definition/references/symbols).
++
++        The caller owns didOpen freshness (open_file first); retries
++        ``ContentModified`` exactly like the write path so a concurrent sync
++        cannot fail the query."""
++        return await self._send_request_with_retry(method, params, timeout=timeout)
++
+     async def _send_notification(self, method: str, params: Any) -> None:
+         self._require_open(method)
+         try:
+diff --git a/agent/lsp/manager.py b/agent/lsp/manager.py
+index fb4a718..90b2da6 100644
+--- a/agent/lsp/manager.py
++++ b/agent/lsp/manager.py
+@@ -21,12 +21,15 @@ import time
+ from typing import Any, Callable, Dict, List, Optional, Tuple
+ 
+ from agent.lsp import eventlog
+-from agent.lsp.client import DIAGNOSTICS_DOCUMENT_WAIT, LSPClient, _diagnostic_key as _diag_key
++from agent.lsp.client import DIAGNOSTICS_DOCUMENT_WAIT, LSPClient, file_uri, _diagnostic_key as _diag_key
+ from agent.lsp.servers import SERVERS, ServerContext, ServerDef, custom_servers, find_server_for_file, language_id_for
+ from agent.lsp.workspace import clear_cache, resolve_workspace_for_file
+ 
+ logger = logging.getLogger("agent.lsp.manager")
+ 
++# 哨兵：导航查询时 (server, root) 对 spawn/init 失败——区别于服务器的真实空答复。
++_NO_CLIENT = object()
++
+ DEFAULT_IDLE_TIMEOUT = 600  # seconds; servers idle for >10min get reaped
+ _DELTA_BASELINE_CAP = 256  # per-file pre-write snapshots; paths never written again would otherwise live forever (#62950)
+ MIN_IDLE_TIMEOUT = 30  # floor for config values; must exceed any per-op wait budget
+@@ -357,6 +360,97 @@ class LSPService:
+             eventlog.log_clean(server_id, file_path)
+         return diags
+ 
++    # ── Read-only navigation (P2, 2026-09-24: agent-callable LSP) ──────────────
++    # Mirrors MiMo-Code tool/lsp.ts: five read-only operations exposed to the
++    # model. Writes stay on write_file/patch; navigation never mutates docs.
++
++    NAV_OPERATIONS = {
++        "hover": "textDocument/hover",
++        "definition": "textDocument/definition",
++        "references": "textDocument/references",
++        "document_symbol": "textDocument/documentSymbol",
++        "workspace_symbol": "workspace/symbol",
++    }
++
++    def navigation_sync(
++        self, file_path: str, operation: str, *, line: Optional[int] = None,
++        character: Optional[int] = None, query: Optional[str] = None,
++        timeout: Optional[float] = None,
++    ) -> Dict[str, Any]:
++        """Answer one read-only navigation query synchronously. Never raises;
++        returns ``{"ok": bool, ...}`` with either ``result`` or ``error`` plus
++        ``server`` metadata so the model can tell "no match" from "no server".
++        """
++        op = str(operation or "").strip()
++        method = self.NAV_OPERATIONS.get(op)
++        if method is None:
++            return {"ok": False, "error": f"unknown operation {op!r}; expected one of {sorted(self.NAV_OPERATIONS)}"}
++        # Pure argument validation first — independent of service state.
++        needs_pos = op in ("hover", "definition", "references")
++        if needs_pos and (line is None or character is None):
++            return {"ok": False, "error": f"{op} requires 1-based `line` and `character`", "operation": op}
++        if op == "workspace_symbol" and not (query or "").strip():
++            return {"ok": False, "error": "workspace_symbol requires `query`", "operation": op}
++        if not self.enabled_for(file_path):
++            from agent.lsp.servers import find_server_for_file
++            srv = find_server_for_file(file_path)
++            why = "no language server registered for this file type" if srv is None else (
++                "LSP is disabled (enable via config `lsp.enabled` or `hermes lsp install`)"
++            )
++            return {"ok": False, "error": why, "operation": op}
++
++        params: Dict[str, Any]
++        if op == "workspace_symbol":
++            params = {"query": str(query)}
++        else:
++            params = {"textDocument": {"uri": file_uri(os.path.abspath(file_path))}}
++            if needs_pos:
++                # Tool args are 1-based (editor convention); LSP positions are 0-based.
++                params["position"] = {"line": int(line) - 1, "character": int(character) - 1}
++            if op == "references":
++                # pyright 无 context 直接 500（Internal Error）。
++                params["context"] = {"includeDeclaration": False}
++
++        srv = self._server_for(file_path)  # enabled_for guarantees a match
++        try:
++            budget = self._wait_budget(file_path)
++            t = timeout if timeout is not None else budget + 5.0
++            raw = self._loop.run(
++                self._navigation_async(file_path, method, params, budget=budget), timeout=t,
++            )
++        except Exception as e:  # noqa: BLE001
++            if isinstance(e, asyncio.TimeoutError):
++                eventlog.log_timeout(srv.server_id, file_path)
++            else:
++                eventlog.log_server_error(srv.server_id, file_path, e)
++            self._mark_broken_for_file(file_path, e)
++            logger.debug("LSP navigation %s failed for %s: %s", op, file_path, e)
++            return {"ok": False, "error": f"LSP {op} failed: {e}", "operation": op, "server": srv.server_id}
++        if raw is _NO_CLIENT:
++            return {"ok": False, "operation": op, "server": srv.server_id,
++                    "error": "language server unavailable (spawn/init failed; `hermes lsp restart` recovers)"}
++        eventlog.event_log.info("lsp navigation %s ok on %s", op, srv.server_id)
++        return {"ok": True, "operation": op, "server": srv.server_id, "result": raw}
++
++    async def _navigation_async(
++        self, file_path: str, method: str, params: Dict[str, Any], *, budget: Optional[float] = None,
++    ) -> Any:
++        """Spawn/reuse the client, didOpen the file, send the request."""
++        client = await self._get_or_spawn(file_path)
++        if client is None:
++            return _NO_CLIENT
++        srv = self._server_for(file_path)
++        await client.open_file(file_path, language_id=language_id_for(file_path, srv))
++        wait = budget if budget is not None else self._wait_timeout
++        result = await client.navigation_request(method, params, timeout=max(wait, 1.0))
++        if result is None:
++            # Cold start: the just-spawned server often answers the first
++            # hover/definition with null before workspace analysis lands
++            # (pyright observed live). One bounded retry, then trust None.
++            await asyncio.sleep(1.5)
++            result = await client.navigation_request(method, params, timeout=max(wait, 1.0))
++        return result
++
+     def _apply_delta(self, file_path: str, diags: _Diags, line_shift: Optional[Callable[[int], Optional[int]]]) -> _Diags:
+         """Drop diagnostics present in the pre-write baseline, then roll the baseline forward."""
+         abs_path = os.path.abspath(file_path)
+diff --git a/tests/tools/test_lsp_tool.py b/tests/tools/test_lsp_tool.py
+new file mode 100644
+index 0000000..5b634e8
+--- /dev/null
++++ b/tests/tools/test_lsp_tool.py
+@@ -0,0 +1,148 @@
++"""Agent-callable LSP navigation tool (P2, 2026-09-24).
++
++Unit tests stub the LSPService — no real language server is spawned. Pins:
++  * error paths are descriptive JSON, never exceptions (model learns WHY);
++  * LSP 0-based positions are converted from 1-based tool args;
++  * Location/LocationLink/hover-contents/symbol-tree normalization and caps;
++  * the tool registers and ships in the coding toolset.
++"""
++import json
++from types import SimpleNamespace
++from unittest.mock import patch
++
++from tools.lsp_tool import lsp_navigate
++
++
++def _svc():
++    calls = []
++
++    def navigation_sync(file_path, operation, *, line=None, character=None, query=None, timeout=None):
++        calls.append({"file_path": file_path, "operation": operation,
++                      "line": line, "character": character, "query": query})
++        if operation == "hover":
++            return {"ok": True, "operation": "hover", "server": "pyright",
++                    "result": {"contents": {"kind": "markdown", "value": "`foo(x: int) -> str`"}}}
++        if operation == "definition":
++            return {"ok": True, "operation": "definition", "server": "pyright",
++                    "result": [{"uri": "file:///w/a.py", "range": {"start": {"line": 9, "character": 3},
++                                                                   "end": {"line": 9, "character": 7}}}]}
++        if operation == "references":
++            return {"ok": True, "operation": "references", "server": "pyright", "result": None}
++        if operation == "document_symbol":
++            return {"ok": True, "operation": "document_symbol", "server": "pyright",
++                    "result": [{"name": "foo", "kind": 12, "range": {"start": {"line": 0}},
++                                "children": [{"name": "bar", "kind": 6,
++                                              "range": {"start": {"line": 2}}}]}]}
++        if operation == "workspace_symbol":
++            return {"ok": True, "operation": "workspace_symbol", "server": "pyright",
++                    "result": [{"name": "foo", "kind": 12, "location": {"uri": "file:///w/a.py",
++                                 "range": {"start": {"line": 0}}}}]}
++        return {"ok": False, "error": "unknown"}
++
++    return SimpleNamespace(navigation_sync=navigation_sync), calls
++
++
++class TestErrorPaths:
++    def test_missing_file_path(self):
++        assert json.loads(lsp_navigate())["ok"] is False
++
++    def test_nonexistent_file(self):
++        out = json.loads(lsp_navigate(operation="hover", file_path="/nope/never.py"))
++        assert out["ok"] is False and "not found" in out["error"]
++
++    def test_service_inactive_is_descriptive(self, tmp_path):
++        f = tmp_path / "a.py"
++        f.write_text("x = 1\n")
++        with patch("tools.lsp_tool._active_service", return_value=None):
++            out = json.loads(lsp_navigate(operation="hover", file_path=str(f)))
++        assert out["ok"] is False and "not active" in out["error"]
++
++
++class TestNavigation:
++    def test_hover_normalizes_markdown_contents(self, tmp_path):
++        f = tmp_path / "a.py"
++        f.write_text("def foo(): pass\n")
++        svc, calls = _svc()
++        with patch("tools.lsp_tool._active_service", return_value=svc):
++            out = json.loads(lsp_navigate(operation="hover", file_path=str(f), line=1, character=5))
++        assert out["ok"] is True
++        assert "`foo(x: int) -> str`" in out["hover"]
++        assert calls[0]["line"] == 1 and calls[0]["character"] == 5
++
++    def test_definition_formats_1_based_locations(self, tmp_path):
++        f = tmp_path / "a.py"
++        f.write_text("from b import foo\nfoo()\n")
++        svc, _ = _svc()
++        with patch("tools.lsp_tool._active_service", return_value=svc):
++            out = json.loads(lsp_navigate(operation="definition", file_path=str(f), line=2, character=1))
++        assert out["locations"] == ["/w/a.py:10 (col 4)"]  # LSP line 9 → 1-based 10
++
++    def test_references_none_result_gets_note(self, tmp_path):
++        f = tmp_path / "a.py"
++        f.write_text("foo()\n")
++        svc, _ = _svc()
++        with patch("tools.lsp_tool._active_service", return_value=svc):
++            out = json.loads(lsp_navigate(operation="references", file_path=str(f), line=1, character=1))
++        assert out["ok"] is True and out["count"] == 0 and "no matches" in out["note"]
++
++    def test_document_symbol_flattens_tree(self, tmp_path):
++        f = tmp_path / "a.py"
++        f.write_text("def foo():\n    bar()\n")
++        svc, _ = _svc()
++        with patch("tools.lsp_tool._active_service", return_value=svc):
++            out = json.loads(lsp_navigate(operation="document_symbol", file_path=str(f)))
++        assert out["symbols"] == ["12 foo:1", "  6 bar:3"]
++
++    def test_workspace_symbol_symbolinformation_shape(self, tmp_path):
++        f = tmp_path / "a.py"
++        f.write_text("x = 1\n")
++        svc, calls = _svc()
++        with patch("tools.lsp_tool._active_service", return_value=svc):
++            out = json.loads(lsp_navigate(operation="workspace_symbol", file_path=str(f), query="foo"))
++        assert out["symbols"] == ["12 foo:1"]
++        assert calls[0]["query"] == "foo"
++
++    def test_service_error_propagates_as_json(self, tmp_path):
++        f = tmp_path / "a.py"
++        f.write_text("x = 1\n")
++        svc = SimpleNamespace(navigation_sync=lambda *a, **k: {"ok": False, "error": "LSP is disabled"})
++        with patch("tools.lsp_tool._active_service", return_value=svc):
++            out = json.loads(lsp_navigate(operation="hover", file_path=str(f), line=1, character=1))
++        assert out["ok"] is False and "disabled" in out["error"]
++
++
++class TestManagerNavigationSync:
++    """navigation_sync argument validation (no server spawned)."""
++
++    def _manager(self):
++        from agent.lsp.manager import LSPService
++        return LSPService.__new__(LSPService)  # no __init__: no loop/config needed
++
++    def test_unknown_operation_rejected(self):
++        out = self._manager().navigation_sync("/tmp/x.py", "rename")
++        assert out["ok"] is False and "unknown operation" in out["error"]
++
++    def test_missing_position_rejected(self):
++        out = self._manager().navigation_sync("/tmp/x.py", "hover")
++        assert out["ok"] is False and "line" in out["error"]
++
++    def test_workspace_symbol_requires_query(self):
++        out = self._manager().navigation_sync("/tmp/x.py", "workspace_symbol")
++        assert out["ok"] is False and "query" in out["error"]
++
++    def test_disabled_service_is_descriptive(self, tmp_path):
++        m = self._manager()
++        with patch.object(m, "enabled_for", return_value=False):
++            out = m.navigation_sync(str(tmp_path / "x.py"), "hover", line=1, character=1)
++        assert out["ok"] is False and ("disabled" in out["error"] or "no language server" in out["error"])
++
++
++class TestRegistration:
++    def test_tool_in_coding_toolset(self):
++        from tools.registry import discover_builtin_tools, registry
++        discover_builtin_tools()
++        assert "lsp" in registry._tools
++        import toolsets
++        coding = toolsets.resolve_toolset("coding")
++        flat = json.dumps(coding if not isinstance(coding, str) else [coding])
++        assert "lsp" in flat or coding == "lsp"
+diff --git a/tools/lsp_tool.py b/tools/lsp_tool.py
+new file mode 100644
+index 0000000..69cfcbb
+--- /dev/null
++++ b/tools/lsp_tool.py
+@@ -0,0 +1,213 @@
++"""Agent-callable LSP navigation tool (read-only, five operations).
++
++P2 of the 2026-09-24 MiMo-Code research absorption
++(docs/superpowers/specs/2026-09-24-mimo-code-coding-tools-research.md):
++MiMo-Code ships a 91-line ``lsp`` tool with nine operations; hermes already had
++the stronger substrate (real language-server subprocesses per (server, root),
++multi-root pyright, write-post diagnostics) but nothing the model could call.
++This exposes the five READ-ONLY operations first — hover / definition /
++references / document_symbol / workspace_symbol — deliberately omitting the
++mutating ones (rename, call-hierarchy edits): writes stay on write_file/patch.
++
++Failure mode is descriptive, never raising: the model learns WHY there is no
++answer (disabled vs. unsupported file type vs. server error) instead of an
++opaque empty result.
++"""
++from __future__ import annotations
++
++import json
++import logging
++import os
++from typing import Any, Dict, List, Optional
++
++from tools.registry import registry
++
++logger = logging.getLogger("tools.lsp")
++
++_MAX_LOCATIONS = 50
++_MAX_HOVER_CHARS = 4000
++_MAX_SYMBOLS = 200
++
++
++def _fmt_location(loc: Dict[str, Any]) -> str:
++    uri = str(loc.get("uri") or "")
++    path = uri[7:] if uri.startswith("file://") else uri
++    rng = loc.get("range") or {}
++    start = (rng.get("start") or {})
++    line = int(start.get("line", 0)) + 1
++    end = (rng.get("end") or {})
++    end_line = int(end.get("line", 0)) + 1
++    col = int(start.get("character", 0)) + 1
++    if end_line != line:
++        return f"{path}:{line}-{end_line} (col {col})"
++    return f"{path}:{line} (col {col})"
++
++
++def _normalize_locations(raw: Any) -> List[str]:
++    """definition/references return Location | Location[] | LocationLink[]."""
++    if raw is None:
++        return []
++    items = raw if isinstance(raw, list) else [raw]
++    out: List[str] = []
++    for item in items:
++        if not isinstance(item, dict):
++            continue
++        loc = item.get("targetUri") and item or item  # LocationLink: targetUri/targetRange
++        out.append(_fmt_location(loc))
++    return out[:_MAX_LOCATIONS]
++
++
++def _normalize_hover(raw: Any) -> str:
++    if not isinstance(raw, dict):
++        return ""
++    contents = raw.get("contents")
++    if isinstance(contents, dict):
++        value = contents.get("value")
++        if value is not None:
++            return str(value)[:_MAX_HOVER_CHARS]
++    if isinstance(contents, list):
++        parts = []
++        for c in contents:
++            if isinstance(c, dict) and c.get("value") is not None:
++                parts.append(str(c["value"]))
++            elif isinstance(c, str):
++                parts.append(c)
++        return "\n".join(parts)[:_MAX_HOVER_CHARS]
++    return str(contents or "")[:_MAX_HOVER_CHARS]
++
++
++def _normalize_symbols(raw: Any) -> List[str]:
++    """documentSymbol returns DocumentSymbol[] (hierarchical) or SymbolInformation[]."""
++    if raw is None:
++        return []
++    items = raw if isinstance(raw, list) else [raw]
++    out: List[str] = []
++
++    def _walk(node: Dict[str, Any], depth: int) -> None:
++        if len(out) >= _MAX_SYMBOLS or not isinstance(node, dict):
++            return
++        name = node.get("name")
++        if name:
++            kind = node.get("kind")
++            detail = node.get("detail")
++            line = ""
++            rng = node.get("range") or (node.get("location") or {}).get("range") or {}
++            start = (rng.get("start") or {})
++            if start.get("line") is not None:
++                line = f":{int(start['line']) + 1}"
++            suffix = f" — {detail}" if detail else ""
++            out.append(f"{'  ' * depth}{kind} {name}{line}{suffix}")
++        for child in node.get("children") or []:
++            _walk(child, depth + 1)
++
++    for item in items:
++        if isinstance(item, dict) and "name" in item:
++            _walk(item, 0)
++        else:
++            out.append(str(item))
++    return out[:_MAX_SYMBOLS]
++
++
++def _active_service():
++    """The profile's LSPService, or None (disabled / import failure)."""
++    try:
++        from agent.lsp import get_service
++        return get_service()
++    except Exception:  # noqa: BLE001
++        return None
++
++
++def lsp_navigate(
++    operation: str = "",
++    file_path: str = "",
++    line: Optional[int] = None,
++    character: Optional[int] = None,
++    query: str = "",
++    **_kwargs: Any,
++) -> str:
++    """Handle one ``lsp`` tool call; always returns a string for the model."""
++    op = str(operation or "").strip()
++    path = str(file_path or "").strip()
++    if not path:
++        return json.dumps({"ok": False, "error": "file_path is required"})
++    if not os.path.isfile(os.path.expanduser(path)):
++        return json.dumps({"ok": False, "error": f"file not found: {path}"})
++
++    svc = _active_service()
++    if svc is None:
++        return json.dumps({
++            "ok": False,
++            "error": "LSP is not active for this profile (enable via config `lsp` section or `hermes lsp install`)",
++        })
++
++    verdict = svc.navigation_sync(
++        os.path.expanduser(path), op,
++        line=line, character=character, query=query or None,
++    )
++    if not verdict.get("ok"):
++        return json.dumps(verdict)
++
++    raw = verdict.get("result")
++    op = verdict.get("operation", op)
++    if op in ("definition", "references"):
++        locations = _normalize_locations(raw)
++        body = {"ok": True, "operation": op, "server": verdict.get("server"),
++                "count": len(locations), "locations": locations}
++    elif op == "hover":
++        body = {"ok": True, "operation": op, "server": verdict.get("server"),
++                "hover": _normalize_hover(raw) or "(no hover information at this position)"}
++    else:  # document_symbol / workspace_symbol
++        symbols = _normalize_symbols(raw)
++        body = {"ok": True, "operation": op, "server": verdict.get("server"),
++                "count": len(symbols), "symbols": symbols}
++    if body.get("count") == 0 and "hover" not in body:
++        body["note"] = "no matches (position may be whitespace, or the symbol is not indexed)"
++    return json.dumps(body, ensure_ascii=False)
++
++
++LSP_SCHEMA = {
++    "name": "lsp",
++    "description": (
++        "Language-server code intelligence for the open workspace: `hover` "
++        "(type/doc info at a position), `definition` (where a symbol is "
++        "defined), `references` (all reference sites), `document_symbol` "
++        "(symbol tree of one file), `workspace_symbol` (search symbols across "
++        "the workspace by name). Lines/characters are 1-based, as shown by "
++        "read_file. Precise where search_files is lexical: use it to resolve "
++        "imports, jump to definitions, or enumerate call sites. Read-only; "
++        "edits go through write_file/patch."
++    ),
++    "parameters": {
++        "type": "object",
++        "properties": {
++            "operation": {
++                "type": "string",
++                "enum": ["hover", "definition", "references", "document_symbol", "workspace_symbol"],
++                "description": "Which code-intelligence query to run.",
++            },
++            "file_path": {
++                "type": "string",
++                "description": "Absolute or workspace-relative file path. For workspace_symbol, any file in the workspace fixes the server.",
++            },
++            "line": {"type": "integer", "description": "1-based line (hover/definition/references)."},
++            "character": {"type": "integer", "description": "1-based column (hover/definition/references)."},
++            "query": {"type": "string", "description": "Symbol-name query (workspace_symbol)."},
++        },
++        "required": ["operation", "file_path"],
++    },
++}
++
++
++registry.register(
++    name="lsp",
++    toolset="file",
++    schema=LSP_SCHEMA,
++    handler=lambda args, **kw: lsp_navigate(
++        operation=args.get("operation") or "",
++        file_path=args.get("file_path") or "",
++        line=args.get("line"),
++        character=args.get("character"),
++        query=args.get("query") or "",
++    ),
++    emoji="🧭",
++)
+diff --git a/toolsets.py b/toolsets.py
+index 2890031..c5508e2 100644
+--- a/toolsets.py
++++ b/toolsets.py
+@@ -12,7 +12,7 @@ from typing import Dict, List, Any, Set, Optional, Tuple
+ _HERMES_CORE_TOOLS = [
+     "web_search", "web_extract",
+     "terminal", "process_manage",
+-    "read_file", "write_file", "patch", "search_files",
++    "read_file", "write_file", "patch", "search_files", "lsp",
+     "vision_analyze", "image_generate",
+     "skills_list", "skill_view", "skill_manage",
+     "browser_navigate", "browser_snapshot", "browser_click",
