@@ -19,8 +19,29 @@
 import Router from '@koa/router'
 import { probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
+import { MentionDispatchService } from '../zcode/mention-dispatch'
 
 const router = new Router({ prefix: '/api/zcode-engine' })
+
+let dispatchSingleton: MentionDispatchService | null = null
+
+/** 派单服务单例：引擎面经投影 runtime（ensureConnected + 桥上调用）。 */
+function getMentionDispatch(): MentionDispatchService {
+  if (dispatchSingleton) return dispatchSingleton
+  const runtime = getZcodeProjectionRuntime()
+  dispatchSingleton = new MentionDispatchService({
+    engine: {
+      probe: () => probeZCodeEngine(),
+      createSession: (p) => runtime.withAgent((agent) => agent.createSession(p)),
+      sendCommand: (p) => runtime.withAgent((agent) => agent.sendConversationCommandV4(p)),
+    },
+    clientId: 'swarmstudio-mention-bus',
+    knownAgents: ['zcode', ...(('' + (process.env.ZCODE_MENTION_AGENTS ?? '')).split(',').filter(Boolean))],
+    deferredAgents: ['claude-code', 'codex', 'pi', 'grok', 'dsh', 'opencode', 'mimo'],
+    onOutcome: () => { /* outcome 经 dispatch() 返回值透传 REST；socket 扇出由调用侧 emit */ },
+  })
+  return dispatchSingleton
+}
 
 router.get('/health', async (ctx) => {
   const startedAt = Date.now()
@@ -71,6 +92,28 @@ router.post('/projection/unwatch', async (ctx) => {
   const runtime = getZcodeProjectionRuntime()
   await runtime.unwatch(workspacePath)
   ctx.body = { ok: true, watching: runtime.watching }
+})
+
+router.post('/mention', async (ctx) => {
+  const { workspacePath, text } = (ctx.request.body ?? {}) as { workspacePath?: string; text?: string }
+  if (typeof workspacePath !== 'string' || workspacePath.length === 0 || typeof text !== 'string' || text.length === 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 与 text 必填' }
+    return
+  }
+  const runtime = getZcodeProjectionRuntime()
+  const service = getMentionDispatch()
+  const outcomes = await service.dispatch({ workspacePath, text })
+  // run 可追溯：成功派发的会话立即挂上投影（conversation topic → /zcode 房间）。
+  for (const o of outcomes) {
+    if (o.reason === 'queued' && o.sessionId) {
+      try {
+        await runtime.watchWorkspace(workspacePath).catch(() => undefined)
+        await runtime.watchSession(workspacePath, o.sessionId).catch(() => undefined)
+      } catch { /* 投影失败不回滚派单；outcome 已携带 sessionId/commandId 可追溯 */ }
+    }
+  }
+  ctx.body = { ok: outcomes.every((o) => o.reason === 'queued' || o.reason === 'coalesced' || o.reason === 'deferred'), outcomes, pending: service.pendingSnapshot() }
 })
 
 router.get('/projection', async (ctx) => {
