@@ -813,3 +813,17 @@
 390-agent-kanban-home-default-board.patch
 391-agent-kanban-board-team-fence.patch
 392-studio-matrix-login-scoped-grant.patch
+# 393/394 MiMo-Code 接入为第 8 个可托管编码 Agent（2026-09-24 MiMo 补充调研 P1；
+#      原编号 381/382，rebase 收口时因 aipaydev 轮占用 381-384 重编号）。
+#      MiMo-Code（XiaomiMiMo/MiMo-Code，OpenCode fork，npm @mimo-ai/cli，bin mimo）
+#      复用 opencode 家族执行路径（run --format json NDJSON）：
+#      - 393 服务端：新模块 services/opencode-family.ts 收敛家族差异（品牌文件
+#        mimocode.json/mimocode.db、MIMOCODE_CONFIG_DIR/MIMOCODE_DB/MIMOCODE_CONFIG_CONTENT
+#        环境变量、$schema URL）；定义条目+配置文件映射+作用域配置+运行时配置+
+#        MCP 同步+启动器全部家族化；mimo run 无 --auto（fork 已移除）以
+#        runSupportsAutoFlag 门控；usage/persisted/webhook/avatar 各联合类型扩 'mimo'。
+#      - 394 客户端：CodingAgentId/AgentStatusId 联合、新建会话下拉项、
+#        agent→chat 映射、头像（public/coding-agents/mimo.svg）。
+#      依据：docs/superpowers/specs/2026-09-24-mimo-code-coding-tools-research.md P1。
+393-server-mimo-coding-agent.patch
+394-client-mimo-agent-ui.patch

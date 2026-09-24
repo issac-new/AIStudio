@@ -1,0 +1,153 @@
+diff --git a/packages/client/public/coding-agents/mimo.svg b/packages/client/public/coding-agents/mimo.svg
+new file mode 100644
+index 0000000..f07f1be
+--- /dev/null
++++ b/packages/client/public/coding-agents/mimo.svg
+@@ -0,0 +1,5 @@
++<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MiMo Code">
++  <rect width="32" height="32" rx="7" fill="#1B1B1F"/>
++  <path d="M7 22.5V12.2c0-.66.54-1.2 1.2-1.2h1.5c.42 0 .81.22 1.03.58L14 17.4l3.27-5.82c.22-.36.61-.58 1.03-.58h1.5c.66 0 1.2.54 1.2 1.2v10.3c0 .55-.45 1-1 1s-1-.45-1-1v-8.16l-3.66 6.5a1 1 0 0 1-1.73 0L11 14.24v8.26c0 .55-.45 1-1 1s-1-.45-1-1z" fill="#FF6900"/>
++  <circle cx="24.5" cy="11.5" r="2" fill="#FF6900" fill-opacity=".85"/>
++</svg>
+diff --git a/packages/client/src/api/agent-status.ts b/packages/client/src/api/agent-status.ts
+index 62ee508..013c8b8 100644
+--- a/packages/client/src/api/agent-status.ts
++++ b/packages/client/src/api/agent-status.ts
+@@ -1,6 +1,6 @@
+ import { request } from './client'
+ 
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'
+ export type AgentStatusSource = 'managed-runtime' | 'user-cli' | 'built-in' | 'not-installed'
+ 
+ export interface AgentStatusRecord {
+@@ -42,6 +42,7 @@ const AGENT_STATUS_ALIASES: Record<string, AgentStatusId> = {
+   pi: 'pi',
+   grok: 'grok',
+   opencode: 'opencode',
++  mimo: 'mimo',
+   dsh: 'dsh',
+   zcode: 'zcode',
+ }
+diff --git a/packages/client/src/api/coding-agents.ts b/packages/client/src/api/coding-agents.ts
+index a101b93..5626039 100644
+--- a/packages/client/src/api/coding-agents.ts
++++ b/packages/client/src/api/coding-agents.ts
+@@ -1,7 +1,7 @@
+ import { request } from './client'
+ import type { ProviderApiMode } from './studio/provider-api-mode'
+ 
+-export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
++export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'
+ export type ChatCodingAgentId = CodingAgentId | 'ekko-agent'
+ export const CODING_AGENT_API_MODES = [
+   'chat_completions',
+diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
+index 26aafbf..8b41c03 100644
+--- a/packages/client/src/api/studio/chat.ts
++++ b/packages/client/src/api/studio/chat.ts
+@@ -137,7 +137,7 @@ export interface RunEvent {
+   }>
+   generation?: string
+   queue_id?: string
+-  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
++  runtime?: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'
+   phase?: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message' | 'cancelled'
+   guarantee?: 'strict' | 'immediate'
+   requested_at?: number
+@@ -191,7 +191,7 @@ export interface ResumeSessionPayload {
+     generation: string
+     run_id?: string
+     queue_id: string
+-    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
++    runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'
+     phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message'
+     guarantee: 'strict' | 'immediate'
+     requested_at: number
+diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
+index 45786cc..f5214e1 100644
+--- a/packages/client/src/components/hermes/chat/ChatPanel.vue
++++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
+@@ -1010,6 +1010,7 @@ const newChatAgentOptions = computed(() => [
+   { label: "Pi", value: "pi" },
+   { label: "Grok", value: "grok" },
+   { label: "OpenCode", value: "opencode" },
++  { label: "MiMo Code", value: "mimo" },
+   { label: "DeepSeek Harness", value: "dsh" },
+ ]);
+ 
+@@ -1127,7 +1128,7 @@ const selectedNewChatProviderGroup = computed(() =>
+ );
+ 
+ const isNewChatCodingAgent = computed(() => newChatAgent.value !== "hermes");
+-const isNewChatExternalCodingAgent = computed(() => newChatAgent.value === "claude-code" || newChatAgent.value === "codex" || newChatAgent.value === "pi" || newChatAgent.value === "grok" || (newChatAgent.value === "opencode" || newChatAgent.value === "dsh"));
++const isNewChatExternalCodingAgent = computed(() => newChatAgent.value === "claude-code" || newChatAgent.value === "codex" || newChatAgent.value === "pi" || newChatAgent.value === "grok" || (newChatAgent.value === "opencode" || newChatAgent.value === "mimo" || newChatAgent.value === "dsh"));
+ const effectiveNewChatAgentMode = computed(() =>
+   effectiveNewChatMode(newChatAgent.value, newChatAgentMode.value),
+ );
+@@ -1373,6 +1374,7 @@ async function confirmNewChat() {
+         ? "grok"
+       : newChatAgent.value === "dsh" ? "dsh" : newChatAgent.value === "opencode"
+         ? "opencode"
++      : newChatAgent.value === "mimo" ? "mimo"
+       : newChatAgent.value === "ekko-agent"
+         ? "ekko-agent"
+       : "hermes";
+@@ -2131,6 +2133,7 @@ const sessionModelCodingAgentId = computed<ChatCodingAgentId | undefined>(() =>
+         ? "grok"
+       : sessionModelSession.value?.agent === "dsh" ? "dsh" : sessionModelSession.value?.agent === "opencode"
+         ? "opencode"
++      : sessionModelSession.value?.agent === "mimo" ? "mimo"
+       : sessionModelSession.value?.agent === "ekko-agent"
+         ? "ekko-agent"
+         : undefined),
+diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
+index 74a5ff0..45f5165 100644
+--- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
+@@ -36,6 +36,7 @@ const emptyStateAgents = [
+     { name: 'Pi', src: '/coding-agents/pi.svg' },
+     { name: 'Grok', src: '/coding-agents/grok.svg' },
+     { name: 'OpenCode', src: '/coding-agents/opencode.png' },
++    { name: 'MiMo Code', src: '/coding-agents/mimo.svg' },
+     { name: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
+ ]
+ const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
+diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index 069b179..3bd66e0 100644
+--- a/packages/client/src/stores/hermes/chat.ts
++++ b/packages/client/src/stores/hermes/chat.ts
+@@ -3617,6 +3617,9 @@ export const useChatStore = defineStore('chat', () => {
+     if (codingAgentId === 'opencode') {
+       return { icon: '/coding-agents/opencode.png' }
+     }
++    if (codingAgentId === 'mimo') {
++      return { icon: '/coding-agents/mimo.svg' }
++    }
+     if (codingAgentId === 'ekko-agent') {
+       return { icon: '/coding-agents/ekko-agent.png' }
+     }
+diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
+index d095015..7b8e19d 100644
+--- a/packages/client/src/utils/chat-agent-avatar.ts
++++ b/packages/client/src/utils/chat-agent-avatar.ts
+@@ -17,6 +17,7 @@ const AGENT_AVATARS = {
+   pi: { label: 'Pi', src: '/coding-agents/pi.svg' },
+   grok: { label: 'Grok', src: '/coding-agents/grok.svg' },
+   opencode: { label: 'OpenCode', src: '/coding-agents/opencode.png' },
++  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
+   dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
+   zcode: { label: 'ZCode', src: '/coding-agents/zcode.svg' },
+ } as const satisfies Record<string, ChatAgentAvatar>
+diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
+index 63932a2..c75a0ff 100644
+--- a/packages/client/src/utils/group-agent-avatar.ts
++++ b/packages/client/src/utils/group-agent-avatar.ts
+@@ -9,6 +9,7 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
+     pi: '/coding-agents/pi.svg',
+     grok: '/coding-agents/grok.svg',
+     opencode: '/coding-agents/opencode.png',
++    mimo: '/coding-agents/mimo.svg',
+     dsh: '/coding-agents/deepseek.svg',
+ }
+ 
