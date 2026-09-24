@@ -1,0 +1,29 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.scope-check
+  version: 0.1.0
+  description: >
+    L0.5 变更范围检查（v0.1 §6.1 Change Scope Check）：声明范围 vs 实际 diff。
+    项目在 .qgate/scope.yaml 声明本任务预期改动 glob；超范围文件 → FAIL 点名
+    （超范围修改/意外公共接口修改/新依赖在此被逮）。exercised 级。
+spec:
+  domain: L0
+  claims:
+    - L0.change-scope-declared
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: l0.scope
+      type: scope
+      mode: scope
+      evidenceType: scope-check-result
+  evidence:
+    required:
+      - scope-check-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
