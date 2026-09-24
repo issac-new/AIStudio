@@ -54,7 +54,7 @@ for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do
   wid=$(mx "$(load_token "$n")" GET account/whoami | jq -r '.user_id' 2>/dev/null || true)
   [[ "$wid" == "@$n:$SERVER_NAME" ]] || { whoami_ok=0; log "whoami 不符：$n → $wid"; }
 done
-[[ $whoami_ok == 1 ]] && gate G1 1 "24 账号 whoami 全对" || gate G1 0 "whoami 存在不匹配（见上）"
+[[ $whoami_ok == 1 ]] && gate G1 1 "$(( ${#USERS[@]} * 2 )) 账号 whoami 全对" || gate G1 0 "whoami 存在不匹配（见上）"
 
 f_state_sha=$(shasum "$HERMES_ROOT/profiles/fanfan/state.db" 2>/dev/null | cut -d' ' -f1 || echo none)
 c_state_sha=$(shasum "$HERMES_ROOT/profiles/chen/state.db" 2>/dev/null | cut -d' ' -f1 || echo none)
@@ -178,7 +178,7 @@ for u in "${INSTANCED_USERS[@]}"; do
 done
 distinct_banks=$(echo "$family_banks" | tr ' ' '\n' | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
 if [[ $g6_ok == 1 && "$distinct_banks" == "${#INSTANCED_USERS[@]}" ]]; then
-  gate G6 1 "11 家族各一 bank（用户名+MAC 区分）、成员共享、provider 全激活、服务健康 ✓"
+  gate G6 1 "${#INSTANCED_USERS[@]} 家族各一 bank（用户名+MAC 区分）、成员共享、provider 全激活、服务健康 ✓"
 else
   [[ "$distinct_banks" == "${#INSTANCED_USERS[@]}" ]] || g6_detail+="家族 bank 去重数 ${distinct_banks}≠${#INSTANCED_USERS[@]}；"
   gate G6 0 "${g6_detail:-异常}"
