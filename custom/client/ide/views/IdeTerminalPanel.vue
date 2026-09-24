@@ -59,6 +59,7 @@ let fitAddon: FitAddon | null = null
 let ws: WebSocket | null = null
 let resizeObserver: ResizeObserver | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let reconnectAttempts = 0
 let initialCdSent = false
 let shellName = ''
 // PTY 泄漏防护：与 CockpitTerminalPane 相同的 disposed 标志 + socket 身份守卫
@@ -141,6 +142,7 @@ function connect() {
   sock.onopen = () => {
     if (ws !== sock) return
     connected.value = true
+    reconnectAttempts = 0
   }
 
   sock.onmessage = (event) => {
@@ -170,6 +172,13 @@ function connect() {
 function scheduleReconnect() {
   if (disposed) return
   if (reconnectTimer) return
+  // C5 健壮性：鉴权失效/node-pty 不可用时 WS 反复握手失败 → 无限重连永远"连接中"。
+  // 上限 5 次后明示后端不可用，不再无限转圈（演示可诊断）。
+  if (reconnectAttempts >= 5) {
+    term?.write('\r\n\x1b[31m[终端后端不可用——已停止重连（检查登录态/node-pty）]\x1b[0m\r\n')
+    return
+  }
+  reconnectAttempts++
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
     connect()
@@ -181,7 +190,7 @@ function send(data: string | object) {
   ws.send(typeof data === 'string' ? data : JSON.stringify(data))
 }
 
-function handleControl(msg: { type?: string; shell?: string; exitCode?: number | string }) {
+function handleControl(msg: { type?: string; shell?: string; exitCode?: number | string; message?: string }) {
   switch (msg.type) {
     case 'created':
       shellName = String(msg.shell ?? '')
@@ -200,6 +209,10 @@ function handleControl(msg: { type?: string; shell?: string; exitCode?: number |
       term?.write(`\r\n\x1b[90m[process exited (code: ${msg.exitCode})]\x1b[0m\r\n`)
       break
     case 'switched':
+      break
+    case 'error':
+      // 服务端 spawn 失败/会话上限等错误帧，此前被静默吞掉致终端空白
+      term?.write(`\r\n\x1b[31m[终端错误: ${msg.message || 'unknown'}]\x1b[0m\r\n`)
       break
   }
 }
