@@ -11,6 +11,7 @@ import { useIdeStore } from '../store/ide'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { TPS_FLOOR, formatTokens, lowContextThreshold, LOW_CONTEXT_RECOVER_PCT } from '../utils/metrics'
+import { useZcodeProjection } from '../../zcode/store/zcode-projection'
 import IdeMetricsPopover from './IdeMetricsPopover.vue'
 
 const ide = useIdeStore()
@@ -18,6 +19,8 @@ const chatStore = useChatStore()
 const { t } = useI18n()
 const message = useMessage()
 const metrics = useSessionMetrics()
+// zcode 会话投影（R4-P2）：/zcode 事件面的状态条 chip（会话数 + 最新 reason）。
+const zcodeProjection = useZcodeProjection()
 
 const running = computed(() => Boolean(chatStore.isRunActive || chatStore.abortState))
 
@@ -93,6 +96,23 @@ watch(
   <footer class="ide-statusbar">
     <span class="ide-statusbar__item" :title="ide.workspace ?? ''">
       {{ ide.workspace ?? t('ide.workspaceDefault') }}
+    </span>
+
+    <!-- zcode 会话投影 chip（R4-P2）：会话数 + 最新 reason（词表字面值本地化） -->
+    <span
+      v-if="zcodeProjection.sessionCount.value > 0 || zcodeProjection.lastReasonText.value"
+      class="ide-statusbar__item"
+      data-testid="ide-zcode-projection"
+      :title="`zcode: ${zcodeProjection.sessionCount.value} 会话 · Δ${zcodeProjection.state.conversationDeltaTotal}`"
+    >
+      zcode {{ zcodeProjection.sessionCount.value }}
+      <span
+        v-if="zcodeProjection.lastReasonText.value"
+        class="ide-statusbar__zcode-reason"
+        :data-trouble="zcodeProjection.lastReasonIsTrouble.value"
+      >
+        {{ zcodeProjection.lastReasonText.value }}
+      </span>
     </span>
 
     <!-- 会话遥测簇（dsh-TUI 移植：水位条 / TPS / 缓存；R1：点击展开遥测面板） -->
@@ -269,3 +289,19 @@ watch(
   opacity: 0.85;
 }
 </style>
+
+/* ── zcode 投影 chip ── */
+.ide-statusbar__zcode-reason {
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  &[data-trouble='true'] {
+    background: rgba(212, 76, 71, 0.18);
+    color: #d44c47;
+  }
+  &[data-trouble='false'] {
+    background: rgba(62, 172, 118, 0.14);
+    color: #3eac76;
+  }
+}
