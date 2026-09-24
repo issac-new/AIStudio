@@ -1,5 +1,5 @@
 # SwarmStudio base runtime: exa (code-specialized external search MCP).
-# Single source of truth — injected into hermes-agent optional-mcps/exa/ by patch 384.
+# Single source of truth — injected into hermes-agent optional-mcps/exa/ by patch 396（原 384，撞号重编）.
 # Consumed by the studio MCP catalog browser and `hermes mcp install exa`.
 # Rationale: MiMo-Code ships a codesearch tool on the Exa Code API; hermes web_search
 # is generic — this gives coding agents a dedicated SDK/library/API research channel

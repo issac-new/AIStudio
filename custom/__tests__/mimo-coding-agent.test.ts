@@ -39,25 +39,25 @@ describe('MiMo-Code 编码 Agent 接入（patch 393/394）', () => {
     }
   })
 
-  it('381 定义条目 + 配置文件映射（~/.config/mimocode/）', () => {
+  it('393 定义条目 + 配置文件映射（~/.config/mimocode/）', () => {
     expect(patch393).toContain("id: 'mimo',")
     expect(patch393).toContain("command: 'mimo',")
     expect(patch393).toContain("packageName: '@mimo-ai/cli',")
     expect(patch393).toContain("'~/.config/mimocode/AGENTS.md'")
   })
 
-  it('381 不为 mimo 无条件传 --auto（fork 已移除该旗标）', () => {
+  it('393 不为 mimo 无条件传 --auto（fork 已移除该旗标）', () => {
     expect(patch393).toContain('...(familyVars.runSupportsAutoFlag ? [\'--auto\'] : [])')
     // 反向锚：旧的固定参数行必须已被替换
     expect(patch393).not.toMatch(/\+\s*'--auto',\n/)
   })
 
-  it('381 扩持久化/用量/webhook 联合类型', () => {
+  it('393 扩持久化/用量/webhook 联合类型', () => {
     expect(patch393).toContain("'opencode' | 'mimo' | 'dsh'")
     expect(patch393).toContain("webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh'")
   })
 
-  it('382 客户端联合 + 新建会话选项 + 头像资源', () => {
+  it('394 客户端联合 + 新建会话选项 + 头像资源', () => {
     expect(patch394).toContain("export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'")
     expect(patch394).toContain('{ label: "MiMo Code", value: "mimo" }')
     expect(patch394).toContain('mimo: { label: \'MiMo Code\', src: \'/coding-agents/mimo.svg\' }')
