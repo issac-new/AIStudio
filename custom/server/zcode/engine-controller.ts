@@ -20,8 +20,10 @@ import Router from '@koa/router'
 import { probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { MentionDispatchService } from '../zcode/mention-dispatch'
+import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
 
 const router = new Router({ prefix: '/api/zcode-engine' })
+const CHECKPOINT_MODES_JOIN = CHECKPOINT_RECOVERY_MODES.join('/')
 
 let dispatchSingleton: MentionDispatchService | null = null
 
@@ -114,6 +116,40 @@ router.post('/mention', async (ctx) => {
     }
   }
   ctx.body = { ok: outcomes.every((o) => o.reason === 'queued' || o.reason === 'coalesced' || o.reason === 'deferred'), outcomes, pending: service.pendingSnapshot() }
+})
+
+router.post('/checkpoint/recover', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { mode, workspacePath, sessionId, rowId, entityId, originalQueryText } = body as Record<string, unknown>
+  if (typeof workspacePath !== 'string' || typeof sessionId !== 'string'
+      || typeof rowId !== 'number' || typeof entityId !== 'string') {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId/rowId/entityId 必填' }
+    return
+  }
+  if (!isCheckpointRecoveryMode(mode)) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: `mode 须为四档之一（${CHECKPOINT_MODES_JOIN}）` }
+    return
+  }
+  const runtime = getZcodeProjectionRuntime()
+  try {
+    const envelopes = buildRecoveryEnvelopes(mode, {
+      workspacePath, sessionId, rowId, entityId,
+      clientId: 'swarmstudio-checkpoint',
+      originalQueryText: typeof originalQueryText === 'string' ? originalQueryText : undefined,
+    }, Date.now())
+    const sent = []
+    for (const envelope of envelopes) {
+      const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope }))
+      sent.push({ commandId: envelope.commandId, type: envelope.type, status: r.status, reasonCode: r.reasonCode })
+    }
+    ctx.body = { ok: true, mode, commands: sent }
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
+    ctx.status = 503
+    ctx.body = { ok: false, reason: /handshake/i.test(detail) ? 'handshake_failed' : 'engine_unreachable', detail }
+  }
 })
 
 router.get('/projection', async (ctx) => {
