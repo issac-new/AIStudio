@@ -1,0 +1,21 @@
+{
+  "_comment": "B1 双树漂移根治：agent 运行时文件清单。source=upstream/hermes-agent（工作树镜像），dest=~/.hermes/hermes-agent（运行时安装树）。inject 出口经 deploy-agent-runtime 自动同步，杜绝'修复只在工作树、不达运行时'（room-invite-gap 真根因）。",
+  "root": "overlay/runtime",
+  "target": "~/.hermes/hermes-agent",
+  "files": [
+    {
+      "source": "plugins/platforms/matrix/tools.py",
+      "dest": "plugins/platforms/matrix/tools.py",
+      "note": "matrix room 工具（含 is_async=True）"
+    },
+    {
+      "source": "plugins/platforms/matrix/plugin.yaml",
+      "dest": "plugins/platforms/matrix/plugin.yaml",
+      "note": "provides_tools 声明"
+    }
+  ],
+  "notes": [
+    "overlay/runtime 是 agent 运行时修复的源（含 is_async/provides_tools），deploy-agent-runtime 同步到 ~/.hermes；幂等、默认 dry-run。",
+    "源须持续含全部运行时修复，否则同步会覆盖回退。"
+  ]
+}

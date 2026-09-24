@@ -1,0 +1,52 @@
+diff --git a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
+index 5aebc1ee..52ab95ac 100644
+--- a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
++++ b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
+@@ -15,7 +15,18 @@ import { canScopedCodingAgentUseProvider } from '@/utils/codingAgentProviders'
+ 
+ import '@vue-flow/node-resizer/dist/style.css'
+ 
+-const props = defineProps<NodeProps<WorkflowAgentNodeData>>()
++const props = defineProps<{
++  data: WorkflowAgentNodeData
++  id: string
++  type?: string
++  selected?: boolean
++  connectable?: unknown
++  position?: { x: number; y: number }
++  dimensions?: { width: number; height: number }
++  label?: unknown
++  dragging?: boolean
++  resizing?: boolean
++}>()
+ const { t } = useI18n()
+ const message = useMessage()
+ const attachmentInputRef = ref<HTMLInputElement | null>(null)
+diff --git a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
+index eed35289..1bd4888d 100644
+--- a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
++++ b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
+@@ -7,7 +7,22 @@ import {
+   type WorkflowSelfLoopGeometry,
+ } from '@/utils/workflow-edge-authoring'
+ 
+-const props = defineProps<EdgeProps>()
++const props = defineProps<{
++  id: string
++  label?: unknown
++  source: string
++  target: string
++  sourceX?: number
++  sourceY?: number
++  targetX?: number
++  targetY?: number
++  sourcePosition?: any
++  targetPosition?: any
++  sourceNode?: any
++  targetNode?: any
++  markerEnd?: unknown
++  data?: unknown
++}>()
+ const emit = defineEmits<{ edit: [edgeId: string] }>()
+ 
+ const nodeBounds = computed(() => ({
