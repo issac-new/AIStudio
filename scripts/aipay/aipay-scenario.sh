@@ -42,7 +42,7 @@ if step_reached smoke; then
     mx "$(load_token "$u")" GET account/whoami >/dev/null || fail "账号 $u token 失效"
     mx "$(load_token "$u-agent")" GET account/whoami >/dev/null || fail "账号 $u-agent token 失效"
   done
-  note "[真值] 24 账号 token 有效 ✓（步骤 1 账号分配）"
+  note "[真值] $(( ${#USERS[@]} * 2 )) 账号 token 有效 ✓（步骤 1 账号分配；编制 ${#USERS[@]} 人 ×2 账号）"
   curl -sf "http://127.0.0.1:${STUDIO_PORT}/health/ready" >/dev/null || fail "studio（单实例多账号）未就绪"
   curl -sf "http://127.0.0.1:${GW_PORT}/health" >/dev/null || fail "gateway（多路复用）未就绪"
   note "[真值] 单 gateway（:${GW_PORT}）+ 单 studio（:${STUDIO_PORT}）就绪 ✓（步骤 2 gateway 配置 / 步骤 4 功能就绪）"
@@ -50,7 +50,7 @@ if step_reached smoke; then
     jwt_of "$u" >/dev/null   # matrix-login 全量验证（步骤 3 自动登录链路）
     kanban_list "$u" >/dev/null
   done
-  note "[真值] 11 账号 matrix-login + 账号板 kanban 可达 ✓（步骤 3 登录）"
+  note "[真值] ${#INSTANCED_USERS[@]} 账号 matrix-login + 账号板 kanban 可达 ✓（步骤 3 登录）"
   # 自动登录链路端点契约（C2 修复 384）：公开可达且按契约应答。configured:true/false
   # 均合法——V2 单 studio 多账号下 root 网关无 matrix 凭据，configured:false 为预期
   # 常态（客户端回落账号 matrix-login）；路由真缺失才是问题（裸 404 无契约体）。
