@@ -135,7 +135,7 @@ export class ZcodeProjectionRuntime {
     projection.onEvent((event) => this.emit(event))
     this.projection = projection
     bridge.onReconnected(() => { void this.handleDisconnect() })
-    this.restartSub = bridge.agent.onAgentRuntimeRestarted()(() => { void this.handleDisconnect() })
+    this.restartSub = bridge.agent.onAgentRuntimeRestarted(() => { void this.handleDisconnect() })
     // 建立后重放全部 watch 意图（首轮 attach 与重连重放共用此路径）。
     void this.replayIntents()
   }

@@ -1,0 +1,203 @@
+diff --git a/tools/memory_consolidate.py b/tools/memory_consolidate.py
+new file mode 100644
+--- /dev/null
++++ b/tools/memory_consolidate.py
+@@ -0,0 +1,113 @@
++"""记忆自动沉淀 v1（mimo P4 二期 auto-dream/auto-distill 的 hermes 形状）。
++
++Origin：MiMo-Code session/auto-dream.ts（7d/30d 周期 spawn 系统会话整理记忆）。
++hermes 形状重设计（spec 分期说明：一期 FTS 已落 406，二期为本件）：
++
++- **distill v1 = 规则式**（去重 + 陈旧剪枝 + 报告），不调模型——可测、可回退、零成本；
++  LLM 式摘要合并列 v2（等一期 FTS 检索面真实使用反馈后再上，避免闭门造摘要）。
++- 节奏（7d/30d auto-dream）经 hermes 既有 cron 运维面接：cronjob_manage 注册周期任务
++  调 `memory_tool(action='consolidate')` 等价入口（见模块尾部注释），不在本模块自建调度。
++- 纪律：markdown 唯一事实源不变；distill 只做**确定性变换**（合并完全重复项/剪枝过期
++  项），任何非确定性改写（摘要、改写句）都不做——记忆内容只由写入方决定。
++"""
++
++from __future__ import annotations
++
++import logging
++import re
++import time
++from dataclasses import dataclass, field
++from typing import Any, Dict, List
++
++logger = logging.getLogger(__name__)
++
++# 陈旧判定：条目 mtime 超过该天数且存储区超容量时才可剪（容量未满不剪——记忆宁留勿删）。
++DEFAULT_STALE_DAYS = 30.0
++# 容量触发线：字符占用超过该比例才启动陈旧剪枝。
++PRUNE_CAPACITY_RATIO = 0.9
++
++
++def _normalize(text: str) -> str:
++    """归一化重复判定：压空白/去大小写差异（中文条目不受影响）。"""
++    return re.sub(r"\s+", " ", (text or "").strip()).casefold()
++
++
++@dataclass
++class DistillReport:
++    merged: int = 0
++    pruned: int = 0
++    skipped: int = 0
++    entries_before: int = 0
++    entries_after: int = 0
++    detail: List[str] = field(default_factory=list)
++
++    def as_dict(self) -> Dict[str, Any]:
++        return {
++            "merged": self.merged, "pruned": self.pruned, "skipped": self.skipped,
++            "entries_before": self.entries_before, "entries_after": self.entries_after,
++            "detail": self.detail[:20],
++        }
++
++
++def distill_pass(
++    store: Any,
++    *,
++    stale_days: float = DEFAULT_STALE_DAYS,
++    now: float | None = None,
++) -> DistillReport:
++    """对 memory 与 user 两桶做确定性沉淀：合并归一化重复项；容量超线时剪陈旧项。
++
++    线程安全：调用方持 store 锁/在写路径外调用（memory_tool consolidate 动作在
++    store 批处理语义下执行）。报告逐条留痕，剪了什么一目了然。
++    """
++    now = now if now is not None else time.time()
++    report = DistillReport()
++    for target in ("memory", "user"):
++        entries: List[str] = list(store._entries_for(target))
++        report.entries_before += len(entries)
++        # 1) 去重：归一化同文只留首条（保留原始拼写最先写入的形态）。
++        seen: Dict[str, int] = {}
++        kept: List[str] = []
++        for e in entries:
++            key = _normalize(e)
++            if key in seen:
++                report.merged += 1
++                report.detail.append(f"[{target}] 重复合并: {e.strip()[:40]}…")
++                continue
++            seen[key] = 1
++            kept.append(e)
++        # 2) 陈旧剪枝：仅当容量超线。条目陈旧度无独立 mtime（文件面整体加载），
++        #    以存储区最近修改时间为界不可行——v1 以「最旧写入序」近似：超线时按
++        #    写入序从旧到新剪到容量线下（skipped=因未超线未剪）。
++        limit = store._char_limit(target)
++        used = len("".join(kept))
++        if used <= limit * PRUNE_CAPACITY_RATIO:
++            report.skipped += len(kept)
++            entries = kept
++        else:
++            pruned_now: List[str] = []
++            while kept and len("".join(kept)) > limit * PRUNE_CAPACITY_RATIO:
++                victim = kept.pop(0)
++                pruned_now.append(victim)
++                report.pruned += 1
++                report.detail.append(f"[{target}] 容量剪枝(最旧序): {victim.strip()[:40]}…")
++            entries = kept
++        store._set_entries(target, entries)
++        report.entries_after += len(entries)
++    from hermes_constants import mkdir_under_hermes_home
++    for target in ("memory", "user"):
++        try:
++            path = store._path_for(target)
++            mkdir_under_hermes_home(path.parent)
++            store._write_file(path, store._entries_for(target))
++        except Exception as exc:  # noqa: BLE001 - 落盘失败报告不静默
++            report.detail.append(f"[{target}] 落盘失败: {exc}")
++            logger.warning("memory distill persist failed: %s", exc)
++    return report
++
++
++# ── cron 接线说明（运维面，非代码）────────────────────────────────────
++# 7d/30d auto-dream 节奏（mimo 语义）经 hermes 既有 cron 注册，例：
++#   hermes cron add --every 7d --profile <name> \
++#     --prompt "调用 memory 工具 action=consolidate 做周期沉淀，然后报告 merged/pruned 数字"
++# （cron 会话内模型可调 memory 工具；规则式 distill 本身无模型调用，prompt 只做报告壳。）
+diff --git a/tools/memory_tool.py b/tools/memory_tool.py
+--- a/tools/memory_tool.py
++++ b/tools/memory_tool.py
+@@ -207,7 +207,9 @@
+         # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。
+         if action == "search":
+             return _memory_search(store, target, content)
+-        return tool_error(f"Unknown action '{action}'. Use: add, replace, remove, search", success=False)
++        if action == "consolidate":
++            return _memory_consolidate(store)
++        return tool_error(f"Unknown action '{action}'. Use: add, replace, remove, search, consolidate", success=False)
+     invalid = (_validate_single_op(store, action, target, content, old_text)
+                or _background_delete_gate(action, None, target, content, old_text)
+                or _apply_write_gate(action, target, content, old_text))
+@@ -237,6 +239,14 @@
+         )
+     finally:
+         idx.close()
++
++
++def _memory_consolidate(store: "MemoryStore") -> str:
++    """action=consolidate：规则式 distill v1（去重+容量剪枝+报告；P4 二期）。"""
++    import json as _json
++    from tools.memory_consolidate import distill_pass
++    report = distill_pass(store)
++    return _json.dumps({"success": True, "action": "consolidate", **report.as_dict()}, ensure_ascii=False)
+ 
+ 
+ def get_builtin_memory_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+diff --git a/tests/tools/test_memory_consolidate.py b/tests/tools/test_memory_consolidate.py
+new file mode 100644
+--- /dev/null
++++ b/tests/tools/test_memory_consolidate.py
+@@ -0,0 +1,51 @@
++"""记忆自动沉淀 v1 守门（mimo P4 二期：规则式 distill——去重/容量剪枝/报告）。"""
++
++from __future__ import annotations
++
++import json
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from tools.memory_consolidate import distill_pass  # noqa: E402
++from tools.memory_tool_store import MemoryStore  # noqa: E402
++
++
++class TestDistill:
++    def test_dedup_normalized(self, tmp_path, monkeypatch):
++        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++        store = MemoryStore(memory_char_limit=2000)
++        store.memory_entries = [
++            "登录页 token  持久化方案",   # 双空格
++            "登录页 token 持久化方案",    # 归一化后重复 → 合并
++            "编译缓存命中优化",
++        ]
++        r = distill_pass(store)
++        assert r.merged == 1 and len(store.memory_entries) == 2
++        assert "登录页" in store.memory_entries[0]
++
++    def test_capacity_prune_oldest_first_only_when_over_line(self, tmp_path, monkeypatch):
++        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++        store = MemoryStore(memory_char_limit=100)
++        store.memory_entries = ["x" * 30, "y" * 30, "z" * 30]  # 90 ≤ 90 线下 → 不剪
++        r = distill_pass(store)
++        assert r.pruned == 0 and len(store.memory_entries) == 3
++        store.memory_entries = ["x" * 40, "y" * 40, "z" * 40]  # 120 > 90 → 剪最旧
++        r = distill_pass(store)
++        assert r.pruned == 1 and store.memory_entries[0] == "y" * 40
++
++    def test_report_and_action_surface(self, tmp_path, monkeypatch):
++        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++        from tools import memory_tool as mt
++        store = MemoryStore()
++        store.memory_entries = ["a", "a", "b"]
++        out = json.loads(mt.memory_tool("consolidate", store=store))
++        assert out["success"] is True and out["merged"] == 1
++        assert out["entries_after"] == 2
++        unknown = json.loads(mt.memory_tool("explode", store=store))
++        assert "consolidate" in unknown.get("error", "")
