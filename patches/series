@@ -896,3 +896,13 @@
 #      （send_message 转向/interrupt 停当前轮）依赖 delegate 后台化（mimo P3 缓办）后接。
 #      依据 docs/upstream-analysis/{dsh-TUI,kimi,routa}.md + spec §1.2 #10。
 404-agent-roster-config-layer.patch
+# 405 mimo P6 ngram 原语 + P7 checkpoint 写手（goal 冷裁判经核实原生已有：goals.py
+#      每轮辅助裁判+GoalGate+fail-open，强于 mimo 方案，不重造）。
+#      P6：runaway_guard 增文本侧 observe_text_step（词级 8-gram Jaccard 相邻窗重复率
+#      >0.6 连续 2 窗 → text_ngram_repeat 信号，只报不打断；短文本豁免断连击），挂
+#      conversation_loop normalize_model_response 后。P7：agent/session_checkpoint.py
+#      五节写手（goal/done 锚点/next 黑名单/blockers/artifacts 各节预算）+校验器重写
+#      一次+原始摘要兜底+generation 幂等+对账三分支降级 unverified；挂 turn_finalizer
+#      预算触顶（budget_exhausted）；HERMES_SESSION_CHECKPOINT=0 关。
+#      依据 specs/2026-09-24-{goal-judge-and-ngram-loop-guard,session-checkpoint-writer}.md。
+405-agent-ngram-checkpoint-writer.patch
