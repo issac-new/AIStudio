@@ -1,0 +1,24 @@
+name: qgate
+
+# QGate 自身质量门（v0.1 §2.1 CI adapter 最小面）：
+# 只跑 qgate 类型检查与套件——overlay 全量依赖本地注入态 upstream 树，CI 不可复现。
+on:
+  push:
+    paths: ['custom/qgate/**', '.github/workflows/qgate.yml']
+  pull_request:
+    paths: ['custom/qgate/**']
+
+jobs:
+  qgate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install & build & test (qgate)
+        working-directory: custom/qgate
+        run: |
+          npm install
+          npx tsc -p tsconfig.json
+          npx vitest run

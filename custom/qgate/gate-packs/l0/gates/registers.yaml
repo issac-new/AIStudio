@@ -1,0 +1,36 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.registers
+  version: 0.1.0
+  description: >
+    L0.3/L0.4 假设与决策登记（v0.1 §6.1 Assumption Register + Open Decision Check）：
+    .qgate/registers/{assumptions,decisions}.md 在档且含必备标记段。
+    诚实降档：在档 = present 级（登记 ≠ 被验证），单凭本门最高 CONDITIONAL。
+spec:
+  domain: L0
+  claims:
+    - L0.registers-maintained
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: l0.registers
+      type: files
+      require:
+        - ".qgate/registers/assumptions.md"
+        - ".qgate/registers/decisions.md"
+      mustContain:
+        - file: ".qgate/registers/assumptions.md"
+          markers: ["## Assumptions", "assumption:", "impact:"]
+        - file: ".qgate/registers/decisions.md"
+          markers: ["## Decisions", "decision:", "status:"]
+      evidenceType: registers-present
+  evidence:
+    required:
+      - registers-present
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

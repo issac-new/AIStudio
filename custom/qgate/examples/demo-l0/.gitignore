@@ -1,0 +1,8 @@
+node_modules/
+.qgate/runs/
+.qgate/evidence/
+.qgate/risks/
+.qgate/exceptions/
+.qgate/cache/
+.qgate/state.json
+.qgate/hooks.log

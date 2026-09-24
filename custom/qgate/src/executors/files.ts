@@ -4,7 +4,7 @@
 // 这是证据强度阶梯（设计 §4.2）的活演示：present 永远只是占位。
 
 import { randomUUID } from 'node:crypto'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type { Evidence, ExecutorSpec } from '../core/types.js'
 import { globMatch } from '../core/impact.js'
@@ -26,19 +26,37 @@ export function runFilesExecutor(executor: ExecutorSpec, input: FilesExecutorInp
     if (hits.length > 0) present.push(...hits.map((h) => relative(input.workspace, h)))
     else missing.push(pattern)
   }
+  // mustContain：存在之上再查标记串（格式在档——仍是 present 级，在档 ≠ 被验证）
+  const markerMisses: string[] = []
+  for (const req of executor.mustContain ?? []) {
+    const hits = matchFiles(input.workspace, req.file)
+    if (hits.length === 0) { missing.push(req.file); continue }
+    let content = ''
+    try {
+      content = readFileSync(hits[0], 'utf8')
+    } catch {
+      missing.push(req.file)
+      continue
+    }
+    for (const marker of req.markers) {
+      if (!content.includes(marker)) markerMisses.push(`${relative(input.workspace, hits[0])} 缺标记 "${marker}"`)
+    }
+  }
   const ev: Evidence = {
     id: `ev-${randomUUID().slice(0, 12)}-files`,
     runId: input.runId,
     gateId: input.gateId,
     type: executor.evidenceType,
     producer: executor.id,
-    result: missing.length === 0 ? 'pass' : 'fail',
-    execution: 'present', // 文件存在 ≠ 真跑过——证据强度三级里的最低档
+    result: missing.length === 0 && markerMisses.length === 0 ? 'pass' : 'fail',
+    // 纯存在性 = present（在档 ≠ 验证）；mustContain 做了真实的内容标记检查 = exercised
+    // （demo-l0 实测校准：标记缺失应是真 FAIL 而非降档 CONDITIONAL）
+    execution: (executor.mustContain && executor.mustContain.length > 0) ? 'exercised' : 'present',
     independence: 'spec-derived',
     summary:
-      missing.length === 0
+      missing.length === 0 && markerMisses.length === 0
         ? `all ${patterns.length} required artifacts present (present-level evidence only)`
-        : `missing artifacts: ${missing.join(', ')}`,
+        : [missing.length ? `missing artifacts: ${missing.join(', ')}` : '', ...markerMisses].filter(Boolean).join('; '),
     provenance: { startedAt, endedAt: Date.now(), commit: input.commit, cwd: input.workspace, affectedPaths: present.slice(0, 50) },
   }
   return ev

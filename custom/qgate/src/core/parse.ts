@@ -80,7 +80,7 @@ export function parseClaim(raw: unknown): Claim | null {
 function parseExecutor(raw: unknown): ExecutorSpec | null {
   if (!isRecord(raw)) return null
   const id = validId(raw.id)
-  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files', 'llm'] as const)
+  const type = enumOf(raw.type, ['command', 'persistence', 'ontology', 'files', 'llm', 'scope'] as const)
   const evidenceType = validId(raw.evidenceType)
   if (!id || !type || !evidenceType) return null
   const out: ExecutorSpec = { id, type, evidenceType }
@@ -105,6 +105,22 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     const require = strList(raw.require, 200)
     if (!require || require.length === 0) return null
     out.require = require
+    if (raw.mustContain !== undefined) {
+      if (!Array.isArray(raw.mustContain) || raw.mustContain.length > 50) return null
+      const entries: NonNullable<ExecutorSpec['mustContain']> = []
+      for (const m of raw.mustContain) {
+        if (!isRecord(m)) return null
+        const file = str(m.file)
+        const markers = strList(m.markers, 20)
+        if (!file || !markers || markers.length === 0) return null
+        entries.push({ file, markers })
+      }
+      out.mustContain = entries
+    }
+  } else if (type === 'scope') {
+    const mode = enumOf(raw.mode, ['scope', 'acceptance'] as const)
+    if (!mode) return null
+    out.mode = mode
   }
   return out
 }

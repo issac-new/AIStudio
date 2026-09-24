@@ -11,6 +11,7 @@ import { runPersistenceExecutor } from '../executors/persistence.js'
 import { runOntologyExecutor } from '../executors/ontology.js'
 import { runFilesExecutor } from '../executors/files.js'
 import { runLlmExecutor } from '../executors/llm.js'
+import { runScopeExecutor } from '../executors/scope.js'
 import { saveRun, storePaths, activeWaiverFor } from './store.js'
 import { cacheKeyFor, cacheGet, cachePut, markCached } from './cache.js'
 
@@ -77,16 +78,20 @@ export async function runGate(input: RunInput): Promise<RunResult> {
 
   // §49 缓存与增量执行：cache key = gate 版本 + 全 executor 面 + 输入锚（commit/treeHash/变更集）
   // + 门配置 + 环境。命中且未过期 → 复用证据（execution 标 cached，决策照旧），跳过重跑。
-  const cacheKey = cacheKeyFor(spec, spec.spec.executors, {
-    qgateDir, workspace, commit: git.commit, treeHash: git.treeHash, changedPaths,
-  })
+  // §49 缓存适用面：仅 argv 确定性 executor（command/llm）参与——files/scope/ontology/
+  // persistence 的输入是工作区文件内容，非 git 目录下 cache key 不随内容漂移（demo-l0
+  // 实测逮住：改登记文件后命中旧证据）。git 项目内 treeHash 锚可兜底，但统一收窄最稳。
+  const cacheable = spec.spec.executors.every((e) => e.type === 'command' || e.type === 'llm')
+  const cacheKey = cacheable
+    ? cacheKeyFor(spec, spec.spec.executors, { qgateDir, workspace, commit: git.commit, treeHash: git.treeHash, changedPaths })
+    : null
   const maxAgeHours = spec.spec.policy.maxAgeHours ?? 24
   let cached = false
   let evidence: Evidence[] = []
-  const hit = cacheGet(qgateDir, cacheKey, maxAgeHours)
+  const hit = cacheKey ? cacheGet(qgateDir, cacheKey, maxAgeHours) : null
   if (hit && hit.evidence.length > 0) {
     cached = true
-    evidence = markCached(hit.evidence, cacheKey)
+    evidence = markCached(hit.evidence, cacheKey!)
   }
 
   if (!cached) {
@@ -101,9 +106,11 @@ export async function runGate(input: RunInput): Promise<RunResult> {
         evidence.push(runFilesExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit }))
       } else if (executor.type === 'llm') {
         evidence.push(await runLlmExecutor(executor, { runId, gateId: spec.metadata.id, workspace, gateSpec: spec, commit: git.commit, changedPaths }))
+      } else if (executor.type === 'scope') {
+        evidence.push(runScopeExecutor(executor, { runId, gateId: spec.metadata.id, workspace, commit: git.commit, changedPaths }))
       }
     }
-    cachePut(qgateDir, cacheKey, evidence)
+    if (cacheKey) cachePut(qgateDir, cacheKey, evidence)
   }
 
   const decision = decide(spec, evidence)

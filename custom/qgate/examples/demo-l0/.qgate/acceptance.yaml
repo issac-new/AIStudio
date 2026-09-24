@@ -1,0 +1,4 @@
+criteria:
+  - id: AC-1
+    statement: add 函数正确相加
+    coveredBy: [demo 手测 node -e]
