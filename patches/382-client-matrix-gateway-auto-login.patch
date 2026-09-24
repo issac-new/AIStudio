@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/stores/hermes/auth.ts b/packages/client/src/stores/hermes/auth.ts
 --- a/packages/client/src/stores/hermes/auth.ts
 +++ b/packages/client/src/stores/hermes/auth.ts
-@@ -61,6 +61,29 @@
+@@ -61,5 +61,28 @@
      }
    }
  
@@ -28,7 +28,6 @@ diff --git a/packages/client/src/stores/hermes/auth.ts b/packages/client/src/sto
 +      isLoading.value = false
 +    }
 +  }
- 
    async function localLogin(username: string, password: string) {
      isLoading.value = true
 @@ -132,6 +155,7 @@
