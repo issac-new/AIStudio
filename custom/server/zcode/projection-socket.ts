@@ -8,6 +8,10 @@
 // （含 DispatchReasonCode 词表值，cockpit chip 按字面值本地化）。
 import type { Server, Socket } from 'socket.io'
 import type { ProjectionEvent } from './session-projection'
+import type { MentionOutcome } from './mention-dispatch'
+
+/** /zcode 房间可承载的事件面（投影事件 + 派单 outcome；共同约束是 workspaceId 键）。 */
+export type ZcodeSocketEvent = ProjectionEvent | MentionOutcome
 
 let activeIo: Server | null = null
 
@@ -36,7 +40,7 @@ export function setupZcodeProjectionSocket(io: Server): void {
 }
 
 /** 扇出：workspace 级房间必投；带 sessionId 的事件加投会话级房间。io 缺席时静默（无连接面）。 */
-export function emitZcodeProjectionEvent(io: Server | null | undefined, event: ProjectionEvent): void {
+export function emitZcodeProjectionEvent(io: Server | null | undefined, event: ZcodeSocketEvent): void {
   const target = io ?? activeIo
   if (!target) return
   const rooms = [`zcode:${event.workspaceId}`]
