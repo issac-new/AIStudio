@@ -224,7 +224,11 @@ if step_reached dispatch; then
     M=$(mx_send "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 请处理需求 ${RFD_ID}。
 需求基本信息：${RFD_ONELINE}。
 需求文档：aipaydev 仓库 ${RFD_DOC}（你账号的工作区在 ${WSF}，先 git pull）
-请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单匹配、SMART 拆分与 RACI 派发。
+请加载需求分析技能（含金融支付转接清算领域知识+通用架构设计技能）执行系统分析：
+1) 需求切分转换、文本提取（图片转 OCR 双路提取交叉核对防字符错认），转 markdown 且不得有信息偏差，按需求模版做格式与要素评估；
+2) 三清单匹配：人员清单（matrix 账号）、应用模块清单（向所有账号查询上报 kanban/teams/agent 能力，csw 开头应用 agent 即应用模块清单）、组织清单（归属/团队/leader，以已入库 org.md 与 app-registry.md 为准）；
+3) 按应用模块职责初分+架构统筹（最小改动、减少重构、同类合并），形成 SMART 任务清单具体到人，登记到主任务上；
+4) 自动邀请所有关联人进群，按 RACI 逐条 @责任人+其团队负责人发任务明细（附文档/仓库地址），并逐条建跟踪子任务与主任务挂父子依赖（全部完成后才关主任务）。
 建主卡与派发子卡时必须填写结构化 raci 字段（建卡工具/CLI 的 --raci，JSON 四元组 responsible/approver/consulted/informed 填矩阵账号），派发契约不再只写正文。
 结论行必须二选一并带凭证，无凭证一律视为未完成：
   ANALYSIS-DONE-${RFD_ID} commit=<分析稿已推送的 commitId> card=<协作看板主卡ID>
@@ -335,7 +339,7 @@ SCAN_ROOM="$(sget room_analysis)"
 # ══ 步骤 12：各主责系分执行（worktree + 分析文档 + 双兜底回执）══
 if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
   note "── anexec：派发 4 个系分执行任务（错峰 2+2）"
-  COMMON='你的 kanban 任务已通过团队负责人分诊确认，现在执行系统分析（步骤：aipaydev-dev 技能的「分析/设计产出」）。
+  COMMON='你的 kanban 任务已通过团队负责人分诊确认，现在执行系统分析（使用 swarm yuan skill 为该 workspace 代码仓库生成的定制化研发技能 xxx-dev skill 执行「分析/设计产出」，结合家族记忆库中的历史数据与评估标准做工作量评估）。
 工作要求：
 1) 在你的工作区 %WS% 下为该任务建 worktree 分支（见 aipaydev-dev 技能纪律），材料归集到任务 materials/
 2) 先读 ${RFD_DOC}、docs/architecture/overview.md、docs/admin/org.md、docs/analysis/${RFD_ID}-tasklist.md
@@ -470,7 +474,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 1) git checkout -b feat/DEV-PAYCORE
 2) 实现 apps/csw-pay-core：支付单创建（merchantId+outTradeNo 幂等）、状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单、渠道回调接收入口（验签后更新状态机，重复回调幂等）；金额单位：分(int64)
 3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
-4) push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
   wait_truth "origin 出现 feat/DEV-PAYCORE 分支" 3600 bash -c \
     "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/DEV-PAYCORE" \
@@ -482,20 +486,26 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     dispatch_in_room "$1" "@$1-agent:matrix.test 执行开发任务 $2（$3）。
 工作区 $(workspace "$1")（先 git fetch && git checkout -b feat/$2 origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
 1) 实现 apps/$3：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），$4；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿；3) push origin feat/$2；结论行 DEV-DONE-$2。不许谎报。" "$(agent_mxid $1),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/$2-testlog.txt 随分支提交，G3 证据，缺件判未完成）；3) push origin feat/$2；结论行 DEV-DONE-$2。不许谎报。" "$(agent_mxid $1),$(agent_mxid wei)"
     sleep 5
   done
 
   dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
-2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿
+2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）
 3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
 
   for b in DEV-CHWX DEV-CHALI DEV-MP; do
     wait_truth "origin 出现 feat/$b 分支" 3600 bash -c \
       "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/$b" \
       || { note "[观察] $b 分支未达"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; }
+  done
+  # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）
+  for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
+    repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt" \
+      || { note "[观察] $b 缺本地测试输出证据（G3，记问题单）"; \
+           echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
   done
   sset devimpl_done 1
 fi
@@ -669,6 +679,13 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。bella 将逐条核对。" "$(agent_mxid fanfan)"
   if wait_truth "UAT 证据行到位" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "UAT-EVIDENCE"; then
     UAT_OK=1; UAT_MISS=""
+    # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
+    UAT_BODY=$(mx_messages "$(load_token bella)" "$(sget room_analysis)" 200 2>/dev/null | jq -r --arg s "$(agent_mxid fanfan)" \
+      '[.[] | select(.sender == $s and ((.content.body//"") | contains("UAT-EVIDENCE")))] | last | .content.body // ""')
+    AC_MISS=$(uat_ac_covered "$AC_LIST" "$UAT_BODY")
+    if [[ -n "$AC_MISS" ]]; then
+      UAT_OK=0; UAT_MISS="${UAT_MISS}UAT-EVIDENCE 未逐条覆盖 AC（缺 ${AC_MISS}）；"
+    fi
     git -C "$DIRECTOR_CLONE" fetch -q origin || true
     git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null || { UAT_OK=0; UAT_MISS="integration 分支不存在；"; }
     repo_has "docs/test/${RFD_ID}-test-report.md" || { UAT_OK=0; UAT_MISS="${UAT_MISS}测试报告缺失；"; }
@@ -759,13 +776,22 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   gate_blocked uat_done retro
   GR=$(gov_report)
   note "[G6] 治理报告已生成：$GR"
+  read -r ISS_N DISP_N <<< "$(issue_disp_stat)"
+  OPEN_N=$((ISS_N - DISP_N)); (( OPEN_N < 0 )) && OPEN_N=0
+  if (( OPEN_N > 0 )); then
+    echo "ISSUE|retro-open-items|director|${OPEN_N} 条问题单缺 DISP 处置记账（已修/观察/延后），复盘表内如实标待处置" >> "$EVID_DIR/issues.log"
+  fi
   RETRO="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-${RFD_ID}-retrospective.md"
   mkdir -p "$(dirname "$RETRO")"
   {
     echo "# ${RFD_ID} 复盘（G6 三段式，$(date '+%F %T')）"
     echo
     echo "## 一、现象（只写事实）"
-    echo "- 问题单台账（$(grep -c '^ISSUE|' "$EVID_DIR/issues.log" 2>/dev/null || echo 0) 条，全量见治理报告）"
+    echo "- 问题单台账（${ISS_N} 条，处置记账 ${DISP_N} 条 DISP，待处置 ${OPEN_N} 条）："
+    echo
+    echo "| 问题单（类型·主体：描述） | 处置 |"
+    echo "|---|---|"
+    awk -F'|' '/^ISSUE\|/{key=$2"·"$3; desc[key]=$4; order[++n]=key} /^DISP\|/{k=$2"·"$3; d[k]=$4} END{for(x=1;x<=n;x++){k=order[x]; print "| " k "：" desc[k] " | " ((k in d)?d[k]:"待处置") " |"}}' "$EVID_DIR/issues.log" 2>/dev/null
     echo "- 硬闸：G1/G2/G4/G5 落键时刻见 state；UAT AC 全过"
     echo
     echo "## 二、规律（机制归因，对事不对人）"
