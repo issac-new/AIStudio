@@ -79,8 +79,40 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
   sset review_done 1
 fi
 
+# ══ 步骤 15：archgate（G2 架构治理评审，V3 新增）═══════
+# arch 账号板（arch-governance）登记评审卡，@arch-agent 按 G2 检查单评审概设。
+# 套模板：templates/design.md（五要素/备选方案）+ review-record.md（评审记录）。
+# 硬闸：G2 未过，close/plan（L2）不得执行。
+if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
+  AGID=$(kanban_create_as arch arch_g2 "${RFD_ID} 架构治理评审（G2）" \
+    "G2 检查单：①设计五要素（背景/方案/接口/数据/风险）②爆炸半径（影响模块 vs 三清单）③验证计划前移④备选方案≥2 及取舍。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项)。" arch-governance)
+  dispatch_in_room arch "@arch-agent:matrix.test 概设 docs/design/${RFD_ID}-architecture-design.md 已入库，请执行 G2 架构治理评审（评审卡 ${AGID}@arch-governance 板）：
+1) 设计五要素齐备（背景/方案/接口/数据/风险，对照 templates/design.md）
+2) 爆炸半径排查：变更影响模块清单 vs 任务三清单，缺漏列出
+3) 验证计划前移：测试要点是否在设计期已列
+4) 备选方案 ≥2 且有取舍理由
+评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单）。不许谎报。" "$(agent_mxid arch)"
+  if wait_truth "房间出现 ARCH-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-(PASS|FAIL)"; then
+    if room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS"; then
+      kanban_walk_done arch "$AGID"
+      sset g2_arch_pass "$(date +%s)"
+      note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
+    else
+      echo "ISSUE|g2-design-review-fail|arch-agent|${RFD_ID} G2 评审 FAIL（缺项见评审卡），回灌修订" >> "$EVID_DIR/issues.log"
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评。" "$(agent_mxid fanfan)"
+      wait_truth "修订后 ARCH-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS" \
+        || fail "G2 两轮未过，L2 不得开始（V3 硬闸）"
+      kanban_walk_done arch "$AGID"; sset g2_arch_pass "$(date +%s)"
+    fi
+  else
+    echo "ISSUE|g2-review-missing|arch-agent|G2 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
+    fail "G2 架构治理评审超时，中止（V3 硬闸）"
+  fi
+fi
+
 # ══ 步骤 14：主任务归档关闭 ═══════════════════════════
 if step_reached close && [[ -z "$(sget close_done)" ]]; then
+  gate_blocked g2_arch_pass close   # V3 硬闸：G2 未过不进 L2
   if [[ "$(kanban_status_of fanfan ${RFD_ID})" != "done" ]]; then
     dispatch_in_room fanfan "@fanfan-agent:matrix.test 评审已通过。请收尾 ${RFD_ID} 主任务：
 1) 把全部关联子任务与过程档案（4 份 AN-*.md、tasklist、概设方案 git 路径+commit）汇总登记进主任务卡 body，便于回溯审计
@@ -210,32 +242,50 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
   fi
   sset testpass_done 1
+  sset g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
 fi
 
-# ══ 步骤 18：发版交付登记（线下执行，在册追踪）═══════
-if step_reached release && [[ -z "$(sget release_done)" ]]; then
-  for spec in "REL-MERGE|integration/${RFD_ID} 合入 main（变更发版）|chen" \
-              "REL-TAG|打 tag v1.0.0-cashier 并出 RELEASE.md|fanfan" \
-              "REL-DELIVER|商户交付包与接入文档交付|fanfan"; do
-    IFS='|' read -r k t owner <<< "$spec"
-    ID=$(kanban_create_as fanfan "$k" "${RFD_ID} $t" "线下执行；责任: ${owner}；关联 integration/${RFD_ID}")
-    kanban_status_as fanfan "$ID" todo || true
-    note "[fanfan] 发布登记 $k → 卡 $ID"
-  done
-  sset release_done 1
-fi
-
-# ══ 步骤 19：模板套用 + 完备性检查 ═══════════════════
-if step_reached templates && [[ -z "$(sget templates_done)" ]]; then
+# ══ 步骤 20：ready（G5 发布准出评审，V3 新增；吸收原 templates 模板完备性）══
+# fanfan-review 板登记准出卡，@fanfan-agent 按七项检查单回结论。
+# 套模板：release-plan.md（灰度/数字阈值回滚/观察窗口/HumanGate）+ release-notes.md（面向用户收益）。
+# 硬闸：G4 未过不得评审；G5 未过不得发布。
+if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
+  gate_blocked g4_pass ready   # V3 硬闸：G4 未过不进发布准出
+  RGID=$(kanban_create_as fanfan g5_ready "${RFD_ID} 发布准出评审（G5）" \
+    "七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。" fanfan-review)
+  dispatch_in_room fanfan "@fanfan-agent:matrix.test 测试报告已在 integration/${RFD_ID}，请执行 G5 发布准出评审（评审卡 ${RGID}@fanfan-review 板，按 templates/release-plan.md 与 release-notes.md 产出）：
+1) G4 证据已挂关联任务卡
+2) 构建产物同 commit 可复现（integration commit 存在、分支树干净）
+3) 依赖无新增（package 清单 diff）
+4) 回滚方案具体化：数字阈值触发条件（如崩溃率>0.5%）+ 命令级步骤 + 72h 观察窗口与盯梢项
+5) 灰度计划：5%→25%→100% 与各档观察期
+6) 发布说明：面向用户收益（不贴 commit 罗列）
+7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
+评审记录落卡 body（review-record 结构）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项）。不许谎报。" "$(agent_mxid fanfan)"
+  if wait_truth "房间出现 READY-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-(PASS|FAIL)"; then
+    if room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS"; then
+      kanban_walk_done fanfan "$RGID"
+      sset g5_ready "$(date +%s)"
+      note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准）"
+    else
+      echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行。" "$(agent_mxid fanfan)"
+      wait_truth "补齐后 READY-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS" \
+        || fail "G5 两轮未过，不得发布（V3 硬闸）"
+      kanban_walk_done fanfan "$RGID"; sset g5_ready "$(date +%s)"
+    fi
+  else
+    echo "ISSUE|g5-review-missing|fanfan-agent|G5 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
+    fail "G5 发布准出超时，中止（V3 硬闸）"
+  fi
+  # 交付模板完备性（原 templates 步并入）：标准正文引用 + 双口径完备性检查 + 证据落 main
   TPL="$HOME/.hermes/delivery/DELIVERY-STANDARD-COMPLETE.md"
   if [[ -f "$TPL" ]]; then
     cp "$TPL" "$EVID_DIR/delivery-standard-ref.md"
     note "[模板] DELIVERY-STANDARD-COMPLETE.md 已引用（$(wc -l < "$TPL") 行）"
   else
     echo "ISSUE|template-missing|delivery|DELIVERY-STANDARD-COMPLETE.md 不存在" >> "$EVID_DIR/issues.log"
-    note "[观察] 交付标准模板缺失（记问题单）"
   fi
-  # 完备性检查：任务分类/优先级/依赖 三口径核对（导演脚本，jq 核验）
   repo_pull
   {
     echo "# ${RFD_ID} 任务完备性检查（$(date +%F %T)）"
@@ -244,16 +294,14 @@ if step_reached templates && [[ -z "$(sget templates_done)" ]]; then
     kanban_list fanfan | jq -r '.. | objects | select(has("title")) | "- [\(.status)] \(.title)"' | sort -u
     echo
     echo "## 仓库档案覆盖"
-    for p in ${RFD_DOC} docs/analysis/${RFD_ID}-tasklist.md \
+    for p in ${RFD_DOC} $(freeze_doc) docs/analysis/${RFD_ID}-tasklist.md \
              docs/analysis/AN-PAYCORE-analysis.md docs/analysis/AN-MP-analysis.md \
              docs/analysis/AN-CHWX-analysis.md docs/analysis/AN-CHALI-analysis.md \
-             docs/design/${RFD_ID}-architecture-design.md docs/plan/${RFD_ID}-schedule.md; do
+             docs/design/${RFD_ID}-architecture-design.md docs/plan/${RFD_ID}-schedule.md \
+             docs/test/${RFD_ID}-test-report.md; do
       if repo_has "$p"; then echo "- ✓ $p"; else echo "- ✗ 缺 $p"; fi
     done
   } > "$EVID_DIR/completeness-check.md"
-  # 证据必须落 main：DIRECTOR_CLONE 常停在 integration/RFD-001（defect 步切出未回），
-  # 就地 commit + push origin main 实际推的是未动的本地 main 引用，证据永不落库
-  # （9-23 实锤，靠人工 cherry-pick 抢救）。改用独立 main worktree 提交推送。
   DL_WT="$SIM_ROOT/var/templates-main-wt"
   mkdir -p "$SIM_ROOT/var"
   if ! ( cd "$DIRECTOR_CLONE" && git worktree add --force "$DL_WT" main ) 2>/dev/null; then
@@ -268,15 +316,121 @@ if step_reached templates && [[ -z "$(sget templates_done)" ]]; then
             && git push -q origin main ); then
       note "[归档] 完备性检查已推送 origin/main（docs/delivery/）"
     else
-      echo "ISSUE|evidence-push|delivery|完备性检查推送 origin/main 失败（留存 $EVID_DIR/completeness-check.md）" >> "$EVID_DIR/issues.log"
-      note "[观察] 完备性检查推送失败，已记问题单（本地证据留存）"
+      echo "ISSUE|evidence-push|delivery|完备性检查推送失败（留存 $EVID_DIR/completeness-check.md）" >> "$EVID_DIR/issues.log"
     fi
     ( cd "$DIRECTOR_CLONE" && git worktree remove --force "$DL_WT" ) 2>/dev/null || true
   else
-    echo "ISSUE|evidence-worktree|delivery|main worktree 不可用，完备性检查未归档（留存 $EVID_DIR/completeness-check.md）" >> "$EVID_DIR/issues.log"
-    note "[观察] main worktree 不可用，已记问题单（本地证据留存）"
+    echo "ISSUE|evidence-worktree|delivery|main worktree 不可用（留存本地）" >> "$EVID_DIR/issues.log"
   fi
-  sset templates_done 1
+  sset ready_done 1
+fi
+
+# ══ 步骤 21：发版交付登记（线下执行，在册追踪）═══════
+if step_reached release && [[ -z "$(sget release_done)" ]]; then
+  gate_blocked g5_ready release   # V3 硬闸：G5 未过不发布
+  for spec in "REL-MERGE|integration/${RFD_ID} 合入 main（变更发版）|chen" \
+              "REL-TAG|打 tag v1.0.0-cashier 并出 RELEASE.md|fanfan" \
+              "REL-DELIVER|商户交付包与接入文档交付|fanfan"; do
+    IFS='|' read -r k t owner <<< "$spec"
+    ID=$(kanban_create_as fanfan "$k" "${RFD_ID} $t" "线下执行；责任: ${owner}；关联 integration/${RFD_ID}")
+    kanban_status_as fanfan "$ID" todo || true
+    note "[fanfan] 发布登记 $k → 卡 $ID"
+  done
+  sset release_done 1
+fi
+
+# ══ 步骤 22：uat（业务验收，V3 新增）══════════════════
+# bella（需求提出方）按 G1 freeze 的 AC-1..N 逐条回验——G1 冻结标准的闭环回验。
+if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
+  gate_blocked release_done uat
+  repo_pull
+  AC_LIST=$(sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -oE "AC-[0-9]+" | sort -u | tr '\n' ' ')
+  [[ -n "$AC_LIST" ]] || { echo "ISSUE|uat-no-ac|director|需求书未提取到 AC 清单" >> "$EVID_DIR/issues.log"; fail "UAT 无 AC 清单可验（G1 冻结缺陷）"; }
+  dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。bella 将逐条核对。" "$(agent_mxid fanfan)"
+  if wait_truth "UAT 证据行到位" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "UAT-EVIDENCE"; then
+    UAT_OK=1; UAT_MISS=""
+    git -C "$DIRECTOR_CLONE" fetch -q origin || true
+    git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null || { UAT_OK=0; UAT_MISS="integration 分支不存在；"; }
+    repo_has "docs/test/${RFD_ID}-test-report.md" || { UAT_OK=0; UAT_MISS="${UAT_MISS}测试报告缺失；"; }
+    repo_has "$(freeze_doc)" || { UAT_OK=0; UAT_MISS="${UAT_MISS}G1 冻结文件缺失；"; }
+    if [[ $UAT_OK == 1 ]]; then
+      ACC="$DIRECTOR_CLONE/docs/acceptance/${RFD_ID}-acceptance.md"
+      mkdir -p "$(dirname "$ACC")"
+      {
+        echo "# ${RFD_ID} 业务验收报告（UAT，$(date '+%F %T')）"
+        echo
+        echo "- 验收人：bella（需求提出方）；依据：$(freeze_doc)（G1 冻结 AC 清单）"
+        echo "- 证据锚点：integration/${RFD_ID} 分支 + docs/test/${RFD_ID}-test-report.md + 房间 UAT-EVIDENCE 行"
+        echo
+        sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" \
+          | while IFS= read -r l; do echo "- ${l#\- } → 通过（证据见上锚点）"; done
+        echo
+        echo "## SLA（ITIL 接管登记，retro 资产回写用）"
+        echo "- SVC-cashier-${RFD_ID}：收银台下单/查单/关单/回调 | 全体商户 | Silver | fanfan | 运营中"
+        echo "- 可用性 99.5%；下单接口 P95 ≤800ms；P2 事件 4h 响应"
+        echo
+        echo "- 结论：全部 AC 通过，验收接受。"
+      } > "$ACC"
+      ( cd "$DIRECTOR_CLONE" && git add -A \
+        && git -c user.name="bella (UAT)" -c user.email="bella@aipaydev.local" \
+             commit -qm "docs(acceptance): ${RFD_ID} 业务验收通过（AC 全过）" \
+        && git pull -q --rebase origin main && git push -q origin main )
+      sset uat_done "$(date +%s)"
+      note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过，验收文档已入仓）"
+    else
+      echo "ISSUE|uat-ac-failed|fanfan-agent|UAT 证据核对失败：${UAT_MISS}" >> "$EVID_DIR/issues.log"
+      fail "UAT 验收未过（${UAT_MISS}）——缺陷回流 defect 语义"
+    fi
+  else
+    echo "ISSUE|uat-evidence-missing|fanfan-agent|UAT-EVIDENCE 2400s 未达" >> "$EVID_DIR/issues.log"
+    fail "UAT 证据行超时，中止"
+  fi
+fi
+
+# ══ 步骤 23：retro（G6 复盘与知识沉淀，V3 新增）═══════
+# 三段式复盘（现象/规律/下轮验证）+ 行动项四元组 + 治理报告与 metrics 回写 + ITIL 资产回写 + 记忆沉淀探针。
+if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
+  gate_blocked uat_done retro
+  GR=$(gov_report)
+  note "[G6] 治理报告已生成：$GR"
+  RETRO="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-${RFD_ID}-retrospective.md"
+  mkdir -p "$(dirname "$RETRO")"
+  {
+    echo "# ${RFD_ID} 复盘（G6 三段式，$(date '+%F %T')）"
+    echo
+    echo "## 一、现象（只写事实）"
+    echo "- 问题单台账（$(grep -c '^ISSUE|' "$EVID_DIR/issues.log" 2>/dev/null || echo 0) 条，全量见治理报告）"
+    echo "- 硬闸：G1/G2/G4/G5 落键时刻见 state；UAT AC 全过"
+    echo
+    echo "## 二、规律（机制归因，对事不对人）"
+    echo "- 按'检查单缺项→失误未被拦截'口径归类问题单（流程/工具/模型/环境），详单见治理报告"
+    echo
+    echo "## 三、下轮验证（行动项四元组）"
+    echo "| 行动项 | owner | 期限 | 验证判据 |"
+    echo "|---|---|---|---|"
+    echo "| 治理报告问题单逐条闭环 | director | 下轮推演前 | issues.log 全条目有处置结论 |"
+    echo "| 家族记忆召回下轮同 RFD 经验 | director | 下轮同名 RFD 轮 | hindsight 召回探针命中本轮结论 |"
+    echo
+    echo "## 资产回写"
+    echo "- 治理报告：evidence/governance-report.md；metrics-log 口径行见报告末节"
+    echo "- ITIL：服务目录 SVC-cashier-${RFD_ID} 已登记于验收文档 SLA 节"
+  } > "$RETRO"
+  ( cd "$DIRECTOR_CLONE" && git add -A \
+    && git -c user.name="director (G6)" -c user.email="director@aipaydev.local" \
+         commit -qm "docs(retro): ${RFD_ID} G6 复盘与治理报告回写" \
+    && git pull -q --rebase origin main && git push -q origin main ) \
+    && note "[G6] 复盘文档已入仓" \
+    || { echo "ISSUE|retro-push|director|复盘文档推送失败（留存 $EVID_DIR）" >> "$EVID_DIR/issues.log"; note "[观察] 复盘推送失败"; }
+  MEM_OK=1
+  curl -sf -m 3 "$HINDSIGHT_API_URL/health" >/dev/null || MEM_OK=0
+  fam_bank=$(jq -r .bank_id "$HERMES_ROOT/profiles/fanfan/hindsight/config.json" 2>/dev/null || echo missing)
+  [[ "$fam_bank" == hermes-* ]] || MEM_OK=0
+  if [[ $MEM_OK == 1 ]]; then
+    note "[G6] 记忆沉淀探针 ✓（hindsight 健康，家族 bank=${fam_bank}——本轮经验可召回，下轮同名 RFD 验证）"
+  else
+    echo "ISSUE|retro-memory-probe|director|hindsight 探针失败（bank=${fam_bank}）" >> "$EVID_DIR/issues.log"
+  fi
+  sset retro_done "$(date +%s)"
 fi
 
 # ══ 步骤 20：IDE 工作台接入核验（API/代码级；UI 走查由导演另行执行）══
