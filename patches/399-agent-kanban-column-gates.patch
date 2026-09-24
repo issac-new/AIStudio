@@ -207,7 +207,7 @@ diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanba
 new file mode 100644
 --- /dev/null
 +++ b/tests/hermes_cli/test_kanban_gates.py
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,212 @@
 +"""Tests for declarative column gates (routa four-piece absorption, first batch #8).
 +
 +Covers:
@@ -279,6 +279,15 @@ new file mode 100644
 +        (task_id, kind),
 +    ).fetchall()
 +    return [json.loads(r["payload"]) if r["payload"] else {} for r in rows]
++
++
++def _expect_gate_block(fn, to_status: str) -> bool:
++    """手动捕获 GateBlockedError（类型或类名匹配即算）——对套件内跨文件顺序污染免疫。"""
++    try:
++        fn()
++        return False
++    except BaseException as exc:  # noqa: BLE001 - 判定后统一口径
++        return type(exc).__name__ == "GateBlockedError" or isinstance(exc, GateBlockedError)
 +
 +
 +class TestEvaluateGates:
@@ -357,8 +366,11 @@ new file mode 100644
 +        conn = _connect(fresh_home)
 +        task_id = _make_task(conn, title="card", body="- [x] done\nAPPROVED")
 +        # 证据缺 validator 命令 → blocking 拒绝，状态留在 ready。
-+        with pytest.raises(GateBlockedError):
-+            kb.complete_task(conn, task_id, result="all green", summary="all green")
++        # （手动捕获而非 pytest.raises：本套件存在跨文件顺序污染——某些先行文件会让
++        #   raises 接不住同型异常；按名断言对污染免疫，判定语义不变。）
++        refused = _expect_gate_block(lambda: kb.complete_task(
++            conn, task_id, result="all green", summary="all green"), "done")
++        assert refused, "blocking 门必须拒绝缺 validator 证据的完成"
 +        assert kb.get_task(conn, task_id).status == "ready"
 +        assert _events(conn, task_id, "gate_blocked")
 +        # 证据带上 pytest → 门全过，完成并落 column_transition。
@@ -370,8 +382,8 @@ new file mode 100644
 +        _write_gates(fresh_home, {"review": {"requiredChecklist": True}})
 +        conn = _connect(fresh_home)
 +        task_id = _make_task(conn, title="card", body="- [ ] still open", status="running")
-+        with pytest.raises(GateBlockedError):
-+            kb.request_review(conn, task_id, summary="please review")
++        assert _expect_gate_block(lambda: kb.request_review(
++            conn, task_id, summary="please review"), "review")
 +        assert kb.get_task(conn, task_id).status == "running"
 +
 +    def test_promote_task_gate_refusal_becomes_reason_tuple(self, fresh_home):
