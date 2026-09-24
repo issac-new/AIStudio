@@ -806,3 +806,6 @@
 378-server-zcode-coding-agent.patch
 379-client-zcode-agent-ui.patch
 380-server-zcode-engine-health-route.patch
+390-agent-kanban-home-default-board.patch
+391-agent-kanban-board-team-fence.patch
+392-studio-matrix-login-scoped-grant.patch

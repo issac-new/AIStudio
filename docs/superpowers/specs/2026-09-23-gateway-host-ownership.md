@@ -39,6 +39,10 @@ sim profile 的 gateway 起不来。链路是：
    的决策，不是 studio 单方面的决策。--force 保留为人工通道。
 3. **长期形态是 multiplex 迁移**：单 host 多 profile 由 gateway 侧 multiplex
    （按 profile 路由）解决，属 hermes-agent 上游能力，另行立项跟踪。
+   【2026-09-24 立项落地】见 `docs/superpowers/specs/2026-09-24-multiplex-multiuser-feasibility-and-plan-v2.md`：
+   上游 multiplex 为原生能力（host_rendezvous.py 每主机一 gateway 多路复用全部 profile），
+   推演拓扑改为单 gateway + profiles/<u>；本节第 2 条"--force 仅人工通道"在新拓扑下自然收敛
+   （单 gateway 无同机再起场景）。
 
 ## 四、验收口径
 
