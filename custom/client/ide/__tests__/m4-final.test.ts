@@ -12,6 +12,10 @@ vi.mock('naive-ui', () => ({
   NDropdown: { name: 'NDropdown', template: '<div><slot /></div>' },
   NTooltip: { name: 'NTooltip', template: '<div><slot name="trigger" /><slot /></div>' },
 }))
+// vi.mock 必须在模块顶层（vitest 4 起 it 内嵌即报错）；dock 用例以 stub 替真终端面板
+vi.mock('../views/IdeTerminalPanel.vue', () => ({
+  default: { name: 'IdeTerminalPanel', template: '<div class="stub-term" />' },
+}))
 
 import MessageQueueFloatPanel from '@/components/hermes/chat/MessageQueueFloatPanel.vue'
 import IdeTerminalDock from '../views/IdeTerminalDock.vue'
@@ -65,9 +69,6 @@ describe('IdeTerminalDock（M4c 终端多开）', () => {
   })
 
   it('默认 1 个页签；＋新增并切换；多余页签可关，最后一个不可关', async () => {
-    vi.mock('../views/IdeTerminalPanel.vue', () => ({
-      default: { name: 'IdeTerminalPanel', template: '<div class="stub-term" />' },
-    }))
     const w = mount(IdeTerminalDock)
     expect(w.findAll('.ide-termdock__tab').length).toBe(1)
     expect(w.find('[data-testid="ide-termdock-add"]').exists()).toBe(true)

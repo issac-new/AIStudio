@@ -1,17 +1,18 @@
 // overlay/custom/client/loop/__tests__/store-factory.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// Mock pg so SaaSStore doesn't try to connect
-vi.mock('pg', () => ({
-  Pool: vi.fn(() => ({
-    connect: vi.fn().mockResolvedValue({
+// Mock pg so SaaSStore doesn't try to connect（vitest 4 起 vi.fn() 不可 new，用 class）
+vi.mock('pg', () => {
+  class MockPool {
+    connect = vi.fn().mockResolvedValue({
       query: vi.fn().mockResolvedValue({ rows: [] }),
       release: vi.fn(),
-    }),
-    query: vi.fn().mockResolvedValue({ rows: [] }),
-    end: vi.fn().mockResolvedValue(undefined),
-  })),
-}))
+    })
+    query = vi.fn().mockResolvedValue({ rows: [] })
+    end = vi.fn().mockResolvedValue(undefined)
+  }
+  return { Pool: MockPool }
+})
 
 // Mock matrix-js-sdk so MatrixStore doesn't try to connect
 vi.mock('matrix-js-sdk', () => ({
