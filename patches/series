@@ -875,3 +875,10 @@
 #      挂 sequential/segmented 步进；默认只报不打断，HERMES_RUNAWAY_GUARD_INTERRUPT=1 打断、
 #      =0 关闭。依据 docs/upstream-analysis/minimax-code.md §2.6 差距表。
 401-agent-runaway-guard-six-signals.patch
+# 402 R5 吸收 #4（minimax+codex）：审批宽度候选五档+决策八态+规则三列表挂载。
+#      candidateScopes（narrow/byFirstWord/byArgvPrefix2/byDomain/wholeTool，candidates[0]
+#      恒窄默认）+ 求值序 deny→ask→allow→default + 批准即学习（approved_scoped 落 allow /
+#      execpolicy_amendment 改默认模式）；域模块 custom/server/approval/ 三件套 +
+#      rules.json 存储（HERMES_APPROVAL_RULES_FILE>cwd>.approval>home 降级）。
+#      依据 docs/upstream-analysis/minimax-code.md §2.3 + spec §1.2 #4。
+402-server-approval-routes-mount.patch
