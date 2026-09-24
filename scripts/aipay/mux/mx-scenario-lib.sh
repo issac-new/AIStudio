@@ -17,8 +17,9 @@ sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0;
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
 note() { log "$*" | tee -a "$SCEN_LOG"; }
 
-# ── 步骤机 ─────────────────────────────────────────────
-STEPS="smoke ba room dispatch register analysis triage anexec review close plan devimpl defect testpass release templates ide"
+# ── 步骤机（V3 生命周期 21 步：六阶段 L0-L5 × G1-G6 门禁，方案见
+#    2026-09-25-mux-v3-lifecycle-plan.md；templates 并入 ready）────────
+STEPS="smoke ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat retro ide"
 START_STEP="${START_STEP:-smoke}"
 UNTIL_STEP="${UNTIL_STEP:-}"
 step_pos() { echo $STEPS | tr ' ' '\n' | grep -n "^$1$" | cut -d: -f1; }
@@ -221,6 +222,57 @@ dispatch_in_room() { # <humanUser> <text> <mention-csv> → event_id
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"
+}
+
+# ── V3 生命周期治理助手 ─────────────────────────────────
+gate_blocked() { # <gate-key> <step-name>：硬闸检查——闸门 state 键未落即拒入后续步骤
+  local key="$1" step="$2"
+  [[ -n "$(sget "$key")" ]] && return 0
+  echo "ISSUE|gate-bypass-blocked|$step|硬闸 $(basename "$key") 未过，$step 不得执行（V3 §3 治理总纲）" >> "$EVID_DIR/issues.log"
+  fail "硬闸未过：$step 前置闸门（$key）未冻结，中止（见方案 V3 闭环治理）"
+}
+
+freeze_doc() { echo "docs/requirements/${RFD_ID}.freeze.md"; }
+
+reqgate_judge() { # 导演侧机械化判读 G1 四要素（不依赖 LLM）→ 0 全过 / 其他=缺失项清单
+  local doc="$1" miss=""
+  grep -q "^## .*验收标准" "$doc" && grep -qE "AC-[0-9]" "$doc" \
+    || miss="${miss}验收标准段缺失或无 AC 编号；"
+  # AC 模糊词检查：仅扫 AC 条目行（行首 "- **AC-N"），不扫段落说明行——
+  # 规则说明行本身会引用模糊词示例，扫全段必然自指误报（2026-09-25 v3 实测 bug）。
+  if sed -n '/^## .*验收标准/,/^## /p' "$doc" | grep -E "^\- \*\*AC-[0-9]" | grep -qE "性能良好|体验优秀|快速|稳定"; then
+    miss="${miss}AC 含模糊词（不可机械化判定）；"
+  fi
+  grep -q "^## .*Scope-Out" "$doc" || miss="${miss}Scope-Out 缺失；"
+  grep -q "^## .*影响面" "$doc" || miss="${miss}影响面缺失；"
+  grep -qE "涉敏|ISO27001|iso27001" "$doc" || miss="${miss}涉敏判定缺失；"
+  [[ -z "$miss" ]] && return 0
+  echo "$miss"; return 1
+}
+
+gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metrics-log 口径）
+  local out="$EVID_DIR/governance-report.md" total fixed observed deferred
+  total=$(grep -c "^ISSUE|" "$EVID_DIR/issues.log" 2>/dev/null || echo 0)
+  {
+    echo "# ${RFD_ID} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T')）"
+    echo
+    echo "## 硬闸状态"
+    for k in g1_frozen g2_arch_pass g4_pass g5_ready uat_done retro_done; do
+      echo "- $k: $(sget "$k" || echo 未落)"
+    done
+    echo
+    echo "## 问题单台账（共 ${total} 条）"
+    awk -F'|' '/^ISSUE\|/{print "- ["$2"] "$3"："$4}' "$EVID_DIR/issues.log" 2>/dev/null | sort | uniq -c | sort -rn
+    echo
+    echo "## 凭证与回灌"
+    echo "- state 闸门键：$(grep -cE "^(jwt_|room_|card_|.*_done|g1_|g2_|g4_|g5_|uat_|retro_)" "$STATE" 2>/dev/null || echo 0) 条"
+    echo
+    echo "## metrics 回写（metrics-log 口径：date,change,gate,score,ratio,window,source,note）"
+    echo "\`\`\`csv"
+    echo "$(date +%F),${RFD_ID},G1-G6,首过率,待全流程轮补,$(date +%F)..$(date +%F),issues.log/state.env,V3 验证轮"
+    echo "\`\`\`"
+  } > "$out"
+  echo "$out"
 }
 
 # 场景脚本沿用 V1 快失败语义：mx-lib 的 set -uo 在 source 时会降级掉 -e，在此恢复
