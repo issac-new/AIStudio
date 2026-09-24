@@ -100,10 +100,15 @@ mx() { # <token> <method> <api-path> [json-body]
     curl -sf -X "$method" "$HS/_matrix/client/v3/$path?access_token=$token"
   fi
 }
-mx_send() { # <token> <roomId> <text> → event_id
-  local token="$1" room="$2" text="$3"
+mx_send() { # <token> <roomId> <text> [mentioned-mxid[,mxid2...]] → event_id
+  local token="$1" room="$2" text="$3" mention="${4:-}"
+  local mentions='{}'
+  if [[ -n "$mention" ]]; then
+    mentions=$(echo "$mention" | tr ',' '\n' | jq -R . | jq -s '{user_ids:.}')
+  fi
   mx "$token" POST "rooms/$room/send/m.room.message" \
-    "{\"msgtype\":\"m.text\",\"body\":$(jq -Rn --arg t "$text" '$t')}" | jq -r '.event_id'
+    "{\"msgtype\":\"m.text\",\"body\":$(jq -Rn --arg t "$text" '$t'),\"m.mentions\":$mentions}" \
+    | jq -r '.event_id'
 }
 mx_messages() { # <token> <roomId> [limit] → 倒序 m.room.message 数组
   local token="$1" room="$2" limit="${3:-80}"
@@ -338,3 +343,108 @@ install_skills() { # <profile-dir>：全 profile 同构技能副本（"其他内
     cp "$SKILLS_SRC/$s/SKILL.md" "$PROF/skills/$s/SKILL.md"
   done
 }
+
+# ═══════════════════════════════════════════════════════════
+# 以下为 P1 场景迁移自 aipay-lib.sh 并入的常量/工具（V2 路径适配）
+# ═══════════════════════════════════════════════════════════
+
+# ── 推演轮次隔离（state/evidence 按 RUN_ID 分家，语义同 V1）────
+RUN_ID="${RUN_ID:-}"
+if [[ -n "$RUN_ID" ]]; then
+  RUN_DIR="$SIM_ROOT/runs/$RUN_ID"
+  mkdir -p "$RUN_DIR/evidence"
+else
+  RUN_DIR="$SIM_ROOT"
+fi
+STATE="$RUN_DIR/state.env"
+EVID_DIR="${MX_EVID_DIR:-$RUN_DIR/evidence}"
+NCWK="$NCWK_ROOT"
+DIRECTOR_CLONE="$SIM_ROOT/central/aipaydev"
+GH_REPO="issac-new/aipaydev"
+
+# ── 需求标识（推演轮次参数化，同 V1）────────────────────────
+RFD_ID="${RFD_ID:-RFD-001}"
+RFD_SLUG="${RFD_SLUG:-payment-cashier}"
+RFD_DOC="docs/requirements/${RFD_ID}-${RFD_SLUG}.md"
+RFD_MATERIAL="${RFD_MATERIAL:-$OVERLAY_ROOT/scripts/aipay/materials/${RFD_ID}-${RFD_SLUG}.md}"
+if [[ -z "${RFD_ONELINE:-}" ]]; then
+  case "$RFD_ID" in
+    RFD-002) RFD_ONELINE="在已上线的收单商户小程序收银台之上，增加退款（整单/多次部分、原路退回）与分账（多接收方、比例/时窗/冻结解冻）两项资金能力，双端一致且不产生资损" ;;
+    *)       RFD_ONELINE="为收单商户开发兼容微信/支付宝双端的小程序支付收银台，含统一下单、渠道适配（财付通/支付宝）、支付结果通知与对账字段支撑" ;;
+  esac
+fi
+
+# 账号工作区（V2：中央仓每账号一棵工作树；kanban dispatcher worker 另用每板 workspaces）
+workspace() { echo "$SIM_ROOT/workspaces/$1/aipaydev"; }
+
+# ── 模型额度预检（V2：profile 配置全同构，路径适配 profiles/<u>）──
+# 返回：ok | quota | auth | unreachable | noreply
+model_preflight() { # <user>
+  local u="$1" cfg="${HERMES_AGENT_VENV:-$HOME/.hermes/hermes-agent/venv/bin/python}"
+  local conf; conf="$HERMES_ROOT/profiles/$u/config.yaml"
+  [[ -f "$conf" ]] || { echo "unreachable"; return 0; }
+  [[ -x "$cfg" ]] || cfg=$(command -v python3 || true)
+  [[ -n "$cfg" ]] || { echo "unreachable"; return 0; }
+  "$cfg" - "$conf" <<'PY' 2>/dev/null || echo unreachable
+import json, sys, urllib.error, urllib.request
+try:
+    import yaml
+except ImportError:
+    print("unreachable"); raise SystemExit
+cfg = yaml.safe_load(open(sys.argv[1])) or {}
+m = cfg.get("model") or {}
+url = (m.get("base_url") or "").rstrip("/")
+key = m.get("api_key") or ""
+name = m.get("default") or ""
+if not url or not name:
+    print("unreachable"); raise SystemExit
+url = url[:-3].rstrip("/") if url.endswith("/v1") else url
+body = json.dumps({"model": name, "max_tokens": 4,
+                   "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}).encode()
+req = urllib.request.Request(url + "/v1/chat/completions", data=body,
+                             headers={"Content-Type": "application/json",
+                                      **({"Authorization": "Bearer " + key} if key else {})})
+try:
+    with urllib.request.urlopen(req, timeout=45) as r:
+        r.read()
+    print("ok")
+except urllib.error.HTTPError as e:
+    text = (e.read() or b"").decode("utf8", "replace").lower()
+    if e.status in (401, 403):
+        print("quota" if ("limit" in text or "quota" in text) else "auth")
+    elif e.status == 429:
+        print("quota")
+    else:
+        print("noreply")
+except Exception:
+    print("unreachable")
+PY
+}
+
+model_preflight_report() { # 检查全部实例，额度/鉴权异常即 fail
+  local bad=() u st
+  for u in "${INSTANCED_USERS[@]}"; do
+    st=$(model_preflight "$u")
+    [[ "$st" == "ok" ]] || bad+=("$u:$st")
+  done
+  if (( ${#bad[@]} > 0 )); then
+    log "模型通道预检未通过：${bad[*]}"
+    fail "推演需要真实 LLM 回合，模型通道不可用就不是产品缺陷。请先恢复额度/鉴权（quota=额度耗尽、auth=鉴权失败、unreachable=代理未起、noreply=通道可用但拒答）后重跑；已完成的轮次可用 START_STEP 从断点续推。"
+  fi
+  log "模型通道预检通过（${#INSTANCED_USERS[@]} 实例）"
+}
+
+gh_token() {
+  if [[ -s "$CREDS_DIR/github.token" ]]; then cat "$CREDS_DIR/github.token"; return 0; fi
+  local t
+  t=$(git credential fill <<EOF 2>/dev/null | grep ^password= | cut -d= -f2-
+protocol=https
+host=github.com
+EOF
+)
+  [[ -n "$t" ]] || fail "github token 不可用"
+  save_token github.token "$t"
+  printf '%s' "$t"
+}
+
+gh_clone_url() { echo "https://x-access-token:$(gh_token)@github.com/$GH_REPO.git"; }

@@ -31,6 +31,12 @@ if curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1; t
   log "studio 已在跑（:${STUDIO_PORT}），跳过"
 else
   api_key=$(api_server_key)
+  # NODE_ENV=production 必须显式给定：dist 是生产构建，缺省时 DB 走 isDev 的
+  # cwd 相对路径（packages/server/data），cwd 若随 worktree 清理消失，node:sqlite
+  # 会报 "attempt to write a readonly database"（2026-09-25 实锤）。生产态 DB
+  # 落 config.appHome（HERMES_WEB_UI_HOME）。进程 cwd 同时钉到 SIM_ROOT。
+  ( cd "$SIM_ROOT" && \
+  NODE_ENV=production \
   PORT="$STUDIO_PORT" \
   HERMES_HOME="$HERMES_ROOT" \
   HERMES_WEB_UI_HOME="$WEBUI_HOME" \
@@ -39,8 +45,8 @@ else
   GATEWAY_PORT="$GW_PORT" \
   HERMES_BIN="$HERMES_BIN" \
   API_SERVER_KEY="$api_key" \
-    nohup node "$STUDIO_DIST/server/index.js" > "$LOGS_DIR/studio.log" 2>&1 &
-  echo $! > "$PIDS_DIR/studio.pid"
+    nohup node "$STUDIO_DIST/server/index.js" > "$LOGS_DIR/studio.log" 2>&1 & \
+  echo $! > "$PIDS_DIR/studio.pid" )
   log "studio 启动中（pid $(cat "$PIDS_DIR/studio.pid")，日志 $LOGS_DIR/studio.log）"
 fi
 
