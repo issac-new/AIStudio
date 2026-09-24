@@ -16,7 +16,7 @@ export interface ZcodeEngineAgentService {
   sendConversationCommandV4(params: { workspacePath: string; envelope: Record<string, unknown> }): Promise<{ status: string; reasonCode?: string }>
   onDynamicConversationFrame(params: { workspacePath: string }): (cb: (wire: Record<string, unknown>) => void) => { dispose(): void }
   onDynamicSessionsIndexFrame(params: { workspacePath: string }): (cb: (wire: Record<string, unknown>) => void) => { dispose(): void }
-  onAgentRuntimeRestarted(): (cb: (event: Record<string, unknown>) => void) => { dispose(): void }
+  onAgentRuntimeRestarted(cb: (event: Record<string, unknown>) => void): { dispose(): void }
 }
 
 export interface ZcodeEngineBridge {
