@@ -882,3 +882,10 @@
 #      rules.json 存储（HERMES_APPROVAL_RULES_FILE>cwd>.approval>home 降级）。
 #      依据 docs/upstream-analysis/minimax-code.md §2.3 + spec §1.2 #4。
 402-server-approval-routes-mount.patch
+# 403 R5 吸收 #9（deepseek-harness token-meter）：三投影互校挂载。
+#      tokenUsage（uncachedInput/output/cacheRead/cacheWrite 逐 attempt 精确求和）/
+#      contextPressure（pressure/projected/window 双比率）/contextBreakdown（三段构成
+#      之和恒等 surface，破坏显式告警不吞）+ zcode UsageStatsSummary 映射对账（差异上报
+#      不静默修数）+ StatsPills 口径缓存命中比与 TTFT/decode 台账（无流样本不伪造）。
+#      依据 docs/upstream-analysis/deepseek-harness.md §四 + spec §1.2 #9。
+403-server-token-meter-routes.patch
