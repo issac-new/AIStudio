@@ -21,6 +21,13 @@ docker exec "$SYNAPSE_CONTAINER" true 2>/dev/null || fail "synapse 容器 $SYNAP
 # ── 1. 运行时 patch（390/391 → 安装树）──────────────────
 mx_apply_agent_patches
 
+# ── 1b. overlay/runtime 部署（B1 结构化 raci 等 7 文件；与 inject 出口同源，
+#        mx 流程不经 inject 故显式幂等同步，失败只告警不阻断）─────────────
+if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
+  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply ) \
+    || log "runtime 部署告警（结构化 raci 等能力依赖它，需人工复核 deploy-agent-runtime）"
+fi
+
 # ── 2. matrix 账号（幂等）+ token ───────────────────────
 for u in "${USERS[@]}"; do
   synapse_register "$u" "$(user_pass "$u")"
