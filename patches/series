@@ -889,3 +889,10 @@
 #      不静默修数）+ StatsPills 口径缓存命中比与 TTFT/decode 台账（无流样本不伪造）。
 #      依据 docs/upstream-analysis/deepseek-harness.md §四 + spec §1.2 #9。
 403-server-token-meter-routes.patch
+# 404 R5 吸收 #10 独立子件：agent 名册配置层（dsh 角色配置+kimi 昵称池+routa 团队名册）。
+#      agent/agent_roster.py——角色目录（routa team 九角色默认）/昵称池（同角色去重、池
+#      竭追加序号、跨角色可重名）/并发与深度护栏单一事实源（delegate 动态描述同源值）；
+#      <HERMES_HOME>/agent-roster.yaml 四要素覆盖，坏文件回默认不炸。continuation 路由
+#      （send_message 转向/interrupt 停当前轮）依赖 delegate 后台化（mimo P3 缓办）后接。
+#      依据 docs/upstream-analysis/{dsh-TUI,kimi,routa}.md + spec §1.2 #10。
+404-agent-roster-config-layer.patch

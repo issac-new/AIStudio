@@ -1,0 +1,227 @@
+diff --git a/agent/agent_roster.py b/agent/agent_roster.py
+new file mode 100644
+--- /dev/null
++++ b/agent/agent_roster.py
+@@ -0,0 +1,139 @@
++"""Agent 名册配置层（第一批吸收 #10 独立子件：dsh 角色配置 + kimi 昵称池 + routa 团队名册）。
++
++Origin：upstream 分析（docs/upstream-analysis/）——dsh-TUI agent roles 配置层、kimi
++TEAM_RUNTIME_LABELS（routa orchestrator.ts:129-139 同源：运行时给 team 系 agent 分配
++人类名做 displayLabel 且同角色内去重）、routa team/ 九角色名册（researcher/frontend/
++backend/qa/ux/code-reviewer/operations/general-engineer/agent-lead）。
++
++定位：**展示与任务路由提示层**——委派语义角色（leaf/orchestrator，delegate_tool
++_normalize_role）不变；本层为子代理目录提供「角色目录 + 昵称池 + 并发/深度护栏配置」
++的单一事实源。配置文件 ``<HERMES_HOME>/agent-roster.yaml``（缺席走内置默认，坏文件
++告警回默认不炸）。
++
++continuation 路由（send_message 转向 / interrupt 只停当前轮）依赖 delegate 后台化
++（mimo 调研 P3，已缓办），本模块的 roster 即其后置数据面。
++"""
++
++from __future__ import annotations
++
++import logging
++import os
++from dataclasses import dataclass, field
++from pathlib import Path
++from typing import Optional
++
++logger = logging.getLogger(__name__)
++
++# routa team/ 名册 + dsh 角色并集（内置默认；Ycode 侧按需在 YAML 扩展）。
++DEFAULT_ROLE_CATALOG: tuple[str, ...] = (
++    "researcher", "frontend", "backend", "qa", "ux",
++    "code-reviewer", "operations", "general-engineer", "agent-lead",
++)
++
++# kimi 人类名池（TEAM_RUNTIME_LABELS 同义）：display 用，同角色内去重分配。
++DEFAULT_NICKNAME_POOL: tuple[str, ...] = ("Alex", "Sam", "Lee", "Riley", "Jordan", "Casey", "Morgan", "Avery")
++
++# 并发/深度护栏默认（delegate 动态描述引用同源值；此处为可配置的单一事实源）。
++DEFAULT_MAX_CONCURRENT_CHILDREN = 4
++DEFAULT_MAX_DELEGATION_DEPTH = 2  # routa MAX_DELEGATION_DEPTH 同值
++
++
++@dataclass
++class RosterRole:
++    role: str
++    display_name: str
++    description: str = ""
++
++
++@dataclass
++class AgentRoster:
++    role_catalog: tuple[str, ...] = DEFAULT_ROLE_CATALOG
++    nickname_pool: tuple[str, ...] = DEFAULT_NICKNAME_POOL
++    max_concurrent_children: int = DEFAULT_MAX_CONCURRENT_CHILDREN
++    max_delegation_depth: int = DEFAULT_MAX_DELEGATION_DEPTH
++    role_descriptions: dict[str, str] = field(default_factory=dict)
++    _nick_taken: dict[str, set[str]] = field(default_factory=dict)
++
++    def roles(self) -> tuple[RosterRole, ...]:
++        return tuple(
++            RosterRole(role=r, display_name=r.replace("-", " ").title(),
++                       description=self.role_descriptions.get(r, ""))
++            for r in self.role_catalog
++        )
++
++    def assign_nickname(self, role: str) -> str:
++        """同角色内昵称去重分配（kimi 语义）；池耗尽追加序号。跨角色可重名。"""
++        taken = self._nick_taken.setdefault(role, set())
++        for nick in self.nickname_pool:
++            if nick not in taken:
++                taken.add(nick)
++                return nick
++        n = len(taken) + 1
++        name = f"{self.nickname_pool[0]}-{n}" if self.nickname_pool else f"agent-{n}"
++        taken.add(name)
++        return name
++
++    def release_nickname(self, role: str, nickname: str) -> None:
++        self._nick_taken.setdefault(role, set()).discard(nickname)
++
++    def guards(self) -> dict[str, int]:
++        return {
++            "max_concurrent_children": self.max_concurrent_children,
++            "max_delegation_depth": self.max_delegation_depth,
++        }
++
++
++def roster_config_path() -> Path:
++    home = os.environ.get("HERMES_HOME", "").strip()
++    base = Path(home) if home else Path.home() / ".hermes"
++    return base / "agent-roster.yaml"
++
++
++def load_roster(path: Optional[Path] = None) -> AgentRoster:
++    """YAML 覆盖四要素（角色目录/昵称池/两护栏）；缺席或坏文件回内置默认（告警不炸）。"""
++    p = path or roster_config_path()
++    roster = AgentRoster()
++    try:
++        if not p.is_file():
++            return roster
++        import yaml  # hermes 栈已有 yaml 依赖
++        raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
++        if not isinstance(raw, dict):
++            raise ValueError("roster YAML 顶层须为映射")
++        if isinstance(raw.get("roles"), list) and raw["roles"]:
++            roles = tuple(str(r) for r in raw["roles"] if str(r).strip())
++            if roles:
++                roster.role_catalog = roles
++        if isinstance(raw.get("nicknames"), list) and raw["nicknames"]:
++            nicks = tuple(str(n) for n in raw["nicknames"] if str(n).strip())
++            if nicks:
++                roster.nickname_pool = nicks
++        for key, attr in (
++            ("max_concurrent_children", "max_concurrent_children"),
++            ("max_delegation_depth", "max_delegation_depth"),
++        ):
++            v = raw.get(key)
++            if isinstance(v, int) and v > 0:
++                setattr(roster, attr, v)
++        if isinstance(raw.get("role_descriptions"), dict):
++            roster.role_descriptions = {str(k): str(v) for k, v in raw["role_descriptions"].items()}
++    except Exception as exc:  # noqa: BLE001 - 配置面故障回默认不阻断委派
++        logger.warning("agent-roster 配置读取失败，回内置默认：%s", exc)
++        return AgentRoster()
++    return roster
++
++
++# 进程级缓存（配置文件按启动读一次；测试用 reset 显式失效）。
++_cached: Optional[AgentRoster] = None
++
++
++def get_roster() -> AgentRoster:
++    global _cached
++    if _cached is None:
++        _cached = load_roster()
++    return _cached
++
++
++def reset_roster_cache() -> None:
++    global _cached
++    _cached = None
+diff --git a/tests/agent/test_agent_roster.py b/tests/agent/test_agent_roster.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_agent_roster.py
+@@ -0,0 +1,78 @@
++"""Agent 名册配置层守门（第一批 #10 独立子件：dsh 角色配置+kimi 昵称池+routa 名册）。"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from agent.agent_roster import (  # noqa: E402
++    AgentRoster, load_roster, reset_roster_cache,
++)
++
++
++class TestBuiltins:
++    def test_default_role_catalog_and_guards(self):
++        r = AgentRoster()
++        assert "researcher" in r.role_catalog and "agent-lead" in r.role_catalog
++        assert r.guards() == {"max_concurrent_children": 4, "max_delegation_depth": 2}
++
++    def test_display_names_titleized(self):
++        r = AgentRoster()
++        d = {x.role: x.display_name for x in r.roles()}
++        assert d["code-reviewer"] == "Code Reviewer"
++
++
++class TestNicknamePool:
++    def test_same_role_dedup_pool_exhaust_numbered(self):
++        r = AgentRoster(nickname_pool=("Alex", "Sam"))
++        first = [r.assign_nickname("qa") for _ in range(2)]
++        assert first == ["Alex", "Sam"]
++        assert r.assign_nickname("qa") == "Alex-3"  # 池耗尽追加序号
++        # 跨角色可重名（kimi 语义：同角色内去重）。
++        assert r.assign_nickname("backend") == "Alex"
++
++    def test_release_returns_nickname(self):
++        r = AgentRoster(nickname_pool=("Alex",))
++        n = r.assign_nickname("qa")
++        r.release_nickname("qa", n)
++        assert r.assign_nickname("qa") == n
++
++
++class TestConfigLayer:
++    def test_yaml_overrides_four_elements(self, tmp_path):
++        cfg = tmp_path / "agent-roster.yaml"
++        cfg.write_text(
++            "roles: [backend, qa]\n"
++            "nicknames: [Kai, Noa]\n"
++            "max_concurrent_children: 2\n"
++            "max_delegation_depth: 1\n"
++            "role_descriptions: {qa: 质量验证}\n",
++            encoding="utf-8",
++        )
++        r = load_roster(cfg)
++        assert r.role_catalog == ("backend", "qa")
++        assert r.nickname_pool == ("Kai", "Noa")
++        assert r.guards() == {"max_concurrent_children": 2, "max_delegation_depth": 1}
++        assert r.role_descriptions["qa"] == "质量验证"
++
++    def test_missing_and_broken_files_fall_back(self, tmp_path):
++        assert load_roster(tmp_path / "absent.yaml").guards()["max_delegation_depth"] == 2
++        bad = tmp_path / "bad.yaml"
++        bad.write_text("{{{{not yaml", encoding="utf-8")
++        assert load_roster(bad).role_catalog == AgentRoster().role_catalog
++
++    def test_cache_reset(self, monkeypatch, tmp_path):
++        import agent.agent_roster as ar
++        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++        ar.reset_roster_cache()
++        cfg = tmp_path / "agent-roster.yaml"
++        cfg.write_text("max_delegation_depth: 3\n", encoding="utf-8")
++        ar.reset_roster_cache()
++        assert ar.get_roster().guards()["max_delegation_depth"] == 3
++        ar.reset_roster_cache()
