@@ -39,7 +39,7 @@ export type ProjectionEvent =
 
 /** zcode-agent 通道的投影消费面（engine-bridge 的子集 + sessions-index 组）。 */
 export interface ProjectionAgentPort {
-  subscribeSessionsIndexV4(params: { workspacePath: string }): Promise<{ ack: { subscriptionId: string; mode?: string } }>
+  subscribeSessionsIndexV4(params: { workspacePath: string; runtimePolicy?: string }): Promise<{ ack: { subscriptionId: string; mode?: string } }>
   subscribeConversationV4(params: { workspacePath: string; sessionId: string }): Promise<{ ack: { subscriptionId: string; mode?: string } }>
   onDynamicSessionsIndexFrame(params: { workspacePath: string }): (cb: (wire: ZcodeWireFrameLike) => void) => { dispose(): void }
   onDynamicConversationFrame(params: { workspacePath: string }): (cb: (wire: ZcodeWireFrameLike) => void) => { dispose(): void }
@@ -89,17 +89,18 @@ export class ZcodeSessionProjection {
     const state: WatchState = { workspacePath, disposers: [], conversationSessions: new Set(), fragmentSkips: new Map() }
     this.watches.set(workspacePath, state)
     try {
-      await this.agent.subscribeSessionsIndexV4({ workspacePath })
+      // 帧回调先注册再订阅：initial 帧走 post-response outbox，订阅应答后才注册会丢首帧
+      // （对齐 zcode ui agentSessionsIndexTransport 的 onFrame→subscribe 顺序）；
+      // runtimePolicy=existing-only：只接既有运行时，不为投影拉起 CLI 子进程。
       const indexSub = this.agent.onDynamicSessionsIndexFrame({ workspacePath })((wire) => {
         this.consumeSessionsIndexFrame(state, wire)
       })
       state.disposers.push(indexSub)
-      // conversation 回调按 workspace 键控（服务面无会话级回调），帧自带 topic 路由；
-      // watchSession 只负责 subscribe，消费面在此统一注册。
       const convSub = this.agent.onDynamicConversationFrame({ workspacePath })((wire) => {
         this.consumeConversationFrame(state, wire)
       })
       state.disposers.push(convSub)
+      await this.agent.subscribeSessionsIndexV4({ workspacePath, runtimePolicy: 'existing-only' })
     } catch (err) {
       this.watches.delete(workspacePath)
       this.emit({
