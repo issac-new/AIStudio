@@ -863,3 +863,15 @@
 #      附 #2 认领围栏验收测试（同人双跑 per-profile cap 拦截）。
 #      依据 specs/2026-09-23-zcode-foundation-design.md §1.2 #8/#2 + routa.md。
 399-agent-kanban-column-gates.patch
+# 400 R5 吸收 #3（kimi）：compact 六段交接摘要——真实意图（Goal 段 TRUE INTENT vs 字面请求）/
+#      还不知道（新段 ## Open Questions & Unknowns）/前向计划（新段 ## Forward Plan，最新
+#      用户消息永远赢）/诚实标注（[UNVERIFIED] 前言规则）；迭代更新指令与确定性回退同步。
+#      已定未定/精确命令错误行由既有 Resolved Questions/Blocked/Errors&Fixes/锚点索引覆盖（强于 kimi）。
+#      依据 docs/upstream-analysis/kimi.md 吸收表 1。
+400-agent-compact-six-segment-handoff.patch
+# 401 R5 吸收 #6（minimax）：runaway-guard 六信号——exact_action_repeat/exact_result_repeat
+#      （同工具）/same_error_family（数字归一化族）/abab_action_cycle/polling_repeat/
+#      unchanged_progress_repeat（跨工具结果不变）+ 工具步进 HMAC 指纹（16KB 有界序列化）；
+#      挂 sequential/segmented 步进；默认只报不打断，HERMES_RUNAWAY_GUARD_INTERRUPT=1 打断、
+#      =0 关闭。依据 docs/upstream-analysis/minimax-code.md §2.6 差距表。
+401-agent-runaway-guard-six-signals.patch
