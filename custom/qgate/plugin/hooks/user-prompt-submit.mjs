@@ -1,38 +1,30 @@
-import { stdout } from 'node:process'
-import { loadProject } from '../core/loader.js'
-import { runGate, gitContext } from '../core/run.js'
-import { resolveProfile, effectivePolicy } from '../core/profile.js'
-import { selectGates } from '../core/impact.js'
-import { tierOfProfile, VERDICT_TO_DELIVERY } from '../core/align.js'
-import { resolve } from 'node:path'
+#!/usr/bin/env node
+// QGate UserPromptSubmit hook（async 审计面，v0.1 §34.2）。项目级 opt-in。
+// 职责：记录任务开始事件（Task Run 起点），不阻断普通 prompt（§34.2 明示）。
+import { existsSync, appendFileSync } from 'node:fs'
+import { join } from 'node:path'
 
-async function main() {
-  const cwd = resolve(process.cwd())
-  const loaded = await loadProject(cwd)
-  if (!loaded) return
-  const changed = gitContext(cwd).changedPaths
-  const profile = loaded.resolveProfile()
-  const enabled = profile.gates.filter((g) => g.spec.enabled ?? true)
-  const toRun = selectGates(enabled, changed)
-  if (toRun.length === 0) return
-
-  const now = Date.now()
-  const results = []
-  for (const spec of toRun) {
-    const result = await runGate({ spec, trigger: 'after_edit', workspace: cwd, qgateDir: loaded.qgateDir, changedPaths: changed })
-    const policy = effectivePolicy(spec, profile)
-    const isBlocking = (result.run.verdict === 'FAIL' && policy.failure === 'block') ||
-        (result.run.verdict === 'INCONCLUSIVE' && policy.inconclusive === 'block')
-    results.push({ gate: spec.metadata.id, verdict: result.run.verdict, blocking: isBlocking })
-    stdout.write(`[user-prompt-submit] ${spec.metadata.id}: ${result.run.verdict}\n`)
-  }
-  const blocking = results.filter(r => r.blocking)
-  if (blocking.length > 0) {
-    stdout.write(`[user-prompt-submit] BLOCKING: ${blocking.map(b => b.gate).join(', ')}\n`)
-    process.exit(1)
-  }
+let input = {}
+try {
+  const raw = await new Promise((resolve, reject) => {
+    let data = ''
+    process.stdin.on('data', (c) => (data += c))
+    process.stdin.on('end', () => resolve(data))
+    process.stdin.on('error', reject)
+  })
+  input = raw ? JSON.parse(raw) : {}
+} catch {
+  process.exit(0)
 }
-main().catch(err => {
-  console.error('[user-prompt-submit] error:', err)
-  process.exit(2)
-})
+
+const cwd = typeof input.cwd === 'string' ? input.cwd : process.cwd()
+if (!existsSync(join(cwd, '.qgate'))) process.exit(0)
+
+const prompt = typeof input.prompt === 'string' ? input.prompt : ''
+try {
+  appendFileSync(join(cwd, '.qgate', 'hooks.log'), JSON.stringify({
+    hook: 'UserPromptSubmit', at: new Date().toISOString(),
+    promptPreview: prompt.slice(0, 120),
+  }) + '\n')
+} catch { /* no-op */ }
+process.exit(0)

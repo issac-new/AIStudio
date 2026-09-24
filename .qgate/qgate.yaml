@@ -1,0 +1,10 @@
+# QGate 项目配置——overlay 仓自备（零 init：clone 即生效，勿提交 runs/evidence 等运行数据）。
+# 档位从 advisory 起步：全量套件结果受 upstream 注入态影响（zcode-patches-guard 等
+# 注入态守门在未注入树上按设计必红），故 basic-check 先 warn 观察，稳定后再切 block。
+profile: vibe-fast
+claims:
+  - id: engineering.lint-clean
+    statement: overlay 自身代码通过 lint 与全量测试链。
+    domain: L1
+    criticality: medium
+overrides: {}

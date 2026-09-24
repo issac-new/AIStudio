@@ -1,0 +1,9 @@
+# Golden scenario: demo-semantic-mismatch —— FIBO 术语歧义被语义门逮住（CONDITIONAL warning 级）。
+# docs/prd.md 同时混用 captured 与 settled（FIBO distinctFrom 对）→ terminology-ambiguity finding。
+profile: semantic-demo
+claims: []
+ontology:
+  provider: fibo
+  mappings:
+    - conceptId: fibo-capture
+      code: [PaymentService]

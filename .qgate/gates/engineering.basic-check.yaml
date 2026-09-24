@@ -1,0 +1,35 @@
+# 项目覆盖内置门：同 id 覆盖（loader 纪律）。advisory 档——见 ../qgate.yaml 头注释。
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: engineering.basic-check
+  version: 0.1.0-overlay
+  description: overlay 仓工程基线（advisory 起步）：lint+全量 vitest。
+spec:
+  domain: L1
+  claims:
+    - engineering.lint-clean
+  appliesWhen:
+    changed:
+      any:
+        - "custom/**"
+        - "patches/**"
+        - "scripts/**"
+  triggers:
+    - task_close
+    - pre_commit
+    - release
+  executors:
+    - id: test
+      type: command
+      command: ["npm", "test", "--silent"]
+      evidenceType: unit-test-result
+      timeoutMs: 600000
+  evidence:
+    required:
+      - unit-test-result
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

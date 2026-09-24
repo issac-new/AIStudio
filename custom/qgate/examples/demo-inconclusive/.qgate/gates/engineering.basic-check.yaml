@@ -1,0 +1,32 @@
+# Golden scenario: demo-inconclusive —— 环境不具备 → INCONCLUSIVE（不是 FAIL，更不是 PASS）。
+# 项目覆盖内置门，executor 直接指向不存在的二进制：spawn 失败 = 证据不可得 = v0.1 §4.2/§69 语义。
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: engineering.basic-check
+  version: 0.1.0-demo
+  description: 环境缺失演示门：工具二进制不存在 → executor error → INCONCLUSIVE。
+spec:
+  domain: L1
+  claims:
+    - engineering.lint-clean
+  appliesWhen:
+    changed:
+      any:
+        - "src/**"
+  triggers:
+    - task_close
+  executors:
+    - id: missing-linter
+      type: command
+      command: ["qgate-demo-linter-binary-that-does-not-exist", "--check", "src/"]
+      evidenceType: lint-result
+      timeoutMs: 10000
+  evidence:
+    required:
+      - lint-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
