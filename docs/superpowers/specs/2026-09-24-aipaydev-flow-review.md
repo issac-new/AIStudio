@@ -165,6 +165,12 @@ session 不转发 → `/api/kanban/boards` 401，简报跨板解析拿不到板�
 > 实操即"人 agent 充当 team leader，向下分派给 csw-\* 专职 agent"，与推演的 chen/hu/lin/xiao
 > 各管一应用一致，只是显式化为 team 下的专职 agent 而非单人独角。
 
+> 【2026-09-25 用户裁决（V2 编制表归一）】：专职 agent 采用**每账号一套**——profile 命名
+> `<user>-<agent-id>`（如 `chen-csw-pay-core`），挂各账号自己的独立板（board.json `profiles`
+> team 认领围栏），编制表见《2026-09-25-mux-v2-fullflow-runbook.md》§2；上文 `csw-<app>-dev`
+> 共享命名口径**废止**（目标原文："每个用户的协作 kanban 独立（挂载**自身**研发专职 agent）"）。
+> 人 agent 仍是 team leader 入口（本节模型保留），仅"专职 agent 归属与命名"改为每账号实例化。
+
 ### C2. 步骤 3 "默认 matrix 账号自动登录" 未实现 ⬜
 
 **证据**：`grep auto.*login|自动登录|matrix.*token.*login` 在 overlay/client 零命中；每次进

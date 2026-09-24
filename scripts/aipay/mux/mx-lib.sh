@@ -384,6 +384,7 @@ RFD_MATERIAL="${RFD_MATERIAL:-$OVERLAY_ROOT/scripts/aipay/materials/${RFD_ID}-${
 if [[ -z "${RFD_ONELINE:-}" ]]; then
   case "$RFD_ID" in
     RFD-002) RFD_ONELINE="在已上线的收单商户小程序收银台之上，增加退款（整单/多次部分、原路退回）与分账（多接收方、比例/时窗/冻结解冻）两项资金能力，双端一致且不产生资损" ;;
+    RFD-003) RFD_ONELINE="在已上线的收银台之上增加 T+1 自动对账能力：以 outTradeNo/transactionId/金额（分，int64）/15 分钟超时自动关单为对账核心字段，支持支付凭证截图经 OCR 双路提取对账字段并勾稽，差异进待澄清清单，不产生资损" ;;
     *)       RFD_ONELINE="为收单商户开发兼容微信/支付宝双端的小程序支付收银台，含统一下单、渠道适配（财付通/支付宝）、支付结果通知与对账字段支撑" ;;
   esac
 fi
