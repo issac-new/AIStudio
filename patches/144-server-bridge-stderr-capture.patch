@@ -2,7 +2,7 @@ diff --git a/packages/server/src/modules/hermes/services/bridge/manager.ts b/pac
 index cd6a032..128fdd1 100644
 --- a/packages/server/src/modules/hermes/services/bridge/manager.ts
 +++ b/packages/server/src/modules/hermes/services/bridge/manager.ts
-@@ -1,7 +1,8 @@
+@@ -1,8 +1,9 @@
  import { execFileSync, spawn, type ChildProcess } from 'child_process'
 -import { existsSync } from 'fs'
 +import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
@@ -11,6 +11,7 @@ index cd6a032..128fdd1 100644
 +import { basename, dirname, isAbsolute, join, resolve } from 'path'
 +import { homedir } from 'os'
  import { logger } from '../../../studio/public/logging'
+ import { config } from '../../../studio/public/config'
  import { OPENROUTER_APP_HEADERS } from '../../../studio/public/openrouter-attribution'
  import { resolveHermesInstallationEnvironment } from '../runtime/installation'
 @@ -994,13 +995,32 @@ export class AgentBridgeManager {

@@ -1,0 +1,694 @@
+diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
+index 4062018..ea15913 100644
+--- a/packages/server/src/modules/coding-agents/services/index.ts
++++ b/packages/server/src/modules/coding-agents/services/index.ts
+@@ -25,6 +25,7 @@ import { PROVIDER_PRESETS } from '../../studio/contracts/providers'
+ import { getModelContextLength, getModelRuntimeCapabilities } from '../../studio/public/provider-runtime'
+ import { getSystemPrompt, studioMcpUsageGuidelines } from '../../studio/public/runs/prompt'
+ import { codingAgentRunManager } from './runtime/run-manager'
++import { OPENCODE_FAMILY_VARS, isOpenCodeFamily, type OpenCodeFamilyId } from './opencode-family'
+ import { mergePiSettings, userSettingsProvidesPiMcpAdapter } from './pi/settings'
+ import { PI_EXTENDED_THINKING_LEVEL_MAP, piModelSupportsThinking } from './pi/thinking'
+ import { GROK_API_KEY_ENV, GROK_CODING_AGENT_DEFINITION, GROK_PROVIDER_ID } from './grok/definition'
+@@ -387,6 +388,13 @@ const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
+     command: 'opencode',
+     packageName: 'opencode-ai',
+   },
++  {
++    id: 'mimo',
++    name: 'MiMo Code',
++    provider: 'Xiaomi MiMo',
++    command: 'mimo',
++    packageName: '@mimo-ai/cli',
++  },
+   {
+     id: 'dsh',
+     name: 'DeepSeek Harness',
+@@ -436,6 +444,13 @@ const CONFIG_FILE_DEFINITIONS: Record<CodingAgentId, Array<Omit<CodingAgentConfi
+     { key: 'config', path: '~/.config/opencode/opencode.json', scopedPath: OPENCODE_CONFIG_FILE, language: 'json' },
+     { key: 'agents', path: '~/.config/opencode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
+   ],
++  mimo: [
++    { key: 'settings', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
++    { key: 'memory', path: '~/.config/mimocode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
++    { key: 'mcp', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
++    { key: 'config', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
++    { key: 'agents', path: '~/.config/mimocode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
++  ],
+ }
+ 
+ const installingTools = new Set<CodingAgentId>()
+@@ -876,12 +891,13 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
+   return session?.provider === 'global' ? 'global' : 'scoped'
+ }
+ 
+-function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
++function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode' {
+   if (id === 'codex') return 'codex'
+   if (id === 'pi') return 'pi'
+   if (id === 'grok') return 'grok'
+   if (id === 'dsh') return 'dsh'
+   if (id === 'opencode') return 'opencode'
++  if (id === 'mimo') return 'mimo'
+   if (id === 'zcode') return 'zcode'
+   return 'claude'
+ }
+@@ -1222,7 +1238,7 @@ function managedHermesMcpServerConfig(
+     if (env?.[HERMES_MCP_MANAGED_ENV_KEY] === '1') {
+       server.env = { ...env, HERMES_MCP_SERVER_NAME: serverName, HERMES_MCP_USER_CLARIFICATION: '1' }
+     }
+-    if (agentId === 'claude-code' || agentId === 'opencode') server.timeout = Math.max(360_000, Number(server.timeout) || 0)
++    if (agentId === 'claude-code' || isOpenCodeFamily(agentId)) server.timeout = Math.max(360_000, Number(server.timeout) || 0)
+     if (agentId === 'dsh') server.toolCallTimeoutMs = Math.max(360_000, Number(server.toolCallTimeoutMs) || 0)
+   }
+   return server
+@@ -1798,6 +1814,7 @@ function mergeOpenCodeSettingsConfig(existingContent: string, settingsContent: s
+ }
+ 
+ function opencodeRuntimeConfig(
++  family: OpenCodeFamilyId,
+   profile: string,
+   runtime: {
+     provider?: string
+@@ -1813,9 +1830,10 @@ function opencodeRuntimeConfig(
+     ? { ...config.mcp }
+     : {}
+   for (const name of [...HERMES_MCP_SERVER_NAMES, ...LEGACY_HERMES_MCP_SERVER_NAMES]) delete externalMcp[name]
+-  const disabledManaged = getDisabledManagedMcpServers('opencode', profile)
++  const familyVars = OPENCODE_FAMILY_VARS[family]
++  const disabledManaged = getDisabledManagedMcpServers(family, profile)
+   const managedMcp = Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
+-    const server = managedHermesMcpServerConfig('opencode', profile, item.name, item.toolset)
++    const server = managedHermesMcpServerConfig(family, profile, item.name, item.toolset)
+     return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
+   }))
+   const inheritedInstructions = Array.isArray(config.instructions)
+@@ -1830,7 +1848,7 @@ function opencodeRuntimeConfig(
+   delete config.instructions
+   return `${JSON.stringify({
+     ...config,
+-    $schema: 'https://opencode.ai/config.json',
++    $schema: familyVars.schemaUrl,
+     ...(runtime.model ? {
+       model: `${OPENCODE_PROVIDER_ID}/${runtime.model}`,
+       provider: {
+@@ -1839,7 +1857,7 @@ function opencodeRuntimeConfig(
+           name: runtime.provider || 'SwarmStudio',
+           options: {
+             baseURL: runtime.baseUrl || '',
+-            apiKey: `{env:${OPENCODE_API_KEY_ENV}}`,
++            apiKey: `{env:${familyVars.apiKeyEnv}}`,
+           },
+           models: {
+             [runtime.model]: {
+@@ -1876,7 +1894,7 @@ function opencodeRuntimeConfig(
+   }, null, 2)}\n`
+ }
+ 
+-function openCodeRuntimeEnv(input: {
++function openCodeRuntimeEnv(family: OpenCodeFamilyId, input: {
+   configDir: string
+   databasePath: string
+   runtimeConfig?: string
+@@ -1891,12 +1909,14 @@ function openCodeRuntimeEnv(input: {
+   // OPENCODE_CONFIG_CONTENT, which OpenCode intentionally loads last. The
+   // native database remains isolated per conversation. Do not redirect HOME or
+   // XDG because that would also redirect git, ssh, npm, and child shells.
++  const familyVars = OPENCODE_FAMILY_VARS[family]
+   return {
+-    OPENCODE_CONFIG_DIR: input.configDir,
+-    OPENCODE_DB: input.databasePath,
+-    ...(input.runtimeConfig ? { [OPENCODE_RUNTIME_CONFIG_ENV]: input.runtimeConfig } : {}),
+-    OPENCODE_DISABLE_CLAUDE_CODE: '1',
+-    ...(input.apiKey ? { [OPENCODE_API_KEY_ENV]: input.apiKey } : {}),
++    [familyVars.configDirEnv]: input.configDir,
++    [familyVars.databaseEnv]: input.databasePath,
++    ...(input.runtimeConfig ? { [familyVars.runtimeConfigEnv]: input.runtimeConfig } : {}),
++    // MiMo-Code gates Claude-Code skill import behind an opt-in flag already.
++    ...(family === 'opencode' ? { OPENCODE_DISABLE_CLAUDE_CODE: '1' } : {}),
++    ...(input.apiKey ? { [familyVars.apiKeyEnv]: input.apiKey } : {}),
+   }
+ }
+ 
+@@ -1904,7 +1924,7 @@ export function getCodingAgentManagedMcpServerConfigs(
+   id: CodingAgentId,
+   profile = 'default',
+ ): Record<string, Record<string, unknown>> {
+-  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh'].includes(id)) return {}
++  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh'].includes(id)) return {}
+   const disabledManaged = getDisabledManagedMcpServers(id, profile)
+   return Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
+     const server = managedHermesMcpServerConfig(id, profile || 'default', item.name, item.toolset)
+@@ -1927,7 +1947,7 @@ export function getCodingAgentManagedMcpServerConfigs(
+         ...(disabledManaged.has(item.name) ? { enabled: false } : {}),
+       }]
+     }
+-    if (id === 'opencode') {
++    if (isOpenCodeFamily(id)) {
+       return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
+     }
+     return [item.name, {
+@@ -2283,7 +2303,7 @@ async function ensurePiScopedBaseConfigFiles(scope: Required<CodingAgentConfigSc
+ }
+ 
+ function shouldShareOpenCodeGlobalFile(name: string): boolean {
+-  if (name === 'AGENTS.md' || name === 'opencode.json' || name === 'opencode.jsonc') return false
++  if (name === 'AGENTS.md' || name === 'opencode.json' || name === 'opencode.jsonc' || name === 'mimocode.json' || name === 'mimocode.jsonc' || name === 'config.json') return false
+   if (name === '.gitignore' || name === 'package.json' || name === 'package-lock.json' || name === 'bun.lock') return false
+   if (name.endsWith('.lock') || name.endsWith('.pid') || name.endsWith('.sock')) return false
+   if (name.endsWith('.db') || name.endsWith('.db-shm') || name.endsWith('.db-wal')) return false
+@@ -2316,6 +2336,7 @@ async function shareOpenCodeGlobalEntry(source: string, target: string, type: 'f
+ }
+ 
+ async function ensureOpenCodeScopedBaseConfigFiles(
++  family: OpenCodeFamilyId,
+   scope: Required<CodingAgentConfigScope>,
+   systemPrompt: string,
+   workspaceDir = resolveLaunchWorkspaceRoot(scope, null),
+@@ -2327,8 +2348,9 @@ async function ensureOpenCodeScopedBaseConfigFiles(
+   launcherFile: string
+   launcherRuntimeConfig: string
+ }> {
+-  const rootDir = getScopedConfigRoot('opencode', scope)
+-  const sourceHome = dirname(getLiveConfigFileDefinition('opencode', 'config')?.absolutePath || '')
++  const familyVars = OPENCODE_FAMILY_VARS[family]
++  const rootDir = getScopedConfigRoot(family, scope)
++  const sourceHome = dirname(getLiveConfigFileDefinition(family, 'config')?.absolutePath || '')
+   await mkdir(rootDir, { recursive: true, mode: 0o700 })
+   await mkdir(sourceHome, { recursive: true })
+ 
+@@ -2349,29 +2371,30 @@ async function ensureOpenCodeScopedBaseConfigFiles(
+ 
+   const memoryFile = join(rootDir, 'AGENTS.md')
+   const promptFile = join(rootDir, 'hermes-rules.md')
+-  const configFile = join(rootDir, OPENCODE_CONFIG_FILE)
++  const configFile = join(rootDir, familyVars.configFileName)
+   const globalInstructions = await safeReadFile(join(sourceHome, 'AGENTS.md')) || ''
+-  const globalConfig = await safeReadFile(join(sourceHome, OPENCODE_CONFIG_FILE))
+-    || await safeReadFile(join(sourceHome, 'opencode.jsonc'))
++  const globalConfig = await safeReadFile(join(sourceHome, familyVars.configFileName))
++    || await safeReadFile(join(sourceHome, `${familyVars.configFileName}c`))
++    || (family === 'mimo' ? await safeReadFile(join(sourceHome, 'config.json')) : '')
+     || ''
+   await writeFile(memoryFile, globalInstructions, 'utf-8')
+   await writeManagedPromptFile(promptFile, systemPrompt, '')
+   await writeFile(
+     configFile,
+-    opencodeRuntimeConfig(scope.profile, {}, globalConfig),
++    opencodeRuntimeConfig(family, scope.profile, {}, globalConfig),
+     'utf-8',
+   )
+-  const launcherRuntimeConfig = opencodeRuntimeConfig(scope.profile, { systemPrompt: promptFile })
+-  const env = openCodeRuntimeEnv({
++  const launcherRuntimeConfig = opencodeRuntimeConfig(family, scope.profile, { systemPrompt: promptFile })
++  const env = openCodeRuntimeEnv(family, {
+     configDir: rootDir,
+-    databasePath: join(rootDir, OPENCODE_DATABASE_FILE),
++    databasePath: join(rootDir, familyVars.databaseFile),
+     runtimeConfig: launcherRuntimeConfig,
+   })
+   const launcherFile = await writeLauncherScript({
+     rootDir,
+     workspaceDir,
+     env,
+-    command: 'opencode',
++    command: family,
+     args: [],
+   })
+   return { rootDir, memoryFile, promptFile, configFile, launcherFile, launcherRuntimeConfig }
+@@ -2811,7 +2834,7 @@ export function withCodingAgentRegistry(id: CodingAgentId, args: string[]): stri
+   // DSH's native dependencies share a process-wide FFI type registry; duplicate
+   // copies can crash plugin startup after an otherwise successful npm update.
+   const installOptions = id === 'dsh' && args[0] === 'install' ? ['--prefer-dedupe'] : []
+-  return id === 'codex' || id === 'grok' || id === 'opencode' || id === 'dsh'
++  return id === 'codex' || id === 'grok' || isOpenCodeFamily(id) || id === 'dsh'
+     ? [...args, ...installOptions, `--registry=${OFFICIAL_NPM_REGISTRY}`]
+     : [...args]
+ }
+@@ -3186,7 +3209,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
+       )
+       : id === 'grok' && key === 'settings'
+         ? grokSettingsConfig(sourceContent)
+-        : id === 'opencode' && key === 'settings'
++        : isOpenCodeFamily(id) && key === 'settings'
+           ? openCodeSettingsConfig(sourceContent)
+         : sourceContent
+     return {
+@@ -3203,7 +3226,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
+       ? mergeGrokConfigWithManagedMcp('', codexMcpConfigToml(normalizedScope.profile, 'grok'))
+       : id === 'pi'
+         ? piLiveConfigDefault(key, normalizedScope.profile) || ''
+-        : id === 'opencode' && key === 'settings'
++        : isOpenCodeFamily(id) && key === 'settings'
+           ? '{}\n'
+           : id === 'dsh' && key === 'settings' ? '{}\n'
+             : id === 'dsh' && key === 'mcp' ? '[]\n'
+@@ -3238,7 +3261,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
+     persistedContent = key === 'mcp'
+       ? mergeGrokUserMcpConfig(existingContent, persistedContent)
+       : mergeGrokSettingsConfig(existingContent, persistedContent)
+-  } else if (id === 'opencode' && key === 'settings') {
++  } else if (isOpenCodeFamily(id) && key === 'settings') {
+     const existingContent = await safeReadFile(definition.absolutePath) || '{}'
+     persistedContent = mergeOpenCodeSettingsConfig(existingContent, persistedContent)
+   }
+@@ -3266,7 +3289,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
+         )
+       : id === 'grok' && key === 'settings'
+         ? grokSettingsConfig(persistedContent)
+-        : id === 'opencode' && key === 'settings'
++        : isOpenCodeFamily(id) && key === 'settings'
+           ? openCodeSettingsConfig(persistedContent)
+         : content,
+     exists: true,
+@@ -3417,17 +3440,18 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+       files = prepared.files
+       args = prepared.args
+       env = prepared.env
+-    } else if (tool.id === 'opencode') {
+-      const prepared = await ensureOpenCodeScopedBaseConfigFiles(scope, systemPrompt, workspaceDir)
++    } else if (isOpenCodeFamily(tool.id)) {
++      const familyVars = OPENCODE_FAMILY_VARS[tool.id]
++      const prepared = await ensureOpenCodeScopedBaseConfigFiles(tool.id, scope, systemPrompt, workspaceDir)
+       // Share native configuration, but keep each conversation's dynamic
+       // instructions separate from other chats and workflow/group-chat runs.
+       promptFile = join(rootDir, 'hermes-rules.md')
+       await writeManagedPromptFile(promptFile, systemPrompt, '')
+-      env = openCodeRuntimeEnv({
++      env = openCodeRuntimeEnv(tool.id, {
+         configDir: prepared.rootDir,
+         // Preserve the existing database location so native sessions can resume.
+-        databasePath: join(prepared.rootDir, OPENCODE_DATABASE_FILE),
+-        runtimeConfig: opencodeRuntimeConfig(scope.profile, { systemPrompt: promptFile }),
++        databasePath: join(prepared.rootDir, familyVars.databaseFile),
++        runtimeConfig: opencodeRuntimeConfig(tool.id, scope.profile, { systemPrompt: promptFile }),
+       })
+       const launcherFile = await writeLauncherScript({
+         rootDir,
+@@ -3439,7 +3463,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+       files = [
+         { key: 'agents', path: 'AGENTS.md', absolutePath: prepared.memoryFile },
+         { key: 'prompt', path: 'hermes-rules.md', absolutePath: promptFile },
+-        { key: 'config', path: OPENCODE_CONFIG_FILE, absolutePath: prepared.configFile },
++        { key: 'config', path: familyVars.configFileName, absolutePath: prepared.configFile },
+         {
+           key: 'launcher',
+           path: process.platform === 'win32' ? WINDOWS_LAUNCHER_FILE : POSIX_LAUNCHER_FILE,
+@@ -3878,11 +3902,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+           chatSessionId: isolatedInput.sessionId,
+         })
+       : null
+-    const baseRuntime = await ensureOpenCodeScopedBaseConfigFiles(scope, scopedSystemPrompt, workspaceDir)
+-    const configPath = join(rootDir, OPENCODE_CONFIG_FILE)
++    const ocFamily: OpenCodeFamilyId = isOpenCodeFamily(tool.id) ? tool.id : 'opencode'
++    const familyVars = OPENCODE_FAMILY_VARS[ocFamily]
++    const baseRuntime = await ensureOpenCodeScopedBaseConfigFiles(ocFamily, scope, scopedSystemPrompt, workspaceDir)
++    const configPath = join(rootDir, familyVars.configFileName)
+     const promptPath = join(rootDir, 'AGENTS.md')
+     await writeManagedPromptFile(promptPath, scopedSystemPrompt, '')
+-    const runtimeConfig = opencodeRuntimeConfig(scope.profile, {
++    const runtimeConfig = opencodeRuntimeConfig(ocFamily, scope.profile, {
+       provider,
+       model,
+       baseUrl: proxyTarget?.baseUrl || baseUrl,
+@@ -3891,12 +3917,12 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+     })
+     await writeFile(configPath, runtimeConfig, 'utf-8')
+     files.push(
+-      { key: 'config', path: OPENCODE_CONFIG_FILE, absolutePath: configPath },
++      { key: 'config', path: familyVars.configFileName, absolutePath: configPath },
+       { key: 'agents', path: 'AGENTS.md', absolutePath: promptPath },
+     )
+-    env = openCodeRuntimeEnv({
++    env = openCodeRuntimeEnv(ocFamily, {
+       configDir: baseRuntime.rootDir,
+-      databasePath: join(rootDir, OPENCODE_DATABASE_FILE),
++      databasePath: join(rootDir, familyVars.databaseFile),
+       runtimeConfig,
+       apiKey: proxyTarget?.token || apiKey,
+     })
+@@ -3943,7 +3969,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+       ? join(rootDir, 'hermes-rules.md')
+       : tool.id === 'grok' || tool.id === 'dsh'
+         ? join(rootDir, 'AGENTS.md')
+-        : tool.id === 'opencode'
++        : isOpenCodeFamily(tool.id)
+           ? join(rootDir, 'AGENTS.md')
+         : undefined,
+     reasoningEffort,
+@@ -4005,10 +4031,10 @@ async function startCodingAgentRunInternal(
+     isolateSettings: true,
+     piOutputMode: id === 'pi' ? 'rpc' : undefined,
+   })
+-  const runtimeMcpFile = launch.files.find(file => file.key === (id === 'dsh' ? 'cordis.patch.yml' : id === 'codex' || id === 'grok' || id === 'opencode' ? 'config' : 'mcp'))
++  const runtimeMcpFile = launch.files.find(file => file.key === (id === 'dsh' ? 'cordis.patch.yml' : id === 'codex' || id === 'grok' || isOpenCodeFamily(id) ? 'config' : 'mcp'))
+   const runtimeMcpPath = runtimeMcpFile?.absolutePath
+-    || (id === 'codex' || id === 'grok' || id === 'opencode'
+-      ? join(launch.rootDir, id === 'opencode' ? OPENCODE_CONFIG_FILE : 'config.toml')
++    || (id === 'codex' || id === 'grok' || isOpenCodeFamily(id)
++      ? join(launch.rootDir, isOpenCodeFamily(id) ? OPENCODE_FAMILY_VARS[id].configFileName : 'config.toml')
+       : id === 'pi'
+         ? join(launch.rootDir, 'mcp.json')
+         : '')
+diff --git a/packages/server/src/modules/coding-agents/services/opencode-family.ts b/packages/server/src/modules/coding-agents/services/opencode-family.ts
+new file mode 100644
+index 0000000..9046805
+--- /dev/null
++++ b/packages/server/src/modules/coding-agents/services/opencode-family.ts
+@@ -0,0 +1,57 @@
++// overlay[mimo-agent]: opencode 家族（OpenCode 与其 fork MiMo-Code）的单一事实源。
++// MiMo-Code（npm @mimo-ai/cli，bin `mimo`）与 OpenCode 共享同一 CLI 契约：
++// `run --format json` NDJSON 事件流 + 同族 config schema（mcp/provider/instructions）。
++// 家族差异只有品牌文件名与环境变量名，全部收敛在此，services/index.ts 与
++// runtime/run-manager.ts 共同引用（二者存在导入方向约束，不能互相 import）。
++export const OPENCODE_FAMILY_IDS = ['opencode', 'mimo'] as const
++export type OpenCodeFamilyId = (typeof OPENCODE_FAMILY_IDS)[number]
++
++export interface OpenCodeFamilyVars {
++  /** 品牌主配置文件名（OpenCode: opencode.json / MiMo: mimocode.json） */
++  configFileName: string
++  /** 原生数据库文件名 */
++  databaseFile: string
++  /** 配置目录环境变量 */
++  configDirEnv: string
++  /** 数据库路径环境变量 */
++  databaseEnv: string
++  /** 运行时增量配置环境变量（进程启动时最后加载） */
++  runtimeConfigEnv: string
++  /** 凭据注入环境变量（config 里以 {env:VAR} 引用） */
++  apiKeyEnv: string
++  /** config $schema URL */
++  schemaUrl: string
++  /** UI/错误信息品牌名 */
++  brandName: string
++  /** run 子命令参数：MiMo fork 已移除 --auto */
++  runSupportsAutoFlag: boolean
++}
++
++export const OPENCODE_FAMILY_VARS: Record<OpenCodeFamilyId, OpenCodeFamilyVars> = {
++  opencode: {
++    configFileName: 'opencode.json',
++    databaseFile: 'opencode.db',
++    configDirEnv: 'OPENCODE_CONFIG_DIR',
++    databaseEnv: 'OPENCODE_DB',
++    runtimeConfigEnv: 'OPENCODE_CONFIG_CONTENT',
++    apiKeyEnv: 'HERMES_OPENCODE_API_KEY',
++    schemaUrl: 'https://opencode.ai/config.json',
++    brandName: 'OpenCode',
++    runSupportsAutoFlag: true,
++  },
++  mimo: {
++    configFileName: 'mimocode.json',
++    databaseFile: 'mimocode.db',
++    configDirEnv: 'MIMOCODE_CONFIG_DIR',
++    databaseEnv: 'MIMOCODE_DB',
++    runtimeConfigEnv: 'MIMOCODE_CONFIG_CONTENT',
++    apiKeyEnv: 'HERMES_MIMO_API_KEY',
++    schemaUrl: 'https://mimo.xiaomi.com/mimocode/config.json',
++    brandName: 'MiMo Code',
++    runSupportsAutoFlag: false,
++  },
++}
++
++export function isOpenCodeFamily(id: string): id is OpenCodeFamilyId {
++  return (OPENCODE_FAMILY_IDS as readonly string[]).includes(id)
++}
+diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+index be38071..236d772 100644
+--- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
++++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+@@ -3,6 +3,7 @@ import { startDshChatTurn } from '../dsh/chat-turn'
+ import { agentUpdateLocked, noteAgentActivity } from '../update-lock'
+ import { dirname, join } from 'path'
+ import { existsSync, accessSync, chmodSync, constants as fsConstants, readFileSync, writeFileSync } from 'fs'
++import { OPENCODE_FAMILY_VARS, isOpenCodeFamily } from '../opencode-family'
+ import { homedir } from 'os'
+ import { spawn, type ChildProcess } from 'child_process'
+ import { createSession, addMessage, getSession, updateSession, updateSessionStats } from '../../../studio/public/sessions'
+@@ -321,25 +322,27 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
+ }
+ 
+ function isPrintAgent(agentId: string): boolean {
+-  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
++  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (isOpenCodeFamily(agentId) || agentId === 'dsh') || agentId === 'zcode'
+ }
+ 
+-function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
++function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode' {
+   if (agentId === 'codex') return 'codex'
+   if (agentId === 'pi') return 'pi'
+   if (agentId === 'grok') return 'grok'
+   if (agentId === 'dsh') return 'dsh'
+   if (agentId === 'opencode') return 'opencode'
++  if (agentId === 'mimo') return 'mimo'
+   if (agentId === 'zcode') return 'zcode'
+   return 'claude'
+ }
+ 
+-function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
++function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode' {
+   if (agentId === 'codex') return 'codex'
+   if (agentId === 'pi') return 'pi'
+   if (agentId === 'grok') return 'grok'
+   if (agentId === 'dsh') return 'dsh'
+   if (agentId === 'opencode') return 'opencode'
++  if (agentId === 'mimo') return 'mimo'
+   if (agentId === 'zcode') return 'zcode'
+   return 'claude_code'
+ }
+@@ -373,11 +376,12 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
+       return false
+     }
+   }
+-  if (run.launch.agentId === 'opencode') {
+-    const configDir = String(run.launch.env?.OPENCODE_CONFIG_DIR || '').trim()
++  if (isOpenCodeFamily(run.launch.agentId)) {
++    const familyVars = OPENCODE_FAMILY_VARS[run.launch.agentId]
++    const configDir = String(run.launch.env?.[familyVars.configDirEnv] || '').trim()
+     if (!configDir) return false
+     try {
+-      const config = readFileSync(join(configDir, 'opencode.json'), 'utf-8')
++      const config = readFileSync(join(configDir, familyVars.configFileName), 'utf-8')
+       return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
+     } catch {
+       return false
+@@ -500,7 +504,7 @@ function codingAgentDisplayName(agentId: string): string {
+   if (agentId === 'codex') return 'Codex'
+   if (agentId === 'pi') return 'Pi'
+   if (agentId === 'grok') return 'Grok'
+-  if (agentId === 'opencode') return 'OpenCode'
++  if (isOpenCodeFamily(agentId)) return OPENCODE_FAMILY_VARS[agentId].brandName
+   if (agentId === 'dsh') return 'DeepSeek Harness'
+   if (agentId === 'zcode') return 'ZCode'
+   return 'Claude Code'
+@@ -750,8 +754,8 @@ export class CodingAgentRunManager {
+           ? 'Pi'
+           : launch.agentId === 'grok'
+             ? 'Grok'
+-            : launch.agentId === 'opencode'
+-              ? 'OpenCode'
++            : isOpenCodeFamily(launch.agentId)
++              ? OPENCODE_FAMILY_VARS[launch.agentId].brandName
+             : launch.agentId === 'dsh'
+               ? 'DeepSeek Harness'
+             : launch.agentId === 'zcode'
+@@ -870,7 +874,7 @@ export class CodingAgentRunManager {
+       this.startDshTurn(run, text, systemPrompt, images)
+       return { runId: run.id, messageId }
+     }
+-    if (run.launch.agentId === 'opencode') {
++    if (isOpenCodeFamily(run.launch.agentId)) {
+       this.startOpenCodeTurn(run, text, systemPrompt, images)
+       return { runId: run.id, messageId }
+     }
+@@ -1151,7 +1155,7 @@ export class CodingAgentRunManager {
+       // for transport and usage accounting only.
+       return
+     }
+-    if ((run.launch.agentId === 'opencode' || run.launch.agentId === 'dsh') && !run.acceptingPrintEvent) {
++    if ((isOpenCodeFamily(run.launch.agentId) || run.launch.agentId === 'dsh') && !run.acceptingPrintEvent) {
+       // Native JSON/ACP stdout is the authoritative turn stream. A single
+       // turn can contain several provider requests, so treating each
+       // proxy response.completed event as the turn boundary duplicates output
+@@ -1216,7 +1220,7 @@ export class CodingAgentRunManager {
+     if (isTerminalEvent) {
+       run.assistantMessageId = this.persistTerminalResponse(run)
+       const final = (storageSafeResponseEvent.data as any).response || storageSafeResponseEvent.data
+-      if (run.launch.mode !== 'scoped' && !['opencode', 'pi'].includes(run.launch.agentId)) {
++      if (run.launch.mode !== 'scoped' && !['opencode', 'mimo', 'pi'].includes(run.launch.agentId)) {
+         const rows = (run.nativeUsage || new NativeTurnUsage()).rows(run.launch.agentId, final?.usage, final?.model || run.launch.model)
+         this.recordNativeUsage(run, rows, final?.id || run.printResponseId || run.runMarker || run.id)
+       }
+@@ -2707,8 +2711,9 @@ export class CodingAgentRunManager {
+     systemPrompt = '',
+     images: CodingAgentImageInput[] = [],
+   ) {
++    const familyVars = OPENCODE_FAMILY_VARS[run.launch.agentId as 'opencode' | 'mimo']
+     if (childIsRunning(run.currentChild)) {
+-      throw new Error('OpenCode is still processing the previous input')
++      throw new Error(`${familyVars.brandName} is still processing the previous input`)
+     }
+ 
+     const responseId = `resp_${Date.now()}`
+@@ -2736,7 +2741,8 @@ export class CodingAgentRunManager {
+       'run',
+       '--format', 'json',
+       '--agent', 'build',
+-      '--auto',
++      // MiMo-Code（OpenCode fork）已移除 --auto 旗标
++      ...(familyVars.runSupportsAutoFlag ? ['--auto'] : []),
+       '--thinking',
+       ...run.launch.args,
+       ...(run.launch.agentNativeSessionId && run.nativeResumeReady
+@@ -2784,7 +2790,7 @@ export class CodingAgentRunManager {
+       }
+       if (run.printCompleted) return
+       if (code === 0) this.completeClaudePrintTurn(run)
+-      else this.failClaudePrintTurn(run, exitErrorMessage('OpenCode', code, run.currentChildStderr))
++      else this.failClaudePrintTurn(run, exitErrorMessage(familyVars.brandName, code, run.currentChildStderr))
+     })
+   }
+ 
+diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/packages/server/src/modules/studio/contracts/agents/runtime.ts
+index f185b3d..53ca611 100644
+--- a/packages/server/src/modules/studio/contracts/agents/runtime.ts
++++ b/packages/server/src/modules/studio/contracts/agents/runtime.ts
+@@ -1,9 +1,9 @@
+ import type { AgentFamily } from './family'
+ 
+-export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'zcode'] as const
++export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'zcode'] as const
+ 
+ export type AgentRuntime = typeof AGENT_RUNTIMES[number]
+-export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'>
++export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'>
+ 
+ const AGENT_RUNTIME_SET = new Set<string>(AGENT_RUNTIMES)
+ 
+@@ -15,6 +15,7 @@ const RUNTIME_FAMILIES: Record<AgentRuntime, AgentFamily> = {
+   pi: 'coding',
+   grok: 'coding',
+   opencode: 'coding',
++  mimo: 'coding',
+   dsh: 'coding',
+   zcode: 'coding',
+ }
+diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/packages/server/src/modules/studio/contracts/runs/session.ts
+index 0b384f3..701bce5 100644
+--- a/packages/server/src/modules/studio/contracts/runs/session.ts
++++ b/packages/server/src/modules/studio/contracts/runs/session.ts
+@@ -161,7 +161,7 @@ export interface SessionState {
+   queueInsertion?: QueueInsertionControl
+   responseRun?: ResponseRunState
+   source?: ChatRunSource
+-  webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
++  webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh'
+   webhookRoomId?: string
+   webhookWorkflowId?: string
+   webhookWorkflowNodeId?: string
+@@ -209,7 +209,7 @@ export interface BridgeContextState {
+ }
+ 
+ export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'global_agent' | 'workflow' | 'group_chat'
+-export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko-agent'
++export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode' | 'ekko-agent'
+ 
+ export interface BridgeCompressionResult {
+   messages: ChatMessage[]
+diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
+index 0f24224..9f87b00 100644
+--- a/packages/server/src/modules/studio/public/agent-status-registry.ts
++++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
+@@ -1,4 +1,4 @@
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'
+ 
+ export type AgentStatusSource =
+   | 'managed-runtime'
+@@ -46,7 +46,7 @@ export interface AgentAvailabilitySnapshot {
+   agents: AgentAvailabilityRecord[]
+ }
+ 
+-const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'zcode']
++const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'zcode']
+ 
+ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+   hermes: {
+@@ -61,6 +61,18 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+     error: '',
+     installations: [],
+   },
++  mimo: {
++    id: 'mimo',
++    name: 'MiMo Code',
++    provider: 'Xiaomi MiMo',
++    kind: 'coding-agent',
++    installed: false,
++    version: '',
++    source: 'not-installed',
++    path: '',
++    error: '',
++    installations: [],
++  },
+   zcode: {
+     id: 'zcode',
+     name: 'ZCode',
+diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b/packages/server/src/modules/studio/services/agent-availability.ts
+index 46b6437..7f09972 100644
+--- a/packages/server/src/modules/studio/services/agent-availability.ts
++++ b/packages/server/src/modules/studio/services/agent-availability.ts
+@@ -13,6 +13,7 @@ const AGENT_ALIASES: Record<string, AgentStatusId> = {
+   pi: 'pi',
+   grok: 'grok',
+   opencode: 'opencode',
++  mimo: 'mimo',
+   dsh: 'dsh',
+ }
+ 
+@@ -24,6 +25,7 @@ const AGENT_NAMES: Record<AgentStatusId, string> = {
+   pi: 'Pi',
+   grok: 'Grok',
+   opencode: 'OpenCode',
++  mimo: 'MiMo Code',
+   dsh: 'DeepSeek Harness',
+   zcode: 'ZCode',
+ }
+diff --git a/packages/server/src/modules/studio/services/group-chat/agent-clients.ts b/packages/server/src/modules/studio/services/group-chat/agent-clients.ts
+index fee8b7b..a207a4b 100644
+--- a/packages/server/src/modules/studio/services/group-chat/agent-clients.ts
++++ b/packages/server/src/modules/studio/services/group-chat/agent-clients.ts
+@@ -297,7 +297,7 @@ export interface GroupChatRunService {
+             workspace?: string | null
+             source?: string
+             session_source?: 'group_chat'
+-            coding_agent_id?: 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko-agent'
++            coding_agent_id?: 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'ekko-agent'
+             mode?: 'scoped' | 'global'
+             profile?: string
+             reasoning_effort?: string
+diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
+index 7be73ff..90a590b 100644
+--- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
++++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
+@@ -13,7 +13,7 @@ export interface RecordSessionUsageInput {
+   sessionId: string
+   runId?: string | null
+   source: 'hermes' | 'coding_agent' | 'ekko_agent'
+-  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko_agent'
++  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode' | 'ekko_agent'
+   profile?: string | null
+   model?: string | null
+   provider?: string | null
+diff --git a/packages/server/src/modules/studio/services/webhooks/envelope.ts b/packages/server/src/modules/studio/services/webhooks/envelope.ts
+index 46e33b9..2ff0f0e 100644
+--- a/packages/server/src/modules/studio/services/webhooks/envelope.ts
++++ b/packages/server/src/modules/studio/services/webhooks/envelope.ts
+@@ -6,7 +6,7 @@ export const CHAT_WEBHOOK_SCHEMA_VERSION = 1
+ export const MAX_WEBHOOK_CONTENT_BYTES = 64 * 1024
+ 
+ export type ChatRunWebhookSource = 'chat' | 'api_server' | 'cli' | 'coding_agent' | 'global_agent' | 'workflow' | 'group_chat'
+-export type ChatRunWebhookAgent = 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
++export type ChatRunWebhookAgent = 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh'
+ export type ChatWebhookLifecycleStatus = 'created' | 'queued' | 'started' | 'requested' | 'resolved' | 'completed' | 'failed' | 'updated'
+ export type ChatWebhookMessageRole = 'user' | 'command' | 'assistant'
+ 

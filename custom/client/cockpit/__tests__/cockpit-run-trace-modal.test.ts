@@ -251,7 +251,8 @@ class MemStorage {
 describe('CockpitRunTraceModal', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    ;(globalThis as any).localStorage = new MemStorage()
+    // happy-dom 新版 localStorage 为 getter-only，改用 defineProperty 覆盖
+    Object.defineProperty(globalThis, 'localStorage', { value: new MemStorage(), configurable: true })
   })
 
   it('does not render when closed', () => {

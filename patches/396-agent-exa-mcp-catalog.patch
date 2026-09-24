@@ -1,0 +1,50 @@
+diff --git a/optional-mcps/exa/manifest.yaml b/optional-mcps/exa/manifest.yaml
+new file mode 100644
+--- /dev/null
++++ b/optional-mcps/exa/manifest.yaml
+@@ -0,0 +1,45 @@
++# SwarmStudio base runtime: exa (code-specialized external search MCP).
++# Single source of truth — injected into hermes-agent optional-mcps/exa/ by patch 384.
++# Consumed by the studio MCP catalog browser and `hermes mcp install exa`.
++# Rationale: MiMo-Code ships a codesearch tool on the Exa Code API; hermes web_search
++# is generic — this gives coding agents a dedicated SDK/library/API research channel
++# (2026-09-24 MiMo research P9).
++manifest_version: 1
++
++name: exa
++description: Exa neural web search and code research — web search, crawling, and multi-step research tuned for libraries, SDKs, and API references.
++source: https://github.com/exa-labs/exa-mcp-server
++
++# Official exa-labs npm server, spawned locally via npx (no vendor-hosted URL;
++# mcp_security intentionally allows npx/uvx commands). EXA_API_KEY is prompted at
++# install, stored in the profile's .env, and interpolated into the child env via
++# the ${VAR} secret-scope reference below.
++transport:
++  type: stdio
++  command: npx
++  args:
++    - "-y"
++    - exa-mcp-server
++  env:
++    EXA_API_KEY: "${EXA_API_KEY}"
++
++auth:
++  type: api_key
++  env:
++    - name: EXA_API_KEY
++      prompt: "Exa API key (create one at dashboard.exa.ai → API keys)"
++
++# Composer-suggestion triggers (desktop brand pills).
++suggest:
++  keywords:
++    - exa
++    - code search
++    - library research
++  hosts:
++    - exa.ai
++
++post_install: |
++  Create an API key at dashboard.exa.ai/api-keys and paste it when
++  prompted (it is stored in the profile's .env; config.yaml only ever
++  carries the ${EXA_API_KEY} reference). Restart the session so tools
++  load. Search usage is metered against your Exa account.
