@@ -34,6 +34,16 @@ if step_reached smoke; then
     kanban_list "$u" >/dev/null
   done
   note "[真值] 11 账号 matrix-login + 账号板 kanban 可达 ✓（步骤 3 登录）"
+  # 自动登录链路端点契约（C2 修复 384）：公开可达且按契约应答。configured:true/false
+  # 均合法——V2 单 studio 多账号下 root 网关无 matrix 凭据，configured:false 为预期
+  # 常态（客户端回落账号 matrix-login）；路由真缺失才是问题（裸 404 无契约体）。
+  GWCRESP=$(curl -s -m 3 "http://127.0.0.1:${STUDIO_PORT}/api/matrix/gateway-credentials" || true)
+  if printf '%s' "$GWCRESP" | grep -q '"configured"'; then
+    note "[真值] 自动登录链路端点按契约应答 ✓（步骤 3 登录×2 模式之二：$(printf '%s' "$GWCRESP" | jq -c .)）"
+  else
+    echo "ISSUE|auto-login-endpoint|studio|gateway-credentials 未按契约应答：$(printf '%s' "$GWCRESP" | cut -c1-60)" >> "$EVID_DIR/issues.log"
+    note "[观察] 自动登录端点未按契约应答（记问题单，继续）"
+  fi
   # 步骤 5：profiles 清单与 team 围栏装载核对
   for u in "${INSTANCED_USERS[@]}"; do
     [[ -d "$HERMES_ROOT/profiles/$u" ]] || fail "profile 缺失: $u"
@@ -93,6 +103,7 @@ if step_reached dispatch; then
 需求基本信息：${RFD_ONELINE}。
 需求文档：aipaydev 仓库 ${RFD_DOC}（你账号的工作区在 ${WSF}，先 git pull）
 请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单匹配、SMART 拆分与 RACI 派发。
+建主卡与派发子卡时必须填写结构化 raci 字段（建卡工具/CLI 的 --raci，JSON 四元组 responsible/approver/consulted/informed 填矩阵账号），派发契约不再只写正文。
 结论行必须二选一并带凭证，无凭证一律视为未完成：
   ANALYSIS-DONE-${RFD_ID} commit=<分析稿已推送的 commitId> card=<协作看板主卡ID>
   ANALYSIS-BLOCKED-${RFD_ID} reason=<阻塞原因> done=<已完成部分清单>
@@ -152,6 +163,14 @@ if step_reached analysis; then
        jq -e '[.chunk[] | select(.type==\"m.room.message\") | select((.content.body//\"\") | contains(\"@${1}-agent\") and contains(\"@${2}-agent\"))] | length > 0'" \
       || note "[观察] @$1/@$2 派发消息未见（记问题单，继续）"
   done
+  # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
+  RACI_JSON="$(kanban_raci_of fanfan "${RFD_ID}")"
+  if [[ -n "$RACI_JSON" ]]; then
+    note "[真值] ${RFD_ID} 主卡带结构化 raci ✓（$(printf '%s' "$RACI_JSON" | cut -c1-80)...）"
+  else
+    echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（仍靠正文承载）" >> "$EVID_DIR/issues.log"
+    note "[观察] 主卡未带结构化 raci（记问题单，继续）"
+  fi
   # 关联人进群核验（step 10 要求 agent 自动邀请）
   EXPECTED_MEMBERS="chen hu lin xiao wei mei qi fei"
   for m in $EXPECTED_MEMBERS; do
