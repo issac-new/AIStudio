@@ -158,6 +158,32 @@ else
   gate G5 0 "真机 orchestrator 健康状态翻转（before=$host_before after=${host_after}）"
 fi
 
+# ═══ G6：hindsight 家族共享记忆（用户裁决 2026-09-25）════
+# 同 matrix 用户家族（orchestrator+agents）必须同 bank（用户名+MAC 区分），异家族异 bank；
+# hindsight 服务健康；全部 profile 的 provider 已激活。
+g6_ok=1; g6_detail=""
+curl -sf -m 3 "$HINDSIGHT_API_URL/health" >/dev/null \
+  || { g6_ok=0; g6_detail="hindsight 服务($HINDSIGHT_API_URL)不健康；"; }
+family_banks=""
+for u in "${INSTANCED_USERS[@]}"; do
+  fam_bank=$(jq -r .bank_id "$HERMES_ROOT/profiles/$u/hindsight/config.json" 2>/dev/null || echo missing)
+  [[ "$fam_bank" == "hermes-"*"-${u}" ]] || { g6_ok=0; g6_detail+="${u} 主 profile bank 异常(${fam_bank})；"; }
+  for a in $(agents_of "$u"); do
+    pb=$(jq -r .bank_id "$HERMES_ROOT/profiles/$(agent_profile "$u" "$a")/hindsight/config.json" 2>/dev/null || echo missing)
+    [[ "$pb" == "$fam_bank" ]] || { g6_ok=0; g6_detail+="$(agent_profile "$u" "$a") bank=${pb} ≠ 家族 ${fam_bank}；"; }
+  done
+  grep -q "provider: hindsight" "$HERMES_ROOT/profiles/$u/config.yaml" 2>/dev/null \
+    || { g6_ok=0; g6_detail+="${u} 未激活 provider；"; }
+  family_banks="$family_banks $fam_bank"
+done
+distinct_banks=$(echo "$family_banks" | tr ' ' '\n' | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
+if [[ $g6_ok == 1 && "$distinct_banks" == "${#INSTANCED_USERS[@]}" ]]; then
+  gate G6 1 "11 家族各一 bank（用户名+MAC 区分）、成员共享、provider 全激活、服务健康 ✓"
+else
+  [[ "$distinct_banks" == "${#INSTANCED_USERS[@]}" ]] || g6_detail+="家族 bank 去重数 ${distinct_banks}≠${#INSTANCED_USERS[@]}；"
+  gate G6 0 "${g6_detail:-异常}"
+fi
+
 # ═══ 汇总取证 ═══════════════════════════════════════════
 {
   echo "mx-smoke $TS  PASS=$PASS FAIL=$FAIL"

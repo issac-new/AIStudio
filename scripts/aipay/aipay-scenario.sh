@@ -13,8 +13,9 @@ source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）====="
 # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷。
-# UNTIL_STEP=smoke 的步骤 1-5 冒烟不消耗 LLM 回合，不要求模型通道。
-if [[ "${UNTIL_STEP:-}" != "smoke" ]]; then
+# LLM 依赖自 dispatch（首个 agent 回合步骤）起：执行区间触及 dispatch 及以后才要求通道；
+# smoke/ba/reqgate 为导演侧动作（whoami/推送/G1 机械化判读），无 LLM 依赖。
+if [[ -z "${UNTIL_STEP:-}" || "$(step_pos "$UNTIL_STEP")" -ge "$(step_pos dispatch)" ]]; then
   model_preflight_report
 fi
 
@@ -34,6 +35,16 @@ if step_reached smoke; then
     kanban_list "$u" >/dev/null
   done
   note "[真值] 11 账号 matrix-login + 账号板 kanban 可达 ✓（步骤 3 登录）"
+  # 自动登录链路端点契约（C2 修复 384）：公开可达且按契约应答。configured:true/false
+  # 均合法——V2 单 studio 多账号下 root 网关无 matrix 凭据，configured:false 为预期
+  # 常态（客户端回落账号 matrix-login）；路由真缺失才是问题（裸 404 无契约体）。
+  GWCRESP=$(curl -s -m 3 "http://127.0.0.1:${STUDIO_PORT}/api/matrix/gateway-credentials" || true)
+  if printf '%s' "$GWCRESP" | grep -q '"configured"'; then
+    note "[真值] 自动登录链路端点按契约应答 ✓（步骤 3 登录×2 模式之二：$(printf '%s' "$GWCRESP" | jq -c .)）"
+  else
+    echo "ISSUE|auto-login-endpoint|studio|gateway-credentials 未按契约应答：$(printf '%s' "$GWCRESP" | cut -c1-60)" >> "$EVID_DIR/issues.log"
+    note "[观察] 自动登录端点未按契约应答（记问题单，继续）"
+  fi
   # 步骤 5：profiles 清单与 team 围栏装载核对
   for u in "${INSTANCED_USERS[@]}"; do
     [[ -d "$HERMES_ROOT/profiles/$u" ]] || fail "profile 缺失: $u"
@@ -47,14 +58,72 @@ if step_reached smoke; then
   note "[真值] 步骤 1-5 全部完成 ✓"
 fi
 
+# ══ 步骤 6：appinit（M1 应用初始化配置，V3-mgmt 新增）══
+# 应用资产登记：脚手架核对 + app-registry 入仓 + 板/manifest 对账。导演侧无 LLM。
+if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
+  repo_pull
+  # 脚手架核对：每应用 apps/<app>/ 必须有 vitest 配置（缺则记问题单，不代建——建骨架属研发职责）
+  app_bad=""
+  while IFS='|' read -r app owner board stack sla; do
+    [[ -d "$DIRECTOR_CLONE/apps/$app" ]] || app_bad="${app_bad}${app} 目录缺；"
+    ls "$DIRECTOR_CLONE/apps/$app/"vitest.config.* >/dev/null 2>&1 || app_bad="${app_bad}${app} vitest 门禁骨架缺；"
+    [[ -f "$HERMES_ROOT/kanban/boards/$board/board.json" ]] || app_bad="${app_bad}${app} 专属板缺；"
+    grep -q "\"$app\"" "$HERMES_ROOT/profiles/$owner/machine-manifest.json" 2>/dev/null || app_bad="${app_bad}${app} 未登记于 owner manifest；"
+  done < <(apps_of)
+  if [[ -n "$app_bad" ]]; then
+    echo "ISSUE|app-init-incomplete|director|应用初始化缺口：${app_bad}" >> "$EVID_DIR/issues.log"
+    note "[观察] 应用初始化缺口（记问题单，继续）：${app_bad}"
+  fi
+  # registry 入仓（幂等：内容变化才推）
+  REG="$DIRECTOR_CLONE/docs/admin/app-registry.md"
+  mkdir -p "$(dirname "$REG")"
+  app_registry_gen > "$REG"
+  ( cd "$DIRECTOR_CLONE" && git add docs/admin/app-registry.md \
+    && { git diff --cached --quiet docs/admin/app-registry.md || { \
+         git -c user.name="director (M1)" -c user.email="director@aipaydev.local" \
+           commit -qm "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）" \
+         && git pull -q --rebase origin main && git push -q origin main; } } )
+  sset appinit_done "$(date +%s)"
+  note "[M1] 应用资产登记完成（4 应用×负责人×板×SLA×门禁骨架，registry 已入仓）"
+fi
+
+# ══ 步骤 7：people（M2 研发人员管理，V3-mgmt 新增）════
+# 组织与权限矩阵入仓 + 三方对账（编制表↔fleet-manifest↔profile/board 实况）。导演侧无 LLM。
+if step_reached people && [[ -z "$(sget people_done)" ]]; then
+  P_BAD=$(people_reconcile || true)
+  if [[ -n "$P_BAD" ]]; then
+    echo "ISSUE|people-org-mismatch|director|组织对账不一致：${P_BAD}" >> "$EVID_DIR/issues.log"
+    note "[观察] 组织对账发现不一致（记问题单，继续）：${P_BAD}"
+  else
+    note "[M2] 组织对账一致：${#INSTANCED_USERS[@]} 账号 × profile × 板 × fleet-manifest ✓"
+  fi
+  ORG="$DIRECTOR_CLONE/docs/admin/org.md"
+  org_gen > "$ORG"
+  ( cd "$DIRECTOR_CLONE" && git add docs/admin/org.md \
+    && { git diff --cached --quiet docs/admin/org.md || { \
+         git -c user.name="director (M2)" -c user.email="director@aipaydev.local" \
+           commit -qm "docs(admin): 研发组织与权限矩阵（org，M2 人员管理，含七角色治理线）" \
+         && git pull -q --rebase origin main && git push -q origin main; } } )
+  sset people_done "$(date +%s)"
+  note "[M2] 组织与权限矩阵入仓（14 账号：BA/PM/系统分析/架构/安全 secops/运维 ops/审计 audit 治理线齐备）"
+fi
+
 # ══ 步骤 6：BA 需求分发 ═══════════════════════════════
 if step_reached ba; then
-  if ! repo_has ${RFD_DOC}; then
+  # 内容比对而非存在性：仓库已有同名 RFD 但材料已升级（如 G1 四要素补齐）时必须重推，
+  # 否则 reqgate 判读的永远是旧版（2026-09-25 v3 实测 bug：V1 旧 RFD-001 在仓导致 G1 误拦）。
+  repo_pull
+  need_push=1
+  if git -C "$DIRECTOR_CLONE" show "origin/main:${RFD_DOC}" > /tmp/mx-rfd-remote.$$ 2>/dev/null; then
+    if cmp -s "/tmp/mx-rfd-remote.$$" "$RFD_MATERIAL"; then need_push=0; fi
+  fi
+  rm -f "/tmp/mx-rfd-remote.$$"
+  if [[ $need_push == 1 ]]; then
     cp "$RFD_MATERIAL" "$DIRECTOR_CLONE/docs/requirements/"
     ( cd "$DIRECTOR_CLONE"
       git add -A
       git -c user.name="bella (BA)" -c user.email="bella@aipaydev.local" \
-        commit -qm "docs(requirements): ${RFD_ID} 多端小程序支付收银台需求说明书（BA 初稿）"
+        commit -qm "docs(requirements): ${RFD_ID} 收银台需求说明书（BA 初稿 v2：G1 四要素——AC/Scope-Out/影响面/涉敏）"
       git pull -q --rebase origin main; git push -q origin main )
     note "[bella] ${RFD_ID} 已提交 aipaydev（email 通道禁用，以 matrix 私信替代送达）"
   fi
@@ -65,6 +134,51 @@ if step_reached ba; then
 请产品团队接手做需求分析与分工。")
     sset ba_dm_marker "$M"
     note "[bella→fanfan] 需求私信已送达 ($M)"
+  fi
+fi
+
+# ══ 步骤 7：reqgate（G1 需求冻结准入，V3 新增）════════
+# 四要素机械化判读：验收标准（AC 编号+无模糊词）/Scope-Out/影响面/涉敏判定（ISO27001 挂钩）。
+# 套模板：templates/prd.md。硬闸：G1 未过，dispatch 不得派发。
+if step_reached reqgate; then
+  if [[ -z "$(sget g1_frozen)" ]]; then
+    repo_pull
+    JUDGE=$(reqgate_judge "$DIRECTOR_CLONE/${RFD_DOC}" || true)
+    if [[ -n "$JUDGE" ]]; then
+      note "[G1] 需求书四要素判读未过：${JUDGE}——回灌 bella 补齐"
+      mx_send "$(load_token bella)" "$(sget dm_bella_fanfan)" \
+        "@$(human_mxid bella) G1 准入退回：${RFD_DOC} 缺 ${JUDGE}请按 templates/prd.md 结构补齐（验收标准逐条 AC 编号且机械化可判）后重推。" >/dev/null 2>&1 || true
+      # 二轮：等待补齐（导演侧重拉重判，900s×2）
+      ok2=""
+      for round in 1 2; do
+        sleep 15; repo_pull
+        J2=$(reqgate_judge "$DIRECTOR_CLONE/${RFD_DOC}" || true)
+        [[ -z "$J2" ]] && { ok2=1; break; }
+        note "[G1] 第 ${round} 轮重判仍未过：${J2}"
+        sleep 30
+      done
+      if [[ -z "$ok2" ]]; then
+        echo "ISSUE|g1-acceptance-blocked|bella|${RFD_ID} 四要素两轮未过：${JUDGE}" >> "$EVID_DIR/issues.log"
+        fail "G1 需求冻结未过（两轮回灌后仍缺要素），L1 不得开始"
+      fi
+    fi
+    # 写冻结标记（AC 清单提取 + 涉敏结论）并推送
+    FREEZE_LOCAL="$DIRECTOR_CLONE/$(freeze_doc)"
+    {
+      echo "# ${RFD_ID} G1 冻结标记"
+      echo
+      echo "- 冻结时间：$(date '+%F %T')；判读：验收标准(AC)/Scope-Out/影响面/涉敏 四要素全过"
+      echo "- 验收标准（UAT 按此回验）："
+      sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" | sed 's/^- /  - /'
+      echo "- 涉敏：支付资金域=内部-机密（ISO27001 风险评估摘要随需求书 §12）"
+      echo "- frozen: true"
+    } > "$FREEZE_LOCAL"
+    ( cd "$DIRECTOR_CLONE" && git add -A \
+      && git -c user.name="director (G1)" -c user.email="director@aipaydev.local" \
+           commit -qm "docs(requirements): ${RFD_ID} G1 冻结（AC/Scope-Out/影响面/涉敏 四要素过）" \
+      && git pull -q --rebase origin main && git push -q origin main )
+    sset g1_frozen "$(date +%s)"
+    note "[G1] ${RFD_ID} 需求冻结完成（$(freeze_doc) 已入 origin/main）"
   fi
 fi
 
@@ -80,6 +194,7 @@ if step_reached room; then
 fi
 
 if step_reached dispatch; then
+  gate_blocked g1_frozen dispatch   # V3 硬闸：G1 未冻结不派发
   RID=$(sget room_analysis)
   # REDISPATCH=1 强制重发：续跑时派单标记若还在，旧版会静默跳过发信，于是后面每一步
   # 都在等一个根本没被重新触发过的 agent——"重跑"实际等于干等 900s 再超时（09-23 连撞数轮）。
@@ -93,6 +208,7 @@ if step_reached dispatch; then
 需求基本信息：${RFD_ONELINE}。
 需求文档：aipaydev 仓库 ${RFD_DOC}（你账号的工作区在 ${WSF}，先 git pull）
 请加载 requirements-analyst 技能执行系统分析：先登记协作 kanban 任务，再做文档要素评估、三清单匹配、SMART 拆分与 RACI 派发。
+建主卡与派发子卡时必须填写结构化 raci 字段（建卡工具/CLI 的 --raci，JSON 四元组 responsible/approver/consulted/informed 填矩阵账号），派发契约不再只写正文。
 结论行必须二选一并带凭证，无凭证一律视为未完成：
   ANALYSIS-DONE-${RFD_ID} commit=<分析稿已推送的 commitId> card=<协作看板主卡ID>
   ANALYSIS-BLOCKED-${RFD_ID} reason=<阻塞原因> done=<已完成部分清单>
@@ -152,6 +268,14 @@ if step_reached analysis; then
        jq -e '[.chunk[] | select(.type==\"m.room.message\") | select((.content.body//\"\") | contains(\"@${1}-agent\") and contains(\"@${2}-agent\"))] | length > 0'" \
       || note "[观察] @$1/@$2 派发消息未见（记问题单，继续）"
   done
+  # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
+  RACI_JSON="$(kanban_raci_of fanfan "${RFD_ID}")"
+  if [[ -n "$RACI_JSON" ]]; then
+    note "[真值] ${RFD_ID} 主卡带结构化 raci ✓（$(printf '%s' "$RACI_JSON" | cut -c1-80)...）"
+  else
+    echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（仍靠正文承载）" >> "$EVID_DIR/issues.log"
+    note "[观察] 主卡未带结构化 raci（记问题单，继续）"
+  fi
   # 关联人进群核验（step 10 要求 agent 自动邀请）
   EXPECTED_MEMBERS="chen hu lin xiao wei mei qi fei"
   for m in $EXPECTED_MEMBERS; do
