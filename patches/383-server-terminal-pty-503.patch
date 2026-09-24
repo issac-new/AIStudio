@@ -1,0 +1,24 @@
+diff --git a/packages/server/src/modules/hermes/sockets/terminal.ts b/packages/server/src/modules/hermes/sockets/terminal.ts
+--- a/packages/server/src/modules/hermes/sockets/terminal.ts
++++ b/packages/server/src/modules/hermes/sockets/terminal.ts
+@@ -86,7 +86,19 @@
+ 
+ export function setupTerminalWebSocket(httpServers: HttpServer | HttpServer[]) {
+   if (!pty) {
+-    logger.warn('node-pty not available, skipping terminal WebSocket setup')
++    // HERMES_CUSTOM[c5-terminal-503]: pty 缺失时不再直接 return（upgrade 无人应答 →
++    // 前端 WS 永久停在 CONNECTING，表现"连接中"死循环）。注册最小应答器对该路径回 503，
++    // 前端立即 onclose 走错误/停止重连提示。
++    logger.warn('node-pty not available, terminal WebSocket will answer 503')
++    const unavailableServers = Array.isArray(httpServers) ? httpServers : [httpServers]
++    const onUpgradeUnavailable = (req: IncomingMessage, socket: Duplex) => {
++      const url = parseUpgradeRequestUrl(req)
++      if (url?.pathname === '/api/hermes/terminal') {
++        socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n')
++        socket.destroy()
++      }
++    }
++    for (const srv of unavailableServers) srv.on('upgrade', onUpgradeUnavailable)
+     return null
+   }
+ 
