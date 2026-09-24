@@ -42,7 +42,19 @@ for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do
   [[ -n "$tok" && "$tok" != "null" ]] || fail "matrix 登录失败：$n"
   save_token "$n" "$tok"
 done
-log "24 账号就绪"
+log "$(( ${#USERS[@]} * 2 )) 账号就绪"
+# 账号清单入档 roster（去 token；token 留 creds/*.token 600，密码按约定式不落明文）
+{
+  echo "# matrix 账号清单 roster（$(date '+%F %T')；编制 ${#USERS[@]} 人 ×2 账号）"
+  echo
+  echo "| 账号 | mxid | 用途 |"
+  echo "|---|---|---|"
+  for u in "${USERS[@]}"; do
+    echo "| $u | $(human_mxid "$u") | 人类（登录密码按 Aipay_<账号>_2026 约定） |"
+    echo "| $u-agent | $(agent_mxid "$u") | AI 助理（token 见 creds/$u-agent.token） |"
+  done
+} > "$CREDS_DIR/roster.md"
+chmod 600 "$CREDS_DIR/roster.md"
 
 # ── 3. 单 root 配置 ─────────────────────────────────────
 write_root_config
