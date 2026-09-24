@@ -15,13 +15,15 @@
 
 把 v0.1 的 Claim/Evidence/Gate/Risk/Exception 元模型 + L0-L5 质量域落地为 `overlay/custom/qgate/` 内的可运行框架：ZCode Plugin 首发适配、CLI 为基础接口、内核平台无关。v0.1 的 ZCode 集成声称经源码级核查全部属实，但遗漏 5 个硬约束（Stop 续跑预算 3 次、60s 超时、32KB 输出上限等），本文修正其 Stop 门禁设计并补降级阶梯。另增与仓库既有交付体系（G1-G6 / 证据三级 / delivery-protocol v2）的语义对齐层，消除双标准风险。
 
-## 1. 三项裁定（用户 2026-09-23 拍板）
+## 1. 裁定记录（D1-D3 用户 2026-09-23 拍板；D4/D5 2026-09-24 追加）
 
 | # | 分叉 | 裁定 | 落点 |
 |---|---|---|---|
 | D1 | 代码落位 | `overlay/custom/qgate/`（与 server/、client/ 同级；独立 package.json 自管依赖） | 独立产品开发于 overlay 仓内，feature 分支合 main 走 workspace 规则 |
-| D2 | 对齐深度 | 语义对齐层：verdict 增 CONDITIONAL、Profile↔tier 三档映射、证据强制 exercised 级、Claim 概念承接交付标准；**不做** Matrix 事件桥接（留 zcode-engine R4 后） | §4 |
+| D2 | 对齐深度 | 语义对齐层：verdict 增 CONDITIONAL、Profile↔tier 三档映射、证据强制 exercised 级、Claim 概念承接交付标准；Matrix 事件桥接已在第三轮落地（client store 层） | §4 |
 | D3 | 首期范围 | Phase 0-4：Spike → 最小内核 → 修复闭环 → Profile+Impact → Persistence Gate + Payment Demo | §6 |
+| D4 | 服务形态 | **不是独立服务**：内核=内嵌库（`src/core/` 可 import，消费方是 overlay 工作流与 zcode-engine 统筹层）；Agent 面=五命令（子进程 CLI 即调即退）+ 六事件钩子；**MCP stdio 服务移除**（与命令面重复，持久进程违背内嵌原则，且曾致 1210 生产事故） | README 架构形态节 |
+| D5 | 部署形态 | 零 init 内嵌：`overlay/.qgate/` 随仓走（advisory 档起步），clone 即生效 | §5 |
 
 ## 2. ZCode 集成事实核查表（源码锚点，upstream/zcode @872ad96）
 
