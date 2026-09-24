@@ -18,10 +18,13 @@
 #   故改为**显式点名**：默认只部署推演实需且已核过的一项，其余逐条评估后再加。
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/aipay-lib.sh"
+# V1（aipay-lib.sh）退役后自包含：PATCHDIR/PATH 原由 aipay-lib 提供，此处内联。
+# PATCHDIR 取**本树**（worktree 检出各自生效）的 patches 目录。
+OVERLAY_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PATCHDIR="$OVERLAY_ROOT/patches"
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 AGENT_TREE="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
-PATCHDIR="$NCWK/overlay/patches"
 # 与 inject.mjs 的路由规则保持一致（scripts/inject.mjs 的 targetRoot 判定）
 AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/)'
 
@@ -41,7 +44,7 @@ CONFLICT_LIST=()
 
 for p in "${WANT[@]}"; do
   [[ -n "$p" ]] || continue
-  [[ -f "$PATCHDIR/$p" ]] || { echo "  ! 缺 patch 文件: $p" >&2; conflicts=$((conflicts+1)); continue; }
+  [[ -f "$PATCHDIR/$p" ]] || { echo "  ! 缺 patch 文件: $p" >&2; conflicts=$((conflicts+1)); CONFLICT_LIST+=("$p (缺 patch 文件)"); continue; }
 
   # 只看第一个目标路径，判定归属（与 inject.mjs 同规则）
   target=$(grep -m1 -E '^(---|\+\+\+) [ab]/' "$PATCHDIR/$p" | sed -E 's/^(---|\+\+\+) [ab]\///; s/[[:space:]].*$//')
