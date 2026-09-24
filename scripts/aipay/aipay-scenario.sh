@@ -58,6 +58,56 @@ if step_reached smoke; then
   note "[真值] 步骤 1-5 全部完成 ✓"
 fi
 
+# ══ 步骤 6：appinit（M1 应用初始化配置，V3-mgmt 新增）══
+# 应用资产登记：脚手架核对 + app-registry 入仓 + 板/manifest 对账。导演侧无 LLM。
+if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
+  repo_pull
+  # 脚手架核对：每应用 apps/<app>/ 必须有 vitest 配置（缺则记问题单，不代建——建骨架属研发职责）
+  app_bad=""
+  while IFS='|' read -r app owner board stack sla; do
+    [[ -d "$DIRECTOR_CLONE/apps/$app" ]] || app_bad="${app_bad}${app} 目录缺；"
+    ls "$DIRECTOR_CLONE/apps/$app/"vitest.config.* >/dev/null 2>&1 || app_bad="${app_bad}${app} vitest 门禁骨架缺；"
+    [[ -f "$HERMES_ROOT/kanban/boards/$board/board.json" ]] || app_bad="${app_bad}${app} 专属板缺；"
+    grep -q "\"$app\"" "$HERMES_ROOT/profiles/$owner/machine-manifest.json" 2>/dev/null || app_bad="${app_bad}${app} 未登记于 owner manifest；"
+  done < <(apps_of)
+  if [[ -n "$app_bad" ]]; then
+    echo "ISSUE|app-init-incomplete|director|应用初始化缺口：${app_bad}" >> "$EVID_DIR/issues.log"
+    note "[观察] 应用初始化缺口（记问题单，继续）：${app_bad}"
+  fi
+  # registry 入仓（幂等：内容变化才推）
+  REG="$DIRECTOR_CLONE/docs/admin/app-registry.md"
+  mkdir -p "$(dirname "$REG")"
+  app_registry_gen > "$REG"
+  ( cd "$DIRECTOR_CLONE" && git add docs/admin/app-registry.md \
+    && { git diff --cached --quiet docs/admin/app-registry.md || { \
+         git -c user.name="director (M1)" -c user.email="director@aipaydev.local" \
+           commit -qm "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）" \
+         && git pull -q --rebase origin main && git push -q origin main; } } )
+  sset appinit_done "$(date +%s)"
+  note "[M1] 应用资产登记完成（4 应用×负责人×板×SLA×门禁骨架，registry 已入仓）"
+fi
+
+# ══ 步骤 7：people（M2 研发人员管理，V3-mgmt 新增）════
+# 组织与权限矩阵入仓 + 三方对账（编制表↔fleet-manifest↔profile/board 实况）。导演侧无 LLM。
+if step_reached people && [[ -z "$(sget people_done)" ]]; then
+  P_BAD=$(people_reconcile || true)
+  if [[ -n "$P_BAD" ]]; then
+    echo "ISSUE|people-org-mismatch|director|组织对账不一致：${P_BAD}" >> "$EVID_DIR/issues.log"
+    note "[观察] 组织对账发现不一致（记问题单，继续）：${P_BAD}"
+  else
+    note "[M2] 组织对账一致：${#INSTANCED_USERS[@]} 账号 × profile × 板 × fleet-manifest ✓"
+  fi
+  ORG="$DIRECTOR_CLONE/docs/admin/org.md"
+  org_gen > "$ORG"
+  ( cd "$DIRECTOR_CLONE" && git add docs/admin/org.md \
+    && { git diff --cached --quiet docs/admin/org.md || { \
+         git -c user.name="director (M2)" -c user.email="director@aipaydev.local" \
+           commit -qm "docs(admin): 研发组织与权限矩阵（org，M2 人员管理，含七角色治理线）" \
+         && git pull -q --rebase origin main && git push -q origin main; } } )
+  sset people_done "$(date +%s)"
+  note "[M2] 组织与权限矩阵入仓（14 账号：BA/PM/系统分析/架构/安全 secops/运维 ops/审计 audit 治理线齐备）"
+fi
+
 # ══ 步骤 6：BA 需求分发 ═══════════════════════════════
 if step_reached ba; then
   # 内容比对而非存在性：仓库已有同名 RFD 但材料已升级（如 G1 四要素补齐）时必须重推，
