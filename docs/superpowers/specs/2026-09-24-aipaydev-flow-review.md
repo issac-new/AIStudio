@@ -135,7 +135,7 @@ session 不转发 → `/api/kanban/boards` 401，简报跨板解析拿不到板�
 
 ## 三、流程未实现 / 设计缺口（⬜ 分析 + 建议）
 
-### C1. 步骤 10 "每个应用的专用研发 agent（csw-*）" 未落地 ⬜
+### C1. 步骤 10 "每个应用的专用研发 agent（csw-*）" 未落地 ✅（口径已裁定）
 
 **证据**：`~/.hermes/profiles/` 下是 `[已移除]-* / data-* / aiteam-*`（与支付域无关），
 **无 csw-pay-core / csw-channel-wechat 等应用级专职 agent**。推演实际由人员 agent
@@ -144,6 +144,26 @@ session 不转发 → `/api/kanban/boards` 401，简报跨板解析拿不到板�
   自己的专用研发 agent，csw 开头的应用 agent 即应用模块清单）"。
 - **建议**：二选一并写死——① 为每个 csw-* 应用建 profile/agent（capability-report 技能上报其能力）；
   ② 明确"应用主责人代行研发 agent"的映射口径，步骤 10 文字相应修订。当前口径模糊。
+
+**C1 口径落地（2026-09-24 裁定）**：`人 = 同一 hermes agent 的 kanban team 下若干专职 agent`。
+
+模型层次：
+- **人**（如 chen）→ 本机 hermes agent（chen-agent）为协作身份入口。
+- **kanban team**：chen-agent 名下一个看板团队，成员为若干**专职 agent**。
+- **专职 agent**：含 csw-\* 应用研发 agent（`csw-pay-core-dev` / `csw-channel-wechat-dev` /
+  `csw-channel-alipay-dev` / `csw-cashier-mp-dev`），每个对应一个应用模块的开发职责；
+  另可有调研设计/测试专职 agent。步骤 10 的"应用模块清单"即这些 csw-\* 专职 agent 的能力上报
+  （capability-report 技能汇总 team 下各 agent 能力）。
+
+落地约定（scaffold）：
+1. 每个 csw-\* 应用在其主责人的 kanban team 下建一个专职 agent profile（命名 `csw-<app>-dev`）。
+2. profile 配 aipaydev-dev / requirements-analyst 等领域技能 + 对应应用的 xxx-dev 定制技能。
+3. 能力上报：capability-report 扫 team 下各 agent 的 skills/tools → 形成"应用模块清单"（步骤 10 三清单之一）。
+4. RACI 派发到"人"（其 agent），由人 agent 路由到 team 下对应 csw-\* 专职 agent 执行。
+
+> 原口径歧义（步骤 10 "应用=专用 agent" vs 推演实操"人=应用主责 agent"）就此收敛为上述模型；
+> 实操即"人 agent 充当 team leader，向下分派给 csw-\* 专职 agent"，与推演的 chen/hu/lin/xiao
+> 各管一应用一致，只是显式化为 team 下的专职 agent 而非单人独角。
 
 ### C2. 步骤 3 "默认 matrix 账号自动登录" 未实现 ⬜
 
