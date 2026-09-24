@@ -2,106 +2,13 @@
 # aipay-scenario2.sh — 推演下半场：anexec(12) → review(13) → close(14) → plan(15)
 #   → devimpl(16) → defect(16缺陷环) → testpass(17) → release(18) → templates(19) → ide(20)
 # 由 aipay-scenario.sh 在 START_STEP>=anexec 时 exec 进入；共享 state.env。
+# 拓扑口径：方案 V2.0 §3.3（单 gateway 多路复用 + 单 studio 多账号 + 账号板寻址）。
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/aipay-lib.sh"
-
-SCEN_LOG="$EVID_DIR/scenario.log"
-sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
-sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
-note() { log "$*" | tee -a "$SCEN_LOG"; }
+source "$SCRIPT_DIR/mux/mx-lib.sh"
+source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 
 model_preflight_report   # 下半场可单独续跑（START_STEP=anexec 等），同样先探通道
-
-STEPS="smoke ba room dispatch register analysis triage anexec review close plan devimpl defect testpass release templates ide"
-START_STEP="${START_STEP:-anexec}"
-step_reached() {
-  local a b
-  a=$(echo $STEPS | tr ' ' '\n' | grep -n "^$1$" | cut -d: -f1)
-  b=$(echo $STEPS | tr ' ' '\n' | grep -n "^$START_STEP$" | cut -d: -f1)
-  # 校验 START_STEP 合法：手敲错值时 b 为空、(( a >= b )) 报错返回假，
-  # 全部门禁静默跳过后仍打印「下半场完成」假完成（与 scenario.sh 同款守卫）
-  [[ -n "$b" ]] || fail "未知 START_STEP: $START_STEP（合法值：$STEPS）"
-  (( a >= b ))
-}
-
-jwt_of() {
-  local u="$1" cached; cached=$(sget "jwt_$u")
-  [[ -n "$cached" ]] && { echo "$cached"; return 0; }
-  local t
-  t=$(studio "$(studio_port "$u")" POST /api/auth/matrix-login "" "$(jq -n \
-    --arg tok "$(load_token "$u")" --arg uid "$(human_mxid "$u")" --arg hs "$HS" \
-    '{matrixAccessToken:$tok, matrixUserId:$uid, homeserverUrl:$hs}')" | jq -r '.token // empty') || true
-  [[ -n "$t" ]] || t=$(studio_login "$u")
-  sset "jwt_$u" "$t"; echo "$t"
-}
-kanban_list() { # 跨板合并：agent 可能建专用板（如 aipay-rfd），默认板可能为空
-  local jwt; jwt=$(jwt_of "$1")
-  local boards; boards=$(studio "$(studio_port "$1")" GET "/api/hermes/kanban/boards" "$jwt" | jq -r '.boards[]?.slug' 2>/dev/null)
-  [[ -z "$boards" ]] && boards="default"
-  local slug out='{"tasks":[]}'
-  for slug in $boards; do
-    out=$(jq -s '.[0].tasks + (.[1].tasks // []) | {tasks: .}' <(echo "$out")       <(studio "$(studio_port "$1")" GET "/api/hermes/kanban?board=$slug" "$jwt" 2>/dev/null || echo '{"tasks":[]}'))
-  done
-  echo "$out"
-}
-kanban_has() { kanban_list "$1" | jq -e --arg n "$2" '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n))] | length > 0' >/dev/null 2>&1; }
-kanban_status_of() { kanban_list "$1" | jq -r --arg n "$2" '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .status][0] // empty'; }
-kanban_done() { kanban_list "$1" | jq -e --arg n "$2" '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .status] | map(select(. == "done")) | length >= 1' >/dev/null 2>&1; }
-kanban_create_as() {
-  local u="$1" key="card_$2" title="$3" body="$4" cached id
-  cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
-  id=$(studio "$(studio_port "$u")" POST /api/hermes/kanban "$(jwt_of "$u")" \
-    "{\"title\":$(jq -Rn --arg t "$title" '$t'),\"body\":$(jq -Rn --arg b "$body" '$b'),\"project\":\"aipaydev\"}" \
-    | jq -r '.task.id // .id')
-  [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: $title"
-  sset "$key" "$id"; echo "$id"
-}
-kanban_status_as() { studio "$(studio_port "$1")" PATCH "/api/hermes/kanban/$2" "$(jwt_of "$1")" "{\"status\":\"$3\"}" >/dev/null; }
-
-kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错）
-  local u="$1" id="$2" st
-  for st in todo running review done; do
-    kanban_status_as "$u" "$id" "$st" 2>/dev/null || true
-  done
-}
-APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
-auto_approve() {
-  local room="$1"
-  for u in "${INSTANCED_USERS[@]}"; do
-    local pend
-    pend=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
-      '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK|approval"))) | .event_id' 2>/dev/null \
-      | while read -r eid; do grep -q "^$eid$" "$APPROVED_LOG" || echo "$eid"; done) || true
-    for eid in $pend; do
-      mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
-        "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$eid\"}}" >/dev/null || true
-      echo "$eid" >> "$APPROVED_LOG"
-    done
-  done
-}
-
-wait_truth() {
-  local desc="$1" timeout="$2"; shift 2
-  local deadline=$(( $(date +%s) + timeout ))
-  while (( $(date +%s) < deadline )); do
-    [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
-    if "$@" >/dev/null 2>&1; then note "[真值] $desc ✓"; return 0; fi
-    sleep 20
-  done
-  note "[真值] $desc ✗（${timeout}s 超时）"
-  return 1
-}
-
-repo_has() { git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true; git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1; }
-repo_pull() { git -C "$DIRECTOR_CLONE" pull -q origin main >/dev/null 2>&1 || true; }
-
-dispatch_in_room() { # <humanUser> <text> <mention-csv> → event_id
-  local m
-  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2" "$3")
-  note "[$1] 派发 ($m): $(echo "$2" | head -1)"
-  echo "$m"
-}
 
 SCAN_ROOM="$(sget room_analysis)"
 
@@ -153,7 +60,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
 1) git pull 读取四份 docs/analysis/AN-*.md
 2) 消除歧义与冲突（重点：金额单位必须统一明确为「分」(int64)；接口契约字段命名统一 snake_case）
 3) 整理结构层次，按规范形成系统概设方案 docs/design/${RFD_ID}-architecture-design.md（含跨模块接口契约与数据模型），提交 push
-4) 在你的 kanban 登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
+4) 在你的账号板登记评审任务卡（标题含 ${RFD_ID}-评审，status=review）
 结论行 REVIEW-DOC-DONE 开头。不许谎报。" "$(agent_mxid fanfan)"
     wait_truth "概设方案 docs/design/${RFD_ID}-architecture-design.md 入库" 2400 \
       repo_has docs/design/${RFD_ID}-architecture-design.md || fail "复核稿超时"
@@ -179,7 +86,7 @@ if step_reached close && [[ -z "$(sget close_done)" ]]; then
 1) 把全部关联子任务与过程档案（4 份 AN-*.md、tasklist、概设方案 git 路径+commit）汇总登记进主任务卡 body，便于回溯审计
 2) 主任务卡 status 置 done（测试工作量按 0.3 系数叠加口径写入 body）
 结论行 CLOSE-DONE 开头。" "$(agent_mxid fanfan)"
-    wait_truth "fanfan kanban ${RFD_ID} 主卡 done" 1200 kanban_done fanfan "${RFD_ID}" \
+    wait_truth "fanfan 账号板 ${RFD_ID} 主卡 done" 1200 kanban_done fanfan "${RFD_ID}" \
       || note "[观察] 主卡未置 done（记问题单）"
   fi
   sset close_done 1
@@ -296,8 +203,8 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
     dispatch_in_room qi "@qi-agent:matrix.test 请出具测试报告：
 1) 在 integration/${RFD_ID} 分支汇总测试结果，写 docs/test/${RFD_ID}-test-report.md（范围/用例数/通过数/缺陷清单及状态/结论/通过时的 git commit id）
 2) push origin integration/${RFD_ID}
-3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本机 kanban；其他机器的由你发 matrix 通知其 owner-agent 更新）
-结论行 REPORT-DONE 开头。" "$(agent_mxid qi)"
+3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
+结论行 REPORT-DONE 开头。不许谎报。" "$(agent_mxid qi)"
     wait_truth "测试报告入库" 2400 bash -c \
       "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' show origin/integration/${RFD_ID}:docs/test/${RFD_ID}-test-report.md" \
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; }
@@ -307,7 +214,6 @@ fi
 
 # ══ 步骤 18：发版交付登记（线下执行，在册追踪）═══════
 if step_reached release && [[ -z "$(sget release_done)" ]]; then
-  JWT=$(jwt_of fanfan)
   for spec in "REL-MERGE|integration/${RFD_ID} 合入 main（变更发版）|chen" \
               "REL-TAG|打 tag v1.0.0-cashier 并出 RELEASE.md|fanfan" \
               "REL-DELIVER|商户交付包与接入文档交付|fanfan"; do
@@ -334,7 +240,7 @@ if step_reached templates && [[ -z "$(sget templates_done)" ]]; then
   {
     echo "# ${RFD_ID} 任务完备性检查（$(date +%F %T)）"
     echo
-    echo "## kanban 任务覆盖（fanfan 板）"
+    echo "## kanban 任务覆盖（fanfan 账号板）"
     kanban_list fanfan | jq -r '.. | objects | select(has("title")) | "- [\(.status)] \(.title)"' | sort -u
     echo
     echo "## 仓库档案覆盖"
@@ -377,7 +283,7 @@ fi
 if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
   note "── ide：核验任务→IDE 跳转与简报生成能力"
   # 1) /ide 路由存在（SPA 200）
-  code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$(studio_port fanfan)/ide")
+  code=$(curl -s -o /dev/null -w '%{http_code}' "$(studio_url)/ide")
   [[ "$code" == 200 ]] && note "[真值] /ide 路由 200 ✓" || echo "ISSUE|ide-route|studio|/ide HTTP $code" >> "$EVID_DIR/issues.log"
   # 2) 任务跳转参数 ide?task= 处理代码存在性（client 源码）
   if grep -rq "route.query.task" "$NCWK/overlay/custom/client/ide" 2>/dev/null; then
