@@ -248,6 +248,8 @@ function generateOverlayViteConfig() {
   const cfg = `// 派生构建配置(inject 生成,已 gitignore)。勿手改,改 inject.mjs。
 import { defineConfig, mergeConfig } from 'vite';
 import { resolve } from 'path';
+import vue from '@vitejs/plugin-vue';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import upstream from ${js(upstreamViteConfig)};
 
 const upstreamCfg =
@@ -255,8 +257,25 @@ const upstreamCfg =
     ? upstream({ command: 'serve', mode: 'development' })
     : upstream;
 
+// 环境级根治(B3)：compiler-sfc 解析 <script setup> 导入类型(defineProps<NodeProps<..>> 等)
+// 时默认取 ts.sys;本仓 typescript 是 7.x 预览版,compiler-sfc 3.5.x 的 ts.sys 自动探测在其
+// 模块结构下失效 → 抛 "No fs option ... non-Node environment",全量构建在 WorkflowAgentNode
+// 处断裂。此处显式注入 node:fs 适配器替代 ts.sys 自动探测,一次性覆盖全仓导入类型 defineProps。
+// (上游 vite.config 的 vue() 为裸调用无选项,故原位替换不丢配置;若上游日后加选项需同步合并。)
+const sfcFs = {
+  fileExists: (f) => { try { return existsSync(f); } catch { return false; } },
+  readFile: (f) => { try { return readFileSync(f, 'utf8'); } catch { return undefined; } },
+  realpath: (f) => { try { return realpathSync(f); } catch { return f; } },
+};
+const withVueFs = (cfg) => ({
+  ...cfg,
+  plugins: (cfg.plugins ?? []).map((p) =>
+    p && p.name === 'vite:vue' ? vue({ script: { fs: sfcFs } }) : p,
+  ),
+});
+
 export default mergeConfig(
-  upstreamCfg,
+  withVueFs(upstreamCfg),
   defineConfig({
     // 关键:覆盖上游的相对 root/packages/client,改为绝对上游路径。
     // 上游 config 用相对路径,mergeConfig 后会被当作相对 overlay 解析(错)。
@@ -514,6 +533,9 @@ function main() {
     ensureServerCustomSymlink();
     // 4. 生成派生 config
     generateOverlayViteConfig();
+    // B1 双树漂移根治：inject 出口自动同步 agent 运行时（overlay/runtime -> ~/.hermes），
+    // 杜绝'修复只在工作树、不达运行时'（room-invite-gap 真根因）。幂等、仅清单内文件。
+    execSync('node scripts/deploy-agent-runtime.mjs --apply', { cwd: overlayRoot, stdio: 'inherit' });
     // 5. 写清单
     writeFileSync(
       manifestPath,

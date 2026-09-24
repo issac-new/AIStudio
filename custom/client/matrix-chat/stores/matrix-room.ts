@@ -231,6 +231,19 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   const selectedEventId = ref<string | null>(null)
   function selectEvent(eventId: string | null) { selectedEventId.value = eventId }
 
+  // C6 jumpToEvent：修 scrollToEvent 只认已渲染 DOM 的断链。事件未加载（搜索命中远古历史）
+  // 时先向上分页 loadOlderMessages 直到命中，再 selectEvent 高亮。上限 30 页防死循环，到头放弃。
+  async function jumpToEvent(eventId: string | null): Promise<void> {
+    if (!eventId) return
+    const idOf = (ev: MatrixEvent): string | undefined => ev.getId?.() ?? (ev as unknown as { event_id?: string }).event_id
+    const has = () => messageList.value.some((ev) => idOf(ev) === eventId)
+    for (let i = 0; i < 30 && !has(); i++) {
+      const n = await loadOlderMessages()
+      if (n === 0) break
+    }
+    if (has()) selectEvent(eventId)
+  }
+
   // ── Computeds ──
   const activeRoom = computed<Room | null>(() => {
     if (!activeRoomId.value) return null
@@ -1252,7 +1265,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     readMarkerEventId, readMarkerVisible, typingUsers, selectedEventId,
     activeRoom, sortedRooms, activeRoomMessages, activeRoomUnreadCount,
     setTimelineLayout, toggleAlwaysShowTimestamps, toggleCompactLayout,
-    setReadMarker, hideReadMarker, setTypingUsers, selectEvent,
+    setReadMarker, hideReadMarker, setTypingUsers, selectEvent, jumpToEvent,
     refreshRoomList, refreshMessages, selectRoom,
     getRoomMemberList, getMemberPowerLevel, canKickInRoom,
     inviteUser, kickUser, setIgnoreUser, startDmWithUser,

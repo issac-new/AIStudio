@@ -42,6 +42,26 @@ if (isDesktopShell) document.documentElement.classList.add('hermes-desktop-shell
   }
 }
 
+// B4 dev 登录桩：dev 模式（vite :8649）下 localStorage 按 origin 隔离，与 dist/桌面不共享
+// 登录态，且浏览器无桌面自动登录桥 → 纯浏览器 dev 必手动登录，/api 与终端 WS 都 401/悬空。
+// 这里在 app.use(router)（鉴权守卫初次导航）之前，用 admin/123456 免密换 JWT 落 hermes_api_key；
+// 后端 authenticatePasswordUser 在空库首登即 bootstrapDefaultSuperAdmin（顺带满足终端 super_admin 门槛）。
+// 失败静默回落手动登录页。仅 DEV 生效，不影响生产/桌面。
+async function devAutoLogin(): Promise<void> {
+  if (!import.meta.env.DEV) return
+  if (localStorage.getItem('hermes_api_key')) return
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: '123456' }),
+    })
+    const body = await res.json().catch(() => null) as { token?: string; jwt?: string } | null
+    const jwt = body?.token || body?.jwt
+    if (jwt) localStorage.setItem('hermes_api_key', jwt)
+  } catch { /* 回落手动登录 */ }
+}
+
 const urlParams = new URLSearchParams(window.location.search)
 const hashQuery = window.location.hash.split('?')[1]
 const urlToken = urlParams.get('token') || (hashQuery ? new URLSearchParams(hashQuery).get('token') : null)
@@ -73,6 +93,9 @@ i18nReady
     // stack size exceeded；初导航 promise 永不落定 → router.isReady() 悬空 →
     // app.mount 永不执行 → 永久停留启动 logo 页。router 安装必须在全部
     // addRoute 完成之后（守门：ia2/__tests__/entry-boot-order.test.ts）。
+    return devAutoLogin()
+  })
+  .then(() => {
     app.use(router)
   })
   .then(() => router.isReady())

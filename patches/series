@@ -806,6 +806,10 @@
 378-server-zcode-coding-agent.patch
 379-client-zcode-agent-ui.patch
 380-server-zcode-engine-health-route.patch
+381-client-workflow-define-props-fix.patch
+382-client-matrix-gateway-auto-login.patch
+383-server-terminal-pty-503.patch
+384-server-matrix-routes-public.patch
 390-agent-kanban-home-default-board.patch
 391-agent-kanban-board-team-fence.patch
 392-studio-matrix-login-scoped-grant.patch
