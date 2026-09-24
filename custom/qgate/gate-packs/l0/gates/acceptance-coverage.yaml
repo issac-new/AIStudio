@@ -1,0 +1,28 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.acceptance-coverage
+  version: 0.1.0
+  description: >
+    L0.2 验收标准覆盖（v0.1 §6.1 Acceptance Criteria Coverage）：.qgate/acceptance.yaml
+    逐条 criteria 必须有非空 covered-by 映射（gateId 或验证命令）。缺映射条目 → FAIL 点名。
+spec:
+  domain: L0
+  claims:
+    - L0.acceptance-mapped
+  triggers:
+    - task_close
+    - pre_commit
+  executors:
+    - id: l0.acceptance
+      type: scope
+      mode: acceptance
+      evidenceType: acceptance-coverage-result
+  evidence:
+    required:
+      - acceptance-coverage-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

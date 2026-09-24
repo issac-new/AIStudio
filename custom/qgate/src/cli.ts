@@ -3,7 +3,8 @@
 // 用法：node dist/cli.js <command> [options]（cwd = 项目根）。
 // 退出码：0=全部 PASS/无阻断；1=存在 FAIL/INCONCLUSIVE 阻断；2=配置或环境错误。
 
-import { resolve } from 'node:path'
+import { resolve, join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { loadProject } from './core/loader.js'
 import { runGate, gitContext } from './core/run.js'
@@ -120,8 +121,10 @@ async function main(): Promise<void> {
           : enabledGates.filter((g) => g.metadata.id === target)
       if (toRun.length === 0) fail(target ? `gate not found or disabled: ${target}` : 'missing gateId or --all')
       let blocking = 0
+      const runIds: string[] = []
       for (const spec of toRun) {
         const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed })
+        runIds.push(result.run.runId)
         const policy = effectivePolicy(spec, resolved)
         const isBlocking =
           (result.run.verdict === 'FAIL' && policy.failure === 'block') ||
@@ -132,6 +135,18 @@ async function main(): Promise<void> {
           `${result.run.conditions ? ` — ${result.run.conditions.join('; ')}` : ''}` +
           `${result.run.failureSummary ? ` — ${result.run.failureSummary}` : ''}\n`,
         )
+      }
+      // §51 evidenceCommit：把本次运行证据归档进可提交区（对齐交付标准"证据落卡"）
+      if (loaded.config.evidenceCommit) {
+        const { cpSync, mkdirSync: mk } = await import('node:fs')
+        for (const id of runIds) {
+          const src = join(paths.evidenceDir, id)
+          if (!existsSync(src)) continue
+          const dst = resolve(workspace, 'docs', 'delivery-evidence', id)
+          mk(resolve(dst, '..'), { recursive: true })
+          cpSync(src, dst, { recursive: true })
+        }
+        process.stdout.write(`evidence archived to docs/delivery-evidence/ (${runIds.length} runs)\n`)
       }
       process.exit(blocking > 0 ? 1 : 0)
       return
