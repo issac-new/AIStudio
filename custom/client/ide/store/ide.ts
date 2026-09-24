@@ -44,6 +44,8 @@ export function ideAgentToChatAgent(agentId: CodingAgentId): string {
       return 'dsh'
     case 'opencode':
       return 'opencode'
+    case 'mimo':
+      return 'mimo'
     default:
       return 'hermes'
   }

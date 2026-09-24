@@ -1,0 +1,339 @@
+diff --git a/agent/tool_executor.py b/agent/tool_executor.py
+index b877a63..06f3301 100644
+--- a/agent/tool_executor.py
++++ b/agent/tool_executor.py
+@@ -189,6 +189,40 @@ def _resolve_concurrent_tool_timeout() -> float | None:
+     )
+ 
+ 
++def _fail_cascade_enabled() -> bool:
++    """Sequential fail-cascade (MiMo-Code gate semantics): when a barrier-class
++    (sequential) call fails, skip every remaining call in the same model response
++    with an explicit cancellation marker instead of executing a stale half-plan
++    (classic case: edit fails -> the batched ``git commit`` still ran).
++    Parallel (read-only, non-conflicting) runs never cascade a sibling's failure.
++    ``HERMES_TOOL_FAIL_CASCADE=0`` restores the pre-cascade behavior."""
++    raw = os.environ.get("HERMES_TOOL_FAIL_CASCADE", "1").strip().lower()
++    return raw not in {"0", "false", "off", "no"}
++
++
++_CASCADE_SKIP_CONTENT = (
++    "[Tool execution cancelled — {name} was skipped because an earlier tool call "
++    "in this response failed; re-plan before retrying]"
++)
++
++
++def _cascade_skip_remaining(agent, messages, remaining, effective_task_id) -> bool:
++    """Append one cascade marker per unstarted call and raise the turn-wide flag so
++    later segments / approval groups drain too; False when the flush failed."""
++    agent._tool_fail_cascade_active = True
++    agent._vprint(
++        f"{agent.log_prefix}⚡ Fail-cascade: skipping {len(remaining)} remaining tool call(s) "
++        "after an earlier failure in this response",
++        force=True,
++    )
++    return _append_skipped_tool_results(
++        agent, messages, remaining, effective_task_id,
++        content=_CASCADE_SKIP_CONTENT,
++        hook_error_type="tool_fail_cascade",
++        flush_stage="cascade-cancelled tool result",
++    )
++
++
+ def _flush_session_db_after_tool_progress(agent, messages: list, *, stage: str) -> bool:
+     """Flush tool-call progress to the session DB before projecting it to any UI: tool side
+     effects can kill/restart the process before turn-end persistence runs."""
+@@ -464,6 +498,9 @@ class _ManagedToolResult:
+     middleware_trace: list[dict[str, Any]]
+     blocked: bool
+     dispatched: bool
++    # Set by _publish_sequential_result: the model-visible (post-transform) result
++    # was classified as an error by _detect_tool_failure. Drives fail-cascade.
++    failed: bool = False
+ 
+ 
+ class _ToolTimeoutResult(str):
+@@ -1752,6 +1789,7 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
+     # Multimodal dict results (_multimodal=True) are not sliceable as strings.
+     _result_len = len(function_result) if isinstance(function_result, str) else len(str(function_result))
+     _is_error_result, _ = _detect_tool_failure(ref.name, function_result)
++    managed.failed = _is_error_result
+     committed = _commit_tool_result(
+         agent, messages, ref, function_result,
+         budget=budget, tool_duration=tool_duration, is_error=_is_error_result, blocked=managed.blocked,
+@@ -1773,11 +1811,23 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
+ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effective_task_id: str, api_call_count: int = 0, *, finalize: bool = True) -> None:
+     from types import SimpleNamespace
+     from agent.terminal_approval_batch import terminal_approval_batch, terminal_approval_runs
+-    for calls in terminal_approval_runs(agent, assistant_message.tool_calls):
++    groups = list(terminal_approval_runs(agent, assistant_message.tool_calls))
++    agent._tool_fail_cascade_active = False
++    for g_idx, calls in enumerate(groups):
+         with terminal_approval_batch(agent, calls, messages, effective_task_id):
+             _execute_tool_calls_sequential(agent, SimpleNamespace(tool_calls=calls), messages, effective_task_id, api_call_count, finalize=False)
+         if getattr(agent, "_incremental_persistence_failed", False):
+             return
++        if getattr(agent, "_tool_fail_cascade_active", False) and g_idx + 1 < len(groups):
++            remaining = [tc for later in groups[g_idx + 1:] for tc in later]
++            if not _append_skipped_tool_results(
++                agent, messages, remaining, effective_task_id,
++                content=_CASCADE_SKIP_CONTENT,
++                hook_error_type="tool_fail_cascade",
++                flush_stage="cascade-cancelled tool result",
++            ):
++                return
++            break
+     if finalize:
+         _finalize_tool_batch(agent, messages, effective_task_id, len(assistant_message.tool_calls), _budget_for_agent(agent))
+ 
+@@ -1810,6 +1860,10 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
+         if pc.parse_error is not None:
+             if not _append_invalid_arguments_result(agent, messages, ref, pc.parse_error):
+                 return
++            if _fail_cascade_enabled() and i < len(tool_calls):
++                if not _cascade_skip_remaining(agent, messages, tool_calls[i:], effective_task_id):
++                    return
++                break
+             continue
+ 
+         tool_start_time = time.time()
+@@ -1826,6 +1880,14 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
+                                           budget=_tool_budget, transform_applied=dispatch.transform_applied):
+             return
+ 
++        if _fail_cascade_enabled() and getattr(managed, "failed", False):
++            # 置轮级标志：即使本段无剩余调用，分段派发器也要排空后续段。
++            agent._tool_fail_cascade_active = True
++            if i < len(tool_calls):
++                if not _cascade_skip_remaining(agent, messages, tool_calls[i:], effective_task_id):
++                    return
++                break
++
+         if agent._interrupt_requested and i < len(tool_calls):
+             if not _skip_remaining_sequential(
+                 agent, messages, tool_calls[i:], effective_task_id,
+@@ -1853,9 +1915,20 @@ def execute_tool_calls_segmented(agent, assistant_message, messages: list, effec
+         _exec_cwd = Path(_active_env.cwd) if _active_env is not None and _active_env.cwd else None
+         segments = _plan_tool_batch_segments(assistant_message.tool_calls, execution_cwd=_exec_cwd)
+ 
+-    for kind, calls in segments:
++    agent._tool_fail_cascade_active = False
++    for s_idx, (kind, calls) in enumerate(segments):
+         if getattr(agent, "_incremental_persistence_failed", False):
+             return
++        if getattr(agent, "_tool_fail_cascade_active", False):
++            remaining = [tc for later_kind, later in segments[s_idx:] for tc in later]
++            if not _append_skipped_tool_results(
++                agent, messages, remaining, effective_task_id,
++                content=_CASCADE_SKIP_CONTENT,
++                hook_error_type="tool_fail_cascade",
++                flush_stage="cascade-cancelled tool result",
++            ):
++                return
++            break
+         segment_message = SimpleNamespace(tool_calls=list(calls))
+         run_segment = execute_tool_calls_concurrent if kind == "parallel" else execute_tool_calls_sequential
+         run_segment(agent, segment_message, messages, effective_task_id, api_call_count, finalize=False)
+diff --git a/tests/agent/test_tool_fail_cascade.py b/tests/agent/test_tool_fail_cascade.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_tool_fail_cascade.py
+@@ -0,0 +1,198 @@
++"""Sequential fail-cascade for tool-call batches (MiMo-Code gate semantics).
++
++When a barrier-class (sequential) call fails, the remaining calls of the same
++model response are skipped with an explicit cancellation marker instead of
++executing a stale half-plan (classic incident: ``patch`` fails on old_string
++mismatch, the batched ``git commit`` still ran and committed partial state).
++
++Scope (2026-09-24 P5, mirroring MiMo ``tool/gate.ts``):
++
++* parallel (read-only, non-conflicting) runs NEVER cascade a sibling failure;
++* cascade spans later segments and later approval groups of the same response;
++* ``HERMES_TOOL_FAIL_CASCADE=0`` restores pre-cascade behavior;
++* success paths are byte-identical to before (no flag reads on success).
++"""
++
++import json
++import threading
++from types import SimpleNamespace
++from unittest.mock import MagicMock, patch
++
++import pytest
++
++from run_agent import AIAgent
++
++
++def _tc(name="web_search", arguments="{}", call_id=None):
++    return SimpleNamespace(
++        id=call_id or f"call_{name}",
++        function=SimpleNamespace(name=name, arguments=arguments),
++    )
++
++
++def _make_tool_defs(*names: str) -> list:
++    return [
++        {
++            "type": "function",
++            "function": {
++                "name": name,
++                "description": f"{name} (test stub)",
++                "parameters": {"type": "object", "properties": {}},
++            },
++        }
++        for name in names
++    ]
++
++
++@pytest.fixture
++def agent():
++    with (
++        patch(
++            "model_tools.get_tool_definitions",
++            return_value=_make_tool_defs("web_search", "terminal"),
++        ),
++        patch("model_tools.check_toolset_requirements", return_value={}),
++        patch("agent.process_bootstrap.OpenAI"),
++    ):
++        a = AIAgent(
++            api_key="test-key-1234567890",
++            base_url="https://openrouter.ai/api/v1",
++            quiet_mode=True,
++            skip_context_files=True,
++            skip_memory=True,
++        )
++        a.client = MagicMock()
++        return a
++
++
++def _ok():
++    return json.dumps({"success": True})
++
++
++def _fail(tool_name: str):
++    # terminal 的失败判定走 exit_code != 0 分支；其余工具走 success=False+error。
++    if tool_name == "terminal":
++        return json.dumps({"exit_code": 1, "error": "boom"})
++    return json.dumps({"success": False, "error": "boom"})
++
++
++class TestSequentialFailCascade:
++    def test_sequential_failure_skips_remaining_with_marker(self, agent):
++        """t2 fails -> t3 never executes and gets one cascade marker result."""
++        calls = [
++            _tc("terminal", '{"command":"a"}', call_id="t1"),
++            _tc("terminal", '{"command":"b"}', call_id="t2"),
++            _tc("terminal", '{"command":"c"}', call_id="t3"),
++        ]
++        msg = SimpleNamespace(content="", tool_calls=calls)
++        messages = []
++        executed = []
++        lock = threading.Lock()
++
++        def fake_handle(name, args, task_id, **kwargs):
++            with lock:
++                executed.append(kwargs["tool_call_id"])
++            return _fail(name) if kwargs["tool_call_id"] == "t2" else _ok()
++
++        with patch("model_tools.handle_function_call", side_effect=fake_handle):
++            agent._execute_tool_calls(msg, messages, "task-1")
++
++        assert executed == ["t1", "t2"]
++        assert [m["tool_call_id"] for m in messages] == ["t1", "t2", "t3"]
++        marker = messages[-1]["content"]
++        assert "earlier tool call" in marker and "t3" not in executed
++        assert getattr(agent, "_tool_fail_cascade_active", False) is True
++
++    def test_all_success_executes_everything(self, agent):
++        calls = [
++            _tc("terminal", '{"command":"a"}', call_id="t1"),
++            _tc("terminal", '{"command":"b"}', call_id="t2"),
++        ]
++        msg = SimpleNamespace(content="", tool_calls=calls)
++        messages = []
++        executed = []
++
++        def fake_handle(name, args, task_id, **kwargs):
++            executed.append(kwargs["tool_call_id"])
++            return _ok()
++
++        with patch("model_tools.handle_function_call", side_effect=fake_handle):
++            agent._execute_tool_calls(msg, messages, "task-1")
++
++        assert executed == ["t1", "t2"]
++        assert getattr(agent, "_tool_fail_cascade_active", False) is False
++        for m in messages:
++            assert "earlier tool call" not in str(m.get("content", ""))
++
++    def test_env_off_restores_pre_cascade_behavior(self, agent, monkeypatch):
++        monkeypatch.setenv("HERMES_TOOL_FAIL_CASCADE", "0")
++        calls = [
++            _tc("terminal", '{"command":"a"}', call_id="t1"),
++            _tc("terminal", '{"command":"b"}', call_id="t2"),
++            _tc("terminal", '{"command":"c"}', call_id="t3"),
++        ]
++        msg = SimpleNamespace(content="", tool_calls=calls)
++        messages = []
++        executed = []
++
++        def fake_handle(name, args, task_id, **kwargs):
++            executed.append(kwargs["tool_call_id"])
++            return _fail(name) if kwargs["tool_call_id"] == "t1" else _ok()
++
++        with patch("model_tools.handle_function_call", side_effect=fake_handle):
++            agent._execute_tool_calls(msg, messages, "task-1")
++
++        assert executed == ["t1", "t2", "t3"]
++
++    def test_barrier_failure_drains_later_parallel_segment(self, agent):
++        """[s1,s2 parallel] [t1 barrier, fails] [s3,s4 parallel]: the trailing
++        read segment is drained with markers, never executed."""
++        calls = [
++            _tc("web_search", '{"query":"a"}', call_id="s1"),
++            _tc("web_search", '{"query":"b"}', call_id="s2"),
++            _tc("terminal", '{"command":"x"}', call_id="t1"),
++            _tc("web_search", '{"query":"c"}', call_id="s3"),
++            _tc("web_search", '{"query":"d"}', call_id="s4"),
++        ]
++        msg = SimpleNamespace(content="", tool_calls=calls)
++        messages = []
++        executed = []
++        lock = threading.Lock()
++
++        def fake_handle(name, args, task_id, **kwargs):
++            with lock:
++                executed.append(kwargs["tool_call_id"])
++            return _fail(name) if kwargs["tool_call_id"] == "t1" else _ok()
++
++        with patch("model_tools.handle_function_call", side_effect=fake_handle):
++            agent._execute_tool_calls(msg, messages, "task-1")
++
++        assert [m["tool_call_id"] for m in messages] == ["s1", "s2", "t1", "s3", "s4"]
++        assert "s3" not in executed and "s4" not in executed
++        for m in messages[-2:]:
++            assert "earlier tool call" in m["content"]
++
++    def test_parallel_sibling_failure_does_not_cascade(self, agent):
++        """A failing read inside a parallel run must not cancel its siblings —
++        they are independent observations the model needs for recovery."""
++        calls = [
++            _tc("web_search", '{"query":"a"}', call_id="s1"),
++            _tc("web_search", '{"query":"b"}', call_id="s2"),
++            _tc("web_search", '{"query":"c"}', call_id="s3"),
++        ]
++        msg = SimpleNamespace(content="", tool_calls=calls)
++        messages = []
++        executed = []
++        lock = threading.Lock()
++
++        def fake_handle(name, args, task_id, **kwargs):
++            with lock:
++                executed.append(kwargs["tool_call_id"])
++            return _fail(name) if kwargs["tool_call_id"] == "s1" else _ok()
++
++        with patch("model_tools.handle_function_call", side_effect=fake_handle):
++            agent._execute_tool_calls(msg, messages, "task-1")
++
++        assert sorted(executed) == ["s1", "s2", "s3"]
++        assert [m["tool_call_id"] for m in messages] == ["s1", "s2", "s3"]
++        assert getattr(agent, "_tool_fail_cascade_active", False) is False

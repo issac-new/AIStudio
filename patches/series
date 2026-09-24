@@ -813,3 +813,38 @@
 390-agent-kanban-home-default-board.patch
 391-agent-kanban-board-team-fence.patch
 392-studio-matrix-login-scoped-grant.patch
+# 393/394 MiMo-Code 接入为第 8 个可托管编码 Agent（2026-09-24 MiMo 补充调研 P1；
+#      原编号 381/382，rebase 收口时因 aipaydev 轮占用 381-384 重编号）。
+#      MiMo-Code（XiaomiMiMo/MiMo-Code，OpenCode fork，npm @mimo-ai/cli，bin mimo）
+#      复用 opencode 家族执行路径（run --format json NDJSON）：
+#      - 393 服务端：新模块 services/opencode-family.ts 收敛家族差异（品牌文件
+#        mimocode.json/mimocode.db、MIMOCODE_CONFIG_DIR/MIMOCODE_DB/MIMOCODE_CONFIG_CONTENT
+#        环境变量、$schema URL）；定义条目+配置文件映射+作用域配置+运行时配置+
+#        MCP 同步+启动器全部家族化；mimo run 无 --auto（fork 已移除）以
+#        runSupportsAutoFlag 门控；usage/persisted/webhook/avatar 各联合类型扩 'mimo'。
+#      - 394 客户端：CodingAgentId/AgentStatusId 联合、新建会话下拉项、
+#        agent→chat 映射、头像（public/coding-agents/mimo.svg）。
+#      依据：docs/superpowers/specs/2026-09-24-mimo-code-coding-tools-research.md P1。
+393-server-mimo-coding-agent.patch
+394-client-mimo-agent-ui.patch
+# 395/396 MiMo 补充调研 P5/P9（2026-09-24）。原编号 383/384，撞号重编。
+#      395=工具批失败级联：串行(barrier)调用失败即置轮级标志，跳过批内剩余调用
+#      并逐调用留痕（MiMo tool/gate.ts FAIL_CASCADE 语义）；并行(只读/无冲突)段
+#      兄弟失败不级联；HERMES_TOOL_FAIL_CASCADE=0 回退旧行为。
+#      注：读并行/写 barrier 的调度本体 hermes 已有（_plan_tool_batch_segments 路径级
+#      读写冲突检测，强于 MiMo 静态分类），本补丁只补失败级联缺口。含 5 例新测试。
+#      396=Exa MCP 目录清单（stdio npx exa-mcp-server + EXA_API_KEY 安装期提示），
+#      单一事实源 overlay/runtime/exa/manifest.yaml；对齐 MiMo codesearch（Exa Code API）
+#      的库/SDK/API 外搜通道。依据 specs/2026-09-24-mimo-code-coding-tools-research.md。
+395-agent-tool-fail-cascade.patch
+396-agent-exa-mcp-catalog.patch
+# 397 MiMo 补充调研 P2：hermes LSP 工具化（2026-09-24）。原编号 385，撞号重编。
+#      MiMo 的 lsp 工具 91 行九操作；hermes 基建更强（per-(server,root) 真实语言
+#      服务器子进程、多根 pyright、写后诊断）但模型此前不可调用。本补丁补五个
+#      只读操作：hover/definition/references/document_symbol/workspace_symbol
+#      （新 tools/lsp_tool.py 自动发现注册，toolsets file 组进 coding 姿态）；
+#      LSPService.navigation_sync 含 pyright references 必带 context、spawn 失败
+#      哨兵语义（≠空结果）、冷启动 1.5s 单次重试；错误全走描述性 JSON 不抛异常。
+#      真 pyright 冒烟五操作全通。含 14 例单测。
+#      依据 specs/2026-09-24-mimo-code-coding-tools-research.md P2。
+397-agent-lsp-tool.patch
