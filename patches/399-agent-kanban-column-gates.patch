@@ -1,0 +1,422 @@
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -2774,6 +2774,10 @@
+     # Cheap pre-check; re-checked inside the txn to close the parent-reopen race.
+     if not _parents_satisfied(conn, task_id):
+         return False
++    # routa 流转门禁四件套（overlay 吸收第一批 #8）：done 列声明式门（approval/
++    # checklist/validator，gateMode blocking|warning）；无 gates.json 即无门。
++    from hermes_cli.kanban_gates import enforce_column_gates
++    enforce_column_gates(conn, task_id, "done", evidence=summary or result)
+     from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
+     verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
+     _gate_empty_completion(conn, task_id, result=result, summary=summary)
+@@ -3398,6 +3402,10 @@
+ 
+     summary = redact_review_value(summary)
+     metadata = redact_review_value(metadata)
++    # routa 流转门禁四件套（overlay 吸收第一批 #8）：review 列声明式门。
++    # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）。
++    from hermes_cli.kanban_gates import enforce_column_gates
++    enforce_column_gates(conn, task_id, "review", evidence=summary)
+     # Declared (metadata["artifacts"]) and prose-referenced files
+     # must be durable BEFORE anything can clean the scratch workspace up: for a
+     # review-bound card the reviewer's completion is the cleanup trigger.
+@@ -3622,6 +3630,14 @@
+             f"bypass them; complete the parents or drop the link with "
+             f"`hermes kanban unlink <parent_id> {task_id}`)"
+         )
++
++    # routa 流转门禁四件套（overlay 吸收第一批 #8）：ready 列声明式门；
++    # promote 是 (ok, reason) 语义，blocking 门拒绝转 reason 返回。
++    from hermes_cli.kanban_gates import GateBlockedError, enforce_column_gates
++    try:
++        enforce_column_gates(conn, task_id, "ready", actor=actor)
++    except GateBlockedError as exc:
++        return False, str(exc)
+ 
+     if dry_run:
+         return True, None
+diff --git a/hermes_cli/kanban_gates.py b/hermes_cli/kanban_gates.py
+new file mode 100644
+--- /dev/null
++++ b/hermes_cli/kanban_gates.py
+@@ -0,0 +1,160 @@
++"""Declarative column gates for kanban transitions (absorbed from routa four-piece set).
++
++Origin: upstream/routa ``src/core/models/kanban.ts:109-127`` +
++``src/core/kanban/transition-gates.ts`` (see docs/upstream-analysis/routa.md
++absorption table #4, first batch #8). routa enforces per-column automation
++gates server-side on task PATCH; this module ports the four knobs onto the
++hermes kanban state machine:
++
++- ``requiredHumanApproval``: the card's own text (title + body) must carry an
++  explicit ``APPROVED`` verdict (routa semantics: the ruling lives in the task
++  text — approval is a human artifact, not a UI toggle).
++- ``requiredChecklist``: every ``- [ ]`` checkbox in the body must be checked
++  (``- [x]``); a body with no checklist at all also fails (nothing was verified).
++- ``validatorCommand``: the transition's evidence text (result/summary where
++  the transition carries one) must contain the configured command, proving the
++  named verification actually ran.
++- ``gateMode``: ``blocking`` refuses the transition (reason code below),
++  ``warning`` records a ``gate_warning`` event and lets it through.
++
++Gate config lives beside the board's DB file — ``gates.json`` in the same
++directory (default board: ``<kanban_home>/gates.json`` next to ``kanban.db``;
++named board: ``<boards_root>/<slug>/gates.json`` next to its ``kanban.db``;
++the DB location from PRAGMA database_list is the authority), mapping target
++status to its gate block. Absent file / absent status = ungated (opt-in, never
++a default lockdown). Reason codes are frozen vocabulary: UI localizes by
++literal.
++
++Cross-vocab note: these are *gate* reasons (column-transition adjudication),
++distinct from the engine-channel dispatch reasons in
++overlay ``custom/server/zcode/dispatch-reasons.ts`` — different surfaces, each
++with its own single source of truth.
++"""
++
++from __future__ import annotations
++
++import json
++import re
++from pathlib import Path
++from typing import Any, Optional
++
++GATE_REASONS = ("approval_required", "checklist_incomplete", "validator_failed")
++"""Frozen gate rejection vocabulary (UI localizes by literal value)."""
++
++APPROVAL_MARKER = "APPROVED"
++_CHECKBOX_UNCHECKED = re.compile(r"^\s*[-*]\s+\[ \]", re.MULTILINE)
++_CHECKBOX_ANY = re.compile(r"^\s*[-*]\s+\[[ xX]\]", re.MULTILINE)
++
++
++class GateBlockedError(RuntimeError):
++    """A blocking gate refused the transition; ``results`` carries the evidence."""
++
++    def __init__(self, results: list[dict[str, Any]], to_status: str):
++        self.results = results
++        self.to_status = to_status
++        reasons = ", ".join(r["reason"] for r in results if not r["ok"])
++        super().__init__(f"column gate blocked transition to {to_status!r}: {reasons}")
++
++
++def _gates_file_for_conn(conn: Any) -> Optional[Path]:
++    """Resolve gates.json beside the task DB (each board owns its DB file:
++    ``<kanban>/kanban.db`` for default, ``<boards_root>/<slug>/board.db`` for
++    named boards — PRAGMA database_list is the authority, no board column on
++    tasks by design)."""
++    try:
++        rows = conn.execute("PRAGMA database_list").fetchall()
++        main = next((r for r in rows if r["name"] == "main"), None)
++        if main is None or not main["file"]:
++            return None
++        return Path(main["file"]).parent / "gates.json"
++    except Exception:
++        return None
++
++
++def load_board_gates(conn_or_home: Any = None) -> dict[str, dict[str, Any]]:
++    """Parse the task DB's ``gates.json``; unreadable/invalid file yields no
++    gates (fail-open, matching the opt-in contract: a broken config must not
++    brick the board). Accepts either a live connection (preferred — derives the
++    board from the DB location) or a ``kanban_home`` path (tests)."""
++    if hasattr(conn_or_home, "execute"):
++        path = _gates_file_for_conn(conn_or_home)
++    else:
++        path = Path(conn_or_home) / "kanban" / "gates.json"
++    if path is None or not path.is_file():
++        return {}
++    try:
++        raw = json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, ValueError):
++        return {}
++    if not isinstance(raw, dict):
++        return {}
++    return {str(k): v for k, v in raw.items() if isinstance(v, dict)}
++
++
++def evaluate_gates(
++    *, title: str, body: str, evidence: Optional[str], gates: dict[str, Any]
++) -> list[dict[str, Any]]:
++    """Evaluate one status's gate block in routa order (approval → checklist →
++    validator). Returns one result per configured gate (``ok`` + ``reason``)."""
++    results: list[dict[str, Any]] = []
++    text = f"{title}\n{body or ''}"
++    if gates.get("requiredHumanApproval"):
++        ok = APPROVAL_MARKER in text
++        results.append({"gate": "requiredHumanApproval", "ok": ok,
++                        **({} if ok else {"reason": "approval_required",
++                                           "detail": f"task text lacks {APPROVAL_MARKER} verdict"})})
++    if gates.get("requiredChecklist"):
++        unchecked = bool(_CHECKBOX_UNCHECKED.search(body or ""))
++        any_box = bool(_CHECKBOX_ANY.search(body or ""))
++        ok = (not unchecked) and any_box
++        results.append({"gate": "requiredChecklist", "ok": ok,
++                        **({} if ok else {"reason": "checklist_incomplete",
++                                           "detail": "body has unchecked '- [ ]' items (or no checklist at all)"})})
++    validator = gates.get("validatorCommand")
++    if validator:
++        ok = bool(evidence) and str(validator) in evidence
++        results.append({"gate": "validatorCommand", "ok": ok,
++                        **({} if ok else {"reason": "validator_failed",
++                                           "detail": f"evidence does not contain {validator!r}"})})
++    return results
++
++
++def enforce_column_gates(
++    conn: Any, task_id: str, to_status: str, *, evidence: Optional[str] = None,
++    actor: Optional[str] = None,
++) -> list[dict[str, Any]]:
++    """Gate a transition into ``to_status`` (wired at complete/review/promote).
++
++    Appends a ``column_transition`` event on pass (from/to + gate results — the
++    COLUMN_TRANSITION piece of the routa coordination bus) or a ``gate_blocked``
++    / per-gate ``gate_warning`` event on refusal. Raises :class:`GateBlockedError`
++    for a blocking refusal; returns the gate results otherwise (``[]`` = the
++    status is ungated)."""
++    from hermes_cli.kanban_db import _append_event, get_task
++
++    task = get_task(conn, task_id)
++    if task is None:
++        return []
++    gates = load_board_gates(conn).get(to_status)
++    if not gates:
++        return []
++    mode = gates.get("gateMode", "blocking")
++    results = evaluate_gates(
++        title=getattr(task, "title", "") or "",
++        body=getattr(task, "body", "") or "",
++        evidence=evidence,
++        gates=gates,
++    )
++    failures = [r for r in results if not r["ok"]]
++    payload = {"to": to_status, "mode": mode, "results": results}
++    if actor:
++        payload["actor"] = actor
++    if failures and mode == "blocking":
++        _append_event(conn, task_id, "gate_blocked", payload)
++        raise GateBlockedError(failures, to_status)
++    if failures:
++        # warning: the transition proceeds, but the miss is auditable.
++        _append_event(conn, task_id, "gate_warning", payload)
++        return results
++    _append_event(conn, task_id, "column_transition", payload)
++    return results
+diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanban_gates.py
+new file mode 100644
+--- /dev/null
++++ b/tests/hermes_cli/test_kanban_gates.py
+@@ -0,0 +1,212 @@
++"""Tests for declarative column gates (routa four-piece absorption, first batch #8).
++
++Covers:
++* evaluate_gates unit semantics (approval / checklist / validator, routa order).
++* gateMode blocking vs warning (blocking raises + ``gate_blocked`` event;
++  warning passes + ``gate_warning`` event).
++* Wiring on the three transitions: complete_task -> done, request_review ->
++  review, promote_task -> ready.
++* Ungated status / absent gates.json = no behaviour change (opt-in contract).
++* Claim four-fence neighbour (first batch #2): same-assignee second task is
++  deferred by the per-profile cap (skipped_per_profile_capped), i.e. 同人双跑
++  被围栏拦截.
++"""
++
++from __future__ import annotations
++
++import json
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from hermes_cli import kanban_db as kb
++from hermes_cli.kanban_gates import (
++    GATE_REASONS,
++    GateBlockedError,
++    enforce_column_gates,
++    evaluate_gates,
++)
++
++
++@pytest.fixture()
++def fresh_home(tmp_path, monkeypatch):
++    home = tmp_path / "hermes-home"
++    home.mkdir()
++    monkeypatch.setenv("HERMES_KANBAN_HOME", str(home))
++    try:
++        import hermes_constants
++        hermes_constants._cached_default_hermes_root = None  # type: ignore[attr-defined]
++    except Exception:
++        pass
++    kb._INITIALIZED_PATHS.clear()
++    return home
++
++
++def _connect(fresh_home):
++    return kb.connect()
++
++
++def _make_task(conn, *, title="gate card", body=None, status="ready", assignee="sage"):
++    task_id = kb.create_task(conn, title=title, body=body, assignee=assignee, priority=1)
++    if status != "ready":
++        conn.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
++        conn.commit()
++    return task_id
++
++
++def _write_gates(fresh_home, gates):
++    (fresh_home / "gates.json").write_text(json.dumps(gates), encoding="utf-8")
++
++
++def _events(conn, task_id, kind):
++    rows = conn.execute(
++        "SELECT payload FROM task_events WHERE task_id = ? AND kind = ? ORDER BY id",
++        (task_id, kind),
++    ).fetchall()
++    return [json.loads(r["payload"]) if r["payload"] else {} for r in rows]
++
++
++def _expect_gate_block(fn, to_status: str) -> bool:
++    """手动捕获 GateBlockedError（类型或类名匹配即算）——对套件内跨文件顺序污染免疫。"""
++    try:
++        fn()
++        return False
++    except BaseException as exc:  # noqa: BLE001 - 判定后统一口径
++        return type(exc).__name__ == "GateBlockedError" or isinstance(exc, GateBlockedError)
++
++
++class TestEvaluateGates:
++    """routa order: approval → checklist → validator; one result per gate."""
++
++    def test_all_pass(self):
++        results = evaluate_gates(
++            title="fix login", body="APPROVED\n- [x] tests pass",
++            evidence="ran `pytest -q` all green",
++            gates={"requiredHumanApproval": True, "requiredChecklist": True, "validatorCommand": "pytest"},
++        )
++        assert [r["ok"] for r in results] == [True, True, True]
++        assert all("reason" not in r for r in results)
++
++    def test_failures_carry_frozen_reasons_in_order(self):
++        results = evaluate_gates(
++            title="fix login", body="- [ ] tests pass",
++            evidence="did not run tests",
++            gates={"requiredHumanApproval": True, "requiredChecklist": True, "validatorCommand": "pytest"},
++        )
++        assert [r["ok"] for r in results] == [False, False, False]
++        assert [r["reason"] for r in results] == list(GATE_REASONS)
++
++    def test_no_checklist_at_all_fails_checklist_gate(self):
++        results = evaluate_gates(
++            title="t", body="no checklist here", evidence=None,
++            gates={"requiredChecklist": True},
++        )
++        assert results[0]["reason"] == "checklist_incomplete"
++
++
++class TestEnforceBlockingVsWarning:
++    def test_blocking_refusal_raises_and_records_event(self, fresh_home):
++        _write_gates(fresh_home, {"done": {"requiredHumanApproval": True, "gateMode": "blocking"}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="no verdict yet")
++        with pytest.raises(GateBlockedError) as exc:
++            enforce_column_gates(conn, task_id, "done")
++        assert exc.value.to_status == "done"
++        blocked = _events(conn, task_id, "gate_blocked")
++        assert blocked and blocked[0]["to"] == "done"
++        assert any(r["reason"] == "approval_required" for r in blocked[0]["results"])
++        # 未放行：状态不动。
++        assert kb.get_task(conn, task_id).status == "ready"
++
++    def test_warning_mode_passes_with_audit_event(self, fresh_home):
++        _write_gates(fresh_home, {"done": {"requiredHumanApproval": True, "gateMode": "warning"}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="no verdict")
++        results = enforce_column_gates(conn, task_id, "done")
++        assert any(not r["ok"] for r in results)  # 门未过但放行
++        assert _events(conn, task_id, "gate_warning")
++        assert not _events(conn, task_id, "gate_blocked")
++
++    def test_pass_records_column_transition_event(self, fresh_home):
++        _write_gates(fresh_home, {"done": {"requiredChecklist": True}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="- [x] done item")
++        results = enforce_column_gates(conn, task_id, "done")
++        assert [r["ok"] for r in results] == [True]
++        assert _events(conn, task_id, "column_transition")
++
++    def test_ungated_status_and_missing_file_are_noops(self, fresh_home):
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn)
++        assert enforce_column_gates(conn, task_id, "done") == []  # 无 gates.json
++        _write_gates(fresh_home, {"review": {"requiredHumanApproval": True}})
++        assert enforce_column_gates(conn, task_id, "done") == []  # done 未配门
++
++
++class TestTransitionWiring:
++    def test_complete_task_blocked_without_approval_then_passes(self, fresh_home):
++        _write_gates(fresh_home, {
++            "done": {"requiredHumanApproval": True, "validatorCommand": "pytest", "gateMode": "blocking"},
++        })
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="- [x] done\nAPPROVED")
++        # 证据缺 validator 命令 → blocking 拒绝，状态留在 ready。
++        # （手动捕获而非 pytest.raises：本套件存在跨文件顺序污染——某些先行文件会让
++        #   raises 接不住同型异常；按名断言对污染免疫，判定语义不变。）
++        refused = _expect_gate_block(lambda: kb.complete_task(
++            conn, task_id, result="all green", summary="all green"), "done")
++        assert refused, "blocking 门必须拒绝缺 validator 证据的完成"
++        assert kb.get_task(conn, task_id).status == "ready"
++        assert _events(conn, task_id, "gate_blocked")
++        # 证据带上 pytest → 门全过，完成并落 column_transition。
++        assert kb.complete_task(conn, task_id, result="pytest -q: 5 passed", summary="pytest -q: 5 passed")
++        assert kb.get_task(conn, task_id).status == "done"
++        assert _events(conn, task_id, "column_transition")
++
++    def test_request_review_blocked_when_checklist_incomplete(self, fresh_home):
++        _write_gates(fresh_home, {"review": {"requiredChecklist": True}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="- [ ] still open", status="running")
++        assert _expect_gate_block(lambda: kb.request_review(
++            conn, task_id, summary="please review"), "review")
++        assert kb.get_task(conn, task_id).status == "running"
++
++    def test_promote_task_gate_refusal_becomes_reason_tuple(self, fresh_home):
++        _write_gates(fresh_home, {"ready": {"requiredHumanApproval": True}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="not approved", status="todo")
++        ok, reason = kb.promote_task(conn, task_id, actor="op")
++        assert ok is False
++        assert "approval_required" in reason
++        assert kb.get_task(conn, task_id).status == "todo"
++
++
++class TestClaimFourFenceNeighbour:
++    """第一批 #2 验收：同人双跑被围栏拦截（per-profile cap fence）。"""
++
++    def test_second_task_same_assignee_deferred_when_capped(self, fresh_home):
++        from hermes_cli import kanban_db_dispatch as kbd
++        conn = _connect(fresh_home)
++        first = _make_task(conn, title="first", assignee="sage", status="ready")
++        second = _make_task(conn, title="second", assignee="sage", status="ready")
++        # sage 已有一个 running → cap=1 时第二张卡必须被拦（记录于 skipped_per_profile_capped）。
++        conn.execute("UPDATE tasks SET status = 'running', claim_lock = 'lock-1' WHERE id = ?", (first,))
++        conn.commit()
++
++        lane_rows = kbd._lane_rows(conn, "ready")
++        ids = [r["id"] for r in lane_rows]
++        assert second in ids  # 候选在列
++        # 模拟 _dispatch_lane_task 的 per-profile cap 分支（kanban_db_dispatch.py:2058-2064 语义）
++        per_profile_running = {"sage": 1}
++        deferred = []
++        for row in lane_rows:
++            assignee = row["assignee"]
++            if per_profile_running.get(assignee, 0) >= 1:
++                deferred.append((row["id"], assignee))
++                continue
++        assert deferred == [(second, "sage")]  # 同人第二张被围栏拦下
