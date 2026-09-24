@@ -74,10 +74,14 @@ function readSeries() {
 //   - gateway/ tests/gateway/ tests/hermes_cli/:见 patch 250/273
 //   - optional-mcps/ optional-skills/:基础运行时目录清单(patch 375 起,
 //     semantica MCP 目录条目等)。tests/ 其余子树属于 hermes-studio,禁止整段路由。
+//   - tools/ tests/tools/ tests/agent/:hermes-agent 工具面与对应测试(patch 395/406 起,
+//     395 靠首段 agent/ 前缀侥幸路由；406 首段 tools/ 路由到 studio 报
+//     "No such file or directory"后显式补齐)。
 export const HERMES_AGENT_PATCH_PREFIXES = [
   'hermes_cli/', 'plugins/', 'agent/', 'apps/', 'assets/', 'acp_',
   'gateway/', 'tests/gateway/', 'tests/hermes_cli/',
   'optional-mcps/', 'optional-skills/',
+  'tools/', 'tests/tools/', 'tests/agent/',
 ];
 
 /** patch 目标路径(---/+++ 后的首段)是否路由到 hermes-agent。 */
