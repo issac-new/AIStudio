@@ -1,7 +1,7 @@
 // Profile 解析与裁剪（设计 §4.3/§5.1）：enable/disable（支持点号通配后缀）+ 逐门 override。
 // tier 别名只随 Profile 元数据走，不参与求值。
 
-import type { GateSpec, Profile } from './types.js'
+import type { GateSpec, GateVerdict, Profile } from './types.js'
 
 export interface ResolvedProfile {
   profileId: string
@@ -60,6 +60,20 @@ export function resolveProfile(
 export function effectivePolicy(spec: GateSpec, resolved: ResolvedProfile): GateSpec['spec']['policy'] {
   const override = resolved.policyOverrides.get(spec.metadata.id)
   return override ? { ...spec.spec.policy, ...override } : spec.spec.policy
+}
+
+/**
+ * 阻断判定（status/Stop/mcp 共用）：只有 policy=block 档的 FAIL/INCONCLUSIVE 才阻断。
+ * warn 档（advisory）产出 CONDITIONAL 语义，不拦 Stop——否则 advisory 嵌入形同虚设。
+ * never-run（无判定记录）按 INCONCLUSIVE 处理：仅 inconclusive:block 档才拦。
+ */
+export function isBlockingVerdict(
+  verdict: GateVerdict,
+  policy: GateSpec['spec']['policy'],
+): boolean {
+  if (verdict === 'FAIL') return policy.failure === 'block'
+  if (verdict === 'INCONCLUSIVE') return policy.inconclusive === 'block'
+  return false
 }
 
 export function findProfile(profiles: readonly Profile[], id: string | undefined): Profile | undefined {
