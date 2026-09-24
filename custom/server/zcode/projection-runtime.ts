@@ -54,6 +54,13 @@ export class ZcodeProjectionRuntime {
     return this.bridge !== null
   }
 
+  /** 在已连接桥上执行引擎调用（未连接先 ensureConnected；断言面供派单链 P3 等复用）。 */
+  async withAgent<T>(fn: (agent: NonNullable<ZcodeEngineBridge['agent']>) => Promise<T>): Promise<T> {
+    await this.ensureConnected()
+    if (!this.bridge) throw new Error('zcode 引擎未连接')
+    return fn(this.bridge.agent)
+  }
+
   async watchWorkspace(workspacePath: string): Promise<void> {
     if (!this.intents.has(workspacePath)) this.intents.set(workspacePath, { workspacePath, conversationSessions: new Set() })
     await this.ensureConnected()
