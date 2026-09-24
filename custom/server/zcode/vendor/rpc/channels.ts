@@ -1,4 +1,4 @@
-export * from "./channels.shared.js";
-export { ChannelServer } from "./channelServer.js";
-export { ChannelClient } from "./channelClient.js";
-export { getDelayedChannel } from "./delayedChannel.js";
+export * from "./channels.shared";
+export { ChannelServer } from "./channelServer";
+export { ChannelClient } from "./channelClient";
+export { getDelayedChannel } from "./delayedChannel";

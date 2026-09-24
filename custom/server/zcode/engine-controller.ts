@@ -141,7 +141,7 @@ router.post('/checkpoint/recover', async (ctx) => {
     }, Date.now())
     const sent = []
     for (const envelope of envelopes) {
-      const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope }))
+      const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope: envelope as unknown as Record<string, unknown> }))
       sent.push({ commandId: envelope.commandId, type: envelope.type, status: r.status, reasonCode: r.reasonCode })
     }
     ctx.body = { ok: true, mode, commands: sent }
