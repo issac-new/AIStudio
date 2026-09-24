@@ -234,6 +234,27 @@ gate_blocked() { # <gate-key> <step-name>：硬闸检查——闸门 state 键�
 
 freeze_doc() { echo "docs/requirements/${RFD_ID}.freeze.md"; }
 
+repo_branch_has() { # <branch> <path-in-repo>：远端分支上文件存在性（证据反查）
+  git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  git -C "$DIRECTOR_CLONE" cat-file -e "refs/remotes/origin/$1:$2" 2>/dev/null
+}
+
+uat_ac_covered() { # <ac-list> <body> → 缺失 AC 编号清单（空串=逐条覆盖）
+  local missing="" ac
+  for ac in $1; do
+    case "$2" in *"$ac"*) ;; *) missing="$missing$ac " ;; esac
+  done
+  printf '%s' "$missing"
+}
+
+issue_disp_stat() { # → "<ISS_N> <DISP_N>" 问题单/处置记账条数（DISP|type|subject|disposition|note）
+  local iss=0 disp=0
+  [[ -f "$EVID_DIR/issues.log" ]] || { echo "0 0"; return 0; }
+  iss=$(grep -c '^ISSUE|' "$EVID_DIR/issues.log" 2>/dev/null || echo 0)
+  disp=$(grep -c '^DISP|' "$EVID_DIR/issues.log" 2>/dev/null || echo 0)
+  echo "$iss $disp"
+}
+
 # ── M1 应用初始化：资产登记表（docs/admin/app-registry.md 生成）────
 app_registry_gen() { # → stdout：registry 内容
   echo "# 应用资产登记表（app-registry，$(date '+%F %T')）"
@@ -307,13 +328,14 @@ work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账
     echo "# 工作管理台账（work-report，$(date '+%F %T')）"
     echo
     echo "## 按人 × 状态分布（跨全部账号板）"
-    echo "| 账号 | todo | running | review | done | 其他 | WIP(running) |"
-    echo "|---|---|---|---|---|---|---|"
+    echo "| 账号 | todo | running | review | done | 其他 | WIP(running) | 卡壳72h |"
+    echo "|---|---|---|---|---|---|---|---|"
     for u in "${INSTANCED_USERS[@]}"; do
-      local todo=0 run=0 rev=0 done=0 other=0
+      local todo=0 run=0 rev=0 done=0 other=0 stale=0
       for slug in $(account_boards "$u"); do
         local db="$HERMES_ROOT/kanban/boards/$slug/kanban.db"
         [[ -f "$db" ]] || continue
+        stale=$((stale + $(sqlite3 "$db" "select count(*) from tasks where status not in ('done','archived') and ifnull(created_at,0) < strftime('%s','now') - 259200" 2>/dev/null || echo 0)))
         while IFS='|' read -r st n; do
           case "$st" in
             todo) todo=$((todo+n)) ;; running) run=$((run+n)) ;;
@@ -324,7 +346,8 @@ work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账
       done
       local flag=""
       if (( run > 2 )); then flag="⚠ 超 WIP 上限"; wip_warn=1; fi
-      echo "| $u | $todo | $run | $rev | $done | $other | $run ${flag} |"
+      if (( stale > 0 )); then flag="$flag ⏳卡壳"; fi
+      echo "| $u | $todo | $run | $rev | $done | $other | $run ${flag} | $stale |"
     done
     echo
     echo "## 治理口径"
@@ -343,9 +366,10 @@ audit_check() { # → 0 合规 / 1 有缺陷（输出审计发现）
   if [[ -n "$(sget g1_frozen)" ]] && ! repo_has "$(freeze_doc)"; then
     echo "G1 已落键但 freeze 文件不在 origin/main"; bad=1
   fi
-  # 问题单台账格式完整（ISSUE|类型|主体|描述 四段）
-  if awk -F'|' '/^ISSUE\|/ && NF < 4 {exit 1}' "$EVID_DIR/issues.log" 2>/dev/null; then :; else
-    echo "issues.log 存在字段缺失条目"; bad=1
+  # 问题单台账格式完整（ISSUE|类型|主体|描述 四段）；无台账≠缺陷（修假阳性）
+  if [[ -f "$EVID_DIR/issues.log" ]]; then
+    awk -F'|' '/^ISSUE\|/ && NF < 4 {exit 1}' "$EVID_DIR/issues.log" 2>/dev/null \
+      || { echo "issues.log 存在字段缺失条目"; bad=1; }
   fi
   # 取证目录在位
   [[ -d "$EVID_DIR" ]] || { echo "取证目录缺失"; bad=1; }
@@ -379,7 +403,7 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
       echo "- $k: $(sget "$k" || echo 未落)"
     done
     echo
-    echo "## 问题单台账（共 ${total} 条）"
+    echo "## 问题单台账（共 ${total} 条；处置记账 $(grep -c '^DISP|' "$EVID_DIR/issues.log" 2>/dev/null || echo 0) 条 DISP——键=类型·主体，缺行=待处置）"
     awk -F'|' '/^ISSUE\|/{print "- ["$2"] "$3"："$4}' "$EVID_DIR/issues.log" 2>/dev/null | sort | uniq -c | sort -rn
     echo
     echo "## 凭证与回灌"
