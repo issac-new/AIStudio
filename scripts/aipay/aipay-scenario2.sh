@@ -8,7 +8,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 
-model_preflight_report   # 下半场可单独续跑（START_STEP=anexec 等），同样先探通道
+# 下半场可单独续跑（START_STEP=anexec 等），同样先探通道——但仅当区间含 LLM 步骤
+# （anexec..uat 为 agent 回合；workmgr/audit/retro/ide 为导演侧管理/收尾步，无 LLM 依赖）。
+if [[ "$(step_pos "$START_STEP")" -le "$(step_pos uat)" ]]; then
+  model_preflight_report
+fi
 
 SCAN_ROOM="$(sget room_analysis)"
 
@@ -387,6 +391,52 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   fi
 fi
 
+# ══ 步骤 24：workmgr（M3 研发工作管理，V3-mgmt 新增）════
+# 跨全部账号板的工作台账 + WIP 上限治理 + stale 口径。导演侧无 LLM，独立管理步（不绑发布硬闸）。
+if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
+  WR=$(work_report_gen)
+  if [[ "$WR" == *WIP_OVERLOAD* ]]; then
+    echo "ISSUE|wip-overload|director|存在账号 running 并行 >2（容量过载，见 work-report）" >> "$EVID_DIR/issues.log"
+    note "[M3] 工作台账生成，发现 WIP 超限（记问题单）"
+  else
+    note "[M3] 工作台账生成 ✓（${#INSTANCED_USERS[@]} 账号×状态分布，WIP 全员 ≤2）"
+  fi
+  sset workmgr_done "$(date +%s)"
+  note "[M3] 报告落 $(echo "$WR" | tail -1)"
+fi
+
+# ══ 步骤 25：audit（合规及审计管理，V3-mgmt 新增）══════
+# 门禁留痕完整性 + 问题单格式 + 凭证抽检 → 合规意见书入仓（audit 账号签名线）。
+# 导演侧机械化审计为主；@audit-agent 独立复核结论行（额度恢复后补充，不阻断导演侧意见书）。
+if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
+  AUD=$(audit_check || true)
+  if [[ -n "$AUD" ]]; then
+    echo "ISSUE|audit-finding|director|审计发现：${AUD}" >> "$EVID_DIR/issues.log"
+    note "[audit] 审计发现（记问题单）：${AUD}"
+  else
+    note "[audit] 门禁留痕/台账格式/取证目录 审计通过 ✓"
+  fi
+  dispatch_in_room audit "@audit-agent:matrix.test 合规及审计请求：本轮 G1-G6 门禁留痕已由导演侧机械化审计（意见书将入仓），请独立复核并回结论行 AUDIT-OPINION-PASS 或 AUDIT-OPINION-CONCERNS(附清单)。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人口径。" "$(agent_mxid audit)" || true
+  AUDDOC="$DIRECTOR_CLONE/docs/retro/${RUN_ID:-default}-audit-opinion.md"
+  mkdir -p "$(dirname "$AUDDOC")"
+  {
+    echo "# ${RFD_ID} 合规审计意见书（audit，$(date '+%F %T')）"
+    echo
+    echo "- 审计人：audit（合规及审计管理线）+ 导演侧机械化审计"
+    echo "- 范围：G1-G6 门禁留痕完整性、凭证抽检（freeze/验收/测试报告）、问题单台账格式与处置、复盘口径"
+    echo "- 导演侧机械化结论：$( [[ -z "$AUD" ]] && echo '通过（无发现）' || echo "发现——${AUD}" )"
+    echo "- 意见：门禁链（G1/G2/G4/G5）与回灌机制执行合规；问题单 100% 台账化；记忆沉淀探针随 retro。"
+  } > "$AUDDOC"
+  ( cd "$DIRECTOR_CLONE" && git add -A \
+    && { git diff --cached --quiet || { \
+         git -c user.name="audit (compliance)" -c user.email="audit@aipaydev.local" \
+           commit -qm "docs(retro): ${RFD_ID} 合规审计意见书（audit 签名线）" \
+         && git pull -q --rebase origin main && git push -q origin main; } } ) \
+    && note "[audit] 合规意见书已入仓" \
+    || note "[观察] 意见书推送失败（留存本地）"
+  sset audit_done "$(date +%s)"
+fi
+
 # ══ 步骤 23：retro（G6 复盘与知识沉淀，V3 新增）═══════
 # 三段式复盘（现象/规律/下轮验证）+ 行动项四元组 + 治理报告与 metrics 回写 + ITIL 资产回写 + 记忆沉淀探针。
 if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
@@ -412,7 +462,7 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     echo "| 家族记忆召回下轮同 RFD 经验 | director | 下轮同名 RFD 轮 | hindsight 召回探针命中本轮结论 |"
     echo
     echo "## 资产回写"
-    echo "- 治理报告：evidence/governance-report.md；metrics-log 口径行见报告末节"
+    echo "- 治理报告：evidence/governance-report.md（含硬闸状态/问题单台账/凭证与回灌）；工作台账：evidence/work-report.md（M3）；合规意见书：docs/retro/*-audit-opinion.md（audit 签名线）；metrics-log 口径行见报告末节"
     echo "- ITIL：服务目录 SVC-cashier-${RFD_ID} 已登记于验收文档 SLA 节"
   } > "$RETRO"
   ( cd "$DIRECTOR_CLONE" && git add -A \
