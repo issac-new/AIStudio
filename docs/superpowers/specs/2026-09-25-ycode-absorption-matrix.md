@@ -51,6 +51,18 @@
 
 高价值四候选：Retry-After 遵从（9d8de19）/TUI 选中即复制三档+终端检测矩阵（ab021e9）/per-model 工具描述覆盖族（4 提交）/流式元数据选择性裁剪（e7165c2）。扩展 API 双提交为插件系统设计参考。其余中低档项与维持原判清单见文档。全部 🔜 排队后续吸收轮。
 
+### 1.4bis 候补队列实施与再裁决（2026-09-25 第二批）
+
+| 候补项 | 来源 | 终态 | 说明 |
+|---|---|---|---|
+| 命令替换递归删除强制询问 | cc 2.1.281 | ✅ 落地 | approval 域 hardAskOverride：rm -rf 目标含 $(...)/反引号 → allow 也不放行强制 ask（deny 仍最优先） |
+| 记忆自动沉淀 v1 | mimo P4 二期 | ✅ patch 407 | 规则式 distill（去重/容量剪枝/报告）+action=consolidate；LLM 摘要列 v2；7d/30d 经既有 cron 运维面 |
+| HTTP Retry-After 遵从 | codex 9d8de19 | 🧬 原生已有 | retry_utils.parse_retry_after_seconds 双形态（数值/HTTP-日期/头映射双大小写）+外层会话循环遵从（agent_runtime_helpers:1891 注释自证） |
+| 动态 Bash 工具契约 | minimax 61c4c31 | 🧬 原生已有（更深） | _WINDOWS_BASH_SHELL_HINT 全套陷阱块（MSYS 路径/PowerShell 内建禁用/PTY CR 语义）+远端 OS 探测（Windows x64 轮实战沉淀）；schema 级动态裁剪通道在 zcode turn 工具面（toolDisallowlist） |
+| E2E 全链四跳 | — | ✅ 实证 | /zcode socket 认证接入+REST 词表回执+事件房间投递+冷运行时 existing-only 正确拒绝；附真缺陷修复（onAgentRuntimeRestarted 真签名直收监听器 zcodeAgentService:5615；IdeStatusBar socket 生命周期接线） |
+
+剩余候补（per-model 工具描述覆盖/元数据选择性裁剪/长会话前缀复用/steering 语义/视频输入链路）维持后续吸收轮排队——每项均为独立设计轮量级，队列有档可查。
+
 ### 1.5 已知事项（E2E 实测，非缺陷即如实记录）
 
 1. **createSession 索引可见性**：经桥 createSession 的新会话不即时出现在 sessions-index initial 快照（E2E 双桶探测证据）；索引归属 host 会话注册表面（zcode session 表 workspace_id 语义，`rememberSessionTrace` 注册链）。待 /ide UI 会话链实测核验。
