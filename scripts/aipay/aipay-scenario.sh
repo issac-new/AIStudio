@@ -13,8 +13,9 @@ source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）====="
 # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷。
-# UNTIL_STEP=smoke 的步骤 1-5 冒烟不消耗 LLM 回合，不要求模型通道。
-if [[ "${UNTIL_STEP:-}" != "smoke" ]]; then
+# LLM 依赖自 dispatch（首个 agent 回合步骤）起：执行区间触及 dispatch 及以后才要求通道；
+# smoke/ba/reqgate 为导演侧动作（whoami/推送/G1 机械化判读），无 LLM 依赖。
+if [[ -z "${UNTIL_STEP:-}" || "$(step_pos "$UNTIL_STEP")" -ge "$(step_pos dispatch)" ]]; then
   model_preflight_report
 fi
 
@@ -59,12 +60,20 @@ fi
 
 # ══ 步骤 6：BA 需求分发 ═══════════════════════════════
 if step_reached ba; then
-  if ! repo_has ${RFD_DOC}; then
+  # 内容比对而非存在性：仓库已有同名 RFD 但材料已升级（如 G1 四要素补齐）时必须重推，
+  # 否则 reqgate 判读的永远是旧版（2026-09-25 v3 实测 bug：V1 旧 RFD-001 在仓导致 G1 误拦）。
+  repo_pull
+  need_push=1
+  if git -C "$DIRECTOR_CLONE" show "origin/main:${RFD_DOC}" > /tmp/mx-rfd-remote.$$ 2>/dev/null; then
+    if cmp -s "/tmp/mx-rfd-remote.$$" "$RFD_MATERIAL"; then need_push=0; fi
+  fi
+  rm -f "/tmp/mx-rfd-remote.$$"
+  if [[ $need_push == 1 ]]; then
     cp "$RFD_MATERIAL" "$DIRECTOR_CLONE/docs/requirements/"
     ( cd "$DIRECTOR_CLONE"
       git add -A
       git -c user.name="bella (BA)" -c user.email="bella@aipaydev.local" \
-        commit -qm "docs(requirements): ${RFD_ID} 多端小程序支付收银台需求说明书（BA 初稿）"
+        commit -qm "docs(requirements): ${RFD_ID} 收银台需求说明书（BA 初稿 v2：G1 四要素——AC/Scope-Out/影响面/涉敏）"
       git pull -q --rebase origin main; git push -q origin main )
     note "[bella] ${RFD_ID} 已提交 aipaydev（email 通道禁用，以 matrix 私信替代送达）"
   fi
@@ -75,6 +84,51 @@ if step_reached ba; then
 请产品团队接手做需求分析与分工。")
     sset ba_dm_marker "$M"
     note "[bella→fanfan] 需求私信已送达 ($M)"
+  fi
+fi
+
+# ══ 步骤 7：reqgate（G1 需求冻结准入，V3 新增）════════
+# 四要素机械化判读：验收标准（AC 编号+无模糊词）/Scope-Out/影响面/涉敏判定（ISO27001 挂钩）。
+# 套模板：templates/prd.md。硬闸：G1 未过，dispatch 不得派发。
+if step_reached reqgate; then
+  if [[ -z "$(sget g1_frozen)" ]]; then
+    repo_pull
+    JUDGE=$(reqgate_judge "$DIRECTOR_CLONE/${RFD_DOC}" || true)
+    if [[ -n "$JUDGE" ]]; then
+      note "[G1] 需求书四要素判读未过：${JUDGE}——回灌 bella 补齐"
+      mx_send "$(load_token bella)" "$(sget dm_bella_fanfan)" \
+        "@$(human_mxid bella) G1 准入退回：${RFD_DOC} 缺 ${JUDGE}请按 templates/prd.md 结构补齐（验收标准逐条 AC 编号且机械化可判）后重推。" >/dev/null 2>&1 || true
+      # 二轮：等待补齐（导演侧重拉重判，900s×2）
+      ok2=""
+      for round in 1 2; do
+        sleep 15; repo_pull
+        J2=$(reqgate_judge "$DIRECTOR_CLONE/${RFD_DOC}" || true)
+        [[ -z "$J2" ]] && { ok2=1; break; }
+        note "[G1] 第 ${round} 轮重判仍未过：${J2}"
+        sleep 30
+      done
+      if [[ -z "$ok2" ]]; then
+        echo "ISSUE|g1-acceptance-blocked|bella|${RFD_ID} 四要素两轮未过：${JUDGE}" >> "$EVID_DIR/issues.log"
+        fail "G1 需求冻结未过（两轮回灌后仍缺要素），L1 不得开始"
+      fi
+    fi
+    # 写冻结标记（AC 清单提取 + 涉敏结论）并推送
+    FREEZE_LOCAL="$DIRECTOR_CLONE/$(freeze_doc)"
+    {
+      echo "# ${RFD_ID} G1 冻结标记"
+      echo
+      echo "- 冻结时间：$(date '+%F %T')；判读：验收标准(AC)/Scope-Out/影响面/涉敏 四要素全过"
+      echo "- 验收标准（UAT 按此回验）："
+      sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" | sed 's/^- /  - /'
+      echo "- 涉敏：支付资金域=内部-机密（ISO27001 风险评估摘要随需求书 §12）"
+      echo "- frozen: true"
+    } > "$FREEZE_LOCAL"
+    ( cd "$DIRECTOR_CLONE" && git add -A \
+      && git -c user.name="director (G1)" -c user.email="director@aipaydev.local" \
+           commit -qm "docs(requirements): ${RFD_ID} G1 冻结（AC/Scope-Out/影响面/涉敏 四要素过）" \
+      && git pull -q --rebase origin main && git push -q origin main )
+    sset g1_frozen "$(date +%s)"
+    note "[G1] ${RFD_ID} 需求冻结完成（$(freeze_doc) 已入 origin/main）"
   fi
 fi
 
@@ -90,6 +144,7 @@ if step_reached room; then
 fi
 
 if step_reached dispatch; then
+  gate_blocked g1_frozen dispatch   # V3 硬闸：G1 未冻结不派发
   RID=$(sget room_analysis)
   # REDISPATCH=1 强制重发：续跑时派单标记若还在，旧版会静默跳过发信，于是后面每一步
   # 都在等一个根本没被重新触发过的 agent——"重跑"实际等于干等 900s 再超时（09-23 连撞数轮）。
