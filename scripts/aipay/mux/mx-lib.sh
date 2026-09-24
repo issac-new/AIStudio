@@ -9,7 +9,21 @@ set -uo pipefail
 MX_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OVERLAY_ROOT="$(cd "$MX_SCRIPT_DIR/../../.." && pwd)"
 PATCH_DIR="$OVERLAY_ROOT/patches"
-NCWK_ROOT="$(cd "$OVERLAY_ROOT/.." && pwd)"
+# ncwk 根用"向上找含真实 upstream/hermes-studio 的目录"锚定——固定层数回溯在
+# worktree 场景（overlay 检出于 .claude/worktrees/<x>）会差一层解析到错处；
+# 跳过符号链是为了不被 .claude/worktrees/upstream 软链（inject 从 worktree 跑
+# 的依赖）截停在浅层。
+_mx_root_walk() {
+  local d="$1"
+  while [[ "$d" != "/" ]]; do
+    if [[ -d "$d/upstream/hermes-studio" && ! -L "$d/upstream" ]]; then
+      echo "$d"; return 0
+    fi
+    d="$(dirname "$d")"
+  done
+  return 1
+}
+NCWK_ROOT="$(_mx_root_walk "$OVERLAY_ROOT" || echo "$(cd "$OVERLAY_ROOT/.." && pwd)")"
 SKILLS_SRC="$OVERLAY_ROOT/scripts/aipay/skills"
 STUDIO_DIST="${MX_STUDIO_DIST:-$NCWK_ROOT/upstream/hermes-studio/dist}"
 HERMES_BIN="${HERMES_BIN:-$HOME/.hermes/hermes-agent/venv/bin/hermes}"
