@@ -28,7 +28,7 @@ import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
-import { buildAuxMessage } from '../components/briefing-types'
+import { buildAuxMessage, parseRaciFromTask } from '../components/briefing-types'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { listBoards, listTasks } from '@/api/hermes/kanban'
@@ -57,7 +57,7 @@ watch(() => route.query.task, (taskId) => {
 // resolveBriefingCrossBoard 同时供深链 watch（eager）与简报抽屉打开时兜底重试。
 const briefingTaskResolved = ref<null | {
   id: string; title: string; status: string
-  priority?: number; body?: string | null; workspacePath?: string | null
+  priority?: number; assignee?: string | null; body?: string | null; workspacePath?: string | null
 }>(null)
 async function resolveBriefingCrossBoard(id: string): Promise<void> {
   const inStore = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
@@ -78,6 +78,7 @@ async function resolveBriefingCrossBoard(id: string): Promise<void> {
         briefingTaskResolved.value = {
           id: hit.id, title: hit.title, status: hit.status,
           priority: typeof hit.priority === 'number' ? hit.priority : undefined,
+          assignee: (hit as { assignee?: string | null }).assignee ?? null,
           body: hit.body ?? null,
           workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
         }
@@ -101,6 +102,7 @@ const briefingTask = computed(() => {
     title: hit.title,
     status: hit.status,
     priority: typeof hit.priority === 'number' ? hit.priority : undefined,
+    assignee: (hit as { assignee?: string | null }).assignee ?? null,
     body: hit.body ?? null,
     workspacePath: (hit as { workspace_path?: string | null }).workspace_path ?? null,
   }
@@ -199,6 +201,9 @@ type BriefingTaskView = {
   body: string | null
   workspacePath: string | null
 }
+// RACI 块：无结构化字段时回退解析 assignee/正文行（排期卡「责任人：chen」、
+// 派单式「团队负责人 @wei」），否则简报恒显 R:—·A:—（aipaydev 实证缺陷）。
+const briefingRaci = computed(() => parseRaciFromTask(briefingTask.value))
 const briefingOpen = ref(false)
 const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
 // 抽屉打开时的兜底重试：eager watch 的跨板解析若因瞬时失败未命中，这里再试一次
@@ -209,9 +214,14 @@ async function resolveBriefingTask(): Promise<void> {
   }
   void loadBriefingGit()
 }
-// Git 活动块：打开抽屉或切换任务时拉一次（任务 workspace 即 git root；失败静默空态）
+// Git 活动块：打开抽屉或切换任务时拉一次，任务 workspace 即 git root；失败静默空态
 async function loadBriefingGit(): Promise<void> {
+  // 回退链：卡片 workspace_path → 会话 workspace → IDE 工作区（aipaydev 实证：
+  // 排期卡/跟踪卡无 workspace_path，简报 Git 块整块空态；IDE 工作区此时即用户
+  // 正在开发的仓库，作为回退展示比空态更有信息量）
   const root = briefingTask.value?.workspacePath
+    ?? (chatStore.activeSession?.workspace as string | undefined)
+    ?? ide.workspace
   briefingGit.value = { branch: null, worktreePath: root ?? null, commits: [] }
   if (!root) return
   try {
@@ -228,8 +238,12 @@ async function loadBriefingGit(): Promise<void> {
     }
   } catch { /* 简报 Git 块保持空态 */ }
 }
-// 协作动态块：任务↔群弱锚点（群名前缀 [taskId 前 8 位]，manage.ts 裁决#4），
-// 匹配命中后直读 client /messages 最近一页（只读，不劫持全局 activeRoom）。
+// 协作动态块：任务↔群锚点两级回退（aipaydev 推演实证：房间按业务命名
+// （如「支付收银台需求分析讨论群」），[taskId] 前缀锚点在真实推演零命中）：
+//   ① 群名前缀 [taskId 前 8 位]（manage.ts 裁决#4，保留）
+//   ② 需求码回退：从标题/正文提取 RFD-\d+，扫最近活跃房间的最近一页消息，
+//      命中提及（任务 id 前 8 位或需求码）即锚定该房。只读、上限 8 房，
+//      避免开抽屉放大请求面。
 const briefingCollab = ref<{ sender: string; excerpt: string; at?: number }[]>([])
 async function loadBriefingCollab(): Promise<void> {
   briefingCollab.value = []
@@ -241,11 +255,33 @@ async function loadBriefingCollab(): Promise<void> {
       import('@/custom/ia2/adapters/manage'),
       import('@/custom/matrix-chat/stores/matrix-client'),
     ])
-    const room = matchRoomByPrefix(useMatrixRoomStore().sortedRooms as Array<{ roomId: string; name?: string | null }>, `[${id.slice(0, 8)}]`)
     const client = useMatrixClientStore().client as any
-    if (!room || !client) return
-    const res = await client.createMessagesRequest(room.roomId, null, 10, 'b')
-    const chunk: any[] = res?.chunk ?? []
+    if (!client) return
+    const rooms = useMatrixRoomStore().sortedRooms as Array<{ roomId: string; name?: string | null }>
+    let room = matchRoomByPrefix(rooms, `[${id.slice(0, 8)}]`)
+    let chunk: any[] = []
+    const fetchPage = async (roomId: string): Promise<any[]> =>
+      ((await client.createMessagesRequest(roomId, null, 10, 'b'))?.chunk ?? []) as any[]
+    if (room) {
+      chunk = await fetchPage(room.roomId)
+    } else {
+      // ② 需求码回退：任务卡正文常引用 docs/analysis/RFD-xxx-*.md
+      const text = `${briefingTask.value?.title ?? ''} ${briefingTask.value?.body ?? ''}`
+      const code = text.match(/RFD-\d+/)?.[0]
+      const needle = id.slice(0, 8)
+      for (const candidate of rooms.slice(0, 8)) {
+        const page = await fetchPage(candidate.roomId)
+        if (page.some(ev => {
+          const b = String(ev?.content?.body ?? '')
+          return b.includes(needle) || (code != null && b.includes(code))
+        })) {
+          room = candidate
+          chunk = page
+          break
+        }
+      }
+    }
+    if (!room) return
     // stale 守卫：await 期间切换任务时丢弃旧响应（旧任务的群消息会串显到新任务）
     if (ide.activeTaskId !== id) return
     briefingCollab.value = chunk
@@ -364,7 +400,7 @@ onUnmounted(() => {
             :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
           >×</button>
         </div>
-        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" @aux-send="onAuxSend" />
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :raci="briefingRaci" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" @aux-send="onAuxSend" />
         <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
       </div>
     </Transition>
