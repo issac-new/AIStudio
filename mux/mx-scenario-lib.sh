@@ -19,7 +19,7 @@ note() { log "$*" | tee -a "$SCEN_LOG"; }
 
 # ── 步骤机（V3 生命周期 21 步：六阶段 L0-L5 × G1-G6 门禁，方案见
 #    2026-09-25-mux-v3-lifecycle-plan.md；templates 并入 ready）────────
-STEPS="smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide"
+STEPS="smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide report"
 START_STEP="${START_STEP:-smoke}"
 UNTIL_STEP="${UNTIL_STEP:-}"
 step_pos() { echo $STEPS | tr ' ' '\n' | grep -n "^$1$" | cut -d: -f1; }

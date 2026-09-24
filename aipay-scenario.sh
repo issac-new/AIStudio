@@ -1,15 +1,19 @@
 #!/bin/bash
-# aipay-scenario.sh — V3 全流程 0-1 推演脚本（单文件完整版，25 步）
+# aipay-scenario.sh — V3 全流程 0-1 推演脚本（单文件完整版，26 步）
 #
 # 方案：docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md（六阶段 L0-L5
 # + 管理域 M1-M3/audit + G1-G6 硬闸；每步准入/准出/质量/治理见方案 §2）。
 # 拓扑：单 gateway 多路复用 + 单 studio 多账号 + 账号板 + 家族共享记忆（V2 手册）。
 # 本文件由 aipay-scenario.sh(1-14 步)+aipay-scenario2.sh(15-25 步) 合并而来
 # （原拆分仅为单文件长度，合一收敛为单一事实源）。
+# 与方案"具体流程 1-26"逐步对应：1-4↔smoke 5↔appinit 6↔people 7↔ba+reqgate
+# 8↔room 9↔dispatch 10↔register 11↔analysis 12↔triage 13↔anexec 14↔review
+# 15↔archgate 16↔close 17↔plan 18↔devimpl 19↔defect+testpass 20↔ready
+# 21↔release+uat 22↔workmgr 23↔audit 24↔retro 25↔ide 26↔report
 # 步骤序(START_STEP/UNTIL_STEP 合法值)：
 #   smoke appinit people ba reqgate room dispatch register analysis triage
 #   anexec review archgate close plan devimpl defect testpass ready release
-#   uat workmgr audit retro ide
+#   uat workmgr audit retro ide report
 # 导演只扮演"人类打字/点击"与"核验地面真值"；agent 动作全为真实 gateway+LLM 回合。
 # 拓扑：单 gateway 多路复用 + 单 studio 多账号 + 每账号多 kanban（账号板寻址）。
 # 断点续跑: START_STEP=<step> bash aipay-scenario.sh
@@ -26,7 +30,7 @@ note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL
 # LLM 依赖区间为 [dispatch, uat]（agent 回合步骤）：执行区间与它有交集才要求通道；
 # smoke..reqgate 与 workmgr/audit/retro/ide 均为导演侧动作，无 LLM 依赖
 # （v3 实测 bug③④：全量预检会把导演侧管理步误拦在额度耗尽环境下）。
-RANGE_END="${UNTIL_STEP:-ide}"
+RANGE_END="${UNTIL_STEP:-report}"
 if (( $(step_pos "$RANGE_END") >= $(step_pos dispatch) )) && (( $(step_pos "$START_STEP") <= $(step_pos uat) )); then
   model_preflight_report
 fi
@@ -68,6 +72,7 @@ if step_reached smoke; then
   done
   note "[真值] profiles 清单 + 每板 team 围栏装载 ✓（步骤 5）"
   note "[真值] 步骤 1-5 全部完成 ✓"
+  sset smoke_done 1
 fi
 
 # ══ 步骤 6：appinit（M1 应用初始化配置，V3-mgmt 新增）══
@@ -246,6 +251,7 @@ if step_reached register; then
       || { echo "ISSUE|kanban-registration-skipped|fanfan-agent|两轮拒收后仍未登记 ${RFD_ID} 账号板卡" >> "$EVID_DIR/issues.log"; \
            fail "fanfan 账号板登记超时（已回灌拒收仍未补做）"; }
   fi
+  sset register_done 1
 fi
 
 # ══ 步骤 10：系统分析（要素评估/三清单/SMART 拆分/RACI 派发）══
@@ -301,6 +307,7 @@ if step_reached analysis; then
     fi
   done
   note "[步骤10] 系统分析派发阶段完成"
+  sset analysis_done 1
 fi
 
 # ══ 步骤 11：分诊登记 + lead 确认 + 双兜底 ═══════════
@@ -318,6 +325,7 @@ if step_reached triage; then
       | while read -r id; do kanban_status_as "$lead" "$id" todo || true; done
     note "[$lead] lead 分诊确认完成（triage→todo）"
   done
+  sset triage_done 1
 fi
 
 # ═══════════ 下半场（anexec → ide）═══════════════════
@@ -815,5 +823,94 @@ if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
 fi
 
 note "===== 下半场完成（到 ${START_STEP} 起全部门禁执行完）====="
+
+# ══ 流程 26：HTML 推演报告（产品路演交付物）═══════════
+# 逐步汇编执行状态/问题单/治理报告/截图证据（evidence/screenshots/*.png）成端到端
+# 演示报告；驾驶舱/协作沟通/IDE 工作台的走查截图由内置浏览器工具（playwright/
+# chrome dev tools / computer use）在流程中捕获落档，本步自动嵌入。
+if step_reached report && [[ -z "$(sget report_done)" ]]; then
+  gov_report >/dev/null
+  SHOTS="$EVID_DIR/screenshots"; mkdir -p "$SHOTS"
+  REP="$EVID_DIR/simulation-report.html"
+  EVID_DIR="$EVID_DIR" STATE="$STATE" RUN_ID="${RUN_ID:-default}" RFD_ID="$RFD_ID" \
+    python3 - "$REP" <<'PYEOF'
+import html, os, sys, datetime, pathlib
+out, evid, state_path = sys.argv[1], os.environ["EVID_DIR"], os.environ["STATE"]
+state = {}
+for line in open(state_path, encoding="utf-8", errors="replace"):
+    if "=" in line:
+        k, v = line.rstrip("\n").split("=", 1)
+        state[k] = v
+steps = [
+ ("smoke","1-4 账号分配/初始化/登录/就绪",["smoke_done"]),
+ ("appinit","5 应用初始化（资产登记）",["appinit_done"]),
+ ("people","6 研发人员管理（组织对账）",["people_done"]),
+ ("ba","7 需求提出（BA→PM）",["ba_dm_marker"]),
+ ("reqgate","7 需求上锁 G1（AC/范围/影响/涉敏）",["g1_frozen"]),
+ ("room","8 建需求分析讨论群",["room_analysis"]),
+ ("dispatch","9 指令派发给 Orchestrator agent",["dispatch_marker"]),
+ ("register","10 协作 kanban 主任务登记",["register_done"]),
+ ("analysis","11 系统分析（三清单/SMART/RACI）",["analysis_done"]),
+ ("triage","12 分诊确认（triage→todo）",["triage_done"]),
+ ("anexec","13 四路系分执行（worktree+xxx-dev skill）",["anexec_done"]),
+ ("review","14 汇总复核定稿",["review_done"]),
+ ("archgate","15 架构治理评审 G2",["g2_arch_pass"]),
+ ("close","16 主任务归档关闭",["close_done"]),
+ ("plan","17 开发/测试排期（带时间窗口）",["plan_done"]),
+ ("devimpl","18 真实编码 G3（本地测试证据）",["devimpl_done"]),
+ ("defect","19 缺陷闭环（报→修→验）",["defect_done"]),
+ ("testpass","19 测试报告 G4（commit id 回填）",["g4_pass"]),
+ ("ready","20 发布准出 G5（回滚/灰度/人工批准）",["g5_ready"]),
+ ("release","21 变更发版登记",["release_done"]),
+ ("uat","21 业务验收（按锁定标准逐条对账）",["uat_done"]),
+ ("workmgr","22 工作台账（WIP≤2/卡壳清点）",["workmgr_done"]),
+ ("audit","23 合规及审计（意见书）",["audit_done"]),
+ ("retro","24 复盘 G6（三段式+治理报告）",["retro_done"]),
+ ("ide","25 IDE 工作台核验（简报/跳转/组件）",["ide_done"]),
+ ("report","26 本报告汇编",["report_done"]),
+]
+gate_names = {"reqgate":"G1","archgate":"G2","testpass":"G4","ready":"G5","retro":"G6"}
+rows = []
+for key, title, cands in steps:
+    done = any(state.get(c) for c in cands)
+    gate = gate_names.get(key, "")
+    st = "✅ 已执行" if done else "⬜ 未执行"
+    rows.append(f"<tr><td>{html.escape(title)}{' 【'+gate+'】' if gate else ''}</td><td>{st}</td></tr>")
+issues = []
+ipath = os.path.join(evid, "issues.log")
+if os.path.exists(ipath):
+    for line in open(ipath, encoding="utf-8", errors="replace"):
+        if line.startswith("ISSUE|"):
+            issues.append("<li>" + html.escape(line.strip()) + "</li>")
+shotdir = os.path.join(evid, "screenshots")
+shots = sorted(pathlib.Path(shotdir).glob("*.png")) if os.path.isdir(shotdir) else []
+imgs = "".join(f'<figure><img src="screenshots/{p.name}" alt="{html.escape(p.stem)}"><figcaption>{html.escape(p.stem)}</figcaption></figure>' for p in shots)
+now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+rfd = os.environ["RFD_ID"]; run = html.escape(os.environ["RUN_ID"])
+doc = f"""<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<title>{rfd} 全流程推演报告（人与 AI 分布式集群协作）</title>
+<style>body{{font-family:"PingFang SC",sans-serif;max-width:1080px;margin:24px auto;padding:0 16px;color:#1c2733}}
+h1{{font-size:24px}} table{{border-collapse:collapse;width:100%}} td,th{{border:1px solid #ccd5e0;padding:6px 10px;font-size:14px}}
+figure{{display:inline-block;width:48%;margin:8px 1%}} img{{width:100%;border:1px solid #ccd5e0;border-radius:6px}}
+figcaption{{font-size:12px;color:#66788c;text-align:center}} li{{font-family:ui-monospace,monospace;font-size:12px}}
+.tag{{color:#66788c;font-size:13px}}</style></head><body>
+<h1>{rfd} 全流程推演报告</h1>
+<p class="tag">人与 AI 分布式集群协作 · 需求研发交付全生命周期 ｜ 轮次 {run} ｜ 生成于 {now} ｜ 方案：mux-v3-lifecycle-plan.md（具体流程 1-26）</p>
+<h2>一、各步执行状态（流程 1-26 对应）</h2>
+<table><tr><th>步骤</th><th>状态</th></tr>{''.join(rows)}</table>
+<h2>二、产品界面走查截图（驾驶舱 / 协作沟通 / IDE 工作台）</h2>
+<p class="tag">截图由内置浏览器真实操作捕获于 evidence/screenshots/，本报告自动嵌入（{len(shots)} 张）</p>
+{imgs if imgs else '<p class="tag">（暂无截图：待走查捕获后重跑 report 步自动嵌入）</p>'}
+<h2>三、问题单台账（推演暴露的问题，{len(issues)} 条）</h2>
+<ul>{''.join(issues) if issues else '<li>（无）</li>'}</ul>
+<h2>四、闭环治理报告</h2>
+<p>详见同目录 governance-report.md（各道锁状态、凭证核验、打回次数、度量口径）。</p>
+</body></html>"""
+open(out, "w", encoding="utf-8").write(doc)
+print(out)
+PYEOF
+  note "[报告] HTML 推演报告已生成：${REP}（截图集 ${SHOTS} 自动嵌入，补齐截图后重跑 report 步刷新）"
+  sset report_done "$(date +%s)"
+fi
 
 note "===== 全流程执行区间（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）内全部 gates 执行完毕 ====="
