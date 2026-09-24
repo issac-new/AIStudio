@@ -1,7 +1,7 @@
-import { VSBuffer } from "./buffer.js";
-import { CancellationToken, Event, Emitter, type IDisposable } from "./foundation.js";
-import { BufferReader, BufferWriter, deserialize, serialize } from "./serialization.js";
-import type { IMessagePassingProtocol } from "./protocol.js";
+import { VSBuffer } from "./buffer";
+import { CancellationToken, Event, Emitter, type IDisposable } from "./foundation";
+import { BufferReader, BufferWriter, deserialize, serialize } from "./serialization";
+import type { IMessagePassingProtocol } from "./protocol";
 import {
   type IChannel,
   type IChannelClient,
@@ -9,7 +9,7 @@ import {
   type IRawResponse,
   RequestType,
   ResponseType,
-} from "./channels.shared.js";
+} from "./channels.shared";
 
 enum State {
   Uninitialized,

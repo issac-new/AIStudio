@@ -8,8 +8,8 @@
  * 只要实现 send() 和 onMessage，就能接入整个 RPC 框架。
  */
 
-import { VSBuffer } from "./buffer.js";
-import { Event, Emitter, IDisposable, DisposableStore } from "./foundation.js";
+import { VSBuffer } from "./buffer";
+import { Event, Emitter, IDisposable, DisposableStore } from "./foundation";
 
 // ============================================================================
 // 核心传输接口
