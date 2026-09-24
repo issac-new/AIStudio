@@ -4,7 +4,7 @@
 // 只读投影（ide store + chat store + useSessionMetrics），不含动作。
 // R1 扩展：遥测簇可点击展开 IdeMetricsPopover（G4 构成/G8 轮表/G7 热力图/
 // 成本估算）；低上下文余量主动 toast（dsh channel.ts 语义，带迟滞）。
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useIdeStore } from '../store/ide'
@@ -12,6 +12,8 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { TPS_FLOOR, formatTokens, lowContextThreshold, LOW_CONTEXT_RECOVER_PCT } from '../utils/metrics'
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
+import { connectZcode, disconnectZcode, subscribeZcodeWorkspace, unsubscribeZcodeWorkspace } from '../../zcode/api/zcode-socket'
+import { handleZcodeEvent } from '../../zcode/store/zcode-projection'
 import IdeMetricsPopover from './IdeMetricsPopover.vue'
 
 const ide = useIdeStore()
@@ -21,6 +23,20 @@ const message = useMessage()
 const metrics = useSessionMetrics()
 // zcode 会话投影（R4-P2）：/zcode 事件面的状态条 chip（会话数 + 最新 reason）。
 const zcodeProjection = useZcodeProjection()
+
+// /zcode 事件面活水：挂接即连即订阅当前 workspace（断线由 socket 客户端自动重连）。
+let zcodeSocket: ReturnType<typeof connectZcode> | null = null
+onMounted(() => {
+  try {
+    zcodeSocket = connectZcode()
+    subscribeZcodeWorkspace(zcodeSocket, ide.workspace ?? '', handleZcodeEvent)
+  } catch { /* /zcode 面缺席不影响状态条其余能力 */ }
+})
+onUnmounted(() => {
+  try {
+    if (zcodeSocket && ide.workspace) unsubscribeZcodeWorkspace(zcodeSocket, ide.workspace)
+  } catch { /* 已断 */ }
+})
 
 const running = computed(() => Boolean(chatStore.isRunActive || chatStore.abortState))
 
