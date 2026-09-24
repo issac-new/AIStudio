@@ -848,3 +848,8 @@
 #      真 pyright 冒烟五操作全通。含 14 例单测。
 #      依据 specs/2026-09-24-mimo-code-coding-tools-research.md P2。
 397-agent-lsp-tool.patch
+# 398 R4-P2：/zcode Socket.IO 命名空间注册（bootstrap/http.ts，与 135 loop-socket 同款模式）。
+#      zcode 会话投影（R4-P2）的数据面：订阅会话列表变更推送到 cockpit（房间两级
+#      zcode:<workspacePath> / +:s:<sessionId>，事件 zcode:event 携带词表 reason）。
+#      依据 plans/2026-09-23-zcode-foundation-r4.md P2 + specs/2026-09-23-zcode-foundation-design.md §1.2 #1。
+398-server-zcode-projection-socket.patch

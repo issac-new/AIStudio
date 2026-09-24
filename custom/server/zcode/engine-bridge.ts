@@ -12,8 +12,10 @@ export interface ZcodeEngineAgentService {
   initializeConversationV4(hello: Record<string, unknown>): Promise<unknown>
   createSession(params: { workspacePath: string }): Promise<{ session: { sessionId: string } }>
   subscribeConversationV4(params: { workspacePath: string; sessionId: string }): Promise<{ ack: { subscriptionId: string; mode: string } }>
+  subscribeSessionsIndexV4(params: { workspacePath: string }): Promise<{ ack: { subscriptionId: string; mode?: string } }>
   sendConversationCommandV4(params: { workspacePath: string; envelope: Record<string, unknown> }): Promise<{ status: string; reasonCode?: string }>
   onDynamicConversationFrame(params: { workspacePath: string }): (cb: (wire: Record<string, unknown>) => void) => { dispose(): void }
+  onDynamicSessionsIndexFrame(params: { workspacePath: string }): (cb: (wire: Record<string, unknown>) => void) => { dispose(): void }
   onAgentRuntimeRestarted(): (cb: (event: Record<string, unknown>) => void) => { dispose(): void }
 }
 
