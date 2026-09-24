@@ -13,11 +13,11 @@ vi.mock('pg', () => {
     iterations: '15',
     loops_created: '3',
   }
-  return {
-    Pool: vi.fn(() => ({
-      query: vi.fn().mockResolvedValue({ rows: [row] }),
-    })),
+  // vitest 4 起 vi.fn() 不可 new，Pool 须为可构造 class
+  class MockPool {
+    query = vi.fn().mockResolvedValue({ rows: [row] })
   }
+  return { Pool: MockPool }
 })
 
 import { BillingService } from '../../../server/loop/engine/billing'

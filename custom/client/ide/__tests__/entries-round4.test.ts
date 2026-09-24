@@ -82,23 +82,23 @@ describe('终端 actions 配置（codex-product 项目级一键命令）', () =>
   })
 })
 
-describe('IdeActivityInbox 三态（claude-code 通知耗时 + codex-product 收件箱）', () => {
-  // vi.mock 工厂被 hoisted 到模块顶，fakeChat 必须经 vi.hoisted 同步提升
-  const fakeChat = vi.hoisted(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { reactive } = require('vue') as typeof import('vue')
-    return reactive({
-      isRunActive: false,
-      activePendingApproval: null as null | { approvalId: string; requestedAt: number },
-      activePendingClarify: null as null | { clarifyId: string },
-      activeSessionId: 's1' as string | null,
-      activeSession: { id: 's1', updatedAt: 1_700_000_050_000 } as Record<string, unknown> | null,
-      runStartedAt: new Map<string, number>(),
-    })
+// vi.mock/vi.hoisted 必须在模块顶层（vitest 4 起 describe 内嵌即报错）
+const fakeChat = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { reactive } = require('vue') as typeof import('vue')
+  return reactive({
+    isRunActive: false,
+    activePendingApproval: null as null | { approvalId: string; requestedAt: number },
+    activePendingClarify: null as null | { clarifyId: string },
+    activeSessionId: 's1' as string | null,
+    activeSession: { id: 's1', updatedAt: 1_700_000_050_000 } as Record<string, unknown> | null,
+    runStartedAt: new Map<string, number>(),
   })
+})
 
-  vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => fakeChat }))
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => fakeChat }))
 
+describe('IdeActivityInbox 三态（claude-code 通知耗时 + codex-product 收件箱）', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     fakeChat.isRunActive = false

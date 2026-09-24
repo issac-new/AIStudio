@@ -1,19 +1,18 @@
 // overlay/custom/client/loop/__tests__/saas-store.test.ts
 import { describe, it, expect, vi } from 'vitest'
 
-// Mock pg
+// Mock pg（vitest 4 起 vi.fn() 不可 new，Pool 须为可构造 class）
 vi.mock('pg', () => {
   const mockClient = {
     query: vi.fn().mockResolvedValue({ rows: [] }),
     release: vi.fn(),
   }
-  return {
-    Pool: vi.fn(() => ({
-      connect: vi.fn().mockResolvedValue(mockClient),
-      query: vi.fn().mockResolvedValue({ rows: [] }),
-      end: vi.fn().mockResolvedValue(undefined),
-    })),
+  class MockPool {
+    connect = vi.fn().mockResolvedValue(mockClient)
+    query = vi.fn().mockResolvedValue({ rows: [] })
+    end = vi.fn().mockResolvedValue(undefined)
   }
+  return { Pool: MockPool }
 })
 
 import { SaaSStore } from '../../../server/loop/store/saas-store'

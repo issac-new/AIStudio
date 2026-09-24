@@ -41,34 +41,36 @@ const { fetchTerminalTools } = vi.hoisted(() => ({
 }))
 vi.mock('@/custom/cockpit/api/terminal-tools', () => ({ fetchTerminalTools }))
 
-// Mock xterm.js 及其 addons（jsdom 环境不支持 canvas/终端渲染）
+// Mock xterm.js 及其 addons（jsdom 环境不支持 canvas/终端渲染）。
+// vitest 5 起 spy 不可 new，凡被 new 的 mock 一律用 class。
 vi.mock('@xterm/xterm', () => {
-  const mockTerminal = vi.fn().mockImplementation(() => ({
-    loadAddon: vi.fn(),
-    open: vi.fn(),
-    write: vi.fn(),
-    onData: vi.fn(),
-    dispose: vi.fn(),
-  }))
-  return { Terminal: mockTerminal }
+  class MockTerminal {
+    loadAddon = vi.fn()
+    open = vi.fn()
+    write = vi.fn()
+    onData = vi.fn()
+    dispose = vi.fn()
+  }
+  return { Terminal: MockTerminal }
 })
 vi.mock('@xterm/addon-fit', () => {
-  const mockFitAddon = vi.fn().mockImplementation(() => ({
-    fit: vi.fn(),
-  }))
-  return { FitAddon: mockFitAddon }
+  class MockFitAddon {
+    fit = vi.fn()
+  }
+  return { FitAddon: MockFitAddon }
 })
 vi.mock('@xterm/addon-web-links', () => {
-  const mockWebLinksAddon = vi.fn()
-  return { WebLinksAddon: mockWebLinksAddon }
+  class MockWebLinksAddon {}
+  return { WebLinksAddon: MockWebLinksAddon }
 })
 
 // jsdom 没有 ResizeObserver，全局 mock
-vi.stubGlobal('ResizeObserver', vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  disconnect: vi.fn(),
-  unobserve: vi.fn(),
-})))
+class MockResizeObserver {
+  observe = vi.fn()
+  disconnect = vi.fn()
+  unobserve = vi.fn()
+}
+vi.stubGlobal('ResizeObserver', MockResizeObserver)
 
 // 可控 WebSocket mock：收集实例与 send 载荷，测试里手动派发服务端控制消息
 class MockWebSocket {
