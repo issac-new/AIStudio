@@ -220,6 +220,47 @@ PYEOF
   echo "API_SERVER_KEY=$api_key" > "$HERMES_ROOT/.env"; chmod 600 "$HERMES_ROOT/.env"
 }
 
+# ── hindsight 家族共享记忆（用户裁决 2026-09-25）──────────────
+# 同一 matrix 用户的全部 kanban 及其 agent teams（orchestrator + 研发专职 agent
+# profiles）共享一个 hindsight bank；bank（记忆仓库）按"用户名+MAC 地址"区分：
+#   bank_id = hermes-<mac12>-<user>
+# - mac12：本机模拟取由用户名确定性派生的 12 位伪 MAC（跨轮稳定；可用
+#   AIPAY_USER_MAC 统一覆盖）；真机部署取宿主网卡 MAC——与宿主既有约定
+#   hermes-b24d7ac5d9c4-aiteam 同构。
+# - 模式 local_external：共享宿主 hindsight 服务（:8888）；同家族 profile 的
+#   config.json 落同一 bank_id 即共享记忆，异家族天然隔离。
+HINDSIGHT_API_URL="${MX_HINDSIGHT_API:-http://localhost:8888}"
+user_mac12() { # <user> → 12 位伪 MAC（确定性派生；AIPAY_USER_MAC 覆盖）
+  if [[ -n "${AIPAY_USER_MAC:-}" ]]; then echo "$AIPAY_USER_MAC"; return 0; fi
+  printf '%s' "$1" | shasum | cut -c1-12
+}
+memory_bank_id() { # <user> → hermes-<mac12>-<user>
+  echo "hermes-$(user_mac12 "$1")-$1"
+}
+write_hindsight_config() { # <user> <profile-dir>：写家族共享 bank 配置（档位对齐宿主）
+  local u="$1" prof="$2" bank
+  bank=$(memory_bank_id "$u")
+  mkdir -p "$prof/hindsight"
+  cat > "$prof/hindsight/config.json" <<EOF
+{
+  "mode": "local_external",
+  "api_url": "$HINDSIGHT_API_URL",
+  "bank_id": "$bank",
+  "recall_budget": "mid",
+  "recall_method": "recall",
+  "auto_recall": true,
+  "auto_retain": true,
+  "retain_async": true,
+  "retain_every_n_turns": 1,
+  "memory_mode": "hybrid",
+  "recall_types": "observation,world,experience",
+  "recall_max_tokens": 4096,
+  "bank_id_template": ""
+}
+EOF
+  chmod 600 "$prof/hindsight/config.json"
+}
+
 write_user_profile() { # <user>：Orchestrator profile——仅账号和配置独立（方案 §2.1）
   local u="$1" PROF="$HERMES_ROOT/profiles/$u" api_key
   api_key=$(api_server_key)
@@ -231,6 +272,7 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}   # patch 390：钉本账号默认板
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}  # 家族共享记忆
 out['platforms'] = {
     'matrix': {'enabled': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
@@ -238,6 +280,7 @@ out['platforms'] = {
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$PROF/config.yaml"
+  write_hindsight_config "$u" "$PROF"
   local HUMANS AGENTS h
   HUMANS=""; for h in "${USERS[@]}"; do HUMANS="$HUMANS,$(human_mxid "$h")"; done; HUMANS="${HUMANS#,}"
   AGENTS=""; for h in "${USERS[@]}"; do AGENTS="$AGENTS,$(agent_mxid "$h")"; done; AGENTS="${AGENTS#,}"
@@ -265,9 +308,11 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}  # 家族共享记忆
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$PROF/config.yaml"
+  write_hindsight_config "$u" "$PROF"
 }
 
 write_user_manifest() { # <user>：账号级能力清单（capability-report 技能数据源）
@@ -289,6 +334,7 @@ write_user_manifest() { # <user>：账号级能力清单（capability-report 技
   "topology": "single-gateway-multiplex",
   "agents": $agents_json,
   "boards": [$boards_json],
+  "memoryBank": "$(memory_bank_id "$u")",
   "kanbanEndpoint": "$(studio_url)/api/hermes/kanban?board=$defboard"
 }
 MANEOF
@@ -312,6 +358,7 @@ write_fleet_manifest() { # 全局事实源：users → matrix 账号 / boards / 
       echo "      \"humanMxid\": \"$(human_mxid "$u")\","
       echo "      \"agentMxid\": \"$(agent_mxid "$u")\","
       echo "      \"profile\": \"$u\","
+      echo "      \"memoryBank\": \"$(memory_bank_id "$u")\","
       echo '      "boards": ['
       local bfirst=1
       for b in $(boards_of "$u"); do
