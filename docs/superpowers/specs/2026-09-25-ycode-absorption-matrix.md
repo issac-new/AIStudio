@@ -205,7 +205,7 @@
 | Worker 抽象 | 🔜P2 |
 | A2A 出站/入站协议 | 🔜P2（依赖租约，同缓） |
 | Yjs CRDT 共写笔记 | 🔜P2 |
-| 名册树视图 | 🔜P2 |
+| 名册树视图 | ✅ roster-tree.ts（lead 聚合/delegates/descendants 子树和/降序） |
 
 ### 3.7 claude-code（13 项散点；专有许可只搬概念）
 
