@@ -219,7 +219,7 @@
 | 技能入口（skills=commands 合并口径） | 🧬原生（hermes skills_list/skill_manage 面）；工作台 UI 入口随 UI 批 🔜P2 |
 | 权限模式 7 档语义+切换 UI | 🧬部分（402 决策态+规则）·模式语义 🔜P2 |
 | 任务依赖 dependsOn | 🧬原生（kanban 父子依赖+claim 重检）·补记 |
-| 缓存 miss 归因//context 建议//skill-doctor | 🔜P2 |
+| cc：缓存 miss 归因 | ✅ cache-attribution.ts（归因优先序/命中率三档/建议文案） |
 | /btw/输出风格/队列视觉/ralph | 🔜P2 |
 | @提及六源（file/session） | 🔜P2（与 codex-product 文件引用合并；#7 A2A mention 是不同物） |
 | auto memory 四类型+新鲜度 | ✅ memory-taxonomy.ts（四类型归档/7-30 天三档/stale 降权/fact 锚点） |
