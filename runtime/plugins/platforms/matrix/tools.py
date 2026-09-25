@@ -205,8 +205,16 @@ async def matrix_room_invite(args: dict | None = None, **_: Any) -> str:
     raw_users = params.get("users") or params.get("user_id") or []
     if isinstance(raw_users, str):
         raw_users = [u.strip() for u in re.split(r"[,\s]+", raw_users) if u.strip()]
+    # Aliases are refused up front, for both delivery paths: the adapter builds
+    # mautrix RoomID(room_id) (upstream adapter.py invite_user), and the
+    # standalone calls address rooms by ID (the joined-rooms check below
+    # compares IDs), so an alias would surface as an unrelated
+    # "not joined to #alias" error instead of the real reason.
+    if room_id.startswith("#"):
+        return _error(f"room alias {room_id} is not supported; resolve it to a room ID (!...) "
+                      "first (matrix_room_list reports room IDs)")
     if not _ROOM_REF_RE.match(room_id):
-        return _error("room_id must be a Matrix room ID (!...) or alias (#...)")
+        return _error("room_id must be a Matrix room ID (!...)")
     if not isinstance(raw_users, list) or not raw_users:
         return _error("users must be a non-empty list of Matrix user IDs")
     if len(raw_users) > _MAX_INVITES_PER_CALL:
@@ -221,13 +229,6 @@ async def matrix_room_invite(args: dict | None = None, **_: Any) -> str:
 
     adapter = _live_matrix_adapter()
     if adapter is not None:
-        # The adapter builds mautrix RoomID(room_id) (upstream adapter.py
-        # invite_user), which takes a !room ID only; an alias would fail deep in
-        # the homeserver call with an unrelated error. Refuse it here with the
-        # real reason — the tool schema promises alias support.
-        if room_id.startswith("#"):
-            return _error(f"room alias {room_id} is not supported on the gateway adapter path; "
-                          "resolve it to a room ID (!...) first (matrix_room_list reports room IDs)")
         return await _invite_via_adapter(adapter, room_id, users)
 
     creds = _creds()
@@ -322,7 +323,10 @@ _TOOLS: dict[str, tuple] = {
         "Invite Matrix users into a room the assistant is already a member of. Use after "
         "splitting a requirement into per-owner tasks so each owner's account receives the "
         "assignment in the shared room. Accepts a list of user IDs; reports per-user results.",
-        {"room_id": {"type": "string", "description": "Target room ID (!...) or alias (#...)."},
+        {"room_id": {"type": "string",
+                     "description": "Target room ID (!...). Room aliases (#...) are not "
+                                    "supported yet: resolve them to a room ID first "
+                                    "(matrix_room_list reports room IDs)."},
          "users": {"type": "array", "items": {"type": "string"},
                    "description": "Matrix user IDs to invite, e.g. ['@chen:matrix.test']."}},
         ["room_id", "users"],

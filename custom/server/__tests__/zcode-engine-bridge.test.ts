@@ -8,7 +8,7 @@ import { createHash } from 'crypto'
 import { tmpdir } from 'os'
 import net from 'net'
 import { WebSocketServer } from 'ws'
-import { connectZCodeEngine } from '../zcode/engine-bridge'
+import { connectZCodeEngine, wsMessageToVSBuffer } from '../zcode/engine-bridge'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const VENDOR = resolve(OVERLAY_ROOT, 'custom/server/zcode/vendor/rpc')
@@ -113,5 +113,23 @@ describe('握手超时与连接泄漏（S4）', () => {
     expect(src).toContain('ws.terminate()')
     // withTimeout 至少三处：WS open / helloConversationV4 / initializeConversationV4
     expect(src.match(/withTimeout\(/g)?.length ?? 0).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('ws 帧归一化（X4）：文本帧/二进制帧都正确进解码器', () => {
+  it('文本帧（string）按 utf8 进字节，不再被 new Uint8Array(string) 静默清空', () => {
+    const text = 'héllo 中文'
+    const bytes = wsMessageToVSBuffer(text)
+    expect([...bytes.buffer]).toEqual([...Buffer.from(text, 'utf8')])
+    // 回归钉死旧缺陷：new Uint8Array('abc') 得空数组、new Uint8Array('3') 得 [0,0,0]，
+    // 文本帧静默损坏——归一化后不得再走这条路径。
+    expect(new Uint8Array('abc' as unknown as ArrayBuffer).length).toBe(0)
+    expect([...bytes.buffer]).not.toEqual([...new Uint8Array(text as unknown as ArrayBuffer)])
+  })
+
+  it('二进制帧（Buffer / ArrayBuffer / Buffer[]）原样保真', () => {
+    expect([...wsMessageToVSBuffer(Buffer.from([1, 2, 3])).buffer]).toEqual([1, 2, 3])
+    expect([...wsMessageToVSBuffer(new Uint8Array([4, 5]).buffer).buffer]).toEqual([4, 5])
+    expect([...wsMessageToVSBuffer([Buffer.from([6]), Buffer.from([7, 8])]).buffer]).toEqual([6, 7, 8])
   })
 })

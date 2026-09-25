@@ -14,6 +14,12 @@
  * POST /api/zcode-engine/projection/unwatch  { workspacePath } —— 停止投影。
  * GET  /api/zcode-engine/projection —— { connected, watching:[...] }。
  *
+ * 归属闸（X1）：/mention 与 /checkpoint/recover 是引擎 run 入口，workspacePath 必须
+ * 注册于 Studio 会话注册表且对调用方可见（归属模型与残余风险见 workspace-access.ts
+ * 头注释），拒绝回 403 + invocation_not_allowed。投影入口 /projection/watch|unwatch
+ * 同闸（X1 收口）：watch 会触发引擎连接并把该 workspace 的会话活动投影给调用方，
+ * 未注册/不可见的 workspace 同样不得建立/拆除投影。
+ *
  * 投影事件经 /zcode socket.io 命名空间扇出（projection-socket.ts，patch 398 注册）。
  */
 import Router from '@koa/router'
@@ -21,9 +27,19 @@ import { probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { MentionDispatchService } from '../zcode/mention-dispatch'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
+import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access'
 
 const router = new Router({ prefix: '/api/zcode-engine' })
 const CHECKPOINT_MODES_JOIN = CHECKPOINT_RECOVERY_MODES.join('/')
+
+/** X1 归属闸（引擎 run 入口共用）：拒绝时已写 403 + invocation_not_allowed，调用侧直接 return。 */
+function workspaceAccessDenied(ctx: { state?: unknown; status: number; body: unknown }, workspacePath: string): boolean {
+  const caller = (ctx.state as { user?: WorkspaceCaller } | undefined)?.user
+  if (canUseWorkspace(caller, workspacePath)) return false
+  ctx.status = 403
+  ctx.body = { ok: false, reason: 'invocation_not_allowed', detail: 'workspace 未注册或当前用户无权访问' }
+  return true
+}
 
 let dispatchSingleton: MentionDispatchService | null = null
 
@@ -63,6 +79,9 @@ router.post('/projection/watch', async (ctx) => {
     ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
     return
   }
+  // X1 归属闸：watch 即把该 workspace 的会话活动投影给调用方（并触发引擎连接），
+  // 未注册/不可见的 workspace 不得建立投影。
+  if (workspaceAccessDenied(ctx, workspacePath)) return
   const runtime = getZcodeProjectionRuntime()
   try {
     // 先 watchWorkspace 再 watchSession（对齐 /mention 路径顺序）：watchSession 要求
@@ -93,6 +112,8 @@ router.post('/projection/unwatch', async (ctx) => {
     ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
     return
   }
+  // X1 归属闸：拆除投影同判据（与 watch 对称——不可见的 workspace 调用方本就不该持有投影意图）。
+  if (workspaceAccessDenied(ctx, workspacePath)) return
   const runtime = getZcodeProjectionRuntime()
   await runtime.unwatch(workspacePath)
   ctx.body = { ok: true, watching: runtime.watching }
@@ -105,6 +126,8 @@ router.post('/mention', async (ctx) => {
     ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 与 text 必填' }
     return
   }
+  // X1 归属闸：派单即引擎 run，未注册/不可见的 workspace 不得触发。
+  if (workspaceAccessDenied(ctx, workspacePath)) return
   const runtime = getZcodeProjectionRuntime()
   const service = getMentionDispatch()
   const outcomes = await service.dispatch({ workspacePath, text })
@@ -134,6 +157,8 @@ router.post('/checkpoint/recover', async (ctx) => {
     ctx.body = { ok: false, reason: 'target_unavailable', detail: `mode 须为四档之一（${CHECKPOINT_MODES_JOIN}）` }
     return
   }
+  // X1 归属闸：checkpoint 恢复即向引擎发命令，未注册/不可见的 workspace 不得触发。
+  if (workspaceAccessDenied(ctx, workspacePath)) return
   const runtime = getZcodeProjectionRuntime()
   const envelopes = buildRecoveryEnvelopes(mode, {
     workspacePath, sessionId, rowId, entityId,

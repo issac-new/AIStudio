@@ -1,3 +1,4 @@
+// import 形态不变量见 channels.ts 头注释（相对 import 省略扩展名；迁移 ESM 前须回补）。
 /**
  * Layer 2: 传输协议抽象
  *

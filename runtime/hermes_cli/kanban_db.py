@@ -2827,6 +2827,11 @@ def complete_task(
     # Cheap pre-check; re-checked inside the txn to close the parent-reopen race.
     if not _parents_satisfied(conn, task_id):
         return False
+    # routa 流转门禁四件套（overlay 吸收第一批 #8）：done 列声明式门（approval/
+    # checklist/validator，gateMode blocking|warning）；无 gates.json 即无门。
+    # 拒绝/告警事件留在事务外；通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
+    from hermes_cli.kanban_gates import gate_transition
+    _, gate_payload = gate_transition(conn, task_id, "done", evidence=summary or result)
     from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
     verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
     _gate_empty_completion(conn, task_id, result=result, summary=summary)
@@ -2901,6 +2906,9 @@ def complete_task(
                 _completed_event_payload(result, event_summary, verified_cards, metadata),
                 run_id=run_id,
             )
+            if gate_payload:
+                # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
+                _append_event(conn, task_id, "column_transition", gate_payload)
     except Exception:
         if staged_copies:
             _discard_staged_copies(staged_copies, staged_copies[0].parent)
@@ -2986,14 +2994,24 @@ def _stage_completion_artifacts(
 ) -> list[Path]:
     """Copy scratch artifacts to the attachments dir and record each as an
     attachment row; returns the copies so the caller can discard them if its
-    transaction rolls back."""
+    transaction rolls back. A failure while recording the rows discards the
+    copies here first (the caller only learns them on a normal return) and
+    re-raises."""
     _persist_scratch_completion_artifacts(conn, task_id, metadata)
     staged = [Path(stored_path) for stored_path in metadata.pop("_staged_artifacts", [])]
-    for path in staged:
-        _insert_completion_attachment(
-            conn, task_id, filename=path.name, stored_path=str(path),
-            size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
-        )
+    try:
+        for path in staged:
+            _insert_completion_attachment(
+                conn, task_id, filename=path.name, stored_path=str(path),
+                size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
+            )
+    except Exception:
+        # The caller's rollback cleanup cannot see these: its ``staged_copies``
+        # is only assigned on a normal return. Deleting here is idempotent with
+        # that cleanup (unlink missing_ok, rmdir suppressed).
+        if staged:
+            _discard_staged_copies(staged, staged[0].parent)
+        raise
     return staged
 
 
@@ -3133,11 +3151,25 @@ def _persist_scratch_completion_artifacts(
         problem = None
         if not src.is_file():
             problem = f"declared scratch artifact is unavailable or not a regular file: {artifact}"
-        elif resolved_src.stat().st_size > KANBAN_ATTACHMENT_MAX_BYTES:
-            problem = (
-                f"declared scratch artifact exceeds the "
-                f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
-            )
+        else:
+            try:
+                artifact_size = resolved_src.stat().st_size
+            except OSError:
+                # TOCTOU: the source can vanish between ``is_file`` and ``stat``;
+                # a bare OSError here would skip the staged-copy cleanup below.
+                # Same fate as the unavailable branch above: discard the copies
+                # and raise ArtifactPreservationError, matching request_review's
+                # "a declared artifact that cannot be preserved raises" promise.
+                problem = (
+                    "declared scratch artifact is unavailable or not a regular "
+                    f"file: {artifact} (disappeared while staging)"
+                )
+            else:
+                if artifact_size > KANBAN_ATTACHMENT_MAX_BYTES:
+                    problem = (
+                        f"declared scratch artifact exceeds the "
+                        f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
+                    )
         if problem:
             _discard_copies()
             raise ArtifactPreservationError(problem)
@@ -3460,6 +3492,11 @@ def request_review(
 
     summary = redact_review_value(summary)
     metadata = redact_review_value(metadata)
+    # routa 流转门禁四件套（overlay 吸收第一批 #8）：review 列声明式门。
+    # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）；拒绝/告警
+    # 事件留在事务外，通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
+    from hermes_cli.kanban_gates import gate_transition
+    _, gate_payload = gate_transition(conn, task_id, "review", evidence=summary)
     # Declared (metadata["artifacts"]) and prose-referenced files
     # must be durable BEFORE anything can clean the scratch workspace up: for a
     # review-bound card the reviewer's completion is the cleanup trigger.
@@ -3554,6 +3591,9 @@ def request_review(
             if staged:
                 payload["artifacts"] = staged
             _append_event(conn, task_id, "review_requested", payload, run_id=run_id)
+        if gate_payload:
+            # 通过事件与状态 UPDATE 同一提交（"回滚后无事件"不变量由此保住）。
+            _append_event(conn, task_id, "column_transition", gate_payload)
     except Exception:
         if staged_copies:
             _discard_staged_copies(staged_copies, staged_copies[0].parent)
@@ -3685,6 +3725,16 @@ def promote_task(
             f"`hermes kanban unlink <parent_id> {task_id}`)"
         )
 
+    # routa 流转门禁四件套（overlay 吸收第一批 #8）：ready 列声明式门；
+    # promote 是 (ok, reason) 语义，blocking 门拒绝转 reason 返回。
+    # dry_run 只校验不落事件（docstring: dry_run only validates）。
+    from hermes_cli.kanban_gates import GateBlockedError, gate_transition
+    try:
+        _, gate_payload = gate_transition(
+            conn, task_id, "ready", actor=actor, dry_run=dry_run)
+    except GateBlockedError as exc:
+        return False, str(exc)
+
     if dry_run:
         return True, None
 
@@ -3696,6 +3746,9 @@ def promote_task(
         if upd.rowcount != 1:
             return False, f"task {task_id} status changed during promotion"
         _append_event(conn, task_id, "promoted_manual", {"actor": actor, "reason": reason})
+        if gate_payload:
+            # 通过事件与状态 UPDATE 同一提交：状态没改成（rowcount≠1/回滚）就不落。
+            _append_event(conn, task_id, "column_transition", gate_payload)
 
     return True, None
 
@@ -4081,6 +4134,25 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
     now = int(time.time())
     lines: list[str] = []
     _ctx_header(lines, task)
+    # recap v1（cc/codex/dsh 三源合并域，矩阵 §3.9 recap 行 P0）：任务重派时若存在
+    # checkpoint（P7 写手在预算触顶/中断落盘），把 上次进展 注入开局——续跑不重做。
+    # 只读注入：对账失败/无文件零影响。
+    try:
+        from agent.session_checkpoint import load_checkpoint, reconcile_checkpoint
+        _cp = load_checkpoint(str(task_id))
+        if _cp:
+            try:
+                reconcile_checkpoint(str(task_id))
+            except Exception:
+                pass
+            lines.append("## 上次进展（checkpoint 续跑——已完成项勿重做）")
+            for _sec in ("goal", "done", "next", "blockers"):
+                _body = (_cp.get(_sec) or "").strip()
+                if _body and _body.lower() != "none":
+                    lines.append(f"- {_sec}: {_body[:400]}")
+            lines.append("")
+    except Exception:
+        pass
     _ctx_attachments(lines, list_attachments(conn, task_id))
     _ctx_prior_attempts(lines, conn, task_id, now)
     _ctx_parent_results(lines, conn, task_id, now)

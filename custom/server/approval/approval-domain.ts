@@ -10,6 +10,16 @@
 //
 // 本文件为纯函数域（无 IO）；存储见 approval-store.ts，REST 见 approval-controller.ts。
 // 「批准即学习」：approved_scoped / execpolicy_amendment 决策按所选宽度落 allow 规则。
+//
+// 归属模型（X2）：规则带 owner（学习者用户名）+ 上下文绑定（sessionId/agentId）。
+// 求值时 scopeVisible 判上下文、ownership 谓词判用户（调用方由 controller 从
+// ctx.state.user 注入）。读删同归属：list 只回可见规则（ruleVisibleTo），delete
+// 下标按可见集计、摘除权本人/super_admin（canRemoveRule）。旧档兼容与残余风险：
+//   - 缺 owner 的旧规则按无主=全局可见处理（最小惊讶：升级不使既有规则失效）；
+//     残余风险：旧档跨用户共享，多用户部署应重建规则或人工置 owner。
+//   - 缺绑定字段的旧 agent/session 规则保持升级前宽语义；现存 session 档只有
+//     denied_for_session 的 deny（过宽=过度拒绝，方向安全）。
+//   - defaultMode 是全局策略，改档须管理权限（approval-controller 校验 super_admin）。
 
 export const APPROVAL_SCOPES = ['narrow', 'byFirstWord', 'byArgvPrefix2', 'byDomain', 'wholeTool'] as const
 export type ApprovalScope = (typeof APPROVAL_SCOPES)[number]
@@ -39,6 +49,12 @@ export interface ApprovalRule {
   argvPrefix?: string
   /** byDomain 学习的规则为 true：按域键跨工具匹配；wholeTool 规则精确匹配单工具。 */
   matchDomain?: boolean
+  /** 归属用户名（X2：写入时记录当前用户）；缺省 = 旧档/无主规则（全局可见，见 makeOwnershipPredicate）。 */
+  owner?: string
+  /** scope='session' 的绑定会话（X2：会话档规则只在其会话上下文可见）；旧档缺省不绑定（兼容旧行为）。 */
+  sessionId?: string
+  /** scope='agent' 的绑定 agent（X2，同 sessionId 语义）。 */
+  agentId?: string
   /** 产生本规则的决策态（审计：规则从哪来）。 */
   learnedFrom: ApprovalDecision
   createdAt: number
@@ -102,18 +118,60 @@ function ruleMatches(rule: ApprovalRule, call: ToolCallRequest): boolean {
 }
 
 function scopeVisible(rule: ApprovalRule, call: ToolCallRequest): boolean {
-  // 归属绑定判定归注入谓词（见 ScopeOwnershipPredicate），这里只看上下文存在性。
+  // 上下文绑定判定（X2）：agent/session 档规则只在其记录的上下文内可见，不再
+  // 「调用带个 sessionId 就全局可见」。旧档（无绑定字段）保持升级前语义——现存
+  // session 档只有 denied_for_session 落的 deny（过宽方向即过度拒绝，安全），
+  // 升级不误伤既有审批；残余风险见模块头注释。
   if (rule.scope === 'global') return true
-  if (rule.scope === 'agent') return !!call.agentId
-  return !!call.sessionId
+  if (rule.scope === 'agent') return !!call.agentId && (rule.agentId == null || rule.agentId === call.agentId)
+  return !!call.sessionId && (rule.sessionId == null || rule.sessionId === call.sessionId)
 }
 
 // 作用域携带：agent/session 档规则把归属写进 argvPrefix 之外的扩展位会复杂化匹配；
-// 简化契约：agent/session 档规则的 tool 字段不变，归属判定经 store 侧 ownership 字段
-// （见 approval-store.ts 的 ownedBy）；域层经注入谓词判可见性。
+// 简化契约：agent/session 档规则的 tool 字段不变，上下文绑定经 sessionId/agentId 字段
+// （scopeVisible 判定），用户归属经 owner 字段（注入谓词判定，见 makeOwnershipPredicate）。
 export type ScopeOwnershipPredicate = (rule: ApprovalRule, call: ToolCallRequest) => boolean
 
-const defaultOwnership: ScopeOwnershipPredicate = () => true
+/** 缺省谓词（X2）：只认无主规则——带 owner 的规则须显式注入调用方身份谓词才参与求值。 */
+const defaultOwnership: ScopeOwnershipPredicate = (rule) => rule.owner == null
+
+/**
+ * 调用方身份（X2）：controller 从 ctx.state.user 注入（上游 requireUserJwt 写入的
+ * AuthenticatedUser 形态：{ id, username, role }，role ∈ super_admin|admin）。
+ */
+export interface ApprovalCaller {
+  username?: string
+  role?: string
+}
+
+/**
+ * 归属谓词（X2）：规则对调用方可见当且仅当——
+ *   - 调用方无身份（未启用鉴权的单用户部署）→ 全可见；
+ *   - 无主规则（owner 缺省：旧档/人工置入的全局策略）→ 可见（最小惊讶：升级不使
+ *     既有规则失效；残余风险：旧档跨用户共享，多用户部署建议重建规则）；
+ *   - rule.owner === 调用方用户名 → 可见；
+ *   - 调用方 super_admin → 可见（管理面跨用户审计）；
+ *   - 其余（他人规则）→ 不可见。
+ */
+export function makeOwnershipPredicate(caller: ApprovalCaller | null | undefined): ScopeOwnershipPredicate {
+  if (!caller?.username) return () => true
+  return (rule) => rule.owner == null || rule.owner === caller.username || caller.role === 'super_admin'
+}
+
+/** 归属可见性（X2）：list/delete 无调用上下文时的归属判定（与谓词同一实现；call 面不参与归属）。 */
+export function ruleVisibleTo(caller: ApprovalCaller | null | undefined, rule: ApprovalRule): boolean {
+  return makeOwnershipPredicate(caller)(rule, { tool: '', argv: [] })
+}
+
+/**
+ * 可删性（X2 读删收口）：本人规则可删；无主（旧档/人工置入的全局策略）与他人规则仅
+ * super_admin 可删——摘全局策略同 setDefaultMode 管理闸，普通登录用户不得摘全局
+ * deny/allow。未启用鉴权（调用方无身份，与 makeOwnershipPredicate 同判据）→ 可删。
+ */
+export function canRemoveRule(caller: ApprovalCaller | null | undefined, rule: ApprovalRule): boolean {
+  if (!caller?.username) return true
+  return rule.owner === caller.username || caller.role === 'super_admin'
+}
 
 // cc 2.1.281 概念吸收（专有许可只搬概念）：递归删除的目标含命令替换/反引号时，
 // 目标不可静态判定——任何 allow 规则都不得放行，强制 ask（"allow 规则不吞不可静态
@@ -158,14 +216,18 @@ export function ruleFromDecision(
   call: ToolCallRequest,
   candidate: ScopeCandidate,
   now: number,
+  owner?: string,
 ): ApprovalRule | null {
+  const ownership = owner ? { owner } : {}
   if (decision === 'approved_scoped') {
     return { list: 'allow', scope: 'global', tool: candidate.tool, argvPrefix: candidate.argvPrefix,
-             matchDomain: candidate.matchDomain, learnedFrom: decision, createdAt: now }
+             matchDomain: candidate.matchDomain, ...ownership, learnedFrom: decision, createdAt: now }
   }
   if (decision === 'denied_for_session') {
-    // 会话档拒绝：记 session 档 deny（store 侧补 ownership）。
-    return { list: 'deny', scope: 'session', tool: candidate.tool, argvPrefix: candidate.argvPrefix, learnedFrom: decision, createdAt: now }
+    // 会话档拒绝：记 session 档 deny 并绑定会话（X2：只在该会话上下文可见，不再全局生效）。
+    return { list: 'deny', scope: 'session', tool: candidate.tool, argvPrefix: candidate.argvPrefix,
+             ...ownership, ...(call.sessionId ? { sessionId: call.sessionId } : {}),
+             learnedFrom: decision, createdAt: now }
   }
   if (decision === 'denied_once' || decision === 'approved_once' || decision === 'approved_for_session') {
     return null // 不学习
