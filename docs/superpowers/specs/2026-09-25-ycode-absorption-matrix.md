@@ -234,7 +234,7 @@
 | codex：turn notify 外呼钩子 | ✅ turn-notify.ts（占位替换/off 关/触发台账） |
 | codex：token-budget 换窗 | 🔜P2 |
 | codex：(model,effort) 成本分组+日桶 | ✅ thread-usage.ts（分组降序/日桶升序/衔接 rounds-table/usage-ledger） |
-| codex：config 8 层叠加+origins | 🔜P2 |
+| codex：config 8 层叠加+per-key origins | ✅ config-layers.ts（覆盖序/来源追踪/debug 视图） |
 | codex：web_search 四档+restrict_to | 🔜P2 |
 | codex：keymap 12×154 可重映射 | 🔜P2 |
 | codex：会话内分节+手动 move | 🔜P2 |
