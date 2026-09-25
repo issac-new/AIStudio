@@ -143,7 +143,7 @@
 | 项 | 处置 |
 |---|---|
 | /mcp-config 余项（scope 三选一/超时指引/needs-auth 闭环） | 🔜P1（needs-auth OAuth 合成工具部分依赖 zcode P1-14 同项） |
-| coder 交接话术（final message=entire handoff） | 🔜P1（纯提示词资产，衔接 400 compact 六段） |
+| coder 交接话术（final message=entire handoff） | ✅ handoff-script.ts（六段：done/notDone/risks/next/artifacts/verify+结构守门+渲染） |
 | 会话 fork+undo 选择器 | ✅ fork=session-fork.ts（与 Q12 合并项）；undo 选择器=file-history.ts 双相快照回读（#5 恢复域） |
 | agent profile 五级来源+watch 热重载 | ✅ 404 配置层+458 watch 热重载 patch |
 | AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 🔜P2 |
