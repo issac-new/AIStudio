@@ -2,7 +2,7 @@ diff --git a/agent/runaway_guard.py b/agent/runaway_guard.py
 new file mode 100644
 --- /dev/null
 +++ b/agent/runaway_guard.py
-@@ -0,0 +1,239 @@
+@@ -0,0 +1,240 @@
 +"""Runaway-guard：六类死循环信号检测（吸收自 minimax-code agent-modules/runaway-guard）。
 +
 +Origin: upstream/minimax-code ``packages/agent-modules/runaway-guard/src/contracts.ts:3-10``
@@ -119,7 +119,8 @@ new file mode 100644
 +        self._results.append(result_fp)
 +        self._errors.append(family)
 +        for buf in (self._actions, self._results, self._errors):
-+            del buf[:-self.window]
++            # window 下限夹到 ≥1：防御性误设 window=0 时 -0==0 什么都不裁（无界增长）。
++            del buf[: -max(1, self.window)]
 +
 +        signal = (
 +            self._check_exact_action_repeat(tool, action_fp)
@@ -264,7 +265,7 @@ diff --git a/tests/agent/test_runaway_guard.py b/tests/agent/test_runaway_guard.
 new file mode 100644
 --- /dev/null
 +++ b/tests/agent/test_runaway_guard.py
-@@ -0,0 +1,126 @@
+@@ -0,0 +1,135 @@
 +"""runaway-guard 六信号守门（第一批 #6，吸收 minimax agent-modules/runaway-guard）。
 +
 +锚点：docs/upstream-analysis/minimax-code.md §2.6（六类信号 + HMAC 指纹 16KB 有界）。
@@ -353,6 +354,15 @@ new file mode 100644
 +        sig, _ = _feed(g, steps)
 +        assert sig is None
 +        assert g.last_signal is None
++
++    def test_window_zero_stays_bounded(self):
++        # 防御性误设 window=0：裁剪下限夹到 ≥1，缓冲不无界增长。
++        g = RunawayGuard(window=0)
++        for i in range(50):
++            g.observe_tool_step("t", {"i": i}, f"r{i}")
++        assert len(g._actions) <= 1
++        assert len(g._results) <= 1
++        assert len(g._errors) <= 1
 +
 +
 +class TestFingerprint:

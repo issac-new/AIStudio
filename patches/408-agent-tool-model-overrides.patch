@@ -2,7 +2,7 @@ diff --git a/agent/tool_model_overrides.py b/agent/tool_model_overrides.py
 new file mode 100644
 --- /dev/null
 +++ b/agent/tool_model_overrides.py
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,132 @@
 +"""Per-model 工具描述/参数覆盖（吸收 codex per-model tool description 族，候补队列第二批）。
 +
 +Origin：codex 29f056c/b2aa42e/f2654ea/8c66a5a（模型目录可按模型覆盖工具 description 与
@@ -22,8 +22,9 @@ new file mode 100644
 +
 +- 应用点：``agent_init._load_tools`` 尾部（会话构建时模型已知即生效）；switch_model
 +  换模热切换列 v2（重跑 _load_tools 片段即可，本版不追）。
-+- 无效 schema（parameters 非 dict / 缺 ``type``）→ 保留捆绑版并告警一次（codex 同款
-+  fail-safe：覆盖配置坏了不能拖垮请求装配）。
++- 无效 schema（parameters 非 dict / type≠object / 缺 properties）→ 整条 override 跳过
++  并告警一次，保留捆绑版（codex 同款 fail-safe：覆盖配置坏了不能拖垮请求装配，也
++  不做半套用）。
 +"""
 +
 +from __future__ import annotations
@@ -38,13 +39,16 @@ new file mode 100644
 +
 +
 +def load_overrides() -> Dict[str, Dict[str, Dict[str, Any]]]:
-+    """读 config 的 tool_model_overrides 节；缺失/坏形回空（fail-soft）。"""
++    """读 config 的 tool_model_overrides 节；缺失/坏形回空（fail-soft，但坏形必须告警留痕）。"""
 +    try:
 +        from hermes_cli.config import load_config_readonly
 +        raw = (load_config_readonly() or {}).get("tool_model_overrides")
-+    except Exception:
++    except Exception as exc:  # noqa: BLE001 - 配置面故障不拖垮装配，但零告警=吞错
++        logger.warning("tool_model_overrides: config 读取失败，忽略全部覆盖: %s", exc)
 +        return {}
 +    if not isinstance(raw, dict):
++        if raw is not None:
++            logger.warning("tool_model_overrides: 配置节不是对象（got %s），忽略全部覆盖", type(raw).__name__)
 +        return {}
 +    out: Dict[str, Dict[str, Dict[str, Any]]] = {}
 +    for pattern, tools in raw.items():
@@ -62,8 +66,25 @@ new file mode 100644
 +    return pattern == model
 +
 +
++def _valid_params_schema(params: Any) -> bool:
++    """parameters 合格线：type=="object" 且 properties 是 dict（required 若给须是 list）。"""
++    return (
++        isinstance(params, dict)
++        and params.get("type") == "object"
++        and isinstance(params.get("properties"), dict)
++        and (params.get("required") is None or isinstance(params.get("required"), list))
++    )
++
++
 +def _apply_one(tool_def: Dict[str, Any], override: Dict[str, Any], model: str) -> Tuple[Dict[str, Any], bool]:
-+    """套用单条覆盖；返回 (可能改写的定义, 是否生效)。无效字段跳过并告警一次。"""
++    """套用单条覆盖；返回 (可能改写的定义, 是否生效)。schema 不合规格整条跳过并告警一次。"""
++    params = override.get("parameters")
++    if params is not None and not _valid_params_schema(params):
++        # 坏 schema 整条 override 不进请求（含 description——单条覆盖是一个整体，
++        # 不做半套用），保留捆绑版（codex 语义：无效覆盖不污染请求装配）。
++        _warn_once(f"invalid parameters schema for model={model}"
++                   f"（须为 type=object 且含 properties 的对象），跳过该条覆盖保留捆绑版")
++        return tool_def, False
 +    fn = dict(tool_def.get("function") or {})
 +    changed = False
 +    desc = override.get("description")
@@ -72,14 +93,9 @@ new file mode 100644
 +        changed = True
 +    elif desc is not None:
 +        _warn_once(f"invalid description for model={model}")
-+    params = override.get("parameters")
 +    if params is not None:
-+        if isinstance(params, dict) and isinstance(params.get("type"), str):
-+            fn["parameters"] = params
-+            changed = True
-+        else:
-+            # 坏 schema 回退捆绑版（codex 语义：无效覆盖不进请求）。
-+            _warn_once(f"invalid parameters schema for model={model}（须为含 type 的对象），保留捆绑版")
++        fn["parameters"] = params
++        changed = True
 +    if not changed:
 +        return tool_def, False
 +    return {"type": "function", "function": fn}, True
@@ -138,8 +154,8 @@ diff --git a/tests/agent/test_tool_model_overrides.py b/tests/agent/test_tool_mo
 new file mode 100644
 --- /dev/null
 +++ b/tests/agent/test_tool_model_overrides.py
-@@ -0,0 +1,64 @@
-+"""per-model 工具覆盖守门（codex 候补吸收：按模型套 description/parameters，坏 schema 回退）。"""
+@@ -0,0 +1,97 @@
++"""per-model 工具覆盖守门（codex 候补吸收：按模型套 description/parameters，坏 schema 整条跳过）。"""
 +
 +from __future__ import annotations
 +
@@ -152,7 +168,7 @@ new file mode 100644
 +if str(_WORKTREE) not in sys.path:
 +    sys.path.insert(0, str(_WORKTREE))
 +
-+from agent.tool_model_overrides import apply_model_tool_overrides  # noqa: E402
++from agent.tool_model_overrides import apply_model_tool_overrides, load_overrides  # noqa: E402
 +
 +
 +def _defs():
@@ -203,3 +219,36 @@ new file mode 100644
 +        ov = {"m": {"terminal": {"description": "changed"}}}
 +        apply_model_tool_overrides(d, "m", ov)
 +        assert d[0]["function"]["description"] == "bundled terminal"
++
++    def test_missing_properties_skips_whole_override(self, caplog):
++        # {"type": "object"} 缺 properties 也是坏 schema：整条 override（含 description）
++        # 跳过并告警一次，捆绑版原样——不做半套用。
++        ov = {"bad-schema-model": {"terminal": {
++            "description": "不该被套用",
++            "parameters": {"type": "object"},
++        }}}
++        out = apply_model_tool_overrides(_defs(), "bad-schema-model", ov)
++        assert out[0]["function"] == _defs()[0]["function"]
++        assert any("invalid parameters" in r.message for r in caplog.records)
++
++    def test_required_must_be_list(self):
++        ov = {"req-model": {"terminal": {
++            "parameters": {"type": "object", "properties": {}, "required": "cmd"},
++        }}}
++        out = apply_model_tool_overrides(_defs(), "req-model", ov)
++        assert out[0]["function"]["parameters"] == {"type": "object", "properties": {}}
++
++
++class TestLoadOverrides:
++    def test_config_failure_warns_not_silent(self, caplog, monkeypatch):
++        # load_overrides 的吞错不再零告警：配置读取失败必须留痕后回空。
++        import types
++
++        def _boom():
++            raise OSError("config.yaml is gone")
++
++        stub = types.ModuleType("hermes_cli.config")
++        stub.load_config_readonly = _boom
++        monkeypatch.setitem(sys.modules, "hermes_cli.config", stub)
++        assert load_overrides() == {}
++        assert any("config 读取失败" in r.message for r in caplog.records)
