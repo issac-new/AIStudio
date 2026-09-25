@@ -148,7 +148,7 @@
 | agent profile 五级来源+watch 热重载 | 🧬部分（404 配置层）·热重载 🔜P2 |
 | AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 🔜P2 |
 | AgentSwarm 扇出+/btw 侧问 | 🧬delegate 批量已有·UI 🔜P2 |
-| fileHistory 回合级快照 | 🔜P2（与 #5 恢复域合并） |
+| fileHistory 回合级双相快照 | ✅ file-history.ts（before/after 双相/单文件回读/diff 三态；#5 恢复域数据面） |
 | goal 三预算字段 | 并入 §3.9 goal 域 |
 | Ctrl-B detach shell | 🧬原生（terminal background+process_manage）·快捷键 🔜P2 |
 | 状态栏可定制 | 🔜P2（**四源合并**：kimi/minimax/codex/dsh，含 custom-command 探针） |
