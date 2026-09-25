@@ -186,7 +186,7 @@
 | 共享目录并发警告块 | ✅ workdir-adjacency.ts（并发>1 警告/chat 共享警示块/互斥锁归调度层） |
 | WS 房间细化到 task 级 | ✅ projection-socket.ts subscribe-task 归属闸+task 房间扇出（multica §五） |
 | PR 交付链提示词规约 | ✅ pr-delivery.ts（--base 显式/分支规约/验据锚点/交付边界提示词） |
-| 看板组织面（父子/五档/四视图） | 🧬kanban 父子已有·四视图 🔜P2 |
+| 看板组织面 | ✅ board-organize.ts（四视图投影/五档/acceptance 准备度/父子缩进） |
 
 ### 3.6 routa（14 项散点）
 
