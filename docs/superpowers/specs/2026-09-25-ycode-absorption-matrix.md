@@ -122,7 +122,7 @@
 | 项 | 处置 |
 |---|---|
 | Q1 Repo Wiki 生成闭环 | 📦旧账已落（wikiPipeline，R5）·待随迁 |
-| Q2 规则体系四型作用域 | 🔜P1 |
+| Q2 规则体系四型作用域 | ✅ rules-scope.ts（always/model-decides/at-manual/glob 四型+global/project 两级合并） |
 | Q3 输入框 / 触发体系 | 🧬部分（slash 已备）·统一入口 🔜P2 |
 | Q4 任务级 Worktree 选择 | 🧬原生（delegate worktree+loop WorktreeManager）·补记 |
 | 自动化（定时/时区/到期/无人值守） | ✅ automation-schedule.ts（到期自停/授权双门/时区日分组） |
