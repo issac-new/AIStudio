@@ -33,6 +33,18 @@ export function resolveApprovalRulesPath(): string {
   return join(homedir(), '.hermes-web-ui', 'approval', 'rules.json')
 }
 
+/** S2 路径收编前的旧档（cwd/.approval/rules.json）：仅作 G6 一次性迁移源。 */
+function legacyApprovalRulesPath(): string {
+  return resolve(process.cwd(), '.approval', 'rules.json')
+}
+
+/** 坏档隔离改名（G7）：`<path>.corrupt.<ts>` 加时间戳，二次损坏不再覆盖现场。 */
+function quarantine(file: string, err: unknown): void {
+  const archive = `${file}.corrupt.${Date.now()}`
+  try { renameSync(file, archive) } catch { /* 留档失败不阻断（只读介质等） */ }
+  console.warn(`[approval-store] 规则文件解析失败，已留档 ${archive}：${err instanceof Error ? err.message : String(err)}`)
+}
+
 export class ApprovalRuleStore {
   private file: ApprovalRulesFile | null = null
 
@@ -40,16 +52,26 @@ export class ApprovalRuleStore {
 
   load(): ApprovalRulesFile {
     if (this.file) return this.file
-    let raw: string
+    let raw: string | null = null
+    let legacy: string | null = null
     try {
       raw = readFileSync(this.path, 'utf8')
     } catch {
+      // G6 旧档兼容读（S2 路径收编的遗漏面）：升级前规则在 cwd/.approval/rules.json，
+      // 不迁移 = 既有 allow/deny 静默失效（deny 失效方向）。仅 env 未显式指定时迁：
+      // env 显式 = 调用方自管路径，不做隐式搬迁。
+      legacy = this.legacyPathIfMigratable()
+      if (legacy) {
+        try { raw = readFileSync(legacy, 'utf8') } catch { raw = null; legacy = null }
+      }
+    }
+    if (raw === null) {
       this.file = { ...DEFAULT_FILE, rules: [] }
       return this.file
     }
     try {
       const parsed = JSON.parse(raw)
-      this.file = {
+      const data: ApprovalRulesFile = {
         defaultMode: parsed.defaultMode === 'allow' || parsed.defaultMode === 'deny' ? parsed.defaultMode : 'ask',
         // 旧档兼容（X2）：缺 owner/sessionId/agentId 的旧规则原样保留（无主=全局可见，
         // 无绑定=升级前宽语义，见 approval-domain.ts 归属模型注释）；字段类型非法时剥掉。
@@ -57,14 +79,30 @@ export class ApprovalRuleStore {
           ? parsed.rules.filter((r: ApprovalRule) => r && typeof r.tool === 'string').map(normalizeRuleIdentity)
           : [],
       }
+      this.file = data
+      if (legacy) {
+        // 一次性迁移：新路径落盘 + 旧档改名 .migrated 留档（不再迁移第二遍）。
+        try {
+          this.save(data)
+          renameSync(legacy, `${legacy}.migrated`)
+          console.warn(`[approval-store] 已从旧档 ${legacy} 迁移规则至 ${this.path}（旧档留档 ${legacy}.migrated）`)
+        } catch (err) {
+          console.warn(`[approval-store] 旧档迁移落盘失败，旧档保留待重试：${err instanceof Error ? err.message : String(err)}`)
+        }
+      }
     } catch (err) {
-      // 坏文件改名留档（<path>.corrupt）再回默认：不静默清零丢规则，保留现场可人工修复回填。
-      const archive = `${this.path}.corrupt`
-      try { renameSync(this.path, archive) } catch { /* 留档失败不阻断（只读介质等） */ }
-      console.warn(`[approval-store] 规则文件解析失败，已留档 ${archive}：${err instanceof Error ? err.message : String(err)}`)
+      // 坏文件改名留档（<path>.corrupt.<ts>）再回默认：不静默清零丢规则，保留现场可人工修复回填。
+      quarantine(legacy ?? this.path, err)
       this.file = { ...DEFAULT_FILE, rules: [] }
     }
     return this.file
+  }
+
+  /** G6 迁移源：仅 env 未显式指定且旧档存在时返回旧档路径（见 load 迁移注释）。 */
+  private legacyPathIfMigratable(): string | null {
+    if (process.env.HERMES_APPROVAL_RULES_FILE?.trim()) return null
+    const legacy = legacyApprovalRulesPath()
+    return existsSync(legacy) ? legacy : null
   }
 
   save(next: ApprovalRulesFile): void {

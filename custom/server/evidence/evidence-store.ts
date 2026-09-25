@@ -11,7 +11,8 @@
 // 启动，cwd 档会写进只读 upstream 树——与 approval-store 同款取舍）。
 // 文件名 = id 稳定哈希（sha256 前 32 hex + 可读前缀）：清洗名多对一（'a/b'≡'a_b'、同长中文、
 // 大小写变体）会撞同一文件，叠加整账覆写即前账全灭。旧清洗名读侧兼容（命中且身份相符才迁）。
-// 落盘 = tmp+rename 原子写；坏文件改名 .corrupt 留档，不再静默当空账续写。
+// 落盘 = tmp+rename 原子写；坏文件改名 .corrupt.<ts> 留档（G7 时间戳防二次损坏覆盖现场），
+// 不再静默当空账续写。
 // 纪律：证据只增不改（每条 = 一次事实记录）；验证裁决可以追加新条覆盖旧裁决（verdict 序列）。
 //
 // 归属（已知边界，勿当无漏）：本台账是**单租户信任模型**——任意登录用户凭 taskId 可读写
@@ -132,9 +133,10 @@ function writeJsonAtomic(file: string, data: unknown): void {
   }
 }
 
-/** 坏文件隔离（S-B）：改名 .corrupt 留档 + warn，不再静默当空账续写（续写=小账覆写全史）。 */
+/** 坏文件隔离（S-B）：改名 .corrupt.<ts> 留档 + warn，不再静默当空账续写（续写=小账覆写全史）。
+ *  时间戳（G7）：固定名 .corrupt 会让二次损坏覆盖第一次现场，档名带 ts 各自留档。 */
 function quarantine(file: string, err: unknown): void {
-  const archive = `${file}.corrupt`
+  const archive = `${file}.corrupt.${Date.now()}`
   try { renameSync(file, archive) } catch { /* 留档失败不阻断（只读介质等） */ }
   console.warn(`[evidence-store] 台账文件解析失败，已留档 ${archive}：${err instanceof Error ? err.message : String(err)}`)
 }

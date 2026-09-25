@@ -103,8 +103,10 @@ router.post('/decide', async (ctx) => {
 
   // execpolicy_amendment：策略级学习（allow 幅度改默认；deny 幅度由调用方经 rules 管理）。
   if (decision === 'execpolicy_amendment') {
-    // 全局默认档是全员生效的策略（X2）：须管理权限，普通登录用户不得全局改档。
-    if (caller && caller.role !== 'super_admin') {
+    // 全局默认档是全员生效的策略（X2）：须认证主体 + 管理权限，普通登录用户不得全局改档。
+    // 无身份也拒绝（G5 fail-closed）：全局策略变更不依赖「挂载序在 authMiddleware 之后」
+    // 的隐式保证；无身份部署（单用户信任模型）改默认档须显式登录或直接改档文件。
+    if (!caller || caller.role !== 'super_admin') {
       ctx.status = 403
       ctx.body = { ok: false, detail: '改全局默认档须 super_admin 权限' }
       return

@@ -3,7 +3,7 @@
 // deny→ask→allow→default + 批准即学习落规则 + 存储幂等 + 控制器接线（patch 402）。
 // X2 收口：规则读删归属——list/decide 回包按归属过滤，delete 下标按可见集（删对行）、
 // 摘除权本人/super_admin（B 删不到 A 的规则）。
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, rmSync, existsSync, readFileSync, readdirSync } from 'fs'
 import { homedir, tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -133,9 +133,68 @@ describe('规则存储（rules.json）', () => {
     const store = new ApprovalRuleStore()
     expect(store.defaultMode()).toBe('ask')
     expect(store.list()).toEqual([])
-    // 坏文件留档 <path>.corrupt 保现场（可人工修复回填），原路径让位给后续干净写入
-    expect(readFileSync(join(dir, 'rules.json.corrupt'), 'utf8')).toBe('{broken')
+    // 坏文件留档 <path>.corrupt.<ts> 保现场（G7 时间戳防二次损坏覆盖），原路径让位给后续干净写入
+    const archives = readdirSync(dir).filter((n) => /^rules\.json\.corrupt\.\d+$/.test(n))
+    expect(archives).toHaveLength(1)
+    expect(readFileSync(join(dir, archives[0]), 'utf8')).toBe('{broken')
     expect(existsSync(join(dir, 'rules.json'))).toBe(false)
+  })
+
+  it('坏档时间戳留档（G7）：二次损坏不覆盖第一次现场', () => {
+    const fs = require('fs') as typeof import('fs')
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1111)
+    try {
+      fs.writeFileSync(join(dir, 'rules.json'), '{broken-1')
+      expect(new ApprovalRuleStore().defaultMode()).toBe('ask')
+      nowSpy.mockReturnValue(2222)
+      fs.writeFileSync(join(dir, 'rules.json'), '{broken-2')
+      expect(new ApprovalRuleStore().defaultMode()).toBe('ask')
+    } finally {
+      nowSpy.mockRestore()
+    }
+    // 两次现场都在（不同时间戳档名），不是同一固定名互相覆盖
+    expect(readdirSync(dir).filter((n) => /^rules\.json\.corrupt\.\d+$/.test(n)).sort())
+      .toEqual(['rules.json.corrupt.1111', 'rules.json.corrupt.2222'])
+  })
+
+  it('G6 旧档一次性迁移：新路径无档且 env 未显式指定 → 读 cwd/.approval/rules.json 迁入，旧档改名 .migrated 留档', () => {
+    const fs = require('fs') as typeof import('fs')
+    delete process.env.HERMES_APPROVAL_RULES_FILE // 迁移仅在 env 未显式指定时发生
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(dir)
+    try {
+      fs.mkdirSync(join(dir, '.approval'), { recursive: true })
+      const legacy = join(dir, '.approval', 'rules.json')
+      fs.writeFileSync(legacy, JSON.stringify({
+        defaultMode: 'deny',
+        rules: [{ list: 'deny', scope: 'global', tool: 'terminal', argvPrefix: 'rm', learnedFrom: 'denied_for_session', createdAt: 1 }],
+      }))
+      const target = join(dir, 'nested', 'rules.json')
+      const store = new ApprovalRuleStore(target)
+      expect(store.defaultMode()).toBe('deny') // deny 不静默失效（迁移方向：拒绝面保全）
+      expect(store.list()).toMatchObject([{ list: 'deny', tool: 'terminal', argvPrefix: 'rm' }])
+      expect(JSON.parse(readFileSync(target, 'utf8')).defaultMode).toBe('deny') // 已迁入新路径
+      expect(existsSync(legacy)).toBe(false) // 旧档改名 .migrated 留档（一次性，不再迁移第二遍）
+      expect(existsSync(`${legacy}.migrated`)).toBe(true)
+    } finally {
+      cwdSpy.mockRestore()
+    }
+  })
+
+  it('G6 迁移仅限 env 未显式指定：env 显式 = 调用方自管路径，旧档原地不动', () => {
+    const fs = require('fs') as typeof import('fs')
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(dir)
+    try {
+      fs.mkdirSync(join(dir, '.approval'), { recursive: true })
+      const legacy = join(dir, '.approval', 'rules.json')
+      fs.writeFileSync(legacy, JSON.stringify({ defaultMode: 'deny', rules: [] }))
+      const explicit = join(dir, 'explicit', 'rules.json')
+      process.env.HERMES_APPROVAL_RULES_FILE = explicit
+      const store = new ApprovalRuleStore()
+      expect(store.defaultMode()).toBe('ask') // 不读旧档（env 显式不迁移）
+      expect(existsSync(legacy)).toBe(true) // 旧档原地保留
+    } finally {
+      cwdSpy.mockRestore()
+    }
   })
 
   it('save 原子替换：临时文件 + rename，落盘无 .tmp 残留且整体替换', () => {
@@ -237,6 +296,14 @@ describe('归属谓词（X2：owner 按调用方身份匹配）', () => {
     expect(evaluate(call('terminal', []), [ownedByAlice], 'ask')).toMatchObject({ list: 'default', mode: 'ask' })
     // 注入身份谓词后可见
     expect(evaluate(call('terminal', []), [ownedByAlice], 'ask', makeOwnershipPredicate({ username: 'alice' }))).toMatchObject({ list: 'allow' })
+  })
+
+  it('缺省谓词 fail-closed（G4）：带 owner 的 deny 不被丢弃（拒绝面不随缺省谓词失效），allow 才隐藏', () => {
+    const ownedDeny: ApprovalRule = { list: 'deny', scope: 'global', tool: 'terminal', argvPrefix: 'rm', owner: 'alice', learnedFrom: 'denied_for_session', createdAt: 3 }
+    // 未注入身份：deny 按拒绝生效并告警（撤此修复 = 带 owner 的 deny 静默失效，本断言即红）
+    expect(evaluate(call('terminal', ['rm', '-rf', '/']), [ownedDeny], 'allow')).toMatchObject({ list: 'deny' })
+    // allow/ask 隐藏不变（隐藏不放大权限，方向安全）
+    expect(evaluate(call('terminal', ['ls']), [ownedByAlice], 'allow')).toMatchObject({ list: 'default', mode: 'allow' })
   })
 
   it('读删谓词同源（X2 收口）：ruleVisibleTo 同可见性；摘除权本人/super_admin，无主与他人仅 super_admin', () => {
@@ -347,6 +414,14 @@ describe('X2 控制器权限面（approval-controller：owner 注入 + setDefaul
     await setDefault(allowed)
     expect(allowed.body).toMatchObject({ ok: true, defaultMode: 'allow' })
     expect(new ApprovalRuleStore().defaultMode()).toBe('allow')
+  })
+
+  it('execpolicy_amendment 无身份 403（G5 fail-closed）且不落盘：不依赖挂载序的隐式保证', async () => {
+    const setDefault = handlerFor('POST', '/decide')
+    const anon = fakeCtx({ decision: 'execpolicy_amendment', defaultMode: 'allow', call: { tool: 'terminal', argv: [] } })
+    await setDefault(anon)
+    expect(anon.status).toBe(403)
+    expect(new ApprovalRuleStore().defaultMode()).toBe('ask')
   })
 
   it('decide 学习规则 owner 取认证主体（body 自报身份不采信）；未启用鉴权不记 owner', async () => {

@@ -11,7 +11,8 @@
 // 桶名 = 收件人稳定哈希（sha256 前 32 hex + 可读前缀）：清洗名多对一
 // （key('member','张三') === key('member','李四')、'a/b'≡'a_b'）会让不同收件人共桶互覆；
 // 旧清洗名读侧兼容迁移（按条目自带 recipient 分账认领）。
-// 落盘 = tmp+rename 原子写；坏文件改名 .corrupt 留档，不再静默当空桶续写。
+// 落盘 = tmp+rename 原子写；坏文件改名 .corrupt.<ts> 留档（G7 时间戳防二次损坏覆盖现场），
+// 不再静默当空桶续写。
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
@@ -93,9 +94,10 @@ function writeJsonAtomic(file: string, data: unknown): void {
   }
 }
 
-/** 坏文件隔离（S-B）：改名 .corrupt 留档 + warn，不再静默当空桶续写。 */
+/** 坏文件隔离（S-B）：改名 .corrupt.<ts> 留档 + warn，不再静默当空桶续写。
+ *  时间戳（G7）：固定名 .corrupt 会让二次损坏覆盖第一次现场，档名带 ts 各自留档。 */
 function quarantine(file: string, err: unknown): void {
-  const archive = `${file}.corrupt`
+  const archive = `${file}.corrupt.${Date.now()}`
   try { renameSync(file, archive) } catch { /* 留档失败不阻断（只读介质等） */ }
   console.warn(`[inbox-store] 收件箱文件解析失败，已留档 ${archive}：${err instanceof Error ? err.message : String(err)}`)
 }

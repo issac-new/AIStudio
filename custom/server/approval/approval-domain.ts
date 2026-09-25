@@ -132,8 +132,20 @@ function scopeVisible(rule: ApprovalRule, call: ToolCallRequest): boolean {
 // （scopeVisible 判定），用户归属经 owner 字段（注入谓词判定，见 makeOwnershipPredicate）。
 export type ScopeOwnershipPredicate = (rule: ApprovalRule, call: ToolCallRequest) => boolean
 
-/** 缺省谓词（X2）：只认无主规则——带 owner 的规则须显式注入调用方身份谓词才参与求值。 */
-const defaultOwnership: ScopeOwnershipPredicate = (rule) => rule.owner == null
+/**
+ * 缺省谓词（X2）：只认无主规则——带 owner 的规则须显式注入调用方身份谓词才参与求值。
+ * 例外 fail-closed（G4）：带 owner 的 deny 不随缺省谓词隐藏——未注入身份的 evaluate()
+ * 调用方静默丢弃它等于拒绝面失效（过宽=放行破坏性调用），故按 deny 仍生效并告警；
+ * allow/ask 仍隐藏（隐藏不放大权限，方向安全）。
+ */
+const defaultOwnership: ScopeOwnershipPredicate = (rule) => {
+  if (rule.owner == null) return true
+  if (rule.list === 'deny') {
+    console.warn(`[approval-domain] evaluate() 未注入调用方身份，带 owner（${rule.owner}）的 deny 规则按拒绝生效（fail-closed）`)
+    return true
+  }
+  return false
+}
 
 /**
  * 调用方身份（X2）：controller 从 ctx.state.user 注入（上游 requireUserJwt 写入的
@@ -169,6 +181,10 @@ export function ruleVisibleTo(caller: ApprovalCaller | null | undefined, rule: A
  * deny/allow。未启用鉴权（调用方无身份，与 makeOwnershipPredicate 同判据）→ 可删。
  */
 export function canRemoveRule(caller: ApprovalCaller | null | undefined, rule: ApprovalRule): boolean {
+  // 无身份分支（G5 显式化）：无身份部署 = 单用户信任模型（全可删，与
+  // makeOwnershipPredicate(null) 全可见同判据）；生产挂载序保证 approval 路由在
+  // authMiddleware 之后、caller 恒有身份，此分支只覆盖未启用鉴权的部署——该依赖即
+  // 挂载序，若路由前移须同步收紧此分支（见 approval-controller 头注释）。
   if (!caller?.username) return true
   return rule.owner === caller.username || caller.role === 'super_admin'
 }
