@@ -202,7 +202,7 @@
 | 共享会话四档模式+prompt 审批 | 📦旧账已落（ide-session-share R6）·待随迁 |
 | 会话连续性四态徽标 | ✅ session-continuity.ts（active/interrupted/restorable/stale 7 天线，routa 语义） |
 | 泳道专家提示词资产 11 份 | ✅ runtime/roster/lane-specialists/（MIT 附出处原样搬运+README 升级纪律） |
-| Worker 抽象 | 🔜P2 |
+| Worker 抽象 | ✅ worker-abstraction.ts（五态心跳状态机/capability 路由/三环境） |
 | A2A 出站/入站协议 | 🔜P2（依赖租约，同缓） |
 | Yjs CRDT 共写笔记 | 🔜P2 |
 | 名册树视图 | ✅ roster-tree.ts（lead 聚合/delegates/descendants 子树和/降序） |
