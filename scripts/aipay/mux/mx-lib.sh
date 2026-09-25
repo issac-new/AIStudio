@@ -622,3 +622,36 @@ EOF
 }
 
 gh_clone_url() { echo "https://x-access-token:$(gh_token)@github.com/$GH_REPO.git"; }
+
+# ── matrix 适配器自愈（2026-09-26 实锤场景）────────────────────
+# 症状：runtime 的 pyproject [tool.hermes.extras-platforms].matrix 门=linux-only
+# （pm 构建期漂移产物，runtime 树 dirty 自述）→ macOS 上 pm.extras 判"不支持此平台"
+# → matrix 适配器全员降级 → agent 收不到 @mention 全员哑火（V3 两度中止根因）。
+# 修复两步（幂等）：①运行时 venv 装 plain mautrix+aio 依赖（无 E2EE，避开
+# python-olm 的 darwin 编译坑）②pyproject 门放行 darwin。调用方负责重启 gateway。
+matrix_adapter_selfheal() { # → 0=已修复 1=无需修 2=修复失败
+  local rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
+  local py="$rt/venv/bin/python" pip="$rt/venv/bin/pip"
+  [[ -x "$py" && -x "$pip" ]] || { log "matrix 自愈：运行时 venv 不在（$rt），跳过"; return 2; }
+  log "matrix 自愈：装 plain mautrix+aio 依赖（darwin 无 E2EE 面）"
+  "$pip" install -q 'mautrix==0.21.1' 'aiohttp-socks==0.11.0' 'aiohttp==3.14.3' \
+    'aiosqlite==0.22.1' 'asyncpg==0.31.0' 2>&1 | tail -1
+  "$py" - "$rt/pyproject.toml" << 'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = 'matrix = "sys_platform == \'linux\'"'
+new = 'matrix = "sys_platform == \'linux\' or sys_platform == \'darwin\'"'
+if old in s:
+    open(p, 'w').write(s.replace(old, new, 1))
+    print('gate opened for darwin')
+else:
+    print('gate already ok or format drift')
+PYEOF
+  "$py" -c "import mautrix" 2>/dev/null || { log "matrix 自愈：mautrix 仍不可导入，失败"; return 2; }
+  return 0
+}
+
+matrix_adapter_degraded() { # <gatewayLog>：近端日志有降级症状？
+  tail -60 "$1" 2>/dev/null | grep -q "skipping platform 'matrix'"
+}
