@@ -339,14 +339,17 @@ SCAN_ROOM="$(sget room_analysis)"
 # ══ 步骤 12：各主责系分执行（worktree + 分析文档 + 双兜底回执）══
 if step_reached anexec && [[ -z "$(sget anexec_done)" ]]; then
   note "── anexec：派发 4 个系分执行任务（错峰 2+2）"
-  COMMON='你的 kanban 任务已通过团队负责人分诊确认，现在执行系统分析（使用 swarm yuan skill 为该 workspace 代码仓库生成的定制化研发技能 xxx-dev skill 执行「分析/设计产出」，结合家族记忆库中的历史数据与评估标准做工作量评估）。
+  # COMMON 双引号定义：模板内仅 ${RFD_DOC}/${RFD_ID} 需展开，其余全是字面量
+  # （已核对无 $、无反引号）；单引号会把这两处变量原样发给 agent（P2）。
+  # %WS% 是唯一随派单变化的占位，在使用点 ${COMMON//%WS%/$WS} 替换。
+  COMMON="你的 kanban 任务已通过团队负责人分诊确认，现在执行系统分析（使用 swarm yuan skill 为该 workspace 代码仓库生成的定制化研发技能 xxx-dev skill 执行「分析/设计产出」，结合家族记忆库中的历史数据与评估标准做工作量评估）。
 工作要求：
 1) 在你的工作区 %WS% 下为该任务建 worktree 分支（见 aipaydev-dev 技能纪律），材料归集到任务 materials/
 2) 先读 ${RFD_DOC}、docs/architecture/overview.md、docs/admin/org.md、docs/analysis/${RFD_ID}-tasklist.md
 3) 输出 docs/analysis/<任务ID>-analysis.md：初步确认结论/待澄清/概设方案（接口签名+数据模型+错误码+幂等键）/前置依赖/风险点/工作量评估(人日)
 4) git 提交并 push 到 origin main（worktree 内直接提交本文件即可，commit message: docs(analysis): <任务ID>）
 5) 完成后在本群发【完成回执】（双兜底：@你的团队负责人-agent 与 @fanfan-agent），格式见 inbox-dedup 技能
-结论行以 AN-DONE-<任务ID> 开头。不许谎报。'
+结论行以 AN-DONE-<任务ID> 开头。不许谎报。"
 
   WS=$(workspace chen)
   dispatch_in_room chen "@chen-agent:matrix.test 执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）。
@@ -480,13 +483,15 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/DEV-PAYCORE" \
     || { note "[观察] DEV-PAYCORE 分支未达"; echo "ISSUE|dev-branch-missing|DEV-PAYCORE|分支未推送" >> "$EVID_DIR/issues.log"; }
 
-  for spec in "hu DEV-CHWX csw-channel-wechat 财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
-              "lin DEV-CHALI csw-channel-alipay 支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
-    set -- $spec
-    dispatch_in_room "$1" "@$1-agent:matrix.test 执行开发任务 $2（$3）。
-工作区 $(workspace "$1")（先 git fetch && git checkout -b feat/$2 origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
-1) 实现 apps/$3：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），$4；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/$2-testlog.txt 随分支提交，G3 证据，缺件判未完成）；3) push origin feat/$2；结论行 DEV-DONE-$2。不许谎报。" "$(agent_mxid $1),$(agent_mxid wei)"
+  # 渠道规格含空格：字段用 | 分隔 + IFS read（同 release 步）；空白分词会把
+  # "财付通(V3 jsapi 下单 ...)" 截成 "财付通(V3"，$4 拿不到完整规格（P3）。
+  for spec in "hu|DEV-CHWX|csw-channel-wechat|财付通(V3 jsapi 下单 wx.requestPayment 参数包 回调验签 查单 关单)" \
+              "lin|DEV-CHALI|csw-channel-alipay|支付宝(alipay.trade.create my.tradePay tradeNO RSA2 验签 查单 关单)"; do
+    IFS='|' read -r who task app chan <<< "$spec"
+    dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}）。
+工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
+1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     sleep 5
   done
 
@@ -513,6 +518,10 @@ fi
 # ══ 步骤 16b：合并集成 + 测试执行 + 缺陷闭环 ═════════
 if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   # 导演把三个后端分支+前端分支合入 integration 分支（模拟集成分支策略）
+  # 分支状态机约定：本步起 HEAD 切到 integration/${RFD_ID} 并常驻（后续步骤用显式
+  # ref 或临时 worktree 访问仓，不看 HEAD）；凡要进 origin/main 的提交一律走
+  # repo_commit_main()（mx-scenario-lib：临时 worktree 基于 origin/main 提交该文件并
+  # push，不切分支、不动 HEAD/local main、无 rebase）。
   repo_pull
   ( cd "$DIRECTOR_CLONE"
     git checkout -q -B integration/${RFD_ID} origin/main
@@ -708,12 +717,16 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
         echo
         echo "- 结论：全部 AC 通过，验收接受。"
       } > "$ACC"
-      ( cd "$DIRECTOR_CLONE" && git add -A \
-        && git -c user.name="bella (UAT)" -c user.email="bella@aipaydev.local" \
-             commit -qm "docs(acceptance): ${RFD_ID} 业务验收通过（AC 全过）" \
-        && git pull -q --rebase origin main && git push -q origin main )
+      # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main
+      # 是空推/被拒，验收书进不了 main 且 set -e 暴毙、uat_done 落不了键。
+      if repo_commit_main "docs/acceptance/${RFD_ID}-acceptance.md" "bella (UAT)" "bella@aipaydev.local" "docs(acceptance): ${RFD_ID} 业务验收通过（AC 全过）"; then
+        note "[UAT] 验收文档已入仓：docs/acceptance/${RFD_ID}-acceptance.md → origin/main"
+      else
+        echo "ISSUE|uat-push|director|验收文档推送 origin/main 失败（留存 ${ACC}）" >> "$EVID_DIR/issues.log"
+        note "[观察] 验收文档推送失败（留存本地，记问题单）"
+      fi
       sset uat_done "$(date +%s)"
-      note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过，验收文档已入仓）"
+      note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
     else
       echo "ISSUE|uat-ac-failed|fanfan-agent|UAT 证据核对失败：${UAT_MISS}" >> "$EVID_DIR/issues.log"
       fail "UAT 验收未过（${UAT_MISS}）——缺陷回流 defect 语义"
@@ -760,13 +773,13 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
     echo "- 导演侧机械化结论：$( [[ -z "$AUD" ]] && echo '通过（无发现）' || echo "发现——${AUD}" )"
     echo "- 意见：门禁链（G1/G2/G4/G5）与回灌机制执行合规；问题单 100% 台账化；记忆沉淀探针随 retro。"
   } > "$AUDDOC"
-  ( cd "$DIRECTOR_CLONE" && git add -A \
-    && { git diff --cached --quiet || { \
-         git -c user.name="audit (compliance)" -c user.email="audit@aipaydev.local" \
-           commit -qm "docs(retro): ${RFD_ID} 合规审计意见书（audit 签名线）" \
-         && git pull -q --rebase origin main && git push -q origin main; } } ) \
-    && note "[audit] 合规意见书已入仓" \
-    || note "[观察] 意见书推送失败（留存本地）"
+  # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main 是
+  # 空推/被拒，"已入仓"成假成功——意见书根本没进 origin/main。
+  if repo_commit_main "docs/retro/${RUN_ID:-default}-audit-opinion.md" "audit (compliance)" "audit@aipaydev.local" "docs(retro): ${RFD_ID} 合规审计意见书（audit 签名线）"; then
+    note "[audit] 合规意见书已入仓"
+  else
+    note "[观察] 意见书推送失败（留存本地）"
+  fi
   sset audit_done "$(date +%s)"
 fi
 
@@ -807,12 +820,14 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     echo "- 治理报告：evidence/governance-report.md（含硬闸状态/问题单台账/凭证与回灌）；工作台账：evidence/work-report.md（M3）；合规意见书：docs/retro/*-audit-opinion.md（audit 签名线）；metrics-log 口径行见报告末节"
     echo "- ITIL：服务目录 SVC-cashier-${RFD_ID} 已登记于验收文档 SLA 节"
   } > "$RETRO"
-  ( cd "$DIRECTOR_CLONE" && git add -A \
-    && git -c user.name="director (G6)" -c user.email="director@aipaydev.local" \
-         commit -qm "docs(retro): ${RFD_ID} G6 复盘与治理报告回写" \
-    && git pull -q --rebase origin main && git push -q origin main ) \
-    && note "[G6] 复盘文档已入仓" \
-    || { echo "ISSUE|retro-push|director|复盘文档推送失败（留存 $EVID_DIR）" >> "$EVID_DIR/issues.log"; note "[观察] 复盘推送失败"; }
+  # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main 是
+  # 空推/被拒，复盘/治理报告进不了 origin/main。
+  if repo_commit_main "docs/retro/${RUN_ID:-default}-${RFD_ID}-retrospective.md" "director (G6)" "director@aipaydev.local" "docs(retro): ${RFD_ID} G6 复盘与治理报告回写"; then
+    note "[G6] 复盘文档已入仓"
+  else
+    echo "ISSUE|retro-push|director|复盘文档推送失败（留存 ${EVID_DIR}）" >> "$EVID_DIR/issues.log"
+    note "[观察] 复盘推送失败"
+  fi
   MEM_OK=1
   curl -sf -m 3 "$HINDSIGHT_API_URL/health" >/dev/null || MEM_OK=0
   fam_bank=$(jq -r .bank_id "$HERMES_ROOT/profiles/fanfan/hindsight/config.json" 2>/dev/null || echo missing)
