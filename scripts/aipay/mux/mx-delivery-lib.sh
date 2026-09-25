@@ -94,7 +94,8 @@ dlv_scenario_open() { # <caseTitle> <repoUrl>：开案例房+邀全员+join（�
   sset dlv_room "$room"; sset dlv_case "$case_id"
   dlv_case_state fanfan "$room" "$case_id" "$(dlv_event case --case-id "$case_id" --title "$title" \
     --repo-url "$repo" --tier standard --stage P1 --owner fanfan --updated-by fanfan)"
-  note "[M3] delivery 案例已开：$case_id → ${room}（全员人类账号已邀+join；agent bot 入房留 M4）"
+  dlv_index_update fanfan "$room"
+  note "[M3] delivery 案例已开：$case_id → ${room}（全员人类账号已邀+join+index 登记；agent bot 入房留 M4）"
 }
 
 dlv_scenario_phase() { # <stage> <stageWorker> <gate> <decider> <evidKind> <summary> <nextStage|->
@@ -151,4 +152,14 @@ dlv_scenario_advance() { # <stage> <worker> <nextStage> [artifactRef]：只发 s
     --tier standard --stage "$next" --owner fanfan --updated-by fanfan \
     --frozen-acceptance "${RFD_ID:-na} G1 冻结清单")"
   note "[M3] delivery 事件：stage $st done + case→$next"
+}
+
+dlv_index_update() { # <who> <roomId>：案例发现机制——account-data index 幂等并入 roomId
+  local who="$1" rid="$2" cur rooms tok uid
+  tok=$(load_token "$who"); uid=$(human_mxid "$who")
+  cur=$(curl -sf "$HS/_matrix/client/v3/user/$uid/account_data/com.swarmstudio.delivery.index?access_token=$tok" 2>/dev/null || echo '{}')
+  rooms=$(jq -c --arg r "$rid" '(.roomIds // []) + [$r] | unique' <<<"$cur")
+  curl -sf -X PUT "$HS/_matrix/client/v3/user/$uid/account_data/com.swarmstudio.delivery.index?access_token=$tok" \
+    -H 'Content-Type: application/json' -d "$(jq -nc --argjson rs "$rooms" --arg by "$who" \
+      '{schemaVersion:2, roomIds:$rs, updatedBy:$by, updatedAt:(now*1000|floor)}')" >/dev/null
 }
