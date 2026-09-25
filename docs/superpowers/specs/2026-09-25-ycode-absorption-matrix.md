@@ -136,7 +136,7 @@
 | Q13 扩展市场入口 | 🔜P2 |
 | 记忆全局/项目两级分治 | ✅ memory-scope.ts（开关/清空/文件数下限/汇总） |
 | Q15 MCP 超时设置 | 🔜P2（与 codex X8 合并：per-server 白黑名单/审批档/超时 🔜P1） |
-| Q16 Goal 自主到底档 | 并入 §3.9 goal 域合并裁决 |
+| Goal 自主到底档 | ✅ goal-autonomy.ts（三档停点/majorFork 例外/不可达与预算同停） |
 
 ### 3.3 kimi（12 项散点）
 
