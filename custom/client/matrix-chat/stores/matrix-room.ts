@@ -232,14 +232,24 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   function selectEvent(eventId: string | null) { selectedEventId.value = eventId }
 
   // C6 jumpToEvent：修 scrollToEvent 只认已渲染 DOM 的断链。事件未加载（搜索命中远古历史）
-  // 时先向上分页 loadOlderMessages 直到命中，再 selectEvent 高亮。上限 30 页防死循环，到头放弃。
+  // 时先向上分页 loadOlderMessages 直到命中，再 selectEvent 高亮。上限 30 页防死循环。
+  // loadOlderMessages 返回 0 有两种语义，不能一律当"到头"：①到头/翻页失败停试
+  // （hasMore=false）→ 放弃；②忙（isLoadingOlder，另有翻页在飞）或未就绪（分页状态
+  // 未建立，refreshMessages 尚未落 oldestToken）→ 短暂等待重试（限 20 次），
+  // 否则点搜索结果会静默无动作。
   async function jumpToEvent(eventId: string | null): Promise<void> {
     if (!eventId) return
     const idOf = (ev: MatrixEvent): string | undefined => ev.getId?.() ?? (ev as unknown as { event_id?: string }).event_id
     const has = () => messageList.value.some((ev) => idOf(ev) === eventId)
+    let stallRetries = 0
     for (let i = 0; i < 30 && !has(); i++) {
       const n = await loadOlderMessages()
-      if (n === 0) break
+      if (n > 0) continue
+      const room = activeRoom.value
+      const state = room ? paginationState.value[room.roomId] : undefined
+      if (state && !state.hasMore) break
+      if (++stallRetries > 20) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
     if (has()) selectEvent(eventId)
   }

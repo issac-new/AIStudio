@@ -162,7 +162,7 @@ diff --git a/agent/session_checkpoint.py b/agent/session_checkpoint.py
 new file mode 100644
 --- /dev/null
 +++ b/agent/session_checkpoint.py
-@@ -0,0 +1,280 @@
+@@ -0,0 +1,308 @@
 +"""会话进展 checkpoint 写手（mimo P7，spec 2026-09-24-session-checkpoint-writer.md）。
 +
 +Origin：MiMo-Code session/checkpoint.ts 五件套（模板/分节预算/校验器/对账/重试）按
@@ -175,9 +175,12 @@ new file mode 100644
 +  next 非空话（黑名单）；失败重写一次，再失败落原始轨迹摘要兜底；
 +- 落盘 ``<HERMES_HOME>/memories/checkpoints/<task-or_session_id>.md``（memory 文件面
 +  子目录，P4 若 FTS 化自动获益，无耦合）；
-+- 幂等：task_id+generation（同代最多一次成功写入，旧代不覆盖新代）；
++- 幂等：同一 task 后写覆盖先写（checkpoint 是进展快照，最新为准，绝不静默丢弃）；
++  generation 仅作元数据记录，不做写入闸门——调用方代数不保证单调（预算触顶的
++  api_call_count 就是跨 run 常量）；原子落盘（临时文件 + os.replace + 尾部 sentinel，
++  崩溃半文视为无 checkpoint）；
 +- 对账（防 checkpoint 说谎）：load 后 done 节逐条轻量核验（文件存在/行内容匹配），
-+  失败条目降级 ``unverified``，不阻塞；
++  失败条目降级 ``unverified``（剥旧标注保证对账幂等），不阻塞；
 +- 纪律：只做状态面——不自动改任务状态、不自动派发 next；env
 +  ``HERMES_SESSION_CHECKPOINT=0`` 整体关闭。
 +"""
@@ -203,7 +206,12 @@ new file mode 100644
 +)
 +# done 锚点：file:line、路径、反引号内命令/输出。
 +_ANCHOR_RE = re.compile(r"(`[^`]+`|[\w./\\-]+\.\w{1,6}(:\d+)?|:\d+)")
++# 对账用文件锚点：须为含 / 的路径形态且带扩展名（github.com、v1.2、3/12 不是文件）。
++_PATH_ANCHOR_RE = re.compile(r"([\w./\\-]+/[\w./\\-]*\.\w{1,6})(?::\d+)?")
 +_UNVERIFIED_TAG = "unverified"
++# 对账标注后缀（剥旧再判级：reconcile 幂等，标注不逐次叠加）。
++_UNVERIFIED_SUFFIX_RE = re.compile(r"\s*\[unverified: [^\]]*\]\s*$")
++_CHECKPOINT_END = "<!-- /checkpoint -->"
 +
 +CHECKPOINT_SYSTEM_PROMPT = (
 +    "You are a checkpoint writer. Produce ONLY the five-section markdown checkpoint "
@@ -337,14 +345,14 @@ new file mode 100644
 +    call_fn: Optional[Callable[[str, str], str]] = None,
 +    memory_root: Optional[Path] = None,
 +) -> Optional[Path]:
-+    """写 checkpoint（幂等：同 task 更高 generation 已存在则跳过；旧代不覆盖新代）。"""
++    """写 checkpoint（覆盖语义：同一 task 后写覆盖先写——checkpoint 是进展快照，
++    最新为准，绝不静默丢弃）。generation 仅记入 header 作元数据（供 load/对账排序），
++    不做写入闸门：调用方代数不保证单调（如预算触顶的 api_call_count 是跨 run 常量），
++    闸门会把后续 checkpoint 永久挡掉、首个占位。落盘原子（见 _atomic_write_text）。"""
 +    if not checkpoint_enabled():
 +        return None
 +    out_dir = checkpoints_dir(memory_root)
 +    path = out_dir / f"{task_id}.md"
-+    existing = _read_meta(path)
-+    if existing is not None and existing.get("generation", -1) >= generation:
-+        return None  # 幂等：已有同代或更新 checkpoint
 +
 +    prompt = build_writer_prompt(reason, goal_hint, trajectory_digest, task_id)
 +    candidate = ""
@@ -364,34 +372,48 @@ new file mode 100644
 +        candidate = _fallback_checkpoint(reason, goal_hint, trajectory_digest, task_id)
 +
 +    header = f"<!-- checkpoint task={task_id} generation={generation} reason={reason} -->\n"
++    body = header + candidate + "\n" + _CHECKPOINT_END + "\n"
 +    try:
 +        out_dir.mkdir(parents=True, exist_ok=True)
-+        path.write_text(header + candidate + "\n", encoding="utf-8")
++        _atomic_write_text(path, body)
 +    except OSError as exc:
 +        logger.warning("session-checkpoint: write failed for %s: %s", task_id, exc)
 +        return None
 +    return path
 +
 +
++def _atomic_write_text(path: Path, text: str) -> None:
++    """临时文件 + os.replace 原子落盘：崩溃只留旧文或整篇新文，不留截断半文。"""
++    tmp = path.with_name(path.name + ".tmp")
++    tmp.write_text(text, encoding="utf-8")
++    os.replace(tmp, path)
++
++
 +def _read_meta(path: Path) -> Optional[Dict[str, str]]:
++    """首行 header + 尾部 sentinel 齐全才算有 checkpoint——崩溃截断的半文（含只有
++    header 的残件）视为无 checkpoint，由下次 write_checkpoint 覆盖修复。"""
 +    try:
-+        first = path.read_text(encoding="utf-8").splitlines()[:1]
-+        m = re.search(r"task=(\S+)\s+generation=(\d+)", first[0] if first else "")
-+        if m:
-+            return {"task": m.group(1), "generation": int(m.group(2))}
++        lines = path.read_text(encoding="utf-8").splitlines()
 +    except OSError:
-+        pass
++        return None
++    if not lines or lines[-1].strip() != _CHECKPOINT_END:
++        return None
++    m = re.search(r"task=(\S+)\s+generation=(\d+)", lines[0])
++    if m:
++        return {"task": m.group(1), "generation": int(m.group(2))}
 +    return None
 +
 +
 +def load_checkpoint(task_id: str, memory_root: Optional[Path] = None) -> Optional[Dict[str, str]]:
 +    path = checkpoints_dir(memory_root) / f"{task_id}.md"
++    meta = _read_meta(path)  # 缺 sentinel/坏文视为无 checkpoint
++    if meta is None:
++        return None
 +    try:
 +        text = path.read_text(encoding="utf-8")
 +    except OSError:
 +        return None
 +    sections = parse_checkpoint(text)
-+    meta = _read_meta(path) or {}
 +    sections["_generation"] = str(meta.get("generation", ""))  # type: ignore[assignment]
 +    return sections
 +
@@ -403,7 +425,8 @@ new file mode 100644
 +    memory_root: Optional[Path] = None,
 +) -> Optional[Dict[str, List[Dict[str, str]]]]:
 +    """续跑对账：done 节逐条轻量核验（file 存在 / `cmd` 原样保留不执行），失败降级
-+    unverified 标注（改写落盘），不阻塞。返回逐条核验结果。"""
++    unverified 标注（改写落盘；先剥旧标注再判级，重复对账不叠加），不阻塞。
++    返回逐条核验结果。"""
 +    path = checkpoints_dir(memory_root) / f"{task_id}.md"
 +    sections = load_checkpoint(task_id, memory_root)
 +    if sections is None:
@@ -411,6 +434,8 @@ new file mode 100644
 +    results: List[Dict[str, str]] = []
 +    new_lines: List[str] = []
 +    for line in sections.get("done", "").splitlines():
++        # 幂等：剥掉既有 [unverified: ...] 后缀再判级，标注不逐次叠加膨胀。
++        line = _UNVERIFIED_SUFFIX_RE.sub("", line)
 +        stripped = line.strip()
 +        if not stripped.startswith(("-", "*")):
 +            new_lines.append(line)
@@ -425,24 +450,27 @@ new file mode 100644
 +        try:
 +            text = path.read_text(encoding="utf-8")
 +            updated = text.replace(sections.get("done", ""), "\n".join(new_lines), 1)
-+            path.write_text(updated, encoding="utf-8")
++            _atomic_write_text(path, updated)  # 同样原子：崩溃不留半文，sentinel 保住
 +        except OSError:
 +            pass
 +    return {"results": results}
 +
 +
 +def _verify_done_line(line: str, workspace_root: Optional[Path]) -> str:
-+    """三分支：verified / missing-file / no-anchor（无锚点不可核验，如实标注）。"""
-+    m = re.search(r"([\w./\\-]+\.\w{1,6})(?::(\d+))?", line)
-+    if not m and "`" not in line:
-+        return "no-anchor"
++    """四分支：verified / missing-file / no-anchor / no-check。
++
++    文件锚点须是含 ``/`` 的路径形态（带扩展名）——``github.com``、``v1.2``、``3/12``
++    之类不是文件，不再被误判 missing-file；有锚点但无可核验路径（反引号命令/输出等）
++    降级 ``no-check``（不冒充 verified）；整行毫无锚点才是 ``no-anchor``。"""
++    m = _PATH_ANCHOR_RE.search(line)
 +    if m:
 +        p = Path(m.group(1))
 +        if not p.is_absolute() and workspace_root is not None:
 +            p = Path(workspace_root) / p
-+        if not p.exists():
-+            return "missing-file"
-+    return "verified"
++        return "verified" if p.exists() else "missing-file"
++    if "`" in line or _ANCHOR_RE.search(line):
++        return "no-check"
++    return "no-anchor"
 diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
 --- a/agent/turn_finalizer.py
 +++ b/agent/turn_finalizer.py
@@ -471,11 +499,12 @@ diff --git a/tests/agent/test_session_checkpoint.py b/tests/agent/test_session_c
 new file mode 100644
 --- /dev/null
 +++ b/tests/agent/test_session_checkpoint.py
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,195 @@
 +"""会话进展 checkpoint 写手守门（mimo P7，spec 2026-09-24-session-checkpoint-writer.md §4.1）。
 +
 +覆盖：模板/解析、校验器（五节/锚点/next 黑名单/预算）、写手重写一次+兜底、
-+幂等（generation 语义）、对账三分支降级、env 开关。
++覆盖语义（同 task 后写覆盖先写，不静默丢弃）、原子落盘 + sentinel 半文拒收、
++对账四分支降级且幂等不叠加、env 开关。
 +"""
 +
 +from __future__ import annotations
@@ -490,6 +519,7 @@ new file mode 100644
 +    sys.path.insert(0, str(_WORKTREE))
 +
 +from agent.session_checkpoint import (  # noqa: E402
++    _CHECKPOINT_END, _verify_done_line,
 +    SECTIONS, build_writer_prompt, load_checkpoint, parse_checkpoint,
 +    reconcile_checkpoint, validate_checkpoint, write_checkpoint, checkpoint_enabled,
 +)
@@ -572,16 +602,17 @@ new file mode 100644
 +        path = write_checkpoint("t_exc", 1, reason="stop", trajectory_digest="digest", call_fn=boom, memory_root=tmp_path)
 +        assert path is not None
 +
-+    def test_idempotent_generation_semantics(self, tmp_path):
++    def test_same_task_overwrites_without_dropping(self, tmp_path):
 +        ok = lambda s, p: GOOD
-+        assert write_checkpoint("t_idem", 5, reason="stop", trajectory_digest="d", call_fn=ok, memory_root=tmp_path) is not None
-+        # 同代重写跳过。
-+        assert write_checkpoint("t_idem", 5, reason="stop", trajectory_digest="d", call_fn=ok, memory_root=tmp_path) is None
-+        # 旧代不覆盖新代。
-+        assert write_checkpoint("t_idem", 3, reason="stop", trajectory_digest="d", call_fn=ok, memory_root=tmp_path) is None
-+        # 更高代可写。
-+        assert write_checkpoint("t_idem", 6, reason="stop", trajectory_digest="d", call_fn=ok, memory_root=tmp_path) is not None
-+        assert "generation=6" in (tmp_path / "checkpoints" / "t_idem.md").read_text(encoding="utf-8")
++        assert write_checkpoint("t_ow", 5, reason="stop", trajectory_digest="d",
++                                call_fn=ok, memory_root=tmp_path) is not None
++        # 同 task 再写不被静默丢弃（含跨 run 常量 generation，如预算触顶的 api_call_count）。
++        p2 = write_checkpoint("t_ow", 5, reason="budget_exhausted", trajectory_digest="d2",
++                              call_fn=lambda s, p: GOOD.replace("Safari", "Chrome"),
++                              memory_root=tmp_path)
++        assert p2 is not None and p2.exists()
++        text = (tmp_path / "checkpoints" / "t_ow.md").read_text(encoding="utf-8")
++        assert "Chrome" in text and "generation=5" in text
 +
 +    def test_env_switch_disables(self, tmp_path, monkeypatch):
 +        monkeypatch.setenv("HERMES_SESSION_CHECKPOINT", "0")
@@ -591,20 +622,20 @@ new file mode 100644
 +
 +
 +class TestReconcile:
-+    def test_three_branches_verified_missing_noanchor(self, tmp_path):
++    def test_reconcile_degrades_missing_and_nocheck(self, tmp_path):
 +        (tmp_path / "ws").mkdir()
 +        existing = tmp_path / "ws" / "auth.ts"
 +        existing.write_text("x" * 10, encoding="utf-8")
 +        cp = GOOD.replace("diff.patch", f"{existing.name}")  # artifacts 用存在的文件
 +        target = tmp_path / "checkpoints"
 +        target.mkdir()
-+        body = "<!-- checkpoint task=t_rec generation=1 reason=stop -->\n" + cp + "\n"
++        body = "<!-- checkpoint task=t_rec generation=1 reason=stop -->\n" + cp + "\n" + _CHECKPOINT_END + "\n"
 +        (target / "t_rec.md").write_text(body, encoding="utf-8")
-+        # done 两行：一行有 LoginView.vue:61 锚（ws 下不存在 → missing-file）、一行有
-+        # 反引号命令（无文件可核 → verified，按 `_verify_done_line` 反引号无路径命中 verified）。
++        # done 两行：一行有 LoginView.vue:61 路径锚（ws 下不存在 → missing-file）、
++        # 一行只有反引号命令（无可核验路径 → no-check，不冒充 verified）。
 +        out = reconcile_checkpoint("t_rec", workspace_root=tmp_path / "ws", memory_root=tmp_path)
 +        verdicts = {r["verdict"] for r in out["results"]}
-+        assert "missing-file" in verdicts
++        assert "missing-file" in verdicts and "no-check" in verdicts
 +        # 降级写回：unverified 标注落盘。
 +        text = (target / "t_rec.md").read_text(encoding="utf-8")
 +        assert "unverified: missing-file" in text
@@ -613,3 +644,54 @@ new file mode 100644
 +
 +    def test_reconcile_absent_task_returns_none(self, tmp_path):
 +        assert reconcile_checkpoint("t_nope", memory_root=tmp_path) is None
++
++    def test_reconcile_annotations_do_not_stack(self, tmp_path):
++        # 幂等：连跑两次 reconcile，标注只留一层，第二次不再改一字。
++        (tmp_path / "ws").mkdir()
++        target = tmp_path / "checkpoints"
++        target.mkdir()
++        body = (
++            "<!-- checkpoint task=t_idem_rec generation=1 reason=stop -->\n"
++            + GOOD + "\n" + _CHECKPOINT_END + "\n"
++        )
++        (target / "t_idem_rec.md").write_text(body, encoding="utf-8")
++        reconcile_checkpoint("t_idem_rec", workspace_root=tmp_path / "ws", memory_root=tmp_path)
++        first = (target / "t_idem_rec.md").read_text(encoding="utf-8")
++        reconcile_checkpoint("t_idem_rec", workspace_root=tmp_path / "ws", memory_root=tmp_path)
++        second = (target / "t_idem_rec.md").read_text(encoding="utf-8")
++        assert second == first
++        assert second.count("[unverified:") == 2  # 两行各一层，不叠加
++
++    def test_truncated_checkpoint_absent_then_repaired(self, tmp_path):
++        # 崩溃截断（无 sentinel）的半文视为无 checkpoint；下次写覆盖修复。
++        target = tmp_path / "checkpoints"
++        target.mkdir()
++        (target / "t_half.md").write_text(
++            "<!-- checkpoint task=t_half generation=1 reason=stop -->\n## goal\n半截",
++            encoding="utf-8")
++        assert load_checkpoint("t_half", memory_root=tmp_path) is None
++        path = write_checkpoint("t_half", 2, reason="stop", trajectory_digest="d",
++                                call_fn=lambda s, p: GOOD, memory_root=tmp_path)
++        assert path is not None
++        text = path.read_text(encoding="utf-8")
++        assert text.splitlines()[-1].strip() == _CHECKPOINT_END
++        assert load_checkpoint("t_half", memory_root=tmp_path) is not None
++
++
++class TestVerifyDoneLine:
++    def test_path_anchor_verified_and_missing(self, tmp_path):
++        ws = tmp_path / "ws"
++        (ws / "src").mkdir(parents=True)
++        (ws / "src" / "auth.ts").write_text("x", encoding="utf-8")
++        assert _verify_done_line("- 改 `src/auth.ts:61` 补调用", ws) == "verified"
++        assert _verify_done_line("- 改 `src/missing.ts:61` 补调用", ws) == "missing-file"
++
++    def test_non_path_tokens_never_missing_file(self, tmp_path):
++        ws = tmp_path / "ws"
++        ws.mkdir()
++        # github.com、v1.2、3/12 不是文件路径：不得误判 missing-file。
++        assert _verify_done_line("- 参考 github.com 文档", ws) == "no-check"
++        assert _verify_done_line("- 升级到 v1.2，比例 3/12", ws) == "no-check"
++        # 反引号命令无路径锚点：降级 no-check 而非 verified。
++        assert _verify_done_line("- `pytest tests/login -q` 通过", ws) == "no-check"
++        assert _verify_done_line("- 做了一些修改", ws) == "no-anchor"

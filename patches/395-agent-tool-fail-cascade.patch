@@ -2,19 +2,30 @@ diff --git a/agent/tool_executor.py b/agent/tool_executor.py
 index b877a63..06f3301 100644
 --- a/agent/tool_executor.py
 +++ b/agent/tool_executor.py
-@@ -189,6 +189,40 @@ def _resolve_concurrent_tool_timeout() -> float | None:
+@@ -189,6 +189,51 @@ def _resolve_concurrent_tool_timeout() -> float | None:
      )
  
  
 +def _fail_cascade_enabled() -> bool:
-+    """Sequential fail-cascade (MiMo-Code gate semantics): when a barrier-class
++    """Sequential fail-cascade (MiMo-Code gate semantics): when a write/barrier-class
 +    (sequential) call fails, skip every remaining call in the same model response
 +    with an explicit cancellation marker instead of executing a stale half-plan
 +    (classic case: edit fails -> the batched ``git commit`` still ran).
++    Only _CASCADE_BARRIER_TOOLS failures trigger it — a read tool's failure (empty
++    observation, safety denial) never cancels the rest of the response.
 +    Parallel (read-only, non-conflicting) runs never cascade a sibling's failure.
 +    ``HERMES_TOOL_FAIL_CASCADE=0`` restores the pre-cascade behavior."""
 +    raw = os.environ.get("HERMES_TOOL_FAIL_CASCADE", "1").strip().lower()
 +    return raw not in {"0", "false", "off", "no"}
++
++
++# 只有写/障碍类调用失败才置级联跳过：失败会留下半执行状态或让后续调用的
++# 前提失效（patch 失败 → 批内 git commit 照跑，提交半成品）。名单与
++# tool_executor 上下文里明确改状态的三类一致（状态变更 checkpoint 同界）：
++# 写文件 write_file/patch、跑命令 terminal。
++# 读类工具（read_file、search_files、lsp 等）失败只是空观测或安全拒绝
++# （"File not found"/"Access denied"），仅记展示、绝不取消后续调用。
++_CASCADE_BARRIER_TOOLS = frozenset({"write_file", "patch", "terminal"})
 +
 +
 +_CASCADE_SKIP_CONTENT = (
@@ -43,12 +54,15 @@ index b877a63..06f3301 100644
  def _flush_session_db_after_tool_progress(agent, messages: list, *, stage: str) -> bool:
      """Flush tool-call progress to the session DB before projecting it to any UI: tool side
      effects can kill/restart the process before turn-end persistence runs."""
-@@ -464,6 +498,9 @@ class _ManagedToolResult:
+@@ -464,6 +498,12 @@ class _ManagedToolResult:
      middleware_trace: list[dict[str, Any]]
      blocked: bool
      dispatched: bool
 +    # Set by _publish_sequential_result: the model-visible (post-transform) result
-+    # was classified as an error by _detect_tool_failure. Drives fail-cascade.
++    # was classified as an error by _detect_tool_failure — a DISPLAY heuristic that
++    # also flags benign empty observations ("File not found") and safety denials
++    # ("Access denied"). Fail-cascade consumes it only for _CASCADE_BARRIER_TOOLS
++    # failures; read-tool failures stay display-only.
 +    failed: bool = False
  
  
@@ -90,18 +104,19 @@ index b877a63..06f3301 100644
          if pc.parse_error is not None:
              if not _append_invalid_arguments_result(agent, messages, ref, pc.parse_error):
                  return
-+            if _fail_cascade_enabled() and i < len(tool_calls):
++            if _fail_cascade_enabled() and ref.name in _CASCADE_BARRIER_TOOLS and i < len(tool_calls):
 +                if not _cascade_skip_remaining(agent, messages, tool_calls[i:], effective_task_id):
 +                    return
 +                break
              continue
  
          tool_start_time = time.time()
-@@ -1826,6 +1880,14 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
+@@ -1826,6 +1880,15 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
                                            budget=_tool_budget, transform_applied=dispatch.transform_applied):
              return
  
-+        if _fail_cascade_enabled() and getattr(managed, "failed", False):
++        if (_fail_cascade_enabled() and getattr(managed, "failed", False)
++                and ref.name in _CASCADE_BARRIER_TOOLS):
 +            # 置轮级标志：即使本段无剩余调用，分段派发器也要排空后续段。
 +            agent._tool_fail_cascade_active = True
 +            if i < len(tool_calls):
@@ -138,16 +153,20 @@ diff --git a/tests/agent/test_tool_fail_cascade.py b/tests/agent/test_tool_fail_
 new file mode 100644
 --- /dev/null
 +++ b/tests/agent/test_tool_fail_cascade.py
-@@ -0,0 +1,198 @@
+@@ -0,0 +1,247 @@
 +"""Sequential fail-cascade for tool-call batches (MiMo-Code gate semantics).
 +
-+When a barrier-class (sequential) call fails, the remaining calls of the same
-+model response are skipped with an explicit cancellation marker instead of
-+executing a stale half-plan (classic incident: ``patch`` fails on old_string
-+mismatch, the batched ``git commit`` still ran and committed partial state).
++When a write/barrier-class (sequential) call — write_file / patch / terminal —
++fails, the remaining calls of the same model response are skipped with an
++explicit cancellation marker instead of executing a stale half-plan (classic
++incident: ``patch`` fails on old_string mismatch, the batched ``git commit``
++still ran and committed partial state).
 +
-+Scope (2026-09-24 P5, mirroring MiMo ``tool/gate.ts``):
++Scope (2026-09-24 P5, mirroring MiMo ``tool/gate.ts``; 触发面收窄见 P5 复审):
 +
++* only write/barrier-class failures cascade — read-tool failures (empty
++  observation / safety denial, e.g. ``read_file`` "File not found") never
++  cancel later calls;
 +* parallel (read-only, non-conflicting) runs NEVER cascade a sibling failure;
 +* cascade spans later segments and later approval groups of the same response;
 +* ``HERMES_TOOL_FAIL_CASCADE=0`` restores pre-cascade behavior;
@@ -190,7 +209,7 @@ new file mode 100644
 +    with (
 +        patch(
 +            "model_tools.get_tool_definitions",
-+            return_value=_make_tool_defs("web_search", "terminal"),
++            return_value=_make_tool_defs("web_search", "terminal", "read_file", "write_file", "patch"),
 +        ),
 +        patch("model_tools.check_toolset_requirements", return_value={}),
 +        patch("agent.process_bootstrap.OpenAI"),
@@ -284,6 +303,51 @@ new file mode 100644
 +            agent._execute_tool_calls(msg, messages, "task-1")
 +
 +        assert executed == ["t1", "t2", "t3"]
++
++    def test_read_failure_does_not_cancel_later_calls(self, agent):
++        """读类失败（空观测/安全拒绝）只是展示事件：[read_file 不存在, terminal]
++        里 terminal 必须照常执行（回归：曾被 _detect_tool_failure 展示启发式误伤）。"""
++        calls = [
++            _tc("read_file", '{"path":"/nope/never.txt"}', call_id="r1"),
++            _tc("terminal", '{"command":"git commit"}', call_id="t1"),
++        ]
++        msg = SimpleNamespace(content="", tool_calls=calls)
++        messages = []
++        executed = []
++
++        def fake_handle(name, args, task_id, **kwargs):
++            executed.append(kwargs["tool_call_id"])
++            return _fail(name) if kwargs["tool_call_id"] == "r1" else _ok()
++
++        with patch("model_tools.handle_function_call", side_effect=fake_handle):
++            agent._execute_tool_calls(msg, messages, "task-1")
++
++        assert executed == ["r1", "t1"]
++        assert getattr(agent, "_tool_fail_cascade_active", False) is False
++        for m in messages:
++            assert "earlier tool call" not in str(m.get("content", ""))
++
++    def test_write_failure_cancels_later_calls(self, agent):
++        """写类失败取消后续（经典事故回归）：patch 失败 → 批内 git commit 被取消。"""
++        calls = [
++            _tc("patch", '{"path":"a.txt","old":"x","new":"y"}', call_id="p1"),
++            _tc("terminal", '{"command":"git commit"}', call_id="t1"),
++        ]
++        msg = SimpleNamespace(content="", tool_calls=calls)
++        messages = []
++        executed = []
++
++        def fake_handle(name, args, task_id, **kwargs):
++            executed.append(kwargs["tool_call_id"])
++            return _fail(name) if kwargs["tool_call_id"] == "p1" else _ok()
++
++        with patch("model_tools.handle_function_call", side_effect=fake_handle):
++            agent._execute_tool_calls(msg, messages, "task-1")
++
++        assert executed == ["p1"]
++        assert [m["tool_call_id"] for m in messages] == ["p1", "t1"]
++        assert "earlier tool call" in messages[-1]["content"]
++        assert getattr(agent, "_tool_fail_cascade_active", False) is True
 +
 +    def test_barrier_failure_drains_later_parallel_segment(self, agent):
 +        """[s1,s2 parallel] [t1 barrier, fails] [s3,s4 parallel]: the trailing

@@ -80,20 +80,25 @@ export function parseRaciFromTask(task: BriefingTask | null | undefined): Briefi
     if (bodyRaci) return bodyRaci
   } catch { /* body 非 JSON，走正则兜底 */ }
   const body = task.body ?? ''
+  const pickWord = (seg: string): string | undefined => {
+    const mention = seg.match(/@([A-Za-z][\w.-]*)/)
+    return mention ? mention[1] : seg.trim().match(/^[A-Za-z][\w.-]*/)?.[0]
+  }
   // 值段=标签后到首个分隔符（，,｜|换行）；派单式正文两类标签常同行，
-  // 故不做行首锚定，改用负向后顾防「团队负责人」被「责任人」误匹配。
-  const labeled = (label: string, lookbehind = ''): string[] => {
-    const re = new RegExp(`${lookbehind}${label}[：:]?\\s*([^，,｜|\\n]+)`, 'g')
+  // 故不做行首锚定。label 前的 skipPrefix 用可选前缀捕获组排除复合标签
+  // （「团队责任人」不算独立「责任人」），与原负向后顾 lookbehind（排除「团队」前缀，
+  // 见 git 历史）同语义——lookbehind 在 Safari <16.4 构造 RegExp 会抛 SyntaxError，不能用。
+  const labeled = (label: string, skipPrefix = ''): string[] => {
+    const re = new RegExp(`(${skipPrefix})?${label}[：:]?\\s*([^，,｜|\\n]+)`, 'g')
     const out: string[] = []
     for (const m of body.matchAll(re)) {
-      const seg = m[1] ?? ''
-      const mention = seg.match(/@([A-Za-z][\w.-]*)/)
-      const word = mention ? mention[1] : seg.trim().match(/^[A-Za-z][\w.-]*/)?.[0]
+      if (m[1]) continue
+      const word = pickWord(m[2] ?? '')
       if (word) out.push(word)
     }
     return out
   }
-  const responsible = task.assignee?.trim() ? [task.assignee.trim()] : labeled('责任人', '(?<!团队)')
+  const responsible = task.assignee?.trim() ? [task.assignee.trim()] : labeled('责任人', '团队')
   const approver = labeled('团队负责人')
   const consulted = labeled('咨询')
   const informed = [...labeled('通知'), ...labeled('发起方')]

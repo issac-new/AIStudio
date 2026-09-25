@@ -16,6 +16,9 @@ export interface ZcodeSocketEvent {
   reason?: string
   detail?: string
   session?: { sessionId?: string; title?: string; phase?: string }
+  /** conversation.frame 帧序号（服务端 session-projection.ts 契约），判重用 */
+  fromSeq?: number
+  toSeq?: number
   deltaCount?: number
   at: number
 }
@@ -52,6 +55,28 @@ const state = reactive<ProjectionState>({
 
 const MAX_STATUS_EVENTS = 20
 
+// 幂等守卫：同一事件可能重复投递——服务端 emitZcodeProjectionEvent 对带 sessionId
+// 的事件经 workspace 级 + 会话级两个房间各投一次，客户端同时 join 两者即收到两份；
+// 断线补发、监听器累积同理。有界指纹集判重：重复的 conversation.frame 不再重复
+// 累加 delta，重复的 status/mention 不再重复入状态环。
+// session.upserted/removed 处理本就幂等（覆盖/删除），且同刻两次 upsert 内容可能
+// 不同，不走判重。
+const MAX_SEEN_KEYS = 200
+const seenEventKeys = new Set<string>()
+function isFirstDelivery(e: ZcodeSocketEvent): boolean {
+  const key = [
+    e.type, e.workspaceId, e.sessionId ?? '', e.reason ?? '', e.detail ?? '',
+    e.fromSeq ?? '', e.toSeq ?? '', e.at, e.deltaCount ?? '',
+  ].join('|')
+  if (seenEventKeys.has(key)) return false
+  seenEventKeys.add(key)
+  if (seenEventKeys.size > MAX_SEEN_KEYS) {
+    const oldest = seenEventKeys.values().next().value
+    if (oldest !== undefined) seenEventKeys.delete(oldest)
+  }
+  return true
+}
+
 export function handleZcodeEvent(e: ZcodeSocketEvent): void {
   if (e.type === 'session.upserted' && e.sessionId) {
     state.sessions[e.sessionId] = {
@@ -66,6 +91,7 @@ export function handleZcodeEvent(e: ZcodeSocketEvent): void {
     return
   }
   if (e.type === 'conversation.frame') {
+    if (!isFirstDelivery(e)) return
     state.conversationDeltaTotal += e.deltaCount ?? 0
     if (e.sessionId) {
       state.sessions[e.sessionId] = { ...state.sessions[e.sessionId], lastActivityAt: e.at }
@@ -74,6 +100,7 @@ export function handleZcodeEvent(e: ZcodeSocketEvent): void {
   }
   if (e.type === 'projection.status' || e.type === 'mention.outcome') {
     if (!e.reason) return
+    if (!isFirstDelivery(e)) return
     state.statusEvents.push({ reason: e.reason, detail: e.detail, at: e.at })
     if (state.statusEvents.length > MAX_STATUS_EVENTS) state.statusEvents.shift()
     state.lastReason = e.reason
@@ -85,6 +112,7 @@ export function resetProjectionStateForTests(): void {
   state.conversationDeltaTotal = 0
   state.statusEvents = []
   state.lastReason = null
+  seenEventKeys.clear()
 }
 
 export function useZcodeProjection() {

@@ -3,7 +3,7 @@
 // 覆盖:inject patch 路由(runtime 目录前缀)、manifest/PIN schema、单一事实源
 // ↔patch 375 逐字节一致、vendor/注册纯函数(免网络免 HOME)。
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
@@ -20,29 +20,35 @@ import { extractNewFileContent, validateSemanticaManifest, validatePin, seriesLi
 const hermesAgentRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
 const hermesStudioRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
 
+// worktree 环境（.claude/worktrees/<feat>/ 的 upstream 经符号链接指回真实树）下，
+// inject.mjs 的 resolvePatchTargetRoot 返回 realpathSync 后的真实路径，测试侧若用
+// 符号链接形态的路径直接等值比较会假失败。两侧都取 realpath 再比，断言语义不变
+// （仍为路径等值），路径不存在时回退原样（与 inject.mjs 的 realpathOrSelf 同款）。
+const rp = (p: string): string => { try { return realpathSync(p); } catch { return p; } };
+
 describe('inject patch 路由:基础运行时前缀', () => {
   const newFilePatch = (path: string) => `diff --git a/${path} b/${path}\nnew file mode 100644\n--- /dev/null\n+++ b/${path}\n@@ -0,0 +1 @@\n+x\n`;
   const modifyPatch = (path: string) => `--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-x\n+y\n`;
 
   it('optional-mcps/ 与 optional-skills/ 路由到 hermes-agent(新文件与改文件两种形态)', () => {
-    expect(resolvePatchTargetRoot(newFilePatch('optional-mcps/semantica/manifest.yaml'))).toBe(hermesAgentRoot);
-    expect(resolvePatchTargetRoot(modifyPatch('optional-skills/foo/SKILL.md'))).toBe(hermesAgentRoot);
+    expect(rp(resolvePatchTargetRoot(newFilePatch('optional-mcps/semantica/manifest.yaml')))).toBe(rp(hermesAgentRoot));
+    expect(rp(resolvePatchTargetRoot(modifyPatch('optional-skills/foo/SKILL.md')))).toBe(rp(hermesAgentRoot));
   });
 
   it('既有 hermes-agent 前缀保持路由不变(回归)', () => {
     for (const p of ['hermes_cli/x.py', 'plugins/y/z.py', 'agent/a.py', 'apps/b', 'assets/c', 'acp_d', 'gateway/e.py', 'tests/gateway/f', 'tests/hermes_cli/g']) {
-      expect(resolvePatchTargetRoot(modifyPatch(p))).toBe(hermesAgentRoot, `前缀 ${p}`);
+      expect(rp(resolvePatchTargetRoot(modifyPatch(p)))).toBe(rp(hermesAgentRoot), `前缀 ${p}`);
     }
   });
 
   it('hermes-studio 路径与 tests/ 其余子树仍落 studio(禁止整段路由回归)', () => {
     for (const p of ['packages/client/src/main.ts', 'vite.config.ts', 'package.json', 'tests/cockpit/foo.test.ts']) {
-      expect(resolvePatchTargetRoot(modifyPatch(p))).toBe(hermesStudioRoot, `路径 ${p}`);
+      expect(rp(resolvePatchTargetRoot(modifyPatch(p)))).toBe(rp(hermesStudioRoot), `路径 ${p}`);
     }
   });
 
   it('无目标行的 patch 文本默认 studio(与历史行为一致)', () => {
-    expect(resolvePatchTargetRoot('不是 patch 的文本')).toBe(hermesStudioRoot);
+    expect(rp(resolvePatchTargetRoot('不是 patch 的文本'))).toBe(rp(hermesStudioRoot));
   });
 });
 
