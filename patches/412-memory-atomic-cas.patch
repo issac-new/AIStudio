@@ -23,13 +23,13 @@ diff --git a/packages/client/src/views/hermes/MemoryView.vue b/packages/client/s
 index ab83b3d4..8b6b3c47 100644
 --- a/packages/client/src/views/hermes/MemoryView.vue
 +++ b/packages/client/src/views/hermes/MemoryView.vue
-@@ -47,13 +47,18 @@ async function handleSave() {
+@@ -47,13 +47,23 @@ async function handleSave() {
    if (!editingSection.value) return
    saving.value = true
    try {
 -    await saveMemory(editingSection.value, editContent.value)
 +    // 带上加载时 mtime 做 CAS：agent（hermes memory 工具）并写同一批文件时
-+    // 服务端 409 拒写，避免互相覆盖；冲突提示后重新加载取最新内容。
++    // 服务端 409 拒写，避免互相覆盖；冲突时编辑区改载服务端最新内容（见 catch）。
 +    const section = editingSection.value
 +    const expectedMtime = data.value ? (data.value as Record<string, unknown>)[`${section}_mtime`] : null
 +    await saveMemory(section, editContent.value, expectedMtime as string | number | null)
@@ -40,6 +40,11 @@ index ab83b3d4..8b6b3c47 100644
    } catch (err: any) {
      message.error(`${t('common.saveFailed')}: ${err.message}`)
 +    await loadMemory()
++    // 409 冲突：保存被拒、旧文从未落盘，而 data 已刷成服务端最新。把编辑区替换为
++    // 最新内容，重试保存不得携带陈旧编辑——保留旧文重试只会覆盖对方的改动。
++    if (err?.status === 409 && editingSection.value) {
++      editContent.value = data.value?.[editingSection.value] || ''
++    }
    } finally {
      saving.value = false
    }
@@ -91,3 +96,94 @@ index bf722914..a4d50df7 100644
      ctx.body = { success: true }
    } catch (err: any) {
      ctx.status = 500
+diff --git a/tests/client/memory-view-conflict.test.ts b/tests/client/memory-view-conflict.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/client/memory-view-conflict.test.ts
+@@ -0,0 +1,86 @@
++// @vitest-environment jsdom
++import { describe, expect, it, vi, beforeEach } from 'vitest'
++import { defineComponent, nextTick } from 'vue'
++import { flushPromises, mount } from '@vue/test-utils'
++
++const fetchMemoryMock = vi.hoisted(() => vi.fn())
++const saveMemoryMock = vi.hoisted(() => vi.fn())
++const messageMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
++
++vi.mock('@/api/hermes/skills', () => ({
++  fetchMemory: fetchMemoryMock,
++  saveMemory: saveMemoryMock,
++}))
++
++vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
++
++vi.mock('@/stores/hermes/profiles', () => ({
++  useProfilesStore: () => ({ activeProfileName: 'p', profiles: [{}], fetchProfiles: vi.fn() }),
++}))
++
++vi.mock('@/components/hermes/chat/MarkdownRenderer.vue', () => ({
++  default: defineComponent({ props: { content: String }, template: '<div class="md-stub" />' }),
++}))
++
++vi.mock('naive-ui', () => ({
++  NButton: defineComponent({
++    props: { disabled: Boolean, loading: Boolean, size: String, quaternary: Boolean, type: String },
++    emits: ['click'],
++    template: '<button class="n-button-stub" :disabled="disabled || loading" @click="$emit(\'click\')"><slot /></button>',
++  }),
++  useMessage: () => messageMock,
++}))
++
++const freshData = (content: string, mtime: number) => ({
++  memory: content,
++  user: '',
++  soul: '',
++  memory_mtime: mtime,
++  user_mtime: null,
++  soul_mtime: null,
++})
++
++async function mountEditing() {
++  const MemoryView = (await import('@/views/hermes/MemoryView.vue')).default
++  const wrapper = mount(MemoryView)
++  await flushPromises()
++  // 进入 memory 段编辑：编辑区 = 服务端首载内容
++  const editBtn = wrapper.findAll('button.n-button-stub').find(b => b.text() === 'common.edit')!
++  await editBtn.trigger('click')
++  await nextTick()
++  return wrapper
++}
++
++describe('MemoryView 冲突重试不得携带陈旧编辑', () => {
++  beforeEach(() => {
++    fetchMemoryMock.mockReset()
++    saveMemoryMock.mockReset()
++    messageMock.error.mockClear()
++  })
++
++  it('409 后编辑区载入服务端最新内容，重试保存携带新内容与新 mtime', async () => {
++    fetchMemoryMock
++      .mockResolvedValueOnce(freshData('旧版本内容', 1000))
++      .mockResolvedValueOnce(freshData('对方改后的内容', 2000))
++    // 与真实 request() 一致：非 2xx 抛出带 status 的 Error
++    saveMemoryMock.mockRejectedValueOnce(
++      Object.assign(new Error('API Error 409: mtime conflict: file changed since load'), { status: 409 }),
++    )
++    const wrapper = await mountEditing()
++    const ta = wrapper.find('textarea.edit-textarea')
++    expect(ta.element.value).toBe('旧版本内容')
++    await ta.setValue('我的编辑（旧文）')
++    // 首次保存 → 409 冲突
++    const buttons = () => wrapper.findAll('button.n-button-stub')
++    await buttons().find(b => b.text() === 'common.save')!.trigger('click')
++    await flushPromises()
++    expect(messageMock.error).toHaveBeenCalled()
++    // 关键断言：编辑区旧文被服务端最新内容替换（撤修复即红：此处仍是"我的编辑（旧文）"）
++    expect(wrapper.find('textarea.edit-textarea').element.value).toBe('对方改后的内容')
++    // 重试保存：不得携带陈旧编辑；expectedMtime 取刷新后的 2000
++    saveMemoryMock.mockResolvedValueOnce(undefined)
++    await buttons().find(b => b.text() === 'common.save')!.trigger('click')
++    await flushPromises()
++    expect(saveMemoryMock).toHaveBeenLastCalledWith('memory', '对方改后的内容', 2000)
++  })
++})

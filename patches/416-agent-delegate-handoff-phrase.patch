@@ -1,13 +1,58 @@
 diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
 --- a/tools/delegate_tool.py
 +++ b/tools/delegate_tool.py
-@@ -588,6 +588,9 @@
+@@ -588,6 +588,8 @@
      "succeeded.\n"
      "- Children cannot close tracked work: a child asked to close it returns findings instead; "
      "the parent applies the transition.\n"
-+    "- The final message IS the entire handoff: the parent sees only your final summary, nothing else "
-+    "(kimi coder 交接话术语义). Pack it with everything needed to continue — done (with file:line "
-+    "anchors), left (concrete next steps), blocked. A vague closing wastes the whole run."
++    "- The subagent's final summary is the entire handoff: nothing else from the child reaches you. It should "
++    "carry done (with file:line anchors), left (concrete next steps), and blocked (kimi coder 交接话术语义)."
  )
  _DESCRIPTION_TAIL = (
      "- Children inherit the parent model unless pinned via delegation.provider / delegation.model in config.yaml."
+diff --git a/tools/delegate_tool_progress.py b/tools/delegate_tool_progress.py
+--- a/tools/delegate_tool_progress.py
++++ b/tools/delegate_tool_progress.py
+@@ -151,6 +151,9 @@
+     "issuing git/workdir-specific commands.\n\n"
+     "Keep your final summary tight: lead with outcomes, prefer bullet points over paragraphs, and don't replay your "
+     "whole process. Your response is returned to the parent agent as a summary, and overlong summaries crowd out the "
+-    "parent's context window."
++    "parent's context window.\n\n"
++    "Your final message IS the entire handoff (kimi coder 交接话术语义): the parent sees only this summary, "
++    "nothing else. Pack it with everything needed to continue — done (with file:line anchors), left (concrete "
++    "next steps), blocked. A vague closing wastes the whole run."
+ )
+ _ORCHESTRATOR_BLOCK = (
+diff --git a/tests/tools/test_delegate_handoff_phrase.py b/tests/tools/test_delegate_handoff_phrase.py
+new file mode 100644
+--- /dev/null
++++ b/tests/tools/test_delegate_handoff_phrase.py
+@@ -0,0 +1,27 @@
++"""交接话术落点守门（kimi coder，矩阵 §3.3）：话术须落在子代理可见面（开局提示）；
++delegate_task 描述属父侧（子代理工具集屏蔽 delegate_task，永远看不到），只写第三人称
++规则。话术写给子代理却落在父侧即红。"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++
++class TestHandoffPhrasePlacement:
++    def test_child_opening_prompt_carries_handoff_phrase(self):
++        from tools.delegate_tool_progress import _build_child_system_prompt
++        prompt = _build_child_system_prompt("g", "c")
++        assert "final message IS the entire handoff" in prompt  # 子代理开局即见
++        assert "done (with file:line anchors)" in prompt
++        assert "blocked" in prompt
++
++    def test_parent_description_is_third_person(self):
++        from tools.delegate_tool import _build_top_level_description
++        desc = _build_top_level_description()
++        assert "final summary is the entire handoff" in desc
++        assert "your final summary" not in desc  # 父侧描述不得以子代理口吻说话
