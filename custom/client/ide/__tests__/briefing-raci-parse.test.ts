@@ -3,6 +3,8 @@
 // 简报 RACI 行曾恒显 "R: — · A:—"（aipaydev 实证缺陷）；修复后从 assignee/正文解析出人名。
 // 用例正文取自 aipaydev 推演真实卡片（排期卡 / 派单式任务卡）。
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import TaskBriefingPanel from '@/custom/ide/components/TaskBriefingPanel.vue'
@@ -106,5 +108,19 @@ describe('C3 结构化 RACI 优先（task.raci / body-JSON raci > 正则）', ()
     const r = parseRaciFromTask(card)
     expect(r.responsible).toEqual(['json-r'])
     expect(r.informed).toEqual(['json-i'])
+  })
+})
+
+describe('C4 Safari 兼容：解析正则不用 lookbehind', () => {
+  it('briefing-types.ts 无负向/正向后顾（Safari <16.4 构造 RegExp 抛 SyntaxError）', () => {
+    const src = readFileSync(resolve(__dirname, '../components/briefing-types.ts'), 'utf8')
+    expect(src).not.toMatch(/\(\?<[=!]/)
+  })
+
+  it('等价判别保留：「团队责任人」不计入 R，普通「责任人」照常命中', () => {
+    const compound = parseRaciFromTask({ id: 't_c', title: 'x', status: 'todo', body: '团队责任人：wei' })
+    expect(compound.responsible).toEqual([])
+    const plain = parseRaciFromTask({ id: 't_p', title: 'x', status: 'todo', body: '责任人: @hu:matrix.test 的 AI 助理（@hu-agent:matrix.test）' })
+    expect(plain.responsible).toEqual(['hu'])
   })
 })

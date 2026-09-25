@@ -47,6 +47,12 @@ if (isDesktopShell) document.documentElement.classList.add('hermes-desktop-shell
 // 这里在 app.use(router)（鉴权守卫初次导航）之前，用 admin/123456 免密换 JWT 落 hermes_api_key；
 // 后端 authenticatePasswordUser 在空库首登即 bootstrapDefaultSuperAdmin（顺带满足终端 super_admin 门槛）。
 // 失败静默回落手动登录页。仅 DEV 生效，不影响生产/桌面。
+// ⚠️ 风险边界（2026-09-25 暴露面收敛）：admin/123456 是硬编码默认口令，凡能打开
+// dev 页面的浏览器都会自动获得 super_admin 会话。故 npm run dev 默认只绑
+// localhost（127.0.0.1），只有多实例演练显式 npm run dev:lan（vite --host）才开放
+// 局域网；dev:lan 下同网段任意设备访问 :8649 即拿到 admin 会话，仅限可信网络。
+// 本桩行为保留（本地开发工作流依赖）：仅 import.meta.env.DEV、仅 localStorage 无
+// JWT 时换一次；生产/桌面构建不含此路径。
 async function devAutoLogin(): Promise<void> {
   if (!import.meta.env.DEV) return
   if (localStorage.getItem('hermes_api_key')) return
