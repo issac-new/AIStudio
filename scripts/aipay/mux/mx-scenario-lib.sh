@@ -185,9 +185,11 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   # 且该 commit 确实含分析稿；card 必须能在 fanfan 账号的板（账号板）查到。
   # 空喊"完成"不计入。
   local rfd="$1" body sha card
+  # 注释必须写在命令替换之外：续行 \` 之后的注释行会吞掉续行，| jq 成为行首管道，
+  # 整个替换体解析失败、jq 过滤器不执行，body 变成全量消息 JSON（P1，防造假失效）。
+  # /messages?dir=b 返回顺序是"新→旧"，必须取 first；取 last 会拿到最旧那条
+  # 无凭证裸 DONE，把已重报的合格凭证误判为不合格（09-23 实锤 false negative）。
   body=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 2>/dev/null \
-    # /messages?dir=b 返回顺序是"新→旧"，必须取 first；取 last 会拿到最旧那条
-    # 无凭证裸 DONE，把已重报的合格凭证误判为不合格（09-23 实锤 false negative）。
     | jq -r --arg p "ANALYSIS-DONE-$rfd" \
       '[.[] | select((.content.body//"") | contains($p))] | first | .content.body // ""')
   [[ -n "$body" ]] || { note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
@@ -211,6 +213,39 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1
 }
 repo_pull() { git -C "$DIRECTOR_CLONE" pull -q origin main >/dev/null 2>&1 || true; }
+
+# ── 分支状态机约定（P4）──────────────────────────────────────
+# DIRECTOR_CLONE 的 HEAD 归属：defect 步 `checkout -B integration/${RFD_ID}` 后停在
+# integration 分支，后续步骤都用显式 ref（origin/integration/...）或临时 worktree 访问
+# 仓库，不看 HEAD。凡**要进 origin/main 的提交**（uat 验收书/audit 意见书/retro 复盘）
+# 一律走本函数：不切分支、不动 HEAD/local main、全程无 rebase——在临时 detached 工作区
+# 基于 origin/main 把该文件提交进去再 push HEAD:main。为什么不能沿用旧写法
+# "integration 上 commit 后 `git push origin main`"：推的是落后的 local main，非快进被拒
+# 或空推，提交永远进不了 main，被拒即 set -e 暴毙、*_done 键落不了；rebase 被打断还会留
+# rebase-merge 中间态。为什么不在原地 `checkout main` 再提交：目标文件已在 main 树里时
+# （重跑轮）checkout 会被未跟踪/本地改动挡住，且脏工作树让 pull --rebase 直接拒绝。
+repo_commit_main() { # <repo 相对路径> <author-name> <author-email> <commit-msg>
+                     # → 0 已入 origin/main（或内容无变化幂等跳过）/ 1 失败（已收尾，无中间态）
+  local path="$1" name="$2" email="$3" msg="$4"
+  local wt="$SIM_ROOT/var/main-doc-wt"
+  [[ -f "$DIRECTOR_CLONE/$path" ]] || return 1
+  ( # 子 shell 作业：任何一步失败即退出非零，EXIT trap 统一拆工作区，不留注册残留
+    trap 'rm -rf "$wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true' EXIT
+    git -C "$DIRECTOR_CLONE" fetch -q origin || exit 1
+    mkdir -p "$SIM_ROOT/var" || exit 1
+    rm -rf "$wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true
+    git -C "$DIRECTOR_CLONE" worktree add -q --detach "$wt" origin/main || exit 1
+    mkdir -p "$wt/$(dirname "$path")" || exit 1
+    cp "$DIRECTOR_CLONE/$path" "$wt/$path" || exit 1
+    if [[ -n "$(git -C "$wt" status --porcelain -- "$path")" ]]; then
+      git -C "$wt" add -- "$path" || exit 1
+      git -C "$wt" -c user.name="$name" -c user.email="$email" \
+        commit -qm "$msg" -- "$path" || exit 1
+      git -C "$wt" push -q origin HEAD:main || exit 1
+    fi
+    # local main 快进到同一提交：它是 `git push origin main` 的推送源，落后即空推/被拒
+    git -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true )
+}
 
 room_has_from() { # <room> <sender-mxid> <pattern>
   mx_messages "$(load_token fanfan)" "$1" 120 | jq -e --arg s "$2" --arg p "$3" \

@@ -29,7 +29,18 @@ STUDIO_DIST="${MX_STUDIO_DIST:-$NCWK_ROOT/upstream/hermes-studio/dist}"
 HERMES_BIN="${HERMES_BIN:-$HOME/.hermes/hermes-agent/venv/bin/hermes}"
 
 # ── 拓扑常量 ────────────────────────────────────────────
-SIM_ROOT="${AIPAY_SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+# SIM_ROOT：env（AIPAY_SIM_ROOT）优先。默认在 NVMe 卷上，Linux 等无该挂载点的机器不可写
+# ——不可写则回落 $HOME/ncwk-sim-mux 并提示（P7 跨端；此处 note/log 尚未定义，提示走 stderr）。
+_mx_sim_default="/Volumes/nvme2230/lab/ncwk-sim-mux"
+if [[ -n "${AIPAY_SIM_ROOT:-}" ]]; then
+  SIM_ROOT="$AIPAY_SIM_ROOT"
+elif [[ ( -d "$_mx_sim_default" && -w "$_mx_sim_default" ) || ( ! -e "$_mx_sim_default" && -w "$(dirname "$_mx_sim_default")" ) ]]; then
+  SIM_ROOT="$_mx_sim_default"
+else
+  SIM_ROOT="$HOME/ncwk-sim-mux"
+  echo "[mux] 默认 SIM_ROOT（${_mx_sim_default}）不可写，回落 ${SIM_ROOT}（可用 AIPAY_SIM_ROOT 覆盖）" >&2
+fi
+unset _mx_sim_default
 HERMES_ROOT="$SIM_ROOT/hermes"            # 单 hermes root（gateway 的 HERMES_HOME）
 GW_PORT="${MX_GW_PORT:-8801}"
 STUDIO_PORT="${MX_STUDIO_PORT:-8802}"
@@ -247,7 +258,21 @@ PYEOF
 HINDSIGHT_API_URL="${MX_HINDSIGHT_API:-http://localhost:8888}"
 user_mac12() { # <user> → 12 位伪 MAC（确定性派生；AIPAY_USER_MAC 覆盖）
   if [[ -n "${AIPAY_USER_MAC:-}" ]]; then echo "$AIPAY_USER_MAC"; return 0; fi
-  printf '%s' "$1" | shasum | cut -c1-12
+  # sha1 派生回落链（P7 跨端）：macOS 有 shasum，精简 Linux 常只剩 sha1sum，再回落
+  # openssl dgst；三者都是 SHA-1 摘要，bank_id 跨端一致。工具全缺即大声失败，
+  # 不静默退化成空 MAC（否则 memory bank 静默串号难查）。
+  local out
+  if command -v shasum >/dev/null 2>&1; then
+    out=$(printf '%s' "$1" | shasum | cut -c1-12)
+  elif command -v sha1sum >/dev/null 2>&1; then
+    out=$(printf '%s' "$1" | sha1sum | cut -c1-12)
+  elif command -v openssl >/dev/null 2>&1; then
+    out=$(printf '%s' "$1" | openssl dgst -sha1 | awk '{print $NF}' | cut -c1-12)
+  else
+    fail "user_mac12：shasum/sha1sum/openssl 全缺，无法派生记忆 bank MAC（装其一或设 AIPAY_USER_MAC）"
+  fi
+  [[ -n "$out" ]] || fail "user_mac12：sha1 派生结果为空（工具异常）"
+  echo "$out"
 }
 memory_bank_id() { # <user> → hermes-<mac12>-<user>
   echo "hermes-$(user_mac12 "$1")-$1"
