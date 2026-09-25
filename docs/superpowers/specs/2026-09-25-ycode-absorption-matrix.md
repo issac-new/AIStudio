@@ -233,7 +233,7 @@
 | codex：计划三选一门 | 📦旧账已落（IdePlanFloat R3）·待随迁 |
 | codex：turn 完成 notify 外部命令钩子 | 🔜P2 |
 | codex：token-budget 换窗 | 🔜P2 |
-| codex：(model,effort) 成本分组+日桶 | 🔜P2（G7 域） |
+| codex：(model,effort) 成本分组+日桶 | ✅ thread-usage.ts（分组降序/日桶升序/衔接 rounds-table/usage-ledger） |
 | codex：config 8 层叠加+origins | 🔜P2 |
 | codex：web_search 四档+restrict_to | 🔜P2 |
 | codex：keymap 12×154 可重映射 | 🔜P2 |
