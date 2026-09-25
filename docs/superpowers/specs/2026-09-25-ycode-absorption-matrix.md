@@ -229,7 +229,7 @@
 
 | 项 | 处置 |
 |---|---|
-| codex：渲染分项开关（mermaid/math/tables 回退源码） | ✅ render-options.ts（三类独立开关/关=回退源码内容不丢/坏配置回默认） |
+| codex：渲染分项开关（mermaid/math/tables 回退源码）+dsh mermaid 渲染策略 | ✅ render-options.ts + mermaid-render.ts（开关降级/渲染败降级 SVG/摘要） |
 | codex：计划三选一门 | 📦旧账已落（IdePlanFloat R3）·待随迁 |
 | codex：turn notify 外呼钩子 | ✅ turn-notify.ts（占位替换/off 关/触发台账） |
 | codex：token-budget 换窗决策 | ✅ window-shift.ts（shift/prune/compact 三策略；critical 事实强制 compact） |
