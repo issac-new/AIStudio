@@ -16,6 +16,7 @@ export interface TurnOutlineEntry {
   startIndex: number
   /** 轮内首句锚点（截 60 字符，navigator 显示用）。 */
   anchor: string
+  /** 轮内操作数（assistant/tool 计入；user 输入不计）。 */
   steps: number
   toolCalls: number
   /** 该轮时长（末事件 at − 首事件 at，ms）。 */
@@ -33,7 +34,7 @@ export function buildTurnOutline(events: readonly OutlineEvent[]): TurnOutlineEn
         turnIndex: entries.length,
         startIndex: index,
         anchor: (e.text ?? '').trim().slice(0, 60),
-        steps: 1,
+        steps: 0,  // steps=轮内操作数（assistant/tool），user 是输入不计步
         toolCalls: 0,
         durationMs: 0,
       }
