@@ -250,7 +250,7 @@
 | 工作区分组管理 | ✅ workspace-groups.ts（登记幂等/pin 置顶/清单汇总） |
 | dsh：/recap+tips | 并入 recap 域（cc 行） |
 | dsh：trajectory hotspot 聚合（按工具/阶段排名 own-duration） | ✅ trajectory-hotspot.ts（工具/阶段降序排名/防重复计数/衔接 timing） |
-| dsh：per-turn changed-files 卡（deepseek-harness） | 🔜P0（与任务结果卡合并立项） |
+| dsh：per-turn changed-files 卡（deepseek-harness） | ✅ changed-files-card.ts（一轮一卡/行数账/折叠 +N more）；任务结果卡=present 交付物原生已有 |
 | dsh：轮导航 rail（TurnNavigator） | 🔜P1（dsh+deepseek+zcode 三源） |
 | dsh：present 交付物工具+交付卡 | 🔜P1 |
 | dsh：compaction 留痕卡+/compact | 🔜P1 |
