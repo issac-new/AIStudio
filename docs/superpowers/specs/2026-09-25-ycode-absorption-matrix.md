@@ -269,7 +269,7 @@
 
 ### 3.10 zcode §七 39 项底座差距清单对账（✅核验批已闭 2026-09-25 三向核验）
 
-zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R3+ 工作消费。逐项核验为独立核验轮（**列 🔜P1 核验批**，非实现批）；已可裁决的先行：G4 六源构成→🧬部分（403 三投影）扩展🔜P1；G8 rounds 表🔜P1；P0-3 技能工作台入口🔜P1；P0-5 Workflow 运行可视化 MVP🔜P1；P1-12 turnSteer🧬原生；P1-14 needs-auth OAuth 合成工具🔜P1（与 kimi /mcp-config 合并）；P1-10 轮导航🔜P1（三源行）；其余 ~24 项进核验批清单（含 @六源/任务六态/插件 MVP/MCP 导入同步/自定义命令/富文本输入/Claude 历史导入/G7 面板等）。
+zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R3+ 工作消费。逐项核验为独立核验轮（**列 🔜P1 核验批**，非实现批）；已可裁决的先行（~~当时排 P1~~ **2026-09-25 终态：全部落地，详见 §3.10 行 282**）：G4 六源网格✅/G8 rounds 表✅/P0-3 技能入口✅/P0-5 Workflow run-line✅/P1-12 turnSteer🧬原生/P1-14 needs-auth✅459/P1-10 轮导航✅turn-outline.ts；其余 ~24 项进核验批清单（含 @六源/任务六态/插件 MVP/MCP 导入同步/自定义命令/富文本输入/Claude 历史导入/G7 面板等）。
 
 #### 核验批终态表（A=upstream/zcode 底座源码 / B=series 390-459 / C=custom 域模块三向核验）
 
@@ -287,3 +287,36 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 错：E1-E5 全部修正（证据源声明/409 状态回改/E4 补正/E5 锚点见 #4 行已含 minimax+codex 合并批原文）。
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
 - **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
+
+### 3.12 P2 批收官（2026-09-25 终态）
+
+P2 批全队列实施完毕（**实现类清零**），20 件落地（每件=纯函数域模块+守门测试+合 main+推 origin）：
+
+1. rulesscope 规则四型作用域（always/model-decides/at-manual/glob+两级合并）
+2. runlog 执行日志每 run 一行（结论三态/费用列/倒序筛选）
+3. permpresets 权限预设三档（放行面/审批面/升级单调性）
+4. changedfiles 每轮改动文件卡（行数账/+N more 折叠）
+5. teamsummary agent-team 汇总条（五态计数/健康色红黄绿）
+6. compactthreshold compact 阈值校准（reserve=输出预算+5%/90% 线/三级）
+7. sessionfork 会话 fork（分叉点/谱系/树投影/越界拒）
+8. goalbudget goal 三预算显式化（steps/tokens/wallclock 独立触顶）
+9. handoff coder 交接话术六段（final message=entire handoff+结构守门）
+10. permmodes 权限模式七档（cc d.ts:6046 六档+readonly/三档映射）
+11. commandtask slash 命令任务形态派生（槽位/门禁随行）
+12. agentsmd AGENTS.md 域（/init 四段模板+32KB 告警+防抖 watch）
+13. hookswrite Q11 Hooks 写档面（upsert/启停/重排/七事件词表）
+14. selection-ref 选区引用入会话（@file:L 区间/校验/引用卡）
+15. lane-timeline 泳道履历时间线（行 197 lane 半边）
+16. file-undo 逐文件 Undo（行 242，三态/回写计划）
+17. squad-coordinator squad 协调协议（评估必录/dispatch 即停，行 178 P0）
+18. automation-steps 列级编排（行 195 P0，门禁前置/失败策略/skip≠失败）
+19. goal-preemption GOAL-05 让位（行 166，用户消息>自治目标）
+20. dispatch-preview WillEnqueueRun 预演（行 180，写读共用谓词）
+21. urgency-escalation urgency 三档升级（行 199，queue/inbox-first/preempt）
+
+另批：十行回写核验批已落件（turn-outline/pricing/usage-ledger/compaction-trace/run-trace/
+skills-ledger/workflow-run-line/mention-resolution/context-six-source/present 原生）——
+此前只进 §3.10 总账未落明细行，本轮对齐。
+
+**实现类终态**：P0=10/10+4（178/195/197/242 四行 P0 收编）｜P1 实现批清零｜P2 实现批清零。
+残余 🔜 全部为裁决性项（非实现缺口）：长会话前缀复用（独立设计轮）/minimax 两候选+四候选（排队后续吸收轮）/kimi 视频链路（条件启动，台账钦点条件到才立项）/技能入口 UI（随 UI 批）。
