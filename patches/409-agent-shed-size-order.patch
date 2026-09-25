@@ -1,0 +1,153 @@
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -3116,11 +3116,40 @@
+                 "protected region now ~%s tokens, soft ceiling %s)",
+                 pressure_hits, f"{_protected_region_tokens():,}", f"{soft_ceiling:,}",
+             )
++        return demoted
++
++    def _demote_size_ordered(
++        self, result: List[Dict[str, Any]], boundary: int,
++        call_id_to_tool: Dict[str, tuple[str, str]], min_prune_chars: int,
++        protected_skills: Optional[set[str]], shed_target_chars: Optional[int],
++    ) -> int:
++        """Demote eligible old tool results largest-first; early-stop once the char
++        reduction meets ``shed_target_chars`` (None = demote all eligible). Size order
++        only matters for the early-stop path — full demotion is order-invariant."""
++        def _content_len(i: int) -> int:
++            c = result[i].get("content", "")
++            return len(c) if isinstance(c, str) else _content_length_for_budget(c)
++
++        order = sorted(
++            (i for i in range(boundary)
++             if result[i].get("role") == "tool" and _content_len(i) >= min_prune_chars),
++            key=_content_len, reverse=True,
++        )
++        reclaimed = 0
++        demoted = 0
++        for i in order:
++            if shed_target_chars is not None and reclaimed >= shed_target_chars:
++                break
++            before = _content_len(i)
++            if self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills):
++                demoted += 1
++                reclaimed += max(0, before - _content_len(i))
+         return demoted
+ 
+     def _prune_old_tool_results(
+         self, messages: List[Dict[str, Any]], protect_tail_count: int,
+         protect_tail_tokens: int | None = None, min_prune_chars: int = _PRUNE_MIN_CHARS,
++        shed_target_chars: int | None = None,
+     ) -> tuple[List[Dict[str, Any]], int]:
+         """Old tool results -> 1-line summaries; dedup, arg truncation, pressure demotion. Returns ``(messages, count)``.
+         Token budget (when given) takes priority over the message-count floor."""
+@@ -3134,11 +3163,12 @@
+         # Without this, a skill loaded moments before a compaction can be demoted to metadata while the
+         # model still believes its instructions are in context. See #32106.
+         protected_skills = _collect_protected_skill_names(result, prune_boundary)
+-        # Pass 2: summarize old tool results. Pass 3: shrink large tool_call arguments INSIDE the parsed JSON so
++        # Pass 2: summarize old tool results — size order (largest first), with optional
++        # early-stop when a shed target is given ("装下即停"：只回收所需，多留完整工具结果；
++        # 无目标时全量 demote，次序不影响结果)。Pass 3: shrink large tool_call arguments INSIDE the parsed JSON so
+         # the result stays valid; otherwise providers 400 on every turn until the call leaves the window.
+-        pruned += sum(
+-            self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills)
+-            for i in range(max(0, prune_boundary))
++        pruned += self._demote_size_ordered(
++            result, max(0, prune_boundary), call_id_to_tool, min_prune_chars, protected_skills, shed_target_chars,
+         )
+         for i in range(max(0, prune_boundary)):
+             self._truncate_tool_call_args_at(result, i)
+@@ -3260,8 +3290,12 @@
+         if session_db and session_id and not callable(getattr(session_db, "archive_and_compact", None)):
+             self._warn_reclamation_no_op("prune:store_cannot_persist", current_tokens)
+             return messages, 0
++        # 超溢量即目标（"装下即停"）：只回收越线部分+余量，多留完整工具结果。
++        overage_tokens = max(0, int(current_tokens or 0) - self.threshold_tokens) if self.threshold_tokens > 0 else 0
++        shed_target = int(overage_tokens * _CHARS_PER_TOKEN * 1.2) if overage_tokens > 0 else None
+         pruned_msgs, pruned_count = self._prune_old_tool_results(
+             messages, protect_tail_count=self.protect_last_n, protect_tail_tokens=None, min_prune_chars=self.proactive_prune_min_result_chars,
++            shed_target_chars=shed_target,
+         )
+         if not pruned_count:
+             # No-op contract: return the INPUT object so callers can gate on `result is not input`.
+diff --git a/tests/agent/test_shed_size_order.py b/tests/agent/test_shed_size_order.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_shed_size_order.py
+@@ -0,0 +1,74 @@
++"""剪枝次序化守门（codex 候补"最大优先装下即停"）：大结果先剪、达目标早停、无目标全量不变。"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from agent.context_compressor import ContextCompressor  # noqa: E402
++
++
++def _tool_msg(cid: str, text: str) -> dict:
++    return {"role": "tool", "tool_call_id": cid, "content": text}
++
++
++def _assistant_with_calls(*cids) -> dict:
++    return {"role": "assistant", "content": "",
++            "tool_calls": [{"id": c, "type": "function", "function": {"name": "t", "arguments": "{}"}} for c in cids]}
++
++
++def _session(big: str, small: str, mid: str):
++    return [
++        {"role": "user", "content": "q"},
++        _assistant_with_calls("c1", "c2", "c3"),
++        _tool_msg("c1", big),
++        _tool_msg("c2", small),
++        _tool_msg("c3", mid),
++        {"role": "assistant", "content": "done"},
++    ]
++
++
++BIG = "B" * 4000
++MID = "M" * 1200
++SMALL = "S" * 260  # 须过 _PRUNE_MIN_CHARS=200 门槛才有剪枝资格
++
++
++class TestSizeOrderShed:
++    """边界语义：protect_tail_count=2 保护末两条（assistant 终答 + MID），
++    故可剪集 = {BIG, SMALL}；shed 目标按"回收字符数"计（demote 后留 1 行摘要）。"""
++
++    def test_no_target_demotes_all_eligible(self):
++        c = ContextCompressor(model="m", quiet_mode=True)
++        out, count = c._prune_old_tool_results(_session(BIG, SMALL, MID), protect_tail_count=2)
++        assert count == 2  # BIG+SMALL（MID 在保护尾）
++        contents = [m["content"] for m in out if m.get("role") == "tool"]
++        assert any(c == MID for c in contents)
++
++    def test_target_stops_after_biggest(self):
++        c = ContextCompressor(model="m", quiet_mode=True)
++        msgs = _session(BIG, SMALL, MID)
++        out, count = c._prune_old_tool_results(
++            msgs, protect_tail_count=2,
++            shed_target_chars=len(BIG) - 400,  # BIG 剪后净回收≈len-摘要行，目标留裕量
++        )
++        assert count == 1  # 最大者即达标停
++        contents = [m["content"] for m in out if m.get("role") == "tool"]
++        assert any(c == SMALL for c in contents) and any(c == MID for c in contents)
++        assert not any(c == BIG for c in contents)
++
++    def test_target_needs_both_eligible(self):
++        c = ContextCompressor(model="m", quiet_mode=True)
++        msgs = _session(BIG, SMALL, MID)
++        out, count = c._prune_old_tool_results(
++            msgs, protect_tail_count=2,
++            shed_target_chars=len(BIG) + len(SMALL),  # 两可剪项全回收也不够——自然尽
++        )
++        assert count == 2
++        contents = [m["content"] for m in out if m.get("role") == "tool"]
++        assert any(c == MID for c in contents)  # 保护尾不动
