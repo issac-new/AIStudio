@@ -31,6 +31,11 @@ NCWK_ROOT="$(_mx_root_walk "$OVERLAY_ROOT" || echo "$(cd "$OVERLAY_ROOT/.." && p
 SKILLS_SRC="$OVERLAY_ROOT/scripts/aipay/skills"
 STUDIO_DIST="${MX_STUDIO_DIST:-$NCWK_ROOT/upstream/hermes-studio/dist}"
 HERMES_BIN="${HERMES_BIN:-$HOME/.hermes/hermes-agent/venv/bin/hermes}"
+# worker 网关解释器（HERMES_HOME/tools/python）裸跑找不到 hermes_cli——必须带
+# PYTHONPATH（09-26 实锤：缺 PATH 致 worker -m hermes_cli.main 两连崩 gave_up）
+_env_sp=$(ls -d "$HOME"/.hermes/installs/*/environments/*/venv/lib/python*/site-packages 2>/dev/null | head -1)
+HERMES_PYTHONPATH="${HERMES_PYTHONPATH:-$HOME/.hermes/hermes-agent${_env_sp:+:$_env_sp}}"
+unset _env_sp
 
 # ── 拓扑常量 ────────────────────────────────────────────
 # SIM_ROOT：env（AIPAY_SIM_ROOT）优先。默认在 NVMe 卷上，Linux 等无该挂载点的机器不可写
@@ -606,26 +611,35 @@ key = m.get("api_key") or ""
 name = m.get("default") or ""
 if not url or not name:
     print("unreachable"); raise SystemExit
-url = url[:-3].rstrip("/") if url.endswith("/v1") else url
+# URL 拼接 bug 修复（2026-09-26 实锤）：只拼 /v1/chat/completions 会把
+# bigmodel 的 .../paas/v4 端点拼成 /v4/v1/... → 404 → 误报 noreply（额度被冤枉）。
+# 两种候选都试：base 已含版本段（/v1 /v4 ...）→ base/chat/completions 优先；
+# 兼容裸前缀风格 → base/v1/chat/completions 兜底；非 404 的首个错误用于分类。
 body = json.dumps({"model": name, "max_tokens": 4,
                    "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}).encode()
-req = urllib.request.Request(url + "/v1/chat/completions", data=body,
-                             headers={"Content-Type": "application/json",
-                                      **({"Authorization": "Bearer " + key} if key else {})})
-try:
-    with urllib.request.urlopen(req, timeout=45) as r:
-        r.read()
-    print("ok")
-except urllib.error.HTTPError as e:
-    text = (e.read() or b"").decode("utf8", "replace").lower()
-    if e.status in (401, 403):
-        print("quota" if ("limit" in text or "quota" in text) else "auth")
-    elif e.status == 429:
-        print("quota")
-    else:
-        print("noreply")
-except Exception:
-    print("unreachable")
+hdrs = {"Content-Type": "application/json",
+        **({"Authorization": "Bearer " + key} if key else {})}
+base = url[:-3].rstrip("/") if url.endswith("/v1") else url
+candidates = [url + "/chat/completions", base + "/v1/chat/completions"]
+last = ("noreply", "")
+for u in candidates:
+    req = urllib.request.Request(u, data=body, headers=hdrs)
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            r.read()
+            print("ok"); raise SystemExit
+    except urllib.error.HTTPError as e:
+        text = (e.read() or b"").decode("utf8", "replace").lower()
+        if e.status in (401, 403):
+            print("quota" if ("limit" in text or "quota" in text) else "auth"); raise SystemExit
+        if e.status == 429:
+            print("quota"); raise SystemExit
+        last = ("noreply", u)
+    except SystemExit:
+        raise
+    except Exception:
+        last = ("unreachable", u)
+print(last[0])
 PY
 }
 
@@ -656,3 +670,36 @@ EOF
 }
 
 gh_clone_url() { echo "https://x-access-token:$(gh_token)@github.com/$GH_REPO.git"; }
+
+# ── matrix 适配器自愈（2026-09-26 实锤场景）────────────────────
+# 症状：runtime 的 pyproject [tool.hermes.extras-platforms].matrix 门=linux-only
+# （pm 构建期漂移产物，runtime 树 dirty 自述）→ macOS 上 pm.extras 判"不支持此平台"
+# → matrix 适配器全员降级 → agent 收不到 @mention 全员哑火（V3 两度中止根因）。
+# 修复两步（幂等）：①运行时 venv 装 plain mautrix+aio 依赖（无 E2EE，避开
+# python-olm 的 darwin 编译坑）②pyproject 门放行 darwin。调用方负责重启 gateway。
+matrix_adapter_selfheal() { # → 0=已修复 1=无需修 2=修复失败
+  local rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
+  local py="$rt/venv/bin/python" pip="$rt/venv/bin/pip"
+  [[ -x "$py" && -x "$pip" ]] || { log "matrix 自愈：运行时 venv 不在（$rt），跳过"; return 2; }
+  log "matrix 自愈：装 plain mautrix+aio 依赖（darwin 无 E2EE 面）"
+  "$pip" install -q 'mautrix==0.21.1' 'aiohttp-socks==0.11.0' 'aiohttp==3.14.3' \
+    'aiosqlite==0.22.1' 'asyncpg==0.31.0' 2>&1 | tail -1
+  "$py" - "$rt/pyproject.toml" << 'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = 'matrix = "sys_platform == \'linux\'"'
+new = 'matrix = "sys_platform == \'linux\' or sys_platform == \'darwin\'"'
+if old in s:
+    open(p, 'w').write(s.replace(old, new, 1))
+    print('gate opened for darwin')
+else:
+    print('gate already ok or format drift')
+PYEOF
+  "$py" -c "import mautrix" 2>/dev/null || { log "matrix 自愈：mautrix 仍不可导入，失败"; return 2; }
+  return 0
+}
+
+matrix_adapter_degraded() { # <gatewayLog>：近端日志有降级症状？
+  tail -60 "$1" 2>/dev/null | grep -q "skipping platform 'matrix'"
+}

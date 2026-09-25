@@ -20,7 +20,7 @@ if curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1; then
   log "gateway 已在跑（:${GW_PORT}），跳过"
 else
   [[ -d "$HERMES_ROOT" ]] || fail "先跑 mx-setup.sh"
-  HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
+  PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
     nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
@@ -60,4 +60,26 @@ while (( $(date +%s) < deadline )); do
 done
 [[ "${g_ok:-0}" == 1 ]] || fail "gateway 300s 内未就绪（$LOGS_DIR/gateway.log）"
 [[ "${s_ok:-0}" == 1 ]] || fail "studio 300s 内未就绪（$LOGS_DIR/studio.log）"
+
+# ── matrix 适配器自愈（pm 门控漂移/venv 缺依赖 → agent 全员哑火的根因面）──
+if matrix_adapter_degraded "$LOGS_DIR/gateway.log"; then
+  log "检测到 matrix 适配器降级（agent 将收不到 @mention）——执行自愈"
+  if matrix_adapter_selfheal; then
+    kill "$(cat "$PIDS_DIR/gateway.pid" 2>/dev/null)" 2>/dev/null; sleep 3
+    ( cd "$SIM_ROOT" && nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 & \
+      echo $! > "$PIDS_DIR/gateway.pid" )
+    deadline=$(( $(date +%s) + 120 ))
+    while (( $(date +%s) < deadline )); do
+      curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1 && break; sleep 3
+    done
+    if matrix_adapter_degraded "$LOGS_DIR/gateway.log"; then
+      log "自愈后 matrix 仍降级（查 $LOGS_DIR/gateway.log）——agent 轮将哑火"
+    else
+      log "matrix 自愈成功：适配器已恢复"
+    fi
+  else
+    log "matrix 自愈失败——agent 轮将哑火，人工处置（hermes pm doctor）"
+  fi
+fi
+
 log "=== 就绪：gateway :${GW_PORT}（多路复用）+ studio :$STUDIO_PORT ==="
