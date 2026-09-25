@@ -231,7 +231,7 @@
 |---|---|
 | codex：渲染分项开关（mermaid/math/tables 回退源码） | ✅ render-options.ts（三类独立开关/关=回退源码内容不丢/坏配置回默认） |
 | codex：计划三选一门 | 📦旧账已落（IdePlanFloat R3）·待随迁 |
-| codex：turn 完成 notify 外部命令钩子 | 🔜P2 |
+| codex：turn notify 外呼钩子 | ✅ turn-notify.ts（占位替换/off 关/触发台账） |
 | codex：token-budget 换窗 | 🔜P2 |
 | codex：(model,effort) 成本分组+日桶 | ✅ thread-usage.ts（分组降序/日桶升序/衔接 rounds-table/usage-ledger） |
 | codex：config 8 层叠加+origins | 🔜P2 |
