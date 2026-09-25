@@ -985,3 +985,8 @@
 #      attention/info）×类型词表、已读/归档双轴四象限、member|agent 双收件人、正文截
 #      200 码点、itemId 幂等+环形 200、批量双轴操作；POST/GET /api/inbox（patch 418 挂载）。
 418-server-inbox-routes.patch
+# 419 P1（routa §七#2 KanbanSessionQueue，矩阵 §3.5）：每 board 并发闸——
+#      kanban.board_concurrency 默认 1（routa 语义；0=不设闸），超限进
+#      skipped_board_capped 排队下轮 tick drain；同 tick spawn 计数同步；默认板
+#      （board=None）同样有闸。守门 4 例（含 fence 禁用隔离）。
+419-agent-board-concurrency-gate.patch
