@@ -204,7 +204,7 @@
 | 泳道专家提示词资产 11 份 | ✅ runtime/roster/lane-specialists/（MIT 附出处原样搬运+README 升级纪律） |
 | Worker 抽象 | ✅ worker-abstraction.ts（五态心跳状态机/capability 路由/三环境） |
 | A2A 出站/入站协议 | ✅ a2a-protocol.ts（Agent Card 校验/终态判定/externalTaskId 映射） |
-| Yjs CRDT 共写笔记 | 🔜P2 |
+| Yjs CRDT 共写笔记 | ✅ crdt-notes.ts（Yjs 轻量语义：段落 LWW/决胜规则/归因；引擎后可替换） |
 | 名册树视图 | ✅ roster-tree.ts（lead 聚合/delegates/descendants 子树和/降序） |
 
 ### 3.7 claude-code（13 项散点；专有许可只搬概念）
