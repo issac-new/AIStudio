@@ -99,6 +99,16 @@ kanban_done() { # <user> <needle> → 0/1（存在 done 的匹配卡）
     >/dev/null 2>&1
 }
 
+# assignee 归一化：agent 可能写 matrix mxid(@xxx-agent) 而 profile 系统用短名(xxx)——
+# 建卡/改卡时统一为短名（V3 全流程轮实测 bug：visibleProfiles 过滤全部漏掉）
+normalize_assignee() { # <assignee> → 短名
+  local a="${1:-}"
+  a="${a#@}"                    # 去 @
+  a="${a%:matrix.test}"        # 去 :matrix.test
+  a="${a%-agent}"              # 去 -agent 后缀（@fanfan-agent → fanfan）
+  printf '%s' "$a"
+}
+
 kanban_create_as() { # <user> <state-key> <title> <body> [board] → id（state 缓存防重；缺省落该账号默认板）
   local u="$1" key="card_$2" title="$3" body="$4" board="${5:-$(first_board_of "$u")}" cached id
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
