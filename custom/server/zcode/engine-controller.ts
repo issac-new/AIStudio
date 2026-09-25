@@ -178,6 +178,38 @@ router.post('/checkpoint/recover', async (ctx) => {
   }
 })
 
+router.post('/mention/preview', async (ctx) => {
+  // 分派预演（multica WillEnqueueRun 语义，矩阵 §3.5 P1）：预测会不会起跑、为谁跑。
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { workspacePath, text } = body as Record<string, unknown>
+  if (typeof workspacePath !== 'string' || !workspacePath || typeof text !== 'string' || !text) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'workspacePath 与 text 必填' }
+    return
+  }
+  const service = getMentionDispatch()
+  const svcAny = service as unknown as {
+    pending: Map<string, { since: number }>
+    known: Set<string>
+    deferred: Set<string>
+    mentionAuthor?: string
+    now: () => number
+    pendingTtlMs: number
+  }
+  const { willEnqueueRun } = await import('../zcode/will-enqueue')
+  const previews = willEnqueueRun(text, workspacePath, {
+    engine: { probe: async () => true, createSession: async () => ({ session: { sessionId: '' } }), sendCommand: async () => ({ status: 'accepted' }) },
+    knownAgents: svcAny.known,
+    deferredAgents: svcAny.deferred,
+    mentionAuthor: svcAny.mentionAuthor,
+    pendingKeys: new Set(svcAny.pending.keys()),
+    pendingSince: new Map([...svcAny.pending.entries()].map(([k, v]) => [k, v.since])),
+    now: svcAny.now,
+    pendingTtlMs: svcAny.pendingTtlMs,
+  })
+  ctx.body = { ok: true, previews }
+})
+
 router.get('/squad/evaluations', async (ctx) => {
   const { listEvaluations } = await import('../zcode/squad-protocol')
   const squad = typeof ctx.query.squad === 'string' ? ctx.query.squad : undefined

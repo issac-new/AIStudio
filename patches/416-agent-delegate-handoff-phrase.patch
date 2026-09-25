@@ -1,0 +1,13 @@
+diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
+--- a/tools/delegate_tool.py
++++ b/tools/delegate_tool.py
+@@ -588,6 +588,9 @@
+     "succeeded.\n"
+     "- Children cannot close tracked work: a child asked to close it returns findings instead; "
+     "the parent applies the transition.\n"
++    "- The final message IS the entire handoff: the parent sees only your final summary, nothing else "
++    "(kimi coder 交接话术语义). Pack it with everything needed to continue — done (with file:line "
++    "anchors), left (concrete next steps), blocked. A vague closing wastes the whole run."
+ )
+ _DESCRIPTION_TAIL = (
+     "- Children inherit the parent model unless pinned via delegation.provider / delegation.model in config.yaml."
