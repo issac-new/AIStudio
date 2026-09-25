@@ -179,7 +179,7 @@
 | inbox 三档 severity×归档双轴 | ✅ patch 418（三档/双轴四象限/双收件人/正文截 200/批量操作） |
 | 分派预演 WillEnqueueRun | 🔜P1（写读共用谓词，衔接 #7 派单链） |
 | resume-unsafe 分档+work_dir 继承 | 🔜P2 |
-| 在场两维（availability×workload） | 🔜P2 |
+| 在场两维（availability×workload） | ✅ presence-two-axis.ts（圆点+芯片分画/30s-90s 心跳三档/在线闲与离线忙可分） |
 | execution log 每 run 一行+费用列 | 🧬RunTrace 已有骨架·费用列 🔜P2 |
 | 分布式 cron 锁表 | ❌单机形态不适用（多机形态再启） |
 | runtime brief 前缀稳定缓存 | 🔜P2 |
