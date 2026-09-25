@@ -1,20 +1,81 @@
 diff --git a/packages/server/src/modules/hermes/services/bridge/manager.ts b/packages/server/src/modules/hermes/services/bridge/manager.ts
-index cd6a032..128fdd1 100644
+index 9978dc7a..2fa44405 100644
 --- a/packages/server/src/modules/hermes/services/bridge/manager.ts
 +++ b/packages/server/src/modules/hermes/services/bridge/manager.ts
-@@ -1,8 +1,9 @@
+@@ -1,7 +1,8 @@
  import { execFileSync, spawn, type ChildProcess } from 'child_process'
 -import { existsSync } from 'fs'
-+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
++import { appendFileSync, existsSync, mkdirSync, renameSync, statSync, truncateSync } from 'fs'
  import { createConnection, createServer } from 'net'
 -import { isAbsolute, join, resolve } from 'path'
-+import { basename, dirname, isAbsolute, join, resolve } from 'path'
++import { dirname, isAbsolute, join, resolve } from 'path'
 +import { homedir } from 'os'
  import { logger } from '../../../studio/public/logging'
  import { config } from '../../../studio/public/config'
  import { OPENROUTER_APP_HEADERS } from '../../../studio/public/openrouter-attribution'
- import { resolveHermesInstallationEnvironment } from '../runtime/installation'
-@@ -994,13 +995,32 @@ export class AgentBridgeManager {
+@@ -539,6 +540,61 @@ function forceKillBridgeEndpointProcesses(endpoint: string): void {
+   }
+ }
+ 
++// overlay[bridge-stderr-capture]: bounded capture log for broker stdout/stderr.
++// Before every flush the file size is checked and the log is rotated to .1
++// (replacing the previous .1) once it reaches the cap, so long-running broker
++// output cannot grow bridge-stderr.log without limit. Writes are batched over
++// BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS instead of one synchronous fs call per
++// chunk on the main-process event loop; appendFileSync within a flush keeps
++// ordering. A hard kill of the host process loses at most the final batch —
++// call flush() where an immediate write matters.
++export const BRIDGE_CAPTURE_LOG_MAX_BYTES = 5 * 1024 * 1024
++export const BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS = 250
++
++export interface BridgeCaptureLog {
++  append(text: string): void
++  flush(): void
++}
++
++export function createBridgeCaptureLog(
++  logPath: string,
++  maxBytes: number = BRIDGE_CAPTURE_LOG_MAX_BYTES,
++): BridgeCaptureLog {
++  let pending = ''
++  let timer: ReturnType<typeof setTimeout> | null = null
++  const flush = (): void => {
++    if (timer) {
++      clearTimeout(timer)
++      timer = null
++    }
++    const text = pending
++    if (!text) return
++    pending = ''
++    try {
++      let size = 0
++      try { size = statSync(logPath).size } catch { /* log not created yet */ }
++      if (size >= maxBytes) {
++        try {
++          renameSync(logPath, `${logPath}.1`)
++        } catch {
++          // Rotation failed (e.g. .1 locked on Windows): truncate in place so
++          // the capture log stays bounded either way.
++          try { truncateSync(logPath, 0) } catch { /* ignore */ }
++        }
++      }
++      appendFileSync(logPath, text)
++    } catch { /* capture must never break the bridge */ }
++  }
++  const append = (text: string): void => {
++    if (!text) return
++    pending += text
++    if (timer) return
++    timer = setTimeout(flush, BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS)
++    timer.unref?.()
++  }
++  return { append, flush }
++}
++
+ export class AgentBridgeManager {
+   endpoint: string
+   private readonly options: AgentBridgeManagerOptions
+@@ -1003,13 +1059,33 @@ export class AgentBridgeManager {
      const env = buildAgentBridgeProcessEnv(this.endpoint, hermesHome, agentRoot)
  
      logger.info('[agent-bridge] starting: %s %s', command.command, args.join(' '))
@@ -25,6 +86,7 @@ index cd6a032..128fdd1 100644
 +    // Windows where the broker crashes before binding its port.
 +    const bridgeStderrLogPath = join(homedir(), '.hermes-web-ui', 'logs', 'bridge-stderr.log')
 +    try { mkdirSync(dirname(bridgeStderrLogPath), { recursive: true }) } catch { /* ignore */ }
++    const captureLog = createBridgeCaptureLog(bridgeStderrLogPath)
      const child = spawn(command.command, args, {
        env,
        cwd: process.cwd(),
@@ -35,12 +97,12 @@ index cd6a032..128fdd1 100644
      })
 +    child.stdout?.on('data', (chunk: Buffer) => {
 +      const text = chunk.toString('utf-8')
-+      try { appendFileSync(bridgeStderrLogPath, `[stdout] ${text}`) } catch { /* ignore */ }
++      captureLog.append(`[stdout] ${text}`)
 +      logger.info('[agent-bridge] broker stdout: %s', text.trim())
 +    })
 +    child.stderr?.on('data', (chunk: Buffer) => {
 +      const text = chunk.toString('utf-8')
-+      try { appendFileSync(bridgeStderrLogPath, `[stderr] ${text}`) } catch { /* ignore */ }
++      captureLog.append(`[stderr] ${text}`)
 +      logger.warn('[agent-bridge] broker stderr: %s', text.trim())
 +    })
 +    child.stdout?.on('error', () => { /* EPIPE: ignore */ })
@@ -48,3 +110,86 @@ index cd6a032..128fdd1 100644
      this.child = child
      this.attached = false
      this.ready = false
+diff --git a/tests/server/agent-bridge-capture-log.test.ts b/tests/server/agent-bridge-capture-log.test.ts
+new file mode 100644
+index 00000000..0cc6f3de
+--- /dev/null
++++ b/tests/server/agent-bridge-capture-log.test.ts
+@@ -0,0 +1,77 @@
++import { mkdtempSync, readFileSync, rmSync } from 'fs'
++import { tmpdir } from 'os'
++import { join } from 'path'
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
++
++// overlay[bridge-stderr-capture]: guards the bounded capture log (rotation to .1
++// at the cap, .1 overwritten on repeat rotation, batched flush). Regression for
++// the unbounded ~/.hermes-web-ui/logs/bridge-stderr.log growth.
++describe('agent bridge capture log', () => {
++  let tempDir = ''
++  let logPath = ''
++
++  beforeEach(() => {
++    vi.resetModules()
++    tempDir = mkdtempSync(join(tmpdir(), 'hermes-agent-bridge-capture-log-'))
++    logPath = join(tempDir, 'bridge-stderr.log')
++  })
++
++  afterEach(() => {
++    vi.useRealTimers()
++    if (tempDir) rmSync(tempDir, { recursive: true, force: true })
++  })
++
++  async function loadCaptureLog() {
++    return await import('../../packages/server/src/modules/hermes/services/bridge/manager')
++  }
++
++  it('caps the capture log at 5MB by default', async () => {
++    const { BRIDGE_CAPTURE_LOG_MAX_BYTES } = await loadCaptureLog()
++    expect(BRIDGE_CAPTURE_LOG_MAX_BYTES).toBe(5 * 1024 * 1024)
++  })
++
++  it('appends below the cap without rotating', async () => {
++    const { createBridgeCaptureLog } = await loadCaptureLog()
++    const log = createBridgeCaptureLog(logPath, 64)
++    log.append('[stdout] one\n')
++    log.flush()
++    log.append('[stderr] two\n')
++    log.flush()
++    expect(readFileSync(logPath, 'utf-8')).toBe('[stdout] one\n[stderr] two\n')
++    expect(() => readFileSync(`${logPath}.1`)).toThrow()
++  })
++
++  it('rotates to .1 at the cap and replaces the previous .1', async () => {
++    const { createBridgeCaptureLog } = await loadCaptureLog()
++    const log = createBridgeCaptureLog(logPath, 8)
++    log.append('aaaaaaa\n') // exactly 8 bytes: first write stays below rotation
++    log.flush()
++    log.append('bbbbbbbb\n')
++    log.flush()
++    log.append('cccccccc\n')
++    log.flush()
++    // latest generation stays in the live file …
++    expect(readFileSync(logPath, 'utf-8')).toBe('cccccccc\n')
++    // … and only one rotated generation is kept (.1 overwritten)
++    expect(readFileSync(`${logPath}.1`, 'utf-8')).toBe('bbbbbbbb\n')
++  })
++
++  it('batches appends and flushes on the interval timer', async () => {
++    vi.useFakeTimers()
++    const { createBridgeCaptureLog, BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS } = await loadCaptureLog()
++    const log = createBridgeCaptureLog(logPath, 1024)
++    log.append('one ')
++    log.append('two')
++    expect(() => readFileSync(logPath)).toThrow() // nothing on disk before the flush
++    vi.advanceTimersByTime(BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS)
++    expect(readFileSync(logPath, 'utf-8')).toBe('one two')
++  })
++
++  it('ignores empty appends', async () => {
++    const { createBridgeCaptureLog } = await loadCaptureLog()
++    const log = createBridgeCaptureLog(logPath, 1024)
++    log.append('')
++    log.flush()
++    expect(() => readFileSync(logPath)).toThrow()
++  })
++})

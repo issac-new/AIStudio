@@ -355,7 +355,7 @@ new file mode 100644
 index 0000000..9046805
 --- /dev/null
 +++ b/packages/server/src/modules/coding-agents/services/opencode-family.ts
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,61 @@
 +// overlay[mimo-agent]: opencode 家族（OpenCode 与其 fork MiMo-Code）的单一事实源。
 +// MiMo-Code（npm @mimo-ai/cli，bin `mimo`）与 OpenCode 共享同一 CLI 契约：
 +// `run --format json` NDJSON 事件流 + 同族 config schema（mcp/provider/instructions）。
@@ -397,6 +397,10 @@ index 0000000..9046805
 +    brandName: 'OpenCode',
 +    runSupportsAutoFlag: true,
 +  },
++  // 2026-09-25 实测核验（mimo 0.1.15 @ ~/.mimocode/bin/mimo，opencode fork）：
++  // MIMOCODE_CONFIG_DIR / MIMOCODE_CONFIG_CONTENT / MIMOCODE_DB / mimocode.json(c) /
++  // {env:VAR} 占位均被 CLI 识别（mimo models、mimo debug config、MIMOCODE_DB 落点、
++  // 用户真实 ~/.config/mimocode/mimocode.jsonc（$schema 同本 URL）互为佐证）。
 +  mimo: {
 +    configFileName: 'mimocode.json',
 +    databaseFile: 'mimocode.db',
