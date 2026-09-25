@@ -176,7 +176,7 @@
 | 项 | 处置 |
 |---|---|
 | squad leader 协调协议（评估必录+dispatch 即停） | 🔜P0（驾驶舱协作主线；#7 只落了 mention 半边） |
-| inbox 三档 severity×归档双轴 | 🔜P1（📦旧账活动收件箱关联） |
+| inbox 三档 severity×归档双轴 | ✅ patch 418（三档/双轴四象限/双收件人/正文截 200/批量操作） |
 | 分派预演 WillEnqueueRun | 🔜P1（写读共用谓词，衔接 #7 派单链） |
 | resume-unsafe 分档+work_dir 继承 | 🔜P2 |
 | 在场两维（availability×workload） | 🔜P2 |
@@ -276,4 +276,4 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 漏：122+ 项全部入档处置完毕（✅2 补记/🧬9 补记/📦9 旧账待迁/🔜100 排队（P0≈10·合并后/P1≈20/P2≈70）/❌3）；zcode §七 39 项→核验批 P1。
 - 错：E1-E5 全部修正（证据源声明/409 状态回改/E4 补正/E5 锚点见 #4 行已含 minimax+codex 合并批原文）。
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
-- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 2：WillEnqueueRun 分派预演+coder 交接话术 patch 416）→ 余 P1 十八项 → 核验批。
+- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 3：WillEnqueueRun 预演+coder 交接话术 416+multica inbox 三档 418）→ 余 P1 十七项 → 核验批。
