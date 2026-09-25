@@ -197,7 +197,7 @@
 | 任务=证据累积对象（laneSessions/交付快照/裁决） | 🔜P0（与 A1 合并立项） |
 | 结果回收三兜底 | 🔜P1 |
 | agent→coordinator 权限升级（urgency 三档） | 🔜P1（衔接 402 审批域） |
-| dev 列 watchdog+监督模式 | 🔜P1（衔接 401 runaway-guard） |
+| dev 列 watchdog+监督模式 | ✅ runaway_supervisor.py（watchdog_retry/ralph_loop 判定面+有界恢复转人工；patch 457；执行钩子后续） |
 | 执行租约+runner 反代 | ❌单机不适用（多机再启；A2A 依赖它同缓） |
 | 共享会话四档模式+prompt 审批 | 📦旧账已落（ide-session-share R6）·待随迁 |
 | 会话连续性四态徽标 | 🔜P2 |
@@ -276,4 +276,4 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 漏：122+ 项全部入档处置完毕（✅2 补记/🧬9 补记/📦9 旧账待迁/🔜100 排队（P0≈10·合并后/P1≈20/P2≈70）/❌3）；zcode §七 39 项→核验批 P1。
 - 错：E1-E5 全部修正（证据源声明/409 状态回改/E4 补正/E5 锚点见 #4 行已含 minimax+codex 合并批原文）。
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
-- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 7+原生再裁 1：tool_search 渐进披露原生）（WillEnqueueRun 预演+交接话术 416+inbox 三档 418+board 并发闸 419+ask 问卷契约 455+权限升级 456+GOAL-05 让位队列）→ 余 P1 十三项 → 核验批。
+- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ 余 P1 十二项 → 核验批。
