@@ -71,6 +71,8 @@ export interface MentionOutcome {
 export interface MentionDispatchOptions {
   engine: DispatchEnginePort
   clientId: string
+  /** 派单发起者（@squad 自触发抑制判定用；缺省视为系统发起不禁停）。 */
+  mentionAuthor?: string
   /** 可派发 agent 名单（默认 ['zcode']；非名单内 → target_unavailable）。 */
   knownAgents?: string[]
   /** 已知名单内但非 zcode 引擎的 agent → deferred（P5 吸收后并入本总线）。 */
@@ -95,6 +97,7 @@ export class MentionDispatchService {
   private readonly pendingTtlMs: number
   private readonly now: () => number
   private readonly onOutcome: (o: MentionOutcome) => void
+  private readonly mentionAuthor: string | undefined
   private readonly pending = new Map<string, PendingRun>()
 
   constructor(opts: MentionDispatchOptions) {
@@ -107,6 +110,7 @@ export class MentionDispatchService {
     this.pendingTtlMs = opts.pendingTtlMs ?? 30 * 60_000
     this.now = opts.now ?? Date.now
     this.onOutcome = opts.onOutcome ?? (() => {})
+    this.mentionAuthor = opts.mentionAuthor
   }
 
   /**
@@ -151,7 +155,31 @@ export class MentionDispatchService {
     const emit = (o: MentionOutcome) => { this.onOutcome(o); return o }
 
     if (token.kind === 'squad') {
-      return emit({ type: 'mention.outcome', ...base, reason: 'deferred', detail: '@squad 派单走看板门禁链（P4 接线）' })
+      // squad leader 协议（multica P0 吸收，squad-protocol.ts）：选人是 leader 职责，
+      // 派单只发 leader；自触发抑制；派单即记一条 no_action 评估占位（leader 轮必录
+      // verdict 覆盖它——"每轮必录"从派单侧就有账）。
+      const { resolveSquad, isSelfTrigger, buildSquadBriefing, recordEvaluation } = await import('./squad-protocol')
+      const squad = resolveSquad(token.target)
+      if (!squad) {
+        return emit({ type: 'mention.outcome', ...base, reason: 'target_unavailable', detail: `未知 squad：${token.target}` })
+      }
+      if (this.mentionAuthor && isSelfTrigger(squad, this.mentionAuthor)) {
+        return emit({ type: 'mention.outcome', ...base, reason: 'self_trigger_suppressed', detail: `leader ${squad.leader} @ 自己的 squad，不再触发` })
+      }
+      // leader 直派：同实例走 dispatchOne（token 直传不重解析文本——简报里的
+      // @成员名 是给 leader 的指引不是触发）；known/deferred 档对 leader 同样生效
+      // （非 zcode leader 如实回 deferred 走旧链）；单 pending 槽与 @leader 同实例共享。
+      const briefing = buildSquadBriefing(token.target, squad, params.text)
+      recordEvaluation({ squad: token.target, leader: squad.leader, verdict: 'no_action', reason: '派单占位：待 leader 首轮 verdict 覆盖', at: this.now() })
+      try {
+        const leaderOutcome = await this.dispatchOne(
+          { workspacePath: params.workspacePath, text: briefing.prompt },
+          { raw: `@${squad.leader}`, target: squad.leader, kind: 'agent' },
+        )
+        return { ...leaderOutcome, target: `${token.target}(leader:${squad.leader})`, detail: `[squad] ${leaderOutcome.detail ?? ''}` }
+      } catch (err) {
+        return emit({ type: 'mention.outcome', ...base, reason: 'engine_unreachable', detail: `[squad] leader 派发失败：${err instanceof Error ? err.message : String(err)}` })
+      }
     }
     if (!this.known.has(token.target)) {
       return emit({ type: 'mention.outcome', ...base, reason: 'target_unavailable', detail: `未知 agent：${token.target}` })
