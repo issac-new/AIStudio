@@ -924,3 +924,9 @@
 #      回退捆绑版告警不拖垮装配（codex fail-safe 语义）。switch_model 热切换列 v2。
 #      依据 docs/upstream-analysis/codex.md 增量节 + ycode-absorption-matrix 候补表。
 408-agent-tool-model-overrides.patch
+# 409 候补终批（codex e7165c2/53446f9 语义 refinement）：剪枝次序化"最大优先装下即停"——
+#      _demote_size_ordered（内容尺寸降序 demote，达 shed_target_chars 早停；无目标全量
+#      次序不变结果）；proactive 路径按超溢量（overage×CHARS_PER_TOKEN×1.2 余量）定目标，
+#      只回收越线部分多留完整工具结果。守门 3 例+压缩器回归 159 绿。
+#      依据 ycode-absorption-matrix 候补终态处置表（原"排队"项按设计轮落地）。
+409-agent-shed-size-order.patch
