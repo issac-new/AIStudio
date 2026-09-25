@@ -19,6 +19,8 @@ const HARNESS_REST_WHITELIST = [
   'scripts/aipay/mux/mx-lib.sh', // sim 编排（mx/mx_send/mx_create_room）
   'scripts/aipay/mux/mx-scenario-lib.sh', // sim 场景（dm_room/auto_approve）
   'scripts/aipay/mux/mx-smoke.sh', // sim 冒烟（经 mx_send 收发核验）
+  'scripts/aipay/mux/mx-delivery-lib.sh', // M3 delivery 协议轮（事件收发，mx_messages 同款直连）
+  'scripts/aipay/mux/mx-delivery-smoke.sh', // M3 六阶段协议轮（断言读回）
   'scripts/aipay/aipay-scenario.sh', // sim 导演兜底（补邀/读消息）
 ]
 const PROTOCOL_SOURCE = 'matrix/task-protocol.ts'
