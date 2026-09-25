@@ -256,7 +256,7 @@
 | dsh：compaction 留痕卡+/compact | 🔜P1 |
 | dsh：RunTrace 时序图 | 🔜P1（T6 同物） |
 | dsh：Office 三件套预览 | 🧬原生（hermes read_file Office 抽取链）·补记 |
-| dsh：权限预设三档捆绑 | 🔜P2（402 域扩展） |
+| dsh：权限预设三档捆绑 | ✅ permission-presets.ts（readonly/standard/full-auto 放行面+审批面+升级单调性） |
 
 ### 3.9 跨仓域合并裁决（D5/D6/D7 消解）
 
