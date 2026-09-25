@@ -228,8 +228,18 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
     || { note "[凭证] commit $sha 不存在于 aipaydev —— 虚报"; return 1; }
   git -C "$DIRECTOR_CLONE" ls-tree -r --name-only "$sha" 2>/dev/null | grep -q "${rfd}-tasklist.md" \
     || { note "[凭证] commit $sha 里没有 ${rfd}-tasklist.md —— 虚报"; return 1; }
-  kanban_list fanfan | grep -q "$card" \
-    || { note "[凭证] fanfan 账号板查无卡片 $card —— 虚报"; return 1; }
+  # 卡号反核含 archived（09-26 实锤 false negative）：agent 完成后归档卡属正常工作流，
+  # kanban_list（默认活跃态 + studio API 面）都看不到 archived 真卡，曾把合格凭证
+  # 误判"虚报"。改 CLI 直查全状态（活跃 + archived）；studio API 整板返空问题另记。
+  local slug card_found=1
+  for slug in $(account_boards fanfan); do
+    if HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list 2>/dev/null | grep -q "$card" \
+      || HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --status archived 2>/dev/null | grep -q "$card"; then
+      card_found=0; break
+    fi
+  done
+  [[ $card_found -eq 0 ]] \
+    || { note "[凭证] fanfan 账号板查无卡片 $card（含 archived）—— 虚报"; return 1; }
   note "[凭证] $rfd 完成证据成立（card 在 fanfan 账号板可查）：commit=$sha card=$card"
   return 0
 }
