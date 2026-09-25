@@ -12,6 +12,8 @@
 //   node delivery-event.mjs gate  --case-id X --gate G1..G6|R1..R4 --verdict pass|conditional|reject \
 //        --evidence-kind command-exit|artifact|human --evidence-summary S \
 //        [--reason R] --decided-by ACC [--at MS]
+//   node delivery-event.mjs index --room-id R [--room-id R2 ...] --updated-by ACC [--at MS]
+//     （案例发现机制：account-data com.swarmstudio.delivery.index，见 lib dlv_index_update）
 import { parseArgs } from 'node:util'
 
 const SCHEMA_VERSION = 2
@@ -43,6 +45,7 @@ const { positionals, values } = parseArgs({
     'worker-account': { type: 'string' }, 'worker-team': { type: 'string' }, 'worker-profile': { type: 'string' },
     outcome: { type: 'string' }, 'artifact-ref': { type: 'string' }, 'reported-by': { type: 'string' },
     gate: { type: 'string' }, verdict: { type: 'string' },
+    'room-id': { type: 'string', multiple: true },
     'evidence-kind': { type: 'string' }, 'evidence-summary': { type: 'string' },
     reason: { type: 'string' }, 'decided-by': { type: 'string' }, at: { type: 'string' },
   },
@@ -100,8 +103,17 @@ if (kind === 'case') {
     decidedBy: pick(values['decided-by']),
     at,
   }
+} else if (kind === 'index') {
+  const rooms = values['room-id'] ?? []
+  if (rooms.length === 0) die('index 至少一个 --room-id')
+  content = {
+    schemaVersion: SCHEMA_VERSION,
+    roomIds: rooms,
+    updatedBy: pick(values['updated-by']),
+    updatedAt: at,
+  }
 } else {
-  die(`未知事件类别: ${kind}（允许 case/stage/gate）`)
+  die(`未知事件类别: ${kind}（允许 case/stage/gate/index）`)
 }
 
 process.stdout.write(JSON.stringify(content))

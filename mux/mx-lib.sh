@@ -563,26 +563,35 @@ key = m.get("api_key") or ""
 name = m.get("default") or ""
 if not url or not name:
     print("unreachable"); raise SystemExit
-url = url[:-3].rstrip("/") if url.endswith("/v1") else url
+# URL 拼接 bug 修复（2026-09-26 实锤）：只拼 /v1/chat/completions 会把
+# bigmodel 的 .../paas/v4 端点拼成 /v4/v1/... → 404 → 误报 noreply（额度被冤枉）。
+# 两种候选都试：base 已含版本段（/v1 /v4 ...）→ base/chat/completions 优先；
+# 兼容裸前缀风格 → base/v1/chat/completions 兜底；非 404 的首个错误用于分类。
 body = json.dumps({"model": name, "max_tokens": 4,
                    "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}).encode()
-req = urllib.request.Request(url + "/v1/chat/completions", data=body,
-                             headers={"Content-Type": "application/json",
-                                      **({"Authorization": "Bearer " + key} if key else {})})
-try:
-    with urllib.request.urlopen(req, timeout=45) as r:
-        r.read()
-    print("ok")
-except urllib.error.HTTPError as e:
-    text = (e.read() or b"").decode("utf8", "replace").lower()
-    if e.status in (401, 403):
-        print("quota" if ("limit" in text or "quota" in text) else "auth")
-    elif e.status == 429:
-        print("quota")
-    else:
-        print("noreply")
-except Exception:
-    print("unreachable")
+hdrs = {"Content-Type": "application/json",
+        **({"Authorization": "Bearer " + key} if key else {})}
+base = url[:-3].rstrip("/") if url.endswith("/v1") else url
+candidates = [url + "/chat/completions", base + "/v1/chat/completions"]
+last = ("noreply", "")
+for u in candidates:
+    req = urllib.request.Request(u, data=body, headers=hdrs)
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            r.read()
+            print("ok"); raise SystemExit
+    except urllib.error.HTTPError as e:
+        text = (e.read() or b"").decode("utf8", "replace").lower()
+        if e.status in (401, 403):
+            print("quota" if ("limit" in text or "quota" in text) else "auth"); raise SystemExit
+        if e.status == 429:
+            print("quota"); raise SystemExit
+        last = ("noreply", u)
+    except SystemExit:
+        raise
+    except Exception:
+        last = ("unreachable", u)
+print(last[0])
 PY
 }
 
