@@ -113,7 +113,7 @@
 | A9 MCP 目录化 | ✅ mcp-catalog.ts（工具级禁用/Store 装机/可用工具扣减） |
 | A10 /boost 多代理推理管线 | 🔜P2 |
 | A11 Terminal OS 级沙箱 | ❌不吸收（超 Ycode 范围）；定时任务编辑视图🔜P2 |
-| A12 Manager 聚合视图+Inbox 异步通知 | 🧬驾驶舱同域已备·聚合 UI 🔜P2 |
+| A12 Manager 聚合视图 | ✅ manager-hub.ts（驾驶视图排序/working-idle/要人总数） |
 | A13 Knowledge 代理检索/贡献闭环 | 🔜P2（依赖 semantica 迁移，§1.3 手册#2） |
 | 补记：子代理目录 UI+状态机 | 📦旧账（IdeSubagentsFloat）·待随迁（并入 #10） |
 
