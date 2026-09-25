@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
-const DIR = resolve(__dirname, '../../../runtime/roster/lane-specialists')
+const DIR = resolve(__dirname, '../../../../runtime/roster/lane-specialists')
 const EXPECTED = [
   'agent.yaml', 'backlog-refiner.yaml', 'blocked-resolver.yaml', 'dev-executor.yaml',
   'done-reporter.yaml', 'flow-analyst.yaml', 'pr-publisher.yaml', 'qa-frontend.yaml',
