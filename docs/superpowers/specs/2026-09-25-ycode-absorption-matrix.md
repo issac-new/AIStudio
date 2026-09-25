@@ -150,7 +150,7 @@
 | AgentSwarm 扇出 | ✅ swarm-fanout.ts（批量分解/并发限流/排队计数）；/btw 侧问随 UI |
 | fileHistory 回合级双相快照 | ✅ file-history.ts（before/after 双相/单文件回读/diff 三态；#5 恢复域数据面） |
 | goal 三预算字段 | 并入 §3.9 goal 域 |
-| Ctrl-B detach shell | 🧬原生（terminal background+process_manage）·快捷键 🔜P2 |
+| kimi Ctrl-B detach | ✅ shell-detach.ts（前台转后台/PTY 提示） |
 | 状态栏可定制 | 🔜P2（**四源合并**：kimi/minimax/codex/dsh，含 custom-command 探针） |
 | 会话全文搜索 | 🧬原生（session_search FTS5）·工作台入口 🔜P2 |
 | headless -p stream-json | 🧬原生（zcode R1 实证）·补记 |
