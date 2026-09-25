@@ -165,6 +165,9 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
   sset "$key" "$rid"; echo "$rid"
 }
 
+# approved.events 台账（边界设计 §2/§6-T4，eid 锚点约定）：每行
+#   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
+# 事件 id 即 Matrix $event_id（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
 auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份线程内回 !approve
   local room="$1"
@@ -172,12 +175,14 @@ auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份线程
     local pend
     pend=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
       '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK|approval"))) | .event_id' 2>/dev/null \
-      | while read -r eid; do grep -q "^$eid$" "$APPROVED_LOG" || echo "$eid"; done) || true
+      | while read -r eid; do grep -q "^$eid" "$APPROVED_LOG" || echo "$eid"; done) || true
     for eid in $pend; do
-      mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
-        "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$eid\"}}" >/dev/null || true
-      echo "$eid" >> "$APPROVED_LOG"
-      note "[$u] 线程内回复 !approve（事件 ${eid}）"
+      local reply_eid
+      reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
+        "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$eid\"}}" \
+        | jq -r '.event_id // empty' 2>/dev/null) || true
+      echo "$eid ${reply_eid:-NO_REPLY} $u $(date +%s)" >> "$APPROVED_LOG"
+      note "[$u] 线程内回复 !approve（请求 ${eid} → 回执 ${reply_eid:-NO_REPLY}）"
     done
   done
 }
