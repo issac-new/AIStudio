@@ -2,10 +2,11 @@
 // 用法: node scripts/deploy-agent-runtime.mjs [--apply] [--runtime <dir>]
 //   默认 dry-run（只报告差异不写入）；--apply 才真正拷贝。杜绝 A1 类"修复不达运行时"。
 //   安装树目标已存在且内容不同时，--apply 先备份旧文件为 <name>.bak.<timestamp> 再覆盖
-//   （计入冲突并在输出列出，可回滚；与 aipay-agent-sync.sh 的安装树安全边界对齐）。
+//   （计入冲突并在输出列出，可回滚；同目标备份只留最近 3 份、超限删最旧（H8：只增不减
+//   会长期堆积）；与 aipay-agent-sync.sh 的安装树安全边界对齐）。
 // source=manifest.root（overlay/runtime，本检出运行时镜像）→ target=~/.hermes/hermes-agent（运行时安装树）。
-import { readFileSync, existsSync, copyFileSync, mkdirSync, lstatSync } from 'node:fs';
-import { resolve, dirname, join } from 'node:path';
+import { readFileSync, existsSync, copyFileSync, mkdirSync, lstatSync, readdirSync, unlinkSync } from 'node:fs';
+import { resolve, dirname, join, basename } from 'node:path';
 import { homedir } from 'node:os';
 
 // 路径解析（Z5）：worktree 检出（.claude/worktrees/<x>）与正常检出（ncwk/overlay）层级
@@ -50,6 +51,20 @@ const dstRoot = runtimeArg > 0 ? process.argv[runtimeArg + 1] : join(homedir(), 
 let same = 0, copied = 0, missing = 0, conflict = 0;
 const conflicts = [];            // 目标与源不同、覆盖前先备份的清单（P6 可回滚+告警）
 const stamp = Date.now();        // 备份时间戳：一次运行共用一个（<name>.bak.<timestamp>）
+const KEEP_BACKUPS = 3;          // 同目标 .bak.<stamp> 备份保留份数（H8：只增不减会长期堆积）
+const pruneBackups = (target) => { // 超限删最旧；非数字后缀（人工留档）不动
+  const prefix = `${basename(target)}.bak.`;
+  const dir = dirname(target);
+  const old = readdirSync(dir)
+    .filter((n) => n.startsWith(prefix))
+    .map((n) => ({ n, t: Number(n.slice(prefix.length)) }))
+    .filter((b) => Number.isFinite(b.t))
+    .sort((a, b) => a.t - b.t);
+  for (const b of old.slice(0, Math.max(0, old.length - KEEP_BACKUPS))) {
+    unlinkSync(join(dir, b.n));
+    console.log(`  · 备份超 ${KEEP_BACKUPS} 份，删最旧 ${b.n}`);
+  }
+};
 console.log(`[deploy-agent-runtime] ${apply ? 'APPLY' : 'DRY-RUN'}  ${manifest.root} → ${dstRoot}`);
 for (const f of manifest.files) {
   const s = join(srcRoot, f.source);
@@ -65,7 +80,10 @@ for (const f of manifest.files) {
   }
   if (apply) {
     mkdirSync(dirname(d), { recursive: true });
-    if (existsSync(d)) copyFileSync(d, `${d}.bak.${stamp}`);   // 先备份旧文件再覆盖，可回滚
+    if (existsSync(d)) {
+      copyFileSync(d, `${d}.bak.${stamp}`);   // 先备份旧文件再覆盖，可回滚
+      pruneBackups(d);                        // 同目标备份只留最近 KEEP_BACKUPS 份（H8）
+    }
     copyFileSync(s, d);
     copied++; console.log(`  ✓ 同步 ${f.source}`);
   } else {
