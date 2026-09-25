@@ -1,0 +1,205 @@
+diff --git a/agent/tool_model_overrides.py b/agent/tool_model_overrides.py
+new file mode 100644
+--- /dev/null
++++ b/agent/tool_model_overrides.py
+@@ -0,0 +1,116 @@
++"""Per-model 工具描述/参数覆盖（吸收 codex per-model tool description 族，候补队列第二批）。
++
++Origin：codex 29f056c/b2aa42e/f2654ea/8c66a5a（模型目录可按模型覆盖工具 description 与
++parameters，轮中换模型即时生效，无效 schema 回退捆绑版并告警）。hermes 形状：
++
++- 配置面：``config.yaml`` 顶层 ``tool_model_overrides``——
++
++  .. code-block:: yaml
++
++     tool_model_overrides:
++       "qwen*":                    # 模型 id 精确或尾通配
++         terminal:
++           description: "…（为该模型定制的说明）"
++       "glm-5.3*":
++         delegate_task:
++           parameters: { type: object, properties: {…}, required: […] }
++
++- 应用点：``agent_init._load_tools`` 尾部（会话构建时模型已知即生效）；switch_model
++  换模热切换列 v2（重跑 _load_tools 片段即可，本版不追）。
++- 无效 schema（parameters 非 dict / 缺 ``type``）→ 保留捆绑版并告警一次（codex 同款
++  fail-safe：覆盖配置坏了不能拖垮请求装配）。
++"""
++
++from __future__ import annotations
++
++import fnmatch
++import logging
++from typing import Any, Dict, List, Optional, Tuple
++
++logger = logging.getLogger(__name__)
++
++_warned: set[str] = set()
++
++
++def load_overrides() -> Dict[str, Dict[str, Dict[str, Any]]]:
++    """读 config 的 tool_model_overrides 节；缺失/坏形回空（fail-soft）。"""
++    try:
++        from hermes_cli.config import load_config_readonly
++        raw = (load_config_readonly() or {}).get("tool_model_overrides")
++    except Exception:
++        return {}
++    if not isinstance(raw, dict):
++        return {}
++    out: Dict[str, Dict[str, Dict[str, Any]]] = {}
++    for pattern, tools in raw.items():
++        if not isinstance(pattern, str) or not isinstance(tools, dict):
++            continue
++        clean = {t: o for t, o in tools.items() if isinstance(t, str) and isinstance(o, dict)}
++        if clean:
++            out[pattern] = clean
++    return out
++
++
++def _pattern_matches(pattern: str, model: str) -> bool:
++    if "*" in pattern or "?" in pattern or "[" in pattern:
++        return fnmatch.fnmatchcase(model or "", pattern)
++    return pattern == model
++
++
++def _apply_one(tool_def: Dict[str, Any], override: Dict[str, Any], model: str) -> Tuple[Dict[str, Any], bool]:
++    """套用单条覆盖；返回 (可能改写的定义, 是否生效)。无效字段跳过并告警一次。"""
++    fn = dict(tool_def.get("function") or {})
++    changed = False
++    desc = override.get("description")
++    if isinstance(desc, str) and desc.strip():
++        fn["description"] = desc
++        changed = True
++    elif desc is not None:
++        _warn_once(f"invalid description for model={model}")
++    params = override.get("parameters")
++    if params is not None:
++        if isinstance(params, dict) and isinstance(params.get("type"), str):
++            fn["parameters"] = params
++            changed = True
++        else:
++            # 坏 schema 回退捆绑版（codex 语义：无效覆盖不进请求）。
++            _warn_once(f"invalid parameters schema for model={model}（须为含 type 的对象），保留捆绑版")
++    if not changed:
++        return tool_def, False
++    return {"type": "function", "function": fn}, True
++
++
++def _warn_once(key: str) -> None:
++    if key not in _warned:
++        _warned.add(key)
++        logger.warning("tool_model_overrides: %s", key)
++
++
++def apply_model_tool_overrides(
++    tool_defs: List[Dict[str, Any]], model: Optional[str],
++    overrides: Optional[Dict[str, Dict[str, Dict[str, Any]]]] = None,
++) -> List[Dict[str, Any]]:
++    """按当前模型套用覆盖（不动入参；无匹配/无配置原样返回浅拷贝）。"""
++    if overrides is None:
++        overrides = load_overrides()
++    model = (model or "").strip()
++    if not overrides or not model:
++        return list(tool_defs or [])
++    matched = {t: o for pattern, tools in overrides.items()
++               if _pattern_matches(pattern, model) for t, o in tools.items()}
++    if not matched:
++        return list(tool_defs)
++    out: List[Dict[str, Any]] = []
++    applied = 0
++    for td in tool_defs or []:
++        name = (td.get("function") or {}).get("name", "")
++        override = matched.get(name)
++        if override is None:
++            out.append(td)
++            continue
++        new_td, changed = _apply_one(td, override, model)
++        out.append(new_td)
++        applied += 1 if changed else 0
++    if applied:
++        logger.info("tool_model_overrides: %d tools overridden for model=%s", applied, model)
++    return out
+diff --git a/agent/agent_init.py b/agent/agent_init.py
+--- a/agent/agent_init.py
++++ b/agent/agent_init.py
+@@ -1085,6 +1085,11 @@
+     if drops:
+         agent.tools = [t for t in agent.tools if t["function"]["name"] not in drops]
+ 
++    # per-model 工具覆盖（codex 候补吸收）：config.tool_model_overrides 按当前模型
++    # 套 description/parameters，坏 schema 回退捆绑版告警不拖垮装配。
++    from agent.tool_model_overrides import apply_model_tool_overrides
++    agent.tools = apply_model_tool_overrides(agent.tools or [], getattr(agent, "model", None))
++
+     agent.valid_tool_names = {tool["function"]["name"] for tool in agent.tools} if agent.tools else set()
+     # Kanban guidance is session-static for the dispatcher-owned worker only. Profiles may
+     # expose kanban_show interactively, and children/cron runs inherit the env var, without
+diff --git a/tests/agent/test_tool_model_overrides.py b/tests/agent/test_tool_model_overrides.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_tool_model_overrides.py
+@@ -0,0 +1,64 @@
++"""per-model 工具覆盖守门（codex 候补吸收：按模型套 description/parameters，坏 schema 回退）。"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from agent.tool_model_overrides import apply_model_tool_overrides  # noqa: E402
++
++
++def _defs():
++    return [
++        {"type": "function", "function": {"name": "terminal",
++         "description": "bundled terminal", "parameters": {"type": "object", "properties": {}}}},
++        {"type": "function", "function": {"name": "read_file",
++         "description": "bundled read", "parameters": {"type": "object", "properties": {}}}},
++    ]
++
++
++class TestApply:
++    def test_exact_match_overrides_desc_and_params(self):
++        ov = {"qwen3.7-max": {"terminal": {
++            "description": "为 qwen 定制",
++            "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}}, "required": ["cmd"]},
++        }}}
++        out = apply_model_tool_overrides(_defs(), "qwen3.7-max", ov)
++        term = out[0]["function"]
++        assert term["description"] == "为 qwen 定制"
++        assert term["parameters"]["required"] == ["cmd"]
++        assert out[1]["function"]["description"] == "bundled read"  # 未覆盖工具原样
++
++    def test_wildcard_pattern(self):
++        ov = {"glm-*": {"terminal": {"description": "glm 系定制"}}}
++        out = apply_model_tool_overrides(_defs(), "glm-5.3-flash", ov)
++        assert out[0]["function"]["description"] == "glm 系定制"
++        # 其他模型不受影响。
++        out2 = apply_model_tool_overrides(_defs(), "qwen3.7-max", ov)
++        assert out2[0]["function"]["description"] == "bundled terminal"
++
++    def test_invalid_params_fallback_bundled_with_warning(self, caplog):
++        ov = {"m": {"terminal": {"parameters": {"no_type": True}}}}
++        out = apply_model_tool_overrides(_defs(), "m", ov)
++        assert out[0]["function"]["parameters"] == {"type": "object", "properties": {}}
++        assert any("invalid parameters" in r.message for r in caplog.records)
++
++    def test_unknown_tool_and_no_match_passthrough(self):
++        ov = {"m": {"nonexistent_tool": {"description": "x"}}}
++        assert apply_model_tool_overrides(_defs(), "m", ov) == _defs()
++        ov2 = {"other-model": {"terminal": {"description": "x"}}}
++        assert apply_model_tool_overrides(_defs(), "m", ov2) == _defs()
++        assert apply_model_tool_overrides(_defs(), "m", {}) == _defs()
++        assert apply_model_tool_overrides(_defs(), "", {"m": {"terminal": {"description": "x"}}}) == _defs()
++
++    def test_input_not_mutated(self):
++        d = _defs()
++        ov = {"m": {"terminal": {"description": "changed"}}}
++        apply_model_tool_overrides(d, "m", ov)
++        assert d[0]["function"]["description"] == "bundled terminal"
