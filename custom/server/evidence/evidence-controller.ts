@@ -12,6 +12,7 @@ import {
   appendEvidence, isEvidenceKind, isVerificationVerdict, latestVerdict, listEvidence,
   type EvidenceRecord,
 } from './evidence-store'
+import { buildResultCard, changedFilesByTurn } from './result-card'
 
 const router = new Router({ prefix: '/api/evidence' })
 
@@ -52,6 +53,16 @@ router.post('/:taskId', async (ctx) => {
   }
   const result = appendEvidence(parsed)
   ctx.body = { ok: true, ...result }
+})
+
+router.get('/:taskId/card', async (ctx) => {
+  // 任务结果卡（deepseek-harness 交付卡：时长+验证 bullet+文件清单+交付冻结）。
+  ctx.body = { ok: true, card: buildResultCard(ctx.params.taskId) }
+})
+
+router.get('/:taskId/changed-files', async (ctx) => {
+  // per-turn changed-files（dsh §十 P0-4）：artifactType='changed-files' 卡按里程碑（轮）分组。
+  ctx.body = { ok: true, turns: changedFilesByTurn(ctx.params.taskId) }
 })
 
 router.get('/:taskId/verdict', async (ctx) => {
