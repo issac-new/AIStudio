@@ -279,7 +279,7 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 1. "多数项随底座原生消解"获证实：22 底座已有+4 已覆盖=26/39（67%）已闭合；8 待排期中 6 项（1/3/5/6/7/8）底座契约/参考实现现成（zcode DeveloperToolsPane/SkillsSection/TaskWorkflowRunLines/task-types/UsageStatsSection/mentions 六源均有锚点），从零新做仅 #22（codex/kimi 导入器改造）与 #9 半边（ChatInput 接线）。
 2. 矩阵预裁 2 处升档已覆盖（#21 needs-auth=patch 459 收口、#10 轮导航=P1 批落地）。
 3. #30 OffPeak 原 × 理由（无计费体系）随底座 coding-plan-subscription 消解改判底座已有；#36 三通道字段齐备留 P2 产品择机；33/37 若转 Electron 分发随 packages/desktop 重启评估。
-4. 待排期 8 项建议落点：#1→IdeRoundsPane；#3→IdeMcpPane 技能 tab；#5→loop run-line 接线；#6→contextBreakdown 六源网格；~~#7→IdeGoalBudgetFloat 三预算字段~~（✅goal-budget.ts）；~~#6→contextBreakdown 六源网格~~（✅context-six-source.ts）；~~#1→IdeRoundsPane~~（✅rounds-table.ts）；~~#8~~（✅usage-ledger.ts）；~~#5~~（✅workflow-run-line.ts）；~~#3 技能入口~~（✅skills-ledger.ts）；~~#9 ChatInput @ 域合并~~（✅mention-resolution.ts：六源前缀+派单裸 @ 兼容 #7 合并口径）；#22→导入器换源（codex/kimi，从零重件）。**待排期 1 项余**（#22）。
+4. 待排期 8 项建议落点：#1→IdeRoundsPane；#3→IdeMcpPane 技能 tab；#5→loop run-line 接线；#6→contextBreakdown 六源网格；~~#7→IdeGoalBudgetFloat 三预算字段~~（✅goal-budget.ts）；~~#6→contextBreakdown 六源网格~~（✅context-six-source.ts）；~~#1→IdeRoundsPane~~（✅rounds-table.ts）；~~#8~~（✅usage-ledger.ts）；~~#5~~（✅workflow-run-line.ts）；~~#3 技能入口~~（✅skills-ledger.ts）；~~#9~~（✅mention-resolution.ts）；~~#22 导入器换源~~（✅session-importer.ts：codex/kimi/claude 三源→统一行适配面，坏行计数不丢全会话）。**✅核验批待排期 8 项全部落地**（G5 三预算/G4 六源网格/G8 rounds 表/G7 用量台账/run-line 技能清单/@域合并/导入器换源）——**zcode §七 39 项对账全闭**。
 
 ### 3.11 补账批统计
 
