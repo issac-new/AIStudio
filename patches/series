@@ -975,3 +975,12 @@
 #      契约校验纯函数；问卷状态机 pending→answered 一次定音；答案必答+选项合法+
 #      多余步拒收；POST/GET /api/ask[/answer]（patch 454 挂载）；守门 3 例。
 454-server-ask-contract-routes.patch
+# 470/471（feat/boundary-leftovers 轮，T4b 上游两留痕）：跨机协作事件锚点
+# （边界设计 §6-T4b；编号避让 P1 批推进前沿取 470 带）。
+# 470  hosted_rooms.append_event 可选 collab_event_id——并入 payload 落盘（零 schema
+#      变更，幂等比对随 payload_json 参与）；runtime 镜像已登记。
+# 471  kanban _append_event 可选 collab_event_id——并入 task_events.payload（零 schema
+#      变更）；与 run-trace collab.event_id、loop graph_events.matrix_event_id、
+#      approved.events 双 eid 构成五留痕 eid 锚点约定闭环。
+470-hosted-rooms-collab-event-id.patch
+471-kanban-collab-event-id.patch

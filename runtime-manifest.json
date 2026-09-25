@@ -67,6 +67,11 @@
       "source": "hermes_cli/main_agent_cmds.py",
       "dest": "hermes_cli/main_agent_cmds.py",
       "note": "452: _cmd_memory_set（原子写+--expect-mtime CAS，R2）"
+    },
+    {
+      "source": "gateway/hosted_rooms.py",
+      "dest": "gateway/hosted_rooms.py",
+      "note": "470: append_event 可选 collab_event_id（T4b 跨机 eid 锚点）"
     }
   ],
   "notes": [
