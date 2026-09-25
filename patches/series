@@ -981,3 +981,7 @@
 #      守门 8 例新增（test_kanban_cli 2 / test_kanban_db 4 / test_matrix_room_tools 2），
 #      对修复敏感：撤修复即红。镜像 8 文件与"全链含 417"状态逐字节一致（cmp 对账）。
 417-agent-kanban-runtime-hardening.patch
+# 418 P1（multica §六 inbox，矩阵 §3.5）：注意力队列——三档 severity（action_required/
+#      attention/info）×类型词表、已读/归档双轴四象限、member|agent 双收件人、正文截
+#      200 码点、itemId 幂等+环形 200、批量双轴操作；POST/GET /api/inbox（patch 418 挂载）。
+418-server-inbox-routes.patch
