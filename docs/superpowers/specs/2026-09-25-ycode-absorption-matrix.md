@@ -267,9 +267,19 @@
 - **recap 域**：cc/codex/dsh 三源→单行🔜P0。
 - **E4 补正**：认领四围栏中 runtime 新鲜度围栏=respawn guard+profile 可用性闸部分等价（实证）；wakeup 修订号围栏=❌单机无 wakeup 机制不适用。四围栏裁决理由补全。
 
-### 3.10 zcode §七 39 项底座差距清单对账（此前整表未对账）
+### 3.10 zcode §七 39 项底座差距清单对账（✅核验批已闭 2026-09-25 三向核验）
 
 zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R3+ 工作消费。逐项核验为独立核验轮（**列 🔜P1 核验批**，非实现批）；已可裁决的先行：G4 六源构成→🧬部分（403 三投影）扩展🔜P1；G8 rounds 表🔜P1；P0-3 技能工作台入口🔜P1；P0-5 Workflow 运行可视化 MVP🔜P1；P1-12 turnSteer🧬原生；P1-14 needs-auth OAuth 合成工具🔜P1（与 kimi /mcp-config 合并）；P1-10 轮导航🔜P1（三源行）；其余 ~24 项进核验批清单（含 @六源/任务六态/插件 MVP/MCP 导入同步/自定义命令/富文本输入/Claude 历史导入/G7 面板等）。
+
+#### 核验批终态表（A=upstream/zcode 底座源码 / B=series 390-459 / C=custom 域模块三向核验）
+
+**四类统计（39 项）**：底座已有 22（#2,11-20,23-32,36）｜已覆盖 4（#4 git checkpoint=403/checkpoint-options、#10 轮导航=turn-outline.ts、#21 needs-auth=459、#38 价目表=pricing.ts）｜待排期 8（#1 G8 rounds 表/#3 技能工作台入口/#5 Workflow 可视化 MVP/#6 G4 六源网格扩展/#7 G5 三预算显式化/#8 G7 用量面板升级/#9 @提及 ChatInput 域合并/#22 Claude 历史导入改造）｜不适用 5（#33 自动更新/#34 反馈中心/#35 Onboarding/#37 桌面能力/#39 CUA——依赖 Electron 分发/自家后端/zcode-cua 占位）。
+
+**核验备注**：
+1. "多数项随底座原生消解"获证实：22 底座已有+4 已覆盖=26/39（67%）已闭合；8 待排期中 6 项（1/3/5/6/7/8）底座契约/参考实现现成（zcode DeveloperToolsPane/SkillsSection/TaskWorkflowRunLines/task-types/UsageStatsSection/mentions 六源均有锚点），从零新做仅 #22（codex/kimi 导入器改造）与 #9 半边（ChatInput 接线）。
+2. 矩阵预裁 2 处升档已覆盖（#21 needs-auth=patch 459 收口、#10 轮导航=P1 批落地）。
+3. #30 OffPeak 原 × 理由（无计费体系）随底座 coding-plan-subscription 消解改判底座已有；#36 三通道字段齐备留 P2 产品择机；33/37 若转 Electron 分发随 packages/desktop 重启评估。
+4. 待排期 8 项建议落点：#1→IdeRoundsPane；#3→IdeMcpPane 技能 tab；#5→loop run-line 接线；#6→contextBreakdown 六源网格；#7→IdeGoalBudgetFloat 三预算字段；#8→IdeMetricsPopover 用量面板升级；#9→ChatInput @ 域合并（衔接 #7 派单半边）；#22→导入器换源（codex/kimi）。
 
 ### 3.11 补账批统计
 
