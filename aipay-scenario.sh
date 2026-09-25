@@ -25,6 +25,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 
+# 临时物清理（Z6）：ba 步 /tmp/mx-rfd-remote.$$ 与 ready 步 DL_WT 临时 worktree 中途
+# 退出会残留。重定义 mx_cleanup 扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按
+# 最新定义执行（bash 单 EXIT trap）；DL_WT 未建时为空跳过，worktree 用
+# git worktree remove --force 兜底。
+mx_cleanup() {
+  rm -f "/tmp/mx-api.$$" "$STATE.tmp" "/tmp/mx-rfd-remote.$$"
+  if [[ -n "${DL_WT:-}" ]]; then
+    git -C "$DIRECTOR_CLONE" worktree remove --force "$DL_WT" >/dev/null 2>&1 \
+      || git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1
+  fi
+}
+
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）====="
 # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷。
 # LLM 依赖区间为 [dispatch, uat]（agent 回合步骤）：执行区间与它有交集才要求通道；
@@ -95,13 +107,17 @@ if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
   REG="$DIRECTOR_CLONE/docs/admin/app-registry.md"
   mkdir -p "$(dirname "$REG")"
   app_registry_gen > "$REG"
-  ( cd "$DIRECTOR_CLONE" && git add docs/admin/app-registry.md \
-    && { git diff --cached --quiet docs/admin/app-registry.md || { \
-         git -c user.name="director (M1)" -c user.email="director@aipaydev.local" \
-           commit -qm "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）" \
-         && git pull -q --rebase origin main && git push -q origin main; } } )
+  # 落 main 走 repo_commit_main（P4/Z1）：HEAD 停在 integration 后旧写法（当前分支 commit
+  # + pull --rebase + push origin main）提交落错分支、push 空推/非快进暴毙；失败记问题单
+  # 不中止（对齐 uat/audit/retro 修后风格，入仓缺口由 audit 步对账查漏）。
+  if repo_commit_main "docs/admin/app-registry.md" "director (M1)" "director@aipaydev.local" \
+       "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）"; then
+    note "[M1] 应用资产登记完成（4 应用×负责人×板×SLA×门禁骨架，registry 已入仓）"
+  else
+    echo "ISSUE|appinit-push|director|app-registry 推送 origin/main 失败（留存 ${REG}）" >> "$EVID_DIR/issues.log"
+    note "[观察] app-registry 推送失败（留存本地，记问题单）"
+  fi
   sset appinit_done "$(date +%s)"
-  note "[M1] 应用资产登记完成（4 应用×负责人×板×SLA×门禁骨架，registry 已入仓）"
 fi
 
 # ══ 步骤 7：people（M2 研发人员管理，V3-mgmt 新增）════
@@ -116,13 +132,16 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   fi
   ORG="$DIRECTOR_CLONE/docs/admin/org.md"
   org_gen > "$ORG"
-  ( cd "$DIRECTOR_CLONE" && git add docs/admin/org.md \
-    && { git diff --cached --quiet docs/admin/org.md || { \
-         git -c user.name="director (M2)" -c user.email="director@aipaydev.local" \
-           commit -qm "docs(admin): 研发组织与权限矩阵（org，M2 人员管理，含七角色治理线）" \
-         && git pull -q --rebase origin main && git push -q origin main; } } )
+  # 落 main 走 repo_commit_main（P4/Z1）：同 appinit——HEAD 在 integration 时旧写法提交
+  # 落错分支、push 空推/非快进暴毙；失败记问题单不中止。
+  if repo_commit_main "docs/admin/org.md" "director (M2)" "director@aipaydev.local" \
+       "docs(admin): 研发组织与权限矩阵（org，M2 人员管理，含七角色治理线）"; then
+    note "[M2] 组织与权限矩阵入仓（14 账号：BA/PM/系统分析/架构/安全 secops/运维 ops/审计 audit 治理线齐备）"
+  else
+    echo "ISSUE|people-push|director|org.md 推送 origin/main 失败（留存 ${ORG}）" >> "$EVID_DIR/issues.log"
+    note "[观察] org.md 推送失败（留存本地，记问题单）"
+  fi
   sset people_done "$(date +%s)"
-  note "[M2] 组织与权限矩阵入仓（14 账号：BA/PM/系统分析/架构/安全 secops/运维 ops/审计 audit 治理线齐备）"
 fi
 
 # ══ 步骤 6：BA 需求分发 ═══════════════════════════════
@@ -136,13 +155,18 @@ if step_reached ba; then
   fi
   rm -f "/tmp/mx-rfd-remote.$$"
   if [[ $need_push == 1 ]]; then
-    cp "$RFD_MATERIAL" "$DIRECTOR_CLONE/docs/requirements/"
-    ( cd "$DIRECTOR_CLONE"
-      git add -A
-      git -c user.name="bella (BA)" -c user.email="bella@aipaydev.local" \
-        commit -qm "docs(requirements): ${RFD_ID} 收银台需求说明书（BA 初稿 v2：G1 四要素——AC/Scope-Out/影响面/涉敏）"
-      git pull -q --rebase origin main; git push -q origin main )
-    note "[bella] ${RFD_ID} 已提交 aipaydev（email 通道禁用，以 matrix 私信替代送达）"
+    cp "$RFD_MATERIAL" "$DIRECTOR_CLONE/$RFD_DOC"
+    # 落 main 走 repo_commit_main（P4/Z1）：HEAD 停在 integration 后旧写法提交落错分支、
+    # push 空推/非快进暴毙，需求书进不了 origin/main、reqgate 判读的还是旧版；失败记问题单
+    # 不中止。cp 显式落到 ${RFD_DOC}：RFD_MATERIAL 环境覆盖时基名可能不同，落到目录会与
+    # RFD_DOC 对不上（旧写法靠 git add -A 兜住，此处不兜）。
+    if repo_commit_main "$RFD_DOC" "bella (BA)" "bella@aipaydev.local" \
+         "docs(requirements): ${RFD_ID} 收银台需求说明书（BA 初稿 v2：G1 四要素——AC/Scope-Out/影响面/涉敏）"; then
+      note "[bella] ${RFD_ID} 已提交 aipaydev（email 通道禁用，以 matrix 私信替代送达）"
+    else
+      echo "ISSUE|ba-push|bella|${RFD_DOC} 推送 origin/main 失败（留存 ${DIRECTOR_CLONE}/${RFD_DOC}）" >> "$EVID_DIR/issues.log"
+      note "[观察] 需求书推送失败（留存本地，记问题单）"
+    fi
   fi
   DM=$(dm_room bella fanfan)
   if [[ -z "$(sget ba_dm_marker)" ]]; then
@@ -190,12 +214,17 @@ if step_reached reqgate; then
       echo "- 涉敏：支付资金域=内部-机密（ISO27001 风险评估摘要随需求书 §12）"
       echo "- frozen: true"
     } > "$FREEZE_LOCAL"
-    ( cd "$DIRECTOR_CLONE" && git add -A \
-      && git -c user.name="director (G1)" -c user.email="director@aipaydev.local" \
-           commit -qm "docs(requirements): ${RFD_ID} G1 冻结（AC/Scope-Out/影响面/涉敏 四要素过）" \
-      && git pull -q --rebase origin main && git push -q origin main )
+    # 落 main 走 repo_commit_main（P4/Z1）：HEAD 在 integration 时旧写法提交落错分支、
+    # push 空推/非快进暴毙。失败记问题单不中止；g1_frozen 照常落键，audit 步对账
+    # "已落键但 freeze 不在 origin/main"（audit_check）查漏。
+    if repo_commit_main "$(freeze_doc)" "director (G1)" "director@aipaydev.local" \
+         "docs(requirements): ${RFD_ID} G1 冻结（AC/Scope-Out/影响面/涉敏 四要素过）"; then
+      note "[G1] ${RFD_ID} 需求冻结完成（$(freeze_doc) 已入 origin/main）"
+    else
+      echo "ISSUE|g1-push|director|$(freeze_doc) 推送 origin/main 失败（留存 ${FREEZE_LOCAL}）" >> "$EVID_DIR/issues.log"
+      note "[观察] G1 冻结文件推送失败（留存本地，记问题单）"
+    fi
     sset g1_frozen "$(date +%s)"
-    note "[G1] ${RFD_ID} 需求冻结完成（$(freeze_doc) 已入 origin/main）"
   fi
 fi
 
@@ -524,13 +553,34 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   # push，不切分支、不动 HEAD/local main、无 rebase）。
   repo_pull
   ( cd "$DIRECTOR_CLONE"
+    # 未跟踪副本防撞（Z1 修复回归面）：repo_commit_main 只推远端、文档副本留存工作树，
+    # 而 checkout 拒绝覆盖 origin/main 已跟踪的同名未跟踪文件（内容相同也拒，实测）。
+    # 与 origin/main 一致的副本删掉（checkout 按树重建同名文件，后续读取不受影响），
+    # 不一致的（入仓失败留存件）移进取证目录保住，不丢证据。
+    while IFS= read -r f; do
+      git cat-file -e "origin/main:$f" 2>/dev/null || continue
+      if git show "origin/main:$f" 2>/dev/null | cmp -s - "$f"; then
+        rm -f "$f"
+      else
+        mkdir -p "$EVID_DIR/untracked-backup/$(dirname "$f")" && mv "$f" "$EVID_DIR/untracked-backup/$f" \
+          || echo "ISSUE|untracked-backup|$f|留存副本移入取证目录失败（checkout 或被挡）" >> "$EVID_DIR/issues.log"
+      fi
+    done < <(git ls-files --others --exclude-standard)
     git checkout -q -B integration/${RFD_ID} origin/main
     for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
       git merge -q --no-ff "origin/feat/$b" -m "merge: $b into integration/${RFD_ID}" 2>/dev/null \
         || { git merge --abort 2>/dev/null; echo "ISSUE|merge-conflict|$b|integration 合并冲突" >> "$EVID_DIR/issues.log"; }
     done
-    git push -q -u origin integration/${RFD_ID} )
-  note "[集成] integration/${RFD_ID} 已合并四开发分支并推送"
+    # 分支状态机约定（P4）：integration/${RFD_ID} 是脚本专有集成分支，每轮 -B 基于
+    # origin/main+四开发分支重建，旧集成提交允许被重建结果覆盖（上一轮测试报告类产物以
+    # 仓内文档/取证为准）。重跑窗口下 origin 上残留旧集成提交时直推非快进被拒、set -e
+    # 暴毙——先常规推送，非快进回落 --force-with-lease（lease 锚定本轮 repo_pull 刷新的
+    # origin 引用，远端再被别人推进仍会拒绝）；仍失败记问题单不中止（后续步骤用显式
+    # origin/integration 引用，不看 HEAD）。
+    git push -q -u origin integration/${RFD_ID} 2>/dev/null \
+      || git push -q --force-with-lease -u origin integration/${RFD_ID} 2>/dev/null \
+      || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（常规+强推均失败）" >> "$EVID_DIR/issues.log" )
+  note "[集成] integration/${RFD_ID} 四开发分支已合并并推送（推送被拒时已记问题单，见 issues.log）"
 
   dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}

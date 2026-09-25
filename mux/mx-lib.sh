@@ -180,6 +180,12 @@ mx_create_room() { # <token> <name> [invite-csv] → room_id
 }
 mx_join() { mx "$1" POST "rooms/$2/join" '{}' >/dev/null 2>&1 || true; }
 
+# ── 临时物清理（Z6）：studio() 的 /tmp/mx-api.$$ 正常路径即用即删，EXIT trap 兜住
+#    中途退出/被杀时的残留。引用本库的脚本可重定义 mx_cleanup 扩展清理面（trap 只挂
+#    这一次，退出时按最新定义执行），不要另挂 EXIT trap——bash 只有一个，会互相覆盖。──
+mx_cleanup() { rm -f "/tmp/mx-api.$$"; }
+trap mx_cleanup EXIT
+
 # ── Studio API（单实例多账号）──────────────────────────
 studio() { # <method> <path> [jwt] [json-body]
   local method="$1" path="$2" jwt="${3:-}" body="${4:-}"

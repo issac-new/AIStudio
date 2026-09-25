@@ -15,6 +15,9 @@ mkdir -p "$EVID_DIR"
 [[ -f "$STATE" ]] || : > "$STATE"
 sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0; }
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
+# 临时物清理（Z6）：$STATE.tmp 是 sset 的中转文件，mv 前被中断会残留。重定义 mx_cleanup
+# 即扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按最新定义执行（bash 单 EXIT trap）。
+mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp"; }
 note() { log "$*" | tee -a "$SCEN_LOG"; }
 
 # ── 步骤机（V3 生命周期 21 步：六阶段 L0-L5 × G1-G6 门禁，方案见
@@ -27,10 +30,12 @@ step_reached() { # 步骤 $1 是否在 [START_STEP, UNTIL_STEP] 执行区间内
   local a b u
   a=$(step_pos "$1")
   b=$(step_pos "$START_STEP")
-  [[ -n "$b" ]] || fail "未知 START_STEP: $START_STEP（合法值：$STEPS）"
+  # 报错文案里 $var 紧邻全角括号必须写 ${var}（Z4）：bash 3.2 会把多字节字符首字节
+  # 吞进变量名，"$START_STEP（" 的值直接变空（已实测）。
+  [[ -n "$b" ]] || fail "未知 START_STEP: ${START_STEP}（合法值：${STEPS}）"
   if [[ -n "$UNTIL_STEP" ]]; then
     u=$(step_pos "$UNTIL_STEP")
-    [[ -n "$u" ]] || fail "未知 UNTIL_STEP: $UNTIL_STEP（合法值：$STEPS）"
+    [[ -n "$u" ]] || fail "未知 UNTIL_STEP: ${UNTIL_STEP}（合法值：${STEPS}）"
     (( a >= b && a <= u )) && return 0
     return 1
   fi
@@ -105,7 +110,7 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] → id（state 
   id=$(studio POST "/api/hermes/kanban?board=$board" "$(jwt_of "$u")" \
     "{\"title\":$(jq -Rn --arg t "$title" '$t'),\"body\":$(jq -Rn --arg b "$body" '$b'),\"project\":\"aipaydev\"}" \
     | jq -r '.task.id // .id')
-  [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: $title（板 ${board}）"
+  [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
   sset "$key" "$id"; echo "$id"
 }
 
@@ -212,7 +217,15 @@ repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1
 }
-repo_pull() { git -C "$DIRECTOR_CLONE" pull -q origin main >/dev/null 2>&1 || true; }
+# repo_pull（Z3）：只刷引用、不动当前分支/工作树。旧写法 `git pull origin main` 会把
+# origin/main merge 进当前分支——defect 步后 HEAD 停在 integration/${RFD_ID}，pull 即把
+# main 混进集成分支污染其历史。现改为：全量 fetch 刷远端引用（repo_has/步骤内 merge 用的
+# origin/*），再把本地 main 快进到 origin/main（供以本地 main 为基的路径用；main 在别处
+# 检出或非快进时 git 自行拒绝，静默跳过，与 repo_commit_main 的收尾口径一致）。
+repo_pull() {
+  git -C "$DIRECTOR_CLONE" fetch -q origin >/dev/null 2>&1 || true
+  git -C "$DIRECTOR_CLONE" fetch -q origin main:main >/dev/null 2>&1 || true
+}
 
 # ── 分支状态机约定（P4）──────────────────────────────────────
 # DIRECTOR_CLONE 的 HEAD 归属：defect 步 `checkout -B integration/${RFD_ID}` 后停在
@@ -264,7 +277,7 @@ gate_blocked() { # <gate-key> <step-name>：硬闸检查——闸门 state 键�
   local key="$1" step="$2"
   [[ -n "$(sget "$key")" ]] && return 0
   echo "ISSUE|gate-bypass-blocked|$step|硬闸 $(basename "$key") 未过，$step 不得执行（V3 §3 治理总纲）" >> "$EVID_DIR/issues.log"
-  fail "硬闸未过：$step 前置闸门（$key）未冻结，中止（见方案 V3 闭环治理）"
+  fail "硬闸未过：$step 前置闸门（${key}）未冻结，中止（见方案 V3 闭环治理）"
 }
 
 freeze_doc() { echo "docs/requirements/${RFD_ID}.freeze.md"; }
