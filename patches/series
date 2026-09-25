@@ -1007,3 +1007,6 @@
 #      同物合并）/needs-auth action 闭环（authorize|dismiss 一次闭环）；
 #      POST/GET /api/mcp-config[/needs-auth/:name/auth]（patch 459 挂载）；守门 2 例。
 459-server-mcp-config-mount.patch
+# 473（feat/boundary-ui 轮，M2 案例面板 i18n）：ia2.delivery 词条（zh/en，
+#      其余语种 fallback——104/105 先例同款）。
+473-delivery-cases-i18n.patch
