@@ -970,8 +970,8 @@
 451-jobs-base-url-cli.patch
 452-memory-set-cli.patch
 453-memory-save-cli.patch
-# 454 P1（minimax ask_user 结构化问卷，矩阵 §3.4；原 420 因并行号段推至 453 尾部续编）：
-#      custom/server/ask/——1-4 步×每步 2-4 选项×recommended≤1×带图（字符串引用）
-#      契约校验纯函数；问卷状态机 pending→answered 一次定音；答案必答+选项合法+
-#      多余步拒收；POST/GET /api/ask[/answer]（patch 454 挂载）；守门 3 例。
-454-server-ask-contract-routes.patch
+419-agent-board-concurrency-gate.patch
+# 455 P1 routes 统一挂载（column-automation/inbox/ask 三组合一——并行会话重排
+#      routes.ts 致三 routes-only 补丁 hunk 集体失配；模块本体走 custom/ symlink
+#      不属补丁体系，挂载收敛为本单一补丁，按当前 routes.ts 实锚生成）。
+455-server-p1-routes-mounts.patch
