@@ -15,7 +15,7 @@ describe('turn outline（dsh 语义）', () => {
       e('assistant', 500),
     ])
     expect(outline).toHaveLength(2)
-    expect(outline[0]).toMatchObject({ turnIndex: 0, startIndex: 0, toolCalls: 2, steps: 3 })
+    expect(outline[0]).toMatchObject({ turnIndex: 0, startIndex: 0, toolCalls: 2, steps: 3 })  // user 不计步
     expect(outline[0].anchor).toHaveLength(60)
     expect(outline[0].durationMs).toBe(300)
     expect(outline[1]).toMatchObject({ turnIndex: 1, startIndex: 4, toolCalls: 0 })
@@ -33,7 +33,7 @@ describe('turn outline（dsh 语义）', () => {
       e('user', 0), e('tool', 50, { toolName: 'a' }),
       e('user', 100), e('assistant', 150),
     ])
-    expect(outlineSummary(outline)).toEqual({ turns: 2, toolCalls: 1, avgTurnMs: 75 })
+    expect(outlineSummary(outline)).toEqual({ turns: 2, toolCalls: 1, avgTurnMs: 50 })  // (50+50)/2
     expect(outlineSummary([])).toEqual({ turns: 0, toolCalls: 0, avgTurnMs: 0 })
   })
 })
