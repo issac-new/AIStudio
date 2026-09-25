@@ -4,12 +4,12 @@
 // PreviewRequest）：**写路径与 preview 端点共用同一谓词**——"这次指派会不会起跑、
 // 为谁跑"的单一事实源，UI 能在用户点确定前告诉他结果与原因，绝不两套判定漂移。
 //
-// Ycode 形状：对 @mention 派单链（mention-dispatch.ts）做纯预测——不执行、不占
-// pending 槽，只走与 dispatchOne 相同的判定序（目标解析→已知/旧链→pending 槽→
-// 自触发）返回预测 outcome reason。写路径侧（dispatchOne）后续可换调用本谓词
-// 保持同源；本件先落 preview 面+谓词本身（同源点在两处 reason 枚举即词表共用）。
-import { parseMentions, type DispatchEnginePort, type MentionOutcome } from './mention-dispatch'
-import { resolveSquad, isSelfTrigger } from './squad-protocol'
+// Ycode 形状：判定核已收敛到 mention-dispatch.ts planDispatch（P-A(d)）——写路径
+// dispatchOne 与本预演调同一份纯判定（目标解析→known/deferred→自触发→槽→可达性），
+// 本文件只做「mention 解析 → 逐条预测 → 预演信封」的映射。历史漂移（squads.yaml
+// review 的 leader=codex 在 deferred 名单：预演回 queued、写路径回 deferred；引擎
+// 离线同理）由同源判定消除，不再靠两处手抄判定序保持一致。
+import { parseMentions, planDispatch, type PlanFacts } from './mention-dispatch'
 import type { DispatchReasonCode } from './dispatch-reasons'
 
 export interface EnqueuePreview {
@@ -19,22 +19,16 @@ export interface EnqueuePreview {
   reason: DispatchReasonCode
   /** 会不会起跑（queued 或 coalesced 算会动，其余不会）。 */
   willRun: boolean
-  /** 为谁跑（squad=leader；agent=自身）。 */
+  /** 为谁跑（squad=leader；agent=自身；不会跑回 '-'）。 */
   runsFor: string
   detail: string
 }
 
-export interface PreviewContext {
-  engine: DispatchEnginePort
-  knownAgents: Set<string>
-  deferredAgents: Set<string>
+export interface PreviewContext extends PlanFacts {
+  /** 派单发起者（自触发抑制判定；与写路径 per-call 同源）。 */
   mentionAuthor?: string
-  /** 当前活跃 pending 槽（workspace::agent 集合），写路径同源读。 */
-  pendingKeys: ReadonlySet<string>
-  now: () => number
-  pendingTtlMs: number
-  /** pending 槽时间戳（workspace::agent → since），过期槽不算活跃。 */
-  pendingSince: ReadonlyMap<string, number>
+  /** 引擎可达性事实（预演入口探测后传入——可达性是判定序末位，不可再各判各的）。 */
+  engineOnline: boolean
 }
 
 /**
@@ -46,39 +40,21 @@ export function willEnqueueRun(
   return parseMentions(text).map((token) => predictOne(token, workspacePath, ctx))
 }
 
-function predictOne(token: { target: string; kind: 'agent' | 'squad' }, workspacePath: string, ctx: PreviewContext): EnqueuePreview {
-  const base = { target: token.target, mentionKind: token.kind }
-  const slotKey = (agent: string) => `${workspacePath}::${agent}`
-  const slotActive = (agent: string) => {
-    const since = ctx.pendingSince.get(slotKey(agent))
-    return since !== undefined && ctx.now() - since < ctx.pendingTtlMs
+function predictOne(
+  token: { target: string; kind: 'agent' | 'squad' }, workspacePath: string, ctx: PreviewContext,
+): EnqueuePreview {
+  const plan = planDispatch({
+    token,
+    workspacePath,
+    mentionAuthor: ctx.mentionAuthor,
+    engineOnline: ctx.engineOnline,
+  }, ctx)
+  return {
+    target: token.target,
+    mentionKind: token.kind,
+    reason: plan.reason,
+    willRun: plan.action !== 'reject',
+    runsFor: plan.reason === 'target_unavailable' ? '-' : plan.runsFor,
+    detail: plan.detail,
   }
-
-  if (token.kind === 'squad') {
-    const squad = resolveSquad(token.target)
-    if (!squad) {
-      return { ...base, reason: 'target_unavailable', willRun: false, runsFor: '-', detail: `未知 squad：${token.target}` }
-    }
-    if (ctx.mentionAuthor && isSelfTrigger(squad, ctx.mentionAuthor)) {
-      return { ...base, reason: 'self_trigger_suppressed', willRun: false, runsFor: squad.leader, detail: `leader ${squad.leader} 自触发抑制` }
-    }
-    const runsFor = squad.leader
-    if (slotActive(runsFor)) {
-      return { ...base, reason: 'coalesced', willRun: true, runsFor, detail: `并入 ${runsFor} 活跃 run` }
-    }
-    return { ...base, reason: 'queued', willRun: true, runsFor, detail: `将起跑（leader ${runsFor}）` }
-  }
-
-  // 与写路径构造器同语义：deferred 隐含已知（先于未知判定）。
-  const known = ctx.deferredAgents.has(token.target) || ctx.knownAgents.has(token.target)
-  if (!known) {
-    return { ...base, reason: 'target_unavailable', willRun: false, runsFor: '-', detail: `未知 agent：${token.target}` }
-  }
-  if (ctx.deferredAgents.has(token.target)) {
-    return { ...base, reason: 'deferred', willRun: false, runsFor: token.target, detail: '非 zcode 引擎 agent 走 hermes 旧链' }
-  }
-  if (slotActive(token.target)) {
-    return { ...base, reason: 'coalesced', willRun: true, runsFor: token.target, detail: '并入活跃 run（不另起）' }
-  }
-  return { ...base, reason: 'queued', willRun: true, runsFor: token.target, detail: '将起跑' }
 }

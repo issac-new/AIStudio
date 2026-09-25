@@ -43,12 +43,31 @@ export interface ZcodeSocketEvent {
   at: number
 }
 
-/** reason 字面值 → 状态条短文案（与服务端词表同步维护；缺省原样展示字面值）。 */
+/**
+ * reason 字面值 → 状态条短文案（缺省原样展示字面值）。
+ * 词表单一事实源是服务端 dispatch-reasons.ts DISPATCH_REASON_CODES（冻结、只追加）：
+ * 本表必须逐值覆盖——zcode-projection.test.ts 有跨端对账守门（键集合断言相等），
+ * 新增 reason 不补文案当场红，不再靠「记得同步」。
+ */
 export const REASON_CHIP_TEXT: Record<string, string> = {
+  // ── 成功路径（已受理/合并/暂缓）──
   queued: '已入队',
   coalesced: '已合并',
   deferred: '暂缓',
+  // ── 权限与目标 ──
+  invocation_not_allowed: '无权触发',
+  target_unavailable: '目标不可用',
+  // ── 运行时四分档 ──
   runtime_offline: '运行时离线',
+  runtime_unusable: '运行时不可用',
+  runtime_access_denied: '运行时拒绝',
+  runtime_profile_missing: 'profile 缺失',
+  agent_runtime_required: '未绑定运行时',
+  // ── 归因与状态 ──
+  attribution_blocked: '归属解析失败',
+  already_active: '已有活跃 run',
+  self_trigger_suppressed: '自触发已抑制',
+  // ── 引擎通道 ──
   engine_unreachable: '引擎不可达',
   handshake_failed: '握手失败',
   subscription_failed: '订阅失败',
