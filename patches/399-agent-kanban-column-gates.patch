@@ -1,48 +1,86 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -2774,6 +2774,10 @@
+@@ -2774,6 +2774,11 @@
      # Cheap pre-check; re-checked inside the txn to close the parent-reopen race.
      if not _parents_satisfied(conn, task_id):
          return False
 +    # routa 流转门禁四件套（overlay 吸收第一批 #8）：done 列声明式门（approval/
 +    # checklist/validator，gateMode blocking|warning）；无 gates.json 即无门。
-+    from hermes_cli.kanban_gates import enforce_column_gates
-+    enforce_column_gates(conn, task_id, "done", evidence=summary or result)
++    # 拒绝/告警事件留在事务外；通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
++    from hermes_cli.kanban_gates import gate_transition
++    _, gate_payload = gate_transition(conn, task_id, "done", evidence=summary or result)
      from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
      verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
      _gate_empty_completion(conn, task_id, result=result, summary=summary)
-@@ -3398,6 +3402,10 @@
+@@ -2841,6 +2846,9 @@
+         _append_event(
+             conn, task_id, "completed",
+             _completed_event_payload(result, event_summary, verified_cards, metadata),
+             run_id=run_id,
+         )
++        if gate_payload:
++            # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
++            _append_event(conn, task_id, "column_transition", gate_payload)
+     _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
+@@ -3398,6 +3406,11 @@
  
      summary = redact_review_value(summary)
      metadata = redact_review_value(metadata)
 +    # routa 流转门禁四件套（overlay 吸收第一批 #8）：review 列声明式门。
-+    # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）。
-+    from hermes_cli.kanban_gates import enforce_column_gates
-+    enforce_column_gates(conn, task_id, "review", evidence=summary)
++    # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）；拒绝/告警
++    # 事件留在事务外，通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
++    from hermes_cli.kanban_gates import gate_transition
++    _, gate_payload = gate_transition(conn, task_id, "review", evidence=summary)
      # Declared (metadata["artifacts"]) and prose-referenced files
      # must be durable BEFORE anything can clean the scratch workspace up: for a
      # review-bound card the reviewer's completion is the cleanup trigger.
-@@ -3622,6 +3630,14 @@
+@@ -3491,6 +3504,9 @@
+             staged = _cleaned_artifact_paths(metadata)
+             if staged:
+                 payload["artifacts"] = staged
+             _append_event(conn, task_id, "review_requested", payload, run_id=run_id)
++        if gate_payload:
++            # 通过事件与状态 UPDATE 同一提交（"回滚后无事件"不变量由此保住）。
++            _append_event(conn, task_id, "column_transition", gate_payload)
+     except Exception:
+         if staged_copies:
+@@ -3622,17 +3638,30 @@
              f"bypass them; complete the parents or drop the link with "
              f"`hermes kanban unlink <parent_id> {task_id}`)"
          )
 +
 +    # routa 流转门禁四件套（overlay 吸收第一批 #8）：ready 列声明式门；
 +    # promote 是 (ok, reason) 语义，blocking 门拒绝转 reason 返回。
-+    from hermes_cli.kanban_gates import GateBlockedError, enforce_column_gates
++    # dry_run 只校验不落事件（docstring: dry_run only validates）。
++    from hermes_cli.kanban_gates import GateBlockedError, gate_transition
 +    try:
-+        enforce_column_gates(conn, task_id, "ready", actor=actor)
++        _, gate_payload = gate_transition(
++            conn, task_id, "ready", actor=actor, dry_run=dry_run)
 +    except GateBlockedError as exc:
 +        return False, str(exc)
  
      if dry_run:
          return True, None
+ 
+     with write_txn(conn):
+         upd = conn.execute(
+             "UPDATE tasks SET status = 'ready' "
+             "WHERE id = ? AND status IN ('todo', 'blocked')", (task_id,),
+         )
+         if upd.rowcount != 1:
+             return False, f"task {task_id} status changed during promotion"
+         _append_event(conn, task_id, "promoted_manual", {"actor": actor, "reason": reason})
++        if gate_payload:
++            # 通过事件与状态 UPDATE 同一提交：状态没改成（rowcount≠1/回滚）就不落。
++            _append_event(conn, task_id, "column_transition", gate_payload)
+ 
+     return True, None
 diff --git a/hermes_cli/kanban_gates.py b/hermes_cli/kanban_gates.py
 new file mode 100644
 --- /dev/null
 +++ b/hermes_cli/kanban_gates.py
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,213 @@
 +"""Declarative column gates for kanban transitions (absorbed from routa four-piece set).
 +
 +Origin: upstream/routa ``src/core/models/kanban.ts:109-127`` +
@@ -94,9 +132,12 @@ new file mode 100644
 +class GateBlockedError(RuntimeError):
 +    """A blocking gate refused the transition; ``results`` carries the evidence."""
 +
-+    def __init__(self, results: list[dict[str, Any]], to_status: str):
++    def __init__(self, results: list[dict[str, Any]], to_status: str,
++                 payload: Optional[dict[str, Any]] = None):
 +        self.results = results
 +        self.to_status = to_status
++        # 拒绝事件的现成载荷：record=False 纯校验后由调用点决定是否留在事务外。
++        self.payload = payload or {"to": to_status, "results": results}
 +        reasons = ", ".join(r["reason"] for r in results if not r["ok"])
 +        super().__init__(f"column gate blocked transition to {to_status!r}: {reasons}")
 +
@@ -164,25 +205,18 @@ new file mode 100644
 +    return results
 +
 +
-+def enforce_column_gates(
-+    conn: Any, task_id: str, to_status: str, *, evidence: Optional[str] = None,
-+    actor: Optional[str] = None,
-+) -> list[dict[str, Any]]:
-+    """Gate a transition into ``to_status`` (wired at complete/review/promote).
-+
-+    Appends a ``column_transition`` event on pass (from/to + gate results — the
-+    COLUMN_TRANSITION piece of the routa coordination bus) or a ``gate_blocked``
-+    / per-gate ``gate_warning`` event on refusal. Raises :class:`GateBlockedError`
-+    for a blocking refusal; returns the gate results otherwise (``[]`` = the
-+    status is ungated)."""
-+    from hermes_cli.kanban_db import _append_event, get_task
++def _eval_gates(
++    conn: Any, task_id: str, to_status: str, *, evidence: Optional[str], actor: Optional[str],
++) -> Optional[tuple[str, list[dict[str, Any]], dict[str, Any]]]:
++    """门评估共用芯：``(mode, results, event_payload)``；任务不存在/该列未配门返回 None。"""
++    from hermes_cli.kanban_db import get_task
 +
 +    task = get_task(conn, task_id)
 +    if task is None:
-+        return []
++        return None
 +    gates = load_board_gates(conn).get(to_status)
 +    if not gates:
-+        return []
++        return None
 +    mode = gates.get("gateMode", "blocking")
 +    results = evaluate_gates(
 +        title=getattr(task, "title", "") or "",
@@ -190,24 +224,81 @@ new file mode 100644
 +        evidence=evidence,
 +        gates=gates,
 +    )
-+    failures = [r for r in results if not r["ok"]]
-+    payload = {"to": to_status, "mode": mode, "results": results}
++    payload: dict[str, Any] = {"to": to_status, "mode": mode, "results": results}
 +    if actor:
 +        payload["actor"] = actor
++    return mode, results, payload
++
++
++def enforce_column_gates(
++    conn: Any, task_id: str, to_status: str, *, evidence: Optional[str] = None,
++    actor: Optional[str] = None, record: bool = True,
++) -> list[dict[str, Any]]:
++    """Gate a transition into ``to_status`` (wired at complete/review/promote).
++
++    Appends a ``column_transition`` event on pass (from/to + gate results — the
++    COLUMN_TRANSITION piece of the routa coordination bus) or a ``gate_blocked``
++    / per-gate ``gate_warning`` event on refusal. Raises :class:`GateBlockedError`
++    for a blocking refusal; returns the gate results otherwise (``[]`` = the
++    status is ungated).
++
++    ``record=False`` 是纯校验：一个事件都不写（``dry_run`` 只校验，绝不把校验写成
++    永久审计）。流转接线见 :func:`gate_transition`：拒绝/告警事件留在事务外，通过
++    事件 ``column_transition`` 由 write_txn 内补记，与状态 UPDATE 同一提交。"""
++    from hermes_cli.kanban_db import _append_event
++
++    ev = _eval_gates(conn, task_id, to_status, evidence=evidence, actor=actor)
++    if ev is None:
++        return []
++    mode, results, payload = ev
++    failures = [r for r in results if not r["ok"]]
 +    if failures and mode == "blocking":
-+        _append_event(conn, task_id, "gate_blocked", payload)
-+        raise GateBlockedError(failures, to_status)
++        if record:
++            _append_event(conn, task_id, "gate_blocked", payload)
++        raise GateBlockedError(failures, to_status, payload=payload)
 +    if failures:
 +        # warning: the transition proceeds, but the miss is auditable.
-+        _append_event(conn, task_id, "gate_warning", payload)
++        if record:
++            _append_event(conn, task_id, "gate_warning", payload)
 +        return results
-+    _append_event(conn, task_id, "column_transition", payload)
++    if record:
++        _append_event(conn, task_id, "column_transition", payload)
 +    return results
++
++
++def gate_transition(
++    conn: Any, task_id: str, to_status: str, *, evidence: Optional[str] = None,
++    actor: Optional[str] = None, dry_run: bool = False,
++) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]]]:
++    """kanban_db 流转接线（complete/review/promote 共用）：门校验 + 事件编排。
++
++    事件语义：``gate_blocked``（拒绝）/``gate_warning``（告警）留在事务外落盘，不因
++    后续回滚消失；``column_transition``（通过）不在这里落——返回其 payload，由调用点
++    在 ``write_txn`` 内与状态 UPDATE 一起 ``_append_event(conn, task_id,
++    "column_transition", payload)`` 补记（同一提交：流转不成事件就不落，校验通过
++    ≠ 已流转）。``dry_run=True`` 纯校验：任何事件都不落、不返回 payload。
++    返回 ``(gate_results, column_transition_payload)``。"""
++    from hermes_cli.kanban_db import _append_event
++
++    ev = _eval_gates(conn, task_id, to_status, evidence=evidence, actor=actor)
++    if ev is None:
++        return [], None
++    mode, results, payload = ev
++    failures = [r for r in results if not r["ok"]]
++    if failures and mode == "blocking":
++        if not dry_run:
++            _append_event(conn, task_id, "gate_blocked", payload)
++        raise GateBlockedError(failures, to_status, payload=payload)
++    if failures:
++        if not dry_run:
++            _append_event(conn, task_id, "gate_warning", payload)
++        return results, None
++    return results, (None if dry_run else payload)
 diff --git a/tests/hermes_cli/test_kanban_gates.py b/tests/hermes_cli/test_kanban_gates.py
 new file mode 100644
 --- /dev/null
 +++ b/tests/hermes_cli/test_kanban_gates.py
-@@ -0,0 +1,212 @@
+@@ -0,0 +1,276 @@
 +"""Tests for declarative column gates (routa four-piece absorption, first batch #8).
 +
 +Covers:
@@ -220,6 +311,7 @@ new file mode 100644
 +* Claim four-fence neighbour (first batch #2): same-assignee second task is
 +  deferred by the per-profile cap (skipped_per_profile_capped), i.e. 同人双跑
 +  被围栏拦截.
++* 门禁原子性：column_transition 与状态 UPDATE 同一提交；dry_run 纯校验零事件。
 +"""
 +
 +from __future__ import annotations
@@ -420,3 +512,66 @@ new file mode 100644
 +                deferred.append((row["id"], assignee))
 +                continue
 +        assert deferred == [(second, "sage")]  # 同人第二张被围栏拦下
++
++
++class TestTransitionAtomicity:
++    """K1：column_transition 必须与状态 UPDATE 同一提交；dry_run 纯校验零事件。"""
++
++    def test_dry_run_records_no_events(self, fresh_home):
++        _write_gates(fresh_home, {"ready": {"requiredChecklist": True}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="- [x] done item", status="todo")
++        assert kb.promote_task(conn, task_id, actor="op", dry_run=True) == (True, None)
++        assert not _events(conn, task_id, "column_transition")
++        assert not _events(conn, task_id, "gate_warning")
++        assert not _events(conn, task_id, "gate_blocked")
++        # 拒绝的 dry-run 同样零事件（dry_run only validates，校验绝不写成审计）。
++        _write_gates(fresh_home, {"ready": {"requiredHumanApproval": True}})
++        ok, reason = kb.promote_task(conn, task_id, actor="op", dry_run=True)
++        assert ok is False and "approval_required" in reason
++        assert not _events(conn, task_id, "gate_blocked")
++        assert kb.get_task(conn, task_id).status == "todo"
++
++    def test_pass_event_rolls_back_with_state_update(self, fresh_home):
++        # 自管连接模拟接线：校验通过 + write_txn 内补记，事务回滚后通过事件不得存在。
++        from hermes_cli.kanban_gates import gate_transition
++        _write_gates(fresh_home, {"done": {"requiredChecklist": True}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="- [x] done item")
++        results, gate_payload = gate_transition(conn, task_id, "done", evidence="ok")
++        assert gate_payload and [r["ok"] for r in results] == [True]
++        try:
++            with kb.write_txn(conn):
++                conn.execute("UPDATE tasks SET status = 'done' WHERE id = ?", (task_id,))
++                if gate_payload:
++                    kb._append_event(conn, task_id, "column_transition", gate_payload)
++                raise RuntimeError("simulated downstream failure")
++        except BaseException:  # noqa: BLE001 - 预期回滚
++            pass
++        assert not _events(conn, task_id, "column_transition")
++        assert kb.get_task(conn, task_id).status == "ready"
++
++    def test_no_pass_event_when_completion_refused(self, fresh_home):
++        # 真接线回归：门过了但完成被拒（空证据）→ 不得留下"已转入 done"假审计事件。
++        _write_gates(fresh_home, {"done": {"requiredChecklist": True}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="- [x] done item")
++        raised = None
++        try:
++            kb.complete_task(conn, task_id, result="  ", summary="  ")
++        except BaseException as exc:  # noqa: BLE001 - 按名判定，对跨文件顺序污染免疫
++            raised = type(exc).__name__
++        assert raised == "EmptyCompletionError", f"空完成必须被拒，实际 {raised}"
++        assert kb.get_task(conn, task_id).status == "ready"
++        assert not _events(conn, task_id, "column_transition")
++
++    def test_no_pass_event_when_run_guard_refuses(self, fresh_home):
++        # 门过了但 expected_run_id 不匹配 → complete_task 返回 False，同样不得落事件。
++        _write_gates(fresh_home, {"done": {"requiredChecklist": True}})
++        conn = _connect(fresh_home)
++        task_id = _make_task(conn, title="card", body="- [x] done item")
++        assert kb.complete_task(
++            conn, task_id, result="pytest -q ok", summary="pytest -q ok",
++            expected_run_id=999) is False
++        assert kb.get_task(conn, task_id).status == "ready"
++        assert not _events(conn, task_id, "column_transition")

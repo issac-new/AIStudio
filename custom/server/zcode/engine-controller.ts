@@ -65,10 +65,11 @@ router.post('/projection/watch', async (ctx) => {
   }
   const runtime = getZcodeProjectionRuntime()
   try {
+    // 先 watchWorkspace 再 watchSession（对齐 /mention 路径顺序）：watchSession 要求
+    // workspace 已 watch，带 sessionId 直调首调必失败。
+    await runtime.watchWorkspace(workspacePath)
     if (typeof sessionId === 'string' && sessionId.length > 0) {
       await runtime.watchSession(workspacePath, sessionId)
-    } else {
-      await runtime.watchWorkspace(workspacePath)
     }
     ctx.body = { ok: true, connected: runtime.connected, watching: runtime.watching }
   } catch (err) {
@@ -78,7 +79,8 @@ router.post('/projection/watch', async (ctx) => {
       ok: false,
       reason: /handshake|protocolVersion/i.test(detail) ? 'handshake_failed' : 'engine_unreachable',
       detail,
-      retained: true, // watch 意图保留，引擎上线后自动重放
+      // retained 按实际意图状态回报（意图已登记才保留、引擎上线后重放），不再无条件 true。
+      retained: runtime.hasWatchIntent(workspacePath),
       watching: runtime.watching,
     }
   }
@@ -133,22 +135,46 @@ router.post('/checkpoint/recover', async (ctx) => {
     return
   }
   const runtime = getZcodeProjectionRuntime()
-  try {
-    const envelopes = buildRecoveryEnvelopes(mode, {
-      workspacePath, sessionId, rowId, entityId,
-      clientId: 'swarmstudio-checkpoint',
-      originalQueryText: typeof originalQueryText === 'string' ? originalQueryText : undefined,
-    }, Date.now())
-    const sent = []
-    for (const envelope of envelopes) {
+  const envelopes = buildRecoveryEnvelopes(mode, {
+    workspacePath, sessionId, rowId, entityId,
+    clientId: 'swarmstudio-checkpoint',
+    originalQueryText: typeof originalQueryText === 'string' ? originalQueryText : undefined,
+  }, Date.now())
+  // 逐条 try、逐条回报（S8）：summarize 档两条命令可能一条已生效一条失败，一条失败即
+  // 503 会让调用方整单重试（双写）；逐条 rejected 也不能谎报 ok:true。ok 由全部命令推导。
+  const commands: Array<{ commandId: string; type: string; status?: string; reasonCode?: string; ok: boolean; detail?: string; transportError?: boolean }> = []
+  for (const envelope of envelopes) {
+    try {
       const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope: envelope as unknown as Record<string, unknown> }))
-      sent.push({ commandId: envelope.commandId, type: envelope.type, status: r.status, reasonCode: r.reasonCode })
+      const accepted = !r.status || r.status === 'accepted' || r.status === 'ok'
+      commands.push({ commandId: envelope.commandId, type: envelope.type, status: r.status, reasonCode: r.reasonCode, ok: accepted })
+    } catch (err) {
+      // transportError：调用链本身失败（引擎不可达/超时），区别于引擎回 rejected 的业务拒绝
+      commands.push({ commandId: envelope.commandId, type: envelope.type, ok: false, transportError: true, detail: err instanceof Error ? err.message : String(err) })
     }
-    ctx.body = { ok: true, mode, commands: sent }
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err)
-    ctx.status = 503
-    ctx.body = { ok: false, reason: /handshake/i.test(detail) ? 'handshake_failed' : 'engine_unreachable', detail }
+  }
+  const landed = commands.filter((c) => c.ok).length
+  const ok = landed === commands.length
+  if (ok) {
+    ctx.body = { ok: true, mode, commands }
+    return
+  }
+  // 部分成功（已有命令生效）回 200 + partial:true，防止调用方按 503 整单重试双写；
+  // 全部失败且均为传输层错误才 503（重试安全，什么都没生效）。
+  const firstFailure = commands.find((c) => !c.ok)
+  const transportDown = commands.every((c) => c.ok || c.transportError === true)
+  ctx.status = landed === 0 && transportDown ? 503 : 200
+  ctx.body = {
+    ok: false,
+    partial: landed > 0,
+    landed,
+    total: commands.length,
+    mode,
+    commands,
+    reason: ctx.status === 503
+      ? (/handshake/i.test(firstFailure?.detail ?? '') ? 'handshake_failed' : 'engine_unreachable')
+      : 'command_rejected',
+    detail: firstFailure?.detail,
   }
 })
 

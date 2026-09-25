@@ -22,18 +22,29 @@ export interface MentionToken {
   kind: 'agent' | 'squad'
 }
 
-/** 解析 @mention：@word / @word-word / @squad/name（按出现顺序去重）。裸 @ 不匹配。 */
+/** 去掉尾随句号：'@zcode.' 是句尾标点不是名字的一部分（'@zcode.' → 'zcode'）。 */
+const TRAILING_DOTS = /\.+$/
+
+/**
+ * 解析 @mention：@word / @word-word / @squad/name（按出现顺序去重）。裸 @ 不匹配。
+ * 词中/邮箱形态不当 mention：@ 前一字符是 [A-Za-z0-9._%+-] 时跳过（'a@b.com'、'x@y'）。
+ */
 export function parseMentions(text: string): MentionToken[] {
   const out: MentionToken[] = []
   const seen = new Set<string>()
   const re = /@squad\/([A-Za-z0-9][A-Za-z0-9._-]*)|@([A-Za-z0-9][A-Za-z0-9._-]*)/g
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
+    // 邮箱/词中形态过滤：'联系 a@b.com' 的 '@b.com' 不是 mention
+    const prev = m.index > 0 ? text[m.index - 1] : ''
+    if (/[A-Za-z0-9._%+-]/.test(prev)) continue
     if (m[1] !== undefined) {
-      const key = `squad/${m[1]}`
-      if (!seen.has(key)) { seen.add(key); out.push({ raw: m[0], target: m[1], kind: 'squad' }) }
+      const target = m[1].replace(TRAILING_DOTS, '')
+      const key = `squad/${target}`
+      if (!seen.has(key)) { seen.add(key); out.push({ raw: m[0].replace(TRAILING_DOTS, ''), target, kind: 'squad' }) }
     } else if (m[2] !== undefined) {
-      if (!seen.has(m[2])) { seen.add(m[2]); out.push({ raw: m[0], target: m[2], kind: 'agent' }) }
+      const target = m[2].replace(TRAILING_DOTS, '')
+      if (!seen.has(target)) { seen.add(target); out.push({ raw: m[0].replace(TRAILING_DOTS, ''), target, kind: 'agent' }) }
     }
   }
   return out
@@ -111,7 +122,15 @@ export class MentionDispatchService {
     return outcomes
   }
 
-  /** 释放 pending 槽（投影侧 sessionEnded/removed 联动或管理面）。幂等。 */
+  /**
+   * 释放 pending 槽（管理面/测试用）。幂等。
+   * 现状：暂无生产调用方，pending 槽只靠 TTL（默认 30 分钟）到期释放。没有接会话
+   * 生命周期自动释放的依据：投影事件面（session-projection.ts ProjectionEvent）只有
+   * session.upserted / session.removed / conversation.frame / projection.status，没有
+   * run 完成或 phase 信号——session.removed 表示会话消失而非 run 结束，接上去会在 run
+   * 进行中误放槽（后续 @mention 会另起 run 并发写同一工作区）。等会话生命周期暴露
+   * 明确的 run 完成事件再接线，不臆造事件名。
+   */
   releaseRun(workspacePath: string, agent: string): boolean {
     return this.pending.delete(this.slotKey(workspacePath, agent))
   }
@@ -144,8 +163,35 @@ export class MentionDispatchService {
     const key = this.slotKey(params.workspacePath, token.target)
     const existing = this.pending.get(key)
     if (existing && this.now() - existing.since < this.pendingTtlMs) {
-      existing.coalesced.push(params.text)
-      return emit({ type: 'mention.outcome', ...base, reason: 'coalesced', sessionId: existing.sessionId, detail: `并入活跃 run（追加 ${existing.coalesced.length} 条）` })
+      // 并入活跃 run：文本必须真的投递给既有会话（sendText 信封），否则用户以为送达实际丢失。
+      // 投递失败如实标注未送达，不计入追加条数。
+      const commandId = uuidV7Like()
+      let undelivered: string | null = null
+      try {
+        const result = await this.engine.sendCommand({
+          workspacePath: params.workspacePath,
+          envelope: {
+            commandId,
+            clientId: this.clientId,
+            sessionId: existing.sessionId,
+            type: 'sendText',
+            payload: { text: params.text, requestedDelivery: 'startNow' },
+            issuedAt: this.now(),
+          },
+        })
+        if (result.status && result.status !== 'accepted' && result.status !== 'ok') {
+          undelivered = `status=${result.status}${result.reasonCode ? ` reasonCode=${result.reasonCode}` : ''}`
+        }
+      } catch (err) {
+        undelivered = err instanceof Error ? err.message : String(err)
+      }
+      if (undelivered === null) existing.coalesced.push(params.text)
+      return emit({
+        type: 'mention.outcome', ...base, reason: 'coalesced', sessionId: existing.sessionId, commandId,
+        detail: undelivered === null
+          ? `并入活跃 run（已投递，追加 ${existing.coalesced.length} 条）`
+          : `并入活跃 run 但文本未送达（${undelivered}）`,
+      })
     }
     if (existing) this.pending.delete(key) // TTL 过期，重派
 

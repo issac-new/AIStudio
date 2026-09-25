@@ -77,6 +77,9 @@ function readSeries() {
 //   - tools/ tests/tools/ tests/agent/:hermes-agent 工具面与对应测试(patch 395/406 起,
 //     395 靠首段 agent/ 前缀侥幸路由；406 首段 tools/ 路由到 studio 报
 //     "No such file or directory"后显式补齐)。
+// 注意：scripts/aipay/aipay-agent-sync.sh 的 AGENT_PREFIXES 是本清单的 shell 镜像
+// (安装树部署用),改这里必须同步它——2a02847 补齐 tools//tests/tools//tests/agent/ 时
+// 漏了 shell 副本,tools/ 开头的 patch 被静默跳过(候选 0 exit 0 无告警)。
 export const HERMES_AGENT_PATCH_PREFIXES = [
   'hermes_cli/', 'plugins/', 'agent/', 'apps/', 'assets/', 'acp_',
   'gateway/', 'tests/gateway/', 'tests/hermes_cli/',

@@ -2,15 +2,15 @@
 // R5-#4 守门：五档宽度候选（candidates[0] 窄默认）+ 八态决策冻结 + 求值序
 // deny→ask→allow→default + 批准即学习落规则 + 存储幂等 + 控制器接线（patch 402）。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs'
-import { tmpdir } from 'os'
+import { mkdtempSync, rmSync, existsSync, readFileSync, readdirSync } from 'fs'
+import { homedir, tmpdir } from 'os'
 import { join, resolve } from 'path'
 import {
   APPROVAL_DECISIONS, APPROVAL_SCOPES, buildScopeCandidates, domainOf,
   evaluate, isApprovalDecision, ruleFromDecision,
   type ApprovalRule, type ToolCallRequest,
 } from '../approval-domain'
-import { ApprovalRuleStore } from '../approval-store'
+import { ApprovalRuleStore, resolveApprovalRulesPath } from '../approval-store'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
 
@@ -115,12 +115,58 @@ describe('规则存储（rules.json）', () => {
     expect(onDisk.rules).toHaveLength(1)
   })
 
-  it('坏文件容错回默认（ask/空规则不炸）', () => {
+  it('坏文件改名留档回默认（ask/空规则不炸，不静默清零）', () => {
     const fs = require('fs') as typeof import('fs')
     fs.writeFileSync(join(dir, 'rules.json'), '{broken')
     const store = new ApprovalRuleStore()
     expect(store.defaultMode()).toBe('ask')
     expect(store.list()).toEqual([])
+    // 坏文件留档 <path>.corrupt 保现场（可人工修复回填），原路径让位给后续干净写入
+    expect(readFileSync(join(dir, 'rules.json.corrupt'), 'utf8')).toBe('{broken')
+    expect(existsSync(join(dir, 'rules.json'))).toBe(false)
+  })
+
+  it('save 原子替换：临时文件 + rename，落盘无 .tmp 残留且整体替换', () => {
+    const store = new ApprovalRuleStore()
+    const rule: ApprovalRule = { list: 'allow', scope: 'global', tool: 'terminal', argvPrefix: 'git push', learnedFrom: 'approved_scoped', createdAt: 1 }
+    store.save({ defaultMode: 'allow', rules: [rule] })
+    expect(readdirSync(dir)).toEqual(['rules.json'])
+    expect(JSON.parse(readFileSync(join(dir, 'rules.json'), 'utf8')).defaultMode).toBe('allow')
+    store.save({ defaultMode: 'deny', rules: [] }) // 覆盖写同样走 rename，不留半截/临时文件
+    expect(readdirSync(dir)).toEqual(['rules.json'])
+    expect(JSON.parse(readFileSync(join(dir, 'rules.json'), 'utf8')).defaultMode).toBe('deny')
+    expect(store.list()).toEqual([])
+  })
+
+  it('存储机制源级守门：path.dirname 切目录、rename 原子替换、坏文件 .corrupt 留档', () => {
+    const src = readFileSync(join(OVERLAY_ROOT, 'custom/server/approval/approval-store.ts'), 'utf8')
+    expect(src).toContain('dirname(this.path)') // 不用 lastIndexOf('/') 切目录（Windows 反斜杠路径会切出垃圾串）
+    expect(src).not.toContain("lastIndexOf('/')")
+    expect(src).toContain('renameSync(tmp') // 临时文件 + rename 原子替换，不直接覆盖写
+    expect(src).toContain('.corrupt') // 坏文件留档
+    expect(src).toContain('console.warn') // 解析失败可观测，不静默
+  })
+})
+
+describe('规则文件路径解析（不落 cwd）', () => {
+  let dir: string
+  const savedEnv = process.env.HERMES_APPROVAL_RULES_FILE
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'approval-path-'))
+    delete process.env.HERMES_APPROVAL_RULES_FILE
+  })
+  afterEach(() => {
+    if (savedEnv === undefined) delete process.env.HERMES_APPROVAL_RULES_FILE
+    else process.env.HERMES_APPROVAL_RULES_FILE = savedEnv
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('env 显式优先；缺省落 ~/.hermes-web-ui/approval（去掉 cwd 档：serve-server 以 upstream 为 cwd，cwd 档会写只读 upstream 树）', () => {
+    const explicit = join(dir, 'rules.json')
+    process.env.HERMES_APPROVAL_RULES_FILE = explicit
+    expect(resolveApprovalRulesPath()).toBe(resolve(explicit))
+    delete process.env.HERMES_APPROVAL_RULES_FILE
+    expect(resolveApprovalRulesPath()).toBe(join(homedir(), '.hermes-web-ui', 'approval', 'rules.json'))
   })
 })
 

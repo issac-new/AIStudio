@@ -32,6 +32,10 @@ interface EngineBridgeOptions {
   url?: string
   token?: string
   clientId?: string
+  /** WS open 超时覆盖 ms（默认 HANDSHAKE_OPEN_TIMEOUT_MS；测试注入小值）。 */
+  openTimeoutMs?: number
+  /** 握手 RPC 每步超时覆盖 ms（默认 HANDSHAKE_RPC_TIMEOUT_MS；测试注入小值）。 */
+  rpcTimeoutMs?: number
 }
 
 /** clientId 稳定性：持久化在数据根（重启同机同 id，zcode 侧会话关联不丢）。 */
@@ -69,46 +73,79 @@ function wrapNodeSocket(ws: WebSocket) {
   }
 }
 
+/** 握手超时面（S4）：WS open 3s、RPC 每步 5s。引擎不响应时快速失败，不无限挂起。 */
+const HANDSHAKE_OPEN_TIMEOUT_MS = 3000
+const HANDSHAKE_RPC_TIMEOUT_MS = 5000
+
+/** 超时包装：到点抛可识别错误（消息含 connect/handshake 字样，供上层归类 reason）。 */
+function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms)
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v) },
+      (e) => { clearTimeout(timer); reject(e) },
+    )
+  })
+}
+
 /** 连接 + v4 握手（hello → clientHello）。失败抛错（调用方决定重试/降级）。 */
 export async function connectZCodeEngine(homeDir: string, opts: EngineBridgeOptions = {}): Promise<ZcodeEngineBridge> {
   const url = opts.url || 'ws://127.0.0.1:3030/ws'
   const token = opts.token ?? process.env.ZCODE_SERVER_AUTH_TOKEN ?? ''
   const target = token ? `${url}?token=${encodeURIComponent(token)}` : url
   const ws = new WebSocket(target)
-  await new Promise<void>((resolve, reject) => {
-    ws.once('open', () => resolve())
-    ws.once('error', reject)
-  })
-  const client = new ChannelClient(new SocketProtocol(wrapNodeSocket(ws)))
-  const agent = ProxyChannel.toService<ZcodeEngineAgentService>(client.getChannel('zcode-agent'))
+  const openTimeoutMs = opts.openTimeoutMs ?? HANDSHAKE_OPEN_TIMEOUT_MS
+  const rpcTimeoutMs = opts.rpcTimeoutMs ?? HANDSHAKE_RPC_TIMEOUT_MS
+  try {
+    await withTimeout(
+      new Promise<void>((resolve, reject) => {
+        ws.once('open', () => resolve())
+        ws.once('error', reject)
+      }),
+      openTimeoutMs,
+      `zcode 引擎连接超时（connect timeout ${openTimeoutMs}ms）`,
+    )
+    const client = new ChannelClient(new SocketProtocol(wrapNodeSocket(ws)))
+    const agent = ProxyChannel.toService<ZcodeEngineAgentService>(client.getChannel('zcode-agent'))
 
-  const hello = await agent.helloConversationV4()
-  if (!hello || typeof hello.protocolVersion !== 'number') {
-    ws.close()
-    throw new Error(`zcode 引擎握手失败：helloConversationV4 返回异常 ${JSON.stringify(hello)}`)
-  }
-  const clientId = opts.clientId || loadOrCreateClientId(homeDir)
-  await agent.initializeConversationV4({
-    kind: 'clientHello',
-    protocolVersion: hello.protocolVersion,
-    clientId,
-    clientKind: 'web',
-    appVersion: 'swarmstudio',
-  })
+    const hello = await withTimeout(
+      agent.helloConversationV4(), rpcTimeoutMs,
+      `zcode 引擎握手超时（handshake timeout：helloConversationV4 ${rpcTimeoutMs}ms）`,
+    )
+    if (!hello || typeof hello.protocolVersion !== 'number') {
+      throw new Error(`zcode 引擎握手失败：helloConversationV4 返回异常 ${JSON.stringify(hello)}`)
+    }
+    const clientId = opts.clientId || loadOrCreateClientId(homeDir)
+    await withTimeout(
+      agent.initializeConversationV4({
+        kind: 'clientHello',
+        protocolVersion: hello.protocolVersion,
+        clientId,
+        clientKind: 'web',
+        appVersion: 'swarmstudio',
+      }),
+      rpcTimeoutMs,
+      `zcode 引擎握手超时（handshake timeout：initializeConversationV4 ${rpcTimeoutMs}ms）`,
+    )
 
-  const reconnectEmitter = new Emitter<void>()
-  ws.on('close', () => {
-    // 本轮 MVP：断线只报事件；重连与订阅恢复在 P2 一并落（含 onAgentRuntimeRestarted）
-    reconnectEmitter.fire()
-  })
+    const reconnectEmitter = new Emitter<void>()
+    ws.on('close', () => {
+      // 本轮 MVP：断线只报事件；重连与订阅恢复在 P2 一并落（含 onAgentRuntimeRestarted）
+      reconnectEmitter.fire()
+    })
 
-  return {
-    agent,
-    clientId,
-    protocolVersion: hello.protocolVersion,
-    readyAt: Date.now(),
-    onReconnected: (cb) => reconnectEmitter.event(cb),
-    close: () => { try { client.dispose?.(new Error('closed')) } catch {}; ws.close() },
+    return {
+      agent,
+      clientId,
+      protocolVersion: hello.protocolVersion,
+      readyAt: Date.now(),
+      onReconnected: (cb) => reconnectEmitter.event(cb),
+      close: () => { try { client.dispose?.(new Error('closed')) } catch {}; ws.close() },
+    }
+  } catch (err) {
+    // 失败分支统一 terminate 再抛（S4）：此前 hello/initialize 抛错路径不关 ws，连接泄漏。
+    try { ws.terminate() } catch { /* 已断 */ }
+    throw err
   }
 }
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import math
 import os
 import shlex
 import sys
@@ -265,14 +266,18 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
 
 def _parse_duration(val) -> Optional[int]:
     """``30s`` / ``5m`` / ``2h`` / ``1d`` or a raw integer → seconds; None for empty input;
-    ValueError on malformed input."""
+    ValueError on malformed input (negative or out-of-range like ``1e999d`` included)."""
     if val is None or val == "":
         return None
     s = str(val).strip().lower()
     try:
-        return int(s)  # bare integer → seconds
+        seconds = int(s)  # bare integer → seconds
     except ValueError:
         pass
+    else:
+        if seconds < 0:
+            raise ValueError(f"malformed duration {val!r} (negative durations are not allowed)")
+        return seconds
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     if not (s and s[-1] in units):
         raise ValueError(f"malformed duration {val!r} (expected 30s, 5m, 2h, 1d, or a number)")
@@ -280,7 +285,14 @@ def _parse_duration(val) -> Optional[int]:
         n = float(s[:-1])
     except ValueError as exc:
         raise ValueError(f"malformed duration {val!r}") from exc
-    return int(n * units[s[-1]])
+    # ``float`` happily yields inf/nan ("infd", "1e999d"), and even a finite
+    # mantissa can overflow to inf mid-multiply ("1e308d" * 86400); ``int()``
+    # then raises OverflowError, which no caller catches. Refuse anything
+    # non-finite or negative before the conversion.
+    seconds = n * units[s[-1]]
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError(f"malformed duration {val!r}")
+    return int(seconds)
 
 
 def _cmd_init(args: argparse.Namespace) -> int:

@@ -1,9 +1,14 @@
 // overlay/custom/server/__tests__/zcode-engine-bridge.test.ts
 // R4-P1 守门：vendored rpc 同步断言 + 桥模块结构 + 健康面控制器 + patch 380 登记。
+// S4 守门：握手超时（WS open / RPC 每步）+ 失败分支统一 terminate（连接不泄漏）。
 import { describe, it, expect } from 'vitest'
-import { readFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
+import { readFileSync, existsSync, mkdtempSync, rmSync } from 'fs'
+import { resolve, join } from 'path'
 import { createHash } from 'crypto'
+import { tmpdir } from 'os'
+import net from 'net'
+import { WebSocketServer } from 'ws'
+import { connectZCodeEngine } from '../zcode/engine-bridge'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const VENDOR = resolve(OVERLAY_ROOT, 'custom/server/zcode/vendor/rpc')
@@ -57,5 +62,56 @@ describe('zcode engine bridge（R4-P1）', () => {
       expect(routes).toContain("import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'")
       expect(routes).toContain('app.use(zcodeEngineRoutes.routes())')
     }
+  })
+})
+
+describe('握手超时与连接泄漏（S4）', () => {
+  it('WS open 无响应 → 连接超时抛可识别错误，不无限挂起', async () => {
+    // TCP 只 accept 不回 WS 握手应答 → 'open' 永不触发
+    const socks = new Set<net.Socket>()
+    const server = net.createServer((sock) => {
+      socks.add(sock)
+      sock.on('close', () => socks.delete(sock))
+      sock.resume() // 读走升级请求，否则 FIN 不达、close 不回调
+    })
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
+    const port = (server.address() as { port: number }).port
+    const home = mkdtempSync(join(tmpdir(), 'zcode-bridge-'))
+    try {
+      await expect(connectZCodeEngine(home, { url: `ws://127.0.0.1:${port}/ws`, openTimeoutMs: 50, rpcTimeoutMs: 50 }))
+        .rejects.toThrow(/connect timeout/)
+    } finally {
+      rmSync(home, { recursive: true, force: true })
+      for (const s of socks) s.destroy()
+      await new Promise<void>((r) => server.close(() => r()))
+    }
+  })
+
+  it('hello RPC 无响应 → handshake timeout 抛错，且 ws 被 terminate（连接不泄漏）', async () => {
+    let serverSawClose: Promise<void> | null = null
+    const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 })
+    wss.on('connection', (sock) => {
+      // 收下 WS 连接但不回任何 RPC 帧
+      serverSawClose = new Promise<void>((r) => sock.on('close', () => r()))
+    })
+    await new Promise<void>((r) => wss.on('listening', () => r()))
+    const port = (wss.address() as { port: number }).port
+    const home = mkdtempSync(join(tmpdir(), 'zcode-bridge-'))
+    try {
+      await expect(connectZCodeEngine(home, { url: `ws://127.0.0.1:${port}/ws`, openTimeoutMs: 1000, rpcTimeoutMs: 80 }))
+        .rejects.toThrow(/handshake timeout/)
+      expect(serverSawClose).toBeTruthy() // WS 连接确实建立过
+      await serverSawClose // 失败分支统一 terminate：服务端看到连接关闭
+    } finally {
+      rmSync(home, { recursive: true, force: true })
+      await new Promise<void>((r) => wss.close(() => r()))
+    }
+  })
+
+  it('超时面源级守门：open 与 hello/initialize 每步都挂超时，失败分支统一 terminate', () => {
+    const src = readFileSync(resolve(OVERLAY_ROOT, 'custom/server/zcode/engine-bridge.ts'), 'utf8')
+    expect(src).toContain('ws.terminate()')
+    // withTimeout 至少三处：WS open / helloConversationV4 / initializeConversationV4
+    expect(src.match(/withTimeout\(/g)?.length ?? 0).toBeGreaterThanOrEqual(3)
   })
 })

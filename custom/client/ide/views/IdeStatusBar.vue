@@ -12,7 +12,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { TPS_FLOOR, formatTokens, lowContextThreshold, LOW_CONTEXT_RECOVER_PCT } from '../utils/metrics'
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
-import { connectZcode, disconnectZcode, subscribeZcodeWorkspace, unsubscribeZcodeWorkspace } from '../../zcode/api/zcode-socket'
+import { connectZcode, subscribeZcodeWorkspace } from '../../zcode/api/zcode-socket'
 import { handleZcodeEvent } from '../../zcode/store/zcode-projection'
 import IdeMetricsPopover from './IdeMetricsPopover.vue'
 
@@ -24,18 +24,32 @@ const metrics = useSessionMetrics()
 // zcode 会话投影（R4-P2）：/zcode 事件面的状态条 chip（会话数 + 最新 reason）。
 const zcodeProjection = useZcodeProjection()
 
-// /zcode 事件面活水：挂接即连即订阅当前 workspace（断线由 socket 客户端自动重连）。
+// /zcode 事件面活水：挂接即连即订阅当前 workspace（断线重连由 socket 层 connect
+// 幂等重订）。订阅返回清理函数（off 监听 + 退订「订阅时的」workspace），换 workspace
+// 先退旧再订新、卸载精确清理——不看卸载时刻的 ide.workspace（可能已与订阅值不同）。
+// 空 workspace 不订阅：服务端 subscribe 对空串忽略（projection-socket.ts）。
 let zcodeSocket: ReturnType<typeof connectZcode> | null = null
+let unsubscribeZcode: (() => void) | null = null
+
+function subscribeZcode(workspace: string | null | undefined): void {
+  unsubscribeZcode?.()
+  unsubscribeZcode = null
+  if (!zcodeSocket || !workspace) return
+  unsubscribeZcode = subscribeZcodeWorkspace(zcodeSocket, workspace, handleZcodeEvent)
+}
+
 onMounted(() => {
   try {
     zcodeSocket = connectZcode()
-    subscribeZcodeWorkspace(zcodeSocket, ide.workspace ?? '', handleZcodeEvent)
+    subscribeZcode(ide.workspace)
   } catch { /* /zcode 面缺席不影响状态条其余能力 */ }
 })
+watch(() => ide.workspace, (workspace) => {
+  try { subscribeZcode(workspace) } catch { /* 同上 */ }
+})
 onUnmounted(() => {
-  try {
-    if (zcodeSocket && ide.workspace) unsubscribeZcodeWorkspace(zcodeSocket, ide.workspace)
-  } catch { /* 已断 */ }
+  try { unsubscribeZcode?.() } catch { /* 已断 */ }
+  unsubscribeZcode = null
 })
 
 const running = computed(() => Boolean(chatStore.isRunActive || chatStore.abortState))
@@ -304,7 +318,6 @@ watch(
   letter-spacing: -0.5px;
   opacity: 0.85;
 }
-</style>
 
 /* ── zcode 投影 chip ── */
 .ide-statusbar__zcode-reason {
@@ -321,3 +334,4 @@ watch(
     color: #3eac76;
   }
 }
+</style>
