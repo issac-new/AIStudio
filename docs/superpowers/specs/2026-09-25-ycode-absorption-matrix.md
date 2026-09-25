@@ -200,7 +200,7 @@
 | dev 列 watchdog+监督模式 | ✅ runaway_supervisor.py（watchdog_retry/ralph_loop 判定面+有界恢复转人工；patch 457；执行钩子后续） |
 | 执行租约+runner 反代 | ❌单机不适用（多机再启；A2A 依赖它同缓） |
 | 共享会话四档模式+prompt 审批 | 📦旧账已落（ide-session-share R6）·待随迁 |
-| 会话连续性四态徽标 | 🔜P2 |
+| 会话连续性四态徽标 | ✅ session-continuity.ts（active/interrupted/restorable/stale 7 天线，routa 语义） |
 | 泳道专家提示词资产 11 份 | ✅ runtime/roster/lane-specialists/（MIT 附出处原样搬运+README 升级纪律） |
 | Worker 抽象 | 🔜P2 |
 | A2A 出站/入站协议 | 🔜P2（依赖租约，同缓） |
