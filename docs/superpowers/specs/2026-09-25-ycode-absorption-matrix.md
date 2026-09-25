@@ -167,7 +167,7 @@
 | compact 阈值策略校准 | 🔜P2（90% 线/reserve 公式对齐） |
 | 状态栏 custom-command | 并入四源状态栏合并（kimi 行） |
 | agent-team 汇总条/投影窗口 | 🔜P2 |
-| 会话搜索/归档/重命名 | 🔜P2 |
+| 会话搜索/归档（两轴筛选） | ✅ session-archive.ts（Recent/Archived×workspace/all+子串搜索；重命名随 UI） |
 | 命令面板元数据模型 | ✅ command-meta.ts（category×discoverability×visibleWhen 三元组过滤/分组） |
 | 草稿恢复（2MiB 原子写） | ✅ draft-store.ts（2MiB 拒存/原子写 rename/恢复清稿） |
 
