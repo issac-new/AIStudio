@@ -930,3 +930,9 @@
 #      只回收越线部分多留完整工具结果。守门 3 例+压缩器回归 159 绿。
 #      依据 ycode-absorption-matrix 候补终态处置表（原"排队"项按设计轮落地）。
 409-agent-shed-size-order.patch
+# 410 P0 批前两项（矩阵 §3.11）：①子代理结果来源标头（cc 2.1.277 概念，§3.7 P0）——
+#      mark_entry_summaries 代码侧包裹不可伪造来源标记（子文本内同款标记零宽中性化+
+#      标志位幂等防预占），聚合出口与 sync 返回双消费点；②recap 域 v1（cc/codex/dsh
+#      三源合并，§3.9 P0）——build_worker_context 注入 checkpoint 上次进展（goal/done/
+#      next/blockers，衔接 405 写手），重派续跑不重做。守门 4+2 例。
+410-agent-source-marks-recap.patch
