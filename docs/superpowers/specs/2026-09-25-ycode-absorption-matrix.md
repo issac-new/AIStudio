@@ -126,7 +126,7 @@
 | Q3 输入框 / 触发体系 | 🧬部分（slash 已备）·统一入口 🔜P2 |
 | Q4 任务级 Worktree 选择 | 🧬原生（delegate worktree+loop WorktreeManager）·补记 |
 | 自动化（定时/时区/到期/无人值守） | ✅ automation-schedule.ts（到期自停/授权双门/时区日分组） |
-| Q6 工作台体检五维报告 | 🔜P2 |
+| 工作台体检（五维） | ✅ harness-health.ts（五维评分/优化卡/损坏降级） |
 | Q7 会话手动压缩入口 | 🧬原生（hermes /compact+微压缩）·补记 |
 | 代码安全三档扫描 | ✅ code-security.ts（静态/语义/数据流按风险选档/发现分级） |
 | Q9 白板 Agent 生成+圈选回传 | 🔜P2（旧账画板 undo 基础上扩） |
