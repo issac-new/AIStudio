@@ -8,6 +8,8 @@
  */
 import Router from '@koa/router'
 import { loadColumnAutomations, matchColumnTransition } from './column-automation'
+import { dispatchColumnTransition } from './column-dispatch'
+import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 
 const router = new Router({ prefix: '/api/column-automation' })
 
@@ -24,6 +26,33 @@ router.get('/match', async (ctx) => {
     return
   }
   ctx.body = { ok: true, triggers: matchColumnTransition(from, to) }
+})
+
+router.post('/dispatch', async (ctx) => {
+  // 执行半环（routa §七#2）：列流转→匹配→每 step 派单到 provider（zcode 引擎）。
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { from, to, workspacePath } = body as Record<string, unknown>
+  if (typeof to !== 'string' || !to || typeof workspacePath !== 'string' || !workspacePath) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'to 与 workspacePath 必填（from 可空）' }
+    return
+  }
+  const runtime = getZcodeProjectionRuntime()
+  try {
+    const result = await dispatchColumnTransition(
+      {
+        probe: () => runtime.withAgent(async () => true).catch(() => false),
+        createSession: (p) => runtime.withAgent((agent) => agent.createSession(p)),
+        sendCommand: (p) => runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath: p.workspacePath, envelope: p.envelope as never })),
+      },
+      'swarmstudio-column-dispatch',
+      { from: typeof from === 'string' && from ? from : null, to, workspacePath },
+    )
+    ctx.body = { ok: true, triggers: result.triggers.length, outcomes: result.outcomes }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message : String(err) }
+  }
 })
 
 export const columnAutomationRoutes = router
