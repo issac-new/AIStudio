@@ -130,7 +130,7 @@
 | Q7 会话手动压缩入口 | 🧬原生（hermes /compact+微压缩）·补记 |
 | 代码安全三档扫描 | ✅ code-security.ts（静态/语义/数据流按风险选档/发现分级） |
 | Q9 白板 Agent 生成+圈选回传 | 🔜P2（旧账画板 undo 基础上扩） |
-| Q10 Auto 模型路由+思考强度参数 | 🔜P2 |
+| Auto 模型路由 | ✅ model-routing.ts（三档成本/low~max 思考强度） |
 | Q11 Hooks 生命周期配置界面 | 📦旧账已落（hooks 只读面板，R4）·写档面 🔜P2 |
 | Q12 任务分支（回复 fork） | 🔜P2（与 kimi fork 合并立项） |
 | Q13 扩展市场入口 | 🔜P2 |
