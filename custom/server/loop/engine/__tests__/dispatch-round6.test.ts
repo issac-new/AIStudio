@@ -57,14 +57,17 @@ describe('dispatcher 认领护栏 + 原因透传', () => {
 
   it('深度超限 → 拦截 + max_depth_exceeded（routa delegation-depth 语义）', async () => {
     const reasons: DispatchOutcome['reason'][] = []
-    const d = new SubagentDispatcher({ onDispatchReason: (_id, r) => reasons.push(r) })
+    // 必须注入 invokeAgent 桩：缺省时 dispatcher 走 CLI 兜底真实 spawn hermes
+    // （subagent-dispatcher 的真实调用链），测试机会留下真实 agent 进程与 LLM 调用。
+    const invoke = vi.fn(async () => 'ok')
+    const d = new SubagentDispatcher({ invokeAgent: invoke, onDispatchReason: (_id, r) => reasons.push(r) })
     // 预置深度到上限（连续 5 层内嵌）
     for (let i = 0; i < 5; i++) {
       const p = d.dispatchWithOutcome(mkContract({ id: `c${i}` }), 'maker')
       void p // 不 await，制造嵌套
     }
     // 手工把 depth 顶到 5：连续同步 await 五层（每层 await 完会减，故直接模拟 6 层并发）
-    const deep = new SubagentDispatcher({ onDispatchReason: (_id, r) => reasons.push(r) })
+    const deep = new SubagentDispatcher({ invokeAgent: invoke, onDispatchReason: (_id, r) => reasons.push(r) })
     const pending: Array<Promise<DispatchOutcome>> = []
     for (let i = 0; i < 5; i++) pending.push(deep.dispatchWithOutcome(mkContract({ id: `x${i}` }), 'maker'))
     const out6 = await deep.dispatchWithOutcome(mkContract({ id: 'x6' }), 'maker')
