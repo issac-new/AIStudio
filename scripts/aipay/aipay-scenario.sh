@@ -269,7 +269,7 @@ if step_reached dispatch; then
 建主卡与派发子卡时必须填写结构化 raci 字段（--raci，四元组 responsible/approver/consulted/informed）。
 **注意：子任务必须建在对应责任人的看板上（板名=责任人账号名-pay-core 等格式），不是建在你自己的板上。**
 **建完子任务后，必须在群内逐条发 matrix 消息 @责任人-agent @团队负责人-agent 附任务明细（用 m.mentions 提及）。不发消息=没人知道有这个任务。**
-**assignee 字段填短名（如 chen），不要填 @chen-agent:matrix.test。**
+**assignee 字段必须填该看板 board.json 团队名单（profiles）里的 agent 档案名——责任人看板的团队名可在 fleet-manifest 查（如 chen-pay-core 板填 chen-csw-pay-core），本主卡填 fanfan-sys-analyst。不要填 @chen-agent:matrix.test（mxid），也不要填裸短名 chen——板级认领围栏按团队名单精确匹配，填错=agent 永远认领不到（09-26 实锤）。**
 结论行必须二选一并带凭证，无凭证一律视为未完成：
   ANALYSIS-DONE-${RFD_ID} commit=<分析稿已推送的 commitId> card=<协作看板主卡ID>
   ANALYSIS-BLOCKED-${RFD_ID} reason=<阻塞原因> done=<已完成部分清单>
