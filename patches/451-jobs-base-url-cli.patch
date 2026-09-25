@@ -1,0 +1,102 @@
+--- a/packages/server/src/modules/hermes/controllers/jobs.ts
++++ b/packages/server/src/modules/hermes/controllers/jobs.ts
+@@ -1,5 +1,5 @@
+ import type { Context } from 'koa'
+-import { existsSync, readFileSync, writeFileSync, renameSync } from 'fs'
++import { existsSync, readFileSync } from 'fs'
+ import { join } from 'path'
+ import { readConfigYamlForProfile } from '../../studio/public/profile-config'
+ import { getActiveProfileName, getProfileDir } from '../services/profiles/profile'
+@@ -146,16 +146,6 @@
+   }))
+ }
+ 
+-function writeJobs(profile: string, jobs: JobRecord[], asArray = false): void {
+-  const jobsPath = getJobsPath(profile)
+-  const payload = asArray ? jobs : { jobs }
+-  // 原子替换：直接覆盖写在进程被杀/磁盘满时会留下半截 JSON，gateway cron 下次
+-  // tick 解析即整库丢失（与 approval-store 同款 tmp+rename 防护）。
+-  const tmp = `${jobsPath}.${process.pid}.tmp`
+-  writeFileSync(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8')
+-  renameSync(tmp, jobsPath)
+-}
+-
+ function readJobs(profile: string, includeDisabled = true): JobRecord[] {
+   const jobsPath = getJobsPath(profile)
+   if (!existsSync(jobsPath)) return []
+@@ -214,35 +204,8 @@
+   return Object.prototype.hasOwnProperty.call(body, field)
+ }
+ 
+-// provider/model 一律走 `hermes cron create/edit --provider/--model`（jobs.json 单写者
+-// = hermes cron 序列化器，见 overlay patches 411）；仅 base_url 无 CLI 面，保留窄道
+-// 直写。上游缺口登记：docs/superpowers/specs/2026-09-25-capability-boundaries-design.md。
+-function buildBaseUrlUpdate(body: Record<string, any>): Record<string, string | null> {
+-  const updates: Record<string, string | null> = {}
+-  if (hasOwn(body, 'base_url')) updates.base_url = normalizeOptionalText(body.base_url)
+-  return updates
+-}
+-
+-function patchJobFields(profile: string, jobId: string, fields: Record<string, any>): JobRecord | null {
+-  const updates = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined))
+-  if (Object.keys(updates).length === 0) return findJob(profile, jobId)
+-
+-  const jobsPath = getJobsPath(profile)
+-  if (!existsSync(jobsPath)) return null
+-  const parsed = JSON.parse(readFileSync(jobsPath, 'utf-8'))
+-  const parsedAsArray = Array.isArray(parsed)
+-  const rawJobs = parsedAsArray ? parsed : parsed?.jobs
+-  if (!Array.isArray(rawJobs)) return null
+-
+-  const index = rawJobs.findIndex((job: JobRecord) => (job.job_id || job.id) === jobId || job.id === jobId)
+-  if (index === -1) return null
+-  rawJobs[index] = {
+-    ...rawJobs[index],
+-    ...updates,
+-  }
+-  writeJobs(profile, rawJobs, parsedAsArray)
+-  return normalizeJob(rawJobs[index])
+-}
++// provider/model/base_url 一律走 `hermes cron create/edit --provider/--model/--base-url`
++// （jobs.json 单写者 = hermes cron 序列化器，patch 411/451；直写通道已随 patch 451 删除）。
+ 
+ function getSkills(body: Record<string, any>): string[] | null {
+   if (Array.isArray(body.skills)) {
+@@ -382,6 +345,7 @@
+   if (body.no_agent === true) args.push('--no-agent')
+   if (hasOwn(body, 'model')) args.push('--model', normalizeOptionalText(body.model) ?? '')
+   if (hasOwn(body, 'provider')) args.push('--provider', normalizeOptionalText(body.provider) ?? '')
++  if (hasOwn(body, 'base_url')) args.push('--base-url', normalizeOptionalText(body.base_url) ?? '')
+ 
+   args.push(schedule)
+   if (prompt) args.push(prompt)
+@@ -398,9 +362,8 @@
+       }
+       throw new Error('Hermes cron command completed without creating a job')
+     }
+-    const inferenceUpdates = buildBaseUrlUpdate(body)
+-    const patchedJob = patchJobFields(profile, job.job_id || job.id, inferenceUpdates)
+-    ctx.body = { job: patchedJob || job }
++    const created = findJob(profile, job.job_id || job.id) || job
++    ctx.body = { job: created }
+   } catch (error: any) {
+     sendCommandError(ctx, error)
+   }
+@@ -442,15 +405,14 @@
+   if (body.no_agent === false) args.push('--agent')
+   if (hasOwn(body, 'model')) args.push('--model', normalizeOptionalText(body.model) ?? '')
+   if (hasOwn(body, 'provider')) args.push('--provider', normalizeOptionalText(body.provider) ?? '')
++  if (hasOwn(body, 'base_url')) args.push('--base-url', normalizeOptionalText(body.base_url) ?? '')
+ 
+   try {
+-    const inferenceUpdates = buildBaseUrlUpdate(body)
+     const hasCliUpdates = args.length > 5
+     if (hasCliUpdates) {
+       await runHermesCron(profile, args)
+     }
+-    const patchedJob = patchJobFields(profile, ctx.params.id, inferenceUpdates)
+-    const job = patchedJob || findJob(profile, ctx.params.id)
++    const job = findJob(profile, ctx.params.id)
+     if (!job) return sendJobNotFound(ctx)
+     ctx.body = { job }
+   } catch (error: any) {
