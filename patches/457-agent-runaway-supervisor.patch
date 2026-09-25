@@ -1,0 +1,129 @@
+diff --git a/agent/runaway_supervisor.py b/agent/runaway_supervisor.py
+new file mode 100644
+--- /dev/null
++++ b/agent/runaway_supervisor.py
+@@ -0,0 +1,72 @@
++"""runaway 监督模式（routa §七#8 吸收，矩阵 §3.6 P1——衔接 401 runaway-guard 信号）。
++
++routa 语义（workflow-orchestrator.ts:28-29/56-74）：dev 列 watchdog 30s 扫描 +
++监督模式 watchdog_retry|ralph_loop + 有界恢复 maxRecoveryAttempts。
++
++hermes 形状（判定面先行，执行钩子列后续——同 415 编排执行半环模式）：
++- 401 runaway-guard 六信号/405 ngram 文本信号 → 本模块决策动作；
++- 三模式：report（只报不处置，默认）| watchdog_retry（信号→有界重试当前轮）
++  | ralph_loop（信号→重跑任务，Ralph 循环）；
++- 有界恢复：maxRecoveryAttempts（默认 3）——超界转人工（stop）；
++- 配置：HERMES_RUNAWAY_SUPERVISOR=report|watchdog_retry|ralph_loop、
++  HERMES_RUNAWAY_MAX_RECOVERY=3。
++"""
++
++from __future__ import annotations
++
++import os
++from dataclasses import dataclass
++from typing import Literal, Optional
++
++SupervisorMode = Literal["report", "watchdog_retry", "ralph_loop"]
++SupervisorAction = Literal["report", "retry", "ralph_loop", "stop"]
++
++DEFAULT_MAX_RECOVERY = 3
++
++
++def supervisor_mode() -> SupervisorMode:
++    raw = os.environ.get("HERMES_RUNAWAY_SUPERVISOR", "report").strip().lower()
++    return raw if raw in ("report", "watchdog_retry", "ralph_loop") else "report"
++
++
++def max_recovery() -> int:
++    try:
++        n = int(os.environ.get("HERMES_RUNAWAY_MAX_RECOVERY", str(DEFAULT_MAX_RECOVERY)))
++        return n if n > 0 else DEFAULT_MAX_RECOVERY
++    except (TypeError, ValueError):
++        return DEFAULT_MAX_RECOVERY
++
++
++@dataclass
++class SupervisorDecision:
++    action: SupervisorAction
++    attempts_used: int
++    attempts_limit: int
++    detail: str
++
++
++class RunawaySupervisor:
++    """每 agent/task 一实例：信号→动作决策（纯判定+计数，执行面挂接后续）。"""
++
++    def __init__(self, mode: Optional[SupervisorMode] = None, limit: Optional[int] = None):
++        self.mode = mode or supervisor_mode()
++        self.limit = limit if limit is not None else max_recovery()
++        self._attempts = 0
++
++    @property
++    def attempts_used(self) -> int:
++        return self._attempts
++
++    def on_signal(self, signal_name: str) -> SupervisorDecision:
++        if self.mode == "report":
++            return SupervisorDecision("report", self._attempts, self.limit, f"runaway 信号 {signal_name} 只报不处置")
++        if self._attempts >= self.limit:
++            # 有界恢复转人工（routa maxRecoveryAttempts 语义）。
++            return SupervisorDecision("stop", self._attempts, self.limit, f"恢复尝试已尽（{self._attempts}/{self.limit}），转人工")
++        self._attempts += 1
++        if self.mode == "watchdog_retry":
++            return SupervisorDecision("retry", self._attempts, self.limit, f"watchdog_retry 第 {self._attempts}/{self.limit} 次：重试当前轮（{signal_name}）")
++        return SupervisorDecision("ralph_loop", self._attempts, self.limit, f"ralph_loop 第 {self._attempts}/{self.limit} 次：重跑任务（{signal_name}）")
++
++    def reset(self) -> None:
++        self._attempts = 0
+diff --git a/tests/agent/test_runaway_supervisor.py b/tests/agent/test_runaway_supervisor.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_runaway_supervisor.py
+@@ -0,0 +1,47 @@
++"""runaway 监督模式守门（routa §七#8：watchdog_retry/ralph_loop/有界恢复）。"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from agent.runaway_supervisor import RunawaySupervisor, max_recovery, supervisor_mode
++
++
++class TestModes:
++    def test_default_report_only(self):
++        s = RunawaySupervisor()
++        d = s.on_signal("exact_action_repeat")
++        assert d.action == "report"
++        assert s.attempts_used == 0  # report 不计恢复次数
++
++    def test_watchdog_retry_bounded(self):
++        s = RunawaySupervisor(mode="watchdog_retry", limit=2)
++        assert s.on_signal("text_ngram_repeat").action == "retry"
++        assert s.on_signal("text_ngram_repeat").action == "retry"
++        d = s.on_signal("text_ngram_repeat")
++        assert d.action == "stop"  # 有界恢复尽→转人工
++        assert "转人工" in d.detail
++
++    def test_ralph_loop_and_reset(self):
++        s = RunawaySupervisor(mode="ralph_loop", limit=1)
++        assert s.on_signal("same_error_family").action == "ralph_loop"
++        assert s.on_signal("same_error_family").action == "stop"
++        s.reset()
++        assert s.on_signal("x").action == "ralph_loop"
++
++    def test_env_config(self, monkeypatch):
++        monkeypatch.setenv("HERMES_RUNAWAY_SUPERVISOR", "watchdog_retry")
++        monkeypatch.setenv("HERMES_RUNAWAY_MAX_RECOVERY", "5")
++        assert supervisor_mode() == "watchdog_retry"
++        assert max_recovery() == 5
++        monkeypatch.setenv("HERMES_RUNAWAY_SUPERVISOR", "bogus")
++        assert supervisor_mode() == "report"  # 非法回默认
++        monkeypatch.setenv("HERMES_RUNAWAY_MAX_RECOVERY", "0")
++        assert max_recovery() == 3  # 非法回默认
