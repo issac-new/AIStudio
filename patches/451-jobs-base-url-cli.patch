@@ -58,7 +58,7 @@
 -  return normalizeJob(rawJobs[index])
 -}
 +// provider/model/base_url 一律走 `hermes cron create/edit --provider/--model/--base-url`
-+// （jobs.json 单写者 = hermes cron 序列化器，patch 411/421；直写通道已随 patch 421 删除）。
++// （jobs.json 单写者 = hermes cron 序列化器，patch 411/451；直写通道已随 patch 451 删除）。
  
  function getSkills(body: Record<string, any>): string[] | null {
    if (Array.isArray(body.skills)) {

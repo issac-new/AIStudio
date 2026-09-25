@@ -29,7 +29,7 @@
      }
 -    // 原子替换：直接覆盖写会留半截文件（tmp+rename 与 approval-store 同款防护）。
 -    const tmp = `${filePath}.${process.pid}.tmp`
-+    // 内容写收口到 hermes CLI 单写者（patch 422 的 `hermes memory set`）：原子写
++    // 内容写收口到 hermes CLI 单写者（patch 452 的 `hermes memory set`）：原子写
 +    // 与并写互覆防护统一在 CLI 侧实现，本控制器不再直写记忆文件。
 +    const tmp = join(tmpdir(), `hermes-memory-${process.pid}-${Date.now()}.tmp`)
      await writeFile(tmp, content, 'utf-8')
