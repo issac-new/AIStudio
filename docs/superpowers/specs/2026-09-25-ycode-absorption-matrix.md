@@ -105,7 +105,7 @@
 | A1 证据型工件挂任务里程碑（截图/录制/diff 卡） | 🔜P1（与 routa"任务=证据累积"同域合并立项） |
 | A2 计划工件评审化（行内评论+Proceed/Review） | 📦旧账已落（IdePlanFloat，R3）·待随迁 |
 | A3 任务组语义 | ✅ task-groups.ts（edited-files 清单/待批步骤专区/组汇总） |
-| A4 浏览器安全层（URL allow/deny+独立 profile） | 🔜P2（依赖浏览器工具面） |
+| A4 浏览器安全层 | ✅ browser-security.ts（deny 优先/白名单/独立 profile） |
 | A5 代理驱动浏览器回路 | 🔜P2 |
 | A6 会话内模型切换器（粘性+推理档+余量双仪表） | 📦旧账已落（IdeModelSwitcher，R4）·待随迁 |
 | A7 任务形态 slash 命令语义 | 🧬部分（hermes slash 面已有）·余 🔜P2 |
