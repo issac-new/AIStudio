@@ -164,7 +164,7 @@ new file mode 100644
 diff --git a/tools/memory_tool.py b/tools/memory_tool.py
 --- a/tools/memory_tool.py
 +++ b/tools/memory_tool.py
-@@ -203,7 +203,11 @@
+@@ -232,7 +232,11 @@ def memory_tool(action: str = None, target: str = "memory", content: str = None,
              return gate_result
          return json.dumps(store.apply_batch(target, operations), ensure_ascii=False)
      if action not in _STORE_ACTIONS:
@@ -175,9 +175,9 @@ diff --git a/tools/memory_tool.py b/tools/memory_tool.py
 +            return _memory_search(store, target, content)
 +        return tool_error(f"Unknown action '{action}'. Use: add, replace, remove, search", success=False)
      invalid = (_validate_single_op(store, action, target, content, old_text)
-                or _background_delete_gate(action, None, target, content, old_text)
-                or _apply_write_gate(action, target, content, old_text))
-@@ -212,6 +216,29 @@
+                or _background_delete_gate(store, action, None, target, content, old_text)
+                or _apply_write_gate(store, action, target, content, old_text))
+@@ -241,6 +245,29 @@ def memory_tool(action: str = None, target: str = "memory", content: str = None,
      return json.dumps(_STORE_ACTIONS[action][0](store, target, content, old_text), ensure_ascii=False)
  
  
@@ -207,7 +207,6 @@ diff --git a/tools/memory_tool.py b/tools/memory_tool.py
  def get_builtin_memory_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
      """Normalized ``memory`` config section ({} when missing/malformed → flags default to
      enabled). ``agent_init`` reads the same section so availability and store cannot diverge."""
-diff --git a/tests/tools/test_memory_index.py b/tests/tools/test_memory_index.py
 new file mode 100644
 --- /dev/null
 +++ b/tests/tools/test_memory_index.py

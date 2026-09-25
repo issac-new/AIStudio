@@ -119,7 +119,7 @@ new file mode 100644
 diff --git a/tools/memory_tool.py b/tools/memory_tool.py
 --- a/tools/memory_tool.py
 +++ b/tools/memory_tool.py
-@@ -207,7 +207,9 @@
+@@ -236,7 +236,9 @@ def memory_tool(action: str = None, target: str = "memory", content: str = None,
          # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。
          if action == "search":
              return _memory_search(store, target, content)
@@ -128,24 +128,23 @@ diff --git a/tools/memory_tool.py b/tools/memory_tool.py
 +            return _memory_consolidate(store)
 +        return tool_error(f"Unknown action '{action}'. Use: add, replace, remove, search, consolidate", success=False)
      invalid = (_validate_single_op(store, action, target, content, old_text)
-                or _background_delete_gate(action, None, target, content, old_text)
-                or _apply_write_gate(action, target, content, old_text))
-@@ -237,6 +239,14 @@
-         )
-     finally:
+                or _background_delete_gate(store, action, None, target, content, old_text)
+                or _apply_write_gate(store, action, target, content, old_text))
+@@ -268,6 +270,14 @@ def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> s
          idx.close()
-+
-+
+ 
+ 
 +def _memory_consolidate(store: "MemoryStore") -> str:
 +    """action=consolidate：规则式 distill v1（去重+容量剪枝+报告；P4 二期）。"""
 +    import json as _json
 +    from tools.memory_consolidate import distill_pass
 +    report = distill_pass(store)
 +    return _json.dumps({"success": True, "action": "consolidate", **report.as_dict()}, ensure_ascii=False)
- 
- 
++
++
  def get_builtin_memory_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-diff --git a/tests/tools/test_memory_consolidate.py b/tests/tools/test_memory_consolidate.py
+     """Normalized ``memory`` config section ({} when missing/malformed → flags default to
+     enabled). ``agent_init`` reads the same section so availability and store cannot diverge."""
 new file mode 100644
 --- /dev/null
 +++ b/tests/tools/test_memory_consolidate.py
