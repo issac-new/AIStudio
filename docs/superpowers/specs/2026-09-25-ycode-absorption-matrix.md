@@ -175,7 +175,7 @@
 
 | 项 | 处置 |
 |---|---|
-| squad leader 协调协议（评估必录+dispatch 即停） | 🔜P0（驾驶舱协作主线；#7 只落了 mention 半边） |
+| squad leader 协调协议（评估必录+dispatch 即停） | ✅ squad-coordinator.ts（评估必录拒空 rationale/dispatch 即停拒叠加/三态闭环）+#7 mention 派单半边（驾驶舱协作主线） |
 | inbox 三档 severity×归档双轴 | ✅ patch 418（三档/双轴四象限/双收件人/正文截 200/批量操作） |
 | 分派预演 WillEnqueueRun | 🔜P1（写读共用谓词，衔接 #7 派单链） |
 | 会话续接 resume-unsafe 分档 | ✅ resume-safety.ts（黑名单优先/new_session/safe_retry/backoff 指数退避封顶）；work_dir 继承随 delegate 域后续 |
