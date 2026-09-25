@@ -1,0 +1,20 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -98,6 +98,8 @@
+ import { askRoutes } from '../custom/ask/ask-controller'
+ // overlay[escalation]: 权限升级协议（routa §七#7，矩阵 §3.6 P1）
+ import { escalationRoutes } from '../custom/escalation/escalation-controller'
++// overlay[mcpconfig]: MCP 配置管理（kimi /mcp-config 余项，矩阵 §3.3 P1）
++import { mcpConfigRoutes } from '../custom/mcpconfig/mcp-config-controller'
+ // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+ import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+@@ -326,6 +328,7 @@
+   app.use(inboxRoutes.routes())                   // 注意力队列：三档/双轴/双收件人（P1 §3.5）
+   app.use(askRoutes.routes())                     // 结构化问卷：1-4 步契约/一次定音（P1 §3.4）
+   app.use(escalationRoutes.routes())              // 权限升级：urgency 三档/批准即改沙箱（P1 §3.6）
++  app.use(mcpConfigRoutes.routes())              // MCP 配置：scope 三选一/needs-auth 闭环（P1 §3.3）
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
+   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
