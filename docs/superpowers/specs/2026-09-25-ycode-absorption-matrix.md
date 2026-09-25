@@ -131,7 +131,7 @@
 | 代码安全三档扫描 | ✅ code-security.ts（静态/语义/数据流按风险选档/发现分级） |
 | Q9 白板回路 | ✅ whiteboard-loop.ts（Agent 生成/圈选标注回传/区域校验） |
 | Auto 模型路由 | ✅ model-routing.ts（三档成本/low~max 思考强度） |
-| Q11 Hooks 生命周期配置界面 | 📦旧账已落（hooks 只读面板，R4）·写档面 🔜P2 |
+| Q11 Hooks 生命周期配置界面 | ✅ 旧账只读面板（R4）+hooks-write.ts 写档面（upsert/启停/重排/七事件词表 d.ts:402） |
 | Q12 任务分支（回复 fork） | ✅ session-fork.ts（分叉点 atIndex/谱系 parent·forkPoint/树投影 childrenOf·rootOf/越界拒） |
 | Q13 扩展市场入口 | ✅ extension-market.ts（安装态三档/版本检测/入口可见性） |
 | 记忆全局/项目两级分治 | ✅ memory-scope.ts（开关/清空/文件数下限/汇总） |
