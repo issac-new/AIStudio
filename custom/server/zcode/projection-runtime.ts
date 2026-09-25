@@ -54,6 +54,11 @@ export class ZcodeProjectionRuntime {
     return this.bridge !== null
   }
 
+  /** watch 意图是否登记（S6：控制器按实际意图状态回报 retained，不再无条件 true）。 */
+  hasWatchIntent(workspacePath: string): boolean {
+    return this.intents.has(workspacePath)
+  }
+
   /** 在已连接桥上执行引擎调用（未连接先 ensureConnected；断言面供派单链 P3 等复用）。 */
   async withAgent<T>(fn: (agent: NonNullable<ZcodeEngineBridge['agent']>) => Promise<T>): Promise<T> {
     await this.ensureConnected()
@@ -120,7 +125,9 @@ export class ZcodeProjectionRuntime {
       // 引擎可能稍后起来：延迟重试，间隔后若有 watch 意图再连。
       const delay = this.opts.retryDelayMs
       if (delay > 0) {
-        setTimeout(() => { if (!this.disposed && this.intents.size > 0) void this.ensureConnected() }, delay)
+        // 失败的重试必须 catch（S5）：悬浮 promise 会产生 unhandledRejection 崩进程；
+        // 失败本身已落 status 事件并再排下一轮重试，这里吞掉返回值即可。
+        setTimeout(() => { if (!this.disposed && this.intents.size > 0) void this.ensureConnected().catch(() => {}) }, delay)
       }
       throw err
     }

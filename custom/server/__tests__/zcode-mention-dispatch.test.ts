@@ -41,6 +41,19 @@ describe('@mention 解析', () => {
     expect(parseMentsSafe('@')).toEqual([])
   })
   function parseMentsSafe(t: string) { return parseMentions(t) }
+
+  it('邮箱/词中形态不当 mention；句尾句号剥掉不吞进 target', () => {
+    // 'a@b.com' 是邮箱不是 mention；'@zcode.' 的句号是句尾标点
+    expect(parseMentions('请 @zcode. 修一下，联系 a@b.com')).toEqual([
+      { raw: '@zcode', target: 'zcode', kind: 'agent' },
+    ])
+    expect(parseMentions('写信给 dev@team.org 和 x@y，别 @zcode...')).toEqual([
+      { raw: '@zcode', target: 'zcode', kind: 'agent' },
+    ])
+    expect(parseMentions('@squad/core. 收一下')).toEqual([
+      { raw: '@squad/core', target: 'core', kind: 'squad' },
+    ])
+  })
 })
 
 describe('派单链（MentionDispatchService）', () => {
@@ -63,18 +76,38 @@ describe('派单链（MentionDispatchService）', () => {
     expect(typeof envelope.issuedAt).toBe('number')
   })
 
-  it('单 pending 槽：活跃期间重派 → coalesced 并入，不另起 run', async () => {
+  it('单 pending 槽：活跃期间重派 → coalesced 并入，不另起 run，但文本必须真的投递给既有会话', async () => {
     const engine = fakeEngine()
     const svc = new MentionDispatchService({ engine, clientId: 'c' })
     await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 任务A' })
     const second = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 补充B' })
     expect(second[0]).toMatchObject({ reason: 'coalesced', sessionId: 'sess-1' })
+    expect(second[0].detail).toContain('已投递')
     expect(engine.sessions).toBe(1) // 未新建会话
     expect(svc.pendingSnapshot()[0]).toMatchObject({ coalescedCount: 1 })
+    // coalesced 不是只记账：sendText 信封真的发给了既有 run 的 sessionId
+    expect(engine.sent).toHaveLength(2)
+    expect(engine.sent[1]).toMatchObject({
+      sessionId: 'sess-1', type: 'sendText',
+      payload: { text: '@zcode 补充B', requestedDelivery: 'startNow' },
+    })
     svc.releaseRun('/ws/p', 'zcode')
     const third = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 新任务' })
     expect(third[0].reason).toBe('queued')
     expect(engine.sessions).toBe(2)
+  })
+
+  it('coalesced 投递失败：outcome 如实注明未送达，不计入追加条数', async () => {
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 任务A' })
+    engine.sendStatus = 'rejected'
+    engine.sendReasonCode = 'session_busy'
+    const second = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 补充B' })
+    expect(second[0].reason).toBe('coalesced')
+    expect(second[0].detail).toContain('未送达')
+    expect(second[0].detail).toContain('reasonCode=session_busy')
+    expect(svc.pendingSnapshot()[0]).toMatchObject({ coalescedCount: 0 })
   })
 
   it('引擎离线 → runtime_offline；未知 agent → target_unavailable；squad → deferred；旧链 agent → deferred', async () => {
