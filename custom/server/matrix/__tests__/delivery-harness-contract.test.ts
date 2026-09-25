@@ -6,7 +6,7 @@ import { execFileSync } from 'child_process'
 import { join } from 'path'
 import { describe, expect, it } from 'vitest'
 import {
-  parseCaseContent, parseGateContent, parseStageContent,
+  parseCaseContent, parseGateContent, parseIndexContent, parseStageContent,
 } from '../../../client/matrix-teams/delivery-protocol'
 
 const BUILDER = join(__dirname, '..', '..', '..', '..', 'scripts', 'aipay', 'mux', 'delivery-event.mjs')
@@ -58,5 +58,14 @@ describe('delivery 事件构造器 ↔ 协议 v2 解析器合同', () => {
       failed = err.status === 4
     }
     expect(failed).toBe(true) // 打回必附方向：无 reason 构造期即拒
+  })
+
+  it('index 事件：roomIds 数组过解析（案例发现机制）', () => {
+    const c = build(['index', '--room-id', '!a:b', '--room-id', '!c:d',
+      '--updated-by', 'fanfan', '--at', '1700000003000'])
+    const parsed = parseIndexContent(c)
+    expect(parsed).not.toBeNull()
+    expect(parsed!.roomIds).toEqual(['!a:b', '!c:d'])
+    expect(parsed!.schemaVersion).toBe(2)
   })
 })
