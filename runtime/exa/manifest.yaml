@@ -11,15 +11,21 @@ description: Exa neural web search and code research — web search, crawling, a
 source: https://github.com/exa-labs/exa-mcp-server
 
 # Official exa-labs npm server, spawned locally via npx (no vendor-hosted URL;
-# mcp_security intentionally allows npx/uvx commands). EXA_API_KEY is prompted at
-# install, stored in the profile's .env, and interpolated into the child env via
-# the ${VAR} secret-scope reference below.
+# mcp_security intentionally allows npx/uvx commands).
+# 版本锁定 exa-mcp-server@3.4.1（npm latest，2026-09-25 registry.npmjs.org 实测）：
+# 不锁版本时每次启动解析 npm latest 并携带 EXA_API_KEY 运行任意新代码（供应链面）。
+# EXA_API_KEY 的凭据声明在 auth.env（安装期提示并存入 profile 的 .env）；
+# transport.env 只放 ${EXA_API_KEY} 引用、不落明文。保留该引用是对
+# mcp_catalog.py TransportSpec.env "NOT for secrets" 注释的有注偏离：stdio 子进程
+# 环境只认 server config 的 env 映射（tools/mcp_tool_transport.py 的
+# _build_safe_env(config.get("env"))），.env 值不经该映射进不了子进程。
 transport:
   type: stdio
   command: npx
   args:
     - "-y"
-    - exa-mcp-server
+    - exa-mcp-server@3.4.1
+  version: "3.4.1"
   env:
     EXA_API_KEY: "${EXA_API_KEY}"
 

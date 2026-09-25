@@ -1,17 +1,37 @@
 diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
-@@ -1630,7 +1630,36 @@
+@@ -1630,7 +1630,61 @@
      return bool(to) and "from" in data and data["from"] != to
  
  
 -def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
++def _board_json_unreadable(board: str) -> bool:
++    """``board.json`` exists but cannot be read (corrupt / not a JSON object) →
++    True; readable or file absent → False. ``read_board_metadata`` never raises
++    (a bad file degrades to a synthesized dict without ``profiles``), so telling
++    "corrupt" from "unconfigured" needs a probe of the raw file."""
++    import json
++    try:
++        path = _kb.board_metadata_path(board)
++        if not path.is_file():
++            return False
++        return not isinstance(json.loads(path.read_text(encoding="utf-8")), dict)
++    except (OSError, ValueError):
++        return True  # 在但读不动：按损坏处理（fail-closed）
++
++
 +def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optional[frozenset]:
 +    """HERMES_CUSTOM[board-team-fence]: per-board team allowlist from the board's
 +    ``board.json`` ``profiles`` key. ``None`` = key absent (no fence, upstream
 +    behavior). A present value is fail-closed: an empty list or unreadable
 +    board.json claims nothing — a corrupt/misconfigured board must never widen
-+    this dispatcher's claim scope."""
++    this dispatcher's claim scope.
++
++    ``read_board_metadata`` swallows every read error, so the ``except`` below is
++    only a last resort; the corrupt case is settled by probing the raw file via
++    :func:`_board_json_unreadable`: 存在但读不出 → ``frozenset()`` fail-closed
++    并 log；文件不存在或合法空配置（无 ``profiles`` 键）→ ``None`` 无围栏。"""
 +    if not board:
 +        return None
 +    try:
@@ -24,6 +44,11 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
 +        return frozenset()
 +    raw = meta.get("profiles") if isinstance(meta, dict) else None
 +    if raw is None:
++        if _board_json_unreadable(board):
++            _kb._log.warning(
++                "kanban: board.json for %r is unreadable — claiming no cards on it", board,
++            )
++            return frozenset()
 +        return None
 +    names = [str(n) for n in raw] if isinstance(raw, (list, tuple)) else str(raw).split(",")
 +    allowed = set()
@@ -39,7 +64,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
      """``hermes_cli.profiles.profile_exists``, or ``None`` when it cannot be
      imported (local import avoids a cycle; callers fall back to trusting the
      assignee).
-@@ -1639,13 +1668,20 @@
+@@ -1639,13 +1693,20 @@
      additionally requires the assignee to be listed, fail-closed — so a card
      assigned to ``default`` is only claimable by homes that opted into it.
      Foreign assignees land in the existing ``skipped_nonspawnable`` bucket.
@@ -61,7 +86,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
          return profile_exists
  
      def _gated(name: str) -> bool:
-@@ -1653,7 +1689,11 @@
+@@ -1653,7 +1714,11 @@
              canon = normalize_profile_name(name)
          except ValueError:
              return False
@@ -74,7 +99,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
  
      return _gated
  
-@@ -2012,7 +2052,7 @@
+@@ -2012,7 +2077,7 @@
      # would fail ``hermes -p <assignee>`` at startup and loop ready→crash→ready
      # forever. Bucketed apart from skipped_unassigned: the operator cannot fix
      # it by assigning a profile, and health telemetry suppresses "stuck" for it.
@@ -83,7 +108,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
      if profile_exists is not None and not profile_exists(assignee):
          result.skipped_nonspawnable.append(task_id)
          return False
-@@ -2234,6 +2274,7 @@
+@@ -2234,6 +2299,7 @@
      *,
      per_profile_cap: Optional[int] = None,
      per_profile_running: Optional[dict[str, int]] = None,
@@ -91,7 +116,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
  ) -> bool:
      """Mirror review dispatch gates before reserving ready-lane capacity.
  
-@@ -2245,7 +2286,7 @@
+@@ -2245,7 +2311,7 @@
      """
      if not review_rows:
          return False
@@ -100,7 +125,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
      running = per_profile_running or {}
      for row in review_rows:
          assignee = row["assignee"]
-@@ -2260,7 +2301,7 @@
+@@ -2260,7 +2326,7 @@
      return False
  
  
@@ -109,7 +134,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
      """``kanban.default_assignee`` when it names a real profile this home may
      claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
      gate). Otherwise ``None`` so an unassigned shared-board card is never
-@@ -2269,7 +2310,7 @@
+@@ -2269,7 +2335,7 @@
      as nonspawnable."""
      name = (default_assignee or "").strip() or None
      if name:
@@ -118,7 +143,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
          if profile_exists is not None and not profile_exists(name):
              return None
      return name
-@@ -2341,6 +2382,7 @@
+@@ -2341,6 +2407,7 @@
      if spawn_budget is not None and spawn_budget > 0 and _any_spawnable_review(
          conn, review_rows,
          per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
@@ -126,7 +151,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
      ):
          ready_budget = max(spawn_budget - 1, 0)
      lane_kwargs: dict[str, Any] = dict(
-@@ -2348,7 +2390,7 @@
+@@ -2348,7 +2415,7 @@
          failure_limit=failure_limit, spawn_fn=spawn_fn,
          per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
      )
@@ -135,3 +160,82 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
      spawned = 0
      for row in ready_rows:
          if ready_budget is not None and spawned >= ready_budget:
+diff --git a/tests/hermes_cli/test_board_team_fence.py b/tests/hermes_cli/test_board_team_fence.py
+new file mode 100644
+--- /dev/null
++++ b/tests/hermes_cli/test_board_team_fence.py
+@@ -0,0 +1,74 @@
++"""板级 team 围栏守门（board-team-fence）：坏 board.json 必须 fail-closed。
++
++锚点：_board_team_allowlist 承诺 "a corrupt/misconfigured board must never widen
++this dispatcher's claim scope"；read_board_metadata 永不抛错，坏文件只能经
++_board_json_unreadable 原文件探针判定，except 兜底救不了它。
++"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from hermes_cli import kanban_db as kb
++from hermes_cli.kanban_db_dispatch import (
++    _board_json_unreadable,
++    _board_team_allowlist,
++    _profile_exists_fn,
++)
++from hermes_cli.profiles import normalize_profile_name
++
++
++def _prepare_home(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_KANBAN_HOME", str(tmp_path))
++    monkeypatch.delenv("HERMES_KANBAN_DISPATCH_PROFILES", raising=False)
++    kb._INITIALIZED_PATHS.clear()
++    return tmp_path
++
++
++def _write_board_json(slug, text):
++    path = kb.board_metadata_path(slug)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(text, encoding="utf-8")
++    return path
++
++
++class TestBoardTeamAllowlistFailClosed:
++    def test_bad_board_json_returns_empty_allowlist(self, tmp_path, monkeypatch):
++        # 坏 board.json → frozenset()（fail-closed）：一张也不许领，绝不放行全量。
++        _prepare_home(tmp_path, monkeypatch)
++        _write_board_json("team-a", "{not valid json")
++        assert _board_team_allowlist(normalize_profile_name, "team-a") == frozenset()
++        assert _board_json_unreadable("team-a") is True
++
++    def test_missing_board_json_is_unfenced(self, tmp_path, monkeypatch):
++        _prepare_home(tmp_path, monkeypatch)
++        assert _board_team_allowlist(normalize_profile_name, "team-b") is None
++        assert _board_json_unreadable("team-b") is False
++
++    def test_valid_board_json_without_profiles_is_unfenced(self, tmp_path, monkeypatch):
++        # 合法空配置（board.json 在、无 profiles 键）≠坏文件：无围栏是既有契约。
++        _prepare_home(tmp_path, monkeypatch)
++        _write_board_json("team-c", '{"name": "Team C"}')
++        assert _board_team_allowlist(normalize_profile_name, "team-c") is None
++
++    def test_profiles_key_builds_allowlist(self, tmp_path, monkeypatch):
++        _prepare_home(tmp_path, monkeypatch)
++        _write_board_json("team-d", '{"profiles": ["Sage", "", "ops"]}')
++        assert _board_team_allowlist(normalize_profile_name, "team-d") == frozenset({"sage", "ops"})
++        # present-but-empty 同样 fail-closed。
++        _write_board_json("team-d", '{"profiles": []}')
++        assert _board_team_allowlist(normalize_profile_name, "team-d") == frozenset()
++
++    def test_corrupt_board_fences_the_spawn_gate(self, tmp_path, monkeypatch):
++        # 接线面：坏 board.json 下 _profile_exists_fn 谁都不认（claim scope 不被放宽）。
++        _prepare_home(tmp_path, monkeypatch)
++        _write_board_json("team-e", "\x00\x01 binary junk")
++        monkeypatch.setattr("hermes_cli.profiles.profile_exists", lambda name: True)
++        fn = _profile_exists_fn("team-e")
++        assert fn is not None
++        assert fn("sage") is False
