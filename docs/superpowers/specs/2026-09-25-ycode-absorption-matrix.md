@@ -194,7 +194,7 @@
 |---|---|
 | 列级 automation steps 编排 | 🔜P0（399 只落门禁半边，编排半边即本行） |
 | 每 board 并发闸+事件驱动 drain | ✅ patch 419（board_concurrency 默认 1/超限排队/同 tick 计数/默认板有闸）；事件驱动 drain 随 loop 域扩 |
-| 任务=证据累积对象（laneSessions/交付快照/裁决） | 🔜P0（与 A1 合并立项） |
+| 任务=证据累积对象（laneSessions/交付快照/裁决） | ✅ evidence 域全落：交付快照/裁决（evidence-store delivery_snapshot·verification）+A1 工件+lane 履历（lane-timeline.ts 时序/小结） |
 | 结果回收三兜底 | 🧬原生已有（再裁决 2026-09-25）：hermes delegate 同步 join=结果必回强于旁路兜底；_fabricated_entry 超时断连兜底=auto-report 语义；background 结果轮间回注=wakeParent；session-end finally=清理兜底 |
 | agent→coordinator 权限升级（urgency 三档） | 🔜P1（衔接 402 审批域） |
 | dev 列 watchdog+监督模式 | ✅ runaway_supervisor.py（watchdog_retry/ralph_loop 判定面+有界恢复转人工；patch 457；执行钩子后续） |
