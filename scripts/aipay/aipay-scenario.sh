@@ -315,7 +315,7 @@ if step_reached analysis; then
     # agent 已建出真卡 t_4bee99f1 却没重报，房间里的 DONE 仍是旧的假卡号，被我方正确拒收，
     # 但没人告诉它要重报，于是死锁在验收上）。
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
-      "@$(agent_mxid fanfan) 凭证核验未通过：你的账号板里其实已有 ${RFD_ID} 主卡，但你最后上报的 DONE 行里 card 仍是需求编号，不是真实卡 ID。
+      "@$(agent_mxid fanfan) 凭证核验未通过：你的账号板里其实已有 ${RFD_ID} 主卡。DONE 行里的 card 必须填建卡工具返回的真实卡 ID（形如 t_4bee99f1），拿需求编号充当一律判虚报。
       请重新发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID，形如 t_4bee99f1>。
       只需补这一行，不要重做已完成的分析与登记。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[拒收回灌] 已 @fanfan-agent 要求用真实卡 ID 重报结论行"

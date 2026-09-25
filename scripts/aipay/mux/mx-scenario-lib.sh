@@ -209,9 +209,16 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   # 整个替换体解析失败、jq 过滤器不执行，body 变成全量消息 JSON（P1，防造假失效）。
   # /messages?dir=b 返回顺序是"新→旧"，必须取 first；取 last 会拿到最旧那条
   # 无凭证裸 DONE，把已重报的合格凭证误判为不合格（09-23 实锤 false negative）。
+  # 双重过滤防回声自毒（09-26 实锤 false negative）：派发指令与打回消息本身都含
+  # "ANALYSIS-DONE-<rfd>" 模板串，只按内容 contains 匹配时最新命中永远是验证器
+  # 自己的回声。故 ①发信人钉 agent 账号（agent_mxid）②内容须带完整凭证形态
+  # （commit=<hex> card=<非空白>），模板行 commit=<已推送commitId> 不满足。
   body=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 2>/dev/null \
-    | jq -r --arg p "ANALYSIS-DONE-$rfd" \
-      '[.[] | select((.content.body//"") | contains($p))] | first | .content.body // ""')
+    | jq -r --arg p "ANALYSIS-DONE-$rfd" --arg s "$(agent_mxid fanfan)" \
+      '[.[] | select((.sender//"") == $s)
+            | select((.content.body//"") | contains($p))
+            | select((.content.body//"") | test("commit=[0-9a-fA-F]{7,40} card=[^ ,；;]+"))
+       ] | first | .content.body // ""')
   [[ -n "$body" ]] || { note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
   sha=$(printf '%s' "$body" | grep -oE 'commit=[0-9a-fA-F]{7,40}' | head -1 | cut -d= -f2)
   card=$(printf '%s' "$body" | grep -oE 'card=[^ ,；;]+' | head -1 | cut -d= -f2)
