@@ -228,6 +228,14 @@ out['platforms'] = {
     'matrix': {'enabled': False},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
+# 模型通道覆写（同 profile：root default profile 也要改道，否则网关默认会话仍走旧通道）
+mu = os.environ.get('MX_MODEL_BASE_URL')
+if mu:
+    mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
+    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
+    cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
+    out['custom_providers'] = cps
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$HERMES_ROOT/config.yaml"
@@ -287,7 +295,15 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}   # patch 390：钉本账号默认板
-out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}  # 家族共享记忆
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
+# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道
+mu = os.environ.get('MX_MODEL_BASE_URL')
+if mu:
+    mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
+    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
+    cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
+    out['custom_providers'] = cps  # 家族共享记忆
 out['platforms'] = {
     'matrix': {'enabled': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
@@ -323,7 +339,15 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}
-out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}  # 家族共享记忆
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
+# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道
+mu = os.environ.get('MX_MODEL_BASE_URL')
+if mu:
+    mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
+    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
+    cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
+    out['custom_providers'] = cps  # 家族共享记忆
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$PROF/config.yaml"
