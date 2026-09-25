@@ -957,3 +957,10 @@
 #      verification 落账（store 层单一事实源）；reviewId/commentId 双幂等；
 #      守门 4 例。
 414-server-review-routes.patch
+# 415 P0 批第八项（routa §七#1，矩阵 §3.6）：列级 automation 编排轻量版——
+#      custom/server/kanban/column-automation.ts（每列 steps/timing entry|exit|both/
+#      autoAdvanceOnSuccess 配置域 + COLUMN_TRANSITION 触发匹配器，与 patch 399
+#      column_transition 事件同源；契约门不重复——399 流转侧强制）；runtime/roster/
+#      columns.yaml 单一事实源；GET /api/column-automation[/match]；守门 3 例。
+#      执行编排 drain 依赖 loop 会话域列后续。
+415-server-column-automation-routes.patch
