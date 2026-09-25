@@ -993,3 +993,8 @@
 #      待决队列高在前、一次定音裁决、approved 可附 sandboxConstraints（批准即改沙箱，
 #      联动 402 规则域）；POST/GET /api/escalation（455 统一挂载续批；custom 模块走 symlink）。
 456-server-escalation-mount.patch
+# 457 P1（routa §七#8，矩阵 §3.6）：runaway 监督模式——watchdog_retry|ralph_loop|report
+#      三模式判定面（信号→动作）+有界恢复 maxRecoveryAttempts（超界转人工）；衔接
+#      401/405 信号；执行钩子列后续（同 415 模式）；HERMES_RUNAWAY_SUPERVISOR/
+#      HERMES_RUNAWAY_MAX_RECOVERY 配置；守门 4 例。
+457-agent-runaway-supervisor.patch
