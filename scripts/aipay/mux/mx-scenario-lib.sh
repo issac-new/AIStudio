@@ -228,8 +228,8 @@ dispatch_in_room() { # <humanUser> <text> <mention-csv> → event_id
 gate_blocked() { # <gate-key> <step-name>：硬闸检查——闸门 state 键未落即拒入后续步骤
   local key="$1" step="$2"
   [[ -n "$(sget "$key")" ]] && return 0
-  echo "ISSUE|gate-bypass-blocked|$step|硬闸 $(basename "$key") 未过，$step 不得执行（V3 §3 治理总纲）" >> "$EVID_DIR/issues.log"
-  fail "硬闸未过：$step 前置闸门（$key）未冻结，中止（见方案 V3 闭环治理）"
+  echo "ISSUE|gate-bypass-blocked|$step|硬闸 ${key} 未过，${step} 不得执行（V3 治理总纲）" >> "$EVID_DIR/issues.log"
+  fail "硬闸未过：${step} 前置闸门（${key}）未冻结，中止（见方案 V3 闭环治理）"
 }
 
 freeze_doc() { echo "docs/requirements/${RFD_ID}.freeze.md"; }
