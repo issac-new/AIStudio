@@ -975,3 +975,7 @@
 #      routes.ts 致三 routes-only 补丁 hunk 集体失配；模块本体走 custom/ symlink
 #      不属补丁体系，挂载收敛为本单一补丁，按当前 routes.ts 实锚生成）。
 455-server-p1-routes-mounts.patch
+# 456 P1（routa §七#7，矩阵 §3.6）：权限升级协议——urgency 三档（normal/urgent/critical）
+#      待决队列高在前、一次定音裁决、approved 可附 sandboxConstraints（批准即改沙箱，
+#      联动 402 规则域）；POST/GET /api/escalation（455 统一挂载续批；custom 模块走 symlink）。
+456-server-escalation-mount.patch
