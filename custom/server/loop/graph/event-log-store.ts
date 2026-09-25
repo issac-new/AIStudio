@@ -24,6 +24,9 @@ export interface GraphLogEvent {
   /** 事件幂等 id（P3 台账：history 双发/重连去重的根）＝ `<runId>-<seq>`，
    *  由 store 在 append 时生成并随事件持久化；前端按 eid 去重（Task 2 接线）。 */
   eid?: string
+  /** 跨机协作事件锚点（边界设计 §6-T4b）：本事件由哪个 Matrix `$event_id` 驱动
+   *  （协议事件触发节点时由调用方携带）；本机留痕对外引用一律锚定它，可选。 */
+  matrixEventId?: string
 }
 
 /** join 屏障簿记（可序列化）：随 checkpoint 进出，保证 resume 后 join 判定不丢前驱完成事实 */
@@ -171,7 +174,7 @@ class SqliteEventLogStore implements EventLogStore {
         seq INTEGER PRIMARY KEY AUTOINCREMENT,
         run_id TEXT NOT NULL, graph_id TEXT NOT NULL, ts INTEGER NOT NULL,
         kind TEXT NOT NULL, node_id TEXT, iteration INTEGER, super_step INTEGER,
-        payload TEXT NOT NULL, eid TEXT
+        payload TEXT NOT NULL, eid TEXT, matrix_event_id TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_graph_events_run ON graph_events(run_id, seq);
       CREATE TABLE IF NOT EXISTS graph_checkpoints (
@@ -199,13 +202,19 @@ class SqliteEventLogStore implements EventLogStore {
     } catch {
       // 列已存在
     }
+    // T4b（跨机 eid 锚点）：旧表补 matrix_event_id 列（同 eid 先例，可选字段）
+    try {
+      db.exec(`ALTER TABLE graph_events ADD COLUMN matrix_event_id TEXT`)
+    } catch {
+      // 列已存在
+    }
   }
 
   async append(e: Omit<GraphLogEvent, 'seq'>): Promise<number> {
     const r = this.db.prepare(
-      `INSERT INTO graph_events (run_id, graph_id, ts, kind, node_id, iteration, super_step, payload)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(e.runId, e.graphId, e.ts, e.kind, e.nodeId ?? null, e.iteration ?? null, e.superStep ?? null, JSON.stringify(e.payload))
+      `INSERT INTO graph_events (run_id, graph_id, ts, kind, node_id, iteration, super_step, payload, matrix_event_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(e.runId, e.graphId, e.ts, e.kind, e.nodeId ?? null, e.iteration ?? null, e.superStep ?? null, JSON.stringify(e.payload), e.matrixEventId ?? null)
     const seq = Number(r.lastInsertRowid)
     // eid = <runId>-<seq>（seq 即 AUTOINCREMENT rowid）；回填同 insert 一样走本库，失败不阻断追加
     try {
@@ -306,6 +315,7 @@ function rowToEvent(r: Record<string, unknown>): GraphLogEvent {
     superStep: (r.super_step as number) ?? undefined,
     payload: JSON.parse(r.payload as string),
     eid: (r.eid as string) ?? undefined,
+    matrixEventId: (r.matrix_event_id as string) ?? undefined,
   }
 }
 
