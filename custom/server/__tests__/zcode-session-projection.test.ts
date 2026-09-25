@@ -9,7 +9,7 @@ import {
   DISPATCH_REASON_CODES, coerceDispatchReasonCode,
 } from '../zcode/dispatch-reasons'
 import {
-  ZcodeSessionProjection, engineReasonToDispatchReason,
+  ZcodeSessionProjection, engineReasonToDispatchReason, normalizeSessionSummary,
   type ProjectionAgentPort, type ProjectionEvent, type ZcodeWireFrameLike,
 } from '../zcode/session-projection'
 import { emitZcodeProjectionEvent } from '../zcode/projection-socket'
@@ -198,5 +198,67 @@ describe('P2 接线守门（runtime/controller/patch）', () => {
       expect(http).toContain("import { setupZcodeProjectionSocket } from '../custom/zcode/projection-socket'")
       expect(http).toContain('setupZcodeProjectionSocket(activeGroupChatServer.getIO())')
     }
+  })
+})
+
+describe('会话条目契约归一化（X5）', () => {
+  // 引擎条目真实形状（取证：upstream/zcode packages/shared/src/zcode-protocol-v4/
+  // sessions-index.ts sessionSummarySchema，pin @872ad96）。
+  const engineEntry = {
+    sessionId: 's1', workspaceId: '/ws/proj', parentSessionId: 'p0', title: '修缺陷',
+    titleSource: 'custom', phase: 'running', sessionEnded: false, hasBackgroundWork: true,
+    workflowActivity: { runs: [{ runId: 'r1' }] },
+    pendingInteraction: { interactionId: 'i1', kind: 'permission', toolName: 'terminal' },
+    pendingInteractionSummary: { permissionCount: 1, userInputCount: 0 },
+    goalStatus: 'active', lastActivityAt: 11, lastAssistantPreview: '预览', createdAt: 5,
+    futureField: { nested: true },
+  }
+
+  it('已知字段显式直取为稳定形状；未知/复合字段不透传', () => {
+    expect(normalizeSessionSummary(engineEntry)).toEqual({
+      sessionId: 's1', title: '修缺陷', phase: 'running', workspaceId: '/ws/proj',
+      parentSessionId: 'p0', titleSource: 'custom', sessionEnded: false, hasBackgroundWork: true,
+      goalStatus: 'active', lastActivityAt: 11, lastAssistantPreview: '预览', createdAt: 5,
+    })
+  })
+
+  it('缺 sessionId → null（非会话条目）；类型不符字段丢弃不炸', () => {
+    expect(normalizeSessionSummary({ title: 'x' })).toBeNull()
+    expect(normalizeSessionSummary(null)).toBeNull()
+    expect(normalizeSessionSummary('str')).toBeNull()
+    expect(normalizeSessionSummary({ sessionId: 's', title: 3, phase: null, lastActivityAt: 'nope' })).toEqual({ sessionId: 's' })
+  })
+
+  it('投影事件 session 为归一化形状（snapshot 与 delta 同路径），不再直投原始条目', async () => {
+    const agent = fakeAgent()
+    const p = new ZcodeSessionProjection({ agent })
+    const events = collect(p)
+    await p.watchWorkspace('/ws/proj')
+    agent.indexFrames[0](completeFrame('sessions-index/proj', {
+      kind: 'snapshot', snapshot: { sessions: [engineEntry] },
+    }))
+    agent.indexFrames[0](completeFrame('sessions-index/proj', {
+      kind: 'deltas', deltas: [{ op: 'session.upserted', session: { ...engineEntry, phase: 'completedSuccess' } }],
+    }))
+    const upserted = events.filter((e) => e.type === 'session.upserted') as Array<{ session: unknown }>
+    expect(upserted).toHaveLength(2)
+    expect(upserted[0].session).toEqual(normalizeSessionSummary(engineEntry))
+    expect(upserted[1].session).toMatchObject({ sessionId: 's1', title: '修缺陷', phase: 'completedSuccess' })
+    expect((upserted[0].session as Record<string, unknown>).futureField).toBeUndefined()
+  })
+
+  it('条目缺 sessionId（snapshot/delta 均）→ frame_malformed 可观测，不静默丢', async () => {
+    const agent = fakeAgent()
+    const p = new ZcodeSessionProjection({ agent })
+    const events = collect(p)
+    await p.watchWorkspace('/ws/proj')
+    agent.indexFrames[0](completeFrame('sessions-index/proj', {
+      kind: 'snapshot', snapshot: { sessions: [{ title: '缺 id' }] },
+    }))
+    agent.indexFrames[0](completeFrame('sessions-index/proj', {
+      kind: 'deltas', deltas: [{ op: 'session.upserted', session: { title: '缺 id' } }],
+    }))
+    expect(events.filter((e) => e.type === 'projection.status' && (e as { detail?: string }).detail?.includes('缺 sessionId'))).toHaveLength(2)
+    expect(events.some((e) => e.type === 'session.upserted')).toBe(false)
   })
 })

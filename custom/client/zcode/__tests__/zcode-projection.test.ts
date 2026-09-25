@@ -9,6 +9,7 @@ import type { Socket } from 'socket.io-client'
 import {
   REASON_CHIP_TEXT, handleZcodeEvent, resetProjectionStateForTests, useZcodeProjection,
 } from '../store/zcode-projection'
+import { normalizeSessionSummary } from '../../../server/zcode/session-projection'
 
 const { ioMock } = vi.hoisted(() => ({ ioMock: vi.fn() }))
 vi.mock('socket.io-client', () => ({ io: ioMock }))
@@ -173,5 +174,24 @@ describe('订阅生命周期守门（C1）', () => {
     } finally {
       ioMock.mockReset()
     }
+  })
+})
+
+// ── X5 跨端契约对齐：服务端归一化形状 → 客户端同形状读 ──
+describe('会话字段契约跨端对齐（X5）', () => {
+  it('服务端 normalizeSessionSummary 投递的稳定形状，客户端按同名字段读 title/phase', () => {
+    resetProjectionStateForTests()
+    // 引擎条目（sessionSummarySchema 真实形状，含未来字段）→ 服务端归一化 → 客户端消费
+    const session = normalizeSessionSummary({
+      sessionId: 's1', workspaceId: '/w', title: '修缺陷', phase: 'running',
+      titleSource: 'custom', sessionEnded: false, hasBackgroundWork: false,
+      lastActivityAt: 11, createdAt: 5, futureField: { nested: true },
+    })
+    expect(session).not.toBeNull()
+    handleZcodeEvent({ type: 'session.upserted', workspaceId: '/w', sessionId: 's1', session: session!, at: 12 })
+    const { state } = useZcodeProjection()
+    // 字段名漂移（服务端改名/客户端裸读旧名）在此失败，不再是恒 undefined 无人发觉
+    expect(state.sessions.s1.title).toBe('修缺陷')
+    expect(state.sessions.s1.phase).toBe('running')
   })
 })

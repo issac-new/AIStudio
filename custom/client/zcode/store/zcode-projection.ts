@@ -9,13 +9,33 @@
 // reason 字面值与服务端冻结词表一一对应（dispatch-reasons.ts），客户端只按字面值映射文案。
 import { computed, reactive } from 'vue'
 
+/**
+ * 会话条目稳定形状（X5 契约归一化）：与服务端 session-projection.ts 的
+ * ProjectionSession 同形（服务端 normalizeSessionSummary 投递的就是这个形状）。
+ * 字段名变更必须两端同改——对齐由 zcode-projection.test.ts 的跨端对齐测试钉死。
+ */
+export interface ZcodeSessionSummary {
+  sessionId?: string
+  title?: string
+  phase?: string
+  workspaceId?: string
+  parentSessionId?: string
+  titleSource?: string
+  sessionEnded?: boolean
+  hasBackgroundWork?: boolean
+  goalStatus?: string
+  lastActivityAt?: number
+  lastAssistantPreview?: string
+  createdAt?: number
+}
+
 export interface ZcodeSocketEvent {
   type: string
   workspaceId: string
   sessionId?: string
   reason?: string
   detail?: string
-  session?: { sessionId?: string; title?: string; phase?: string }
+  session?: ZcodeSessionSummary
   /** conversation.frame 帧序号（服务端 session-projection.ts 契约），判重用 */
   fromSeq?: number
   toSeq?: number

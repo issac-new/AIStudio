@@ -15,6 +15,81 @@
 import { EventEmitter } from 'events'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
 
+/**
+ * 会话条目稳定投影形状（X5 契约归一化）。
+ *
+ * 取证锚点（upstream/zcode @872ad96）：sessions-index 条目即
+ * packages/shared/src/zcode-protocol-v4/sessions-index.ts 的 sessionSummarySchema——
+ * { sessionId, workspaceId, parentSessionId?, title, titleSource?, phase,
+ *   sessionEnded, hasBackgroundWork, workflowActivity?, pendingInteraction?,
+ *   pendingInteractionSummary?, goalStatus?, lastActivityAt, lastAssistantPreview?, createdAt }
+ * phase 枚举见 snapshot.ts sessionPhaseSchema：draft/prewarming/running/
+ * completedSuccess/completedInterrupted/error。
+ *
+ * 此前服务端把引擎条目 `session: unknown` 直投 socket、客户端按 {title?,phase?} 裸读，
+ * 字段名一变即恒 undefined 且无人发觉。归一化后两端以本形状为唯一事实源：
+ * 已知字段显式直取（类型不符即丢弃），未知/复合字段（workflowActivity 等）不透传，
+ * 消费端读不到新字段时是「未实现」而非「契约漂移」。
+ */
+export interface ProjectionSession {
+  sessionId: string
+  title?: string
+  phase?: string
+  workspaceId?: string
+  parentSessionId?: string
+  titleSource?: string
+  sessionEnded?: boolean
+  hasBackgroundWork?: boolean
+  goalStatus?: string
+  lastActivityAt?: number
+  lastAssistantPreview?: string
+  createdAt?: number
+}
+
+function str(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : undefined
+}
+
+function num(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+
+function bool(v: unknown): boolean | undefined {
+  return typeof v === 'boolean' ? v : undefined
+}
+
+/** 引擎 sessions-index 条目 → 稳定形状；缺 sessionId（非会话条目）返回 null。 */
+export function normalizeSessionSummary(raw: unknown): ProjectionSession | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  const sessionId = str(r.sessionId)
+  if (!sessionId) return null
+  const out: ProjectionSession = { sessionId }
+  const title = str(r.title)
+  if (title !== undefined) out.title = title
+  const phase = str(r.phase)
+  if (phase !== undefined) out.phase = phase
+  const workspaceId = str(r.workspaceId)
+  if (workspaceId !== undefined) out.workspaceId = workspaceId
+  const parentSessionId = str(r.parentSessionId)
+  if (parentSessionId !== undefined) out.parentSessionId = parentSessionId
+  const titleSource = str(r.titleSource)
+  if (titleSource !== undefined) out.titleSource = titleSource
+  const sessionEnded = bool(r.sessionEnded)
+  if (sessionEnded !== undefined) out.sessionEnded = sessionEnded
+  const hasBackgroundWork = bool(r.hasBackgroundWork)
+  if (hasBackgroundWork !== undefined) out.hasBackgroundWork = hasBackgroundWork
+  const goalStatus = str(r.goalStatus)
+  if (goalStatus !== undefined) out.goalStatus = goalStatus
+  const lastActivityAt = num(r.lastActivityAt)
+  if (lastActivityAt !== undefined) out.lastActivityAt = lastActivityAt
+  const lastAssistantPreview = str(r.lastAssistantPreview)
+  if (lastAssistantPreview !== undefined) out.lastAssistantPreview = lastAssistantPreview
+  const createdAt = num(r.createdAt)
+  if (createdAt !== undefined) out.createdAt = createdAt
+  return out
+}
+
 /** wire 物理帧的最小消费面（complete 携带 logical frame；fragment 只识别计数）。 */
 export interface ZcodeWireFrameLike {
   kind?: string
@@ -33,7 +108,7 @@ interface TopicFrameLike {
 
 export type ProjectionEvent =
   | { type: 'projection.status'; workspaceId: string; reason: DispatchReasonCode; detail?: string; at: number }
-  | { type: 'session.upserted'; workspaceId: string; sessionId: string; at: number; session: unknown }
+  | { type: 'session.upserted'; workspaceId: string; sessionId: string; at: number; session: ProjectionSession }
   | { type: 'session.removed'; workspaceId: string; sessionId: string; at: number }
   | { type: 'conversation.frame'; workspaceId: string; sessionId: string; at: number; fromSeq?: number; toSeq?: number; payloadKind?: string; deltaCount: number }
 
@@ -148,16 +223,25 @@ export class ZcodeSessionProjection {
     if (!logical) return
     const payload = logical.payload ?? {}
     if (payload.kind === 'snapshot') {
-      const sessions = (payload.snapshot as { sessions?: Array<{ sessionId?: string }> } | undefined)?.sessions ?? []
+      const sessions = (payload.snapshot as { sessions?: unknown[] } | undefined)?.sessions ?? []
       for (const s of sessions) {
-        if (s && typeof s.sessionId === 'string') {
-          this.emit({ type: 'session.upserted', workspaceId: state.workspacePath, sessionId: s.sessionId, session: s, at: this.now() })
+        // 归一化后投递（X5）：稳定形状见 ProjectionSession；非会话条目可观测不静默。
+        const normalized = normalizeSessionSummary(s)
+        if (normalized) {
+          this.emit({ type: 'session.upserted', workspaceId: state.workspacePath, sessionId: normalized.sessionId, session: normalized, at: this.now() })
+        } else {
+          this.emit({ type: 'projection.status', workspaceId: state.workspacePath, reason: 'frame_malformed', detail: 'sessions-index snapshot 条目缺 sessionId', at: this.now() })
         }
       }
     } else if (payload.kind === 'deltas' && Array.isArray(payload.deltas)) {
-      for (const d of payload.deltas as Array<{ op?: string; session?: { sessionId?: string }; sessionId?: string }>) {
-        if (d?.op === 'session.upserted' && d.session?.sessionId) {
-          this.emit({ type: 'session.upserted', workspaceId: state.workspacePath, sessionId: d.session.sessionId, session: d.session, at: this.now() })
+      for (const d of payload.deltas as Array<{ op?: string; session?: unknown; sessionId?: string }>) {
+        if (d?.op === 'session.upserted') {
+          const normalized = normalizeSessionSummary(d.session)
+          if (normalized) {
+            this.emit({ type: 'session.upserted', workspaceId: state.workspacePath, sessionId: normalized.sessionId, session: normalized, at: this.now() })
+          } else {
+            this.emit({ type: 'projection.status', workspaceId: state.workspacePath, reason: 'frame_malformed', detail: 'sessions-index delta 条目缺 sessionId', at: this.now() })
+          }
         } else if (d?.op === 'session.removed' && typeof d.sessionId === 'string') {
           this.emit({ type: 'session.removed', workspaceId: state.workspacePath, sessionId: d.sessionId, at: this.now() })
         } else {
