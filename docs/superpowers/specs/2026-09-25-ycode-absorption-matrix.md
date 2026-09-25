@@ -239,7 +239,7 @@
 | codex：keymap 可重映射 | ✅ keymap.ts（override 覆盖/一键双绑冲突检测） |
 | codex：会话内分节 | ✅ session-sections.ts（定义幂等/手动 move/汇总） |
 | codex-product：/review 评审模式（两域+行内回流） | ✅ patch 414（review-store 两域/评论 open→resolved 回流/三裁决一次定音+evidence verification 联动） |
-| codex-product：任务结果卡（验证 bullet+文件±行数+逐文件 Undo） | 🔜P0（Undo 与 #5 恢复域衔接） |
+| codex-product：任务结果卡（验证 bullet+文件±行数+逐文件 Undo） | ✅ result-card.ts 前两半+file-undo.ts 逐文件 Undo（三态/回写计划，#5 恢复域 file-history 衔接） |
 | codex-product：Activity 收件箱三态+OS 通知 | 📦旧账已落（R4）·待随迁 |
 | codex-product：终端 actions（项目级一键命令） | 📦旧账已落（R4）·待随迁 |
 | codex-product：文件/选区引用入会话 | ✅ 文件=mention-resolution file 源；选区=selection-ref.ts（@file:L 区间/校验/引用卡） |
