@@ -1,0 +1,70 @@
+diff --git a/packages/server/src/modules/hermes/controllers/jobs.ts b/packages/server/src/modules/hermes/controllers/jobs.ts
+index 2227a3ce..a48ae84c 100644
+--- a/packages/server/src/modules/hermes/controllers/jobs.ts
++++ b/packages/server/src/modules/hermes/controllers/jobs.ts
+@@ -1,5 +1,5 @@
+ import type { Context } from 'koa'
+-import { existsSync, readFileSync, writeFileSync } from 'fs'
++import { existsSync, readFileSync, writeFileSync, renameSync } from 'fs'
+ import { join } from 'path'
+ import { readConfigYamlForProfile } from '../../studio/public/profile-config'
+ import { getActiveProfileName, getProfileDir } from '../services/profiles/profile'
+@@ -149,7 +149,11 @@ function resolveJobDefaults(jobs: JobRecord[], config: Record<string, any>): Job
+ function writeJobs(profile: string, jobs: JobRecord[], asArray = false): void {
+   const jobsPath = getJobsPath(profile)
+   const payload = asArray ? jobs : { jobs }
+-  writeFileSync(jobsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8')
++  // 原子替换：直接覆盖写在进程被杀/磁盘满时会留下半截 JSON，gateway cron 下次
++  // tick 解析即整库丢失（与 approval-store 同款 tmp+rename 防护）。
++  const tmp = `${jobsPath}.${process.pid}.tmp`
++  writeFileSync(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8')
++  renameSync(tmp, jobsPath)
+ }
+ 
+ function readJobs(profile: string, includeDisabled = true): JobRecord[] {
+@@ -210,10 +214,11 @@ function hasOwn(body: Record<string, any>, field: string): boolean {
+   return Object.prototype.hasOwnProperty.call(body, field)
+ }
+ 
+-function buildInferenceUpdates(body: Record<string, any>): Record<string, string | null> {
++// provider/model 一律走 `hermes cron create/edit --provider/--model`（jobs.json 单写者
++// = hermes cron 序列化器，见 overlay patches 411）；仅 base_url 无 CLI 面，保留窄道
++// 直写。上游缺口登记：docs/superpowers/specs/2026-09-25-capability-boundaries-design.md。
++function buildBaseUrlUpdate(body: Record<string, any>): Record<string, string | null> {
+   const updates: Record<string, string | null> = {}
+-  if (hasOwn(body, 'provider')) updates.provider = normalizeOptionalText(body.provider)
+-  if (hasOwn(body, 'model')) updates.model = normalizeOptionalText(body.model)
+   if (hasOwn(body, 'base_url')) updates.base_url = normalizeOptionalText(body.base_url)
+   return updates
+ }
+@@ -375,6 +380,8 @@ export async function create(ctx: Context) {
+   if (script) args.push('--script', script)
+   if (body.workdir != null) args.push('--workdir', String(body.workdir))
+   if (body.no_agent === true) args.push('--no-agent')
++  if (hasOwn(body, 'model')) args.push('--model', normalizeOptionalText(body.model) ?? '')
++  if (hasOwn(body, 'provider')) args.push('--provider', normalizeOptionalText(body.provider) ?? '')
+ 
+   args.push(schedule)
+   if (prompt) args.push(prompt)
+@@ -391,7 +398,7 @@ export async function create(ctx: Context) {
+       }
+       throw new Error('Hermes cron command completed without creating a job')
+     }
+-    const inferenceUpdates = buildInferenceUpdates(body)
++    const inferenceUpdates = buildBaseUrlUpdate(body)
+     const patchedJob = patchJobFields(profile, job.job_id || job.id, inferenceUpdates)
+     ctx.body = { job: patchedJob || job }
+   } catch (error: any) {
+@@ -433,9 +440,11 @@ export async function update(ctx: Context) {
+   if (body.workdir != null) args.push('--workdir', String(body.workdir))
+   if (body.no_agent === true) args.push('--no-agent')
+   if (body.no_agent === false) args.push('--agent')
++  if (hasOwn(body, 'model')) args.push('--model', normalizeOptionalText(body.model) ?? '')
++  if (hasOwn(body, 'provider')) args.push('--provider', normalizeOptionalText(body.provider) ?? '')
+ 
+   try {
+-    const inferenceUpdates = buildInferenceUpdates(body)
++    const inferenceUpdates = buildBaseUrlUpdate(body)
+     const hasCliUpdates = args.length > 5
+     if (hasCliUpdates) {
+       await runHermesCron(profile, args)
