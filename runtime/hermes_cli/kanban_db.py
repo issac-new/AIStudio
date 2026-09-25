@@ -2017,9 +2017,15 @@ def _insert_comment(
 
 def _append_event(
     conn: sqlite3.Connection, task_id: str, kind: str, payload: Optional[dict] = None, *,
-    run_id: Optional[int] = None,
+    run_id: Optional[int] = None, collab_event_id: Optional[str] = None,
 ) -> None:
-    """Insert an event row inside the caller's txn; ``run_id`` groups it by attempt (NULL = task-scoped)."""
+    """Insert an event row inside the caller's txn; ``run_id`` groups it by attempt (NULL = task-scoped).
+
+    ``collab_event_id``（可选，边界设计 §6-T4b）：本事件由哪个 Matrix ``$event_id`` 驱动
+    （协议事件派单/回执触发看板变更时携带），并入 payload 落盘——本机留痕对外引用
+    一律锚定该 id，与 task_events 既有的本地自增 id 分工不同。"""
+    if collab_event_id:
+        payload = {**(payload or {}), "collab_event_id": collab_event_id}
     conn.execute(
         "INSERT INTO task_events (task_id, run_id, kind, payload, created_at) "
         "VALUES (?, ?, ?, ?, ?)", (task_id, run_id, kind, _json_or_null(payload), int(time.time())),

@@ -1,0 +1,21 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -76,6 +76,9 @@
+ import ideStorageRoutes from '../custom/controllers/system/storage'
+ import ideWorktreeRouter from '../custom/controllers/ide/worktree'
+ import { registerMatrixRoutes } from '../custom/matrix'
++// overlay[cron-bridge]: T3b loop 调度桥接——hermes cron 回调 tick 端点（公开段，
++// token fail-closed + loopback 限源；未启用 LOOP_SCHEDULER=cron 时恒 404）。
++import { registerLoopCronBridgeRoutes } from '../custom/loop/graph/cron-bridge'
+ import ideRetryCountRoutes from '../custom/controllers/ide/retry-counts'
+ import ideSessionShareRouter from '../custom/controllers/ide/session-share'
+ import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
+@@ -239,6 +242,8 @@
+   app.use(chatWebhookPublicRoutes.routes())
+   // HERMES_CUSTOM[c2-gateway-credentials]: matrix 网关凭据端点须公开（自动登录在认证前调用）。
+   registerMatrixRoutes(app)
++  // overlay[cron-bridge]: hermes cron no-agent 脚本的到期回调（认证前挂载，自带 token 校验）。
++  registerLoopCronBridgeRoutes(app)
+ 
+   // --- Auth middleware: all routes below require authentication ---
+   authMiddleware.forEach((middleware) => app.use(middleware))
