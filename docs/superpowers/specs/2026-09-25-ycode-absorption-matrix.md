@@ -133,7 +133,7 @@
 | Auto 模型路由 | ✅ model-routing.ts（三档成本/low~max 思考强度） |
 | Q11 Hooks 生命周期配置界面 | 📦旧账已落（hooks 只读面板，R4）·写档面 🔜P2 |
 | Q12 任务分支（回复 fork） | 🔜P2（与 kimi fork 合并立项） |
-| Q13 扩展市场入口 | 🔜P2 |
+| Q13 扩展市场入口 | ✅ extension-market.ts（安装态三档/版本检测/入口可见性） |
 | 记忆全局/项目两级分治 | ✅ memory-scope.ts（开关/清空/文件数下限/汇总） |
 | Q15 MCP 超时设置 | 🔜P2（与 codex X8 合并：per-server 白黑名单/审批档/超时 🔜P1） |
 | Goal 自主到底档 | ✅ goal-autonomy.ts（三档停点/majorFork 例外/不可达与预算同停） |
