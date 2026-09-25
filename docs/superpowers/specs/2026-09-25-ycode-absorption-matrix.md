@@ -162,7 +162,7 @@
 | /context 六段构成可视化 | 🧬部分（403 三投影）·六段网格扩展 🔜P1 |
 | ask_user 结构化问卷契约 | ✅ ask-contract.ts（1-4 步×2-4 选项×recommended≤1×带图；一次定音；挂载 455） |
 | Plan Mode 三件套 | 🔜P1（R5 留档接续） |
-| MCP tool_search 渐进披露 | 🔜P1 |
+| MCP tool_search 渐进披露 | 🧬原生已有（tools/tool_search.py：threshold_pct 0-100+listing_max_tokens 双预算 min() 控制；topK 条数限制被 token 预算覆盖更细）——再裁决（2026-09-25 核查） |
 | 运行中 queue+GOAL-05 让位 | 🔜P1（steer 半边原生已裁；queue 让位半边无人认领——本行即认领） |
 | compact 阈值策略校准 | 🔜P2（90% 线/reserve 公式对齐） |
 | 状态栏 custom-command | 并入四源状态栏合并（kimi 行） |
@@ -276,4 +276,4 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 漏：122+ 项全部入档处置完毕（✅2 补记/🧬9 补记/📦9 旧账待迁/🔜100 排队（P0≈10·合并后/P1≈20/P2≈70）/❌3）；zcode §七 39 项→核验批 P1。
 - 错：E1-E5 全部修正（证据源声明/409 状态回改/E4 补正/E5 锚点见 #4 行已含 minimax+codex 合并批原文）。
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
-- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 7：WillEnqueueRun 预演+交接话术 416+inbox 三档 418+board 并发闸 419+ask 问卷契约 455+权限升级 456+GOAL-05 让位队列）→ 余 P1 十三项 → 核验批。
+- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 7+原生再裁 1：tool_search 渐进披露原生）（WillEnqueueRun 预演+交接话术 416+inbox 三档 418+board 并发闸 419+ask 问卷契约 455+权限升级 456+GOAL-05 让位队列）→ 余 P1 十三项 → 核验批。
