@@ -130,6 +130,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/scenes/EngScene.vue'),
         },
         {
+          // 交付案例（M2：delivery 协议事件投影，工程场景 tab 的深链直达）
+          path: 'cases',
+          name: 'ia2.deliveryCases',
+          component: () => import('@/custom/matrix-teams/views/DeliveryCasesView.vue'),
+        },
+        {
           // 全部运行（RunCenter 自带 runs|inbox tab）
           path: 'runs',
           name: 'ia2.runs',
