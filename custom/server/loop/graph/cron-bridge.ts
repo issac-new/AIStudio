@@ -83,8 +83,14 @@ export interface CronBridgeOpts {
  */
 export async function ensureLoopTickCronJob(opts: CronBridgeOpts): Promise<boolean> {
   const log = opts.log ?? (() => {})
+  const home = opts.hermesHome ?? join(homedir(), '.hermes')
+  // 真 CLI 合同（冒烟实测，issue #18594）：不显式钉 HERMES_HOME 时 CLI 会落到
+  // "活动 profile" 的 home 找 scripts/，脚本写错家即失败——与写脚本的家保持一致。
   const exec = opts.exec ?? ((args) => new Promise((resolve, reject) => {
-    execFile('hermes', args, { timeout: 30_000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+    execFile('hermes', args, {
+      timeout: 30_000, maxBuffer: 1024 * 1024,
+      env: { ...process.env, HERMES_HOME: home },
+    }, (err, stdout, stderr) => {
       if (err) { Object.assign(err, { stdout: String(stdout ?? ''), stderr: String(stderr ?? '') }); reject(err); return }
       resolve({ stdout: String(stdout ?? ''), stderr: String(stderr ?? '') })
     })
@@ -94,16 +100,18 @@ export async function ensureLoopTickCronJob(opts: CronBridgeOpts): Promise<boole
     log(`[cron-bridge] job "${CRON_BRIDGE_JOB_NAME}" 已注册，跳过`)
     return false
   }
-  const home = opts.hermesHome ?? join(homedir(), '.hermes')
   const scriptsDir = join(home, 'scripts')
   mkdirSync(scriptsDir, { recursive: true })
-  const scriptPath = join(scriptsDir, 'loop-cron-bridge.sh')
+  // 真 CLI 合同（冒烟实测）：--script 只收相对 <HERMES_HOME>/scripts/ 的文件名，
+  // 绝对/home 相对路径会被 `hermes cron create` 直接拒绝。
+  const scriptName = 'loop-cron-bridge.sh'
+  const scriptPath = join(scriptsDir, scriptName)
   writeFileSync(scriptPath, buildTickScript(opts.port, opts.token), { mode: 0o600 })
   chmodSync(scriptPath, 0o600)
   await exec([
     'cron', 'create', '1m',
     '--name', CRON_BRIDGE_JOB_NAME,
-    '--no-agent', '--script', scriptPath,
+    '--no-agent', '--script', scriptName,
     '--deliver', 'local',
   ])
   log(`[cron-bridge] 已注册 hermes cron 任务 "${CRON_BRIDGE_JOB_NAME}"（1m no-agent → :${opts.port}${CRON_BRIDGE_TICK_PATH}）`)
