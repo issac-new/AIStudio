@@ -6,10 +6,14 @@
 # raci-rest-guard.test.ts 的 HARNESS_REST_WHITELIST 收录本目录）。
 # 事件类型字符串唯一源=客户端 delivery-protocol.ts；本 lib 只经 state/msg 类型
 # 字面量拼 URL，字面量漂移由合同测试间接覆盖（构造器过解析器即含类型约定）。
+# 依赖 sset/sget（mx-scenario-lib）：场景脚本已按序 source；独立使用（驱动/冒烟）
+# 时自查补挂，勿依赖调用方顺序。
 
 DLV_CASE_TYPE="com.swarmstudio.delivery.case"
 DLV_STAGE_TYPE="com.swarmstudio.delivery.stage"
 DLV_GATE_TYPE="com.swarmstudio.delivery.gate"
+
+command -v sget >/dev/null 2>&1 || source "$MX_SCRIPT_DIR/mx-scenario-lib.sh"
 
 dlv_event() { # <kind> [args...] → JSON（构造器出口，缺参大声失败）
   node "$(dirname "${BASH_SOURCE[0]}")/delivery-event.mjs" "$@"
@@ -70,4 +74,81 @@ dlv_assert() { # <desc> <expr...>：断言失败即 fail（M3 验收门）
   local desc="$1"; shift
   if ! eval "$*" >/dev/null 2>&1; then fail "[M3 断言] $desc"; fi
   note "[M3 断言] $desc ✓"
+}
+
+# ── M3 场景事件化（aipay-scenario 接入面；MX_DELIVERY=1 启用，缺省零行为）──
+dlv_enabled() { [[ "${MX_DELIVERY:-}" == "1" ]]; }
+
+dlv_scenario_open() { # <caseTitle> <repoUrl>：开案例房+邀全员+join（幂等：sset dlv_room）
+  local title="$1" repo="$2" u room case_id
+  [[ -n "$(sget dlv_room)" ]] && { note "[M3] delivery 案例已开（$(sget dlv_room)），跳过"; return 0; }
+  case_id="dlv-${RUN_ID:-run}-$(date +%H%M%S)"
+  room=$(dlv_room fanfan "$case_id" "$title")
+  for u in "${INSTANCED_USERS[@]}"; do
+    # 幂等：先查在房名单（建房者已在房，重复邀会被 Synapse 400）
+    if ! dlv_joined fanfan "$room" | grep -q "^$(human_mxid "$u")$"; then
+      dlv_invite fanfan "$room" "$(human_mxid "$u")"
+      mx_join "$(load_token "$u")" "$room"
+    fi
+  done
+  sset dlv_room "$room"; sset dlv_case "$case_id"
+  dlv_case_state fanfan "$room" "$case_id" "$(dlv_event case --case-id "$case_id" --title "$title" \
+    --repo-url "$repo" --tier standard --stage P1 --owner fanfan --updated-by fanfan)"
+  note "[M3] delivery 案例已开：$case_id → ${room}（全员人类账号已邀+join；agent bot 入房留 M4）"
+}
+
+dlv_scenario_phase() { # <stage> <stageWorker> <gate> <decider> <evidKind> <summary> <nextStage|->
+  local st="$1" w="$2" g="$3" d="$4" k="$5" s="$6" next="$7"
+  local room case_id; room=$(sget dlv_room); case_id=$(sget dlv_case)
+  [[ -z "$room" ]] && { note "[M3] delivery 未启用（无案例房），跳过 $st/$g"; return 0; }
+  dlv_stage "$d" "$room" "$case_id" "$st" "$w" done -
+  dlv_gate  "$d" "$room" "$case_id" "$g" pass "$k" "$s"
+  if [[ "$next" != "-" ]]; then
+    dlv_case_state fanfan "$room" "$case_id" "$(dlv_event case --case-id "$case_id" \
+      --title "aipaydev ${RFD_ID:-scenario}" --repo-url "https://github.com/issac-new/aipaydev" \
+      --tier standard --stage "$next" --owner fanfan --updated-by fanfan \
+      --frozen-acceptance "${RFD_ID:-na} G1 冻结清单")"
+  fi
+  note "[M3] delivery 事件：stage $st done + gate $g pass$( [[ "$next" != "-" ]] && echo " + case→$next")"
+}
+
+dlv_scenario_assert() { # 结尾断言（六 stage/六 gate/终态）+ 证据报告
+  local room case_id st_n g rej final out
+  room=$(sget dlv_room)
+  [[ -z "$room" ]] && return 0
+  case_id=$(sget dlv_case)
+  st_n=$(dlv_events fanfan "$room" "$DLV_STAGE_TYPE" | jq -s --arg c "$case_id" \
+    '[.[] | select(.caseId==$c and .outcome=="done")] | [.[].stage] | unique | length')
+  local missing=""
+  for G in G1 G2 G3 G4 G5 G6; do
+    dlv_events fanfan "$room" "$DLV_GATE_TYPE" | jq -s --arg c "$case_id" --arg g "$G" \
+      '[.[] | select(.caseId==$c and .gate==$g and .verdict=="pass")] | length' | grep -q '^0$' && missing="$missing $G"
+  done
+  final=$(dlv_case_state_read fanfan "$room" "$case_id" | jq -r '.stage')
+  out="$EVID_DIR/delivery-events"; mkdir -p "$out"
+  {
+    echo "# M3 V3 事件化断言（$(date '+%F %T')）"
+    echo "- case: $case_id  room: $room"
+    echo "- 六 stage done 计数: ${st_n}（期望 6）"
+    echo "- 缺 pass 的门:${missing:- 无}"
+    echo "- case 终态: ${final}（期望 P6）"
+  } > "$out/report.md"
+  if [[ "$st_n" == 6 && -z "$missing" && "$final" == "P6" ]]; then
+    note "[M3] V3 事件化断言全过（六 stage/六 gate/终态 P6）→ $out/report.md"
+  else
+    echo "ISSUE|m3-v3-events|director|delivery 事件化断言未全过（stage=$st_n missing=[${missing}] final=${final}）" >> "$EVID_DIR/issues.log"
+    note "[M3] V3 事件化断言未全过（记问题单，详见 $out/report.md）"
+  fi
+}
+
+dlv_scenario_advance() { # <stage> <worker> <nextStage> [artifactRef]：只发 stage done + case 推进（无门）
+  local st="$1" w="$2" next="$3" ref="${4:--}"
+  local room case_id; room=$(sget dlv_room); case_id=$(sget dlv_case)
+  [[ -z "$room" ]] && return 0
+  dlv_stage fanfan "$room" "$case_id" "$st" "$w" done "$ref"
+  dlv_case_state fanfan "$room" "$case_id" "$(dlv_event case --case-id "$case_id" \
+    --title "aipaydev ${RFD_ID:-scenario}" --repo-url "https://github.com/issac-new/aipaydev" \
+    --tier standard --stage "$next" --owner fanfan --updated-by fanfan \
+    --frozen-acceptance "${RFD_ID:-na} G1 冻结清单")"
+  note "[M3] delivery 事件：stage $st done + case→$next"
 }
