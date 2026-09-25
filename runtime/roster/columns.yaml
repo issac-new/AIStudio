@@ -1,6 +1,11 @@
 # Ycode 看板列编排（routa §七#1 KanbanColumnAutomation 语义，矩阵 §3.6 P0）
 # 每列：automation.steps（有序步骤：id/role/specialist/provider）+ 触发时机
-# entry|exit|both + autoAdvanceOnSuccess（步骤全成后自动进列）。
+# entry|exit|both + autoAdvanceOnSuccess（步骤全成后的进列意图——完成后由人工/
+# 编排推进列，本层无自动进列执行面）。
+# 执行语义：同 provider 多步合并进单 run 按序执行（单 pending 槽）；跨 run 串行
+# 依赖 run 完成信号（未接）。
+# 校验：provider 限词表（zcode）；id/role/specialist 限 [A-Za-z0-9._-] 且 ≤64 字符
+# ——这些字段拼进派单文本，违规 step 加载 warn、派发时拒绝（400 配置错误）。
 # 契约门四件套（requiredHumanApproval/checklist/validator/gateMode）已由
 # kanban_gates.py（patch 399）在流转侧强制，本表只管编排触发，不重复门禁。
 # 维护：role/specialist 对齐 runtime/roster/squads.yaml 与 agent-roster 角色目录。

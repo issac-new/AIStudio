@@ -18,7 +18,9 @@
  * 注册于 Studio 会话注册表且对调用方可见（归属模型与残余风险见 workspace-access.ts
  * 头注释），拒绝回 403 + invocation_not_allowed。投影入口 /projection/watch|unwatch
  * 同闸（X1 收口）：watch 会触发引擎连接并把该 workspace 的会话活动投影给调用方，
- * 未注册/不可见的 workspace 同样不得建立/拆除投影。
+ * 未注册/不可见的 workspace 同样不得建立/拆除投影。预演入口 /mention/preview 同闸
+ * （P-C(a)）：预演暴露派单判定与 pending 槽位信息，不得给未授权 workspace 窥探。
+ * /squad/evaluations 为台账只读面：登录校验 + 按调用方可见面过滤 + sessionId 脱敏。
  *
  * 投影事件经 /zcode socket.io 命名空间扇出（projection-socket.ts，patch 398 注册）。
  */
@@ -32,8 +34,8 @@ import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access
 const router = new Router({ prefix: '/api/zcode-engine' })
 const CHECKPOINT_MODES_JOIN = CHECKPOINT_RECOVERY_MODES.join('/')
 
-/** X1 归属闸（引擎 run 入口共用）：拒绝时已写 403 + invocation_not_allowed，调用侧直接 return。 */
-function workspaceAccessDenied(ctx: { state?: unknown; status: number; body: unknown }, workspacePath: string): boolean {
+/** X1 归属闸（引擎 run / 编排 run 入口共用）：拒绝时已写 403 + invocation_not_allowed，调用侧直接 return。 */
+export function workspaceAccessDenied(ctx: { state?: unknown; status: number; body: unknown }, workspacePath: string): boolean {
   const caller = (ctx.state as { user?: WorkspaceCaller } | undefined)?.user
   if (canUseWorkspace(caller, workspacePath)) return false
   ctx.status = 403
@@ -41,10 +43,44 @@ function workspaceAccessDenied(ctx: { state?: unknown; status: number; body: unk
   return true
 }
 
+/** 调用方身份（上游 requireUserJwt 写入；未启用鉴权的部署为 undefined）。 */
+function callerOf(ctx: { state?: unknown }): WorkspaceCaller | undefined {
+  return (ctx.state as { user?: WorkspaceCaller } | undefined)?.user
+}
+
+/**
+ * 登录校验用鉴权状态探测：启用鉴权的部署，ctx.state.user 缺席即未登录 → 拒；
+ * 未启用鉴权（单用户部署）放行（fleet.ts / workspace-access.ts 先例）。
+ * 测试注入 stub（上游 lazy require 在测试链不可达时按未启用处理）。
+ */
+let testAuthEnabled: (() => Promise<boolean>) | null = null
+
+export function setAuthEnabledProbeForTests(fn: (() => Promise<boolean>) | null): void {
+  testAuthEnabled = fn
+}
+
+async function isAuthEnabled(): Promise<boolean> {
+  if (testAuthEnabled) return testAuthEnabled()
+  try {
+    // 字面量 require 供构建期打包（workspace-access.ts 同款）；上游不可达按未启用鉴权处理。
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const auth = require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/auth') as {
+      isAuthEnabled?: () => Promise<boolean>
+    }
+    return typeof auth.isAuthEnabled === 'function' ? await auth.isAuthEnabled() : false
+  } catch {
+    return false
+  }
+}
+
 let dispatchSingleton: MentionDispatchService | null = null
 
-/** 派单服务单例：引擎面经投影 runtime（ensureConnected + 桥上调用）。 */
-function getMentionDispatch(): MentionDispatchService {
+/**
+ * 派单服务单例：引擎面经投影 runtime（ensureConnected + 桥上调用）。
+ * 共享 getter（P-A(b)）：列编排（column-dispatch）与 /mention REST 必须共用这一实例
+ * ——pending 槽是实例级状态，各建实例会同 (workspace,zcode) 双槽并存双跑。
+ */
+export function getMentionDispatch(): MentionDispatchService {
   if (dispatchSingleton) return dispatchSingleton
   const runtime = getZcodeProjectionRuntime()
   dispatchSingleton = new MentionDispatchService({
@@ -59,6 +95,11 @@ function getMentionDispatch(): MentionDispatchService {
     onOutcome: () => { /* outcome 经 dispatch() 返回值透传 REST；socket 扇出由调用侧 emit */ },
   })
   return dispatchSingleton
+}
+
+/** 测试用：丢弃单例（pending 槽状态随实例重置）。 */
+export function resetMentionDispatchForTests(): void {
+  dispatchSingleton = null
 }
 
 router.get('/health', async (ctx) => {
@@ -130,7 +171,8 @@ router.post('/mention', async (ctx) => {
   if (workspaceAccessDenied(ctx, workspacePath)) return
   const runtime = getZcodeProjectionRuntime()
   const service = getMentionDispatch()
-  const outcomes = await service.dispatch({ workspacePath, text })
+  // 自触发抑制 per-request 取发起者（P-C(d)）：从 ctx.state.user 取，构造器字段废弃。
+  const outcomes = await service.dispatch({ workspacePath, text, mentionAuthor: callerOf(ctx)?.username })
   // run 可追溯：成功派发的会话立即挂上投影（conversation topic → /zcode 房间）。
   for (const o of outcomes) {
     if (o.reason === 'queued' && o.sessionId) {
@@ -212,33 +254,47 @@ router.post('/mention/preview', async (ctx) => {
     ctx.body = { ok: false, detail: 'workspacePath 与 text 必填' }
     return
   }
+  // X1 归属闸（P-C(a)）：与 /mention 同闸——未注册/不可见的 workspace 不得窥探派单判定。
+  if (workspaceAccessDenied(ctx, workspacePath)) return
   const service = getMentionDispatch()
-  const svcAny = service as unknown as {
-    pending: Map<string, { since: number }>
-    known: Set<string>
-    deferred: Set<string>
-    mentionAuthor?: string
-    now: () => number
-    pendingTtlMs: number
-  }
   const { willEnqueueRun } = await import('../zcode/will-enqueue')
+  // 可达性事实用真实探测（与写路径同源：引擎离线如实回 runtime_offline，不再硬编码在线）；
+  // 判定事实走服务只读快照 planFacts()（P-A(d)），不再反射私有字段。
+  const engineOnline = await probeZCodeEngine().catch(() => false)
   const previews = willEnqueueRun(text, workspacePath, {
-    engine: { probe: async () => true, createSession: async () => ({ session: { sessionId: '' } }), sendCommand: async () => ({ status: 'accepted' }) },
-    knownAgents: svcAny.known,
-    deferredAgents: svcAny.deferred,
-    mentionAuthor: svcAny.mentionAuthor,
-    pendingKeys: new Set(svcAny.pending.keys()),
-    pendingSince: new Map([...svcAny.pending.entries()].map(([k, v]) => [k, v.since])),
-    now: svcAny.now,
-    pendingTtlMs: svcAny.pendingTtlMs,
+    ...service.planFacts(),
+    mentionAuthor: callerOf(ctx)?.username, // 与写路径同源的 per-request 发起者（P-C(d)）
+    engineOnline,
   })
   ctx.body = { ok: true, previews }
 })
 
 router.get('/squad/evaluations', async (ctx) => {
-  const { listEvaluations } = await import('../zcode/squad-protocol')
-  const squad = typeof ctx.query.squad === 'string' ? ctx.query.squad : undefined
-  ctx.body = { ok: true, evaluations: listEvaluations(squad) }
+  const caller = callerOf(ctx)
+  // 登录校验（P-C(a)）：启用鉴权的部署，未登录（ctx.state.user 缺席）不得读台账；
+  // 未启用鉴权的单用户部署放行（fleet.ts / workspace-access.ts 先例）。
+  if (!caller && (await isAuthEnabled())) {
+    ctx.status = 401
+    ctx.body = { ok: false, reason: 'invocation_not_allowed', detail: '未登录' }
+    return
+  }
+  const { listEvaluations, maskSessionId } = await import('../zcode/squad-protocol')
+  const squad = typeof ctx.query.squad === 'string' && ctx.query.squad ? ctx.query.squad : undefined
+  // 可见面过滤（P-C(a)）：只回调用方有权工作区的记录，不泄漏全租户数据；无归属面的
+  // 旧记录对登录用户不外泄（fail-closed）。sessionId 一律脱敏，不给全量引用。
+  const rows = listEvaluations(squad).filter((e) => {
+    if (!caller || caller.role === 'super_admin') return true
+    if (!e.workspacePath) return false
+    return canUseWorkspace(caller, e.workspacePath)
+  })
+  ctx.body = {
+    ok: true,
+    evaluations: rows.map((e) => ({
+      ...e,
+      placeholder: e.verdict === 'pending', // 占位/实评区分（P-B(a)）
+      sessionId: e.sessionId ? maskSessionId(e.sessionId) : undefined,
+    })),
+  }
 })
 
 router.get('/projection', async (ctx) => {

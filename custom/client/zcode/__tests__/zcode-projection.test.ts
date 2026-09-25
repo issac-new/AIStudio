@@ -103,6 +103,15 @@ describe('状态条与 socket 接线守门', () => {
       expect(REASON_CHIP_TEXT[key], `缺 ${key} 文案`).toBeTruthy()
     }
   })
+
+  it('chip 文案表与服务端词表逐值对账（P-F(a)）：键集合断言相等，新增 reason 不补文案当场红', async () => {
+    // 单一事实源 = 服务端 dispatch-reasons.ts DISPATCH_REASON_CODES（冻结词表）。
+    const { DISPATCH_REASON_CODES } = await import('../../../server/zcode/dispatch-reasons')
+    const missing = [...DISPATCH_REASON_CODES].filter((code) => !(code in REASON_CHIP_TEXT))
+    const extra = Object.keys(REASON_CHIP_TEXT).filter((code) => !(DISPATCH_REASON_CODES as readonly string[]).includes(code))
+    expect(missing, `缺文案：${missing.join(',')}`).toEqual([])
+    expect(extra, `多余文案键：${extra.join(',')}`).toEqual([])
+  })
 })
 
 // ── C1 订阅生命周期（行为级：假 socket 上验证监听器登记/清理/重连重订）──
