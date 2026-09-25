@@ -17,7 +17,7 @@ sget() { grep -s "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2-; return 0;
 sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2" >> "$STATE.tmp"; mv "$STATE.tmp" "$STATE"; }
 # 临时物清理（Z6）：$STATE.tmp 是 sset 的中转文件，mv 前被中断会残留。重定义 mx_cleanup
 # 即扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按最新定义执行（bash 单 EXIT trap）。
-mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp"; }
+mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp"; }
 note() { log "$*" | tee -a "$SCEN_LOG"; }
 
 # ── 步骤机（V3 生命周期 21 步：六阶段 L0-L5 × G1-G6 门禁，方案见
@@ -432,6 +432,17 @@ audit_check() { # → 0 合规 / 1 有缺陷（输出审计发现）
   # 取证目录在位
   [[ -d "$EVID_DIR" ]] || { echo "取证目录缺失"; bad=1; }
   return $bad
+}
+
+rfd_doc_snapshot() { # 需求书判读/提取用快照路径：origin/main 优先，工作树兜底 → 打印路径
+  # repo_pull 是 fetch-only（Z3）：远端独占更新不物化进工作树，重判轮读工作树副本会读到
+  # 旧稿（2026-09-25 实证边角）。判读口径统一取 origin/main 最新；远端暂无该文件（ba cp
+  # 未推的本地稿）回落工作树副本。快照落 "$STATE.rfd.tmp"，随 mx_cleanup 清理。
+  local snap="$STATE.rfd.tmp"
+  if git -C "$DIRECTOR_CLONE" show "origin/main:${RFD_DOC}" >"$snap" 2>/dev/null; then
+    echo "$snap"; return 0
+  fi
+  echo "$DIRECTOR_CLONE/${RFD_DOC}"
 }
 
 reqgate_judge() { # 导演侧机械化判读 G1 四要素（不依赖 LLM）→ 0 全过 / 其他=缺失项清单
