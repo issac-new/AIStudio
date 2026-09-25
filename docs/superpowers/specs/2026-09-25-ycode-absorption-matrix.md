@@ -163,7 +163,7 @@
 | ask_user 结构化问卷契约 | ✅ ask-contract.ts（1-4 步×2-4 选项×recommended≤1×带图；一次定音；挂载 455） |
 | Plan Mode 三件套 | ✅ plan-mode.ts（agent 主动进入/确认门/auto 免打扰档/执行流转；评审面板=IdePlanFloat 数据面） |
 | MCP tool_search 渐进披露 | 🧬原生已有（tools/tool_search.py：threshold_pct 0-100+listing_max_tokens 双预算 min() 控制；topK 条数限制被 token 预算覆盖更细）——再裁决（2026-09-25 核查） |
-| 运行中 queue+GOAL-05 让位 | 🔜P1（steer 半边原生已裁；queue 让位半边无人认领——本行即认领） |
+| 运行中 queue+GOAL-05 让位 | ✅ goal-preemption.ts（用户消息>自治目标/让位 yielded/让位点续跑/goal 不抢位）+steer 半边🧬原生 |
 | compact 阈值策略校准 | ✅ compact-threshold.ts（reserve=输出预算+5% 余量/90% 线/under·soon·now 三级） |
 | 状态栏 custom-command | 并入四源状态栏合并（kimi 行） |
 | agent-team 汇总条/投影窗口 | ✅ team-summary-bar.ts（五态计数/健康色红黄绿/零值段省略）；投影窗口并入 projection-socket task 房间 |
@@ -261,7 +261,7 @@
 ### 3.9 跨仓域合并裁决（D5/D6/D7 消解）
 
 - **goal 域（八源归一）**：mimo P6/kimi/minimax/dsh/cc/codex/codex-product/zcode G5——裁决中心=goal 域以 hermes 原生 goals.py 为基座（每轮裁判+GoalGate+预算字段已有），**增量吸收统一立项**：goal 三预算字段显式化✅ goal-budget.ts（steps/tokens/wallclock 独立触顶）、Quest"自主到底"档语义✅ goal-autonomy.ts（三档停点）。八源不再各自立项。
-- **steering/queue 域（七源归一）**：steer 半边🧬原生已裁决（delegate action steer/stop）；**queue 让位半边🔜P1**（minimax GOAL-05：用户消息>自治目标）单独认领。七源归此两行。
+- **steering/queue 域（七源归一）**：steer 半边🧬原生已裁决（delegate action steer/stop）；**queue 让位半边✅ goal-preemption.ts**（minimax GOAL-05：用户消息>自治目标）。七源归此两行。
 - **命名空间消歧（D7）**："恢复点 restore-point"（#5 四恢复选项+kimi fork+qoder Q12+cc 逐文件 Undo+fileHistory——统一恢复域）vs"检查点摘要 checkpoint-writer"（P7 五节写手）。后续立项一律用此二名。
 - **状态栏定制域**：kimi/minimax/codex/dsh 四源→单行✅ statusline-config.ts（6 槽/整行替换/custom 探针）。
 - **recap 域**：cc/codex/dsh 三源→单行✅ patch 410 recap v1。
