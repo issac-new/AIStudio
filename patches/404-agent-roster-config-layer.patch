@@ -2,7 +2,7 @@ diff --git a/agent/agent_roster.py b/agent/agent_roster.py
 new file mode 100644
 --- /dev/null
 +++ b/agent/agent_roster.py
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,151 @@
 +"""Agent 名册配置层（第一批吸收 #10 独立子件：dsh 角色配置 + kimi 昵称池 + routa 团队名册）。
 +
 +Origin：upstream 分析（docs/upstream-analysis/）——dsh-TUI agent roles 配置层、kimi
@@ -11,8 +11,10 @@ new file mode 100644
 +backend/qa/ux/code-reviewer/operations/general-engineer/agent-lead）。
 +
 +定位：**展示与任务路由提示层**——委派语义角色（leaf/orchestrator，delegate_tool
-+_normalize_role）不变；本层为子代理目录提供「角色目录 + 昵称池 + 并发/深度护栏配置」
-+的单一事实源。配置文件 ``<HERMES_HOME>/agent-roster.yaml``（缺席走内置默认，坏文件
++_normalize_role）不变；本层为子代理目录提供「角色目录 + 昵称池 + 护栏配置面」：角色
++目录与昵称池的单一事实源在此，护栏默认值的单一事实源在 tools/delegate_tool_config.py
++（delegate_task 实际执行的护栏），本层只导入派生、YAML 可覆盖取值，不写第二份字面量。
++配置文件 ``<HERMES_HOME>/agent-roster.yaml``（缺席走内置默认，坏文件
 +告警回默认不炸）。
 +
 +continuation 路由（send_message 转向 / interrupt 只停当前轮）依赖 delegate 后台化
@@ -27,6 +29,15 @@ new file mode 100644
 +from pathlib import Path
 +from typing import Optional
 +
++# 护栏默认值的单一事实源（Y2 收敛，原 4/2 与真实护栏 10/1 矛盾）。单向 import：本模块
++# 只依赖 tools 侧常量；tools.delegate_tool_config 模块级仅 import utils 与
++# hermes_cli.fallback_config（都不反向 import agent/），无循环 import。
++# 跨模块引私有名沿用 tools/delegate_tool.py 的既有先例。
++from tools.delegate_tool_config import (  # noqa: F401
++    MAX_DEPTH as _DELEGATE_MAX_DEPTH,
++    _DEFAULT_MAX_CONCURRENT_CHILDREN,
++)
++
 +logger = logging.getLogger(__name__)
 +
 +# routa team/ 名册 + dsh 角色并集（内置默认；Ycode 侧按需在 YAML 扩展）。
@@ -38,9 +49,10 @@ new file mode 100644
 +# kimi 人类名池（TEAM_RUNTIME_LABELS 同义）：display 用，同角色内去重分配。
 +DEFAULT_NICKNAME_POOL: tuple[str, ...] = ("Alex", "Sam", "Lee", "Riley", "Jordan", "Casey", "Morgan", "Avery")
 +
-+# 并发/深度护栏默认（delegate 动态描述引用同源值；此处为可配置的单一事实源）。
-+DEFAULT_MAX_CONCURRENT_CHILDREN = 4
-+DEFAULT_MAX_DELEGATION_DEPTH = 2  # routa MAX_DELEGATION_DEPTH 同值
++# 并发/深度护栏默认：与 delegate_task 实际护栏同源（上 import 派生，禁止在此写第二份
++# 字面量）。YAML 可在 load_roster 覆盖进程内取值。
++DEFAULT_MAX_CONCURRENT_CHILDREN = _DEFAULT_MAX_CONCURRENT_CHILDREN  # 10：delegation.max_concurrent_children 默认
++DEFAULT_MAX_DELEGATION_DEPTH = _DELEGATE_MAX_DEPTH  # 1：flat（parent 0 → child 1）；routa 的 orchestrator→leaf（2）需 YAML 显式开启
 +
 +
 +@dataclass
@@ -146,7 +158,7 @@ diff --git a/tests/agent/test_agent_roster.py b/tests/agent/test_agent_roster.py
 new file mode 100644
 --- /dev/null
 +++ b/tests/agent/test_agent_roster.py
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,93 @@
 +"""Agent 名册配置层守门（第一批 #10 独立子件：dsh 角色配置+kimi 昵称池+routa 名册）。"""
 +
 +from __future__ import annotations
@@ -169,7 +181,7 @@ new file mode 100644
 +    def test_default_role_catalog_and_guards(self):
 +        r = AgentRoster()
 +        assert "researcher" in r.role_catalog and "agent-lead" in r.role_catalog
-+        assert r.guards() == {"max_concurrent_children": 4, "max_delegation_depth": 2}
++        assert r.guards() == {"max_concurrent_children": 10, "max_delegation_depth": 1}
 +
 +    def test_display_names_titleized(self):
 +        r = AgentRoster()
@@ -211,7 +223,7 @@ new file mode 100644
 +        assert r.role_descriptions["qa"] == "质量验证"
 +
 +    def test_missing_and_broken_files_fall_back(self, tmp_path):
-+        assert load_roster(tmp_path / "absent.yaml").guards()["max_delegation_depth"] == 2
++        assert load_roster(tmp_path / "absent.yaml").guards()["max_delegation_depth"] == 1
 +        bad = tmp_path / "bad.yaml"
 +        bad.write_text("{{{{not yaml", encoding="utf-8")
 +        assert load_roster(bad).role_catalog == AgentRoster().role_catalog
@@ -225,3 +237,18 @@ new file mode 100644
 +        ar.reset_roster_cache()
 +        assert ar.get_roster().guards()["max_delegation_depth"] == 3
 +        ar.reset_roster_cache()
++
++
++class TestGuardSingleSource:
++    def test_guard_defaults_track_delegate_tool_config(self):
++        """Y2 守门：护栏默认值单一事实源在 tools/delegate_tool_config.py，roster 只派生。
++        任一端改字面量，此测试必须当场 fail（防 4/2 vs 10/1 两套事实源复发）。"""
++        from agent.agent_roster import (
++            DEFAULT_MAX_CONCURRENT_CHILDREN, DEFAULT_MAX_DELEGATION_DEPTH,
++        )
++        from tools.delegate_tool_config import (
++            MAX_DEPTH, _DEFAULT_MAX_CONCURRENT_CHILDREN,
++        )
++
++        assert DEFAULT_MAX_CONCURRENT_CHILDREN == _DEFAULT_MAX_CONCURRENT_CHILDREN == 10
++        assert DEFAULT_MAX_DELEGATION_DEPTH == MAX_DEPTH == 1
