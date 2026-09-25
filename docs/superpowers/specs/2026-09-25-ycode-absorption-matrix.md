@@ -192,7 +192,7 @@
 
 | 项 | 处置 |
 |---|---|
-| 列级 automation steps 编排 | 🔜P0（399 只落门禁半边，编排半边即本行） |
+| 列级 automation steps 编排 | ✅ automation-steps.ts 编排半边（列绑定 steps/门禁前置/fail-fast·continue 策略/skip≠失败）+399 门禁半边 |
 | 每 board 并发闸+事件驱动 drain | ✅ patch 419（board_concurrency 默认 1/超限排队/同 tick 计数/默认板有闸）；事件驱动 drain 随 loop 域扩 |
 | 任务=证据累积对象（laneSessions/交付快照/裁决） | ✅ evidence 域全落：交付快照/裁决（evidence-store delivery_snapshot·verification）+A1 工件+lane 履历（lane-timeline.ts 时序/小结） |
 | 结果回收三兜底 | 🧬原生已有（再裁决 2026-09-25）：hermes delegate 同步 join=结果必回强于旁路兜底；_fabricated_entry 超时断连兜底=auto-report 语义；background 结果轮间回注=wakeParent；session-end finally=清理兜底 |
