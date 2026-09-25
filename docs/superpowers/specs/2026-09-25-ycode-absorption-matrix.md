@@ -177,7 +177,7 @@
 |---|---|
 | squad leader 协调协议（评估必录+dispatch 即停） | ✅ squad-coordinator.ts（评估必录拒空 rationale/dispatch 即停拒叠加/三态闭环）+#7 mention 派单半边（驾驶舱协作主线） |
 | inbox 三档 severity×归档双轴 | ✅ patch 418（三档/双轴四象限/双收件人/正文截 200/批量操作） |
-| 分派预演 WillEnqueueRun | 🔜P1（写读共用谓词，衔接 #7 派单链） |
+| 分派预演 WillEnqueueRun | ✅ dispatch-preview.ts（写读共用谓词 willEnqueueRun：暂停/重复/并发上限/去重键四因子）+#7 派单链 |
 | 会话续接 resume-unsafe 分档 | ✅ resume-safety.ts（黑名单优先/new_session/safe_retry/backoff 指数退避封顶）；work_dir 继承随 delegate 域后续 |
 | 在场两维（availability×workload） | ✅ presence-two-axis.ts（圆点+芯片分画/30s-90s 心跳三档/在线闲与离线忙可分） |
 | execution log 每 run 一行+费用列 | ✅ run-log.ts（一行一 run：结论三态/耗时/命令截断/费用列/倒序筛选） |
