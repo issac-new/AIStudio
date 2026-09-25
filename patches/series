@@ -1010,3 +1010,6 @@
 # 473（feat/boundary-ui 轮，M2 案例面板 i18n）：ia2.delivery 词条（zh/en，
 #      其余语种 fallback——104/105 先例同款）。
 473-delivery-cases-i18n.patch
+# 474（feat/boundary-ui 轮，M2 发起向导 i18n）：ia2.delivery 补 launch/表单/网络读数词条
+#      （zh/en，其余语种 fallback——104/105 先例同款）。
+474-delivery-wizard-i18n.patch
