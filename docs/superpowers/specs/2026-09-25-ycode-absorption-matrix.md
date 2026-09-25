@@ -108,7 +108,7 @@
 | A4 浏览器安全层 | ✅ browser-security.ts（deny 优先/白名单/独立 profile） |
 | A5 浏览器回路 | ✅ browser-loop.ts（截图-动作-录制严格回路/录制回流计数） |
 | A6 会话内模型切换器（粘性+推理档+余量双仪表） | 📦旧账已落（IdeModelSwitcher，R4）·待随迁 |
-| A7 任务形态 slash 命令语义 | 🧬部分（hermes slash 面已有）·余 🔜P2 |
+| A7 任务形态 slash 命令语义 | ✅ hermes slash 面+command-as-task.ts（任务模板派生/槽位填充/门禁随行/纯命令不派生） |
 | A8 /learn 沉淀闭环 | ✅ learn-distill.ts（三归宿判定/流程化优先） |
 | A9 MCP 目录化 | ✅ mcp-catalog.ts（工具级禁用/Store 装机/可用工具扣减） |
 | A10 /boost 管线 | ✅ boost-pipeline.ts（断言回灌/一致数胜出/多数一致 verified） |
@@ -212,7 +212,7 @@
 | 项 | 处置 |
 |---|---|
 | 会话 recap（离开后发生了什么） | 🔜P0（cc/codex/dsh 三源合并；衔接 405 checkpoint 写手） |
-| 子代理结果来源标头防冒充 | 🔜P0（安全项） |
+| 子代理结果来源标头防冒充 | ✅ patch 410 agent-source-marks（代码侧不可伪造标记/子文本同款中性化/单点生成） |
 | 通知补耗时/模型 | 📦旧账已含（R4 活动收件箱）·待随迁 |
 | 计划模板（feature-dev 范式） | ✅ runtime/roster/prompts/plan-template.md（cc 概念自研重写：阶段+门禁+关键文件清单；红线合规） |
 | 评审/验证轮编排模板 | ✅ review-template.md（高信号纪律+独立验证轮自研；实件 /review 已落 patch 414） |
