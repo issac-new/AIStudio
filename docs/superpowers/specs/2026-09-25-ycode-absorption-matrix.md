@@ -221,7 +221,7 @@
 | 任务依赖 dependsOn | 🧬原生（kanban 父子依赖+claim 重检）·补记 |
 | cc：缓存 miss 归因 | ✅ cache-attribution.ts（归因优先序/命中率三档/建议文案） |
 | cc：/btw 侧问 | ✅ btw-sidebar.ts（三态/合并回注/不改主方向） |
-| @提及六源（file/session） | 🔜P2（与 codex-product 文件引用合并；#7 A2A mention 是不同物） |
+| @提及六源（file/session） | ✅ mention-resolution.ts（六源 file/session/skill/plugin/subagent/whiteboard+派单 agent/squad 同解析口径，client/ide/utils） |
 | auto memory 四类型+新鲜度 | ✅ memory-taxonomy.ts（四类型归档/7-30 天三档/stale 降权/fact 锚点） |
 | security-guidance 双层 | ✅ security-guidance.ts（同步拦/异步复查/放行三态） |
 
@@ -242,7 +242,7 @@
 | codex-product：任务结果卡（验证 bullet+文件±行数+逐文件 Undo） | 🔜P0（Undo 与 #5 恢复域衔接） |
 | codex-product：Activity 收件箱三态+OS 通知 | 📦旧账已落（R4）·待随迁 |
 | codex-product：终端 actions（项目级一键命令） | 📦旧账已落（R4）·待随迁 |
-| codex-product：文件/选区引用入会话 | 🔜P1（@域合并） |
+| codex-product：文件/选区引用入会话 | ✅ 文件=mention-resolution file 源；选区=selection-ref.ts（@file:L 区间/校验/引用卡） |
 | codex-product：webhook 事件触发 | ✅ loop/connectors/webhook-connector.ts（事件触发已有接线面） |
 | codex-product：AGENTS.md /init | ✅ agents-md.ts initTemplate（目标/构建与验证/约定/红线四段骨架） |
 | dsh：低上下文主动提醒（20k 余量 toast+迟滞） | ✅原生已落（IdeStatusBar lowNotified+迟滞，R1 代码实证）·补记 |
