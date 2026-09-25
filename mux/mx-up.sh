@@ -20,7 +20,7 @@ if curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1; then
   log "gateway 已在跑（:${GW_PORT}），跳过"
 else
   [[ -d "$HERMES_ROOT" ]] || fail "先跑 mx-setup.sh"
-  HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
+  PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
     nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"

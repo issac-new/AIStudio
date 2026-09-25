@@ -31,6 +31,11 @@ NCWK_ROOT="$(_mx_root_walk "$OVERLAY_ROOT" || echo "$(cd "$OVERLAY_ROOT/.." && p
 SKILLS_SRC="$OVERLAY_ROOT/scripts/aipay/skills"
 STUDIO_DIST="${MX_STUDIO_DIST:-$NCWK_ROOT/upstream/hermes-studio/dist}"
 HERMES_BIN="${HERMES_BIN:-$HOME/.hermes/hermes-agent/venv/bin/hermes}"
+# worker 网关解释器（HERMES_HOME/tools/python）裸跑找不到 hermes_cli——必须带
+# PYTHONPATH（09-26 实锤：缺 PATH 致 worker -m hermes_cli.main 两连崩 gave_up）
+_env_sp=$(ls -d "$HOME"/.hermes/installs/*/environments/*/venv/lib/python*/site-packages 2>/dev/null | head -1)
+HERMES_PYTHONPATH="${HERMES_PYTHONPATH:-$HOME/.hermes/hermes-agent${_env_sp:+:$_env_sp}}"
+unset _env_sp
 
 # ── 拓扑常量 ────────────────────────────────────────────
 # SIM_ROOT：env（AIPAY_SIM_ROOT）优先。默认在 NVMe 卷上，Linux 等无该挂载点的机器不可写
