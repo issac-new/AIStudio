@@ -90,3 +90,32 @@ describe('派单链集成（squad→leader 复用 agent 围栏）', () => {
     expect(self[0].reason).toBe('self_trigger_suppressed')
   })
 })
+
+describe('分派预演 WillEnqueueRun（multica 写读共用谓词语义，矩阵 §3.5 P1）', () => {
+  it('预测判定序与写路径同源：未知/旧链/自触发/活跃槽 coalesced/新槽 queued；纯零副作用', async () => {
+    const { willEnqueueRun } = await import('../will-enqueue')
+    const ctx = {
+      engine: { probe: async () => true, createSession: async () => ({ session: { sessionId: '' } }), sendCommand: async () => ({ status: 'accepted' }) },
+      knownAgents: new Set(['zcode']),
+      deferredAgents: new Set(['codex']),
+      mentionAuthor: 'zcode',
+      pendingKeys: new Set(['/w::zcode']),
+      pendingSince: new Map([['/w::zcode', 1000]]),
+      now: () => 2000,
+      pendingTtlMs: 30 * 60_000,
+    } as never
+    const previews = willEnqueueRun('@ghost 干活 @codex 干活 @squad/core 干活 @zcode 干活', '/w', ctx as never)
+    expect(previews.map((p) => p.reason)).toEqual([
+      'target_unavailable',        // ghost 未知
+      'deferred',                  // codex 旧链
+      'self_trigger_suppressed',   // zcode leader @ 自己 squad
+      'coalesced',                 // zcode 活跃槽（预演命中）——未真起跑
+    ])
+    expect(previews.every((p) => typeof p.willRun === 'boolean')).toBe(true)
+    expect(previews[3].runsFor).toBe('zcode')
+    // 过期槽预测 queued；纯零副作用（预演不落 pending）。
+    const ctx2 = { ...ctx, now: () => 2000 + 40 * 60_000 } as never
+    const p2 = willEnqueueRun('@zcode 新活', '/w', ctx2 as never)
+    expect(p2[0].reason).toBe('queued')
+  })
+})
