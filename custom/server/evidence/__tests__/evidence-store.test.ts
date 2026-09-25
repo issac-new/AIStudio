@@ -1,6 +1,7 @@
 // 任务证据台账守门（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）。
+// S-A 文件名哈希/身份校验、S-B 原子写+坏档隔离、S-D 写失败只报 code 与字段上限在此守门。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs'
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync, readdirSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
@@ -33,16 +34,16 @@ describe('五 kind 冻结（routa 证据面 + A1 工件 + 预留泳道）', () =
   })
 })
 
-describe('台账：只增 + 幂等 + 环形 + fail-soft', () => {
+describe('台账：只增 + 幂等 + 环形 + 坏档隔离', () => {
   it('append 幂等（同 evidenceId 跳过）；只增不改', () => {
-    expect(appendEvidence(rec({}))).toEqual({ added: true, total: 1 })
-    expect(appendEvidence(rec({ note: '重复' }))).toEqual({ added: false, total: 1 })
+    expect(appendEvidence(rec({}))).toMatchObject({ added: true, total: 1, evicted: 0 })
+    expect(appendEvidence(rec({ note: '重复' }))).toMatchObject({ added: false, total: 1, evicted: 0 })
     const records = listEvidence('t1')
     expect(records).toHaveLength(1)
     expect(records[0].note).toBeUndefined()  // 原条未被改写
   })
 
-  it('环形上限 500；新在前倒序', () => {
+  it('环形上限 500；新在前倒序；挤出给 evicted 计数', () => {
     for (let i = 0; i < 503; i++) {
       appendEvidence(rec({ evidenceId: `e${i}`, at: i }))
     }
@@ -52,18 +53,32 @@ describe('台账：只增 + 幂等 + 环形 + fail-soft', () => {
     expect(records[0].at).toBe(502)  // 最新在前
   })
 
-  it('坏文件回空台账（fail-soft）', () => {
-    writeBroken()
-    expect(loadEvidence('t1').records).toEqual([])
-    expect(appendEvidence(rec({})).added).toBe(true)  // 且可正常续写
+  it('环形挤出条数在结果里可循；幂等键只在环内有效（如实限定）', () => {
+    for (let i = 0; i < 500; i++) appendEvidence(rec({ evidenceId: `e${i}`, at: i }))
+    expect(appendEvidence(rec({ evidenceId: 'e500' }))).toMatchObject({ added: true, total: 500, evicted: 1 })
+    // e0 已被挤出环外：再次 append 不再命中幂等键（环内语义，非全史幂等）。
+    expect(appendEvidence(rec({ evidenceId: 'e0' })).added).toBe(true)
   })
 
-  it('kind 过滤 + limit', () => {
+  it('坏文件隔离 .corrupt 留档 + 可续写（不再静默当空账续写）', () => {
+    const file = evidenceFile('t1')
+    writeFileSync(file, '{{bad', 'utf8')
+    expect(loadEvidence('t1').records).toEqual([])
+    const archive = `${file}.corrupt`
+    expect(existsSync(archive)).toBe(true)          // 坏档留档不销毁
+    expect(readFileSync(archive, 'utf8')).toBe('{{bad')
+    expect(appendEvidence(rec({})).added).toBe(true)  // 且可正常续写
+    expect(loadEvidence('t1').records).toHaveLength(1)
+  })
+
+  it('kind 过滤 + limit；limit 非有限数回默认（slice(-NaN) 不再回全量）', () => {
     appendEvidence(rec({ evidenceId: 'a1', kind: 'artifact' }))
     appendEvidence(rec({ evidenceId: 'v1', kind: 'verification', verdict: 'pass', basis: 'pytest' }))
     expect(listEvidence('t1', 'artifact')).toHaveLength(1)
     expect(listEvidence('t1', undefined, 1)).toHaveLength(1)
     expect(latestVerdict('t1')?.verdict).toBe('pass')
+    for (let i = 0; i < 60; i++) appendEvidence(rec({ evidenceId: `m${i}` }))
+    expect(listEvidence('t1', undefined, Number.NaN)).toHaveLength(50)
   })
 
   it('验证裁决序列取最新；delivery_snapshot 带 revision', () => {
@@ -83,10 +98,73 @@ describe('台账：只增 + 幂等 + 环形 + fail-soft', () => {
     expect(raw.records[0].evidenceId).toBe('e1')
   })
 
-  function writeBroken() {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require('fs').writeFileSync(join(dir, 't1.json'), '{{bad', 'utf8')
-  }
+  it('字段上限：note/basis 4000、ref 200（超限截断）', () => {
+    appendEvidence(rec({ ref: 'r'.repeat(300), note: 'n'.repeat(5000), basis: 'b'.repeat(5000) }))
+    const saved = loadEvidence('t1').records[0]
+    expect(saved.ref).toHaveLength(200)
+    expect(saved.note).toHaveLength(4000)
+    expect(saved.basis).toHaveLength(4000)
+  })
+})
+
+describe('文件名哈希化（S-A：清洗名多对一 = 整账覆写销毁）', () => {
+  it('清洗名多对一的 id 各自独立台账（中文/斜杠/大小写）', () => {
+    // 缺陷前提：旧清洗名把下面这些折成同一个文件名。
+    expect('a/b'.replace(/[^A-Za-z0-9._-]/g, '_')).toBe('a_b')
+    expect(evidenceFile('a/b')).not.toBe(evidenceFile('a_b'))
+    expect(evidenceFile('张三')).not.toBe(evidenceFile('李四'))
+    expect(evidenceFile('T1')).not.toBe(evidenceFile('t1'))
+    appendEvidence(rec({ taskId: 'a/b', evidenceId: 'x1' }))
+    appendEvidence(rec({ taskId: 'a_b', evidenceId: 'x2' }))
+    expect(loadEvidence('a/b').records.map((r) => r.evidenceId)).toEqual(['x1'])
+    expect(loadEvidence('a_b').records.map((r) => r.evidenceId)).toEqual(['x2'])
+  })
+
+  it('旧清洗命名兼容读取 + 命中即迁移（身份相符才搬）', () => {
+    writeFileSync(join(dir, 't1.json'), JSON.stringify({ taskId: 't1', records: [rec({})] }), 'utf8')
+    expect(loadEvidence('t1').records.map((r) => r.evidenceId)).toEqual(['e1'])  // 兼容读取
+    expect(existsSync(evidenceFile('t1'))).toBe(true)                            // 已迁到哈希名
+    expect(existsSync(join(dir, 't1.json'))).toBe(false)
+    appendEvidence(rec({ evidenceId: 'e2' }))
+    expect(loadEvidence('t1').records.map((r) => r.evidenceId)).toEqual(['e1', 'e2'])
+  })
+
+  it('旧清洗名下碰撞对侧的账不认领不覆写（留给对方迁移）', () => {
+    // 旧清洗名 'a_b.json' 里是 'a/b' 的账：'a_b' 不认领，写入走自己的哈希名。
+    writeFileSync(
+      join(dir, 'a_b.json'),
+      JSON.stringify({ taskId: 'a/b', records: [rec({ taskId: 'a/b', evidenceId: 'x1' })] }),
+      'utf8',
+    )
+    expect(loadEvidence('a_b').records).toEqual([])
+    expect(appendEvidence(rec({ taskId: 'a_b', evidenceId: 'x2' })).added).toBe(true)
+    expect(JSON.parse(readFileSync(join(dir, 'a_b.json'), 'utf8')).records.map((r: { evidenceId: string }) => r.evidenceId)).toEqual(['x1'])
+    expect(loadEvidence('a/b').records.map((r) => r.evidenceId)).toEqual(['x1'])  // 对侧仍可认领并迁移
+  })
+
+  it('文件内 id 不符拒绝写入并报码（不再当空账续写覆掉他人台账）', () => {
+    writeFileSync(
+      evidenceFile('t1'),
+      JSON.stringify({ taskId: 'other', records: [rec({ taskId: 'other', evidenceId: 'keep' })] }),
+      'utf8',
+    )
+    expect(appendEvidence(rec({}))).toMatchObject({ added: false, code: 'identity_mismatch' })
+    const raw = JSON.parse(readFileSync(evidenceFile('t1'), 'utf8'))
+    expect(raw.taskId).toBe('other')                                    // 原文件原样
+    expect(raw.records.map((r: { evidenceId: string }) => r.evidenceId)).toEqual(['keep'])
+  })
+})
+
+describe('写失败只报 code（S-D：不泄漏 syscall/errno/服务器路径）', () => {
+  it('落盘失败回 write_failed，结果不带 err 展开字段', () => {
+    const blocker = join(dir, 'blocker')
+    writeFileSync(blocker, 'x', 'utf8')          // 拿同名文件占住目录位 → 建目录/落盘必失败
+    process.env.HERMES_EVIDENCE_DIR = blocker
+    const res = appendEvidence(rec({}))
+    expect(res).toMatchObject({ added: false, code: 'write_failed' })
+    expect(Object.keys(res).sort()).toEqual(['added', 'code', 'evicted', 'total'])
+    expect(readdirSync(dir).filter((f) => f.endsWith('.tmp'))).toEqual([])  // 无 tmp 残骸
+  })
 })
 
 describe('任务结果卡聚合（deepseek-harness 交付卡语义）', () => {
@@ -122,5 +200,15 @@ describe('任务结果卡聚合（deepseek-harness 交付卡语义）', () => {
     expect(card).toMatchObject({ durationSeconds: 0, verdict: null, evidenceCount: 0 })
     expect(card.verificationBullets).toEqual([])
     expect(card.files).toEqual([])
+  })
+
+  it('缺裁决残条不渲染字面量 "undefined"、不遮蔽真实裁决（S-C 读侧防御）', async () => {
+    const { buildResultCard } = await import('../result-card')
+    appendEvidence(rec({ evidenceId: 'v1', kind: 'verification', verdict: 'pass', basis: 'ok', at: 1 }))
+    appendEvidence(rec({ evidenceId: 'v2', kind: 'verification', at: 2 }))  // 残条：verification 无 verdict
+    const card = buildResultCard('t1')
+    expect(card.verificationBullets.map((b) => b.verdict)).toEqual(['pass'])
+    expect(JSON.stringify(card)).not.toContain('undefined')
+    expect(card.verdict).toBe('pass')  // 残条不顶掉真实裁决
   })
 })

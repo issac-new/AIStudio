@@ -44,23 +44,54 @@ export function pricingTablePath(): string {
   return resolve(__dirname, '../../../runtime/pricing/models.yaml')
 }
 
+/** 单档单价形状（S-C）：idle/peak 均须非负有限数，缺一即条目作废。 */
+function isTierPrice(v: unknown): v is { idle: number; peak: number } {
+  const t = v as { idle?: unknown; peak?: unknown } | null
+  return !!t && typeof t === 'object'
+    && typeof t.idle === 'number' && Number.isFinite(t.idle) && t.idle >= 0
+    && typeof t.peak === 'number' && Number.isFinite(t.peak) && t.peak >= 0
+}
+
+/** 条目形状校验：缺 input/output 或 cache 价目形状坏的条目丢弃（S-C：坏条目抛 TypeError
+ *  会把 /api/token-meter/cost 打成 500），丢弃条目 + warn。 */
+function isModelPrice(v: unknown): v is ModelPrice {
+  const m = v as ModelPrice | null
+  return !!m && typeof m === 'object'
+    && isTierPrice(m.input) && isTierPrice(m.output)
+    && (m.cacheRead === undefined || isTierPrice(m.cacheRead))
+    && (m.cacheWrite === undefined || isTierPrice(m.cacheWrite))
+}
+
 export function loadPricingTable(): PricingTable {
   if (cachedTable) return cachedTable
   const p = pricingTablePath()
   try {
-    if (!existsSync(p)) return (cachedTable = { currency: 'CNY', models: {} })
+    if (!existsSync(p)) {
+      // 未命中不缓存（S-C）：加载失败 ≠ 未收录，缓存空表会把 priced:0 锁死到重启。
+      console.warn(`[pricing] 价目表不存在，本次不缓存：${p}`)
+      return { currency: 'CNY', models: {} }
+    }
     // yaml 解析走与 server 一致的依赖；解析失败回空表（未收录=不显示，fail-soft）
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { parse } = require('yaml') as typeof import('yaml')
     const raw = parse(readFileSync(p, 'utf8')) || {}
-    cachedTable = {
-      currency: typeof raw.currency === 'string' ? raw.currency : 'CNY',
-      models: raw.models && typeof raw.models === 'object' ? raw.models : {},
+    const models: Record<string, ModelPrice> = {}
+    const rawModels = raw.models && typeof raw.models === 'object' ? raw.models as Record<string, unknown> : {}
+    for (const [id, entry] of Object.entries(rawModels)) {
+      if (isModelPrice(entry)) models[id] = entry
+      else console.warn(`[pricing] 价目条目形状非法，已丢弃：${id}`)
     }
-  } catch {
-    cachedTable = { currency: 'CNY', models: {} }
+    const table: PricingTable = {
+      currency: typeof raw.currency === 'string' ? raw.currency : 'CNY',
+      models,
+    }
+    // 只缓存成功加载且有条目的表（S-C）：空表/失败不缓存，下次请求可恢复。
+    if (Object.keys(models).length > 0) cachedTable = table
+    return table
+  } catch (err) {
+    console.warn(`[pricing] 价目表加载失败，本次不缓存：${err instanceof Error ? err.message : String(err)}`)
+    return { currency: 'CNY', models: {} }
   }
-  return cachedTable
 }
 
 export function resetPricingCacheForTests(): void {

@@ -3,7 +3,9 @@
 // 结果卡字段（dsh 交付卡）：时长（首末证据跨度）+ 验证 bullet（verdict 序列）
 // + 文件清单（artifact 卡汇总：每文件一张证据卡）+ 交付冻结（snapshot revision）
 // + 最新裁决。纯聚合函数：台账是事实源，卡片是读侧投影（不落盘不冗余）。
-import { listEvidence, latestVerdict, loadEvidence, type EvidenceRecord } from './evidence-store'
+import {
+  isVerificationVerdict, listEvidence, latestVerdict, loadEvidence, type EvidenceRecord,
+} from './evidence-store'
 
 export interface ResultCard {
   taskId: string
@@ -22,7 +24,9 @@ export interface ResultCard {
 
 export function buildResultCard(taskId: string): ResultCard {
   const all = loadEvidence(taskId).records
-  const verifications = all.filter((r: EvidenceRecord) => r.kind === 'verification')
+  // verification bullet 只收带三态裁决的（读侧防御：缺裁决的残条不渲染成字面量 "undefined"，
+  // 遮蔽真实裁决；写侧已强制 kind='verification' 必带 verdict，见 evidence-controller）。
+  const verifications = all.filter((r: EvidenceRecord) => r.kind === 'verification' && isVerificationVerdict(r.verdict))
   const artifacts = all.filter((r: EvidenceRecord) => r.kind === 'artifact')
   const snapshots = all.filter((r: EvidenceRecord) => r.kind === 'delivery_snapshot')
   const times = all.map((r: EvidenceRecord) => r.at).filter((t) => typeof t === 'number')
