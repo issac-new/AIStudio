@@ -4,6 +4,10 @@
 # 拓扑：本机 1 个 hermes gateway（multiplex 全部 profile）+ 1 个 studio（多 matrix 账号）
 # 用户模型：每个独立用户 = matrix 账号 + 账号下多个独立 kanban + 各 kanban 下的 agent teams
 # 设计文档：docs/superpowers/specs/2026-09-24-multiplex-multiuser-feasibility-and-plan-v2.md
+#
+# 归属声明（边界设计 §3-E3）：本库重生成 config.yaml/.env 仅限 sim 编排场景
+# （幂等再生成、漂移自动收敛），是 sim-only 写者；真实环境 config.yaml 的写者
+# 为 studio controllers/config.ts。根治（mx-setup 走 studio API）见该文档 §6-T6。
 set -uo pipefail
 
 MX_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

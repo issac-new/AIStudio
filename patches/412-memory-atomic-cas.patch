@@ -1,0 +1,93 @@
+diff --git a/packages/client/src/api/hermes/skills.ts b/packages/client/src/api/hermes/skills.ts
+index 242a14e6..c7e4bdf2 100644
+--- a/packages/client/src/api/hermes/skills.ts
++++ b/packages/client/src/api/hermes/skills.ts
+@@ -156,10 +156,14 @@ export async function fetchMemory(): Promise<MemoryData> {
+   return request<MemoryData>('/api/hermes/memory')
+ }
+ 
+-export async function saveMemory(section: 'memory' | 'user' | 'soul', content: string): Promise<void> {
++export async function saveMemory(
++  section: 'memory' | 'user' | 'soul',
++  content: string,
++  expectedMtime?: string | number | null,
++): Promise<void> {
+   await request('/api/hermes/memory', {
+     method: 'POST',
+-    body: JSON.stringify({ section, content }),
++    body: JSON.stringify({ section, content, expected_mtime: expectedMtime ?? null }),
+   })
+ }
+ 
+diff --git a/packages/client/src/views/hermes/MemoryView.vue b/packages/client/src/views/hermes/MemoryView.vue
+index ab83b3d4..8b6b3c47 100644
+--- a/packages/client/src/views/hermes/MemoryView.vue
++++ b/packages/client/src/views/hermes/MemoryView.vue
+@@ -47,13 +47,18 @@ async function handleSave() {
+   if (!editingSection.value) return
+   saving.value = true
+   try {
+-    await saveMemory(editingSection.value, editContent.value)
++    // 带上加载时 mtime 做 CAS：agent（hermes memory 工具）并写同一批文件时
++    // 服务端 409 拒写，避免互相覆盖；冲突提示后重新加载取最新内容。
++    const section = editingSection.value
++    const expectedMtime = data.value ? (data.value as Record<string, unknown>)[`${section}_mtime`] : null
++    await saveMemory(section, editContent.value, expectedMtime as string | number | null)
+     await loadMemory()
+     editingSection.value = null
+     editContent.value = ''
+     message.success(t('common.saved'))
+   } catch (err: any) {
+     message.error(`${t('common.saveFailed')}: ${err.message}`)
++    await loadMemory()
+   } finally {
+     saving.value = false
+   }
+diff --git a/packages/server/src/modules/hermes/controllers/memory.ts b/packages/server/src/modules/hermes/controllers/memory.ts
+index bf722914..a4d50df7 100644
+--- a/packages/server/src/modules/hermes/controllers/memory.ts
++++ b/packages/server/src/modules/hermes/controllers/memory.ts
+@@ -1,4 +1,4 @@
+-import { mkdir, writeFile } from 'fs/promises'
++import { mkdir, rename, stat, writeFile } from 'fs/promises'
+ import { join } from 'path'
+ import { safeReadFile, safeStat } from '../../studio/public/files'
+ import { getActiveProfileName, getProfileDir } from '../services/profiles/profile'
+@@ -27,7 +27,9 @@ export async function get(ctx: any) {
+ }
+ 
+ export async function save(ctx: any) {
+-  const { section, content } = ctx.request.body as { section: string; content: string }
++  const { section, content, expected_mtime } = ctx.request.body as {
++    section: string; content: string; expected_mtime?: string | number | null
++  }
+   if (!section || content === undefined || content === null) {
+     ctx.status = 400
+     ctx.body = { error: 'Missing section or content' }
+@@ -48,7 +50,25 @@ export async function save(ctx: any) {
+     filePath = join(hd, 'memories', fileName)
+   }
+   try {
+-    await writeFile(filePath, content, 'utf-8')
++    // mtime CAS：hermes memory 工具并写同一批文件，先读后写会在 agent 留痕与
++    // 人工编辑并发时互相覆盖。客户端带上加载时 mtime，对不上即 409 拒写。
++    // 缺省（不带 expected_mtime）保持旧行为，兼容既有调用方。
++    if (expected_mtime != null && expected_mtime !== '') {
++      const expMs = typeof expected_mtime === 'number'
++        ? expected_mtime
++        : Date.parse(String(expected_mtime))
++      const st = await stat(filePath).catch(() => null)
++      const curMs = st ? new Date(st.mtime).getTime() : null
++      if (curMs != null && Number.isFinite(expMs) && Math.round(curMs) !== Math.round(expMs)) {
++        ctx.status = 409
++        ctx.body = { error: 'mtime conflict: file changed since load', current_mtime: new Date(curMs).toISOString() }
++        return
++      }
++    }
++    // 原子替换：直接覆盖写会留半截文件（tmp+rename 与 approval-store 同款防护）。
++    const tmp = `${filePath}.${process.pid}.tmp`
++    await writeFile(tmp, content, 'utf-8')
++    await rename(tmp, filePath)
+     ctx.body = { success: true }
+   } catch (err: any) {
+     ctx.status = 500
