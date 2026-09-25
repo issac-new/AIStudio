@@ -132,7 +132,7 @@
 | Q9 白板回路 | ✅ whiteboard-loop.ts（Agent 生成/圈选标注回传/区域校验） |
 | Auto 模型路由 | ✅ model-routing.ts（三档成本/low~max 思考强度） |
 | Q11 Hooks 生命周期配置界面 | 📦旧账已落（hooks 只读面板，R4）·写档面 🔜P2 |
-| Q12 任务分支（回复 fork） | 🔜P2（与 kimi fork 合并立项） |
+| Q12 任务分支（回复 fork） | ✅ session-fork.ts（分叉点 atIndex/谱系 parent·forkPoint/树投影 childrenOf·rootOf/越界拒） |
 | Q13 扩展市场入口 | ✅ extension-market.ts（安装态三档/版本检测/入口可见性） |
 | 记忆全局/项目两级分治 | ✅ memory-scope.ts（开关/清空/文件数下限/汇总） |
 | Q15 MCP 超时设置 | 🔜P2（与 codex X8 合并：per-server 白黑名单/审批档/超时 🔜P1） |
@@ -144,7 +144,7 @@
 |---|---|
 | /mcp-config 余项（scope 三选一/超时指引/needs-auth 闭环） | 🔜P1（needs-auth OAuth 合成工具部分依赖 zcode P1-14 同项） |
 | coder 交接话术（final message=entire handoff） | 🔜P1（纯提示词资产，衔接 400 compact 六段） |
-| 会话 fork+undo 选择器 | 🔜P2（与 Q12 合并） |
+| 会话 fork+undo 选择器 | ✅ fork=session-fork.ts（与 Q12 合并项）；undo 选择器=file-history.ts 双相快照回读（#5 恢复域） |
 | agent profile 五级来源+watch 热重载 | 🧬部分（404 配置层）·热重载 🔜P2 |
 | AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 🔜P2 |
 | AgentSwarm 扇出 | ✅ swarm-fanout.ts（批量分解/并发限流/排队计数）；/btw 侧问随 UI |
