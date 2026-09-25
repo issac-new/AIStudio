@@ -111,7 +111,7 @@
 | A7 任务形态 slash 命令语义 | 🧬部分（hermes slash 面已有）·余 🔜P2 |
 | A8 /learn 沉淀闭环 | ✅ learn-distill.ts（三归宿判定/流程化优先） |
 | A9 MCP 目录化 | ✅ mcp-catalog.ts（工具级禁用/Store 装机/可用工具扣减） |
-| A10 /boost 多代理推理管线 | 🔜P2 |
+| A10 /boost 管线 | ✅ boost-pipeline.ts（断言回灌/一致数胜出/多数一致 verified） |
 | A11 Terminal OS 级沙箱 | ❌不吸收（超 Ycode 范围）；定时任务编辑视图🔜P2 |
 | A12 Manager 聚合视图 | ✅ manager-hub.ts（驾驶视图排序/working-idle/要人总数） |
 | A13 Knowledge 代理检索/贡献闭环 | ✅ 判定面 knowledge-loop.ts（通用性准入/检索命中才入选）；semantica 存储迁移仍排队（§1.3 手册#2） |
