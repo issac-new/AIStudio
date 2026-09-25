@@ -39,6 +39,7 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
       'hermes_cli/', 'plugins/', 'agent/', 'apps/', 'assets/', 'acp_',
       'gateway/', 'tests/gateway/', 'tests/hermes_cli/',
       'optional-mcps/', 'optional-skills/',
+      'tools/', 'tests/tools/', 'tests/agent/',
     ]
     for (const p of expected) {
       expect(HERMES_AGENT_PATCH_PREFIXES, `前缀 ${p}`).toContain(p)
@@ -49,6 +50,21 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
     const ensureSrc = readFileSync(resolve(__dirname, '../../../scripts/ensure-injected.mjs'), 'utf8')
     expect(ensureSrc).toContain("isHermesAgentPatchPath } from './inject.mjs'")
     expect(ensureSrc).not.toContain("startsWith('hermes_cli/')")
+  })
+
+  it('aipay-agent-sync.sh 的 AGENT_PREFIXES 与 inject.mjs 前缀集双向相等（2a02847 防复发）', () => {
+    // 2a02847 事故：inject.mjs 补齐 tools//tests/tools//tests/agent/ 时漏了 shell 侧镜像
+    // AGENT_PREFIXES，tools/ 开头的 patch 被静默跳过（候选 0 exit 0 无告警）。上例
+    // toContain 是单向断言（删前缀仍绿），此处解析 shell 正则片段与 js 导出逐项双向比对，
+    // 任一侧增删即红。
+    const syncSrc = readFileSync(resolve(__dirname, '../../../scripts/aipay/aipay-agent-sync.sh'), 'utf8')
+    const m = syncSrc.match(/AGENT_PREFIXES='\^\(([^)]*)\)'/)
+    expect(m, "aipay-agent-sync.sh 应含 AGENT_PREFIXES='^(a/|b_|...)' 正则片段").toBeTruthy()
+    const shellPrefixes = (m as RegExpMatchArray)[1].split('|').filter((p) => p.length > 0)
+    const jsPrefixes = [...injectModule.HERMES_AGENT_PATCH_PREFIXES]
+    expect(shellPrefixes.filter((p) => !jsPrefixes.includes(p)), 'shell 侧多出/未同步到 js 的前缀').toEqual([])
+    expect(jsPrefixes.filter((p) => !shellPrefixes.includes(p)), 'js 侧多出/未同步到 shell 的前缀').toEqual([])
+    expect(shellPrefixes.slice().sort(), '两侧前缀集逐项相等').toEqual(jsPrefixes.slice().sort())
   })
 })
 

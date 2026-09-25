@@ -250,10 +250,17 @@ out['platforms'] = {
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
 # 模型通道覆写（同 profile：root default profile 也要改道，否则网关默认会话仍走旧通道）
+# 同构拷贝 ×3（write_root_config/write_user_profile/write_agent_profile）：改任一份须
+# 同步另两份。语义：model 段合并不替换（只覆写 default/provider/base_url/api_key，
+# 保留源键）；MX_MODEL_KEY 空时保留源配置 api_key，不生成 api_key:''。
 mu = os.environ.get('MX_MODEL_BASE_URL')
 if mu:
     mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
-    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    src_model = dict(out.get('model') or {})
+    if not mk:
+        mk = src_model.get('api_key') or ''   # KEY 未设：保留源配置 api_key
+    out['model'] = {**src_model, 'default': mn, 'provider': 'custom:dashscope',
+                    'base_url': mu, 'api_key': mk}
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
     out['custom_providers'] = cps
@@ -273,10 +280,14 @@ PYEOF
 #   hermes-b24d7ac5d9c4-aiteam 同构。
 # - 模式 local_external：共享宿主 hindsight 服务（:8888）；同家族 profile 的
 #   config.json 落同一 bank_id 即共享记忆，异家族天然隔离。
-# 备用模型通道框架：当前通道断时自动切到第一个可用的备用
-MX_FALLBACK_MODELS="${MX_FALLBACK_MODELS:-}"   # 逗号分隔：name:base_url:key:model
+# 备用模型通道（占位未实现）：切换逻辑待接，设置此变量当前无效果，勿据此做故障切换；
+# 格式先定：逗号分隔 name:base_url:key:model
+MX_FALLBACK_MODELS="${MX_FALLBACK_MODELS:-}"   # 逗号分隔：name:base_url:key:model（占位未实现，设置无效）
 HINDSIGHT_API_URL="${MX_HINDSIGHT_API:-http://localhost:8888}"
 user_mac12() { # <user> → 12 位伪 MAC（确定性派生；AIPAY_USER_MAC 覆盖）
+  # 失败一律 return 1、原因走 stderr，不在函数内 fail：全部调用点都在 $( ) 命令替换
+  # 内，替换体里的 exit 只退子 shell——实测三工具全缺时外层 exit=0、bank=hermes--<user>
+  # 照跑（跨机同名用户记忆串号，正是上文要防的场景）。中止由调用方判非零后外层 fail。
   if [[ -n "${AIPAY_USER_MAC:-}" ]]; then echo "$AIPAY_USER_MAC"; return 0; fi
   # sha1 派生回落链（P7 跨端）：macOS 有 shasum，精简 Linux 常只剩 sha1sum，再回落
   # openssl dgst；三者都是 SHA-1 摘要，bank_id 跨端一致。工具全缺即大声失败，
@@ -289,17 +300,23 @@ user_mac12() { # <user> → 12 位伪 MAC（确定性派生；AIPAY_USER_MAC 覆
   elif command -v openssl >/dev/null 2>&1; then
     out=$(printf '%s' "$1" | openssl dgst -sha1 | awk '{print $NF}' | cut -c1-12)
   else
-    fail "user_mac12：shasum/sha1sum/openssl 全缺，无法派生记忆 bank MAC（装其一或设 AIPAY_USER_MAC）"
+    echo "user_mac12：shasum/sha1sum/openssl 全缺，无法派生记忆 bank MAC（装其一或设 AIPAY_USER_MAC）" >&2
+    return 1
   fi
-  [[ -n "$out" ]] || fail "user_mac12：sha1 派生结果为空（工具异常）"
+  [[ -n "$out" ]] || { echo "user_mac12：sha1 派生结果为空（工具异常）" >&2; return 1; }
   echo "$out"
 }
-memory_bank_id() { # <user> → hermes-<mac12>-<user>
-  echo "hermes-$(user_mac12 "$1")-$1"
+memory_bank_id() { # <user> → hermes-<mac12>-<user>（派生失败 return 1，不拼空 MAC bank_id）
+  local mac
+  mac=$(user_mac12 "$1") || return 1
+  [[ -n "$mac" ]] || return 1
+  echo "hermes-$mac-$1"
 }
 write_hindsight_config() { # <user> <profile-dir>：写家族共享 bank 配置（档位对齐宿主）
   local u="$1" prof="$2" bank
-  bank=$(memory_bank_id "$u")
+  # 命令替换内 fail 不外传（见 user_mac12 注释）：此处判非零/判空后外层 fail
+  bank=$(memory_bank_id "$u") || fail "[$u] 记忆 bank MAC 派生失败（user_mac12 报错见上），中止防记忆串号"
+  [[ -n "$bank" ]] || fail "[$u] 记忆 bank MAC 为空，中止防记忆串号"
   mkdir -p "$prof/hindsight"
   cat > "$prof/hindsight/config.json" <<EOF
 {
@@ -333,14 +350,21 @@ keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'too
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}   # patch 390：钉本账号默认板
 out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
-# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道
+# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道。
+# 同构拷贝 ×3（write_root_config/write_user_profile/write_agent_profile）：改任一份须
+# 同步另两份。语义：model 段合并不替换（只覆写 default/provider/base_url/api_key，
+# 保留源键）；MX_MODEL_KEY 空时保留源配置 api_key，不生成 api_key:''。
 mu = os.environ.get('MX_MODEL_BASE_URL')
 if mu:
     mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
-    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    src_model = dict(out.get('model') or {})
+    if not mk:
+        mk = src_model.get('api_key') or ''   # KEY 未设：保留源配置 api_key
+    out['model'] = {**src_model, 'default': mn, 'provider': 'custom:dashscope',
+                    'base_url': mu, 'api_key': mk}
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
-    out['custom_providers'] = cps  # 家族共享记忆
+    out['custom_providers'] = cps
 out['platforms'] = {
     'matrix': {'enabled': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
@@ -377,14 +401,21 @@ keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'too
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}
 out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
-# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道
+# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道。
+# 同构拷贝 ×3（write_root_config/write_user_profile/write_agent_profile）：改任一份须
+# 同步另两份。语义：model 段合并不替换（只覆写 default/provider/base_url/api_key，
+# 保留源键）；MX_MODEL_KEY 空时保留源配置 api_key，不生成 api_key:''。
 mu = os.environ.get('MX_MODEL_BASE_URL')
 if mu:
     mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
-    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    src_model = dict(out.get('model') or {})
+    if not mk:
+        mk = src_model.get('api_key') or ''   # KEY 未设：保留源配置 api_key
+    out['model'] = {**src_model, 'default': mn, 'provider': 'custom:dashscope',
+                    'base_url': mu, 'api_key': mk}
     cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
     cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
-    out['custom_providers'] = cps  # 家族共享记忆
+    out['custom_providers'] = cps
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$PROF/config.yaml"
@@ -392,8 +423,11 @@ PYEOF
 }
 
 write_user_manifest() { # <user>：账号级能力清单（capability-report 技能数据源）
-  local u="$1" PROF="$HERMES_ROOT/profiles/$u" defboard agents_json boards_json a b alist
+  local u="$1" PROF="$HERMES_ROOT/profiles/$u" defboard agents_json boards_json a b alist bank
   defboard=$(first_board_of "$u")
+  # bank 先取值再进 heredoc：heredoc 里的 $( ) 同属命令替换，fail 不外传
+  bank=$(memory_bank_id "$u") || fail "[$u] 记忆 bank MAC 派生失败（user_mac12 报错见上），中止防记忆串号"
+  [[ -n "$bank" ]] || fail "[$u] 记忆 bank MAC 为空，中止防记忆串号"
   agents_json="[{\"id\":\"orchestrator\",\"capabilities\":[\"coordination\"]}"
   for a in $(agents_of "$u"); do
     agents_json+=",{\"id\":\"$a\",\"capabilities\":[\"research\",\"delivery\"]}"
@@ -410,31 +444,67 @@ write_user_manifest() { # <user>：账号级能力清单（capability-report 技
   "topology": "single-gateway-multiplex",
   "agents": $agents_json,
   "boards": [$boards_json],
-  "memoryBank": "$(memory_bank_id "$u")",
+  "memoryBank": "$bank",
   "kanbanEndpoint": "$(studio_url)/api/hermes/kanban?board=$defboard"
 }
 MANEOF
   chmod 600 "$PROF/machine-manifest.json"
 }
 
+roster_snapshot() { # 编制对账（边界设计 §6-T5）：agent-roster.yaml 快照 + 游离角色声明。
+  # 单源=hermes agent-roster.yaml；boards_of 的 agent-id 不在其 roles 内时记入
+  # extraRoles 显式声明（sim 场景角色属场景数据，允许扩展但不许静默漂移）。
+  # agent-id 经环境变量传给 python（heredoc 会抢占 stdin，管道传参必丢）。
+  # 健壮化（H2）：roles 含映射项时 set(roles) 抛 TypeError、stdout 落空，拼出
+  # `"roster": ,` 非法 JSON——roles 逐项 str() 归一（同上游 agent_roster.py:118），
+  # 且任何异常/缺 python3 一律只吐 null，保证调用方拼出的 JSON 恒合法。
+  local roster="" ids out
+  [[ -f "$HERMES_ROOT/agent-roster.yaml" ]] && roster="$HERMES_ROOT/agent-roster.yaml"
+  [[ -z "$roster" && -f "$HOME/.hermes/agent-roster.yaml" ]] && roster="$HOME/.hermes/agent-roster.yaml"
+  ids=$({ for u in "${INSTANCED_USERS[@]}"; do agents_of "$u"; done } | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ')
+  out=$(ROSTER_FILE="$roster" ROSTER_IDS="$ids" python3 - <<'PYEOF'
+import json, os
+ids = sorted({i for i in os.environ.get('ROSTER_IDS', '').split() if i})
+path = os.environ.get('ROSTER_FILE') or ''
+roles = []
+if path:
+    try:
+        import yaml
+        data = yaml.safe_load(open(path)) or {}
+        roles = list(data.get('roles') or [])
+    except Exception:
+        roles = []
+norm = [str(r) for r in roles]   # 非字符串角色归一（set 可哈希；同上游逐项 str()）
+extra = sorted({i for i in ids if i not in set(norm)})
+print(json.dumps({'source': path or None, 'roles': norm,
+                  'boardAgentIds': ids, 'extraRoles': extra}, ensure_ascii=False))
+PYEOF
+) || out="null"
+  printf '%s\n' "${out:-null}"
+}
+
 write_fleet_manifest() { # 全局事实源：users → matrix 账号 / boards / teams
-  local out="$SIM_ROOT/fleet-manifest.json" u b first=1
+  local out="$SIM_ROOT/fleet-manifest.json" u b first=1 bank
   {
     echo '{'
     echo "  \"topology\": \"single-gateway-multiplex\","
     echo "  \"hermesRoot\": \"$HERMES_ROOT\","
     echo "  \"gatewayPort\": $GW_PORT,"
     echo "  \"studioPort\": $STUDIO_PORT,"
+    echo "  \"roster\": $(roster_snapshot),"
     echo '  "users": ['
     for u in "${INSTANCED_USERS[@]}"; do
       [[ $first == 1 ]] || echo '    ,'
       first=0
+      # 命令替换内 fail 不外传（见 user_mac12 注释）：判非零/判空后外层 fail
+      bank=$(memory_bank_id "$u") || fail "[$u] 记忆 bank MAC 派生失败（user_mac12 报错见上），中止防记忆串号"
+      [[ -n "$bank" ]] || fail "[$u] 记忆 bank MAC 为空，中止防记忆串号"
       echo '    {'
       echo "      \"user\": \"$u\","
       echo "      \"humanMxid\": \"$(human_mxid "$u")\","
       echo "      \"agentMxid\": \"$(agent_mxid "$u")\","
       echo "      \"profile\": \"$u\","
-      echo "      \"memoryBank\": \"$(memory_bank_id "$u")\","
+      echo "      \"memoryBank\": \"$bank\","
       echo '      "boards": ['
       local bfirst=1
       for b in $(boards_of "$u"); do

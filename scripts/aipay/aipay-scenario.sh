@@ -30,7 +30,10 @@ source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # 最新定义执行（bash 单 EXIT trap）；DL_WT 未建时为空跳过，worktree 用
 # git worktree remove --force 兜底。
 mx_cleanup() {
-  rm -f "/tmp/mx-api.$$" "$STATE.tmp" "/tmp/mx-rfd-remote.$$"
+  # 清理面取三处定义的并集（mx-lib /tmp/mx-api.$$、mx-scenario-lib $STATE.tmp 与
+  # $STATE.rfd.tmp——rfd_doc_snapshot 快照、注释声称随 mx_cleanup 清理、此处曾漏掉，
+  # 重定义须保留全部既有项），再加本脚本 ba 步 /tmp/mx-rfd-remote.$$ 与 DL_WT。
+  rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp" "/tmp/mx-rfd-remote.$$"
   if [[ -n "${DL_WT:-}" ]]; then
     git -C "$DIRECTOR_CLONE" worktree remove --force "$DL_WT" >/dev/null 2>&1 \
       || git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1
