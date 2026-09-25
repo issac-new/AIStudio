@@ -936,3 +936,12 @@
 #      三源合并，§3.9 P0）——build_worker_context 注入 checkpoint 上次进展（goal/done/
 #      next/blockers，衔接 405 写手），重派续跑不重做。守门 4+2 例。
 410-agent-source-marks-recap.patch
+# 411/412（feat/capability-boundaries 轮）：jobs.json 与记忆文件单写者治理
+# （双写台账见 docs/superpowers/specs/2026-09-25-capability-boundaries-design.md）。
+# 411  provider/model 改走 hermes cron create/edit --model/--provider（jobs.json 单写者
+#      = hermes cron 序列化器），writeJobs 原子替换防半截 JSON；base_url 无 CLI 面
+#      保留窄道直写（上游缺口登记）。
+# 412  记忆三文件（MEMORY/USER/SOUL.md）原子写 + mtime CAS：hermes memory 工具并写
+#      同一批文件，先读后写并发互踩→客户端带 expected_mtime，冲突 409 拒写。
+411-cron-jobs-single-writer.patch
+412-memory-atomic-cas.patch
