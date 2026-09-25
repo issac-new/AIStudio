@@ -263,6 +263,8 @@ PYEOF
 #   hermes-b24d7ac5d9c4-aiteam 同构。
 # - 模式 local_external：共享宿主 hindsight 服务（:8888）；同家族 profile 的
 #   config.json 落同一 bank_id 即共享记忆，异家族天然隔离。
+# 备用模型通道框架：当前通道断时自动切到第一个可用的备用
+MX_FALLBACK_MODELS="${MX_FALLBACK_MODELS:-}"   # 逗号分隔：name:base_url:key:model
 HINDSIGHT_API_URL="${MX_HINDSIGHT_API:-http://localhost:8888}"
 user_mac12() { # <user> → 12 位伪 MAC（确定性派生；AIPAY_USER_MAC 覆盖）
   if [[ -n "${AIPAY_USER_MAC:-}" ]]; then echo "$AIPAY_USER_MAC"; return 0; fi
