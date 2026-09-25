@@ -2,9 +2,12 @@
 // S3 守门：/zcode 命名空间鉴权——客户端送 handshake.auth.token，服务端必须校验，
 // 无 token / 坏 token 一律 next(err) 拒绝连接；isAuthEnabled 关闭时放行（upstream
 // pet-state.ts authMiddleware 同款语义）。接法锚：upstream sockets/pet-state.ts。
-import { describe, it, expect, vi } from 'vitest'
+// X1 收口：subscribe/subscribe-session 进房另过归属闸（canUseWorkspace）——跨用户
+// 不进房（不泄跨 workspace 元数据），本人/可见会话进房；未启用鉴权放行（单用户部署）。
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Server, Socket } from 'socket.io'
 import { setupZcodeProjectionSocket, type ZcodeNamespaceAuth } from '../zcode/projection-socket'
+import { setWorkspaceAccessDepsForTests } from '../zcode/workspace-access'
 
 function fakeIo() {
   const nsp = {
@@ -90,5 +93,79 @@ describe('/zcode 命名空间鉴权（S3）', () => {
     await mw(fakeSocket({ token: 'whatever' }) as unknown as Socket, next)
     // 无注入 + 懒加载成功则走真实校验（坏 token 拒）；懒加载失败则直接拒——两者都不放行
     expect(next.mock.calls[0][0]).toBeInstanceOf(Error)
+  })
+})
+
+describe('/zcode 订阅房间归属（X1 收口）', () => {
+  type SocketHandler = (...args: string[]) => void
+
+  /** 走完鉴权中间件（socket.data.user 由鉴权面写入）再进 connection 处理器，取事件处理器与 join 探针。 */
+  async function connectWith(authDeps: ZcodeNamespaceAuth, token?: string): Promise<{
+    handlers: Map<string, SocketHandler>
+    join: ReturnType<typeof vi.fn>
+    leave: ReturnType<typeof vi.fn>
+  }> {
+    const { io, nsp } = fakeIo()
+    setupZcodeProjectionSocket(io, authDeps)
+    const mw = nsp.use.mock.calls[0][0] as NspMiddleware
+    const handlers = new Map<string, SocketHandler>()
+    const join = vi.fn()
+    const leave = vi.fn()
+    const socket = {
+      handshake: { auth: token === undefined ? {} : { token } },
+      data: {} as Record<string, unknown>,
+      on: (evt: string, fn: SocketHandler) => { handlers.set(evt, fn) },
+      join,
+      leave,
+    }
+    const next = vi.fn()
+    await mw(socket as unknown as Socket, next)
+    expect(next).toHaveBeenCalledWith() // 鉴权通过（拒绝路径由 S3 守门覆盖）
+    const onConnection = nsp.on.mock.calls.find((c) => c[0] === 'connection')?.[1] as ((s: Socket) => void) | undefined
+    expect(onConnection).toBeTypeOf('function')
+    onConnection!(socket as unknown as Socket)
+    return { handlers, join, leave }
+  }
+
+  const authed: ZcodeNamespaceAuth = {
+    isAuthEnabled: async () => true,
+    authenticateUserToken: async (token: string) => (token === 'good-token' ? { id: 7, username: 'alice', role: 'admin' } : null),
+  }
+  const registeredDeps = {
+    listSessions: () => [{ profile: 'default', workspace: '/w/p' }, { profile: 'ops', workspace: '/w/ops' }],
+    userCanAccessProfile: (_id: number | string, profile: string) => profile === 'default',
+  }
+
+  beforeEach(() => { setWorkspaceAccessDepsForTests(registeredDeps) })
+  afterEach(() => { setWorkspaceAccessDepsForTests(null) })
+
+  it('跨用户 subscribe 不进房：未注册 / 他人 profile 的 workspace 静默拒，join 零调用（不泄跨 workspace 元数据）', async () => {
+    const { handlers, join } = await connectWith(authed, 'good-token')
+    handlers.get('subscribe')!('/w/other') // 未注册于 Studio 会话注册表
+    handlers.get('subscribe')!('/w/ops') // 已注册但 profile 对调用方不可见
+    handlers.get('subscribe-session')!('/w/other', 's1')
+    handlers.get('subscribe-session')!('/w/ops', 's1')
+    expect(join).not.toHaveBeenCalled()
+  })
+
+  it('本人可见 workspace：subscribe 进 workspace 级房间，subscribe-session 进会话级房间', async () => {
+    const { handlers, join } = await connectWith(authed, 'good-token')
+    handlers.get('subscribe')!('/w/p')
+    handlers.get('subscribe-session')!('/w/p', 's1')
+    expect(join.mock.calls.map((c) => c[0])).toEqual(['zcode:/w/p', 'zcode:/w/p:s:s1'])
+  })
+
+  it('super_admin 跨 workspace 直通；未启用鉴权（socket.data.user 缺席）放行（单用户部署口径）', async () => {
+    const asRoot = await connectWith({
+      isAuthEnabled: async () => true,
+      authenticateUserToken: async () => ({ id: 1, username: 'root', role: 'super_admin' }),
+    }, 'any-token')
+    asRoot.handlers.get('subscribe')!('/w/ops')
+    asRoot.handlers.get('subscribe-session')!('/w/other', 's9')
+    expect(asRoot.join.mock.calls.map((c) => c[0])).toEqual(['zcode:/w/ops', 'zcode:/w/other:s:s9'])
+
+    const anon = await connectWith({ isAuthEnabled: async () => false, authenticateUserToken: async () => null })
+    anon.handlers.get('subscribe')!('/w/anywhere')
+    expect(anon.join).toHaveBeenCalledWith('zcode:/w/anywhere')
   })
 })

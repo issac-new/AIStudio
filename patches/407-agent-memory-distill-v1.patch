@@ -2,7 +2,7 @@ diff --git a/tools/memory_consolidate.py b/tools/memory_consolidate.py
 new file mode 100644
 --- /dev/null
 +++ b/tools/memory_consolidate.py
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,163 @@
 +"""记忆自动沉淀 v1（mimo P4 二期 auto-dream/auto-distill 的 hermes 形状）。
 +
 +Origin：MiMo-Code session/auto-dream.ts（7d/30d 周期 spawn 系统会话整理记忆）。
@@ -12,8 +12,16 @@ new file mode 100644
 +  LLM 式摘要合并列 v2（等一期 FTS 检索面真实使用反馈后再上，避免闭门造摘要）。
 +- 节奏（7d/30d auto-dream）经 hermes 既有 cron 运维面接：cronjob_manage 注册周期任务
 +  调 `memory_tool(action='consolidate')` 等价入口（见模块尾部注释），不在本模块自建调度。
-+- 纪律：markdown 唯一事实源不变；distill 只做**确定性变换**（合并完全重复项/剪枝过期
++- 纪律：markdown 唯一事实源不变；distill 只做**确定性变换**（合一完全同文副本/剪枝超容
 +  项），任何非确定性改写（摘要、改写句）都不做——记忆内容只由写入方决定。
++- 落盘纪律（W1）：写入只经 `store._mutate`（持 _file_lock + _read_raw_checked +
++  _detect_external_drift，见 tools/memory_tool_store）；闭包从锁内重读的最新条目推导保留
++  集，外部新增条目不在删除计划内一律保留，漂移由上游写 .bak 并中止，绝不整体覆写。
++- 判重纪律（W2）：合一键=精确匹配（与上游 load/写路径的 dict.fromkeys 同口径）。大小写
++  敏感文件系统里 /tmp/Report.md 与 /tmp/report.md 是两个文件；归一化（压空白/去大小写）
++  只用于「疑似重复」报告，命中项不落盘删除。
++- 门禁纪律（W3）：合并与容量剪枝都是删除性变更。无人值守（background review）只出报告
++  不落盘；有人值守（有审批权）才应用，其中容量剪枝再经 _apply_write_gate 同款写门禁。
 +"""
 +
 +from __future__ import annotations
@@ -33,7 +41,7 @@ new file mode 100644
 +
 +
 +def _normalize(text: str) -> str:
-+    """归一化重复判定：压空白/去大小写差异（中文条目不受影响）。"""
++    """归一化仅用于「疑似重复」报告，不参与落盘删除（W2）：压空白/去大小写差异。"""
 +    return re.sub(r"\s+", " ", (text or "").strip()).casefold()
 +
 +
@@ -45,6 +53,10 @@ new file mode 100644
 +    entries_before: int = 0
 +    entries_after: int = 0
 +    detail: List[str] = field(default_factory=list)
++    # target → 待删条目全文：容量剪枝项（过写门禁后按全文精确删除）
++    removals: Dict[str, List[str]] = field(default_factory=dict)
++    # target → 被合一的同文副本全文（dict.fromkeys 口径随落盘自然实现，不单独删条目）
++    collapse: Dict[str, List[str]] = field(default_factory=dict)
 +
 +    def as_dict(self) -> Dict[str, Any]:
 +        return {
@@ -60,55 +72,93 @@ new file mode 100644
 +    stale_days: float = DEFAULT_STALE_DAYS,
 +    now: float | None = None,
 +) -> DistillReport:
-+    """对 memory 与 user 两桶做确定性沉淀：合并归一化重复项；容量超线时剪陈旧项。
++    """只读规划：对 memory 与 user 两桶按**磁盘原始条目**算出确定性沉淀动作，不落盘。
 +
-+    线程安全：调用方持 store 锁/在写路径外调用（memory_tool consolidate 动作在
-+    store 批处理语义下执行）。报告逐条留痕，剪了什么一目了然。
++    规划面是原始盘面（_read_file 不去重、保留同文副本）——合一几个副本、剪哪几条都要看
++    真实落盘状态。删除动作放 report.collapse / report.removals，由 memory_tool 的
++    consolidate 挂接过门禁后调 apply_distill 落盘。stale_days 为 v2 陈旧语义预留，v1
++    剪枝只按容量+最旧写入序。报告逐条留痕，剪了什么一目了然。
 +    """
 +    now = now if now is not None else time.time()
 +    report = DistillReport()
 +    for target in ("memory", "user"):
-+        entries: List[str] = list(store._entries_for(target))
-+        report.entries_before += len(entries)
-+        # 1) 去重：归一化同文只留首条（保留原始拼写最先写入的形态）。
++        raw_entries: List[str] = store._read_file(store._path_for(target))
++        report.entries_before += len(raw_entries)
++        # 1) 同文副本合一：精确匹配只留首条（与上游 dict.fromkeys 同口径，W2）。
 +        seen: Dict[str, int] = {}
 +        kept: List[str] = []
-+        for e in entries:
-+            key = _normalize(e)
-+            if key in seen:
++        collapse: List[str] = []
++        for e in raw_entries:
++            if e in seen:
++                collapse.append(e)
 +                report.merged += 1
-+                report.detail.append(f"[{target}] 重复合并: {e.strip()[:40]}…")
++                report.detail.append(f"[{target}] 同文副本合一: {e.strip()[:40]}…")
 +                continue
-+            seen[key] = 1
++            seen[e] = 1
 +            kept.append(e)
-+        # 2) 陈旧剪枝：仅当容量超线。条目陈旧度无独立 mtime（文件面整体加载），
++        # 2) 疑似重复（仅大小写/空白差异）只报告不删（W2）：casefold 归并曾把
++        #    /tmp/Report.md 与 /tmp/report.md 当重复删掉——大小写敏感文件系统里是两个文件。
++        groups: Dict[str, List[str]] = {}
++        for e in kept:
++            groups.setdefault(_normalize(e), []).append(e)
++        for same in groups.values():
++            if len(same) > 1:
++                report.detail.append(
++                    f"[{target}] 疑似重复(仅报告不删): {' | '.join(x.strip()[:20] for x in same)}")
++        # 3) 陈旧剪枝：仅当容量超线。条目陈旧度无独立 mtime（文件面整体加载），
 +        #    以存储区最近修改时间为界不可行——v1 以「最旧写入序」近似：超线时按
 +        #    写入序从旧到新剪到容量线下（skipped=因未超线未剪）。
 +        limit = store._char_limit(target)
-+        used = len("".join(kept))
-+        if used <= limit * PRUNE_CAPACITY_RATIO:
-+            report.skipped += len(kept)
-+            entries = kept
-+        else:
-+            pruned_now: List[str] = []
++        pruned: List[str] = []
++        if len("".join(kept)) > limit * PRUNE_CAPACITY_RATIO:
 +            while kept and len("".join(kept)) > limit * PRUNE_CAPACITY_RATIO:
 +                victim = kept.pop(0)
-+                pruned_now.append(victim)
++                pruned.append(victim)
 +                report.pruned += 1
 +                report.detail.append(f"[{target}] 容量剪枝(最旧序): {victim.strip()[:40]}…")
-+            entries = kept
-+        store._set_entries(target, entries)
-+        report.entries_after += len(entries)
-+    from hermes_constants import mkdir_under_hermes_home
++        else:
++            report.skipped += len(kept)
++        if collapse:
++            report.collapse[target] = collapse
++        if pruned:
++            report.removals[target] = pruned
++        report.entries_after += len(kept)
++    return report
++
++
++def apply_distill(store: Any, report: DistillReport) -> None:
++    """把已过门禁的报告落盘（W1）：写入走 store._mutate——持 _file_lock、
++    _read_raw_checked、_detect_external_drift（漂移时上游写 .bak 并中止），闭包从锁内
++    重读的最新条目推导保留集：外部新增条目不在删除计划内一律保留。
++
++    同文副本合一不在闭包里删条目：_mutate 读入即 dict.fromkeys 去重（与上游 load/任一
++    写路径同口径），随落盘自然实现——副本没有「删哪一条」的单条目标，按文本删会误删仅
++    存副本（v0.21.5 entry-pinning 回放也钉不住副本）。
++    """
 +    for target in ("memory", "user"):
++        drop = set(report.removals.get(target) or [])
++        collapse_planned = bool(report.collapse.get(target))
++        if not drop and not collapse_planned:
++            continue
++
++        def _apply(entries: List[str], limit: int):
++            kept = [e for e in entries if e not in drop]
++            for e in entries:
++                if e in drop:
++                    report.detail.append(f"[{target}] 已剪枝: {e.strip()[:40]}…")
++            if kept == entries and not collapse_planned:
++                return {"success": True, "note": "no change"}  # dict=只读回传，不落盘
++            return kept, f"distill applied: {len(entries) - len(kept)} removed."
++
 +        try:
-+            path = store._path_for(target)
-+            mkdir_under_hermes_home(path.parent)
-+            store._write_file(path, store._entries_for(target))
++            result = store._mutate(target, _apply)
 +        except Exception as exc:  # noqa: BLE001 - 落盘失败报告不静默
 +            report.detail.append(f"[{target}] 落盘失败: {exc}")
 +            logger.warning("memory distill persist failed: %s", exc)
-+    return report
++            continue
++        if result.get("success") is False:
++            report.detail.append(f"[{target}] 落盘中止: {result.get('error', '')[:120]}")
++            logger.warning("memory distill persist aborted: %s", result.get("error"))
 +
 +
 +# ── cron 接线说明（运维面，非代码）────────────────────────────────────
@@ -130,26 +180,52 @@ diff --git a/tools/memory_tool.py b/tools/memory_tool.py
      invalid = (_validate_single_op(store, action, target, content, old_text)
                 or _background_delete_gate(store, action, None, target, content, old_text)
                 or _apply_write_gate(store, action, target, content, old_text))
-@@ -268,6 +270,14 @@ def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> s
+@@ -268,6 +270,38 @@ def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> s
          idx.close()
  
  
 +def _memory_consolidate(store: "MemoryStore") -> str:
-+    """action=consolidate：规则式 distill v1（去重+容量剪枝+报告；P4 二期）。"""
++    """action=consolidate：规则式 distill v1（同文副本合一+容量剪枝+报告；P4 二期）。
++
++    删除性变更走 remove 同款门禁语义（#105921）：无人值守只出报告不落盘——同文副本合一
++    没有可寻址的单条目标（pending 回放按 matched_entry 钉条会误删仅存副本），无法 stage，
++    故合并/剪枝统一只出报告；有人值守（有审批权）才应用，容量剪枝再过 _apply_write_gate
++    同款写门禁。落盘走 store._mutate（持锁+漂移守卫，见 tools/memory_consolidate 头注释）。
++    """
 +    import json as _json
-+    from tools.memory_consolidate import distill_pass
++    from tools.memory_consolidate import apply_distill, distill_pass
 +    report = distill_pass(store)
-+    return _json.dumps({"success": True, "action": "consolidate", **report.as_dict()}, ensure_ascii=False)
++    if report.removals or report.collapse:
++        from tools.skill_provenance import is_unattended_review
++        if is_unattended_review():
++            return _json.dumps({"success": True, "action": "consolidate", "applied": False,
++                                "dry_run": True,
++                                "message": ("无人值守（background review）不落盘删除性变更，本次只出报告；"
++                                            "需要沉淀请在有人值守会话重跑 consolidate。"),
++                                **report.as_dict()}, ensure_ascii=False)
++        for target, victims in report.removals.items():
++            gated = _apply_write_gate(store, "batch", target, None, None,
++                                      [{"action": "remove", "old_text": e, "matched_entry": e}
++                                       for e in victims])
++            if gated is not None:
++                return _json.dumps({**_json.loads(gated), "action": "consolidate", "applied": False,
++                                    **report.as_dict()}, ensure_ascii=False)
++    apply_distill(store, report)
++    return _json.dumps({"success": True, "action": "consolidate",
++                        "applied": bool(report.removals or report.collapse), **report.as_dict()},
++                       ensure_ascii=False)
 +
 +
  def get_builtin_memory_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
      """Normalized ``memory`` config section ({} when missing/malformed → flags default to
      enabled). ``agent_init`` reads the same section so availability and store cannot diverge."""
+diff --git a/tests/tools/test_memory_consolidate.py b/tests/tools/test_memory_consolidate.py
 new file mode 100644
 --- /dev/null
 +++ b/tests/tools/test_memory_consolidate.py
-@@ -0,0 +1,51 @@
-+"""记忆自动沉淀 v1 守门（mimo P4 二期：规则式 distill——去重/容量剪枝/报告）。"""
+@@ -0,0 +1,121 @@
++"""记忆自动沉淀 v1 守门（mimo P4 二期：规则式 distill——同文副本合一/容量剪枝/报告；
++W1 落盘守卫、W2 精确判重、W3 无人值守不静默删除）。"""
 +
 +from __future__ import annotations
 +
@@ -163,40 +239,109 @@ new file mode 100644
 +if str(_WORKTREE) not in sys.path:
 +    sys.path.insert(0, str(_WORKTREE))
 +
-+from tools.memory_consolidate import distill_pass  # noqa: E402
-+from tools.memory_tool_store import MemoryStore  # noqa: E402
++from tools.memory_consolidate import apply_distill, distill_pass  # noqa: E402
++from tools.memory_tool_store import ENTRY_DELIMITER, MemoryStore  # noqa: E402
++
++
++def _seed(tmp_path, monkeypatch, entries, *, memory_char_limit=2000):
++    """把条目写进真实记忆文件再加载——沉淀读盘面原始条目，测试必须走盘。"""
++    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
++    store = MemoryStore(memory_char_limit=memory_char_limit)
++    path = store._path_for("memory")
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(ENTRY_DELIMITER.join(entries), encoding="utf-8")
++    store.load_from_disk()
++    return store
++
++
++def _disk_entries(store):
++    return store._read_file(store._path_for("memory"))
 +
 +
 +class TestDistill:
-+    def test_dedup_normalized(self, tmp_path, monkeypatch):
-+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-+        store = MemoryStore(memory_char_limit=2000)
-+        store.memory_entries = [
-+            "登录页 token  持久化方案",   # 双空格
-+            "登录页 token 持久化方案",    # 归一化后重复 → 合并
-+            "编译缓存命中优化",
-+        ]
-+        r = distill_pass(store)
-+        assert r.merged == 1 and len(store.memory_entries) == 2
-+        assert "登录页" in store.memory_entries[0]
++    def test_exact_dup_collapses_near_dup_kept(self, tmp_path, monkeypatch):
++        """W2 守门：判重键=精确匹配；仅大小写/空白不同的条目不是重复，只进报告不删。"""
++        store = _seed(tmp_path, monkeypatch, [
++            "/tmp/Report.md 位置", "/tmp/report.md 位置",        # 仅大小写不同 → 均保留
++            "登录页 token  持久化方案", "登录页 token 持久化方案",  # 仅空白不同 → 均保留
++            "精确重复条目", "精确重复条目",                      # 精确重复 → 合一
++        ])
++        report = distill_pass(store)
++        apply_distill(store, report)
++        assert report.merged == 1
++        entries = _disk_entries(store)
++        assert "/tmp/Report.md 位置" in entries and "/tmp/report.md 位置" in entries
++        assert "登录页 token  持久化方案" in entries and "登录页 token 持久化方案" in entries
++        assert entries.count("精确重复条目") == 1
++        assert any("疑似重复" in d for d in report.detail)  # 疑似只报告，绝不落盘删除
 +
 +    def test_capacity_prune_oldest_first_only_when_over_line(self, tmp_path, monkeypatch):
-+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-+        store = MemoryStore(memory_char_limit=100)
-+        store.memory_entries = ["x" * 30, "y" * 30, "z" * 30]  # 90 ≤ 90 线下 → 不剪
-+        r = distill_pass(store)
-+        assert r.pruned == 0 and len(store.memory_entries) == 3
-+        store.memory_entries = ["x" * 40, "y" * 40, "z" * 40]  # 120 > 90 → 剪最旧
-+        r = distill_pass(store)
-+        assert r.pruned == 1 and store.memory_entries[0] == "y" * 40
++        store = _seed(tmp_path, monkeypatch, ["x" * 30, "y" * 30, "z" * 30], memory_char_limit=100)
++        report = distill_pass(store)
++        apply_distill(store, report)
++        assert report.pruned == 0 and _disk_entries(store) == ["x" * 30, "y" * 30, "z" * 30]
++        store = _seed(tmp_path, monkeypatch, ["x" * 40, "y" * 40, "z" * 40], memory_char_limit=100)
++        report = distill_pass(store)
++        apply_distill(store, report)
++        assert report.pruned == 1 and _disk_entries(store) == ["y" * 40, "z" * 40]  # 剪最旧
++
++    def test_external_entry_survives_consolidate(self, tmp_path, monkeypatch):
++        """W1 守门：外部进程追加的条目不在删除计划内，consolidate 落盘必须保留。"""
++        from tools import memory_tool as mt
++        store = _seed(tmp_path, monkeypatch, ["旧条目一", "旧条目一", "旧条目二"])
++        path = store._path_for("memory")
++        path.write_text(path.read_text(encoding="utf-8") + ENTRY_DELIMITER + "外部进程追加的条目",
++                        encoding="utf-8")  # 外部进程手工追加（§ 分隔，可回环）
++        out = json.loads(mt.memory_tool("consolidate", store=store))
++        assert out["success"] is True and out["applied"] is True
++        entries = _disk_entries(store)
++        assert "外部进程追加的条目" in entries
++        assert entries.count("旧条目一") == 1 and "旧条目二" in entries
++
++    def test_external_drift_writes_backup_and_aborts(self, tmp_path, monkeypatch):
++        """W1 守门：外部漂移（超整面上限的自由文本）→ 上游漂移守卫写 .bak 并中止，不覆写。"""
++        store = _seed(tmp_path, monkeypatch, ["旧条目一", "旧条目一"])
++        path = store._path_for("memory")
++        path.write_text(path.read_text(encoding="utf-8") + ENTRY_DELIMITER + "w" * 2200,
++                        encoding="utf-8")  # 外部超长自由文本 → 不可回环 → 漂移
++        report = distill_pass(store)
++        apply_distill(store, report)
++        assert list(path.parent.glob("MEMORY.md.bak.*"))  # .bak 已存
++        assert any("落盘中止" in d for d in report.detail)
++        assert any("w" * 2200 in e for e in _disk_entries(store))  # 外部内容原样保留
++
++    def test_unattended_no_silent_merge(self, tmp_path, monkeypatch):
++        """W3 守门：无人值守 consolidate 只出报告不落盘，同文副本一条不少。"""
++        from tools import memory_tool as mt
++        from tools.skill_provenance import reset_current_write_origin, set_current_write_origin
++        store = _seed(tmp_path, monkeypatch, ["重复条目", "重复条目", "普通条目"])
++        tok = set_current_write_origin("background_review")
++        try:
++            out = json.loads(mt.memory_tool("consolidate", store=store))
++        finally:
++            reset_current_write_origin(tok)
++        assert out["applied"] is False and out["dry_run"] is True
++        assert out["merged"] == 1  # 报告如实告知拟合一
++        assert _disk_entries(store) == ["重复条目", "重复条目", "普通条目"]  # 未静默删除
++
++    def test_unattended_no_silent_prune(self, tmp_path, monkeypatch):
++        """W3 守门：无人值守容量剪枝同样只出报告不落盘。"""
++        from tools import memory_tool as mt
++        from tools.skill_provenance import reset_current_write_origin, set_current_write_origin
++        store = _seed(tmp_path, monkeypatch, ["x" * 40, "y" * 40, "z" * 40], memory_char_limit=100)
++        tok = set_current_write_origin("background_review")
++        try:
++            out = json.loads(mt.memory_tool("consolidate", store=store))
++        finally:
++            reset_current_write_origin(tok)
++        assert out["pruned"] == 1 and out["applied"] is False  # 报告拟剪 1 条
++        assert _disk_entries(store) == ["x" * 40, "y" * 40, "z" * 40]  # 未静默删除
 +
 +    def test_report_and_action_surface(self, tmp_path, monkeypatch):
-+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
 +        from tools import memory_tool as mt
-+        store = MemoryStore()
-+        store.memory_entries = ["a", "a", "b"]
++        store = _seed(tmp_path, monkeypatch, ["a", "a", "b"])
 +        out = json.loads(mt.memory_tool("consolidate", store=store))
 +        assert out["success"] is True and out["merged"] == 1
-+        assert out["entries_after"] == 2
++        assert out["entries_after"] == 2 and out["applied"] is True
 +        unknown = json.loads(mt.memory_tool("explode", store=store))
 +        assert "consolidate" in unknown.get("error", "")

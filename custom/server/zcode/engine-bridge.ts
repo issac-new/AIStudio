@@ -55,11 +55,28 @@ function loadOrCreateClientId(homeDir: string): string {
   return created
 }
 
+/**
+ * ws 交付帧归一化（X4）：ws 文本帧交付 utf8 string、二进制帧交付 Buffer（另有
+ * ArrayBuffer / Buffer[] 形态）。此前 `new Uint8Array(raw)` 只在 raw 为 Buffer 时
+ * 成立——文本帧 string 会被按「长度参数」解析成垃圾字节（'str' → 空数组），帧静默
+ * 损坏。统一先归一化为 Buffer 再进 VSBuffer 解码器，文本帧与二进制帧同路径保真。
+ */
+export function wsMessageToVSBuffer(raw: unknown): VSBuffer {
+  const buf = typeof raw === 'string'
+    ? Buffer.from(raw, 'utf8')
+    : Buffer.isBuffer(raw)
+      ? raw
+      : Array.isArray(raw)
+        ? Buffer.concat(raw as Buffer[])
+        : Buffer.from(raw as ArrayBuffer)
+  return VSBuffer.wrap(new Uint8Array(buf))
+}
+
 function wrapNodeSocket(ws: WebSocket) {
   const onData = new Emitter<VSBuffer>()
   const onClose = new Emitter<void>()
   const onEnd = new Emitter<void>()
-  ws.on('message', (raw: Buffer) => onData.fire(VSBuffer.wrap(new Uint8Array(raw))))
+  ws.on('message', (raw: Buffer | string) => onData.fire(wsMessageToVSBuffer(raw)))
   ws.on('close', () => { onClose.fire(); onEnd.fire() })
   ws.on('error', () => { onClose.fire(); onEnd.fire() })
   return {
