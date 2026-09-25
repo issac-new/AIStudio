@@ -184,7 +184,7 @@ fi
 if step_reached reqgate; then
   if [[ -z "$(sget g1_frozen)" ]]; then
     repo_pull
-    JUDGE=$(reqgate_judge "$DIRECTOR_CLONE/${RFD_DOC}" || true)
+    JUDGE=$(reqgate_judge "$(rfd_doc_snapshot)" || true)
     if [[ -n "$JUDGE" ]]; then
       note "[G1] 需求书四要素判读未过：${JUDGE}——回灌 bella 补齐"
       mx_send "$(load_token bella)" "$(sget dm_bella_fanfan)" \
@@ -193,7 +193,7 @@ if step_reached reqgate; then
       ok2=""
       for round in 1 2; do
         sleep 15; repo_pull
-        J2=$(reqgate_judge "$DIRECTOR_CLONE/${RFD_DOC}" || true)
+        J2=$(reqgate_judge "$(rfd_doc_snapshot)" || true)
         [[ -z "$J2" ]] && { ok2=1; break; }
         note "[G1] 第 ${round} 轮重判仍未过：${J2}"
         sleep 30
@@ -210,7 +210,7 @@ if step_reached reqgate; then
       echo
       echo "- 冻结时间：$(date '+%F %T')；判读：验收标准(AC)/Scope-Out/影响面/涉敏 四要素全过"
       echo "- 验收标准（UAT 按此回验）："
-      sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" | sed 's/^- /  - /'
+      sed -n '/^## .*验收标准/,/^## /p' "$(rfd_doc_snapshot)" | grep -E "^\- \*\*AC-[0-9]" | sed 's/^- /  - /'
       echo "- 涉敏：支付资金域=内部-机密（ISO27001 风险评估摘要随需求书 §12）"
       echo "- frozen: true"
     } > "$FREEZE_LOCAL"
