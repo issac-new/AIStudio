@@ -32,3 +32,12 @@ describe('runLogView（倒序+筛选）', () => {
     expect(runLogView(runs, 'success').map((l) => l.runId)).toEqual(['old'])
   })
 })
+
+describe('费用列（multica）', () => {
+  it('未记账不带费用段；记账带 $x.xx', () => {
+    expect(runLogLine(run('a')).summary).not.toContain('$')
+    const paid = runLogLine(run('b', { costUsd: 0.125 }))
+    expect(paid.summary).toContain('$0.13')
+    expect(paid.costUsd).toBe(0.125)
+  })
+})

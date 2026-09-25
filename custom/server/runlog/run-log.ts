@@ -14,6 +14,8 @@ export interface RunRecord {
   exitCode: number | null
   timedOut: boolean
   command: string
+  /** 该 run 费用（美元；multica 费用列）。 */
+  costUsd?: number
 }
 
 export interface RunLogLine {
@@ -21,7 +23,9 @@ export interface RunLogLine {
   outcome: RunOutcome
   durationMs: number
   command: string
-  /** 行摘要：结论+耗时（秒，一位小数）+命令截断 40 字。 */
+  /** 该 run 费用（美元；未记账为 undefined）。 */
+  costUsd?: number
+  /** 行摘要：结论+耗时（秒，一位小数）+命令截断 40 字+费用。 */
   summary: string
 }
 
@@ -30,12 +34,14 @@ export function runLogLine(run: RunRecord): RunLogLine {
   const outcome: RunOutcome = run.timedOut ? 'timeout' : run.exitCode === 0 ? 'success' : 'failed'
   const secs = (run.durationMs / 1000).toFixed(1)
   const cmd = run.command.length > 40 ? run.command.slice(0, 39) + '…' : run.command
+  const cost = run.costUsd === undefined ? '' : ` $${run.costUsd.toFixed(2)}`
   return {
     runId: run.runId,
     outcome,
     durationMs: run.durationMs,
     command: run.command,
-    summary: `${outcome} ${secs}s ${cmd}`,
+    costUsd: run.costUsd,
+    summary: `${outcome} ${secs}s${cost} ${cmd}`,
   }
 }
 
