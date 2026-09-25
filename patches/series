@@ -975,11 +975,6 @@
 #      routes.ts 致三 routes-only 补丁 hunk 集体失配；模块本体走 custom/ symlink
 #      不属补丁体系，挂载收敛为本单一补丁，按当前 routes.ts 实锚生成）。
 455-server-p1-routes-mounts.patch
-# 454 P1（minimax ask_user 结构化问卷，矩阵 §3.4；原 420 因并行号段推至 453 尾部续编）：
-#      custom/server/ask/——1-4 步×每步 2-4 选项×recommended≤1×带图（字符串引用）
-#      契约校验纯函数；问卷状态机 pending→answered 一次定音；答案必答+选项合法+
-#      多余步拒收；POST/GET /api/ask[/answer]（patch 454 挂载）；守门 3 例。
-454-server-ask-contract-routes.patch
 # 470/471（feat/boundary-leftovers 轮，T4b 上游两留痕）：跨机协作事件锚点
 # （边界设计 §6-T4b；编号避让 P1 批推进前沿取 470 带）。
 # 470  hosted_rooms.append_event 可选 collab_event_id——并入 payload 落盘（零 schema
@@ -994,3 +989,7 @@
 #      /api/loop/cron-bridge/tick；token fail-closed+loopback 限源；未启用恒 404）。
 #      配套 overlay 件：custom/server/loop/graph/cron-bridge.ts + graph-assembly 门控。
 472-loop-cron-bridge-route.patch
+# 456 P1（routa §七#7，矩阵 §3.6）：权限升级协议——urgency 三档（normal/urgent/critical）
+#      待决队列高在前、一次定音裁决、approved 可附 sandboxConstraints（批准即改沙箱，
+#      联动 402 规则域）；POST/GET /api/escalation（455 统一挂载续批；custom 模块走 symlink）。
+456-server-escalation-mount.patch
