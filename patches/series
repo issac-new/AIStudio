@@ -951,3 +951,9 @@
 #      坏文件 fail-soft；POST/GET /api/evidence/:taskId 与 /verdict；守门 7 例。
 #      laneSessions/laneHandoffs 完整语义依赖 loop 会话域列后续扩。
 413-server-evidence-routes.patch
+# 414 P0 批第七项（codex-product §五 P0-1，矩阵 §3.8）：/review 评审域轻量版——
+#      两域（baseline/uncommitted）+行内评论 file:line 回流（open→resolved）+
+#      三裁决一次定音（approve/request_changes/comment），裁决联动 evidence
+#      verification 落账（store 层单一事实源）；reviewId/commentId 双幂等；
+#      守门 4 例。
+414-server-review-routes.patch
