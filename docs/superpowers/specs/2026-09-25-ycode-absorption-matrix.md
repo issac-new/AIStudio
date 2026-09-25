@@ -146,7 +146,7 @@
 | coder 交接话术（final message=entire handoff） | ✅ handoff-script.ts（六段：done/notDone/risks/next/artifacts/verify+结构守门+渲染） |
 | 会话 fork+undo 选择器 | ✅ fork=session-fork.ts（与 Q12 合并项）；undo 选择器=file-history.ts 双相快照回读（#5 恢复域） |
 | agent profile 五级来源+watch 热重载 | ✅ 404 配置层+458 watch 热重载 patch |
-| AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 🔜P2 |
+| AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 ✅ agents-md.ts（32KB 告警+shouldEmit 防抖 300ms 窗口） |
 | AgentSwarm 扇出 | ✅ swarm-fanout.ts（批量分解/并发限流/排队计数）；/btw 侧问随 UI |
 | fileHistory 回合级双相快照 | ✅ file-history.ts（before/after 双相/单文件回读/diff 三态；#5 恢复域数据面） |
 | goal 三预算字段 | 并入 §3.9 goal 域 |
@@ -244,7 +244,7 @@
 | codex-product：终端 actions（项目级一键命令） | 📦旧账已落（R4）·待随迁 |
 | codex-product：文件/选区引用入会话 | 🔜P1（@域合并） |
 | codex-product：webhook 事件触发 | ✅ loop/connectors/webhook-connector.ts（事件触发已有接线面） |
-| codex-product：AGENTS.md /init | 🔜P2 |
+| codex-product：AGENTS.md /init | ✅ agents-md.ts initTemplate（目标/构建与验证/约定/红线四段骨架） |
 | dsh：低上下文主动提醒（20k 余量 toast+迟滞） | ✅原生已落（IdeStatusBar lowNotified+迟滞，R1 代码实证）·补记 |
 | dsh：会话成本估算（价目表三原则） | 🔜P0（两仓无价目表需自建，zcode §6.7 实证） |
 | 工作区分组管理 | ✅ workspace-groups.ts（登记幂等/pin 置顶/清单汇总） |
