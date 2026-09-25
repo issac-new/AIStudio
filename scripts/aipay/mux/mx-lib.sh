@@ -149,15 +149,25 @@ mx() { # <token> <method> <api-path> [json-body]
     curl -sf -X "$method" "$HS/_matrix/client/v3/$path?access_token=$token"
   fi
 }
+mx_room_members() { # <token> <roomId> → 每行一个已加入成员 mxid（09-26 补定义：缺失致进群核验 8 连误报）
+  mx "$1" GET "rooms/$2/joined_members" | jq -r '.joined | keys[]' 2>/dev/null || true
+}
 mx_send() { # <token> <roomId> <text> [mentioned-mxid[,mxid2...]] → event_id
+  # 瞬断/限流重试 3 次；全败回 SEND-FAILED 且返回 0——set -euo pipefail 下
+  # 赋值非零即静默击杀整个脚本（09-26 实锤：arch 派发一击致死 28s 无声退出）。
   local token="$1" room="$2" text="$3" mention="${4:-}"
-  local mentions='{}'
+  local mentions='{}' out i
   if [[ -n "$mention" ]]; then
     mentions=$(echo "$mention" | tr ',' '\n' | jq -R . | jq -s '{user_ids:.}')
   fi
-  mx "$token" POST "rooms/$room/send/m.room.message" \
-    "{\"msgtype\":\"m.text\",\"body\":$(jq -Rn --arg t "$text" '$t'),\"m.mentions\":$mentions}" \
-    | jq -r '.event_id'
+  for i in 1 2 3; do
+    out=$(mx "$token" POST "rooms/$room/send/m.room.message" \
+      "{\"msgtype\":\"m.text\",\"body\":$(jq -Rn --arg t "$text" '$t'),\"m.mentions\":$mentions}" 2>/dev/null \
+      | jq -r '.event_id' 2>/dev/null) || out=""
+    [[ -n "$out" && "$out" != "null" ]] && { printf '%s' "$out"; return 0; }
+    sleep $((i*2))
+  done
+  printf 'SEND-FAILED'
 }
 mx_messages() { # <token> <roomId> [limit] → 倒序 m.room.message 数组
   local token="$1" room="$2" limit="${3:-80}"
