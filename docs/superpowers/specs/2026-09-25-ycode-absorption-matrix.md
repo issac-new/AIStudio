@@ -232,7 +232,7 @@
 | codex：渲染分项开关（mermaid/math/tables 回退源码） | ✅ render-options.ts（三类独立开关/关=回退源码内容不丢/坏配置回默认） |
 | codex：计划三选一门 | 📦旧账已落（IdePlanFloat R3）·待随迁 |
 | codex：turn notify 外呼钩子 | ✅ turn-notify.ts（占位替换/off 关/触发台账） |
-| codex：token-budget 换窗 | 🔜P2 |
+| codex：token-budget 换窗决策 | ✅ window-shift.ts（shift/prune/compact 三策略；critical 事实强制 compact） |
 | codex：(model,effort) 成本分组+日桶 | ✅ thread-usage.ts（分组降序/日桶升序/衔接 rounds-table/usage-ledger） |
 | codex：config 8 层叠加+per-key origins | ✅ config-layers.ts（覆盖序/来源追踪/debug 视图） |
 | codex：web_search 四档+域收敛 | ✅ web-search-policy.ts（off/light/full/agent/交集收敛/子域准入） |
