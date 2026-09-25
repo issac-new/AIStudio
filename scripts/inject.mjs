@@ -314,6 +314,15 @@ export default mergeConfig(
     },
     server: {
       proxy: {
+        // G3 威胁面收口：vite dev 代理默认不带 X-Forwarded-For，经代理的 LAN 请求与
+        // 本机直连在后端字节级不可区分，gateway-credentials 的回环闸会被本机代理放大。
+        // 这里给上游代理键补 xfwd（mergeConfig 深合并，保留上游 target/configure）：
+        // 代理如实转发客户端 IP，后端 routes.ts 的 XFF 闸即可拒绝非回环来源。
+        '/api': { xfwd: true },
+        '/v1': { xfwd: true },
+        '/health': { xfwd: true },
+        '/upload': { xfwd: true },
+        '/socket.io': { xfwd: true },
         '/agent-health': {
           target: 'http://127.0.0.1:8650',
           changeOrigin: true,
