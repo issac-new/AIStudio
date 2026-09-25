@@ -165,6 +165,9 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
   sset "$key" "$rid"; echo "$rid"
 }
 
+# approved.events 台账（边界设计 §2/§6-T4，eid 锚点约定）：每行
+#   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
+# 事件 id 即 Matrix $event_id（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
 auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份线程内回 !approve
   local room="$1"
@@ -178,10 +181,12 @@ auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份线程
       '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK|approval"))) | .event_id' 2>/dev/null \
       | while read -r eid; do grep -qFx "$eid" "$APPROVED_LOG" || grep -qF "$eid " "$APPROVED_LOG" || echo "$eid"; done) || true
     for eid in $pend; do
-      mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
-        "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$eid\"}}" >/dev/null || true
-      echo "$eid" >> "$APPROVED_LOG"
-      note "[$u] 线程内回复 !approve（事件 ${eid}）"
+      local reply_eid
+      reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
+        "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$eid\"}}" \
+        | jq -r '.event_id // empty' 2>/dev/null) || true
+      echo "$eid ${reply_eid:-NO_REPLY} $u $(date +%s)" >> "$APPROVED_LOG"
+      note "[$u] 线程内回复 !approve（请求 ${eid} → 回执 ${reply_eid:-NO_REPLY}）"
     done
   done
 }
@@ -208,9 +213,16 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   # 整个替换体解析失败、jq 过滤器不执行，body 变成全量消息 JSON（P1，防造假失效）。
   # /messages?dir=b 返回顺序是"新→旧"，必须取 first；取 last 会拿到最旧那条
   # 无凭证裸 DONE，把已重报的合格凭证误判为不合格（09-23 实锤 false negative）。
+  # 双重过滤防回声自毒（09-26 实锤 false negative）：派发指令与打回消息本身都含
+  # "ANALYSIS-DONE-<rfd>" 模板串，只按内容 contains 匹配时最新命中永远是验证器
+  # 自己的回声。故 ①发信人钉 agent 账号（agent_mxid）②内容须带完整凭证形态
+  # （commit=<hex> card=<非空白>），模板行 commit=<已推送commitId> 不满足。
   body=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 2>/dev/null \
-    | jq -r --arg p "ANALYSIS-DONE-$rfd" \
-      '[.[] | select((.content.body//"") | contains($p))] | first | .content.body // ""')
+    | jq -r --arg p "ANALYSIS-DONE-$rfd" --arg s "$(agent_mxid fanfan)" \
+      '[.[] | select((.sender//"") == $s)
+            | select((.content.body//"") | contains($p))
+            | select((.content.body//"") | test("commit=[0-9a-fA-F]{7,40} card=[^ ,；;]+"))
+       ] | first | .content.body // ""')
   [[ -n "$body" ]] || { note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
   sha=$(printf '%s' "$body" | grep -oE 'commit=[0-9a-fA-F]{7,40}' | head -1 | cut -d= -f2)
   card=$(printf '%s' "$body" | grep -oE 'card=[^ ,；;]+' | head -1 | cut -d= -f2)
@@ -220,8 +232,18 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
     || { note "[凭证] commit $sha 不存在于 aipaydev —— 虚报"; return 1; }
   git -C "$DIRECTOR_CLONE" ls-tree -r --name-only "$sha" 2>/dev/null | grep -q "${rfd}-tasklist.md" \
     || { note "[凭证] commit $sha 里没有 ${rfd}-tasklist.md —— 虚报"; return 1; }
-  kanban_list fanfan | grep -q "$card" \
-    || { note "[凭证] fanfan 账号板查无卡片 $card —— 虚报"; return 1; }
+  # 卡号反核含 archived（09-26 实锤 false negative）：agent 完成后归档卡属正常工作流，
+  # kanban_list（默认活跃态 + studio API 面）都看不到 archived 真卡，曾把合格凭证
+  # 误判"虚报"。改 CLI 直查全状态（活跃 + archived）；studio API 整板返空问题另记。
+  local slug card_found=1
+  for slug in $(account_boards fanfan); do
+    if HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list 2>/dev/null | grep -q "$card" \
+      || HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --status archived 2>/dev/null | grep -q "$card"; then
+      card_found=0; break
+    fi
+  done
+  [[ $card_found -eq 0 ]] \
+    || { note "[凭证] fanfan 账号板查无卡片 $card（含 archived）—— 虚报"; return 1; }
   note "[凭证] $rfd 完成证据成立（card 在 fanfan 账号板可查）：commit=$sha card=$card"
   return 0
 }

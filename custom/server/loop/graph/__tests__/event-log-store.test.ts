@@ -81,6 +81,15 @@ describe('InMemoryEventLogStore', () => {
     expect((await s.query('r2'))[0]?.eid).toBe('r2-3')
   })
 
+  it('round-trips optional matrixEventId（T4b 跨机 eid 锚点，可缺省）', async () => {
+    const s = new InMemoryEventLogStore()
+    await s.append({ ...base, matrixEventId: '$abc123' })
+    await s.append(base)
+    const all = await s.query('r1')
+    expect(all[0]?.matrixEventId).toBe('$abc123')
+    expect(all[1]?.matrixEventId).toBeUndefined()
+  })
+
   it('saveSpec/getSpec/listSpecs round-trip and upsert by id (P2 台账⑥)', async () => {
     const s = new InMemoryEventLogStore()
     expect(await s.listSpecs()).toEqual([])
@@ -185,6 +194,14 @@ describe.skipIf(!sqliteAvailable)('createEventLogStore via node:sqlite', () => {
     await s.append({ ...base, runId: 'r2' })
     expect((await s.query('r1'))[0]?.eid).toBe('r1-1')
     expect((await s.query('r2'))[0]?.eid).toBe('r2-2')
+  })
+
+  it('round-trips matrixEventId in sqlite too（T4b；旧库无列走 ALTER 容错）', async () => {
+    const s = createEventLogStore(':memory:')
+    await s.append({ ...base, matrixEventId: '$evt_9' })
+    await s.append(base)
+    expect((await s.query('r1'))[0]?.matrixEventId).toBe('$evt_9')
+    expect((await s.query('r1'))[1]?.matrixEventId).toBeUndefined()
   })
 
   it('latest: per-run tail window in sqlite under multi-run global-seq interleaving (2026-09-12 审查)', async () => {

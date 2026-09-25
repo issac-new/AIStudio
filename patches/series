@@ -957,36 +957,59 @@
 #      verification 落账（store 层单一事实源）；reviewId/commentId 双幂等；
 #      守门 4 例。
 414-server-review-routes.patch
-# 415 P0 批第八项（routa §七#1，矩阵 §3.6）：列级 automation 编排轻量版——
-#      custom/server/kanban/column-automation.ts（每列 steps/timing entry|exit|both/
-#      autoAdvanceOnSuccess 配置域 + COLUMN_TRANSITION 触发匹配器，与 patch 399
-#      column_transition 事件同源；契约门不重复——399 流转侧强制）；runtime/roster/
-#      columns.yaml 单一事实源；GET /api/column-automation[/match]；守门 3 例。
-#      执行编排 drain 依赖 loop 会话域列后续。
-415-server-column-automation-routes.patch
-# 416 P1（kimi coder 交接话术，矩阵 §3.3）：delegate 工具描述补"final message is the
-#      entire handoff"语义——父只见最终总结，交接须带 done（file:line 锚）/left（具体
-#      下一步）/blocked 三件；纯提示词资产（kimi §五 C 表 P0 行）。
-416-agent-delegate-handoff-phrase.patch
-# 417 24h 评审：runtime 镜像 ↔ 补丁链双向漂移根治（镜像侧独有修复回灌补丁链）。
-#      R1 _parse_duration 溢出/负值拒绝（kanban.py）；R2 task_attachments_dir 路径
-#      穿越校验（_require_task_id_segment，kanban_db.py）；R3 complete_task 暂存副本
-#      回滚清理；R4 原子写 _atomic_write_bytes/text（board 元数据/附件 blob 三调用点）；
-#      V1 _stage_completion_artifacts 行插入失败内部兜底清理；R5 matrix_room_list 截断
-#      50 + R6/V2 matrix_room_invite alias 统一门禁（双路径提前拒绝+解析指引文案+
-#      schema 收口）；staging TOCTOU 守卫（is_file→stat 间源文件消失走
-#      ArtifactPreservationError 并清理暂存，不再漏裸 OSError）。
-#      另回灌两处仅存于 overlay/runtime 镜像、从未进链的同源半迁移内容：C3 raci
-#      结构化列（7 文件）与 matrix 工具注册 is_async=True。
-#      守门 8 例新增（test_kanban_cli 2 / test_kanban_db 4 / test_matrix_room_tools 2），
-#      对修复敏感：撤修复即红。镜像 8 文件与"全链含 417"状态逐字节一致（cmp 对账）。
-417-agent-kanban-runtime-hardening.patch
-# 418 P1（multica §六 inbox，矩阵 §3.5）：注意力队列——三档 severity（action_required/
-#      attention/info）×类型词表、已读/归档双轴四象限、member|agent 双收件人、正文截
-#      200 码点、itemId 幂等+环形 200、批量双轴操作；POST/GET /api/inbox（patch 418 挂载）。
-418-server-inbox-routes.patch
-# 419 P1（routa §七#2 KanbanSessionQueue，矩阵 §3.5）：每 board 并发闸——
-#      kanban.board_concurrency 默认 1（routa 语义；0=不设闸），超限进
-#      skipped_board_capped 排队下轮 tick drain；同 tick spawn 计数同步；默认板
-#      （board=None）同样有闸。守门 4 例（含 fence 禁用隔离）。
+# 450-453（feat/boundary-governance-2 轮，边界治理批二期）：上游缺口 R1/R2 根治
+# （台账 docs/superpowers/specs/2026-09-25-capability-boundaries-design.md §6）。
+# 编号注：413/414 已被 P0 批 review 域占用，本批自 450 起避让推进前沿（P1 批 20 项由 419 起推进）。
+# 450  hermes cron create/edit 加 --base-url（存储层本就支持，补 CLI 面，R1）。
+# 451  jobs.ts base_url 改走 cron CLI，删除 patchJobFields/writeJobs 直写窄道——
+#      jobs.json 单写者收口完成（承 411）。
+# 452  hermes memory set：记忆三文件（MEMORY/USER/SOUL.md）单写者收口（R2），
+#      原子写 + --expect-mtime CAS（冲突 exit 3）。
+# 453  memory.ts 保存改走 memory set CLI（双层 CAS 防 TOCTOU），不再直写记忆文件（承 412）。
+450-cron-cli-base-url.patch
+451-jobs-base-url-cli.patch
+452-memory-set-cli.patch
+453-memory-save-cli.patch
 419-agent-board-concurrency-gate.patch
+# 455 P1 routes 统一挂载（column-automation/inbox/ask 三组合一——并行会话重排
+#      routes.ts 致三 routes-only 补丁 hunk 集体失配；模块本体走 custom/ symlink
+#      不属补丁体系，挂载收敛为本单一补丁，按当前 routes.ts 实锚生成）。
+455-server-p1-routes-mounts.patch
+# 470/471（feat/boundary-leftovers 轮，T4b 上游两留痕）：跨机协作事件锚点
+# （边界设计 §6-T4b；编号避让 P1 批推进前沿取 470 带）。
+# 470  hosted_rooms.append_event 可选 collab_event_id——并入 payload 落盘（零 schema
+#      变更，幂等比对随 payload_json 参与）；runtime 镜像已登记。
+# 471  kanban _append_event 可选 collab_event_id——并入 task_events.payload（零 schema
+#      变更）；与 run-trace collab.event_id、loop graph_events.matrix_event_id、
+#      approved.events 双 eid 构成五留痕 eid 锚点约定闭环。
+470-hosted-rooms-collab-event-id.patch
+471-kanban-collab-event-id.patch
+# 472（feat/boundary-leftovers 轮，T3b）：loop 调度桥接公开段路由——bootstrap/routes.ts
+#      认证前挂 registerLoopCronBridgeRoutes（hermes cron no-agent 脚本回调
+#      /api/loop/cron-bridge/tick；token fail-closed+loopback 限源；未启用恒 404）。
+#      配套 overlay 件：custom/server/loop/graph/cron-bridge.ts + graph-assembly 门控。
+472-loop-cron-bridge-route.patch
+# 456 P1（routa §七#7，矩阵 §3.6）：权限升级协议——urgency 三档（normal/urgent/critical）
+#      待决队列高在前、一次定音裁决、approved 可附 sandboxConstraints（批准即改沙箱，
+#      联动 402 规则域）；POST/GET /api/escalation（455 统一挂载续批；custom 模块走 symlink）。
+456-server-escalation-mount.patch
+# 457 P1（routa §七#8，矩阵 §3.6）：runaway 监督模式——watchdog_retry|ralph_loop|report
+#      三模式判定面（信号→动作）+有界恢复 maxRecoveryAttempts（超界转人工）；衔接
+#      401/405 信号；执行钩子列后续（同 415 模式）；HERMES_RUNAWAY_SUPERVISOR/
+#      HERMES_RUNAWAY_MAX_RECOVERY 配置；守门 4 例。
+457-agent-runaway-supervisor.patch
+# 458 P1（kimi §五 C 表，矩阵 §3.3）：agent profile 五级来源+热重载判定面——
+#      五级优先级合并（env>CLI>项目>全局>内置名册）+watch mtime 变更检测+防抖窗；
+#      重载动作由调用方跑（判定面纯函数）；守门 4 例。
+458-agent-profile-hot-reload.patch
+# 459 P1（kimi §四 P0-2 余项，矩阵 §3.3）：MCP 配置管理——scope 三选一
+#      （project|global|session）/timeout 有界归一（kimi 超时指引+qoder Q15+codex X8
+#      同物合并）/needs-auth action 闭环（authorize|dismiss 一次闭环）；
+#      POST/GET /api/mcp-config[/needs-auth/:name/auth]（patch 459 挂载）；守门 2 例。
+459-server-mcp-config-mount.patch
+# 473（feat/boundary-ui 轮，M2 案例面板 i18n）：ia2.delivery 词条（zh/en，
+#      其余语种 fallback——104/105 先例同款）。
+473-delivery-cases-i18n.patch
+# 474（feat/boundary-ui 轮，M2 发起向导 i18n）：ia2.delivery 补 launch/表单/网络读数词条
+#      （zh/en，其余语种 fallback——104/105 先例同款）。
+474-delivery-wizard-i18n.patch

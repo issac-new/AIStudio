@@ -12,13 +12,17 @@ import OrchestrateView from '../OrchestrateView.vue'
 
 const TeamsManagePanel = defineAsyncComponent(() =>
   import('@/custom/matrix-teams/views/TeamsManagePanel.vue'))
+// M2 交付案例面板（分布式设计 §7 工程场景挂点；delivery 协议事件投影）
+const DeliveryCasesView = defineAsyncComponent(() =>
+  import('@/custom/matrix-teams/views/DeliveryCasesView.vue'))
 
 const { t } = useI18n()
 
-type EngTab = 'orchestrate' | 'teams'
+type EngTab = 'orchestrate' | 'teams' | 'delivery'
 const ENG_TABS: Array<{ key: EngTab; label: string }> = [
   { key: 'orchestrate', label: t('ia2.nav.orchestrate') },
   { key: 'teams', label: t('loopScenes.manage.tabTeams') },
+  { key: 'delivery', label: t('ia2.delivery.tab') },
 ]
 const activeTab = ref<EngTab>('orchestrate')
 </script>
@@ -38,6 +42,7 @@ const activeTab = ref<EngTab>('orchestrate')
     </div>
 
     <OrchestrateView v-if="activeTab === 'orchestrate'" class="escene__pane" />
+    <DeliveryCasesView v-else-if="activeTab === 'delivery'" class="escene__pane" />
     <TeamsManagePanel v-else class="escene__pane" />
   </section>
 </template>
