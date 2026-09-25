@@ -247,7 +247,7 @@
 | codex-product：AGENTS.md /init | 🔜P2 |
 | dsh：低上下文主动提醒（20k 余量 toast+迟滞） | ✅原生已落（IdeStatusBar lowNotified+迟滞，R1 代码实证）·补记 |
 | dsh：会话成本估算（价目表三原则） | 🔜P0（两仓无价目表需自建，zcode §6.7 实证） |
-| dsh：工作区分组管理 | 🔜P2 |
+| 工作区分组管理 | ✅ workspace-groups.ts（登记幂等/pin 置顶/清单汇总） |
 | dsh：/recap+tips | 并入 recap 域（cc 行） |
 | dsh：trajectory hotspot 聚合（按工具/阶段排名 own-duration） | ✅ trajectory-hotspot.ts（工具/阶段降序排名/防重复计数/衔接 timing） |
 | dsh：per-turn changed-files 卡（deepseek-harness） | 🔜P0（与任务结果卡合并立项） |
