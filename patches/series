@@ -990,3 +990,16 @@
 #      skipped_board_capped 排队下轮 tick drain；同 tick spawn 计数同步；默认板
 #      （board=None）同样有闸。守门 4 例（含 fence 禁用隔离）。
 419-agent-board-concurrency-gate.patch
+# 420-423（feat/boundary-governance-2 轮，边界治理批二期）：上游缺口 R1/R2 根治
+# （台账 docs/superpowers/specs/2026-09-25-capability-boundaries-design.md §6）。
+# 编号注：413/414 已被 P0 批 review 域占用，本批自 420 起避让推进前沿。
+# 420  hermes cron create/edit 加 --base-url（存储层本就支持，补 CLI 面，R1）。
+# 421  jobs.ts base_url 改走 cron CLI，删除 patchJobFields/writeJobs 直写窄道——
+#      jobs.json 单写者收口完成（承 411）。
+# 422  hermes memory set：记忆三文件（MEMORY/USER/SOUL.md）单写者收口（R2），
+#      原子写 + --expect-mtime CAS（冲突 exit 3）。
+# 423  memory.ts 保存改走 memory set CLI（双层 CAS 防 TOCTOU），不再直写记忆文件（承 412）。
+420-cron-cli-base-url.patch
+421-jobs-base-url-cli.patch
+422-memory-set-cli.patch
+423-memory-save-cli.patch

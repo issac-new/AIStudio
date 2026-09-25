@@ -1,0 +1,62 @@
+--- a/packages/server/src/modules/hermes/controllers/memory.ts
++++ b/packages/server/src/modules/hermes/controllers/memory.ts
+@@ -1,7 +1,10 @@
+-import { mkdir, rename, stat, writeFile } from 'fs/promises'
++import { mkdir, stat, unlink, writeFile } from 'fs/promises'
++import { tmpdir } from 'os'
+ import { join } from 'path'
+ import { safeReadFile, safeStat } from '../../studio/public/files'
+ import { getActiveProfileName, getProfileDir } from '../services/profiles/profile'
++import { getHermesBin } from '../services/runtime/path'
++import { execHermesWithBin } from '../services/runtime/process'
+ 
+ function requestedProfile(ctx: any): string {
+   return ctx.state?.profile?.name || getActiveProfileName() || 'default'
+@@ -50,8 +53,8 @@
+     filePath = join(hd, 'memories', fileName)
+   }
+   try {
+-    // mtime CAS：hermes memory 工具并写同一批文件，先读后写会在 agent 留痕与
+-    // 人工编辑并发时互相覆盖。客户端带上加载时 mtime，对不上即 409 拒写。
++    // mtime CAS 快路径：客户端带上加载时 mtime，对不上即 409 拒写（结构化
++    // current_mtime 供前端重载）。与 CLI --expect-mtime 双层校验防 TOCTOU。
+     // 缺省（不带 expected_mtime）保持旧行为，兼容既有调用方。
+     if (expected_mtime != null && expected_mtime !== '') {
+       const expMs = typeof expected_mtime === 'number'
+@@ -65,13 +68,32 @@
+         return
+       }
+     }
+-    // 原子替换：直接覆盖写会留半截文件（tmp+rename 与 approval-store 同款防护）。
+-    const tmp = `${filePath}.${process.pid}.tmp`
++    // 内容写收口到 hermes CLI 单写者（patch 422 的 `hermes memory set`）：原子写
++    // 与并写互覆防护统一在 CLI 侧实现，本控制器不再直写记忆文件。
++    const tmp = join(tmpdir(), `hermes-memory-${process.pid}-${Date.now()}.tmp`)
+     await writeFile(tmp, content, 'utf-8')
+-    await rename(tmp, filePath)
++    try {
++      const args = ['memory', 'set', section, '--file', tmp]
++      if (expected_mtime != null && expected_mtime !== '') {
++        args.push('--expect-mtime', String(expected_mtime))
++      }
++      await execHermesWithBin(getHermesBin(), args, {
++        env: { ...process.env, HERMES_HOME: hd },
++        timeout: 30_000,
++        maxBuffer: 1024 * 1024,
++        windowsHide: true,
++      })
++    } finally {
++      await unlink(tmp).catch(() => undefined)
++    }
+     ctx.body = { success: true }
+   } catch (err: any) {
++    if (err?.code === 3) {
++      ctx.status = 409
++      ctx.body = { error: 'mtime conflict: file changed since load' }
++      return
++    }
+     ctx.status = 500
+-    ctx.body = { error: err.message }
++    ctx.body = { error: err?.stderr || err.message }
+   }
+ }

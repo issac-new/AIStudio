@@ -1,0 +1,38 @@
+diff --git a/hermes_cli/cron.py b/hermes_cli/cron.py
+index 5431dda516..6f855064f0 100644
+--- a/hermes_cli/cron.py
++++ b/hermes_cli/cron.py
+@@ -671,7 +671,8 @@ _JOB_ARG_FIELDS = (("name", "name"), ("deliver", "deliver"), ("failure_deliver",
+                    ("repeat", "repeat"), ("script", "script"), ("workdir", "workdir"),
+                    ("model", "model"), ("provider", "model_provider"), ("pinned", "pinned"),
+                    ("monitor_script", "monitor_script"), ("monitor_url", "monitor_url"),
+-                   ("continuity", "continuity"), ("reasoning_effort", "reasoning_effort"))
++                   ("continuity", "continuity"), ("reasoning_effort", "reasoning_effort"),
++                   ("base_url", "base_url"))
+ 
+ 
+ def _job_api_kwargs(args) -> Dict[str, Any]:
+diff --git a/hermes_cli/subcommands/cron.py b/hermes_cli/subcommands/cron.py
+index 365ac5368b..716ef18086 100644
+--- a/hermes_cli/subcommands/cron.py
++++ b/hermes_cli/subcommands/cron.py
+@@ -72,6 +72,9 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
+             "`hermes model` changes never touch it. Ignored when --model is given.")
+     cron_create.add_argument("--provider", dest="model_provider",
+         help="Inference provider paired with --model (e.g. 'openrouter', 'nous').")
++    cron_create.add_argument("--base-url", dest="base_url",
++        help="Inference base URL paired with --model/--provider (custom "
++            "endpoints). Pass empty string to clear.")
+     cron_create.add_argument("--reasoning-effort", dest="reasoning_effort",
+         help="Pin this job's reasoning (thinking) effort: none, minimal, low, "
+             "medium, high, xhigh, max, or ultra. Overrides agent.reasoning_effort "
+@@ -144,6 +147,9 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
+         help="Pin this job's reasoning (thinking) effort: none, minimal, low, "
+             "medium, high, xhigh, max, or ultra. Pass empty string to clear "
+             "the pin and follow config resolution.")
++    cron_edit.add_argument("--base-url", dest="base_url",
++        help="Inference base URL paired with --model/--provider (custom "
++            "endpoints). Pass empty string to clear.")
+ 
+     # lifecycle actions
+     cron_pause = cron_subparsers.add_parser("pause", help="Pause a scheduled job")
