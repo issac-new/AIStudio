@@ -6,7 +6,7 @@
     {
       "source": "plugins/platforms/matrix/tools.py",
       "dest": "plugins/platforms/matrix/tools.py",
-      "note": "matrix room 工具（含 is_async=True）"
+      "note": "matrix room 工具：is_async=True + R5 房间列表截断 50 + R6/V2 alias 统一门禁"
     },
     {
       "source": "plugins/platforms/matrix/plugin.yaml",
@@ -16,7 +16,7 @@
     {
       "source": "hermes_cli/kanban_db.py",
       "dest": "hermes_cli/kanban_db.py",
-      "note": "C3: tasks 表 raci TEXT 列（schema/Task/create_task/INSERT）"
+      "note": "C3 raci TEXT 列（schema/Task/create_task/INSERT）+ R2 task_id 段校验 + R3/V1 暂存副本清理 + R4 原子写 + 399 流转门禁接线 + staging TOCTOU 守卫"
     },
     {
       "source": "hermes_cli/kanban_db_connect.py",
@@ -36,7 +36,7 @@
     {
       "source": "hermes_cli/kanban.py",
       "dest": "hermes_cli/kanban.py",
-      "note": "C3: _cmd_create 解析并透传 raci"
+      "note": "C3: _cmd_create 解析并透传 raci + R1 _parse_duration 溢出/负值拒绝"
     },
     {
       "source": "tools/kanban_tools_schemas.py",
@@ -51,6 +51,8 @@
   ],
   "notes": [
     "overlay/runtime 是 agent 运行时修复的源（含 is_async/provides_tools），deploy-agent-runtime 同步到 ~/.hermes；幂等、默认 dry-run。",
-    "源须持续含全部运行时修复，否则同步会覆盖回退。"
+    "源须持续含全部运行时修复，否则同步会覆盖回退。",
+    "镜像基线（2026-09-25 重生成）：本清单全部文件 = upstream/hermes-agent + patches/series 全链（含 410）应用后的工作树状态，即镜像与补丁链零漂移。",
+    "对账方法：git clone --shared upstream/hermes-agent /tmp/r3-ha，按 series 顺序 apply 全部 hermes-agent 侧补丁（路由用 scripts/inject.mjs resolvePatchTargetRoot），cmp overlay/runtime/<f> 与 /tmp/r3-ha/<f> 逐字节一致；重生成亦用该 scratch 全链状态覆盖。"
   ]
 }

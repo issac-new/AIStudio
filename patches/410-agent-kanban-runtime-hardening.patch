@@ -1,0 +1,751 @@
+diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
+index b3488106a0..5e6b664ca6 100644
+--- a/hermes_cli/kanban.py
++++ b/hermes_cli/kanban.py
+@@ -9,6 +9,7 @@ from __future__ import annotations
+ import argparse
+ import contextlib
+ import json
++import math
+ import os
+ import shlex
+ import sys
+@@ -265,14 +266,18 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
+ 
+ def _parse_duration(val) -> Optional[int]:
+     """``30s`` / ``5m`` / ``2h`` / ``1d`` or a raw integer → seconds; None for empty input;
+-    ValueError on malformed input."""
++    ValueError on malformed input (negative or out-of-range like ``1e999d`` included)."""
+     if val is None or val == "":
+         return None
+     s = str(val).strip().lower()
+     try:
+-        return int(s)  # bare integer → seconds
++        seconds = int(s)  # bare integer → seconds
+     except ValueError:
+         pass
++    else:
++        if seconds < 0:
++            raise ValueError(f"malformed duration {val!r} (negative durations are not allowed)")
++        return seconds
+     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+     if not (s and s[-1] in units):
+         raise ValueError(f"malformed duration {val!r} (expected 30s, 5m, 2h, 1d, or a number)")
+@@ -280,7 +285,14 @@ def _parse_duration(val) -> Optional[int]:
+         n = float(s[:-1])
+     except ValueError as exc:
+         raise ValueError(f"malformed duration {val!r}") from exc
+-    return int(n * units[s[-1]])
++    # ``float`` happily yields inf/nan ("infd", "1e999d"), and even a finite
++    # mantissa can overflow to inf mid-multiply ("1e308d" * 86400); ``int()``
++    # then raises OverflowError, which no caller catches. Refuse anything
++    # non-finite or negative before the conversion.
++    seconds = n * units[s[-1]]
++    if not math.isfinite(seconds) or seconds < 0:
++        raise ValueError(f"malformed duration {val!r}")
++    return int(seconds)
+ 
+ 
+ def _cmd_init(args: argparse.Namespace) -> int:
+@@ -356,6 +368,16 @@ def _cmd_create(args: argparse.Namespace) -> int:
+         max_runtime = _parse_duration(getattr(args, "max_runtime", None))
+     except ValueError as exc:
+         return _err(f"kanban: --max-runtime: {exc}", 2)
++    raci_raw = getattr(args, "raci", None)
++    raci = None
++    if raci_raw:
++        try:
++            parsed_raci = json.loads(raci_raw)
++            raci = parsed_raci if isinstance(parsed_raci, dict) else None
++        except (ValueError, TypeError):
++            return _err("kanban: --raci must be a JSON object", 2)
++        if raci is None:
++            return _err("kanban: --raci must be a JSON object", 2)
+     max_retries = getattr(args, "max_retries", None)
+     if max_retries is not None and max_retries < 1:
+         return _err(f"kanban: --max-retries must be >= 1 (got {max_retries}); "
+@@ -375,6 +397,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
+             goal_mode=bool(getattr(args, "goal_mode", False)),
+             goal_max_turns=getattr(args, "goal_max_turns", None),
+             completion_contract=getattr(args, "completion_contract", None),
++            raci=raci,
+             initial_status=getattr(args, "initial_status", "running"),
+             creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
+                              if is_dispatcher_owned_worker_context() else None),
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index 030a7a28dc..3f6b790f76 100644
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -468,6 +468,28 @@ def get_current_board() -> str:
+     return DEFAULT_BOARD
+ 
+ 
++def _atomic_write_bytes(path: Path, data: bytes) -> None:
++    """Write ``data`` to ``path`` via a same-dir temp file + ``os.replace``, so a
++    crash mid-write can never leave a truncated file behind (board.json, the
++    current-board pointer, attachment blobs)."""
++    tmp = path.with_name(f".{path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp")
++    try:
++        with tmp.open("wb") as f:
++            f.write(data)
++            f.flush()
++            os.fsync(f.fileno())
++        os.replace(tmp, path)
++    except BaseException:
++        with contextlib.suppress(OSError):
++            tmp.unlink(missing_ok=True)
++        raise
++
++
++def _atomic_write_text(path: Path, text: str) -> None:
++    """``_atomic_write_bytes`` for text (UTF-8): a crash-safe ``write_text``."""
++    _atomic_write_bytes(path, text.encode("utf-8"))
++
++
+ def set_current_board(slug: str) -> Path:
+     """Persist ``slug`` as the active board; returns the file written. Does NOT
+     check the board exists — callers do (so ``boards switch <typo>`` errors)."""
+@@ -475,7 +497,7 @@ def set_current_board(slug: str) -> Path:
+     normed = _require_slug(slug)
+     path = current_board_path()
+     path.parent.mkdir(parents=True, exist_ok=True)
+-    path.write_text(normed + "\n", encoding="utf-8")
++    _atomic_write_text(path, normed + "\n")
+     return path
+ 
+ 
+@@ -542,8 +564,33 @@ def attachments_root(board: Optional[str] = None) -> Path:
+ 
+ 
+ def task_attachments_dir(task_id: str, board: Optional[str] = None) -> Path:
+-    """Return the per-task attachment directory ``<root>/<task_id>/``."""
+-    return attachments_root(board=board) / task_id
++    """Return the per-task attachment directory ``<root>/<task_id>/``.
++
++    ``task_id`` must be a single safe path segment (:func:`_require_task_id_segment`):
++    tool-supplied ids reach :func:`store_attachment_bytes` through here, and an
++    unchecked ``/etc/x`` or ``../../..`` would escape the attachments root and
++    create/write arbitrary locations."""
++    return attachments_root(board=board) / _require_task_id_segment(task_id)
++
++
++# ``t_<hex>`` ids are letters/digits/underscore only, but imported or
++# hand-written ids may carry dots or dashes; the point is one path segment.
++_TASK_ID_SEGMENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
++
++
++def _require_task_id_segment(task_id: str) -> str:
++    """Validate ``task_id`` as one safe path segment; ``ValueError`` naming the
++    reason for anything with a separator (``/``, ``\\``), traversal (``..``),
++    an absolute path, or an empty id. This is the trust boundary for
++    caller-supplied task ids used in filesystem paths."""
++    tid = task_id if isinstance(task_id, str) else ""
++    if (not tid or tid in (".", "..") or not _TASK_ID_SEGMENT_RE.match(tid)
++            or Path(tid).name != tid):
++        raise ValueError(
++            f"invalid task_id {task_id!r}: must be a single path-safe segment "
++            "(no '/', '\\\\', '..', or empty)"
++        )
++    return tid
+ 
+ 
+ def worker_logs_dir(board: Optional[str] = None) -> Path:
+@@ -620,9 +667,7 @@ def write_board_metadata(
+         meta["created_at"] = int(time.time())
+     path = board_metadata_path(slug)
+     path.parent.mkdir(parents=True, exist_ok=True)
+-    path.write_text(
+-        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8",
+-    )
++    _atomic_write_text(path, json.dumps(meta, indent=2, ensure_ascii=False) + "\n")
+     meta["db_path"] = str(kanban_db_path(slug))
+     return meta
+ 
+@@ -751,12 +796,15 @@ class Task:
+     block_kind: Optional[str] = None
+     block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
+     completion_contract: Optional[str] = None
++    raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
+ 
+     @classmethod
+     def from_row(cls, row: sqlite3.Row) -> "Task":
+         g = lambda col, default=None: _lossy_text(_row_get(row, col, default))  # noqa: E731
+         parsed = _json_or(g("skills"))
+         skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
++        raci_parsed = _json_or(g("raci"))
++        raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
+         return cls(
+             **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
+             **{col: g(col) for col in _TASK_OPTIONAL_COLUMNS},
+@@ -766,6 +814,7 @@ class Task:
+             consecutive_failures=g("consecutive_failures", g("spawn_failures", 0)),
+             last_failure_error=g("last_failure_error", g("last_spawn_error")),
+             skills=skills_value,
++            raci=raci_value,
+             goal_mode=bool(g("goal_mode")),
+             block_recurrences=int(g("block_recurrences") or 0),
+         )
+@@ -936,6 +985,8 @@ CREATE TABLE IF NOT EXISTS tasks (
+     -- Force-loaded skills for the worker on this task, stored as JSON.
+     -- Passed to the worker via `--skills`. NULL or empty array = no extras.
+     skills               TEXT,
++    -- HERMES_CUSTOM[raci] Structured RACI (JSON {responsible,approver,consulted,informed}).
++    raci                 TEXT,
+     -- Per-task model override. When set, the dispatcher passes -m <model>
+     -- to the worker, overriding the profile's default model. NULL = use
+     -- the profile default.
+@@ -1279,6 +1330,7 @@ def create_task(
+     project_source_task_id: Optional[str] = None,
+     creator_task_id: Optional[str] = None,
+     completion_contract: Optional[str] = None,
++    raci: Optional[dict] = None,
+ ) -> str:
+     """Create a task (optionally under ``parents``); returns its id.
+ 
+@@ -1386,8 +1438,8 @@ def create_task(
+                         max_runtime_seconds,
+                         skills, max_retries, model_override, provider_override,
+                         reasoning_effort,
+-                        goal_mode, goal_max_turns, session_id, completion_contract
+-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
++                        goal_mode, goal_max_turns, session_id, completion_contract, raci
++                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     """,
+                     (
+                         task_id, title.strip(), body, assignee, task_status, priority,
+@@ -1397,6 +1449,7 @@ def create_task(
+                         json.dumps(skills_list) if skills_list is not None else None,
+                         _opt_int(max_retries), model_override, provider_override, reasoning_effort,
+                         1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
++                        json.dumps(raci) if isinstance(raci, dict) else None,
+                     ),
+                 )
+                 for pid in parents:
+@@ -1879,7 +1932,7 @@ def store_attachment_bytes(
+     dest_dir = task_attachments_dir(task_id, board=board)
+     dest_dir.mkdir(parents=True, exist_ok=True)
+     dest_path = _collision_free_path(dest_dir, safe_name)
+-    dest_path.write_bytes(data)
++    _atomic_write_bytes(dest_path, data)
+     try:
+         return add_attachment(
+             conn, task_id, filename=dest_path.name, stored_path=str(dest_path.resolve()),
+@@ -2789,68 +2842,77 @@ def complete_task(
+     acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
+     if acceptance is False:
+         return False
+-    with write_txn(conn):
+-        # Hard invariant even for human review approval: a parent may have
+-        # reopened while this task waited.
+-        if not _parents_satisfied(conn, task_id):
+-            return False
+-        if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
+-            return False
+-        trow = conn.execute(
+-            "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
+-            (task_id,),
+-        ).fetchone()
+-        prior_status = trow["status"] if trow else None
+-        # Refuse to close a LIVE worker's run without proof of ownership
+-        # (expected_run_id) or an explicit human override (force=True); see
+-        # _claim_is_live for what "live" means.
+-        if expected_run_id is None and not force and trow and _claim_is_live(trow):
+-            raise LiveClaimError(task_id)
+-        sql = """
+-                UPDATE tasks
+-                   SET status       = 'done',
+-                       result       = ?,
+-                       completed_at = ?,
+-                       claim_lock   = NULL,
+-                       claim_expires= NULL,
+-                       worker_pid   = NULL,
+-                       block_kind   = NULL,
+-                       block_recurrences = 0
+-                 WHERE id = ?
+-                   AND status IN ('running', 'ready', 'blocked', 'review')
+-                """
+-        params: tuple = (result, now, task_id)
+-        if expected_run_id is not None:
+-            sql += " AND current_run_id = ?"
+-            params = (*params, int(expected_run_id))
+-        if conn.execute(sql, params).rowcount != 1:
+-            return False
+-        if isinstance(metadata, dict):
+-            _stage_completion_artifacts(conn, task_id, metadata, now)
+-        run_id = _end_run(
+-            conn, task_id, outcome="completed", status="done", summary=handoff_summary,
+-            metadata=metadata,
+-        )
+-        # Never-claimed task: synthesize a run so the handoff fields survive.
+-        if run_id is None and (summary or metadata or result or prior_status == "review"):
+-            synth_summary, synth_metadata = handoff_summary, metadata
+-            if prior_status == "review" and not synth_summary and not synth_metadata:
+-                synth_summary = _REVIEW_APPROVED_NOTE
+-                synth_metadata = {"source_status": "review", "approval": "manual"}
+-            run_id = _synthesize_ended_run(
+-                conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
++    # Staged copies live outside the txn: a rollback after staging must not
++    # leave orphans that make the retry stage ``name_1.ext`` beside them
++    # (same fence as ``request_review``).
++    staged_copies: list[Path] = []
++    try:
++        with write_txn(conn):
++            # Hard invariant even for human review approval: a parent may have
++            # reopened while this task waited.
++            if not _parents_satisfied(conn, task_id):
++                return False
++            if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
++                return False
++            trow = conn.execute(
++                "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
++                (task_id,),
++            ).fetchone()
++            prior_status = trow["status"] if trow else None
++            # Refuse to close a LIVE worker's run without proof of ownership
++            # (expected_run_id) or an explicit human override (force=True); see
++            # _claim_is_live for what "live" means.
++            if expected_run_id is None and not force and trow and _claim_is_live(trow):
++                raise LiveClaimError(task_id)
++            sql = """
++                    UPDATE tasks
++                       SET status       = 'done',
++                           result       = ?,
++                           completed_at = ?,
++                           claim_lock   = NULL,
++                           claim_expires= NULL,
++                           worker_pid   = NULL,
++                           block_kind   = NULL,
++                           block_recurrences = 0
++                     WHERE id = ?
++                       AND status IN ('running', 'ready', 'blocked', 'review')
++                    """
++            params: tuple = (result, now, task_id)
++            if expected_run_id is not None:
++                sql += " AND current_run_id = ?"
++                params = (*params, int(expected_run_id))
++            if conn.execute(sql, params).rowcount != 1:
++                return False
++            if isinstance(metadata, dict):
++                staged_copies = _stage_completion_artifacts(conn, task_id, metadata, now)
++            run_id = _end_run(
++                conn, task_id, outcome="completed", status="done", summary=handoff_summary,
++                metadata=metadata,
+             )
+-        event_summary = handoff_summary
+-        if prior_status == "review" and not event_summary:
+-            event_summary = _REVIEW_APPROVED_NOTE
+-        _append_event(
+-            conn, task_id, "completed",
+-            _completed_event_payload(result, event_summary, verified_cards, metadata),
+-            run_id=run_id,
+-        )
+-        if gate_payload:
+-            # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
+-            _append_event(conn, task_id, "column_transition", gate_payload)
++            # Never-claimed task: synthesize a run so the handoff fields survive.
++            if run_id is None and (summary or metadata or result or prior_status == "review"):
++                synth_summary, synth_metadata = handoff_summary, metadata
++                if prior_status == "review" and not synth_summary and not synth_metadata:
++                    synth_summary = _REVIEW_APPROVED_NOTE
++                    synth_metadata = {"source_status": "review", "approval": "manual"}
++                run_id = _synthesize_ended_run(
++                    conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
++                )
++            event_summary = handoff_summary
++            if prior_status == "review" and not event_summary:
++                event_summary = _REVIEW_APPROVED_NOTE
++            _append_event(
++                conn, task_id, "completed",
++                _completed_event_payload(result, event_summary, verified_cards, metadata),
++                run_id=run_id,
++            )
++            if gate_payload:
++                # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
++                _append_event(conn, task_id, "column_transition", gate_payload)
++    except Exception:
++        if staged_copies:
++            _discard_staged_copies(staged_copies, staged_copies[0].parent)
++        raise
+     _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
+     # Success wipes the breaker counter (history stays on the event log).
+     _clear_failure_counter(conn, task_id)
+@@ -2932,14 +2994,24 @@ def _stage_completion_artifacts(
+ ) -> list[Path]:
+     """Copy scratch artifacts to the attachments dir and record each as an
+     attachment row; returns the copies so the caller can discard them if its
+-    transaction rolls back."""
++    transaction rolls back. A failure while recording the rows discards the
++    copies here first (the caller only learns them on a normal return) and
++    re-raises."""
+     _persist_scratch_completion_artifacts(conn, task_id, metadata)
+     staged = [Path(stored_path) for stored_path in metadata.pop("_staged_artifacts", [])]
+-    for path in staged:
+-        _insert_completion_attachment(
+-            conn, task_id, filename=path.name, stored_path=str(path),
+-            size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
+-        )
++    try:
++        for path in staged:
++            _insert_completion_attachment(
++                conn, task_id, filename=path.name, stored_path=str(path),
++                size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
++            )
++    except Exception:
++        # The caller's rollback cleanup cannot see these: its ``staged_copies``
++        # is only assigned on a normal return. Deleting here is idempotent with
++        # that cleanup (unlink missing_ok, rmdir suppressed).
++        if staged:
++            _discard_staged_copies(staged, staged[0].parent)
++        raise
+     return staged
+ 
+ 
+@@ -3079,11 +3151,25 @@ def _persist_scratch_completion_artifacts(
+         problem = None
+         if not src.is_file():
+             problem = f"declared scratch artifact is unavailable or not a regular file: {artifact}"
+-        elif resolved_src.stat().st_size > KANBAN_ATTACHMENT_MAX_BYTES:
+-            problem = (
+-                f"declared scratch artifact exceeds the "
+-                f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
+-            )
++        else:
++            try:
++                artifact_size = resolved_src.stat().st_size
++            except OSError:
++                # TOCTOU: the source can vanish between ``is_file`` and ``stat``;
++                # a bare OSError here would skip the staged-copy cleanup below.
++                # Same fate as the unavailable branch above: discard the copies
++                # and raise ArtifactPreservationError, matching request_review's
++                # "a declared artifact that cannot be preserved raises" promise.
++                problem = (
++                    "declared scratch artifact is unavailable or not a regular "
++                    f"file: {artifact} (disappeared while staging)"
++                )
++            else:
++                if artifact_size > KANBAN_ATTACHMENT_MAX_BYTES:
++                    problem = (
++                        f"declared scratch artifact exceeds the "
++                        f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
++                    )
+         if problem:
+             _discard_copies()
+             raise ArtifactPreservationError(problem)
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+index 0886ef4725..e0c47d7cac 100644
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -821,6 +821,8 @@ _LATER_TASK_COLUMNS = (
+     ("current_step_key", "current_step_key TEXT"),
+     # JSON array of skill names the dispatcher force-loads via --skills.
+     ("skills", "skills TEXT"),
++    # HERMES_CUSTOM[raci] structured RACI JSON column.
++    ("raci", "raci TEXT"),
+     # Per-task override for the consecutive-failure circuit breaker; NULL =
+     # ``kanban.failure_limit`` config, then ``DEFAULT_FAILURE_LIMIT``.
+     ("max_retries", "max_retries INTEGER"),
+diff --git a/hermes_cli/kanban_output.py b/hermes_cli/kanban_output.py
+index f5769fa903..332b7bbc6f 100644
+--- a/hermes_cli/kanban_output.py
++++ b/hermes_cli/kanban_output.py
+@@ -21,6 +21,7 @@ _TASK_DICT_FIELDS = (
+     "created_by", "created_at", "started_at", "completed_at", "result",
+     "skills", "max_runtime_seconds", "max_retries", "model_override", "provider_override",
+     "reasoning_effort",  # HERMES_CUSTOM[v020]
++    "raci",  # HERMES_CUSTOM[raci]
+     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
+ )
+ _SHOW_RUN_FIELDS = (
+diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
+index 449621a0d6..0a06caac1b 100644
+--- a/hermes_cli/kanban_parser.py
++++ b/hermes_cli/kanban_parser.py
+@@ -215,6 +215,8 @@ _SPECS = [
+              help="Pin the worker's thinking depth for this task "
+                   "(minimal/low/medium/high/xhigh/max/ultra, or 'none' for thinking "
+                   "off). Omit to use the assignee profile's agent.reasoning_effort."),
++        _arg("--raci", metavar="JSON",
++             help='Structured RACI as JSON object, e.g. {"responsible":["chen"],"approver":["wei"]}'),
+         _arg("--completion-contract", metavar="CONTRACT",
+              help="local-only (default), OWNER/REPO for publication, or exact GitHub PR URL; required CI gates done."),
+         _arg("--goal", action="store_true", dest="goal_mode",
+diff --git a/plugins/platforms/matrix/tools.py b/plugins/platforms/matrix/tools.py
+index d3354d3821..2865783a98 100644
+--- a/plugins/platforms/matrix/tools.py
++++ b/plugins/platforms/matrix/tools.py
+@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
+ _REQUEST_TIMEOUT_SECONDS = 30
+ _MAX_INVITES_PER_CALL = 50
+ _MAX_MEMBER_REPORT = 40
++_MAX_ROOM_LIST = 50
+ 
+ _MXID_RE = re.compile(r"^@[A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
+ _ROOM_REF_RE = re.compile(r"^[!#][A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
+@@ -150,8 +151,14 @@ async def matrix_room_list(args: dict | None = None, **_: Any) -> str:
+     if rooms is None:
+         return _error("Could not list joined rooms from the homeserver")
+ 
++    # Every room costs two serial API calls (30s timeout each): an account on
++    # hundreds of rooms would pin the agent turn for minutes. Truncate and say
++    # so, like _MAX_INVITES_PER_CALL does for invites.
++    truncated = len(rooms) > _MAX_ROOM_LIST
++    listed = rooms[:_MAX_ROOM_LIST]
++
+     out = []
+-    for room_id in rooms:
++    for room_id in listed:
+         path = f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}"
+         # `/state/<type>` returns the event content directly; the untyped `/state`
+         # form returns a bare list of events, which is easy to mis-read as a dict.
+@@ -165,7 +172,8 @@ async def matrix_room_list(args: dict | None = None, **_: Any) -> str:
+             "members": joined[:_MAX_MEMBER_REPORT],
+         })
+ 
+-    return json.dumps({"count": len(out), "rooms": out}, ensure_ascii=False)
++    return json.dumps({"count": len(out), "total": len(rooms), "truncated": truncated,
++                       "rooms": out}, ensure_ascii=False)
+ 
+ 
+ async def _invite_via_adapter(adapter: Any, room_id: str, users: list[str]) -> str:
+@@ -197,8 +205,16 @@ async def matrix_room_invite(args: dict | None = None, **_: Any) -> str:
+     raw_users = params.get("users") or params.get("user_id") or []
+     if isinstance(raw_users, str):
+         raw_users = [u.strip() for u in re.split(r"[,\s]+", raw_users) if u.strip()]
++    # Aliases are refused up front, for both delivery paths: the adapter builds
++    # mautrix RoomID(room_id) (upstream adapter.py invite_user), and the
++    # standalone calls address rooms by ID (the joined-rooms check below
++    # compares IDs), so an alias would surface as an unrelated
++    # "not joined to #alias" error instead of the real reason.
++    if room_id.startswith("#"):
++        return _error(f"room alias {room_id} is not supported; resolve it to a room ID (!...) "
++                      "first (matrix_room_list reports room IDs)")
+     if not _ROOM_REF_RE.match(room_id):
+-        return _error("room_id must be a Matrix room ID (!...) or alias (#...)")
++        return _error("room_id must be a Matrix room ID (!...)")
+     if not isinstance(raw_users, list) or not raw_users:
+         return _error("users must be a non-empty list of Matrix user IDs")
+     if len(raw_users) > _MAX_INVITES_PER_CALL:
+@@ -307,7 +323,10 @@ _TOOLS: dict[str, tuple] = {
+         "Invite Matrix users into a room the assistant is already a member of. Use after "
+         "splitting a requirement into per-owner tasks so each owner's account receives the "
+         "assignment in the shared room. Accepts a list of user IDs; reports per-user results.",
+-        {"room_id": {"type": "string", "description": "Target room ID (!...) or alias (#...)."},
++        {"room_id": {"type": "string",
++                     "description": "Target room ID (!...). Room aliases (#...) are not "
++                                    "supported yet: resolve them to a room ID first "
++                                    "(matrix_room_list reports room IDs)."},
+          "users": {"type": "array", "items": {"type": "string"},
+                    "description": "Matrix user IDs to invite, e.g. ['@chen:matrix.test']."}},
+         ["room_id", "users"],
+@@ -329,7 +348,8 @@ _TOOLS: dict[str, tuple] = {
+     "matrix_room_list": (
+         matrix_room_list,
+         "List the Matrix rooms this account has joined, with names. Use to locate an existing "
+-        "requirement room before creating a duplicate.",
++        "requirement room before creating a duplicate. Truncated to the first "
++        f"{_MAX_ROOM_LIST} rooms; `truncated`/`total` report the rest.",
+         {},
+         [],
+         "📋",
+@@ -345,4 +365,4 @@ def register_tools(ctx) -> None:
+             parameters["required"] = required
+         schema = {"name": name, "description": description, "parameters": parameters}
+         ctx.register_tool(name=name, toolset="matrix", handler=handler, description=description,
+-                          schema=schema, emoji=emoji, check_fn=_room_ops_available)
++                          schema=schema, emoji=emoji, check_fn=_room_ops_available, is_async=True)
+diff --git a/tests/gateway/test_matrix_room_tools.py b/tests/gateway/test_matrix_room_tools.py
+index 2742129146..58fb95a3ad 100644
+--- a/tests/gateway/test_matrix_room_tools.py
++++ b/tests/gateway/test_matrix_room_tools.py
+@@ -412,3 +412,30 @@ def test_missing_credentials_fail_closed(monkeypatch):
+                  rt.matrix_room_create({"name": "x"})):
+         out = json.loads(_run(coro))
+         assert "not configured" in out["error"]
++
++
++# ---- alias gate (unified refusal, R6/V2) ---------------------------------
++
++def test_room_alias_refused_up_front_with_resolution_hint(creds, monkeypatch):
++    """An alias must be refused before any network call, with the one message
++    that says how to resolve it — not masked as an unrelated "not joined to
++    #alias" error."""
++    fake = _install(monkeypatch, FakeHomeserver(joined_rooms=["!room:matrix.test"]))
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "#alias:matrix.test", "users": ["@chen:matrix.test"]})))
++    assert "room alias #alias:matrix.test is not supported" in out["error"]
++    assert "resolve it to a room ID" in out["error"]
++    assert fake.calls == [], "validation must happen before any network call"
++
++
++def test_room_alias_refused_on_the_adapter_path_too(monkeypatch):
++    """The unified gate covers both delivery paths: the gateway adapter builds
++    mautrix ``RoomID(room_id)``, which takes ``!`` ids only."""
++    class _Boom:
++        async def invite_user(self, *_a, **_kw):
++            raise AssertionError("alias must not reach the adapter")
++
++    monkeypatch.setattr(rt, "_live_matrix_adapter", lambda: _Boom())
++    out = json.loads(_run(rt.matrix_room_invite(
++        {"room_id": "#alias:matrix.test", "users": ["@chen:matrix.test"]})))
++    assert "room alias #alias:matrix.test is not supported" in out["error"]
+diff --git a/tests/hermes_cli/test_kanban_cli.py b/tests/hermes_cli/test_kanban_cli.py
+index be8aa5ad4f..748a3ad7a6 100644
+--- a/tests/hermes_cli/test_kanban_cli.py
++++ b/tests/hermes_cli/test_kanban_cli.py
+@@ -241,3 +241,27 @@ def test_run_slash_reclaim_running_task(kanban_home):
+ # ---------------------------------------------------------------------------
+ 
+ 
++
++
++# ---------------------------------------------------------------------------
++# _parse_duration overflow / negative refusal (runtime hardening R1)
++# ---------------------------------------------------------------------------
++
++
++def test_parse_duration_rejects_overflow_nan_and_negative():
++    """``float`` yields inf/nan for inputs like ``1e999d``, and a finite
++    mantissa can overflow to inf in the seconds multiply; ``int()`` then raised
++    an OverflowError no caller caught. Negative durations were accepted. All of
++    it must surface as a clean ValueError."""
++    for bad in ("1e999d", "1e308d", "infd", "nans", "-5", "-1h"):
++        with pytest.raises(ValueError):
++            kc._parse_duration(bad)
++
++
++def test_parse_duration_still_accepts_valid_forms():
++    assert kc._parse_duration(None) is None
++    assert kc._parse_duration("") is None
++    assert kc._parse_duration("30s") == 30
++    assert kc._parse_duration("2h") == 2 * 3600
++    assert kc._parse_duration("1d") == 86400
++    assert kc._parse_duration("45") == 45
+diff --git a/tests/hermes_cli/test_kanban_db.py b/tests/hermes_cli/test_kanban_db.py
+index e6773105f7..4840b419e5 100644
+--- a/tests/hermes_cli/test_kanban_db.py
++++ b/tests/hermes_cli/test_kanban_db.py
+@@ -2008,3 +2008,96 @@ def test_archive_non_running_task_does_not_attempt_termination(kanban_home):
+             (t,),
+         ).fetchone()
+         assert row is None
++
++
++# ---------------------------------------------------------------------------
++# Runtime hardening gates: path-safe task ids, atomic writes, staged-copy
++# cleanup, source-vanish race (patch 410 R2/R3/R4/V1 + staging guard)
++# ---------------------------------------------------------------------------
++
++
++def test_task_attachments_dir_rejects_path_escape(kanban_home):
++    """R2: tool-supplied ids reach the filesystem through this join; traversal,
++    separators, absolute paths and the empty id must raise instead of escaping
++    the attachments root."""
++    for bad in ("..", ".", "../x", "a/b", "a\\b", "", "/etc/passwd"):
++        with pytest.raises(ValueError):
++            kb.task_attachments_dir(bad)
++    ok = kb.task_attachments_dir("t_abc123")
++    assert ok.name == "t_abc123"
++
++
++def test_atomic_write_text_is_replace_based(tmp_path):
++    """R4: a failed replace leaves the old content byte-intact and no temp file
++    behind; the pre-fix in-place ``write_text`` truncated the target."""
++    target = tmp_path / "board.json"
++    target.write_text("old\n", encoding="utf-8")
++
++    def _boom(src, dst):
++        raise OSError("replace failed")
++
++    with pytest.MonkeyPatch.context() as mp:
++        mp.setattr(os, "replace", _boom)
++        with pytest.raises(OSError):
++            kb._atomic_write_text(target, "new\n")
++    assert target.read_text(encoding="utf-8") == "old\n"
++    assert not list(tmp_path.glob(".board.json.*.tmp")), "temp file must not leak"
++
++    kb._atomic_write_text(target, "new\n")
++    assert target.read_text(encoding="utf-8") == "new\n"
++
++
++def test_stage_completion_artifacts_discards_copies_when_row_insert_fails(kanban_home, monkeypatch):
++    """V1: the caller's rollback cleanup only learns the copies on a normal
++    return, so a row-insert failure must discard them right here or the retry
++    stages ``chart_1.png`` next to an orphan."""
++    with kbc.connect() as conn:
++        t = kb.create_task(conn, title="staged", workspace_kind="scratch")
++        ws = kbw.resolve_workspace(kb.get_task(conn, t))
++        kbw.set_workspace_path(conn, t, ws)
++        artifact = ws / "chart.png"
++        artifact.write_bytes(b"png-bytes")
++
++        def _boom(*_a, **_k):
++            raise RuntimeError("attachment row insert failed")
++
++        monkeypatch.setattr(kb, "_insert_completion_attachment", _boom)
++        with pytest.raises(RuntimeError):
++            kb.complete_task(conn, t, result="ok", metadata={"artifacts": [str(artifact)]})
++        attachment_dir = kb.task_attachments_dir(t)
++    assert not attachment_dir.exists() or not any(attachment_dir.iterdir())
++
++
++def test_source_vanishing_during_staging_raises_preservation_error(kanban_home):
++    """TOCTOU: the artifact can vanish between ``is_file`` and ``stat``. That
++    must take the unavailable branch (ArtifactPreservationError, staged copies
++    discarded, transition rolled back) — the pre-guard bare OSError skipped the
++    cleanup entirely."""
++    with kbc.connect() as conn:
++        t = kb.create_task(conn, title="vanish", workspace_kind="scratch")
++        ws = kbw.resolve_workspace(kb.get_task(conn, t))
++        kbw.set_workspace_path(conn, t, ws)
++        artifact = ws / "evidence.json"
++        artifact.write_bytes(b"{}")
++        kb.claim_task(conn, t)
++        run_id = kb.get_task(conn, t).current_run_id
++        real_stat, real_is_file = Path.stat, Path.is_file
++
++        def _racing_is_file(self):
++            return True if self.name == "evidence.json" else real_is_file(self)
++
++        def _racing_stat(self, *a, **kw):
++            if self.name == "evidence.json":
++                raise FileNotFoundError(2, "No such file or directory", str(self))
++            return real_stat(self, *a, **kw)
++
++        with pytest.MonkeyPatch.context() as mp:
++            mp.setattr(Path, "is_file", _racing_is_file)
++            mp.setattr(Path, "stat", _racing_stat)
++            with pytest.raises(kb.ArtifactPreservationError):
++                kb.request_review(
++                    conn, t, summary="ready",
++                    metadata={"artifacts": [str(artifact)]}, expected_run_id=run_id)
++        attachment_dir = kb.task_attachments_dir(t)
++        assert kb.get_task(conn, t).status == "running"
++        assert not attachment_dir.exists() or not any(attachment_dir.iterdir())
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index 64db0c316c..3fa2e2d71f 100644
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -1065,6 +1065,7 @@ def _handle_create(args: dict, **kw) -> str:
+             model_override=model_override, provider_override=provider_override,
+             goal_mode=goal_mode, goal_max_turns=_opt_int(args.get("goal_max_turns")),
+             completion_contract=args.get("completion_contract"),
++            raci=(args.get("raci") if isinstance(args.get("raci"), dict) else None),
+             initial_status=str(args.get("initial_status") or "running"),
+             created_by=_persisted_identity(), session_id=session_id)
+         landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)
+diff --git a/tools/kanban_tools_schemas.py b/tools/kanban_tools_schemas.py
+index f4134e92c6..e6e28df742 100644
+--- a/tools/kanban_tools_schemas.py
++++ b/tools/kanban_tools_schemas.py
+@@ -477,6 +477,11 @@ KANBAN_CREATE_SCHEMA = _schema(
+                 "open-ended cards where one shot rarely finishes the "
+                 "work. Defaults to false (classic single-shot worker)."
+         )),
++        "raci": {
++            "type": "object",
++            "description": "Structured RACI assignment: keys responsible/approver/consulted/informed, values arrays of account names. Takes precedence over body-text RACI.",
++            "additionalProperties": { "type": "array", "items": { "type": "string" } },
++        },
+         "completion_contract": _prop("string", (
+             "Declare at creation: local-only (default), OWNER/REPO for PR publication, or an exact GitHub PR URL. "
+             "PR tasks cannot complete until repository-required exact-head CI passes. On publication pass metadata.published_pr."

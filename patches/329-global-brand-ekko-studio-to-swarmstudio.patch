@@ -3068,3 +3068,16 @@ index b2c775d..70f0bc7 100644
  
  This skill is separate from Hermes Agent's native `image_generate` tool. The
  native tool reads `image_gen` from `config.yaml`; this Studio-managed endpoint
+diff --git a/tests/server/agent-bridge-manager.test.ts b/tests/server/agent-bridge-manager.test.ts
+index c336c3a..6035d71 100644
+--- a/tests/server/agent-bridge-manager.test.ts
++++ b/tests/server/agent-bridge-manager.test.ts
+@@ -190,7 +190,7 @@ describe('agent bridge manager command resolution', () => {
+     const env = buildAgentBridgeProcessEnv('ipc:///tmp/test.sock', '/tmp/hermes-home', '/tmp/hermes-agent')
+ 
+     expect(env.HERMES_OPENROUTER_APP_REFERER).toBe('https://ekkostudio.xyz')
+-    expect(env.HERMES_OPENROUTER_APP_TITLE).toBe('Ekko Studio')
++    expect(env.HERMES_OPENROUTER_APP_TITLE).toBe('SwarmStudio')
+     expect(env.HERMES_OPENROUTER_APP_CATEGORIES).toBe('cli-agent,personal-agent')
+   })
+ 

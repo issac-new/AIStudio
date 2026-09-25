@@ -930,3 +930,16 @@
 #      只回收越线部分多留完整工具结果。守门 3 例+压缩器回归 159 绿。
 #      依据 ycode-absorption-matrix 候补终态处置表（原"排队"项按设计轮落地）。
 409-agent-shed-size-order.patch
+# 410 24h 评审：runtime 镜像 ↔ 补丁链双向漂移根治（镜像侧独有修复回灌补丁链）。
+#      R1 _parse_duration 溢出/负值拒绝（kanban.py）；R2 task_attachments_dir 路径
+#      穿越校验（_require_task_id_segment，kanban_db.py）；R3 complete_task 暂存副本
+#      回滚清理；R4 原子写 _atomic_write_bytes/text（board 元数据/附件 blob 三调用点）；
+#      V1 _stage_completion_artifacts 行插入失败内部兜底清理；R5 matrix_room_list 截断
+#      50 + R6/V2 matrix_room_invite alias 统一门禁（双路径提前拒绝+解析指引文案+
+#      schema 收口）；staging TOCTOU 守卫（is_file→stat 间源文件消失走
+#      ArtifactPreservationError 并清理暂存，不再漏裸 OSError）。
+#      另回灌两处仅存于 overlay/runtime 镜像、从未进链的同源半迁移内容：C3 raci
+#      结构化列（7 文件）与 matrix 工具注册 is_async=True。
+#      守门 8 例新增（test_kanban_cli 2 / test_kanban_db 4 / test_matrix_room_tools 2），
+#      对修复敏感：撤修复即红。镜像 8 文件与"全链含 410"状态逐字节一致（cmp 对账）。
+410-agent-kanban-runtime-hardening.patch
