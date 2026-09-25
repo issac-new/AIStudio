@@ -25,8 +25,12 @@ PATCHDIR="$OVERLAY_ROOT/patches"
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 AGENT_TREE="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
-# 与 inject.mjs 的路由规则保持一致（scripts/inject.mjs 的 targetRoot 判定）
-AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/)'
+# 与 inject.mjs 的路由规则保持一致（scripts/inject.mjs 的 HERMES_AGENT_PATCH_PREFIXES
+# 是路由前缀的单一事实源，此为 shell 侧镜像——改任一侧必须同步另一侧，否则 patch 会被
+# 静默跳过：候选 0 exit 0 无告警）。当前全集：
+#   hermes_cli/ plugins/ agent/ apps/ assets/ acp_ gateway/ tests/gateway/
+#   tests/hermes_cli/ optional-mcps/ optional-skills/ tools/ tests/tools/ tests/agent/
+AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/)'
 
 # 要部署的 patch：位置参数优先，否则用默认清单（空格分隔，可用 AIPAY_AGENT_PATCHES 覆盖）
 DEFAULT_PATCHES="372-agent-tick-socket-fallback.patch 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch"
