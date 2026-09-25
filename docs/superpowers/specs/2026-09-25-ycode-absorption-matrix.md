@@ -238,7 +238,7 @@
 | codex：web_search 四档+restrict_to | 🔜P2 |
 | codex：keymap 12×154 可重映射 | 🔜P2 |
 | codex：会话内分节+手动 move | 🔜P2 |
-| codex-product：/review 评审模式（两域+行内回流） | 🔜P0 |
+| codex-product：/review 评审模式（两域+行内回流） | ✅ patch 414（review-store 两域/评论 open→resolved 回流/三裁决一次定音+evidence verification 联动） |
 | codex-product：任务结果卡（验证 bullet+文件±行数+逐文件 Undo） | 🔜P0（Undo 与 #5 恢复域衔接） |
 | codex-product：Activity 收件箱三态+OS 通知 | 📦旧账已落（R4）·待随迁 |
 | codex-product：终端 actions（项目级一键命令） | 📦旧账已落（R4）·待随迁 |
@@ -276,4 +276,4 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 漏：122+ 项全部入档处置完毕（✅2 补记/🧬9 补记/📦9 旧账待迁/🔜100 排队（P0≈10·合并后/P1≈20/P2≈70）/❌3）；zcode §七 39 项→核验批 P1。
 - 错：E1-E5 全部修正（证据源声明/409 状态回改/E4 补正/E5 锚点见 #4 行已含 minimax+codex 合并批原文）。
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
-- **下一实施批（按优先级）**：~~P0 十项~~ → **P0 已落 6/10**（recap 域 v1+来源标头=410；价目表=pricing.ts；squad leader 协议=squad-protocol.ts；任务证据累积=patch 413；任务结果卡+changed-files=result-card.ts 聚合面）→ 余 P0 四项（列级编排//review）→ P1 二十项 → 旧账随迁批（📦9 项）→ 核验批。
+- **下一实施批（按优先级）**：~~P0 十项~~ → **P0 已落 7/10**（recap 域 v1+来源标头=410；价目表=pricing.ts；squad leader 协议=squad-protocol.ts；任务证据累积=patch 413；任务结果卡+changed-files=result-card.ts；/review 评审域=patch 414 两域+评论回流+三裁决联动 evidence）→ 余 P0 三项（列级编排）→ P1 二十项 → 旧账随迁批（📦9 项）→ 核验批。
