@@ -164,9 +164,9 @@
 | Plan Mode 三件套 | ✅ plan-mode.ts（agent 主动进入/确认门/auto 免打扰档/执行流转；评审面板=IdePlanFloat 数据面） |
 | MCP tool_search 渐进披露 | 🧬原生已有（tools/tool_search.py：threshold_pct 0-100+listing_max_tokens 双预算 min() 控制；topK 条数限制被 token 预算覆盖更细）——再裁决（2026-09-25 核查） |
 | 运行中 queue+GOAL-05 让位 | 🔜P1（steer 半边原生已裁；queue 让位半边无人认领——本行即认领） |
-| compact 阈值策略校准 | 🔜P2（90% 线/reserve 公式对齐） |
+| compact 阈值策略校准 | ✅ compact-threshold.ts（reserve=输出预算+5% 余量/90% 线/under·soon·now 三级） |
 | 状态栏 custom-command | 并入四源状态栏合并（kimi 行） |
-| agent-team 汇总条/投影窗口 | 🔜P2 |
+| agent-team 汇总条/投影窗口 | ✅ team-summary-bar.ts（五态计数/健康色红黄绿/零值段省略）；投影窗口并入 projection-socket task 房间 |
 | 会话搜索/归档（两轴筛选） | ✅ session-archive.ts（Recent/Archived×workspace/all+子串搜索；重命名随 UI） |
 | 命令面板元数据模型 | ✅ command-meta.ts（category×discoverability×visibleWhen 三元组过滤/分组） |
 | 草稿恢复（2MiB 原子写） | ✅ draft-store.ts（2MiB 拒存/原子写 rename/恢复清稿） |
