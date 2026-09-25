@@ -10,6 +10,7 @@
 import { createEventLogStore, type EventLogStore } from './event-log-store'
 import { GraphService } from './graph-service'
 import { RunSpawner } from './run-spawner'
+import { isCronBridgeEnabled, setCronBridgeTick, ensureLoopTickCronJob } from './cron-bridge'
 import { compileLoopToDef, type CompileDeps } from './graph-compiler'
 import { appendContractsById } from './phase-nodes'
 import { computeNextTick } from './next-tick'
@@ -395,15 +396,33 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
           log(`[graph] running-loop recovery failed: ${err instanceof Error ? err.message : err}`)
         }
       }
-      spawner?.start()
+      if (isCronBridgeEnabled()) {
+        // T3b 桥接模式：调度单写者=hermes cron——本进程不起 30s 内部轮询，
+        // 到期判定由 cron no-agent 脚本回调 /api/loop/cron-bridge/tick 驱动
+        // spawner.poll()（粒度 60s；webhook/手动 tick 不受影响）。
+        setCronBridgeTick(async () => { await spawner?.poll() })
+        const port = Number(process.env.LOOP_CRON_BRIDGE_PORT ?? '')
+        const token = process.env.LOOP_CRON_BRIDGE_TOKEN
+        if (Number.isFinite(port) && port > 0 && token) {
+          void ensureLoopTickCronJob({ port, token, log }).catch((err) => {
+            log(`[cron-bridge] 注册失败（loop 调度将无 timer 驱动，属可观测故障）：${err instanceof Error ? err.message : err}`)
+          })
+        } else {
+          log('[cron-bridge] LOOP_SCHEDULER=cron 但 LOOP_CRON_BRIDGE_PORT/LOOP_CRON_BRIDGE_TOKEN 未配置——'
+            + '未注册 cron 任务，loop 到期判定无 timer 驱动（修复配置后重启生效）')
+        }
+      } else {
+        spawner?.start()
+      }
       shadowRunner?.start()
       interruptScanner?.start()
       briefJob?.start()
       if (!tryBindSocket()) scheduleSocketRetry()
-      log(`[graph] engine mode: ${mode}`)
+      log(`[graph] engine mode: ${mode}${isCronBridgeEnabled() ? ' + cron-bridge' : ''}`)
       return assembly
     },
     stop() {
+      setCronBridgeTick(null)
       spawner?.stop()
       shadowRunner?.stop()
       interruptScanner?.stop()
