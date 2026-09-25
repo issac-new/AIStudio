@@ -964,3 +964,7 @@
 #      columns.yaml 单一事实源；GET /api/column-automation[/match]；守门 3 例。
 #      执行编排 drain 依赖 loop 会话域列后续。
 415-server-column-automation-routes.patch
+# 416 P1（kimi coder 交接话术，矩阵 §3.3）：delegate 工具描述补"final message is the
+#      entire handoff"语义——父只见最终总结，交接须带 done（file:line 锚）/left（具体
+#      下一步）/blocked 三件；纯提示词资产（kimi §五 C 表 P0 行）。
+416-agent-delegate-handoff-phrase.patch
