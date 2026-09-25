@@ -918,3 +918,9 @@
 #      剪枝 + 逐条报告；memory_tool 增 action=consolidate。确定性变换纪律（不做摘要/
 #      改写）；7d/30d auto-dream 节奏经既有 cron 运维面接（模块尾注释注册例）。
 407-agent-memory-distill-v1.patch
+# 408 候补第二批（codex 29f056c 族）：per-model 工具描述/参数覆盖——config.yaml 顶层
+#      tool_model_overrides 按模型（精确/尾通配）覆盖工具 description/parameters，
+#      挂 _load_tools 尾部（会话构建即生效）；坏 schema（parameters 非含 type 对象）
+#      回退捆绑版告警不拖垮装配（codex fail-safe 语义）。switch_model 热切换列 v2。
+#      依据 docs/upstream-analysis/codex.md 增量节 + ycode-absorption-matrix 候补表。
+408-agent-tool-model-overrides.patch
