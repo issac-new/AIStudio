@@ -135,7 +135,7 @@
 | Q12 任务分支（回复 fork） | ✅ session-fork.ts（分叉点 atIndex/谱系 parent·forkPoint/树投影 childrenOf·rootOf/越界拒） |
 | Q13 扩展市场入口 | ✅ extension-market.ts（安装态三档/版本检测/入口可见性） |
 | 记忆全局/项目两级分治 | ✅ memory-scope.ts（开关/清空/文件数下限/汇总） |
-| Q15 MCP 超时设置 | 🔜P2（与 codex X8 合并：per-server 白黑名单/审批档/超时 🔜P1） |
+| Q15 MCP 超时设置 | ✅ mcp-config.ts per-server timeoutMs（kimi 超时指引+Q15/X8 同物合并，[1,600000] 归一）；白黑名单=mcpcatalog 工具级禁用 |
 | Goal 自主到底档 | ✅ goal-autonomy.ts（三档停点/majorFork 例外/不可达与预算同停） |
 
 ### 3.3 kimi（12 项散点）
@@ -145,14 +145,14 @@
 | /mcp-config 余项（scope 三选一/超时指引/needs-auth 闭环） | 🔜P1（needs-auth OAuth 合成工具部分依赖 zcode P1-14 同项） |
 | coder 交接话术（final message=entire handoff） | 🔜P1（纯提示词资产，衔接 400 compact 六段） |
 | 会话 fork+undo 选择器 | ✅ fork=session-fork.ts（与 Q12 合并项）；undo 选择器=file-history.ts 双相快照回读（#5 恢复域） |
-| agent profile 五级来源+watch 热重载 | 🧬部分（404 配置层）·热重载 🔜P2 |
+| agent profile 五级来源+watch 热重载 | ✅ 404 配置层+458 watch 热重载 patch |
 | AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 🔜P2 |
 | AgentSwarm 扇出 | ✅ swarm-fanout.ts（批量分解/并发限流/排队计数）；/btw 侧问随 UI |
 | fileHistory 回合级双相快照 | ✅ file-history.ts（before/after 双相/单文件回读/diff 三态；#5 恢复域数据面） |
 | goal 三预算字段 | 并入 §3.9 goal 域 |
 | kimi Ctrl-B detach | ✅ shell-detach.ts（前台转后台/PTY 提示） |
-| 状态栏可定制 | 🔜P2（**四源合并**：kimi/minimax/codex/dsh，含 custom-command 探针） |
-| 会话全文搜索 | 🧬原生（session_search FTS5）·工作台入口 🔜P2 |
+| 状态栏可定制 | ✅ statusline-config.ts（四源合并：6 槽/整行替换/custom 探针） |
+| 会话全文搜索 | ✅ 原生 session_search FTS5+工作台入口（cockpit store sessionSearch 缓存面） |
 | headless -p stream-json | 🧬原生（zcode R1 实证）·补记 |
 
 ### 3.4 minimax-code（11 项散点）
@@ -260,7 +260,7 @@
 
 ### 3.9 跨仓域合并裁决（D5/D6/D7 消解）
 
-- **goal 域（八源归一）**：mimo P6/kimi/minimax/dsh/cc/codex/codex-product/zcode G5——裁决中心=goal 域以 hermes 原生 goals.py 为基座（每轮裁判+GoalGate+预算字段已有），**增量吸收统一立项**：goal 三预算字段显式化🔜P1、Quest"自主到底"档语义🔜P2。八源不再各自立项。
+- **goal 域（八源归一）**：mimo P6/kimi/minimax/dsh/cc/codex/codex-product/zcode G5——裁决中心=goal 域以 hermes 原生 goals.py 为基座（每轮裁判+GoalGate+预算字段已有），**增量吸收统一立项**：goal 三预算字段显式化✅ goal-budget.ts（steps/tokens/wallclock 独立触顶）、Quest"自主到底"档语义✅ goal-autonomy.ts（三档停点）。八源不再各自立项。
 - **steering/queue 域（七源归一）**：steer 半边🧬原生已裁决（delegate action steer/stop）；**queue 让位半边🔜P1**（minimax GOAL-05：用户消息>自治目标）单独认领。七源归此两行。
 - **命名空间消歧（D7）**："恢复点 restore-point"（#5 四恢复选项+kimi fork+qoder Q12+cc 逐文件 Undo+fileHistory——统一恢复域）vs"检查点摘要 checkpoint-writer"（P7 五节写手）。后续立项一律用此二名。
 - **状态栏定制域**：kimi/minimax/codex/dsh 四源→单行🔜P2。
