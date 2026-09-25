@@ -262,3 +262,18 @@ describe('会话条目契约归一化（X5）', () => {
     expect(events.some((e) => e.type === 'session.upserted')).toBe(false)
   })
 })
+
+
+describe('WS 房间细化到 task 级（multica §五）', () => {
+  it('带 taskId 事件加投 task 房间；socket 订阅面注册', () => {
+    const rooms: string[] = []
+    const fakeIo = {
+      of: () => ({ to: (room: string) => ({ emit: (name: string) => { rooms.push(`${name}@${room}`) } }) }),
+    } as never
+    emitZcodeProjectionEvent(fakeIo, { type: 'mention.outcome', workspaceId: '/w', taskId: 't9', reason: 'queued' } as never)
+    expect(rooms).toContain('zcode:event@zcode:/w')
+    expect(rooms).toContain('zcode:event@zcode:/w:t:t9')
+    const sock = readFileSync(resolve(OVERLAY_ROOT, 'custom/server/zcode/projection-socket.ts'), 'utf8')
+    expect(sock).toContain("socket.on('subscribe-task'")  // 服务端订阅监听（emit 是客户端侧动词）
+  })
+})

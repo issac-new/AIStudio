@@ -90,7 +90,7 @@ export async function matrixInviteUser(
   throw new Error(`invite ${userId} failed: HTTP ${res.status} ${body.slice(0, 120)}`)
 }
 
-/** 发送 m.room.message 文本到房间。 */
+/** 发送 m.room.message 文本到房间（仅人读通知，不承担协作语义）。 */
 export async function matrixSendMessage(
   env: MatrixDispatchEnv,
   roomId: string,
@@ -109,6 +109,33 @@ export async function matrixSendMessage(
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`sendMessage failed: HTTP ${res.status} ${body.slice(0, 120)}`)
+  }
+}
+
+/**
+ * 发送自定义类型协议事件（协作信号唯一通道）。类型字符串与 content 形状由
+ * task-protocol.ts 约束（镜像 matrix-teams 协议 v1 稳定面）；禁止用本函数发
+ * 自由格式协作消息——那类诉求走矩阵协议事件或人读摘要。
+ */
+export async function matrixSendProtocolEvent(
+  env: MatrixDispatchEnv,
+  roomId: string,
+  eventType: string,
+  content: Record<string, unknown>,
+): Promise<void> {
+  const origin = await safeMatrixOrigin(env.homeserverUrl)
+  const txnId = `proto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const res = await fetch(
+    `${origin}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/send/${encodeURIComponent(eventType)}/${encodeURIComponent(txnId)}`,
+    {
+      method: 'PUT',
+      headers: authHeaders(env.accessToken),
+      body: JSON.stringify(content),
+    },
+  )
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`sendProtocolEvent ${eventType} failed: HTTP ${res.status} ${body.slice(0, 120)}`)
   }
 }
 

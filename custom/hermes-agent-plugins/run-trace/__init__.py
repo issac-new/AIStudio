@@ -152,6 +152,7 @@ def _on_session_start(ctx: Any, payload: dict) -> None:
                 started_at=started_at,
                 model=payload.get("model"),
                 provider=payload.get("provider"),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             header = {
@@ -245,6 +246,7 @@ def _pre_api_request(ctx: Any, payload: dict) -> None:
                 model=payload.get("model"),
                 provider=payload.get("provider"),
                 started_at=started_at,
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -300,6 +302,7 @@ def _post_api_request(ctx: Any, payload: dict) -> None:
                 duration_ms=duration_ms,
                 usage=payload.get("usage"),
                 finish_reason=payload.get("finish_reason"),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -352,6 +355,7 @@ def _post_tool_call(ctx: Any, payload: dict) -> None:
                 status=payload.get("status"),
                 error_message=payload.get("error_message"),
                 started_at=payload.get("ts", time.time()),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -402,6 +406,7 @@ def _subagent_start(ctx: Any, payload: dict) -> None:
                 session_id=session_id,
                 label=subagent_label,
                 started_at=started_at,
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {
@@ -452,6 +457,7 @@ def _subagent_stop(ctx: Any, payload: dict) -> None:
                 ended_at=ended_at,
                 duration_ms=duration_ms,
                 status=payload.get("status"),
+                collab_event_id=payload.get("collab_event_id"),
             )
         else:
             chunk = {

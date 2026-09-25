@@ -24,6 +24,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
+# M3 事件化：delivery.* 协议事件层（MX_DELIVERY=1 启用，缺省零行为变化；映射与
+# 断言见 docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
+source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
 
 # 临时物清理（Z6）：ba 步 /tmp/mx-rfd-remote.$$ 与 ready 步 DL_WT 临时 worktree 中途
 # 退出会残留。重定义 mx_cleanup 扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按
@@ -223,6 +226,11 @@ if step_reached reqgate; then
     if repo_commit_main "$(freeze_doc)" "director (G1)" "director@aipaydev.local" \
          "docs(requirements): ${RFD_ID} G1 冻结（AC/Scope-Out/影响面/涉敏 四要素过）"; then
       note "[G1] ${RFD_ID} 需求冻结完成（$(freeze_doc) 已入 origin/main）"
+      # M3 事件化：开案例房（P1）→ stage P1 done → gate G1 pass（HumanGate=PM 人类 sender）→ case→P2
+      dlv_enabled && {
+        dlv_scenario_open "aipaydev ${RFD_ID}" "https://github.com/issac-new/aipaydev"
+        dlv_scenario_phase P1 fanfan G1 fanfan human "G1 四要素冻结入仓（$(freeze_doc)）" P2
+      }
     else
       echo "ISSUE|g1-push|director|$(freeze_doc) 推送 origin/main 失败（留存 ${FREEZE_LOCAL}）" >> "$EVID_DIR/issues.log"
       note "[观察] G1 冻结文件推送失败（留存本地，记问题单）"
@@ -264,7 +272,7 @@ if step_reached dispatch; then
 建主卡与派发子卡时必须填写结构化 raci 字段（--raci，四元组 responsible/approver/consulted/informed）。
 **注意：子任务必须建在对应责任人的看板上（板名=责任人账号名-pay-core 等格式），不是建在你自己的板上。**
 **建完子任务后，必须在群内逐条发 matrix 消息 @责任人-agent @团队负责人-agent 附任务明细（用 m.mentions 提及）。不发消息=没人知道有这个任务。**
-**assignee 字段填短名（如 chen），不要填 @chen-agent:matrix.test。**
+**assignee 字段必须填该看板 board.json 团队名单（profiles）里的 agent 档案名——责任人看板的团队名可在 fleet-manifest 查（如 chen-pay-core 板填 chen-csw-pay-core），本主卡填 fanfan-sys-analyst。不要填 @chen-agent:matrix.test（mxid），也不要填裸短名 chen——板级认领围栏按团队名单精确匹配，填错=agent 永远认领不到（09-26 实锤）。**
 结论行必须二选一并带凭证，无凭证一律视为未完成：
   ANALYSIS-DONE-${RFD_ID} commit=<分析稿已推送的 commitId> card=<协作看板主卡ID>
   ANALYSIS-BLOCKED-${RFD_ID} reason=<阻塞原因> done=<已完成部分清单>
@@ -310,7 +318,7 @@ if step_reached analysis; then
     # agent 已建出真卡 t_4bee99f1 却没重报，房间里的 DONE 仍是旧的假卡号，被我方正确拒收，
     # 但没人告诉它要重报，于是死锁在验收上）。
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
-      "@$(agent_mxid fanfan) 凭证核验未通过：你的账号板里其实已有 ${RFD_ID} 主卡，但你最后上报的 DONE 行里 card 仍是需求编号，不是真实卡 ID。
+      "@$(agent_mxid fanfan) 凭证核验未通过：你的账号板里其实已有 ${RFD_ID} 主卡。DONE 行里的 card 必须填建卡工具返回的真实卡 ID（形如 t_4bee99f1），拿需求编号充当一律判虚报。
       请重新发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID，形如 t_4bee99f1>。
       只需补这一行，不要重做已完成的分析与登记。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[拒收回灌] 已 @fanfan-agent 要求用真实卡 ID 重报结论行"
@@ -459,6 +467,8 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       kanban_walk_done arch "$AGID"
       sset g2_arch_pass "$(date +%s)"
       note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
+      # M3 事件化：P2 done（概设定稿）→ G2 pass（arch 评审）→ case→P3
+      dlv_enabled && dlv_scenario_phase P2 fanfan G2 arch artifact "概设评审过（arch 板 ${AGID}）" P3
     else
       echo "ISSUE|g2-design-review-fail|arch-agent|${RFD_ID} G2 评审 FAIL（缺项见评审卡），回灌修订" >> "$EVID_DIR/issues.log"
       dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评。" "$(agent_mxid fanfan)"
@@ -548,6 +558,8 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
            echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
   done
   sset devimpl_done 1
+  # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
+  dlv_enabled && dlv_scenario_phase P3 chen G3 chen command-exit "devimpl 分支自测+评审过" P4
 fi
 
 # ══ 步骤 16b：合并集成 + 测试执行 + 缺陷闭环 ═════════
@@ -638,6 +650,8 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   fi
   sset testpass_done 1
   sset g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
+  # M3 事件化：P4 done（集成+缺陷闭环+测试报告）→ G4 pass（非实现者 tester）→ case→P5
+  dlv_enabled && dlv_scenario_phase P4 qi G4 qi command-exit "testpass 测试报告入仓+G4 硬闸置位" P5
 fi
 
 # ══ 步骤 20：ready（G5 发布准出评审，V3 新增；吸收原 templates 模板完备性）══
@@ -662,6 +676,8 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       kanban_walk_done fanfan "$RGID"
       sset g5_ready "$(date +%s)"
       note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准）"
+      # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
+      dlv_enabled && dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
     else
       echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
       dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行。" "$(agent_mxid fanfan)"
@@ -783,6 +799,8 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       fi
       sset uat_done "$(date +%s)"
       note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
+      # M3 事件化：P5 done（发布+UAT 验收报告）→ case→P6
+      dlv_enabled && dlv_scenario_advance P5 fanfan P6 "git:main#$(git -C "${DIRECTOR_CLONE:-.}" rev-parse --short HEAD 2>/dev/null || echo na):docs/acceptance/${RFD_ID}-acceptance.md"
     else
       echo "ISSUE|uat-ac-failed|fanfan-agent|UAT 证据核对失败：${UAT_MISS}" >> "$EVID_DIR/issues.log"
       fail "UAT 验收未过（${UAT_MISS}）——缺陷回流 defect 语义"
@@ -880,6 +898,8 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   # 空推/被拒，复盘/治理报告进不了 origin/main。
   if repo_commit_main "docs/retro/${RUN_ID:-default}-${RFD_ID}-retrospective.md" "director (G6)" "director@aipaydev.local" "docs(retro): ${RFD_ID} G6 复盘与治理报告回写"; then
     note "[G6] 复盘文档已入仓"
+    # M3 事件化：P6 done（复盘+治理报告入仓）→ G6 pass → 终态 P6
+    dlv_enabled && dlv_scenario_phase P6 fanfan G6 fanfan artifact "G6 三段式复盘+治理报告入仓" -
   else
     echo "ISSUE|retro-push|director|复盘文档推送失败（留存 ${EVID_DIR}）" >> "$EVID_DIR/issues.log"
     note "[观察] 复盘推送失败"
@@ -1008,6 +1028,8 @@ print(out)
 PYEOF
   note "[报告] HTML 推演报告已生成：${REP}（截图集 ${SHOTS} 自动嵌入，补齐截图后重跑 report 步刷新）"
   sset report_done "$(date +%s)"
+  # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）
+  dlv_enabled && dlv_scenario_assert
 fi
 
 note "===== 全流程执行区间（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）内全部 gates 执行完毕 ====="

@@ -102,19 +102,19 @@
 
 | 项 | 处置 |
 |---|---|
-| A1 证据型工件挂任务里程碑（截图/录制/diff 卡） | 🔜P1（与 routa"任务=证据累积"同域合并立项） |
+| A1 证据型工件挂任务里程碑（截图/录制/diff 卡） | ✅ evidence 域合并落（evidence-store kind=artifact+milestone 挂载+changedFilesByTurn 分组投影，patch 413 台账） |
 | A2 计划工件评审化（行内评论+Proceed/Review） | 📦旧账已落（IdePlanFloat，R3）·待随迁 |
-| A3 任务组语义（edited-files 清单+待批步骤专区） | 🔜P2 |
-| A4 浏览器安全层（URL allow/deny+独立 profile） | 🔜P2（依赖浏览器工具面） |
-| A5 代理驱动浏览器回路 | 🔜P2 |
+| A3 任务组语义 | ✅ task-groups.ts（edited-files 清单/待批步骤专区/组汇总） |
+| A4 浏览器安全层 | ✅ browser-security.ts（deny 优先/白名单/独立 profile） |
+| A5 浏览器回路 | ✅ browser-loop.ts（截图-动作-录制严格回路/录制回流计数） |
 | A6 会话内模型切换器（粘性+推理档+余量双仪表） | 📦旧账已落（IdeModelSwitcher，R4）·待随迁 |
-| A7 任务形态 slash 命令语义 | 🧬部分（hermes slash 面已有）·余 🔜P2 |
-| A8 /learn 沉淀闭环 | 🔜P2（衔接 P4 记忆域） |
-| A9 MCP 目录化安装+工具级禁用 | 🔜P2 |
-| A10 /boost 多代理推理管线 | 🔜P2 |
-| A11 Terminal OS 级沙箱 | ❌不吸收（超 Ycode 范围）；定时任务编辑视图🔜P2 |
-| A12 Manager 聚合视图+Inbox 异步通知 | 🧬驾驶舱同域已备·聚合 UI 🔜P2 |
-| A13 Knowledge 代理检索/贡献闭环 | 🔜P2（依赖 semantica 迁移，§1.3 手册#2） |
+| A7 任务形态 slash 命令语义 | ✅ hermes slash 面+command-as-task.ts（任务模板派生/槽位填充/门禁随行/纯命令不派生） |
+| A8 /learn 沉淀闭环 | ✅ learn-distill.ts（三归宿判定/流程化优先） |
+| A9 MCP 目录化 | ✅ mcp-catalog.ts（工具级禁用/Store 装机/可用工具扣减） |
+| A10 /boost 管线 | ✅ boost-pipeline.ts（断言回灌/一致数胜出/多数一致 verified） |
+| A11 Terminal OS 级沙箱/语音/定时视图 | 沙箱❌不吸收（超范围）；语音转写✅ speech-transcribe.ts（低置信标注/质量三档）；定时编辑视图✅ 并入 autosched |
+| A12 Manager 聚合视图 | ✅ manager-hub.ts（驾驶视图排序/working-idle/要人总数） |
+| A13 Knowledge 代理检索/贡献闭环 | ✅ 判定面 knowledge-loop.ts（通用性准入/检索命中才入选）；semantica 存储迁移仍排队（§1.3 手册#2） |
 | 补记：子代理目录 UI+状态机 | 📦旧账（IdeSubagentsFloat）·待随迁（并入 #10） |
 
 ### 3.2 qoder（16 项，此前整仓缺席）
@@ -122,158 +122,201 @@
 | 项 | 处置 |
 |---|---|
 | Q1 Repo Wiki 生成闭环 | 📦旧账已落（wikiPipeline，R5）·待随迁 |
-| Q2 规则体系四型作用域 | 🔜P1 |
-| Q3 输入框 / 触发体系 | 🧬部分（slash 已备）·统一入口 🔜P2 |
+| Q2 规则体系四型作用域 | ✅ rules-scope.ts（always/model-decides/at-manual/glob 四型+global/project 两级合并） |
+| Q3 输入框 / 触发体系 | ✅ slash 已备+统一入口=cmdmeta 三元组+ide 命令面板（command-palette 守门） |
 | Q4 任务级 Worktree 选择 | 🧬原生（delegate worktree+loop WorktreeManager）·补记 |
-| Q5 自动化（时区/到期日/无人值守授权） | 🧬大部分（hermes cron 域）·无人值守授权 🔜P2 |
-| Q6 工作台体检五维报告 | 🔜P2 |
+| 自动化（定时/时区/到期/无人值守） | ✅ automation-schedule.ts（到期自停/授权双门/时区日分组） |
+| 工作台体检（五维） | ✅ harness-health.ts（五维评分/优化卡/损坏降级） |
 | Q7 会话手动压缩入口 | 🧬原生（hermes /compact+微压缩）·补记 |
-| Q8 代码安全三档扫描 | 🔜P2 |
-| Q9 白板 Agent 生成+圈选回传 | 🔜P2（旧账画板 undo 基础上扩） |
-| Q10 Auto 模型路由+思考强度参数 | 🔜P2 |
-| Q11 Hooks 生命周期配置界面 | 📦旧账已落（hooks 只读面板，R4）·写档面 🔜P2 |
-| Q12 任务分支（回复 fork） | 🔜P2（与 kimi fork 合并立项） |
-| Q13 扩展市场入口 | 🔜P2 |
-| Q14 记忆全局/项目分治 | 🧬部分（memory/user 双 target）·项目级 🔜P2 |
-| Q15 MCP 超时设置 | 🔜P2（与 codex X8 合并：per-server 白黑名单/审批档/超时 🔜P1） |
-| Q16 Goal 自主到底档 | 并入 §3.9 goal 域合并裁决 |
+| 代码安全三档扫描 | ✅ code-security.ts（静态/语义/数据流按风险选档/发现分级） |
+| Q9 白板回路 | ✅ whiteboard-loop.ts（Agent 生成/圈选标注回传/区域校验） |
+| Auto 模型路由 | ✅ model-routing.ts（三档成本/low~max 思考强度） |
+| Q11 Hooks 生命周期配置界面 | ✅ 旧账只读面板（R4）+hooks-write.ts 写档面（upsert/启停/重排/七事件词表 d.ts:402） |
+| Q12 任务分支（回复 fork） | ✅ session-fork.ts（分叉点 atIndex/谱系 parent·forkPoint/树投影 childrenOf·rootOf/越界拒） |
+| Q13 扩展市场入口 | ✅ extension-market.ts（安装态三档/版本检测/入口可见性） |
+| 记忆全局/项目两级分治 | ✅ memory-scope.ts（开关/清空/文件数下限/汇总） |
+| Q15 MCP 超时设置 | ✅ mcp-config.ts per-server timeoutMs（kimi 超时指引+Q15/X8 同物合并，[1,600000] 归一）；白黑名单=mcpcatalog 工具级禁用 |
+| Goal 自主到底档 | ✅ goal-autonomy.ts（三档停点/majorFork 例外/不可达与预算同停） |
 
 ### 3.3 kimi（12 项散点）
 
 | 项 | 处置 |
 |---|---|
-| /mcp-config 余项（scope 三选一/超时指引/needs-auth 闭环） | 🔜P1（needs-auth OAuth 合成工具部分依赖 zcode P1-14 同项） |
-| coder 交接话术（final message=entire handoff） | 🔜P1（纯提示词资产，衔接 400 compact 六段） |
-| 会话 fork+undo 选择器 | 🔜P2（与 Q12 合并） |
-| agent profile 五级来源+watch 热重载 | 🧬部分（404 配置层）·热重载 🔜P2 |
-| AGENTS.md 装载链细节 | 🧬大部分（hermes 装载已有）·告警/防抖细节 🔜P2 |
-| AgentSwarm 扇出+/btw 侧问 | 🧬delegate 批量已有·UI 🔜P2 |
-| fileHistory 回合级快照 | 🔜P2（与 #5 恢复域合并） |
+| /mcp-config 余项（scope 三选一/超时指引/needs-auth 闭环） | ✅ mcp-config.ts（scope project/global/session+timeoutMs 归一）+patch 459（needs-auth OAuth 合成工具，zcode P1-14 同项已覆盖） |
+| coder 交接话术（final message=entire handoff） | ✅ handoff-script.ts（六段：done/notDone/risks/next/artifacts/verify+结构守门+渲染） |
+| 会话 fork+undo 选择器 | ✅ fork=session-fork.ts（与 Q12 合并项）；undo 选择器=file-history.ts 双相快照回读（#5 恢复域） |
+| agent profile 五级来源+watch 热重载 | ✅ 404 配置层+458 watch 热重载 patch |
+| AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 ✅ agents-md.ts（32KB 告警+shouldEmit 防抖 300ms 窗口） |
+| AgentSwarm 扇出 | ✅ swarm-fanout.ts（批量分解/并发限流/排队计数）；/btw 侧问随 UI |
+| fileHistory 回合级双相快照 | ✅ file-history.ts（before/after 双相/单文件回读/diff 三态；#5 恢复域数据面） |
 | goal 三预算字段 | 并入 §3.9 goal 域 |
-| Ctrl-B detach shell | 🧬原生（terminal background+process_manage）·快捷键 🔜P2 |
-| 状态栏可定制 | 🔜P2（**四源合并**：kimi/minimax/codex/dsh，含 custom-command 探针） |
-| 会话全文搜索 | 🧬原生（session_search FTS5）·工作台入口 🔜P2 |
+| kimi Ctrl-B detach | ✅ shell-detach.ts（前台转后台/PTY 提示） |
+| 状态栏可定制 | ✅ statusline-config.ts（四源合并：6 槽/整行替换/custom 探针） |
+| 会话全文搜索 | ✅ 原生 session_search FTS5+工作台入口（cockpit store sessionSearch 缓存面） |
 | headless -p stream-json | 🧬原生（zcode R1 实证）·补记 |
 
 ### 3.4 minimax-code（11 项散点）
 
 | 项 | 处置 |
 |---|---|
-| /context 六段构成可视化 | 🧬部分（403 三投影）·六段网格扩展 🔜P1 |
-| ask_user 结构化问卷契约 | 🔜P1（minimax+dsh 双源） |
-| Plan Mode 三件套 | 🔜P1（R5 留档接续） |
-| MCP tool_search 渐进披露 | 🔜P1 |
-| 运行中 queue+GOAL-05 让位 | 🔜P1（steer 半边原生已裁；queue 让位半边无人认领——本行即认领） |
-| compact 阈值策略校准 | 🔜P2（90% 线/reserve 公式对齐） |
+| /context 六段构成可视化 | ✅ 403 三投影+context-six-source.ts 六源网格（四段→六源映射+isEstimate 诚实标注+fromSpans 升级面） |
+| ask_user 结构化问卷契约 | ✅ ask-contract.ts（1-4 步×2-4 选项×recommended≤1×带图；一次定音；挂载 455） |
+| Plan Mode 三件套 | ✅ plan-mode.ts（agent 主动进入/确认门/auto 免打扰档/执行流转；评审面板=IdePlanFloat 数据面） |
+| MCP tool_search 渐进披露 | 🧬原生已有（tools/tool_search.py：threshold_pct 0-100+listing_max_tokens 双预算 min() 控制；topK 条数限制被 token 预算覆盖更细）——再裁决（2026-09-25 核查） |
+| 运行中 queue+GOAL-05 让位 | ✅ goal-preemption.ts（用户消息>自治目标/让位 yielded/让位点续跑/goal 不抢位）+steer 半边🧬原生 |
+| compact 阈值策略校准 | ✅ compact-threshold.ts（reserve=输出预算+5% 余量/90% 线/under·soon·now 三级） |
 | 状态栏 custom-command | 并入四源状态栏合并（kimi 行） |
-| agent-team 汇总条/投影窗口 | 🔜P2 |
-| 会话搜索/归档/重命名 | 🔜P2 |
-| 命令面板元数据模型 | 🔜P2 |
-| 草稿恢复（原子写） | 🔜P2 |
+| agent-team 汇总条/投影窗口 | ✅ team-summary-bar.ts（五态计数/健康色红黄绿/零值段省略）；投影窗口并入 projection-socket task 房间 |
+| 会话搜索/归档（两轴筛选） | ✅ session-archive.ts（Recent/Archived×workspace/all+子串搜索；重命名随 UI） |
+| 命令面板元数据模型 | ✅ command-meta.ts（category×discoverability×visibleWhen 三元组过滤/分组） |
+| 草稿恢复（2MiB 原子写） | ✅ draft-store.ts（2MiB 拒存/原子写 rename/恢复清稿） |
 
 ### 3.5 multica（12 项散点）
 
 | 项 | 处置 |
 |---|---|
-| squad leader 协调协议（评估必录+dispatch 即停） | 🔜P0（驾驶舱协作主线；#7 只落了 mention 半边） |
+| squad leader 协调协议（评估必录+dispatch 即停） | ✅ squad-coordinator.ts（评估必录拒空 rationale/dispatch 即停拒叠加/三态闭环）+#7 mention 派单半边（驾驶舱协作主线） |
 | inbox 三档 severity×归档双轴 | ✅ patch 418（三档/双轴四象限/双收件人/正文截 200/批量操作） |
-| 分派预演 WillEnqueueRun | 🔜P1（写读共用谓词，衔接 #7 派单链） |
-| resume-unsafe 分档+work_dir 继承 | 🔜P2 |
-| 在场两维（availability×workload） | 🔜P2 |
-| execution log 每 run 一行+费用列 | 🧬RunTrace 已有骨架·费用列 🔜P2 |
+| 分派预演 WillEnqueueRun | ✅ dispatch-preview.ts（写读共用谓词 willEnqueueRun：暂停/重复/并发上限/去重键四因子）+#7 派单链 |
+| 会话续接 resume-unsafe 分档 | ✅ resume-safety.ts（黑名单优先/new_session/safe_retry/backoff 指数退避封顶）；work_dir 继承随 delegate 域后续 |
+| 在场两维（availability×workload） | ✅ presence-two-axis.ts（圆点+芯片分画/30s-90s 心跳三档/在线闲与离线忙可分） |
+| execution log 每 run 一行+费用列 | ✅ run-log.ts（一行一 run：结论三态/耗时/命令截断/费用列/倒序筛选） |
 | 分布式 cron 锁表 | ❌单机形态不适用（多机形态再启） |
-| runtime brief 前缀稳定缓存 | 🔜P2 |
-| 共享目录并发警告 | 🔜P2 |
-| WS 房间细化到 task 级 | 🔜P2 |
-| PR 交付链提示词规约 | 🔜P2 |
-| 看板组织面（父子/五档/四视图） | 🧬kanban 父子已有·四视图 🔜P2 |
+| runtime brief 前缀稳定缓存 | ✅ brief-cache.ts（稳定前缀/词边界回退/链收益统计） |
+| 共享目录并发警告块 | ✅ workdir-adjacency.ts（并发>1 警告/chat 共享警示块/互斥锁归调度层） |
+| WS 房间细化到 task 级 | ✅ projection-socket.ts subscribe-task 归属闸+task 房间扇出（multica §五） |
+| PR 交付链提示词规约 | ✅ pr-delivery.ts（--base 显式/分支规约/验据锚点/交付边界提示词） |
+| 看板组织面 | ✅ board-organize.ts（四视图投影/五档/acceptance 准备度/父子缩进） |
 
 ### 3.6 routa（14 项散点）
 
 | 项 | 处置 |
 |---|---|
-| 列级 automation steps 编排 | 🔜P0（399 只落门禁半边，编排半边即本行） |
-| 每 board 并发闸+事件驱动 drain | 🧬部分（per-profile cap）·board 级闸 🔜P1 |
-| 任务=证据累积对象（laneSessions/交付快照/裁决） | 🔜P0（与 A1 合并立项） |
-| 结果回收三兜底 | 🔜P1 |
-| agent→coordinator 权限升级（urgency 三档） | 🔜P1（衔接 402 审批域） |
-| dev 列 watchdog+监督模式 | 🔜P1（衔接 401 runaway-guard） |
+| 列级 automation steps 编排 | ✅ automation-steps.ts 编排半边（列绑定 steps/门禁前置/fail-fast·continue 策略/skip≠失败）+399 门禁半边 |
+| 每 board 并发闸+事件驱动 drain | ✅ patch 419（board_concurrency 默认 1/超限排队/同 tick 计数/默认板有闸）；事件驱动 drain 随 loop 域扩 |
+| 任务=证据累积对象（laneSessions/交付快照/裁决） | ✅ evidence 域全落：交付快照/裁决（evidence-store delivery_snapshot·verification）+A1 工件+lane 履历（lane-timeline.ts 时序/小结） |
+| 结果回收三兜底 | 🧬原生已有（再裁决 2026-09-25）：hermes delegate 同步 join=结果必回强于旁路兜底；_fabricated_entry 超时断连兜底=auto-report 语义；background 结果轮间回注=wakeParent；session-end finally=清理兜底 |
+| agent→coordinator 权限升级（urgency 三档） | ✅ urgency-escalation.ts（low=queue/normal=inbox-first/critical=preempt 打断+升级必录理由，衔接 402+456） |
+| dev 列 watchdog+监督模式 | ✅ runaway_supervisor.py（watchdog_retry/ralph_loop 判定面+有界恢复转人工；patch 457；执行钩子后续） |
 | 执行租约+runner 反代 | ❌单机不适用（多机再启；A2A 依赖它同缓） |
 | 共享会话四档模式+prompt 审批 | 📦旧账已落（ide-session-share R6）·待随迁 |
-| 会话连续性四态徽标 | 🔜P2 |
-| 泳道专家提示词资产 11 份 | 🔜P1（资产搬运，404 名册是 team 角色非泳道专家） |
-| Worker 抽象 | 🔜P2 |
-| A2A 出站/入站协议 | 🔜P2（依赖租约，同缓） |
-| Yjs CRDT 共写笔记 | 🔜P2 |
-| 名册树视图 | 🔜P2 |
+| 会话连续性四态徽标 | ✅ session-continuity.ts（active/interrupted/restorable/stale 7 天线，routa 语义） |
+| 泳道专家提示词资产 11 份 | ✅ runtime/roster/lane-specialists/（MIT 附出处原样搬运+README 升级纪律） |
+| Worker 抽象 | ✅ worker-abstraction.ts（五态心跳状态机/capability 路由/三环境） |
+| A2A 出站/入站协议 | ✅ a2a-protocol.ts（Agent Card 校验/终态判定/externalTaskId 映射） |
+| Yjs CRDT 共写笔记 | ✅ crdt-notes.ts（Yjs 轻量语义：段落 LWW/决胜规则/归因；引擎后可替换） |
+| 名册树视图 | ✅ roster-tree.ts（lead 聚合/delegates/descendants 子树和/降序） |
 
 ### 3.7 claude-code（13 项散点；专有许可只搬概念）
 
 | 项 | 处置 |
 |---|---|
-| 会话 recap（离开后发生了什么） | 🔜P0（cc/codex/dsh 三源合并；衔接 405 checkpoint 写手） |
-| 子代理结果来源标头防冒充 | 🔜P0（安全项） |
+| 会话 recap（离开后发生了什么） | ✅ patch 410 recap v1（cc/codex/dsh 三源合并域：重派开局带 checkpoint 上次进展；衔接 405 写手） |
+| 子代理结果来源标头防冒充 | ✅ patch 410 agent-source-marks（代码侧不可伪造标记/子文本同款中性化/单点生成） |
 | 通知补耗时/模型 | 📦旧账已含（R4 活动收件箱）·待随迁 |
-| 计划模板（feature-dev 范式） | 🔜P1（纯资产） |
-| 评审/验证轮编排模板 | 🔜P1（与 codex-product /review 合并） |
-| 技能入口（skills=commands 合并口径） | 🔜P1（zcode SkillPort 原生面待核） |
-| 权限模式 7 档语义+切换 UI | 🧬部分（402 决策态+规则）·模式语义 🔜P2 |
+| 计划模板（feature-dev 范式） | ✅ runtime/roster/prompts/plan-template.md（cc 概念自研重写：阶段+门禁+关键文件清单；红线合规） |
+| 评审/验证轮编排模板 | ✅ review-template.md（高信号纪律+独立验证轮自研；实件 /review 已落 patch 414） |
+| 技能入口（skills=commands 合并口径） | 🧬原生（hermes skills_list/skill_manage 面）；工作台 UI 入口随 UI 批 🔜P2 |
+| 权限模式 7 档语义+切换 UI | ✅ permission-modes.ts 七档语义（cc d.ts:6046 六档+readonly/放行面/三档映射）+402 决策态；切换 UI 随 UI 批 |
 | 任务依赖 dependsOn | 🧬原生（kanban 父子依赖+claim 重检）·补记 |
-| 缓存 miss 归因//context 建议//skill-doctor | 🔜P2 |
-| /btw/输出风格/队列视觉/ralph | 🔜P2 |
-| @提及六源（file/session） | 🔜P2（与 codex-product 文件引用合并；#7 A2A mention 是不同物） |
-| auto memory 四类型+新鲜度 | 🔜P2（P4 域扩展） |
-| security-guidance 同步拦+异步复查 | 🔜P2 |
+| cc：缓存 miss 归因 | ✅ cache-attribution.ts（归因优先序/命中率三档/建议文案） |
+| cc：/btw 侧问 | ✅ btw-sidebar.ts（三态/合并回注/不改主方向） |
+| @提及六源（file/session） | ✅ mention-resolution.ts（六源 file/session/skill/plugin/subagent/whiteboard+派单 agent/squad 同解析口径，client/ide/utils） |
+| auto memory 四类型+新鲜度 | ✅ memory-taxonomy.ts（四类型归档/7-30 天三档/stale 降权/fact 锚点） |
+| security-guidance 双层 | ✅ security-guidance.ts（同步拦/异步复查/放行三态） |
 
 ### 3.8 codex（11 项）+ codex-product（7 项，整份此前缺席）+ deepseek-harness（7 项）+ dsh-TUI（6 项）
 
 | 项 | 处置 |
 |---|---|
-| codex：渲染分项开关（mermaid/math/tables 回退源码） | 🔜P1（与 dsh mermaid 渲染合并） |
+| codex：渲染分项开关（mermaid/math/tables 回退源码）+dsh mermaid 渲染策略 | ✅ render-options.ts + mermaid-render.ts（开关降级/渲染败降级 SVG/摘要） |
 | codex：计划三选一门 | 📦旧账已落（IdePlanFloat R3）·待随迁 |
-| codex：turn 完成 notify 外部命令钩子 | 🔜P2 |
-| codex：token-budget 换窗 | 🔜P2 |
-| codex：(model,effort) 成本分组+日桶 | 🔜P2（G7 域） |
-| codex：config 8 层叠加+origins | 🔜P2 |
-| codex：web_search 四档+restrict_to | 🔜P2 |
-| codex：keymap 12×154 可重映射 | 🔜P2 |
-| codex：会话内分节+手动 move | 🔜P2 |
+| codex：turn notify 外呼钩子 | ✅ turn-notify.ts（占位替换/off 关/触发台账） |
+| codex：token-budget 换窗决策 | ✅ window-shift.ts（shift/prune/compact 三策略；critical 事实强制 compact） |
+| codex：(model,effort) 成本分组+日桶 | ✅ thread-usage.ts（分组降序/日桶升序/衔接 rounds-table/usage-ledger） |
+| codex：config 8 层叠加+per-key origins | ✅ config-layers.ts（覆盖序/来源追踪/debug 视图） |
+| codex：web_search 四档+域收敛 | ✅ web-search-policy.ts（off/light/full/agent/交集收敛/子域准入） |
+| codex：keymap 可重映射 | ✅ keymap.ts（override 覆盖/一键双绑冲突检测） |
+| codex：会话内分节 | ✅ session-sections.ts（定义幂等/手动 move/汇总） |
 | codex-product：/review 评审模式（两域+行内回流） | ✅ patch 414（review-store 两域/评论 open→resolved 回流/三裁决一次定音+evidence verification 联动） |
-| codex-product：任务结果卡（验证 bullet+文件±行数+逐文件 Undo） | 🔜P0（Undo 与 #5 恢复域衔接） |
+| codex-product：任务结果卡（验证 bullet+文件±行数+逐文件 Undo） | ✅ result-card.ts 前两半+file-undo.ts 逐文件 Undo（三态/回写计划，#5 恢复域 file-history 衔接） |
 | codex-product：Activity 收件箱三态+OS 通知 | 📦旧账已落（R4）·待随迁 |
 | codex-product：终端 actions（项目级一键命令） | 📦旧账已落（R4）·待随迁 |
-| codex-product：文件/选区引用入会话 | 🔜P1（@域合并） |
-| codex-product：webhook 事件触发 | 🔜P2 |
-| codex-product：AGENTS.md /init | 🔜P2 |
+| codex-product：文件/选区引用入会话 | ✅ 文件=mention-resolution file 源；选区=selection-ref.ts（@file:L 区间/校验/引用卡） |
+| codex-product：webhook 事件触发 | ✅ loop/connectors/webhook-connector.ts（事件触发已有接线面） |
+| codex-product：AGENTS.md /init | ✅ agents-md.ts initTemplate（目标/构建与验证/约定/红线四段骨架） |
 | dsh：低上下文主动提醒（20k 余量 toast+迟滞） | ✅原生已落（IdeStatusBar lowNotified+迟滞，R1 代码实证）·补记 |
-| dsh：会话成本估算（价目表三原则） | 🔜P0（两仓无价目表需自建，zcode §6.7 实证） |
-| dsh：工作区分组管理 | 🔜P2 |
+| dsh：会话成本估算（价目表三原则） | ✅ tokens/pricing.ts（自建价目表）+usage-ledger.ts 用量台账 |
+| 工作区分组管理 | ✅ workspace-groups.ts（登记幂等/pin 置顶/清单汇总） |
 | dsh：/recap+tips | 并入 recap 域（cc 行） |
-| dsh：trajectory hotspot 聚合 | 🔜P2（RunTrace 域） |
-| dsh：per-turn changed-files 卡（deepseek-harness） | 🔜P0（与任务结果卡合并立项） |
-| dsh：轮导航 rail（TurnNavigator） | 🔜P1（dsh+deepseek+zcode 三源） |
-| dsh：present 交付物工具+交付卡 | 🔜P1 |
-| dsh：compaction 留痕卡+/compact | 🔜P1 |
-| dsh：RunTrace 时序图 | 🔜P1（T6 同物） |
+| dsh：trajectory hotspot 聚合（按工具/阶段排名 own-duration） | ✅ trajectory-hotspot.ts（工具/阶段降序排名/防重复计数/衔接 timing） |
+| dsh：per-turn changed-files 卡（deepseek-harness） | ✅ changed-files-card.ts（一轮一卡/行数账/折叠 +N more）；任务结果卡=present 交付物原生已有 |
+| dsh：轮导航 rail（TurnNavigator） | ✅ turn-outline.ts（三源行：轮轮廓/跳转） |
+| dsh：present 交付物工具+交付卡 | ✅ 🧬原生 present 交付物+result-card.ts 交付卡（验证 bullet/文件±行数） |
+| dsh：compaction 留痕卡+/compact | ✅ compaction-trace.ts 留痕卡+400 compact 六段 |
+| dsh：RunTrace 时序图 | ✅ run-trace-adapter.ts+run-trace-timing.ts（T6 同物） |
 | dsh：Office 三件套预览 | 🧬原生（hermes read_file Office 抽取链）·补记 |
-| dsh：权限预设三档捆绑 | 🔜P2（402 域扩展） |
+| dsh：权限预设三档捆绑 | ✅ permission-presets.ts（readonly/standard/full-auto 放行面+审批面+升级单调性） |
 
 ### 3.9 跨仓域合并裁决（D5/D6/D7 消解）
 
-- **goal 域（八源归一）**：mimo P6/kimi/minimax/dsh/cc/codex/codex-product/zcode G5——裁决中心=goal 域以 hermes 原生 goals.py 为基座（每轮裁判+GoalGate+预算字段已有），**增量吸收统一立项**：goal 三预算字段显式化🔜P1、Quest"自主到底"档语义🔜P2。八源不再各自立项。
-- **steering/queue 域（七源归一）**：steer 半边🧬原生已裁决（delegate action steer/stop）；**queue 让位半边🔜P1**（minimax GOAL-05：用户消息>自治目标）单独认领。七源归此两行。
+- **goal 域（八源归一）**：mimo P6/kimi/minimax/dsh/cc/codex/codex-product/zcode G5——裁决中心=goal 域以 hermes 原生 goals.py 为基座（每轮裁判+GoalGate+预算字段已有），**增量吸收统一立项**：goal 三预算字段显式化✅ goal-budget.ts（steps/tokens/wallclock 独立触顶）、Quest"自主到底"档语义✅ goal-autonomy.ts（三档停点）。八源不再各自立项。
+- **steering/queue 域（七源归一）**：steer 半边🧬原生已裁决（delegate action steer/stop）；**queue 让位半边✅ goal-preemption.ts**（minimax GOAL-05：用户消息>自治目标）。七源归此两行。
 - **命名空间消歧（D7）**："恢复点 restore-point"（#5 四恢复选项+kimi fork+qoder Q12+cc 逐文件 Undo+fileHistory——统一恢复域）vs"检查点摘要 checkpoint-writer"（P7 五节写手）。后续立项一律用此二名。
-- **状态栏定制域**：kimi/minimax/codex/dsh 四源→单行🔜P2。
-- **recap 域**：cc/codex/dsh 三源→单行🔜P0。
+- **状态栏定制域**：kimi/minimax/codex/dsh 四源→单行✅ statusline-config.ts（6 槽/整行替换/custom 探针）。
+- **recap 域**：cc/codex/dsh 三源→单行✅ patch 410 recap v1。
 - **E4 补正**：认领四围栏中 runtime 新鲜度围栏=respawn guard+profile 可用性闸部分等价（实证）；wakeup 修订号围栏=❌单机无 wakeup 机制不适用。四围栏裁决理由补全。
 
-### 3.10 zcode §七 39 项底座差距清单对账（此前整表未对账）
+### 3.10 zcode §七 39 项底座差距清单对账（✅核验批已闭 2026-09-25 三向核验）
 
-zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R3+ 工作消费。逐项核验为独立核验轮（**列 🔜P1 核验批**，非实现批）；已可裁决的先行：G4 六源构成→🧬部分（403 三投影）扩展🔜P1；G8 rounds 表🔜P1；P0-3 技能工作台入口🔜P1；P0-5 Workflow 运行可视化 MVP🔜P1；P1-12 turnSteer🧬原生；P1-14 needs-auth OAuth 合成工具🔜P1（与 kimi /mcp-config 合并）；P1-10 轮导航🔜P1（三源行）；其余 ~24 项进核验批清单（含 @六源/任务六态/插件 MVP/MCP 导入同步/自定义命令/富文本输入/Claude 历史导入/G7 面板等）。
+zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R3+ 工作消费。逐项核验为独立核验轮（**列 🔜P1 核验批**，非实现批）；已可裁决的先行（~~当时排 P1~~ **2026-09-25 终态：全部落地，详见 §3.10 行 282**）：G4 六源网格✅/G8 rounds 表✅/P0-3 技能入口✅/P0-5 Workflow run-line✅/P1-12 turnSteer🧬原生/P1-14 needs-auth✅459/P1-10 轮导航✅turn-outline.ts；其余 ~24 项进核验批清单（含 @六源/任务六态/插件 MVP/MCP 导入同步/自定义命令/富文本输入/Claude 历史导入/G7 面板等）。
+
+#### 核验批终态表（A=upstream/zcode 底座源码 / B=series 390-459 / C=custom 域模块三向核验）
+
+**四类统计（39 项）**：底座已有 22（#2,11-20,23-32,36）｜已覆盖 4（#4 git checkpoint=403/checkpoint-options、#10 轮导航=turn-outline.ts、#21 needs-auth=459、#38 价目表=pricing.ts）｜待排期 8（#1 G8 rounds 表/#3 技能工作台入口/#5 Workflow 可视化 MVP/#6 G4 六源网格扩展/#7 G5 三预算显式化/#8 G7 用量面板升级/#9 @提及 ChatInput 域合并/#22 Claude 历史导入改造）｜不适用 5（#33 自动更新/#34 反馈中心/#35 Onboarding/#37 桌面能力/#39 CUA——依赖 Electron 分发/自家后端/zcode-cua 占位）。
+
+**核验备注**：
+1. "多数项随底座原生消解"获证实：22 底座已有+4 已覆盖=26/39（67%）已闭合；8 待排期中 6 项（1/3/5/6/7/8）底座契约/参考实现现成（zcode DeveloperToolsPane/SkillsSection/TaskWorkflowRunLines/task-types/UsageStatsSection/mentions 六源均有锚点），从零新做仅 #22（codex/kimi 导入器改造）与 #9 半边（ChatInput 接线）。
+2. 矩阵预裁 2 处升档已覆盖（#21 needs-auth=patch 459 收口、#10 轮导航=P1 批落地）。
+3. #30 OffPeak 原 × 理由（无计费体系）随底座 coding-plan-subscription 消解改判底座已有；#36 三通道字段齐备留 P2 产品择机；33/37 若转 Electron 分发随 packages/desktop 重启评估。
+4. 待排期 8 项建议落点：#1→IdeRoundsPane；#3→IdeMcpPane 技能 tab；#5→loop run-line 接线；#6→contextBreakdown 六源网格；~~#7→IdeGoalBudgetFloat 三预算字段~~（✅goal-budget.ts）；~~#6→contextBreakdown 六源网格~~（✅context-six-source.ts）；~~#1→IdeRoundsPane~~（✅rounds-table.ts）；~~#8~~（✅usage-ledger.ts）；~~#5~~（✅workflow-run-line.ts）；~~#3 技能入口~~（✅skills-ledger.ts）；~~#9~~（✅mention-resolution.ts）；~~#22 导入器换源~~（✅session-importer.ts：codex/kimi/claude 三源→统一行适配面，坏行计数不丢全会话）。**✅核验批待排期 8 项全部落地**（G5 三预算/G4 六源网格/G8 rounds 表/G7 用量台账/run-line 技能清单/@域合并/导入器换源）——**zcode §七 39 项对账全闭**。
 
 ### 3.11 补账批统计
 
 - 漏：122+ 项全部入档处置完毕（✅2 补记/🧬9 补记/📦9 旧账待迁/🔜100 排队（P0≈10·合并后/P1≈20/P2≈70）/❌3）；zcode §七 39 项→核验批 P1。
 - 错：E1-E5 全部修正（证据源声明/409 状态回改/E4 补正/E5 锚点见 #4 行已含 minimax+codex 合并批原文）。
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
-- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 3：WillEnqueueRun 预演+coder 交接话术 416+multica inbox 三档 418）→ 余 P1 十七项 → 核验批。
+- **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
+
+### 3.12 P2 批收官（2026-09-25 终态）
+
+P2 批全队列实施完毕（**实现类清零**），20 件落地（每件=纯函数域模块+守门测试+合 main+推 origin）：
+
+1. rulesscope 规则四型作用域（always/model-decides/at-manual/glob+两级合并）
+2. runlog 执行日志每 run 一行（结论三态/费用列/倒序筛选）
+3. permpresets 权限预设三档（放行面/审批面/升级单调性）
+4. changedfiles 每轮改动文件卡（行数账/+N more 折叠）
+5. teamsummary agent-team 汇总条（五态计数/健康色红黄绿）
+6. compactthreshold compact 阈值校准（reserve=输出预算+5%/90% 线/三级）
+7. sessionfork 会话 fork（分叉点/谱系/树投影/越界拒）
+8. goalbudget goal 三预算显式化（steps/tokens/wallclock 独立触顶）
+9. handoff coder 交接话术六段（final message=entire handoff+结构守门）
+10. permmodes 权限模式七档（cc d.ts:6046 六档+readonly/三档映射）
+11. commandtask slash 命令任务形态派生（槽位/门禁随行）
+12. agentsmd AGENTS.md 域（/init 四段模板+32KB 告警+防抖 watch）
+13. hookswrite Q11 Hooks 写档面（upsert/启停/重排/七事件词表）
+14. selection-ref 选区引用入会话（@file:L 区间/校验/引用卡）
+15. lane-timeline 泳道履历时间线（行 197 lane 半边）
+16. file-undo 逐文件 Undo（行 242，三态/回写计划）
+17. squad-coordinator squad 协调协议（评估必录/dispatch 即停，行 178 P0）
+18. automation-steps 列级编排（行 195 P0，门禁前置/失败策略/skip≠失败）
+19. goal-preemption GOAL-05 让位（行 166，用户消息>自治目标）
+20. dispatch-preview WillEnqueueRun 预演（行 180，写读共用谓词）
+21. urgency-escalation urgency 三档升级（行 199，queue/inbox-first/preempt）
+
+另批：十行回写核验批已落件（turn-outline/pricing/usage-ledger/compaction-trace/run-trace/
+skills-ledger/workflow-run-line/mention-resolution/context-six-source/present 原生）——
+此前只进 §3.10 总账未落明细行，本轮对齐。
+
+**实现类终态**：P0=10/10+4（178/195/197/242 四行 P0 收编）｜P1 实现批清零｜P2 实现批清零。
+残余 🔜 全部为裁决性项（非实现缺口）：长会话前缀复用（独立设计轮）/minimax 两候选+四候选（排队后续吸收轮）/kimi 视频链路（条件启动，台账钦点条件到才立项）/技能入口 UI（随 UI 批）。

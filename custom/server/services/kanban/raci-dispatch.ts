@@ -27,9 +27,11 @@ import {
   matrixCreateTaskRoom,
   matrixInviteUser,
   matrixSendMessage,
+  matrixSendProtocolEvent,
   raciInviteeIds,
   type MatrixDispatchEnv,
 } from '../../matrix/raci-matrix'
+import { TASK_ASSIGN_EVENT_TYPE, buildAssignContent } from '../../matrix/task-protocol'
 
 /** 派发所需的最小任务结构（KanbanTask 的结构化子集） */
 export interface RaciDispatchTask {
@@ -143,7 +145,7 @@ export class RACIDispatchService {
     return { roomId: await RACIDispatchService.dispatchSimulated(task, raci), mode: 'simulated' }
   }
 
-  /** 真实 Matrix 派发：建房（邀人随房提交）+ 逐个补邀幂等 + 发摘要 */
+  /** 真实 Matrix 派发：建房（邀人随房提交）+ 逐个补邀幂等 + 发协议事件与人读摘要 */
   private static async dispatchReal(
     env: MatrixDispatchEnv,
     task: RaciDispatchTask,
@@ -154,6 +156,18 @@ export class RACIDispatchService {
     const roomId = await matrixCreateTaskRoom(env, roomName, invitees)
     // 补邀（建房 invite 已含，此处幂等兜底已在房/漏邀场景）
     for (const uid of invitees) await matrixInviteUser(env, roomId, uid)
+    // 协作信号走 task.assign 协议事件（边界设计 §6-T2）：每个 responsible 一发，
+    // 跨机协议消费方只认事件不认摘要文本；摘要保留作人读通知。
+    const targets = raci.responsible.length > 0 ? [...new Set(raci.responsible)] : [env.userId]
+    for (const account of targets) {
+      await matrixSendProtocolEvent(env, roomId, TASK_ASSIGN_EVENT_TYPE, buildAssignContent({
+        taskId: task.id,
+        title: task.title,
+        body: task.body ?? undefined,
+        target: { account },
+        issuedBy: env.userId,
+      }))
+    }
     await matrixSendMessage(env, roomId, RACIDispatchService.buildDispatchText(task, raci))
     return roomId
   }

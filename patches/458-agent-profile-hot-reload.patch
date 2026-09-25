@@ -1,0 +1,150 @@
+diff --git a/agent/profile_hot_reload.py b/agent/profile_hot_reload.py
+new file mode 100644
+--- /dev/null
++++ b/agent/profile_hot_reload.py
+@@ -0,0 +1,90 @@
++"""agent profile 五级来源 + 热重载判定面（kimi §五 C 表 P1 吸收，矩阵 §3.3）。
++
++kimi 语义（自定义 agent profile 目录：五级来源 + watch 热重载 + --agent）：
++- **五级来源**（高→低优先）：env 覆盖 > CLI 指定（--agent/HERMES_PROFILE）>
++  项目级 config（repo 内 .hermes/profiles）> 全局 config（~/.hermes/profiles）>
++  内置默认（built-in role 名册——衔接 404 agent-roster）。
++- **watch 热重载**：profile 目录文件变更（mtime）→ needs_reload 判定（变化即重载，
++  防抖窗内不重复触发）；重载动作由调用方执行（判定面纯函数先行）。
++
++现状衔接：hermes 已有 profiles（HERMES_HOME/profiles + HERMES_CUSTOM 切换）——
++本模块只补**热重载判定面**（五级合并解析+变更检测），不动既有加载器。
++"""
++
++from __future__ import annotations
++
++import os
++import time
++from dataclasses import dataclass
++from typing import Optional
++
++DEFAULT_DEBOUNCE_MS = 300
++
++
++@dataclass
++class ProfileSources:
++    """五级来源解析结果（高→低已合并；resolved 来自哪级留痕）。"""
++
++    profile_id: str
++    resolved_from: str  # 'env' | 'cli' | 'project' | 'global' | 'builtin'
++    directory: Optional[str] = None  # profile 目录（watch 面）
++
++
++def resolve_profile_sources(
++    *,
++    env_profile: Optional[str] = None,
++    cli_profile: Optional[str] = None,
++    project_profile: Optional[str] = None,
++    global_profile: Optional[str] = None,
++    builtin: str = "default",
++) -> ProfileSources:
++    """五级来源合并（kimi 优先级序）；每级命中即停（高优先级胜出）。"""
++    if env_profile:
++        return ProfileSources(env_profile, "env")
++    if cli_profile:
++        return ProfileSources(cli_profile, "cli")
++    if project_profile:
++        return ProfileSources(project_profile, "project")
++    if global_profile:
++        return ProfileSources(global_profile, "global")
++    return ProfileSources(builtin, "builtin")
++
++
++def resolve_profile_id(*, builtin: str = "default") -> ProfileSources:
++    """从进程环境解析五级（HERMES_PROFILE=env/CLI 同源，其余留接口给加载器）。"""
++    return resolve_profile_sources(
++        env_profile=os.environ.get("HERMES_PROFILE_OVERRIDE") or None,
++        cli_profile=os.environ.get("HERMES_PROFILE") or None,
++        builtin=builtin,
++    )
++
++
++@dataclass
++class ReloadWatch:
++    """profile 目录热重载判定（mtime 比对+防抖；重载动作由调用方跑）。"""
++
++    debounce_ms: int = DEFAULT_DEBOUNCE_MS
++    _last_mtime: Optional[float] = None
++    _last_fire: float = 0.0
++
++    def observe(self, files: dict[str, float], now: Optional[float] = None) -> bool:
++        """files={路径: mtime}；返回是否需要重载（变化且过防抖窗）。"""
++        if not files:
++            return False
++        cur = max(files.values())
++        now = time.time() if now is None else now
++        changed = self._last_mtime is not None and cur > self._last_mtime
++        first = self._last_mtime is None
++        self._last_mtime = cur
++        if first:
++            return False  # 首观测只建基线
++        if not changed:
++            return False
++        if (now - self._last_fire) * 1000 < self.debounce_ms:
++            return False  # 防抖窗内不重复触发
++        self._last_fire = now
++        return True
++
++    def reset(self) -> None:
++        self._last_mtime = None
++        self._last_fire = 0.0
+diff --git a/tests/agent/test_profile_hot_reload.py b/tests/agent/test_profile_hot_reload.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_profile_hot_reload.py
+@@ -0,0 +1,50 @@
++"""profile 五级来源+热重载守门（kimi §五 C 表 P1）。"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++
++import pytest
++
++_WORKTREE = Path(__file__).resolve().parents[2]
++if str(_WORKTREE) not in sys.path:
++    sys.path.insert(0, str(_WORKTREE))
++
++from agent.profile_hot_reload import ReloadWatch, resolve_profile_id, resolve_profile_sources
++
++
++class TestFiveSources:
++    def test_priority_order_env_first_builtin_last(self):
++        full = resolve_profile_sources(env_profile='e', cli_profile='c', project_profile='p', global_profile='g')
++        assert (full.profile_id, full.resolved_from) == ('e', 'env')
++        assert resolve_profile_sources(cli_profile='c', project_profile='p').resolved_from == 'cli'
++        assert resolve_profile_sources(project_profile='p', global_profile='g').resolved_from == 'project'
++        assert resolve_profile_sources(global_profile='g').resolved_from == 'global'
++        assert resolve_profile_sources(builtin='role-x') == resolve_profile_sources(builtin='role-x')
++
++    def test_env_resolution(self, monkeypatch):
++        monkeypatch.setenv('HERMES_PROFILE_OVERRIDE', 'ov')
++        assert resolve_profile_id().resolved_from == 'env'
++        monkeypatch.delenv('HERMES_PROFILE_OVERRIDE')
++        monkeypatch.setenv('HERMES_PROFILE', 'cli-prof')
++        assert resolve_profile_id().resolved_from == 'cli'
++        monkeypatch.delenv('HERMES_PROFILE')
++        assert resolve_profile_id().resolved_from == 'builtin'
++
++
++class TestHotReload:
++    def test_baseline_then_change_then_debounce(self):
++        w = ReloadWatch(debounce_ms=300)
++        assert w.observe({'p': 100.0}, now=1.0) is False  # 首观测建基线
++        assert w.observe({'p': 100.0}, now=1.1) is False  # 无变化
++        assert w.observe({'p': 200.0}, now=1.2) is True   # 变化触发
++        assert w.observe({'p': 300.0}, now=1.25) is False  # 防抖窗内
++        assert w.observe({'p': 400.0}, now=2.0) is True   # 过窗再触发
++
++    def test_empty_files_noop_and_reset(self):
++        w = ReloadWatch()
++        assert w.observe({}, now=1.0) is False
++        w.observe({'p': 1.0}, now=1.0)
++        w.reset()
++        assert w.observe({'p': 2.0}, now=2.0) is False  # reset 后重建基线

@@ -48,6 +48,9 @@ class SpanAttributes:
     AGENTSCOPE_REPLY_ID = "agentscope.agent.reply_id"
     AGENTSCOPE_SESSION_ID = "agentscope.session.id"
     AGENTSCOPE_TASK_ID = "agentscope.task.id"
+    # 跨机协作事件锚点（边界设计 §2/§6-T4b）：本 span 由哪个 Matrix $event_id
+    # 驱动（协议事件触发 agent 回合时由 payload.collab_event_id 透传）。
+    COLLAB_EVENT_ID = "collab.event_id"
 
 
 class OperationName:
@@ -82,7 +85,7 @@ def _status(code: str, message: Optional[str] = None) -> Dict[str, Any]:
     return s
 
 
-def build_session_span(session_id: str, task_id: Optional[str], started_at: float, model: Optional[str] = None, provider: Optional[str] = None) -> Dict[str, Any]:
+def build_session_span(session_id: str, task_id: Optional[str], started_at: float, model: Optional[str] = None, provider: Optional[str] = None, collab_event_id: Optional[str] = None) -> Dict[str, Any]:
     """Build the root trace span for a session (header)."""
     attrs = {
         SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.INVOKE_AGENT,
@@ -90,6 +93,8 @@ def build_session_span(session_id: str, task_id: Optional[str], started_at: floa
     }
     if task_id:
         attrs[SpanAttributes.AGENTSCOPE_TASK_ID] = task_id
+    if collab_event_id:
+        attrs[SpanAttributes.COLLAB_EVENT_ID] = collab_event_id
     if model:
         attrs[SpanAttributes.GEN_AI_REQUEST_MODEL] = model
     if provider:
@@ -118,12 +123,15 @@ def build_llm_span(
     usage: Optional[Dict] = None,
     finish_reason: Optional[str] = None,
     parent_span_id: Optional[str] = None,
+    collab_event_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build an LLM call span (chunk: llm_span)."""
     attrs = {
         SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.CHAT,
         SpanAttributes.GEN_AI_CONVERSATION_ID: session_id,
     }
+    if collab_event_id:
+        attrs[SpanAttributes.COLLAB_EVENT_ID] = collab_event_id
     if model:
         attrs[SpanAttributes.GEN_AI_REQUEST_MODEL] = model
     if provider:
@@ -165,12 +173,15 @@ def build_tool_span(
     error_message: Optional[str] = None,
     started_at: Optional[float] = None,
     parent_span_id: Optional[str] = None,
+    collab_event_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build a tool execution span (chunk: tool_span)."""
     attrs = {
         SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.EXECUTE_TOOL,
         SpanAttributes.GEN_AI_CONVERSATION_ID: session_id,
     }
+    if collab_event_id:
+        attrs[SpanAttributes.COLLAB_EVENT_ID] = collab_event_id
     if tool_name:
         attrs[SpanAttributes.GEN_AI_TOOL_NAME] = tool_name
     if tool_call_id:
@@ -209,9 +220,17 @@ def build_subagent_span(
     duration_ms: Optional[float] = None,
     status: Optional[str] = None,
     parent_span_id: Optional[str] = None,
+    collab_event_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build a subagent span (chunk: subagent_span)."""
     span_id = f"subagent-{label}-{int(started_at * 1000)}"
+    subagent_attrs: Dict[str, Any] = {
+        SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.INVOKE_AGENT,
+        SpanAttributes.GEN_AI_CONVERSATION_ID: session_id,
+        "agentscope.subagent.label": label,
+    }
+    if collab_event_id:
+        subagent_attrs[SpanAttributes.COLLAB_EVENT_ID] = collab_event_id
     span: Dict[str, Any] = {
         "traceId": session_id,
         "spanId": span_id,
@@ -219,11 +238,7 @@ def build_subagent_span(
         "name": f"subagent {label}",
         "kind": SpanKind.INTERNAL,
         "startTime": _us(started_at),
-        "attributes": {
-            SpanAttributes.GEN_AI_OPERATION_NAME: OperationName.INVOKE_AGENT,
-            SpanAttributes.GEN_AI_CONVERSATION_ID: session_id,
-            "agentscope.subagent.label": label,
-        },
+        "attributes": subagent_attrs,
         "status": _status(StatusCode.UNSET),
         "otelFormat": True,
     }
