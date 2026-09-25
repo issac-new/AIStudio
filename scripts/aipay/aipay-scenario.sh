@@ -584,6 +584,12 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
           || echo "ISSUE|untracked-backup|$f|留存副本移入取证目录失败（checkout 或被挡）" >> "$EVID_DIR/issues.log"
       fi
     done < <(git ls-files --others --exclude-standard)
+    # 跟踪文件脏改防撞（09-26 实锤：app-registry/org/freeze 未提交残留挡 checkout，
+    # set -e 静默击杀）。产物性脏改先收编提交，不丢证据。
+    if [[ -n "$(git status --porcelain 2>/dev/null | head -1)" ]]; then
+      git add -A >/dev/null 2>&1 || true
+      git commit -q -m "director(${RFD_ID}): 未提交产物收编（integration checkout 前置）" >/dev/null 2>&1 || true
+    fi
     git checkout -q -B integration/${RFD_ID} origin/main
     for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
       git merge -q --no-ff "origin/feat/$b" -m "merge: $b into integration/${RFD_ID}" 2>/dev/null \
