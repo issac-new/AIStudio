@@ -1,0 +1,20 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -83,6 +83,8 @@
+ import { approvalRoutes } from '../custom/approval/approval-controller'
+ // overlay[tokens]: token-meter 三投影互校（第一批吸收 #9）
+ import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'
++// overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
++import { evidenceRoutes } from '../custom/evidence/evidence-controller'
+ // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+ import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+@@ -303,6 +305,7 @@
+   app.use(zcodeEngineRoutes.routes())             // zcode 引擎健康面（R4-P1）
+   app.use(approvalRoutes.routes())                // 审批域：candidates/evaluate/decide/rules（R5 #4）
+   app.use(tokenMeterRoutes.routes())              // token-meter：project 三投影/zcode 互校（R5 #9）
++  app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
+   app.use(loopRouter.routes())
+   app.use(graphRouter.routes())
+   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），

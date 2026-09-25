@@ -945,3 +945,9 @@
 #      同一批文件，先读后写并发互踩→客户端带 expected_mtime，冲突 409 拒写。
 411-cron-jobs-single-writer.patch
 412-memory-atomic-cas.patch
+# 411 P0 批第五项（routa §七#3 + antigravity A1 合并域，矩阵 §3.6）：任务=证据累积对象
+#      轻量版——custom/server/evidence/ 五 kind 台账（artifact 工件卡/snapshot 交付冻结/
+#      verification 三态裁决/lane 两 kind 预留）、只增不改+evidenceId 幂等+500 条环形+
+#      坏文件 fail-soft；POST/GET /api/evidence/:taskId 与 /verdict；守门 7 例。
+#      laneSessions/laneHandoffs 完整语义依赖 loop 会话域列后续扩。
+411-server-evidence-routes.patch
