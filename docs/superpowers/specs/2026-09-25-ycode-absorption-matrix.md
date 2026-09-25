@@ -146,7 +146,7 @@
 | coder 交接话术（final message=entire handoff） | 🔜P1（纯提示词资产，衔接 400 compact 六段） |
 | 会话 fork+undo 选择器 | 🔜P2（与 Q12 合并） |
 | agent profile 五级来源+watch 热重载 | 🧬部分（404 配置层）·热重载 🔜P2 |
-| AGENTS.md 装载链细节 | 🧬大部分（hermes 装载已有）·告警/防抖细节 🔜P2 |
+| AGENTS.md 装载链细节 | 🧬原生主面（prompt_builder context files 注入+防注入防护）；32KB 告警/防抖 watch 细节 🔜P2 |
 | AgentSwarm 扇出+/btw 侧问 | 🧬delegate 批量已有·UI 🔜P2 |
 | fileHistory 回合级快照 | 🔜P2（与 #5 恢复域合并） |
 | goal 三预算字段 | 并入 §3.9 goal 域 |
@@ -216,7 +216,7 @@
 | 通知补耗时/模型 | 📦旧账已含（R4 活动收件箱）·待随迁 |
 | 计划模板（feature-dev 范式） | ✅ runtime/roster/prompts/plan-template.md（cc 概念自研重写：阶段+门禁+关键文件清单；红线合规） |
 | 评审/验证轮编排模板 | ✅ review-template.md（高信号纪律+独立验证轮自研；实件 /review 已落 patch 414） |
-| 技能入口（skills=commands 合并口径） | 🔜P1（zcode SkillPort 原生面待核） |
+| 技能入口（skills=commands 合并口径） | 🧬原生（hermes skills_list/skill_manage 面）；工作台 UI 入口随 UI 批 🔜P2 |
 | 权限模式 7 档语义+切换 UI | 🧬部分（402 决策态+规则）·模式语义 🔜P2 |
 | 任务依赖 dependsOn | 🧬原生（kanban 父子依赖+claim 重检）·补记 |
 | 缓存 miss 归因//context 建议//skill-doctor | 🔜P2 |
