@@ -118,6 +118,17 @@ export function setupZcodeProjectionSocket(io: Server, authDeps?: ZcodeNamespace
         socket.leave(`zcode:${workspacePath}:s:${sessionId}`)
       }
     })
+    // multica §五 WS scope 细化：task 级房间（任务维度事件——派单 outcome/编排进度）。
+    socket.on('subscribe-task', (workspacePath: string, taskId: string) => {
+      if (typeof workspacePath === 'string' && typeof taskId === 'string' && taskId.length > 0) {
+        joinIfAllowed(socket, `zcode:${workspacePath}:t:${taskId}`, workspacePath) // 归属闸同 workspace 级
+      }
+    })
+    socket.on('unsubscribe-task', (workspacePath: string, taskId: string) => {
+      if (typeof workspacePath === 'string' && typeof taskId === 'string') {
+        socket.leave(`zcode:${workspacePath}:t:${taskId}`)
+      }
+    })
   })
 }
 
@@ -127,5 +138,6 @@ export function emitZcodeProjectionEvent(io: Server | null | undefined, event: Z
   if (!target) return
   const rooms = [`zcode:${event.workspaceId}`]
   if ('sessionId' in event && event.sessionId) rooms.push(`zcode:${event.workspaceId}:s:${event.sessionId}`)
+  if ('taskId' in event && (event as { taskId?: string }).taskId) rooms.push(`zcode:${event.workspaceId}:t:${(event as { taskId?: string }).taskId}`)
   for (const room of rooms) target.of('/zcode').to(room).emit('zcode:event', event)
 }
