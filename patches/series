@@ -1002,3 +1002,8 @@
 #      五级优先级合并（env>CLI>项目>全局>内置名册）+watch mtime 变更检测+防抖窗；
 #      重载动作由调用方跑（判定面纯函数）；守门 4 例。
 458-agent-profile-hot-reload.patch
+# 459 P1（kimi §四 P0-2 余项，矩阵 §3.3）：MCP 配置管理——scope 三选一
+#      （project|global|session）/timeout 有界归一（kimi 超时指引+qoder Q15+codex X8
+#      同物合并）/needs-auth action 闭环（authorize|dismiss 一次闭环）；
+#      POST/GET /api/mcp-config[/needs-auth/:name/auth]（patch 459 挂载）；守门 2 例。
+459-server-mcp-config-mount.patch
