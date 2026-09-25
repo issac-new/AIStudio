@@ -134,7 +134,7 @@
 | Q11 Hooks 生命周期配置界面 | 📦旧账已落（hooks 只读面板，R4）·写档面 🔜P2 |
 | Q12 任务分支（回复 fork） | 🔜P2（与 kimi fork 合并立项） |
 | Q13 扩展市场入口 | 🔜P2 |
-| Q14 记忆全局/项目分治 | 🧬部分（memory/user 双 target）·项目级 🔜P2 |
+| 记忆全局/项目两级分治 | ✅ memory-scope.ts（开关/清空/文件数下限/汇总） |
 | Q15 MCP 超时设置 | 🔜P2（与 codex X8 合并：per-server 白黑名单/审批档/超时 🔜P1） |
 | Q16 Goal 自主到底档 | 并入 §3.9 goal 域合并裁决 |
 
