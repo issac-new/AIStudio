@@ -1,4 +1,9 @@
 // overlay/custom/server/loop/engine/centralized-scheduler.ts
+//
+// 【退役候选】生产零接线（bootstrap 只装配 RunSpawner，见 graph-assembly.ts 四件套），
+// 现仅测试消费（client/loop/__tests__）。调度负载唯一登记见
+// docs/superpowers/specs/2026-09-25-scheduled-loads-registry.md；新增生产代码禁止
+// 引用本类，新调度负载先登记台账再实现。
 import { computeNextTick } from '../graph/next-tick'
 import type { LoopStateStore } from '../store/state-store'
 import type { LoopEngine } from './loop-engine'

@@ -417,6 +417,32 @@ MANEOF
   chmod 600 "$PROF/machine-manifest.json"
 }
 
+roster_snapshot() { # 编制对账（边界设计 §6-T5）：agent-roster.yaml 快照 + 游离角色声明。
+  # 单源=hermes agent-roster.yaml；boards_of 的 agent-id 不在其 roles 内时记入
+  # extraRoles 显式声明（sim 场景角色属场景数据，允许扩展但不许静默漂移）。
+  # agent-id 经环境变量传给 python（heredoc 会抢占 stdin，管道传参必丢）。
+  local roster="" ids
+  [[ -f "$HERMES_ROOT/agent-roster.yaml" ]] && roster="$HERMES_ROOT/agent-roster.yaml"
+  [[ -z "$roster" && -f "$HOME/.hermes/agent-roster.yaml" ]] && roster="$HOME/.hermes/agent-roster.yaml"
+  ids=$({ for u in "${INSTANCED_USERS[@]}"; do agents_of "$u"; done } | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ')
+  ROSTER_FILE="$roster" ROSTER_IDS="$ids" python3 - <<'PYEOF'
+import json, os
+ids = sorted({i for i in os.environ.get('ROSTER_IDS', '').split() if i})
+path = os.environ.get('ROSTER_FILE') or ''
+roles = []
+if path:
+    try:
+        import yaml
+        data = yaml.safe_load(open(path)) or {}
+        roles = list(data.get('roles') or [])
+    except Exception:
+        roles = []
+extra = sorted({i for i in ids if i not in set(roles)})
+print(json.dumps({'source': path or None, 'roles': roles,
+                  'boardAgentIds': ids, 'extraRoles': extra}, ensure_ascii=False))
+PYEOF
+}
+
 write_fleet_manifest() { # 全局事实源：users → matrix 账号 / boards / teams
   local out="$SIM_ROOT/fleet-manifest.json" u b first=1
   {
@@ -425,6 +451,7 @@ write_fleet_manifest() { # 全局事实源：users → matrix 账号 / boards / 
     echo "  \"hermesRoot\": \"$HERMES_ROOT\","
     echo "  \"gatewayPort\": $GW_PORT,"
     echo "  \"studioPort\": $STUDIO_PORT,"
+    echo "  \"roster\": $(roster_snapshot),"
     echo '  "users": ['
     for u in "${INSTANCED_USERS[@]}"; do
       [[ $first == 1 ]] || echo '    ,'
