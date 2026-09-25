@@ -255,7 +255,7 @@ new file mode 100644
 +        cp_dir.mkdir(parents=True, exist_ok=True)
 +        (cp_dir / f"{tid}.md").write_text(
 +            f"<!-- checkpoint task={tid} generation=1 reason=budget_exhausted -->\n"
-+            "## goal\n修复登录\n\n## done\n- 修了 auth.ts:61\n\n## next\n跑 pytest 全量\n\n## blockers\nnone\n\n## artifacts\nnone\n",
++            "## goal\n修复登录\n\n## done\n- 修了 auth.ts:61\n\n## next\n跑 pytest 全量\n\n## blockers\nnone\n\n## artifacts\nnone\n<!-- /checkpoint -->\n",
 +            encoding="utf-8")
 +        ctx = kb.build_worker_context(conn, tid)
 +        assert "上次进展" in ctx
