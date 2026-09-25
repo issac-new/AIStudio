@@ -223,7 +223,7 @@
 | /btw/输出风格/队列视觉/ralph | 🔜P2 |
 | @提及六源（file/session） | 🔜P2（与 codex-product 文件引用合并；#7 A2A mention 是不同物） |
 | auto memory 四类型+新鲜度 | ✅ memory-taxonomy.ts（四类型归档/7-30 天三档/stale 降权/fact 锚点） |
-| security-guidance 同步拦+异步复查 | 🔜P2 |
+| security-guidance 双层 | ✅ security-guidance.ts（同步拦/异步复查/放行三态） |
 
 ### 3.8 codex（11 项）+ codex-product（7 项，整份此前缺席）+ deepseek-harness（7 项）+ dsh-TUI（6 项）
 
