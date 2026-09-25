@@ -984,3 +984,8 @@
 #      approved.events 双 eid 构成五留痕 eid 锚点约定闭环。
 470-hosted-rooms-collab-event-id.patch
 471-kanban-collab-event-id.patch
+# 472（feat/boundary-leftovers 轮，T3b）：loop 调度桥接公开段路由——bootstrap/routes.ts
+#      认证前挂 registerLoopCronBridgeRoutes（hermes cron no-agent 脚本回调
+#      /api/loop/cron-bridge/tick；token fail-closed+loopback 限源；未启用恒 404）。
+#      配套 overlay 件：custom/server/loop/graph/cron-bridge.ts + graph-assembly 门控。
+472-loop-cron-bridge-route.patch
