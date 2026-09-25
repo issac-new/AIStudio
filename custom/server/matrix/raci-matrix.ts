@@ -10,6 +10,11 @@
 //
 // 安全边界：homeserver 经 safeMatrixOrigin（url-guard SSRF 防护，允许内网 http
 // 自建 homeserver——推演 Synapse 即 http://127.0.0.1:8008）；token 不落日志。
+//
+// 边界规则（docs/superpowers/specs/2026-09-25-capability-boundaries-design.md §2/§3-E6）：
+// Matrix client-server REST 直连仅限初始化与派发摘要（建群/邀人/一条通知），
+// 跨机协作消息一律走 matrix-teams/delivery 协议事件。本模块调用方锁白名单
+// （raci-dispatch.ts），新增消费方须先过该文档 §6-T1 裁决并更新守门测试。
 
 import type { RACITuple } from './gateway-env'
 import { readGatewayMatrixEnv } from './gateway-env'

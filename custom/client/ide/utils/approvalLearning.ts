@@ -11,6 +11,8 @@
 //   byDomain  URL 域名一致（fetch/curl 类含 http 链接的命令）
 //   wholeTool 工具名一致（最宽）
 // 存储：localStorage per sessionId，FIFO 50 条；deny 不记忆（否定学习留给后端）。
+// 定位声明（边界设计 §2）：localStorage 仅是提示缓存，不是审批规则源；执行生效的
+// 规则在后端 session 档与 approval rules.json（本模块与二者互不写入，见 §4-2 纠偏）。
 export type ApprovalWidth = 'exact' | 'byFirstWord' | 'byArgvPrefix2' | 'byDomain' | 'wholeTool'
 
 export interface ApprovalMemoryEntry {

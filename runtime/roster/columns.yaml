@@ -1,0 +1,43 @@
+# Ycode 看板列编排（routa §七#1 KanbanColumnAutomation 语义，矩阵 §3.6 P0）
+# 每列：automation.steps（有序步骤：id/role/specialist/provider）+ 触发时机
+# entry|exit|both + autoAdvanceOnSuccess（步骤全成后自动进列）。
+# 契约门四件套（requiredHumanApproval/checklist/validator/gateMode）已由
+# kanban_gates.py（patch 399）在流转侧强制，本表只管编排触发，不重复门禁。
+# 维护：role/specialist 对齐 runtime/roster/squads.yaml 与 agent-roster 角色目录。
+columns:
+  todo:
+    timing: entry
+    autoAdvanceOnSuccess: true
+    steps:
+      - id: refine
+        role: general-engineer
+        specialist: backlog-refiner
+        provider: zcode
+  in_progress:
+    timing: entry
+    autoAdvanceOnSuccess: false
+    steps:
+      - id: implement
+        role: backend
+        specialist: dev-crafter
+        provider: zcode
+  review:
+    timing: entry
+    autoAdvanceOnSuccess: false
+    steps:
+      - id: qa
+        role: qa
+        specialist: review-guard
+        provider: zcode
+      - id: approve
+        role: code-reviewer
+        specialist: review-guard
+        provider: zcode
+  done:
+    timing: exit
+    autoAdvanceOnSuccess: false
+    steps:
+      - id: report
+        role: operations
+        specialist: done-reporter
+        provider: zcode

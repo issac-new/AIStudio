@@ -11,6 +11,7 @@ import {
   attemptLedger, cacheHitPercent, deriveContextBreakdown, deriveContextPressure,
   deriveTokenUsage, fromZcodeUsageSummary, type AttemptUsage,
 } from './meter-projections'
+import { estimateCost, loadPricingTable, matchPriceKey } from './pricing'
 
 const router = new Router({ prefix: '/api/token-meter' })
 
@@ -68,6 +69,30 @@ router.post('/zcode', async (ctx) => {
     reasoningTokens: num(s.reasoningTokens),
   })
   ctx.body = { ok: true, ...mapped, reconcileOk: mapped.reconcile.length === 0 }
+})
+
+router.post('/cost', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const model = typeof body.model === 'string' ? body.model : ''
+  const u = (body.usage ?? {}) as Record<string, unknown>
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  if (!model) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'model 必填' }
+    return
+  }
+  const table = loadPricingTable()
+  const key = matchPriceKey(table, model)
+  if (!key) {
+    // dsh 原则 3：未收录模型不显示金额（HTTP 200 + available:false，UI 不渲染金额）。
+    ctx.body = { ok: true, available: false, model, priced: Object.keys(table.models).length }
+    return
+  }
+  const estimate = estimateCost(model, {
+    uncachedInput: num(u.uncachedInput), output: num(u.output),
+    cacheRead: num(u.cacheRead), cacheWrite: num(u.cacheWrite),
+  }, table)
+  ctx.body = { ok: true, available: true, estimate }
 })
 
 export const tokenMeterRoutes = router

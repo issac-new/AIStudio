@@ -117,10 +117,13 @@ describe('派单链（MentionDispatchService）', () => {
     expect((await svc.dispatch({ workspacePath: '/w', text: '@zcode 干活' }))[0].reason).toBe('runtime_offline')
     expect((await svc.dispatch({ workspacePath: '/w', text: '@ghost 干活' }))[0].reason).toBe('target_unavailable')
     engine.online = true
+    // squad 语义（multica P0 吸收后）：@squad/core → 直派 leader zcode（queued，
+    // 且与 @zcode 共享单 pending 槽）；@codex 走旧链 deferred。
     const svc2 = new MentionDispatchService({ engine, clientId: 'c', deferredAgents: ['codex'] })
     const multi = await svc2.dispatch({ workspacePath: '/w', text: '@squad/core @codex @zcode 三路' })
-    expect(multi.map((o) => o.reason)).toEqual(['deferred', 'deferred', 'queued'])
-    expect(multi[0].detail).toContain('P4')
+    expect(multi.map((o) => o.reason)).toEqual(['queued', 'deferred', 'coalesced'])
+    expect(multi[0].target).toContain('leader:zcode')
+    expect(multi[0].detail).toContain('[squad]')
     expect(multi[1].detail).toContain('hermes 旧链')
   })
 
