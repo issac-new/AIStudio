@@ -9,10 +9,30 @@ import { useDeliveryCasesStore, type GateLight } from '../stores/delivery-cases'
 const store = useDeliveryCasesStore()
 const loading = ref(false)
 const drawer = ref<GateLight | null>(null)
+// 发起向导（M2）：标题/中央仓/档位 → 建案例房 + case state + index 登记
+const formOpen = ref(false)
+const form = ref({ title: '', repoUrl: '', tier: 'standard' })
+const launching = ref(false)
+const launchError = ref('')
 
 async function reload() {
   loading.value = true
   try { await store.refresh() } finally { loading.value = false }
+}
+
+async function submitCase() {
+  if (!form.value.title.trim() || !form.value.repoUrl.trim()) return
+  launching.value = true
+  launchError.value = ''
+  try {
+    await store.createCase({ ...form.value })
+    formOpen.value = false
+    form.value = { title: '', repoUrl: '', tier: 'standard' }
+  } catch (err) {
+    launchError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    launching.value = false
+  }
 }
 onMounted(reload)
 
@@ -32,7 +52,31 @@ function fmtAt(at: number): string { return new Date(at).toLocaleString() }
     <div class="head">
       <h2>{{ $t('ia2.delivery.title') }}</h2>
       <NButton size="small" :loading="loading" @click="reload">{{ $t('common.refresh') }}</NButton>
+      <NButton size="small" type="primary" @click="formOpen = !formOpen">{{ $t('ia2.delivery.launch') }}</NButton>
     </div>
+
+    <div class="readings">
+      {{ $t('ia2.delivery.readings') }}:
+      {{ store.networkReadings.inFlight }} ·
+      <span v-for="(n, st) in store.networkReadings.byStage" :key="st" class="chip">{{ st }}={{ n }}</span>
+      · {{ $t('ia2.delivery.pendingHuman') }}={{ store.networkReadings.pendingHumanGates }}
+    </div>
+
+    <NCard v-if="formOpen" size="small" :title="$t('ia2.delivery.launch')">
+      <div class="form">
+        <input v-model="form.title" :placeholder="$t('ia2.delivery.formTitle')" class="in" />
+        <input v-model="form.repoUrl" :placeholder="$t('ia2.delivery.formRepo')" class="in" />
+        <select v-model="form.tier" class="in">
+          <option value="lite">lite</option>
+          <option value="standard">standard</option>
+          <option value="compliance">compliance</option>
+        </select>
+        <NButton size="small" type="primary" :loading="launching" :disabled="!form.title.trim() || !form.repoUrl.trim()" @click="submitCase">
+          {{ $t('ia2.delivery.submit') }}
+        </NButton>
+        <div v-if="launchError" class="reason">{{ launchError }}</div>
+      </div>
+    </NCard>
 
     <NSpin v-if="loading && !store.loaded" class="spin" />
     <NEmpty
@@ -91,6 +135,10 @@ function fmtAt(at: number): string { return new Date(at).toLocaleString() }
 <style scoped>
 .delivery-cases { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%; overflow: auto; }
 .head { display: flex; align-items: center; justify-content: space-between; }
+.readings { font-size: 12px; color: #666; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.chip { background: #f3f4f6; border-radius: 8px; padding: 1px 8px; }
+.form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.in { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
 .list { display: flex; flex-direction: column; gap: 10px; }
 .stagebar { display: flex; gap: 6px; margin-bottom: 8px; }
 .stage { padding: 2px 8px; border-radius: 4px; background: #eee; font-size: 12px; }

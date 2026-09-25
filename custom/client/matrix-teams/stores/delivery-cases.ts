@@ -12,7 +12,8 @@ import { computed, ref } from 'vue'
 import type { MatrixClient, Room } from 'matrix-js-sdk'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import {
-  DELIVERY_EVENT_TYPES, DELIVERY_GATES, DELIVERY_INDEX_ACCOUNT_DATA_TYPE, DELIVERY_STAGES,
+  DELIVERY_EVENT_TYPES, DELIVERY_GATES, DELIVERY_INDEX_ACCOUNT_DATA_TYPE,
+  DELIVERY_SCHEMA_VERSION, DELIVERY_STAGES,
   parseCaseContent, parseGateContent, parseIndexContent, parseStageContent,
 } from '../delivery-protocol'
 
@@ -91,5 +92,50 @@ export const useDeliveryCasesStore = defineStore('matrix-teams-delivery-cases', 
     return out
   })
 
-  return { cases, loaded, byStage, refresh, DELIVERY_STAGES, DELIVERY_GATES }
+  /** 网络读数（设计 §7 总览：在途案例数/阶段分布/待审 HumanGate=G1/G5 缺 pass 计数） */
+  const networkReadings = computed(() => {
+    const pendingHumanGates = cases.value.reduce((n, c) => {
+      const need = ['G1', 'G5'].filter(g => !c.gates.some(x => x.gate === g && x.verdict === 'pass'))
+      return n + need.length
+    }, 0)
+    return {
+      inFlight: cases.value.length,
+      byStage: byStage.value,
+      pendingHumanGates,
+    }
+  })
+
+  /** 发起向导（M2 工程场景）：建案例房 + case state + index 登记（镜像 mx-delivery-lib 语义） */
+  async function createCase(input: { title: string; repoUrl: string; tier: string }): Promise<void> {
+    const client = matrixStore.client as MatrixClient | null
+    if (!client) throw new Error('matrix client 未就绪')
+    const self = (client.getUserId() ?? '@unknown:local').split(':')[0].replace(/^@/, '')
+    const caseId = `dlv-${Date.now()}`
+    const result = await client.createRoom({
+      name: `delivery-${caseId}-${input.title.slice(0, 24)}`,
+      preset: 'private_chat' as never,
+      is_direct: false,
+    }) as unknown as { room_id: string }
+    const now = Date.now()
+    await client.sendStateEvent(result.room_id, DELIVERY_EVENT_TYPES.case, {
+      schemaVersion: DELIVERY_SCHEMA_VERSION,
+      caseId, title: input.title, repoUrl: input.repoUrl, tier: input.tier,
+      stage: 'P1', ownerAccount: self,
+      createdAt: now, updatedAt: now, updatedBy: self,
+    }, '')
+    // index 幂等并入（发现机制；读失败视为空表重建）
+    let roomIds: string[] = []
+    try {
+      const idx = parseIndexContent(await client.getAccountDataFromServer(DELIVERY_INDEX_ACCOUNT_DATA_TYPE))
+      if (idx) roomIds = idx.roomIds
+    } catch { /* 首例无 index */ }
+    await client.setAccountData(DELIVERY_INDEX_ACCOUNT_DATA_TYPE, {
+      schemaVersion: DELIVERY_SCHEMA_VERSION,
+      roomIds: [...new Set([...roomIds, result.room_id])],
+      updatedBy: self, updatedAt: now,
+    })
+    await refresh()
+  }
+
+  return { cases, loaded, byStage, networkReadings, refresh, createCase, DELIVERY_STAGES, DELIVERY_GATES }
 })
