@@ -235,6 +235,50 @@ router.post('/mention/preview', async (ctx) => {
   ctx.body = { ok: true, previews }
 })
 
+router.post('/queue/enqueue', async (ctx) => {
+  // GOAL-05 让位队列（minimax 矩阵 §3.4 P1）：自治项遇用户消息让位，轮空恢复。
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { itemId, workspacePath, origin, text, source } = body as Record<string, unknown>
+  if (typeof itemId !== 'string' || !itemId || typeof workspacePath !== 'string' || !workspacePath
+      || (origin !== 'user' && origin !== 'autonomy') || typeof text !== 'string' || !text) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'itemId/workspacePath/origin(user|autonomy)/text 必填' }
+    return
+  }
+  const { enqueue } = await import('../zcode/dispatch-queue')
+  const result = enqueue({ itemId, workspacePath, origin, text, at: Date.now(), state: 'pending', source: typeof source === 'string' ? source : undefined })
+  ctx.body = { ok: true, ...result }
+})
+
+router.post('/queue/yield', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { workspacePath } = body as Record<string, unknown>
+  if (typeof workspacePath !== 'string' || !workspacePath) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'workspacePath 必填' }
+    return
+  }
+  const { yieldToUser } = await import('../zcode/dispatch-queue')
+  ctx.body = { ok: true, yielded: yieldToUser(workspacePath) }
+})
+
+router.post('/queue/drain', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { workspacePath } = body as Record<string, unknown>
+  if (typeof workspacePath !== 'string' || !workspacePath) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'workspacePath 必填' }
+    return
+  }
+  const dq = await import('../zcode/dispatch-queue')
+  ctx.body = { ok: true, restored: dq.restoreYielded(workspacePath), next: dq.dequeueNext(workspacePath) }
+})
+
+router.get('/queue/:workspacePath', async (ctx) => {
+  const { queueView } = await import('../zcode/dispatch-queue')
+  ctx.body = { ok: true, queue: queueView(ctx.params.workspacePath) }
+})
+
 router.get('/squad/evaluations', async (ctx) => {
   const { listEvaluations } = await import('../zcode/squad-protocol')
   const squad = typeof ctx.query.squad === 'string' ? ctx.query.squad : undefined
