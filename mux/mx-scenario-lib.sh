@@ -302,7 +302,14 @@ room_has_from() { # <room> <sender-mxid> <pattern>
 }
 
 dispatch_in_room() { # <humanUser> <text> <mention-csv> → event_id
-  local m
+  local m uid rid
+  uid="$(human_mxid "$1")"; rid="$(sget room_analysis)"
+  # 成员保障（09-26 实锤：派发者不在群→403 M_FORBIDDEN→SEND-FAILED；治理角色
+  # 不在第 8/11 步邀人清单内，arch 派发被拒）。不在群则补邀+自入后再发。
+  if ! mx_room_members "$(load_token fanfan)" "$rid" | grep -qx "$uid"; then
+    mx "$(load_token fanfan)" POST "rooms/$rid/invite" "{\"user_id\":\"$uid\"}" >/dev/null 2>&1 || true
+    mx_join "$(load_token "$1")" "$rid" >/dev/null 2>&1 || true
+  fi
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"
