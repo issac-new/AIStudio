@@ -1,0 +1,22 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1110,7 +1110,7 @@
+ 
+   ia2: {
+     // M2 交付案例面板（DeliveryCasesView，/app/cases；patch 473）
+-    delivery: { tab: '交付案例', title: '交付案例', empty: '暂无交付案例（推演/编排发起后显示）', owner: '发起人' },
++    delivery: { tab: '交付案例', title: '交付案例', empty: '暂无交付案例（推演/编排发起后显示）', owner: '发起人', launch: '发起案例', formTitle: '标题', formRepo: '中央仓地址', submit: '发起', readings: '网络读数', pendingHuman: '待审人工门' },
+     brand: '驾驶舱',
+     // v12 统一视图（09-19）：工作台/态势/管理台词表
+     flow: {
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1110,7 +1110,7 @@
+ 
+   ia2: {
+     // M2 delivery cases panel (DeliveryCasesView, /app/cases; patch 473)
+-    delivery: { tab: 'Delivery cases', title: 'Delivery Cases', empty: 'No delivery cases yet', owner: 'Owner' },
++    delivery: { tab: 'Delivery cases', title: 'Delivery Cases', empty: 'No delivery cases yet', owner: 'Owner', launch: 'New case', formTitle: 'Title', formRepo: 'Central repo URL', submit: 'Launch', readings: 'Network', pendingHuman: 'Pending human gates' },
+     brand: 'Cockpit',
+     // v12 unified view (09-19): workbench / sitline / governance vocabulary
+     flow: {

@@ -91,3 +91,45 @@ describe('delivery-cases store 投影', () => {
     expect(store.loaded).toBe(true)
   })
 })
+
+describe('发起向导 createCase（M2）', () => {
+  beforeEach(() => { setActivePinia(createPinia()); clientHolder.client = null })
+
+  it('建案例房+case state+index 登记三发；网络读数含 HumanGate 待审计数', async () => {
+    const calls: Array<[string, string, unknown]> = []
+    const caseRoom = fakeRoom('!c3:m.x', {
+      schemaVersion: 2, caseId: 'dlv-3', title: '向导案例', repoUrl: 'https://r',
+      tier: 'standard', stage: 'P1', ownerAccount: 'fanfan',
+      createdAt: 1, updatedAt: 1, updatedBy: 'fanfan',
+    }, [
+      fakeEvent('com.swarmstudio.delivery.gate', {
+        schemaVersion: 2, caseId: 'dlv-3', gate: 'G1', verdict: 'pass',
+        evidence: { kind: 'human', summary: 's' }, decidedBy: 'fanfan', at: 5,
+      }),
+    ])
+    clientHolder.client = {
+      getUserId: () => '@fanfan:matrix.test',
+      createRoom: vi.fn().mockResolvedValue({ room_id: '!c3:m.x' }),
+      sendStateEvent: vi.fn().mockImplementation(async (rid: string, type: string, content: unknown) => {
+        calls.push([rid, type, content]); return {}
+      }),
+      getAccountDataFromServer: vi.fn().mockRejectedValue(new Error('none')),
+      setAccountData: vi.fn().mockImplementation(async (type: string, content: unknown) => {
+        calls.push(['', type, content])
+      }),
+      getRoom: (rid: string) => (rid === '!c3:m.x' ? caseRoom : null),
+      getRooms: () => [caseRoom],
+    }
+    const { useDeliveryCasesStore } = await import('../stores/delivery-cases')
+    const store = useDeliveryCasesStore()
+    await store.createCase({ title: '向导案例', repoUrl: 'https://r', tier: 'standard' })
+    const stateSend = calls.find(([rid, type]) => rid === '!c3:m.x' && type === 'com.swarmstudio.delivery.case')!
+    expect((stateSend![2] as { caseId: string }).caseId).toMatch(/^dlv-/)
+    expect((stateSend![2] as { stage: string }).stage).toBe('P1')
+    const index = calls.find(([, type]) => type === 'com.swarmstudio.delivery.index')!
+    expect((index![2] as { roomIds: string[] }).roomIds).toContain('!c3:m.x')
+    // 网络读数：1 在途；G1 已 pass、G5 缺 → 待审人工门 = 1
+    expect(store.networkReadings.inFlight).toBe(1)
+    expect(store.networkReadings.pendingHumanGates).toBe(1)
+  })
+})
