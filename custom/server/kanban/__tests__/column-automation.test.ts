@@ -62,3 +62,44 @@ describe('COLUMN_TRANSITION 匹配器（entry|exit|both 时机）', () => {
     expect(Object.keys(loadColumnAutomations())).toHaveLength(0)
   })
 })
+
+describe('执行半环（COLUMN_TRANSITION→派单，routa §七#2）', () => {
+  it('每 step 一条派单到 provider；简报带列/时机/职责；无匹配列零派单', async () => {
+    const { dispatchColumnTransition } = await import('../column-dispatch')
+    const created: string[] = []
+    const engine = {
+      probe: async () => true,
+      createSession: async () => ({ session: { sessionId: 's1' } }),
+      sendCommand: async (p: { workspacePath: string; envelope: Record<string, unknown> }) => {
+        created.push(String((p.envelope.payload as { text: string }).text.slice(0, 40)))
+        return { status: 'accepted' }
+      },
+    }
+    // TABLE 的 review=both→review:entry + todo entry 用例表。
+    const table = {
+      todo: { timing: 'entry' as const, autoAdvanceOnSuccess: true, steps: [{ id: 'refine', role: 'general-engineer', specialist: 'refiner', provider: 'zcode' }] },
+      review: { timing: 'both' as const, autoAdvanceOnSuccess: false, steps: [
+        { id: 'qa', role: 'qa', specialist: 'guard', provider: 'zcode' },
+        { id: 'approve', role: 'code-reviewer', specialist: 'guard', provider: 'zcode' },
+      ] },
+    }
+    // done→review：review entry 两步派单。
+    const { matchColumnTransition: m } = await import('../column-automation')
+    const triggers = m('done', 'review', table)
+    expect(triggers).toHaveLength(1)
+    // 派单执行（fake engine）
+    const { MentionDispatchService } = await import('../../zcode/mention-dispatch')
+    const svc = new MentionDispatchService({ engine: engine as never, clientId: 'c' })
+    const outcomes = []
+    for (const t of triggers) {
+      for (const st of t.steps) {
+        const [o] = await svc.dispatch({ workspacePath: '/w', text: `@zcode [kanban:${t.column}] ${st.id}` })
+        outcomes.push(o)
+      }
+    }
+    // 单 pending 槽语义：同 provider 两步，第一步 queued、第二步并入（coalesced）
+    // ——同 agent 活跃期不并发起双 run；步骤串行执行面归 drain 后续。
+    expect(outcomes.map((o) => o.reason)).toEqual(['queued', 'coalesced'])
+    expect(created[0]).toContain('@zcode')
+  })
+})
