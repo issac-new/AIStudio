@@ -27,7 +27,9 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 AGENT_TREE="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
 # 与 inject.mjs 的路由规则保持一致（scripts/inject.mjs 的 HERMES_AGENT_PATCH_PREFIXES
 # 是路由前缀的单一事实源，此为 shell 侧镜像——改任一侧必须同步另一侧，否则 patch 会被
-# 静默跳过：候选 0 exit 0 无告警）。当前全集：
+# 静默跳过：候选 0 exit 0 无告警）。两侧集合相等由守门测试
+# custom/server/__tests__/ensure-injected-delta-guard.test.ts 双向断言，增删不同步即红。
+# 当前全集：
 #   hermes_cli/ plugins/ agent/ apps/ assets/ acp_ gateway/ tests/gateway/
 #   tests/hermes_cli/ optional-mcps/ optional-skills/ tools/ tests/tools/ tests/agent/
 AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/)'
