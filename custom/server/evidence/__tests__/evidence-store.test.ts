@@ -88,3 +88,39 @@ describe('台账：只增 + 幂等 + 环形 + fail-soft', () => {
     require('fs').writeFileSync(join(dir, 't1.json'), '{{bad', 'utf8')
   }
 })
+
+describe('任务结果卡聚合（deepseek-harness 交付卡语义）', () => {
+  it('时长+验证 bullet 序列+文件清单+交付冻结+最新裁决', async () => {
+    const { buildResultCard } = await import('../result-card')
+    appendEvidence(rec({ evidenceId: 'a1', kind: 'artifact', ref: 'src/a.ts', artifactType: 'diff', milestone: 'turn-1', at: 1000 }))
+    appendEvidence(rec({ evidenceId: 'a2', kind: 'artifact', ref: 'src/a.ts', artifactType: 'screenshot', milestone: 'turn-2', at: 2000 }))
+    appendEvidence(rec({ evidenceId: 'd1', kind: 'delivery_snapshot', revision: { base: 'aaa', head: 'bbb' }, at: 3000 }))
+    appendEvidence(rec({ evidenceId: 'v1', kind: 'verification', verdict: 'fail', basis: 'pytest 1/5', at: 4000 }))
+    appendEvidence(rec({ evidenceId: 'v2', kind: 'verification', verdict: 'pass', basis: 'pytest 5/5', at: 9000 }))
+    const card = buildResultCard('t1')
+    expect(card.durationSeconds).toBe(8)  // (9000-1000)/1000
+    expect(card.verdict).toBe('pass')     // 最新裁决
+    expect(card.verificationBullets.map((b) => b.verdict)).toEqual(['pass', 'fail'])  // 新在前
+    expect(card.files).toEqual([{ ref: 'src/a.ts', artifactTypes: ['diff', 'screenshot'], milestones: ['turn-1', 'turn-2'], count: 2 }])
+    expect(card.deliverySnapshot).toEqual({ base: 'aaa', head: 'bbb', at: 3000 })
+    expect(card.evidenceCount).toBe(5)
+  })
+
+  it('per-turn changed-files 按里程碑分组（dsh P0-4）', async () => {
+    const { changedFilesByTurn } = await import('../result-card')
+    appendEvidence(rec({ evidenceId: 'c1', kind: 'artifact', ref: 'a.ts', artifactType: 'changed-files', milestone: 'turn-1', at: 1 }))
+    appendEvidence(rec({ evidenceId: 'c2', kind: 'artifact', ref: 'b.ts', artifactType: 'changed-files', milestone: 'turn-1', at: 2 }))
+    appendEvidence(rec({ evidenceId: 'c3', kind: 'artifact', ref: 'c.ts', artifactType: 'changed-files', milestone: 'turn-2', at: 3 }))
+    const turns = changedFilesByTurn('t1')
+    expect(turns).toHaveLength(2)
+    expect(turns.find((t) => t.milestone === 'turn-1')?.files.sort()).toEqual(['a.ts', 'b.ts'])
+  })
+
+  it('空台账→空卡（零不炸）', async () => {
+    const { buildResultCard } = await import('../result-card')
+    const card = buildResultCard('t-none')
+    expect(card).toMatchObject({ durationSeconds: 0, verdict: null, evidenceCount: 0 })
+    expect(card.verificationBullets).toEqual([])
+    expect(card.files).toEqual([])
+  })
+})
