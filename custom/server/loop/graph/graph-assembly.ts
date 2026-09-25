@@ -403,10 +403,18 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
         setCronBridgeTick(async () => { await spawner?.poll() })
         const port = Number(process.env.LOOP_CRON_BRIDGE_PORT ?? '')
         const token = process.env.LOOP_CRON_BRIDGE_TOKEN
+        // 真 CLI 合同（冒烟实测）：cron 任务落在"活动 profile 家"——多 profile 环境须
+        // 显式给 LOOP_CRON_BRIDGE_HOME（如 ~/.hermes/profiles/<active>），缺省 ~/.hermes
+        // 仅适用于 default 单 profile 环境。
+        const hermesHome = process.env.LOOP_CRON_BRIDGE_HOME?.trim() || undefined
         if (Number.isFinite(port) && port > 0 && token) {
-          void ensureLoopTickCronJob({ port, token, log }).catch((err) => {
+          void ensureLoopTickCronJob({ port, token, hermesHome, log }).catch((err) => {
             log(`[cron-bridge] 注册失败（loop 调度将无 timer 驱动，属可观测故障）：${err instanceof Error ? err.message : err}`)
           })
+          if (!hermesHome) {
+            log('[cron-bridge] 未配置 LOOP_CRON_BRIDGE_HOME，按 ~/.hermes（default profile）注册——'
+              + '多 profile 环境若报"Script file not found"，请配置为活动 profile 家')
+          }
         } else {
           log('[cron-bridge] LOOP_SCHEDULER=cron 但 LOOP_CRON_BRIDGE_PORT/LOOP_CRON_BRIDGE_TOKEN 未配置——'
             + '未注册 cron 任务，loop 到期判定无 timer 驱动（修复配置后重启生效）')

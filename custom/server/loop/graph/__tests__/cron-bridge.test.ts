@@ -102,7 +102,9 @@ describe('幂等注册', () => {
     const createArgs = calls.find((a) => a[1] === 'create')!
     expect(createArgs).toContain('1m')
     expect(createArgs).toContain(CRON_BRIDGE_JOB_NAME)
-    expect(createArgs).toContain(scriptPath)
+    // 真 CLI 合同（冒烟实测）：--script 只收相对 <home>/scripts/ 的文件名
+    expect(createArgs).toContain('loop-cron-bridge.sh')
+    expect(createArgs).not.toContain(scriptPath)
     const again = await ensureLoopTickCronJob({ port: 8647, token: 'tok-1', hermesHome: dir, exec, log: (m) => logs.push(m) })
     expect(again).toBe(false)
     expect(calls.filter((a) => a[1] === 'create')).toHaveLength(1)
