@@ -180,7 +180,7 @@
 | 分派预演 WillEnqueueRun | 🔜P1（写读共用谓词，衔接 #7 派单链） |
 | 会话续接 resume-unsafe 分档 | ✅ resume-safety.ts（黑名单优先/new_session/safe_retry/backoff 指数退避封顶）；work_dir 继承随 delegate 域后续 |
 | 在场两维（availability×workload） | ✅ presence-two-axis.ts（圆点+芯片分画/30s-90s 心跳三档/在线闲与离线忙可分） |
-| execution log 每 run 一行+费用列 | 🧬RunTrace 已有骨架·费用列 🔜P2 |
+| execution log 每 run 一行+费用列 | ✅ run-log.ts（一行一 run：结论三态/耗时/命令截断/费用列/倒序筛选） |
 | 分布式 cron 锁表 | ❌单机形态不适用（多机形态再启） |
 | runtime brief 前缀稳定缓存 | ✅ brief-cache.ts（稳定前缀/词边界回退/链收益统计） |
 | 共享目录并发警告块 | ✅ workdir-adjacency.ts（并发>1 警告/chat 共享警示块/互斥锁归调度层） |
