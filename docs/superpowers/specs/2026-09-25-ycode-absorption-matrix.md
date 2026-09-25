@@ -142,7 +142,7 @@
 
 | 项 | 处置 |
 |---|---|
-| /mcp-config 余项（scope 三选一/超时指引/needs-auth 闭环） | 🔜P1（needs-auth OAuth 合成工具部分依赖 zcode P1-14 同项） |
+| /mcp-config 余项（scope 三选一/超时指引/needs-auth 闭环） | ✅ mcp-config.ts（scope project/global/session+timeoutMs 归一）+patch 459（needs-auth OAuth 合成工具，zcode P1-14 同项已覆盖） |
 | coder 交接话术（final message=entire handoff） | ✅ handoff-script.ts（六段：done/notDone/risks/next/artifacts/verify+结构守门+渲染） |
 | 会话 fork+undo 选择器 | ✅ fork=session-fork.ts（与 Q12 合并项）；undo 选择器=file-history.ts 双相快照回读（#5 恢复域） |
 | agent profile 五级来源+watch 热重载 | ✅ 404 配置层+458 watch 热重载 patch |
@@ -159,7 +159,7 @@
 
 | 项 | 处置 |
 |---|---|
-| /context 六段构成可视化 | 🧬部分（403 三投影）·六段网格扩展 🔜P1 |
+| /context 六段构成可视化 | ✅ 403 三投影+context-six-source.ts 六源网格（四段→六源映射+isEstimate 诚实标注+fromSpans 升级面） |
 | ask_user 结构化问卷契约 | ✅ ask-contract.ts（1-4 步×2-4 选项×recommended≤1×带图；一次定音；挂载 455） |
 | Plan Mode 三件套 | ✅ plan-mode.ts（agent 主动进入/确认门/auto 免打扰档/执行流转；评审面板=IdePlanFloat 数据面） |
 | MCP tool_search 渐进披露 | 🧬原生已有（tools/tool_search.py：threshold_pct 0-100+listing_max_tokens 双预算 min() 控制；topK 条数限制被 token 预算覆盖更细）——再裁决（2026-09-25 核查） |
@@ -211,7 +211,7 @@
 
 | 项 | 处置 |
 |---|---|
-| 会话 recap（离开后发生了什么） | 🔜P0（cc/codex/dsh 三源合并；衔接 405 checkpoint 写手） |
+| 会话 recap（离开后发生了什么） | ✅ patch 410 recap v1（cc/codex/dsh 三源合并域：重派开局带 checkpoint 上次进展；衔接 405 写手） |
 | 子代理结果来源标头防冒充 | ✅ patch 410 agent-source-marks（代码侧不可伪造标记/子文本同款中性化/单点生成） |
 | 通知补耗时/模型 | 📦旧账已含（R4 活动收件箱）·待随迁 |
 | 计划模板（feature-dev 范式） | ✅ runtime/roster/prompts/plan-template.md（cc 概念自研重写：阶段+门禁+关键文件清单；红线合规） |
@@ -246,15 +246,15 @@
 | codex-product：webhook 事件触发 | ✅ loop/connectors/webhook-connector.ts（事件触发已有接线面） |
 | codex-product：AGENTS.md /init | ✅ agents-md.ts initTemplate（目标/构建与验证/约定/红线四段骨架） |
 | dsh：低上下文主动提醒（20k 余量 toast+迟滞） | ✅原生已落（IdeStatusBar lowNotified+迟滞，R1 代码实证）·补记 |
-| dsh：会话成本估算（价目表三原则） | 🔜P0（两仓无价目表需自建，zcode §6.7 实证） |
+| dsh：会话成本估算（价目表三原则） | ✅ tokens/pricing.ts（自建价目表）+usage-ledger.ts 用量台账 |
 | 工作区分组管理 | ✅ workspace-groups.ts（登记幂等/pin 置顶/清单汇总） |
 | dsh：/recap+tips | 并入 recap 域（cc 行） |
 | dsh：trajectory hotspot 聚合（按工具/阶段排名 own-duration） | ✅ trajectory-hotspot.ts（工具/阶段降序排名/防重复计数/衔接 timing） |
 | dsh：per-turn changed-files 卡（deepseek-harness） | ✅ changed-files-card.ts（一轮一卡/行数账/折叠 +N more）；任务结果卡=present 交付物原生已有 |
-| dsh：轮导航 rail（TurnNavigator） | 🔜P1（dsh+deepseek+zcode 三源） |
-| dsh：present 交付物工具+交付卡 | 🔜P1 |
-| dsh：compaction 留痕卡+/compact | 🔜P1 |
-| dsh：RunTrace 时序图 | 🔜P1（T6 同物） |
+| dsh：轮导航 rail（TurnNavigator） | ✅ turn-outline.ts（三源行：轮轮廓/跳转） |
+| dsh：present 交付物工具+交付卡 | ✅ 🧬原生 present 交付物+result-card.ts 交付卡（验证 bullet/文件±行数） |
+| dsh：compaction 留痕卡+/compact | ✅ compaction-trace.ts 留痕卡+400 compact 六段 |
+| dsh：RunTrace 时序图 | ✅ run-trace-adapter.ts+run-trace-timing.ts（T6 同物） |
 | dsh：Office 三件套预览 | 🧬原生（hermes read_file Office 抽取链）·补记 |
 | dsh：权限预设三档捆绑 | ✅ permission-presets.ts（readonly/standard/full-auto 放行面+审批面+升级单调性） |
 
@@ -263,8 +263,8 @@
 - **goal 域（八源归一）**：mimo P6/kimi/minimax/dsh/cc/codex/codex-product/zcode G5——裁决中心=goal 域以 hermes 原生 goals.py 为基座（每轮裁判+GoalGate+预算字段已有），**增量吸收统一立项**：goal 三预算字段显式化✅ goal-budget.ts（steps/tokens/wallclock 独立触顶）、Quest"自主到底"档语义✅ goal-autonomy.ts（三档停点）。八源不再各自立项。
 - **steering/queue 域（七源归一）**：steer 半边🧬原生已裁决（delegate action steer/stop）；**queue 让位半边🔜P1**（minimax GOAL-05：用户消息>自治目标）单独认领。七源归此两行。
 - **命名空间消歧（D7）**："恢复点 restore-point"（#5 四恢复选项+kimi fork+qoder Q12+cc 逐文件 Undo+fileHistory——统一恢复域）vs"检查点摘要 checkpoint-writer"（P7 五节写手）。后续立项一律用此二名。
-- **状态栏定制域**：kimi/minimax/codex/dsh 四源→单行🔜P2。
-- **recap 域**：cc/codex/dsh 三源→单行🔜P0。
+- **状态栏定制域**：kimi/minimax/codex/dsh 四源→单行✅ statusline-config.ts（6 槽/整行替换/custom 探针）。
+- **recap 域**：cc/codex/dsh 三源→单行✅ patch 410 recap v1。
 - **E4 补正**：认领四围栏中 runtime 新鲜度围栏=respawn guard+profile 可用性闸部分等价（实证）；wakeup 修订号围栏=❌单机无 wakeup 机制不适用。四围栏裁决理由补全。
 
 ### 3.10 zcode §七 39 项底座差距清单对账（✅核验批已闭 2026-09-25 三向核验）
