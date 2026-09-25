@@ -102,7 +102,7 @@
 
 | 项 | 处置 |
 |---|---|
-| A1 证据型工件挂任务里程碑（截图/录制/diff 卡） | 🔜P1（与 routa"任务=证据累积"同域合并立项） |
+| A1 证据型工件挂任务里程碑（截图/录制/diff 卡） | ✅ evidence 域合并落（evidence-store kind=artifact+milestone 挂载+changedFilesByTurn 分组投影，patch 413 台账） |
 | A2 计划工件评审化（行内评论+Proceed/Review） | 📦旧账已落（IdePlanFloat，R3）·待随迁 |
 | A3 任务组语义 | ✅ task-groups.ts（edited-files 清单/待批步骤专区/组汇总） |
 | A4 浏览器安全层 | ✅ browser-security.ts（deny 优先/白名单/独立 profile） |
@@ -123,7 +123,7 @@
 |---|---|
 | Q1 Repo Wiki 生成闭环 | 📦旧账已落（wikiPipeline，R5）·待随迁 |
 | Q2 规则体系四型作用域 | ✅ rules-scope.ts（always/model-decides/at-manual/glob 四型+global/project 两级合并） |
-| Q3 输入框 / 触发体系 | 🧬部分（slash 已备）·统一入口 🔜P2 |
+| Q3 输入框 / 触发体系 | ✅ slash 已备+统一入口=cmdmeta 三元组+ide 命令面板（command-palette 守门） |
 | Q4 任务级 Worktree 选择 | 🧬原生（delegate worktree+loop WorktreeManager）·补记 |
 | 自动化（定时/时区/到期/无人值守） | ✅ automation-schedule.ts（到期自停/授权双门/时区日分组） |
 | 工作台体检（五维） | ✅ harness-health.ts（五维评分/优化卡/损坏降级） |
@@ -217,7 +217,7 @@
 | 计划模板（feature-dev 范式） | ✅ runtime/roster/prompts/plan-template.md（cc 概念自研重写：阶段+门禁+关键文件清单；红线合规） |
 | 评审/验证轮编排模板 | ✅ review-template.md（高信号纪律+独立验证轮自研；实件 /review 已落 patch 414） |
 | 技能入口（skills=commands 合并口径） | 🧬原生（hermes skills_list/skill_manage 面）；工作台 UI 入口随 UI 批 🔜P2 |
-| 权限模式 7 档语义+切换 UI | 🧬部分（402 决策态+规则）·模式语义 🔜P2 |
+| 权限模式 7 档语义+切换 UI | ✅ permission-modes.ts 七档语义（cc d.ts:6046 六档+readonly/放行面/三档映射）+402 决策态；切换 UI 随 UI 批 |
 | 任务依赖 dependsOn | 🧬原生（kanban 父子依赖+claim 重检）·补记 |
 | cc：缓存 miss 归因 | ✅ cache-attribution.ts（归因优先序/命中率三档/建议文案） |
 | cc：/btw 侧问 | ✅ btw-sidebar.ts（三态/合并回注/不改主方向） |
@@ -243,7 +243,7 @@
 | codex-product：Activity 收件箱三态+OS 通知 | 📦旧账已落（R4）·待随迁 |
 | codex-product：终端 actions（项目级一键命令） | 📦旧账已落（R4）·待随迁 |
 | codex-product：文件/选区引用入会话 | 🔜P1（@域合并） |
-| codex-product：webhook 事件触发 | 🔜P2 |
+| codex-product：webhook 事件触发 | ✅ loop/connectors/webhook-connector.ts（事件触发已有接线面） |
 | codex-product：AGENTS.md /init | 🔜P2 |
 | dsh：低上下文主动提醒（20k 余量 toast+迟滞） | ✅原生已落（IdeStatusBar lowNotified+迟滞，R1 代码实证）·补记 |
 | dsh：会话成本估算（价目表三原则） | 🔜P0（两仓无价目表需自建，zcode §6.7 实证） |
