@@ -1,6 +1,11 @@
 // overlay/approval 存储：rules.json 三列表 + defaultMode（minimax permission.json schema 移植）。
 // 路径解析：HERMES_APPROVAL_RULES_FILE 显式 > ~/.hermes-web-ui/approval。
 // 不落 cwd：serve-server.mjs 以 upstream 为 cwd 启动，cwd 档会把规则写进只读 upstream 树。
+//
+// 分域声明（docs/superpowers/specs/2026-09-25-capability-boundaries-design.md §2/§4-2）：
+// 本规则库只管 IDE coding-agent（zcode/mimo）执行体的工具审批；hermes agent 的命令
+// 审批在各 profile 的 command_allowlist（tools/approval.py），两平面分域、互不写入
+// 属设计而非缺陷。跨机人工裁决（HumanGate）以 Matrix 房间事件为准，不入本库。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
