@@ -61,7 +61,14 @@
 | 动态 Bash 工具契约 | minimax 61c4c31 | 🧬 原生已有（更深） | _WINDOWS_BASH_SHELL_HINT 全套陷阱块（MSYS 路径/PowerShell 内建禁用/PTY CR 语义）+远端 OS 探测（Windows x64 轮实战沉淀）；schema 级动态裁剪通道在 zcode turn 工具面（toolDisallowlist） |
 | E2E 全链四跳 | — | ✅ 实证 | /zcode socket 认证接入+REST 词表回执+事件房间投递+冷运行时 existing-only 正确拒绝；附真缺陷修复（onAgentRuntimeRestarted 真签名直收监听器 zcodeAgentService:5615；IdeStatusBar socket 生命周期接线） |
 
-剩余候补（per-model 工具描述覆盖/元数据选择性裁剪/长会话前缀复用/steering 语义/视频输入链路）维持后续吸收轮排队——每项均为独立设计轮量级，队列有档可查。
+剩余候补终态处置（第三批，2026-09-25）：
+- **per-model 工具描述/参数覆盖** ✅ 落地 patch 408（config 声明式/通配匹配/坏 schema 回退；_load_tools 接线；守门 5 例；switch_model 热切换列 v2）。
+- **流式元数据选择性裁剪** 🔜 独立设计轮排队——hermes 压缩器已有全套（prune 工具结果/保护头尾/主动剪枝+迟滞）；codex 增量仅"最大优先+装下即停"次序 refinement，而 context_compressor 是全仓战损最重面（百余条 issue 注释），长会话尾部不做低收益盲改。
+- **长会话已验证前缀复用** 🔜 独立设计轮排队——涉 hermes_state 会话重放/持久层增量校验，架构级。
+- **multica steering 语义** 🧬 已裁决原生（delegate action steer/stop）。
+- **kimi 视频输入链路** 🔜 条件启动维持（台账钦点，条件到即立独立设计轮）。
+
+至此候补队列每项均有终态处置：落地（补丁号）/原生已有（实证锚点）/排队（量化理由）/条件启动（触发条件）。
 
 ### 1.5 已知事项（E2E 实测，非缺陷即如实记录）
 
