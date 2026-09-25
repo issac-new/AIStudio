@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 _REQUEST_TIMEOUT_SECONDS = 30
 _MAX_INVITES_PER_CALL = 50
 _MAX_MEMBER_REPORT = 40
+_MAX_ROOM_LIST = 50
 
 _MXID_RE = re.compile(r"^@[A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
 _ROOM_REF_RE = re.compile(r"^[!#][A-Za-z0-9._\-/=+]+:[A-Za-z0-9.\-]+(?::\d+)?$")
@@ -150,8 +151,14 @@ async def matrix_room_list(args: dict | None = None, **_: Any) -> str:
     if rooms is None:
         return _error("Could not list joined rooms from the homeserver")
 
+    # Every room costs two serial API calls (30s timeout each): an account on
+    # hundreds of rooms would pin the agent turn for minutes. Truncate and say
+    # so, like _MAX_INVITES_PER_CALL does for invites.
+    truncated = len(rooms) > _MAX_ROOM_LIST
+    listed = rooms[:_MAX_ROOM_LIST]
+
     out = []
-    for room_id in rooms:
+    for room_id in listed:
         path = f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}"
         # `/state/<type>` returns the event content directly; the untyped `/state`
         # form returns a bare list of events, which is easy to mis-read as a dict.
@@ -165,7 +172,8 @@ async def matrix_room_list(args: dict | None = None, **_: Any) -> str:
             "members": joined[:_MAX_MEMBER_REPORT],
         })
 
-    return json.dumps({"count": len(out), "rooms": out}, ensure_ascii=False)
+    return json.dumps({"count": len(out), "total": len(rooms), "truncated": truncated,
+                       "rooms": out}, ensure_ascii=False)
 
 
 async def _invite_via_adapter(adapter: Any, room_id: str, users: list[str]) -> str:
@@ -213,6 +221,13 @@ async def matrix_room_invite(args: dict | None = None, **_: Any) -> str:
 
     adapter = _live_matrix_adapter()
     if adapter is not None:
+        # The adapter builds mautrix RoomID(room_id) (upstream adapter.py
+        # invite_user), which takes a !room ID only; an alias would fail deep in
+        # the homeserver call with an unrelated error. Refuse it here with the
+        # real reason — the tool schema promises alias support.
+        if room_id.startswith("#"):
+            return _error(f"room alias {room_id} is not supported on the gateway adapter path; "
+                          "resolve it to a room ID (!...) first (matrix_room_list reports room IDs)")
         return await _invite_via_adapter(adapter, room_id, users)
 
     creds = _creds()
@@ -329,7 +344,8 @@ _TOOLS: dict[str, tuple] = {
     "matrix_room_list": (
         matrix_room_list,
         "List the Matrix rooms this account has joined, with names. Use to locate an existing "
-        "requirement room before creating a duplicate.",
+        "requirement room before creating a duplicate. Truncated to the first "
+        f"{_MAX_ROOM_LIST} rooms; `truncated`/`total` report the rest.",
         {},
         [],
         "📋",
