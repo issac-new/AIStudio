@@ -998,3 +998,7 @@
 #      401/405 信号；执行钩子列后续（同 415 模式）；HERMES_RUNAWAY_SUPERVISOR/
 #      HERMES_RUNAWAY_MAX_RECOVERY 配置；守门 4 例。
 457-agent-runaway-supervisor.patch
+# 458 P1（kimi §五 C 表，矩阵 §3.3）：agent profile 五级来源+热重载判定面——
+#      五级优先级合并（env>CLI>项目>全局>内置名册）+watch mtime 变更检测+防抖窗；
+#      重载动作由调用方跑（判定面纯函数）；守门 4 例。
+458-agent-profile-hot-reload.patch
