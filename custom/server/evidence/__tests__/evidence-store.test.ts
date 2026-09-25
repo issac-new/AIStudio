@@ -60,13 +60,12 @@ describe('台账：只增 + 幂等 + 环形 + 坏档隔离', () => {
     expect(appendEvidence(rec({ evidenceId: 'e0' })).added).toBe(true)
   })
 
-  it('坏文件隔离 .corrupt 留档 + 可续写（不再静默当空账续写）', () => {
-    const file = evidenceFile('t1')
-    writeFileSync(file, '{{bad', 'utf8')
+  it('坏文件隔离 .corrupt.<ts> 留档（G7 时间戳防二次损坏覆盖）+ 可续写（不再静默当空账续写）', () => {
+    writeFileSync(evidenceFile('t1'), '{{bad', 'utf8')
     expect(loadEvidence('t1').records).toEqual([])
-    const archive = `${file}.corrupt`
-    expect(existsSync(archive)).toBe(true)          // 坏档留档不销毁
-    expect(readFileSync(archive, 'utf8')).toBe('{{bad')
+    const archives = readdirSync(dir).filter((n) => n.includes('.corrupt.'))  // 坏档留档不销毁
+    expect(archives).toHaveLength(1)
+    expect(readFileSync(join(dir, archives[0]), 'utf8')).toBe('{{bad')
     expect(appendEvidence(rec({})).added).toBe(true)  // 且可正常续写
     expect(loadEvidence('t1').records).toHaveLength(1)
   })

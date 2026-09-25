@@ -1,7 +1,7 @@
 // /review 评审域守门（codex-product §五 P0-1：两域/行内评论/三裁决一次定音/evidence 联动）。
 // S-A 文件名哈希/身份校验、S-B 坏档隔离与 evidence 断链标记、S-D 字段上限在此守门。
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'fs'
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
@@ -127,10 +127,10 @@ describe('文件名哈希化（S-A：清洗名多对一 = 整账覆写销毁）'
     expect(readFileSync(reviewFile('r1'), 'utf8')).toBe(foreign)
   })
 
-  it('坏文件隔离 .corrupt 留档 + 可续写（不再静默当"评审不存在"）', () => {
+  it('坏文件隔离 .corrupt.<ts> 留档（G7 时间戳防二次损坏覆盖）+ 可续写（不再静默当"评审不存在"）', () => {
     writeFileSync(reviewFile('r1'), '{{bad', 'utf8')
     expect(loadReview('r1')).toBeNull()
-    expect(existsSync(`${reviewFile('r1')}.corrupt`)).toBe(true)   // 坏档留档不销毁
+    expect(readdirSync(rdir).filter((n) => n.includes('.corrupt.'))).toHaveLength(1)  // 坏档留档不销毁
     expect(openReview({ reviewId: 'r1', domain: 'uncommitted' }).reviewId).toBe('r1')
     expect(loadReview('r1')?.comments).toEqual([])
   })

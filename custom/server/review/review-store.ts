@@ -7,7 +7,7 @@
 // （旧档 cwd/.review 兜底已撤，同 evidence-store）。
 // 文件名 = reviewId 稳定哈希（sha256 前 32 hex + 可读前缀）：清洗名多对一会撞同一文件
 // 整账覆写；旧清洗名读侧兼容迁移（命中且身份相符才搬）。落盘 tmp+rename 原子写，
-// 坏文件改名 .corrupt 留档。
+// 坏文件改名 .corrupt.<ts> 留档（G7 时间戳防二次损坏覆盖现场）。
 //
 // 归属（已知边界，勿当无漏）：单租户信任模型——任意登录用户凭 reviewId 可读写任意评审，
 // 写入只记 actor 痕（opener/评论者/裁决者各留一道）。多租户任务归属待接（同 evidence-store）。
@@ -100,9 +100,10 @@ function writeJsonAtomic(file: string, data: unknown): void {
   }
 }
 
-/** 坏文件隔离（S-B）：改名 .corrupt 留档 + warn，不再静默当"评审不存在"续写。 */
+/** 坏文件隔离（S-B）：改名 .corrupt.<ts> 留档 + warn，不再静默当"评审不存在"续写。
+ *  时间戳（G7）：固定名 .corrupt 会让二次损坏覆盖第一次现场，档名带 ts 各自留档。 */
 function quarantine(file: string, err: unknown): void {
-  const archive = `${file}.corrupt`
+  const archive = `${file}.corrupt.${Date.now()}`
   try { renameSync(file, archive) } catch { /* 留档失败不阻断（只读介质等） */ }
   console.warn(`[review-store] 评审文件解析失败，已留档 ${archive}：${err instanceof Error ? err.message : String(err)}`)
 }

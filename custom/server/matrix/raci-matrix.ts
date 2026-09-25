@@ -13,8 +13,10 @@
 //
 // 边界规则（docs/superpowers/specs/2026-09-25-capability-boundaries-design.md §2/§3-E6）：
 // Matrix client-server REST 直连仅限初始化与派发摘要（建群/邀人/一条通知），
-// 跨机协作消息一律走 matrix-teams/delivery 协议事件。本模块调用方锁白名单
-// （raci-dispatch.ts），新增消费方须先过该文档 §6-T1 裁决并更新守门测试。
+// 跨机协作消息一律走 matrix-teams/delivery 协议事件。REST 包装函数清单与调用方
+// 白名单以 __tests__/raci-rest-guard.test.ts 为单一事实源（REST_FNS/ALLOWED_CONSUMERS，
+// 含协议事件通道 matrixSendProtocolEvent）；新增包装函数或消费方须先过该文档
+// §6-T1 裁决并同步守门清单。
 
 import type { RACITuple } from './gateway-env'
 import { readGatewayMatrixEnv } from './gateway-env'

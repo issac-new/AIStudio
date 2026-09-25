@@ -1,7 +1,7 @@
 // 注意力队列守门（multica §六 inbox：三档/双轴/双收件人/正文截断）。
 // S-A 桶名哈希、S-B 坏档隔离、S-D 码点截断与 limit clamp 在此守门。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
@@ -80,12 +80,12 @@ describe('双收件人隔离 + 幂等 + 环形', () => {
     expect(loadInbox('member', 'a/b').map((i) => i.itemId)).toEqual(['mine', 'more'])
   })
 
-  it('坏文件隔离 .corrupt 留档 + 可续写（不再静默当空桶续写）', () => {
-    const file = inboxFile('agent', 'zcode')
-    writeFileSync(file, '{{bad', 'utf8')
+  it('坏文件隔离 .corrupt.<ts> 留档（G7 时间戳防二次损坏覆盖）+ 可续写（不再静默当空桶续写）', () => {
+    writeFileSync(inboxFile('agent', 'zcode'), '{{bad', 'utf8')
     expect(loadInbox('agent', 'zcode')).toEqual([])
-    expect(existsSync(`${file}.corrupt`)).toBe(true)          // 坏档留档不销毁
-    expect(readFileSync(`${file}.corrupt`, 'utf8')).toBe('{{bad')
+    const archives = readdirSync(dir).filter((n) => n.includes('.corrupt.'))  // 坏档留档不销毁
+    expect(archives).toHaveLength(1)
+    expect(readFileSync(join(dir, archives[0]), 'utf8')).toBe('{{bad')
     expect(deliver(item({})).added).toBe(true)                 // 且可正常续写
   })
 })
