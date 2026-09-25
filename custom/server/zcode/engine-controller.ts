@@ -178,6 +178,12 @@ router.post('/checkpoint/recover', async (ctx) => {
   }
 })
 
+router.get('/squad/evaluations', async (ctx) => {
+  const { listEvaluations } = await import('../zcode/squad-protocol')
+  const squad = typeof ctx.query.squad === 'string' ? ctx.query.squad : undefined
+  ctx.body = { ok: true, evaluations: listEvaluations(squad) }
+})
+
 router.get('/projection', async (ctx) => {
   const runtime = getZcodeProjectionRuntime()
   ctx.body = { connected: runtime.connected, watching: runtime.watching }
