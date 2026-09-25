@@ -1,0 +1,16 @@
+# Ycode 成本估算价目表（单一事实源——dsh deepseekPricing 三原则：两档单价/缓存分价/未收录不显示）
+# 计价单位：每百万 token（per-Mtok）。idle=空闲档，peak=高峰档。
+# 缓存价缺省折算：cacheRead=input×0.1，cacheWrite=input 全价。
+# 维护纪律：新增模型先查官方价目页；查不到就不登记（未收录=UI 不显示金额，绝不瞎算）。
+currency: CNY
+models:
+  glm-4.7:
+    input: { idle: 0.5, peak: 2 }
+    output: { idle: 2, peak: 8 }
+    cacheRead: { idle: 0.05, peak: 0.2 }
+  glm-4.7-flash:
+    input: { idle: 0.05, peak: 0.2 }
+    output: { idle: 0.2, peak: 0.8 }
+  qwen3.7-max:
+    input: { idle: 1, peak: 4 }
+    output: { idle: 4, peak: 16 }
