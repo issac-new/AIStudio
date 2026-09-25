@@ -4,6 +4,10 @@
 # 拓扑：本机 1 个 hermes gateway（multiplex 全部 profile）+ 1 个 studio（多 matrix 账号）
 # 用户模型：每个独立用户 = matrix 账号 + 账号下多个独立 kanban + 各 kanban 下的 agent teams
 # 设计文档：docs/superpowers/specs/2026-09-24-multiplex-multiuser-feasibility-and-plan-v2.md
+#
+# 归属声明（边界设计 §3-E3）：本库重生成 config.yaml/.env 仅限 sim 编排场景
+# （幂等再生成、漂移自动收敛），是 sim-only 写者；真实环境 config.yaml 的写者
+# 为 studio controllers/config.ts。根治（mx-setup 走 studio API）见该文档 §6-T6。
 set -uo pipefail
 
 MX_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -245,6 +249,14 @@ out['platforms'] = {
     'matrix': {'enabled': False},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
 }
+# 模型通道覆写（同 profile：root default profile 也要改道，否则网关默认会话仍走旧通道）
+mu = os.environ.get('MX_MODEL_BASE_URL')
+if mu:
+    mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
+    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
+    cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
+    out['custom_providers'] = cps
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$HERMES_ROOT/config.yaml"
@@ -261,6 +273,8 @@ PYEOF
 #   hermes-b24d7ac5d9c4-aiteam 同构。
 # - 模式 local_external：共享宿主 hindsight 服务（:8888）；同家族 profile 的
 #   config.json 落同一 bank_id 即共享记忆，异家族天然隔离。
+# 备用模型通道框架：当前通道断时自动切到第一个可用的备用
+MX_FALLBACK_MODELS="${MX_FALLBACK_MODELS:-}"   # 逗号分隔：name:base_url:key:model
 HINDSIGHT_API_URL="${MX_HINDSIGHT_API:-http://localhost:8888}"
 user_mac12() { # <user> → 12 位伪 MAC（确定性派生；AIPAY_USER_MAC 覆盖）
   if [[ -n "${AIPAY_USER_MAC:-}" ]]; then echo "$AIPAY_USER_MAC"; return 0; fi
@@ -318,7 +332,15 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}   # patch 390：钉本账号默认板
-out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}  # 家族共享记忆
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
+# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道
+mu = os.environ.get('MX_MODEL_BASE_URL')
+if mu:
+    mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
+    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
+    cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
+    out['custom_providers'] = cps  # 家族共享记忆
 out['platforms'] = {
     'matrix': {'enabled': True},
     'email': {'enabled': False}, 'weixin': {'enabled': False}, 'webhook': {'enabled': False},
@@ -354,7 +376,15 @@ src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}
-out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}  # 家族共享记忆
+out['memory'] = {'memory_enabled': True, 'provider': 'hindsight', 'user_profile_enabled': True}
+# 模型通道覆写（额度切换）：MX_MODEL_BASE_URL/KEY/NAME 给定时整编制改道
+mu = os.environ.get('MX_MODEL_BASE_URL')
+if mu:
+    mk = os.environ.get('MX_MODEL_KEY', ''); mn = os.environ.get('MX_MODEL_NAME', 'qwen-plus')
+    out['model'] = {'default': mn, 'provider': 'custom:dashscope', 'base_url': mu, 'api_key': mk}
+    cps = [c for c in (out.get('custom_providers') or []) if c.get('name') != 'dashscope']
+    cps.insert(0, {'name': 'dashscope', 'base_url': mu, 'api_key': mk, 'model': mn})
+    out['custom_providers'] = cps  # 家族共享记忆
 yaml.safe_dump(out, open(sys.stdout.fileno(), 'w'), allow_unicode=True, sort_keys=False)
 PYEOF
   chmod 600 "$PROF/config.yaml"
