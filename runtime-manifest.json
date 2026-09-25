@@ -51,22 +51,22 @@
     {
       "source": "hermes_cli/subcommands/cron.py",
       "dest": "hermes_cli/subcommands/cron.py",
-      "note": "420: cron create/edit 加 --base-url 参数面（R1）"
+      "note": "450: cron create/edit 加 --base-url 参数面（R1）"
     },
     {
       "source": "hermes_cli/cron.py",
       "dest": "hermes_cli/cron.py",
-      "note": "420: _JOB_ARG_FIELDS 收 base_url（R1）"
+      "note": "450: _JOB_ARG_FIELDS 收 base_url（R1）"
     },
     {
       "source": "hermes_cli/subcommands/memory.py",
       "dest": "hermes_cli/subcommands/memory.py",
-      "note": "422: memory set 子命令（三文件单写者，R2）"
+      "note": "452: memory set 子命令（三文件单写者，R2）"
     },
     {
       "source": "hermes_cli/main_agent_cmds.py",
       "dest": "hermes_cli/main_agent_cmds.py",
-      "note": "422: _cmd_memory_set（原子写+--expect-mtime CAS，R2）"
+      "note": "452: _cmd_memory_set（原子写+--expect-mtime CAS，R2）"
     }
   ],
   "notes": [
