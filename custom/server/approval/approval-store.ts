@@ -13,6 +13,15 @@ export interface ApprovalRulesFile {
 
 const DEFAULT_FILE: ApprovalRulesFile = { defaultMode: 'ask', rules: [] }
 
+/** 归属/绑定字段校验（X2）：字符串才保留，非法类型剥掉（缺省即旧档语义，见域层注释）。 */
+function normalizeRuleIdentity(rule: ApprovalRule): ApprovalRule {
+  const out = { ...rule }
+  if (out.owner !== undefined && typeof out.owner !== 'string') delete out.owner
+  if (out.sessionId !== undefined && typeof out.sessionId !== 'string') delete out.sessionId
+  if (out.agentId !== undefined && typeof out.agentId !== 'string') delete out.agentId
+  return out
+}
+
 export function resolveApprovalRulesPath(): string {
   const env = process.env.HERMES_APPROVAL_RULES_FILE?.trim()
   if (env) return resolve(env)
@@ -37,7 +46,11 @@ export class ApprovalRuleStore {
       const parsed = JSON.parse(raw)
       this.file = {
         defaultMode: parsed.defaultMode === 'allow' || parsed.defaultMode === 'deny' ? parsed.defaultMode : 'ask',
-        rules: Array.isArray(parsed.rules) ? parsed.rules.filter((r: ApprovalRule) => r && typeof r.tool === 'string') : [],
+        // 旧档兼容（X2）：缺 owner/sessionId/agentId 的旧规则原样保留（无主=全局可见，
+        // 无绑定=升级前宽语义，见 approval-domain.ts 归属模型注释）；字段类型非法时剥掉。
+        rules: Array.isArray(parsed.rules)
+          ? parsed.rules.filter((r: ApprovalRule) => r && typeof r.tool === 'string').map(normalizeRuleIdentity)
+          : [],
       }
     } catch (err) {
       // 坏文件改名留档（<path>.corrupt）再回默认：不静默清零丢规则，保留现场可人工修复回填。
@@ -72,12 +85,16 @@ export class ApprovalRuleStore {
     return this.load().defaultMode
   }
 
-  /** 追加学习规则（同 list+scope+tool+argvPrefix 幂等去重）。 */
+  /** 追加学习规则（同 list+scope+tool+argvPrefix+归属/绑定 幂等去重；归属进键——否则
+   *  用户 B 学同款规则会被用户 A 的旧规则去重吞掉，B 反而看不见自己的规则）。 */
   addRule(rule: ApprovalRule): ApprovalRule[] {
     const cur = this.load()
     const dup = cur.rules.some((r) =>
       r.list === rule.list && r.scope === rule.scope && r.tool === rule.tool &&
-      (r.argvPrefix ?? '') === (rule.argvPrefix ?? ''))
+      (r.argvPrefix ?? '') === (rule.argvPrefix ?? '') &&
+      (r.owner ?? '') === (rule.owner ?? '') &&
+      (r.sessionId ?? '') === (rule.sessionId ?? '') &&
+      (r.agentId ?? '') === (rule.agentId ?? ''))
     if (!dup) {
       cur.rules.push(rule)
       this.save(cur)
