@@ -249,7 +249,7 @@
 | dsh：会话成本估算（价目表三原则） | 🔜P0（两仓无价目表需自建，zcode §6.7 实证） |
 | dsh：工作区分组管理 | 🔜P2 |
 | dsh：/recap+tips | 并入 recap 域（cc 行） |
-| dsh：trajectory hotspot 聚合 | 🔜P2（RunTrace 域） |
+| dsh：trajectory hotspot 聚合（按工具/阶段排名 own-duration） | ✅ trajectory-hotspot.ts（工具/阶段降序排名/防重复计数/衔接 timing） |
 | dsh：per-turn changed-files 卡（deepseek-harness） | 🔜P0（与任务结果卡合并立项） |
 | dsh：轮导航 rail（TurnNavigator） | 🔜P1（dsh+deepseek+zcode 三源） |
 | dsh：present 交付物工具+交付卡 | 🔜P1 |
