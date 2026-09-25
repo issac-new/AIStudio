@@ -184,7 +184,7 @@
 | 分布式 cron 锁表 | ❌单机形态不适用（多机形态再启） |
 | runtime brief 前缀稳定缓存 | 🔜P2 |
 | 共享目录并发警告块 | ✅ workdir-adjacency.ts（并发>1 警告/chat 共享警示块/互斥锁归调度层） |
-| WS 房间细化到 task 级 | 🔜P2 |
+| WS 房间细化到 task 级 | ✅ projection-socket.ts subscribe-task 归属闸+task 房间扇出（multica §五） |
 | PR 交付链提示词规约 | 🔜P2 |
 | 看板组织面（父子/五档/四视图） | 🧬kanban 父子已有·四视图 🔜P2 |
 
