@@ -236,7 +236,7 @@
 | codex：(model,effort) 成本分组+日桶 | ✅ thread-usage.ts（分组降序/日桶升序/衔接 rounds-table/usage-ledger） |
 | codex：config 8 层叠加+per-key origins | ✅ config-layers.ts（覆盖序/来源追踪/debug 视图） |
 | codex：web_search 四档+域收敛 | ✅ web-search-policy.ts（off/light/full/agent/交集收敛/子域准入） |
-| codex：keymap 12×154 可重映射 | 🔜P2 |
+| codex：keymap 可重映射 | ✅ keymap.ts（override 覆盖/一键双绑冲突检测） |
 | codex：会话内分节+手动 move | 🔜P2 |
 | codex-product：/review 评审模式（两域+行内回流） | ✅ patch 414（review-store 两域/评论 open→resolved 回流/三裁决一次定音+evidence verification 联动） |
 | codex-product：任务结果卡（验证 bullet+文件±行数+逐文件 Undo） | 🔜P0（Undo 与 #5 恢复域衔接） |
