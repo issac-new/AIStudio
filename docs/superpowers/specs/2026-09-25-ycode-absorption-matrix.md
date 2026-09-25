@@ -109,7 +109,7 @@
 | A5 代理驱动浏览器回路 | 🔜P2 |
 | A6 会话内模型切换器（粘性+推理档+余量双仪表） | 📦旧账已落（IdeModelSwitcher，R4）·待随迁 |
 | A7 任务形态 slash 命令语义 | 🧬部分（hermes slash 面已有）·余 🔜P2 |
-| A8 /learn 沉淀闭环 | 🔜P2（衔接 P4 记忆域） |
+| A8 /learn 沉淀闭环 | ✅ learn-distill.ts（三归宿判定/流程化优先） |
 | A9 MCP 目录化安装+工具级禁用 | 🔜P2 |
 | A10 /boost 多代理推理管线 | 🔜P2 |
 | A11 Terminal OS 级沙箱 | ❌不吸收（超 Ycode 范围）；定时任务编辑视图🔜P2 |
