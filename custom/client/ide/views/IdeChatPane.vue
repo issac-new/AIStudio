@@ -28,6 +28,8 @@ import { useFilesStore } from '@/stores/hermes/files'
 import { useToolPanelStore } from '@/stores/hermes/tool-panel'
 import MessageList from '@/components/hermes/chat/MessageList.vue'
 import ChatInput from '@/components/hermes/chat/ChatInput.vue'
+import IdeTurnRail from '../components/IdeTurnRail.vue'
+import IdeHandoffCard from '../components/IdeHandoffCard.vue'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
 import FilePreview from '@/components/hermes/files/FilePreview.vue'
@@ -458,12 +460,16 @@ async function pickModel(provider: string, model: string): Promise<void> {
     <IdeRunResultCard />
 
     <div class="ide-chat__body">
-      <MessageList
-        v-if="ready"
-        class="ide-chat__messages"
-        approval-portal-to-body
-        scroll-scope="ide"
-      />
+      <div class="ide-chat__messages-anchor">
+        <MessageList
+          v-if="ready"
+          class="ide-chat__messages"
+          approval-portal-to-body
+          scroll-scope="ide"
+        />
+        <IdeTurnRail />
+      </div>
+      <IdeHandoffCard />
       <div class="ide-chat__model-picker-anchor">
         <ChatInput
           :model-disabled="modelDisabled"
@@ -844,5 +850,13 @@ async function pickModel(provider: string, model: string): Promise<void> {
 
 .ide-chat__model-option:hover {
   background: var(--hover-color, rgba(0, 0, 0, 0.05));
+}
+
+.ide-chat__messages-anchor {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 </style>

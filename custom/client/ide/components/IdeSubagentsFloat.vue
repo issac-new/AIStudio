@@ -13,6 +13,7 @@ import IdeFloatPanel from './IdeFloatPanel.vue'
 import { useIdeStore } from '../store/ide'
 import { formatRelativeTime } from '../utils/time'
 import { scanInjection } from '../utils/subagentGuard'
+import IdeTeamSummaryBar from './IdeTeamSummaryBar.vue'
 
 const props = defineProps<{ focusId?: string | null }>()
 const { t } = useI18n()
@@ -81,6 +82,7 @@ function select(stream: SubagentStream): void {
 </script>
 
 <template>
+  <IdeTeamSummaryBar />
   <IdeFloatPanel :title="t('ide.float.agentsTitle')" testid="ide-float-agents" @close="ide.toggleFloat('agents')">
     <div class="ide-agents">
       <ul v-if="agents.length" class="ide-agents__list" data-testid="ide-float-agents-list">
