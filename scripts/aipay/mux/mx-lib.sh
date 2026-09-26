@@ -172,7 +172,8 @@ mx_send() { # <token> <roomId> <text> [mentioned-mxid[,mxid2...]] → event_id
       "{\"msgtype\":\"m.text\",\"body\":$(jq -Rn --arg t "$text" '$t'),\"m.mentions\":$mentions}" 2>/dev/null \
       | jq -r '.event_id' 2>/dev/null) || out=""
     [[ -n "$out" && "$out" != "null" ]] && { printf '%s' "$out"; return 0; }
-    sleep $((i*2))
+    # 退避只在尝试之间（末次失败不再空等 6s）
+    [[ $i -lt 3 ]] && sleep $((i*2))
   done
   printf 'SEND-FAILED'
 }

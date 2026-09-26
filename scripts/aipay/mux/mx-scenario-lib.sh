@@ -404,7 +404,7 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   members="$(mx_room_members "$(load_token fanfan)" "$rid" 2>/dev/null || true)"
   for u in "${uids[@]}"; do
     [[ -n "$u" ]] || continue
-    if ! printf '%s\n' "$members" | grep -qx "$u"; then
+    if ! printf '%s\n' "$members" | grep -qxF "$u"; then
       mx "$(load_token fanfan)" POST "rooms/$rid/invite" "{\"user_id\":\"$u\"}" >/dev/null 2>&1 || true
       lp="${u%%:*}"; lp="${lp#@}"
       mx_join "$(load_token "$lp")" "$rid" >/dev/null 2>&1 || true
