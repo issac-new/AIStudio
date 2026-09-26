@@ -288,6 +288,21 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
 - **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
 
+### 3.14 UI 融合批（2026-09-26 用户拍板"开工"，origin=d38429a）
+
+完成标准=浏览器可感知。**真完成 6 件**（每件=组件+数据接线+守门+vite 编译实证）：
+
+1. **轮导航 rail**（IdeTurnRail）：消息流右缘轮序条，悬停显锚点/步数/工具数，点击经 chatStore.focusMessageId 走 MessageList 既有滚动链；2 守门。
+2. **team 汇总条**（IdeTeamSummaryBar）：子代理浮窗顶条，subagentStreams 六态映射+健康色红黄绿+stale（5 分钟无更新）判定；2 守门。
+3. **run 逐文件 Undo**（run-undo 控制器+patch 482）：workspace_run_change_files 库内 patch 真反向应用（git apply -R），added 反向删/deleted 反向重建/无 patch 422；run 卡文件行 ⎌ 按钮；3 守门含真恢复用例。
+4. **交接卡**（IdeHandoffCard）：末条 assistant 消息过 handoff 六段校验即浮结构化交接卡（跨树引用 server 域 validateHandoff——注入同树相对 import 实证可行）；2 守门。
+5. **状态栏槽位定制**（IdeStatusBar ⚙）：显隐+CSS order 排序+localStorage 持久化；2 守门。
+6. **G8 逐轮表费用/耗时列**（patch 481）：estimateCostUsd 逐行折算，未收录显 —（dsh 三原则）。
+
+**记档 4 件（依赖如实）**：compaction 消息流内嵌卡（缺服务端压缩事件下发链）；权限七档切换器（真生效依赖 zcode 引擎配置写穿=层 2，不做存储摆设件）；会话 fork 入口（服务端会话复制端点缺，MessageList 仅渲染分界）；IDE 内嵌看板四视图（cockpit 侧看板已全，IDE 内嵌列下批）。
+
+- 坑：**共享树并行操作抹掉三个文件的挂载接线**（组件在 main、接线丢——commit 后 grep 复核制度确立：组件+挂载必须同一 commit 且提交后核对接线在档）。
+
 ### 3.13 独立模型配置（2026-09-26 用户指令）
 
 用户指令：IDE 工作台编程工具（zcode 底座）的模型配置（功能同 zcode）与 hermes agent 的模型**独立设置**。层 1 已落（origin=c671bcb，2887/2887 终验绿）：
