@@ -1022,3 +1022,6 @@
 # 477（用户指令 2026-09-26）：IDE 编码引擎独立模型配置挂载——bootstrap/routes.ts
 #      两行（import+use，356 session-share 同款）；本体走 custom（控制器+enginemodels 域）。
 477-server-ide-engine-models-route.patch
+# 478（修复轮）：输入框模型按钮词条 ide.chatSelectModel（zh/en）——按钮本体修复
+#      走 custom（IdeChatPane 解禁+独立目录浮层+双路径 pick）。
+478-client-input-model-i18n.patch
