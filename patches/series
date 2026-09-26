@@ -1025,3 +1025,6 @@
 # 478（修复轮）：输入框模型按钮词条 ide.chatSelectModel（zh/en）——按钮本体修复
 #      走 custom（IdeChatPane 解禁+独立目录浮层+双路径 pick）。
 478-client-input-model-i18n.patch
+# 479（报障修复）："Profile 未配置大模型"启动竞态误弹——token 恢复前 fetchProviders
+#      空跑、之后无人复查；补 token 就绪后重查（500ms/2s 两拍），真空才弹。
+479-client-provider-prompt-token-retry.patch
