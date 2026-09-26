@@ -78,11 +78,14 @@ board_of_task() { # <user> <id> → 卡所在账号板 slug（找不到非零）
 }
 
 kanban_list() { # <user> → 合并该账号全部账号板的任务 {"tasks":[...]}
-  local u="$1" jwt slug out='{"tasks":[]}'
-  jwt=$(jwt_of "$u")
+  # 09-26 run6/7 实锤：studio /api/hermes/kanban?board=* 整板返空（tenant 面未明），
+  # 板上真卡在却两窗误杀（kanban_has/kanban_status_of 全线失明）。改 CLI 直查：
+  # hermes kanban --board <slug> list --json 输出裸数组 → {tasks:.} 归一兼容旧消费面。
+  local u="$1" slug out='{"tasks":[]}'
   for slug in $(account_boards "$u"); do
-    out=$(jq -s '.[0].tasks + (.[1].tasks // []) | {tasks: .}' <(echo "$out") \
-      <(studio GET "/api/hermes/kanban?board=$slug" "$jwt" 2>/dev/null || echo '{"tasks":[]}'))
+    out=$(jq -c -s '{tasks: (.[0].tasks + (.[1] // []))}' \
+      <(echo "$out") \
+      <(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null || echo '[]'))
   done
   echo "$out"
 }
