@@ -12,12 +12,19 @@ import { fetchMcpServers } from '@/api/hermes/mcp'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
+import { fetchHermesSkills } from '../utils/hermes-skills'
+import { buildSkillsLedger, skillsSummary, type SkillEntry } from '../utils/skills-ledger'
 
 const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const ide = useIdeStore()
 const chatStore = useChatStore()
+
+const activeTab = ref<'mcp' | 'skills'>('mcp')
+const skillEntries = ref<SkillEntry[]>([])
+const skillsError = ref('')
+const skillsLoading = ref(false)
 
 const servers = ref<McpServerInfo[]>([])
 const totalTools = ref(0)
@@ -40,7 +47,26 @@ async function load(): Promise<void> {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadSkills()
+})
+
+async function loadSkills(): Promise<void> {
+  skillsLoading.value = true
+  try {
+    const res = await fetchHermesSkills()
+    skillEntries.value = buildSkillsLedger(res.rows)
+    skillsError.value = ''
+  } catch (err) {
+    skillEntries.value = []
+    skillsError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    skillsLoading.value = false
+  }
+}
+
+const skillsSummaryView = computed(() => skillsSummary(skillEntries.value))
 
 const connectedCount = computed(() => servers.value.filter((s) => s.connected).length)
 const summary = computed(() =>
@@ -66,6 +92,22 @@ function openManage(): void {
   <div class="ide-mcp" data-testid="ide-mcp-pane">
     <header class="ide-mcp__head">
       <span class="ide-mcp__title">{{ t('ide.mcp.title') }}</span>
+      <span class="ide-mcp__tabs">
+        <button
+          type="button"
+          class="ide-mcp__tab"
+          :class="{ 'is-active': activeTab === 'mcp' }"
+          data-testid="ide-mcp-tab-mcp"
+          @click="activeTab = 'mcp'"
+        >MCP</button>
+        <button
+          type="button"
+          class="ide-mcp__tab"
+          :class="{ 'is-active': activeTab === 'skills' }"
+          data-testid="ide-mcp-tab-skills"
+          @click="activeTab = 'skills'"
+        >{{ t('ide.skills.tab') }}</button>
+      </span>
       <button
         type="button"
         class="ide-mcp__btn"
@@ -75,6 +117,7 @@ function openManage(): void {
       >{{ t('ide.mcp.refresh') }}</button>
     </header>
 
+    <template v-if="activeTab === 'mcp'">
     <p v-if="servers.length" class="ide-mcp__summary" data-testid="ide-mcp-summary">{{ summary }}</p>
     <p v-else-if="loadError" class="ide-mcp__error" data-testid="ide-mcp-load-error">{{ loadError }}</p>
     <p v-else class="ide-mcp__empty" data-testid="ide-mcp-empty">{{ t('ide.mcp.empty') }}</p>
@@ -97,8 +140,34 @@ function openManage(): void {
         </div>
       </li>
     </ul>
+    </template>
 
-    <footer class="ide-mcp__actions">
+    <div v-if="activeTab === 'skills'" class="ide-mcp__skills" data-testid="ide-skills-list">
+      <p v-if="skillsSummaryView.skills" class="ide-mcp__summary" data-testid="ide-skills-summary">
+        {{ t('ide.skills.summary', { n: skillsSummaryView.skills, e: skillsSummaryView.enabled }) }}
+      </p>
+      <p v-else-if="skillsError" class="ide-mcp__error" data-testid="ide-skills-error">{{ skillsError }}</p>
+      <p v-else class="ide-mcp__empty" data-testid="ide-skills-empty">{{ t('ide.skills.empty') }}</p>
+      <ul v-if="skillEntries.length" class="ide-mcp__list">
+        <li
+          v-for="skill in skillEntries"
+          :key="skill.name"
+          class="ide-mcp__server"
+          :data-testid="`ide-skill-${skill.name}`"
+        >
+          <div class="ide-mcp__server-row">
+            <span class="ide-mcp__dot" :class="skill.enabled ? 'is-on' : 'is-off'" />
+            <span class="ide-mcp__name" :title="skill.name">{{ skill.name }}</span>
+            <span class="ide-mcp__transport">{{ skill.source }}</span>
+          </div>
+          <div v-if="skill.description" class="ide-mcp__skill-desc" :title="skill.description">
+            {{ skill.description }}
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <footer v-if="activeTab === 'mcp'" class="ide-mcp__actions">
       <button
         type="button"
         class="ide-mcp__btn ide-mcp__btn--primary"
@@ -124,6 +193,34 @@ function openManage(): void {
   gap: 8px;
   overflow-y: auto;
   font-size: 12px;
+}
+
+.ide-mcp__tabs {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ide-mcp__tab {
+  border: 1px solid var(--border-color, #ddd);
+  background: transparent;
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ide-mcp__tab.is-active {
+  background: var(--primary-color, #18a058);
+  color: #fff;
+  border-color: var(--primary-color, #18a058);
+}
+
+.ide-mcp__skill-desc {
+  color: var(--text-color-3, #999);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ide-mcp__head {

@@ -1016,3 +1016,6 @@
 # 475（P2 余半项，流式裁剪）：分级牺牲优先级表（可再生只读工具 tier0 先牺牲，
 #      同级大小降序保"最大优先"）+shed_bytes 指标（demoted/shed_bytes/target/met_target）。
 475-agent-shed-tiered-metrics.patch
+# 476（UI 批首件，技能入口）：IdeMcpPane 技能 tab 词条（zh/en，其余语种 fallback——
+#      474 先例同款）；组件本体走 custom/ symlink（IdeMcpPane+hermes-skills+守门）。
+476-client-skills-tab-i18n.patch
