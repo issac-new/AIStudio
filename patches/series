@@ -1035,3 +1035,6 @@
 # 482（UI 融合 UI-5）：run 逐文件 Undo——挂载 run-undo 路由（477 同款两行）
 #      +词条 undoFile（zh/en）；本体走 custom（node:sqlite 直连+git apply -R+按钮）。
 482-server-run-undo-mount-i18n.patch
+# 483（UI 融合 UI-10）：IDE 内嵌看板四视图词条（tab_kanban+kanban.empty，zh/en）；
+#      本体走 custom（IdeKanbanPane 四视图+sidepane tab）。
+483-client-kanban-pane-i18n.patch
