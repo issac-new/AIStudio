@@ -66,7 +66,7 @@
 剩余候补终态处置（第三批，2026-09-25）：
 - **per-model 工具描述/参数覆盖** ✅ 落地 patch 408（config 声明式/通配匹配/坏 schema 回退；_load_tools 接线；守门 5 例；switch_model 热切换列 v2）。
 - **流式元数据选择性裁剪** ✅ patch 409（"最大优先装下即停"次序化+超溢量目标）+patch 475 余半项（分级牺牲优先级表：可再生只读工具 tier0 先牺牲/同级大小降序；shed_bytes 指标 demoted·shed_bytes·target·met_target；守门 5 例）。
-- **长会话已验证前缀复用** 🔜 独立设计轮排队——涉 hermes_state 会话重放/持久层增量校验，架构级。
+- **长会话已验证前缀复用** ✅ 设计轮层 1 已落=2026-09-26-prefix-reuse-design.md（链式指纹+增量校验+回退语义）+prefix-reuse.ts 数据面（4 守门）；层 2/3（hermes_state 指纹链接线/请求链路）随真实长会话分轮推进。
 - **multica steering 语义** 🧬 已裁决原生（delegate action steer/stop）。
 - **kimi 视频输入链路** 🔜 条件启动维持（台账钦点，条件到即立独立设计轮）。
 
