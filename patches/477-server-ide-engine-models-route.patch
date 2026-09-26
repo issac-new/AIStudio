@@ -1,0 +1,20 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 083002af..ff80071e 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -81,6 +81,7 @@ import { registerMatrixRoutes } from '../custom/matrix'
+ import { registerLoopCronBridgeRoutes } from '../custom/loop/graph/cron-bridge'
+ import ideRetryCountRoutes from '../custom/controllers/ide/retry-counts'
+ import ideSessionShareRouter from '../custom/controllers/ide/session-share'
++import ideEngineModelsRouter from '../custom/controllers/ide/engine-models'
+ import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
+ // overlay[approval]: 审批宽度候选五档+决策八态+规则三列表（第一批吸收 #4）
+ import { approvalRoutes } from '../custom/approval/approval-controller'
+@@ -319,6 +320,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(ideWorktreeRouter.routes())               // IDE worktree 编排（R5 任务级隔离：create/remove/list + 会话绑定）
+   app.use(ideRetryCountRoutes.routes())              // IDE 简报打回计数（aipaydev 缺口 3 可视化；与 patch 363 计数链同源）
+   app.use(ideSessionShareRouter.routes())            // IDE 共享会话（R6：invite token 四档模式 + prompt 审批，multica 人机共驾）
++  app.use(ideEngineModelsRouter.routes())             // IDE 编码引擎独立模型配置（2026-09-26 用户指令：与 hermes agent 模型独立设置）
+   app.use(zcodeEngineRoutes.routes())             // zcode 引擎健康面（R4-P1）
+   app.use(approvalRoutes.routes())                // 审批域：candidates/evaluate/decide/rules（R5 #4）
+   app.use(tokenMeterRoutes.routes())              // token-meter：project 三投影/zcode 互校（R5 #9）

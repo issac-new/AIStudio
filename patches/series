@@ -1019,3 +1019,6 @@
 # 476（UI 批首件，技能入口）：IdeMcpPane 技能 tab 词条（zh/en，其余语种 fallback——
 #      474 先例同款）；组件本体走 custom/ symlink（IdeMcpPane+hermes-skills+守门）。
 476-client-skills-tab-i18n.patch
+# 477（用户指令 2026-09-26）：IDE 编码引擎独立模型配置挂载——bootstrap/routes.ts
+#      两行（import+use，356 session-share 同款）；本体走 custom（控制器+enginemodels 域）。
+477-server-ide-engine-models-route.patch
