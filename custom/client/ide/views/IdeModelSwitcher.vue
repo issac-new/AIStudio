@@ -3,11 +3,14 @@
 // 当前模型显示 + 下拉选择（按 provider 分组的 modelGroups 目录）→ setSessionModel 持久化。
 // 落点：IdeChatPane 头部（与 antigravity 的「会话内切换+粘性」一致）。
 // 目录未加载或 global codingAgent 会话（模型由 agent 底座管）时渲染诚实禁用态。
-import { computed, ref } from 'vue'
+// 2026-09-26 用户指令：模型目录**独立设置**——优先读 IDE 引擎独立配置
+// （/api/ide/engine-models，与 hermes agent 零共享）；未配置回落 hermes 目录（过渡兼容）。
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useAppStore } from '@/stores/hermes/app'
 import { useIdeStore } from '../store/ide'
+import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 
 const { t } = useI18n()
 const chatStore = useChatStore()
@@ -27,7 +30,24 @@ const switchable = computed(() => {
 
 const currentModel = computed(() => session.value?.model || '')
 
-const groups = computed(() => appStore.modelGroups ?? [])
+const engineGroups = ref<EngineCatalogGroup[]>([])
+const usingIndependent = ref(false)
+
+onMounted(async () => {
+  try {
+    const catalog = await fetchEngineCatalog()
+    engineGroups.value = catalog.groups
+    usingIndependent.value = catalog.independent
+  } catch {
+    engineGroups.value = []
+    usingIndependent.value = false
+  }
+})
+
+// 独立设置：独立目录优先；空回落 hermes 目录（appStore.modelGroups）
+const groups = computed(() =>
+  usingIndependent.value ? engineGroups.value : (appStore.modelGroups ?? []),
+)
 const catalogReady = computed(() => groups.value.length > 0)
 
 async function pick(provider: string, model: string): Promise<void> {
