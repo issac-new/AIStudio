@@ -184,6 +184,12 @@ watch(
     >
       zcode {{ zcodeProjection.sessionCount.value }}
       <span
+        v-if="zcodeProjection.state.lastBranch"
+        class="ide-statusbar__branch"
+        data-testid="ide-branch-chip"
+        :title="`已分叉：${zcodeProjection.state.lastBranch.sessionId.slice(0, 8)} 从行 ${zcodeProjection.state.lastBranch.fromRowId} 截断 ${zcodeProjection.state.lastBranch.removedRows} 行`"
+      >⇄</span>
+      <span
         v-if="zcodeProjection.lastReasonText.value"
         class="ide-statusbar__zcode-reason"
         :data-trouble="zcodeProjection.lastReasonIsTrouble.value"
@@ -446,5 +452,10 @@ watch(
   cursor: pointer;
   font-size: 11px;
   color: var(--text-color-3, #999);
+}
+
+.ide-statusbar__branch {
+  color: var(--primary-color, #18a058);
+  margin-left: 2px;
 }
 </style>
