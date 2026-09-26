@@ -40,6 +40,7 @@ import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
 import IdeModelSwitcher from './IdeModelSwitcher.vue'
+import IdeShareEntry from './IdeShareEntry.vue'
 import IdeActivityInbox from './IdeActivityInbox.vue'
 import IdeWorktreeBadge from './IdeWorktreeBadge.vue'
 import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
@@ -296,6 +297,7 @@ const modelDisabled = computed(() => true)
           :title="t('ide.chatNewSession')"
           @click="newSession"
         >＋</button>
+        <IdeShareEntry :session-id="chatStore.activeSessionId ?? ''" />
         <button
           type="button"
           class="ide-chat__action"
