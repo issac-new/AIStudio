@@ -1,0 +1,26 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 81f0a925..f1412834 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -605,6 +605,8 @@ export default {
+       roundColIn: '输入',
+       roundColOut: '输出',
+       roundColCache: '缓存命中',
++      roundColDuration: '耗时',
++      roundColCost: '费用',
+       heatmapTitle: '用量热力图（84 天）',
+       heatmapStreak: '连续 {days} 天',
+       heatmapEmpty: '近期无用量记录',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 42d63e68..4db59bc4 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -605,6 +605,8 @@ export default {
+       roundColIn: 'In',
+       roundColOut: 'Out',
+       roundColCache: 'Cache',
++      roundColDuration: 'Duration',
++      roundColCost: 'Cost',
+       heatmapTitle: 'Usage heatmap (84 days)',
+       heatmapStreak: '{days}-day streak',
+       heatmapEmpty: 'No usage in this period',
