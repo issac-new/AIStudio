@@ -122,7 +122,9 @@ describe('派单链（MentionDispatchService）', () => {
     const svc2 = new MentionDispatchService({ engine, clientId: 'c', deferredAgents: ['codex'] })
     const multi = await svc2.dispatch({ workspacePath: '/w', text: '@squad/core @codex @zcode 三路' })
     expect(multi.map((o) => o.reason)).toEqual(['queued', 'deferred', 'coalesced'])
-    expect(multi[0].target).toContain('leader:zcode')
+    // P-D(b) 信封对称：target=squad 名，leader 独立字段（不再塞 'leader:zcode' 进 target）。
+    expect(multi[0].target).toBe('core')
+    expect(multi[0].leader).toBe('zcode')
     expect(multi[0].detail).toContain('[squad]')
     expect(multi[1].detail).toContain('hermes 旧链')
   })
