@@ -1041,3 +1041,7 @@
 # 484（UI 融合 UI-2 v1）：compaction 留痕卡数据面挂载（chat_compression_snapshots
 #      单点查询）；本体走 custom（controller+IdeCompactionCard 消息流底部浮卡）。
 484-server-compaction-trace-route.patch
+# 485（前缀复用层 2）：hermes_state 指纹链存储——session_prefix_chain 独立表
+#      （零 messages 迁移）+append/批量事务内增量推进（sha1 链头；失败静默不阻断）；
+#      agent pytest 2 例（链演进/内容敏感/会话隔离/缺表容错）。
+485-agent-prefix-chain-store.patch
