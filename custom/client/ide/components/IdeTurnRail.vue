@@ -5,8 +5,11 @@
 import { computed } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { buildTurnOutline, type OutlineEvent } from '../../cockpit/adapters/turn-outline'
+import { fetchEngineRows, findForkAnchor, forkAtAnchor } from '../utils/zcode-fork'
+import { useIdeStore } from '../store/ide'
 
 const chatStore = useChatStore()
+const ide = useIdeStore()
 
 interface TurnRow {
   turnIndex: number
@@ -46,8 +49,29 @@ const rows = computed<TurnRow[]>(() => {
   }))
 })
 
-function jump(row: TurnRow): void {
+function jump(row: TurnRow, ev?: MouseEvent): void {
+  if (ev?.shiftKey) {
+    void forkFromTurn()
+    return
+  }
   if (row.firstMessageId) chatStore.focusMessageId = row.firstMessageId
+}
+
+/** ⇧点击：从该会话最新稳定 assistant 行分叉（zcode v4 forkAssistant）。 */
+async function forkFromTurn(): Promise<void> {
+  const sid = chatStore.activeSessionId
+  if (!sid || !ide.workspace) return
+  try {
+    const rows = await fetchEngineRows(ide.workspace, sid)
+    const anchor = findForkAnchor(rows)
+    if (!anchor) {
+      window.alert('未找到可分叉的稳定 assistant 行（需至少一条完整回复）')
+      return
+    }
+    await forkAtAnchor(ide.workspace, sid, anchor)
+  } catch (err) {
+    window.alert(err instanceof Error ? err.message : String(err))
+  }
 }
 
 function fmt(ms: number): string {
@@ -64,8 +88,8 @@ function fmt(ms: number): string {
       :key="row.turnIndex"
       class="ide-turn-rail__row"
       :data-testid="`ide-turn-rail-${row.turnIndex}`"
-      :title="`#${row.turnIndex + 1} ${row.anchor} · ${row.steps} steps · ${row.toolCalls} tools · ${fmt(row.durationMs)}`"
-      @click="jump(row)"
+      :title="`#${row.turnIndex + 1} ${row.anchor} · ${row.steps} steps · ${row.toolCalls} tools · ${fmt(row.durationMs)} · ⇧点击分叉`""
+      @click="jump(row, $event)"
     >
       <span class="ide-turn-rail__idx">{{ row.turnIndex + 1 }}</span>
       <span v-if="row.toolCalls" class="ide-turn-rail__tools">{{ row.toolCalls }}</span>

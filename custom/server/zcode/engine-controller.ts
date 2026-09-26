@@ -185,6 +185,49 @@ router.post('/mention', async (ctx) => {
   ctx.body = { ok: outcomes.every((o) => o.reason === 'queued' || o.reason === 'coalesced' || o.reason === 'deferred'), outcomes, pending: service.pendingSnapshot() }
 })
 
+router.get('/rows', async (ctx) => {
+  const { workspacePath, sessionId } = ctx.query as { workspacePath?: string; sessionId?: string }
+  if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || !workspacePath || !sessionId) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const runtime = getZcodeProjectionRuntime()
+  const rows = runtime.listRows(workspacePath, sessionId)
+  ctx.body = { ok: true, sessionId, count: rows.length, rows }
+})
+
+// fork：对稳定 assistant 行分叉（zcode v4 原生 forkAssistant——fork.ts StableForkTarget
+// 的命令面；rowId/entityId 来自 /rows 行缓存锚点）。
+router.post('/fork', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { workspacePath, sessionId, rowId, entityId } = body
+  if (typeof workspacePath !== 'string' || typeof sessionId !== 'string'
+      || typeof rowId !== 'number' || typeof entityId !== 'string') {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId/rowId/entityId 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const runtime = getZcodeProjectionRuntime()
+  const envelope = {
+    commandId: `${Date.now()}-fork-${rowId}`,
+    clientId: 'swarmstudio-ide',
+    sessionId,
+    type: 'forkAssistant',
+    issuedAt: Date.now(),
+    payload: { target: { rowId, entityId } },
+  }
+  try {
+    const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope: envelope as unknown as Record<string, unknown> }))
+    ctx.body = { ok: r?.status === 'accepted', status: r?.status ?? 'unknown', reasonCode: r?.reasonCode }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message : String(err) }
+  }
+})
+
 router.post('/checkpoint/recover', async (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const { mode, workspacePath, sessionId, rowId, entityId, originalQueryText } = body as Record<string, unknown>

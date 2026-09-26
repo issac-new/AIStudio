@@ -55,6 +55,11 @@ export class ZcodeProjectionRuntime {
   }
 
   /** watch 意图是否登记（S6：控制器按实际意图状态回报 retained，不再无条件 true）。 */
+  /** 行查询（fork/rewind 锚点）：委托投影实例的行缓存。 */
+  listRows(workspacePath: string, sessionId: string): Array<{ rowId: number; entityId?: string; kind: string; state?: string; text: string }> {
+    return this.projection ? this.projection.listRows(workspacePath, sessionId) : []
+  }
+
   hasWatchIntent(workspacePath: string): boolean {
     return this.intents.has(workspacePath)
   }
