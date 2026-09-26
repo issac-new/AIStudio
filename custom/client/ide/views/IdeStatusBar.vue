@@ -22,6 +22,52 @@ const { t } = useI18n()
 const message = useMessage()
 const metrics = useSessionMetrics()
 // zcode 会话投影（R4-P2）：/zcode 事件面的状态条 chip（会话数 + 最新 reason）。
+// 槽位定制（UI-8，kimi/minimax/codex/dsh 四源合并的数据面消费——轻量版：
+// 显隐+顺序存 localStorage；custom 探针槽列层 2）。
+interface StatusSlotConf { kind: 'workspace' | 'zcode' | 'metrics'; on: boolean }
+const SLOT_KEYS: Array<StatusSlotConf['kind']> = ['workspace', 'zcode', 'metrics']
+const slotsConf = ref<StatusSlotConf[]>(readSlots())
+const slotsPanelOpen = ref(false)
+
+function readSlots(): StatusSlotConf[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem('ide_status_slots') ?? '[]') as StatusSlotConf[]
+    const valid = SLOT_KEYS.map((k) => raw.find((r) => r && r.kind === k) ?? { kind: k, on: true })
+    return valid
+  } catch {
+    return SLOT_KEYS.map((k) => ({ kind: k, on: true }))
+  }
+}
+
+function persistSlots(): void {
+  localStorage.setItem('ide_status_slots', JSON.stringify(slotsConf.value))
+}
+
+function slotOn(kind: StatusSlotConf['kind']): boolean {
+  return slotsConf.value.find((s) => s.kind === kind)?.on ?? true
+}
+
+function slotOrder(kind: StatusSlotConf['kind']): number {
+  return slotsConf.value.findIndex((s) => s.kind === kind)
+}
+
+function toggleSlot(kind: StatusSlotConf['kind']): void {
+  const slot = slotsConf.value.find((s) => s.kind === kind)
+  if (slot) slot.on = !slot.on
+  persistSlots()
+}
+
+function moveSlot(kind: StatusSlotConf['kind'], delta: number): void {
+  const idx = slotsConf.value.findIndex((s) => s.kind === kind)
+  const target = idx + delta
+  if (idx < 0 || target < 0 || target >= slotsConf.value.length) return
+  const next = [...slotsConf.value]
+  const [item] = next.splice(idx, 1)
+  next.splice(target, 0, item)
+  slotsConf.value = next
+  persistSlots()
+}
+
 const zcodeProjection = useZcodeProjection()
 
 // /zcode 事件面活水：挂接即连即订阅当前 workspace（断线重连由 socket 层 connect
@@ -124,14 +170,15 @@ watch(
 
 <template>
   <footer class="ide-statusbar">
-    <span class="ide-statusbar__item" :title="ide.workspace ?? ''">
+    <span v-if="slotOn('workspace')" class="ide-statusbar__item" :style="{ order: slotOrder('workspace') }" :title="ide.workspace ?? ''">
       {{ ide.workspace ?? t('ide.workspaceDefault') }}
     </span>
 
     <!-- zcode 会话投影 chip（R4-P2）：会话数 + 最新 reason（词表字面值本地化） -->
     <span
-      v-if="zcodeProjection.sessionCount.value > 0 || zcodeProjection.lastReasonText.value"
+      v-if="slotOn('zcode') && (zcodeProjection.sessionCount.value > 0 || zcodeProjection.lastReasonText.value)"
       class="ide-statusbar__item"
+      :style="{ order: slotOrder('zcode') }"
       data-testid="ide-zcode-projection"
       :title="`zcode: ${zcodeProjection.sessionCount.value} 会话 · Δ${zcodeProjection.state.conversationDeltaTotal}`"
     >
@@ -147,6 +194,8 @@ watch(
 
     <!-- 会话遥测簇（dsh-TUI 移植：水位条 / TPS / 缓存；R1：点击展开遥测面板） -->
     <span
+      v-if="slotOn('metrics')"
+      :style="{ order: slotOrder('metrics') }"
       class="ide-statusbar__cluster"
       data-testid="ide-metrics-cluster"
       role="button"
@@ -203,6 +252,27 @@ watch(
     <Teleport to="body">
       <IdeMetricsPopover v-if="metricsOpen" :metrics="metrics" @close="metricsOpen = false" />
     </Teleport>
+      <span class="ide-statusbar__item ide-statusbar__slots-btn" :style="{ order: 99 }">
+      <button
+        type="button"
+        class="ide-statusbar__config"
+        data-testid="ide-status-slots-btn"
+        title="statusline slots"
+        @click="slotsPanelOpen = !slotsPanelOpen"
+      >⚙</button>
+      <div v-if="slotsPanelOpen" class="ide-statusbar__slots-panel" data-testid="ide-status-slots-panel">
+        <div v-for="slot in slotsConf" :key="slot.kind" class="ide-statusbar__slot-row">
+          <label>
+            <input type="checkbox" :checked="slot.on" :data-testid="`ide-slot-${slot.kind}`" @change="toggleSlot(slot.kind)">
+            {{ slot.kind }}
+          </label>
+          <span class="ide-statusbar__slot-move">
+            <button type="button" :data-testid="`ide-slot-${slot.kind}-up`" @click="moveSlot(slot.kind, -1)">↑</button>
+            <button type="button" :data-testid="`ide-slot-${slot.kind}-down`" @click="moveSlot(slot.kind, 1)">↓</button>
+          </span>
+        </div>
+      </div>
+    </span>
   </footer>
 </template>
 
@@ -333,5 +403,48 @@ watch(
     background: rgba(62, 172, 118, 0.14);
     color: #3eac76;
   }
+}
+
+.ide-statusbar__config {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-color-3, #999);
+}
+
+.ide-statusbar__slots-btn {
+  position: relative;
+  display: inline-flex;
+}
+
+.ide-statusbar__slots-panel {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  background: var(--card-color, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 6px 10px;
+  z-index: 60;
+  font-size: 12px;
+  min-width: 150px;
+}
+
+.ide-statusbar__slot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.ide-statusbar__slot-move button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-color-3, #999);
 }
 </style>
