@@ -299,7 +299,9 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 5. **状态栏槽位定制**（IdeStatusBar ⚙）：显隐+CSS order 排序+localStorage 持久化；2 守门。
 6. **G8 逐轮表费用/耗时列**（patch 481）：estimateCostUsd 逐行折算，未收录显 —（dsh 三原则）。
 
-**记档 4 件（依赖如实）**：compaction 消息流内嵌卡（缺服务端压缩事件下发链）；权限七档切换器（真生效依赖 zcode 引擎配置写穿=层 2，不做存储摆设件）；会话 fork 入口（服务端会话复制端点缺，MessageList 仅渲染分界）；IDE 内嵌看板四视图（cockpit 侧看板已全，IDE 内嵌列下批）。
+**B3 增量（origin=7006399，2911/2911 终验）**：⑦ **IDE 内嵌看板四视图**（IdeKanbanPane ▦ tab：board 列桶/list 表/swimlane 泳道/gantt 时序条+优先级五档色标；studio 原生 kanban API；patch 483 词条）；⑧ **compaction 留痕卡 v1**（GET /api/ide/compaction-trace/:sessionId 读 chat_compression_snapshots 单点→消息流底部浮卡"折叠 N 条进摘要"；patch 484 挂载）。
+
+**最终记档 2 件（引擎层依赖，不做摆设件）**：权限七档切换器（真生效依赖 zcode 引擎配置写穿=独立模型配置层 2 同批）；会话 fork 创建链（需 zcode 引擎 fork 语义——createSession 无 fork 参数，studio 层复制会话续聊断链；MessageList 仅渲染分界）。
 
 - 坑：**共享树并行操作抹掉三个文件的挂载接线**（组件在 main、接线丢——commit 后 grep 复核制度确立：组件+挂载必须同一 commit 且提交后核对接线在档）。
 
