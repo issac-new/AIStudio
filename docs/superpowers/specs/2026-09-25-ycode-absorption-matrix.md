@@ -31,7 +31,7 @@
 | P1 mimo 接入 | ✅ 393/394 | 按 Ycode 定位红线降级为过渡对照手段（非路线终点） |
 | P2 LSP 工具化 | ✅ 397 | 五只读操作，真 pyright 冒烟全通 |
 | P3 delegate 后台化 | 🧬 | **调研判定有误**——background 模式/steer/stop/_merge_late_steer 原生已有（delegate_tool.py:560-580 实证），worktree 隔离仍是 hermes 独有优势 |
-| P4 记忆 FTS | ✅ 一期 406+二期 v1 407 | 一期 FTS 索引视图+reconcile；二期 v1 规则式 distill 已落（§1.4bis）；LLM 摘要 v2 排队 |
+| P4 记忆 FTS | ✅ 一期 406+二期 v1 407 | 一期 FTS 索引视图+reconcile；v1 规则式 distill 已落；v2 LLM 摘要=**条件挂起（407 自注：等 FTS 真实使用反馈，不闭门造摘要）**+触发判定面已落 distill-v2-gate.ts（反馈到量门槛/簇合成门槛/陈旧标记） |
 | P5 失败级联 | ✅ 395 | 调研判定有误的二次修正（hermes 已有分段调度，只补级联） |
 | P6 goal 冷裁判+ngram | ✅ 部分 405 | goal 冷裁判原生已有（goals.py 每轮裁判+GoalGate，强于 mimo 单次冷裁判）；ngram 新增 |
 | P7 checkpoint 写手 | ✅ 405 | 五节模板+锚点校验+幂等+对账降级（挂预算触顶） |
