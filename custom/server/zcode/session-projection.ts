@@ -133,6 +133,30 @@ interface WatchState {
   disposers: Array<{ dispose(): void }>
   conversationSessions: Set<string>
   fragmentSkips: Map<string, number>
+  /** 行缓存（fork/rewind 锚点）：sessionId → rowId → 行简视图。 */
+  rows: Map<string, Map<number, ProjectionRow>>
+}
+
+/** 行简视图（forkAssistant/applyFileRewind 的 rowId/entityId 锚源）。 */
+export interface ProjectionRow {
+  rowId: number
+  entityId?: string
+  kind: string
+  state?: string
+  /** 文本摘要（前 80 字——匹配/展示用，不存全文防膨胀）。 */
+  text: string
+}
+
+/** 引擎行 → 简视图（未知 kind 宽容截取）。 */
+function toProjectionRow(row: Record<string, unknown>): ProjectionRow {
+  const text = typeof row.text === 'string' ? row.text.slice(0, 80) : ''
+  return {
+    rowId: Number(row.rowId ?? -1),
+    entityId: typeof row.entityId === 'string' ? row.entityId : undefined,
+    kind: String(row.kind ?? 'unknown'),
+    state: typeof row.state === 'string' ? row.state : undefined,
+    text,
+  }
 }
 
 /**
@@ -161,7 +185,7 @@ export class ZcodeSessionProjection {
   /** 订阅 workspace 的 sessions-index（列表活性）并开始消费帧。幂等。 */
   async watchWorkspace(workspacePath: string): Promise<void> {
     if (this.watches.has(workspacePath)) return
-    const state: WatchState = { workspacePath, disposers: [], conversationSessions: new Set(), fragmentSkips: new Map() }
+    const state: WatchState = { workspacePath, disposers: [], conversationSessions: new Set(), fragmentSkips: new Map(), rows: new Map() }
     this.watches.set(workspacePath, state)
     try {
       // 帧回调先注册再订阅：initial 帧走 post-response outbox，订阅应答后才注册会丢首帧
@@ -263,11 +287,44 @@ export class ZcodeSessionProjection {
       return
     }
     const payload = logical.payload ?? {}
+    if (payload.kind === 'deltas' && Array.isArray(payload.deltas)) {
+      this.applyRowDeltas(state, sessionId, payload.deltas as Array<Record<string, unknown>>)
+    }
     this.emit({
       type: 'conversation.frame', workspaceId: state.workspacePath, sessionId, at: this.now(),
       fromSeq: logical.fromSeq, toSeq: logical.toSeq, payloadKind: payload.kind,
       deltaCount: payload.kind === 'deltas' && Array.isArray(payload.deltas) ? payload.deltas.length : 0,
     })
+  }
+
+  /** 行缓存维护（v4 三 op：appended/upserted 整行写；removed 截断=分支语义）。 */
+  private applyRowDeltas(state: WatchState, sessionId: string, deltas: Array<Record<string, unknown>>): void {
+    let rows = state.rows.get(sessionId)
+    if (!rows) {
+      rows = new Map()
+      state.rows.set(sessionId, rows)
+    }
+    for (const d of deltas) {
+      if (d.op === 'row.appended' || d.op === 'row.upserted') {
+        const row = d.row as Record<string, unknown> | undefined
+        if (row && Number.isFinite(Number(row.rowId))) rows.set(Number(row.rowId), toProjectionRow(row))
+      } else if (d.op === 'row.removed') {
+        const from = Number(d.fromRowId)
+        for (const rowId of [...rows.keys()]) {
+          if (rowId >= from) rows.delete(rowId)
+        }
+      }
+      // row.delta（流式追加）不进缓存：摘要锚点只需终态行；state.updated 与行无关。
+    }
+  }
+
+  /** 行查询（fork/rewind 锚）：rowId 升序快照。 */
+  listRows(workspacePath: string, sessionId: string): ProjectionRow[] {
+    const state = this.watches.get(workspacePath)
+    if (!state) return []
+    const rows = state.rows.get(sessionId)
+    if (!rows) return []
+    return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r)
   }
 
   /** wire 帧准入：complete 才有 logical frame；fragment 按 topic 计数并透传 reason。 */
