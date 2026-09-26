@@ -9,6 +9,13 @@ CEN = SIM / 'central/aipaydev'
 OUT = SIM / 'evidence/screenshots/_render'
 OUT.mkdir(parents=True, exist_ok=True)
 HS = 'http://127.0.0.1:8008'
+# 时间窗过滤（09-26）：只取本轮推演窗口内的消息（以 state.g1_frozen 前 30 分钟为界），
+# 防旧轮次同名结论行混入导致"截图信息与步骤对不上"。
+import os
+_c = os.environ.get('RUN_SINCE', '')
+CUTOFF = int(_c) if _c.isdigit() and _c else 0
+_u = os.environ.get('RUN_UNTIL', '')
+CUTOFF_HI = int(_u) if _u.isdigit() and _u else 0
 
 CSS = '''<style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -128,8 +135,9 @@ def render_transcript(ident, title, room, token, matcher, src_note='', maxn=14):
             body = str(c.get('body', ''))
             if e.get('type') != 'm.room.message':
                 continue
-            if matcher(body):
-                msgs.append((e.get('origin_server_ts', 0), e.get('event_id', ''), e.get('sender', ''), body, rid))
+            ts = e.get('origin_server_ts', 0)
+            if matcher(body) and (CUTOFF == 0 or ts >= CUTOFF) and (CUTOFF_HI == 0 or ts <= CUTOFF_HI):
+                msgs.append((ts, e.get('event_id', ''), e.get('sender', ''), body, rid))
     msgs.sort(key=lambda x: x[0])
     blocks = []
     import datetime
