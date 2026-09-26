@@ -30,6 +30,19 @@ import MessageList from '@/components/hermes/chat/MessageList.vue'
 import ChatInput from '@/components/hermes/chat/ChatInput.vue'
 import IdeTurnRail from '../components/IdeTurnRail.vue'
 import IdeHandoffCard from '../components/IdeHandoffCard.vue'
+import IdeRecoveryDialog from '../components/IdeRecoveryDialog.vue'
+import IdePermissionSwitcher from '../components/IdePermissionSwitcher.vue'
+import IdeAskCard from '../components/IdeAskCard.vue'
+import IdeMentionChip from '../components/IdeMentionChip.vue'
+import IdeRunLogPanel from '../components/IdeRunLogPanel.vue'
+import IdeQueuePanel from '../components/IdeQueuePanel.vue'
+import IdeRecapCard from '../components/IdeRecapCard.vue'
+import IdeTaskGroupsPanel from '../components/IdeTaskGroupsPanel.vue'
+import IdeReviewPanel from '../components/IdeReviewPanel.vue'
+import IdeMentionPicker from '../components/IdeMentionPicker.vue'
+import IdeInlineDiff from '../components/IdeInlineDiff.vue'
+import IdeAgentsView from '../components/IdeAgentsView.vue'
+import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
@@ -302,6 +315,9 @@ const modelGroupsView = computed(() =>
 )
 const modelDisabled = computed(() => modelGroupsView.value.length === 0)
 const modelPickerOpen = ref(false)
+const recoveryOpen = ref(false)
+// S1 inline diff：当前会话最近 run 的 diff 文本（run 卡数据链复用）；无 diff 不渲染。
+const demoDiff = ref('')
 const modelLabel = computed(() => {
   const m = chatStore.activeSession?.model || appStore.selectedModel || ''
   return m || t('ide.chatSelectModel')
@@ -346,7 +362,16 @@ async function pickModel(provider: string, model: string): Promise<void> {
           :title="t('ide.chatNewSession')"
           @click="newSession"
         >＋</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-recovery"
+          :disabled="!chatStore.activeSessionId"
+          :title="t('ide.chatRecovery')"
+          @click="recoveryOpen = true"
+        >⏎</button>
         <IdeShareEntry :session-id="chatStore.activeSessionId ?? ''" />
+        <IdePermissionSwitcher />
         <button
           type="button"
           class="ide-chat__action"
@@ -470,7 +495,19 @@ async function pickModel(provider: string, model: string): Promise<void> {
         />
         <IdeTurnRail />
       </div>
+      <IdeMentionPicker />
+      <IdeInlineDiff :diff-text="demoDiff" />
+      <IdeAgentsView />
+      <IdeContextBar />
+      <IdeQueuePanel />
+      <IdeRecapCard />
+      <IdeTaskGroupsPanel />
+      <IdeReviewPanel />
+      <IdeAskCard />
+      <IdeMentionChip />
+      <IdeRunLogPanel />
       <IdeHandoffCard />
+      <IdeRecoveryDialog v-if="recoveryOpen" :open="recoveryOpen" @close="recoveryOpen = false" />
       <IdeCompactionCard />
       <div class="ide-chat__model-picker-anchor">
         <ChatInput
