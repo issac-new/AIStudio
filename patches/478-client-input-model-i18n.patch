@@ -1,0 +1,24 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 5a0523a5..1ec47b40 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -586,6 +586,7 @@ export default {
+       summary: '{n} 项技能 · {e} 启用',
+       empty: '暂无技能',
+     },
++    chatSelectModel: '选择模型...',
+     usagePanel: {
+       title: '会话遥测',
+       costHint: '按官方价目折算的估算成本（未收录模型不计入）',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 0db800cf..fa5f3845 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -586,6 +586,7 @@ export default {
+       summary: '{n} skills · {e} enabled',
+       empty: 'No skills yet',
+     },
++    chatSelectModel: 'Select model...',
+     usagePanel: {
+       title: 'Session telemetry',
+       costHint: 'Estimated cost from official pricing (unlisted models excluded)',

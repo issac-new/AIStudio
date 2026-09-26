@@ -27,6 +27,7 @@ import { useFilesStore } from '@/stores/hermes/files'
 import { useToolPanelStore } from '@/stores/hermes/tool-panel'
 import MessageList from '@/components/hermes/chat/MessageList.vue'
 import ChatInput from '@/components/hermes/chat/ChatInput.vue'
+import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
 import FilePreview from '@/components/hermes/files/FilePreview.vue'
 import {
@@ -275,8 +276,45 @@ const sessionTitle = computed(
   () => chatStore.activeSession?.title?.trim() || t('ide.chatUntitled'),
 )
 
-// global 模式由 agent 自身管理模型配置，模型按钮禁用为诚实态
-const modelDisabled = computed(() => true)
+// 输入框模型按钮（2026-09-26 修复：此前写死禁用）：独立目录优先+hermes 回落，
+// 目录就绪即可选；有会话切会话粘性，无会话设新会话默认模型。
+const engineGroups = ref<EngineCatalogGroup[]>([])
+const usingIndependent = ref(false)
+
+onMounted(async () => {
+  try {
+    const catalog = await fetchEngineCatalog()
+    engineGroups.value = catalog.groups
+    usingIndependent.value = catalog.independent
+  } catch {
+    engineGroups.value = []
+    usingIndependent.value = false
+  }
+})
+
+const modelGroupsView = computed(() =>
+  usingIndependent.value ? engineGroups.value : (appStore.modelGroups ?? []),
+)
+const modelDisabled = computed(() => modelGroupsView.value.length === 0)
+const modelPickerOpen = ref(false)
+const modelLabel = computed(() => {
+  const m = chatStore.activeSession?.model || appStore.selectedModel || ''
+  return m || t('ide.chatSelectModel')
+})
+
+function onModelClick(): void {
+  modelPickerOpen.value = !modelPickerOpen.value
+}
+
+async function pickModel(provider: string, model: string): Promise<void> {
+  modelPickerOpen.value = false
+  const sid = chatStore.activeSessionId
+  if (sid) {
+    await chatStore.switchSessionModel(model, provider, sid)
+  } else {
+    await appStore.switchModel(model, provider)
+  }
+}
 </script>
 
 <template>
@@ -418,7 +456,31 @@ const modelDisabled = computed(() => true)
         approval-portal-to-body
         scroll-scope="ide"
       />
-      <ChatInput :model-disabled="modelDisabled" persist-draft />
+      <div class="ide-chat__model-picker-anchor">
+        <ChatInput
+          :model-disabled="modelDisabled"
+          :model-label="modelLabel"
+          persist-draft
+          @model-click="onModelClick"
+        />
+        <div v-if="modelPickerOpen" class="ide-chat__model-picker" data-testid="ide-input-model-picker">
+          <div
+            v-for="group in modelGroupsView"
+            :key="group.provider"
+            class="ide-chat__model-group"
+          >
+            <div class="ide-chat__model-group-title">{{ group.provider }}</div>
+            <button
+              v-for="m in group.models"
+              :key="m.id"
+              type="button"
+              class="ide-chat__model-option"
+              :data-testid="`ide-input-model-${group.provider}-${m.id}`"
+              @click="pickModel(group.provider, m.id)"
+            >{{ m.id }}</button>
+          </div>
+        </div>
+      </div>
 
       <!-- toolPanel overlay：会话 workspace diff / 文件预览（ChatPanel 宿主同款） -->
       <div v-if="showOverlay" class="ide-chat__overlay">
@@ -732,5 +794,47 @@ const modelDisabled = computed(() => true)
   cursor: pointer;
 
   &:hover { border-color: var(--accent-primary, #4cc9f0); }
+}
+
+.ide-chat__model-picker-anchor {
+  position: relative;
+}
+
+.ide-chat__model-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--card-color, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 6px 10px;
+  z-index: 30;
+  font-size: 12px;
+  min-width: 220px;
+}
+
+.ide-chat__model-group-title {
+  font-weight: 600;
+  color: var(--text-color-3, #999);
+  padding: 4px 0 2px;
+}
+
+.ide-chat__model-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ide-chat__model-option:hover {
+  background: var(--hover-color, rgba(0, 0, 0, 0.05));
 }
 </style>
