@@ -45,13 +45,13 @@
 | 来源 | 高价值新点 | 裁决 |
 |---|---|---|
 | multica | ACP 原子 in-turn interject（steering 三件套：prompt 生命周期开窗+版本门控+ack 超时，ec70b224）；Telegram 媒体双向管线 | steering 语义→🧬 原生已裁决（§1.4bis）；媒体管线参考→排队 P2 |
-| minimax | Turn 级动态 Bash 工具契约（schema 随运行时裁剪+shell 感知提示，61c4c31）；长会话已验证前缀复用 | 🔜 两候选 |
+| minimax | Turn 级动态 Bash 工具契约（schema 随运行时裁剪+shell 感知提示，61c4c31）；长会话已验证前缀复用 | 动态契约✅ bashcontract/dynamic-bash-contract.ts；前缀复用 🔜 独立设计轮 |
 | kimi | trust-boundary 加固回滚（929403b6d 负信号：深度防恶意加固被撤回） | 📄 概念留档（加固边界停在信任提示前） |
 | claude-code 2.1.281 | 恢复保形原则；命令替换递归删除强制询问（allow 规则不吞不可静态判定的破坏性命令） | 📄 概念留档（专有许可红线：只搬概念） |
 
 ### 1.4 codex 61 提交增量（15 新点，全文见 `docs/upstream-analysis/codex.md` 增量节）
 
-高价值四候选：Retry-After 遵从（9d8de19）/TUI 选中即复制三档+终端检测矩阵（ab021e9）/per-model 工具描述覆盖族（4 提交）/流式元数据选择性裁剪（e7165c2）。扩展 API 双提交为插件系统设计参考。其余中低档项与维持原判清单见文档。全部 🔜 排队后续吸收轮。
+高价值四候选终态：Retry-After 遵从🧬原生（行 62）/流式元数据选择性裁剪✅409+475/TUI 选中即复制三档+终端检测矩阵✅tuicopy/copy-on-select.ts（off·on-select·foreground+能力降级）/per-model 工具描述覆盖族✅tooldesc/description-overrides.ts（整段替换/词表校验/省字账）。扩展 API 双提交为插件系统设计参考（维持）。其余中低档项与维持原判清单见文档。
 
 ### 1.4bis 候补队列实施与再裁决（2026-09-25 第二批）
 
@@ -65,7 +65,7 @@
 
 剩余候补终态处置（第三批，2026-09-25）：
 - **per-model 工具描述/参数覆盖** ✅ 落地 patch 408（config 声明式/通配匹配/坏 schema 回退；_load_tools 接线；守门 5 例；switch_model 热切换列 v2）。
-- **流式元数据选择性裁剪** ✅ 半项落地 patch 409（"最大优先装下即停"次序化+proactive 超溢量目标；守门 3+回归 145 绿）；其余半项（分级牺牲优先级表/shed_bytes 指标）排队 P2。
+- **流式元数据选择性裁剪** ✅ patch 409（"最大优先装下即停"次序化+超溢量目标）+patch 475 余半项（分级牺牲优先级表：可再生只读工具 tier0 先牺牲/同级大小降序；shed_bytes 指标 demoted·shed_bytes·target·met_target；守门 5 例）。
 - **长会话已验证前缀复用** 🔜 独立设计轮排队——涉 hermes_state 会话重放/持久层增量校验，架构级。
 - **multica steering 语义** 🧬 已裁决原生（delegate action steer/stop）。
 - **kimi 视频输入链路** 🔜 条件启动维持（台账钦点，条件到即立独立设计轮）。
