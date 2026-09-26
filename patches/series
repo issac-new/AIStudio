@@ -1045,3 +1045,6 @@
 #      （零 messages 迁移）+append/批量事务内增量推进（sha1 链头；失败静默不阻断）；
 #      agent pytest 2 例（链演进/内容敏感/会话隔离/缺表容错）。
 485-agent-prefix-chain-store.patch
+# 486（UI 复刻 R1）：恢复对话框词条 chatRecovery（zh/en）；本体走 custom（R1-R5
+#      五件：恢复对话框/权限七档/问卷卡/mention chip/执行日志区——组件+挂载同 commit）。
+486-client-replica-r1-i18n.patch
