@@ -1,7 +1,7 @@
 // 引擎独立模型配置 REST 守门（router-harness 模式=session-share-round6 同款；
 // 存储经 ENGINE_MODEL_STORE 注入临时文件，不碰生产 runtime/）。
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs'
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync as fs_mkdirSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import Router from '@koa/router'
@@ -42,6 +42,39 @@ describe('/api/ide/engine-models（独立设置守门）', () => {
     expect(body.ok).toBe(true)
     expect(body.config.providers).toEqual([])
     expect(body.store).toContain('engine-models.json')
+  })
+
+  it('层 2 写穿：合法 PUT 同步写 ~/.zcode/v2/config.json（ide-engine: 前缀+用户条目零触碰+env 缺失禁用）', async () => {
+    // 临时 ZCODE_HOME（引擎配置树）
+    const zhome = join(dir, 'zhome')
+    mkdtempSync; // keep import used
+    const v2 = join(zhome, 'v2')
+    fs_mkdirSync(v2, { recursive: true })
+    const engineCfgPath = join(v2, 'config.json')
+    writeFileSync(engineCfgPath, JSON.stringify({ provider: { 'builtin:user-own': { name: 'User Own', kind: 'anthropic', options: {}, enabled: true } } }), 'utf8')
+    process.env.ZCODE_HOME = zhome
+    process.env.TEST_KEY_X = 'secret-value'
+
+    const res = await run(router, 'put', {
+      request: { body: {
+        providers: [
+          { providerId: 'with-key', baseURL: 'https://a.com/v1', apiKeyEnv: 'TEST_KEY_X', models: [{ modelId: 'm1', reasoningLevels: ['low'] }] },
+          { providerId: 'no-key', baseURL: 'https://b.com/v1', apiKeyEnv: 'MISSING_ENV_VAR', models: [{ modelId: 'm2' }] },
+        ],
+        defaultModel: { providerId: 'with-key', modelId: 'm1' },
+      } },
+    })
+    expect(res.status).toBe(200)
+    const body = res.body as { enginePassthrough: { wrote: boolean; providerKeys: string[] } }
+    expect(body.enginePassthrough.wrote).toBe(true)
+    expect(body.enginePassthrough.providerKeys).toEqual(['ide-engine:with-key', 'ide-engine:no-key'])
+    const engine = JSON.parse(readFileSync(engineCfgPath, 'utf8')) as { provider: Record<string, { enabled?: boolean; options?: { apiKey?: string }; models?: Record<string, unknown> }> }
+    expect(engine.provider['builtin:user-own']).toBeTruthy() // 用户条目零触碰
+    expect(engine.provider['ide-engine:with-key'].options?.apiKey).toBe('secret-value')
+    expect(engine.provider['ide-engine:with-key'].models?.m1).toMatchObject({ name: 'm1', reasoningLevels: ['low'] })
+    expect(engine.provider['ide-engine:no-key'].enabled).toBe(false) // env 缺失禁用占位
+    delete process.env.ZCODE_HOME
+    delete process.env.TEST_KEY_X
   })
 
   it('PUT 非法 400 带问题清单；合法原子落盘+回读一致', async () => {
