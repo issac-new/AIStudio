@@ -45,7 +45,7 @@
 | 来源 | 高价值新点 | 裁决 |
 |---|---|---|
 | multica | ACP 原子 in-turn interject（steering 三件套：prompt 生命周期开窗+版本门控+ack 超时，ec70b224）；Telegram 媒体双向管线 | steering 语义→🧬 原生已裁决（§1.4bis）；媒体管线参考→排队 P2 |
-| minimax | Turn 级动态 Bash 工具契约（schema 随运行时裁剪+shell 感知提示，61c4c31）；长会话已验证前缀复用 | 动态契约✅ bashcontract/dynamic-bash-contract.ts；前缀复用 🔜 独立设计轮 |
+| minimax | Turn 级动态 Bash 工具契约（schema 随运行时裁剪+shell 感知提示，61c4c31）；长会话已验证前缀复用 | 动态契约✅ bashcontract/dynamic-bash-contract.ts；前缀复用✅ 设计轮+层 1（prefix-reuse.ts）+层 2 存储（patch 485 session_prefix_chain）——请求链路层 3 随 provider 增量帧协议 |
 | kimi | trust-boundary 加固回滚（929403b6d 负信号：深度防恶意加固被撤回） | 📄 概念留档（加固边界停在信任提示前） |
 | claude-code 2.1.281 | 恢复保形原则；命令替换递归删除强制询问（allow 规则不吞不可静态判定的破坏性命令） | 📄 概念留档（专有许可红线：只搬概念） |
 
@@ -362,4 +362,4 @@ skills-ledger/workflow-run-line/mention-resolution/context-six-source/present �
 此前只进 §3.10 总账未落明细行，本轮对齐。
 
 **实现类终态**：P0=10/10+4（178/195/197/242 四行 P0 收编）｜P1 实现批清零｜P2 实现批清零。
-残余 🔜 全部为裁决性项（非实现缺口）：长会话前缀复用（独立设计轮）/minimax 两候选+四候选（排队后续吸收轮）/kimi 视频链路（条件启动，台账钦点条件到才立项）/技能入口 UI（随 UI 批）。
+残余 🔜 全部收官（2026-09-27 层 2 清零批后）：前缀复用层 1+2✅（层 3=请求链路增量帧随 provider 协议）/minimax 候选✅tuicopy·tooldesc·bashcontract/kimi 视频✅层 1+层 2 真抽帧/技能入口 UI✅IdeMcpPane tab。唯一挂起=distill v2 LLM 合成（407 自注条件：等 FTS 真实使用反馈，非开发缺口）。
