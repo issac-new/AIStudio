@@ -288,6 +288,29 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
 - **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
 
+### 3.16 UI 复刻批（2026-09-27，用户指令"全面寻找差距，源码级复刻"，origin=395bb517）
+
+**差距审计法**：三路 Explore 代理扫 12 份分析文档抽出 130+ UI 功能面清单，对照 /ide 现有 34 组件。差距格局=**大量数据面已落、UI 未接**。本批源码级复刻 13 件（组件+挂载同 commit+守门，2944/2944 终验）：
+
+**R 批 9 件（数据面已有→UI 复刻）**：
+1. R1 恢复四档对话框（IdeRecoveryDialog：行选点倒序+四档卡片→/checkpoint/recover，claude-code rewind+minimax 历史浏览器形态）
+2. R2 权限七档切换器（IdePermissionSwitcher：cc Shift+Tab 七档+minimax Alt+M 形态；localStorage 持久化）
+3. R3 ask_user 结构化问卷卡（IdeAskCard：minimax 问卷 1-N 步×选项/recommended/必答门槛）
+4. R4 mention 结果 chip（IdeMentionChip：multica"为什么没跑"语义——reason 码本地化 chip+trouble 标红）
+5. R5 执行日志区（IdeRunLogPanel：multica 每 run 一行状态/时长/费用+历史折叠）
+6. R6 Task Groups 面板（IdeTaskGroupsPanel：antigravity 组概览+edited-files pill+待批步骤专区+批准）
+7. R7 排队面板（IdeQueuePanel：cc 发送队列灰显+queue 面板+运行中让位）
+8. R8 回笼摘要卡（IdeRecapCard：cc"离开后发生了什么"+dsh /recap）
+9. R9 评审面板（IdeReviewPanel：codex-product 两域 findings open/resolved 回流+三裁决一次定音）
+
+**S 批 4 件（新 UI 大件）**：
+10. S1 inline diff 逐处 accept/reject/edit（IdeInlineDiff：cc inline diff+codex-product 聚焦式——unified diff→hunk 分组逐处决策+双击改行）
+11. S2 @提及六源面板（IdeMentionPicker：zcode @六源+cc 选区引用——六源菜单+目标输入+chips 暂存+发送拼前缀+解析预览）
+12. S3 分段上下文水位条（IdeContextBar：dsh-TUI 5 段配色+悬停图例+80/95% 压力分级）
+13. S4 后台代理三分区（IdeAgentsView：cc"claude agents"Needs input/Working/Completed+时长）
+
+另：mentionOutcomes 环入 zcode store（R4 数据源）。词条 patch 486。
+
 ### 3.15 引擎层 2 批（2026-09-26 深夜，origin=cc8c5d6）
 
 **2-A 独立模型配置写穿**：PUT /api/ide/engine-models 同步写 ~/.zcode/v2/config.json（**ide-engine: 前缀键位隔离+用户已有条目零触碰**+apiKeyEnv 服务端解析 env 缺失禁用占位；守门 3 例含真写穿断言）。引擎按自身装载节奏消费（写穿后新会话/引擎重载生效）。
