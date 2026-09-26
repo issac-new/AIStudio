@@ -288,6 +288,16 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
 - **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
 
+### 3.15 引擎层 2 批（2026-09-26 深夜，origin=cc8c5d6）
+
+**2-A 独立模型配置写穿**：PUT /api/ide/engine-models 同步写 ~/.zcode/v2/config.json（**ide-engine: 前缀键位隔离+用户已有条目零触碰**+apiKeyEnv 服务端解析 env 缺失禁用占位；守门 3 例含真写穿断言）。引擎按自身装载节奏消费（写穿后新会话/引擎重载生效）。
+
+**2-B 会话 fork 全链（zcode 原生原语）**：v4 协议实证 forkAssistant 命令（fork.ts StableForkTarget+四 guard；命令面 command.ts:152）——落地：①会话投影**行缓存**（v4 三 op：row.appended/upserted 整行写、row.removed 截断=分支语义；摘要 80 字防膨胀）；②GET /api/zcode-engine/rows（行锚查询，X1 归属闸）；③POST /api/zcode-engine/fork（forkAssistant 信封发送）；④IdeTurnRail **⇧点击=分叉**（锚=最后一条 complete 的 assistantText 行；引擎 guard 如 forkAssistantOnly 如实透传弹窗）。守门 2 例（三 op 维护+锚定位）。
+
+**权限七档引擎映射**：zcode 引擎任务权限档实锤=ZCodeTaskMode 六档（yolo/plan/edit/auto/autoEdit/build，zcode-task-mode-schema.ts:6）——permmodes 补 toEngineTaskMode 七档映射（任务派发/automation 消费面）；**会话级 mode 的 v4 通道引擎未开**（createSession 仅 workspacePath）——会话内切换器维持记档。
+
+**记档（独立轮量级）**：前缀复用层 2（hermes_state 指纹链存储接线）；视频链路层 2（ffmpeg 抽帧引擎）；fork 前端谱系回显（引擎 fork 事件→parentSessionId 展示，依赖行流消费扩展）。
+
 ### 3.14 UI 融合批（2026-09-26 用户拍板"开工"，origin=d38429a）
 
 完成标准=浏览器可感知。**真完成 6 件**（每件=组件+数据接线+守门+vite 编译实证）：
