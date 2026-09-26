@@ -42,7 +42,7 @@ export function validateEngineModelConfig(config: EngineModelConfig): ConfigVali
     const modelIds = new Set<string>()
     for (const m of p.models) {
       if (!m.modelId.trim()) problems.push(`empty modelId under ${p.providerId}`)
-      if (modelIds.has(m.modelId)) problems.push(`duplicate modelId ${p.modelId} under ${p.providerId}`)
+      if (modelIds.has(m.modelId)) problems.push(`duplicate modelId ${m.modelId} under ${p.providerId}`)
       modelIds.add(m.modelId)
     }
   }
