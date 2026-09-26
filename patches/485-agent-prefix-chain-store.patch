@@ -1,0 +1,144 @@
+diff --git a/hermes_state_messages.py b/hermes_state_messages.py
+index 168923f538..6b4552c53b 100644
+--- a/hermes_state_messages.py
++++ b/hermes_state_messages.py
+@@ -23,6 +23,29 @@ from hermes_state_common import (
+ logger = logging.getLogger("hermes_state")  # caplog tests pin the origin module's name
+ 
+ # One INSERT shape for every message writer (append, batch, replace, compact, import).
++def _advance_prefix_chain(conn, session_id: str, role: str, content) -> None:
++    """overlay[485] 前缀指纹链增量推进：chain_head'=sha1(chain_head||role||NUL||content)。
++
++    独立表零迁移；失败不阻断消息写入（链断则复用点重置——复用是优化非语义依赖）。
++    """
++    import hashlib
++    try:
++        row = conn.execute(
++            "SELECT chain_head, verified_index FROM session_prefix_chain WHERE session_id = ?",
++            (session_id,)).fetchone()
++        prev_head, prev_index = (row[0], row[1]) if row else ("", -1)
++        payload = (str(role) + "\x00" + (content if isinstance(content, str) else str(content or ""))).encode("utf-8", "surrogatepass")
++        new_head = hashlib.sha1(prev_head.encode("utf-8") + payload).hexdigest()
++        conn.execute(
++            """INSERT INTO session_prefix_chain (session_id, chain_head, verified_index, updated_at)
++               VALUES (?, ?, ?, ?)
++               ON CONFLICT(session_id) DO UPDATE SET chain_head = excluded.chain_head,
++                 verified_index = excluded.verified_index, updated_at = excluded.updated_at""",
++            (session_id, new_head, prev_index + 1, __import__("time").time()))
++    except Exception:
++        pass
++
++
+ _INSERT_MESSAGE_SQL = """INSERT INTO messages (session_id, role, content, tool_call_id,
+                    tool_calls, tool_name, effect_disposition, timestamp, token_count, finish_reason,
+                    reasoning, reasoning_content, reasoning_details, codex_reasoning_items,
+@@ -322,6 +345,7 @@ class SessionMessagesMixin:
+                 turn_lease_holder=turn_lease_holder, turn_lease_ttl_seconds=turn_lease_ttl_seconds)
+             msg_id = conn.execute(_INSERT_MESSAGE_SQL, params).lastrowid
+             self._bump_session_counters(conn, session_id, 1, _tool_calls_count(tool_calls), unit=True)
++            _advance_prefix_chain(conn, session_id, role, content)
+             return msg_id
+         # THE critical write (failure aborts the turn): long patience so a sibling legitimately
+         # holding the lock for seconds (VACUUM, checkpoint) can't kill it.
+@@ -382,6 +406,8 @@ class SessionMessagesMixin:
+                 encode_content_fn=self._encode_content, decode_content_fn=self._decode_content)
+             inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
+             self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
++            for row in inserted_rows:
++                _advance_prefix_chain(conn, session_id, row.get("role"), row.get("content"))
+             return inserted
+         return self._execute_write(_do, patience_s=self._TRANSCRIPT_WRITE_PATIENCE_S)
+ 
+diff --git a/hermes_state_common.py b/hermes_state_common.py
+index 3d36055e76..bb098097b5 100644
+--- a/hermes_state_common.py
++++ b/hermes_state_common.py
+@@ -578,7 +578,14 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
+ CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model);
+ CREATE INDEX IF NOT EXISTS idx_async_delegations_delivery
+     ON async_delegations(delivery_state, completed_at);
+-"""
++
++-- overlay[485] 前缀复用层 2：会话指纹链表（独立表零迁移；append_message 增量维护）。
++CREATE TABLE IF NOT EXISTS session_prefix_chain (
++  session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
++  chain_head TEXT NOT NULL,
++  verified_index INTEGER NOT NULL DEFAULT 0,
++  updated_at REAL NOT NULL
++);"""
+ 
+ # Indexes on later-added columns must run AFTER _reconcile_columns(), or executescript fails on legacy DBs.
+ DEFERRED_INDEX_SQL = """
+diff --git a/tests/hermes_cli/test_prefix_chain_485.py b/tests/hermes_cli/test_prefix_chain_485.py
+new file mode 100644
+new file mode 100644
+index 0000000000..43177d1998
+--- /dev/null
++++ b/tests/hermes_cli/test_prefix_chain_485.py
+@@ -0,0 +1,66 @@
++"""overlay[485] 前缀指纹链层 2 守门：append 推进链头/内容敏感/批量同链/读回一致。"""
++import os
++import sqlite3
++import tempfile
++
++import pytest
++
++
++def _make_store(tmpdir):
++    db = os.path.join(tmpdir, "state.db")
++    conn = sqlite3.connect(db)
++    conn.execute("PRAGMA journal_mode=WAL")
++    return db, conn
++
++
++def _init_tables(conn):
++    from hermes_state_common import SCHEMA_SQL
++    conn.executescript(SCHEMA_SQL)
++    conn.commit()
++
++
++def _append(db, session_id, role, content):
++    from hermes_state_messages import _advance_prefix_chain
++    conn = sqlite3.connect(db)
++    conn.execute("PRAGMA journal_mode=WAL")
++    _advance_prefix_chain(conn, session_id, role, content)
++    conn.commit()
++    conn.close()
++
++
++def _head(db, session_id):
++    conn = sqlite3.connect(db)
++    row = conn.execute(
++        "SELECT chain_head, verified_index FROM session_prefix_chain WHERE session_id = ?",
++        (session_id,)).fetchone()
++    conn.close()
++    return row
++
++
++def test_chain_advances_and_is_content_sensitive(tmp_path):
++    db, conn = _make_store(str(tmp_path))
++    _init_tables(conn)
++    conn.close()
++    _append(db, "s1", "user", "hello")
++    h1 = _head(db, "s1")
++    assert h1[1] == 0
++    _append(db, "s1", "assistant", "world")
++    h2 = _head(db, "s1")
++    assert h2[0] != h1[0] and h2[1] == 1
++    # 同序列不同内容 → 链头不同（篡改检测基础）
++    _append(db, "s2", "user", "hello")
++    _append(db, "s2", "assistant", "WORLD")
++    hb = _head(db, "s2")
++    assert hb[0] != h2[0]
++    # 会话隔离
++    assert _head(db, "s1")[0] == h2[0]
++
++
++def test_chain_failure_does_not_raise(tmp_path):
++    # 表缺失（模拟旧库未迁移）→ 静默跳过不阻断消息写入语义
++    db, conn = _make_store(str(tmp_path))
++    conn.execute("CREATE TABLE sessions (id TEXT PRIMARY KEY)")
++    conn.commit()
++    conn.close()
++    from hermes_state_messages import _advance_prefix_chain
++    _advance_prefix_chain(conn, "s1", "user", "x")  # 不应抛
