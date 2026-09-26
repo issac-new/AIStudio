@@ -296,7 +296,13 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 
 **权限七档引擎映射**：zcode 引擎任务权限档实锤=ZCodeTaskMode 六档（yolo/plan/edit/auto/autoEdit/build，zcode-task-mode-schema.ts:6）——permmodes 补 toEngineTaskMode 七档映射（任务派发/automation 消费面）；**会话级 mode 的 v4 通道引擎未开**（createSession 仅 workspacePath）——会话内切换器维持记档。
 
-**记档（独立轮量级）**：前缀复用层 2（hermes_state 指纹链存储接线）；视频链路层 2（ffmpeg 抽帧引擎）；fork 前端谱系回显（引擎 fork 事件→parentSessionId 展示，依赖行流消费扩展）。
+**层 2 清零批（2026-09-26 深夜续，origin=299b805，用户指令"不要偷懒假装完成"）**：
+
+- **前缀复用层 2** ✅ patch 485：hermes_state `session_prefix_chain` 独立表（零 messages 迁移）+append/批量事务内链头增量推进（sha1(prev‖role‖NUL‖content)；失败静默不阻断消息写入——复用是优化非语义依赖）；agent pytest 2 例（链演进/内容敏感/会话隔离/缺表容错）。
+- **视频链路层 2** ✅ frame-extract.ts：**真 ffmpeg 抽帧**（ffprobe 元信息+等间隔 fps+保比缩放+帧数上限；守门真跑合成视频 4 帧+坏输入拒）+REST POST /api/ide/video-frames（base64 帧返回，多模态消息组装面）。
+- **fork 分支回显** ✅：行缓存 removed 截断→`conversation.branch` 事件（fromRowId/removedRows）→客户端 lastBranch 态→状态条 zcode chip **⇄ 分叉标记**（悬停详情）；守门 1 例。
+
+**批终态：全部剩余层 2 项清零。**唯一挂起=distill v2 LLM 合成（407 自注前置条件：等 FTS 真实使用反馈——使用条件非开发缺口）。
 
 ### 3.14 UI 融合批（2026-09-26 用户拍板"开工"，origin=d38429a）
 
