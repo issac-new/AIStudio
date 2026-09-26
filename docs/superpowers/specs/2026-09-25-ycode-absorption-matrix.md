@@ -288,6 +288,16 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
 - **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
 
+### 3.13 独立模型配置（2026-09-26 用户指令）
+
+用户指令：IDE 工作台编程工具（zcode 底座）的模型配置（功能同 zcode）与 hermes agent 的模型**独立设置**。层 1 已落（origin=c671bcb，2887/2887 终验绿）：
+
+- **enginemodels 域**：providers（id/baseURL/apiKeyEnv——只存环境变量名不存凭据）×models（id+推理档）+默认模型；唯一性/可达性校验+隔离断言（与 hermes config 源零交集）。
+- **REST**：`/api/ide/engine-models` GET/PUT（runtime/ide-engine-models.json 独立存储+原子写），patch 477 挂载（356 session-share 同款两行）。
+- **客户端**：IdeModelSwitcher 数据源切换——**独立目录优先，空/失败回落 appStore.modelGroups**（未配置前不空白）；engine-models.ts 取数 util。
+- **附带根治**：AssignEventContent 严格面欠账（421-453 批遗留 TS2345）经接口加索引签名根治；engine-model-config 笔误（p.modelId→m.modelId）修正。
+- **层 2 排队**：写穿 ~/.zcode/v2 引擎配置（zcode 运行时格式探明后独立轮）——当前引擎消费侧仍读自有配置，本层先把 IDE 侧目录独立。
+
 ### 3.12 P2 批收官（2026-09-25 终态）
 
 P2 批全队列实施完毕（**实现类清零**），20 件落地（每件=纯函数域模块+守门测试+合 main+推 origin）：
