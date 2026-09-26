@@ -15,6 +15,7 @@
 // 自身登录，模型按钮禁用为诚实态；scoped 模式经 cockpit/聊天页配置）。
 import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import {
   useChatStore,
@@ -59,6 +60,7 @@ const filesStore = useFilesStore()
 const toolPanelStore = useToolPanelStore()
 const cockpitStore = useCockpitStore()
 const { t } = useI18n()
+const message = useMessage()
 
 // R2 会话钩子：runaway-guard 失控检测 + 子代理结果反注入 + 恢复 recap
 const { recap, dismissRecap, flaggedSubagents } = useIdeSessionHooks()
@@ -88,7 +90,7 @@ function ensureSession() {
   chatStore.newChat({
     agent: ideAgentToChatAgent(ide.agentId) as never,
     codingAgentId: ide.agentId,
-    codingAgentMode: 'global',
+    codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
     source: 'coding_agent',
     workspace: ide.workspace,
   })
@@ -257,7 +259,7 @@ function newSession() {
   chatStore.newChat({
     agent: ideAgentToChatAgent(ide.agentId) as never,
     codingAgentId: ide.agentId,
-    codingAgentMode: 'global',
+    codingAgentMode: 'scoped',
     source: 'coding_agent',
     workspace: ide.workspace,
   })
@@ -310,7 +312,13 @@ async function pickModel(provider: string, model: string): Promise<void> {
   modelPickerOpen.value = false
   const sid = chatStore.activeSessionId
   if (sid) {
-    await chatStore.switchSessionModel(model, provider, sid)
+    const ok = await chatStore.switchSessionModel(model, provider, sid)
+    // 存量 global 模式会话（改 scoped 前创建）不支持会话内切换：写默认模型并
+    // 提示——新会话（已改 scoped）即用所选模型。
+    if (!ok) {
+      await appStore.switchModel(model, provider)
+      message.info(t('ide.chatModelNeedsScopedSession'))
+    }
   } else {
     await appStore.switchModel(model, provider)
   }
