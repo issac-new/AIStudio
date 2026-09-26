@@ -46,6 +46,25 @@ const verifyBullet = computed(() => {
 })
 
 // per-turn 变更（按 run_id 聚合；新→旧）
+const undoBusy = ref('')
+const undoDone = ref('')
+
+async function undoFile(changeId: string, f: { id: number; path: string }): Promise<void> {
+  const sid = chatStore.activeSessionId
+  if (!sid || !ide.workspace || undoBusy.value) return
+  undoBusy.value = `${changeId}:${f.id}`
+  try {
+    const res = await ideRunsApi.undo({ sessionId: sid, changeId, fileId: f.id, workspace: ide.workspace })
+    undoDone.value = res.restoredPath ?? f.path
+    void load() // 重载变更（undo 后 digest 应反映恢复态）
+  } catch (err) {
+    undoDone.value = ''
+    window.alert(err instanceof Error ? err.message : String(err))
+  } finally {
+    undoBusy.value = ''
+  }
+}
+
 const digests = ref<RunChangesDigest[]>([])
 const loaded = ref(false)
 async function load(): Promise<void> {
@@ -98,6 +117,9 @@ const visible = computed(
     <div v-if="verifyBullet" class="ide-runresult__verify" data-testid="ide-run-result-verify">
       {{ verifyBullet }}
     </div>
+    <div v-if="undoDone" class="ide-runresult__undo-done" data-testid="ide-run-undo-done">
+      ⎌ {{ undoDone }}
+    </div>
     <ul v-if="digests.length" class="ide-runresult__runs" data-testid="ide-run-result-runs">
       <li v-for="d in digests.slice(0, 3)" :key="d.runId" class="ide-runresult__run">
         <span class="ide-runresult__files">{{ t('ide.runResult.files', { count: d.fileCount }) }}</span>
@@ -107,6 +129,18 @@ const visible = computed(
         </span>
         <span class="ide-runresult__paths" :title="d.files.map((f) => f.path).join('\n')">
           {{ d.files.slice(0, 2).map((f) => f.path.split(/[\\/]/).pop()).join(' · ') }}<template v-if="d.fileCount > 2">…</template>
+        </span>
+        <span class="ide-runresult__undos">
+          <button
+            v-for="f in d.files.slice(0, 4)"
+            :key="f.id"
+            type="button"
+            class="ide-runresult__undo"
+            :data-testid="`ide-run-undo-${f.id}`"
+            :title="t('ide.runResult.undoFile', { path: f.path })"
+            :disabled="undoBusy === `${d.runId}:${f.id}`"
+            @click="undoFile(d.changeId, f)"
+          >⎌</button>
         </span>
       </li>
     </ul>
@@ -179,5 +213,30 @@ const visible = computed(
   white-space: nowrap;
   color: var(--text-muted, #9aa0aa);
   font-family: ui-monospace, monospace;
+}
+
+.ide-runresult__undos {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.ide-runresult__undo {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 3px;
+  color: var(--text-color-3, #999);
+  border-radius: 3px;
+}
+
+.ide-runresult__undo:hover {
+  background: var(--hover-color, rgba(0, 0, 0, 0.08));
+  color: var(--primary-color, #18a058);
+}
+
+.ide-runresult__undo-done {
+  font-size: 11px;
+  color: var(--primary-color, #18a058);
 }
 </style>
