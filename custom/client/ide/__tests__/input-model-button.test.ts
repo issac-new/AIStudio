@@ -16,6 +16,7 @@ vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
     get activeSessionId() { return state.activeSessionId },
     get activeSession() { return state.activeSession },
+    subagentStreams: new Map(),
     switchSessionModel,
     sendMessage: vi.fn(),
   }),
@@ -86,6 +87,26 @@ describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
     await w.find('[data-testid="stub-model-btn"]').trigger('click')
     await w.find('[data-testid="ide-input-model-bigmodel-glm-5.3"]').trigger('click')
     expect(switchSessionModel).toHaveBeenCalledWith('glm-5.3', 'bigmodel', 's1')
+  })
+
+  it('存量 global 会话切换被拒→兜底设默认模型；scoped 会话直接切', async () => {
+    catalogMock.mockResolvedValue({
+      independent: true,
+      groups: [{ provider: 'bigmodel', models: [{ id: 'glm-5.3' }] }],
+    })
+    state.activeSessionId = 's9'
+    state.activeSession = { id: 's9', codingAgentMode: 'global', model: 'qwen3.7-max' }
+    switchSessionModel.mockResolvedValueOnce(false)
+    const w = mount(IdeChatPane, { global: { stubs: { transition: false } } } as never)
+    await flushPromises()
+    await w.find('[data-testid="stub-model-btn"]').trigger('click')
+    await w.find('[data-testid="ide-input-model-bigmodel-glm-5.3"]').trigger('click')
+    expect(switchModel).toHaveBeenCalledWith('glm-5.3', 'bigmodel')
+    state.activeSession = { id: 's10', codingAgentMode: 'scoped', model: '' }
+    switchSessionModel.mockResolvedValueOnce(true)
+    await w.find('[data-testid="stub-model-btn"]').trigger('click')
+    await w.find('[data-testid="ide-input-model-bigmodel-glm-5.3"]').trigger('click')
+    expect(switchSessionModel).toHaveBeenCalledWith('glm-5.3', 'bigmodel', 's9')
   })
 
   it('目录全空才禁（回落也空）', async () => {
