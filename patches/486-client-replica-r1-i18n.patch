@@ -1,0 +1,24 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 7bfcb122..d05f5205 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -587,6 +587,7 @@ export default {
+       empty: '暂无技能',
+     },
+     chatSelectModel: '选择模型...',
++    chatRecovery: '恢复到历史点（rewind）',
+     chatModelNeedsScopedSession: '当前会话为全局模式，已设为默认模型——新建会话即可直接切换',
+     usagePanel: {
+       title: '会话遥测',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 61bdc083..2fe1430e 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -587,6 +587,7 @@ export default {
+       empty: 'No skills yet',
+     },
+     chatSelectModel: 'Select model...',
++    chatRecovery: 'Recover to history point (rewind)',
+     chatModelNeedsScopedSession: 'This session is in global mode; set as default model — new sessions switch directly',
+     usagePanel: {
+       title: 'Session telemetry',

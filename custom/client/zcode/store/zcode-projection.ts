@@ -82,6 +82,8 @@ export interface ProjectionState {
   sessions: Record<string, { title?: string; phase?: string; lastActivityAt: number }>
   conversationDeltaTotal: number
   statusEvents: Array<{ reason: string; detail?: string; at: number }>
+  /** mention 分派结果环（UI-4 chip 数据源，reason 词表字面值）。 */
+  mentionOutcomes: Array<{ target?: string; reason: string; detail?: string; at: number }>
   /** 最近一次引擎分支（fork/rewind 截断）：可感知回显。 */
   lastBranch: { sessionId: string; fromRowId: number; removedRows: number; at: number } | null
   lastReason: string | null
@@ -91,6 +93,7 @@ const state = reactive<ProjectionState>({
   sessions: {},
   conversationDeltaTotal: 0,
   statusEvents: [],
+  mentionOutcomes: [],
   lastBranch: null,
   lastReason: null,
 })
@@ -150,6 +153,10 @@ export function handleZcodeEvent(e: ZcodeSocketEvent): void {
     state.statusEvents.push({ reason: e.reason, detail: e.detail, at: e.at })
     if (state.statusEvents.length > MAX_STATUS_EVENTS) state.statusEvents.shift()
     state.lastReason = e.reason
+    if (e.type === 'mention.outcome') {
+      state.mentionOutcomes.push({ target: (e as { target?: string }).target, reason: e.reason, detail: e.detail, at: e.at })
+      if (state.mentionOutcomes.length > 12) state.mentionOutcomes.shift()
+    }
   }
 }
 
