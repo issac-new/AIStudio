@@ -82,6 +82,8 @@ export interface ProjectionState {
   sessions: Record<string, { title?: string; phase?: string; lastActivityAt: number }>
   conversationDeltaTotal: number
   statusEvents: Array<{ reason: string; detail?: string; at: number }>
+  /** 最近一次引擎分支（fork/rewind 截断）：可感知回显。 */
+  lastBranch: { sessionId: string; fromRowId: number; removedRows: number; at: number } | null
   lastReason: string | null
 }
 
@@ -89,6 +91,7 @@ const state = reactive<ProjectionState>({
   sessions: {},
   conversationDeltaTotal: 0,
   statusEvents: [],
+  lastBranch: null,
   lastReason: null,
 })
 
@@ -135,6 +138,10 @@ export function handleZcodeEvent(e: ZcodeSocketEvent): void {
     if (e.sessionId) {
       state.sessions[e.sessionId] = { ...state.sessions[e.sessionId], lastActivityAt: e.at }
     }
+    return
+  }
+  if (e.type === 'conversation.branch' && e.sessionId) {
+    state.lastBranch = { sessionId: e.sessionId, fromRowId: e.fromRowId, removedRows: e.removedRows, at: e.at }
     return
   }
   if (e.type === 'projection.status' || e.type === 'mention.outcome') {
