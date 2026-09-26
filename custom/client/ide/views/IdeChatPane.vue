@@ -39,6 +39,10 @@ import IdeQueuePanel from '../components/IdeQueuePanel.vue'
 import IdeRecapCard from '../components/IdeRecapCard.vue'
 import IdeTaskGroupsPanel from '../components/IdeTaskGroupsPanel.vue'
 import IdeReviewPanel from '../components/IdeReviewPanel.vue'
+import IdeMentionPicker from '../components/IdeMentionPicker.vue'
+import IdeInlineDiff from '../components/IdeInlineDiff.vue'
+import IdeAgentsView from '../components/IdeAgentsView.vue'
+import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
@@ -312,6 +316,8 @@ const modelGroupsView = computed(() =>
 const modelDisabled = computed(() => modelGroupsView.value.length === 0)
 const modelPickerOpen = ref(false)
 const recoveryOpen = ref(false)
+// S1 inline diff：当前会话最近 run 的 diff 文本（run 卡数据链复用）；无 diff 不渲染。
+const demoDiff = ref('')
 const modelLabel = computed(() => {
   const m = chatStore.activeSession?.model || appStore.selectedModel || ''
   return m || t('ide.chatSelectModel')
@@ -489,6 +495,10 @@ async function pickModel(provider: string, model: string): Promise<void> {
         />
         <IdeTurnRail />
       </div>
+      <IdeMentionPicker />
+      <IdeInlineDiff :diff-text="demoDiff" />
+      <IdeAgentsView />
+      <IdeContextBar />
       <IdeQueuePanel />
       <IdeRecapCard />
       <IdeTaskGroupsPanel />
