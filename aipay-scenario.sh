@@ -647,6 +647,12 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     if [[ -n "$(git status --porcelain 2>/dev/null | head -1)" ]]; then
       git add -A >/dev/null 2>&1 || true
       git commit -q -m "director(${RFD_ID}): 未提交产物收编（integration checkout 前置）" >/dev/null 2>&1 || true
+      # 收编自验证（r4）：commit 被钩子/锁挡下时 checkout 仍会被挡且 set -e 静默击杀——
+      # 复查仍有脏改即记 ISSUE 并显式失败，不再无声退场。
+      if [[ -n "$(git status --porcelain 2>/dev/null | head -1)" ]]; then
+        echo "ISSUE|integration-checkout-blocked|director|收编后仍有脏改，checkout 预期被挡" >> "$EVID_DIR/issues.log"
+        fail "integration checkout 前置收编失败：工作树仍有脏改（见 issues.log）"
+      fi
     fi
     # 基线变更受控（独立审计意见 R-A3，run2 0ab43de 实锤）：旧约定每轮 -B 从
     # origin/main 重建 + 非快进回落强推，两轮重建各丢 23/一批提交
