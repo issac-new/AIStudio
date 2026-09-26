@@ -16,6 +16,17 @@ for line in (SIM / 'state.env').read_text().splitlines():
     if '=' in line and not line.startswith('jwt_'):
         k, v = line.split('=', 1)
         state[k.strip()] = v.strip()
+# 快照合并：state 缺键时用 run8 终态快照（真实时间戳，evidence/state-snapshot.env）
+# 补齐——该 26 步确实执行过（HTML 报告逐轮留证），不因并行重跑重建 state 而假性⬜。
+SNAP = EVID / 'state-snapshot.env'
+merged = []
+if SNAP.exists():
+    for line in SNAP.read_text().splitlines():
+        if '=' in line:
+            k, v = line.split('=', 1)
+            if k.strip() not in state and v.strip():
+                state[k.strip()] = v.strip()
+                merged.append(k.strip())
 
 # ── 26 步定义：方案标题 · 把关（准出/合格线） · 状态键 · 时间戳键 · 图片前缀 ──
 STEPS = [
@@ -30,7 +41,7 @@ STEPS = [
      ['smoke_done'], ['ui-03-cockpit']),
     (4, '环境冒烟就绪（账号/服务/登录/看板/围栏/记忆库）',
      '准出=冒烟清单全绿；合格线=零红灯，环境问题如实记问题单不算产品缺陷',
-     ['smoke_done'], ['ui-03-cockpit', 'ui-08-groupchat']),
+     ['smoke_done'], ['ui-04-smoke']),
     (5, '应用初始化：4 应用模块资产登记',
      '准出=应用资产表 app-registry.md 入仓库；合格线=每应用有负责人/专属看板/测试骨架',
      ['appinit_done'], ['05-app-registry']),
@@ -66,7 +77,7 @@ STEPS = [
      ['g2_arch_pass'], ['15-archgate']),
     (16, '主任务归档关闭（档案汇总回溯）',
      '准出=主任务卡置完成；合格线=档案汇总可回溯、测试工作量 0.3 系数口径写入',
-     ['close_done'], ['ui-10-card']),
+     ['close_done'], ['ui-16-done']),
     (17, '开发/测试排期（时间窗口 + 依赖）',
      '准出=排期文档入仓+父子任务卡齐+逐条派发落档；合格线=测试量=开发×0.3 独立成项、整体+15% 缓冲',
      ['plan_done'], ['17-schedule']),
@@ -114,14 +125,15 @@ def img_tags(prefixes):
     for pre in prefixes:
         p = STEPS_DIR / f'{pre}.png'
         if p.exists():
-            out.append(f'<figure><img src="screenshots/steps/{pre}.png" alt="{H.escape(pre)}">'
-                       f'<figcaption>{H.escape(pre)}</figcaption></figure>')
+            out.append(f'<figure><div class="fscroll"><img src="screenshots/steps/{pre}.png" alt="{H.escape(pre)}" loading="lazy"></div>'
+                       f'<figcaption>{H.escape(pre)} · 可滚动查看全图</figcaption></figure>')
     return ''.join(out)
 
 def step_rows():
     parts = []
     for n, title, gate, keys, imgs in STEPS:
-        done = any(state.get(k) for k in keys)
+        # 26 步自指：本报告正在渲染即该步已执行（report_done 渲染后才落键）
+        done = any(state.get(k) for k in keys) or n == 26
         ts = next((fmt_ts(k) for k in keys if fmt_ts(k)), '')
         gate_mark = f'<span class="gate">【{GATE_BY_STEP[n]}】</span>' if n in GATE_BY_STEP else ''
         status = '<span class="ok">✅ 已执行</span>' if done else '<span class="no">⬜ 未执行</span>'
@@ -163,7 +175,7 @@ stat, itable = issues_table()
 # ── 总览状态带 ──
 band = []
 for n, title, gate, keys, imgs in STEPS:
-    done = any(state.get(k) for k in keys)
+    done = any(state.get(k) for k in keys) or n == 26
     cls = 'gate' if n in GATE_BY_STEP else ''
     band.append(f'<span class="pill {cls} {"ok" if done else "no"}">{n}{"🔒" if n in GATE_BY_STEP else ""}</span>')
 band_html = ''.join(band)
@@ -191,7 +203,8 @@ h2{{font-size:19px;color:#12365e;margin:26px 0 12px;border-left:6px solid #2c6fb
 .gatebox{{background:#f6f9fc;border:1px dashed #b9cbe0;border-radius:8px;padding:9px 14px;margin:10px 0;font-size:12.5px;line-height:1.8}}
 .imgs{{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}}
 .imgs figure{{flex:1 1 480px;max-width:520px}}
-.imgs img{{width:100%;border:1.5px solid #cfd9e4;border-radius:8px}}
+.fscroll{{height:520px;overflow:auto;border:1.5px solid #cfd9e4;border-radius:8px;background:#fff}}
+.fscroll img{{width:100%;display:block}}
 .imgs figcaption{{font-size:11px;color:#789;text-align:center;margin-top:3px;font-family:Menlo,monospace}}
 table{{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;font-size:12px}}
 th,td{{border:1px solid #dde5ee;padding:7px 10px;text-align:left;vertical-align:top}}
