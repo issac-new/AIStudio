@@ -61,6 +61,22 @@ const roundsCost = computed(() =>
   }, 0),
 )
 
+function formatDuration(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000))
+  return s >= 60 ? `${Math.floor(s / 60)}m${s % 60}s` : `${s}s`
+}
+
+/** 每轮费用（dsh 三原则：未收录模型显示 — 不虚报 0）。 */
+function formatRowCost(row: UsageRoundRow): string {
+  const cost = estimateCostUsd(row.model, {
+    inputTokens: row.input_tokens,
+    outputTokens: row.output_tokens,
+    cacheReadTokens: row.cache_read_tokens,
+    cacheWriteTokens: row.cache_write_tokens,
+  })
+  return cost === null ? '—' : `$${cost.toFixed(3)}`
+}
+
 const lowContext = computed(() =>
   isLowContext(props.metrics.contextUsed.value, props.metrics.contextLength.value),
 )
@@ -244,6 +260,8 @@ watch(
             <th class="is-num">{{ t('ide.usagePanel.roundColIn') }}</th>
             <th class="is-num">{{ t('ide.usagePanel.roundColOut') }}</th>
             <th class="is-num">{{ t('ide.usagePanel.roundColCache') }}</th>
+            <th class="is-num">{{ t('ide.usagePanel.roundColDuration') }}</th>
+            <th class="is-num">{{ t('ide.usagePanel.roundColCost') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -253,6 +271,8 @@ watch(
             <td class="is-num">{{ formatTokens(row.input_tokens + row.cache_read_tokens + row.cache_write_tokens) }}</td>
             <td class="is-num">{{ formatTokens(row.output_tokens) }}</td>
             <td class="is-num">{{ formatTokens(row.cache_read_tokens) }}</td>
+            <td class="is-num">{{ formatDuration((row.ended_at - row.started_at) * 1000) }}</td>
+            <td class="is-num">{{ formatRowCost(row) }}</td>
           </tr>
         </tbody>
       </table>
