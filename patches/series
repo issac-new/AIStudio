@@ -1028,3 +1028,7 @@
 # 479（报障修复）："Profile 未配置大模型"启动竞态误弹——token 恢复前 fetchProviders
 #      空跑、之后无人复查；补 token 就绪后重查（500ms/2s 两拍），真空才弹。
 479-client-provider-prompt-token-retry.patch
+# 480（scoped 模型可调）：IDE 会话建为 scoped（会话级模型——用户指令"模型可调"）；
+#      词条 chatModelNeedsScopedSession（存量 global 会话兜底提示）；本体走 custom
+#      （IdeChatPane/IdeCommandPalette 三处 global→scoped+pickModel 兜底）。
+480-client-scoped-model-i18n.patch

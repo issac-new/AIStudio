@@ -64,7 +64,7 @@ const commandItems = computed<PaletteItem[]>(() => {
         chatStore.newChat({
           agent: ideAgentToChatAgent(ide.agentId) as never,
           codingAgentId: ide.agentId,
-          codingAgentMode: 'global',
+          codingAgentMode: 'scoped', // 2026-09-26：IDE 会话改会话级模型（scoped）——工作台可调模型（用户指令），不再由 agent 底座独管
           source: 'coding_agent',
           workspace: ide.workspace,
         })

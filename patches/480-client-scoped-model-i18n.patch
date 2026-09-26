@@ -1,0 +1,24 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 1ec47b40..81f0a925 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -587,6 +587,7 @@ export default {
+       empty: '暂无技能',
+     },
+     chatSelectModel: '选择模型...',
++    chatModelNeedsScopedSession: '当前会话为全局模式，已设为默认模型——新建会话即可直接切换',
+     usagePanel: {
+       title: '会话遥测',
+       costHint: '按官方价目折算的估算成本（未收录模型不计入）',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index fa5f3845..42d63e68 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -587,6 +587,7 @@ export default {
+       empty: 'No skills yet',
+     },
+     chatSelectModel: 'Select model...',
++    chatModelNeedsScopedSession: 'This session is in global mode; set as default model — new sessions switch directly',
+     usagePanel: {
+       title: 'Session telemetry',
+       costHint: 'Estimated cost from official pricing (unlisted models excluded)',
