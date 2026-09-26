@@ -142,7 +142,13 @@ band = ''.join(
     f'<span class="pill {("gate" if n in GATE_BY_STEP else "")} {"ok" if (any(state.get(k) for k in keys) or n == 26) else "no"}">{n}{"🔒" if n in GATE_BY_STEP else ""}</span>'
     for n, title, gate, keys, imgs in STEPS)
 
-gov = (EVID / 'governance-report.md').read_text()[:4500] if (EVID / 'governance-report.md').exists() else ''
+gov = (EVID / 'governance-report.md').read_text()[:4500]
+# 兜底（09-26）：旧模板占位符出现在治理报告时用实算值替换，杜绝"待补"空转
+if '待全流程轮补' in gov:
+    _isl = (EVID / 'issues.log').read_text() if (EVID / 'issues.log').exists() else ''
+    _g = lambda pref: any(l.startswith('ISSUE|' + pref) for l in _isl.splitlines())
+    _fp = 4 - sum([_g('g1-review') or _g('g1-freeze') or _g('g1-gate'), _g('g2-'), _g('g4-'), _g('g5-')])
+    gov = gov.replace('待全流程轮补', f'{_fp}/4（实算）') if (EVID / 'governance-report.md').exists() else ''
 
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
