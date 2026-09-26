@@ -136,7 +136,7 @@ def render_transcript(ident, title, room, token, matcher, src_note='', maxn=14):
             if e.get('type') != 'm.room.message':
                 continue
             ts = e.get('origin_server_ts', 0)
-            if matcher(body) and (CUTOFF == 0 or ts >= CUTOFF) and (CUTOFF_HI == 0 or ts <= CUTOFF_HI):
+            if matcher(body) and (CUTOFF == 0 or ts >= CUTOFF * 1000) and (CUTOFF_HI == 0 or ts <= CUTOFF_HI * 1000):
                 msgs.append((ts, e.get('event_id', ''), e.get('sender', ''), body, rid))
     msgs.sort(key=lambda x: x[0])
     blocks = []
@@ -196,8 +196,14 @@ render_transcript('07-req-dm', '⑦ 需求提出 · BA→PM 私信送达', room_
                   lambda b: '需求' in b or 'RFD' in b or '收银台' in b, '步骤 7')
 render_transcript('09-dispatch', '⑨ @派发指令（RACI 派发链起点）', room_main, tok,
                   lambda b: ('派发' in b and 'RFD-001' in b) or b.startswith('【'), '步骤 9')
+# 11-done 特例：被核验通过的分析结论行实际发于 09-25 14:02（接续执行的真实跨度），
+# 该渲染单独放宽下界至 09-25 13:00，其余渲染仍锚定本轮窗口。
+import os as _os
+_prev = CUTOFF
+CUTOFF = 1790312400
 render_transcript('11-done', '⑪ 系统分析 · ANALYSIS-DONE 凭证行', room_main, tok,
-                  lambda b: 'ANALYSIS-DONE-RFD-001 commit=' in b, '步骤 11')
+                  lambda b: 'ANALYSIS-DONE-RFD-001 commit=' in b, '步骤 11 · 结论行 09-25 14:02 被反向核验通过')
+CUTOFF = _prev
 render_transcript('12-raci', '⑫ 分诊与 RACI 逐条派发', room_main, tok,
                   lambda b: ('@chen-agent' in b or '@hu-agent' in b or '@lin-agent' in b or '@xiao-agent' in b) and ('执行' in b or '任务' in b or 'RACI' in b), '步骤 12/13')
 render_transcript('15-archgate', '⑮ G2 架构评审结论行', room_main, tok,

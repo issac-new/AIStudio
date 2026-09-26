@@ -177,7 +177,7 @@ pre.gov{{background:#fff;border:1px solid #d5dee8;border-radius:10px;padding:16p
 </style></head><body>
 <h1>Swarm Studio 全流程推演报告 · RFD-001 支付收银台（多端小程序）</h1>
 <div class="sub">15 人 × AI 分布式集群协作 · 单 gateway 多路复用 42 profile · 28 kanban · matrix :8008<br>
-本报告锚定 <b>09-26 00:22—08:27 完整推演轮</b>（26 步全过闸）：每步标题与把关逐字引用《全流程推演方案》"具体流程 1-26"，截图为该步真实证据（界面走查 / 工件渲染，含 matrix event_id 与 git 引用可反查）。</div>
+本报告锚定 <b>09-25 14:00—09-26 08:27 完整推演周期</b>（26 步全过闸，接续执行）：每步标题与把关逐字引用《全流程推演方案》"具体流程 1-26"，截图为该步真实证据（界面走查 / 工件渲染，含 matrix event_id 与 git 引用可反查）。</div>
 <div class="band">{band}</div>
 <div class="sub">{stat} ｜ 运行环境：单 gateway :8801 + 单 studio :8802 + synapse :8008 + hindsight :8888</div>
 
