@@ -35,7 +35,13 @@ vi.mock('@/api/hermes/mcp', () => ({
 }))
 
 const routerPush = vi.fn()
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }))
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: routerPush }),
+  createRouter: () => { throw new Error('router should not be created in pane tests') },
+}))
+vi.mock('../utils/hermes-skills', () => ({
+  fetchHermesSkills: vi.fn(async () => ({ rows: [], categories: 0 })),
+}))
 
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 import IdeMcpPane from '../views/IdeMcpPane.vue'
