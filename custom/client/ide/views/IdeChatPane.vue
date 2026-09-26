@@ -30,6 +30,7 @@ import MessageList from '@/components/hermes/chat/MessageList.vue'
 import ChatInput from '@/components/hermes/chat/ChatInput.vue'
 import IdeTurnRail from '../components/IdeTurnRail.vue'
 import IdeHandoffCard from '../components/IdeHandoffCard.vue'
+import IdeCompactionCard from '../components/IdeCompactionCard.vue'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
 import FilePreview from '@/components/hermes/files/FilePreview.vue'
@@ -470,6 +471,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
         <IdeTurnRail />
       </div>
       <IdeHandoffCard />
+      <IdeCompactionCard />
       <div class="ide-chat__model-picker-anchor">
         <ChatInput
           :model-disabled="modelDisabled"
