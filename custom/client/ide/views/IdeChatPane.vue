@@ -35,6 +35,10 @@ import IdePermissionSwitcher from '../components/IdePermissionSwitcher.vue'
 import IdeAskCard from '../components/IdeAskCard.vue'
 import IdeMentionChip from '../components/IdeMentionChip.vue'
 import IdeRunLogPanel from '../components/IdeRunLogPanel.vue'
+import IdeQueuePanel from '../components/IdeQueuePanel.vue'
+import IdeRecapCard from '../components/IdeRecapCard.vue'
+import IdeTaskGroupsPanel from '../components/IdeTaskGroupsPanel.vue'
+import IdeReviewPanel from '../components/IdeReviewPanel.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 import WorkspaceDiffPreview from '@/components/hermes/files/WorkspaceDiffPreview.vue'
@@ -485,6 +489,10 @@ async function pickModel(provider: string, model: string): Promise<void> {
         />
         <IdeTurnRail />
       </div>
+      <IdeQueuePanel />
+      <IdeRecapCard />
+      <IdeTaskGroupsPanel />
+      <IdeReviewPanel />
       <IdeAskCard />
       <IdeMentionChip />
       <IdeRunLogPanel />
