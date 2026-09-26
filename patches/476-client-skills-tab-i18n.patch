@@ -1,0 +1,32 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 0093665a..5a0523a5 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -581,6 +581,11 @@ export default {
+       manage: '管理页',
+       chatMissing: '无活跃会话',
+     },
++    skills: {
++      tab: '技能',
++      summary: '{n} 项技能 · {e} 启用',
++      empty: '暂无技能',
++    },
+     usagePanel: {
+       title: '会话遥测',
+       costHint: '按官方价目折算的估算成本（未收录模型不计入）',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index dd61ea97..0db800cf 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -581,6 +581,11 @@ export default {
+       manage: 'Manage',
+       chatMissing: 'No active session',
+     },
++    skills: {
++      tab: 'Skills',
++      summary: '{n} skills · {e} enabled',
++      empty: 'No skills yet',
++    },
+     usagePanel: {
+       title: 'Session telemetry',
+       costHint: 'Estimated cost from official pricing (unlisted models excluded)',
