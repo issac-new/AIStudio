@@ -107,7 +107,7 @@ STEPS = [
      ['ide_done'], ['ui-25-ide', 'ui-25-models']),
     (26, 'HTML 推演报告汇编（产品路演交付物）',
      '准出=simulation-report.html 生成；合格线=26 步状态真实、截图逐一对位、问题单与治理报告挂接',
-     ['report_done'], []),
+     ['report_done'], ['ui-26-report']),
 ]
 
 GATES = {'reqgate': 'G1', 'archgate': 'G2', 'testpass': 'G4', 'ready': 'G5', 'retro': 'G6'}
