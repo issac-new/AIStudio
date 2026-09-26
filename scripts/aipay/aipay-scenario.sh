@@ -995,7 +995,9 @@ steps = [
 gate_names = {"reqgate":"G1","archgate":"G2","testpass":"G4","ready":"G5","retro":"G6"}
 rows = []
 for key, title, cands in steps:
-    done = any(state.get(c) for c in cands)
+    # report 步自指：本报告正在渲染即该步已执行（report_done 在渲染后才落键），
+    # 自标 ⬜ 与"报告在场"自相矛盾（09-26 实锤）。
+    done = any(state.get(c) for c in cands) or key == "report"
     gate = gate_names.get(key, "")
     st = "✅ 已执行" if done else "⬜ 未执行"
     rows.append(f"<tr><td>{html.escape(title)}{' 【'+gate+'】' if gate else ''}</td><td>{st}</td></tr>")
