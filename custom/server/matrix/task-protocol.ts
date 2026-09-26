@@ -15,6 +15,8 @@ export const TASK_RECEIPT_EVENT_TYPE = 'com.swarmstudio.task.receipt'
 
 /** AssignContent（v1 稳定字段 + v2 四可选字段，与客户端 protocol.ts 对齐） */
 export interface AssignEventContent {
+  // 协议事件 content 是开放 JSON 面：允许经协议事件发送通道（其 content 形参为宽索引记录）传递。
+  [key: string]: unknown
   taskId: string
   title: string
   body?: string
