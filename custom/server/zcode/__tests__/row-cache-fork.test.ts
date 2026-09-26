@@ -61,3 +61,23 @@ describe('fork 锚定位（findForkAnchor）', () => {
     expect(findForkAnchor([{ rowId: 9, entityId: 'x', kind: 'assistantText', state: 'streaming', text: '' }])).toBeNull()
   })
 })
+
+describe('分支事件（fork 回显）', () => {
+  it('removed 截断时发 conversation.branch（fromRowId/removedRows）；非截断不发', async () => {
+    const fake = makeFake()
+    const events: Array<Record<string, unknown>> = []
+    const p = new ZcodeSessionProjection({ agent: fake.agent as never, now: () => 0, log: () => undefined })
+    p.onEvent((e) => events.push(e as unknown as Record<string, unknown>))
+    await p.watchWorkspace('/w')
+    await p.watchSession('/w', 's1')
+    fake.emit(deltaFrame('s1', [
+      { op: 'row.appended', row: { rowId: 1, kind: 'userInput', text: 'q' } },
+      { op: 'row.appended', row: { rowId: 2, entityId: 'e', kind: 'assistantText', state: 'complete', text: 'a' } },
+      { op: 'row.appended', row: { rowId: 3, entityId: 'e2', kind: 'assistantText', state: 'complete', text: 'b' } },
+    ]))
+    fake.emit(deltaFrame('s1', [{ op: 'row.removed', fromRowId: 2 }]))
+    const branch = events.filter((e) => e.type === 'conversation.branch') as Array<{ fromRowId: number; removedRows: number; sessionId: string }>
+    expect(branch).toHaveLength(1)
+    expect(branch[0]).toMatchObject({ fromRowId: 2, removedRows: 2, sessionId: 's1' })
+  })
+})

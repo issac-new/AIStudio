@@ -111,6 +111,7 @@ export type ProjectionEvent =
   | { type: 'session.upserted'; workspaceId: string; sessionId: string; at: number; session: ProjectionSession }
   | { type: 'session.removed'; workspaceId: string; sessionId: string; at: number }
   | { type: 'conversation.frame'; workspaceId: string; sessionId: string; at: number; fromSeq?: number; toSeq?: number; payloadKind?: string; deltaCount: number }
+  | { type: 'conversation.branch'; workspaceId: string; sessionId: string; at: number; fromRowId: number; removedRows: number }
 
 /** zcode-agent 通道的投影消费面（engine-bridge 的子集 + sessions-index 组）。 */
 export interface ProjectionAgentPort {
@@ -310,8 +311,15 @@ export class ZcodeSessionProjection {
         if (row && Number.isFinite(Number(row.rowId))) rows.set(Number(row.rowId), toProjectionRow(row))
       } else if (d.op === 'row.removed') {
         const from = Number(d.fromRowId)
+        let removed = 0
         for (const rowId of [...rows.keys()]) {
-          if (rowId >= from) rows.delete(rowId)
+          if (rowId >= from) { rows.delete(rowId); removed += 1 }
+        }
+        if (removed > 0) {
+          this.emit({
+            type: 'conversation.branch', workspaceId: state.workspacePath, sessionId,
+            at: this.now(), fromRowId: from, removedRows: removed,
+          })
         }
       }
       // row.delta（流式追加）不进缓存：摘要锚点只需终态行；state.updated 与行无关。
