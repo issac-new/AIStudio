@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
+vi.mock('naive-ui', () => ({ useMessage: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }) }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 const { push } = vi.hoisted(() => ({ push: vi.fn() }))
 // 模块链含 upstream router/index.ts（createRouter + beforeEach 链）→ mock 补全
