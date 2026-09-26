@@ -142,7 +142,7 @@ band = ''.join(
     f'<span class="pill {("gate" if n in GATE_BY_STEP else "")} {"ok" if (any(state.get(k) for k in keys) or n == 26) else "no"}">{n}{"🔒" if n in GATE_BY_STEP else ""}</span>'
     for n, title, gate, keys, imgs in STEPS)
 
-gov = (EVID / 'governance-report.md').read_text()[:4500] if (EVID / 'governance-report.md').exists() else ''
+gov = (EVID / 'governance-report.md').read_text()[:2500] if (EVID / 'governance-report.md').exists() else ''
 
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
