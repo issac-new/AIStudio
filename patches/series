@@ -1013,3 +1013,6 @@
 # 474（feat/boundary-ui 轮，M2 发起向导 i18n）：ia2.delivery 补 launch/表单/网络读数词条
 #      （zh/en，其余语种 fallback——104/105 先例同款）。
 474-delivery-wizard-i18n.patch
+# 475（P2 余半项，流式裁剪）：分级牺牲优先级表（可再生只读工具 tier0 先牺牲，
+#      同级大小降序保"最大优先"）+shed_bytes 指标（demoted/shed_bytes/target/met_target）。
+475-agent-shed-tiered-metrics.patch
