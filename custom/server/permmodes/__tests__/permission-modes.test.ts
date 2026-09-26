@@ -27,3 +27,16 @@ describe('七档语义（cc d.ts:6046 六档+readonly）', () => {
     expect(modes).toHaveLength(7)
   })
 })
+
+describe('七档→引擎任务档映射（层 2）', () => {
+  it('全七档映射到 ZCodeTaskMode 六档词表', async () => {
+    const { toEngineTaskMode } = await import('../permission-modes')
+    expect(toEngineTaskMode('readonly')).toBe('plan')
+    expect(toEngineTaskMode('plan')).toBe('plan')
+    expect(toEngineTaskMode('default')).toBe('edit')
+    expect(toEngineTaskMode('acceptEdits')).toBe('autoEdit')
+    expect(toEngineTaskMode('dontAsk')).toBe('auto')
+    expect(toEngineTaskMode('auto')).toBe('auto')
+    expect(toEngineTaskMode('bypassPermissions')).toBe('yolo')
+  })
+})

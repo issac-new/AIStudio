@@ -38,3 +38,25 @@ export function modeToPreset(mode: PermissionMode): 'readonly' | 'standard' | 'f
   if (mode === 'default' || mode === 'acceptEdits') return 'standard'
   return 'full-auto'
 }
+
+// ── 引擎档映射（2026-09-26 层 2）──
+// zcode 引擎任务权限档 ZCodeTaskMode 六档（zcode-task-mode-schema.ts:6：
+// yolo/plan/edit/auto/autoEdit/build）。七档→引擎档映射供任务派发（automation/
+// create 带 permissionMode）消费；**会话级 mode 的 v4 通道引擎未开**（createSession
+// 只收 workspacePath）——会话内切换器待引擎面扩展（记档）。
+export type EngineTaskMode = 'yolo' | 'plan' | 'edit' | 'auto' | 'autoEdit' | 'build'
+
+const ENGINE_MODE_MAP: Record<PermissionMode, EngineTaskMode> = {
+  'readonly': 'plan',
+  'plan': 'plan',
+  'default': 'edit',
+  'acceptEdits': 'autoEdit',
+  'dontAsk': 'auto',
+  'auto': 'auto',
+  'bypassPermissions': 'yolo',
+}
+
+/** 七档 → 引擎任务档（ZCodeTaskMode 词表；派单/automation 消费）。 */
+export function toEngineTaskMode(mode: PermissionMode): EngineTaskMode {
+  return ENGINE_MODE_MAP[mode]
+}
