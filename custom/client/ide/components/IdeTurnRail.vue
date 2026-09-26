@@ -88,7 +88,7 @@ function fmt(ms: number): string {
       :key="row.turnIndex"
       class="ide-turn-rail__row"
       :data-testid="`ide-turn-rail-${row.turnIndex}`"
-      :title="`#${row.turnIndex + 1} ${row.anchor} · ${row.steps} steps · ${row.toolCalls} tools · ${fmt(row.durationMs)} · ⇧点击分叉`""
+      :title="`#${row.turnIndex + 1} ${row.anchor} · ${row.steps} steps · ${row.toolCalls} tools · ${fmt(row.durationMs)} · ⇧点击分叉`"
       @click="jump(row, $event)"
     >
       <span class="ide-turn-rail__idx">{{ row.turnIndex + 1 }}</span>

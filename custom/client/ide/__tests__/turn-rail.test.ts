@@ -12,6 +12,7 @@ const state = {
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => state,
 }))
+vi.mock('../store/ide', () => ({ useIdeStore: () => ({ workspace: '/w' }) }))
 
 import IdeTurnRail from '../components/IdeTurnRail.vue'
 
