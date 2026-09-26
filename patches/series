@@ -1032,3 +1032,6 @@
 #      词条 chatModelNeedsScopedSession（存量 global 会话兜底提示）；本体走 custom
 #      （IdeChatPane/IdeCommandPalette 三处 global→scoped+pickModel 兜底）。
 480-client-scoped-model-i18n.patch
+# 482（UI 融合 UI-5）：run 逐文件 Undo——挂载 run-undo 路由（477 同款两行）
+#      +词条 undoFile（zh/en）；本体走 custom（node:sqlite 直连+git apply -R+按钮）。
+482-server-run-undo-mount-i18n.patch
