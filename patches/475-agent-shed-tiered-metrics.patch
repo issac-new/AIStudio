@@ -1,0 +1,103 @@
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+index e81befa2b0..f476a4cdd6 100644
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -807,6 +807,9 @@ def _is_summary_stub(content: str) -> bool:
+ # user answer is never re-summarized away on a later prune pass.
+ _PRUNE_MIN_CHARS = 200
+ 
++# 分级牺牲表 tier 0（可再生——重跑即得，先牺牲）：只读类工具名前缀。
++_SACRIFICE_REGEN_TOOLS: tuple[str, ...] = ("read", "grep", "glob", "ls", "find", "search")
++
+ # Sentinel ``user_response`` values from timeout / no-user clarify callbacks;
+ # must never be quoted as a user answer.
+ _CLARIFY_NON_RESPONSE_PREFIXES = (
+@@ -1984,6 +1987,9 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin
+     """Default context engine: prune tool results, protect head/tail, summarize the middle
+     with an LLM, and iteratively update the previous summary on later compactions."""
+ 
++    # 最近一次 shed 的指标（_demote_size_ordered 写入）：demoted/shed_bytes/target_chars/met_target。
++    last_shed_metrics: Optional[Dict[str, Any]] = None
++
+     @property
+     def name(self) -> str:
+         return "compressor"
+@@ -3130,10 +3136,17 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin
+             c = result[i].get("content", "")
+             return len(c) if isinstance(c, str) else _content_length_for_budget(c)
+ 
++        # 分级牺牲优先级表（codex e7165c2 余半项）：可再生只读工具结果先牺牲
++        # （tier 0），其余工具结果 tier 1；同级内大小降序（保留"最大优先"语义）。
++        def _sacrifice_tier(i: int) -> int:
++            name, _args = call_id_to_tool.get(result[i].get("tool_call_id", ""), ("", ""))
++            n = str(name).lower()
++            return 0 if any(n.startswith(t) for t in _SACRIFICE_REGEN_TOOLS) else 1
++
+         order = sorted(
+             (i for i in range(boundary)
+              if result[i].get("role") == "tool" and _content_len(i) >= min_prune_chars),
+-            key=_content_len, reverse=True,
++            key=lambda i: (_sacrifice_tier(i), -_content_len(i)),
+         )
+         reclaimed = 0
+         demoted = 0
+@@ -3144,6 +3157,13 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin
+             if self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills):
+                 demoted += 1
+                 reclaimed += max(0, before - _content_len(i))
++        # shed_bytes 指标（余半项）：回收字节/条数/目标与命中，供调用方上报。
++        self.last_shed_metrics = {
++            "demoted": demoted,
++            "shed_bytes": reclaimed,
++            "target_chars": shed_target_chars,
++            "met_target": shed_target_chars is None or reclaimed >= shed_target_chars,
++        }
+         return demoted
+ 
+     def _prune_old_tool_results(
+diff --git a/tests/agent/test_shed_size_order.py b/tests/agent/test_shed_size_order.py
+index 3264afe0f8..c2bfbc7a15 100644
+--- a/tests/agent/test_shed_size_order.py
++++ b/tests/agent/test_shed_size_order.py
+@@ -73,3 +73,41 @@ class TestSizeOrderShed:
+         contents = [m["content"] for m in out if m.get("role") == "tool"]
+         assert any(c == MID for c in contents)  # 保护尾不动
+ 
++
++class TestTieredSacrificeAndMetrics:
++    """余半项守门：分级牺牲优先级表（可再生先牺牲）+ shed_bytes 指标。"""
++
++    def test_regen_tool_sacrificed_before_bigger_bash(self):
++        # c1=read_file（tier0 可再生，1500 字）先于 c2=bash（tier1，4000 字）牺牲，
++        # 尽管后者更大——目标 1400 时剪 read 即达标停，bash 保留完整。
++        c = ContextCompressor(model="m", quiet_mode=True)
++        regen, heavy = "R" * 1500, "B" * 4000
++        msgs = [
++            {"role": "user", "content": "q"},
++            {"role": "assistant", "content": "",
++             "tool_calls": [
++                 {"id": "c1", "type": "function", "function": {"name": "read_file", "arguments": "{}"}},
++                 {"id": "c2", "type": "function", "function": {"name": "bash", "arguments": "{}"}},
++             ]},
++            _tool_msg("c1", regen),
++            _tool_msg("c2", heavy),
++            {"role": "assistant", "content": "done"},
++        ]
++        out, count = c._prune_old_tool_results(msgs, protect_tail_count=2, shed_target_chars=1400)
++        assert count == 1
++        contents = [m["content"] for m in out if m.get("role") == "tool"]
++        assert heavy in contents and regen not in contents  # 只牺牲可再生者
++        m = c.last_shed_metrics
++        assert m["demoted"] == 1
++        assert m["shed_bytes"] > 0
++        assert m["met_target"] is True
++        assert m["target_chars"] == 1400
++
++    def test_metrics_reflect_full_shed_when_no_target(self):
++        c = ContextCompressor(model="m", quiet_mode=True)
++        c._prune_old_tool_results(_session(BIG, SMALL, MID), protect_tail_count=2)
++        m = c.last_shed_metrics
++        assert m["demoted"] == 2
++        assert m["shed_bytes"] > 0
++        assert m["target_chars"] is None
++        assert m["met_target"] is True  # 无目标=自然尽即命中
