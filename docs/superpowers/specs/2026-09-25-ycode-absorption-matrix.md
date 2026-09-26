@@ -216,7 +216,7 @@
 | 通知补耗时/模型 | 📦旧账已含（R4 活动收件箱）·待随迁 |
 | 计划模板（feature-dev 范式） | ✅ runtime/roster/prompts/plan-template.md（cc 概念自研重写：阶段+门禁+关键文件清单；红线合规） |
 | 评审/验证轮编排模板 | ✅ review-template.md（高信号纪律+独立验证轮自研；实件 /review 已落 patch 414） |
-| 技能入口（skills=commands 合并口径） | 🧬原生（hermes skills_list/skill_manage 面）；工作台 UI 入口随 UI 批 🔜P2 |
+| 技能入口（skills=commands 合并口径） | ✅ 🧬原生 skills 面+工作台 UI 入口=IdeMcpPane 技能 tab（hermes-skills.ts 取数+ledger 投影+patch 476 词条，UI 批首件落地） |
 | 权限模式 7 档语义+切换 UI | ✅ permission-modes.ts 七档语义（cc d.ts:6046 六档+readonly/放行面/三档映射）+402 决策态；切换 UI 随 UI 批 |
 | 任务依赖 dependsOn | 🧬原生（kanban 父子依赖+claim 重检）·补记 |
 | cc：缓存 miss 归因 | ✅ cache-attribution.ts（归因优先序/命中率三档/建议文案） |
