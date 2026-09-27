@@ -3,7 +3,7 @@
 // 专属卡+通用兜底；UI 复刻 T 批）。数据=chatStore messages role='tool'（toolName/
 // content/状态）；专属语义：edit/write→diff 行着色、bash→命令+退出态、read→路径
 // 跳转、grep/search→命中摘要、glob→文件清单、web→URL、mcp→服务器.工具。
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 
 const chat = useChatStore()
@@ -11,7 +11,7 @@ const chat = useChatStore()
 interface ToolRow {
   id: string
   name: string
-  category: 'edit' | 'bash' | 'read' | 'search' | 'glob' | 'web' | 'mcp' | 'other'
+  category: 'edit' | 'bash' | 'read' | 'search' | 'glob' | 'web' | 'mcp' | 'todo' | 'workflow' | 'delegate' | 'skill' | 'plan' | 'cua' | 'git' | 'present' | 'cron' | 'artifact' | 'other'
   summary: string
   detail: string
 }
@@ -19,6 +19,16 @@ interface ToolRow {
 function categorize(name: string): ToolRow['category'] {
   const n = name.toLowerCase()
   if (n.startsWith('mcp') || n.startsWith('mcp__')) return 'mcp'
+  if (n.includes('todo')) return 'todo'
+  if (n.includes('workflow') || n.includes('graph')) return 'workflow'
+  if (n.includes('task') || n.includes('agent') || n.includes('delegate') || n.includes('subagent')) return 'delegate'
+  if (n.includes('skill')) return 'skill'
+  if (n.includes('plan')) return 'plan'
+  if (n.includes('cua') || n.includes('computer')) return 'cua'
+  if (n.includes('git') || n.includes('commit') || n.includes('branch') || n.includes('checkpoint')) return 'git'
+  if (n.includes('present') || n.includes('deliver')) return 'present'
+  if (n.includes('cron') || n.includes('schedul') || n.includes('offpeak')) return 'cron'
+  if (n.includes('artifact') || n.includes('screenshot') || n.includes('record')) return 'artifact'
   if (n.includes('edit') || n.includes('write') || n.includes('apply')) return 'edit'
   if (n.includes('bash') || n.includes('exec') || n.includes('terminal')) return 'bash'
   if (n.startsWith('read') || n.includes('view') || n.includes('cat')) return 'read'
@@ -41,8 +51,32 @@ function summarize(row: Omit<ToolRow, 'summary'>, content: string): string {
     case 'search': return `${lines.length} 行命中`
     case 'glob': return `${lines.length} 文件`
     case 'web': return content.split('\n')[0]?.slice(0, 70) ?? ''
+    case 'todo': {
+      const done = (content.match(/(completed|in_progress)/g) ?? []).length
+      const total = (content.match(/(pending|in_progress|completed)/g) ?? []).length
+      return total ? `${done}/${total} 项` : content.slice(0, 40)
+    }
+    case 'workflow': return content.split('\n')[0]?.slice(0, 50) ?? ''
+    case 'delegate': return content.split('\n')[0]?.slice(0, 60) ?? ''
+    case 'skill': return content.split('\n')[0]?.slice(0, 40) ?? ''
+    case 'plan': return content.split('\n')[0]?.slice(0, 50) ?? ''
+    case 'cua': return `${lines.length} 动作`
+    case 'git': return content.split('\n')[0]?.slice(0, 50) ?? ''
+    case 'present': return content.split('\n')[0]?.slice(0, 50) ?? ''
+    case 'cron': return content.split('\n')[0]?.slice(0, 50) ?? ''
+    case 'artifact': return content.split('\n')[0]?.slice(0, 50) ?? ''
     default: return `${lines.length} 行`
   }
+}
+
+const expanded = ref<Record<string, boolean>>({})
+
+function toggle(id: string): void {
+  expanded.value = { ...expanded.value, [id]: !expanded.value[id] }
+}
+
+function diffLines(detail: string): string[] {
+  return detail.split('\n').slice(0, 40)
 }
 
 const rows = computed<ToolRow[]>(() => {
@@ -67,6 +101,16 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
   glob: { icon: '≡', label: '枚举' },
   web: { icon: '◍', label: '网络' },
   mcp: { icon: '⌗', label: 'MCP' },
+  todo: { icon: '☑', label: '待办' },
+  workflow: { icon: '⟐', label: '工作流' },
+  delegate: { icon: '❖', label: '子代理' },
+  skill: { icon: '✦', label: '技能' },
+  plan: { icon: '▤', label: '计划' },
+  cua: { icon: '▣', label: '桌面' },
+  git: { icon: '⎇', label: 'Git' },
+  present: { icon: '⇪', label: '交付' },
+  cron: { icon: '⏱', label: '定时' },
+  artifact: { icon: '▣', label: '工件' },
   other: { icon: '·', label: '工具' },
 }
 </script>
@@ -78,14 +122,26 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
     <div
       v-for="row in rows"
       :key="row.id"
-      class="ide-tools__row"
-      :class="`is-${row.category}`"
+      class="ide-tools__item"
       :data-testid="`ide-tool-${row.id}`"
-      :title="row.detail"
     >
-      <span class="ide-tools__icon">{{ CATEGORY_META[row.category].icon }}</span>
-      <span class="ide-tools__name">{{ row.name }}</span>
-      <span class="ide-tools__summary">{{ row.summary }}</span>
+      <div
+        class="ide-tools__row"
+        :class="`is-${row.category}`"
+        :title="row.detail"
+        @click="toggle(row.id)"
+      >
+        <span class="ide-tools__icon">{{ CATEGORY_META[row.category].icon }}</span>
+        <span class="ide-tools__name">{{ row.name }}</span>
+        <span class="ide-tools__summary">{{ row.summary }}</span>
+        <span v-if="row.category === 'edit'" class="ide-tools__chev">{{ expanded[row.id] ? '▾' : '▸' }}</span>
+      </div>
+      <pre v-if="expanded[row.id] && row.category === 'edit'" class="ide-tools__diff" data-testid="ide-tools-diff-preview"><span
+          v-for="(line, li) in diffLines(row.detail)"
+          :key="li"
+          class="ide-tools__dline"
+          :class="{ 'is-add': line.startsWith('+'), 'is-del': line.startsWith('-') }"
+        >{{ line }}</span></pre>
     </div>
   </div>
 </template>
@@ -95,6 +151,15 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 .ide-tools__head { font-weight: 600; padding: 2px 6px 8px; }
 .ide-tools__count { color: var(--text-color-3, #999); font-weight: 400; }
 .ide-tools__empty { color: var(--text-color-3, #999); padding: 16px; }
+.ide-tools__item { margin: 3px 0; }
+.ide-tools__diff {
+  margin: 2px 0 4px 20px; padding: 6px 8px; font-size: 10px; font-family: ui-monospace, monospace;
+  background: var(--hover-color, rgba(0, 0, 0, 0.03)); border-radius: 4px; max-height: 200px; overflow: auto;
+}
+.ide-tools__dline { display: block; white-space: pre-wrap; }
+.ide-tools__dline.is-add { color: #18a058; background: rgba(24, 160, 88, 0.08); }
+.ide-tools__dline.is-del { color: #d03050; background: rgba(208, 48, 80, 0.08); }
+.ide-tools__chev { color: var(--text-color-3, #999); font-size: 10px; }
 .ide-tools__row {
   display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 5px;
   border-left: 2px solid var(--border-color, #e0e0e0); margin: 3px 0; cursor: default;
