@@ -288,6 +288,13 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
 - **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
 
+### 3.18 T2 细分卡批+水位条真实 span（2026-09-27 续）
+
+- **T2 十类细分工具卡**（IdeToolsPane 扩）：todo☑（进度 n/m）/workflow⟐/delegate❖/skill✦/plan▤/cua▣（动作数）/git⎇/present⇪/cron⏱/artifact▣——合计 **17 类专属卡**（首期七类+T2 十类），覆盖 zcode 62 渲染器的高频语义族；edit 卡**点击展开 diff 预览**（着色 +/− 行块）。守门 3 例（十类归类+diff 预览+七类回归）。
+- **水位条真实 span**（IdeContextBar）：接 `computeBreakdown`（G4 构成分解同源：消息角色归段 system/user/assistant(+thinking)/tools 四段——与遥测弹窗同一数据面）；无可分解口径回落总量单条（诚实）。守门改真实函数路径（四段渲染+80% 压力+回落）。
+
+终验 399 文件 2949/2949。
+
 ### 3.17 复刻续批：真实链拔摆设+工具时间线（2026-09-27，origin=d15671bb）
 
 **真实链审计与修复**（复刻批自检——4 件接的是 mock 形态而非真实数据，全部拔除）：
