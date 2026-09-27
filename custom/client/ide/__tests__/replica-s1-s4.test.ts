@@ -59,17 +59,30 @@ describe('S2 @提及六源面板', () => {
   })
 })
 
-describe('S3 分段水位条', () => {
-  it('五段配色渲染+压力分级+悬停图例', async () => {
+describe('S3 分段水位条（真实 span=computeBreakdown）', () => {
+  it('消息角色归段渲染+压力分级+悬停图例；无消息回落总量条', async () => {
     const { default: IdeContextBar } = await import('../components/IdeContextBar.vue')
+    // 真实路径：消息（带 token_count）→ 四段归因
+    chatState.activeSession = { messages: [
+      { role: 'system', content: 'sys', token_count: 10000 },
+      { role: 'user', content: '问', token_count: 20000 },
+      { role: 'assistant', content: '答', token_count: 30000 },
+      { role: 'tool', content: 'out', token_count: 20000 },
+    ] }
     const w = mount(IdeContextBar)
-    expect(w.find('[data-testid="ide-ctxbar-seg-systemPrompt"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ide-ctxbar-seg-messages"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxbar-seg-system"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxbar-seg-user"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxbar-seg-assistant"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxbar-seg-tool"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-ctxbar-pct"]').text()).toBe('80%')
-    expect(w.classes()).toContain('is-warn') // 80% 档
+    expect(w.classes()).toContain('is-warn')
     await w.trigger('mouseenter')
     expect(w.find('[data-testid="ide-ctxbar-legend"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ide-ctxbar-legend"]').text()).toContain('messages 45%')
+    expect(w.find('[data-testid="ide-ctxbar-legend"]').text()).toContain('assistant/thinking')
+    // 回落：无消息 → 总量单条
+    chatState.activeSession = null
+    const bare = mount(IdeContextBar)
+    expect(bare.find('.ide-ctxbar__seg.is-total').exists()).toBe(true)
   })
 })
 
