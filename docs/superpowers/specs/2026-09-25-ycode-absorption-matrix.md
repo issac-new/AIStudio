@@ -288,6 +288,18 @@ zcode 为底座本体：其差距清单的多数项随底座原生消解或由 R
 - 重：D1-D7 全部消解（收敛回改 4 处+域合并 5 组+命名空间 1 组）。
 - **下一实施批（按优先级）**：~~P0 十项~~ **P0 已落 10/10**（终账：410 recap+来源标头/pricing.ts 价目表/squad-protocol.ts/patch 413 证据台账/result-card.ts 结果卡/patch 414 评审域/patch 415 列编排+执行半环）→ ~~旧账随迁批~~ **随迁核验已闭（2026-09-25 浏览器实证）**：8/9 组件实证接线（IdePlanFloat/IdeModelSwitcher/Wiki W tab/活动收件箱🔔/终端 actions 面板内/IdeSubagentsFloat/hooks⚓/低水位 toast 原生✅）；1 件 session-share 服务端路由已接（R6 patch）客户端入口待活跃会话态核验 → P1 批（已落 8+原生再裁 1：预演+交接话术 416+inbox 418+board 闸 419+ask 455+权限升级 456+GOAL-05 队列+监督模式 457；tool_search 原生）→ P1 已落 13（+轮导航 rail 投影）+原生再裁 4（present 交付物/任务依赖/技能入口/AGENTS.md 装载主面）→ P1 已落 14（+compaction 留痕卡投影）→ **P1 队列收官（17 落地+4 原生再裁=全项处置完毕）**——最后一项 kimi /mcp-config 余项=mcpconfig 域（scope 三选一/timeout 有界/needs-auth 闭环，patch 459）。**下一批=核验批**（zcode §七 39 项逐项核验）。
 
+### 3.17 复刻续批：真实链拔摆设+工具时间线（2026-09-27，origin=d15671bb）
+
+**真实链审计与修复**（复刻批自检——4 件接的是 mock 形态而非真实数据，全部拔除）：
+- R7 排队面板：queuedMessages 字段不存在（守门 mock 出来的）→ 改消息 `queued` 标志（MessageList 灰显同源）；
+- R6 Task Groups：props 无数据源恒空 → 接会话 taskPlan 快照（plan 步骤→组步骤，pending=待批/completed=已批）；
+- R9 评审面板：findings 本地空 ref → 接 review REST 真链（POST /api/review 幂等键创建→GET /:id 的 ReviewRecord.comments 回流：file:line+body+resolve 态）；
+- S1 inline diff：demoDiff 恒空 → 接最近 run 首文件 patch（changes→file 详情端点 patch 文本）。
+
+**T 批：工具时间线面板**（IdeToolsPane ⚙ 侧栏 tab——zcode 62 专属工具卡渲染器复刻首期）：工具调用流按语义七类专属卡（edit✎±行数/bash$ 命令行/read⊟路径/search⌕命中数/glob≡文件数/web◍URL/mcp⌗服务器.工具）+通用兜底+类别色标+倒序时间线。守门 1 例（七类归类+摘要语义）。
+
+终验 399 文件 2947/2947。
+
 ### 3.16 UI 复刻批（2026-09-27，用户指令"全面寻找差距，源码级复刻"，origin=395bb517）
 
 **差距审计法**：三路 Explore 代理扫 12 份分析文档抽出 130+ UI 功能面清单，对照 /ide 现有 34 组件。差距格局=**大量数据面已落、UI 未接**。本批源码级复刻 13 件（组件+挂载同 commit+守门，2944/2944 终验）：
