@@ -3,26 +3,36 @@
 // thinking/tools +悬停图例 breakdown+80/95% 压力变色读数；UI 复刻 S3）。
 // 数据=useSessionMetrics 的分段（六源 context-six-source 同语义四段合并映射五段）。
 import { computed, ref } from 'vue'
+import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
+import { computeBreakdown } from '../utils/contextBreakdown'
 
 const metrics = useSessionMetrics()
+const chatStore = useChatStore()
 const hover = ref(false)
 
 interface Segment { key: string; label: string; pct: number; color: string }
 
-/** 五段构成（占总量百分比；来源=上下文构成投影——缺省等分标注估算）。 */
+/** 分段构成（真实 span 源=computeBreakdown——G4 构成分解同源：按消息角色归段；
+ * 无可分解口径时回落总量条（诚实不虚构构成）。 */
 const segments = computed<Segment[]>(() => {
-  const ctx = metrics as unknown as { contextUsed?: { value: number }; contextLength?: { value: number }; segments?: { value: Array<{ key: string; pct: number }> } }
-  const segs = ctx.segments?.value
-  if (segs?.length) {
-    const COLORS: Record<string, string> = {
-      systemPrompt: '#61afef', memory: '#c678dd', tools: '#e5c07b',
-      skills: '#98c379', messages: '#56b6c2', other: '#888',
-    }
-    return segs.map((s) => ({ key: s.key, label: s.key, pct: s.pct, color: COLORS[s.key] ?? '#888' }))
+  const used = (metrics as unknown as { contextUsed?: { value: number } }).contextUsed?.value ?? 0
+  const breakdown = computeBreakdown((chatStore.activeSession?.messages ?? []) as never, used)
+  if (!breakdown || breakdown.total <= 0) return []
+  const COLORS: Record<string, string> = {
+    system: '#e5c07b', user: '#61afef', assistant: '#98c379', tool: '#c678dd',
   }
-  // 无分段数据：单条总量条（诚实不虚构构成）
-  return []
+  const LABELS: Record<string, string> = {
+    system: 'system/prompt', user: 'user', assistant: 'assistant/thinking', tool: 'tools',
+  }
+  return breakdown.segments
+    .filter((seg) => seg.tokens > 0)
+    .map((seg) => ({
+      key: seg.key,
+      label: LABELS[seg.key] ?? seg.key,
+      pct: Math.round((seg.tokens / breakdown.total) * 100),
+      color: COLORS[seg.key] ?? '#888',
+    }))
 })
 
 const totalPct = computed(() => {
