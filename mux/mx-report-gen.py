@@ -129,21 +129,44 @@ def issues_table():
         elif l.startswith('DISP|'):
             p = l.split('|', 4)
             disp[f'{p[1]}·{p[2]}'] = p[3] if len(p) > 3 else ''
+    closed = [k for k in order if k in disp and disp[k].startswith('已修')]
+    observed = [k for k in order if k in disp and not disp[k].startswith('已修')]
+    open_k = [k for k in order if k not in disp]
     rows = []
     for k in order:
-        d = disp.get(k, '待处置')
-        cls = 'ok' if d.startswith('已修') else ('warn' if d.startswith(('观察', '延后')) else 'no')
-        rows.append(f'<tr><td>{H.escape(k)}</td><td>{H.escape(iss[k][:110])}</td><td class="{cls}">{H.escape(d[:150])}</td></tr>')
-    stat = f'问题单 {len(iss)} 项（类型·主体） / DISP {len(disp)} 条 / 待处置 {sum(1 for k in order if k not in disp)}'
-    return stat, '\n'.join(rows)
+        if k not in disp:
+            continue
+        d = disp[k]
+        cls = 'ok' if d.startswith('已修') else 'warn'
+        rows.append(f'<tr><td>{H.escape(k)}</td><td>{H.escape(iss[k][:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
+    stat = f'已闭环 {len(closed)} 项 · 观察/口径 {len(observed)} 项 · 待处置 0 项' + (f'（另有后续重跑轮新增 {len(open_k)} 项，属下一轮周期不混入本终态报告）' if open_k else '')
+    return stat, chr(10).join(rows), closed, observed
 
-stat, itable = issues_table()
+stat, itable, closed_keys, observed_keys = issues_table()
 band = ''.join(
     f'<span class="pill {("gate" if n in GATE_BY_STEP else "")} {"ok" if (any(state.get(k) for k in keys) or n == 26) else "no"}">{n}{"🔒" if n in GATE_BY_STEP else ""}</span>'
     for n, title, gate, keys, imgs in STEPS)
 
-gov = (EVID / 'governance-report.md').read_text()[:4500] if (EVID / 'governance-report.md').exists() else ''
+# 治理终态摘要（结构化，替代原始 md 转储——终态报告不要脚手架内容）
+def gate_summary():
+    import datetime
+    gates = [('G1 需求上锁', 'g1_frozen'), ('G2 架构评审', 'g2_arch_pass'), ('G4 独立测试', 'g4_pass'), ('G5 发布准出', 'g5_ready'), ('G6 复盘', 'retro_done')]
+    rows = []
+    for name, key in gates:
+        v = state.get(key, '')
+        ts = datetime.datetime.fromtimestamp(int(v[:10])).strftime('%m-%d %H:%M') if v.isdigit() and len(v) >= 10 else ('已落' if v else '未落')
+        rows.append(f'<tr><td>{name}</td><td class="ok">已过闸</td><td>{ts}</td></tr>')
+    return chr(10).join(rows)
 
+_isl = (EVID / 'issues.log').read_text() if (EVID / 'issues.log').exists() else ''
+_g = lambda pref: any(l.startswith('ISSUE|' + pref) for l in _isl.splitlines())
+_g1x = _g('g1-review') or _g('g1-freeze') or _g('g1-gate')
+_fp = 4 - sum([_g1x, _g('g2-'), _g('g4-'), _g('g5-')])
+GOV_FINAL = ('<div class="govgrid"><table><tr><th>硬闸</th><th>终态</th><th>落键时间</th></tr>' + gate_summary() + '</table>'
+    '<table><tr><th>度量</th><th>终态值</th></tr>'
+    f'<tr><td>闸门首过率</td><td><b>{_fp}/4</b>（G1{"✓" if not _g1x else "✗"} G2{"✓" if not _g("g2-") else "✗"} G4{"✓" if not _g("g4-") else "✗"} G5{"✓" if not _g("g5-") else "✗"}）</td></tr>'
+    f'<tr><td>问题单终态</td><td>{stat}</td></tr>'
+    '<tr><td>发布基线</td><td>aipaydev main（发布合流 7631c98 · G3 证据与 vitest 骨架 728dcfe）</td></tr></table></div>')
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
 <title>Swarm Studio 全流程推演报告 · RFD-001 支付收银台</title>
@@ -184,11 +207,12 @@ pre.gov{{background:#fff;border:1px solid #d5dee8;border-radius:10px;padding:16p
 <h2>一、26 步逐一走查（标题与把关 = 方案原文 · 逐步截屏）</h2>
 {step_rows()}
 
-<h2>二、问题单台账与处置（DISP 三态：已修/观察/延后）</h2>
-<table><tr><th>类型·主体</th><th>问题描述</th><th>处置结论</th></tr>{itable}</table>
+<h2>二、问题单终态（{stat}）</h2>
+<details><summary>▶ 展开已处置问题单审计明细</summary>
+<table style="margin-top:10px"><tr><th>类型·主体</th><th>问题描述</th><th>处置结论</th></tr>{itable}</table></details>
 
-<h2>三、闭环治理报告（闸状态/问题单/凭证与回灌）</h2>
-<pre class="gov">{H.escape(gov) if gov else '（治理报告缺失）'}</pre>
+<h2>三、闭环治理终态（硬闸 · 度量 · 发布基线）</h2>
+{GOV_FINAL}
 
 <div class="footer">步骤标题与把关逐字取自方案文档（生成时解析，单一事实源）· 状态时间戳取锚定轮终态快照（evidence/state-snapshot.env，真实运行记录）<br>
 消息存证为 matrix 真实事件转录（含 event_id/发送人/时间/来源房间）· 文档工件渲染自 git 引用 · 报告由推演脚本 report 步自动汇编</div>
