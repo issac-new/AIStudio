@@ -454,6 +454,16 @@ fi
 # 套模板：templates/design.md（五要素/备选方案）+ review-record.md（评审记录）。
 # 硬闸：G2 未过，close/plan（L2）不得执行。
 if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
+  # G2 前置补邀（09-27 run9d 实锤第八层根因）：分析群是步骤 8 建的，邀的是研发
+  # 关联人（chen/hu/lin/xiao/wei/mei/qi/fei），arch 不在其列——@arch-agent 不在房，
+  # G2 mention 无法投递、1800s 硬闸必超时。照步骤 10 导演补邀惯用法双账号补齐。
+  ARID=$(sget room_analysis)
+  for mxid in "$(human_mxid arch)" "$(agent_mxid arch)"; do
+    if ! mx_room_members "$(load_token fanfan)" "$ARID" | grep -qx "$mxid"; then
+      mx "$(load_token fanfan)" POST "rooms/$ARID/invite" "{\"user_id\":\"$mxid\"}" >/dev/null 2>&1 || true
+      [[ "$mxid" == *"-agent"* ]] || mx_join "$(load_token arch)" "$ARID"
+    fi
+  done
   AGID=$(kanban_create_as arch arch_g2 "${RFD_ID} 架构治理评审（G2）" \
     "G2 检查单：①设计五要素（背景/方案/接口/数据/风险）②爆炸半径（影响模块 vs 三清单）③验证计划前移④备选方案≥2 及取舍。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项)。" arch-governance)
   dispatch_in_room arch "@arch-agent:matrix.test 概设 docs/design/${RFD_ID}-architecture-design.md 已入库，请执行 G2 架构治理评审（评审卡 ${AGID}@arch-governance 板）：
