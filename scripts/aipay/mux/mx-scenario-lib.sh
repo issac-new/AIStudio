@@ -78,11 +78,14 @@ board_of_task() { # <user> <id> → 卡所在账号板 slug（找不到非零）
 }
 
 kanban_list() { # <user> → 合并该账号全部账号板的任务 {"tasks":[...]}
-  local u="$1" jwt slug out='{"tasks":[]}'
-  jwt=$(jwt_of "$u")
+  # 09-26 run6/7 实锤：studio /api/hermes/kanban?board=* 整板返空（tenant 面未明），
+  # 板上真卡在却两窗误杀（kanban_has/kanban_status_of 全线失明）。改 CLI 直查：
+  # hermes kanban --board <slug> list --json 输出裸数组 → {tasks:.} 归一兼容旧消费面。
+  local u="$1" slug out='{"tasks":[]}'
   for slug in $(account_boards "$u"); do
-    out=$(jq -s '.[0].tasks + (.[1].tasks // []) | {tasks: .}' <(echo "$out") \
-      <(studio GET "/api/hermes/kanban?board=$slug" "$jwt" 2>/dev/null || echo '{"tasks":[]}'))
+    out=$(jq -c -s '{tasks: (.[0].tasks + (.[1] // []))}' \
+      <(echo "$out") \
+      <(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --json 2>/dev/null || echo '[]'))
   done
   echo "$out"
 }
@@ -115,24 +118,34 @@ normalize_assignee() { # <assignee> → 短名
 }
 
 kanban_create_as() { # <user> <state-key> <title> <body> [board] → id（state 缓存防重；缺省落该账号默认板）
+  # 09-26 run8 实锤：studio POST /api/hermes/kanban 写路径与读路径同病（tenant 面），
+  # 导演兜底建卡直接 fail。改 CLI 直查（--json 返回卡对象，.id 即卡号，实测 t_8b84e215）。
   local u="$1" key="card_$2" title="$3" body="$4" board="${5:-$(first_board_of "$u")}" cached id
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
-  id=$(studio POST "/api/hermes/kanban?board=$board" "$(jwt_of "$u")" \
-    "{\"title\":$(jq -Rn --arg t "$title" '$t'),\"body\":$(jq -Rn --arg b "$body" '$b'),\"project\":\"aipaydev\"}" \
-    | jq -r '.task.id // .id')
+  id=$(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$board" create "$title" \
+    --body "$body" --project aipaydev --json 2>/dev/null | jq -r '.id // empty')
   [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
   sset "$key" "$id"; echo "$id"
 }
 
-kanban_status_as() { # <user> <id> <status>（自动定位卡所在账号板）
-  local b; b=$(board_of_task "$1" "$2") || return 1
-  studio PATCH "/api/hermes/kanban/$2?board=$b" "$(jwt_of "$1")" "{\"status\":\"$3\"}" >/dev/null
+kanban_status_as() { # <user> <id> <status>（studio PATCH 主路 + CLI 合法路径兜底）
+  # 隔夜 26 步实证 PATCH 有效；GET/POST-create 才有 tenant 病。兜底按状态机动词：
+  # running=claim / review=request-review / done=complete（walk_done 全程静默容错）。
+  local u="$1" tid="$2" st="$3" b
+  b=$(board_of_task "$u" "$tid") || return 1
+  studio PATCH "/api/hermes/kanban/$tid?board=$b" "$(jwt_of "$u")" "{\"status\":\"$st\"}" >/dev/null 2>&1 && return 0
+  case "$st" in
+    running) HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" claim "$tid" >/dev/null 2>&1 || true ;;
+    review)  HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" request-review "$tid" >/dev/null 2>&1 || true ;;
+    done)    HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" complete "$tid" >/dev/null 2>&1 || true ;;
+  esac
+  return 0
 }
 
 kanban_link_as() { # <user> <parentId> <childId>（挂父卡所在板）
-  local b; b=$(board_of_task "$1" "$2") || return 0
-  studio POST "/api/hermes/kanban/links?board=$b" "$(jwt_of "$1")" \
-    "{\"parentId\":\"$2\",\"childId\":\"$3\"}" >/dev/null || true
+  local u="$1" pid="$2" cid="$3" b
+  b=$(board_of_task "$u" "$pid") || return 0
+  HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$b" link "$pid" "$cid" >/dev/null 2>&1 || true
 }
 
 kanban_walk_done() { # <user> <id>：按合法路径走到 done（静默容错）
@@ -173,9 +186,13 @@ auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份线程
   local room="$1"
   for u in "${INSTANCED_USERS[@]}"; do
     local pend
+    # 去重改固定串（H5）：eid 形如 $abc…:matrix.test，当正则用时 `.` 是通配、^eid 还前缀
+    # 命中——两个仅 `.` 位不同的 eid 互误判"已批"，!approve 永不发。两式并联：本台账
+    # （裸 eid 整行）由 -Fx 全行命中；eid+空格分隔的多字段行（主干格式）由 -F "$eid "
+    # 命中（分隔符收边界防前缀），旧版台账行不漏、重跑不重复批。
     pend=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
       '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK|approval"))) | .event_id' 2>/dev/null \
-      | while read -r eid; do grep -q "^$eid" "$APPROVED_LOG" || echo "$eid"; done) || true
+      | while read -r eid; do grep -qFx "$eid" "$APPROVED_LOG" || grep -qF "$eid " "$APPROVED_LOG" || echo "$eid"; done) || true
     for eid in $pend; do
       local reply_eid
       reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
@@ -228,8 +245,18 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
     || { note "[凭证] commit $sha 不存在于 aipaydev —— 虚报"; return 1; }
   git -C "$DIRECTOR_CLONE" ls-tree -r --name-only "$sha" 2>/dev/null | grep -q "${rfd}-tasklist.md" \
     || { note "[凭证] commit $sha 里没有 ${rfd}-tasklist.md —— 虚报"; return 1; }
-  kanban_list fanfan | grep -q "$card" \
-    || { note "[凭证] fanfan 账号板查无卡片 $card —— 虚报"; return 1; }
+  # 卡号反核含 archived（09-26 实锤 false negative）：agent 完成后归档卡属正常工作流，
+  # kanban_list（默认活跃态 + studio API 面）都看不到 archived 真卡，曾把合格凭证
+  # 误判"虚报"。改 CLI 直查全状态（活跃 + archived）；studio API 整板返空问题另记。
+  local slug card_found=1
+  for slug in $(account_boards fanfan); do
+    if HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list 2>/dev/null | grep -q "$card" \
+      || HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$slug" list --status archived 2>/dev/null | grep -q "$card"; then
+      card_found=0; break
+    fi
+  done
+  [[ $card_found -eq 0 ]] \
+    || { note "[凭证] fanfan 账号板查无卡片 $card（含 archived）—— 虚报"; return 1; }
   note "[凭证] $rfd 完成证据成立（card 在 fanfan 账号板可查）：commit=$sha card=$card"
   return 0
 }
