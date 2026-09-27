@@ -1048,3 +1048,6 @@
 # 486（UI 复刻 R1）：恢复对话框词条 chatRecovery（zh/en）；本体走 custom（R1-R5
 #      五件：恢复对话框/权限七档/问卷卡/mention chip/执行日志区——组件+挂载同 commit）。
 486-client-replica-r1-i18n.patch
+# 487（UI 复刻 T 批）：工具时间线面板词条 tab_tools（zh/en）；本体走 custom
+#      （IdeToolsPane 七类专属卡+sidepane ⚙ tab——zcode 62 卡复刻首期）。
+487-client-tools-pane-i18n.patch
