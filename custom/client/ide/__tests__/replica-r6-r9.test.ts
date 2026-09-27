@@ -9,6 +9,24 @@ const chatState: Record<string, unknown> = {
 }
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => chatState }))
 
+describe('R6 Task Groups 真实链（taskPlan 映射）', () => {
+  it('会话 taskPlan 快照→组+步骤映射（pending=待批/completed=已批）', async () => {
+    const { default: IdeTaskGroupsPanel } = await import('../components/IdeTaskGroupsPanel.vue')
+    chatState.activeSession = {
+      taskPlan: { plan_id: 'p1', run_id: 'run-abc12345', plan: [
+        { id: 'st1', step: '实现支付流', status: 'completed' },
+        { id: 'st2', step: '上线切流', status: 'pending' },
+      ] },
+    }
+    const w = mount(IdeTaskGroupsPanel)
+    expect(w.find('[data-testid="ide-task-groups"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-tg-pending"]').text()).toContain('上线切流')
+    await w.find('[data-testid="ide-tg-head-p1"]').trigger('click')
+    expect(w.text()).toContain('实现支付流')
+    chatState.activeSession = null
+  })
+})
+
 describe('R6 Task Groups 面板', () => {
   it('组展开/edited-files pill/待批步骤专区/批准动作', async () => {
     const { default: IdeTaskGroupsPanel } = await import('../components/IdeTaskGroupsPanel.vue')
@@ -38,13 +56,18 @@ describe('R6 Task Groups 面板', () => {
 describe('R7 排队面板', () => {
   it('queuedMessages 渲染行；无队列不渲染；运行中让位提示', async () => {
     const { default: IdeQueuePanel } = await import('../components/IdeQueuePanel.vue')
-    chatState.queuedMessages = [{ id: 'q1', content: '稍后改个文案' }, { id: 'q2', content: '再补个测试' }]
+    chatState.activeSession = { messages: [
+      { id: 'm0', role: 'user', content: '先跑起来' },
+      { id: 'q1', role: 'user', content: '稍后改个文案', queued: true },
+      { id: 'q2', role: 'user', content: '再补个测试', queued: true },
+    ] }
     chatState.isLoading = true
     const w = mount(IdeQueuePanel)
     expect(w.find('[data-testid="ide-queue-q1"]').exists()).toBe(true)
     expect(w.text()).toContain('运行中让位')
-    chatState.queuedMessages = []
+    chatState.activeSession = { messages: [{ id: 'm0', role: 'user', content: '普通' }] }
     expect(mount(IdeQueuePanel).find('[data-testid="ide-queue-panel"]').exists()).toBe(false)
+    chatState.activeSession = null
   })
 })
 

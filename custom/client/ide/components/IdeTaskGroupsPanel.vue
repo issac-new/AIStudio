@@ -3,6 +3,7 @@
 // edited-files pill（点开看当前态）+可展开子任务步骤+末尾"待批步骤"专区；UI 复刻 R6）。
 // 数据面=taskgroups 域（defineGroup/approveStep/groupSummary 语义镜像——本地状态）。
 import { computed, ref } from 'vue'
+import { useChatStore } from '@/stores/hermes/chat'
 
 interface Step { stepId: string; description: string; needsApproval: boolean; approved: boolean }
 interface Group {
@@ -18,7 +19,25 @@ const emit = defineEmits<{ (e: 'approve', groupId: string, stepId: string, appro
 const expanded = ref<Record<string, boolean>>({})
 const openFile = ref<string | null>(null)
 
-const groups = computed(() => props.groups ?? [])
+const chatStore = useChatStore()
+
+/** 真实链：会话 taskPlan 快照（steps→组步骤；status 映射批准态）映射为任务组。 */
+const taskPlanGroups = computed<Group[]>(() => {
+  const plan = (chatStore.activeSession as unknown as { taskPlan?: { plan_id: string; run_id: string; plan: Array<{ id: string; step: string; status: string }> } } | null)?.taskPlan
+  if (!plan?.plan?.length) return []
+  return [{
+    groupId: plan.plan_id || plan.run_id,
+    title: `任务计划 · ${plan.run_id.slice(-8)}`,
+    editedFiles: [],
+    steps: plan.plan.map((p) => ({
+      stepId: p.id, description: p.step,
+      needsApproval: p.status === 'pending',
+      approved: p.status === 'completed',
+    })),
+  }]
+})
+
+const groups = computed(() => props.groups?.length ? props.groups : taskPlanGroups.value)
 const pendingApprovals = computed(() =>
   groups.value.flatMap((g) => g.steps.filter((s) => s.needsApproval && !s.approved).map((s) => ({ groupId: g.groupId, step: s }))),
 )

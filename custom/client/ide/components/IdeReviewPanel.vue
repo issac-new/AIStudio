@@ -11,6 +11,43 @@ interface Finding { id: string; domain: 'baseline' | 'uncommitted'; severity: 'h
 
 const findings = ref<Finding[]>([])
 const verdict = ref<'accept' | 'reject' | 'conditional' | null>(null)
+const reviewId = ref<string | null>(null)
+
+/** 真实链：/review 创建（POST /api/review）→ GET /:id findings 回流。 */
+async function startReview(): Promise<void> {
+  try {
+    const id = `ide-${chatStore.activeSessionId ?? 's'}-${Date.now()}`
+    const res = await fetch('/api/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewId: id }),
+    })
+    if (!res.ok) return
+    if (!res.ok) return
+    reviewId.value = id
+    await refresh()
+  } catch { /* 创建失败保持空态 */ }
+}
+
+async function refresh(): Promise<void> {
+  if (!reviewId.value) return
+  try {
+    const res = await fetch(`/api/review/${encodeURIComponent(reviewId.value)}`)
+    if (!res.ok) return
+    const body = (await res.json()) as {
+      review?: { reviewId: string; domain?: string; comments?: Array<{ commentId?: string; file?: string; line?: number; body?: string; state?: string }> }
+    }
+    const rec = body.review
+    const list = rec?.comments ?? []
+    findings.value = list.map((c, i) => ({
+      id: String(c.commentId ?? `c${i}`),
+      domain: rec?.domain === 'baseline' ? 'baseline' : 'uncommitted',
+      severity: 'medium',
+      text: `${c.file}:${c.line} — ${c.body}`,
+      resolved: c.state === 'resolved',
+    }))
+  } catch { /* 拉取失败保持现状 */ }
+}
 
 const open = computed(() => findings.value.filter((f) => !f.resolved))
 const resolvedList = computed(() => findings.value.filter((f) => f.resolved))
@@ -28,7 +65,10 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 <template>
   <div class="ide-review" data-testid="ide-review-panel">
     <div class="ide-review__head">⎇ 评审 <span class="ide-review__counts">{{ open.length }} open · {{ resolvedList.length }} resolved</span></div>
-    <div v-if="!findings.length" class="ide-review__empty">暂无 findings（/review 产出后此处回流）</div>
+    <div v-if="!findings.length" class="ide-review__empty">
+      暂无 findings
+      <button type="button" class="ide-review__start" data-testid="ide-review-start" @click="startReview">发起评审</button>
+    </div>
     <div v-for="f in open" :key="f.id" class="ide-review__finding" :class="`is-${f.severity}`" :data-testid="`ide-review-${f.id}`">
       <span class="ide-review__sev">{{ f.severity }}</span>
       <span class="ide-review__domain">{{ f.domain === 'baseline' ? '基线' : '未提交' }}</span>
@@ -75,4 +115,9 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
   padding: 4px 12px; cursor: pointer; font-size: 12px;
 }
 .ide-review__btn.is-active { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+
+.ide-review__start {
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  padding: 1px 8px; cursor: pointer; font-size: 11px; margin-left: 6px;
+}
 </style>

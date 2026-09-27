@@ -42,6 +42,7 @@ import IdeReviewPanel from '../components/IdeReviewPanel.vue'
 import IdeMentionPicker from '../components/IdeMentionPicker.vue'
 import IdeInlineDiff from '../components/IdeInlineDiff.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
+import { ideRunsApi } from '../api/runs'
 import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
@@ -316,8 +317,24 @@ const modelGroupsView = computed(() =>
 const modelDisabled = computed(() => modelGroupsView.value.length === 0)
 const modelPickerOpen = ref(false)
 const recoveryOpen = ref(false)
-// S1 inline diff：当前会话最近 run 的 diff 文本（run 卡数据链复用）；无 diff 不渲染。
+// S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
+// fetchWorkspaceRunChangesForSession → 首文件详情端点 patch）；无 diff 不渲染。
 const demoDiff = ref('')
+async function loadLatestDiff(): Promise<void> {
+  const sid = chatStore.activeSessionId
+  if (!sid) return
+  try {
+    const summaries = await ideRunsApi.changes(sid)
+    const latest = summaries[0]
+    const file = (latest as unknown as { files?: Array<{ id: number; change_id: string; path: string }> }).files?.[0]
+    if (!file) return
+    const res = await fetch(`/api/studio/sessions/${encodeURIComponent(sid)}/workspace-run-changes/${encodeURIComponent(file.change_id)}/files/${file.id}`)
+    if (!res.ok) return
+    const body = (await res.json()) as { file?: { patch?: string } }
+    demoDiff.value = body.file?.patch ?? ''
+  } catch { /* 无 diff 保持不渲染 */ }
+}
+onMounted(() => { void loadLatestDiff() })
 const modelLabel = computed(() => {
   const m = chatStore.activeSession?.model || appStore.selectedModel || ''
   return m || t('ide.chatSelectModel')

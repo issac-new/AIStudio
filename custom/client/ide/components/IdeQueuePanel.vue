@@ -9,8 +9,11 @@ const chatStore = useChatStore()
 interface QueuedItem { id: string; text: string; state: 'queued' | 'sent' }
 
 const queue = computed<QueuedItem[]>(() => {
-  const q = (chatStore as unknown as { queuedMessages?: Array<{ id?: string; content?: string; text?: string }> }).queuedMessages
-  return (q ?? []).map((m, i) => ({ id: m.id ?? `q${i}`, text: String(m.content ?? m.text ?? '').slice(0, 80), state: 'queued' }))
+  // 真实链：消息 queued 标志（MessageList 同源灰显数据）。
+  const msgs = (chatStore.activeSession?.messages ?? []) as Array<{ id?: string; queued?: boolean; content?: unknown }>
+  return msgs
+    .filter((m) => m.queued)
+    .map((m, i) => ({ id: String(m.id ?? `q${i}`), text: String(typeof m.content === 'string' ? m.content : '').slice(0, 80), state: 'queued' }))
 })
 
 const isRunning = computed(() => Boolean((chatStore as unknown as { isLoading?: boolean }).isLoading))
