@@ -1,0 +1,22 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1434,6 +1434,8 @@
+       formRepo: '中央仓地址',
+       submit: '发起',
+       readings: '网络读数',
++      inFlight: '在途',
++      completed: '已完成',
+       pendingHuman: '待审人工门',
+     },
+     brand: '驾驶舱',
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1433,6 +1433,8 @@
+       formTitle: 'Title',
+       formRepo: 'Central repo URL',
+       submit: 'Launch',
++      inFlight: 'In flight',
++      completed: 'Completed',
+       readings: 'Network',
+       pendingHuman: 'Pending human gates',
+     },

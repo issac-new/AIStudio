@@ -27,6 +27,8 @@ export interface DeliveryCaseView {
   ownerAccount: string
   stagesDone: string[]
   gates: GateLight[]
+  /** P0：completed = P6 + G6 pass；面板分色与读数排除依据 */
+  completed: boolean
 }
 
 function projectRoom(room: Room): DeliveryCaseView | null {
@@ -58,6 +60,9 @@ function projectRoom(room: Room): DeliveryCaseView | null {
     roomId: room.roomId, caseId: head.caseId, title: head.title, stage: head.stage,
     tier: head.tier, ownerAccount: head.ownerAccount,
     stagesDone: [...stagesDone], gates: [...gateByGate.values()],
+    // P0（09-28）：completed = P6 + G6 pass（run14 终局形态）；面板据此分色，
+    // 网络读数据此排除已完成态（此前 6 个中断案例把"待审人工门"虚高到 6）。
+    completed: head.stage === 'P6' && gateByGate.get('G6')?.verdict === 'pass',
   }
 }
 
@@ -92,15 +97,21 @@ export const useDeliveryCasesStore = defineStore('matrix-teams-delivery-cases', 
     return out
   })
 
-  /** 网络读数（设计 §7 总览：在途案例数/阶段分布/待审 HumanGate=G1/G5 缺 pass 计数） */
+  /** 网络读数（设计 §7 总览；P0 修正口径：completed 案例不计入在途/待审——
+   * 此前 6 个中断案例把待审人工门虚高（已死案例缺 G5 也被计入）） */
   const networkReadings = computed(() => {
-    const pendingHumanGates = cases.value.reduce((n, c) => {
+    const active = cases.value.filter(c => !c.completed)
+    const pendingHumanGates = active.reduce((n, c) => {
       const need = ['G1', 'G5'].filter(g => !c.gates.some(x => x.gate === g && x.verdict === 'pass'))
       return n + need.length
     }, 0)
+    const out: Record<string, number> = {}
+    for (const c of active) out[c.stage] = (out[c.stage] ?? 0) + 1
     return {
-      inFlight: cases.value.length,
-      byStage: byStage.value,
+      total: cases.value.length,
+      completed: cases.value.length - active.length,
+      inFlight: active.length,
+      byStage: out,
       pendingHumanGates,
     }
   })
