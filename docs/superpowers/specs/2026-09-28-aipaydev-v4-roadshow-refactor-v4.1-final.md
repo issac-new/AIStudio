@@ -1,5 +1,7 @@
 # Swarm Studio 全流程推演方案（V4.1 整合终版）
 
+> **版本状态（2026-09-29）**：本文已与 V3 操作主链合并为 V5 整合版 `2026-09-29-mux-v5-fullflow-plan.md`（基准前移 b964f7fd，执行态更新至 V4-run2 收尾）；V5 为唯一正本，本文自即日起存档，不再更新。
+
 > **文档定位**：本文整合 V3 操作方案（26 步主链+六闸，操作层单一事实源仍是 `2026-09-25-mux-v3-lifecycle-plan.md`）、V4 重构层（七问题域治理框架+路演叙事，`2026-09-28-aipaydev-v4-roadshow-refactor.md` 及其三段补遗）与 2026-09-28 全天执行态，是当前最新版。此后变更走增量补遗，不重写主链。
 > **基准**：overlay main @ 7c035396；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
 
