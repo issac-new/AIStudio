@@ -371,7 +371,7 @@ function sendAux(): void {
     padding: 3px 10px;
     cursor: pointer;
     background: var(--brand, #3370ff);
-    color: #fff;
+    color: var(--text-on-accent);
     font-size: 12px;
   }
 }

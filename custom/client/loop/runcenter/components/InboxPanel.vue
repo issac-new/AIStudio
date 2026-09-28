@@ -155,7 +155,7 @@ function waitingLabel(run: RunSummary): string {
   padding: 0 6px;
   border-radius: var(--radius-pill, 999px);
   background: var(--color-warning, #f59e0b);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 11px;
 }
 

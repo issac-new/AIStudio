@@ -1,0 +1,76 @@
+diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
+--- a/packages/client/src/styles/variables.scss
++++ b/packages/client/src/styles/variables.scss
+@@ -243,2 +243,72 @@
+ $accent-info-rgb: var(--accent-info-rgb);
+ // HERMES_CUSTOM[Branding] END
++
++// HERMES_CUSTOM[color-family] BEGIN: 驾驶舱组件色板变量族（2026-09-28 明暗主题色调统一）
++// 背景：cockpit/ia2/kanban/loop/ide/matrix-chat 自定义组件 400+ 处引用
++// --color-* / --*-color / --primary* / --hover-* / --bg-* / --radius-* / --font-*
++// 家族，但本文件从未定义——全部回落组件内硬编码 fallback（#3b82f6/#e11d48/
++// #28bf5c/#059669 等非 Pure Ink 色，且双主题恒定不变），是明暗主题色调不
++// 统一的根因。此处一次定义、与既有 Pure Ink 变量同源；组件内 fallback 随之
++// 失效，两主题自动切换。
++// 注意：custom property 里的 var() 在声明元素上完成代换——引用其他变量的族
++// 必须亮暗两块各自显式声明，不能只声明在 :root。
++:root {
++  // 语义色族（= 既有 Pure Ink 同名值）
++  --color-primary: var(--accent-primary);
++  --primary: var(--accent-primary);
++  --primary-color: var(--accent-primary);
++  --color-on-accent: var(--text-on-accent);
++  --color-bg-primary: var(--bg-primary);
++  --color-bg-input: var(--bg-input);
++  --color-card: var(--bg-card);
++  --card-color: var(--bg-card);
++  --bg-page: var(--bg-primary);
++  --color-text-primary: var(--text-primary);
++  --color-text-secondary: var(--text-secondary);
++  --text-color-3: var(--text-muted);
++  --color-danger: var(--error);
++  --color-error: var(--error);
++  --danger: var(--error);
++  --error-color: var(--error);
++  --color-success: var(--success);
++  --success-color: var(--success);
++  --color-warning: var(--warning);
++  --warning-color: var(--warning);
++  --info: var(--accent-info);
++  --info-color: var(--accent-info);
++  --color-danger-rgb: var(--error-rgb);
++  --color-success-rgb: var(--success-rgb);
++  --color-warning-rgb: var(--warning-rgb);
++  --accent-secondary: var(--accent-muted);
++  --accent-primary-soft: rgba(var(--accent-primary-rgb), 0.12);
++  // 警戒底文字：两主题警告色均浅橙系，近黑恒 ≥6:1（白字压亮色 #f57f17 仅 2.7:1）
++  --text-on-warning: #1a1a1a;
++
++  // 交互面（暗色块重声明，见上注）
++  --hover-bg: rgba(0, 0, 0, 0.04);
++  --hover-color: rgba(0, 0, 0, 0.05);
++  --bg-hover: rgba(0, 0, 0, 0.04);
++  --bg-inset: rgba(0, 0, 0, 0.06);
++  --accent-bg: rgba(51, 51, 51, 0.08);
++
++  // 中性工具族（主题无关）
++  --radius: 6px;
++  --radius-sm: 3px;
++  --radius-micro: 3px;
++  --radius-standard: 6px;
++  --radius-large: 12px;
++  --radius-pill: 999px;
++  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
++  --font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
++  --transition-fast: 0.15s ease;
++}
++
++.dark {
++  --hover-bg: rgba(255, 255, 255, 0.06);
++  --hover-color: rgba(255, 255, 255, 0.07);
++  --bg-hover: rgba(255, 255, 255, 0.06);
++  --bg-inset: rgba(255, 255, 255, 0.08);
++  --accent-bg: rgba(224, 224, 224, 0.10);
++  --accent-primary-soft: rgba(var(--accent-primary-rgb), 0.14);
++}
++// HERMES_CUSTOM[color-family] END
