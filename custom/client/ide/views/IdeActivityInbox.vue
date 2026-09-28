@@ -155,8 +155,8 @@ function formatDuration(seconds?: number): string {
   font-size: 9px;
   line-height: 13px;
   text-align: center;
-  color: #fff;
-  background: var(--error-color, #d03050);
+  color: var(--text-on-accent);
+  background: var(--error-color);
 }
 
 .ide-inbox__panel {

@@ -345,7 +345,7 @@ function replayTime(e: GraphEventLike): string {
   padding: 0 6px;
   border-radius: var(--radius-pill, 999px);
   background: var(--color-warning, #f59e0b);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 11px;
 }
 
@@ -448,7 +448,7 @@ function replayTime(e: GraphEventLike): string {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-standard, 6px);
   background: var(--color-primary, #3b82f6);
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;

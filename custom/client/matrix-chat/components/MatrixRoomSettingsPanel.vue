@@ -630,10 +630,10 @@ async function handleLeaveRoom() {
 
   &--confirming {
     background: var(--error, #ef4444);
-    color: #fff;
+    color: var(--text-on-accent);
     font-weight: 700;
 
-    svg { color: #fff; }
+    svg { color: var(--text-on-accent); }
   }
 }
 

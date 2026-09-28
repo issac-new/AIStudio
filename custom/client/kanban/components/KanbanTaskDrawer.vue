@@ -2084,13 +2084,13 @@ function statusDotClass(status: string): string {
   flex-shrink: 0;
   display: inline-block;
 
-  &--triage { background: #9ca3af; }
-  &--todo { background: #6b7280; }
-  &--ready { background: #3b82f6; }
-  &--running { background: #f59e0b; }
-  &--blocked { background: #ef4444; }
-  &--done { background: #10b981; }
-  &--archived { background: #8b5cf6; }
+  &--triage { background: var(--accent-muted); }
+  &--todo { background: var(--text-muted); }
+  &--ready { background: var(--accent-info); }
+  &--running { background: var(--warning); }
+  &--blocked { background: var(--error); }
+  &--done { background: var(--success); }
+  &--archived { background: var(--accent-muted); }
 }
 </style>
 <!-- HERMES_CUSTOM[Kanban] END -->

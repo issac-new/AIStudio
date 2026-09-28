@@ -81,8 +81,8 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
   white-space: nowrap;
 }
 .gov-entry__badge {
-  background: #b45309;
-  color: #fff;
+  background: var(--warning);
+  color: var(--text-on-warning, var(--text-on-accent));
   border-radius: 9px;
   padding: 1px 6px;
   font-size: 11px;
