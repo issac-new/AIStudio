@@ -14,6 +14,8 @@ const props = defineProps<{
   searchQuery?: string
   loading?: boolean
   includeArchived?: boolean
+  /** P2 等您操作过滤（当前登录人的待做 R / 待审 A 卡） */
+  mineOnly?: boolean
   laneByProfile?: boolean
   tenants?: string[]
   taskCount?: number
@@ -29,6 +31,7 @@ const emit = defineEmits<{
   refresh: []
   dispatch: []
   includeArchivedChange: [value: boolean]
+  mineOnlyChange: [value: boolean]
   laneByProfileChange: [value: boolean]
   clearFilters: []
   createBoard: [data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean }]
@@ -274,6 +277,15 @@ const hasActiveFilters = computed(() =>
           @update:checked="handleLaneByProfileChange"
         >
           {{ t('kanban.lanesByProfile', 'Lanes by profile') }}
+        </NCheckbox>
+        <!-- P2 等您操作（2026-09-28 §三）：一键过滤我负责(R)/待我审(A)的卡 -->
+        <NCheckbox
+          :checked="mineOnly"
+          size="small"
+          data-testid="filter-mine-only"
+          @update:checked="(v: boolean) => emit('mineOnlyChange', v)"
+        >
+          {{ t('kanban.mineOnly') }}
         </NCheckbox>
       </div>
 

@@ -11,6 +11,8 @@ import type { KanbanTaskDetail, KanbanTaskStatus, KanbanEvent, KanbanRun, Kanban
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
 import { decideApproval } from '@/custom/cockpit/api/approvals'
+import { parseTaskRaci, myRaciRole, type TaskRaci } from '@/custom/kanban/utils/raci'
+import { getStoredUsername } from '@/api/client'
 import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
 import KanbanAttachments from '@/custom/kanban/components/KanbanAttachments.vue'
 // HERMES_CUSTOM[P3 Task 7] 来源 run 关联区块（任务 → run 反查，ia2/adapters/traceability 纯函数投影）
@@ -452,6 +454,15 @@ function canMoveTo(status: KanbanTaskStatus): boolean {
 // P1 审批动作（2026-09-28 产品 UI 缺陷修复 §二）：review 态卡的验收/打回/看差异。
 // 决策先落审批历史（/api/approvals kanban: 前缀 = 纯记账），再走既有状态迁移。
 const approvalBusy = ref(false)
+// P2 RACI 四元组（§三）：结构化 raci（417 列/body-JSON）解析；我的角色高亮。
+const raciOf = computed<TaskRaci | null>(() => parseTaskRaci(task.value))
+const myRaci = computed(() => myRaciRole(raciOf.value, getStoredUsername()))
+const raciRows = computed(() => raciOf.value ? ([
+  { role: 'R' as const, label: 'kanban.raci.responsible', members: raciOf.value.responsible },
+  { role: 'A' as const, label: 'kanban.raci.approver', members: raciOf.value.approver },
+  { role: 'C' as const, label: 'kanban.raci.consulted', members: raciOf.value.consulted },
+  { role: 'I' as const, label: 'kanban.raci.informed', members: raciOf.value.informed },
+]) : [])
 async function decideKanbanApproval(decision: 'approve' | 'request_changes'): Promise<boolean> {
   if (!task.value || approvalBusy.value) return false
   approvalBusy.value = true
@@ -825,6 +836,28 @@ function statusDotClass(status: string): string {
         </div>
 
         <!-- Meta rows -->
+        <!-- P2 RACI 四元组（§三）：卡片详情完整 RACI；我的角色描边高亮 -->
+        <div v-if="raciRows.length" class="drawer-section" data-testid="drawer-raci">
+          <div class="drawer-section-title">{{ t('kanban.raci.title') }}</div>
+          <div class="raci-grid">
+            <div
+              v-for="row in raciRows" :key="row.role"
+              class="raci-cell" :class="{ 'raci-cell--mine': myRaci === row.role }"
+            >
+              <span class="raci-cell__role" :class="`raci-cell__role--${row.role}`">{{ row.role }}</span>
+              <div class="raci-cell__body">
+                <div class="raci-cell__label">{{ t(row.label) }}</div>
+                <div class="raci-cell__members">
+                  <template v-if="row.members.length">
+                    <span v-for="m in row.members" :key="m" class="raci-member">{{ m }}</span>
+                  </template>
+                  <span v-else class="raci-member raci-member--empty">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="drawer-meta">
           <div class="meta-row">
             <span class="meta-label">{{ t('kanban.detail.status') }}</span>
@@ -1528,6 +1561,64 @@ function statusDotClass(status: string): string {
 .edit-actions {
   display: flex;
   gap: 6px;
+}
+
+/* P2 RACI 四元组（§三） */
+.drawer-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #878c99);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.raci-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+.raci-cell {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  align-items: flex-start;
+  &--mine { border-color: #f59e0b; box-shadow: 0 0 0 1px #f59e0b44; }
+}
+.raci-cell__role {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  &--R { background: #2563eb; }
+  &--A { background: #d97706; }
+  &--C { background: #059669; }
+  &--I { background: #6b7280; }
+}
+.raci-cell__body { min-width: 0; }
+.raci-cell__label {
+  font-size: 11px;
+  color: var(--text-muted, #878c99);
+  margin-bottom: 3px;
+}
+.raci-cell__members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.raci-member {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-secondary, #f1f2f4);
+  &--empty { opacity: 0.5; }
 }
 
 .drawer-meta {
