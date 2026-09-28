@@ -280,3 +280,7 @@
 #      （workerHealth/groupAgents/turnsPlaceholder/worktree/table.run）+ teams.leader
 #      组长化 + teams.accounts.title 补键（组件对象引用缺陷同修）。
 494-client-ide-i18n-wiring.patch
+
+# 495（设计审查遗留轮 · 双看板合一）：/hermes/kanban 深链重定向 /app/board
+#      （ia2.board 主面）。上游 KanbanView 退役出路由面；路由名保留兼容。
+495-client-kanban-unify-redirect.patch
