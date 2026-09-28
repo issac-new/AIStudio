@@ -3,7 +3,7 @@ id: payment-create
 description: POST /payments 后逐字段校验 payment 行 + 跨表金额一致不变量
 server:
   start: ["npm", "start"]
-  readyUrl: http://127.0.0.1:8901/healthz
+  readyUrl: http://127.0.0.1:{{PORT}}/healthz
 db:
   driver: sqlite
   path: data/payment.db
@@ -13,7 +13,7 @@ setup:
 execute:
   http:
     method: POST
-    url: http://127.0.0.1:8901/payments
+    url: http://127.0.0.1:{{PORT}}/payments
     json:
       orderId: O1001
       amount: 100

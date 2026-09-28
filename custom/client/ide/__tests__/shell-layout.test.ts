@@ -18,6 +18,7 @@ vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
     sessions: [], activeSessionId: null, sessionsLoaded: true,
     sessionProfileFilter: null, loadSessions: vi.fn(async () => {}),
+    setRuntimeMode: vi.fn(),
     isRunActive: false, abortState: null,
     getSubagentStream: vi.fn(() => null),
     sendMessage: chatSendMessage,
