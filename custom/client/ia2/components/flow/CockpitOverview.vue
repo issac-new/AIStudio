@@ -72,20 +72,20 @@ function raciOf(t: CockpitTask) {
 
 <template>
   <div class="ov" data-testid="cockpit-overview">
-    <div class="ov__title">{{ t('ia2.overview.title') }}</div>
+    <div class="ov__title">{{ t('ia2.overviewDash.title') }}</div>
     <div class="ov__grid">
       <!-- ① 我的待办 -->
       <section class="ov__card" data-testid="ov-todo">
         <div class="ov__card-head">
-          <span>{{ t('ia2.overview.myTodo') }}</span>
+          <span>{{ t('ia2.overviewDash.myTodo') }}</span>
           <span v-if="myTodoCount" class="ov__n ov__n--hot">{{ myTodoCount }}</span>
         </div>
         <button type="button" class="ov__row" data-testid="ov-todo-approvals" @click="emit('open-inbox')">
-          <span class="ov__row-label">{{ t('ia2.overview.waitingApproval') }}</span>
+          <span class="ov__row-label">{{ t('ia2.overviewDash.waitingApproval') }}</span>
           <b>{{ pending.length }}</b>
         </button>
         <button type="button" class="ov__row" data-testid="ov-todo-raci" @click="emit('open-board')">
-          <span class="ov__row-label">{{ t('ia2.overview.myRaci') }}</span>
+          <span class="ov__row-label">{{ t('ia2.overviewDash.myRaci') }}</span>
           <b>{{ myRaciTasks.length }}</b>
         </button>
         <div v-if="myRaciTasks.length" class="ov__mini">
@@ -100,15 +100,15 @@ function raciOf(t: CockpitTask) {
       <!-- ② 评审闸口 -->
       <section class="ov__card" data-testid="ov-gates">
         <div class="ov__card-head">
-          <span>{{ t('ia2.overview.gateReview') }}</span>
+          <span>{{ t('ia2.overviewDash.gateReview') }}</span>
           <span v-if="pendingReviews.length" class="ov__n ov__n--warn">{{ pendingReviews.length }}</span>
         </div>
         <button type="button" class="ov__row" data-testid="ov-gates-pending" @click="emit('open-inbox')">
-          <span class="ov__row-label">{{ t('ia2.overview.pendingReview') }}</span>
+          <span class="ov__row-label">{{ t('ia2.overviewDash.pendingReview') }}</span>
           <b>{{ pendingReviews.length }}</b>
         </button>
-        <div class="ov__sub">{{ t('ia2.overview.recentVerdicts') }}</div>
-        <div v-if="!recentVerdicts.length" class="ov__empty">{{ t('ia2.overview.noVerdicts') }}</div>
+        <div class="ov__sub">{{ t('ia2.overviewDash.recentVerdicts') }}</div>
+        <div v-if="!recentVerdicts.length" class="ov__empty">{{ t('ia2.overviewDash.noVerdicts') }}</div>
         <div v-for="v in recentVerdicts" :key="v.id + v.ts" class="ov__verdict" :data-testid="`ov-verdict-${v.targetId}`">
           <span class="ov__verdict-badge" :class="v.decision === 'approve' ? 'is-ok' : 'is-no'">
             {{ t(`approvals.choice.${v.decision}`) }}
@@ -120,16 +120,16 @@ function raciOf(t: CockpitTask) {
 
       <!-- ③ 交付进度 -->
       <section class="ov__card" data-testid="ov-progress">
-        <div class="ov__card-head"><span>{{ t('ia2.overview.progress') }}</span></div>
+        <div class="ov__card-head"><span>{{ t('ia2.overviewDash.progress') }}</span></div>
         <div class="ov__bar" role="progressbar" :aria-valuenow="progressPct">
           <div class="ov__bar-fill" data-testid="ov-progress-fill" :style="{ width: progressPct + '%' }" />
         </div>
-        <div class="ov__pct">{{ t('ia2.overview.doneOfTotal', { done: statusCount.done, total: tasks.length, pct: progressPct }) }}</div>
+        <div class="ov__pct">{{ t('ia2.overviewDash.doneOfTotal', { done: statusCount.done, total: tasks.length, pct: progressPct }) }}</div>
         <div class="ov__dist">
-          <span>{{ t('ia2.overview.running') }} {{ statusCount.running }}</span>
-          <span>{{ t('ia2.overview.review') }} {{ statusCount.review }}</span>
-          <span>{{ t('ia2.overview.blocked') }} {{ statusCount.blocked }}</span>
-          <span>{{ t('ia2.overview.open') }} {{ statusCount.open }}</span>
+          <span>{{ t('ia2.overviewDash.running') }} {{ statusCount.running }}</span>
+          <span>{{ t('ia2.overviewDash.review') }} {{ statusCount.review }}</span>
+          <span>{{ t('ia2.overviewDash.blocked') }} {{ statusCount.blocked }}</span>
+          <span>{{ t('ia2.overviewDash.open') }} {{ statusCount.open }}</span>
         </div>
       </section>
     </div>

@@ -86,6 +86,6 @@ describe('P5 驾驶舱概览', () => {
       props: { tasks: [], pending: [], history: [], username: '' },
     })
     expect(w.find('[data-testid="ov-progress-fill"]').attributes('style')).toContain('width: 0%')
-    expect(w.text()).toContain('ia2.overview.noVerdicts')
+    expect(w.text()).toContain('ia2.overviewDash.noVerdicts')
   })
 })
