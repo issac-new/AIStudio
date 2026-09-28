@@ -28,6 +28,9 @@ import IdeStatusBar from './IdeStatusBar.vue'
 import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
+import { listFiles } from '@/api/studio/files'
+import { useFilesStore } from '@/stores/hermes/files'
+import type { BriefingContextFile } from '../components/briefing-types'
 import { buildAuxMessage, parseRaciFromTask } from '../components/briefing-types'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import { useKanbanStore } from '@/stores/hermes/kanban'
@@ -117,6 +120,44 @@ onMounted(() => {
     if (hit) chatStore.switchSession?.(hit.id)
   }
 })
+
+// ── P3.2/P3.3 任务简报上下文文件（2026-09-28 产品 UI 缺陷修复 §四）──
+// workspace 就绪后扫描根目录与 docs/：按文件名语义归类（需求/概设/排期/文档），
+// 每类至多 3 件共 8 件；点击 → filesStore.openEditor 一键打开。
+const filesStore = useFilesStore()
+const briefingContextFiles = ref<BriefingContextFile[]>([])
+const CONTEXT_PATTERNS: Array<{ re: RegExp; kind: BriefingContextFile['kind'] }> = [
+  { re: /(需求|requirement|prd)/i, kind: 'req' },
+  { re: /(概设|设计|design|spec)/i, kind: 'design' },
+  { re: /(排期|计划|schedule|plan)/i, kind: 'schedule' },
+]
+async function loadBriefingContextFiles(): Promise<void> {
+  const ws = ide.workspace
+  if (!ws) { briefingContextFiles.value = []; return }
+  const picked: BriefingContextFile[] = []
+  const perKind: Record<string, number> = {}
+  try {
+    const roots = ['', 'docs']
+    for (const root of roots) {
+      const res = await listFiles(root, ws)
+      for (const entry of res.entries ?? []) {
+        if (entry.type !== 'file' || !/\.(md|txt|docx?|pdf)$/i.test(entry.name)) continue
+        const hit = CONTEXT_PATTERNS.find((p) => p.re.test(entry.name))
+        if (!hit) continue
+        if ((perKind[hit.kind] ?? 0) >= 3) continue
+        perKind[hit.kind] = (perKind[hit.kind] ?? 0) + 1
+        picked.push({ path: root ? `${root}/${entry.name}` : entry.name, kind: hit.kind })
+        if (picked.length >= 8) break
+      }
+      if (picked.length >= 8) break
+    }
+  } catch { /* 工作区不可读时静默空列表（面板显示暂无） */ }
+  briefingContextFiles.value = picked
+}
+watch(() => [ide.workspace, ide.activeTaskId] as const, () => void loadBriefingContextFiles(), { immediate: true })
+function openBriefingFile(path: string): void {
+  void filesStore.openEditor(path)
+}
 
 // 命令面板快捷键：Cmd/Ctrl+K 开关（对标 zcode quickPick；终端面板聚焦时
 // xterm 可能吞键，面板入口在 TopBar 同步提供）。
@@ -402,7 +443,7 @@ onUnmounted(() => {
             :title="t('ide.briefing.close', '收起简报')" @click="briefingOpen = false"
           >×</button>
         </div>
-        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :raci="briefingRaci" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" @aux-send="onAuxSend" />
+        <TaskBriefingPanel v-if="briefingTask" class="ide-shell__brief-body" :task="briefingTask" :raci="briefingRaci" :git="briefingGit" :collab="briefingCollab" :workflow="briefingWorkflow" :context-files="briefingContextFiles" @aux-send="onAuxSend" @open-file="openBriefingFile" />
         <p v-else class="ide-shell__brief-empty">{{ t('ide.briefing.noActiveTask', '当前无激活任务：从看板或任务跳转进入后自动带入简报') }}</p>
       </div>
     </Transition>

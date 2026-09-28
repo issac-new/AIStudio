@@ -12,6 +12,7 @@ import type {
   BriefingWorkflow,
   BriefingCollabMessage,
   BriefingRecap,
+  BriefingContextFile,
 } from './briefing-types'
 
 const props = defineProps<{
@@ -21,9 +22,15 @@ const props = defineProps<{
   workflow?: BriefingWorkflow
   collab?: BriefingCollabMessage[]
   recap?: BriefingRecap
+  /** P3.2 上下文文件列表（需求/概设/排期等关键文档） */
+  contextFiles?: BriefingContextFile[]
 }>()
 
-const emit = defineEmits<{ 'aux-send': [text: string] }>()
+const emit = defineEmits<{
+  'aux-send': [text: string]
+  /** P3.3 一键打开（IDE 编辑器/预览） */
+  'open-file': [path: string]
+}>()
 
 const { t } = useI18n()
 
@@ -37,6 +44,13 @@ const recapView = computed<BriefingRecap>(() => props.recap ?? { summary: '', de
 const collapsed = ref<Record<string, boolean>>({})
 function toggle(id: string): void {
   collapsed.value[id] = !collapsed.value[id]
+}
+
+function kindLabel(kind?: string): string {
+  if (kind === 'req') return t('ide.briefing.ctxKindReq', '需求')
+  if (kind === 'design') return t('ide.briefing.ctxKindDesign', '概设')
+  if (kind === 'schedule') return t('ide.briefing.ctxKindSchedule', '排期')
+  return t('ide.briefing.ctxKindDoc', '文档')
 }
 
 const auxDraft = ref('')
@@ -87,6 +101,15 @@ function sendAux(): void {
       <div v-if="!collapsed.context" class="section-body">
         <p v-if="task.body" class="body-excerpt">{{ task.body.slice(0, 200) }}</p>
         <p v-else class="muted">{{ t('ide.briefing.noContext', '暂无需求上下文') }}</p>
+        <!-- P3.2/P3.3 上下文文件列表 + 一键打开 -->
+        <ul v-if="contextFiles && contextFiles.length" class="ctx-file-list" data-testid="briefing-context-files">
+          <li v-for="f in contextFiles" :key="f.path">
+            <button type="button" class="ctx-file" :data-testid="`briefing-open-file`" :title="f.path" @click="emit('open-file', f.path)">
+              <span class="ctx-file__kind" :class="`ctx-file__kind--${f.kind || 'doc'}`">{{ kindLabel(f.kind) }}</span>
+              <span class="ctx-file__name">{{ f.title || f.path.split('/').pop() }}</span>
+            </button>
+          </li>
+        </ul>
       </div>
     </section>
 
@@ -253,6 +276,48 @@ function sendAux(): void {
 
 .muted {
   color: var(--text-muted, #8f959e);
+}
+
+/* P3.2 上下文文件列表（§四） */
+.ctx-file-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ctx-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 5px;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  &:hover { background: var(--bg-secondary, #f1f2f4); }
+}
+.ctx-file__kind {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #fff;
+  background: #6b7280;
+  &--req { background: #2563eb; }
+  &--design { background: #059669; }
+  &--schedule { background: #d97706; }
+}
+.ctx-file__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .body-excerpt {

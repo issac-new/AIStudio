@@ -1,6 +1,16 @@
 // custom/client/ide/components/briefing-types.ts
 // 任务简报面板（TaskBriefingPanel）的入参类型。<script setup> 不可 export，
 // 类型集中在此供面板 / IdeShell / 测试共享。
+/** P3.2 上下文文件（2026-09-28 §四）：任务简报的关键文档（需求/概设/排期等） */
+export interface BriefingContextFile {
+  /** workspace 相对路径 */
+  path: string
+  /** 展示标题（缺省用路径 basename） */
+  title?: string
+  /** 归类（需求/设计/排期/其他） */
+  kind?: 'req' | 'design' | 'schedule' | 'doc'
+}
+
 export interface BriefingTask {
   id: string
   title: string
