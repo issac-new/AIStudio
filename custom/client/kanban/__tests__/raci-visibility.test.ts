@@ -8,7 +8,7 @@ import { mount } from '@vue/test-utils'
 import type { KanbanTask } from '@/api/hermes/kanban'
 import { parseTaskRaci, raciBadges, myRaciRole, needsMyAction } from '../utils/raci'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
 vi.mock('@/api/client', () => ({ getStoredUsername: () => 'alice' }))
 
 function mkTask(over: Partial<KanbanTask> & { raci?: unknown }): KanbanTask {

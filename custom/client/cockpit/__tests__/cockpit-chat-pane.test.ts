@@ -62,7 +62,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
 vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
   useMatrixComposerStore: () => ({ sendMessage: matrixSendMessage }),
 }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
 
 import CockpitChatPane from '@/custom/cockpit/components/CockpitChatPane.vue'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'

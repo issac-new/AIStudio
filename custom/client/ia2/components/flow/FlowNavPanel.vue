@@ -267,7 +267,7 @@ function submitCreateRoom(): void {
 .flow-nav__head { padding: 10px 12px 6px; font-weight: 700; font-size: 12px; color: var(--text-primary); }
 .flow-nav__filters { display: flex; gap: 4px; padding: 0 12px 6px; }
 .flow-nav__chip {
-  height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 11px;
+  height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px);
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
   white-space: nowrap;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
@@ -286,12 +286,12 @@ function submitCreateRoom(): void {
   display: flex; align-items: center; gap: 5px; padding: 4px 4px 3px;
   font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
 }
-.flow-nav__sec-n { min-width: 14px; height: 14px; padding: 0 4px; border-radius: 7px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 9px; display: inline-flex; align-items: center; justify-content: center; }
+.flow-nav__sec-n { min-width: 14px; height: 14px; padding: 0 4px; border-radius: var(--radius-standard, 6px); background: var(--bg-secondary); color: var(--text-secondary); font-size: 9px; display: inline-flex; align-items: center; justify-content: center; }
 
 /* R7-C agent 名册 */
 .flow-nav__agent {
   display: flex; align-items: center; gap: 6px; width: 100%;
-  padding: 2px 6px; border-radius: 5px; font-size: 11px; color: var(--text-primary);
+  padding: 2px 6px; border-radius: var(--radius-standard, 6px); font-size: 11px; color: var(--text-primary);
 }
 .flow-nav__agent-dot {
   flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%;
@@ -323,7 +323,7 @@ function submitCreateRoom(): void {
 .flow-nav__cnt--btn { cursor: pointer; border-radius: 6px; padding: 1px 4px; &:hover { background: var(--bg-secondary); color: var(--text-primary); } }
 .flow-nav__cluster { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 8px 6px 20px; }
 .flow-nav__task {
-  height: 18px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: 9px;
+  height: 18px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: var(--radius-panel, 8px);
   background: var(--bg-secondary); color: var(--text-secondary); font-size: 10px;
   cursor: pointer; font-family: inherit; white-space: nowrap;
   &:hover { color: var(--primary); border-color: var(--primary); }
@@ -356,7 +356,7 @@ function submitCreateRoom(): void {
 }
 .flow-nav__pct { flex-shrink: 0; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .flow-nav__stagebar { display: flex; gap: 2px; margin: 5px 0 4px; }
-.flow-nav__seg { flex: 1; height: 3px; border-radius: 2px; background: var(--border-color); }
+.flow-nav__seg { flex: 1; height: 3px; border-radius: var(--radius-micro, 3px); background: var(--border-color); }
 .flow-nav__seg--done { background: var(--success); }
 .flow-nav__seg--run { background: var(--primary); }
 .flow-nav__seg--err { background: var(--error); }

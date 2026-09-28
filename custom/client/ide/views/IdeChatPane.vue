@@ -695,7 +695,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
 .ide-chat__agent {
   flex-shrink: 0;
   padding: 1px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-panel, 8px);
   border: 1px solid var(--border-color, #e0e0e0);
   font-size: 11px;
   color: var(--text-muted, #9aa0aa);
@@ -718,7 +718,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   color: var(--text-muted, #9aa0aa);
   background: transparent;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -793,7 +793,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
 .ide-chat__model-invalid-btn {
   flex-shrink: 0;
   border: 1px solid color-mix(in srgb, #f0a44c 50%, transparent);
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   background: transparent;
   color: #f0c98c;
   font-size: 12px;
@@ -863,7 +863,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   margin-top: 8px;
   width: 100%;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   background: var(--bg-tertiary, #ebebeb);
   color: var(--text-primary, #e6e6e6);
   font-size: 12px;
@@ -906,7 +906,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   border: none;
   background: transparent;
   padding: 3px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   cursor: pointer;
   font-size: 12px;
 }

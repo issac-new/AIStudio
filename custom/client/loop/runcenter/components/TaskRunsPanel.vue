@@ -179,7 +179,7 @@ function badgeStatus(status: string): RunStatus | null {
 .trp__retry {
   border: 1px solid var(--border-color, #e5e7eb);
   background: transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   padding: 3px 12px;
   cursor: pointer;
   font-family: inherit;
