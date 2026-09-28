@@ -539,10 +539,10 @@ export default { name: 'SpecEditorView' }
   padding: 0 5px;
   border-radius: var(--radius-pill, 999px);
   font-size: 10px;
-  color: #fff;
+  color: var(--text-on-accent);
 }
-.sev__issue.is-error { background: rgba(225, 29, 72, 0.08); color: var(--error, var(--color-danger, #e11d48)); }
-.sev__issue.is-error .sev__issue-tag { background: var(--error, var(--color-danger, #e11d48)); }
+.sev__issue.is-error { background: rgba(var(--error-rgb), 0.08); color: var(--error); }
+.sev__issue.is-error .sev__issue-tag { background: var(--error); color: var(--text-on-accent); }
 .sev__issue.is-warn { background: rgba(245, 158, 11, 0.1); color: var(--color-warning, #f59e0b); }
 .sev__issue.is-warn .sev__issue-tag { background: var(--color-warning, #f59e0b); }
 

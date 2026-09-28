@@ -184,7 +184,7 @@ function handleClose() {
   border: none;
   border-radius: $radius-sm;
   background: var(--error, #ef4444);
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   display: flex;
   align-items: center;

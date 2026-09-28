@@ -308,7 +308,7 @@ defineExpose({ refresh })
   &--primary {
     background: var(--success-color, #059669);
     border-color: var(--success-color, #059669);
-    color: #fff;
+    color: var(--text-on-accent);
     font-weight: 600;
   }
   &:hover:not(:disabled) { filter: brightness(1.05); }

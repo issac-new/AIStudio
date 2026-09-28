@@ -516,7 +516,7 @@ async function copyMxid() {
   border: none;
   border-radius: 6px;
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -274,3 +274,7 @@
 #      卡深链 markdown（utils/group-body-links）+ @当前登录人入 mention 高亮词表。
 #      （P4 特性组件与测试早已在库，但从未接入群聊真实渲染面——"证据待补"根因。）
 493-client-groupchat-p4-wiring.patch
+# 494（驾驶舱主题统一）：定义 --color-* / --hover-bg / --accent-bg / --radius-* / --font-mono
+#      变量族（亮暗两块）——自定义组件 253+ 处此前引用未定义变量全部回落硬编码
+#      fallback（非 Pure Ink 色且双主题恒定），为明暗主题色调不统一根因。
+494-client-variables-color-family.patch
