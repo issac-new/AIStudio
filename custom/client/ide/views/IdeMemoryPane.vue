@@ -30,16 +30,18 @@ async function load(): Promise<void> {
   loading.value = true
   try {
     // 记忆文件三来源：根 AGENTS.md / MEMORY.md + memory/ 目录（zcode workspace memory 对应物）
+    // FileEntry 判形用 isDir（api/studio/workspace-files.ts 契约；e.type 字段不存在，
+    // 2026-09-28 实测修复：旧 e.type==='file'/'directory' 恒 false → 记忆文件永远列不出）
     const found: Array<{ path: string; name: string }> = []
     const push = (path: string, name: string) => { if (!found.some(f => f.path === path)) found.push({ path, name }) }
     const rootRes = await listFiles('', ide.workspace!)
     for (const name of ['AGENTS.md', 'CLAUDE.md', 'MEMORY.md']) {
-      if (rootRes.entries.some(e => e.name === name && e.type === 'file')) push(name, name)
+      if (rootRes.entries.some(e => e.name === name && !e.isDir)) push(name, name)
     }
-    if (rootRes.entries.some(e => e.name === 'memory' && e.type === 'directory')) {
+    if (rootRes.entries.some(e => e.name === 'memory' && e.isDir)) {
       const memRes = await listFiles('memory', ide.workspace!)
       for (const e of memRes.entries) {
-        if (e.type === 'file' && e.name.endsWith('.md')) push(`memory/${e.name}`, `memory/${e.name}`)
+        if (!e.isDir && e.name.endsWith('.md')) push(`memory/${e.name}`, `memory/${e.name}`)
       }
     }
     items.value = found
