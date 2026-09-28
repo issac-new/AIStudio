@@ -10,6 +10,8 @@
 // controllers/hermes/trace.ts 注释）。
 
 import type { Server as HttpServer } from 'http'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { createFleetRouter } from '../../controllers/hermes/fleet'
 import { createKanbanOverview } from './kanban-overview'
 import { createTeamsStore } from './teams-store'
@@ -49,6 +51,8 @@ export function initCommandPost(deps: CommandPostDeps): CommandPostSingleton {
     listTasks: deps.listTasks,
     watchEvents: deps.watchEvents,
     killWatch: deps.killWatch,
+    // sqlite 直读快道数据根（2026-09-28 性能根治：29 板 × python CLI ≈55s → <100ms）
+    kanbanDir: join(process.env.HERMES_HOME || join(homedir(), '.hermes'), 'kanban'),
   })
   const teams = createTeamsStore()
   const fleetRouter = createFleetRouter({
