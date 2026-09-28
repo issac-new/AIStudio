@@ -3,9 +3,11 @@
 // codex 计划三选一收口形态；UI 复刻 R9）。数据面=review-store（patch 414：两域/
 // 评论 open→resolved 回流/三裁决一次定音）。
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 
 interface Finding { id: string; domain: 'baseline' | 'uncommitted'; severity: 'high' | 'medium' | 'low'; text: string; resolved: boolean }
 
@@ -73,16 +75,16 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 
 <template>
   <div class="ide-review" data-testid="ide-review-panel">
-    <div class="ide-review__head">⎇ 评审 <span class="ide-review__counts">{{ open.length }} open · {{ resolvedList.length }} resolved</span></div>
+    <div class="ide-review__head">⎇ {{ t('ide.review.title', '评审') }} <span class="ide-review__counts">{{ t('ide.review.openCount', { n: open.length }) }} · {{ t('ide.review.resolvedCount', { n: resolvedList.length }) }}</span></div>
     <div v-if="!findings.length" class="ide-review__empty">
-      暂无 findings
-      <button type="button" class="ide-review__start" data-testid="ide-review-start" @click="startReview">发起评审</button>
+      {{ t('ide.review.noFindings', '暂无 findings') }}
+      <button type="button" class="ide-review__start" data-testid="ide-review-start" @click="startReview">{{ t('ide.review.start', '发起评审') }}</button>
     </div>
     <div v-for="f in open" :key="f.id" class="ide-review__finding" :class="`is-${f.severity}`" :data-testid="`ide-review-${f.id}`">
       <span class="ide-review__sev">{{ f.severity }}</span>
-      <span class="ide-review__domain">{{ f.domain === 'baseline' ? '基线' : '未提交' }}</span>
+      <span class="ide-review__domain">{{ f.domain === 'baseline' ? t('ide.review.domainBaseline', '基线') : t('ide.review.domainUncommitted', '未提交') }}</span>
       <span class="ide-review__text">{{ f.text }}</span>
-      <button type="button" class="ide-review__resolve" :data-testid="`ide-review-resolve-${f.id}`" @click="resolve(f.id)">已处理</button>
+      <button type="button" class="ide-review__resolve" :data-testid="`ide-review-resolve-${f.id}`" @click="resolve(f.id)">{{ t('ide.review.resolved', '已处理') }}</button>
     </div>
     <div v-for="f in resolvedList" :key="f.id" class="ide-review__finding is-resolved">
       ✓ {{ f.text }}
@@ -96,7 +98,7 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
         :class="{ 'is-active': verdict === v }"
         :data-testid="`ide-review-verdict-${v}`"
         @click="decide(v)"
-      >{{ v === 'accept' ? '通过' : v === 'reject' ? '打回' : '有条件' }}</button>
+      >{{ v === 'accept' ? t('ide.review.verdictAccept', '通过') : v === 'reject' ? t('ide.review.verdictReject', '打回') : t('ide.review.verdictConditional', '有条件') }}</button>
     </div>
   </div>
 </template>

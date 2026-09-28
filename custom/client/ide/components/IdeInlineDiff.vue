@@ -5,6 +5,9 @@
 // accept/reject 为本地 resolved 态标记 + emit 上抛（挂载处未接引擎写通道，run-undo
 // 反向撤销在 ideRunsApi.undo，由调用方按需接线），双击改行仅改本地展示文本。
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface DiffLine { kind: 'add' | 'del' | 'ctx'; text: string }
 interface Hunk { id: number; lines: DiffLine[]; decision: 'pending' | 'accepted' | 'rejected' }
@@ -53,7 +56,7 @@ function editLine(hunkId: number, lineIndex: number): void {
   if (!hunk) return
   const line = hunk.lines[lineIndex]
   if (!line) return
-  const next = window.prompt('修改该行：', line.text)
+  const next = window.prompt(t('ide.inlineDiff.editPrompt', '修改该行：'), line.text)
   if (next !== null) {
     line.text = next
   }
@@ -71,10 +74,10 @@ function editLine(hunkId: number, lineIndex: number): void {
       :data-testid="`ide-idiff-hunk-${h.id}`"
     >
       <div v-if="h.decision === 'pending'" class="ide-idiff__actions">
-        <button type="button" class="ide-idiff__btn is-accept" :data-testid="`ide-idiff-accept-${h.id}`" @click="decide(h.id, 'accepted')">✓ 接受</button>
-        <button type="button" class="ide-idiff__btn is-reject" :data-testid="`ide-idiff-reject-${h.id}`" @click="decide(h.id, 'rejected')">✕ 拒绝</button>
+        <button type="button" class="ide-idiff__btn is-accept" :data-testid="`ide-idiff-accept-${h.id}`" @click="decide(h.id, 'accepted')">✓ {{ t('ide.inlineDiff.accept', '接受') }}</button>
+        <button type="button" class="ide-idiff__btn is-reject" :data-testid="`ide-idiff-reject-${h.id}`" @click="decide(h.id, 'rejected')">✕ {{ t('ide.inlineDiff.reject', '拒绝') }}</button>
       </div>
-      <div class="ide-idiff__verdict" v-else>{{ h.decision === 'accepted' ? '✓ 已接受' : '✕ 已拒绝' }}</div>
+      <div class="ide-idiff__verdict" v-else>{{ h.decision === 'accepted' ? `✓ ${t('ide.inlineDiff.accepted', '已接受')}` : `✕ ${t('ide.inlineDiff.rejected', '已拒绝')}` }}</div>
       <div
         v-for="(line, li) in h.lines"
         :key="li"

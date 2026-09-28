@@ -86,7 +86,7 @@ onMounted(() => {
 
       <div class="tmp__body">
         <section class="tmp__accounts" data-testid="teams-accounts">
-          <div class="tmp__sec">{{ t('teams.accounts') }}</div>
+          <div class="tmp__sec">{{ t('teams.accounts.title') }}</div>
           <div v-if="registry.accounts.length === 0" class="tmp__empty">{{ t('teams.accounts.empty') }}</div>
           <div v-for="a in registry.accounts" :key="a.userId" class="tmp__account"
             :data-testid="`teams-account-${a.userId}`">

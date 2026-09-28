@@ -3,6 +3,7 @@
 // edited-files pill（点开看当前态）+可展开子任务步骤+末尾"待批步骤"专区；UI 复刻 R6）。
 // 数据面=taskgroups 域（defineGroup/approveStep/groupSummary 语义镜像——本地状态）。
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 interface Step { stepId: string; description: string; needsApproval: boolean; approved: boolean }
@@ -20,6 +21,7 @@ const expanded = ref<Record<string, boolean>>({})
 const openFile = ref<string | null>(null)
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 
 /** 真实链：会话 taskPlan 快照（steps→组步骤；status 映射批准态）映射为任务组。 */
 const taskPlanGroups = computed<Group[]>(() => {
@@ -27,7 +29,7 @@ const taskPlanGroups = computed<Group[]>(() => {
   if (!plan?.plan?.length) return []
   return [{
     groupId: plan.plan_id || plan.run_id,
-    title: `任务计划 · ${plan.run_id.slice(-8)}`,
+    title: t('ide.taskGroups.planTitle', { id: plan.run_id.slice(-8) }),
     editedFiles: [],
     steps: plan.plan.map((p) => ({
       stepId: p.id, description: p.step,
@@ -76,17 +78,17 @@ function toggle(groupId: string): void {
               class="ide-tg__approve"
               :data-testid="`ide-tg-approve-${s.stepId}`"
               @click="emit('approve', g.groupId, s.stepId, true)"
-            >批准</button>
+            >{{ t('ide.taskGroups.approve', '批准') }}</button>
             <span v-else-if="s.approved" class="ide-tg__ok">✓</span>
           </li>
         </ol>
       </div>
     </div>
     <div v-if="pendingApprovals.length" class="ide-tg__pending" data-testid="ide-tg-pending">
-      <div class="ide-tg__pendinghead">待批步骤专区 · {{ pendingApprovals.length }}</div>
+      <div class="ide-tg__pendinghead">{{ t('ide.taskGroups.pendingHead', { n: pendingApprovals.length }) }}</div>
       <div v-for="p in pendingApprovals" :key="p.step.stepId" class="ide-tg__pendingrow">
         {{ p.step.description }}
-        <button type="button" class="ide-tg__approve" @click="emit('approve', p.groupId, p.step.stepId, true)">批准</button>
+        <button type="button" class="ide-tg__approve" @click="emit('approve', p.groupId, p.step.stepId, true)">{{ t('ide.taskGroups.approve', '批准') }}</button>
       </div>
     </div>
   </div>

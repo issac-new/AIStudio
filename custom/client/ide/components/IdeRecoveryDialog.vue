@@ -5,6 +5,7 @@
 // （mode 四档：code-and-conversation/code-only/conversation-only/summarize-from-here）。
 // 交互：行列表倒序点选恢复点 → 四档卡片选 → 确认发请求；错误如实弹。
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { fetchEngineRows, type EngineRow } from '../utils/zcode-fork'
@@ -14,16 +15,17 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const chatStore = useChatStore()
 const ide = useIdeStore()
+const { t } = useI18n()
 const rows = ref<EngineRow[]>([])
 const selectedRow = ref<EngineRow | null>(null)
 const busy = ref(false)
 
-const MODES: Array<{ key: string; label: string; hint: string }> = [
-  { key: 'code-and-conversation', label: '代码 + 对话', hint: '回滚该轮文件并截断会话（双恢复）' },
-  { key: 'conversation-only', label: '仅对话', hint: '只切会话分支，工作区不动' },
-  { key: 'code-only', label: '仅代码', hint: '只撤该轮文件，聊天历史保留' },
-  { key: 'summarize-from-here', label: '摘要从此处开始', hint: '切分支后把后续压缩为交接摘要' },
-]
+const MODES = computed<Array<{ key: string; label: string; hint: string }>>(() => [
+  { key: 'code-and-conversation', label: t('ide.recovery.modeCodeConv', '代码 + 对话'), hint: t('ide.recovery.modeCodeConvHint', '回滚该轮文件并截断会话（双恢复）') },
+  { key: 'conversation-only', label: t('ide.recovery.modeConvOnly', '仅对话'), hint: t('ide.recovery.modeConvOnlyHint', '只切会话分支，工作区不动') },
+  { key: 'code-only', label: t('ide.recovery.modeCodeOnly', '仅代码'), hint: t('ide.recovery.modeCodeOnlyHint', '只撤该轮文件，聊天历史保留') },
+  { key: 'summarize-from-here', label: t('ide.recovery.modeSummarize', '摘要从此处开始'), hint: t('ide.recovery.modeSummarizeHint', '切分支后把后续压缩为交接摘要') },
+])
 
 /** 可选恢复点：用户/助手消息行（倒序，最新在上）。 */
 const selectable = computed(() =>
@@ -73,10 +75,10 @@ async function recover(mode: string): Promise<void> {
     <div class="ide-recovery__mask" @click="emit('close')" />
     <div class="ide-recovery__panel">
       <header class="ide-recovery__head">
-        <span>⏎ 恢复到历史点</span>
+        <span>⏎ {{ t('ide.recovery.title', '恢复到历史点') }}</span>
         <button type="button" class="ide-recovery__close" data-testid="ide-recovery-close" @click="emit('close')">✕</button>
       </header>
-      <p v-if="!selectable.length" class="ide-recovery__empty">无可恢复的行（需会话已有消息）</p>
+      <p v-if="!selectable.length" class="ide-recovery__empty">{{ t('ide.recovery.empty', '无可恢复的行（需会话已有消息）') }}</p>
       <ul v-else class="ide-recovery__rows" data-testid="ide-recovery-rows">
         <li
           v-for="row in selectable"
@@ -86,7 +88,7 @@ async function recover(mode: string): Promise<void> {
           :data-testid="`ide-recovery-row-${row.rowId}`"
           @click="selectedRow = row"
         >
-          <span class="ide-recovery__kind">{{ row.kind === 'userInput' ? '问' : '答' }}</span>
+          <span class="ide-recovery__kind">{{ row.kind === 'userInput' ? t('ide.recovery.kindUser', '问') : t('ide.recovery.kindAssistant', '答') }}</span>
           <span class="ide-recovery__text">{{ row.text }}</span>
         </li>
       </ul>

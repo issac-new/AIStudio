@@ -180,14 +180,14 @@ watch(
       class="ide-statusbar__item"
       :style="{ order: slotOrder('zcode') }"
       data-testid="ide-zcode-projection"
-      :title="`zcode: ${zcodeProjection.sessionCount.value} 会话 · Δ${zcodeProjection.state.conversationDeltaTotal}`"
+      :title="`zcode: ${t('ide.status.zcodeSessions', { n: zcodeProjection.sessionCount.value })} · Δ${zcodeProjection.state.conversationDeltaTotal}`"
     >
       zcode {{ zcodeProjection.sessionCount.value }}
       <span
         v-if="zcodeProjection.state.lastBranch"
         class="ide-statusbar__branch"
         data-testid="ide-branch-chip"
-        :title="`已分叉：${zcodeProjection.state.lastBranch.sessionId.slice(0, 8)} 从行 ${zcodeProjection.state.lastBranch.fromRowId} 截断 ${zcodeProjection.state.lastBranch.removedRows} 行`"
+        :title="t('ide.status.zcodeBranched', { id: zcodeProjection.state.lastBranch.sessionId.slice(0, 8), from: zcodeProjection.state.lastBranch.fromRowId, removed: zcodeProjection.state.lastBranch.removedRows })"
       >⇄</span>
       <span
         v-if="zcodeProjection.lastReasonText.value"
