@@ -81,7 +81,9 @@ describe('KanbanTaskCard RACI 徽章渲染', () => {
     const mine = wrap.find('.raci-badge--mine')
     expect(mine.exists()).toBe(true)
     expect(mine.classes()).toContain('raci-badge--R')
-  })
+    // 首次动态 import+挂载在全量并发/高负载机上可超默认 5s（本机实测 9.7s）；
+    // 提超时至 15s 吸收负载，断言语义不变（同 phase3/usage-round 既有先例）。
+  }, 15000)
 
   it('无 raci 的卡不渲染徽章区', async () => {
     const { default: KanbanTaskCard } = await import('../components/KanbanTaskCard.vue')
@@ -90,5 +92,5 @@ describe('KanbanTaskCard RACI 徽章渲染', () => {
       global: { stubs: { NCheckbox: true } },
     })
     expect(wrap.find('[data-testid="raci-badges"]').exists()).toBe(false)
-  })
+  }, 15000)
 })
