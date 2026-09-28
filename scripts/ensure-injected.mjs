@@ -18,8 +18,10 @@ const overlayRoot = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
-const upstream = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
-const hermesAgentRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
+// OVERLAY_UPSTREAM_ROOT：并行会话私有 upstream 副本覆盖（与 scripts/inject.mjs 同步）。
+const upstreamRoot = resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(overlayRoot, '..', 'upstream'));
+const upstream = resolve(upstreamRoot, 'hermes-studio');
+const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const routerPath = resolve(upstream, 'packages/client/src/router/index.ts');
 
 function gitStatus() {
