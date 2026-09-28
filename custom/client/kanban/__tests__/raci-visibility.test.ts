@@ -23,6 +23,16 @@ function mkTask(over: Partial<KanbanTask> & { raci?: unknown }): KanbanTask {
 const STRUCTURED = { responsible: ['@alice:matrix.dev'], approver: ['@bob:matrix.dev'], consulted: [], informed: ['carol'] }
 
 describe('RACI 纯函数（utils/raci）', () => {
+  it('字符串形成员归一（RFD 主卡 responsible:"fanfan" → ["fanfan"]，不逐字拆）', () => {
+    const strForm = parseTaskRaci(mkTask({ raci: { responsible: 'fanfan', approver: 'admin', consulted: ['arch'], informed: [] } }))
+    expect(strForm?.responsible).toEqual(['fanfan'])
+    expect(strForm?.approver).toEqual(['admin'])
+    expect(strForm?.consulted).toEqual(['arch'])
+    const badges = raciBadges(strForm)
+    expect(badges.find((b) => b.role === 'R')?.count).toBe(1)
+    expect(myRaciRole(strForm, 'fanfan')).toBe('R')
+  })
+
   it('结构化字段优先；body-JSON raci 块兜底；两源成员并集', () => {
     const byField = parseTaskRaci(mkTask({ raci: STRUCTURED }))
     expect(byField?.responsible).toEqual(['@alice:matrix.dev'])
