@@ -228,3 +228,7 @@
 482-server-run-undo-mount-i18n.patch
 484-server-compaction-trace-route.patch
 485-agent-prefix-chain-store.patch
+# 488（P1 人工审批收件箱）：审批聚合面挂载（pending 聚合 fleet 命令审批+评审未裁决卡 /
+#      decide 就地裁决按 id 前缀路由 / history 决策历史）；本体走 custom
+#      （approval-log append-only 台账 + review-store listReviews 聚合）。
+488-server-approvals-inbox-mount.patch

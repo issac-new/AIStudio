@@ -10,6 +10,7 @@ import * as kanbanApi from '@/api/hermes/kanban'
 import type { KanbanTaskDetail, KanbanTaskStatus, KanbanEvent, KanbanRun, KanbanTaskLog, HomeChannel } from '@/api/hermes/kanban'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
+import { decideApproval } from '@/custom/cockpit/api/approvals'
 import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosticsSection.vue'
 import KanbanAttachments from '@/custom/kanban/components/KanbanAttachments.vue'
 // HERMES_CUSTOM[P3 Task 7] 来源 run 关联区块（任务 → run 反查，ia2/adapters/traceability 纯函数投影）
@@ -441,11 +442,35 @@ function canMoveTo(status: KanbanTaskStatus): boolean {
   switch (status) {
     case 'triage': return s !== 'triage'
     case 'ready': return s !== 'ready'
-    case 'blocked': return s === 'running' || s === 'ready'
-    case 'done': return s === 'running' || s === 'ready' || s === 'blocked'
+    case 'blocked': return s === 'running' || s === 'ready' || s === 'review'
+    case 'done': return s === 'running' || s === 'ready' || s === 'blocked' || s === 'review'
     case 'archived': return s !== 'archived'
     default: return false
   }
+}
+
+// P1 审批动作（2026-09-28 产品 UI 缺陷修复 §二）：review 态卡的验收/打回/看差异。
+// 决策先落审批历史（/api/approvals kanban: 前缀 = 纯记账），再走既有状态迁移。
+const approvalBusy = ref(false)
+async function decideKanbanApproval(decision: 'approve' | 'request_changes'): Promise<boolean> {
+  if (!task.value || approvalBusy.value) return false
+  approvalBusy.value = true
+  try {
+    await decideApproval(`kanban:${task.value.id}`, decision, undefined, task.value.title)
+    return true
+  } catch { return false } finally { approvalBusy.value = false }
+}
+async function doApproveReview(): Promise<void> {
+  if (!await decideKanbanApproval('approve')) return
+  await doPatch({ status: 'done' })
+}
+async function doRejectReview(): Promise<void> {
+  if (!await decideKanbanApproval('request_changes')) return
+  await doPatch({ status: 'blocked' })
+}
+function openReviewDiff(): void {
+  const taskId = task.value?.id
+  void router.push({ name: 'ide.shell', query: taskId ? { task: taskId } : {} })
 }
 
 // 确认文案走 cockpit 命名空间既有键（zh/en 双语在案；kanban.* 无此键，
@@ -935,6 +960,37 @@ function statusDotClass(status: string): string {
         <!-- Status Actions -->
         <div class="drawer-section">
           <div class="status-actions">
+            <!-- P1 审批（review 态卡）：验收通过 / 打回返工 / 查看变更 -->
+            <NButton
+              v-if="task.status === 'review'"
+              size="small"
+              type="primary"
+              data-testid="drawer-approve"
+              :loading="approvalBusy"
+              :disabled="approvalBusy"
+              @click="doApproveReview"
+            >
+              ✓ {{ t('approvals.choice.approve') }}
+            </NButton>
+            <NButton
+              v-if="task.status === 'review'"
+              size="small"
+              type="error"
+              data-testid="drawer-reject"
+              :loading="approvalBusy"
+              :disabled="approvalBusy"
+              @click="doRejectReview"
+            >
+              ✕ {{ t('approvals.choice.request_changes') }}
+            </NButton>
+            <NButton
+              v-if="task.status === 'review'"
+              size="small"
+              data-testid="drawer-view-diff"
+              @click="openReviewDiff"
+            >
+              ± {{ t('approvals.viewDiff') }}
+            </NButton>
             <NButton
               v-if="task.status === 'triage'"
               size="small"
