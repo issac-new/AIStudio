@@ -12,7 +12,9 @@ import { resolve } from 'path'
 // overlay 根（本文件所在目录）。
 const overlayRoot = __dirname
 // 上游 client src：@ 兜底 alias 的目标（@/api、@/views 等解析到上游）。
-const upstreamClientSrc = resolve(overlayRoot, '../upstream/hermes-studio/packages/client/src')
+// OVERLAY_UPSTREAM_ROOT：并行会话私有 upstream 副本覆盖（与 scripts/inject.mjs 同步）。
+const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT || resolve(overlayRoot, '../upstream')
+const upstreamClientSrc = resolve(upstreamRoot, 'hermes-studio/packages/client/src')
 
 export default defineConfig({
   plugins: [vue()],
