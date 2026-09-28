@@ -189,23 +189,23 @@ STEPS_META = {
 # ── 六域审计（用户指令 2026-09-28：六域各自回答一个交付问题）──
 DOMAINS = [
     ('L0', '范围与需求', '是否漏做、误做或擅自假设？',
-     '无漏做主线；两处如实记账的边界——本期邮件通道禁用改走 matrix 私信（问题单口径）、fleet-manifest 无专属界面（profiles 页承载配置视角）。无擅自假设：26 步全按方案原文执行，标题/把关逐字取自方案文档。',
-     '方案 26 步逐字对齐 · 问题单 22 键全处置 · 治理中心管理档案三件在仓'),
+     '无漏做（26 步 UI 覆盖逐条核对为零缺图）。两处如实记账边界：邮件通道本期禁用改 matrix 私信（问题单口径）；fleet-manifest 四件套无专属界面，步骤 2 以 profiles 配置页承载并在此声明。',
+     '实测：26/26 步 UI 图在位（生成器元素级核对）· 问题单 22 键全处置 · 管理档案三件在仓'),
     ('L1', '工程正确性', '代码和制品是否成立？',
-     '成立。守门测试全绿：治理域 8/8、审批域 9/9、看板快道 5/5；client 构建过 verify-dist 门禁；服务端 esbuild bundle 实跑；测试证据为分支内实跑日志（vitest 全绿），非纸面。',
-     'overlay main 7adc614c · 守门 22/22 绿 · docs/evidence/*-testlog.txt（分支锚）'),
+     '成立（复跑实证）。五域守门合跑 28/28 绿：治理 8 + 审批 10 + 面板 5 + 看板快道 5；client 构建过 verify-dist 门禁；测试证据为分支内实跑日志，非纸面。',
+     '实测：vitest 五文件合跑 28 passed (5 files) · docs/evidence/*-testlog.txt 分支锚'),
     ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？',
-     '一致。治理 API 20 件工件与 git 真仓逐件对账（commit/日期实测）；看板 API 经 sqlite 快道直读看板级库（与 CLI 同一存储）；报告数字与界面实拍同源（任务 36/完成率 61% 均为界面实查值）。',
-     '/api/governance overview 200（docs 20/20）· 看板库 sqlite 直读 · UI 实拍与叙事同源'),
+     '一致（live 对账）。治理 API 实查：20 件工件 20 在仓，四组分布 8/3/5/4，G3 分支证据 4，待裁决 1；五件代表工件 doc 接口 markdown 全文可取（freeze 663B/roster 875B/tasklist 6.5KB/testlog-mp 5.3KB/retro 10.2KB）；看板 API 与 CLI 同库（sqlite 直读）。',
+     '实测：GET /api/governance/overview 200（20/20）· doc×5 200 · 看板库同源'),
     ('L3', '行为与业务语义', '运行行为是否符合业务意图？',
-     '符合且有人工在回路实证：G2/G5 打回环真实发生（FAIL→补齐→复审 PASS）；xiao 建卡被审批门拦截 5 分钟即停手不越权；UAT 按 G1 冻结 AC-1~7 逐条对账通过——开头定的标准，结尾拿它对账。',
-     'ARCH-GATE/READY-GATE 结论行 · 审批收件箱待审+裁决历史 · UAT 逐条锚点'),
+     '符合。行为级证据：G2/G5 打回环真实发生（FAIL→补齐→复审 PASS 结论行在案）；xiao 建卡被审批门 5 分钟超时拦截不越权；UAT 拿 G1 冻结 AC-1~7 逐条对账——开头定的标准结尾对账闭环。',
+     '实测：ARCH-GATE-PASS/READY-GATE 结论行可反查（event_id）· 审批拦截实录 · UAT 逐条锚点'),
     ('L4', '架构、非功能与安全', '实现方式是否可接受？',
-     '可接受。治理 API git 全异步（execFile+8s 超时，杜绝事件循环阻塞）；sqlite 只读快道降聚合 55s→20ms；金额分 int64、渠道一律本地 mock、密钥不出服务端；追溯链完整（event_id/commit/卡号三锚）。',
-     'kanban-overview 快道（f3a88154）· 治理 controller 异步化 · 概设安全条目'),
+     '可接受（安全探针通过）。未授权访问治理/审批 API 均 401（无 token 与伪造 token 双探针）；git 全异步 execFile+8s 超时杜绝事件循环阻塞；sqlite 只读快道聚合 55s→20ms；金额分 int64/渠道本地 mock/密钥不出服务端。',
+     '实测：no-token→401 ×2 · bad-jwt→401 · 聚合延迟 20ms 量级实查'),
     ('L5', '交付与治理', '是否能部署、运营和追责？',
-     '能。发布基线动态实查；四道硬闸+HumanGate 批准留痕；问题单 100% 处置记账（已修 20/观察 1/待处置 1 属下轮）；审计独立签名线在仓；SLA 运营登记（99.5%/P95≤800ms/P2 4h）。',
-     'G5 七项三轮过闸 · 审计意见书 · 复盘处置表 · RELEASE.md SLA'),
+     '能（裁决链实测）。decide 非法前缀正确 400（id 前缀校验）；审批历史留痕（wei 裁决在案）；四道硬闸+HumanGate 批准留痕；问题单 100% 处置记账；审计独立签名线在仓；SLA 登记（99.5%/P95≤800ms/P2 4h）。',
+     '实测：POST decide 非法前缀→400 · 审批历史 API 200 含裁决记录 · G5 三轮过闸'),
 ]
 
 GATE_BY_STEP = {7: 'G1', 15: 'G2', 18: 'G3', 19: 'G4', 20: 'G5', 24: 'G6'}
@@ -505,7 +505,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 
   {content_html}
 
-  <h2 class="section-hd">六域审计 · 每域一个交付问题</h2>
+  <h2 class="section-hd">六域审计 · 每域一个交付问题（逐域实测）</h2>
   <table class="domains">
     <tr><th style="width:84px">域</th><th style="width:170px">交付问题</th><th>结论</th><th style="width:25%">证据锚点</th></tr>
     {''.join(f'<tr><td><b>{d[0]}</b><br><span class="dm-name">{d[1]}</span></td><td class="dm-q">{H.escape(d[2])}</td><td class="dm-a">{H.escape(d[3])}</td><td class="dm-e">{H.escape(d[4])}</td></tr>' for d in DOMAINS)}
