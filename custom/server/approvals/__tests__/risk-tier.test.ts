@@ -102,3 +102,22 @@ describe('审批风险分级（risk-tier）', () => {
     expect(isApprovalRiskTier(undefined)).toBe(false)
   })
 })
+
+// run2 探针实锤的 git 全局旗标盲区（2026-09-29 修复守门）
+describe('git 全局旗标剥除（-C/-c/--git-dir）', () => {
+  it('git -C <path> status → low（只读不因首词 -C 误判 medium）', async () => {
+    const { classifyApprovalRisk } = await import('../risk-tier')
+    expect(classifyApprovalRisk({ kind: 'command', detail: 'git -C /Volumes/repo status --short' })).toBe('low')
+    expect(classifyApprovalRisk({ kind: 'command', detail: 'git -c core.pager=cat log --oneline' })).toBe('low')
+  })
+  it('安全向：git -C <path> push 不再绕过高危正则 → high', async () => {
+    const { classifyApprovalRisk } = await import('../risk-tier')
+    expect(classifyApprovalRisk({ kind: 'command', detail: 'git -C /Volumes/repo push origin main' })).toBe('high')
+    expect(classifyApprovalRisk({ kind: 'command', detail: 'git --git-dir=/x/.git push' })).toBe('high')
+    expect(classifyApprovalRisk({ kind: 'command', detail: 'git -C /repo reset --hard HEAD~1' })).toBe('high')
+  })
+  it('旗标剥除不越权：未知旗标后的写子命令仍 medium+', async () => {
+    const { classifyApprovalRisk } = await import('../risk-tier')
+    expect(classifyApprovalRisk({ kind: 'command', detail: 'git branch -D main' })).toBe('medium')
+  })
+})
