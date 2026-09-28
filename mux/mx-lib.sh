@@ -654,11 +654,28 @@ PY
 }
 
 model_preflight_report() { # 检查全部实例，额度/鉴权异常即 fail
-  local bad=() u st
+  local bad=() still=() u st
   for u in "${INSTANCED_USERS[@]}"; do
     st=$(model_preflight "$u")
     [[ "$st" == "ok" ]] || bad+=("$u:$st")
   done
+  if (( ${#bad[@]} > 0 )); then
+    # 429 瞬时抖动鉴别（2026-09-28 V4-run1 实锤：14 连发探针 + 在跑 agent 回合同窗
+    # 挤通道，尾部探针被 RPM 限流误判 quota；全停 30s 冷却后复查——真额度耗尽仍
+    # 会失败，瞬发限流则恢复）。仅对 quota 态重试，auth/unreachable/noreply 不重试。
+    local retriable=0 e
+    for e in "${bad[@]}"; do [[ "$e" == *:quota ]] && retriable=1; done
+    if (( retriable )); then
+      log "模型通道预检首轮 quota 态（${bad[*]}）——冷却 30s 复查（区分限流抖动与真额度耗尽）"
+      sleep 30
+      for e in "${bad[@]}"; do
+        u="${e%%:*}"
+        st=$(model_preflight "$u")
+        [[ "$st" == "ok" ]] || still+=("$u:$st")
+      done
+      bad=(${still[@]+"${still[@]}"})
+    fi
+  fi
   if (( ${#bad[@]} > 0 )); then
     log "模型通道预检未通过：${bad[*]}"
     fail "推演需要真实 LLM 回合，模型通道不可用就不是产品缺陷。请先恢复额度/鉴权（quota=额度耗尽、auth=鉴权失败、unreachable=代理未起、noreply=通道可用但拒答）后重跑；已完成的轮次可用 START_STEP 从断点续推。"
@@ -687,14 +704,52 @@ gh_clone_url() { echo "https://x-access-token:$(gh_token)@github.com/$GH_REPO.gi
 # → matrix 适配器全员降级 → agent 收不到 @mention 全员哑火（V3 两度中止根因）。
 # 修复两步（幂等）：①运行时 venv 装 plain mautrix+aio 依赖（无 E2EE，避开
 # python-olm 的 darwin 编译坑）②pyproject 门放行 darwin。调用方负责重启 gateway。
+# 2026-09-28 V4-run1 实锤修正：gateway 真跑在 per-home selected venv
+# （$HERMES_ROOT/installs/<id>/environments/<gen>/venv，facts.json 指定），不是
+# agent 安装目录 venv——装错 venv 会"自愈成功"假阳性（import 检查在错误解释器上
+# 通过），gateway 依旧全员降级。先解析 selected venv 再装；selected 缺失才回落。
+mx_selected_venv() { # → 打印 HERMES_ROOT 下 facts.json 指定的 selected venv 路径
+  local facts env_dir
+  for facts in "$HERMES_ROOT"/installs/*/facts.json; do
+    [[ -f "$facts" ]] || continue
+    env_dir=$(python3 - "$facts" <<'PYEOF' 2>/dev/null
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(d['packages']['venv']['environment'])
+except Exception:
+    pass
+PYEOF
+)
+    [[ -n "$env_dir" && -d "$env_dir" ]] && { echo "$env_dir"; return 0; }
+  done
+  return 1
+}
 matrix_adapter_selfheal() { # → 0=已修复 1=无需修 2=修复失败
-  local rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
-  local py="$rt/venv/bin/python" pip="$rt/venv/bin/pip"
-  [[ -x "$py" && -x "$pip" ]] || { log "matrix 自愈：运行时 venv 不在（$rt），跳过"; return 2; }
-  log "matrix 自愈：装 plain mautrix+aio 依赖（darwin 无 E2EE 面）"
-  "$pip" install -q 'mautrix==0.21.1' 'aiohttp-socks==0.11.0' 'aiohttp==3.14.3' \
-    'aiosqlite==0.22.1' 'asyncpg==0.31.0' 2>&1 | tail -1
-  "$py" - "$rt/pyproject.toml" << 'PYEOF'
+  local sel_env sel_py rt uv_bin
+  sel_env="$(mx_selected_venv 2>/dev/null || true)"
+  if [[ -z "$sel_env" ]]; then
+    rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
+    sel_env="$rt/venv"
+    [[ -x "$sel_env/bin/python" ]] || { log "matrix 自愈：selected venv 与 agent venv（$rt）均不在，跳过"; return 2; }
+    log "matrix 自愈：selected venv 未登记，回落 agent venv（$rt）"
+  fi
+  sel_py="$sel_env/bin/python"
+  if [[ -x "$sel_py" && -z "$("$sel_py" -c 'import mautrix' 2>&1)" ]]; then
+    log "matrix 自愈：mautrix 已可导入（$sel_env），仅补门放行"
+  else
+    log "matrix 自愈：装 plain mautrix+aio 依赖到 selected venv（darwin 无 E2EE 面）"
+    uv_bin="$(ls "$HERMES_ROOT"/tools/uv-*/uv 2>/dev/null | head -1)"
+    if [[ -x "$uv_bin" ]]; then
+      "$uv_bin" pip install --python "$sel_py" 'mautrix==0.21.1' 'aiohttp-socks==0.11.0' \
+        'aiohttp==3.14.3' 'aiosqlite==0.22.1' 'asyncpg==0.31.0' 2>&1 | tail -1
+    else
+      "$sel_py" -m pip install -q 'mautrix==0.21.1' 'aiohttp-socks==0.11.0' \
+        'aiohttp==3.14.3' 'aiosqlite==0.22.1' 'asyncpg==0.31.0' 2>&1 | tail -1
+    fi
+  fi
+  rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
+  "$sel_py" - "$rt/pyproject.toml" << 'PYEOF'
 import sys
 p = sys.argv[1]
 s = open(p).read()
@@ -706,7 +761,7 @@ if old in s:
 else:
     print('gate already ok or format drift')
 PYEOF
-  "$py" -c "import mautrix" 2>/dev/null || { log "matrix 自愈：mautrix 仍不可导入，失败"; return 2; }
+  "$sel_py" -c "import mautrix" 2>/dev/null || { log "matrix 自愈：mautrix 仍不可导入（$sel_env），失败"; return 2; }
   return 0
 }
 
