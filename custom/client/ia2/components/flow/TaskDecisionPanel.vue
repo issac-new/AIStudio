@@ -17,6 +17,8 @@ import WaitQueue from './WaitQueue.vue'
 import AttentionList from './AttentionList.vue'
 import LinkedTaskList from './LinkedTaskList.vue'
 import TaskFeed from './TaskFeed.vue'
+import TaskFlowTimeline from './TaskFlowTimeline.vue'
+import type { TaskFlowEvent } from '@/custom/matrix-chat/utils/task-flow'
 
 const props = defineProps<{
   waitItems: DecisionRow[]
@@ -26,6 +28,8 @@ const props = defineProps<{
   attentionRows?: AttentionRow[]
   /** 挂接任务节头副注（当前对象名，如 release-pipeline / 应急指挥中心） */
   linkedContext?: string
+  /** P4③ 当前群任务流转事件（缺省为空——不渲染该节，向后兼容） */
+  flowEvents?: TaskFlowEvent[]
 }>()
 
 const emit = defineEmits<{
@@ -41,6 +45,7 @@ const emit = defineEmits<{
   (e: 'new-task'): void
   (e: 'all-timeline'): void
   (e: 'open-attention', row: AttentionRow): void
+  (e: 'open-task', taskId: string): void
 }>()
 
 const { t } = useI18n()
@@ -103,6 +108,14 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
           @open-ide="id => emit('open-ide', id)"
           @handle-task="id => emit('handle-task', id)"
         />
+      </section>
+
+      <!-- P4③ 当前群任务流转时间线（仅选中群且有任务型消息时渲染） -->
+      <section v-if="flowEvents?.length" class="tdp__sec" data-testid="tdp-flow-sec">
+        <div class="tdp__sec-head">
+          <span>{{ t('ia2.tdp.flowTitle') }}<span class="tdp__n">{{ flowEvents.length }}</span></span>
+        </div>
+        <TaskFlowTimeline :events="flowEvents" @open-task="id => emit('open-task', id)" />
       </section>
 
       <section class="tdp__sec">
