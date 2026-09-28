@@ -54,6 +54,12 @@ function gateColor(gate: string, c: DeliveryCaseView): string {
   return hit.verdict === 'pass' ? '#22c55e' : hit.verdict === 'conditional' ? '#eab308' : '#ef4444'
 }
 function fmtAt(at: number): string { return new Date(at).toLocaleString() }
+/** U8 降噪（推演审计二轮）：matrix 全形 ID（!room:host / @user:host）→ 短形展示，悬停见全形。 */
+function shortMatrixId(id: string | null | undefined): string {
+  if (!id) return ''
+  if (id.startsWith('@')) return '@' + id.slice(1).split(':')[0]
+  return id.replace(/^!/, '').split(':')[0].slice(0, 10)
+}
 function openRoom(roomId: string) {
   void router.push({ name: 'ia2.commsRoom', params: { roomId } })
 }
@@ -130,8 +136,8 @@ function openRoom(roomId: string) {
           >{{ g }}</span>
         </div>
         <div class="meta">
-          {{ $t('ia2.delivery.owner') }}: {{ c.ownerAccount }} ·
-          <a class="roomlink" @click.prevent="openRoom(c.roomId)">{{ c.roomId }}</a>
+          {{ $t('ia2.delivery.owner') }}: <span :title="c.ownerAccount">{{ shortMatrixId(c.ownerAccount) }}</span> ·
+          <a class="roomlink" :title="c.roomId" @click.prevent="openRoom(c.roomId)">{{ shortMatrixId(c.roomId) }}</a>
         </div>
       </NCard>
     </div>
