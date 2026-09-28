@@ -12,6 +12,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { filterStreams, LOOP_STAGE_ORDER, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type StreamSelection } from '../../adapters/flow'
+import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
 import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
 import InboxNavEntry from '../InboxNavEntry.vue'
@@ -54,6 +55,11 @@ const shownSessions = computed(() =>
 const shownLoops = computed(() =>
   filterStreams(props.loops, { kind: filterKind.value === 'session' ? 'session' : filterKind.value, query: query.value })
     .filter(r => r.kind === 'loop') as FlowLoopRow[])
+
+/** 同名消歧（推演审计二轮 U5b）：工作台房间列与 matrix-chat 列是两套渲染，
+ *  多轮推演同名群在这套列表同样无法分辨——同名行尾缀短 ID（与 utils/room-disambig 同源）。 */
+const dupNames = computed(() =>
+  collectDuplicateNames((props.sessions as Array<{ name: string }>).map(r => r.name)))
 
 /** 会话聚类三小节（R4a：房间/群聊/会话——类型是天然簇，随过滤联动） */
 const sessionClusters = computed(() => ({
@@ -136,6 +142,12 @@ function submitCreateRoom(): void {
             @dblclick="emit('jump-ide', s.taskIds[0] ?? null)"
           >
             <span class="flow-nav__name">{{ s.name }}</span>
+            <span
+              v-if="dupNames.has(s.name)"
+              class="flow-nav__suffix"
+              :title="s.id"
+              data-testid="flow-dup-suffix"
+            >#{{ shortRoomId(s.id) }}</span>
             <span v-if="s.teamTag" class="flow-nav__teamtag">{{ s.teamTag }}</span>
             <span
               v-if="s.taskIds.length"
@@ -314,6 +326,10 @@ function submitCreateRoom(): void {
 }
 .flow-nav__row--on { background: var(--bg-secondary); color: var(--text-primary); font-weight: 600; }
 .flow-nav__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-nav__suffix {
+  flex-shrink: 0; font-size: 10.5px; color: var(--text-muted, #878c99);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .75;
+}
 .flow-nav__teamtag {
   flex-shrink: 0; padding: 0 5px; height: 16px; border-radius: 8px;
   background: rgba(59, 130, 246, .08); color: var(--primary);

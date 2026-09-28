@@ -40,6 +40,11 @@ async function setSession(user, board) {
     localStorage.setItem('hermes_api_key', tk)
     localStorage.setItem('hermes_server_url', location.origin)
     localStorage.setItem('hermes_locale', 'zh')
+    // 浏览器侧 matrix-js-sdk 凭据（snake_case 键，坑②）：房间/消息同步的真正前置
+    localStorage.setItem('matrix_access_token', tokenOf(user))
+    localStorage.setItem('matrix_user_id', `@${user}:matrix.test`)
+    localStorage.setItem('matrix_device_id', 'CAPTURE-V2')
+    localStorage.setItem('matrix_homeserver_url', 'http://127.0.0.1:8008')
     if (bd) localStorage.setItem('hermes.kanban.selectedBoard', bd)
   }, [await loginAs(user), board ?? null])
 }
