@@ -152,6 +152,13 @@ mx() { # <token> <method> <api-path> [json-body]
 mx_room_members() { # <token> <roomId> → 每行一个已加入成员 mxid（09-26 补定义：缺失致进群核验 8 连误报）
   mx "$1" GET "rooms/$2/joined_members" | jq -r '.joined | keys[]' 2>/dev/null || true
 }
+mx_room_membership() { # <token> <roomId> <mxid> → join|invite|空（缺席）
+  # 进群核验语义修正（V4-run1 room-invite-gap 误报根治）：joined_members 只含已接受者，
+  # 把"已邀请待接受"误判为"未邀请"，错误归罪 agent 邀请能力（实锤：run1 中 agent 19:43
+  # 已邀 16/16 全 200，22:49 核验仍记 7 条能力缺口问题单）。邀请是否发出=agent 职责；
+  # 接受与否=受邀方行为。核验 agent 履职须用本函数按 invite|join 双态判定。
+  mx "$1" GET "rooms/$2/state/m.room.member/$3" 2>/dev/null | jq -r '.membership // empty' 2>/dev/null || true
+}
 mx_send() { # <token> <roomId> <text> [mentioned-mxid[,mxid2...]] → event_id
   # 瞬断/限流重试 3 次；全败回 SEND-FAILED 且返回 0——set -euo pipefail 下
   # 赋值非零即静默击杀整个脚本（09-26 实锤：arch 派发一击致死 28s 无声退出）。
