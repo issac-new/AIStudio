@@ -128,7 +128,52 @@ describe('发起向导 createCase（M2）', () => {
     expect((stateSend![2] as { stage: string }).stage).toBe('P1')
     const index = calls.find(([, type]) => type === 'com.swarmstudio.delivery.index')!
     expect((index![2] as { roomIds: string[] }).roomIds).toContain('!c3:m.x')
-    // 网络读数：1 在途；G1 已 pass、G5 缺 → 待审人工门 = 1
+    // 网络读数（P0 新口径）：1 在途（非完成态）；G1 已 pass、G5 缺 → 待审人工门 = 1
+    expect(store.networkReadings.inFlight).toBe(1)
+    expect(store.networkReadings.pendingHumanGates).toBe(1)
+  })
+})
+
+describe('P0 完成态区分（run14 形态）', () => {
+  beforeEach(() => { setActivePinia(createPinia()); clientHolder.client = null })
+
+  it('P6+G6 pass → completed=true；读数不计在途/待审；未完案例缺 G5 不被完成态豁免', async () => {
+    const doneRoom = fakeRoom('!done:m.x', {
+      schemaVersion: 2, caseId: 'dlv-done', title: '终局案例', repoUrl: 'https://r',
+      tier: 'standard', stage: 'P6', ownerAccount: 'fanfan',
+      createdAt: 1, updatedAt: 1, updatedBy: 'fanfan',
+    }, ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'].map((st, i) => fakeEvent('com.swarmstudio.delivery.stage', {
+      schemaVersion: 2, caseId: 'dlv-done', stage: st, worker: { account: 'fanfan' },
+      outcome: 'done', reportedBy: 'fanfan', at: 10 + i,
+    })).concat(['G1', 'G2', 'G3', 'G4', 'G5', 'G6'].map((g, i) => fakeEvent('com.swarmstudio.delivery.gate', {
+      schemaVersion: 2, caseId: 'dlv-done', gate: g, verdict: 'pass',
+      evidence: { kind: 'artifact', summary: 's' }, decidedBy: 'fanfan', at: 20 + i,
+    }))))
+    const stuckRoom = fakeRoom('!stuck:m.x', {
+      schemaVersion: 2, caseId: 'dlv-stuck', title: '中断案例', repoUrl: 'https://r',
+      tier: 'standard', stage: 'P2', ownerAccount: 'fanfan',
+      createdAt: 1, updatedAt: 1, updatedBy: 'fanfan',
+    }, [fakeEvent('com.swarmstudio.delivery.gate', {
+      schemaVersion: 2, caseId: 'dlv-stuck', gate: 'G1', verdict: 'pass',
+      evidence: { kind: 'human', summary: 's' }, decidedBy: 'fanfan', at: 5,
+    })])
+    clientHolder.client = {
+      getAccountDataFromServer: vi.fn().mockResolvedValue({
+        schemaVersion: 2, roomIds: ['!done:m.x', '!stuck:m.x'], updatedBy: 'fanfan', updatedAt: 1,
+      }),
+      getRoom: (rid: string) => (rid === '!done:m.x' ? doneRoom : stuckRoom),
+      getRooms: () => [doneRoom, stuckRoom],
+    }
+    const { useDeliveryCasesStore } = await import('../stores/delivery-cases')
+    const store = useDeliveryCasesStore()
+    await store.refresh()
+    const done = store.cases.find(c => c.caseId === 'dlv-done')!
+    const stuck = store.cases.find(c => c.caseId === 'dlv-stuck')!
+    expect(done.completed).toBe(true)
+    expect(stuck.completed).toBe(false)
+    // 读数新口径：完成态只进 completed 计数；在途=1（stuck，缺 G5 → 待审=1）
+    expect(store.networkReadings.total).toBe(2)
+    expect(store.networkReadings.completed).toBe(1)
     expect(store.networkReadings.inFlight).toBe(1)
     expect(store.networkReadings.pendingHumanGates).toBe(1)
   })

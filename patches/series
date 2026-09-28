@@ -254,3 +254,5 @@
 # 491（U1 公告非阻塞）：StudioAnnouncementPrompt 模态→底部常驻横幅，
 #      公告不再遮罩拦截全界面（20+ 张推演截图被挡实锤），确认后按 id 记账不再弹。
 491-client-announcement-nonblocking-banner.patch
+# 476（feat/p0-hardening 轮）：案例面板 P0 词条（zh/en）——inFlight/completed（读数新口径）
+476-delivery-panel-p0-i18n.patch
