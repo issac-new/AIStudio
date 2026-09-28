@@ -1,0 +1,14 @@
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -58,7 +58,10 @@
+ 
+ function filterTasksByVisibleProfiles(ctx: Context, tasks: kanbanCli.KanbanTask[]): kanbanCli.KanbanTask[] {
+   const visible = visibleProfileSet(ctx)
+-  if (!visible) return tasks
++  // overlay[477] 空映射不滤光（09-28 实锤）：Mux 自动建号（auth.ts createFromMatrix）
++  // 固定 role=admin 且不写 user_profiles 行 → 空 Set → 整板 {"tasks":[]}（HTTP 200，
++  // CLI 直查正常）。admin 空映射视为不限制（admin 本就应见全部板）。
++  if (!visible || visible.size === 0) return tasks
+   return tasks.filter(task => visible.has(taskAssigneeProfile(task)))
+ }
+ 
