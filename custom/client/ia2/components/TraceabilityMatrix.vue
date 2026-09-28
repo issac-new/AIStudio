@@ -14,11 +14,12 @@ import { NSpin } from 'naive-ui'
 import { loopRest } from '@/custom/loop/api/loop-rest'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
+import { runRest } from '@/custom/loop/runcenter/api'
 import RunStageBadge from '@/custom/loop/runcenter/components/RunStageBadge.vue'
 import type { RunStatus } from '@/custom/loop/runcenter/types'
 import {
-  buildTraceMatrix,
-  type TraceLoopEvent, type TraceLoopGroup, type TraceLoopInput, type TraceTaskRow,
+  buildTaskChain, buildTraceMatrix,
+  type TaskChainGroup, type TraceLoopEvent, type TraceLoopGroup, type TraceLoopInput,
 } from '../adapters/traceability'
 
 const { t } = useI18n()
@@ -30,6 +31,27 @@ const loading = ref(false)
 const failed = ref(false)
 const loops = ref<TraceLoopInput[]>([])
 const events = ref<TraceLoopEvent[]>([])
+
+/** 任务链（kanban 任务树+执行史投影；loop 引擎未跑过的环境的主追溯面） */
+const taskChain = ref<TaskChainGroup[]>([])
+const chainFailed = ref(false)
+
+async function loadChain(): Promise<void> {
+  chainFailed.value = false
+  try {
+    const mind = await runRest.getMind()
+    if (!mind.available) { taskChain.value = []; return }
+    taskChain.value = buildTaskChain({
+      thoughts: mind.thoughts.map(t => ({ id: t.id, title: t.title, status: t.status })),
+      relations: mind.relations ?? [],
+      runs: mind.runs.map(r => ({ runId: r.runId, thoughtId: r.thoughtId, status: r.status, endedAt: r.endedAt })),
+    })
+  } catch {
+    // 任务链失败不阻断 loop 矩阵（两个数据面独立）；空态如实展示
+    chainFailed.value = true
+    taskChain.value = []
+  }
+}
 
 /** 单 loop 事件拉取上限（对齐 runs store 指标采集口径） */
 const EVENT_LIMIT = 500
@@ -59,6 +81,7 @@ async function load(): Promise<void> {
 
 onMounted(() => {
   void load()
+  void loadChain()
   // join 数据源惰性补拉（已有缓存不重拉）：任务标题/状态 + run 状态
   if (kanban.tasks.length === 0) void kanban.fetchTasks()
   if (runsStore.runs.length === 0) void runsStore.fetchRuns()
@@ -88,8 +111,15 @@ function openRun(runId: string | null): void {
   // 2026-09-18 统一导航：运行详情挂 ia2.runDetail（/app/ops/runs/:runId）
   if (runId) void router.push({ name: 'ia2.runDetail', params: { runId } })
 }
-function openTask(row: TraceTaskRow): void {
+function openTask(row: { taskId: string | null }): void {
   if (row.taskId) emit('open-task', row.taskId)
+}
+
+/** 时间列（任务链最近结束）：ISO → 本地串；空/坏值落 — */
+function fmtTime(v: string | null): string {
+  if (!v) return '—'
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
 }
 </script>
 
@@ -102,11 +132,64 @@ function openTask(row: TraceTaskRow): void {
         {{ t('ia2.trace.retry') }}
       </button>
     </div>
-    <div v-else-if="groups.length === 0" class="ia-trace__empty">
+    <div v-else-if="groups.length === 0 && taskChain.length === 0" class="ia-trace__empty">
       <div class="ia-trace__empty-title">{{ t('ia2.trace.emptyTitle') }}</div>
       <div class="ia-trace__empty-hint">{{ t('ia2.trace.emptyHint') }}</div>
     </div>
     <template v-else>
+      <!-- 任务链追溯（看板任务树+执行史；数据来自 /api/graph/mind 只读投影） -->
+      <section
+        v-for="g in taskChain"
+        :key="`chain-${g.root.id}`"
+        class="ia-trace__group"
+        :data-testid="`ia-trace-chain-${g.root.id}`"
+      >
+        <header class="ia-trace__head">
+          <span class="ia-trace__name">{{ t('ia2.trace.taskChainTitle') }}</span>
+          <button
+            type="button"
+            class="ia-trace__tasklink"
+            :title="t('ia2.trace.openTask')"
+            @click="openTask({ taskId: g.root.id })"
+          >{{ g.root.title ?? g.root.id }}</button>
+          <span v-if="g.root.status" class="ia-trace__task-status">{{ g.root.status }}</span>
+        </header>
+        <table class="ia-trace__table">
+          <thead>
+            <tr>
+              <th class="ia-trace__col-task">{{ t('ia2.trace.colChild') }}</th>
+              <th class="ia-trace__col-run">{{ t('ia2.trace.colRounds') }}</th>
+              <th class="ia-trace__col-iter">{{ t('ia2.trace.colOutcome') }}</th>
+              <th class="ia-trace__col-rounds">{{ t('ia2.trace.colLastEnd') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="child in g.children" :key="child.id">
+              <td class="ia-trace__col-task">
+                <button
+                  type="button"
+                  class="ia-trace__tasklink"
+                  :title="t('ia2.trace.openTask')"
+                  @click="openTask({ taskId: child.id })"
+                >{{ child.title ?? child.id }}</button>
+                <span v-if="child.status" class="ia-trace__task-status">{{ child.status }}</span>
+              </td>
+              <td class="ia-trace__col-run">
+                <span
+                  class="ia-trace__rounds"
+                  :class="{ 'ia-trace__rounds--failed': child.rounds.failed > 0 && child.lastOutcome !== 'completed' }"
+                >{{ child.rounds.passed }}/{{ child.rounds.total }}</span>
+              </td>
+              <td class="ia-trace__col-iter">
+                <RunStageBadge v-if="runStatusOf(child.lastOutcome)" :status="runStatusOf(child.lastOutcome)!" />
+                <span v-else class="ia-trace__muted">—</span>
+              </td>
+              <td class="ia-trace__col-rounds ia-trace__muted">{{ fmtTime(child.lastEndedAt) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <section v-for="g in groups" :key="g.loopId" class="ia-trace__group" :data-loop-id="g.loopId">
         <header class="ia-trace__head">
           <span class="ia-trace__name">{{ g.loopName }}</span>
