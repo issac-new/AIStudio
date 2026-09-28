@@ -167,11 +167,11 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
   display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 5px;
   border-left: 2px solid var(--border-color, #e0e0e0); margin: 3px 0; cursor: default;
 }
-.ide-tools__row.is-edit { border-left-color: #61afef; }
-.ide-tools__row.is-bash { border-left-color: #e5c07b; }
-.ide-tools__row.is-read { border-left-color: #98c379; }
-.ide-tools__row.is-search { border-left-color: #c678dd; }
-.ide-tools__row.is-web { border-left-color: #56b6c2; }
+.ide-tools__row.is-edit { border-left-color: var(--primary-color, #18a058); }
+.ide-tools__row.is-bash { border-left-color: var(--warning-color, #d97706); }
+.ide-tools__row.is-read { border-left-color: var(--success-color, #18a058); }
+.ide-tools__row.is-search { border-left-color: var(--info-color, #8b5cf6); }
+.ide-tools__row.is-web { border-left-color: var(--info-color, #0ea5e9); }
 .ide-tools__icon { color: var(--text-color-3, #999); width: 14px; }
 .ide-tools__name { font-family: ui-monospace, monospace; font-size: 11px; }
 .ide-tools__summary {

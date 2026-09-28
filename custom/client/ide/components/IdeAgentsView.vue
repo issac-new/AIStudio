@@ -59,7 +59,7 @@ function dur(s: SubagentStream): string {
 .ide-agents__head { font-weight: 600; color: var(--text-color-3, #999); font-size: 11px; }
 .ide-agents__row { display: flex; gap: 8px; align-items: baseline; padding: 2px 4px; }
 .ide-agents__state { font-size: 10px; padding: 0 6px; border-radius: 8px; }
-.ide-agents__state.is-needs { background: rgba(208, 48, 80, 0.1); color: #c0392b; }
+.ide-agents__state.is-needs { background: rgba(208, 48, 80, 0.1); color: var(--error-color, #d03050); }
 .ide-agents__state.is-working { background: rgba(24, 160, 88, 0.12); color: #18a058; }
 .ide-agents__state.is-done { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-color-3, #999); }
 .ide-agents__dur { margin-left: auto; color: var(--text-color-3, #aaa); font-size: 11px; }

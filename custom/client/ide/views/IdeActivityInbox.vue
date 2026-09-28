@@ -156,7 +156,7 @@ function formatDuration(seconds?: number): string {
   line-height: 13px;
   text-align: center;
   color: #fff;
-  background: #e06c75;
+  background: var(--error-color, #d03050);
 }
 
 .ide-inbox__panel {
@@ -205,7 +205,7 @@ function formatDuration(seconds?: number): string {
 
   &.is-running { background: #4cc9f0; }
   &.is-waiting { background: #f0a44c; }
-  &.is-done { background: var(--success-color, #98c379); }
+  &.is-done { background: var(--success-color, var(--success-color, #18a058)); }
 }
 
 .ide-inbox__label {

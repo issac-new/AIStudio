@@ -111,7 +111,7 @@ async function pick(provider: string, model: string): Promise<void> {
   cursor: pointer;
   max-width: 220px;
 
-  &:hover { border-color: #61afef; color: #61afef; }
+  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 }
 
 .ide-model-switcher__current {
@@ -171,7 +171,7 @@ async function pick(provider: string, model: string): Promise<void> {
   &:hover { background: rgba(255, 255, 255, 0.06); }
 
   &.is-active {
-    color: #61afef;
+    color: var(--primary-color, #18a058);
     background: rgba(97, 175, 239, 0.12);
   }
 }

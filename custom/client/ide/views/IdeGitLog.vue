@@ -135,7 +135,7 @@ watch(() => ide.workspace, () => void load())
   white-space: nowrap;
 
   &.is-branch { background: rgba(76, 201, 240, 0.15); color: #4cc9f0; }
-  &.is-remote { background: rgba(152, 195, 121, 0.15); color: #98c379; }
+  &.is-remote { background: rgba(152, 195, 121, 0.15); color: var(--success-color, #18a058); }
   &.is-tag { background: rgba(240, 164, 76, 0.15); color: #f0a44c; }
 }
 

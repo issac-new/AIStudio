@@ -45,6 +45,6 @@ function isTrouble(reason: string): boolean {
   background: var(--hover-color, rgba(0, 0, 0, 0.05)); color: var(--text-color-3, #777);
 }
 .ide-mention-chip.is-trouble {
-  background: rgba(208, 48, 80, 0.08); color: #c0392b; border: 1px solid rgba(208, 48, 80, 0.25);
+  background: rgba(208, 48, 80, 0.08); color: var(--error-color, #d03050); border: 1px solid rgba(208, 48, 80, 0.25);
 }
 </style>

@@ -141,7 +141,7 @@ onMounted(load)
   &:hover:not(:disabled) { border-color: var(--accent-primary, #4cc9f0); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  &--danger { color: #e06c75; border-color: rgba(224, 108, 117, 0.5); &:hover:not(:disabled) { background: rgba(224, 108, 117, 0.12); } }
+  &--danger { color: var(--error-color, #d03050); border-color: rgba(224, 108, 117, 0.5); &:hover:not(:disabled) { background: rgba(224, 108, 117, 0.12); } }
 }
 
 .ide-storage__confirm {

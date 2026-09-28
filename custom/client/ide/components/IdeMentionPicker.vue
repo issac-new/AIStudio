@@ -92,22 +92,28 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
 <style scoped lang="scss">
 .ide-mention { margin: 4px 12px; font-size: 12px; position: relative; }
 .ide-mention__row { display: flex; gap: 6px; align-items: center; }
+.ide-mention__at:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
+.ide-mention__at:focus-visible { outline: 2px solid var(--primary-color, #18a058); outline-offset: 1px; }
 .ide-mention__at {
   border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
   width: 26px; height: 26px; cursor: pointer; font-weight: 600;
 }
+.ide-mention__input:focus { border-color: var(--primary-color, #18a058); outline: none; }
 .ide-mention__input {
-  flex: 1; border: 1px solid var(--border-color, #e0e0e0); border-radius: 5px; padding: 5px 10px;
+  flex: 1; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; padding: 4px 10px;
   background: var(--card-color, #fff); color: inherit;
 }
 .ide-mention__send {
-  border: none; background: var(--primary-color, #18a058); color: #fff; border-radius: 5px;
-  padding: 5px 14px; cursor: pointer;
+  border: none; background: var(--primary-color, #18a058); color: #fff; border-radius: 4px;
+  padding: 4px 14px; cursor: pointer;
 }
+.ide-mention__send:hover:not(:disabled) { filter: brightness(1.1); }
+.ide-mention__send:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.ide-mention__send:active:not(:disabled) { transform: scale(0.98); }
 .ide-mention__send:disabled { opacity: 0.45; cursor: default; }
 .ide-mention__chips { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0; }
 .ide-mention__chip {
-  background: var(--hover-color, rgba(0, 0, 0, 0.06)); border-radius: 10px; padding: 1px 8px;
+  background: var(--hover-color, rgba(0, 0, 0, 0.06)); border-radius: 10px; padding: 2px 8px;
   display: inline-flex; gap: 4px; align-items: center;
 }
 .ide-mention__x { border: none; background: transparent; cursor: pointer; color: var(--text-color-3, #999); font-size: 10px; }
@@ -117,19 +123,20 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
   border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); padding: 8px;
 }
 .ide-mention__src {
-  border: none; background: transparent; border-radius: 5px; cursor: pointer;
+  border: none; background: transparent; border-radius: 4px; cursor: pointer;
   padding: 4px 10px; margin-right: 2px; font-size: 12px;
 }
+.ide-mention__src:hover { background: var(--hover-color, rgba(0, 0, 0, 0.06)); }
 .ide-mention__src.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.08)); color: var(--primary-color, #18a058); }
 .ide-mention__src small { color: var(--text-color-3, #999); margin-left: 4px; }
 .ide-mention__form { display: flex; gap: 6px; margin-top: 8px; }
 .ide-mention__target {
-  flex: 1; border: 1px solid var(--border-color, #e0e0e0); border-radius: 5px; padding: 4px 8px;
+  flex: 1; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; padding: 4px 8px;
   background: var(--card-color, #fff); color: inherit;
 }
 .ide-mention__stage {
   border: 1px solid var(--primary-color, #18a058); background: transparent; color: var(--primary-color, #18a058);
-  border-radius: 5px; padding: 4px 10px; cursor: pointer;
+  border-radius: 4px; padding: 4px 10px; cursor: pointer;
 }
 .ide-mention__preview { color: var(--text-color-3, #999); font-size: 11px; margin-top: 2px; }
 </style>

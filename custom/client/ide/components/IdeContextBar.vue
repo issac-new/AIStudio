@@ -20,7 +20,7 @@ const segments = computed<Segment[]>(() => {
   const breakdown = computeBreakdown((chatStore.activeSession?.messages ?? []) as never, used)
   if (!breakdown || breakdown.total <= 0) return []
   const COLORS: Record<string, string> = {
-    system: '#e5c07b', user: '#61afef', assistant: '#98c379', tool: '#c678dd',
+    system: '#d97706', user: '#3b82f6', assistant: '#10b981', tool: '#8b5cf6',
   }
   const LABELS: Record<string, string> = {
     system: 'system/prompt', user: 'user', assistant: 'assistant/thinking', tool: 'tools',
@@ -86,7 +86,7 @@ const noTelemetry = computed(() => totalPct.value === 0)
 .ide-ctxbar__seg { height: 100%; }
 .ide-ctxbar__seg.is-total { background: var(--primary-color, #18a058); }
 .ide-ctxbar__pct { font-size: 11px; color: var(--text-color-3, #999); }
-.ide-ctxbar.is-warn .ide-ctxbar__pct { color: #b8860b; }
+.ide-ctxbar.is-warn .ide-ctxbar__pct { color: var(--warning-color, #d97706); }
 .ide-ctxbar.is-critical .ide-ctxbar__pct { color: #d03050; font-weight: 600; }
 .ide-ctxbar__legend {
   position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 50;

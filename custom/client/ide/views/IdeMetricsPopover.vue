@@ -41,10 +41,10 @@ const breakdown = computed(() =>
 )
 
 const SEGMENT_COLORS: Record<ContextSegment['key'], string> = {
-  user: '#61afef',
-  assistant: '#98c379',
-  tool: '#c678dd',
-  system: '#e5c07b',
+  user: 'var(--primary-color, #18a058)',
+  assistant: 'var(--success-color, #18a058)',
+  tool: 'var(--info-color, #8b5cf6)',
+  system: 'var(--warning-color, #d97706)',
 }
 
 // ── 成本估算（dsh-TUI 三原则：未收录不显示 / 缓存分价 / 价目随官方维护）──
@@ -338,7 +338,7 @@ watch(
   color: var(--text-muted, #9aa0aa);
 
   &[data-level='warn'] { color: #f0a44c; }
-  &[data-level='danger'] { color: #e06c75; }
+  &[data-level='danger'] { color: var(--error-color, #d03050); }
 }
 
 .ide-metrics-panel__cost {
@@ -366,7 +366,7 @@ watch(
   padding: 6px 8px;
   border-radius: 6px;
   background: rgba(224, 108, 117, 0.12);
-  color: #e06c75;
+  color: var(--error-color, #d03050);
 }
 
 .ide-metrics-panel__low-title { font-weight: 600; }
@@ -488,6 +488,6 @@ watch(
   &[data-level='1'] { background: rgba(152, 195, 121, 0.3); }
   &[data-level='2'] { background: rgba(152, 195, 121, 0.5); }
   &[data-level='3'] { background: rgba(152, 195, 121, 0.75); }
-  &[data-level='4'] { background: #98c379; }
+  &[data-level='4'] { background: var(--success-color, #18a058); }
 }
 </style>
