@@ -214,6 +214,26 @@ DOMAINS = [
      'cp-g5,cp-g6'),
 ]
 
+# ── 六域台账（真实产品功能产出，治理中心「六域体检」运行落账）──
+# 有台账：判定/证据取最新轮（真实流程中运行的检查器输出）；
+# 无台账：回落下方内置静态实测（2026-09-28 手工实测留档），并在表头声明来源。
+DOMAIN_LEDGER_FILE = (SIM.parent / 'ncwk-sim-mux/central/aipaydev/docs/governance/domain-audit.jsonl') if SIM.name == 'overlay' else (SIM / 'central/aipaydev/docs/governance/domain-audit.jsonl')
+DOMAIN_LEDGER_SOURCE = '内置实测（2026-09-28 手工命令留档）'
+try:
+    _led = [__import__('json').loads(l) for l in DOMAIN_LEDGER_FILE.read_text(encoding='utf-8').splitlines() if l.strip()]
+    _latest = {}
+    for _r in _led:
+        _latest.setdefault(_r['domain'], _r)  # 文件序=时间序，首见即最新
+    if _latest:
+        DOMAIN_LEDGER_SOURCE = f"治理中心六域体检台账（{DOMAIN_LEDGER_FILE}，{len({r['run'] for r in _led})} 轮 {len(_led)} 条）"
+        DOMAINS = [
+            (d[0], d[1], d[2], _latest.get(d[0], {}).get('verdict', d[3]),
+             '；'.join(_latest.get(d[0], {}).get('evidence', [])) or d[4], d[5], d[6])
+            for d in DOMAINS
+        ]
+except Exception:
+    pass
+
 # 关键卡点（人工在回路的实拍现场）：id 锚点供六域表跳转
 CHECKPOINTS = [
     ('cp-g1', 'G1 需求上锁', '验收标准可判定才许开工，锁后不许改', '人审 · BA/PM 四要素', 'ui-gov-doc', 'frozen:true @ 0217cf2'),
@@ -577,6 +597,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 
   <h2 class="section-hd">六域审计 · 每域一个交付问题（逐域实测）</h2>
   {domains_table()}
+  <p class="stat-note">数据来源：{DOMAIN_LEDGER_SOURCE} —— 治理中心（#/app/gov）「六域体检」可在真实流程中随时重跑并累积台账</p>
 
   <h2 class="section-hd">问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
