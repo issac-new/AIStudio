@@ -66,6 +66,13 @@ STEPS = [
     ('13', 'archgate G2·人工批准', '13-archgate-approve-clicked.png', '实操作',
          ' 人在 UI 点击 Approve：评审落裁决 + DECISION HISTORY 即时记账'
          ' 「wei · t_f52893c4 · Standard · Approve」——P1 完整人机闭环的实证画面。'),
+    ('13b', 'archgate·命令审批 live 闭环（修复后）', '12c-fleet-command-approval-pending.png', '实操作',
+         ' fleet 命令审批垂直修复实证①：unattended worker 撞 rm -rf /tmp/pay-live-demo →'
+         ' 审批请求经 studio-file 传输入队 → 收件箱 UI 实时可见（Approval inbox · 2 pending，'
+         ' agent 重试变体连排）——补丁 490 + 传输插件 + 收件箱文件源全链。'),
+    ('13c', 'archgate·命令审批 live 放行', '13b-fleet-command-approved.png', '实操作',
+         ' 实证②：人点「批准」→ 响应文件回写（request_id+digest 绑定）→ worker 放行 →'
+         ' rm 真实执行、目录删除、任务 done（t_26da796a ✓）——命令审批人机闭环完成。'),
     ('14', 'close 系分收官', '14-close-req-analysis.png', '实操作',
          ' bella-req-analysis 板（需求分析师板）：系分收官后的任务收口面。'),
     ('15', 'plan 排期', '15-plan-pm-board.png', '实操作',
@@ -97,10 +104,8 @@ STEPS = [
 ]
 
 GAPS = [
-    ('fleet 命令审批待审为空', 'gateway 对 sim profile 有「dispatcher stuck」告警（agent 未 spawn），'
-     'live 命令审批流待环境修复后演示；评审卡审批闭环（步骤 12/13）已实证。'),
-    ('RACI 字符串形渲染小疵', 'RFD 主卡的 raci.responsible 为字符串（非数组），简报 R 行按字符逐个展示'
-     '（fanfan → f, a, n…）——解析层（P2 utils 已容错）展示层待统一归一为数组。'),
+    ('（无）', '上一版缺口已全部闭口：fleet 命令审批 live 闭环见步骤 13b/13c；'
+     'raci 字符串形已归一修复（main b4d9e97f）。'),
 ]
 
 FIXES = [
