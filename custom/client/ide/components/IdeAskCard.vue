@@ -5,6 +5,7 @@
 // respondToClarifyFor（引擎真实应答通道）。兼容 display_metadata.ask 多步问卷
 // 解析路（结构化多步形态，作答 sendMessage 回流）。
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 interface AskStep {
@@ -17,6 +18,7 @@ interface AskQuestionnaire {
 }
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 const answers = ref<Record<number, number[]>>({})
 const submitted = ref(false)
 const freeText = ref('')
@@ -112,7 +114,7 @@ function submit(): void {
       v-model="freeText"
       class="ide-ask__free"
       data-testid="ide-ask-free"
-      placeholder="输入你的回答…"
+      :placeholder="t('ide.ask.freePlaceholder', '输入你的回答…')"
       @keydown.enter.prevent="submit"
     />
     <button
@@ -121,7 +123,7 @@ function submit(): void {
       data-testid="ide-ask-submit"
       :disabled="!canSubmit"
       @click="submit"
-    >提交作答</button>
+    >{{ t('ide.ask.submit', '提交作答') }}</button>
   </section>
 </template>
 

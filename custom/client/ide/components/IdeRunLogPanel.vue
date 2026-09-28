@@ -3,11 +3,13 @@
 // 状态/时长/费用、活跃在上历史折叠；UI 复刻 R5）。数据=workspace_run_changes（run 级）
 // →run-log 行投影语义（结论三态/费用列）。
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { ideRunsApi, type RunChangesDigest } from '../api/runs'
 import { estimateCostUsd } from '../utils/modelPricing'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 const digests = ref<RunChangesDigest[]>([])
 const showHistory = ref(false)
 
@@ -48,7 +50,7 @@ function fmtCost(c: number | null): string {
 
 <template>
   <div v-if="digests.length" class="ide-runlog" data-testid="ide-runlog-panel">
-    <div class="ide-runlog__head">▤ 执行日志 <span class="ide-runlog__count">{{ digests.length }}</span></div>
+    <div class="ide-runlog__head">▤ {{ t('ide.runlog.title', '执行日志') }} <span class="ide-runlog__count">{{ digests.length }}</span></div>
     <div
       v-for="d in active"
       :key="d.runId"
@@ -57,7 +59,7 @@ function fmtCost(c: number | null): string {
     >
       <span class="ide-runlog__state">●</span>
       <span class="ide-runlog__id">{{ d.runId.slice(-8) }}</span>
-      <span class="ide-runlog__meta">{{ d.fileCount }} 文件 +{{ d.additions }} −{{ d.deletions }}</span>
+      <span class="ide-runlog__meta">{{ t('ide.runlog.filesMeta', { n: d.fileCount, adds: d.additions, dels: d.deletions }) }}</span>
       <span class="ide-runlog__meta">{{ fmtDur(d.durationMs) }}</span>
       <span class="ide-runlog__cost">{{ fmtCost(d.costUsd) }}</span>
     </div>
@@ -67,12 +69,12 @@ function fmtCost(c: number | null): string {
       class="ide-runlog__toggle"
       data-testid="ide-runlog-toggle"
       @click="showHistory = !showHistory"
-    >{{ showHistory ? '▾' : '▸' }} 历史 {{ history.length }}</button>
+    >{{ showHistory ? '▾' : '▸' }} {{ t('ide.runlog.history', { n: history.length }) }}</button>
     <div v-if="showHistory">
       <div v-for="d in history" :key="d.runId" class="ide-runlog__row" :data-testid="`ide-runlog-${d.runId}`">
         <span class="ide-runlog__state is-done">○</span>
         <span class="ide-runlog__id">{{ d.runId.slice(-8) }}</span>
-        <span class="ide-runlog__meta">{{ d.fileCount }} 文件 +{{ d.additions }} −{{ d.deletions }}</span>
+        <span class="ide-runlog__meta">{{ t('ide.runlog.filesMeta', { n: d.fileCount, adds: d.additions, dels: d.deletions }) }}</span>
         <span class="ide-runlog__meta">{{ fmtDur(d.durationMs) }}</span>
         <span class="ide-runlog__cost">{{ fmtCost(d.costUsd) }}</span>
       </div>

@@ -4,9 +4,11 @@
 // content/状态）；专属语义：edit/write→diff 行着色、bash→命令+退出态、read→路径
 // 跳转、grep/search→命中摘要、glob→文件清单、web→URL、mcp→服务器.工具。
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 const chat = useChatStore()
+const { t } = useI18n()
 
 interface ToolRow {
   id: string
@@ -117,8 +119,8 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 
 <template>
   <div class="ide-tools" data-testid="ide-tools-pane">
-    <div class="ide-tools__head">⚙ 工具时间线 <span class="ide-tools__count">{{ rows.length }}</span></div>
-    <p v-if="!rows.length" class="ide-tools__empty">当前会话暂无工具调用</p>
+    <div class="ide-tools__head">⚙ {{ t('ide.tools.title', '工具时间线') }} <span class="ide-tools__count">{{ rows.length }}</span></div>
+    <p v-if="!rows.length" class="ide-tools__empty">{{ t('ide.tools.empty', '当前会话暂无工具调用') }}</p>
     <div
       v-for="row in rows"
       :key="row.id"

@@ -4,24 +4,26 @@
 // resolveMentions 解析）。形态：@ 弹出六源菜单→选源→目标输入→生成 @kind:target
 // chip 暂存→发送时拼入消息（与派单裸 @ 语法同源）。
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { resolveMentions, type MentionKind } from '../utils/mention-resolution'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 const open = ref(false)
 const kind = ref<MentionKind>('file')
 const target = ref('')
 const staged = ref<Array<{ raw: string; kind: MentionKind }>>([])
 const draft = ref('')
 
-const SOURCES: Array<{ kind: MentionKind; label: string; hint: string }> = [
-  { kind: 'file', label: '文件', hint: 'src/a.ts 或 src/a.ts:10-20 行区间' },
-  { kind: 'session', label: '会话', hint: '会话 id 引用' },
-  { kind: 'skill', label: '技能', hint: '技能名（skills=commands 合并口径）' },
-  { kind: 'plugin', label: '插件', hint: '插件名' },
-  { kind: 'subagent', label: '子代理', hint: '子代理 id' },
-  { kind: 'whiteboard', label: '画板', hint: '画板区域引用' },
-]
+const SOURCES = computed<Array<{ kind: MentionKind; label: string; hint: string }>>(() => [
+  { kind: 'file', label: t('ide.mention.src.file', '文件'), hint: t('ide.mention.hint.file', 'src/a.ts 或 src/a.ts:10-20 行区间') },
+  { kind: 'session', label: t('ide.mention.src.session', '会话'), hint: t('ide.mention.hint.session', '会话 id 引用') },
+  { kind: 'skill', label: t('ide.mention.src.skill', '技能'), hint: t('ide.mention.hint.skill', '技能名（skills=commands 合并口径）') },
+  { kind: 'plugin', label: t('ide.mention.src.plugin', '插件'), hint: t('ide.mention.hint.plugin', '插件名') },
+  { kind: 'subagent', label: t('ide.mention.src.subagent', '子代理'), hint: t('ide.mention.hint.subagent', '子代理 id') },
+  { kind: 'whiteboard', label: t('ide.mention.src.whiteboard', '画板'), hint: t('ide.mention.hint.whiteboard', '画板区域引用') },
+])
 
 function stage(): void {
   const raw = `@${kind.value}:${target.value.trim()}`
@@ -51,15 +53,15 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
 <template>
   <div class="ide-mention" data-testid="ide-mention-picker">
     <div class="ide-mention__row">
-      <button type="button" class="ide-mention__at" data-testid="ide-mention-open" :title="'@ 六源引用（file/session/skill/plugin/subagent/whiteboard）'" @click="open = !open">@</button>
+      <button type="button" class="ide-mention__at" data-testid="ide-mention-open" :title="t('ide.mention.atTitle', '@ 六源引用（file/session/skill/plugin/subagent/whiteboard）')" @click="open = !open">@</button>
       <input
         v-model="draft"
         class="ide-mention__input"
         data-testid="ide-mention-draft"
-        placeholder="消息正文（引用 chips 会随消息发出）"
+        :placeholder="t('ide.mention.draftPlaceholder', '消息正文（引用 chips 会随消息发出）')"
         @keydown.enter.prevent="send"
       />
-      <button type="button" class="ide-mention__send" data-testid="ide-mention-send" :disabled="!draft.trim() && !staged.length" @click="send">发送</button>
+      <button type="button" class="ide-mention__send" data-testid="ide-mention-send" :disabled="!draft.trim() && !staged.length" @click="send">{{ t('ide.mention.send', '发送') }}</button>
     </div>
     <div v-if="staged.length" class="ide-mention__chips" data-testid="ide-mention-chips">
       <span v-for="(s, i) in staged" :key="i" class="ide-mention__chip">
@@ -80,11 +82,11 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
       >{{ s.label }}<small>@{{ s.kind }}</small></button>
       <div class="ide-mention__form">
         <input v-model="target" class="ide-mention__target" :placeholder="SOURCES.find((x) => x.kind === kind)?.hint" :data-testid="'ide-mention-target'" @keydown.enter.prevent="stage" />
-        <button type="button" class="ide-mention__stage" data-testid="ide-mention-stage" @click="stage">加入引用</button>
+        <button type="button" class="ide-mention__stage" data-testid="ide-mention-stage" @click="stage">{{ t('ide.mention.stage', '加入引用') }}</button>
       </div>
     </div>
     <div v-if="preview.length" class="ide-mention__preview" data-testid="ide-mention-preview">
-      {{ preview.length }} 条引用 · 六源 {{ preview.filter((r) => r.resolved).length }} 可解析
+      {{ t('ide.mention.previewCount', { n: preview.length }) }} · {{ t('ide.mention.previewResolved', { n: preview.filter((r) => r.resolved).length }) }}
     </div>
   </div>
 </template>
