@@ -274,3 +274,8 @@
 #      卡深链 markdown（utils/group-body-links）+ @当前登录人入 mention 高亮词表。
 #      （P4 特性组件与测试早已在库，但从未接入群聊真实渲染面——"证据待补"根因。）
 493-client-groupchat-p4-wiring.patch
+
+# 496（V4.1 §七 抽检器 locale）：approvals 域补 choice.auto_pass/spotcheck_*（历史
+#      决策列显示）与 spotcheck.* 键族（收件箱「抽检·自动放行回看」区）。锚定 473
+#      注入后的 approvals 块（zh/en 同构，与 473 同例不动其余 9 语言）。
+496-client-locales-approvals-spotcheck.patch
