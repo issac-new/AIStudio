@@ -223,7 +223,7 @@ try:
     _led = [__import__('json').loads(l) for l in DOMAIN_LEDGER_FILE.read_text(encoding='utf-8').splitlines() if l.strip()]
     _latest = {}
     for _r in _led:
-        _latest.setdefault(_r['domain'], _r)  # 文件序=时间序，首见即最新
+        _latest[_r['domain']] = _r  # JSONL 追加序=时间序（新在后），末见即最新
     if _latest:
         DOMAIN_LEDGER_SOURCE = f"治理中心六域体检台账（{DOMAIN_LEDGER_FILE}，{len({r['run'] for r in _led})} 轮 {len(_led)} 条）"
         DOMAINS = [
