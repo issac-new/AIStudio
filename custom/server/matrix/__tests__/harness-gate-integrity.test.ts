@@ -199,7 +199,9 @@ describe('⑤ 门禁文本与派发契约回归绊线', () => {
   })
 
   it('G2/G5/UAT 门禁调用携带时窗参数', () => {
-    const scen = execFileSync('bash', ['-c', `grep -c 'room_has_from.*\\"\\$G[25]_TS\\"\\|room_has_from.*\\"\\$UAT_TS\\"' "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}" || true`], { encoding: 'utf8' })
+    // H8 后 G2/G5 走判词函数（*TS 仍作显式实参传入），UAT 走 room_has_from——
+    // 时窗参数在场是防"历史结论行秒过"的根保证，绊线盯 *_TS 实参出现次数。
+    const scen = execFileSync('bash', ['-c', `grep -cE '"\\$(G2_TS|G2_RETRY_TS|G5_TS|G5_RETRY_TS|UAT_TS)"' "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}" || true`], { encoding: 'utf8' })
     expect(Number(scen.trim())).toBeGreaterThanOrEqual(5)
   })
 
@@ -248,5 +250,114 @@ describe('⑥ 报告路由（H7：无 RUN_ID 落全局目录出旧轮假报告�
   it('无 RUN_ID 缺省回落 SIM 全局（V3 兼容）但可被 --run 纠正', () => {
     const out = printPaths('')
     expect(out).toContain('OUT=/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/simulation-report.html')
+  })
+})
+
+describe('⑦ 闸门判词语义（H8/R-A2：转述 stub 不得当结论行）', () => {
+  it('引用讨论（判词成对出现）取末判词 FAIL——绝不假过', () => {
+    const root = sandbox()
+    const out = sh(`mx_text_gate_verdict READY-GATE 'False alarm — the stub itself says "结论行 READY-GATE-PASS 或 READY-GATE-FAIL", tripping my check.'`, root)
+    expect(out.trim()).toBe('FAIL')
+  })
+
+  it('真实结论行（判词居中/居末）正确取判词', () => {
+    const root = sandbox()
+    const out = sh(`
+echo "$(mx_text_gate_verdict ARCH-GATE '技能已修补。评审卡 t_11e182b3 落卡复核通过，结论 **ARCH-GATE-PASS**，缺项清单已指名到人。')"
+echo "$(mx_text_gate_verdict READY-GATE 'conclusion: READY-GATE-FAIL')"
+echo "[$(mx_text_gate_verdict READY-GATE '无判词消息')]"`, root)
+    const lines = out.trim().split('\n')
+    expect(lines[0]).toBe('PASS')
+    expect(lines[1]).toBe('FAIL')
+    expect(lines[2]).toBe('[]')
+  })
+
+  it('房间判词取时间最新一条（打回后复审 PASS 盖过前次 FAIL）', () => {
+    const root = sandbox()
+    const out = sh(`
+mx_messages() {
+  cat <<'JSON'
+[
+ {"sender":"@a:matrix.test","origin_server_ts":100,"content":{"body":"结论 READY-GATE-FAIL（缺项）"}},
+ {"sender":"@a:matrix.test","origin_server_ts":200,"content":{"body":"复审完成，结论 READY-GATE-PASS"}}
+]
+JSON
+}
+load_token() { echo tok; }
+mx_room_gate_verdict room "@a:matrix.test" READY-GATE 0`, root)
+    expect(out.trim()).toBe('PASS')
+  })
+
+  it('卡面 FAIL 优先于房间 PASS（双源合并保守不放行）', () => {
+    const root = sandbox()
+    const out = sh(`
+mx_messages() {
+  cat <<'JSON'
+[{"sender":"@a:matrix.test","origin_server_ts":100,"content":{"body":"结论 READY-GATE-PASS"}}]
+JSON
+}
+load_token() { echo tok; }
+kanban_list() { echo '{"tasks":[{"title":"RFD-001 发布准出评审（G5）","body":"七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL。\\n\\nconclusion: READY-GATE-FAIL"}]}'; }
+mx_gate_verdict_combined room "@a:matrix.test" READY-GATE 0 fanfan "发布准出评审"`, root)
+    expect(out.trim()).toBe('FAIL')
+  })
+
+  it('run2 实锤消息原文不构成 PASS 结论', () => {
+    const root = sandbox()
+    const out = sh(`
+mx_messages() {
+  cat <<'JSON'
+[{"sender":"@fanfan-agent:matrix.test","origin_server_ts":100,"content":{"body":"False alarm — the stub itself says \\"结论行 READY-GATE-PASS 或 READY-GATE-FAIL\\", tripping my check. Refining the collision test."}}]
+JSON
+}
+load_token() { echo tok; }
+_v=$(mx_room_gate_verdict room "@fanfan-agent:matrix.test" READY-GATE 0)
+echo "verdict=$_v"
+_mx=0; mx_gate_verdict_pass room "@fanfan-agent:matrix.test" READY-GATE 0 || _mx=$?
+echo "pass_rc=$_mx"`, root)
+    expect(out).toContain('verdict=FAIL')
+    expect(out).toContain('pass_rc=1')
+  })
+})
+
+describe('⑧ UAT 逐条判词（H9：有条件通过不得写成全部通过）', () => {
+  it('判词按证据行取：通过/有条件通过/不通过/未见', () => {
+    const root = sandbox()
+    const out = sh(`
+BODY='逐条证据已按冻结清单核出。结论先行：**AC-1/AC-2/AC-3/AC-5/AC-6 通过；AC-4、AC-7 有条件通过**（历史缺陷修复未合入 integration 基线，放行权归 bella）。'
+for ac in AC-1 AC-4 AC-7 AC-9; do echo "$ac=$(uat_ac_verdict "$BODY" "$ac")"; done
+echo "AC-2x=$(uat_ac_verdict 'AC-2 未通过：断言不成立' AC-2)"`, root)
+    const lines = out.trim().split('\n')
+    expect(lines[0]).toBe('AC-1=通过')
+    expect(lines[1]).toBe('AC-4=有条件通过')
+    expect(lines[2]).toBe('AC-7=有条件通过')
+    expect(lines[3]).toBe('AC-9=未见')
+    expect(lines[4]).toBe('AC-2x=不通过')
+  })
+})
+
+describe('⑨ 基线变更受控绊线（H10/H11/R-A3）', () => {
+  it('integration 推送禁强推（--force-with-lease 不得回归）', () => {
+    const scen = execFileSync('bash', ['-c', `grep -c 'force-with-lease' "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}" || true`], { encoding: 'utf8' })
+    expect(scen.trim()).toBe('0')
+  })
+
+  it('集成块带丢线守卫（旧基线头必须为 HEAD 祖先）', () => {
+    const scen = execFileSync('bash', ['-c', `grep -c 'merge-base --is-ancestor' "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}" || true`], { encoding: 'utf8' })
+    expect(Number(scen.trim())).toBeGreaterThanOrEqual(1)
+  })
+
+  it('G3 硬闸落键 g3_code_pass 在场', () => {
+    const scen = execFileSync('bash', ['-c', `grep -c 'g3_code_pass' "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}" "${join(REPO, 'scripts', 'aipay', 'mux', 'mx-scenario-lib.sh')}" | awk -F: '{s+=\$2} END {print s}'`], { encoding: 'utf8' })
+    expect(Number(scen.trim())).toBeGreaterThanOrEqual(2)
+  })
+
+  it('G2/G5 走判词合并、UAT 走逐条判词', () => {
+    const scen = execFileSync('bash', ['-c', `cat "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}"`], { encoding: 'utf8' })
+    expect(scen).toContain('mx_gate_verdict_combined')
+    expect(scen).toContain('mx_gate_combined_pass')
+    expect(scen).toContain('uat_ac_verdict')
+    expect(scen).toContain('uat-conditional')
+    expect(scen).toContain('G5-HUMANGATE-APPROVED')
   })
 })
