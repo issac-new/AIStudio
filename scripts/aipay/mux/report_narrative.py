@@ -264,3 +264,124 @@ if __name__ == '__main__':
     html = render_narrative(st, sim / 'evidence')
     sys.stdout.write(html)
     print(f'\n<!-- narrative bytes={len(html)} -->', file=sys.stderr)
+
+
+# ── 意图链路可视化（V4.1 §三 需求保真域缺口闭合：报告侧连线）──
+# 从中央仓真实工件解析：G1 冻结 AC → 系分稿（AN-*）→ 开发分支测试日志（G3）→
+# 独立测试报告（G4）→ UAT 逐条对账（acceptance）。取不到的环节显式 ⬜，不虚构。
+def render_intent_chain(sim) -> str:
+    import re as _re
+    from pathlib import Path as _Path
+    central = _Path(sim) / 'central' / 'aipaydev'
+    ESC_ = ESC
+
+    # 应用映射（冻结条款关键词 → AN/DEV 工件后缀与应用目录）
+    APP_KEYS = [
+        ('PAYCORE', 'csw-pay-core', ('csw-pay-core', '幂等', '状态机', '金额', '回调幂等', '超时关单')),
+        ('MP', 'csw-cashier-mp', ('收银台三态', '前端', '小程序', 'csw-cashier-mp')),
+        ('CHWX', 'csw-channel-wechat', ('微信', 'csw-channel-wechat', '双渠道')),
+        ('CHALI', 'csw-channel-alipay', ('支付宝', 'csw-channel-alipay', '双渠道')),
+    ]
+
+    def _read(path):
+        try:
+            return path.read_text(encoding='utf-8')
+        except Exception:
+            return ''
+
+    # 1) G1 冻结 AC 清单
+    acs = []
+    for fz in sorted(central.glob('docs/requirements/*.freeze.md')):
+        for ln in _read(fz).splitlines():
+            m = _re.match(r'^- \*\*(AC-\d+)\s*([^*]+)\*\*[：:](.+)$', ln.strip())
+            if m:
+                acs.append({'id': m.group(1), 'title': m.group(2).strip(), 'text': m.group(3).strip()})
+    # 2) UAT 逐条判定（acceptance 报告）
+    verdicts = {}
+    for ac in sorted(central.glob('docs/acceptance/*-acceptance.md')):
+        for ln in _read(ac).splitlines():
+            m = _re.match(r'^- \*\*(AC-\d+)[^*]+\*\*[：:].*?→\s*(通过|不通过|部分通过|待验收)', ln.strip())
+            if m:
+                verdicts[m.group(1)] = m.group(2)
+    # 3) 链上工件（存在性 + 摘要）
+    def artifact(suffix_dir, pattern, summarizer=None):
+        hits = sorted(central.glob(pattern))
+        if not hits:
+            return None
+        note = summarizer(hits[0]) if summarizer else ''
+        return (hits[0].name, note)
+
+    def testlog_summary(path):
+        txt = _read(path)
+        m = _re.search(r'Tests\s+(\d+) passed', txt)
+        return f'{m.group(1)} 用例全绿' if m else '已落档'
+
+    rows = []
+    for ac in acs:
+        apps = [sfx for sfx, _d, keys in APP_KEYS if any(k in ac['text'] or k in ac['title'] for k in keys)]
+        if not apps:
+            apps = ['PAYCORE', 'MP', 'CHWX', 'CHALI']  # 条款未点名应用=全链涉及（如实标注全量）
+        chips = []
+        # 系分
+        an_ok = [a for a in apps if (central / f'docs/analysis/AN-{a}-analysis.md').exists()]
+        chips.append(('系分', f"AN-{'/'.join(an_ok) if an_ok else ''}" if an_ok else None,
+                      f"docs/analysis/AN-{'、'.join(an_ok)}" if an_ok else ''))
+        # 开发测试日志（G3）
+        dev_ok, dev_note = [], ''
+        for a in apps:
+            hit = artifact(None, f'docs/evidence/DEV-{a}-testlog.txt', testlog_summary)
+            if hit:
+                dev_ok.append(a)
+                dev_note = hit[1]
+        chips.append(('编码门禁', '/'.join(dev_ok) if dev_ok else None, dev_note))
+        # 独立测试报告（G4）
+        tr = artifact(None, 'docs/test/*test-report*.md')
+        chips.append(('独立测试', tr[0] if tr else None, ''))
+        # UAT
+        v = verdicts.get(ac['id'])
+        chips.append(('UAT 对账', v if v else None, ''))
+        rows.append((ac, chips))
+
+    if not rows:
+        return ''
+
+    def chip(label, value, note):
+        if value:
+            n = f'<span class="nv-ic-note">{ESC_(note)}</span>' if note else ''
+            return (f'<div class="nv-ic-chip nv-ic-chip--ok"><b>{ESC_(label)}</b>'
+                    f'<span>{ESC_(str(value))}</span>{n}</div>')
+        return f'<div class="nv-ic-chip nv-ic-chip--miss"><b>{ESC_(label)}</b><span>⬜</span></div>'
+
+    rows_html = ''
+    for ac, chips in rows:
+        chain = '<span class="nv-ic-arrow">→</span>'.join(chip(*c) for c in chips)
+        rows_html += (
+            f'<div class="nv-ic-row"><div class="nv-ic-ac"><b>{ESC_(ac["id"])}</b>'
+            f'<span class="nv-ic-title">{ESC_(ac["title"])}</span>'
+            f'<div class="nv-ic-text">{ESC_(ac["text"][:120])}{"…" if len(ac["text"]) > 120 else ""}</div></div>'
+            f'<div class="nv-ic-chain">{chain}</div></div>'
+        )
+
+    return """
+<section class="nv-sec" id="nv-intent-chain">
+  <h2>意图链路：一条验收标准从冻结到对账的全程连线</h2>
+  <p class="nv-lead">需求保真的证据不在"某人说过"，而在链上每个环节都留下可反查的工件。下图逐条连线 G1 冻结的验收标准（AC）→ 系分稿 → 编码门禁测试日志 → 独立测试报告 → UAT 对账判定；全部取自中央仓真实文件，缺失环节如实标 ⬜。</p>
+  <div class="nv-ic-rows">""" + rows_html + """</div>
+  <p class="nv-note">数据源：docs/requirements/*.freeze.md（G1 冻结）、docs/analysis/AN-*-analysis.md（系分）、docs/evidence/DEV-*-testlog.txt（G3 分支测试日志）、docs/test/*test-report*.md（G4 独立测试）、docs/acceptance/*-acceptance.md（UAT 逐条判定）——生成时程序化解析，非人工誊写。</p>
+</section>
+<style>
+.nv-ic-rows{display:flex;flex-direction:column;gap:10px}
+.nv-ic-row{display:grid;grid-template-columns:300px 1fr;gap:14px;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#fff;align-items:center}
+.nv-ic-ac b{color:#1e40af;font-size:13px;margin-right:8px}
+.nv-ic-title{font-weight:600;font-size:13px}
+.nv-ic-text{font-size:11.5px;color:#64748b;margin-top:4px;line-height:1.6}
+.nv-ic-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nv-ic-chip{display:flex;flex-direction:column;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:5px 10px;min-width:86px}
+.nv-ic-chip b{font-size:10.5px;color:#166534;text-transform:uppercase;letter-spacing:.03em}
+.nv-ic-chip span{font-size:12px;color:#0f172a;font-weight:600}
+.nv-ic-chip--miss{border-color:#e2e8f0;background:#f8fafc}
+.nv-ic-chip--miss b,.nv-ic-chip--miss span{color:#94a3b8}
+.nv-ic-note{font-size:10.5px;color:#64748b;font-weight:400}
+.nv-ic-arrow{color:#94a3b8;font-size:14px}
+</style>
+"""
