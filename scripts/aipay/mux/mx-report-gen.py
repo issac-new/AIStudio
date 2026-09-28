@@ -100,7 +100,7 @@ STEPS_META = {
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
             narrative='用户打开 Swarm Studio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；登录后只见本账号档案与看板（ACL 隔离抽查通过）。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
             imgs=[
-                  ('ui-03-cockpit', '驾驶舱全景：顶栏任务 36·需关注 6 / 左房间 / 右「任务·决策」三节+动态 feed', 'ui'),]),
+                  ('ui-03-cockpit', '驾驶舱全景：顶栏任务计数/注意力条实时聚合 + 左房间列表 + 右「任务·决策」三节+动态 feed', 'ui'),]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
             narrative='冒烟清单真值核验：24 账号 token 有效、单 gateway+单 studio 就绪、双登录模式通、看板围栏与记忆库在位。bella matrix-login 一次回落如实记问题单（当日已修复复测通过）。环境就绪后，驾驶舱「概览」页（#/app/dash）即全员工作总览入口。',
             imgs=[
@@ -118,35 +118,32 @@ STEPS_META = {
             imgs=[
                   ('ui-gov-doc', '治理中心·六闸工件：G1 需求冻结件——AC-1~7 全文 + frozen:true + commit 锚点', 'ui'),]),
     8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
-            narrative='产品经理 fanfan 创建"支付收银台需求分析讨论群"，邀请本机 Orchestrator agent 后，自动邀请全部关联人进群——实查 22 名成员（含各角色人类账号与 AI 助理）。',
+            narrative='产品经理 fanfan 创建"支付收银台需求分析讨论群"（本轮房间 !FurImZOaeHVyUqaRQR），先邀 fanfan-agent；系统分析步自动补邀 chen/hu/lin/xiao/mei/qi/fei 关联人（agent 自动邀请面不足记问题单、导演兜底——如实呈现）。',
             imgs=[
-                  ('ui-09-room', '协作沟通界面：需求分析讨论群真实消息流 + 右侧任务面板（22 人在群）', 'ui'),]),
+                  ('ui-08-groupchat', '协作沟通界面（#/app/s/room）：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4）', 'ui'),]),
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · fanfan 派发',
-            narrative='fanfan 在群内 @Orchestrator agent 发出派发指令：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）。指令原文按 event_id 锚定直取。',
+            narrative='fanfan 在群内 @fanfan-agent 发出派发指令（event $wH4lFXYehQsJkZibp7cuFNf1yJON4Pl1xlkTMkjacwU）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）。',
             imgs=[
-                  ('ui-09-room', '协作沟通界面：群内 @派发现场——指令要求证据（提交号+卡号），右侧跟踪卡挂接', 'ui'),]),
+                  ('ui-08b-msgcard', '协作沟通界面：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②），右栏任务时间线（P4③）', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
-            narrative='Orchestrator agent 经 matrix channel 接收指令，登记主任务卡到 fanfan-pm-plan 看板：真实卡 ID t_9e5c6c18（建卡工具返回，非需求编号冒充），带 RACI 结构化字段与子卡链。',
+            narrative='Orchestrator agent 经 matrix channel 接收指令。本轮首验 900s 窗未见新卡——agent 依据家族记忆把本轮判定为"重复派单+基线漂移"（V3 已完整执行过 RFD-001），两轮拒收回灌后以 r5 增量刷新主卡 t_447bd817 落板重报，凭证反向核验通过（commit 真在 origin、卡真在账号板）——打回环真实发生，非橡皮图章。',
             imgs=[
-                  ('ui-10-carddrawer', '产品看板卡详情抽屉：RFD-001 主卡 t_9e5c6c18——done 终态/指派/完成回执评论', 'ui'),
-                  ('ui-10-kanban', '产品看板：fanfan-pm-plan 板 T-101~T-108 跟踪卡 + 编排面板', 'ui'),]),
+                  ('ui-10-kanban', '产品看板：fanfan-pm-plan 板 RACI 徽章卡（R/A/C/I+我的角色描边）+「等您操作」过滤入口', 'ui'),
+                  ('ui-10b-kanban-mine', '产品看板：「等您操作」过滤器一键筛出当前登录人相关卡（P2）', 'ui'),]),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 系统分析智能体',
-            narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），产出 SMART 任务清单入仓（9035c1b），ANALYSIS-DONE 结论行经反向核验（提交真在仓库且含分析稿、卡真在账号板）。',
+            narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），tasklist v5 增量刷新入仓（1c362f5，基线漂移 24 提交的增量对账），ANALYSIS-DONE 结论行经反向核验（提交真在 origin 且含分析稿、卡真在账号板）。本轮凭证核验经历 600s 超时+拒收回灌+重报通过三段——验收驱动闭环实录。',
             imgs=[
-                  ('ui-gov-tasklist', '治理中心·分析档案：SMART 任务清单——T-101~T-108 具体到人（RACI）', 'ui'),]),
+                  ('ui-gov-tasklist', '治理中心·分析档案：SMART 任务清单 v5——T-101~T-108 具体到人（RACI）+24 人日合计', 'ui'),]),
     12: dict(keys=['triage_done'], actor='both', actorText='人确认 · AI 执行',
-            narrative='四条 RACI 派发直达四主责（chen/hu/lin/xiao），各 agent 建卡回执；xiao 的建卡查重命令被审批门拦截、5 分钟无人应答即停手不越权——人工始终在回路的真实实证。团队负责人分诊确认后推进。',
+            narrative='四条 RACI 派发直达四主责（chen/hu/lin/xiao），分诊台逐账号板登记核验 ✓。本轮 orchestrator 依家族记忆判"重复派单"未自动群发——fanfan（PM 人职责）补发四条 RACI 派发消息、导演补邀 7 名关联人，均如实记问题单：人始终在回路的兜底实录。',
             imgs=[
-                  ('ui-09-room', '协作沟通界面：RACI 派发现场（群内逐条 @主责 agent，右侧跟踪卡同步挂接）', 'ui'),]),
+                  ('ui-08b-msgcard', '协作沟通界面：RACI 派发现场（群内逐条 @主责 agent + @我高亮），右栏任务时间线同步挂接', 'ui'),]),
     13: dict(keys=['anexec_done'], actor='ai', actorText='AI×4 · 四路系分并行',
-            narrative='四路专职研发 agent 并行系统分析：接口签名、数据模型、错误码、幂等键、工作量人日评估，四份系分稿各自入仓；跨模块契约对齐（snake_case、金额分 int64）。',
+            narrative='四路系分产物（AN-PAYCORE/CHWX/CHALI/MP：接口签名/数据模型/错误码/幂等键/工作量人日）已在仓（前轮执行、本轮复跑复用），本轮核验四主责账号板 RFD-001 卡与系分工件在位后过闸——复跑轮语义如实呈现，不重复消耗 LLM 回合。',
             imgs=[
-                  ('ui-gov-anpaycore', '治理中心·分析档案：AN-PAYCORE 系分全文（接口签名/工作量/六要素）', 'ui'),
-                  ('ui-gov-anchwx', '治理中心·分析档案：AN-CHWX 财付通渠道系分', 'ui'),
-                  ('ui-gov-anchali', '治理中心·分析档案：AN-CHALI 支付宝渠道系分', 'ui'),
-                  ('ui-gov-anmp', '治理中心·分析档案：AN-MP 收银台前端系分', 'ui'),]),
+                  ('ui-gov-tasklist', '治理中心·分析档案：任务清单 T-101~T-108 RACI + 24 人日（系分产物锚点）', 'ui'),]),
     14: dict(keys=['review_done'], actor='both', actorText='AI 汇总 · 人复核',
-            narrative='fanfan 汇总四路系分成总稿，调用全局需求分析与架构设计技能复核：消除歧义、统一口径（金额分 int64、字段 snake_case），形成概要设计五要素（背景/方案/接口/数据/风险）+ 备选方案取舍 + 爆炸半径 + 验证计划前移。',
+            narrative='概要设计五要素（背景/方案/接口/数据/风险）+ 备选方案取舍 + 爆炸半径 + 验证计划前移已在仓（3ddf3a9）；本轮汇总评审卡由导演登记置 done（agent 汇总回合缺席记观察）——工件真伪由 G2 评审独立核验兜底。',
             imgs=[
                   ('ui-gov-design', '治理中心·六闸工件：概要设计（G2 评审对象）——五要素/备选/爆炸半径/验证前移', 'ui'),]),
     15: dict(keys=['g2_arch_pass'], actor='gate', actorText='硬闸 G2 · 架构评审',
@@ -355,6 +352,16 @@ def main_head():
 
 stat, stat_note, itable, n_closed = issues_stats()
 main_sha = main_head()
+
+# 叙事层（V4 §四：终版报告=叙事层+旅程层单文件；失败显式降级不阻断）
+try:
+    import html as _H
+    from report_narrative import render_narrative
+    _narrative_html = render_narrative(state, EVID)
+except Exception as _e:
+    import html as _H
+    _narrative_html = (f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;'
+                       f'color:#92400e">叙事层生成失败（如实标注）：{_H.escape(str(_e))}</div>')
 total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
 ui_imgs = sum(1 for _, _, _, m in STEPS for pre, _, kind in m['imgs'] if kind == 'ui' and (STEPS_DIR / f'{pre}.png').exists())
 
@@ -593,7 +600,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
   <header class="hero">
     <h1>Swarm Studio 全流程推演报告</h1>
     <div class="sub">RFD-001 收单商户多端小程序支付收银台 · 15 人 × AI 分布式集群协作 · 四类 AI 员工（需求设计/应用研发/质量测试/研发治理）<br>
-    锚定 09-25 14:00 — 09-26 08:27 完整推演周期 · 标题与把关逐字引用方案原文 · 每步标注人/AI 角色与结果锚点</div>
+    推演轮次 {RUN_ID or 'V3 基线轮'} · 锚定本轮 state 落键时间窗 · 标题与把关逐字引用方案原文 · 每步标注人/AI 角色与结果锚点</div>
     <div class="hero-stats">
       <div class="hstat"><b>26</b><span>步骤</span></div>
       <div class="hstat"><b>{total_imgs}</b><span>证据图 · 全部界面实拍</span></div>
@@ -604,6 +611,8 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
     <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">{''.join(f'<span class="pb-label">{p[2]}</span>' for p in PHASES)}</div>
   </header>
+
+  {_narrative_html}
 
   <div class="gates">{gate_cards()}</div>
 
