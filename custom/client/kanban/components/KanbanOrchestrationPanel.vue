@@ -290,7 +290,7 @@ watch(() => store.selectedBoard, () => {
 
 .orchestration-msg {
   padding: 6px 10px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   font-size: 12px;
   margin-bottom: 12px;
 }
@@ -387,7 +387,7 @@ watch(() => store.selectedBoard, () => {
 .profile-tag {
   font-size: 10px;
   padding: 1px 6px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: var(--n-tag-color);
   color: var(--n-text-color-2);
 }

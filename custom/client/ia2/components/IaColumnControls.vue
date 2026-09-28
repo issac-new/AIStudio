@@ -54,7 +54,7 @@ const { t } = useI18n()
 .colctl { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .colctl__btn {
   width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;
-  border: none; border-radius: var(--radius-standard, 6px); background: transparent;
+  border: none; border-radius: 5px; background: transparent;
   color: var(--text-muted, #9aa0aa); cursor: pointer; font-size: 11px; line-height: 1;
   &:hover { background: var(--bg-secondary, rgba(128,128,128,0.12)); color: var(--text-primary, #e6e6e6); }
 }

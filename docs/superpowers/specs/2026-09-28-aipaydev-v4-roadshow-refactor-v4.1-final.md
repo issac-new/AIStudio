@@ -83,3 +83,11 @@
 ## 八、运行手册指针
 
 环境：`scripts/aipay/mux/mx-up.sh`｜场景：`scripts/aipay/aipay-scenario.sh`（26 步+把关断言，UNTIL_STEP 区间执行）｜截图：`mux/capture-ui.mjs`｜报告：`mux/demo-report-gen.py`（evidence/20260928-product-demo/ 就地生成）｜治理工件：`#/app/gov`（GOVERNANCE_REPO 可配仓根）。
+
+## 九、两线合并记档（2026-09-28 20:30 · 用户指令）
+
+报告双线（旅程线 mx-report-gen：26 步方案原文对齐+闸门仪表盘+步骤真证据；实操线 demo-report-gen：叙事层+UI 实拍+六域审计）与方案双线（V3 操作源+V4/V4.1 重构层）按"合一收敛"合并：
+
+- **统一报告** `evidence/unified-roadshow-report.html`（9.5MB，unified-report-gen.py 生成）：实操线为基底（叙事层+29 步 27 图自包含实拍+缺口台账+验证链），并入旅程线三资产——①每步"方案把关（原文）"行（26 条，V3 文档生成时逐字解析，PLAN_MAP 两线步骤语义对齐）②六道闸仪表盘与治理度量（首过率 2/4 真实打回环/问题单 22 键处置/测试 51+131/发布基线，从 simulation-report.html 实抽）③步骤真证据索引 77 张（matrix event_id/git 可反查，相对路径引用）。
+- **共享数据模块** demo_steps_data.py：STEPS/GAPS/FIXES 单一事实源，demo/unified 双生成器共用。
+- 本节即方案层合并终态：V4.1 之上不再有平行方案分支，变更走本文件增量补遗。

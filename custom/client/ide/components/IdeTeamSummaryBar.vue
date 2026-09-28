@@ -54,7 +54,7 @@ const summary = computed(() => {
 .ide-team-bar {
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   border: 1px solid transparent;
 }
 

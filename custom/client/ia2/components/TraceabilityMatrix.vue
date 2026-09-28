@@ -279,7 +279,7 @@ function fmtTime(v: string | null): string {
 .ia-trace__retry {
   border: 1px solid var(--border-color, #e5e7eb);
   background: transparent;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   padding: 3px 12px;
   cursor: pointer;
   font-family: inherit;

@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, second?: string | Record<string, unknown>) => (typeof second === 'string' && second ? second : k) }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 const chatState: Record<string, unknown> = {
   activeSessionId: 's1', activeSession: null, sendMessage: vi.fn(), isLoading: false,
 }

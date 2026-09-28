@@ -51,7 +51,7 @@ function segments(): Seg[] {
 .sf { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sf__node {
   display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px;
-  border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px);
+  border: 1px solid var(--border-color); border-radius: 13px;
   background: transparent; color: var(--text-secondary); font-size: 11px;
   font-family: inherit; cursor: default; white-space: nowrap;
 }

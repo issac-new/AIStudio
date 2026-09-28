@@ -203,7 +203,7 @@ function openManage(): void {
 .ide-mcp__tab {
   border: 1px solid var(--border-color, #ddd);
   background: transparent;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   padding: 1px 8px;
   font-size: 11px;
   cursor: pointer;
@@ -315,7 +315,7 @@ function openManage(): void {
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);
   font-size: 12px;

@@ -5,9 +5,6 @@
 // accept/reject 为本地 resolved 态标记 + emit 上抛（挂载处未接引擎写通道，run-undo
 // 反向撤销在 ideRunsApi.undo，由调用方按需接线），双击改行仅改本地展示文本。
 import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
 
 interface DiffLine { kind: 'add' | 'del' | 'ctx'; text: string }
 interface Hunk { id: number; lines: DiffLine[]; decision: 'pending' | 'accepted' | 'rejected' }
@@ -56,7 +53,7 @@ function editLine(hunkId: number, lineIndex: number): void {
   if (!hunk) return
   const line = hunk.lines[lineIndex]
   if (!line) return
-  const next = window.prompt(t('ide.inlineDiff.editPrompt', '修改该行：'), line.text)
+  const next = window.prompt('修改该行：', line.text)
   if (next !== null) {
     line.text = next
   }
@@ -74,10 +71,10 @@ function editLine(hunkId: number, lineIndex: number): void {
       :data-testid="`ide-idiff-hunk-${h.id}`"
     >
       <div v-if="h.decision === 'pending'" class="ide-idiff__actions">
-        <button type="button" class="ide-idiff__btn is-accept" :data-testid="`ide-idiff-accept-${h.id}`" @click="decide(h.id, 'accepted')">✓ {{ t('ide.inlineDiff.accept', '接受') }}</button>
-        <button type="button" class="ide-idiff__btn is-reject" :data-testid="`ide-idiff-reject-${h.id}`" @click="decide(h.id, 'rejected')">✕ {{ t('ide.inlineDiff.reject', '拒绝') }}</button>
+        <button type="button" class="ide-idiff__btn is-accept" :data-testid="`ide-idiff-accept-${h.id}`" @click="decide(h.id, 'accepted')">✓ 接受</button>
+        <button type="button" class="ide-idiff__btn is-reject" :data-testid="`ide-idiff-reject-${h.id}`" @click="decide(h.id, 'rejected')">✕ 拒绝</button>
       </div>
-      <div class="ide-idiff__verdict" v-else>{{ h.decision === 'accepted' ? `✓ ${t('ide.inlineDiff.accepted', '已接受')}` : `✕ ${t('ide.inlineDiff.rejected', '已拒绝')}` }}</div>
+      <div class="ide-idiff__verdict" v-else>{{ h.decision === 'accepted' ? '✓ 已接受' : '✕ 已拒绝' }}</div>
       <div
         v-for="(line, li) in h.lines"
         :key="li"
@@ -92,13 +89,13 @@ function editLine(hunkId: number, lineIndex: number): void {
 <style scoped lang="scss">
 .ide-idiff { font-family: ui-monospace, monospace; font-size: 11px; margin: 4px 12px; }
 .ide-idiff__stats { color: var(--text-color-3, #999); padding: 2px 0; }
-.ide-idiff__hunk { border: 1px solid var(--border-color, #e8e8e8); border-radius: var(--radius-standard, 6px); margin: 6px 0; overflow: hidden; }
+.ide-idiff__hunk { border: 1px solid var(--border-color, #e8e8e8); border-radius: 5px; margin: 6px 0; overflow: hidden; }
 .ide-idiff__hunk.is-accepted { border-color: var(--primary-color, #18a058); opacity: 0.75; }
 .ide-idiff__hunk.is-rejected { opacity: 0.45; }
 .ide-idiff__actions { display: flex; gap: 6px; padding: 4px 8px; background: var(--hover-color, rgba(0, 0, 0, 0.03)); }
 .ide-idiff__verdict { padding: 3px 8px; color: var(--text-color-3, #999); }
 .ide-idiff__btn {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: var(--radius-micro, 3px);
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
   font-size: 11px; padding: 1px 8px; cursor: pointer;
 }
 .ide-idiff__btn.is-accept:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }

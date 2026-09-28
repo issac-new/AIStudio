@@ -116,7 +116,7 @@ const firstTask = () => props.linkedTasks[0]
   font-weight: 600; white-space: nowrap; max-width: 220px; overflow: hidden;
 }
 .swp__duty {
-  flex-shrink: 0; height: 20px; padding: 0 8px; border-radius: var(--radius-panel, 8px);
+  flex-shrink: 0; height: 20px; padding: 0 8px; border-radius: 10px;
   border: 1px solid var(--border-color); color: var(--text-secondary);
   display: inline-flex; align-items: center; white-space: nowrap;
 }
@@ -140,7 +140,7 @@ const firstTask = () => props.linkedTasks[0]
 }
 .swp__badge {
   display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
-  border-radius: var(--radius-panel, 8px); background: var(--bg-secondary); color: var(--text-secondary);
+  border-radius: 10px; background: var(--bg-secondary); color: var(--text-secondary);
   white-space: nowrap; flex-shrink: 0;
 }
 .swp__invite {
@@ -149,7 +149,7 @@ const firstTask = () => props.linkedTasks[0]
 }
 .swp__link { border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; &:hover { color: var(--primary); } }
 .swp__chip {
-  height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px);
+  height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 11px;
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
   white-space: nowrap;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }

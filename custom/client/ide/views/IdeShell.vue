@@ -532,7 +532,7 @@ onUnmounted(() => {
   padding-top: 4px;
 }
 .ide-shell__rail-btn {
-  width: 16px; height: 40px; border: 1px solid var(--border-color, #e0e0e0); border-radius: var(--radius-micro, 3px);
+  width: 16px; height: 40px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px;
   background: var(--bg-primary, #14161a); color: var(--text-muted, #9aa0aa); cursor: pointer;
   font-size: 10px; line-height: 1; padding: 0;
   &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }

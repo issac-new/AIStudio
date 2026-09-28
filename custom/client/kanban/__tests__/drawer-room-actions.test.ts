@@ -24,7 +24,7 @@ vi.mock('@/api/hermes/kanban', async () => {
 vi.mock('@/stores/hermes/kanban', () => ({
   useKanbanStore: () => ({ tasks: [], fetchTasks: vi.fn(async () => {}) }),
 }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 // naive-ui 的 useMessage/useDialog 必须有外层 Provider 否则 setup 直接抛错；
 // 测试只桩这两个钩子，NDrawer/NDrawerContent/NButton 等模板组件保持真身。
 vi.mock('naive-ui', async () => {

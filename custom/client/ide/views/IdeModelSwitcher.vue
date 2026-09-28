@@ -107,7 +107,7 @@ async function pick(provider: string, model: string): Promise<void> {
   color: var(--text-secondary, #b0b5be);
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   cursor: pointer;
   max-width: 220px;
 
@@ -165,7 +165,7 @@ async function pick(provider: string, model: string): Promise<void> {
   font-size: 12px;
   font-family: ui-monospace, monospace;
   padding: 4px 6px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   cursor: pointer;
 
   &:hover { background: rgba(255, 255, 255, 0.06); }

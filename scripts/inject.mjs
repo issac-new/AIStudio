@@ -26,7 +26,7 @@ const realpathOrSelf = (p) => {
 const overlayRoot = realpathOrSelf(resolve(import.meta.dirname, '..'));
 const ncwkRoot = resolve(overlayRoot, '..');
 // upstream 可能经符号链接进入（worktree 场景），统一取真实路径。
-const upstreamRoot = realpathOrSelf(resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(ncwkRoot, 'upstream')));
+const upstreamRoot = realpathOrSelf(resolve(ncwkRoot, 'upstream'));
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const zcodeRoot = resolve(upstreamRoot, 'zcode');

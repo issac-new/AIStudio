@@ -46,7 +46,7 @@ function toggleView(): void {
   padding: 0; margin: 0; height: 28px; box-sizing: border-box; align-self: auto;
 }
 .ia-vsrow .ia-scenes .ia-scenes__btn.ia-scenes__btn {
-  padding: 0 10px; border: none; border-radius: var(--radius-standard, 6px); cursor: pointer;
+  padding: 0 10px; border: none; border-radius: 5px; cursor: pointer;
   background: transparent; color: var(--text-muted);
   font-size: 12px; font-family: inherit; white-space: nowrap; height: 100%;
   margin: 1px 0; align-self: center;

@@ -8,7 +8,7 @@ import { mount } from '@vue/test-utils'
 import { nextTick, reactive } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
 // R1：状态栏新增低余量 toast（useMessage）与遥测弹层（usage api）依赖
 vi.mock('naive-ui', () => ({ useMessage: () => ({ warning: vi.fn() }) }))

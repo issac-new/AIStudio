@@ -142,7 +142,7 @@ function sanitizeHtml(html: string): string {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.92em;
   background: rgba(37, 99, 235, 0.08);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   padding: 0 4px;
   text-decoration: none;
 }
@@ -150,7 +150,7 @@ function sanitizeHtml(html: string): string {
 :deep(.mx-mention-me) {
   color: #b45309;
   background: #fef3c7;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   padding: 0 3px;
   font-weight: 600;
 }
