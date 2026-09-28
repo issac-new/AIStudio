@@ -27,7 +27,8 @@ vi.mock('@/custom/kanban/components/KanbanMarkdown.vue', () => ({
 const overviewFixture = {
   ok: true, repo: '/tmp/repo', repoReady: true,
   docs: [
-    { kind: 'freeze', path: 'docs/requirements/RFD-001.freeze.md', title: 'G1 需求冻结', gate: 'G1', exists: true, commit: 'abc1234', committedAt: '2026-09-26T00:24:00+08:00', lines: 30 },
+    { kind: 'freeze', path: 'docs/requirements/RFD-001.freeze.md', title: 'G1 需求冻结', gate: 'G1', group: 'gate', exists: true, commit: 'abc1234', committedAt: '2026-09-26T00:24:00+08:00', lines: 30 },
+    { kind: 'roster', path: 'docs/admin/roster.md', title: '账号清单', gate: '', group: 'admin', exists: true, commit: 'abc1235', committedAt: '2026-09-26T00:20:00+08:00', lines: 20 },
     { kind: 'design', path: 'docs/design/RFD-001-architecture-design.md', title: '概要设计', gate: 'G2', exists: true, commit: 'def5678', committedAt: '2026-09-26T04:00:00+08:00', lines: 461 },
     { kind: 'schedule', path: 'docs/plan/RFD-001-schedule.md', title: '排期', gate: 'G2', exists: true, commit: 'aaa0001', committedAt: '2026-09-26T05:30:00+08:00', lines: 20 },
     { kind: 'test', path: 'docs/test/RFD-001-test-report.md', title: 'G4 测试报告', gate: 'G4', exists: true, commit: 'bbb0002', committedAt: '2026-09-26T06:50:00+08:00', lines: 40 },
@@ -90,6 +91,13 @@ describe('治理中心前端', () => {
     expect(gates).toHaveLength(6)
     expect(wrapper.find('[data-testid="gov-gate-G1"]').text()).toContain('在仓')
     expect(wrapper.find('[data-testid="gov-gate-G3"]').text()).toContain('4')
+    // 工件库分组渲染（六闸工件 + 管理档案同屏）
+    const groupTitles = wrapper.findAll('.ia-gov__group-title').map(n => n.text())
+    expect(groupTitles).toContain('六闸工件')
+    expect(groupTitles).toContain('管理档案')
+    expect(wrapper.find('[data-testid="gov-doc-roster"]').exists()).toBe(true)
+    // 六闸卡计数不受管理档案掺入（roster gate='' 不计入任何闸）
+    expect(wrapper.find('[data-testid="gov-gate-G1"]').text()).toContain('1/1')
     // 缺失工件禁用态
     const retroBtn = wrapper.find('[data-testid="gov-doc-retro"]')
     expect(retroBtn.attributes('disabled')).toBeDefined()

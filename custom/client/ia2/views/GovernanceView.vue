@@ -36,9 +36,20 @@ const acting = ref<Set<string>>(new Set())
 const GATE_KEYS = ['gateG1', 'gateG2', 'gateG3', 'gateG4', 'gateG5', 'gateG6'] as const
 const GATE_IDS = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] as const
 
+/** 工件库四组（单一事实源=server GOVERNANCE_DOCS.group 值；标题本地化） */
+const DOC_GROUPS: Array<{ key: string; zh: string }> = [
+  { key: 'gate', zh: '六闸工件' },
+  { key: 'admin', zh: '管理档案' },
+  { key: 'analysis', zh: '分析档案' },
+  { key: 'evidence', zh: '测试证据' },
+]
+const docGroups = computed(() =>
+  DOC_GROUPS.map(g => ({ ...g, docs: (overview.value?.docs ?? []).filter(d => (d.group || 'gate') === g.key) }))
+    .filter(g => g.docs.length))
+
 /** 六闸卡：每闸聚合其工件（在仓=绿，缺=灰）；G3 以开发分支数为证据。 */
 const gateCards = computed(() => GATE_IDS.map((gateId, i) => {
-  const docs = (overview.value?.docs ?? []).filter((d) => d.gate === gateId)
+  const docs = (overview.value?.docs ?? []).filter((d) => d.gate === gateId && (d.group || 'gate') === 'gate')
   const inRepo = docs.filter((d) => d.exists)
   const branchCount = gateId === 'G3' ? (overview.value?.devBranches?.length ?? 0) : null
   const okState = gateId === 'G3' ? branchCount! > 0 : docs.length > 0 && inRepo.length === docs.length
@@ -128,19 +139,22 @@ onMounted(() => void refresh())
       <!-- 左：工件清单 -->
       <aside class="ia-gov__list" data-testid="gov-docs">
         <h3 class="ia-gov__list-title">{{ L.docsTitle }}</h3>
-        <button
-          v-for="d in overview?.docs ?? []"
-          :key="d.kind"
-          type="button"
-          class="ia-gov__doc"
-          :class="{ 'is-selected': selectedKind === d.kind, 'is-missing': !d.exists }"
-          :data-testid="`gov-doc-${d.kind}`"
-          :disabled="!d.exists"
-          @click="openDoc(d.kind)"
-        >
-          <span class="ia-gov__doc-title">{{ d.title }}</span>
-          <span class="ia-gov__doc-meta">{{ d.exists ? d.commit : L.missing }}</span>
-        </button>
+        <template v-for="g in docGroups" :key="g.key">
+          <div class="ia-gov__group-title" :data-group="g.key">{{ g.zh }}</div>
+          <button
+            v-for="d in g.docs"
+            :key="d.kind"
+            type="button"
+            class="ia-gov__doc"
+            :class="{ 'is-selected': selectedKind === d.kind, 'is-missing': !d.exists }"
+            :data-testid="`gov-doc-${d.kind}`"
+            :disabled="!d.exists"
+            @click="openDoc(d.kind)"
+          >
+            <span class="ia-gov__doc-title">{{ d.title }}</span>
+            <span class="ia-gov__doc-meta">{{ d.exists ? (d.ref ? d.ref.replace('origin/', '') + ' · ' : '') + d.commit : L.missing }}</span>
+          </button>
+        </template>
       </aside>
 
       <!-- 右：文档全文 + 待裁决 -->
@@ -267,6 +281,14 @@ onMounted(() => void refresh())
   &:hover:not(:disabled) { background: var(--bg-secondary, #f1f2f4); }
   &.is-selected { border-color: var(--accent-primary, #3b82f6); background: rgba(59, 130, 246, 0.06); }
   &.is-missing { opacity: 0.5; cursor: not-allowed; }
+}
+.ia-gov__group-title {
+  margin: 8px 0 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted, #878c99);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .ia-gov__doc-title { font-size: 12.5px; font-weight: 600; color: var(--text-primary, inherit); }
 .ia-gov__doc-meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
