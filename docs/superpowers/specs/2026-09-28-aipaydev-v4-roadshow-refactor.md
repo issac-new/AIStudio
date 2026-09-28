@@ -176,3 +176,24 @@ RSI（`2026-09-18-rsi-kernel-design.md`）点出为"演进方向"：内核自改
 3. **微信缓存即清丢图**：截图落盘后立即入 evidence 目录，不留临时区；
 4. **报告证据红线**：截图必须是真实 UI 操作画面（产品 UI 缺陷清单 §目标形态），文档渲染/CLI 输出凑数即打回；
 5. **studio API 读写双失明**：对 done 卡等场景 studio API 返回空，一律用 CLI 替代（V3 实锤坑位）。
+
+---
+
+## 实测记录补遗：V4 设计实现批（2026-09-28 15:56）
+
+**设计实现 backlog 全收口**（overlay main，按时间序）：
+
+| 项 | 落点 | 门禁 |
+|---|---|---|
+| V4-N1 审批风险三档 | 8e4b7b98（服务端权威分类+分区呈现+台账） | 20/20 新守门+463 邻域绿；490 unattended `rm -rf` 实落 HIGH RISK 区实证（12c 截图） |
+| P4 协作沟通三件套 | 1148dbf6（卡链接/@我高亮/任务流转时间线） | 407 文件/3000 用例+build 全绿 |
+| P5 驾驶舱概览 | 25604aa2+830d013e+22cdd5a4（三卡+ia2.dash+🏠入口） | 408 文件/3005 用例+build 全绿；途中根治 ia2.overview 词表撞名与 ia2.overview 退役路由名两坑 |
+| V4-N2 叙事层 | b1caae50+0778968（hero/挑战实例/双 loop/六亮点/四维） | 9.0MB 合并报告成品（叙事层+26 步实录+31 实拍截图，证据包 20260928-product-demo/） |
+| inject 体系两修 | d65a0af0（目录形 ?? 豁免）+ b8096e9f（490 重锚） | 修复前全量干净重放必失败，修复后全序列套用实证 |
+| 体系外并行批 | 治理中心 2aeabe98（#/app/gov 六闸工件真 git 实查）+fleet 命令审批 live 闭环 13df24fa+看板聚合 sqlite 快道 09d8eb83+native-routes 404 恢复 462a1de5 等 | 由并行会话各自记档 |
+
+**回归实测（混合态共享树）**：411 文件 3021/3022 绿；两失败均为注入态缺失的环境性产物（zcode-patches-guard 明示"clean 后跑则 fail"、matrix-login-session 因 server/src/custom 软链缺席），非代码缺陷。负载峰值 458（三会话 vitest 并发）期间 dev 白屏为 CPU 饥饿假象，非启动缺陷（模块直取 200 实证）。
+
+**坑位入册**：inject 漂移死锁 stash 恢复法（patch 改于 inject 后 → 反套失败 → 预检拒 → stash+重放+diff 零丢失验证）、i18n 键域撞名探针法（同域重复块后者覆盖前者，grep 块名先行）、退役路由名查 RETIRED_NAMES、worktree 合并须显式 cd 主 checkout、git apply -C 先切目录导致 patch 相对路径必须绝对化、IAB fullPage 拼接假象、hunk 行数账少算 1 行即 corrupt（a9d95b97 案例）。
+
+**待办**：负载/共享树收车后——P4/P5 端到端截图实证（capture-ui ui-03b/ui-08b/ui-10b 位已备）、干净树终态回归复跑、V4-run1 推演复跑裁决、终版报告重生成。
