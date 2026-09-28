@@ -153,7 +153,7 @@ const visible = computed(
   padding: 6px 12px;
   font-size: 12px;
   border-bottom: 1px solid var(--border-color, #e0e0e0);
-  background: color-mix(in srgb, var(--success-color, #98c379) 8%, transparent);
+  background: color-mix(in srgb, var(--success-color, var(--success-color, #18a058)) 8%, transparent);
   color: var(--text-secondary, #b0b5be);
 }
 
@@ -165,7 +165,7 @@ const visible = computed(
 
 .ide-runresult__kicker {
   font-weight: 600;
-  color: var(--success-color, #98c379);
+  color: var(--success-color, var(--success-color, #18a058));
 }
 
 .ide-runresult__elapsed {
@@ -202,8 +202,8 @@ const visible = computed(
 .ide-runresult__delta {
   font-variant-numeric: tabular-nums;
 
-  .is-add { color: var(--success-color, #98c379); }
-  .is-del { color: #e06c75; margin-left: 4px; }
+  .is-add { color: var(--success-color, var(--success-color, #18a058)); }
+  .is-del { color: var(--error-color, #d03050); margin-left: 4px; }
 }
 
 .ide-runresult__paths {

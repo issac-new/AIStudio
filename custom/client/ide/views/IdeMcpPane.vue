@@ -246,7 +246,7 @@ function openManage(): void {
   line-height: 1.6;
 }
 
-.ide-mcp__error { color: #e06c75; }
+.ide-mcp__error { color: var(--error-color, #d03050); }
 
 .ide-mcp__list {
   flex: 1;
@@ -276,8 +276,8 @@ function openManage(): void {
   border-radius: 50%;
   flex-shrink: 0;
 
-  &.is-on { background: var(--success-color, #98c379); }
-  &.is-off { background: #e06c75; }
+  &.is-on { background: var(--success-color, var(--success-color, #18a058)); }
+  &.is-off { background: var(--error-color, #d03050); }
 }
 
 .ide-mcp__name {
@@ -299,7 +299,7 @@ function openManage(): void {
 
 .ide-mcp__server-error {
   margin-top: 4px;
-  color: #e06c75;
+  color: var(--error-color, #d03050);
   font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -135,7 +135,7 @@ function fmt(ms: number): string {
 }
 
 .ide-turn-rail__tools {
-  font-size: 9px;
+  font-size: 10px;
   background: var(--hover-color, rgba(0, 0, 0, 0.08));
   border-radius: 3px;
   padding: 0 2px;

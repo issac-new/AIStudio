@@ -486,7 +486,7 @@ onUnmounted(() => {
   &::before {
     content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px;
   }
-  &:hover, &:active { background: color-mix(in srgb, #61afef 30%, transparent); }
+  &:hover, &:active { background: color-mix(in srgb, var(--primary-color, #18a058) 30%, transparent); }
 }
 .ide-shell__split--l { right: -3px; }
 .ide-shell__split--r { left: -3px; }

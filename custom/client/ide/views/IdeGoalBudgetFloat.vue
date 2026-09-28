@@ -170,10 +170,10 @@ watch(
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover { border-color: #61afef; color: #61afef; }
+  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 
   &[data-level='warn'] { border-color: #f0a44c66; color: #f0a44c; }
-  &[data-level='over'] { border-color: #e06c7566; color: #e06c75; }
+  &[data-level='over'] { border-color: var(--error-color, #d03050)66; color: var(--error-color, #d03050); }
 }
 
 .ide-goal__panel {
@@ -207,7 +207,7 @@ watch(
 
   &.is-running { color: #4cc9f0; }
   &[data-level='warn'] { color: #f0a44c; }
-  &[data-level='over'] { color: #e06c75; }
+  &[data-level='over'] { color: var(--error-color, #d03050); }
 }
 
 .ide-goal__bar {
@@ -221,11 +221,11 @@ watch(
   display: block;
   height: 100%;
   border-radius: 2px;
-  background: var(--success-color, #98c379);
+  background: var(--success-color, var(--success-color, #18a058));
   transition: width 0.3s ease;
 
   &[data-level='warn'] { background: #f0a44c; }
-  &[data-level='over'] { background: #e06c75; }
+  &[data-level='over'] { background: var(--error-color, #d03050); }
 }
 
 .ide-goal__warn {
@@ -274,13 +274,13 @@ watch(
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { border-color: #61afef; color: #61afef; }
+  &:hover:not(:disabled) { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
   &:disabled { opacity: 0.4; cursor: default; }
 
   &.is-primary {
-    background: #61afef22;
-    border-color: #61afef66;
-    color: #61afef;
+    background: var(--primary-color, #18a058)22;
+    border-color: var(--primary-color, #18a058)66;
+    color: var(--primary-color, #18a058);
   }
 }
 

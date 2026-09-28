@@ -103,7 +103,7 @@ function byEvent(list: HookSpec[]): Array<{ event: string; items: HookSpec[] }> 
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover { border-color: #61afef; color: #61afef; }
+  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 }
 
 .ide-hooks__state {
@@ -119,7 +119,7 @@ function byEvent(list: HookSpec[]): Array<{ event: string; items: HookSpec[] }> 
   font-family: ui-monospace, monospace;
   font-size: 11px;
   font-weight: 600;
-  color: #61afef;
+  color: var(--primary-color, #18a058);
   margin-bottom: 4px;
 }
 

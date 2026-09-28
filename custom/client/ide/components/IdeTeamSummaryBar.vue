@@ -60,7 +60,7 @@ const summary = computed(() => {
 
 .ide-team-bar.is-green { color: #18a058; }
 .ide-team-bar.is-amber {
-  color: #b8860b;
+  color: var(--warning-color, #d97706);
   background: rgba(184, 134, 11, 0.08);
   border-color: rgba(184, 134, 11, 0.35);
 }

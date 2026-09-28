@@ -742,12 +742,12 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
 
-  &:hover { border-color: #61afef; }
+  &:hover { border-color: var(--primary-color, #18a058); }
 
   &.is-active {
     background: rgba(97, 175, 239, 0.12);
-    border-color: #61afef66;
-    color: #61afef;
+    border-color: var(--primary-color, #18a058)66;
+    color: var(--primary-color, #18a058);
     font-weight: 600;
   }
 }
@@ -838,7 +838,7 @@ onMounted(async () => {
   cursor: pointer;
 
   &:hover { color: var(--text-primary, #e6e6e6); background: var(--bg-tertiary, #ebebeb); }
-  &--danger:hover { color: #e06c75; }
+  &--danger:hover { color: var(--error-color, #d03050); }
 }
 
 .ide-taskbar__section-count { margin-left: auto; opacity: 0.7; }
@@ -888,7 +888,7 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 18%, transparent);
   color: var(--text-muted, #9aa0aa);
 
-  &--p0 { background: rgba(224, 108, 117, 0.18); color: #e06c75; }
+  &--p0 { background: rgba(224, 108, 117, 0.18); color: var(--error-color, #d03050); }
   &--p1 { background: rgba(240, 164, 76, 0.18); color: #f0a44c; }
   &--p2 { background: rgba(76, 201, 240, 0.16); color: #4cc9f0; }
 }

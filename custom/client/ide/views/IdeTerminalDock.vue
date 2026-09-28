@@ -153,7 +153,7 @@ function closeTab(id: number): void {
   cursor: pointer;
   padding: 0;
 
-  &:hover { color: #e06c75; }
+  &:hover { color: var(--error-color, #d03050); }
 }
 
 .ide-termdock__add {

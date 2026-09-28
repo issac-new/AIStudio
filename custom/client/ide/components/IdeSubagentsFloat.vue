@@ -187,8 +187,8 @@ function select(stream: SubagentStream): void {
   background: var(--text-muted, #9aa0aa);
 
   &.is-running { background: #4cc9f0; }
-  &.is-completed { background: #98c379; }
-  &.is-failed, &.is-error, &.is-cancelled, &.is-interrupted { background: #e06c75; }
+  &.is-completed { background: var(--success-color, #18a058); }
+  &.is-failed, &.is-error, &.is-cancelled, &.is-interrupted { background: var(--error-color, #d03050); }
 }
 
 .ide-agents__badge {
@@ -199,12 +199,12 @@ function select(stream: SubagentStream): void {
   border-radius: 3px;
 
   &--injection {
-    color: #f0a44c;
+    color: var(--warning-color, #d97706);
     background: rgba(240, 164, 76, 0.15);
   }
 
   &--steer {
-    color: #61afef;
+    color: var(--primary-color, #18a058);
     background: rgba(97, 175, 239, 0.12);
   }
 }
@@ -251,15 +251,15 @@ function select(stream: SubagentStream): void {
 
 .ide-agents__steer-btn {
   flex-shrink: 0;
-  border: 1px solid #61afef66;
-  background: #61afef22;
-  color: #61afef;
+  border: 1px solid var(--primary-color, #18a058)66;
+  background: var(--primary-color, #18a058)22;
+  color: var(--primary-color, #18a058);
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { background: #61afef33; }
+  &:hover:not(:disabled) { background: var(--primary-color, #18a058)33; }
   &:disabled { opacity: 0.4; cursor: default; }
 }
 </style>

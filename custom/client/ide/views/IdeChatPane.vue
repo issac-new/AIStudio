@@ -626,14 +626,14 @@ async function pickModel(provider: string, model: string): Promise<void> {
   padding: 6px 12px;
   font-size: 12px;
   border-bottom: 1px solid var(--border-color, #e0e0e0);
-  background: color-mix(in srgb, #61afef 10%, transparent);
+  background: color-mix(in srgb, var(--primary-color, #18a058) 10%, transparent);
   color: var(--text-secondary, #b0b5be);
 }
 
 .ide-chat__recap-kicker {
   flex-shrink: 0;
   font-weight: 600;
-  color: #61afef;
+  color: var(--primary-color, #18a058);
 }
 
 .ide-chat__recap-last {
@@ -680,7 +680,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   flex-shrink: 0;
   padding: 4px 12px;
   font-size: 11px;
-  color: #61afef;
+  color: var(--primary-color, #18a058);
   background: rgba(97, 175, 239, 0.08);
   border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
@@ -689,7 +689,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--success-color, #98c379);
+  color: var(--success-color, var(--success-color, #18a058));
 }
 
 .ide-chat__agent {

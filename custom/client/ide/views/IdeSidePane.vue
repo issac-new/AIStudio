@@ -334,7 +334,7 @@ function focusMainChat(): void {
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover { border-color: #61afef; color: #61afef; }
+  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 
   &--add {
     padding: 2px 6px;
@@ -351,7 +351,7 @@ function focusMainChat(): void {
   cursor: pointer;
   padding: 0 2px;
 
-  &:hover { color: #e06c75; }
+  &:hover { color: var(--error-color, #d03050); }
 }
 
 .ide-sidepane__action-input {

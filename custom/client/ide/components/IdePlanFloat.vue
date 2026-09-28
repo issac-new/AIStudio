@@ -125,14 +125,14 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
   color: var(--text-secondary, #b0b5be);
   cursor: pointer;
 
-  &:hover { border-color: #61afef; color: #61afef; }
+  &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 
   &.is-primary {
-    background: #61afef22;
-    border-color: #61afef66;
-    color: #61afef;
+    background: var(--primary-color, #18a058)22;
+    border-color: var(--primary-color, #18a058)66;
+    color: var(--primary-color, #18a058);
 
-    &:hover { background: #61afef33; }
+    &:hover { background: var(--primary-color, #18a058)33; }
   }
 }
 </style>

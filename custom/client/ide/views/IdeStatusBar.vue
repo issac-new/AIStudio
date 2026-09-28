@@ -302,7 +302,7 @@ watch(
   white-space: nowrap;
 
   &.is-running {
-    color: var(--success-color, #98c379);
+    color: var(--success-color, var(--success-color, #18a058));
   }
 }
 
@@ -346,7 +346,7 @@ watch(
   display: block;
   height: 100%;
   border-radius: 2px;
-  background: var(--success-color, #98c379);
+  background: var(--success-color, var(--success-color, #18a058));
   transition: width 0.3s ease;
 
   /* 压力分级与 ChatInput 上下文条同阈值（60/80） */
@@ -355,7 +355,7 @@ watch(
   }
 
   &[data-level='danger'] {
-    background: #e06c75;
+    background: var(--error-color, #d03050);
   }
 }
 
@@ -375,7 +375,7 @@ watch(
 
   /* 速度色阶（dsh-TUI：≥50 绿 / ≥20 黄 / <20 红） */
   &[data-speed='fast'] {
-    background: var(--success-color, #98c379);
+    background: var(--success-color, var(--success-color, #18a058));
   }
 
   &[data-speed='med'] {
@@ -383,7 +383,7 @@ watch(
   }
 
   &[data-speed='slow'] {
-    background: #e06c75;
+    background: var(--error-color, #d03050);
   }
 }
 
