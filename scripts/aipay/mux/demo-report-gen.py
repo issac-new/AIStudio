@@ -2,10 +2,35 @@
 # 20260928 产品实操演示报告生成器 —— 26 步 × 真实产品 UI 截图（非文档渲染）。
 # 截图来源：内置浏览器对 http://127.0.0.1:8802 的真实操作（登录/点击/审批）。
 # 诚实标注：每步标 [实操作]（人点出来的）/ [实状态]（真实数据画面）/ [缺口]（本轮已知未竟）。
+# V4-N2（2026-09-28 V4 路演重构方案 §四）：头部接线 report-narrative 叙事层
+# （价值主张 hero / 挑战与协同真实案例 / 双 loop 环图 / 六亮点 / 四维协作质量）。
 import os, base64, html
+from pathlib import Path
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(DIR, 'shots')
+
+# V4-N2 叙事层数据源：sim 状态与问题单台账（数字实算，取不到显式 ⬜）
+SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
+_narrative_state = {}
+_sf = SIM / 'state.env'
+if _sf.exists():
+    for _line in _sf.read_text().splitlines():
+        if '=' in _line and not _line.startswith('jwt_'):
+            _k, _v = _line.split('=', 1)
+            _narrative_state[_k.strip()] = _v.strip()
+_snap = SIM / 'evidence' / 'state-snapshot.env'
+if _snap.exists():
+    for _line in _snap.read_text().splitlines():
+        if '=' in _line:
+            _k, _v = _line.split('=', 1)
+            if _v.strip():
+                _narrative_state[_k.strip()] = _v.strip()
+try:
+    from report_narrative import render_narrative
+    _narrative_html = render_narrative(_narrative_state, SIM / 'evidence')
+except Exception as _e:  # 叙事层失败不阻断主报告：显式降级标注
+    _narrative_html = f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;color:#92400e">叙事层生成失败（如实标注）：{html.escape(str(_e))}</div>'
 
 # (步骤号, 名称, 截图文件, 类型, 说明)
 STEPS = [
@@ -117,6 +142,8 @@ out.append('<h1>产品实操演示 · 26 步全流程推演报告</h1>')
 out.append('<div class="meta">生成：2026-09-28 ｜ 环境：SwarmStudio :8802（P0-P3 修复后构建）+ gateway :8801 + matrix :8008 ｜ '
            '操作者：wei（Matrix 真实账号登录） ｜ 截图：内置浏览器真实操作画面（非文档渲染）<br>'
            '修复基线：' + '；'.join(f'<b>{a}</b> {b}' for a, b in FIXES) + '</div>')
+# V4-N2 叙事层（价值主张/挑战与协同/双 loop/六亮点/四维协作质量），先于 26 步实录
+out.append(_narrative_html)
 out.append('<h2>推演实录（真实产品 UI 操作）</h2>')
 for no, name, img, typ, desc in STEPS:
     cls = {"实操作": "a", "实状态": "s"}.get(typ, "g")
