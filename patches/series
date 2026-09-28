@@ -251,3 +251,6 @@
 # 489（404 缺陷修复）：IDE 两端点原生中间件直挂（PUT engine-models/POST video-frames
 #      ——绕开 koa-router 注册面，404 怪象根治性 workaround）。
 489-server-native-ide-routes.patch
+# 491（U1 公告非阻塞）：StudioAnnouncementPrompt 模态→底部常驻横幅，
+#      公告不再遮罩拦截全界面（20+ 张推演截图被挡实锤），确认后按 id 记账不再弹。
+491-client-announcement-nonblocking-banner.patch
