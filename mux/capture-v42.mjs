@@ -56,10 +56,8 @@ async function shot(name, url, opts = {}) {
   if (only && only !== name) return
   await page.goto(BASE + '/#' + url.replace(/^#/, ''))
   await page.waitForTimeout(opts.wait ?? 4000)
-  for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒']) {
-    const btn = page.locator(`button:has-text("${txt}")`).first()
-    if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(500) }
-  }
+  // ⚠️ 不点任何弹窗按钮："知道了"=通知跳转钮，点击即劫持导航到 board?task=<卡>
+  // （run2 实锤：五连拍全被劫持到 t_666aecf8；去掉 Dismiss 循环后全部正确落位）
   if (opts.after) await opts.after()
   await page.screenshot({ path: `${OUT}/${name}.png`, ...(opts.fullPage ? { fullPage: true } : {}) })
   const probe = await page.evaluate(() => {
