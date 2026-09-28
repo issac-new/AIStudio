@@ -233,6 +233,5 @@
 #      （approval-log append-only 台账 + review-store listReviews 聚合）。
 488-server-approvals-inbox-mount.patch
 
-# 489（V4-N1 审批风险分级）：approvals.risk 三档词条 + colRisk（zh/en 成对）。
-#      挂在 488 之后——473 块尾追加，与并行会话 P3 的 473 改动零重叠。
-489-client-approvals-risk-i18n.patch
+# 489（V4-N1 审批风险分级）：approvals.risk 三档词条已折入 473 单一事实源
+#      （2026-09-28 locale 收敛轮：并行会话的键并入，patch 退役）。
