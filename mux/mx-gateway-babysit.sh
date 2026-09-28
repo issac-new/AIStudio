@@ -23,17 +23,29 @@ FAIL_NEED="${FAIL_NEED:-3}"  # 连续失败阈值
 CHECK_INTERVAL="${CHECK_INTERVAL:-10}"
 LOG="$SIM_ROOT/logs/gateway-babysit.log"
 LOCK_JSON="$SIM_ROOT/gateway-locks/host-gateway.json"
-LOCK_FD="$SIM_ROOT/gateway-locks/babysit.flock"
+LOCK_DIR="$SIM_ROOT/gateway-locks/babysit.lock.d"
 HERMES_BIN="${HERMES_BIN:-/Users/cuishi/.hermes/hermes-agent/venv/bin/hermes}"
 
 mkdir -p "$SIM_ROOT/logs" "$SIM_ROOT/gateway-locks" "$SIM_ROOT/pids"
 
-# 单实例锁（fd 9 排他；已有人在跑则静默退出）
-exec 9>"$LOCK_FD"
-if ! flock -n 9; then
-  echo "[$(date '+%F %T')] another babysitter holds $LOCK_FD — exiting" >> "$LOG"
-  exit 0
+# 单实例锁：mkdir 原子锁（macOS 无 flock——flock 127 会让旧版 `! flock` 恒真、
+# 保姆启动即误判互斥成功退出，同 aipay-scenario.sh 单驱动锁语义）。陈锁检测：
+# info 里 pid 已死则接管；持锁者活着即大声退出（不静默，与旧版假绿日志区分）。
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  _lock_pid=$(sed -n 's/^pid=//p' "$LOCK_DIR/info" 2>/dev/null | head -1 | awk '{print $1}')
+  if [[ "$_lock_pid" =~ ^[0-9]+$ ]] && ! kill -0 "$_lock_pid" 2>/dev/null; then
+    echo "[$(date '+%F %T')] stale babysit lock (pid $_lock_pid dead) — taking over" >> "$LOG"
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || { echo "[$(date '+%F %T')] lock takeover race lost — exiting" >> "$LOG"; exit 0; }
+  else
+    # ${LOCK_DIR} 必须带花括号：macOS bash 3.2 把 $VAR 后紧邻的全角字符首字节吸进变量名（set -u 下 unbound 崩）
+    echo "[$(date '+%F %T')] another babysitter holds ${LOCK_DIR} (pid ${_lock_pid:-unknown}) — exiting（确认无保姆在跑可 rm -rf ${LOCK_DIR}）" >> "$LOG"
+    exit 0
+  fi
 fi
+echo "pid=$$ start=$(date '+%F %T')" > "$LOCK_DIR/info"
+trap 'rm -rf "$LOCK_DIR"' EXIT
+trap 'rm -rf "$LOCK_DIR"; exit 0' INT TERM
 
 log() { echo "[$(date '+%F %T')] $*" >> "$LOG"; }
 

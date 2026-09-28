@@ -3,11 +3,23 @@
 # 前提：studio :8802 在跑（mx-up.sh 或 dist/server/index.js）
 # 产出：evidence/screenshots/steps/ui-gov-center.png + ui-gov-doc.png
 set -euo pipefail
-cd "$(dirname "$0")/../.."   # → upstream/hermes-studio
-node - <<'EOF'
+# cd 到 overlay 根（脚本在 scripts/aipay/mux/ 下，三层回根；旧注释"→ upstream/hermes-studio"
+# 与两层 ../.. 的实际落点 scripts/ 不符——此前纯靠 node 沿 cwd 向上撞见 overlay/node_modules
+# 才解析到 playwright，换检出路径即断）
+cd "$(dirname "$0")/../.."
+# 证据防覆盖：产出前把基线图挪入带时间戳备份目录（报告管线仍按固定文件名取图，
+# 契约不变；重跑不再无声覆盖 V3 报告引用的证据图）
+OUT="/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/screenshots/steps"
+if [ -d "$OUT" ]; then
+  BAK="$OUT/.bak-$(date +%Y%m%d-%H%M%S)"
+  for f in ui-gov-center.png ui-gov-doc.png; do
+    [ -f "$OUT/$f" ] && { mkdir -p "$BAK"; mv "$OUT/$f" "$BAK/$f"; }
+  done
+fi
+OUT="$OUT" node - <<'EOF'
 import { chromium } from 'playwright'
 import { readFileSync } from 'node:fs'
-const OUT = '/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/screenshots/steps'
+const OUT = process.env.OUT
 const mtok = readFileSync('/Volumes/nvme2230/lab/ncwk-sim-mux/creds/fanfan.token', 'utf8').split('\n')[0].trim()
 const login = await fetch('http://127.0.0.1:8802/api/auth/matrix-login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },

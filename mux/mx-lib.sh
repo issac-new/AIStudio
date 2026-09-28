@@ -738,12 +738,12 @@ matrix_adapter_selfheal() { # → 0=已修复 1=无需修 2=修复失败
   if [[ -z "$sel_env" ]]; then
     rt="${HERMES_AGENT_RT:-$HOME/.hermes/hermes-agent}"
     sel_env="$rt/venv"
-    [[ -x "$sel_env/bin/python" ]] || { log "matrix 自愈：selected venv 与 agent venv（$rt）均不在，跳过"; return 2; }
-    log "matrix 自愈：selected venv 未登记，回落 agent venv（$rt）"
+    [[ -x "$sel_env/bin/python" ]] || { log "matrix 自愈：selected venv 与 agent venv（${rt}）均不在，跳过"; return 2; }
+    log "matrix 自愈：selected venv 未登记，回落 agent venv（${rt}）"
   fi
   sel_py="$sel_env/bin/python"
   if [[ -x "$sel_py" && -z "$("$sel_py" -c 'import mautrix' 2>&1)" ]]; then
-    log "matrix 自愈：mautrix 已可导入（$sel_env），仅补门放行"
+    log "matrix 自愈：mautrix 已可导入（${sel_env}），仅补门放行"
   else
     log "matrix 自愈：装 plain mautrix+aio 依赖到 selected venv（darwin 无 E2EE 面）"
     uv_bin="$(ls "$HERMES_ROOT"/tools/uv-*/uv 2>/dev/null | head -1)"
@@ -768,7 +768,7 @@ if old in s:
 else:
     print('gate already ok or format drift')
 PYEOF
-  "$sel_py" -c "import mautrix" 2>/dev/null || { log "matrix 自愈：mautrix 仍不可导入（$sel_env），失败"; return 2; }
+  "$sel_py" -c "import mautrix" 2>/dev/null || { log "matrix 自愈：mautrix 仍不可导入（${sel_env}），失败"; return 2; }
   return 0
 }
 
