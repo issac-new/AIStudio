@@ -3,6 +3,7 @@
 // edited-files pill（点开看当前态）+可展开子任务步骤+末尾"待批步骤"专区；UI 复刻 R6）。
 // 数据面=taskgroups 域（defineGroup/approveStep/groupSummary 语义镜像——本地状态）。
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 interface Step { stepId: string; description: string; needsApproval: boolean; approved: boolean }
@@ -20,6 +21,7 @@ const expanded = ref<Record<string, boolean>>({})
 const openFile = ref<string | null>(null)
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 
 /** 真实链：会话 taskPlan 快照（steps→组步骤；status 映射批准态）映射为任务组。 */
 const taskPlanGroups = computed<Group[]>(() => {
@@ -27,7 +29,7 @@ const taskPlanGroups = computed<Group[]>(() => {
   if (!plan?.plan?.length) return []
   return [{
     groupId: plan.plan_id || plan.run_id,
-    title: `任务计划 · ${plan.run_id.slice(-8)}`,
+    title: t('ide.taskGroups.planTitle', { id: plan.run_id.slice(-8) }),
     editedFiles: [],
     steps: plan.plan.map((p) => ({
       stepId: p.id, description: p.step,
@@ -76,17 +78,17 @@ function toggle(groupId: string): void {
               class="ide-tg__approve"
               :data-testid="`ide-tg-approve-${s.stepId}`"
               @click="emit('approve', g.groupId, s.stepId, true)"
-            >批准</button>
+            >{{ t('ide.taskGroups.approve', '批准') }}</button>
             <span v-else-if="s.approved" class="ide-tg__ok">✓</span>
           </li>
         </ol>
       </div>
     </div>
     <div v-if="pendingApprovals.length" class="ide-tg__pending" data-testid="ide-tg-pending">
-      <div class="ide-tg__pendinghead">待批步骤专区 · {{ pendingApprovals.length }}</div>
+      <div class="ide-tg__pendinghead">{{ t('ide.taskGroups.pendingHead', { n: pendingApprovals.length }) }}</div>
       <div v-for="p in pendingApprovals" :key="p.step.stepId" class="ide-tg__pendingrow">
         {{ p.step.description }}
-        <button type="button" class="ide-tg__approve" @click="emit('approve', p.groupId, p.step.stepId, true)">批准</button>
+        <button type="button" class="ide-tg__approve" @click="emit('approve', p.groupId, p.step.stepId, true)">{{ t('ide.taskGroups.approve', '批准') }}</button>
       </div>
     </div>
   </div>
@@ -102,7 +104,7 @@ function toggle(groupId: string): void {
 .ide-tg__body { padding: 0 10px 8px; }
 .ide-tg__files { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
 .ide-tg__pill {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 10px;
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: var(--radius-panel, 8px);
   font-size: 11px; padding: 1px 8px; cursor: pointer;
 }
 .ide-tg__filestate { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-color-3, #888); margin: 2px 0; }
@@ -112,7 +114,7 @@ function toggle(groupId: string): void {
 .ide-tg__ok { color: var(--primary-color, #18a058); margin-left: 4px; }
 .ide-tg__approve {
   border: 1px solid var(--primary-color, #18a058); background: transparent; color: var(--primary-color, #18a058);
-  border-radius: 4px; font-size: 11px; padding: 0 6px; cursor: pointer; margin-left: 6px;
+  border-radius: var(--radius-micro, 3px); font-size: 11px; padding: 0 6px; cursor: pointer; margin-left: 6px;
 }
 .ide-tg__pending { margin-top: 10px; border-top: 1px dashed var(--border-color, #ccc); padding-top: 6px; }
 .ide-tg__pendinghead { font-weight: 600; font-size: 11px; color: var(--text-color-3, #999); }

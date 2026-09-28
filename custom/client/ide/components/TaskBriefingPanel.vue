@@ -293,7 +293,7 @@ function sendAux(): void {
   gap: 6px;
   width: 100%;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   background: transparent;
   padding: 4px 8px;
   font-size: 12px;
@@ -358,7 +358,7 @@ function sendAux(): void {
     flex: 1;
     min-width: 0;
     border: 1px solid var(--border-color, #e5e6eb);
-    border-radius: 4px;
+    border-radius: var(--radius-micro, 3px);
     padding: 3px 6px;
     font-size: 12px;
     background: var(--bg-primary, #fff);
@@ -367,7 +367,7 @@ function sendAux(): void {
 
   .aux-send {
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-micro, 3px);
     padding: 3px 10px;
     cursor: pointer;
     background: var(--brand, #3370ff);

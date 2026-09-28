@@ -1593,7 +1593,7 @@ function statusDotClass(status: string): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -1616,7 +1616,7 @@ function statusDotClass(status: string): string {
 .raci-member {
   font-size: 11px;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   background: var(--bg-secondary, #f1f2f4);
   &--empty { opacity: 0.5; }
 }

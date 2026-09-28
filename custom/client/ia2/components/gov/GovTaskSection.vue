@@ -129,7 +129,7 @@ function history(task: CockpitTask): void {
 .gts__c2, .gts__c3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 11px; }
 .gts__ops { display: flex; gap: 4px; justify-content: flex-end; }
 .gts__op {
-  height: 20px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: 10px;
+  height: 20px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: var(--radius-panel, 8px);
   background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }

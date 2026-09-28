@@ -9,8 +9,8 @@ const ncwkRoot = resolve(overlayRoot, '..');
 export const bootstrap = {
   ncwkRoot,
   overlayRoot,
-  upstreamRoot: resolve(ncwkRoot, 'upstream'),
-  hermesStudioRoot: resolve(ncwkRoot, 'upstream', 'hermes-studio'),
+  upstreamRoot: resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(ncwkRoot, 'upstream')),
+  hermesStudioRoot: resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(ncwkRoot, 'upstream'), 'hermes-studio'),
 
   // B 类 patch:按 series 顺序应用(阶段 2 填充)
   patchSeriesFile: resolve(overlayRoot, 'patches', 'series'),

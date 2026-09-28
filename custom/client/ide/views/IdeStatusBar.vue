@@ -180,14 +180,14 @@ watch(
       class="ide-statusbar__item"
       :style="{ order: slotOrder('zcode') }"
       data-testid="ide-zcode-projection"
-      :title="`zcode: ${zcodeProjection.sessionCount.value} 会话 · Δ${zcodeProjection.state.conversationDeltaTotal}`"
+      :title="`zcode: ${t('ide.status.zcodeSessions', { n: zcodeProjection.sessionCount.value })} · Δ${zcodeProjection.state.conversationDeltaTotal}`"
     >
       zcode {{ zcodeProjection.sessionCount.value }}
       <span
         v-if="zcodeProjection.state.lastBranch"
         class="ide-statusbar__branch"
         data-testid="ide-branch-chip"
-        :title="`已分叉：${zcodeProjection.state.lastBranch.sessionId.slice(0, 8)} 从行 ${zcodeProjection.state.lastBranch.fromRowId} 截断 ${zcodeProjection.state.lastBranch.removedRows} 行`"
+        :title="t('ide.status.zcodeBranched', { id: zcodeProjection.state.lastBranch.sessionId.slice(0, 8), from: zcodeProjection.state.lastBranch.fromRowId, removed: zcodeProjection.state.lastBranch.removedRows })"
       >⇄</span>
       <span
         v-if="zcodeProjection.lastReasonText.value"
@@ -317,7 +317,7 @@ watch(
   align-items: center;
   gap: 16px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
 
   &:focus-visible {
     outline: 1px solid var(--border-color, #4a90d9);
@@ -337,7 +337,7 @@ watch(
 .ide-statusbar__ctxbar {
   width: 72px;
   height: 5px;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   overflow: hidden;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 22%, transparent);
 }
@@ -345,7 +345,7 @@ watch(
 .ide-statusbar__ctxfill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   background: var(--success-color, #98c379);
   transition: width 0.3s ease;
 
@@ -362,7 +362,7 @@ watch(
 .ide-statusbar__tpsbar {
   width: 40px;
   height: 5px;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   overflow: hidden;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 22%, transparent);
 }
@@ -370,7 +370,7 @@ watch(
 .ide-statusbar__tpsfill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   transition: width 0.3s ease;
 
   /* 速度色阶（dsh-TUI：≥50 绿 / ≥20 黄 / <20 红） */
