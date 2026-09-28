@@ -6,7 +6,7 @@
 // 全部纯函数、零 store 零 DOM；事件输入 = LoopEvent / replay GraphLogEvent 的结构化最小子集。
 import { describe, it, expect } from 'vitest'
 import {
-  buildTraceMatrix, persistedLinksForTask, persistedTaskLinksOfRun,
+  buildTaskChain, buildTraceMatrix, persistedLinksForTask, persistedTaskLinksOfRun,
   type TraceLoopEvent,
 } from '../adapters/traceability'
 
@@ -190,5 +190,69 @@ describe('persistedTaskLinksOfRun', () => {
     expect(persistedTaskLinksOfRun([
       { type: 'loop.persisted', ts: 1, payload: { contractId: 'task/a', taskId: 't_9' } },
     ])).toEqual([{ contractId: 'task/a', taskId: 't_9' }])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildTaskChain（2026-09-28 产品实操演示轮：任务链追溯纯函数守门）
+// ---------------------------------------------------------------------------
+describe('buildTaskChain', () => {
+  const thoughts = [
+    { id: 't_root', title: 'RFD-001 需求冻结', status: 'completed' },
+    { id: 't_c1', title: '系分执行', status: 'done' },
+    { id: 't_c2', title: '缺陷修复', status: 'ready' },
+    { id: 't_iso', title: '无父子任务', status: 'done' },
+  ]
+  const relations = [
+    { parentId: 't_root', childId: 't_c1' },
+    { parentId: 't_root', childId: 't_c2' },
+  ]
+  const runs = [
+    { runId: '1', thoughtId: 't_c1', status: 'completed', endedAt: '2026-09-26T10:00:00Z' },
+    { runId: '2', thoughtId: 't_c1', status: 'failed', endedAt: '2026-09-27T10:00:00Z' },
+    { runId: '3', thoughtId: 't_c2', status: 'completed', endedAt: '2026-09-28T10:00:00Z' },
+    { runId: '4', thoughtId: 't_iso', status: 'completed', endedAt: '2026-09-28T11:00:00Z' },
+  ]
+
+  it('根=relations 中的父且非子；子行挂轮次统计与最近结局', () => {
+    const groups = buildTaskChain({ thoughts, relations, runs })
+    expect(groups).toHaveLength(1)
+    expect(groups[0].root).toMatchObject({ id: 't_root', title: 'RFD-001 需求冻结' })
+    const c1 = groups[0].children.find(c => c.id === 't_c1')!
+    expect(c1.rounds).toEqual({ total: 2, passed: 1, failed: 1 })
+    expect(c1.lastOutcome).toBe('failed') // 最近结束的一轮是 run 2
+    expect(c1.lastEndedAt).toBe('2026-09-27T10:00:00Z')
+  })
+
+  it('子行按最近结束倒序', () => {
+    const groups = buildTaskChain({ thoughts, relations, runs })
+    expect(groups[0].children.map(c => c.id)).toEqual(['t_c2', 't_c1'])
+  })
+
+  it('无父子关系的运行不入链（运行中心任务运行 tab 是其主展示面）；引用缺失任务的 relation 剔除', () => {
+    const groups = buildTaskChain({
+      thoughts, runs,
+      relations: [{ parentId: 't_root', childId: 't_gone' }],
+    })
+    // t_root 无有效子 → 不成组（childrenOf 为空 → 不入 rootIds）
+    expect(groups).toHaveLength(0)
+  })
+
+  it('环任务（互为父子无真根）不入组——不臆造根', () => {
+    const groups = buildTaskChain({
+      thoughts: thoughts.slice(0, 2),
+      relations: [
+        { parentId: 't_root', childId: 't_c1' },
+        { parentId: 't_c1', childId: 't_root' },
+      ],
+      runs: [],
+    })
+    expect(groups).toHaveLength(0)
+  })
+
+  it('无运行的子行保留（0 轮次=尚未执行，如实可见）', () => {
+    const groups = buildTaskChain({ thoughts, relations, runs: [] })
+    expect(groups[0].children).toHaveLength(2)
+    expect(groups[0].children.every(c => c.rounds.total === 0 && c.lastOutcome === null)).toBe(true)
   })
 })
