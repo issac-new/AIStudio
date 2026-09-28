@@ -1,0 +1,39 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -442,8 +442,8 @@
+     open: '打开',
+     clear: '清除',
+     refresh: '刷新',
+-    apply: 'Apply',
+-    search: 'SEARCH',
++    apply: '应用',
++    search: '搜索',
+   },
+   mcp: {
+     title: 'MCP 服务器',
+@@ -1778,6 +1778,11 @@
+     shell: {
+       gotoIde: 'IDE 工作台',
+     },
++    wb: {
++      emptyTitle: '开始一段协作',
++      emptyDesc: '从左侧选择会话、房间或循环，或直接发起新会话。',
++      emptyCta: '新建会话',
++    },
+     wm: {
+       maximize: '最大化',
+       restore: '还原',
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1778,6 +1778,11 @@
+     shell: {
+       gotoIde: 'IDE Workspace',
+     },
++    wb: {
++      emptyTitle: 'Start collaborating',
++      emptyDesc: 'Pick a session, room, or loop on the left — or start a new one.',
++      emptyCta: 'New session',
++    },
+     wm: {
+       maximize: 'Maximize',
+       restore: 'Restore',
