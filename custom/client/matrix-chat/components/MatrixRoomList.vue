@@ -5,6 +5,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { onDutyRoomIds } from '@/custom/matrix-teams/adapters/accounts'
+import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
 
 const roomStore = useMatrixRoomStore()
 const clientStore = useMatrixClientStore()
@@ -24,6 +25,11 @@ const filteredRooms = computed(() => {
 })
 
 const isSyncing = computed(() => clientStore.syncState !== 'PREPARED' && clientStore.syncState !== 'SYNCING')
+
+/** 同名房间消歧（推演审计二轮 U5）：多轮推演产物同名群并排无法分辨——
+ *  仅同名行尾缀短房 ID，唯一名不加噪音。 */
+const duplicateNames = computed(() =>
+  collectDuplicateNames((roomStore.sortedRooms as Array<{ name: string }>).map((r) => r.name)))
 
 function getLastMessagePreview(room: any): string {
   const timeline = room.timeline
@@ -110,6 +116,12 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
         <div class="mx_RoomTile_info">
           <div class="mx_RoomTile_top">
             <span class="mx_RoomTile_name">{{ room.name }}</span>
+            <span
+              v-if="duplicateNames.has(room.name)"
+              class="mx_RoomTile_suffix"
+              :title="room.roomId"
+              data-testid="room-dup-suffix"
+            >#{{ shortRoomId(room.roomId) }}</span>
             <span v-if="onDuty.has(room.roomId)" class="room-duty-badge" data-testid="room-duty-badge">
               {{ t('teams.duty.mine') }}</span>
             <span v-if="getRoomUnreadCount(room) > 0" class="mx_RoomTile_badge">
@@ -290,6 +302,14 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+}
+
+.mx_RoomTile_suffix {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-muted, #878c99);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  opacity: 0.75;
 }
 
 .mx_RoomTile_badge {
