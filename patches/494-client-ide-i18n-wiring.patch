@@ -10,7 +10,7 @@
 +    handoff: { title: '交接书', done: '已完成', notDone: '未完成', risks: '风险', next: '下一步', artifacts: '产物', verify: '复核' },
 +    inlineDiff: { editPrompt: '修改该行：', accept: '接受', reject: '拒绝', accepted: '已接受', rejected: '已拒绝' },
 +    mention: {
-+      atTitle: '@ 六源引用（file/session/skill/plugin/subagent/whiteboard）',
++      atTitle: "{'@'} 六源引用（file/session/skill/plugin/subagent/whiteboard）",
 +      draftPlaceholder: '消息正文（引用 chips 会随消息发出）',
 +      send: '发送', stage: '加入引用',
 +      previewCount: '{n} 条引用', previewResolved: '六源 {n} 可解析',
@@ -102,7 +102,7 @@
 +    handoff: { title: 'Handoff', done: 'Done', notDone: 'Not done', risks: 'Risks', next: 'Next', artifacts: 'Artifacts', verify: 'Verify' },
 +    inlineDiff: { editPrompt: 'Edit this line:', accept: 'Accept', reject: 'Reject', accepted: 'Accepted', rejected: 'Rejected' },
 +    mention: {
-+      atTitle: '@ six-source reference (file/session/skill/plugin/subagent/whiteboard)',
++      atTitle: "{'@'} six-source reference (file/session/skill/plugin/subagent/whiteboard)",
 +      draftPlaceholder: 'Message body (reference chips are sent with the message)',
 +      send: 'Send', stage: 'Add reference',
 +      previewCount: '{n} references', previewResolved: '{n} resolvable across six sources',
