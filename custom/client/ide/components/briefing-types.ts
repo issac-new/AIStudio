@@ -79,7 +79,19 @@ export function parseRaciFromTask(task: BriefingTask | null | undefined): Briefi
   // parseRACIFields 约定，见 overlay/custom/server/services/kanban/raci-dispatch.ts）③ 正则兜底。
   const merge = (r: Partial<BriefingRaci> | null | undefined): BriefingRaci | null => {
     if (!r) return null
-    const out = { responsible: [...(r.responsible ?? [])], approver: [...(r.approver ?? [])], consulted: [...(r.consulted ?? [])], informed: [...(r.informed ?? [])] }
+    // 成员形状归一（2026-09-28 演示轮实锤）：结构化 raci 存量数据有字符串形
+    // （RFD 主卡 responsible:"fanfan"）——直接展开会把字符串逐字拆成
+    // ['f','a','n',…]，简报 R 行渲染成 "f, a, n…"。此处统一收数为数组。
+    const toMembers = (v: unknown): string[] =>
+      typeof v === 'string' ? [v.trim()].filter(Boolean)
+        : Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean)
+          : []
+    const out = {
+      responsible: toMembers(r.responsible),
+      approver: toMembers(r.approver),
+      consulted: toMembers(r.consulted),
+      informed: toMembers(r.informed),
+    }
     return (out.responsible.length || out.approver.length || out.consulted.length || out.informed.length) ? out : null
   }
   const structured = merge(task.raci)
