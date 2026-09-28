@@ -1,0 +1,9 @@
+name: studio-file-approval
+version: "1.0.0"
+description: >
+  Human approval transport backed by a filesystem queue under HERMES_HOME.
+  Workers append redacted approval requests to approvals/queue.jsonl and poll
+  approvals/responses/<request_id>.json; SwarmStudio's /api/approvals inbox
+  reads the queue and writes the correlated decision. Fail-closed: a missing
+  or malformed response is a denial.
+author: SwarmStudio overlay

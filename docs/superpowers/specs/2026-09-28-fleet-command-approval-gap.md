@@ -1,4 +1,12 @@
-# Fleet 命令审批 live 缺口排查清单（2026-09-28 演示轮实证）
+# Fleet 命令审批 live 缺口（2026-09-28 已修复 · 垂直闭环实证）
+
+> **状态更新（同日 13:40）**：按下方"修复方向"落地——patch 490（unattended deny 前
+> 先走 operator 已选审批传输）+ studio-file-approval 传输插件 + studio 收件箱文件
+> 队列源（root + 全 profile home 扫描）。E2E 实证：worker 撞 `rm -rf /tmp/pay-live-demo`
+> → 请求入队 → 收件箱 UI 可见（2 pending）→ 人点「批准」→ 响应文件回写（request_id+
+> digest 绑定）→ worker 放行执行 → **目录真实删除、任务 done（t_26da796a）**。
+> 启用/撤销脚本 `scripts/aipay/mux/mx-enable-file-approval.sh`（幂等；DEENABLE=1 回
+> builtin）。以下为修复前的实证排查记录（保留存档）。
 
 ## 现象
 kanban spawn 的 worker（unattended/single-query 模式）撞危险命令时**硬 block**，

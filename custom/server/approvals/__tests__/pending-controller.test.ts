@@ -4,6 +4,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createServer } from 'http'
 import Koa from 'koa'
 import type { AddressInfo } from 'net'
+import { readFileSync, mkdirSync } from 'fs'
+import { join } from 'path'
 
 const LOG_FILE_BEFORE = process.env.HERMES_APPROVALS_LOG_FILE
 const REVIEW_DIR_BEFORE = process.env.HERMES_REVIEW_DIR
@@ -28,6 +30,8 @@ describe('审批收件箱 REST（/api/approvals）', () => {
   beforeEach(async () => {
     process.env.HERMES_APPROVALS_LOG_FILE = `/tmp/p1-approvals-log-${process.pid}-${Date.now()}.json`
     process.env.HERMES_REVIEW_DIR = `/tmp/p1-review-dir-${process.pid}-${Date.now()}`
+    process.env.HERMES_APPROVALS_QUEUE_DIR = `/tmp/p1-approvals-queue-${process.pid}-${Date.now()}`
+    mkdirSync(process.env.HERMES_APPROVALS_QUEUE_DIR, { recursive: true })
     const { approvalsRoutes } = await import('../pending-controller')
     const { openReview } = await import('../../review/review-store')
     // 造一张待审评审卡 + 一张已裁决卡
@@ -119,6 +123,50 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     const mine = entries.find((e) => e.targetId === 't_200')
     expect(mine?.targetKind).toBe('kanban')
     expect(mine?.targetTitle).toBe('支付渠道接入')
+  })
+
+  it('文件队列源：未答在列、已答/超时不在列；fleetfile decide 写响应文件 + 历史', async () => {
+    const dir = process.env.HERMES_APPROVALS_QUEUE_DIR!
+    const { writeFileSync, mkdirSync } = await import('fs')
+    mkdirSync(join(dir, 'responses'), { recursive: true })
+    writeFileSync(join(dir, 'queue.jsonl'), [
+      JSON.stringify({ request_id: 'rq-live', digest: 'd1', command: 'rm -rf /tmp/x', allowed_choices: ['once', 'deny'], timeout_seconds: 300, enqueued_at: Date.now(), surface: 'unattended:single_query' }),
+      JSON.stringify({ request_id: 'rq-answered', digest: 'd2', command: 'cmd2', timeout_seconds: 300, enqueued_at: Date.now() }),
+      JSON.stringify({ request_id: 'rq-stale', digest: 'd3', command: 'cmd3', timeout_seconds: 60, enqueued_at: Date.now() - 600_000 }),
+    ].join('\n') + '\n')
+    writeFileSync(join(dir, 'responses', 'rq-answered.json'), JSON.stringify({ request_id: 'rq-answered', digest: 'd2', choice: 'deny' }))
+
+    const pending = await fetchJson(base, '/api/approvals/pending')
+    const ids = (pending.body.items as Array<{ id: string }>).map(i => i.id)
+    expect(ids).toContain('fleetfile:rq-live')
+    expect(ids).not.toContain('fleetfile:rq-answered')
+    expect(ids).not.toContain('fleetfile:rq-stale')
+    const live = (pending.body.items as Array<{ id: string; choices?: string[] }>).find(i => i.id === 'fleetfile:rq-live')!
+    expect(live.choices).toEqual(['once', 'deny'])
+
+    const decide = await fetchJson(base, '/api/approvals/fleetfile:rq-live/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'once', note: '演示放行' }),
+    })
+    expect(decide.status).toBe(200)
+    expect((decide.body.entry as { actor: string }).actor).toBe('qa-lead')
+    const resp = JSON.parse(readFileSync(join(dir, 'responses', 'rq-live.json'), 'utf8')) as { request_id: string; digest: string; choice: string }
+    expect(resp).toEqual({ ...resp, request_id: 'rq-live', digest: 'd1', choice: 'once' })
+
+    // 已答后不再在列
+    const after = await fetchJson(base, '/api/approvals/pending')
+    expect((after.body.items as Array<{ id: string }>).map(i => i.id)).not.toContain('fleetfile:rq-live')
+  })
+
+  it('fleetfile decide：队列缺该请求 404', async () => {
+    const dir = process.env.HERMES_APPROVALS_QUEUE_DIR!; const { mkdirSync, writeFileSync } = await import('fs')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'queue.jsonl'), '')
+    const res = await fetchJson(base, '/api/approvals/fleetfile:rq-none/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'once' }),
+    })
+    expect(res.status).toBe(404)
   })
 
   it('fleet decide：非词表决策 400；id 缺会话段 400', async () => {
