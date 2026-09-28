@@ -7,7 +7,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   fetchPendingApprovals, decideApproval, fetchApprovalHistory,
-  type PendingApprovalItem, type ApprovalHistoryEntry,
+  type PendingApprovalItem, type ApprovalHistoryEntry, type ApprovalRiskTier,
 } from '../api/approvals'
 
 const props = withDefaults(defineProps<{
@@ -27,8 +27,15 @@ const error = ref('')
 const acting = ref<Set<string>>(new Set())
 let timer: ReturnType<typeof setInterval> | null = null
 
-const commandItems = computed(() => items.value.filter((i) => i.kind === 'command'))
-const reviewItems = computed(() => items.value.filter((i) => i.kind === 'review'))
+/** V4-N1 风险三档分组：高危置顶红标逐条裁决，低风险标"可自动通过·抽检"。
+ *  服务端 pending 已按档排序，这里仅按档聚桶；缺档（老服务端）按 medium 兜底。 */
+const tierGroups = computed(() => {
+  const buckets: Record<ApprovalRiskTier, PendingApprovalItem[]> = { high: [], medium: [], low: [] }
+  for (const item of items.value) buckets[item.risk ?? 'medium'].push(item)
+  return (['high', 'medium', 'low'] as const)
+    .map((key) => ({ key, rows: buckets[key] }))
+    .filter((g) => g.rows.length > 0)
+})
 
 async function refresh(): Promise<void> {
   loading.value = true
@@ -94,42 +101,55 @@ defineExpose({ refresh })
 
     <div v-if="!loading && items.length === 0" class="approval-panel__empty" data-testid="approval-empty">{{ t('approvals.empty') }}</div>
 
-    <!-- 命令审批（agent 工具/命令请求） -->
-    <section v-if="commandItems.length" class="approval-panel__group">
-      <h4 class="approval-panel__group-title">{{ t('approvals.kindCommand') }}</h4>
-      <div v-for="item in commandItems" :key="item.id" class="approval-row" data-testid="approval-row-command">
+    <!-- V4-N1 风险三档分区：高危（红标逐条）/ 常规 / 低风险（可自动通过·抽检） -->
+    <section
+      v-for="group in tierGroups"
+      :key="group.key"
+      class="approval-panel__group"
+      :class="`approval-panel__group--${group.key}`"
+      :data-testid="`approval-tier-${group.key}`"
+    >
+      <h4 class="approval-panel__group-title">
+        <span class="risk-dot" :class="`risk-dot--${group.key}`"></span>{{ t(`approvals.risk.${group.key}`) }}
+        <span v-if="group.key === 'high'" class="risk-hint risk-hint--high">{{ t('approvals.risk.highHint') }}</span>
+        <span v-if="group.key === 'low'" class="risk-hint risk-hint--low">{{ t('approvals.risk.autoSample') }}</span>
+      </h4>
+      <div
+        v-for="item in group.rows"
+        :key="item.id"
+        class="approval-row"
+        :class="{ 'approval-row--high': group.key === 'high' }"
+        :data-testid="item.kind === 'command' ? 'approval-row-command' : 'approval-row-review'"
+      >
         <div class="approval-row__main">
-          <div class="approval-row__title">{{ item.title }}</div>
-          <code class="approval-row__detail">{{ item.detail }}</code>
-          <div class="approval-row__meta">{{ fmtTime(item.createdAt) }}<template v-if="item.profile"> · {{ item.profile }}</template></div>
+          <div class="approval-row__title">
+            <span class="approval-row__kind">{{ t(item.kind === 'command' ? 'approvals.kindCommand' : 'approvals.kindReview') }}</span>{{ item.title }}
+          </div>
+          <code v-if="item.kind === 'command'" class="approval-row__detail">{{ item.detail }}</code>
+          <div v-else class="approval-row__detail">{{ item.detail }}</div>
+          <div class="approval-row__meta">
+            {{ fmtTime(item.createdAt) }}
+            <template v-if="item.profile"> · {{ item.profile }}</template>
+            <template v-if="item.taskId"> · {{ item.taskId }}</template>
+          </div>
         </div>
         <div class="approval-row__actions">
-          <button
-            v-for="choice in (item.choices && item.choices.length ? item.choices : ['once', 'session', 'deny'])"
-            :key="choice"
-            type="button"
-            class="approval-btn"
-            :class="`approval-btn--${choice}`"
-            :data-testid="`approval-btn-${choice}`"
-            :disabled="acting.has(item.id)"
-            @click="decide(item, choice)"
-          >{{ t(`approvals.choice.${choice}`) }}</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 评审卡（review 域未裁决） -->
-    <section v-if="reviewItems.length" class="approval-panel__group">
-      <h4 class="approval-panel__group-title">{{ t('approvals.kindReview') }}</h4>
-      <div v-for="item in reviewItems" :key="item.id" class="approval-row" data-testid="approval-row-review">
-        <div class="approval-row__main">
-          <div class="approval-row__title">{{ item.title }}</div>
-          <div class="approval-row__detail">{{ item.detail }}</div>
-          <div class="approval-row__meta">{{ fmtTime(item.createdAt) }}<template v-if="item.taskId"> · {{ item.taskId }}</template></div>
-        </div>
-        <div class="approval-row__actions">
-          <button type="button" class="approval-btn approval-btn--once" data-testid="approval-btn-approve" :disabled="acting.has(item.id)" @click="decide(item, 'approve')">{{ t('approvals.choice.approve') }}</button>
-          <button type="button" class="approval-btn approval-btn--deny" data-testid="approval-btn-request-changes" :disabled="acting.has(item.id)" @click="decide(item, 'request_changes')">{{ t('approvals.choice.request_changes') }}</button>
+          <template v-if="item.kind === 'command'">
+            <button
+              v-for="choice in (item.choices && item.choices.length ? item.choices : ['once', 'session', 'deny'])"
+              :key="choice"
+              type="button"
+              class="approval-btn"
+              :class="`approval-btn--${choice}`"
+              :data-testid="`approval-btn-${choice}`"
+              :disabled="acting.has(item.id)"
+              @click="decide(item, choice)"
+            >{{ t(`approvals.choice.${choice}`) }}</button>
+          </template>
+          <template v-else>
+            <button type="button" class="approval-btn approval-btn--once" data-testid="approval-btn-approve" :disabled="acting.has(item.id)" @click="decide(item, 'approve')">{{ t('approvals.choice.approve') }}</button>
+            <button type="button" class="approval-btn approval-btn--deny" data-testid="approval-btn-request-changes" :disabled="acting.has(item.id)" @click="decide(item, 'request_changes')">{{ t('approvals.choice.request_changes') }}</button>
+          </template>
         </div>
       </div>
     </section>
@@ -144,6 +164,7 @@ defineExpose({ refresh })
             <th>{{ t('approvals.colTime') }}</th>
             <th>{{ t('approvals.colActor') }}</th>
             <th>{{ t('approvals.colTarget') }}</th>
+            <th>{{ t('approvals.colRisk') }}</th>
             <th>{{ t('approvals.colDecision') }}</th>
             <th>{{ t('approvals.colNote') }}</th>
           </tr>
@@ -153,6 +174,7 @@ defineExpose({ refresh })
             <td>{{ fmtTime(entry.ts) }}</td>
             <td>{{ entry.actor }}</td>
             <td>{{ entry.targetTitle }}</td>
+            <td><span v-if="entry.risk" class="risk-badge" :class="`risk-badge--${entry.risk}`" data-testid="approval-history-risk">{{ t(`approvals.risk.${entry.risk}`) }}</span></td>
             <td><span class="approval-history__decision" :class="`is-${entry.decision}`">{{ t(`approvals.choice.${entry.decision}`) !== `approvals.choice.${entry.decision}` ? t(`approvals.choice.${entry.decision}`) : entry.decision }}</span></td>
             <td>{{ entry.note || '' }}</td>
           </tr>
@@ -289,5 +311,52 @@ defineExpose({ refresh })
   font-weight: 600;
   &.is-once, &.is-session, &.is-always, &.is-approve { color: #059669; }
   &.is-deny, &.is-request_changes { color: #dc2626; }
+}
+
+/* V4-N1 风险三档（§一 域1）：高危红标、低风险绿标、常规中性 */
+.risk-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: 1px;
+  &--high { background: #dc2626; }
+  &--medium { background: #d97706; }
+  &--low { background: #059669; }
+}
+.risk-hint {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+  &--high { color: #dc2626; background: #dc262614; }
+  &--low { color: #059669; background: #05966914; }
+}
+.approval-row--high {
+  border-left: 3px solid #dc2626;
+}
+.approval-row__kind {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted, #878c99);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 4px;
+  vertical-align: 1px;
+}
+.risk-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 11px;
+  border-radius: 4px;
+  &--high { color: #dc2626; background: #dc262614; }
+  &--medium { color: #d97706; background: #d9770614; }
+  &--low { color: #059669; background: #05966914; }
 }
 </style>

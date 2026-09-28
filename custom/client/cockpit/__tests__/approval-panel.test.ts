@@ -89,4 +89,29 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     expect(rows[0].text()).toContain('qa-lead')
     expect(rows[0].text()).toContain('once')
   })
+
+  // V4-N1 风险三档：分区渲染 + 高危置顶 + 缺档兜底 medium + 历史档位徽标
+  it('V4-N1：按风险档分区渲染（高危置顶红标、低风险带抽检标、缺档归 medium）', async () => {
+    api.__setState({
+      pending: {
+        items: [
+          { id: 'fleet:s1:a1', kind: 'command', title: '会话 A', detail: 'git push origin main', risk: 'high', choices: ['once', 'deny'], createdAt: 1759000000000 },
+          { id: 'fleet:s1:a2', kind: 'command', title: '会话 A', detail: 'git status', risk: 'low', choices: ['once', 'deny'], createdAt: 1759000001000 },
+          { id: 'review:rev-1', kind: 'review', title: '评审 · t_100', detail: '基线对照 main', taskId: 't_100', createdAt: 1759000100000 },
+        ],
+      },
+      history: { entries: [{ ...historyEntries[0], risk: 'high' }] },
+    })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0, showHistory: true } })
+    await flushPromises()
+
+    const tiers = wrap.findAll('[data-testid^="approval-tier-"]')
+    expect(tiers.map((s) => s.attributes('data-testid'))).toEqual(['approval-tier-high', 'approval-tier-medium', 'approval-tier-low'])
+    expect(wrap.find('[data-testid="approval-tier-high"] .approval-row--high').exists()).toBe(true)
+    expect(wrap.find('[data-testid="approval-tier-low"]').text()).toContain('approvals.risk.autoSample')
+    // 缺档的 review 卡归入 medium 区
+    expect(wrap.find('[data-testid="approval-tier-medium"] [data-testid="approval-row-review"]').exists()).toBe(true)
+    // 历史档位徽标
+    expect(wrap.find('[data-testid="approval-history-risk"]').classes()).toContain('risk-badge--high')
+  })
 })

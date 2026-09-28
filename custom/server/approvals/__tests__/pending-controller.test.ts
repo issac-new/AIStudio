@@ -133,4 +133,38 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     })
     expect(bad2.status).toBe(400)
   })
+
+  // V4-N1 风险分级：pending 聚合带档位 + 裁决台账记档位
+  it('V4-N1：pending 项带服务端权威风险档（review baseline=medium）', async () => {
+    const { status, body } = await fetchJson(base, '/api/approvals/pending')
+    expect(status).toBe(200)
+    const items = body.items as Array<{ id: string; risk?: string }>
+    const pending = items.find((i) => i.id === 'review:rev-pending-1')
+    expect(pending?.risk).toBe('medium')
+  })
+
+  it('V4-N1：kanban 裁决台账记风险档（发布语义=high；普通卡=medium）', async () => {
+    await fetchJson(base, '/api/approvals/kanban:t_rel/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'approve', title: '生产环境发版审批' }),
+    })
+    await fetchJson(base, '/api/approvals/kanban:t_201/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'approve', title: '支付渠道接入' }),
+    })
+    const hist = await fetchJson(base, '/api/approvals/history')
+    const entries = hist.body.entries as Array<{ targetId: string; risk?: string }>
+    expect(entries.find((e) => e.targetId === 't_rel')?.risk).toBe('high')
+    expect(entries.find((e) => e.targetId === 't_201')?.risk).toBe('medium')
+  })
+
+  it('V4-N1：review 裁决台账记风险档（baseline 评审=medium）', async () => {
+    await fetchJson(base, '/api/approvals/review:rev-pending-1/decide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'approve' }),
+    })
+    const hist = await fetchJson(base, '/api/approvals/history')
+    const entries = hist.body.entries as Array<{ targetId: string; risk?: string }>
+    expect(entries.find((e) => e.targetId === 'rev-pending-1')?.risk).toBe('medium')
+  })
 })

@@ -20,6 +20,7 @@ import { buildFleetSnapshotFromTap, respondFleetApproval } from '../services/her
 import { loadReview, setVerdict, listReviews } from '../review/review-store'
 import { isReviewVerdict, type ReviewVerdict } from '../review/review-store'
 import { appendApprovalLog, queryApprovalLog } from './approval-log'
+import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 
 const router = new Router({ prefix: '/api/approvals' })
 
@@ -35,6 +36,8 @@ export interface PendingItem {
   baseRef?: string
   choices?: string[]
   createdAt: number
+  /** V4-N1 风险档（服务端权威分类；high 红标逐条裁决 / low 可自动通过+抽检） */
+  risk: ApprovalRiskTier
 }
 
 function actorOf(ctx: { state?: { user?: { username?: string } } }): string {
@@ -58,6 +61,7 @@ router.get('/pending', async (ctx) => {
           profile: session.profile,
           choices: approval.choices,
           createdAt: session.lastActiveAt || 0,
+          risk: classifyApprovalRisk({ kind: 'command', detail: approval.preview || '', title: session.title }),
         })
       }
     }
@@ -67,20 +71,24 @@ router.get('/pending', async (ctx) => {
   try {
     for (const rec of listReviews()) {
       if (rec.verdict) continue
+      const detail = rec.domain === 'baseline' ? `基线对照 ${rec.baseRef ?? ''}` : '未提交变更'
       items.push({
         id: `review:${rec.reviewId}`,
         kind: 'review',
         title: rec.taskId ? `评审 · ${rec.taskId}` : `评审 · ${rec.reviewId}`,
-        detail: rec.domain === 'baseline' ? `基线对照 ${rec.baseRef ?? ''}` : '未提交变更',
+        detail,
         taskId: rec.taskId,
         domain: rec.domain,
         baseRef: rec.baseRef,
         createdAt: rec.createdAt,
+        risk: classifyApprovalRisk({ kind: 'review', title: rec.taskId || rec.reviewId, detail, domain: rec.domain }),
       })
     }
   } catch { /* review 源不可用不阻断 */ }
 
-  items.sort((a, b) => b.createdAt - a.createdAt)
+  // V4-N1：高危置顶，同档内按时间新→旧
+  const tierOrder: Record<ApprovalRiskTier, number> = { high: 0, medium: 1, low: 2 }
+  items.sort((a, b) => (tierOrder[a.risk] - tierOrder[b.risk]) || (b.createdAt - a.createdAt))
   ctx.body = { ok: true, items, ts: Date.now() }
 })
 
@@ -103,6 +111,14 @@ router.post('/:id/decide', async (ctx) => {
     }
     const sessionId = rest.slice(0, sep)
     const approvalId = rest.slice(sep + 1)
+    // V4-N1：裁决前服务端重算风险档入台账（不信客户端自报档位）
+    let risk: ApprovalRiskTier | undefined
+    try {
+      const sessions = buildFleetSnapshotFromTap()
+      const sess = sessions?.find((s) => s.id === sessionId)
+      const appr = sess?.approvals?.find((a) => a.approval_id === approvalId)
+      if (appr) risk = classifyApprovalRisk({ kind: 'command', detail: appr.preview || '', title: sess?.title })
+    } catch { /* 快照不可用则档位留空，不阻断裁决 */ }
     const result = await respondFleetApproval(approvalId, decision)
     if (!result.resolved) {
       ctx.status = 409
@@ -111,7 +127,7 @@ router.post('/:id/decide', async (ctx) => {
     }
     const entry = appendApprovalLog({
       id, actor, targetKind: 'command', targetId: approvalId,
-      targetTitle: `${sessionId} · ${approvalId}`, decision, note,
+      targetTitle: `${sessionId} · ${approvalId}`, decision, note, risk,
     })
     ctx.body = { ok: true, entry }
     return
@@ -125,10 +141,11 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: 'kanban 决策须为 approve|request_changes，id 形如 kanban:<taskId>' }
       return
     }
+    const targetTitle = typeof body.title === 'string' ? body.title.slice(0, 200) : (note || targetId)
     const entry = appendApprovalLog({
       id, actor, targetKind: 'kanban', targetId,
-      targetTitle: typeof body.title === 'string' ? body.title.slice(0, 200) : (note || targetId),
-      decision, note,
+      targetTitle, decision, note,
+      risk: classifyApprovalRisk({ kind: 'kanban', title: targetTitle }),
     })
     ctx.body = { ok: true, entry }
     return
@@ -157,6 +174,7 @@ router.post('/:id/decide', async (ctx) => {
     const entry = appendApprovalLog({
       id, actor, targetKind: 'review', targetId: reviewId,
       targetTitle: rec.taskId || reviewId, decision: verdict, note,
+      risk: classifyApprovalRisk({ kind: 'review', title: rec.taskId || reviewId, domain: rec.domain, detail: rec.baseRef }),
     })
     ctx.body = { ok: true, review: updated, entry }
     return
