@@ -329,7 +329,7 @@ onMounted(() => void refresh())
   gap: 2px;
   text-align: left;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 7px;
+  border-radius: var(--radius-standard, 6px);
   background: var(--bg-primary, #fff);
   padding: 7px 9px;
   cursor: pointer;
@@ -403,7 +403,7 @@ onMounted(() => void refresh())
   align-items: center;
   gap: 12px;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 7px;
+  border-radius: var(--radius-standard, 6px);
   padding: 7px 9px;
 }
 .ia-gov__review-main { flex: 1; min-width: 0; }

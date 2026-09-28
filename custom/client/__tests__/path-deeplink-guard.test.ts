@@ -7,9 +7,10 @@ import { join, resolve } from 'node:path'
 // vue-router 全程不可见，须在 router 初始化前迁移为 hash 形态。
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
+// 私有上游流程优先（OVERLAY_UPSTREAM_ROOT，与 inject.mjs 同源）
 const UPSTREAM_MAIN = join(
-  OVERLAY_ROOT,
-  '../upstream/hermes-studio/packages/client/src/main.ts',
+  process.env.OVERLAY_UPSTREAM_ROOT ? process.env.OVERLAY_UPSTREAM_ROOT : join(OVERLAY_ROOT, '../upstream'),
+  'hermes-studio/packages/client/src/main.ts',
 )
 const PATCH_FILE = join(OVERLAY_ROOT, 'patches/368-client-path-deeplink-to-hash.patch')
 const SERIES = join(OVERLAY_ROOT, 'patches/series')

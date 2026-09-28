@@ -4,9 +4,11 @@
 // 该会话被压缩过即在消息流底部浮一张卡（压到哪条/折叠多少条/摘要规模）。
 // 历史序列卡（多次压缩 markers）列 v2（表只存最新快照）。
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 const snapshot = ref<{ compressedThroughMessageId: string; foldedMessages: number; summaryChars: number; reason: string } | null>(null)
 
 async function load(): Promise<void> {
@@ -30,14 +32,14 @@ watch(() => chatStore.activeSessionId, () => { void load() })
 
 const foldedText = computed(() =>
   snapshot.value && snapshot.value.foldedMessages > 0
-    ? `折叠 ${snapshot.value.foldedMessages} 条进摘要`
-    : '折叠范围未记',
+    ? t('ide.compaction.folded', { n: snapshot.value.foldedMessages })
+    : t('ide.compaction.foldRangeUnknown', '折叠范围未记'),
 )
 </script>
 
 <template>
-  <div v-if="snapshot" class="ide-compaction" data-testid="ide-compaction-card" title="历史已压缩——摘要替换早期消息">
-    ▤ 压缩留痕：{{ foldedText }} · 摘要 {{ snapshot.summaryChars }} 字（至消息 #{{ snapshot.compressedThroughMessageId.slice(0, 8) }}）
+  <div v-if="snapshot" class="ide-compaction" data-testid="ide-compaction-card" :title="t('ide.compaction.hint', '历史已压缩——摘要替换早期消息')">
+    {{ t('ide.compaction.trace', '压缩留痕') }}：{{ foldedText }} · {{ t('ide.compaction.summaryChars', { n: snapshot.summaryChars }) }}（{{ t('ide.compaction.through', { id: snapshot.compressedThroughMessageId.slice(0, 8) }) }}）
   </div>
 </template>
 
@@ -47,7 +49,7 @@ const foldedText = computed(() =>
   color: var(--text-color-3, #999);
   background: var(--hover-color, rgba(0, 0, 0, 0.03));
   border-left: 3px solid var(--text-color-3, #bbb);
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   padding: 3px 10px;
   margin: 4px 12px;
 }

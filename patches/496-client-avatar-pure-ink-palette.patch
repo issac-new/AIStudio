@@ -1,0 +1,28 @@
+--- a/packages/client/src/components/hermes/profiles/ProfileAvatar.vue
++++ b/packages/client/src/components/hermes/profiles/ProfileAvatar.vue
+@@ -12,10 +12,14 @@
+ })
+ 
+ const fallbackSeed = computed(() => props.name || 'default')
++// Pure Ink：beam 变体默认彩板（紫红/青）与黑白灰体系冲突，统一五档灰阶
++const GRAY_PALETTE = ['#1a1a1a', '#4d4d4d', '#808080', '#b3b3b3', '#e0e0e0']
++
+ const generatedSvg = computed(() => boring({
+   name: props.avatar?.seed || fallbackSeed.value,
+   variant: 'beam',
+   size: props.size,
++  colors: GRAY_PALETTE,
+ }))
+ const style = computed(() => ({
+   width: `${props.size}px`,
+--- a/packages/client/src/components/hermes/settings/AccountSettings.vue
++++ b/packages/client/src/components/hermes/settings/AccountSettings.vue
+@@ -93,7 +93,7 @@
+       ? crypto.randomUUID()
+       : Math.random().toString(36).slice(2)
+     const seed = `${username.value || 'default'}-${Date.now()}-${randomPart}`
+-    const svg = boring({ name: seed, variant: 'beam' })
++    const svg = boring({ name: seed, variant: 'beam', colors: ['#1a1a1a', '#4d4d4d', '#808080', '#b3b3b3', '#e0e0e0'] })  // Pure Ink 灰阶
+     const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)))
+     await updateMyAvatar({ type: 'image', dataUrl, seed })
+     avatar.value = { type: 'image', dataUrl, seed }

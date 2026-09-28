@@ -10,7 +10,7 @@
 // 上游依赖全部 mock：users（避免触碰真实 DB）、jwt、profile-config、
 // custom admin-service（validateMatrixToken 假通过）；只放开登录限流与 url-guard 真实现
 //（http://localhost:8008 + allowPrivateIp 走真实 SSRF 校验路径）。
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   saveMatrixSession: vi.fn(),
@@ -37,7 +37,11 @@ vi.mock('../../../server/matrix/admin-service', () => ({
 // 路径与真实路径在 vitest 模块图里可能是两个模块 ID，两侧 specifier 都要
 // mock（0.7.24 刷新后单侧 mock 失配→真实 validateMatrixToken 打到本地
 // synapse 上→401，三用例连锁挂）。
-const UPSTREAM_CUSTOM = vi.hoisted(() => '../../../../../upstream/hermes-studio/packages/server/src/custom')
+// 私有上游流程优先（OVERLAY_UPSTREAM_ROOT，与 inject.mjs 同源）；默认共享树。
+const UPSTREAM_CUSTOM = vi.hoisted(() =>
+  process.env.OVERLAY_UPSTREAM_ROOT
+    ? process.env.OVERLAY_UPSTREAM_ROOT + '/hermes-studio/packages/server/src/custom'
+    : '../../../../../upstream/hermes-studio/packages/server/src/custom')
 vi.mock(`${UPSTREAM_CUSTOM}/matrix/session-store`, () => ({ saveMatrixSession: mocks.saveMatrixSession }))
 vi.mock(`${UPSTREAM_CUSTOM}/matrix/admin-service`, () => ({
   validateMatrixToken: mocks.validateMatrixToken,
@@ -51,7 +55,8 @@ vi.mock(`${UPSTREAM_CUSTOM}/matrix/admin-service`, () => ({
 
 // 上游模块：路径自本文件起 5 级到 ncwk 根，再进 upstream/hermes-studio。
 // vi.mock 会提升到文件顶部，路径常量必须用 vi.hoisted 同步提升。
-const UPSTREAM = vi.hoisted(() => '../../../../../upstream/hermes-studio/packages/server/src/modules/studio')
+const UPSTREAM = vi.hoisted(() =>
+  (process.env.OVERLAY_UPSTREAM_ROOT ? process.env.OVERLAY_UPSTREAM_ROOT + '/hermes-studio/packages/server/src/modules/studio' : '../../../../../upstream/hermes-studio/packages/server/src/modules/studio'))
 vi.mock(`${UPSTREAM}/public/users`, () => ({
   DEFAULT_USERNAME: 'admin',
   DEFAULT_PASSWORD: '123456',
@@ -85,7 +90,7 @@ vi.mock(`${UPSTREAM}/public/profile-config`, () => ({
   listProfileNamesFromDisk: vi.fn(() => ['default']),
 }))
 
-import { matrixLogin } from '../../../../../upstream/hermes-studio/packages/server/src/modules/studio/controllers/auth'
+
 
 const USER = {
   id: 7, username: 'swarm', role: 'super_admin', status: 'active',
@@ -118,7 +123,12 @@ const LOGIN_BODY = {
   homeserverUrl: 'http://localhost:8008',
 }
 
+let matrixLogin: (ctx: unknown) => Promise<unknown>
+
 describe('matrixLogin → saveMatrixSession（patch 012）', () => {
+  beforeAll(async () => {
+    ;({ matrixLogin } = await import(/* @vite-ignore */ `${UPSTREAM}/controllers/auth`) as never)
+  })
   it('token 校验通过且用户已绑定 → 落盘 session（homeserverUrl 用 SSRF 归一 origin）', async () => {
     const ctx = makeCtx(LOGIN_BODY)
     await matrixLogin(ctx as never)

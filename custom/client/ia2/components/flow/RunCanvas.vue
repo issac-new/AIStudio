@@ -302,7 +302,7 @@ function fmtEventTs(ts: string | number | undefined): string {
 }
 .rc__viewbar-label { color: var(--text-muted); font-weight: 700; font-size: 11px; }
 .rc__chip {
-  height: 22px; padding: 0 9px; border: 1px solid var(--border-color); border-radius: 11px;
+  height: 22px; padding: 0 9px; border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px);
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
   white-space: nowrap;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
@@ -311,13 +311,13 @@ function fmtEventTs(ts: string | number | undefined): string {
 .rc__chip--on { border-color: var(--primary); color: var(--primary); font-weight: 600; }
 .rc__spacer { flex: 1; }
 .rc__livebadge {
-  height: 20px; padding: 0 8px; border: 1px solid var(--success); border-radius: 10px;
+  height: 20px; padding: 0 8px; border: 1px solid var(--success); border-radius: var(--radius-panel, 8px);
   color: var(--success); font-size: 10px; font-weight: 700;
   display: inline-flex; align-items: center; white-space: nowrap;
 }
 /* v13 运行耗时徽章（与 LIVE 徽章并排；running 态才渲染） */
 .rc__elapsed {
-  height: 20px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 10px;
+  height: 20px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: var(--radius-panel, 8px);
   color: var(--text-secondary); font-size: 10px; font-variant-numeric: tabular-nums;
   display: inline-flex; align-items: center; white-space: nowrap;
 }
@@ -344,7 +344,7 @@ function fmtEventTs(ts: string | number | undefined): string {
 .rc__sembar-seg.rc__sem--other { background: var(--text-muted); }
 .rc__semchips { display: flex; flex-wrap: wrap; gap: 4px; }
 .rc__semchip {
-  height: 18px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: 9px;
+  height: 18px; padding: 0 7px; border: 1px solid var(--border-color); border-radius: var(--radius-panel, 8px);
   background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer;
   font-family: inherit; white-space: nowrap;
   &:hover { border-color: var(--text-muted); }

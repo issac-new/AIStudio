@@ -11,7 +11,7 @@ import { resolve } from 'path'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
 
 // ── store 桩 ──
 const roomStubs = vi.hoisted(() => {
@@ -464,7 +464,10 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
     await wrapper.find('[data-testid="tdp-timeline-all"]').trigger('click')
     expect(cockpitStubs.state.openRunTraceGlobal).toHaveBeenCalled()
     expect(wrapper.find('[data-testid="tdp-feed"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('ia2.feed.taskCreated')
+    // feed 行经 t(key, params) 渲染；mock 参数态返回值序列，故断言行数据值
+    // （taskCreated 携带任务 id/title）而非键名（数据流语义不变）
+    expect(wrapper.text()).toContain('t-402')
+    expect(wrapper.text()).toContain('v2.28 发布')
   })
 })
 
