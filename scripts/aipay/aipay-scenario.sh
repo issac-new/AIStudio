@@ -1030,7 +1030,9 @@ if step_reached report && [[ -z "$(sget report_done)" ]]; then
   # 报告生成器外置 mux/mx-report-gen.py（09-26 重构：方案对齐 26 步+逐步截屏挂接）：
   # 步骤定义与方案"具体流程 1-26"一一对应，含把关（准出/合格线）与
   # evidence/screenshots/steps/ 逐步截图自动嵌入（真实界面走查+真实工件渲染）。
-  python3 "$SCRIPT_DIR/mux/mx-report-gen.py" || fail "报告生成失败"
+  # --run 必带（H7）：缺省时生成器回落 SIM 全局 state/evidence，拿旧轮 state
+  # 出"状态真实"的假报告，且落盘路径与下方 note 不符（run2 2026-09-29 05:15 实锤）。
+  python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   sset report_done "$(date +%s)"
   # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）

@@ -210,3 +210,43 @@ describe('⑤ 门禁文本与派发契约回归绊线', () => {
     expect(skill).toContain('RUN_ID 不同')
   })
 })
+
+describe('⑥ 报告路由（H7：无 RUN_ID 落全局目录出旧轮假报告）', () => {
+  const gen = join(MX, 'mx-report-gen.py')
+
+  function printPaths(args: string, env: Record<string, string> = {}): string {
+    return execFileSync('python3', [gen, ...args.split(' ').filter(Boolean), '--print-paths'], {
+      encoding: 'utf8',
+      env: { ...process.env, ...env },
+    })
+  }
+
+  it('aipay-scenario.sh 报告生成调用携带 --run', () => {
+    const scen = execFileSync('bash', ['-c', `grep -c 'mx-report-gen.py.*--run' "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}" || true`], { encoding: 'utf8' })
+    expect(Number(scen.trim())).toBeGreaterThanOrEqual(1)
+  })
+
+  it('--run 使 OUT/STATE 落 runs/<id>/（不出全局目录假报告）', () => {
+    const out = printPaths('--run 20260929-v4-run2')
+    expect(out).toContain('runs/20260929-v4-run2/evidence/simulation-report.html')
+    expect(out).toContain('runs/20260929-v4-run2/state.env')
+  })
+
+  it('--run 显式值胜过 MX_RUN_ID 环境残留', () => {
+    const out = printPaths('--run cli-run', { MX_RUN_ID: 'env-run' })
+    expect(out).toContain('runs/cli-run/evidence/simulation-report.html')
+    expect(out).not.toContain('env-run')
+  })
+
+  it('MX_EVID_DIR 覆盖 EVID 而 STATE 仍按 RUN_ID（与 mx-lib 同源）', () => {
+    const root = sandbox()
+    const out = printPaths('', { MX_EVID_DIR: root })
+    expect(out).toContain(`OUT=${join(root, 'simulation-report.html')}`)
+    expect(out).toContain('STATE=/Volumes/nvme2230/lab/ncwk-sim-mux/state.env')
+  })
+
+  it('无 RUN_ID 缺省回落 SIM 全局（V3 兼容）但可被 --run 纠正', () => {
+    const out = printPaths('')
+    expect(out).toContain('OUT=/Volumes/nvme2230/lab/ncwk-sim-mux/evidence/simulation-report.html')
+  })
+})
