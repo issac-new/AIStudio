@@ -47,7 +47,7 @@ vi.mock('@/api/hermes/kanban', () => ({
   listTasks: (...a: unknown[]) => listTasksMock(...a),
 }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: () => ({}) }))
-vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ sessions: [] }) }))
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ sessions: [], setRuntimeMode: vi.fn(), loadSessions: vi.fn(async () => {}) }) }))
 // P3.2 上下文文件接线（2026-09-28）：files store 与 listFiles 须替身（真实实现需 pinia/网络）
 vi.mock('@/stores/hermes/files', () => ({ useFilesStore: () => ({ openEditor: vi.fn() }) }))
 vi.mock('@/api/studio/files', () => ({ listFiles: vi.fn(async () => ({ entries: [], path: '' })) }))

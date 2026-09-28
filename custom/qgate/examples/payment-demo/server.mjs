@@ -4,7 +4,8 @@
 import { createServer } from 'node:http'
 import { openDb, insertPayment } from './db.mjs'
 
-const PORT = 8901
+// 端口由 QGate 执行器经 env PORT 注入（空闲端口防撞）；8901 仅为裸跑兜底。
+const PORT = Number(process.env.PORT || 8901)
 const db = openDb()
 
 export function buildPaymentResponse(row) {

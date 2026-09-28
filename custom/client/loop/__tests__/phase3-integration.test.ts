@@ -74,10 +74,12 @@ describe('Phase 3 Integration (SaaS Layer)', () => {
     const sched = new CentralizedScheduler(store, engine, 100)
     await sched.poll()
     // poll() fires engine.tick() without awaiting (fire-and-forget design).
-    // Flush the microtask/macrotask queue so the tick completes before asserting.
-    // 250ms (was 50) — under parallel suite load the fire-and-forget tick can
-    // take longer to land; the wider window avoids a flaky false-negative.
-    await new Promise(r => setTimeout(r, 250))
+    // Deterministic deadline wait: fixed sleeps (50→250ms history) stayed flaky
+    // under parallel suite load, so wait for the event itself instead.
+    const deadline = Date.now() + 5_000
+    while (!events.some(e => e.type === 'loop.tick-complete') && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 25))
+    }
 
     // Verify the loop was ticked
     expect(events.some(e => e.type === 'loop.tick-complete')).toBe(true)

@@ -6,7 +6,7 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 vi.mock('naive-ui', () => ({
-  useMessage: () => ({ success: vi.fn(), error: vi.fn() }),
+  useMessage: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }),
   useDialog: () => ({ warning: vi.fn() }),
 }))
 const switchSessionModel = vi.fn(async () => true)
@@ -17,10 +17,14 @@ vi.mock('@/stores/hermes/chat', () => ({
     get activeSessionId() { return state.activeSessionId },
     get activeSession() { return state.activeSession },
     subagentStreams: new Map(),
+    sessions: [],
+    newChat: vi.fn(),
     switchSessionModel,
     sendMessage: vi.fn(),
   }),
 }))
+vi.mock('@/stores/hermes/profiles', () => ({ useProfilesStore: () => ({ fetchProfiles: vi.fn(async () => {}), profiles: [] }) }))
+vi.mock('@/stores/hermes/settings', () => ({ useSettingsStore: () => ({ fetchSettings: vi.fn(async () => {}), settings: {} }) }))
 vi.mock('@/stores/hermes/app', () => ({
   useAppStore: () => ({
     modelGroups: [{ provider: 'hermes-p', models: [{ id: 'h-model' }] }],
@@ -28,7 +32,7 @@ vi.mock('@/stores/hermes/app', () => ({
     switchModel,
   }),
 }))
-vi.mock('../store/ide', () => ({ useIdeStore: () => ({ floats: {}, agentId: 'zcode' }) }))
+vi.mock('../store/ide', () => ({ useIdeStore: () => ({ floats: {}, agentId: 'zcode' }), ideAgentToChatAgent: (agentId: string) => ({ id: agentId }) }))
 const catalogMock = vi.fn()
 vi.mock('../utils/engine-models', () => ({ fetchEngineCatalog: () => catalogMock() }))
 vi.mock('@/api/hermes/model-context', () => ({ setModelContext: vi.fn(async () => undefined) }))
@@ -44,6 +48,19 @@ vi.mock('@/components/hermes/chat/ChatInput.vue', () => ({
   },
 }))
 
+// 健康挂载（IdeChatPane 防漂移 ?. 挂载走通后）下 ready=true 会渲染重型子树，
+// 单测聚焦输入框模型按钮，其余子组件一律桩化（vi.mock 静态声明，不可循环）。
+vi.mock('@/components/hermes/chat/MessageList.vue', () => ({ default: { name: 'MessageListStub', template: '<div />' } }))
+vi.mock('../components/IdeTurnRail.vue', () => ({ default: { name: 'IdeTurnRail', template: '<div />' } }))
+vi.mock('../components/IdeHandoffCard.vue', () => ({ default: { name: 'IdeHandoffCard', template: '<div />' } }))
+vi.mock('../components/IdeRecoveryDialog.vue', () => ({ default: { name: 'IdeRecoveryDialog', template: '<div />' } }))
+vi.mock('../components/IdePermissionSwitcher.vue', () => ({ default: { name: 'IdePermissionSwitcher', template: '<div />' } }))
+vi.mock('../components/IdeAskCard.vue', () => ({ default: { name: 'IdeAskCard', template: '<div />' } }))
+vi.mock('../components/IdeMentionChip.vue', () => ({ default: { name: 'IdeMentionChip', template: '<div />' } }))
+vi.mock('../components/IdeRunLogPanel.vue', () => ({ default: { name: 'IdeRunLogPanel', template: '<div />' } }))
+vi.mock('../components/IdeQueuePanel.vue', () => ({ default: { name: 'IdeQueuePanel', template: '<div />' } }))
+vi.mock('../components/IdeRecapCard.vue', () => ({ default: { name: 'IdeRecapCard', template: '<div />' } }))
+vi.mock('../components/IdeTaskGroupsPanel.vue', () => ({ default: { name: 'IdeTaskGroupsPanel', template: '<div />' } }))
 import IdeChatPane from '../views/IdeChatPane.vue'
 
 describe('IdeChatPane 输入框模型按钮（修复守门）', () => {
