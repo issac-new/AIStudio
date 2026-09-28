@@ -156,14 +156,14 @@ const CATEGORY_META: Record<ToolRow['category'], { icon: string; label: string }
 .ide-tools__item { margin: 3px 0; }
 .ide-tools__diff {
   margin: 2px 0 4px 20px; padding: 6px 8px; font-size: 10px; font-family: ui-monospace, monospace;
-  background: var(--hover-color, rgba(0, 0, 0, 0.03)); border-radius: 4px; max-height: 200px; overflow: auto;
+  background: var(--hover-color, rgba(0, 0, 0, 0.03)); border-radius: var(--radius-micro, 3px); max-height: 200px; overflow: auto;
 }
 .ide-tools__dline { display: block; white-space: pre-wrap; }
 .ide-tools__dline.is-add { color: #18a058; background: rgba(24, 160, 88, 0.08); }
 .ide-tools__dline.is-del { color: #d03050; background: rgba(208, 48, 80, 0.08); }
 .ide-tools__chev { color: var(--text-color-3, #999); font-size: 10px; }
 .ide-tools__row {
-  display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 5px;
+  display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: var(--radius-standard, 6px);
   border-left: 2px solid var(--border-color, #e0e0e0); margin: 3px 0; cursor: default;
 }
 .ide-tools__row.is-edit { border-left-color: #61afef; }

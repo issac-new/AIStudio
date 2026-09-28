@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // __tests__ → kanban → client → custom → overlay → ncwk 根；上游只读面从 ncwk/ 进
-const upstreamRoot = resolve(here, '../../../../../upstream/hermes-studio')
+const upstreamRoot = resolve(process.env.OVERLAY_UPSTREAM_ROOT ? process.env.OVERLAY_UPSTREAM_ROOT : resolve(here, '../../../../../upstream'), 'hermes-studio')
 
 function readInjected(relPath: string): string {
   const full = resolve(upstreamRoot, relPath)

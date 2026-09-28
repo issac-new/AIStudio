@@ -79,7 +79,7 @@ const pressure = computed(() => (totalPct.value >= 95 ? 'critical' : totalPct.va
 <style scoped lang="scss">
 .ide-ctxbar { position: relative; display: inline-flex; align-items: center; gap: 6px; cursor: default; }
 .ide-ctxbar__track {
-  width: 140px; height: 8px; border-radius: 4px; overflow: hidden; display: flex;
+  width: 140px; height: 8px; border-radius: var(--radius-micro, 3px); overflow: hidden; display: flex;
   background: var(--hover-color, rgba(0, 0, 0, 0.08));
 }
 .ide-ctxbar__seg { height: 100%; }
@@ -92,5 +92,5 @@ const pressure = computed(() => (totalPct.value >= 95 ? 'critical' : totalPct.va
   background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 6px; padding: 6px 10px; font-size: 11px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
-.ide-ctxbar__dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.ide-ctxbar__dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-micro, 3px); margin-right: 5px; }
 </style>

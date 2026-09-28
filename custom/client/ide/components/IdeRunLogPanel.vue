@@ -88,7 +88,7 @@ function fmtCost(c: number | null): string {
 .ide-runlog__count { font-weight: 400; }
 .ide-runlog__row {
   display: flex; gap: 8px; align-items: baseline; padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
 }
 .ide-runlog__row.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.04)); }
 .ide-runlog__state { color: var(--primary-color, #18a058); }

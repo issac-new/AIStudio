@@ -179,14 +179,14 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
 .ide-kanban__head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border-color, #eee); }
 .ide-kanban__refresh { border: none; background: transparent; cursor: pointer; font-size: 14px; color: var(--text-color-3, #999); }
 .ide-kanban__views { display: inline-flex; gap: 2px; }
-.ide-kanban__viewtab { border: 1px solid transparent; background: transparent; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 1px 8px; color: var(--text-color-3, #999); }
+.ide-kanban__viewtab { border: 1px solid transparent; background: transparent; border-radius: var(--radius-micro, 3px); cursor: pointer; font-size: 11px; padding: 1px 8px; color: var(--text-color-3, #999); }
 .ide-kanban__viewtab.is-active { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 .ide-kanban__count { margin-left: auto; color: var(--text-color-3, #999); }
 .ide-kanban__error, .ide-kanban__empty { padding: 12px; color: var(--text-color-3, #999); }
 .ide-kanban__board { flex: 1; display: flex; gap: 8px; overflow-x: auto; padding: 8px; }
 .ide-kanban__col { flex: 0 0 168px; background: var(--hover-color, rgba(0,0,0,.03)); border-radius: 6px; padding: 6px; }
 .ide-kanban__colhead { font-weight: 600; color: var(--text-color-3, #999); font-size: 11px; padding: 2px 4px 6px; }
-.ide-kanban__card { display: flex; gap: 4px; align-items: baseline; background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; overflow: hidden; }
+.ide-kanban__card { display: flex; gap: 4px; align-items: baseline; background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0); border-radius: var(--radius-micro, 3px); padding: 4px 6px; margin-bottom: 4px; overflow: hidden; }
 .ide-kanban__prio { font-size: 10px; font-weight: 600; }
 .is-p0 .ide-kanban__prio, td.is-p0 { color: #d03050; }
 .is-p1 .ide-kanban__prio, td.is-p1 { color: #d06030; }
@@ -203,7 +203,7 @@ td.is-title { max-width: 200px; white-space: nowrap; overflow: hidden; text-over
 .ide-kanban__gantt { flex: 1; overflow-y: auto; padding: 8px; }
 .ide-kanban__grow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .ide-kanban__glabel { flex: 0 0 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
-.ide-kanban__gtrack { flex: 1; position: relative; height: 8px; background: var(--hover-color, rgba(0,0,0,.05)); border-radius: 4px; }
-.ide-kanban__gbar { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--primary-color, #18a058); opacity: .6; }
+.ide-kanban__gtrack { flex: 1; position: relative; height: 8px; background: var(--hover-color, rgba(0,0,0,.05)); border-radius: var(--radius-micro, 3px); }
+.ide-kanban__gbar { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-micro, 3px); background: var(--primary-color, #18a058); opacity: .6; }
 .ide-kanban__gbar.is-done { opacity: 1; }
 </style>

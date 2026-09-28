@@ -95,7 +95,7 @@ function roomName(roomId: string): string {
 }
 .gps__ops { flex-shrink: 0; }
 .gps__op {
-  height: 22px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 11px;
+  height: 22px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px);
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
   &:disabled { opacity: .4; cursor: not-allowed; }
   &:hover:not(:disabled) { color: var(--text-primary); border-color: var(--text-muted); }

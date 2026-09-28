@@ -388,7 +388,7 @@ defineExpose({ refresh })
   font-size: 11px;
   font-weight: 500;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   text-transform: none;
   letter-spacing: 0;
   &--high { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.08); }
@@ -405,7 +405,7 @@ defineExpose({ refresh })
   font-weight: 500;
   color: var(--text-muted, #878c99);
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   vertical-align: 1px;
 }
 .risk-badge {
@@ -413,7 +413,7 @@ defineExpose({ refresh })
   margin-right: 6px;
   padding: 1px 6px;
   font-size: 11px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   &--high { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.08); }
   &--medium { color: var(--warning-color, #d97706); background: rgba(217, 119, 6, 0.08); }
   &--low { color: var(--success-color, #059669); background: rgba(5, 150, 105, 0.08); }

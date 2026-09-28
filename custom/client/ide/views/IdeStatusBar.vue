@@ -317,7 +317,7 @@ watch(
   align-items: center;
   gap: 16px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
 
   &:focus-visible {
     outline: 1px solid var(--border-color, #4a90d9);
@@ -337,7 +337,7 @@ watch(
 .ide-statusbar__ctxbar {
   width: 72px;
   height: 5px;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   overflow: hidden;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 22%, transparent);
 }
@@ -345,7 +345,7 @@ watch(
 .ide-statusbar__ctxfill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   background: var(--success-color, #98c379);
   transition: width 0.3s ease;
 
@@ -362,7 +362,7 @@ watch(
 .ide-statusbar__tpsbar {
   width: 40px;
   height: 5px;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   overflow: hidden;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 22%, transparent);
 }
@@ -370,7 +370,7 @@ watch(
 .ide-statusbar__tpsfill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   transition: width 0.3s ease;
 
   /* 速度色阶（dsh-TUI：≥50 绿 / ≥20 黄 / <20 红） */

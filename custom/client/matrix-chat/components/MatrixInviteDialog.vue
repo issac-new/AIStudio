@@ -444,7 +444,7 @@ $text-on-accent: var(--bg-primary);
   padding: 2px 6px 2px 2px;
   background: rgba(var(--accent-primary-rgb), 0.08);
   border: 1px solid rgba(var(--accent-primary-rgb), 0.2);
-  border-radius: 16px;
+  border-radius: var(--radius-large, 12px);
   flex-shrink: 0;
 }
 

@@ -109,7 +109,7 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 .ide-review__counts { color: var(--text-color-3, #999); font-weight: 400; font-size: 11px; }
 .ide-review__empty { color: var(--text-color-3, #999); padding: 8px 0; }
 .ide-review__finding {
-  display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 4px; margin: 2px 0;
+  display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: var(--radius-micro, 3px); margin: 2px 0;
 }
 .ide-review__finding.is-high { background: rgba(208, 48, 80, 0.07); }
 .ide-review__finding.is-medium { background: rgba(184, 134, 11, 0.07); }
@@ -122,13 +122,13 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 }
 .ide-review__verdict { display: flex; gap: 6px; margin-top: 8px; }
 .ide-review__btn {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 5px;
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: var(--radius-standard, 6px);
   padding: 4px 12px; cursor: pointer; font-size: 12px;
 }
 .ide-review__btn.is-active { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 
 .ide-review__start {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: var(--radius-micro, 3px);
   padding: 1px 8px; cursor: pointer; font-size: 11px; margin-left: 6px;
 }
 </style>

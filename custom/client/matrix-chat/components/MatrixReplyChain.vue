@@ -47,7 +47,7 @@ const replyContent = computed(() => {
   padding: 4px 8px;
   border-left: 2px solid var(--accent-primary);
   background: rgba(var(--accent-primary-rgb), 0.04);
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   cursor: pointer;
   font-size: 12px;
   transition: background-color $transition-fast;
