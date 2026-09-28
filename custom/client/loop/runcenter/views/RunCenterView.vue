@@ -10,6 +10,7 @@ import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import RunListTable from '@/custom/loop/runcenter/components/RunListTable.vue'
 import InboxPanel from '@/custom/loop/runcenter/components/InboxPanel.vue'
+import TaskRunsPanel from '@/custom/loop/runcenter/components/TaskRunsPanel.vue'
 import { filterRuns } from '@/custom/loop/runcenter/adapters'
 import { formatEventTs } from '@/custom/loop/runcenter/adapters/run-graph'
 import type { GraphEventLike, RunAction, RunStatus, RunSummary } from '@/custom/loop/runcenter/types'
@@ -19,8 +20,8 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
-// ── 视图 tab（运行列表 / 介入收件箱，task-7）──
-const activeTab = ref<'runs' | 'inbox'>('runs')
+// ── 视图 tab（运行列表 / 介入收件箱 / 任务运行，2026-09-28 演示轮补第三 tab）──
+const activeTab = ref<'runs' | 'inbox' | 'taskRuns'>('runs')
 
 // ── 工具条状态 ──
 const statusFilter = ref<'' | RunStatus>('')
@@ -179,6 +180,15 @@ function replayTime(e: GraphEventLike): string {
           {{ t('runcenter.tab.inbox') }}
           <span v-if="store.awaitingCount > 0" class="rc-view__tab-count">{{ store.awaitingCount }}</span>
         </button>
+        <!-- 任务运行（kanban task_runs 真实执行史；图引擎 legacy 环境的主台账） -->
+        <button
+          class="rc-view__tab"
+          :class="{ 'rc-view__tab--active': activeTab === 'taskRuns' }"
+          data-testid="rc-tab-task-runs"
+          @click="activeTab = 'taskRuns'"
+        >
+          {{ t('runcenter.tab.taskRuns') }}
+        </button>
       </div>
 
       <span class="rc-view__connection" :class="`rc-view__connection--${store.connection}`">
@@ -223,6 +233,9 @@ function replayTime(e: GraphEventLike): string {
       @unarchive="(r: RunSummary) => store.unarchiveRun(r.runId)"
       @detail="goRunDetail"
     />
+
+    <!-- 任务运行（kanban task_runs 投影，自含拉取/过滤/空态） -->
+    <TaskRunsPanel v-else-if="activeTab === 'taskRuns'" />
 
     <!-- 空态三步引导（R4：选模板 → 设节奏 → 跑起来） -->
     <div v-else-if="!store.loading && store.runs.length === 0" class="rc-view__onboarding">

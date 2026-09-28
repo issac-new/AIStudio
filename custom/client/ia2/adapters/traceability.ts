@@ -124,6 +124,119 @@ export function persistedTaskLinksOfRun(events: TraceReplayEvent[]): PersistedTa
 }
 
 // ---------------------------------------------------------------------------
+// 任务链追溯（2026-09-28 产品实操演示轮：loop 引擎数据缺失环境的主追溯面）
+// ---------------------------------------------------------------------------
+// 数据源：GET /api/graph/mind 只读投影（thoughts=任务 / relations=任务父子 /
+// runs=task_runs 执行轮次）。loop 事件（loop.persisted 等）只在 loop 引擎
+// 跑过的环境存在；本环境引擎未启用，真实链路=看板任务树+执行史。两个投影
+// 并存：loop 矩阵（上文）与任务链（下文），组件按数据有无各自渲染。
+
+/** 任务链输入：mind 投影的结构化最小子集（超集字段忽略） */
+export interface TaskChainThought {
+  id: string
+  title?: string | null
+  status?: string | null
+}
+
+export interface TaskChainRelation {
+  parentId: string
+  childId: string
+}
+
+export interface TaskChainRun {
+  runId: string
+  thoughtId: string
+  status?: string | null
+  endedAt?: string | null
+}
+
+export interface TaskChainGroup {
+  /** 根任务（relations 中为父且自身非子） */
+  root: { id: string; title: string | null; status: string | null }
+  children: Array<{
+    id: string
+    title: string | null
+    status: string | null
+    /** 执行轮次（task_runs 计数；completed 计通过、failed 计失败） */
+    rounds: { total: number; passed: number; failed: number }
+    /** 最近一轮结局（无运行为 null） */
+    lastOutcome: string | null
+    lastEndedAt: string | null
+  }>
+}
+
+/**
+ * 任务链聚合：根=relations 中的父且非子；子行挂执行轮次统计。
+ * - 环任务（互为父子，无真根）不入组——不臆造根，链断比链假好；
+ * - 无 relations 的运行不丢：不出现在链里（无父子关系可归属），
+ *   运行中心任务运行 tab 是它们的主展示面；
+ * - 子行按最近结束倒序，组按组内最近结束倒序。
+ */
+export function buildTaskChain(input: {
+  thoughts: TaskChainThought[]
+  relations: TaskChainRelation[]
+  runs: TaskChainRun[]
+}): TaskChainGroup[] {
+  const thoughtById = new Map(input.thoughts.map(t => [t.id, t]))
+  const parentIds = new Set(input.relations.map(r => r.parentId))
+  const childIds = new Set(input.relations.map(r => r.childId))
+  const childrenOf = new Map<string, string[]>()
+  for (const r of input.relations) {
+    if (!thoughtById.has(r.parentId) || !thoughtById.has(r.childId)) continue
+    const list = childrenOf.get(r.parentId) ?? []
+    if (!list.includes(r.childId)) list.push(r.childId)
+    childrenOf.set(r.parentId, list)
+  }
+
+  const runsByThought = new Map<string, TaskChainRun[]>()
+  for (const run of input.runs) {
+    const list = runsByThought.get(run.thoughtId) ?? []
+    list.push(run)
+    runsByThought.set(run.thoughtId, list)
+  }
+
+  const rootIds = [...parentIds].filter(id => !childIds.has(id) && childrenOf.has(id))
+  const runStat = (taskId: string) => {
+    const runs = runsByThought.get(taskId) ?? []
+    const ended = runs
+      .filter(r => r.endedAt)
+      .sort((a, b) => tsMs(b.endedAt) - tsMs(a.endedAt))
+    return {
+      rounds: {
+        total: runs.length,
+        passed: runs.filter(r => r.status === 'completed').length,
+        failed: runs.filter(r => r.status === 'failed').length,
+      },
+      lastOutcome: ended[0]?.status ?? null,
+      lastEndedAt: ended[0]?.endedAt ?? null,
+    }
+  }
+
+  const groups = rootIds.map(rootId => {
+    const root = thoughtById.get(rootId)
+    const children = (childrenOf.get(rootId) ?? [])
+      .map(childId => {
+        const child = thoughtById.get(childId)
+        return {
+          id: childId,
+          title: child?.title ?? null,
+          status: child?.status ?? null,
+          ...runStat(childId),
+        }
+      })
+      .sort((a, b) => tsMs(b.lastEndedAt) - tsMs(a.lastEndedAt))
+    return {
+      root: { id: rootId, title: root?.title ?? null, status: root?.status ?? null },
+      children,
+    }
+  })
+
+  const groupLatest = (g: TaskChainGroup): number =>
+    Math.max(0, ...g.children.map(c => tsMs(c.lastEndedAt)))
+  return groups.sort((a, b) => groupLatest(b) - groupLatest(a))
+}
+
+// ---------------------------------------------------------------------------
 // 追溯矩阵（§7B.2）
 // ---------------------------------------------------------------------------
 

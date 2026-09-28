@@ -44,7 +44,9 @@ STEPS = [
     ('4', 'ba 需求收集', '04-ba-requirement-room.png', '实操作',
          ' 点击「支付收银台需求分析讨论群」打开会话画布（99+ 未读），需求讨论消息与任务簇面板并排。'),
     ('5', 'reqgate G1 需求上锁', '05-reqgate-delivery-room.png', '实状态',
-         ' delivery-dlv-drv RFD 派发群消息留痕：RFD-001 需求冻结与派发回执（V3 真实 matrix 事件回放）。'),
+         ' 需求分析讨论群内 G1 冻结条款核验留痕（V3 真实 matrix 消息）：已按冻结条款逐条核对仓内实物证据——'
+         '冻结清单 docs/requirements/RFD-001-payment-cashier.md §11 L111-117 @ 7d2ac97、'
+         '集成基线 integration/RFD-001 @ 25063c5 等锚点可反查。'),
     ('6', 'room 建群', '03-people-rooms.png', '实状态',
          ' 群列表即建群产物面：V3 轮按 RACI 建立的全部交付群真实列出（与步骤 3 同面复用）。'),
     ('7', 'dispatch RACI 派发', '07c-plan-board.png', '实操作',
@@ -59,7 +61,8 @@ STEPS = [
          ' 看板 Triage 列特写：分诊入口列（Raw ideas — a specifier will flesh out the spec），'
          ' V3 轮系分/研发卡的分诊流转面。'),
     ('11', 'anexec 架构执行', '11-anexec-arch-board.png', '实操作',
-         ' arch-governance 板（4 卡·ready）：架构治理执行卡真实在板。'),
+         ' arch-governance 板（4 卡，跨 To do/In progress/In review/Ready 列）：'
+         '[AN-PAY-1] 支付核心域防腐层设计等架构治理执行卡真实在板，卡片带 R/A/C/I 徽章。'),
     ('12', 'review 评审·审批收件箱', '12b-review-approval-inbox.png', '实操作',
          ' P1 旗舰：/app/inbox 审批收件箱。评审卡「评审 · t_f52893c4 · 未提交变更」在列，'
          ' Approve / Request changes 待操作（API 开评审真实入队，risk=medium 为 V4-N1 分级）。'),
@@ -85,17 +88,25 @@ STEPS = [
     ('18', 'testpass 测试通过', '18-testpass-qi-test-pay.png', '实操作',
          ' qi-test-pay 板（1 卡）：支付测试通过收口卡（回归验证：独立探针 wechat-7 / alipay-7 双端通过）。'),
     ('19', 'ready G4/G5·全部运行', '19-ready-runs.png', '实状态',
-         ' /app/runs 运行中心：V3 轮全部 agent 运行的真实台账（运行画布/介入收件箱入口）。'),
+         ' /app/runs 运行中心「任务运行」页签（本轮补全功能）：图引擎 runs 在 legacy 引擎环境为空，'
+         '真实 agent 执行史落在 kanban task_runs——204 条真实运行台账（任务/状态/时长/起止/执行摘要），'
+         '如 #203「统一本机 Python 版本」8m43s completed 全程可查。'),
     ('20', 'release 发布', '20-release-ops-board.png', '实操作',
          ' ops-release 发布板：合入 fix/TEST-FE-guard 到 integration/RFD-001 等发布卡真实在列。'),
     ('21', 'uat UAT 验收', '21-uat-delivery-run-room.png', '实操作',
-         ' delivery-dlv-run-092528 群（RFD-001）：运行交付群内的验收回执与消息留痕。'),
+         ' 需求群内 UAT 派验与执行留痕（V3 真实 matrix 消息）：bella 委 fanfan-agent 业务验收——'
+         '「请按 G1 冻结清单 AC-1~AC-7 逐条给出证据（commit/分支/测试报告行号锚点）」，'
+         '下方 fanfan-agent 读取 uat-evidence 技能开始取证的执行轨迹同步可见。'),
     ('22', 'workmgr 台账·追溯矩阵', '22-workmgr-traceability.png', '实操作',
-         ' 看板页 Traceability 页签：需求 → run → 产出任务 → 验证轮次的追溯矩阵（V3 真实链路投影）。'),
+         ' 看板页 Traceability 页签（本轮补全任务链投影）：loop 引擎未启用的环境下，追溯面改由看板真实数据驱动——'
+         '根任务 → 子任务 → 验证轮次（passed/total）→ 最近结局。图中为真实任务链：'
+         'Fluss POC 封闭验证（3 子任务，1/1、2/2 轮次全过）等 5 条链全部来自 task_links + task_runs 真实记录。'),
     ('23', 'audit 审计', '23-audit-compliance-board.png', '实操作',
          ' audit-compliance 板（10 卡·ready）：审计合规卡组真实在板（secops/audit 编制产物）。'),
     ('24', 'retro 复盘·记忆沉淀', '24-retro-memory-pane.png', '实操作',
-         ' IDE 工作台记忆面板（Memory）：复盘知识沉淀面——hindsight 家族库的工作区投影入口。'),
+         ' IDE 工作台记忆面板（Memory，本轮修复 isDir 契约缺陷后首次真实可用）：'
+         'RFD-001 全流程复盘写入工作区 memory/（经产品文件通道，admin 以 super_admin 身份操作——'
+         '文件写入面本部署原无 super_admin，已补配），面板真实列出并渲染复盘全文（交付结论/沉淀要点/改进项）。'),
     ('25', 'ide IDE 工作台·任务简报', '25-ide-briefing-drawer.png', '实操作',
          ' P3 旗舰点亮：#/ide?task=t_4b12eb64 深链 → 任务简报抽屉全开——ID/标题/状态/优先级/'
          'RACI 四元组/需求上下文六区块（跨板解析修复后实机渲染）。'),
@@ -104,8 +115,10 @@ STEPS = [
 ]
 
 GAPS = [
-    ('（无）', '上一版缺口已全部闭口：fleet 命令审批 live 闭环见步骤 13b/13c；'
-     'raci 字符串形已归一修复（main b4d9e97f）。'),
+    ('（已闭口·真实功能补全）',
+     '上一轮审计发现 5 张截图与画面不符（05/11/19/22/24，均为目标视图数据加载失败页配上臆造描述）。'
+     '本轮逐张核验 31 张截图后全部根治：运行中心补「任务运行」页签（204 条真实 task_runs）、'
+     '追溯矩阵补任务链投影、IDE 记忆面板修 isDir 契约缺陷、05/11/21 重截真实画面（需求群冻结/UAT 消息、arch 板）。'),
 ]
 
 FIXES = [
@@ -114,6 +127,9 @@ FIXES = [
     ('P2 RACI 可视化', '卡片徽章 + 等您操作过滤 + 详情四元组（main b7b2a1ca）'),
     ('P3 IDE 简报联动', '上下文文件列表 + 一键打开接线（main 0d1cf397）'),
     ('词表完整性根治', '274 丢失键找回 + 终极扫描 4122 键零缺（main 7c9ed03）'),
+    ('运行中心·任务运行页签', '图引擎 runs 空的环境下接 /api/graph/mind 真实 task_runs（204 条）——task-runs 纯函数适配器 + 面板（本轮）'),
+    ('追溯矩阵·任务链投影', '根任务→子任务→验证轮次→最近结局，数据=task_links+task_runs 真实记录（本轮）'),
+    ('IDE 记忆面板 isDir 缺陷', '旧代码判 e.type（FileEntry 无此字段）恒 false→记忆文件永列不出；改 isDir 契约 + 守门测试（本轮）'),
 ]
 
 def b64(name):
@@ -165,7 +181,10 @@ out.append('</table>')
 out.append('<h2>验证链</h2><div class="meta">'
            '干净重放 inject（198 patch）→ build:full（tsc 服务端门禁）→ 404/404 测试文件 2979/2979 用例全绿 → '
            'postbuild 产物门禁（index.html 4141B + assets）→ 实机登录/审批/看板/IDE 操作实录。<br>'
-           '截图存证：<code>evidence/20260928-product-demo/shots/</code>（19 张 PNG，全部来自 :8802 真实渲染）</div>')
+           '本轮补全后门禁：custom 411 测试文件 3027 用例全绿（含 task-runs/trace 任务链/记忆面板 isDir 三组新守门）→ '
+           'vue-tsc 自有改动零错误 → build:full 重出包 → 逐张重截。<br>'
+           '截图存证：<code>evidence/20260928-product-demo/shots/</code>（31 张 PNG，全部来自 :8802 真实渲染；'
+           '本轮已对全部截图做视觉逐张核验，五张失实项已闭口）</div>')
 out.append('</body></html>')
 
 path = os.path.join(DIR, 'product-demo-report.html')
