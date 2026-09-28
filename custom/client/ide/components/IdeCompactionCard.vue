@@ -49,7 +49,7 @@ const foldedText = computed(() =>
   color: var(--text-color-3, #999);
   background: var(--hover-color, rgba(0, 0, 0, 0.03));
   border-left: 3px solid var(--text-color-3, #bbb);
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   padding: 3px 10px;
   margin: 4px 12px;
 }

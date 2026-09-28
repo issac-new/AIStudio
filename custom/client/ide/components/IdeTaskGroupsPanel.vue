@@ -104,7 +104,7 @@ function toggle(groupId: string): void {
 .ide-tg__body { padding: 0 10px 8px; }
 .ide-tg__files { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
 .ide-tg__pill {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 10px;
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: var(--radius-panel, 8px);
   font-size: 11px; padding: 1px 8px; cursor: pointer;
 }
 .ide-tg__filestate { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-color-3, #888); margin: 2px 0; }
@@ -114,7 +114,7 @@ function toggle(groupId: string): void {
 .ide-tg__ok { color: var(--primary-color, #18a058); margin-left: 4px; }
 .ide-tg__approve {
   border: 1px solid var(--primary-color, #18a058); background: transparent; color: var(--primary-color, #18a058);
-  border-radius: 4px; font-size: 11px; padding: 0 6px; cursor: pointer; margin-left: 6px;
+  border-radius: var(--radius-micro, 3px); font-size: 11px; padding: 0 6px; cursor: pointer; margin-left: 6px;
 }
 .ide-tg__pending { margin-top: 10px; border-top: 1px dashed var(--border-color, #ccc); padding-top: 6px; }
 .ide-tg__pendinghead { font-weight: 600; font-size: 11px; color: var(--text-color-3, #999); }

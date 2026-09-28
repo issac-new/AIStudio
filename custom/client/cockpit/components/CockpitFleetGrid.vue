@@ -208,7 +208,7 @@ async function clarify(session: FleetSession, clarifyId: string) {
 .fleet-grid__tools { display: flex; align-items: center; gap: 8px; }
 .fleet-grid__search {
   font: inherit; font-size: 11px; padding: 3px 8px; border: 1px solid var(--border-color);
-  border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); min-width: 140px;
+  border-radius: var(--radius-micro, 3px); background: var(--bg-secondary); color: var(--text-primary); min-width: 140px;
 }
 .fleet-grid__toggle { font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
 .fleet-grid__body {
@@ -234,28 +234,28 @@ async function clarify(session: FleetSession, clarifyId: string) {
 }
 .fleet-card__profile {
   flex-shrink: 0; font-size: 9px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
-  color: var(--text-on-accent); background: var(--accent-primary); border-radius: 4px; padding: 1px 5px;
+  color: var(--text-on-accent); background: var(--accent-primary); border-radius: var(--radius-micro, 3px); padding: 1px 5px;
 }
 .fleet-card__meta { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); flex-wrap: wrap; }
 .fleet-card__run { color: #10b981; font-weight: 600; font-family: ui-monospace, monospace; }
 .fleet-card__idle { font-family: ui-monospace, monospace; }
-.fleet-card__queue { background: var(--bg-secondary); border-radius: 4px; padding: 0 4px; }
-.fleet-card__src { background: var(--bg-secondary); border-radius: 4px; padding: 0 4px; }
+.fleet-card__queue { background: var(--bg-secondary); border-radius: var(--radius-micro, 3px); padding: 0 4px; }
+.fleet-card__src { background: var(--bg-secondary); border-radius: var(--radius-micro, 3px); padding: 0 4px; }
 .fleet-card__preview {
   font-family: ui-monospace, monospace; font-size: 10.5px; line-height: 1.45; color: var(--text-secondary);
-  background: var(--bg-secondary); border-radius: 4px; padding: 5px 7px; max-height: 4.4em;
+  background: var(--bg-secondary); border-radius: var(--radius-micro, 3px); padding: 5px 7px; max-height: 4.4em;
   overflow: hidden; word-break: break-all; white-space: pre-wrap;
 }
 .fleet-card__actions { display: flex; flex-direction: column; gap: 4px; }
 .fleet-card__subs {
   display: flex; flex-direction: column; gap: 2px; padding: 4px 6px;
-  background: var(--bg-secondary); border-radius: 4px; border: 1px dashed var(--border-color);
+  background: var(--bg-secondary); border-radius: var(--radius-micro, 3px); border: 1px dashed var(--border-color);
 }
 .fleet-card__subs-head { display: flex; align-items: center; gap: 6px; }
 .fleet-card__subs-label { font-size: 9px; font-weight: 700; letter-spacing: .03em; color: var(--text-muted); }
 .fleet-card__subs-run {
   font-size: 9px; font-weight: 700; color: #10b981;
-  background: rgba(16, 185, 129, .12); border-radius: 4px; padding: 0 4px;
+  background: rgba(16, 185, 129, .12); border-radius: var(--radius-micro, 3px); padding: 0 4px;
 }
 .fleet-card__sub { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .fleet-card__sub-goal {
@@ -269,7 +269,7 @@ async function clarify(session: FleetSession, clarifyId: string) {
 .fleet-card__subs-more { font-size: 9px; color: var(--text-muted); }
 .fleet-card__approval {
   display: flex; align-items: center; gap: 6px; background: rgba(239, 68, 68, .08);
-  border: 1px solid rgba(239, 68, 68, .35); border-radius: 4px; padding: 4px 6px;
+  border: 1px solid rgba(239, 68, 68, .35); border-radius: var(--radius-micro, 3px); padding: 4px 6px;
 }
 .fleet-card__approval-text {
   flex: 1; min-width: 0; font-size: 10.5px; color: var(--text-primary);
@@ -277,7 +277,7 @@ async function clarify(session: FleetSession, clarifyId: string) {
 }
 .fleet-card__btn {
   flex-shrink: 0; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer;
-  border-radius: 4px; border: 1px solid transparent; padding: 2px 8px;
+  border-radius: var(--radius-micro, 3px); border: 1px solid transparent; padding: 2px 8px;
   &.is-ok { background: #10b981; color: #fff; }
   &.is-ok:hover { background: #059669; }
   &.is-no { background: transparent; border-color: var(--error); color: var(--error); }

@@ -117,7 +117,7 @@ function fmtActivity(ts: number | null): string {
 .gss__ops { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
 .gss__act { font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .gss__op {
-  height: 20px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 10px;
+  height: 20px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: var(--radius-panel, 8px);
   background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }

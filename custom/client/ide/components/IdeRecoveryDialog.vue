@@ -113,7 +113,7 @@ async function recover(mode: string): Promise<void> {
 .ide-recovery__mask { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
 .ide-recovery__panel {
   position: relative; width: 480px; max-height: 60vh; display: flex; flex-direction: column;
-  background: var(--card-color, #fff); border-radius: 10px; padding: 12px 16px;
+  background: var(--card-color, #fff); border-radius: var(--radius-panel, 8px); padding: 12px 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 .ide-recovery__head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }

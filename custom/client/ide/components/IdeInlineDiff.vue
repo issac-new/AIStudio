@@ -92,13 +92,13 @@ function editLine(hunkId: number, lineIndex: number): void {
 <style scoped lang="scss">
 .ide-idiff { font-family: ui-monospace, monospace; font-size: 11px; margin: 4px 12px; }
 .ide-idiff__stats { color: var(--text-color-3, #999); padding: 2px 0; }
-.ide-idiff__hunk { border: 1px solid var(--border-color, #e8e8e8); border-radius: 5px; margin: 6px 0; overflow: hidden; }
+.ide-idiff__hunk { border: 1px solid var(--border-color, #e8e8e8); border-radius: var(--radius-standard, 6px); margin: 6px 0; overflow: hidden; }
 .ide-idiff__hunk.is-accepted { border-color: var(--primary-color, #18a058); opacity: 0.75; }
 .ide-idiff__hunk.is-rejected { opacity: 0.45; }
 .ide-idiff__actions { display: flex; gap: 6px; padding: 4px 8px; background: var(--hover-color, rgba(0, 0, 0, 0.03)); }
 .ide-idiff__verdict { padding: 3px 8px; color: var(--text-color-3, #999); }
 .ide-idiff__btn {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: var(--radius-micro, 3px);
   font-size: 11px; padding: 1px 8px; cursor: pointer;
 }
 .ide-idiff__btn.is-accept:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
