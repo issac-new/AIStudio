@@ -18,8 +18,8 @@ const overlayRoot = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
-const upstream = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
-const hermesAgentRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
+const upstream = resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(overlayRoot, '..', 'upstream'), 'hermes-studio');
+const hermesAgentRoot = resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(overlayRoot, '..', 'upstream'), 'hermes-agent');
 const routerPath = resolve(upstream, 'packages/client/src/router/index.ts');
 
 function gitStatus() {

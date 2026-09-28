@@ -129,7 +129,7 @@ watch(() => ide.workspace, () => void load())
   height: 22px;
   padding: 0 10px;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   background: transparent;
   color: var(--text-primary, #e6e6e6);
   font-size: 11px;
@@ -147,7 +147,7 @@ watch(() => ide.workspace, () => void load())
   height: 26px;
   padding: 0 8px;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   background: var(--bg-primary, #14161a);
   color: var(--text-primary, #e6e6e6);
   font-size: 12px;
@@ -169,7 +169,7 @@ watch(() => ide.workspace, () => void load())
 
 .ide-memory__item {
   padding: 5px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   font-size: 12px;
   color: var(--text-primary, #e6e6e6);
   cursor: pointer;

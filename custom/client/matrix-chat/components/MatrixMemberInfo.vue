@@ -382,7 +382,7 @@ async function copyMxid() {
   align-items: center;
   gap: 4px;
   padding: 1px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-panel, 8px);
 
   &.presence--online { background: rgba(var(--success-rgb), 0.08); color: var(--success); }
   &.presence--unavailable { background: rgba(var(--warning-rgb), 0.08); color: var(--warning); }
@@ -406,7 +406,7 @@ async function copyMxid() {
   border: none;
   cursor: pointer;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -428,7 +428,7 @@ async function copyMxid() {
   font-size: 11px;
   font-weight: 500;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
 
   &.mi-role--admin { background: rgba(var(--accent-info-rgb), 0.1); color: var(--accent-info); }
   &.mi-role--mod { background: rgba(var(--success-rgb), 0.1); color: var(--success); }
@@ -438,7 +438,7 @@ async function copyMxid() {
 .mi-e2e-shield {
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   display: flex;
   align-items: center;
   gap: 4px;

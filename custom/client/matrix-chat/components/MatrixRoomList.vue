@@ -317,7 +317,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   font-weight: 600;
   color: var(--bg-primary);
   background: var(--color-primary, #3b82f6);
-  border-radius: 10px;
+  border-radius: var(--radius-panel, 8px);
   padding: 1px 6px;
   min-width: 18px;
   text-align: center;

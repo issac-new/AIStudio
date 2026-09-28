@@ -244,7 +244,7 @@ function select(stream: SubagentStream): void {
   color: var(--text-primary, #d7dae0);
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
 
   &::placeholder { color: var(--text-muted, #9aa0aa); }
 }
@@ -256,7 +256,7 @@ function select(stream: SubagentStream): void {
   color: #61afef;
   font-size: 11px;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   cursor: pointer;
 
   &:hover:not(:disabled) { background: #61afef33; }

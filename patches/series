@@ -271,3 +271,17 @@
 # 490（走查修复 2）：zcode 会话 scoped→global 自动回落——IDE 会话默认 scoped（模型
 #      可调）与服务端 zcode-only-global 冲突致发送全 400；回落而非硬拒。
 490-server-zcode-scoped-fallback.patch
+
+# 494（设计审查遗留轮 · IDE i18n 接线·重落地）：14 个 ide 组件硬编码中文抽 t()（ask/
+#      compaction/contextBar/handoff/inlineDiff/mention/queue/recap/recovery/review/
+#      runlog/taskGroups/status/tools 十四域 zh+en 双语）；zh==en 可译五键
+#      + teams.leader 组长化 + teams.accounts.title 补键。7c035396 误回退后重落。
+494-client-ide-i18n-wiring.patch
+# 495（设计审查遗留轮 · 双看板合一·重落地）：/hermes/kanban 深链重定向 /app/board
+495-client-kanban-unify-redirect.patch
+# 496（设计审查遗留轮 · 头像 Pure Ink 灰阶·重落地）：boring-avatars beam 彩板归一
+496-client-avatar-pure-ink-palette.patch
+
+# 497（设计审查终轮 · P2 存量项）：Locked IPs 常驻钮 Retry→Refresh——无条件常驻且
+#      动作为重载清单，Retry 语义误导；common.refresh 两语词表既有。
+497-client-settings-lockedips-refresh.patch

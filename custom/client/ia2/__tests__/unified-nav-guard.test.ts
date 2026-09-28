@@ -9,7 +9,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { IA_AREAS, buildIaRoutes, areaForPath, IA_LEGACY_REDIRECTS } from '../routes'
 
 // 自本文件 5 级到 ncwk 根（overlay/custom/client/ia2/__tests__），再进 upstream/hermes-studio
-const UPSTREAM_CLIENT = '../../../../../upstream/hermes-studio/packages/client/src'
+const UPSTREAM_CLIENT = (process.env.OVERLAY_UPSTREAM_ROOT ? process.env.OVERLAY_UPSTREAM_ROOT : resolve(__dirname, '../../../../../upstream')) + '/hermes-studio/packages/client/src'
 
 function readUpstream(rel: string): string {
   return readFileSync(resolve(__dirname, `${UPSTREAM_CLIENT}/${rel}`), 'utf8')
