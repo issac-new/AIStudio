@@ -58,8 +58,10 @@ export function buildUsageLedger(events: readonly UsageEvent[], opts: { fillDays
       peakDay = { day: d.day, tokens: d.tokens }
     }
   }
-  // streak：从最新日往前，活跃（tokens>0）连续计数；遇 0 断。
+  // streak：从最新活跃日往前，活跃（tokens>0）连续计数；遇 0 断。末尾的 0 日
+  //（今日尚未发生是常态）先跳过——与 IdeMetricsPopover「今日无用量不断链」同语义。
   const rev = [...daily].reverse()
+  while (rev.length > 0 && rev[0].tokens <= 0) rev.shift()
   let streak = 0
   for (const d of rev) {
     if (d.tokens > 0) streak += 1

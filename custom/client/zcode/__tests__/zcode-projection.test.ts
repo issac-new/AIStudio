@@ -31,6 +31,30 @@ describe('zcode 投影 store（/zcode 事件消费）', () => {
     expect(state.conversationDeltaTotal).toBe(3)
   })
 
+  it('workflow 集成轮：upserted 带 workflowActivity 存入会话面，workflowSessions 汇聚；无 run 的覆盖清除', () => {
+    resetProjectionStateForTests()
+    const wf = { runs: [{ runId: 'r1', status: 'running', agentsWorking: 2, phases: [{ name: '扫描', status: 'done' }] }] }
+    handleZcodeEvent({ type: 'session.upserted', workspaceId: '/w', sessionId: 's1', session: { title: '跑流', workflowActivity: wf }, at: 1 })
+    handleZcodeEvent({ type: 'session.upserted', workspaceId: '/w', sessionId: 's2', session: { title: '无流' }, at: 2 })
+    const p = useZcodeProjection()
+    expect(Object.keys(p.workflowSessions.value)).toEqual(['s1'])
+    expect(p.workflowSessions.value.s1.runs[0].runId).toBe('r1')
+    // conflated 全量覆盖：下一次 upserted 无 run → 行随之消失。
+    handleZcodeEvent({ type: 'session.upserted', workspaceId: '/w', sessionId: 's1', session: { title: '跑流', phase: 'completedSuccess' }, at: 3 })
+    expect(Object.keys(p.workflowSessions.value)).toEqual([])
+  })
+
+  it('跨端对齐：服务端 normalizeSessionSummary 的 workflowActivity 直供客户端 store（形状同源）', () => {
+    const normalized = normalizeSessionSummary({
+      sessionId: 's1', title: 'x',
+      workflowActivity: { runs: [{ runId: 'r1', status: 'running', agentsWorking: 1, phases: [{ name: 'p', status: 'running' }] }] },
+    })
+    expect(normalized?.workflowActivity).toBeDefined()
+    resetProjectionStateForTests()
+    handleZcodeEvent({ type: 'session.upserted', workspaceId: '/w', sessionId: 's1', session: normalized ?? undefined, at: 1 })
+    expect(useZcodeProjection().workflowSessions.value.s1).toEqual(normalized?.workflowActivity)
+  })
+
   it('status/mention 事件按词表字面值映射 chip 文案；非成功档标 trouble', () => {
     resetProjectionStateForTests()
     handleZcodeEvent({ type: 'projection.status', workspaceId: '/w', reason: 'runtime_offline', at: 1 })

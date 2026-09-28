@@ -11,6 +11,8 @@ import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { fetchUsageStats } from '@/api/studio/sessions'
 import { ideUsageApi, type UsageRoundRow } from '../api/usage'
+import { buildUsageLedger } from '../utils/usage-ledger'
+import { roundsSummary } from '../utils/rounds-table'
 import { computeBreakdown, type ContextSegment } from '../utils/contextBreakdown'
 import { estimateCostUsd, formatCostUsd } from '../utils/modelPricing'
 import { formatTokens, isLowContext, type PressureLevel, type SpeedLevel } from '../utils/metrics'
@@ -85,6 +87,26 @@ const lowContext = computed(() =>
 const rounds = ref<UsageRoundRow[]>([])
 const roundsState = ref<'loading' | 'ok' | 'empty' | 'error'>('loading')
 
+// 表尾合计（rounds-table 接线，G8 #1）：REST 行→RoundRow→roundsSummary 单一源；
+// 费用列与 formatRowCost 同价目（未收录=合计 null 不显示，dsh 三原则）。
+const roundsTotal = computed(() => {
+  if (!rounds.value.length) return null
+  return roundsSummary(rounds.value.map((row, i) => ({
+    roundIndex: i,
+    model: row.model,
+    inputTokens: row.input_tokens + row.cache_write_tokens,
+    outputTokens: row.output_tokens,
+    cacheReadTokens: row.cache_read_tokens,
+    durationMs: Math.max(0, (row.ended_at - row.started_at) * 1000),
+    ttftMs: null,
+    costIdle: estimateCostUsd(row.model, {
+      inputTokens: row.input_tokens, outputTokens: row.output_tokens,
+      cacheReadTokens: row.cache_read_tokens, cacheWriteTokens: row.cache_write_tokens,
+    }),
+    costPeak: null,
+  })))
+})
+
 async function loadRounds(): Promise<void> {
   const sid = chatStore.activeSessionId
   if (!sid) {
@@ -121,6 +143,8 @@ interface HeatCell { date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 }
 const heatCells = ref<HeatCell[]>([])
 const heatMax = ref(0)
 const heatStreak = ref(0)
+const heatPeak = ref<{ day: string; tokens: number } | null>(null)
+const heatTotal = ref(0)
 const heatState = ref<'loading' | 'ok' | 'empty' | 'error'>('loading')
 
 function dayKey(d: Date): string {
@@ -130,27 +154,20 @@ function dayKey(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-function computeStreak(map: Map<string, number>): number {
-  let streak = 0
-  const cursor = new Date()
-  // 今日无用量不断链（今日尚未发生是常态），从昨日起回溯
-  if (!map.get(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1)
-  while (map.get(dayKey(cursor))) {
-    streak++
-    cursor.setDate(cursor.getDate() - 1)
-  }
-  return streak
-}
-
 async function loadHeatmap(): Promise<void> {
   heatState.value = 'loading'
   try {
     const stats = await fetchUsageStats(HEATMAP_DAYS)
-    const map = new Map<string, number>()
-    for (const row of stats.daily_usage ?? []) {
-      const tokens = (row.input_tokens || 0) + (row.output_tokens || 0) + (row.cache_read_tokens || 0)
-      if (tokens > 0) map.set(row.date, tokens)
-    }
+    // 投影单一源（usage-ledger 接线，G7 #8）：事件→台账（空日补 0/streak 跳末尾 0/
+    // 峰值日/累计），热力图 cells 与汇总行同源，不再各算一套。
+    const ledger = buildUsageLedger(
+      (stats.daily_usage ?? []).map((row) => ({
+        day: row.date,
+        tokens: (row.input_tokens || 0) + (row.output_tokens || 0) + (row.cache_read_tokens || 0),
+      })),
+      { fillDays: true },
+    )
+    const byDay = new Map(ledger.daily.map((d) => [d.day, d.tokens]))
     const cells: HeatCell[] = []
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -158,7 +175,7 @@ async function loadHeatmap(): Promise<void> {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
       const date = dayKey(d)
-      cells.push({ date, tokens: map.get(date) ?? 0, level: 0 })
+      cells.push({ date, tokens: byDay.get(date) ?? 0, level: 0 })
     }
     const max = Math.max(0, ...cells.map((c) => c.tokens))
     if (max > 0) {
@@ -169,8 +186,10 @@ async function loadHeatmap(): Promise<void> {
     }
     heatCells.value = cells
     heatMax.value = max
-    heatStreak.value = computeStreak(map)
-    heatState.value = map.size ? 'ok' : 'empty'
+    heatStreak.value = ledger.currentStreakDays
+    heatPeak.value = ledger.peakDay
+    heatTotal.value = ledger.totalTokens
+    heatState.value = ledger.activeDays ? 'ok' : 'empty'
   } catch {
     heatState.value = 'error'
   }
@@ -275,6 +294,16 @@ watch(
             <td class="is-num">{{ formatRowCost(row) }}</td>
           </tr>
         </tbody>
+        <tfoot v-if="roundsTotal" class="ide-metrics-panel__rounds-total" data-testid="ide-metrics-rounds-total">
+          <tr>
+            <td colspan="2">{{ t('ide.usagePanel.roundsTotal', { n: roundsTotal.rounds }) }}</td>
+            <td class="is-num">{{ formatTokens(roundsTotal.totalTokens) }}</td>
+            <td class="is-num">—</td>
+            <td class="is-num">—</td>
+            <td class="is-num">{{ formatDuration(roundsTotal.totalMs) }}</td>
+            <td class="is-num">{{ roundsTotal.totalCostIdle === null ? '—' : `$${roundsTotal.totalCostIdle.toFixed(3)}` }}</td>
+          </tr>
+        </tfoot>
       </table>
     </section>
 
@@ -297,6 +326,11 @@ watch(
           :data-level="cell.level"
           :title="heatTitle(cell)"
         />
+      </div>
+      <!-- 台账汇总行（usage-ledger 同源：峰值日/累计/活跃天数） -->
+      <div v-if="heatState === 'ok'" class="ide-metrics-panel__ledger" data-testid="ide-metrics-usage-ledger">
+        <span v-if="heatPeak">{{ t('ide.usagePanel.ledgerPeak', { day: heatPeak.day, tokens: formatTokens(heatPeak.tokens) }) }}</span>
+        <span>{{ t('ide.usagePanel.ledgerTotal', { tokens: formatTokens(heatTotal) }) }}</span>
       </div>
     </section>
   </div>
@@ -390,6 +424,14 @@ watch(
   color: var(--text-muted, #9aa0aa);
 }
 
+.ide-metrics-panel__ledger {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted, #9aa0aa);
+}
+
 .ide-metrics-panel__stack {
   display: flex;
   height: 8px;
@@ -457,6 +499,12 @@ watch(
   th {
     color: var(--text-muted, #9aa0aa);
     font-size: 11px;
+  }
+
+  tfoot td {
+    border-top: 1px solid var(--border-color, #3a3f4a);
+    color: var(--text-secondary, #b0b5be);
+    font-weight: 600;
   }
 
   .is-num { text-align: right; }

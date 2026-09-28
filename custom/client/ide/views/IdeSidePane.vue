@@ -19,6 +19,7 @@ import IdeMcpPane from './IdeMcpPane.vue'
 import IdeWhiteboardPane from './IdeWhiteboardPane.vue'
 import IdeKanbanPane from './IdeKanbanPane.vue'
 import IdeToolsPane from './IdeToolsPane.vue'
+import IdeWorkflowPane from './IdeWorkflowPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeHooksPane from './IdeHooksPane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
@@ -45,6 +46,7 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'board', icon: '✎' },
   { key: 'kanban', icon: '▦' },
   { key: 'tools', icon: '⚙' },
+  { key: 'workflow', icon: '⟐' },
   { key: 'mcp', icon: '⌗' },
   { key: 'terminal', icon: '⌨' },
   { key: 'hooks', icon: '⚓' },
@@ -162,6 +164,7 @@ function focusMainChat(): void {
       <IdeWhiteboardPane v-else-if="ide.sidePane.tab === 'board'" class="ide-sidepane__fill" />
       <IdeKanbanPane v-else-if="ide.sidePane.tab === 'kanban'" class="ide-sidepane__fill" data-testid="ide-sidepane-kanban" />
       <IdeToolsPane v-else-if="ide.sidePane.tab === 'tools'" class="ide-sidepane__fill" data-testid="ide-sidepane-tools" />
+      <IdeWorkflowPane v-else-if="ide.sidePane.tab === 'workflow'" class="ide-sidepane__fill" data-testid="ide-sidepane-workflow" />
       <IdeMcpPane v-else-if="ide.sidePane.tab === 'mcp'" class="ide-sidepane__fill" data-testid="ide-sidepane-mcp" />
       <template v-else-if="ide.sidePane.tab === 'terminal'">
         <div class="ide-sidepane__termwrap">
