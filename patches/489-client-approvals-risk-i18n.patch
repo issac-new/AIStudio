@@ -1,0 +1,54 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -6212,15 +6212,23 @@
+     colTarget: 'Target',
+     colDecision: 'Decision',
+     colNote: 'Note',
++    colRisk: 'Risk tier',
+     loadFailed: 'Load failed',
+     viewDiff: 'View diff',
+     choice: {
+       once: 'Approve',
+       session: 'Allow for session',
+       always: 'Always allow',
+       deny: 'Deny',
+       approve: 'Approve',
+       request_changes: 'Request changes',
+     },
++    risk: {
++      high: 'High risk',
++      medium: 'Standard',
++      low: 'Low risk',
++      highHint: 'Decide individually',
++      autoSample: 'Auto-approvable · sampled',
++    },
+   },
+ }
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -6212,15 +6212,23 @@
+     colTarget: '操作对象',
+     colDecision: '结果',
+     colNote: '备注',
++    colRisk: '风险档',
+     loadFailed: '加载失败',
+     viewDiff: '查看变更',
+     choice: {
+       once: '批准',
+       session: '本会话允许',
+       always: '总是允许',
+       deny: '拒绝',
+       approve: '批准',
+       request_changes: '打回返工',
+     },
++    risk: {
++      high: '高危不可逆',
++      medium: '常规',
++      low: '低风险',
++      highHint: '逐条裁决',
++      autoSample: '可自动通过 · 抽检',
++    },
+   },
+ }

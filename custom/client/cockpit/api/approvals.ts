@@ -2,6 +2,9 @@
 // P1 审批收件箱 API 客户端（/api/approvals/*）。
 import { request } from '@/api/client'
 
+/** V4-N1 风险档：high 不可逆高危（红标逐条裁决）/ medium 常规 / low 低风险（可自动通过+抽检） */
+export type ApprovalRiskTier = 'high' | 'medium' | 'low'
+
 export interface PendingApprovalItem {
   id: string
   kind: 'command' | 'review'
@@ -14,6 +17,7 @@ export interface PendingApprovalItem {
   baseRef?: string
   choices?: string[]
   createdAt: number
+  risk?: ApprovalRiskTier
 }
 
 export interface ApprovalHistoryEntry {
@@ -25,6 +29,7 @@ export interface ApprovalHistoryEntry {
   targetTitle: string
   decision: string
   note?: string
+  risk?: ApprovalRiskTier
 }
 
 export function fetchPendingApprovals(): Promise<{ items: PendingApprovalItem[] }> {

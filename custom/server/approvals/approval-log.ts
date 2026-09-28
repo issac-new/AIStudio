@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
+import type { ApprovalRiskTier } from './risk-tier'
 
 export interface ApprovalLogEntry {
   id: string
@@ -16,6 +17,8 @@ export interface ApprovalLogEntry {
   targetTitle: string
   decision: string
   note?: string
+  /** V4-N1 风险档（裁决时服务端重算；老记录可无） */
+  risk?: ApprovalRiskTier
 }
 
 const CAP = 500
