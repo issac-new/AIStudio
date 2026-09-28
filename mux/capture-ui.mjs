@@ -39,7 +39,9 @@ async function shot(name, url, opts = {}) {
   if (only && only !== name) return
   await page.goto(BASE + url)
   await page.waitForTimeout(opts.wait ?? 3000)
-  for (const txt of ['Confirm', '确认', '确定', '知道了']) {
+  // 演示弹窗逐一点掉：确认类 + 提醒类（稍等=模型配置提醒、稍后提醒=默认密码提醒——
+  // 后者加载期禁用属正常，出现即可点时点是环境就绪信号）
+  for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒']) {
     const btn = page.locator(`button:has-text("${txt}")`).first()
     if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(500) }
   }
@@ -65,6 +67,22 @@ await shot('ui-10-kanban', '/hermes/kanban?board=fanfan-pm-plan', {
       const opt = page.locator('text=fanfan-pm-plan').first()
       if (await opt.isVisible().catch(() => false)) { await opt.click().catch(() => {}); await page.waitForTimeout(2200) }
     }
+  },
+})
+
+// ③b 看板「等您操作」过滤器（P2）：勾选后只留当前登录人 R/A 相关卡
+await shot('ui-10b-kanban-mine', '/hermes/kanban?board=fanfan-pm-plan', {
+  wait: 4000,
+  after: async () => {
+    const sel = page.locator('text=/看板:.*Default/').first()
+    if (await sel.isVisible().catch(() => false)) {
+      await sel.click().catch(() => {})
+      await page.waitForTimeout(600)
+      const opt = page.locator('text=fanfan-pm-plan').first()
+      if (await opt.isVisible().catch(() => false)) { await opt.click().catch(() => {}); await page.waitForTimeout(2200) }
+    }
+    const mine = page.locator('[data-testid="filter-mine-only"]').first()
+    if (await mine.isVisible().catch(() => false)) { await mine.click().catch(() => {}); await page.waitForTimeout(1200) }
   },
 })
 
