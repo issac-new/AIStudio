@@ -170,3 +170,71 @@ describe('projectMindFromKanban — 任务关系边（A2）', () => {
     expect(p.relations).toEqual([])
   })
 })
+
+// ---------------------------------------------------------------------------
+// projectMindAggregated — 分板聚合守门（2026-09-28 RFD-002 缺口①修复）
+// ---------------------------------------------------------------------------
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { projectMindAggregated } from '../mind-projection'
+
+describe('projectMindAggregated — root + 分板聚合', () => {
+  it('root 库 + 多分板合并：任务/运行/关系统计；分板 runId 板名限定防撞键；thoughts 带来源板', () => {
+    // home 布局：<dir>/kanban.db（root）+ <dir>/kanban/boards/{a,b}/kanban.db
+    const root = openDb(dbPath)
+    insertTask(root, 't-root', 'done')
+    insertRun(root, 1, 't-root', 'completed', 'completed', 100, 160)
+    root.close()
+    for (const slug of ['board-a', 'board-b']) {
+      const bdir = join(dir, 'kanban', 'boards', slug)
+      mkdirSync(bdir, { recursive: true })
+      const bdb = openDb(join(bdir, 'kanban.db'))
+      seed(bdb)
+      insertTask(bdb, `t-${slug}`, 'done', slug)
+      // 两板 run id 故意相同（板内自增跨板必撞的真实形态）
+      insertRun(bdb, 7, `t-${slug}`, 'completed', 'completed', 200, 260)
+      bdb.close()
+    }
+    const p = projectMindAggregated(dir)
+    expect(p.available).toBe(true)
+    expect(p.thoughts).toHaveLength(3)
+    expect(p.runs.map(r => r.runId).sort()).toEqual(['1', 'board-a:7', 'board-b:7'])
+    // thoughts.board = 来源板 slug；root 库回落 project_id（NULL）
+    const byId = new Map(p.thoughts.map(t => [t.id, t]))
+    expect(byId.get('t-board-a')?.board).toBe('board-a')
+    expect(byId.get('t-root')?.board).toBeNull()
+    // 运行按开始时间倒序（board 的 200 > root 的 100）
+    expect(p.runs[0].startedAt && Date.parse(p.runs[0].startedAt) >= Date.parse(p.runs[2].startedAt!)).toBe(true)
+  })
+
+  it('HERMES_HOME 环境变量优先解析根（部署一致性）；显式 homeDir 参数覆盖一切', () => {
+    mkdirSync(join(dir, 'kanban', 'boards', 'envboard'), { recursive: true })
+    const bdb = openDb(join(dir, 'kanban', 'boards', 'envboard', 'kanban.db'))
+    seed(bdb); insertTask(bdb, 't-env', 'done'); bdb.close()
+    const prev = process.env.HERMES_HOME
+    process.env.HERMES_HOME = dir
+    try {
+      const viaEnv = projectMindAggregated()
+      expect(viaEnv.thoughts.some(t => t.id === 't-env')).toBe(true)
+      const viaArg = projectMindAggregated(join(dir, 'nonexistent-home'))
+      expect(viaArg.available).toBe(false)
+    } finally {
+      if (prev === undefined) delete process.env.HERMES_HOME
+      else process.env.HERMES_HOME = prev
+    }
+  })
+
+  it('root 库缺失但分板在 → available:true（分板是唯一真实源的分板拓扑）', () => {
+    rmSync(dbPath)
+    const bdir = join(dir, 'kanban', 'boards', 'only-board')
+    mkdirSync(bdir, { recursive: true })
+    const bdb = openDb(join(bdir, 'kanban.db'))
+    seed(bdb); insertTask(bdb, 't-only', 'running')
+    insertRun(bdb, 1, 't-only', 'running', null, 300, null)
+    bdb.close()
+    const p = projectMindAggregated(dir)
+    expect(p.available).toBe(true)
+    expect(p.thoughts).toHaveLength(1)
+    expect(p.runs[0].status).toBe('running')
+    expect(p.runs[0].runId).toBe('only-board:1')
+  })
+})
