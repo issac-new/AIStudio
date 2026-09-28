@@ -148,12 +148,18 @@
 .cockpit ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 .cockpit { scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
 
-// ── 键盘焦点环 ──
-// 仅键盘导航时显示（:focus-visible），鼠标点击不触发
-.cockpit button:focus-visible,
-.cockpit input:focus-visible,
-.cockpit select:focus-visible,
-.cockpit textarea:focus-visible {
+// ── 键盘焦点环（全局 a11y 地板）──
+// 仅键盘导航时显示（:focus-visible），鼠标点击不触发。
+// 覆盖全部可聚焦元素：此前仅 .cockpit 容器内生效，board/inbox/runs/ide
+// 等 ia2 表面与上游页面键盘导航无焦点反馈（71 条 outline:none 生效）。
+// 组件级更具体的焦点样式（如 naive-ui box-shadow 环）仍可覆盖本规则。
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+[role='button']:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 1px;
 }
