@@ -24,10 +24,12 @@ export function parseTaskRaci(task: KanbanTask | null | undefined): TaskRaci | n
     if (!r) return
     for (const k of ['responsible', 'approver', 'consulted', 'informed'] as const) {
       const v = (r as Record<string, unknown>)[k]
-      if (Array.isArray(v)) {
-        const names = v.map(String).filter(Boolean)
-        if (names.length) { out[k] = [...new Set([...out[k], ...names])]; found = true }
-      }
+      // 形状归一（2026-09-28）：字符串形成员（"fanfan"）与数组形等价收数——
+      // 旧逻辑 Array.isArray 门槛会静默丢掉字符串形（徽章缺 R/A）。
+      const names = typeof v === 'string'
+        ? [v.trim()].filter(Boolean)
+        : Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []
+      if (names.length) { out[k] = [...new Set([...out[k], ...names])]; found = true }
     }
   }
   const structured = (task as KanbanTask & { raci?: unknown }).raci

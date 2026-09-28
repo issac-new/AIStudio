@@ -38,6 +38,35 @@ const dispatchCard: BriefingTask = {
   ].join('\n'),
 }
 
+describe('RACI 字符串形成员归一（2026-09-28 演示轮实锤缺陷）', () => {
+  it('结构化 raci responsible 为字符串 "fanfan" → 解析为 ["fanfan"]，不逐字拆分', () => {
+    const task: BriefingTask = {
+      id: 't_4b12eb64',
+      title: 'RFD-001 支付收银台需求分析（r3 派发主卡）',
+      status: 'done',
+      raci: { responsible: 'fanfan', approver: 'admin', consulted: ['arch', 'wei', 'mei'], informed: ['bella'] },
+    }
+    const raci = parseRaciFromTask(task)
+    expect(raci.responsible).toEqual(['fanfan'])
+    expect(raci.approver).toEqual(['admin'])
+    expect(raci.consulted).toEqual(['arch', 'wei', 'mei'])
+    expect(raci.informed).toEqual(['bella'])
+  })
+
+  it('面板渲染：R 行显示 fanfan 整名（而非 f, a, n…）', () => {
+    const task: BriefingTask = {
+      id: 't_4b12eb64',
+      title: 'RFD-001 主卡',
+      status: 'done',
+      raci: { responsible: 'fanfan', approver: 'admin', consulted: [], informed: [] },
+    }
+    const wrap = mount(TaskBriefingPanel, { props: { task, raci: parseRaciFromTask(task) }, global: { plugins: [i18n] } })
+    const text = wrap.find('[data-testid="briefing-header-block"]').text()
+    expect(text).toContain('fanfan')
+    expect(text).not.toContain('f, a, n')
+  })
+})
+
 describe('parseRaciFromTask', () => {
   it('空任务返回全空 RACI', () => {
     expect(parseRaciFromTask(null)).toEqual({ responsible: [], approver: [], consulted: [], informed: [] })
