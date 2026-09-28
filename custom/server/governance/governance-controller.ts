@@ -25,15 +25,31 @@ import { listReviews } from '../review/review-store'
 const router = new Router({ prefix: '/api/governance' })
 
 /** 治理工件登记表：kind → 仓内路径 + 界面标题 + 所属闸。单一事实源（client 只消费）。 */
-export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title: string; gate: string }> = [
-  { kind: 'freeze', path: 'docs/requirements/RFD-001.freeze.md', title: 'G1 需求冻结', gate: 'G1' },
-  { kind: 'design', path: 'docs/design/RFD-001-architecture-design.md', title: '概要设计（G2 评审对象）', gate: 'G2' },
-  { kind: 'schedule', path: 'docs/plan/RFD-001-schedule.md', title: '开发/测试排期', gate: 'G2' },
-  { kind: 'test', path: 'docs/test/RFD-001-test-report.md', title: 'G4 测试报告', gate: 'G4' },
-  { kind: 'release', path: 'RELEASE.md', title: 'G5 发布说明', gate: 'G5' },
-  { kind: 'uat', path: 'docs/acceptance/RFD-001-acceptance.md', title: 'UAT 业务验收', gate: 'G5' },
-  { kind: 'audit', path: 'docs/retro/default-audit-opinion.md', title: '合规审计意见书', gate: 'G6' },
-  { kind: 'retro', path: 'docs/retro/default-RFD-001-retrospective.md', title: 'G6 复盘报告', gate: 'G6' },
+export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title: string; gate: string; group: string; ref?: string }> = [
+  // 六闸工件（治理门禁对象）
+  { kind: 'freeze', path: 'docs/requirements/RFD-001.freeze.md', title: 'G1 需求冻结', gate: 'G1', group: 'gate' },
+  { kind: 'design', path: 'docs/design/RFD-001-architecture-design.md', title: '概要设计（G2 评审对象）', gate: 'G2', group: 'gate' },
+  { kind: 'schedule', path: 'docs/plan/RFD-001-schedule.md', title: '开发/测试排期', gate: 'G2', group: 'gate' },
+  { kind: 'test', path: 'docs/test/RFD-001-test-report.md', title: 'G4 测试报告', gate: 'G4', group: 'gate' },
+  { kind: 'release', path: 'RELEASE.md', title: 'G5 发布说明', gate: 'G5', group: 'gate' },
+  { kind: 'uat', path: 'docs/acceptance/RFD-001-acceptance.md', title: 'UAT 业务验收', gate: 'G5', group: 'gate' },
+  { kind: 'audit', path: 'docs/retro/default-audit-opinion.md', title: '合规审计意见书', gate: 'G6', group: 'gate' },
+  { kind: 'retro', path: 'docs/retro/default-RFD-001-retrospective.md', title: 'G6 复盘报告', gate: 'G6', group: 'gate' },
+  // 管理档案（编制/应用/组织——推演报告步骤 1/5/6 的产品承载）
+  { kind: 'roster', path: 'docs/admin/roster.md', title: '账号清单（15 人编制）', gate: '', group: 'admin' },
+  { kind: 'app-registry', path: 'docs/admin/app-registry.md', title: '应用资产登记表', gate: '', group: 'admin' },
+  { kind: 'org', path: 'docs/admin/org.md', title: '组织与权限矩阵', gate: '', group: 'admin' },
+  // 分析档案（系统分析产物——步骤 11/13 的产品承载）
+  { kind: 'tasklist', path: 'docs/analysis/RFD-001-tasklist.md', title: 'SMART 任务清单（T-101~108）', gate: '', group: 'analysis' },
+  { kind: 'an-paycore', path: 'docs/analysis/AN-PAYCORE-analysis.md', title: '系分 · AN-PAYCORE 支付核心', gate: '', group: 'analysis' },
+  { kind: 'an-chwx', path: 'docs/analysis/AN-CHWX-analysis.md', title: '系分 · AN-CHWX 微信渠道', gate: '', group: 'analysis' },
+  { kind: 'an-chali', path: 'docs/analysis/AN-CHALI-analysis.md', title: '系分 · AN-CHALI 支付宝渠道', gate: '', group: 'analysis' },
+  { kind: 'an-mp', path: 'docs/analysis/AN-MP-analysis.md', title: '系分 · AN-MP 收银台前端', gate: '', group: 'analysis' },
+  // 测试证据（G3 分支内工件——ref 指向开发分支）
+  { kind: 'testlog-paycore', path: 'docs/evidence/DEV-PAYCORE-testlog.txt', title: 'G3 证据 · DEV-PAYCORE（vitest 52/52）', gate: 'G3', group: 'evidence', ref: 'origin/feat/DEV-PAYCORE' },
+  { kind: 'testlog-chwx', path: 'docs/evidence/DEV-CHWX-testlog.txt', title: 'G3 证据 · DEV-CHWX（vitest 25/25）', gate: 'G3', group: 'evidence', ref: 'origin/feat/DEV-CHWX' },
+  { kind: 'testlog-chali', path: 'docs/evidence/DEV-CHALI-testlog.txt', title: 'G3 证据 · DEV-CHALI（vitest 54/54）', gate: 'G3', group: 'evidence', ref: 'origin/feat/DEV-CHALI' },
+  { kind: 'testlog-mp', path: 'docs/evidence/DEV-MP-testlog.txt', title: 'G3 证据 · DEV-MP（17 例+220 检查）', gate: 'G3', group: 'evidence', ref: 'origin/feat/DEV-MP' },
 ]
 
 function repoRoot(): string {
@@ -58,17 +74,19 @@ function repoReady(): boolean {
   return existsSync(resolve(root, '.git'))
 }
 
-/** 单件工件元数据：commit/时间/行数（缺失如实 exists:false）。 */
+/** 单件工件元数据：commit/时间一次合并取（缺失如实 exists:false；行数由 /doc 惰性算，
+ *  overview 不为行数拉全文——20 件工件 × 全文 show 会把聚合拖到秒级）。 */
 async function docMeta(entry: typeof GOVERNANCE_DOCS[number]) {
-  if (!repoReady()) return { ...entry, exists: false, commit: null as string | null, committedAt: null as string | null, lines: 0 }
+  const empty = { ...entry, exists: false, commit: null as string | null, committedAt: null as string | null, lines: 0 }
+  if (!repoReady()) return empty
   try {
-    const commit = (await git(['log', '-1', '--format=%h', 'origin/main', '--', entry.path])).trim()
-    if (!commit) return { ...entry, exists: false, commit: null, committedAt: null, lines: 0 }
-    const committedAt = (await git(['log', '-1', '--format=%cI', 'origin/main', '--', entry.path])).trim()
-    const content = await git(['show', `origin/main:${entry.path}`])
-    return { ...entry, exists: true, commit, committedAt, lines: content.split('\n').length }
+    const ref = entry.ref || 'origin/main'
+    const out = (await git(['log', '-1', '--format=%h %cI', ref, '--', entry.path])).trim()
+    if (!out) return empty
+    const [commit, ...rest] = out.split(' ')
+    return { ...entry, exists: true, commit, committedAt: rest.join(' '), lines: 0 }
   } catch {
-    return { ...entry, exists: false, commit: null, committedAt: null, lines: 0 }
+    return empty
   }
 }
 
@@ -123,7 +141,7 @@ router.get('/doc', async (ctx) => {
     gate: entry.gate,
     commit: meta.commit,
     committedAt: meta.committedAt,
-    markdown: await git(['show', `origin/main:${entry.path}`]),
+    markdown: await git(['show', `${entry.ref || 'origin/main'}:${entry.path}`]),
   }
 })
 

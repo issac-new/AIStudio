@@ -9,6 +9,10 @@ export interface GovernanceDocMeta {
   path: string
   title: string
   gate: string
+  /** 分组：gate 六闸工件 / admin 管理档案 / analysis 分析档案 / evidence 测试证据 */
+  group: string
+  /** 非主干工件所在 git ref（如 origin/feat/DEV-*） */
+  ref?: string
   exists: boolean
   commit: string | null
   committedAt: string | null
