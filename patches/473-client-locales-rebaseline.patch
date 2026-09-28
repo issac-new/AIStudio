@@ -1442,7 +1442,7 @@ index 589b9bf1..33763ef7 100644
 +        idle: 'Idle',
 +      },
 +    },
-+    overview: {
++    overviewDash: {
 +      title: 'Cockpit overview',
 +      myTodo: 'My to-dos',
 +      waitingApproval: 'Pending approvals',
@@ -5660,7 +5660,7 @@ index b5d4b85d..7962fd58 100644
 +        idle: '待进入',
 +      },
 +    },
-+    overview: {
++    overviewDash: {
 +      title: '驾驶舱概览',
 +      myTodo: '我的待办',
 +      waitingApproval: '审批待审',
