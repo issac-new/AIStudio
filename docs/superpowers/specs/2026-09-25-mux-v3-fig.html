@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Swarm Studio V3 · 架构逻辑与全流程链路</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{width:1122px;height:793px;background:#f0f2f5;font-family:"PingFang SC","Helvetica Neue",sans-serif;overflow:hidden;position:relative;font-size:10px;color:#2a3a4a}
+  .hd{position:absolute;top:6px;left:0;right:0;text-align:center}
+  .hd h1{font-size:15px;color:#1a2733}
+  .hd p{font-size:8.5px;color:#667;margin-top:1px}
+
+  /* ══ 左侧：记忆反哺通道（虚线上行，坐标硬编码） ══ */
+  .fb{position:absolute;left:5px;top:377px;width:17px;height:318px;border-right:2px dashed #b03a4a;display:flex;align-items:center;justify-content:center}
+  .fb span{writing-mode:vertical-rl;font-size:8px;color:#b03a4a;letter-spacing:1px}
+  .fb i{position:absolute;top:-2px;right:-6px;font-style:normal;font-size:9px;color:#b03a4a}
+
+  /* ══ 六层：全部绝对定位 ══ */
+  .lay{position:absolute;left:28px;width:838px;display:flex;border-radius:8px;border:2px solid;overflow:hidden}
+  .lay .no{width:116px;padding:5px 7px;display:flex;flex-direction:column;justify-content:center;gap:1px}
+  .lay .no b{font-size:10.5px}
+  .lay .no span{font-size:7.5px;opacity:.88}
+  .lay .mid{flex:1;padding:4px 7px;display:flex;flex-direction:column;gap:3px;justify-content:center}
+  .lay .chip{font-size:8px;line-height:1.4;padding:2px 5px;background:rgba(255,255,255,.85);border-radius:3px;border:1px solid rgba(30,50,70,.14)}
+  .lay .chip b{color:#2456b0}
+  .lay .log{width:186px;padding:5px 7px;background:rgba(255,255,255,.6);display:flex;align-items:center;font-size:8px;line-height:1.45;border-left:1.5px dashed rgba(30,50,70,.25)}
+  .conn{position:absolute;left:28px;width:838px;height:17px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#345}
+  .conn b{color:#2456b0}
+
+  .l1{top:44px;height:100px;background:#eef4ff;border-color:#2456b0}.l1 .no{background:#2456b0;color:#fff}
+  .l2{top:161px;height:78px;background:#eefaff;border-color:#0e7c86}.l2 .no{background:#0e7c86;color:#fff}
+  .l3{top:256px;height:104px;background:#eefaf0;border-color:#1a7a35}.l3 .no{background:#1a7a35;color:#fff}
+  .l4{top:377px;height:128px;background:#e8f8ee;border-color:#137a2e;border-width:3px}.l4 .no{background:#137a2e;color:#fff}
+  .l5{top:522px;height:78px;background:#f4eefe;border-color:#6b3fb0}.l5 .no{background:#6b3fb0;color:#fff}
+  .l6{top:617px;height:78px;background:#fef0f2;border-color:#b03a4a}.l6 .no{background:#b03a4a;color:#fff}
+  .c1{top:144px}.c2{top:239px}.c3{top:360px}.c4{top:505px}.c5{top:600px}
+
+  /* 五步能力 chips */
+  .steps5{display:flex;align-items:stretch;gap:2px}
+  .steps5 .st{flex:1;text-align:center;padding:2px 2px;border-radius:4px;background:#fff;border:1.5px solid #4ac080;font-size:7.5px;line-height:1.3}
+  .steps5 .st b{display:block;font-size:8.5px;color:#137a2e}
+  .steps5 .ar{display:flex;align-items:center;font-size:9px;color:#137a2e;flex-shrink:0}
+
+  /* ══ 右栏：共享/隔离/治理 ══ */
+  .rail{position:absolute;right:10px;top:44px;width:236px;height:651px;display:flex;flex-direction:column;gap:6px}
+  .rc{border-radius:8px;border:2px solid;padding:4px 8px 6px;flex:1}
+  .rc h5{font-size:10px;margin-bottom:3px;text-align:center}
+  .rc .it{font-size:8px;line-height:1.5;padding:1.5px 4px;background:rgba(255,255,255,.8);border-radius:3px;margin:1.5px 0}
+  .rc .it b{color:#2456b0}
+  .rc-sh{background:#eefaf0;border-color:#1a7a35}.rc-sh h5{color:#137a2e}
+  .rc-iso{background:#fef0f2;border-color:#b03a4a}.rc-iso h5{color:#b03a4a}
+  .rc-gov{background:#fff8e8;border-color:#b45f06}.rc-gov h5{color:#b45f06}
+  .rc-gov .g{font-size:8px;line-height:1.45;padding:1.5px 4px;background:#fff;border-radius:3px;margin:1.5px 0;border:1px solid #e8c860}
+
+  /* ══ 底部：26 步流程条 ══ */
+  .flow-strip{position:absolute;bottom:8px;left:10px;right:10px;height:34px;display:flex;gap:1px;align-items:center;background:#f8f9fa;border:1.5px dashed #99a;border-radius:8px;padding:0 6px}
+  .fs{font-size:7.5px;padding:2px 3px;border-radius:3px;border:1px solid #99a;background:#fff;text-align:center;flex:1;white-space:nowrap;overflow:hidden}
+  .fs b{color:#2456b0}
+  .fs.gate{background:#fff4d6;border-color:#e8a000;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <h1>Swarm Studio V3 · 架构逻辑与全流程链路（A4 横版）</h1>
+  <p>读法：一次任务自上而下走完六层 ① 人发指令 → ② 消息协作 → ③ 调度看板 → ④ yuan 五步能力 → ⑤ 产物凭证 → ⑥ 记忆沉淀；记忆反哺能力层，治理横切全程</p>
+</div>
+
+<!-- 记忆反哺通道：L4 顶 → L6 底 -->
+<div class="fb"><i>▲</i><span>记忆反哺：历史偏差红杠拦截 · 下轮自动回忆</span></div>
+
+<!-- ═══ ① 人机入口层 ═══ -->
+<div class="lay l1">
+  <div class="no"><b>① 人机入口层</b><span>15 人 + Studio :8802</span></div>
+  <div class="mid">
+    <div class="chip"><b>15 人编制</b>：admin · bella(BA) · fanfan(PM) · arch · chen/hu/lin/xiao(研发×4) · qi/fei(测试×2) · secops/ops/audit(治理×3)</div>
+    <div class="chip"><b>Studio 驾驶舱 + IDE 工作台</b>（zcode 底座）：任务跳转→自动简报→交互编码→git 图谱→模型设置</div>
+    <div class="chip">matrix 免密登录 → JWT → 只见本账号档案与看板</div>
+  </div>
+  <div class="log">人发指令、看全景；IDE 工作台随时亲手介入开发（第 25 步）</div>
+</div>
+<div class="conn c1">▼ 需求与指令进入消息通道（群内 @ 全关联人）</div>
+
+<!-- ═══ ② 分布式协作层 ═══ -->
+<div class="lay l2">
+  <div class="no"><b>② 分布式协作层</b><span>Matrix Synapse :8008</span></div>
+  <div class="mid">
+    <div class="chip"><b>30 账号</b>（15 人 + 15 AI 助理）· 群聊 = 需求分析讨论群 · 私信送达需求文档</div>
+    <div class="chip"><b>@派发 = RACI 四元组</b>（主责/授权/咨询/通知）· 双兜底回执（@lead + @发起人）· 缺陷回流闭环</div>
+  </div>
+  <div class="log">消息即指令：所有协作凭 matrix 消息留痕，可追溯可审计（第 7-13 步）</div>
+</div>
+<div class="conn c2">▼ @assignee 消息即指令，仅其本人 profile 响应（异 profile 零触碰）</div>
+
+<!-- ═══ ③ 调度与看板层 ═══ -->
+<div class="lay l3">
+  <div class="no"><b>③ 调度与看板层</b><span>单 Gateway :8801 多路复用</span></div>
+  <div class="mid">
+    <div class="chip"><b>42 profile</b>：14 Orchestrator（每人 1）+ 28 agent（每人 2）——每用户仅账号+配置独立，技能模板完全同构</div>
+    <div class="chip"><b>28 kanban 板</b>：一板一 SQLite · team 围栏（板外 agent 拒认领）· RACI 结构化字段</div>
+    <div class="chip">认领即执行：hermes -p &lt;assignee&gt; chat 在围栏内 spawn agent</div>
+  </div>
+  <div class="log">一台电脑模拟 42 个"分布式节点"，等价于每人一套独立部署（第 1-2 步）</div>
+</div>
+<div class="conn c3">▼ 看板任务认领 → spawn agent → ACP 调用编程工具</div>
+
+<!-- ═══ ④ 能力层（重点） ═══ -->
+<div class="lay l4">
+  <div class="no"><b>④ 能力层（重点）</b><span>swarm yuan skill · ACP→zcode</span></div>
+  <div class="mid">
+    <div class="chip"><b>调用链</b>：kanban 认领 → agent 启动 workspace → ACP → zcode（底座）→ 加载 yuan skill → xxx-dev 定制技能 → 产出回写 kanban + matrix 通知</div>
+    <div class="steps5">
+      <div class="st"><b>① 认知地图</b>资产梳理·认识仓库</div><div class="ar">→</div>
+      <div class="st"><b>② 规格先行</b>无设计不编码</div><div class="ar">→</div>
+      <div class="st"><b>③ 代码纪律</b>需求-代码-测试对应</div><div class="ar">→</div>
+      <div class="st"><b>④ 知识池</b>用例+失败数据归档</div><div class="ar">→</div>
+      <div class="st"><b>⑤ 质量门禁</b>全绿+白盒扫描</div>
+    </div>
+    <div class="chip">workspace = worktree 共享目录（同任务 agent 共享 · feature 分支隔离）｜ 技能五族：通用·分析·研发·测试·管理</div>
+  </div>
+  <div class="log">第 18 步"五步标准动作"= swarm yuan skill 的内建能力；四类 AI 员工（需求设计/应用研发/质量测试/研发治理）共用本层</div>
+</div>
+<div class="conn c4">▼ 产物入仓：提交号 + 任务卡号双凭证</div>
+
+<!-- ═══ ⑤ 产物与证据层 ═══ -->
+<div class="lay l5">
+  <div class="no"><b>⑤ 产物与证据层</b><span>GitHub aipaydev 中央仓</span></div>
+  <div class="mid">
+    <div class="chip">冻结需求 → 系分稿 → 概设 → 排期 → 开发分支 → 测试报告 → 验收报告 → 审计意见书 → 复盘，全程入仓</div>
+    <div class="chip"><b>HTML 推演报告</b>（26 步真实状态 + 驾驶舱/协作/IDE 三界面截图，产品路演用）</div>
+  </div>
+  <div class="log">一切"完成"必须带提交号+卡号，系统反向核验，查不到打回（第 26 步）</div>
+</div>
+<div class="conn c5">▼ 每轮复盘：经验、问题单处置、度量基线沉淀入记忆</div>
+
+<!-- ═══ ⑥ 记忆沉淀层 ═══ -->
+<div class="lay l6">
+  <div class="no"><b>⑥ 记忆沉淀层</b><span>hindsight :8888</span></div>
+  <div class="mid">
+    <div class="chip"><b>14 家族库</b>：hermes-&lt;MAC&gt;-&lt;用户名&gt;，同族（本人全部看板+agent）共享，异族隔离</div>
+    <div class="chip">④知识池归档（用例/缺陷/失败打回）· <b>历史偏差红杠</b>（G2 检查项⑤命中必回应）· 复盘存入 → 下轮同需求自动回忆</div>
+  </div>
+  <div class="log">同族人与 agent 共用一份记忆，越干越熟（第 24 步存、下轮取）</div>
+</div>
+
+<!-- ══ 右栏 ══ -->
+<div class="rail">
+  <div class="rc rc-sh">
+    <h5>✅ 能力共享（全编制同构）</h5>
+    <div class="it">🔗 1 个 gateway 进程多路复用 42 profile</div>
+    <div class="it">🌐 matrix 服务（同 :8008 消息通道）</div>
+    <div class="it">📚 yuan 技能模板（每 profile 同构副本）</div>
+    <div class="it">⚙️ 模型通道（MX_MODEL_* 整编制改道+备用）</div>
+    <div class="it">🐙 GitHub 中央仓（同 aipaydev）</div>
+    <div class="it">🧠 hindsight 服务（同 :8888）</div>
+  </div>
+  <div class="rc rc-iso">
+    <h5>🔒 档案隔离（按账号独立）</h5>
+    <div class="it">👤 profile 配置（仅账号+凭据不同）</div>
+    <div class="it">📋 kanban 板（一板一 SQLite 库）</div>
+    <div class="it">🧠 记忆 bank（用户名+MAC 分仓）</div>
+    <div class="it">🔐 Studio ACL（只见本账号+本家族档案）</div>
+    <div class="it">🛡️ board 围栏（板外 assignee 拒认领）</div>
+    <div class="it">💾 state.db（异 profile 零触碰）</div>
+  </div>
+  <div class="rc rc-gov">
+    <h5>⚖️ 治理横切全程</h5>
+    <div class="g"><b>四道硬闸</b>：G1 需求上锁→不分析 · G2 架构评审(含偏差红杠)→不排期 · G4 独立测试→不发布 · G5 发布准出(人工批准)→不上线</div>
+    <div class="g"><b>凭证核验</b>：commit+卡号反查，查不到打回</div>
+    <div class="g"><b>问题台账</b>：全程记账，复盘 100% 处置</div>
+    <div class="g"><b>回灌重报</b>：超时拒收原因回灌，不静默</div>
+    <div class="g"><b>治理报告</b>：闸通过率·缺陷密度·幻觉抽检·AI 贡献占比</div>
+  </div>
+</div>
+
+<!-- 26 步流程条 -->
+<div class="flow-strip">
+  <div class="fs"><b>1-4</b>环境就绪</div><div class="fs"><b>5</b>应用登记</div><div class="fs"><b>6</b>人员管理</div>
+  <div class="fs gate"><b>7</b>🔒G1 上锁</div>
+  <div class="fs"><b>8</b>建群邀人</div><div class="fs"><b>9</b>@派发</div><div class="fs"><b>10</b>登记主卡</div><div class="fs"><b>11</b>系统分析</div><div class="fs"><b>12</b>分诊</div><div class="fs"><b>13</b>四路系分</div><div class="fs"><b>14</b>复核定稿</div>
+  <div class="fs gate"><b>15</b>🔒G2 评审</div>
+  <div class="fs"><b>16</b>归档</div><div class="fs"><b>17</b>PM 排期</div><div class="fs"><b>18</b>G3 五步编码</div>
+  <div class="fs gate"><b>19</b>🔒G4 测试</div>
+  <div class="fs gate"><b>20</b>🔒G5 准出</div>
+  <div class="fs"><b>21</b>发版 UAT</div><div class="fs"><b>22</b>工作台账</div><div class="fs"><b>23</b>合规审计</div><div class="fs"><b>24</b>G6 复盘</div><div class="fs"><b>25</b>IDE 核验</div><div class="fs"><b>26</b>HTML 报告</div>
+</div>
+
+</body>
+</html>
