@@ -124,6 +124,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/TasksView.vue'),
         },
         {
+          // 审批收件箱（工作页，P1 §二 2026-09-28：待审聚合 + 审批历史）
+          path: 'inbox',
+          name: 'ia2.inbox',
+          component: () => import('./views/InboxView.vue'),
+        },
+        {
           // 编排（工程）：＋新循环入口
           path: 'eng',
           name: 'ia2.eng',

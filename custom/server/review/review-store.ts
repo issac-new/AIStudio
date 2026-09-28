@@ -12,7 +12,7 @@
 // 归属（已知边界，勿当无漏）：单租户信任模型——任意登录用户凭 reviewId 可读写任意评审，
 // 写入只记 actor 痕（opener/评论者/裁决者各留一道）。多租户任务归属待接（同 evidence-store）。
 import { createHash, randomBytes } from 'crypto'
-import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { appendEvidence } from '../evidence/evidence-store'
@@ -156,6 +156,29 @@ function readReview(reviewId: string): ReviewRead {
 
 export function loadReview(reviewId: string): ReviewRecord | null {
   return readReview(reviewId).rec
+}
+
+/** 全量评审列表（新→旧；P1 审批收件箱聚合用——verdict 未落者为待审）。
+ * 直读 JSON 取内部 reviewId（文件名是 id 的哈希衍生，当 id 传入 readReviewFile
+ * 会触发身份闸并把好档误隔离成 .corrupt）。坏档跳过不动（只读面不隔离）。 */
+export function listReviews(limit = 200): ReviewRecord[] {
+  let names: string[] = []
+  try {
+    names = readdirSync(reviewDir()).filter((f) => f.endsWith('.json'))
+  } catch {
+    return []
+  }
+  const out: ReviewRecord[] = []
+  for (const name of names) {
+    if (out.length >= limit) break
+    try {
+      const raw = JSON.parse(readFileSync(join(reviewDir(), name), 'utf8')) as Record<string, unknown>
+      if (typeof raw.reviewId === 'string' && Array.isArray(raw.comments)) {
+        out.push(raw as unknown as ReviewRecord)
+      }
+    } catch { /* 坏档跳过 */ }
+  }
+  return out.sort((a, b) => b.createdAt - a.createdAt)
 }
 
 /** 写侧读取：身份不符单独报错（不当"评审不存在"，更不当空账续写）。 */
