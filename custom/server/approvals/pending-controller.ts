@@ -16,6 +16,9 @@
  * 挂载：B 类 patch 488 在 bootstrap/routes.ts（与 477/482 同款两行）。
  */
 import Router from '@koa/router'
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
 import { buildFleetSnapshotFromTap, respondFleetApproval } from '../services/hermes/fleet-tap'
 import { loadReview, setVerdict, listReviews } from '../review/review-store'
 import { isReviewVerdict, type ReviewVerdict } from '../review/review-store'
@@ -44,8 +47,98 @@ function actorOf(ctx: { state?: { user?: { username?: string } } }): string {
   return ctx.state?.user?.username ?? 'anonymous'
 }
 
+// ── studio-file 审批传输队列（fleet 命令审批 live 源，patch 490 + 插件配套）──
+// worker 插件把（已脱敏）审批请求追加 <HERMES_HOME>/approvals/queue.jsonl 并轮询
+// responses/<request_id>.json；本端读队列、写响应。无响应文件且未超时 = 待审。
+interface FileQueueEntry {
+  request_id: string
+  digest: string
+  command: string
+  description: string
+  surface?: string
+  allowed_choices?: string[]
+  timeout_seconds?: number
+  enqueued_at?: number
+}
+
+function approvalsDirs(): string[] {
+  // 队列目录集：显式 env > 根 home + 全部 profile home（worker 的 HERMES_HOME
+  // 是 profile home，传输按其入队——studio 侧全扫聚合，decide 回写同目录）。
+  const env = process.env.HERMES_APPROVALS_QUEUE_DIR?.trim()
+  if (env) return [env]
+  const home = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const dirs = [join(home, 'approvals')]
+  try {
+    for (const name of readdirSync(join(home, 'profiles'))) {
+      const d = join(home, 'profiles', name, 'approvals')
+      if (existsSync(d)) dirs.push(d)
+    }
+  } catch { /* profiles 目录不存在（非 sim 部署）忽略 */ }
+  return dirs
+}
+
+function readPendingFileQueue(): PendingItem[] {
+  const outAll: PendingItem[] = []
+  for (const dir of approvalsDirs()) outAll.push(...readOneQueue(dir))
+  return outAll
+}
+
+/** 该请求所在的队列目录（decide 回写响应用）；找不到 = null。 */
+function queueDirOfRequest(requestId: string): string | null {
+  for (const dir of approvalsDirs()) {
+    const queue = join(dir, 'queue.jsonl')
+    try {
+      for (const line of readFileSync(queue, 'utf8').split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        try {
+          const entry = JSON.parse(trimmed) as FileQueueEntry
+          if (entry.request_id === requestId) return dir
+        } catch { continue }
+      }
+    } catch { continue }
+  }
+  return null
+}
+
+function readOneQueue(dir: string): PendingItem[] {
+  const queue = join(dir, 'queue.jsonl')
+  if (!existsSync(queue)) return []
+  const now = Date.now()
+  const out: PendingItem[] = []
+  let lines: string[] = []
+  try {
+    lines = readFileSync(queue, 'utf8').split('\n')
+  } catch { return [] }
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    let entry: FileQueueEntry
+    try { entry = JSON.parse(trimmed) as FileQueueEntry } catch { continue }
+    if (!entry.request_id || !entry.digest) continue
+    // 已答（响应文件在）或已超时（timeout 从入队起算，宽限 30s 消化延迟）不再列
+    if (existsSync(join(dir, 'responses', `${entry.request_id}.json`))) continue
+    const ttl = (typeof entry.timeout_seconds === 'number' ? entry.timeout_seconds : 300) * 1000
+    const enqueued = typeof entry.enqueued_at === 'number' ? entry.enqueued_at : 0
+    if (enqueued && now - enqueued > ttl + 30_000) continue
+    out.push({
+      id: `fleetfile:${entry.request_id}`,
+      kind: 'command',
+      // 危险命令人审默认高档（V4-N1 三档口径；文件队列源无服务端分类器）
+      risk: 'high',
+      title: `${entry.surface || 'unattended worker'} 的命令审批`,
+      detail: entry.command || entry.description || entry.request_id,
+      choices: (entry.allowed_choices && entry.allowed_choices.length ? entry.allowed_choices : ['once', 'session', 'deny']),
+      createdAt: enqueued || now,
+    })
+  }
+  return out
+}
+
 router.get('/pending', async (ctx) => {
   const items: PendingItem[] = []
+  // 文件队列源（patch 490 unattended 传输；读失败不阻断其余聚合）
+  try { items.push(...readPendingFileQueue()) } catch { /* 队列不可读忽略 */ }
 
   // fleet 命令审批（agent 工具调用等）
   try {
@@ -128,6 +221,51 @@ router.post('/:id/decide', async (ctx) => {
     const entry = appendApprovalLog({
       id, actor, targetKind: 'command', targetId: approvalId,
       targetTitle: `${sessionId} · ${approvalId}`, decision, note, risk,
+    })
+    ctx.body = { ok: true, entry }
+    return
+  }
+
+  if (id.startsWith('fleetfile:')) {
+    const requestId = id.slice('fleetfile:'.length)
+    if (!FLEET_CHOICES.has(decision)) {
+      ctx.status = 400
+      ctx.body = { ok: false, detail: 'fleetfile 决策须为 once|session|always|deny' }
+      return
+    }
+    // 响应文件须带 digest 绑定（worker 侧校验 request_id+digest，宿主再校验一次）
+    const dir = queueDirOfRequest(requestId)
+    if (!dir) {
+      ctx.status = 404
+      ctx.body = { ok: false, detail: '审批请求不在队列（已超时或不存在）' }
+      return
+    }
+    const queue = join(dir, 'queue.jsonl')
+    let digest = ''
+    try {
+      for (const line of readFileSync(queue, 'utf8').split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        try {
+          const entry = JSON.parse(trimmed) as FileQueueEntry
+          if (entry.request_id === requestId && entry.digest) { digest = entry.digest; break }
+        } catch { continue }
+      }
+    } catch { /* 队列不可读 */ }
+    if (!digest) {
+      ctx.status = 404
+      ctx.body = { ok: false, detail: '审批请求不在队列（已超时或不存在）' }
+      return
+    }
+    const respDir = join(dir, 'responses')
+    mkdirSync(respDir, { recursive: true })
+    const file = join(respDir, `${requestId}.json`)
+    const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
+    writeFileSync(tmp, JSON.stringify({ request_id: requestId, digest, choice: decision, decided_at: Date.now(), actor }), 'utf8')
+    renameSync(tmp, file)
+    const entry = appendApprovalLog({
+      id, actor, targetKind: 'command', targetId: requestId,
+      targetTitle: note || requestId, decision, note,
     })
     ctx.body = { ok: true, entry }
     return
