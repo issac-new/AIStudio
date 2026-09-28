@@ -53,8 +53,21 @@ async function shot(name, url, opts = {}) {
 // ① 驾驶舱全景（房间 + 任务面板真实数据）
 await shot('ui-03-cockpit', '/app', { wait: 6000 })
 
-// ② 群聊（需求分析讨论群，真实消息流）
+// ①b 驾驶舱概览（P5）：#/app/dash 三卡（我的待办/评审闸口/交付进度）
+await shot('ui-03b-dash', '/app/dash', { wait: 5000 })
+
+// ② 群聊（需求分析讨论群，真实消息流；P4 任务流转时间线在右栏）
 await shot('ui-08-groupchat', `/app/s/group/${encodeURIComponent(ROOM_ANALYSIS)}`, { wait: 5000 })
+
+// ②b 群聊消息卡链接特写（P4①②：card=t_ 链接化 + @我高亮，消息区滚动到底部抓最新派发/回执）
+await shot('ui-08b-msgcard', `/app/s/group/${encodeURIComponent(ROOM_ANALYSIS)}`, {
+  wait: 5000,
+  after: async () => {
+    const scroller = page.locator('.mx_EventTile_body').last()
+    await scroller.scrollIntoViewIfNeeded().catch(() => {})
+    await page.waitForTimeout(800)
+  },
+})
 
 // ③ 看板（fanfan-pm-plan 真实卡片；预选板 + 兜底点选）
 await shot('ui-10-kanban', '/hermes/kanban?board=fanfan-pm-plan', {
