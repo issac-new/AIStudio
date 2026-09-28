@@ -11,22 +11,40 @@
 #   4. 问题单口径对齐台账（22 唯一键），如实标注与复盘文档事件流口径（70 行）的差异
 #   5. 发布基线动态取 git rev-parse，不再硬编码
 import html as H
+import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
-EVID = SIM / 'evidence'
+# RUN_ID 参数化（V4-run1 起）：MX_RUN_ID=<id> 或 --run <id> → state/evidence/出报告
+# 全部指向 runs/<id>/；缺省回落 SIM 根（V3 兼容）。生成终版报告必须带本轮
+# RUN_ID，否则会拿旧轮 state 出"状态真实"的假报告。
+RUN_ID = os.environ.get('MX_RUN_ID', '')
+if not RUN_ID and '--run' in sys.argv:
+    RUN_ID = sys.argv[sys.argv.index('--run') + 1]
+if RUN_ID:
+    EVID = SIM / 'runs' / RUN_ID / 'evidence'
+    STATE_FILES = [SIM / 'runs' / RUN_ID / 'state.env']
+else:
+    EVID = SIM / 'evidence'
+    STATE_FILES = [SIM / 'state.env']
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 OUT = EVID / 'simulation-report.html'
 PLAN_PATH = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
 CEN = SIM / 'central/aipaydev'
 
 state = {}
-for line in (SIM / 'state.env').read_text().splitlines():
-    if '=' in line and not line.startswith('jwt_'):
-        k, v = line.split('=', 1)
-        state[k.strip()] = v.strip()
+for sf in STATE_FILES:
+    if not sf.exists():
+        continue
+    for line in sf.read_text().splitlines():
+        if '=' in line and not line.startswith('jwt_'):
+            k, v = line.split('=', 1)
+            state[k.strip()] = v.strip()
+if not state:
+    sys.exit(f'[mx-report-gen] state 为空：{STATE_FILES[0]} 不存在——RUN_ID 是否写错？')
 SNAP = EVID / 'state-snapshot.env'
 if SNAP.exists():
     for line in SNAP.read_text().splitlines():
