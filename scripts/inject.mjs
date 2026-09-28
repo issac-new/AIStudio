@@ -26,9 +26,7 @@ const realpathOrSelf = (p) => {
 const overlayRoot = realpathOrSelf(resolve(import.meta.dirname, '..'));
 const ncwkRoot = resolve(overlayRoot, '..');
 // upstream 可能经符号链接进入（worktree 场景），统一取真实路径。
-// OVERLAY_UPSTREAM_ROOT：并行会话各持私有 upstream 副本时按环境变量覆盖，
-// 避免 clean/inject 循环翻动共享树、打断其他会话的 dev server。
-const upstreamRoot = realpathOrSelf(resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(ncwkRoot, 'upstream')));
+const upstreamRoot = realpathOrSelf(resolve(ncwkRoot, 'upstream'));
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const zcodeRoot = resolve(upstreamRoot, 'zcode');
@@ -318,6 +316,18 @@ export default mergeConfig(
       rollupOptions: { input: resolve(${js(upstreamClientRoot)}, 'index.html') },
     },
     server: {
+      // fs.allow 显式双根（V4 轮实锤）：root 指到 upstream 后 vite 默认
+      // searchForWorkspaceRoot 只放行 upstream 树——alias 解析出的 overlay
+      // /@fs 模块（entry shim/custom 全部 A 类资产）被 403，A 类注册链路死，
+      // 应用以上游裸模式启动（ia2 路由缺失 → #/app 命中 catch-all 重定向环）。
+      // 显式放行 overlay 根 + upstream 根 + workspace 外层（node_modules 归属）。
+      fs: {
+        allow: [
+          ${js(overlayRoot)},
+          ${js(upstreamRoot)},
+          ${js(resolve(upstreamRoot, 'hermes-studio'))},
+        ],
+      },
       proxy: {
         // G3 威胁面收口：vite dev 代理默认不带 X-Forwarded-For，经代理的 LAN 请求与
         // 本机直连在后端字节级不可区分，gateway-credentials 的回环闸会被本机代理放大。
