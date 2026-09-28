@@ -137,6 +137,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/InboxView.vue'),
         },
         {
+          // 治理中心（工作页，补功能主清单 2026-09-28）：六闸工件（G1 冻结/概设/
+          // 排期/测试报告/发布说明/UAT/审计/复盘）真仓锚点 + markdown 全文 +
+          // 待裁决评审就地裁决
+          path: 'gov',
+          name: 'ia2.governance',
+          component: () => import('./views/GovernanceView.vue'),
+        },
+        {
           // 编排（工程）：＋新循环入口
           path: 'eng',
           name: 'ia2.eng',

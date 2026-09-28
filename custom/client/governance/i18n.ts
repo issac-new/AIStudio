@@ -1,0 +1,58 @@
+// overlay/custom/client/governance/i18n.ts
+// 治理中心词条（补功能主清单 2026-09-28）。独立小事实源 + onMounted
+// mergeLocaleMessage 增量注入——不动 patch 473 的 locale 单一事实源面
+// （并行会话在改 473，此处收敛在 custom 模块内，键前缀 governance.*）。
+export const governanceMessages = {
+  zh: {
+    governance: {
+      pageTitle: '治理中心',
+      pageSub: '六道闸工件 · 真仓锚点 · 就地裁决',
+      repoLabel: '数据仓',
+      gatesTitle: '六道闸',
+      gateG1: 'G1 需求上锁',
+      gateG2: 'G2 架构评审',
+      gateG3: 'G3 编码门禁',
+      gateG4: 'G4 独立验证',
+      gateG5: 'G5 发布准出',
+      gateG6: 'G6 复盘治理',
+      inRepo: '在仓',
+      missing: '缺失',
+      branches: '条开发分支',
+      docsTitle: '治理工件',
+      docMeta: '{lines} 行 · {commit} · {date}',
+      selectDoc: '选择左侧工件查看全文',
+      loadFailed: '加载失败',
+      reviewsTitle: '待裁决评审（G2 语义）',
+      noReviews: '暂无待裁决评审',
+      approve: '通过',
+      reject: '打回',
+      refresh: '刷新',
+    },
+  },
+  en: {
+    governance: {
+      pageTitle: 'Governance Center',
+      pageSub: 'Six gates · repo-anchored · decide in place',
+      repoLabel: 'Repo',
+      gatesTitle: 'Six Gates',
+      gateG1: 'G1 Requirement Freeze',
+      gateG2: 'G2 Architecture Review',
+      gateG3: 'G3 Coding Gate',
+      gateG4: 'G4 Independent Verification',
+      gateG5: 'G5 Release Readiness',
+      gateG6: 'G6 Retrospective',
+      inRepo: 'in repo',
+      missing: 'missing',
+      branches: 'dev branches',
+      docsTitle: 'Governance Artifacts',
+      docMeta: '{lines} lines · {commit} · {date}',
+      selectDoc: 'Select an artifact to view',
+      loadFailed: 'Failed to load',
+      reviewsTitle: 'Pending reviews (G2)',
+      noReviews: 'No pending reviews',
+      approve: 'Approve',
+      reject: 'Request changes',
+      refresh: 'Refresh',
+    },
+  },
+} as const
