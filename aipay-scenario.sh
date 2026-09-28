@@ -28,22 +28,20 @@ source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # 断言见 docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
 source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
 
-# 单驱动锁（P0，2026-09-28）：双会话双开推演是实测最高频互踩源——共享 state.env/
-# 板库/房间双写互踩（本会话实录多轮）。mkdir 原子锁（macOS 无 flock；mkdir 在所有
-# 文件系统上原子）：锁不可得即大声拒绝，不静默并发。陈锁检测：info 里的 pid 已死则接管。
+# 单驱动锁（P0，2026-09-28；判活根治 2026-09-29）：双会话双开推演是实测最高频
+# 互踩源——共享 state.env/板库/房间双写互踩。锁实现收敛在 mx-scenario-lib
+# （mx_driver_lock_acquire 单一事实源，可单测）；陈锁只在持锁 pid 真死时接管，
+# 判活取 pid 数字段（旧版整行取出致 kill -0 报 illegal pid 恒失败——V4-run1
+# 02:26 run1 续跑误抢 run2 活锁的实锤根因）。
 DRIVER_LOCK="$SIM_ROOT/.driver.lock.d"
-if ! mkdir "$DRIVER_LOCK" 2>/dev/null; then
-  _lock_pid=$(sed -n 's/^pid=//p' "$DRIVER_LOCK/info" 2>/dev/null | head -1)
-  if [[ -n "$_lock_pid" ]] && ! kill -0 "$_lock_pid" 2>/dev/null; then
-    note "[单驱动锁] 检测陈锁（pid $_lock_pid 已死），接管"
-    rm -rf "$DRIVER_LOCK"; mkdir "$DRIVER_LOCK" 2>/dev/null \
-      || { echo "[mux FAIL] 锁接管竞争失败，另一驱动者刚接管——本轮退出" >&2; exit 3; }
-  else
-    echo "[mux FAIL $(date '+%H:%M:%S')] 推演单驱动锁被占（持锁者：$(cat "$DRIVER_LOCK/info" 2>/dev/null || echo unknown)）——拒绝双开；如确认无推演在跑：rm -rf $DRIVER_LOCK 后重试" >&2
-    exit 3
-  fi
+_mx_rc=0; mx_driver_lock_acquire "$DRIVER_LOCK" "$$" || _mx_rc=$?
+if [[ "$_mx_rc" == "1" ]]; then
+  echo "[mux FAIL $(date '+%H:%M:%S')] 推演单驱动锁被占（持锁者：$(cat "$DRIVER_LOCK/info" 2>/dev/null || echo unknown)）——拒绝双开；如确认无推演在跑：rm -rf $DRIVER_LOCK 后重试" >&2
+  exit 3
+elif [[ "$_mx_rc" == "2" ]]; then
+  echo "[mux FAIL] 锁接管竞争失败，另一驱动者刚接管——本轮退出" >&2
+  exit 3
 fi
-echo "pid=$$ start=$(date '+%F %T') host=$(hostname -s)" > "$DRIVER_LOCK/info"
 
 # 临时物清理（Z6）：ba 步 /tmp/mx-rfd-remote.$$ 与 ready 步 DL_WT 临时 worktree 中途
 # 退出会残留。重定义 mx_cleanup 扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按
@@ -297,7 +295,7 @@ if step_reached dispatch; then
 1) 需求切分转换、文本提取（图片转 OCR 双路提取交叉核对防字符错认），转 markdown 且不得有信息偏差，按需求模版做格式与要素评估；
 2) 三清单匹配：人员清单（matrix 账号）、应用模块清单（向所有账号查询上报 kanban/teams/agent 能力，csw 开头应用 agent 即应用模块清单）、组织清单（归属/团队/leader，以已入库 org.md 与 app-registry.md 为准）；
 3) 按应用模块职责初分+架构统筹（最小改动、减少重构、同类合并），形成 SMART 任务清单具体到人，登记到主任务上；
-4) 自动邀请所有关联人进群，按 RACI 逐条 @责任人+其团队负责人发任务明细（附文档/仓库地址），并逐条建跟踪子任务与主任务挂父子依赖（全部完成后才关主任务）。
+4) 自动邀请所有关联人进群，按 RACI 逐条 @责任人+其团队负责人发任务明细（附文档/仓库地址），并逐条建跟踪子任务与主任务挂父子依赖（全部完成后才关主任务）。你转派的每条派单都必须带「派发标识 RUN=${RUN_ID:-default}」并声明：同任务 ID 的历史轮产物不算重复派单，接收方须重新执行或核验并回执结论行，禁止静默。
 建主卡与派发子卡时必须填写结构化 raci 字段（--raci，四元组 responsible/approver/consulted/informed）。
 **注意：子任务必须建在对应责任人的看板上（板名=责任人账号名-pay-core 等格式），不是建在你自己的板上。**
 **建完子任务后，必须在群内逐条发 matrix 消息 @责任人-agent @团队负责人-agent 附任务明细（用 m.mentions 提及）。不发消息=没人知道有这个任务。**
@@ -493,6 +491,7 @@ fi
 # 套模板：templates/design.md（五要素/备选方案）+ review-record.md（评审记录）。
 # 硬闸：G2 未过，close/plan（L2）不得执行。
 if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
+  mx_gate_breaker_check g2 "G2 架构治理评审"   # 熔断：两轮未过不得开始 L2（跨调用持久）
   # G2 前置补邀（09-27 run9d 实锤第八层根因）：分析群是步骤 8 建的，邀的是研发
   # 关联人（chen/hu/lin/xiao/wei/mei/qi/fei），arch 不在其列——@arch-agent 不在房，
   # G2 mention 无法投递、1800s 硬闸必超时。照步骤 10 导演补邀惯用法双账号补齐。
@@ -505,14 +504,15 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
   done
   AGID=$(kanban_create_as arch arch_g2 "${RFD_ID} 架构治理评审（G2）" \
     "G2 检查单：①设计五要素（背景/方案/接口/数据/风险）②爆炸半径（影响模块 vs 三清单）③验证计划前移④备选方案≥2 及取舍。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项)。" arch-governance)
+  G2_TS=$(( $(date +%s) * 1000 ))
   dispatch_in_room arch "@arch-agent:matrix.test 概设 docs/design/${RFD_ID}-architecture-design.md 已入库，请执行 G2 架构治理评审（评审卡 ${AGID}@arch-governance 板）：
 1) 设计五要素齐备（背景/方案/接口/数据/风险，对照 templates/design.md）
 2) 爆炸半径排查：变更影响模块清单 vs 任务三清单，缺漏列出
 3) 验证计划前移：测试要点是否在设计期已列
 4) 备选方案 ≥2 且有取舍理由
 评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单）。不许谎报。" "$(agent_mxid arch)"
-  if wait_truth "房间出现 ARCH-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-(PASS|FAIL)"; then
-    if room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS"; then
+  if wait_truth "房间出现 ARCH-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-(PASS|FAIL)" "$G2_TS"; then
+    if room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS" "$G2_TS"; then
       kanban_walk_done arch "$AGID"
       sset g2_arch_pass "$(date +%s)"
       note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
@@ -520,10 +520,15 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       dlv_enabled && dlv_scenario_phase P2 fanfan G2 arch artifact "概设评审过（arch 板 ${AGID}）" P3
     else
       echo "ISSUE|g2-design-review-fail|arch-agent|${RFD_ID} G2 评审 FAIL（缺项见评审卡），回灌修订" >> "$EVID_DIR/issues.log"
+      mx_gate_breaker_trip g2 "G2 架构治理评审" 1
+      G2_RETRY_TS=$(( $(date +%s) * 1000 ))
       dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评。" "$(agent_mxid fanfan)"
-      wait_truth "修订后 ARCH-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS" \
-        || fail "G2 两轮未过，L2 不得开始（V3 硬闸）"
-      kanban_walk_done arch "$AGID"; sset g2_arch_pass "$(date +%s)"
+      if wait_truth "修订后 ARCH-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS" "$G2_RETRY_TS"; then
+        kanban_walk_done arch "$AGID"; sset g2_arch_pass "$(date +%s)"
+      else
+        mx_gate_breaker_trip g2 "G2 架构治理评审" 1
+        fail "G2 两轮未过，L2 不得开始（V3 硬闸）"
+      fi
     fi
   else
     echo "ISSUE|g2-review-missing|arch-agent|G2 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
@@ -727,6 +732,8 @@ fi
 # 硬闸：G4 未过不得评审；G5 未过不得发布。
 if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   gate_blocked g4_pass ready   # V3 硬闸：G4 未过不进发布准出
+  mx_gate_breaker_check g5 "G5 发布准出"   # 熔断：两轮未过不得发布（跨调用持久）
+  G5_TS=$(( $(date +%s) * 1000 ))
   RGID=$(kanban_create_as fanfan g5_ready "${RFD_ID} 发布准出评审（G5）" \
     "七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。" fanfan-review)
   dispatch_in_room fanfan "@fanfan-agent:matrix.test 测试报告已在 integration/${RFD_ID}，请执行 G5 发布准出评审（评审卡 ${RGID}@fanfan-review 板，按 templates/release-plan.md 与 release-notes.md 产出）：
@@ -738,8 +745,8 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
 评审记录落卡 body（review-record 结构）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项）。不许谎报。" "$(agent_mxid fanfan)"
-  if wait_truth "房间出现 READY-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-(PASS|FAIL)"; then
-    if room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS"; then
+  if wait_truth "房间出现 READY-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-(PASS|FAIL)" "$G5_TS"; then
+    if room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS" "$G5_TS"; then
       kanban_walk_done fanfan "$RGID"
       sset g5_ready "$(date +%s)"
       note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准）"
@@ -747,10 +754,15 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       dlv_enabled && dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
     else
       echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
+      mx_gate_breaker_trip g5 "G5 发布准出" 1
+      G5_RETRY_TS=$(( $(date +%s) * 1000 ))
       dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行。" "$(agent_mxid fanfan)"
-      wait_truth "补齐后 READY-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS" \
-        || fail "G5 两轮未过，不得发布（V3 硬闸）"
-      kanban_walk_done fanfan "$RGID"; sset g5_ready "$(date +%s)"
+      if wait_truth "补齐后 READY-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS" "$G5_RETRY_TS"; then
+        kanban_walk_done fanfan "$RGID"; sset g5_ready "$(date +%s)"
+      else
+        mx_gate_breaker_trip g5 "G5 发布准出" 1
+        fail "G5 两轮未过，不得发布（V3 硬闸）"
+      fi
     fi
   else
     echo "ISSUE|g5-review-missing|fanfan-agent|G5 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
@@ -766,7 +778,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   fi
   repo_pull
   {
-    echo "# ${RFD_ID} 任务完备性检查（$(date +%F %T)）"
+    echo "# ${RFD_ID} 任务完备性检查（$(date '+%F %T')）"
     echo
     echo "## kanban 任务覆盖（fanfan 账号板）"
     kanban_list fanfan | jq -r '.. | objects | select(has("title")) | "- [\(.status)] \(.title)"' | sort -u
@@ -824,8 +836,9 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   repo_pull
   AC_LIST=$(sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -oE "AC-[0-9]+" | sort -u | tr '\n' ' ')
   [[ -n "$AC_LIST" ]] || { echo "ISSUE|uat-no-ac|director|需求书未提取到 AC 清单" >> "$EVID_DIR/issues.log"; fail "UAT 无 AC 清单可验（G1 冻结缺陷）"; }
+  UAT_TS=$(( $(date +%s) * 1000 ))
   dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。bella 将逐条核对。" "$(agent_mxid fanfan)"
-  if wait_truth "UAT 证据行到位" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "UAT-EVIDENCE"; then
+  if wait_truth "UAT 证据行到位" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "UAT-EVIDENCE" "$UAT_TS"; then
     UAT_OK=1; UAT_MISS=""
     # 逐条 AC 覆盖核验：UAT-EVIDENCE 结论行必须逐条列出每个 AC 编号（缺条即不通过）
     UAT_BODY=$(mx_messages "$(load_token bella)" "$(sget room_analysis)" 200 2>/dev/null | jq -r --arg s "$(agent_mxid fanfan)" \
