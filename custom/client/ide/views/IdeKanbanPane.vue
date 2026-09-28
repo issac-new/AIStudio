@@ -5,7 +5,7 @@
 // 优先级五档映射 p0-p4；列=status 词表。只读视图（编辑走驾驶舱看板）。
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { listBoards, listTasks, type KanbanTask } from '@/api/hermes/kanban'
+import { listTasks, type KanbanTask } from '@/api/hermes/kanban'
 
 type BoardView = 'list' | 'board' | 'swimlane' | 'gantt'
 
@@ -22,14 +22,27 @@ const VIEWS: Array<{ key: BoardView; label: string }> = [
   { key: 'gantt', label: 'Gantt' },
 ]
 
+// 每次看板 REST 都 spawn hermes CLI（约 9s/次）——45s exec 队列超时在高并发排队时
+// 会撞线（实弹走查 2026-09-28 实录）。加载策略：①直取默认板（单次 CLI，跳过
+// listBoards 发现轮）；②队列超时自动重试一次（首次调用也预热了 CLI，重试显著变快）。
+async function fetchTasks(): Promise<void> {
+  const res = await listTasks()
+  // listTasks 返回数组（upstream 契约），历史代码误取 res.tasks → 永远空。
+  tasks.value = Array.isArray(res) ? res : (res.tasks ?? [])
+}
+
 async function load(): Promise<void> {
   loading.value = true
   try {
-    const boards = await listBoards()
-    const board = boards.find((b) => !b.archived) ?? boards[0]
-    const res = await listTasks(board ? { board: board.slug } : undefined)
-    tasks.value = res.tasks ?? []
-    loadError.value = ''
+    try {
+      await fetchTasks()
+      loadError.value = ''
+    } catch (first) {
+      const msg = first instanceof Error ? first.message : String(first)
+      if (!/timeout|queue/i.test(msg)) throw first
+      await fetchTasks() // 队列超时重试一次（CLI 已被首次调用预热）
+      loadError.value = ''
+    }
   } catch (err) {
     tasks.value = []
     loadError.value = err instanceof Error ? err.message : String(err)

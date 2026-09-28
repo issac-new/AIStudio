@@ -1,0 +1,23 @@
+diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
+--- a/packages/server/src/modules/coding-agents/services/index.ts
++++ b/packages/server/src/modules/coding-agents/services/index.ts
+@@ -3560,7 +3560,10 @@ export async function runCodingAgentSession({
+  let args: string[] = []
+  let env: Record<string, string> = {}
+
+
+-  if (tool.id === 'zcode') {
+-    // overlay[zcode] R3：scoped（hermes 托管密钥/代理）模式不支持——
+-    // zcode 走自身 provider 体系与登录凭据（~/.zcode/v2），仅 global 模式。
+-    const err = new Error('ZCode 会话仅支持 global 模式（zcode 自身登录）')
+-    ;(err as any).status = 400
+-    throw err
+-  }
++  if (tool.id === 'zcode') {
++    // overlay[zcode] R3：scoped（hermes 托管密钥/代理）模式不支持——
++    // zcode 走自身 provider 体系与登录凭据（~/.zcode/v2），仅 global 模式。
++    // 2026-09-28 实弹走查修复：IDE 会话默认 scoped（工作台模型可调）与本约束冲突
++    // 导致 IDE 发送全部 400——scoped→global 自动回落（zcode 忽略 hermes 侧
++    // 密钥注入，模型切换走 ~/.zcode/v2 独立配置面）而非硬拒。
++    console.log('[coding-agents] zcode 会话 scoped→global 回落（IDE 兼容缝）')
++  }
