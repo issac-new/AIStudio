@@ -1,0 +1,68 @@
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -54,12 +54,45 @@
+   return tasks.filter(task => visible.has(taskAssigneeProfile(task)))
+ }
+ 
++// HERMES_CUSTOM[492] BEGIN: 跨板任务解析——错板/缺省板 404 兜底。
++// 实锤缺陷：看板抽屉/任务深链/消息卡链接恒带 board=default，任务在他板即 404
++// （推演截图"API Error 404: Task not found"抽屉根因）。任务 ID 全局唯一，
++// 先按板库 sqlite 快查定位（10ms 级），再用命中板重试一次 show。
++async function resolveTaskBoard(taskId: string, skipBoards: ReadonlySet<string>): Promise<string | null> {
++  try {
++    const boards = await kanbanCli.listBoards({ includeArchived: true })
++    // eslint-disable-next-line @typescript-eslint/no-var-requires
++    const { DatabaseSync } = require('node:sqlite')
++    for (const b of boards) {
++      if (!b.db_path || skipBoards.has(b.slug)) continue
++      try {
++        const db = new DatabaseSync(b.db_path, { readOnly: true })
++        try {
++          const row = db.prepare('SELECT 1 AS ok FROM tasks WHERE id = ?').get(taskId) as { ok?: number } | undefined
++          if (row) return b.slug
++        } finally {
++          db.close()
++        }
++      } catch { /* 单板库不可读/表缺失：跳过继续 */ }
++    }
++  } catch { /* 解析失败交回上层 404 */ }
++  return null
++}
++
++async function getTaskResilient(board: string, taskId: string): Promise<kanbanCli.KanbanTaskDetail | null> {
++  const detail = await kanbanCli.getTask(taskId, { board })
++  if (detail) return detail
++  const alt = await resolveTaskBoard(taskId, new Set([board]))
++  return alt ? kanbanCli.getTask(taskId, { board: alt }) : null
++}
++// HERMES_CUSTOM[492] END
++
+ async function getAuthorizedTask(
+   ctx: Context,
+   board: string,
+   taskId: string,
+ ): Promise<kanbanCli.KanbanTaskDetail | null> {
+-  const detail = await kanbanCli.getTask(taskId, { board })
++  const detail = await getTaskResilient(board, taskId)
+   if (!detail || !filterTasksByVisibleProfiles(ctx, [detail.task]).length) {
+     ctx.status = 404
+     ctx.body = { error: 'Task not found' }
+@@ -78,7 +111,7 @@
+   const visible = visibleProfileSet(ctx)
+   if (!visible && !allowedStatuses) return true
+   const ids = [...new Set(taskIds.map(id => id.trim()).filter(Boolean))]
+-  const details = await Promise.all(ids.map(id => kanbanCli.getTask(id, { board })))
++  const details = await Promise.all(ids.map(id => getTaskResilient(board, id)))
+   if (details.some(detail => !detail || (visible && !filterTasksByVisibleProfiles(ctx, [detail.task]).length))) {
+     ctx.status = 404
+     ctx.body = { error: 'Task not found' }
+@@ -387,7 +420,7 @@
+   const board = requestBoard(ctx)
+   if (!board) return
+   try {
+-    const detail = await kanbanCli.getTask(ctx.params.id, { board })
++    const detail = await getTaskResilient(board, ctx.params.id)
+     if (!detail) {
+       ctx.status = 404
+       ctx.body = { error: 'Task not found' }
