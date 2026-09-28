@@ -4,6 +4,8 @@ import { NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
+import { getStoredUsername } from '@/api/client'
+import { needsMyAction } from '../utils/raci'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import KanbanBoard from '@/custom/kanban/components/KanbanBoard.vue'
 import KanbanToolbar from '@/custom/kanban/components/KanbanToolbar.vue'
@@ -20,6 +22,8 @@ const workspace = useWorkspaceStore()
 const selectedTaskId = ref<string | null>(null)
 const showTaskDrawer = ref(false)
 const includeArchived = ref(false)
+/** P2 等您操作过滤（当前登录人的待做 R / 待审 A 卡） */
+const mineOnly = ref(false)
 const laneByProfile = ref(false)
 const tenantFilter = ref('')
 const attentionExpanded = ref(false)
@@ -81,6 +85,11 @@ const filteredTasks = computed(() => {
   }
   if (store.filterAssignee) {
     tasks = tasks.filter((t: KanbanTask) => t.assignee === store.filterAssignee)
+  }
+  if (mineOnly.value) {
+    // P2 §三：我是执行(R)且未完成的卡 + 我是审批(A)且在评审的卡
+    const me = getStoredUsername()
+    tasks = tasks.filter((t: KanbanTask) => needsMyAction(t, me))
   }
   if (tenantFilter.value) {
     tasks = tasks.filter((t: KanbanTask) => t.tenant === tenantFilter.value)
@@ -517,6 +526,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       :search-query="store.searchQuery"
       :loading="store.loading"
       :include-archived="includeArchived"
+      :mine-only="mineOnly"
       :lane-by-profile="laneByProfile"
       :tenants="tenants"
       :task-count="filteredTasks.length"
@@ -526,6 +536,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       @tenant-change="handleTenantChange"
       @search-change="handleSearchChange"
       @include-archived-change="handleIncludeArchivedChange"
+      @mine-only-change="(v: boolean) => { mineOnly = v }"
       @lane-by-profile-change="handleLaneByProfileChange"
       @refresh="handleRefresh"
       @dispatch="handleDispatch"
