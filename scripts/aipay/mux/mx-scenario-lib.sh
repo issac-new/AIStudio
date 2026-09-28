@@ -309,9 +309,14 @@ repo_commit_main() { # <repo 相对路径> <author-name> <author-email> <commit-
     git -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true )
 }
 
-room_has_from() { # <room> <sender-mxid> <pattern>
-  mx_messages "$(load_token fanfan)" "$1" 120 | jq -e --arg s "$2" --arg p "$3" \
-    'map(select(.sender == $s and ((.content.body // "") | test($p)))) | any' >/dev/null 2>&1
+room_has_from() { # <room> <sender-mxid> <pattern> [since-ms]
+  # since-ms（可选，默认 0）：只认该时刻之后的消息。门禁必须传派发时刻——
+  # 只按 sender+pattern 匹配历史消息会让上一轮残留结论行"秒过"门禁（假完成）：
+  # V4-run1 02:26:34 G5 结论行 4 秒即 ✓ 实为 01:04 的旧 READY-GATE 行，
+  # 02:26:50 的 PASS 判定也可能是 01:44 超时后迟到的旧回执（TEST 侧早已用
+  # SINCE_TS 过滤根治同类问题，门禁侧漏了同款修复）。
+  mx_messages "$(load_token fanfan)" "$1" 120 | jq -e --arg s "$2" --arg p "$3" --argjson since "${4:-0}" \
+    'map(select((.origin_server_ts // 0) > $since and .sender == $s and ((.content.body // "") | test($p)))) | any' >/dev/null 2>&1
 }
 
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
@@ -337,9 +342,59 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
       mx_join "$(load_token "$lp")" "$rid" >/dev/null 2>&1 || true
     fi
   done
-  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2" "$3")
+  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2
+[派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，须重新执行或核验并回执结论行；判定重复也必须回执合并回执，禁止静默。" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"
+}
+
+# ── 推演单驱动锁（单一事实源，可单测）────────────────────────
+# 双会话双开推演是实测最高频互踩源（共享 state.env/板库/房间双写）。mkdir 原子锁
+# （macOS 无 flock；mkdir 在各文件系统均原子）：锁不可得即大声拒绝，不静默并发。
+# 陈锁判定根治（2026-09-29 V4-run1 02:26 实锤）：旧版 `sed -n 's/^pid=//p'` 把
+# "pid=84431 start=… host=…" 整段取出，`kill -0 "84431 start=…"` 报 illegal pid
+# 恒失败 → **活锁被误判陈锁、被接管**——run1 ready 续跑误抢 run2 活锁，双驱动同栈
+# 互写 12 分钟。判活只取 pid 数字段；解析不出一律按活锁拒绝（宁停勿抢）。
+mx_lock_holder_pid() { # <info-file> → 持锁 pid（仅数字段；解析不出=空串）
+  sed -n 's/^pid=\([0-9][0-9]*\).*/\1/p' "$1" 2>/dev/null | head -1
+}
+
+mx_driver_lock_acquire() { # <lock-dir> <pid> → 0 取得 / 1 活锁被占 / 2 接管竞争失败
+  local d="$1" pid="$2" held
+  _mx_lock_info() { printf 'pid=%s start=%s host=%s\n' "$2" "$(date '+%F %T')" "$(hostname -s)" > "$1/info"; }
+  if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
+  held=$(mx_lock_holder_pid "$d/info")
+  if [[ -n "$held" ]] && ! kill -0 "$held" 2>/dev/null; then
+    rm -rf "$d"
+    if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
+    return 2
+  fi
+  return 1
+}
+
+# ── 硬闸打回熔断（跨调用持久，人工放行留痕）──────────────────
+# 语义定性（2026-09-29 g5-ready-fail 记档）：V3 "两轮未过，不得发布/不得开始"是
+# 防 agent 无限重做回路的硬闸；断点续跑曾静默重置轮次绕过熔断（run1 01:44 G5
+# 两轮熔断 → 02:26 续跑直接放行）。根治：轮次计数按 RUN 落 state 持久化，达阈值
+# 后新调用直接拒绝；人工确认可重试须 GATE_BREAKER_OVERRIDE=1 显式放行并记 issue
+# （不可逆决策留痕，符合 V3 总则"人只守意图对齐与不可逆决策"）。
+mx_gate_breaker_trip() { # <gate-key> <label> <unpassed-rounds>：记 N 轮未过
+  local key="$1" label="$2" n="${3:-1}" cur
+  cur=$(sget "${key}_fail_rounds"); cur=${cur:-0}
+  sset "${key}_fail_rounds" $(( cur + n ))
+  note "[熔断] ${label} 累计 $(( cur + n )) 轮未过（阈值 2）"
+}
+
+mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝，除非 GATE_BREAKER_OVERRIDE=1
+  local key="$1" label="$2" cur
+  cur=$(sget "${key}_fail_rounds"); cur=${cur:-0}
+  (( cur < 2 )) && return 0
+  if [[ "${GATE_BREAKER_OVERRIDE:-0}" == "1" ]]; then
+    echo "ISSUE|gate-breaker-override|director|${label} 熔断已触发（${cur} 轮未过），人工 GATE_BREAKER_OVERRIDE=1 显式放行重试" >> "$EVID_DIR/issues.log"
+    return 0
+  fi
+  echo "ISSUE|gate-breaker-tripped|director|${label} 熔断（${cur} 轮未过），本轮拒绝执行；重试须人工 GATE_BREAKER_OVERRIDE=1（断点续跑不得静默绕过）" >> "$EVID_DIR/issues.log"
+  fail "${label} 打回熔断（${cur} 轮未过，V3 硬闸）：不得继续。人工确认可重试时以 GATE_BREAKER_OVERRIDE=1 重启。"
 }
 
 # ── V3 生命周期治理助手 ─────────────────────────────────
