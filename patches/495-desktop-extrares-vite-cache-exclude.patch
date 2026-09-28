@@ -1,0 +1,14 @@
+diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -62,6 +62,10 @@
+     to: "webui/node_modules"
+     filter:
+       - "**/*"
++      # 排除 Vite 缓存（deps_temp_* 家族可达 GB 级，绝不能进生产包；2.25 轮 patch 281
++      # 语义，补丁系列折叠时随 111 孤儿化丢失，本补丁按 extraResources 新结构重建）
++      - "!node_modules/.vite/**"
++      - "!node_modules/.tmp/**"
+       # Drop other-platform node-pty prebuilds (saves ~45MB)
+       - "!node-pty/prebuilds/!(${platform}-${arch})/**"
+       # Linux has no bundled prebuild and loads the native module compiled by

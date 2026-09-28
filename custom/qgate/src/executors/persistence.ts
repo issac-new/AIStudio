@@ -6,6 +6,7 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:net'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { parse as parseYaml } from 'yaml'
@@ -61,6 +62,20 @@ function equalish(expected: unknown, actual: unknown): boolean {
   return String(expected) === String(actual)
 }
 
+// 场景里写死端口会撞开发机上别的常驻服务（探活见 404 也当 ready），
+// 被测服务与场景 URL 统一走 {{PORT}} 令牌：执行器选空闲端口注入。
+function pickFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer()
+    srv.listen(0, '127.0.0.1', () => {
+      const addr = srv.address()
+      const port = typeof addr === 'object' && addr ? addr.port : 0
+      srv.close(() => (port > 0 ? resolve(port) : reject(new Error('no free port available'))))
+    })
+    srv.on('error', reject)
+  })
+}
+
 export async function runPersistenceExecutor(
   executor: ExecutorSpec,
   input: PersistenceInput,
@@ -86,6 +101,14 @@ export async function runPersistenceExecutor(
     return [e]
   }
 
+  // {{PORT}} 令牌展开：要起被测服务时选空闲端口，场景 URL 与服务 env 同源。
+  let dynamicPort = 0
+  const rawServer = isRecord(scenario.server) ? scenario.server : undefined
+  if (rawServer && Array.isArray(rawServer.start) && (rawServer.start as unknown[]).length > 0) {
+    dynamicPort = await pickFreePort()
+    scenario = JSON.parse(JSON.stringify(scenario).replaceAll('{{PORT}}', String(dynamicPort))) as Record<string, unknown>
+  }
+
   const dbSpec = isRecord(scenario.db) ? scenario.db : {}
   const dbRel = typeof dbSpec.path === 'string' ? dbSpec.path : null
   const dbFile = dbRel ? join(input.workspace, dbRel) : null
@@ -108,7 +131,8 @@ export async function runPersistenceExecutor(
       const start = strList(serverSpec.start) ?? []
       const readyUrl = typeof serverSpec.readyUrl === 'string' ? serverSpec.readyUrl : null
       if (start.length > 0) {
-        serverProc = spawn(start[0], start.slice(1), { cwd: input.workspace, stdio: 'ignore' })
+        const env = dynamicPort > 0 ? { ...process.env, PORT: String(dynamicPort) } : process.env
+        serverProc = spawn(start[0], start.slice(1), { cwd: input.workspace, stdio: 'ignore', env })
         if (readyUrl) await waitReady(readyUrl, SERVER_READY_TIMEOUT_MS)
       }
     }
