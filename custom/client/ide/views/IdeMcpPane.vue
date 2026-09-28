@@ -90,6 +90,19 @@ function openManage(): void {
 
 <template>
   <div class="ide-mcp" data-testid="ide-mcp-pane">
+    <!-- 工作台体检条（吸收第一批 B1 v1，qoder 五维体检的诚实两维版）：
+         skills/mcp 两维有数据面（fetchHermesSkills/fetchMcpServers），评分+欠账
+         优化提示；rules/memory/automations 三维数据面未接（源模块归档/待接），
+         不虚标——全数据面接通后升五维 harnessReport（harnesshealth 域记档）。 -->
+    <div class="ide-mcp__health" data-testid="ide-harness-health">
+      <span class="ide-mcp__health-title">体检</span>
+      <span class="ide-mcp__health-dim" :data-level="skillEntries.length ? 'good' : 'poor'" title="技能资产：0 项=欠账（常用流程技能化）">
+        技能 {{ skillEntries.length ? `✓ ${skillEntries.length}` : '✗ 欠账' }}
+      </span>
+      <span class="ide-mcp__health-dim" :data-level="servers.length ? 'good' : 'poor'" title="MCP 资产：0 项=欠账（高频工具接入）">
+        MCP {{ servers.length ? `✓ ${servers.length}` : '✗ 欠账' }}
+      </span>
+    </div>
     <header class="ide-mcp__head">
       <span class="ide-mcp__title">{{ t('ide.mcp.title') }}</span>
       <span class="ide-mcp__tabs">
@@ -330,4 +343,9 @@ function openManage(): void {
     color: var(--accent-primary, #4cc9f0);
   }
 }
+.ide-mcp__health { display: flex; align-items: center; gap: 10px; padding: 4px 10px; font-size: 11px; border-bottom: 1px solid var(--border-color, #e0e0e0); }
+.ide-mcp__health-title { font-weight: 600; color: var(--text-color-3, #999); }
+.ide-mcp__health-dim { color: var(--text-color-2, #555);
+  &[data-level='good'] { color: var(--success-color, #18a058); }
+  &[data-level='poor'] { color: var(--warning-color, #f0a020); } }
 </style>
