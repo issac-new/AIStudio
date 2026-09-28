@@ -198,6 +198,107 @@ router.get('/rows', async (ctx) => {
   ctx.body = { ok: true, sessionId, count: rows.length, rows }
 })
 
+// ── workflow 查询面（workflow 集成轮；全 GET 只读——新文件非 GET 404 坑不适用，
+// 本文件既有 koa-router 注册链）──
+// 锚点 upstream/zcode zcodeAgentService conversationWorkflowRunsV4:5322 /
+// conversationWorkflowRunEventsV4:5307 / listSavedWorkflows:3938 /
+// listSavedWorkflowRuns:3974。引擎离线 → 503 engine_unreachable（/projection/watch 同款词表）。
+
+/** query 数值钳制：非有限正数取缺省。 */
+function positiveIntParam(raw: unknown, fallback?: number): number | undefined {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.min(Math.floor(n), 200)
+}
+
+router.get('/workflow/runs', async (ctx) => {
+  const { workspacePath, sessionId } = ctx.query as { workspacePath?: string; sessionId?: string }
+  if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || !workspacePath || !sessionId) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const limit = positiveIntParam(ctx.query.limit, 50)
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.conversationWorkflowRunsV4({ workspacePath, sessionId, limit }))
+    ctx.body = { ok: true, sessionId, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+})
+
+router.get('/workflow/run-events', async (ctx) => {
+  const { workspacePath, sessionId, runId } = ctx.query as { workspacePath?: string; sessionId?: string; runId?: string }
+  if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || typeof runId !== 'string' || !workspacePath || !sessionId || !runId) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId/runId 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const afterSequence = Number.isFinite(Number(ctx.query.afterSequence)) && Number(ctx.query.afterSequence) >= 0
+    ? Math.floor(Number(ctx.query.afterSequence))
+    : undefined
+  const limit = positiveIntParam(ctx.query.limit, 100)
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.conversationWorkflowRunEventsV4({ workspacePath, sessionId, runId, afterSequence, limit }))
+    ctx.body = { ok: true, sessionId, runId, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+})
+
+router.get('/workflow/saved', async (ctx) => {
+  const { workspacePath, scope } = ctx.query as { workspacePath?: string; scope?: string }
+  if (typeof workspacePath !== 'string' || !workspacePath) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  if (scope !== undefined && scope !== 'project' && scope !== 'global') {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'scope 仅 project/global' }
+    return
+  }
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.listSavedWorkflows({ workspacePath, ...(scope ? { scope } : {}) }))
+    ctx.body = { ok: true, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+})
+
+router.get('/workflow/saved-runs', async (ctx) => {
+  const { workspacePath, name, scope } = ctx.query as { workspacePath?: string; name?: string; scope?: string }
+  if (typeof workspacePath !== 'string' || !workspacePath) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  if (scope !== undefined && scope !== 'project' && scope !== 'global') {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'scope 仅 project/global' }
+    return
+  }
+  const limit = positiveIntParam(ctx.query.limit, 20) ?? 20
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.listSavedWorkflowRuns({ workspacePath, ...(name ? { name } : {}), limit, ...(scope ? { scope } : {}) }))
+    ctx.body = { ok: true, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+})
+
 // fork：对稳定 assistant 行分叉（zcode v4 原生 forkAssistant——fork.ts StableForkTarget
 // 的命令面；rowId/entityId 来自 /rows 行缓存锚点）。
 router.post('/fork', async (ctx) => {

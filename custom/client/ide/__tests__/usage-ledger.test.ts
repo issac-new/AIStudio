@@ -28,6 +28,22 @@ describe('用量台账（zcode usage-stats 契约）', () => {
     expect(ledger.totalTokens).toBe(40)
   })
 
+  it('streak 跳过末尾 0 日（今日尚未发生不断链——MetricsPopover 接线轮语义修正）', () => {
+    const ledger = buildUsageLedger([
+      { day: '2026-09-22', tokens: 10 },
+      { day: '2026-09-23', tokens: 10 },
+      { day: '2026-09-24', tokens: 0 },  // 今日已补 0（尚未发生）
+    ], { fillDays: false })
+    expect(ledger.currentStreakDays).toBe(2)
+    // 末尾连续多日 0 同样跳过。
+    const ledger2 = buildUsageLedger([
+      { day: '2026-09-20', tokens: 5 },
+      { day: '2026-09-22', tokens: 0 },
+      { day: '2026-09-23', tokens: 0 },
+    ])
+    expect(ledger2.currentStreakDays).toBe(1)
+  })
+
   it('空输入→空台账零炸', () => {
     const ledger = buildUsageLedger([])
     expect(ledger).toMatchObject({ activeDays: 0, currentStreakDays: 0, totalTokens: 0, peakDay: null })
