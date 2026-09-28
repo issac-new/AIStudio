@@ -73,122 +73,141 @@ PHASES = [
 STEPS_META = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
             narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账。',
-            imgs=[('ui-gov-roster', '治理中心（产品界面）：管理档案·账号清单——15 人编制×双账号×角色（commit 锚点在案）', 'ui'),
-                  ('01-roster', '账号清单 roster.md 入仓（15 人×双账号，含角色分工）', 'doc')]),
+            imgs=[
+                  ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（commit 锚点）', 'ui'),]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='单 gateway :8801 多路复用承载全部 profile（等价每人一台电脑一套）：14 用户逐一装配"账号+配置+看板+团队围栏+记忆库"四件套，互不可见。',
-            imgs=[('02-fleet', 'fleet-manifest 装配清单：14 用户四件套逐项可列', 'doc')]),
+            imgs=[
+                  ('ui-02-profiles', '产品界面：profiles 配置面——单 gateway 多路复用下的账号配置（等价每人一套）', 'ui'),]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
             narrative='用户打开 Swarm Studio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；登录后只见本账号档案与看板（ACL 隔离抽查通过）。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
-            imgs=[('ui-03-cockpit', '登录后驾驶舱全景：顶栏任务 36·需关注 6 / 左房间列表 / 右「任务·决策」面板（等我·需关注·挂接任务三节 + 任务动态 feed）', 'ui')]),
+            imgs=[
+                  ('ui-03-cockpit', '驾驶舱全景：顶栏任务 36·需关注 6 / 左房间 / 右「任务·决策」三节+动态 feed', 'ui'),]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
             narrative='冒烟清单真值核验：24 账号 token 有效、单 gateway+单 studio 就绪、双登录模式通、看板围栏与记忆库在位。bella matrix-login 一次回落如实记问题单（当日已修复复测通过）。环境就绪后，驾驶舱「概览」页（#/app/dash）即全员工作总览入口。',
-            imgs=[('04-smoke', '冒烟真值日志转录（scenario.log 原文，含一次问题单记录）', 'doc'),
-                  ('ui-04-dash', '驾驶舱概览页（产品界面）：我的待办 6 / 评审闸口（待裁决+最近裁决留痕）/ 交付进度（状态分布+完成率 61%）', 'ui')]),
+            imgs=[
+                  ('ui-04-dash', '驾驶舱概览页：我的待办 6 / 评审闸口 / 交付进度（133 任务·完成率 61%）——功能就绪总览', 'ui'),]),
     5: dict(keys=['appinit_done'], actor='both', actorText='人+AI · 应用登记',
             narrative='四个应用模块（支付核心/微信渠道/支付宝渠道/小程序收银台）逐一登记资产表：负责人、专属看板、技术栈、SLA、测试骨架。csw-cashier-mp 门禁骨架缺口记问题单并补建（728dcfe，vitest 10/10 实跑全绿）。',
-            imgs=[('ui-gov-appregistry', '治理中心（产品界面）：管理档案·应用资产登记表——四应用负责人/看板/SLA/门禁骨架', 'ui'),
-                  ('05-app-registry', '应用资产登记表 app-registry.md（含门禁骨架核对列）', 'doc')]),
+            imgs=[
+                  ('ui-gov-appregistry', '治理中心·管理档案：应用资产登记表——四应用负责人/看板/SLA/门禁骨架', 'ui'),]),
     6: dict(keys=['people_done'], actor='both', actorText='人+AI · 组织对账',
             narrative='生成组织与权限矩阵：15 人×角色×汇报线×看板×团队×matrix 账号，与实际账号/看板/智能体逐项对账零差异；角色全覆盖含架构/安全/运维/合规审计。',
-            imgs=[('ui-gov-org', '治理中心（产品界面）：管理档案·组织与权限矩阵——15 人×角色×汇报线×看板', 'ui'),
-                  ('06-org', '组织与权限矩阵 org.md（人员×角色×汇报线×看板）', 'doc')]),
+            imgs=[
+                  ('ui-gov-org', '治理中心·管理档案：组织与权限矩阵——15 人×角色×汇报线×看板', 'ui'),]),
     7: dict(keys=['g1_frozen'], actor='gate', actorText='硬闸 G1 · 人审上锁',
             narrative='BA（bella）经 matrix 私信送达需求文档（邮件通道本期禁用，记问题单口径）。需求过 G1 四项检查：验收标准可机械判定（AC-1~7）、范围外清单、影响面、涉敏评估——四项齐才生成冻结标记入库，锁后不许改。',
-            imgs=[('ui-gov-doc', '治理中心（产品界面，#/app/gov）：G1 需求冻结件渲染——AC-1~7 全文 + frozen:true + commit 锚点（14 行 · 0217cf2）', 'ui'),
-                  ('07-freeze', 'G1 冻结文件：AC-1~7 全部可判定 + frozen:true', 'doc'),
-                  ('07-req-dm', 'BA→PM 私信送达原文（event_id 锚定直取）', 'msg')]),
+            imgs=[
+                  ('ui-gov-doc', '治理中心·六闸工件：G1 需求冻结件——AC-1~7 全文 + frozen:true + commit 锚点', 'ui'),]),
     8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
             narrative='产品经理 fanfan 创建"支付收银台需求分析讨论群"，邀请本机 Orchestrator agent 后，自动邀请全部关联人进群——实查 22 名成员（含各角色人类账号与 AI 助理）。',
-            imgs=[('08-members', '群成员名单实查（22 人在群，joined_members API）', 'doc'),
-                  ('ui-09-room', '协作沟通界面（产品）：群内真实消息流 + 右侧任务面板（09-26 推演窗口实拍）', 'ui')]),
+            imgs=[
+                  ('ui-09-room', '协作沟通界面：需求分析讨论群真实消息流 + 右侧任务面板（22 人在群）', 'ui'),]),
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · fanfan 派发',
             narrative='fanfan 在群内 @Orchestrator agent 发出派发指令：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）。指令原文按 event_id 锚定直取。',
-            imgs=[('09-dispatch', '派发指令原文（dispatch_marker 事件直取）', 'msg')]),
+            imgs=[
+                  ('ui-09-room', '协作沟通界面：群内 @派发现场——指令要求证据（提交号+卡号），右侧跟踪卡挂接', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
             narrative='Orchestrator agent 经 matrix channel 接收指令，登记主任务卡到 fanfan-pm-plan 看板：真实卡 ID t_9e5c6c18（建卡工具返回，非需求编号冒充），带 RACI 结构化字段与子卡链。',
-            imgs=[('ui-10-carddrawer', '产品看板卡详情抽屉：RFD-001 主卡 t_9e5c6c18——done 终态/指派/完成回执评论/标签/优先级', 'ui'),
-                  ('10-card', '主卡实查：t_9e5c6c18 登记凭据（建卡时间/指派人/RACI 四元组）', 'doc'),
-                  ('ui-10-kanban', '产品看板（#/app/board）：fanfan-pm-plan 板 T-101~T-108 跟踪卡（就绪/完成态）+ 编排面板（自动派发开关）', 'ui')]),
+            imgs=[
+                  ('ui-10-carddrawer', '产品看板卡详情抽屉：RFD-001 主卡 t_9e5c6c18——done 终态/指派/完成回执评论', 'ui'),
+                  ('ui-10-kanban', '产品看板：fanfan-pm-plan 板 T-101~T-108 跟踪卡 + 编排面板', 'ui'),]),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 系统分析智能体',
             narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），产出 SMART 任务清单入仓（9035c1b），ANALYSIS-DONE 结论行经反向核验（提交真在仓库且含分析稿、卡真在账号板）。',
-            imgs=[('ui-gov-tasklist', '治理中心（产品界面）：分析档案·SMART 任务清单——T-101~T-108 具体到人（RACI）', 'ui'),
-                  ('11-tasklist', 'SMART 任务清单：8 任务具体到人（T-101~T-108）', 'doc'),
-                  ('11-done', 'ANALYSIS-DONE 凭证行（commit+card 双凭证）', 'msg')]),
+            imgs=[
+                  ('ui-gov-tasklist', '治理中心·分析档案：SMART 任务清单——T-101~T-108 具体到人（RACI）', 'ui'),]),
     12: dict(keys=['triage_done'], actor='both', actorText='人确认 · AI 执行',
             narrative='四条 RACI 派发直达四主责（chen/hu/lin/xiao），各 agent 建卡回执；xiao 的建卡查重命令被审批门拦截、5 分钟无人应答即停手不越权——人工始终在回路的真实实证。团队负责人分诊确认后推进。',
-            imgs=[('12-raci', 'RACI 派发四连 + 回执（含审批门拦截实况）', 'msg')]),
+            imgs=[
+                  ('ui-09-room', '协作沟通界面：RACI 派发现场（群内逐条 @主责 agent，右侧跟踪卡同步挂接）', 'ui'),]),
     13: dict(keys=['anexec_done'], actor='ai', actorText='AI×4 · 四路系分并行',
             narrative='四路专职研发 agent 并行系统分析：接口签名、数据模型、错误码、幂等键、工作量人日评估，四份系分稿各自入仓；跨模块契约对齐（snake_case、金额分 int64）。',
-            imgs=[('ui-gov-anpaycore', '治理中心（产品界面）：分析档案·AN-PAYCORE 系分全文（接口签名/工作量/六要素）', 'ui'),
-                  ('ui-gov-anchwx', '治理中心：分析档案·AN-CHWX 财付通渠道系分', 'ui'),
-                  ('ui-gov-anchali', '治理中心：分析档案·AN-CHALI 支付宝渠道系分', 'ui'),
-                  ('ui-gov-anmp', '治理中心：分析档案·AN-MP 收银台前端系分', 'ui'),
-                  ('13-an-paycore', '系分 AN-PAYCORE：支付核心（状态机/幂等/回调）', 'doc'),
-                  ('13-an-chwx', '系分 AN-CHWX：财付通 V3 渠道', 'doc'),
-                  ('13-an-chali', '系分 AN-CHALI：支付宝渠道', 'doc'),
-                  ('13-an-mp', '系分 AN-MP：小程序收银台前端', 'doc')]),
+            imgs=[
+                  ('ui-gov-anpaycore', '治理中心·分析档案：AN-PAYCORE 系分全文（接口签名/工作量/六要素）', 'ui'),
+                  ('ui-gov-anchwx', '治理中心·分析档案：AN-CHWX 财付通渠道系分', 'ui'),
+                  ('ui-gov-anchali', '治理中心·分析档案：AN-CHALI 支付宝渠道系分', 'ui'),
+                  ('ui-gov-anmp', '治理中心·分析档案：AN-MP 收银台前端系分', 'ui'),]),
     14: dict(keys=['review_done'], actor='both', actorText='AI 汇总 · 人复核',
             narrative='fanfan 汇总四路系分成总稿，调用全局需求分析与架构设计技能复核：消除歧义、统一口径（金额分 int64、字段 snake_case），形成概要设计五要素（背景/方案/接口/数据/风险）+ 备选方案取舍 + 爆炸半径 + 验证计划前移。',
-            imgs=[('14-design', '概要设计定稿（G2 评审对象）', 'doc')]),
+            imgs=[
+                  ('ui-gov-design', '治理中心·六闸工件：概要设计（G2 评审对象）——五要素/备选/爆炸半径/验证前移', 'ui'),]),
     15: dict(keys=['g2_arch_pass'], actor='gate', actorText='硬闸 G2 · 架构评审',
             narrative='概设派发 arch 架构治理评审：五项检查逐条留痕（五要素/爆炸半径/验证前移/备选≥2/历史偏差红杠）。首轮结论行因审批超时曲折，打回复评后 ARCH-GATE-PASS（评审记录落卡 t_674f173c）。不评审不排期。评审卡的产品承载见步骤 20 审批收件箱「评审卡」分组与卡详情抽屉。',
-            imgs=[('ui-gov-center', '治理中心（产品界面）：六道闸卡全绿在仓 + 待裁决评审区（通过/打回）——G2 语义的产品承载', 'ui'),
-                  ('ui-gov-design', '治理中心：概要设计（G2 评审对象）全文渲染', 'ui'),
-                  ('15-archgate', 'G2 评审派发与结论行（两轮真实过闸）', 'msg')]),
+            imgs=[
+                  ('ui-gov-center', '治理中心：六道闸卡全绿在仓 + 待裁决评审区——G2 语义的产品承载', 'ui'),
+                  ('ui-room-archived', '协作沟通界面：arch-agent「G2 架构治理评审已完成…ARCH-GATE-PASS」结论行现场', 'ui'),]),
     16: dict(keys=['close_done'], actor='ai', actorText='AI · 归档',
             narrative='主任务卡登记全部关联子任务与过程档案后置完成：completed 时间戳、完成摘要（7/7 子卡与任务清单对齐）可回溯，测试工作量按 0.3 系数口径写入。',
-            imgs=[('16-card-done', '主卡终态：done + completed 时间 + 完成摘要', 'doc')]),
+            imgs=[
+                  ('ui-10-carddrawer', '产品看板卡抽屉：主卡归档终态——completed 时间/完成摘要（7/7 子卡对齐）可回溯', 'ui'),]),
     17: dict(keys=['plan_done'], actor='ai', actorText='AI · PM 排期技能',
             narrative='按定稿概设与工作量评估编排排期：四条开发任务（DEV-PAYCORE/CHWX/CHALI/MP）+ 两条测试任务（TEST-BE/FE），测试量=开发×0.3 独立成项，整体 +15% 缓冲，每任务时间窗口与依赖明确。',
-            imgs=[('ui-gov-schedule', '治理中心（产品界面）：排期计划渲染——DEV-* 时间窗口+依赖链+TEST×0.3+15% 缓冲', 'ui'),
-                  ('17-schedule', '排期计划：时间窗口+依赖链+测试独立成项', 'doc')]),
+            imgs=[
+                  ('ui-gov-schedule', '治理中心·六闸工件：排期计划——DEV-* 时间窗口+依赖链+TEST×0.3+15% 缓冲', 'ui'),]),
     18: dict(keys=['devimpl_done'], actor='gate', actorText='硬闸 G3 · 编码门禁',
             narrative='四研发按 xxx-dev 五步能力（认知地图→规格先行→代码纪律→知识池→质量门禁）实施：四条 feat/DEV-* 分支入 origin，本地测试证据随分支提交（pay-core 52 例/微信 25 例/支付宝 54 例/收银台 17 例+220 骨架检查，全绿实跑）。无设计不编码、渠道一律本地 mock。',
-            imgs=[('ui-gov-tlpaycore', '治理中心（产品界面）：测试证据·DEV-PAYCORE 测试日志全文（分支锚 feat/DEV-PAYCORE）', 'ui'),
-                  ('ui-gov-tlmp', '治理中心：测试证据·DEV-MP 测试日志（17 例+220 检查全部通过，分支锚在案）', 'ui'),
-                  ('18-gitgraph', 'git 图谱：四条开发分支 + 集成线 + main', 'doc'),
-                  ('18-testlog-dev-paycore', 'G3 证据 DEV-PAYCORE：vitest 52/52', 'doc'),
-                  ('18-testlog-dev-chwx', 'G3 证据 DEV-CHWX：vitest 25/25', 'doc'),
-                  ('18-testlog-dev-chali', 'G3 证据 DEV-CHALI：vitest 54/54', 'doc'),
-                  ('18-testlog-dev-mp', 'G3 证据 DEV-MP：17 例+220 检查', 'doc')]),
+            imgs=[
+                  ('ui-gov-tlpaycore', '治理中心·测试证据：DEV-PAYCORE 测试日志全文（分支锚 feat/DEV-PAYCORE）', 'ui'),
+                  ('ui-gov-tlchwx', '治理中心·测试证据：DEV-CHWX 测试日志', 'ui'),
+                  ('ui-gov-tlchali', '治理中心·测试证据：DEV-CHALI 测试日志', 'ui'),
+                  ('ui-gov-tlmp', '治理中心·测试证据：DEV-MP 测试日志（17 例+220 检查全过）', 'ui'),]),
     19: dict(keys=['g4_pass'], actor='gate', actorText='硬闸 G4 · 独立验证',
             narrative='测试的人不是写代码的人：qi/fei 独立执行 TEST-BE/TEST-FE，缺陷报→修→验全关才算过（DEF-FE-1..4 实弹闭环）；集成 51/51 + 回归 131/131 全绿，测试报告（51 例实测版）入仓，commit id 回填关联卡。',
-            imgs=[('ui-gov-test', '治理中心（产品界面）：G4 测试报告渲染——51/51 集成+131/131 回归全绿', 'ui'),
-                  ('19-testreport', '测试报告：51/51 集成 + 131/131 回归全绿', 'doc'),
-                  ('19-testpass', '测试派发→执行→回执→lead 复验全链消息', 'msg')]),
+            imgs=[
+                  ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——51/51 集成+131/131 回归全绿', 'ui'),
+                  ('ui-room-archived', '协作沟通界面：qi 派发 TEST-BE 现场与测试执行回执区带', 'ui'),]),
     20: dict(keys=['g5_ready'], actor='gate', actorText='硬闸 G5 · 发布准出+人批准',
             narrative='发布检查七项三轮过闸：首轮 FAIL（证据挂接缺/分支树不洁）如实打回，补齐后复审 PASS——回滚数字阈值、灰度 5%→25%→100%、面向用户收益的发布说明、HumanGate 人工批准留痕。两轮不过不得上线。产品侧对应「审批收件箱」页面（#/app/inbox）：命令审批四键裁决 + 审批历史留痕。',
-            imgs=[('20-readygate', 'G5 三轮结论行（FAIL→补齐→PASS 真实过闸）', 'msg'),
-                  ('20-release-notes', '发布说明：面向用户收益 + 缺陷闭环清单 0 open', 'doc'),
-                  ('ui-20-inbox', '审批收件箱（产品界面）：命令审批（批准/本会话允许/总是允许/拒绝）+ 审批历史（wei 两次裁决留痕）', 'ui')]),
+            imgs=[
+                  ('ui-gov-release', '治理中心·六闸工件：G5 发布说明——交付范围/缺陷闭环 0 open/商户接入要点', 'ui'),]),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · bella 验收',
             narrative='BA 拿 G1 冻结清单逐条对账：AC-1~7 每条给出证据锚点（测试文件行号/分支/commit/报告锚点），全过出验收报告入仓，并登记上线后 SLA（可用性 99.5%、下单 P95≤800ms、P2 事件 4h 响应）。',
-            imgs=[('ui-gov-uat', '治理中心（产品界面）：UAT 验收报告渲染——AC 逐条通过 + SLA 登记（99.5%/P95≤800ms/4h）', 'ui'),
-                  ('21-acceptance', '验收报告：AC-1~7 全过 + SLA 登记', 'doc'),
-                  ('21-uat', 'UAT 逐条对账消息（每条 AC 带 file:line 锚点）', 'msg')]),
+            imgs=[
+                  ('ui-gov-uat', '治理中心·六闸工件：UAT 验收报告——AC 逐条通过+SLA 登记（99.5%/P95≤800ms/4h）', 'ui'),]),
     22: dict(keys=['workmgr_done'], actor='both', actorText='人+AI · 工作管理',
             narrative='研发工作台账随时可出：14 人×状态分布（待办/进行中/评审/完成）真查数据，WIP 并行 ≤2 零超限，卡壳 72h 任务零——容量过载即记问题单。产品侧驾驶舱「概览」页的交付进度卡（状态分布+完成率）即此台账的常驻界面视图。',
-            imgs=[('ui-04-dash', '概览页交付进度卡（产品界面）：就绪 23·受阻 4·待办 3·已完成 49·归档 10，完成率 61%（81/133）', 'ui'),
-                  ('22-workreport', '工作台账全量：人均负载/WIP/卡壳三清点（14 人真查数据）', 'doc')]),
+            imgs=[
+                  ('ui-04-dash', '驾驶舱概览页：交付进度卡（状态分布+完成率）——工作台账的常驻界面视图', 'ui'),]),
     23: dict(keys=['audit_done'], actor='human', actorText='人 · audit 独立签名线',
             narrative='合规审计独立于开发/测试线：门禁留痕完整性（每道锁冻结凭证在仓）、问题单台账格式、取证目录在位逐项过，意见书带签名线入仓；AI 结论抽检反向核验，幻觉率计入治理报告。',
-            imgs=[('ui-gov-audit', '治理中心（产品界面）：合规审计意见书渲染（audit 独立签名线）', 'ui'),
-                  ('23-audit', '合规审计意见书（签名线）', 'doc'),
-                  ('23-audit-line', 'audit 独立复核派发（与开发/测试线隔离）', 'msg')]),
+            imgs=[
+                  ('ui-gov-audit', '治理中心·六闸工件：合规审计意见书（audit 独立签名线）', 'ui'),]),
     24: dict(keys=['retro_done'], actor='gate', actorText='硬闸 G6 · 复盘',
             narrative='三段式复盘（现象只写事实/规律机制归因对事不对人/行动项四要素），问题单 100% 处置记账（已修/观察/延后三态）；治理报告产出（闸首过率/证据通过率/缺陷统计）；本轮经验存入家族记忆库，下轮同需求自动回忆。',
-            imgs=[('ui-gov-retro', '治理中心（产品界面）：G6 复盘报告渲染——问题单全表处置记账', 'ui'),
-                  ('24-retro', 'G6 复盘文档：三段式+问题单全表处置', 'doc'),
-                  ('24-gov', '治理报告：闸状态/问题单/凭证度量', 'doc'),
-                  ('24-memprobe', '记忆沉淀探针：hindsight 家族库健康', 'doc')]),
+            imgs=[
+                  ('ui-gov-retro', '治理中心·六闸工件：G6 复盘报告——问题单全表处置记账（三段式）', 'ui'),]),
     25: dict(keys=['ide_done'], actor='both', actorText='人 · IDE 实操',
             narrative='IDE 工作台（#/ide）全程介入：左侧任务列表带 RACI 徽章（主责/授权/咨询/通知计数），点卡上简报入口即出「任务简报」面板——RACI 四元组、工作流（子卡 7·重试 0/2）、git（worktree+分支+提交）、上下文文件（任务清单 144.6KB 等 2 份）一屏齐；评审面板（通过/打回/有条件）为人工把关入口；模型经顶栏选择器独立配置。（深链自动弹简报为在修项，当前经卡入口唤出。）',
-            imgs=[('ui-25-ide', 'IDE 工作台（产品界面）：任务简报面板已唤出——RACI 四元组/工作流子卡 7/git 提交/上下文文件；左侧任务列表带 RACI 徽章；底部评审面板（通过/打回/有条件）', 'ui')]),
+            imgs=[
+                  ('ui-25-ide', 'IDE 工作台：任务简报面板（RACI 四元/工作流子卡 7/git/上下文文件）+ 评审面板', 'ui'),]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
             narrative='本报告由生成器产出：步骤标题与把关逐字解析方案文档（单一事实源），每张证据图标注来源（产品界面实拍 / 仓内工件 / 消息转录），含 matrix event_id/git 引用可反查，26 步状态真实不作假。',
-            imgs=[('ui-26-report', '推演报告自身（本页）', 'ui')]),
+            imgs=[
+                  ('ui-26-report', '推演报告自身（本页）', 'ui'),]),
 }
+
+# ── 六域审计（用户指令 2026-09-28：六域各自回答一个交付问题）──
+DOMAINS = [
+    ('L0', '范围与需求', '是否漏做、误做或擅自假设？',
+     '无漏做主线；两处如实记账的边界——本期邮件通道禁用改走 matrix 私信（问题单口径）、fleet-manifest 无专属界面（profiles 页承载配置视角）。无擅自假设：26 步全按方案原文执行，标题/把关逐字取自方案文档。',
+     '方案 26 步逐字对齐 · 问题单 22 键全处置 · 治理中心管理档案三件在仓'),
+    ('L1', '工程正确性', '代码和制品是否成立？',
+     '成立。守门测试全绿：治理域 8/8、审批域 9/9、看板快道 5/5；client 构建过 verify-dist 门禁；服务端 esbuild bundle 实跑；测试证据为分支内实跑日志（vitest 全绿），非纸面。',
+     'overlay main 7adc614c · 守门 22/22 绿 · docs/evidence/*-testlog.txt（分支锚）'),
+    ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？',
+     '一致。治理 API 20 件工件与 git 真仓逐件对账（commit/日期实测）；看板 API 经 sqlite 快道直读看板级库（与 CLI 同一存储）；报告数字与界面实拍同源（任务 36/完成率 61% 均为界面实查值）。',
+     '/api/governance overview 200（docs 20/20）· 看板库 sqlite 直读 · UI 实拍与叙事同源'),
+    ('L3', '行为与业务语义', '运行行为是否符合业务意图？',
+     '符合且有人工在回路实证：G2/G5 打回环真实发生（FAIL→补齐→复审 PASS）；xiao 建卡被审批门拦截 5 分钟即停手不越权；UAT 按 G1 冻结 AC-1~7 逐条对账通过——开头定的标准，结尾拿它对账。',
+     'ARCH-GATE/READY-GATE 结论行 · 审批收件箱待审+裁决历史 · UAT 逐条锚点'),
+    ('L4', '架构、非功能与安全', '实现方式是否可接受？',
+     '可接受。治理 API git 全异步（execFile+8s 超时，杜绝事件循环阻塞）；sqlite 只读快道降聚合 55s→20ms；金额分 int64、渠道一律本地 mock、密钥不出服务端；追溯链完整（event_id/commit/卡号三锚）。',
+     'kanban-overview 快道（f3a88154）· 治理 controller 异步化 · 概设安全条目'),
+    ('L5', '交付与治理', '是否能部署、运营和追责？',
+     '能。发布基线动态实查；四道硬闸+HumanGate 批准留痕；问题单 100% 处置记账（已修 20/观察 1/待处置 1 属下轮）；审计独立签名线在仓；SLA 运营登记（99.5%/P95≤800ms/P2 4h）。',
+     'G5 七项三轮过闸 · 审计意见书 · 复盘处置表 · RELEASE.md SLA'),
+]
+
 GATE_BY_STEP = {7: 'G1', 15: 'G2', 18: 'G3', 19: 'G4', 20: 'G5', 24: 'G6'}
 GATE_STATE_KEY = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'devimpl_done', 'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
 GATE_DESC = {
@@ -433,6 +452,12 @@ table{{width:100%;border-collapse:collapse;background:var(--card);border-radius:
 th,td{{border-bottom:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}}
 th{{background:var(--bg);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}}
 .d-ok{{color:var(--ok);font-weight:500}} .d-warn{{color:var(--warn)}}
+.domains {{ margin-top: 12px }}
+.domains td {{ font-size: 12px; line-height: 1.7; vertical-align: top }}
+.dm-name {{ font-size: 11px; color: var(--muted) }}
+.dm-q {{ font-weight: 600 }}
+.dm-a {{ color: #334155 }}
+.dm-e {{ color: var(--muted); font-size: 11px }}
 .govgrid{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}}
 .stat-note{{font-size:11.5px;color:var(--muted);margin:6px 0 0}}
 details.audit{{margin-top:12px}}
@@ -467,7 +492,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
     锚定 09-25 14:00 — 09-26 08:27 完整推演周期 · 标题与把关逐字引用方案原文 · 每步标注人/AI 角色与结果锚点</div>
     <div class="hero-stats">
       <div class="hstat"><b>26</b><span>步骤</span></div>
-      <div class="hstat"><b>{total_imgs}</b><span>证据图（界面实拍 {ui_imgs}）</span></div>
+      <div class="hstat"><b>{total_imgs}</b><span>证据图 · 全部界面实拍</span></div>
       <div class="hstat"><b>2/4</b><span>闸首过率（G2/G5 打回复评后通过）</span></div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
@@ -479,6 +504,12 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
   <div class="gates">{gate_cards()}</div>
 
   {content_html}
+
+  <h2 class="section-hd">六域审计 · 每域一个交付问题</h2>
+  <table class="domains">
+    <tr><th style="width:84px">域</th><th style="width:170px">交付问题</th><th>结论</th><th style="width:25%">证据锚点</th></tr>
+    {''.join(f'<tr><td><b>{d[0]}</b><br><span class="dm-name">{d[1]}</span></td><td class="dm-q">{H.escape(d[2])}</td><td class="dm-a">{H.escape(d[3])}</td><td class="dm-e">{H.escape(d[4])}</td></tr>' for d in DOMAINS)}
+  </table>
 
   <h2 class="section-hd">问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
@@ -498,7 +529,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
   </div>
 
   <div class="footer">步骤标题与把关逐字取自方案文档（生成时解析，单一事实源）<br>
-证据图来源三分类（每图角标）：「界面实拍」=Swarm Studio 产品页面浏览器实拍 ·「仓内工件」=git 文档/看板库/真值日志的排版呈现 ·「消息转录」=matrix 真实事件（event_id 可反查）——非产品界面的证据不冒充 UI<br>点击截图可放大 · 2026-09-28 内容级审计改版：叙事化（人/AI 角色+结果锚点）+ matcher 修正 + 问题单口径对齐</div>
+全部证据图=Swarm Studio 产品界面浏览器实拍（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）<br>点击截图可放大 · 2026-09-28 内容级审计改版：叙事化（人/AI 角色+结果锚点）+ matcher 修正 + 问题单口径对齐</div>
 </main>
 </div>
 </body></html>'''
