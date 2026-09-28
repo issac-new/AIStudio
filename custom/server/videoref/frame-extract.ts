@@ -96,6 +96,6 @@ export async function extractFramesBase64(
 }
 
 function statSyncSafe(p: string): number {
-  try { return statSyncOf(p) } catch { return 0 }
+  try { return statSyncOf(p).size } catch { return 0 }
 }
 import { statSync as statSyncOf } from 'fs'
