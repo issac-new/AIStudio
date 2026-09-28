@@ -1,7 +1,9 @@
 <!-- overlay/custom/client/cockpit/components/ApprovalPanel.vue -->
 <!-- P1 人工审批面板（2026-09-28 产品 UI 缺陷修复 §二）：
      待审列表（fleet 命令审批 + 评审卡）+ 就地裁决按钮 + 审批历史。
-     数据源 /api/approvals/{pending,decide,history}；裁决成功后自动刷新两区。 -->
+     数据源 /api/approvals/{pending,decide,history}；裁决成功后自动刷新两区。
+     U2 改版（推演报告审计二轮）：hideTitle 收敛双标题、刷新钮显性化、
+     行内风险徽章 + 主次按钮、决策徽章化、时间随界面语言。 -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -15,11 +17,13 @@ const props = withDefaults(defineProps<{
   pollMs?: number
   /** 是否渲染历史区（收件箱页 true，嵌入条 false） */
   showHistory?: boolean
-}>(), { pollMs: 10000, showHistory: true })
+  /** 隐藏面板内标题（外层页面栏已给出标题时置 true，收敛双标题） */
+  hideTitle?: boolean
+}>(), { pollMs: 10000, showHistory: true, hideTitle: false })
 
 const emit = defineEmits<{ changed: [] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const items = ref<PendingApprovalItem[]>([])
 const history = ref<ApprovalHistoryEntry[]>([])
 const loading = ref(false)
@@ -76,7 +80,7 @@ async function decide(item: PendingApprovalItem, decision: string): Promise<void
 
 function fmtTime(ts: number): string {
   if (!ts) return ''
-  return new Date(ts).toLocaleString()
+  return new Date(ts).toLocaleString(locale.value)
 }
 
 onMounted(() => {
@@ -91,10 +95,16 @@ defineExpose({ refresh })
 <template>
   <div class="approval-panel" data-testid="approval-panel">
     <div class="approval-panel__head">
-      <h3 class="approval-panel__title">{{ t('approvals.title') }}
-        <span v-if="items.length" class="approval-panel__count" data-testid="approval-pending-count">{{ t('approvals.pendingCount', { n: items.length }) }}</span>
-      </h3>
-      <button type="button" class="approval-panel__refresh" :aria-label="t('common.refresh')" @click="refresh()">⟳</button>
+      <h3 v-if="!hideTitle" class="approval-panel__title">{{ t('approvals.title') }}</h3>
+      <span v-if="items.length" class="approval-panel__count" data-testid="approval-pending-count">{{ t('approvals.pendingCount', { n: items.length }) }}</span>
+      <span v-else class="approval-panel__count approval-panel__count--idle">{{ t('approvals.empty') }}</span>
+      <button
+        type="button"
+        class="approval-panel__refresh"
+        :aria-label="t('common.refresh')"
+        :disabled="loading"
+        @click="refresh()"
+      >{{ t('common.refresh') }}</button>
     </div>
 
     <div v-if="error" class="approval-panel__error" data-testid="approval-error">{{ t('approvals.loadFailed') }}：{{ error }}</div>
@@ -123,7 +133,9 @@ defineExpose({ refresh })
       >
         <div class="approval-row__main">
           <div class="approval-row__title">
-            <span class="approval-row__kind">{{ t(item.kind === 'command' ? 'approvals.kindCommand' : 'approvals.kindReview') }}</span>{{ item.title }}
+            <span class="approval-row__kind">{{ t(item.kind === 'command' ? 'approvals.kindCommand' : 'approvals.kindReview') }}</span>
+            <span class="risk-badge" :class="`risk-badge--${group.key}`" data-testid="approval-row-risk">{{ t(`approvals.risk.${group.key}`) }}</span>
+            {{ item.title }}
           </div>
           <code v-if="item.kind === 'command'" class="approval-row__detail">{{ item.detail }}</code>
           <div v-else class="approval-row__detail">{{ item.detail }}</div>
@@ -140,14 +152,14 @@ defineExpose({ refresh })
               :key="choice"
               type="button"
               class="approval-btn"
-              :class="`approval-btn--${choice}`"
+              :class="[`approval-btn--${choice}`, { 'approval-btn--primary': choice === 'once' }]"
               :data-testid="`approval-btn-${choice}`"
               :disabled="acting.has(item.id)"
               @click="decide(item, choice)"
             >{{ t(`approvals.choice.${choice}`) }}</button>
           </template>
           <template v-else>
-            <button type="button" class="approval-btn approval-btn--once" data-testid="approval-btn-approve" :disabled="acting.has(item.id)" @click="decide(item, 'approve')">{{ t('approvals.choice.approve') }}</button>
+            <button type="button" class="approval-btn approval-btn--once approval-btn--primary" data-testid="approval-btn-approve" :disabled="acting.has(item.id)" @click="decide(item, 'approve')">{{ t('approvals.choice.approve') }}</button>
             <button type="button" class="approval-btn approval-btn--deny" data-testid="approval-btn-request-changes" :disabled="acting.has(item.id)" @click="decide(item, 'request_changes')">{{ t('approvals.choice.request_changes') }}</button>
           </template>
         </div>
@@ -202,22 +214,25 @@ defineExpose({ refresh })
   font-weight: 600;
 }
 .approval-panel__count {
-  margin-left: 6px;
   font-size: 12px;
   font-weight: 500;
   color: var(--accent-primary, #3b82f6);
+  &--idle { color: var(--text-muted, #878c99); font-weight: 400; }
 }
 .approval-panel__refresh {
   margin-left: auto;
-  border: none;
-  background: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  background: var(--bg-primary, #fff);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 12px;
+  padding: 3px 10px;
   color: var(--text-muted, #878c99);
-  &:hover { color: inherit; }
+  &:hover:not(:disabled) { color: inherit; background: var(--bg-secondary, #f1f2f4); }
+  &:disabled { opacity: 0.5; cursor: wait; }
 }
 .approval-panel__error {
-  color: #dc2626;
+  color: var(--error-color, #dc2626);
   font-size: 12px;
 }
 .approval-panel__empty {
@@ -243,7 +258,7 @@ defineExpose({ refresh })
   display: flex;
   gap: 12px;
   align-items: center;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 8px;
   background: var(--bg-secondary, rgba(255, 255, 255, 0.55));
@@ -284,13 +299,19 @@ defineExpose({ refresh })
   border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 6px;
   background: var(--bg-primary, #fff);
-  padding: 5px 10px;
+  padding: 5px 12px;
   font-size: 12px;
   cursor: pointer;
   &:disabled { opacity: 0.5; cursor: wait; }
-  &--once, &--session, &--always, &--approve { color: #059669; border-color: #05966944; }
-  &--deny, &--request_changes { color: #dc2626; border-color: #dc262644; }
-  &:hover:not(:disabled) { background: var(--bg-secondary, #f1f2f4); }
+  &--once, &--session, &--always, &--approve { color: var(--success-color, #059669); border-color: var(--success-color, #059669); border-opacity: 0.3; }
+  &--deny, &--request_changes { color: var(--error-color, #dc2626); border-color: var(--error-color, #dc2626); border-opacity: 0.3; }
+  &--primary {
+    background: var(--success-color, #059669);
+    border-color: var(--success-color, #059669);
+    color: #fff;
+    font-weight: 600;
+  }
+  &:hover:not(:disabled) { filter: brightness(1.05); }
 }
 .approval-panel__history {
   margin-top: 6px;
@@ -308,9 +329,13 @@ defineExpose({ refresh })
   td { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 .approval-history__decision {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 600;
-  &.is-once, &.is-session, &.is-always, &.is-approve { color: #059669; }
-  &.is-deny, &.is-request_changes { color: #dc2626; }
+  &.is-once, &.is-session, &.is-always, &.is-approve { color: var(--success-color, #059669); background: rgba(5, 150, 105, 0.1); }
+  &.is-deny, &.is-request_changes { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.1); }
 }
 
 /* V4-N1 风险三档（§一 域1）：高危红标、低风险绿标、常规中性 */
@@ -321,9 +346,9 @@ defineExpose({ refresh })
   border-radius: 50%;
   margin-right: 5px;
   vertical-align: 1px;
-  &--high { background: #dc2626; }
-  &--medium { background: #d97706; }
-  &--low { background: #059669; }
+  &--high { background: var(--error-color, #dc2626); }
+  &--medium { background: var(--warning-color, #d97706); }
+  &--low { background: var(--success-color, #059669); }
 }
 .risk-hint {
   margin-left: 8px;
@@ -333,11 +358,11 @@ defineExpose({ refresh })
   border-radius: 4px;
   text-transform: none;
   letter-spacing: 0;
-  &--high { color: #dc2626; background: #dc262614; }
-  &--low { color: #059669; background: #05966914; }
+  &--high { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.08); }
+  &--low { color: var(--success-color, #059669); background: rgba(5, 150, 105, 0.08); }
 }
 .approval-row--high {
-  border-left: 3px solid #dc2626;
+  border-left: 3px solid var(--error-color, #dc2626);
 }
 .approval-row__kind {
   display: inline-block;
@@ -352,11 +377,12 @@ defineExpose({ refresh })
 }
 .risk-badge {
   display: inline-block;
+  margin-right: 6px;
   padding: 1px 6px;
   font-size: 11px;
   border-radius: 4px;
-  &--high { color: #dc2626; background: #dc262614; }
-  &--medium { color: #d97706; background: #d9770614; }
-  &--low { color: #059669; background: #05966914; }
+  &--high { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.08); }
+  &--medium { color: var(--warning-color, #d97706); background: rgba(217, 119, 6, 0.08); }
+  &--low { color: var(--success-color, #059669); background: rgba(5, 150, 105, 0.08); }
 }
 </style>

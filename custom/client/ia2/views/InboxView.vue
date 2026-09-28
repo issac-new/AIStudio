@@ -29,7 +29,7 @@ function closeInbox(): void {
       >×</button>
     </div>
     <div class="ia-inbox__body">
-      <ApprovalPanel poll-ms="10000" show-history />
+      <ApprovalPanel poll-ms="10000" show-history hide-title />
     </div>
   </div>
 </template>
