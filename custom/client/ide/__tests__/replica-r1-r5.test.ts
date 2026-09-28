@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 const chatState = { activeSessionId: 's1', activeSession: null as unknown, sendMessage: vi.fn() }
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => chatState,
@@ -89,11 +89,7 @@ describe('R5 执行日志区', () => {
     await w.vm.$nextTick()
     expect(w.find('[data-testid="ide-runlog-panel"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-runlog-run-2"]').exists()).toBe(true)
-    // i18n 接线后 filesMeta 为参数化键（ide.runlog.filesMeta {n/adds/dels}）；
-    // mock 不渲染模板，改为断言数据三值齐现（数据流语义不变）
-    expect(w.text()).toContain('2')
-    expect(w.text()).toContain('30')
-    expect(w.text()).toContain('3')
+    expect(w.text()).toContain('2 文件 +30 −3')
     expect(w.text()).toContain('2s')
     await w.find('[data-testid="ide-runlog-toggle"]').trigger('click')
     expect(w.find('[data-testid="ide-runlog-run-1"]').exists()).toBe(true)

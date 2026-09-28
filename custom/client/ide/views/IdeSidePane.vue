@@ -269,7 +269,7 @@ function focusMainChat(): void {
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   cursor: pointer;
@@ -331,7 +331,7 @@ function focusMainChat(): void {
   color: var(--text-secondary, #b0b5be);
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   cursor: pointer;
 
   &:hover { border-color: #61afef; color: #61afef; }
@@ -361,7 +361,7 @@ function focusMainChat(): void {
   color: var(--text-primary, #d7dae0);
   font-size: 11px;
   padding: 2px 6px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
 
   &.is-cmd { width: 130px; font-family: ui-monospace, monospace; }
 
@@ -390,7 +390,7 @@ function focusMainChat(): void {
   flex: 1;
   height: 24px;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   font-size: 11px;

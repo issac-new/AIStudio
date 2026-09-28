@@ -393,7 +393,7 @@ watch(
 .ide-metrics-panel__stack {
   display: flex;
   height: 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   overflow: hidden;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 18%, transparent);
 }
@@ -421,7 +421,7 @@ watch(
 .ide-metrics-panel__dot {
   width: 8px;
   height: 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 2px;
   flex-shrink: 0;
 }
 
@@ -482,7 +482,7 @@ watch(
 .ide-metrics-panel__cell {
   width: 10px;
   height: 10px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 2px;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 15%, transparent);
 
   &[data-level='1'] { background: rgba(152, 195, 121, 0.3); }

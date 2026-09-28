@@ -87,7 +87,7 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
 .ide-plan-progress__bar {
   flex: 1;
   height: 5px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 2px;
   overflow: hidden;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 22%, transparent);
 }
@@ -95,7 +95,7 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
 .ide-plan-progress__fill {
   display: block;
   height: 100%;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 2px;
   background: var(--success-color, #98c379);
   transition: width 0.3s ease;
 }
@@ -120,7 +120,7 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
   padding: 4px 8px;
   font-size: 11px;
   border: 1px solid var(--border-color, #3a3f4b);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: none;
   color: var(--text-secondary, #b0b5be);
   cursor: pointer;

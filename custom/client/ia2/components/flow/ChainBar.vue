@@ -71,7 +71,7 @@ const first = () => props.linkedTasks[0]
 .chain__spacer { flex: 1; }
 .chain__link { border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; &:hover { color: var(--primary); } }
 .chain__chip {
-  height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px);
+  height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 11px;
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
   white-space: nowrap;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }

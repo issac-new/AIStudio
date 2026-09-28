@@ -5,7 +5,6 @@
 // respondToClarifyFor（引擎真实应答通道）。兼容 display_metadata.ask 多步问卷
 // 解析路（结构化多步形态，作答 sendMessage 回流）。
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 interface AskStep {
@@ -18,7 +17,6 @@ interface AskQuestionnaire {
 }
 
 const chatStore = useChatStore()
-const { t } = useI18n()
 const answers = ref<Record<number, number[]>>({})
 const submitted = ref(false)
 const freeText = ref('')
@@ -114,7 +112,7 @@ function submit(): void {
       v-model="freeText"
       class="ide-ask__free"
       data-testid="ide-ask-free"
-      :placeholder="t('ide.ask.freePlaceholder', '输入你的回答…')"
+      placeholder="输入你的回答…"
       @keydown.enter.prevent="submit"
     />
     <button
@@ -123,7 +121,7 @@ function submit(): void {
       data-testid="ide-ask-submit"
       :disabled="!canSubmit"
       @click="submit"
-    >{{ t('ide.ask.submit', '提交作答') }}</button>
+    >提交作答</button>
   </section>
 </template>
 
@@ -136,18 +134,18 @@ function submit(): void {
 .ide-ask__q { font-weight: 600; margin: 6px 0 4px; }
 .ide-ask__opt {
   display: block; width: 100%; text-align: left; border: 1px solid var(--border-color, #e0e0e0);
-  background: transparent; border-radius: var(--radius-standard, 6px); padding: 5px 10px; margin: 3px 0; cursor: pointer;
+  background: transparent; border-radius: 5px; padding: 5px 10px; margin: 3px 0; cursor: pointer;
 }
 .ide-ask__opt.is-selected { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 .ide-ask__opt.is-recommended { border-style: dashed; }
 .ide-ask__submit {
   margin-top: 8px; border: none; background: var(--primary-color, #18a058); color: #fff;
-  border-radius: var(--radius-standard, 6px); padding: 6px 14px; cursor: pointer;
+  border-radius: 5px; padding: 6px 14px; cursor: pointer;
 }
 .ide-ask__submit:disabled { opacity: 0.45; cursor: default; }
 
 .ide-ask__free {
-  width: 100%; border: 1px solid var(--border-color, #e0e0e0); border-radius: var(--radius-standard, 6px);
+  width: 100%; border: 1px solid var(--border-color, #e0e0e0); border-radius: 5px;
   padding: 5px 10px; margin: 4px 0; background: var(--card-color, #fff); color: inherit;
 }
 </style>

@@ -83,7 +83,7 @@ function onPointerUp(event: PointerEvent): void {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color, #26292f);
-  border-radius: var(--radius-panel, 8px);
+  border-radius: 10px;
   background: var(--bg-secondary, #1b1e24);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
@@ -123,7 +123,7 @@ function onPointerUp(event: PointerEvent): void {
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   font-size: 11px;

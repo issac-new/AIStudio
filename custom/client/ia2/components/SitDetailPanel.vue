@@ -428,7 +428,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sitp__empty { padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
 .sitp__row {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px;
-  border: none; border-radius: var(--radius-standard, 6px); background: transparent; cursor: pointer;
+  border: none; border-radius: 5px; background: transparent; cursor: pointer;
   font-family: inherit; text-align: left;
   &:hover { background: var(--bg-secondary); }
 }
@@ -494,7 +494,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 .sitp__acts { display: inline-flex; gap: 4px; flex-shrink: 0; }
 .sitp__act {
-  height: 22px; padding: 0 8px; border-radius: var(--radius-micro, 3px); border: 1px solid var(--border-color);
+  height: 22px; padding: 0 8px; border-radius: 4px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-secondary); font-size: 11px;
   cursor: pointer; font-family: inherit; white-space: nowrap;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
@@ -504,7 +504,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sitp__search { position: relative; padding: 4px 4px 6px; }
 .sitp__search-input {
   width: 100%; height: 24px; padding: 0 22px 0 8px;
-  border: 1px solid var(--border-color); border-radius: var(--radius-standard, 6px);
+  border: 1px solid var(--border-color); border-radius: 5px;
   background: var(--bg-secondary); color: var(--text-primary);
   font-size: 11px; font-family: inherit; outline: none;
   &::placeholder { color: var(--text-muted); }
@@ -518,7 +518,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sitp__acct { border-bottom: 1px dashed var(--border-color); padding: 2px 0; &:last-of-type { border-bottom: none; } }
 .sitp__acct-head {
   display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 6px;
-  border: none; border-radius: var(--radius-standard, 6px); background: transparent; cursor: pointer;
+  border: none; border-radius: 5px; background: transparent; cursor: pointer;
   font-family: inherit; text-align: left;
   &:hover { background: var(--bg-secondary); }
 }
@@ -528,7 +528,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sitp__acct-sub { font-size: 10px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .sitp__acct-body { padding: 0 6px 4px 16px; }
 .sitp__node {
-  display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: var(--radius-micro, 3px);
+  display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px;
   font-size: 11px; color: var(--text-primary);
 }
 .sitp__node--btn {
@@ -550,7 +550,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .sitp__dot.is-idle { background: var(--text-muted); }
 .sitp__gov {
   display: block; margin: 4px auto 8px; height: 26px; padding: 0 14px;
-  border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px); background: var(--bg-card);
+  border: 1px solid var(--border-color); border-radius: 13px; background: var(--bg-card);
   color: var(--text-secondary); font-size: 12px; cursor: pointer; font-family: inherit;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }

@@ -624,7 +624,7 @@ function onNewLoop(): void {
   padding-top: 4px; cursor: default;
 }
 .wb__rail-btn {
-  width: 16px; height: 40px; border: 1px solid var(--border-color); border-radius: var(--radius-micro, 3px);
+  width: 16px; height: 40px; border: 1px solid var(--border-color); border-radius: 4px;
   background: var(--bg-card); color: var(--text-muted); cursor: pointer;
   font-size: 10px; line-height: 1; padding: 0;
   &:hover { color: var(--text-primary); background: var(--bg-secondary); }

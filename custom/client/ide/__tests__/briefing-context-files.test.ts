@@ -7,7 +7,7 @@ import { mount } from '@vue/test-utils'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
 import type { BriefingTask, BriefingContextFile } from '../components/briefing-types'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
 const task: BriefingTask = { id: 't_1', title: '支付渠道接入', status: 'review' }
 const files: BriefingContextFile[] = [

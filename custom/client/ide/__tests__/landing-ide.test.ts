@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
-const UPSTREAM_CLIENT = (process.env.OVERLAY_UPSTREAM_ROOT ? process.env.OVERLAY_UPSTREAM_ROOT : resolve(__dirname, '../../../../../upstream')) + '/hermes-studio/packages/client/src'
+const UPSTREAM_CLIENT = '../../../../../upstream/hermes-studio/packages/client/src'
 
 function readUpstream(rel: string): string {
   return readFileSync(resolve(__dirname, `${UPSTREAM_CLIENT}/${rel}`), 'utf8')

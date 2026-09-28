@@ -3,14 +3,12 @@
 // thinking/tools +悬停图例 breakdown+80/95% 压力变色读数；UI 复刻 S3）。
 // 数据=useSessionMetrics 的分段（六源 context-six-source 同语义四段合并映射五段）。
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { computeBreakdown } from '../utils/contextBreakdown'
 
 const metrics = useSessionMetrics()
 const chatStore = useChatStore()
-const { t } = useI18n()
 const hover = ref(false)
 
 interface Segment { key: string; label: string; pct: number; color: string }
@@ -74,7 +72,7 @@ const noTelemetry = computed(() => totalPct.value === 0)
           <span class="ide-ctxbar__dot" :style="{ background: s.color }" />{{ s.label }} {{ s.pct }}%
         </div>
       </template>
-      <div v-else>{{ t('ide.contextBar.breakdownUnavailable', '分段构成数据未就绪（显示总量）') }}</div>
+      <div v-else>分段构成数据未就绪（显示总量）</div>
     </div>
   </div>
 </template>

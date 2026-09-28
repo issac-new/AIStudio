@@ -3,7 +3,6 @@
 // features.ide 关闭时 bootstrap 必须注册 /ide 重定向兜底，否则登录后
 // 命中无匹配路由白屏。
 // 2026-09-18 统一导航 Task 5：兜底目标 /hermes/cockpit 已是死路由，改指 /app。
-// @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const featuresState = vi.hoisted(() => ({

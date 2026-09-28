@@ -99,7 +99,7 @@ vi.mock('@/custom/cockpit/components/CockpitScheduleModal.vue', () => ({
 vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({
   default: { name: 'CockpitRunTraceModal', template: '<div class="runtrace-modal-stub" />' },
 }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 // 注意力条单独有守门；此间桩化隔离（其数据源与壳同构）。
 // v12.3 R2：空态不消失（条即管理入口）——桩去掉 v-if 并补 open-gov 事件
 vi.mock('@/custom/ia2/components/AttentionStrip.vue', () => ({

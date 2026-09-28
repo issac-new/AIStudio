@@ -603,7 +603,7 @@ function handleTopicLinkClick(ev: MouseEvent) {
 .summary-badge {
   font-size: 12px;
   padding: 2px 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;

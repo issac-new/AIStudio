@@ -90,7 +90,7 @@ const rowIndex = computed(() => {
 .gtp__chart { position: relative; display: flex; flex-direction: column; }
 .gtp__row { display: flex; align-items: center; gap: 8px; height: 26px; }
 .gtp__lane { position: relative; width: 640px; height: 100%; border-bottom: 1px dashed var(--border-color); flex: none; }
-.gtp__bar { position: absolute; top: 8px; width: 10px; height: 10px; border-radius: var(--radius-standard, 6px); background: var(--primary); }
+.gtp__bar { position: absolute; top: 8px; width: 10px; height: 10px; border-radius: 5px; background: var(--primary); }
 .gtp__bar--over { background: var(--error, #e05656); }
 .gtp__label { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gtp__label--over { color: var(--error, #e05656); font-weight: 700; }

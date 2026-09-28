@@ -156,16 +156,16 @@ function openRoom(roomId: string) {
 .readings { font-size: 12px; color: #666; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .chip { background: #f3f4f6; border-radius: 8px; padding: 1px 8px; }
 .form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.in { padding: 4px 8px; border: 1px solid #ddd; border-radius: var(--radius-micro, 3px); font-size: 12px; }
+.in { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
 .list { display: flex; flex-direction: column; gap: 10px; }
 .case--done { opacity: 0.72; border-color: #bbf7d0; }
 .roomlink { color: var(--color-primary, #3b82f6); cursor: pointer; text-decoration: underline dotted; }
 .stagebar { display: flex; gap: 6px; margin-bottom: 8px; }
-.stage { padding: 2px 8px; border-radius: var(--radius-micro, 3px); background: #eee; font-size: 12px; }
+.stage { padding: 2px 8px; border-radius: 4px; background: #eee; font-size: 12px; }
 .stage.done { background: #dcfce7; }
 .stage.current { background: #111; color: #fff; }
 .gates { display: flex; gap: 8px; }
-.light { width: 28px; height: 20px; border-radius: var(--radius-panel, 8px); color: #fff; font-size: 11px;
+.light { width: 28px; height: 20px; border-radius: 10px; color: #fff; font-size: 11px;
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .meta { color: #888; font-size: 12px; margin-top: 6px; }
 .evid { font-size: 13px; }

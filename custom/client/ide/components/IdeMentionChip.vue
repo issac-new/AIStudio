@@ -41,7 +41,7 @@ function isTrouble(reason: string): boolean {
 <style scoped lang="scss">
 .ide-mention-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 12px; }
 .ide-mention-chip {
-  font-size: 11px; padding: 1px 8px; border-radius: var(--radius-panel, 8px);
+  font-size: 11px; padding: 1px 8px; border-radius: 10px;
   background: var(--hover-color, rgba(0, 0, 0, 0.05)); color: var(--text-color-3, #777);
 }
 .ide-mention-chip.is-trouble {

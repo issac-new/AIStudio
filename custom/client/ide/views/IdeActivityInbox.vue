@@ -151,7 +151,7 @@ function formatDuration(seconds?: number): string {
   min-width: 13px;
   height: 13px;
   padding: 0 3px;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 7px;
   font-size: 9px;
   line-height: 13px;
   text-align: center;
