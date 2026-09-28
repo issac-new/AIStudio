@@ -72,6 +72,11 @@
       "source": "gateway/hosted_rooms.py",
       "dest": "gateway/hosted_rooms.py",
       "note": "470: append_event 可选 collab_event_id（T4b 跨机 eid 锚点）"
+    },
+    {
+      "source": "hermes_cli/kanban_db_dispatch.py",
+      "dest": "hermes_cli/kanban_db_dispatch.py",
+      "note": "478: dispatcher 预算闸遥信（budget_capped/per_profile_capped 进 suppression——满载忙不再误报卡死）"
     }
   ],
   "notes": [
