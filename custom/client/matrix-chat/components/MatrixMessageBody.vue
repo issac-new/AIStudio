@@ -2,6 +2,8 @@
 import { computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MatrixSenderProfile from './MatrixSenderProfile.vue'
+import { getStoredUsername } from '@/api/client'
+import { linkifyPlainText } from '../utils/linkify'
 
 interface Props {
   displayContent: string
@@ -17,6 +19,12 @@ const { t } = useI18n()
 
 const isEmote = computed(() => props.msgType === 'm.emote')
 
+// P4①②（§五）：纯文本消息的卡链接化 + @我 高亮。linkify 先转义全文再受控替换
+// 生成 <a>/<span>，随后再过 sanitizeHtml 白名单（纵深防御双层）。
+const linkifiedPlain = computed(() =>
+  linkifyPlainText(props.displayContent, getStoredUsername()),
+)
+
 // ─── HTML content rendering helper ────────────────────────
 function renderHtmlContent() {
   const html = props.formattedContent
@@ -30,9 +38,9 @@ function renderHtmlContent() {
 function sanitizeHtml(html: string): string {
   const allowedTags = ['b', 'i', 'em', 'strong', 'u', 's', 'strike', 'del', 'a', 'p', 'br', 'pre', 'code', 'blockquote', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'span', 'div', 'sup', 'sub']
   const allowedAttrs: Record<string, string[]> = {
-    a: ['href', 'title', 'rel'],
+    a: ['href', 'title', 'rel', 'class'],
     img: ['src', 'alt', 'title', 'width', 'height'],
-    span: ['data-mx-spoiler', 'data-mx-color'],
+    span: ['data-mx-spoiler', 'data-mx-color', 'class'],
     code: ['class'],
     pre: ['class'],
   }
@@ -116,10 +124,35 @@ function sanitizeHtml(html: string): string {
     <!-- HTML formatted message -->
     <component :is="renderHtmlContent" v-else-if="formattedContent && !isBigEmoji" />
 
-    <!-- Plain text message -->
+    <!-- Plain text message（P4：卡链接+@我高亮；linkify 转义优先 + sanitize 白名单双层） -->
     <div v-else class="mx_EventTile_body" :class="{ 'mx_EventTile_body--big-emoji': isBigEmoji }">
-      {{ displayContent }}
+      <span v-if="linkifiedPlain.cardIds.length || linkifiedPlain.mentionsMe || linkifiedPlain.html !== displayContent"
+            class="mx_EventTile_linkified"
+            v-html="sanitizeHtml(linkifiedPlain.html)" />
+      <template v-else>{{ displayContent }}</template>
       <span v-if="isEdited" class="mx_EventTile_edited">{{ t('matrixChat.edited') }}</span>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* P4①② 卡链接与 @我 高亮 */
+:deep(.mx-card-link) {
+  color: var(--accent-primary, #2563eb);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 4px;
+  padding: 0 4px;
+  text-decoration: none;
+}
+:deep(.mx-card-link:hover) { text-decoration: underline; }
+:deep(.mx-mention-me) {
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 4px;
+  padding: 0 3px;
+  font-weight: 600;
+}
+:deep(.mx-mention) { color: var(--accent-primary, #2563eb); }
+</style>
