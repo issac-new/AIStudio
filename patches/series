@@ -286,3 +286,6 @@
 #      决策列显示）与 spotcheck.* 键族（收件箱「抽检·自动放行回看」区）。锚定 473
 #      注入后的 approvals 块（zh/en 同构，与 473 同例不动其余 9 语言）。
 496-client-locales-approvals-spotcheck.patch
+# 497（win 交付物重建）：win.target 补 zip x64——本机分发交付物（nsis -86 在案惯例
+#      非交付物）；2.25 轮 patch 109 语义，系列折叠时孤儿化，v0.7.25 结构重建。
+497-desktop-win-zip-target.patch
