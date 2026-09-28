@@ -89,7 +89,12 @@ describe('S3 分段水位条（真实 span=computeBreakdown）', () => {
     expect(w.classes()).toContain('is-warn')
     await w.trigger('mouseenter')
     expect(w.find('[data-testid="ide-ctxbar-legend"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ide-ctxbar-legend"]').text()).toContain('assistant/thinking')
+    // 六源图例（G4 #6 接线轮）：四段→六源映射，messages 合并 user+assistant，估算带 ≈。
+    const legendText = w.find('[data-testid="ide-ctxbar-legend"]').text()
+    expect(legendText).toContain('消息')
+    expect(legendText).toContain('工具 schema')
+    expect(w.find('[data-testid="ide-ctxbar-six-messages"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxbar-six-messages"] .ide-ctxbar__est').exists()).toBe(true)
     // 回落：无消息 → 总量单条
     chatState.activeSession = null
     const bare = mount(IdeContextBar)

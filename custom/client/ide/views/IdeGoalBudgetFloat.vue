@@ -13,7 +13,8 @@ import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { formatTokens } from '../utils/metrics'
-import { extractGoalProgress, goalBudgetLevel } from '../utils/goalEngine'
+import { extractGoalProgress, extractGoalStatusText, goalBudgetLevel } from '../utils/goalEngine'
+import { parseThreeBudgets, type GoalThreeBudgets } from '../utils/goal-budget'
 
 const { t } = useI18n()
 const chatStore = useChatStore()
@@ -26,6 +27,23 @@ const goalProgress = computed(() =>
   extractGoalProgress((chatStore.activeSession?.messages ?? []) as Array<{ role: string; content?: string }>),
 )
 const budgetLevel = computed(() => (goalProgress.value ? goalBudgetLevel(goalProgress.value) : 'ok'))
+
+// ── 三预算显式化（G5 #7 接线）：同一回执全文解析 token/wallClock 两维 ──
+// 回执没带该段（max=0）不显示该行——与 turn 单维现状自然兼容，不虚报。
+const threeBudgets = computed<GoalThreeBudgets | null>(() => {
+  const text = extractGoalStatusText((chatStore.activeSession?.messages ?? []) as Array<{ role: string; content?: string }>)
+  return text ? parseThreeBudgets(text) : null
+})
+const tokenDim = computed(() => {
+  const d = threeBudgets.value?.token
+  return d && d.max > 0 ? d : null
+})
+const wallClockDim = computed(() => {
+  const d = threeBudgets.value?.wallClock
+  return d && d.max > 0 ? d : null
+})
+const anyBudgetWarn = computed(() =>
+  Boolean(tokenDim.value?.warn || wallClockDim.value?.warn || (goalProgress.value && budgetLevel.value !== 'ok')))
 
 // 命令驱动（引擎在 hermes，此处只发文本命令）
 const goalDraft = ref('')
@@ -101,8 +119,17 @@ watch(
             :style="{ width: `${Math.min((goalProgress.used / goalProgress.max) * 100, 100)}%` }"
           />
         </div>
-        <p v-if="budgetLevel !== 'ok'" class="ide-goal__warn" data-testid="ide-goal-warn">
-          {{ budgetLevel === 'over' ? t('ide.goal.budgetOver') : t('ide.goal.budgetWarn') }}
+        <!-- 三预算另两维（G5 #7）：回执带 token/wallClock 段才显示 -->
+        <div v-if="tokenDim" class="ide-goal__progress-head" data-testid="ide-goal-token-budget">
+          <span>{{ t('ide.goal.tokenBudget') }}</span>
+          <span class="ide-goal__num" :data-level="tokenDim.warn ? 'warn' : 'ok'">{{ formatTokens(tokenDim.used) }}/{{ formatTokens(tokenDim.max) }}</span>
+        </div>
+        <div v-if="wallClockDim" class="ide-goal__progress-head" data-testid="ide-goal-wallclock-budget">
+          <span>{{ t('ide.goal.wallClockBudget') }}</span>
+          <span class="ide-goal__num" :data-level="wallClockDim.warn ? 'warn' : 'ok'">{{ wallClockDim.used }}/{{ wallClockDim.max }} min</span>
+        </div>
+        <p v-if="anyBudgetWarn" class="ide-goal__warn" data-testid="ide-goal-warn">
+          {{ t('ide.goal.budgetWarn') }}
         </p>
       </div>
 

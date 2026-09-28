@@ -1,11 +1,14 @@
 <script setup lang="ts">
 // IdeContextBar — 分段上下文水位条（复刻 dsh-TUI 5 段配色：system/prompt/assistant/
 // thinking/tools +悬停图例 breakdown+80/95% 压力变色读数；UI 复刻 S3）。
-// 数据=useSessionMetrics 的分段（六源 context-six-source 同语义四段合并映射五段）。
+// 数据=useSessionMetrics 的分段（computeBreakdown 四段）。
+// 六源图例（G4 #6 接线）：悬停明细=四段→六源映射（context-six-source
+// fromFourSegments，system 桶拆不开按三源均分并标注估算——诚实：宁可粗，不虚报细）。
 import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { computeBreakdown } from '../utils/contextBreakdown'
+import { fromFourSegments, type SixSourceEntry } from '../utils/context-six-source'
 
 const metrics = useSessionMetrics()
 const chatStore = useChatStore()
@@ -34,6 +37,27 @@ const segments = computed<Segment[]>(() => {
       color: COLORS[seg.key] ?? '#888',
     }))
 })
+
+/** 四段合计（六源映射输入面）。 */
+const fourTotals = computed(() => {
+  const used = (metrics as unknown as { contextUsed?: { value: number } }).contextUsed?.value ?? 0
+  const breakdown = computeBreakdown((chatStore.activeSession?.messages ?? []) as never, used)
+  if (!breakdown) return null
+  const t = { user: 0, assistant: 0, tool: 0, system: 0 }
+  for (const seg of breakdown.segments) t[seg.key as keyof typeof t] = seg.tokens
+  return { four: t, surface: used }
+})
+
+/** 六源明细（悬停图例升级；段>0 才画，估算标注跟行走）。 */
+const sixSources = computed<SixSourceEntry[]>(() => {
+  const src = fourTotals.value
+  if (!src || src.surface <= 0) return []
+  return fromFourSegments(src.four, src.surface).sources.filter((e) => e.tokens > 0)
+})
+
+const SIX_LABELS: Record<string, string> = {
+  systemPrompt: '系统提示词', memory: '记忆', tools: '工具 schema', skills: '技能', messages: '消息', other: '其他',
+}
 
 const totalPct = computed(() => {
   const used = (metrics as unknown as { contextUsed?: { value: number } }).contextUsed?.value ?? 0
@@ -67,7 +91,13 @@ const noTelemetry = computed(() => totalPct.value === 0)
     </div>
     <span class="ide-ctxbar__pct" :data-testid="'ide-ctxbar-pct'">{{ noTelemetry ? '无遥测' : totalPct + '%' }}</span>
     <div v-if="hover" class="ide-ctxbar__legend" data-testid="ide-ctxbar-legend">
-      <template v-if="segments.length">
+      <template v-if="sixSources.length">
+        <div v-for="e in sixSources" :key="e.key" class="ide-ctxbar__six" :data-testid="`ide-ctxbar-six-${e.key}`">
+          <span>{{ SIX_LABELS[e.key] ?? e.key }} {{ e.pct }}%</span>
+          <span v-if="e.isEstimate" class="ide-ctxbar__est" title="前端四段映射估算，非服务端精确 span">≈</span>
+        </div>
+      </template>
+      <template v-else-if="segments.length">
         <div v-for="s in segments" :key="s.key">
           <span class="ide-ctxbar__dot" :style="{ background: s.color }" />{{ s.label }} {{ s.pct }}%
         </div>
@@ -94,4 +124,6 @@ const noTelemetry = computed(() => totalPct.value === 0)
   border-radius: 6px; padding: 6px 10px; font-size: 11px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 .ide-ctxbar__dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.ide-ctxbar__six { display: flex; align-items: center; gap: 4px; line-height: 1.6; }
+.ide-ctxbar__est { font-size: 10px; color: var(--warning-color, #d97706); }
 </style>
