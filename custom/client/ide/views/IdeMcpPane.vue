@@ -211,7 +211,7 @@ function openManage(): void {
 
 .ide-mcp__tab.is-active {
   background: var(--primary-color, #18a058);
-  color: #fff;
+  color: var(--text-on-accent);
   border-color: var(--primary-color, #18a058);
 }
 

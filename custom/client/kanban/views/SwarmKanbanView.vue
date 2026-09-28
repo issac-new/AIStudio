@@ -632,7 +632,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
 .kanban-boardbar__chip--all.is-on {
   border-style: solid;
   background: var(--primary-color, #3b82f6);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .kanban-boardbar__chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -643,7 +643,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
   &:hover { color: var(--text-primary, inherit); border-color: var(--text-muted, #999); }
   &.is-on {
     background: var(--primary-color, var(--accent-primary, #3b82f6));
-    border-color: transparent; color: #fff;
+    border-color: transparent; color: var(--text-on-accent);
   }
 }
 .kanban-boardbar__chip--all.is-on { background: transparent; color: var(--text-primary, inherit); border-color: var(--primary-color, #3b82f6); }
