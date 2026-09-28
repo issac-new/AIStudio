@@ -2,11 +2,13 @@
 // P1 审批面板守门：待审双组渲染 + 就地裁决调用链 + 历史表 + 空态/错误态。
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import ApprovalPanel from '../components/ApprovalPanel.vue'
 import * as approvalsApi from '../api/approvals'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k) }) }))
+// U2 改版（locale 时间随界面语言）：mock 需带 locale ref，否则 fmtTime 读 locale.value 炸挂载
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k), locale: ref('zh-CN') }) }))
 // mock 整个 approvals API 模块：经 @/api/client 会连锁拉入上游 router（node 环境无 location）
 vi.mock('../api/approvals', async () => {
   const state = { pending: { items: [] as unknown[] }, history: { entries: [] as unknown[] }, decideResult: { ok: true } as Record<string, unknown> }
