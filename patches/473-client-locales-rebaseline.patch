@@ -557,7 +557,7 @@ index 589b9bf1..33763ef7 100644
    sidebar: {
      chat: 'Chat',
      backToChat: 'Back',
-@@ -475,8 +582,1555 @@ export default {
+@@ -475,8 +582,1557 @@ export default {
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -1444,6 +1444,7 @@ index 589b9bf1..33763ef7 100644
 +    },
 +    overviewDash: {
 +      title: 'Cockpit overview',
++      navLabel: 'Overview',
 +      myTodo: 'My to-dos',
 +      waitingApproval: 'Pending approvals',
 +      myRaci: 'Needs your action (RACI)',
@@ -4775,7 +4776,7 @@ index b5d4b85d..7962fd58 100644
    sidebar: {
      chat: '对话',
      backToChat: '返回',
-@@ -475,8 +582,1555 @@ export default {
+@@ -475,8 +582,1557 @@ export default {
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -5662,6 +5663,7 @@ index b5d4b85d..7962fd58 100644
 +    },
 +    overviewDash: {
 +      title: '驾驶舱概览',
++      navLabel: '概览',
 +      myTodo: '我的待办',
 +      waitingApproval: '审批待审',
 +      myRaci: '等您操作（RACI）',

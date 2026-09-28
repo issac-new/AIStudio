@@ -80,6 +80,8 @@ onUnmounted(unsubscribeCols)
 const overviewPending = ref<PendingApprovalItem[]>([])
 const overviewHistory = ref<ApprovalHistoryEntry[]>([])
 const overviewUsername = getStoredUsername() ?? ''
+/** P5：#/app/overview 显式概览路由（不占对象选择轴） */
+const isOverviewRoute = computed(() => route.name === 'ia2.dash')
 let overviewTimer: ReturnType<typeof setInterval> | null = null
 async function refreshOverview(): Promise<void> {
   try {
@@ -491,8 +493,20 @@ function onNewLoop(): void {
           @max="flow.toggleCenterMax()" @popout="onPopout"
         />
       </div>
+      <!-- P5 驾驶舱概览：#/app/overview 显式路由（左栏「🏠 概览」入口）——
+           我的待办/评审闸口/交付进度三卡；不占对象选择轴（auto-select 语义不动） -->
+      <CockpitOverview
+        v-if="isOverviewRoute"
+        :tasks="tasksForShow"
+        :pending="overviewPending"
+        :history="overviewHistory"
+        :username="overviewUsername"
+        @open-inbox="router.push({ name: 'ia2.inbox' })"
+        @open-board="router.push({ name: 'ia2.board' })"
+        @open-task="onHandleTask"
+      />
       <SessionCanvas
-        v-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
+        v-else-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"
         :key="`${activeSel.kind}:${activeSel.id}`"
         :kind="activeSel.kind"
         :object-name="selectedSessionRow.name"
@@ -523,19 +537,7 @@ function onNewLoop(): void {
         @handle-task="onHandleTask"
         @goto-board="onGotoBoard"
       />
-      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
-        <!-- P5 驾驶舱概览：无选中对象时的 landing（我的待办/评审闸口/交付进度） -->
-        <CockpitOverview
-          v-if="!activeSel"
-          :tasks="tasksForShow"
-          :pending="overviewPending"
-          :history="overviewHistory"
-          :username="overviewUsername"
-          @open-inbox="router.push({ name: 'ia2.inbox' })"
-          @open-board="router.push({ name: 'ia2.board' })"
-          @open-task="onHandleTask"
-        />
-      </div>
+      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
     </section>
     <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控迁独立控制条行 -->
     <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
