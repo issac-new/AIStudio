@@ -56,8 +56,9 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 
 | 区域 | 路由 | 内容 |
 |------|------|------|
-| **总览** | `/app` | 注意力条（blocked / review / triage 三梯队，点击跳工作项区带筛选）→ 四卡片（活跃运行 / 等你决策 / 今日日程 / 关键指标）→ 工作项状态分布 → 今日计划（到期 loop + 今日待办）；零数据时出现三步引导（选模板 → 设节奏 → 跑起来），任一 run 存在即消失。关键指标标注近似口径：平均耗时显示"基于 N 个样本"（近 7 天窗口内最近 20 个终态 run 的回放采样），loop 事件采集降级时熔断计数标"部分数据" |
+| **总览** | `/app` | 注意力条（blocked / review / triage 三梯队，点击跳工作项区带筛选）+ **交付网络读数条**（在途案例/阶段分布/待审人工门/已完成 chip 流，零在途零待审隐藏，点击深链 `/app/cases`）→ 四卡片（活跃运行 / 等你决策 / 今日日程 / 关键指标）→ 工作项状态分布 → 今日计划（到期 loop + 今日待办）；零数据时出现三步引导（选模板 → 设节奏 → 跑起来），任一 run 存在即消失。关键指标标注近似口径：平均耗时显示"基于 N 个样本"（近 7 天窗口内最近 20 个终态 run 的回放采样），loop 事件采集降级时熔断计数标"部分数据" |
 | **编排** | `/app/orchestrate` | 模板库（五阶段模板只读列表）+ GraphSpec 可视化（与运行详情同源的画布投影）+ 一键实例化（cron 节奏 / 时区 / 租户，粗校交服务端 cron-parser） |
+| **工程** | `/app/eng` | 编排 tab + Teams 管理 tab + **交付案例 tab**（Delivery Cases 面板，深链 `/app/cases`——见功能特色专节） |
 | **运行中心** | `/app/runs` | P2 运行中心整体迁入（阶段 × 状态双轴、`awaiting-input` 恒置顶、执行图画布 + 时间轴回放、三级分辨率、节点检查器、介入收件箱——详见下文「Loop Engineering」） |
 | **介入中心** | `/app/inbox` | 五源聚合（awaiting 审批 / Triage 分诊队列 / 到期闹钟等）+ 就地审批 + 自动归档 |
 | **工作项** | `/app/tasks` | SwarmKanban 协作看板整体承接 + 任务↔run 双向关联 + 追溯矩阵 |
@@ -105,6 +106,19 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 - 群聊未读追踪、自动 join、日期分隔符、清空消息
 - 基于 `matrix-js-sdk`，经 Matrix homeserver 认证
 
+### 📦 Delivery Cases — 交付案例面板（M2，2026-09-26/28）
+
+分布式交付六阶段（P1 需求 → P6 复盘）的协议事件投影面板——跨机协作的唯一事实源是 Matrix 房间里的 `com.swarmstudio.delivery.*` 协议事件（v2 schema），本面板把这些事件实时投影为人可读的案例卡。挂工程场景（`/app/eng`）第三 tab「Delivery cases」，深链 `/app/cases`；i18n zh/en（patch 473/474）。
+
+- **数据面（delivery-cases store）**：发现机制（`delivery.index` account-data → 案例房清单）→ 案例头（case state：title/tier/stage/owner/frozenAcceptance）→ 门禁（gate 事件，同 gate 取最新 verdict）→ 阶段（stage done 计数）。协议常量唯一源=客户端 `delivery-protocol.ts`，服务端镜像 `task-protocol.ts` 双侧对账守门（漂移即 fail）。
+- **案例卡**：阶段条 P1-P6（完成绿/current 黑/未达灰）+ 门禁灯 G1-G6（pass 绿 / conditional 黄 / reject 红，点击开证据抽屉：evidence 摘要 / decidedBy / 时间 / 打回 reason）+ 完成态分色（`completed = P6 + G6 pass`：绿边+透明+徽标——run14 马拉松终局形态与六轮中断案例一眼可辨）+ 房间 ID 深链（跳沟通区房间）。
+- **网络读数条**：在途案例数（completed 不计）· 阶段分布 · 待审人工门（G1/G5 缺 pass 计数）· 已完成。P1 起同款读数条上浮全局顶区（IaGlobalTop chip 流，零在途零待审整条隐藏=零噪音，点击深链 `/app/cases`）。
+- **实时性**：store 挂 `Room.timeline` 事件监听（matrix-teams 同款模式），delivery.* 协议事件落房 500ms 去抖自动重投影；60s 兜底轮询防边缘态。
+- **发起向导（New case）**：标题 / 中央仓地址 / 档位（lite/standard/compliance）→ 建案例房 + case state + index 登记三发（镜像 harness 语义）；端到端浏览器实证（第 8 案例房服务端 case state 在案）。
+- **验证标准**：三层验法——构建产物 grep + HTTP 200 + 真浏览器登录走查（截屏入档）；26 步全流程马拉松（run14）六 stage/六 gate/终态 P6 断言全过，案例房地面真值（case×6+gate×6+stage×6）核验。
+
+设计文档：`docs/superpowers/specs/2026-09-18-distributed-delivery-network-design.md`（分布式交付网络）+ `2026-09-25-capability-boundaries-design.md`（三系统能力边界 §8）。
+
 ### 🔐 Matrix 账号集成
 
 - **登录**：Homeserver URL + MXID + 密码，Remember Me 持久化 + 本地降级
@@ -129,6 +143,8 @@ P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区�
 - **运行详情**：左图右流——执行图画布（vue-flow 只读）+ 时间轴回放（游标 = 重放至第 N 事件，图与事件流共用前缀投影）；**三级分辨率**时间轴（`summary` 只看节点级结果 / `normal` 增加路由与耗时 / `verbose` 全量原始负载，逐级放开）
 - **节点检查器**：选中节点查看类型 / 状态 / 迭代 / 耗时与最近一次 update 的 channel 键值（attach 档）；唯一介入动作是 failed 节点的「重跑整个 run」（fork → startRun 显式起跑）——审批不在检查器，位于列表行 peek 展开与介入收件箱的审批面板
 - 数据面：`GET /api/graph/runs/:id` + `/replay`，socket `/graph` 实时推送
+
+**调度单写者桥接（T3b，patch 472，默认关闭）**：`LOOP_SCHEDULER=cron` 时 RunSpawner 不启内部 30s 轮询，hermes cron no-agent 脚本（每分钟回调公开段 `POST /api/loop/cron-bridge/tick`）成为唯一 timer——token fail-closed + loopback 限源 + 幂等注册；四层验证（单测/集成/真 CLI 冒烟/活火 72.6s→204）。规格：`docs/superpowers/specs/2026-09-25-loop-cron-bridge-design.md`。
 
 **R1 每日 Brief（P2，投递已于 P3 接线）**：`on` 模式下每日定时（`LOOP_BRIEF_CRON`，缺省 `0 9 * * *` 本地时区）聚合过去 24h 的图引擎事实，渲染三段式结构化简报——进展（完成 / 失败 / 熔断升级告警）、等你决策（awaiting-input 及等待时长）、今日计划（到期未触发的 loop）。零 LLM 依赖，纯持久数据源（事件日志 + loop 台账），重启自然恢复；brief 自身作为 `graphId='daily-brief'` 审计 run 落事件日志，可回放可审计。**Matrix 投递身份（用户拍板：使用本机配置的登录身份）**，凭据三级回落（每次投递重读，token 轮换即时生效）：应用内最近一次 Matrix 登录（`POST /api/auth/matrix-login`，patch 012）落盘的 `~/.hermes-web-ui/matrix-session.json`（0600）→ `LOOP_MATRIX_HOMESERVER` / `LOOP_MATRIX_TOKEN` / `LOOP_MATRIX_USER` env → gateway（hermes-agent）dotenv `~/.hermes/profiles/<profile>/.env` 的 `MATRIX_HOMESERVER` / `MATRIX_ACCESS_TOKEN` / `MATRIX_USER_ID`（profile 取 `LOOP_MATRIX_PROFILE` → `active_profile` 文件 → `orchestrator`）。**房间**：`LOOP_BRIEF_ROOM` → 回落 gateway `MATRIX_HOME_ROOM`（网关主房间）→ 均无则只落事件日志（审计 run 记 `delivered:false`）；房间值支持 `!room:server` 直发与 `#alias:server` 经 homeserver 解析（失败上抛走审计），发送失败同样经审计可见。投递身份取创建装配时的判定：进程启动后才完成首次 Matrix 登录的，需重启服务接通投递。
 
@@ -589,7 +605,13 @@ patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。
 
 ## 设计文档
 
-完整设计文档位于 `../docs/superpowers/`（specs + plans），覆盖 Cockpit、RunTraceView、Kanban、Matrix 集成、overlay 架构等。
+完整设计文档位于 `../docs/superpowers/`（specs + plans），覆盖 Cockpit、RunTraceView、Kanban、Matrix 集成、overlay 架构等。核心总览：
+
+- **《三系统能力边界设计》**（`specs/2026-09-25-capability-boundaries-design.md`）——hermes agent teams / SwarmStudio / swarm-yuan / overlay 四干系人的能力域归属终表、双写治理台账 E1-E9、八层根因链、T1-T8 工单与 P0/P1 完善批（§8）、UI 三层验法收账标准
+- **《多机多用户分布式交付网络设计》**（`specs/2026-09-18-distributed-delivery-network-design.md`）——"Matrix 传协调、git 传制品、本机管执行"三层事实源、delivery 协议 v2、M0-M4 里程碑（M3 已收官：26 步+事件马拉松 run14 exit 0）、入网 runbook
+- **《调度负载唯一登记台账》**（`specs/2026-09-25-scheduled-loads-registry.md`）——13 项定时负载全量盘点（一负载一登记处）
+- **《loop 调度 cron 桥接设计》**（`specs/2026-09-25-loop-cron-bridge-design.md`）——`LOOP_SCHEDULER=cron` 时 hermes cron 为唯一 timer（四层验证含活火）
+- **《V3 全流程推演计划》**（`specs/2026-09-25-mux-v3-lifecycle-plan.md`）——26 步全流程 + M3 事件化 wiring + run14 终局实测
 
 ## ⚠️ 同版本号覆盖更新的缓存陷阱
 
