@@ -38,6 +38,9 @@ import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import RunCanvas from '../components/flow/RunCanvas.vue'
+import CockpitOverview from '../components/flow/CockpitOverview.vue'
+import { fetchPendingApprovals, fetchApprovalHistory, type PendingApprovalItem, type ApprovalHistoryEntry } from '@/custom/cockpit/api/approvals'
+import { getStoredUsername } from '@/api/client'
 import IaColumnControls from '../components/IaColumnControls.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import type { ParticipantBadge } from '../components/flow/SessionWorkbenchPanel.vue'
@@ -71,6 +74,23 @@ const unsubscribeCols = onColWidthsChange((w) => {
   rightWidth.value = w.right
 })
 onUnmounted(unsubscribeCols)
+
+// ── P5 驾驶舱概览数据（2026-09-28 §六）：审批待审+决策历史 30s 轮询，
+//    交付进度复用 workspace.tasks（tasksForShow 已在内存）。 ──
+const overviewPending = ref<PendingApprovalItem[]>([])
+const overviewHistory = ref<ApprovalHistoryEntry[]>([])
+const overviewUsername = getStoredUsername() ?? ''
+let overviewTimer: ReturnType<typeof setInterval> | null = null
+async function refreshOverview(): Promise<void> {
+  try {
+    const [p, h] = await Promise.all([fetchPendingApprovals(), fetchApprovalHistory(20)])
+    overviewPending.value = p.items ?? []
+    overviewHistory.value = h.entries ?? []
+  } catch { /* 后端未就绪保持上次数据 */ }
+}
+void refreshOverview()
+overviewTimer = setInterval(() => void refreshOverview(), 30000)
+onUnmounted(() => { if (overviewTimer) clearInterval(overviewTimer) })
 
 // 栏宽必须进 grid 轨道：grid item 的内联 width 改不动固定轨道（2026-09-22
 // 「拖了不动」根因——aside 拖宽只是溢出轨道被中栏盖住/悬出屏外，可见边界不动）。
@@ -503,7 +523,19 @@ function onNewLoop(): void {
         @handle-task="onHandleTask"
         @goto-board="onGotoBoard"
       />
-      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
+      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
+        <!-- P5 驾驶舱概览：无选中对象时的 landing（我的待办/评审闸口/交付进度） -->
+        <CockpitOverview
+          v-if="!activeSel"
+          :tasks="tasksForShow"
+          :pending="overviewPending"
+          :history="overviewHistory"
+          :username="overviewUsername"
+          @open-inbox="router.push({ name: 'ia2.inbox' })"
+          @open-board="router.push({ name: 'ia2.board' })"
+          @open-task="onHandleTask"
+        />
+      </div>
     </section>
     <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控迁独立控制条行 -->
     <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
