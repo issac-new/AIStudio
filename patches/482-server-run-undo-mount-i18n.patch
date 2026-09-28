@@ -1,27 +1,3 @@
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index f1412834..5059c230 100644
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -647,6 +647,7 @@ export default {
-       repetitive_text: '检测到重复输出，可能打转',
-     },
-     runResult: {
-+      undoFile: '撤销 {path}（恢复本轮 run 前内容）',
-       title: '本轮结果',
-       files: '{count} 个文件',
-     },
-diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 4db59bc4..fa9fe8e2 100644
---- a/packages/client/src/i18n/locales/en.ts
-+++ b/packages/client/src/i18n/locales/en.ts
-@@ -647,6 +647,7 @@ export default {
-       repetitive_text: 'Repeated output detected; may be spinning',
-     },
-     runResult: {
-+      undoFile: 'Undo {path} (restore to before this run)',
-       title: 'Run result',
-       files: '{count} file(s)',
-     },
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
 index ff80071e..70af3c70 100644
 --- a/packages/server/src/bootstrap/routes.ts

@@ -63,31 +63,6 @@ index 5c40e951..26aafbf7 100644
      phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message'
      guarantee: 'strict' | 'immediate'
      requested_at: number
-diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 89263dff..6c07d08a 100644
---- a/packages/client/src/components/hermes/chat/ChatPanel.vue
-+++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -1004,6 +1004,7 @@ const newChatAgentOptions = computed(() => [
-   { label: "Ekko", value: "ekko-agent" },
-   { label: "Claude", value: "claude-code" },
-   { label: "Codex", value: "codex" },
-+  { label: "ZCode", value: "zcode" },
-   { label: "Pi", value: "pi" },
-   { label: "Grok", value: "grok" },
-   { label: "OpenCode", value: "opencode" },
-diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index 8cad4b1d..70992bf3 100644
---- a/packages/client/src/components/hermes/chat/MessageList.vue
-+++ b/packages/client/src/components/hermes/chat/MessageList.vue
-@@ -299,7 +299,7 @@ const canInsertQueuedMessages = computed(() => {
-   if (agent === "ekko-agent") {
-     return session.source === "coding_agent" || session.source === "global_agent";
-   }
--  if (agent === "codex" || agent === "pi" || agent === "grok" || (agent === "opencode" || agent === "dsh") || agent === "claude" || agent === "claude-code") return true;
-+  if (agent === "codex" || agent === "pi" || agent === "grok" || (agent === "opencode" || agent === "dsh") || agent === "claude" || agent === "claude-code" || agent === "zcode") return true;
-   return !session.source || session.source === "cli" || session.source === "global_agent";
- });
- const visibleApproval = computed(() => chatStore.activePendingApproval);
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
 index 0fa18a4f..46224fe7 100644
 --- a/packages/client/src/i18n/locales/ar.ts
@@ -113,19 +88,6 @@ index aab5563e..3f72579c 100644
 +    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Unbekannt' },
      dailyTrend: 'Tagliche Nutzung',
      date: 'Datum',
-     tokens: 'Tokens',
-diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 2c8e7af0..9178ce2c 100644
---- a/packages/client/src/i18n/locales/en.ts
-+++ b/packages/client/src/i18n/locales/en.ts
-@@ -3420,7 +3420,7 @@ export default {
-     cacheHitRate: 'Cache Hit Rate',
-     modelBreakdown: 'Model Breakdown',
-     agentBreakdown: 'Agent Breakdown',
--    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: 'Unknown' },
-+    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: 'Unknown' },
-     dailyTrend: 'Daily Usage',
-     date: 'Date',
      tokens: 'Tokens',
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
 index 33ca7f88..7d466cbe 100644
@@ -218,66 +180,6 @@ index 791aa1b2..acb133dd 100644
      dailyTrend: '每日用量',
      date: '日期',
      tokens: 'Token',
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index f2b69c3f..bf24173c 100644
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -3468,7 +3468,7 @@ export default {
-     cacheHitRate: '缓存命中率',
-     modelBreakdown: '模型分布',
-     agentBreakdown: 'Agent 分布',
--    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', ekkoAgent: 'Ekko', unknown: '未知' },
-+    agents: { hermes: 'Hermes Agent', claudeCode: 'Claude', codex: 'Codex', pi: 'Pi', grok: 'Grok', opencode: 'OpenCode', dsh: 'DeepSeek Harness', zcode: 'ZCode', ekkoAgent: 'Ekko', unknown: '未知' },
-     dailyTrend: '每日用量',
-     date: '日期',
-     tokens: 'Token',
-diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 49f1f54b..65e8787e 100644
---- a/packages/client/src/stores/hermes/chat.ts
-+++ b/packages/client/src/stores/hermes/chat.ts
-@@ -30,7 +30,7 @@ export type ContentBlock = ContentBlockImport
- export const LIVE_CHAT_MESSAGE_PAGE_SIZE = 150
- export const LIVE_CHAT_MAX_LOADED_MESSAGES = 300
- const LEGACY_WORKSPACE_RUN_CHANGE_MESSAGE_PREFIX = 'workspace-run-change:'
--type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko-agent'
-+type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko-agent'
- 
- function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
-   if (agent === 'codex') return 'codex'
-@@ -39,6 +39,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
-   if (agent === 'dsh') return 'dsh'
-   if (agent === 'opencode') return 'opencode'
-   if (agent === 'claude') return 'claude-code'
-+  if (agent === 'zcode') return 'zcode'
-   if (agent === 'ekko-agent') return 'ekko-agent'
-   return undefined
- }
-@@ -50,6 +51,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
-   if (id === 'dsh') return 'dsh'
-   if (id === 'opencode') return 'opencode'
-   if (id === 'claude-code') return 'claude'
-+  if (id === 'zcode') return 'zcode'
-   if (id === 'ekko-agent') return 'ekko-agent'
-   return undefined
- }
-@@ -3089,6 +3091,7 @@ export const useChatStore = defineStore('chat', () => {
-       runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
-       queueId,
-       runtime: raw.runtime === 'ekko'
-+        || raw.runtime === 'zcode'
-         || raw.runtime === 'claude-code'
-         || raw.runtime === 'codex'
-         || raw.runtime === 'pi'
-@@ -3507,6 +3510,9 @@ export const useChatStore = defineStore('chat', () => {
-     if (codingAgentId === 'codex') {
-       return { icon: '/coding-agents/codex-openai.png' }
-     }
-+    if (codingAgentId === 'zcode') {
-+      return { icon: '/coding-agents/zcode.svg' }
-+    }
-     if (codingAgentId === 'claude-code') {
-       return { icon: '/coding-agents/claude-code.svg' }
-     }
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
 index d29a5d89..d095015e 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts

@@ -3,6 +3,7 @@
 // / toast 基建 / recap 构建。口径契约见各 utils 头注。
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 import { detectRunaway, type RunawayMessage } from '../utils/runawayGuard'
 import { scanInjection, hasInjection } from '../utils/subagentGuard'
 import {
@@ -190,28 +191,16 @@ describe('会话恢复 recap（claude-code 2.1.108 语义）', () => {
 
 describe('patch 342/343 漂移守卫', () => {
   const overlayRoot = resolve(__dirname, '../../../..')
+  const UPSTREAM_CLIENT = resolve(overlayRoot, '../upstream/hermes-studio/packages/client/src')
 
-  it('342 含 CustomEvent 派发与 HERMES_CUSTOM 标记', () => {
-    const patch = readFileSync(resolve(overlayRoot, 'patches/342-client-approval-learning-event.patch'), 'utf8')
-    expect(patch).toContain('overlay:approval-decision')
-    expect(patch).toContain('HERMES_CUSTOM[IdeApprovalLearning]')
-    expect(patch).toContain('MessageList.vue')
+  it('342 审批学习 CustomEvent 已接线（注入态 MessageList 直断）', () => {
+    const ml = readFileSync(resolve(UPSTREAM_CLIENT, 'components/hermes/chat/MessageList.vue'), 'utf8')
+    expect(ml).toContain('overlay:approval-decision')
+    expect(ml).toContain('HERMES_CUSTOM[IdeApprovalLearning]')
   })
 
-  it('343 双语各含五块键；series/manifest 已登记', () => {
-    const patch = readFileSync(resolve(overlayRoot, 'patches/343-client-i18n-ide-r2.patch'), 'utf8')
-    for (const key of ['recap', 'injection', 'approval', 'runaway', 'steerHint']) {
-      expect(patch).toContain(key)
-    }
-    const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
-    expect(series).toContain('342-client-approval-learning-event.patch')
-    expect(series).toContain('343-client-i18n-ide-r2.patch')
-    // manifest 只存在于执行过 npm run inject 的检出（主 overlay 根）
-    const manifestPath = resolve(overlayRoot, '.overlay-injected.json')
-    if (existsSync(manifestPath)) {
-      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-      expect(manifest.appliedPatches).toContain('342-client-approval-learning-event.patch')
-      expect(manifest.appliedPatches).toContain('343-client-i18n-ide-r2.patch')
-    }
+  it('343 双语各含五块键（注入态词表直断）', () => {
+    expectLocaleKeys('ide', ['recap', 'injection', 'approval', 'runaway'])
+    expectLocaleKeys('ide.agents', ['steerHint'])
   })
 })

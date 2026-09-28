@@ -1,21 +1,3 @@
-diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index a265ce3..a9f6764 100644
---- a/packages/desktop/electron-builder.yml
-+++ b/packages/desktop/electron-builder.yml
-@@ -69,9 +69,12 @@ extraResources:
-       # prune non-target prebuilds by context.electronPlatformName + context.arch.
-       # - "!node-pty/prebuilds/!(${platform}-${arch})/**"
-       # Linux has no bundled prebuild and loads the native module compiled by
--      # `npm rebuild node-pty` from build/Release.
-+      # `npm rebuild node-pty` from build/Release. spawn-helper is a hard
-+      # dependency of node-pty's Unix implementation (unixTerminal execs it
-+      # for every pty.spawn), so ship it alongside pty.node.
-       - "!node-pty/build/**"
-       - "node-pty/build/Release/pty.node"
-+      - "node-pty/build/Release/spawn-helper"
-       - "!**/*.md"
- 
- asarUnpack:
 diff --git a/packages/desktop/scripts/after-pack-combined.cjs b/packages/desktop/scripts/after-pack-combined.cjs
 index b4774cd..92cdfdd 100644
 --- a/packages/desktop/scripts/after-pack-combined.cjs

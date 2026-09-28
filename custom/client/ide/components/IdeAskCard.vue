@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// IdeAskCard — ask_user 结构化问卷卡（复刻 minimax ask_user 1-4 步×2-4 选项问卷；
-// UI 复刻 R3）。数据面=ask-contract（步骤/选项/recommended/答案必答一次定音）。
-// 本卡从消息流最后一条 ask 消息解析问卷 JSON（display_metadata 或文本内嵌）渲染。
+// IdeAskCard — ask_user 结构化问卷卡（复刻 minimax ask_user 问卷；UI 复刻 R3）。
+// 真实链（2026-09-27 适配）：chatStore.activePendingClarify（clarify.requested 事件→
+// PendingClarify{question,choices[],responseMode}）→ 问卷卡渲染，作答走
+// respondToClarifyFor（引擎真实应答通道）。兼容 display_metadata.ask 多步问卷
+// 解析路（结构化多步形态，作答 sendMessage 回流）。
 import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 
@@ -17,6 +19,10 @@ interface AskQuestionnaire {
 const chatStore = useChatStore()
 const answers = ref<Record<number, number[]>>({})
 const submitted = ref(false)
+const freeText = ref('')
+
+/** 真实链：PendingClarify → 单步问卷（choices 为选项）。 */
+const clarify = computed(() => (chatStore as unknown as { activePendingClarify?: { clarifyId: string; question: string; choices: string[] | null } | null }).activePendingClarify ?? null)
 
 function parseAsk(messages: Array<{ role: string; content: unknown; display_metadata?: unknown }>): AskQuestionnaire | null {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -35,7 +41,17 @@ function parseAsk(messages: Array<{ role: string; content: unknown; display_meta
   return null
 }
 
-const questionnaire = computed(() => parseAsk((chatStore.activeSession?.messages ?? []) as never))
+const questionnaire = computed<AskQuestionnaire | null>(() => {
+  if (clarify.value) {
+    return {
+      steps: [{
+        question: clarify.value.question,
+        options: (clarify.value.choices ?? []).map((label) => ({ label })),
+      }],
+    }
+  }
+  return parseAsk((chatStore.activeSession?.messages ?? []) as never)
+})
 
 function select(stepIndex: number, optionIndex: number, multi: boolean): void {
   if (submitted.value) return
@@ -54,11 +70,19 @@ function isSelected(stepIndex: number, optionIndex: number): boolean {
 const canSubmit = computed(() => {
   const q = questionnaire.value
   if (!q) return false
+  if (q.steps.length === 1 && (!q.steps[0]!.options.length)) return freeText.value.trim().length > 0
   return q.steps.every((_, i) => (answers.value[i]?.length ?? 0) > 0)
 })
 
 function submit(): void {
   submitted.value = true
+  // 真实链：clarify → respondToClarifyFor（引擎应答通道）
+  if (clarify.value) {
+    const picked = (answers.value[0] ?? []).map((oi) => clarify.value!.choices?.[oi] ?? '').filter(Boolean)
+    const response = picked.length ? picked.join(', ') : freeText.value.trim()
+    void (chatStore as unknown as { respondToClarifyFor: (sid: string, cid: string, r: string) => unknown }).respondToClarifyFor?.(clarify.value.clarifyId && chatStore.activeSessionId ? chatStore.activeSessionId : '', clarify.value.clarifyId, response)
+    return
+  }
   const q = questionnaire.value
   if (!q) return
   const lines = q.steps.map((s, i) => {
@@ -83,6 +107,14 @@ function submit(): void {
         @click="select(si, oi, !!step.multi)"
       >{{ opt.recommended ? '★ ' : '' }}{{ opt.label }}</button>
     </div>
+    <input
+      v-if="questionnaire && questionnaire.steps.length === 1 && !questionnaire.steps[0].options.length"
+      v-model="freeText"
+      class="ide-ask__free"
+      data-testid="ide-ask-free"
+      placeholder="输入你的回答…"
+      @keydown.enter.prevent="submit"
+    />
     <button
       type="button"
       class="ide-ask__submit"
@@ -111,4 +143,9 @@ function submit(): void {
   border-radius: 5px; padding: 6px 14px; cursor: pointer;
 }
 .ide-ask__submit:disabled { opacity: 0.45; cursor: default; }
+
+.ide-ask__free {
+  width: 100%; border: 1px solid var(--border-color, #e0e0e0); border-radius: 5px;
+  padding: 5px 10px; margin: 4px 0; background: var(--card-color, #fff); color: inherit;
+}
 </style>

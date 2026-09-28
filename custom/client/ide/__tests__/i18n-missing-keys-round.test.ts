@@ -1,80 +1,40 @@
 // overlay/custom/client/ide/__tests__/i18n-missing-keys-round.test.ts
-// patch 375 守门：全量 i18n 裸键清剿轮（2026-09-23 三轮审计汇总）。
-// 覆盖面：ide.task.timeline / ide.briefing.* 全族登记 / RunTrace 禁用因 /
+// i18n 缺键清剿守门（2026-09-23 三轮审计汇总）。
+// 覆盖面：ide.task.timeline / ide.briefing.* 全族 / RunTrace 禁用因 /
 // 热力图失败态 / chat.deleteSessionFailed / cockpit 四键 / sidebar 两键（zh）/
 // matrixChat.e2eVerified / common.open|clear|refresh。
-// 环境：node（只读文件断言，无 DOM）。
-import { describe, it, expect } from 'vitest'
-import { readFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
+// 2026-09-28 P0 收敛：locale 单一事实源化（473 全量重基线）后，守卫从
+// "读 patch 376 文件"改为"读注入态词表"（zh/en 成对直断，语义更强）。
+// 环境：node（词表导入断言，无 DOM）。
+import { describe, it } from 'vitest'
+import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 
-const overlayRoot = resolve(__dirname, '../../../..')
-const PATCH = '376-client-i18n-missing-keys.patch'
-
-function readPatch(): string {
-  return readFileSync(resolve(overlayRoot, `patches/${PATCH}`), 'utf8')
-}
-
-describe('patch 376：i18n 缺键清剿（zh/en 成对）', () => {
-  it('series 已登记 376', () => {
-    const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
-    expect(series).toContain(PATCH)
-  })
-
+describe('i18n 缺键清剿（zh/en 成对 · 注入态词表直断）', () => {
   it('ide 域：task.timeline / chatTabTraceDisabled / heatmapLoadFailed / briefing 全族', () => {
-    const patch = readPatch()
-    for (const key of [
-      "timeline: '时间线'",
-      "timeline: 'Timeline'",
-      "chatTabTraceDisabled: '无活跃会话，暂不可用'",
-      "chatTabTraceDisabled: 'Unavailable without an active session'",
-      "heatmapLoadFailed: '热力图加载失败'",
-      "heatmapLoadFailed: 'Failed to load heatmap'",
-      'briefing: {',
-      "title: 'Task Briefing'",
-      "noActiveTask: '当前无激活任务：从看板或任务跳转进入后自动带入简报'",
-      "auxPlaceholder: 'Free-form chat…'",
-    ]) {
-      expect(patch).toContain(key)
-    }
+    expectLocaleKeys('ide.task', ['timeline'])
+    expectLocaleKeys('ide', ['chatTabTraceDisabled'])
+    expectLocaleKeys('ide.usagePanel', ['heatmapLoadFailed'])
     // briefing 族 zh/en 各 32 键：title/toggle/close/noActiveTask/headerBlock/taskTitle/
     // taskId/taskStatus/taskPriority/stage/branch/worktree/contextBlock/noContext/
     // raciLabel/workflowBlock/deps/blocked/blockedYes/blockedNo/retryCount/gitBlock/
     // noCommits/collabBlock/noCollab/recapSummary/recapDecisions/recapBlockers/
     // recapTodos/auxBlock/auxPlaceholder/auxSend
-    expect(patch.match(/auxSend:/g)?.length).toBe(2)
+    expectLocaleKeys('ide.briefing', [
+      'title', 'toggle', 'close', 'noActiveTask', 'headerBlock', 'taskTitle',
+      'taskId', 'taskStatus', 'taskPriority', 'stage', 'branch', 'worktree',
+      'contextBlock', 'noContext', 'raciLabel', 'workflowBlock', 'deps',
+      'blocked', 'blockedYes', 'blockedNo', 'retryCount', 'gitBlock',
+      'noCommits', 'collabBlock', 'noCollab', 'recapSummary', 'recapDecisions',
+      'recapBlockers', 'recapTodos', 'auxBlock', 'auxPlaceholder', 'auxSend',
+    ])
   })
 
   it('跨域：chat/cockpit/sidebar/matrixChat/common 缺键补齐', () => {
-    const patch = readPatch()
-    for (const key of [
-      "deleteSessionFailed: '删除会话失败'",
-      "deleteSessionFailed: 'Failed to delete session'",
-      "scheduleTitle: '日程'",
-      "scheduleTitle: 'Schedule'",
-      "yearLabel: '年'",
-      "itemCount: '{count} 项'",
-      "aggregateSessions: '聚合关联会话'",
-      "swarmKanban: 'swarm 看板'",
-      "matrixChat: 'Matrix 聊天'",
-      "e2eVerified: '已通过加密验证'",
-      "e2eVerified: 'Encryption verified'",
-      "refresh: '刷新'",
-      "refresh: 'Refresh'",
-    ]) {
-      expect(patch).toContain(key)
-    }
-  })
-
-  it('注入态含 375 时 locale 已生效（防只登记不注入；未注入检出跳过）', () => {
-    const manifestPath = resolve(overlayRoot, '.overlay-injected.json')
-    if (!existsSync(manifestPath)) return
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-    if (!manifest.appliedPatches?.includes(PATCH)) return
-    const zhPath = resolve(overlayRoot, '../upstream/hermes-studio/packages/client/src/i18n/locales/zh.ts')
-    if (!existsSync(zhPath)) return
-    const zh = readFileSync(zhPath, 'utf8')
-    expect(zh).toContain('briefing: {')
-    expect(zh).toContain("chatTabTraceDisabled: '无活跃会话，暂不可用'")
+    expectLocaleKeys('chat', ['deleteSessionFailed'])
+    expectLocaleKeys('cockpit', ['scheduleTitle', 'yearLabel', 'itemCount', 'aggregateSessions'])
+    expectLocaleKeys('sidebar', ['swarmKanban'])
+    expectLocaleKeys('sidebar', ['matrixChat'])
+    expectLocaleKeys('matrixChat', ['e2eVerified'])
+    expectLocaleKeys('common', ['open', 'clear', 'refresh'])
   })
 })

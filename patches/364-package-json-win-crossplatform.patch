@@ -1,8 +1,22 @@
+diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -52,8 +52,8 @@
+     "test:ekko-agent": "vitest run tests/ekko-agent",
+     "build:ekko-agent": "npm --prefix packages/ekko-agent run build",
+     "verify:sharp-runtime": "node scripts/verify-sharp-runtime.mjs",
+-    "prepare": "[ -d dist ] || npm run build",
+-    "preview": "NODE_ENV=production vite preview",
++    "prepare": "node -e \"require('node:fs').existsSync('dist') || process.exit(1)\" || npm run build",
++    "preview": "cross-env NODE_ENV=production vite preview",
+     "test": "vitest run",
+     "test:watch": "vitest",
+     "test:coverage": "vitest run --coverage",
 diff --git a/package-lock.json b/package-lock.json
-index 2e9bcba1..59bd2b60 100644
+index 1f3ab190..c591ea7f 100644
 --- a/package-lock.json
 +++ b/package-lock.json
-@@ -22,16 +22,23 @@
+@@ -23,11 +23,17 @@
          "adm-zip": "^0.6.0",
          "agent-browser": "^0.26.0",
          "boring-avatars-vanilla": "^1.0.2",
@@ -20,13 +34,7 @@ index 2e9bcba1..59bd2b60 100644
          "sharp": "^0.35.3",
          "sherpa-onnx-node": "1.13.3",
          "smol-toml": "^1.8.0",
-         "socket.io": "^4.8.3",
-         "socket.io-client": "^4.8.3",
-+        "three": "^0.170.0",
-         "yaml": "^2.9.0"
-       },
-       "bin": {
-@@ -257,6 +264,12 @@
+@@ -258,6 +264,12 @@
          "node": ">=6.0.0"
        }
      },
@@ -39,7 +47,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/@babel/types": {
        "version": "7.29.7",
        "resolved": "https://registry.npmjs.org/@babel/types/-/types-7.29.7.tgz",
-@@ -1467,9 +1480,6 @@
+@@ -1468,9 +1480,6 @@
        "cpu": [
          "arm"
        ],
@@ -49,7 +57,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1486,9 +1496,6 @@
+@@ -1487,9 +1496,6 @@
        "cpu": [
          "arm64"
        ],
@@ -59,7 +67,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1505,9 +1512,6 @@
+@@ -1506,9 +1512,6 @@
        "cpu": [
          "ppc64"
        ],
@@ -69,7 +77,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1524,9 +1528,6 @@
+@@ -1525,9 +1528,6 @@
        "cpu": [
          "riscv64"
        ],
@@ -79,7 +87,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1543,9 +1544,6 @@
+@@ -1544,9 +1544,6 @@
        "cpu": [
          "s390x"
        ],
@@ -89,7 +97,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1562,9 +1560,6 @@
+@@ -1563,9 +1560,6 @@
        "cpu": [
          "x64"
        ],
@@ -99,7 +107,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1581,9 +1576,6 @@
+@@ -1582,9 +1576,6 @@
        "cpu": [
          "arm64"
        ],
@@ -109,7 +117,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1600,9 +1592,6 @@
+@@ -1601,9 +1592,6 @@
        "cpu": [
          "x64"
        ],
@@ -119,7 +127,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "LGPL-3.0-or-later",
        "optional": true,
        "os": [
-@@ -1619,9 +1608,6 @@
+@@ -1620,9 +1608,6 @@
        "cpu": [
          "arm"
        ],
@@ -129,7 +137,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -1644,9 +1630,6 @@
+@@ -1645,9 +1630,6 @@
        "cpu": [
          "arm64"
        ],
@@ -139,7 +147,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -1669,9 +1652,6 @@
+@@ -1670,9 +1652,6 @@
        "cpu": [
          "ppc64"
        ],
@@ -149,7 +157,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -1694,9 +1674,6 @@
+@@ -1695,9 +1674,6 @@
        "cpu": [
          "riscv64"
        ],
@@ -159,7 +167,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -1719,9 +1696,6 @@
+@@ -1720,9 +1696,6 @@
        "cpu": [
          "s390x"
        ],
@@ -169,7 +177,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -1744,9 +1718,6 @@
+@@ -1745,9 +1718,6 @@
        "cpu": [
          "x64"
        ],
@@ -179,7 +187,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -1769,9 +1740,6 @@
+@@ -1770,9 +1740,6 @@
        "cpu": [
          "arm64"
        ],
@@ -189,7 +197,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -1794,9 +1762,6 @@
+@@ -1795,9 +1762,6 @@
        "cpu": [
          "x64"
        ],
@@ -199,7 +207,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "optional": true,
        "os": [
-@@ -2135,6 +2100,15 @@
+@@ -2136,6 +2100,15 @@
          "ws": "^8.19.0"
        }
      },
@@ -215,7 +223,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/@mermaid-js/parser": {
        "version": "1.1.1",
        "resolved": "https://registry.npmjs.org/@mermaid-js/parser/-/parser-1.1.1.tgz",
-@@ -2310,9 +2284,6 @@
+@@ -2311,9 +2284,6 @@
          "arm64"
        ],
        "dev": true,
@@ -225,7 +233,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "MIT",
        "optional": true,
        "os": [
-@@ -2334,9 +2305,6 @@
+@@ -2335,9 +2305,6 @@
          "arm64"
        ],
        "dev": true,
@@ -235,7 +243,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "MIT",
        "optional": true,
        "os": [
-@@ -2358,9 +2326,6 @@
+@@ -2359,9 +2326,6 @@
          "riscv64"
        ],
        "dev": true,
@@ -245,7 +253,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "MIT",
        "optional": true,
        "os": [
-@@ -2382,9 +2347,6 @@
+@@ -2383,9 +2347,6 @@
          "x64"
        ],
        "dev": true,
@@ -255,7 +263,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "MIT",
        "optional": true,
        "os": [
-@@ -2406,9 +2368,6 @@
+@@ -2407,9 +2368,6 @@
          "x64"
        ],
        "dev": true,
@@ -265,7 +273,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "MIT",
        "optional": true,
        "os": [
-@@ -4028,6 +3987,12 @@
+@@ -4029,6 +3987,12 @@
        "dev": true,
        "license": "MIT"
      },
@@ -278,7 +286,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/@types/eventsource": {
        "version": "1.1.15",
        "resolved": "https://registry.npmjs.org/@types/eventsource/-/eventsource-1.1.15.tgz",
-@@ -5014,6 +4979,12 @@
+@@ -5024,6 +4988,12 @@
        "dev": true,
        "license": "MIT"
      },
@@ -291,7 +299,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/ansi-regex": {
        "version": "6.2.2",
        "resolved": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-6.2.2.tgz",
-@@ -5151,6 +5122,12 @@
+@@ -5161,6 +5131,12 @@
        "dev": true,
        "license": "MIT"
      },
@@ -304,7 +312,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/base64-js": {
        "version": "1.5.1",
        "resolved": "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz",
-@@ -5304,6 +5281,15 @@
+@@ -5314,6 +5290,15 @@
          "node": ">=8"
        }
      },
@@ -320,7 +328,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/buffer-from": {
        "version": "1.1.2",
        "resolved": "https://registry.npmjs.org/buffer-from/-/buffer-from-1.1.2.tgz",
-@@ -5776,6 +5762,18 @@
+@@ -5786,6 +5771,18 @@
        "dev": true,
        "license": "MIT"
      },
@@ -339,7 +347,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/cross-env": {
        "version": "10.1.0",
        "resolved": "https://registry.npmjs.org/cross-env/-/cross-env-10.1.0.tgz",
-@@ -6655,7 +6653,6 @@
+@@ -6665,7 +6662,6 @@
        "version": "6.1.0",
        "resolved": "https://registry.npmjs.org/echarts/-/echarts-6.1.0.tgz",
        "integrity": "sha512-q0yaFPggC9FUdsWH4blavRWFmxdrIodbkoKNAjJudAI6CA9gNPxHtV2RcZNEepZVlk4yvBYkOkbk6HIVpIyHZA==",
@@ -347,7 +355,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "Apache-2.0",
        "dependencies": {
          "tslib": "2.3.0",
-@@ -6666,7 +6663,6 @@
+@@ -6676,7 +6672,6 @@
        "version": "2.3.0",
        "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.3.0.tgz",
        "integrity": "sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==",
@@ -355,7 +363,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "0BSD"
      },
      "node_modules/editorconfig": {
-@@ -6914,6 +6910,15 @@
+@@ -6924,6 +6919,15 @@
          "node": ">= 0.6"
        }
      },
@@ -371,7 +379,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/eventsource": {
        "version": "4.1.0",
        "resolved": "https://registry.npmjs.org/eventsource/-/eventsource-4.1.0.tgz",
-@@ -7353,7 +7358,6 @@
+@@ -7363,7 +7367,6 @@
        "version": "4.2.11",
        "resolved": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz",
        "integrity": "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==",
@@ -379,7 +387,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "ISC"
      },
      "node_modules/hachure-fill": {
-@@ -7769,6 +7773,18 @@
+@@ -7779,6 +7782,18 @@
          "node": ">=0.10.0"
        }
      },
@@ -398,7 +406,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/is-number": {
        "version": "7.0.0",
        "resolved": "https://registry.npmjs.org/is-number/-/is-number-7.0.0.tgz",
-@@ -8084,6 +8100,15 @@
+@@ -8094,6 +8109,15 @@
          "setimmediate": "^1.0.5"
        }
      },
@@ -414,7 +422,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/katex": {
        "version": "0.17.0",
        "resolved": "https://registry.npmjs.org/katex/-/katex-0.17.0.tgz",
-@@ -8640,6 +8665,19 @@
+@@ -8650,6 +8674,19 @@
        "integrity": "sha512-AZV+GsS/6ckvPOVQPXSiFFacKvKB4kOQu6ynt9wz0F3LO4R9Ij4K1ddYsIytDpSgLz88JHd9P+oaLeej5/Sl7Q==",
        "license": "MIT"
      },
@@ -434,7 +442,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/long": {
        "version": "5.3.2",
        "resolved": "https://registry.npmjs.org/long/-/long-5.3.2.tgz",
-@@ -8663,6 +8701,21 @@
+@@ -8673,6 +8710,21 @@
          "node": "20 || >=22"
        }
      },
@@ -456,7 +464,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/magic-string": {
        "version": "0.30.21",
        "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
-@@ -8770,6 +8823,59 @@
+@@ -8780,6 +8832,59 @@
          "node": ">= 0.4"
        }
      },
@@ -516,7 +524,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/mdn-data": {
        "version": "2.27.1",
        "resolved": "https://registry.npmjs.org/mdn-data/-/mdn-data-2.27.1.tgz",
-@@ -9327,6 +9433,18 @@
+@@ -9337,6 +9442,18 @@
          "url": "https://github.com/sponsors/ljharb"
        }
      },
@@ -535,7 +543,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/on-exit-leak-free": {
        "version": "2.1.2",
        "resolved": "https://registry.npmjs.org/on-exit-leak-free/-/on-exit-leak-free-2.1.2.tgz",
-@@ -9395,6 +9513,21 @@
+@@ -9405,6 +9522,21 @@
          "node": ">=8"
        }
      },
@@ -557,7 +565,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/p-try": {
        "version": "2.2.0",
        "resolved": "https://registry.npmjs.org/p-try/-/p-try-2.2.0.tgz",
-@@ -9584,6 +9717,95 @@
+@@ -9594,6 +9726,95 @@
        "dev": true,
        "license": "MIT"
      },
@@ -653,7 +661,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/picocolors": {
        "version": "1.1.1",
        "resolved": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
-@@ -9802,6 +10024,45 @@
+@@ -9812,6 +10033,45 @@
          "node": "^10 || ^12 || >=14"
        }
      },
@@ -699,7 +707,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/process-nextick-args": {
        "version": "2.0.1",
        "resolved": "https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-2.0.1.tgz",
-@@ -9826,6 +10087,23 @@
+@@ -9836,6 +10096,23 @@
        ],
        "license": "MIT"
      },
@@ -723,7 +731,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/proto-list": {
        "version": "1.2.4",
        "resolved": "https://registry.npmjs.org/proto-list/-/proto-list-1.2.4.tgz",
-@@ -10292,6 +10570,15 @@
+@@ -10302,6 +10579,15 @@
          "node": ">= 0.6"
        }
      },
@@ -739,7 +747,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/rfdc": {
        "version": "1.4.1",
        "resolved": "https://registry.npmjs.org/rfdc/-/rfdc-1.4.1.tgz",
-@@ -10602,6 +10889,15 @@
+@@ -10612,6 +10898,15 @@
          "node": ">=v12.22.7"
        }
      },
@@ -755,7 +763,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/secure-json-parse": {
        "version": "4.1.0",
        "resolved": "https://registry.npmjs.org/secure-json-parse/-/secure-json-parse-4.1.0.tgz",
-@@ -11149,7 +11445,6 @@
+@@ -11159,7 +11454,6 @@
        "version": "4.2.0",
        "resolved": "https://registry.npmjs.org/split2/-/split2-4.2.0.tgz",
        "integrity": "sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==",
@@ -763,20 +771,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "ISC",
        "engines": {
          "node": ">= 10.x"
-@@ -11490,6 +11785,12 @@
-       "dev": true,
-       "license": "MIT"
-     },
-+    "node_modules/three": {
-+      "version": "0.170.0",
-+      "resolved": "https://registry.npmmirror.com/three/-/three-0.170.0.tgz",
-+      "integrity": "sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==",
-+      "license": "MIT"
-+    },
-     "node_modules/tinybench": {
-       "version": "2.9.0",
-       "resolved": "https://registry.npmjs.org/tinybench/-/tinybench-2.9.0.tgz",
-@@ -11900,6 +12201,12 @@
+@@ -11910,6 +12204,12 @@
        "integrity": "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==",
        "license": "MIT"
      },
@@ -789,7 +784,7 @@ index 2e9bcba1..59bd2b60 100644
      "node_modules/universalify": {
        "version": "2.0.1",
        "resolved": "https://registry.npmjs.org/universalify/-/universalify-2.0.1.tgz",
-@@ -12853,7 +13160,6 @@
+@@ -12863,7 +13163,6 @@
        "version": "4.0.2",
        "resolved": "https://registry.npmjs.org/xtend/-/xtend-4.0.2.tgz",
        "integrity": "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==",
@@ -797,7 +792,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "MIT",
        "engines": {
          "node": ">=0.4"
-@@ -12994,7 +13300,6 @@
+@@ -13004,7 +13303,6 @@
        "version": "6.1.0",
        "resolved": "https://registry.npmjs.org/zrender/-/zrender-6.1.0.tgz",
        "integrity": "sha512-oEGMDB6pOP2S6OwRR4PdVv610zrjnA3Bh+JnSG12fYJlBKjtNAoEb5fSUoCOOINlH96I2fU38/A2UpRKs67xYQ==",
@@ -805,7 +800,7 @@ index 2e9bcba1..59bd2b60 100644
        "license": "BSD-3-Clause",
        "dependencies": {
          "tslib": "2.3.0"
-@@ -13004,7 +13309,6 @@
+@@ -13014,7 +13312,6 @@
        "version": "2.3.0",
        "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.3.0.tgz",
        "integrity": "sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==",
@@ -813,17 +808,3 @@ index 2e9bcba1..59bd2b60 100644
        "license": "0BSD"
      }
    }
-diff --git a/package.json b/package.json
---- a/package.json
-+++ b/package.json
-@@ -52,8 +52,8 @@
-     "test:ekko-agent": "vitest run tests/ekko-agent",
-     "build:ekko-agent": "npm --prefix packages/ekko-agent run build",
-     "verify:sharp-runtime": "node scripts/verify-sharp-runtime.mjs",
--    "prepare": "[ -d dist ] || npm run build",
--    "preview": "NODE_ENV=production vite preview",
-+    "prepare": "node -e \"require('node:fs').existsSync('dist') || process.exit(1)\" || npm run build",
-+    "preview": "cross-env NODE_ENV=production vite preview",
-     "test": "vitest run",
-     "test:watch": "vitest",
-     "test:coverage": "vitest run --coverage",

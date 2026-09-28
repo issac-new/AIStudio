@@ -3,6 +3,7 @@
 // / IdeRunResultCard 渲染接线 / patch 344 漂移守卫。
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 import { mount } from '@vue/test-utils'
 import { nextTick, reactive } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
@@ -215,21 +216,8 @@ describe('IdeRunResultCard 接线（codex-product 任务结果卡语义）', () 
 describe('patch 344 漂移守卫', () => {
   const overlayRoot = resolve(__dirname, '../../../..')
 
-  it('344 双语含 runResult/plan/paletteCmdReview；series/manifest 登记', () => {
-    const patch = readFileSync(resolve(overlayRoot, 'patches/344-client-i18n-ide-r3.patch'), 'utf8')
-    for (const key of ['runResult', 'actImplement', 'paletteCmdReview']) {
-      expect(patch).toContain(key)
-    }
-    expect(patch).toContain('locales/zh.ts')
-    expect(patch).toContain('locales/en.ts')
-    const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
-    expect(series).toContain('344-client-i18n-ide-r3.patch')
-    // manifest 只存在于执行过 npm run inject 的检出（主 overlay 根）；
-    // worktree/CI 检出无注入态时跳过该项，series 守卫已保下限
-    const manifestPath = resolve(overlayRoot, '.overlay-injected.json')
-    if (existsSync(manifestPath)) {
-      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-      expect(manifest.appliedPatches).toContain('344-client-i18n-ide-r3.patch')
-    }
+  it('344 双语含 runResult/plan/paletteCmdReview（注入态词表直断）', () => {
+    expectLocaleKeys('ide', ['runResult', 'paletteCmdReview'])
+    expectLocaleKeys('ide.plan', ['actImplement'])
   })
 })

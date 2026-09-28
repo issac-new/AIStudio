@@ -55,19 +55,6 @@ index aab5563e..004a91a0 100644
      searchScope: 'Suchbereich: nur lokale Web-UI-Sitzungsdatenbank; schreibgeschützte Hermes-Verlaufssitzungen sind nicht enthalten.',
      searchFailed: 'Sitzungssuche fehlgeschlagen',
      searchNoSnippet: 'Keine Vorschau verfügbar',
-diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 2c8e7af0..1dfc4628 100644
---- a/packages/client/src/i18n/locales/en.ts
-+++ b/packages/client/src/i18n/locales/en.ts
-@@ -1034,7 +1034,7 @@ export default {
-     searchTitle: 'Search Sessions',
-     searchSubtitle: 'Search by title or message content',
-     searchScope: 'Search scope: Web UI local session database only. Read-only Hermes history sessions are not included.',
--    searchHint: 'Cmd/Ctrl+K',
-+    searchHint: 'Cmd/Ctrl+F',
-     searchPlaceholder: 'Search sessions...',
-     searchEmpty: 'Recent sessions',
-     searchRecent: 'Recent session',
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
 index 33ca7f88..db3f3c80 100644
 --- a/packages/client/src/i18n/locales/es.ts
@@ -159,16 +146,3 @@ index 791aa1b2..a10f1b49 100644
      searchPlaceholder: '搜尋工作階段...',
      searchEmpty: '最近工作階段',
      searchRecent: '最近工作階段',
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index f2b69c3f..9eb0fca9 100644
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -1034,7 +1034,7 @@ export default {
-     searchTitle: '搜索会话',
-     searchSubtitle: '按标题或消息内容搜索',
-     searchScope: '搜索范围：仅 Web UI 本地会话库；不包含只读 Hermes 历史会话。',
--    searchHint: 'Cmd/Ctrl+K',
-+    searchHint: 'Cmd/Ctrl+F',
-     searchPlaceholder: '搜索会话...',
-     searchEmpty: '最近会话',
-     searchRecent: '最近会话',

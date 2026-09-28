@@ -102,4 +102,52 @@ describe('R9 评审面板', () => {
     expect(w.find('[data-testid="ide-review-verdict-accept"]').classes()).toContain('is-active')
     expect(chatState.sendMessage).toHaveBeenCalled()
   })
+
+  it('发起评审必须带 domain（服务端必填两域）+ resolve 回流 resolve 端点', async () => {
+    const { default: IdeReviewPanel } = await import('../components/IdeReviewPanel.vue')
+    const calls: Array<{ url: string; method: string; body?: string }> = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL, init?: { method?: string; body?: string }) => {
+      const u = String(url)
+      calls.push({ url: u, method: init?.method ?? 'GET', body: init?.body })
+      if (u === '/api/review') return { ok: true, status: 200, json: async () => ({ ok: true, review: { reviewId: 'r1', domain: 'uncommitted' } }) }
+      return { ok: true, status: 200, json: async () => ({ ok: true, review: { reviewId: 'r1', comments: [] } }) }
+    }))
+    try {
+      const w = mount(IdeReviewPanel)
+      await w.find('[data-testid="ide-review-start"]').trigger('click')
+      await w.vm.$nextTick()
+      const post = calls.find((c) => c.url === '/api/review' && c.method === 'POST')
+      expect(post).toBeTruthy()
+      expect(JSON.parse(post!.body ?? '{}')).toMatchObject({ domain: 'uncommitted' })
+      const vm = w.vm as unknown as { reviewId: string | null; findings: Array<Record<string, unknown>> }
+      expect(vm.reviewId?.startsWith('ide-s1-')).toBe(true)
+      // resolve 回流：本地置 resolved 后 POST resolve 端点
+      vm.findings = [{ id: 'f1', domain: 'uncommitted', severity: 'high', text: 'x', resolved: false }]
+      await w.vm.$nextTick()
+      await w.find('[data-testid="ide-review-resolve-f1"]').trigger('click')
+      await w.vm.$nextTick()
+      const resolveCall = calls.find((c) => c.url === `/api/review/${vm.reviewId}/comments/f1/resolve`)
+      expect(resolveCall?.method).toBe('POST')
+      expect(w.find('[data-testid="ide-review-f1"]').exists()).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('resolve 回流失败如实回退（服务端仍 open，不得假 resolved）', async () => {
+    const { default: IdeReviewPanel } = await import('../components/IdeReviewPanel.vue')
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({ ok: false, detail: 'boom' }) })))
+    try {
+      const w = mount(IdeReviewPanel)
+      const vm = w.vm as unknown as { reviewId: string | null; findings: Array<Record<string, unknown>> }
+      vm.reviewId = 'r1'
+      vm.findings = [{ id: 'f1', domain: 'uncommitted', severity: 'high', text: 'x', resolved: false }]
+      await w.vm.$nextTick()
+      await w.find('[data-testid="ide-review-resolve-f1"]').trigger('click')
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="ide-review-f1"]').exists()).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })
