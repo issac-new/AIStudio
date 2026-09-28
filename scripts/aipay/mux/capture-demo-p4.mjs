@@ -45,7 +45,7 @@ await page.locator('text=支付收银台需求分析讨论群').first()
   .waitFor({ state: 'visible', timeout: 70000 })
   .catch(() => console.log('  [warn] 房间列表未同步'))
 // 同名 6 群必点错——按 roomId 精确点选（data-testid="room-<roomId>"）
-const roomBtn = page.locator(`[data-testid="room-${ROOM}"]`)
+const roomBtn = page.locator(`[data-testid="flow-session-${ROOM}"]`)
 if (await roomBtn.count() > 0) { await roomBtn.first().click().catch(() => {}); await page.waitForTimeout(20000) }
 else if (await page.locator('text=支付收银台需求分析讨论群').first().isVisible().catch(() => false)) {
   await page.locator('text=支付收银台需求分析讨论群').first().click().catch(() => {}); await page.waitForTimeout(5000)
