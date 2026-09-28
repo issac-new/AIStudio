@@ -79,11 +79,18 @@ truth_imgs = sorted(STEPS_DIR.glob('*.png')) if STEPS_DIR.exists() else []
 # ── 演示步（同 demo-report-gen STEPS，含 3b）──
 from demo_steps_data import STEPS, GAPS, FIXES  # 抽出的共享数据模块
 
+SHOTS_V2 = EVID / '20260928-product-demo' / 'shots-v2'
+
 def b64(name):
     if not name:
         return None
-    p = SHOTS / name
-    return base64.b64encode(p.read_bytes()).decode() if p.exists() else None
+    # 归一（坑④修复）：核验图集 shots-v2 优先，旧 shots/ 兜底——demo_steps_data 已把
+    # 二轮审计证伪的旧引用替换为 shots-v2 核验图；并行补拍的新图仍在 shots/。
+    for base in (SHOTS_V2, SHOTS):
+        p = base / name
+        if p.exists():
+            return base64.b64encode(p.read_bytes()).decode()
+    return None
 
 out = []
 out.append('''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
