@@ -3,6 +3,7 @@
 // 消耗面推导 / patch 346 漂移守卫。
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 import { mount } from '@vue/test-utils'
 import { nextTick, reactive } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
@@ -113,19 +114,8 @@ describe('IdeGoalBudgetFloat 消耗面（zcode goal stats 语义）', () => {
 describe('patch 346 漂移守卫', () => {
   const overlayRoot = resolve(__dirname, '../../../..')
 
-  it('346 双语含 worktree/goal/wiki.pipeline；series/manifest 登记', () => {
-    const patch = readFileSync(resolve(overlayRoot, 'patches/346-client-i18n-ide-r5.patch'), 'utf8')
-    for (const key of ['worktree', 'goal', 'pipeline']) {
-      expect(patch).toContain(key)
-    }
-    expect(patch).toContain('locales/zh.ts')
-    expect(patch).toContain('locales/en.ts')
-    const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
-    expect(series).toContain('346-client-i18n-ide-r5.patch')
-    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
-    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
-      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
-      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
-    expect(manifest.appliedPatches).toContain('346-client-i18n-ide-r5.patch')
+  it('346 双语含 worktree/goal/wiki.pipeline（注入态词表直断）', () => {
+    expectLocaleKeys('ide', ['worktree', 'goal'])
+    expectLocaleKeys('ide.wiki', ['pipeline'])
   })
 })

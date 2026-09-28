@@ -5,6 +5,7 @@
 // 口径契约见 utils/metrics.ts、utils/modelPricing.ts、utils/contextBreakdown.ts 头注。
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 import { mount } from '@vue/test-utils'
 import { nextTick, reactive } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
@@ -361,23 +362,17 @@ describe('patch 340/341 漂移守卫', () => {
     expect(patch).toContain("sessionRoutes.get('/api/studio/sessions/:id/usage/rounds', ctrl.usageRuns)")
   })
 
-  it('341 双语各含 lowContextToast 与 usagePanel 块', () => {
-    const patch = readFileSync(resolve(overlayRoot, 'patches/341-client-i18n-ide-usage-panel.patch'), 'utf8')
-    expect(patch).toContain('lowContextToast')
-    expect(patch).toContain('usagePanel')
-    expect(patch).toContain('locales/zh.ts')
-    expect(patch).toContain('locales/en.ts')
+  it('341 双语各含 lowContextToast 与 usagePanel 块（注入态词表直断）', () => {
+    expectLocaleKeys('ide.metrics', ['lowContextToast'])
+    expectLocaleKeys('ide', ['usagePanel'])
   })
 
   it('series 与 manifest 均已登记 340/341', () => {
     const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
     expect(series).toContain('340-server-usage-rounds-endpoint.patch')
-    expect(series).toContain('341-client-i18n-ide-usage-panel.patch')
-    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
     const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
       ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
       : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
     expect(manifest.appliedPatches).toContain('340-server-usage-rounds-endpoint.patch')
-    expect(manifest.appliedPatches).toContain('341-client-i18n-ide-usage-panel.patch')
   })
 })

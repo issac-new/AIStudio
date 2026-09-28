@@ -1,15 +1,3 @@
-diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
---- a/packages/desktop/electron-builder.yml
-+++ b/packages/desktop/electron-builder.yml
-@@ -14,7 +14,7 @@ publish:
- buildDependenciesFromSource: false
- nodeGypRebuild: false
- npmRebuild: false
--afterPack: "./scripts/verify-packaged-webui.mjs"
-+afterPack: "./scripts/after-pack-combined.cjs"
-
- files:
-   - "dist/**/*"
 diff --git a/packages/desktop/scripts/after-pack-combined.cjs b/packages/desktop/scripts/after-pack-combined.cjs
 new file mode 100644
 --- /dev/null

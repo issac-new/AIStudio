@@ -325,16 +325,23 @@ async function loadLatestDiff(): Promise<void> {
   if (!sid) return
   try {
     const summaries = await ideRunsApi.changes(sid)
+    if (chatStore.activeSessionId !== sid) return // 会话已切换，弃旧响应防乱序回写
     const latest = summaries[0]
     const file = (latest as unknown as { files?: Array<{ id: number; change_id: string; path: string }> }).files?.[0]
     if (!file) return
     const res = await fetch(`/api/studio/sessions/${encodeURIComponent(sid)}/workspace-run-changes/${encodeURIComponent(file.change_id)}/files/${file.id}`)
     if (!res.ok) return
     const body = (await res.json()) as { file?: { patch?: string } }
+    if (chatStore.activeSessionId !== sid) return // 文件详情返回前再次校验
     demoDiff.value = body.file?.patch ?? ''
   } catch { /* 无 diff 保持不渲染 */ }
 }
 onMounted(() => { void loadLatestDiff() })
+// 会话切换即清空并重拉：inline diff 只属于当前会话，残留即跨会话串显。
+watch(() => chatStore.activeSessionId, () => {
+  demoDiff.value = ''
+  void loadLatestDiff()
+})
 const modelLabel = computed(() => {
   const m = chatStore.activeSession?.model || appStore.selectedModel || ''
   return m || t('ide.chatSelectModel')

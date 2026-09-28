@@ -1,5 +1,5 @@
 diff --git a/vitest.config.ts b/vitest.config.ts
-index 0868870e..a8011625 100644
+index fe333408..a8a081f5 100644
 --- a/vitest.config.ts
 +++ b/vitest.config.ts
 @@ -6,6 +6,8 @@ export default defineConfig({
@@ -11,4 +11,3 @@ index 0868870e..a8011625 100644
        '@': resolve(__dirname, 'packages/client/src'),
        electron: resolve(__dirname, 'tests/mocks/electron.ts'),
        '/logo.png': resolve(__dirname, 'packages/client/public/logo.png'),
-    },
