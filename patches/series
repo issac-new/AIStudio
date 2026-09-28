@@ -270,3 +270,7 @@
 # 490（走查修复 2）：zcode 会话 scoped→global 自动回落——IDE 会话默认 scoped（模型
 #      可调）与服务端 zcode-only-global 冲突致发送全 400；回落而非硬拒。
 490-server-zcode-scoped-fallback.patch
+# 493（P4①② 群聊面接线 · 补功能缺口收口）：GroupMessageItem——card=t_xxx 转看板
+#      卡深链 markdown（utils/group-body-links）+ @当前登录人入 mention 高亮词表。
+#      （P4 特性组件与测试早已在库，但从未接入群聊真实渲染面——"证据待补"根因。）
+493-client-groupchat-p4-wiring.patch
