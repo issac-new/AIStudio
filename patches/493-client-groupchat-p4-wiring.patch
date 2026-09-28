@@ -1,0 +1,48 @@
+diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
+--- a/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupMessageItem.vue
+@@ -13,6 +13,10 @@
+ } from '../chat/highlight'
+ import { parseThinking, countThinkingChars } from '@/utils/thinking-parser'
+ import { isGatewayNotice as isGatewayNoticeText } from '@/custom/chat/gateway-notice'
++// HERMES_CUSTOM[P4] BEGIN: P4①② 群聊面接线——卡链接 markdown 化 + @当前登录人入高亮词表
++import { cardRefsToMarkdownLinks } from '@/custom/matrix-chat/utils/group-body-links'
++import { getStoredUsername } from '@/api/client'
++// HERMES_CUSTOM[P4] END
+ import { useGlobalSpeech } from '@/composables/useSpeech'
+ import { useVoiceSettings } from '@/composables/useVoiceSettings'
+ import { speedToEdgeRate, hzToEdgePitch } from '@/utils/ttsHelpers'
+@@ -131,7 +135,13 @@
+     return props.message.senderName || props.message.senderId || 'user'
+ })
+ 
+-const mentionNames = computed(() => ['all', ...props.agents.map(a => a.name).filter(Boolean)])
++const mentionNames = computed(() => {
++    // HERMES_CUSTOM[P4] BEGIN: @当前登录人高亮（P4②）——本机用户名入 mention 词表
++    const me = getStoredUsername()
++    const names = ['all', ...props.agents.map(a => a.name).filter(Boolean)]
++    return me && !names.includes(me) ? [...names, me] : names
++    // HERMES_CUSTOM[P4] END
++})
+ const parsedThinking = computed(() => parseThinking(props.message.content || '', { streaming: !!props.message.isStreaming }))
+ const hasReasoningField = computed(() => !!(props.message.reasoning && props.message.reasoning.length > 0))
+ const hasThinking = computed(() => hasReasoningField.value || parsedThinking.value.hasThinking)
+@@ -217,6 +227,9 @@
+         .join('\n')
+ })
+ const renderedDisplayBody = ref(displayBody.value)
++    // HERMES_CUSTOM[P4] BEGIN: 卡链接（P4①）——card=t_xxx 转看板卡深链 markdown
++    const groupBodyLinkified = computed(() => cardRefsToMarkdownLinks(renderedDisplayBody.value))
++    // HERMES_CUSTOM[P4] END
+ let streamingMarkdownTimer: ReturnType<typeof setTimeout> | null = null
+ 
+ function clearStreamingMarkdownTimer() {
+@@ -833,7 +846,7 @@
+                     <MarkdownRenderer :content="referencedContentMarkdown" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" />
+                     <MarkdownRenderer v-if="parsedMessageReference.reply" :content="parsedMessageReference.reply" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" />
+                 </template>
+-                <MarkdownRenderer v-else-if="renderedDisplayBody" :content="renderedDisplayBody" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" :defer-images="!!message.isStreaming" />
++                <MarkdownRenderer v-else-if="renderedDisplayBody" :content="groupBodyLinkified" :mention-names="mentionNames" :resolve-image-url="resolveGroupImageUrl" :defer-images="!!message.isStreaming" />
+                 <ToolChangeCard
+                     v-for="change in assistantWorkspaceChanges"
+                     :key="change.change_id"
