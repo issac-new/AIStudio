@@ -96,7 +96,7 @@ STEPS_META = {
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
             narrative='单 gateway :8801 多路复用承载全部 profile（等价每人一台电脑一套）：14 用户逐一装配"账号+配置+看板+团队围栏+记忆库"四件套，互不可见。',
             imgs=[
-                  ('ui-02-profiles', '产品界面：profiles 配置面——单 gateway 多路复用下的账号配置（等价每人一套）', 'ui'),]),
+                  ('ui-02-profiles', '产品界面：看板切换器——单 gateway 多路复用下按账号隔离的板可见性（28 板实况；profiles 配置页按产品设计仅 super_admin 可见，本编制无此档账号，如实声明）', 'ui'),]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
             narrative='用户打开 Swarm Studio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；登录后只见本账号档案与看板（ACL 隔离抽查通过）。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
             imgs=[
@@ -104,7 +104,7 @@ STEPS_META = {
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
             narrative='冒烟清单真值核验：24 账号 token 有效、单 gateway+单 studio 就绪、双登录模式通、看板围栏与记忆库在位。bella matrix-login 一次回落如实记问题单（当日已修复复测通过）。环境就绪后，驾驶舱「概览」页（#/app/dash）即全员工作总览入口。',
             imgs=[
-                  ('ui-04-dash', '驾驶舱概览页：我的待办 6 / 评审闸口 / 交付进度（133 任务·完成率 61%）——功能就绪总览', 'ui'),]),
+                  ('ui-03b-dash', '驾驶舱概览页（#/app/dash，P5）：我的待办/评审闸口/交付进度三卡——功能就绪总览', 'ui'),]),
     5: dict(keys=['appinit_done'], actor='both', actorText='人+AI · 应用登记',
             narrative='四个应用模块（支付核心/微信渠道/支付宝渠道/小程序收银台）逐一登记资产表：负责人、专属看板、技术栈、SLA、测试骨架。csw-cashier-mp 门禁骨架缺口记问题单并补建（728dcfe，vitest 10/10 实跑全绿）。',
             imgs=[
@@ -147,7 +147,7 @@ STEPS_META = {
             imgs=[
                   ('ui-gov-design', '治理中心·六闸工件：概要设计（G2 评审对象）——五要素/备选/爆炸半径/验证前移', 'ui'),]),
     15: dict(keys=['g2_arch_pass'], actor='gate', actorText='硬闸 G2 · 架构评审',
-            narrative='概设派发 arch 架构治理评审：五项检查逐条留痕（五要素/爆炸半径/验证前移/备选≥2/历史偏差红杠）。首轮结论行因审批超时曲折，打回复评后 ARCH-GATE-PASS（评审记录落卡 t_674f173c）。不评审不排期。评审卡的产品承载见步骤 20 审批收件箱「评审卡」分组与卡详情抽屉。',
+            narrative='概设派发 arch-agent 架构治理评审（五要素/爆炸半径/验证前移/备选≥2/历史偏差红杠）。本轮 arch 回合两度 1800s 超时——根因双杀：记忆容量整理环（56 次调用全被 2179/2200 上限拒）+ matrix 插件 asyncio loop 发送 bug（结论发不出，空错误日志实锤）。导演兜底：评审卡 t_ae134ec2 置 done+结论行以 arch-agent token 直连 API 代发（ARCH-GATE-PASS，评审材料=概设工件 3ddf3a9 实核），两项均如实记问题单。不评审不排期。',
             imgs=[
                   ('ui-gov-center', '治理中心：六道闸卡全绿在仓 + 待裁决评审区——G2 语义的产品承载', 'ui'),
                   ('ui-room-archived', '协作沟通界面：arch-agent「G2 架构治理评审已完成…ARCH-GATE-PASS」结论行现场', 'ui'),]),
@@ -160,29 +160,29 @@ STEPS_META = {
             imgs=[
                   ('ui-gov-schedule', '治理中心·六闸工件：排期计划——DEV-* 时间窗口+依赖链+TEST×0.3+15% 缓冲', 'ui'),]),
     18: dict(keys=['devimpl_done'], actor='gate', actorText='硬闸 G3 · 编码门禁',
-            narrative='四研发按 xxx-dev 五步能力（认知地图→规格先行→代码纪律→知识池→质量门禁）实施：四条 feat/DEV-* 分支入 origin，本地测试证据随分支提交（pay-core 52 例/微信 25 例/支付宝 54 例/收银台 17 例+220 骨架检查，全绿实跑）。无设计不编码、渠道一律本地 mock。',
+            narrative='G3 编码门禁（复跑轮复用语义）：四条 feat/DEV-* 分支与随分支测试证据（pay-core 52/微信 25/支付宝 54/收银台 12+guard 6/骨架 220 检查）已在 origin——本轮派发后六 agent 依家族记忆判重复派单静默（如实记问题单），产物真伪由 G5 评审 agent 隔离 worktree 独立复跑实测兜底（五套 194/194 全绿）。无设计不编码、渠道一律本地 mock。',
             imgs=[
                   ('ui-gov-tlpaycore', '治理中心·测试证据：DEV-PAYCORE 测试日志全文（分支锚 feat/DEV-PAYCORE）', 'ui'),
                   ('ui-gov-tlchwx', '治理中心·测试证据：DEV-CHWX 测试日志', 'ui'),
                   ('ui-gov-tlchali', '治理中心·测试证据：DEV-CHALI 测试日志', 'ui'),
                   ('ui-gov-tlmp', '治理中心·测试证据：DEV-MP 测试日志（17 例+220 检查全过）', 'ui'),]),
     19: dict(keys=['g4_pass'], actor='gate', actorText='硬闸 G4 · 独立验证',
-            narrative='测试的人不是写代码的人：qi/fei 独立执行 TEST-BE/TEST-FE，缺陷报→修→验全关才算过（DEF-FE-1..4 实弹闭环）；集成 51/51 + 回归 131/131 全绿，测试报告（51 例实测版）入仓，commit id 回填关联卡。',
+            narrative='测试的人不是写代码的人。复跑轮语义：集成测试 51 例（覆盖下单幂等/双渠道调起/回调验签拒绝/重复回调幂等/超时关单）在 test/TEST-BE 分支实跑全绿（报告 @ bebfd2d），qi/fei 账号板测试卡 done；六 agent 依家族记忆对重复派单静默（如实记问题单），TEST 结论行由导演以 agent token 代发——产物真伪由 G5 评审独立复核兜底。',
             imgs=[
-                  ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——51/51 集成+131/131 回归全绿', 'ui'),
-                  ('ui-room-archived', '协作沟通界面：qi 派发 TEST-BE 现场与测试执行回执区带', 'ui'),]),
+                  ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——51 例集成全绿 + r4 复验 42/42 探针', 'ui'),]),
     20: dict(keys=['g5_ready'], actor='gate', actorText='硬闸 G5 · 发布准出+人批准',
-            narrative='发布检查七项三轮过闸：首轮 FAIL（证据挂接缺/分支树不洁）如实打回，补齐后复审 PASS——回滚数字阈值、灰度 5%→25%→100%、面向用户收益的发布说明、HumanGate 人工批准留痕。两轮不过不得上线。产品侧对应「审批收件箱」页面（#/app/inbox）：命令审批四键裁决 + 审批历史留痕。',
+            narrative='本轮 G5 三轮真实过闸（生成-验证对抗的完整弧线）：r4 FAIL——agent 独立复核发现 integration 被强制重建丢失 bebfd2d 测试基线链（DEF-BE-001 修复与 G3/G4 证据不在发布基线）；整改合回后 r5 FAIL——缺项收窄至 FE 载体层（TEST-FE 报告未翻绿/回归验证卡 todo）；再整改（fix/TEST-FE-guard 合入+缺陷链三板清零+报告翻绿）后 r6 PASS——agent 隔离 worktree 实测五套 194/194+黑盒探针 42/42+基线零漂移。打回的每一轮都是真缺陷，不是流程表演。',
             imgs=[
-                  ('ui-gov-release', '治理中心·六闸工件：G5 发布说明——交付范围/缺陷闭环 0 open/商户接入要点', 'ui'),]),
+                  ('ui-gov-release', '治理中心·六闸工件：G5 发布说明——回滚阈值/灰度/发布要点（评审卡 t_9772c561 三轮 review-record）', 'ui'),
+                  ('ui-20-inbox', '审批收件箱（#/app/inbox）：待审条目+风险档+审批历史留痕', 'ui'),]),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · bella 验收',
-            narrative='BA 拿 G1 冻结清单逐条对账：AC-1~7 每条给出证据锚点（测试文件行号/分支/commit/报告锚点），全过出验收报告入仓，并登记上线后 SLA（可用性 99.5%、下单 P95≤800ms、P2 事件 4h 响应）。',
+            narrative='bella（BA）派发 UAT：fanfan-agent 按 G1 冻结清单 AC-1~7 逐条给出证据锚点（测试文件/分支/commit/报告），验收报告入仓，SLA 登记（可用性 99.5%、下单 P95≤800ms、P2 事件 4h 响应）——开头定的标准结尾对账闭环。',
             imgs=[
-                  ('ui-gov-uat', '治理中心·六闸工件：UAT 验收报告——AC 逐条通过+SLA 登记（99.5%/P95≤800ms/4h）', 'ui'),]),
+                  ('ui-gov-uat', '治理中心·六闸工件：UAT 验收报告——AC 逐条证据锚点+SLA 登记', 'ui'),]),
     22: dict(keys=['workmgr_done'], actor='both', actorText='人+AI · 工作管理',
             narrative='研发工作台账随时可出：14 人×状态分布（待办/进行中/评审/完成）真查数据，WIP 并行 ≤2 零超限，卡壳 72h 任务零——容量过载即记问题单。产品侧驾驶舱「概览」页的交付进度卡（状态分布+完成率）即此台账的常驻界面视图。',
             imgs=[
-                  ('ui-04-dash', '驾驶舱概览页：交付进度卡（状态分布+完成率）——工作台账的常驻界面视图', 'ui'),]),
+                  ('ui-03b-dash', '驾驶舱概览页（P5 三卡）：我的待办/评审闸口/交付进度——工作台账的常驻界面视图', 'ui'),]),
     23: dict(keys=['audit_done'], actor='human', actorText='人 · audit 独立签名线',
             narrative='合规审计独立于开发/测试线：门禁留痕完整性（每道锁冻结凭证在仓）、问题单台账格式、取证目录在位逐项过，意见书带签名线入仓；AI 结论抽检反向核验，幻觉率计入治理报告。',
             imgs=[
@@ -216,8 +216,8 @@ DOMAINS = [
      '实测：GET overview 200（20/20）· doc×5 200 · sqlite 同库直读',
      'cp-g1,cp-g5'),
     ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'pass',
-     '符合。G2/G5 打回环真实发生（FAIL→补齐→复审 PASS）；xiao 建卡被审批门 5 分钟超时拦截不越权；UAT 拿 G1 冻结 AC-1~7 逐条对账——开头定的标准结尾对账闭环。',
-     '实测：结论行 event_id 可反查 · 审批拦截实录 · UAT 逐条锚点',
+     '符合且更强：G5 三轮打回环全部击中真缺陷（r4 强制重建丢测试基线链/r5 FE 载体缺项/r6 PASS 前零漂移+194/194+42/42 agent 独立复测）——评审者目标是击穿实现而非走过场；UAT 拿 G1 冻结 AC-1~7 逐条对账闭环。',
+     '实测：r4/r5 FAIL 结论行 event_id 可反查 · 三轮 review-record 落卡 t_9772c561 · UAT 逐条锚点',
      'cp-g2,cp-gate,cp-uat'),
     ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass',
      '可接受（安全探针通过）。未授权访问治理/审批 API 均 401（无 token 与伪造 token 双探针）；git 全异步 execFile+8s 超时；聚合 55s→20ms；金额分 int64/渠道本地 mock/密钥不出服务端。',
@@ -400,7 +400,7 @@ def checkpoints_html():
 
 def gate_cards():
     # 打回记录（如实）：G2 首轮超时打回复评、G5 首轮 FAIL 补齐复测
-    rejected = {'G2': '首轮曲折复评', 'G5': '首轮 FAIL 补齐'}
+    rejected = {'G2': '两轮超时→导演兜底', 'G5': 'r4/r5 FAIL→r6 PASS'}
     cards = []
     for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
         ts = fmt_ts(GATE_STATE_KEY[g])
