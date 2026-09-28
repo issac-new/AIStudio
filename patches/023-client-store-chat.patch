@@ -6,22 +6,24 @@ index 49f1f54b..75564f7f 100644
  export const LIVE_CHAT_MESSAGE_PAGE_SIZE = 150
  export const LIVE_CHAT_MAX_LOADED_MESSAGES = 300
  const LEGACY_WORKSPACE_RUN_CHANGE_MESSAGE_PREFIX = 'workspace-run-change:'
--type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko-agent'
-+type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko-agent'
+-type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'ekko-agent'
++type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' | 'ekko-agent'
  
  function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
    if (agent === 'codex') return 'codex'
-@@ -39,6 +39,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
+@@ -39,7 +39,8 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
    if (agent === 'dsh') return 'dsh'
    if (agent === 'opencode') return 'opencode'
-   if (agent === 'claude') return 'claude-code'
+   if (agent === 'cursor') return 'cursor'
 +  if (agent === 'zcode') return 'zcode'
+   if (agent === 'claude') return 'claude-code'
    if (agent === 'ekko-agent') return 'ekko-agent'
    return undefined
  }
-@@ -50,6 +51,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
+@@ -50,7 +51,8 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
    if (id === 'dsh') return 'dsh'
    if (id === 'opencode') return 'opencode'
+   if (id === 'cursor') return 'cursor'
    if (id === 'claude-code') return 'claude'
 +  if (id === 'zcode') return 'zcode'
    if (id === 'ekko-agent') return 'ekko-agent'
@@ -99,14 +101,14 @@ index 49f1f54b..75564f7f 100644
    function clearActiveSession() {
      activeSelectionSequence++
      const sid = activeSessionId.value
-@@ -2020,6 +2071,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -2096,6 +2147,8 @@ export const useChatStore = defineStore('chat', () => {
      if (legacyActiveKey) removeItem(legacyActiveKey)
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
 +    // HERMES_CUSTOM[ChatUnread]
 +    clearSessionUnread(sessionId)
  
-     if (!activeSession.value) return
+     if (!activeSession.value) return false
  
 @@ -3089,6 +3142,7 @@ export const useChatStore = defineStore('chat', () => {
        runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,

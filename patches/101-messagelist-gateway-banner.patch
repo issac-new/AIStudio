@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index 8cad4b1d..cbb5b0a5 100644
+index c8d3eded..c6da693f 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
 @@ -28,6 +28,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
@@ -10,7 +10,7 @@ index 8cad4b1d..cbb5b0a5 100644
  
  const props = withDefaults(defineProps<{
    approvalPortalToBody?: boolean
-@@ -365,6 +366,24 @@ async function openForkParent(event?: MouseEvent) {
+@@ -374,6 +375,24 @@ async function openForkParent(event?: MouseEvent) {
  }
  
  function handleApproval(choice: "once" | "session" | "always" | "deny") {
@@ -35,11 +35,11 @@ index 8cad4b1d..cbb5b0a5 100644
    chatStore.respondApproval(choice);
  }
  
-@@ -635,6 +654,7 @@ defineExpose({
+@@ -654,6 +673,7 @@ defineExpose({
  
  <template>
-   <div class="message-list-shell">
+   <div class="message-list-shell" :aria-busy="isSearchLoading">
 +    <GatewayNoticeBanner :session-id="chatStore.activeSessionId" :messages="chatStore.messages" />
      <VirtualMessageList
+       v-if="!isSearchFetching"
        :key="activeSessionScrollKey || 'chat-empty'"
-       ref="listRef"

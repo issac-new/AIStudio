@@ -1,8 +1,14 @@
 diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
-index a81265bd..423d11f7 100644
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
-@@ -14,7 +14,7 @@ publish:
+@@ -1,5 +1,5 @@
+ appId: com.hermeswebui.studio
+-productName: Ekko Studio
++productName: SwarmStudio
+ copyright: Copyright © 2026
+ 
+ directories:
+@@ -14,7 +14,7 @@
  buildDependenciesFromSource: false
  nodeGypRebuild: false
  npmRebuild: false
@@ -11,3 +17,31 @@ index a81265bd..423d11f7 100644
  
  files:
    - "dist/**/*"
+@@ -89,15 +89,15 @@
+   entitlements: build/entitlements.mac.plist
+   entitlementsInherit: build/entitlements.mac.inherit.plist
+   extendInfo:
+-    NSMicrophoneUsageDescription: "Ekko Studio uses the microphone for voice conversations and speech transcription."
+-  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
++    NSMicrophoneUsageDescription: "SwarmStudio uses the microphone for voice conversations and speech transcription."
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ win:
+   icon: build/icon.ico
+   target:
+     - target: nsis
+       arch: [x64]
+-  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ linux:
+   icon: build/icons
+@@ -107,7 +107,7 @@
+     - target: deb
+       arch: [x64]   # fpm has no arm64 binary; deb only on x64
+   category: Development
+-  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
++  artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ deb:
+   afterInstall: build/linux-after-install.tpl

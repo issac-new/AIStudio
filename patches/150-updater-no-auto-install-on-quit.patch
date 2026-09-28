@@ -1,16 +1,26 @@
 diff --git a/packages/desktop/src/main/updater.ts b/packages/desktop/src/main/updater.ts
+index 5f7031bc..f0e659d5 100644
 --- a/packages/desktop/src/main/updater.ts
 +++ b/packages/desktop/src/main/updater.ts
-@@ -190,7 +190,11 @@ export function initAutoUpdater(nextOptions: AutoUpdaterOptions = {}) {
+@@ -332,7 +332,10 @@ export function initAutoUpdater(nextOptions: AutoUpdaterOptions = {}) {
    if (!app.isPackaged) return // dev mode: skip
-
+ 
    autoUpdater.autoDownload = false
 -  autoUpdater.autoInstallOnAppQuit = true
-+  // overlay[quit-no-auto-install]: do not auto-install on普通 quit. A downloaded
-+  // update would trigger NSIS silent install on every tray Quit, spawning
-+  // SwarmStudio.exe --quit and interfering with shutdown. Only install when
-+  // the user explicitly clicks "Restart now".
++  // overlay[quit-no-auto-install]: 退出不静默安装——下载完成的更新若开启 quit 自动安装，
++  // 每次 tray Quit 都会触发 NSIS 静默安装，拉起 SwarmStudio.exe --quit 干扰关机流程。
++  // 仅在用户显式点“立即重启”（quitAndInstallDownloadedUpdate）时安装。
 +  autoUpdater.autoInstallOnAppQuit = false
-
-   autoUpdater.on('update-available', info => {
-     console.log(`[updater] update available: ${info.version}`)
+ 
+   if (process.platform === 'darwin') {
+     nativeAutoUpdater.on('update-downloaded', () => {
+@@ -387,7 +390,8 @@ export function initAutoUpdater(nextOptions: AutoUpdaterOptions = {}) {
+   autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
+     if (!activeDownload || activeDownload.token.cancelled || activeDownload.error || info.version !== activeDownload.version) return
+     activeDownload.info = info
+-    autoUpdater.autoInstallOnAppQuit = true
++    // overlay[quit-no-auto-install]: 下载完成也不启用退出静默安装（同 initAutoUploader 处注释）
++    autoUpdater.autoInstallOnAppQuit = false
+     publishUpdateState({ status: 'preparing', percent: 100, bytesPerSecond: 0 })
+   })
+ 
