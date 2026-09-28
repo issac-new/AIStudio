@@ -1,7 +1,7 @@
 # Swarm Studio 全流程推演方案（V5 整合版）
 
 > **文档定位**：本文合并 V3 操作主链（`2026-09-25-mux-v3-lifecycle-plan.md`，背景/目标/编制/架构/26 步逐步把关原文/治理总则，全文并入第二至五章）与 V4.1 整合终版（`2026-09-28-aipaydev-v4-roadshow-refactor-v4.1-final.md`，七问题域治理框架、实现清单、路演层与执行态，并入第六至九章），是全流程推演的唯一正本。V3 与 V4.1 自本文起转为历史版本，仅存档不更新。此后变更走本文增量补遗，不再另立平行版本。
-> **基准**：overlay main @ b964f7fd；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
+> **基准**：overlay main @ f185efc5（本文合并基底）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
 
 ---
 
@@ -204,7 +204,7 @@ graph TB
 6. 可复现与 AI 贡献度量：每轮记录模型通道与版本，关键回合原始输入输出留档备查；治理报告增加 AI 贡献口径（AI 主理回合数与占比、人工介入次数）；同一需求可下轮双跑对比输出一致性，验证随机性应对是否有效。
 7. 指令通道与数据通道分离（V4 增补）：agent 只响应 @本人 指令语义，文档正文不作指令执行。
 
-## 六、七问题域 × 系统能力映射（落地终态 @ b964f7fd）
+## 六、七问题域 × 系统能力映射（落地终态 @ f185efc5）
 
 | 问题域 | 已落地能力（锚点） | 剩余 |
 |---|---|---|
@@ -245,6 +245,7 @@ graph TB
 | capture-v42 | RUN_ID 参数化+三新特性实拍位+去 Dismiss 导航劫持 | 12db6e64；8f109fe8 |
 | 统一报告 run 模式 | UNIFIED_RUN_ID 按轮次取输入落输出+旅程线正文嵌入+审计改判真值节 | 4046ab5c/9f80ac7e（merge b964f7fd） |
 | 终版叙事收口 | G5 三轮打回环真值化+G2/19 步复跑轮语义+缺图步补拍对位 | c353a154 |
+| x20 吸收第一批 | IDE 14 件接线（presence/workdir/resume/roster/thread-usage/memory 分治新鲜度/brief 差异度量/modelroute Auto 档等） | d5f70537+83e5413f |
 
 ## 八、路演报告与交付物
 
@@ -272,11 +273,11 @@ graph TB
 | V4-run2（RUN_ID=20260929-v4-run2，09-29） | 执行区间（START_STEP=smoke）全部 gates 完毕；evidence/ 落 unified-roadshow-report.html（97.5KB）+ simulation-report.html（88KB）+ 审计处置台账 audit-response-disposition.md；配套门禁完整性根治在 fix/harness-gate-integrity（在途待合） |
 | 终态回归 | vitest 413 文件 3034 用例 + build:full 绿（V4.1 时点）；v0.7.25 升级轮 244 补丁重放零告警 |
 | aipaydev 中央仓 | 冻结/系分/概设/排期/DEV 分支/测试报告/验收/审计/复盘全程入仓（本地 integration/RFD-001 与远端 27 分支，ls-remote 核对） |
-| 在途待合（截至 b964f7fd） | fix/24h-review-20260929（24h 审查批 20 项根治）；fix/harness-gate-integrity（门禁完整性六缺陷+H7-H11 判词语义）；feat/x20-absorb-first-batch |
+| 在途待合（截至 f185efc5） | fix/24h-review-20260929（24h 审查批 20 项根治）；fix/harness-gate-integrity（门禁完整性六缺陷+H7-H11 判词语义）——x20 吸收第一批已随 d5f70537/83e5413f 进 main |
 
 ## 十、剩余 backlog（按优先级）
 
-1. **在途三支待合 main**：24h 审查批、harness 门禁完整性、x20 吸收首批——各属主会话收口，合入后本章更新。
+1. **在途两支待合 main**：24h 审查批、harness 门禁完整性——各属主会话收口，合入后本章更新。
 2. **统一报告路演定稿**：run2 版已出（97.5KB），定稿前按报告内缺口台账补拍对位（c353a154 机制已落）。
 3. **长线记档项**：SBOM+依赖白名单；graphify 代码知识图谱接入；影子运行/双跑对比（口径已立）；逃逸缺陷率与 revert 率长线数据（六域体检台账已开始积攒）。
 
