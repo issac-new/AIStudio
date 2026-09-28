@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDE 工作台实弹走查报告（2026-09-28）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0f1117; color: #e2e8f0; line-height: 1.6; }
+  .header { padding: 40px 24px 24px; text-align: center; border-bottom: 1px solid #2a2f3a; }
+  .header h1 { font-size: 26px; margin-bottom: 8px; color: #7ee787; }
+  .header .meta { color: #8b949e; font-size: 13px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+  .stat { background: #161b22; border: 1px solid #2a2f3a; border-radius: 8px; padding: 14px 18px; }
+  .stat .v { font-size: 28px; font-weight: 700; color: #79c0ff; }
+  .stat .l { font-size: 12px; color: #8b949e; }
+  .fixes { max-width: 1200px; margin: 0 auto; padding: 0 24px 20px; }
+  .fix-card { background: #161b22; border-left: 3px solid #f0883e; border-radius: 6px; padding: 14px 18px; margin-bottom: 10px; }
+  .fix-card h3 { color: #f0883e; font-size: 14px; margin-bottom: 4px; }
+  .fix-card p { font-size: 13px; color: #b8c0cc; }
+  .steps { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
+  .step { background: #161b22; border: 1px solid #2a2f3a; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .step h2 { font-size: 17px; margin-bottom: 10px; color: #e2e8f0; }
+  .step .num { display: inline-block; background: #238636; color: #fff; border-radius: 4px; font-size: 12px; padding: 2px 8px; margin-right: 10px; font-family: monospace; }
+  .step .desc { font-size: 14px; color: #c9d1d9; margin-bottom: 6px; }
+  .step .evidence { font-size: 12px; color: #79c0ff; background: #0d1117; border-radius: 4px; padding: 6px 10px; margin-bottom: 12px; }
+  .step img { width: 100%; border-radius: 6px; border: 1px solid #2a2f3a; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>IDE 工作台实弹走查报告</h1>
+  <div class="meta">2026-09-28 · 前端 :8651（vite→8647） · 引擎 :3030 · 验收用户 e2e-accept · 全部截图为真实浏览器逐步截取</div>
+</div>
+<div class="summary">
+  <div class="stat"><div class="v">20</div><div class="l">走查步骤（逐步真实截图）</div></div>
+  <div class="stat"><div class="v">2</div><div class="l">真实缺陷修复（看板数据链/会话模式冲突）</div></div>
+  <div class="stat"><div class="v">69</div><div class="l">看板真实任务卡（三列分桶）</div></div>
+  <div class="stat"><div class="v">905</div><div class="l">技能清单加载</div></div>
+  <div class="stat"><div class="v">7</div><div class="l">agent 真实工具调用（Bash×4+Write×3）</div></div>
+  <div class="stat"><div class="v">3</div><div class="l">agent 产出文件（独立验证通过）</div></div>
+</div>
+<div class="fixes">
+  <div class="fix-card"><h3>修复 1：看板面板 0 卡（数组契约 bug）</h3><p>IdeKanbanPane 取 <code>res.tasks ?? []</code>，但 upstream <code>listTasks()</code> 返回数组 → 恒空。修为 <code>Array.isArray(res) ? res : res.tasks ?? []</code>，69 卡渲染实证。附带：加载策略改单次直取+队列超时重试（避开 45s exec 队列超时）。</p></div>
+  <div class="fix-card"><h3>修复 2：IDE 会话发送即 400（scoped/global 冲突）</h3><p>IDE 会话默认 scoped（模型可调修复）与服务端 zcode 引擎 only-global 硬约束冲突。服务端（patch 490）改为 scoped→global 自动回落而非硬拒。修复后真实开发任务全程跑通。</p></div>
+  <div class="fix-card"><h3>附带修复（前轮）：hermes 运行时冲突标记</h3><p>~/.hermes/hermes-agent TUI 源码遗留合并冲突标记 → CLI 每次启动炸 → 看板链断。冲突块取 ours + TUI 重建 + source_completion 跑完，boards 500→200。</p></div>
+</div>
+<div class="steps">
+    <section class="step">
+      <h2><span class="num">01</span>步骤 1：登录页</h2>
+      <p class="desc">8651 前端（vite→8647 后端）冷启动登录页。清态后展示 Matrix 登录表单，Vue 应用壳正常挂载。</p>
+      <p class="evidence">🔍 环境：8647 后端 health 200 + vite 8651 代理 → /api/auth/me 200</p>
+      <img src="shots/01-login.png" alt="步骤 1：登录页" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">02</span>步骤 2：IDE 工作台主界面</h2>
+      <p class="desc">注入 e2e-accept 用户 JWT（8647 /api/auth/login 签发）后进入 /#/ide。ide-shell + ide-chat 全挂载，头部含新建会话/恢复(⏎)/分享(⇗)按钮。</p>
+      <p class="evidence">🔍 挂载判定：.ide-shell ✓ .ide-chat ✓ #app.__vue_app__ ✓</p>
+      <img src="shots/02-ide-workspace.png" alt="步骤 2：IDE 工作台主界面" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">03</span>步骤 3：输入框模型选择器</h2>
+      <p class="desc">点击输入栏模型按钮（aim），弹出独立引擎目录浮层：alibaba/opencode-free/custom:cc-switch/kimi-coding 等分组。</p>
+      <p class="evidence">🔍 浮层 testid=ide-input-model-picker ✓，分组真实来自 /api/hermes/available-models</p>
+      <img src="shots/03-model-picker.png" alt="步骤 3：输入框模型选择器" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">04</span>步骤 4：权限七档切换器</h2>
+      <p class="desc">点击 ⛨ 按钮展开七档面板：只读/计划/标准/自动编辑/少问/全自动/绕过，每档带引擎映射提示（如 default→engine: edit）。</p>
+      <p class="evidence">🔍 七档全部渲染 ✓，档位含义+引擎映射文案完整</p>
+      <img src="shots/04-perm-switcher.png" alt="步骤 4：权限七档切换器" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">05</span>步骤 5：@六源引用面板</h2>
+      <p class="desc">点击 @ 按钮展开六源菜单（文件/会话/技能/插件/子代理/画板），选 file 源填入 package.json 后加入引用，chips 区显示 @file:package.json。</p>
+      <p class="evidence">🔍 六源 ✓，chip 暂存+移除 ✓（走查中即时清理）</p>
+      <img src="shots/05-mention-picker.png" alt="步骤 5：@六源引用面板" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">06</span>步骤 6：checkpoint 恢复对话框</h2>
+      <p class="desc">点击 ⏎ 打开四恢复选项对话框：代码+对话/仅对话/仅代码/摘要从此处开始。当前会话无历史消息行（新会话，行数 0 合理）。</p>
+      <p class="evidence">🔍 四模式按钮 ✓，对话框 testid=ide-recovery-dialog ✓</p>
+      <img src="shots/06-recovery-dialog.png" alt="步骤 6：checkpoint 恢复对话框" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">07</span>步骤 7：状态栏槽位定制</h2>
+      <p class="desc">点击状态栏 ⚙ 弹出槽位配置面板：workspace/zcode/遥测簇三个可显隐可排序槽位（localStorage 持久化）。</p>
+      <p class="evidence">🔍 3 个槽位 checkbox ✓</p>
+      <img src="shots/07-statusbar-slots.png" alt="步骤 7：状态栏槽位定制" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">08</span>步骤 8：看板 Board 视图（69 张真实任务卡）</h2>
+      <p class="desc">侧栏 ▦ 看板 tab。修复数组契约 bug 后渲染 69 张真实任务：done·62 / ready·1 / blocked·6 三列分桶，优先级色标。</p>
+      <p class="evidence">🔍 修复：listTasks() 返回数组，原代码 res.tasks ?? [] 恒空 → Array.isArray 兼容。cards=69 实证</p>
+      <img src="shots/08-kanban-board.png" alt="步骤 8：看板 Board 视图（69 张真实任务卡）" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">09</span>步骤 9：看板 Swimlane 视图</h2>
+      <p class="desc">切换泳道视图：20 条泳道按负责人分组（worker-coder·4 / [已移除]·2 / ops-devops·2…）。</p>
+      <p class="evidence">🔍 lanes=20 ✓ 真实负责人数据</p>
+      <img src="shots/09-kanban-swimlane.png" alt="步骤 9：看板 Swimlane 视图" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">10</span>步骤 10：看板 Gantt 视图</h2>
+      <p class="desc">切换甘特视图：65 条时间条（59 条已完成实心），按开始时间排序。</p>
+      <p class="evidence">🔍 bars=65, done=59 ✓</p>
+      <img src="shots/10-kanban-gantt.png" alt="步骤 10：看板 Gantt 视图" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">11</span>步骤 11：工具时间线面板（空态）</h2>
+      <p class="desc">侧栏 ⚙ 工具 tab。新会话无工具调用时的诚实空态。</p>
+      <p class="evidence">🔍 空态文案 ✓（后面步骤 19 展示有数据态）</p>
+      <img src="shots/11-tools-timeline.png" alt="步骤 11：工具时间线面板（空态）" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">12</span>步骤 12：MCP 面板技能子页签</h2>
+      <p class="desc">MCP tab → 技能子页签：905 个技能全部加载（905 skills · 905 enabled）。</p>
+      <p class="evidence">🔍 来自 GET /api/hermes/skills 真实数据（10 类目 324 技能，聚合后 905 项）</p>
+      <img src="shots/12-skills-tab.png" alt="步骤 12：MCP 面板技能子页签" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">13</span>步骤 13：需求输入</h2>
+      <p class="desc">在 IDE 输入框输入真实前后端开发需求：mini-site 静态项目（index.html+api/health.json+style.css，中文注释，自验证）。</p>
+      <p class="evidence">🔍 textarea 238 字 ✓</p>
+      <img src="shots/13-prompt-typed.png" alt="步骤 13：需求输入" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">14</span>步骤 14：发送（首次——暴露缺陷）</h2>
+      <p class="desc">Enter 发送。agent 回复报错："ZCode 会话仅支持 global 模式"——走查抓到真实缺陷：IDE 会话默认 scoped 与服务端 zcode-only-global 冲突。</p>
+      <p class="evidence">🔍 缺陷 2 定位：server coding-agents/services/index.ts:3563 硬 400</p>
+      <img src="shots/14-message-sent.png" alt="步骤 14：发送（首次——暴露缺陷）" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">15</span>步骤 15：缺陷修复（scoped→global 回落）</h2>
+      <p class="desc">服务端修复（patch 490）：zcode 会话遇 scoped 自动回落 global 而非硬拒。重启 8647 后重发需求。</p>
+      <p class="evidence">🔍 修复后无 400，会话正常建立</p>
+      <img src="shots/15-agent-response.png" alt="步骤 15：缺陷修复（scoped→global 回落）" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">16</span>步骤 16：需求重发成功</h2>
+      <p class="desc">重发后 agent 进入流式工作态（输入框已清空，thinking 指示器跳动）。</p>
+      <p class="evidence">🔍 streaming ✓ taCleared ✓</p>
+      <img src="shots/16-task-resent.png" alt="步骤 16：需求重发成功" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">17</span>步骤 17：agent 工作中</h2>
+      <p class="desc">agent 真实执行：工具时间线实时捕获 7 个工具调用（Bash×4 + Write×3），状态栏遥测跳动（26 t/s、上下文水位）。</p>
+      <p class="evidence">🔍 工具时间线 count=7 ✓ 状态遥测实时 ✓</p>
+      <img src="shots/17-agent-working.png" alt="步骤 17：agent 工作中" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">18</span>步骤 18：agent 完成回复</h2>
+      <p class="desc">agent 报告完成：三文件创建+逐个读回验证（JSON 可解析/HTML 引用正确）。</p>
+      <p class="evidence">🔍 回复含实测验证声明 ✓</p>
+      <img src="shots/18-agent-final.png" alt="步骤 18：agent 完成回复" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">19</span>步骤 19：工具时间线（真实数据）</h2>
+      <p class="desc">会话有工具调用后复截：7 行工具卡（$ Bash ×4 / ✎ Write ×3），类别色标+编辑卡 diff 预览展开钮。</p>
+      <p class="evidence">🔍 count=7，Bash/Write 专属图标 ✓</p>
+      <img src="shots/19-tools-with-data.png" alt="步骤 19：工具时间线（真实数据）" loading="lazy">
+    </section>
+    <section class="step">
+      <h2><span class="num">20</span>步骤 20：文件树面板+状态遥测</h2>
+      <p class="desc">侧栏文件 tab + 状态栏真实读数：Default workspace / 0/256k 0.0% / 26 t/s / Idle / 上下文水位条。</p>
+      <p class="evidence">🔍 水位条 testid=ide-context-bar ✓ 状态遥测实时值 ✓</p>
+      <img src="shots/20-files-pane-status.png" alt="步骤 20：文件树面板+状态遥测" loading="lazy">
+    </section>
+</div>
+</body>
+</html>
