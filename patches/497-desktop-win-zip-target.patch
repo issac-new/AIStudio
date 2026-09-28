@@ -1,0 +1,14 @@
+diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -97,6 +97,10 @@
+   target:
+     - target: nsis
+       arch: [x64]
++    # zip 为本机分发交付物（nsis 依赖 Rosetta 跑 x64 makensis，-86 在案惯例非交付物；
++    # 2.25 轮 patch 109 语义，系列折叠时孤儿化，本补丁按 v0.7.25 结构重建）
++    - target: zip
++      arch: [x64]
+   artifactName: "SwarmStudio-${version}-${arch}.${ext}"
+ 
+ linux:
