@@ -20,18 +20,32 @@ from pathlib import Path
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 # RUN_ID 参数化（V4-run1 起）：MX_RUN_ID=<id> 或 --run <id> → state/evidence/出报告
 # 全部指向 runs/<id>/；缺省回落 SIM 根（V3 兼容）。生成终版报告必须带本轮
-# RUN_ID，否则会拿旧轮 state 出"状态真实"的假报告。
+# RUN_ID，否则会拿旧轮 state 出"状态真实"的假报告（run2 05:15 实锤：无参调用
+# 落 SIM 全局目录、state 时间戳是旧轮的，调用方日志却报 run 目录路径）。
+# --run 显式传参优先于 MX_RUN_ID 环境变量（调用点显式值胜过环境残留值）。
 RUN_ID = os.environ.get('MX_RUN_ID', '')
-if not RUN_ID and '--run' in sys.argv:
+if '--run' in sys.argv:
     RUN_ID = sys.argv[sys.argv.index('--run') + 1]
-if RUN_ID:
+# EVID 解析与 mx-lib.sh 的 EVID_DIR 同源：MX_EVID_DIR 显式覆盖 > runs/<id> > SIM 根。
+# STATE 仍按 RUN_ID 解析（mx-lib 的 STATE 亦不受 MX_EVID_DIR 影响）。
+if os.environ.get('MX_EVID_DIR'):
+    EVID = Path(os.environ['MX_EVID_DIR'])
+elif RUN_ID:
     EVID = SIM / 'runs' / RUN_ID / 'evidence'
-    STATE_FILES = [SIM / 'runs' / RUN_ID / 'state.env']
 else:
     EVID = SIM / 'evidence'
+if RUN_ID:
+    STATE_FILES = [SIM / 'runs' / RUN_ID / 'state.env']
+else:
     STATE_FILES = [SIM / 'state.env']
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 OUT = EVID / 'simulation-report.html'
+# 路径契约自证（守门测试用）：--print-paths 只打印解析结果不读 state 不出报告。
+if '--print-paths' in sys.argv:
+    print(f'OUT={OUT}')
+    print(f'STATE={STATE_FILES[0]}')
+    print(f'STEPS_DIR={STEPS_DIR}')
+    sys.exit(0)
 PLAN_PATH = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
 CEN = SIM / 'central/aipaydev'
 
