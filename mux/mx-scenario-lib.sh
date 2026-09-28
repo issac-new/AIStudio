@@ -319,6 +319,68 @@ room_has_from() { # <room> <sender-mxid> <pattern> [since-ms]
     'map(select((.origin_server_ts // 0) > $since and .sender == $s and ((.content.body // "") | test($p)))) | any' >/dev/null 2>&1
 }
 
+# ── 闸门判词语义（run2 2026-09-29 04:49 实锤，独立审计意见 R-A2）────────
+# 判词子串匹配会被「引用/讨论」消息命中：fanfan-agent 转述 stub 原文
+# 「结论行 READY-GATE-PASS 或 READY-GATE-FAIL」，G5 即把该条当结论行误过
+# （04:49:04 判 ✓，真实评审 04:51:27 才完成且卡面结论实为 READY-GATE-FAIL）。
+# 语义：**最后一个判词赢**——结论行居末是派单既定约定（"结论行 … 开头"、卡面
+# conclusion 节在 body 末尾）；引用讨论里判词成对出现时末个为 FAIL，只会把门
+# 禁推向拒绝/打回（保守方向），不会假过。多条结论行取时间最新一条（打回后
+# 复审 PASS 盖过前次 FAIL）。FAIL 是显式判词：调用方必须熔断，不得置卡 done、
+# 不得落键（R-A2）。
+mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=无判词）
+  local out
+  out=$(printf '%s' "$2" | grep -oE "$1-(PASS|FAIL)" | tail -1)
+  case "$out" in
+    *-PASS) echo PASS ;;
+    *-FAIL) echo FAIL ;;
+    *) echo "" ;;
+  esac
+}
+
+mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
+  local room="$1" sender="$2" gate="$3" since="${4:-0}"
+  mx_messages "$(load_token fanfan)" "$room" 200 2>/dev/null | jq -r --arg s "$sender" --arg g "$gate" --argjson since "$since" '
+    [ .[] | select((.origin_server_ts // 0) > $since and .sender == $s)
+      | {ts: (.origin_server_ts // 0),
+         v: ((.content.body // "") | [match($g + "-(PASS|FAIL)"; "g") | .captures[0].string] | last // empty)}
+      | select(.v != "") ]
+    | sort_by(.ts) | last | .v // empty'
+}
+
+kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> → stdout: PASS|FAIL|空
+  # 评审记录落卡 body 是准出的权威载体（派单即要求 review-record 落卡），房间行
+  # 只是广播；卡判词与房间行判词由调用方合并（FAIL 优先，保守不放行）。
+  local body
+  body=$(kanban_list "$1" | jq -r --arg n "$2" \
+    '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""')
+  mx_text_gate_verdict "$3" "$body"
+}
+
+mx_gate_verdict_seen() { # <room> <sender> <gate> [since-ms] → 0 当出现任一判词结论行
+  [[ -n "$(mx_room_gate_verdict "$@")" ]]
+}
+
+mx_gate_verdict_pass() { # <room> <sender> <gate> [since-ms] → 0 仅当最新结论判词为 PASS
+  [[ "$(mx_room_gate_verdict "$@")" == "PASS" ]]
+}
+
+mx_gate_verdict_combined() { # <room> <sender> <gate> <since-ms> <card-user> <card-needle> → stdout: PASS|FAIL|空
+  # 房间行 + 评审卡 body 双源合并（R-A2）：FAIL 任一出现即 FAIL（保守不放行），
+  # 仅当无 FAIL 且任一 PASS 才 PASS。卡 body 是权威载体（review-record 在卡）；
+  # 复审轮必须同步更新卡结论行，否则旧 FAIL 判词持续拦门（安全方向）。
+  local rv cv
+  rv="$(mx_room_gate_verdict "$1" "$2" "$3" "$4")"
+  cv="$(kanban_card_gate_verdict "$5" "$6" "$3")"
+  if [[ "$rv" == "FAIL" || "$cv" == "FAIL" ]]; then echo FAIL; return 0; fi
+  if [[ "$rv" == "PASS" || "$cv" == "PASS" ]]; then echo PASS; return 0; fi
+  echo ""
+}
+
+mx_gate_combined_pass() { # 同 mx_gate_verdict_combined，供 wait_truth 断言用
+  [[ "$(mx_gate_verdict_combined "$@")" == "PASS" ]]
+}
+
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   local m uid rid u lp members
   local uids=()
@@ -418,6 +480,25 @@ uat_ac_covered() { # <ac-list> <body> → 缺失 AC 编号清单（空串=逐条
     case "$2" in *"$ac"*) ;; *) missing="$missing$ac " ;; esac
   done
   printf '%s' "$missing"
+}
+
+uat_ac_verdict() { # <body> <AC-id> → 通过|有条件通过|不通过|未见
+  # 逐条判词语义（独立审计意见 #3，run2 实锤）：UAT 证据行实为「AC-1/AC-2/AC-3/
+  # AC-5/AC-6 通过；AC-4、AC-7 有条件通过」——一行多 AC 共享一个判词，按行取判词
+  # 会把 AC-1 也判成"有条件"。改按「AC 组+判词」切段：判词紧跟 AC 组之后，
+  # 同段多 AC 共享判词；多段命中同 AC 时取最后一段（逐条明细行在汇总行之后，
+  # 更具体者胜）。旧代码对全部 AC 一律写「通过」——验收书与证据矛盾即失真。
+  local seg
+  seg=$(printf '%s\n' "$1" \
+    | grep -oE '(AC-[0-9]+([/、,及和 ]+AC-[0-9]+)*[ ]*)(有条件通过|不通过|未通过|通过|FAIL|PASS)' \
+    | grep -F -- "$2" | tail -1)
+  [[ -n "$seg" ]] || { echo "未见"; return 0; }
+  case "$seg" in
+    *有条件通过*) echo "有条件通过" ;;
+    *不通过*|*未通过*|*FAIL*) echo "不通过" ;;
+    *通过*|*PASS*) echo "通过" ;;
+    *) echo "未见" ;;
+  esac
 }
 
 issue_disp_stat() { # → "<ISS_N> <DISP_N>" 问题单/处置记账条数（DISP|type|subject|disposition|note）
@@ -591,7 +672,9 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
     echo "# ${RFD_ID} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T')）"
     echo
     echo "## 硬闸状态"
-    for k in g1_frozen g2_arch_pass g4_pass g5_ready uat_done retro_done; do
+    # G1-G6 全闸落键（独立审计意见 R-A4：G3 曾只有 devimpl_done 无 g3_ 硬闸键，
+    # 治理报告"门禁链"跳过 G3/G6 无说明）；retro_done 即 G6 复盘闸。
+    for k in g1_frozen g2_arch_pass g3_code_pass g4_pass g5_ready uat_done retro_done; do
       echo "- $k: $(sget "$k" || echo 未落)"
     done
     echo
