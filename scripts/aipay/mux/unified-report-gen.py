@@ -30,10 +30,16 @@ for _sf in [SIM / 'state.env', EVID / 'state-snapshot.env']:
                     _ns[_k.strip()] = _v.strip()
 try:
     sys.path.insert(0, str(DIR))
-    from report_narrative import render_narrative
+    from report_narrative import render_narrative, render_intent_chain
     narrative_html = render_narrative(_ns, EVID)
 except Exception as e:
     narrative_html = f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;color:#92400e">叙事层生成失败（如实标注）：{html.escape(str(e))}</div>'
+
+# 意图链路（V4.1 §三 需求保真域缺口闭合）：G1 冻结 AC → 系分 → 编码门禁 → 独立测试 → UAT
+try:
+    intent_html = render_intent_chain(SIM)
+except Exception as e:
+    intent_html = f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;color:#92400e">意图链路生成失败（如实标注）：{html.escape(str(e))}</div>'
 
 # ── ① 方案原文把关解析（与 mx-report-gen 同源正则）──
 plan_steps = {}
@@ -124,8 +130,10 @@ out.append('<div class="meta">生成：2026-09-28 ｜ 合并两线：旅程线�
            '方案基准：V3 生命周期方案（操作单一事实源）+ V4.1 整合终版（七问题域/亮点/四维）｜ 环境：SwarmStudio :8802 + gateway :8801 + matrix :8008 ｜ 中央仓 issac-new/aipaydev<br>'
            '修复基线：' + '；'.join(f'<b>{a}</b> {b}' for a, b in FIXES) + '</div>')
 
-# 叙事层
+# 叙事层 + 意图链路（V4.1 需求保真域）
 out.append(narrative_html)
+if intent_html:
+    out.append(intent_html)
 
 # 六闸仪表盘与治理度量（旅程线真实数字）
 out.append('<h2>六道闸仪表盘与治理度量（旅程线真实数据实抽）</h2>')
