@@ -38,6 +38,17 @@ describe('S1 inline diff 逐处 accept/reject/edit', () => {
     expect(promptSpy).toHaveBeenCalled()
     promptSpy.mockRestore()
   })
+
+  it('diffText 后到（异步拉取链）必须重解析 hunk——prop 失活回归', async () => {
+    const { default: IdeInlineDiff } = await import('../components/IdeInlineDiff.vue')
+    const diff = '@@ -1,1 +1,2 @@\n-a\n+b\n+c'
+    const w = mount(IdeInlineDiff, { props: { diffText: '' } })
+    expect(w.find('[data-testid="ide-inline-diff"]').exists()).toBe(false)
+    await w.setProps({ diffText: diff })
+    expect(w.find('[data-testid="ide-inline-diff"]').exists()).toBe(true)
+    expect(w.findAll('[data-testid^="ide-idiff-hunk-"]')).toHaveLength(1)
+    expect(w.find('.ide-idiff__stats').text()).toContain('± 2 / − 1')
+  })
 })
 
 describe('S2 @提及六源面板', () => {

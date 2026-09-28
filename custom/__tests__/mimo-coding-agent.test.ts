@@ -3,14 +3,16 @@
 // CLI 参数门控（mimo 无 --auto）、客户端联合与映射。依据 2026-09-24
 // MiMo 补充调研 P1（docs/superpowers/specs/2026-09-24-mimo-code-coding-tools-research.md）。
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 const OVERLAY_ROOT = resolve(__dirname, '../..')
 const read = (rel: string) => readFileSync(resolve(OVERLAY_ROOT, rel), 'utf-8')
 const series = read('patches/series')
 const patch393 = read('patches/393-server-mimo-coding-agent.patch')
-const patch394 = read('patches/394-client-mimo-agent-ui.patch')
+// 394 客户端联合已并入注入态(ChatPanel 选项/api 联合/头像/svg),
+// 2026-09-28 P0 收敛:patch 文件保留 server 侧,客户端断言改读注入态树。
+const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/src')
 
 describe('MiMo-Code 编码 Agent 接入（patch 393/394）', () => {
   it('series 尾部依序登记 393/394（原 381/382，撞号重编）', () => {
@@ -57,11 +59,14 @@ describe('MiMo-Code 编码 Agent 接入（patch 393/394）', () => {
     expect(patch393).toContain("webhookAgent?: 'bridge' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh'")
   })
 
-  it('394 客户端联合 + 新建会话选项 + 头像资源', () => {
-    expect(patch394).toContain("export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'")
-    expect(patch394).toContain('{ label: "MiMo Code", value: "mimo" }')
-    expect(patch394).toContain('mimo: { label: \'MiMo Code\', src: \'/coding-agents/mimo.svg\' }')
-    expect(patch394).toContain('diff --git a/packages/client/public/coding-agents/mimo.svg b/packages/client/public/coding-agents/mimo.svg')
+  it('394 客户端联合 + 新建会话选项 + 头像资源（注入态树直断）', () => {
+    const api = readFileSync(resolve(UPSTREAM_CLIENT, 'api/coding-agents.ts'), 'utf8')
+    expect(api).toContain("export type CodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'zcode'")
+    const chatPanel = readFileSync(resolve(UPSTREAM_CLIENT, 'components/hermes/chat/ChatPanel.vue'), 'utf8')
+    expect(chatPanel).toContain('{ label: "MiMo Code", value: "mimo" }')
+    const avatar = readFileSync(resolve(UPSTREAM_CLIENT, 'utils/chat-agent-avatar.ts'), 'utf8')
+    expect(avatar).toContain("mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' }")
+    expect(existsSync(resolve(UPSTREAM_CLIENT, '../public/coding-agents/mimo.svg')), 'mimo.svg 图标未注入').toBe(true)
   })
 
   it('overlay ide.ts 将 mimo 映射进 IDE 工作台 agent 选择（P1 落点）', () => {

@@ -1,19 +1,41 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index afed12a8..9069c006 100644
+index 8cad4b1d..cbb5b0a5 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
-@@ -20,9 +20,10 @@ import MessageQueueFloatPanel from "./MessageQueueFloatPanel.vue";
- import { LIVE_CHAT_MAX_LOADED_MESSAGES, parseMessageReference, useChatStore, type Message } from "@/stores/hermes/chat";
- import { useProfilesStore } from "@/stores/hermes/profiles";
- import { useToolTraceVisibility } from "@/composables/useToolTraceVisibility";
- import { openSubagentStream, subagentIdFromToolCall } from "@/utils/hermes/subagent-stream";
- import { messageScrollPositionKey, rememberMessageScrollPosition } from "./message-scroll-position";
+@@ -28,6 +28,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
  import { chatSessionAgentAvatar } from "@/utils/chat-agent-avatar";
  import { parseThinking } from "@/utils/thinking-parser";
  import { groupCompletedToolsByRun } from "./tool-run-grouping";
 +import GatewayNoticeBanner from "@/custom/chat/components/GatewayNoticeBanner.vue";
  
-@@ -596,6 +597,7 @@ defineExpose({
+ const props = withDefaults(defineProps<{
+   approvalPortalToBody?: boolean
+@@ -365,6 +366,24 @@ async function openForkParent(event?: MouseEvent) {
+ }
+ 
+ function handleApproval(choice: "once" | "session" | "always" | "deny") {
++  // HERMES_CUSTOM[IdeApprovalLearning] BEGIN
++  // R2 批准即学习：上游 MessageList 按钮改为发 CustomEvent（不新增 props/emit，
++  // 避免波及全部调用点）；overlay IdeChatPane 捕获后做记忆+提示再转发
++  // respondApproval。无监听（ChatPanel 等场景）时退化为直接响应，语义零变化。
++  if (typeof window !== "undefined") {
++    const pending = chatStore.activePendingApproval;
++    window.dispatchEvent(
++      new CustomEvent("overlay:approval-decision", {
++        detail: {
++          choice,
++          sessionId: chatStore.activeSessionId,
++          toolName: pending?.description ?? "",
++          command: pending?.command ?? "",
++        },
++      }),
++    );
++  }
++  // HERMES_CUSTOM[IdeApprovalLearning] END
+   chatStore.respondApproval(choice);
+ }
+ 
+@@ -635,6 +654,7 @@ defineExpose({
  
  <template>
    <div class="message-list-shell">

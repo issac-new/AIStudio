@@ -13,16 +13,15 @@ const findings = ref<Finding[]>([])
 const verdict = ref<'accept' | 'reject' | 'conditional' | null>(null)
 const reviewId = ref<string | null>(null)
 
-/** 真实链：/review 创建（POST /api/review）→ GET /:id findings 回流。 */
+/** 真实链：/review 创建（POST /api/review，domain 必填两域之一）→ GET /:id findings 回流。 */
 async function startReview(): Promise<void> {
   try {
     const id = `ide-${chatStore.activeSessionId ?? 's'}-${Date.now()}`
     const res = await fetch('/api/review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewId: id }),
+      body: JSON.stringify({ reviewId: id, domain: 'uncommitted' }),
     })
-    if (!res.ok) return
     if (!res.ok) return
     reviewId.value = id
     await refresh()
@@ -52,8 +51,18 @@ async function refresh(): Promise<void> {
 const open = computed(() => findings.value.filter((f) => !f.resolved))
 const resolvedList = computed(() => findings.value.filter((f) => f.resolved))
 
-function resolve(id: string): void {
+/** 已处理：先本地置 resolved，再回流服务端（patch 414 resolve 端点）；失败如实回退，
+ *  避免 UI 显示 resolved 而服务端仍 open、下次 refresh 打回。 */
+async function resolve(id: string): Promise<void> {
+  const prev = findings.value
   findings.value = findings.value.map((f) => (f.id === id ? { ...f, resolved: true } : f))
+  if (!reviewId.value) return // 无在评评审（如内部预置数据），仅本地态
+  try {
+    const res = await fetch(`/api/review/${encodeURIComponent(reviewId.value)}/comments/${encodeURIComponent(id)}/resolve`, { method: 'POST' })
+    if (!res.ok) throw new Error(`resolve ${res.status}`)
+  } catch {
+    findings.value = prev
+  }
 }
 
 function decide(v: 'accept' | 'reject' | 'conditional'): void {

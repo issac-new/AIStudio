@@ -1,4 +1,3 @@
-# B 类 patch 应用清单(按序)
 001-schemas-matrix-columns.patch
 002-config-matrix-fields.patch
 003-vite-matrix-presbundle.patch
@@ -16,17 +15,13 @@
 015-server-db-users-store.patch
 016-server-middleware-user-auth.patch
 017-package-json-matrix-sdk-dep.patch
-020-client-pagesidebarnav-nav.patch
 022-client-store-kanban-enh.patch
 023-client-store-chat.patch
 024-client-store-auth-matrix.patch
 025-client-loginview-matrix.patch
 026-client-accountsettings-matrix.patch
 027-client-usermgmtsettings-matrix.patch
-# 028-client-kanbanview-enh.patch  # v0.6.20: disabled — keep native kanban, swarm-kanban uses overlay components
 029-client-settingsview.patch
-# 030-client-groupchatview.patch  # v0.6.39: disabled — upstream now awaits store.connect() (same change as this patch)
-031-client-chatpanel.patch
 032-client-styles-variables-branding.patch
 033-client-api-profiles.patch
 034-client-api-sessions.patch
@@ -34,19 +29,9 @@
 037-test-kanban-service.patch
 038-test-kanban-controller.patch
 039-test-kanban-routes.patch
-# 040-package-lock-matrix-sdk.patch  # SKIP: auto-generated via npm install
 041-desktop-rebrand-swarmstudio-config.patch
 042-desktop-rebrand-swarmstudio-pkg.patch
 043-desktop-rebrand-swarmstudio-strings.patch
-# 044-i18n-locale-de.patch  # FIXME: pre-existing context mismatch (upstream de.ts changed). Stale.
-# 046-i18n-locale-es.patch  # FIXME: pre-existing context mismatch (upstream es.ts changed). Stale.
-# 047-i18n-locale-fr.patch  # FIXME: pre-existing context mismatch (upstream fr.ts changed). Stale.
-# 048-i18n-locale-ja.patch  # FIXME: pre-existing context mismatch (upstream ja.ts changed). Stale.
-# 049-i18n-locale-ko.patch  # FIXME: pre-existing context mismatch (upstream ko.ts changed). Stale.
-# 050-i18n-locale-pt.patch  # FIXME: pre-existing context mismatch (upstream pt.ts changed). Stale.
-# 051-i18n-locale-ru.patch  # FIXME: pre-existing context mismatch (upstream ru.ts changed). Stale.
-# 052-i18n-locale-zh-TW.patch  # FIXME: pre-existing context mismatch (upstream zh-TW.ts changed). Stale.
-# 054-i18n-login-title-swarmstudio.patch  # FIXME: pre-existing context mismatch. Stale.
 000-vitest-custom-alias.patch
 055-test-matrix-right-panel.patch
 056-test-matrix-thread-notifications.patch
@@ -57,26 +42,11 @@
 070-cockpit-packages_client_src_App.vue.patch
 071-cockpit-packages_client_src_router_index.ts.patch
 072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch
-# 073-cockpit-packages_client_src_views_LoginView.vue.patch  # FIXME: pre-existing context mismatch (upstream LoginView.vue changed). Stale.
-074-cockpit-packages_client_src_i18n_locales_en.ts.patch
-075-cockpit-packages_client_src_i18n_locales_zh.ts.patch
-# 076-i18n-matrix-chat-en.patch  # v0.6.20: combined into 074
-# 077-i18n-matrix-chat-zh.patch  # v0.6.20: combined into 075
 078-server-kanban-workspace-files.patch
-# 079-server-kanban-timeline-aggregate.patch  # v0.6.20: combined into 078
 080-echarts-dep.patch
-# 082-i18n-cockpit-history-en.patch  # v0.6.20: combined into 074
-# 083-i18n-cockpit-history-zh.patch  # v0.6.20: combined into 075
 085-group-chat-unread-tracking.patch
-# 086-i18n-cockpit-notify.patch  # v0.6.20: combined into 074+075
 087-group-chat-autojoin-on-connect.patch
 088-run-chat-autojoin-sessions-on-connect.patch
-089-chat-store-unread-tracking.patch
-# 090-cockpit-i18n-workitem-actions-en.ts.patch  # v0.6.20: combined into 074
-# 091-cockpit-i18n-workitem-actions-zh.ts.patch  # v0.6.20: combined into 075
-# 092-fix-upstream-i18n-duplicate-keys.patch  # v0.6.20: no-op, duplicates already removed upstream
-# 093-server-kanban-attachment-workspace-sync.patch  # v0.6.20: combined into 078
-094-client-store-chat-gateway-notice.patch
 095-client-messageitem-gateway-notice.patch
 096-client-groupmessageitem-gateway-notice.patch
 097-server-files-api-root-param.patch
@@ -85,723 +55,126 @@
 100-client-files-filetree-root.patch
 101-messagelist-gateway-banner.patch
 102-groupmessagelist-gateway-banner.patch
-
 103-lunar-dep.patch
-#104-kanban-i18n-en.patch  # v0.6.20: keys already in upstream
-#105-kanban-i18n-zh.patch  # v0.6.20: keys already in upstream
-#106-desktop-installer-targets.patch  # v0.6.30: merged into 041 (notarize + artifactName)
 107-agent-health-proxy.patch
-# 2.6 re-enabled 108: upstream pin lags (0.20.0); pin hermes-0.20.4-runtime (newest published). Bump when hermes-0.20.5-runtime ships
-#108-update-runtime-version.patch  # v0.7.12 上游已原生 pin hermes-0.20.6-runtime(ref v2026.8.27),使命完成摘除
-#109-windows-zip-target.patch  # v0.6.30: upstream already added zip target for win
 110-sidebar-logout-consistency.patch
-113-settings-hide-sidebar-footer.patch
-#111-hermes-to-swarm-rebrand.patch
 114-server-trace-api.patch
-
 036-server-routes-index.patch
 115-client-api-sessions-hermes-profile-wide.patch
 116-server-sessions-parent-id.patch
 119-desktop-preload-no-strip-credential.patch
 120-server-restrict-query-token.patch
-121-desktop-electron-sandbox.patch
 122-groupchat-sidebar-logout.patch
 123-server-files-root-task-workspace-allowlist.patch
 124-server-kanban-workspace-files-allowlist.patch
-# 125 + 131 folded into 107 (auth removed + port 8642 + logging, all in one hunk)
-# 125-server-agent-health-remove-auth.patch
-
-# 126-desktop-system-hermes-agent-default.patch  # v0.6.39: disabled — dead helpers (preferredSystemHermesCommand/explicitSystemHermesEnabled/resolveExecutable unused); execFileSync covered by patch 144; run_agent.py check covered by patch 148. Upstream refactored runtimeRequiredFiles→runtimeRequiredFileGroups, making this patch obsolete.
 127-desktop-node-pty-prebuilds-prune.patch
-128-desktop-fix-home-route-and-window-raise.patch
 129-server-client-fix-wmi-polling.patch
 130-desktop-webui-detached.patch
-# 131 folded into 107
-# 131-server-agent-health-port-fix.patch
-132-desktop-fix-second-instance-raise.patch
 137-proper-lockfile-dep.patch
 136-cron-parser-dep.patch
-
-# Loop Engineering (Task 8): wire REST controller + Socket.IO namespace
 134-loop-server-routes.patch
 135-loop-socket-namespace.patch
-
-# Loop Engineering (Task 11): sidebar nav entry for Loop Engineering
-#133-loop-nav-entry.patch  # v0.7.12 摘除：锚定的 hermes.models/memory 侧边栏项已被上游重构移除,patch 仅剩一条迁移注释无实效
-
-# Loop Engineering (Phase 3 Task 7): add pg dependency for SaaSStore
 138-pg-dep.patch
-
-# Loop Engineering i18n
-139-loop-i18n-en.patch
-140-loop-i18n-zh.patch
-
-# Windows focus-steal + orphan-daemon + diagnostics (Phase 2)
-141-desktop-win-file-logging.patch
 143-desktop-bridge-worker-port-range.patch
 144-server-bridge-stderr-capture.patch
-
-# Windows runtime + quit lifecycle fixes (Phase 3)
 146-bridge-agent-root-optional-default.patch
 148-package-runtime-run-agent-check.patch
-#149-runtime-manager-require-run-agent.patch  # v0.7.15 上游已原生包含 run_agent.py/cli.py 必需文件检查,使命完成摘除(同 108 先例)
 150-updater-no-auto-install-on-quit.patch
-151-desktop-startup-quit-logging.patch
 153-bridge-import-fallback-for-missing-run-agent.patch
 154-cli-shim-powershell-encoded-command.patch
 155-gateway-windows-http-health-fallback.patch
 156-gateway-windows-http-first-cli-fallback.patch
 157-agent-health-detailed-401-fallback.patch
-158-i18n-kanban-missing-keys.patch
-159-i18n-sidebar-common-runtrace-keys.patch
 160-vite-custom-alias.patch
-161-i18n-cockpit-missing-keys.patch
-162-i18n-missing-graph-loop-kanban-keys.patch
-163-i18n-missing-loop-kanban-keys.patch
-
-# P1 — KanbanTask 接口 v0.19 运维状态字段补齐（hermes-agent v0.19.0 Task dataclass）
 164-client-api-kanban-task-fields.patch
 165-server-service-hermes-kanban-task-fields.patch
-
-# P2 — 补 5 个缺失 HTTP wrapper + 迁入 cockpit-extras（readArtifact/debugHomeChannels/listWorkspaceFiles/getTimeline/searchSessions + FileNode/TimelineItem/SessionSearchResult）
 166-client-api-kanban-wrappers.patch
-
-# P3 — CockpitWorkspace v0.19 运维状态只读 meta 行 + events/runs 区段（i18n 补 en/zh keys）
-167-cockpit-kanban-fields-en.patch
-168-cockpit-kanban-fields-zh.patch
-
-# P4 — attach-from-URL 新 HTTP 路由 + UI + SSRF 守卫
 169-server-controllers-kanban-attach-url.patch
 170-server-routes-kanban-attach-url.patch
-171-kanban-attach-url-en.patch
-172-kanban-attach-url-zh.patch
 173-client-store-kanban-attach-url.patch
-
-# v0.6.35 适配：附件下载切到上游 readAttachment 路径 + delete 传 task_id
 174-client-kanban-attachment-download-path.patch
-
-# v0.6.35 适配：kanban-routes 测试 mock 补 uploadAttachmentFromUrl
 175-test-kanban-routes-attach-url-mock.patch
-
-# v0.6.35 适配：auth-routes-avatar 测试 mock 补 matrix 系列 controller
 176-test-auth-routes-avatar-matrix-mock.patch
-
-# v0.6.37 适配：cli-shim.ts 重构后单独拆出 rebrand patch
 177-desktop-cli-shim-rebrand.patch
-
-# hermes-agent v0.20.0 kanban 迁移：CLI 动词补全（reasoning/estimate/board project/projects json）
-
-# hermes-agent v0.20.0 kanban 迁移：TS service 接入（model/reasoning/estimate/projects/board project）
 180-server-service-kanban-v020.patch
-
-# hermes-agent v0.20.0 kanban 迁移：controllers + routes（estimate/projects/board PATCH/create 字段透传）
 181-server-controllers-kanban-v020.patch
 182-server-routes-kanban-v020.patch
-
-# hermes-agent v0.20.0 kanban 迁移：client API + store（types/wrappers/actions）
 183-client-api-kanban-v020.patch
 184-client-store-kanban-v020.patch
-
-# hermes-agent v0.20.0 kanban 迁移：i18n（en/zh model/reasoning/estimate/project/liveCommentHint）
-185-kanban-v020-i18n-en.patch
-186-kanban-v020-i18n-zh.patch
-
-# i18n duplicate-key 修复（patch 161/162/163 注入残留去重）
-187-i18n-dedup-en.patch
-187-i18n-dedup-zh.patch
-
-# runtime 统一：本地 hermes agent 安装优先（dev 态），其次 ~/.hermes-web-ui 捆绑 runtime
 188-desktop-runtime-local-priority.patch
-
-# cockpit 终端多工具支持（Claude Code > Codex > DeepSeek Harness）：
-# 服务端工具探测路由 + cockpit i18n keys（termTool/termToolNotInstalled）
 189-server-routes-terminal-tools.patch
-190-client-i18n-terminal-tools-en.patch
-191-client-i18n-terminal-tools-zh.patch
-
-# PTY 泄漏修复（2026-08-28 事故：252 个 PTY 耗尽系统池）：
-# 三个终端组件的 ws 生命周期守卫（卸载后不再重连、旧 socket 迟到事件不影响新连接）
-# + 服务端全局 PTY 并发上限 100 兜底
 192-client-terminalview-ws-lifecycle.patch
 193-client-terminalpanel-ws-lifecycle.patch
 194-server-terminal-session-cap.patch
-
-# 2.13 指挥中心（Command Post）：舰队聚合 / 看板服务端聚合 / 团队注册表
-# 服务端：chat-run 实例注册给 custom 舰队 tap + routes 挂载 fleet/overview/teams REST + http 挂载舰队/聚合 WS
 195-server-chatrun-fleet-tap.patch
 196-server-routes-command-post.patch
 197-server-http-command-post-ws.patch
-# 客户端：恢复 group-chat/workflow 路由（071 的删除反转，修审批死链）+ cockpit 指挥中心 i18n
 198-client-router-restore-groupchat-workflow.patch
-199-client-i18n-command-post-zh.patch
-200-client-i18n-command-post-en.patch
-
-# v1.0.2 vue-tsc 迁移修复（上游 build 新增 vue-tsc -b 严门禁暴露的潜伏债）
-# - custom-modules.d.ts: @/custom/* 通配 ambient 声明（custom 树走 overlay vitest+构建验证,不进上游严格 vue-tsc）
-# - chat.ts: 移除上游已删除用法的 fetchWorkspaceRunChangesForSession 导入
-# - ChatPanel: 删上游已移除用法的 openSettingsPage;为登出按钮补 authStore 绑定
-# - GroupChatPanel: 删未使用的 authStore 声明
-# - GroupMessageList: 网关告警过滤改用 isGatewayNotice 内容检测(group 消息无 systemType 打标链路)
-# - PageSidebarNav: 补上模板引用却从未定义的 openMatrixChat(2.15 起潜伏的点击报错)
-# - WorkflowView: 删上游重构后未使用的 PageSidebarFooter 导入
 201-client-v102-vuetsc-fixes.patch
-# P1 Task 7: loop graph 生产装配——GRAPH_ENGINE=legacy|shadow|on 三态分流 +
-# graph REST(/api/graph/runs|specs) + /graph socket + 审批桥接(默认 legacy 零行为变化)
 202-loop-graph-assembly.patch
-# T1 子代理花名册: cockpit fleet 卡片子代理实时状态条(hermes-agent 0.21.1 delegation)
-205-client-i18n-fleet-subagents-zh.patch
-206-client-i18n-fleet-subagents-en.patch
-# T5: 桌面捆绑 runtime pin(2026-09-16 随 upstream 0.7.22 升级轮原位改名并升 pin:
-# patch 体 0.20.6 -> 0.21.0 变为 0.21.0 -> 0.21.3,tag hermes-0.21.3-runtime / ref v2026.9.14;
-# 上游 studio 自升 pin 并携带同版资产前本 patch 保持活跃,不退役)
 207-desktop-runtime-pin.patch
-# P2 Task 5: 运行中心——/graph socket 客户端 + Pinia runs store + 运行列表视图 i18n
-# (合并重编号: 原 205-208 与 T1/T5 撞号, 2026-09-10)
-203-client-i18n-runcenter-zh.patch
-204-client-i18n-runcenter-en.patch
-# P2 Task 6: 运行详情——执行图画布 + 时间轴回放 + 三级分辨率 i18n
-209-client-i18n-runcenter-detail-zh.patch
-210-client-i18n-runcenter-detail-en.patch
-# P2 Task 7: 节点检查器 + 介入收件箱——peek/attach/审批/两态归档 i18n
-211-client-i18n-runcenter-intervention-zh.patch
-212-client-i18n-runcenter-intervention-en.patch
-# P3 Task 1: 台账清偿——运行详情导出 JSON 按钮文案
-213-client-i18n-runcenter-export-zh.patch
-214-client-i18n-runcenter-export-en.patch
-# P3 Task 2: 前端台账清偿——审批身份/检查器当前值/键盘可达 i18n
-215-client-i18n-runcenter-task2-zh.patch
-216-client-i18n-runcenter-task2-en.patch
-# P3 Task 3: 六区域导航骨架——/app 路由树(dynamic 注册,零 router patch)+侧栏新 IA 入口+
-# ia2 i18n。登录默认落 /app 经 overlay 兼容守卫(custom/client/ia2/guard.ts)承接,不 patch router
-218-client-i18n-ia2-zh.patch
-219-client-i18n-ia2-en.patch
-# P3 Task 4: 总览首屏——注意力+四卡片+角色指标+空态引导 i18n（ia2.overview 段）
-220-client-i18n-ia2-overview-zh.patch
-221-client-i18n-ia2-overview-en.patch
-# P3 Task 5: 介入中心——五源聚合+Triage 分诊+就地审批+自动归档 i18n（ia2.inbox 段）
-222-client-i18n-ia2-inbox-zh.patch
-223-client-i18n-ia2-inbox-en.patch
-# P3 Task 6: 编排区实装——模板库只读列表+GraphSpec 可视化+实例化入口 i18n（ia2.orchestrate 段）
-224-client-i18n-ia2-orchestrate-zh.patch
-225-client-i18n-ia2-orchestrate-en.patch
-# P3 Task 7: 工作项↔run 双向关联+追溯矩阵——任务页签/来源 run/产物任务/追溯矩阵 i18n
-# （ia2.tasks+ia2.trace+ia2.runLinks 段 + runcenter.inspector 产物任务段）
-226-client-i18n-ia2-trace-zh.patch
-227-client-i18n-ia2-trace-en.patch
 228-client-settingsview-graph-engine-card.patch
-229-client-i18n-ia2-observer-engine-en.patch
-230-client-i18n-ia2-observer-engine-zh.patch
-# P3 Task 9: 收口——指标口径标注 i18n（平均耗时样本副注/熔断部分数据标志，ia2.overview 段）
-231-client-i18n-ia2-overview-caliber-zh.patch
-232-client-i18n-ia2-overview-caliber-en.patch
-
-# 2.18: v0.7.19 desktop-identity 重构采纳后,setName 翻回 SwarmStudio(品牌+userData 钉住语义保留)
 233-desktop-identity-swarmstudio.patch
-
-# 2.18: 上游 v0.7.19 侧栏重构后 openMatrixChat 成死代码(TS6133),删除;matrix 入口由 ia2 /app/comms 内联路由承接
-234-client-pagesidebarnav-drop-dead-matrix-fn.patch
-
-# 2.18: 上游 v0.7.19 新增 sessions 测试断言 3 参调用;我方 116 patch 的 includeChildren 扩展传 4 参,同步两处断言
 235-server-sessions-tests-includechildren.patch
-# P4: 编排器编辑器 i18n（ia2.orchestrate.editor 段）——编号顺延：233/234 已被
-# 2.18 上游同步的 desktop-identity / pagesidebarnav 占用，本对 i18n patch 取 236/237
-236-client-i18n-ia2-orchestrator-zh.patch
-237-client-i18n-ia2-orchestrator-en.patch
-
-# P4: IaNav 用户设置入口 i18n（ia2.nav.settings）
-238-client-i18n-ia2-nav-settings-zh.patch
-239-client-i18n-ia2-nav-settings-en.patch
-
-# P4 平行共存（用户裁决 2026-09-11）: 原有 AI 协作中心（cockpit）恢复——路由嵌套归位 + 侧栏双入口
 240-cockpit-parallel-routes.patch
-241-appsidebar-cockpit-parallel-entry.patch
-
-# P4 T9: 审批面板「Always allow 按类型记忆」i18n（runcenter.approval.autoPassed 等键）
-242-client-i18n-always-allow-zh.patch
-243-client-i18n-always-allow-en.patch
-
-# P4 T9: 舰队审批「始终允许」档文案（cockpit.fleetAlways，服务端 always 选择暴露）
-244-client-i18n-fleet-always-zh.patch
-245-client-i18n-fleet-always-en.patch
-
-# Loop Graph 一级菜单入口（AppSidebar）：patch 133 于 v0.7.12 摘除后恢复；
-# 锚定 cockpit 入口之后，全 hermes.loop* 家族高亮。标签 sidebar.loopGraph
-# 有别于冻结的 sidebar.loop（cockpit 顶栏 Loop Engineering 按钮=旧 LoopModal）。
-246-appsidebar-loop-graph-entry.patch
-
-# Loop Graph 菜单入口 i18n（sidebar.loopGraph，其余语言回退 en）
-247-client-i18n-loop-graph-entry-zh.patch
-248-client-i18n-loop-graph-entry-en.patch
-
-# 回归缺陷修复：补齐 overlay patch 025/026/027/100 引用但从未定义的 25 个
-# i18n 键（login.matrix*/settings.matrixIdentity*/users.matrix*/files.noSubdirs）。
-# 此前这些键裸渲染键名（无内联兜底处）；上游 tests/client/i18n-coverage.test.ts
-# 因此两断言失败——本 patch 使其转绿（en 定义+zh 中文，其余语言经 en fallback）。
-249-client-i18n-locale-missing-matrix-keys.patch
-
-# 顶栏健康探测收敛（2026-09-14 用户指定）：agent /health/detailed 新增
-# loaded_platforms（仅本进程写入的 channel，writer_pid+writer_start_time 双钉）
-# 与 served_profiles；前端投影后顶栏只展示 channel 名（profile 仅留详情面板）。
-# 注：inject.mjs 路由同步扩展 gateway/、tests/gateway/ → hermes-agent。
-# 117/118/178/179/250/273（2026-09-22 深夜 v0.21.4 适配审计）：语义逐字适用，
-# 保留 active。git apply 报 does not apply 的真因=共享树残留上一注入周期的
-# 已应用内容（checkout 切换未清），非语义漂移——clean -fd 后 -3 三方零冲突、
-# 导出 diff 与原 patch 逐行一致（610 行）实证。教训：内容验证法必须在 pristine
-# 树上做，脏树假阳性曾误判「已收编」。
 117-agent-default-workspace-kind-dir.patch
 118-profile-default-run-trace.patch
 178-agent-kanban-cli-verbs.patch
 179-agent-projects-list-json.patch
 250-agent-health-loaded-platforms.patch
 273-agent-tests-pin-scratch-default.patch
-
-
-# 舰队/看板聚合 WS 实机断连修复：上游 http.ts catch-all upgrade 白名单仅
-# terminal/kanban-events/lan-peer/socket.io，overlay 的 fleet/events 与
-# kanban/overview/events 被同步 socket.destroy()（bare hang-up，无 401 响应）。
-# 舰队流自 2.13 引入起生产从未连通（catch-all 先于异步鉴权同步毁 socket）。
 251-server-http-fleet-ws-whitelist.patch
-
-# 循环驾驶舱单页重构（2026-09-14）：/hermes/loop 与 /app 总览合并为同一个
-# LoopCockpitView 单页；IaNav 六菜单栏退役。252/253 = 驾驶舱 i18n 键块（zh/en，
-# 其余语言经 mergeMessagesWithFallback(en) 自动回退，与 249 修复模式一致）。
-252-loop-cockpit-i18n-zh.patch
-253-loop-cockpit-i18n-en.patch
-
-# 思维大脑重设计（2026-09-15）：循环驾驶舱 = 动态增长的活动思维大脑，
-# 无人工编排。254/255 = loopMind i18n 键块（zh/en，其余语言 en 回退）。
-254-mind-i18n-zh.patch
-255-mind-i18n-en.patch
-
-# 思维大脑语义化（2026-09-15）：色彩全局一致 + 思维图语义标签。256/257 =
-# loopMind.status.* 状态词（思想核/末梢的可读语义，zh/en，其余语言 en 回退）。
-256-mind-status-i18n-zh.patch
-257-mind-status-i18n-en.patch
-
-# 思维图谱本体论重设计（2026-09-15）：实体/关系/状态分区/时序四层语义 +
-# 分区弧 + 语义标签。258/259 = loopMind.zone.* 分区词（zh/en，其余语言 en 回退）。
-258-mind-zone-i18n-zh.patch
-259-mind-zone-i18n-en.patch
-
-# 3D 思维图谱（2026-09-15 用户裁决）：核心思维图升级 Three.js 立体图——可缩放/
-# 旋转/层级切换。260 = three 依赖（本体论分区映射到 3D 语义层：状态=高度层）。
 260-three-dep.patch
-
-# 3D 思维图谱 i18n（2026-09-15）：261/262 = view3d/view2d/3dHint/zone.all（zh/en）。
-261-mind-3d-i18n-zh.patch
-262-mind-3d-i18n-en.patch
-
-# 方案 B 思维皮层原型 + A 方案关系边/审批负载/L3 详情层（2026-09-15）。
-# 263/264 = loopMind.viewCortex/protoB（皮层原型视图切换与标识，zh/en）。
-263-mind-cortex-i18n-zh.patch
-264-mind-cortex-i18n-en.patch
-
-# Windows/Linux(麒麟) 兼容 + ACP 调用修复（2026-09-15 全面排查轮）：
-# 265 = ACP 跨平台核心——win32 环境变量过滤大小写归一、ACP stdout 非 JSON 行
-#       容错( banners/杀软注入不再杀会话)、pnpm 缺失的 cmd/PowerShell 中英文报错识别
-# 266 = 麒麟/精简 Linux 发现兜底——which 二进制缺失时 PATH 直扫、PATH 增补
-#       ~/.local/share/pnpm、终端候选加 mate-terminal/qterminal/deepin-terminal、
-#       runs 目录 hash 64→16 位(Windows MAX_PATH 减压)
-# 267 = node-pty Linux 打包——extraResources 保留 spawn-helper(Unix pty 硬依赖)、
-#       afterPack 补 exec 位 + @img/sharp-* 平台裁剪、terminal.ts 修权门槛扩到 Linux
-# 268 = 麒麟 AppImage 沙箱回退——无 SUID chrome-sandbox 且禁 userns 时自动
-#       --no-sandbox 重启一次(entry.ts, 纯决策函数 linux-sandbox.ts)
-# 269 = Linux 主进程文件日志——XDG logs 目录(原来仅 Windows 有)
-# 270 = cli-shim GUI 启动兜底——Linux 无 SHELL 变量时写 .bash_profile/.bashrc
 265-server-dsh-acp-cross-platform.patch
 266-server-coding-agents-kylin-discovery.patch
 267-nodepty-linux-packaging.patch
 268-desktop-linux-sandbox-fallback.patch
-269-desktop-linux-main-logging.patch
 270-desktop-cli-shim-gui-shell-fallback.patch
-
-# 力导向内聚 + 就地筛选 + 右栏详情说明（2026-09-15 用户裁决；编号顺延至
-# 271/272——265-270 已被并行会话的麒麟兼容轮占用）。
-271-mind-detail-i18n-zh.patch
-272-mind-detail-i18n-en.patch
-# 273 = hermes_cli 测试语义适配——显式钉 workspace_kind="scratch"（四个测试针对 scratch 清理/回滚
-#       语义，不应依赖任务默认 kind；overlay 117 的 dir 默认现仅作用于普通板，项目板走上游 worktree 继承）
-# 274 = 登录默认落点改为 AI 协作中心——上游 071 守卫的两处落点
-#       (/app → /hermes/cockpit)：已持有 key 访问 /login 的跳过重定向 + 非
-#       superadmin 兜底。2026-09-16 用户裁决。
 274-login-landing-cockpit.patch
-# 275 = 表单登录落点同步改驾驶舱——LoginView.loginRedirectTarget
-#       （/app → /hermes/cockpit），与 274 守卫两处构成完整登录链。
-#       2026-09-16 用户裁决。
 275-loginview-landing-cockpit.patch
-# 276-280 = IDE 工作台主页面（/ide）——2026-09-16 用户裁决：IDE 成为登录默认
-#       落点与操作主页面（codex 源码底座 + zcode 会话 UI 全量复用，A 类本体在
-#       custom/client/ide/）。276/277 镜像 274/275 把三处登录落点
-#       /hermes/cockpit → /ide；278 侧边栏顶部一级入口（overlay[ide] 标记）；
-#       279/280 = sidebar.ideWorkspace + ide.* 全页文案键块（其余语言经
-#       mergeMessagesWithFallback(en) 自动回退，与 249 修复模式一致）。
 276-client-router-landing-ide.patch
 277-loginview-landing-ide.patch
-278-appsidebar-ide-entry.patch
-# 281: electron-builder 的 node_modules 整目录直拷曾把 980MB .vite 构建缓存扫进 DMG
-#       （产物 597M vs 基线 390M）；打包面过滤 .vite/.vite-temp 缓存目录，杜绝复发。
-281-desktop-exclude-vite-cache.patch
-# 283/284 = loop 多视图场景 i18n——壳切换条 + 管理/Code/运维场景面板 +
-#           kanban 抽屉建群/跳群按钮，zh/en 成对。2026-09-16。
-#           （编号顺延两次：main 276-280 被 feat/ide-main-page 占用，取 281/282；
-#           其后 main 281 又被 release-2.25 构建修复（desktop-exclude-vite-cache）
-#           占用，再顺延为 283/284。）
-283-loop-scenes-i18n-zh.patch
-284-loop-scenes-i18n-en.patch
 285-server-routes-ide-git.patch
-288-client-i18n-matrix-teams-zh.patch
-289-client-i18n-matrix-teams-en.patch
-# 290/291 = matrix-teams Task 7：teams.duty.* 六键（title/chooseRoom/to/assign/
-#           clear/mine）zh/en 成对，插入 288/289 建立的 teams 命名空间内。
-#           基线为全 series 注入态（288/289 依赖更早 patch 的上下文，不可单独落）。
-290-client-i18n-matrix-teams-duty-zh.patch
-291-client-i18n-matrix-teams-duty-en.patch
-# 292/293 = matrix-teams Task 10：teams.dispatch.* 十三键（title/new/titleField/
-#           body/target/profile/send/empty/status.created|running|done|failed/issuedBy）
-#           zh/en 成对，插入 288/289 建立的 teams 命名空间内（290/291 之后）。
-292-client-i18n-matrix-teams-dispatch-zh.patch
-293-client-i18n-matrix-teams-dispatch-en.patch
-# 294/295 = matrix-teams 终审 backlog：teams.dispatch.status.pending 中性文案
-# （无回执时不声称「已建卡」，zh「待回执」/en「Awaiting」），
-# 插入 292/293 建立的 status 块内。
-294-client-i18n-matrix-teams-dispatch-pending-zh.patch
-295-client-i18n-matrix-teams-dispatch-pending-en.patch
-
-# 296 = 统一导航 Task 3 过渡：cockpit 三栏迁入 ia2 协作场景（/app/collab），
-#       旧 CockpitView.vue 删除——/hermes/cockpit 父路由组件改指 CollabScene.vue
-#       保持注入树可构建；路由家族整删（含侧栏/登录落点）由 Task 6 patch 收口。
 296-client-router-cockpit-collab-scene.patch
-
-# 297-301 = 统一导航 Task 6：/hermes/cockpit 家族+6 条路径别名删除、catch-all → /app、
-#       登录/超管兜底落点 /app、侧边栏双入口+系统折叠分组（删 cockpit/loopGraph 一级
-#       与底部返回 hack）、PageSidebarNav/GlobalPendingActions 协作深链改指 ia2.collab*。
 297-client-router-cockpit-family-removal.patch
 298-client-login-landing-app.patch
-299-client-appsidebar-dual-entry-system-group.patch
-300-client-pagesidebarnav-collab-targets.patch
 301-client-globalpendingactions-collab-links.patch
-
-
-# 302-304 = 统一导航窗口管理（/goal 追加）：桌面 open-panel-window IPC——主进程
-#       openPanelWindow（BrowserWindow + preload + --hermes-window-kind=panel，路由
-#       路径白名单校验、去重聚焦、可信发送者纳入 panel 窗）、preload 暴露、
-#       client desktop-bridge 接口/windowKind 加 'panel'。
-302-desktop-main-panel-window.patch
 303-desktop-preload-panel-window.patch
 304-client-desktop-bridge-panel-window.patch
-
-# 305/306 = 统一导航 i18n（zh/en 成对）：品牌 驾驶舱/Cockpit、六场景词表补
-#       collab/eng/ops、新增 ia2.shell（gotoIde 缺失键修复）与 ia2.wm 窗口管理
-#       词表、sidebar.systemGroup 系统分组、ide.links.cockpitHome ⇄ 互跳；
-#       死键清理 sidebar.loop/graph/loopGraph、ide.links.workbench/cockpit/
-#       loopGraph、cockpit.brandTitle（零引用）。
-
-# 307 = /ide 侧栏归档区数据源：GET /api/studio/sessions/conversations 加
-#       archived=1 过滤分支（仅归档会话）；默认行为不变（该端点历史上不过滤
-#       归档，上游消费者零回归）。与 116 同文件，注入顺序在 116 之后。
 307-server-sessions-archived-flag.patch
-
-# 279/280 = /ide 基础 i18n（zh/en 成对）：ide.brand/links/railLabel 等
-279-client-i18n-ide-zh.patch
-280-client-i18n-ide-en.patch
-
-
-# 308/309 = /ide 富侧栏 i18n（zh/en 成对）：ide.task.* 词表（新建/搜索/置顶/
-#       workspace 分组/归档区/相对时间/更多操作）。增量 diff（279/280 注入态→目标态）。
-
-# 305/306 = 统一导航 i18n（zh/en 成对）：品牌 驾驶舱/Cockpit、六场景词表补
-305-client-i18n-unified-nav-zh.patch
-306-client-i18n-unified-nav-en.patch
-
-308-client-i18n-ide-task-sidebar-zh.patch  
-309-client-i18n-ide-task-sidebar-en.patch  
-
-# 286/287（ide-parity i18n 命令面板/Git 面板词表）已并入 308/309（增量
-#       hunk，基于 279/280+305/306 注入态生成），patch 文件退役删除。
-# 310/311 = M1.3/M1.4 会话面媒体增强（zcode markdownImage/attachments 对齐）：
-#       310 = ImagePreviewOverlay 灯箱（前后导航/缩放/下载/键盘）+ MessageItem 图集点击
-#             与 PDF 消息内预览（iframe 弹层，文件卡点击分流）；
-#       311 = ChatInput 附件超限守门（PDF 20MB/视频 200MB，超限 toast 拒绝入列）。
 310-client-image-lightbox-pdf-preview.patch
 311-chat-input-attachment-limits.patch
-
-# 312 = M2 资源管理器路由挂载：/api/ide/storage/*（snapshot/clean/reveal），
-#       controller=custom/server/controllers/system/storage.ts（A 类）。
 312-server-routes-ide-storage.patch
-
-# 313 = M4a 排队富操作（zcode chat.queue.edit/drag 对齐）：服务端 update_queued_run/
-#       reorder_queued_runs 事件 + reorderQueueByIds 纯函数；chatStore editQueuedMessage/
-#       reorderQueuedMessages；FloatPanel 内联编辑+拖拽重排；MessageList 接线。
 313-queue-edit-reorder.patch
-
-# 314 = server tsconfig exclude custom 测试目录：custom/__tests__ 45+1 类型债不阻打包链
-#       （生产端 custom 仍受 tsc 门禁；测试由 overlay vitest 运行时覆盖）。
 314-server-tsconfig-exclude-custom-tests.patch
-
-# 315 = 补上游 v0.7.23 缺键 common.close（ImagePreviewOverlay/MessageItem 引用未定义；
-#       en+zh 双补，其余语言 mergeMessagesWithFallback(en) 回退）——i18n 门禁抓获的上游缺陷。
-# 315（common.close 键）与 308 首个 hunk 完全重复（并行会话重复提交），退役删除。
-
-# 316/317 = v12 统一视图全量文案（工作流导航/任务决策右栏/链路条/参与方/运行画布/
-#           态势条/管理台五区/动态流/IDE 维度条）+ ia2.nav.collab 值改「沟通协作」。
-#           zh/en 成对；键清单与组件 t() 调用一一对应（i18n-compile 与 coverage 门禁覆盖）。
-316-client-i18n-cockpit-v12-zh.patch
-317-client-i18n-cockpit-v12-en.patch
-
-# 318 = 补主题三级面变量 --bg-tertiary（浅 #ebebeb / 深 #2e2e2e）——ide 模块 24 处
-#      var(--bg-tertiary, #242830) 恒落深色 fallback，浅色主题下 ⌘ 徽章/选中页签/hover 成黑块。
 318-client-variables-bg-tertiary.patch
-
-# 319 = kanban CLI 桥补 review 态——patchTask 分支表与 applyBulkStatus 均缺 review
-#      （静默无操作/throw 被吞，前端乐观更新假成功后回滚＝「按钮没反应」根因）。
-#      桥接 CLI request-review --force（九态中 review 唯一无直写通道的状态）。
 319-server-kanban-review-bridge.patch
-# 320: i18n 键块归位——chat.* 13 键从 ide 块迁回 chat 块（308/309 再生成时锚错父块，i18n 门禁抓获）+ common.close 双语补齐（上游 v0.7.23 已知缺键复发）
-320-client-i18n-chat-block-relocation.patch
-
-# 321: cockpit 补 completionSummary/completionSummaryHint 双语——看板任务抽屉完成弹窗
-#      原引用 kanban.* 缺键吃英文回退（中文界面显英文，C2 走查抓获）；既有 4 键
-#      （confirmDone/confirmArchive/confirmBlocked/completionSummaryRequired）改引 cockpit 命名空间。
-321-client-i18n-cockpit-completion-summary.patch
-
-# 322: kanban complete 守卫放行 review 态——等待队列「验收」对 review 任务恰被 409
-#      拦截（allowedStatuses 仅 running/ready/blocked），前端吞错=按钮没反应的
-#      第二半根因（与 319 同族：review 出口）。CLI complete 对 review 无需 --force。
 322-server-kanban-complete-allow-review.patch
-
-# 323: review 态打回桥（review→ready 重做）——CLI reopen-review 贯通 service/
-#      controller/route/client api；前端右栏打回按任务状态分流（review→reopenReview，
-#      其余→blockTask）。CLI 无 review→blocked 转移，直调 block 必 409（与 322 同族）。
 323-server-kanban-reopen-review-bridge.patch
-
-# 324/325: kanban 自定义组件 i18n 缺键补全（zh/en 各 +151 键）——组件 t('kanban.*')
-#      内联英文兜底导致中文界面显示英文的存量缺口（session 实测 247 个静态引用、
-#      zh 缺 150/en 缺 146）；词表=组件内联兜底+上下文翻译；recovery.hint 改平铺
-#      recoveryHint 避开与平铺 recovery 键冲突；action 组并入既有组防覆盖。
-#      守门：custom/client/__tests__/kanban-i18n-coverage.test.ts 断言零缺键。
-324-client-i18n-kanban-missing-keys-zh.patch
-325-client-i18n-kanban-missing-keys-en.patch
-
-# 326: 态势条内联面板 i18n（v12.2 用户裁定：二级/三级功能整合同页不来回跳转）——
-#      SitDetailPanel 五段面板 + 页头视图切换器文案（sit 组 +9 键 zh/en）。
-326-client-i18n-sitline-inline-panel.patch
-
-# 327: IDE 工作台重构 i18n（09-20 五项裁定：顶区对齐沟通协作/去链路维度/
-#      查看文件右移右栏/时间线优先级/计划子代理浮窗）——ide.float 组 +5 键、
-#      sidePane.tab_files，zh/en 双侧。
-327-client-i18n-ide-workbench-refactor.patch
-
-# 328: 驾驶舱 v12.3 i18n（09-20 六项裁定：语言直切/日程恢复/通知下拉双页签/
-#      态势迁页头/左栏聚类任务簇双击/三聊天合一）——header+notify+swp 三段
-#      新建 +24 键、flow.cluster* +3、wm 栏控 +4，zh/en 双侧。
-328-client-i18n-ia2-v12-3.patch
-
-# 329: 驾驶舱 v12.4（09-20 用户裁定）全局品牌替换——"Ekko Studio" →
-#      "SwarmStudio"（64 文件：client 标题/manifest/12 locale/ChatView/连接面板；
-#      desktop 弹窗标题/更新器缓存名/linux desktop entry/installer.nsh 停机名单
-#      对齐 SwarmStudio.exe；ekko-agent 提示词/归因/presets/skills；server
-#      studio/coding-agents/ekko 模块文案；esp32 固件 manifest/README）。
-#      域名 ekkostudio.xyz 与 CLI 二进制名 ekko-studio* 是功能标识不替换；
-#      login-item-migration 的 'ekko studio.exe'（小写）是旧版安装检测器保留。
 329-global-brand-ekko-studio-to-swarmstudio.patch
-
-# 330: 驾驶舱 v12.4 i18n zh——sit.actGoReview 进评审、wm.unfoldLeft/unfoldRight
-#      折叠导轨展开、overview.swarmKanbanLabel/Hint 注意力条双击进看板（+5 键）。
-330-client-i18n-ia2-v12-4-zh.patch
-
-# 331: 驾驶舱 v12.4 i18n en——330 同键英文侧（zh/en 成对，编号相邻）。
-331-client-i18n-ia2-v12-4-en.patch
-
-# 332: 驾驶舱 v12.5 i18n zh——sit.panelBoards/onlineSearchPh/taskJumpHint（在线级联
-#      检索与任务跳转提示）、kanban.board.filterLabel/filterAll（板多选筛选条）。
-332-client-i18n-ia2-v12-5-zh.patch
-
-# 333: 驾驶舱 v12.5 i18n en——332 同键英文侧（zh/en 成对，编号相邻）。
-333-client-i18n-ia2-v12-5-en.patch
-
-# 334: kanban 状态机诚实化（服务端）——DELETE 走 archive+--rm 两步硬删（CLI 无 rm 动词，
-#      此前必 500）；bulk/patch 链补 scheduled（CLI schedule 动词）与 todo/triage（按当前态
-#      组合 reopen-review/unblock，不可达组合抛清晰错误）；patchTask 回检 bulk results。
-#      修复装机轮在案缺口：PATCH status:'todo' 静默无操作 + review 任务 DELETE 500。
-# 335: kanban 状态机诚实化（客户端）——moveTask 回检 bulk results[].ok，失败抛错不再
-#      假成功；todo/triage 落点由父子门禁决定，不做乐观写入改拉真值。
 334-server-kanban-status-delete-honesty.patch
 335-client-kanban-move-result-gate.patch
-
-# 336: IDE 状态栏会话遥测簇（M2 dsh-TUI 移植）——ide.metrics 命名空间 8 键
-#      （context/tps/tpsEmpty/cache/cacheEmpty/cacheRead/cacheWrite/cacheInput）。
-336-client-i18n-ide-metrics.patch
-
-# 337/338: ia2.sit 词表（SitDetailPanel 过滤/排序五键：filterByStatusHint/
-#      emptyFiltered/sortStatus/sortPriority/sortCreatedAt，zh/en 成对）。
-337-client-i18n-ia2-v12-7-zh.patch
-338-client-i18n-ia2-v12-7-en.patch
-
-# 339: IDE「MCP」页签 + 对话式 MCP 配置（M3 kimi /mcp-config 范式移植）——
-#      ide.sidePane.tab_mcp / ide.paletteCmdMcpConfig / ide.mcp.* 12 键。
-339-client-i18n-ide-mcp.patch
-
-# 340: IDE 遥测面板（R1/G8）——每轮用量只读端点：
-#      GET /api/studio/sessions/:id/usage/rounds（usage-store getUsageRounds 按 run_id
-#      聚合 + controllers usageRuns + routes 挂载；JSON 兜底无 run 维度返回空数组）。
 340-server-usage-rounds-endpoint.patch
-
-# 341: IDE 遥测面板（R1：G4 构成/G7 热力图/G8 轮表/低余量提醒/成本估算）i18n——
-#      ide.metrics.lowContextToast 1 键 + ide.usagePanel.* 22 键（zh/en 双语同步）。
-341-client-i18n-ide-usage-panel.patch
-
-# 342: IDE 批准即学习（R2）——MessageList 审批按钮发 overlay:approval-decision
-#      CustomEvent（HERMES_CUSTOM[IdeApprovalLearning] 段包裹，无监听退化为直接响应）。
-342-client-approval-learning-event.patch
-
-# 343: IDE R2 i18n——ide.recap/injection/approval/agents/runaway 五块 18 键（zh/en）。
-343-client-i18n-ide-r2.patch
-
-# 344: IDE R3 i18n——ide.runResult/plan/paletteCmdReview 三块 6 键（zh/en）。
-344-client-i18n-ide-r3.patch
-
-# 345: IDE R4 i18n——ide.hooks/inbox/modelSwitcher/termActions/sidePaneTab_hooks 五块
-#      17 键（zh/en）。
-345-client-i18n-ide-r4.patch
-
-# 346: IDE R5 i18n——ide.worktree/goal + wiki.pipeline 三块 9 键（zh/en）。
-346-client-i18n-ide-r5.patch
-
-# 347: IDE 会话三段视图（进行中/已完成/工作空间）i18n——ide.task.view_active/
-#      view_done/view_workspace/views 4 键（zh/en）。
-347-client-i18n-ide-session-views.patch
-
-# 348: IDE worktree 编排（R5 任务级隔离）——bootstrap routes 挂载
-#      /api/ide/worktree/{create,remove,list}（loop WorktreeManager detached-HEAD
-#      建/回收 + 会话 workspace 绑定复用 updateSession）。
 348-server-ide-worktree-routes.patch
-
-# 349: IDE R5 引擎域 i18n——worktree 编排/goal 预算引擎/子代理 steer 三块
-#      24 键（zh/en）。
-349-client-i18n-ide-r5-engine.patch
-
-# 350: 沟通协作 v13 协作感知轮——locales 增键（act/att/sem 词表：活动脉冲
-#      tooltip/需关注节副文/语义块七类 + 耗时徽章 + 全部过滤）。
-350-client-i18n-comm-v13.patch
-
-# 351: 驾驶舱回归修复——恢复 hermes.chat/session/globalAgent(×Session) 命名路由
-#      （统一导航 111/240 退役后 ChatPanel SessionListItem 解析缺失致协作/工作台
-#      场景白屏；path 恢复性不挂导航，会话深链由 ChatView 读 param 定位）。
 351-client-cockpit-chat-route-restore.patch
-
-# 352: R6 dispatch reason code 词汇表 i18n——ia2.dispatch.* 12 键（zh/en）。
-352-client-i18n-ia2-dispatch-reason.patch
-
-# 353: R7 归属链 + 开发回喂 i18n——ia2.att.subSession{Failed,Blocked} 2 键 +
-#      ia2.tdp.session 1 键（zh/en）。
-353-client-i18n-ia2-r7-linkage.patch
-
-# 354: R7-C agent 名册 i18n——ia2.flow.groupAgents + ia2.agents.{sessions,busy,
-#      online,idle,offline} 6 键（zh/en）。
-354-client-i18n-ia2-agents.patch
-
-# 355: R6 @mention 总线——kanban addComment 入库后解析 [@agent]/@squad 为 agent
-#      enqueue run 并落系统行留痕（multica comment.go:3100；best-effort 不阻断）。
 355-server-kanban-mention-bus.patch
-
-# 356: R6 共享会话——bootstrap routes 挂载 /api/ide/session-share/{create,:token,
-#      :token/prompt}（invite token 四档模式 host/collaborator/viewer + prompt 审批，
-#      routa shared-session 语义，叠 matrix 账号）。
 356-server-ide-session-share.patch
-
-# 357: R6 执行租约 daemon 形态——sessions 表加 owner_instance_id + lease_expires_at
-#      两列（routa execution-backend.ts:54 语义；syncTable 自动加列迁移，多实例
-#      协同重启按租约接管的最小充分机制）。
 357-server-sessions-lease-schema.patch
-
-# 358: 驾驶舱顶栏调整 i18n——ia2.sit.decideTitle（待决策区标题）+
-#      ia2.notify.totalHint（通知徽章双计数明细）（zh/en）。
-358-client-i18n-cockpit-fixes.patch
-
-# 359: 顶栏「等我」并入「任务」i18n——ia2.sit.decideCount（待决策角标）（zh/en）。
-359-client-i18n-sit-merge.patch
-
-# 360: 公告版本感知过滤——/api/studio/announcements 下发前过滤：引用版本号全部 ≤ 本机的
-#      公告视为过期丢弃（0.7.23 弹「请更新至0.7.20」实锤）；无版本号公告不误杀。
 360-server-announcement-version-filter.patch
-
-# 361: kanban RACI 派发——task 3.0.0 RACI 字段透传 + 9 用户 Matrix 房间派发 + 架构规则引擎
 361-server-kanban-raci-dispatch.patch
-
-# 362: 架构规则引擎派发闸——assignTask 前置 evaluateRules，BLOCKED_BY_POLICY 报错阻断（方案步骤 10.4 关卡）
 362-server-kanban-rule-engine-gate.patch
-
-# 363: 防死循环打回计数——reopenReview 后 retry+1，阈值 3 触发 LEADER_INTERVENTION 留痕（方案步骤 16.7）
 363-server-kanban-retry-guard.patch
-# 364: package.json 跨平台化——prepare 的 POSIX test 语法换 node -e(cmd.exe 下 '['
-#      不是命令,每次 install 被迫无条件全量 build);preview 的 NODE_ENV= 前缀换
-#      cross-env;并同步 package-lock(017/080/103/136/137/138/260 加的 6 个依赖
-#      此前不在锁内,干净机器 npm ci 必败)。win-x64 排查轮(2026-09-22)。
 364-package-json-win-crossplatform.patch
-
-# 365: IDE 侧栏页签 i18n 裸键修复——tab_storage/memory/board/hooks 四键 zh/en 双补（推演 CDP 实锤 ide-i18n-raw-keys）
-365-client-i18n-ide-sidepane-tabs.patch
-
-# 366: RACI 派发接 assign 时刻——assignTask 成功后 best-effort 派发（同任务 sidecar 幂等去重，方案步骤 10.4 触发点补全）
 366-server-kanban-raci-assign-dispatch.patch
-
-# 367: v0.7.24 升级轮——AuthenticatedUser.matrix_user_id 放宽为 string|null。
-#      上游 #3144 起新通知族(live-activity/run-push/catchup)把 UserRecord 直接传入
-#      canReceiveAppEvent(AuthenticatedUser)，015 的可空列与 016 的 ?:string 不兼容。
 367-server-auth-matrix-userid-nullable.patch
-
-# 368: 推演实锤 ide-deeplink-loses-task 根治——hash 路由吞路径形态深链 search 参数，
-#      router 初始化前把 pathname+search 迁移为 hash 形态（与 entry.mts shim 双侧同步）。
 368-client-path-deeplink-to-hash.patch
-
-# 369: kanban CLI exec 并发队列——进程内 FIFO 把 execHermes 并发压到 2 + 排队 45s
-#      超时快速失败（推演实锤 kanban-api-hang-qi：exec 风暴下 CLI 排队致 API 整体
-#      挂起）；notify-list 裸 exec 补 30s 超时。watchEvents 长连流不经队列。
 369-server-kanban-exec-queue.patch
-
-# 370: stock hermes 运行时兼容层（用户裁决 2026-09-23：不动官方 CLI 只改 studio）——
-#      能力探测缓存（estimate --help 试探）+ estimate 诚实降级 + set-reasoning 降级报错
-#      + projects list 表格解析回落 + 板绑定走官方 project bind-board（clear 除外）。
-#      （编号 370：369 被并行会话 exec-queue 占用，让号重登记）
 370-server-kanban-stock-runtime-compat.patch
-
-# 371: IDE 简报「打回次数」数据源——bootstrap routes 挂载 /api/ide/retry-count
-#      （custom/server/controllers/ide/retry-counts.ts，读 RetryStore sidecar，与 363 计数链同源）
 371-server-ide-retry-count-route.patch
-
-
-# 372: agent tick socket sun_path 回落——深路径 home（推演 SIM_ROOT）下直接路径
-#      >104B 致 bind 失败、loop 活跃探针全失效（推演实锤 tick-socket-path-overflow）；
-#      复用 control_socket 同款 _fits_sun_path/_fallback_socket_path 短路径回落。
-#      （编号 372：371 被并行会话 IDE retry-count 路由占用，让号重登记）
 372-agent-tick-socket-fallback.patch
-
-
-# 373: studio 侧 host 守卫判读——isGatewayRunningForProfile 对「他 profile owns
-#      this host / will not serve」输出判 NOT-running（此前被 runtime-lock 字样
-#      误读为已在跑，ensure 跳过启动，该 profile gateway 永远起不来；推演 ISSUE-04
-#      host-gateway-ownership）。纯函数+守门测试在 custom/loop/gateway/host-ownership。
 373-server-gateway-host-ownership.patch
-
-# 374: Matrix 房间运维 agent 工具（推演 P1 缺口 room-invite-gap 的真修复）。
-#      5d1cd7f 曾把该缺口记为「已修」，但只改了技能文案去调 `hermes matrix
-#      rooms|invite` —— 该 CLI 动词从不存在，adapter.invite_user 仍是无 CLI 无
-#      工具面的死 API，推演复跑必然复现。本 patch 按上游 deferred-platform 工具
-#      契约补齐：plugin.yaml 声明 provides_tools + plugins/platforms/matrix/tools.py
-#      提供 register_tools(ctx)，三个工具 matrix_room_create/invite/list 优先走
-#      gateway 已鉴权 adapter（不碰 token），无 gateway 时回落 Client-Server API。
-#      守门测试 tests/gateway/test_matrix_room_tools.py（33 例）。
 374-agent-matrix-room-tools.patch
-# 375 基础运行时 semantica MCP 目录清单(2026-09-23 基础运行时轮)。
-#      单一事实源 overlay/runtime/semantica/manifest.yaml;本 patch 把它作为
-#      optional-mcps/semantica/ 新文件注入 hermes-agent 目录清单(presence =
-#      approval 语义),studio MCP 浏览器与 `hermes mcp install semantica` 直接
-#      消费。安装=git clone pinned tag v0.7.0 + venv + pip install;transport
-#      stdio semantica-mcp(15 知识图谱/决策溯源工具,实弹 tools/list 核对)。
-#      更新流程:改 runtime/ 单一事实源 → 重生成本 patch → npm run clean &&
-#      npm run inject 验证。
 375-runtime-semantica-mcp-catalog.patch
-376-client-i18n-missing-keys.patch
 377-client-search-hotkey-cmdf.patch
 378-server-zcode-coding-agent.patch
 379-client-zcode-agent-ui.patch
@@ -813,241 +186,45 @@
 390-agent-kanban-home-default-board.patch
 391-agent-kanban-board-team-fence.patch
 392-studio-matrix-login-scoped-grant.patch
-# 393/394 MiMo-Code 接入为第 8 个可托管编码 Agent（2026-09-24 MiMo 补充调研 P1；
-#      原编号 381/382，rebase 收口时因 aipaydev 轮占用 381-384 重编号）。
-#      MiMo-Code（XiaomiMiMo/MiMo-Code，OpenCode fork，npm @mimo-ai/cli，bin mimo）
-#      复用 opencode 家族执行路径（run --format json NDJSON）：
-#      - 393 服务端：新模块 services/opencode-family.ts 收敛家族差异（品牌文件
-#        mimocode.json/mimocode.db、MIMOCODE_CONFIG_DIR/MIMOCODE_DB/MIMOCODE_CONFIG_CONTENT
-#        环境变量、$schema URL）；定义条目+配置文件映射+作用域配置+运行时配置+
-#        MCP 同步+启动器全部家族化；mimo run 无 --auto（fork 已移除）以
-#        runSupportsAutoFlag 门控；usage/persisted/webhook/avatar 各联合类型扩 'mimo'。
-#      - 394 客户端：CodingAgentId/AgentStatusId 联合、新建会话下拉项、
-#        agent→chat 映射、头像（public/coding-agents/mimo.svg）。
-#      依据：docs/superpowers/specs/2026-09-24-mimo-code-coding-tools-research.md P1。
 393-server-mimo-coding-agent.patch
 394-client-mimo-agent-ui.patch
-# 395/396 MiMo 补充调研 P5/P9（2026-09-24）。原编号 383/384，撞号重编。
-#      395=工具批失败级联：串行(barrier)调用失败即置轮级标志，跳过批内剩余调用
-#      并逐调用留痕（MiMo tool/gate.ts FAIL_CASCADE 语义）；并行(只读/无冲突)段
-#      兄弟失败不级联；HERMES_TOOL_FAIL_CASCADE=0 回退旧行为。
-#      注：读并行/写 barrier 的调度本体 hermes 已有（_plan_tool_batch_segments 路径级
-#      读写冲突检测，强于 MiMo 静态分类），本补丁只补失败级联缺口。含 5 例新测试。
-#      396=Exa MCP 目录清单（stdio npx exa-mcp-server + EXA_API_KEY 安装期提示），
-#      单一事实源 overlay/runtime/exa/manifest.yaml；对齐 MiMo codesearch（Exa Code API）
-#      的库/SDK/API 外搜通道。依据 specs/2026-09-24-mimo-code-coding-tools-research.md。
 395-agent-tool-fail-cascade.patch
 396-agent-exa-mcp-catalog.patch
-# 397 MiMo 补充调研 P2：hermes LSP 工具化（2026-09-24）。原编号 385，撞号重编。
-#      MiMo 的 lsp 工具 91 行九操作；hermes 基建更强（per-(server,root) 真实语言
-#      服务器子进程、多根 pyright、写后诊断）但模型此前不可调用。本补丁补五个
-#      只读操作：hover/definition/references/document_symbol/workspace_symbol
-#      （新 tools/lsp_tool.py 自动发现注册，toolsets file 组进 coding 姿态）；
-#      LSPService.navigation_sync 含 pyright references 必带 context、spawn 失败
-#      哨兵语义（≠空结果）、冷启动 1.5s 单次重试；错误全走描述性 JSON 不抛异常。
-#      真 pyright 冒烟五操作全通。含 14 例单测。
-#      依据 specs/2026-09-24-mimo-code-coding-tools-research.md P2。
 397-agent-lsp-tool.patch
-# 398 R4-P2：/zcode Socket.IO 命名空间注册（bootstrap/http.ts，与 135 loop-socket 同款模式）。
-#      zcode 会话投影（R4-P2）的数据面：订阅会话列表变更推送到 cockpit（房间两级
-#      zcode:<workspacePath> / +:s:<sessionId>，事件 zcode:event 携带词表 reason）。
-#      依据 plans/2026-09-23-zcode-foundation-r4.md P2 + specs/2026-09-23-zcode-foundation-design.md §1.2 #1。
 398-server-zcode-projection-socket.patch
-# 399 R4-P4：看板流转门禁四件套（吸收 routa transition-gates，第一批 #8）。
-#      声明式列门 gates.json（与板 DB 同目录）：requiredHumanApproval（正文须含
-#      APPROVED 裁决）/requiredChecklist（- [ ] 全勾）/validatorCommand（证据须含
-#      指定命令）/gateMode blocking|warning；挂 complete_task(done) /
-#      request_review(review) / promote_task(ready) 三流转点；拒绝走冻结词表
-#      GATE_REASONS（approval_required/checklist_incomplete/validator_failed），
-#      通过落 column_transition 事件（routa COLUMN_TRANSITION 协调总线件）。
-#      附 #2 认领围栏验收测试（同人双跑 per-profile cap 拦截）。
-#      依据 specs/2026-09-23-zcode-foundation-design.md §1.2 #8/#2 + routa.md。
 399-agent-kanban-column-gates.patch
-# 400 R5 吸收 #3（kimi）：compact 六段交接摘要——真实意图（Goal 段 TRUE INTENT vs 字面请求）/
-#      还不知道（新段 ## Open Questions & Unknowns）/前向计划（新段 ## Forward Plan，最新
-#      用户消息永远赢）/诚实标注（[UNVERIFIED] 前言规则）；迭代更新指令与确定性回退同步。
-#      已定未定/精确命令错误行由既有 Resolved Questions/Blocked/Errors&Fixes/锚点索引覆盖（强于 kimi）。
-#      依据 docs/upstream-analysis/kimi.md 吸收表 1。
 400-agent-compact-six-segment-handoff.patch
-# 401 R5 吸收 #6（minimax）：runaway-guard 六信号——exact_action_repeat/exact_result_repeat
-#      （同工具）/same_error_family（数字归一化族）/abab_action_cycle/polling_repeat/
-#      unchanged_progress_repeat（跨工具结果不变）+ 工具步进 HMAC 指纹（16KB 有界序列化）；
-#      挂 sequential/segmented 步进；默认只报不打断，HERMES_RUNAWAY_GUARD_INTERRUPT=1 打断、
-#      =0 关闭。依据 docs/upstream-analysis/minimax-code.md §2.6 差距表。
 401-agent-runaway-guard-six-signals.patch
-# 402 R5 吸收 #4（minimax+codex）：审批宽度候选五档+决策八态+规则三列表挂载。
-#      candidateScopes（narrow/byFirstWord/byArgvPrefix2/byDomain/wholeTool，candidates[0]
-#      恒窄默认）+ 求值序 deny→ask→allow→default + 批准即学习（approved_scoped 落 allow /
-#      execpolicy_amendment 改默认模式）；域模块 custom/server/approval/ 三件套 +
-#      rules.json 存储（HERMES_APPROVAL_RULES_FILE>cwd>.approval>home 降级）。
-#      依据 docs/upstream-analysis/minimax-code.md §2.3 + spec §1.2 #4。
 402-server-approval-routes-mount.patch
-# 403 R5 吸收 #9（deepseek-harness token-meter）：三投影互校挂载。
-#      tokenUsage（uncachedInput/output/cacheRead/cacheWrite 逐 attempt 精确求和）/
-#      contextPressure（pressure/projected/window 双比率）/contextBreakdown（三段构成
-#      之和恒等 surface，破坏显式告警不吞）+ zcode UsageStatsSummary 映射对账（差异上报
-#      不静默修数）+ StatsPills 口径缓存命中比与 TTFT/decode 台账（无流样本不伪造）。
-#      依据 docs/upstream-analysis/deepseek-harness.md §四 + spec §1.2 #9。
 403-server-token-meter-routes.patch
-# 404 R5 吸收 #10 独立子件：agent 名册配置层（dsh 角色配置+kimi 昵称池+routa 团队名册）。
-#      agent/agent_roster.py——角色目录（routa team 九角色默认）/昵称池（同角色去重、池
-#      竭追加序号、跨角色可重名）/并发与深度护栏单一事实源（delegate 动态描述同源值）；
-#      <HERMES_HOME>/agent-roster.yaml 四要素覆盖，坏文件回默认不炸。continuation 路由
-#      （send_message 转向/interrupt 停当前轮）依赖 delegate 后台化（mimo P3 缓办）后接。
-#      依据 docs/upstream-analysis/{dsh-TUI,kimi,routa}.md + spec §1.2 #10。
 404-agent-roster-config-layer.patch
-# 405 mimo P6 ngram 原语 + P7 checkpoint 写手（goal 冷裁判经核实原生已有：goals.py
-#      每轮辅助裁判+GoalGate+fail-open，强于 mimo 方案，不重造）。
-#      P6：runaway_guard 增文本侧 observe_text_step（词级 8-gram Jaccard 相邻窗重复率
-#      >0.6 连续 2 窗 → text_ngram_repeat 信号，只报不打断；短文本豁免断连击），挂
-#      conversation_loop normalize_model_response 后。P7：agent/session_checkpoint.py
-#      五节写手（goal/done 锚点/next 黑名单/blockers/artifacts 各节预算）+校验器重写
-#      一次+原始摘要兜底+generation 幂等+对账三分支降级 unverified；挂 turn_finalizer
-#      预算触顶（budget_exhausted）；HERMES_SESSION_CHECKPOINT=0 关。
-#      依据 specs/2026-09-24-{goal-judge-and-ngram-loop-guard,session-checkpoint-writer}.md。
 405-agent-ngram-checkpoint-writer.patch
-# 406 mimo P4 一期：记忆 FTS 索引视图——markdown 仍为唯一事实源，SQLite FTS5+BM25
-#      只做索引（<home>/memories/index.sqlite）；search 前 reconcile 全量对账（源条目
-#      受字符预算量小恒廉价），零侵入 MemoryStore（索引不挂写路径，坏只影响本查询）；
-#      中文查询 FTS 未命中退 LIKE 子串（unicode61 不切 CJK，排序退时间序如实标注）。
-#      memory_tool 增 action=search（content 为查询词，target 可限桶）。二期
-#      auto-dream/distill 自动沉淀维持分期。
-#      依据 2026-09-24-mimo-code-coding-tools-research.md §3.5 P4。
 406-agent-memory-fts-index.patch
-# 407 mimo P4 二期 v1：规则式 distill 自动沉淀——归一化去重 + 容量超线(0.9)最旧序
-#      剪枝 + 逐条报告；memory_tool 增 action=consolidate。确定性变换纪律（不做摘要/
-#      改写）；7d/30d auto-dream 节奏经既有 cron 运维面接（模块尾注释注册例）。
 407-agent-memory-distill-v1.patch
-# 408 候补第二批（codex 29f056c 族）：per-model 工具描述/参数覆盖——config.yaml 顶层
-#      tool_model_overrides 按模型（精确/尾通配）覆盖工具 description/parameters，
-#      挂 _load_tools 尾部（会话构建即生效）；坏 schema（parameters 非含 type 对象）
-#      回退捆绑版告警不拖垮装配（codex fail-safe 语义）。switch_model 热切换列 v2。
-#      依据 docs/upstream-analysis/codex.md 增量节 + ycode-absorption-matrix 候补表。
 408-agent-tool-model-overrides.patch
-# 409 候补终批（codex e7165c2/53446f9 语义 refinement）：剪枝次序化"最大优先装下即停"——
-#      _demote_size_ordered（内容尺寸降序 demote，达 shed_target_chars 早停；无目标全量
-#      次序不变结果）；proactive 路径按超溢量（overage×CHARS_PER_TOKEN×1.2 余量）定目标，
-#      只回收越线部分多留完整工具结果。守门 3 例+压缩器回归 159 绿。
-#      依据 ycode-absorption-matrix 候补终态处置表（原"排队"项按设计轮落地）。
 409-agent-shed-size-order.patch
-# 410 P0 批前两项（矩阵 §3.11）：①子代理结果来源标头（cc 2.1.277 概念，§3.7 P0）——
-#      mark_entry_summaries 代码侧包裹不可伪造来源标记（子文本内同款标记零宽中性化+
-#      标志位幂等防预占），聚合出口与 sync 返回双消费点；②recap 域 v1（cc/codex/dsh
-#      三源合并，§3.9 P0）——build_worker_context 注入 checkpoint 上次进展（goal/done/
-#      next/blockers，衔接 405 写手），重派续跑不重做。守门 4+2 例。
 410-agent-source-marks-recap.patch
-# 411/412（feat/capability-boundaries 轮）：jobs.json 与记忆文件单写者治理
-# （双写台账见 docs/superpowers/specs/2026-09-25-capability-boundaries-design.md）。
-# 411  provider/model 改走 hermes cron create/edit --model/--provider（jobs.json 单写者
-#      = hermes cron 序列化器），writeJobs 原子替换防半截 JSON；base_url 无 CLI 面
-#      保留窄道直写（上游缺口登记）。
-# 412  记忆三文件（MEMORY/USER/SOUL.md）原子写 + mtime CAS：hermes memory 工具并写
-#      同一批文件，先读后写并发互踩→客户端带 expected_mtime，冲突 409 拒写。
 411-cron-jobs-single-writer.patch
 412-memory-atomic-cas.patch
-# 413 P0 批第五项（routa §七#3 + antigravity A1 合并域，矩阵 §3.6；原 411 撞并行 cron 号重编）：任务=证据累积对象
-#      轻量版——custom/server/evidence/ 五 kind 台账（artifact 工件卡/snapshot 交付冻结/
-#      verification 三态裁决/lane 两 kind 预留）、只增不改+evidenceId 幂等+500 条环形+
-#      坏文件 fail-soft；POST/GET /api/evidence/:taskId 与 /verdict；守门 7 例。
-#      laneSessions/laneHandoffs 完整语义依赖 loop 会话域列后续扩。
 413-server-evidence-routes.patch
-# 414 P0 批第七项（codex-product §五 P0-1，矩阵 §3.8）：/review 评审域轻量版——
-#      两域（baseline/uncommitted）+行内评论 file:line 回流（open→resolved）+
-#      三裁决一次定音（approve/request_changes/comment），裁决联动 evidence
-#      verification 落账（store 层单一事实源）；reviewId/commentId 双幂等；
-#      守门 4 例。
 414-server-review-routes.patch
-# 450-453（feat/boundary-governance-2 轮，边界治理批二期）：上游缺口 R1/R2 根治
-# （台账 docs/superpowers/specs/2026-09-25-capability-boundaries-design.md §6）。
-# 编号注：413/414 已被 P0 批 review 域占用，本批自 450 起避让推进前沿（P1 批 20 项由 419 起推进）。
-# 450  hermes cron create/edit 加 --base-url（存储层本就支持，补 CLI 面，R1）。
-# 451  jobs.ts base_url 改走 cron CLI，删除 patchJobFields/writeJobs 直写窄道——
-#      jobs.json 单写者收口完成（承 411）。
-# 452  hermes memory set：记忆三文件（MEMORY/USER/SOUL.md）单写者收口（R2），
-#      原子写 + --expect-mtime CAS（冲突 exit 3）。
-# 453  memory.ts 保存改走 memory set CLI（双层 CAS 防 TOCTOU），不再直写记忆文件（承 412）。
 450-cron-cli-base-url.patch
 451-jobs-base-url-cli.patch
 452-memory-set-cli.patch
 453-memory-save-cli.patch
 419-agent-board-concurrency-gate.patch
-# 455 P1 routes 统一挂载（column-automation/inbox/ask 三组合一——并行会话重排
-#      routes.ts 致三 routes-only 补丁 hunk 集体失配；模块本体走 custom/ symlink
-#      不属补丁体系，挂载收敛为本单一补丁，按当前 routes.ts 实锚生成）。
 455-server-p1-routes-mounts.patch
-# 470/471（feat/boundary-leftovers 轮，T4b 上游两留痕）：跨机协作事件锚点
-# （边界设计 §6-T4b；编号避让 P1 批推进前沿取 470 带）。
-# 470  hosted_rooms.append_event 可选 collab_event_id——并入 payload 落盘（零 schema
-#      变更，幂等比对随 payload_json 参与）；runtime 镜像已登记。
-# 471  kanban _append_event 可选 collab_event_id——并入 task_events.payload（零 schema
-#      变更）；与 run-trace collab.event_id、loop graph_events.matrix_event_id、
-#      approved.events 双 eid 构成五留痕 eid 锚点约定闭环。
 470-hosted-rooms-collab-event-id.patch
 471-kanban-collab-event-id.patch
-# 472（feat/boundary-leftovers 轮，T3b）：loop 调度桥接公开段路由——bootstrap/routes.ts
-#      认证前挂 registerLoopCronBridgeRoutes（hermes cron no-agent 脚本回调
-#      /api/loop/cron-bridge/tick；token fail-closed+loopback 限源；未启用恒 404）。
-#      配套 overlay 件：custom/server/loop/graph/cron-bridge.ts + graph-assembly 门控。
 472-loop-cron-bridge-route.patch
-# 456 P1（routa §七#7，矩阵 §3.6）：权限升级协议——urgency 三档（normal/urgent/critical）
-#      待决队列高在前、一次定音裁决、approved 可附 sandboxConstraints（批准即改沙箱，
-#      联动 402 规则域）；POST/GET /api/escalation（455 统一挂载续批；custom 模块走 symlink）。
 456-server-escalation-mount.patch
-# 457 P1（routa §七#8，矩阵 §3.6）：runaway 监督模式——watchdog_retry|ralph_loop|report
-#      三模式判定面（信号→动作）+有界恢复 maxRecoveryAttempts（超界转人工）；衔接
-#      401/405 信号；执行钩子列后续（同 415 模式）；HERMES_RUNAWAY_SUPERVISOR/
-#      HERMES_RUNAWAY_MAX_RECOVERY 配置；守门 4 例。
 457-agent-runaway-supervisor.patch
-# 458 P1（kimi §五 C 表，矩阵 §3.3）：agent profile 五级来源+热重载判定面——
-#      五级优先级合并（env>CLI>项目>全局>内置名册）+watch mtime 变更检测+防抖窗；
-#      重载动作由调用方跑（判定面纯函数）；守门 4 例。
 458-agent-profile-hot-reload.patch
-# 459 P1（kimi §四 P0-2 余项，矩阵 §3.3）：MCP 配置管理——scope 三选一
-#      （project|global|session）/timeout 有界归一（kimi 超时指引+qoder Q15+codex X8
-#      同物合并）/needs-auth action 闭环（authorize|dismiss 一次闭环）；
-#      POST/GET /api/mcp-config[/needs-auth/:name/auth]（patch 459 挂载）；守门 2 例。
 459-server-mcp-config-mount.patch
-# 473（feat/boundary-ui 轮，M2 案例面板 i18n）：ia2.delivery 词条（zh/en，
-#      其余语种 fallback——104/105 先例同款）。
-473-delivery-cases-i18n.patch
-# 474（feat/boundary-ui 轮，M2 发起向导 i18n）：ia2.delivery 补 launch/表单/网络读数词条
-#      （zh/en，其余语种 fallback——104/105 先例同款）。
-474-delivery-wizard-i18n.patch
-# 475（P2 余半项，流式裁剪）：分级牺牲优先级表（可再生只读工具 tier0 先牺牲，
-#      同级大小降序保"最大优先"）+shed_bytes 指标（demoted/shed_bytes/target/met_target）。
+473-client-locales-rebaseline.patch
 475-agent-shed-tiered-metrics.patch
-# 476（UI 批首件，技能入口）：IdeMcpPane 技能 tab 词条（zh/en，其余语种 fallback——
-#      474 先例同款）；组件本体走 custom/ symlink（IdeMcpPane+hermes-skills+守门）。
-476-client-skills-tab-i18n.patch
-# 477（用户指令 2026-09-26）：IDE 编码引擎独立模型配置挂载——bootstrap/routes.ts
-#      两行（import+use，356 session-share 同款）；本体走 custom（控制器+enginemodels 域）。
 477-server-ide-engine-models-route.patch
-# 478（修复轮）：输入框模型按钮词条 ide.chatSelectModel（zh/en）——按钮本体修复
-#      走 custom（IdeChatPane 解禁+独立目录浮层+双路径 pick）。
-478-client-input-model-i18n.patch
-# 479（报障修复）："Profile 未配置大模型"启动竞态误弹——token 恢复前 fetchProviders
-#      空跑、之后无人复查；补 token 就绪后重查（500ms/2s 两拍），真空才弹。
 479-client-provider-prompt-token-retry.patch
-# 480（scoped 模型可调）：IDE 会话建为 scoped（会话级模型——用户指令"模型可调"）；
-#      词条 chatModelNeedsScopedSession（存量 global 会话兜底提示）；本体走 custom
-#      （IdeChatPane/IdeCommandPalette 三处 global→scoped+pickModel 兜底）。
-480-client-scoped-model-i18n.patch
-# 482（UI 融合 UI-5）：run 逐文件 Undo——挂载 run-undo 路由（477 同款两行）
-#      +词条 undoFile（zh/en）；本体走 custom（node:sqlite 直连+git apply -R+按钮）。
 482-server-run-undo-mount-i18n.patch
-# 483（UI 融合 UI-10）：IDE 内嵌看板四视图词条（tab_kanban+kanban.empty，zh/en）；
-#      本体走 custom（IdeKanbanPane 四视图+sidepane tab）。
-483-client-kanban-pane-i18n.patch
-# 484（UI 融合 UI-2 v1）：compaction 留痕卡数据面挂载（chat_compression_snapshots
-#      单点查询）；本体走 custom（controller+IdeCompactionCard 消息流底部浮卡）。
 484-server-compaction-trace-route.patch
-# 485（前缀复用层 2）：hermes_state 指纹链存储——session_prefix_chain 独立表
-#      （零 messages 迁移）+append/批量事务内增量推进（sha1 链头；失败静默不阻断）；
-#      agent pytest 2 例（链演进/内容敏感/会话隔离/缺表容错）。
 485-agent-prefix-chain-store.patch
-# 486（UI 复刻 R1）：恢复对话框词条 chatRecovery（zh/en）；本体走 custom（R1-R5
-#      五件：恢复对话框/权限七档/问卷卡/mention chip/执行日志区——组件+挂载同 commit）。
-486-client-replica-r1-i18n.patch
-# 487（UI 复刻 T 批）：工具时间线面板词条 tab_tools（zh/en）；本体走 custom
-#      （IdeToolsPane 七类专属卡+sidepane ⚙ tab——zcode 62 卡复刻首期）。
-487-client-tools-pane-i18n.patch
