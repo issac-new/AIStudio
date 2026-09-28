@@ -12,7 +12,8 @@ from pathlib import Path
 DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 EVID = SIM / 'evidence'
-SHOTS = DIR / 'shots'
+# 实拍源（持久位置优先；DIR/shots 为生成期临时布局回落——20260928-product-demo 迁移后留档）
+SHOTS = EVID / '20260928-product-demo' / 'shots' if (EVID / '20260928-product-demo' / 'shots').is_dir() else DIR / 'shots'
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 PLAN_PATH = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
 JOURNEY_HTML = EVID / 'simulation-report.html'
