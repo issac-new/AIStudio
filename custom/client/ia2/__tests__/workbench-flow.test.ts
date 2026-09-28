@@ -580,3 +580,57 @@ describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', (
     expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
   })
 })
+
+describe('WorkbenchView — P4③ 群任务流转时间线（2026-09-29 消息源按选择类别分派）', () => {
+  function makeFlowRouter(): Router {
+    return createRouter({
+      history: createMemoryHistory(),
+      routes: [{
+        path: '/app',
+        component: { template: '<router-view />' },
+        children: [
+          { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
+          { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
+          { path: 's/group/:roomId', name: 'ia2.groupRoom', component: WorkbenchView },
+          { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
+        ],
+      }, {
+        path: '/ide', name: 'ide.shell', component: { template: '<div ide />' },
+      }],
+    })
+  }
+
+  const GROUP_MSGS = [
+    { id: 'm1', senderName: 'bella', content: '派发任务 card=t_ab12cd34 @fanfan-agent:matrix.test 请开始系统分析', timestamp: 1759000040000 },
+    { id: 'm2', senderName: 'fanfan-agent', content: '【完成回执】t_ab12cd34 已完成', timestamp: 1759000050000 },
+    { id: 'm3', senderName: 'mei', content: '流式生成中的无关内容', timestamp: 1759000060000, isStreaming: true },
+  ]
+
+  it('group 选择：group-chat store 消息解析出派发+完成回执 → 右栏时间线渲染（streaming 不入流）', async () => {
+    ;(groupStubs.state as { messages?: unknown[] }).messages = GROUP_MSGS
+    const router = makeFlowRouter()
+    router.push('/app/s/group/gr-1')
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    await flushPromises()
+    const sec = wrapper.find('[data-testid="tdp-flow-sec"]')
+    expect(sec.exists()).toBe(true)
+    expect(sec.text()).toContain('fanfan-agent')
+    expect(sec.text()).toContain('完成回执')
+    expect(sec.text()).not.toContain('流式生成中的无关内容')
+    delete (groupStubs.state as { messages?: unknown[] }).messages
+  })
+
+  it('room 选择走 matrix-room 消息源：群消息不串门（修复前分析群面板未出数的反向守门）', async () => {
+    ;(groupStubs.state as { messages?: unknown[] }).messages = GROUP_MSGS
+    const router = makeFlowRouter()
+    router.push('/app/s/room/!r1:host')
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    await flushPromises()
+    // room 选择不读群消息（matrix-room 桩无消息）→ 时间线不渲染，群消息零残留
+    expect(wrapper.find('[data-testid="tdp-flow-sec"]').exists()).toBe(false)
+    delete (groupStubs.state as { messages?: unknown[] }).messages
+  })
+})

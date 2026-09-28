@@ -25,6 +25,7 @@ import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { parseTaskFlow, type TaskFlowEvent } from '@/custom/matrix-chat/utils/task-flow'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useChatStore } from '@/stores/hermes/chat'
 import { usePlatformsStore } from '../store/platforms'
 import { buildAgentRoster } from '../adapters/agents'
@@ -204,18 +205,34 @@ const feedRows = computed(() => mergeFeed(
   })),
   Date.now(),))
 
-// ── P4③ 群任务流转时间线（2026-09-28 §五）：当前选中群的消息流解析任务型事件
+// ── P4③ 群任务流转时间线（2026-09-28 §五）：当前选中对象的消息流解析任务型事件
 // （派发/完成回执/缺陷/评审结论），喂给右栏 TaskDecisionPanel 的「任务流转」节。
+// 2026-09-29 重构轮根治"分析群面板未出数"：群（group）的消息在 hermes group-chat
+// store（GroupChatView 自装载，非 matrix-room store）——按选择类别取对消息源；
+// 类别不符一律空（chat 会话无房间消息流；切换对象后旧房消息不再残留右栏）。
+const groupChatStore = useGroupChatStore()
+
 const roomFlowEvents = computed<TaskFlowEvent[]>(() => {
-  const msgs = (matrixRoom.activeRoomMessages ?? []) as Array<{
-    getSender?: () => string; getContent?: () => { body?: string }; getTs?: () => number
-  }>
-  if (!msgs.length) return []
-  return parseTaskFlow(msgs.map((ev) => ({
-    sender: ev.getSender?.() ?? '',
-    body: ev.getContent?.()?.body ?? '',
-    ts: ev.getTs?.() ?? 0,
-  })))
+  const sel = activeSel.value
+  let msgs: Array<{ sender: string; body: string; ts: number }> = []
+  if (sel?.kind === 'group') {
+    const raw = (groupChatStore.messages ?? []) as Array<{
+      senderId?: string; senderName?: string; content?: string; timestamp?: number; isStreaming?: boolean
+    }>
+    msgs = raw
+      .filter((m) => !m.isStreaming)
+      .map((m) => ({ sender: m.senderName || m.senderId || '', body: m.content || '', ts: m.timestamp || 0 }))
+  } else if (sel?.kind === 'room') {
+    const raw = (matrixRoom.activeRoomMessages ?? []) as Array<{
+      getSender?: () => string; getContent?: () => { body?: string }; getTs?: () => number
+    }>
+    msgs = raw.map((ev) => ({
+      sender: ev.getSender?.() ?? '',
+      body: ev.getContent?.()?.body ?? '',
+      ts: ev.getTs?.() ?? 0,
+    }))
+  }
+  return msgs.length ? parseTaskFlow(msgs) : []
 })
 
 const linkedContext = computed(() => {
