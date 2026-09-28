@@ -53,3 +53,9 @@ console.log('[overlay-build] ▶ 运行时配置资源 → dist/server/runtime/{
 console.log('\n[overlay-build] ✓ 完整构建完成:');
 console.log('  dist/client/  — 客户端(含自定义矩阵/看板/品牌)');
 console.log('  dist/server/  — 服务端');
+
+// 6. 产物完整性门禁:交付链唯一真实出口是本脚本(build:full/build-dmg 直呼 node,
+// 不经 npm 生命周期),postbuild 钩子只在 `npm run build`(纯 vite client 构建)后
+// 触发——门禁此前从不覆盖交付链,09-27 dist/client 空壳事故(服务 ready 但 SPA
+// 全 404)正发生在这条链路上。execSync 非零即抛,校验失败=构建失败。
+run('node scripts/verify-dist.mjs', overlayRoot, 'verify-dist: 产物完整性门禁');

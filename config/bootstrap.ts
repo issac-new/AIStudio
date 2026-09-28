@@ -9,8 +9,9 @@ const ncwkRoot = resolve(overlayRoot, '..');
 export const bootstrap = {
   ncwkRoot,
   overlayRoot,
-  upstreamRoot: resolve(ncwkRoot, 'upstream'),
-  hermesStudioRoot: resolve(ncwkRoot, 'upstream', 'hermes-studio'),
+  // OVERLAY_UPSTREAM_ROOT：并行会话私有 upstream 副本覆盖（与 scripts/inject.mjs 同步）。
+  upstreamRoot: resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(ncwkRoot, 'upstream')),
+  hermesStudioRoot: resolve(process.env.OVERLAY_UPSTREAM_ROOT || resolve(ncwkRoot, 'upstream'), 'hermes-studio'),
 
   // B 类 patch:按 series 顺序应用(阶段 2 填充)
   patchSeriesFile: resolve(overlayRoot, 'patches', 'series'),

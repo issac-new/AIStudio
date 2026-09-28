@@ -87,7 +87,8 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
       const mainDb = join(deps.kanbanDir, 'kanban.db')
       if (existsSync(mainDb)) {
         const total = queryBoardDb(mainDb, db => (db.prepare('select count(*) n from tasks').get() as any)?.n ?? 0)
-        out.push({ slug: 'default', name: 'Default', total: total ?? 0, archived: false })
+        if (total === null) return null // 主库读不了 → 整体回落（与分板语义一致，防"Default 板 0 任务"假象）
+        out.push({ slug: 'default', name: 'Default', total, archived: false })
       }
       for (const slug of readdirSync(boardsDir)) {
         const dbPath = join(boardsDir, slug, 'kanban.db')

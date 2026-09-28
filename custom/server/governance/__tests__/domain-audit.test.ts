@@ -86,6 +86,10 @@ describe('六域体检（POST /domains/run + GET /domains）', () => {
     expect(body.runs).toEqual(['run-two', 'seed-run'])
     expect(Object.keys(body.latest).sort()).toEqual(['L0', 'L1', 'L2', 'L3', 'L4', 'L5'])
     expect(body.total).toBeGreaterThanOrEqual(12)
+    // latest 必须是每域最新一轮（文件序旧→新，末行=最新）：以台账末行实测对账
+    const ledgerLines = readFileSync(join(repo, 'docs/governance/domain-audit.jsonl'), 'utf8').trim().split('\n')
+    const lastL0 = JSON.parse(ledgerLines.reverse().find(l => (JSON.parse(l) as { domain: string }).domain === 'L0')!)
+    expect((body.latest.L0 as { checkedAt: string }).checkedAt).toBe(lastL0.checkedAt)
   })
 
   it('patch 490 在 series（挂载单一事实源）', async () => {

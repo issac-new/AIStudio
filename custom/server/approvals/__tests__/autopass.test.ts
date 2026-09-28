@@ -47,6 +47,9 @@ describe('autopass 纯函数（确定性抽检 + 候选判定）', () => {
     const now = 1_000_000
     expect(isAutopassCandidate({ kind: 'command', risk: 'low', createdAt: now - 2000 }, now)).toBe(true)
     expect(isAutopassCandidate({ kind: 'command', risk: 'low', createdAt: now - 500 }, now)).toBe(false)
+    // createdAt 非正/缺失=未知（fleet lastActiveAt=0）：宽限期从当下起算，不得立即放行
+    expect(isAutopassCandidate({ kind: 'command', risk: 'low', createdAt: 0 }, now)).toBe(false)
+    expect(isAutopassCandidate({ kind: 'command', risk: 'low' }, now)).toBe(false)
     expect(isAutopassCandidate({ kind: 'command', risk: 'medium', createdAt: now - 9999 }, now)).toBe(false)
     expect(isAutopassCandidate({ kind: 'command', risk: 'high', createdAt: now - 9999 }, now)).toBe(false)
     expect(isAutopassCandidate({ kind: 'review', risk: 'low', createdAt: now - 9999 }, now)).toBe(false)

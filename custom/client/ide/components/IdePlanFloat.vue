@@ -128,11 +128,11 @@ function planAction(kind: 'implement' | 'fresh' | 'leave'): void {
   &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 
   &.is-primary {
-    background: var(--primary-color, #18a058)22;
-    border-color: var(--primary-color, #18a058)66;
+    background: color-mix(in srgb, var(--primary-color, #18a058) 13%, transparent);
+    border-color: color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
     color: var(--primary-color, #18a058);
 
-    &:hover { background: var(--primary-color, #18a058)33; }
+    &:hover { background: color-mix(in srgb, var(--primary-color, #18a058) 20%, transparent); }
   }
 }
 </style>
