@@ -8,6 +8,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useWorkspaceStore } from '../store/workspace'
 import { useSitCounts } from '../composables/useSitCounts'
@@ -16,13 +17,26 @@ import { mergeAttention } from '../adapters/overview'
 import { useSharedArm } from '../composables/useSharedArm'
 import IaShellHeader from './IaShellHeader.vue'
 import AttentionStrip from './AttentionStrip.vue'
+import { useDeliveryCasesStore } from '@/custom/matrix-teams/stores/delivery-cases'
 
 const router = useRouter()
+const { t } = useI18n()
 useSharedArm()
 
 const cockpit = useCockpitStore()
 const workspace = useWorkspaceStore()
 const { waitItems, loopRows } = useSitCounts()
+// P1（09-28）：交付网络读数卡（分布式设计 §7 总览三数：在途案例/待审人工门/已完成）
+// ——数据来自 delivery-cases store（事件驱动实时投影）；有在途或待审才显示（零噪音）。
+const delivery = useDeliveryCasesStore()
+void delivery.refresh()
+const deliveryReadings = computed(() => delivery.networkReadings)
+const showDelivery = computed(() =>
+  deliveryReadings.value.inFlight > 0 || deliveryReadings.value.pendingHumanGates > 0)
+
+function openCases(): void {
+  void router.push({ name: 'ia2.deliveryCases' })
+}
 
 /** 注意力梯队（mergeAttention 单一排序：blocked → review → triage）：
  *  blocked 任务（跨板聚合）+ blocked 循环 + 等我（review 任务/中断运行/fleet）。 */
@@ -70,6 +84,12 @@ function onOpenBoard(): void {
 <template>
   <div class="ia-gtop" data-testid="ia-global-top">
     <IaShellHeader :user-name="cockpit.currentUserName" />
+    <div v-if="showDelivery" class="delivery-strip" data-testid="delivery-readings" @click="openCases">
+      <span class="dchip dchip--flight">{{ t('ia2.delivery.inFlight') }} {{ deliveryReadings.inFlight }}</span>
+      <span v-for="(n, st) in deliveryReadings.byStage" :key="st" class="dchip">{{ st }} {{ n }}</span>
+      <span v-if="deliveryReadings.pendingHumanGates > 0" class="dchip dchip--human">{{ t('ia2.delivery.pendingHuman') }} {{ deliveryReadings.pendingHumanGates }}</span>
+      <span v-if="deliveryReadings.completed > 0" class="dchip dchip--done">{{ t('ia2.delivery.completed') }} {{ deliveryReadings.completed }}</span>
+    </div>
     <AttentionStrip
       :items="attentionRows"
       @select="onAttentionSelect"
@@ -77,3 +97,12 @@ function onOpenBoard(): void {
     />
   </div>
 </template>
+
+<style scoped>
+/* P1 交付网络读数条：单行 chip 流，零在途零待审时整条隐藏（零噪音原则） */
+.delivery-strip { display: flex; gap: 6px; align-items: center; padding: 3px 12px 0; cursor: pointer; flex-wrap: wrap; }
+.dchip { font-size: 11px; color: #555; background: #f3f4f6; border-radius: 8px; padding: 1px 8px; }
+.dchip--flight { background: #dbeafe; color: #1d4ed8; }
+.dchip--human { background: #fef3c7; color: #b45309; }
+.dchip--done { background: #dcfce7; color: #15803d; }
+</style>
