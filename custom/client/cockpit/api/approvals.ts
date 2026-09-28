@@ -47,3 +47,28 @@ export function decideApproval(id: string, decision: string, note?: string, titl
 export function fetchApprovalHistory(limit = 50): Promise<{ entries: ApprovalHistoryEntry[] }> {
   return request<{ entries: ApprovalHistoryEntry[] }>(`/api/approvals/history?limit=${limit}`)
 }
+
+/** V4.1 §七 抽检器：低风险自动放行条目（待抽检 + 已处置回看） */
+export interface SpotCheckItem {
+  id: string
+  ts: number
+  title: string
+  detail: string
+  profile?: string
+  verdict?: 'confirmed' | 'vetoed'
+  verdictTs?: number
+  verdictActor?: string
+  verdictNote?: string
+}
+
+export function fetchSpotChecks(limit = 20): Promise<{ items: SpotCheckItem[]; resolved: SpotCheckItem[] }> {
+  return request<{ items: SpotCheckItem[]; resolved: SpotCheckItem[] }>(`/api/approvals/spotcheck?limit=${limit}`)
+}
+
+export function resolveSpotCheck(id: string, verdict: 'confirm' | 'veto', note?: string): Promise<{ ok: boolean; item?: SpotCheckItem; detail?: string }> {
+  return request('/api/approvals/spotcheck/' + encodeURIComponent(id) + '/resolve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ verdict, note }),
+  })
+}
