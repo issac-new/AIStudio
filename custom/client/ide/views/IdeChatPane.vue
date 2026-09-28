@@ -114,13 +114,14 @@ function ensureSession() {
 }
 
 onMounted(async () => {
-  chatStore.setRuntimeMode('default')
-  appStore.loadModels()
+  // overlay 挂载面须容忍上游 store 版本漂移：缺方法即跳过，不炸挂载
+  chatStore.setRuntimeMode?.('default')
+  appStore.loadModels?.()
   await Promise.all([
-    profilesStore.fetchProfiles(),
-    settingsStore.fetchSettings(),
+    profilesStore.fetchProfiles?.() ?? Promise.resolve(),
+    settingsStore.fetchSettings?.() ?? Promise.resolve(),
   ])
-  await chatStore.loadSessions(chatStore.sessionProfileFilter)
+  await chatStore.loadSessions?.(chatStore.sessionProfileFilter)
   ready.value = true
   ensureSession()
 })

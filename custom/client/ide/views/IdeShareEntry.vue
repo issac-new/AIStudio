@@ -17,6 +17,8 @@ async function shareSession(): Promise<void> {
   try {
     shareLink.value = await createSessionShare(props.sessionId, 'view')
     void navigator.clipboard?.writeText(shareLink.value.url).catch(() => undefined)
+  } catch {
+    // 创建失败保持静默：不展示链接（失败态由按钮恢复可用表达）
   } finally {
     sharing.value = false
   }

@@ -58,6 +58,14 @@ run('npm ci --prefix packages/desktop --no-audit --no-fund', upstream, 'desktop:
 // === Step 3: Build desktop main process (tsc) ===
 run('npm run build:main', desktopDir, 'build desktop main process (tsc)');
 
+// === Step 3.5: 仓库根 node_modules 生产化 ===
+// electron-builder 的 extraResources 把仓库根 node_modules 整拷进包内 webui/node_modules，
+// 约定它是"已裁剪的生产依赖"（上游 CI 以 --omit=dev 安装）。本机开发轮会把 vite/vitest/
+// playwright 等开发依赖装回根目录（实测 14GB），不裁剪则产物膨胀到 14GB（0.7.24 时代的
+// 2-3GB 巨型产物即此病灶）。构建在 build:full 之后，vite/tsc 已用完，此处裁剪安全。
+// 副作用：裁剪后上游根目录缺开发依赖，下轮开发/构建前需在上游根 `npm install` 还原。
+run('npm prune --omit=dev --no-audit --no-fund', upstream, 'root node_modules → production-only');
+
 // === Step 4: electron-builder 打包 ===
 // 直接用 electron-builder，不经过 upstream npm run dist（避免其 npm run build 覆盖 dist/）
 run(`npx electron-builder ${electronBuilderFlags}`, desktopDir, `electron-builder ${electronBuilderFlags}`);

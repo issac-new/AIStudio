@@ -3993,9 +3993,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 -
 -  // Changelog
    changelog: {
-     new_0_7_24_1: 'Added iOS Live Activities orchestration with locale-aware updates and per-user notification routing (#3102, #3111, #3152)',
-     new_0_7_24_2: 'Improved notification defaults and previews, ignored legacy session opt-outs, and hid unsupported social push entries (#3131, #3133, #3146, #3151)',
-@@ -3704,7 +5855,7 @@
+     new_0_7_25_1: 'Added Cursor CLI support for chat, group chats, and workflows, with native settings, skills management, and isolated Studio MCP (#3110)',
+     new_0_7_25_2: 'Added configurable JEV memory recall, relevance filtering, write review, skill matching, and learning preflight (#3159, #3161, #3169)',
+@@ -3714,7 +5865,7 @@
      new_0_7_22_5: 'Restored Studio MCP tools in global Coding Agent sessions and improved executable search paths and missing-command errors (#3044, #3055)',
      new_0_7_22_6: 'Added version declarations to Studio-generated DSH plugin manifests for compatibility (#3038)',
      new_0_7_22_7: 'Fixed API URL configuration migration reading the next line when BASE_URL is empty (#3046)',
@@ -4004,7 +4004,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      new_0_7_22_9: 'Fixed truncated or incorrectly split multi-line arrays, strings and arrays of tables in scoped Grok session configuration (#3072)',
      new_0_7_22_10: 'Fixed lost browser executable permissions and symbolic links in desktop runtime bundles, added Hermes 0.21.3 compatibility, and prevented runtime releases from replacing the latest desktop release marker (#3073)',
      new_0_7_21_1: 'Fixed DSH plugin configuration and Agent preset pages failing to open on Windows when startup selected the wrong command script (#3026)',
-@@ -3721,7 +5872,7 @@
+@@ -3731,7 +5882,7 @@
      new_0_7_20_10: 'Fixed approval session association for Hermes Agent 0.21 and later while retaining compatibility with older runtimes (#3018)',
      new_0_7_20_11: 'Updated default apikey domains to apikey.fan and added a one-time startup migration of old endpoints in existing Hermes configurations, preserving paths, keys, and model settings (#3022)',
      new_0_7_20_12: 'Improved Linux launcher and window icons with rounded corners and transparent margins for a more balanced visual size (#3008)',
@@ -4013,7 +4013,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      new_0_7_19_2: 'Fixed desktop restart loops, interrupted updates, and startup failures; preserved sign-in and browser data across upgrades and migrated Windows startup settings (#2931, #2979, #2988)',
      new_0_7_19_3: 'Added native OpenCode Free with keyless chat creation and Coding Agent access; available models load in the background (#2932)',
      new_0_7_19_4: 'Fixed OpenCode session compatibility for Ekko and Coding Agents routed through Studio; Hermes still requires a runtime upgrade (#2996)',
-@@ -3791,4 +5942,804 @@
+@@ -3801,4 +5952,804 @@
      new_0_7_0_10: 'The English and Chinese READMEs now document the five runtimes, three Agent families, module ownership, canonical APIs, and current development and validation workflows (#2745)',
      new_0_7_0_11: 'Device Connections now shows only Android and iOS download cards; official Apple releases are labeled App Store instead of TestFlight · App Store',
    },
@@ -8814,9 +8814,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 -
 -  // 更新日志
    changelog: {
-     new_0_7_24_1: '新增 iOS 实时活动编排，支持按语言更新并按用户路由通知 (#3102、#3111、#3152)',
-     new_0_7_24_2: '改进通知默认设置与预览，忽略旧版会话退出设置，并隐藏不支持的社交推送条目 (#3131、#3133、#3146、#3151)',
-@@ -3752,7 +5843,7 @@
+     new_0_7_25_1: '新增 Cursor CLI 支持，可用于聊天、群聊和工作流，并提供原生设置、技能管理与独立的 Studio MCP 配置 (#3110)',
+     new_0_7_25_2: '新增可配置的 JEV 记忆召回、相关性过滤、写入审核、技能匹配与学习预检查 (#3159、#3161、#3169)',
+@@ -3762,7 +5853,7 @@
      new_0_7_22_5: '补齐全局 Coding Agent 会话的 Studio MCP 工具，改进启动命令搜索路径及未安装可执行程序时的错误提示 (#3044, #3055)',
      new_0_7_22_6: '为 Studio 生成的 DSH 插件声明版本号，修复插件清单兼容性 (#3038)',
      new_0_7_22_7: '修复 API 地址配置迁移时，空 BASE_URL 错误读取下一行配置的问题 (#3046)',
@@ -8825,7 +8825,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      new_0_7_22_9: '修复 Grok 独立会话配置中的多行数组、长文本和表数组被截断或错误拆分的问题 (#3072)',
      new_0_7_22_10: '修复桌面运行时打包时浏览器执行权限和符号链接丢失的问题，兼容 Hermes 0.21.3；运行时发布不再覆盖桌面端的最新版本标记 (#3073)',
      new_0_7_21_1: '修复 Windows 下因选错启动脚本导致 DSH 插件配置和 Agent 预设页面无法打开的问题 (#3026)',
-@@ -3769,7 +5860,7 @@
+@@ -3779,7 +5870,7 @@
      new_0_7_20_10: '修复 Hermes Agent 0.21 及后续版本的审批会话关联，兼容旧版运行时 (#3018)',
      new_0_7_20_11: '将 apikey 默认域名更新为 apikey.fan，启动时一次性迁移已有 Hermes 配置中的旧端点，保留路径、密钥和模型设置 (#3022)',
      new_0_7_20_12: '优化 Linux 启动器和窗口图标的圆角与透明留白，使显示尺寸更协调 (#3008)',
@@ -8834,7 +8834,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      new_0_7_19_2: '修复桌面端反复重启、更新中断与启动失败；升级后保留登录及浏览器数据，并迁移 Windows 开机启动设置 (#2931, #2979, #2988)',
      new_0_7_19_3: '新增原生 OpenCode Free 提供商，无需 API Key 即可建聊和供 Coding Agent 使用，可用模型在后台加载 (#2932)',
      new_0_7_19_4: '修复 Ekko 与 Studio 代理的 Coding Agent 请求 OpenCode 时的会话兼容性；Hermes 仍需升级运行时 (#2996)',
-@@ -3839,4 +5930,804 @@
+@@ -3849,4 +5940,804 @@
      new_0_7_0_10: '中英文 README 已更新，完整说明五种运行时、三类 Agent、模块归属、规范 API，以及当前开发和验证流程（#2745）',
      new_0_7_0_11: '“设备互联”现仅显示 Android 和 iOS 下载卡片；Apple 正式版只标记为 App Store，不再显示 TestFlight · App Store',
    },

@@ -56,13 +56,13 @@ index e81befa2b0..f476a4cdd6 100644
  
      def _prune_old_tool_results(
 diff --git a/tests/agent/test_shed_size_order.py b/tests/agent/test_shed_size_order.py
-index 3264afe0f8..c2bfbc7a15 100644
 --- a/tests/agent/test_shed_size_order.py
 +++ b/tests/agent/test_shed_size_order.py
-@@ -73,3 +73,41 @@ class TestSizeOrderShed:
+@@ -72,3 +72,42 @@
+         assert count == 2
          contents = [m["content"] for m in out if m.get("role") == "tool"]
          assert any(c == MID for c in contents)  # 保护尾不动
- 
++
 +
 +class TestTieredSacrificeAndMetrics:
 +    """余半项守门：分级牺牲优先级表（可再生先牺牲）+ shed_bytes 指标。"""
