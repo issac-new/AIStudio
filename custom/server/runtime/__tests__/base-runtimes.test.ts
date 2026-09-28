@@ -17,8 +17,13 @@ import { validateSkillsShape, buildPinYaml, syncFromSource, readPin, readPinSkil
 import { applyPuaRegistration, semanticaMcpStatus } from '../../../../scripts/runtime/register-runtime.mjs';
 import { extractNewFileContent, validateSemanticaManifest, validatePin, seriesListsPatch } from '../../../../scripts/runtime/runtime-doctor.mjs';
 
-const hermesAgentRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
-const hermesStudioRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
+// 上游根与 inject.mjs 同源解析（OVERLAY_UPSTREAM_ROOT 私有树覆盖优先生效）；
+// env 缺席时与原逻辑一致（overlayRoot/../upstream）。
+const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT)
+  : resolve(overlayRoot, '..', 'upstream');
+const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
+const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 
 // worktree 环境（.claude/worktrees/<feat>/ 的 upstream 经符号链接指回真实树）下，
 // inject.mjs 的 resolvePatchTargetRoot 返回 realpathSync 后的真实路径，测试侧若用

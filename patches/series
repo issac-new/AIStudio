@@ -268,3 +268,8 @@
 #      max_in_progress 满载）与 per_profile cap 此前不进 describe_suppression，
 #      stuck 告警零后缀把"忙"误报"卡死"（B2 根治，gateway N=600+ 实锤）。
 478-dispatch-budget-telemetry.patch
+
+# 493（设计审查轮 · 工作台空态词条 + zh common 漏翻）：ia2.wb.empty* 三键 en/zh
+#      双语（工作台中栏空态引导）；zh common.search/apply 漏翻修正（板页 SEARCH
+#      标签实证）。追加式补键，沿用 328+/476 同款流程，不改 473 本体。
+493-client-wb-empty-i18n-zh-common.patch

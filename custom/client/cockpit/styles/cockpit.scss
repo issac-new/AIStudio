@@ -10,6 +10,13 @@
   --radius-standard: 6px; // 按钮、卡片、输入框
   --radius-large: 12px;   // 模态、大面板
   --radius-pill: 999px;   // 胶囊、圆形头像
+
+  // naive-ui 遗留变量名兜底：overlay 组件散用 var(--color-primary/--primary-color, <彩色>)，
+  // 两变量运行时从未定义，彩色 fallback（蓝 #3b82f6 / 绿 #18a058）逃逸出 Pure Ink
+  // （实测：Run Center CTA 蓝、IDE 发送薄荷绿、场景条激活态蓝）。令牌层统一别名为
+  // 墨色 accent，所有散落 fallback 收敛；组件局部定义的同名变量不受影响。
+  --color-primary: var(--accent-primary);
+  --primary-color: var(--accent-primary);
 }
 
 .cockpit {
@@ -148,12 +155,18 @@
 .cockpit ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 .cockpit { scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
 
-// ── 键盘焦点环 ──
-// 仅键盘导航时显示（:focus-visible），鼠标点击不触发
-.cockpit button:focus-visible,
-.cockpit input:focus-visible,
-.cockpit select:focus-visible,
-.cockpit textarea:focus-visible {
+// ── 键盘焦点环（全局 a11y 地板）──
+// 仅键盘导航时显示（:focus-visible），鼠标点击不触发。
+// 覆盖全部可聚焦元素：此前仅 .cockpit 容器内生效，board/inbox/runs/ide
+// 等 ia2 表面与上游页面键盘导航无焦点反馈（71 条 outline:none 生效）。
+// 组件级更具体的焦点样式（如 naive-ui box-shadow 环）仍可覆盖本规则。
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+[role='button']:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 1px;
 }

@@ -537,7 +537,20 @@ function onNewLoop(): void {
         @handle-task="onHandleTask"
         @goto-board="onGotoBoard"
       />
-      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
+      <!-- 无选择兜底：空态引导（此前为纯虚线空框，首屏中栏 60% 面积零信息） -->
+      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
+        <div class="wb__empty">
+          <span class="wb__empty-mark" aria-hidden="true">◌</span>
+          <p class="wb__empty-title">{{ t('ia2.wb.emptyTitle') }}</p>
+          <p class="wb__empty-desc">{{ t('ia2.wb.emptyDesc') }}</p>
+          <button
+            type="button"
+            class="wb__empty-cta"
+            data-testid="wb-empty-cta"
+            @click="router.push({ name: 'ia2.collabChat' })"
+          >{{ t('ia2.wb.emptyCta') }}</button>
+        </div>
+      </div>
     </section>
     <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控迁独立控制条行 -->
     <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
@@ -612,7 +625,7 @@ function onNewLoop(): void {
   &::before {
     content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px;
   }
-  &:hover, &:active { background: color-mix(in srgb, #61afef 30%, transparent); }
+  &:hover, &:active { background: color-mix(in srgb, var(--accent-primary) 18%, transparent); }
 }
 .wb__split--l { right: -3px; }
 .wb__split--r { left: -3px; }
@@ -630,4 +643,18 @@ function onNewLoop(): void {
   &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
 .wb__canvas-ph { height: 100%; border: 1px dashed var(--border-color); border-radius: 6px; }
+.wb__empty {
+  height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center; padding: 24px;
+}
+.wb__empty-mark { font-size: 40px; line-height: 1; color: var(--text-muted); }
+.wb__empty-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.wb__empty-desc { margin: 0 0 10px; font-size: 12.5px; color: var(--text-secondary); }
+.wb__empty-cta {
+  padding: 7px 18px; border: none; border-radius: var(--radius-standard, 6px);
+  background: var(--accent-primary); color: var(--bg-card);
+  font-size: 13px; cursor: pointer;
+  &:hover { background: var(--accent-hover); }
+}
 </style>
