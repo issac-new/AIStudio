@@ -50,6 +50,13 @@ run('node scripts/inject.mjs', overlayRoot, 'inject patches → upstream');
 
 // === Step 1: Full web UI build (client + server, 用 overlay vite config) ===
 // 关键: 使用 build.mjs (overlay config)，而不是上游的 npm run build
+// 幂等前置：上轮构建的 Step 3.5 已把根 node_modules 裁剪为生产态，vite/tsc 缺席，
+// 先补装开发依赖（已就绪时 npm install 近乎空转）。
+try {
+  execSync(`node -e "require.resolve('vite/package.json', { paths: [${JSON.stringify(upstream)}] })"`, { stdio: 'ignore' });
+} catch {
+  run('npm install --no-audit --no-fund', upstream, 'root node_modules → dev deps restored (post-prune idempotency)');
+}
 run('node scripts/build.mjs', overlayRoot, 'build:full (overlay config → dist/client + dist/server)');
 
 // === Step 2: Desktop deps ===
