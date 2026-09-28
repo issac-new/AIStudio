@@ -120,6 +120,15 @@ def render_narrative(state: dict, evid: Path) -> str:
             '协同机制：生成-验证分离且对抗性设计，验证者的目标是"击穿实现"；每道闸未过不得流入下游（显式状态机熔断错误级联）。',
             _state_mark(state, 'g2_arch_pass'),
         ),
+        (
+            '挑战 D：模型通道拒绝服务形状（V4-run1 实录）',
+            '开局 agent 首回合即被模型网关 HTTP 400 拒（Invalid request parameters），预检极简探针却全绿——'
+            '预检探针与真实载荷形状不一致，"通道可用"被假阳性掩盖。',
+            '协同机制：本地捕获代理截获 79KB 真实载荷逐项重放对照（原样 400 / 去掉 200 / 降档 200），'
+            '实锤元凶为非标参数 reasoning_effort="max"（仅 gpt-5.6 层线上值接受）；配置改 high 后通道恢复、'
+            'agent 回合全通。模型通道问题不猜不改盲试——载荷级实证定位，一修即愈。',
+            _state_mark(state, 'analysis_done'),
+        ),
     ]
     case_html = ''.join(
         f'''<div class="nv-case">
