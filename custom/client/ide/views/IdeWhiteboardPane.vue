@@ -233,7 +233,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   min-width: 26px;
   padding: 0 5px;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);
   font-size: 12px;
@@ -253,7 +253,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   height: 24px;
   padding: 0;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   cursor: pointer;
 }

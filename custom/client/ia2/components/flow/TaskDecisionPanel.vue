@@ -159,7 +159,7 @@ const feedWithTime = computed(() => props.feedRows.map(r => ({ ...r, time: fmtTi
   border-top: 1px solid var(--border-color);
 }
 .tdp__chip {
-  height: 22px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: var(--radius-large, 12px);
+  height: 22px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 11px;
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }

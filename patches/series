@@ -271,19 +271,3 @@
 # 490（走查修复 2）：zcode 会话 scoped→global 自动回落——IDE 会话默认 scoped（模型
 #      可调）与服务端 zcode-only-global 冲突致发送全 400；回落而非硬拒。
 490-server-zcode-scoped-fallback.patch
-# 493（设计审查轮 · 工作台空态词条 + zh common 漏翻）：ia2.wb.empty* 三键 en/zh
-#      双语（工作台中栏空态引导）；zh common.search/apply 漏翻修正（板页 SEARCH
-#      标签实证）。追加式补键，沿用 328+/476 同款流程，不改 473 本体。
-493-client-wb-empty-i18n-zh-common.patch
-# 494（设计审查遗留轮 · IDE i18n 接线）：14 个 ide 组件硬编码中文抽 t()（ask/
-#      compaction/contextBar/handoff/inlineDiff/mention/queue/recap/recovery/review/
-#      runlog/taskGroups/status/tools 十四域 zh+en 双语）；zh==en 可译五键
-#      （workerHealth/groupAgents/turnsPlaceholder/worktree/table.run）+ teams.leader
-#      组长化 + teams.accounts.title 补键（组件对象引用缺陷同修）。
-494-client-ide-i18n-wiring.patch
-# 495（设计审查遗留轮 · 双看板合一）：/hermes/kanban 深链重定向 /app/board
-#      （ia2.board 主面）。上游 KanbanView 退役出路由面；路由名保留兼容。
-495-client-kanban-unify-redirect.patch
-# 496（设计审查遗留轮 · P1a）：boring-avatars beam 变体默认彩板（紫红/青）与
-#      Pure Ink 冲突——两处调用统一五档灰阶色板（用户辨识靠纹样+明度）。
-496-client-avatar-pure-ink-palette.patch

@@ -383,6 +383,6 @@ function handleInlineCreateCancel() {
 
 .column-body::-webkit-scrollbar-thumb {
   background-color: $border-color;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 2px;
 }
 </style>

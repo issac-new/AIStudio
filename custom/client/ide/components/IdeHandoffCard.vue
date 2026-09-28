@@ -4,19 +4,14 @@
 // 结构校验（server 域同源：validateHandoff/renderHandoff——注入同树相对引用）
 // 即在消息流底部浮一张结构化交接卡（六段），不进 MessageList（零 upstream 侵入）。
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { validateHandoff, renderHandoff, type Handoff } from '../../../server/handoff/handoff-script'
 
 const chatStore = useChatStore()
-const { t } = useI18n()
 
-// 展示标题走 i18n；titleMap（解析引擎渲染的 `## 已完成` 等段头）是协议解析器，保持中文原文。
-const SECTION_TITLES = computed<Record<keyof Handoff, string>>(() => ({
-  done: t('ide.handoff.done', '已完成'), notDone: t('ide.handoff.notDone', '未完成'),
-  risks: t('ide.handoff.risks', '风险'), next: t('ide.handoff.next', '下一步'),
-  artifacts: t('ide.handoff.artifacts', '产物'), verify: t('ide.handoff.verify', '复核'),
-}))
+const SECTION_TITLES: Record<keyof Handoff, string> = {
+  done: '已完成', notDone: '未完成', risks: '风险', next: '下一步', artifacts: '产物', verify: '复核',
+}
 
 function parseHandoff(text: string): Handoff | null {
   // 六段式宽松解析：`## 标题` 分段（handoff-script 渲染同款标题），段内 - 列表行。
@@ -54,12 +49,12 @@ const handoff = computed<Handoff | null>(() => {
   return null
 })
 
-const sections = computed(() => Object.keys(SECTION_TITLES.value) as Array<keyof Handoff>)
+const sections = computed(() => Object.keys(SECTION_TITLES) as Array<keyof Handoff>)
 </script>
 
 <template>
   <section v-if="handoff" class="ide-handoff" data-testid="ide-handoff-card">
-    <header class="ide-handoff__head">⇄ {{ t('ide.handoff.title', '交接书') }}<span class="ide-handoff__sub">（final message = entire handoff）</span></header>
+    <header class="ide-handoff__head">⇄ 交接书（final message = entire handoff）</header>
     <div
       v-for="key in sections"
       :key="key"

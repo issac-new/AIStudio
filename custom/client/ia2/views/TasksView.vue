@@ -124,7 +124,7 @@ function openTaskFromMatrix(taskId: string): void {
 .ia-tasks__close {
   margin-left: auto; flex-shrink: 0;
   width: 24px; height: 24px; padding: 0; margin-bottom: 2px;
-  border: none; border-radius: var(--radius-standard, 6px); background: transparent;
+  border: none; border-radius: 5px; background: transparent;
   color: var(--text-muted, #878c99); font-size: 16px; line-height: 1; cursor: pointer;
   &:hover { color: var(--text-primary, inherit); background: var(--bg-secondary, #f1f2f4); }
 }

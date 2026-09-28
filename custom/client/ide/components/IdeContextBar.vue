@@ -3,14 +3,12 @@
 // thinking/tools +悬停图例 breakdown+80/95% 压力变色读数；UI 复刻 S3）。
 // 数据=useSessionMetrics 的分段（六源 context-six-source 同语义四段合并映射五段）。
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { computeBreakdown } from '../utils/contextBreakdown'
 
 const metrics = useSessionMetrics()
 const chatStore = useChatStore()
-const { t } = useI18n()
 const hover = ref(false)
 
 interface Segment { key: string; label: string; pct: number; color: string }
@@ -44,6 +42,9 @@ const totalPct = computed(() => {
 })
 
 const pressure = computed(() => (totalPct.value >= 95 ? 'critical' : totalPct.value >= 80 ? 'warn' : 'ok'))
+
+/** 无遥测（coding-agent 类会话不上报 contextTokens）→ 诚实标注而非误导性 0%。 */
+const noTelemetry = computed(() => totalPct.value === 0)
 </script>
 
 <template>
@@ -64,14 +65,14 @@ const pressure = computed(() => (totalPct.value >= 95 ? 'critical' : totalPct.va
       />
       <span v-if="!segments.length" class="ide-ctxbar__seg is-total" :style="{ width: `${totalPct}%` }" />
     </div>
-    <span class="ide-ctxbar__pct" :data-testid="'ide-ctxbar-pct'">{{ totalPct }}%</span>
+    <span class="ide-ctxbar__pct" :data-testid="'ide-ctxbar-pct'">{{ noTelemetry ? '无遥测' : totalPct + '%' }}</span>
     <div v-if="hover" class="ide-ctxbar__legend" data-testid="ide-ctxbar-legend">
       <template v-if="segments.length">
         <div v-for="s in segments" :key="s.key">
           <span class="ide-ctxbar__dot" :style="{ background: s.color }" />{{ s.label }} {{ s.pct }}%
         </div>
       </template>
-      <div v-else>{{ t('ide.contextBar.breakdownUnavailable', '分段构成数据未就绪（显示总量）') }}</div>
+      <div v-else>分段构成数据未就绪（显示总量）</div>
     </div>
   </div>
 </template>
@@ -79,7 +80,7 @@ const pressure = computed(() => (totalPct.value >= 95 ? 'critical' : totalPct.va
 <style scoped lang="scss">
 .ide-ctxbar { position: relative; display: inline-flex; align-items: center; gap: 6px; cursor: default; }
 .ide-ctxbar__track {
-  width: 140px; height: 8px; border-radius: var(--radius-micro, 3px); overflow: hidden; display: flex;
+  width: 140px; height: 8px; border-radius: 4px; overflow: hidden; display: flex;
   background: var(--hover-color, rgba(0, 0, 0, 0.08));
 }
 .ide-ctxbar__seg { height: 100%; }
@@ -92,5 +93,5 @@ const pressure = computed(() => (totalPct.value >= 95 ? 'critical' : totalPct.va
   background: var(--card-color, #fff); border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 6px; padding: 6px 10px; font-size: 11px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
-.ide-ctxbar__dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-micro, 3px); margin-right: 5px; }
+.ide-ctxbar__dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 </style>

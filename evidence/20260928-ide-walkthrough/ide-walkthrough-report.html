@@ -34,7 +34,7 @@
 </div>
 <div class="summary">
   <div class="stat"><div class="v">20</div><div class="l">走查步骤（逐步真实截图）</div></div>
-  <div class="stat"><div class="v">2</div><div class="l">真实缺陷修复（看板数据链/会话模式冲突）</div></div>
+  <div class="stat"><div class="v">6</div><div class="l">真实缺陷修复（走查 2+审查 4）</div></div>
   <div class="stat"><div class="v">69</div><div class="l">看板真实任务卡（三列分桶）</div></div>
   <div class="stat"><div class="v">905</div><div class="l">技能清单加载</div></div>
   <div class="stat"><div class="v">7</div><div class="l">agent 真实工具调用（Bash×4+Write×3）</div></div>
@@ -43,6 +43,10 @@
 <div class="fixes">
   <div class="fix-card"><h3>修复 1：看板面板 0 卡（数组契约 bug）</h3><p>IdeKanbanPane 取 <code>res.tasks ?? []</code>，但 upstream <code>listTasks()</code> 返回数组 → 恒空。修为 <code>Array.isArray(res) ? res : res.tasks ?? []</code>，69 卡渲染实证。附带：加载策略改单次直取+队列超时重试（避开 45s exec 队列超时）。</p></div>
   <div class="fix-card"><h3>修复 2：IDE 会话发送即 400（scoped/global 冲突）</h3><p>IDE 会话默认 scoped（模型可调修复）与服务端 zcode 引擎 only-global 硬约束冲突。服务端（patch 490）改为 scoped→global 自动回落而非硬拒。修复后真实开发任务全程跑通。</p></div>
+  <div class="fix-card"><h3>修复 3：Write 工具卡摘要 "+0 −0"（报告审查发现）</h3><p>Write 工具返回文件内容（非 diff），edit 类摘要按 +/- 行计数恒为 0。修复：无 diff 标记时显示行数。守门 3/3 绿。</p></div>
+  <div class="fix-card"><h3>修复 4：上下文水位条恒 0%（报告审查发现）</h3><p>zcode coding-agent 会话不上报 contextTokens（数据源缺失，非前端 bug）。修复：无遥测时诚实显示"无遥测"。</p></div>
+  <div class="fix-card"><h3>修复 5：恢复对话框 IDE 会话 0 行（报告审查发现）</h3><p>恢复对话框依赖引擎行缓存（GET /rows），IDE coding-agent 会话不走引擎直连——恒空。修复：空时回落 chatStore 消息构建行。守门 1/1 绿。</p></div>
+  <div class="fix-card"><h3>修复 6：upstream chat.ts 语法错误（并行半迁移态）</h3><p>api/studio/chat.ts:140 未闭合引号 <code>'cursor | 'zcode'</code> → <code>'cursor' | 'zcode'</code>。</p></div>
   <div class="fix-card"><h3>附带修复（前轮）：hermes 运行时冲突标记</h3><p>~/.hermes/hermes-agent TUI 源码遗留合并冲突标记 → CLI 每次启动炸 → 看板链断。冲突块取 ours + TUI 重建 + source_completion 跑完，boards 500→200。</p></div>
 </div>
 <div class="steps">
@@ -125,22 +129,22 @@
       <img src="shots/13-prompt-typed.png" alt="步骤 13：需求输入" loading="lazy">
     </section>
     <section class="step">
-      <h2><span class="num">14</span>步骤 14：发送（首次——暴露缺陷）</h2>
-      <p class="desc">Enter 发送。agent 回复报错："ZCode 会话仅支持 global 模式"——走查抓到真实缺陷：IDE 会话默认 scoped 与服务端 zcode-only-global 冲突。</p>
-      <p class="evidence">🔍 缺陷 2 定位：server coding-agents/services/index.ts:3563 硬 400</p>
-      <img src="shots/14-message-sent.png" alt="步骤 14：发送（首次——暴露缺陷）" loading="lazy">
+      <h2><span class="num">14</span>步骤 14：首次发送（发送动作成功）</h2>
+      <p class="desc">Enter 发送——发送动作本身成功（输入框已清空、流式指示器启动）。此时尚未看到错误（错误出现在后续 agent 回复中，见步骤 15 截图）。</p>
+      <p class="evidence">🔍 发送成功 ✓ streaming=true ✓ 输入框清空 ✓</p>
+      <img src="shots/14-message-sent.png" alt="步骤 14：首次发送" loading="lazy">
     </section>
     <section class="step">
-      <h2><span class="num">15</span>步骤 15：缺陷修复（scoped→global 回落）</h2>
-      <p class="desc">服务端修复（patch 490）：zcode 会话遇 scoped 自动回落 global 而非硬拒。重启 8647 后重发需求。</p>
-      <p class="evidence">🔍 修复后无 400，会话正常建立</p>
-      <img src="shots/15-agent-response.png" alt="步骤 15：缺陷修复（scoped→global 回落）" loading="lazy">
+      <h2><span class="num">15</span>步骤 15：首次发送的结果——报错（缺陷暴露）</h2>
+      <p class="desc">等待后 agent 回复报错："ZCode 会话仅支持 global 模式"。走查抓到真实缺陷：IDE 会话默认 scoped 与服务端 zcode-only-global 硬约束冲突。根因：coding-agents/services/index.ts:3563 硬 400。</p>
+      <p class="evidence">🔍 错误文本清晰可见 ✓ 缺陷定位完成</p>
+      <img src="shots/15-agent-response.png" alt="步骤 15：首次发送报错" loading="lazy">
     </section>
     <section class="step">
-      <h2><span class="num">16</span>步骤 16：需求重发成功</h2>
-      <p class="desc">重发后 agent 进入流式工作态（输入框已清空，thinking 指示器跳动）。</p>
-      <p class="evidence">🔍 streaming ✓ taCleared ✓</p>
-      <img src="shots/16-task-resent.png" alt="步骤 16：需求重发成功" loading="lazy">
+      <h2><span class="num">16</span>步骤 16：修复后重发——scoped→global 回落（patch 490）</h2>
+      <p class="desc">服务端修复（patch 490）：zcode 会话遇 scoped 自动回落 global 而非硬拒。重启 8647 后重发需求，agent 进入流式工作态。</p>
+      <p class="evidence">🔍 修复后无 400 ✓ streaming=true ✓</p>
+      <img src="shots/16-task-resent.png" alt="步骤 16：修复后重发" loading="lazy">
     </section>
     <section class="step">
       <h2><span class="num">17</span>步骤 17：agent 工作中</h2>

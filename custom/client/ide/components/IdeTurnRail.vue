@@ -122,7 +122,7 @@ function fmt(ms: number): string {
   align-items: center;
   gap: 2px;
   padding: 1px 3px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   cursor: pointer;
   font-size: 10px;
   line-height: 1.4;

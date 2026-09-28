@@ -172,7 +172,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 .ndp__badge--msg { background: #61afef; }
 .ndp__spacer { flex: 1; }
 .ndp__act {
-  height: 22px; padding: 0 8px; border: none; border-radius: var(--radius-micro, 3px); background: transparent;
+  height: 22px; padding: 0 8px; border: none; border-radius: 4px; background: transparent;
   color: var(--text-muted); font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap;
   &:hover { color: var(--text-primary); background: var(--bg-card); }
 }
@@ -206,7 +206,7 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 }
 .ndp__acts { display: inline-flex; gap: 4px; flex-shrink: 0; }
 .ndp__act-btn {
-  height: 22px; padding: 0 8px; border-radius: var(--radius-micro, 3px); border: 1px solid var(--border-color);
+  height: 22px; padding: 0 8px; border-radius: 4px; border: 1px solid var(--border-color);
   background: var(--bg-card); color: var(--text-secondary); font-size: 11px;
   cursor: pointer; font-family: inherit; white-space: nowrap;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }

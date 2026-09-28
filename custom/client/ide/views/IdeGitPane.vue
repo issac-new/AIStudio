@@ -326,7 +326,7 @@ defineExpose({ refresh, toGroups })
   color: var(--text-muted, #9aa0aa);
   background: transparent;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   cursor: pointer;
 
   &:hover:not(:disabled) { color: var(--text-primary, #e6e6e6); }
@@ -499,7 +499,7 @@ defineExpose({ refresh, toGroups })
   color: var(--text-primary, #e6e6e6);
   background: var(--bg-primary, #14161a);
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   outline: none;
 
   &:focus { border-color: var(--accent-primary, #4cc9f0); }
@@ -513,7 +513,7 @@ defineExpose({ refresh, toGroups })
   color: var(--text-primary, #e6e6e6);
   background: var(--accent-primary, #4cc9f0);
   border: none;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   cursor: pointer;
 
   &:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -532,7 +532,7 @@ defineExpose({ refresh, toGroups })
   height: 18px;
   padding: 0 8px;
   border: none;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   font-size: 11px;
@@ -557,13 +557,13 @@ defineExpose({ refresh, toGroups })
   padding: 4px;
   list-style: none;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 7px;
   background: var(--bg-secondary, #1b1e24);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 
   li {
     padding: 4px 8px;
-    border-radius: var(--radius-standard, 6px);
+    border-radius: 5px;
     font-size: 12px;
     color: var(--text-primary, #e6e6e6);
     cursor: pointer;
@@ -578,7 +578,7 @@ defineExpose({ refresh, toGroups })
   min-width: 24px;
   padding: 0 6px;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   font-size: 11px;
