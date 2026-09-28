@@ -158,12 +158,19 @@ export class RACIDispatchService {
     for (const uid of invitees) await matrixInviteUser(env, roomId, uid)
     // 协作信号走 task.assign 协议事件（边界设计 §6-T2）：每个 responsible 一发，
     // 跨机协议消费方只认事件不认摘要文本；摘要保留作人读通知。
+    // P1（09-28）：v2 字段接线——task body 的 raci JSON 若带 phase/parent/dependsOn
+    // 则透传（Orchestrator 路由与任务树消费方此前拿不到这两维）。
+    const meta = this.parseRaciMeta(task)
     const targets = raci.responsible.length > 0 ? [...new Set(raci.responsible)] : [env.userId]
     for (const account of targets) {
       await matrixSendProtocolEvent(env, roomId, TASK_ASSIGN_EVENT_TYPE, buildAssignContent({
         taskId: task.id,
         title: task.title,
         body: task.body ?? undefined,
+        parentId: meta.parentId,
+        capability: meta.capability,
+        phase: meta.phase,
+        dependsOn: meta.dependsOn,
         target: { account },
         issuedBy: env.userId,
       }))
@@ -204,6 +211,30 @@ export class RACIDispatchService {
       } catch { /* body 不是 JSON，使用默认值 */ }
     }
     return defaultRaci
+  }
+
+  /** P1：task body 顶层 v2 协作字段提取（phase/parent/dependsOn/capability）——
+   *  与 raci 同一 JSON 顶层（harness 建卡与 aipay-scenario 派发侧约定）；
+   *  非法类型静默丢弃（协议解析器是权威校验面）。 */
+  private static parseRaciMeta(task: RaciDispatchTask): {
+    parentId?: string; capability?: string[]; phase?: string; dependsOn?: string[]
+  } {
+    if (!task.body) return {}
+    try {
+      const meta = JSON.parse(task.body) as Record<string, unknown>
+      const out: { parentId?: string; capability?: string[]; phase?: string; dependsOn?: string[] } = {}
+      if (typeof meta.parentId === 'string' && meta.parentId) out.parentId = meta.parentId
+      if (typeof meta.phase === 'string' && meta.phase) out.phase = meta.phase
+      if (Array.isArray(meta.capability)) {
+        const caps = meta.capability.filter((c): c is string => typeof c === 'string' && !!c)
+        if (caps.length > 0) out.capability = caps
+      }
+      if (Array.isArray(meta.dependsOn)) {
+        const deps = meta.dependsOn.filter((d): d is string => typeof d === 'string' && !!d)
+        if (deps.length > 0) out.dependsOn = deps
+      }
+      return out
+    } catch { return {} }
   }
 
   /** 派发摘要文本（真实/模拟共用） */

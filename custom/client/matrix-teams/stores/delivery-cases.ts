@@ -8,7 +8,8 @@
 //   阶段：timeline 消息事件 = DELIVERY_EVENT_TYPES.stage（outcome=done 计数）
 // 视图：../views/DeliveryCasesView.vue（/app/cases，ia2 routes）。
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { RoomEvent } from 'matrix-js-sdk'
 import type { MatrixClient, Room } from 'matrix-js-sdk'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import {
@@ -90,6 +91,32 @@ export const useDeliveryCasesStore = defineStore('matrix-teams-delivery-cases', 
     cases.value = rooms.map(projectRoom).filter((c): c is DeliveryCaseView => c !== null)
     loaded.value = true
   }
+
+  // P1 实时刷新：Room.timeline 事件驱动（review-center/task-dispatch 同款模式）——
+  // delivery.* 协议事件或 index 变更落房即 500ms 去抖重投影，替代 P0 的 30s 盲轮询。
+  let refreshTimer: ReturnType<typeof setTimeout> | null = null
+  function scheduleRefresh(): void {
+    if (refreshTimer) clearTimeout(refreshTimer)
+    refreshTimer = setTimeout(() => { refreshTimer = null; void refresh() }, 500)
+  }
+  function onTimeline(ev: { getType?: () => string }): void {
+    const t = ev.getType?.() ?? ''
+    if (t === DELIVERY_EVENT_TYPES.stage || t === DELIVERY_EVENT_TYPES.gate
+      || t === DELIVERY_EVENT_TYPES.case || t === DELIVERY_INDEX_ACCOUNT_DATA_TYPE) {
+      scheduleRefresh()
+    }
+  }
+  let listening = false
+  function ensureListening(): void {
+    if (listening) return
+    listening = true
+    watch(() => matrixStore.client, (client, prev) => {
+      if (prev && typeof prev.off === 'function') prev.off(RoomEvent.Timeline, onTimeline)
+      if (!client || typeof client.on !== 'function') return // 测试 mock client 无 on/off
+      client.on(RoomEvent.Timeline, onTimeline)
+    }, { immediate: true })
+  }
+  ensureListening() // store 顶层挂载（同 task-dispatch.ts 终审修复模式）
 
   const byStage = computed(() => {
     const out: Record<string, number> = {}
