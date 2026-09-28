@@ -103,7 +103,7 @@ const TONE: Record<string, string> = {
 }
 .ltl__acts { display: flex; gap: 3px; flex-shrink: 0; }
 .ltl__btn {
-  height: 18px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 9px;
+  height: 18px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: var(--radius-panel, 8px);
   background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer;
   &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }

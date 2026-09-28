@@ -285,7 +285,7 @@ function getPercent(count: number, total: number): string {
   display: flex; align-items: center;
   height: 26px;
   padding: 0 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   overflow: hidden;
   background: $bg-secondary;
 
@@ -295,7 +295,7 @@ function getPercent(count: number, total: number): string {
 .pp-option-bar {
   position: absolute; left: 0; top: 0; bottom: 0;
   background: rgba(var(--accent-primary-rgb), 0.12);
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   transition: width 0.3s ease;
 }
 

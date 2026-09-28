@@ -4,9 +4,11 @@
 // 数据源=消息流 display_kind='recap' 或 display_metadata.recap（patch 410 recap
 // 的客户端呈现面）。
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 
 interface RecapPayload { text?: string; summary?: string; at?: number }
 
@@ -25,8 +27,8 @@ const recap = computed(() => {
 </script>
 
 <template>
-  <div v-if="recap" class="ide-recap" data-testid="ide-recap-card" title="恢复会话时的回笼摘要（离开后发生了什么）">
-    ↩ 回笼摘要：{{ recap }}
+  <div v-if="recap" class="ide-recap" data-testid="ide-recap-card" :title="t('ide.recap.hint', '恢复会话时的回笼摘要（离开后发生了什么）')">
+    ↩ {{ t('ide.recap.title', '回笼摘要') }}：{{ recap }}
   </div>
 </template>
 

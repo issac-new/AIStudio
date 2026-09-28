@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
 const tasksSeed = [
   { id: 't1', title: '修复登录', assignee: 'alice', status: 'todo', priority: 0, started_at: 1000, completed_at: null, body: null, created_by: null, created_at: 0, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
   { id: 't2', title: '编写文档', assignee: 'bob', status: 'doing', priority: 2, started_at: 2000, completed_at: null, body: null, created_by: null, created_at: 0, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
