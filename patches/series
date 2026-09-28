@@ -260,3 +260,8 @@
 #      任务 ID 全局唯一，sqlite 快查定位所在板后重试 show（抽屉/深链/消息卡链接
 #      恒带 board=default 撞 404 的根因，推演截图三连拍实锤）。
 492-server-kanban-task-crossboard-resolve.patch
+
+# 493（设计审查轮 · 工作台空态词条 + zh common 漏翻）：ia2.wb.empty* 三键 en/zh
+#      双语（工作台中栏空态引导）；zh common.search/apply 漏翻修正（板页 SEARCH
+#      标签实证）。追加式补键，沿用 328+/476 同款流程，不改 473 本体。
+493-client-wb-empty-i18n-zh-common.patch
