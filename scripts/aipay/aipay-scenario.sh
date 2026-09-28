@@ -478,10 +478,12 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     kanban_walk_done fanfan "$RID"
     note "[fanfan] 线下评审结论：通过（虚拟架构小组人工评审），评审卡 $RID → done"
   else
-    note "[观察] 评审卡未找到，导演直接登记并置 done"
-    echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡" >> "$EVID_DIR/issues.log"
-    RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "线下人工评审：通过。概设 docs/design/${RFD_ID}-architecture-design.md")
-    kanban_walk_done fanfan "$RID"
+    # R-A4（run2 独立审计意见）：评审卡缺失不得由导演自批置 done——补登记卡保留
+    # "评审记录待补"，评审人补记结论后方可置 done；review_done 落键仅代表本步有
+    # 记录，不代表评审通过。
+    RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（agent 未登记评审卡，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md")
+    note "[观察] 评审卡未找到，导演补登记 ${RID}（不置 done——评审记录待评审人补记，R-A4）"
+    echo "ISSUE|review-card-missing|fanfan|agent 未登记评审卡（导演补登记 ${RID}，评审记录待补，不置 done）" >> "$EVID_DIR/issues.log"
   fi
   sset review_done 1
 fi
@@ -511,8 +513,9 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
 3) 验证计划前移：测试要点是否在设计期已列
 4) 备选方案 ≥2 且有取舍理由
 评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单）。不许谎报。" "$(agent_mxid arch)"
-  if wait_truth "房间出现 ARCH-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-(PASS|FAIL)" "$G2_TS"; then
-    if room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS" "$G2_TS"; then
+  if wait_truth "房间出现 ARCH-GATE 结论行（判词语义）" 1800 mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS"; then
+    # 判词合并（R-A2）：房间行+评审卡 body 双源，FAIL 任一出现即 FAIL（保守不放行）
+    if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审")" == "PASS" ]]; then
       kanban_walk_done arch "$AGID"
       sset g2_arch_pass "$(date +%s)"
       note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
@@ -522,8 +525,8 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
       echo "ISSUE|g2-design-review-fail|arch-agent|${RFD_ID} G2 评审 FAIL（缺项见评审卡），回灌修订" >> "$EVID_DIR/issues.log"
       mx_gate_breaker_trip g2 "G2 架构治理评审" 1
       G2_RETRY_TS=$(( $(date +%s) * 1000 ))
-      dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评。" "$(agent_mxid fanfan)"
-      if wait_truth "修订后 ARCH-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid arch)" "ARCH-GATE-PASS" "$G2_RETRY_TS"; then
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评（复评结论行须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
+      if wait_truth "修订后 ARCH-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_RETRY_TS" arch "${RFD_ID} 架构治理评审"; then
         kanban_walk_done arch "$AGID"; sset g2_arch_pass "$(date +%s)"
       else
         mx_gate_breaker_trip g2 "G2 架构治理评审" 1
@@ -612,6 +615,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
            echo "ISSUE|g3-local-gate-missing|$b|分支缺 docs/evidence/$b-testlog.txt" >> "$EVID_DIR/issues.log"; }
   done
   sset devimpl_done 1
+  sset g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
   # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
   dlv_enabled && dlv_scenario_phase P3 chen G3 chen command-exit "devimpl 分支自测+评审过" P4
 fi
@@ -644,32 +648,44 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
       git add -A >/dev/null 2>&1 || true
       git commit -q -m "director(${RFD_ID}): 未提交产物收编（integration checkout 前置）" >/dev/null 2>&1 || true
     fi
-    git checkout -q -B integration/${RFD_ID} origin/main
-    for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
-      if ! git merge -q --no-ff "origin/feat/$b" -m "merge: $b into integration/${RFD_ID}" 2>/dev/null; then
-        # 冲突自愈（V4-run1 merge-conflict×3 根治）：冲突路径全是 docs/evidence/*-testlog.txt
-        # 时取 integration 侧自动收口——testlog 正本在其任务正主分支，他分支携带的是
-        # 跨任务污染副本（基于 feat/DEV-PAYCORE 起分支+复跑全套测试所致），丢弃不丢证据。
+    # 基线变更受控（独立审计意见 R-A3，run2 0ab43de 实锤）：旧约定每轮 -B 从
+    # origin/main 重建 + 非快进回落强推，两轮重建各丢 23/一批提交
+    # （DEF-BE-001 修正线、FE 修复线 78ee897/65bb44f、verify-guard-onpay.js、
+    # pay-button-guard.test.ts、G3/G4 testlog 全数从基线消失，双缺陷回归进发布
+    # 基线）。改增量 merge 续建：旧集成头是 HEAD 祖先=历史保留，修复线恒在；
+    # 推送禁强推（强推即再丢线成因），被拒记单不中止。
+    git fetch -q origin
+    BASE="origin/main"
+    git rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1 \
+      && BASE="origin/integration/${RFD_ID}"
+    OLD_TIP="$(git rev-parse "$BASE" 2>/dev/null || echo "")"
+    git checkout -q -B "integration/${RFD_ID}" "$BASE"
+    merge_keep_history() { # <ref> <label>：merge --no-ff；冲突仅 testlog 污染副本时取 integration 正本
+      if ! git merge -q --no-ff "$1" -m "merge: $2 into integration/${RFD_ID}" 2>/dev/null; then
+        local CONFLICTS
         CONFLICTS="$(git diff --name-only --diff-filter=U 2>/dev/null)"
         if [[ -n "$CONFLICTS" ]] && ! printf '%s\n' "$CONFLICTS" | grep -vE '^docs/evidence/[A-Z0-9-]+-testlog\.txt$' | grep -q .; then
           printf '%s\n' "$CONFLICTS" | while read -r cf; do git checkout --ours -- "$cf" 2>/dev/null; git add -- "$cf" 2>/dev/null; done
           git commit -q --no-edit 2>/dev/null || true
-          note "[观察] $b 合并冲突仅限 testlog 污染副本，已取 integration 正本自动收口"
-          echo "ISSUE|merge-conflict-autoresolved|$b|testlog 副本冲突已取 integration 正本收口（仍记单追踪提交纪律）" >> "$EVID_DIR/issues.log"
+          note "[观察] $2 合并冲突仅限 testlog 污染副本，已取 integration 正本自动收口"
+          echo "ISSUE|merge-conflict-autoresolved|$2|testlog 副本冲突已取 integration 正本收口（仍记单追踪提交纪律）" >> "$EVID_DIR/issues.log"
         else
-          git merge --abort 2>/dev/null; echo "ISSUE|merge-conflict|$b|integration 合并冲突" >> "$EVID_DIR/issues.log"
+          git merge --abort 2>/dev/null; echo "ISSUE|merge-conflict|$2|integration 合并冲突" >> "$EVID_DIR/issues.log"
         fi
       fi
+    }
+    merge_keep_history origin/main "origin-main"   # 主线同步（首建时 BASE=origin/main，空合幂等）
+    for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
+      merge_keep_history "origin/feat/$b" "$b"
     done
-    # 分支状态机约定（P4）：integration/${RFD_ID} 是脚本专有集成分支，每轮 -B 基于
-    # origin/main+四开发分支重建，旧集成提交允许被重建结果覆盖（上一轮测试报告类产物以
-    # 仓内文档/取证为准）。重跑窗口下 origin 上残留旧集成提交时直推非快进被拒、set -e
-    # 暴毙——先常规推送，非快进回落 --force-with-lease（lease 锚定本轮 repo_pull 刷新的
-    # origin 引用，远端再被别人推进仍会拒绝）；仍失败记问题单不中止（后续步骤用显式
-    # origin/integration 引用，不看 HEAD）。
-    git push -q -u origin integration/${RFD_ID} 2>/dev/null \
-      || git push -q --force-with-lease -u origin integration/${RFD_ID} 2>/dev/null \
-      || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（常规+强推均失败）" >> "$EVID_DIR/issues.log" )
+    # 丢线守卫：旧基线头必须仍是 HEAD 祖先，否则本轮基线无效、如实记账（R-A3）
+    if [[ -n "$OLD_TIP" ]] && ! git merge-base --is-ancestor "$OLD_TIP" HEAD 2>/dev/null; then
+      echo "ISSUE|baseline-history-lost|${RFD_ID}|integration/${RFD_ID} 集成后旧基线 ${OLD_TIP:0:7} 非祖先（丢线，基线不可用）" >> "$EVID_DIR/issues.log"
+    fi
+    # 推送只走常规（R-A4 防再丢机制：禁强推）；被拒记单不中止，后续步骤用显式
+    # origin/integration 引用，不看 HEAD。
+    git push -q -u origin "integration/${RFD_ID}" 2>/dev/null \
+      || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（已禁强推，变更受控）" >> "$EVID_DIR/issues.log" )
   note "[集成] integration/${RFD_ID} 四开发分支已合并并推送（推送被拒时已记问题单，见 issues.log）"
 
   dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
@@ -745,20 +761,27 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：本推演由导演人工批准（批准记录落评审卡）
 评审记录落卡 body（review-record 结构）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项）。不许谎报。" "$(agent_mxid fanfan)"
-  if wait_truth "房间出现 READY-GATE 结论行" 1800 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-(PASS|FAIL)" "$G5_TS"; then
-    if room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS" "$G5_TS"; then
+  if wait_truth "房间出现 READY-GATE 结论行（判词语义）" 1800 mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
+    # 判词合并（R-A2，run2 实锤）：房间行判词子串曾被「转述 stub 原文」消息命中
+    # （"结论行 READY-GATE-PASS 或 READY-GATE-FAIL"）→ G5 误过；真实卡面结论是
+    # READY-GATE-FAIL。双源合并 FAIL 优先，FAIL 不得置卡 done、不得落键。
+    if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]]; then
       kanban_walk_done fanfan "$RGID"
       sset g5_ready "$(date +%s)"
-      note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准）"
+      # HumanGate 批准留痕（独立审计意见 #6）：批准事件入 approved.events 可反查，
+      # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
+      echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+      note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准，事件入 approved.events）"
       # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
       dlv_enabled && dlv_gate fanfan "$(sget dlv_room)" "$(sget dlv_case)" G5 pass human "发布准出七项过（评审卡 ${RGID}）"
     else
       echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
       mx_gate_breaker_trip g5 "G5 发布准出" 1
       G5_RETRY_TS=$(( $(date +%s) * 1000 ))
-      dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行。" "$(agent_mxid fanfan)"
-      if wait_truth "补齐后 READY-GATE-PASS" 2400 room_has_from "$(sget room_analysis)" "$(agent_mxid fanfan)" "READY-GATE-PASS" "$G5_RETRY_TS"; then
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 缺项补齐（回滚阈值/灰度/发布说明）后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
+      if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
         kanban_walk_done fanfan "$RGID"; sset g5_ready "$(date +%s)"
+        echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
       else
         mx_gate_breaker_trip g5 "G5 发布准出" 1
         fail "G5 两轮未过，不得发布（V3 硬闸）"
@@ -852,6 +875,14 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     repo_has "docs/test/${RFD_ID}-test-report.md" || { UAT_OK=0; UAT_MISS="${UAT_MISS}测试报告缺失；"; }
     repo_has "$(freeze_doc)" || { UAT_OK=0; UAT_MISS="${UAT_MISS}G1 冻结文件缺失；"; }
     if [[ $UAT_OK == 1 ]]; then
+      # 逐条 AC 判词（独立审计意见 #3）：验收书按证据行逐条落判词，有条件/不通过
+      # 不得写成"全部通过"——放行权归需求提出方 bella（人），条件闭环后另行验收。
+      UAT_ALL_PASS=1; UAT_VERDICTS=""
+      for ac in $AC_LIST; do
+        v=$(uat_ac_verdict "$UAT_BODY" "$ac")
+        UAT_VERDICTS="${UAT_VERDICTS}${ac}=${v} "
+        [[ "$v" == "通过" ]] || UAT_ALL_PASS=0
+      done
       ACC="$DIRECTOR_CLONE/docs/acceptance/${RFD_ID}-acceptance.md"
       mkdir -p "$(dirname "$ACC")"
       {
@@ -861,24 +892,36 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
         echo "- 证据锚点：integration/${RFD_ID} 分支 + docs/test/${RFD_ID}-test-report.md + 房间 UAT-EVIDENCE 行"
         echo
         sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -E "^\- \*\*AC-[0-9]" \
-          | while IFS= read -r l; do echo "- ${l#\- } → 通过（证据见上锚点）"; done
+          | while IFS= read -r l; do
+              _ac=$(printf '%s' "$l" | grep -oE 'AC-[0-9]+' | head -1)
+              echo "- ${l#\- } → $(uat_ac_verdict "$UAT_BODY" "$_ac")（证据见上锚点）"
+            done
         echo
         echo "## SLA（ITIL 接管登记，retro 资产回写用）"
         echo "- SVC-cashier-${RFD_ID}：收银台下单/查单/关单/回调 | 全体商户 | Silver | fanfan | 运营中"
         echo "- 可用性 99.5%；下单接口 P95 ≤800ms；P2 事件 4h 响应"
         echo
-        echo "- 结论：全部 AC 通过，验收接受。"
+        if [[ $UAT_ALL_PASS == 1 ]]; then
+          echo "- 结论：全部 AC 通过，验收接受。"
+        else
+          echo "- 结论：AC 判定见上表（${UAT_VERDICTS}）——**不构成无条件验收**；有条件/不通过项的放行权归需求提出方 bella（人），条件闭环后另行验收。"
+        fi
       } > "$ACC"
+      [[ $UAT_ALL_PASS == 1 ]] || echo "ISSUE|uat-conditional|fanfan-agent|UAT 非全过（${UAT_VERDICTS}），验收有条件，放行权归 bella" >> "$EVID_DIR/issues.log"
       # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main
       # 是空推/被拒，验收书进不了 main 且 set -e 暴毙、uat_done 落不了键。
-      if repo_commit_main "docs/acceptance/${RFD_ID}-acceptance.md" "bella (UAT)" "bella@aipaydev.local" "docs(acceptance): ${RFD_ID} 业务验收通过（AC 全过）"; then
+      if repo_commit_main "docs/acceptance/${RFD_ID}-acceptance.md" "bella (UAT)" "bella@aipaydev.local" "docs(acceptance): ${RFD_ID} 业务验收（${UAT_VERDICTS}）"; then
         note "[UAT] 验收文档已入仓：docs/acceptance/${RFD_ID}-acceptance.md → origin/main"
       else
         echo "ISSUE|uat-push|director|验收文档推送 origin/main 失败（留存 ${ACC}）" >> "$EVID_DIR/issues.log"
         note "[观察] 验收文档推送失败（留存本地，记问题单）"
       fi
       sset uat_done "$(date +%s)"
-      note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
+      if [[ $UAT_ALL_PASS == 1 ]]; then
+        note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
+      else
+        note "[UAT] ${RFD_ID} 业务验收完成（${UAT_VERDICTS}）——非全过项不作无条件验收，放行权归 bella"
+      fi
       # M3 事件化：P5 done（发布+UAT 验收报告）→ case→P6
       dlv_enabled && dlv_scenario_advance P5 fanfan P6 "git:main#$(git -C "${DIRECTOR_CLONE:-.}" rev-parse --short HEAD 2>/dev/null || echo na):docs/acceptance/${RFD_ID}-acceptance.md"
     else
