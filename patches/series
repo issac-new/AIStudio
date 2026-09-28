@@ -256,3 +256,7 @@
 491-client-announcement-nonblocking-banner.patch
 # 476（feat/p0-hardening 轮）：案例面板 P0 词条（zh/en）——inFlight/completed（读数新口径）
 476-delivery-panel-p0-i18n.patch
+# 477（feat/p1-batch）：kanban 空映射不滤光——Mux admin 建号无 user_profiles 行致
+#      GET /api/hermes/kanban?board=* 整板 {"tasks":[]}（CLI 正常；run6-9 实锤，
+#      harness 曾被迫 CLI 直查绕开）；空 Set 视为不限制（admin 应见全部板）。
+477-kanban-empty-profile-no-filter.patch
