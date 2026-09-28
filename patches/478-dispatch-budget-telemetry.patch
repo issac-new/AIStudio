@@ -1,0 +1,39 @@
+--- a/hermes_cli/kanban_db_dispatch.py
++++ b/hermes_cli/kanban_db_dispatch.py
+@@ -148,6 +148,10 @@
+     skipped_locked: bool = False
+     """True when another process held the board's dispatch lock: this tick did
+     no DB writes; the lock holder is making progress on the same board."""
++    budget_capped: Optional[tuple[int, int]] = None
++    """overlay[478] ``(running, cap)`` when _tick_spawn_budget refused the whole
++    tick on a concurrency cap (max_spawn or max_in_progress): busy, not stuck.
++    Telemetry gap fixed 2026-09-28 — describe_suppression previously invisible."""
+     memory_pressure: Optional[str] = None
+     """Memory pressure that restricted this tick: ``"critical"`` (no new
+     workers), ``"elevated"`` (at most one), ``None`` (no restriction).
+@@ -175,6 +179,11 @@
+             counts["rate_limited"] = counts.get("rate_limited", 0) + len(res.rate_limited)
+         if res.skipped_locked:
+             counts["skipped_locked"] = counts.get("skipped_locked", 0) + 1
++        if res.budget_capped:
++            r, c = res.budget_capped
++            counts[f"concurrency_capped({r}/{c})"] = counts.get(f"concurrency_capped({r}/{c})", 0) + 1
++        if res.skipped_per_profile_capped:
++            counts["per_profile_capped"] = counts.get("per_profile_capped", 0) + len(res.skipped_per_profile_capped)
+         if res.memory_pressure:
+             pressure = res.memory_pressure
+     parts = [f"{k}={v}" for k, v in sorted(counts.items())]
+@@ -2332,6 +2341,13 @@
+         conn, result, max_spawn=max_spawn, max_in_progress=max_in_progress, board=board,
+     )
+     if not may_spawn:
++        # overlay[478] 记录拒绝门（running, cap 择最小命中者）——否则 stuck 告警
++        # 零后缀，满载忙被误报卡死（B2 遥信盲区，2026-09-28 实锤 N=600+）。
++        running_now = count_running_tasks(conn)
++        cap_hit = min(
++            c for c in (max_spawn, max_in_progress) if c is not None
++        ) if (max_spawn is not None or max_in_progress is not None) else running_now
++        result.budget_capped = (running_now, cap_hit)
+         return result
+ 
+     ready_rows = _lane_rows(conn, "ready")
