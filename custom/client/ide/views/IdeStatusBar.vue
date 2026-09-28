@@ -14,6 +14,7 @@ import { TPS_FLOOR, formatTokens, lowContextThreshold, LOW_CONTEXT_RECOVER_PCT }
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
 import { connectZcode, subscribeZcodeWorkspace } from '../../zcode/api/zcode-socket'
 import { handleZcodeEvent } from '../../zcode/store/zcode-projection'
+import IdeKeymapCard from '../components/IdeKeymapCard.vue'
 import IdeMetricsPopover from './IdeMetricsPopover.vue'
 
 const ide = useIdeStore()
@@ -24,10 +25,28 @@ const metrics = useSessionMetrics()
 // zcode 会话投影（R4-P2）：/zcode 事件面的状态条 chip（会话数 + 最新 reason）。
 // 槽位定制（UI-8，kimi/minimax/codex/dsh 四源合并的数据面消费——轻量版：
 // 显隐+顺序存 localStorage；custom 探针槽列层 2）。
-interface StatusSlotConf { kind: 'workspace' | 'zcode' | 'metrics'; on: boolean }
-const SLOT_KEYS: Array<StatusSlotConf['kind']> = ['workspace', 'zcode', 'metrics']
+interface StatusSlotConf { kind: 'workspace' | 'zcode' | 'metrics' | 'workdir'; on: boolean }
+const SLOT_KEYS: Array<StatusSlotConf['kind']> = ['workspace', 'zcode', 'metrics', 'workdir']
 const slotsConf = ref<StatusSlotConf[]>(readSlots())
 const slotsPanelOpen = ref(false)
+
+// ── workdir 并发警告（吸收第一批 A2，multica §2.5）──
+// 数据=zcode 投影 store（sessions-index 的 workspaceId 即 workspacePath；
+// running 会话=同目录活跃任务——agent 会话对目录都有写面，全按 task 计）。
+// 判定=workdir-adjacency 纯函数（workdir 域，纯 TS 无 server 依赖可跨引，
+// replica-s1-s4 测试跨引 server 投影同款先例）。
+import { workdirAdjacency, type WorkdirWarning } from '../../../server/workdir/workdir-adjacency'
+
+const workdirWarnings = computed<WorkdirWarning[]>(() => {
+  const sessions = (zcodeProjection.state as { sessions?: Record<string, { workspaceId?: string; phase?: string; lastActivityAt: number }> }).sessions ?? {}
+  const tasks = Object.entries(sessions).map(([sessionId, s]) => ({
+    taskId: sessionId,
+    workDir: s.workspaceId ?? ide.workspace ?? '~',
+    kind: 'task' as const,
+    startedAt: s.lastActivityAt,
+  }))
+  return workdirAdjacency(tasks)
+})
 
 function readSlots(): StatusSlotConf[] {
   try {
@@ -198,6 +217,15 @@ watch(
       </span>
     </span>
 
+    <!-- workdir 并发警告 chip（A2）：共享目录多任务并发（写互踩风险） -->
+    <span
+      v-if="slotOn('workdir') && workdirWarnings.length"
+      class="ide-statusbar__item ide-statusbar__workdir"
+      :style="{ order: slotOrder('workdir') }"
+      data-testid="ide-workdir-warning"
+      :title="workdirWarnings.map((w) => w.detail).join('\n')"
+    >⚠ {{ workdirWarnings.length }} 目录并发</span>
+
     <!-- 会话遥测簇（dsh-TUI 移植：水位条 / TPS / 缓存；R1：点击展开遥测面板） -->
     <span
       v-if="slotOn('metrics')"
@@ -258,7 +286,8 @@ watch(
     <Teleport to="body">
       <IdeMetricsPopover v-if="metricsOpen" :metrics="metrics" @close="metricsOpen = false" />
     </Teleport>
-      <span class="ide-statusbar__item ide-statusbar__slots-btn" :style="{ order: 99 }">
+      <IdeKeymapCard />
+    <span class="ide-statusbar__item ide-statusbar__slots-btn" :style="{ order: 99 }">
       <button
         type="button"
         class="ide-statusbar__config"
@@ -457,5 +486,11 @@ watch(
 .ide-statusbar__branch {
   color: var(--primary-color, #18a058);
   margin-left: 2px;
+}
+
+.ide-statusbar__workdir {
+  color: var(--warning-color, #f0a020);
+  font-weight: 600;
+  cursor: default;
 }
 </style>

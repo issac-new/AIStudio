@@ -3,8 +3,13 @@
 // Needs input/Working/Completed 三分区+antigravity Manager 状态列；UI 复刻 S4）。
 // 数据=chatStore.subagentStreams 六态映射三分区：needs input=failed/interrupted；
 // working=running；completed=completed/cancelled。
+// 在场两维徽章（multica §六 2.1，吸收第一批 A3）：每行 availability 圆点
+// （心跳距今 30s/90s 两档）× workload 芯片（running/queued/idle）分画——
+// "在线但闲"与"离线但队里有活"一眼可分。投影=presence-two-axis.ts。
 import { computed } from 'vue'
 import { useChatStore, type SubagentStream } from '@/stores/hermes/chat'
+import { presenceTwoAxis, type PresenceTwoAxis } from '../utils/presence-two-axis'
+import IdeRosterTree from './IdeRosterTree.vue'
 
 const chat = useChatStore()
 
@@ -25,13 +30,32 @@ function dur(s: SubagentStream): string {
   const secs = s.durationSeconds ?? (s.updatedAt - s.startedAt) / 1000
   return `${Math.max(0, Math.round(secs))}s`
 }
+
+/** subagentStream → 在场两维（心跳=updatedAt 距今；queued=pending 类态）。 */
+function presence(s: SubagentStream): PresenceTwoAxis {
+  return presenceTwoAxis({
+    lastHeartbeatAgoMs: Date.now() - s.updatedAt,
+    running: s.status === 'running' ? 1 : 0,
+    queued: (s.status === 'failed' || s.status === 'error' || s.status === 'interrupted') ? 1 : 0,
+  })
+}
+
+const PRESENCE_TEXT: Record<string, string> = {
+  online: '在线', unstable: '迟滞', offline: '离线',
+  working: '干活', queued: '待处理', idle: '空闲',
+}
 </script>
 
 <template>
   <div v-if="streams.length" class="ide-agents" data-testid="ide-agents-view">
+    <IdeRosterTree />
     <div class="ide-agents__section is-needs" data-testid="ide-agents-needs">
       <div class="ide-agents__head">⚑ Needs input · {{ needsInput.length }}</div>
       <div v-for="s in needsInput" :key="s.subagentId" class="ide-agents__row">
+        <span class="ide-agents__presence" :data-testid="`ide-agents-presence-${s.subagentId}`" :title="presence(s).combo">
+          <span class="ide-agents__dot" :class="`is-${presence(s).availability}`" />
+          <span class="ide-agents__chip" :class="`is-${presence(s).workload}`">{{ PRESENCE_TEXT[presence(s).workload] }}</span>
+        </span>
         <span class="ide-agents__state is-needs">{{ s.status }}</span>
         {{ s.goal || s.subagentId }}<span class="ide-agents__dur">{{ dur(s) }}</span>
       </div>
@@ -39,6 +63,10 @@ function dur(s: SubagentStream): string {
     <div class="ide-agents__section is-working" data-testid="ide-agents-working">
       <div class="ide-agents__head">▶ Working · {{ working.length }}</div>
       <div v-for="s in working" :key="s.subagentId" class="ide-agents__row">
+        <span class="ide-agents__presence" :data-testid="`ide-agents-presence-${s.subagentId}`" :title="presence(s).combo">
+          <span class="ide-agents__dot" :class="`is-${presence(s).availability}`" />
+          <span class="ide-agents__chip" :class="`is-${presence(s).workload}`">{{ PRESENCE_TEXT[presence(s).workload] }}</span>
+        </span>
         <span class="ide-agents__state is-working">running</span>
         {{ s.goal || s.subagentId }}<span class="ide-agents__dur">{{ dur(s) }}</span>
       </div>
@@ -63,4 +91,14 @@ function dur(s: SubagentStream): string {
 .ide-agents__state.is-working { background: rgba(24, 160, 88, 0.12); color: #18a058; }
 .ide-agents__state.is-done { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-color-3, #999); }
 .ide-agents__dur { margin-left: auto; color: var(--text-color-3, #aaa); font-size: 11px; }
+// 在场两维（A3）：圆点=availability，芯片=workload，分画不合并。
+.ide-agents__presence { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.ide-agents__dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+  &.is-online { background: var(--success-color, #18a058); }
+  &.is-unstable { background: var(--warning-color, #f0a020); }
+  &.is-offline { background: var(--text-color-3, #bbb); } }
+.ide-agents__chip { font-size: 9px; padding: 0 5px; border-radius: 7px; line-height: 14px;
+  &.is-working { background: rgba(32, 128, 240, 0.12); color: var(--info-color, #2080f0); }
+  &.is-queued { background: rgba(240, 160, 32, 0.12); color: var(--warning-color, #f0a020); }
+  &.is-idle { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-color-3, #999); } }
 </style>

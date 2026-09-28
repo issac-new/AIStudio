@@ -23,10 +23,27 @@ import {
   type TerminalToolId,
 } from '@/custom/cockpit/terminal/terminal-tools'
 import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/cockpit/api/terminal-tools'
+import { detachShell } from '../../../server/shelldetach/shell-detach'
 
 const ide = useIdeStore()
 const { isDark } = useTheme()
 const { t } = useI18n()
+
+/** ⌘B detach：判定（shelldetach 域）→ 收面板+toast；进程在服务端 PTY 继续跑。 */
+function detachToBackground(): void {
+  const decision = detachShell({
+    taskId: 'ide-terminal',
+    foreground: ide.sidePane.open && ide.sidePane.tab === 'terminal',
+    finished: ws === null || disposed,
+    interactivePty: true,
+  })
+  if (decision.verdict === 'refused') {
+    term?.write(`\r\n\x1b[90m[${decision.reason}]\x1b[0m\r\n`)
+    return
+  }
+  ide.sidePane.open = false
+  term?.write(`\r\n\x1b[90m[${decision.reason}——终端页签唤回]\x1b[0m\r\n`)
+}
 
 const terminalRef = ref<HTMLDivElement | null>(null)
 const isSuperAdmin = isStoredSuperAdmin()
@@ -231,6 +248,19 @@ function initTerminal() {
   fitAddon = new FitAddon()
   term.loadAddon(fitAddon)
   term.loadAddon(new WebLinksAddon())
+
+  // 终端 detach（吸收第一批 A4，kimi §五）：⌘B 把面板收起、PTY 进程继续跑
+  // （node-pty 在服务端，面板关闭不断会话）——「输入面腾出+进程保活」的
+  // 真实 detach 半边；判定=detachShell（shelldetach 域；GUI 下用 ⌘B 而非
+  // kimi 原文 Ctrl-B——Ctrl-B 是 readline backward-char，误拦破坏 shell 编辑）。
+  // 引擎后台化（process_manage background）支持后升级为真转后台（记档）。
+  term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+    if (e.type === 'keydown' && e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'b') {
+      void detachToBackground()
+      return false
+    }
+    return true
+  })
 
   term.onData((data) => {
     if (ws?.readyState === WebSocket.OPEN) ws.send(data)
