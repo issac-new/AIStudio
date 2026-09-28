@@ -24,6 +24,7 @@ import { useLoopStore } from '@/custom/loop/store/loop'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { parseTaskFlow, type TaskFlowEvent } from '@/custom/matrix-chat/utils/task-flow'
 import { useChatStore } from '@/stores/hermes/chat'
 import { usePlatformsStore } from '../store/platforms'
 import { buildAgentRoster } from '../adapters/agents'
@@ -179,8 +180,21 @@ const feedRows = computed(() => mergeFeed(
     id: x.id, title: x.title, createdAt: x.createdAt,
     startedAt: null, completedAt: null,
   })),
-  Date.now(),
-))
+  Date.now(),))
+
+// ── P4③ 群任务流转时间线（2026-09-28 §五）：当前选中群的消息流解析任务型事件
+// （派发/完成回执/缺陷/评审结论），喂给右栏 TaskDecisionPanel 的「任务流转」节。
+const roomFlowEvents = computed<TaskFlowEvent[]>(() => {
+  const msgs = (matrixRoom.activeRoomMessages ?? []) as Array<{
+    getSender?: () => string; getContent?: () => { body?: string }; getTs?: () => number
+  }>
+  if (!msgs.length) return []
+  return parseTaskFlow(msgs.map((ev) => ({
+    sender: ev.getSender?.() ?? '',
+    body: ev.getContent?.()?.body ?? '',
+    ts: ev.getTs?.() ?? 0,
+  })))
+})
 
 const linkedContext = computed(() => {
   const sel = activeSel.value
@@ -503,6 +517,7 @@ function onNewLoop(): void {
         :attention-rows="attentionRows"
         :linked-tasks="linkedTasks"
         :feed-rows="feedRows"
+        :flow-events="roomFlowEvents"
         :linked-context="linkedContext"
         @approve-task="approveTask"
         @reject-task="rejectTask"
@@ -513,6 +528,7 @@ function onNewLoop(): void {
         @reassign="onReassign"
         @open-ide="onOpenIde"
         @handle-task="onHandleTask"
+        @open-task="onHandleTask"
         @new-task="onNewTask"
         @all-timeline="onAllTimeline"
         @open-attention="onOpenAttention"
