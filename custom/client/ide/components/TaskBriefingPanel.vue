@@ -3,8 +3,9 @@
      纯展示组件：数据由父层（IdeShell / 任务跳转入口）注入，自身不发请求。
      区块：任务概览 / 需求上下文 / Git 活动 / Kanban 状态 / 协作动态 / 辅助会话。 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { diffBrief } from '../../../server/brief/brief-cache'
 import type {
   BriefingTask,
   BriefingRaci,
@@ -39,6 +40,21 @@ const gitView = computed<BriefingGit>(() => props.git ?? { branch: null, worktre
 const wfView = computed<BriefingWorkflow>(() => props.workflow ?? { stage: props.task.status, parentIds: [], childIds: [], blocked: false, retryCount: 0 })
 const collabView = computed<BriefingCollabMessage[]>(() => props.collab ?? [])
 const recapView = computed<BriefingRecap>(() => props.recap ?? { summary: '', decisions: [], blockers: [], todos: [] })
+
+// ── 简报前缀稳定度量（吸收第一批 D2，multica runtime brief 缓存语义的度量面）──
+// 当前简报内容 vs 上次打开（localStorage per task）→ diffBrief 稳定前缀/变更段；
+// 「本版变化 N 字」回答简报重开后什么变了。生效面（派单组装走增量+provider
+// prompt cache）挂 provider 增量帧协议（与 prefix-reuse 层 3 同依赖，记档）。
+const briefText = computed(() => JSON.stringify({ raci: raciView.value, git: gitView.value, wf: wfView.value, collab: collabView.value }))
+const briefPrevKey = computed(() => `ide_brief_prev_${props.task.id}`)
+const briefDiff = computed(() => {
+  const prev = (() => { try { return JSON.parse(localStorage.getItem(briefPrevKey.value) ?? 'null')?.text ?? null } catch { return null } })()
+  return diffBrief(prev, briefText.value)
+})
+function settleBrief(): void {
+  localStorage.setItem(briefPrevKey.value, JSON.stringify({ text: briefText.value, at: Date.now() }))
+}
+watch(briefText, settleBrief, { immediate: true })
 
 /** 六区块折叠态（默认全部展开，用户可逐区收起） */
 const collapsed = ref<Record<string, boolean>>({})
@@ -199,6 +215,10 @@ function sendAux(): void {
         </div>
       </div>
     </section>
+    <!-- 简报前缀稳定度量（D2）：本版较上版变化（diffBrief 稳定前缀/变更段） -->
+    <p v-if="briefDiff.prefixChars > 0" class="briefing-briefdiff" data-testid="briefing-briefdiff">
+      简报较上版：稳定前缀 {{ briefDiff.prefixChars }} 字 · 变化 {{ briefDiff.delta.length }} 字
+    </p>
   </aside>
 </template>
 
@@ -210,6 +230,8 @@ function sendAux(): void {
   font-size: 12px;
   color: var(--text-primary, #1f2329);
 }
+
+.briefing-briefdiff { font-size: 10px; color: var(--text-muted, #9aa0aa); margin: 0; padding: 0 2px; }
 
 .briefing-header {
   display: flex;

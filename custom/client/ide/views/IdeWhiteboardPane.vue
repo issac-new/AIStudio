@@ -6,7 +6,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useChatStore } from '@/stores/hermes/chat'
-import { roundTrip, validAnnotation, type BoardAnnotation } from '../../server/whiteboard/whiteboard-loop'
+import { roundTrip, validAnnotation, type BoardAnnotation } from '../../../server/whiteboard/whiteboard-loop'
 
 const { t } = useI18n()
 const message = useMessage()

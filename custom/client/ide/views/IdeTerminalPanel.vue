@@ -23,7 +23,7 @@ import {
   type TerminalToolId,
 } from '@/custom/cockpit/terminal/terminal-tools'
 import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/cockpit/api/terminal-tools'
-import { detachShell } from '../../server/shelldetach/shell-detach'
+import { detachShell } from '../../../server/shelldetach/shell-detach'
 
 const ide = useIdeStore()
 const { isDark } = useTheme()

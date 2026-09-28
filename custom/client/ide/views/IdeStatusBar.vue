@@ -14,6 +14,7 @@ import { TPS_FLOOR, formatTokens, lowContextThreshold, LOW_CONTEXT_RECOVER_PCT }
 import { useZcodeProjection } from '../../zcode/store/zcode-projection'
 import { connectZcode, subscribeZcodeWorkspace } from '../../zcode/api/zcode-socket'
 import { handleZcodeEvent } from '../../zcode/store/zcode-projection'
+import IdeKeymapCard from '../components/IdeKeymapCard.vue'
 import IdeMetricsPopover from './IdeMetricsPopover.vue'
 
 const ide = useIdeStore()
@@ -34,10 +35,11 @@ const slotsPanelOpen = ref(false)
 // running 会话=同目录活跃任务——agent 会话对目录都有写面，全按 task 计）。
 // 判定=workdir-adjacency 纯函数（workdir 域，纯 TS 无 server 依赖可跨引，
 // replica-s1-s4 测试跨引 server 投影同款先例）。
-import { workdirAdjacency, type WorkdirWarning } from '../../server/workdir/workdir-adjacency'
+import { workdirAdjacency, type WorkdirWarning } from '../../../server/workdir/workdir-adjacency'
 
 const workdirWarnings = computed<WorkdirWarning[]>(() => {
-  const tasks = Object.entries(zcodeProjection.state.sessions).map(([sessionId, s]) => ({
+  const sessions = (zcodeProjection.state as { sessions?: Record<string, { workspaceId?: string; phase?: string; lastActivityAt: number }> }).sessions ?? {}
+  const tasks = Object.entries(sessions).map(([sessionId, s]) => ({
     taskId: sessionId,
     workDir: s.workspaceId ?? ide.workspace ?? '~',
     kind: 'task' as const,
@@ -284,7 +286,8 @@ watch(
     <Teleport to="body">
       <IdeMetricsPopover v-if="metricsOpen" :metrics="metrics" @close="metricsOpen = false" />
     </Teleport>
-      <span class="ide-statusbar__item ide-statusbar__slots-btn" :style="{ order: 99 }">
+      <IdeKeymapCard />
+    <span class="ide-statusbar__item ide-statusbar__slots-btn" :style="{ order: 99 }">
       <button
         type="button"
         class="ide-statusbar__config"
