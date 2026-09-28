@@ -14,6 +14,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { readdirSync } from 'node:fs'
 
 /** 大脑思想核（kanban task 投影） */
 export interface MindThought {
@@ -87,14 +88,27 @@ function toIso(epochSec: number | null | undefined): string | null {
 /**
  * 从 kanban.db 投影思维大脑数据。库缺失/读失败 → available:false（不抛错，
  * 让前端落「思维网络未形成」空态而非 500）。
+ *
+ * 2026-09-28 前：只读 `<home>/kanban.db` 单库——分板拓扑（kanban/boards/*）
+ * 的任务与运行对本投影不可见（RFD-002 实测：开发运行台账缺当日全部会话）。
+ * 单库入口保留（测试/单库部署兼容）；装配面改走 projectMindAggregated。
  */
 export function projectMindFromKanban(dbPath?: string): MindProjection {
   const file = dbPath ?? join(homedir(), '.hermes', 'kanban.db')
+  const single = projectMindFromDbFile(file, null)
+  if (!single) return { thoughts: [], runs: [], relations: [], available: false }
+  return { ...single, available: true }
+}
+
+/** 单库投影内部形态（board = 来源板 slug；root 库为 null） */
+type DbProjection = { thoughts: MindThought[]; runs: MindRun[]; relations: MindRelation[] }
+
+function projectMindFromDbFile(file: string, boardSlug: string | null): DbProjection | null {
   let db: DatabaseSync | null = null
   try {
     db = new DatabaseSync(file, { open: true, readOnly: true } as never)
   } catch {
-    return { thoughts: [], runs: [], relations: [], available: false }
+    return null
   }
   try {
     const taskRows = db.prepare(
@@ -105,7 +119,8 @@ export function projectMindFromKanban(dbPath?: string): MindProjection {
       title: String(r.title ?? r.id),
       status: mapTaskStatus(r.status as string),
       createdAt: toIso(r.created_at as number),
-      board: r.project_id != null ? String(r.project_id) : null,
+      // 来源板优先（分板拓扑真实归属）；root 库回落 project_id
+      board: boardSlug ?? (r.project_id != null ? String(r.project_id) : null),
     }))
 
     const runRows = db.prepare(
@@ -117,7 +132,8 @@ export function projectMindFromKanban(dbPath?: string): MindProjection {
       const started = r.started_at as number | null
       const ended = r.ended_at as number | null
       return {
-        runId: String(r.id),
+        // 分板 run id 是板内自增整数，跨板必撞——板名限定保唯一（前端行键/展示直用）
+        runId: boardSlug ? `${boardSlug}:${r.id}` : String(r.id),
         thoughtId: String(r.task_id),
         status: mapRunStatus(r.status as string, r.outcome as string, ended),
         durationSec: started != null ? Math.max(0, Math.round((ended ?? nowSec) - started)) : 0,
@@ -135,10 +151,50 @@ export function projectMindFromKanban(dbPath?: string): MindProjection {
       relations = linkRows.map(r => ({ parentId: String(r.parent_id), childId: String(r.child_id) }))
     } catch { /* task_links 表缺失（旧库）→ 空关系 */ }
 
-    return { thoughts, runs, relations, available: true }
+    return { thoughts, runs, relations }
   } catch {
-    return { thoughts: [], runs: [], relations: [], available: false }
+    return null
   } finally {
     try { db?.close() } catch { /* 已关闭 */ }
   }
+}
+
+/**
+ * 聚合投影（2026-09-28 RFD-002 缺口①修复）：root 库 + 全部分板库合并。
+ * 根解析与部署一致：HERMES_HOME 显式优先（studio 以其钉 sim 根），否则 ~/.hermes。
+ * 任一源可开即 available:true；分板 runId 以 `<slug>:<id>` 限定防跨板撞键。
+ */
+export function projectMindAggregated(homeDir?: string): MindProjection {
+  const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const sources: Array<{ file: string; slug: string | null }> = [
+    { file: join(home, 'kanban.db'), slug: null },
+  ]
+  const boardsRoot = join(home, 'kanban', 'boards')
+  try {
+    for (const slug of readdirSync(boardsRoot, { withFileTypes: true })) {
+      if (!slug.isDirectory()) continue
+      sources.push({ file: join(boardsRoot, slug.name, 'kanban.db'), slug: slug.name })
+    }
+  } catch { /* boards 目录缺失（单库部署）→ 只读 root */ }
+
+  const thoughts: MindThought[] = []
+  const runs: MindRun[] = []
+  const relations: MindRelation[] = []
+  let anyOpen = false
+  for (const src of sources) {
+    const p = projectMindFromDbFile(src.file, src.slug)
+    if (!p) continue
+    anyOpen = true
+    thoughts.push(...p.thoughts)
+    runs.push(...p.runs)
+    relations.push(...p.relations)
+  }
+  runs.sort((a, b) => (tsMs(b.startedAt) - tsMs(a.startedAt)))
+  return { thoughts, runs, relations, available: anyOpen }
+}
+
+function tsMs(iso: string | null): number {
+  if (!iso) return 0
+  const t = Date.parse(iso)
+  return Number.isFinite(t) ? t : 0
 }
