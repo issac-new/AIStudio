@@ -170,12 +170,12 @@ function raciOf(t: CockpitTask) {
 .ov__empty { font-size: 11.5px; color: var(--text-muted); padding: 4px 0; }
 .ov__verdict { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; font-size: 11.5px; }
 .ov__verdict-badge { font-size: 10px; padding: 0 5px; border-radius: 3px; flex-shrink: 0; }
-.ov__verdict-badge.is-ok { color: var(--success, #2e7d32); background: rgba(var(--success-rgb, 46, 125, 50), 0.08); }
-.ov__verdict-badge.is-no { color: var(--error, #c62828); background: rgba(var(--error-rgb, 198, 40, 40), 0.08); }
+.ov__verdict-badge.is-ok { color: #059669; background: #05966914; }
+.ov__verdict-badge.is-no { color: #dc2626; background: #dc262614; }
 .ov__verdict-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov__verdict-meta { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 .ov__bar { height: 8px; border-radius: 4px; background: var(--bg-secondary, #eef1f4); overflow: hidden; }
-.ov__bar-fill { height: 100%; background: var(--accent-primary); transition: width .3s; }
+.ov__bar-fill { height: 100%; background: linear-gradient(90deg, #2563eb, #059669); transition: width .3s; }
 .ov__pct { font-size: 12px; font-weight: 600; margin-top: 6px; }
 .ov__dist { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 </style>

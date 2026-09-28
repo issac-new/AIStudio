@@ -109,11 +109,7 @@ defineExpose({ refresh })
 
     <div v-if="error" class="approval-panel__error" data-testid="approval-error">{{ t('approvals.loadFailed') }}：{{ error }}</div>
 
-    <!-- 空态：图标 + 文案的暖空态（对照 Run Center 3 步引导范式，不再裸灰字） -->
-    <div v-if="!loading && items.length === 0" class="approval-panel__empty" data-testid="approval-empty">
-      <span class="approval-panel__empty-icon" aria-hidden="true">✓</span>
-      <span class="approval-panel__empty-text">{{ t('approvals.empty') }}</span>
-    </div>
+    <div v-if="!loading && items.length === 0" class="approval-panel__empty" data-testid="approval-empty">{{ t('approvals.empty') }}</div>
 
     <!-- V4-N1 风险三档分区：高危（红标逐条）/ 常规 / 低风险（可自动通过·抽检） -->
     <section
@@ -236,31 +232,14 @@ defineExpose({ refresh })
   &:disabled { opacity: 0.5; cursor: wait; }
 }
 .approval-panel__error {
-  color: var(--error, #c62828);
+  color: var(--error-color, #dc2626);
   font-size: 12px;
 }
 .approval-panel__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 28px 0;
-  text-align: center;
-}
-.approval-panel__empty-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--bg-secondary, #f0f0f0);
-  color: var(--success, #2e7d32);
-  font-size: 18px;
-}
-.approval-panel__empty-text {
   color: var(--text-muted, #878c99);
   font-size: 13px;
+  padding: 18px 0;
+  text-align: center;
 }
 .approval-panel__group {
   display: flex;
@@ -324,11 +303,11 @@ defineExpose({ refresh })
   font-size: 12px;
   cursor: pointer;
   &:disabled { opacity: 0.5; cursor: wait; }
-  &--once, &--session, &--always, &--approve { color: var(--success, #2e7d32); border-color: rgba(var(--success-rgb, 46, 125, 50), 0.27); }
-  &--deny, &--request_changes { color: var(--error, #c62828); border-color: rgba(var(--error-rgb, 198, 40, 40), 0.27); }
+  &--once, &--session, &--always, &--approve { color: var(--success-color, #059669); border-color: var(--success-color, #059669); border-opacity: 0.3; }
+  &--deny, &--request_changes { color: var(--error-color, #dc2626); border-color: var(--error-color, #dc2626); border-opacity: 0.3; }
   &--primary {
-    background: var(--success, #2e7d32);
-    border-color: var(--success, #2e7d32);
+    background: var(--success-color, #059669);
+    border-color: var(--success-color, #059669);
     color: #fff;
     font-weight: 600;
   }
@@ -350,25 +329,13 @@ defineExpose({ refresh })
   td { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 .approval-history__decision {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-block;
   padding: 1px 8px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-  /* 形状+符号编码，不仅颜色（红绿色盲可辨） */
-  &::before { font-size: 10px; }
-  &.is-once, &.is-session, &.is-always, &.is-approve {
-    color: var(--success, #2e7d32);
-    background: rgba(var(--success-rgb, 46, 125, 50), 0.1);
-    &::before { content: '✓'; }
-  }
-  &.is-deny, &.is-request_changes {
-    color: var(--error, #c62828);
-    background: rgba(var(--error-rgb, 198, 40, 40), 0.1);
-    &::before { content: '✕'; }
-  }
+  &.is-once, &.is-session, &.is-always, &.is-approve { color: var(--success-color, #059669); background: rgba(5, 150, 105, 0.1); }
+  &.is-deny, &.is-request_changes { color: var(--error-color, #dc2626); background: rgba(220, 38, 38, 0.1); }
 }
 
 /* V4-N1 风险三档（§一 域1）：高危红标、低风险绿标、常规中性 */
