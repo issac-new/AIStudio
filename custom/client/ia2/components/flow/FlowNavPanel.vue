@@ -15,6 +15,7 @@ import { filterStreams, LOOP_STAGE_ORDER, type FlowFilter, type FlowLoopRow, typ
 import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
 import InboxNavEntry from '../InboxNavEntry.vue'
+import IaOverviewEntry from '../IaOverviewEntry.vue'
 
 const props = defineProps<{
   sessions: FlowSessionRow[]
@@ -89,6 +90,8 @@ function submitCreateRoom(): void {
 <template>
   <div class="flow-nav" data-testid="flow-nav">
     <div class="flow-nav__head">{{ t('ia2.flow.title') }}</div>
+    <!-- P5 驾驶舱概览入口（#/app/overview 三卡 landing） -->
+    <IaOverviewEntry />
     <!-- P1 审批收件箱入口（待审计数徽标；自含轮询） -->
     <InboxNavEntry />
 
