@@ -1,0 +1,32 @@
+diff --git a/tools/approval.py b/tools/approval.py
+index 627c7c92c2..b57a044e09 100644
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ -1188,6 +1188,27 @@ def check_all_command_guards(command: str, env_type: str,
+         for ctx in _unattended_contexts():
+             result = _unattended_deny(command, ctx)
+             if result is not None:
++                # HERMES_CUSTOM[unattended-transport] BEGIN
++                # 2026-09-28（演示轮实锤缺口修复）：kanban spawn 的 worker（-q
++                # single-query）撞危险命令被 deny 模式硬拒，审批请求无人可见、
++                # 任务自动 block。修复：deny 生效前，若 operator 显式选了插件
++                # 审批传输（security.approval.transport != builtin），先把请求
++                # 交给传输等人裁决——仅显式 once/session/always 放行；传输失败/
++                # 超时/拒绝维持原硬拒（fail-closed 语义不变）。检测层与授权面
++                # 不动（传输契约见 hermes_cli/approval_transport.py：只呈现已
++                # 脱敏请求、回传带摘要绑定的决策）。
++                _upk = str(result.get("pattern_key") or "unattended")
++                _udesc = str(result.get("description") or command)
++                attempt = _present_with_selected_transport(
++                    command=command, description=_udesc, pattern_key=_upk,
++                    pattern_keys=(_upk,), session_key=get_current_session_key(),
++                    surface=f"unattended:{ctx.name}", allow_session=True, allow_permanent=True,
++                )
++                _uchoice, _udenied = _transport_choice(
++                    attempt, pattern_key=_upk, description=_udesc)
++                if _udenied is None and _uchoice in ("once", "session", "always"):
++                    return _approved()
++                # HERMES_CUSTOM[unattended-transport] END
+                 return result
+         return _approved()
+ 
