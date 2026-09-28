@@ -268,3 +268,6 @@
 #      max_in_progress 满载）与 per_profile cap 此前不进 describe_suppression，
 #      stuck 告警零后缀把"忙"误报"卡死"（B2 根治，gateway N=600+ 实锤）。
 478-dispatch-budget-telemetry.patch
+# 490（走查修复 2）：zcode 会话 scoped→global 自动回落——IDE 会话默认 scoped（模型
+#      可调）与服务端 zcode-only-global 冲突致发送全 400；回落而非硬拒。
+490-server-zcode-scoped-fallback.patch
