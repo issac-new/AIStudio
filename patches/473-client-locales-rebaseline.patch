@@ -557,7 +557,7 @@ index 589b9bf1..33763ef7 100644
    sidebar: {
      chat: 'Chat',
      backToChat: 'Back',
-@@ -475,8 +582,1539 @@ export default {
+@@ -475,8 +582,1555 @@ export default {
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -1441,6 +1441,22 @@ index 589b9bf1..33763ef7 100644
 +        paused: 'Paused',
 +        idle: 'Idle',
 +      },
++    },
++    overview: {
++      title: 'Cockpit overview',
++      myTodo: 'My to-dos',
++      waitingApproval: 'Pending approvals',
++      myRaci: 'Needs your action (RACI)',
++      gateReview: 'Review gates',
++      pendingReview: 'Pending reviews',
++      recentVerdicts: 'Recent verdicts',
++      noVerdicts: 'No verdicts yet',
++      progress: 'Delivery progress',
++      doneOfTotal: '{done}/{total} done ({pct}%)',
++      running: 'Running',
++      review: 'In review',
++      blocked: 'Blocked',
++      open: 'Open',
 +    },
 +    tdp: {
 +      title: 'Tasks · Decisions',
@@ -4759,7 +4775,7 @@ index b5d4b85d..7962fd58 100644
    sidebar: {
      chat: '对话',
      backToChat: '返回',
-@@ -475,8 +582,1539 @@ export default {
+@@ -475,8 +582,1555 @@ export default {
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -5643,6 +5659,22 @@ index b5d4b85d..7962fd58 100644
 +        paused: '已暂停',
 +        idle: '待进入',
 +      },
++    },
++    overview: {
++      title: '驾驶舱概览',
++      myTodo: '我的待办',
++      waitingApproval: '审批待审',
++      myRaci: '等您操作（RACI）',
++      gateReview: '评审闸口',
++      pendingReview: '待裁决评审',
++      recentVerdicts: '最近裁决',
++      noVerdicts: '暂无裁决记录',
++      progress: '交付进度',
++      doneOfTotal: '已完成 {done}/{total}（{pct}%）',
++      running: '进行中',
++      review: '评审中',
++      blocked: '受阻',
++      open: '未开始',
 +    },
 +    tdp: {
 +      title: '任务 · 决策',
