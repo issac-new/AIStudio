@@ -376,15 +376,20 @@ if step_reached analysis; then
     note "[观察] 主卡未带结构化 raci（记问题单，继续）"
   fi
   # 关联人进群核验（step 10 要求 agent 自动邀请）
+  # 判定语义（V4-run1 误报根治）：agent 职责=邀请发出（join|invite 均算履职）；
+  # 受邀方接受与否不在 agent 控制面。仅当 join/invite 双缺时才记能力缺口问题单。
   EXPECTED_MEMBERS="chen hu lin xiao wei mei qi fei"
   for m in $EXPECTED_MEMBERS; do
-    if ! mx_room_members "$(load_token fanfan)" "$RID" | grep -qx "$(human_mxid "$m")"; then
-      note "[问题] @$m 未被邀入需求群——agent 自动邀请能力缺口，导演补邀并记问题单"
-      echo "ISSUE|room-invite-gap|fanfan-agent|Orchestrator 未自动邀请 @$m 进群，导演兜底" >> "$EVID_DIR/issues.log"
+    MEM_ST="$(mx_room_membership "$(load_token fanfan)" "$RID" "$(human_mxid "$m")")"
+    if [[ -z "$MEM_ST" ]]; then
+      note "[问题] @$m 未被邀入需求群（join/invite 双缺）——agent 自动邀请能力缺口，导演补邀并记问题单"
+      echo "ISSUE|room-invite-gap|fanfan-agent|Orchestrator 未自动邀请 @$m 进群（join/invite 双缺实锤），导演兜底" >> "$EVID_DIR/issues.log"
       mx "$(load_token fanfan)" POST "rooms/$RID/invite" "{\"user_id\":\"$(human_mxid "$m")\"}" >/dev/null 2>&1 || true
       mx_join "$(load_token "$m")" "$RID"
       mx "$(load_token fanfan)" POST "rooms/$RID/invite" "{\"user_id\":\"$(agent_mxid "$m")\"}" >/dev/null 2>&1 || true
       mx_join "$(load_token "$m-agent")" "$RID"
+    elif [[ "$MEM_ST" == "invite" ]]; then
+      note "[真值] @$m 需求群邀请已发出（invite 待接受）✓"
     fi
   done
   note "[步骤10] 系统分析派发阶段完成"
@@ -566,7 +571,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
 1) git checkout -b feat/DEV-PAYCORE
 2) 实现 apps/csw-pay-core：支付单创建（merchantId+outTradeNo 幂等）、状态机 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单、渠道回调接收入口（验签后更新状态机，重复回调幂等）；金额单位：分(int64)
 3) vitest 单测：幂等/状态机/关单/回调重复消费 ≥8 用例全绿（${PYTEST_NOTE}）
-4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
+4) 测试运行输出保存到 docs/evidence/DEV-PAYCORE-testlog.txt 随分支提交（G3 编码门禁证据，缺件判未完成）。提交纪律：git add 只取本任务改动文件与该 testlog 显式路径，严禁把他任务 evidence 文件带进分支（integration 合并 add/add 冲突实锤）；push origin feat/DEV-PAYCORE；结论行 DEV-DONE-DEV-PAYCORE。不许谎报。" "$(agent_mxid chen),$(agent_mxid wei)"
 
   wait_truth "origin 出现 feat/DEV-PAYCORE 分支" 3600 bash -c \
     "git -C '$DIRECTOR_CLONE' fetch -q origin && git -C '$DIRECTOR_CLONE' rev-parse -q --verify refs/remotes/origin/feat/DEV-PAYCORE" \
@@ -580,14 +585,14 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
     dispatch_in_room "$who" "@$who-agent:matrix.test 执行开发任务 ${task}（${app}）。
 工作区 $(workspace "$who")（先 git fetch && git checkout -b feat/${task} origin/feat/DEV-PAYCORE，基于 pay-core 契约）。
 1) 实现 apps/${app}：统一 ChannelAdapter 接口（createOrder/queryOrder/closeOrder/verifyNotify），${chan}；渠道 HTTP 一律 mock
-2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
+2) vitest 单测 ≥6 用例全绿（运行输出保存到 docs/evidence/${task}-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与 docs/evidence/${task}-testlog.txt 显式路径；基于 feat/DEV-PAYCORE 起分支自带的他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交（integration 合并 add/add 冲突实锤）；3) push origin feat/${task}；结论行 DEV-DONE-${task}。不许谎报。" "$(agent_mxid $who),$(agent_mxid wei)"
     sleep 5
   done
 
   dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 DEV-MP（csw-cashier-mp）。
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
-2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）
+2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成）。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
 3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
 
   for b in DEV-CHWX DEV-CHALI DEV-MP; do
@@ -636,8 +641,20 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     fi
     git checkout -q -B integration/${RFD_ID} origin/main
     for b in DEV-PAYCORE DEV-CHWX DEV-CHALI DEV-MP; do
-      git merge -q --no-ff "origin/feat/$b" -m "merge: $b into integration/${RFD_ID}" 2>/dev/null \
-        || { git merge --abort 2>/dev/null; echo "ISSUE|merge-conflict|$b|integration 合并冲突" >> "$EVID_DIR/issues.log"; }
+      if ! git merge -q --no-ff "origin/feat/$b" -m "merge: $b into integration/${RFD_ID}" 2>/dev/null; then
+        # 冲突自愈（V4-run1 merge-conflict×3 根治）：冲突路径全是 docs/evidence/*-testlog.txt
+        # 时取 integration 侧自动收口——testlog 正本在其任务正主分支，他分支携带的是
+        # 跨任务污染副本（基于 feat/DEV-PAYCORE 起分支+复跑全套测试所致），丢弃不丢证据。
+        CONFLICTS="$(git diff --name-only --diff-filter=U 2>/dev/null)"
+        if [[ -n "$CONFLICTS" ]] && ! printf '%s\n' "$CONFLICTS" | grep -vE '^docs/evidence/[A-Z0-9-]+-testlog\.txt$' | grep -q .; then
+          printf '%s\n' "$CONFLICTS" | while read -r cf; do git checkout --ours -- "$cf" 2>/dev/null; git add -- "$cf" 2>/dev/null; done
+          git commit -q --no-edit 2>/dev/null || true
+          note "[观察] $b 合并冲突仅限 testlog 污染副本，已取 integration 正本自动收口"
+          echo "ISSUE|merge-conflict-autoresolved|$b|testlog 副本冲突已取 integration 正本收口（仍记单追踪提交纪律）" >> "$EVID_DIR/issues.log"
+        else
+          git merge --abort 2>/dev/null; echo "ISSUE|merge-conflict|$b|integration 合并冲突" >> "$EVID_DIR/issues.log"
+        fi
+      fi
     done
     # 分支状态机约定（P4）：integration/${RFD_ID} 是脚本专有集成分支，每轮 -B 基于
     # origin/main+四开发分支重建，旧集成提交允许被重建结果覆盖（上一轮测试报告类产物以
