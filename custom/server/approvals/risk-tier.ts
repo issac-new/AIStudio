@@ -56,12 +56,27 @@ const GIT_READONLY_SAFE_ARGS: Record<string, RegExp> = {
   stash: /^(list|show)\b/,
 }
 
+/** git 全局旗标（-C <path>、-c k=v、--git-dir=… 等）：剥掉后子命令/高危判据才不被首词干扰。
+ *  run2 探针实锤两处盲区：`git -C /repo status` 被首词 '-C' 判 medium（保守可忍）；
+ *  `git -C /repo push` 更是绕过 /\bgit\s+push\b/ 高危正则 → medium（安全向缺陷，必修）。 */
+const GIT_GLOBAL_FLAG = /^(?:-C\s+\S+|-c\s+\S+=\S+|--git-dir(?:=\s*\S+|\s+\S+)|--work-tree(?:=\s*\S+|\s+\S+)|--namespace(?:=\s*\S+|\s+\S+)|--no-pager|--no-optional-locks|--literal-pathspecs)\s*/
+
+function stripGitGlobalFlags(rest: string): string {
+  let args = rest.trim()
+  for (;;) {
+    const m = GIT_GLOBAL_FLAG.exec(args)
+    if (!m) return args
+    args = args.slice(m[0].length)
+  }
+}
+
 function isReadonlyGit(rest: string): boolean {
-  const sub = rest.split(/\s+/)[0] ?? ''
+  const args = stripGitGlobalFlags(rest)
+  const sub = args.split(/\s+/)[0] ?? ''
   if (GIT_READONLY_ANY_ARGS.has(sub)) return true
   const safe = GIT_READONLY_SAFE_ARGS[sub]
   if (!safe) return false
-  return safe.test(rest.slice(sub.length).trim())
+  return safe.test(args.slice(sub.length).trim())
 }
 
 /** 高危语义关键词（评审/看板卡标题与详情）。 */
@@ -70,15 +85,17 @@ const HIGH_SEMANTIC = /(发布|准出|上线|发版|生产|release|deploy|produc
 function classifyCommand(detail: string): ApprovalRiskTier {
   const text = detail.trim()
   if (!text) return 'medium'
+  // 高危判据在剥掉 git 全局旗标后的文本上执行（`git -C /repo push` 不再漏网）
+  const effective = /^git\b/.test(text) ? `git ${stripGitGlobalFlags(text.slice(3).trim())}`.trim() : text
   for (const re of HIGH_COMMAND) {
-    if (re.test(text)) return 'high'
+    if (re.test(effective)) return 'high'
   }
-  const lead = text.split(/\s+/)[0]?.replace(/^sudo$/, '') ?? ''
-  const rest = text.slice(text.indexOf(lead) + lead.length).trim()
+  const lead = effective.split(/\s+/)[0]?.replace(/^sudo$/, '') ?? ''
+  const rest = effective.slice(effective.indexOf(lead) + lead.length).trim()
   if (LOW_COMMAND_LEAD.has(lead.toLowerCase())) return 'low'
   if (lead === 'git' && isReadonlyGit(rest)) return 'low'
-  if (/^(npm|yarn|pnpm)\s+(ls|list|outdated|view|info|audit)\b/i.test(text)) return 'low'
-  if (/^(node|python3?|ruby|java|go|rustc)\s+(--version|-v|-V)$/.test(text)) return 'low'
+  if (/^(npm|yarn|pnpm)\s+(ls|list|outdated|view|info|audit)\b/i.test(effective)) return 'low'
+  if (/^(node|python3?|ruby|java|go|rustc)\s+(--version|-v|-V)$/.test(effective)) return 'low'
   return 'medium'
 }
 
