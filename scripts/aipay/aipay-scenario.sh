@@ -261,11 +261,21 @@ fi
 # ══ 步骤 7-8：建群 + 发需求给 Orchestrator ═══════════
 if step_reached room; then
   if [[ -z "$(sget room_analysis)" ]]; then
-    RID=$(mx_create_room "$(load_token fanfan)" "支付收银台需求分析讨论群" "$(agent_mxid fanfan)")
+    # 全量预邀（方案 §8 原文：fanfan 建群"自动邀请全部关联人进群后再开始分析"）。
+    # 此前只邀 fanfan-agent，关联人入群全押 agent 自动邀请——通道不稳时
+    # room-invite-gap 反复发作（V3 ×7 / V4-run1 ×8 实锤）。邀请幂等，人须各自 join。
+    ASSOCIATES="chen hu lin xiao wei mei qi fei"
+    INVITE_CSV="$(agent_mxid fanfan)"
+    for m in $ASSOCIATES; do INVITE_CSV="${INVITE_CSV},$(human_mxid "$m"),$(agent_mxid "$m")"; done
+    RID=$(mx_create_room "$(load_token fanfan)" "支付收银台需求分析讨论群" "$INVITE_CSV")
     [[ "$RID" == '!'* ]] || fail "建群失败: $RID"
     sset room_analysis "$RID"
     mx_join "$(load_token fanfan-agent)" "$RID"
-    note "[fanfan] 已建「支付收银台需求分析讨论群」 $RID 并邀请 fanfan-agent"
+    for m in $ASSOCIATES; do
+      mx_join "$(load_token "$m")" "$RID"
+      mx_join "$(load_token "$m-agent")" "$RID"
+    done
+    note "[fanfan] 已建「支付收银台需求分析讨论群」 $RID 并全量预邀（fanfan-agent + 8 关联人及各自 agent，方案 §8）"
   fi
 fi
 

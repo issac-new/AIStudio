@@ -314,15 +314,29 @@ room_has_from() { # <room> <sender-mxid> <pattern>
     'map(select(.sender == $s and ((.content.body // "") | test($p)))) | any' >/dev/null 2>&1
 }
 
-dispatch_in_room() { # <humanUser> <text> <mention-csv> → event_id
-  local m uid rid
+dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
+  local m uid rid u lp members
+  local uids=()
   uid="$(human_mxid "$1")"; rid="$(sget room_analysis)"
-  # 成员保障（09-26 实锤：派发者不在群→403 M_FORBIDDEN→SEND-FAILED；治理角色
-  # 不在第 8/11 步邀人清单内，arch 派发被拒）。不在群则补邀+自入后再发。
-  if ! mx_room_members "$(load_token fanfan)" "$rid" | grep -qx "$uid"; then
-    mx "$(load_token fanfan)" POST "rooms/$rid/invite" "{\"user_id\":\"$uid\"}" >/dev/null 2>&1 || true
-    mx_join "$(load_token "$1")" "$rid" >/dev/null 2>&1 || true
+  # 成员保障 v2（09-26 v1 只保派发者；09-29 重构轮扩展到全部被 @ 责任人）：
+  # 指令必达前置——被 @ 者不在群则 mention 不可达、其 agent 无从接单
+  # （V4-run1 room-invite-gap ×8 复发实锤：接收方而非派发方缺位）。
+  # 不在群则 fanfan 补邀 + 该账号自入（join 按 mxid localpart 取 token）。
+  uids=("$uid")
+  if [[ -n "${3:-}" ]]; then
+    local IFS=','
+    read -r -a uids_m <<< "$3"
+    uids+=("${uids_m[@]}")
   fi
+  members="$(mx_room_members "$(load_token fanfan)" "$rid" 2>/dev/null || true)"
+  for u in "${uids[@]}"; do
+    [[ -n "$u" ]] || continue
+    if ! printf '%s\n' "$members" | grep -qx "$u"; then
+      mx "$(load_token fanfan)" POST "rooms/$rid/invite" "{\"user_id\":\"$u\"}" >/dev/null 2>&1 || true
+      lp="${u%%:*}"; lp="${lp#@}"
+      mx_join "$(load_token "$lp")" "$rid" >/dev/null 2>&1 || true
+    fi
+  done
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"
