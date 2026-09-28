@@ -15,7 +15,7 @@ import { compileLoopToDef, type CompileDeps } from './graph-compiler'
 import { appendContractsById } from './phase-nodes'
 import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
-import { projectMindFromKanban } from './mind-projection'
+import { projectMindAggregated } from './mind-projection'
 import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
@@ -317,7 +317,8 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   // ~/.hermes/kanban.db 的 tasks/task_runs 投影为思想核 + 突触末梢；
   // 不动 kanban 本体、不写图引擎库。库缺失/读失败 → available:false（前端落空态）。
   router.get('/api/graph/mind', async (ctx) => {
-    ctx.body = projectMindFromKanban()
+    // 2026-09-28 缺口①：聚合 root+全部分板（HERMES_HOME 根解析），分板运行入台账
+    ctx.body = projectMindAggregated()
   })
 
   if (!tryBindSocket()) scheduleSocketRetry()
