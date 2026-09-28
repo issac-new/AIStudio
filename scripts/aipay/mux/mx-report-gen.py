@@ -188,24 +188,43 @@ STEPS_META = {
 
 # ── 六域审计（用户指令 2026-09-28：六域各自回答一个交付问题）──
 DOMAINS = [
-    ('L0', '范围与需求', '是否漏做、误做或擅自假设？',
-     '无漏做（26 步 UI 覆盖逐条核对为零缺图）。两处如实记账边界：邮件通道本期禁用改 matrix 私信（问题单口径）；fleet-manifest 四件套无专属界面，步骤 2 以 profiles 配置页承载并在此声明。',
-     '实测：26/26 步 UI 图在位（生成器元素级核对）· 问题单 22 键全处置 · 管理档案三件在仓'),
-    ('L1', '工程正确性', '代码和制品是否成立？',
+    ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass',
+     '无漏做（26 步 UI 覆盖逐条核对为零缺图）。两处如实记账边界：邮件通道本期禁用改 matrix 私信；fleet-manifest 四件套无专属界面，步骤 2 以 profiles 配置页承载并在此声明。',
+     '实测：26/26 步 UI 图在位 · 问题单 22 键全处置 · 管理档案三件在仓',
+     'cp-g1,cp-g6'),
+    ('L1', '工程正确性', '代码和制品是否成立？', 'pass',
      '成立（复跑实证）。五域守门合跑 28/28 绿：治理 8 + 审批 10 + 面板 5 + 看板快道 5；client 构建过 verify-dist 门禁；测试证据为分支内实跑日志，非纸面。',
-     '实测：vitest 五文件合跑 28 passed (5 files) · docs/evidence/*-testlog.txt 分支锚'),
-    ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？',
-     '一致（live 对账）。治理 API 实查：20 件工件 20 在仓，四组分布 8/3/5/4，G3 分支证据 4，待裁决 1；五件代表工件 doc 接口 markdown 全文可取（freeze 663B/roster 875B/tasklist 6.5KB/testlog-mp 5.3KB/retro 10.2KB）；看板 API 与 CLI 同库（sqlite 直读）。',
-     '实测：GET /api/governance/overview 200（20/20）· doc×5 200 · 看板库同源'),
-    ('L3', '行为与业务语义', '运行行为是否符合业务意图？',
-     '符合。行为级证据：G2/G5 打回环真实发生（FAIL→补齐→复审 PASS 结论行在案）；xiao 建卡被审批门 5 分钟超时拦截不越权；UAT 拿 G1 冻结 AC-1~7 逐条对账——开头定的标准结尾对账闭环。',
-     '实测：ARCH-GATE-PASS/READY-GATE 结论行可反查（event_id）· 审批拦截实录 · UAT 逐条锚点'),
-    ('L4', '架构、非功能与安全', '实现方式是否可接受？',
-     '可接受（安全探针通过）。未授权访问治理/审批 API 均 401（无 token 与伪造 token 双探针）；git 全异步 execFile+8s 超时杜绝事件循环阻塞；sqlite 只读快道聚合 55s→20ms；金额分 int64/渠道本地 mock/密钥不出服务端。',
-     '实测：no-token→401 ×2 · bad-jwt→401 · 聚合延迟 20ms 量级实查'),
-    ('L5', '交付与治理', '是否能部署、运营和追责？',
-     '能（裁决链实测）。decide 非法前缀正确 400（id 前缀校验）；审批历史留痕（wei 裁决在案）；四道硬闸+HumanGate 批准留痕；问题单 100% 处置记账；审计独立签名线在仓；SLA 登记（99.5%/P95≤800ms/P2 4h）。',
-     '实测：POST decide 非法前缀→400 · 审批历史 API 200 含裁决记录 · G5 三轮过闸'),
+     '实测：vitest 五文件合跑 28 passed · docs/evidence/*-testlog.txt 分支锚',
+     'cp-g3,cp-g4'),
+    ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？', 'pass',
+     '一致（live 对账）。治理 API 实查：20 件工件 20 在仓，四组 8/3/5/4，G3 分支证据 4，待裁决 1；五件代表工件 doc 接口全文可取；看板 API 与 CLI 同库。',
+     '实测：GET overview 200（20/20）· doc×5 200 · sqlite 同库直读',
+     'cp-g1,cp-g5'),
+    ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'pass',
+     '符合。G2/G5 打回环真实发生（FAIL→补齐→复审 PASS）；xiao 建卡被审批门 5 分钟超时拦截不越权；UAT 拿 G1 冻结 AC-1~7 逐条对账——开头定的标准结尾对账闭环。',
+     '实测：结论行 event_id 可反查 · 审批拦截实录 · UAT 逐条锚点',
+     'cp-g2,cp-gate,cp-uat'),
+    ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass',
+     '可接受（安全探针通过）。未授权访问治理/审批 API 均 401（无 token 与伪造 token 双探针）；git 全异步 execFile+8s 超时；聚合 55s→20ms；金额分 int64/渠道本地 mock/密钥不出服务端。',
+     '实测：no-token→401 ×2 · bad-jwt→401 · 聚合 20ms 量级',
+     'cp-gate,cp-g3'),
+    ('L5', '交付与治理', '是否能部署、运营和追责？', 'pass',
+     '能（裁决链实测）。decide 非法前缀正确 400；审批历史留痕（wei 裁决在案）；四道硬闸+HumanGate 批准留痕；问题单 100% 处置记账；审计签名线在仓；SLA 登记。',
+     '实测：POST decide 非法前缀→400 · 审批历史 200 含裁决 · SLA 在案',
+     'cp-g5,cp-g6'),
+]
+
+# 关键卡点（人工在回路的实拍现场）：id 锚点供六域表跳转
+CHECKPOINTS = [
+    ('cp-g1', 'G1 需求上锁', '验收标准可判定才许开工，锁后不许改', '人审 · BA/PM 四要素', 'ui-gov-doc', 'frozen:true @ 0217cf2'),
+    ('cp-triage', '分诊确认', '团队负责人手工确认后任务才推进', '人 · 团队 lead', 'ui-10-kanban', '看板 T-101~T-108 分诊→执行'),
+    ('cp-g2', 'G2 架构评审', '五项检查逐条留痕，不评审不排期', '人 · arch 治理组', 'ui-room-archived', 'ARCH-GATE-PASS 结论行（两轮过闸）'),
+    ('cp-gate', '审批门拦截', '高危命令 5 分钟无人应答即拦截停手', '运行时 HumanGate', 'ui-20-inbox', 'xiao 建卡被拦实录 + 收件箱待审'),
+    ('cp-g3', 'G3 编码门禁', '测试证据随分支提交，无设计不编码', '门禁脚本 + 研发', 'ui-gov-tlpaycore', 'testlog 分支锚 feat/DEV-* ×4'),
+    ('cp-g4', 'G4 独立验证', '测试的人不是写代码的人，缺陷全闭环', '人 · qi/fei 独立执行', 'ui-gov-test', '51/51 集成 + 131/131 回归'),
+    ('cp-g5', 'G5 发布准出 + HumanGate', '七项检查 + 人工批准才许上线', '人 · PM + 评审卡', 'ui-gov-release', '三轮 FAIL→补齐→PASS + 批准留痕'),
+    ('cp-uat', 'UAT 业务验收', 'BA 拿 G1 冻结清单逐条对账', '人 · bella 验收', 'ui-gov-uat', 'AC-1~7 逐条证据锚点 + SLA'),
+    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账，经验入家族记忆库', '人 · 全员 + 治理', 'ui-gov-retro', 'DISP 三态处置表 + 记忆探针'),
 ]
 
 GATE_BY_STEP = {7: 'G1', 15: 'G2', 18: 'G3', 19: 'G4', 20: 'G5', 24: 'G6'}
@@ -302,6 +321,38 @@ total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_
 ui_imgs = sum(1 for _, _, _, m in STEPS for pre, _, kind in m['imgs'] if kind == 'ui' and (STEPS_DIR / f'{pre}.png').exists())
 
 # ── 闸门仪表盘 ──
+
+def status_badge(s: str) -> str:
+    return '<span class="dm-badge">✓ 通过</span>' if s == 'pass' else f'<span class="dm-badge dm-badge--{s}">{s}</span>'
+
+def domains_table():
+    rows = []
+    for d in DOMAINS:
+        code, name, question, status, answer, evidence, cps = d
+        links = ' '.join(f'<a class="dm-cp" href="#{cp}">▸{cp.split("-", 1)[1].upper()}</a>' for cp in cps.split(','))
+        rows.append(f'<tr><td><b>{code}</b><br><span class="dm-name">{name}</span></td>'
+                    f'<td class="dm-q">{H.escape(question)}</td>'
+                    f'<td class="dm-a">{status_badge(status)}{H.escape(answer)}</td>'
+                    f'<td class="dm-e">{H.escape(evidence)}</td>'
+                    f'<td class="dm-cps">{links}</td></tr>')
+    return ('<table class="domains"><tr><th style="width:72px">域</th><th style="width:160px">交付问题</th>'
+            '<th>判定（逐域实测）</th><th style="width:22%">实测证据</th><th style="width:112px">关联卡点</th></tr>'
+            + ''.join(rows) + '</table>')
+
+def checkpoints_html():
+    cards = []
+    for cid, name, semantics, who, img, evidence in CHECKPOINTS:
+        if not (STEPS_DIR / f'{img}.png').exists():
+            continue
+        cards.append(
+            '<div class="cp-card" id="' + cid + '">'
+            '<div class="cp-head"><span class="cp-name">' + H.escape(name) + '</span><span class="cp-who">' + H.escape(who) + '</span></div>'
+            '<label class="cp-shot"><input type="checkbox"><img src="screenshots/steps/' + img + '.png" alt="' + H.escape(name) + '" loading="lazy"></label>'
+            '<div class="cp-sem">' + H.escape(semantics) + '</div>'
+            '<div class="cp-ev">' + H.escape(evidence) + '</div>'
+            '</div>')
+    return '<div class="cp-grid">' + ''.join(cards) + '</div>'
+
 def gate_cards():
     # 打回记录（如实）：G2 首轮超时打回复评、G5 首轮 FAIL 补齐复测
     rejected = {'G2': '首轮曲折复评', 'G5': '首轮 FAIL 补齐'}
@@ -452,6 +503,21 @@ table{{width:100%;border-collapse:collapse;background:var(--card);border-radius:
 th,td{{border-bottom:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}}
 th{{background:var(--bg);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}}
 .d-ok{{color:var(--ok);font-weight:500}} .d-warn{{color:var(--warn)}}
+.cp-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px }}
+.cp-card {{ border:1px solid var(--border); border-radius:10px; background:var(--card); padding:10px 12px; box-shadow:var(--shadow) }}
+.cp-head {{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px }}
+.cp-name {{ font-size:13px; font-weight:700 }}
+.cp-who {{ font-size:10.5px; color:var(--warn); font-weight:600; white-space:nowrap }}
+.cp-shot {{ display:block; cursor:zoom-in; margin:2px 0 6px }}
+.cp-shot img {{ width:100%; height:118px; object-fit:cover; object-position:top; border:1px solid var(--border); border-radius:6px; display:block }}
+.cp-shot input {{ display:none }}
+.cp-shot input:checked ~ img {{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); height:auto; max-height:88vh; max-width:90vw; width:auto; object-fit:contain; z-index:9999; box-shadow:0 8px 40px rgba(0,0,0,.3); border-radius:8px }}
+.cp-sem {{ font-size:11.5px; color:#334155; line-height:1.5 }}
+.cp-ev {{ font-size:10.5px; color:var(--muted); margin-top:4px; font-family:ui-monospace,monospace }}
+.dm-badge {{ display:inline-block; font-size:10px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:4px; padding:1px 7px; margin-right:7px; vertical-align:1px }}
+a.dm-cp {{ display:inline-block; font-size:10px; color:var(--accent); text-decoration:none; margin:1px 3px 1px 0; border:1px solid var(--border); border-radius:4px; padding:1px 6px }}
+a.dm-cp:hover {{ background:var(--bg) }}
+@media (max-width: 1100px) {{ .cp-grid {{ grid-template-columns:repeat(2,1fr) }} }}
 .domains {{ margin-top: 12px }}
 .domains td {{ font-size: 12px; line-height: 1.7; vertical-align: top }}
 .dm-name {{ font-size: 11px; color: var(--muted) }}
@@ -503,13 +569,14 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 
   <div class="gates">{gate_cards()}</div>
 
+  <h2 class="section-hd" id="checkpoints">关键卡点 · 人工把关实拍现场</h2>
+  <p class="stat-note">九个人工卡点按流程顺序排列——每卡点配真实产品界面实拍（点击放大）：谁在把关、把什么关、证据在哪。六域判定的"关联卡点"可跳回此处。</p>
+  {checkpoints_html()}
+
   {content_html}
 
   <h2 class="section-hd">六域审计 · 每域一个交付问题（逐域实测）</h2>
-  <table class="domains">
-    <tr><th style="width:84px">域</th><th style="width:170px">交付问题</th><th>结论</th><th style="width:25%">证据锚点</th></tr>
-    {''.join(f'<tr><td><b>{d[0]}</b><br><span class="dm-name">{d[1]}</span></td><td class="dm-q">{H.escape(d[2])}</td><td class="dm-a">{H.escape(d[3])}</td><td class="dm-e">{H.escape(d[4])}</td></tr>' for d in DOMAINS)}
-  </table>
+  {domains_table()}
 
   <h2 class="section-hd">问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
