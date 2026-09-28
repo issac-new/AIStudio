@@ -8,6 +8,19 @@ import Router from '@koa/router'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 
+
+/** studio db 多候选探测（symlink/物理 __dirname 双形态+cwd 兜底）。 */
+function resolveStudioDb(): string {
+  const env = process.env.RUN_UNDO_DB?.trim()
+  if (env) return resolve(env)
+  const candidates = [
+    // serve 子进程 cwd 恒=hermes-studio 根（serve-server.mjs spawn cwd）——最可靠锚。
+    resolve(process.cwd(), 'packages/server/data/hermes-web-ui.db'),
+    resolve(__dirname, '../../../../data/hermes-web-ui.db'),
+  ]
+  return candidates.find((p) => existsSync(p)) ?? candidates[0]!
+}
+
 const router = new Router({ prefix: '/api/ide' })
 
 router.get('/compaction-trace/:sessionId', (ctx) => {
@@ -17,9 +30,7 @@ router.get('/compaction-trace/:sessionId', (ctx) => {
     ctx.body = { ok: false, detail: 'sessionId 必填' }
     return
   }
-  const dbPath = process.env.RUN_UNDO_DB?.trim()
-    ? resolve(process.env.RUN_UNDO_DB)
-    : resolve(__dirname, '../../../../data/hermes-web-ui.db')
+  const dbPath = resolveStudioDb()
   if (!existsSync(dbPath)) {
     ctx.body = { ok: true, snapshot: null, detail: 'db 不可用' }
     return

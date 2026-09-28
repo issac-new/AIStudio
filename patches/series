@@ -239,3 +239,12 @@
 #      插件审批传输（security.approval.transport）；仅显式 once/session/always 放行，
 #      失败/超时/拒绝维持硬拒 fail-closed。配套 runtime/plugins/studio-file-approval。
 490-agent-unattended-approval-transport.patch
+
+# 490（治理中心 · 补功能主清单）：/api/governance overview（六闸工件 git 实查+G3 分支
+#      证据+评审待裁决聚合）+ doc?kind=（markdown 全文含 commit 锚点）；本体走 custom
+#      （governance-controller，数据源=GOVERNANCE_REPO 真仓 git，缺失如实 exists:false）。
+490-server-governance-mount.patch
+# 488（验收修复）：视频抽帧端点独立文件化（append 到既有 controller 的路由真进程
+#      不生效——独立文件模式实证有效）+挂载；compaction/run-undo db 路径多候选修复
+#      （serve 子进程 cwd=hermes-studio 根为最可靠锚）。
+488-server-video-frames-route.patch

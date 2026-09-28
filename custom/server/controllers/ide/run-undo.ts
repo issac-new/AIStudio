@@ -14,6 +14,19 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, isAbsolute, resolve } from 'path'
 
+
+/** studio db 多候选探测：symlink/物理两种 __dirname 形态 + cwd 兜底（真进程修复）。 */
+function resolveStudioDb(): string {
+  const env = process.env.RUN_UNDO_DB?.trim()
+  if (env) return resolve(env)
+  const candidates = [
+    // serve 子进程 cwd 恒=hermes-studio 根（serve-server.mjs spawn cwd）——最可靠锚。
+    resolve(process.cwd(), 'packages/server/data/hermes-web-ui.db'),
+    resolve(__dirname, '../../../../data/hermes-web-ui.db'),
+  ]
+  return candidates.find((p) => existsSync(p)) ?? candidates[0]!
+}
+
 const router = new Router({ prefix: '/api/ide' })
 
 interface FileRow {
@@ -24,9 +37,7 @@ interface FileRow {
 }
 
 function openDb(): { query: (sql: string, args: unknown[]) => Array<Record<string, unknown>> } | null {
-  const dbPath = process.env.RUN_UNDO_DB?.trim()
-    ? resolve(process.env.RUN_UNDO_DB)
-    : resolve(__dirname, '../../../../data/hermes-web-ui.db')
+  const dbPath = resolveStudioDb()
   if (!existsSync(dbPath)) return null
   // 惰性 require：守门环境无 node:sqlite 时降级为不可用（503）。
   let DatabaseSync: new (path: string, opts?: unknown) => { prepare: (sql: string) => { all: (...a: unknown[]) => Array<Record<string, unknown>> } }
@@ -100,8 +111,7 @@ router.post('/run-undo', (ctx) => {
 export default router
 
 // ── 视频抽帧 REST（层 2 消费面；videoref 域同文件挂载省一个 patch）──
-router.post('/video-frames', async (ctx) => {
-  const body = (ctx.request as { body?: Record<string, unknown> }).body ?? {}
+body ?? {}
   const videoPath = String(body.videoPath ?? '')
   const frames = Number(body.frames ?? 8)
   const widthPx = Number(body.widthPx ?? 1280)
