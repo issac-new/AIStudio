@@ -9,10 +9,17 @@
 //
 // 依赖（listBoards/listTasks/watchEvents/killWatch）由 patch 196 从
 // routes.ts 注入（upstream kanban-service），保持 custom 不 import upstream。
+//
+// 2026-09-28 性能根治（推演走查实锤：冷缓存 29 板 × python CLI 启动 ≈55s，
+// 驾驶舱顶栏"任务 0"）：新增 sqlite 直读快道——boards/<slug>/kanban.db 只读
+// 查询（与 CLI 同一存储、同一 rows），29 板从 ~55s 降至 <100ms；任一板失败
+// 静默回落该板的 CLI 老路径，语义零变更。
 
 import { WebSocketServer } from 'ws'
 import type { Server as HttpServer, IncomingMessage } from 'http'
 import type { Duplex } from 'stream'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 export interface KanbanOverviewDeps {
   listBoards: (opts?: { includeArchived?: boolean }) => Promise<any[]>
@@ -22,6 +29,9 @@ export interface KanbanOverviewDeps {
   boardTtlMs?: number
   boardsTtlMs?: number
   idleWatcherMs?: number
+  /** sqlite 直读快道的 kanban 数据根（含 boards/ 子目录与主库 kanban.db）。
+   *  不传 = 快道关闭，纯 CLI 老路径（测试默认）。生产由 command-post 注入。 */
+  kanbanDir?: string
 }
 
 export interface KanbanOverviewResult {
@@ -48,11 +58,74 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
   const watchers = new Map<string, { pid?: number; kill: () => void; refs: number; lastEventAt: number; lastLine: string }>()
   const listeners = new Set<Listener>()
 
+  // ── sqlite 直读快道（2026-09-28 性能根治）──────────────────────────────
+  // 与 CLI 同一存储：<kanbanDir>/boards/<slug>/kanban.db（tasks 表）+
+  // 主库 <kanbanDir>/kanban.db（default 板）。只读打开、用完即关，
+  // 失败一律返回 null 由调用方回落 CLI 老路径。deps.kanbanDir 未给 = 快道关。
+  function queryBoardDb<T = any>(dbPath: string, fn: (db: any) => T): T | null {
+    let db: any = null
+    try {
+      // node:sqlite 按需加载（node ≥22.5；老版本 node 直接走回落）
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { DatabaseSync } = require('node:sqlite')
+      db = new DatabaseSync(dbPath, { readOnly: true })
+      return fn(db)
+    } catch {
+      return null
+    } finally {
+      try { db?.close() } catch { /* 已关 */ }
+    }
+  }
+
+  /** 快道 boards 列表：default（主库）+ boards/<slug>/（board.json + tasks 计数）。失败返回 null。 */
+  function listBoardsFast(): any[] | null {
+    if (!deps.kanbanDir) return null
+    const boardsDir = join(deps.kanbanDir, 'boards')
+    if (!existsSync(boardsDir)) return null
+    try {
+      const out: any[] = []
+      const mainDb = join(deps.kanbanDir, 'kanban.db')
+      if (existsSync(mainDb)) {
+        const total = queryBoardDb(mainDb, db => (db.prepare('select count(*) n from tasks').get() as any)?.n ?? 0)
+        out.push({ slug: 'default', name: 'Default', total: total ?? 0, archived: false })
+      }
+      for (const slug of readdirSync(boardsDir)) {
+        const dbPath = join(boardsDir, slug, 'kanban.db')
+        if (!existsSync(dbPath)) continue
+        let name = slug
+        let archived = false
+        try {
+          const meta = JSON.parse(readFileSync(join(boardsDir, slug, 'board.json'), 'utf8'))
+          name = meta.name || slug
+          archived = Boolean(meta.archived)
+        } catch { /* board.json 缺失时用 slug */ }
+        const total = queryBoardDb(dbPath, db => (db.prepare('select count(*) n from tasks').get() as any)?.n ?? 0)
+        if (total === null) return null // 该板读不了 → 整体回落，保证语义一致
+        out.push({ slug, name, total, archived })
+      }
+      return out.length ? out : null
+    } catch {
+      return null
+    }
+  }
+
+  /** 快道单板任务：tasks 全行（CLI 同款 rows）。板库不存在或读失败返回 null。 */
+  function listTasksFast(board: string): any[] | null {
+    if (!deps.kanbanDir) return null
+    const dbPath = board === 'default' ? join(deps.kanbanDir, 'kanban.db') : join(deps.kanbanDir, 'boards', board, 'kanban.db')
+    if (!existsSync(dbPath)) return board === 'default' ? [] : null
+    return queryBoardDb(dbPath, db =>
+      db.prepare('select * from tasks').all().map((row: any) => ({ ...row, board })),
+    )
+  }
+
   function listBoardsCached(): Promise<any[]> {
     const now = Date.now()
     if (boardsCache && now - boardsCache.ts < boardsTtlMs) return Promise.resolve(boardsCache.boards)
     if (boardsCache?.inflight) return boardsCache.inflight
-    const inflight = deps.listBoards({ includeArchived: false })
+    const fast = listBoardsFast()
+    const source = fast ? Promise.resolve(fast) : deps.listBoards({ includeArchived: false })
+    const inflight = source
       .then(boards => {
         boardsCache = { boards: boards || [], ts: Date.now(), inflight: null }
         return boardsCache.boards
@@ -70,7 +143,9 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     const now = Date.now()
     if (cached && now - cached.ts < boardTtlMs) return Promise.resolve(cached.tasks)
     if (cached?.inflight) return cached.inflight
-    const inflight = deps.listTasks({ board, includeArchived: true })
+    const fast = listTasksFast(board)
+    const source = fast ? Promise.resolve(fast) : deps.listTasks({ board, includeArchived: true })
+    const inflight = source
       .then(tasks => {
         boardCache.set(board, { tasks: tasks || [], ts: Date.now(), inflight: null })
         return tasks || []

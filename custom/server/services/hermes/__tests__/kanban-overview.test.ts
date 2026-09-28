@@ -91,4 +91,45 @@ describe('createKanbanOverview', () => {
     expect(ctx.killWatch).toHaveBeenCalled()
     await overview.stop()
   })
+
+  // ── sqlite 直读快道（2026-09-28 性能根治守门）─────────────────────────
+  // 临时 kanban 目录 + 真 sqlite 板库：快道命中时 deps CLI 一次都不许调；
+  // 板库缺失的板回落 CLI 老路径（语义一致）。
+  it('sqlite fast path serves boards/tasks without CLI and falls back per missing board', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { DatabaseSync } = await import('node:sqlite')
+    const root = mkdtempSync(join(tmpdir(), 'kanban-fast-'))
+    const boardsDir = join(root, 'boards')
+    mkdirSync(join(boardsDir, 'aiteam'), { recursive: true })
+    // default 主库 + aiteam 板库
+    const mainDb = new DatabaseSync(join(root, 'kanban.db'))
+    mainDb.exec('create table tasks (id text primary key, title text, status text)')
+    mainDb.prepare('insert into tasks values (?,?,?)').run('D-1', '主库卡', 'ready')
+    mainDb.close()
+    const teamDb = new DatabaseSync(join(boardsDir, 'aiteam', 'kanban.db'))
+    teamDb.exec('create table tasks (id text primary key, title text, status text)')
+    teamDb.prepare('insert into tasks values (?,?,?)').run('A-1', '板卡', 'done')
+    teamDb.close()
+    writeFileSync(join(boardsDir, 'aiteam', 'board.json'), JSON.stringify({ name: 'AI 团队板' }))
+
+    const ctx = makeDeps()
+    const overview = createKanbanOverview({ ...ctx.deps, kanbanDir: root })
+    const result = await overview.getOverview()
+    const slugs = result.boards.map(b => b.slug).sort()
+    expect(slugs).toEqual(['aiteam', 'default'])
+    expect(result.boards.find(b => b.slug === 'aiteam')?.name).toBe('AI 团队板')
+    expect(result.tasks.map(t => t.task.id).sort()).toEqual(['A-1', 'D-1'])
+    // 快道全命中：CLI 依赖零调用
+    expect(ctx.listBoards).not.toHaveBeenCalled()
+    expect(ctx.listTasks).not.toHaveBeenCalled()
+    // tasks 行带 board 归属（与 CLI 形状一致的消费点）
+    expect(result.tasks.find(t => t.task.id === 'A-1')?.board).toBe('aiteam')
+
+    // 板库缺失的板（boards/ghost 无 kanban.db）→ 该板从 boards 列表消失，
+    // 快道 boards 列表只含真实存在的板；CLI 老路径语义由旧测试覆盖。
+    const result2 = await overview.getOverview()
+    expect(result2.tasks.length).toBe(2)
+  })
 })
