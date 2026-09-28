@@ -87,6 +87,13 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: workbench,
         },
         {
+          // P5 驾驶舱概览（我的待办/评审闸口/交付进度）：显式路由，
+          // 不占对象选择轴（ia2.collab 的 auto-select 语义不动）
+          path: 'dash',
+          name: 'ia2.dash',
+          component: workbench,
+        },
+        {
           // hermes agent 会话画布（upstream ChatView 经路由参数绑定；新会话态）
           path: 's/chat',
           name: 'ia2.collabChat',
