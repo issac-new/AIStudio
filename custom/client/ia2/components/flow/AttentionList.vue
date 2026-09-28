@@ -59,7 +59,7 @@ function age(ts: number, now?: number): string {
 .att { display: flex; flex-direction: column; gap: 2px; }
 .att__row {
   display: flex; align-items: center; gap: 6px; width: 100%; padding: 3px 6px;
-  border: none; border-left: 2px solid var(--warning); border-radius: 4px;
+  border: none; border-left: 2px solid var(--warning); border-radius: var(--radius-micro, 3px);
   background: transparent; cursor: pointer; text-align: left;
   &:hover { background: var(--bg-secondary); }
 }

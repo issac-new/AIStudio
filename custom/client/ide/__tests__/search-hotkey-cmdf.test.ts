@@ -11,7 +11,7 @@ import { resolve } from 'path'
 
 // 自本文件 5 级到 ncwk 根，再进 upstream/hermes-studio（同 appsidebar 模式）；
 // overlay 自身文件 4 级到 overlay 根。
-const UPSTREAM_CLIENT = '../../../../../upstream/hermes-studio/packages/client/src'
+const UPSTREAM_CLIENT = (process.env.OVERLAY_UPSTREAM_ROOT ? process.env.OVERLAY_UPSTREAM_ROOT : resolve(__dirname, '../../../../../upstream')) + '/hermes-studio/packages/client/src'
 const OVERLAY_ROOT = '../../../..'
 
 function readUpstream(rel: string): string {

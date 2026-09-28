@@ -100,7 +100,7 @@ function byEvent(list: HookSpec[]): Array<{ event: string; items: HookSpec[] }> 
   color: var(--text-secondary, #b0b5be);
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   cursor: pointer;
 
   &:hover { border-color: #61afef; color: #61afef; }

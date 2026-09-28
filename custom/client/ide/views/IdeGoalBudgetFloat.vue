@@ -167,7 +167,7 @@ watch(
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   cursor: pointer;
 
   &:hover { border-color: #61afef; color: #61afef; }
@@ -212,7 +212,7 @@ watch(
 
 .ide-goal__bar {
   height: 5px;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   overflow: hidden;
   background: color-mix(in srgb, var(--text-muted, #9aa0aa) 22%, transparent);
 }
@@ -220,7 +220,7 @@ watch(
 .ide-goal__fill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-micro, 3px);
   background: var(--success-color, #98c379);
   transition: width 0.3s ease;
 
@@ -247,7 +247,7 @@ watch(
   color: var(--text-primary, #d7dae0);
   font-size: 11px;
   padding: 3px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   margin-bottom: 4px;
 
   &::placeholder { color: var(--text-muted, #9aa0aa); }
@@ -271,7 +271,7 @@ watch(
   color: var(--text-secondary, #b0b5be);
   font-size: 10px;
   padding: 3px 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   cursor: pointer;
 
   &:hover:not(:disabled) { border-color: #61afef; color: #61afef; }

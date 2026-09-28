@@ -15,7 +15,7 @@ vi.mock('@/api/studio/files', () => ({
   readFile: vi.fn(),
 }))
 vi.mock('naive-ui', () => ({ useMessage: () => ({ error: () => {} }) }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
 vi.mock('@/components/hermes/chat/MarkdownRenderer.vue', () => ({ default: { template: '<div><slot /></div>' } }))
 vi.mock('../store/ide', () => ({
   useIdeStore: () => ({ workspace: '/ws/proj' }),

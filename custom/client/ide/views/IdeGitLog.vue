@@ -80,7 +80,7 @@ watch(() => ide.workspace, () => void load())
   height: 22px;
   padding: 0 10px;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 5px;
+  border-radius: var(--radius-standard, 6px);
   background: transparent;
   color: var(--text-primary, #e6e6e6);
   font-size: 11px;
@@ -127,7 +127,7 @@ watch(() => ide.workspace, () => void load())
 .ide-gitlog__ref {
   flex-shrink: 0;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-micro, 3px);
   font-size: 10px;
   max-width: 110px;
   overflow: hidden;

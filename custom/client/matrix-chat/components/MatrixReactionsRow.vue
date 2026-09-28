@@ -160,7 +160,7 @@ onUnmounted(() => {
   gap: 3px;
   padding: 2px 8px;
   border: 1px solid $border-color;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill, 999px);
   background: transparent;
   cursor: pointer;
   font-size: 13px;
@@ -219,7 +219,7 @@ onUnmounted(() => {
   width: 28px;
   height: 24px;
   border: 1px dashed $border-color;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill, 999px);
   background: transparent;
   color: $text-muted;
   cursor: pointer;

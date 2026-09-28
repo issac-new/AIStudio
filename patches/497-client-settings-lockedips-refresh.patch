@@ -1,0 +1,12 @@
+--- a/packages/client/src/components/hermes/settings/AccountSettings.vue
++++ b/packages/client/src/components/hermes/settings/AccountSettings.vue
+@@ -378,7 +378,8 @@
+       <div class="action-row" style="margin-bottom: 12px;">
+         <span class="action-label">{{ t("settings.lockedIps.count", { count: lockedIps.length }) }}</span>
+         <div class="action-buttons">
+-          <NButton size="small" :loading="loadingLocks" @click="loadLockedIps">{{ t("common.retry") }}</NButton>
++          <!-- 语义修正（设计审查终轮）：该钮无条件常驻且动作是重载清单，"Retry"误导（暗示失败才可点）——改 Refresh -->
++          <NButton size="small" :loading="loadingLocks" @click="loadLockedIps">{{ t("common.refresh") }}</NButton>
+           <NPopconfirm v-if="lockedIps.length > 0" @positive-click="handleUnlockAll">
+             <template #trigger>
+               <NButton size="small" type="warning">{{ t("settings.lockedIps.unlockAll") }}</NButton>

@@ -71,7 +71,7 @@ defineExpose({ cycle })
 <style scoped lang="scss">
 .ide-perm { position: relative; display: inline-flex; }
 .ide-perm__trigger {
-  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: var(--radius-micro, 3px);
   padding: 1px 8px; cursor: pointer; font-size: 11px; color: var(--text-color-3, #999);
 }
 .ide-perm__panel {
@@ -81,7 +81,7 @@ defineExpose({ cycle })
 }
 .ide-perm__mode {
   display: block; width: 100%; text-align: left; border: none; background: transparent;
-  border-radius: 5px; padding: 5px 8px; cursor: pointer; font-size: 12px;
+  border-radius: var(--radius-standard, 6px); padding: 5px 8px; cursor: pointer; font-size: 12px;
 }
 .ide-perm__mode:hover { background: var(--hover-color, rgba(0, 0, 0, 0.06)); }
 .ide-perm__mode.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.1)); color: var(--primary-color, #18a058); }
