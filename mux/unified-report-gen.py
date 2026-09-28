@@ -11,13 +11,22 @@ from pathlib import Path
 
 DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
-EVID = SIM / 'evidence'
+# UNIFIED_RUN_ID（可选）：指定推演轮次时全部输入/输出改从 runs/<RUN_ID>/ 取
+# （evidence/screenshots/steps + simulation-report.html + 输出落 run 目录），
+# 缺省保持既有行为（evidence/ 根，20260928 两线合并版口径）。
+_RUN_ID = os.environ.get('UNIFIED_RUN_ID', '').strip()
+if _RUN_ID:
+    EVID = SIM / 'runs' / _RUN_ID / 'evidence'
+    JOURNEY_HTML = EVID / 'simulation-report.html'
+    OUT = EVID / 'unified-roadshow-report.html'
+else:
+    EVID = SIM / 'evidence'
+    JOURNEY_HTML = EVID / 'simulation-report.html'
+    OUT = EVID / 'unified-roadshow-report.html'
 # 实拍源（持久位置优先；DIR/shots 为生成期临时布局回落——20260928-product-demo 迁移后留档）
 SHOTS = EVID / '20260928-product-demo' / 'shots' if (EVID / '20260928-product-demo' / 'shots').is_dir() else DIR / 'shots'
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 PLAN_PATH = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
-JOURNEY_HTML = EVID / 'simulation-report.html'
-OUT = EVID / 'unified-roadshow-report.html'
 
 # ── 叙事层（同 demo-report-gen 接线）──
 _ns = {}
