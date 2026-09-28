@@ -9,8 +9,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
 import {
-  fetchGovernanceOverview, fetchGovernanceDoc,
+  fetchGovernanceOverview, fetchGovernanceDoc, runDomainAudit, fetchDomainAudit,
   type GovernanceDocMeta, type GovernanceOverview, type GovernanceDoc,
+  type DomainCheckResult, type DomainAuditSummary,
 } from '@/custom/governance/api/governance'
 import { governanceMessages } from '@/custom/governance/i18n'
 import {
@@ -32,6 +33,23 @@ const error = ref('')
 const loading = ref(false)
 const reviews = ref<PendingApprovalItem[]>([])
 const acting = ref<Set<string>>(new Set())
+
+// ── 六域体检（长期台账）──
+const audit = ref<DomainAuditSummary | null>(null)
+const auditRunning = ref(false)
+const DOMAIN_ORDER = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'] as const
+const DOMAIN_NAMES: Record<string, string> = {
+  L0: '范围与需求', L1: '工程正确性', L2: '系统一致性',
+  L3: '行为与业务语义', L4: '架构·非功能·安全', L5: '交付与治理',
+}
+
+async function runAudit(): Promise<void> {
+  auditRunning.value = true
+  try {
+    await runDomainAudit(`run-${new Date().toISOString().slice(5, 16).replace('T', ' ')}`)
+    audit.value = await fetchDomainAudit()
+  } catch { /* 台账读取失败保留旧值 */ } finally { auditRunning.value = false }
+}
 
 const GATE_KEYS = ['gateG1', 'gateG2', 'gateG3', 'gateG4', 'gateG5', 'gateG6'] as const
 const GATE_IDS = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] as const
@@ -70,6 +88,7 @@ async function refresh(): Promise<void> {
   error.value = ''
   try {
     overview.value = await fetchGovernanceOverview()
+    audit.value = await fetchDomainAudit().catch(() => audit.value)
     const pending = await fetchPendingApprovals()
     reviews.value = (pending.items ?? []).filter((i) => i.kind === 'review')
   } catch (e) {
@@ -132,6 +151,29 @@ onMounted(() => void refresh())
         <div class="ia-gov__gate-label">{{ card.label }}</div>
         <div class="ia-gov__gate-detail" :data-testid="`gov-gate-${card.gate}`">{{ card.ok ? L.inRepo : L.missing }} · {{ card.detail }}</div>
         <div v-if="card.latest" class="ia-gov__gate-ts">{{ card.latest }}</div>
+      </div>
+    </div>
+
+    <!-- 六域体检：真实流程中运行的判定引擎，台账跨轮累积 -->
+    <div class="ia-gov__audit" data-testid="gov-domain-audit">
+      <div class="ia-gov__audit-bar">
+        <h3 class="ia-gov__list-title">六域体检 · 每域一个交付问题</h3>
+        <button type="button" class="ia-gov__refresh" data-testid="gov-audit-run" :disabled="auditRunning" @click="runAudit()">
+          {{ auditRunning ? '⏳ 体检中…' : '▶ 运行六域体检' }}
+        </button>
+      </div>
+      <div v-if="audit" class="ia-gov__audit-grid">
+        <div v-for="d in DOMAIN_ORDER" :key="d" class="ia-gov__audit-cell" :data-testid="`gov-audit-${d}`">
+          <span class="ia-gov__audit-dom">{{ d }} · {{ DOMAIN_NAMES[d] }}</span>
+          <span class="ia-gov__audit-badge" :class="`is-${audit.latest[d]?.verdict ?? 'none'}`">
+            {{ audit.latest[d] ? ({ pass: '通过', warn: '观察', fail: '不通过' } as Record<string, string>)[audit.latest[d]!.verdict] : '未体检' }}
+          </span>
+          <div class="ia-gov__audit-ev">{{ (audit.latest[d]?.evidence ?? []).slice(0, 2).join(' · ') }}</div>
+        </div>
+      </div>
+      <div v-else class="ia-gov__empty">尚未体检——点击「运行六域体检」产出首轮台账（docs/governance/domain-audit.jsonl，跨轮累积）</div>
+      <div v-if="audit" class="ia-gov__audit-meta">
+        台账 {{ audit.total }} 条判定 · {{ audit.runs.length }} 轮（{{ audit.runs.slice(0, 3).join(' / ') }}{{ audit.runs.length > 3 ? ' …' : '' }}）——长期基础数据，下轮目标 = 上轮基线
       </div>
     </div>
 
@@ -241,6 +283,20 @@ onMounted(() => void refresh())
 .ia-gov__gate-label { font-size: 11px; color: var(--text-primary, inherit); margin-top: 1px; }
 .ia-gov__gate-detail { font-size: 10.5px; color: var(--text-muted, #878c99); margin-top: 3px; }
 .ia-gov__gate-ts { font-size: 10px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
+
+.ia-gov__audit { border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; padding: 10px 12px; background: var(--bg-primary, #fff); flex-shrink: 0; }
+.ia-gov__audit-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.ia-gov__audit-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.ia-gov__audit-cell { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 7px 9px; }
+.ia-gov__audit-dom { display: block; font-size: 11px; font-weight: 700; }
+.ia-gov__audit-badge { display: inline-block; margin: 3px 0 4px; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 1px 8px;
+  &.is-pass { color: #15803d; background: #dcfce7; }
+  &.is-warn { color: #b45309; background: #fef3c7; }
+  &.is-fail { color: #b91c1c; background: #fee2e2; }
+  &.is-none { color: #64748b; background: #f1f5f9; } }
+.ia-gov__audit-ev { font-size: 10px; color: var(--text-muted, #878c99); line-height: 1.45; }
+.ia-gov__audit-meta { margin-top: 7px; font-size: 10.5px; color: var(--text-muted, #878c99); }
+@media (max-width: 1100px) { .ia-gov__audit-grid { grid-template-columns: repeat(3, 1fr) } }
 
 .ia-gov__main {
   display: grid;

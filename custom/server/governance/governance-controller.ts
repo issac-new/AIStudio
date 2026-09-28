@@ -21,6 +21,8 @@ import { execFile } from 'child_process'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 import { listReviews } from '../review/review-store'
+import { registerDomainAudit } from './domain-audit'
+import { queryApprovalLog } from '../approvals/approval-log'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -143,6 +145,25 @@ router.get('/doc', async (ctx) => {
     committedAt: meta.committedAt,
     markdown: await git(['show', `${entry.ref || 'origin/main'}:${entry.path}`]),
   }
+})
+
+/** 工件全文读取（domain-audit 检查器复用；缺失返回 null）。 */
+async function docText(path: string, ref = 'origin/main'): Promise<string | null> {
+  if (!repoReady()) return null
+  try {
+    return await git(['show', `${ref}:${path}`])
+  } catch {
+    return null
+  }
+}
+
+registerDomainAudit({
+  repoRoot,
+  git,
+  repoReady,
+  docText,
+  approvalHistoryCount: () => { try { return queryApprovalLog(500).length } catch { return 0 } },
+  router,
 })
 
 export const governanceRoutes = router

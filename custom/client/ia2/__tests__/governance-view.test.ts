@@ -15,6 +15,12 @@ const approvals = await import('@/custom/cockpit/api/approvals')
 vi.mock('@/custom/governance/api/governance', () => ({
   fetchGovernanceOverview: vi.fn(),
   fetchGovernanceDoc: vi.fn(),
+  runDomainAudit: vi.fn(async () => ({ ok: true, run: 't-run', results: [] })),
+  fetchDomainAudit: vi.fn(async () => ({
+    ok: true, total: 6, runs: ['t-run'],
+    latest: { L0: { run: 't-run', domain: 'L0', verdict: 'pass', evidence: ['AC 可判定 7 条'], checkedAt: '' } },
+    ledger: [],
+  })),
 }))
 vi.mock('@/custom/cockpit/api/approvals', () => ({
   fetchPendingApprovals: vi.fn(),
@@ -120,6 +126,19 @@ describe('治理中心前端', () => {
     await flushPromises()
     expect(approvals.decideApproval).toHaveBeenCalledWith('review:r1', 'approve')
     expect(api.fetchGovernanceOverview).toHaveBeenCalledTimes(2)
+  })
+
+  it('六域体检区渲染（台账最新判定+运行按钮链）', async () => {
+    const wrapper = await mountView()
+    expect(wrapper.find('[data-testid="gov-domain-audit"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-audit-L0"]').text()).toContain('通过')
+    expect(wrapper.find('[data-testid="gov-audit-L0"]').text()).toContain('AC 可判定 7 条')
+    expect(wrapper.text()).toContain('1 轮')
+    // 运行按钮 → runDomainAudit → 台账重读
+    await wrapper.find('[data-testid="gov-audit-run"]').trigger('click')
+    await flushPromises()
+    const { runDomainAudit } = await import('@/custom/governance/api/governance')
+    expect(runDomainAudit).toHaveBeenCalled()
   })
 
   it('i18n zh/en 键集合一致', () => {

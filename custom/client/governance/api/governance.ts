@@ -51,3 +51,29 @@ export function fetchGovernanceOverview(): Promise<GovernanceOverview> {
 export function fetchGovernanceDoc(kind: string): Promise<GovernanceDoc> {
   return request<GovernanceDoc>(`/api/governance/doc?kind=${encodeURIComponent(kind)}`)
 }
+
+// ── 六域体检（长期台账：多轮累积的基础数据）──
+export interface DomainCheckResult {
+  run: string
+  domain: 'L0' | 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
+  verdict: 'pass' | 'warn' | 'fail'
+  evidence: string[]
+  checkedAt: string
+}
+
+export interface DomainAuditSummary {
+  ok: boolean
+  total: number
+  runs: string[]
+  latest: Record<string, DomainCheckResult>
+  ledger: DomainCheckResult[]
+}
+
+export function runDomainAudit(run?: string): Promise<{ ok: boolean; run: string; results: DomainCheckResult[] }> {
+  const q = run ? `?run=${encodeURIComponent(run)}` : ''
+  return request(`/api/governance/domains/run${q}`, { method: 'POST' })
+}
+
+export function fetchDomainAudit(): Promise<DomainAuditSummary> {
+  return request('/api/governance/domains')
+}
