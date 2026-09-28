@@ -284,3 +284,7 @@
 # 495（设计审查遗留轮 · 双看板合一）：/hermes/kanban 深链重定向 /app/board
 #      （ia2.board 主面）。上游 KanbanView 退役出路由面；路由名保留兼容。
 495-client-kanban-unify-redirect.patch
+
+# 496（设计审查遗留轮 · P1a）：boring-avatars beam 变体默认彩板（紫红/青）与
+#      Pure Ink 冲突——两处调用统一五档灰阶色板（用户辨识靠纹样+明度）。
+496-client-avatar-pure-ink-palette.patch
