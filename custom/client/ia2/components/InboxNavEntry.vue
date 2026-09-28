@@ -79,7 +79,7 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 .inbox-entry__badge {
   background: #dc2626;
   color: #fff;
-  border-radius: var(--radius-panel, 8px);
+  border-radius: 9px;
   padding: 1px 6px;
   font-size: 11px;
   font-weight: 600;

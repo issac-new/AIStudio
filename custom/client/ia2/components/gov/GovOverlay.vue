@@ -118,7 +118,7 @@ function setSection(section: GovSection): void {
   position: absolute; inset: 24px 32px; display: grid;
   grid-template-columns: 250px minmax(320px, 1fr) 240px; gap: 10px;
   background: var(--bg-primary); border: 1px solid var(--border-color);
-  border-radius: var(--radius-panel, 8px); box-shadow: 0 12px 48px rgba(0, 0, 0, .22);
+  border-radius: 10px; box-shadow: 0 12px 48px rgba(0, 0, 0, .22);
   overflow: hidden;
 }
 .gov__left {

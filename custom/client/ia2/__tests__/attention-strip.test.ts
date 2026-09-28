@@ -9,7 +9,7 @@ import { mount } from '@vue/test-utils'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
 import AttentionStrip from '../components/AttentionStrip.vue'
 import type { AttentionRow } from '../adapters/overview'

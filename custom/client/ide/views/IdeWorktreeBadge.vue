@@ -121,7 +121,7 @@ async function removeIsolation(): Promise<void> {
   font-size: 10px;
   line-height: 1;
   padding: 3px 6px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   color: #61afef;
   background: rgba(97, 175, 239, 0.12);
   font-family: ui-monospace, monospace;

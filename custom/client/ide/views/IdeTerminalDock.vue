@@ -160,7 +160,7 @@ function closeTab(id: number): void {
   width: 22px;
   height: 22px;
   border: none;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   font-size: 13px;

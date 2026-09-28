@@ -60,7 +60,7 @@ function closeInbox(): void {
   height: 24px;
   padding: 0;
   border: none;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-muted, #878c99);
   font-size: 16px;

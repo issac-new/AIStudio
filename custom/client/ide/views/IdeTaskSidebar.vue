@@ -667,7 +667,7 @@ onMounted(async () => {
   color: var(--text-secondary, #9aa0aa);
   background: var(--bg-tertiary, #ebebeb);
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   padding: 1px 5px;
   font-family: inherit;
 }
@@ -684,7 +684,7 @@ onMounted(async () => {
   height: 26px;
   padding: 0 8px;
   border: 1px solid var(--accent-primary, #4cc9f0);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: var(--bg-primary, #14161a);
   color: var(--text-primary, #e6e6e6);
   font-size: 12px;
@@ -695,7 +695,7 @@ onMounted(async () => {
   width: 26px;
   height: 26px;
   border: none;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: var(--bg-tertiary, #ebebeb);
   color: var(--accent-primary, #4cc9f0);
   cursor: pointer;
@@ -814,7 +814,7 @@ onMounted(async () => {
   height: 20px;
   padding: 0 6px;
   border: 1px solid var(--accent-primary, #4cc9f0);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: var(--bg-primary, #14161a);
   color: var(--text-primary, #e6e6e6);
   font-size: 11px;
@@ -831,7 +831,7 @@ onMounted(async () => {
   width: 18px;
   height: 18px;
   border: none;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   font-size: 10px;
@@ -881,7 +881,7 @@ onMounted(async () => {
 .ide-taskbar__prio {
   flex-shrink: 0;
   padding: 0 5px;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   font-size: 10px;
   font-weight: 700;
   line-height: 16px;
@@ -901,7 +901,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   cursor: pointer;
@@ -921,7 +921,7 @@ onMounted(async () => {
   margin: 4px 8px;
   padding: 8px 10px;
   border: 1px solid rgba(224, 108, 117, 0.5);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 7px;
   background: var(--bg-secondary, #1b1e24);
 
   p { margin: 0 0 6px; font-size: 12px; color: var(--text-primary, #e6e6e6); }

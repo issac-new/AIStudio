@@ -51,7 +51,7 @@ const root = computed(() => chat.activeSession?.workspace ?? ide.workspace)
   flex: 1;
   height: 24px;
   border: none;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-muted, #9aa0aa);
   font-size: 12px;

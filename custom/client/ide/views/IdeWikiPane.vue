@@ -196,7 +196,7 @@ watch(() => ide.workspace, () => void loadPages())
 .ide-wiki__btn {
   flex-shrink: 0;
   border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   background: transparent;
   color: var(--text-primary, #e6e6e6);
   font-size: 11px;
@@ -235,7 +235,7 @@ watch(() => ide.workspace, () => void loadPages())
 
 .ide-wiki__item {
   padding: 5px 8px;
-  border-radius: var(--radius-standard, 6px);
+  border-radius: 5px;
   font-size: 12px;
   color: var(--text-primary, #e6e6e6);
   cursor: pointer;

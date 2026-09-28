@@ -17,7 +17,7 @@ import { buildRecap } from '../composables/useIdeSessionHooks'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fb?: string | Record<string, unknown>) => { if (typeof fb === 'string' && fb) return fb; if (fb && typeof fb === 'object') return Object.values(fb).map(String).join(' '); return k } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
 const NOW = 1_700_000_000_000
 const RUN_OPTS = { isRunning: true, nowMs: NOW, runStartedAtMs: NOW - 60_000 }

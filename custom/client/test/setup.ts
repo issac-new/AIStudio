@@ -61,13 +61,9 @@ vi.mock('vue-i18n', async () => {
   return {
     ...actual,
     useI18n: () => ({
-      // fallback 感知：t(key, '默认文案') 返回默认文案（对齐生产行为——vue-i18n
-      // 缺键回落第二参字面量）；t(key, {n:1}) 命名插值渲染占位；t(key) 恒等。
-      t: (key: string, second?: string | Record<string, unknown>) => {
-        if (typeof second === 'string' && second) return second
-        if (second && typeof second === 'object') {
-          return Object.values(second).map(String).join(' ')
-        }
+      t: (key: string, args?: Record<string, unknown>) => {
+        if (args?.count !== undefined) return String(args.count)
+        if (args?.n !== undefined) return String(args.n)
         return key
       },
     }),

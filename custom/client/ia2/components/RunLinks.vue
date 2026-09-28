@@ -135,7 +135,7 @@ function openRun(runId: string | null): void {
   gap: 8px;
   padding: 5px 8px;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: var(--radius-micro, 3px);
+  border-radius: 4px;
   background: transparent;
   color: inherit;
   cursor: pointer;

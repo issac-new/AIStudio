@@ -90,7 +90,7 @@ const { t } = useI18n()
 .wq__sub { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wq__acts { display: flex; gap: 4px; flex-shrink: 0; }
 .wq__btn {
-  height: 20px; padding: 0 8px; border-radius: var(--radius-panel, 8px); font-size: 10px; cursor: pointer;
+  height: 20px; padding: 0 8px; border-radius: 10px; font-size: 10px; cursor: pointer;
   background: transparent; white-space: nowrap;
 }
 .wq__btn--ok { border: 1px solid var(--success); color: var(--success); &:hover { background: rgba(46,125,50,.08); } }

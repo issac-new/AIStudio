@@ -190,7 +190,7 @@ function getContentPreview(event: any): string {
   flex-shrink: 0;
   padding: 2px 8px;
   background: $bg-secondary;
-  border-radius: var(--radius-panel, 8px);
+  border-radius: 10px;
 }
 
 .rsv-cancel-btn {
@@ -320,7 +320,7 @@ function getContentPreview(event: any): string {
   :deep(.search-highlight) {
     background: rgba(var(--accent-warning-rgb, 245 158 11), 0.25);
     color: inherit;
-    border-radius: var(--radius-micro, 3px);
+    border-radius: 2px;
     padding: 0 1px;
   }
 }
