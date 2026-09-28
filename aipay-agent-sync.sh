@@ -32,7 +32,7 @@ AGENT_TREE="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
 # 当前全集：
 #   hermes_cli/ plugins/ agent/ apps/ assets/ acp_ gateway/ tests/gateway/
 #   tests/hermes_cli/ optional-mcps/ optional-skills/ tools/ tests/tools/ tests/agent/
-AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/)'
+AGENT_PREFIXES='^(hermes_cli/|plugins/|agent/|apps/|assets/|acp_|gateway/|tests/gateway/|tests/hermes_cli/|optional-mcps/|optional-skills/|tools/|tests/tools/|tests/agent/|hermes_state)'
 
 # 要部署的 patch：位置参数优先，否则用默认清单（空格分隔，可用 AIPAY_AGENT_PATCHES 覆盖）
 DEFAULT_PATCHES="372-agent-tick-socket-fallback.patch 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch"
