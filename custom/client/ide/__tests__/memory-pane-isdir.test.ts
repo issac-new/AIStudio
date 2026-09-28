@@ -36,8 +36,9 @@ describe('IdeMemoryPane 记忆文件发现（isDir 契约）', () => {
     const wrapper = mount(IdeMemoryPane)
     await flushPromises()
     const items = wrapper.findAll('[data-testid^="ide-memory-item-"]').map(w => w.text())
-    expect(items).toContain('AGENTS.md')
-    expect(items).toContain('memory/2026-09-28-retro-rfd001.md')
+    // D1 freshness 徽章会追加到条目文本（如 'AGENTS.md 新'）——按前缀断言。
+    expect(items.some(t => t.startsWith('AGENTS.md'))).toBe(true)
+    expect(items.some(t => t.startsWith('memory/2026-09-28-retro-rfd001.md'))).toBe(true)
     // 非 .md 文件不入列
     expect(items.some(t => t.includes('notes.txt'))).toBe(false)
     // listFiles 以 workspace 为 root 参数调用
@@ -50,7 +51,7 @@ describe('IdeMemoryPane 记忆文件发现（isDir 契约）', () => {
     const wrapper = mount(IdeMemoryPane)
     await flushPromises()
     const items = wrapper.findAll('[data-testid^="ide-memory-item-"]').map(w => w.text())
-    expect(items).toEqual(['MEMORY.md'])
+    expect(items.some(t => t.startsWith('MEMORY.md'))).toBe(true)
     expect(listFilesMock).toHaveBeenCalledTimes(1)
   })
 

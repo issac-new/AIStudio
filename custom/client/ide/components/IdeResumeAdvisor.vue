@@ -7,7 +7,7 @@
 // resume-unsafe 黑名单：同会话连续 2 次 session 类失败本地标记（不引服务端态）。
 import { computed, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
-import { classifyResume, type ResumeDecision } from '../../server/resume/resume-safety'
+import { classifyResume, type ResumeDecision } from '../../../server/resume/resume-safety'
 
 const chat = useChatStore()
 const dismissedAt = ref<number>(0)
