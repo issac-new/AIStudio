@@ -39,8 +39,9 @@ describe('zcode 引擎接入链（R3 守门）', () => {
   it('client 侧接线（注入态：unions/选项/头像/队列/图标/映射）', () => {
     const api = readFileSync(resolve(UPSTREAM_CLIENT, 'api/coding-agents.ts'), 'utf8')
     expect(api).toMatch(/CodingAgentId = .*'zcode'/)
-    const chatPanel = readFileSync(resolve(UPSTREAM_CLIENT, 'components/hermes/chat/ChatPanel.vue'), 'utf8')
-    expect(chatPanel).toContain('{ label: "ZCode", value: "zcode" }')
+    // 上游 #3199 将各处 Agent 选项收敛为 AGENT_OPTIONS 单一事实源（utils/agent-options.ts）
+    const agentOptions = readFileSync(resolve(UPSTREAM_CLIENT, 'utils/agent-options.ts'), 'utf8')
+    expect(agentOptions).toContain("{ label: 'ZCode', value: 'zcode' }")
     const avatar = readFileSync(resolve(UPSTREAM_CLIENT, 'utils/chat-agent-avatar.ts'), 'utf8')
     expect(avatar).toContain("zcode: { label: 'ZCode'")
     expect(existsSync(resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/public/coding-agents/zcode.svg')),

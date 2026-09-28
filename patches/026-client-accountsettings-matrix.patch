@@ -1,42 +1,48 @@
 diff --git a/packages/client/src/components/hermes/settings/AccountSettings.vue b/packages/client/src/components/hermes/settings/AccountSettings.vue
-index 6e2bc58d..4d78d3c5 100644
+index bae25a29..a1e7ddf4 100644
 --- a/packages/client/src/components/hermes/settings/AccountSettings.vue
 +++ b/packages/client/src/components/hermes/settings/AccountSettings.vue
-@@ -1,14 +1,18 @@
+@@ -1,10 +1,11 @@
  <script setup lang="ts">
 -import { ref, onMounted } from "vue";
--import { NButton, NInput, NModal, NForm, NFormItem, NPopconfirm, useMessage } from "naive-ui";
 +import { ref, computed, onMounted } from "vue";
+ import { storeToRefs } from "pinia";
+ import { useAccountStore } from "@/stores/account";
+-import { NButton, NInput, NModal, NForm, NFormItem, NPopconfirm, useMessage } from "naive-ui";
 +import { NButton, NInput, NModal, NForm, NFormItem, NPopconfirm, NTag, useMessage } from "naive-ui";
  import { useI18n } from "vue-i18n";
--import { changePassword, changeUsername, fetchCurrentUser, fetchLockedIps, unlockSpecificIp, unlockAllIps, fetchMyAvatar, updateMyAvatar, resetMyAvatar } from "@/api/studio/auth";
+-import { changePassword, changeUsername, fetchLockedIps, unlockSpecificIp, unlockAllIps, updateMyAvatar, resetMyAvatar } from "@/api/studio/auth";
 +import { useAuthStore } from "@/stores/hermes/auth";
-+import { changePassword, changeUsername, fetchCurrentUser, fetchLockedIps, unlockSpecificIp, unlockAllIps, fetchMyAvatar, updateMyAvatar, resetMyAvatar, resetMatrixUserPassword } from "@/api/studio/auth";
- import type { LockedIp, UserAvatar } from "@/api/studio/auth";
++import { changePassword, changeUsername, fetchLockedIps, unlockSpecificIp, unlockAllIps, updateMyAvatar, resetMyAvatar, resetMatrixUserPassword } from "@/api/studio/auth";
+ import type { LockedIp } from "@/api/studio/auth";
  import ProfileAvatar from "@/components/hermes/profiles/ProfileAvatar.vue";
  import boring from "boring-avatars-vanilla";
+@@ -16,6 +17,12 @@ const accountStore = useAccountStore();
+ const { username, avatar } = storeToRefs(accountStore);
+ const loading = ref(false);
  
- const { t } = useI18n();
- const message = useMessage();
++// HERMES_CUSTOM[MatrixAccount] BEGIN: matrix 用户判定（密码改走 Matrix 侧）
 +const authStore = useAuthStore();
 +const user = computed(() => authStore.user);
 +const isMatrixUser = computed(() => user.value?.authSource === 'matrix');
- 
- const username = ref<string | null>(null);
- const loading = ref(false);
-@@ -125,6 +129,11 @@ const showChangeUsernameModal = ref(false);
++// HERMES_CUSTOM[MatrixAccount] END
++
+ // User avatar
+ const avatarFileInput = ref<HTMLInputElement | null>(null);
+ const avatarSaving = ref(false);
+@@ -127,6 +134,11 @@ const showChangeUsernameModal = ref(false);
  const currentPasswordForName = ref("");
  const newUsernameVal = ref("");
  
-+// Matrix password reset state
++// HERMES_CUSTOM[MatrixAccount]: matrix 密码重置弹窗状态
 +const showMatrixPasswordModal = ref(false);
 +const matrixNewPassword = ref("");
 +const matrixPasswordConfirm = ref("");
 +
- onMounted(async () => {
-   try {
-     const user = await fetchCurrentUser();
-@@ -193,6 +202,37 @@ function openChangeUsernameModal() {
+ onMounted(() => { void accountStore.loadAccount(); });
+ 
+ async function handleChangePassword() {
+@@ -186,6 +198,37 @@ function openChangeUsernameModal() {
    showChangeUsernameModal.value = true;
  }
  
@@ -74,7 +80,7 @@ index 6e2bc58d..4d78d3c5 100644
  // Locked IPs management
  const lockedIps = ref<LockedIp[]>([]);
  const loadingLocks = ref(false);
-@@ -272,9 +312,59 @@ onMounted(() => { loadLockedIps(); });
+@@ -265,9 +308,59 @@ onMounted(() => { loadLockedIps(); });
        </div>
      </div>
  
@@ -136,7 +142,7 @@ index 6e2bc58d..4d78d3c5 100644
          <div class="action-buttons">
            <NButton @click="openChangePasswordModal">{{ t("login.changePassword") }}</NButton>
            <NButton @click="openChangeUsernameModal">{{ t("login.changeUsername") }}</NButton>
-@@ -344,6 +434,22 @@ onMounted(() => { loadLockedIps(); });
+@@ -337,6 +430,22 @@ onMounted(() => { loadLockedIps(); });
          <NButton type="primary" :loading="loading" @click="handleChangeUsername">{{ t("common.save") }}</NButton>
        </template>
      </NModal>
@@ -159,7 +165,7 @@ index 6e2bc58d..4d78d3c5 100644
    </div>
  </template>
  
-@@ -464,4 +570,49 @@ onMounted(() => { loadLockedIps(); });
+@@ -457,4 +566,49 @@ onMounted(() => { loadLockedIps(); });
    color: $text-muted;
    margin: 0 0 12px;
  }

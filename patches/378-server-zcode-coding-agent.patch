@@ -1,20 +1,23 @@
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
-index 2df868b6..5b0a0fd3 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -27,6 +27,7 @@ import { codingAgentRunManager } from './runtime/run-manager'
- import { mergePiSettings, userSettingsProvidesPiMcpAdapter } from './pi/settings'
+@@ -30,6 +30,7 @@
+ import { CURSOR_DEFAULT_SETTINGS, cursorSettingsPath, validateCursorSettings } from './cursor/settings'
  import { PI_EXTENDED_THINKING_LEVEL_MAP, piModelSupportsThinking } from './pi/thinking'
  import { GROK_API_KEY_ENV, GROK_CODING_AGENT_DEFINITION, GROK_PROVIDER_ID } from './grok/definition'
 +import { ZCODE_CODING_AGENT_DEFINITION, resolveZcodeCliEntry } from './zcode/definition'
  import { getDisabledManagedMcpServers, getManagedMcpServerOverride } from './mcp-overrides'
  import {
    grokSettingsConfig,
-@@ -392,9 +393,11 @@ const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
+@@ -397,6 +398,7 @@
      command: 'dsh',
      packageName: '@deepseek-ai/dsh',
    },
 +  ZCODE_CODING_AGENT_DEFINITION,
+   {
+     id: 'cursor',
+     name: 'Cursor',
+@@ -407,6 +409,7 @@
  ]
  
  const CONFIG_FILE_DEFINITIONS: Record<CodingAgentId, Array<Omit<CodingAgentConfigFileDefinition, 'absolutePath'> & { scopedPath: string }>> = {
@@ -22,22 +25,23 @@ index 2df868b6..5b0a0fd3 100644
    'claude-code': [
      { key: 'settings', path: '~/.claude/settings.json', scopedPath: 'settings.json', language: 'json' },
      { key: 'mcp', path: '~/.claude/mcp.json', scopedPath: 'mcp.json', language: 'json' },
-@@ -871,12 +874,13 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
+@@ -893,13 +896,14 @@
    return session?.provider === 'global' ? 'global' : 'scoped'
  }
  
--function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' {
-+function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
+-function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' {
++function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' {
    if (id === 'codex') return 'codex'
    if (id === 'pi') return 'pi'
    if (id === 'grok') return 'grok'
    if (id === 'dsh') return 'dsh'
    if (id === 'opencode') return 'opencode'
+   if (id === 'cursor') return 'cursor'
 +  if (id === 'zcode') return 'zcode'
    return 'claude'
  }
  
-@@ -2808,6 +2812,53 @@ export function getCodingAgentConfigFileDefinitions(id: string): CodingAgentConf
+@@ -2864,6 +2868,53 @@
  }
  
  export async function getCodingAgentStatus(definition: CodingAgentDefinition): Promise<CodingAgentToolStatus> {
@@ -91,7 +95,7 @@ index 2df868b6..5b0a0fd3 100644
    let resolvedCommand = ''
    try {
      const env = await commandEnv()
-@@ -2967,6 +3018,12 @@ export async function checkUpdateAgent(id: string): Promise<CodingAgentUpdateRes
+@@ -3035,6 +3086,12 @@
  }
  
  export async function installCodingAgent(id: string): Promise<CodingAgentMutationResult> {
@@ -104,7 +108,7 @@ index 2df868b6..5b0a0fd3 100644
    const tool = getCodingAgentDefinition(id)
    if (!tool) {
      const err = new Error('Unknown coding agent')
-@@ -3291,6 +3348,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3382,6 +3439,7 @@
      let files: Array<{ key: string; path: string; absolutePath: string }> = []
      let args: string[] = []
      let env: Record<string, string> = {}
@@ -112,7 +116,7 @@ index 2df868b6..5b0a0fd3 100644
  
      if (tool.id === 'claude-code') {
        promptFile = join(rootDir, 'hermes-rules.md')
-@@ -3311,6 +3369,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3402,6 +3460,13 @@
          { key: 'config', path: 'config.toml', absolutePath: join(rootDir, 'config.toml') },
        ]
        env = { CODEX_HOME: rootDir }
@@ -126,7 +130,7 @@ index 2df868b6..5b0a0fd3 100644
      } else if (tool.id === 'grok') {
        const prepared = await prepareGlobalGrokRuntime({
          sourceHome: process.env.GROK_HOME?.trim() || join(getGlobalConfigHome(), '.grok'),
-@@ -3378,7 +3443,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3474,7 +3539,7 @@
      const shellCommand = buildLaunchShellCommand({
        workspaceDir,
        env,
@@ -135,7 +139,7 @@ index 2df868b6..5b0a0fd3 100644
        args,
      })
      return {
-@@ -3389,7 +3454,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3485,7 +3550,7 @@
        model: '',
        rootDir,
        workspaceDir,
@@ -144,7 +148,7 @@ index 2df868b6..5b0a0fd3 100644
        args,
        env,
        shellCommand,
-@@ -3451,6 +3516,14 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
+@@ -3547,6 +3612,14 @@
    let args: string[] = []
    let env: Record<string, string> = {}
  
@@ -160,50 +164,51 @@ index 2df868b6..5b0a0fd3 100644
      const proxyTarget = baseUrl && (apiKey || freeRuntime)
        ? registerClaudeCodeProxyTarget({
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
-index dddefa95..be38071c 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
 +++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
-@@ -29,6 +29,9 @@ import { compactCodexThread } from './codex-compact'
+@@ -29,6 +29,9 @@
  import { updateManagedPromptFileSync } from '../prompt-file'
  import { grokSessionExists, startGrokTurnProcess } from '../grok/turn-process'
  import { applyGrokStreamEvent } from '../grok/event-adapter'
 +import { startZcodeTurnProcess } from '../zcode/turn-process'
 +import { applyZcodeStreamEvent } from '../zcode/event-adapter'
 +import { resolveZcodeCliEntry } from '../zcode/definition'
+ import { CURSOR_COMPACT_UNSUPPORTED, startCursorTurnProcess } from '../cursor/turn-process'
+ import { applyCursorStreamEvent } from '../cursor/event-adapter'
  import { isolatedCodingAgentChildEnv } from './child-env'
- import { NativeTurnUsage, type NativeUsageRow } from './native-usage'
- import { readCodexTurnModel, readOpenCodeMessageModel } from './native-model'
-@@ -318,24 +321,26 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
+@@ -321,26 +324,28 @@
  }
  
  function isPrintAgent(agentId: string): boolean {
--  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh')
-+  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
+-  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh')
++  return agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
  }
  
--function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' {
-+function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
+-function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' {
++function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' {
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
    if (agentId === 'grok') return 'grok'
    if (agentId === 'dsh') return 'dsh'
    if (agentId === 'opencode') return 'opencode'
+   if (agentId === 'cursor') return 'cursor'
 +  if (agentId === 'zcode') return 'zcode'
    return 'claude'
  }
  
--function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' {
-+function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' {
+-export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' {
++export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' {
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
    if (agentId === 'grok') return 'grok'
    if (agentId === 'dsh') return 'dsh'
    if (agentId === 'opencode') return 'opencode'
+   if (agentId === 'cursor') return 'cursor'
 +  if (agentId === 'zcode') return 'zcode'
    return 'claude_code'
  }
  
-@@ -497,6 +502,7 @@ function codingAgentDisplayName(agentId: string): string {
+@@ -503,6 +508,7 @@
    if (agentId === 'grok') return 'Grok'
    if (agentId === 'opencode') return 'OpenCode'
    if (agentId === 'dsh') return 'DeepSeek Harness'
@@ -211,16 +216,16 @@ index dddefa95..be38071c 100644
    return 'Claude Code'
  }
  
-@@ -748,6 +754,8 @@ export class CodingAgentRunManager {
-               ? 'OpenCode'
-             : launch.agentId === 'dsh'
+@@ -758,6 +764,8 @@
                ? 'DeepSeek Harness'
+             : launch.agentId === 'cursor'
+               ? 'Cursor'
 +            : launch.agentId === 'zcode'
 +              ? 'ZCode'
              : 'Claude Code'
        this.emitTerminalStatus(run, `${agentName} chat runner ready.`)
        logger.info({
-@@ -854,6 +862,10 @@ export class CodingAgentRunManager {
+@@ -864,6 +872,10 @@
        this.startGrokPrintTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
      }
@@ -228,10 +233,10 @@ index dddefa95..be38071c 100644
 +      this.startZcodeExecTurn(run, text)
 +      return { runId: run.id, messageId }
 +    }
-     if (run.launch.agentId === 'dsh') {
-       this.startDshTurn(run, text, systemPrompt, images)
+     if (run.launch.agentId === 'cursor') {
+       this.startCursorPrintTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
-@@ -2580,6 +2592,115 @@ export class CodingAgentRunManager {
+@@ -2727,6 +2739,115 @@
      }
    }
  
@@ -581,62 +586,59 @@ index 00000000..b8bb27bc
 +
 +export type { ZcodeUsage }
 diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/packages/server/src/modules/studio/contracts/agents/runtime.ts
-index 6ca68193..f185b3d5 100644
 --- a/packages/server/src/modules/studio/contracts/agents/runtime.ts
 +++ b/packages/server/src/modules/studio/contracts/agents/runtime.ts
 @@ -1,9 +1,9 @@
  import type { AgentFamily } from './family'
  
--export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh'] as const
-+export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'zcode'] as const
+-export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor'] as const
++export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'zcode'] as const
  
  export type AgentRuntime = typeof AGENT_RUNTIMES[number]
--export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'>
-+export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'>
+-export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'>
++export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'>
  
  const AGENT_RUNTIME_SET = new Set<string>(AGENT_RUNTIMES)
  
-@@ -16,6 +16,7 @@ const RUNTIME_FAMILIES: Record<AgentRuntime, AgentFamily> = {
-   grok: 'coding',
+@@ -17,6 +17,7 @@
    opencode: 'coding',
    dsh: 'coding',
+   cursor: 'coding',
 +  zcode: 'coding',
  }
  
  export function isAgentRuntime(value: unknown): value is AgentRuntime {
 diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/packages/server/src/modules/studio/contracts/runs/session.ts
-index 459cfa6d..0b384f3b 100644
 --- a/packages/server/src/modules/studio/contracts/runs/session.ts
 +++ b/packages/server/src/modules/studio/contracts/runs/session.ts
-@@ -209,7 +209,7 @@ export interface BridgeContextState {
+@@ -211,7 +211,7 @@
  }
  
  export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'global_agent' | 'workflow' | 'group_chat'
--export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko-agent'
-+export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko-agent'
+-export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'ekko-agent'
++export type ChatCodingAgentId = 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' | 'ekko-agent'
  
  export interface BridgeCompressionResult {
    messages: ChatMessage[]
 diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
-index 71679895..b359e24c 100644
 --- a/packages/server/src/modules/studio/public/agent-status-registry.ts
 +++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
 @@ -1,4 +1,4 @@
--export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh'
-+export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode'
+-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'
++export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'
  
  export type AgentStatusSource =
    | 'managed-runtime'
-@@ -46,7 +46,7 @@ export interface AgentAvailabilitySnapshot {
+@@ -46,7 +46,7 @@
    agents: AgentAvailabilityRecord[]
  }
  
--const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh']
-+const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'zcode']
+-const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor']
++const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'zcode']
  
  const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
    hermes: {
-@@ -61,6 +61,19 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+@@ -61,6 +61,19 @@
      error: '',
      installations: [],
    },
@@ -657,52 +659,48 @@ index 71679895..b359e24c 100644
      id: 'ekko-agent',
      name: 'Ekko',
 diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b/packages/server/src/modules/studio/services/agent-availability.ts
-index d585bdc0..46b6437f 100644
 --- a/packages/server/src/modules/studio/services/agent-availability.ts
 +++ b/packages/server/src/modules/studio/services/agent-availability.ts
-@@ -25,6 +25,7 @@ const AGENT_NAMES: Record<AgentStatusId, string> = {
-   grok: 'Grok',
+@@ -27,6 +27,7 @@
    opencode: 'OpenCode',
    dsh: 'DeepSeek Harness',
+   cursor: 'Cursor',
 +  zcode: 'ZCode',
  }
  
  export const AGENT_NOT_INSTALLED = 'AGENT_NOT_INSTALLED'
 diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-index 1384c4a8..7be73ffe 100644
 --- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 +++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-@@ -13,7 +13,7 @@ export interface RecordSessionUsageInput {
+@@ -13,7 +13,7 @@
    sessionId: string
    runId?: string | null
    source: 'hermes' | 'coding_agent' | 'ekko_agent'
--  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'ekko_agent'
-+  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'zcode' | 'ekko_agent'
+-  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'ekko_agent'
++  agent: 'hermes' | 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode' | 'ekko_agent'
    profile?: string | null
    model?: string | null
    provider?: string | null
 diff --git a/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts b/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
-index a517df81..9f45a694 100644
 --- a/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
 +++ b/packages/server/src/modules/studio/services/chat-run/handle-coding-agent-run.ts
-@@ -163,7 +163,7 @@ export async function handleCodingAgentRun(
+@@ -167,7 +167,7 @@
    try {
      const codingInput = convertContentBlocksForCodingAgent(data.input)
-     await writeModelRunProfileToken(socketUser, profile)
--    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh')
-+    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
+     if (!data.studio_mcp_token_file) await writeModelRunProfileToken(socketUser, profile)
+-    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh')
++    const includeBaseSystemPrompt = agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh') || agentId === 'zcode'
      const runPrompt = [
        groupSystemPrompt
          ? [groupSystemPrompt, studioMcpUsageGuidelines(mcpCapabilities)].filter(Boolean).join('\n\n')
 diff --git a/packages/server/src/modules/studio/services/chat-run/types.ts b/packages/server/src/modules/studio/services/chat-run/types.ts
-index ac6f5878..1e848de4 100644
 --- a/packages/server/src/modules/studio/services/chat-run/types.ts
 +++ b/packages/server/src/modules/studio/services/chat-run/types.ts
-@@ -3,6 +3,6 @@ export * from '../../contracts/runs/session'
+@@ -3,6 +3,6 @@
  
  export function codingAgentId(data: { coding_agent_id?: ChatCodingAgentId; agent_id?: ChatCodingAgentId }): Exclude<ChatCodingAgentId, 'ekko-agent'> {
    const value = data.coding_agent_id || data.agent_id || 'claude-code'
--  if (value === 'codex' || value === 'pi' || value === 'grok' || (value === 'opencode' || value === 'dsh')) return value
-+  if (value === 'codex' || value === 'pi' || value === 'grok' || (value === 'opencode' || value === 'dsh') || value === 'zcode') return value
+-  if (value === 'codex' || value === 'pi' || value === 'grok' || value === 'cursor' || (value === 'opencode' || value === 'dsh')) return value
++  if (value === 'codex' || value === 'pi' || value === 'grok' || value === 'cursor' || (value === 'opencode' || value === 'dsh') || value === 'zcode') return value
    return 'claude-code'
  }

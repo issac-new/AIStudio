@@ -1,22 +1,19 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index afa66a69..9933c68a 100644
+index 0e27541b..606a7800 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -10,11 +10,8 @@ import ProfileSelector from "@/components/layout/ProfileSelector.vue";
- import LanguageSwitch from "@/components/layout/LanguageSwitch.vue";
- import ThemeSwitch from "@/components/layout/ThemeSwitch.vue";
- import { changelog } from "@/data/changelog";
--import {
--  getStoredUserId,
--  getStoredUsername,
--  isStoredSuperAdmin,
--} from "@/api/client";
-+import { getStoredUserId, getStoredUsername } from "@/api/client";
+@@ -1,8 +1,9 @@
+ <script setup lang="ts">
+-import { computed } from "vue";
++import { computed, ref } from "vue";
+ import { useRoute, useRouter } from "vue-router";
+ import { useI18n } from "vue-i18n";
+ import { useAppStore } from "@/stores/hermes/app";
 +import { useAuthStore } from "@/stores/hermes/auth";
- import { clearThemeBackgroundCache } from "@/api/studio/theme";
- 
- const { t } = useI18n();
-@@ -22,10 +19,23 @@ const message = useMessage();
+ import RouteLinkItem from "@/components/common/RouteLinkItem.vue";
+ import PageSidebarFooter from "@/components/layout/PageSidebarFooter.vue";
+ import { isStoredSuperAdmin } from "@/api/client";
+@@ -11,10 +12,25 @@ const { t } = useI18n();
  const route = useRoute();
  const router = useRouter();
  const appStore = useAppStore();
@@ -25,6 +22,8 @@ index afa66a69..9933c68a 100644
    return route.name as string;
  });
 -const isSuperAdmin = computed(() => isStoredSuperAdmin());
++// overlay: 响应式超管判定（authStore 优先，回退 localStorage 快照）
++const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin());
 +// overlay[ia2]: P3 六区域新 IA 高亮（Task 8: cockpit 入口随退役移除，仅保留新 IA 项）
 +const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
 +// overlay[ide]: IDE 工作台（/ide）一级入口高亮（编程专业界面壳）
@@ -37,19 +36,11 @@ index afa66a69..9933c68a 100644
 +  "hermes.profiles", "hermes.settings",
 +];
 +const systemOpen = ref(SYSTEM_ROUTE_NAMES.includes(String(route.name ?? "")));
-+const isSuperAdmin = computed(() => authStore.isSuperAdmin);
- const currentUsername = computed(() => getStoredUsername());
++const isSettingsPage = computed(() => route.name === 'hermes.settings');
  const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
  const isDesktopShell = computed(
-@@ -33,6 +43,7 @@ const isDesktopShell = computed(
-     (window as typeof window & { hermesDesktop?: { isDesktop?: boolean } })
-       .hermesDesktop?.isDesktop === true,
- );
-+const isSettingsPage = computed(() => route.name === 'hermes.settings');
- const showChangelog = ref(false);
- const showDockerUpdateTip = ref(false);
- const isDockerRuntime = computed(() => appStore.isDocker);
-@@ -103,6 +114,89 @@ function handleUpdateClick() {
+   () =>
+@@ -52,6 +68,89 @@ function handleSidebarClick(event: MouseEvent) {
      @click="handleSidebarClick"
    >
      <nav class="sidebar-nav">
@@ -139,23 +130,15 @@ index afa66a69..9933c68a 100644
        <RouteLinkItem
          class="nav-item"
          :to="{ name: 'hermes.logs' }"
-@@ -330,12 +424,13 @@ function handleUpdateClick() {
+@@ -279,31 +378,13 @@ function handleSidebarClick(event: MouseEvent) {
          </svg>
          <span>{{ t("sidebar.settings") }}</span>
        </RouteLinkItem>
 +      </div>
      </nav>
  
-     <ProfileSelector />
-     <ModelSelector />
- 
--    <div class="sidebar-footer">
-+    <div v-if="!isSettingsPage" class="sidebar-footer">
-       <button class="nav-item logout-item" @click="handleLogout">
-         <svg
-           width="16"
-@@ -458,26 +553,7 @@ function handleUpdateClick() {
-     </div>
+-    <PageSidebarFooter :collapsed="appStore.sidebarCollapsed" class="sidebar-account-footer" />
++    <PageSidebarFooter v-if="!isSettingsPage" :collapsed="appStore.sidebarCollapsed" class="sidebar-account-footer" />
  
      <div class="sidebar-top-actions">
 -      <RouteLinkItem
@@ -182,7 +165,7 @@ index afa66a69..9933c68a 100644
        <button
          class="collapse-btn"
          @click="appStore.toggleSidebarCollapsed()"
-@@ -631,11 +707,18 @@ function handleUpdateClick() {
+@@ -412,11 +493,18 @@ function handleSidebarClick(event: MouseEvent) {
    border-top: 1px solid $border-color;
  }
  
@@ -205,8 +188,8 @@ index afa66a69..9933c68a 100644
 +  transform: rotate(90deg);
  }
  
- .sidebar-footer {
-@@ -837,12 +920,6 @@ function handleUpdateClick() {
+ .sidebar-account-footer {
+@@ -443,12 +531,6 @@ function handleSidebarClick(event: MouseEvent) {
      padding-top: 8px;
    }
  
