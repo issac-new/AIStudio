@@ -4,6 +4,11 @@
  * GET  /api/approvals/pending            待审聚合（fleet 命令审批 + 评审域未裁决）
  * POST /api/approvals/:id/decide         就地裁决（id 前缀路由到对应域，决策落历史）
  * GET  /api/approvals/history?limit=50   决策历史（时间+操作人+对象+结果）
+ * GET  /api/approvals/spotcheck          待抽检清单（低风险自动放行的事后回看）
+ * POST /api/approvals/spotcheck/:id/resolve  抽检处置（confirm 认可 / veto 误放行回灌）
+ *
+ * V4.1 §七 抽检器（2026-09-29）：pending 聚合前先跑低风险自动放行（autopass.ts，
+ * 纯只读命令过宽限期自动 once 放行 + 确定性抽检入队），人审聚焦 high/medium。
  *
  * 数据源复用既有域（不另起炉灶）：
  *   - fleet 命令审批：services/hermes/fleet-tap（buildFleetSnapshotFromTap 的
@@ -24,6 +29,7 @@ import { loadReview, setVerdict, listReviews } from '../review/review-store'
 import { isReviewVerdict, type ReviewVerdict } from '../review/review-store'
 import { appendApprovalLog, queryApprovalLog } from './approval-log'
 import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
+import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
 
 const router = new Router({ prefix: '/api/approvals' })
 
@@ -124,8 +130,9 @@ function readOneQueue(dir: string): PendingItem[] {
     out.push({
       id: `fleetfile:${entry.request_id}`,
       kind: 'command',
-      // 危险命令人审默认高档（V4-N1 三档口径；文件队列源无服务端分类器）
-      risk: 'high',
+      // V4.1 抽检器：文件队列源同走服务端权威分类（rm/push 等仍 high 人审；
+      // 纯只读命令 low → 可自动放行+抽检；分不明细的兜底 medium 不低判）
+      risk: classifyApprovalRisk({ kind: 'command', detail: entry.command || entry.description || '' }),
       title: `${entry.surface || 'unattended worker'} 的命令审批`,
       detail: entry.command || entry.description || entry.request_id,
       choices: (entry.allowed_choices && entry.allowed_choices.length ? entry.allowed_choices : ['once', 'session', 'deny']),
@@ -135,7 +142,34 @@ function readOneQueue(dir: string): PendingItem[] {
   return out
 }
 
-router.get('/pending', async (ctx) => {
+/** 写文件队列审批响应（digest 绑定；decide 路由与低风险自动放行共用同一实现）。 */
+function writeFleetFileResponse(requestId: string, choice: string, actor: string): { ok: true } | { ok: false } {
+  const dir = queueDirOfRequest(requestId)
+  if (!dir) return { ok: false }
+  const queue = join(dir, 'queue.jsonl')
+  let digest = ''
+  try {
+    for (const line of readFileSync(queue, 'utf8').split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      try {
+        const entry = JSON.parse(trimmed) as FileQueueEntry
+        if (entry.request_id === requestId && entry.digest) { digest = entry.digest; break }
+      } catch { continue }
+    }
+  } catch { /* 队列不可读 */ }
+  if (!digest) return { ok: false }
+  const respDir = join(dir, 'responses')
+  mkdirSync(respDir, { recursive: true })
+  const file = join(respDir, `${requestId}.json`)
+  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
+  writeFileSync(tmp, JSON.stringify({ request_id: requestId, digest, choice, decided_at: Date.now(), actor }), 'utf8')
+  renameSync(tmp, file)
+  return { ok: true }
+}
+
+/** 待审聚合三源合并（不排序；供 pending 路由与自动放行扫描共用）。 */
+function collectPendingItems(): PendingItem[] {
   const items: PendingItem[] = []
   // 文件队列源（patch 490 unattended 传输；读失败不阻断其余聚合）
   try { items.push(...readPendingFileQueue()) } catch { /* 队列不可读忽略 */ }
@@ -178,6 +212,45 @@ router.get('/pending', async (ctx) => {
       })
     }
   } catch { /* review 源不可用不阻断 */ }
+  return items
+}
+
+// V4.1 抽检器：扫描节流（并发 pending 查询不重复放行；1s 内只扫一次）
+let lastAutopassScan = 0
+
+/** 低风险自动放行扫描：候选（纯只读命令且过宽限期）执行 once 放行 + 记账入抽检。 */
+async function runAutoPassScan(items: PendingItem[]): Promise<number> {
+  if (!autopassEnabled()) return 0
+  const now = Date.now()
+  if (now - lastAutopassScan < 1_000) return 0
+  lastAutopassScan = now
+  let acted = 0
+  for (const item of items) {
+    if (!isAutopassCandidate(item, now)) continue
+    try {
+      if (item.id.startsWith('fleet:')) {
+        const rest = item.id.slice('fleet:'.length)
+        const sep = rest.indexOf(':')
+        if (sep <= 0) continue
+        const result = await respondFleetApproval(rest.slice(sep + 1), 'once')
+        if (!result.resolved) continue
+      } else if (item.id.startsWith('fleetfile:')) {
+        if (!writeFleetFileResponse(item.id.slice('fleetfile:'.length), 'once', 'system').ok) continue
+      } else {
+        continue
+      }
+      recordAutoPass({ id: item.id, title: item.title, detail: item.detail, profile: item.profile })
+      acted++
+    } catch { /* 单条放行失败不阻断其余 */ }
+  }
+  return acted
+}
+
+router.get('/pending', async (ctx) => {
+  const pre = collectPendingItems()
+  // V4.1 抽检器：聚合前先放行低风险项（放行后重取，人审只看 high/medium）
+  const acted = await runAutoPassScan(pre)
+  const items = acted > 0 ? collectPendingItems() : pre
 
   // V4-N1：高危置顶，同档内按时间新→旧
   const tierOrder: Record<ApprovalRiskTier, number> = { high: 0, medium: 1, low: 2 }
@@ -233,36 +306,12 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: 'fleetfile 决策须为 once|session|always|deny' }
       return
     }
-    // 响应文件须带 digest 绑定（worker 侧校验 request_id+digest，宿主再校验一次）
-    const dir = queueDirOfRequest(requestId)
-    if (!dir) {
+    // 响应文件带 digest 绑定（worker 侧校验 request_id+digest，宿主再校验一次）
+    if (!writeFleetFileResponse(requestId, decision, actor).ok) {
       ctx.status = 404
       ctx.body = { ok: false, detail: '审批请求不在队列（已超时或不存在）' }
       return
     }
-    const queue = join(dir, 'queue.jsonl')
-    let digest = ''
-    try {
-      for (const line of readFileSync(queue, 'utf8').split('\n')) {
-        const trimmed = line.trim()
-        if (!trimmed) continue
-        try {
-          const entry = JSON.parse(trimmed) as FileQueueEntry
-          if (entry.request_id === requestId && entry.digest) { digest = entry.digest; break }
-        } catch { continue }
-      }
-    } catch { /* 队列不可读 */ }
-    if (!digest) {
-      ctx.status = 404
-      ctx.body = { ok: false, detail: '审批请求不在队列（已超时或不存在）' }
-      return
-    }
-    const respDir = join(dir, 'responses')
-    mkdirSync(respDir, { recursive: true })
-    const file = join(respDir, `${requestId}.json`)
-    const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-    writeFileSync(tmp, JSON.stringify({ request_id: requestId, digest, choice: decision, decided_at: Date.now(), actor }), 'utf8')
-    renameSync(tmp, file)
     const entry = appendApprovalLog({
       id, actor, targetKind: 'command', targetId: requestId,
       targetTitle: note || requestId, decision, note,
@@ -326,5 +375,36 @@ router.get('/history', async (ctx) => {
   const limit = Number(ctx.query.limit ?? 50)
   ctx.body = { ok: true, entries: queryApprovalLog(Number.isFinite(limit) ? limit : 50) }
 })
+
+// ── V4.1 §七 抽检器端点：低风险自动放行的事后回看与处置 ──
+
+router.get('/spotcheck', async (ctx) => {
+  const limit = Number(ctx.query.limit ?? 20)
+  const n = Number.isFinite(limit) ? limit : 20
+  ctx.body = { ok: true, items: listOpenSpotchecks(n), resolved: listResolvedSpotchecks(n) }
+})
+
+router.post('/spotcheck/:id/resolve', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { verdict?: unknown; note?: unknown }
+  const verdict = String(body.verdict ?? '')
+  const note = typeof body.note === 'string' ? body.note.slice(0, 500) : undefined
+  if (verdict !== 'confirm' && verdict !== 'veto') {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'verdict 须为 confirm|veto' }
+    return
+  }
+  const item = resolveSpotcheck(String(ctx.params.id ?? ''), verdict, actorOf(ctx as never), note)
+  if (!item) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: '抽检项不存在或已处置（一次定音）' }
+    return
+  }
+  ctx.body = { ok: true, item }
+})
+
+/** 仅测试用：清空自动放行扫描节流（并发用例各自独立计时）。 */
+export function _resetAutopassScanThrottleForTests(): void {
+  lastAutopassScan = 0
+}
 
 export const approvalsRoutes = router
