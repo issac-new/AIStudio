@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { NCheckbox } from 'naive-ui'
 import type { KanbanTask } from '@/api/hermes/kanban'
 import { useI18n } from 'vue-i18n'
+import { getStoredUsername } from '@/api/client'
+import { raciBadges, myRaciRole, parseTaskRaci, type RaciRole } from '../utils/raci'
 
 const props = defineProps<{
   task: KanbanTask
@@ -27,6 +29,12 @@ const { t } = useI18n()
 // meta row of badges, the title, and a meta line. There is intentionally
 // NO body/result/latest-summary/skills preview on cards — the reference
 // keeps cards lean (those live in the drawer).
+// P2 RACI 徽章（2026-09-28 §三）：非空角色字母标签；当前用户承担的角色高亮。
+const raciOf = computed(() => parseTaskRaci(props.task))
+const raciBadgeList = computed(() => raciBadges(raciOf.value))
+const myRole = computed<RaciRole | null>(() => myRaciRole(raciOf.value, getStoredUsername()))
+const raciRoleTitles: Record<RaciRole, string> = { R: 'R', A: 'A', C: 'C', I: 'I' }
+
 const needsAssignee = computed(() =>
   props.task.status === 'ready' && !props.task.assignee
 )
@@ -177,6 +185,14 @@ function handleDragEnd(e: DragEvent) {
       <span v-if="needsAssignee" class="needs-assignee-badge">
         {{ t('kanban.card.needsAssignee') }}
       </span>
+      <!-- P2 RACI 徽章：非空角色；我的角色高亮描边 -->
+      <span v-if="raciBadgeList.length" class="raci-badges" data-testid="raci-badges">
+        <span
+          v-for="b in raciBadgeList" :key="b.role"
+          class="raci-badge" :class="[`raci-badge--${b.role}`, { 'raci-badge--mine': myRole === b.role }]"
+          :title="`RACI ${b.role} × ${b.count}`"
+        >{{ raciRoleTitles[b.role] }}<sup v-if="b.count > 1">{{ b.count }}</sup></span>
+      </span>
     </div>
 
     <div class="card-title">{{ task.title || t('kanban.card.untitled') }}</div>
@@ -319,6 +335,30 @@ function handleDragEnd(e: DragEvent) {
     border-color: rgba(63, 185, 125, 0.45);
     color: $text-primary;
   }
+}
+
+/* P2 RACI 徽章（§三）：字母小标签，我的角色高亮 */
+.raci-badges {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.raci-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  color: #fff;
+  sup { font-size: 7px; margin-left: 1px; }
+  &--R { background: #2563ebcc; }
+  &--A { background: #d97706cc; }
+  &--C { background: #059669cc; }
+  &--I { background: #6b7280cc; }
+  &--mine { border-color: currentColor; outline: 1.5px solid #f59e0b66; outline-offset: 1px; }
 }
 
 .needs-assignee-badge {
