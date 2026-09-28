@@ -24,6 +24,23 @@ export function parseGoalTurns(text: string | undefined): GoalTurnProgress | nul
   return { used, max }
 }
 
+/**
+ * 最近一次 /goal status 回执的全文（turn 进度所在行）——三预算显式化（G5 #7）
+ * 的输入面：goal-budget parseThreeBudgets 在其上解析 token/wallClock 段
+ * （回执没带该段=该维无上限，不显示，与 turn 单维现状自然兼容）。
+ */
+export function extractGoalStatusText(
+  messages: Array<{ role: string; content?: string }>,
+): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]
+    if (m.role !== 'assistant' && m.role !== 'tool' && m.role !== 'system') continue
+    const text = typeof m.content === 'string' ? m.content : ''
+    if (parseGoalTurns(text)) return text
+  }
+  return null
+}
+
 /** 从会话消息流找最近一次 /goal status 的助手回执（含 turns 进度的那条） */
 export function extractGoalProgress(
   messages: Array<{ role: string; content?: string }>,

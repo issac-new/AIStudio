@@ -9,7 +9,7 @@ import {
   DISPATCH_REASON_CODES, coerceDispatchReasonCode,
 } from '../zcode/dispatch-reasons'
 import {
-  ZcodeSessionProjection, engineReasonToDispatchReason, normalizeSessionSummary,
+  ZcodeSessionProjection, engineReasonToDispatchReason, normalizeSessionSummary, normalizeWorkflowActivity,
   type ProjectionAgentPort, type ProjectionEvent, type ZcodeWireFrameLike,
 } from '../zcode/session-projection'
 import { emitZcodeProjectionEvent } from '../zcode/projection-socket'
@@ -207,19 +207,61 @@ describe('会话条目契约归一化（X5）', () => {
   const engineEntry = {
     sessionId: 's1', workspaceId: '/ws/proj', parentSessionId: 'p0', title: '修缺陷',
     titleSource: 'custom', phase: 'running', sessionEnded: false, hasBackgroundWork: true,
-    workflowActivity: { runs: [{ runId: 'r1' }] },
+    workflowActivity: {
+      runs: [{
+        runId: 'r1', toolCallId: 'call-1', name: '重构排查', status: 'running',
+        startedAt: 9, currentPhase: '采样', agentsWorking: 2,
+        phases: [
+          { name: '扫描', status: 'done' },
+          { name: '采样', status: 'running', alongside: [0] },
+        ],
+      }],
+    },
     pendingInteraction: { interactionId: 'i1', kind: 'permission', toolName: 'terminal' },
     pendingInteractionSummary: { permissionCount: 1, userInputCount: 0 },
     goalStatus: 'active', lastActivityAt: 11, lastAssistantPreview: '预览', createdAt: 5,
     futureField: { nested: true },
   }
 
-  it('已知字段显式直取为稳定形状；未知/复合字段不透传', () => {
+  it('已知字段显式直取为稳定形状；workflowActivity 归一化透传；未知/复合字段不透传', () => {
     expect(normalizeSessionSummary(engineEntry)).toEqual({
       sessionId: 's1', title: '修缺陷', phase: 'running', workspaceId: '/ws/proj',
       parentSessionId: 'p0', titleSource: 'custom', sessionEnded: false, hasBackgroundWork: true,
       goalStatus: 'active', lastActivityAt: 11, lastAssistantPreview: '预览', createdAt: 5,
+      workflowActivity: {
+        runs: [{
+          runId: 'r1', toolCallId: 'call-1', name: '重构排查', status: 'running',
+          startedAt: 9, currentPhase: '采样', agentsWorking: 2,
+          phases: [
+            { name: '扫描', status: 'done' },
+            { name: '采样', status: 'running', alongside: [0] },
+          ],
+        }],
+      },
     })
+  })
+
+  it('workflowActivity 归一化守门：坏 run 丢弃、词表外 status/stopReason 丢弃、超 4 条截断、无有效 run 键缺席', () => {
+    // 缺 runId / status 非词表 → run 丢弃。
+    expect(normalizeWorkflowActivity({ runs: [{ runId: 'r1' }, { runId: 'r2', status: 'weird' }] })).toBeUndefined()
+    // 有效 run + 词表外 stopReason 丢弃 + 坏 phase 丢弃。
+    const one = normalizeWorkflowActivity({
+      runs: [{
+        runId: 'r3', status: 'errored', stopReason: 'provider', agentsWorking: -1,
+        phases: [{ name: 'a', status: 'done' }, { name: '', status: 'running' }, { name: 'b', status: 'nope' }],
+      }],
+    })
+    expect(one).toEqual({
+      runs: [{
+        runId: 'r3', status: 'errored', stopReason: 'provider', phases: [{ name: 'a', status: 'done' }], agentsWorking: 0,
+      }],
+    })
+    // 超上界截断到 4。
+    const many = normalizeWorkflowActivity({ runs: [1, 2, 3, 4, 5, 6].map((i) => ({ runId: `r${i}`, status: 'completed' })) })
+    expect(many?.runs).toHaveLength(4)
+    // 非 object / runs 非数组 → 键缺席。
+    expect(normalizeWorkflowActivity('x')).toBeUndefined()
+    expect(normalizeWorkflowActivity({ runs: 'no' })).toBeUndefined()
   })
 
   it('缺 sessionId → null（非会话条目）；类型不符字段丢弃不炸', () => {

@@ -28,7 +28,8 @@ import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-re
  *
  * 此前服务端把引擎条目 `session: unknown` 直投 socket、客户端按 {title?,phase?} 裸读，
  * 字段名一变即恒 undefined 且无人发觉。归一化后两端以本形状为唯一事实源：
- * 已知字段显式直取（类型不符即丢弃），未知/复合字段（workflowActivity 等）不透传，
+ * 已知字段显式直取（类型不符即丢弃）；workflow 集成轮起 workflowActivity 亦经
+ * normalizeWorkflowActivity 归一化透传（有界 ≤4 runs），其余未知/复合字段仍不透传，
  * 消费端读不到新字段时是「未实现」而非「契约漂移」。
  */
 export interface ProjectionSession {
@@ -44,6 +45,101 @@ export interface ProjectionSession {
   lastActivityAt?: number
   lastAssistantPreview?: string
   createdAt?: number
+  /**
+   * 侧栏工作流运行摘要（workflow 集成轮）：zcode sessions-index 的
+   * sessionWorkflowActivitySchema 有界投影（≤4 runs）。契约锚点
+   * upstream/zcode packages/shared/src/zcode-protocol-v4/sessions-index-workflow-activity.ts。
+   */
+  workflowActivity?: ProjectionWorkflowActivity
+}
+
+/** 站点灯四态（zcode sessionWorkflowPhaseStatusSchema 同词表）。 */
+export type ProjectionWorkflowPhaseStatus = 'pending' | 'running' | 'done' | 'failed'
+
+export interface ProjectionWorkflowPhase {
+  name: string
+  status: ProjectionWorkflowPhaseStatus
+  /** 并行站下标（声明表路径才有；退化路缺席）。 */
+  alongside?: number[]
+}
+
+/** run 终态五词表（zcode workflowRunSchema.shape.status 同词表）。 */
+export type ProjectionWorkflowRunStatus = 'pending' | 'running' | 'completed' | 'errored' | 'stopped'
+
+export type ProjectionWorkflowStopReason = 'user' | 'model' | 'provider' | 'interrupted' | 'superseded'
+
+export interface ProjectionWorkflowRunSummary {
+  runId: string
+  toolCallId?: string
+  /** 展示名（= 后台工作标题）。 */
+  name?: string
+  status: ProjectionWorkflowRunStatus
+  stopReason?: ProjectionWorkflowStopReason
+  startedAt?: number
+  phases: ProjectionWorkflowPhase[]
+  currentPhase?: string
+  /** status === 'running' 的子代理数。 */
+  agentsWorking: number
+}
+
+export interface ProjectionWorkflowActivity {
+  runs: ProjectionWorkflowRunSummary[]
+}
+
+const WORKFLOW_RUN_STATUSES: readonly string[] = ['pending', 'running', 'completed', 'errored', 'stopped']
+const WORKFLOW_STOP_REASONS: readonly string[] = ['user', 'model', 'provider', 'interrupted', 'superseded']
+const WORKFLOW_PHASE_STATUSES: readonly string[] = ['pending', 'running', 'done', 'failed']
+/** 会话级 run 摘要上界（zcode SESSION_WORKFLOW_ACTIVITY_MAX_RUNS = 4）。 */
+const WORKFLOW_ACTIVITY_MAX_RUNS = 4
+
+/**
+ * 引擎 workflowActivity → 稳定形状。与 normalizeSessionSummary 同纪律：
+ * 逐字段显式直取，形状不符整条丢弃（runs 非数组 / 超上界截断 / 单 run 缺
+ * runId 或 status 非词表 → 该 run 丢弃，不让坏行污染整份摘要）。
+ */
+export function normalizeWorkflowActivity(raw: unknown): ProjectionWorkflowActivity | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const runsRaw = (raw as Record<string, unknown>).runs
+  if (!Array.isArray(runsRaw)) return undefined
+  const runs: ProjectionWorkflowRunSummary[] = []
+  for (const item of runsRaw) {
+    if (!item || typeof item !== 'object') continue
+    const r = item as Record<string, unknown>
+    const runId = str(r.runId)
+    const status = str(r.status)
+    if (!runId || !WORKFLOW_RUN_STATUSES.includes(status)) continue
+    const phasesRaw = Array.isArray(r.phases) ? r.phases : []
+    const phases: ProjectionWorkflowPhase[] = []
+    for (const p of phasesRaw) {
+      if (!p || typeof p !== 'object') continue
+      const pr = p as Record<string, unknown>
+      const name = str(pr.name)
+      const pstatus = str(pr.status)
+      if (!name || !WORKFLOW_PHASE_STATUSES.includes(pstatus)) continue
+      const alongside = Array.isArray(pr.alongside)
+        ? pr.alongside.filter((n): n is number => Number.isInteger(n) && n >= 0)
+        : undefined
+      phases.push({ name, status: pstatus as ProjectionWorkflowPhaseStatus, ...(alongside?.length ? { alongside } : {}) })
+    }
+    const stopReason = str(r.stopReason)
+    const startedAt = num(r.startedAt)
+    const agentsWorking = num(r.agentsWorking)
+    runs.push({
+      runId,
+      ...(str(r.toolCallId) ? { toolCallId: str(r.toolCallId) } : {}),
+      ...(str(r.name) ? { name: str(r.name) } : {}),
+      status: status as ProjectionWorkflowRunStatus,
+      ...(WORKFLOW_STOP_REASONS.includes(stopReason) ? { stopReason: stopReason as ProjectionWorkflowStopReason } : {}),
+      ...(startedAt !== undefined ? { startedAt } : {}),
+      phases,
+      ...(str(r.currentPhase) ? { currentPhase: str(r.currentPhase) } : {}),
+      agentsWorking: agentsWorking !== undefined && agentsWorking >= 0 ? Math.floor(agentsWorking) : 0,
+    })
+    if (runs.length >= WORKFLOW_ACTIVITY_MAX_RUNS) break
+  }
+  // 与引擎侧 deriveSessionWorkflowActivity 同姿态：没有任何有效 run → 键整个缺席。
+  if (runs.length === 0) return undefined
+  return { runs }
 }
 
 function str(v: unknown): string | undefined {
@@ -87,6 +183,8 @@ export function normalizeSessionSummary(raw: unknown): ProjectionSession | null 
   if (lastAssistantPreview !== undefined) out.lastAssistantPreview = lastAssistantPreview
   const createdAt = num(r.createdAt)
   if (createdAt !== undefined) out.createdAt = createdAt
+  const workflowActivity = normalizeWorkflowActivity(r.workflowActivity)
+  if (workflowActivity !== undefined) out.workflowActivity = workflowActivity
   return out
 }
 
