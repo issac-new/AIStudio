@@ -235,3 +235,7 @@
 
 # 489（V4-N1 审批风险分级）：approvals.risk 三档词条已折入 473 单一事实源
 #      （2026-09-28 locale 收敛轮：并行会话的键并入，patch 退役）。
+# 490（fleet 命令审批 live 修复）：unattended deny 生效前先走 operator 已选的
+#      插件审批传输（security.approval.transport）；仅显式 once/session/always 放行，
+#      失败/超时/拒绝维持硬拒 fail-closed。配套 runtime/plugins/studio-file-approval。
+490-agent-unattended-approval-transport.patch
