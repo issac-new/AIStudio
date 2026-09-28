@@ -44,6 +44,7 @@ const acting = ref<Set<string>>(new Set())
 // ── 六域体检（长期台账）──
 const audit = ref<DomainAuditSummary | null>(null)
 const auditRunning = ref(false)
+const auditError = ref('')
 const DOMAIN_ORDER = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'] as const
 const DOMAIN_NAMES: Record<string, string> = {
   L0: '范围与需求', L1: '工程正确性', L2: '系统一致性',
@@ -52,10 +53,14 @@ const DOMAIN_NAMES: Record<string, string> = {
 
 async function runAudit(): Promise<void> {
   auditRunning.value = true
+  auditError.value = ''
   try {
     await runDomainAudit(`run-${new Date().toISOString().slice(5, 16).replace('T', ' ')}`)
     audit.value = await fetchDomainAudit()
-  } catch { /* 台账读取失败保留旧值 */ } finally { auditRunning.value = false }
+  } catch (e) {
+    // 失败必须可见：静默吞掉会让旧台账徽章继续冒充本轮结果
+    auditError.value = `六域体检失败：${e instanceof Error ? e.message : String(e)}（徽章仍为上一轮台账）`
+  } finally { auditRunning.value = false }
 }
 
 const GATE_KEYS = ['gateG1', 'gateG2', 'gateG3', 'gateG4', 'gateG5', 'gateG6'] as const
@@ -169,6 +174,7 @@ onMounted(() => void refresh())
           {{ auditRunning ? '⏳ 体检中…' : '▶ 运行六域体检' }}
         </button>
       </div>
+      <div v-if="auditError" class="ia-gov__audit-error" data-testid="gov-audit-error">{{ auditError }}</div>
       <div v-if="audit" class="ia-gov__audit-grid">
         <div v-for="d in DOMAIN_ORDER" :key="d" class="ia-gov__audit-cell" :data-testid="`gov-audit-${d}`">
           <span class="ia-gov__audit-dom">{{ d }} · {{ DOMAIN_NAMES[d] }}</span>
@@ -285,6 +291,7 @@ onMounted(() => void refresh())
   &:hover { background: var(--bg-secondary, #f1f2f4); }
 }
 .ia-gov__error { color: #dc2626; font-size: 12px; }
+.ia-gov__audit-error { color: #dc2626; font-size: 12px; padding: 6px 0; }
 
 .ia-gov__gates {
   display: grid;

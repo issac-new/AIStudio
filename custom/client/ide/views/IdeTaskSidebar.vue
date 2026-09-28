@@ -776,7 +776,7 @@ onMounted(async () => {
 
   &.is-active {
     background: rgba(97, 175, 239, 0.12);
-    border-color: var(--primary-color, #18a058)66;
+    border-color: color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
     color: var(--primary-color, #18a058);
     font-weight: 600;
   }

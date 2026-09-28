@@ -135,10 +135,11 @@ export function registerDomainAudit(deps: DomainAuditDeps): void {
   deps.router.post('/domains/run', async (ctx) => {
     const run = String(ctx.query.run || `run-${new Date().toISOString().slice(0, 13)}`)
     const checks = [checkL0, checkL1, checkL2, checkL3, checkL4, checkL5]
+    const domainNames = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'] as const
     const results: DomainCheckResult[] = []
-    for (const check of checks) {
+    for (const [i, check] of checks.entries()) {
       try { results.push({ ...(await check()), run }) }
-      catch (e) { results.push({ run, domain: 'L0', verdict: 'warn', evidence: [`检查器异常: ${String(e).slice(0, 80)}`], checkedAt: new Date().toISOString() }) }
+      catch (e) { results.push({ run, domain: domainNames[i], verdict: 'warn', evidence: [`检查器异常: ${String(e).slice(0, 80)}`], checkedAt: new Date().toISOString() }) }
     }
     appendLedger(results)
     ctx.body = { ok: true, run, results }
@@ -148,7 +149,7 @@ export function registerDomainAudit(deps: DomainAuditDeps): void {
     const all = readLedger()
     const runs = [...new Set(all.map(r => r.run))].reverse()
     const latest: Record<string, DomainCheckResult> = {}
-    for (const r of all) if (!latest[r.domain]) latest[r.domain] = r // 台账新→旧，首见即最新
+    for (let i = all.length - 1; i >= 0; i--) if (!latest[all[i].domain]) latest[all[i].domain] = all[i] // 文件序旧→新，倒序首见即最新
     ctx.body = { ok: true, total: all.length, runs, latest, ledger: all.slice(-120) }
   })
 }

@@ -262,7 +262,7 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
     fi
   done
   [[ $card_found -eq 0 ]] \
-    || { note "[凭证] fanfan 账号板查无卡片 $card（含 archived）—— 虚报"; return 1; }
+    || { note "[凭证] fanfan 账号板查无卡片 ${card}（含 archived）—— 虚报"; return 1; }
   note "[凭证] $rfd 完成证据成立（card 在 fanfan 账号板可查）：commit=$sha card=$card"
   return 0
 }

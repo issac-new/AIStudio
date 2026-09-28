@@ -39,6 +39,9 @@ function load(): ApprovalLogEntry[] {
     const parsed = JSON.parse(readFileSync(file, 'utf8'))
     return Array.isArray(parsed) ? parsed.filter(isEntry) : []
   } catch {
+    // 解析失败（尾写损坏/手改）：隔离原文件再返回空，防止下一次 append 用
+    // 只剩新条目的数组整文件覆写、丢光历史台账（对齐 review-store 先例）。
+    try { renameSync(file, `${file}.corrupt-${Date.now()}`) } catch { /* 隔离失败不阻断追加 */ }
     return []
   }
 }
