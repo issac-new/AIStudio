@@ -13,6 +13,7 @@ import { fetchUsageStats } from '@/api/studio/sessions'
 import { ideUsageApi, type UsageRoundRow } from '../api/usage'
 import { buildUsageLedger } from '../utils/usage-ledger'
 import { roundsSummary } from '../utils/rounds-table'
+import { buildThreadUsage } from '../utils/thread-usage'
 import { computeBreakdown, type ContextSegment } from '../utils/contextBreakdown'
 import { estimateCostUsd, formatCostUsd } from '../utils/modelPricing'
 import { formatTokens, isLowContext, type PressureLevel, type SpeedLevel } from '../utils/metrics'
@@ -147,6 +148,11 @@ const heatPeak = ref<{ day: string; tokens: number } | null>(null)
 const heatTotal = ref(0)
 const heatState = ref<'loading' | 'ok' | 'empty' | 'error'>('loading')
 
+// ── 成本分组（吸收第一批 B3，codex ThreadUsage）：(model×effort) 分组记账+日桶 ──
+// 数据=同一次 fetchUsageStats 响应的 model_usage（model 维度现成；effort 字段
+// 响应未携带→'default' 兜底，等上游带 effort 后自动分组），零新增请求。
+const threadUsage = ref<ReturnType<typeof buildThreadUsage> | null>(null)
+
 function dayKey(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -158,6 +164,15 @@ async function loadHeatmap(): Promise<void> {
   heatState.value = 'loading'
   try {
     const stats = await fetchUsageStats(HEATMAP_DAYS)
+    // 成本分组（B3）：model_usage → 分组样本（tokens=入+出+缓存读，与台账口径一致）。
+    threadUsage.value = buildThreadUsage(
+      (stats.model_usage ?? []).map((m) => ({
+        model: m.model,
+        tokens: (m.input_tokens || 0) + (m.output_tokens || 0) + (m.cache_read_tokens || 0),
+        day: '',
+        turns: m.sessions,
+      })),
+    )
     // 投影单一源（usage-ledger 接线，G7 #8）：事件→台账（空日补 0/streak 跳末尾 0/
     // 峰值日/累计），热力图 cells 与汇总行同源，不再各算一套。
     const ledger = buildUsageLedger(
@@ -332,6 +347,32 @@ watch(
         <span v-if="heatPeak">{{ t('ide.usagePanel.ledgerPeak', { day: heatPeak.day, tokens: formatTokens(heatPeak.tokens) }) }}</span>
         <span>{{ t('ide.usagePanel.ledgerTotal', { tokens: formatTokens(heatTotal) }) }}</span>
       </div>
+    </section>
+
+    <!-- 成本分组（吸收第一批 B3，codex ThreadUsage）：模型×档位分组记账 -->
+    <section v-if="threadUsage && threadUsage.groups.length" class="ide-metrics-panel__section">
+      <div class="ide-metrics-panel__section-head">
+        {{ t('ide.usagePanel.threadUsageTitle') }}
+        <span class="ide-metrics-panel__hint">{{ t('ide.usagePanel.threadUsageHint') }}</span>
+      </div>
+      <table class="ide-metrics-panel__rounds" data-testid="ide-metrics-thread-usage">
+        <thead>
+          <tr>
+            <th>{{ t('ide.usagePanel.threadColGroup') }}</th>
+            <th class="is-num">{{ t('ide.usagePanel.threadColTurns') }}</th>
+            <th class="is-num">{{ t('ide.usagePanel.threadColTokens') }}</th>
+            <th class="is-num">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="g in threadUsage.groups.slice(0, 8)" :key="g.key">
+            <td class="is-model" :title="g.key">{{ g.model }} · {{ g.effort }}</td>
+            <td class="is-num">{{ g.turns }}</td>
+            <td class="is-num">{{ formatTokens(g.tokens) }}</td>
+            <td class="is-num">{{ threadUsage.totalTokens > 0 ? ((g.tokens / threadUsage.totalTokens) * 100).toFixed(1) : '0' }}</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   </div>
 </template>

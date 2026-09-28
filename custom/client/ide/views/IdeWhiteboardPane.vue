@@ -5,16 +5,27 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
+import { useChatStore } from '@/stores/hermes/chat'
+import { roundTrip, validAnnotation, type BoardAnnotation } from '../../server/whiteboard/whiteboard-loop'
 
 const { t } = useI18n()
 const message = useMessage()
+const chatStore = useChatStore()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const tool = ref<'pen' | 'eraser'>('pen')
+const tool = ref<'pen' | 'eraser' | 'annotate'>('pen')
 const color = ref('#4cc9f0')
 const width = ref(3)
 const canUndo = ref(false)
 const canRedo = ref(false)
+
+// ── 标注模式（吸收第一批 C3，qoder 白板回路：圈选+注释→聚合回传 Agent）──
+// 标注=0-1 相对坐标矩形（whiteboard-loop 契约），重绘随画布缩放；回传=
+// roundTrip 聚合 feedback 文本注入当前会话。
+const annotations = ref<BoardAnnotation[]>([])
+let annotateStart: { x: number; y: number } | null = null
+let pendingAnnotate: BoardAnnotation | null = null
+let genSeq = 0
 
 /** 笔迹自带属性快照：撤销/重做/导出的重绘必须按落笔时的工具与颜色，
  *  而不是「当前」工具栏状态——否则换色后 undo/redo 会给历史笔迹统一改色，
@@ -40,6 +51,21 @@ function repaint(): void {
   if (!canvas || !ctx) return
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   for (const stroke of strokes.value) drawStroke(ctx, stroke)
+  // 标注框（C3）：虚线框+序号（相对坐标×画布尺寸）。
+  ctx.save()
+  ctx.strokeStyle = '#f0a020'
+  ctx.setLineDash([6, 4])
+  ctx.lineWidth = 2
+  ctx.globalCompositeOperation = 'source-over'
+  annotations.value.forEach((a, i) => {
+    ctx.strokeRect(a.region.x * canvas.width, a.region.y * canvas.height, a.region.w * canvas.width, a.region.h * canvas.height)
+    ctx.setLineDash([])
+    ctx.fillStyle = '#f0a020'
+    ctx.font = '12px sans-serif'
+    ctx.fillText(String(i + 1), a.region.x * canvas.width + 4, a.region.y * canvas.height + 14)
+    ctx.setLineDash([6, 4])
+  })
+  ctx.restore()
   canUndo.value = strokes.value.length > 0
   canRedo.value = redoStack.value.length > 0
 }
@@ -85,11 +111,22 @@ function pos(event: PointerEvent): { x: number; y: number } {
 function onDown(event: PointerEvent): void {
   drawing = true
   redoStack.value = []
+  // 标注模式：记相对坐标起点，不入笔迹栈。
+  if (tool.value === 'annotate') {
+    const canvas = canvasRef.value!
+    annotateStart = {
+      x: (event.clientX - canvas.getBoundingClientRect().left) / canvas.getBoundingClientRect().width,
+      y: (event.clientY - canvas.getBoundingClientRect().top) / canvas.getBoundingClientRect().height,
+    }
+    pendingAnnotate = null
+    return
+  }
   // 落笔即快照当前工具属性
   currentStroke = { points: [pos(event)], tool: tool.value, color: color.value, width: width.value }
 }
 
 function onMove(event: PointerEvent): void {
+  if (tool.value === 'annotate' && annotateStart) return  // 框在 onUp 落定（无拖影预览 v1）
   if (!drawing || !currentStroke) return
   currentStroke.points.push(pos(event))
   const ctx = ctx2d()
@@ -106,13 +143,46 @@ function onMove(event: PointerEvent): void {
   }
 }
 
-function onUp(): void {
+function onUp(event: PointerEvent): void {
   if (!drawing) return
   drawing = false
+  if (tool.value === 'annotate' && annotateStart) {
+    const canvas = canvasRef.value!
+    const rect = canvas.getBoundingClientRect()
+    const end = {
+      x: (event.clientX - rect.left) / rect.width,
+      y: (event.clientY - rect.top) / rect.height,
+    }
+    const region = {
+      x: Math.min(annotateStart.x, end.x),
+      y: Math.min(annotateStart.y, end.y),
+      w: Math.abs(end.x - annotateStart.x),
+      h: Math.abs(end.y - annotateStart.y),
+    }
+    annotateStart = null
+    const note = window.prompt('标注注释（回传给 Agent 的指令）') ?? ''
+    const cand: BoardAnnotation = { annotationId: `ann-${Date.now()}`, region, note, at: Date.now() }
+    if (validAnnotation(cand) && note.trim()) {
+      annotations.value = [...annotations.value, cand]
+      repaint()
+    }
+    return
+  }
   if (currentStroke) strokes.value = [...strokes.value, currentStroke]
   currentStroke = null
   canUndo.value = true
   canRedo.value = false
+}
+
+/** 回传 Agent（C3 白板回路）：标注聚合 → 当前会话消息。 */
+function sendAnnotationsToAgent(): void {
+  if (!annotations.value.length) {
+    message.warning('先在标注模式下圈选并注释')
+    return
+  }
+  const round = roundTrip({ genId: `board-${++genSeq}`, kind: 'freeform', at: Date.now() }, annotations.value)
+  void chatStore.sendMessage(round.feedback)
+  message.success(`已回传 ${annotations.value.length} 条标注到当前会话`)
 }
 
 function undo(): void {
@@ -131,6 +201,7 @@ function redo(): void {
 
 function clearAll(): void {
   strokes.value = []
+  annotations.value = []
   redoStack.value = []
   repaint()
 }
@@ -190,6 +261,8 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
     <div class="ide-board__toolbar">
       <button type="button" class="ide-board__btn" :class="{ 'is-active': tool === 'pen' }" :title="t('ide.whiteboard.pen')" data-testid="ide-board-pen" @click="tool = 'pen'">✏️</button>
       <button type="button" class="ide-board__btn" :class="{ 'is-active': tool === 'eraser' }" :title="t('ide.whiteboard.eraser')" data-testid="ide-board-eraser" @click="tool = 'eraser'">🧹</button>
+      <button type="button" class="ide-board__btn" :class="{ 'is-active': tool === 'annotate' }" title="标注模式：圈选+注释后回传 Agent" data-testid="ide-board-annotate" @click="tool = 'annotate'">⌗</button>
+      <button type="button" class="ide-board__btn ide-board__btn--primary" :disabled="!annotations.length" title="标注聚合回传当前会话" data-testid="ide-board-send-annotations" @click="sendAnnotationsToAgent">⇪ {{ annotations.length }}</button>
       <input v-model="color" type="color" class="ide-board__color" :title="t('ide.whiteboard.color')" data-testid="ide-board-color">
       <input v-model.number="width" type="range" min="1" max="12" class="ide-board__range" :title="t('ide.whiteboard.width')">
       <span class="ide-board__spacer" />

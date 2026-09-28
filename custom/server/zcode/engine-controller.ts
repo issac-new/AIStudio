@@ -457,6 +457,19 @@ router.get('/queue/:workspacePath', async (ctx) => {
   ctx.body = { ok: true, queue: queueView(ctx.params.workspacePath) }
 })
 
+router.get('/squad/roster', async (ctx) => {
+  // 名册树数据面（吸收第一批 B5，routa 名册树视图）：squads 定义（leader+members）。
+  // 登录校验同 /squad/evaluations；delegateCounts 由客户端从 subagentStreams 聚合。
+  const caller = callerOf(ctx)
+  if (!caller && (await isAuthEnabled())) {
+    ctx.status = 401
+    ctx.body = { ok: false, reason: 'invocation_not_allowed', detail: '未登录' }
+    return
+  }
+  const { loadSquads } = await import('../zcode/squad-protocol')
+  ctx.body = { ok: true, squads: loadSquads() }
+})
+
 router.get('/squad/evaluations', async (ctx) => {
   const caller = callerOf(ctx)
   // 登录校验（P-C(a)）：启用鉴权的部署，未登录（ctx.state.user 缺席）不得读台账；
