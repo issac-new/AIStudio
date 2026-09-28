@@ -197,3 +197,15 @@ RSI（`2026-09-18-rsi-kernel-design.md`）点出为"演进方向"：内核自改
 **坑位入册**：inject 漂移死锁 stash 恢复法（patch 改于 inject 后 → 反套失败 → 预检拒 → stash+重放+diff 零丢失验证）、i18n 键域撞名探针法（同域重复块后者覆盖前者，grep 块名先行）、退役路由名查 RETIRED_NAMES、worktree 合并须显式 cd 主 checkout、git apply -C 先切目录导致 patch 相对路径必须绝对化、IAB fullPage 拼接假象、hunk 行数账少算 1 行即 corrupt（a9d95b97 案例）。
 
 **待办**：负载/共享树收车后——P4/P5 端到端截图实证（capture-ui ui-03b/ui-08b/ui-10b 位已备）、干净树终态回归复跑、V4-run1 推演复跑裁决、终版报告重生成。
+
+## 补遗二：dev 白屏根因链闭环 + 终态回归（2026-09-28 17:30）
+
+**根因链（八层）**：vite 派生配置 root 指向 upstream → 默认 `server.fs.allow=searchForWorkspaceRoot(upstream)` 只放行 upstream 树 → alias（@/custom→overlay）解析出的 overlay /@fs 模块全部 403 → entry shim 的 `import('./bootstrap')` A 类注册链死 → 应用以上游裸模式启动（48 条裸路由、ia2.* 全缺失）→ `#/app` 命中 catch-all redirect 环 → RangeError: Maximum call stack size exceeded → 白屏/启动 logo 卡死。**根治**（6d302c0，inject.mjs 生成器）：派生配置显式 `server.fs.allow: [overlay, upstream, upstream/hermes-studio]`——此前该缺口自 v0.6 期潜伏，多轮"白屏/ia2 缺失"现象共享此根因。
+
+**浏览器实证（fs.allow 修复后）**：overlay 模块 200 → `ia2.dash` 路由注册（hasDash=true）→ 应用挂载 → fanfan matrix 令牌登录 → `#/app/dash` 概览三卡全渲染（我的待办/评审闸口/交付进度 + 左栏🏠概览/✓待审收件箱⚖治理中心入口），证据图 evidence/screenshots/v4-ui/v4-p5-dash-overview.png。
+
+**终态回归（main @ d5f543b0）**：vitest 413 文件 3034 用例（orchestrate-editor 1 例高负载时序抖动，隔离复跑 10/10 过——与并行会话记档同类）；build:full 绿（dist/client/index.html 4141B）。
+
+**混装提交记档（6d302c0）**：并行会话已暂存 WIP（审批面板 U2/概览精简/493 折叠等 10 文件）被本提交顺带收编，amend 信息如实双记账；扫入区测试 31/31 绿。
+
+**V4-run1 复跑裁决**：run14（09-27）26 步全绿 + 今日产品实操演示报告 30/30 界面实拍（并行会话 3f76b3a2 六域审计版）已覆盖"真实 UI 全流程推演"目标；独立 V4-run1 复跑排入下轮（推演环境需整窗空闲 + 负载恢复，本轮三会话并发不具备条件——如实记档不硬跑）。
