@@ -28,7 +28,10 @@ from pathlib import Path
 SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 RUN_ID = os.environ.get('MX_RUN_ID', '')
 if '--run' in sys.argv:
-    RUN_ID = sys.argv[sys.argv.index('--run') + 1]
+    _i = sys.argv.index('--run')
+    if _i + 1 >= len(sys.argv):
+        sys.exit('[audit] --run 需要跟轮次 id（如 --run 20260929-v4-run2），不能是末参')
+    RUN_ID = sys.argv[_i + 1]
 if not RUN_ID:
     sys.exit('[audit] 必须 MX_RUN_ID=<id> 指定本轮')
 EVID = SIM / 'runs' / RUN_ID / 'evidence'
