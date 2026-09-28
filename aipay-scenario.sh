@@ -21,27 +21,46 @@
 # 步骤序: smoke → ba → room → dispatch → register → analysis → triage → anexec
 #        → review → close → plan → devimpl → defect → testpass → release → templates → ide
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # M3 事件化：delivery.* 协议事件层（MX_DELIVERY=1 启用，缺省零行为变化；映射与
 # 断言见 docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
 source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
 
+# 单驱动锁（P0，2026-09-28）：双会话双开推演是实测最高频互踩源——共享 state.env/
+# 板库/房间双写互踩（本会话实录多轮）。mkdir 原子锁（macOS 无 flock；mkdir 在所有
+# 文件系统上原子）：锁不可得即大声拒绝，不静默并发。陈锁检测：info 里的 pid 已死则接管。
+DRIVER_LOCK="$SIM_ROOT/.driver.lock.d"
+if ! mkdir "$DRIVER_LOCK" 2>/dev/null; then
+  _lock_pid=$(sed -n 's/^pid=//p' "$DRIVER_LOCK/info" 2>/dev/null | head -1)
+  if [[ -n "$_lock_pid" ]] && ! kill -0 "$_lock_pid" 2>/dev/null; then
+    note "[单驱动锁] 检测陈锁（pid $_lock_pid 已死），接管"
+    rm -rf "$DRIVER_LOCK"; mkdir "$DRIVER_LOCK" 2>/dev/null \
+      || { echo "[mux FAIL] 锁接管竞争失败，另一驱动者刚接管——本轮退出" >&2; exit 3; }
+  else
+    echo "[mux FAIL $(date '+%H:%M:%S')] 推演单驱动锁被占（持锁者：$(cat "$DRIVER_LOCK/info" 2>/dev/null || echo unknown)）——拒绝双开；如确认无推演在跑：rm -rf $DRIVER_LOCK 后重试" >&2
+    exit 3
+  fi
+fi
+echo "pid=$$ start=$(date '+%F %T') host=$(hostname -s)" > "$DRIVER_LOCK/info"
+
 # 临时物清理（Z6）：ba 步 /tmp/mx-rfd-remote.$$ 与 ready 步 DL_WT 临时 worktree 中途
 # 退出会残留。重定义 mx_cleanup 扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按
 # 最新定义执行（bash 单 EXIT trap）；DL_WT 未建时为空跳过，worktree 用
-# git worktree remove --force 兜底。
+# git worktree remove --force 兜底。单驱动锁目录随退出一并移除（锁生命周期=脚本生命周期）。
 mx_cleanup() {
   # 清理面取三处定义的并集（mx-lib /tmp/mx-api.$$、mx-scenario-lib $STATE.tmp 与
   # $STATE.rfd.tmp——rfd_doc_snapshot 快照、注释声称随 mx_cleanup 清理、此处曾漏掉，
-  # 重定义须保留全部既有项），再加本脚本 ba 步 /tmp/mx-rfd-remote.$$ 与 DL_WT。
+  # 重定义须保留全部既有项），再加本脚本 ba 步 /tmp/mx-rfd-remote.$$、DL_WT 与驱动锁。
   rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp" "/tmp/mx-rfd-remote.$$"
+  rm -rf "$DRIVER_LOCK"
   if [[ -n "${DL_WT:-}" ]]; then
     git -C "$DIRECTOR_CLONE" worktree remove --force "$DL_WT" >/dev/null 2>&1 \
       || git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1
   fi
 }
+trap 'mx_cleanup' EXIT
 
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）====="
 # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷。
@@ -312,7 +331,11 @@ if step_reached analysis; then
          fail "步骤 10 未完成：${RFD_ID}-tasklist.md 未入仓，不得继续派发"; }
   # 产物到仓 ≠ 流程走完：还要 agent 自己交回可核验凭证（commit + 账号板卡）。
   # 两者任一造假或缺失，本轮按未完成处理，不带可疑前序进入分诊与派发。
-  if ! wait_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在账号板）" 600 \
+  # 续跑语义（P0，2026-09-28）：verify 有 done 键——断点重跑不再要求 agent 重报
+  # （run10 之死：已完成态被重验，agent 不重报即两窗超时中止）。首验秒过即落键。
+  if [[ -n "$(sget analysis_verified)" ]] && verify_done_evidence "${RFD_ID}"; then
+    note "[凭证] 续跑：${RFD_ID} 凭证已核验过且仍成立，跳过回灌"
+  elif ! wait_truth "${RFD_ID} 完成凭证反向核验（commit 真在 origin 且含分析稿、card 真在账号板）" 600 \
       verify_done_evidence "${RFD_ID}"; then
     # 与步骤 9 同款回灌：只中止不告知，等于把"凭证错了"变成人肉重跑（09-23 实锤：
     # agent 已建出真卡 t_4bee99f1 却没重报，房间里的 DONE 仍是旧的假卡号，被我方正确拒收，
@@ -326,6 +349,7 @@ if step_reached analysis; then
       || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 两轮拒收后凭证仍缺失或造假" >> "$EVID_DIR/issues.log"; \
            fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
   fi
+  sset analysis_verified 1
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
     wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 1200 bash -c \
