@@ -508,7 +508,14 @@ function main() {
         // untracked patch 产物），这些文件属于 patch 自身产出，不应阻塞 inject。
         if (!l.startsWith('??')) return true;
         const f = l.slice(3).trim();
-        return !patchFileSets().patchNewFiles.has(f);
+        if (patchFileSets().patchNewFiles.has(f)) return false;
+        // 目录形 ??（git status 对全 untracked 目录折叠输出 "dir/"，V4 轮实锤：
+        // 378 的 services/zcode/ 目录行不匹配文件级 patchNewFiles 致 inject 假死锁）——
+        // 该目录下任一 patch 新增文件命中即豁免。
+        if (f.endsWith('/')) {
+          for (const nf of patchFileSets().patchNewFiles) if (nf.startsWith(f)) return false;
+        }
+        return true;
       })
       // .loop/ 是 loop 工程运行态（graph-events.db 等由运行中的 server 持有句柄，
       // 非任何 patch 的产物）：app 在跑时每次 inject 都会出现，豁免之。
