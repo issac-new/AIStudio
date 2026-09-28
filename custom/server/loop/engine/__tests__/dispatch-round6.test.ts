@@ -3,6 +3,7 @@
 // loop-engine 人机分工门禁（in_review 待人审）/ ia2 reason 投影 / patch 352 漂移。
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { expectLocaleKeys } from '../../../../client/__tests__/helpers/locale-tree'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import {
@@ -113,20 +114,9 @@ describe('patch 352 漂移守卫', () => {
   // 从 custom/server/loop/engine/__tests__ 上溯到 overlay 根：../../../../..
   const overlayRoot = resolve(__dirname, '../../../../..')
 
-  it('352 双语含 ia2.dispatch 12 键；series/manifest 登记', () => {
-    const patch = readFileSync(resolve(overlayRoot, 'patches/352-client-i18n-ia2-dispatch-reason.patch'), 'utf8')
-    for (const key of ['runtime_offline', 'max_depth_exceeded', 'gate_pending_human', 'lease_conflict', 'board_concurrency_full']) {
-      expect(patch).toContain(key)
-    }
-    expect(patch).toContain('locales/zh.ts')
-    expect(patch).toContain('locales/en.ts')
-    const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
-    expect(series).toContain('352-client-i18n-ia2-dispatch-reason.patch')
-    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
-    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
-      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
-      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
-    expect(manifest.appliedPatches).toContain('352-client-i18n-ia2-dispatch-reason.patch')
+  it('352 双语含 ia2.dispatch 12 键（注入态词表直断）', () => {
+    // 2026-09-28 P0 收敛:locale 单一事实源化,漂移守卫改读注入态词表。
+    expectLocaleKeys('ia2.dispatch', ['runtime_offline', 'max_depth_exceeded', 'gate_pending_human', 'lease_conflict', 'board_concurrency_full'])
   })
 
   it('loop-engine 人机分工门禁存在（in_review 待人审 + gate_pending_human 事件）', () => {

@@ -2,8 +2,9 @@
 // IdeInlineDiff — inline diff 逐处接受/拒绝（复刻 claude-code inline diff accept/
 // reject/edit + codex-product 聚焦式 keep/undo；UI 复刻 S1）。
 // 形态：diff 行（+/-/context）逐 hunk 分组，每 hunk 头部 accept/reject 按钮；
-// accept→整 hunk 保留改动（resolved 态），reject→标记撤回（调 run-undo 反向语义）。
-import { computed, ref } from 'vue'
+// accept/reject 为本地 resolved 态标记 + emit 上抛（挂载处未接引擎写通道，run-undo
+// 反向撤销在 ideRunsApi.undo，由调用方按需接线），双击改行仅改本地展示文本。
+import { computed, ref, watch } from 'vue'
 
 interface DiffLine { kind: 'add' | 'del' | 'ctx'; text: string }
 interface Hunk { id: number; lines: DiffLine[]; decision: 'pending' | 'accepted' | 'rejected' }
@@ -32,6 +33,11 @@ function parseHunks(text: string): Hunk[] {
 }
 
 const hunks = ref<Hunk[]>(parseHunks(props.diffText ?? ''))
+// 真实链 diffText 异步后到（IdeChatPane 挂载后拉取 run patch）：prop 变化必须重解析，
+// 否则 hunks 恒为 setup 时的空数组，面板永不渲染。
+watch(() => props.diffText, (t) => {
+  hunks.value = parseHunks(t ?? '')
+})
 const stats = computed(() => ({
   adds: hunks.value.flatMap((h) => h.lines).filter((l) => l.kind === 'add').length,
   dels: hunks.value.flatMap((h) => h.lines).filter((l) => l.kind === 'del').length,

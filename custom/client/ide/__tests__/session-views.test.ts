@@ -4,6 +4,7 @@
 // （工作空间强制 project 分桶）/ patch 347 漂移守卫。
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
+import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import { bucketSessions, isActiveSession, ACTIVE_WINDOW_MS } from '../utils/sessionBuckets'
@@ -67,20 +68,10 @@ describe('isActiveSession / bucketSessions 分桶口径', () => {
 describe('patch 347 漂移守卫', () => {
   const overlayRoot = resolve(__dirname, '../../../..')
 
-  it('347 双语含 view 三键 + views；series/manifest 登记', () => {
-    const patch = readFileSync(resolve(overlayRoot, 'patches/347-client-i18n-ide-session-views.patch'), 'utf8')
-    for (const key of ['view_active', 'view_done', 'view_workspace', 'views']) {
-      expect(patch).toContain(key)
-    }
-    expect(patch).toContain('locales/zh.ts')
-    expect(patch).toContain('locales/en.ts')
-    const series = readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8')
-    expect(series).toContain('347-client-i18n-ide-session-views.patch')
-    // 未注入检出（worktree/CI）回落 series 登记：守卫语义=补丁已登记进 overlay 补丁集
-    const manifest = existsSync(resolve(overlayRoot, '.overlay-injected.json'))
-      ? JSON.parse(readFileSync(resolve(overlayRoot, '.overlay-injected.json'), 'utf8'))
-      : { appliedPatches: readFileSync(resolve(overlayRoot, 'patches/series'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) }
-    expect(manifest.appliedPatches).toContain('347-client-i18n-ide-session-views.patch')
+  it('347 双语含 view 三键 + views（注入态词表直断）', () => {
+    // 2026-09-28 P0 收敛:locale 单一事实源化(473 全量重基线),漂移守卫
+    // 从"读 patch 文件"改为"读注入态词表"——直接验证运行时状态,语义更强。
+    expectLocaleKeys('ide.task', ['view_active', 'view_done', 'view_workspace', 'views'])
   })
 
   it('侧栏接线存在：bucketSessions 调用 + 三段 chip + 工作空间强制 project', () => {

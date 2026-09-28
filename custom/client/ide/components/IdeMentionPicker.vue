@@ -35,12 +35,11 @@ function unstage(index: number): void {
   staged.value = staged.value.filter((_, i) => i !== index)
 }
 
-/** 发送：引用 chips 前缀 + 草稿正文（一次投递）。 */
+/** 发送：引用 chips 前缀 + 草稿正文（一次投递）。解析态由 preview 行实时呈现。 */
 function send(): void {
   const prefix = staged.value.map((s) => s.raw).join(' ')
   const text = prefix ? `${prefix} ${draft.value}`.trim() : draft.value.trim()
   if (!text) return
-  const refs = resolveMentions(text)
   void chatStore.sendMessage?.(text)
   staged.value = []
   draft.value = ''

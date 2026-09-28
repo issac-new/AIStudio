@@ -64,43 +64,6 @@ index 26aafbf..8b41c03 100644
      phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message'
      guarantee: 'strict' | 'immediate'
      requested_at: number
-diff --git a/packages/client/src/components/hermes/chat/ChatPanel.vue b/packages/client/src/components/hermes/chat/ChatPanel.vue
-index 45786cc..f5214e1 100644
---- a/packages/client/src/components/hermes/chat/ChatPanel.vue
-+++ b/packages/client/src/components/hermes/chat/ChatPanel.vue
-@@ -1010,6 +1010,7 @@ const newChatAgentOptions = computed(() => [
-   { label: "Pi", value: "pi" },
-   { label: "Grok", value: "grok" },
-   { label: "OpenCode", value: "opencode" },
-+  { label: "MiMo Code", value: "mimo" },
-   { label: "DeepSeek Harness", value: "dsh" },
- ]);
- 
-@@ -1127,7 +1128,7 @@ const selectedNewChatProviderGroup = computed(() =>
- );
- 
- const isNewChatCodingAgent = computed(() => newChatAgent.value !== "hermes");
--const isNewChatExternalCodingAgent = computed(() => newChatAgent.value === "claude-code" || newChatAgent.value === "codex" || newChatAgent.value === "pi" || newChatAgent.value === "grok" || (newChatAgent.value === "opencode" || newChatAgent.value === "dsh"));
-+const isNewChatExternalCodingAgent = computed(() => newChatAgent.value === "claude-code" || newChatAgent.value === "codex" || newChatAgent.value === "pi" || newChatAgent.value === "grok" || (newChatAgent.value === "opencode" || newChatAgent.value === "mimo" || newChatAgent.value === "dsh"));
- const effectiveNewChatAgentMode = computed(() =>
-   effectiveNewChatMode(newChatAgent.value, newChatAgentMode.value),
- );
-@@ -1373,6 +1374,7 @@ async function confirmNewChat() {
-         ? "grok"
-       : newChatAgent.value === "dsh" ? "dsh" : newChatAgent.value === "opencode"
-         ? "opencode"
-+      : newChatAgent.value === "mimo" ? "mimo"
-       : newChatAgent.value === "ekko-agent"
-         ? "ekko-agent"
-       : "hermes";
-@@ -2131,6 +2133,7 @@ const sessionModelCodingAgentId = computed<ChatCodingAgentId | undefined>(() =>
-         ? "grok"
-       : sessionModelSession.value?.agent === "dsh" ? "dsh" : sessionModelSession.value?.agent === "opencode"
-         ? "opencode"
-+      : sessionModelSession.value?.agent === "mimo" ? "mimo"
-       : sessionModelSession.value?.agent === "ekko-agent"
-         ? "ekko-agent"
-         : undefined),
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 index 74a5ff0..45f5165 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
@@ -113,20 +76,6 @@ index 74a5ff0..45f5165 100644
      { name: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
  ]
  const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
-diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 069b179..3bd66e0 100644
---- a/packages/client/src/stores/hermes/chat.ts
-+++ b/packages/client/src/stores/hermes/chat.ts
-@@ -3617,6 +3617,9 @@ export const useChatStore = defineStore('chat', () => {
-     if (codingAgentId === 'opencode') {
-       return { icon: '/coding-agents/opencode.png' }
-     }
-+    if (codingAgentId === 'mimo') {
-+      return { icon: '/coding-agents/mimo.svg' }
-+    }
-     if (codingAgentId === 'ekko-agent') {
-       return { icon: '/coding-agents/ekko-agent.png' }
-     }
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
 index d095015..7b8e19d 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts

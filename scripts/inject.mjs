@@ -85,6 +85,9 @@ export const HERMES_AGENT_PATCH_PREFIXES = [
   'gateway/', 'tests/gateway/', 'tests/hermes_cli/',
   'optional-mcps/', 'optional-skills/',
   'tools/', 'tests/tools/', 'tests/agent/',
+  // hermes-agent 仓库根层的 hermes_state_*.py 族(patch 485 起):studio 无此文件,
+  // 误路由 studio 会因 "No such file" 硬失败阻断整个 inject。
+  'hermes_state',
 ];
 
 /** patch 目标路径(---/+++ 后的首段)是否路由到 hermes-agent。 */
