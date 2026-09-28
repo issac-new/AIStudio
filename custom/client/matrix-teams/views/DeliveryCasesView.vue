@@ -7,11 +7,9 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton, NCard, NEmpty, NSpin, NTag } from 'naive-ui'
-import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useDeliveryCasesStore, type DeliveryCaseView, type GateLight } from '../stores/delivery-cases'
 
 const store = useDeliveryCasesStore()
-const matrixStore = useMatrixClientStore()
 const router = useRouter()
 const loading = ref(false)
 const drawer = ref<GateLight | null>(null)
@@ -41,14 +39,13 @@ async function submitCase() {
   }
 }
 
-// 实时刷新（P1）：监听已知案例房的 timeline 事件（协议事件落房即刷），30s 兜底轮询
+// 实时刷新（P1 升级）：事件驱动已下沉 store（Room.timeline 协议事件 500ms 去抖，
+// review-center 同款模式）；视图只保留 60s 兜底轮询（防 index 房未入 getRooms 的边缘态）。
 let pollTimer: ReturnType<typeof setInterval> | null = null
-function wireLiveRefresh() {
-  const client = matrixStore.client as { on?: (ev: string, fn: () => void) => void } | null
-  // 事件驱动的精确刷新需要逐房 timeline 监听；成本与复杂度高，MVP 用轻轮询兜底
-  pollTimer = setInterval(() => { void store.refresh() }, 30_000)
-}
-onMounted(() => { void reload(); wireLiveRefresh() })
+onMounted(() => {
+  void reload()
+  pollTimer = setInterval(() => { void store.refresh() }, 60_000)
+})
 onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer) })
 
 function gateColor(gate: string, c: DeliveryCaseView): string {
