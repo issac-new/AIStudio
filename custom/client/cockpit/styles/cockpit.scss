@@ -10,6 +10,13 @@
   --radius-standard: 6px; // 按钮、卡片、输入框
   --radius-large: 12px;   // 模态、大面板
   --radius-pill: 999px;   // 胶囊、圆形头像
+
+  // naive-ui 遗留变量名兜底：overlay 组件散用 var(--color-primary/--primary-color, <彩色>)，
+  // 两变量运行时从未定义，彩色 fallback（蓝 #3b82f6 / 绿 #18a058）逃逸出 Pure Ink
+  // （实测：Run Center CTA 蓝、IDE 发送薄荷绿、场景条激活态蓝）。令牌层统一别名为
+  // 墨色 accent，所有散落 fallback 收敛；组件局部定义的同名变量不受影响。
+  --color-primary: var(--accent-primary);
+  --primary-color: var(--accent-primary);
 }
 
 .cockpit {
