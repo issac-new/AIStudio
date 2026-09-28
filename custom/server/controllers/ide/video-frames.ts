@@ -34,3 +34,24 @@ router.post('/video-frames', async (ctx) => {
 })
 
 export default router
+
+
+// PUT /api/ide/engine-models 在真进程 404（学理未解，见 native-routes.ts 头注）——
+// 提供等价 POST 变体（POST 面实证稳定）：body 同 PUT，行为=校验+落盘+引擎写穿。
+router.post('/engine-models-put', async (ctx) => {
+  const { validateEngineModelConfig } = await import('../../enginemodels/engine-model-config')
+  const body = (ctx.request as { body?: Record<string, unknown> }).body ?? {}
+  const config = {
+    providers: Array.isArray(body.providers) ? (body.providers as never[]) : [],
+    defaultModel: (body.defaultModel as never) ?? null,
+  } as never
+  const validation = validateEngineModelConfig(config)
+  if (!validation.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: validation.problems }
+    return
+  }
+  const { writeThroughToEngine } = await import('./engine-models')
+  const passthrough = writeThroughToEngine(config)
+  ctx.body = { ok: true, config, enginePassthrough: passthrough }
+})

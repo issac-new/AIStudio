@@ -248,3 +248,6 @@
 #      不生效——独立文件模式实证有效）+挂载；compaction/run-undo db 路径多候选修复
 #      （serve 子进程 cwd=hermes-studio 根为最可靠锚）。
 488-server-video-frames-route.patch
+# 489（404 缺陷修复）：IDE 两端点原生中间件直挂（PUT engine-models/POST video-frames
+#      ——绕开 koa-router 注册面，404 怪象根治性 workaround）。
+489-server-native-ide-routes.patch
