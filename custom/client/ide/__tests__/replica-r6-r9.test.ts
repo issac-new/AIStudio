@@ -8,6 +8,9 @@ const chatState: Record<string, unknown> = {
   activeSessionId: 's1', activeSession: null, sendMessage: vi.fn(), isLoading: false,
 }
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => chatState }))
+// A6：IdeQueuePanel 新增 ide store（workspace 取自治队列）与 fetch（queue 端点）依赖
+vi.mock('../store/ide', () => ({ useIdeStore: () => ({ workspace: null }) }))
+vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, queue: [] }) })))
 
 describe('R6 Task Groups 真实链（taskPlan 映射）', () => {
   it('会话 taskPlan 快照→组+步骤映射（completed=✓/pending=未执行徽标）', async () => {
