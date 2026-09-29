@@ -6,17 +6,28 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTaskDispatchStore } from '../stores/task-dispatch'
 import { useTeamRegistryStore } from '../stores/team-registry'
+import { admissionMessages } from '../i18n-admission'
 
-const { t } = useI18n()
+const i18n = useI18n()
+const { t } = i18n
 const dispatch = useTaskDispatchStore()
 const registry = useTeamRegistryStore()
+const A = computed(() => {
+  const loc = String((i18n as { locale?: { value?: string } }).locale?.value ?? 'zh')
+  return loc.startsWith('zh') ? admissionMessages.zh : admissionMessages.en
+})
 
 const title = ref('')
 const body = ref('')
 const targetAccount = ref('')
 const targetProfile = ref('')
-const accounts = computed(() => registry.accounts.map(a => ({ userId: a.userId, label: a.displayName, profiles: a.agentTeams.flatMap(tm => tm.profiles) })))
+const accounts = computed(() => registry.accounts.map(a => ({ userId: a.userId, label: a.displayName, admissionOk: a.admissionOk, profiles: a.agentTeams.flatMap(tm => tm.profiles) })))
 const profileOptions = computed(() => accounts.value.find(a => a.userId === targetAccount.value)?.profiles ?? [])
+/** 派发侧告警（4A 治理层 ⑤）：目标账号未过五问即显式提醒（非阻断，答卷补齐后再派是建议路径）。 */
+const targetNotAdmitted = computed(() => {
+  const a = accounts.value.find(x => x.userId === targetAccount.value)
+  return a ? !a.admissionOk : false
+})
 
 async function send(): Promise<void> {
   if (!title.value.trim() || !targetAccount.value) return
@@ -48,8 +59,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       <select v-model="targetAccount" class="dl__select" data-testid="dispatch-target-select"
         :aria-label="t('teams.dispatch.target')">
         <option value="">{{ t('teams.dispatch.target') }}</option>
-        <option v-for="a in accounts" :key="a.userId" :value="a.userId">{{ a.label }}（{{ a.userId }}）</option>
+        <option v-for="a in accounts" :key="a.userId" :value="a.userId">{{ a.label }}（{{ a.userId }}）{{ a.admissionOk ? '' : ' ⚠' }}</option>
       </select>
+      <div v-if="targetNotAdmitted" class="dl__admit-warn" data-testid="dispatch-admission-warn">{{ A.dispatchWarn }}</div>
       <select v-model="targetProfile" class="dl__select" data-testid="dispatch-profile-select"
         :aria-label="t('teams.dispatch.profile')" :disabled="!targetAccount">
         <option value="">{{ t('teams.dispatch.profile') }}</option>
@@ -88,4 +100,5 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .dl__status--done { border-color: var(--color-success, #22c55e); color: var(--color-success, #22c55e); }
 .dl__status--failed { border-color: var(--color-danger, #e11d48); color: var(--color-danger, #e11d48); }
 .dl__status--running { border-color: var(--color-primary, #3b82f6); color: var(--color-primary, #3b82f6); }
+.dl__admit-warn { grid-column: 1 / -1; font-size: 11px; color: #b45309; background: #fef3c7; border-radius: var(--radius-standard); padding: 3px 8px; }
 </style>

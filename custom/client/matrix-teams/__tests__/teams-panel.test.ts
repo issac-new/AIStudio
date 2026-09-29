@@ -125,7 +125,7 @@ describe('已配置注册房间', () => {
   beforeEach(() => {
     registryState.registryRoomId.value = '!reg:sv'
     registryState.accounts.value = [
-      { userId: '@alice:sv', displayName: 'alice', agentTeams: [{ slug: 'dev', name: 'Dev', profiles: ['alice'], defaultProfile: 'alice' }], isLeader: false, declared: true },
+      { userId: '@alice:sv', displayName: 'alice', agentTeams: [{ slug: 'dev', name: 'Dev', profiles: ['alice'], defaultProfile: 'alice' }], isLeader: false, declared: true, admissionOk: true },
       { userId: '@bob:sv', displayName: 'bob', agentTeams: [], isLeader: true, declared: true },
     ]
     registryState.leaders.value = ['@bob:sv']
@@ -152,7 +152,7 @@ describe('已配置注册房间', () => {
   it('编辑器同名两行 → save 出的 slug 去重（第二名加序号后缀）', async () => {
     registryState.writeSelfAccount.mockClear()
     registryState.accounts.value = [
-      { userId: '@alice:sv', displayName: 'alice', isLeader: false, declared: true, agentTeams: [
+      { userId: '@alice:sv', displayName: 'alice', isLeader: false, declared: true, admissionOk: true, agentTeams: [
         { slug: 'dev', name: 'Dev', profiles: ['alice'], defaultProfile: 'alice' },
         { slug: 'ops', name: 'Dev', profiles: ['alice-2'], defaultProfile: 'alice-2' },
       ] },

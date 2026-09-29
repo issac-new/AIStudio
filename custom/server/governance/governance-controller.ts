@@ -23,7 +23,7 @@ import { resolve } from 'path'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
-import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats } from './governance-ledger'
+import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts } from './governance-ledger'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary } from './governance-analytics'
 import { auditLog } from './governance-audit'
 
@@ -237,6 +237,16 @@ router.get('/audit-log', async (ctx) => {
   const limit = Number(ctx.query.limit) || 200
   const result = await auditLog({ sources, q, limit })
   ctx.body = result
+})
+
+router.get('/contracts', async (ctx) => {
+  const res = loadActionContracts()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'action-contracts.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
 })
 
 export const governanceRoutes = router

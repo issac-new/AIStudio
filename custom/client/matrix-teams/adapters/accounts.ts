@@ -1,8 +1,8 @@
 // overlay/custom/client/matrix-teams/adapters/accounts.ts
 // 账号树纯函数投影：视图不自算（先例 ia2/adapters/manage.ts）。
 import {
-  TEAM_EVENT_TYPES, parseAccountContent, agentTeamGlobalId,
-  type AgentTeam, type DutyContent,
+  TEAM_EVENT_TYPES, parseAccountContent, agentTeamGlobalId, admissionComplete,
+  type AgentTeam, type DutyContent, type AdmissionAnswers,
 } from '../protocol'
 
 export interface RawStateEvent {
@@ -18,6 +18,9 @@ export interface TeamAccountView {
   agentTeams: AgentTeam[]
   isLeader: boolean
   declared: true
+  /** 准入五问答卷（全过）原文；未过/缺失为 undefined，admissionOk=false 由读端显式标记。 */
+  admission?: AdmissionAnswers
+  admissionOk: boolean
 }
 
 export function projectAccounts(events: RawStateEvent[], leaders: string[]): TeamAccountView[] {
@@ -33,6 +36,8 @@ export function projectAccounts(events: RawStateEvent[], leaders: string[]): Tea
       agentTeams: parsed.agentTeams,
       isLeader: leaders.includes(ev.stateKey),
       declared: true,
+      admission: parsed.admission,
+      admissionOk: admissionComplete(parsed.admission),
     })
   }
   return [...byUser.values()].sort((a, b) => a.userId.localeCompare(b.userId))
