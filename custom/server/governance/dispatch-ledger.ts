@@ -85,11 +85,3 @@ export function readDispatchLedger(limit = 2000): DispatchLedgerEntry[] {
     return []
   }
 }
-
-/** 供测试清账。 */
-export function resetDispatchLedgerForTests(): void {
-  const file = dispatchLedgerPath()
-  try {
-    if (existsSync(file)) writeFileSync(file, '')
-  } catch { /* 忽略 */ }
-}
