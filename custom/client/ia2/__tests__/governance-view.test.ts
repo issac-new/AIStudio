@@ -61,6 +61,22 @@ vi.mock('@/custom/governance/api/governance', () => ({
     events: [{ ts: 1790000000000, source: 'approvals', actor: 'admin', action: 'review:approve', target: '评审 X', result: 'approve' }],
   })),
 }))
+// 变更治理区（2026-09-29 调研落地轮挂进 GovernanceView）——mock 须全量，
+// 缺导出即 vitest unhandled rejection（同 LedgerSection 先例）
+vi.mock('@/custom/governance/api/changeGov', () => ({
+  fetchChangeGovMeta: vi.fn(async () => ({ ok: true, levels: [], dimensions: [], baselines: {}, freezeTiers: [] })),
+  fetchChangeMetrics: vi.fn(async () => ({ ok: true, month: '2026-09', submittedInMonth: 0, metrics: [] })),
+  fetchChangeRequests: vi.fn(async () => ({ ok: true, items: [], levels: [] })),
+  fetchFreezeWindows: vi.fn(async () => ({ ok: true, items: [] })),
+  createChangeRequest: vi.fn(async () => ({ ok: true })),
+  updateChangeRequest: vi.fn(async () => ({ ok: true })),
+  submitChangeRequest: vi.fn(async () => ({ ok: true })),
+  resubmitChangeRequest: vi.fn(async () => ({ ok: true })),
+  decideChangeRequest: vi.fn(async () => ({ ok: true })),
+  implementChangeRequest: vi.fn(async () => ({ ok: true })),
+  createFreezeWindow: vi.fn(async () => ({ ok: true })),
+  setFreezeWindowActive: vi.fn(async () => ({ ok: true })),
+}))
 vi.mock('@/custom/cockpit/api/approvals', () => ({
   fetchPendingApprovals: vi.fn(),
   decideApproval: vi.fn(),

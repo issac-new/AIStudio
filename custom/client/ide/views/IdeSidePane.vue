@@ -10,6 +10,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
+import { CAPABILITY_TABS, loadCapabilityPack, packAllows, saveCapabilityPack } from '../utils/capabilityPack'
 import IdeFilesPane from './IdeFilesPane.vue'
 import IdeGitPane from './IdeGitPane.vue'
 import IdeWikiPane from './IdeWikiPane.vue'
@@ -22,6 +23,7 @@ import IdeToolsPane from './IdeToolsPane.vue'
 import IdeWorkflowPane from './IdeWorkflowPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeHooksPane from './IdeHooksPane.vue'
+import IdeAutomationsPane from './IdeAutomationsPane.vue'
 import IdeSlashCommandsPane from './IdeSlashCommandsPane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
 import {
@@ -52,7 +54,60 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'terminal', icon: '⌨' },
   { key: 'hooks', icon: '⚓' },
   { key: 'slash', icon: '/' },
+  { key: 'automations', icon: '⚡' },
 ]
+
+// ── B1 项目能力包：工作区级页签 allow-list（null=全量默认）──
+const capabilityPack = ref<IdeSidePaneTab[] | null>(null)
+const packEditing = ref(false)
+const packDraft = ref<IdeSidePaneTab[]>([])
+
+watch(
+  () => ide.workspace,
+  (ws) => { capabilityPack.value = loadCapabilityPack(ws ?? '') },
+  { immediate: true },
+)
+
+/** 能力包过滤后的可见页签（选择器始终列全量词表，新页签可发现）。 */
+const visibleTabs = computed(() =>
+  capabilityPack.value === null ? TABS : TABS.filter((t) => capabilityPack.value!.includes(t.key)))
+
+// 当前页签被能力包裁掉 → 落回 files（files 不在包内则取首个可见页签）
+watch([capabilityPack, () => ide.sidePane.tab], () => {
+  if (!packAllows(capabilityPack.value, ide.sidePane.tab)) {
+    const fallback = packAllows(capabilityPack.value, 'files')
+      ? 'files'
+      : (visibleTabs.value[0]?.key ?? 'files')
+    if (fallback !== ide.sidePane.tab) ide.setSidePaneTab(fallback)
+  }
+})
+
+function openPackEditor(): void {
+  packDraft.value = capabilityPack.value === null ? [...CAPABILITY_TABS] : [...capabilityPack.value]
+  packEditing.value = !packEditing.value
+}
+
+function toggleDraftTab(tab: IdeSidePaneTab): void {
+  const idx = packDraft.value.indexOf(tab)
+  if (idx >= 0) {
+    // 至少保留一个（全隐会让侧栏失去落点）
+    if (packDraft.value.length > 1) packDraft.value.splice(idx, 1)
+  } else {
+    packDraft.value.push(tab)
+  }
+}
+
+function savePack(): void {
+  saveCapabilityPack(ide.workspace ?? '', packDraft.value)
+  capabilityPack.value = loadCapabilityPack(ide.workspace ?? '')
+  packEditing.value = false
+}
+
+function resetPack(): void {
+  saveCapabilityPack(ide.workspace ?? '', [])
+  capabilityPack.value = null
+  packEditing.value = false
+}
 
 // R4 终端 actions（工作区级；MVP localStorage，团队共享归 R5+）
 const termActions = ref<TerminalAction[]>([])
@@ -117,7 +172,7 @@ function focusMainChat(): void {
   <aside v-if="ide.sidePane.open" class="ide-sidepane" :class="{ 'is-max': ide.layout.sidepane.maximized }" :style="paneStyle" data-testid="ide-sidepane">
     <div class="ide-sidepane__tabs" role="tablist" :aria-label="t('ide.sidePane.togglePanel')">
       <button
-        v-for="tab in TABS"
+        v-for="tab in visibleTabs"
         :key="tab.key"
         type="button"
         role="tab"
@@ -130,6 +185,13 @@ function focusMainChat(): void {
       >
         <span class="ide-sidepane__tab-icon" aria-hidden="true">{{ tab.icon }}</span>
       </button>
+      <button
+        type="button"
+        class="ide-sidepane__tab"
+        data-testid="ide-sidepane-pack"
+        :title="capabilityPack === null ? '项目能力包（当前：全量）' : `项目能力包（当前：${capabilityPack.length} 项）`"
+        @click="openPackEditor"
+      >☰</button>
       <button
         type="button"
         class="ide-sidepane__tab ide-sidepane__tab--add"
@@ -154,6 +216,24 @@ function focusMainChat(): void {
         :aria-label="t('ide.sidePane.collapse')"
         @click="ide.sidePane.open = false"
       >✕</button>
+    </div>
+
+    <div v-if="packEditing" class="ide-sidepane__pack" data-testid="ide-sidepane-pack-editor">
+      <div class="ide-sidepane__pack-title">能力包：声明本工作区需要的页签</div>
+      <div class="ide-sidepane__pack-list">
+        <label v-for="tab in CAPABILITY_TABS" :key="tab" class="ide-sidepane__pack-item">
+          <input
+            type="checkbox"
+            :checked="packDraft.includes(tab)"
+            :data-testid="`ide-pack-check-${tab}`"
+            @change="toggleDraftTab(tab)"
+          >{{ t(`ide.sidePane.tab_${tab}`) }}
+        </label>
+      </div>
+      <div class="ide-sidepane__pack-actions">
+        <button type="button" class="ide-sidepane__pack-btn" data-testid="ide-pack-save" @click="savePack">保存</button>
+        <button type="button" class="ide-sidepane__pack-btn" data-testid="ide-pack-reset" @click="resetPack">恢复全量默认</button>
+      </div>
     </div>
 
     <div class="ide-sidepane__body">
@@ -216,6 +296,7 @@ function focusMainChat(): void {
       </template>
       <IdeHooksPane v-else-if="ide.sidePane.tab === 'hooks'" class="ide-sidepane__fill" data-testid="ide-sidepane-hooks" />
       <IdeSlashCommandsPane v-else-if="ide.sidePane.tab === 'slash'" class="ide-sidepane__fill" data-testid="ide-sidepane-slash" />
+      <IdeAutomationsPane v-else-if="ide.sidePane.tab === 'automations'" class="ide-sidepane__fill" data-testid="ide-sidepane-automations" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">
@@ -443,4 +524,23 @@ function focusMainChat(): void {
     color: var(--accent-primary, #4cc9f0);
   }
 }
+
+.ide-sidepane__pack {
+  border-bottom: 1px solid var(--border-color, #eee); padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ide-sidepane__pack-title { font-size: 11px; font-weight: 600; color: var(--text-color-2, #555); }
+.ide-sidepane__pack-list {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; max-height: 140px; overflow-y: auto;
+}
+.ide-sidepane__pack-item {
+  display: inline-flex; gap: 4px; align-items: center; font-size: 11px;
+  color: var(--text-color-2, #555); cursor: pointer;
+}
+.ide-sidepane__pack-actions { display: flex; gap: 8px; }
+.ide-sidepane__pack-btn {
+  border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px;
+  font-size: 11px; padding: 2px 10px; cursor: pointer; color: var(--text-color-2, #555);
+}
+.ide-sidepane__pack-btn:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 </style>

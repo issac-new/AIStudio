@@ -18,8 +18,9 @@ const featuresState = vi.hoisted(() => ({
 vi.mock('../../../../config/features', () => ({ features: featuresState }))
 
 const routerStubs = vi.hoisted(() => ({ addRoute: vi.fn() }))
-// mock 面与 bootstrap 的导入符同源（'@/router'）：相对路径写法只在主树布局下与
-// alias 解析合流；OVERLAY_UPSTREAM_ROOT 钉私有注入树时两者分叉，mock 打空（2026-09-29 实锤）。
+vi.mock('../../../../../upstream/hermes-studio/packages/client/src/router', () => ({ default: routerStubs }))
+// OVERLAY_UPSTREAM_ROOT 隔离树模式下 @ 别名与相对路径解析成两个模块 ID——
+// 双 mock 覆盖（对默认共享树模式无副作用）。
 vi.mock('@/router', () => ({ default: routerStubs }))
 
 const ia2Stubs = vi.hoisted(() => ({
