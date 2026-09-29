@@ -389,11 +389,11 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(r2.currentRoute.value.name).toBe('ia2.runs')
   })
 
-  it('＋新循环 → /app/eng；⚙管理 → flow.govOpen', async () => {
+  it('＋新循环 → /app/runs（S5：/app/eng 工程页退役）；⚙管理 → flow.govOpen', async () => {
     const { wrapper, router } = await mountAt('/app')
     await wrapper.find('[data-testid="flow-new-loop"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.eng')
+    expect(router.currentRoute.value.name).toBe('ia2.runs')
     const { wrapper: w2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
     expect(useFlowStore().govOpen).toBe(true)

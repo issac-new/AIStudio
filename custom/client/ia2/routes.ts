@@ -58,6 +58,8 @@ export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
   // M6（补遗⑤）：/app/l 循环画布退役 → 运行中心（画布能力在 /app/runs/:runId 详情）
   { from: '/app/l/:loopId', to: '/app/runs' },
   { from: '/app/l', to: '/app/runs' },
+  // S5（补遗⑤）：/app/eng 工程页退役 → 运行中心（交付案例 /app/cases 保留）
+  { from: '/app/eng', to: '/app/runs' },
 ]
 
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */
@@ -166,12 +168,9 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           name: 'ia2.accounts',
           component: () => import('./views/AccountAdminView.vue'),
         },
-        {
-          // 编排（工程）：＋新循环入口
-          path: 'eng',
-          name: 'ia2.eng',
-          component: () => import('./views/scenes/EngScene.vue'),
-        },
+        // S5（补遗⑤）：/app/eng 工程页退役（OrchestrateView/TeamsManagePanel 组件
+        // 保留于 views/scenes/EngScene.vue 引用链外；循环由脚本建、团队由脚本装配、
+        // 组织走治理中心 OrgEditor）——旧深链经 IA_LEGACY_REDIRECTS 落运行中心。
         {
           // 交付案例（M2：delivery 协议事件投影，工程场景 tab 的深链直达）
           path: 'cases',

@@ -18,6 +18,27 @@ export interface FeatureConfig {
   /** IDE 工作台主页面（/ide）：codex 底座 + zcode 会话 UI 全量复用，
    *  登录落点由 patch 276/277 指向 /ide（2026-09-16 用户裁决）。 */
   ide: boolean;
+  /** S3（补遗⑤ §13.4，B 档默认关）：语音对话（RealtimeVoiceStage 挂载 +
+   *  设置语音区 stt/tts tab）。VITE_CUSTOM_VOICE=true 再开。组件与 API 全保留。 */
+  voice: boolean;
+  /** S3：桌面宠物三件（desktop.pet 路由 + WebPet 浮层 + petdex 商店入口）。
+   *  VITE_CUSTOM_PET=true 再开。 */
+  pet: boolean;
+  /** S3：connections 的社媒 app tab + ESP32 mcu tab。
+   *  VITE_CUSTOM_CONNECTIONS_EXTRAS=true 再开。 */
+  connectionsExtras: boolean;
+  /** S3：图像生成辅助模型面板（ModelsView auxiliary tab）。
+   *  VITE_CUSTOM_IMAGE_ASSIST=true 再开。 */
+  imageAssist: boolean;
+  /** S3：ekko 四页（memory/skills/mcp/settings，superadmin 运维面）。
+   *  VITE_CUSTOM_EKKO=true 再开。 */
+  ekko: boolean;
+  /** S3：/studio/agents 配置中心（hermes.agentManager + codingAgent.config）。
+   *  VITE_CUSTOM_AGENT_MANAGER=true 再开。 */
+  agentManager: boolean;
+  /** S3：三个外链页路由（/share/group-chat、/group-chat-link、/desktop-chat）。
+   *  VITE_CUSTOM_EXTERNAL_LINKS=true 再开。 */
+  externalLinks: boolean;
 }
 
 export const features: FeatureConfig = {
@@ -29,6 +50,14 @@ export const features: FeatureConfig = {
   extendedI18n: import.meta.env.VITE_CUSTOM_EXTENDED_I18N !== 'false',
   cockpit: import.meta.env.VITE_CUSTOM_COCKPIT !== 'false',
   ide: import.meta.env.VITE_CUSTOM_IDE !== 'false',
+  // S3（补遗⑤）：未用大块功能面默认关——显式环境变量再开（=== 'true'）
+  voice: import.meta.env.VITE_CUSTOM_VOICE === 'true',
+  pet: import.meta.env.VITE_CUSTOM_PET === 'true',
+  connectionsExtras: import.meta.env.VITE_CUSTOM_CONNECTIONS_EXTRAS === 'true',
+  imageAssist: import.meta.env.VITE_CUSTOM_IMAGE_ASSIST === 'true',
+  ekko: import.meta.env.VITE_CUSTOM_EKKO === 'true',
+  agentManager: import.meta.env.VITE_CUSTOM_AGENT_MANAGER === 'true',
+  externalLinks: import.meta.env.VITE_CUSTOM_EXTERNAL_LINKS === 'true',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {

@@ -55,6 +55,29 @@ export async function bootstrapClient(app: App): Promise<void> {
     router.addRoute(route)
   }
 
+  // ── S3（补遗⑤ §13.4 B 档，2026-09-29）：未用路由族按开关摘除（默认关）──
+  // removeRoute 对不存在路由幂等静默；组件/视图/API 全保留，开关开（VITE_CUSTOM_*=true）
+  // 即回生，无需改代码。桌面宠物路由（desktop.pet）与 WebPet 浮层开关同源（pet）。
+  if (!features.ekko) {
+    for (const name of ['ekko.memory', 'ekko.skills', 'ekko.mcp', 'ekko.settings']) {
+      router.removeRoute?.(name)
+    }
+  }
+  if (!features.agentManager) {
+    // /studio/agents 配置中心（含 codingAgent.config 分区路由）
+    router.removeRoute?.('hermes.agentManager')
+    router.removeRoute?.('codingAgent.config')
+  }
+  if (!features.externalLinks) {
+    // 外链页三路由：/share/group-chat、/group-chat-link、/desktop-chat
+    router.removeRoute?.('share.groupChat')
+    router.removeRoute?.('groupChat.link')
+    router.removeRoute?.('desktop.chat')
+  }
+  if (!features.pet) {
+    router.removeRoute?.('desktop.pet')
+  }
+
   // 注册需要挂载为 cockpit 子路由的动态路由（如 matrix-chat）
   if (features.matrixChat) {
     const { registerMatrixChatRoutes } = await import('../../custom/client/matrix-chat')

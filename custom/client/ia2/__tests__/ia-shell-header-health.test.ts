@@ -108,107 +108,18 @@ function grpText(w: ReturnType<typeof mount>) {
   return w.find('.cockpit-top__grp').text()
 }
 
-describe('IaShellHeader Platforms loaded 作用域', () => {
+describe('IaShellHeader Platforms loaded 作用域（S7 补遗⑤ A 档：探测组 UI 隐藏）', () => {
   beforeEach(() => { vi.unstubAllGlobals() })
 
-  it('显示 loaded_platforms 的当前进程裸 channel（telegram）', async () => {
+  it('S7：Gateway 探测组入口隐藏（platforms store 轮询与投影保留，恢复去注释即回生）', async () => {
     const w = await mountBar({
       gateway_state: 'running',
       platforms: { telegram: { state: 'connected' } },
       loaded_platforms: { telegram: { state: 'connected', updated_at: new Date().toISOString() } },
       served_profiles: ['default'],
     })
-    expect(grpText(w)).toContain('telegram')
-    w.unmount()
-  })
-
-  it('不显示仅存在于 runtime platforms 的残留/其他 profile 条目', async () => {
-    const w = await mountBar({
-      gateway_state: 'running',
-      platforms: {
-        telegram: { state: 'connected' },
-        discord: { state: 'connected' },
-        research: { state: 'connected' },
-      },
-      loaded_platforms: { telegram: { state: 'connected' } },
-      served_profiles: ['default'],
-    })
-    const txt = grpText(w)
-    expect(txt).toContain('telegram')
-    expect(txt).not.toContain('discord')
-    w.unmount()
-  })
-
-  it('解析 <profile>:<platform> 命名空间：页头只显示渠道名（不含 profile，也不泄漏完整内部键）', async () => {
-    const w = await mountBar({
-      gateway_state: 'running',
-      platforms: { 'research:matrix': { state: 'connected' } },
-      loaded_platforms: { 'research:matrix': { state: 'connected' } },
-      served_profiles: ['default', 'research'],
-    })
-    const txt = grpText(w)
-    expect(txt).toContain('matrix')
-    expect(txt).not.toContain('research')
-    expect(txt).not.toContain('research:matrix')
-    w.unmount()
-  })
-
-  it('页头隐藏 profile，但详情面板保留 profile 语义', async () => {
-    const w = await mountBar({
-      gateway_state: 'running',
-      loaded_platforms: { 'research:matrix': { state: 'connected' } },
-      served_profiles: ['default', 'research'],
-    })
-    expect(grpText(w)).toContain('matrix')
-    expect(grpText(w)).not.toContain('research')
-    await w.find('.cockpit-top__grp').trigger('click')
-    const rows = w.findAll('.cockpit-probe__row').map(r => r.text())
-    expect(rows.some(r => r.includes('research: matrix'))).toBe(true)
-    w.unmount()
-  })
-
-  it('namespaced profile 不在 served_profiles 中时不显示', async () => {
-    const w = await mountBar({
-      gateway_state: 'running',
-      platforms: { 'ghost:telegram': { state: 'connected' } },
-      loaded_platforms: { 'ghost:telegram': { state: 'connected' } },
-      served_profiles: ['default'],
-    })
-    expect(grpText(w)).not.toContain('telegram')
-    w.unmount()
-  })
-
-  it('缺 loaded_platforms（旧 gateway / 401 fallback）时显示空平台列表，不回退全量 platforms', async () => {
-    const w = await mountBar({
-      gateway_state: 'running',
-      platforms: { telegram: { state: 'connected' }, matrix: { state: 'connected' } },
-    })
-    const txt = grpText(w)
-    expect(txt).not.toContain('telegram')
-    expect(txt).not.toContain('matrix')
-    w.unmount()
-  })
-
-  it('malformed loaded_platforms 不抛异常且投影为空', async () => {
-    const w = await mountBar({
-      gateway_state: 'running',
-      loaded_platforms: { telegram: 'not-an-object', matrix: { state: 42 } },
-    })
-    expect(Array.isArray((w.vm as unknown as { platforms: unknown[] }).platforms)).toBe(true)
-    w.unmount()
-  })
-
-  it('页头与详情面板使用同一投影（详情不再各渲染一套 rawData.platforms）', async () => {
-    const w = await mountBar({
-      gateway_state: 'running',
-      platforms: { telegram: { state: 'connected' }, stale: { state: 'fatal' } },
-      loaded_platforms: { telegram: { state: 'connected' } },
-      served_profiles: ['default'],
-    })
-    await w.find('.cockpit-top__grp').trigger('click')
-    const rows = w.findAll('.cockpit-probe__row').map(r => r.text())
-    expect(rows.some(r => r.includes('telegram'))).toBe(true)
-    expect(rows.some(r => r.includes('stale'))).toBe(false)
+    // A 档语义：入口不渲染——原 8 例「显示/命名空间/不泄漏」断言随入口隐藏退役
+    expect(w.find('[data-testid*="probe"]').exists()).toBe(false)
     w.unmount()
   })
 })

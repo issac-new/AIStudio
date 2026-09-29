@@ -68,7 +68,10 @@ describe('ia2 路由树（v12 双视图）', () => {
   it('工作页：board / eng / runs 存在；runDetail 参数名 runId 且懒组件落 RunDetailView', async () => {
     const router = makeRouter()
     expect(router.resolve('/app/board').name).toBe('ia2.board')
-    expect(router.resolve('/app/eng').name).toBe('ia2.eng')
+    // S5（补遗⑤）：/app/eng 工程页退役 → 重定向 /app/runs
+    const eng = router.resolve('/app/eng')
+    expect(eng.name).toBeUndefined()
+    expect(eng.matched.some(r => r.redirect === '/app/runs')).toBe(true)
     expect(router.resolve('/app/runs').name).toBe('ia2.runs')
     const resolved = router.resolve('/app/runs/run-abc')
     expect(resolved.name).toBe('ia2.runDetail')
@@ -153,7 +156,7 @@ describe('areaForPath（视图投影，场景条高亮依据）', () => {
     ['/app/board', 'collab'],
     ['/app/runs', 'collab'],
     ['/app/runs/run-9', 'collab'],
-    ['/app/eng', 'collab'],
+
     ['/app/s/room/x', 'collab'],
     ['/app/ide', 'collab'],
     ['/app/history/session/s1', 'collab'],

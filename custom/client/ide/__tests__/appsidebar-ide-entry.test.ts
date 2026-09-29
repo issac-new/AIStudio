@@ -51,4 +51,28 @@ describe('AppSidebar IDE 一级入口（patch 072 守门，M2 后 = 移除）', 
     expect(src).toMatch(/^\+\s*display:\s*contents;/m)
     expect(src).toMatch(/^\+const systemOpen = ref\(/m)
   })
+
+  it('S1（补遗⑤ A 档）：主题/宠物商店/技能用量入口 v-if=false 摘面（路由保留）', () => {
+    // 三个入口的 RouteLinkItem 行新增态带 v-if="false"（入口隐藏、路由不动）
+    for (const name of ['hermes.theme', 'hermes.petdex', 'hermes.skillsUsage']) {
+      const re = new RegExp(String.raw`^\+\s*v-if="false"
+\s*class="nav-item"
+\s*:to="\{ name: '${name}' \}"`, 'm')
+      expect(src, name).toMatch(re)
+    }
+    // 系统组其余三项保留：logs/usage/settings——usage/settings 不在 patch 任何
+    // hunk 内（上游原文未被触碰即"保留"的保证）；logs 在上下文行且其 :to 行前
+    // 无 v-if="false" 摘面
+    const logsIdx = src.indexOf(`:to="{ name: 'hermes.logs' }"`)
+    expect(logsIdx).toBeGreaterThan(-1)
+    expect(src.slice(Math.max(0, logsIdx - 80), logsIdx)).not.toContain('v-if="false"')
+    expect(src).not.toContain(`v-if="false"\n        class="nav-item"\n        :to="{ name: 'hermes.usage' }"`)
+    expect(src).not.toContain(`v-if="false"\n        class="nav-item"\n        :to="{ name: 'hermes.settings' }"`)
+    // superadmin 条件项语义不动：performance/profiles（含 versionPreview 条件）
+    // 均不在 patch hunks 内（上游原文未触碰）；若日后被摘面须显式 v-if=false，
+    // 在此断言为零容忍
+    for (const name of ['hermes.performance', 'hermes.profiles', 'hermes.versionPreview']) {
+      expect(src).not.toContain(`v-if="false"\n        class="nav-item"\n        :to="{ name: '${name}' }"`)
+    }
+  })
 })

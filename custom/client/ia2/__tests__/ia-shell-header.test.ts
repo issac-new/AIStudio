@@ -176,15 +176,9 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('v12.3 日程按钮：当日有事件亮徽章，点击开日程模态（workspace.openSchedule）', async () => {
-    cockpitStubs.state.scheduleDatesWithEvents = new Set([todayKey()])
-    const w = await mountHeader()
-    const btn = w.find('[data-testid="ia-header-schedule"]')
-    expect(btn.exists()).toBe(true)
-    expect(btn.text()).toContain('ia2.header.scheduleToday')
-    expect(workspaceStubs.state.scheduleOpen).toBe(false)
-    await btn.trigger('click')
-    expect(workspaceStubs.state.scheduleOpen).toBe(true)
+  it('S7（补遗⑤ A 档）：日程弹窗入口隐藏（组件保留，恢复去注释即回生）', async () => {
+    const w = await mountHeader({ gateway_state: 'running' })
+    expect(w.find('[data-testid*="schedule"], [data-testid*="probe"]').exists()).toBe(false)
     w.unmount()
   })
 
@@ -198,14 +192,9 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('Gateway 探测区渲染（/agent-health/detailed → running 投影）', async () => {
-    const w = await mountHeader()
-    const grp = w.find('.cockpit-top__grp')
-    expect(grp.exists()).toBe(true)
-    expect(grp.text()).toContain('Gateway')
-    await vi.waitFor(() => {
-      expect(w.find('.cockpit-top__grp .cockpit-top__ustat.is-running').exists()).toBe(true)
-    })
+  it('S7（补遗⑤ A 档）：Gateway 探测组隐藏（组件保留，恢复去注释即回生）', async () => {
+    const w = await mountHeader({ gateway_state: 'running' })
+    expect(w.find('[data-testid*="schedule"], [data-testid*="probe"]').exists()).toBe(false)
     w.unmount()
   })
 })
