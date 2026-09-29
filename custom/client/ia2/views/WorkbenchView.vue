@@ -426,7 +426,9 @@ async function onCreateRoom(name: string): Promise<void> {
 }
 
 function onNewLoop(): void {
-  void router.push({ name: 'ia2.eng' })
+  // S5（补遗⑤）：/app/eng 编排页退役——＋新循环落运行中心（空态三步引导在；
+  // 循环实际由脚本建，编排组件库保留备用）
+  void router.push({ name: 'ia2.runs' })
 }
 
 // ── v14 统一聊天：新建三型 + 群聊管理（补偿被隐藏画布侧栏的入口）──

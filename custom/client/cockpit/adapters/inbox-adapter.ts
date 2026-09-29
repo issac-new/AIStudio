@@ -171,7 +171,9 @@ export function mcpHealthToInbox(health: McpHealthSource[]): InboxItem[] {
       preview: entry.error || 'not connected',
       count: 1,
       ts: entry.checkedAt,
-      routeTarget: { name: 'hermes.mcp' } as RouteLocationRaw,
+      // overlay[s2]（补遗⑤）：hermes.mcp 运维页退役——条目保留（健康告警仍
+      // 聚合进统一收件箱），点击落驾驶舱（MCP 配置归运维面 superadmin 再开）
+      routeTarget: { path: '/app' } as RouteLocationRaw,
     }))
 }
 

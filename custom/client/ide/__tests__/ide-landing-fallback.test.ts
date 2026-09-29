@@ -39,10 +39,9 @@ describe('bootstrap /ide 落点兜底', () => {
     expect(routerStubs.addRoute).not.toHaveBeenCalledWith(expect.objectContaining({ path: '/ide' }))
   })
 
-  it('features.ide 关闭：注册 /ide → /app 重定向兜底', async () => {
+  it('M2（补遗⑤）：ide 关闭时不注册任何路由；开启时 /ide 旧壳 → /app/ide 重定向由 buildIdeRoutes 提供', async () => {
     featuresState.ide = false
     await bootstrapClient({} as never)
     expect(ideStubs.registerIde).not.toHaveBeenCalled()
-    expect(routerStubs.addRoute).toHaveBeenCalledWith({ path: '/ide', redirect: '/app' })
   })
 })
