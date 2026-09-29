@@ -16,6 +16,7 @@ import type { CodingAgentId } from '@/api/coding-agents'
 const WORKSPACE_KEY = 'hermes_ide_workspace'
 const AGENT_KEY = 'hermes_ide_agent'
 const LAYOUT_KEY = 'hermes_ide_layout'
+const DELIVERY_MODE_KEY = 'hermes_ide_chat_delivery_mode'
 
 /** 中栏浮窗键（任务计划/子代理，对标 zcode 浮窗模式） */
 export type IdeFloatKey = 'plan' | 'agents'
@@ -167,6 +168,21 @@ export const useIdeStore = defineStore('ide', () => {
   const activeTaskId = ref<string | null>(null)
   /** 中栏浮窗开关（任务计划/子代理名册；瞬态不持久化，对标 zcode 浮窗） */
   const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false })
+  /**
+   * 运行中发送的投递模式（A1，对标 opencode v2 会话契约的 steer/queue）：
+   * queue=排队等空闲边界投递（既有语义）；steer=入队后立即走安全边界插入
+   * （insert_queued_run，中断当前 turn 在步边界注入）。
+   */
+  const chatDeliveryMode = ref<'queue' | 'steer'>(
+    localStorage.getItem(DELIVERY_MODE_KEY) === 'steer' ? 'steer' : 'queue',
+  )
+
+  function setChatDeliveryMode(mode: 'queue' | 'steer'): void {
+    chatDeliveryMode.value = mode
+    try {
+      localStorage.setItem(DELIVERY_MODE_KEY, mode)
+    } catch { /* 存储异常不阻塞 */ }
+  }
 
   function setWorkspace(path: string | null): void {
     workspace.value = path?.trim() ? path.trim() : null
@@ -268,6 +284,8 @@ export const useIdeStore = defineStore('ide', () => {
     activeTaskId,
     floats,
     terminalCwd,
+    chatDeliveryMode,
+    setChatDeliveryMode,
     setWorkspace,
     setAgentId,
     setDimension,
