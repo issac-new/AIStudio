@@ -116,6 +116,92 @@ export function loadMetricsDefs(): LoadResult<MetricsDoc> {
   return { exists: true, path, doc, problems: validateMetrics(doc) }
 }
 
+// ---- 动作契约（第二期 ①）----
+
+export interface ActionContract {
+  id: string
+  purpose: string
+  input: string
+  output: string
+  errors: string[]
+  verdictCarrier?: string
+  verdictVocabulary?: string
+  owner: string
+  version: string
+  changeNotice: string
+  refs?: { file?: string; upstream?: string; note?: string }
+}
+export interface ContractsDoc {
+  version: number
+  reviewedAt: string
+  contracts: ActionContract[]
+}
+
+/** upstream 根向上寻（overlay 仓内/主树/worktree 三形态兼容；最多 6 层）。 */
+export function findUpstreamRoot(fromDir: string): string | null {
+  let dir = resolve(fromDir)
+  for (let i = 0; i <= 6; i++) {
+    if (existsSync(resolve(dir, 'upstream', 'hermes-agent'))) return resolve(dir, 'upstream')
+    const parent = resolve(dir, '..')
+    if (parent === dir) break
+    dir = parent
+  }
+  return null
+}
+
+export function loadActionContracts(opts?: {
+  fileExists?: (rel: string) => boolean
+  upstreamExists?: (rel: string) => boolean
+}): LoadResult<ContractsDoc> {
+  const path = resolveGovFile('action-contracts.yaml')
+  if (!path || !existsSync(path)) return { exists: false, path: null, doc: null, problems: ['action-contracts.yaml 未找到'] }
+  let doc: ContractsDoc
+  try {
+    doc = loadYamlCached<ContractsDoc>('contracts', path)
+  } catch (e) {
+    return { exists: true, path, doc: null, problems: [`YAML 解析失败：${(e as Error).message}`] }
+  }
+  const fileExists = opts?.fileExists ?? ((rel: string) => existsSync(resolve(path, '../../..', rel)))
+  const upstreamRoot = findUpstreamRoot(resolve(path, '../../..'))
+  const upstreamExists = opts?.upstreamExists ?? ((rel: string) => upstreamRoot != null && existsSync(resolve(upstreamRoot, rel)))
+  return { exists: true, path, doc, problems: validateContracts(doc, fileExists, upstreamExists) }
+}
+
+const ERROR_ID_RE = /^[a-z][a-z0-9_]*$/
+
+export function validateContracts(
+  doc: ContractsDoc,
+  fileExists: (rel: string) => boolean,
+  upstreamExists: (rel: string) => boolean,
+): string[] {
+  const problems: string[] = []
+  if (!doc || typeof doc !== 'object') return ['契约注册表为空或非对象']
+  if (doc.version !== 1) problems.push(`version 须为 1，实得 ${doc.version}`)
+  if (!doc.reviewedAt || Number.isNaN(Date.parse(doc.reviewedAt))) problems.push('文件头 reviewedAt 缺失或不可解析')
+  const ids = new Set<string>()
+  for (const c of doc.contracts ?? []) {
+    for (const f of ['id', 'purpose', 'input', 'output', 'owner', 'version', 'changeNotice'] as const) {
+      if (!c[f]) problems.push(`contract ${c.id ?? '?'} 缺字段 ${f}`)
+    }
+    if (ids.has(c.id)) problems.push(`contract id 重复：${c.id}`)
+    ids.add(c.id)
+    if (!Array.isArray(c.errors) || c.errors.length === 0) {
+      problems.push(`contract ${c.id} errors 须为非空数组`)
+    } else {
+      for (const e of c.errors) {
+        if (!ERROR_ID_RE.test(e)) problems.push(`contract ${c.id} 错误 id 词法违规：${e}`)
+      }
+    }
+    // 语义归一：凡产出判定的契约，判定词表必须归口 metrics.yaml（防第三套词表）
+    if (c.verdictCarrier && c.verdictVocabulary !== 'metrics.yaml') {
+      problems.push(`contract ${c.id} 有 verdictCarrier 但 verdictVocabulary≠metrics.yaml：${c.verdictVocabulary ?? '(缺)'}`)
+    }
+    if (c.refs?.file && !fileExists(c.refs.file)) problems.push(`contract ${c.id} refs.file 不存在：${c.refs.file}`)
+    if (c.refs?.upstream && !upstreamExists(c.refs.upstream)) problems.push(`contract ${c.id} refs.upstream 不存在：${c.refs.upstream}`)
+  }
+  return problems
+}
+
 // ---- 校验（守门与运行时共用；返回问题清单，空数组=通过）----
 
 export function validateLedger(doc: LedgerDoc, fileExists: (rel: string) => boolean): string[] {
