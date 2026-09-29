@@ -525,6 +525,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       :lane-by-profile="laneByProfile"
       :tenants="tenants"
       :task-count="filteredTasks.length"
+      :status-filter="store.filterStatus"
       hide-board-select
       @board-change="handleBoardChange"
       @assignee-change="handleAssigneeChange"
@@ -538,6 +539,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       @clear-filters="handleClearFilters"
       @create-board="handleCreateBoard"
       @archive-board="handleArchiveBoard"
+      @status-change="store.setFilter('status', $event)"
     />
 
     <KanbanOrchestrationPanel />
