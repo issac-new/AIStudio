@@ -8,6 +8,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
 import { compactThreshold, type ThresholdDecision } from '../../../server/compactthreshold/compact-threshold'
+import { authFetch } from '../utils/auth-fetch'
 
 const chatStore = useChatStore()
 const metrics = useSessionMetrics()
@@ -20,7 +21,7 @@ async function load(): Promise<void> {
     return
   }
   try {
-    const res = await fetch(`/api/ide/compaction-trace/${encodeURIComponent(sid)}`)
+    const res = await authFetch(`/api/ide/compaction-trace/${encodeURIComponent(sid)}`)
     if (!res.ok) throw new Error(String(res.status))
     const body = (await res.json()) as { snapshot: typeof snapshot.value }
     snapshot.value = body.snapshot ?? null

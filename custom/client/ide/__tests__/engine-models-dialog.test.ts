@@ -44,15 +44,15 @@ describe('IdeEngineModelsDialog（A8）', () => {
     const pidInput = w.find('[data-testid="ide-emd-pid-1"]')
     await pidInput.setValue('openai')
     await w.find('[data-testid="ide-emd-purl-1"]').setValue('https://api.openai.com/v1')
-    fetchMock.mockImplementation(async (_u: string, init?: { method?: string }) => {
-      if (init?.method === 'PUT') {
+    fetchMock.mockImplementation(async (u: string, init?: { method?: string }) => {
+      if (String(u).endsWith('engine-models-put')) {
         return { ok: true, json: async () => ({ ok: true, enginePassthrough: { wrote: true, providerKeys: ['ide-engine:glm', 'ide-engine:openai'], note: '' } }) }
       }
       return { ok: true, json: async () => EXISTING }
     })
     await w.find('[data-testid="ide-emd-save"]').trigger('click')
     await new Promise((r) => setTimeout(r, 30))
-    const put = fetchMock.mock.calls.find((c) => c[1]?.method === 'PUT')
+    const put = fetchMock.mock.calls.find((c) => String(c[0]) === '/api/ide/engine-models-put' && c[1]?.method === 'POST')
     expect(put).toBeTruthy()
     const body = JSON.parse(String(put![1]?.body))
     expect(body.providers).toHaveLength(2)
@@ -67,8 +67,8 @@ describe('IdeEngineModelsDialog（A8）', () => {
   it('400：校验问题逐条可见，不 emit saved', async () => {
     const w = mount(IdeEngineModelsDialog)
     await new Promise((r) => setTimeout(r, 30))
-    fetchMock.mockImplementation(async (_u: string, init?: { method?: string }) => {
-      if (init?.method === 'PUT') return { ok: false, status: 400, json: async () => ({ ok: false, problems: ['duplicate providerId: glm'] }) }
+    fetchMock.mockImplementation(async (u: string, init?: { method?: string }) => {
+      if (String(u).endsWith('engine-models-put')) return { ok: false, status: 400, json: async () => ({ ok: false, problems: ['duplicate providerId: glm'] }) }
       return { ok: true, json: async () => EXISTING }
     })
     await w.find('[data-testid="ide-emd-save"]').trigger('click')

@@ -7,10 +7,14 @@
 // 这是 spec §3.3/§7 记录的"入口结构升级冲突点"。
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import router from '../../../upstream/hermes-studio/packages/client/src/router'
-import { i18nReady } from '../../../upstream/hermes-studio/packages/client/src/i18n'
-import App from '../../../upstream/hermes-studio/packages/client/src/App.vue'
-import '../../../upstream/hermes-studio/packages/client/src/styles/global.scss'
+// 上游引用走 vite/vitest 的 '@' alias（inject 生成的 vite.config.overlay.ts 与
+// vitest.config.ts 同源定义）——裸相对路径 ../../../upstream 在 worktree / 私有
+// 上游（OVERLAY_UPSTREAM_ROOT）布局下解析失败，dev 入口直接 500（2026-09-29
+// 隔离走查实录；alias 才是唯一在三种布局都成立的引用方式）。
+import router from '@/router'
+import { i18nReady } from '@/i18n'
+import App from '@/App.vue'
+import '@/styles/global.scss'
 import 'katex/dist/katex.min.css'
 
 // === 上游 main.ts 的 FOUC / token 处理(原样复制,勿改)===

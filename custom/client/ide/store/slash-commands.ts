@@ -5,6 +5,7 @@
 // 消费面：① IdeSlashCommandsPane 管理 UI；② ChatInput slash 菜单（patch 500 注入，
 // 选中把 prompt 模板写入输入框——见 patches/500-client-chatinput-custom-slash.patch）。
 import { reactive, readonly } from 'vue'
+import { authFetch } from '../utils/auth-fetch'
 
 export interface SlashCommandEntry {
   name: string
@@ -18,7 +19,7 @@ const state = reactive<{ commands: SlashCommandEntry[]; loaded: boolean }>({ com
 export async function loadSlashCommands(force = false): Promise<SlashCommandEntry[]> {
   if (state.loaded && !force) return state.commands
   try {
-    const res = await fetch('/api/ide/slash-commands')
+    const res = await authFetch('/api/ide/slash-commands')
     if (!res.ok) return state.commands
     const body = (await res.json()) as { ok?: boolean; commands?: SlashCommandEntry[] }
     state.commands = Array.isArray(body.commands) ? body.commands : []
@@ -28,7 +29,7 @@ export async function loadSlashCommands(force = false): Promise<SlashCommandEntr
 }
 
 export async function saveSlashCommands(commands: SlashCommandEntry[]): Promise<{ ok: boolean; problems?: string[] }> {
-  const res = await fetch('/api/ide/slash-commands/save', {
+  const res = await authFetch('/api/ide/slash-commands/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ commands }),

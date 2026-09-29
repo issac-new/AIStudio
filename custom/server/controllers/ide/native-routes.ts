@@ -60,7 +60,10 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
 function slashCommandStorePath(): string {
   return process.env.SLASH_COMMAND_STORE?.trim()
     ? resolve(process.env.SLASH_COMMAND_STORE)
-    : resolve(__dirname, '../../../runtime/ide-slash-commands.json')
+    // 层级勘误（2026-09-29 隔离走查实录）：controllers/ide 到 overlay 根需 4 级——
+    // 3 级指向 custom/（无 runtime/，写盘 ENOENT 被错误链吞成 404；同根因即历史
+    // 「PUT /api/ide/engine-models 真进程 404 学理未解」悬案病灶）。
+    : resolve(__dirname, '../../../../runtime/ide-slash-commands.json')
 }
 
 async function handleSlashCommandsGet(ctx: Context): Promise<void> {
@@ -110,7 +113,7 @@ async function handleEngineModelsPut(ctx: Context): Promise<void> {
     return
   }
   // overlay 独立存储（物理路径锚=本文件 overlay 侧——与 controller 同型）。
-  const store = resolve(__dirname, '../../../runtime/ide-engine-models.json')
+  const store = resolve(__dirname, '../../../../runtime/ide-engine-models.json')
   const tmp = `${store}.tmp`
   writeFileSync(tmp, JSON.stringify(config, null, 2), 'utf8')
   renameSync(tmp, store)

@@ -6,6 +6,7 @@ import {
   fetchWorkspaceRunChangesForSession,
   type WorkspaceRunChangeSummary,
 } from '@/api/studio/sessions'
+import { authFetch } from '../utils/auth-fetch'
 
 export interface RunChangesDigest {
   runId: string
@@ -52,7 +53,7 @@ export const ideRunsApi = {
    *  hunkIndexes 可选：只反向选中 hunk（IdeInlineDiff 逐处拒绝写通道；
    *  序号约定 = patch 内 @@ 出现次序 0 起，与 IdeInlineDiff parseHunks 对齐）。 */
   async undo(input: { sessionId: string; changeId: string; fileId: number; workspace: string; hunkIndexes?: number[] }): Promise<{ ok: boolean; restoredPath?: string; detail?: string }> {
-    const res = await fetch('/api/ide/run-undo', {
+    const res = await authFetch('/api/ide/run-undo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),

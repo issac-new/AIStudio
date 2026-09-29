@@ -25,8 +25,11 @@ const realpathOrSelf = (p) => {
 };
 const overlayRoot = realpathOrSelf(resolve(import.meta.dirname, '..'));
 const ncwkRoot = resolve(overlayRoot, '..');
-// upstream 可能经符号链接进入（worktree 场景），统一取真实路径。
-const upstreamRoot = realpathOrSelf(resolve(ncwkRoot, 'upstream'));
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（design-review 轮记档基建恢复）——
+// inject 目标指向独立副本，不触碰 ncwk 共享 upstream。缺省行为不变。
+const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? realpathOrSelf(resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim()))
+  : realpathOrSelf(resolve(ncwkRoot, 'upstream'));
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const zcodeRoot = resolve(upstreamRoot, 'zcode');

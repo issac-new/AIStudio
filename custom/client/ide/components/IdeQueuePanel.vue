@@ -8,6 +8,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
+import { authFetch } from '../utils/auth-fetch'
 
 const chatStore = useChatStore()
 const ide = useIdeStore()
@@ -60,7 +61,7 @@ async function fetchAutonomyQueue(): Promise<void> {
   const ws = ide.workspace
   if (!ws) { autonomyQueue.value = []; return }
   try {
-    const res = await fetch(`/api/zcode-engine/queue/${encodeURIComponent(ws)}`)
+    const res = await authFetch(`/api/zcode-engine/queue/${encodeURIComponent(ws)}`)
     if (!res.ok) return
     const body = (await res.json()) as { ok?: boolean; queue?: AutonomyItem[] }
     autonomyQueue.value = Array.isArray(body.queue) ? body.queue : []
@@ -73,7 +74,7 @@ async function autonomyAction(kind: 'yield' | 'drain'): Promise<void> {
   autonomyBusy.value = true
   autonomyNote.value = ''
   try {
-    const res = await fetch(`/api/zcode-engine/queue/${kind}`, {
+    const res = await authFetch(`/api/zcode-engine/queue/${kind}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspacePath: ws }),
