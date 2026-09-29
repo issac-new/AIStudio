@@ -23,16 +23,22 @@ export interface EngineProviderEntry {
 export interface EngineModelConfig {
   providers: EngineProviderEntry[]
   defaultModel: { providerId: string; modelId: string } | null
+  /** B2 提供方策略（用户自作者语句；治理面语句运行时另载拼接，见 provider-policy.ts）。 */
+  policy?: { statements: PolicyStatement[] }
 }
+
+import { validatePolicyStatements, type PolicyStatement } from './provider-policy'
 
 export interface ConfigValidation {
   ok: boolean
   problems: string[]
 }
 
-/** 配置校验：provider/model 唯一性+默认模型可达。 */
+/** 配置校验：provider/model 唯一性+默认模型可达+策略语句合法（B2）。 */
 export function validateEngineModelConfig(config: EngineModelConfig): ConfigValidation {
   const problems: string[] = []
+  const policyRes = validatePolicyStatements(config.policy?.statements)
+  if (!policyRes.ok) problems.push(...policyRes.problems)
   const providerIds = new Set<string>()
   for (const p of config.providers) {
     if (!p.providerId.trim()) problems.push('empty providerId')

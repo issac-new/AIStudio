@@ -10,7 +10,7 @@ import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useAppStore } from '@/stores/hermes/app'
 import { useIdeStore } from '../store/ide'
-import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
+import { fetchEngineCatalog, type EngineCatalogGroup, type EnginePolicyView } from '../utils/engine-models'
 import { autoRoute, type CostTier } from '../../../server/modelroute/model-routing'
 import IdeEngineModelsDialog from '../components/IdeEngineModelsDialog.vue'
 
@@ -78,6 +78,8 @@ const switchable = computed(() => {
 const currentModel = computed(() => session.value?.model || '')
 
 const engineGroups = ref<EngineCatalogGroup[]>([])
+/** B2 提供方策略：被拒 provider 置灰（治理面 deny 权威）。 */
+const enginePolicy = ref<EnginePolicyView | null>(null)
 const usingIndependent = ref(false)
 const manageOpen = ref(false)
 
@@ -86,9 +88,11 @@ async function loadCatalog(): Promise<void> {
   try {
     const catalog = await fetchEngineCatalog()
     engineGroups.value = catalog.groups
+    enginePolicy.value = catalog.policy ?? null
     usingIndependent.value = catalog.independent
   } catch {
     engineGroups.value = []
+    enginePolicy.value = null
     usingIndependent.value = false
   }
 }
@@ -104,7 +108,15 @@ const groups = computed(() =>
 )
 const catalogReady = computed(() => groups.value.length > 0)
 
+function deniedBy(provider: string): EnginePolicyView['denied'][number] | undefined {
+  return usingIndependent.value
+    ? enginePolicy.value?.denied.find((d) => d.providerId === provider)
+    : undefined
+}
+
 async function pick(provider: string, model: string): Promise<void> {
+  const denied = deniedBy(provider)
+  if (denied) return // 策略拒配 provider 不可选（服务端写穿已同步跳过）
   const sid = chatStore.activeSessionId
   if (!sid) return
   open.value = false
@@ -146,11 +158,13 @@ async function pick(provider: string, model: string): Promise<void> {
             :key="`${g.provider}/${m}`"
             type="button"
             class="ide-model-switcher__option"
-            :class="{ 'is-active': m === currentModel && session?.provider === g.provider }"
+            :class="{ 'is-active': m === currentModel && session?.provider === g.provider, 'is-denied': deniedBy(g.provider) }"
+            :disabled="Boolean(deniedBy(g.provider))"
             :data-testid="`ide-model-option-${m}`"
+            :title="deniedBy(g.provider) ? `策略拒配（${deniedBy(g.provider)!.source === 'governance' ? '治理面' : '用户'} deny）` : undefined"
             @click="pick(g.provider, m)"
           >
-            {{ m }}
+            {{ m }}<span v-if="deniedBy(g.provider)" class="ide-model-switcher__denied-badge">策略拒配</span>
           </button>
         </section>
       </template>
@@ -250,6 +264,11 @@ async function pick(provider: string, model: string): Promise<void> {
   }
 }
 
+.ide-model-switcher__option.is-denied { opacity: 0.45; cursor: not-allowed; }
+.ide-model-switcher__denied-badge {
+  margin-left: 6px; font-size: 9px; color: var(--error-color, #d03050);
+  border: 1px solid var(--error-color, #d03050); border-radius: 3px; padding: 0 3px;
+}
 .ide-model-switcher__manage {
   border-top: 1px dashed var(--border-color, #3a3f4b);
   margin-top: 4px;
