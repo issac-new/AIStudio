@@ -144,7 +144,8 @@ STEPS_META = {
             narrative='Orchestrator agent 经 matrix channel 接收指令，fanfan 账号板 RFD-001 任务卡 02:16:55 真值 ✓。完成凭证反向核验首轮 02:27:01 600s 超时 ✗——拒收回灌（@fanfan-agent 要求用真实卡 ID 重报结论行），02:31:02 重报后核验 ✓（commit 真在 origin、卡真在账号板）——打回环真实发生，非橡皮图章。凭证主卡保持未分配/非派发状态专供核验（前代凭证卡链可回溯）。',
             imgs=[
                   ('ui-10-kanban', '产品看板：fanfan-pm-plan 板 RACI 徽章卡（R/A/C/I+我的角色描边）+「等您操作」过滤入口', 'ui'),
-                  ('ui-10-carddrawer', '产品看板卡抽屉：RFD-001 凭证主卡详情——需求/交付物（含 commit 锚点）/关联卡对账', 'ui'),]),
+                  ('ui-10-carddrawer', '产品看板卡抽屉：RFD-001 凭证主卡详情——需求/交付物（含 commit 锚点）/关联卡对账', 'ui'),
+                  ('ui-10b-kanban-mine', '产品看板：「等您操作」过滤器一键筛出当前登录人相关卡（P2）', 'ui'),]),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 系统分析智能体',
             narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），系统分析稿与任务清单 v6 入仓（commit bcc9d9c，02:35:55：双路提取核对+三清单匹配+SMART 拆分），ANALYSIS-DONE 结论行经反向核验。',
             imgs=[
@@ -184,15 +185,18 @@ STEPS_META = {
                   ('ui-gov-tlchali', '治理中心·测试证据：DEV-CHALI 测试日志（分支锚 feat/DEV-CHALI）', 'ui'),
                   ('ui-gov-tlmp', '治理中心·测试证据：DEV-MP 测试日志（分支锚 feat/DEV-MP）', 'ui'),]),
     19: dict(keys=['g4_pass'], actor='gate', actorText='硬闸 G4 · 独立验证',
-            narrative='测试的人不是写代码的人：qi/fei 独立执行 TEST-BE/TEST-FE（派发 02:51:24），结论行 TEST-PASS-TEST-BE（test/TEST-BE@48a9d9d）/TEST-PASS-TEST-FE（test/TEST-FE@bdb9450），g4_pass 落键 03:28:25。独立审计注：G4 独立评审卡缺失曾由导演补登记（review-card-missing 在案，R-A4 已根治）；且新回执实跑树≠发布基线树、用例口径与基线实测有差——该缺陷由 G5 评审揭出（见步 20）。',
+            narrative='测试的人不是写代码的人：qi/fei 独立执行 TEST-BE/TEST-FE（派发 02:51:24），结论行 TEST-PASS-TEST-BE（test/TEST-BE@48a9d9d）/TEST-PASS-TEST-FE（test/TEST-FE@bdb9450），g4_pass 落键 03:28:25。独立审计注：G4 独立评审卡缺失曾由导演补登记（review-card-missing 在案，R-A4 已根治）；且新回执实跑树≠发布基线树、用例口径与基线实测有差——该缺陷由 G5 评审揭出（见步 20；收口轮已同基线复验 194/194 闭环）。',
             imgs=[
                   ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——r4 口径 51/51 集成+131/131 回归（锚点 bebfd2d）', 'ui'),]),
     20: dict(keys=['g5_ready'], actor='gate', actorText='硬闸 G5 · 发布准出+人批准',
-            open_note='G5 判回滚（独立审计 R-A1）：state g5_ready 落键系判词误判（04:49:03 转述 stub 消息被当结论行），评审卡 t_ea68c462 结论实为 READY-GATE-FAIL——落键判废、"4/4 首过"口径判废、REL-* 三卡曾冻结（blocked）。闭环追记（2026-09-29 10:52）：R-A3 全链闭环——丢线回补（integration/RFD-001 增量合并 69ba333 整线 @ 67a1a95，DEF-BE-001/FE 修复线/守卫脚本/证据全数回归）、同基线复验 194/194+verify-guard 6/6+黑盒探针 42/42+skeleton 220、独立复审 r8 READY-GATE-PASS（卡 t_ea68c462 结论行+凭证行 commit=5c1a02d），REL-* 三卡解冻（ready）。',
+            mark_chip='判回滚→复审 r8 PASS',
+            ts_override='04:49 误落键 · 10:52 复审 PASS',
+            open_note='**G5 判回滚**（独立审计 R-A1）：state g5_ready 落键系判词误判（04:49:03 转述 stub 消息被当结论行），评审卡 t_ea68c462 结论实为 **READY-GATE-FAIL**——落键判废、"4/4 首过"口径判废、REL-* 三卡曾冻结（blocked）。**闭环追记（2026-09-29 10:52）：R-A3 全链闭环**——丢线回补（integration/RFD-001 增量合并 69ba333 整线 @ 67a1a95，DEF-BE-001/FE 修复线/守卫脚本/证据全数回归）、同基线复验 **194/194**+verify-guard **6/6**+黑盒探针 **42/42**+skeleton 220、独立复审 r8 **READY-GATE-PASS**（卡 t_ea68c462 结论行+凭证行 commit=5c1a02d），REL-* 三卡解冻（ready）。',
             narrative='G5 发布准出（派发 04:21:49，event $vldnPTzqiXr8AbbeHTalLQ2cBeBcBXuZ4oqwjAZFbOU，评审卡 t_ea68c462@fanfan-review）：fanfan-agent 产 release-plan/notes r7+隔离 worktree 全量取证（附件 G5-r7-isolated-run），评审结论 READY-GATE-FAIL（缺项①G4 证据链——报告锚点 bebfd2d ∉ 发布基线 0ab43de、执行证据随重建删除；②同 commit 可复现——基线强制重建丢 23 提交，DEF-BE-001/DEF-TESTFE-R3-1 双缺陷回归，黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL；第 3-7 项 PASS）。机械判定曾于 04:49:14 因转述 stub 消息命中判词子串误过 G5（04:51:27 评审才实际完成）——判词语义已根治（末判词赢+卡面双源合并 FAIL 优先）。独立审计 R-A1 判回滚：G5 不成立、发布冻结，R1-R4 闭环后复审；回滚方案/灰度/发布说明第 4-7 项评审通过留痕在卡。',
             imgs=[
                   ('ui-gov-release', '治理中心·六闸工件：G5 发布说明（r7 基线刷新版）——已知问题如实列双缺陷回归为发布阻塞项', 'ui'),
-                  ('ui-20-inbox', '审批收件箱（#/app/inbox）：待审条目+风险三档分区+审批历史留痕', 'ui'),]),
+                  ('ui-20-inbox', '审批收件箱（#/app/inbox）：待审条目+风险三档分区+审批历史留痕', 'ui'),
+                  ('ui-20b-spotcheck', '审批收件箱·抽检区（V4.1）：低风险自动放行回看（抽检·自动放行回看）', 'ui'),]),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · bella 验收',
             note='UAT 判词语义（独立审计 #3，H9 已根治）：证据行逐条判词=AC-1/2/3/5/6 通过、AC-4/AC-7 有条件通过（历史缺陷修复未合入 integration 基线）——有条件验收，放行权归需求提出方 bella，条件闭环后另行验收；旧版"全部 AC 通过"表述判废。',
             narrative='bella（BA）派发 UAT（event $ahY127LXMLkFx7fcBL8-BzJFHpHSnL9CiNIFiZKmLBs，按 G1 冻结清单 AC-1~7）：fanfan-agent 逐条给出三层证据锚点（冻结源/报告行号/testlog 行号，含隔离 worktree 一手复测），验收报告入仓（收口已加判词勘误），SLA 登记（可用性 99.5%、下单 P95≤800ms、P2 事件 4h 响应）——开头定的标准结尾对账闭环。',
@@ -237,16 +241,16 @@ DOMAINS = [
      '实测：GET overview 200（20/20）· doc×5 200 · sqlite 同库直读',
      'cp-g1,cp-g5'),
     ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'warn',
-     '部分符合：G1→UAT 意图链路闭环（冻结 AC-1~7 逐条对账）；G5 评审实测击穿实现——t_ea68c462 r7 结论 READY-GATE-FAIL（双缺陷回归/证据链断裂），机械判定曾误过、被独立审计判回滚——评审者目标是击穿实现而非走过场，本轮未达发布准出。',
-     '实测：卡 t_ea68c462 review-record r7（READY-GATE-FAIL 可反查）· UAT 逐条判词 5 通过+2 有条件 · R-A1 判回滚',
+     '部分符合（已闭环）：G1→UAT 意图链路闭环（冻结 AC-1~7 逐条对账）；G5 评审实测击穿实现——t_ea68c462 r7 结论 READY-GATE-FAIL（双缺陷回归/证据链断裂），机械判定曾误过、被独立审计判回滚；R-A3 闭环（回补+复验 194/194）后复审 r8 PASS 转正。评审者目标是击穿实现而非走过场。',
+     '实测：卡 t_ea68c462 r7（READY-GATE-FAIL 可反查）→ r8 READY-GATE-PASS（闭环）· UAT 逐条判词 5 通过+2 有条件（条件已解除）· R-A1 判回滚→复审转正',
      'cp-g2,cp-gate,cp-uat'),
     ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass',
      '可接受（安全探针通过）。未授权访问治理/审批 API 均 401（无 token 与伪造 token 双探针）；git 全异步 execFile+8s 超时；聚合 55s→20ms；金额分 int64/渠道本地 mock/密钥不出服务端。',
      '实测：no-token→401 ×2 · bad-jwt→401 · 聚合 20ms 量级',
      'cp-gate,cp-g3'),
     ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn',
-     '可追责、发布冻结中：G5 实物 FAIL 判回滚（R-A1），REL-* 三卡 blocked 至 R1-R4 闭环+复审；审批历史留痕；问题单 6/6 处置（DISP）；审计签名线+独立复核意见在仓；SLA 登记。HumanGate 批准事件入 approved.events（审批人独立性局限如实记档）。',
-     '实测：REL-* 卡 status=blocked · DISP 6/6 · AUDIT-OPINION-CONCERNS 10/10 处置挂接',
+     '可追责、发布已解冻：G5 曾实物 FAIL 判回滚（R-A1）→ R-A3 闭环复审 r8 PASS，REL-* 三卡 ready；审批历史留痕；问题单 6/6 处置（DISP）；审计签名线+独立复核意见在仓；SLA 登记；metrics-log 实物（M2 任务级比值）。HumanGate 批准事件入 approved.events（审批人独立性局限如实记档）。',
+     '实测：REL-* 解冻 ready（曾冻结 blocked）· DISP 6/6 · 审计 10/10 挂接 · metrics-log 实物',
      'cp-g5,cp-g6'),
 ]
 
@@ -261,7 +265,7 @@ try:
     for _r in _led:
         _latest[_r['domain']] = _r  # JSONL 追加序=时间序（新在后），末见即最新
     if _latest:
-        DOMAIN_LEDGER_SOURCE = f"治理中心六域体检台账（{DOMAIN_LEDGER_FILE}，{len({r['run'] for r in _led})} 轮 {len(_led)} 条）"
+        DOMAIN_LEDGER_SOURCE = f"治理中心六域体检台账（docs/governance/domain-audit.jsonl，{len({r['run'] for r in _led})} 轮 {len(_led)} 条）"
         DOMAINS = [
             (d[0], d[1], d[2], _latest.get(d[0], {}).get('verdict', d[3]),
              '；'.join(_latest.get(d[0], {}).get('evidence', [])) or d[4], d[5], d[6])
@@ -319,6 +323,10 @@ KIND_STYLE = {
     'doc': ('#e0f2fe', '#0369a1', '仓内工件'),
     'msg': ('#f3e8ff', '#7e22ce', '消息转录'),
 }
+
+def md_bold(t):
+    """转义后把 **…** 渲染为加粗（关键判词强调；防注入先整体转义）。"""
+    return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', H.escape(t))
 
 def img_tags(imgs):
     out = []
@@ -384,6 +392,7 @@ except Exception as _e:
     _narrative_html = (f'<div style="padding:12px;border:1px solid #f59e0b;border-radius:8px;'
                        f'color:#92400e">叙事层生成失败（如实标注）：{_H.escape(str(_e))}</div>')
 total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists())
+unique_imgs = len({pre for _, _, _, m in STEPS for pre, _, _ in m['imgs'] if (STEPS_DIR / f'{pre}.png').exists()})
 ui_imgs = sum(1 for _, _, _, m in STEPS for pre, _, kind in m['imgs'] if kind == 'ui' and (STEPS_DIR / f'{pre}.png').exists())
 
 # ── 闸门仪表盘 ──
@@ -455,13 +464,13 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     for n in range(start, end + 1):
         _, title, gate_text, meta = STEPS[n-1]
         done = any(state.get(k) for k in meta['keys']) or n == 26
-        ts = next((fmt_ts(k) for k in meta['keys'] if fmt_ts(k)), '')
+        ts = meta.get('ts_override') or next((fmt_ts(k) for k in meta['keys'] if fmt_ts(k)), '')
         gate_mark = f'<span class="gmark">{GATE_BY_STEP[n]}</span>' if n in GATE_BY_STEP else ''
-        status = '<span class="ok">✅</span>' if done else '<span class="no">⬜</span>'
-        if meta.get('open_note'):
-            done = False
-            status = '<span class="no">⬜</span><span class="gmark">判回滚</span>'
-        nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{status}</a>')
+        nav_status = '<span class="ok">✅</span>' if done else '<span class="no">⬜</span>'
+        status = nav_status
+        if meta.get('mark_chip'):
+            status += f'<span class="gmark">{H.escape(meta["mark_chip"])}</span>'
+        nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{nav_status}</a>')
         imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
         abg, afg, atxt = ACTOR_STYLE[meta['actor']]
         step_cards.append(f'''
@@ -472,8 +481,8 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     <span class="st-meta">{status}{f" · {ts}" if ts else ""} <span class="actor" style="background:{abg};color:{afg}">{atxt}｜{H.escape(meta["actorText"])}</span></span></div>
   </div>
   <p class="st-story">{H.escape(meta["narrative"])}</p>
-  {('<div class="st-open">' + H.escape(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
-  {('<div class="st-note">' + H.escape(meta["note"]) + '</div>') if meta.get("note") else ''}
+  {('<div class="st-open">' + md_bold(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
+  {('<div class="st-note">' + md_bold(meta["note"]) + '</div>') if meta.get("note") else ''}
   <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>把关标准（方案原文）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
   <div class="st-shots">{imgs_html}</div>
 </article>''')
@@ -619,6 +628,14 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
   .gates{{grid-template-columns:repeat(2,1fr)}}
   .st-story,.st-gate{{margin-left:0;padding-left:0}}
 }}
+/* ── 图版面（分析轮 P-6/P-8）：图放大可读 + 占位防懒加载漂移 + 锚点滚动偏移 ── */
+/* 证据图=产品界面实拍，不得裁剪（object-fit:cover 会裁掉下半屏内容——P-19）；
+   满栏呈现保证截图内文字可读（P-6：520px 上限→满栏） */
+label.shot{{flex:1 1 100%;max-width:none;min-width:0}}
+label.shot img{{width:100%;height:auto;max-height:none;aspect-ratio:16/10;object-fit:contain;object-position:top;background:#f1f5f9;border-radius:8px}}
+.cp-shot img{{width:100%;height:auto;max-height:none;aspect-ratio:16/10;object-fit:contain;background:#f1f5f9}}
+.step,.section-hd{{scroll-margin-top:16px}}
+html{{scroll-behavior:auto}} /* 平滑滚动在 15k px 长文里会让锚点落点漂移（P-8），改即时 */
 @media print {{
   .sidebar{{display:none}}
   .layout{{grid-template-columns:1fr}}
@@ -638,7 +655,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
     推演轮次 {RUN_ID or 'V3 基线轮'} · 锚定本轮 state 落键时间窗 · 标题与把关逐字引用方案原文 · 每步标注人/AI 角色与结果锚点</div>
     <div class="hero-stats">
       <div class="hstat"><b>26</b><span>步骤</span></div>
-      <div class="hstat"><b>{total_imgs}</b><span>证据图 · 全部界面实拍</span></div>
+      <div class="hstat"><b>{unique_imgs}</b><span>证据图位 · {total_imgs} 图次 · 全部实拍</span></div>
       <div class="hstat"><b>R-A3 闭环</b><span>G5 复审 r8 PASS · 发布解冻（10:52）</span></div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
@@ -668,11 +685,11 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
 
 
   <h2 class="section-hd" id="audit-response">独立审计与处置 · AUDIT-OPINION-CONCERNS（10/10 逐条）</h2>
-  <p class="stat-note">独立合规审计（audit-agent，05:35 独立复核，与导演侧机械化意见书不一致）提出 10 项关切与 R-A1..R-A6 处置建议；收口轮逐条判定与处置如下（单一事实源：evidence/audit-response-disposition.md）。本轮有效性判定：<b>G1/G2/G4 留痕成立；G5 判回滚（实物 FAIL，发布冻结）；UAT 判"有条件验收"</b>——"四闸首过/AC 全过"口径判废。</p>
+  <p class="stat-note">独立合规审计（audit-agent，05:35 独立复核，与导演侧机械化意见书不一致）提出 10 项关切与 R-A1..R-A6 处置建议；收口轮逐条判定与处置如下（单一事实源：evidence/audit-response-disposition.md）。本轮有效性判定：<b>G1/G2/G4 留痕成立；G5 判回滚（实物 FAIL，发布冻结）；UAT 判"有条件验收"</b>——"四闸首过/AC 全过"口径判废。<b>收口追记（2026-09-29 10:52）：R1-R4 闭环、G5 复审 r8 READY-GATE-PASS、REL-* 解冻、UAT 条件解除</b>——判废口径经闭环转正，全链锚点见处置表。</p>
   <details class="audit" open><summary>▶ 独立审计 10 项判定与处置</summary>
   <table style="margin-top:8px"><tr><th>#</th><th>发现</th><th>判定</th><th>处置</th></tr>
-  <tr><td>1</td><td>G5 落键"通过"与评审实物矛盾（转述 stub 消息被当结论行，卡面 READY-GATE-FAIL）</td><td>属实</td><td>已修（根因）：H8 判词语义（末判词赢+卡面双源合并 FAIL 优先+熔断），run2 原文入守门用例；本报告步 20 判回滚</td></tr>
-  <tr><td>2</td><td>发布基线强制重建丢线 23 提交（DEF-BE-001/FE 修复线/守卫脚本/testlog），双缺陷回归</td><td>属实</td><td>已修（机制）：H11 集成 merge 续建+丢线守卫+禁强推；回补重验=行动项（2026-09-30 前）</td></tr>
+  <tr><td>1</td><td>G5 落键"通过"与评审实物矛盾（转述 stub 消息被当结论行，卡面 READY-GATE-FAIL）</td><td>属实</td><td>已修（根因）：H8 判词语义（末判词赢+卡面双源合并 FAIL 优先+熔断），run2 原文入守门用例；步 20 判回滚→复审 r8 PASS（闭环）</td></tr>
+  <tr><td>2</td><td>发布基线强制重建丢线 23 提交（DEF-BE-001/FE 修复线/守卫脚本/testlog），双缺陷回归</td><td>属实</td><td>已修+已闭环：H11 机制根治；回补 merge 67a1a95（丢线整线回归）+同基线复验 194/194+6/6+42/42+220（2026-09-29）</td></tr>
   <tr><td>3</td><td>UAT"全过"与证据行矛盾（AC-4/AC-7 有条件通过）+基线锚断裂</td><td>属实</td><td>已修（根因）：H9 逐条判词（有条件≠无条件验收，放行权归 bella）；验收书勘误入 origin/main</td></tr>
   <tr><td>4</td><td>G3 硬门无落键，治理报告跳过 G3/G6</td><td>属实</td><td>已修：H10 g3_code_pass 落键+治理报告六闸全列</td></tr>
   <tr><td>5</td><td>评审卡缺失由导演登记即置 done</td><td>属实</td><td>已修（R-A4）：补登记卡保留"评审记录待补"，不自批置 done</td></tr>
