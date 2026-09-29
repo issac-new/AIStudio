@@ -337,3 +337,145 @@ export function deriveLedgerStats(doc: LedgerDoc, now: number = Date.now()): Led
     primaryGaps,
   }
 }
+
+// ---- 状态-事件本体（第五期 ②）----
+
+export interface StateModelTransition {
+  id: string
+  from: string
+  to: string
+  trigger: string
+  rules: string[]
+  actions: string[]
+  evidence: string
+  refs?: { file?: string; upstream?: string; note?: string }
+}
+export interface StateModelDoc {
+  version: number
+  reviewedAt: string
+  object: string
+  authority: string
+  states: Array<{ id: string; semantics: string }>
+  freeMoveStates?: string[]
+  runOutcomeTerminal: Record<string, string>
+  transitions: StateModelTransition[]
+  eventSources: Array<{ id: string; authority: string; kind: string }>
+}
+
+/** upstream kanban_db.py 提取 VALID_STATUSES / _RUN_OUTCOME_TERMINAL_STATUS（事实面，不写死）。 */
+export function extractKanbanStatusFacts(kanbanDbPath: string): {
+  validStatuses: string[]
+  runOutcomeTerminal: Record<string, string>
+} | null {
+  try {
+    const src = readFileSync(kanbanDbPath, 'utf8')
+    const vm = src.match(/VALID_STATUSES\s*=\s*\{([^}]*)\}/)
+    const om = src.match(/_RUN_OUTCOME_TERMINAL_STATUS\s*=\s*\{([^}]*)\}/)
+    if (!vm) return null
+    const validStatuses = [...vm[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1])
+    const runOutcomeTerminal: Record<string, string> = {}
+    if (om) for (const m of om[1].matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)) runOutcomeTerminal[m[1]] = m[2]
+    return { validStatuses, runOutcomeTerminal }
+  } catch {
+    return null
+  }
+}
+
+function kanbanDbPathOf(): string | null {
+  const root = findUpstreamRoot(resolve(__dirname))
+  if (root) {
+    const p = resolve(root, 'hermes-agent/hermes_cli/kanban_db.py')
+    if (existsSync(p)) return p
+  }
+  // 测试/非常规部署：cwd 上寻
+  let dir = process.cwd()
+  for (let i = 0; i <= 6; i++) {
+    const p = resolve(dir, 'upstream/hermes-agent/hermes_cli/kanban_db.py')
+    if (existsSync(p)) return p
+    const parent = resolve(dir, '..')
+    if (parent === dir) break
+    dir = parent
+  }
+  return null
+}
+
+export function validateStateModel(doc: StateModelDoc, facts: { validStatuses: string[]; runOutcomeTerminal: Record<string, string> } | null, contractIds: Set<string>): string[] {
+  const problems: string[] = []
+  if (!doc || typeof doc !== 'object') return ['状态本体为空或非对象']
+  if (doc.version !== 1) problems.push(`version 须为 1，实得 ${doc.version}`)
+  if (!doc.reviewedAt || Number.isNaN(Date.parse(doc.reviewedAt))) problems.push('文件头 reviewedAt 缺失或不可解析')
+  if (facts) {
+    const declared = (doc.states ?? []).map((s) => s.id).sort()
+    const actual = [...facts.validStatuses].sort()
+    if (JSON.stringify(declared) !== JSON.stringify(actual)) {
+      problems.push(`states 与 upstream VALID_STATUSES 不一致（kanban_db.py:103）：声明 ${declared.join(',')} / 实际 ${actual.join(',')}`)
+    }
+    const om = JSON.stringify(Object.entries(doc.runOutcomeTerminal ?? {}).sort())
+    const am = JSON.stringify(Object.entries(facts.runOutcomeTerminal).sort())
+    if (om !== am) problems.push(`runOutcomeTerminal 与 upstream _RUN_OUTCOME_TERMINAL_STATUS 不一致（kanban_db.py:2377）：声明 ${om} / 实际 ${am}`)
+  }
+  const stateIds = new Set((doc.states ?? []).map((s) => s.id))
+  for (const t of doc.transitions ?? []) {
+    for (const f of ['id', 'from', 'to', 'trigger', 'actions', 'evidence'] as const) {
+      if (!t[f]) problems.push(`transition ${t.id ?? '?'} 缺字段 ${f}`)
+    }
+    if (t.from !== '*' && !stateIds.has(t.from)) problems.push(`transition ${t.id}.from 越状态词表：${t.from}`)
+    if (!stateIds.has(t.to) && !(doc.runOutcomeTerminal ?? {})[Object.keys(doc.runOutcomeTerminal ?? {}).find((k) => doc.runOutcomeTerminal[k] === t.to) ?? '']) {
+      // to 允许 states ∪ runOutcomeTerminal 值域（changes_requested 特例如实放行）
+      const terminalValues = new Set(Object.values(doc.runOutcomeTerminal ?? {}))
+      if (!terminalValues.has(t.to)) problems.push(`transition ${t.id}.to 越状态词表且非 run 终态值：${t.to}`)
+    }
+    for (const a of t.actions ?? []) {
+      if (!contractIds.has(a)) problems.push(`transition ${t.id}.actions 引用不存在的动作契约：${a}`)
+    }
+  }
+  for (const s of doc.freeMoveStates ?? []) {
+    if (!stateIds.has(s)) problems.push(`freeMoveStates 越状态词表：${s}`)
+  }
+  return problems
+}
+
+export function loadStateModel(opts?: {
+  facts?: { validStatuses: string[]; runOutcomeTerminal: Record<string, string> } | null
+  contractIds?: Set<string>
+}): LoadResult<StateModelDoc> {
+  const path = resolveGovFile('state-model.yaml')
+  if (!path || !existsSync(path)) return { exists: false, path: null, doc: null, problems: ['state-model.yaml 未找到'] }
+  let doc: StateModelDoc
+  try {
+    doc = loadYamlCached<StateModelDoc>('stateModel', path)
+  } catch (e) {
+    return { exists: true, path, doc: null, problems: [`YAML 解析失败：${(e as Error).message}`] }
+  }
+  const kb = kanbanDbPathOf()
+  const facts = opts?.facts !== undefined ? opts.facts : (kb ? extractKanbanStatusFacts(kb) : null)
+  if (!facts && !opts?.facts) {
+    return { exists: true, path, doc, problems: ['upstream kanban_db.py 不可达，词表一致性断言挂起（如实降级）'] }
+  }
+  const contracts = loadActionContracts()
+  const contractIds = opts?.contractIds ?? new Set((contracts.doc?.contracts ?? []).map((c) => c.id))
+  return { exists: true, path, doc, problems: validateStateModel(doc, facts, contractIds) }
+}
+
+// ---- ① 派单语义上下文（agent 消费本体的通道）----
+
+/**
+ * 为派单负载构建语义上下文块（fail-soft）：单元→能力→SLO 目标→判定词表。
+ * 数据全部来自受守门的注册表（metrics sloTargets/ledger），非用户输入；任何一环
+ * 缺席只降级对应行，不阻断派发。这是文章"Agent 消费本体"主张的最小落地通道。
+ */
+export function buildDispatchSemanticContext(specialistId: string): string | null {
+  const ledger = loadCapabilityLedger()
+  const metrics = loadMetricsDefs()
+  const unit = ledger.doc?.units.find((u) => u.id === specialistId)
+  if (!unit) return null
+  const cap = ledger.doc?.capabilities.find((c) => c.id === unit.capability)
+  const targets = (metrics.doc as { sloTargets?: Record<string, { successRate: number; windowDays: number; minSamples: number }> } | null)?.sloTargets
+  const tgt = targets?.[unit.sloTier]
+  const verdicts = (metrics.doc?.verdicts ?? []).map((v) => v.id).join('/')
+  const lines = [`[语义上下文] 单元 ${unit.id}（${unit.kind}${unit.primary ? '·主承载' : ''}）`]
+  if (cap) lines.push(`能力 ${cap.id} ${cap.name}（${cap.object}·${cap.action}，${ledger.doc?.domains.find((d) => d.id === cap.domain)?.name ?? ''}）`)
+  if (tgt) lines.push(`SLO ${unit.sloTier} 档：成功率目标 ${(tgt.successRate * 100).toFixed(0)}%（窗口 ${tgt.windowDays}d，样本<${tgt.minSamples} 判定挂起）`)
+  if (verdicts) lines.push(`判定词表 ${verdicts}（词面相似不构成判定依据，判定只认结构化 verdict；语义见 runtime/governance/metrics.yaml）`)
+  return lines.join('\n')
+}

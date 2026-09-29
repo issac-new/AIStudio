@@ -23,7 +23,8 @@ import { resolve } from 'path'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
-import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts } from './governance-ledger'
+import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
+import { queryImpact } from './governance-impact'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns } from './governance-analytics'
 import { auditLog } from './governance-audit'
 import { readDispatchLedger } from './dispatch-ledger'
@@ -256,6 +257,28 @@ router.get('/contracts', async (ctx) => {
     return
   }
   ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
+})
+
+// ---- 4A 治理层第五期：状态-事件本体投影 + 反向影响查询 ----
+
+router.get('/state-model', async (ctx) => {
+  const res = loadStateModel()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'state-model.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
+})
+
+router.get('/impact', async (ctx) => {
+  const target = String(ctx.query.target ?? '').trim()
+  if (!target) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'target 必填（形如 unit.<id> / contract.<id> / metric.<id> / verdicts / sloTargets / state-model）' }
+    return
+  }
+  ctx.body = { ok: true, ...queryImpact(target) }
 })
 
 export const governanceRoutes = router
