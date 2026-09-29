@@ -287,3 +287,16 @@
 497-desktop-win-zip-target.patch
 498-goals-user-preempt.patch
 499-goals-budget-fields.patch
+# 500（B7 自定义斜杠命令）：ChatInput slash 菜单合并自定义命令（coding-agent 会话面），
+#      选中写 prompt 模板全文而非 /name；数据=/api/ide/slash-commands（native-routes 原生中间件）。
+#      B8 扩展：监听 ide-edit-resend 事件 + expose setInputText（取回编辑消费面）。
+500-client-chatinput-custom-slash.patch
+# 501（B7 配套词条）：ide.sidePane.tab_slash zh/en 成对（473 之后按 496 同例单补）。
+501-client-i18n-sidepane-slash-tab.patch
+# 503（B8 取回编辑）：MessageItem 用户消息 ✎ 按钮 → window ide-edit-resend 事件 →
+#      ChatInput（patch 500 扩）填入可改再发；历史不改写（真改写重生成的引擎命令
+#      =zcode v4 editUserQuery，hermes 链未开——面板按钮 title 已如实标注）。
+503-client-messageitem-edit-resend.patch
+# 504（侧栏死链根治，原 499 让号避 goals-budget）：删 PageSidebarNav 孤函数 openMatrixChat——
+#      目标路由 hermes.matrixChat 已被 297 随 cockpit 家族整体删除，函数零调用方。
+504-sidebar-dead-matrix-entry-removal.patch

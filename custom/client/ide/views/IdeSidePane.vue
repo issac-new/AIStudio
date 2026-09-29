@@ -22,6 +22,7 @@ import IdeToolsPane from './IdeToolsPane.vue'
 import IdeWorkflowPane from './IdeWorkflowPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeHooksPane from './IdeHooksPane.vue'
+import IdeSlashCommandsPane from './IdeSlashCommandsPane.vue'
 import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
 import {
   loadTerminalActions,
@@ -50,6 +51,7 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string }> = [
   { key: 'mcp', icon: '⌗' },
   { key: 'terminal', icon: '⌨' },
   { key: 'hooks', icon: '⚓' },
+  { key: 'slash', icon: '/' },
 ]
 
 // R4 终端 actions（工作区级；MVP localStorage，团队共享归 R5+）
@@ -213,6 +215,7 @@ function focusMainChat(): void {
         </div>
       </template>
       <IdeHooksPane v-else-if="ide.sidePane.tab === 'hooks'" class="ide-sidepane__fill" data-testid="ide-sidepane-hooks" />
+      <IdeSlashCommandsPane v-else-if="ide.sidePane.tab === 'slash'" class="ide-sidepane__fill" data-testid="ide-sidepane-slash" />
       <div v-else class="ide-sidepane__assistant">
         <p class="ide-sidepane__assistant-hint">{{ t('ide.task.assistantHint') }}</p>
         <div class="ide-sidepane__assistant-kinds">

@@ -12,6 +12,7 @@ import { useAppStore } from '@/stores/hermes/app'
 import { useIdeStore } from '../store/ide'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
 import { autoRoute, type CostTier } from '../../../server/modelroute/model-routing'
+import IdeEngineModelsDialog from '../components/IdeEngineModelsDialog.vue'
 
 const { t } = useI18n()
 const chatStore = useChatStore()
@@ -78,8 +79,10 @@ const currentModel = computed(() => session.value?.model || '')
 
 const engineGroups = ref<EngineCatalogGroup[]>([])
 const usingIndependent = ref(false)
+const manageOpen = ref(false)
 
-onMounted(async () => {
+// A8：抽成可重入——管理对话框保存后重拉目录（写穿结果立即可选）。
+async function loadCatalog(): Promise<void> {
   try {
     const catalog = await fetchEngineCatalog()
     engineGroups.value = catalog.groups
@@ -88,7 +91,12 @@ onMounted(async () => {
     engineGroups.value = []
     usingIndependent.value = false
   }
-})
+}
+onMounted(() => { void loadCatalog() })
+
+function onManageSaved(): void {
+  void loadCatalog()
+}
 
 // 独立设置：独立目录优先；空回落 hermes 目录（appStore.modelGroups）
 const groups = computed(() =>
@@ -146,7 +154,16 @@ async function pick(provider: string, model: string): Promise<void> {
           </button>
         </section>
       </template>
+      <div class="ide-model-switcher__manage">
+        <button
+          type="button"
+          class="ide-model-switcher__managebtn"
+          data-testid="ide-model-manage"
+          @click="manageOpen = true"
+        >⚙ 管理引擎目录…</button>
+      </div>
     </div>
+    <IdeEngineModelsDialog v-if="manageOpen" @close="manageOpen = false" @saved="onManageSaved" />
   </div>
 </template>
 
@@ -231,5 +248,26 @@ async function pick(provider: string, model: string): Promise<void> {
     color: var(--primary-color, #18a058);
     background: rgba(97, 175, 239, 0.12);
   }
+}
+
+.ide-model-switcher__manage {
+  border-top: 1px dashed var(--border-color, #3a3f4b);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.ide-model-switcher__managebtn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 11px;
+  padding: 4px 6px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover { background: rgba(255, 255, 255, 0.06); color: var(--primary-color, #18a058); }
 }
 </style>

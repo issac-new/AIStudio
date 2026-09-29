@@ -16,9 +16,22 @@ export async function registerMatrixChat(_app: App) {
   // upstream patch 移除。本模块无动态路由追加。
 }
 
-// Kept for backward compatibility with bootstrap.ts call site, but is now a no-op:
-// matrix-chat routes live in ia2/routes.ts (comms scene children).
-export function registerMatrixChatRoutes(_router: Router) {
+// A10 复活（2026-09-29）：全屏 Matrix 客户端路由恢复。matrix-chat 三件套
+// （MatrixChatView/MatrixChatPanel/MatrixRoomList/MatrixJoinRoomDialog）自 patch 297
+// 删 cockpit 家族路由后成孤儿，房间列表/房间目录浏览能力不可达。此处以顶层
+// fullscreen 路由重新挂载（/app 三栏内的房间画布不变，两处共享 matrix-room store）。
+export function registerMatrixChatRoutes(router: Router) {
   if (!features.matrixChat) return;
-  // no-op: routes defined in custom/client/ia2/routes.ts
+  router.addRoute({
+    path: '/matrix',
+    name: 'matrix.client',
+    component: () => import('./views/MatrixChatView.vue'),
+    meta: { fullscreen: true },
+  });
+  router.addRoute({
+    path: '/matrix/room/:roomId',
+    name: 'matrix.clientRoom',
+    component: () => import('./views/MatrixChatView.vue'),
+    meta: { fullscreen: true },
+  });
 }

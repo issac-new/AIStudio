@@ -38,8 +38,56 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
       await handleCacheAttribution(ctx)
       return
     }
+    // ── B7：自定义斜杠命令（zcode CommandsSection 对照）──
+    if (method === 'GET' && path === '/api/ide/slash-commands') {
+      await handleSlashCommandsGet(ctx)
+      return
+    }
+    if (method === 'POST' && path === '/api/ide/slash-commands/save') {
+      await handleSlashCommandsSave(ctx)
+      return
+    }
     await next()
   }
+}
+
+// B7 存储：runtime/ide-slash-commands.json（原子写；SLASH_COMMAND_STORE 守门注入）。
+function slashCommandStorePath(): string {
+  return process.env.SLASH_COMMAND_STORE?.trim()
+    ? resolve(process.env.SLASH_COMMAND_STORE)
+    : resolve(__dirname, '../../../runtime/ide-slash-commands.json')
+}
+
+async function handleSlashCommandsGet(ctx: Context): Promise<void> {
+  const store = slashCommandStorePath()
+  if (!existsSync(store)) {
+    ctx.body = { ok: true, commands: [] }
+    return
+  }
+  try {
+    const raw = JSON.parse(readFileSync(store, 'utf8')) as { commands?: unknown }
+    const { normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
+    ctx.body = { ok: true, commands: normalizeSlashCommands(raw.commands) }
+  } catch {
+    ctx.body = { ok: true, commands: [] }
+  }
+}
+
+async function handleSlashCommandsSave(ctx: Context): Promise<void> {
+  const { validateSlashCommands, normalizeSlashCommands } = await import('../../slashcmd/slash-commands')
+  const body = (ctx.request as { body?: Record<string, unknown> }).body ?? {}
+  const commands = normalizeSlashCommands(body.commands)
+  const problems = validateSlashCommands(commands)
+  if (problems.length) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems }
+    return
+  }
+  const store = slashCommandStorePath()
+  const tmp = `${store}.tmp`
+  writeFileSync(tmp, JSON.stringify({ commands }, null, 2), 'utf8')
+  renameSync(tmp, store)
+  ctx.body = { ok: true, commands }
 }
 
 async function handleEngineModelsPut(ctx: Context): Promise<void> {

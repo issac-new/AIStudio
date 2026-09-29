@@ -8,9 +8,12 @@ const chatState: Record<string, unknown> = {
   activeSessionId: 's1', activeSession: null, sendMessage: vi.fn(), isLoading: false,
 }
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => chatState }))
+// A6：IdeQueuePanel 新增 ide store（workspace 取自治队列）与 fetch（queue 端点）依赖
+vi.mock('../store/ide', () => ({ useIdeStore: () => ({ workspace: null }) }))
+vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, queue: [] }) })))
 
 describe('R6 Task Groups 真实链（taskPlan 映射）', () => {
-  it('会话 taskPlan 快照→组+步骤映射（pending=待批/completed=已批）', async () => {
+  it('会话 taskPlan 快照→组+步骤映射（completed=✓/pending=未执行徽标）', async () => {
     const { default: IdeTaskGroupsPanel } = await import('../components/IdeTaskGroupsPanel.vue')
     chatState.activeSession = {
       taskPlan: { plan_id: 'p1', run_id: 'run-abc12345', plan: [
@@ -28,7 +31,7 @@ describe('R6 Task Groups 真实链（taskPlan 映射）', () => {
 })
 
 describe('R6 Task Groups 面板', () => {
-  it('组展开/edited-files pill/待批步骤专区/批准动作', async () => {
+  it('组展开/edited-files pill/未执行步骤专区（A3：假批准按钮已移除）', async () => {
     const { default: IdeTaskGroupsPanel } = await import('../components/IdeTaskGroupsPanel.vue')
     const w = mount(IdeTaskGroupsPanel, {
       props: {
@@ -36,8 +39,8 @@ describe('R6 Task Groups 面板', () => {
           groupId: 'g1', title: '支付收银台',
           editedFiles: ['src/pay.ts', 'src/checkout.vue'],
           steps: [
-            { stepId: 's1', description: '实现支付流', needsApproval: false, approved: true },
-            { stepId: 's2', description: '上线切流', needsApproval: true, approved: false },
+            { stepId: 's1', description: '实现支付流', approved: true },
+            { stepId: 's2', description: '上线切流', approved: false },
           ],
         }],
       },
@@ -46,10 +49,42 @@ describe('R6 Task Groups 面板', () => {
     expect(w.find('[data-testid="ide-tg-pending"]').text()).toContain('上线切流')
     await w.find('[data-testid="ide-tg-head-g1"]').trigger('click')
     expect(w.find('[data-testid="ide-tg-file-src/pay.ts"]').exists()).toBe(true)
-    await w.find('[data-testid="ide-tg-approve-s2"]').trigger('click')
-    expect((w.emitted('approve') ?? []).at(0)).toEqual(['g1', 's2', true])
+    // A3：引擎无逐步批准语义，不再有假批准按钮
+    expect(w.find('[data-testid="ide-tg-approve-s2"]').exists()).toBe(false)
+    expect(w.text()).toContain('未执行')
     await w.find('[data-testid="ide-tg-file-src/pay.ts"]').trigger('click')
     expect(w.find('[data-testid="ide-tg-filestate"]').exists()).toBe(true)
+  })
+})
+
+describe('A3 会话级真实待批审批（pendingApproval → respondApproval）', () => {
+  it('审批卡渲染四档按钮，点击调 respondApproval；missing 显错不冒充已批', async () => {
+    const { default: IdeTaskGroupsPanel } = await import('../components/IdeTaskGroupsPanel.vue')
+    const respondApproval = vi.fn(() => 'submitted')
+    chatState.activePendingApproval = {
+      approvalId: 'ap1', command: 'git push', description: '推送远端',
+      choices: ['once', 'session', 'deny'], allowPermanent: false,
+    }
+    chatState.respondApproval = respondApproval
+    const w = mount(IdeTaskGroupsPanel)
+    expect(w.find('[data-testid="ide-tg-session-approval"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-tg-session-approval"]').text()).toContain('推送远端')
+    await w.find('[data-testid="ide-tg-approval-once"]').trigger('click')
+    expect(respondApproval).toHaveBeenCalledWith('once')
+    // missing 路径：显错不静默
+    respondApproval.mockReturnValue('missing')
+    await w.find('[data-testid="ide-tg-approval-deny"]').trigger('click')
+    expect(w.find('[data-testid="ide-tg-approval-err"]').exists()).toBe(true)
+    delete chatState.activePendingApproval
+    delete chatState.respondApproval
+  })
+
+  it('无待批审批时不渲染审批卡', async () => {
+    const { default: IdeTaskGroupsPanel } = await import('../components/IdeTaskGroupsPanel.vue')
+    const w = mount(IdeTaskGroupsPanel, {
+      props: { groups: [{ groupId: 'g1', title: 't', editedFiles: [], steps: [{ stepId: 's1', description: 'd', approved: true }] }] },
+    })
+    expect(w.find('[data-testid="ide-tg-session-approval"]').exists()).toBe(false)
   })
 })
 
