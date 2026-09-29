@@ -211,6 +211,10 @@
 451-jobs-base-url-cli.patch
 452-memory-set-cli.patch
 453-memory-save-cli.patch
+# 416/417 series 行回补（2026-09-29 死补丁处置：416 direct-apply 验证过已树上应用；
+#      417 kanban 硬化与树上并行 WIP 冲突由 inject 窗口统一重放裁决）。
+416-agent-delegate-handoff-phrase.patch
+417-agent-kanban-runtime-hardening.patch
 419-agent-board-concurrency-gate.patch
 455-server-p1-routes-mounts.patch
 470-hosted-rooms-collab-event-id.patch

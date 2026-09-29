@@ -10,18 +10,19 @@ import { computed, onMounted, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { distillTarget } from '../../../server/learndistill/learn-distill'
 import { shouldContribute } from '../../../server/knowledge/knowledge-loop'
-import { fetchMcpServers } from '@/api/hermes/mcp'
 
 const chat = useChatStore()
 const open = ref(false)
 const feedbackText = ref('')
 const semanticaOnline = ref<boolean | null>(null)
 
+// 状态判定走 agent 层配置（studio MCP 面板列的是另一层——R2 修正）。
 onMounted(async () => {
   try {
-    const res = await fetchMcpServers()
-    const s = (res.servers ?? []).find((x) => /semantica/i.test(x.name ?? ''))
-    semanticaOnline.value = Boolean(s)
+    const res = await fetch('/api/ide/semantica-status')
+    if (!res.ok) throw new Error(String(res.status))
+    const body = await res.json() as { configured?: boolean }
+    semanticaOnline.value = Boolean(body.configured)
   } catch {
     semanticaOnline.value = null
   }
@@ -65,7 +66,7 @@ function sendKnowledgeContribute(): void {
 <template>
   <div class="ide-know" data-testid="ide-knowledge-bar">
     <button type="button" class="ide-know__btn" title="知识闭环（/learn 沉淀+知识库贡献）" data-testid="ide-know-open" @click="open = !open">
-      ⛁ <span class="ide-know__dot" :data-state="semanticaOnline === null ? 'unknown' : semanticaOnline ? 'on' : 'off'" :title="semanticaOnline ? 'semantica MCP 在线（15 知识工具）' : 'semantica 未上線（hermes mcp install semantica）'" />
+      ⛁ <span class="ide-know__dot" :data-state="semanticaOnline === null ? 'unknown' : semanticaOnline ? 'on' : 'off'" :title="semanticaOnline ? 'semantica 已配置（agent 会话装载 15 只知识工具）' : 'semantica 未配置（hermes mcp install semantica）'" />
     </button>
     <div v-if="open" class="ide-know__panel" data-testid="ide-know-panel">
       <div class="ide-know__head">知识沉淀（/learn 三归宿）</div>
