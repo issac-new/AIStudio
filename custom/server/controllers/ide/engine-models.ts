@@ -21,7 +21,7 @@ const engineModelsRouter = new Router({ prefix: '/api/ide/engine-models' })
 // 存储路径支持 ENGINE_MODEL_STORE 覆盖（守门注入临时文件；生产默认 runtime/）。
 const STORE_PATH = process.env.ENGINE_MODEL_STORE?.trim()
   ? resolve(process.env.ENGINE_MODEL_STORE)
-  : join(__dirname, '../../../runtime/ide-engine-models.json')
+  : join(__dirname, '../../../../runtime/ide-engine-models.json')
 
 function readConfig(): EngineModelConfig {
   if (!existsSync(STORE_PATH)) return { providers: [], defaultModel: null }

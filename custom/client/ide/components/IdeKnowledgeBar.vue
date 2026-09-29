@@ -10,6 +10,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { distillTarget } from '../../../server/learndistill/learn-distill'
 import { shouldContribute } from '../../../server/knowledge/knowledge-loop'
+import { authFetch } from '../utils/auth-fetch'
 
 const chat = useChatStore()
 const open = ref(false)
@@ -19,7 +20,7 @@ const semanticaOnline = ref<boolean | null>(null)
 // 状态判定走 agent 层配置（studio MCP 面板列的是另一层——R2 修正）。
 onMounted(async () => {
   try {
-    const res = await fetch('/api/ide/semantica-status')
+    const res = await authFetch('/api/ide/semantica-status')
     if (!res.ok) throw new Error(String(res.status))
     const body = await res.json() as { configured?: boolean }
     semanticaOnline.value = Boolean(body.configured)

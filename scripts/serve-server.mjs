@@ -27,7 +27,10 @@ for (let i = 0; i < args.length; i++) {
 }
 
 const overlayRoot = resolve(import.meta.dirname, '..');
-const upstream = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs 同一基建；语义=upstream 根）
+const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
+  : resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
 
 process.env.TS_NODE_PROJECT = 'packages/server/tsconfig.json';
 process.env.TS_NODE_FILES = '1';

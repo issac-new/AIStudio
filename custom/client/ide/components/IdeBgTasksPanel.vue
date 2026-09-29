@@ -10,6 +10,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { useNowTick } from '@/custom/ia2/composables/useNowTick'
+import { authFetch } from '../utils/auth-fetch'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 const chat = useChatStore()
@@ -40,7 +41,7 @@ async function loadQueue(): Promise<void> {
   const ws = ide.workspace
   if (!ws) { queueItems.value = []; return }
   try {
-    const res = await fetch(`/api/zcode-engine/queue/${encodeURIComponent(ws)}`)
+    const res = await authFetch(`/api/zcode-engine/queue/${encodeURIComponent(ws)}`)
     if (!res.ok) { queueError.value = `队列 ${res.status}`; return }
     const body = (await res.json()) as { queue?: Array<{ itemId: string; text: string; origin: string; state: string }> }
     queueItems.value = Array.isArray(body.queue) ? body.queue : []
@@ -56,7 +57,7 @@ async function loadWorkflowRuns(): Promise<void> {
   const sid = chat.activeSessionId
   if (!ws || !sid) { wfRuns.value = []; return }
   try {
-    const res = await fetch(`/api/zcode-engine/workflow/runs?workspacePath=${encodeURIComponent(ws)}&sessionId=${encodeURIComponent(sid)}&limit=10`)
+    const res = await authFetch(`/api/zcode-engine/workflow/runs?workspacePath=${encodeURIComponent(ws)}&sessionId=${encodeURIComponent(sid)}&limit=10`)
     if (!res.ok) { wfError.value = `工作流 ${res.status}`; return }
     const body = (await res.json()) as { ok?: boolean; runs?: Array<{ runId: string; name?: string; status?: string }> }
     wfRuns.value = Array.isArray(body.runs) ? body.runs : []

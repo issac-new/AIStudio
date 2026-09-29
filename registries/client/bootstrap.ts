@@ -3,7 +3,8 @@
 // 加入上游 router。
 import type { App } from 'vue'
 import { features } from '../../config/features'
-import router from '../../../upstream/hermes-studio/packages/client/src/router'
+// '@' alias 引用上游（与 entry.mts 同因：裸相对路径在 worktree/私有上游布局解析失败）
+import router from '@/router'
 import { getRegisteredRoutes } from './index'
 
 export async function bootstrapClient(app: App): Promise<void> {
