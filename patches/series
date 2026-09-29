@@ -306,3 +306,8 @@
 504-sidebar-dead-matrix-entry-removal.patch
 # 505（卡抽屉 body/评论 Markdown 渲染）：upstream 抽屉裸插值→KanbanMarkdown，run2 实拍实证 raw 字面量。
 505-kanban-drawer-markdown.patch
+# 506（IDE Automations 服务端挂载，A2）：/api/ide/automations 规则 CRUD+事件摄入。
+#      控制器 custom/controllers/ide/automations.ts（A 类）；引擎 custom/server/automations/。
+506-server-ide-automations-route.patch
+# 507（IDE Automations 侧栏页签 i18n，A2）：tab_automations zh/en 双语。
+507-client-i18n-automations-tab.patch

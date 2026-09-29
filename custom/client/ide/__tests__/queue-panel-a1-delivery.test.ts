@@ -57,6 +57,7 @@ describe('A1 IdeQueuePanel 投递双模式 + 时间线', () => {
   })
 
   it('① 模式切换：默认排队高亮；点注入调 setChatDeliveryMode("steer")', async () => {
+    chatState.queuedUserMessages = new Map([['s1', [{ id: 'q0', content: 'seed' }]]])
     const w = mount(IdeQueuePanel)
     const queueBtn = w.find('[data-testid="ide-delivery-mode-queue"]')
     const steerBtn = w.find('[data-testid="ide-delivery-mode-steer"]')
