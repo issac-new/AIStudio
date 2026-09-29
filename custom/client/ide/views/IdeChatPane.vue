@@ -45,6 +45,7 @@ import type { InlineDiffUndoContext } from '../components/IdeInlineDiff.vue'
 import IdeVideoFramesDialog from '../components/IdeVideoFramesDialog.vue'
 import IdeFindInSession from '../components/IdeFindInSession.vue'
 import IdeBtwPanel from '../components/IdeBtwPanel.vue'
+import IdeBgTasksPanel from '../components/IdeBgTasksPanel.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
 import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
 import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
@@ -342,6 +343,8 @@ function openFind(): void {
 }
 // B2 侧问浮窗开关
 const btwOpen = ref(false)
+// B1 后台任务中心开关
+const bgTasksOpen = ref(false)
 // S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
 // fetchWorkspaceRunChangesForSession → 首文件详情端点 patch）；无 diff 不渲染。
 // A1 接线（2026-09-29）：同时捕获 undo 上下文（changeId/fileId/workspace），
@@ -451,6 +454,13 @@ async function pickModel(provider: string, model: string): Promise<void> {
           title="侧问（/btw：旁路提问不打断主任务，答完可复制旁注回主会话）"
           @click="btwOpen = !btwOpen"
         >⇋</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-bgtasks"
+          title="后台任务中心（子代理/自治队列/工作流运行 跨源总览）"
+          @click="bgTasksOpen = !bgTasksOpen"
+        >⏱</button>
         <button
           type="button"
           class="ide-chat__action"
@@ -595,6 +605,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeVideoFramesDialog v-if="videoFramesOpen" :workspace="ide.workspace" @close="videoFramesOpen = false" @frames="onVideoFrames" />
       <IdeFindInSession v-if="findOpen" ref="findRef" @close="findOpen = false" />
       <IdeBtwPanel v-if="btwOpen" @close="btwOpen = false" />
+      <IdeBgTasksPanel v-if="bgTasksOpen" @close="bgTasksOpen = false" />
       <IdeCompactionCard />
       <div class="ide-chat__model-picker-anchor">
         <ChatInput
