@@ -652,10 +652,10 @@ index 0000000..6195d9b
 +process.stdin.on("end", () => process.exit(0));
 diff --git a/packages/zcode-cua/node-backend.js b/packages/zcode-cua/node-backend.js
 new file mode 100644
-index 0000000..15d2355
+index 0000000..84668b9
 --- /dev/null
 +++ b/packages/zcode-cua/node-backend.js
-@@ -0,0 +1,743 @@
+@@ -0,0 +1,744 @@
 +// @zcode/zcode-cua Node 跨平台自动化后端（overlay 补丁件，2026-09-29）。
 +//
 +// 定位：产品 Helper（原生 addon，tools/cua-helper 产物）缺席时的等价后端——
@@ -836,21 +836,14 @@ index 0000000..15d2355
 +
 +// ── Linux 探测与实现 ──
 +
-+async function firstAvailableCmd(candidates) {
++async function firstAvailableCmd(candidates, runner = runCommand) {
 +  for (const c of candidates) {
-+    const res = await runCommand("sh", ["-c", `command -v ${JSON.stringify(c)}`], { timeoutMs: 2_000 });
++    const res = await runner("sh", ["-c", `command -v ${JSON.stringify(c)}`], { timeoutMs: 2_000 });
 +    if (res.code === 0 && res.stdout.trim()) return c;
 +  }
 +  return null;
 +}
 +
-+async function linuxInputCmd() {
-+  return (await firstAvailableCmd(["ydotool", "xdotool"])) ?? null;
-+}
-+
-+async function linuxScreenshotCmd() {
-+  return (await firstAvailableCmd(["maim", "scrot", "import", "gnome-screenshot", "grim"])) ?? null;
-+}
 +
 +// ── 参数清洗 ──
 +
@@ -884,6 +877,14 @@ index 0000000..15d2355
 +  function requirePlatform() {
 +    if (mac || win || linux) return;
 +    throw new Error(`unsupported platform: ${platform}`);
++  }
++
++  async function linuxInputCmd() {
++    return (await firstAvailableCmd(["ydotool", "xdotool"], runner)) ?? null;
++  }
++
++  async function linuxScreenshotCmd() {
++    return (await firstAvailableCmd(["maim", "scrot", "import", "gnome-screenshot", "grim"], runner)) ?? null;
 +  }
 +
 +  async function macAssertOk(res, what) {
@@ -1397,7 +1398,7 @@ index 0000000..15d2355
 +export const NODE_BACKEND_METHODS = Object.freeze([
 +  "health", "permission_status", "screenshot", "list_displays", "list_apps", "list_windows",
 +  "open_application", "get_app_state", "mouse_move", "left_click", "right_click",
-+  "double_click", "drag", "scroll", "type_text", "key", "hold_key_down", "hold_key_up", "wait",
++  "double_click", "drag", "scroll", "type_text", "key", "hold_key_down", "hold_key_up", "set_value", "wait",
 +]);
 diff --git a/packages/zcode-cua/tool-map.js b/packages/zcode-cua/tool-map.js
 new file mode 100644
