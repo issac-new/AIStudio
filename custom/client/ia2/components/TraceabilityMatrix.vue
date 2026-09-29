@@ -119,7 +119,7 @@ function openTask(row: { taskId: string | null }): void {
 function fmtTime(v: string | null): string {
   if (!v) return '—'
   const d = new Date(v)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('zh-CN')
 }
 </script>
 

@@ -108,7 +108,7 @@ function formatRuntime(sec: number | null | undefined): string {
 function formatTime(ts: number | null | undefined): string {
   if (!ts) return '-'
   try {
-    return new Date(ts * 1000).toLocaleString()
+    return new Date(ts * 1000).toLocaleString('zh-CN')
   } catch {
     return String(ts)
   }
