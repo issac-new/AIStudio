@@ -54,6 +54,16 @@ watch(() => route.query.task, (taskId) => {
   if (id) ide.setDimension('task')
 }, { immediate: true })
 
+// ── 会话深链（/ide?session=<id>，沟通协作页「需关注」会话行 R7-B 入口）──
+// 此前 WorkbenchView 发出 session 参数但本侧零消费，跳转后静默丢弃。
+// 会话列表未装载时先装载再切换；未知 id 由 switchSession 自身容错（不崩溃）。
+watch(() => route.query.session, async (sessionId) => {
+  const id = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : null
+  if (!id) return
+  if (!chatStore.sessionsLoaded) await chatStore.loadSessions(chatStore.sessionProfileFilter)
+  await chatStore.switchSession(id)
+}, { immediate: true })
+
 // 深链绑定后跨板解析任务（aipaydev 推演 ide-briefing-cross-board-empty 立项）：
 // kanbanStore.tasks 只装当前选中板，agent 自建板（如 aipay-rfd）的任务会解析
 // 失败致简报抽屉空态。这里主动逐板查询（当前板缓存优先，一次深链最多 +N 次
