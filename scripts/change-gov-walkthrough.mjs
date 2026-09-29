@@ -24,6 +24,23 @@ const page = await browser.newPage({ viewport: { width: 1560, height: 940 }, loc
 const results = []
 function record(name, ok, note = '') { results.push({ name, ok, note }) }
 
+async function domClick(sel) {
+  // 遮罩免疫点击（走查先例：naive-ui 遮罩下 Playwright click 永超时——evaluate 直点）。
+  // sel 形如 'CSS' 或 'CSS::TEXT=按钮文字'（文本精确匹配，等价 playwright hasText 但 querySelector 可解析）
+  const css = sel.split('::TEXT=')[0]
+  await page.locator(css).first().waitFor({ state: 'attached', timeout: 15000 })
+  await page.evaluate((s) => {
+    const [c, textRule] = s.split('::TEXT=')
+    let el = null
+    if (textRule) {
+      el = [...document.querySelectorAll(c)].find(e => e.textContent.trim() === textRule)
+    } else {
+      el = document.querySelector(c)
+    }
+    if (!el) throw new Error('not found: ' + s)
+    el.click()
+  }, sel)
+}
 async function clearMasks() {
   for (let i = 0; i < 3 && await page.locator('.n-modal-mask').count() > 0; i++) {
     await page.keyboard.press('Escape')
@@ -51,7 +68,7 @@ await page.screenshot({ path: `${shots}/01-accounts-tab.png`, fullPage: false })
 // 决策点动线：定位 → 看板页签
 const locateBtn = page.locator('[data-testid="ma-decisions"] button', { hasText: '定位' }).first()
 if (await locateBtn.count() > 0) {
-  await locateBtn.click()
+  await domClick('[data-testid="ma-decisions"] button::TEXT=定位')
   await page.waitForTimeout(600)
   const boardActive = await page.locator('[data-testid="ia-tasks-tab-board"]').first().getAttribute('aria-selected')
   record('决策点定位 → 看板页签', boardActive === 'true')
@@ -70,13 +87,13 @@ await page.screenshot({ path: `${shots}/02-gov-change.png`, fullPage: false })
 
 // ── ③ 实弹闭环：创建并提交一单 ──
 await clearMasks()
-await page.locator('[data-testid="cg-new"]').first().click()
+await domClick('[data-testid="cg-new"]')
 await page.waitForTimeout(800)
 await page.locator('[data-testid="cg-form-title"]').fill('走查：报表字段新增（E2E）')
 await page.locator('[data-testid="cg-form-source"]').fill('walkthrough')
 await page.locator('[data-testid="cg-form-impact-schedule"]').selectOption('2')
 await page.locator('[data-testid="cg-form-impact-risk"]').selectOption('2')
-await page.locator('[data-testid="cg-form-create-submit"]').click()
+await domClick('[data-testid="cg-form-create-submit"]')
 await page.waitForTimeout(1200)
 const row1 = page.locator('[data-testid^="cg-row-cr-"]', { hasText: '走查：报表字段新增' })
 record('变更单创建并提交（行出现）', await row1.count() > 0)
@@ -85,7 +102,8 @@ await page.screenshot({ path: `${shots}/03-change-created.png`, fullPage: false 
 
 // ── ④ 冻结闸门：建窗口 → 再提一单 → 穿透 chip（表单二开前整页 reload，清组件态）──
 await clearMasks()
-await page.locator('[data-testid="cg-freeze-new"]').first().click()
+await clearMasks()
+await domClick('[data-testid="cg-freeze-new"]')
 await page.waitForTimeout(800)
 await page.locator('[data-testid="cg-freeze-name"]').fill('走查：v0.9 发布冻结')
 await page.locator('[data-testid="cg-freeze-tier"]').selectOption('3')
@@ -93,18 +111,18 @@ const now = new Date()
 const fmt = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 await page.locator('[data-testid="cg-freeze-start"]').fill(fmt(new Date(now.getTime() - 3600_000)))
 await page.locator('[data-testid="cg-freeze-end"]').fill(fmt(new Date(now.getTime() + 72 * 3600_000)))
-await page.locator('[data-testid="cg-freeze-create"]').click()
+await domClick('[data-testid="cg-freeze-create"]')
 await page.waitForTimeout(1200)
 record('冻结窗口创建（T3 行出现）', await page.locator('[data-testid^="cg-freeze-row-fw-"]', { hasText: '走查：v0.9 发布冻结' }).count() > 0)
 
 await page.goto(BASE + '/#/app/gov', { waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(3000)
 await clearMasks()
-await page.locator('[data-testid="cg-new"]').first().click()
+await domClick('[data-testid="cg-new"]')
 await page.waitForTimeout(800)
 await page.locator('[data-testid="cg-form-title"]').fill('走查：冻结期插单（E2E）')
 await page.locator('[data-testid="cg-form-impact-scope"]').selectOption('1')
-await page.locator('[data-testid="cg-form-create-submit"]').click()
+await domClick('[data-testid="cg-form-create-submit"]')
 await page.waitForTimeout(1200)
 const row2 = page.locator('[data-testid^="cg-row-cr-"]', { hasText: '走查：冻结期插单' })
 const row2Text = await row2.first().innerText().catch(() => '')
