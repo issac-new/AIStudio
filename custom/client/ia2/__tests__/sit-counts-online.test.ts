@@ -6,12 +6,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
-const { fleetSessionsRef, accountsRef, kanbanTasksRef, matrixRoomsRef, joinedMembersRef } = vi.hoisted(() => ({
+const { fleetSessionsRef, accountsRef, kanbanTasksRef, matrixRoomsRef, joinedMembersRef, platformsRef, gatewayStateRef, loggedInRef } = vi.hoisted(() => ({
   fleetSessionsRef: { value: [] as Array<{ profile: string }> },
   accountsRef: { value: [] as Array<{ agentTeams?: Array<{ profiles: string[] }> }> },
   kanbanTasksRef: { value: [] as Array<{ status: string; assignee?: string | null }> },
   matrixRoomsRef: { value: [] as Array<{ roomId: string }> },
   joinedMembersRef: { value: [] as Array<{ userId: string; presence: string }> },
+  platformsRef: { value: [] as Array<{ name: string; state: string; profile?: string; icon: string; updated: string }> },
+  gatewayStateRef: { value: 'stopped' as string },
+  loggedInRef: { value: false as boolean },
 }))
 
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
@@ -36,6 +39,7 @@ vi.mock('@/stores/hermes/kanban', () => ({
 vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
   useMatrixClientStore: () => ({
     client: {
+      isLoggedIn: () => loggedInRef.value,
       getRoom: (roomId: string) => {
         if (!matrixRoomsRef.value.some(r => r.roomId === roomId)) return null
         return { getJoinedMembers: () => joinedMembersRef.value }
@@ -45,6 +49,14 @@ vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
 }))
 vi.mock('../store/workspace', () => ({
   useWorkspaceStore: () => ({ tasks: [], boards: [] }),
+}))
+vi.mock('../store/platforms', () => ({
+  usePlatformsStore: () => ({
+    gatewayState: gatewayStateRef.value,
+    platforms: platformsRef.value,
+    retain: vi.fn(),
+    release: vi.fn(),
+  }),
 }))
 
 import { useSitCounts } from '../composables/useSitCounts'
@@ -56,6 +68,9 @@ beforeEach(() => {
   kanbanTasksRef.value = []
   matrixRoomsRef.value = []
   joinedMembersRef.value = []
+  platformsRef.value = []
+  gatewayStateRef.value = 'stopped'
+  loggedInRef.value = false
 })
 
 describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
@@ -84,6 +99,27 @@ describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
   it('两者皆空保持 0（无实例在线是真实状态）', () => {
     const { online } = useSitCounts()
     expect(online.value).toEqual({ people: 0, agents: 0, machines: 0 })
+  })
+
+  it('网关真值（cockpit-online-zero 根治）：fleet 空时机器=网关实例、智能体=连通通道档案、人≥登录本人', () => {
+    gatewayStateRef.value = 'running'
+    platformsRef.value = [
+      { name: 'matrix', state: 'connected', profile: 'fanfan', icon: 'users', updated: '' },
+      { name: 'matrix', state: 'connected', profile: 'chen', icon: 'users', updated: '' },
+      { name: 'matrix', state: 'stopped', profile: 'hu', icon: 'users', updated: '' },
+    ]
+    loggedInRef.value = true
+    const { online } = useSitCounts()
+    expect(online.value.machines).toBe(1) // 网关 running 即 1 台机器
+    expect(online.value.agents).toBe(2)   // 连通通道去重档案 fanfan/chen
+    expect(online.value.people).toBeGreaterThanOrEqual(1) // 本人已登录即在线
+  })
+
+  it('网关停止且无会话时在线为 0（真实停机态）', () => {
+    gatewayStateRef.value = 'stopped'
+    loggedInRef.value = false
+    const { online } = useSitCounts()
+    expect(online.value.machines).toBe(0)
   })
 
   it('动态探测：Matrix presence 在线账号计入 people（2026-09-23 用户裁决）', () => {
