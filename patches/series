@@ -292,3 +292,5 @@
 # 500（B7 自定义斜杠命令）：ChatInput slash 菜单合并自定义命令（coding-agent 会话面），
 #      选中写 prompt 模板全文而非 /name；数据=/api/ide/slash-commands（native-routes 原生中间件）。
 500-client-chatinput-custom-slash.patch
+# 501（B7 配套词条）：ide.sidePane.tab_slash zh/en 成对（473 之后按 496 同例单补）。
+501-client-i18n-sidepane-slash-tab.patch
