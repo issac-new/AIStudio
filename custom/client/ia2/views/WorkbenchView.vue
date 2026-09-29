@@ -418,10 +418,6 @@ async function onCreateRoom(name: string): Promise<void> {
   }
 }
 
-function onNewLoop(): void {
-  void router.push({ name: 'ia2.eng' })
-}
-
 // ── v14 统一聊天：新建三型 + 群聊管理（补偿被隐藏画布侧栏的入口）──
 
 /** agent 单聊：/app/s/chat 新会话态（ChatView 无 sessionId 分支） */
@@ -485,7 +481,6 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         :loop-activity="loopActivity"
         @select="onSelect"
         @create-room="onCreateRoom"
-        @new-loop="onNewLoop"
         @open-gov="flow.openGov()"
         @open-task="onNavOpenTask"
         @jump-ide="onNavJumpIde"

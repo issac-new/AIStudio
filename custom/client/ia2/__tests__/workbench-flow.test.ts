@@ -309,8 +309,8 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     await w.find('[data-testid="flow-create-input"]').setValue('新房间')
     await w.find('[data-testid="flow-create-ok"]').trigger('click')
     expect(w.emitted('create-room')![0][0]).toBe('新房间')
-    await w.find('[data-testid="flow-new-loop"]').trigger('click')
-    expect(w.emitted('new-loop')).toHaveLength(1)
+    // V5 补遗⑤ S5：＋新循环入口退役（编排不走 UI）——按钮不存在
+    expect(w.find('[data-testid="flow-new-loop"]').exists()).toBe(false)
     await w.find('[data-testid="flow-gov"]').trigger('click')
     expect(w.emitted('open-gov')).toHaveLength(1)
   })
@@ -332,7 +332,8 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
           { path: 'l/:loopId', name: 'ia2.loopCanvas', redirect: () => ({ name: 'ia2.runs' }) },
           { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
           { path: 'runs/:runId', name: 'ia2.runDetail', component: { template: '<div run-detail />' } },
-          { path: 'eng', name: 'ia2.eng', component: { template: '<div class="eng-stub" />' } },
+          { path: 'eng', name: 'ia2.eng', redirect: () => ({ name: 'ia2.deliveryCases' }) },
+          { path: 'cases', name: 'ia2.deliveryCases', component: { template: '<div cases />' } },
           { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
         ],
         component: { template: '<router-view />' },
@@ -384,11 +385,12 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(wrapper.find('[data-testid="run-canvas"]').exists()).toBe(false)
   })
 
-  it('＋新循环 → /app/eng；⚙管理 → flow.govOpen', async () => {
+  it('＋新循环入口已退役（⑤ S5：/app/eng 重定向交付案例）；⚙管理 → flow.govOpen', async () => {
     const { wrapper, router } = await mountAt('/app')
-    await wrapper.find('[data-testid="flow-new-loop"]').trigger('click')
+    expect(wrapper.find('[data-testid="flow-new-loop"]').exists()).toBe(false)
+    await router.push('/app/eng')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.eng')
+    expect(router.currentRoute.value.name).toBe('ia2.deliveryCases')
     const { wrapper: w2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
     expect(useFlowStore().govOpen).toBe(true)

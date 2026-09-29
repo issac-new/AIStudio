@@ -159,10 +159,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/AccountAdminView.vue'),
         },
         {
-          // 编排（工程）：＋新循环入口
+          // V5 补遗⑤ S5：/app/eng 页退役（编排编辑器/Teams 管理推演不走 UI——循环
+          // 脚本建、团队脚本装配、组织走治理中心 OrgEditor）；重定向交付案例，
+          // loop 组件库保留（/app/l 详情内嵌与 /app/runs 依赖）
           path: 'eng',
           name: 'ia2.eng',
-          component: () => import('./views/scenes/EngScene.vue'),
+          redirect: () => ({ name: 'ia2.deliveryCases' }),
         },
         {
           // 交付案例（M2：delivery 协议事件投影，工程场景 tab 的深链直达）

@@ -176,17 +176,6 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('v12.3 日程按钮：当日有事件亮徽章，点击开日程模态（workspace.openSchedule）', async () => {
-    cockpitStubs.state.scheduleDatesWithEvents = new Set([todayKey()])
-    const w = await mountHeader()
-    const btn = w.find('[data-testid="ia-header-schedule"]')
-    expect(btn.exists()).toBe(true)
-    expect(btn.text()).toContain('ia2.header.scheduleToday')
-    expect(workspaceStubs.state.scheduleOpen).toBe(false)
-    await btn.trigger('click')
-    expect(workspaceStubs.state.scheduleOpen).toBe(true)
-    w.unmount()
-  })
 
   it('用户按钮跳 hermes.settings（avatar = userName 首字符）', async () => {
     const w = await mountHeader()
@@ -198,14 +187,10 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('Gateway 探测区渲染（/agent-health/detailed → running 投影）', async () => {
+  it('V5 补遗⑤ S7：Gateway 探测区入口已摘除（能力保留于 platforms store）', async () => {
     const w = await mountHeader()
-    const grp = w.find('.cockpit-top__grp')
-    expect(grp.exists()).toBe(true)
-    expect(grp.text()).toContain('Gateway')
-    await vi.waitFor(() => {
-      expect(w.find('.cockpit-top__grp .cockpit-top__ustat.is-running').exists()).toBe(true)
-    })
+    expect(w.find('.cockpit-top__grp').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-header-schedule"]').exists()).toBe(false)
     w.unmount()
   })
 })
