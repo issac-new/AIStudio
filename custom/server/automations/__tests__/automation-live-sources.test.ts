@@ -85,7 +85,9 @@ describe('A2 实弹事件源', () => {
       expect(dispatchCalls[0].text).toContain('src/api/user.ts')
       // README 同窗口写入但规则 pattern 只认 src/api/**.ts——规则级过滤生效，不进简报
       expect(dispatchCalls[0].text).not.toContain('README.md')
-      // 第二轮：只写 .git 噪声文件 → 不派发
+      // 第二轮：只写 .git 噪声文件 → 不派发。先排干正例尾随去抖桶
+      // （重触碰循环最后一次写入的桶可能在 500ms 后才冲刷），再清零进负例窗。
+      await new Promise((r) => setTimeout(r, 900))
       dispatchCalls.length = 0
       mkdirSync(join(ws, '.git'), { recursive: true })
       writeFileSync(join(ws, '.git/config-stress'), 'x')
