@@ -76,8 +76,7 @@ vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStu
 const runsStubs = vi.hoisted(() => {
   const state = {
     runs: [{ runId: 'run-9', graphId: 'loop-lp-1', status: 'awaiting-input', updatedAt: null, stage: null, iteration: 0, lastActivityAt: null, cost: 0, events: [], pendingInterruptId: 'it-1' }],
-    // V5 补遗⑤ M6：循环行落运行详情须能按 graphId 命中最新 run（原桩恒空）
-    sortedRuns: [{ runId: 'run-9', graphId: 'loop-lp-1', status: 'awaiting-input', updatedAt: null, stage: null, iteration: 0, lastActivityAt: null, cost: 0, events: [], pendingInterruptId: 'it-1' }],
+    sortedRuns: [],
     resumeRun: vi.fn(),
   }
   return { state, useRunCenterStore: () => state }
@@ -328,8 +327,7 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
           { path: 's/group/:roomId', name: 'ia2.groupRoom', component: WorkbenchView },
-          // V5 补遗⑤ M6：循环画布路由退役为重定向；循环观测落运行详情
-          { path: 'l/:loopId', name: 'ia2.loopCanvas', redirect: () => ({ name: 'ia2.runs' }) },
+          // M6：/app/l 循环画布退役；循环行点击落运行详情/列表
           { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
           { path: 'runs/:runId', name: 'ia2.runDetail', component: { template: '<div run-detail />' } },
           { path: 'eng', name: 'ia2.eng', component: { template: '<div class="eng-stub" />' } },
@@ -366,7 +364,7 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(wrapper.find('[data-testid="flow-session-!r2:host"]').text()).toContain('swarm')
   })
 
-  it('点击会话/循环行 → 路由子路径；循环行落运行详情（V5 ⑤ M6：画布并入详情页）', async () => {
+  it('点击会话/循环行 → 路由子路径；中栏画布按选择分派', async () => {
     const { wrapper, router } = await mountAt('/app')
     await wrapper.find('[data-testid="flow-session-!r2:host"]').trigger('click')
     await flushPromises()
@@ -376,19 +374,26 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.collabSession')
     expect(router.currentRoute.value.params.sessionId).toBe('sess-1')
-    // 循环行 → 该循环最新 run（run-9：graphId loop-lp-1）的运行详情
+    // M6：循环行点击落最新 run 详情（graphId === loop-<loopId>）；中栏 RunCanvas 分支已退役
+    const sortedRunsBackup = runsStubs.state.sortedRuns
+    runsStubs.state.sortedRuns = [...runsStubs.state.runs]
     await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
     await flushPromises()
+    runsStubs.state.sortedRuns = sortedRunsBackup
     expect(router.currentRoute.value.name).toBe('ia2.runDetail')
     expect(router.currentRoute.value.params.runId).toBe('run-9')
-    expect(wrapper.find('[data-testid="run-canvas"]').exists()).toBe(false)
+    // 无 run 的循环 → 兜底运行列表（sortedRuns 空）
+    const { wrapper: w2, router: r2 } = await mountAt('/app')
+    await w2.find('[data-testid="flow-loop-lp-1"]').trigger('click')
+    await flushPromises()
+    expect(r2.currentRoute.value.name).toBe('ia2.runs')
   })
 
-  it('＋新循环 → /app/eng；⚙管理 → flow.govOpen', async () => {
+  it('＋新循环 → /app/runs（S5：/app/eng 工程页退役）；⚙管理 → flow.govOpen', async () => {
     const { wrapper, router } = await mountAt('/app')
     await wrapper.find('[data-testid="flow-new-loop"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.eng')
+    expect(router.currentRoute.value.name).toBe('ia2.runs')
     const { wrapper: w2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
     expect(useFlowStore().govOpen).toBe(true)
@@ -450,8 +455,7 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
           { path: 's/chat', name: 'ia2.collabChat', component: WorkbenchView },
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
-          // V5 补遗⑤ M6：循环画布路由退役为重定向；观测落运行详情
-          { path: 'l/:loopId', name: 'ia2.loopCanvas', redirect: () => ({ name: 'ia2.runs' }) },
+          // M6：/app/l 循环画布退役；循环行点击落运行详情/列表
           { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
           { path: 'runs/:runId', name: 'ia2.runDetail', component: { template: '<div run-detail />' } },
           { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
@@ -500,24 +504,25 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
     expect(cockpitStubs.state.respondFleetApproval).toHaveBeenCalledWith('fs-1', 'ap-1', 'deny')
   })
 
-  it('挂接任务随会话选择变化：tenant 挂接；改派开抽屉；⌨跳 IDE（V5 ⑤ M6：循环挂接迁运行详情页）', async () => {
+  it('挂接任务随选择变化：会话（tenant 挂接）右栏联动；改派开抽屉；⌨跳 IDE（M6 后循环契约挂接在运行详情页）', async () => {
     const { wrapper, router } = await mountTdp('/app')
     // 默认选择 !r1 → t-402（tenant 六段式挂接）；t-415 不在
     expect(wrapper.find('[data-testid="tdp-task-t-402"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="tdp-task-t-415"]').exists()).toBe(false)
-    // 循环行点击 → 最新 run 运行详情（契约挂接任务在详情页画布内呈现）
+    // M6：循环行点击不再切换右栏（导航去 /app/runs 家族，契约挂接在详情页解析）
     await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.runDetail')
-    expect(router.currentRoute.value.params.runId).toBe('run-9')
-    // 改派 → 抽屉开（task-id 透传）
-    await wrapper.find('[data-testid="tdp-reassign-t-402"]').trigger('click')
-    expect(wrapper.find('.drawer-stub').attributes('data-taskid')).toBe('t-402')
+    expect(router.currentRoute.value.name).toBe('ia2.runs')
+    // 改派 → 抽屉开（task-id 透传；以默认挂接任务驱动）
+    const { wrapper: w2 } = await mountTdp('/app')
+    await w2.find('[data-testid="tdp-reassign-t-402"]').trigger('click')
+    expect(w2.find('.drawer-stub').attributes('data-taskid')).toBe('t-402')
     // ⌨ → ide.shell?task=
-    await wrapper.find('[data-testid="tdp-ide-t-402"]').trigger('click')
+    const { wrapper: w3, router: r3 } = await mountTdp('/app')
+    await w3.find('[data-testid="tdp-ide-t-402"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ide.shell')
-    expect(router.currentRoute.value.query.task).toBe('t-402')
+    expect(r3.currentRoute.value.name).toBe('ide.shell')
+    expect(r3.currentRoute.value.query.task).toBe('t-402')
   })
 
   it('全部时间线 → cockpit.openRunTraceGlobal；动态流渲染 FeedRow', async () => {
@@ -539,8 +544,7 @@ describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', (
         children: [
           { path: '', name: 'ia2.collab', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
-          // V5 补遗⑤ M6：循环画布路由退役为重定向；观测落运行详情
-          { path: 'l/:loopId', name: 'ia2.loopCanvas', redirect: () => ({ name: 'ia2.runs' }) },
+          // M6：/app/l 循环画布退役；循环行点击落运行详情/列表
           { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
           { path: 'runs/:runId', name: 'ia2.runDetail', component: { template: '<div run-detail />' } },
           { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },

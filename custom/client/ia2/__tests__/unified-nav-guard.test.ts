@@ -140,7 +140,8 @@ describe('v12 统一视图守门（双视图）', () => {
     // standalone 精简壳 / Esc 收管理台 / 合并回流监听；
     // v12.3 页级 max=1 最大化与最小化 dock 链路退役（守门防回潮）
     expect(shell).toContain('IaPopoutBar v-if="isStandalone"')
-    expect(shell).toContain('<IaGlobalTop v-else />')
+    // M2 IDE 子路由：IdeShell 自带共享顶区，壳侧隐藏防双份
+    expect(shell).toContain('<IaGlobalTop v-else-if="!isIdeChild" />')
     expect(shell).toContain("event.key === 'Escape'")
     expect(shell).not.toContain('<IaMinimizedDock')
     expect(shell).not.toContain('isMaximized')

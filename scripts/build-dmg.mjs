@@ -8,16 +8,11 @@
 //   默认: --mac (arm64 DMG + zip)
 
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
 import { resolve } from 'path';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/ensure-injected.mjs 同一基建；
-// 2026-09-29 补齐——此前 build 链缺失该支持，嵌套 worktree 下默认解析撞其他会话副本）。
-const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
-  : resolve(ncwkRoot, 'upstream/hermes-studio');
+const upstream = resolve(ncwkRoot, 'upstream/hermes-studio');
 const desktopDir = resolve(upstream, 'packages/desktop');
 
 const platform = process.argv.includes('--win') ? 'win'
@@ -57,10 +52,9 @@ run('node scripts/inject.mjs', overlayRoot, 'inject patches → upstream');
 // 关键: 使用 build.mjs (overlay config)，而不是上游的 npm run build
 // 幂等前置：上轮构建的 Step 3.5 已把根 node_modules 裁剪为生产态，vite/tsc 缺席，
 // 先补装开发依赖（已就绪时 npm install 近乎空转）。
-// 直接存在性检查：require.resolve 的 paths 解析会沿祖先目录穿透（嵌套 worktree 布局下
-// overlay/node_modules 软链在祖先链上，私有树缺 vite 时仍解析成功——假阳性跳过还原，
-// build:full 必炸）。检查构建真实消费的 bin 入口文件本身。
-if (!existsSync(resolve(upstream, 'node_modules/vite/bin/vite.js'))) {
+try {
+  execSync(`node -e "require.resolve('vite/package.json', { paths: [${JSON.stringify(upstream)}] })"`, { stdio: 'ignore' });
+} catch {
   run('npm install --no-audit --no-fund', upstream, 'root node_modules → dev deps restored (post-prune idempotency)');
 }
 run('node scripts/build.mjs', overlayRoot, 'build:full (overlay config → dist/client + dist/server)');
