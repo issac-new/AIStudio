@@ -35,8 +35,12 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   _lock_pid=$(sed -n 's/^pid=//p' "$LOCK_DIR/info" 2>/dev/null | head -1 | awk '{print $1}')
   if [[ "$_lock_pid" =~ ^[0-9]+$ ]] && ! kill -0 "$_lock_pid" 2>/dev/null; then
     echo "[$(date '+%F %T')] stale babysit lock (pid $_lock_pid dead) — taking over" >> "$LOG"
-    rm -rf "$LOCK_DIR"
+    # 接管原子化：mv 摘锁再 mkdir，绝不原地 rm（判死与 rm 之间第三方新建的活锁会被误删，
+    # 双保姆并存重复拉起/杀 gateway）；竞争失败时陈锁归档 ${LOCK_DIR}.stale.$$ 可回查
+    _stale="${LOCK_DIR}.stale.$$"
+    mv "$LOCK_DIR" "$_stale" 2>/dev/null
     mkdir "$LOCK_DIR" 2>/dev/null || { echo "[$(date '+%F %T')] lock takeover race lost — exiting" >> "$LOG"; exit 0; }
+    rm -rf "$_stale"
   else
     # ${LOCK_DIR} 必须带花括号：macOS bash 3.2 把 $VAR 后紧邻的全角字符首字节吸进变量名（set -u 下 unbound 崩）
     echo "[$(date '+%F %T')] another babysitter holds ${LOCK_DIR} (pid ${_lock_pid:-unknown}) — exiting（确认无保姆在跑可 rm -rf ${LOCK_DIR}）" >> "$LOG"
