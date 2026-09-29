@@ -55,6 +55,23 @@ await page.evaluate(([token, mtok2]) => {
 async function shot(name, url, opts = {}) {
   if (only && only !== name) return
   await page.goto(BASE + '/#' + url.replace(/^#/, ''))
+  // 拍前去噪：CSS 隐藏版本通知 toast（严禁点击"知道了"=跳转劫持钮）+Esc 收浮层
+  await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
+  await page.keyboard.press('Escape').catch(() => {})
+  // 快门守门（8.4 规范）：目标组件非空且无加载态才拍；空/加载中重试，最终仍空=拒拍记缺陷
+  if (opts.expect) {
+    let gated = false
+    for (let i = 0; i < 6 && !gated; i++) {
+      gated = await page.evaluate((sel) => {
+        const el = document.querySelector(sel)
+        const spins = [...document.querySelectorAll('.n-spin, [class*="spin"]')]
+        const spinning = spins.some((s) => getComputedStyle(s).display !== 'none' && !!s.offsetParent)
+        return !!el && (el.innerText || '').trim().length > 0 && !spinning
+      }, opts.expect).catch(() => false)
+      if (!gated) await page.waitForTimeout(1500)
+    }
+    if (!gated) { console.error(`DEFECT[shutter-gate]: ${name} 目标 ${opts.expect} 空/加载中——拒拍（补数据或修组件后重拍）`); return }
+  }
   await page.waitForTimeout(opts.wait ?? 4000)
   // ⚠️ 不点任何弹窗按钮："知道了"=通知跳转钮，点击即劫持导航到 board?task=<卡>
   // （run2 实锤：五连拍全被劫持到 t_666aecf8；去掉 Dismiss 循环后全部正确落位）
@@ -68,7 +85,28 @@ async function shot(name, url, opts = {}) {
       bodyText: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 90),
     }
   })
+  // 文件名-内容对齐校验：落地路由与预期不符即记缺陷（防 ui-26 错拍类复发）
+  if (opts.expectRoute && !new RegExp(opts.expectRoute).test(probe.url)) {
+    console.error(`DEFECT[route-mismatch]: ${name} 落地 ${probe.url} ≠ 预期 /#${opts.expectRoute}`)
+  }
   console.log('shot:', name, JSON.stringify(probe))
+}
+// 同画面去重：全量拍完按文件字节哈希报告重复帧（采集计划收敛依据）
+async function reportDuplicateFrames() {
+  const { createHash } = await import('node:crypto')
+  const { readdirSync, statSync } = await import('node:fs')
+  const bySize = new Map()
+  try {
+    for (const f of readdirSync(OUT)) {
+      if (!f.endsWith('.png')) continue
+      const p = `${OUT}/${f}`
+      const { readFileSync } = await import('node:fs')
+      const h = createHash('md5').update(readFileSync(p)).digest('hex')
+      bySize.set(h, (bySize.get(h) || []).concat(f))
+    }
+  } catch { return }
+  const dups = [...bySize.values()].filter((v) => v.length > 1)
+  if (dups.length) console.warn('WARN[duplicate-frames]:', JSON.stringify(dups))
 }
 
 /** 遍历同名房间点选命中本轮 room_analysis（深链不驱动选择，run1 实锤）。 */
@@ -90,8 +128,8 @@ async function openCurrentRoom() {
 }
 
 // ── 驾驶舱全景 + P5 概览 ──
-await shot('ui-03-cockpit', '/app', { wait: 6000 })
-await shot('ui-03b-dash', '/app/dash', { wait: 5000 })
+await shot('ui-03-cockpit', '/app', { wait: 6000, expect: '[data-testid="wb-rail-left"], .ia-shell, main', expectRoute: '^/app' })
+await shot('ui-03b-dash', '/app/dash', { wait: 5000, expect: '[data-testid*="dash"], .ia-overview, main', expectRoute: '/app' })
 
 // ── 分析群：全景 + P4③ 时间线特写 + 成员面板（全量预邀实证）──
 if (await openCurrentRoom()) {
@@ -143,10 +181,10 @@ if (await openCurrentRoom()) {
 }
 
 // ── 看板 RACI + 等您操作 ──
-await shot('ui-10-kanban', '/hermes/kanban?board=fanfan-pm-plan', { wait: 4500 })
+await shot('ui-10-kanban', '/hermes/kanban?board=fanfan-pm-plan', { wait: 4500, expect: '.kanban-board, [class*="kanban"], main', expectRoute: 'kanban' })
 
 // ── 收件箱：三档分区全景 + V4.1 抽检区特写 ──
-await shot('ui-20-inbox', '/app/inbox', { wait: 4500 })
+await shot('ui-20-inbox', '/app/inbox', { wait: 4500, expect: 'main', expectRoute: '/app/inbox' })
 if (!only || only === 'ui-20b-spotcheck') {
   const sec = page.locator('[data-testid="approval-spotcheck"]')
   if (await sec.isVisible().catch(() => false)) {
@@ -161,7 +199,7 @@ if (!only || only === 'ui-20b-spotcheck') {
 
 // ── IDE 任务简报 + 治理面 ──
 const ideTask = process.env.IDE_TASK || state.card_review_rfd || ''
-await shot('ui-25-ide', `/ide${ideTask ? `?task=${ideTask}` : ''}`, { wait: 6000 })
+await shot('ui-25-ide', `/ide${ideTask ? `?task=${ideTask}` : ''}`, { wait: 6000, expect: 'main', expectRoute: '/ide' })
 // ui-26-report：第 26 步交付物=本报告自身——直拍生成的 simulation-report.html 首屏（治"拍成治理中心"错拍）
 if (!only || only === 'ui-26-report') {
   await page.goto('file://' + RUN_DIR + '/evidence/simulation-report.html', { waitUntil: 'load' })
@@ -170,5 +208,6 @@ if (!only || only === 'ui-26-report') {
   console.log('shot: ui-26-report (report file first screen)')
 }
 
+await reportDuplicateFrames()
 await browser.close()
 console.log('capture-v42 done')
