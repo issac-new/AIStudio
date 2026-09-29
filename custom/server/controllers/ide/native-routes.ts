@@ -33,6 +33,11 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
       await handleVideoFrames(ctx)
       return
     }
+    // ── 遗留清单 L6：缓存 miss 归因（cc-switch.db 只读聚合）──
+    if (method === 'GET' && path === '/api/ide/cache-attribution') {
+      await handleCacheAttribution(ctx)
+      return
+    }
     await next()
   }
 }
@@ -121,5 +126,51 @@ async function handleVideoFrames(ctx: Context): Promise<void> {
   } catch (err) {
     ctx.status = 422
     ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+}
+
+// ── 缓存 miss 归因（L6，cc 语义）：cc-switch.db 只读（proxy_request_logs，
+// 28 万行真实缓存字段——cache_read/creation_tokens）；聚合窗口近 200 条请求的
+// 命中率+按 (model) 断档归因（模型切换=缓存跨模型不共享）+建议。
+async function handleCacheAttribution(ctx: Context): Promise<void> {
+  const { DatabaseSync } = await import('node:sqlite')
+  const { join } = await import('path')
+  const { homedir } = await import('os')
+  const dbPath = join(homedir(), '.cc-switch', 'cc-switch.db')
+  let db: import('node:sqlite').DatabaseSync | null = null
+  try {
+    db = new DatabaseSync(dbPath, { readOnly: true })
+    const rows = db.prepare(
+      'SELECT model, input_tokens, cache_read_tokens, cache_creation_tokens FROM proxy_request_logs ORDER BY created_at DESC LIMIT 200',
+    ).all() as Array<{ model: string; input_tokens: number; cache_read_tokens: number; cache_creation_tokens: number }>
+    db.close(); db = null
+    const { attributeCacheMiss } = await import('../../cacheattr/cache-attribution')
+    let input = 0, cacheRead = 0, cacheCreate = 0
+    const models = new Set<string>()
+    for (const r of rows) {
+      input += Number(r.input_tokens ?? 0)
+      cacheRead += Number(r.cache_read_tokens ?? 0)
+      cacheCreate += Number(r.cache_creation_tokens ?? 0)
+      models.add(String(r.model ?? ''))
+    }
+    const denom = input + cacheRead || 1
+    const hitRate = cacheRead / denom
+    // 归因启发式：窗口内多模型混用=model-switched；余 unknown（上下文差异面在引擎侧）。
+    const causes = models.size > 1 ? ['model-switched' as const] : ['unknown' as const]
+    const attribution = attributeCacheMiss({ hitRate, causes })
+    ctx.body = {
+      ok: true,
+      window: rows.length,
+      hitRate: Math.round(hitRate * 1000) / 10,
+      cacheReadTokens: cacheRead,
+      cacheCreationTokens: cacheCreate,
+      inputTokens: input,
+      models: [...models].slice(0, 6),
+      attribution,
+    }
+  } catch (err) {
+    try { db?.close() } catch { /* 已闭 */ }
+    ctx.status = 503
+    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
   }
 }

@@ -6,10 +6,11 @@
 // 在场两维徽章（multica §六 2.1，吸收第一批 A3）：每行 availability 圆点
 // （心跳距今 30s/90s 两档）× workload 芯片（running/queued/idle）分画——
 // "在线但闲"与"离线但队里有活"一眼可分。投影=presence-two-axis.ts。
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useChatStore, type SubagentStream } from '@/stores/hermes/chat'
 import { presenceTwoAxis, type PresenceTwoAxis } from '../utils/presence-two-axis'
 import IdeRosterTree from './IdeRosterTree.vue'
+import { boostPipeline, type BoostResult } from '../../../server/boost/boost-pipeline'
 
 const chat = useChatStore()
 
@@ -44,6 +45,22 @@ const PRESENCE_TEXT: Record<string, string> = {
   online: '在线', unstable: '迟滞', offline: '离线',
   working: '干活', queued: '待处理', idle: '空闲',
 }
+
+// ── 多路聚合（遗留清单 L4，antigravity /boost 断言回灌+交叉验证）：
+// completed 区各路最后 text=候选答案；断言=文本中「断言：/- 断言」行（boost
+// 模板要求 agent 输出）；boostPipeline 一致数胜出——多路一致才 verified。
+const boostResult = ref<BoostResult | null>(null)
+function runBoostAggregate(): void {
+  const candidates = completed.value.map((s, i) => {
+    const texts = (s.entries ?? []).filter((e) => e.kind === 'text' && e.text?.trim())
+    const answer = texts[texts.length - 1]?.text?.trim() ?? ''
+    const assertions = (texts.flatMap((e) => (e.text ?? '').split('\n')))
+      .filter((l) => /^[-－*]?\s*断言[:：]/.test(l.trim()))
+      .map((l) => l.trim())
+    return { candidateId: `${s.subagentId}:${i}`, answer, assertions }
+  }).filter((c) => c.answer)
+  boostResult.value = candidates.length ? boostPipeline(candidates) : null
+}
 </script>
 
 <template>
@@ -72,7 +89,13 @@ const PRESENCE_TEXT: Record<string, string> = {
       </div>
     </div>
     <div class="ide-agents__section is-done" data-testid="ide-agents-completed">
-      <div class="ide-agents__head">✓ Completed · {{ completed.length }}</div>
+      <div class="ide-agents__head">
+        ✓ Completed · {{ completed.length }}
+        <button v-if="completed.length > 1" type="button" class="ide-agents__boost" data-testid="ide-boost-aggregate" title="多路候选聚合：一致数胜出+断言回灌（/boost 管线的消费面）" @click="runBoostAggregate">⚡聚合</button>
+      </div>
+      <div v-if="boostResult" class="ide-agents__boostresult" data-testid="ide-boost-result" :title="`断言回灌 ${boostResult.mergedAssertions.length} 条`">
+        {{ boostResult.verified ? '✓ 多数一致' : '△ 未达多数一致' }} · 胜出 {{ boostResult.winner }} · 断言 {{ boostResult.mergedAssertions.length }} 条
+      </div>
       <div v-for="s in completed" :key="s.subagentId" class="ide-agents__row">
         <span class="ide-agents__state is-done">{{ s.status }}</span>
         {{ s.goal || s.subagentId }}<span class="ide-agents__dur">{{ dur(s) }}</span>
@@ -101,4 +124,6 @@ const PRESENCE_TEXT: Record<string, string> = {
   &.is-working { background: rgba(32, 128, 240, 0.12); color: var(--info-color, #2080f0); }
   &.is-queued { background: rgba(240, 160, 32, 0.12); color: var(--warning-color, #f0a020); }
   &.is-idle { background: var(--hover-color, rgba(0, 0, 0, 0.06)); color: var(--text-color-3, #999); } }
+.ide-agents__boost { border: 1px solid var(--border-color, #e0e0e0); background: transparent; border-radius: 4px; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-color-3, #999); margin-left: 6px; }
+.ide-agents__boostresult { font-size: 10px; color: var(--info-color, #2080f0); padding: 2px 4px; }
 </style>

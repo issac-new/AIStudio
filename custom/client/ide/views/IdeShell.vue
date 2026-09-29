@@ -37,6 +37,7 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import { listBoards, listTasks } from '@/api/hermes/kanban'
 import { request } from '@/api/client'
 import { ideGitApi } from '../api/git'
+import { useKeyBinding } from '../components/IdeKeymapCard.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -161,10 +162,18 @@ function openBriefingFile(path: string): void {
 
 // 命令面板快捷键：Cmd/Ctrl+K 开关（对标 zcode quickPick；终端面板聚焦时
 // xterm 可能吞键，面板入口在 TopBar 同步提供）。
+// keymap 生效面 v2（遗留清单 L2）：全局键经 keymap 映射分发（defaultKeymap
+// 'global' 上下文 + 用户覆盖 + 冲突检测），⌘K 走 applyKeymap('global','palette')。
+const paletteBinding = useKeyBinding('global', 'palette')
 function onGlobalKeydown(event: KeyboardEvent): void {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-    event.preventDefault()
-    ide.togglePalette()
+  if (event.metaKey || event.ctrlKey) {
+    const key = event.key.toLowerCase()
+    const combo = `${event.metaKey ? 'Cmd' : 'Ctrl'}+${key.length === 1 ? key.toUpperCase() : key}`
+    const binding = paletteBinding()
+    if (binding && combo === binding) {
+      event.preventDefault()
+      ide.togglePalette()
+    }
   }
 }
 window.addEventListener('keydown', onGlobalKeydown)

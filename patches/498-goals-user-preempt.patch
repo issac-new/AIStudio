@@ -1,0 +1,51 @@
+diff --git a/hermes_cli/goals.py b/hermes_cli/goals.py
+index 500096ef87..c5769a80d9 100644
+--- a/hermes_cli/goals.py
++++ b/hermes_cli/goals.py
+@@ -996,6 +996,30 @@ def last_user_message_from_db(session_id: Optional[str]) -> Any:
+         return ""
+ 
+ 
++def _user_message_preempts(state: "GoalState", session_id: Optional[str]) -> bool:
++    """GOAL-05 让位（overlay patch 498，multica §3.1 语义：用户消息 > 自治目标）。
++
++    自治续轮前查 SessionDB：最后用户消息 ``timestamp`` 晚于 ``state.last_turn_at``
++    （上一自治轮开始时刻）即用户在自治轮期间插话 → 自治让位（用户消息驱动下一轮，
++    continuation 不抢跑）。fail-open：读取失败/时间缺省一律不拦（turn 预算仍是兜底）。
++    """
++    if not session_id or state.last_turn_at <= 0:
++        return False
++    try:
++        db = _get_session_db()
++        if db is None:
++            return False
++        rows = db.get_messages(str(session_id), limit=20, latest=True)
++        for msg in reversed(rows or []):
++            if isinstance(msg, dict) and msg.get("role") == "user":
++                ts = float(msg.get("timestamp") or 0)
++                # agent SessionDB timestamp 秒级与 time.time() 同域；缺省 0 不触发。
++                return ts > state.last_turn_at
++        return False
++    except Exception:
++        return False
++
++
+ def gather_background_processes(task_id: Optional[str] = None, *, owner_task_id: Optional[str] = None) -> List[Dict[str, Any]]:
+     """Fail-safe snapshot of RUNNING ``process_registry`` sessions for the judge; ``[]`` on any error
+     so the loop degrades to its pre-wait-barrier behavior.
+@@ -1463,6 +1487,15 @@ class GoalManager:
+         if self.is_waiting():
+             return self._waiting_decision(state)
+ 
++        # GOAL-05 让位（overlay patch 498）：用户在自治轮期间插话 → 暂停让位，
++        # 用户消息驱动下一轮（自治 continuation 不抢跑）。
++        if _user_message_preempts(state, self.session_id):
++            self._pause_state("user-preempted")
++            return _decision(
++                "paused", False, None, "preempted", "user message during autonomous turn",
++                "用户消息插话——自治目标让位（GOAL-05）；发送你的消息继续",
++            )
++
+         state.turns_used += 1
+         state.last_turn_at = time.time()
+ 
