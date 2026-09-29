@@ -363,3 +363,6 @@
 # 524（S3 语音舞台/语音设置页签/connections 扩展 tab/图像辅助门控——原 522 内容复活，
 #      pet 部分剔除由 520 承载；997faa70 收敛曾整删 522 致 S3 回退）。
 524-client-s3-stage-gates.patch
+# 525（run4 轮，2026-09-30）：build-server onResolve 重锚 custom 兄弟布局字面量
+#      （../../../../upstream/hermes-studio/… → 本仓根）——worktree/沙箱布局 build:full 必炸根治。
+525-server-build-upstream-escape.patch
