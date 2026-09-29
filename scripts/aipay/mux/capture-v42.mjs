@@ -181,7 +181,7 @@ if (await openCurrentRoom()) {
 }
 
 // ── 看板 RACI + 等您操作 ──
-await shot('ui-10-kanban', '/app/board', { wait: 4500, expect: '.kanban-board, [class*="kanban"], main', expectRoute: '^/app/board' })
+await shot('ui-10-kanban', '/app/board', { wait: 4500, expect: '.kanban-board, [class*="kanban"], main', expectRoute: '/app/board' })
 
 // ── 收件箱：三档分区全景 + V4.1 抽检区特写 ──
 await shot('ui-20-inbox', '/app/inbox', { wait: 4500, expect: 'main', expectRoute: '/app/inbox' })
@@ -199,7 +199,7 @@ if (!only || only === 'ui-20b-spotcheck') {
 
 // ── IDE 任务简报 + 治理面 ──
 const ideTask = process.env.IDE_TASK || state.card_review_rfd || ''
-await shot('ui-25-ide', `/app/ide${ideTask ? `?task=${ideTask}` : ''}`, { wait: 6000, expect: 'main', expectRoute: '^/app/ide' })
+await shot('ui-25-ide', `/app/ide${ideTask ? `?task=${ideTask}` : ''}`, { wait: 6000, expect: 'main', expectRoute: '/app/ide' })
 // ui-26-report：第 26 步交付物=本报告自身——直拍生成的 simulation-report.html 首屏（治"拍成治理中心"错拍）
 if (!only || only === 'ui-26-report') {
   await page.goto('file://' + RUN_DIR + '/evidence/simulation-report.html', { waitUntil: 'load' })

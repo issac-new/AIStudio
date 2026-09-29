@@ -10,6 +10,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useWorkspaceStore } from '../store/workspace'
 import { useSitCounts } from '../composables/useSitCounts'
 import type { AttentionRow } from '../adapters/overview'
@@ -24,6 +25,7 @@ const { t } = useI18n()
 useSharedArm()
 
 const cockpit = useCockpitStore()
+const runsStore = useRunCenterStore()
 const workspace = useWorkspaceStore()
 const { waitItems, loopRows } = useSitCounts()
 // P1（09-28）：交付网络读数卡（分布式设计 §7 总览三数：在途案例/待审人工门/已完成）
@@ -58,16 +60,18 @@ const attentionRows = computed<AttentionRow[]>(() => {
   return mergeAttention(inputs)
 })
 
-/** 动线④：注意力条 → 对象（任务→看板预选；循环→运行中心；运行→运行详情；其余→工作台）。
+/** 动线④：注意力条 → 对象（任务→看板预选；循环→最新 run 运行详情；运行→运行详情；其余→工作台）。
  *  mergeAttention 会把行 id 改写为 att- 前缀（且仅保留源输入 id 于 taskId），
  *  选择时先剥前缀还原源 id，再对 waitItems（task:/run:/fleet: 前缀族）与
- *  blocked 循环（loop: 前缀）分派——直接拿行 id 对 waitItems 查找永远落空。 */
+ *  blocked 循环（loop: 前缀）分派——直接拿行 id 对 waitItems 查找永远落空。
+ *  V5 补遗⑤ M6：循环行落运行中心（该循环最新 run 详情，画布已内嵌）。 */
 function onAttentionSelect(row: AttentionRow): void {
   const base = row.id.replace(/^att-/, '')
   if (base.startsWith('loop:')) {
-    // M6（补遗⑤）：循环行落运行中心（/app/l 画布已退役并入运行详情；
-    // loopId 语境的详情解析在 RunCenterView 内按 graphId 归并，此处落列表）
-    void router.push({ name: 'ia2.runs' })
+    const loopId = base.slice(5)
+    const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${loopId}`)
+    if (latest) void router.push({ name: 'ia2.runDetail', params: { runId: latest.runId } })
+    else void router.push({ name: 'ia2.runs' })
     return
   }
   const hit = waitItems.value.find(w => w.id === base)

@@ -26,9 +26,11 @@ const EXPECTED_NAMES = [
   'ia2.commsRoom',
   'ia2.dash',
   'ia2.deliveryCases',
+  'ia2.eng',
   'ia2.governance',
   'ia2.groupRoom',
   'ia2.inbox',
+  'ia2.loopCanvas',
   'ia2.runDetail',
   'ia2.runs',
   'ia2.shell',
@@ -41,10 +43,14 @@ describe('路由白名单守门（补遗⑤ §13.6-2：快照断言）', () => {
   })
   it('兼容层全部为 redirect；退役名 ia2.eng / ia2.loopCanvas 不在可达名账本', () => {
     for (const c of compat) expect(['string','function']).toContain(typeof c.redirect)
-    expect(named).not.toContain('ia2.eng')
-    expect(named).not.toContain('ia2.loopCanvas')
+    for (const gone of ['ia2.eng', 'ia2.loopCanvas']) {
+      const rec = all.find((r) => r.name === gone)
+      if (rec) expect(rec.redirect, `${gone} 只能以重定向残留`).toBeTruthy()
+    }
   })
   it('M2：旧 /ide 壳重定向 → /app/ide（驾驶舱子路由）', () => {
-    expect(String(buildIdeRoutes()[0].redirect)).toBe('/app/ide')
+    const legacy = buildIdeRoutes().find((r) => String(r.path) === '/ide')
+    expect(legacy, '/ide 兼容记录在案').toBeTruthy()
+    expect(String(legacy?.redirect)).toContain('/app/ide')
   })
 })

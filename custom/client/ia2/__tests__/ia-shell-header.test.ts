@@ -176,11 +176,6 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('S7（补遗⑤ A 档）：日程弹窗入口隐藏（组件保留，恢复去注释即回生）', async () => {
-    const w = await mountHeader({ gateway_state: 'running' })
-    expect(w.find('[data-testid*="schedule"], [data-testid*="probe"]').exists()).toBe(false)
-    w.unmount()
-  })
 
   it('用户按钮跳 hermes.settings（avatar = userName 首字符）', async () => {
     const w = await mountHeader()
@@ -192,9 +187,10 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('S7（补遗⑤ A 档）：Gateway 探测组隐藏（组件保留，恢复去注释即回生）', async () => {
-    const w = await mountHeader({ gateway_state: 'running' })
-    expect(w.find('[data-testid*="schedule"], [data-testid*="probe"]').exists()).toBe(false)
+  it('V5 补遗⑤ S7：Gateway 探测区入口已摘除（能力保留于 platforms store）', async () => {
+    const w = await mountHeader()
+    expect(w.find('.cockpit-top__grp').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-header-schedule"]').exists()).toBe(false)
     w.unmount()
   })
 })

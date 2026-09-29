@@ -306,9 +306,9 @@ function submitCreateRoom(): void {
       <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" @click="newMenuOpen = !newMenuOpen">
         ＋ {{ t('ia2.flow.newChat') }}
       </button>
-      <button type="button" class="flow-nav__chip" data-testid="flow-new-loop" @click="emit('new-loop')">
-        ＋ {{ t('ia2.flow.newLoop') }}
-      </button>
+      <!-- S5（补遗⑤）：/app/eng 编排页退役——＋新循环入口随之摘除（守门 workbench-flow
+           断言 flow-new-loop 不存在；循环创建走脚本/运行中心，恢复路由即回生）。 -->
+
       <button type="button" class="flow-nav__chip flow-nav__chip--gov" data-testid="flow-gov" @click="emit('open-gov')">
         ⚙ {{ t('ia2.flow.manage') }}
       </button>

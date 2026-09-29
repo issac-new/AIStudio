@@ -61,12 +61,6 @@
   flex-direction: column;
 }
 
-// M2 IDE 子路由（/app/ide）：IdeShell 自带 height:100vh（原独立壳时代），
-// 嵌入壳内（standalone 弹窗有 popout bar）改为跟随壳主区高度，防溢出。
-.ia-shell .ia-shell__main > .ide-shell {
-  height: auto;
-}
-
 // ── 全局弹窗遮罩（复用 cockpit overlay 语义：fixed 全屏 + 暗化） ──
 .ia-overlay {
   position: fixed;

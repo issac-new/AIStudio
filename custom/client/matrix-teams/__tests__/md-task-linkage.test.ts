@@ -114,6 +114,7 @@ describe('TaskCard VTU', () => {
   })
 })
 
+
 // ── store 回环（M-D 验收门 1 的事件链等价物；CDP 动线归发布轮）──
 const sentEvents: Array<{ roomId?: string; type: string; content: Record<string, unknown> }> = []
 const sdkClient = {
