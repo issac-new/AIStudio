@@ -13,6 +13,7 @@ const FULL: AdmissionAnswers = { q1: 'a1', q2: 'a2', q3: 'a3', q4: 'a4', q5: 'a5
 
 // ── store 闸用模块级 mock（vi.mock 提升，须在 describe 外定义，对齐 team-registry-store.test.ts 先例）──
 const sent: Array<{ roomId: string; type: string; stateKey: string; content: unknown }> = []
+const receipts: Array<{ roomId: string; type: string; content: Record<string, unknown> }> = []
 const roomStates: Record<string, Array<{ type: string; stateKey: string; sender: string; content: unknown }>> = {}
 const sdkClient = {
   on: () => {},
@@ -35,7 +36,10 @@ const sdkClient = {
     roomStates[roomId] = [...(roomStates[roomId] ?? []), { type, stateKey, sender: stateKey, content }]
   },
   invite: vi.fn(async () => ({})),
-  sendEvent: vi.fn(async () => ({})),
+  sendEvent: async (roomId: string, type: string, content: Record<string, unknown>) => {
+    receipts.push({ roomId, type, content })
+    return { event_id: `$e${receipts.length}` }
+  },
   userId: '@alice:sv',
 }
 
@@ -134,5 +138,41 @@ describe('准入写入闸（store）', () => {
     const ok = await store.writeSelfAccount([{ slug: 'd', name: 'D', profiles: ['p'] }], { ...FULL, q3: '' })
     expect(ok).toBe(false)
     expect(sent.filter(s => s.type === TEAM_EVENT_TYPES.account)).toHaveLength(0)
+  })
+
+  it('执行端强制（第五期 ⑤）：跨域派发且本机未过五问 → 拒收回执 admission-incomplete；同域不受闸', async () => {
+    // 五问语义=跨边界协作签约：target.account 与本机不同 homeserver 域才强制；
+    // 本域派发不在此范围（存量账号不被打断，既有推演链路安全）。
+    roomStates['!reg:sv'].push({
+      type: TEAM_EVENT_TYPES.account, stateKey: '@alice:sv', sender: '@alice:sv',
+      content: { displayName: 'alice', agentTeams: [{ slug: 'dev', name: 'Dev', profiles: ['pa'] }], updatedAt: 1 }, // 无 admission
+    })
+    receipts.length = 0
+    const createdTasks: unknown[] = []
+    vi.doMock('@/api/hermes/kanban', () => ({
+      createTask: vi.fn(async (p: unknown) => { createdTasks.push(p); return { id: 'kt-1' } }),
+    }))
+    const { useTaskDispatchStore } = await import('../stores/task-dispatch')
+    const registry = makeStore()
+    await registry.rebuild()
+    expect(registry.accounts.find(a => a.userId === '@alice:sv')?.admissionOk).toBe(false)
+    const dispatch = useTaskDispatchStore() // 房间/accounts 经 team-registry store 派生
+    // ① 同域派发（@lead:sv → 本机 @alice:sv）：不受闸，正常建卡
+    await dispatch.receiveAssign({
+      taskId: 'task-same-1', title: 'T', target: { account: '@alice:sv', profile: 'pa' },
+      issuedBy: '@lead:sv', issuedAt: 1,
+    })
+    expect(createdTasks).toHaveLength(1)
+    // ② 跨域派发（@lead:other-hs → 本机未过五问）：拒收 + failed(admission-incomplete)
+    receipts.length = 0
+    await dispatch.receiveAssign({
+      taskId: 'task-cross-1', title: 'T', target: { account: '@lead:other-hs', profile: 'pa' },
+      issuedBy: '@lead:other-hs', issuedAt: 2,
+    })
+    expect(createdTasks).toHaveLength(1) // 未新增建卡
+    const r = receipts.find(x => x.type.endsWith('.receipt'))
+    expect(r?.content?.reason).toBe('admission-incomplete')
+    expect(r?.content?.status).toBe('failed')
+    vi.doUnmock('@/api/hermes/kanban')
   })
 })
