@@ -12,7 +12,11 @@ import { resolve } from 'path';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
-const upstream = resolve(ncwkRoot, 'upstream/hermes-studio');
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/ensure-injected.mjs 同一基建；
+// 2026-09-29 补齐——此前 build 链缺失该支持，嵌套 worktree 下默认解析撞其他会话副本）。
+const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
+  : resolve(ncwkRoot, 'upstream/hermes-studio');
 const desktopDir = resolve(upstream, 'packages/desktop');
 
 const platform = process.argv.includes('--win') ? 'win'

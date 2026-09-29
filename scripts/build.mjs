@@ -8,7 +8,12 @@ import { resolve } from 'path';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
-const upstream = resolve(ncwkRoot, 'upstream/hermes-studio');
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/ensure-injected.mjs 同一基建）。
+// 嵌套 worktree（.claude/worktrees/<feat>/）下 resolve(overlayRoot,'..') 是 worktrees
+// 目录而非 ncwk 根，默认解析会撞上其他会话的隔离副本——隔离构建必须显式指定。
+const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
+  : resolve(ncwkRoot, 'upstream/hermes-studio');
 
 function run(cmd, cwd, label) {
   console.log(`\n[overlay-build] ▶ ${label}`);
