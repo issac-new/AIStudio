@@ -137,7 +137,9 @@ export function resolveSpotcheck(id: string, verdict: 'confirm' | 'veto', actor:
 export function isAutopassCandidate(item: { kind: string; risk?: ApprovalRiskTier; createdAt?: number }, now = Date.now()): boolean {
   if (item.kind !== 'command') return false
   if (item.risk !== 'low') return false
-  const created = typeof item.createdAt === 'number' ? item.createdAt : 0
+  // createdAt<=0/缺失 视为未知（fleet 源 lastActiveAt=0 即"未知"）：宽限期从
+  // 当下起算，杜绝陈旧/零值让新人列项首扫即被放行（先可见后放行失效）。
+  const created = typeof item.createdAt === 'number' && item.createdAt > 0 ? item.createdAt : now
   return now - created >= autopassGraceMs()
 }
 

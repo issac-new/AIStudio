@@ -83,6 +83,12 @@ function sanitizeHtml(html: string): string {
             // 非图片 URL（mxc:// 是 Matrix 媒体 URI），跳过该属性
             return
           }
+        } else if (attr === 'class') {
+          // class 逐 token 白名单：仅放行 linkify 本地生成与代码高亮类名；
+          // 任意放行会让消息发送者借 formatted_body 伪造系统徽章等 UI 元素。
+          const kept = val.split(/\s+/).filter((c) => /^(mx-card-link|mx-mention-me|mx-mention|mx_EventTile_linkified|language-[\w+-]+|hljs[\w.-]*)$/.test(c))
+          if (kept.length === 0) return
+          val = kept.join(' ')
         }
         // HERMES_CUSTOM[SecXssMsgBody] END
         newEl.setAttribute(attr, val)

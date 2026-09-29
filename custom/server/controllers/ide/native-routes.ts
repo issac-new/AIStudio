@@ -11,9 +11,9 @@
  *   POST /api/ide/video-frames      视频抽帧入口
  */
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import type { Context, Next } from 'koa'
+import { writeThroughToEngine } from './engine-models'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -114,50 +114,13 @@ async function handleEngineModelsPut(ctx: Context): Promise<void> {
   }
   // overlay 独立存储（物理路径锚=本文件 overlay 侧——与 controller 同型）。
   const store = resolve(__dirname, '../../../../runtime/ide-engine-models.json')
-  const tmp = `${store}.tmp`
+  const tmp = `${store}.tmp-${process.pid}-${Date.now()}`
   writeFileSync(tmp, JSON.stringify(config, null, 2), 'utf8')
   renameSync(tmp, store)
-  // 层 2 写穿 ~/.zcode/v2/config.json（ide-engine: 前缀隔离）。
-  const passthrough = writeThrough(config)
+  // 层 2 写穿 ~/.zcode/v2/config.json（ide-engine: 前缀隔离）——复用 engine-models
+  // 的 writeThroughToEngine（此前本地手抄副本已现漂移面，单一事实源收敛）。
+  const passthrough = writeThroughToEngine(config)
   ctx.body = { ok: true, config, enginePassthrough: passthrough }
-}
-
-interface EnginePassthrough { wrote: boolean; providerKeys: string[]; note: string }
-
-function writeThrough(config: EngineModelConfig): EnginePassthrough {
-  try {
-    const root = process.env.ZCODE_HOME?.trim() ? resolve(process.env.ZCODE_HOME) : join(homedir(), '.zcode')
-    const path = join(root, 'v2', 'config.json')
-    if (!existsSync(path)) return { wrote: false, providerKeys: [], note: `zcode config 不存在（${path}）` }
-    const engine = JSON.parse(readFileSync(path, 'utf8')) as { provider?: Record<string, Record<string, unknown>> }
-    engine.provider = engine.provider ?? {}
-    const keys: string[] = []
-    for (const p of config.providers) {
-      const key = `ide-engine:${p.providerId}`
-      const apiKey = p.apiKeyEnv ? (process.env[p.apiKeyEnv] ?? '').trim() : ''
-      const models: Record<string, unknown> = {}
-      for (const m of p.models) {
-        models[m.modelId] = {
-          name: m.modelId, limit: { context: 1048576, output: 128000 },
-          modalities: { input: ['text'], output: ['text'] },
-          ...(m.reasoningLevels ? { reasoningLevels: m.reasoningLevels } : {}),
-        }
-      }
-      engine.provider[key] = {
-        name: `IDE · ${p.providerId}`, kind: 'anthropic',
-        options: { baseURL: p.baseURL, ...(apiKey ? { apiKey } : {}) },
-        enabled: apiKey !== '' || !p.apiKeyEnv, source: 'custom',
-        ...(Object.keys(models).length ? { models } : {}),
-      }
-      keys.push(key)
-    }
-    const tmp = `${path}.tmp`
-    writeFileSync(tmp, JSON.stringify(engine, null, 2), 'utf8')
-    renameSync(tmp, path)
-    return { wrote: true, providerKeys: keys, note: '已写穿 ~/.zcode/v2/config.json（ide-engine: 前缀）' }
-  } catch (err) {
-    return { wrote: false, providerKeys: [], note: `写穿失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
-  }
 }
 
 async function handleVideoFrames(ctx: Context): Promise<void> {

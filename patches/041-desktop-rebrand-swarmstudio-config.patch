@@ -2,8 +2,9 @@ diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-b
 --- a/packages/desktop/electron-builder.yml
 +++ b/packages/desktop/electron-builder.yml
 @@ -1,5 +1,5 @@
- appId: com.hermeswebui.studio
+-appId: com.hermeswebui.studio
 -productName: Ekko Studio
++appId: com.swarmstudio.app
 +productName: SwarmStudio
  copyright: Copyright © 2026
  

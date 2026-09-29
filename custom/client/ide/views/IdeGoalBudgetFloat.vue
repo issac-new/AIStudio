@@ -236,7 +236,7 @@ watch(
   &:hover { border-color: var(--primary-color, #18a058); color: var(--primary-color, #18a058); }
 
   &[data-level='warn'] { border-color: #f0a44c66; color: #f0a44c; }
-  &[data-level='over'] { border-color: var(--error-color, #d03050)66; color: var(--error-color, #d03050); }
+  &[data-level='over'] { border-color: color-mix(in srgb, var(--error-color, #d03050) 40%, transparent); color: var(--error-color, #d03050); }
 }
 
 .ide-goal__panel {
@@ -341,8 +341,8 @@ watch(
   &:disabled { opacity: 0.4; cursor: default; }
 
   &.is-primary {
-    background: var(--primary-color, #18a058)22;
-    border-color: var(--primary-color, #18a058)66;
+    background: color-mix(in srgb, var(--primary-color, #18a058) 13%, transparent);
+    border-color: color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
     color: var(--primary-color, #18a058);
   }
 }
