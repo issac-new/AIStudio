@@ -1,3 +1,4 @@
+import { authFetch } from './auth-fetch'
 // overlay：会话分叉客户端半边（UI 融合 fork——zcode v4 原生 forkAssistant 落地）。
 // 链路：GET /api/zcode-engine/rows（行缓存锚）→ 定位该轮前最近一条 complete 的
 // assistantText 行 → POST /api/zcode-engine/fork（引擎切分支，行流 row.removed
@@ -12,7 +13,7 @@ export interface EngineRow {
 
 export async function fetchEngineRows(workspacePath: string, sessionId: string): Promise<EngineRow[]> {
   const params = new URLSearchParams({ workspacePath, sessionId })
-  const res = await fetch(`/api/zcode-engine/rows?${params.toString()}`)
+  const res = await authFetch(`/api/zcode-engine/rows?${params.toString()}`)
   if (!res.ok) throw new Error(`rows ${res.status}`)
   const body = (await res.json()) as { rows?: EngineRow[] }
   return body.rows ?? []
@@ -25,7 +26,7 @@ export function findForkAnchor(rows: readonly EngineRow[]): EngineRow | null {
 }
 
 export async function forkAtAnchor(workspacePath: string, sessionId: string, anchor: EngineRow): Promise<{ ok: boolean; status?: string; reasonCode?: string }> {
-  const res = await fetch('/api/zcode-engine/fork', {
+  const res = await authFetch('/api/zcode-engine/fork', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ workspacePath, sessionId, rowId: anchor.rowId, entityId: anchor.entityId }),

@@ -9,6 +9,7 @@ import { ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { planScan, gradeFinding, type SecurityFinding } from '../../../server/codesec/code-security'
+import { authFetch } from '../utils/auth-fetch'
 
 const chat = useChatStore()
 const ide = useIdeStore()
@@ -25,7 +26,7 @@ async function runScan(): Promise<void> {
   try {
     const ws = ide.workspace
     if (!ws) throw new Error('无工作区')
-    const res = await fetch(`/api/studio/git/status?path=${encodeURIComponent(ws)}`).catch(() => null)
+    const res = await authFetch(`/api/studio/git/status?path=${encodeURIComponent(ws)}`).catch(() => null)
     // 降级数据面：git status 端点形状不可靠时扫会话内 edit 类工具触碰的文件列表
     //（消息流 tool:Edit/Write 的文件路径）。诚实面：扫到什么列什么，无文件=无发现。
     const touched: string[] = []

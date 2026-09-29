@@ -5,6 +5,7 @@
 // RPC（zcode-patches 草稿 498-import-session-rpc；RPC 未开时如实报错不虚标）。
 import { ref } from 'vue'
 import { useIdeStore } from '../store/ide'
+import { authFetch } from '../utils/auth-fetch'
 
 const ide = useIdeStore()
 const open = ref(false)
@@ -20,7 +21,7 @@ async function runPreview(): Promise<void> {
   if (!ide.workspace) { error.value = '无工作区'; return }
   loading.value = true
   try {
-    const res = await fetch(`/api/zcode-engine/import/history-preview?source=${source.value}&ref=${encodeURIComponent(filePath.value)}`)
+    const res = await authFetch(`/api/zcode-engine/import/history-preview?source=${source.value}&ref=${encodeURIComponent(filePath.value)}`)
     const body = await res.json() as { ok?: boolean; detail?: string; rowCount?: number; skippedRows?: number; preview?: Array<{ role: string; text: string }> }
     if (!res.ok || !body.ok) throw new Error(body.detail ?? `http_${res.status}`)
     preview.value = { rowCount: body.rowCount ?? 0, skippedRows: body.skippedRows ?? 0, preview: body.preview ?? [] }
@@ -34,7 +35,7 @@ async function runPreview(): Promise<void> {
 async function doImport(): Promise<void> {
   error.value = null
   try {
-    const res = await fetch('/api/zcode-engine/import/history', {
+    const res = await authFetch('/api/zcode-engine/import/history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspacePath: ide.workspace, source: source.value, ref: filePath.value }),

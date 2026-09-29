@@ -4,6 +4,7 @@
 // 不便经浏览器 FileReader 的大视频；粘贴/选文件的小视频由 ChatInput 浏览器端
 // 抽帧原生覆盖）。产出=PNG File 列表，经 ChatInput defineExpose(addFiles) 入输入框。
 import { ref } from 'vue'
+import { authFetch } from '../utils/auth-fetch'
 
 const props = defineProps<{ workspace?: string | null }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'frames', files: File[]): void }>()
@@ -29,7 +30,7 @@ async function extract(): Promise<void> {
   busy.value = true
   error.value = ''
   try {
-    const res = await fetch('/api/ide/video-frames', {
+    const res = await authFetch('/api/ide/video-frames', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoPath: abs, frames: framesCount.value, widthPx: 1280 }),

@@ -12,3 +12,4 @@ tests/
 # 基础运行时:远端 vendor 模式的上游检出缓存(脚本生成,不入库)
 .runtime-cache/
 __pycache__/
+runtime/

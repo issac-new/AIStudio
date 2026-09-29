@@ -18,7 +18,10 @@ const overlayRoot = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
-const upstream = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/serve-server.mjs 同一基建）
+const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
+  : resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
 const hermesAgentRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
 const routerPath = resolve(upstream, 'packages/client/src/router/index.ts');
 

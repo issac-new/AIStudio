@@ -1,3 +1,4 @@
+import { authFetch } from './auth-fetch'
 // overlay：共享会话客户端入口（session-share 客户端半边，R6 服务端三端点的调用方）。
 //
 // 服务端（custom/server/controllers/ide/session-share.ts）：POST create /
@@ -14,7 +15,7 @@ export interface ShareLink {
 
 /** host 创建共享链接（POST /api/ide/session-share/create）。 */
 export async function createSessionShare(sessionId: string, mode: ShareMode = 'view'): Promise<ShareLink> {
-  const res = await fetch('/api/ide/session-share/create', {
+  const res = await authFetch('/api/ide/session-share/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId, mode }),

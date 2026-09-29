@@ -6,6 +6,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { buildRosterTree, type RosterNode } from '../utils/roster-tree'
+import { authFetch } from '../utils/auth-fetch'
 
 const chat = useChatStore()
 const squads = ref<Record<string, { leader: string; members: string[] }>>({})
@@ -14,7 +15,7 @@ const loadError = ref<string | null>(null)
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/zcode-engine/squad/roster')
+    const res = await authFetch('/api/zcode-engine/squad/roster')
     if (!res.ok) throw new Error(`http_${res.status}`)
     const body = await res.json() as { squads?: Record<string, { leader: string; members: string[] }> }
     squads.value = body.squads ?? {}
