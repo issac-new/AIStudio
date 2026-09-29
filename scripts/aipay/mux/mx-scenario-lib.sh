@@ -125,6 +125,12 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] → id（state 
   id=$(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$board" create "$title" \
     --body "$body" --project aipaydev --json 2>/dev/null | jq -r '.id // empty')
   [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
+  # 板归属校验（run2 REL-* 三卡实测落错板 audit-compliance，现行 CLI 路由已不可复现
+  # ——补创建后归属核验：错板记单留证，不再静默）
+  _landed="$(board_of_task "$u" "$id" 2>/dev/null || true)"
+  if [[ -n "$_landed" && "$_landed" != "$board" ]]; then
+    echo "ISSUE|kanban-board-misroute|$u|$id 创建要求板 $board 实落 $_landed（P-18 归属核验）" >> "$EVID_DIR/issues.log"
+  fi
   sset "$key" "$id"; echo "$id"
 }
 

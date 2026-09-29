@@ -97,8 +97,13 @@ truth_imgs = sorted(STEPS_DIR.glob('*.png')) if STEPS_DIR.exists() else []
 
 # ── run 模式（UNIFIED_RUN_ID）：旅程线报告正文嵌入 + 审计改判/新特性真值节 ──
 RUN_BODY = ''
+JOURNEY_STYLE = ''
 if _RUN_ID and JOURNEY_HTML.exists():
     _jh = JOURNEY_HTML.read_text(encoding='utf-8')
+    _sm = re.search(r'<style>(.*?)</style>', _jh, re.S)
+    if _sm:
+        JOURNEY_STYLE = ('\n/* ── 旅程线正文样式（run 模式随正文注入，后定义覆盖同名 demo 类）── */\n'
+                         + _sm.group(1))
     _m = re.search(r'<body[^>]*>(.*)</body>', _jh, re.S)
     if _m:
         RUN_BODY = _m.group(1)
@@ -121,7 +126,7 @@ def b64(name):
 
 out = []
 out.append('''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
-<title>SwarmStudio 全流程推演 · 统一版报告（方案对齐 × 产品实操 · 2026-09-28）</title>
+<title>Swarm Studio 全流程推演 · 统一版报告（run2 闭环版 · 2026-09-29）</title>
 <style>
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;max-width:1080px;margin:0 auto;padding:28px;color:#1f2328;background:#fafafa}
 h1{font-size:26px;border-bottom:3px solid #2563eb;padding-bottom:10px}
@@ -145,9 +150,9 @@ th{background:#f3f4f6}
 .idx{font-size:12px}
 .idx td{padding:4px 8px}
 code{background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:12px}
-</style></head><body>''')
-out.append('<h1>SwarmStudio 全流程推演 · 统一版报告</h1>')
-out.append('<div class="meta">生成：2026-09-28 ｜ 合并两线：旅程线（26 步对齐方案原文+闸门仪表盘+38 张步骤真证据）× 实操线（叙事层+29 步产品 UI 实拍+六域审计）<br>'
+</style>''' + JOURNEY_STYLE + '''</head><body>''')
+out.append('<h1>Swarm Studio 全流程推演 · 统一版报告</h1>')
+out.append('<div class="meta">生成：2026-09-29（run2 闭环版）｜ 合并两线：旅程线（26 步对齐方案原文+闸门仪表盘+38 张步骤真证据）× 实操线（叙事层+29 步产品 UI 实拍+六域审计）<br>'
            '方案基准：V3 生命周期方案（操作单一事实源）+ V4.1 整合终版（七问题域/亮点/四维）｜ 环境：SwarmStudio :8802 + gateway :8801 + matrix :8008 ｜ 中央仓 issac-new/aipaydev<br>'
            '修复基线：' + '；'.join(f'<b>{a}</b> {b}' for a, b in FIXES) + '</div>')
 
