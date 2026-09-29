@@ -160,6 +160,22 @@ export interface UsageReport {
   perUnit: UnitUsage[]
   unmappedAssignees: Array<{ assignee: string; total: number; lastActiveAt: number | null }>
   zeroUseCandidates: UnitUsage[]
+  /** 第三期：引擎派发统计（dispatch.successRate 本地实况）与门禁通过率（gate.passRate）。 */
+  dispatchStats?: {
+    dispatched: number
+    delivered: number
+    deferred: number
+    failed: number
+    deliveredRate: number | null
+    byUnit: Array<{ key: string; dispatched: number; delivered: number; rate: number | null }>
+  }
+  gateStats?: {
+    runs: number
+    byVerdict: Record<string, number>
+    passRate: number | null
+    lastAt: number | null
+    roots: string[]
+  }
 }
 export interface SloTierReport {
   tier: string
@@ -195,6 +211,7 @@ export interface CostSummary {
   currency: string
   byProvider: CostBucket[]
   byProfile: CostBucket[]
+  byCapability?: CostBucket[]
   total: { calls: number; inputTokens: number; outputTokens: number; costIdle: number; costPeak: number; unpricedRows: number }
   pricingMissing: string[]
   dbFound: boolean

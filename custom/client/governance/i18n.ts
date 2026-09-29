@@ -81,6 +81,11 @@ export const governanceMessages = {
         unpriced: '未计价',
         unpricedHint: '价目表未收录，不计金额',
         pricingMissing: '价目表未收录模型',
+        dispatch: '引擎派发',
+        delivered: '送达',
+        gate: '门禁通过率',
+        gateRuns: '次闸门运行',
+        colCapability: '能力',
       },
       audit: {
         title: '统一审计',
@@ -174,6 +179,11 @@ export const governanceMessages = {
         unpriced: 'unpriced',
         unpricedHint: 'not in pricing table, excluded from amounts',
         pricingMissing: 'Models missing from pricing table',
+        dispatch: 'Engine dispatch',
+        delivered: 'delivered',
+        gate: 'Gate pass rate',
+        gateRuns: 'gate runs',
+        colCapability: 'Capability',
       },
       audit: {
         title: 'Unified Audit',

@@ -15,6 +15,8 @@
 import { matchColumnTransition, isSafeStep, type ColumnTransitionTrigger, type AutomationStep } from './column-automation'
 import { MentionDispatchService, type MentionOutcome } from '../zcode/mention-dispatch'
 import { checkDispatchBudget } from '../governance/governance-budget'
+import { loadActionContracts } from '../governance/governance-ledger'
+import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
@@ -35,6 +37,23 @@ export class ColumnDispatchConfigError extends Error {
  * autoAdvanceOnSuccess 只表达进列意图，话术不承诺自动进列（P-D(e)：完成后由人工/
  * 编排推进列，与 squad-protocol「done 是人类的动作」同一交付边界）。
  */
+/**
+ * 交付契约块（4A 治理层第三期·派发负载契约化）：从 action-contracts.yaml 取
+ * column.dispatch 契约，拼进派单文本尾部——本机派发不再是裸文本任务传递，完成
+ * 回执的判定词表与失败词表随负载下发。契约注册表缺席时回落内置短句（fail-soft，
+ * 不阻断派发）。文本拼接值全部来自受守门的注册表（id/version 冻结词表），非用户输入。
+ */
+function contractFooter(): string {
+  const res = loadActionContracts()
+  const c = res.doc?.contracts.find((x) => x.id === 'column.dispatch')
+  if (!c) return '交付契约：完成回执须含结构化判定（verdict），词面相似不构成判定依据。'
+  return [
+    `交付契约（action-contracts:${c.id} v${c.version}）：`,
+    `完成回执须含结构化 verdict（六态：pass/fail/conditional/inconclusive/waived/not_applicable，语义见 runtime/governance/metrics.yaml；词面相似不构成判定依据）。`,
+    `失败按冻结错误词表报告：${c.errors.join(' / ')}。`,
+  ].join('')
+}
+
 function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
   return [
@@ -42,6 +61,7 @@ function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], in
     ...lines,
     `本次派发第 ${index + 1} 步：${steps[index].id}${trigger.autoAdvanceOnSuccess ? '（全部步骤完成后由人工/编排推进列）' : ''}。`,
     `请按职责处理列 ${trigger.column} 的当前任务。`,
+    contractFooter(),
   ].join('\n')
 }
 
@@ -74,7 +94,18 @@ export async function dispatchColumnTransition(
     for (const [index, step] of trigger.steps.entries()) {
       // step→agent 派单：provider 已过词表校验才拼进目标 token；简报文本同理。
       const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index)}`
-      outcomes.push(...await service.dispatch({ workspacePath: params.workspacePath, text }))
+      const stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text })
+      outcomes.push(...stepOutcomes)
+      // 派发结果台账（4A 第三期）：column 条目归因到 specialist/role/列，同 commandId
+      // 与引擎单例落的 mention 条目去重（统计面优先取本条目）。
+      for (const o of stepOutcomes) {
+        appendDispatchOutcome({
+          kind: 'column', target: step.provider, specialist: step.specialist || undefined,
+          role: step.role || undefined, column: trigger.column, reason: o.reason,
+          commandId: o.commandId, sessionId: o.sessionId, workspaceId: o.workspaceId,
+          detail: o.detail?.slice(0, 200),
+        })
+      }
     }
   }
   return { triggers, outcomes }
