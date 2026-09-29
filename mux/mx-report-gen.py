@@ -225,6 +225,132 @@ STEPS_META_RUN2 = {
             imgs=[
                   ('ui-26-report', '推演报告自身（本页）', 'ui'),]),
 }
+STEPS_META_RUN4 = {
+    1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
+            narrative='0→1 清环境推演（补遗④第 1 项）：mx-clean 归档旧轮 runs/与 state 后重建账号面。管理员经设置·账户管理页（#/app/accounts，P6）维护 matrix 账号与双账号绑定，roster 界面导出入仓；30 账号 token 真值核验有效（headless+界面双源）。',
+            imgs=[
+                  ('ui-01-accounts', '设置·账户管理（P6，补遗④）：matrix 账号创建/分配/停用 + 本机↔matrix 双账号绑定——第 1 步账号分配的产品面', 'ui'),
+                  ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（清单入仓可对账）', 'ui'),]),
+    2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
+            narrative='单 gateway :8801 多路复用承载全部 profile（等价每人一台电脑一套）：14 用户逐一装配"账号+配置+看板+团队围栏+记忆库"四件套，互不可见；profiles 清单+每板 team 围栏装载真值核验 ✓。',
+            imgs=[
+                  ('ui-02-profiles', '产品界面：看板切换器——单 gateway 多路复用下按账号隔离的板可见性（28 板实况）', 'ui'),]),
+    3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
+            narrative='用户免密/双模式登录后落驾驶舱（#/app，补遗⑤ 单面口径）：顶栏任务计数、注意力条、中栏会话画布实时聚合跨板数据；主侧栏一级入口仅「驾驶舱」（+系统折叠组），全流程 UI 动线不出 /app 路由树。',
+            imgs=[
+                  ('ui-03-cockpit', '驾驶舱全景（补遗⑤ 单面）：顶栏任务/在线 chips·注意力条 + 中栏会话画布 + 右「任务·决策」三节', 'ui'),]),
+    4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
+            narrative='冒烟清单真值核验：30 账号 token 有效、单 gateway+单 studio 就绪、双登录模式通、看板围栏与记忆库在位。本轮起驾驶舱回归为准出项（补遗④第 3 项）：页头「任务」chip 计数=看板实况、「在线」chip 三数（人/智能体/机器）>0 且两组下拉可点选——headless（gateway detailed 健康）与浏览器（ui-04a/b）双源合并，「在线恒零」即阻断。',
+            imgs=[
+                  ('ui-04a-sit-tasks', '驾驶舱回归：页头「任务」chip 下拉——计数/状态过滤/待决策角标（补遗④第 3 项）', 'ui'),
+                  ('ui-04b-sit-online', '驾驶舱回归：页头「在线」chip 下拉——人/智能体/机器三数>0 可点选（"在线恒零"阻断位）', 'ui'),
+                  ('ui-03b-dash', '驾驶舱概览页（#/app/dash，P5）：我的待办/评审闸口/交付进度三卡——功能就绪总览', 'ui'),]),
+    5: dict(keys=['appinit_done'], actor='both', actorText='人+AI · 应用登记',
+            narrative='四个应用模块（支付核心/微信渠道/支付宝渠道/小程序收银台）登记资产表：负责人、专属看板、技术栈、SLA、测试骨架，registry 入仓。补遗④第 4 项：登记/变更/退役在治理中心·应用资产界面完成（六列表单，保存即 git 提交，app-registry.md 为界面产物）。',
+            imgs=[
+                  ('ui-gov-appregistry', '治理中心·应用资产（P7，补遗④）：六列表单增改退役，保存即提交——registry 为界面产物', 'ui'),
+                  ('ui-gov-center', '治理中心全景：六闸工件+应用资产+组织关系（P7/P8 承载面）', 'ui'),]),
+    6: dict(keys=['people_done'], actor='both', actorText='人+AI · 组织对账',
+            narrative='组织与权限矩阵逐项对账（14 账号×角色×汇报线×看板×团队×matrix 账号零差异）。补遗④第 5 项：账号↔团队↔负责人在治理中心·组织界面维护，入职/转岗/离职三步向导（移交→停用→审计留痕）操作化，org.md 同步入仓。',
+            imgs=[
+                  ('ui-gov-org', '治理中心·组织（P8，补遗④）：关系维护+入职/转岗/离职三步向导——org.md 界面产物', 'ui'),]),
+    7: dict(keys=['g1_frozen'], actor='gate', actorText='硬闸 G1 · 人审上锁',
+            narrative='BA（bella）经 matrix 私信送达需求文档；需求过 G1 四项检查（验收标准可机械判定 AC-1~7、范围外清单、影响面、涉敏评估）生成冻结标记入库，锁后不许改。两轮不齐不得开工。',
+            imgs=[
+                  ('ui-gov-doc', '治理中心·六闸工件：G1 需求冻结件——AC-1~7 全文 + frozen:true + commit 锚点', 'ui'),]),
+    8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
+            narrative='fanfan 创建"支付收银台需求分析讨论群"并全量预邀（fanfan-agent + 8 关联人及各自 agent）——建群即按 RACI 全量预邀（room-invite-gap 终清后 0→1 复验位），群即驾驶舱中栏会话画布（补遗⑤）。',
+            imgs=[
+                  ('ui-08-groupchat', '驾驶舱·会话画布：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4③）', 'ui'),
+                  ('ui-08d-members', '会话画布·成员面板：建群全量预邀实证——人+agent 并排在列', 'ui'),]),
+    9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · fanfan 派发',
+            narrative='fanfan 在群内 @fanfan-agent 发出派发指令：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）——指令通道与文档正文分离（@本人语义才执行）。',
+            imgs=[
+                  ('ui-08b-msgcard', '驾驶舱·会话画布：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②）', 'ui'),]),
+    10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
+            narrative='Orchestrator agent 经 matrix channel 接收指令，fanfan 账号板 RFD-001 任务卡真值 ✓。完成凭证反向核验（commit 真在 origin、卡真在账号板），超时即拒收回灌限期重报——打回环真实发生，非橡皮图章。看板入口=注意力条最左「swarm kanban」按钮（M1 裁决动线，/app/board）。',
+            imgs=[
+                  ('ui-10-kanban', '驾驶舱·看板（#/app/board，M1 归一）：RACI 徽章卡（R/A/C/I+我的角色描边）+「等您操作」过滤入口', 'ui'),
+                  ('ui-10-carddrawer', '看板卡抽屉：RFD-001 凭证主卡详情——需求/交付物（含 commit 锚点）/关联卡对账', 'ui'),
+                  ('ui-10b-kanban-mine', '看板：「等您操作」过滤器一键筛出当前登录人相关卡（P2）', 'ui'),]),
+    11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 系统分析智能体',
+            narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），系统分析稿与任务清单入仓，ANALYSIS-DONE 结论行经反向核验。',
+            imgs=[
+                  ('ui-gov-tasklist', '治理中心·分析档案：SMART 任务清单——具体到人（RACI）+人日合计', 'ui'),]),
+    12: dict(keys=['triage_done'], actor='both', actorText='人确认 · AI 执行',
+            narrative='四条 RACI 派发直达四主责（chen/hu/lin/xiao，房间真值 ✓），主卡带结构化 raci 四元组；分诊台逐账号板登记核验 ✓，wei/mei 两 lead 分诊确认——人始终在回路。run3 曾在本步两轮超时熔断（triage-missing 在案），本轮 0→1 环境复验该点位。',
+            imgs=[
+                  ('ui-08b-msgcard', '驾驶舱·会话画布：RACI 派发现场（群内逐条 @主责 agent + @我高亮）', 'ui'),
+                  ('ui-08c-flow-timeline', '会话画布·右栏「任务流转」时间线（P4③）：派发/分诊/回执事件挂接', 'ui'),]),
+    13: dict(keys=['anexec_done'], actor='ai', actorText='AI×4 · 四路系分并行',
+            narrative='四路系分（AN-PAYCORE/CHWX/CHALI/MP：接口签名/数据模型/错误码/幂等键/工作量人日），系分稿在仓+四主责完成回执双真值 ✓。补遗④第 9 项（R14）：swarm yuan 生成 xxx-dev 定制 skill 的过程（仓库扫描→资产梳理→产出）以 ≥3 帧入报告——定义真容+装配脚印见下帧。',
+            imgs=[
+                  ('ui-skill-gen', 'R14·skill 生成过程：swarm yuan 定义真容+装配脚印（N 个 profile 副本真值）', 'ui'),
+                  ('ui-gov-tasklist', '治理中心·分析档案：任务清单 RACI+人日（系分产物锚点）', 'ui'),]),
+    14: dict(keys=['review_done'], actor='both', actorText='AI 汇总 · 人复核',
+            narrative='概要设计五要素（背景/方案/接口/数据/风险）+ 备选方案取舍 + 爆炸半径 + 验证计划前移入仓（docs/design/）。评审卡由评审人账号登记为唯一有效路径（R-A4 根治后语义），导演补登记不置 done。',
+            imgs=[
+                  ('ui-gov-design', '治理中心·六闸工件：概要设计（G2 评审对象）——五要素/备选/爆炸半径/验证前移', 'ui'),]),
+    15: dict(keys=['g2_arch_pass'], actor='gate', actorText='硬闸 G2 · 架构评审',
+            narrative='概设派发 arch-agent 架构治理评审（真实 LLM 回合，评审卡登记+结论行留痕）。不评审不排期；历史偏差红杠（家族记忆库命中项）须显式回应。',
+            imgs=[
+                  ('ui-gov-center', '治理中心：六道闸卡在仓 + 待裁决评审区——G2 语义的产品承载', 'ui'),]),
+    16: dict(keys=['close_done'], actor='ai', actorText='AI · 归档',
+            narrative='主任务卡登记全部关联子任务与过程档案后置完成（close_done 落键）：完成摘要与关联卡对账可回溯，测试工作量按 0.3 系数口径写入。',
+            imgs=[
+                  ('ui-10-carddrawer', '看板卡抽屉：RFD-001 凭证主卡——关联卡对账（前代主卡/活跃子卡/合并卡全链可查）', 'ui'),]),
+    17: dict(keys=['plan_done'], actor='ai', actorText='AI · PM 排期技能',
+            narrative='按定稿概设与工作量评估编排排期（docs/plan/RFD-001-schedule.md 真值 ✓）：四条开发任务+两条测试任务，测试量=开发×0.3 独立成项，整体 +15% 缓冲，每任务时间窗口与依赖明确。',
+            imgs=[
+                  ('ui-gov-schedule', '治理中心·六闸工件：排期计划——DEV-* 时间窗口+依赖链+TEST×0.3+15% 缓冲', 'ui'),]),
+    18: dict(keys=['devimpl_done'], actor='gate', actorText='硬闸 G3 · 编码门禁',
+            narrative='G3 编码门禁：feat/DEV-* 分支进 origin，随分支测试证据 docs/evidence/DEV-*-testlog.txt（G3 本地门禁脚本真查）+落键 g3_code_pass（H10 后六闸全列）。无设计不编码、渠道一律本地 mock。补遗④第 9 项（R14 驱动面）：xxx-dev skill 五步能力驱动开发的过程 ≥2 帧入报告。',
+            imgs=[
+                  ('ui-skill-drive-a', 'R14·skill 驱动现场①：五步能力调用真迹（agent 产出物引用 xxx-dev/五步能力）', 'ui'),
+                  ('ui-skill-drive-b', 'R14·skill 驱动现场②：五步能力调用真迹', 'ui'),
+                  ('ui-gov-tlpaycore', '治理中心·测试证据：DEV-PAYCORE 测试日志（分支锚 feat/DEV-PAYCORE；测试证据三件=案例清单/数据/执行输出）', 'ui'),
+                  ('ui-gov-tlchwx', '治理中心·测试证据：DEV-CHWX 测试日志', 'ui'),
+                  ('ui-gov-tlchali', '治理中心·测试证据：DEV-CHALI 测试日志', 'ui'),
+                  ('ui-gov-tlmp', '治理中心·测试证据：DEV-MP 测试日志', 'ui'),]),
+    19: dict(keys=['g4_pass'], actor='gate', actorText='硬闸 G4 · 独立验证',
+            narrative='测试的人不是写代码的人：qi/fei 独立执行 TEST-BE/TEST-FE，结论行 TEST-PASS-* 经反向核验，g4_pass 落键。合格线补（H9 后）：测试报告六要素+证据证明真跑过+实跑 commit 与发布基线同祖（merge-base 可验）。',
+            imgs=[
+                  ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——范围/用例数/通过数/缺陷归因/结论/通过 commit id', 'ui'),]),
+    20: dict(keys=['g5_ready'], actor='gate', actorText='硬闸 G5 · 发布准出+人批准',
+            narrative='G5 发布准出：release-plan/notes+完备性七项（回滚阈值/灰度三档/观察窗/依赖无新增/同 commit 复现/HumanGate/用户收益表述），评审卡结构化判词（末判词赢+卡面消息双源 FAIL 优先——H8 根治后 stub 词面免疫）。FAIL 即发布冻结（REL-* 置 blocked，缺项闭环+复审 PASS 才解冻）。',
+            imgs=[
+                  ('ui-gov-release', '治理中心·六闸工件：G5 发布计划+发布说明（七项完备性）', 'ui'),
+                  ('ui-20-inbox', '审批收件箱（#/app/inbox）：待审条目+风险三档分区+审批历史留痕', 'ui'),
+                  ('ui-20b-spotcheck', '审批收件箱·抽检区（V4.1）：低风险自动放行回看——放行/抽样/复核/落账全链台账', 'ui'),
+                  ('ui-flow-freeze', '流转现场：发布冻结/解冻（REL-* 卡状态迁移；G5 首过无冻结事件时合法缺席）', 'ui'),]),
+    21: dict(keys=['uat_done'], actor='human', actorText='人 · bella 验收',
+            narrative='bella（BA）按 G1 冻结清单 AC-1~7 逐条验收：每个 AC 判词三态（通过/有条件通过/不通过）逐条落判词（H9 根治后禁总括句），验收书结论=逐条判词汇总，有条件/不通过不构成无条件验收，放行权归需求提出方。SLA 登记对账闭环。',
+            imgs=[
+                  ('ui-gov-uat', '治理中心·六闸工件：UAT 验收报告——AC 逐条判词+证据锚点+SLA 登记', 'ui'),
+                  ('ui-flow-uat', '流转现场：验收逐条对账（UAT 报告真容——中央仓 acceptance 工件）', 'ui'),]),
+    22: dict(keys=['workmgr_done'], actor='both', actorText='人+AI · 工作管理',
+            narrative='研发工作台账随时可出：14 账号×状态分布真查数据，WIP 并行 ≤2 零超限；stale 卡（>72h）如实记档。产品侧驾驶舱「概览」页交付进度卡即此台账的常驻界面视图。',
+            imgs=[
+                  ('ui-03b-dash', '驾驶舱概览页（P5 三卡）：我的待办/评审闸口/交付进度——工作台账的常驻界面视图', 'ui'),]),
+    23: dict(keys=['audit_done'], actor='human', actorText='人 · audit 独立签名线',
+            narrative='合规审计独立于开发/测试线：导演侧机械化审计（门禁留痕/台账格式/取证目录）+独立复核分层，两层结论不一致以独立意见为准并勘误改判留痕；审计范围含闸门判词与实物一致性（判词真值/基线锚/落键齐全）。',
+            imgs=[
+                  ('ui-gov-audit', '治理中心·六闸工件：合规审计意见书（audit 独立签名线+独立复核层）', 'ui'),]),
+    24: dict(keys=['retro_done'], actor='gate', actorText='硬闸 G6 · 复盘',
+            narrative='三段式复盘（现象只写事实/规律对事不对人/下轮验证）入仓+治理报告产出（硬闸状态/问题单台账/凭证与回灌/metrics 口径行）；DISP 每条一行回写 issues.log 台账本体，复盘计数=台账实算；本轮经验存入家族记忆库（hindsight），下轮同需求自动回忆。',
+            imgs=[
+                  ('ui-gov-retro', '治理中心·六闸工件：G6 复盘报告——问题单处置记账（三段式）', 'ui'),]),
+    25: dict(keys=['ide_done'], actor='both', actorText='人 · IDE 实操',
+            narrative='IDE 工作台=驾驶舱·IDE 画布（/app/ide，补遗⑤ M2 归一；全屏画布形态与任务简报/交互编码/git 图谱/模型设置能力不变）：任务列表带 RACI 徽章，点卡出「任务简报」（RACI 四元组、工作流、git、上下文文件一屏齐）；评审面板（通过/打回/有条件）为人工把关入口。',
+            imgs=[
+                  ('ui-25-ide', '驾驶舱·IDE 画布（#/app/ide，M2 归一）：任务简报面板+评审面板+git 图谱', 'ui'),]),
+    26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
+            narrative='本报告由生成器产出：步骤标题与把关逐字解析方案文档（单一事实源），每张证据图标注来源（产品界面实拍/仓内工件/消息转录），26 步状态真实不作假（✅/⬜ 与 state 落键一致）。补遗④⑤口径：R12 快门守门（拒拍空态/错页）+R14 skill 过程位+流转衔接位随报告挂接；统一版（unified-roadshow-report.html）为唯一交付，本旅程版随 evidence 存档备查。',
+            imgs=[
+                  ('ui-26-report', '推演报告自身（本页首屏）', 'ui'),
+                  ('ui-skill-tree', 'R14·skill 产出文件树（产出真容）', 'ui'),
+                  ('ui-skill-content', 'R14·skill 产出内容（SKILL.md 真容——五步能力）', 'ui'),]),
+}
 STEPS_META_RUN1 = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
             narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账。',
@@ -338,7 +464,7 @@ STEPS_META_RUN1 = {
                   ('ui-26-report', '推演报告自身（本页）', 'ui'),]),
 }
 # 按轮次选择叙事集（run1 叙事自 c353a154 版逐字找回；未知轮次报错不静默错配）
-_NARR={'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2}
+_NARR={'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4}
 if RUN_ID not in _NARR:
     sys.exit('[mx-report-gen] 无该轮叙事集: '+RUN_ID+'（已知: 20260928-v4-run1, 20260929-v4-run2）')
 STEPS_META=_NARR[RUN_ID]

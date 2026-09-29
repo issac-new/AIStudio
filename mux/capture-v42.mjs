@@ -131,6 +131,50 @@ async function openCurrentRoom() {
 await shot('ui-03-cockpit', '/app', { wait: 6000, expect: '[data-testid="wb-rail-left"], .ia-shell, main', expectRoute: '^/app' })
 await shot('ui-03b-dash', '/app/dash', { wait: 5000, expect: '[data-testid*="dash"], .ia-overview, main', expectRoute: '/app' })
 
+// ── 补遗④第 3 项：驾驶舱回归（第 4 步）——页头「任务」「在线」chips 下拉逐项验证 ──
+// 合格线：任务计数=看板实况（推演后>0）；在线三数（人/智能体/机器）各>0，恒零即 DEFECT（准出阻断）；
+// 两组下拉可开（可点选跳转的入口在面板内，截屏留档）。
+if (!only || only === 'sit-chips') await guarded('sit-chips', async () => {
+  await page.goto(BASE + '/#/app')
+  await page.waitForTimeout(7000)
+  await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
+  // ① 任务 chip：计数与状态下拉开面板
+  const tasksChip = page.locator('[data-testid="sit-tasks"]')
+  if (!(await tasksChip.isVisible({ timeout: 6000 }).catch(() => false))) throw new Error('sit-tasks chip 不可见')
+  const tasksText = (await tasksChip.innerText()).replace(/\s+/g, ' ').trim()
+  const taskNum = parseInt((tasksText.match(/(\d+)/) || ['0'])[1], 10)
+  console.log(`[sit] 任务 chip 文本="${tasksText}" 计数=${taskNum}`)
+  await tasksChip.click(); await page.waitForTimeout(1500)
+  const tasksPanel = page.locator('[data-testid="sit-panel-tasks"]')
+  const panelOk = await tasksPanel.isVisible().catch(() => false)
+  if (!panelOk) throw new Error('任务下拉面板未打开（下拉不可点选）')
+  await page.screenshot({ path: `${OUT}/ui-04a-sit-tasks.png` })
+  console.log('shot: ui-04a-sit-tasks')
+  if (taskNum <= 0) console.error('DEFECT[sit-tasks-zero]: 任务计数=0（应=看板实况，推演后须>0）')
+  await page.locator('[data-testid="sit-panel-close"]').click().catch(() => page.keyboard.press('Escape'))
+  await page.waitForTimeout(600)
+  // ② 在线 chip：三数解析 + 下拉
+  const onlineChip = page.locator('[data-testid="sit-online"]')
+  const onlineText = (await onlineChip.innerText()).replace(/\s+/g, ' ').trim()
+  const nums = (onlineText.match(/\d+/g) || []).map(Number)
+  const total = nums[0] ?? 0
+  const detail = nums.slice(1)
+  console.log(`[sit] 在线 chip 文本="${onlineText}" 总数=${total} 明细=${JSON.stringify(detail)}`)
+  if (total <= 0 || (detail.length >= 3 && detail.slice(0, 3).every((n) => n <= 0))) {
+    console.error(`DEFECT[sit-online-zero]: 在线恒零（文本="${onlineText}"）——补遗④第 3 项准出阻断`)
+  }
+  await onlineChip.click(); await page.waitForTimeout(1500)
+  const onlinePanel = page.locator('[data-testid="sit-panel-online"]')
+  if (!(await onlinePanel.isVisible().catch(() => false))) throw new Error('在线下拉面板未打开')
+  await page.screenshot({ path: `${OUT}/ui-04b-sit-online.png` })
+  console.log('shot: ui-04b-sit-online')
+})
+
+// ── 补遗④第 2/4/5 项产品面：P6 账户管理 / P7 应用资产 / P8 组织（保存即 git 提交，R13）──
+await shot('ui-01-accounts', '/app/accounts', { wait: 4500, expect: 'main', expectRoute: '/app/accounts' })
+await shot('ui-gov-center', '/app/gov', { wait: 5500, expect: 'main', expectRoute: '/app/gov' })
+
+
 // ── 分析群：全景 + P4③ 时间线特写 + 成员面板（全量预邀实证）──
 if (await openCurrentRoom()) {
   await page.waitForTimeout(2500)
@@ -212,29 +256,78 @@ if (!only || only === 'ui-26-report') {
 async function guarded(name, fn) {
   try { await fn() } catch (e) { console.error(`DEFECT[capture-${name}]: ${e.message}`) }
 }
-// R14①：xxx-dev skill 真容（文件树+SKILL.md 头部，file:// 直读真实产物）
-await guarded('skill-views', async () => {
-  const { readdirSync, readFileSync, existsSync } = await import('node:fs')
-  const skillRoot = `${RUN_DIR}/workspaces`
+async function renderTextFrame(name, title, body) {
+  await page.setContent(
+    `<div style="font:12px ui-monospace;padding:0"><div style="font:600 14px -apple-system;padding:10px 16px;background:#f3f4f6">${title}</div>`
+    + `<pre style="font:12px ui-monospace;padding:16px;white-space:pre-wrap;margin:0">${body.replace(/</g, '&lt;')}</pre></div>`,
+    { waitUntil: 'load' })
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: `${OUT}/${name}.png` })
+  console.log(`shot: ${name}`)
+}
+// R14① 生成过程·定义帧：swarm yuan 生成器定义（扫描→资产梳理→产出的配方真容）
+if (!only || only === 'skill-gen') await guarded('skill-gen', async () => {
+  const { existsSync, readFileSync, readdirSync } = await import('node:fs')
+  const gen = process.env.SWARM_YUAN_SKILL || `${process.env.HOME}/.zcode/skills/swarm-yuan/SKILL.md`
+  const cands = [gen, '/Volumes/nvme2230/lab/.wxwork/v5run4/scripts/aipay/skills/aipaydev-dev/SKILL.md']
+  const p = cands.find((c) => c && existsSync(c))
+  if (!p) throw new Error('swarm-yuan 生成器定义不可寻')
+  let body = readFileSync(p, 'utf8')
+  // 装配脚印：每 profile 的 aipaydev-dev 副本计数（生成→分发链真值）
+  const profDir = '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/profiles'
+  if (existsSync(profDir)) {
+    const copies = readdirSync(profDir).filter((u) => existsSync(`${profDir}/${u}/skills/aipaydev-dev/SKILL.md`))
+    body = `# 装配脚印（真值）\n${copies.length} 个 profile 装有 aipaydev-dev skill 副本：${copies.slice(0, 12).join(' ')}${copies.length > 12 ? ' …' : ''}\n\n# 生成器/产出定义真容（${p}）\n` + body
+  }
+  await renderTextFrame('ui-skill-gen', `R14·生成过程（定义真容）：${p}`, body.slice(0, 5000))
+})
+// R14② 产出·文件树帧 + ③ 内容帧：本轮 xxx-dev skill 真容（file:// 直读真实产物）
+if (!only || only === 'skill-views') await guarded('skill-views', async () => {
+  const { readdirSync, readFileSync, existsSync, statSync } = await import('node:fs')
+  const skillRoots = [`${RUN_DIR}/workspaces`, '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/profiles']
   const cand = []
-  const walk = (d, depth) => { if (depth > 3 || !existsSync(d)) return
+  const walk = (d, depth) => { if (depth > 3 || !existsSync(d) || cand.length > 8) return
     for (const f of readdirSync(d, { withFileTypes: true })) {
       if (f.isDirectory() && /skill|\.swarm|yuan/i.test(f.name)) cand.push(`${d}/${f.name}`)
       else if (f.isDirectory()) walk(`${d}/${f.name}`, depth + 1)
       else if (/SKILL\.md$/.test(f.name)) cand.push(`${d}/${f.name}`)
     } }
-  walk(skillRoot, 0)
-  const skillMd = cand.find((c) => c.endsWith('SKILL.md'))
-  if (skillMd) {
-    const body = readFileSync(skillMd, 'utf8').slice(0, 4000)
-    await page.setContent(`<pre style="font:12px ui-monospace;padding:16px;white-space:pre-wrap">${body.replace(/</g, '&lt;')}</pre>`, { waitUntil: 'load' })
-    await page.waitForTimeout(600)
-    await page.screenshot({ path: `${OUT}/ui-skill-content.png` })
-    console.log('shot: ui-skill-content (' + skillMd + ')')
-  } else console.error('DEFECT[R14]: 未找到 xxx-dev SKILL.md（walk ' + skillRoot + '）')
+  for (const r of skillRoots) walk(r, 0)
+  const skillMd = cand.find((c) => /aipaydev-dev\/SKILL\.md$/.test(c)) || cand.find((c) => c.endsWith('SKILL.md'))
+  if (!skillMd) throw new Error('未找到 xxx-dev SKILL.md（walk ' + skillRoots.join(',') + '）')
+  // 文件树帧：skill 目录 + 一层子文件与大小
+  const dir = skillMd.slice(0, skillMd.lastIndexOf('/'))
+  const tree = readdirSync(dir, { withFileTypes: true }).map((f) => {
+    const fp = `${dir}/${f.name}`
+    const sz = f.isDirectory() ? `${readdirSync(fp).length} 项` : `${statSync(fp).size}B`
+    return `${f.isDirectory() ? 'd' : '-'} ${sz.padStart(8)}  ${f.name}`
+  }).join('\n')
+  await renderTextFrame('ui-skill-tree', `R14·产出文件树：${dir}`, tree)
+  // 内容帧
+  await renderTextFrame('ui-skill-content', `R14·产出内容：${skillMd}`, readFileSync(skillMd, 'utf8').slice(0, 5000))
+})
+// R14④⑤ 驱动开发过程两帧：skill 五步能力调用现场（agent 真实产出物引用该 skill 的痕迹）
+if (!only || only === 'skill-drive') await guarded('skill-drive', async () => {
+  const { readdirSync, readFileSync, existsSync, statSync } = await import('node:fs')
+  const roots = [`${RUN_DIR}/workspaces`, '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/kanban/boards']
+  const hits = []
+  const small = (p) => { try { return statSync(p).size < 400000 } catch { return false } }
+  const grep = (d, depth) => { if (depth > 4 || !existsSync(d) || hits.length > 6) return
+    for (const f of readdirSync(d, { withFileTypes: true })) {
+      const fp = `${d}/${f.name}`
+      if (f.isDirectory()) { if (!/node_modules|\.git/.test(f.name)) grep(fp, depth + 1); continue }
+      if (!/\.(md|txt|log|json)$/.test(f.name) || !small(fp)) continue
+      try { const t = readFileSync(fp, 'utf8')
+        if (/xxx-dev|五步能力/.test(t)) hits.push({ fp, excerpt: t.slice(Math.max(0, t.search(/xxx-dev|五步能力/) - 200), 1800) })
+      } catch { /* 二进制/权限跳过 */ }
+    } }
+  for (const r of roots) grep(r, 0)
+  if (hits.length === 0) throw new Error('workspaces/boards 未见 xxx-dev 或五步能力引用痕迹（skill 驱动开发现场缺席）')
+  await renderTextFrame('ui-skill-drive-a', `R14·驱动现场①：${hits[0].fp}`, hits[0].excerpt)
+  if (hits[1]) await renderTextFrame('ui-skill-drive-b', `R14·驱动现场②：${hits[1].fp}`, hits[1].excerpt)
 })
 // 流转现场①：群内缺陷回流/提测流转消息（群视图滚动至含 FAIL/缺陷/提测 关键词可见）
-await guarded('flow-defect', async () => {
+if (!only || only === 'flow-defect') await guarded('flow-defect', async () => {
   if (!ROOM) throw new Error('无 room_analysis')
   await page.goto(BASE + '/#/app')
   await page.waitForTimeout(6000)
@@ -243,6 +336,27 @@ await guarded('flow-defect', async () => {
     await page.screenshot({ path: `${OUT}/ui-flow-defect.png` })
     console.log('shot: ui-flow-defect')
   } else throw new Error('群内未见流转关键词消息')
+})
+// 流转现场②：发布冻结/解冻（REL-* 关联卡状态或收件箱决策历史；无冻结事件=如实 WARN）
+if (!only || only === 'flow-freeze') await guarded('flow-freeze', async () => {
+  await page.goto(BASE + '/#/app/board')
+  await page.waitForTimeout(5500)
+  const rel = page.locator('text=/REL-|blocked|冻结/').first()
+  if (await rel.isVisible({ timeout: 6000 }).catch(() => false)) {
+    await rel.scrollIntoViewIfNeeded().catch(() => {})
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: `${OUT}/ui-flow-freeze.png` })
+    console.log('shot: ui-flow-freeze')
+  } else console.log('WARN[flow-freeze]: 本轮无 REL- 冻结/解冻现场（G5 首过无冻结事件时为合法缺席）')
+})
+// 流转现场③：验收对账（UAT 逐条判词真容——中央仓验收报告渲染帧）
+if (!only || only === 'flow-uat') await guarded('flow-uat', async () => {
+  const { existsSync, readFileSync, readdirSync } = await import('node:fs')
+  const accDir = '/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev/docs/acceptance'
+  if (!existsSync(accDir)) throw new Error('中央仓 acceptance 目录不存在')
+  const f = readdirSync(accDir).filter((n) => /RFD-001/.test(n)).sort().pop()
+  if (!f) throw new Error('无 RFD-001 验收报告')
+  await renderTextFrame('ui-flow-uat', `流转·验收对账：docs/acceptance/${f}`, readFileSync(`${accDir}/${f}`, 'utf8').slice(0, 5000))
 })
 await reportDuplicateFrames()
 await browser.close()

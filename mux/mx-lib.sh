@@ -250,8 +250,16 @@ mx_apply_agent_patches() {
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
       log "运行时 patch 已在位：$p"; continue
     fi
-    git -C "$tree" apply --check "$pf" >/dev/null 2>&1 \
-      || fail "$p 与安装树（${tree}）冲突——未强行应用，人工处置后重跑"
+    if ! git -C "$tree" apply --check "$pf" >/dev/null 2>&1; then
+      # 源码树漂移（自更新推进）致上下文失配：查补丁首个新增符号是否已在 SIM 安装环境在位
+      # ——在位=运行时行为已生效（installs 分发物已带），如实记档跳过；缺位才真失败。
+      _marker=$(grep -m1 -oE '^\+(def|class) [A-Za-z_0-9]+' "$pf" | sed -E 's/^\+(def|class) //')
+      if [ -n "$_marker" ] && grep -rql "$_marker" "$HERMES_ROOT/installs/" 2>/dev/null; then
+        log "运行时 patch 语义已在安装环境在位（源码树漂移跳过）：$p（marker=$_marker）"
+        continue
+      fi
+      fail "$p 与安装树冲突且语义未在安装环境（marker=${_marker:-无}）——人工处置后重跑"
+    fi
     git -C "$tree" apply --whitespace=nowarn "$pf" || fail "$p 应用失败"
     log "运行时 patch 已部署：$p → $tree"
   done
