@@ -285,3 +285,4 @@
 # 497（win 交付物重建）：win.target 补 zip x64——本机分发交付物（nsis -86 在案惯例
 #      非交付物）；2.25 轮 patch 109 语义，系列折叠时孤儿化，v0.7.25 结构重建。
 497-desktop-win-zip-target.patch
+498-goals-user-preempt.patch

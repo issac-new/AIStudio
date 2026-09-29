@@ -17,9 +17,10 @@ describe('键位重映射（codex 语义）', () => {
     expect(clash.conflicts[0].actions.sort()).toEqual(['interrupt', 'submit'])
   })
 
-  it('默认键位（两上下文最小集）', () => {
+  it('默认键位（三上下文：global 生效面 v2 + session/editor 展示）', () => {
     const d = defaultKeymap()
-    expect(new Set(d.map((b) => b.context))).toEqual(new Set(['session', 'editor']))
+    expect(new Set(d.map((b) => b.context))).toEqual(new Set(['global', 'session', 'editor']))
+    expect(d.find((b) => b.context === 'global' && b.action === 'palette')?.key).toBe('Cmd+K')
     expect(applyKeymap(d, []).conflicts).toEqual([])
   })
 })

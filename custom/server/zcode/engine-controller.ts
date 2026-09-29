@@ -457,6 +457,52 @@ router.get('/queue/:workspacePath', async (ctx) => {
   ctx.body = { ok: true, queue: queueView(ctx.params.workspacePath) }
 })
 
+// ── 遗留清单 L8：多源会话导入（#22）——解析预览端点 ──
+// 三源（codex/kimi/claude）JSONL → session-importer 归一化行+坏行计数；
+// 写入面（引擎 importSession RPC）见 zcode-patches 草稿，未开前导入按钮如实报错。
+router.get('/import/history-preview', async (ctx) => {
+  const { source, ref } = ctx.query as { source?: string; ref?: string }
+  if (source !== 'codex' && source !== 'kimi' && source !== 'claude') {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'source ∈ codex|kimi|claude' }
+    return
+  }
+  if (typeof ref !== 'string' || !ref) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'ref 必填（JSONL 文件服务器路径）' }
+    return
+  }
+  // 只读服务器本地文件（导入方上传落盘后的路径；无上传面时 curl/CLI 供路径）。
+  const { readFileSync } = await import('fs')
+  const { resolve } = await import('path')
+  const filePath = resolve(ref)
+  let lines: string[]
+  try {
+    lines = readFileSync(filePath, 'utf8').split('\n').filter((l) => l.trim())
+  } catch (err) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
+    return
+  }
+  const { parseSessionHistory } = await import('../importer/session-importer')
+  const parsed = parseSessionHistory(source, filePath, lines)
+  ctx.body = {
+    ok: true,
+    source,
+    sourceId: parsed.sourceId,
+    rowCount: parsed.rows.length,
+    skippedRows: parsed.skippedRows,
+    preview: parsed.rows.slice(0, 20).map((r) => ({ role: r.role, text: r.text.slice(0, 120), at: r.at })),
+  }
+})
+
+// 写入端点（L8）：引擎 importSession RPC 未开（zcode-patches 草稿）——501 如实。
+router.post('/import/history', async (ctx) => {
+  void ctx
+  ctx.status = 501
+  ctx.body = { ok: false, detail: '引擎 importSession RPC 未开（见 docs/superpowers/notes/2026-09-29-zcode-import-session-rpc-draft.md）——解析预览端点已可用' }
+})
+
 router.get('/squad/roster', async (ctx) => {
   // 名册树数据面（吸收第一批 B5，routa 名册树视图）：squads 定义（leader+members）。
   // 登录校验同 /squad/evaluations；delegateCounts 由客户端从 subagentStreams 聚合。
