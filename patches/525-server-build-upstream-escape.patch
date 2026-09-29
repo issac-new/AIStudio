@@ -1,0 +1,31 @@
+diff --git a/scripts/build-server.mjs b/scripts/build-server.mjs
+index 2ffdbd0d..3104e4b8 100644
+--- a/scripts/build-server.mjs
++++ b/scripts/build-server.mjs
+@@ -11,7 +11,26 @@ const serverOutDir = resolve(rootDir, 'dist/server')
+ rmSync(serverOutDir, { recursive: true, force: true })
+ mkdirSync(serverOutDir, { recursive: true })
+ 
++// overlay[build-escape]（patch 525）：custom 侧兄弟布局字面量 require
++// （'../../../../upstream/hermes-studio/…'，见 custom/server/zcode/projection-socket.ts）
++// 假设 overlay 检出在 ncwk/overlay——worktree/沙箱布局下该前缀不可解析、build:full 必炸
++// （2026-09-29 v5run4 沙箱实锤）。onResolve 把该前缀重锚到本仓根，两种布局同解。
++const upstreamEscapePrefix = '../../../../upstream/hermes-studio/'
++const overlayUpstreamEscapePlugin = {
++  name: 'overlay-upstream-escape',
++  setup(build) {
++    build.onResolve({ filter: /\.\.\/\.\.\/\.\.\/\.\.\/upstream\/hermes-studio\// }, (args) => {
++      const base = resolve(rootDir, args.path.slice(upstreamEscapePrefix.length))
++      for (const cand of [base + '.ts', base + '.tsx', resolve(base, 'index.ts'), base]) {
++        if (existsSync(cand)) return { path: cand }
++      }
++      return { path: base }
++    })
++  },
++}
++
+ await esbuild.build({
++  plugins: [overlayUpstreamEscapePlugin],
+   entryPoints: [resolve(rootDir, 'packages/server/src/index.ts')],
+   bundle: true,
+   platform: 'node',
