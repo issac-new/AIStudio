@@ -151,7 +151,7 @@ function onPanelJumpTask(taskId: string): void {
     if (row?.kind === 'room') { void router.push({ name: 'ia2.commsRoom', params: { roomId: row.id } }); return }
     if (row?.kind === 'group') { void router.push({ name: 'ia2.groupRoom', params: { roomId: row.id } }); return }
   }
-  void router.push({ path: '/ide', query: { task: taskId } })
+  void router.push({ path: '/app/ide', query: { task: taskId } })
 }
 </script>
 

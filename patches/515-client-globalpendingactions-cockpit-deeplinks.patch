@@ -1,0 +1,39 @@
+diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/packages/client/src/components/layout/GlobalPendingActions.vue
+--- a/packages/client/src/components/layout/GlobalPendingActions.vue
++++ b/packages/client/src/components/layout/GlobalPendingActions.vue
+@@ -316,10 +316,13 @@ function openPendingSource(action: GlobalPendingAction) {
+   }
+   if (action.kind === 'group-approval' || action.kind === 'group-clarify') {
+-    void router.push({ name: 'hermes.groupChatRoom', params: { roomId: action.pending.roomId } })
++    // overlay[nav]: 群聊介入深链迁驾驶舱群画布（V5 补遗⑤ M3——全流程不出 /app 树）
++    void router.push({ name: 'ia2.groupRoom', params: { roomId: action.pending.roomId } })
+     return
+   }
++  // overlay[nav]: 工作流审批介入深链迁驾驶舱审批收件箱（V5 补遗⑤ M4——
++  // 运行审批已聚合 ApprovalPanel；workflow 编辑器页退出用户可达面）
+   void router.push({
+-    name: 'hermes.workflow',
++    name: 'ia2.inbox',
+     query: { workflowId: action.workflowId, runId: action.runId, nodeId: action.nodeId, executionId: action.executionId },
+   })
+ }
+@@ -344,15 +347,17 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
+       ? `/app/collab/global-agent/session/${sessionId}${profileQuery}`
+       : `/app/collab/session/${sessionId}${profileQuery}`
+   }
+   if (action.kind === 'group-approval' || action.kind === 'group-clarify') {
+-    return `/hermes/group-chat/room/${encodeURIComponent(action.pending.roomId)}${profileQuery}`
++    // overlay[nav]: 群聊通知点击 URL 迁驾驶舱群画布（V5 补遗⑤ M3）
++    return `/app/s/group/${encodeURIComponent(action.pending.roomId)}${profileQuery}`
+   }
+   const query = new URLSearchParams({
+     profile: action.profile,
+     workflowId: action.workflowId,
+     runId: action.runId,
+     nodeId: action.nodeId,
+     ...(action.executionId ? { executionId: action.executionId } : {}),
+   })
+-  return `/hermes/workflow?${query.toString()}`
++  // overlay[nav]: 工作流通知点击 URL 迁审批收件箱（V5 补遗⑤ M4）
++  return `/app/inbox?${query.toString()}`
+ }
