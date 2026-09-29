@@ -58,7 +58,7 @@ if [ "$KEEP_ACCOUNTS" = 0 ]; then
   ADM=$( [ -f "$SIM_ROOT/creds/admin.token" ] && cat "$SIM_ROOT/creds/admin.token" | head -1 || true )
   if [ "$APPLY" = 1 ] && [ -n "$ADM" ]; then
     HS=http://127.0.0.1:8008
-    for u in fanfan bella; do
+    for u in bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit; do
       T=$( [ -f "$SIM_ROOT/creds/$u.token" ] && head -1 "$SIM_ROOT/creds/$u.token" || true )
       [ -n "$T" ] || continue
       curl -sf "$HS/_matrix/client/v3/joined_rooms?access_token=$T" | jq -r '.joined_rooms[]' | while read -r rid; do
