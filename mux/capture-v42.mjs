@@ -208,6 +208,42 @@ if (!only || only === 'ui-26-report') {
   console.log('shot: ui-26-report (report file first screen)')
 }
 
+// ── 补遗④：R14 skill 过程位 + 流转衔接现场位（缺席记 DEFECT 不炸）──
+async function guarded(name, fn) {
+  try { await fn() } catch (e) { console.error(`DEFECT[capture-${name}]: ${e.message}`) }
+}
+// R14①：xxx-dev skill 真容（文件树+SKILL.md 头部，file:// 直读真实产物）
+await guarded('skill-views', async () => {
+  const { readdirSync, readFileSync, existsSync } = await import('node:fs')
+  const skillRoot = `${RUN_DIR}/workspaces`
+  const cand = []
+  const walk = (d, depth) => { if (depth > 3 || !existsSync(d)) return
+    for (const f of readdirSync(d, { withFileTypes: true })) {
+      if (f.isDirectory() && /skill|\.swarm|yuan/i.test(f.name)) cand.push(`${d}/${f.name}`)
+      else if (f.isDirectory()) walk(`${d}/${f.name}`, depth + 1)
+      else if (/SKILL\.md$/.test(f.name)) cand.push(`${d}/${f.name}`)
+    } }
+  walk(skillRoot, 0)
+  const skillMd = cand.find((c) => c.endsWith('SKILL.md'))
+  if (skillMd) {
+    const body = readFileSync(skillMd, 'utf8').slice(0, 4000)
+    await page.setContent(`<pre style="font:12px ui-monospace;padding:16px;white-space:pre-wrap">${body.replace(/</g, '&lt;')}</pre>`, { waitUntil: 'load' })
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: `${OUT}/ui-skill-content.png` })
+    console.log('shot: ui-skill-content (' + skillMd + ')')
+  } else console.error('DEFECT[R14]: 未找到 xxx-dev SKILL.md（walk ' + skillRoot + '）')
+})
+// 流转现场①：群内缺陷回流/提测流转消息（群视图滚动至含 FAIL/缺陷/提测 关键词可见）
+await guarded('flow-defect', async () => {
+  if (!ROOM) throw new Error('无 room_analysis')
+  await page.goto(BASE + '/#/app')
+  await page.waitForTimeout(6000)
+  const hit = page.locator('text=/FAIL|缺陷|提测|READY-GATE/').first()
+  if (await hit.isVisible({ timeout: 8000 }).catch(() => false)) {
+    await page.screenshot({ path: `${OUT}/ui-flow-defect.png` })
+    console.log('shot: ui-flow-defect')
+  } else throw new Error('群内未见流转关键词消息')
+})
 await reportDuplicateFrames()
 await browser.close()
 console.log('capture-v42 done')
