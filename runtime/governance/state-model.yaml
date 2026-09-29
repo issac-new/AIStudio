@@ -1,0 +1,108 @@
+# 状态-事件本体（4A 治理层注册表族之五）
+#
+# 定位：把文章八要素中"状态"与"事件"显式可计算化——对象处于什么状态、什么事件
+# 触发哪条规则、允许什么动作、须留什么证据。设计依据：
+# docs/superpowers/specs/2026-09-29-agent-4a-governance-layer-design.md §3.13。
+#
+# 事实锚点（守门断言防漂移）：
+# - states 词表 = upstream kanban_db.py:103 VALID_STATUSES（九态，逐字一致）
+# - runOutcomeTerminal = kanban_db.py:2377 _RUN_OUTCOME_TERMINAL_STATUS（逐字一致）
+# - 门禁挂接语义 = kanban_gates.py:24/160 按目标状态 opt-in（gates.json 缺席该状态即不拦）
+# - 代码无合法转移矩阵（set 面宽）：transitions 只声明**有治理挂接**的转移，
+#   不虚构全量枚举；freeMoveStates 如实列出无门禁约束的状态。
+# - anomaly：changes_requested 出现在 run 终态映射但不在 VALID_STATUSES（upstream
+#   既有怪味，如实登记不改 upstream）。
+
+version: 1
+reviewedAt: "2026-09-29"
+
+object: task
+authority: kanban.db（hermes CLI 单写者；本表只读投影）
+
+states:
+  - id: triage
+    semantics: 分诊中，未定去留
+  - id: todo
+    semantics: 待办，已定做
+  - id: scheduled
+    semantics: 已排期
+  - id: ready
+    semantics: 就绪可认领
+  - id: running
+    semantics: 执行中（有活跃 run）
+  - id: blocked
+    semantics: 阻塞（含 dependency_wait）
+  - id: review
+    semantics: 待评审（HumanGate 语义挂接点）
+  - id: done
+    semantics: 完成（completion_contract 过闸才算，见 metrics task.done）
+  - id: archived
+    semantics: 归档（账面留存）
+
+freeMoveStates: [triage, todo, scheduled]   # 无门禁挂接（gates.json 未配置即不拦，opt-in 语义）
+
+# run 终态映射：task_runs.outcome → task.status（kanban_db.py:2377 逐字）
+runOutcomeTerminal:
+  completed: done
+  review_requested: review
+  changes_requested: changes_requested
+  blocked: blocked
+  dependency_wait: blocked
+
+# 有治理挂接的转移（列编排触发/门禁强制/run 终态）。actions 引 action-contracts id。
+transitions:
+  - id: run.complete
+    from: running
+    to: done
+    trigger: task_runs.outcome=completed
+    rules: [completion_contract 四件套（metrics task.done 口径）]
+    actions: [kanban.transition]
+    evidence: task_events 流转记录 + task_runs.outcome
+    refs: { upstream: hermes-agent/hermes_cli/kanban_db.py }
+  - id: run.review-request
+    from: running
+    to: review
+    trigger: task_runs.outcome=review_requested
+    rules: [review 状态门禁 opt-in（gates.json）]
+    actions: [kanban.transition]
+    evidence: task_events + 门禁判定
+    refs: { upstream: hermes-agent/hermes_cli/kanban_db.py }
+  - id: run.block
+    from: running
+    to: blocked
+    trigger: task_runs.outcome=blocked|dependency_wait
+    rules: []
+    actions: [kanban.transition]
+    evidence: task_events + run outcome
+    refs: { upstream: hermes-agent/hermes_cli/kanban_db.py }
+  - id: column.enter-review
+    from: "*"          # 列编排 entry 触发（任意源列进 review）
+    to: review
+    trigger: column_transition（columns.yaml review.entry + 列门禁挂接点）
+    rules: [requiredHumanApproval, requiredChecklist, validatorCommand, gateMode]
+    actions: [kanban.transition, column.dispatch]
+    evidence: task_events + 门禁判定 + 派发结果台账
+    refs: { file: runtime/roster/columns.yaml }
+  - id: column.enter-done
+    from: "*"
+    to: done
+    trigger: column_transition（columns.yaml done.exit + done-reporter 步骤）
+    rules: [done 门禁 opt-in（gates.json）]
+    actions: [kanban.transition, column.dispatch]
+    evidence: task_events + 派发结果台账 + completion_contract
+    refs: { file: runtime/roster/columns.yaml }
+
+# 事件源（本体的事件面；证据链入口）
+eventSources:
+  - id: task_events
+    authority: kanban.db
+    kind: 状态流转/评论/系统行
+  - id: task_runs
+    authority: kanban.db
+    kind: run 结果（outcome→终态映射）
+  - id: dispatch-ledger
+    authority: ~/.hermes-web-ui/overlay/dispatch-ledger.jsonl
+    kind: 引擎派发结果
+  - id: matrix-events
+    authority: Synapse（task.assign/receipt/delivery）
+    kind: 跨机协议事件
