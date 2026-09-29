@@ -42,6 +42,7 @@ import IdeReviewPanel from '../components/IdeReviewPanel.vue'
 import IdeMentionPicker from '../components/IdeMentionPicker.vue'
 import IdeInlineDiff from '../components/IdeInlineDiff.vue'
 import type { InlineDiffUndoContext } from '../components/IdeInlineDiff.vue'
+import IdeVideoFramesDialog from '../components/IdeVideoFramesDialog.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
 import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
 import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
@@ -322,6 +323,13 @@ const modelGroupsView = computed(() =>
 const modelDisabled = computed(() => modelGroupsView.value.length === 0)
 const modelPickerOpen = ref(false)
 const recoveryOpen = ref(false)
+// A7 视频抽帧入会话（/api/ide/video-frames 客户端接通）：帧 PNG File 经
+// ChatInput defineExpose(addFiles) 入输入框附件列（与粘贴/选文件同一附件链）。
+const videoFramesOpen = ref(false)
+const chatInputEl = ref<{ addFiles?: (files: File[]) => void } | null>(null)
+function onVideoFrames(files: File[]): void {
+  chatInputEl.value?.addFiles?.(files)
+}
 // S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
 // fetchWorkspaceRunChangesForSession → 首文件详情端点 patch）；无 diff 不渲染。
 // A1 接线（2026-09-29）：同时捕获 undo 上下文（changeId/fileId/workspace），
@@ -410,6 +418,13 @@ async function pickModel(provider: string, model: string): Promise<void> {
         >⏎</button>
         <IdeShareEntry :session-id="chatStore.activeSessionId ?? ''" />
         <IdePermissionSwitcher />
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-video-frames"
+          title="视频抽帧入会话（按路径抽帧投喂，agent 录屏产物适用）"
+          @click="videoFramesOpen = true"
+        >🎞</button>
         <button
           type="button"
           class="ide-chat__action"
@@ -549,9 +564,11 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeRunLogPanel />
       <IdeHandoffCard />
       <IdeRecoveryDialog v-if="recoveryOpen" :open="recoveryOpen" @close="recoveryOpen = false" />
+      <IdeVideoFramesDialog v-if="videoFramesOpen" :workspace="ide.workspace" @close="videoFramesOpen = false" @frames="onVideoFrames" />
       <IdeCompactionCard />
       <div class="ide-chat__model-picker-anchor">
         <ChatInput
+          ref="chatInputEl"
           :model-disabled="modelDisabled"
           :model-label="modelLabel"
           persist-draft
