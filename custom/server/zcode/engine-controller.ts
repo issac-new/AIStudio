@@ -529,8 +529,10 @@ router.post('/import/history', async (ctx) => {
   }
   try {
     const runtime = getZcodeProjectionRuntime()
+    // 词表转换：session-importer 用 'claude'（源格式名）→ 引擎 migrationSource 用 'claudeCode'。
+    const engineSource = source === 'claude' ? 'claudeCode' as const : source
     const result = await runtime.withAgent((agent) => agent.importSessionV4({
-      workspacePath, source, sourceId: parsed.sourceId,
+      workspacePath, source: engineSource, sourceId: parsed.sourceId,
       rows: parsed.rows.map((r) => ({ role: r.role, text: r.text, at: r.at })),
     }))
     ctx.body = { ok: true, ...result, skippedRows: parsed.skippedRows }
