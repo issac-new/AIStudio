@@ -298,9 +298,9 @@ graph TB
 | x20 吸收 | IDE 吸收计划 20 件全数落地（presence/workdir/resume/roster/thread-usage/memory 分治新鲜度/brief 差异度量/modelroute Auto 档等，第一批+v2 批 5 件） | d5f70537+83e5413f；a34e15aa |
 | 报告生成器四修 | unified-report-gen 元信息全参数化（标题/时间/计数/基线实查取 main）+ mx-report-audit 增查 6（R3-R9 断言）；run2 版重生成实证 | fix/report-generator-four @ 2f6d8a8d（待合） |
 | UI 视觉审计轮 | 两轮报告截图面逐张目检：UI 缺陷 19 项（P0×3）+图证不一致 15 处，产品侧 11 件/采集侧 6 件归属拆分 | 台账 `2026-09-29-ui-visual-audit-run1-run2.md`（补遗②） |
-| P6 账户管理联动（补遗④） | 设置→账户管理页：matrix 账号创建/分配/停用（synapse 管理端 API，服务端 admin-service 已有底）+本机↔matrix 双账号绑定维护+roster 导出入仓 | 待立项：UI+API+守门；验收=界面建号可登录+roster 由 UI 入仓 |
-| P7 应用资产表 UI（补遗④） | 治理中心·应用资产：六列表单增改退役，保存即 git 提交（app-registry.md 为界面产物，双向一致） | 待立项；验收=UI 变更可回溯提交记录 |
-| P8 组织关系 UI（补遗④） | 治理中心·组织：账号↔团队↔负责人关系维护+入职/转岗/离职三步向导（移交/停用/留痕），org.md 同步入仓 | 待立项；验收=离职向导全流程走通+md 同步 |
+| P6 账户管理联动（补遗④） | 设置→账户管理页：matrix 账号创建/分配/停用（synapse 管理端 API）+本机↔matrix 双账号绑定维护+roster 导出入仓 | **已实施** 34d22713：#/app/accounts+导航入口；建号双账号（adminToken 鉴权）/roster 编辑/保存即提交；守门 5+1 例；浏览器走查待 run3 结束（studio 重启窗口） |
+| P7 应用资产表 UI（补遗④） | 治理中心·应用资产：六列表单增改退役，保存即 git 提交（app-registry.md 为界面产物，双向一致） | **已实施** 34d22713：AppRegistryEditor（表单/原文双模式）；md↔表回环守门 3 例 |
+| P8 组织关系 UI（补遗④） | 治理中心·组织：账号↔团队↔负责人关系维护+入职/转岗/离职三步向导（移交/停用/留痕），org.md 同步入仓 | **已实施** 34d22713：OrgEditor 五列维护+离职向导（移交工单→停用双号→append-only 审计留痕，每步独立提交） |
 | UI 遗留批（补遗④前落） | 工作台画布空态（P0×2 根治）+待裁决同对象去重+审批历史可读化+日期 zh-CN+采集快门守门 | 0164255b/e6f13ff9；650/650 绿 |
 
 ## 八、路演报告规范与交付物（第 26 步细化）
