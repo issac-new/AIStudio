@@ -18,11 +18,14 @@ const overlayRoot = resolve(import.meta.dirname, '..');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/serve-server.mjs 同一基建）
-const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
-  : resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
-const hermesAgentRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/serve-server.mjs 同一基建）。
+// hermes-agent 与 hermes-studio 同根解析——此前仅 studio 尊重该 env，agent 补丁
+// 仍会打进共享 upstream 树，隔离不完整（inject.mjs:34 对照）。
+const upstreamRootBase = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim())
+  : resolve(overlayRoot, '..', 'upstream');
+const upstream = resolve(upstreamRootBase, 'hermes-studio');
+const hermesAgentRoot = resolve(upstreamRootBase, 'hermes-agent');
 const routerPath = resolve(upstream, 'packages/client/src/router/index.ts');
 
 function gitStatus() {

@@ -1,0 +1,36 @@
+diff --git a/packages/zcode-cua/node-backend.js b/packages/zcode-cua/node-backend.js
+index 84668b9..9c5df8c 100644
+--- a/packages/zcode-cua/node-backend.js
++++ b/packages/zcode-cua/node-backend.js
+@@ -704,6 +704,24 @@ export function createNodeAutomationBackend(options = {}) {
+       return { ok: true, key: combo, held: false };
+     },
+ 
++    async hold_key(params = {}) {
++      requirePlatform();
++      const combo = boundedText(params.key ?? params.combo, 100);
++      if (!mac) throw new Error("hold_key is macOS-only in node backend (CGEvent key-down without up)");
++      // overlay 005（hold_key 工具失配根治 2026-09-30）：tool-map 的 hold_key 工具
++      // method 指向 "hold_key"，但后端此前只有 hold_key_down/hold_key_up 且词表不含
++      // hold_key——进程内直调 TypeError、broker 报 unknown broker method，工具必失败。
++      // 组合语义=按下→durationMs（默认 500，上限 10000，与 tool-map schema 一致）→松开。
++      const ms = Math.max(0, Math.min(10_000, Number(params.durationMs) || 500));
++      await macAssertOk(await jxa(macKeyScript(combo, true)), "hold_key down");
++      try {
++        await new Promise((r) => setTimeout(r, ms));
++      } finally {
++        await macAssertOk(await jxa(macKeyScript(combo, false)), "hold_key up");
++      }
++      return { ok: true, key: combo, durationMs: ms };
++    },
++
+     async set_value(params = {}) {
+       requirePlatform();
+       const text = boundedText(params.text);
+@@ -740,5 +758,5 @@ export function createNodeAutomationBackend(options = {}) {
+ export const NODE_BACKEND_METHODS = Object.freeze([
+   "health", "permission_status", "screenshot", "list_displays", "list_apps", "list_windows",
+   "open_application", "get_app_state", "mouse_move", "left_click", "right_click",
+-  "double_click", "drag", "scroll", "type_text", "key", "hold_key_down", "hold_key_up", "set_value", "wait",
++  "double_click", "drag", "scroll", "type_text", "key", "hold_key", "hold_key_down", "hold_key_up", "set_value", "wait",
+ ]);
