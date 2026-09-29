@@ -25,8 +25,11 @@ function base64ToPngFile(dataBase64: string, index: number): File {
 async function extract(): Promise<void> {
   const raw = videoPath.value.trim()
   if (!raw || busy.value) return
+  // 绝对路径判定兼容三态：POSIX '/' 开头、Windows 盘符（C:\ C:/）、UNC（\\\\）——
+  // 只认 '/' 会把 Windows 绝对路径当相对路径拼进 workspace 发给服务端必 404
+  const isAbs = raw.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(raw) || raw.startsWith('\\\\')
   // 相对路径按当前 workspace 解析（与文件树口径一致）
-  const abs = raw.startsWith('/') ? raw : (props.workspace ? `${props.workspace.replace(/\/$/, '')}/${raw}` : raw)
+  const abs = isAbs ? raw : (props.workspace ? `${props.workspace.replace(/[\\/]$/, '')}/${raw}` : raw)
   busy.value = true
   error.value = ''
   try {

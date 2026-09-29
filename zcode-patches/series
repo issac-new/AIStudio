@@ -21,3 +21,9 @@
 #      ZCODE_CUA_DISABLE=1 保持 fail-closed。SDK 方法面别名（paste/set_value/
 #      left_click_drag/stop_computer_control）在 003 tool-map。
 004-node-repl-cua-fallback.patch
+# 005（hold_key 工具失配根治，24h 审查轮 2026-09-30）：003 tool-map 的 hold_key 工具
+#      method 指向 "hold_key"，但 node-backend 只有 hold_key_down/hold_key_up 且
+#      NODE_BACKEND_METHODS 不含 hold_key——进程内直调 TypeError、broker 报
+#      unknown broker method，工具两条执行路径全失败。005 补 hold_key 组合方法
+#      （按下→durationMs 默认 500/上限 10000→松开，finally 保底松键）+词表加名。
+005-zcode-cua-hold-key.patch

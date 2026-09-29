@@ -32,6 +32,13 @@ describe('A2 规则校验', () => {
       expect(bad.errors.agent).toBeTruthy()
     }
   })
+
+  it('Windows 绝对路径（盘符 C:\\ / C:/）合法——startsWith("/") 会整端拒真（跨端守门）', () => {
+    const winBackslash = validateRuleInput({ name: 'w1', workspacePath: 'C:\\Users\\demo\\proj', source: { type: 'git' }, promptTemplate: 'go' })
+    expect('rule' in winBackslash).toBe(true)
+    const winForward = validateRuleInput({ name: 'w2', workspacePath: 'D:/work/proj', source: { type: 'git' }, promptTemplate: 'go' })
+    expect('rule' in winForward).toBe(true)
+  })
 })
 
 describe('A2 事件匹配', () => {
