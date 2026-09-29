@@ -15,7 +15,7 @@
 import { matchColumnTransition, isSafeStep, type ColumnTransitionTrigger, type AutomationStep } from './column-automation'
 import { MentionDispatchService, type MentionOutcome } from '../zcode/mention-dispatch'
 import { checkDispatchBudget } from '../governance/governance-budget'
-import { loadActionContracts } from '../governance/governance-ledger'
+import { loadActionContracts, buildDispatchSemanticContext } from '../governance/governance-ledger'
 import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 
 export interface ColumnDispatchResult {
@@ -56,11 +56,17 @@ function contractFooter(): string {
 
 function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
+  // 第五期 ①：语义上下文块（agent 消费本体）——单元/能力/SLO 目标/判定词表随负载下发，
+  // buildDispatchSemanticContext 内部 fail-soft（注册表缺该单元返回 null 不占行）。
+  const semantic = steps[index].specialist
+    ? buildDispatchSemanticContext(steps[index].specialist || '')
+    : null
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
     `本次派发第 ${index + 1} 步：${steps[index].id}${trigger.autoAdvanceOnSuccess ? '（全部步骤完成后由人工/编排推进列）' : ''}。`,
     `请按职责处理列 ${trigger.column} 的当前任务。`,
+    ...(semantic ? [semantic] : []),
     contractFooter(),
   ].join('\n')
 }
