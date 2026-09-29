@@ -304,3 +304,5 @@
 # 504（侧栏死链根治，原 499 让号避 goals-budget）：删 PageSidebarNav 孤函数 openMatrixChat——
 #      目标路由 hermes.matrixChat 已被 297 随 cockpit 家族整体删除，函数零调用方。
 504-sidebar-dead-matrix-entry-removal.patch
+# 505（卡抽屉 body/评论 Markdown 渲染）：upstream 抽屉裸插值→KanbanMarkdown，run2 实拍实证 raw 字面量。
+505-kanban-drawer-markdown.patch
