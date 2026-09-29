@@ -14,7 +14,10 @@ SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 # UNIFIED_RUN_ID（可选）：指定推演轮次时全部输入/输出改从 runs/<RUN_ID>/ 取
 # （evidence/screenshots/steps + simulation-report.html + 输出落 run 目录），
 # 缺省保持既有行为（evidence/ 根，20260928 两线合并版口径）。
-_RUN_ID = os.environ.get('UNIFIED_RUN_ID', '').strip()
+# 运行参数优先级：--run 显式传参 > UNIFIED_RUN_ID > MX_RUN_ID（与 mx-report-gen 同源）
+_RUN_ID = os.environ.get('UNIFIED_RUN_ID', '').strip() or os.environ.get('MX_RUN_ID', '').strip()
+if '--run' in sys.argv:
+    _RUN_ID = sys.argv[sys.argv.index('--run') + 1]
 if _RUN_ID:
     EVID = SIM / 'runs' / _RUN_ID / 'evidence'
     JOURNEY_HTML = EVID / 'simulation-report.html'
@@ -24,13 +27,14 @@ else:
     JOURNEY_HTML = EVID / 'simulation-report.html'
     OUT = EVID / 'unified-roadshow-report.html'
 # 实拍源（持久位置优先；DIR/shots 为生成期临时布局回落——20260928-product-demo 迁移后留档）
-SHOTS = EVID / '20260928-product-demo' / 'shots' if (EVID / '20260928-product-demo' / 'shots').is_dir() else DIR / 'shots'
+_DEMO_SHOTS = SIM / 'evidence' / '20260928-product-demo' / 'shots'
+SHOTS = _DEMO_SHOTS if _DEMO_SHOTS.is_dir() else DIR / 'shots'
 STEPS_DIR = EVID / 'screenshots' / 'steps'
 PLAN_PATH = Path('/Volumes/nvme2230/lab/ncwk/docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md')
 
 # ── 叙事层（同 demo-report-gen 接线）──
 _ns = {}
-for _sf in [SIM / 'state.env', EVID / 'state-snapshot.env']:
+for _sf in ([SIM / 'runs' / _RUN_ID / 'state.env'] if _RUN_ID else [SIM / 'state.env']) + [EVID / 'state-snapshot.env']:
     if _sf.exists():
         for _line in _sf.read_text().splitlines():
             if '=' in _line and not _line.startswith('jwt_'):
@@ -85,7 +89,7 @@ if JOURNEY_HTML.exists():
     for gr in re.finditer(r'<tr><td><b>(G[1-6])</b></td>(.*?)</tr>', jh, re.S):
         cells = re.findall(r'<td[^>]*>(.*?)</td>', '<tr>' + gr.group(2) + '</tr>', re.S)
         gate_rows.append((gr.group(1), [re.sub(r'<[^>]+>', '', c).strip() for c in cells]))
-    for mr in re.finditer(r'<tr><td>(闸门首过率|问题单终态|测试口径|发布基线)</td><td>(.*?)</tr>', jh, re.S):
+    for mr in re.finditer(r'<tr><td>(闸门首过率|闸门判定|问题单终态|测试口径|UAT 判词|发布状态|发布基线)</td><td>(.*?)</tr>', jh, re.S):
         metric_rows.append((mr.group(1), re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', mr.group(2))).strip()))
 
 # ── ③ 步骤真证据索引 ──
@@ -102,7 +106,7 @@ if _RUN_ID and JOURNEY_HTML.exists():
 # ── 演示步（同 demo-report-gen STEPS，含 3b）──
 from demo_steps_data import STEPS, GAPS, FIXES  # 抽出的共享数据模块
 
-SHOTS_V2 = EVID / '20260928-product-demo' / 'shots-v2'
+SHOTS_V2 = SIM / 'evidence' / '20260928-product-demo' / 'shots-v2'
 
 def b64(name):
     if not name:
