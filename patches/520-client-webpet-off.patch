@@ -1,0 +1,21 @@
+diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
+--- a/packages/client/src/App.vue
++++ b/packages/client/src/App.vue
+@@ -166,6 +166,8 @@
+   return appStore.pageSidebarExpanded ? 260 : 10;
+ });
+ const isDesktopPetRoute = computed(() => route.name === "desktop.pet");
++// overlay[p10] V5 补遗⑤ S3：宠物浮面默认关（B 档开关；组件与能力保留）
++const petsEnabled = import.meta.env.VITE_CUSTOM_PETS === "true";
+ const showWebPet = computed(
+   () =>
+     !isLoginPage.value &&
+@@ -318,7 +320,7 @@
+               </main>
+             </div>
+           </div>
+-          <WebPet v-if="showWebPet" />
++          <WebPet v-if="showWebPet && petsEnabled" />
+           <SessionSearchModal
+             v-if="
+               !isDesktopPetRoute && !isStandaloneChatPage && sessionSearchOpen

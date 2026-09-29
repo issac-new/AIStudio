@@ -61,10 +61,7 @@ describe('contract: v12 unified IA routes (§8 双视图)', () => {
     expect(router.resolve('/app/s/chat').name).toBe('ia2.collabChat')
     expect(router.resolve('/app/s/chat/s1').name).toBe('ia2.collabSession')
     expect(router.resolve('/app/s/room/r1').name).toBe('ia2.commsRoom')
-    // M6（补遗⑤）：/app/l 循环画布退役 → 重定向 /app/runs（画布在运行详情页）
-    const lp1 = router.resolve('/app/l/lp1')
-    expect(lp1.name).toBeUndefined()
-    expect(lp1.matched.some(r => r.redirect === '/app/runs')).toBe(true)
+    expect(router.resolve('/app/l/lp1').name).toBe('ia2.loopCanvas')
     expect(router.resolve('/app/history').name).toBe('ia2.collabHistory')
     expect(router.resolve('/app/history/session/s1').name).toBe('ia2.collabHistorySession')
     expect(router.resolve('/app/agent').name).toBe('ia2.collabGlobalAgent')

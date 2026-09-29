@@ -51,6 +51,9 @@ describe('ia2 路由树（v12 双视图）', () => {
     const room = router.resolve('/app/s/room/!foo:bar')
     expect(room.name).toBe('ia2.commsRoom')
     expect(room.params.roomId).toBe('!foo:bar')
+    const loop = router.resolve('/app/l/lp-1')
+    expect(loop.name).toBe('ia2.loopCanvas')
+    expect(loop.params.loopId).toBe('lp-1')
   })
 
   it('工作台记录懒组件真实落到 WorkbenchView', async () => {
@@ -65,13 +68,22 @@ describe('ia2 路由树（v12 双视图）', () => {
     }
   })
 
+  it('V5 补遗⑤ M6：/app/l 画布入口退役——降为兼容重定向（组件退役，不触发懒加载）', () => {
+    const router = makeRouter()
+    const resolved = router.resolve('/app/l/l1')
+    const record = resolved.matched[resolved.matched.length - 1]
+    expect(record?.name).toBe('ia2.loopCanvas')
+    expect(record?.components).toBeFalsy()
+    expect(typeof record?.redirect).toBe('function')
+  })
+
   it('工作页：board / eng / runs 存在；runDetail 参数名 runId 且懒组件落 RunDetailView', async () => {
     const router = makeRouter()
     expect(router.resolve('/app/board').name).toBe('ia2.board')
-    // S5（补遗⑤）：/app/eng 工程页退役 → 重定向 /app/runs
-    const eng = router.resolve('/app/eng')
-    expect(eng.name).toBeUndefined()
-    expect(eng.matched.some(r => r.redirect === '/app/runs')).toBe(true)
+    // V5 补遗⑤ S5：/app/eng 退役为重定向（组件保留）
+    const engRec = router.resolve('/app/eng').matched.slice(-1)[0]
+    expect(engRec?.name).toBe('ia2.eng')
+    expect(typeof engRec?.redirect).toBe('function')
     expect(router.resolve('/app/runs').name).toBe('ia2.runs')
     const resolved = router.resolve('/app/runs/run-abc')
     expect(resolved.name).toBe('ia2.runDetail')
@@ -80,36 +92,6 @@ describe('ia2 路由树（v12 双视图）', () => {
     const loader = record.components?.default as unknown as () => Promise<{ default: unknown }>
     const mod = await loader()
     expect(mod.default).toBe(RunDetailView)
-  })
-
-  it('M2 IDE 归一：/app/ide 为 IaShell 子路由，名称沿用 ide.shell，fullscreen 继承', () => {
-    const router = makeRouter()
-    const resolved = router.resolve('/app/ide')
-    expect(resolved.name).toBe('ide.shell')
-    expect(resolved.meta.fullscreen).toBe(true)
-    // 懒组件身份：IdeShell（不触发装载，仅断言 loader 函数态）
-    const record = resolved.matched[resolved.matched.length - 1]
-    const loader = record.components?.default as unknown as () => Promise<unknown>
-    expect(typeof loader).toBe('function')
-  })
-
-  it('M6 画布退役：/app/l/:loopId 与 /app/l 重定向到 /app/runs（运行中心）', () => {
-    // 记录级断言（不 push——vue-router 导航期会装载目标懒组件，
-    // RunCenterView 链会引上游 router 的 createWebHashHistory，node 环境无 location）
-    const [shell] = buildIaRoutes()
-    const legacy = new Map((shell.children ?? []).map(r => [r.path, r.redirect]))
-    expect(legacy.get('/app/l/:loopId')).toBe('/app/runs')
-    expect(legacy.get('/app/l')).toBe('/app/runs')
-    // 退役名零残留：路由树不含 ia2.loopCanvas 记录
-    const names: string[] = []
-    const walk = (records: ReturnType<typeof buildIaRoutes>) => {
-      for (const r of records) {
-        if (r.name) names.push(String(r.name))
-        if (r.children) walk(r.children)
-      }
-    }
-    walk(buildIaRoutes())
-    expect(names).not.toContain('ia2.loopCanvas')
   })
 
   it('hermes 会话深链面：history / global-agent 家族齐全（上游 PageSidebarNav 依赖）', () => {
@@ -156,9 +138,9 @@ describe('areaForPath（视图投影，场景条高亮依据）', () => {
     ['/app/board', 'collab'],
     ['/app/runs', 'collab'],
     ['/app/runs/run-9', 'collab'],
-
+    ['/app/eng', 'collab'],
     ['/app/s/room/x', 'collab'],
-    ['/app/ide', 'collab'],
+    ['/app/l/lp-1', 'collab'],
     ['/app/history/session/s1', 'collab'],
   ])('%s → %s', (path, expected) => {
     expect(areaForPath(path)).toBe(expected)

@@ -351,9 +351,9 @@
 518-client-i18n-runcenter-loop-canvas.patch
 # 记档（2026-09-29 驾驶舱聚焦轮）：v14 三补丁（506/507/508）并行合并悬空事故已由并行会话在
 #      main 原号复原（与 cbd7b3e7^ 历史逐字节一致）；本仓曾复位的 517/518/519 冗余件已撤。
-
-# ── 补遗⑤ P10（S2/S3）──
-# 513（S2 运维页族摘除，补遗⑤ §13.4 C 档，2026-09-29）：HermesConfigSidebar 九运维页
-521-client-router-hermes-config-retire.patch
-# 514（S3 无关大块功能面开关，补遗⑤ §13.4 B 档，2026-09-29）：WebPet 浮层/语音对话
-522-client-s3-feature-gates.patch
+# 519（驾驶舱聚焦 P10 精简批 S1，2026-09-29）：系统组收缩——技能用量/主题/宠物商店
+#      三入口摘除+SYSTEM_ROUTE_NAMES 同步（A 档：路由与页面保留，主题切换走页头开关）。
+519-client-appsidebar-system-trim.patch
+# 520（P10 精简批 S3 部分）：WebPet 宠物浮面默认关（B 档 VITE_CUSTOM_PETS 开关；
+#      组件保留）。语音/ekko/外部渠道挂载链分散，记档 P10 剩余项。
+520-client-webpet-off.patch

@@ -16,7 +16,6 @@ import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
 import IaPopoutBar from '../components/IaPopoutBar.vue'
-import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import GovOverlay from '../components/gov/GovOverlay.vue'
 import { useSharedArm } from '../composables/useSharedArm'
@@ -36,10 +35,6 @@ let mergeBackOff: (() => void) | null = null
 
 /** 独立窗口态（query standalone=1）：本窗口内导航后保持标记不丢 */
 const isStandalone = computed(() => route.query.standalone === '1')
-/** IDE 子路由（补遗⑤ M2）：IdeShell 自带共享顶区 IaGlobalTop 与 RunTrace
- *  弹窗（含 StatusBar），壳侧对本子路由隐藏同名件防双份；standalone 弹窗
- *  栏照常渲染。 */
-const isIdeChild = computed(() => route.name === 'ide.shell')
 let standaloneActive = isStandalone.value
 
 watch(() => route.path, path => store.syncFromPath(path), { immediate: true })
@@ -78,19 +73,16 @@ onUnmounted(() => {
 <template>
   <div class="ia-shell">
     <IaPopoutBar v-if="isStandalone" />
-    <!-- M2 IDE 子路由自带共享顶区，壳侧隐藏防双份（standalone 弹窗栏照常） -->
-    <IaGlobalTop v-else-if="!isIdeChild" />
+    <IaGlobalTop v-else />
     <div class="ia-shell__main">
       <router-view />
     </div>
 
-    <div v-if="workspace.scheduleOpen" class="ia-overlay" @click="workspace.closeSchedule()" />
-    <CockpitScheduleModal v-if="workspace.scheduleOpen" />
-    <div v-if="cockpit.runTraceOpen && !isIdeChild" class="ia-overlay" @click="cockpit.closeRunTrace()" />
+    <!-- V5 补遗⑤ S7：日程弹窗挂载随页头入口摘除（组件与 store 能力保留） -->
+    <div v-if="cockpit.runTraceOpen" class="ia-overlay" @click="cockpit.closeRunTrace()" />
     <!-- v12 性能收敛：仅打开时挂载。曾无条件挂载，其内部 watch(needsSessionSelect,
-         immediate) 会在冷启动即跨全 profile 扫会话（数十请求），即使弹窗从未打开。
-         M2 IDE 子路由：IdeShell 自带同款弹窗（无条件挂载），壳侧让位防双份。 -->
-    <CockpitRunTraceModal v-if="cockpit.runTraceOpen && !isIdeChild" />
+         immediate) 会在冷启动即跨全 profile 扫会话（数十请求），即使弹窗从未打开。 -->
+    <CockpitRunTraceModal v-if="cockpit.runTraceOpen" />
     <!-- v12 ⚙管理台：全局覆盖层（Esc/⇠返回/backdrop 关闭） -->
     <GovOverlay v-if="flow.govOpen" />
   </div>

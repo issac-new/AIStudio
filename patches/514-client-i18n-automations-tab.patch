@@ -1,0 +1,20 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -783,6 +783,7 @@ export default {
+       tab_hooks: '钩子',
+       tab_workflow: '工作流',
+       tab_slash: '斜杠命令',
++      tab_automations: '自动化',
+       ledgerPeak: '峰值 {day} · {tokens}',
+       ledgerTotal: '累计 {tokens}',
+       roundsTotal: '合计（{n} 轮）',
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -783,6 +783,7 @@ export default {
+       tab_hooks: 'Hooks',
+       tab_workflow: 'Workflows',
+       tab_slash: 'Slash commands',
++      tab_automations: 'Automations',
+       ledgerPeak: 'Peak {day} · {tokens}',
+       ledgerTotal: 'Total {tokens}',
+       roundsTotal: 'Total ({n} rounds)',

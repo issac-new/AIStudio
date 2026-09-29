@@ -257,11 +257,10 @@ function replayTime(e: GraphEventLike): string {
           <p>{{ t('runcenter.empty.step3Desc') }}</p>
         </div>
       </div>
-      <!-- S5（补遗⑤ A 档）：/app/eng 编排页退役，空态建循环 CTA 隐藏——
-           循环由脚本建（mx-setup），编排组件库保留（组件不动仅摘入口） -->
-      <!-- <button class="rc-view__cta" @click="router.push({ name: 'ia2.eng' })">
+      <!-- 2026-09-18 统一导航：hermes.loop 壳已退役，空态引导落工程场景编排 tab -->
+      <button class="rc-view__cta" @click="router.push({ name: 'ia2.eng' })">
         {{ t('runcenter.empty.cta') }}
-      </button> -->
+      </button>
     </div>
 
     <!-- 列表 -->

@@ -11,17 +11,15 @@
      历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
      Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { storeToRefs } from 'pinia'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
 import { useWorkspaceStore } from '../store/workspace'
 import { useFlowStore } from '../store/flow'
-import { usePlatformsStore } from '../store/platforms'
 import { taskLinkedSessionId } from '../adapters/flow'
 import { filterInboxByPrefs } from '../store/notify-prefs'
 import IaLocaleToggle from './IaLocaleToggle.vue'
@@ -46,48 +44,8 @@ defineProps<{ userName?: string }>()
 /** 用户按钮 → 设置页 */
 function goSettings() { router.push({ name: 'hermes.settings' }) }
 
-// ── Gateway 探测组（2026-09-19 v12 上移 platforms store 共享轮询；展示语义不变）──
-
-const platformsStore = usePlatformsStore()
-const { gatewayState, platforms, refreshing, countdown, rawData } = storeToRefs(platformsStore)
-const showDetail = ref(false)
-
-function formatTimeAgo(iso: string): string {
-  if (!iso) return ''
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return t('cockpit.justNow')
-  if (mins < 60) return t('cockpit.minutesAgo', { n: mins })
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return t('cockpit.hoursAgo', { n: hrs })
-  return t('cockpit.daysAgo', { n: Math.floor(hrs / 24) })
-}
-
-/** 显示相对时间（store 保留 ISO，i18n 相对时间在组件层渲染） */
-function platformUpdated(pl: { updated: string }): string {
-  return formatTimeAgo(pl.updated)
-}
-
-/** 点击手动探测并弹出详情 */
-async function manualProbe() {
-  // 先切换显示状态，再异步刷新数据
-  showDetail.value = !showDetail.value
-  if (showDetail.value) {
-    await platformsStore.fetchGatewayStatus(false)
-  }
-}
-
-onMounted(() => platformsStore.retain())
-onUnmounted(() => platformsStore.release())
-
-// ── 日程按钮（v12.3 恢复）：当日有事件亮徽章 ──
-
-const todayKey = computed(() => {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-})
-const scheduleTodayCount = computed(() => store.scheduleDatesWithEvents.has(todayKey.value) ? 1 : 0)
+// ── V5 补遗⑤ S7：Gateway 探测组与日程按钮入口摘除（A 档——platforms store 与
+// 轮询能力保留，引用计数由 GovTeamSection/WorkbenchView 各自 retain） ──
 
 // ── 通知下拉（v12.3）：铃铛徽章 = 待决策未读数（useDecisionRows 单一聚合）──
 
@@ -151,7 +109,6 @@ function onPanelJumpTask(taskId: string): void {
     if (row?.kind === 'room') { void router.push({ name: 'ia2.commsRoom', params: { roomId: row.id } }); return }
     if (row?.kind === 'group') { void router.push({ name: 'ia2.groupRoom', params: { roomId: row.id } }); return }
   }
-  // M2 IDE 归一：IDE 工作台在 /app/ide（名称 ide.shell 不变，query 透传）
   void router.push({ path: '/app/ide', query: { task: taskId } })
 }
 </script>
@@ -189,28 +146,6 @@ function onPanelJumpTask(taskId: string): void {
         @select="onSitSelect"
       />
     </div>
-    <!-- S7（补遗⑤ A 档，2026-09-29）：Gateway 探测组隐藏（未用；platforms store
-         轮询与探测面板组件保留，恢复时去注释即回生）
-    <div class="cockpit-top__grp" :title="t('cockpit.gatewayProbeTitle')" @click.stop="manualProbe">
-      <span class="cockpit-top__cd" :title="t('cockpit.countdownTitle')">{{ countdown }}s</span>
-      <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
-        <span class="cockpit-top__dot" :class="gatewayState === 'running' ? 'is-ok' : gatewayState === 'stopped' ? 'is-err' : 'is-idle'" />
-        Gateway{{ refreshing ? '…' : '' }}
-      </span>
-      <span v-for="pl in platforms" :key="pl.name + (pl.profile ? ':' + pl.profile : '')" class="cockpit-top__ustat"
-        :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
-      ><CockpitIcon :name="pl.icon" :size="12" /> {{ pl.name }}<span v-if="pl.state !== 'connected'" class="cockpit-top__warn">!</span></span>
-    </div>
-    -->
-    <!-- S7（补遗⑤ A 档）：日程弹窗入口隐藏（未用；workspace.openSchedule 与
-         CockpitScheduleModal 组件保留，恢复时去注释即回生）
-    <button type="button" class="cockpit-top__btn" data-testid="ia-header-schedule"
-      :title="t('cockpit.scheduleTitle')" @click="workspace.openSchedule()"
-    >
-      <CockpitIcon name="calendar" />
-      <span v-if="scheduleTodayCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ t('ia2.header.scheduleToday') }}</span>
-    </button>
-    -->
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" data-testid="ia-header-notify" @click="showNotify = !showNotify">
       <CockpitIcon name="bell" />
@@ -256,48 +191,6 @@ function onPanelJumpTask(taskId: string): void {
     <!-- 通知下拉（v12.3：双页签，点击遮罩关闭） -->
     <NotifyDropdownPanel v-if="showNotify" @close="showNotify = false" />
     <div v-if="showNotify" class="cockpit-top__mask" @click="showNotify = false" />
-
-    <!-- 探测结果下拉面板（必须在 cockpit-top 内部，才能相对其定位） -->
-    <div v-if="showDetail" class="cockpit-probe" @click.stop>
-      <div class="cockpit-probe__head">
-        <span>Connected Platforms</span>
-        <button type="button" class="cockpit-probe__close" @click="showDetail = false">×</button>
-      </div>
-      <div v-if="rawData" class="cockpit-probe__body">
-        <div class="cockpit-probe__row">
-          <span class="cockpit-probe__label">Gateway</span>
-          <span class="cockpit-probe__val" :class="rawData.gateway_state === 'running' ? 'is-ok' : 'is-err'">
-            <span :class="rawData.gateway_state === 'running' ? 'is-ok' : 'is-err'">
-              <span class="cockpit-top__dot" :class="rawData.gateway_state === 'running' ? 'is-ok' : 'is-err'" />
-              {{ rawData.gateway_state === 'running' ? 'running' : (rawData.gateway_state || 'stopped') }}
-            </span>
-          </span>
-        </div>
-        <div class="cockpit-probe__row">
-          <span class="cockpit-probe__label">Active Agents</span>
-          <span class="cockpit-probe__val">{{ rawData.active_agents ?? 0 }}</span>
-        </div>
-        <div v-if="platforms.length" class="cockpit-probe__section">
-          <div class="cockpit-probe__section-title">Platforms</div>
-          <div v-for="pl in platforms" :key="pl.name + (pl.profile ? ':' + pl.profile : '')" class="cockpit-probe__row">
-            <span class="cockpit-probe__label"><CockpitIcon :name="pl.icon" :size="12" /> {{ pl.profile ? pl.profile + ': ' : '' }}{{ pl.name }}</span>
-            <span class="cockpit-probe__val" :class="pl.state === 'connected' ? 'is-ok' : 'is-err'">
-              {{ pl.state }}
-            </span>
-            <span v-if="pl.updated" class="cockpit-probe__ago">{{ platformUpdated(pl) }}</span>
-          </div>
-        </div>
-        <div v-if="rawData.pid || rawData.version" class="cockpit-probe__footer">
-          <span v-if="rawData.version">v{{ rawData.version }}</span>
-          <span v-if="rawData.pid">PID {{ rawData.pid }}</span>
-        </div>
-      </div>
-      <div v-else class="cockpit-probe__body cockpit-probe__body--empty">
-        {{ refreshing ? t('cockpit.detecting') + '…' : t('cockpit.noData') }}
-      </div>
-    </div>
-    <!-- 点击遮罩关闭 -->
-    <div v-if="showDetail" class="cockpit-probe__mask" @click="showDetail = false" />
   </div>
 </template>
 
