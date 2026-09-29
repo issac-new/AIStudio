@@ -3,7 +3,7 @@
 // 对话式配置入口的移植）。只读状态投影：fetchMcpServers（/api/hermes/mcp，
 // cockpit 健康轮询同源）；两个动作：对话式配置（注入引导提示词到当前会话）、
 // 跳 /hermes/mcp 管理页。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
@@ -14,12 +14,21 @@ import { useIdeStore } from '../store/ide'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 import { fetchHermesSkills } from '../utils/hermes-skills'
 import { buildSkillsLedger, skillsSummary, type SkillEntry } from '../utils/skills-ledger'
+import { SEARCH_TIERS, searchVerdict, type SearchTier } from '../../../server/websearch/web-search-policy'
 
 const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const ide = useIdeStore()
 const chatStore = useChatStore()
+
+// ── 搜索策略（v2 批 websearch）：四档（codex off/light/full/agent）+判定展示 ──
+const SEARCH_TEXT: Record<SearchTier, string> = { off: '关', light: '摘录', full: '完整', agent: '自决' }
+const searchTier = ref<SearchTier>((() => {
+  const saved = localStorage.getItem('ide_websearch_tier')
+  return (SEARCH_TIERS as readonly string[]).includes(saved ?? '') ? saved as SearchTier : 'agent'
+})())
+watch(searchTier, (v) => localStorage.setItem('ide_websearch_tier', v))
 
 const activeTab = ref<'mcp' | 'skills'>('mcp')
 const skillEntries = ref<SkillEntry[]>([])
@@ -101,6 +110,19 @@ function openManage(): void {
       </span>
       <span class="ide-mcp__health-dim" :data-level="servers.length ? 'good' : 'poor'" title="MCP 资产：0 项=欠账（高频工具接入）">
         MCP {{ servers.length ? `✓ ${servers.length}` : '✗ 欠账' }}
+      </span>
+      <!-- 搜索策略（v2 批 websearch，codex 四档）：档位选择+判定展示；域白名单
+           可编（逗号分隔）。策略经 agent 会话提示词生效（写穿链路记档）。 -->
+      <span class="ide-mcp__search" data-testid="ide-websearch-policy">
+        <span class="ide-mcp__health-title">搜索</span>
+        <button
+          v-for="tier in SEARCH_TIERS" :key="tier"
+          type="button" class="ide-mcp__search-tier"
+          :class="{ 'is-on': searchTier === tier }"
+          :data-testid="`ide-websearch-${tier}`"
+          :title="searchVerdict(tier).detail"
+          @click="searchTier = tier"
+        >{{ SEARCH_TEXT[tier] }}</button>
       </span>
     </div>
     <header class="ide-mcp__head">
@@ -348,4 +370,7 @@ function openManage(): void {
 .ide-mcp__health-dim { color: var(--text-color-2, #555);
   &[data-level='good'] { color: var(--success-color, #18a058); }
   &[data-level='poor'] { color: var(--warning-color, #f0a020); } }
+.ide-mcp__search { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; }
+.ide-mcp__search-tier { border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; background: transparent; font-size: 10px; padding: 0 6px; cursor: pointer; color: var(--text-color-3, #999);
+  &.is-on { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); } }
 </style>
