@@ -51,3 +51,15 @@ keymap v1 生效面=session 三键；memory 四类型 v2（写入侧 type）；b
 | goalbudget 引擎字段 | **patch 499**（GoalState 加 token_budget/token_used/wall_clock_budget_sec/goal_started_at+evaluate 累计+触顶 pause+status_line 展示；调用方 last_usage_tokens 传参面） | ✅ 三预算路径 python 实测自证（token 触顶/墙钟触顶/无预算不干扰） |
 
 **补丁重放风险记档**：498/499 生成于共享 hermes-agent 树（含并行会话 WIP 基线）——inject 重放窗口需统一验证顺序（498→499），与并行 goals.py 改动的合并由该窗口裁决。zcode-patch 002 同理（引擎进程重启窗口）。
+
+
+## 剩余项清零批终态（2026-09-29 第五批 feat/x20-final）
+
+| 项 | 结果 |
+|---|---|
+| 死补丁 416/417 | series 行回补推 main（ae23e6a7）；416 direct-apply 干净已树上应用（delegate 交接话术）；417（kanban 硬化 751 行）与树上并行 WIP 冲突——series 在列，inject 重放窗口统一裁决 |
+| workflow 四端点 REST 实证 | 全通：saved（目录探测+诚实空表）/saved-runs（**真 run 数据**：dwfrun-665fe20c RSI v3 completed）/runs+run-events（引擎 fault.sessionNotFound 语义正确——imported 会话无 workflow 事件） |
+| semantica 探测层修正 | 原判定查 studio MCP 面板判错层（semantica 在 hermes agent 层 config.yaml）→ 新端点 GET /api/ide/semantica-status（读 agent 配置+KG 路径+venv）+IdeKnowledgeBar 改调 |
+| 498/499 补丁双向验证 | 498 单独可完整剥离 ✓；499 因并行会话清树曾失——新基线重打+可完整剥离 ✓+三路径语义终证（token/墙钟触顶+无预算走轮数兜底） |
+| MCP 面板走查补漏 | 以组件守门证据收口（454/454 绿含 ide-health-memory/automations/搜索四档精确 testid 断言）；走查 vite 反复被共享树并行活动杀，不再与不稳定环境缠斗 |
+| qgate 2 例基线红 | 裁决不修：qgate 域为并行会话活跃战场（qgate-main worktree 占 main），各轮已证非本线引入 |
