@@ -8,8 +8,8 @@ import { RoomEvent, type MatrixClient, type Room } from 'matrix-js-sdk'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import {
   TEAM_EVENT_TYPES, REGISTRY_ACCOUNT_DATA_TYPE, REGISTRY_ROOM_POWER_LEVELS,
-  isSwarmStudioEventType, parseLeadersContent, parseDutyContent,
-  type AgentTeam, type DutyContent,
+  isSwarmStudioEventType, parseLeadersContent, parseDutyContent, admissionComplete,
+  type AgentTeam, type DutyContent, type AdmissionAnswers,
 } from '../protocol'
 import { projectAccounts, undeclaredMembers, type TeamAccountView, type RawStateEvent } from '../adapters/accounts'
 import { unwrapRef } from '../utils'
@@ -168,16 +168,27 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
   }
 
   // ── 写 ──
-  async function writeSelfAccount(agentTeams: AgentTeam[]): Promise<boolean> {
+  /**
+   * 自声明写入（准入五问闸，4A 治理层 ⑤）：首宣或既有答卷缺失/不全时，必须随写
+   * 提交完整 admission（五答全非空）；已有完整答卷的账号改 teams 自动沿用，
+   * 不重复索答。无答卷硬写即拒（lastError 记档），对齐"缺一问不签"。
+   */
+  async function writeSelfAccount(agentTeams: AgentTeam[], admission?: AdmissionAnswers): Promise<boolean> {
     const client = clientRef.value
     const selfId = userIdRef.value
     if (!client || !selfId || !registryRoomId.value) return false
+    const existing = accounts.value.find((a) => a.userId === selfId)
+    const carried = admissionComplete(admission) ? admission : (existing?.admission ?? null)
+    if (!carried) {
+      lastError.value = '准入五问未全过：首宣或答卷缺失时须随写提交五答（缺一问不签）'
+      return false
+    }
     const displayName = selfId.split(':')[0].replace(/^@/, '')
     try {
       lastError.value = null // 成功路径清旧错：失败后重试成功不应再显示旧错误
       await client.sendStateEvent(
         registryRoomId.value, TEAM_EVENT_TYPES.account,
-        { displayName, agentTeams, updatedAt: Date.now() }, selfId,
+        { displayName, agentTeams, updatedAt: Date.now(), admission: carried }, selfId,
       )
       await rebuild()
       return true

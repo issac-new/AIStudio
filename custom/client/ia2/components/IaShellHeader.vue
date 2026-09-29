@@ -23,6 +23,7 @@ import { useWorkspaceStore } from '../store/workspace'
 import { useFlowStore } from '../store/flow'
 import { usePlatformsStore } from '../store/platforms'
 import { taskLinkedSessionId } from '../adapters/flow'
+import { filterInboxByPrefs } from '../store/notify-prefs'
 import IaLocaleToggle from './IaLocaleToggle.vue'
 import IaViewSwitcher from './IaViewSwitcher.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
@@ -94,8 +95,9 @@ const showNotify = ref(false)
 const { decisionRows, decisionUnread, oldestDecisionLabel } = useDecisionRows()
 
 // R6 补充：消息未读合计（统一收件箱 inboxItems count 求和；通知徽章双计数）
+// B9 口径：同走偏好分组过滤（notify-prefs 单一事实源）——关掉的类目不进徽章。
 const messageUnread = computed(() =>
-  (store.inboxItems ?? []).reduce((n: number, i: { count?: number }) => n + (i.count ?? 0), 0),
+  filterInboxByPrefs(store.inboxItems ?? []).reduce((n: number, i: { count?: number }) => n + (i.count ?? 0), 0),
 )
 const notifyTotal = computed(() => decisionUnread.value + messageUnread.value)
 

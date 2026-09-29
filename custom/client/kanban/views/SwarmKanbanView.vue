@@ -6,6 +6,7 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
 import { getStoredUsername } from '@/api/client'
 import { needsMyAction } from '../utils/raci'
+import { taskMatchesQuery } from '../utils/task-search'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import KanbanBoard from '@/custom/kanban/components/KanbanBoard.vue'
 import KanbanToolbar from '@/custom/kanban/components/KanbanToolbar.vue'
@@ -98,15 +99,9 @@ const filteredTasks = computed(() => {
     tasks = tasks.filter((t: KanbanTask) => t.status !== 'archived')
   }
   if (store.searchQuery) {
-    const q = store.searchQuery.toLowerCase()
-    tasks = tasks.filter((t: KanbanTask) =>
-      t.title.toLowerCase().includes(q) ||
-      (t.body && t.body.toLowerCase().includes(q)) ||
-      t.id.toLowerCase().includes(q) ||
-      (t.result && t.result.toLowerCase().includes(q)) ||
-      (t.assignee && t.assignee.toLowerCase().includes(q)) ||
-      (t.tenant && t.tenant.toLowerCase().includes(q))
-    )
+    // 字段类型归一（utils/task-search 单一事实源）：title/body 等字段出现非字符串
+    // 态时旧过滤器 .toLowerCase() TypeError 打死整个看板视图（TasksView 块实测崩）
+    tasks = tasks.filter((t: KanbanTask) => taskMatchesQuery(t, store.searchQuery))
   }
   // 默认按创建时间逆序（最新在最上面）
   return [...tasks].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
@@ -530,6 +525,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       :lane-by-profile="laneByProfile"
       :tenants="tenants"
       :task-count="filteredTasks.length"
+      :status-filter="store.filterStatus"
       hide-board-select
       @board-change="handleBoardChange"
       @assignee-change="handleAssigneeChange"
@@ -543,6 +539,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       @clear-filters="handleClearFilters"
       @create-board="handleCreateBoard"
       @archive-board="handleArchiveBoard"
+      @status-change="store.setFilter('status', $event)"
     />
 
     <KanbanOrchestrationPanel />
@@ -632,7 +629,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
 .kanban-boardbar__chip--all.is-on {
   border-style: solid;
   background: var(--primary-color, #3b82f6);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .kanban-boardbar__chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -643,7 +640,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
   &:hover { color: var(--text-primary, inherit); border-color: var(--text-muted, #999); }
   &.is-on {
     background: var(--primary-color, var(--accent-primary, #3b82f6));
-    border-color: transparent; color: #fff;
+    border-color: transparent; color: var(--text-on-accent);
   }
 }
 .kanban-boardbar__chip--all.is-on { background: transparent; color: var(--text-primary, inherit); border-color: var(--primary-color, #3b82f6); }

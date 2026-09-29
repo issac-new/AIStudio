@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
@@ -9,7 +10,14 @@ import MatrixInviteDialog from './MatrixInviteDialog.vue'
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
 const threadStore = useMatrixThreadStore()
+const router = useRouter()
 const { t } = useI18n()
+
+/** A10：全屏 Matrix 客户端入口（/matrix/room/:roomId，复活的三件套路由）。 */
+function openFullClient(): void {
+  const roomId = roomStore.activeRoomId
+  void router.push(roomId ? { name: 'matrix.clientRoom', params: { roomId } } : { name: 'matrix.client' })
+}
 
 const showInviteDialog = ref(false)
 /** Inline search input (shown in header when search active, element-web style) */
@@ -231,6 +239,11 @@ const roomTopic = computed(() => {
       <!-- Video call button -->
       <button class="header-action-btn" @click="handleVideoCall" :title="t('matrixChat.videoCall')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg>
+      </button>
+
+      <!-- A10 全屏客户端入口（房间列表/目录浏览在 /matrix） -->
+      <button class="header-action-btn" data-testid="matrix-open-full" @click="openFullClient" :title="t('matrixChat.openFullClient', '打开完整客户端（房间列表/目录）')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
       </button>
 
       <!-- Invite button (+ icon) -->

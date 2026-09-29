@@ -5,14 +5,22 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTeamRegistryStore } from '../stores/team-registry'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
-import { agentTeamGlobalId, type AgentTeam } from '../protocol'
+import { agentTeamGlobalId, type AgentTeam, type AdmissionAnswers } from '../protocol'
+import { admissionMessages } from '../i18n-admission'
 import AgentTeamEditor from '../components/AgentTeamEditor.vue'
 import DutyAssignPanel from '../components/DutyAssignPanel.vue'
 import DispatchList from '../components/DispatchList.vue'
 
-const { t } = useI18n()
+const i18n = useI18n()
+const { t } = i18n
 const registry = useTeamRegistryStore()
 const matrixClientStore = useMatrixClientStore()
+
+/** 准入词条按当前 locale 直取（模块内小事实源，不动 473）。 */
+const A = computed(() => {
+  const loc = String((i18n as { locale?: { value?: string } }).locale?.value ?? 'zh')
+  return loc.startsWith('zh') ? admissionMessages.zh : admissionMessages.en
+})
 
 const matrixOnline = computed(() => matrixClientStore.authenticated && !!matrixClientStore.client)
 
@@ -29,8 +37,19 @@ async function submitCreate(): Promise<void> {
 const selfUserId = computed(() => matrixClientStore.userId)
 const selfAccount = computed(() => registry.accounts.find(a => a.userId === selfUserId.value) ?? null)
 const selfTeams = computed<AgentTeam[]>(() => selfAccount.value?.agentTeams ?? [])
+
+// ── 准入五问（4A 治理层 ⑤）：首宣或答卷缺失时随写必答；已有完整答卷自动沿用 ──
+const admissionDraft = ref({ q1: '', q2: '', q3: '', q4: '', q5: '' })
+const needAdmissionForm = computed(() => !selfAccount.value?.admissionOk)
+const admissionReady = computed(() =>
+  Object.values(admissionDraft.value).every(s => s.trim().length > 0))
 async function saveSelfTeams(teams: AgentTeam[]): Promise<void> {
-  await registry.writeSelfAccount(teams)
+  let admission: AdmissionAnswers | undefined
+  if (needAdmissionForm.value) {
+    if (!admissionReady.value || !selfUserId.value) return
+    admission = { ...admissionDraft.value, answeredAt: Date.now(), signer: selfUserId.value }
+  }
+  await registry.writeSelfAccount(teams, admission)
 }
 
 // ── leader 管理 ──
@@ -95,6 +114,8 @@ onMounted(() => {
               <span class="tmp__account-id">{{ a.userId }}</span>
               <span v-if="a.isLeader" class="tmp__leader" data-testid="teams-leader-badge">
                 {{ t('teams.leader.badge') }}</span>
+              <span v-if="a.admissionOk" class="tmp__admit is-ok" :data-testid="`teams-admission-ok-${a.userId}`">{{ A.passed }}</span>
+              <span v-else class="tmp__admit is-missing" :title="A.missingHint" :data-testid="`teams-admission-missing-${a.userId}`">{{ A.missing }}</span>
             </div>
             <div v-for="tm in a.agentTeams" :key="tm.slug" class="tmp__team">
               <span class="tmp__team-id">{{ agentTeamGlobalId(a.userId, tm.slug) }}</span>
@@ -109,6 +130,16 @@ onMounted(() => {
         <aside class="tmp__side">
           <section class="tmp__self">
             <div class="tmp__sec">{{ t('teams.self.hint') }}</div>
+            <!-- 准入五问表单（首宣/答卷缺失时必答；全填才可随 teams 一并提交） -->
+            <div v-if="needAdmissionForm" class="tmp__admit-form" data-testid="teams-admission-form">
+              <div class="tmp__admit-title">{{ A.formTitle }}</div>
+              <label v-for="k in (['q1','q2','q3','q4','q5'] as const)" :key="k" class="tmp__admit-q">
+                <span>{{ A[k] }}</span>
+                <input v-model="admissionDraft[k]" class="tmp__input" :placeholder="A.placeholder"
+                  :data-testid="`teams-admission-${k}`" />
+              </label>
+              <div v-if="!admissionReady" class="tmp__admit-req" data-testid="teams-admission-required">{{ A.required }}</div>
+            </div>
             <AgentTeamEditor :initial="selfTeams" @save="saveSelfTeams" />
           </section>
 
@@ -170,6 +201,13 @@ onMounted(() => {
 .tmp__account-name { font-weight: 600; font-size: 13px; }
 .tmp__account-id { font-size: 11px; color: var(--text-secondary); }
 .tmp__leader { font-size: 10px; border: 1px solid var(--color-warning, #f59e0b); color: var(--color-warning, #f59e0b); border-radius: 999px; padding: 0 6px; }
+.tmp__admit { font-size: 10px; border-radius: 999px; padding: 0 6px; border: 1px solid;
+  &.is-ok { color: #15803d; border-color: #15803d55; background: #dcfce7; }
+  &.is-missing { color: #b45309; border-color: #b4530955; background: #fef3c7; } }
+.tmp__admit-form { display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--border-color); border-radius: var(--radius-standard); padding: 8px; }
+.tmp__admit-title { font-size: 11px; font-weight: 600; }
+.tmp__admit-q { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-secondary); }
+.tmp__admit-req { font-size: 10px; color: #b45309; }
 .tmp__team { display: flex; gap: 8px; font-size: 12px; padding-left: 10px; }
 .tmp__team-id { color: var(--color-primary, #3b82f6); font-size: 11px; }
 .tmp__team-profiles { color: var(--text-secondary); font-size: 11px; }

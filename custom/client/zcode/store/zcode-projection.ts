@@ -9,6 +9,24 @@
 // reason 字面值与服务端冻结词表一一对应（dispatch-reasons.ts），客户端只按字面值映射文案。
 import { computed, reactive } from 'vue'
 
+/** 站点灯四态 / run 五态（zcode sessions-index-workflow-activity 同词表；跨端与服务端 normalizeWorkflowActivity 同形）。 */
+export type ZcodeWorkflowPhaseStatus = 'pending' | 'running' | 'done' | 'failed'
+export type ZcodeWorkflowRunStatus = 'pending' | 'running' | 'completed' | 'errored' | 'stopped'
+
+export interface ZcodeWorkflowPhase { name: string; status: ZcodeWorkflowPhaseStatus; alongside?: number[] }
+export interface ZcodeWorkflowRunSummary {
+  runId: string
+  toolCallId?: string
+  name?: string
+  status: ZcodeWorkflowRunStatus
+  stopReason?: string
+  startedAt?: number
+  phases: ZcodeWorkflowPhase[]
+  currentPhase?: string
+  agentsWorking: number
+}
+export interface ZcodeWorkflowActivity { runs: ZcodeWorkflowRunSummary[] }
+
 /**
  * 会话条目稳定形状（X5 契约归一化）：与服务端 session-projection.ts 的
  * ProjectionSession 同形（服务端 normalizeSessionSummary 投递的就是这个形状）。
@@ -27,6 +45,8 @@ export interface ZcodeSessionSummary {
   lastActivityAt?: number
   lastAssistantPreview?: string
   createdAt?: number
+  /** workflow 集成轮：侧栏运行行摘要（≤4 runs；无 run 时键缺席）。 */
+  workflowActivity?: ZcodeWorkflowActivity
 }
 
 export interface ZcodeSocketEvent {
@@ -79,7 +99,7 @@ export const REASON_CHIP_TEXT: Record<string, string> = {
 }
 
 export interface ProjectionState {
-  sessions: Record<string, { title?: string; phase?: string; lastActivityAt: number }>
+  sessions: Record<string, { title?: string; phase?: string; lastActivityAt: number; workflowActivity?: ZcodeWorkflowActivity }>
   conversationDeltaTotal: number
   statusEvents: Array<{ reason: string; detail?: string; at: number }>
   /** mention 分派结果环（UI-4 chip 数据源，reason 词表字面值）。 */
@@ -124,10 +144,13 @@ function isFirstDelivery(e: ZcodeSocketEvent): boolean {
 
 export function handleZcodeEvent(e: ZcodeSocketEvent): void {
   if (e.type === 'session.upserted' && e.sessionId) {
+    // upserted 即最新态全量覆盖（服务端 conflated 投影）：无 run 的会话
+    // workflowActivity 键缺席 → 覆盖为 undefined，行随之消失。
     state.sessions[e.sessionId] = {
       title: e.session?.title,
       phase: e.session?.phase,
       lastActivityAt: e.at,
+      ...(e.session?.workflowActivity ? { workflowActivity: e.session.workflowActivity } : {}),
     }
     return
   }
@@ -174,5 +197,13 @@ export function useZcodeProjection() {
     state.lastReason ? (REASON_CHIP_TEXT[state.lastReason] ?? state.lastReason) : '')
   const lastReasonIsTrouble = computed(() =>
     state.lastReason !== null && !['queued', 'coalesced', 'deferred'].includes(state.lastReason))
-  return { state, sessionCount, lastReasonText, lastReasonIsTrouble }
+  /** 有工作流活动的会话（侧栏运行行数据面；键缺席=无 run 的会话不进本表）。 */
+  const workflowSessions = computed(() => {
+    const out: Record<string, ZcodeWorkflowActivity> = {}
+    for (const [sid, s] of Object.entries(state.sessions)) {
+      if (s.workflowActivity?.runs.length) out[sid] = s.workflowActivity
+    }
+    return out
+  })
+  return { state, sessionCount, lastReasonText, lastReasonIsTrouble, workflowSessions }
 }

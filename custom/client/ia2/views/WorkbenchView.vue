@@ -25,6 +25,7 @@ import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { parseTaskFlow, type TaskFlowEvent } from '@/custom/matrix-chat/utils/task-flow'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useChatStore } from '@/stores/hermes/chat'
 import { usePlatformsStore } from '../store/platforms'
 import { buildAgentRoster } from '../adapters/agents'
@@ -50,6 +51,11 @@ import { useDecisionRows } from '../composables/useDecisionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useIdeJump } from '../composables/useIdeJump'
 import { openPanelWindow } from '../wm/popout'
+// v14 统一聊天：群聊建房型复用上游 CreateRoomForm（与 GroupChatPanel 同源，
+// GroupChatPanel.vue:3528 引用）；NDrawer 未开不渲染内容，测试装载零负担
+import { NDrawer, NDrawerContent } from 'naive-ui'
+import CreateRoomForm from '@/components/hermes/group-chat/CreateRoomForm.vue'
+import type { RoomAgentInput, RoomSummaryConfig } from '@/api/studio/group-chat'
 
 const route = useRoute()
 const router = useRouter()
@@ -204,18 +210,34 @@ const feedRows = computed(() => mergeFeed(
   })),
   Date.now(),))
 
-// ── P4③ 群任务流转时间线（2026-09-28 §五）：当前选中群的消息流解析任务型事件
+// ── P4③ 群任务流转时间线（2026-09-28 §五）：当前选中对象的消息流解析任务型事件
 // （派发/完成回执/缺陷/评审结论），喂给右栏 TaskDecisionPanel 的「任务流转」节。
+// 2026-09-29 重构轮根治"分析群面板未出数"：群（group）的消息在 hermes group-chat
+// store（GroupChatView 自装载，非 matrix-room store）——按选择类别取对消息源；
+// 类别不符一律空（chat 会话无房间消息流；切换对象后旧房消息不再残留右栏）。
+const groupChatStore = useGroupChatStore()
+
 const roomFlowEvents = computed<TaskFlowEvent[]>(() => {
-  const msgs = (matrixRoom.activeRoomMessages ?? []) as Array<{
-    getSender?: () => string; getContent?: () => { body?: string }; getTs?: () => number
-  }>
-  if (!msgs.length) return []
-  return parseTaskFlow(msgs.map((ev) => ({
-    sender: ev.getSender?.() ?? '',
-    body: ev.getContent?.()?.body ?? '',
-    ts: ev.getTs?.() ?? 0,
-  })))
+  const sel = activeSel.value
+  let msgs: Array<{ sender: string; body: string; ts: number }> = []
+  if (sel?.kind === 'group') {
+    const raw = (groupChatStore.messages ?? []) as Array<{
+      senderId?: string; senderName?: string; content?: string; timestamp?: number; isStreaming?: boolean
+    }>
+    msgs = raw
+      .filter((m) => !m.isStreaming)
+      .map((m) => ({ sender: m.senderName || m.senderId || '', body: m.content || '', ts: m.timestamp || 0 }))
+  } else if (sel?.kind === 'room') {
+    const raw = (matrixRoom.activeRoomMessages ?? []) as Array<{
+      getSender?: () => string; getContent?: () => { body?: string }; getTs?: () => number
+    }>
+    msgs = raw.map((ev) => ({
+      sender: ev.getSender?.() ?? '',
+      body: ev.getContent?.()?.body ?? '',
+      ts: ev.getTs?.() ?? 0,
+    }))
+  }
+  return msgs.length ? parseTaskFlow(msgs) : []
 })
 
 const linkedContext = computed(() => {
@@ -449,6 +471,45 @@ async function onCreateRoom(name: string): Promise<void> {
 function onNewLoop(): void {
   void router.push({ name: 'ia2.eng' })
 }
+
+// ── v14 统一聊天：新建三型 + 群聊管理（补偿被隐藏画布侧栏的入口）──
+
+/** agent 单聊：/app/s/chat 新会话态（ChatView 无 sessionId 分支） */
+function onNewChat(): void {
+  void router.push({ name: 'ia2.collabChat' })
+}
+
+/** agent 群聊建房型抽屉开合 */
+const groupCreateOpen = ref(false)
+function onCreateGroup(): void {
+  groupCreateOpen.value = true
+}
+
+/** CreateRoomForm 提交（签名与 GroupChatPanel.handleCreateGroup 同源）：
+ *  setUserInfo + createNewRoom + 跳 ia2.groupRoom（GroupChatView 装载后自 connect/join）。 */
+async function onCreateGroupSubmit(
+  name: string, inviteCode: string, userName: string, description: string,
+  summary: RoomSummaryConfig, workspace: string, agents: RoomAgentInput[],
+): Promise<void> {
+  try {
+    groupChatStore.setUserInfo(userName, description)
+    const res = await groupChatStore.createNewRoom(name, inviteCode, agents, summary, workspace, { name: userName, description })
+    groupCreateOpen.value = false
+    if (res?.room?.id) void router.push({ name: 'ia2.groupRoom', params: { roomId: res.room.id } })
+  } catch {
+    // store 侧已置 error（连接未就绪等）；抽屉保持打开供修正重试
+  }
+}
+
+/** 群聊删除（行 hover ✕）：删的是当前房间时兜底回工作台首页（auto-select 重选） */
+async function onDeleteGroup(roomId: string): Promise<void> {
+  try {
+    await groupChatStore.deleteRoom(roomId)
+    if (route.name === 'ia2.groupRoom' && route.params.roomId === roomId) void router.replace('/app')
+  } catch {
+    // store 侧已置 error；静默
+  }
+}
 </script>
 
 <template>
@@ -478,6 +539,9 @@ function onNewLoop(): void {
         @open-gov="flow.openGov()"
         @open-task="onNavOpenTask"
         @jump-ide="onNavJumpIde"
+        @new-chat="onNewChat"
+        @create-group="onCreateGroup"
+        @delete-group="onDeleteGroup"
       />
     </aside>
     <div v-else class="wb__rail" data-testid="wb-rail-left">
@@ -584,6 +648,12 @@ function onNewLoop(): void {
     </div>
     <!-- 改派/详情：复用看板任务抽屉（含指派编辑） -->
     <KanbanTaskDrawer v-model:show="drawerOpen" :task-id="drawerTaskId" />
+    <!-- v14 统一聊天：agent 群聊建房型（上游 CreateRoomForm 同款抽屉） -->
+    <NDrawer v-model:show="groupCreateOpen" placement="right" :width="520">
+      <NDrawerContent :title="t('ia2.flow.newGroupChat')" closable>
+        <CreateRoomForm @submit="onCreateGroupSubmit" @cancel="groupCreateOpen = false" />
+      </NDrawerContent>
+    </NDrawer>
   </div>
 </template>
 

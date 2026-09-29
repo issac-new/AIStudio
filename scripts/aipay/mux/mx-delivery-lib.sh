@@ -42,8 +42,12 @@ dlv_case_state() { # <owner> <room> <caseId> <json>（state key=caseId，覆盖�
   mx "$(load_token "$1")" PUT "rooms/$2/state/$DLV_CASE_TYPE/$3" "$4" >/dev/null
 }
 
+DLV_TXN_SEQ="${DLV_TXN_SEQ:-0}"
 dlv_msg() { # <who> <room> <type> <json>
-  local txn="dlv-$$-$(date +%s%N)"
+  # txn=Matrix 幂等键：同 id 重发会被去重吞消息。date +%s%N 在老 BSD date 上
+  # %N 是字面量（同秒同 pid 必撞）；再叠进程内自增序号+随机兜底，任何平台唯一。
+  DLV_TXN_SEQ=$((DLV_TXN_SEQ+1))
+  local txn="dlv-$$-${DLV_TXN_SEQ}-$(date +%s%N 2>/dev/null || date +%s)-$RANDOM"
   mx "$(load_token "$1")" PUT "rooms/$2/send/$3/$txn" "$4" >/dev/null
 }
 

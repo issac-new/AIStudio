@@ -55,10 +55,33 @@ export interface AgentTeam {
   profiles: string[]
   defaultProfile?: string
 }
+/**
+ * 准入五问答卷（4A 治理层 ⑤，可信数据空间五问在本机的承载）：
+ * q1 真实场景 / q2 口径一致 / q3 用途边界 / q4 越界可证 / q5 责任落地——
+ * 五答全非空才算过（一票否决，缺一问不签，对齐 admission-checklist.md）。
+ * 增量可选字段：老账号事件无 admission 照常解析（admissionOk=false 由读端显式标记）。
+ */
+export interface AdmissionAnswers {
+  q1: string
+  q2: string
+  q3: string
+  q4: string
+  q5: string
+  answeredAt: number
+  signer: string
+}
 export interface AccountContent {
   displayName: string
   agentTeams: AgentTeam[]
   updatedAt: number
+  admission?: AdmissionAnswers
+}
+/** 五问是否全过（每答非空 + 时间戳 + 签署人齐）。 */
+export function admissionComplete(a?: AdmissionAnswers | null): a is AdmissionAnswers {
+  if (!a || typeof a !== 'object') return false
+  return [a.q1, a.q2, a.q3, a.q4, a.q5].every((s) => typeof s === 'string' && s.trim().length > 0)
+    && typeof a.answeredAt === 'number' && a.answeredAt > 0
+    && typeof a.signer === 'string' && a.signer.trim().length > 0
 }
 export interface LeadersContent { leaders: string[] }
 export interface DutyContent {
@@ -160,7 +183,18 @@ export function parseAccountContent(raw: unknown): AccountContent | null {
     }
     agentTeams.push({ slug, name, profiles, defaultProfile: str(t.defaultProfile) })
   }
-  return { displayName, agentTeams, updatedAt }
+  // admission 增量可选：存在但形状非法 → 视为未过（undefined），不拖垮整份声明（容错先例）。
+  let admission: AdmissionAnswers | undefined
+  if (isRecord(raw.admission)) {
+    const a = raw.admission
+    const parsed: AdmissionAnswers = {
+      q1: str(a.q1) ?? '', q2: str(a.q2) ?? '', q3: str(a.q3) ?? '', q4: str(a.q4) ?? '', q5: str(a.q5) ?? '',
+      answeredAt: num(a.answeredAt) ?? 0,
+      signer: str(a.signer) ?? '',
+    }
+    if (admissionComplete(parsed)) admission = parsed
+  }
+  return { displayName, agentTeams, updatedAt, ...(admission ? { admission } : {}) }
 }
 
 export function parseLeadersContent(raw: unknown): LeadersContent | null {

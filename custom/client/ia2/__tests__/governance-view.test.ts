@@ -21,6 +21,45 @@ vi.mock('@/custom/governance/api/governance', () => ({
     latest: { L0: { run: 't-run', domain: 'L0', verdict: 'pass', evidence: ['AC 可判定 7 条'], checkedAt: '' } },
     ledger: [],
   })),
+  // 4A 治理层（LedgerSection/RuntimeSection/AuditSection 挂载消费面——mock 须全量，
+  // 缺导出即 vitest unhandled rejection）
+  fetchGovernanceLedger: vi.fn(async () => ({
+    ok: true, exists: true, path: '/x/capability-ledger.yaml', problems: [],
+    doc: { version: 1, reviewedAt: '2026-09-29', domains: [{ id: 'engineering', name: '开发实现', owner: 'cuishi' }], capabilities: [], units: [] },
+    stats: { counts: { domains: 1, capabilities: 0, units: 0 }, byKind: {}, byLifecycle: {}, bySloTier: {}, stale: [], primaryGaps: [] },
+  })),
+  fetchMetricsDefs: vi.fn(async () => ({
+    ok: true, exists: true, path: '/x/metrics.yaml', problems: [],
+    doc: { version: 1, reviewedAt: '2026-09-29', verdicts: [{ id: 'fail', label: '不通过', semantics: '词面相似不构成判定依据' }], metrics: [] },
+  })),
+  fetchUsage: vi.fn(async () => ({ ok: true, perUnit: [], unmappedAssignees: [], zeroUseCandidates: [] })),
+  fetchStateModel: vi.fn(async () => ({
+    ok: true, exists: true, path: '/x/state-model.yaml', problems: [],
+    doc: {
+      object: 'task', authority: 'kanban.db',
+      states: [{ id: 'running', semantics: '执行中' }, { id: 'done', semantics: '完成' }],
+      freeMoveStates: ['triage'],
+      runOutcomeTerminal: { completed: 'done' },
+      transitions: [{ id: 'run.complete', from: 'running', to: 'done', trigger: 'outcome=completed', rules: [], actions: ['kanban.transition'], evidence: 'task_events' }],
+      eventSources: [{ id: 'task_events', authority: 'kanban.db', kind: '流转' }],
+    },
+  })),
+  fetchSlo: vi.fn(async () => ({
+    ok: true, budgetMode: 'warn', windowDays: 30,
+    tiers: [{ tier: 'core', target: { successRate: 0.95, windowDays: 30, minSamples: 10, budgetAction: 'freeze' }, closed: 20, done: 19, successRate: 0.95, p95DurationS: 120, exhausted: false }],
+    unmapped: { closed: 0, done: 0, successRate: null, assignees: [] }, dataAvailable: true,
+  })),
+  fetchCostSummary: vi.fn(async () => ({
+    ok: true, days: 30, rows: 0, currency: 'CNY', byProvider: [], byProfile: [],
+    total: { calls: 0, inputTokens: 0, outputTokens: 0, costIdle: 0, costPeak: 0, unpricedRows: 0 },
+    pricingMissing: [], dbFound: false,
+  })),
+  fetchAuditLog: vi.fn(async () => ({
+    ok: true,
+    sources: [{ id: 'approvals', available: true }, { id: 'domain', available: false }, { id: 'provider', available: false }, { id: 'kanban', available: true }],
+    total: 1,
+    events: [{ ts: 1790000000000, source: 'approvals', actor: 'admin', action: 'review:approve', target: '评审 X', result: 'approve' }],
+  })),
 }))
 vi.mock('@/custom/cockpit/api/approvals', () => ({
   fetchPendingApprovals: vi.fn(),
@@ -140,6 +179,22 @@ describe('治理中心前端', () => {
     await flushPromises()
     const { runDomainAudit } = await import('@/custom/governance/api/governance')
     expect(runDomainAudit).toHaveBeenCalled()
+  })
+
+  it('4A 治理层三区渲染（台账/运行态/统一审计）', async () => {
+    const wrapper = await mountView()
+    expect(wrapper.find('[data-testid="gov-ledger"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-runtime"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-audit"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-state-model"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sm-trans-run.complete"]').exists()).toBe(true)
+    // 运行态：SLO 档行渲染 + 零调用空态如实
+    expect(wrapper.find('[data-testid="slo-tier-core"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="usage-zero-none"]').exists()).toBe(true)
+    // 统一审计：四源 chips + 事件行 + 计数
+    expect(wrapper.findAll('[data-testid^="audit-src-"]').length).toBe(4)
+    expect(wrapper.find('[data-testid="audit-row-approvals"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="audit-count"]').text()).toContain('1')
   })
 
   it('i18n zh/en 键集合一致', () => {

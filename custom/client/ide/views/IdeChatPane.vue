@@ -13,7 +13,7 @@
 // 会话生命周期 = ChatView 挂载配方 + newChat codex 配方（ChatPanel.vue
 // 新建会话处）：agent 底座默认 codex、codingAgentMode 'global'（走各 agent
 // 自身登录，模型按钮禁用为诚实态；scoped 模式经 cockpit/聊天页配置）。
-import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
@@ -41,7 +41,17 @@ import IdeTaskGroupsPanel from '../components/IdeTaskGroupsPanel.vue'
 import IdeReviewPanel from '../components/IdeReviewPanel.vue'
 import IdeMentionPicker from '../components/IdeMentionPicker.vue'
 import IdeInlineDiff from '../components/IdeInlineDiff.vue'
+import type { InlineDiffUndoContext } from '../components/IdeInlineDiff.vue'
+import IdeVideoFramesDialog from '../components/IdeVideoFramesDialog.vue'
+import IdeFindInSession from '../components/IdeFindInSession.vue'
+import IdeBtwPanel from '../components/IdeBtwPanel.vue'
+import IdeBgTasksPanel from '../components/IdeBgTasksPanel.vue'
+import IdeSideSessionPane from '../components/IdeSideSessionPane.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
+import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
+import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
+import IdeImportHistory from '../components/IdeImportHistory.vue'
+import IdeKnowledgeBar from '../components/IdeKnowledgeBar.vue'
 import { ideRunsApi } from '../api/runs'
 import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
@@ -58,6 +68,7 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
+import IdeTodoBar from '../components/IdeTodoBar.vue'
 import IdeModelSwitcher from './IdeModelSwitcher.vue'
 import IdeShareEntry from './IdeShareEntry.vue'
 import IdeActivityInbox from './IdeActivityInbox.vue'
@@ -66,6 +77,7 @@ import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
 import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
+import { authFetch } from '../utils/auth-fetch'
 
 const ide = useIdeStore()
 const chatStore = useChatStore()
@@ -318,9 +330,33 @@ const modelGroupsView = computed(() =>
 const modelDisabled = computed(() => modelGroupsView.value.length === 0)
 const modelPickerOpen = ref(false)
 const recoveryOpen = ref(false)
+// A7 视频抽帧入会话（/api/ide/video-frames 客户端接通）：帧 PNG File 经
+// ChatInput defineExpose(addFiles) 入输入框附件列（与粘贴/选文件同一附件链）。
+const videoFramesOpen = ref(false)
+const chatInputEl = ref<{ addFiles?: (files: File[]) => void } | null>(null)
+function onVideoFrames(files: File[]): void {
+  chatInputEl.value?.addFiles?.(files)
+}
+// B4 会话内查找条（zcode findInTask 对照）：开关注入+自动聚焦。
+const findOpen = ref(false)
+const findRef = ref<{ open?: () => void } | null>(null)
+function openFind(): void {
+  findOpen.value = true
+  void nextTick(() => findRef.value?.open?.())
+}
+// B2 侧问浮窗开关
+const btwOpen = ref(false)
+// B1 后台任务中心开关
+const bgTasksOpen = ref(false)
+// B6 对照分屏开关（只读第二会话）
+const sideSessionOpen = ref(false)
 // S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
 // fetchWorkspaceRunChangesForSession → 首文件详情端点 patch）；无 diff 不渲染。
-const demoDiff = ref('')
+// A1 接线（2026-09-29）：同时捕获 undo 上下文（changeId/fileId/workspace），
+// 逐处拒绝经 /api/ide/run-undo hunkIndexes 真回滚；workspace 缺失时不传上下文，
+// 组件降级为本地标记。
+const latestDiff = ref('')
+const latestDiffUndoCtx = ref<InlineDiffUndoContext | null>(null)
 async function loadLatestDiff(): Promise<void> {
   const sid = chatStore.activeSessionId
   if (!sid) return
@@ -330,17 +366,22 @@ async function loadLatestDiff(): Promise<void> {
     const latest = summaries[0]
     const file = (latest as unknown as { files?: Array<{ id: number; change_id: string; path: string }> }).files?.[0]
     if (!file) return
-    const res = await fetch(`/api/studio/sessions/${encodeURIComponent(sid)}/workspace-run-changes/${encodeURIComponent(file.change_id)}/files/${file.id}`)
+    const res = await authFetch(`/api/studio/sessions/${encodeURIComponent(sid)}/workspace-run-changes/${encodeURIComponent(file.change_id)}/files/${file.id}`)
     if (!res.ok) return
     const body = (await res.json()) as { file?: { patch?: string } }
     if (chatStore.activeSessionId !== sid) return // 文件详情返回前再次校验
-    demoDiff.value = body.file?.patch ?? ''
+    latestDiff.value = body.file?.patch ?? ''
+    const ws = ide.workspace
+    latestDiffUndoCtx.value = latestDiff.value && ws
+      ? { sessionId: sid, changeId: file.change_id, fileId: file.id, workspace: ws }
+      : null
   } catch { /* 无 diff 保持不渲染 */ }
 }
 onMounted(() => { void loadLatestDiff() })
 // 会话切换即清空并重拉：inline diff 只属于当前会话，残留即跨会话串显。
 watch(() => chatStore.activeSessionId, () => {
-  demoDiff.value = ''
+  latestDiff.value = ''
+  latestDiffUndoCtx.value = null
   void loadLatestDiff()
 })
 const modelLabel = computed(() => {
@@ -397,6 +438,42 @@ async function pickModel(provider: string, model: string): Promise<void> {
         >⏎</button>
         <IdeShareEntry :session-id="chatStore.activeSessionId ?? ''" />
         <IdePermissionSwitcher />
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-video-frames"
+          title="视频抽帧入会话（按路径抽帧投喂，agent 录屏产物适用）"
+          @click="videoFramesOpen = true"
+        >🎞</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-find"
+          title="会话内查找（跳转定位；行内高亮待上游 MessageList 补丁）"
+          @click="openFind"
+        >🔍</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-btw"
+          title="侧问（/btw：旁路提问不打断主任务，答完可复制旁注回主会话）"
+          @click="btwOpen = !btwOpen"
+        >⇋</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-bgtasks"
+          title="后台任务中心（子代理/自治队列/工作流运行 跨源总览）"
+          @click="bgTasksOpen = !bgTasksOpen"
+        >⏱</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-sidesession"
+          :class="{ 'is-on': sideSessionOpen }"
+          title="对照分屏：右半屏只读另一会话（主屏不动，边看边干）"
+          @click="sideSessionOpen = !sideSessionOpen"
+        >⇔</button>
         <button
           type="button"
           class="ide-chat__action"
@@ -509,9 +586,11 @@ async function pickModel(provider: string, model: string): Promise<void> {
 
     <!-- R3 轮结果卡（时长 + 验证 bullet + per-turn 文件变更） -->
     <IdeRunResultCard />
+    <!-- B5 todo 常驻条：最新 todo_list 快照的进度+展开清单（无 todo 自隐藏） -->
+    <IdeTodoBar />
 
     <div class="ide-chat__body">
-      <div class="ide-chat__messages-anchor">
+      <div class="ide-chat__messages-anchor" :style="sideSessionOpen ? { paddingRight: '348px' } : undefined">
         <MessageList
           v-if="ready"
           class="ide-chat__messages"
@@ -520,9 +599,14 @@ async function pickModel(provider: string, model: string): Promise<void> {
         />
         <IdeTurnRail />
       </div>
+      <IdeSideSessionPane v-if="sideSessionOpen" @close="sideSessionOpen = false" />
       <IdeMentionPicker />
-      <IdeInlineDiff :diff-text="demoDiff" />
+      <IdeInlineDiff :diff-text="latestDiff" :undo-context="latestDiffUndoCtx" />
       <IdeAgentsView />
+      <IdeResumeAdvisor />
+      <IdeSecurityBoostBar />
+      <IdeImportHistory />
+      <IdeKnowledgeBar />
       <IdeContextBar />
       <IdeQueuePanel />
       <IdeRecapCard />
@@ -533,9 +617,14 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeRunLogPanel />
       <IdeHandoffCard />
       <IdeRecoveryDialog v-if="recoveryOpen" :open="recoveryOpen" @close="recoveryOpen = false" />
+      <IdeVideoFramesDialog v-if="videoFramesOpen" :workspace="ide.workspace" @close="videoFramesOpen = false" @frames="onVideoFrames" />
+      <IdeFindInSession v-if="findOpen" ref="findRef" @close="findOpen = false" />
+      <IdeBtwPanel v-if="btwOpen" @close="btwOpen = false" />
+      <IdeBgTasksPanel v-if="bgTasksOpen" @close="bgTasksOpen = false" />
       <IdeCompactionCard />
       <div class="ide-chat__model-picker-anchor">
         <ChatInput
+          ref="chatInputEl"
           :model-disabled="modelDisabled"
           :model-label="modelLabel"
           persist-draft
@@ -584,6 +673,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative; /* B4 会话内查找条（绝对定位浮层）的锚 */
   background: var(--bg-primary, #14161a);
 }
 

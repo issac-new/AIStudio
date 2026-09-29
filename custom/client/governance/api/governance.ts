@@ -77,3 +77,204 @@ export function runDomainAudit(run?: string): Promise<{ ok: boolean; run: string
 export function fetchDomainAudit(): Promise<DomainAuditSummary> {
   return request('/api/governance/domains')
 }
+
+// ── 4A 治理层（能力台账 + 语义指标层；spec 2026-09-29 §3.4）──
+export interface LedgerUnit {
+  id: string
+  capability: string
+  primary: boolean
+  kind: string
+  owner: string
+  lifecycle: string
+  sloTier: string
+  skills: string[]
+  refs?: { file?: string; note?: string }
+  reviewedAt: string
+}
+export interface LedgerCapability {
+  id: string
+  domain: string
+  name: string
+  object: string
+  action: string
+  importance: string
+  maturity: string
+}
+export interface LedgerDoc {
+  version: number
+  reviewedAt: string
+  domains: Array<{ id: string; name: string; owner: string }>
+  capabilities: LedgerCapability[]
+  units: LedgerUnit[]
+}
+export interface LedgerStats {
+  counts: { domains: number; capabilities: number; units: number }
+  byKind: Record<string, number>
+  byLifecycle: Record<string, number>
+  bySloTier: Record<string, number>
+  stale: Array<{ id: string; reviewedAt: string; days: number }>
+  primaryGaps: string[]
+}
+export interface GovernanceLedger {
+  ok: boolean
+  exists: boolean
+  path: string | null
+  problems: string[]
+  doc: LedgerDoc | null
+  stats: LedgerStats | null
+}
+export interface MetricsDefsDoc {
+  version: number
+  reviewedAt: string
+  verdicts: Array<{ id: string; label: string; semantics: string }>
+  metrics: Array<{ id: string; name: string; formula: string; dimensions: string[]; permission: string; authority: string; status: string }>
+}
+export interface GovernanceMetricsDefs {
+  ok: boolean
+  exists: boolean
+  path: string | null
+  problems: string[]
+  doc: MetricsDefsDoc | null
+}
+
+export function fetchGovernanceLedger(): Promise<GovernanceLedger> {
+  return request<GovernanceLedger>('/api/governance/ledger')
+}
+
+export function fetchMetricsDefs(): Promise<GovernanceMetricsDefs> {
+  return request<GovernanceMetricsDefs>('/api/governance/metrics-defs')
+}
+
+// ── 4A 治理层运行态（第二期 ②③④⑥）──
+export interface UnitUsage {
+  unitId: string
+  kind: string
+  mapped: boolean
+  source: 'kanban-assignee' | 'squad-ledger' | 'untracked'
+  lastUsedAt: number | null
+  daysSinceUse: number | null
+  note?: string
+}
+export interface UsageReport {
+  ok: boolean
+  perUnit: UnitUsage[]
+  unmappedAssignees: Array<{ assignee: string; total: number; lastActiveAt: number | null }>
+  zeroUseCandidates: UnitUsage[]
+  /** 第三期：引擎派发统计（dispatch.successRate 本地实况）与门禁通过率（gate.passRate）。 */
+  dispatchStats?: {
+    dispatched: number
+    delivered: number
+    deferred: number
+    failed: number
+    deliveredRate: number | null
+    byUnit: Array<{ key: string; dispatched: number; delivered: number; rate: number | null }>
+  }
+  gateStats?: {
+    runs: number
+    byVerdict: Record<string, number>
+    passRate: number | null
+    lastAt: number | null
+    roots: string[]
+  }
+}
+export interface SloTierReport {
+  tier: string
+  target: { successRate: number; windowDays: number; minSamples: number; budgetAction: string } | null
+  closed: number
+  done: number
+  successRate: number | null
+  p95DurationS: number | null
+  exhausted: boolean
+  note?: string
+}
+export interface SloReport {
+  ok: boolean
+  budgetMode: string
+  windowDays: number
+  tiers: SloTierReport[]
+  unmapped: { closed: number; done: number; successRate: number | null; assignees: string[] }
+  dataAvailable: boolean
+}
+export interface CostBucket {
+  key: string
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  costIdle: number
+  costPeak: number
+  unpricedRows: number
+}
+export interface CostSummary {
+  ok: boolean
+  days: number
+  rows: number
+  currency: string
+  byProvider: CostBucket[]
+  byProfile: CostBucket[]
+  byCapability?: CostBucket[]
+  total: { calls: number; inputTokens: number; outputTokens: number; costIdle: number; costPeak: number; unpricedRows: number }
+  pricingMissing: string[]
+  dbFound: boolean
+}
+export interface AuditEvent {
+  ts: number
+  source: 'approvals' | 'domain' | 'provider' | 'kanban'
+  actor: string
+  action: string
+  target: string
+  result: string
+  ref?: string
+}
+export interface AuditLogResult {
+  ok: boolean
+  sources: Array<{ id: string; available: boolean; note?: string }>
+  total: number
+  events: AuditEvent[]
+}
+
+export function fetchUsage(): Promise<UsageReport> {
+  return request<UsageReport>('/api/governance/usage')
+}
+export function fetchSlo(): Promise<SloReport> {
+  return request<SloReport>('/api/governance/slo')
+}
+export function fetchCostSummary(days = 30): Promise<CostSummary> {
+  return request<CostSummary>(`/api/governance/cost-summary?days=${days}`)
+}
+export function fetchAuditLog(opts?: { sources?: string[]; q?: string; limit?: number }): Promise<AuditLogResult> {
+  const params = new URLSearchParams()
+  if (opts?.sources?.length) params.set('sources', opts.sources.join(','))
+  if (opts?.q) params.set('q', opts.q)
+  if (opts?.limit) params.set('limit', String(opts.limit))
+  const qs = params.toString()
+  return request<AuditLogResult>(`/api/governance/audit-log${qs ? `?${qs}` : ''}`)
+}
+
+// ── 4A 治理层第五期②展示面（状态-事件本体）──
+export interface StateModelTransitionDto {
+  id: string
+  from: string
+  to: string
+  trigger: string
+  rules: string[]
+  actions: string[]
+  evidence: string
+}
+export interface StateModelResp {
+  ok: boolean
+  exists: boolean
+  path: string | null
+  problems: string[]
+  doc: {
+    object: string
+    authority: string
+    states: Array<{ id: string; semantics: string }>
+    freeMoveStates?: string[]
+    runOutcomeTerminal: Record<string, string>
+    transitions: StateModelTransitionDto[]
+    eventSources: Array<{ id: string; authority: string; kind: string }>
+  } | null
+}
+export function fetchStateModel(): Promise<StateModelResp> {
+  return request<StateModelResp>('/api/governance/state-model')
+}

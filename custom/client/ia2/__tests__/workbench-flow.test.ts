@@ -149,7 +149,13 @@ const loopStubs = vi.hoisted(() => {
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: loopStubs.useLoopStore }))
 
 const groupStubs = vi.hoisted(() => ({
-  state: { rooms: [{ id: 'gr-1', name: '产品群聊', lastActiveAt: 900 }] },
+  state: {
+    rooms: [{ id: 'gr-1', name: '产品群聊', lastActiveAt: 900 }],
+    messages: [] as unknown[],
+    setUserInfo: vi.fn(),
+    createNewRoom: vi.fn(async () => ({ room: { id: 'gr-new', name: '新群聊' }, agents: [] })),
+    deleteRoom: vi.fn(async () => {}),
+  },
   useGroupChatStore: () => groupStubs.state,
 }))
 vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: groupStubs.useGroupChatStore }))
@@ -234,16 +240,33 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(empty.find('[data-testid="flow-empty"]').exists()).toBe(true)
   })
 
-  it('R4a 聚类：会话按类型三小节（房间/群聊/会话），行 testid 不变', () => {
+  it('v14 单一聊天列表：三类混排按最近活动降序、kind 图标行首、旧三小节退役', () => {
     const w = mountPanel()
-    expect(w.find('[data-testid="flow-cluster-room"]').exists()).toBe(true)
-    expect(w.find('[data-testid="flow-cluster-group"]').exists()).toBe(true)
-    expect(w.find('[data-testid="flow-cluster-chat"]').exists()).toBe(true)
-    expect(w.find('[data-testid="flow-session-!r1"]').exists()).toBe(true)
-    // 空簇隐藏（v-show）：仅 chat 簇有行时其余两簇不可见
-    const w2 = mountPanel({ sessions: [SESSIONS[1]] })
-    expect(w2.find('[data-testid="flow-cluster-chat"]').isVisible()).toBe(true)
-    expect(w2.find('[data-testid="flow-cluster-room"]').isVisible()).toBe(false)
+    expect(w.find('[data-testid="flow-cluster-chat-all"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-group-chats"]').exists()).toBe(true)
+    // 旧三小节（房间/群聊/会话分节）退役
+    expect(w.find('[data-testid="flow-cluster-room"]').exists()).toBe(false)
+    expect(w.find('[data-testid="flow-cluster-group"]').exists()).toBe(false)
+    expect(w.find('[data-testid="flow-cluster-chat"]').exists()).toBe(false)
+    // 混排降序：room(200) 先于 chat(100)；行首 kind 图标
+    const rows = w.findAll('.flow-nav__row')
+    expect(rows[0].attributes('data-kind')).toBe('room')
+    expect(rows[1].attributes('data-kind')).toBe('chat')
+    expect(rows[0].find('.flow-nav__kind').text()).toBe('#')
+    expect(rows[1].find('.flow-nav__kind').text()).toBe('💬')
+    // group 行混排插入（lastActivityAt 最大者居首）且带 ✕ 删除
+    const w2 = mountPanel({ sessions: [...SESSIONS, { kind: 'group', id: 'gr-9', name: '远端协同群', unread: 0, taskIds: [], teamTag: '', dutyName: null, lastActivityAt: 999 }] })
+    const rows2 = w2.findAll('.flow-nav__row')
+    expect(rows2[0].attributes('data-kind')).toBe('group')
+    expect(w2.find('[data-testid="flow-del-group-gr-9"]').exists()).toBe(true)
+    expect(w2.find('[data-testid="flow-del-group-!r1"]').exists()).toBe(false)
+  })
+
+  it('v14 群聊行 ✕ emit delete-group（不触发行选中）', async () => {
+    const w = mountPanel({ sessions: [{ kind: 'group', id: 'gr-9', name: '远端协同群', unread: 0, taskIds: [], teamTag: '', dutyName: null, lastActivityAt: 1 }] })
+    await w.find('[data-testid="flow-del-group-gr-9"]').trigger('click')
+    expect(w.emitted('delete-group')![0][0]).toBe('gr-9')
+    expect(w.emitted('select')).toBeUndefined()
   })
 
   it('R4a 任务簇：📋N 点击就地展开任务 chip；chip 点击 emit open-task、双击 emit jump-ide；行双击携带首个任务', async () => {
@@ -267,9 +290,21 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(false)
   })
 
-  it('栏底动作：内联新建（输入+确认 emit create-room）、＋新循环、⚙管理', async () => {
+  it('栏底动作：v14「＋新聊天」三分型菜单（单聊/群聊 emit、房间转内联输入）、＋新循环、⚙管理', async () => {
     const w = mountPanel()
     await w.find('[data-testid="flow-new-session"]').trigger('click')
+    expect(w.find('[data-testid="flow-new-menu"]').exists()).toBe(true)
+    await w.find('[data-testid="flow-new-chat-agent"]').trigger('click')
+    expect(w.emitted('new-chat')).toHaveLength(1)
+    // 选择后菜单收起
+    expect(w.find('[data-testid="flow-new-menu"]').exists()).toBe(false)
+    await w.find('[data-testid="flow-new-session"]').trigger('click')
+    await w.find('[data-testid="flow-new-chat-group"]').trigger('click')
+    expect(w.emitted('create-group')).toHaveLength(1)
+    // matrix 房间：转内联输入 → 输入+确认 emit create-room
+    await w.find('[data-testid="flow-new-session"]').trigger('click')
+    await w.find('[data-testid="flow-new-chat-room"]').trigger('click')
+    expect(w.find('[data-testid="flow-create-input"]').exists()).toBe(true)
     await w.find('[data-testid="flow-create-input"]').setValue('新房间')
     await w.find('[data-testid="flow-create-ok"]').trigger('click')
     expect(w.emitted('create-room')![0][0]).toBe('新房间')
@@ -288,6 +323,7 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
         path: '/app',
         children: [
           { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: 's/chat', name: 'ia2.collabChat', component: WorkbenchView },
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
           { path: 's/group/:roomId', name: 'ia2.groupRoom', component: WorkbenchView },
@@ -361,6 +397,20 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(wrapper.find('[data-testid="group-view-stub"]').exists()).toBe(true)
   })
 
+  it('v14 新建动线：agent 单聊 → /app/s/chat 新会话态；群聊 ✕ → store.deleteRoom', async () => {
+    const { wrapper, router } = await mountAt('/app')
+    await wrapper.find('[data-testid="flow-new-session"]').trigger('click')
+    await wrapper.find('[data-testid="flow-new-chat-agent"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.collabChat')
+    // 删除群聊（非当前选中）：只调 store，不动路由
+    const { wrapper: w2, router: r2 } = await mountAt('/app')
+    await w2.find('[data-testid="flow-del-group-gr-1"]').trigger('click')
+    await flushPromises()
+    expect(groupStubs.state.deleteRoom).toHaveBeenCalledWith('gr-1')
+    expect(r2.currentRoute.value.name).toBe('ia2.collab')
+  })
+
   it('R4a 动线⑤：左栏任务簇 chip → 看板预选；行双击 → ide.shell?task=（useIdeJump）', async () => {
     const { wrapper, router } = await mountAt('/app')
     await wrapper.find('[data-testid="flow-session-!r1:host"] .flow-nav__cnt--btn').trigger('click')
@@ -391,6 +441,7 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
         component: { template: '<router-view />' },
         children: [
           { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: 's/chat', name: 'ia2.collabChat', component: WorkbenchView },
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
           { path: 'l/:loopId', name: 'ia2.loopCanvas', component: WorkbenchView },
@@ -578,5 +629,60 @@ describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', (
     await flushPromises()
     expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
+  })
+})
+
+describe('WorkbenchView — P4③ 群任务流转时间线（2026-09-29 消息源按选择类别分派）', () => {
+  function makeFlowRouter(): Router {
+    return createRouter({
+      history: createMemoryHistory(),
+      routes: [{
+        path: '/app',
+        component: { template: '<router-view />' },
+        children: [
+          { path: '', name: 'ia2.collab', component: WorkbenchView },
+          { path: 's/chat', name: 'ia2.collabChat', component: WorkbenchView },
+          { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
+          { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
+          { path: 's/group/:roomId', name: 'ia2.groupRoom', component: WorkbenchView },
+          { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
+        ],
+      }, {
+        path: '/ide', name: 'ide.shell', component: { template: '<div ide />' },
+      }],
+    })
+  }
+
+  const GROUP_MSGS = [
+    { id: 'm1', senderName: 'bella', content: '派发任务 card=t_ab12cd34 @fanfan-agent:matrix.test 请开始系统分析', timestamp: 1759000040000 },
+    { id: 'm2', senderName: 'fanfan-agent', content: '【完成回执】t_ab12cd34 已完成', timestamp: 1759000050000 },
+    { id: 'm3', senderName: 'mei', content: '流式生成中的无关内容', timestamp: 1759000060000, isStreaming: true },
+  ]
+
+  it('group 选择：group-chat store 消息解析出派发+完成回执 → 右栏时间线渲染（streaming 不入流）', async () => {
+    ;(groupStubs.state as { messages?: unknown[] }).messages = GROUP_MSGS
+    const router = makeFlowRouter()
+    router.push('/app/s/group/gr-1')
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    await flushPromises()
+    const sec = wrapper.find('[data-testid="tdp-flow-sec"]')
+    expect(sec.exists()).toBe(true)
+    expect(sec.text()).toContain('fanfan-agent')
+    expect(sec.text()).toContain('完成回执')
+    expect(sec.text()).not.toContain('流式生成中的无关内容')
+    delete (groupStubs.state as { messages?: unknown[] }).messages
+  })
+
+  it('room 选择走 matrix-room 消息源：群消息不串门（修复前分析群面板未出数的反向守门）', async () => {
+    ;(groupStubs.state as { messages?: unknown[] }).messages = GROUP_MSGS
+    const router = makeFlowRouter()
+    router.push('/app/s/room/!r1:host')
+    await router.isReady()
+    const wrapper = mount(WorkbenchView, { global: { plugins: [router] } })
+    await flushPromises()
+    // room 选择不读群消息（matrix-room 桩无消息）→ 时间线不渲染，群消息零残留
+    expect(wrapper.find('[data-testid="tdp-flow-sec"]').exists()).toBe(false)
+    delete (groupStubs.state as { messages?: unknown[] }).messages
   })
 })

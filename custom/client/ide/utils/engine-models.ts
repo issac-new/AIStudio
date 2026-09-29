@@ -1,3 +1,4 @@
+import { authFetch } from './auth-fetch'
 // overlay：IDE 编码引擎独立模型目录取数（2026-09-26 用户指令的客户端半边）。
 //
 // 数据源=/api/ide/engine-models（patch 477 挂载，runtime/ide-engine-models.json
@@ -15,7 +16,7 @@ export interface EngineCatalog {
 }
 
 export async function fetchEngineCatalog(): Promise<EngineCatalog> {
-  const res = await fetch('/api/ide/engine-models')
+  const res = await authFetch('/api/ide/engine-models')
   if (!res.ok) throw new Error(`engine-models ${res.status}`)
   const body = (await res.json()) as {
     config?: { providers?: Array<{ providerId: string; models?: Array<{ modelId: string; reasoningLevels?: string[] }> }> }

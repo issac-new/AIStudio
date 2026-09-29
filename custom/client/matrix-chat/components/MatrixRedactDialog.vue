@@ -137,7 +137,7 @@ function handleCancel() {
 
   &.danger {
     background: var(--error, #dc2626);
-    color: #fff;
+    color: var(--text-on-accent);
   }
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }

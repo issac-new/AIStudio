@@ -211,6 +211,10 @@
 451-jobs-base-url-cli.patch
 452-memory-set-cli.patch
 453-memory-save-cli.patch
+# 416/417 series 行回补（2026-09-29 死补丁处置：416 direct-apply 验证过已树上应用；
+#      417 kanban 硬化与树上并行 WIP 冲突由 inject 窗口统一重放裁决）。
+416-agent-delegate-handoff-phrase.patch
+417-agent-kanban-runtime-hardening.patch
 419-agent-board-concurrency-gate.patch
 455-server-p1-routes-mounts.patch
 470-hosted-rooms-collab-event-id.patch
@@ -253,8 +257,6 @@
 # 491（U1 公告非阻塞）：StudioAnnouncementPrompt 模态→底部常驻横幅，
 #      公告不再遮罩拦截全界面（20+ 张推演截图被挡实锤），确认后按 id 记账不再弹。
 491-client-announcement-nonblocking-banner.patch
-# 476（feat/p0-hardening 轮）：案例面板 P0 词条（zh/en）——inFlight/completed（读数新口径）
-476-delivery-panel-p0-i18n.patch
 # 492（U3/U10 根治 · 跨板 404）：GET /api/hermes/kanban/:id 错板/缺省板兜底——
 #      任务 ID 全局唯一，sqlite 快查定位所在板后重试 show（抽屉/深链/消息卡链接
 #      恒带 board=default 撞 404 的根因，推演截图三连拍实锤）。
@@ -282,6 +284,40 @@
 #      （2.25 轮 patch 281 语义；系列折叠时随 111 孤儿化丢失，v0.7.25 结构重建——
 #      12GB vite 缓存入包致产物 14GB 的根因）。
 495-desktop-extrares-vite-cache-exclude.patch
+#      决策列显示）与 spotcheck.* 键族（收件箱「抽检·自动放行回看」区）。锚定 473
+#      注入后的 approvals 块（zh/en 同构，与 473 同例不动其余 9 语言）。
 # 497（win 交付物重建）：win.target 补 zip x64——本机分发交付物（nsis -86 在案惯例
 #      非交付物）；2.25 轮 patch 109 语义，系列折叠时孤儿化，v0.7.25 结构重建。
 497-desktop-win-zip-target.patch
+498-goals-user-preempt.patch
+499-goals-budget-fields.patch
+# 500（B7 自定义斜杠命令）：ChatInput slash 菜单合并自定义命令（coding-agent 会话面），
+#      选中写 prompt 模板全文而非 /name；数据=/api/ide/slash-commands（native-routes 原生中间件）。
+#      B8 扩展：监听 ide-edit-resend 事件 + expose setInputText（取回编辑消费面）。
+500-client-chatinput-custom-slash.patch
+# 501（B7 配套词条）：ide.sidePane.tab_slash zh/en 成对（473 之后按 496 同例单补）。
+501-client-i18n-sidepane-slash-tab.patch
+# 503（B8 取回编辑）：MessageItem 用户消息 ✎ 按钮 → window ide-edit-resend 事件 →
+#      ChatInput（patch 500 扩）填入可改再发；历史不改写（真改写重生成的引擎命令
+#      =zcode v4 editUserQuery，hermes 链未开——面板按钮 title 已如实标注）。
+503-client-messageitem-edit-resend.patch
+# 504（侧栏死链根治，原 499 让号避 goals-budget）：删 PageSidebarNav 孤函数 openMatrixChat——
+#      目标路由 hermes.matrixChat 已被 297 随 cockpit 家族整体删除，函数零调用方。
+504-sidebar-dead-matrix-entry-removal.patch
+# 505（卡抽屉 body/评论 Markdown 渲染）：upstream 抽屉裸插值→KanbanMarkdown，run2 实拍实证 raw 字面量。
+505-kanban-drawer-markdown.patch
+# 506/507（v14 统一聊天 Phase 1）：ia2 工作台嵌入态 standaloneEmbed——ChatView/GroupChatView
+#      隐藏自带会话/房间侧栏（工作台左栏即唯一导航）+ 深链失效回 /app 不越界 +
+#      嵌入态高度 100%（治 calc(vh) 溢出裁切输入区）。独立 meta key 不复用
+#      standaloneChat：App.vue 以其门控六个全局弹层，挂上会连带砍 GlobalPendingActions。
+506-client-chatview-standalone-embed.patch
+507-client-groupchatview-standalone-embed.patch
+# 508（v14 配套词条，473 之后按 496/501 同例单补）：ia2.flow 六键 zh/en 成对——
+#      chatSection/newChat/newAgentChat/newGroupChat/newMatrixRoom/deleteGroup。
+508-client-i18n-comm-v14.patch
+# 509/510（v14 统一聊天 P2B ChatBridge）：group-chat.ts 桥注入 API
+#      （publishBridgeMemberMessage：持久化+广播+processMentions 编排，非 socket 入口）
+#      + bridgeEvents 桥订阅面（approval.requested 广播）+ bootstrap/http.ts 挂载
+#      （CHAT_BRIDGE_ENABLED 门控，动态 import 失败不阻断主进程）。
+509-server-groupchat-bridge-api.patch
+510-server-chatbridge-mount.patch

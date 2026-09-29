@@ -1,0 +1,34 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index 066a128..7ab4699 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1541,6 +1541,12 @@ export default {
+       clusterGroups: 'Group Chats',
+       clusterChats: 'Agent Chats',
+       groupAgents: 'Agents',
++      chatSection: 'Chats',
++      newChat: 'New chat',
++      newAgentChat: 'Agent direct chat',
++      newGroupChat: 'Agent group chat',
++      newMatrixRoom: 'Matrix room',
++      deleteGroup: 'Delete group chat',
+     },
+     loop: {
+       stage: {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 9d4607b..6a00bee 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1541,6 +1541,12 @@ export default {
+       clusterGroups: '群聊',
+       clusterChats: '会话',
+       groupAgents: 'Agents',
++      chatSection: '聊天',
++      newChat: '新聊天',
++      newAgentChat: 'Agent 单聊',
++      newGroupChat: 'Agent 群聊',
++      newMatrixRoom: 'Matrix 房间',
++      deleteGroup: '删除群聊',
+     },
+     loop: {
+       stage: {

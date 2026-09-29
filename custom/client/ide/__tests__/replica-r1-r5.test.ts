@@ -24,6 +24,14 @@ describe('R2 权限七档切换器', () => {
     expect(w.find('[data-testid="ide-perm-trigger"]').text()).toContain('绕过')
     expect(localStorage.getItem('ide-permission-mode:s1')).toBe('bypassPermissions')
   })
+
+  it('A2 诚实标注：面板常显生效面说明（不冒充会话即时生效）', async () => {
+    const { default: IdePermissionSwitcher } = await import('../components/IdePermissionSwitcher.vue')
+    const w = mount(IdePermissionSwitcher)
+    await w.find('[data-testid="ide-perm-trigger"]').trigger('click')
+    expect(w.find('[data-testid="ide-perm-note"]').text()).toContain('任务派发')
+    expect(w.find('[data-testid="ide-perm-note"]').text()).toContain('待引擎接线')
+  })
 })
 
 describe('R3 ask_user 问卷卡', () => {

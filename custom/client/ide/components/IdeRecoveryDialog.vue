@@ -8,6 +8,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { fetchEngineRows, type EngineRow } from '../utils/zcode-fork'
+import { authFetch } from '../utils/auth-fetch'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -67,7 +68,7 @@ async function recover(mode: string): Promise<void> {
   if (!sid || !ide.workspace || !selectedRow.value || busy.value) return
   busy.value = true
   try {
-    const res = await fetch('/api/zcode-engine/checkpoint/recover', {
+    const res = await authFetch('/api/zcode-engine/checkpoint/recover', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

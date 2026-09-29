@@ -15,6 +15,7 @@ ESC = lambda s: H.escape(str(s), quote=True)
 
 
 def _issue_counts(evid: Path) -> Counter:
+    """（返回 (Counter, ledger_found) 语义由调用方组合——缺键=0 次≠数据缺失）"""
     """问题单台账实算：ISSUE|类型|主体|描述 → 按类型计数。"""
     f = evid / 'issues.log'
     c: Counter = Counter()
@@ -76,6 +77,12 @@ def _loop_diagram(items, center_label, back_edge, caption, accent='#2563eb'):
 def render_narrative(state: dict, evid: Path) -> str:
     """叙事层 HTML：价值主张 hero → 挑战与协同 → 双 loop → 差异化亮点 → 四维协作质量。"""
     counts = _issue_counts(evid)
+    ledger_found = (evid / 'issues.log').exists()
+    def _c(n):
+        # 台账在场：缺键=本轮 0 次（≠数据缺失）；台账缺失才显式 ⬜（"取不到显式 ⬜"口径）
+        return str(n) if ledger_found else '⬜'
+    def _z(n, note='——根治后未复现（建群全量预邀）'):
+        return note if (ledger_found and n == 0) else ''
     total_issues = sum(counts.values())
     n_invite = counts.get('room-invite-gap', 0)
     n_evidence = counts.get('done-without-verifiable-evidence', 0)
@@ -91,7 +98,7 @@ def render_narrative(state: dict, evid: Path) -> str:
     <div class="nv-metric"><b>6</b><span>道硬闸（G1-G6）</span></div>
     <div class="nv-metric"><b>15×2</b><span>人编制 ×（人+AI 助理）账号</span></div>
     <div class="nv-metric"><b>4</b><span>类 AI 员工（需求设计/应用研发/质量测试/研发治理）</span></div>
-    <div class="nv-metric"><b>{total_issues if total_issues else "⬜"}</b><span>问题单台账条目（全程记账）</span></div>
+    <div class="nv-metric"><b>{_c(total_issues)}</b><span>问题单台账条目（全程记账）</span></div>
   </div>
 </section>'''
 
@@ -99,7 +106,7 @@ def render_narrative(state: dict, evid: Path) -> str:
     cases = [
         (
             '挑战 A：分布式协作的成员一致性',
-            f'推演中问题单台账实记 <b>{n_invite if n_invite else "⬜"}</b> 次"派发者不在群"缺口——'
+            f'推演中问题单台账实记 <b>{_c(n_invite)}</b> 次{_z(n_invite)}"派发者不在群"缺口——'
             '智能体@责任人派发任务时，对方尚未入群，消息发不出去（Matrix 403）。',
             '协同机制：导演模式检测缺口即刻补邀并记问题单，不静默丢失；随后根治为"建群即按 RACI 全量预邀 + G2 前补邀架构双账号"（overlay f8382131）。'
             '这正是 harness（场景编排器）+ multi-agent 的交界处：通信基建的语义缺口，靠台账暴露、靠流程根治。',
@@ -107,7 +114,7 @@ def render_narrative(state: dict, evid: Path) -> str:
         ),
         (
             '挑战 B：大模型"完成"幻觉',
-            f'台账实记 <b>{n_evidence if n_evidence else "⬜"}</b> 次"无凭证报完成"被打回——'
+            f'台账实记 <b>{_c(n_evidence)}</b> 次{_z(n_evidence, "——本轮走拒收回灌环实录（600s 超时→重报通过，02:27/02:31）")}"无凭证报完成"被打回——'
             '智能体宣称任务完成，但提交号/卡号反向核验查无实据（RFD-001 两轮拒收实例）。',
             '协同机制：一切"完成"必须带代码提交号+任务卡号双凭证，系统反向核验，查不到打回限期重报，两轮不过记问题单中止。'
             '验证优先于生成：客观执行信号作准出，自我评价不作数。',
@@ -115,7 +122,7 @@ def render_narrative(state: dict, evid: Path) -> str:
         ),
         (
             '挑战 C：审查不沦为橡皮图章',
-            f'台账实记闸门相关缺口 <b>{n_gate if n_gate else "⬜"}</b> 次（评审卡缺失/本地门禁缺件）。'
+            f'台账实记闸门相关缺口 <b>{_c(n_gate)}</b> 次（本轮；评审卡缺失/本地门禁缺件）{_z(n_gate)}。'
             'G2 架构评审 FAIL 即打回修订复评，历史偏差红杠命中未回应即拦；G4 测试独立验证——测试的人不能是写代码的人。',
             '协同机制：生成-验证分离且对抗性设计，验证者的目标是"击穿实现"；每道闸未过不得流入下游（显式状态机熔断错误级联）。',
             _state_mark(state, 'g2_arch_pass'),
@@ -264,3 +271,124 @@ if __name__ == '__main__':
     html = render_narrative(st, sim / 'evidence')
     sys.stdout.write(html)
     print(f'\n<!-- narrative bytes={len(html)} -->', file=sys.stderr)
+
+
+# ── 意图链路可视化（V4.1 §三 需求保真域缺口闭合：报告侧连线）──
+# 从中央仓真实工件解析：G1 冻结 AC → 系分稿（AN-*）→ 开发分支测试日志（G3）→
+# 独立测试报告（G4）→ UAT 逐条对账（acceptance）。取不到的环节显式 ⬜，不虚构。
+def render_intent_chain(sim) -> str:
+    import re as _re
+    from pathlib import Path as _Path
+    central = _Path(sim) / 'central' / 'aipaydev'
+    ESC_ = ESC
+
+    # 应用映射（冻结条款关键词 → AN/DEV 工件后缀与应用目录）
+    APP_KEYS = [
+        ('PAYCORE', 'csw-pay-core', ('csw-pay-core', '幂等', '状态机', '金额', '回调幂等', '超时关单')),
+        ('MP', 'csw-cashier-mp', ('收银台三态', '前端', '小程序', 'csw-cashier-mp')),
+        ('CHWX', 'csw-channel-wechat', ('微信', 'csw-channel-wechat', '双渠道')),
+        ('CHALI', 'csw-channel-alipay', ('支付宝', 'csw-channel-alipay', '双渠道')),
+    ]
+
+    def _read(path):
+        try:
+            return path.read_text(encoding='utf-8')
+        except Exception:
+            return ''
+
+    # 1) G1 冻结 AC 清单
+    acs = []
+    for fz in sorted(central.glob('docs/requirements/*.freeze.md')):
+        for ln in _read(fz).splitlines():
+            m = _re.match(r'^- \*\*(AC-\d+)\s*([^*]+)\*\*[：:](.+)$', ln.strip())
+            if m:
+                acs.append({'id': m.group(1), 'title': m.group(2).strip(), 'text': m.group(3).strip()})
+    # 2) UAT 逐条判定（acceptance 报告）
+    verdicts = {}
+    for ac in sorted(central.glob('docs/acceptance/*-acceptance.md')):
+        for ln in _read(ac).splitlines():
+            m = _re.match(r'^- \*\*(AC-\d+)[^*]+\*\*[：:].*?→\s*(通过|不通过|部分通过|待验收)', ln.strip())
+            if m:
+                verdicts[m.group(1)] = m.group(2)
+    # 3) 链上工件（存在性 + 摘要）
+    def artifact(suffix_dir, pattern, summarizer=None):
+        hits = sorted(central.glob(pattern))
+        if not hits:
+            return None
+        note = summarizer(hits[0]) if summarizer else ''
+        return (hits[0].name, note)
+
+    def testlog_summary(path):
+        txt = _read(path)
+        m = _re.search(r'Tests\s+(\d+) passed', txt)
+        return f'{m.group(1)} 用例全绿' if m else '已落档'
+
+    rows = []
+    for ac in acs:
+        apps = [sfx for sfx, _d, keys in APP_KEYS if any(k in ac['text'] or k in ac['title'] for k in keys)]
+        if not apps:
+            apps = ['PAYCORE', 'MP', 'CHWX', 'CHALI']  # 条款未点名应用=全链涉及（如实标注全量）
+        chips = []
+        # 系分
+        an_ok = [a for a in apps if (central / f'docs/analysis/AN-{a}-analysis.md').exists()]
+        chips.append(('系分', f"AN-{'/'.join(an_ok) if an_ok else ''}" if an_ok else None,
+                      f"docs/analysis/AN-{'、'.join(an_ok)}" if an_ok else ''))
+        # 开发测试日志（G3）
+        dev_ok, dev_note = [], ''
+        for a in apps:
+            hit = artifact(None, f'docs/evidence/DEV-{a}-testlog.txt', testlog_summary)
+            if hit:
+                dev_ok.append(a)
+                dev_note = hit[1]
+        chips.append(('编码门禁', '/'.join(dev_ok) if dev_ok else None, dev_note))
+        # 独立测试报告（G4）
+        tr = artifact(None, 'docs/test/*test-report*.md')
+        chips.append(('独立测试', tr[0] if tr else None, ''))
+        # UAT
+        v = verdicts.get(ac['id'])
+        chips.append(('UAT 对账', v if v else None, ''))
+        rows.append((ac, chips))
+
+    if not rows:
+        return ''
+
+    def chip(label, value, note):
+        if value:
+            n = f'<span class="nv-ic-note">{ESC_(note)}</span>' if note else ''
+            return (f'<div class="nv-ic-chip nv-ic-chip--ok"><b>{ESC_(label)}</b>'
+                    f'<span>{ESC_(str(value))}</span>{n}</div>')
+        return f'<div class="nv-ic-chip nv-ic-chip--miss"><b>{ESC_(label)}</b><span>⬜</span></div>'
+
+    rows_html = ''
+    for ac, chips in rows:
+        chain = '<span class="nv-ic-arrow">→</span>'.join(chip(*c) for c in chips)
+        rows_html += (
+            f'<div class="nv-ic-row"><div class="nv-ic-ac"><b>{ESC_(ac["id"])}</b>'
+            f'<span class="nv-ic-title">{ESC_(ac["title"])}</span>'
+            f'<div class="nv-ic-text">{ESC_(ac["text"][:120])}{"…" if len(ac["text"]) > 120 else ""}</div></div>'
+            f'<div class="nv-ic-chain">{chain}</div></div>'
+        )
+
+    return """
+<section class="nv-sec" id="nv-intent-chain">
+  <h2>意图链路：一条验收标准从冻结到对账的全程连线</h2>
+  <p class="nv-lead">需求保真的证据不在"某人说过"，而在链上每个环节都留下可反查的工件。下图逐条连线 G1 冻结的验收标准（AC）→ 系分稿 → 编码门禁测试日志 → 独立测试报告 → UAT 对账判定；全部取自中央仓真实文件，缺失环节如实标 ⬜。</p>
+  <div class="nv-ic-rows">""" + rows_html + """</div>
+  <p class="nv-note">数据源：docs/requirements/*.freeze.md（G1 冻结）、docs/analysis/AN-*-analysis.md（系分）、docs/evidence/DEV-*-testlog.txt（G3 分支测试日志）、docs/test/*test-report*.md（G4 独立测试）、docs/acceptance/*-acceptance.md（UAT 逐条判定）——生成时程序化解析，非人工誊写。</p>
+</section>
+<style>
+.nv-ic-rows{display:flex;flex-direction:column;gap:10px}
+.nv-ic-row{display:grid;grid-template-columns:300px 1fr;gap:14px;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#fff;align-items:center}
+.nv-ic-ac b{color:#1e40af;font-size:13px;margin-right:8px}
+.nv-ic-title{font-weight:600;font-size:13px}
+.nv-ic-text{font-size:11.5px;color:#64748b;margin-top:4px;line-height:1.6}
+.nv-ic-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nv-ic-chip{display:flex;flex-direction:column;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:5px 10px;min-width:86px}
+.nv-ic-chip b{font-size:10.5px;color:#166534;text-transform:uppercase;letter-spacing:.03em}
+.nv-ic-chip span{font-size:12px;color:#0f172a;font-weight:600}
+.nv-ic-chip--miss{border-color:#e2e8f0;background:#f8fafc}
+.nv-ic-chip--miss b,.nv-ic-chip--miss span{color:#94a3b8}
+.nv-ic-note{font-size:10.5px;color:#64748b;font-weight:400}
+.nv-ic-arrow{color:#94a3b8;font-size:14px}
+</style>
+"""

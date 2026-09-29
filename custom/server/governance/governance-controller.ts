@@ -23,6 +23,13 @@ import { resolve } from 'path'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
+import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
+import { queryImpact } from './governance-impact'
+import { crossMachineDispatchStats } from './governance-crossdispatch'
+import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount } from './registry-admin'
+import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns } from './governance-analytics'
+import { auditLog } from './governance-audit'
+import { readDispatchLedger } from './dispatch-ledger'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -164,6 +171,160 @@ registerDomainAudit({
   docText,
   approvalHistoryCount: () => { try { return queryApprovalLog(500).length } catch { return 0 } },
   router,
+})
+
+// ---- 4A 治理层只读投影（spec 2026-09-29 §3.4；单一事实源 runtime/governance/*.yaml）----
+
+router.get('/ledger', async (ctx) => {
+  const res = loadCapabilityLedger()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'capability-ledger.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = {
+    ok: true,
+    exists: true,
+    path: res.path,
+    problems: res.problems,
+    doc: res.doc,
+    stats: res.doc ? deriveLedgerStats(res.doc) : null,
+  }
+})
+
+router.get('/metrics-defs', async (ctx) => {
+  const res = loadMetricsDefs()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'metrics.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
+})
+
+// ---- 4A 治理层运行态投影（第二期 ②③④⑥；只读实取，诚实降级不编造）----
+
+router.get('/usage', async (ctx) => {
+  const res = loadCapabilityLedger()
+  if (!res.exists || !res.doc) {
+    ctx.status = 404
+    ctx.body = { ok: false, error: 'capability-ledger.yaml 未找到' }
+    return
+  }
+  const [assigneeStats, squadStats] = [await collectAssigneeStats(), collectSquadStats()]
+  const dispatchEntries = readDispatchLedger()
+  const report = deriveUsage(res.doc, assigneeStats, squadStats, { dispatchEntries })
+  ctx.body = {
+    ok: true,
+    ...report,
+    // 第三期：dispatch.successRate 本地实况（引擎派发台账）+ gate.passRate 实况（qgate runs 扫描）
+    dispatchStats: dispatchStats(dispatchEntries),
+    gateStats: collectQgateRuns(),
+  }
+})
+
+router.get('/slo', async (ctx) => {
+  const ledgerRes = loadCapabilityLedger()
+  if (!ledgerRes.exists || !ledgerRes.doc) {
+    ctx.status = 404
+    ctx.body = { ok: false, error: 'capability-ledger.yaml 未找到' }
+    return
+  }
+  const metricsRes = loadMetricsDefs()
+  const assigneeStats = await collectAssigneeStats()
+  const report = computeSloReport(ledgerRes.doc, metricsRes.doc ?? null, assigneeStats)
+  ctx.body = { ok: true, budgetMode: process.env.GOVERNANCE_SLO_BUDGET || 'warn', ...report }
+})
+
+router.get('/cost-summary', async (ctx) => {
+  const days = Math.min(Math.max(Number(ctx.query.days) || 30, 1), 365)
+  const ledgerRes = loadCapabilityLedger()
+  const summary = await costSummary(days, undefined, ledgerRes.doc)
+  ctx.body = { ok: true, ...summary }
+})
+
+router.get('/audit-log', async (ctx) => {
+  const sources = String(ctx.query.sources ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  const q = String(ctx.query.q ?? '')
+  const limit = Number(ctx.query.limit) || 200
+  const result = await auditLog({ sources, q, limit })
+  ctx.body = result
+})
+
+router.get('/contracts', async (ctx) => {
+  const res = loadActionContracts()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'action-contracts.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
+})
+
+// ---- 4A 治理层第五期：状态-事件本体投影 + 反向影响查询 ----
+
+router.get('/state-model', async (ctx) => {
+  const res = loadStateModel()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'state-model.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
+})
+
+router.get('/impact', async (ctx) => {
+  const target = String(ctx.query.target ?? '').trim()
+  if (!target) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'target 必填（形如 unit.<id> / contract.<id> / metric.<id> / verdicts / sloTargets / state-model）' }
+    return
+  }
+  ctx.body = { ok: true, ...queryImpact(target) }
+})
+
+// ---- 第六期：跨机派发账本聚合（服务端权威面；客户端 dispatch-kv 为同口径本机视图）----
+router.get('/dispatch-stats', async (ctx) => {
+  ctx.body = { ok: true, ...crossMachineDispatchStats() }
+})
+
+// ---- P6-P8 管理维护端点（补遗④；写操作以 body.adminToken 向 synapse 管理端鉴权）----
+
+router.get('/registry/:kind', async (ctx) => {
+  if (!isRegistryKind(ctx.params.kind)) { ctx.status = 404; ctx.body = { error: 'unknown registry' }; return }
+  ctx.body = await readRegistry(ctx.params.kind)
+})
+
+router.put('/registry/:kind', async (ctx) => {
+  if (!isRegistryKind(ctx.params.kind)) { ctx.status = 404; ctx.body = { error: 'unknown registry' }; return }
+  const { markdown, message, actor } = ctx.request.body as { markdown?: string; message?: string; actor?: string }
+  if (typeof markdown !== 'string' || !markdown.trim()) { ctx.status = 400; ctx.body = { error: 'markdown 必填' }; return }
+  ctx.body = await writeRegistry(ctx.params.kind, markdown, message || `更新 ${ctx.params.kind}`, actor || 'studio-ui')
+})
+
+router.post('/matrix-users', async (ctx) => {
+  const b = ctx.request.body as Record<string, string>
+  for (const k of ['localName', 'role', 'password', 'adminToken', 'homeserverUrl']) {
+    if (!b[k]) { ctx.status = 400; ctx.body = { error: `缺 ${k}` }; return }
+  }
+  try { ctx.body = await provisionMatrixAccount({
+    localName: b.localName, role: b.role, password: b.password,
+    adminToken: b.adminToken, homeserverUrl: b.homeserverUrl,
+    withAgent: b.withAgent !== 'false', displayName: b.displayName,
+  }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
+})
+
+router.post('/matrix-offboard', async (ctx) => {
+  const b = ctx.request.body as Record<string, string | string[]>
+  for (const k of ['localName', 'handoverTo', 'adminToken', 'homeserverUrl']) {
+    if (!b[k]) { ctx.status = 400; ctx.body = { error: `缺 ${k}` }; return }
+  }
+  try { ctx.body = await offboardAccount({
+    localName: String(b.localName), handoverTo: String(b.handoverTo),
+    taskIds: Array.isArray(b.taskIds) ? (b.taskIds as string[]) : [],
+    reason: String(b.reason || ''), adminToken: String(b.adminToken), homeserverUrl: String(b.homeserverUrl),
+    actor: b.actor ? String(b.actor) : undefined,
+  }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
 })
 
 export const governanceRoutes = router

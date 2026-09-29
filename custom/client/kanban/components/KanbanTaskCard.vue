@@ -263,11 +263,11 @@ function handleDragEnd(e: DragEvent) {
   // Staleness tiers (reference `hermes-kanban-card--stale-*`). These only
   // apply when not selected — selected keeps its own ring above via order.
   &.stale-amber:not(.selected):not(:hover) {
-    box-shadow: inset 0 0 0 1px #d4b34888;
+    box-shadow: inset 0 0 0 1px rgba(var(--warning-rgb), 0.53);
   }
 
   &.stale-amber:not(.selected):hover {
-    box-shadow: inset 0 0 0 2px #d4b348;
+    box-shadow: inset 0 0 0 2px $warning;
   }
 
   &.stale-red:not(.selected):not(:hover) {
@@ -331,8 +331,8 @@ function handleDragEnd(e: DragEvent) {
   white-space: nowrap;
 
   &.complete {
-    background: rgba(63, 185, 125, 0.22);
-    border-color: rgba(63, 185, 125, 0.45);
+    background: rgba(var(--success-rgb), 0.22);
+    border-color: rgba(var(--success-rgb), 0.45);
     color: $text-primary;
   }
 }

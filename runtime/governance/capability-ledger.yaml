@@ -1,0 +1,476 @@
+# 能力台账（4A 治理层单一事实源之一）
+#
+# 定位：本机智能体协作的"能力地图 + 应用台账"合一本——L1 能力域 / L2 能力项
+# （能力=业务对象+动作）/ L3 能力单元（主承载认定落点）。设计依据：
+# docs/superpowers/specs/2026-09-29-agent-4a-governance-layer-design.md §3.1。
+#
+# 纪律：
+# - 只登记治理维度（主责/生命周期/SLO 档/复核日/实物锚点），不复制各制品内容
+#   （提示词、协议 schema 等以 refs 指向的实物为准，防第二事实源）。
+# - 每个 L2 恰好一个 primary: true 的 L3（一项能力只认一个主责，守门断言）。
+# - reviewedAt 为保鲜字段：超 90 天守门 warn；改条目必刷新本行与文件头。
+# - refs.file 路径相对 overlay 仓根；refs.note 用于无单文件锚点的条目。
+# - kind 词表：lane-specialist（泳道专家）| roster-role（名册角色）| squad（小队）
+#   | coding-agent（执行底座）| team（编制分组）| service（服务件，预留）。
+
+version: 1
+reviewedAt: "2026-09-29"
+
+# L1 能力域（投什么四象限的承载层）
+domains:
+  - id: requirements
+    name: 需求与拆解
+    owner: cuishi
+  - id: engineering
+    name: 开发实现
+    owner: cuishi
+  - id: quality
+    name: 质量评审
+    owner: cuishi
+  - id: release
+    name: 发布与运维
+    owner: cuishi
+  - id: collaboration
+    name: 协作与协调
+    owner: cuishi
+
+# L2 能力项（能力=对象+动作；importance/maturity 供"投什么"四象限评估）
+capabilities:
+  - id: req.decompose
+    domain: requirements
+    name: 任务拆解
+    object: 需求
+    action: 拆解
+    importance: core
+    maturity: high
+  - id: req.refine
+    domain: requirements
+    name: 卡片精化
+    object: 任务卡
+    action: 精化
+    importance: core
+    maturity: high
+  - id: req.research
+    domain: requirements
+    name: 调研取证
+    object: 问题
+    action: 调研
+    importance: support
+    maturity: medium
+  - id: req.design
+    domain: requirements
+    name: 体验设计
+    object: 交互
+    action: 设计
+    importance: support
+    maturity: medium
+  - id: eng.implement
+    domain: engineering
+    name: 卡片实现
+    object: 任务卡
+    action: 实现
+    importance: core
+    maturity: high
+  - id: eng.facade
+    domain: engineering
+    name: 触点实现
+    object: 界面
+    action: 实现
+    importance: core
+    maturity: medium
+  - id: eng.unblock
+    domain: engineering
+    name: 阻塞解除
+    object: 阻塞卡
+    action: 解除
+    importance: support
+    maturity: medium
+  - id: eng.orchestrate
+    domain: engineering
+    name: 待办编排
+    object: 待办列
+    action: 编排
+    importance: support
+    maturity: medium
+  - id: eng.publish
+    domain: engineering
+    name: 变更发布
+    object: 变更
+    action: 发布
+    importance: core
+    maturity: medium
+  - id: quality.review
+    domain: quality
+    name: 代码评审
+    object: 变更
+    action: 评审
+    importance: core
+    maturity: high
+  - id: quality.test
+    domain: quality
+    name: 前端验证
+    object: 界面
+    action: 验证
+    importance: core
+    maturity: medium
+  - id: quality.flow
+    domain: quality
+    name: 流程分析
+    object: 看板流
+    action: 分析
+    importance: support
+    maturity: low
+  - id: release.report
+    domain: release
+    name: 完成报告
+    object: 交付
+    action: 报告
+    importance: core
+    maturity: high
+  - id: release.ops
+    domain: release
+    name: 运行维护
+    object: 运行时
+    action: 维护
+    importance: support
+    maturity: medium
+  - id: collab.coordinate
+    domain: collaboration
+    name: 团队协调
+    object: 团队
+    action: 协调
+    importance: core
+    maturity: medium
+  - id: collab.execute
+    domain: collaboration
+    name: 委派执行
+    object: 委派任务
+    action: 执行
+    importance: core
+    maturity: high
+
+# L3 能力单元（认账人到人；lifecycle/sloTier 词表见文件头）
+units:
+  # ---- 泳道专家（kind: lane-specialist，实物 runtime/roster/lane-specialists/）----
+  - id: kanban-agent
+    capability: req.decompose
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [kanban, decompose-tasks]
+    refs:
+      file: runtime/roster/lane-specialists/agent.yaml
+    reviewedAt: "2026-09-29"
+  - id: backlog-refiner
+    capability: req.refine
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [kanban, story-contract]
+    refs:
+      file: runtime/roster/lane-specialists/backlog-refiner.yaml
+    reviewedAt: "2026-09-29"
+  - id: dev-crafter
+    capability: eng.implement
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: core
+    skills: [kanban, git, coding]
+    refs:
+      file: runtime/roster/lane-specialists/dev-executor.yaml
+      note: 派发标签 dev-crafter 源于显示名 "Dev Crafter"；文件内 id 为 kanban-dev-executor——三个名字的对应关系以本行为准
+    reviewedAt: "2026-09-29"
+  - id: blocked-resolver
+    capability: eng.unblock
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [kanban, triage]
+    refs:
+      file: runtime/roster/lane-specialists/blocked-resolver.yaml
+    reviewedAt: "2026-09-29"
+  - id: todo-orchestrator
+    capability: eng.orchestrate
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [kanban, planning]
+    refs:
+      file: runtime/roster/lane-specialists/todo-orchestrator.yaml
+    reviewedAt: "2026-09-29"
+  - id: pr-publisher
+    capability: eng.publish
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [git, review]
+    refs:
+      file: runtime/roster/lane-specialists/pr-publisher.yaml
+    reviewedAt: "2026-09-29"
+  - id: review-guard
+    capability: quality.review
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: core
+    skills: [review, gate]
+    refs:
+      file: runtime/roster/lane-specialists/review-guard.yaml
+    reviewedAt: "2026-09-29"
+  - id: qa-frontend
+    capability: quality.test
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [qa, browser]
+    refs:
+      file: runtime/roster/lane-specialists/qa-frontend.yaml
+    reviewedAt: "2026-09-29"
+  - id: flow-analyst
+    capability: quality.flow
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [kanban, metrics]
+    refs:
+      file: runtime/roster/lane-specialists/flow-analyst.yaml
+    reviewedAt: "2026-09-29"
+  - id: done-reporter
+    capability: release.report
+    primary: true
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [kanban, report]
+    refs:
+      file: runtime/roster/lane-specialists/done-reporter.yaml
+    reviewedAt: "2026-09-29"
+  - id: kanban-workflow
+    capability: eng.implement
+    primary: false
+    kind: lane-specialist
+    owner: cuishi
+    lifecycle: sustaining
+    sloTier: general
+    skills: [kanban]
+    refs:
+      file: runtime/roster/lane-specialists/workflow.yaml
+      note: 通用列作业执行面（任一列完成当前阶段并进列），dev-crafter 的通用兜底
+    reviewedAt: "2026-09-29"
+
+  # ---- 名册角色（kind: roster-role，目录单一事实源=patch 404 agent_roster.py）----
+  - id: role-researcher
+    capability: req.research
+    primary: true
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [research]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 researcher 行（委派显示与路由提示层）
+    reviewedAt: "2026-09-29"
+  - id: role-ux
+    capability: req.design
+    primary: true
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [design]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 ux 行
+    reviewedAt: "2026-09-29"
+  - id: role-frontend
+    capability: eng.facade
+    primary: true
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [frontend, coding]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 frontend 行
+    reviewedAt: "2026-09-29"
+  - id: role-backend
+    capability: eng.implement
+    primary: false
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [backend, coding]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 backend 行；eng.implement 主承载为 dev-crafter
+    reviewedAt: "2026-09-29"
+  - id: role-general-engineer
+    capability: eng.implement
+    primary: false
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [coding]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 general-engineer 行（全栈兜底）
+    reviewedAt: "2026-09-29"
+  - id: role-code-reviewer
+    capability: quality.review
+    primary: false
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [review]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 code-reviewer 行；quality.review 主承载为 review-guard
+    reviewedAt: "2026-09-29"
+  - id: role-qa
+    capability: quality.test
+    primary: false
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [qa]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 qa 行；quality.test 主承载为 qa-frontend
+    reviewedAt: "2026-09-29"
+  - id: role-operations
+    capability: release.ops
+    primary: true
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [ops]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 operations 行
+    reviewedAt: "2026-09-29"
+  - id: role-agent-lead
+    capability: collab.coordinate
+    primary: false
+    kind: roster-role
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [lead, delegate]
+    refs:
+      file: patches/404-agent-roster-config-layer.patch
+      note: 对应角色目录 agent-lead 行；collab.coordinate 主承载为 squad-core
+    reviewedAt: "2026-09-29"
+
+  # ---- 小队（kind: squad，实物 runtime/roster/squads.yaml，leader 委托制）----
+  - id: squad-core
+    capability: collab.coordinate
+    primary: true
+    kind: squad
+    owner: cuishi
+    lifecycle: active
+    sloTier: core
+    skills: [delegate, dispatch]
+    refs:
+      file: runtime/roster/squads.yaml
+      note: squads.yaml core 组（leader zcode，成员 zcode/codex/mimo）；选人与分派是 leader 职责
+    reviewedAt: "2026-09-29"
+  - id: squad-review
+    capability: quality.review
+    primary: false
+    kind: squad
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [review, delegate]
+    refs:
+      file: runtime/roster/squads.yaml
+      note: squads.yaml review 组（leader codex，成员 codex/zcode）
+    reviewedAt: "2026-09-29"
+
+  # ---- 执行底座（kind: coding-agent，AgentManager 管理的可安装执行体）----
+  - id: zcode
+    capability: collab.execute
+    primary: true
+    kind: coding-agent
+    owner: cuishi
+    lifecycle: active
+    sloTier: core
+    skills: [coding, delegate]
+    refs:
+      file: runtime/roster/squads.yaml
+      note: core squad leader；默认执行底座，主派单面（mention-dispatch 单 pending 槽）
+    reviewedAt: "2026-09-29"
+  - id: codex
+    capability: collab.execute
+    primary: false
+    kind: coding-agent
+    owner: cuishi
+    lifecycle: active
+    sloTier: important
+    skills: [coding, review]
+    refs:
+      file: runtime/roster/squads.yaml
+      note: review squad leader
+    reviewedAt: "2026-09-29"
+  - id: mimo
+    capability: collab.execute
+    primary: false
+    kind: coding-agent
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [coding]
+    refs:
+      file: runtime/roster/squads.yaml
+      note: core squad 成员（patch 381/382 opencode 家族化接入）
+    reviewedAt: "2026-09-29"
+  - id: claude-code
+    capability: collab.execute
+    primary: false
+    kind: coding-agent
+    owner: cuishi
+    lifecycle: sustaining
+    sloTier: general
+    skills: [coding]
+    refs:
+      note: AgentManager 管理的第四执行体；当前未编入任何 squad，按存量观察
+    reviewedAt: "2026-09-29"
+
+  # ---- 编制分组（kind: team，TeamRecord 平面）----
+  - id: fleet-teams
+    capability: collab.coordinate
+    primary: false
+    kind: team
+    owner: cuishi
+    lifecycle: active
+    sloTier: general
+    skills: [fleet]
+    refs:
+      file: custom/server/services/hermes/teams-store.ts
+      note: TeamRecord 编制分组平面（REST/JSON，~/.hermes-web-ui/overlay/teams.json）；与 Matrix AgentTeam、squad 的对应关系经 profile 名弱连接——本台账是三者唯一的对账面
+    reviewedAt: "2026-09-29"

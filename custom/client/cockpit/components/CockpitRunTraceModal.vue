@@ -13,6 +13,7 @@ import CockpitIcon from './CockpitIcon.vue'
 import RunTraceSkillDrilldown from './RunTraceSkillDrilldown.vue'
 import RunTraceScrubber from './RunTraceScrubber.vue'
 import RunTraceOverview from './RunTraceOverview.vue'
+import { buildHotspots, type HotspotEntry } from '../adapters/trajectory-hotspot'
 
 const store = useCockpitStore()
 const { t } = useI18n()
@@ -266,6 +267,21 @@ function exportDossier() {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+// ── 热点排名（遗留清单 L3，dsh trajectory 聚合）：nodes 的 L2 durationMs →
+// buildHotspots（own-duration 口径，按 kind 分桶 top5）——"时间去哪了"。
+const hotspotTool = computed<Array<{ key: string; totalMs: number; count: number; avgMs: number }>>(() => {
+  const events = (trace.nodes.value ?? [])
+    .filter((n) => n.kind === 'tool' && typeof (n as { durationMs?: number }).durationMs === 'number')
+    .map((n) => ({ kind: 'tool' as const, name: n.label ?? n.id, durationMs: (n as { durationMs: number }).durationMs }))
+  return buildHotspots(events, 5).byTool
+})
+const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number; avgMs: number }>>(() => {
+  const events = (trace.nodes.value ?? [])
+    .filter((n) => typeof (n as { durationMs?: number }).durationMs === 'number')
+    .map((n) => ({ kind: 'tool' as const, name: n.kind, durationMs: (n as { durationMs: number }).durationMs }))
+  return buildHotspots(events, 5).byTool
+})
 </script>
 <template>
   <div
@@ -355,7 +371,24 @@ function exportDossier() {
       <main class="run-trace-modal__main">
         <RunTraceSkillDrilldown v-if="drilldownSkill" :skill="drilldownSkill" @back="drilldownSkillId = null" />
         <RunTraceGraph v-else :nodes="trace.nodes.value" :edges="trace.edges.value" :focused-node-id="focusedNode?.id || null" :current-time="trace.scrubberTime.value" @focus-node="focusNode" />
-        <RunTraceInspector :node="focusedNode" />
+
+        <!-- 热点排名（L3）：工具/节点类型 top5（L2 durationMs，own-duration） -->
+        <div v-if="hotspotTool.length" class="run-trace-modal__hotspots" data-testid="run-trace-hotspots">
+          <div class="run-trace-modal__hotspot-col">
+            <div class="run-trace-modal__hotspot-title">⏱ 工具耗时 Top5</div>
+            <div v-for="h in hotspotTool" :key="h.key" class="run-trace-modal__hotspot-row">
+              <span class="run-trace-modal__hotspot-key">{{ h.key }}</span>
+              <span>{{ (h.totalMs / 1000).toFixed(1) }}s ×{{ h.count }}（均 {{ (h.avgMs / 1000).toFixed(1) }}s）</span>
+            </div>
+          </div>
+          <div v-if="hotspotKind.length" class="run-trace-modal__hotspot-col">
+            <div class="run-trace-modal__hotspot-title">节点类型 Top5</div>
+            <div v-for="h in hotspotKind" :key="h.key" class="run-trace-modal__hotspot-row">
+              <span class="run-trace-modal__hotspot-key">{{ h.key }}</span>
+              <span>{{ (h.totalMs / 1000).toFixed(1) }}s ×{{ h.count }}</span>
+            </div>
+          </div>
+        </div>        <RunTraceInspector :node="focusedNode" />
       </main>
     </template>
   </div>
@@ -455,4 +488,9 @@ function exportDossier() {
 .run-trace-related__profile { font-size: 9px; opacity: 0.7; }
 .run-trace-related__role { font-size: 9px; padding: 0 3px; border-radius: 3px; background: rgba(var(--accent-secondary-rgb, 64,120,192), 0.12); color: var(--text-secondary); }
 .run-trace-related__empty { font-size: 9px; padding: 0 3px; border-radius: 3px; background: var(--bg-inset, rgba(0,0,0,0.06)); color: var(--text-muted); }
+.run-trace-modal__hotspots { display: flex; gap: 12px; padding: 6px 18px; font-size: 11px; color: var(--text-muted, #9aa0aa); }
+.run-trace-modal__hotspot-col { flex: 1; min-width: 0; }
+.run-trace-modal__hotspot-title { font-weight: 600; margin-bottom: 2px; }
+.run-trace-modal__hotspot-row { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.run-trace-modal__hotspot-key { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
