@@ -321,3 +321,15 @@
 #      （CHAT_BRIDGE_ENABLED 门控，动态 import 失败不阻断主进程）。
 509-server-groupchat-bridge-api.patch
 510-server-chatbridge-mount.patch
+# 511（fresh-build 类型门禁根治）：上游 vue-tsc 门禁在 dist 缺席的全新树上会被
+#      prepare 钩子触发，暴露补丁集 29 项存量类型债（此前构建树 dist 常在、
+#      prepare 短路从未触达）。本补丁一次收口：
+#      - mimo/zcode 补丁族（379/394/507/509-510 交互面）类型尾债：头像 label 联合、
+#        RoomAgent/RoomAgentInput/GroupAgentType/descriptor 联合、Record 字面量补键、
+#        394 迁移重放残留的 mimo 重复键两处（chat/group avatar）
+#      - MessageItem B8 取回编辑块插入时吃掉 computed 右括号（孤儿括号+三连错误）
+#      - Workflow 边组件 defineProps 自定义类型的缺口（必填坐标/模板 props/未用导入）
+#      - ChatInput 自定义斜杠选项参数显式类型（@/custom 环境声明为 any 族）
+#      - useKeyboard isContentEditable 断言 HTMLElement；chat store systemType 补 gateway
+#        （101 gateway banner 运行时早已使用）与 QueueInsertionState.runtime 补 zcode
+511-client-type-gate-fresh-build.patch
