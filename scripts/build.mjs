@@ -8,7 +8,11 @@ import { resolve } from 'path';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
-const upstream = resolve(ncwkRoot, 'upstream/hermes-studio');
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/ensure-injected.mjs/serve-server.mjs
+// 同一基建）——worktree 布局下 ncwkRoot/../upstream 不存在，构建目标显式指向沙箱。
+const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
+  : resolve(ncwkRoot, 'upstream/hermes-studio');
 
 function run(cmd, cwd, label) {
   console.log(`\n[overlay-build] ▶ ${label}`);
