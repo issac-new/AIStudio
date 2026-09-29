@@ -58,7 +58,7 @@ describe('ia2 路由树（v12 双视图）', () => {
 
   it('工作台记录懒组件真实落到 WorkbenchView', async () => {
     const router = makeRouter()
-    for (const path of ['/app', '/app/s/chat/s1', '/app/s/room/r1', '/app/l/l1']) {
+    for (const path of ['/app', '/app/s/chat/s1', '/app/s/room/r1']) {
       const resolved = router.resolve(path)
       const record = resolved.matched[resolved.matched.length - 1]
       const loader = record.components?.default as unknown as () => Promise<{ default: unknown }>
@@ -66,6 +66,15 @@ describe('ia2 路由树（v12 双视图）', () => {
       const mod = await loader()
       expect(mod.default).toBe(WorkbenchView)
     }
+  })
+
+  it('V5 补遗⑤ M6：/app/l 画布入口退役——降为兼容重定向（组件退役，不触发懒加载）', () => {
+    const router = makeRouter()
+    const resolved = router.resolve('/app/l/l1')
+    const record = resolved.matched[resolved.matched.length - 1]
+    expect(record?.name).toBe('ia2.loopCanvas')
+    expect(record?.components).toBeFalsy()
+    expect(typeof record?.redirect).toBe('function')
   })
 
   it('工作页：board / eng / runs 存在；runDetail 参数名 runId 且懒组件落 RunDetailView', async () => {

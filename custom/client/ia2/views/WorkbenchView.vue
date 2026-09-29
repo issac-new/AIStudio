@@ -30,7 +30,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { usePlatformsStore } from '../store/platforms'
 import { buildAgentRoster } from '../adapters/agents'
 import {
-  linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
+  linkedTaskIdsOfSession, mergeFeed,
   type StreamSelection,
 } from '../adapters/flow'
 import { buildAttention, loopRunActivity, type AttentionRow, type LoopActivity } from '../adapters/activity'
@@ -38,7 +38,6 @@ import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
-import RunCanvas from '../components/flow/RunCanvas.vue'
 import CockpitOverview from '../components/flow/CockpitOverview.vue'
 import { fetchPendingApprovals, dedupePending, fetchApprovalHistory, type PendingApprovalItem, type ApprovalHistoryEntry } from '@/custom/cockpit/api/approvals'
 import { getStoredUsername } from '@/api/client'
@@ -159,7 +158,7 @@ const routeSel = computed<StreamSelection | null>(() => {
     case 'ia2.commsRoom': return typeof route.params.roomId === 'string' ? { kind: 'room', id: route.params.roomId } : null
     case 'ia2.groupRoom': return typeof route.params.roomId === 'string' ? { kind: 'group', id: route.params.roomId } : null
     case 'ia2.collabSession': return typeof route.params.sessionId === 'string' ? { kind: 'chat', id: route.params.sessionId } : null
-    case 'ia2.loopCanvas': return typeof route.params.loopId === 'string' ? { kind: 'loop', id: route.params.loopId } : null
+    // V5 补遗⑤ M6：ia2.loopCanvas 已降为重定向（运行详情承接），此处不再分派
     default: return null
   }
 })
@@ -174,10 +173,8 @@ const activeSel = computed<StreamSelection | null>(() => routeSel.value ?? defau
 
 watch(activeSel, sel => flow.select(sel), { immediate: true })
 
-// 循环选中时装载该循环的契约/事件（运行画布与右栏挂接任务/动态共用）
-watch(activeSel, sel => {
-  if (sel?.kind === 'loop' && loopStore.currentLoop?.id !== sel.id) void loopStore.fetchLoop(sel.id)
-}, { immediate: true })
+// V5 补遗⑤ M6：循环画布路由退役（重定向运行中心），循环选中装载逻辑随之移除；
+// loopStore.currentEvents 仍供右栏动态（feedRows）消费。
 
 // ── 右栏数据（任务与决策恒驻）──
 
@@ -187,9 +184,6 @@ const tasksForShow = computed(() => workspace.tasks)
 const linkedTasks = computed<CockpitTask[]>(() => {
   const sel = activeSel.value
   if (!sel) return recentOpenTasks.value
-  if (sel.kind === 'loop') {
-    return linkedTasksOfLoop(loopStore.currentContracts ?? [], tasksForShow.value)
-  }
   const ids = new Set(linkedTaskIdsOfSession(sel, tasksForLink.value))
   return tasksForShow.value.filter(x => ids.has(x.id))
 })
@@ -284,12 +278,9 @@ function onOpenAttention(row: AttentionRow): void {
     return
   }
   if (row.runId) {
-    const run = (runsStore.sortedRuns ?? []).find(r => r.runId === row.runId)
-    const loopId = run?.graphId.startsWith('loop-') ? run.graphId.slice(5) : null
-    if (loopId) {
-      void router.push({ name: 'ia2.loopCanvas', params: { loopId } })
-      return
-    }
+    // V5 补遗⑤ M6：运行行直落运行详情（原经循环画布中转，画布已并入详情页）
+    void router.push({ name: 'ia2.runDetail', params: { runId: row.runId } })
+    return
   }
   cockpit.openRunTraceGlobal()
 }
@@ -375,55 +366,14 @@ function onCanvasInvite(): void {
   if (sel) flow.openGov('session', sel.kind === 'loop' ? undefined : sel.id)
 }
 
-// ── 中栏 · 运行画布数据（循环面）──
+// ── 中栏 · 循环观测落点（V5 补遗⑤ M6：画布并入运行详情）──
 
-const loopLatestRunId = computed(() => {
-  const sel = activeSel.value
-  if (!sel || sel.kind !== 'loop') return null
-  // run.graphId === `loop-<loopId>`（graph-compiler 约定）
-  return (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)?.runId ?? null
-})
-
-/** v13 运行画布耗时徽章：最新 run 状态 + 首事件时刻（ISO∪ms 归一 ms） */
-const loopLatestRunStatus = computed(() => {
-  const sel = activeSel.value
-  if (!sel || sel.kind !== 'loop') return null
-  return (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)?.status ?? null
-})
-
-const loopLatestRunStartMs = computed(() => {
-  const sel = activeSel.value
-  if (!sel || sel.kind !== 'loop') return null
-  const run = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)
-  if (!run || !run.events.length) return null
-  let min = Number.POSITIVE_INFINITY
-  for (const e of run.events) {
-    const ms = typeof e.ts === 'number' ? e.ts : Date.parse(String(e.ts))
-    if (!Number.isNaN(ms) && ms < min) min = ms
-  }
-  return Number.isFinite(min) ? min : null
-})
-
-const loopLiveConnected = computed(() => runsStore.connection === 'connected')
-
-const loopParticipants = computed(() => {
-  const sel = activeSel.value
-  if (!sel || sel.kind !== 'loop') return []
-  const byId = new Map(tasksForShow.value.map(x => [x.id, x]))
-  const seen = new Set<string>()
-  const out: Array<{ kind: 'agent'; name: string; role: string }> = []
-  for (const c of loopStore.currentContracts ?? []) {
-    const task = c.persistedTaskId ? byId.get(c.persistedTaskId) : null
-    if (task?.assignee && !seen.has(task.assignee)) {
-      seen.add(task.assignee)
-      out.push({ kind: 'agent', name: task.assignee, role: t('ia2.rc.roleExec') })
-    }
-  }
-  return out
-})
-
-function onGotoBoard(): void {
-  void router.push({ name: 'ia2.board' })
+/** 左栏循环行点击 → 该循环最新 run 的运行详情（RunCanvas 已内嵌详情页）；
+ *  无 run（从未跑过）落运行列表页。run.graphId === `loop-<loopId>`（graph-compiler 约定） */
+function openLoopLatestRun(loopId: string): void {
+  const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${loopId}`)
+  if (latest) void router.push({ name: 'ia2.runDetail', params: { runId: latest.runId } })
+  else void router.push({ name: 'ia2.runs' })
 }
 
 /** 中栏独立窗口：弹出当前对象路由（standalone=1 精简壳；合入在独立窗内） */
@@ -442,7 +392,7 @@ function onSelect(sel: StreamSelection): void {
   }
   else if (sel.kind === 'group') void router.push({ name: 'ia2.groupRoom', params: { roomId: sel.id } })
   else if (sel.kind === 'chat') void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
-  else void router.push({ name: 'ia2.loopCanvas', params: { loopId: sel.id } })
+  else openLoopLatestRun(sel.id)
 }
 
 /** 任务簇 chip → 看板预选（R4a） */
@@ -583,24 +533,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         @open-ide="onOpenIde"
         @invite="onCanvasInvite"
       />
-      <RunCanvas
-        v-else-if="activeSel?.kind === 'loop' && loopStore.currentLoop"
-        :key="`loop:${activeSel.id}`"
-        :loop="loopStore.currentLoop"
-        :loop-row="loopRows.find(l => l.id === activeSel.id) ?? { kind: 'loop', id: activeSel.id, name: loopStore.currentLoop.name, stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null }"
-        :linked-tasks="linkedTasks"
-        :latest-run-id="loopLatestRunId"
-        :latest-run-status="loopLatestRunStatus"
-        :latest-run-start-ms="loopLatestRunStartMs"
-        :live-connected="loopLiveConnected"
-        :participants="loopParticipants"
-        @open-task="onCanvasOpenTask"
-        @open-timeline="onAllTimeline"
-        @open-ide="onOpenIde"
-        @reassign="onReassign"
-        @handle-task="onHandleTask"
-        @goto-board="onGotoBoard"
-      />
+      <!-- V5 补遗⑤ M6：RunCanvas 中栏分支移除——循环观测落运行详情页（组件内嵌复用） -->
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
         <div class="wb__canvas-ph-body">
           <p class="wb__canvas-ph-tit">未选择会话或循环</p>
