@@ -33,16 +33,16 @@ describe('S3 功能开关默认关（B 档：构建可再开，组件与 API 全
   })
 })
 
-describe('S3 上游挂载点 patch 522 守门（双轨收敛后正号）', () => {
-  const patch = readOverlay('patches/522-client-s3-feature-gates.patch')
+describe('S3 上游挂载点 patch 524 守门（997faa70 收敛删 522 后复活为 524）', () => {
+  const patch = readOverlay('patches/524-client-s3-stage-gates.patch')
 
-  it('series 已登记 522', () => {
-    expect(readOverlay('patches/series')).toContain('522-client-s3-feature-gates.patch')
+  it('series 已登记 524', () => {
+    expect(readOverlay('patches/series')).toContain('524-client-s3-stage-gates.patch')
   })
 
-  it('WebPet 浮层挂点（App.vue showWebPet）被 features.pet 套住', () => {
-    expect(patch).toContain('features.pet &&')
-    expect(patch).toMatch(/import \{ features \} from ["']@\/custom\/features["'];/)
+  it('WebPet 归 patch 520（import.meta.env 直读 VITE_CUSTOM_PETS）', () => {
+    const p520 = readOverlay('patches/520-client-webpet-off.patch')
+    expect(p520).toContain('VITE_CUSTOM_PETS')
   })
 
   it('语音对话（RealtimeVoiceStage）与设置语音区（stt/tts tab）被 features.voice 套住', () => {
@@ -61,29 +61,7 @@ describe('S3 上游挂载点 patch 522 守门（双轨收敛后正号）', () =>
   })
 })
 
-describe('S3 路由族 bootstrap 摘除守门（ekko 四页 / studio agents / 外链页 / 桌宠路由）', () => {
-  const src = readOverlay('registries/client/bootstrap.ts')
-
-  it('ekko 四页随 features.ekko 摘除', () => {
-    expect(src).toContain("for (const name of ['ekko.memory', 'ekko.skills', 'ekko.mcp', 'ekko.settings'])")
-    expect(src).toMatch(/if \(!features\.ekko\)/)
-  })
-
-  it('/studio/agents 配置中心随 features.agentManager 摘除', () => {
-    expect(src).toContain("router.removeRoute?.('hermes.agentManager')")
-    expect(src).toContain("router.removeRoute?.('codingAgent.config')")
-  })
-
-  it('三个外链页随 features.externalLinks 摘除', () => {
-    for (const n of ['share.groupChat', 'groupChat.link', 'desktop.chat']) {
-      expect(src).toContain(`router.removeRoute?.('${n}')`)
-    }
-  })
-
-  it('desktop.pet 路由随 features.pet 摘除', () => {
-    expect(src).toContain("router.removeRoute?.('desktop.pet')")
-  })
-})
+// 997faa70 收敛撤销了 bootstrap 路由摘除（ekko/agentManager/外链）——外链与 ekko 改由 523 路由守卫承载
 
 describe('S3 入口补齐 patch 523 守门（cockpit-s3 轮：语音入口/ekko 卡片/路由守卫第二层）', () => {
   const patch = readOverlay('patches/523-client-s3-entries-gates.patch')
