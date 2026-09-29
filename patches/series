@@ -315,3 +315,9 @@
 # 508（v14 配套词条，473 之后按 496/501 同例单补）：ia2.flow 六键 zh/en 成对——
 #      chatSection/newChat/newAgentChat/newGroupChat/newMatrixRoom/deleteGroup。
 508-client-i18n-comm-v14.patch
+# 509/510（v14 统一聊天 P2B ChatBridge）：group-chat.ts 桥注入 API
+#      （publishBridgeMemberMessage：持久化+广播+processMentions 编排，非 socket 入口）
+#      + bridgeEvents 桥订阅面（approval.requested 广播）+ bootstrap/http.ts 挂载
+#      （CHAT_BRIDGE_ENABLED 门控，动态 import 失败不阻断主进程）。
+509-server-groupchat-bridge-api.patch
+510-server-chatbridge-mount.patch
