@@ -80,7 +80,10 @@ describe('ia2 路由树（v12 双视图）', () => {
   it('工作页：board / eng / runs 存在；runDetail 参数名 runId 且懒组件落 RunDetailView', async () => {
     const router = makeRouter()
     expect(router.resolve('/app/board').name).toBe('ia2.board')
-    expect(router.resolve('/app/eng').name).toBe('ia2.eng')
+    // V5 补遗⑤ S5：/app/eng 退役为重定向（组件保留）
+    const engRec = router.resolve('/app/eng').matched.slice(-1)[0]
+    expect(engRec?.name).toBe('ia2.eng')
+    expect(typeof engRec?.redirect).toBe('function')
     expect(router.resolve('/app/runs').name).toBe('ia2.runs')
     const resolved = router.resolve('/app/runs/run-abc')
     expect(resolved.name).toBe('ia2.runDetail')

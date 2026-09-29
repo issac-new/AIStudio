@@ -4,6 +4,7 @@
 // RunGraphCanvas vue-flow stub 下的节点投影与选中 / RunDetailView 数据装配与布局骨架。
 // vue-flow 以 stub 替身挂载（jsdom 无真实量测），画布映射逻辑经 stub props 断言。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 
@@ -58,7 +59,10 @@ const { pushMock, routeParams } = vi.hoisted(() => ({
   pushMock: vi.fn(async () => {}),
   routeParams: { value: {} as Record<string, string> },
 }))
-vi.mock('vue-router', () => ({
+// V5 ⑤ P10 修复：RunDetailView 导入链触上游 router/index.ts（模块级 createRouter，
+// P9 M6 内嵌 RunCanvas 引入）——全量 mock 缺 export 即模块级炸；改 partial mock。
+vi.mock('vue-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('vue-router')>()),
   useRoute: () => ({ params: routeParams.value }),
   useRouter: () => ({ push: pushMock }),
 }))
@@ -91,6 +95,9 @@ const row = (over: Partial<TimelineRow> & { index: number; type: string }): Time
 })
 
 beforeEach(() => {
+  // V5 ⑤ M6：RunDetailView 内嵌 RunCanvas 引入 loop/runs/workspace/ide-linkage
+  // store 依赖——挂载前激活 pinia
+  setActivePinia(createPinia())
   vi.clearAllMocks()
   flowCapture.nodes = []
   flowCapture.edges = []

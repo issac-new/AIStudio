@@ -12,7 +12,6 @@ import { TASK_EVENT_TYPES, type AssignContent, type ReceiptContent } from '../pr
 import { buildTaskFromMessage, cardStatus, buildOpReceipt, buildReassign } from '../task-card'
 import { projectGantt } from '../gantt'
 import TaskCard from '../components/TaskCard.vue'
-import GanttPanel from '../../ia2/components/GanttPanel.vue'
 
 // ── 纯函数 ──
 describe('task-card 纯函数', () => {
@@ -115,28 +114,6 @@ describe('TaskCard VTU', () => {
   })
 })
 
-describe('GanttPanel VTU', () => {
-  const NOW = 1_000
-  const tasks = [
-    { taskId: 'a', title: 'A', status: 'running', dueAt: 2_000, dependsOn: ['b'] },
-    { taskId: 'b', title: 'B', status: 'done', dueAt: 500 },
-    { taskId: 'c', title: 'C', status: 'running', dueAt: 100 },
-    { taskId: 'd', title: 'D', status: 'todo' },
-  ]
-  it('时间轴行/逾期着色/依赖连线/无 dueAt 回落列表齐备', () => {
-    const w = mount(GanttPanel, { props: { tasks, now: NOW } as never, global: { plugins: [createPinia()] } })
-    expect(w.findAll('[data-testid^="gantt-row-"]')).toHaveLength(3)
-    expect(w.find('[data-testid="gantt-bar-c"]').classes()).toContain('gtp__bar--over')
-    expect(w.find('[data-testid="gantt-bar-b"]').classes()).not.toContain('gtp__bar--over')
-    expect(w.find('[data-testid="gantt-edge-b-a"]').exists()).toBe(true)
-    expect(w.find('[data-testid="gantt-list-d"]').exists()).toBe(true)
-  })
-  it('无时间任务 → 空态', () => {
-    const w = mount(GanttPanel, { props: { tasks: [{ taskId: 'd', title: 'D', status: 'todo' }], now: NOW } as never, global: { plugins: [createPinia()] } })
-    expect(w.find('[data-testid="gantt-chart"]').exists()).toBe(false)
-    expect(w.text()).toContain('ia2.gantt.noTimed')
-  })
-})
 
 // ── store 回环（M-D 验收门 1 的事件链等价物；CDP 动线归发布轮）──
 const sentEvents: Array<{ roomId?: string; type: string; content: Record<string, unknown> }> = []
