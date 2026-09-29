@@ -354,6 +354,6 @@
 
 # ── 补遗⑤ P10（S2/S3）──
 # 513（S2 运维页族摘除，补遗⑤ §13.4 C 档，2026-09-29）：HermesConfigSidebar 九运维页
-513-client-router-hermes-config-retire.patch
+521-client-router-hermes-config-retire.patch
 # 514（S3 无关大块功能面开关，补遗⑤ §13.4 B 档，2026-09-29）：WebPet 浮层/语音对话
-514-client-s3-feature-gates.patch
+522-client-s3-feature-gates.patch
