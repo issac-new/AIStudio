@@ -137,9 +137,11 @@ export function useSitCounts() {
     // 网关真值（cockpit-online-zero 根治 2026-09-30）：fleetSessions=studio 会话面，
     // agent 走网关通道时不在此列——机器/智能体以 ia2-platforms 网关探测为准：
     // 机器=网关实例（running 即 ≥1），智能体=网关连通通道的去重档案数。
-    const gw = platformsStore.gatewayState === 'running'
+    const gwState = platformsStore.gatewayState
+    const gw = (gwState?.value ?? gwState) === 'running'  // mock 工厂可能返回 ref 未解包，双态兼容
+    const gwPlatforms = (platformsStore.platforms?.value ?? platformsStore.platforms ?? []) as Array<{ state?: string; profile?: string }>
     const gwAgents = new Set(
-      platformsStore.platforms
+      gwPlatforms
         .filter(p => p.state === 'connected' && p.profile)
         .map(p => p.profile as string),
     ).size
