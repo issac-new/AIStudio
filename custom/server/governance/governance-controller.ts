@@ -61,7 +61,7 @@ export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title:
   { kind: 'testlog-mp', path: 'docs/evidence/DEV-MP-testlog.txt', title: 'G3 证据 · DEV-MP（17 例+220 检查）', gate: 'G3', group: 'evidence', ref: 'origin/feat/DEV-MP' },
 ]
 
-function repoRoot(): string {
+export function repoRoot(): string {
   return process.env.GOVERNANCE_REPO || '/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev'
 }
 
