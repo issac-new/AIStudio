@@ -23,11 +23,17 @@ const REST_FNS = ['matrixCreateTaskRoom', 'matrixInviteUser', 'matrixSendMessage
 const ALLOWED_CONSUMERS = [
   'server/matrix/raci-matrix.ts', // 定义处
   'server/services/kanban/raci-dispatch.ts', // 唯一调用方：RACI 派发建群+摘要+协议事件
+  // 双轨收敛补录（2026-09-29 cockpit-s3 轮）：v14 P2B/P2A 文件自误删恢复后入单——
+  // 桥接与身份面是合法 REST 消费者（本守门成文时两文件恰被 cbd7b3e7 误删缺席）
+  'server/matrix/chat-bridge.ts', // v14 P2B：matrix 房间 ↔ hermes 群聊双向桥（sync 通道）
+  'server/matrix/agent-identity.ts', // v14 P2A：agent 身份解析（displayname/徽章）
 ]
 // ① URL 字面量断言白名单（与函数级断言并存）：直连地址仅包装实现与管理面可出现。
 const URL_ALLOWED = [
   'server/matrix/raci-matrix.ts', // 初始化（建群/邀人/摘要）REST 通道
   'server/matrix/admin-service.ts', // 管理面（whoami/displayname/synapse admin）
+  'server/matrix/chat-bridge.ts', // v14 P2B 桥接通道（收敛补录，同 ALLOWED_CONSUMERS）
+  'server/matrix/agent-identity.ts', // v14 P2A 身份面（收敛补录）
 ]
 // ③ 协议事件类型字面量唯一源。
 const PROTOCOL_SOURCE = 'server/matrix/task-protocol.ts'
