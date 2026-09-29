@@ -77,3 +77,35 @@
      return
    }
    inputText.value = `/${command.insertText || command.name} `
+--- a/packages/client/src/components/hermes/chat/ChatInput.vue
++++ b/packages/client/src/components/hermes/chat/ChatInput.vue
+@@ -1012,7 +1012,28 @@
+   nextTick(() => textareaRef.value?.focus())
+ }
+ 
+-defineExpose({ addFiles, focusComposer })
++// overlay[ide] B8：取回编辑——window 事件消费（MessageItem patch 503 发起）+ expose setInputText
++const editResendHandler = (e: Event) => {
++  const text = (e as CustomEvent<string>).detail ?? ''
++  if (typeof text === 'string' && text.trim()) {
++    inputText.value = text
++    nextTick(() => {
++      const el = textareaRef.value
++      if (!el) return
++      const pos = inputText.value.length
++      el.setSelectionRange(pos, pos)
++      el.focus()
++      autoSizeTextarea(el)
++    })
++  }
++}
++onMounted(() => window.addEventListener('ide-edit-resend', editResendHandler))
++onUnmounted(() => window.removeEventListener('ide-edit-resend', editResendHandler))
++function setInputText(text: string): void {
++  inputText.value = text
++  nextTick(() => textareaRef.value?.focus())
++}
++defineExpose({ addFiles, focusComposer, setInputText })
+ 
+ // --- Send ---
+ 

@@ -46,6 +46,7 @@ import IdeVideoFramesDialog from '../components/IdeVideoFramesDialog.vue'
 import IdeFindInSession from '../components/IdeFindInSession.vue'
 import IdeBtwPanel from '../components/IdeBtwPanel.vue'
 import IdeBgTasksPanel from '../components/IdeBgTasksPanel.vue'
+import IdeSideSessionPane from '../components/IdeSideSessionPane.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
 import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
 import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
@@ -345,6 +346,8 @@ function openFind(): void {
 const btwOpen = ref(false)
 // B1 后台任务中心开关
 const bgTasksOpen = ref(false)
+// B6 对照分屏开关（只读第二会话）
+const sideSessionOpen = ref(false)
 // S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
 // fetchWorkspaceRunChangesForSession → 首文件详情端点 patch）；无 diff 不渲染。
 // A1 接线（2026-09-29）：同时捕获 undo 上下文（changeId/fileId/workspace），
@@ -464,6 +467,14 @@ async function pickModel(provider: string, model: string): Promise<void> {
         <button
           type="button"
           class="ide-chat__action"
+          data-testid="ide-chat-sidesession"
+          :class="{ 'is-on': sideSessionOpen }"
+          title="对照分屏：右半屏只读另一会话（主屏不动，边看边干）"
+          @click="sideSessionOpen = !sideSessionOpen"
+        >⇔</button>
+        <button
+          type="button"
+          class="ide-chat__action"
           :class="{ 'is-on': ide.floats.plan }"
           data-testid="ide-chat-float-plan"
           :title="t('ide.float.planTitle')"
@@ -577,7 +588,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
     <IdeTodoBar />
 
     <div class="ide-chat__body">
-      <div class="ide-chat__messages-anchor">
+      <div class="ide-chat__messages-anchor" :style="sideSessionOpen ? { paddingRight: '348px' } : undefined">
         <MessageList
           v-if="ready"
           class="ide-chat__messages"
@@ -586,6 +597,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
         />
         <IdeTurnRail />
       </div>
+      <IdeSideSessionPane v-if="sideSessionOpen" @close="sideSessionOpen = false" />
       <IdeMentionPicker />
       <IdeInlineDiff :diff-text="latestDiff" :undo-context="latestDiffUndoCtx" />
       <IdeAgentsView />

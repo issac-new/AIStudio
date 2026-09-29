@@ -1,0 +1,44 @@
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -180,6 +180,13 @@
+ });
+ const parsedMessageReference = computed(() =>
+   props.message.role === 'user' ? parseMessageReference(displayText.value) : null,
++// overlay[ide] B8：取回编辑（window 事件直发，ChatInput patch 500 消费）
++function emitEditResend(): void {
++  if (props.message.role !== 'user') return
++  const text = typeof props.message.content === 'string' ? props.message.content : ''
++  if (!text) return
++  window.dispatchEvent(new CustomEvent('ide-edit-resend', { detail: text }))
++}
+ )
+ const referencedContentMarkdown = computed(() =>
+   parsedMessageReference.value
+@@ -1258,6 +1265,15 @@
+                 <MarkdownRenderer v-if="parsedMessageReference.reply" :content="parsedMessageReference.reply" />
+               </template>
+               <MarkdownRenderer v-else-if="displayText" :content="displayText" />
++              <!-- overlay[ide] B8 取回编辑（mcode edit 半边的 /ide 形态）：文本进输入框可改再发；
++                   历史本身不改写（真·改写重生成的引擎命令=zcode v4 editUserQuery，hermes 链未开） -->
++              <button
++                v-if="displayText"
++                type="button"
++                class="msg-edit-resend"
++                title="取回编辑：文本进输入框，可修改后重新发送"
++                @click="emitEditResend"
++              >✎</button>
+             </template>
+ 
+             <!-- Render assistant message content -->
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -2306,4 +2306,9 @@
+   border: none;
+   background: var(--bg-primary, #14161a);
+ }
++.msg-edit-resend {
++  border: none; background: none; cursor: pointer; font-size: 11px;
++  color: var(--text-color-3, #999); padding: 0 4px; vertical-align: middle;
++}
++.msg-edit-resend:hover { color: var(--primary-color, #18a058); }
+ </style>
