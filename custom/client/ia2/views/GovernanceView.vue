@@ -358,8 +358,8 @@ onMounted(() => void refresh())
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.ia-gov__doc-title { font-size: 12.5px; font-weight: 600; color: var(--text-primary, inherit); }
-.ia-gov__doc-meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
+.ia-gov__doc-title { font-size: 12.5px; font-weight: 600; color: var(--text-primary, inherit); line-height: 1.35; word-break: break-word; }
+.ia-gov__doc-meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
 .ia-gov__content {
   display: flex;
@@ -385,7 +385,7 @@ onMounted(() => void refresh())
   font-size: 13px;
 }
 .ia-gov__docview-meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
-.ia-gov__docview-body { padding: 12px 16px; overflow: auto; font-size: 12.5px; line-height: 1.7; }
+.ia-gov__docview-body { padding: 12px 16px 26px; overflow: auto; font-size: 12.5px; line-height: 1.7; }
 .ia-gov__empty {
   border: 1px dashed var(--border-color, #e5e7eb);
   border-radius: 8px;
