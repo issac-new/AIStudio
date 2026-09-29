@@ -93,6 +93,40 @@ ok('M6 运行详情页可达不白屏', body.length > 0, body.slice(0, 60))
 ok('M6 非循环 run 无画布节', (await page.locator('[data-testid="rd-loop-canvas"]').count()) === 0)
 await page.screenshot({ path: shots + '/05-run-detail.png' })
 
+// ── P10 精简批断言 ──
+// S1：系统组无 技能用量/主题/宠物（独立新页读侧栏）
+{
+  const p2 = await ctx.newPage()
+  await p2.goto(BASE + '/')
+  await p2.evaluate(t => {
+    localStorage.setItem('hermes_api_key', t)
+    localStorage.setItem('hermes_server_url', location.origin)
+    localStorage.setItem('hermes_locale', 'zh')
+  }, login.token)
+  await p2.goto(BASE + '/#/hermes/logs')
+  await p2.waitForTimeout(5000)
+  const nav = await p2.locator('.sidebar-nav').innerText().catch(() => '')
+  ok('S1 系统组无技能用量', !nav.includes('技能用量'))
+  ok('S1 系统组无主题', !nav.includes('主题'))
+  ok('S1 系统组无宠物', !nav.includes('宠物'))
+  ok('S1 系统组保留 日志/用量/设置', nav.includes('日志') && nav.includes('用量') && nav.includes('设置'))
+  await p2.screenshot({ path: shots + '/06-sidebar-s1.png' })
+  await p2.close()
+}
+// S5：/app/eng 重定向交付案例
+await page.goto(BASE + '/#/app/eng')
+await page.waitForTimeout(3500)
+if (!page.url().includes('cases')) { await page.reload(); await page.waitForTimeout(5000) }
+ok('S5 /app/eng → /app/cases', page.url().includes('/#/app/cases'), page.url())
+await page.screenshot({ path: shots + '/07-app-cases.png' })
+// S7：页头无日程钮与探测组
+await page.goto(BASE + '/#/app')
+await page.waitForTimeout(4000)
+ok('S7 页头无日程钮', (await page.locator('[data-testid="ia-header-schedule"]').count()) === 0)
+ok('S7 页头无 Gateway 探测组', (await page.locator('.cockpit-top__grp').count()) === 0)
+ok('S3 WebPet 默认关', (await page.locator('canvas, .web-pet, [class*="webpet"]').count()) === 0)
+await page.screenshot({ path: shots + '/08-header-s7.png' })
+
 await browser.close()
 const fails = results.filter(r => !r.pass)
 console.log(`\n==== 走查 ${results.length - fails.length}/${results.length} 通过 ====`)

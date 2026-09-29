@@ -1692,7 +1692,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     enterTerminal, exitTerminal, sendTerminalCommand,
     saveTemplateFromCurrentWorkItem, deleteTemplate, applyTemplateToCurrentWorkItem, openTemplateManager, closeTemplateManager,
     taskAttachments, attachmentsLoading, loadAttachments, uploadAttachment, deleteAttachment, refreshFileTree,
-    // 生命周期仪表盘数据源（TaskLifecycleView 用，只读透传）
+    // 生命周期仪表盘数据源（只读透传；原消费组件 TaskLifecycleView 已随 P10 S4 删除）
     cockpitTasksAny: cockpitTasks,
     detailCacheAny: _detailCache,
     // 日程

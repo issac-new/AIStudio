@@ -16,7 +16,6 @@ import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
 import IaPopoutBar from '../components/IaPopoutBar.vue'
-import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
 import GovOverlay from '../components/gov/GovOverlay.vue'
 import { useSharedArm } from '../composables/useSharedArm'
@@ -79,8 +78,7 @@ onUnmounted(() => {
       <router-view />
     </div>
 
-    <div v-if="workspace.scheduleOpen" class="ia-overlay" @click="workspace.closeSchedule()" />
-    <CockpitScheduleModal v-if="workspace.scheduleOpen" />
+    <!-- V5 补遗⑤ S7：日程弹窗挂载随页头入口摘除（组件与 store 能力保留） -->
     <div v-if="cockpit.runTraceOpen" class="ia-overlay" @click="cockpit.closeRunTrace()" />
     <!-- v12 性能收敛：仅打开时挂载。曾无条件挂载，其内部 watch(needsSessionSelect,
          immediate) 会在冷启动即跨全 profile 扫会话（数十请求），即使弹窗从未打开。 -->
