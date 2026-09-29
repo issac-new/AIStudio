@@ -8,12 +8,18 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
+import AppRegistryEditor from '../components/gov/AppRegistryEditor.vue'
+import OrgEditor from '../components/gov/OrgEditor.vue'
 import {
   fetchGovernanceOverview, fetchGovernanceDoc, runDomainAudit, fetchDomainAudit,
   type GovernanceDocMeta, type GovernanceOverview, type GovernanceDoc,
   type DomainCheckResult, type DomainAuditSummary,
 } from '@/custom/governance/api/governance'
 import { governanceMessages } from '@/custom/governance/i18n'
+import LedgerSection from '@/custom/governance/components/LedgerSection.vue'
+import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
+import AuditSection from '@/custom/governance/components/AuditSection.vue'
+import StateModelSection from '@/custom/governance/components/StateModelSection.vue'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
@@ -177,6 +183,12 @@ onMounted(() => void refresh())
       </div>
     </div>
 
+    <!-- 4A 治理层四区（一期台账+二期运行态/审计+五期本体） -->
+    <LedgerSection />
+    <RuntimeSection />
+    <AuditSection />
+    <StateModelSection />
+
     <div class="ia-gov__main">
       <!-- 左：工件清单 -->
       <aside class="ia-gov__list" data-testid="gov-docs">
@@ -229,6 +241,12 @@ onMounted(() => void refresh())
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- P7/P8 管理维护（补遗④）：应用资产表 + 组织关系，保存即提交 git（R13） -->
+      <section class="ia-gov__admin" data-testid="gov-admin-maintain">
+        <AppRegistryEditor />
+        <OrgEditor />
       </section>
     </div>
   </div>
@@ -373,6 +391,7 @@ onMounted(() => void refresh())
   font-size: 13px;
 }
 .ia-gov__docview-meta { font-size: 10.5px; color: var(--text-muted, #878c99); font-family: ui-monospace, monospace; }
+.ia-gov__admin { display: flex; flex-direction: column; gap: 14px; }
 .ia-gov__docview-body { padding: 12px 16px; overflow: auto; font-size: 12.5px; line-height: 1.7; }
 .ia-gov__empty {
   border: 1px dashed var(--border-color, #e5e7eb);

@@ -64,6 +64,13 @@ router.post('/dispatch', async (ctx) => {
       ctx.body = { ok: false, reason: 'target_unavailable', detail }
       return
     }
+    // SLO 预算耗尽（4A 治理层 ③）：enforce 模式的硬冻结，409 冲突语义 + 记档原因。
+    const isBudget = (err as { name?: string } | null)?.name === 'BudgetExhaustedError'
+    if (isBudget) {
+      ctx.status = 409
+      ctx.body = { ok: false, reason: 'slo_budget_exhausted', detail }
+      return
+    }
     const transport = /ECONNREFUSED|ETIMEDOUT|ECONNRESET|EPIPE|handshake|ws closed|unreachable/i.test(detail)
     ctx.status = transport ? 503 : 500
     ctx.body = { ok: false, reason: transport ? 'engine_unreachable' : 'internal_error', detail }

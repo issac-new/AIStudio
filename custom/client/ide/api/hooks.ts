@@ -42,4 +42,13 @@ export const ideHooksApi = {
     const res = await request<Record<string, unknown>>('/api/hermes/config?section=hooks')
     return normalizeHooks(res?.hooks ?? res)
   },
+
+  /** B3 写档面：全量替换 hooks 段（PUT /api/hermes/config section 通道，
+   *  真实落 ~/.hermes/config.yaml；与 upstream updateConfigSection 同链路）。 */
+  async saveAll(hooks: HookSpec[]): Promise<void> {
+    await request('/api/hermes/config', {
+      method: 'PUT',
+      body: JSON.stringify({ section: 'hooks', values: { hooks } }),
+    })
+  },
 }

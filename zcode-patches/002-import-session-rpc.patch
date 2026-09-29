@@ -1,0 +1,128 @@
+diff --git a/packages/services/src/zcode-agent/zcodeAgentService.ts b/packages/services/src/zcode-agent/zcodeAgentService.ts
+index 9b33c71..c3b5db7 100644
+--- a/packages/services/src/zcode-agent/zcodeAgentService.ts
++++ b/packages/services/src/zcode-agent/zcodeAgentService.ts
+@@ -123,6 +123,7 @@ import {
+   mergeAutomationMutationToolDenylist,
+   mergeOffPeakMutationToolDenylist,
+ } from "#src/zcode-agent/automationToolPolicy.js";
++import type { V4ImportSessionParams, V4ImportSessionResult } from "@zcode/shared/zcode-protocol-v4";
+ import { ZCODE_AGENT_RUNTIME_UNAVAILABLE_CODE } from "./zcodeAgent.js";
+ import type {
+   ZCodeProtocolRequestId,
+@@ -5301,6 +5302,54 @@ export function createZCodeAgentService(
+       );
+     },
+ 
++    // overlay 002-import-session-rpc（#22 多源导入写入面）：归一化行 → imported
++    // snapshot（claude-native persist 泛化；migrationSource 扩 codex/kimi）。
++    // tool 行并入 assistant（persisted 消息 role 仅 user/assistant，"[tool]" 前缀保留来源语义）。
++    async importSessionV4(params: V4ImportSessionParams) {
++      const { randomUUID } = await import("node:crypto");
++      const { TaskIndexRepo } = await import("../session/taskIndexRepo.js");
++      const { persistImportedClaudeTask } = await import(
++        "../session/claude-native/persistImportedClaudeTask.js"
++      );
++      if (params.rows.length === 0) {
++        throw new Error("fault.importSession.noRows");
++      }
++      const sessionId = `import-${params.source}-${randomUUID().slice(0, 8)}`;
++      const firstAt = params.rows[0]?.at ?? Date.now();
++      const lastAt = params.rows[params.rows.length - 1]?.at ?? firstAt;
++      const meta = {
++        taskId: sessionId,
++        traceId: `trace-${sessionId}`,
++        title: `[imported:${params.source}] ${params.sourceId.slice(0, 60)}`,
++        workspacePath: params.workspacePath,
++        createdAt: Math.floor(firstAt),
++        updatedAt: Math.floor(lastAt),
++        mode: "build" as const,
++        migrationSource: params.source,
++        status: "completed" as const,
++      };
++      const messages = params.rows.map((r, i) => ({
++        id: `${sessionId}-${i}`,
++        role: r.role === "user" ? ("user" as const) : ("assistant" as const),
++        content: r.role === "tool" ? `[tool] ${r.text}` : r.text,
++        timestamp: Math.floor(r.at),
++      }));
++      const repo = new TaskIndexRepo();
++      try {
++        const taskMeta = await persistImportedClaudeTask({
++          taskIndexRepo: repo,
++          sessionFile: { meta, messages },
++          workspaceIdentity: params.workspacePath,
++        });
++        return {
++          sessionId: taskMeta.taskId,
++          rowsWritten: messages.length,
++        } satisfies V4ImportSessionResult;
++      } finally {
++        try { (repo as unknown as { close?: () => void }).close?.() } catch { /* best-effort */ }
++      }
++    },
++
+     // workflow run 事件日志：同样是只读 query，沿现有 workspace attachment 透传。
+     // 分页发生在存储层（JournalStorePort.listEvents 带 afterSequence/limit），这里不切片；
+     // 在 RPC 层切等于每翻一页把整条 journal 读进内存。
+diff --git a/packages/shared/src/validation.ts b/packages/shared/src/validation.ts
+index 7d89774..774e139 100644
+--- a/packages/shared/src/validation.ts
++++ b/packages/shared/src/validation.ts
+@@ -548,7 +548,7 @@ export const hostLogResponseSchema = z.object({
+ 
+ export { zcodeProviderSchema };
+ 
+-export const zcodeTaskMigrationSourceSchema = z.enum(["claudeCode"]);
++export const zcodeTaskMigrationSourceSchema = z.enum(["claudeCode", "codex", "kimi"]);
+ 
+ export const hostAgentProcessSpawnedResponseSchema = z.object({
+   type: z.literal("agent-process-spawned"),
+diff --git a/packages/shared/src/zcode-protocol-v4/transport.ts b/packages/shared/src/zcode-protocol-v4/transport.ts
+index 4d1d53b..0b65c0e 100644
+--- a/packages/shared/src/zcode-protocol-v4/transport.ts
++++ b/packages/shared/src/zcode-protocol-v4/transport.ts
+@@ -346,6 +346,9 @@ export const V4_METHODS = {
+   conversationFileRewindPreview: "v4/conversation/fileRewindPreview",
+   // workflow run 的事件日志分页（详情页审计面）：只读、无状态、超时重发安全。
+   // 新方法天然偏斜安全——旧桌面根本不会调用它。
++  // overlay 002-import-session-rpc：多源会话导入写入（#22）。归一化行写入
++  // imported 会话（claude-native persist 泛化）；非幂等（重复导入=新会话）。
++  importSession: "v4/session/import",
+   conversationWorkflowRunEvents: "v4/conversation/workflowRunEvents",
+   conversationWorkflowRuns: "v4/conversation/workflowRuns",
+   // workflow run 的用户面产物。三条同族：
+@@ -707,6 +710,33 @@ export type V4ConversationWorkflowRunsResult = z.infer<
+   typeof v4ConversationWorkflowRunsResultSchema
+ >;
+ 
++// overlay 002-import-session-rpc：多源会话导入（#22）——归一化行写入 imported 会话。
++export const v4ImportSessionParamsSchema = z
++  .object({
++    workspacePath: z.string().min(1),
++    source: z.enum(["codex", "kimi", "claudeCode"]),
++    sourceId: z.string().min(1),
++    rows: z
++      .array(
++        z.object({
++          role: z.enum(["user", "assistant", "tool"]),
++          text: z.string(),
++          at: z.number(),
++        }),
++      )
++      .max(5000),
++  })
++  .strict();
++export type V4ImportSessionParams = z.infer<typeof v4ImportSessionParamsSchema>;
++
++export const v4ImportSessionResultSchema = z
++  .object({
++    sessionId: z.string().min(1),
++    rowsWritten: z.number().int().nonnegative(),
++  })
++  .strict();
++export type V4ImportSessionResult = z.infer<typeof v4ImportSessionResultSchema>;
++
+ export const v4ConversationFileRewindPreviewParamsSchema = z
+   .object({
+     sessionId: z.string().min(1),

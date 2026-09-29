@@ -50,8 +50,12 @@ describe('Search Sessions 快捷键 ⌘F 迁移（patch 377 守门）', () => {
     expect(series).toMatch(/^377-client-search-hotkey-cmdf\.patch$/m)
   })
 
-  it('IDE 命令面板保留 ⌘K（迁移的另一侧契约，IdeShell 不动）', () => {
+  it('IDE 命令面板保留 ⌘K（迁移另一侧契约；遗留清单 L2 后=映射分发形态）', () => {
     const shell = readOverlay('custom/client/ide/views/IdeShell.vue')
-    expect(shell).toContain("event.key.toLowerCase() === 'k'")
+    // keymap 生效面 v2：⌘K 经 defaultKeymap('global','palette')→applyKeymap 分发，
+    // 默认仍 Cmd+K（可改键），语义保留。
+    const keymap = readOverlay('custom/server/keymap/keymap.ts')
+    expect(keymap).toContain("{ context: 'global', action: 'palette', key: 'Cmd+K' }")
+    expect(shell).toContain("useKeyBinding('global', 'palette')")
   })
 })

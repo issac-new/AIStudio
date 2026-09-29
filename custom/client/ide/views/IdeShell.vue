@@ -37,6 +37,7 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import { listBoards, listTasks } from '@/api/hermes/kanban'
 import { request } from '@/api/client'
 import { ideGitApi } from '../api/git'
+import { useKeyBinding } from '../components/IdeKeymapCard.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -51,6 +52,16 @@ watch(() => route.query.task, (taskId) => {
   const id = typeof taskId === 'string' && taskId.trim() ? taskId.trim() : null
   ide.setActiveTask(id)
   if (id) ide.setDimension('task')
+}, { immediate: true })
+
+// ── 会话深链（/ide?session=<id>，沟通协作页「需关注」会话行 R7-B 入口）──
+// 此前 WorkbenchView 发出 session 参数但本侧零消费，跳转后静默丢弃。
+// 会话列表未装载时先装载再切换；未知 id 由 switchSession 自身容错（不崩溃）。
+watch(() => route.query.session, async (sessionId) => {
+  const id = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : null
+  if (!id) return
+  if (!chatStore.sessionsLoaded) await chatStore.loadSessions(chatStore.sessionProfileFilter)
+  await chatStore.switchSession(id)
 }, { immediate: true })
 
 // 深链绑定后跨板解析任务（aipaydev 推演 ide-briefing-cross-board-empty 立项）：
@@ -161,10 +172,18 @@ function openBriefingFile(path: string): void {
 
 // 命令面板快捷键：Cmd/Ctrl+K 开关（对标 zcode quickPick；终端面板聚焦时
 // xterm 可能吞键，面板入口在 TopBar 同步提供）。
+// keymap 生效面 v2（遗留清单 L2）：全局键经 keymap 映射分发（defaultKeymap
+// 'global' 上下文 + 用户覆盖 + 冲突检测），⌘K 走 applyKeymap('global','palette')。
+const paletteBinding = useKeyBinding('global', 'palette')
 function onGlobalKeydown(event: KeyboardEvent): void {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-    event.preventDefault()
-    ide.togglePalette()
+  if (event.metaKey || event.ctrlKey) {
+    const key = event.key.toLowerCase()
+    const combo = `${event.metaKey ? 'Cmd' : 'Ctrl'}+${key.length === 1 ? key.toUpperCase() : key}`
+    const binding = paletteBinding()
+    if (binding && combo === binding) {
+      event.preventDefault()
+      ide.togglePalette()
+    }
   }
 }
 window.addEventListener('keydown', onGlobalKeydown)

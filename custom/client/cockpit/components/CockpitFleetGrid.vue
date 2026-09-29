@@ -201,7 +201,7 @@ async function clarify(session: FleetSession, clarifyId: string) {
 }
 .fleet-grid__title { font-size: 12px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
 .fleet-grid__dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.fleet-grid__dot.is-on { background: #10b981; box-shadow: 0 0 4px rgba(16, 185, 129, .8); }
+.fleet-grid__dot.is-on { background: var(--success); box-shadow: 0 0 4px rgba(var(--success-rgb), .8); }
 .fleet-grid__dot.is-off { background: var(--text-muted); }
 .fleet-grid__stats { font-size: 11px; font-weight: 400; color: var(--text-muted); }
 .fleet-grid__attn { color: var(--error); font-weight: 700; margin-left: 6px; }
@@ -220,14 +220,14 @@ async function clarify(session: FleetSession, clarifyId: string) {
   background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px;
   transition: border-color 0.12s, box-shadow 0.12s; min-width: 0;
   &:hover { border-color: var(--accent-primary); }
-  &.is-working { border-left: 2px solid #10b981; }
-  &.is-aborting { border-left: 2px solid #f59e0b; }
+  &.is-working { border-left: 2px solid var(--success); }
+  &.is-aborting { border-left: 2px solid var(--warning); }
 }
 .fleet-card__head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .fleet-card__status { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
-.fleet-card__status.is-working { background: #10b981; animation: fleet-pulse 1.6s ease-in-out infinite; }
+.fleet-card__status.is-working { background: var(--success); animation: fleet-pulse 1.6s ease-in-out infinite; }
 .fleet-card__status.is-attention { background: var(--error); animation: fleet-pulse 0.9s ease-in-out infinite; }
-.fleet-card__status.is-aborting { background: #f59e0b; }
+.fleet-card__status.is-aborting { background: var(--warning); }
 .fleet-card__title {
   flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -237,7 +237,7 @@ async function clarify(session: FleetSession, clarifyId: string) {
   color: var(--text-on-accent); background: var(--accent-primary); border-radius: 4px; padding: 1px 5px;
 }
 .fleet-card__meta { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); flex-wrap: wrap; }
-.fleet-card__run { color: #10b981; font-weight: 600; font-family: ui-monospace, monospace; }
+.fleet-card__run { color: var(--success); font-weight: 600; font-family: ui-monospace, monospace; }
 .fleet-card__idle { font-family: ui-monospace, monospace; }
 .fleet-card__queue { background: var(--bg-secondary); border-radius: 4px; padding: 0 4px; }
 .fleet-card__src { background: var(--bg-secondary); border-radius: 4px; padding: 0 4px; }
@@ -254,7 +254,7 @@ async function clarify(session: FleetSession, clarifyId: string) {
 .fleet-card__subs-head { display: flex; align-items: center; gap: 6px; }
 .fleet-card__subs-label { font-size: 9px; font-weight: 700; letter-spacing: .03em; color: var(--text-muted); }
 .fleet-card__subs-run {
-  font-size: 9px; font-weight: 700; color: #10b981;
+  font-size: 9px; font-weight: 700; color: var(--success);
   background: rgba(16, 185, 129, .12); border-radius: 4px; padding: 0 4px;
 }
 .fleet-card__sub { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
@@ -278,8 +278,8 @@ async function clarify(session: FleetSession, clarifyId: string) {
 .fleet-card__btn {
   flex-shrink: 0; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer;
   border-radius: 4px; border: 1px solid transparent; padding: 2px 8px;
-  &.is-ok { background: #10b981; color: #fff; }
-  &.is-ok:hover { background: #059669; }
+  &.is-ok { background: var(--success); color: var(--text-on-accent); }
+  &.is-ok:hover { background: var(--success); filter: brightness(1.08); }
   &.is-no { background: transparent; border-color: var(--error); color: var(--error); }
   &.is-no:hover { background: rgba(239, 68, 68, .12); }
   &:disabled { opacity: .5; cursor: default; }

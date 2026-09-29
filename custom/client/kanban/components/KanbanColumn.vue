@@ -270,9 +270,9 @@ function handleInlineCreateCancel() {
   color: $text-primary;
 }
 
-// Status dot colours mirror the reference plugin verbatim
-// (`hermes-kanban-dot-*` in dist/style.css). scheduled / review have no
-// dedicated dot in the reference and fall back to the muted base.
+// Pure Ink 语义状态色——与 KanbanTaskDrawer.kanban-dot / FleetGrid 同一张映射：
+// triage=中性灰、ready=信息蓝、running=警告橙、blocked=错误红、done=成功绿、
+// archived=弱化灰。scheduled / review 无专属语义，回落 muted 基色。
 .status-dot {
   width: 0.5rem;
   height: 0.5rem;
@@ -280,15 +280,15 @@ function handleInlineCreateCancel() {
   background-color: $text-muted;
   flex-shrink: 0;
 
-  &.triage { background-color: #b47dd6; }
+  &.triage { background-color: $accent-muted; }
   &.todo { background-color: $text-muted; }
   &.scheduled { background-color: $text-muted; }
-  &.ready { background-color: #d4b348; }
-  &.running { background-color: #3fb97d; }
+  &.ready { background-color: var(--accent-info); }
+  &.running { background-color: $warning; }
   &.blocked { background-color: $error; }
   &.review { background-color: $text-muted; }
-  &.done { background-color: #4a8cd1; }
-  &.archived { background-color: $border-color; }
+  &.done { background-color: $success; }
+  &.archived { background-color: $accent-muted; }
 }
 
 .count-badge {

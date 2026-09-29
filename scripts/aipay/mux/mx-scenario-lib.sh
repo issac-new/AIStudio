@@ -125,6 +125,12 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] → id（state 
   id=$(HERMES_HOME="$HERMES_ROOT" hermes kanban --board "$board" create "$title" \
     --body "$body" --project aipaydev --json 2>/dev/null | jq -r '.id // empty')
   [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
+  # 板归属校验（run2 REL-* 三卡实测落错板 audit-compliance，现行 CLI 路由已不可复现
+  # ——补创建后归属核验：错板记单留证，不再静默）
+  _landed="$(board_of_task "$u" "$id" 2>/dev/null || true)"
+  if [[ -n "$_landed" && "$_landed" != "$board" ]]; then
+    echo "ISSUE|kanban-board-misroute|$u|$id 创建要求板 $board 实落 $_landed（P-18 归属核验）" >> "$EVID_DIR/issues.log"
+  fi
   sset "$key" "$id"; echo "$id"
 }
 
@@ -309,23 +315,154 @@ repo_commit_main() { # <repo 相对路径> <author-name> <author-email> <commit-
     git -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true )
 }
 
-room_has_from() { # <room> <sender-mxid> <pattern>
-  mx_messages "$(load_token fanfan)" "$1" 120 | jq -e --arg s "$2" --arg p "$3" \
-    'map(select(.sender == $s and ((.content.body // "") | test($p)))) | any' >/dev/null 2>&1
+room_has_from() { # <room> <sender-mxid> <pattern> [since-ms]
+  # since-ms（可选，默认 0）：只认该时刻之后的消息。门禁必须传派发时刻——
+  # 只按 sender+pattern 匹配历史消息会让上一轮残留结论行"秒过"门禁（假完成）：
+  # V4-run1 02:26:34 G5 结论行 4 秒即 ✓ 实为 01:04 的旧 READY-GATE 行，
+  # 02:26:50 的 PASS 判定也可能是 01:44 超时后迟到的旧回执（TEST 侧早已用
+  # SINCE_TS 过滤根治同类问题，门禁侧漏了同款修复）。
+  mx_messages "$(load_token fanfan)" "$1" 120 | jq -e --arg s "$2" --arg p "$3" --argjson since "${4:-0}" \
+    'map(select((.origin_server_ts // 0) > $since and .sender == $s and ((.content.body // "") | test($p)))) | any' >/dev/null 2>&1
 }
 
-dispatch_in_room() { # <humanUser> <text> <mention-csv> → event_id
-  local m uid rid
+# ── 闸门判词语义（run2 2026-09-29 04:49 实锤，独立审计意见 R-A2）────────
+# 判词子串匹配会被「引用/讨论」消息命中：fanfan-agent 转述 stub 原文
+# 「结论行 READY-GATE-PASS 或 READY-GATE-FAIL」，G5 即把该条当结论行误过
+# （04:49:04 判 ✓，真实评审 04:51:27 才完成且卡面结论实为 READY-GATE-FAIL）。
+# 语义：**最后一个判词赢**——结论行居末是派单既定约定（"结论行 … 开头"、卡面
+# conclusion 节在 body 末尾）；引用讨论里判词成对出现时末个为 FAIL，只会把门
+# 禁推向拒绝/打回（保守方向），不会假过。多条结论行取时间最新一条（打回后
+# 复审 PASS 盖过前次 FAIL）。FAIL 是显式判词：调用方必须熔断，不得置卡 done、
+# 不得落键（R-A2）。
+mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=无判词）
+  local out
+  out=$(printf '%s' "$2" | grep -oE "$1-(PASS|FAIL)" | tail -1)
+  case "$out" in
+    *-PASS) echo PASS ;;
+    *-FAIL) echo FAIL ;;
+    *) echo "" ;;
+  esac
+}
+
+mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
+  local room="$1" sender="$2" gate="$3" since="${4:-0}"
+  mx_messages "$(load_token fanfan)" "$room" 200 2>/dev/null | jq -r --arg s "$sender" --arg g "$gate" --argjson since "$since" '
+    [ .[] | select((.origin_server_ts // 0) > $since and .sender == $s)
+      | {ts: (.origin_server_ts // 0),
+         v: ((.content.body // "") | [match($g + "-(PASS|FAIL)"; "g") | .captures[0].string] | last // empty)}
+      | select(.v != "") ]
+    | sort_by(.ts) | last | .v // empty'
+}
+
+kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> → stdout: PASS|FAIL|空
+  # 评审记录落卡 body 是准出的权威载体（派单即要求 review-record 落卡），房间行
+  # 只是广播；卡判词与房间行判词由调用方合并（FAIL 优先，保守不放行）。
+  local body
+  body=$(kanban_list "$1" | jq -r --arg n "$2" \
+    '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""')
+  mx_text_gate_verdict "$3" "$body"
+}
+
+mx_gate_verdict_seen() { # <room> <sender> <gate> [since-ms] → 0 当出现任一判词结论行
+  [[ -n "$(mx_room_gate_verdict "$@")" ]]
+}
+
+mx_gate_verdict_pass() { # <room> <sender> <gate> [since-ms] → 0 仅当最新结论判词为 PASS
+  [[ "$(mx_room_gate_verdict "$@")" == "PASS" ]]
+}
+
+mx_gate_verdict_combined() { # <room> <sender> <gate> <since-ms> <card-user> <card-needle> → stdout: PASS|FAIL|空
+  # 房间行 + 评审卡 body 双源合并（R-A2）：FAIL 任一出现即 FAIL（保守不放行），
+  # 仅当无 FAIL 且任一 PASS 才 PASS。卡 body 是权威载体（review-record 在卡）；
+  # 复审轮必须同步更新卡结论行，否则旧 FAIL 判词持续拦门（安全方向）。
+  local rv cv
+  rv="$(mx_room_gate_verdict "$1" "$2" "$3" "$4")"
+  cv="$(kanban_card_gate_verdict "$5" "$6" "$3")"
+  if [[ "$rv" == "FAIL" || "$cv" == "FAIL" ]]; then echo FAIL; return 0; fi
+  if [[ "$rv" == "PASS" || "$cv" == "PASS" ]]; then echo PASS; return 0; fi
+  echo ""
+}
+
+mx_gate_combined_pass() { # 同 mx_gate_verdict_combined，供 wait_truth 断言用
+  [[ "$(mx_gate_verdict_combined "$@")" == "PASS" ]]
+}
+
+dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
+  local m uid rid u lp members
+  local uids=()
   uid="$(human_mxid "$1")"; rid="$(sget room_analysis)"
-  # 成员保障（09-26 实锤：派发者不在群→403 M_FORBIDDEN→SEND-FAILED；治理角色
-  # 不在第 8/11 步邀人清单内，arch 派发被拒）。不在群则补邀+自入后再发。
-  if ! mx_room_members "$(load_token fanfan)" "$rid" | grep -qx "$uid"; then
-    mx "$(load_token fanfan)" POST "rooms/$rid/invite" "{\"user_id\":\"$uid\"}" >/dev/null 2>&1 || true
-    mx_join "$(load_token "$1")" "$rid" >/dev/null 2>&1 || true
+  # 成员保障 v2（09-26 v1 只保派发者；09-29 重构轮扩展到全部被 @ 责任人）：
+  # 指令必达前置——被 @ 者不在群则 mention 不可达、其 agent 无从接单
+  # （V4-run1 room-invite-gap ×8 复发实锤：接收方而非派发方缺位）。
+  # 不在群则 fanfan 补邀 + 该账号自入（join 按 mxid localpart 取 token）。
+  uids=("$uid")
+  if [[ -n "${3:-}" ]]; then
+    local IFS=','
+    read -r -a uids_m <<< "$3"
+    uids+=("${uids_m[@]}")
   fi
-  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2" "$3")
+  members="$(mx_room_members "$(load_token fanfan)" "$rid" 2>/dev/null || true)"
+  for u in "${uids[@]}"; do
+    [[ -n "$u" ]] || continue
+    if ! printf '%s\n' "$members" | grep -qx "$u"; then
+      mx "$(load_token fanfan)" POST "rooms/$rid/invite" "{\"user_id\":\"$u\"}" >/dev/null 2>&1 || true
+      lp="${u%%:*}"; lp="${lp#@}"
+      mx_join "$(load_token "$lp")" "$rid" >/dev/null 2>&1 || true
+    fi
+  done
+  m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$2
+[派发标识 RUN=${RUN_ID:-default}] 去重键=任务 ID+RUN：同任务 ID 的历史轮（不同 RUN）不构成重复派单，须重新执行或核验并回执结论行；判定重复也必须回执合并回执，禁止静默。" "$3")
   note "[$1] 派发 ($m): $(echo "$2" | head -1)"
   echo "$m"
+}
+
+# ── 推演单驱动锁（单一事实源，可单测）────────────────────────
+# 双会话双开推演是实测最高频互踩源（共享 state.env/板库/房间双写）。mkdir 原子锁
+# （macOS 无 flock；mkdir 在各文件系统均原子）：锁不可得即大声拒绝，不静默并发。
+# 陈锁判定根治（2026-09-29 V4-run1 02:26 实锤）：旧版 `sed -n 's/^pid=//p'` 把
+# "pid=84431 start=… host=…" 整段取出，`kill -0 "84431 start=…"` 报 illegal pid
+# 恒失败 → **活锁被误判陈锁、被接管**——run1 ready 续跑误抢 run2 活锁，双驱动同栈
+# 互写 12 分钟。判活只取 pid 数字段；解析不出一律按活锁拒绝（宁停勿抢）。
+mx_lock_holder_pid() { # <info-file> → 持锁 pid（仅数字段；解析不出=空串）
+  sed -n 's/^pid=\([0-9][0-9]*\).*/\1/p' "$1" 2>/dev/null | head -1
+}
+
+mx_driver_lock_acquire() { # <lock-dir> <pid> → 0 取得 / 1 活锁被占 / 2 接管竞争失败
+  local d="$1" pid="$2" held
+  _mx_lock_info() { printf 'pid=%s start=%s host=%s\n' "$2" "$(date '+%F %T')" "$(hostname -s)" > "$1/info"; }
+  if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
+  held=$(mx_lock_holder_pid "$d/info")
+  if [[ -n "$held" ]] && ! kill -0 "$held" 2>/dev/null; then
+    rm -rf "$d"
+    if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
+    return 2
+  fi
+  return 1
+}
+
+# ── 硬闸打回熔断（跨调用持久，人工放行留痕）──────────────────
+# 语义定性（2026-09-29 g5-ready-fail 记档）：V3 "两轮未过，不得发布/不得开始"是
+# 防 agent 无限重做回路的硬闸；断点续跑曾静默重置轮次绕过熔断（run1 01:44 G5
+# 两轮熔断 → 02:26 续跑直接放行）。根治：轮次计数按 RUN 落 state 持久化，达阈值
+# 后新调用直接拒绝；人工确认可重试须 GATE_BREAKER_OVERRIDE=1 显式放行并记 issue
+# （不可逆决策留痕，符合 V3 总则"人只守意图对齐与不可逆决策"）。
+mx_gate_breaker_trip() { # <gate-key> <label> <unpassed-rounds>：记 N 轮未过
+  local key="$1" label="$2" n="${3:-1}" cur
+  cur=$(sget "${key}_fail_rounds"); cur=${cur:-0}
+  sset "${key}_fail_rounds" $(( cur + n ))
+  note "[熔断] ${label} 累计 $(( cur + n )) 轮未过（阈值 2）"
+}
+
+mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝，除非 GATE_BREAKER_OVERRIDE=1
+  local key="$1" label="$2" cur
+  cur=$(sget "${key}_fail_rounds"); cur=${cur:-0}
+  (( cur < 2 )) && return 0
+  if [[ "${GATE_BREAKER_OVERRIDE:-0}" == "1" ]]; then
+    echo "ISSUE|gate-breaker-override|director|${label} 熔断已触发（${cur} 轮未过），人工 GATE_BREAKER_OVERRIDE=1 显式放行重试" >> "$EVID_DIR/issues.log"
+    return 0
+  fi
+  echo "ISSUE|gate-breaker-tripped|director|${label} 熔断（${cur} 轮未过），本轮拒绝执行；重试须人工 GATE_BREAKER_OVERRIDE=1（断点续跑不得静默绕过）" >> "$EVID_DIR/issues.log"
+  fail "${label} 打回熔断（${cur} 轮未过，V3 硬闸）：不得继续。人工确认可重试时以 GATE_BREAKER_OVERRIDE=1 重启。"
 }
 
 # ── V3 生命周期治理助手 ─────────────────────────────────
@@ -349,6 +486,25 @@ uat_ac_covered() { # <ac-list> <body> → 缺失 AC 编号清单（空串=逐条
     case "$2" in *"$ac"*) ;; *) missing="$missing$ac " ;; esac
   done
   printf '%s' "$missing"
+}
+
+uat_ac_verdict() { # <body> <AC-id> → 通过|有条件通过|不通过|未见
+  # 逐条判词语义（独立审计意见 #3，run2 实锤）：UAT 证据行实为「AC-1/AC-2/AC-3/
+  # AC-5/AC-6 通过；AC-4、AC-7 有条件通过」——一行多 AC 共享一个判词，按行取判词
+  # 会把 AC-1 也判成"有条件"。改按「AC 组+判词」切段：判词紧跟 AC 组之后，
+  # 同段多 AC 共享判词；多段命中同 AC 时取最后一段（逐条明细行在汇总行之后，
+  # 更具体者胜）。旧代码对全部 AC 一律写「通过」——验收书与证据矛盾即失真。
+  local seg
+  seg=$(printf '%s\n' "$1" \
+    | grep -oE '(AC-[0-9]+([/、,及和 ]+AC-[0-9]+)*[ ]*)(有条件通过|不通过|未通过|通过|FAIL|PASS)' \
+    | grep -F -- "$2" | tail -1)
+  [[ -n "$seg" ]] || { echo "未见"; return 0; }
+  case "$seg" in
+    *有条件通过*) echo "有条件通过" ;;
+    *不通过*|*未通过*|*FAIL*) echo "不通过" ;;
+    *通过*|*PASS*) echo "通过" ;;
+    *) echo "未见" ;;
+  esac
 }
 
 issue_disp_stat() { # → "<ISS_N> <DISP_N>" 问题单/处置记账条数（DISP|type|subject|disposition|note）
@@ -522,7 +678,9 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
     echo "# ${RFD_ID} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T')）"
     echo
     echo "## 硬闸状态"
-    for k in g1_frozen g2_arch_pass g4_pass g5_ready uat_done retro_done; do
+    # G1-G6 全闸落键（独立审计意见 R-A4：G3 曾只有 devimpl_done 无 g3_ 硬闸键，
+    # 治理报告"门禁链"跳过 G3/G6 无说明）；retro_done 即 G6 复盘闸。
+    for k in g1_frozen g2_arch_pass g3_code_pass g4_pass g5_ready uat_done retro_done; do
       echo "- $k: $(sget "$k" || echo 未落)"
     done
     echo

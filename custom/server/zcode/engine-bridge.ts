@@ -17,6 +17,17 @@ export interface ZcodeEngineAgentService {
   onDynamicConversationFrame(params: { workspacePath: string }): (cb: (wire: Record<string, unknown>) => void) => { dispose(): void }
   onDynamicSessionsIndexFrame(params: { workspacePath: string }): (cb: (wire: Record<string, unknown>) => void) => { dispose(): void }
   onAgentRuntimeRestarted(cb: (event: Record<string, unknown>) => void): { dispose(): void }
+  // ── workflow 查询面（workflow 集成轮）──
+  // 锚点 upstream/zcode packages/services/src/zcode-agent/zcodeAgentService.ts:
+  // conversationWorkflowRunsV4:5322 / conversationWorkflowRunEventsV4:5307 /
+  // listSavedWorkflows:3938 / listSavedWorkflowRuns:3974。全只读查询，
+  // 走 ProxyChannel 动态代理（接口声明即调用面，返回形状见 zcode v4 result schema）。
+  conversationWorkflowRunsV4(params: { workspacePath: string; sessionId: string; limit?: number }): Promise<Record<string, unknown>>
+  conversationWorkflowRunEventsV4(params: { workspacePath: string; sessionId: string; runId: string; afterSequence?: number; limit?: number }): Promise<Record<string, unknown>>
+  listSavedWorkflows(params: { workspacePath?: string; scope?: string }): Promise<Record<string, unknown>>
+  listSavedWorkflowRuns(params: { workspacePath?: string; name?: string; limit: number; scope?: string }): Promise<Record<string, unknown>>
+  // overlay 002-import-session-rpc（#22 写入面）：归一化行→imported 会话。
+  importSessionV4(params: { workspacePath: string; source: 'codex' | 'kimi' | 'claudeCode'; sourceId: string; rows: Array<{ role: 'user' | 'assistant' | 'tool'; text: string; at: number }> }): Promise<{ sessionId: string; rowsWritten: number }>
 }
 
 export interface ZcodeEngineBridge {

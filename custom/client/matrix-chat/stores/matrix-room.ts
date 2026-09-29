@@ -206,6 +206,8 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     'm.room.canonical_alias', 'm.room.join_rules', 'm.room.history_visibility',
     'm.room.encryption', 'm.room.pinned_events', 'm.room.tombstone',
     'm.room.server_acl',
+    // v14 P2D：ChatBridge 出向徽章事件（正文随 m.text，这里投影来源标识行）
+    'com.swarmstudio.agent.message',
   ])
 
   // ── Layout settings (timeline-rendering concern) ──

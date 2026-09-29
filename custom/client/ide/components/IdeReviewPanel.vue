@@ -4,6 +4,7 @@
 // 评论 open→resolved 回流/三裁决一次定音）。
 import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
+import { authFetch } from '../utils/auth-fetch'
 
 const chatStore = useChatStore()
 
@@ -17,7 +18,7 @@ const reviewId = ref<string | null>(null)
 async function startReview(): Promise<void> {
   try {
     const id = `ide-${chatStore.activeSessionId ?? 's'}-${Date.now()}`
-    const res = await fetch('/api/review', {
+    const res = await authFetch('/api/review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reviewId: id, domain: 'uncommitted' }),
@@ -31,7 +32,7 @@ async function startReview(): Promise<void> {
 async function refresh(): Promise<void> {
   if (!reviewId.value) return
   try {
-    const res = await fetch(`/api/review/${encodeURIComponent(reviewId.value)}`)
+    const res = await authFetch(`/api/review/${encodeURIComponent(reviewId.value)}`)
     if (!res.ok) return
     const body = (await res.json()) as {
       review?: { reviewId: string; domain?: string; comments?: Array<{ commentId?: string; file?: string; line?: number; body?: string; state?: string }> }
@@ -58,7 +59,7 @@ async function resolve(id: string): Promise<void> {
   findings.value = findings.value.map((f) => (f.id === id ? { ...f, resolved: true } : f))
   if (!reviewId.value) return // 无在评评审（如内部预置数据），仅本地态
   try {
-    const res = await fetch(`/api/review/${encodeURIComponent(reviewId.value)}/comments/${encodeURIComponent(id)}/resolve`, { method: 'POST' })
+    const res = await authFetch(`/api/review/${encodeURIComponent(reviewId.value)}/comments/${encodeURIComponent(id)}/resolve`, { method: 'POST' })
     if (!res.ok) throw new Error(`resolve ${res.status}`)
   } catch {
     findings.value = prev

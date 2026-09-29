@@ -28,6 +28,7 @@ import Router from '@koa/router'
 import { probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { MentionDispatchService } from '../zcode/mention-dispatch'
+import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
 import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access'
 
@@ -92,7 +93,14 @@ export function getMentionDispatch(): MentionDispatchService {
     clientId: 'swarmstudio-mention-bus',
     knownAgents: ['zcode', ...(('' + (process.env.ZCODE_MENTION_AGENTS ?? '')).split(',').filter(Boolean))],
     deferredAgents: ['claude-code', 'codex', 'pi', 'grok', 'dsh', 'opencode', 'mimo'],
-    onOutcome: () => { /* outcome 经 dispatch() 返回值透传 REST；socket 扇出由调用侧 emit */ },
+    // 4A 治理层第三期：派发结果台账（fail-soft 留痕，消费关系/dispatch.successRate 信号面）。
+    // column 派发经同一单例，会先落 kind=mention 通用条目、再由 column-dispatch 落归因更细
+    // 的 kind=column 条目（同 commandId，统计去重优先 column）。
+    onOutcome: (o) => appendDispatchOutcome({
+      kind: 'mention', target: o.target, mentionKind: o.mentionKind, reason: o.reason,
+      commandId: o.commandId, sessionId: o.sessionId, workspaceId: o.workspaceId,
+      detail: o.detail?.slice(0, 200),
+    }),
   })
   return dispatchSingleton
 }
@@ -196,6 +204,107 @@ router.get('/rows', async (ctx) => {
   const runtime = getZcodeProjectionRuntime()
   const rows = runtime.listRows(workspacePath, sessionId)
   ctx.body = { ok: true, sessionId, count: rows.length, rows }
+})
+
+// ── workflow 查询面（workflow 集成轮；全 GET 只读——新文件非 GET 404 坑不适用，
+// 本文件既有 koa-router 注册链）──
+// 锚点 upstream/zcode zcodeAgentService conversationWorkflowRunsV4:5322 /
+// conversationWorkflowRunEventsV4:5307 / listSavedWorkflows:3938 /
+// listSavedWorkflowRuns:3974。引擎离线 → 503 engine_unreachable（/projection/watch 同款词表）。
+
+/** query 数值钳制：非有限正数取缺省。 */
+function positiveIntParam(raw: unknown, fallback?: number): number | undefined {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.min(Math.floor(n), 200)
+}
+
+router.get('/workflow/runs', async (ctx) => {
+  const { workspacePath, sessionId } = ctx.query as { workspacePath?: string; sessionId?: string }
+  if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || !workspacePath || !sessionId) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const limit = positiveIntParam(ctx.query.limit, 50)
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.conversationWorkflowRunsV4({ workspacePath, sessionId, limit }))
+    ctx.body = { ok: true, sessionId, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+})
+
+router.get('/workflow/run-events', async (ctx) => {
+  const { workspacePath, sessionId, runId } = ctx.query as { workspacePath?: string; sessionId?: string; runId?: string }
+  if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || typeof runId !== 'string' || !workspacePath || !sessionId || !runId) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId/runId 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const afterSequence = Number.isFinite(Number(ctx.query.afterSequence)) && Number(ctx.query.afterSequence) >= 0
+    ? Math.floor(Number(ctx.query.afterSequence))
+    : undefined
+  const limit = positiveIntParam(ctx.query.limit, 100)
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.conversationWorkflowRunEventsV4({ workspacePath, sessionId, runId, afterSequence, limit }))
+    ctx.body = { ok: true, sessionId, runId, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+})
+
+router.get('/workflow/saved', async (ctx) => {
+  const { workspacePath, scope } = ctx.query as { workspacePath?: string; scope?: string }
+  if (typeof workspacePath !== 'string' || !workspacePath) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  if (scope !== undefined && scope !== 'project' && scope !== 'global') {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'scope 仅 project/global' }
+    return
+  }
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.listSavedWorkflows({ workspacePath, ...(scope ? { scope } : {}) }))
+    ctx.body = { ok: true, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
+})
+
+router.get('/workflow/saved-runs', async (ctx) => {
+  const { workspacePath, name, scope } = ctx.query as { workspacePath?: string; name?: string; scope?: string }
+  if (typeof workspacePath !== 'string' || !workspacePath) {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  if (scope !== undefined && scope !== 'project' && scope !== 'global') {
+    ctx.status = 400
+    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'scope 仅 project/global' }
+    return
+  }
+  const limit = positiveIntParam(ctx.query.limit, 20) ?? 20
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.listSavedWorkflowRuns({ workspacePath, ...(name ? { name } : {}), limit, ...(scope ? { scope } : {}) }))
+    ctx.body = { ok: true, ...result }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+  }
 })
 
 // fork：对稳定 assistant 行分叉（zcode v4 原生 forkAssistant——fork.ts StableForkTarget
@@ -354,6 +463,105 @@ router.post('/queue/drain', async (ctx) => {
 router.get('/queue/:workspacePath', async (ctx) => {
   const { queueView } = await import('../zcode/dispatch-queue')
   ctx.body = { ok: true, queue: queueView(ctx.params.workspacePath) }
+})
+
+// ── 遗留清单 L8：多源会话导入（#22）——解析预览端点 ──
+// 三源（codex/kimi/claude）JSONL → session-importer 归一化行+坏行计数；
+// 写入面（引擎 importSession RPC）见 zcode-patches 草稿，未开前导入按钮如实报错。
+router.get('/import/history-preview', async (ctx) => {
+  const { source, ref } = ctx.query as { source?: string; ref?: string }
+  if (source !== 'codex' && source !== 'kimi' && source !== 'claude') {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'source ∈ codex|kimi|claude' }
+    return
+  }
+  if (typeof ref !== 'string' || !ref) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'ref 必填（JSONL 文件服务器路径）' }
+    return
+  }
+  // 只读服务器本地文件（导入方上传落盘后的路径；无上传面时 curl/CLI 供路径）。
+  const { readFileSync } = await import('fs')
+  const { resolve } = await import('path')
+  const filePath = resolve(ref)
+  let lines: string[]
+  try {
+    lines = readFileSync(filePath, 'utf8').split('\n').filter((l) => l.trim())
+  } catch (err) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
+    return
+  }
+  const { parseSessionHistory } = await import('../importer/session-importer')
+  const parsed = parseSessionHistory(source, filePath, lines)
+  ctx.body = {
+    ok: true,
+    source,
+    sourceId: parsed.sourceId,
+    rowCount: parsed.rows.length,
+    skippedRows: parsed.skippedRows,
+    preview: parsed.rows.slice(0, 20).map((r) => ({ role: r.role, text: r.text.slice(0, 120), at: r.at })),
+  }
+})
+
+// 写入端点（#22 收口）：引擎 importSessionV4（zcode-patch 002）真写入——
+// 读取 JSONL→session-importer 解析→归一化行经桥 RPC 写 imported 会话。
+// 引擎进程未载入 002 补丁时（旧引擎进程）→ 503 如实（重启引擎窗口后生效）。
+router.post('/import/history', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { workspacePath?: unknown; source?: unknown; ref?: unknown }
+  const workspacePath = typeof body.workspacePath === 'string' ? body.workspacePath : ''
+  const source = body.source
+  const ref = typeof body.ref === 'string' ? body.ref : ''
+  if (!workspacePath || (source !== 'codex' && source !== 'kimi' && source !== 'claude') || !ref) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'workspacePath/source(codex|kimi|claude)/ref 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const { readFileSync } = await import('fs')
+  const { resolve } = await import('path')
+  let lines: string[]
+  try {
+    lines = readFileSync(resolve(ref), 'utf8').split('\n').filter((l) => l.trim())
+  } catch (err) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
+    return
+  }
+  const { parseSessionHistory } = await import('../importer/session-importer')
+  const parsed = parseSessionHistory(source, resolve(ref), lines)
+  if (!parsed.rows.length) {
+    ctx.status = 422
+    ctx.body = { ok: false, detail: '无可导入行（全部坏行）' }
+    return
+  }
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    // 词表转换：session-importer 用 'claude'（源格式名）→ 引擎 migrationSource 用 'claudeCode'。
+    const engineSource = source === 'claude' ? 'claudeCode' as const : source
+    const result = await runtime.withAgent((agent) => agent.importSessionV4({
+      workspacePath, source: engineSource, sourceId: parsed.sourceId,
+      rows: parsed.rows.map((r) => ({ role: r.role, text: r.text, at: r.at })),
+    }))
+    ctx.body = { ok: true, ...result, skippedRows: parsed.skippedRows }
+  } catch (err) {
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    ctx.status = 503
+    ctx.body = { ok: false, reason: /method|unknown|no such|not a function/i.test(detail) ? 'engine_rpc_not_loaded' : 'engine_unreachable', detail: `引擎写入面失败（旧引擎进程未载 zcode-patch 002 时重启引擎后生效）：${detail}` }
+  }
+})
+
+router.get('/squad/roster', async (ctx) => {
+  // 名册树数据面（吸收第一批 B5，routa 名册树视图）：squads 定义（leader+members）。
+  // 登录校验同 /squad/evaluations；delegateCounts 由客户端从 subagentStreams 聚合。
+  const caller = callerOf(ctx)
+  if (!caller && (await isAuthEnabled())) {
+    ctx.status = 401
+    ctx.body = { ok: false, reason: 'invocation_not_allowed', detail: '未登录' }
+    return
+  }
+  const { loadSquads } = await import('../zcode/squad-protocol')
+  ctx.body = { ok: true, squads: loadSquads() }
 })
 
 router.get('/squad/evaluations', async (ctx) => {

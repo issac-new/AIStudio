@@ -13,7 +13,9 @@ import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { formatTokens } from '../utils/metrics'
-import { extractGoalProgress, goalBudgetLevel } from '../utils/goalEngine'
+import { extractGoalProgress, extractGoalStatusText, goalBudgetLevel } from '../utils/goalEngine'
+import { parseThreeBudgets, type GoalThreeBudgets } from '../utils/goal-budget'
+import { shouldStop, type AutonomyMode } from '../../../server/goalautonomy/goal-autonomy'
 
 const { t } = useI18n()
 const chatStore = useChatStore()
@@ -26,6 +28,42 @@ const goalProgress = computed(() =>
   extractGoalProgress((chatStore.activeSession?.messages ?? []) as Array<{ role: string; content?: string }>),
 )
 const budgetLevel = computed(() => (goalProgress.value ? goalBudgetLevel(goalProgress.value) : 'ok'))
+
+// ── 三预算显式化（G5 #7 接线）：同一回执全文解析 token/wallClock 两维 ──
+// 回执没带该段（max=0）不显示该行——与 turn 单维现状自然兼容，不虚报。
+const threeBudgets = computed<GoalThreeBudgets | null>(() => {
+  const text = extractGoalStatusText((chatStore.activeSession?.messages ?? []) as Array<{ role: string; content?: string }>)
+  return text ? parseThreeBudgets(text) : null
+})
+const tokenDim = computed(() => {
+  const d = threeBudgets.value?.token
+  return d && d.max > 0 ? d : null
+})
+const wallClockDim = computed(() => {
+  const d = threeBudgets.value?.wallClock
+  return d && d.max > 0 ? d : null
+})
+const anyBudgetWarn = computed(() =>
+  Boolean(tokenDim.value?.warn || wallClockDim.value?.warn || (goalProgress.value && budgetLevel.value !== 'ok')))
+
+// ── 自主档（v2 批 goalautonomy）：三档选择（localStorage 记忆）+停点判定展示 ──
+const AUTONOMY_TEXT: Record<AutonomyMode, string> = { autonomous: '自主到底', checkin: '步进确认', assistive: '只建议' }
+const AUTONOMY_HINT: Record<AutonomyMode, string> = {
+  autonomous: '一路做完，仅不可达/重大分叉才停',
+  checkin: '每步向人确认',
+  assistive: '只建议不执行',
+}
+const autonomy = ref<AutonomyMode>((() => {
+  const saved = localStorage.getItem('ide_goal_autonomy')
+  return saved === 'checkin' || saved === 'assistive' || saved === 'autonomous' ? saved : 'autonomous'
+})())
+watch(autonomy, (m) => localStorage.setItem('ide_goal_autonomy', m))
+
+const stopDecision = computed(() => shouldStop(autonomy.value, {
+  reachable: true,
+  majorFork: false,
+  budgetExhausted: Boolean(goalProgress.value && goalProgress.value.used >= goalProgress.value.max),
+}))
 
 // 命令驱动（引擎在 hermes，此处只发文本命令）
 const goalDraft = ref('')
@@ -101,9 +139,34 @@ watch(
             :style="{ width: `${Math.min((goalProgress.used / goalProgress.max) * 100, 100)}%` }"
           />
         </div>
-        <p v-if="budgetLevel !== 'ok'" class="ide-goal__warn" data-testid="ide-goal-warn">
-          {{ budgetLevel === 'over' ? t('ide.goal.budgetOver') : t('ide.goal.budgetWarn') }}
+        <!-- 三预算另两维（G5 #7）：回执带 token/wallClock 段才显示 -->
+        <div v-if="tokenDim" class="ide-goal__progress-head" data-testid="ide-goal-token-budget">
+          <span>{{ t('ide.goal.tokenBudget') }}</span>
+          <span class="ide-goal__num" :data-level="tokenDim.warn ? 'warn' : 'ok'">{{ formatTokens(tokenDim.used) }}/{{ formatTokens(tokenDim.max) }}</span>
+        </div>
+        <div v-if="wallClockDim" class="ide-goal__progress-head" data-testid="ide-goal-wallclock-budget">
+          <span>{{ t('ide.goal.wallClockBudget') }}</span>
+          <span class="ide-goal__num" :data-level="wallClockDim.warn ? 'warn' : 'ok'">{{ wallClockDim.used }}/{{ wallClockDim.max }} min</span>
+        </div>
+        <p v-if="anyBudgetWarn" class="ide-goal__warn" data-testid="ide-goal-warn">
+          {{ t('ide.goal.budgetWarn') }}
         </p>
+        <!-- 自主档（v2 批 goalautonomy，qoder 自主到底三档）：档位选择+停点判定展示；
+             档位写入经 /goal 提示词链随 goal 引擎域（v1 展示+选择记忆，记档）。 -->
+        <div class="ide-goal__autonomy" data-testid="ide-goal-autonomy">
+          <span class="ide-goal__autonomy-label">自主档</span>
+          <button
+            v-for="m in ['autonomous', 'checkin', 'assistive'] as const"
+            :key="m"
+            type="button"
+            class="ide-goal__autonomy-btn"
+            :class="{ 'is-on': autonomy === m }"
+            :data-testid="`ide-goal-autonomy-${m}`"
+            :title="AUTONOMY_HINT[m]"
+            @click="autonomy = m"
+          >{{ AUTONOMY_TEXT[m] }}</button>
+          <span class="ide-goal__autonomy-stop" :title="stopDecision.reason">停点：{{ stopDecision.stop ? '会停' : '不停' }} · {{ stopDecision.reason }}</span>
+        </div>
       </div>
 
       <!-- goal 命令驱动 -->
@@ -298,4 +361,9 @@ watch(
   font-size: 10px;
   color: var(--text-muted, #9aa0aa);
 }
+.ide-goal__autonomy { display: flex; align-items: center; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.ide-goal__autonomy-label { font-size: 10px; color: var(--text-color-3, #999); }
+.ide-goal__autonomy-btn { border: 1px solid var(--border-color, #e0e0e0); border-radius: 9px; background: transparent; font-size: 10px; padding: 0 7px; cursor: pointer; color: var(--text-color-3, #999);
+  &.is-on { color: var(--primary-color, #18a058); border-color: var(--primary-color, #18a058); } }
+.ide-goal__autonomy-stop { font-size: 10px; color: var(--text-color-3, #999); width: 100%; }
 </style>

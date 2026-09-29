@@ -9,7 +9,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, fetchApprovalHistory,
-  type PendingApprovalItem, type ApprovalHistoryEntry, type ApprovalRiskTier,
+  fetchSpotChecks, resolveSpotCheck,
+  type PendingApprovalItem, type ApprovalHistoryEntry, type ApprovalRiskTier, type SpotCheckItem,
 } from '../api/approvals'
 
 const props = withDefaults(defineProps<{
@@ -32,6 +33,8 @@ function prettyTarget(title: string): string {
   return /^[0-9a-f]{16,}$/i.test(s) ? `对象 ${s.slice(0, 8)}…` : s || '—'
 }
 const history = ref<ApprovalHistoryEntry[]>([])
+const spotChecks = ref<SpotCheckItem[]>([])
+const spotResolvedCount = ref(0)
 const loading = ref(false)
 const error = ref('')
 const acting = ref<Set<string>>(new Set())
@@ -51,12 +54,15 @@ async function refresh(): Promise<void> {
   loading.value = true
   error.value = ''
   try {
-    const [pending, hist] = await Promise.all([
+    const [pending, hist, spot] = await Promise.all([
       fetchPendingApprovals(),
       props.showHistory ? fetchApprovalHistory(50) : Promise.resolve({ entries: [] }),
+      props.showHistory ? fetchSpotChecks(20) : Promise.resolve({ items: [], resolved: [] }),
     ])
     items.value = dedupePending(pending.items ?? [])
     history.value = hist.entries ?? []
+    spotChecks.value = spot.items ?? []
+    spotResolvedCount.value = (spot.resolved ?? []).length
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -71,6 +77,27 @@ async function decide(item: PendingApprovalItem, decision: string): Promise<void
     const res = await decideApproval(item.id, decision)
     if (res && (res as { ok?: boolean }).ok === false) {
       error.value = (res as { detail?: string }).detail || '决策失败'
+    } else {
+      emit('changed')
+      await refresh()
+    }
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    const next = new Set(acting.value)
+    next.delete(item.id)
+    acting.value = next
+  }
+}
+
+/** V4.1 抽检处置：认可放行 / 误放行（veto 落台账回灌治理） */
+async function onSpotResolve(item: SpotCheckItem, verdict: 'confirm' | 'veto'): Promise<void> {
+  if (acting.value.has(item.id)) return
+  acting.value = new Set(acting.value).add(item.id)
+  try {
+    const res = await resolveSpotCheck(item.id, verdict)
+    if (res && (res as { ok?: boolean }).ok === false) {
+      error.value = (res as { detail?: string }).detail || '处置失败'
     } else {
       emit('changed')
       await refresh()
@@ -168,6 +195,36 @@ defineExpose({ refresh })
             <button type="button" class="approval-btn approval-btn--once approval-btn--primary" data-testid="approval-btn-approve" :disabled="acting.has(item.id)" @click="decide(item, 'approve')">{{ t('approvals.choice.approve') }}</button>
             <button type="button" class="approval-btn approval-btn--deny" data-testid="approval-btn-request-changes" :disabled="acting.has(item.id)" @click="decide(item, 'request_changes')">{{ t('approvals.choice.request_changes') }}</button>
           </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- V4.1 §七 抽检器：低风险自动放行的事后回看（收件箱治理面） -->
+    <section v-if="showHistory && (spotChecks.length || spotResolvedCount)" class="approval-panel__spotcheck" data-testid="approval-spotcheck">
+      <h4 class="approval-panel__group-title">
+        <span class="risk-dot risk-dot--low"></span>{{ t('approvals.spotcheck.title') }}
+        <span class="risk-hint risk-hint--low">{{ t('approvals.spotcheck.hint') }}</span>
+      </h4>
+      <div v-if="spotChecks.length === 0" class="approval-panel__empty" data-testid="approval-spotcheck-empty">
+        {{ t('approvals.spotcheck.empty', { n: spotResolvedCount }) }}
+      </div>
+      <div
+        v-for="sc in spotChecks"
+        :key="sc.id"
+        class="approval-row approval-row--spotcheck"
+        data-testid="approval-spotcheck-row"
+      >
+        <div class="approval-row__main">
+          <div class="approval-row__title">
+            <span class="risk-badge risk-badge--low" data-testid="approval-spotcheck-risk">{{ t('approvals.risk.low') }}</span>
+            {{ sc.title }}
+          </div>
+          <code class="approval-row__detail">{{ sc.detail }}</code>
+          <div class="approval-row__meta">{{ t('approvals.spotcheck.autoPassedAt') }} {{ fmtTime(sc.ts) }}<template v-if="sc.profile"> · {{ sc.profile }}</template></div>
+        </div>
+        <div class="approval-row__actions">
+          <button type="button" class="approval-btn approval-btn--once" data-testid="spotcheck-btn-confirm" :disabled="acting.has(sc.id)" @click="onSpotResolve(sc, 'confirm')">{{ t('approvals.spotcheck.confirm') }}</button>
+          <button type="button" class="approval-btn approval-btn--deny" data-testid="spotcheck-btn-veto" :disabled="acting.has(sc.id)" @click="onSpotResolve(sc, 'veto')">{{ t('approvals.spotcheck.veto') }}</button>
         </div>
       </div>
     </section>
@@ -370,6 +427,11 @@ defineExpose({ refresh })
 }
 .approval-row--high {
   border-left: 3px solid var(--error-color, #dc2626);
+}
+/* V4.1 抽检行：低风险绿轴（区别于高危红轴；事后回看非待审） */
+.approval-row--spotcheck {
+  border-left: 3px solid var(--success-color, #059669);
+  opacity: 0.92;
 }
 .approval-row__kind {
   display: inline-block;

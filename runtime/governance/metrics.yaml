@@ -1,0 +1,100 @@
+# 语义与指标层（4A 治理层单一事实源之二）
+#
+# 定位：判定词与指标口径的唯一定义处——"指标一次定义 = 口径·维度·权限，
+# 绕过这一层的口径不认"（数据架构总图·服务站）。设计依据：
+# docs/superpowers/specs/2026-09-29-agent-4a-governance-layer-design.md §3.2。
+#
+# 消费方：报告生成器、qgate、治理中心视图、审计聚合——判定与统计引本表，
+# 不自造同义词。status 字段区分口径成熟度：live=已有实况数据接线，
+# defined=口径已定、实况接线在第二期（如实标注，不假装已上线）。
+
+version: 1
+reviewedAt: "2026-09-29"
+
+# 判定词表（六态，与 qgate 词表逐字对齐；守门断言漂移）
+# 语义栏是判定的唯一依据——词面相似（如报告文本含 fail 字样）不构成判定依据，
+# 该条系 V4.1 轮 G5"实质 FAIL 词面误配"审计事故的复盘产物。
+verdicts:
+  - id: pass
+    label: 通过
+    semantics: 全部验收条件成立且有 exercised 级证据
+  - id: fail
+    label: 不通过
+    semantics: 证据明确反驳验收条件；词面相似不构成判定依据，判定只认结构化 verdict 字段
+  - id: conditional
+    label: 有条件通过
+    semantics: 放行但带解除条件，条件未解除前不算 pass
+  - id: inconclusive
+    label: 无法判定
+    semantics: 证据不可得（工具缺失/环境不具备/执行失败）；不是通过也不是失败，先修环境或补跑
+  - id: waived
+    label: 豁免
+    semantics: 有有效豁免记录（豁免人/理由/期限三要素齐）
+  - id: not_applicable
+    label: 不适用
+    semantics: 该门对本对象不适用，须附不适用理由
+
+# 指标定义（口径 formula / 维度 dimensions / 权限 permission / 权威源 authority）
+metrics:
+  - id: task.done
+    name: 任务完成
+    formula: kanban 卡列流转至 done 且 completion_contract 四件套过闸（kanban_gates.py 强制）；仅列位置达标不算完成
+    dimensions: [board, assignee, capability]
+    permission: 全员可读
+    authority: kanban.db（经 hermes CLI 单写者访问）
+    status: live
+  - id: gate.passRate
+    name: 门禁通过率
+    formula: 周期内结构化 verdict=pass 的闸门判定数 / 判定总数；conditional 计入分母不计入分子；not_applicable 双侧剔除
+    dimensions: [gate, capability, period]
+    permission: 全员可读
+    authority: qgate runs 台账（.qgate/runs 扫描：cwd/仓根上寻/示例仓；GOVERNANCE_QGATE_RUNS 覆盖）
+    status: live
+  - id: dispatch.successRate
+    name: 派发成功率
+    formula: 引擎派发（本地）= 送达数（reason=queued/coalesced）/ 派发总数（同 commandId 去重、column 条目优先；deferred 计分母不计分子）。跨机派发 = task.receipt 状态达 created/running 的派单数 / task.assign 总数（Matrix 侧聚合待接线，如实分列）
+    dimensions: [unit, capability, period]
+    permission: 全员可读
+    authority: 派发结果台账（~/.hermes-web-ui/overlay/dispatch-ledger.jsonl，引擎派发）+ Matrix 注册房协议事件（跨机）
+    status: live
+  - id: run.durationP95
+    name: 运行时长 P95
+    formula: 周期内已完成 run 的 wall-clock 时长第 95 百分位；按 sloTier 分档对照目标值
+    dimensions: [capability, sloTier, period]
+    permission: 全员可读
+    authority: kanban 事件流 + state.db
+    status: live
+  - id: slo.tierSuccessRate
+    name: 分档任务成功率
+    formula: 窗口内 done 数 / (done+archived) 数；assignee 经台账单元映射 sloTier，未映射入 unmapped 桶不计预算；样本 <minSamples 预算判定挂起
+    dimensions: [sloTier, windowDays]
+    permission: 全员可读
+    authority: kanban.db（root+boards/* 聚合，只读）
+    status: live
+  - id: cost.perRun
+    name: 单次运行成本
+    formula: run 内全部 model_call 用量按价目表折算求和；未收录模型不计金额并显式标注
+    dimensions: [capability, provider, period]
+    permission: 管理者可读
+    authority: usage-store（hermes-web-ui.db）+ token-meter 价目表
+    status: defined
+
+# SLO 分级目标值（技术架构总图"分级×目标值"在本机的承载；错误预算耗尽动作
+# budgetAction：freeze=冻结该档派发（GOVERNANCE_SLO_BUDGET=enforce 时硬性生效，
+# 默认 warn 只告警记档），warn=治理中心横幅+日志告警）。
+sloTargets:
+  core:
+    successRate: 0.95
+    windowDays: 30
+    minSamples: 10
+    budgetAction: freeze
+  important:
+    successRate: 0.90
+    windowDays: 30
+    minSamples: 10
+    budgetAction: warn
+  general:
+    successRate: 0.80
+    windowDays: 30
+    minSamples: 10
+    budgetAction: warn

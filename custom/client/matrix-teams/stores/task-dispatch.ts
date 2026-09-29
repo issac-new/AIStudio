@@ -163,6 +163,19 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
   async function doReceiveAssign(assign: AssignContent): Promise<'created' | 'failed' | 'queued' | 'skipped'> {
     const index = loadDispatchIndex()
     if (index[assign.taskId]) return 'skipped' // kv 防重（spec §6.2）
+    // 准入五问执行端强制（4A 第五期 ⑤）：跨域派发（target.account 与本机不同
+    // homeserver 域）且本机已宣但未过五问 → 拒收并回执 failed——五问语义是
+    // "跨边界协作签约"（可信数据空间），本域派发不在其范围（本域治理归边界 spec
+    // 写者边界与审批面）。写端闸在客户端（可绕），执行端闸使跨域"未过五问→收不到
+    // 任务"协议级闭环。未自宣账号走既有 no-such-profile 路径。
+    const domainOf = (id: string): string => id.split(':')[1] ?? ''
+    const selfId = userIdRef.value ?? ''
+    const crossDomain = domainOf(selfId) !== domainOf(assign.target.account)
+    const selfAccount = selfId ? accountsRef.value.find(a => a.userId === selfId) : undefined
+    if (crossDomain && selfAccount && !selfAccount.admissionOk) {
+      await sendReceipt(assign.taskId, 'failed', { reason: 'admission-incomplete' })
+      return 'failed'
+    }
     const profile = resolveTargetProfile(assign.target, accountsRef.value)
     if (!profile) {
       await sendReceipt(assign.taskId, 'failed', { reason: 'no-such-profile' })

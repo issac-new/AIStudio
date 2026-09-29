@@ -405,3 +405,49 @@ skills-ledger/workflow-run-line/mention-resolution/context-six-source/present �
 
 **实现类终态**：P0=10/10+4（178/195/197/242 四行 P0 收编）｜P1 实现批清零｜P2 实现批清零。
 残余 🔜 全部收官（2026-09-27 层 2 清零批后）：前缀复用层 1+2✅（层 3=请求链路增量帧随 provider 协议）/minimax 候选✅tuicopy·tooldesc·bashcontract/kimi 视频✅层 1+层 2 真抽帧/技能入口 UI✅IdeMcpPane tab。唯一挂起=distill v2 LLM 合成（407 自注条件：等 FTS 真实使用反馈，非开发缺口）。
+
+---
+
+## §5 2026-09-29 实物核验轮勘误（workflow 集成轮附带）
+
+用户指令"IDE 工作台必须包含调研学习的所有产品和源码工具的功能"触发全量实物核验
+（三层验法：产物存在→接线存在→数据源闭合；不采信本文档自报）。结论先行：
+**此前"落地"口径混淆了两类状态——「纯函数域模块+守门测试落库」与「功能进产品
+（组件挂载+数据源+可感知）」。前者大量存在但从未接线。**
+
+### 5.1 §3.10 "待排期 8 项全部落地" 勘误（6/8 虚标，本轮 5 件补真接线）
+
+| # | 项 | 核验时状态 | 本轮处置 |
+|---|---|---|---|
+| 3 | 技能入口 skills-ledger | ✅真（IdeMcpPane 接线） | 不动 |
+| 9 | @提及 mention-resolution | ✅真（IdeMentionPicker 接线） | 不动 |
+| 5 | Workflow run-line | ❌孤儿 | ✅补齐（见 5.3） |
+| 1 | rounds-table | ❌孤儿（轮表本体已在 MetricsPopover，独有语义=表尾合计未接） | ✅接线：roundsSummary 表尾合计行进 MetricsPopover |
+| 6 | context-six-source | ❌孤儿（四段在用，六源映射从未被调） | ✅接线：IdeContextBar 悬停图例升六源（估算≈标注） |
+| 7 | goal-budget | ❌孤儿（turn 一维在用，token/wallClock 未呈现） | ✅接线：IdeGoalBudgetFloat 三预算（回执带段才显示） |
+| 8 | usage-ledger | ❌孤儿（热力图自算 streak/peak 未走台账） | ✅接线：MetricsPopover 热力图+汇总行单一源 buildUsageLedger（streak 语义修正=跳末尾 0 日） |
+| 22 | session-importer | ❌孤儿 | **未接线，如实记档**：zcode 引擎 RPC 面无 import 端点（claude-native 管线在引擎内部 zcodeAgentService 未暴露；codex/kimi 源引擎侧不存在）。依赖=引擎侧 patch 开 RPC 后再接，REST+UI 先行即假接线。**下轮工作** |
+
+### 5.2 全量核验汇总（锚点证据见核验报告 evidence 归档）
+
+- §3.12 P2 批 21 件：1 真（handoff）/ 20 孤儿——其中 8 件功能另有真实实现（F 类：
+  runlog/teamsummary/sessionarchive/taskgroups/autosteps/dispatchpreview/fileundo/
+  squadcoord，落点声明失实但功能面在）、12 件功能未进产品。
+- §3.1-3.8 X 类纯孤儿（零非测试引用、无 UI/路由/patch 对应）：47 件域模块 + 8 件
+  client utils。**裁决清单待用户批**（逐件吸收进产品 vs 归档为设计参考件——按原
+  语义逐件进产品估 30-60 人日，不应默默吞掉也不应默默丢弃）。
+- patch 416/417：文件在、series 缺、upstream/hermes-agent 树内无内容=死补丁（§3.11
+  "已落"失实）。处置=下轮回 series 重放或删档（先核对 06d772ab 是否已折叠吸收）。
+- 真落地不动项：UI 复刻批 25 件、带 controller 的域 12 个、zcode 桥全域、roster 资产。
+
+### 5.3 workflow 集成（本轮主线，#5 从孤儿到全链）
+
+- 服务端：session-projection 透传 workflowActivity（normalizeWorkflowActivity 有界
+  归一化 ≤4 runs，词表对齐 zcode）；engine-bridge 接口 +4 RPC；engine-controller
+  +4 GET（workflow/runs · run-events · saved · saved-runs，归属闸+引擎离线 503）。
+- 客户端：zcode-projection store 增 workflowSessions；workflow-run-line 重写为协议
+  摘要投影（折叠/确认集合/live 优先，移植 zcode workflowRunLine 语义）；新组件
+  IdeWorkflowRunLines（迷你轨道）；新面板 IdeWorkflowPane（侧栏 workflow ⟐ 页签：
+  会话运行行实时+run 事件流分页+已保存工作流项目/全局档+历史 runs）。
+- 词条：473 再生（tab_workflow/ledgerPeak/ledgerTotal/roundsTotal/tokenBudget/
+  wallClockBudget）。

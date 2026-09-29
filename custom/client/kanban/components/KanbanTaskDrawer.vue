@@ -17,6 +17,7 @@ import KanbanDiagnosticsSection from '@/custom/kanban/components/KanbanDiagnosti
 import KanbanAttachments from '@/custom/kanban/components/KanbanAttachments.vue'
 // HERMES_CUSTOM[P3 Task 7] 来源 run 关联区块（任务 → run 反查，ia2/adapters/traceability 纯函数投影）
 import RunLinks from '@/custom/ia2/components/RunLinks.vue'
+import KanbanHandoffSection from './KanbanHandoffSection.vue'
 import { defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 // HERMES_CUSTOM[loop-multiview] 任务↔群弱锚点（ia2/adapters/manage 纯函数）
@@ -989,6 +990,14 @@ function statusDotClass(status: string): string {
         <!-- HERMES_CUSTOM[P3 Task 7] BEGIN: 来源 run 关联（loop.persisted 按 taskId 显式反查 → runId 深链） -->
         <RunLinks class="drawer-section" :task-id="task.id" :show="show" />
         <!-- HERMES_CUSTOM[P3 Task 7] END -->
+
+        <!-- B10 交接单（routa 4 类×5 态；载体=评论结构化标记，hermes CLI 写链不变） -->
+        <KanbanHandoffSection
+          class="drawer-section"
+          :task-id="task.id"
+          :comments="detail?.comments ?? []"
+          @submitted="loadDetail(task.id)"
+        />
 
         <!-- Status Actions -->
         <div class="drawer-section">
@@ -2084,13 +2093,13 @@ function statusDotClass(status: string): string {
   flex-shrink: 0;
   display: inline-block;
 
-  &--triage { background: #9ca3af; }
-  &--todo { background: #6b7280; }
-  &--ready { background: #3b82f6; }
-  &--running { background: #f59e0b; }
-  &--blocked { background: #ef4444; }
-  &--done { background: #10b981; }
-  &--archived { background: #8b5cf6; }
+  &--triage { background: var(--accent-muted); }
+  &--todo { background: var(--text-muted); }
+  &--ready { background: var(--accent-info); }
+  &--running { background: var(--warning); }
+  &--blocked { background: var(--error); }
+  &--done { background: var(--success); }
+  &--archived { background: var(--accent-muted); }
 }
 </style>
 <!-- HERMES_CUSTOM[Kanban] END -->

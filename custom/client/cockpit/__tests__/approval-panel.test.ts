@@ -11,12 +11,19 @@ import * as approvalsApi from '../api/approvals'
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k), locale: ref('zh-CN') }) }))
 // mock 整个 approvals API 模块：经 @/api/client 会连锁拉入上游 router（node 环境无 location）
 vi.mock('../api/approvals', async () => {
-  const state = { pending: { items: [] as unknown[] }, history: { entries: [] as unknown[] }, decideResult: { ok: true } as Record<string, unknown> }
+  const state = {
+    pending: { items: [] as unknown[] }, history: { entries: [] as unknown[] },
+    spotcheck: { items: [] as unknown[], resolved: [] as unknown[] },
+    decideResult: { ok: true } as Record<string, unknown>,
+    spotResolveResult: { ok: true } as Record<string, unknown>,
+  }
   return {
     dedupePending: (items: unknown[]) => items,
     fetchPendingApprovals: vi.fn(async () => JSON.parse(JSON.stringify(state.pending))),
     fetchApprovalHistory: vi.fn(async () => JSON.parse(JSON.stringify(state.history))),
+    fetchSpotChecks: vi.fn(async () => JSON.parse(JSON.stringify(state.spotcheck))),
     decideApproval: vi.fn(async () => state.decideResult),
+    resolveSpotCheck: vi.fn(async () => state.spotResolveResult),
     __setState: (s: Partial<typeof state>) => Object.assign(state, s),
   }
 })
@@ -40,7 +47,7 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     fetchPendingApprovals: ReturnType<typeof vi.fn>, fetchApprovalHistory: ReturnType<typeof vi.fn>, decideApproval: ReturnType<typeof vi.fn> }
 
   beforeEach(() => {
-    api.__setState({ pending: { items: [] }, history: { entries: [] }, decideResult: { ok: true } })
+    api.__setState({ pending: { items: [] }, history: { entries: [] }, spotcheck: { items: [], resolved: [] }, decideResult: { ok: true }, spotResolveResult: { ok: true } })
     api.fetchPendingApprovals.mockClear()
     api.fetchApprovalHistory.mockClear()
     api.decideApproval.mockClear()
@@ -116,5 +123,48 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     expect(wrap.find('[data-testid="approval-tier-medium"] [data-testid="approval-row-review"]').exists()).toBe(true)
     // 历史档位徽标
     expect(wrap.find('[data-testid="approval-history-risk"]').classes()).toContain('risk-badge--high')
+  })
+
+  // V4.1 §七 抽检器：低风险自动放行的事后回看（待抽检行 + 认可/误放行处置 + 空态计数）
+  it('V4.1：抽检区渲染待抽检行；veto 点击 → resolveSpotCheck(veto) → 刷新；showHistory=false 不渲染', async () => {
+    const api2 = approvalsApi as unknown as { __setState: (s: Record<string, unknown>) => void
+      fetchSpotChecks: ReturnType<typeof vi.fn>, resolveSpotCheck: ReturnType<typeof vi.fn> }
+    api2.__setState({
+      pending: { items: [] },
+      history: { entries: [] },
+      spotcheck: {
+        items: [{ id: 'fleetfile:rq-1', ts: 1759000030000, title: 'unattended:single_query 的命令审批', detail: 'git status', profile: 'wei' }],
+        resolved: [{ id: 'fleetfile:rq-0', ts: 1759000010000, title: 'x', detail: 'ls', verdict: 'confirmed' }],
+      },
+    })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0, showHistory: true } })
+    await flushPromises()
+    const row = wrap.find('[data-testid="approval-spotcheck-row"]')
+    expect(row.exists()).toBe(true)
+    expect(row.text()).toContain('git status')
+    expect(wrap.find('[data-testid="approval-spotcheck"]').text()).toContain('approvals.spotcheck.title')
+
+    api2.fetchSpotChecks.mockClear()
+    await wrap.find('[data-testid="spotcheck-btn-veto"]').trigger('click')
+    await flushPromises()
+    expect(api2.resolveSpotCheck).toHaveBeenCalledWith('fleetfile:rq-1', 'veto')
+    expect(api2.fetchSpotChecks).toHaveBeenCalled()
+
+    // 嵌入条（showHistory=false）不渲染抽检区——抽检是收件箱治理面，不进看板窄条
+    const narrow = mount(ApprovalPanel, { props: { pollMs: 0, showHistory: false } })
+    await flushPromises()
+    expect(narrow.find('[data-testid="approval-spotcheck"]').exists()).toBe(false)
+  })
+
+  it('V4.1：抽检空态（仅已处置计数，无待抽检行）', async () => {
+    const api2 = approvalsApi as unknown as { __setState: (s: Record<string, unknown>) => void }
+    api2.__setState({
+      pending: { items: [] }, history: { entries: [] },
+      spotcheck: { items: [], resolved: [{ id: 'x1', ts: 1, title: 't', detail: 'd', verdict: 'vetoed' }] },
+    })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0, showHistory: true } })
+    await flushPromises()
+    expect(wrap.find('[data-testid="approval-spotcheck-row"]').exists()).toBe(false)
+    expect(wrap.find('[data-testid="approval-spotcheck-empty"]').exists()).toBe(true)
   })
 })

@@ -11,6 +11,8 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useAppStore } from '@/stores/hermes/app'
 import { useIdeStore } from '../store/ide'
 import { fetchEngineCatalog, type EngineCatalogGroup } from '../utils/engine-models'
+import { autoRoute, type CostTier } from '../../../server/modelroute/model-routing'
+import IdeEngineModelsDialog from '../components/IdeEngineModelsDialog.vue'
 
 const { t } = useI18n()
 const chatStore = useChatStore()
@@ -18,6 +20,51 @@ const appStore = useAppStore()
 const ide = useIdeStore()
 
 const open = ref(false)
+
+// ── Auto 模型路由（吸收第一批 D3，qoder：复杂度→成本档+思考强度）──
+// 判定 v1=启发式（最近 user 消息长度+任务关键词），理由透明（toast 展示，不黑箱）；
+// 档位→模型映射默认=目录摊平序 [首/中位/末]，localStorage ide_auto_tier_map 可覆盖。
+const AUTO_MAP_KEY = 'ide_auto_tier_map'
+function tierModels(): Record<CostTier, { provider: string; model: string } | null> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(AUTO_MAP_KEY) ?? 'null')
+    if (raw?.economy?.model && raw?.standard?.model && raw?.power?.model) return raw
+  } catch { /* 坏档回默认 */ }
+  const flat: Array<{ provider: string; model: string }> = []
+  for (const g of groups.value) for (const m of g.models) flat.push({ provider: g.provider, model: m })
+  if (!flat.length) return { economy: null, standard: null, power: null }
+  const pickAt = (i: number) => flat[Math.min(i, flat.length - 1)] ?? null
+  return { economy: pickAt(0), standard: pickAt(Math.floor((flat.length - 1) / 2)), power: pickAt(flat.length - 1) }
+}
+
+function judgeComplexity(): 'simple' | 'standard' | 'complex' {
+  const msgs = (chatStore.activeSession?.messages ?? []) as Array<Record<string, unknown>>
+  let lastUser = ''
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role === 'user') { lastUser = String(msgs[i].content ?? ''); break }
+  }
+  if (/重构|排查|架构|设计|迁移|审计|全量|端到端/i.test(lastUser)) return 'complex'
+  if (lastUser.length <= 24 && !/[？?]/.test(lastUser)) return 'simple'
+  return 'standard'
+}
+
+async function pickAuto(): Promise<void> {
+  const sid = chatStore.activeSessionId
+  if (!sid) return
+  const route = autoRoute({ complexity: judgeComplexity() })
+  const target = tierModels()[route.tier]
+  open.value = false
+  if (!target) return
+  await chatStore.switchSessionModel(target.model, target.provider, sid)
+  // 判定理由透明（不黑箱）：toast 告知档位与依据。
+  window.setTimeout(() => {
+    const el = document.createElement('div')
+    el.textContent = `Auto：${route.detail} → ${target.model}`
+    el.style.cssText = 'position:fixed;bottom:44px;right:16px;z-index:999;background:#18a058;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,.2)'
+    document.body.appendChild(el)
+    window.setTimeout(() => el.remove(), 3200)
+  }, 50)
+}
 
 const session = computed(() => chatStore.activeSession)
 // switchSessionModel 对 codingAgentMode==='global' 的会话直接返回 false（模型由
@@ -32,8 +79,10 @@ const currentModel = computed(() => session.value?.model || '')
 
 const engineGroups = ref<EngineCatalogGroup[]>([])
 const usingIndependent = ref(false)
+const manageOpen = ref(false)
 
-onMounted(async () => {
+// A8：抽成可重入——管理对话框保存后重拉目录（写穿结果立即可选）。
+async function loadCatalog(): Promise<void> {
   try {
     const catalog = await fetchEngineCatalog()
     engineGroups.value = catalog.groups
@@ -42,7 +91,12 @@ onMounted(async () => {
     engineGroups.value = []
     usingIndependent.value = false
   }
-})
+}
+onMounted(() => { void loadCatalog() })
+
+function onManageSaved(): void {
+  void loadCatalog()
+}
 
 // 独立设置：独立目录优先；空回落 hermes 目录（appStore.modelGroups）
 const groups = computed(() =>
@@ -72,6 +126,17 @@ async function pick(provider: string, model: string): Promise<void> {
     </button>
 
     <div v-if="open" class="ide-model-switcher__panel" data-testid="ide-model-switcher-panel">
+      <!-- Auto 档（D3）：复杂度路由（判定理由 toast 透明） -->
+      <section class="ide-model-switcher__group">
+        <div class="ide-model-switcher__provider">Auto 路由</div>
+        <button
+          type="button"
+          class="ide-model-switcher__option is-auto"
+          data-testid="ide-model-option-auto"
+          title="按任务复杂度选成本档（0.5×/1×/2×）——判定理由见点击后提示"
+          @click="pickAuto"
+        >⚡ Auto（复杂度路由）</button>
+      </section>
       <p v-if="!catalogReady" class="ide-model-switcher__state">{{ t('ide.modelSwitcher.loading') }}</p>
       <template v-else>
         <section v-for="g in groups" :key="g.provider" class="ide-model-switcher__group">
@@ -89,7 +154,16 @@ async function pick(provider: string, model: string): Promise<void> {
           </button>
         </section>
       </template>
+      <div class="ide-model-switcher__manage">
+        <button
+          type="button"
+          class="ide-model-switcher__managebtn"
+          data-testid="ide-model-manage"
+          @click="manageOpen = true"
+        >⚙ 管理引擎目录…</button>
+      </div>
     </div>
+    <IdeEngineModelsDialog v-if="manageOpen" @close="manageOpen = false" @saved="onManageSaved" />
   </div>
 </template>
 
@@ -174,5 +248,26 @@ async function pick(provider: string, model: string): Promise<void> {
     color: var(--primary-color, #18a058);
     background: rgba(97, 175, 239, 0.12);
   }
+}
+
+.ide-model-switcher__manage {
+  border-top: 1px dashed var(--border-color, #3a3f4b);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.ide-model-switcher__managebtn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--text-muted, #9aa0aa);
+  font-size: 11px;
+  padding: 4px 6px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover { background: rgba(255, 255, 255, 0.06); color: var(--primary-color, #18a058); }
 }
 </style>
