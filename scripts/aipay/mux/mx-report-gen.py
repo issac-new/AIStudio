@@ -428,7 +428,7 @@ def gate_cards():
         ts = fmt_ts(GATE_STATE_KEY[g])
         passed = bool(state.get(GATE_STATE_KEY[g]))
         if g == 'G5' and passed:
-            cls, badge = 'gpass', '✓ 复审通过 r8（曾判回滚）'
+            cls, badge = 'gpass', '✓ 已通过（复审 r8）'
         else:
             cls = 'gpass' if passed else 'gpending'
             badge = '✓ 已通过' if passed else '○ 未达'
