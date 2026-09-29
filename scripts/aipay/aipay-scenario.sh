@@ -81,6 +81,18 @@ if step_reached smoke; then
   curl -sf "http://127.0.0.1:${STUDIO_PORT}/health/ready" >/dev/null || fail "studio（单实例多账号）未就绪"
   curl -sf "http://127.0.0.1:${GW_PORT}/health" >/dev/null || fail "gateway（多路复用）未就绪"
   note "[真值] 单 gateway（:${GW_PORT}）+ 单 studio（:${STUDIO_PORT}）就绪 ✓（步骤 2 gateway 配置 / 步骤 4 功能就绪）"
+  # 驾驶舱回归·headless 侧（补遗④第 3 项：「在线恒零」从观察项升级为准出阻断）：
+  # gateway detailed 健康给出 机器/智能体 在线真值；浏览器侧「任务/在线」chips 下拉
+  # 逐项验证由 capture-v42 ui-04a/ui-04b 承担并截屏入档，双源合并。
+  _akey=$(grep '^API_SERVER_KEY=' "$HERMES_ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' || true)
+  _det=$(curl -sf -m 5 -H "Authorization: Bearer ${_akey}" "http://127.0.0.1:${GW_PORT}/health/detailed" 2>/dev/null || true)
+  if [[ -n "$_det" ]] && printf '%s' "$_det" | jq -e '.gateway_state == "running"' >/dev/null 2>&1; then
+    _cpl=$(printf '%s' "$_det" | jq -r '.readiness.checks.gateway.connected_platforms // 0')
+    note "[真值] 驾驶舱回归·在线（headless）：gateway_state=running ✓ connected_platforms=${_cpl}（机器+智能体通道在线；浏览器侧三数见 ui-04b）"
+  else
+    echo "ISSUE|cockpit-online-zero|studio|gateway /health/detailed 不可判或非 running——在线恒零阻断（补遗④第 3 项）" >> "$EVID_DIR/issues.log"
+    fail "驾驶舱回归·在线真值失败：gateway detailed 健康不可用（在线恒零=准出阻断，补遗④第 3 项）"
+  fi
   for u in "${INSTANCED_USERS[@]}"; do
     jwt_of "$u" >/dev/null   # matrix-login 全量验证（步骤 3 自动登录链路）
     kanban_list "$u" >/dev/null

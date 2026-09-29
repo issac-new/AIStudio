@@ -51,6 +51,30 @@ if [ "$APPLY" = 1 ]; then
   rm -rf "$SIM_ROOT/gateway-locks" "$SIM_ROOT/.driver.lock.d"
 fi
 
+# 2b) 看板库归档（0→1 补全线——run4 实锤：旧轮 147 卡残留污染 chips 计数与凭证核验）
+#     tar 归档 boards/ 后清空各板 tasks 及关联表（保留板元数据 board.json/team 围栏/profiles）。
+if [ "$APPLY" = 1 ] && [ -d "$SIM_ROOT/hermes/kanban/boards" ]; then
+  say "看板库归档 → ${ARC}/boards.tar；随后清空各板任务（保留板骨架/围栏）"
+  tar -cf "$ARC/boards.tar" -C "$SIM_ROOT/hermes/kanban" boards
+  python3 - "$SIM_ROOT/hermes/kanban/boards" <<'PYEOF'
+import sqlite3, glob, sys
+n = 0
+for db in glob.glob(sys.argv[1] + '/*/kanban.db'):
+    conn = sqlite3.connect(db, timeout=15)
+    try:
+        cur = conn.cursor(); cur.execute('begin immediate')
+        c1 = cur.execute('delete from tasks').rowcount
+        for t in ('task_links','task_comments','task_events','task_runs','task_attachments'):
+            try: cur.execute('delete from ' + t)
+            except Exception: pass
+        conn.commit(); n += max(c1, 0)
+    except Exception as e:
+        conn.rollback(); print(f'  WARN {db}: {e}')
+    finally: conn.close()
+print(f'  boards tasks cleared: {n}')
+PYEOF
+fi
+
 # 3) synapse 房间归档清理（保留账号与凭据：按创建时间/名称把推演房间逐个 PUT /forget+delete 前先 archive）
 #    管理员 token 自 creds/admin.token；房间筛选=成员含 @fanfan:matrix.test 且名称含「需求分析讨论群」等推演特征
 if [ "$KEEP_ACCOUNTS" = 0 ]; then
@@ -58,7 +82,7 @@ if [ "$KEEP_ACCOUNTS" = 0 ]; then
   ADM=$( [ -f "$SIM_ROOT/creds/admin.token" ] && cat "$SIM_ROOT/creds/admin.token" | head -1 || true )
   if [ "$APPLY" = 1 ] && [ -n "$ADM" ]; then
     HS=http://127.0.0.1:8008
-    for u in fanfan bella; do
+    for u in bella fanfan wei mei chen hu lin xiao qi fei arch secops ops audit; do
       T=$( [ -f "$SIM_ROOT/creds/$u.token" ] && head -1 "$SIM_ROOT/creds/$u.token" || true )
       [ -n "$T" ] || continue
       curl -sf "$HS/_matrix/client/v3/joined_rooms?access_token=$T" | jq -r '.joined_rooms[]' | while read -r rid; do
