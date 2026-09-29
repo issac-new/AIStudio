@@ -1,9 +1,9 @@
 <!-- overlay/custom/client/ia2/components/IaViewSwitcher.vue -->
 <!-- v12.4 视图单按钮切换（2026-09-20 用户裁定）：「沟通协作 | IDE 工作台」
      双按钮合并为一个切换钮——显示目标视图名（collab 态显示 IDE 工作台，
-     ide 态显示沟通协作），点击跳另一视图。自算当前视图（/ide → ide，
-     其余 /app 家族 → collab）；testid 沿用 ia-viewswitch-row / ia-scenes
-     保持守门兼容，按钮改 ia-view-toggle。 -->
+     ide 态显示沟通协作），点击跳另一视图。自算当前视图（V5 补遗⑤ M2 起
+     /app/ide → ide，其余 /app 家族 → collab；旧 /ide 兼容重定向已兜）；
+     testid 沿用 ia-viewswitch-row / ia-scenes 保持守门兼容，按钮改 ia-view-toggle。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -13,7 +13,7 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const isIde = computed(() => route.path === '/ide' || route.path.startsWith('/ide/'))
+const isIde = computed(() => route.path === '/app/ide' || route.path.startsWith('/app/ide/'))
 
 function toggleView(): void {
   void router.push({ name: isIde.value ? 'ia2.collab' : 'ide.shell' })
