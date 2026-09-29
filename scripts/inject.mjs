@@ -245,7 +245,7 @@ function reverseZcodePatches(patches) {
   }
 }
 
-function generateOverlayViteConfig() {
+export function generateOverlayViteConfig() {
   // 生成完整派生 config:把 @ 指向 upstream src,@/custom 指向 overlay custom,
   // 入口重定向到 overlay client shim(复制上游 main.ts 启动序列 + A 类 bootstrap)。
   const upstreamViteConfig = resolve(hermesStudioRoot, 'vite.config.ts');
@@ -610,6 +610,16 @@ function main() {
     ensureServerCustomSymlink();
     console.log('[clean] done');
   }
+}
+
+// --config-only：只生成派生构建 config + node_modules 软链，不触共享 upstream 注入态
+// （worktree 构建门禁用：build:full 需 vite.config.overlay.ts，而全量 inject 会重写
+// 共享 upstream——多会话并行期只允许 config 层操作）。
+if (process.argv.includes('--config-only')) {
+  generateOverlayViteConfig();
+  ensureNodeModulesSymlink();
+  console.log('[inject] --config-only done（未触碰 upstream 注入态）');
+  process.exit(0);
 }
 
 // 直跑守卫:测试 import 本模块(断言 js 转义/win32 分支)不触发注入副作用。
