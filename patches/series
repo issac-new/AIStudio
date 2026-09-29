@@ -286,3 +286,6 @@
 #      非交付物）；2.25 轮 patch 109 语义，系列折叠时孤儿化，v0.7.25 结构重建。
 497-desktop-win-zip-target.patch
 498-goals-user-preempt.patch
+# 499（侧栏死链根治）：删 PageSidebarNav 孤函数 openMatrixChat——目标路由 hermes.matrixChat
+#      已被 297 随 cockpit 家族整体删除，函数零调用方（按钮块在更早系列已移除）。
+499-sidebar-dead-matrix-entry-removal.patch
