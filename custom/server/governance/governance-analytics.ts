@@ -397,11 +397,9 @@ export function computeSloReport(
   ledger: LedgerDoc,
   metrics: MetricsDoc | null,
   assigneeStats: Map<string, AssigneeStat>,
-  now: number = Date.now(),
 ): SloReport {
   const targets = (metrics as { sloTargets?: Record<string, SloTarget> } | null)?.sloTargets ?? {}
   const windowDays = Math.max(1, ...Object.values(targets).map((t) => t.windowDays || 30), 30)
-  const windowMs = windowDays * 86400000
   const tierOfAssignee = new Map<string, string>()
   for (const u of ledger.units ?? []) tierOfAssignee.set(u.id, u.sloTier)
 
@@ -439,8 +437,6 @@ export function computeSloReport(
       note: a.closed > 0 && a.closed < minSamples ? `样本 ${a.closed}<${minSamples}，预算判定挂起` : undefined,
     }
   })
-  void now
-  void windowMs
   return {
     windowDays,
     tiers,
