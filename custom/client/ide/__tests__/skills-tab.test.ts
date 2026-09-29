@@ -6,7 +6,7 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, p?: Record<string, unknown>) =>
   k === 'ide.skills.summary' ? `${p?.n} skills · ${p?.e} enabled` : k }) }))
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }), createRouter: vi.fn(() => ({ beforeEach: vi.fn(), push: vi.fn() })), createWebHashHistory: vi.fn(() => ({})) }))
 vi.mock('naive-ui', () => ({ useMessage: () => ({ success: vi.fn() }) }))
 vi.mock('@/api/hermes/mcp', () => ({
   fetchMcpServers: vi.fn(async () => ({ servers: [], total_tools: 0 })),
