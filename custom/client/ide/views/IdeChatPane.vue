@@ -45,6 +45,7 @@ import IdeAgentsView from '../components/IdeAgentsView.vue'
 import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
 import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
 import IdeImportHistory from '../components/IdeImportHistory.vue'
+import IdeKnowledgeBar from '../components/IdeKnowledgeBar.vue'
 import { ideRunsApi } from '../api/runs'
 import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
@@ -529,6 +530,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeResumeAdvisor />
       <IdeSecurityBoostBar />
       <IdeImportHistory />
+      <IdeKnowledgeBar />
       <IdeContextBar />
       <IdeQueuePanel />
       <IdeRecapCard />

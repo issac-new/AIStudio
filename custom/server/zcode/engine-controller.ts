@@ -496,11 +496,49 @@ router.get('/import/history-preview', async (ctx) => {
   }
 })
 
-// 写入端点（L8）：引擎 importSession RPC 未开（zcode-patches 草稿）——501 如实。
+// 写入端点（#22 收口）：引擎 importSessionV4（zcode-patch 002）真写入——
+// 读取 JSONL→session-importer 解析→归一化行经桥 RPC 写 imported 会话。
+// 引擎进程未载入 002 补丁时（旧引擎进程）→ 503 如实（重启引擎窗口后生效）。
 router.post('/import/history', async (ctx) => {
-  void ctx
-  ctx.status = 501
-  ctx.body = { ok: false, detail: '引擎 importSession RPC 未开（见 docs/superpowers/notes/2026-09-29-zcode-import-session-rpc-draft.md）——解析预览端点已可用' }
+  const body = (ctx.request.body ?? {}) as { workspacePath?: unknown; source?: unknown; ref?: unknown }
+  const workspacePath = typeof body.workspacePath === 'string' ? body.workspacePath : ''
+  const source = body.source
+  const ref = typeof body.ref === 'string' ? body.ref : ''
+  if (!workspacePath || (source !== 'codex' && source !== 'kimi' && source !== 'claude') || !ref) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'workspacePath/source(codex|kimi|claude)/ref 必填' }
+    return
+  }
+  if (workspaceAccessDenied(ctx, workspacePath)) return
+  const { readFileSync } = await import('fs')
+  const { resolve } = await import('path')
+  let lines: string[]
+  try {
+    lines = readFileSync(resolve(ref), 'utf8').split('\n').filter((l) => l.trim())
+  } catch (err) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
+    return
+  }
+  const { parseSessionHistory } = await import('../importer/session-importer')
+  const parsed = parseSessionHistory(source, resolve(ref), lines)
+  if (!parsed.rows.length) {
+    ctx.status = 422
+    ctx.body = { ok: false, detail: '无可导入行（全部坏行）' }
+    return
+  }
+  try {
+    const runtime = getZcodeProjectionRuntime()
+    const result = await runtime.withAgent((agent) => agent.importSessionV4({
+      workspacePath, source, sourceId: parsed.sourceId,
+      rows: parsed.rows.map((r) => ({ role: r.role, text: r.text, at: r.at })),
+    }))
+    ctx.body = { ok: true, ...result, skippedRows: parsed.skippedRows }
+  } catch (err) {
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    ctx.status = 503
+    ctx.body = { ok: false, reason: /method|unknown|no such|not a function/i.test(detail) ? 'engine_rpc_not_loaded' : 'engine_unreachable', detail: `引擎写入面失败（旧引擎进程未载 zcode-patch 002 时重启引擎后生效）：${detail}` }
+  }
 })
 
 router.get('/squad/roster', async (ctx) => {

@@ -39,3 +39,15 @@ keymap v1 生效面=session 三键；memory 四类型 v2（写入侧 type）；b
 | goalbudget(server) | 引擎预算字段未开——引擎侧记档（turns 预算已在 goals.py） |
 | 知识系 3 件 | 依赖 semantica 迁移（base-runtimes §7）+FTS 反馈——外部依赖，迁移立项时连动 |
 | brief 生效面 | 依赖 provider 增量帧协议（同 prefix-reuse 层 3） |
+
+
+## 依赖消除批终态（2026-09-29 第四批 feat/x20-deps-cleared）
+
+| 原依赖项 | 消除方式 | 终态 |
+|---|---|---|
+| #22 引擎 importSession RPC | **zcode-patch 002**（transport 方法+schema/service 方法/migrationSource 枚举扩 codex/kimi；persist 泛化写入）+桥声明+POST /import/history 真写入 | ✅ 引擎代码全链落库；**引擎进程重启窗口后生效**（旧进程未载补丁时端点如实 503 engine_rpc_not_loaded） |
+| 知识系待 semantica | 核查发现**已实装**（~/.hermes/config.yaml mcp_servers.semantica enabled+venv 可 import+KG_PATH 持久化）——台账状态过时 | ✅ 依赖本已消除；补 IDE 侧闭环：IdeKnowledgeBar（/learn 三归宿判定+通用性贡献判定+semantica 在线状态） |
+| brief 待 provider 增量帧 | 依赖重定性：prompt-cache 命中只依赖**请求侧前缀字节稳定**（响应侧增量帧是另一优化）——squad 简报规则段天然前缀稳定 | ✅ 守门测试钉死该性质（diffBrief 前缀≥task_data 定界头，防回归） |
+| goalbudget 引擎字段 | **patch 499**（GoalState 加 token_budget/token_used/wall_clock_budget_sec/goal_started_at+evaluate 累计+触顶 pause+status_line 展示；调用方 last_usage_tokens 传参面） | ✅ 三预算路径 python 实测自证（token 触顶/墙钟触顶/无预算不干扰） |
+
+**补丁重放风险记档**：498/499 生成于共享 hermes-agent 树（含并行会话 WIP 基线）——inject 重放窗口需统一验证顺序（498→499），与并行 goals.py 改动的合并由该窗口裁决。zcode-patch 002 同理（引擎进程重启窗口）。
