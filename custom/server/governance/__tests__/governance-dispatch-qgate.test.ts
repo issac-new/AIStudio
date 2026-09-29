@@ -1,13 +1,13 @@
 // 4A 治理层第三期守门——派发结果台账/派发统计/门禁通过率/成本能力维度/派单契约块。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   deriveUsage, dispatchStats, dedupeDispatchEntries, collectQgateRuns, costSummary,
 } from '../governance-analytics'
 import {
-  appendDispatchOutcome, readDispatchLedger, dispatchLedgerPath, resetDispatchLedgerForTests,
+  appendDispatchOutcome, readDispatchLedger, dispatchLedgerPath,
   type DispatchLedgerEntry,
 } from '../dispatch-ledger'
 import type { LedgerDoc } from '../governance-ledger'
