@@ -187,14 +187,14 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.find('.rc-table__row').classes()).toContain('rc-table__row--awaiting')
   })
 
-  it('空态渲染三步引导 + CTA 跳转循环工程', async () => {
+  it('空态渲染三步引导 + CTA 跳循环工程（⑤ S5 后 /app/eng 重定向交付案例）', async () => {
     rest.listRuns.mockResolvedValue([])
     const w = mount(RunCenterView)
     await new Promise(r => setTimeout(r, 0))
     expect(w.find('.rc-view__onboarding').exists()).toBe(true)
     expect(w.findAll('.rc-view__step')).toHaveLength(3)
-    await w.find('.rc-view__cta').trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.eng' })
+    // ⑤ S5：CTA 按钮随「循环创建不走 UI」注释退役（合并态 L262）——守门断言按钮不在
+    expect(w.find('.rc-view__cta').exists()).toBe(false)
   })
 
   it('?loop= 深链预填搜索框：落点即该 loop 的运行列表（P3 台账，Task 9 补）', async () => {
