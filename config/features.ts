@@ -16,7 +16,7 @@ export interface FeatureConfig {
    *  六区域 IA 平行共存——不再退役，旗标回归默认开启。 */
   cockpit: boolean;
   /** IDE 工作台主页面（/ide）：codex 底座 + zcode 会话 UI 全量复用，
-   *  登录落点由 patch 276/277 指向 /ide（2026-09-16 用户裁决）。 */
+   *  登录落点由 patch 276/277 指向 /app/ide（2026-09-16 用户裁决定 IDE；V5 补遗⑤ M2 归一驾驶舱子页面）。 */
   ide: boolean;
 }
 

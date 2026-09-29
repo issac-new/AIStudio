@@ -13,7 +13,7 @@ index 0e27541b..606a7800 100644
  import RouteLinkItem from "@/components/common/RouteLinkItem.vue";
  import PageSidebarFooter from "@/components/layout/PageSidebarFooter.vue";
  import { isStoredSuperAdmin } from "@/api/client";
-@@ -11,10 +12,25 @@ const { t } = useI18n();
+@@ -11,10 +12,23 @@ const { t } = useI18n();
  const route = useRoute();
  const router = useRouter();
  const appStore = useAppStore();
@@ -26,8 +26,6 @@ index 0e27541b..606a7800 100644
 +const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin());
 +// overlay[ia2]: P3 六区域新 IA 高亮（Task 8: cockpit 入口随退役移除，仅保留新 IA 项）
 +const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
-+// overlay[ide]: IDE 工作台（/ide）一级入口高亮（编程专业界面壳）
-+const isIdeArea = computed(() => String(route.name ?? "").startsWith("ide."));
 +// overlay[nav]: 系统折叠分组（统一导航裁决）——低频运维/配置入口收敛；
 +// 当前命中系统页时默认展开
 +const SYSTEM_ROUTE_NAMES = [
@@ -40,32 +38,13 @@ index 0e27541b..606a7800 100644
  const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
  const isDesktopShell = computed(
    () =>
-@@ -52,6 +68,89 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -52,6 +68,70 @@ function handleSidebarClick(event: MouseEvent) {
      @click="handleSidebarClick"
    >
      <nav class="sidebar-nav">
-+      <!-- overlay[ide]: IDE 工作台一级入口（登录默认落点 /ide；codex 底座 + zcode 会话 UI） -->
-+      <RouteLinkItem
-+        class="nav-item"
-+        :to="{ name: 'ide.shell' }"
-+        :active="isIdeArea"
-+      >
-+        <svg
-+          width="16"
-+          height="16"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
-+          stroke-width="1.5"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
-+          <path d="M8 6 3 12l5 6" />
-+          <path d="M16 6l5 6-5 6" />
-+        </svg>
-+        <span>{{ t("sidebar.ideWorkspace") }}</span>
-+      </RouteLinkItem>
-+      <!-- overlay[ia2]: 六区域新 IA 一级入口（P3 登录默认；Task 8 cockpit 退役后唯一入口） -->
++      <!-- overlay[ia2]: 六区域新 IA 一级入口（P3 登录默认；Task 8 cockpit 退役后唯一入口）。
++           V5 补遗⑤ M2：IDE 工作台一级入口移除（归一 /app/ide，驾驶舱子页面；
++           进入路径=页头视图切换/任务 ⌨IDE 动线），主侧栏一级仅剩驾驶舱。 -->
 +      <RouteLinkItem
 +        class="nav-item"
 +        :to="{ name: 'ia2.collab' }"

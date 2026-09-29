@@ -76,7 +76,8 @@ function makeRouter(): Router {
     routes: [
       { path: '/app', name: 'ia2.collab', component: { template: '<div />' } },
       { path: '/app/board', name: 'ia2.board', component: { template: '<div />' } },
-      { path: '/ide', name: 'ide.shell', component: { template: '<div />' } },
+      // ⑤ M2：IDE 归一 /app/ide（旧 /ide 为兼容重定向，不再单列）
+      { path: '/app/ide', name: 'ide.shell', component: { template: '<div />' } },
     ],
   })
 }
@@ -110,8 +111,8 @@ describe('IaViewSwitcher — 右上角视图切换器（v12.4 单按钮）', () 
     wrapper.unmount()
   })
 
-  it('/ide → 显示目标视图沟通协作，点击跳 ia2.collab', async () => {
-    const { wrapper } = await mountAt('/ide', IaViewSwitcher)
+  it('/app/ide（⑤ M2 归一）→ 显示目标视图沟通协作，点击跳 ia2.collab', async () => {
+    const { wrapper } = await mountAt('/app/ide', IaViewSwitcher)
     const btn = wrapper.find('[data-testid="ia-view-toggle"]')
     expect(btn.text()).toContain('ia2.nav.collab')
     await btn.trigger('click')
