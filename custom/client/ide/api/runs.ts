@@ -48,8 +48,10 @@ export const ideRunsApi = {
     return fetchWorkspaceRunChangesForSession(sessionId)
   },
 
-  /** 逐文件 Undo（UI-5）：反向应用该文件本轮 patch，恢复到 run 前内容。 */
-  async undo(input: { sessionId: string; changeId: string; fileId: number; workspace: string }): Promise<{ ok: boolean; restoredPath?: string; detail?: string }> {
+  /** 逐文件 Undo（UI-5）：反向应用该文件本轮 patch，恢复到 run 前内容。
+   *  hunkIndexes 可选：只反向选中 hunk（IdeInlineDiff 逐处拒绝写通道；
+   *  序号约定 = patch 内 @@ 出现次序 0 起，与 IdeInlineDiff parseHunks 对齐）。 */
+  async undo(input: { sessionId: string; changeId: string; fileId: number; workspace: string; hunkIndexes?: number[] }): Promise<{ ok: boolean; restoredPath?: string; detail?: string }> {
     const res = await fetch('/api/ide/run-undo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
