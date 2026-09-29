@@ -249,3 +249,32 @@ export function fetchAuditLog(opts?: { sources?: string[]; q?: string; limit?: n
   const qs = params.toString()
   return request<AuditLogResult>(`/api/governance/audit-log${qs ? `?${qs}` : ''}`)
 }
+
+// ── 4A 治理层第五期②展示面（状态-事件本体）──
+export interface StateModelTransitionDto {
+  id: string
+  from: string
+  to: string
+  trigger: string
+  rules: string[]
+  actions: string[]
+  evidence: string
+}
+export interface StateModelResp {
+  ok: boolean
+  exists: boolean
+  path: string | null
+  problems: string[]
+  doc: {
+    object: string
+    authority: string
+    states: Array<{ id: string; semantics: string }>
+    freeMoveStates?: string[]
+    runOutcomeTerminal: Record<string, string>
+    transitions: StateModelTransitionDto[]
+    eventSources: Array<{ id: string; authority: string; kind: string }>
+  } | null
+}
+export function fetchStateModel(): Promise<StateModelResp> {
+  return request<StateModelResp>('/api/governance/state-model')
+}
