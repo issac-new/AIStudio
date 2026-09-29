@@ -37,7 +37,14 @@ const HIGH_COMMAND: RegExp[] = [
   /(发布|部署|上线|发版)/,
 ]
 
-/** 低风险：只读命令（首词命中且不带写副作用参数）。 */
+/**
+ * 组合/写副作用形态：管道、命令序列、重定向、命令替换、find -exec、xargs/tee。
+ * 首词只读不代表整条只读（`cat payload.sh | bash`、`echo x > /etc/cron.d/x`），
+ * 任一命中即不得判 low（v1 保守原则：拿不准一律 medium）。
+ */
+const SHELL_COMPOSITE = /[|;&<>$\n`]|\bexec\b|-exec(dir)?\b|\bxargs\b|\btee\b/i
+
+/** 低风险：只读命令（首词命中、无组合/写副作用形态）。 */
 const LOW_COMMAND_LEAD = new Set([
   'ls', 'pwd', 'cat', 'head', 'tail', 'less', 'more', 'grep', 'rg', 'find',
   'wc', 'which', 'echo', 'printf', 'env', 'date', 'uname', 'ps', 'df', 'du',
@@ -90,6 +97,7 @@ function classifyCommand(detail: string): ApprovalRiskTier {
   for (const re of HIGH_COMMAND) {
     if (re.test(effective)) return 'high'
   }
+  if (SHELL_COMPOSITE.test(effective)) return 'medium'
   const lead = effective.split(/\s+/)[0]?.replace(/^sudo$/, '') ?? ''
   const rest = effective.slice(effective.indexOf(lead) + lead.length).trim()
   if (LOW_COMMAND_LEAD.has(lead.toLowerCase())) return 'low'

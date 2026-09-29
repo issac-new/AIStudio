@@ -57,18 +57,26 @@ interface XtermTheme {
 
 function getTheme(dark: boolean): XtermTheme {
   const style = getComputedStyle(document.documentElement)
+  // xterm 的 css.toColor 只认 hex/rgb(a)：直接传 var(...) 试色抛错被库内吞掉，
+  // 该槽位静默回落默认调色板（4638072e 主题统一时引入）。语义令牌一律取实值；
+  // 品红/青无对应令牌，保留 one-dark 原字面量（同轮曾把两槽误并到 --info-color）。
+  const cssVar = (name: string, fallback: string): string => style.getPropertyValue(name).trim() || fallback
+  const error = cssVar('--error-color', '#d03050')
+  const success = cssVar('--success-color', '#18a058')
+  const warning = cssVar('--warning-color', '#d97706')
   if (dark) {
-    const bg = style.getPropertyValue('--bg-primary').trim() || '#1a1a1a'
-    const fg = style.getPropertyValue('--text-primary').trim() || '#e0e0e0'
-    const accent = style.getPropertyValue('--accent-primary').trim() || '#4cc9f0'
-    const border = style.getPropertyValue('--border-color').trim() || '#333'
-    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: 'var(--error-color, #d03050)', green: 'var(--success-color, #18a058)', yellow: 'var(--warning-color, #d97706)', blue: accent, magenta: 'var(--info-color, #8b5cf6)', cyan: 'var(--info-color, #0ea5e9)', white: fg, brightBlack: border, brightRed: 'var(--error-color, #d03050)', brightGreen: 'var(--success-color, #18a058)', brightYellow: 'var(--warning-color, #d97706)', brightBlue: 'var(--primary-color, #18a058)', brightMagenta: 'var(--info-color, #8b5cf6)', brightCyan: 'var(--info-color, #0ea5e9)', brightWhite: '#ffffff' }
+    const bg = cssVar('--bg-primary', '#1a1a1a')
+    const fg = cssVar('--text-primary', '#e0e0e0')
+    const accent = cssVar('--accent-primary', '#4cc9f0')
+    const border = cssVar('--border-color', '#333')
+    const primary = cssVar('--primary-color', '#18a058')
+    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: error, green: success, yellow: warning, blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: primary, brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
   }
-  const bg = style.getPropertyValue('--bg-primary').trim() || '#fafafa'
-  const fg = style.getPropertyValue('--text-primary').trim() || '#383a42'
-  const accent = style.getPropertyValue('--accent-primary').trim() || '#526fff'
-  const border = style.getPropertyValue('--border-color').trim() || '#e0e0e0'
-  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: 'var(--error-color, #d03050)', brightGreen: 'var(--success-color, #18a058)', brightYellow: 'var(--warning-color, #d97706)', brightBlue: 'var(--primary-color, #18a058)', brightMagenta: 'var(--info-color, #8b5cf6)', brightCyan: 'var(--info-color, #0ea5e9)', brightWhite: '#ffffff' }
+  const bg = cssVar('--bg-primary', '#fafafa')
+  const fg = cssVar('--text-primary', '#383a42')
+  const accent = cssVar('--accent-primary', '#526fff')
+  const border = cssVar('--border-color', '#e0e0e0')
+  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: cssVar('--primary-color', '#18a058'), brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' }
 }
 
 let term: Terminal | null = null

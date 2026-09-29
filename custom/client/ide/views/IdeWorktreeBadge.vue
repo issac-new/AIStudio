@@ -134,7 +134,7 @@ async function removeIsolation(): Promise<void> {
 
   &--create {
     cursor: pointer;
-    border: 1px dashed var(--primary-color, #18a058)66;
+    border: 1px dashed color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
     background: none;
 
     &:hover:not(:disabled) { border-color: var(--primary-color, #18a058); }

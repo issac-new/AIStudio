@@ -251,15 +251,15 @@ function select(stream: SubagentStream): void {
 
 .ide-agents__steer-btn {
   flex-shrink: 0;
-  border: 1px solid var(--primary-color, #18a058)66;
-  background: var(--primary-color, #18a058)22;
+  border: 1px solid color-mix(in srgb, var(--primary-color, #18a058) 40%, transparent);
+  background: color-mix(in srgb, var(--primary-color, #18a058) 13%, transparent);
   color: var(--primary-color, #18a058);
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { background: var(--primary-color, #18a058)33; }
+  &:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-color, #18a058) 20%, transparent); }
   &:disabled { opacity: 0.4; cursor: default; }
 }
 </style>
