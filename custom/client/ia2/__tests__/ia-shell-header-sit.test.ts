@@ -227,7 +227,7 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     // 无挂接会话 → IDE 编码工作空间（任务维度 + 会话列自动切挂靠会话）
     await row.trigger('click')
     await flushPromises()
-    expect(pushMock).toHaveBeenCalledWith({ path: '/ide', query: { task: 't-402' } })
+    expect(pushMock).toHaveBeenCalledWith({ path: '/app/ide', query: { task: 't-402' } })
     expect(w.find('[data-testid="sit-panel-tasks"]').exists()).toBe(false)
     // 挂接 matrix 房间 → 工作台房间画布（三栏左/中栏定位该会话）
     await w.find('[data-testid="sit-tasks"]').trigger('click')
@@ -240,7 +240,7 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     await flushPromises()
     await w.find('[data-testid="sitp-task-t-415"]').trigger('click')
     await flushPromises()
-    expect(pushMock).toHaveBeenCalledWith({ path: '/ide', query: { task: 't-415' } })
+    expect(pushMock).toHaveBeenCalledWith({ path: '/app/ide', query: { task: 't-415' } })
     // 同段再点收起
     await w.find('[data-testid="sit-tasks"]').trigger('click')
     expect(w.find('[data-testid="sit-panel-tasks"]').exists()).toBe(true)

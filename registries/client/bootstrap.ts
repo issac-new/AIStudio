@@ -30,15 +30,18 @@ export async function bootstrapClient(app: App): Promise<void> {
   }
   // 2026-09-18 统一导航 Task 5：/hermes/loop 路由家族整体退役，
   // loop 模块瘦身为纯组件/店铺库——runcenter 视图改由 ia2 运行场景（ia2.routes）挂载。
-  // IDE 工作台主页面（/ide）：codex 底座 + zcode 会话 UI 全量复用。
-  // 注册顺序无关守卫，仅要求在下方 addRoute 循环（mount 前）之前。
+  // IDE 工作台主页面（V5 补遗⑤ M2 归一为 /app/ide，驾驶舱子页面）：
+  // codex 底座 + zcode 会话 UI 全量复用。注册顺序无关守卫，仅要求在下方
+  // addRoute 循环（mount 前）之前。
   if (features.ide) {
     const { registerIde } = await import('../../custom/client/ide')
     await registerIde(app)
   } else {
-    // patch 276/277 的登录守卫硬指向 /ide：开关关闭时注册重定向兜底，
-    // 避免登录后命中无匹配路由白屏（2026-09-17 24h 评审）。
+    // patch 276/277 的登录守卫硬指向 /app/ide：开关关闭时注册重定向兜底，
+    // 避免登录后命中无匹配路由白屏（2026-09-17 24h 评审；⑤ M2 两路径都兜）。
     router.addRoute({ path: '/ide', redirect: '/app' })
+    router.addRoute({ path: '/app/ide', redirect: '/app' })
+    router.addRoute({ path: '/app/ide/:rest(.*)', redirect: '/app' })
   }
   // P3 Task 3：六区域新 IA（/app 路由树）。无守卫依赖，仅要求在 mount 前完成。
   // 2026-09-18 统一导航 Task 5：旧 loop 深链兼容守卫随 /hermes/loop 家族退役删除；

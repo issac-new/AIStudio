@@ -342,3 +342,12 @@
 #      mimo/zcode 补丁族联合类型与 Record 键补全 + 394 重复键两处清理 + MessageItem
 #      孤儿括号 + Workflow defineProps 缺口 + gateway systemType 尾债。
 515-client-type-gate-fresh-build.patch
+# 517（驾驶舱聚焦轮 V5 补遗⑤ M3/M4，2026-09-29；两度让号：513/514→ide-automations、515→type-gate）：全局审批浮层两处介入深链
+#      （群聊审批→ia2.groupRoom、工作流审批→ia2.inbox）与通知点击 URL 同步
+#      迁 /app 树——chat 类 301 已迁，本补丁收尾群聊+工作流两处。
+517-client-globalpendingactions-cockpit-deeplinks.patch
+# 518（驾驶舱聚焦轮 V5 补遗⑤ M6；原拟 514/516 两度让号）：runcenter.detail.loopCanvas zh/en 成对
+#      （473 之后按 496/501/512 同例单补，不动其余 9 语言）。
+518-client-i18n-runcenter-loop-canvas.patch
+# 记档（2026-09-29 驾驶舱聚焦轮）：v14 三补丁（506/507/508）并行合并悬空事故已由并行会话在
+#      main 原号复原（与 cbd7b3e7^ 历史逐字节一致）；本仓曾复位的 517/518/519 冗余件已撤。
