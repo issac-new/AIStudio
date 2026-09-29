@@ -303,10 +303,9 @@ describe('IdeTaskSidebar', () => {
     expect(vm.archived.length).toBe(0)
   })
 
-  it('自动化入口跳 JobsView', async () => {
+  it('S2（补遗⑤ A 档）：jobs 运维页退役后自动化入口隐藏（路由恢复即回生）', async () => {
     const w = mountSidebar()
     await flushPromises()
-    await w.find('[data-testid="ide-task-automations"]').trigger('click')
-    expect(push).toHaveBeenCalledWith({ name: 'hermes.jobs' })
+    expect(w.find('[data-testid="ide-task-automations"]').exists()).toBe(false)
   })
 })

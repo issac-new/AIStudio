@@ -1,6 +1,8 @@
 # zcode patch series (受管 fork,路由全部进 upstream/zcode)
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
 001-server-cli-yazl-external.patch
+
+# ── 以下 003/004 恢复自 6619a447（CUA 桌面级轮；并行 P9/P10 合并时被旧侧 series 覆盖丢失，本轮并集恢复）──
 # 003（zcode-cua 活体化，Computer Use 桌面级 2026-09-29）：占位包→跨三端真实现。
 #      新增 node-backend.js（mac=JXA CGEvent+screencapture+System Events 粘贴通道/
 #      win=PowerShell SendInput+System.Drawing/linux=xdotool|ydotool+maim 链）+

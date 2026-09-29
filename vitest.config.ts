@@ -12,13 +12,10 @@ import { resolve } from 'path'
 // overlay 根（本文件所在目录）。
 const overlayRoot = __dirname
 // 上游 client src：@ 兜底 alias 的目标（@/api、@/views 等解析到上游）。
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/ensure-injected.mjs/build 链同一基建）。
-// 嵌套 worktree 下默认相对解析落到其他会话的隔离副本（.claude/worktrees/upstream），
-// 其注入 series 不可控 → 测试结果随并行会话注入态漂移（2026-09-29 实锤 86 红源于此）；
-// 测试断言的 @/api 是注入态代码，必须钉住与被测 overlay 同 series 的注入树。
-const upstreamClientSrc = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio/packages/client/src')
-  : resolve(overlayRoot, '../upstream/hermes-studio/packages/client/src')
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/serve-server.mjs 同一基建）——
+// worktree（.claude/worktrees、/tmp）中测试时指向隔离注入副本，缺省回落共享 upstream。
+const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim() || resolve(overlayRoot, '..', 'upstream')
+const upstreamClientSrc = resolve(upstreamRoot, 'hermes-studio/packages/client/src')
 
 export default defineConfig({
   plugins: [vue()],

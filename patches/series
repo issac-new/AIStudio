@@ -351,3 +351,9 @@
 518-client-i18n-runcenter-loop-canvas.patch
 # 记档（2026-09-29 驾驶舱聚焦轮）：v14 三补丁（506/507/508）并行合并悬空事故已由并行会话在
 #      main 原号复原（与 cbd7b3e7^ 历史逐字节一致）；本仓曾复位的 517/518/519 冗余件已撤。
+
+# ── 补遗⑤ P10（S2/S3）──
+# 513（S2 运维页族摘除，补遗⑤ §13.4 C 档，2026-09-29）：HermesConfigSidebar 九运维页
+521-client-router-hermes-config-retire.patch
+# 514（S3 无关大块功能面开关，补遗⑤ §13.4 B 档，2026-09-29）：WebPet 浮层/语音对话
+522-client-s3-feature-gates.patch

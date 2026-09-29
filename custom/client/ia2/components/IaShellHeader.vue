@@ -151,6 +151,7 @@ function onPanelJumpTask(taskId: string): void {
     if (row?.kind === 'room') { void router.push({ name: 'ia2.commsRoom', params: { roomId: row.id } }); return }
     if (row?.kind === 'group') { void router.push({ name: 'ia2.groupRoom', params: { roomId: row.id } }); return }
   }
+  // M2 IDE 归一：IDE 工作台在 /app/ide（名称 ide.shell 不变，query 透传）
   void router.push({ path: '/app/ide', query: { task: taskId } })
 }
 </script>
@@ -188,6 +189,8 @@ function onPanelJumpTask(taskId: string): void {
         @select="onSitSelect"
       />
     </div>
+    <!-- S7（补遗⑤ A 档，2026-09-29）：Gateway 探测组隐藏（未用；platforms store
+         轮询与探测面板组件保留，恢复时去注释即回生）
     <div class="cockpit-top__grp" :title="t('cockpit.gatewayProbeTitle')" @click.stop="manualProbe">
       <span class="cockpit-top__cd" :title="t('cockpit.countdownTitle')">{{ countdown }}s</span>
       <span class="cockpit-top__ustat" :class="'is-' + gatewayState">
@@ -198,12 +201,16 @@ function onPanelJumpTask(taskId: string): void {
         :class="pl.state === 'connected' ? 'is-running' : 'is-stopped'"
       ><CockpitIcon :name="pl.icon" :size="12" /> {{ pl.name }}<span v-if="pl.state !== 'connected'" class="cockpit-top__warn">!</span></span>
     </div>
+    -->
+    <!-- S7（补遗⑤ A 档）：日程弹窗入口隐藏（未用；workspace.openSchedule 与
+         CockpitScheduleModal 组件保留，恢复时去注释即回生）
     <button type="button" class="cockpit-top__btn" data-testid="ia-header-schedule"
       :title="t('cockpit.scheduleTitle')" @click="workspace.openSchedule()"
     >
       <CockpitIcon name="calendar" />
       <span v-if="scheduleTodayCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ t('ia2.header.scheduleToday') }}</span>
     </button>
+    -->
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" data-testid="ia-header-notify" @click="showNotify = !showNotify">
       <CockpitIcon name="bell" />

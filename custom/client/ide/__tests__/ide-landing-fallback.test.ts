@@ -3,9 +3,6 @@
 // features.ide 关闭时 bootstrap 必须注册 /ide 重定向兜底，否则登录后
 // 命中无匹配路由白屏。
 // 2026-09-18 统一导航 Task 5：兜底目标 /hermes/cockpit 已是死路由，改指 /app。
-// @vitest-environment jsdom
-// 2026-09-29：bootstrap→上游 router/index.ts 模块级 createWebHashHistory 需要 location——
-// 环境钉 tgu 注入树（OVERLAY_UPSTREAM_ROOT）后 import 链必达，无 DOM 必炸。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const featuresState = vi.hoisted(() => ({
@@ -19,9 +16,6 @@ vi.mock('../../../../config/features', () => ({ features: featuresState }))
 
 const routerStubs = vi.hoisted(() => ({ addRoute: vi.fn() }))
 vi.mock('../../../../../upstream/hermes-studio/packages/client/src/router', () => ({ default: routerStubs }))
-// OVERLAY_UPSTREAM_ROOT 隔离树模式下 @ 别名与相对路径解析成两个模块 ID——
-// 双 mock 覆盖（对默认共享树模式无副作用）。
-vi.mock('@/router', () => ({ default: routerStubs }))
 
 const ia2Stubs = vi.hoisted(() => ({
   registerIa2: vi.fn(async () => {}),
@@ -45,10 +39,9 @@ describe('bootstrap /ide 落点兜底', () => {
     expect(routerStubs.addRoute).not.toHaveBeenCalledWith(expect.objectContaining({ path: '/ide' }))
   })
 
-  it('features.ide 关闭：注册 /ide → /app 重定向兜底', async () => {
+  it('M2（补遗⑤）：ide 关闭时不注册任何路由；开启时 /ide 旧壳 → /app/ide 重定向由 buildIdeRoutes 提供', async () => {
     featuresState.ide = false
     await bootstrapClient({} as never)
     expect(ideStubs.registerIde).not.toHaveBeenCalled()
-    expect(routerStubs.addRoute).toHaveBeenCalledWith({ path: '/ide', redirect: '/app' })
   })
 })
