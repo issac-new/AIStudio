@@ -356,4 +356,9 @@
 519-client-appsidebar-system-trim.patch
 # 520（P10 精简批 S3 部分）：WebPet 宠物浮面默认关（B 档 VITE_CUSTOM_PETS 开关；
 #      组件保留）。语音/ekko/外部渠道挂载链分散，记档 P10 剩余项。
-520-client-webpet-off.patch
+520-client-webpet-off.patch# 523（S3 补齐轮，2026-09-29 深夜；997faa70 收敛后复活）：语音入口（voiceMode 菜单项+
+#      作曲麦克风）/ekko（卡片+路由守卫）/外链分享页守卫（并轨 externalLinks 键）。
+523-client-s3-entries-gates.patch
+# 524（S3 语音舞台/语音设置页签/connections 扩展 tab/图像辅助门控——原 522 内容复活，
+#      pet 部分剔除由 520 承载；997faa70 收敛曾整删 522 致 S3 回退）。
+524-client-s3-stage-gates.patch
