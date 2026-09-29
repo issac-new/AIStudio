@@ -188,7 +188,7 @@ STEPS_META = {
             imgs=[
                   ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——r4 口径 51/51 集成+131/131 回归（锚点 bebfd2d）', 'ui'),]),
     20: dict(keys=['g5_ready'], actor='gate', actorText='硬闸 G5 · 发布准出+人批准',
-            open_note='G5 判回滚（独立审计 R-A1）：state g5_ready 落键系判词误判（04:49:03 转述 stub 消息被当结论行），评审卡 t_ea68c462 结论实为 READY-GATE-FAIL——落键判废、"4/4 首过"口径判废、REL-* 三卡已冻结（blocked）至 R1-R4 闭环+G5 复审 PASS（目标 2026-09-30）。',
+            open_note='G5 判回滚（独立审计 R-A1）：state g5_ready 落键系判词误判（04:49:03 转述 stub 消息被当结论行），评审卡 t_ea68c462 结论实为 READY-GATE-FAIL——落键判废、"4/4 首过"口径判废、REL-* 三卡曾冻结（blocked）。闭环追记（2026-09-29 10:52）：R-A3 全链闭环——丢线回补（integration/RFD-001 增量合并 69ba333 整线 @ 67a1a95，DEF-BE-001/FE 修复线/守卫脚本/证据全数回归）、同基线复验 194/194+verify-guard 6/6+黑盒探针 42/42+skeleton 220、独立复审 r8 READY-GATE-PASS（卡 t_ea68c462 结论行+凭证行 commit=5c1a02d），REL-* 三卡解冻（ready）。',
             narrative='G5 发布准出（派发 04:21:49，event $vldnPTzqiXr8AbbeHTalLQ2cBeBcBXuZ4oqwjAZFbOU，评审卡 t_ea68c462@fanfan-review）：fanfan-agent 产 release-plan/notes r7+隔离 worktree 全量取证（附件 G5-r7-isolated-run），评审结论 READY-GATE-FAIL（缺项①G4 证据链——报告锚点 bebfd2d ∉ 发布基线 0ab43de、执行证据随重建删除；②同 commit 可复现——基线强制重建丢 23 提交，DEF-BE-001/DEF-TESTFE-R3-1 双缺陷回归，黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL；第 3-7 项 PASS）。机械判定曾于 04:49:14 因转述 stub 消息命中判词子串误过 G5（04:51:27 评审才实际完成）——判词语义已根治（末判词赢+卡面双源合并 FAIL 优先）。独立审计 R-A1 判回滚：G5 不成立、发布冻结，R1-R4 闭环后复审；回滚方案/灰度/发布说明第 4-7 项评审通过留痕在卡。',
             imgs=[
                   ('ui-gov-release', '治理中心·六闸工件：G5 发布说明（r7 基线刷新版）——已知问题如实列双缺陷回归为发布阻塞项', 'ui'),
@@ -421,14 +421,14 @@ def checkpoints_html():
 
 def gate_cards():
     # 打回/判回滚记录（如实，run2）：G2 一次通过；G5 判词误过→独立审计 R-A1 判回滚
-    rejected = {'G5': 'R7 评审 FAIL（缺项①②）→ R-A1 判回滚 · REL-* 冻结'}
+    rejected = {'G5': '误过→R-A1 判回滚→R-A3 闭环复审 PASS（r8 @ 5c1a02d）'}
     annot = {'G3': 'g3_code_pass 落键缺失（R-A4 已修）'}
     cards = []
     for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
         ts = fmt_ts(GATE_STATE_KEY[g])
         passed = bool(state.get(GATE_STATE_KEY[g]))
         if g == 'G5' and passed:
-            cls, badge = 'gfail', '✗ 判回滚（实物 FAIL）'
+            cls, badge = 'gpass', '✓ 复审通过 r8（曾判回滚）'
         else:
             cls = 'gpass' if passed else 'gpending'
             badge = '✓ 已通过' if passed else '○ 未达'
@@ -639,7 +639,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
     <div class="hero-stats">
       <div class="hstat"><b>26</b><span>步骤</span></div>
       <div class="hstat"><b>{total_imgs}</b><span>证据图 · 全部界面实拍</span></div>
-      <div class="hstat"><b>G5 判回滚</b><span>发布冻结至 R1-R4 闭环+复审 PASS</span></div>
+      <div class="hstat"><b>R-A3 闭环</b><span>G5 复审 r8 PASS · 发布解冻（10:52）</span></div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
@@ -690,11 +690,11 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
     {''.join(f'<tr><td><b>{g}</b></td><td style="font-size:11px">{GATE_DESC[g]}</td><td class="{"err" if g == "G5" else "ok"}">{"✗ 判回滚（R-A1，实物 FAIL）" if g == "G5" else "✓"}</td><td>{fmt_ts(GATE_STATE_KEY[g]) or "—"}</td></tr>' for g in ['G1','G2','G3','G4','G5','G6'])}
     </table>
     <table><tr><th>度量</th><th>终态值</th></tr>
-    <tr><td>闸门判定</td><td><b>G1/G2/G4 留痕成立 · G5 判回滚</b>（R-A1；"4/4 首过"口径判废）· G3 落键缺失（R-A4 已修）</td></tr>
+    <tr><td>闸门判定</td><td><b>G1/G2/G4 留痕成立 · G5 判回滚（R-A1）→ R-A3 闭环复审 PASS（r8）</b>；"4/4 首过"口径判废后经闭环转正 · G3 落键缺失（R-A4 已修）</td></tr>
     <tr><td>问题单终态</td><td>{stat}</td></tr>
     <tr><td>测试口径</td><td>TEST-BE r5（test/TEST-BE@48a9d9d）/TEST-FE r4+r5（test/TEST-FE@bdb9450）TEST-PASS 回执；评审侧黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL（实跑树≠发布基线，"绿且少"按回归判 FAIL）</td></tr>
     <tr><td>UAT 判词</td><td><b>有条件验收</b>：AC-1/2/3/5/6 通过 · AC-4/AC-7 有条件通过（放行权归 bella）</td></tr>
-    <tr><td>发布状态</td><td><b>冻结</b>：REL-* 三卡 blocked；解冻条件=R1-R4 闭环+G5 复审 PASS（目标 2026-09-30）</td></tr>
+    <tr><td>发布状态</td><td><b>R-A3 已闭环、发布解冻</b>（2026-09-29 10:52）：G5 复审 r8 READY-GATE-PASS（独立评审），REL-* 三卡 blocked→ready（解冻批准入 approved.events）；放行后动作 R5（RELEASE.md 替换）随发布执行</td></tr>
     <tr><td>发布基线</td><td>aipaydev main {main_sha}（动态实查）；本轮 integration 基线 0ab43de 为强制重建产物（bebfd2d 非祖先，丢线 23 提交——R-A3 回补中）</td></tr></table>
   </div>
 
