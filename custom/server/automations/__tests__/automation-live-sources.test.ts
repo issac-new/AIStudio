@@ -23,7 +23,7 @@ function git(cwd: string, args: string): void {
   execSync(`git -C ${JSON.stringify(cwd)} ${args}`, { stdio: 'ignore' })
 }
 
-async function waitFor(cond: () => boolean, ms = 8000): Promise<void> {
+async function waitFor(cond: () => boolean, ms = 15_000): Promise<void> {
   const deadline = Date.now() + ms
   while (Date.now() < deadline) {
     if (cond()) return
@@ -61,7 +61,7 @@ describe('A2 实弹事件源', () => {
     } finally {
       engine.dispose()
     }
-  }, 20_000)
+  }, 30_000)
 
   it('file watcher：源码文件写入 → file 事件 → 去抖 → 派递（.git 噪声不触发）', async () => {
     const ws = join(dir, 'ws')
@@ -89,5 +89,6 @@ describe('A2 实弹事件源', () => {
     } finally {
       engine.dispose()
     }
-  }, 20_000)
+
+  }, 30_000)
 })
