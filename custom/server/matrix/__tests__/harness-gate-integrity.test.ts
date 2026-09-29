@@ -352,6 +352,14 @@ describe('⑨ 基线变更受控绊线（H10/H11/R-A3）', () => {
     expect(Number(scen.trim())).toBeGreaterThanOrEqual(2)
   })
 
+  it('patch 505：卡抽屉 body/评论走 KanbanMarkdown（禁回退裸插值）', () => {
+    const patch = execFileSync('bash', ['-c', `cat "${join(REPO, 'patches', '505-kanban-drawer-markdown.patch')}"`], { encoding: 'utf8' })
+    expect(patch).toContain("import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'")
+    expect(patch).toContain('<KanbanMarkdown :source="detail.task.body" />')
+    expect(patch).toContain('<KanbanMarkdown :source="comment.body" />')
+    expect(patch).not.toMatch(/^\+.*\{\{ detail\.task\.body \}\}/m)
+  })
+
   it('G2/G5 走判词合并、UAT 走逐条判词', () => {
     const scen = execFileSync('bash', ['-c', `cat "${join(REPO, 'scripts', 'aipay', 'aipay-scenario.sh')}"`], { encoding: 'utf8' })
     expect(scen).toContain('mx_gate_verdict_combined')
