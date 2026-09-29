@@ -15,6 +15,8 @@ import {
 } from '@/custom/governance/api/governance'
 import { governanceMessages } from '@/custom/governance/i18n'
 import LedgerSection from '@/custom/governance/components/LedgerSection.vue'
+import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
+import AuditSection from '@/custom/governance/components/AuditSection.vue'
 import {
   fetchPendingApprovals, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
@@ -180,6 +182,12 @@ onMounted(() => void refresh())
 
     <!-- 能力台账（4A 治理层：能力树+生命周期+语义指标层，spec 2026-09-29） -->
     <LedgerSection />
+
+    <!-- 运行态（第二期：消费关系/SLO 实况/成本归集） -->
+    <RuntimeSection />
+
+    <!-- 统一审计查看器（第二期：审批/体检/provider/kanban 四源归一） -->
+    <AuditSection />
 
     <div class="ia-gov__main">
       <!-- 左：工件清单 -->

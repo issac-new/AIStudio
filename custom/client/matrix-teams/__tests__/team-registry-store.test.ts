@@ -159,15 +159,18 @@ describe('建房（leader）', () => {
   })
 })
 
+const ADMISSION = { q1: 'a1', q2: 'a2', q3: 'a3', q4: 'a4', q5: 'a5', answeredAt: 1, signer: '@alice:sv' }
+
 describe('写 account（成员自声明）', () => {
-  it('sendStateEvent 到注册房间，stateKey=自己 userId', async () => {
+  it('sendStateEvent 到注册房间，stateKey=自己 userId（随写准入答卷透传）', async () => {
     const store = useTeamRegistryStore()
     store.attachRoom('!reg:sv')
-    const ok = await store.writeSelfAccount([{ slug: 'dev', name: 'Dev', profiles: ['pa'], defaultProfile: 'pa' }])
+    const ok = await store.writeSelfAccount([{ slug: 'dev', name: 'Dev', profiles: ['pa'], defaultProfile: 'pa' }], ADMISSION)
     expect(ok).toBe(true)
     const w = sdk.sent.stateEvents.find(s => s.type === TEAM_EVENT_TYPES.account && s.stateKey === '@alice:sv')
     expect(w).toBeTruthy()
     expect((w!.content as { agentTeams: unknown[] }).agentTeams).toHaveLength(1)
+    expect((w!.content as { admission?: { q1?: string } }).admission?.q1).toBe('a1')
   })
   it('未配置注册房间 → false 且不动 SDK', async () => {
     const store = useTeamRegistryStore()
@@ -178,9 +181,9 @@ describe('写 account（成员自声明）', () => {
     const store = useTeamRegistryStore()
     store.attachRoom('!reg:sv')
     const spy = vi.spyOn(sdk.client, 'sendStateEvent').mockRejectedValueOnce(new Error('net down'))
-    expect(await store.writeSelfAccount([{ slug: 'dev', name: 'Dev', profiles: ['pa'] }])).toBe(false)
+    expect(await store.writeSelfAccount([{ slug: 'dev', name: 'Dev', profiles: ['pa'] }], ADMISSION)).toBe(false)
     expect(store.lastError).toBe('net down')
-    expect(await store.writeSelfAccount([{ slug: 'dev', name: 'Dev', profiles: ['pa'] }])).toBe(true)
+    expect(await store.writeSelfAccount([{ slug: 'dev', name: 'Dev', profiles: ['pa'] }], ADMISSION)).toBe(true)
     expect(store.lastError).toBeNull()
     spy.mockRestore()
   })

@@ -23,7 +23,9 @@ import { resolve } from 'path'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
-import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats } from './governance-ledger'
+import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts } from './governance-ledger'
+import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary } from './governance-analytics'
+import { auditLog } from './governance-audit'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -191,6 +193,57 @@ router.get('/metrics-defs', async (ctx) => {
   if (!res.exists) {
     ctx.status = 404
     ctx.body = { ok: false, exists: false, error: 'metrics.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
+})
+
+// ---- 4A 治理层运行态投影（第二期 ②③④⑥；只读实取，诚实降级不编造）----
+
+router.get('/usage', async (ctx) => {
+  const res = loadCapabilityLedger()
+  if (!res.exists || !res.doc) {
+    ctx.status = 404
+    ctx.body = { ok: false, error: 'capability-ledger.yaml 未找到' }
+    return
+  }
+  const [assigneeStats, squadStats] = [await collectAssigneeStats(), collectSquadStats()]
+  const report = deriveUsage(res.doc, assigneeStats, squadStats)
+  ctx.body = { ok: true, ...report }
+})
+
+router.get('/slo', async (ctx) => {
+  const ledgerRes = loadCapabilityLedger()
+  if (!ledgerRes.exists || !ledgerRes.doc) {
+    ctx.status = 404
+    ctx.body = { ok: false, error: 'capability-ledger.yaml 未找到' }
+    return
+  }
+  const metricsRes = loadMetricsDefs()
+  const assigneeStats = await collectAssigneeStats()
+  const report = computeSloReport(ledgerRes.doc, metricsRes.doc ?? null, assigneeStats)
+  ctx.body = { ok: true, budgetMode: process.env.GOVERNANCE_SLO_BUDGET || 'warn', ...report }
+})
+
+router.get('/cost-summary', async (ctx) => {
+  const days = Math.min(Math.max(Number(ctx.query.days) || 30, 1), 365)
+  const summary = await costSummary(days)
+  ctx.body = { ok: true, ...summary }
+})
+
+router.get('/audit-log', async (ctx) => {
+  const sources = String(ctx.query.sources ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  const q = String(ctx.query.q ?? '')
+  const limit = Number(ctx.query.limit) || 200
+  const result = await auditLog({ sources, q, limit })
+  ctx.body = result
+})
+
+router.get('/contracts', async (ctx) => {
+  const res = loadActionContracts()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'action-contracts.yaml 未找到（runtime/governance/）' }
     return
   }
   ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }

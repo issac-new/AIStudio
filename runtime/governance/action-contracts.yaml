@@ -1,0 +1,118 @@
+# 动作契约注册表（4A 治理层单一事实源之三）
+#
+# 定位：关键派发/执行动作的"接口契约六件事"（应用架构总图·建服站）——用途、
+# 输入、输出、错误词表、责任人与版本、变更通知。设计依据：
+# docs/superpowers/specs/2026-09-29-agent-4a-governance-layer-design.md §8-①。
+#
+# 语义归一（completion_contract ∪ output_schema）：凡产出判定的契约，verdictCarrier
+# 指明结构化判定载体，且判定词一律引 metrics.yaml verdicts 六态——两套历史契约
+# （kanban completion_contract / delegate_task output_schema）在治理平面统一词表，
+# 词面相似不构成判定依据。refs.file 由守门验存在（overlay 仓内直解，upstream 锚点
+# 走向上寻根）；refs.note 补充跨仓语义。
+
+version: 1
+reviewedAt: "2026-09-29"
+
+contracts:
+  - id: kanban.create
+    purpose: 创建任务卡（本机执行面唯一入口，RACI 派发随成功路径触发）
+    input: 标题/正文/assignee(=profile)/skills/priority/tenant；completion_contract 可选，列门禁要求时强制
+    output: taskId + 卡片当前状态
+    errors: [validation_failed, board_not_found, profile_unknown, contract_invalid]
+    verdictCarrier: completion_contract（结构化判定，词表引 metrics.yaml verdicts）
+    verdictVocabulary: metrics.yaml
+    owner: hermes-agent（kanban_db.py 单写者）
+    version: "1"
+    changeNotice: 字段增删经 patch 评审并在本表刷新复核日
+    refs:
+      upstream: hermes-agent/hermes_cli/kanban_db.py
+      note: 入库前 validate_contract 校验（kanban_db.py:753,1301）
+
+  - id: kanban.assign
+    purpose: 指派任务到 profile（板级团队围栏 fail-closed）
+    input: taskId + assignee；RACI 四元组可随正文 JSON raci 块解析派发
+    output: 更新后卡片状态
+    errors: [task_not_found, profile_unknown, fence_closed]
+    owner: hermes-agent（kanban_db.py 单写者；patch 391 围栏）
+    version: "1"
+    changeNotice: 同 kanban.create
+    refs:
+      file: patches/391-agent-kanban-board-team-fence.patch
+      upstream: hermes-agent/hermes_cli/kanban_db_dispatch.py
+
+  - id: kanban.transition
+    purpose: 卡片列流转（done 等受控流转点挂门禁四件套）
+    input: taskId + 目标列；受控列须过 requiredHumanApproval/requiredChecklist/validatorCommand/gateMode
+    output: 流转后状态；拒绝时带冻结词表原因之一
+    errors: [approval_required, checklist_incomplete, validator_failed, invalid_transition]
+    verdictCarrier: 门禁判定（kanban_gates.py，词表引 metrics.yaml verdicts）
+    verdictVocabulary: metrics.yaml
+    owner: hermes-agent（kanban_gates.py；patch 399 挂接）
+    version: "1"
+    changeNotice: 拒绝词表冻结，新增经评审
+    refs:
+      upstream: hermes-agent/hermes_cli/kanban_gates.py
+
+  - id: delegate_task
+    purpose: 进程内委派子代理执行（goal/context/output_schema 三要素）
+    input: goal/context/output_schema/images/group；角色 leaf|orchestrator，工具集继承裁剪
+    output: 子代理结果 + schema_valid/schema_errors（父代验证+一次纠错重试）
+    errors: [schema_invalid, depth_exceeded, concurrency_exceeded, subagent_failed]
+    verdictCarrier: output_schema 验证结果（schema_valid 结构化布尔，判定词引 metrics.yaml verdicts）
+    verdictVocabulary: metrics.yaml
+    owner: hermes-agent（tools/delegate_tool.py）
+    version: "1"
+    changeNotice: schema 变更须父代子代同轮评审
+    refs:
+      upstream: hermes-agent/tools/delegate_tool.py
+
+  - id: mention.dispatch
+    purpose: "@mention 评论驱动派单（agent/squad/member 三类路由）"
+    input: 评论文本（@agent/@squad/<名>）；单 pending 槽 (workspace,agent) 串行
+    output: MentionOutcome（accepted/coalesced/queued/rejected + reason 词表）
+    errors: [unknown_agent, slot_busy, workspace_denied, engine_unreachable]
+    owner: overlay（custom/server/zcode/mention-dispatch.ts）
+    version: "1"
+    changeNotice: reason 词表冻结，新增经评审
+    refs:
+      file: custom/server/zcode/mention-dispatch.ts
+
+  - id: column.dispatch
+    purpose: 列编排流转触发派发（columns.yaml step 有序执行）
+    input: from/to 列 + workspacePath；step(id/role/specialist/provider) 限字符集
+    output: ColumnDispatchResult（triggers + outcomes 全量）
+    errors: [config_invalid, slo_budget_exhausted, engine_unreachable, workspace_denied]
+    owner: overlay（custom/server/kanban/column-dispatch.ts）
+    version: "2"
+    changeNotice: v2 起挂 SLO 预算闸（GOVERNANCE_SLO_BUDGET；enforce 时 core 档耗尽拒绝）
+    refs:
+      file: custom/server/kanban/column-dispatch.ts
+
+  - id: task.assign
+    purpose: 跨机任务派发协议事件（注册房 message，leader PL50）
+    input: taskId/title/body/priority/dueAt/target(account/agentTeam/profile)/issuedBy；
+      v2 增 parentId/capability/phase/dependsOn；admission 未过五问的目标账号告警
+    output: 房间事件 $event_id；成员侧落地 kanban 建卡
+    errors: [target_not_declared, room_not_found, admission_incomplete]
+    verdictCarrier: task.receipt 状态词表（created/running/waiting-human/done/failed，
+      终态判定词引 metrics.yaml verdicts）
+    verdictVocabulary: metrics.yaml
+    owner: overlay（matrix-teams 协议；客户端单源 + 服务端镜像对账守门）
+    version: "2"
+    changeNotice: schemaVersion 双读单写；v3 提案须先改协议常量和镜像再过对账守门
+    refs:
+      file: custom/client/matrix-teams/protocol.ts
+      note: 服务端镜像 custom/server/matrix/task-protocol.ts 与本文件常量对账（守门测试强制）
+
+  - id: task.receipt
+    purpose: 跨机任务回执协议事件（成员 PL0，同 taskId 最新 reportedAt 幂等覆盖）
+    input: taskId/status/localTaskId/reason/reportedBy/reportedAt
+    output: 房间事件 $event_id；leader 侧外派视图聚合（不做本地镜像）
+    errors: [task_unknown, stale_receipt]
+    verdictCarrier: 本事件即判定载体（status 词表；终态判定词引 metrics.yaml verdicts）
+    verdictVocabulary: metrics.yaml
+    owner: overlay（matrix-teams 协议）
+    version: "2"
+    changeNotice: 同 task.assign
+    refs:
+      file: custom/client/matrix-teams/protocol.ts
