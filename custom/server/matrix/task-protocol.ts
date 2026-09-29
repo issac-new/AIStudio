@@ -7,11 +7,18 @@
 // 事件类型字符串与 AssignContent 字段镜像自 custom/client/matrix-teams/protocol.ts
 // （协议 v2 已收口：45/45 守门绿后于 2026-09-25 同步镜像 v2 面——
 // parentId/capability/phase/dependsOn 四可选字段；agent.message/agent.profile 类型
-// 暂不镜像：服务端派发面只发 assign，bot 徽章消息与注册房 state 归客户端）。
+// 2026-09-29 v14 统一聊天 P2D 起镜像：ChatBridge 出向徽章与能力声明移入服务端，
+// 服务端不再只发 assign）。
 // 守门：__tests__/task-protocol-guard.test.ts 与客户端常量做字符串对账，漂移即 fail。
 
 export const TASK_ASSIGN_EVENT_TYPE = 'com.swarmstudio.task.assign'
 export const TASK_RECEIPT_EVENT_TYPE = 'com.swarmstudio.task.receipt'
+/** v14 P2D：桥出向 agent 徽章事件（镜像客户端 TASK_EVENT_TYPES.message） */
+export const AGENT_MESSAGE_EVENT_TYPE = 'com.swarmstudio.agent.message'
+/** v14 P2D：桥启动能力声明 state 事件（镜像客户端 AGENT_PROFILE_EVENT_TYPE） */
+export const AGENT_PROFILE_EVENT_TYPE = 'com.swarmstudio.agent.profile'
+/** v14 P2B：协议事件命名空间前缀（ChatBridge sync 解析分流用；与客户端 isSwarmStudioEventType 同源语义） */
+export const SWARM_EVENT_PREFIX = 'com.swarmstudio.'
 
 /** AssignContent（v1 稳定字段 + v2 四可选字段，与客户端 protocol.ts 对齐） */
 export interface AssignEventContent {
