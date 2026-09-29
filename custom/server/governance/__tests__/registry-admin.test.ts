@@ -44,11 +44,17 @@ describe('registry-admin（P6-P8）', () => {
     expect(r.markdown).toContain('@admin:matrix.test')
   })
 
-  it('建号：synapse 双账号 + roster 追加行 + 提交', async () => {
-    const r = await provisionMatrixAccount({ localName: 'zhang', role: '研发', password: 'Pw1!', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008' })
+  it('建号：synapse 双账号 + roster 追加行 + 提交（P2A 凭据闭环 best-effort 记因）', async () => {
+    const r = await provisionMatrixAccount({
+      localName: 'zhang', role: '研发', password: 'Pw1!', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008',
+      // v14 P2A：注入失败登录替身——不触真 homeserver；断言建号不被凭据失败阻断
+      fetchImpl: async () => new Response('{"errcode":"M_FORBIDDEN"}', { status: 403 }),
+    })
     expect(r.created).toEqual(['@zhang:matrix.test', '@zhang-agent:matrix.test'])
     expect(createMock).toHaveBeenCalledTimes(2)
     expect(r.rosterCommit).toBe('abc1234')
+    expect(r.agentIdentity?.written).toBe(false)
+    expect(r.agentIdentity?.reason).toContain('403')
   })
 
   it('离职三步：移交工单提交 → 停用双号 → 审计留痕提交', async () => {
