@@ -13,7 +13,7 @@
 // 会话生命周期 = ChatView 挂载配方 + newChat codex 配方（ChatPanel.vue
 // 新建会话处）：agent 底座默认 codex、codingAgentMode 'global'（走各 agent
 // 自身登录，模型按钮禁用为诚实态；scoped 模式经 cockpit/聊天页配置）。
-import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
@@ -43,6 +43,7 @@ import IdeMentionPicker from '../components/IdeMentionPicker.vue'
 import IdeInlineDiff from '../components/IdeInlineDiff.vue'
 import type { InlineDiffUndoContext } from '../components/IdeInlineDiff.vue'
 import IdeVideoFramesDialog from '../components/IdeVideoFramesDialog.vue'
+import IdeFindInSession from '../components/IdeFindInSession.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
 import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
 import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
@@ -63,6 +64,7 @@ import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
 import IdeSubagentsFloat from '../components/IdeSubagentsFloat.vue'
 import IdeRunResultCard from './IdeRunResultCard.vue'
+import IdeTodoBar from '../components/IdeTodoBar.vue'
 import IdeModelSwitcher from './IdeModelSwitcher.vue'
 import IdeShareEntry from './IdeShareEntry.vue'
 import IdeActivityInbox from './IdeActivityInbox.vue'
@@ -330,6 +332,13 @@ const chatInputEl = ref<{ addFiles?: (files: File[]) => void } | null>(null)
 function onVideoFrames(files: File[]): void {
   chatInputEl.value?.addFiles?.(files)
 }
+// B4 会话内查找条（zcode findInTask 对照）：开关注入+自动聚焦。
+const findOpen = ref(false)
+const findRef = ref<{ open?: () => void } | null>(null)
+function openFind(): void {
+  findOpen.value = true
+  void nextTick(() => findRef.value?.open?.())
+}
 // S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
 // fetchWorkspaceRunChangesForSession → 首文件详情端点 patch）；无 diff 不渲染。
 // A1 接线（2026-09-29）：同时捕获 undo 上下文（changeId/fileId/workspace），
@@ -425,6 +434,13 @@ async function pickModel(provider: string, model: string): Promise<void> {
           title="视频抽帧入会话（按路径抽帧投喂，agent 录屏产物适用）"
           @click="videoFramesOpen = true"
         >🎞</button>
+        <button
+          type="button"
+          class="ide-chat__action"
+          data-testid="ide-chat-find"
+          title="会话内查找（跳转定位；行内高亮待上游 MessageList 补丁）"
+          @click="openFind"
+        >🔍</button>
         <button
           type="button"
           class="ide-chat__action"
@@ -537,6 +553,8 @@ async function pickModel(provider: string, model: string): Promise<void> {
 
     <!-- R3 轮结果卡（时长 + 验证 bullet + per-turn 文件变更） -->
     <IdeRunResultCard />
+    <!-- B5 todo 常驻条：最新 todo_list 快照的进度+展开清单（无 todo 自隐藏） -->
+    <IdeTodoBar />
 
     <div class="ide-chat__body">
       <div class="ide-chat__messages-anchor">
@@ -565,6 +583,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeHandoffCard />
       <IdeRecoveryDialog v-if="recoveryOpen" :open="recoveryOpen" @close="recoveryOpen = false" />
       <IdeVideoFramesDialog v-if="videoFramesOpen" :workspace="ide.workspace" @close="videoFramesOpen = false" @frames="onVideoFrames" />
+      <IdeFindInSession v-if="findOpen" ref="findRef" @close="findOpen = false" />
       <IdeCompactionCard />
       <div class="ide-chat__model-picker-anchor">
         <ChatInput
@@ -617,6 +636,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative; /* B4 会话内查找条（绝对定位浮层）的锚 */
   background: var(--bg-primary, #14161a);
 }
 
