@@ -92,7 +92,8 @@ async function handleSlashCommandsSave(ctx: Context): Promise<void> {
     return
   }
   const store = slashCommandStorePath()
-  const tmp = `${store}.tmp`
+  // pid+时间戳限定 tmp（对齐 handleEngineModelsPut）：dev 与打包版双进程并发保存时固定名互相截断
+  const tmp = `${store}.tmp-${process.pid}-${Date.now()}`
   writeFileSync(tmp, JSON.stringify({ commands }, null, 2), 'utf8')
   renameSync(tmp, store)
   ctx.body = { ok: true, commands }
@@ -204,7 +205,8 @@ async function handleSemanticaStatus(ctx: Context): Promise<void> {
     const cfg = readFileSync(join(homedir(), '.hermes', 'config.yaml'), 'utf8')
     const configured = /mcp_servers:[\s\S]*?\n\s{2,}semantica:/.test(cfg)
     const kgPath = cfg.match(/SEMANTICA_KG_PATH:\s*(\S+)/)?.[1] ?? null
-    const venvOk = existsSync(join(homedir(), '.hermes', 'hermes-agent', 'venv', 'lib'))
+    // venv 布局平台差异：win32 是 Scripts\（含 python.exe），POSIX 是 lib/——固定探测 lib 在 Windows 恒 false
+    const venvOk = existsSync(join(homedir(), '.hermes', 'hermes-agent', 'venv', process.platform === 'win32' ? 'Scripts' : 'lib'))
     ctx.body = { ok: true, configured, kgPath, venvOk, note: configured ? '工具在 agent 会话启动时装载（15 只知识工具）' : '未配置（hermes mcp install semantica）' }
   } catch (err) {
     ctx.status = 503

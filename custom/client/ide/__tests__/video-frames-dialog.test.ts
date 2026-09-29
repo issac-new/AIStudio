@@ -47,6 +47,20 @@ describe('IdeVideoFramesDialog（A7）', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).videoPath).toBe('/tmp/abs.mp4')
   })
 
+  it('Windows 绝对路径（盘符反斜杠/盘符正斜杠）同样透传，不当相对路径拼 workspace', async () => {
+    fetchMock.mockImplementation(async () => ({ ok: true, json: async () => ({ ok: true, frames: [{ index: 0, dataBase64: PNG_B64 }] }) }))
+    const w = mount(IdeVideoFramesDialog, { props: { workspace: '/w' } })
+    await w.find('[data-testid="ide-vf-path"]').setValue('C:\\Users\\demo\\rec.mp4')
+    await w.find('[data-testid="ide-vf-extract"]').trigger('click')
+    await new Promise((r) => setTimeout(r, 30))
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).videoPath).toBe('C:\\Users\\demo\\rec.mp4')
+    fetchMock.mockClear()
+    await w.find('[data-testid="ide-vf-path"]').setValue('D:/clips/b.mp4')
+    await w.find('[data-testid="ide-vf-extract"]').trigger('click')
+    await new Promise((r) => setTimeout(r, 30))
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).videoPath).toBe('D:/clips/b.mp4')
+  })
+
   it('失败（视频不存在 404/抽帧失败 422）：显错不关窗不上抛', async () => {
     fetchMock.mockImplementation(async () => ({ ok: false, status: 422, json: async () => ({ ok: false, detail: 'ffmpeg 不可用' }) }))
     const w = mount(IdeVideoFramesDialog, { props: { workspace: '/w' } })
