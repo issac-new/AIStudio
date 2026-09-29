@@ -28,6 +28,7 @@ import Router from '@koa/router'
 import { probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { MentionDispatchService } from '../zcode/mention-dispatch'
+import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
 import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access'
 
@@ -92,7 +93,14 @@ export function getMentionDispatch(): MentionDispatchService {
     clientId: 'swarmstudio-mention-bus',
     knownAgents: ['zcode', ...(('' + (process.env.ZCODE_MENTION_AGENTS ?? '')).split(',').filter(Boolean))],
     deferredAgents: ['claude-code', 'codex', 'pi', 'grok', 'dsh', 'opencode', 'mimo'],
-    onOutcome: () => { /* outcome 经 dispatch() 返回值透传 REST；socket 扇出由调用侧 emit */ },
+    // 4A 治理层第三期：派发结果台账（fail-soft 留痕，消费关系/dispatch.successRate 信号面）。
+    // column 派发经同一单例，会先落 kind=mention 通用条目、再由 column-dispatch 落归因更细
+    // 的 kind=column 条目（同 commandId，统计去重优先 column）。
+    onOutcome: (o) => appendDispatchOutcome({
+      kind: 'mention', target: o.target, mentionKind: o.mentionKind, reason: o.reason,
+      commandId: o.commandId, sessionId: o.sessionId, workspaceId: o.workspaceId,
+      detail: o.detail?.slice(0, 200),
+    }),
   })
   return dispatchSingleton
 }

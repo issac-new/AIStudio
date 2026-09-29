@@ -91,6 +91,21 @@ onMounted(() => void refresh())
               {{ a.assignee }} · {{ a.total }}
             </span>
           </div>
+          <!-- 第三期：dispatch.successRate / gate.passRate 本地实况 -->
+          <div v-if="usage.dispatchStats" class="runtime__row" data-testid="runtime-dispatch">
+            <span class="runtime__label">{{ L?.dispatch }}</span>
+            <span class="runtime__tag">{{ usage.dispatchStats.delivered }}/{{ usage.dispatchStats.dispatched }} {{ L?.delivered }}</span>
+            <span class="runtime__tag" :class="usage.dispatchStats.deliveredRate != null && usage.dispatchStats.deliveredRate < 0.9 ? 'is-warn' : 'is-ok'">
+              {{ pct(usage.dispatchStats.deliveredRate) }}
+            </span>
+            <span v-for="b in usage.dispatchStats.byUnit.slice(0, 4)" :key="b.key" class="runtime__tag" :data-testid="`dispatch-unit-${b.key}`">{{ b.key }} {{ pct(b.rate) }}</span>
+          </div>
+          <div v-if="usage.gateStats && usage.gateStats.runs > 0" class="runtime__row" data-testid="runtime-gate">
+            <span class="runtime__label">{{ L?.gate }}</span>
+            <span class="runtime__tag" :class="usage.gateStats.passRate != null && usage.gateStats.passRate < 0.9 ? 'is-warn' : 'is-ok'">{{ pct(usage.gateStats.passRate) }}</span>
+            <span class="runtime__tag">{{ usage.gateStats.runs }} {{ L?.gateRuns }}</span>
+            <span v-if="usage.gateStats.lastAt" class="runtime__tag">{{ fmtTime(usage.gateStats.lastAt) }}</span>
+          </div>
         </template>
         <div v-else class="runtime__empty">…</div>
       </section>
@@ -145,6 +160,17 @@ onMounted(() => void refresh())
               <tbody>
                 <tr v-for="b in cost.byProvider.slice(0, 6)" :key="b.key" :data-testid="`cost-provider-${b.key}`">
                   <td><b>{{ b.key }}</b><span v-if="b.unpricedRows" class="runtime__tag is-warn" :title="L?.unpricedHint">{{ b.unpricedRows }} {{ L?.unpriced }}</span></td>
+                  <td>{{ b.calls }}</td>
+                  <td>{{ fmtTokens(b.inputTokens) }}+{{ fmtTokens(b.outputTokens) }}</td>
+                  <td>{{ fmtCost(b.costIdle, cost.currency) }} ~ {{ fmtCost(b.costPeak, cost.currency) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <table v-if="cost.byCapability?.length" class="runtime__table">
+              <thead><tr><th>{{ L?.colCapability }}</th><th>{{ L?.calls }}</th><th>tokens</th><th>{{ L?.colCost }}</th></tr></thead>
+              <tbody>
+                <tr v-for="b in cost.byCapability.slice(0, 5)" :key="b.key" :data-testid="`cost-capability-${b.key}`">
+                  <td><b>{{ b.key }}</b></td>
                   <td>{{ b.calls }}</td>
                   <td>{{ fmtTokens(b.inputTokens) }}+{{ fmtTokens(b.outputTokens) }}</td>
                   <td>{{ fmtCost(b.costIdle, cost.currency) }} ~ {{ fmtCost(b.costPeak, cost.currency) }}</td>

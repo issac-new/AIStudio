@@ -45,18 +45,18 @@ metrics:
     status: live
   - id: gate.passRate
     name: 门禁通过率
-    formula: 周期内结构化 verdict=pass 的闸门判定数 / 判定总数；conditional 计入分母不计入分子
+    formula: 周期内结构化 verdict=pass 的闸门判定数 / 判定总数；conditional 计入分母不计入分子；not_applicable 双侧剔除
     dimensions: [gate, capability, period]
     permission: 全员可读
-    authority: qgate 证据库 + kanban 事件流
-    status: defined
+    authority: qgate runs 台账（.qgate/runs 扫描：cwd/仓根上寻/示例仓；GOVERNANCE_QGATE_RUNS 覆盖）
+    status: live
   - id: dispatch.successRate
     name: 派发成功率
-    formula: 周期内 task.receipt 状态达 created/running 的派单数 / task.assign 总数；failed 与超时不回执计失败
-    dimensions: [squad, capability, period]
+    formula: 引擎派发（本地）= 送达数（reason=queued/coalesced）/ 派发总数（同 commandId 去重、column 条目优先；deferred 计分母不计分子）。跨机派发 = task.receipt 状态达 created/running 的派单数 / task.assign 总数（Matrix 侧聚合待接线，如实分列）
+    dimensions: [unit, capability, period]
     permission: 全员可读
-    authority: Matrix 注册房协议事件（task.assign/receipt）
-    status: defined
+    authority: 派发结果台账（~/.hermes-web-ui/overlay/dispatch-ledger.jsonl，引擎派发）+ Matrix 注册房协议事件（跨机）
+    status: live
   - id: run.durationP95
     name: 运行时长 P95
     formula: 周期内已完成 run 的 wall-clock 时长第 95 百分位；按 sloTier 分档对照目标值
