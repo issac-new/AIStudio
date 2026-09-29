@@ -206,8 +206,8 @@ if _ilog.exists() and '问题单终态' in rep:
 # R9 报告步自证：第 26 步须 ✅（生成器对本步恒真）且带生成产物锚点
 _b26 = next((b for b in blocks if '<span class="st-num">26</span>' in b), '')
 if _b26:
-    if '⬜' in _b26:
-        fails.append('R9 报告步自证悖论：第 26 步标 ⬜——产物存在即应 ✅ 并回填生成时间')
+    if '<span class="no">⬜</span>' in _b26:
+        fails.append('R9 报告步自证悖论：第 26 步状态标 ⬜——产物存在即应 ✅（叙事文本中的 ⬜ 字样不算状态）')
     if 'simulation-report.html' not in _b26:
         warns.append('R9 第 26 步未挂 simulation-report.html 产物锚点')
 else:
