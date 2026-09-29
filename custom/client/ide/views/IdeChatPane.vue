@@ -43,6 +43,7 @@ import IdeMentionPicker from '../components/IdeMentionPicker.vue'
 import IdeInlineDiff from '../components/IdeInlineDiff.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
 import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
+import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
 import { ideRunsApi } from '../api/runs'
 import IdeContextBar from '../components/IdeContextBar.vue'
 import IdeCompactionCard from '../components/IdeCompactionCard.vue'
@@ -525,6 +526,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
       <IdeInlineDiff :diff-text="demoDiff" />
       <IdeAgentsView />
       <IdeResumeAdvisor />
+      <IdeSecurityBoostBar />
       <IdeContextBar />
       <IdeQueuePanel />
       <IdeRecapCard />
