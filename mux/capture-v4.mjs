@@ -52,28 +52,59 @@ await page.evaluate(([token, mtok2]) => {
 
 async function shot(name, url, opts = {}) {
   if (only && only !== name) return
-  // hash 路由铁律：SPA 用 createWebHashHistory，path URL 一律被重定向回 #/app
-  // （V3 实锤"落点漂移"）；采集必须走 /#<path>
   await page.goto(BASE + '/#' + url.replace(/^#/, ''))
-  await page.waitForTimeout(opts.wait ?? 4000)
-  // 演示弹窗逐一点掉（确认/稍等/稍后提醒；加载期禁用属正常，能点即点）
-  for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒']) {
-    const btn = page.locator(`button:has-text("${txt}")`).first()
-    if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(500) }
+  // 拍前去噪：CSS 隐藏版本通知 toast（严禁点击"知道了"=跳转劫持钮）+Esc 收浮层
+  await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
+  await page.keyboard.press('Escape').catch(() => {})
+  // 快门守门（8.4 规范）：目标组件非空且无加载态才拍；空/加载中重试，最终仍空=拒拍记缺陷
+  if (opts.expect) {
+    let gated = false
+    for (let i = 0; i < 6 && !gated; i++) {
+      gated = await page.evaluate((sel) => {
+        const el = document.querySelector(sel)
+        const spins = [...document.querySelectorAll('.n-spin, [class*="spin"]')]
+        const spinning = spins.some((s) => getComputedStyle(s).display !== 'none' && !!s.offsetParent)
+        return !!el && (el.innerText || '').trim().length > 0 && !spinning
+      }, opts.expect).catch(() => false)
+      if (!gated) await page.waitForTimeout(1500)
+    }
+    if (!gated) { console.error(`DEFECT[shutter-gate]: ${name} 目标 ${opts.expect} 空/加载中——拒拍（补数据或修组件后重拍）`); return }
   }
+  await page.waitForTimeout(opts.wait ?? 4000)
+  // ⚠️ 不点任何弹窗按钮："知道了"=通知跳转钮，点击即劫持导航到 board?task=<卡>
+  // （run2 实锤：五连拍全被劫持到 t_666aecf8；去掉 Dismiss 循环后全部正确落位）
   if (opts.after) await opts.after()
-  await page.screenshot({ path: `${OUT}/${name}.png` })
-  // 落点自证：URL + 关键 DOM 锚点（防"登录页假截图"——不可见时须人工处置）
+  await page.screenshot({ path: `${OUT}/${name}.png`, ...(opts.fullPage ? { fullPage: true } : {}) })
   const probe = await page.evaluate(() => {
     const q = (s) => !!document.querySelector(s)
     return {
       url: location.hash || location.pathname,
-      title: document.title.slice(0, 40),
-      hasApp: q('#app'), hasLogin: !!document.querySelector('input[type=password]'),
+      hasLogin: !!document.querySelector('input[type=password]'),
       bodyText: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 90),
     }
   })
+  // 文件名-内容对齐校验：落地路由与预期不符即记缺陷（防 ui-26 错拍类复发）
+  if (opts.expectRoute && !new RegExp(opts.expectRoute).test(probe.url)) {
+    console.error(`DEFECT[route-mismatch]: ${name} 落地 ${probe.url} ≠ 预期 /#${opts.expectRoute}`)
+  }
   console.log('shot:', name, JSON.stringify(probe))
+}
+// 同画面去重：全量拍完按文件字节哈希报告重复帧（采集计划收敛依据）
+async function reportDuplicateFrames() {
+  const { createHash } = await import('node:crypto')
+  const { readdirSync, statSync } = await import('node:fs')
+  const bySize = new Map()
+  try {
+    for (const f of readdirSync(OUT)) {
+      if (!f.endsWith('.png')) continue
+      const p = `${OUT}/${f}`
+      const { readFileSync } = await import('node:fs')
+      const h = createHash('md5').update(readFileSync(p)).digest('hex')
+      bySize.set(h, (bySize.get(h) || []).concat(f))
+    }
+  } catch { return }
+  const dups = [...bySize.values()].filter((v) => v.length > 1)
+  if (dups.length) console.warn('WARN[duplicate-frames]:', JSON.stringify(dups))
 }
 
 // 步骤 3/4：驾驶舱全景 + P5 概览三卡
@@ -136,5 +167,6 @@ await shot('ui-25-ide', `/ide${ideTask ? `?task=${ideTask}` : ''}`, { wait: 6000
 // 步骤 26：报告自身（生成后重跑本位）
 await shot('ui-26-report', '/app/gov', { wait: 5000 })
 
+await reportDuplicateFrames()
 await browser.close()
 console.log('capture-v4 done')
