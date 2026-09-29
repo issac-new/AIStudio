@@ -15,7 +15,8 @@ const clientRoot = resolve(ia2Root, '..')
 describe('驾驶舱性能收敛守门（源码级）', () => {
   it('IaShell：RunTraceModal 仅在 runTraceOpen 时挂载', () => {
     const src = readFileSync(resolve(ia2Root, 'views/IaShell.vue'), 'utf8')
-    expect(src).toContain('<CockpitRunTraceModal v-if="cockpit.runTraceOpen" />')
+    // M2 IDE 子路由：IdeShell 自带同款弹窗，壳侧让位防双份（条件加 !isIdeChild）
+    expect(src).toContain('<CockpitRunTraceModal v-if="cockpit.runTraceOpen && !isIdeChild" />')
     expect(src).not.toMatch(/<CockpitRunTraceModal\s*\/>/)
   })
 

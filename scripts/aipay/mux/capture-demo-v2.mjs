@@ -175,7 +175,7 @@ await shot('s11-triage-mine', '/app/board', {
 })
 
 // 步骤 13：IDE 简报 worktree 区块
-await shot('s12-ide-worktree', '/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 3000, readyTimeout: 70000, after: async () => {
+await shot('s12-ide-worktree', '/app/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 3000, readyTimeout: 70000, after: async () => {
   const b = page.locator('button:has-text("简报"), [data-testid="ide-briefing-drawer"], .ide-briefing').first()
   if (await b.isVisible().catch(() => false)) { await b.click().catch(() => {}); await page.waitForTimeout(1800) }
 } })
@@ -199,7 +199,7 @@ await shot('s15-g2-archgate', '/app/gov', { readyText: 'G2', settle: 2500, after
 await shot('s16-plan-cards', '/app/board', { readyText: 'T-101', settle: 2500 })
 
 // 步骤 18（G3）：IDE Git 面板
-await shot('s17-ide-git', '/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 2500, readyTimeout: 70000, after: async () => {
+await shot('s17-ide-git', '/app/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 2500, readyTimeout: 70000, after: async () => {
   const g = page.locator('text=/^Git$|Git 活动/').first()
   if (await g.isVisible().catch(() => false)) { await g.click().catch(() => {}); await page.waitForTimeout(1800) }
 } })
@@ -241,7 +241,7 @@ await shot('s24-retro-doc', '/app/gov', { readyText: '复盘', settle: 2500, aft
 } })
 
 // 步骤 25：IDE 任务简报抽屉六区块
-await shot('s25-ide-briefing', '/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 3000, readyTimeout: 70000, after: async () => {
+await shot('s25-ide-briefing', '/app/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 3000, readyTimeout: 70000, after: async () => {
   const b = page.locator('button:has-text("简报"), [data-testid="ide-briefing-drawer"], .ide-briefing').first()
   if (await b.isVisible().catch(() => false)) { await b.click().catch(() => {}); await page.waitForTimeout(1800) }
 } })

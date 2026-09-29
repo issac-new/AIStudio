@@ -17,9 +17,7 @@ vi.mock('naive-ui', () => ({
 // 三个内容面板挡为桩（各自依赖面由专测覆盖）
 vi.mock('../views/IdeGitPane.vue', () => ({ default: { name: 'IdeGitPane', template: '<div data-testid="stub-gitpane" />' } }))
 vi.mock('../views/IdeWikiPane.vue', () => ({ default: { name: 'IdeWikiPane', template: '<div data-testid="stub-wikipane" />' } }))
-// Computer Use 接线轮：browser 页签从上游设置页（DesktopBrowserView）换为
-// IdeBrowserPane（真·内置浏览器包装）——mock 目标同步
-vi.mock('../views/IdeBrowserPane.vue', () => ({ default: { name: 'IdeBrowserPane', template: '<div data-testid="stub-browser" />' } }))
+vi.mock('@/views/hermes/DesktopBrowserView.vue', () => ({ default: { name: 'DesktopBrowserView', template: '<div data-testid="stub-browser" />' } }))
 vi.mock('../views/IdeStoragePane.vue', () => ({ default: { name: 'IdeStoragePane', template: '<div data-testid="stub-storage" />' } }))
 vi.mock('../views/IdeMemoryPane.vue', () => ({ default: { name: 'IdeMemoryPane', template: '<div data-testid="stub-memory" />' } }))
 vi.mock('../views/IdeTerminalDock.vue', () => ({ default: { name: 'IdeTerminalDock', template: '<div data-testid="stub-termdock" />' } }))
@@ -64,8 +62,7 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     ide.setSidePaneTab('browser')
     await flushPromises()
     w = mountPane()
-    // 外层 data-testid 覆盖桩自带（同 review 注）；接线后标记=ide-sidepane-browser
-    expect(w.find('[data-testid="ide-sidepane-browser"]').exists()).toBe(true)
+    expect(w.find('[data-testid="stub-browser"]').exists()).toBe(true)
 
     ide.setSidePaneTab('wiki')
     await flushPromises()
