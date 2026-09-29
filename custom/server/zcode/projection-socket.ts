@@ -132,12 +132,17 @@ export function setupZcodeProjectionSocket(io: Server, authDeps?: ZcodeNamespace
   })
 }
 
-/** 扇出：workspace 级房间必投；带 sessionId 的事件加投会话级房间。io 缺席时静默（无连接面）。 */
+/**
+ * 扇出（C2 单编码多房间）：workspace 级房间必投；带 sessionId 的事件加投会话级房间。
+ * 房间链式 `.to(a).to(b)`（opencode v2 事件流「encode once, N queues」语义的 socket.io
+ * 对应形态）：一次 emit 一个包——同 socket 跨房间（workspace+会话双订阅）只收一份
+ * （旧逐房间 emit 形态既重复序列化又重复投递）；io 缺席时静默（无连接面）。
+ */
 export function emitZcodeProjectionEvent(io: Server | null | undefined, event: ZcodeSocketEvent): void {
   const target = io ?? activeIo
   if (!target) return
-  const rooms = [`zcode:${event.workspaceId}`]
-  if ('sessionId' in event && event.sessionId) rooms.push(`zcode:${event.workspaceId}:s:${event.sessionId}`)
-  if ('taskId' in event && (event as { taskId?: string }).taskId) rooms.push(`zcode:${event.workspaceId}:t:${(event as { taskId?: string }).taskId}`)
-  for (const room of rooms) target.of('/zcode').to(room).emit('zcode:event', event)
+  let broadcast = target.of('/zcode').to(`zcode:${event.workspaceId}`)
+  if ('sessionId' in event && event.sessionId) broadcast = broadcast.to(`zcode:${event.workspaceId}:s:${event.sessionId}`)
+  if ('taskId' in event && (event as { taskId?: string }).taskId) broadcast = broadcast.to(`zcode:${event.workspaceId}:t:${(event as { taskId?: string }).taskId}`)
+  broadcast.emit('zcode:event', event)
 }

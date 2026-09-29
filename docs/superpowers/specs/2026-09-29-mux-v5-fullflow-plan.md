@@ -5,7 +5,8 @@
 > **补遗记档**：2026-09-29 补遗②——第五章新增总则 8-14（判词真值化/落键完整/审计双线/基线受控/判回滚冻结/处置回灌/留痕受控，均带 run2 先例锚点）；新增 4.3 步骤修订批（第 15/18/19/20/21/23/24/26 步把关增补，4.2 原文一字不动）；8.3 增 R10 工件新鲜度并在 8.4 增采集快门守门；run1 问题单 12 键 DISP 补账回灌台账本体（对齐 R-A5 先例）；UI 视觉审计 19 缺陷+15 图证不一致入第十章台账（详单 `2026-09-29-ui-visual-audit-run1-run2.md`）。报告生成器四修已落 fix/report-generator-four @ 2f6d8a8d（元信息参数化/R3-R9 断言，待合）。
 > **补遗记档**：2026-09-29 补遗③——修复"各环节符合准入准出标准的交付物无效果图"缺位（用户指认）：新增 8.6 交付物效果图规范（26 步交付物→模版→呈现要求全矩阵，呈现=交付物真容渲染+模版逐节核对，非截图非转述）；8.2 步骤块四件套升五件套；8.3 增 R11 交付物真容；锚点实证=中央仓 RFD-001.freeze.md（四要素+AC-7 条实存）。
 > **补遗记档**：2026-09-29 补遗④（用户十项调整）——①0→1 清环境推演（run4 定义+清理程序，§十一）；②账号分配产品化（设置·账户管理页，本机↔matrix 账号管理联动，§七 P6+4.5 批第 1 步）；③驾驶舱「任务/在线」下拉功能回归验证（4.5 批第 4 步）；④应用资产登记表 UI 可维护（P7+第 5 步）；⑤研发人员/团队/负责人关系 UI 可维护（P8+第 6 步）；⑥六闸把关标准显性清单化（新增 §4.4）；⑦截图内容与工作要求一致性硬校验（8.3 R12）；⑧交付物真实可编辑可提交 git（R13）；⑨xxx-dev skill 生成与开发过程截屏展示（R14+第 13/18 步）；⑩各环节交付物+测试案例/数据/报告+衔接流转全截屏串联（8.6 扩列+第 19-21 步）。
-> **基准**：overlay main @ e6f13ff9（补遗④基底）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
+> **补遗记档**：2026-09-29 补遗⑤（用户指令：驾驶舱聚焦）——推演 UI 面限定"只能使用驾驶舱及其下的功能"，其它页面在用功能迁入驾驶舱（§13.3 迁移清单 M1-M6）；推演全程未用到的 UI 功能分析后精简、保留基础技术组件能力（§13.4 精简清单 S1-S7）；新增 §4.6 步骤修订批（第 4/10/25/26 步 UI 落点）；§一"5 个产品面"口径自本补遗起由 §13.1 取代；§十 增执行序条目 7，沿革表登记。同日用户四项裁决：M1 看板统一用注意力条「swarm kanban」既有入口（v12.4 裁定动线，不新增左栏入口）；M2 IDE 子页面化照准；R-C1 裁决合一、转为迁移项 M6；M3-M4 两处深链改指照准。
+> **基准**：overlay main @ e6f13ff9（补遗④基底）→ cbf76b7a（补遗⑤基底）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
 
 ---
 
@@ -235,6 +236,15 @@ graph TB
 - 第 13/18 步增补 skill 过程展示：**swarm yuan 生成 xxx-dev 定制 skill 的过程**（仓库扫描→资产梳理→skill 产出文件树与内容）与**该 skill 驱动开发的过程**（五步能力逐步调用现场）截屏入报告。（准出补=skill 生成 ≥3 帧（扫描/产出/内容）+开发过程 ≥2 帧；缺即违例。依据=第 9 项。）
 - 第 19-21 步增补衔接流转截屏：各环节交付物对应的**测试案例清单/测试数据/执行输出/报告**逐项截屏；环节间**流转现场**（提测流转对话/缺陷回流消息/发布冻结与解冻/验收逐条对账）逐节点截屏，报告按时间线完整串联。（合格线=每环节 ≥1 帧交付物+ ≥1 帧流转现场、8.6 流转列全绿。依据=第 10 项。）
 
+### 4.6 步骤修订批·补遗⑤（驾驶舱聚焦的操作层落点）
+
+4.2 原文仍一字不动；本批随 §十三 P9/P10 落地后生效，生效前按原步骤执行（同 4.5 批语义）。产品面口径同步收窄：§一"5 个产品面"自本补遗起由 §13.1 取代——协作沟通、IDE 工作台、审批收件箱、治理中心均为驾驶舱子功能区，不再是并列产品面。
+
+- 第 4 步（冒烟）增补驾驶舱口径：原文"用户可以使用系统所有功能（驾驶舱、协作沟通、IDE 工作台）"的落点=驾驶舱及其下功能区（协作沟通=驾驶舱中栏会话画布、IDE 工作台=驾驶舱 IDE 画布、看板/审批/治理/账户=驾驶舱工作页）。冒烟清单增一项断言：主侧栏一级入口仅「驾驶舱」（+系统折叠组），全流程 UI 动作不出 /app 路由树（登录页除外）。（依据=§13.1 聚焦判定标准。）
+- 第 10 步（看板登记）落点改 /app/board：流程走查与采集不再使用 /hermes/kanban（上游原生看板页）；看板入口统一用注意力条最左「swarm kanban」按钮（用户 v12.4 已裁定的既有动线：AttentionStrip.vue open-board → IaGlobalTop.vue:80 → ia2.board），不新增左栏入口（2026-09-29 用户裁决）。（依据=§13.3 M1——现状采集主位 capture-v42.mjs:184 与 capture-demo-v2.mjs:137/158/170/199 均指 /hermes/kanban，属"在其它页面"的典型项。）
+- 第 25 步（IDE 介入）落点改 /app/ide：IDE 工作台=驾驶舱·IDE 画布，路由归一为 IaShell 子路由（全屏画布形态与任务简报/交互编码/git 图谱/模型设置能力全部不变）；主侧栏一级「IDE 工作台」入口移除，进入路径=任务右栏 ⌨IDE 与页头视图切换（IaShellHeader.vue:219）；旧 /ide 深链加兼容重定向，登录落点（patch 276/277 所指，features.ts 注释所记 2026-09-16 裁决）同步改指。（依据=§13.3 M2。）
+- 第 26 步（报告）三界面口径改：截图"三界面"（驾驶舱/协作沟通/IDE 工作台）核验口径=驾驶舱三功能区（工作台/看板/IDE 画布）；8.3 R7"截图三界面齐"按此解释核验，capture 各 shot 位 expectRoute 断言统一 '^/app'（ui-25 随 M2 改 /app/ide 后成立）。（依据=§13.3 M5。）
+
 ## 五、质量与闭环治理总则（贯穿全程）
 
 1. 四道锁系统直接拦：需求未上锁不分析（G1，第 7 条）、设计未评审不排期（G2，第 15 条）、测试未过不发布（G4，第 19 条）、发布检查未过不上线（G5，第 20 条）——锁不过，后续步骤脚本直接拒绝执行。
@@ -420,6 +430,7 @@ capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录＋弹窗点击清�
 4. **交付物全景补产（补遗③，R11）已全部落地**：run2/run1 双报告嵌入交付物真容+模版核对（各 ≥14 步、六闸必备件齐）；run1 叙事按轮回退自 c353a154（run2 故事残留清零）；unified run 模式收敛（--run 单一入口、输出落 runs/&lt;RUN_ID&gt;/evidence/、交付物块继承、判回滚叙事在位）；capture ui-26-report 错拍根治（直拍报告首屏，run2 实拍 1.35MB 落位）。
 5. **图 base64 自包含**：演示步图已内嵌，真证据索引维持相对路径+同目录交付（8.1 既定形态，非缺陷）。
 6. **长线记档项**：SBOM+依赖白名单；graphify 代码知识图谱接入；影子运行/双跑对比（口径已立）；逃逸缺陷率与 revert 率长线数据（六域体检台账已开始积攒）。
+7. **补遗⑤执行序（驾驶舱聚焦；2026-09-29 用户四项裁决已收）**：P9 迁移批（M1 看板统一协作看板——注意力条既有入口，前端零改动／M2 IDE 归一 /app/ide／M3-M4 深链改指——chat 类已迁过，实余群聊+工作流两处／M5 报告口径／M6 画布并入运行详情=R-C1 裁决）→ P10 精简批（S1-S7；S4 十六个驾驶舱孤儿组件先删，git 可回滚）→ run4 双口径（0→1 清环境+驾驶舱聚焦合一，报告 R7 按三功能区核验）。P9/P10 若延期不阻塞 run4：run4 回退按补遗④口径执行，⑤ 验于 run5。锚点与验收门见 §十三。
 
 ## 十一、运行手册
 
@@ -455,6 +466,7 @@ RUN_ID=<run4> bash scripts/aipay/aipay-scenario.sh
 | ② | 09-29 | 截图面视觉审计+audit 处置台账+并行分支漂移核实 | §五 8-14 条；§4.3 修订批 8 步；8.3 R10+8.4 快门守门；run1 台账 12 键补账；§七管理规则；§十 UI 台账 | 三支合 main 后 run3 复跑；UI 缺陷修复批（P0×3 先行） | 待合待验 |
 | ③ | 09-29 | 用户指认：交付物无效果图 | 8.6 交付物效果图规范+全矩阵；8.2 五件套；8.3 R11；4.3 第 26 步条更新 | 生成器交付物视图段+治理中心 markdown 渲染修复；run2/run1 补产 | 待实施 |
 | ④ | 09-29 | 用户十项调整（0→1/账户管理产品化/任务在线回归/资产表与组织 UI/六闸标准显性化/截图一致性/工件可编辑/skill 过程/流转串联） | §4.4 六闸清单+§4.5 修订批；P6-P8；R12-R14；8.6 扩列；§十一 mx-clean+run4 | P6-P8 立项→mx-clean→run4 0→1 全流程→补遗④口径统一报告 | 待立项（P6-P8 为前置） |
+| ⑤ | 09-29 | 用户指令：推演限定驾驶舱单面，未用 UI 精简保能力；同日四项裁决（M1 注意力条入口/R-C1 合一转 M6/M2/M3-M4 照准） | §4.6 修订批；§十三（13.1 聚焦原则/13.2 在用面/13.3 迁移 M1-M6/13.4 精简 S1-S7（R-C1 已裁决）/13.5 Non-goals/13.6 验收门）；§十 7 | P9 迁移批（M1-M6）→P10 精简批→run4 双口径（或 run4 退 ④、⑤ 验 run5） | 待立项（P9/P10 为前置） |
 
 | 版本 | 日期 | 定位 | 状态 |
 |---|---|---|---|
@@ -465,3 +477,79 @@ RUN_ID=<run4> bash scripts/aipay/aipay-scenario.sh
 | V5 | 09-29 | V3+V4.1 合一，唯一正本；此后变更走本文增量补遗 | 当前 |
 
 两线合并记档（2026-09-28 用户指令，V4.1 §九原文归此）：报告双线（旅程线 mx-report-gen：26 步方案原文对齐+闸门仪表盘+步骤真证据；实操线 demo-report-gen：叙事层+UI 实拍+六域审计）与方案双线（V3 操作源+V4/V4.1 重构层）按"合一收敛"合并——统一报告与共享数据模块见第八章；方案层即本文，V5 之上不再有平行方案分支。
+
+## 十三、驾驶舱聚焦与 UI 精简（补遗⑤）
+
+### 13.1 聚焦原则（取代 §一"5 个产品面"口径）
+
+产品面自本补遗生效起收敛为驾驶舱一个一级面，沟通、看板、审批、治理、IDE、账户六类功能区全部是其子功能。三条原则：
+
+1. **单一入口**：主侧栏一级入口仅「驾驶舱」加系统折叠组（运维项）；登录后落驾驶舱；全流程 UI 操作不出 /app 路由树，登录页除外。这条是聚焦的判定标准，run4 冒烟步按此断言。
+2. **迁移优先于复制**：其它页面在用功能一律迁入驾驶舱原能力（改路由/改入口/改深链），不在驾驶舱内再造一份，防双份真相。
+3. **精简保能力**：未用 UI 功能按四档摘面——A 隐藏入口（路由保留）、B 默认关闭（features.ts 开关，构建可再开）、C 退役路由（组件保留）、D 删除孤儿件（git 可回滚）；底层技术组件（store/API/被复用组件/上游能力代码）一律保留。删的是面，不是能力。
+
+### 13.2 在用面清单（迁移与精简的判定底座）
+
+判定依据=run1/run2 evidence 截图位、capture 脚本 URL、demo_steps_data 步骤描述三方交叉。锚点为 2026-09-29 盘点时点（工作树含在途 WIP，行号以文件为准）。驾驶舱内功能区（均在 /app 树内，保留，不属迁移对象）：
+
+| 功能区 | 路由 | 触达锚点 |
+|---|---|---|
+| 工作台三栏（三聊天合一+右栏等我/需关注/群任务流转时间线） | /app、/app/s/* | capture-ui.mjs:60-63；capture-demo-v2.mjs:149-164（s06/s07/s10） |
+| 概览三卡 | /app/dash | capture-v42.mjs:132（ui-03b） |
+| 看板+追溯矩阵+任务抽屉 | /app/board | capture-demo-v2.mjs:161（?task= 深链+RACI 四元组） |
+| 审批收件箱+低风险抽检器 | /app/inbox | capture-v42.mjs:187（ui-20/20b） |
+| 治理中心（六闸工件/裁决/体检/应用资产/组织） | /app/gov | run2 evidence ui-gov-* 15 位；P7/P8（§七 34d22713） |
+| 账户管理 | /app/accounts | 补遗④ P6（§七 34d22713） |
+| 运行中心（任务运行页签） | /app/runs | demo_steps_data.py:61 |
+| 交付案例 | /app/cases | demo_steps_data.py:8 |
+| 循环运行画布 | /app/l/* | 驾驶舱自有观测面，两线报告未设采集位（与运行中心重叠，R-C1 已裁决合一为 M6） |
+
+驾驶舱外在用面仅三类，全部迁入（13.3）：上游原生看板页 /hermes/kanban（采集主位）、IDE 工作台 /ide（第 25 步）、全局审批浮层两处深链（GlobalPendingActions.vue:317 群聊审批指 hermes.groupChatRoom、:320-323 工作流审批指 hermes.workflow，均跳出 /app 树）。
+
+### 13.3 迁移清单（其它页面→驾驶舱）
+
+| # | 现状（锚点） | 迁移后落点 | 改动面 |
+|---|---|---|---|
+| M1 看板归一（已裁决） | 采集与流程落点用 /hermes/kanban?board=（capture-v42.mjs:184、capture-demo-v2.mjs:137/158/170/199、_probe-drawer.mjs:11）；协作看板 /app/board 功能已齐（列看板+任务抽屉+追溯矩阵+?task=/?status= 深链），入口=注意力条最左「swarm kanban」按钮（v12.4 用户裁定：AttentionStrip.vue open-board→ia2.board）；原方案"左栏新增看板入口"作废（2026-09-29 用户裁决：统一使用该协作看板） | ①/app/board 为看板唯一落点（选板经 localStorage hermes.kanban.selectedBoard——采集既有机制；?board= 直链参数如需可作小增强）；②三个采集脚本+probe 共五处 URL 改 /app/board；③/hermes/kanban 退出流程，页面按 S2 归运维面 | capture 脚本四文件（前端零改动） |
+| M2 IDE 归一 | /ide 独立全屏壳（ide.shell，IdeShell），主侧栏一级入口（AppSidebar.vue:72-91）+页头视图切换（IaShellHeader.vue:219）；IdeShell 顶区已共享 IaGlobalTop，改造不动三栏结构 | 路由归一 /app/ide（IaShell 子路由，全屏中栏画布语义不变）；主侧栏一级入口移除；/ide 加兼容重定向；登录落点（patch 276/277 所指）同步改指；任务 ⌨IDE 深链语义不变 | ide/routes.ts+bootstrap.ts+AppSidebar patch+重定向表 |
+| M3 群聊审批深链 | group-approval 介入深链指上游群聊页 hermes.groupChatRoom（GlobalPendingActions.vue:316-318）；chat 类审批已迁 ia2.collab*（:309-314 overlay[nav] 标记），故两处深链实余群聊+工作流 | 改指 ia2.groupRoom（/app/s/group/:roomId，驾驶舱中栏同一 GroupChatView 组件） | GlobalPendingActions 单点 |
+| M4 运行审批深链 | workflow 审批介入深链指工作流编辑器页 hermes.workflow（GlobalPendingActions.vue:320-323） | 改指驾驶舱收件箱 /app/inbox（运行审批已聚合 ApprovalPanel）；#/hermes/workflow 页归 S2 运维面，编辑器组件保留 | 同上单点 |
+| M5 报告口径 | 第 26 步与 8.3 R7"三界面"=驾驶舱/协作沟通/IDE 三并列产品面 | 改为驾驶舱单界面三功能区（工作台/看板/IDE 画布）；capture expectRoute 断言 '^/app' | 4.6 修订批+mx-report-audit 断言 |
+| M6 画布并入运行详情（R-C1 裁决） | /app/l 循环运行画布（RunCanvas：链路条/阶段流/事件编年/历史回放）与 /app/runs 运行中心（列表/介入收件箱/任务运行/详情 RunDetailView）功能重叠，两线报告仅触达后者 | RunCanvas 能力并入 RunDetailView（图+时间线骨架已在，内嵌复用 RunCanvas 组件）；/app/l 画布入口退役、组件保留；左栏循环分组点击落点改 /app/runs/:id（2026-09-29 用户裁决：合一） | ia2 routes+WorkbenchView 左栏+RunDetailView |
+
+轻量备选案记档（不推荐）：M2 若工期紧可退为"仅入口归一"——一级入口移除、进入路径全发自驾驶舱，路由暂不动；代价是 /ide 独立壳仍在，不满足 13.1 判定标准（UI 动作出 /app 树）。
+
+### 13.4 精简清单（未用到→摘面；能力保留）
+
+四档处置语义见 13.1 原则 3。逐组：
+
+| 组 | 项（锚点） | 推演使用情况 | 处置 | 保留的能力 |
+|---|---|---|---|---|
+| S1 主侧栏系统组 | 主题页（AppSidebar.vue:292）、宠物商店（L316）、技能用量（L220）入口；性能/版本预览/profiles 为 superadmin 条件渲染（L201/264/339） | 未用（主题切换用页头 ThemeSwitch；profiles 已声明仅 super_admin 可见且 ui-02 实为看板切换器，mx-report-gen.py:99） | A：系统组收缩为 设置+日志+用量 三项；superadmin 项权限语义不动 | 全部路由与页面 |
+| S2 运维配置页族 | HermesConfigSidebar 九页：jobs/kanban/channels/skills/plugins/mcp/memory/journey/config-settings/agentManager | 未用（装配走 mx-setup 脚本，管理走 P6-P8 产品面；kanban 页随 M1 退出流程） | C：M1 完成后整族从用户可达面摘除 | 上游运维能力，superadmin 可再开 |
+| S3 无关大块功能面 | 语音对话（ChatPanel 挂载+设置语音区）；桌面宠物三件（#/desktop-pet、WebPet 浮层 App.vue:321、petdex 宠物商店）；connections 的 ESP32/社媒 tab；channels 外部渠道；图像生成辅助任务；ekko 四页；/studio/agents 配置中心；外链页 /share/group-chat、/group-chat-link、/desktop-chat | 全部未用（群聊走驾驶舱中栏，沟通不经外链页） | B：features.ts 增开关默认关（VITE_CUSTOM_VOICE/PET 等）；WebPet 默认关 | 组件库与 API 全量，构建可再开 |
+| S4 驾驶舱孤儿件 | 16 个孤儿组件：CockpitWorkspace/CockpitKanban/CockpitTimeline/CockpitFleetGrid/CockpitCollabMap/CockpitCollabBar/CockpitHistoryModal/CockpitChatPane/CockpitColumnRail/CockpitTemplateManager/CockpitGraphNode/CockpitFileTree/CockpitFileNode/TimeRangeSlider/TaskLifecycleView/CockpitCompletionModal+ConfirmDialog；另 GanttPanel 与 compaction-trace/trajectory-hotspot 两 adapter | 无（/hermes/cockpit 退役后无生产消费者，仅 __tests__ 引用） | D：删除组件+同步删 __tests__（git 历史可回滚） | cockpit store（1708 行数据中枢，IaShellHeader/WorkbenchView/GovOverlay/IdeShell 全依赖）与在用组件不动 |
+| S5 /app/eng 工程页 | OrchestrateView 编排编辑器+TeamsManagePanel（/app/eng 三 tab 中两 tab；交付案例 tab 有独立路由） | 未用（循环由脚本建、团队由脚本装配、组织走 P8 OrgEditor）；交付案例 /app/cases 在用保留 | C：/app/eng 页退役；loop 组件库保留 | loop 编排组件库（/app/l 与 /app/runs 依赖） |
+| S6 深链兼容层 | /app/history、/app/agent（上游 PageSidebarNav 依赖）；/hermes/chat 等三条 ChatView 命名路由（patch 351） | 间接（深链兜底） | 不动 | 兼容层 |
+| S7 驾驶舱页头未用件 | 日程弹窗入口（IaShellHeader.vue:199-204）、Gateway 探测组（L189-198） | 未用（页头「任务/在线」chips 为补遗④第 3 项回归对象、通知铃铛属审批提醒域、全局搜索属基础能力，均保留） | A：两处入口隐藏、组件保留 | 组件与 store |
+
+**R-C1 已裁决（2026-09-29 用户：合一）**：实时画布能力并入运行中心详情页，/app/l 画布入口退役、组件保留——列为迁移项 M6 执行。两线报告本就仅触达 /app/runs，无采集位需要回改。
+
+### 13.5 Non-goals（本补遗明确不做）
+
+- 不删任何底层能力代码：语音/宠物/工作流/渠道等仅摘面不摘库，S3 一律开关化。
+- 不动登录页与鉴权链路（双模式登录是第 3 步原文契约）。
+- 不动 superadmin 运维语义（S1 三项保留权限条件渲染）。
+- 不在驾驶舱内复制其它页面功能（迁移优先于复制）。
+- 不改 4.2 原文（走 4.6 修订批）。
+
+### 13.6 验收门与执行序
+
+验收门（全过才算落地）：
+
+1. 浏览器走查：主侧栏一级入口仅「驾驶舱」（+系统折叠组）；全流程 UI 动作不出 /app 路由树（登录页除外）。
+2. 路由白名单守门测试：用户可达路由集合快照断言，新增可达路由须走本补遗评审。
+3. capture 全 shot 位 expectRoute '^/app' 断言过（ui-25 随 M2 生效）。
+4. 全量 vitest+build:full 绿；S4 删除项 __tests__ 同步清。
+
+执行序（§十条目 7）：P9 迁移批（M1-M5）→ P10 精简批（S1-S7，S4 先行）→ mx-clean → run4 双口径（0→1+驾驶舱聚焦）；P9/P10 延期则 run4 回退补遗④口径，⑤ 验于 run5。

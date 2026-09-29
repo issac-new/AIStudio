@@ -29,7 +29,9 @@
     "runtime:register": "node scripts/runtime/register-runtime.mjs",
     "zcode:ensure": "node scripts/zcode-engine.mjs ensure",
     "zcode:serve": "node scripts/zcode-engine.mjs serve",
-    "postbuild": "node scripts/verify-dist.mjs"
+    "postbuild": "node scripts/verify-dist.mjs",
+    "bench:ide-startup": "node scripts/ide-startup-bench.mjs",
+    "bench:ide-startup:json": "node scripts/ide-startup-bench.mjs --json runtime/bench/ide-startup.json"
   },
   "engines": {
     "node": ">=23.0.0"
