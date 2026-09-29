@@ -130,7 +130,8 @@ STEPS_META_RUN2 = {
     7: dict(keys=['g1_frozen'], actor='gate', actorText='硬闸 G1 · 人审上锁',
             narrative='BA（bella）经 matrix 私信送达需求文档（event $JWjga_-fnvLkFiA7ZnShOeJH9Jq_6eyMjZ-K-50bUUM；邮件通道本期禁用记问题单口径）。需求过 G1 四项检查：验收标准可机械判定（AC-1~7）、范围外清单、影响面、涉敏评估——四项齐才生成冻结标记入库（commit 02bd32c，冻结完成 02:16:43），锁后不许改。',
             imgs=[
-                  ('ui-gov-doc', '治理中心·六闸工件：G1 需求冻结件——AC-1~7 全文 + frozen:true + commit 锚点', 'ui'),]),
+                  ('ui-gov-center', '治理中心·六闸工件区：G1 冻结件呈现面（docs/requirements/RFD-001.freeze.md 已入 origin/main，commit 3191c11 锚）', 'ui'),
+                  ('ui-08-groupchat', '驾驶舱·会话画布：冻结后建群现场（G1→room 衔接）', 'ui'),]),
     8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
             narrative='产品经理 fanfan 创建"支付收银台需求分析讨论群"（本轮房间 !zMzIGtITnwKsZtbjAp:matrix.test，02:16:47）并全量预邀（fanfan-agent + 8 关联人及各自 agent，方案 §8）——建群即按 RACI 全量预邀根治 room-invite 缺口，本轮零邀人问题单。',
             imgs=[
@@ -232,15 +233,16 @@ STEPS_META_RUN4 = {
                   ('ui-01-accounts', '设置·账户管理（P6，补遗④）：matrix 账号创建/分配/停用 + 本机↔matrix 双账号绑定——第 1 步账号分配的产品面', 'ui'),
                   ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（清单入仓可对账）', 'ui'),]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
-            narrative='单 gateway :8801 多路复用承载全部 profile（等价每人一台电脑一套）：14 用户逐一装配"账号+配置+看板+团队围栏+记忆库"四件套，互不可见；profiles 清单+每板 team 围栏装载真值核验 ✓。',
+            narrative='单 gateway :8801 多路复用承载全部 profile（hermes 0.21.5，connected_platforms=15，冒烟真值 23:29:46）：14 用户逐一装配"账号+配置+看板+团队围栏+记忆库"四件套，互不可见；profiles 清单+每板 team 围栏装载真值核验 ✓。',
             imgs=[
-                  ('ui-02-profiles', '产品界面：看板切换器——单 gateway 多路复用下按账号隔离的板可见性（28 板实况）', 'ui'),]),
+                  ('ui-01-accounts', '设置·账户管理（P6）：双账号绑定与 roster——多账号隔离面（28 板经 profile 围栏装载，冒烟真值 ✓）', 'ui'),
+                  ('ui-04a-sit-tasks', '驾驶舱页头「任务」chip：跨板聚合计数（多路复用账号面的实时投影）', 'ui'),]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
-            narrative='用户免密/双模式登录后落驾驶舱（#/app，补遗⑤ 单面口径）：顶栏任务计数、注意力条、中栏会话画布实时聚合跨板数据；主侧栏一级入口仅「驾驶舱」（+系统折叠组），全流程 UI 动线不出 /app 路由树。',
+            narrative='用户免密/双模式登录后落驾驶舱（#/app，补遗⑤ 单面口径；14 账号 matrix-login 真值 23:29:47 ✓，自动登录端点按契约应答 {"configured":false}）：顶栏任务计数、注意力条、中栏会话画布实时聚合跨板数据；主侧栏一级入口仅「驾驶舱」（+系统折叠组），全流程 UI 动线不出 /app 路由树。',
             imgs=[
                   ('ui-03-cockpit', '驾驶舱全景（补遗⑤ 单面）：顶栏任务/在线 chips·注意力条 + 中栏会话画布 + 右「任务·决策」三节', 'ui'),]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
-            narrative='冒烟清单真值核验：30 账号 token 有效、单 gateway+单 studio 就绪、双登录模式通、看板围栏与记忆库在位。本轮起驾驶舱回归为准出项（补遗④第 3 项）：页头「任务」chip 计数=看板实况、「在线」chip 三数（人/智能体/机器）>0 且两组下拉可点选——headless（gateway detailed 健康）与浏览器（ui-04a/b）双源合并，「在线恒零」即阻断。',
+            narrative='冒烟清单真值核验（23:29:45-47）：30 账号 token 有效 ✓、单 gateway+单 studio 就绪 ✓、双登录模式通 ✓、看板围栏与记忆库在位 ✓。本轮起驾驶舱回归为准出项（补遗④第 3 项）：页头「任务」chip 计数=看板实况、「在线」chip 三数（人/智能体/机器）>0 且两组下拉可点选——headless（gateway detailed 健康）与浏览器（ui-04a/b）双源合并，「在线恒零」即阻断。',
             imgs=[
                   ('ui-04a-sit-tasks', '驾驶舱回归：页头「任务」chip 下拉——计数/状态过滤/待决策角标（补遗④第 3 项）', 'ui'),
                   ('ui-04b-sit-online', '驾驶舱回归：页头「在线」chip 下拉——人/智能体/机器三数>0 可点选（"在线恒零"阻断位）', 'ui'),
@@ -253,22 +255,24 @@ STEPS_META_RUN4 = {
     6: dict(keys=['people_done'], actor='both', actorText='人+AI · 组织对账',
             narrative='组织与权限矩阵逐项对账（14 账号×角色×汇报线×看板×团队×matrix 账号零差异）。补遗④第 5 项：账号↔团队↔负责人在治理中心·组织界面维护，入职/转岗/离职三步向导（移交→停用→审计留痕）操作化，org.md 同步入仓。',
             imgs=[
-                  ('ui-gov-org', '治理中心·组织（P8，补遗④）：关系维护+入职/转岗/离职三步向导——org.md 界面产物', 'ui'),]),
+                  ('ui-gov-center', '治理中心全景（P7/P8 承载面）：组织关系与应用资产维护入口——org/registry 界面产物（M2 对账 14 账号 ✓ 零差异）', 'ui'),
+                  ('ui-01-accounts', '设置·账户管理：14 账号×profile 对账的账号面（M2 真值锚）', 'ui'),]),
     7: dict(keys=['g1_frozen'], actor='gate', actorText='硬闸 G1 · 人审上锁',
             narrative='BA（bella）经 matrix 私信送达需求文档；需求过 G1 四项检查（验收标准可机械判定 AC-1~7、范围外清单、影响面、涉敏评估）生成冻结标记入库，锁后不许改。两轮不齐不得开工。',
             imgs=[
-                  ('ui-gov-doc', '治理中心·六闸工件：G1 需求冻结件——AC-1~7 全文 + frozen:true + commit 锚点', 'ui'),]),
+                  ('ui-gov-center', '治理中心·六闸工件区：G1 需求冻结件呈现面（docs/requirements/RFD-001.freeze.md 已入 origin/main，worktree 锚 3191c11）', 'ui'),
+                  ('ui-08-groupchat', '驾驶舱·会话画布：冻结后建群现场（G1→room 衔接，私信事件 $TQnF…4cszw）', 'ui'),]),
     8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
-            narrative='fanfan 创建"支付收银台需求分析讨论群"并全量预邀（fanfan-agent + 8 关联人及各自 agent）——建群即按 RACI 全量预邀（room-invite-gap 终清后 0→1 复验位），群即驾驶舱中栏会话画布（补遗⑤）。',
+            narrative='fanfan 创建"支付收银台需求分析讨论群"（房间 !dNmjqtrriuDbzqTyvk:matrix.test，23:30:33）并全量预邀（fanfan-agent + 8 关联人及各自 agent）——建群即按 RACI 全量预邀（room-invite-gap 终清后 0→1 复验位），群即驾驶舱中栏会话画布（补遗⑤）。',
             imgs=[
                   ('ui-08-groupchat', '驾驶舱·会话画布：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4③）', 'ui'),
                   ('ui-08d-members', '会话画布·成员面板：建群全量预邀实证——人+agent 并排在列', 'ui'),]),
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · fanfan 派发',
-            narrative='fanfan 在群内 @fanfan-agent 发出派发指令：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）——指令通道与文档正文分离（@本人语义才执行）。',
+            narrative='fanfan 在群内 @fanfan-agent 发出派发指令（event $r63f1ZfV8eqB0FpJ9eEj0oguNWDVfLOt9QtTcP3NIOM）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）——指令通道与文档正文分离（@本人语义才执行）。',
             imgs=[
                   ('ui-08b-msgcard', '驾驶舱·会话画布：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②）', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
-            narrative='Orchestrator agent 经 matrix channel 接收指令，fanfan 账号板 RFD-001 任务卡真值 ✓。完成凭证反向核验（commit 真在 origin、卡真在账号板），超时即拒收回灌限期重报——打回环真实发生，非橡皮图章。看板入口=注意力条最左「swarm kanban」按钮（M1 裁决动线，/app/board）。',
+            narrative='Orchestrator agent 经 matrix channel 接收指令，fanfan 账号板 RFD-001 任务主卡 t_215792cd（23:46:00 落板）真值 ✓。完成凭证反向核验（commit 真在 origin、卡真在账号板），超时即拒收回灌限期重报——打回环真实发生，非橡皮图章。看板入口=注意力条最左「swarm kanban」按钮（M1 裁决动线，/app/board）。',
             imgs=[
                   ('ui-10-kanban', '驾驶舱·看板（#/app/board，M1 归一）：RACI 徽章卡（R/A/C/I+我的角色描边）+「等您操作」过滤入口', 'ui'),
                   ('ui-10-carddrawer', '看板卡抽屉：RFD-001 凭证主卡详情——需求/交付物（含 commit 锚点）/关联卡对账', 'ui'),
@@ -345,7 +349,7 @@ STEPS_META_RUN4 = {
             imgs=[
                   ('ui-25-ide', '驾驶舱·IDE 画布（#/app/ide，M2 归一）：任务简报面板+评审面板+git 图谱', 'ui'),]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
-            narrative='本报告由生成器产出：步骤标题与把关逐字解析方案文档（单一事实源），每张证据图标注来源（产品界面实拍/仓内工件/消息转录），26 步状态真实不作假（✅/⬜ 与 state 落键一致）。补遗④⑤口径：R12 快门守门（拒拍空态/错页）+R14 skill 过程位+流转衔接位随报告挂接；统一版（unified-roadshow-report.html）为唯一交付，本旅程版随 evidence 存档备查。',
+            narrative='本报告由生成器产出：步骤标题与把关逐字解析方案文档（单一事实源），每张证据图标注来源（产品界面实拍/仓内工件/消息转录），26 步状态真实不作假（状态徽标与 state 落键一致）。补遗④⑤口径：R12 快门守门（拒拍空态/错页）+R14 skill 过程位+流转衔接位随报告挂接；统一版（unified-roadshow-report.html）为唯一交付，本旅程版随 evidence 存档备查。',
             imgs=[
                   ('ui-26-report', '推演报告自身（本页首屏）', 'ui'),
                   ('ui-skill-tree', 'R14·skill 产出文件树（产出真容）', 'ui'),
@@ -470,17 +474,19 @@ if RUN_ID not in _NARR:
 STEPS_META=_NARR[RUN_ID]
 
 _L3_A={
+'20260929-v5-run4':'部分符合（通道受限轮，如实呈现）：G1 冻结→建群全量预邀（0 缺口）→派发→主卡 t_215792cd+T-101~107 七子卡 RACI 落对板→tasklist v8 入仓，意图链路真实闭环；register/analysis 打回环各 3 轮真实发生（拒收回灌机制按设计工作）；LLM 通道三池 429 雪崩（aim 池配额死→MGLM 1302→kimi too-many）与并发闸（max_concurrent_sessions=3）收敛全程在案——通道韧性为本轮主难点，行为语义符合治理意图。',
 '20260928-v4-run1':'部分符合：G1→UAT 意图链路闭环（冻结 AC-1~7 逐条对账）；G5 三轮真实打回环（缺项退回→补齐重报→复审 PASS，HumanGate 留痕）——评审目标是击穿实现而非走过场。',
 '20260929-v4-run2':'部分符合（已闭环）：G1→UAT 意图链路闭环（冻结 AC-1~7 逐条对账）；G5 评审实测击穿实现——t_ea68c462 r7 结论 READY-GATE-FAIL（双缺陷回归/证据链断裂），机械判定曾误过、被独立审计判回滚；R-A3 闭环（回补+复验 194/194）后复审 r8 PASS 转正。评审者目标是击穿实现而非走过场。',
 }
 _L3_B={
+'20260929-v5-run4':'实测：建群预邀全员 0 缺口 · 主卡 t_215792cd（23:46:00）· 七子卡落对板落对人（23:46-23:52）· 打回环 ×6（register/analysis 各 3）· issues 4 行在案 · 通道手术三迁+并发闸（429 由 746/5min 降至 111）',
 '20260928-v4-run1':'实测：G5 打回环 driver.log 01:44 拦截→02:26 复审 PASS · UAT AC 逐条对账 · 审批历史留痕 3 条',
 '20260929-v4-run2':'实测：卡 t_ea68c462 r7（READY-GATE-FAIL 可反查）→ r8 READY-GATE-PASS（闭环）· UAT 逐条判词 5 通过+2 有条件（条件已解除）· R-A1 判回滚→复审转正',
 }
-_CP_G5={'20260928-v4-run1':'三轮打回后过闸（02:26 PASS · HumanGate=导演批准留痕）','20260929-v4-run2':'t_ea68c462 r7 READY-GATE-FAIL → R-A1 判回滚 · REL-* 冻结'}
-_NOTE_G5={'20260928-v4-run1':('步 20 两件缺"回滚/灰度/观察窗"如实红标：G5 发布计划/发布说明真容在评审卡 t_9772c561 附件（文件域未落正本，卡面 review-record 可反查）——列 backlog 补文件域正本。'),
+_CP_G5={'20260929-v5-run4':'本轮 G5 未达（LLM 通道受限轮，如实 ⬜——前序真值见打回环与通道治理记录）','20260928-v4-run1':'三轮打回后过闸（02:26 PASS · HumanGate=导演批准留痕）','20260929-v4-run2':'t_ea68c462 r7 READY-GATE-FAIL → R-A1 判回滚 · REL-* 冻结'}
+_NOTE_G5={'20260929-v5-run4':('步 20 ⬜：通道受限未达发布评审——G1→analysis 前序真值完整，后续步按方案重跑补齐（通道恢复窗口）。'),'20260928-v4-run1':('步 20 两件缺"回滚/灰度/观察窗"如实红标：G5 发布计划/发布说明真容在评审卡 t_9772c561 附件（文件域未落正本，卡面 review-record 可反查）——列 backlog 补文件域正本。'),
 '20260929-v4-run2':('步 20 两件缺"回滚/灰度/观察窗"如实红标：G5 发布计划/发布说明 r7 真容在评审卡 t_ea68c462 附件（文件域未落正本，卡面 review-record 可反查）——列 backlog 补文件域正本。')}
-_BASELINE_NOTE=('' if RUN_ID=='20260928-v4-run1' else '；本轮 integration 基线 0ab43de 为强制重建产物（bebfd2d 非祖先，丢线 23 提交——R-A3 回补中）')
+_BASELINE_NOTE={'20260928-v4-run1':'','20260929-v4-run2':'；本轮 integration 基线 0ab43de 为强制重建产物（bebfd2d 非祖先，丢线 23 提交——R-A3 回补中）','20260929-v5-run4':'；本轮 0→1 清环境：中央仓 RFD 工件经 mx-clean --reset-central 重置（快照 tag mx-clean-20260929-232127 可回滚），基线自 G1 冻结重建'}.get(RUN_ID,'')
 
 
 
@@ -796,11 +802,27 @@ def _art_checks_html(raw: str, checks):
                      f'{"✅" if hit else "缺"} {H.escape(label)}</span>')
     return ok_all, ''.join(spans)
 
+def _step_done(n: int) -> bool:
+    """步达成态（R9/交付物门控共用）：第 26 步以本报告产物存在自证。"""
+    if n == 26:
+        return True
+    meta = STEPS_META.get(n) or {}
+    return any(state.get(k) for k in meta.get('keys', []))
+
 def artifact_block(n: int) -> str:
-    """单步交付物视图 <details> 块（真容渲染+模版核对）；无映射步返回 ''。"""
+    """单步交付物视图 <details> 块（真容渲染+模版核对）；无映射步返回 ''。
+
+    0→1 语义门控（run4 起）：未达步不渲染中央仓现存工件——0→1 轮中央仓可能被
+    repo_pull 自远端带回历史轮工件，未达步渲染即冒充本轮产物；未达步如实标注。"""
     arts = ARTIFACT_VIEWS.get(n)
     if not arts:
         return ''
+    if not _step_done(n):
+        names = '、'.join(H.escape(a[0]) for a in arts)
+        return (f'<details class="st-artifact"><summary>📦 交付物（本轮未产——步 ⬜）</summary>'
+                f'<div class="art-body"><div class="art-item"><div class="art-chk miss">'
+                f'{names}：本轮未达此步，中央仓现存为历史轮工件（mx-clean 本地重置被 repo_pull 远端恢复，'
+                f'0→1 缺口记档）——不作本轮交付物呈现。</div></div></div></details>')
     pieces = []
     for name, rel, checks in arts:
         raw = _art_read(rel)

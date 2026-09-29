@@ -224,6 +224,8 @@ if (await openCurrentRoom()) {
 
   // 消息卡链接特写（滚动到底部最新派发/回执）
   if (!only || only === 'ui-08b-msgcard') {
+    await page.keyboard.press('Escape').catch(() => {})
+    await page.waitForTimeout(800)
     await page.evaluate(() => {
       const sc = [...document.querySelectorAll('[class*=timeline],[class*=messages]')].pop()
       if (sc) sc.scrollTop = sc.scrollHeight
@@ -298,11 +300,12 @@ if (!only || only === 'skill-views') await guarded('skill-views', async () => {
   const { readdirSync, readFileSync, existsSync, statSync } = await import('node:fs')
   const skillRoots = [`${RUN_DIR}/workspaces`, '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/profiles']
   const cand = []
-  const walk = (d, depth) => { if (depth > 3 || !existsSync(d) || cand.length > 8) return
+  const walk = (d, depth) => { if (depth > 4 || !existsSync(d) || cand.length > 8) return
     for (const f of readdirSync(d, { withFileTypes: true })) {
-      if (f.isDirectory() && /skill|\.swarm|yuan/i.test(f.name)) cand.push(`${d}/${f.name}`)
-      else if (f.isDirectory()) walk(`${d}/${f.name}`, depth + 1)
-      else if (/SKILL\.md$/.test(f.name)) cand.push(`${d}/${f.name}`)
+      if (f.isDirectory()) {
+        walk(`${d}/${f.name}`, depth + 1)  // 无条件递归（skills 命中也要进去找 SKILL.md）
+        if (/skill|\.swarm|yuan/i.test(f.name)) cand.push(`${d}/${f.name}`)
+      } else if (/SKILL\.md$/.test(f.name)) cand.push(`${d}/${f.name}`)
     } }
   for (const r of skillRoots) walk(r, 0)
   const skillMd = cand.find((c) => /aipaydev-dev\/SKILL\.md$/.test(c)) || cand.find((c) => c.endsWith('SKILL.md'))
