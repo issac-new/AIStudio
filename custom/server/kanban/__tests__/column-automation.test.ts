@@ -88,6 +88,8 @@ let dir: string
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'columns-'))
   process.env.HERMES_COLUMNS_FILE = join(dir, 'columns.yaml')
+  // 4A 第三期：派发结果台账重定向 tmp（引擎单例 onOutcome 会落账，防污染主机文件）
+  process.env.GOVERNANCE_DISPATCH_LEDGER = join(dir, 'dispatch-ledger.jsonl')
   resetColumnAutomationsCacheForTests()
   runtimeMock.state.agentCalls = 0
   runtimeMock.state.sessions = 0
@@ -211,6 +213,33 @@ describe('执行半环（COLUMN_TRANSITION→派单，routa §七#2）', () => {
     await expect(dispatchColumnTransition(svc, { from: null, to: 'todo', workspacePath: '/w' }))
       .rejects.toThrow(ColumnDispatchConfigError)
     expect(engine.texts).toHaveLength(0) // 拦在拼文本前，@ghost 不进任何派单
+  })
+
+  it('派单文本嵌交付契约块（4A 第三期·派发负载契约化）：action-contracts column.dispatch 的判定词表与错误词表随负载下发', async () => {
+    write('columns:\n  todo:\n    timing: entry\n    steps:\n      - { id: refine, role: general-engineer, specialist: backlog-refiner, provider: zcode }\n')
+    resetColumnAutomationsCacheForTests()
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    await dispatchColumnTransition(svc, { from: null, to: 'todo', workspacePath: '/w' })
+    const brief = engine.texts[0]
+    expect(brief).toContain('交付契约（action-contracts:column.dispatch')
+    expect(brief).toContain('结构化 verdict')
+    expect(brief).toContain('词面相似不构成判定依据')
+    expect(brief).toContain('slo_budget_exhausted') // 错误词表随负载下发（冻结词表值，非用户输入）
+  })
+
+  it('派发结果台账落账（4A 第三期）：column 条目带 specialist/role/列名（mention 条目路径由引擎单例 onOutcome 覆盖，另见 dispatch-ledger 单测）', async () => {
+    const { readDispatchLedger } = await import('../../governance/dispatch-ledger')
+    write('columns:\n  todo:\n    timing: entry\n    steps:\n      - { id: refine, role: general-engineer, specialist: backlog-refiner, provider: zcode }\n')
+    resetColumnAutomationsCacheForTests()
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    await dispatchColumnTransition(svc, { from: null, to: 'todo', workspacePath: '/w' })
+    const col = readDispatchLedger().find((e) => e.kind === 'column')
+    expect(col?.specialist).toBe('backlog-refiner')
+    expect(col?.role).toBe('general-engineer')
+    expect(col?.column).toBe('todo')
+    expect(col?.reason).toBe('queued')
   })
 })
 

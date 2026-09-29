@@ -24,8 +24,9 @@ import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
 import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts } from './governance-ledger'
-import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary } from './governance-analytics'
+import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns } from './governance-analytics'
 import { auditLog } from './governance-audit'
+import { readDispatchLedger } from './dispatch-ledger'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -208,8 +209,15 @@ router.get('/usage', async (ctx) => {
     return
   }
   const [assigneeStats, squadStats] = [await collectAssigneeStats(), collectSquadStats()]
-  const report = deriveUsage(res.doc, assigneeStats, squadStats)
-  ctx.body = { ok: true, ...report }
+  const dispatchEntries = readDispatchLedger()
+  const report = deriveUsage(res.doc, assigneeStats, squadStats, { dispatchEntries })
+  ctx.body = {
+    ok: true,
+    ...report,
+    // 第三期：dispatch.successRate 本地实况（引擎派发台账）+ gate.passRate 实况（qgate runs 扫描）
+    dispatchStats: dispatchStats(dispatchEntries),
+    gateStats: collectQgateRuns(),
+  }
 })
 
 router.get('/slo', async (ctx) => {
@@ -227,7 +235,8 @@ router.get('/slo', async (ctx) => {
 
 router.get('/cost-summary', async (ctx) => {
   const days = Math.min(Math.max(Number(ctx.query.days) || 30, 1), 365)
-  const summary = await costSummary(days)
+  const ledgerRes = loadCapabilityLedger()
+  const summary = await costSummary(days, undefined, ledgerRes.doc)
   ctx.body = { ok: true, ...summary }
 })
 

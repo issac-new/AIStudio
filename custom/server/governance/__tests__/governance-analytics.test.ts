@@ -119,7 +119,7 @@ describe('② 消费关系：kanban 实耗聚合与零调用候选', () => {
     tmpDirs.push(squadDir)
     const assignee = await collectAssigneeStats(home)
     const squads = collectSquadStats(squadDir)
-    const report = deriveUsage(LEDGER, assignee, squads, NOW_S * 1000)
+    const report = deriveUsage(LEDGER, assignee, squads, { now: NOW_S * 1000 })
     const z = report.perUnit.find((u) => u.unitId === 'zcode')
     expect(z?.mapped).toBe(true)
     expect(z?.source).toBe('kanban-assignee')
@@ -139,7 +139,7 @@ describe('② 消费关系：kanban 实耗聚合与零调用候选', () => {
       { assignee: 'orchestrator', status: 'done', started_at: NOW_S - 200, completed_at: NOW_S - 100 },
     ])
     tmpDirs.push(home)
-    const report = deriveUsage(LEDGER, await collectAssigneeStats(home), new Map(), NOW_S * 1000)
+    const report = deriveUsage(LEDGER, await collectAssigneeStats(home), new Map(), { now: NOW_S * 1000 })
     expect(report.zeroUseCandidates.map((u) => u.unitId)).toContain('zcode')
     expect(report.unmappedAssignees.map((a) => a.assignee)).toContain('orchestrator')
   })
