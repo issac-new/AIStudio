@@ -33,6 +33,17 @@ vi.mock('@/custom/governance/api/governance', () => ({
     doc: { version: 1, reviewedAt: '2026-09-29', verdicts: [{ id: 'fail', label: '不通过', semantics: '词面相似不构成判定依据' }], metrics: [] },
   })),
   fetchUsage: vi.fn(async () => ({ ok: true, perUnit: [], unmappedAssignees: [], zeroUseCandidates: [] })),
+  fetchStateModel: vi.fn(async () => ({
+    ok: true, exists: true, path: '/x/state-model.yaml', problems: [],
+    doc: {
+      object: 'task', authority: 'kanban.db',
+      states: [{ id: 'running', semantics: '执行中' }, { id: 'done', semantics: '完成' }],
+      freeMoveStates: ['triage'],
+      runOutcomeTerminal: { completed: 'done' },
+      transitions: [{ id: 'run.complete', from: 'running', to: 'done', trigger: 'outcome=completed', rules: [], actions: ['kanban.transition'], evidence: 'task_events' }],
+      eventSources: [{ id: 'task_events', authority: 'kanban.db', kind: '流转' }],
+    },
+  })),
   fetchSlo: vi.fn(async () => ({
     ok: true, budgetMode: 'warn', windowDays: 30,
     tiers: [{ tier: 'core', target: { successRate: 0.95, windowDays: 30, minSamples: 10, budgetAction: 'freeze' }, closed: 20, done: 19, successRate: 0.95, p95DurationS: 120, exhausted: false }],
@@ -175,6 +186,8 @@ describe('治理中心前端', () => {
     expect(wrapper.find('[data-testid="gov-ledger"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="gov-runtime"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="gov-audit"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="gov-state-model"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sm-trans-run.complete"]').exists()).toBe(true)
     // 运行态：SLO 档行渲染 + 零调用空态如实
     expect(wrapper.find('[data-testid="slo-tier-core"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="usage-zero-none"]').exists()).toBe(true)

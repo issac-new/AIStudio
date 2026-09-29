@@ -16,6 +16,10 @@ import {
   type DomainCheckResult, type DomainAuditSummary,
 } from '@/custom/governance/api/governance'
 import { governanceMessages } from '@/custom/governance/i18n'
+import LedgerSection from '@/custom/governance/components/LedgerSection.vue'
+import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
+import AuditSection from '@/custom/governance/components/AuditSection.vue'
+import StateModelSection from '@/custom/governance/components/StateModelSection.vue'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
@@ -178,6 +182,12 @@ onMounted(() => void refresh())
         台账 {{ audit.total }} 条判定 · {{ audit.runs.length }} 轮（{{ audit.runs.slice(0, 3).join(' / ') }}{{ audit.runs.length > 3 ? ' …' : '' }}）——长期基础数据，下轮目标 = 上轮基线
       </div>
     </div>
+
+    <!-- 4A 治理层四区（一期台账+二期运行态/审计+五期本体） -->
+    <LedgerSection />
+    <RuntimeSection />
+    <AuditSection />
+    <StateModelSection />
 
     <div class="ia-gov__main">
       <!-- 左：工件清单 -->
