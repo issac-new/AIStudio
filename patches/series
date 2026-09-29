@@ -349,3 +349,10 @@
 # 516（驾驶舱聚焦轮 V5 补遗⑤ M6；原拟 514 让号）：runcenter.detail.loopCanvas zh/en 成对
 #      （473 之后按 496/501/512 同例单补，不动其余 9 语言）。
 516-client-i18n-runcenter-loop-canvas.patch
+# 517/518/519（v14 统一聊天 Phase 1 三补丁复位，2026-09-29 驾驶舱聚焦轮）：原 506/507/508
+#      在并行合并让号重编中内容悬空（cbd7b3e7 删件、513/514 被 ide-automations 占号），
+#      守门 standalone-embed-patches.test 4 红+ia2.flow 词条缺失实锤——自 cbd7b3e7^ 历史复原，
+#      按现号段顺延 517/518/519。
+517-client-chatview-standalone-embed.patch
+518-client-groupchatview-standalone-embed.patch
+519-client-i18n-comm-v14.patch
