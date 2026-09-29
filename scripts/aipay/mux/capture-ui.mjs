@@ -70,7 +70,7 @@ await shot('ui-08b-msgcard', `/app/s/group/${encodeURIComponent(ROOM_ANALYSIS)}`
 })
 
 // ③ 看板（fanfan-pm-plan 真实卡片；预选板 + 兜底点选）
-await shot('ui-10-kanban', '/hermes/kanban?board=fanfan-pm-plan', {
+await shot('ui-10-kanban', '/app/board', {
   wait: 4000,
   after: async () => {
     const sel = page.locator('text=/看板:.*Default/').first()
@@ -84,7 +84,7 @@ await shot('ui-10-kanban', '/hermes/kanban?board=fanfan-pm-plan', {
 })
 
 // ③b 看板「等您操作」过滤器（P2）：勾选后只留当前登录人 R/A 相关卡
-await shot('ui-10b-kanban-mine', '/hermes/kanban?board=fanfan-pm-plan', {
+await shot('ui-10b-kanban-mine', '/app/board', {
   wait: 4000,
   after: async () => {
     const sel = page.locator('text=/看板:.*Default/').first()
@@ -103,10 +103,10 @@ await shot('ui-10b-kanban-mine', '/hermes/kanban?board=fanfan-pm-plan', {
 await shot('ui-20-inbox', '/app/inbox', { wait: 4000 })
 
 // ⑤ IDE 工作台（任务跳转 + 简报）
-await shot('ui-25-ide', '/ide?task=t_9e5c6c18', { wait: 5000 })
+await shot('ui-25-ide', '/app/ide?task=t_9e5c6c18', { wait: 5000 })
 
 // ⑥ 模型设置（IDE 内 Models 页）
-await shot('ui-25-models', '/ide', {
+await shot('ui-25-models', '/app/ide', {
   wait: 3500,
   after: async () => {
     const m = page.locator('text=/^Models$|^模型$/').first()
