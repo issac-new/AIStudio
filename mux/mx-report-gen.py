@@ -104,113 +104,120 @@ PHASES = [
 # 报告读者必须能一眼区分"产品长什么样"与"证据是什么"，杜绝工件冒充 UI。
 STEPS_META = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · admin 管理员',
-            narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账。',
+            narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账（本轮 30 账号 token 真值核验 02:14:30 有效）。',
             imgs=[
-                  ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（commit 锚点）', 'ui'),]),
+                  ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（清单入仓可对账）', 'ui'),]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
-            narrative='单 gateway :8801 多路复用承载全部 profile（等价每人一台电脑一套）：14 用户逐一装配"账号+配置+看板+团队围栏+记忆库"四件套，互不可见。',
+            narrative='单 gateway :8801 多路复用承载全部 profile（等价每人一台电脑一套）：14 用户逐一装配"账号+配置+看板+团队围栏+记忆库"四件套，互不可见；profiles 清单+每板 team 围栏装载 02:16:07 真值核验 ✓。',
             imgs=[
-                  ('ui-02-profiles', '产品界面：看板切换器——单 gateway 多路复用下按账号隔离的板可见性（28 板实况；profiles 配置页按产品设计仅 super_admin 可见，本编制无此档账号，如实声明）', 'ui'),]),
+                  ('ui-02-profiles', '产品界面：看板切换器（看板: … ▾ 展开）——单 gateway 多路复用下按账号隔离的板可见性（28 板实况）', 'ui'),]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
-            narrative='用户打开 Swarm Studio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；登录后只见本账号档案与看板（ACL 隔离抽查通过）。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
+            narrative='用户打开 Swarm Studio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；02:16:07 14 账号 matrix-login+账号板 kanban 可达真值核验 ✓，登录后只见本账号档案与看板。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
             imgs=[
                   ('ui-03-cockpit', '驾驶舱全景：顶栏任务计数/注意力条实时聚合 + 左房间列表 + 右「任务·决策」三节+动态 feed', 'ui'),]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
-            narrative='冒烟清单真值核验：24 账号 token 有效、单 gateway+单 studio 就绪、双登录模式通、看板围栏与记忆库在位。bella matrix-login 一次回落如实记问题单（当日已修复复测通过）。环境就绪后，驾驶舱「概览」页（#/app/dash）即全员工作总览入口。',
+            narrative='冒烟清单真值核验：30 账号 token 有效、单 gateway+单 studio 就绪、双登录模式通（自动登录链路端点按契约应答）、看板围栏与记忆库在位。本轮首轮 02:11:53 因账号 admin token 失效中止（如实记录），重启后 02:14:29 模型通道预检通过（14 实例）。环境就绪后，驾驶舱「概览」页（#/app/dash）即全员工作总览入口。',
             imgs=[
                   ('ui-03b-dash', '驾驶舱概览页（#/app/dash，P5）：我的待办/评审闸口/交付进度三卡——功能就绪总览', 'ui'),]),
     5: dict(keys=['appinit_done'], actor='both', actorText='人+AI · 应用登记',
-            narrative='四个应用模块（支付核心/微信渠道/支付宝渠道/小程序收银台）逐一登记资产表：负责人、专属看板、技术栈、SLA、测试骨架。csw-cashier-mp 门禁骨架缺口记问题单并补建（728dcfe，vitest 10/10 实跑全绿）。',
+            narrative='四个应用模块（支付核心/微信渠道/支付宝渠道/小程序收银台）逐一登记资产表：负责人、专属看板、技术栈、SLA、测试骨架，registry 入仓（commit 0508009，02:16:14）。',
             imgs=[
                   ('ui-gov-appregistry', '治理中心·管理档案：应用资产登记表——四应用负责人/看板/SLA/门禁骨架', 'ui'),]),
     6: dict(keys=['people_done'], actor='both', actorText='人+AI · 组织对账',
-            narrative='生成组织与权限矩阵：15 人×角色×汇报线×看板×团队×matrix 账号，与实际账号/看板/智能体逐项对账零差异；角色全覆盖含架构/安全/运维/合规审计。',
+            narrative='生成组织与权限矩阵（commit 3d74f0a，02:16:21）：14 账号×角色×汇报线×看板×团队×matrix 账号逐项对账零差异（M2 02:16:27 ✓），角色全覆盖含架构/安全 secops/运维 ops/审计 audit 治理线。',
             imgs=[
-                  ('ui-gov-org', '治理中心·管理档案：组织与权限矩阵——15 人×角色×汇报线×看板', 'ui'),]),
+                  ('ui-gov-org', '治理中心·管理档案：组织与权限矩阵——14 账号×角色×汇报线×看板', 'ui'),]),
     7: dict(keys=['g1_frozen'], actor='gate', actorText='硬闸 G1 · 人审上锁',
-            narrative='BA（bella）经 matrix 私信送达需求文档（邮件通道本期禁用，记问题单口径）。需求过 G1 四项检查：验收标准可机械判定（AC-1~7）、范围外清单、影响面、涉敏评估——四项齐才生成冻结标记入库，锁后不许改。',
+            narrative='BA（bella）经 matrix 私信送达需求文档（event $JWjga_-fnvLkFiA7ZnShOeJH9Jq_6eyMjZ-K-50bUUM；邮件通道本期禁用记问题单口径）。需求过 G1 四项检查：验收标准可机械判定（AC-1~7）、范围外清单、影响面、涉敏评估——四项齐才生成冻结标记入库（commit 02bd32c，冻结完成 02:16:43），锁后不许改。',
             imgs=[
                   ('ui-gov-doc', '治理中心·六闸工件：G1 需求冻结件——AC-1~7 全文 + frozen:true + commit 锚点', 'ui'),]),
     8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
-            narrative='产品经理 fanfan 创建"支付收银台需求分析讨论群"（本轮房间 !FurImZOaeHVyUqaRQR），先邀 fanfan-agent；系统分析步自动补邀 chen/hu/lin/xiao/mei/qi/fei 关联人（agent 自动邀请面不足记问题单、导演兜底——如实呈现）。',
+            narrative='产品经理 fanfan 创建"支付收银台需求分析讨论群"（本轮房间 !zMzIGtITnwKsZtbjAp:matrix.test，02:16:47）并全量预邀（fanfan-agent + 8 关联人及各自 agent，方案 §8）——建群即按 RACI 全量预邀根治 room-invite 缺口，本轮零邀人问题单。',
             imgs=[
-                  ('ui-08-groupchat', '协作沟通界面（#/app/s/room）：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4）', 'ui'),]),
+                  ('ui-08-groupchat', '协作沟通界面（#/app/s/group）：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4③）', 'ui'),
+                  ('ui-08d-members', '协作沟通界面·成员面板：建群全量预邀实证——人+agent 并排在列', 'ui'),]),
     9: dict(keys=['dispatch_marker'], actor='human', actorText='人 · fanfan 派发',
-            narrative='fanfan 在群内 @fanfan-agent 发出派发指令（event $wH4lFXYehQsJkZibp7cuFNf1yJON4Pl1xlkTMkjacwU）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）。',
+            narrative='fanfan 在群内 @fanfan-agent 发出派发指令（event $dnUFtNxIWKuOUrQngOHYS-c0p0-x5wfZ3x9744tqGlw）：需求一行信息+材料地址+证据要求（结论必须带提交号+卡号，空喊"完成"不算数）。',
             imgs=[
-                  ('ui-08b-msgcard', '协作沟通界面：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②），右栏任务时间线（P4③）', 'ui'),]),
+                  ('ui-08b-msgcard', '协作沟通界面：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②）', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
-            narrative='Orchestrator agent 经 matrix channel 接收指令。本轮首验 900s 窗未见新卡——agent 依据家族记忆把本轮判定为"重复派单+基线漂移"（V3 已完整执行过 RFD-001），两轮拒收回灌后以 r5 增量刷新主卡 t_447bd817 落板重报，凭证反向核验通过（commit 真在 origin、卡真在账号板）——打回环真实发生，非橡皮图章。',
+            narrative='Orchestrator agent 经 matrix channel 接收指令，fanfan 账号板 RFD-001 任务卡 02:16:55 真值 ✓。完成凭证反向核验首轮 02:27:01 600s 超时 ✗——拒收回灌（@fanfan-agent 要求用真实卡 ID 重报结论行），02:31:02 重报后核验 ✓（commit 真在 origin、卡真在账号板）——打回环真实发生，非橡皮图章。凭证主卡保持未分配/非派发状态专供核验（前代凭证卡链可回溯）。',
             imgs=[
                   ('ui-10-kanban', '产品看板：fanfan-pm-plan 板 RACI 徽章卡（R/A/C/I+我的角色描边）+「等您操作」过滤入口', 'ui'),
-                  ('ui-10b-kanban-mine', '产品看板：「等您操作」过滤器一键筛出当前登录人相关卡（P2）', 'ui'),]),
+                  ('ui-10-carddrawer', '产品看板卡抽屉：RFD-001 凭证主卡详情——需求/交付物（含 commit 锚点）/关联卡对账', 'ui'),]),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 系统分析智能体',
-            narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），tasklist v5 增量刷新入仓（1c362f5，基线漂移 24 提交的增量对账），ANALYSIS-DONE 结论行经反向核验（提交真在 origin 且含分析稿、卡真在账号板）。本轮凭证核验经历 600s 超时+拒收回灌+重报通过三段——验收驱动闭环实录。',
+            narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），系统分析稿与任务清单 v6 入仓（commit bcc9d9c，02:35:55：双路提取核对+三清单匹配+SMART 拆分），ANALYSIS-DONE 结论行经反向核验。',
             imgs=[
-                  ('ui-gov-tasklist', '治理中心·分析档案：SMART 任务清单 v5——T-101~T-108 具体到人（RACI）+24 人日合计', 'ui'),]),
+                  ('ui-gov-tasklist', '治理中心·分析档案：SMART 任务清单——T-101~T-108 具体到人（RACI）+人日合计', 'ui'),]),
     12: dict(keys=['triage_done'], actor='both', actorText='人确认 · AI 执行',
-            narrative='四条 RACI 派发直达四主责（chen/hu/lin/xiao），分诊台逐账号板登记核验 ✓。本轮 orchestrator 依家族记忆判"重复派单"未自动群发——fanfan（PM 人职责）补发四条 RACI 派发消息、导演补邀 7 名关联人，均如实记问题单：人始终在回路的兜底实录。',
+            narrative='四条 RACI 派发直达四主责（chen/hu/lin/xiao，02:42:30-32 房间真值 ✓），主卡带结构化 raci 四元组 ✓（responsible/approver/consulted/notification）；分诊台逐账号板登记核验 ✓（02:42:39-57），wei/mei 两 lead 分诊确认（triage→todo，02:43:09/19）——人始终在回路。',
             imgs=[
-                  ('ui-08b-msgcard', '协作沟通界面：RACI 派发现场（群内逐条 @主责 agent + @我高亮），右栏任务时间线同步挂接', 'ui'),]),
+                  ('ui-08b-msgcard', '协作沟通界面：RACI 派发现场（群内逐条 @主责 agent + @我高亮）', 'ui'),
+                  ('ui-08c-flow-timeline', '协作沟通界面·右栏「任务流转」时间线（P4③）：派发/分诊/回执事件挂接', 'ui'),]),
     13: dict(keys=['anexec_done'], actor='ai', actorText='AI×4 · 四路系分并行',
-            narrative='四路系分产物（AN-PAYCORE/CHWX/CHALI/MP：接口签名/数据模型/错误码/幂等键/工作量人日）已在仓（前轮执行、本轮复跑复用），本轮核验四主责账号板 RFD-001 卡与系分工件在位后过闸——复跑轮语义如实呈现，不重复消耗 LLM 回合。',
+            narrative='四路系分（AN-PAYCORE/CHWX/CHALI/MP：接口签名/数据模型/错误码/幂等键/工作量人日）：本轮 AN-CHWX（commit c4adb02）/AN-MP（commit 3730ce8）新提交入库，AN-PAYCORE/AN-CHALI 系分稿沿用在仓正本（复跑复用语义如实呈现，不重复消耗 LLM 回合）；四份系分稿在仓+四主责完成回执双真值 02:43:28-36 ✓。',
             imgs=[
-                  ('ui-gov-tasklist', '治理中心·分析档案：任务清单 T-101~T-108 RACI + 24 人日（系分产物锚点）', 'ui'),]),
+                  ('ui-gov-tasklist', '治理中心·分析档案：任务清单 RACI+人日（系分产物锚点）', 'ui'),]),
     14: dict(keys=['review_done'], actor='both', actorText='AI 汇总 · 人复核',
-            narrative='概要设计五要素（背景/方案/接口/数据/风险）+ 备选方案取舍 + 爆炸半径 + 验证计划前移已在仓（3ddf3a9）；本轮汇总评审卡由导演登记置 done（agent 汇总回合缺席记观察）——工件真伪由 G2 评审独立核验兜底。',
+            narrative='概要设计五要素（背景/方案/接口/数据/风险）+ 备选方案取舍 + 爆炸半径 + 验证计划前移已在仓（docs/design/RFD-001-architecture-design.md）。本轮汇总评审卡 agent 未登记（review-card-missing 在案）——导演补登记但不置 done（评审记录待评审人补记；独立审计 R-A4 后已根治此兜底可自批的路径）。',
             imgs=[
                   ('ui-gov-design', '治理中心·六闸工件：概要设计（G2 评审对象）——五要素/备选/爆炸半径/验证前移', 'ui'),]),
     15: dict(keys=['g2_arch_pass'], actor='gate', actorText='硬闸 G2 · 架构评审',
-            narrative='概设派发 arch-agent 架构治理评审（五要素/爆炸半径/验证前移/备选≥2/历史偏差红杠）。本轮 arch 回合两度 1800s 超时——根因双杀：记忆容量整理环（56 次调用全被 2179/2200 上限拒）+ matrix 插件 asyncio loop 发送 bug（结论发不出，空错误日志实锤）。导演兜底：评审卡 t_ae134ec2 置 done+结论行以 arch-agent token 直连 API 代发（ARCH-GATE-PASS，评审材料=概设工件 3ddf3a9 实核），两项均如实记问题单。不评审不排期。',
+            narrative='概设派发 arch-agent 架构治理评审（event $Xmb4SsviuF59Cpb9hxqQec3_1SBJKsbAKItqb00n-Ys，评审卡 t_11e182b3@arch-governance）。G2 一次通过：02:50:18 arch-agent 结论 ARCH-GATE-PASS（五项检查逐条留痕，缺项清单 G-1→fanfan、G-2→wei 指名到人），02:50:33 评审卡 → done。不评审不排期。',
             imgs=[
-                  ('ui-gov-center', '治理中心：六道闸卡全绿在仓 + 待裁决评审区——G2 语义的产品承载', 'ui'),
-                  ('ui-room-archived', '协作沟通界面：arch-agent「G2 架构治理评审已完成…ARCH-GATE-PASS」结论行现场', 'ui'),]),
+                  ('ui-gov-center', '治理中心：六道闸卡在仓 + 待裁决评审区——G2 语义的产品承载', 'ui'),
+                  ('ui-room-archived', '协作沟通界面：本轮需求分析讨论群消息流（arch-agent ARCH-GATE-PASS 结论行 02:50:18 在此房间，event 可反查）', 'ui'),]),
     16: dict(keys=['close_done'], actor='ai', actorText='AI · 归档',
-            narrative='主任务卡登记全部关联子任务与过程档案后置完成：completed 时间戳、完成摘要（7/7 子卡与任务清单对齐）可回溯，测试工作量按 0.3 系数口径写入。',
+            narrative='主任务卡登记全部关联子任务与过程档案后置完成（close_done 落键）：完成摘要与关联卡对账可回溯，测试工作量按 0.3 系数口径写入。',
             imgs=[
-                  ('ui-10-carddrawer', '产品看板卡抽屉：主卡归档终态——completed 时间/完成摘要（7/7 子卡对齐）可回溯', 'ui'),]),
+                  ('ui-10-carddrawer', '产品看板卡抽屉：RFD-001 凭证主卡——关联卡对账（前代主卡/活跃子卡/合并卡全链可查）', 'ui'),]),
     17: dict(keys=['plan_done'], actor='ai', actorText='AI · PM 排期技能',
-            narrative='按定稿概设与工作量评估编排排期：四条开发任务（DEV-PAYCORE/CHWX/CHALI/MP）+ 两条测试任务（TEST-BE/FE），测试量=开发×0.3 独立成项，整体 +15% 缓冲，每任务时间窗口与依赖明确。',
+            narrative='按定稿概设与工作量评估编排排期（docs/plan/RFD-001-schedule.md，02:50:45 真值 ✓）：四条开发任务（DEV-PAYCORE/CHWX/CHALI/MP）+ 两条测试任务（TEST-BE/FE），测试量=开发×0.3 独立成项，整体 +15% 缓冲，每任务时间窗口与依赖明确。',
             imgs=[
                   ('ui-gov-schedule', '治理中心·六闸工件：排期计划——DEV-* 时间窗口+依赖链+TEST×0.3+15% 缓冲', 'ui'),]),
     18: dict(keys=['devimpl_done'], actor='gate', actorText='硬闸 G3 · 编码门禁',
-            narrative='G3 编码门禁（复跑轮复用语义）：四条 feat/DEV-* 分支与随分支测试证据（pay-core 52/微信 25/支付宝 54/收银台 12+guard 6/骨架 220 检查）已在 origin——本轮派发后六 agent 依家族记忆判重复派单静默（如实记问题单），产物真伪由 G5 评审 agent 隔离 worktree 独立复跑实测兜底（五套 194/194 全绿）。无设计不编码、渠道一律本地 mock。',
+            note='G3 落键注（独立审计 R-A4）：本轮 G3 仅有 devimpl_done 步键、无 g3_code_pass 硬闸键（治理报告跳闸）——已根治：自下轮起 G3 硬闸落键+治理报告六闸全列。',
+            narrative='G3 编码门禁：四条 feat/DEV-* 分支 02:50:48-02:51:06 全部进 origin ✓，随分支测试证据 docs/evidence/DEV-*-testlog.txt（G3 本地门禁脚本真查）。合入 integration 时 testlog 污染副本冲突 3 起（DEV-PAYCORE/CHWX/CHALI，merge-conflict 在案；已根治为冲突自愈+增量 merge 保历史）。无设计不编码、渠道一律本地 mock。',
             imgs=[
-                  ('ui-gov-tlpaycore', '治理中心·测试证据：DEV-PAYCORE 测试日志全文（分支锚 feat/DEV-PAYCORE）', 'ui'),
-                  ('ui-gov-tlchwx', '治理中心·测试证据：DEV-CHWX 测试日志', 'ui'),
-                  ('ui-gov-tlchali', '治理中心·测试证据：DEV-CHALI 测试日志', 'ui'),
-                  ('ui-gov-tlmp', '治理中心·测试证据：DEV-MP 测试日志（17 例+220 检查全过）', 'ui'),]),
+                  ('ui-gov-tlpaycore', '治理中心·测试证据：DEV-PAYCORE 测试日志（分支锚 feat/DEV-PAYCORE）', 'ui'),
+                  ('ui-gov-tlchwx', '治理中心·测试证据：DEV-CHWX 测试日志（分支锚 feat/DEV-CHWX）', 'ui'),
+                  ('ui-gov-tlchali', '治理中心·测试证据：DEV-CHALI 测试日志（分支锚 feat/DEV-CHALI）', 'ui'),
+                  ('ui-gov-tlmp', '治理中心·测试证据：DEV-MP 测试日志（分支锚 feat/DEV-MP）', 'ui'),]),
     19: dict(keys=['g4_pass'], actor='gate', actorText='硬闸 G4 · 独立验证',
-            narrative='测试的人不是写代码的人。复跑轮语义：集成测试 51 例（覆盖下单幂等/双渠道调起/回调验签拒绝/重复回调幂等/超时关单）在 test/TEST-BE 分支实跑全绿（报告 @ bebfd2d），qi/fei 账号板测试卡 done；六 agent 依家族记忆对重复派单静默（如实记问题单），TEST 结论行由导演以 agent token 代发——产物真伪由 G5 评审独立复核兜底。',
+            narrative='测试的人不是写代码的人：qi/fei 独立执行 TEST-BE/TEST-FE（派发 02:51:24），结论行 TEST-PASS-TEST-BE（test/TEST-BE@48a9d9d）/TEST-PASS-TEST-FE（test/TEST-FE@bdb9450），g4_pass 落键 03:28:25。独立审计注：G4 独立评审卡缺失曾由导演补登记（review-card-missing 在案，R-A4 已根治）；且新回执实跑树≠发布基线树、用例口径与基线实测有差——该缺陷由 G5 评审揭出（见步 20）。',
             imgs=[
-                  ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——51 例集成全绿 + r4 复验 42/42 探针', 'ui'),]),
+                  ('ui-gov-test', '治理中心·六闸工件：G4 测试报告——r4 口径 51/51 集成+131/131 回归（锚点 bebfd2d）', 'ui'),]),
     20: dict(keys=['g5_ready'], actor='gate', actorText='硬闸 G5 · 发布准出+人批准',
-            narrative='本轮 G5 三轮真实过闸（生成-验证对抗的完整弧线）：r4 FAIL——agent 独立复核发现 integration 被强制重建丢失 bebfd2d 测试基线链（DEF-BE-001 修复与 G3/G4 证据不在发布基线）；整改合回后 r5 FAIL——缺项收窄至 FE 载体层（TEST-FE 报告未翻绿/回归验证卡 todo）；再整改（fix/TEST-FE-guard 合入+缺陷链三板清零+报告翻绿）后 r6 PASS——agent 隔离 worktree 实测五套 194/194+黑盒探针 42/42+基线零漂移。打回的每一轮都是真缺陷，不是流程表演。',
+            open_note='G5 判回滚（独立审计 R-A1）：state g5_ready 落键系判词误判（04:49:03 转述 stub 消息被当结论行），评审卡 t_ea68c462 结论实为 READY-GATE-FAIL——落键判废、"4/4 首过"口径判废、REL-* 三卡已冻结（blocked）至 R1-R4 闭环+G5 复审 PASS（目标 2026-09-30）。',
+            narrative='G5 发布准出（派发 04:21:49，event $vldnPTzqiXr8AbbeHTalLQ2cBeBcBXuZ4oqwjAZFbOU，评审卡 t_ea68c462@fanfan-review）：fanfan-agent 产 release-plan/notes r7+隔离 worktree 全量取证（附件 G5-r7-isolated-run），评审结论 READY-GATE-FAIL（缺项①G4 证据链——报告锚点 bebfd2d ∉ 发布基线 0ab43de、执行证据随重建删除；②同 commit 可复现——基线强制重建丢 23 提交，DEF-BE-001/DEF-TESTFE-R3-1 双缺陷回归，黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL；第 3-7 项 PASS）。机械判定曾于 04:49:14 因转述 stub 消息命中判词子串误过 G5（04:51:27 评审才实际完成）——判词语义已根治（末判词赢+卡面双源合并 FAIL 优先）。独立审计 R-A1 判回滚：G5 不成立、发布冻结，R1-R4 闭环后复审；回滚方案/灰度/发布说明第 4-7 项评审通过留痕在卡。',
             imgs=[
-                  ('ui-gov-release', '治理中心·六闸工件：G5 发布说明——回滚阈值/灰度/发布要点（评审卡 t_9772c561 三轮 review-record）', 'ui'),
-                  ('ui-20-inbox', '审批收件箱（#/app/inbox）：待审条目+风险档+审批历史留痕', 'ui'),]),
+                  ('ui-gov-release', '治理中心·六闸工件：G5 发布说明（r7 基线刷新版）——已知问题如实列双缺陷回归为发布阻塞项', 'ui'),
+                  ('ui-20-inbox', '审批收件箱（#/app/inbox）：待审条目+风险三档分区+审批历史留痕', 'ui'),]),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · bella 验收',
-            narrative='bella（BA）派发 UAT：fanfan-agent 按 G1 冻结清单 AC-1~7 逐条给出证据锚点（测试文件/分支/commit/报告），验收报告入仓，SLA 登记（可用性 99.5%、下单 P95≤800ms、P2 事件 4h 响应）——开头定的标准结尾对账闭环。',
+            note='UAT 判词语义（独立审计 #3，H9 已根治）：证据行逐条判词=AC-1/2/3/5/6 通过、AC-4/AC-7 有条件通过（历史缺陷修复未合入 integration 基线）——有条件验收，放行权归需求提出方 bella，条件闭环后另行验收；旧版"全部 AC 通过"表述判废。',
+            narrative='bella（BA）派发 UAT（event $ahY127LXMLkFx7fcBL8-BzJFHpHSnL9CiNIFiZKmLBs，按 G1 冻结清单 AC-1~7）：fanfan-agent 逐条给出三层证据锚点（冻结源/报告行号/testlog 行号，含隔离 worktree 一手复测），验收报告入仓（收口已加判词勘误），SLA 登记（可用性 99.5%、下单 P95≤800ms、P2 事件 4h 响应）——开头定的标准结尾对账闭环。',
             imgs=[
-                  ('ui-gov-uat', '治理中心·六闸工件：UAT 验收报告——AC 逐条证据锚点+SLA 登记', 'ui'),]),
+                  ('ui-gov-uat', '治理中心·六闸工件：UAT 验收报告——AC 逐条证据锚点+SLA 登记（判词勘误见步 21 注）', 'ui'),]),
     22: dict(keys=['workmgr_done'], actor='both', actorText='人+AI · 工作管理',
-            narrative='研发工作台账随时可出：14 人×状态分布（待办/进行中/评审/完成）真查数据，WIP 并行 ≤2 零超限，卡壳 72h 任务零——容量过载即记问题单。产品侧驾驶舱「概览」页的交付进度卡（状态分布+完成率）即此台账的常驻界面视图。',
+            narrative='研发工作台账随时可出（05:14:58 M3）：14 账号×状态分布真查数据，WIP 并行 ≤2 零超限；stale 卡（>72h）实测 6 项（fanfan 1/lin 1/arch 2/audit 2）如实记档，跨轮衔接由 PM 决定挂起/移交。产品侧驾驶舱「概览」页的交付进度卡即此台账的常驻界面视图。',
             imgs=[
                   ('ui-03b-dash', '驾驶舱概览页（P5 三卡）：我的待办/评审闸口/交付进度——工作台账的常驻界面视图', 'ui'),]),
     23: dict(keys=['audit_done'], actor='human', actorText='人 · audit 独立签名线',
-            narrative='合规审计独立于开发/测试线：门禁留痕完整性（每道锁冻结凭证在仓）、问题单台账格式、取证目录在位逐项过，意见书带签名线入仓；AI 结论抽检反向核验，幻觉率计入治理报告。',
+            note='审计双线如实呈现：导演侧机械化意见书原判"通过（无发现）"经独立复核指出与在案问题单及 G5 实物 FAIL 不符，收口已改判"有保留（待整改）"（R-A6）；正确结论以独立意见+处置表为准。',
+            narrative='合规审计独立于开发/测试线：导演侧机械化审计（门禁留痕/台账格式/取证目录）05:15:00 通过并派发独立复核（event $B9p2ikl87-vJViId8eH-W-GB8xq_BL1dbnUFkT0vtl0）；audit-agent 独立复核 05:35 回结论 AUDIT-OPINION-CONCERNS（10 项：G5 留痕失真/基线重建丢线/UAT 基线锚断裂/G3 无落键/评审卡缺失仍落键/HumanGate 自评自批/DISP 缺账/留痕未受控改动/复盘模板话术/意见书口径），附抽检通过项与 R-A1..R-A6 处置建议——10 项逐条处置见《run2 独立审计响应与问题单处置》（evidence/audit-response-disposition.md）。',
             imgs=[
                   ('ui-gov-audit', '治理中心·六闸工件：合规审计意见书（audit 独立签名线）', 'ui'),]),
     24: dict(keys=['retro_done'], actor='gate', actorText='硬闸 G6 · 复盘',
-            narrative='三段式复盘（现象只写事实/规律机制归因对事不对人/行动项四要素），问题单 100% 处置记账（已修/观察/延后三态）；治理报告产出（闸首过率/证据通过率/缺陷统计）；本轮经验存入家族记忆库，下轮同需求自动回忆。',
+            note='收口补记（R-A5）：6 条问题单 DISP 三态全部补记（已修 6）、ISSUES-LOG.md 回灌；复盘计数勘误 5→6；"UAT AC 全过"勘误为有条件验收；治理报告"0 条 DISP"系产出时点快照，处置以本报告问题单节+audit-response-disposition.md 为准。',
+            narrative='三段式复盘（现象只写事实/规律机制归因对事不对人/行动项四要素）入仓+治理报告产出（硬闸状态/问题单台账/凭证与回灌/metrics 口径行）；本轮经验存入家族记忆库（hindsight 探针 ✓，bank=hermes-f4ff5aba122f-fanfan），下轮同需求自动回忆。问题单 6 条经收口全部处置记账（已修 6/6）。',
             imgs=[
-                  ('ui-gov-retro', '治理中心·六闸工件：G6 复盘报告——问题单全表处置记账（三段式）', 'ui'),]),
+                  ('ui-gov-retro', '治理中心·六闸工件：G6 复盘报告——问题单处置记账（三段式）', 'ui'),]),
     25: dict(keys=['ide_done'], actor='both', actorText='人 · IDE 实操',
-            narrative='IDE 工作台（#/ide）全程介入：左侧任务列表带 RACI 徽章（主责/授权/咨询/通知计数），点卡上简报入口即出「任务简报」面板——RACI 四元组、工作流（子卡 7·重试 0/2）、git（worktree+分支+提交）、上下文文件（任务清单 144.6KB 等 2 份）一屏齐；评审面板（通过/打回/有条件）为人工把关入口；模型经顶栏选择器独立配置。（深链自动弹简报为在修项，当前经卡入口唤出。）',
+            narrative='IDE 工作台（#/ide）全程介入：左侧任务列表带 RACI 徽章（主责/授权/咨询/通知计数），点卡上简报入口即出「任务简报」面板——RACI 四元组、工作流、git、上下文文件一屏齐；评审面板（通过/打回/有条件）为人工把关入口；模型经顶栏选择器独立配置。05:15:16 三真值核验 ✓（/ide 路由 200、ide?task 参数处理、简报生成代码）。',
             imgs=[
-                  ('ui-25-ide', 'IDE 工作台：任务简报面板（RACI 四元/工作流子卡 7/git/上下文文件）+ 评审面板', 'ui'),]),
+                  ('ui-25-ide', 'IDE 工作台：任务简报面板（RACI 四元/工作流/git/上下文文件）+ 评审面板', 'ui'),]),
     26: dict(keys=['report_done'], actor='ai', actorText='AI · 报告生成器',
-            narrative='本报告由生成器产出：步骤标题与把关逐字解析方案文档（单一事实源），每张证据图标注来源（产品界面实拍 / 仓内工件 / 消息转录），含 matrix event_id/git 引用可反查，26 步状态真实不作假。',
+            narrative='本报告由生成器产出：步骤标题与把关逐字解析方案文档（单一事实源），每张证据图标注来源（产品界面实拍/仓内工件/消息转录），26 步状态真实不作假。报告路由（H7）：本轮 05:15 的首次生成因调用未带 RUN_ID 落 SIM 全局目录、拿了旧轮 state（"状态真实"的假报告）——已根治（调用必带 --run+路径同源），本报告即按 MX_RUN_ID=20260929-v4-run2 重生成的 run2 真值版。',
             imgs=[
                   ('ui-26-report', '推演报告自身（本页）', 'ui'),]),
 }
@@ -219,7 +226,7 @@ STEPS_META = {
 DOMAINS = [
     ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass',
      '无漏做（26 步 UI 覆盖逐条核对为零缺图）。两处如实记账边界：邮件通道本期禁用改 matrix 私信；fleet-manifest 四件套无专属界面，步骤 2 以 profiles 配置页承载并在此声明。',
-     '实测：26/26 步 UI 图在位 · 问题单 22 键全处置 · 管理档案三件在仓',
+     '实测：26/26 步 UI 图在位 · 问题单 6 键全处置（DISP 6/6）· 管理档案三件在仓',
      'cp-g1,cp-g6'),
     ('L1', '工程正确性', '代码和制品是否成立？', 'pass',
      '成立（复跑实证）。五域守门合跑 28/28 绿：治理 8 + 审批 10 + 面板 5 + 看板快道 5；client 构建过 verify-dist 门禁；测试证据为分支内实跑日志，非纸面。',
@@ -229,17 +236,17 @@ DOMAINS = [
      '一致（live 对账）。治理 API 实查：20 件工件 20 在仓，四组 8/3/5/4，G3 分支证据 4，待裁决 1；五件代表工件 doc 接口全文可取；看板 API 与 CLI 同库。',
      '实测：GET overview 200（20/20）· doc×5 200 · sqlite 同库直读',
      'cp-g1,cp-g5'),
-    ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'pass',
-     '符合且更强：G5 三轮打回环全部击中真缺陷（r4 强制重建丢测试基线链/r5 FE 载体缺项/r6 PASS 前零漂移+194/194+42/42 agent 独立复测）——评审者目标是击穿实现而非走过场；UAT 拿 G1 冻结 AC-1~7 逐条对账闭环。',
-     '实测：r4/r5 FAIL 结论行 event_id 可反查 · 三轮 review-record 落卡 t_9772c561 · UAT 逐条锚点',
+    ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'warn',
+     '部分符合：G1→UAT 意图链路闭环（冻结 AC-1~7 逐条对账）；G5 评审实测击穿实现——t_ea68c462 r7 结论 READY-GATE-FAIL（双缺陷回归/证据链断裂），机械判定曾误过、被独立审计判回滚——评审者目标是击穿实现而非走过场，本轮未达发布准出。',
+     '实测：卡 t_ea68c462 review-record r7（READY-GATE-FAIL 可反查）· UAT 逐条判词 5 通过+2 有条件 · R-A1 判回滚',
      'cp-g2,cp-gate,cp-uat'),
     ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass',
      '可接受（安全探针通过）。未授权访问治理/审批 API 均 401（无 token 与伪造 token 双探针）；git 全异步 execFile+8s 超时；聚合 55s→20ms；金额分 int64/渠道本地 mock/密钥不出服务端。',
      '实测：no-token→401 ×2 · bad-jwt→401 · 聚合 20ms 量级',
      'cp-gate,cp-g3'),
-    ('L5', '交付与治理', '是否能部署、运营和追责？', 'pass',
-     '能（裁决链实测）。decide 非法前缀正确 400；审批历史留痕（wei 裁决在案）；四道硬闸+HumanGate 批准留痕；问题单 100% 处置记账；审计签名线在仓；SLA 登记。',
-     '实测：POST decide 非法前缀→400 · 审批历史 200 含裁决 · SLA 在案',
+    ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn',
+     '可追责、发布冻结中：G5 实物 FAIL 判回滚（R-A1），REL-* 三卡 blocked 至 R1-R4 闭环+复审；审批历史留痕；问题单 6/6 处置（DISP）；审计签名线+独立复核意见在仓；SLA 登记。HumanGate 批准事件入 approved.events（审批人独立性局限如实记档）。',
+     '实测：REL-* 卡 status=blocked · DISP 6/6 · AUDIT-OPINION-CONCERNS 10/10 处置挂接',
      'cp-g5,cp-g6'),
 ]
 
@@ -267,13 +274,13 @@ except Exception:
 CHECKPOINTS = [
     ('cp-g1', 'G1 需求上锁', '验收标准可判定才许开工，锁后不许改', '人审 · BA/PM 四要素', 'ui-gov-doc', 'frozen:true @ 0217cf2'),
     ('cp-triage', '分诊确认', '团队负责人手工确认后任务才推进', '人 · 团队 lead', 'ui-10-kanban', '看板 T-101~T-108 分诊→执行'),
-    ('cp-g2', 'G2 架构评审', '五项检查逐条留痕，不评审不排期', '人 · arch 治理组', 'ui-room-archived', 'ARCH-GATE-PASS 结论行（两轮过闸）'),
-    ('cp-gate', '审批门拦截', '高危命令 5 分钟无人应答即拦截停手', '运行时 HumanGate', 'ui-20-inbox', 'xiao 建卡被拦实录 + 收件箱待审'),
+    ('cp-g2', 'G2 架构评审', '五项检查逐条留痕，不评审不排期', '人 · arch 治理组', 'ui-room-archived', 'ARCH-GATE-PASS 结论行（一次通过，缺项 G-1/G-2 指名到人）'),
+    ('cp-gate', '审批门拦截', '高危命令 5 分钟无人应答即拦截停手', '运行时 HumanGate', 'ui-20-inbox', 'approved.events 留痕（lin !approve→NO_REPLY）+ 收件箱三档分区'),
     ('cp-g3', 'G3 编码门禁', '测试证据随分支提交，无设计不编码', '门禁脚本 + 研发', 'ui-gov-tlpaycore', 'testlog 分支锚 feat/DEV-* ×4'),
-    ('cp-g4', 'G4 独立验证', '测试的人不是写代码的人，缺陷全闭环', '人 · qi/fei 独立执行', 'ui-gov-test', '51/51 集成 + 131/131 回归'),
-    ('cp-g5', 'G5 发布准出 + HumanGate', '七项检查 + 人工批准才许上线', '人 · PM + 评审卡', 'ui-gov-release', '三轮 FAIL→补齐→PASS + 批准留痕'),
-    ('cp-uat', 'UAT 业务验收', 'BA 拿 G1 冻结清单逐条对账', '人 · bella 验收', 'ui-gov-uat', 'AC-1~7 逐条证据锚点 + SLA'),
-    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账，经验入家族记忆库', '人 · 全员 + 治理', 'ui-gov-retro', 'DISP 三态处置表 + 记忆探针'),
+    ('cp-g4', 'G4 独立验证', '测试的人不是写代码的人，缺陷全闭环', '人 · qi/fei 独立执行', 'ui-gov-test', 'TEST-BE r5 / TEST-FE r4+r5 回执（实跑树差异由 G5 评审揭出）'),
+    ('cp-g5', 'G5 发布准出 + HumanGate', '七项检查 + 人工批准才许上线', '人 · PM + 评审卡', 'ui-gov-release', 't_ea68c462 r7 READY-GATE-FAIL → R-A1 判回滚 · REL-* 冻结'),
+    ('cp-uat', 'UAT 业务验收', 'BA 拿 G1 冻结清单逐条对账', '人 · bella 验收', 'ui-gov-uat', 'AC 逐条判词：5 通过+2 有条件（放行权归 bella）+ SLA'),
+    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账，经验入家族记忆库', '人 · 全员 + 治理', 'ui-gov-retro', 'DISP 6/6 处置 + ISSUES-LOG 回灌 + 记忆探针'),
 ]
 
 GATE_BY_STEP = {7: 'G1', 15: 'G2', 18: 'G3', 19: 'G4', 20: 'G5', 24: 'G6'}
@@ -413,15 +420,20 @@ def checkpoints_html():
     return '<div class="cp-grid">' + ''.join(cards) + '</div>'
 
 def gate_cards():
-    # 打回记录（如实）：G2 首轮超时打回复评、G5 首轮 FAIL 补齐复测
-    rejected = {'G2': '两轮超时→导演兜底', 'G5': 'r4/r5 FAIL→r6 PASS'}
+    # 打回/判回滚记录（如实，run2）：G2 一次通过；G5 判词误过→独立审计 R-A1 判回滚
+    rejected = {'G5': 'R7 评审 FAIL（缺项①②）→ R-A1 判回滚 · REL-* 冻结'}
+    annot = {'G3': 'g3_code_pass 落键缺失（R-A4 已修）'}
     cards = []
     for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
         ts = fmt_ts(GATE_STATE_KEY[g])
         passed = bool(state.get(GATE_STATE_KEY[g]))
-        cls = 'gpass' if passed else 'gpending'
-        badge = '✓ 已通过' if passed else '○ 未达'
+        if g == 'G5' and passed:
+            cls, badge = 'gfail', '✗ 判回滚（实物 FAIL）'
+        else:
+            cls = 'gpass' if passed else 'gpending'
+            badge = '✓ 已通过' if passed else '○ 未达'
         rej = f'<span class="gate-rej">打回环：{rejected[g]}</span>' if g in rejected else '<span class="gate-rej ok1">一次通过</span>'
+        rej += (f'<span class="gate-rej">{annot[g]}</span>' if g in annot else '')
         cards.append(f'''<div class="gate-card {cls}">
   <div class="gate-name">{g}</div>
   <div class="gate-state">{badge}</div>
@@ -446,6 +458,9 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         ts = next((fmt_ts(k) for k in meta['keys'] if fmt_ts(k)), '')
         gate_mark = f'<span class="gmark">{GATE_BY_STEP[n]}</span>' if n in GATE_BY_STEP else ''
         status = '<span class="ok">✅</span>' if done else '<span class="no">⬜</span>'
+        if meta.get('open_note'):
+            done = False
+            status = '<span class="no">⬜</span><span class="gmark">判回滚</span>'
         nav_items.append(f'<a href="#step{n}" class="nav-step{" gate" if n in GATE_BY_STEP else ""}">{n} {gate_mark} {H.escape(title[:14])}…{status}</a>')
         imgs_html = img_tags(meta['imgs']) or '<p class="no-evidence">（截图缺失）</p>'
         abg, afg, atxt = ACTOR_STYLE[meta['actor']]
@@ -457,6 +472,8 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     <span class="st-meta">{status}{f" · {ts}" if ts else ""} <span class="actor" style="background:{abg};color:{afg}">{atxt}｜{H.escape(meta["actorText"])}</span></span></div>
   </div>
   <p class="st-story">{H.escape(meta["narrative"])}</p>
+  {('<div class="st-open">' + H.escape(meta["open_note"]) + '</div>') if meta.get("open_note") else ''}
+  {('<div class="st-note">' + H.escape(meta["note"]) + '</div>') if meta.get("note") else ''}
   <details class="st-gate"{" open" if n in GATE_BY_STEP else ""}><summary>把关标准（方案原文）</summary><div class="gate-body">{H.escape(gate_text) if gate_text else "（未单列）"}</div></details>
   <div class="st-shots">{imgs_html}</div>
 </article>''')
@@ -518,6 +535,10 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .gate-desc{{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5}}
 .gate-rej{{display:inline-block;font-size:9.5px;margin-top:5px;padding:1px 6px;border-radius:4px;background:#fef3c7;color:#b45309}}
 .gate-rej.ok1{{background:#dcfce7;color:#15803d}}
+.gate-card.gfail{{border-top-color:var(--err)}}
+.gate-card.gfail .gate-state{{color:var(--err)}}
+.st-open{{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--err);background:#fef2f2;border-radius:8px;font-size:12.5px;color:#991b1b;line-height:1.7}}
+.st-note{{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--warn);background:#fffbeb;border-radius:8px;font-size:12.5px;color:#92400e;line-height:1.7}}
 
 .phase{{margin-bottom:32px}}
 .ph-hd{{display:flex;align-items:center;gap:14px;padding:16px 0 12px;margin-bottom:4px;border-bottom:2px solid var(--pc,var(--border))}}
@@ -618,7 +639,7 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
     <div class="hero-stats">
       <div class="hstat"><b>26</b><span>步骤</span></div>
       <div class="hstat"><b>{total_imgs}</b><span>证据图 · 全部界面实拍</span></div>
-      <div class="hstat"><b>2/4</b><span>闸首过率（G2/G5 打回复评后通过）</span></div>
+      <div class="hstat"><b>G5 判回滚</b><span>发布冻结至 R1-R4 闭环+复审 PASS</span></div>
       <div class="hstat"><b>{n_closed}</b><span>问题单已闭环</span></div>
       <div class="hstat"><b>6</b><span>生命周期阶段</span></div>
     </div>
@@ -645,20 +666,40 @@ details.audit summary{{font-size:13px;font-weight:600;color:var(--muted);cursor:
   <details class="audit"><summary>▶ 展开问题单处置明细（唯一键口径）</summary>
   <table style="margin-top:8px"><tr><th>类型·主体</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
 
+
+  <h2 class="section-hd" id="audit-response">独立审计与处置 · AUDIT-OPINION-CONCERNS（10/10 逐条）</h2>
+  <p class="stat-note">独立合规审计（audit-agent，05:35 独立复核，与导演侧机械化意见书不一致）提出 10 项关切与 R-A1..R-A6 处置建议；收口轮逐条判定与处置如下（单一事实源：evidence/audit-response-disposition.md）。本轮有效性判定：<b>G1/G2/G4 留痕成立；G5 判回滚（实物 FAIL，发布冻结）；UAT 判"有条件验收"</b>——"四闸首过/AC 全过"口径判废。</p>
+  <details class="audit" open><summary>▶ 独立审计 10 项判定与处置</summary>
+  <table style="margin-top:8px"><tr><th>#</th><th>发现</th><th>判定</th><th>处置</th></tr>
+  <tr><td>1</td><td>G5 落键"通过"与评审实物矛盾（转述 stub 消息被当结论行，卡面 READY-GATE-FAIL）</td><td>属实</td><td>已修（根因）：H8 判词语义（末判词赢+卡面双源合并 FAIL 优先+熔断），run2 原文入守门用例；本报告步 20 判回滚</td></tr>
+  <tr><td>2</td><td>发布基线强制重建丢线 23 提交（DEF-BE-001/FE 修复线/守卫脚本/testlog），双缺陷回归</td><td>属实</td><td>已修（机制）：H11 集成 merge 续建+丢线守卫+禁强推；回补重验=行动项（2026-09-30 前）</td></tr>
+  <tr><td>3</td><td>UAT"全过"与证据行矛盾（AC-4/AC-7 有条件通过）+基线锚断裂</td><td>属实</td><td>已修（根因）：H9 逐条判词（有条件≠无条件验收，放行权归 bella）；验收书勘误入 origin/main</td></tr>
+  <tr><td>4</td><td>G3 硬门无落键，治理报告跳过 G3/G6</td><td>属实</td><td>已修：H10 g3_code_pass 落键+治理报告六闸全列</td></tr>
+  <tr><td>5</td><td>评审卡缺失由导演登记即置 done</td><td>属实</td><td>已修（R-A4）：补登记卡保留"评审记录待补"，不自批置 done</td></tr>
+  <tr><td>6</td><td>G5 HumanGate 自评自批；approved.events 无 G5 审批事件</td><td>属实（部分环境局限）</td><td>部分已修：HumanGate 批准事件入 approved.events 可反查；审批人独立性=单操作者推演局限，观察记档</td></tr>
+  <tr><td>7</td><td>问题单 DISP 0 条；ISSUES-LOG 未收录；复盘计数 5≠6</td><td>属实</td><td>已修（R-A5）：DISP 6/6 补记+ISSUES-LOG 回灌+复盘计数勘误</td></tr>
+  <tr><td>8</td><td>完备性检查留痕未受控删行；台账同名 G5 卡双态</td><td>部分属实</td><td>删行来源未查明→已回滚恢复留痕原貌（快照不可变）；双态卡=各轮卡并存，观察记档</td></tr>
+  <tr><td>9</td><td>G6 复盘模板话术/交叉引用断链/metrics 口径偏离</td><td>属实</td><td>部分已修：复盘逐单归类+断链修正+行动项补 R-A1..R-A6；metrics 口径重出延后（行动项）</td></tr>
+  <tr><td>10</td><td>导演侧意见书"通过（无发现）"不成立</td><td>属实</td><td>已修（R-A6）：意见书勘误改判"有保留（待整改）"，以独立意见为准</td></tr>
+  </table></details>
+  <p class="stat-note">抽检通过项（独立审计留痕）：G1 四要素真实可判 · G2 留痕完整（t_11e182b3 独立评审人）· 测试内容真实性（testlog 实物与报告数字一致）· 复盘对事不对人口径 · 评审人如实报 FAIL 附取证。另有收口补充处置：报告路由缺陷 H7（05:15 首次生成落全局目录拿旧轮 state）已修并重生成本报告；双驱动污染窗口 02:26:04–02:37:56（run1 ready 续跑误抢活锁，H1 已修）如实记档。</p>
+
   <h2 class="section-hd">闭环治理终态</h2>
   <div class="govgrid">
     <table><tr><th>硬闸</th><th>把关点</th><th>终态</th><th>落键时间</th></tr>
-    {''.join(f'<tr><td><b>{g}</b></td><td style="font-size:11px">{GATE_DESC[g]}</td><td class="ok">✓</td><td>{fmt_ts(GATE_STATE_KEY[g]) or "—"}</td></tr>' for g in ['G1','G2','G3','G4','G5','G6'])}
+    {''.join(f'<tr><td><b>{g}</b></td><td style="font-size:11px">{GATE_DESC[g]}</td><td class="{"err" if g == "G5" else "ok"}">{"✗ 判回滚（R-A1，实物 FAIL）" if g == "G5" else "✓"}</td><td>{fmt_ts(GATE_STATE_KEY[g]) or "—"}</td></tr>' for g in ['G1','G2','G3','G4','G5','G6'])}
     </table>
     <table><tr><th>度量</th><th>终态值</th></tr>
-    <tr><td>闸门首过率</td><td><b>2/4</b>（G1✓ G2✗ G4✓ G5✗——打回环均真实过闸复评通过）</td></tr>
+    <tr><td>闸门判定</td><td><b>G1/G2/G4 留痕成立 · G5 判回滚</b>（R-A1；"4/4 首过"口径判废）· G3 落键缺失（R-A4 已修）</td></tr>
     <tr><td>问题单终态</td><td>{stat}</td></tr>
-    <tr><td>测试口径</td><td>集成 51/51 + 回归 131/131 全绿（G4 独立验证）</td></tr>
-    <tr><td>发布基线</td><td>aipaydev main {main_sha}（动态实查）</td></tr></table>
+    <tr><td>测试口径</td><td>TEST-BE r5（test/TEST-BE@48a9d9d）/TEST-FE r4+r5（test/TEST-FE@bdb9450）TEST-PASS 回执；评审侧黑盒探针 40/42 FAIL、verify-guard 3/6 FAIL（实跑树≠发布基线，"绿且少"按回归判 FAIL）</td></tr>
+    <tr><td>UAT 判词</td><td><b>有条件验收</b>：AC-1/2/3/5/6 通过 · AC-4/AC-7 有条件通过（放行权归 bella）</td></tr>
+    <tr><td>发布状态</td><td><b>冻结</b>：REL-* 三卡 blocked；解冻条件=R1-R4 闭环+G5 复审 PASS（目标 2026-09-30）</td></tr>
+    <tr><td>发布基线</td><td>aipaydev main {main_sha}（动态实查）；本轮 integration 基线 0ab43de 为强制重建产物（bebfd2d 非祖先，丢线 23 提交——R-A3 回补中）</td></tr></table>
   </div>
 
   <div class="footer">步骤标题与把关逐字取自方案文档（生成时解析，单一事实源）<br>
-全部证据图=Swarm Studio 产品界面浏览器实拍（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）<br>点击截图可放大 · 2026-09-28 内容级审计改版：叙事化（人/AI 角色+结果锚点）+ matcher 修正 + 问题单口径对齐</div>
+全部证据图=Swarm Studio 产品界面浏览器实拍（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）<br>点击截图可放大 · 2026-09-28 内容级审计改版：叙事化（人/AI 角色+结果锚点）+ matcher 修正 + 问题单口径对齐<br>2026-09-29 run2 收口改版：判词真值化（G5 判回滚/UAT 有条件验收）+ 独立审计 10 项处置挂接 + 报告路由 H7 重生成</div>
 </main>
 </div>
 </body></html>'''
