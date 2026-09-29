@@ -16,6 +16,7 @@ vi.mock('../store/ide', async () => {
 })
 vi.mock('@/stores/hermes/chat', () => ({
   useChatStore: () => ({
+      setRuntimeMode: vi.fn(),
     sessions: [], activeSessionId: null, sessionsLoaded: true,
     sessionProfileFilter: null, loadSessions: vi.fn(async () => {}),
     setRuntimeMode: vi.fn(),
