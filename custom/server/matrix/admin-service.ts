@@ -108,7 +108,8 @@ export async function createMatrixUser(
   userId: string,
   password: string,
   adminToken: string,
-  homeserverUrl: string
+  homeserverUrl: string,
+  displayName?: string
 ): Promise<boolean> {
   try {
     const origin = await safeMatrixOrigin(homeserverUrl)
@@ -125,7 +126,24 @@ export async function createMatrixUser(
         user_type: null,
       }),
     })
-    return res.ok
+    if (!res.ok) return false
+    // 显示名 best-effort：register 端点不带 displayname，走管理员用户管理 API 单独设置，
+    // 失败不影响建号结果（registry-admin P6 建号场景 displayName 是增强项非硬需求）。
+    if (displayName) {
+      try {
+        await fetch(`${origin}/_synapse/admin/v1/users/${encodeURIComponent(userId)}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ displayname: displayName }),
+        })
+      } catch {
+        // 显示名失败静默：建号已成功，不回滚
+      }
+    }
+    return true
   } catch (err) {
     if (err instanceof UnsafeUrlError) throw err
     return false
