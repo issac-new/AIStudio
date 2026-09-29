@@ -97,6 +97,15 @@ describe('ia2 路由树（v12 双视图）', () => {
     expect(resolved.meta.fullscreen).toBe(true)
   })
 
+  it('v14 统一聊天：s/chat 与 s/group 路由带 standaloneEmbed meta（嵌入态隐藏画布自带侧栏）', () => {
+    const router = makeRouter()
+    expect(router.resolve('/app/s/chat').meta.standaloneEmbed).toBe(true)
+    expect(router.resolve('/app/s/chat/s1').meta.standaloneEmbed).toBe(true)
+    expect(router.resolve('/app/s/group/!g:1').meta.standaloneEmbed).toBe(true)
+    // matrix 房间画布（MatrixRoomCanvas）本就无房间列表，不挂该 meta
+    expect(router.resolve('/app/s/room/!r:1').meta.standaloneEmbed).toBeUndefined()
+  })
+
   it('路由名全树唯一', () => {
     const names: string[] = []
     const walk = (records: ReturnType<typeof buildIaRoutes>) => {

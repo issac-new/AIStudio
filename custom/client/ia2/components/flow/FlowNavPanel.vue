@@ -7,7 +7,12 @@
      单击语义不变：选中即换中栏（唯一导航轴，无透镜无二级导航）。
      v13（2026-09-21 协作感知轮）：循环行加运行中活动脉冲（multica「agent 活动
      指示器」的循环面投影）——loopActivity[loopId].running>0 时行右上 ●N 呼吸点，
-     title 提示运行数；awaiting 档已有 awaitingYou 表达，不重复投影。 -->
+     title 提示运行数；awaiting 档已有 awaitingYou 表达，不重复投影。
+     v14（2026-09-29 统一聊天轮，用户裁定「不再区分」）：房间/群聊/会话三小节
+     并为单一「聊天」列表——按最近活动降序混排，行首 kind 小图标区分类型，
+     未读/消歧/任务簇/双击语义原样保留；群聊行 hover ✕ 删除（补偿被隐藏的
+     画布内侧栏管理入口）；栏底「＋新聊天」三分型菜单（agent 单聊/agent 群聊/
+     matrix 房间），matrix 房间沿用内联输入。正本 docs/comm-collab-v14-unified-chat.md §4。 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -39,6 +44,12 @@ const emit = defineEmits<{
   (e: 'open-task', taskId: string): void
   /** 行/任务 chip 双击 → IDE 工作台（taskId 空则裸进，R4a 动线⑤） */
   (e: 'jump-ide', taskId: string | null): void
+  /** v14：「＋新聊天」→ agent 单聊（/app/s/chat 新会话态） */
+  (e: 'new-chat'): void
+  /** v14：「＋新聊天」→ agent 群聊（WorkbenchView 开 CreateRoomForm 抽屉） */
+  (e: 'create-group'): void
+  /** v14：群聊行 hover ✕ → store.deleteGroup（补偿被隐藏侧栏的删除入口） */
+  (e: 'delete-group', roomId: string): void
 }>()
 
 const { t } = useI18n()
@@ -47,6 +58,8 @@ const query = ref('')
 /** 栏底内联新建房间（Electron renderer 无 window.prompt，就地输入） */
 const createOpen = ref(false)
 const createName = ref('')
+/** v14「＋新聊天」三分型菜单开合 */
+const newMenuOpen = ref(false)
 /** 任务簇展开态（会话行键 → 展开；徽章点击切换，不触发行选中） */
 const openCluster = ref<string | null>(null)
 
@@ -62,12 +75,21 @@ const shownLoops = computed(() =>
 const dupNames = computed(() =>
   collectDuplicateNames((props.sessions as Array<{ name: string }>).map(r => r.name)))
 
-/** 会话聚类三小节（R4a：房间/群聊/会话——类型是天然簇，随过滤联动） */
-const sessionClusters = computed(() => ({
-  room: { rows: shownSessions.value.filter(r => r.kind === 'room'), labelKey: 'ia2.flow.clusterRooms', icon: '#' },
-  group: { rows: shownSessions.value.filter(r => r.kind === 'group'), labelKey: 'ia2.flow.clusterGroups', icon: '👥' },
-  chat: { rows: shownSessions.value.filter(r => r.kind === 'chat'), labelKey: 'ia2.flow.clusterChats', icon: '💬' },
-}))
+/** v14 单一「聊天」列表：三类混排按 lastActivityAt 降序（无活动时间者沉底，
+ *  sort 稳定保序）。kind 图标替代旧三小节分节（R4a 聚类退役）。 */
+const chatRows = computed<FlowSessionRow[]>(() =>
+  [...shownSessions.value].sort((a, b) => {
+    const at = a.lastActivityAt ?? 0
+    const bt = b.lastActivityAt ?? 0
+    return bt - at
+  }))
+
+const KIND_ICONS: Record<FlowSessionRow['kind'], string> = { room: '#', group: '👥', chat: '💬' }
+const KIND_LABEL_KEYS: Record<FlowSessionRow['kind'], string> = {
+  room: 'ia2.flow.clusterRooms',
+  group: 'ia2.flow.clusterGroups',
+  chat: 'ia2.flow.clusterChats',
+}
 
 function toggleCluster(rowKey: string): void {
   openCluster.value = openCluster.value === rowKey ? null : rowKey
@@ -126,23 +148,26 @@ function submitCreateRoom(): void {
     >
 
     <div class="flow-nav__scroll">
-      <div
-        v-for="(cluster, ck) in sessionClusters" :key="ck"
-        v-show="cluster.rows.length" class="flow-nav__sec"
-        :data-testid="`flow-cluster-${ck}`"
-      >
-        <div class="flow-nav__sec-head">
-          {{ cluster.icon }} {{ t(cluster.labelKey) }}<span class="flow-nav__sec-n">{{ cluster.rows.length }}</span>
+      <!-- v14 单一「聊天」列表（三小节退役；行 testid 沿用 flow-session-*） -->
+      <div v-show="chatRows.length" class="flow-nav__sec" data-testid="flow-cluster-chat-all">
+        <div class="flow-nav__sec-head" data-testid="flow-group-chats">
+          {{ t('ia2.flow.chatSection') }}<span class="flow-nav__sec-n">{{ chatRows.length }}</span>
         </div>
-        <template v-for="s in cluster.rows" :key="`${s.kind}:${s.id}`">
+        <template v-for="s in chatRows" :key="`${s.kind}:${s.id}`">
           <button
             type="button"
             class="flow-nav__row"
             :class="{ 'flow-nav__row--on': selection?.kind === s.kind && selection.id === s.id }"
             :data-testid="`flow-session-${s.id}`"
+            :data-kind="s.kind"
             @click="emit('select', { kind: s.kind, id: s.id })"
             @dblclick="emit('jump-ide', s.taskIds[0] ?? null)"
           >
+            <span
+              class="flow-nav__kind"
+              :class="`flow-nav__kind--${s.kind}`"
+              :title="t(KIND_LABEL_KEYS[s.kind])"
+            >{{ KIND_ICONS[s.kind] }}</span>
             <span class="flow-nav__name">{{ s.name }}</span>
             <span
               v-if="dupNames.has(s.name)"
@@ -158,6 +183,13 @@ function submitCreateRoom(): void {
               @click.stop="toggleCluster(`${s.kind}:${s.id}`)"
             >📋{{ s.taskIds.length }}{{ openCluster === `${s.kind}:${s.id}` ? ' ▴' : ' ▾' }}</span>
             <span v-if="s.unread" class="flow-nav__unr">{{ s.unread > 99 ? '99+' : s.unread }}</span>
+            <span
+              v-if="s.kind === 'group'"
+              class="flow-nav__del"
+              :data-testid="`flow-del-group-${s.id}`"
+              :title="t('ia2.flow.deleteGroup')"
+              @click.stop="emit('delete-group', s.id)"
+            >✕</span>
           </button>
           <!-- 任务簇（R4a）：挂接任务 chip 就地展开；chip 点击→看板预选，双击→IDE -->
           <div
@@ -259,8 +291,20 @@ function submitCreateRoom(): void {
     </div>
 
     <div class="flow-nav__foot">
-      <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" @click="createOpen = true">
-        ＋ {{ t('ia2.flow.newSession') }}
+      <!-- v14「＋新聊天」三分型：agent 单聊 / agent 群聊 / matrix 房间（内联输入） -->
+      <div v-if="newMenuOpen && !createOpen" class="flow-nav__newmenu" data-testid="flow-new-menu">
+        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-agent" @click="newMenuOpen = false; emit('new-chat')">
+          💬 {{ t('ia2.flow.newAgentChat') }}
+        </button>
+        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-group" @click="newMenuOpen = false; emit('create-group')">
+          👥 {{ t('ia2.flow.newGroupChat') }}
+        </button>
+        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-room" @click="newMenuOpen = false; createOpen = true">
+          # {{ t('ia2.flow.newMatrixRoom') }}
+        </button>
+      </div>
+      <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" @click="newMenuOpen = !newMenuOpen">
+        ＋ {{ t('ia2.flow.newChat') }}
       </button>
       <button type="button" class="flow-nav__chip" data-testid="flow-new-loop" @click="emit('new-loop')">
         ＋ {{ t('ia2.flow.newLoop') }}
@@ -390,7 +434,35 @@ function submitCreateRoom(): void {
   background: var(--bg-secondary); color: var(--text-primary); font-size: 11px; outline: none;
 }
 .flow-nav__foot {
+  position: relative;
   display: flex; align-items: center; gap: 4px; padding: 8px 12px;
   border-top: 1px solid var(--border-color);
 }
+/* v14「＋新聊天」三分型菜单：foot 上方浮出 */
+.flow-nav__newmenu {
+  position: absolute; bottom: calc(100% + 4px); left: 8px; z-index: 30;
+  display: flex; flex-direction: column; gap: 2px; min-width: 148px;
+  padding: 4px; border: 1px solid var(--border-color); border-radius: 8px;
+  background: var(--bg-card); box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+}
+.flow-nav__newmenu-item {
+  display: flex; align-items: center; gap: 6px; width: 100%; height: 26px; padding: 0 8px;
+  border: none; border-radius: 6px; background: transparent; color: var(--text-secondary);
+  font-size: 11px; cursor: pointer; text-align: left; white-space: nowrap;
+  &:hover { background: var(--bg-secondary); color: var(--text-primary); }
+}
+/* v14 单一聊天列表：kind 图标 + 群聊行 hover 删除 */
+.flow-nav__kind {
+  flex-shrink: 0; width: 14px; text-align: center;
+  font-size: 10px; color: var(--text-muted);
+  &.flow-nav__kind--room { color: var(--primary); }
+  &.flow-nav__kind--group { font-size: 9px; }
+}
+.flow-nav__del {
+  display: none; flex-shrink: 0; width: 16px; height: 16px;
+  align-items: center; justify-content: center;
+  border-radius: 4px; color: var(--text-muted); font-size: 10px; cursor: pointer;
+  &:hover { color: var(--error); background: color-mix(in srgb, var(--error) 12%, transparent); }
+}
+.flow-nav__row:hover .flow-nav__del { display: inline-flex; }
 </style>
