@@ -133,7 +133,7 @@ todo 7d/30d）；"最劣偏差天数"取全部任务最劣值，界面明确标�
 |---|---|---|
 | 服务端 | custom/server/governance/change-governance-store.ts | A 类 |
 | 服务端 | custom/server/governance/change-governance-controller.ts | A 类 |
-| 挂载 | patches/506-server-change-gov-mount.patch（仿 490 两行） | B 类 |
+| 挂载 | patches/511-server-change-gov-mount.patch（仿 490 两行；原 506 让号避 v14 统一聊天） | B 类 |
 | 客户端 | custom/client/governance/api/changeGov.ts | A 类 |
 | 客户端 | custom/client/governance/components/ChangeGovernanceSection.vue | A 类 |
 | 客户端 | custom/client/governance/i18n.ts 增 changeGov 子树 | A 类 |
@@ -141,7 +141,7 @@ todo 7d/30d）；"最劣偏差天数"取全部任务最劣值，界面明确标�
 | 客户端 | custom/client/kanban/components/ManagementAccountsPanel.vue | A 类 |
 | 客户端 | custom/client/kanban/i18n-accounts.ts（模块内词条） | A 类 |
 | 客户端 | custom/client/ia2/views/TasksView.vue 第三页签 | A 类 |
-| 词条 | patches/507-client-i18n-tasks-tab-accounts.patch（ia2.tasks.tabAccounts） | B 类 |
+| 词条 | patches/512-client-i18n-tasks-tab-accounts.patch（ia2.tasks.tabAccounts；原 507 让号） | B 类 |
 
 ## 五、验证计划
 
