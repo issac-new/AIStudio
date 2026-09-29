@@ -109,8 +109,20 @@ async function reportDuplicateFrames() {
   if (dups.length) console.warn('WARN[duplicate-frames]:', JSON.stringify(dups))
 }
 
-/** 遍历同名房间点选命中本轮 room_analysis（深链不驱动选择，run1 实锤）。 */
+/** 打开本轮分析群：优先路由深链 /app/s/room/<id>（⑤ 后会话画布子路由，P9 WorkbenchView），
+ *  列表点选仅兜底（列表装载时序不稳——run4 实测房间名 9s 内未上左栏）。 */
 async function openCurrentRoom() {
+  if (ROOM) {
+    await page.goto(BASE + '/#/app/s/room/' + encodeURIComponent(ROOM))
+    await page.waitForTimeout(6500)
+    await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
+    const onRoom = await page.evaluate(() => {
+      const t = (document.body.innerText || '')
+      return t.includes('支付收银台需求分析讨论群') || !!document.querySelector('[data-testid="tdp"], [class*="group-chat"], [class*="room-view"]')
+    })
+    if (onRoom) { console.log('room opened via deep link: ' + ROOM.slice(0, 20)); return true }
+    console.log('WARN: 深链未见房间视图标志，回落列表点选')
+  }
   await page.goto(BASE + '/#/app')
   await page.waitForTimeout(9000)
   for (const txt of ['知道了', '确定', '稍后提醒']) {
