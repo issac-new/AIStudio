@@ -19,12 +19,79 @@ import { buildRunGraph, projectEvents } from '@/custom/loop/runcenter/adapters/r
 import type { RunGraphData, RunGraphTopologyLike, ReplayEventLike, TimelineMode } from '@/custom/loop/runcenter/adapters/run-graph'
 import { runRest } from '@/custom/loop/runcenter/api'
 import type { RunStatus } from '@/custom/loop/runcenter/types'
+// M6 画布并入（补遗⑤ R-C1 裁决）：/app/l 循环画布退役，RunCanvas（链路条/
+// 阶段流/事件编年/历史回放）作为详情区块挂入本页；loop 上下文按 graphId
+// 约定（loop-<loopId>）自 run 详情解析装载。
+import RunCanvas from '@/custom/ia2/components/flow/RunCanvas.vue'
+import { useLoopStore } from '@/custom/loop/store/loop'
+import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
+import { linkedTasksOfLoop } from '@/custom/ia2/adapters/flow'
+import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
+import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
 const runId = computed(() => String(route.params.runId ?? ''))
+
+// ── M6 循环画布区块（补遗⑤）：graphId = loop-<loopId> 约定解析 loop 上下文 ──
+
+const loopStore = useLoopStore()
+const runsStore = useRunCenterStore()
+const workspaceStore = useWorkspaceStore()
+
+/** 本 run 的 graphId（load() 捕获；instance.graphDefId 同值域兜底） */
+const runGraphId = ref<string | null>(null)
+const loopId = computed(() =>
+  runGraphId.value && runGraphId.value.startsWith('loop-') ? runGraphId.value.slice(5) : null)
+
+/** 装载 loop 画布上下文（契约驱动挂接任务/参与方；重复进入同 loop 幂等跳过） */
+watch(loopId, id => {
+  if (id && loopStore.currentLoop?.id !== id) void loopStore.fetchLoop(id)
+}, { immediate: true })
+
+/** 首事件时刻（ms；ISO∪ms 归一——与 WorkbenchView 原 loopLatestRunStartMs 同口径） */
+const firstEventMs = computed(() => {
+  let min = Number.POSITIVE_INFINITY
+  for (const e of events.value) {
+    const ms = typeof e.ts === 'number' ? e.ts : Date.parse(String(e.ts))
+    if (!Number.isNaN(ms) && ms < min) min = ms
+  }
+  return Number.isFinite(min) ? min : null
+})
+
+/** 挂接任务（契约 → 看板任务解析，WorkbenchView 同源实现） */
+const loopLinkedTasks = computed<CockpitTask[]>(() =>
+  loopId.value && loopStore.currentLoop?.id === loopId.value
+    ? linkedTasksOfLoop(loopStore.currentContracts ?? [], workspaceStore.tasks)
+    : [])
+
+/** 参与方（契约挂接任务的 assignee 去重；WorkbenchView loopParticipants 同口径） */
+const loopParticipants = computed(() => {
+  const byId = new Map((workspaceStore.tasks ?? []).map(x => [x.id, x]))
+  const seen = new Set<string>()
+  const out: Array<{ kind: 'agent'; name: string; role: string }> = []
+  for (const c of loopStore.currentContracts ?? []) {
+    const task = c.persistedTaskId ? byId.get(c.persistedTaskId) : null
+    if (task?.assignee && !seen.has(task.assignee)) {
+      seen.add(task.assignee)
+      out.push({ kind: 'agent', name: task.assignee, role: t('ia2.rc.roleExec') })
+    }
+  }
+  return out
+})
+
+/** 画布事件 → 详情页动线（看板/IDE 深链；open-timeline 即本页主时间轴，无需另行跳转） */
+function onCanvasOpenTask(taskId: string): void {
+  void router.push({ name: 'ia2.board', query: { task: taskId } })
+}
+function onCanvasOpenIde(taskId: string): void {
+  void router.push({ name: 'ide.shell', query: { task: taskId } })
+}
+function onCanvasGotoBoard(): void {
+  void router.push({ name: 'ia2.board' })
+}
 
 // ── 数据 ──
 const loading = ref(true)
@@ -78,6 +145,8 @@ async function load(): Promise<void> {
     seek(replayEvents.length)
     status.value = ((detail.instance as { status?: RunStatus }).status) ?? 'unknown'
     const specId = ((detail.instance as { graphDefId?: string }).graphDefId) || detail.graphId
+    // M6 循环画布区块：graphId 留存（loop-<loopId> 约定解析，非 loop 图为 null）
+    runGraphId.value = detail.graphId ?? specId ?? null
     const specDetail = await runRest.getSpec(specId)
     if (runId.value !== id) return
     spec.value = specDetail
@@ -193,6 +262,35 @@ function onSelectNode(id: string): void {
         />
       </div>
     </div>
+
+    <!-- M6 循环画布区块（补遗⑤ R-C1：/app/l 退役，RunCanvas 能力并入详情页；
+         非 loop 图（graphId 无 loop- 前缀）不渲染） -->
+    <section
+      v-if="loopId && loopStore.currentLoop?.id === loopId"
+      class="rd-view__canvas"
+      data-testid="rd-loop-canvas"
+    >
+      <h3 class="rd-view__canvas-title">{{ t('runcenter.detail.loopCanvas') }}</h3>
+      <RunCanvas
+        :loop="loopStore.currentLoop"
+        :loop-row="{
+          kind: 'loop', id: loopStore.currentLoop.id, name: loopStore.currentLoop.name,
+          stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0,
+          statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: null,
+        }"
+        :linked-tasks="loopLinkedTasks"
+        :latest-run-id="runId"
+        :latest-run-status="status"
+        :latest-run-start-ms="firstEventMs"
+        :live-connected="runsStore.connection === 'connected'"
+        :participants="loopParticipants"
+        @open-task="onCanvasOpenTask"
+        @open-ide="onCanvasOpenIde"
+        @reassign="onCanvasOpenTask"
+        @handle-task="onCanvasOpenTask"
+        @goto-board="onCanvasGotoBoard"
+      />
+    </section>
   </div>
 </template>
 
@@ -304,4 +402,29 @@ function onSelectNode(id: string): void {
 }
 .rd-view__timeline { min-height: 0; flex: 1; }
 .rd-view__inspector { max-height: 300px; flex-shrink: 0; }
+
+/* M6 循环画布区块：固定高度带内滚（RunCanvas 自带视图条与左右分区） */
+.rd-view__canvas {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  max-height: 560px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-standard, 6px);
+  overflow: hidden;
+}
+.rd-view__canvas-title {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.rd-view__canvas > :deep(.rc-view),
+.rd-view__canvas > :deep(*) {
+  flex: 1;
+  min-height: 0;
+}
 </style>

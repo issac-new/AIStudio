@@ -151,7 +151,8 @@ function onPanelJumpTask(taskId: string): void {
     if (row?.kind === 'room') { void router.push({ name: 'ia2.commsRoom', params: { roomId: row.id } }); return }
     if (row?.kind === 'group') { void router.push({ name: 'ia2.groupRoom', params: { roomId: row.id } }); return }
   }
-  void router.push({ path: '/ide', query: { task: taskId } })
+  // M2 IDE 归一：IDE 工作台在 /app/ide（名称 ide.shell 不变，query 透传）
+  void router.push({ path: '/app/ide', query: { task: taskId } })
 }
 </script>
 

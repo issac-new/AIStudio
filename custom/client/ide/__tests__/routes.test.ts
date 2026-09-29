@@ -1,35 +1,38 @@
 // overlay/custom/client/ide/__tests__/routes.test.ts
-// /ide 路由守门：存在性 / fullscreen meta / 注册开关语义。
-// 纯路由表断言用 router.resolve，不加载任何视图组件（懒组件保持函数态）。
+// /ide 兼容重定向守门（补遗⑤ M2 归一后）：
+//   路由本体 = ia2/routes.ts 内 IaShell 子路由 /app/ide（名称仍 ide.shell），
+//   本文件只产旧直链兼容重定向。纯路由表断言用 router.resolve/push，
+//   不加载任何视图组件（懒组件保持函数态）。
 import { describe, it, expect } from 'vitest'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { buildIdeRoutes } from '../routes'
 
+const stubIde = { path: '/app/ide', name: 'ide.shell', component: { render: () => null } }
+
 function makeRouter() {
-  return createRouter({ history: createMemoryHistory(), routes: buildIdeRoutes() })
+  return createRouter({ history: createMemoryHistory(), routes: [...buildIdeRoutes(), stubIde] })
 }
 
-describe('ide 路由（/ide 主页面）', () => {
-  it('/ide 可解析为 ide.shell', () => {
+describe('ide 路由（/ide 旧直链兼容重定向）', () => {
+  it('buildIdeRoutes 只含 /ide → /app/ide 重定向一条', () => {
+    const routes = buildIdeRoutes()
+    expect(routes).toHaveLength(1)
+    expect(routes[0].path).toBe('/ide')
+    expect(routes[0].redirect).toBe('/app/ide')
+  })
+
+  it('/ide 导航重定向到 /app/ide 且查询参数透传（?task=/?session= 深链免改）', async () => {
     const router = makeRouter()
-    const resolved = router.resolve('/ide')
-    expect(resolved.name).toBe('ide.shell')
+    await router.push('/ide?task=t_abc&session=s_1')
+    expect(router.currentRoute.value.path).toBe('/app/ide')
+    expect(router.currentRoute.value.name).toBe('ide.shell')
+    expect(router.currentRoute.value.query.task).toBe('t_abc')
+    expect(router.currentRoute.value.query.session).toBe('s_1')
   })
 
-  it('带 fullscreen meta（隐藏上游 AppSidebar，IDE 自带壳）', () => {
-    const router = makeRouter()
-    const resolved = router.resolve('/ide')
-    expect(resolved.meta.fullscreen).toBe(true)
-  })
-
-  it('懒组件保持函数态（不触发视图加载）', () => {
-    const [route] = buildIdeRoutes()
-    const loader = route.component as unknown as () => Promise<unknown>
-    expect(typeof loader).toBe('function')
-  })
-
-  it('路由树只含 /ide 一条（子功能不扩路由）', () => {
-    expect(buildIdeRoutes()).toHaveLength(1)
-    expect(buildIdeRoutes()[0].path).toBe('/ide')
+  it('/ide 不再承载组件（独立壳退役，本体在 ia2 子路由）', () => {
+    const [route] = buildIdeRoutes() as Array<{ component?: unknown; redirect?: unknown }>
+    expect(route.component).toBeUndefined()
+    expect(route.redirect).toBe('/app/ide')
   })
 })

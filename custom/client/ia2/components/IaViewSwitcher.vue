@@ -13,7 +13,9 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const isIde = computed(() => route.path === '/ide' || route.path.startsWith('/ide/'))
+// M2 IDE 归一后 IDE 工作台在 /app/ide（IaShell 子路由，名称仍 ide.shell）；
+// 旧 /ide 经重定向兜底，此判定以 /app 家族内路径为准。
+const isIde = computed(() => route.path === '/app/ide' || route.path.startsWith('/app/ide/'))
 
 function toggleView(): void {
   void router.push({ name: isIde.value ? 'ia2.collab' : 'ide.shell' })
