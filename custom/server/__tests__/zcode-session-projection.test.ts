@@ -152,20 +152,16 @@ describe('会话投影（ZcodeSessionProjection）', () => {
 })
 
 describe('socket 扇出（/zcode 命名空间）', () => {
-  it('C2 单 emit 房间并集（链式 .to）；io 缺席静默', () => {
-    // 链式 mock：.to(room) 返回可继续 .to/emit 的广播对象（C2 扇出形态）
-    const emissions: Array<{ name: string; rooms: string[] }> = []
-    const makeBroadcast = (rooms: string[]) => ({
-      to: (room: string) => makeBroadcast([...rooms, room]),
-      emit: (name: string) => { emissions.push({ name, rooms }) },
-    })
-    const fakeIo = { of: () => ({ to: (room: string) => makeBroadcast([room]) }) } as never
+  it('workspace 级必投 + 会话级加投；io 缺席静默', () => {
+    const rooms: string[] = []
+    const fakeIo = {
+      of: () => ({ to: (room: string) => ({ emit: (name: string) => { rooms.push(`${name}@${room}`) } }) }),
+    } as never
     emitZcodeProjectionEvent(fakeIo, { type: 'session.upserted', workspaceId: '/ws/proj', sessionId: 's1', session: {}, at: 0 })
-    emitZcodeProjectionEvent(fakeIo, { type: 'projection.status', workspacePath: undefined, workspaceId: '/ws/proj', reason: 'runtime_offline', at: 0 } as never)
-    // 每事件一次 emit；带 sessionId 的事件房间并集含 workspace+会话两级
-    expect(emissions).toEqual([
-      { name: 'zcode:event', rooms: ['zcode:/ws/proj', 'zcode:/ws/proj:s:s1'] },
-      { name: 'zcode:event', rooms: ['zcode:/ws/proj'] },
+    emitZcodeProjectionEvent(fakeIo, { type: 'projection.status', workspaceId: '/ws/proj', reason: 'runtime_offline', at: 0 })
+    expect(rooms).toEqual([
+      'zcode:event@zcode:/ws/proj', 'zcode:event@zcode:/ws/proj:s:s1',
+      'zcode:event@zcode:/ws/proj',
     ])
     expect(() => emitZcodeProjectionEvent(null, { type: 'projection.status', workspaceId: '/w', reason: 'engine_unreachable', at: 0 })).not.toThrow()
   })
@@ -311,17 +307,14 @@ describe('会话条目契约归一化（X5）', () => {
 
 
 describe('WS 房间细化到 task 级（multica §五）', () => {
-  it('带 taskId 事件投房间并集（C2 链式单 emit）；socket 订阅面注册', () => {
-    const emissions: Array<{ name: string; rooms: string[] }> = []
-    const makeBroadcast = (rooms: string[]) => ({
-      to: (room: string) => makeBroadcast([...rooms, room]),
-      emit: (name: string) => { emissions.push({ name, rooms }) },
-    })
-    const fakeIo = { of: () => ({ to: (room: string) => makeBroadcast([room]) }) } as never
+  it('带 taskId 事件加投 task 房间；socket 订阅面注册', () => {
+    const rooms: string[] = []
+    const fakeIo = {
+      of: () => ({ to: (room: string) => ({ emit: (name: string) => { rooms.push(`${name}@${room}`) } }) }),
+    } as never
     emitZcodeProjectionEvent(fakeIo, { type: 'mention.outcome', workspaceId: '/w', taskId: 't9', reason: 'queued' } as never)
-    expect(emissions.length).toBe(1)
-    expect(emissions[0].rooms).toContain('zcode:/w')
-    expect(emissions[0].rooms).toContain('zcode:/w:t:t9')
+    expect(rooms).toContain('zcode:event@zcode:/w')
+    expect(rooms).toContain('zcode:event@zcode:/w:t:t9')
     const sock = readFileSync(resolve(OVERLAY_ROOT, 'custom/server/zcode/projection-socket.ts'), 'utf8')
     expect(sock).toContain("socket.on('subscribe-task'")  // 服务端订阅监听（emit 是客户端侧动词）
   })

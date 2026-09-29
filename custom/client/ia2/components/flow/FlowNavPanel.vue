@@ -38,6 +38,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'select', sel: StreamSelection): void
   (e: 'create-room', name: string): void
+  (e: 'new-loop'): void
   (e: 'open-gov'): void
   /** 任务簇 chip 点击 → 看板预选（R4a） */
   (e: 'open-task', taskId: string): void
@@ -304,6 +305,9 @@ function submitCreateRoom(): void {
       </div>
       <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" @click="newMenuOpen = !newMenuOpen">
         ＋ {{ t('ia2.flow.newChat') }}
+      </button>
+      <button type="button" class="flow-nav__chip" data-testid="flow-new-loop" @click="emit('new-loop')">
+        ＋ {{ t('ia2.flow.newLoop') }}
       </button>
       <button type="button" class="flow-nav__chip flow-nav__chip--gov" data-testid="flow-gov" @click="emit('open-gov')">
         ⚙ {{ t('ia2.flow.manage') }}

@@ -140,7 +140,7 @@ function makeRouter(): Router {
         ],
       },
       // v12 双视图第二入口（场景条 IDE 直链的目标）
-      { path: '/app/ide', name: 'ide.shell', component: AREA },
+      { path: '/ide', name: 'ide.shell', component: AREA },
     ],
   })
 }

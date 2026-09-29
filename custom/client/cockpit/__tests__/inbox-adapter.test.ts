@@ -114,7 +114,7 @@ describe('mcpHealthToInbox（T3：MCP 降级信号）', () => {
     expect(items.every(i => i.kind === 'mcp')).toBe(true)
     expect(items.map(i => i.title)).toEqual(['MCP · broken-server', 'MCP · err-server'])
     expect(items[0].preview).toBe('connection refused')
-    expect(items[0].routeTarget).toEqual({ name: 'hermes.mcp' })
+    expect(items[0].routeTarget).toEqual({ path: '/app' })  // overlay[s2] 补遗⑤：MCP 运维页退役，落驾驶舱
   })
 
   it('mcp 排在 blocked 之后、clarify 之前', () => {

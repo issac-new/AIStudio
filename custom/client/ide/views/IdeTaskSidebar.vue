@@ -400,7 +400,8 @@ function onSearchClick(): void {
 }
 
 function onAutomationsClick(): void {
-  router.push({ name: 'hermes.jobs' })
+  // overlay[s2]（补遗⑤）：jobs 运维页路由已退役（patch 513）——路由存在才导航
+  if (router.hasRoute('hermes.jobs')) router.push({ name: 'hermes.jobs' })
 }
 
 onMounted(async () => {
@@ -427,7 +428,8 @@ onMounted(async () => {
         </span>
         <kbd class="ide-taskbar__kbd">⌘K</kbd>
       </button>
-      <button type="button" class="ide-taskbar__action" data-testid="ide-task-automations" @click="onAutomationsClick">
+      <!-- overlay[s2]（补遗⑤ A 档）：jobs 页退出用户可达面，入口隐藏（路由恢复即回生） -->
+      <button v-if="router.hasRoute?.('hermes.jobs') ?? false" type="button" class="ide-taskbar__action" data-testid="ide-task-automations" @click="onAutomationsClick">
         <span class="ide-taskbar__action-label">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8" /><rect x="4" y="8" width="16" height="12" rx="2" /><path d="M8 14h8" /></svg>
           {{ t('ide.task.automations') }}

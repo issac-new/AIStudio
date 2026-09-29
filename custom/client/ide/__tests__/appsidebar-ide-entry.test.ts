@@ -1,55 +1,78 @@
 // overlay/custom/client/ide/__tests__/appsidebar-ide-entry.test.ts
-// 守门（V5 补遗⑤ 后口径）：主侧栏一级入口仅「驾驶舱」+系统折叠组——IDE 一级
-// 入口已随 M2 移除（IDE 归一 /app/ide 子页面），系统组三入口（技能用量/主题/
-// 宠物商店）已随 S1 摘除。
+// 守门（补遗⑤ M2 后口径反转）：主侧边栏（上游 AppSidebar.vue，经 patch 072 注入）
+// 的 IDE 工作台一级入口已移除——IDE 归一为驾驶舱子路由 /app/ide，进入路径 =
+// 页头视图切换器（IaViewSwitcher）与任务 ⌨IDE 深链；/ide 旧直链走兼容重定向。
 //
-// 断言对象改为本仓 patch 文件（脱离共享注入树——注入态与检出分支不保证同步，
-// 读共享树会随并行 clean/inject 翻树假红/假绿；2026-09-29 驾驶舱聚焦轮实测）。
+// 断言对象改为仓库内 patch 文件本体（非注入态共享树——注入态随并行会话
+// inject/clean 漂移，非Hermetic；patch 文件是单一事实源，漂移当场 fail）。
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
-const OVERLAY_ROOT = resolve(__dirname, '../../../..')
+// 自本文件 3 级到 overlay 根（custom/client/ide/__tests__ → overlay）
+const OVERLAY_ROOT = '../../../..'
 
-function readPatch(name: string): string {
-  return readFileSync(resolve(OVERLAY_ROOT, 'patches', name), 'utf8')
+function readPatch(): string {
+  return readFileSync(
+    resolve(__dirname, `${OVERLAY_ROOT}/patches/072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch`),
+    'utf8',
+  )
 }
 
-describe('AppSidebar 单一级入口守门（⑤ M2/S1 后口径，patch 072/519）', () => {
-  const p072 = readPatch('072-cockpit-packages_client_src_components_layout_AppSidebar.vue.patch')
-  const p519 = readPatch('519-client-appsidebar-system-trim.patch')
+describe('AppSidebar IDE 一级入口（patch 072 守门，M2 后 = 移除）', () => {
+  const src = readPatch()
 
-  it('M2：IDE 一级入口已移除——072 无 ide.shell 路由链接与 isIdeArea', () => {
-    expect(p072).not.toContain(`:to="{ name: 'ide.shell' }"`)
-    expect(p072).not.toContain('isIdeArea')
-    expect(p072).not.toContain('overlay[ide]')
+  it('IDE 一级入口零残留：无 ide.shell RouteLinkItem、无 isIdeArea 高亮', () => {
+    expect(src).not.toContain(`:to="{ name: 'ide.shell' }"`)
+    expect(src).not.toContain('isIdeArea')
+    // 移除说明留在注释行（overlay[ide] 注释标记仍可出现于注释，但不得有入口实体）
+    expect(src).not.toMatch(/RouteLinkItem[^<]*ide\.shell/)
   })
 
-  it('驾驶舱唯一一级入口在位（ia2.collab）+ 系统折叠组结构不变', () => {
-    expect(p072).toContain(`:to="{ name: 'ia2.collab' }"`)
-    expect(p072).toContain('sidebar-system-toggle')
-    expect(p072).toContain('sidebar-system-items')
+  it('驾驶舱仍为唯一一级入口（ia2.collab），其后系统折叠组', () => {
+    expect(src).toContain(`:to="{ name: 'ia2.collab' }"`)
+    expect(src).toContain('sidebar-system-toggle')
+    const ia2Idx = src.indexOf(`:to="{ name: 'ia2.collab' }"`)
+    const sysIdx = src.indexOf('sidebar-system-toggle')
+    const logsIdx = src.indexOf(`:to="{ name: 'hermes.logs' }"`)
+    expect(sysIdx).toBeGreaterThan(ia2Idx)
+    expect(logsIdx).toBeGreaterThan(sysIdx)
   })
 
-  it('S1：系统组三入口摘除——519 含三处 RouteLinkItem 删除与数组收缩', () => {
-    const removedLines = p519.split('\n').filter(l => l.startsWith('-'))
-    for (const name of ['hermes.skillsUsage', 'hermes.theme', 'hermes.petdex']) {
-      expect(removedLines.some(l => l.includes(`:to="{ name: '${name}' }"`)), name).toBe(true)
+  it('旧一级入口与底部返回 hack 零残留（patch 299 守门延续；断言新增行无残留）', () => {
+    // patch 文件含 '-' 移除行属正常（本 patch 即退役载体）；断言 '+' 新增行零残留
+    expect(src).not.toMatch(/^\+.*name: 'hermes\.cockpit'/m)
+    expect(src).not.toMatch(/^\+.*name: 'hermes\.loop'/m)
+    expect(src).not.toMatch(/^\+.*sidebar-return-tab/m)
+  })
+
+  it('系统分组：折叠容器 display:contents + 命中系统页默认展开', () => {
+    expect(src).toMatch(/^\+\s*\.sidebar-system-items\s*\{/m)
+    expect(src).toMatch(/^\+\s*display:\s*contents;/m)
+    expect(src).toMatch(/^\+const systemOpen = ref\(/m)
+  })
+
+  it('S1（补遗⑤ A 档）：主题/宠物商店/技能用量入口 v-if=false 摘面（路由保留）', () => {
+    // 三个入口的 RouteLinkItem 行新增态带 v-if="false"（入口隐藏、路由不动）
+    for (const name of ['hermes.theme', 'hermes.petdex', 'hermes.skillsUsage']) {
+      const re = new RegExp(String.raw`^\+\s*v-if="false"
+\s*class="nav-item"
+\s*:to="\{ name: '${name}' \}"`, 'm')
+      expect(src, name).toMatch(re)
     }
-    // SYSTEM_ROUTE_NAMES 收缩后的数组不含三名（补丁后态）
-    // 补丁后态 = 上下文行(空格) + 新增行(+)；删除行(-)不计
-    const after = p519.split('\n').filter(l => (l.startsWith('+') || l.startsWith(' ')) && l.includes('"hermes.'))
-    const joined = after.join('\n')
-    expect(joined).not.toContain('hermes.skillsUsage')
-    expect(joined).not.toContain('hermes.theme')
-    expect(joined).not.toContain('hermes.petdex')
-    expect(joined).toContain('"hermes.logs"')
-    expect(joined).toContain('"hermes.settings"')
-  })
-
-  it('series 登记：519/520 在列', () => {
-    const s = readFileSync(resolve(OVERLAY_ROOT, 'patches', 'series'), 'utf8')
-    expect(s).toContain('519-client-appsidebar-system-trim.patch')
-    expect(s).toContain('520-client-webpet-off.patch')
+    // 系统组其余三项保留：logs/usage/settings——usage/settings 不在 patch 任何
+    // hunk 内（上游原文未被触碰即"保留"的保证）；logs 在上下文行且其 :to 行前
+    // 无 v-if="false" 摘面
+    const logsIdx = src.indexOf(`:to="{ name: 'hermes.logs' }"`)
+    expect(logsIdx).toBeGreaterThan(-1)
+    expect(src.slice(Math.max(0, logsIdx - 80), logsIdx)).not.toContain('v-if="false"')
+    expect(src).not.toContain(`v-if="false"\n        class="nav-item"\n        :to="{ name: 'hermes.usage' }"`)
+    expect(src).not.toContain(`v-if="false"\n        class="nav-item"\n        :to="{ name: 'hermes.settings' }"`)
+    // superadmin 条件项语义不动：performance/profiles（含 versionPreview 条件）
+    // 均不在 patch hunks 内（上游原文未触碰）；若日后被摘面须显式 v-if=false，
+    // 在此断言为零容忍
+    for (const name of ['hermes.performance', 'hermes.profiles', 'hermes.versionPreview']) {
+      expect(src).not.toContain(`v-if="false"\n        class="nav-item"\n        :to="{ name: '${name}' }"`)
+    }
   })
 })

@@ -30,7 +30,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { usePlatformsStore } from '../store/platforms'
 import { buildAgentRoster } from '../adapters/agents'
 import {
-  linkedTaskIdsOfSession, mergeFeed,
+  linkedTaskIdsOfSession, linkedTasksOfLoop, mergeFeed,
   type StreamSelection,
 } from '../adapters/flow'
 import { buildAttention, loopRunActivity, type AttentionRow, type LoopActivity } from '../adapters/activity'
@@ -158,7 +158,7 @@ const routeSel = computed<StreamSelection | null>(() => {
     case 'ia2.commsRoom': return typeof route.params.roomId === 'string' ? { kind: 'room', id: route.params.roomId } : null
     case 'ia2.groupRoom': return typeof route.params.roomId === 'string' ? { kind: 'group', id: route.params.roomId } : null
     case 'ia2.collabSession': return typeof route.params.sessionId === 'string' ? { kind: 'chat', id: route.params.sessionId } : null
-    // V5 补遗⑤ M6：ia2.loopCanvas 已降为重定向（运行详情承接），此处不再分派
+    // M6：ia2.loopCanvas（/app/l）路由已退役——循环画布能力并入 /app/runs/:runId
     default: return null
   }
 })
@@ -173,8 +173,10 @@ const activeSel = computed<StreamSelection | null>(() => routeSel.value ?? defau
 
 watch(activeSel, sel => flow.select(sel), { immediate: true })
 
-// V5 补遗⑤ M6：循环画布路由退役（重定向运行中心），循环选中装载逻辑随之移除；
-// loopStore.currentEvents 仍供右栏动态（feedRows）消费。
+// 循环选中时装载该循环的契约/事件（运行画布与右栏挂接任务/动态共用）
+watch(activeSel, sel => {
+  if (sel?.kind === 'loop' && loopStore.currentLoop?.id !== sel.id) void loopStore.fetchLoop(sel.id)
+}, { immediate: true })
 
 // ── 右栏数据（任务与决策恒驻）──
 
@@ -184,6 +186,9 @@ const tasksForShow = computed(() => workspace.tasks)
 const linkedTasks = computed<CockpitTask[]>(() => {
   const sel = activeSel.value
   if (!sel) return recentOpenTasks.value
+  if (sel.kind === 'loop') {
+    return linkedTasksOfLoop(loopStore.currentContracts ?? [], tasksForShow.value)
+  }
   const ids = new Set(linkedTaskIdsOfSession(sel, tasksForLink.value))
   return tasksForShow.value.filter(x => ids.has(x.id))
 })
@@ -278,7 +283,7 @@ function onOpenAttention(row: AttentionRow): void {
     return
   }
   if (row.runId) {
-    // V5 补遗⑤ M6：运行行直落运行详情（原经循环画布中转，画布已并入详情页）
+    // M6：运行行落运行详情（原 /app/l 循环画布已退役并并入详情页）
     void router.push({ name: 'ia2.runDetail', params: { runId: row.runId } })
     return
   }
@@ -366,15 +371,11 @@ function onCanvasInvite(): void {
   if (sel) flow.openGov('session', sel.kind === 'loop' ? undefined : sel.id)
 }
 
-// ── 中栏 · 循环观测落点（V5 补遗⑤ M6：画布并入运行详情）──
-
-/** 左栏循环行点击 → 该循环最新 run 的运行详情（RunCanvas 已内嵌详情页）；
- *  无 run（从未跑过）落运行列表页。run.graphId === `loop-<loopId>`（graph-compiler 约定） */
-function openLoopLatestRun(loopId: string): void {
-  const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${loopId}`)
-  if (latest) void router.push({ name: 'ia2.runDetail', params: { runId: latest.runId } })
-  else void router.push({ name: 'ia2.runs' })
-}
+// ── 中栏 · 运行画布数据（循环面）──
+// M6（补遗⑤）：/app/l 循环画布中栏分支与 loop* 派生（耗时徽章/参与方等）
+// 随路由退役移除——RunCanvas 能力并入 /app/runs/:runId 运行详情
+// （RunDetailView 内嵌，同口径计算在彼处）。onSelect 循环分组落点 =
+// 最新 run 详情（graphId === `loop-<loopId>`，graph-compiler 约定）。
 
 /** 中栏独立窗口：弹出当前对象路由（standalone=1 精简壳；合入在独立窗内） */
 function onPopout(): void {
@@ -392,7 +393,13 @@ function onSelect(sel: StreamSelection): void {
   }
   else if (sel.kind === 'group') void router.push({ name: 'ia2.groupRoom', params: { roomId: sel.id } })
   else if (sel.kind === 'chat') void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
-  else openLoopLatestRun(sel.id)
+  else {
+    // M6：循环分组点击落运行详情（/app/l 循环画布已退役并入 RunDetailView）。
+    // graphId === `loop-<loopId>`（graph-compiler 约定）取最新 run；无 run 落运行列表。
+    const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${sel.id}`)
+    if (latest) void router.push({ name: 'ia2.runDetail', params: { runId: latest.runId } })
+    else void router.push({ name: 'ia2.runs' })
+  }
 }
 
 /** 任务簇 chip → 看板预选（R4a） */
@@ -416,6 +423,12 @@ async function onCreateRoom(name: string): Promise<void> {
   } catch {
     // store 侧已置 error（矩阵连接未就绪等）；此处静默——列表/态势呈现状态
   }
+}
+
+function onNewLoop(): void {
+  // S5（补遗⑤）：/app/eng 编排页退役——＋新循环落运行中心（空态三步引导在；
+  // 循环实际由脚本建，编排组件库保留备用）
+  void router.push({ name: 'ia2.runs' })
 }
 
 // ── v14 统一聊天：新建三型 + 群聊管理（补偿被隐藏画布侧栏的入口）──
@@ -481,6 +494,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         :loop-activity="loopActivity"
         @select="onSelect"
         @create-room="onCreateRoom"
+        @new-loop="onNewLoop"
         @open-gov="flow.openGov()"
         @open-task="onNavOpenTask"
         @jump-ide="onNavJumpIde"
@@ -528,7 +542,9 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         @open-ide="onOpenIde"
         @invite="onCanvasInvite"
       />
-      <!-- V5 补遗⑤ M6：RunCanvas 中栏分支移除——循环观测落运行详情页（组件内嵌复用） -->
+      <!-- M6（补遗⑤）：循环 → RunCanvas 中栏分支随 /app/l 退役移除——
+           RunCanvas 能力并入 /app/runs/:runId 运行详情（RunDetailView 内嵌），
+           组件本体在 loop/runcenter/views/RunDetailView.vue 消费 -->
       <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
         <div class="wb__canvas-ph-body">
           <p class="wb__canvas-ph-tit">未选择会话或循环</p>

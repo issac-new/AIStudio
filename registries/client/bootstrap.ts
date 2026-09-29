@@ -30,18 +30,15 @@ export async function bootstrapClient(app: App): Promise<void> {
   }
   // 2026-09-18 统一导航 Task 5：/hermes/loop 路由家族整体退役，
   // loop 模块瘦身为纯组件/店铺库——runcenter 视图改由 ia2 运行场景（ia2.routes）挂载。
-  // IDE 工作台主页面（V5 补遗⑤ M2 归一为 /app/ide，驾驶舱子页面）：
-  // codex 底座 + zcode 会话 UI 全量复用。注册顺序无关守卫，仅要求在下方
-  // addRoute 循环（mount 前）之前。
+  // IDE 工作台主页面（/ide）：codex 底座 + zcode 会话 UI 全量复用。
+  // 注册顺序无关守卫，仅要求在下方 addRoute 循环（mount 前）之前。
   if (features.ide) {
     const { registerIde } = await import('../../custom/client/ide')
     await registerIde(app)
   } else {
-    // patch 276/277 的登录守卫硬指向 /app/ide：开关关闭时注册重定向兜底，
-    // 避免登录后命中无匹配路由白屏（2026-09-17 24h 评审；⑤ M2 两路径都兜）。
+    // patch 276/277 的登录守卫硬指向 /ide：开关关闭时注册重定向兜底，
+    // 避免登录后命中无匹配路由白屏（2026-09-17 24h 评审）。
     router.addRoute({ path: '/ide', redirect: '/app' })
-    router.addRoute({ path: '/app/ide', redirect: '/app' })
-    router.addRoute({ path: '/app/ide/:rest(.*)', redirect: '/app' })
   }
   // P3 Task 3：六区域新 IA（/app 路由树）。无守卫依赖，仅要求在 mount 前完成。
   // 2026-09-18 统一导航 Task 5：旧 loop 深链兼容守卫随 /hermes/loop 家族退役删除；
@@ -56,6 +53,29 @@ export async function bootstrapClient(app: App): Promise<void> {
   // 把 registry 收集的路由加入上游 router(addRoute 必须在 mount 前)。
   for (const route of getRegisteredRoutes()) {
     router.addRoute(route)
+  }
+
+  // ── S3（补遗⑤ §13.4 B 档，2026-09-29）：未用路由族按开关摘除（默认关）──
+  // removeRoute 对不存在路由幂等静默；组件/视图/API 全保留，开关开（VITE_CUSTOM_*=true）
+  // 即回生，无需改代码。桌面宠物路由（desktop.pet）与 WebPet 浮层开关同源（pet）。
+  if (!features.ekko) {
+    for (const name of ['ekko.memory', 'ekko.skills', 'ekko.mcp', 'ekko.settings']) {
+      router.removeRoute?.(name)
+    }
+  }
+  if (!features.agentManager) {
+    // /studio/agents 配置中心（含 codingAgent.config 分区路由）
+    router.removeRoute?.('hermes.agentManager')
+    router.removeRoute?.('codingAgent.config')
+  }
+  if (!features.externalLinks) {
+    // 外链页三路由：/share/group-chat、/group-chat-link、/desktop-chat
+    router.removeRoute?.('share.groupChat')
+    router.removeRoute?.('groupChat.link')
+    router.removeRoute?.('desktop.chat')
+  }
+  if (!features.pet) {
+    router.removeRoute?.('desktop.pet')
   }
 
   // 注册需要挂载为 cockpit 子路由的动态路由（如 matrix-chat）
