@@ -144,3 +144,91 @@ export function fetchGovernanceLedger(): Promise<GovernanceLedger> {
 export function fetchMetricsDefs(): Promise<GovernanceMetricsDefs> {
   return request<GovernanceMetricsDefs>('/api/governance/metrics-defs')
 }
+
+// ── 4A 治理层运行态（第二期 ②③④⑥）──
+export interface UnitUsage {
+  unitId: string
+  kind: string
+  mapped: boolean
+  source: 'kanban-assignee' | 'squad-ledger' | 'untracked'
+  lastUsedAt: number | null
+  daysSinceUse: number | null
+  note?: string
+}
+export interface UsageReport {
+  ok: boolean
+  perUnit: UnitUsage[]
+  unmappedAssignees: Array<{ assignee: string; total: number; lastActiveAt: number | null }>
+  zeroUseCandidates: UnitUsage[]
+}
+export interface SloTierReport {
+  tier: string
+  target: { successRate: number; windowDays: number; minSamples: number; budgetAction: string } | null
+  closed: number
+  done: number
+  successRate: number | null
+  p95DurationS: number | null
+  exhausted: boolean
+  note?: string
+}
+export interface SloReport {
+  ok: boolean
+  budgetMode: string
+  windowDays: number
+  tiers: SloTierReport[]
+  unmapped: { closed: number; done: number; successRate: number | null; assignees: string[] }
+  dataAvailable: boolean
+}
+export interface CostBucket {
+  key: string
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  costIdle: number
+  costPeak: number
+  unpricedRows: number
+}
+export interface CostSummary {
+  ok: boolean
+  days: number
+  rows: number
+  currency: string
+  byProvider: CostBucket[]
+  byProfile: CostBucket[]
+  total: { calls: number; inputTokens: number; outputTokens: number; costIdle: number; costPeak: number; unpricedRows: number }
+  pricingMissing: string[]
+  dbFound: boolean
+}
+export interface AuditEvent {
+  ts: number
+  source: 'approvals' | 'domain' | 'provider' | 'kanban'
+  actor: string
+  action: string
+  target: string
+  result: string
+  ref?: string
+}
+export interface AuditLogResult {
+  ok: boolean
+  sources: Array<{ id: string; available: boolean; note?: string }>
+  total: number
+  events: AuditEvent[]
+}
+
+export function fetchUsage(): Promise<UsageReport> {
+  return request<UsageReport>('/api/governance/usage')
+}
+export function fetchSlo(): Promise<SloReport> {
+  return request<SloReport>('/api/governance/slo')
+}
+export function fetchCostSummary(days = 30): Promise<CostSummary> {
+  return request<CostSummary>(`/api/governance/cost-summary?days=${days}`)
+}
+export function fetchAuditLog(opts?: { sources?: string[]; q?: string; limit?: number }): Promise<AuditLogResult> {
+  const params = new URLSearchParams()
+  if (opts?.sources?.length) params.set('sources', opts.sources.join(','))
+  if (opts?.q) params.set('q', opts.q)
+  if (opts?.limit) params.set('limit', String(opts.limit))
+  const qs = params.toString()
+  return request<AuditLogResult>(`/api/governance/audit-log${qs ? `?${qs}` : ''}`)
+}
