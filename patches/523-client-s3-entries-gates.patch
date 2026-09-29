@@ -1,0 +1,78 @@
+diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
+--- a/packages/client/src/components/hermes/chat/ChatInput.vue
++++ b/packages/client/src/components/hermes/chat/ChatInput.vue
+@@ -16,6 +16,8 @@
+ import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
+ import { extractClipboardFiles } from '@/utils/clipboard-files'
+ import VoiceDialogueControls from './VoiceDialogueControls.vue'
++// overlay[s3]（补遗⑤）：语音入口默认关（VITE_CUSTOM_VOICE 再开）——设置菜单项/作曲麦克风/语音舞台三处同门
++import { features } from '@/custom/features'
+ import BundleCreateModal from './BundleCreateModal.vue'
+ import { BRIDGE_SESSION_COMMAND_DEFINITIONS } from '@/utils/hermes/bridge-session-commands'
+ import { clampChatInputHeight, isMobileChatInputViewport } from '@/utils/chat-input-height'
+@@ -484,14 +486,15 @@
+ }
+ 
+ const inputSettingsOptions = computed<DropdownOption[]>(() => [
+-  {
++  // overlay[s3]：语音模式入口随 features.voice 摘除（关时不留死菜单项）
++  ...(features.voice ? [{
+     label: t('realtimeVoice.mode'),
+     key: 'voiceMode',
+     icon: () => h('span', {
+       class: 'settings-voice-mode-icon',
+       'aria-hidden': 'true',
+     }, '◉'),
+-  },
++  }] : []),
+   {
+     label: t('chat.showToolCalls'),
+     key: 'toolTrace',
+@@ -1446,6 +1449,7 @@
+         </div>
+         <div class="input-actions">
+           <VoiceDialogueControls
++            v-if="features.voice"
+             :status="voiceInput.dialogue.status.value"
+             :transcript="voiceInput.transcript.value"
+             :error="voiceInput.error.value"
+diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
+--- a/packages/client/src/views/hermes/AgentManagerView.vue
++++ b/packages/client/src/views/hermes/AgentManagerView.vue
+@@ -1,5 +1,7 @@
+ <script setup lang="ts">
+ import { getAgentUpdatePolicies, setAgentAutoUpdate, type AgentUpdatePolicyState } from '@/api/coding-agents'
++// overlay[s3]（补遗⑤）：ekko 配置入口默认关（VITE_CUSTOM_EKKO 再开）
++import { features } from '@/custom/features'
+ import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue'
+ import { useRoute, useRouter } from 'vue-router'
+ import { useI18n } from 'vue-i18n'
+@@ -517,7 +519,7 @@
+           </NAlert>
+ 
+           <div class="coding-agent-grid">
+-            <section class="agent-card coding-agent-card" data-testid="agent-card-ekko">
++            <section v-if="features.ekko" class="agent-card coding-agent-card" data-testid="agent-card-ekko">
+               <header class="agent-card-header compact">
+                 <div class="agent-identity">
+                   <img :src="'/coding-agents/ekko-agent.png'" alt="" class="agent-logo" />
+diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
+--- a/packages/client/src/router/index.ts
++++ b/packages/client/src/router/index.ts
+@@ -1,4 +1,5 @@
+ import { createRouter, createWebHashHistory } from 'vue-router'
++import { features } from '@/custom/features'
+ import { hasApiKey, isStoredSuperAdmin } from '@/api/client'
+ import { hasDesktopBrowserBridge } from '@/utils/desktop-bridge'
+ import { resolveLoginRedirect } from '@/utils/login-redirect'
+@@ -266,6 +267,10 @@
+ }
+ 
+ router.beforeEach(async (to, _from, next) => {
++  // overlay[s3]（补遗⑤）：ekko 配置页与外链分享页默认关（VITE_CUSTOM_EKKO /
++  // VITE_CUSTOM_EXTERNAL_LINKS 再开；与 bootstrap externalLinks 摘除同键——router 守卫为第二层防线）
++  if (to.meta.ekkoConfig && !features.ekko) { next("/app"); return }
++  if ((to.name === "share.groupChat" || to.name === "groupChat.link") && !features.externalLinks) { next("/app"); return }
+   await ensureDesktopAuth()
+ 
+   if (to.name === 'codingAgent.config' && ['plugins', 'presets'].includes(String(to.params.section)) && to.params.agentId !== 'dsh') {
