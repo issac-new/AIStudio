@@ -77,3 +77,70 @@ export function runDomainAudit(run?: string): Promise<{ ok: boolean; run: string
 export function fetchDomainAudit(): Promise<DomainAuditSummary> {
   return request('/api/governance/domains')
 }
+
+// ── 4A 治理层（能力台账 + 语义指标层；spec 2026-09-29 §3.4）──
+export interface LedgerUnit {
+  id: string
+  capability: string
+  primary: boolean
+  kind: string
+  owner: string
+  lifecycle: string
+  sloTier: string
+  skills: string[]
+  refs?: { file?: string; note?: string }
+  reviewedAt: string
+}
+export interface LedgerCapability {
+  id: string
+  domain: string
+  name: string
+  object: string
+  action: string
+  importance: string
+  maturity: string
+}
+export interface LedgerDoc {
+  version: number
+  reviewedAt: string
+  domains: Array<{ id: string; name: string; owner: string }>
+  capabilities: LedgerCapability[]
+  units: LedgerUnit[]
+}
+export interface LedgerStats {
+  counts: { domains: number; capabilities: number; units: number }
+  byKind: Record<string, number>
+  byLifecycle: Record<string, number>
+  bySloTier: Record<string, number>
+  stale: Array<{ id: string; reviewedAt: string; days: number }>
+  primaryGaps: string[]
+}
+export interface GovernanceLedger {
+  ok: boolean
+  exists: boolean
+  path: string | null
+  problems: string[]
+  doc: LedgerDoc | null
+  stats: LedgerStats | null
+}
+export interface MetricsDefsDoc {
+  version: number
+  reviewedAt: string
+  verdicts: Array<{ id: string; label: string; semantics: string }>
+  metrics: Array<{ id: string; name: string; formula: string; dimensions: string[]; permission: string; authority: string; status: string }>
+}
+export interface GovernanceMetricsDefs {
+  ok: boolean
+  exists: boolean
+  path: string | null
+  problems: string[]
+  doc: MetricsDefsDoc | null
+}
+
+export function fetchGovernanceLedger(): Promise<GovernanceLedger> {
+  return request<GovernanceLedger>('/api/governance/ledger')
+}
+
+export function fetchMetricsDefs(): Promise<GovernanceMetricsDefs> {
+  return request<GovernanceMetricsDefs>('/api/governance/metrics-defs')
+}

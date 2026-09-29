@@ -23,6 +23,7 @@ import { resolve } from 'path'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
+import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats } from './governance-ledger'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -164,6 +165,35 @@ registerDomainAudit({
   docText,
   approvalHistoryCount: () => { try { return queryApprovalLog(500).length } catch { return 0 } },
   router,
+})
+
+// ---- 4A 治理层只读投影（spec 2026-09-29 §3.4；单一事实源 runtime/governance/*.yaml）----
+
+router.get('/ledger', async (ctx) => {
+  const res = loadCapabilityLedger()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'capability-ledger.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = {
+    ok: true,
+    exists: true,
+    path: res.path,
+    problems: res.problems,
+    doc: res.doc,
+    stats: res.doc ? deriveLedgerStats(res.doc) : null,
+  }
+})
+
+router.get('/metrics-defs', async (ctx) => {
+  const res = loadMetricsDefs()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'metrics.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
 })
 
 export const governanceRoutes = router
