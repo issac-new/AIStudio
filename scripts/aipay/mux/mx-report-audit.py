@@ -128,7 +128,16 @@ for g, k in GATE_KEYS.items():
     in_state = bool(state_keys.get(k))
     # 报告闸门卡状态：passed 显示"✓ 已通过"
     m = re.search(rf'{g}</div>\s*<div class="gate-state">([^<]+)', rep)
-    rep_pass = bool(m and '已通过' in m.group(1))
+    rep_state = m.group(1) if m else ''
+    rep_pass = '已通过' in rep_state
+    # 声明式判回滚（独立审计判词，如 run2 G5/R-A1）：state 落键保留原值（执行流水
+    # 不改写），判定以报告+处置表为准——此类 state≠report 是声明更正，降 WARN 不 FAIL。
+    if '判回滚' in rep_state:
+        if rep_pass:
+            fails.append(f'{g} 判回滚卡不得显示已通过')
+        else:
+            warns.append(f'{g} 声明判回滚（state 落键保留原值为执行流水，判定以报告/处置表为准）')
+        continue
     if in_state != rep_pass:
         fails.append(f'{g} 状态不一致：state={in_state} report={rep_pass}（报告疑为闸前旧生成，须重生成）')
 
