@@ -20,6 +20,7 @@ import LedgerSection from '@/custom/governance/components/LedgerSection.vue'
 import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
 import AuditSection from '@/custom/governance/components/AuditSection.vue'
 import StateModelSection from '@/custom/governance/components/StateModelSection.vue'
+import ChangeGovernanceSection from '@/custom/governance/components/ChangeGovernanceSection.vue'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
@@ -188,6 +189,9 @@ onMounted(() => void refresh())
     <RuntimeSection />
     <AuditSection />
     <StateModelSection />
+
+    <!-- 变更治理（调研落地轮 2026-09-29）：分级评审/五维影响/三级冻结窗口/管控基准 -->
+    <ChangeGovernanceSection />
 
     <div class="ia-gov__main">
       <!-- 左：工件清单 -->

@@ -106,6 +106,7 @@ const groupedItems = computed(() => {
     | { type: 'date'; date: string }
     | { type: 'message'; event: any; showSender: boolean; isContinuation: boolean; isLastInSection: boolean }
     | { type: 'stateEvent'; event: any }
+    | { type: 'agentBadge'; event: any; label: string }
     | { type: 'readMarker' }
   > = []
   let lastSenderId = ''
@@ -120,6 +121,17 @@ const groupedItems = computed(() => {
       result.push({ type: 'date', date: dateStr })
       lastDateStr = dateStr
       lastSenderId = ''
+    }
+
+    // v14 P2D：桥 agent 徽章（com.swarmstudio.agent.message）——正文已随 m.text
+    // 渲染，这里只投影一条安静的来源标识行（agent 名/类型/run 关联），不参与分组
+    if (event?.getType?.() === 'com.swarmstudio.agent.message') {
+      const c = (event.getContent?.() ?? {}) as { agentName?: string; agent?: string; runId?: string | null }
+      const label = [c.agentName || c.agent || 'agent', c.runId ? `run ${String(c.runId).slice(0, 8)}` : '']
+        .filter(Boolean).join(' · ')
+      result.push({ type: 'agentBadge', event, label: `🤖 ${label}` })
+      lastSenderId = ''
+      continue
     }
 
     // 状态事件(create/member):渲染为系统通知,不参与消息分组
@@ -379,10 +391,15 @@ watch(
       <p class="matrix-timeline-empty-title">{{ emptyState.title }}</p>
       <p class="matrix-timeline-empty-desc">{{ emptyState.description }}</p>
     </div>
-    <template v-for="(item, idx) in groupedItems" :key="item.type === 'date' ? 'date-' + item.date : item.type === 'readMarker' ? 'read-marker-' + idx : item.type === 'stateEvent' ? 'state-' + item.event.getId() : 'msg-' + item.event.getId()">
+    <template v-for="(item, idx) in groupedItems" :key="item.type === 'date' ? 'date-' + item.date : item.type === 'readMarker' ? 'read-marker-' + idx : item.type === 'stateEvent' ? 'state-' + item.event.getId() : item.type === 'agentBadge' ? 'agent-badge-' + item.event.getId() : 'msg-' + item.event.getId()">
       <MatrixDateSeparator v-if="item.type === 'date'" :date="item.date" />
       <MatrixReadMarker v-if="item.type === 'readMarker'" />
       <MatrixStateEvent v-if="item.type === 'stateEvent'" :event="item.event" />
+      <div
+        v-if="item.type === 'agentBadge'"
+        class="mx_AgentBadge"
+        :data-testid="`agent-badge-${item.event.getId()}`"
+      >{{ item.label }}</div>
       <div
         v-if="item.type === 'message'"
         :data-event-id="item.event.getId()"
@@ -492,5 +509,17 @@ watch(
 @keyframes highlight-flash {
   0% { background: rgba(var(--accent-primary-rgb), 0.15); }
   100% { background: transparent; }
+}
+
+// v14 P2D：桥 agent 徽章行（com.swarmstudio.agent.message）——安静的系统级标识
+.mx_AgentBadge {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 24px;
+  margin: 2px 0;
+  word-break: break-word;
+  opacity: .85;
 }
 </style>
