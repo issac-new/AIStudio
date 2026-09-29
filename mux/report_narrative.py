@@ -15,6 +15,7 @@ ESC = lambda s: H.escape(str(s), quote=True)
 
 
 def _issue_counts(evid: Path) -> Counter:
+    """（返回 (Counter, ledger_found) 语义由调用方组合——缺键=0 次≠数据缺失）"""
     """问题单台账实算：ISSUE|类型|主体|描述 → 按类型计数。"""
     f = evid / 'issues.log'
     c: Counter = Counter()
@@ -76,6 +77,12 @@ def _loop_diagram(items, center_label, back_edge, caption, accent='#2563eb'):
 def render_narrative(state: dict, evid: Path) -> str:
     """叙事层 HTML：价值主张 hero → 挑战与协同 → 双 loop → 差异化亮点 → 四维协作质量。"""
     counts = _issue_counts(evid)
+    ledger_found = (evid / 'issues.log').exists()
+    def _c(n):
+        # 台账在场：缺键=本轮 0 次（≠数据缺失）；台账缺失才显式 ⬜（"取不到显式 ⬜"口径）
+        return str(n) if ledger_found else '⬜'
+    def _z(n, note='——根治后未复现（建群全量预邀）'):
+        return note if (ledger_found and n == 0) else ''
     total_issues = sum(counts.values())
     n_invite = counts.get('room-invite-gap', 0)
     n_evidence = counts.get('done-without-verifiable-evidence', 0)
@@ -91,7 +98,7 @@ def render_narrative(state: dict, evid: Path) -> str:
     <div class="nv-metric"><b>6</b><span>道硬闸（G1-G6）</span></div>
     <div class="nv-metric"><b>15×2</b><span>人编制 ×（人+AI 助理）账号</span></div>
     <div class="nv-metric"><b>4</b><span>类 AI 员工（需求设计/应用研发/质量测试/研发治理）</span></div>
-    <div class="nv-metric"><b>{total_issues if total_issues else "⬜"}</b><span>问题单台账条目（全程记账）</span></div>
+    <div class="nv-metric"><b>{_c(total_issues)}</b><span>问题单台账条目（全程记账）</span></div>
   </div>
 </section>'''
 
@@ -99,7 +106,7 @@ def render_narrative(state: dict, evid: Path) -> str:
     cases = [
         (
             '挑战 A：分布式协作的成员一致性',
-            f'推演中问题单台账实记 <b>{n_invite if n_invite else "⬜"}</b> 次"派发者不在群"缺口——'
+            f'推演中问题单台账实记 <b>{_c(n_invite)}</b> 次{_z(n_invite)}"派发者不在群"缺口——'
             '智能体@责任人派发任务时，对方尚未入群，消息发不出去（Matrix 403）。',
             '协同机制：导演模式检测缺口即刻补邀并记问题单，不静默丢失；随后根治为"建群即按 RACI 全量预邀 + G2 前补邀架构双账号"（overlay f8382131）。'
             '这正是 harness（场景编排器）+ multi-agent 的交界处：通信基建的语义缺口，靠台账暴露、靠流程根治。',
@@ -107,7 +114,7 @@ def render_narrative(state: dict, evid: Path) -> str:
         ),
         (
             '挑战 B：大模型"完成"幻觉',
-            f'台账实记 <b>{n_evidence if n_evidence else "⬜"}</b> 次"无凭证报完成"被打回——'
+            f'台账实记 <b>{_c(n_evidence)}</b> 次{_z(n_evidence, "——本轮走拒收回灌环实录（600s 超时→重报通过，02:27/02:31）")}"无凭证报完成"被打回——'
             '智能体宣称任务完成，但提交号/卡号反向核验查无实据（RFD-001 两轮拒收实例）。',
             '协同机制：一切"完成"必须带代码提交号+任务卡号双凭证，系统反向核验，查不到打回限期重报，两轮不过记问题单中止。'
             '验证优先于生成：客观执行信号作准出，自我评价不作数。',
@@ -115,7 +122,7 @@ def render_narrative(state: dict, evid: Path) -> str:
         ),
         (
             '挑战 C：审查不沦为橡皮图章',
-            f'台账实记闸门相关缺口 <b>{n_gate if n_gate else "⬜"}</b> 次（评审卡缺失/本地门禁缺件）。'
+            f'台账实记闸门相关缺口 <b>{_c(n_gate)}</b> 次（本轮；评审卡缺失/本地门禁缺件）{_z(n_gate)}。'
             'G2 架构评审 FAIL 即打回修订复评，历史偏差红杠命中未回应即拦；G4 测试独立验证——测试的人不能是写代码的人。',
             '协同机制：生成-验证分离且对抗性设计，验证者的目标是"击穿实现"；每道闸未过不得流入下游（显式状态机熔断错误级联）。',
             _state_mark(state, 'g2_arch_pass'),
