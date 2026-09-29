@@ -134,7 +134,7 @@ await shot('ui-03b-dash', '/app/dash', { wait: 5000, expect: '[data-testid*="das
 // ── 补遗④第 3 项：驾驶舱回归（第 4 步）——页头「任务」「在线」chips 下拉逐项验证 ──
 // 合格线：任务计数=看板实况（推演后>0）；在线三数（人/智能体/机器）各>0，恒零即 DEFECT（准出阻断）；
 // 两组下拉可开（可点选跳转的入口在面板内，截屏留档）。
-await guarded('sit-chips', async () => {
+if (!only || only === 'sit-chips') await guarded('sit-chips', async () => {
   await page.goto(BASE + '/#/app')
   await page.waitForTimeout(7000)
   await page.addStyleTag({ content: '.n-notification{display:none!important}' }).catch(() => {})
@@ -266,7 +266,7 @@ async function renderTextFrame(name, title, body) {
   console.log(`shot: ${name}`)
 }
 // R14① 生成过程·定义帧：swarm yuan 生成器定义（扫描→资产梳理→产出的配方真容）
-await guarded('skill-gen', async () => {
+if (!only || only === 'skill-gen') await guarded('skill-gen', async () => {
   const { existsSync, readFileSync, readdirSync } = await import('node:fs')
   const gen = process.env.SWARM_YUAN_SKILL || `${process.env.HOME}/.zcode/skills/swarm-yuan/SKILL.md`
   const cands = [gen, '/Volumes/nvme2230/lab/.wxwork/v5run4/scripts/aipay/skills/aipaydev-dev/SKILL.md']
@@ -282,7 +282,7 @@ await guarded('skill-gen', async () => {
   await renderTextFrame('ui-skill-gen', `R14·生成过程（定义真容）：${p}`, body.slice(0, 5000))
 })
 // R14② 产出·文件树帧 + ③ 内容帧：本轮 xxx-dev skill 真容（file:// 直读真实产物）
-await guarded('skill-views', async () => {
+if (!only || only === 'skill-views') await guarded('skill-views', async () => {
   const { readdirSync, readFileSync, existsSync, statSync } = await import('node:fs')
   const skillRoots = [`${RUN_DIR}/workspaces`, '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/profiles']
   const cand = []
@@ -307,7 +307,7 @@ await guarded('skill-views', async () => {
   await renderTextFrame('ui-skill-content', `R14·产出内容：${skillMd}`, readFileSync(skillMd, 'utf8').slice(0, 5000))
 })
 // R14④⑤ 驱动开发过程两帧：skill 五步能力调用现场（agent 真实产出物引用该 skill 的痕迹）
-await guarded('skill-drive', async () => {
+if (!only || only === 'skill-drive') await guarded('skill-drive', async () => {
   const { readdirSync, readFileSync, existsSync, statSync } = await import('node:fs')
   const roots = [`${RUN_DIR}/workspaces`, '/Volumes/nvme2230/lab/ncwk-sim-mux/hermes/kanban/boards']
   const hits = []
@@ -327,7 +327,7 @@ await guarded('skill-drive', async () => {
   if (hits[1]) await renderTextFrame('ui-skill-drive-b', `R14·驱动现场②：${hits[1].fp}`, hits[1].excerpt)
 })
 // 流转现场①：群内缺陷回流/提测流转消息（群视图滚动至含 FAIL/缺陷/提测 关键词可见）
-await guarded('flow-defect', async () => {
+if (!only || only === 'flow-defect') await guarded('flow-defect', async () => {
   if (!ROOM) throw new Error('无 room_analysis')
   await page.goto(BASE + '/#/app')
   await page.waitForTimeout(6000)
@@ -338,7 +338,7 @@ await guarded('flow-defect', async () => {
   } else throw new Error('群内未见流转关键词消息')
 })
 // 流转现场②：发布冻结/解冻（REL-* 关联卡状态或收件箱决策历史；无冻结事件=如实 WARN）
-await guarded('flow-freeze', async () => {
+if (!only || only === 'flow-freeze') await guarded('flow-freeze', async () => {
   await page.goto(BASE + '/#/app/board')
   await page.waitForTimeout(5500)
   const rel = page.locator('text=/REL-|blocked|冻结/').first()
@@ -350,7 +350,7 @@ await guarded('flow-freeze', async () => {
   } else console.log('WARN[flow-freeze]: 本轮无 REL- 冻结/解冻现场（G5 首过无冻结事件时为合法缺席）')
 })
 // 流转现场③：验收对账（UAT 逐条判词真容——中央仓验收报告渲染帧）
-await guarded('flow-uat', async () => {
+if (!only || only === 'flow-uat') await guarded('flow-uat', async () => {
   const { existsSync, readFileSync, readdirSync } = await import('node:fs')
   const accDir = '/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev/docs/acceptance'
   if (!existsSync(accDir)) throw new Error('中央仓 acceptance 目录不存在')
