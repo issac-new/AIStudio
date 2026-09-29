@@ -132,6 +132,75 @@ for g, k in GATE_KEYS.items():
     if in_state != rep_pass:
         fails.append(f'{g} 状态不一致：state={in_state} report={rep_pass}（报告疑为闸前旧生成，须重生成）')
 
+# ── 查 6：V5 §8.3 硬性要求断言（R3-R9；R1 判词语义/R2 落键由 harness H8-H11 与查 5 覆盖） ──
+# R3 UAT 逐条判词：报告含"全部 AC 通过"总括且同文出现"有条件"=判词矛盾
+if re.search(r'全部\s*AC\s*通过', rep) and '有条件' in rep:
+    fails.append('R3 UAT 判词矛盾：同文出现"全部 AC 通过"与"有条件"——须逐条判词，禁总括')
+
+# R4 发布基线守卫：合入只许快进或 merge 增量（检出即 FAIL，守卫属 harness H11 执行侧）
+_main_repo = Path('/Volumes/nvme2230/lab/ncwk-sim-mux/central/aipaydev/.git')
+if _main_repo.exists():
+    import subprocess
+    _heads = subprocess.run(['git', '--git-dir', str(_main_repo), 'for-each-ref',
+                             '--format=%(refname:short) %(objectname:short)'], capture_output=True, text=True)
+    _m = re.search(r'main\s+([0-9a-f]+)', _heads.stdout)
+    if _m and state_keys.get('baseline_sha') and state_keys['baseline_sha'] != _m.group(1):
+        _old = state_keys['baseline_sha']
+        _ff = subprocess.run(['git', '--git-dir', str(_main_repo), 'merge-base', '--is-ancestor', _old, _m.group(1)],
+                             capture_output=True)
+        if _ff.returncode != 0:
+            fails.append(f'R4 发布基线非快进重建：{_old[:8]}→{_m.group(1)[:8]}（丢线事故，须回补重验）')
+
+# R5 问题单 100% DISP：issues.log 中 ISSUE 唯一键全有 DISP
+_ilog = EVID / 'issues.log'
+if _ilog.exists():
+    _iss, _disp = [], set()
+    for _l in _ilog.read_text().splitlines():
+        if _l.startswith('ISSUE|'):
+            _p = _l.split('|', 3)
+            if f'{_p[1]}·{_p[2]}' not in _iss:
+                _iss.append(f'{_p[1]}·{_p[2]}')
+        elif _l.startswith('DISP|'):
+            _p = _l.split('|', 3)
+            _disp.add(f'{_p[1]}·{_p[2]}')
+    _open = [k for k in _iss if k not in _disp]
+    if _open:
+        fails.append(f'R5 问题单缺 DISP（{len(_open)}/{len(_iss)} 待处置）：{_open[:6]}——违反第 24 步合格线')
+
+# R6 证据锚点密度：每个已完成步块至少 1 个可反查锚点（event_id $xxx / 短 hash / t_ 卡号）
+_anchor_pat = re.compile(r'\$[A-Za-z0-9_-]{25,}|\bt_[0-9a-f]{8}\b|\b[0-9a-f]{7,10}\b')
+_done_blocks = [b for b in blocks if '✅' in b]
+_no_anchor = []
+for i, b in enumerate(blocks, 1):
+    if '✅' in b and not _anchor_pat.search(b):
+        _m2 = re.search(r'<span class="st-num">(\d+)</span>', b)
+        _no_anchor.append(_m2.group(1) if _m2 else str(i))
+if _no_anchor:
+    warns.append(f'R6 完成步缺可反查锚点（event_id/commit/t_ 卡号）：步 {_no_anchor}')
+
+# R7 截图红线：完成步图须真实产品 UI——ui 类图占比抽查（doc/msg 类为工件允许）
+# （图面真实性以人工视觉审计为准，本断言只查"完成步全为 doc/msg 无一张界面实拍"的极端退化）
+_ui_cnt = sum(1 for b in _done_blocks if '界面实拍' in b)
+if _done_blocks and _ui_cnt == 0:
+    warns.append('R7 完成步无一帧"界面实拍"角标——疑文档/CLI 凑数，须人工视觉复核')
+
+# R8 数字实算：报告内计数类字样与 issues.log 一致（问题单唯一键数）
+if _ilog.exists() and '问题单终态' in rep:
+    _uniq = len(set(_iss))
+    _m3 = re.search(rf'唯一键\s*(\d+)', rep)
+    if _m3 and int(_m3.group(1)) != _uniq:
+        fails.append(f'R8 问题单计数不实：报告唯一键 {_m3.group(1)} ≠ issues.log 实算 {_uniq}')
+
+# R9 报告步自证：第 26 步须 ✅（生成器对本步恒真）且带生成产物锚点
+_b26 = next((b for b in blocks if '<span class="st-num">26</span>' in b), '')
+if _b26:
+    if '⬜' in _b26:
+        fails.append('R9 报告步自证悖论：第 26 步标 ⬜——产物存在即应 ✅ 并回填生成时间')
+    if 'simulation-report.html' not in _b26:
+        warns.append('R9 第 26 步未挂 simulation-report.html 产物锚点')
+else:
+    warns.append('R9 未定位第 26 步块（结构漂移？）')
+
 # ── 汇总 ──
 print(f'报告：{REPORT}')
 print(f'步块：{len(blocks)}；图：{len(pngs)} 张 PNG，唯一 md5 {len(md5)} 组')
