@@ -15,19 +15,22 @@ vi.mock('node:fs/promises', () => ({
     return ''
   }),
   writeFile: vi.fn(async () => undefined),
+  appendFile: vi.fn(async () => undefined),
   mkdir: vi.fn(async () => undefined),
 }))
 const createMock = vi.fn(async () => ({ userId: '', created: true }))
 const deactivateMock = vi.fn(async () => true)
+const whoamiMock = vi.fn(async () => ({ userId: '@admin:matrix.test', deviceId: '' }))
 vi.mock('../../matrix/admin-service', () => ({
   createMatrixUser: (...a: unknown[]) => createMock(...a),
   setMatrixUserActive: (...a: unknown[]) => deactivateMock(...a),
+  validateMatrixToken: (...a: unknown[]) => whoamiMock(...a),
 }))
 vi.mock('../governance-controller', () => ({ repoRoot: () => '/tmp/fake-repo' }))
 
 import { readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, appendTableRow } from '../registry-admin'
 
-beforeEach(() => { execMock.mockClear(); createMock.mockClear(); deactivateMock.mockClear() })
+beforeEach(() => { execMock.mockClear(); createMock.mockClear(); deactivateMock.mockClear(); whoamiMock.mockClear() })
 
 describe('registry-admin（P6-P8）', () => {
   it('保存即提交：write → git add <path> → git commit（R13 链）', async () => {
@@ -57,6 +60,21 @@ describe('registry-admin（P6-P8）', () => {
     expect(r.deactivated).toHaveLength(2)
     const commits = execMock.mock.calls.filter((c: unknown[]) => (c[1] as string[]).join(' ').includes('commit')).length
     expect(commits).toBeGreaterThanOrEqual(2) // ①移交工单 + ③审计留痕 两笔提交
+  })
+
+  it('离职守门①：非法用户名（路径穿越形态）拒收且零写盘零 git', async () => {
+    await expect(offboardAccount({ localName: '../../escape', handoverTo: 'chen', taskIds: [], reason: 'x', adminToken: 't', homeserverUrl: 'http://127.0.0.1:8008' }))
+      .rejects.toThrow('非法用户名')
+    expect(execMock).not.toHaveBeenCalled()
+    expect(deactivateMock).not.toHaveBeenCalled()
+  })
+
+  it('离职守门②：adminToken 无效先拒，不产生任何工单/审计落盘', async () => {
+    whoamiMock.mockResolvedValueOnce(null)
+    await expect(offboardAccount({ localName: 'zhang', handoverTo: 'chen', taskIds: [], reason: 'x', adminToken: 'bad', homeserverUrl: 'http://127.0.0.1:8008' }))
+      .rejects.toThrow('adminToken 无效')
+    expect(execMock).not.toHaveBeenCalled()
+    expect(deactivateMock).not.toHaveBeenCalled()
   })
 
   it('appendTableRow 追加到表末行后', () => {

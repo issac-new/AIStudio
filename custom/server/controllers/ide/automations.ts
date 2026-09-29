@@ -17,7 +17,7 @@ import Router from '@koa/router'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { AutomationEngine, type AutomationDispatchPort } from '../../automations/automation-engine'
-import type { AutomationEvent } from '../../automations/automation-rules'
+import { isAbsoluteWorkspacePath, type AutomationEvent } from '../../automations/automation-rules'
 
 const automationsRouter = new Router({ prefix: '/api/ide/automations' })
 
@@ -66,7 +66,17 @@ automationsRouter.get('/', (ctx) => {
   ctx.body = { ok: true, rules: engine.listRules(), history: engine.listHistory() }
 })
 
-automationsRouter.post('/rules', (ctx) => {
+automationsRouter.post('/rules', async (ctx) => {
+  // X1 归属闸（先于 addRule——被拒路径不得落盘、不得挂 watcher）：与引擎其余全部
+  // 入口（/api/zcode-engine/*、列编排）同一道——workspacePath 未注册于会话注册表
+  // 或调用方不可见即 403。动态 import 与 dispatch 端口同因（两模块均 server 启动后才
+  // 可用，避免加载序环）。PATCH 不放行 workspacePath 变更，规则归属建后不可移。
+  const rawWs = (ctx.request?.body ?? {}) as { workspacePath?: unknown }
+  const wsPath = typeof rawWs.workspacePath === 'string' ? rawWs.workspacePath.trim() : ''
+  if (wsPath) {
+    const { workspaceAccessDenied } = await import('../../zcode/engine-controller')
+    if (workspaceAccessDenied(ctx, wsPath)) return
+  }
   const engine = getAutomationEngine()
   const res = engine.addRule(ctx.request?.body)
   if ('errors' in res) {
@@ -106,7 +116,7 @@ automationsRouter.post('/events', (ctx) => {
   const type = body?.type
   const workspacePath = typeof body?.workspacePath === 'string' ? body.workspacePath : ''
   const known = ['file', 'kanban', 'git', 'webhook']
-  if (!type || !known.includes(type) || !workspacePath.startsWith('/')) {
+  if (!type || !known.includes(type) || !workspacePath || !isAbsoluteWorkspacePath(workspacePath)) {
     ctx.status = 400
     ctx.body = { ok: false, detail: '事件须含 type（file/kanban/git/webhook）与绝对 workspacePath' }
     return

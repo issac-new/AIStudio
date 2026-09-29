@@ -433,8 +433,11 @@ mx_driver_lock_acquire() { # <lock-dir> <pid> → 0 取得 / 1 活锁被占 / 2 
   if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
   held=$(mx_lock_holder_pid "$d/info")
   if [[ -n "$held" ]] && ! kill -0 "$held" 2>/dev/null; then
-    rm -rf "$d"
-    if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
+    # 接管原子化：mv 摘走陈锁再 mkdir，绝不原地 rm——kill -0 判死与 rm 之间第三方
+    # 可新建活锁被误删（双驱动同栈互写）。竞争失败时陈锁归档 ${d}.stale.$$ 可回查。
+    local stale="${d}.stale.$$"
+    mv "$d" "$stale" 2>/dev/null || return 2
+    if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; rm -rf "$stale"; return 0; fi
     return 2
   fi
   return 1
