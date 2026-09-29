@@ -64,11 +64,27 @@ export interface ProvisionInput {
   localName: string; role: string; password: string
   adminToken: string; homeserverUrl: string
   withAgent?: boolean; displayName?: string
+  /** v14 P2A：agent 号建成后自动「密码换 token → 写 hermes profile dotenv」。
+   *  缺省 true；失败不阻断建号（结果里带 reason 如实呈现）。 */
+  writeAgentEnv?: boolean
+  /** 注入用（测试）：HERMES_HOME 覆盖 */
+  hermesHome?: string
+  /** 注入用（测试）：登录 fetch 替身（避免测试触真 homeserver） */
+  fetchImpl?: typeof fetch
 }
 
-/** P6 建号：synapse 建人类号（+可选 AI 助理号）→ roster 追加行 → 提交。 */
+/** v14 P2A agent 身份供给结果（best-effort：登录/写盘失败不回滚建号，如实记因）。 */
+export interface AgentIdentityOutcome {
+  agentUserId: string
+  profile: string
+  written: boolean
+  reason?: string
+}
+
+/** P6 建号：synapse 建人类号（+可选 AI 助理号）→ v14 P2A 助理号凭据闭环 →
+ *  roster 追加行 → 提交。 */
 export async function provisionMatrixAccount(inp: ProvisionInput): Promise<{
-  created: string[]; rosterCommit: string
+  created: string[]; rosterCommit: string; agentIdentity?: AgentIdentityOutcome
 }> {
   const name = inp.localName.trim().replace(/^@/, '').split(':')[0]
   if (!/^[a-z0-9_.-]+$/i.test(name)) throw new Error(`非法用户名：${name}`)
@@ -76,17 +92,38 @@ export async function provisionMatrixAccount(inp: ProvisionInput): Promise<{
   const serverName = new URL(inp.homeserverUrl).hostname === '127.0.0.1' ? 'matrix.test' : new URL(inp.homeserverUrl).hostname
   const human = `${name}:${serverName}`
   const base = { password: inp.password, adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl }
-  await createMatrixUser(`@${human}`, inp.password, inp.adminToken, inp.homeserverUrl)
+  await createMatrixUser(`@${human}`, inp.password, inp.adminToken, inp.homeserverUrl, inp.displayName || name)
   created.push(`@${human}`)
+  let agentIdentity: AgentIdentityOutcome | undefined
   if (inp.withAgent !== false) {
-    await createMatrixUser(`@${name}-agent:${serverName}`, inp.password + '-agent', inp.adminToken, inp.homeserverUrl)
-    created.push(`@${name}-agent:${serverName}`)
+    const agentUserId = `@${name}-agent:${serverName}`
+    await createMatrixUser(agentUserId, inp.password + '-agent', inp.adminToken, inp.homeserverUrl)
+    created.push(agentUserId)
+    // v14 P2A：初始密码换 token → 写 profiles/<name>/.env（消费侧 gateway-env /
+    // hermes matrix 适配器零改动）。best-effort：失败记 reason 不回滚建号。
+    if (inp.writeAgentEnv !== false) {
+      try {
+        const { provisionAgentIdentity } = await import('../matrix/agent-identity')
+        const res = await provisionAgentIdentity({
+          homeserverUrl: inp.homeserverUrl,
+          agentUserId,
+          password: inp.password + '-agent',
+          profile: name,
+          hermesHome: inp.hermesHome,
+          fetchImpl: inp.fetchImpl,
+        })
+        agentIdentity = { agentUserId, profile: res.profile, written: true }
+      } catch (e) {
+        agentIdentity = { agentUserId, profile: name, written: false, reason: String((e as Error).message ?? e) }
+      }
+    }
   }
   const { markdown } = await readRegistry('roster')
   const agentCell = inp.withAgent === false ? '—' : `@${name}-agent:${serverName}`
+  const envNote = agentIdentity ? (agentIdentity.written ? '，凭据已入 profile .env' : '，凭据写入失败见返回') : ''
   const next = appendTableRow(markdown, [`@${human}`, agentCell, inp.role])
-  const { commit } = await writeRegistry('roster', next, `账户管理：新增 ${name}（${inp.role}）`, 'account-admin')
-  return { created, rosterCommit: commit }
+  const { commit } = await writeRegistry('roster', next, `账户管理：新增 ${name}（${inp.role}${envNote}）`, 'account-admin')
+  return { created, rosterCommit: commit, agentIdentity }
 }
 
 export interface OffboardInput {

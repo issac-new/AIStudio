@@ -19,6 +19,12 @@ describe('协议镜像对账：服务端 task-protocol ↔ 客户端 protocol', 
     expect(clientSrc).toContain(`receipt: '${TASK_RECEIPT_EVENT_TYPE}'`)
   })
 
+  it('v14 P2D：agent.message/agent.profile 类型字符串逐字一致（ChatBridge 出向镜像）', async () => {
+    const { AGENT_MESSAGE_EVENT_TYPE, AGENT_PROFILE_EVENT_TYPE } = await import('../task-protocol')
+    expect(clientSrc).toContain(`message: '${AGENT_MESSAGE_EVENT_TYPE}'`)
+    expect(clientSrc).toContain(`export const AGENT_PROFILE_EVENT_TYPE = '${AGENT_PROFILE_EVENT_TYPE}'`)
+  })
+
   it('v2 四可选字段双侧同步（服务端镜像已扩 v2 面，2026-09-25）', () => {
     const serverSrc = readFileSync(join(__dirname, '..', 'task-protocol.ts'), 'utf8')
     for (const v2Field of ['parentId', 'capability', 'phase', 'dependsOn']) {

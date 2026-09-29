@@ -1,0 +1,88 @@
+--- a/packages/server/src/modules/studio/sockets/group-chat.ts	2026-09-29 16:30:23
++++ b/packages/server/src/modules/studio/sockets/group-chat.ts	2026-09-29 16:30:23
+@@ -7,6 +7,8 @@
+ import { registerGroupEventAccess } from '../services/webhooks/app-events'
+ import { publishGroupMessage, publishGroupInteraction } from '../services/webhooks/domain-events'
+ import { Server, Socket, Namespace } from 'socket.io'
++// overlay[v14 P2B]: ChatBridge 桥事件出口（审批请求远端通知）
++import { EventEmitter } from 'node:events'
+ import type { Server as HttpServer } from 'http'
+ import { mkdirSync } from 'fs'
+ import { basename, join } from 'path'
+@@ -3252,6 +3254,8 @@
+     /** Map: socket.id → numeric users.id from the web UI auth (for avatar resolution) */
+     private socketAuthUserIdMap = new Map<string, number>()
+     readonly agentClients = new AgentClients()
++    /** overlay[v14 P2B]: 桥订阅面（ChatBridge 消费：approval.requested 等） */
++    readonly bridgeEvents = new EventEmitter()
+     private roomSummaryService: GroupRoomSummaryService
+     private summaryReviewService: GroupSummaryReviewService
+     private messageRoutingService: GroupMessageRoutingService
+@@ -3671,6 +3675,58 @@
+ 
+     getChatRunService(): GroupChatRunService | null {
+         return this.chatRunService
++    }
++
++    /**
++     * overlay[v14 P2B ChatBridge]: 非 socket 人类消息注入——matrix 桥把远端人的
++     * 话落进本地群房。复用 handleMessage 的持久化/广播/编排尾段；无 socket 语义
++     * （无 ack/push 快照/LLM 兜底路由分支——processMentions 自带文本 mention
++     * 解析，user 角色 0 mention 亦按上游策略派发）。房不在返回 null。
++     */
++    publishBridgeMemberMessage(input: {
++        roomId: string
++        senderId: string
++        senderName: string
++        content: string
++        mentions?: StructuredMention[]
++    }): ChatMessage | null {
++        const room = this.storage.getRoom(input.roomId)
++        if (!room) return null
++        const message: ChatMessage = {
++            id: this.generateId(),
++            roomId: input.roomId,
++            senderId: input.senderId,
++            senderName: input.senderName,
++            senderType: 'member',
++            content: input.content,
++            timestamp: Date.now(),
++            persistedAt: Date.now(),
++            role: 'user',
++            mentions: input.mentions ?? [],
++        }
++        const saved = this.storage.saveMessageAndRefreshRoom(message)
++        this.nsp.to(input.roomId).emit('message', buildOutboundGroupMessage(saved.message))
++        this.notifyGroupReply(input.roomId, saved.message)
++        this.nsp.to(input.roomId).emit('room_updated', { roomId: input.roomId, totalTokens: saved.totalTokens })
++        this.agentClients.processMentions(input.roomId, {
++            messageId: saved.message.id,
++            content: contentToText(saved.message.content),
++            input: undefined,
++            senderName: saved.message.senderName,
++            senderId: saved.message.senderId,
++            timestamp: saved.message.timestamp,
++            role: saved.message.role,
++            mentionDepth: 0,
++            handoffChainId: saved.message.id,
++            mentions: saved.message.mentions,
++            executionQueueCapabilityHash: '',
++        }).catch((err) => {
++            logger.error(`[GroupChat] bridge processMentions error: ${err.message}`)
++        }).finally(() => {
++            if (typeof this.agentClients.processSummaryCheck !== 'function') return
++            this.agentClients.processSummaryCheck(input.roomId, saved.message.id).catch(() => { /* 桥路径 summary 失败不阻断 */ })
++        })
++        return saved.message
+     }
+ 
+     publishAgentAttachmentMessage(input: {
+@@ -5375,6 +5431,8 @@
+             requestedAt: Date.now(),
+         }
+         this.pendingApprovalRoutes.set(routeKey, pendingRoute)
++        // overlay[v14 P2C]: 桥订阅面广播（ChatBridge → matrix 房间远端通知）
++        this.bridgeEvents.emit('approval.requested', pendingRoute)
+         this.schedulePendingApprovalExpiry(routeKey, pendingRoute)
+         if (!pendingRoute.ownerMemberId) {
+             logger.warn(`[GroupChat] approval ${data.approval_id} has no Agent owner in room ${roomId}`)

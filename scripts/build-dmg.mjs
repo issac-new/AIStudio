@@ -7,12 +7,16 @@
 // 用法: node scripts/build-dmg.mjs [--mac | --win | --linux]
 //   默认: --mac (arm64 DMG + zip)
 
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { resolve } from 'path';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const ncwkRoot = resolve(overlayRoot, '..');
-const upstream = resolve(ncwkRoot, 'upstream/hermes-studio');
+// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/ensure-injected.mjs 同一基建；
+// 2026-09-29 补齐——此前 build 链缺失该支持，嵌套 worktree 下默认解析撞其他会话副本）。
+const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
+  : resolve(ncwkRoot, 'upstream/hermes-studio');
 const desktopDir = resolve(upstream, 'packages/desktop');
 
 const platform = process.argv.includes('--win') ? 'win'
@@ -52,8 +56,10 @@ run('node scripts/inject.mjs', overlayRoot, 'inject patches → upstream');
 // 关键: 使用 build.mjs (overlay config)，而不是上游的 npm run build
 // 幂等前置：上轮构建的 Step 3.5 已把根 node_modules 裁剪为生产态，vite/tsc 缺席，
 // 先补装开发依赖（已就绪时 npm install 近乎空转）。
+// 注意必须 execFileSync：execSync 模板串里 JSON.stringify 的双引号会截断 sh -c 的
+// -e 参数，使检查恒失败、每次构建都白跑一次上游完整 build（prepare 钩子连锁）。
 try {
-  execSync(`node -e "require.resolve('vite/package.json', { paths: [${JSON.stringify(upstream)}] })"`, { stdio: 'ignore' });
+  execFileSync(process.execPath, ['-e', "require.resolve('vite/package.json', { paths: [process.argv[1]] })", upstream], { stdio: 'ignore' });
 } catch {
   run('npm install --no-audit --no-fund', upstream, 'root node_modules → dev deps restored (post-prune idempotency)');
 }
