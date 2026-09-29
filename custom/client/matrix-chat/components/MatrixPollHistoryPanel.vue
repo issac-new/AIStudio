@@ -123,7 +123,7 @@ function getSenderName(senderId: string): string {
 
 function getTimeString(ts: number): string {
   if (!ts) return ''
-  return new Date(ts).toLocaleString()
+  return new Date(ts).toLocaleString('zh-CN')
 }
 
 function getPercent(count: number, total: number): string {

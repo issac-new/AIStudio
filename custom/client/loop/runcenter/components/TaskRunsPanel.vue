@@ -57,7 +57,7 @@ const paged = computed(() => filtered.value.slice(0, RENDER_CAP))
 function fmtTime(v: string | null): string {
   if (!v) return '—'
   const d = new Date(v)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('zh-CN')
 }
 
 function fmtDuration(sec: number): string {

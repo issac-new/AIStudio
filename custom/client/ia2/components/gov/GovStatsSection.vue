@@ -31,7 +31,7 @@ function shortUser(mxId: string): string {
         <div v-if="!stats.overdue.length" class="gss__empty">{{ t('ia2.gov.stats.overdueEmpty') }}</div>
         <div v-for="r in stats.overdue" :key="r.taskId" class="gss__row gss__row--over" :data-testid="`gov-reminder-${r.taskId}`">
           <span class="gss__name">{{ r.title }}</span>
-          <span class="gss__meta">{{ shortUser(r.assignee) }} · {{ new Date(r.dueAt).toLocaleDateString() }}</span>
+          <span class="gss__meta">{{ shortUser(r.assignee) }} · {{ new Date(r.dueAt).toLocaleDateString('zh-CN') }}</span>
           <span class="gss__badge">{{ t(`ia2.taskCard.status.${r.status}`) }}</span>
         </div>
       </div>

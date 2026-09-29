@@ -13,6 +13,7 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<str
 vi.mock('../api/approvals', async () => {
   const state = { pending: { items: [] as unknown[] }, history: { entries: [] as unknown[] }, decideResult: { ok: true } as Record<string, unknown> }
   return {
+    dedupePending: (items: unknown[]) => items,
     fetchPendingApprovals: vi.fn(async () => JSON.parse(JSON.stringify(state.pending))),
     fetchApprovalHistory: vi.fn(async () => JSON.parse(JSON.stringify(state.history))),
     decideApproval: vi.fn(async () => state.decideResult),
