@@ -33,6 +33,11 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
       await handleVideoFrames(ctx)
       return
     }
+    // ── R2：semantica 知识库状态（hermes agent 层配置，非 studio MCP 层）──
+    if (method === 'GET' && path === '/api/ide/semantica-status') {
+      await handleSemanticaStatus(ctx)
+      return
+    }
     // ── 遗留清单 L6：缓存 miss 归因（cc-switch.db 只读聚合）──
     if (method === 'GET' && path === '/api/ide/cache-attribution') {
       await handleCacheAttribution(ctx)
@@ -218,6 +223,24 @@ async function handleCacheAttribution(ctx: Context): Promise<void> {
     }
   } catch (err) {
     try { db?.close() } catch { /* 已闭 */ }
+    ctx.status = 503
+    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+  }
+}
+
+// ── semantica 状态（R2）：配置于 ~/.hermes/config.yaml mcp_servers.semantica——
+// 装载在 agent 会话启动时（studio MCP 面板列的是另一层，判不到它）。
+async function handleSemanticaStatus(ctx: Context): Promise<void> {
+  const { readFileSync } = await import('fs')
+  const { join } = await import('path')
+  const { homedir } = await import('os')
+  try {
+    const cfg = readFileSync(join(homedir(), '.hermes', 'config.yaml'), 'utf8')
+    const configured = /mcp_servers:[\s\S]*?\n\s{2,}semantica:/.test(cfg)
+    const kgPath = cfg.match(/SEMANTICA_KG_PATH:\s*(\S+)/)?.[1] ?? null
+    const venvOk = existsSync(join(homedir(), '.hermes', 'hermes-agent', 'venv', 'lib'))
+    ctx.body = { ok: true, configured, kgPath, venvOk, note: configured ? '工具在 agent 会话启动时装载（15 只知识工具）' : '未配置（hermes mcp install semantica）' }
+  } catch (err) {
     ctx.status = 503
     ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
   }
