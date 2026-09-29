@@ -205,7 +205,11 @@ function formatTime(at: number): string {
 </script>
 
 <template>
-  <div class="ide-queue" data-testid="ide-queue-panel">
+  <div
+    v-if="queue.length || deliveredRows.length || autonomyQueue.length"
+    class="ide-queue"
+    data-testid="ide-queue-panel"
+  >
     <div class="ide-queue__mode" data-testid="ide-delivery-mode">
       <span class="ide-queue__mode-label">投递</span>
       <button
