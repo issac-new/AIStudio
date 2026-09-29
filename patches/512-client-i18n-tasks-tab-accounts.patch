@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -2191,6 +2191,7 @@
+     tasks: {
+       tabBoard: 'Board',
+       tabTrace: 'Traceability',
++      tabAccounts: 'Accounts',
+     },
+     dispatch: {
+       queued: 'Queued',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -2191,6 +2191,7 @@
+     tasks: {
+       tabBoard: '看板',
+       tabTrace: '追溯',
++      tabAccounts: '管理三账',
+     },
+     dispatch: {
+       queued: '已入队',

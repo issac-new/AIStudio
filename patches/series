@@ -306,3 +306,11 @@
 504-sidebar-dead-matrix-entry-removal.patch
 # 505（卡抽屉 body/评论 Markdown 渲染）：upstream 抽屉裸插值→KanbanMarkdown，run2 实拍实证 raw 字面量。
 505-kanban-drawer-markdown.patch
+# 511（变更治理挂载，调研落地轮 2026-09-29，原 506 让号避 v14 统一聊天）：/api/change-gov
+#      控制面独立文件——L1-L4 分级评审/决策时效 SLA/五维影响评估/三级冻结窗口/管控基准
+#      指标（文章《研发总监怎么管需求变更》产品化）。与 490 同款两行挂载；
+#      词条在 custom/governance/i18n.ts changeGov 子树（不动 473）。
+511-server-change-gov-mount.patch
+# 512（三账页签词条，调研落地轮 2026-09-29，原 507 让号）：ia2.tasks.tabAccounts
+#      zh/en 成对（473 之后按 496/501 同例单补，不动其余 9 语言）。
+512-client-i18n-tasks-tab-accounts.patch

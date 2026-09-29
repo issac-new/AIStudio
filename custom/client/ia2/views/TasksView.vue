@@ -12,13 +12,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
+import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const kanban = useKanbanStore()
 
-type TabKey = 'board' | 'trace'
+type TabKey = 'board' | 'trace' | 'accounts'
 const tab = ref<TabKey>('board')
 
 /** v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）——回到沟通协作
@@ -36,6 +37,7 @@ const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>
 /** route query → 看板预选（status 过滤器 + task 搜索）。非法值忽略。 */
 function applyQuery(q: Record<string, unknown>): void {
   if (q.tab === 'trace') tab.value = 'trace'
+  else if (q.tab === 'accounts') tab.value = 'accounts'
   else if (q.tab === 'board') tab.value = 'board'
   if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status)) {
     kanban.setStatusFilter(q.status)
@@ -56,6 +58,20 @@ watch(
 function openTaskFromMatrix(taskId: string): void {
   tab.value = 'board'
   kanban.setSearchQuery(taskId)
+}
+
+/** 管理三账决策点动线（三类决策对应）：偏差/风险 → 定位任务；
+ *  资源 → 按人过滤看板；请求 → 审批收件箱。 */
+function openTaskFromAccounts(taskId: string): void {
+  tab.value = 'board'
+  kanban.setSearchQuery(taskId)
+}
+function filterAssigneeFromAccounts(assignee: string): void {
+  tab.value = 'board'
+  kanban.setAssigneeFilter(assignee) // 空串=未指派桶清过滤（store 侧 falsy→null）
+}
+function goInboxFromAccounts(): void {
+  void router.push({ name: 'ia2.inbox' })
 }
 </script>
 
@@ -84,6 +100,18 @@ function openTaskFromMatrix(taskId: string): void {
       >
         {{ t('ia2.tasks.tabTrace') }}
       </button>
+      <!-- 管理三账（调研落地轮 2026-09-29）：进度/风险/资源三账 + 决策点联动 -->
+      <button
+        type="button"
+        class="ia-tasks__tab"
+        :class="{ 'ia-tasks__tab--active': tab === 'accounts' }"
+        role="tab"
+        :aria-selected="tab === 'accounts'"
+        data-testid="ia-tasks-tab-accounts"
+        @click="tab = 'accounts'"
+      >
+        {{ t('ia2.tasks.tabAccounts') }}
+      </button>
       <!-- v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关） -->
       <button
         type="button"
@@ -97,6 +125,13 @@ function openTaskFromMatrix(taskId: string): void {
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
       <SwarmKanbanView />
+    </div>
+    <div v-else-if="tab === 'accounts'" class="ia-area">
+      <ManagementAccountsPanel
+        @open-task="openTaskFromAccounts"
+        @filter-assignee="filterAssigneeFromAccounts"
+        @go-inbox="goInboxFromAccounts"
+      />
     </div>
     <div v-else class="ia-area">
       <TraceabilityMatrix @open-task="openTaskFromMatrix" />
