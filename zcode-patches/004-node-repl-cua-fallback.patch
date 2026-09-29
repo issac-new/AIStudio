@@ -1,0 +1,20 @@
+diff --git a/apps/zcode-cli/packages/node-repl-host/src/server.ts b/apps/zcode-cli/packages/node-repl-host/src/server.ts
+index e50333e..69f7492 100644
+--- a/apps/zcode-cli/packages/node-repl-host/src/server.ts
++++ b/apps/zcode-cli/packages/node-repl-host/src/server.ts
+@@ -373,7 +373,14 @@ export function captureComputerUseRuntimeFromEnvironment(
+   env: NodeJS.ProcessEnv = process.env,
+ ): ComputerUseRuntime | undefined {
+   const socketPath = env.ZCODE_CUA_PERMISSION_BROKER_SOCKET?.trim();
+-  if (!socketPath) return undefined;
++  if (!socketPath) {
++    // overlay 004（Computer Use 桌面级 2026-09-29）：宿主未注入 broker socket 时
++    // 回落自包含 Node 后端 runtime（@zcode/zcode-cua index 活体，进程内直调后端）。
++    // 三端通用语义；ZCODE_CUA_DISABLE=1 保持 fail-closed（返回 undefined →
++    // bridge 不注入 → SDK 报 unavailable，与产品闭包语义一致）。
++    if (env.ZCODE_CUA_DISABLE === "1") return undefined;
++    return createComputerUseRuntime();
++  }
+   return createComputerUseRuntime({
+     brokerSocketPath: socketPath,
+     refreshMarkerPath: env.ZCODE_CUA_PERMISSION_BROKER_REFRESH_MARKER?.trim(),

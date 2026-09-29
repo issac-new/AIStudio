@@ -1,3 +1,21 @@
 # zcode patch series (受管 fork,路由全部进 upstream/zcode)
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
 001-server-cli-yazl-external.patch
+# 003（zcode-cua 活体化，Computer Use 桌面级 2026-09-29）：占位包→跨三端真实现。
+#      新增 node-backend.js（mac=JXA CGEvent+screencapture+System Events 粘贴通道/
+#      win=PowerShell SendInput+System.Drawing/linux=xdotool|ydotool+maim 链）+
+#      tool-map.js（18 工具面）+ mcp-server.js（stdio MCP，自包含=无宿主 env 时内置直调）；
+#      broker.js 协议活体（行式 JSON-RPC over unix socket，词表路由+未知方法显式拒）；
+#      broker-server.js=Node 宿主（createProductCuaHelperHost 起 broker server 常驻单例）+
+#      resolver 活体（OS 权限 fail-closed 门+computer-use 条目注入/同名替换）；
+#      index.js=createComputerUseRuntime 直调活体。d.ts 零改动（API 兼容）。
+#      实测：mac 全链（截图/鼠标/键盘组合/中文粘贴通道+剪贴板恢复/应用枚举/宿主/resolver）。
+#      未实测如实记档：Windows/Linux 代码路径就位未真机验证。
+003-zcode-cua-live.patch
+# 004（node_repl host 自包含回落，Computer Use 桌面级 2026-09-29）：
+#      captureComputerUseRuntimeFromEnvironment 无宿主 broker socket env 时回落
+#      createComputerUseRuntime()（003 活体=进程内 Node 后端直调）——官方
+#      computer-use 插件（skill+SDK）整链在无桌面宿主注入的 CLI/引擎会话直接可用；
+#      ZCODE_CUA_DISABLE=1 保持 fail-closed。SDK 方法面别名（paste/set_value/
+#      left_click_drag/stop_computer_control）在 003 tool-map。
+004-node-repl-cua-fallback.patch
