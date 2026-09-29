@@ -68,6 +68,17 @@ async function settle(): Promise<void> {
 beforeEach(() => { dispatchCalls.length = 0; dispatchResult = [{ reason: 'dispatched', sessionId: 's-1', commandId: 'c-1' }] })
 
 describe('A2 引擎：去抖与派发', () => {
+  it('flushAllForTests 立即冲刷在途桶：不等计时器、真派发、真落历史', async () => {
+    const { engine } = newEngine()
+    engine.addRule({ name: 'r', workspacePath: '/w', source: { type: 'kanban', board: 'b' }, promptTemplate: 'go', debounceMs: 60_000 })
+    engine.ingestEvent({ type: 'kanban', workspacePath: '/w', board: 'b', taskId: 't1', from: 'todo', to: 'doing' })
+    expect(dispatchCalls).toHaveLength(0) // 仍在去抖窗口内
+    await engine.flushAllForTests()
+    await settle()
+    expect(dispatchCalls).toHaveLength(1) // 已立即派发（修复前 dropBucket 后 flush 恒空转，事件静默丢弃）
+    expect(engine.listHistory()[0]?.reason).toBe('dispatched')
+  })
+
   it('窗口内事件合并为一次派发；窗口不因新事件延展（首事件起算）', async () => {
     const { engine, clock } = newEngine()
     engine.addRule({ name: 'r', workspacePath: '/w', source: { type: 'file' }, promptTemplate: 'go {{paths}}', debounceMs: 2000 })

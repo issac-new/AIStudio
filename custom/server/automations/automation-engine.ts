@@ -83,7 +83,8 @@ export class AutomationEngine {
 
   private writeJsonAtomic(path: string, value: unknown): void {
     mkdirSync(dirname(path), { recursive: true })
-    const tmp = `${path}.tmp`
+    // pid+时间戳限定 tmp：dev 与打包版双进程并发写同一 store 时固定名会互相截断
+    const tmp = `${path}.tmp-${process.pid}-${Date.now()}`
     writeFileSync(tmp, JSON.stringify(value, null, 2), 'utf8')
     renameSync(tmp, path)
   }
@@ -167,6 +168,11 @@ export class AutomationEngine {
     const bucket = this.buckets.get(ruleId)
     if (!bucket) return
     this.buckets.delete(ruleId)
+    await this.dispatchBucket(ruleId, bucket)
+  }
+
+  /** 派发一个已摘出的桶（flush 计时到期与 flushAllForTests 立即冲刷共用）。 */
+  private async dispatchBucket(ruleId: string, bucket: DebounceBucket): Promise<void> {
     const rule = this.rules.find((r) => r.id === ruleId)
     if (!rule || !rule.enabled) return // 桶期间被删/停用：丢弃（不派发陈意图）
     const { text, truncated } = renderBriefing(rule, bucket.events)
@@ -196,11 +202,14 @@ export class AutomationEngine {
     this.persistHistory()
   }
 
-  /** 测试/停机面：立即冲刷全部在途桶（不等待计时器）。 */
+  /** 测试/停机面：立即冲刷全部在途桶（不等待计时器）。先摘桶再派发——
+   *  此前先 dropBucket 再 flush，flush 取不到桶恒空转，在途事件被静默丢弃。 */
   async flushAllForTests(): Promise<void> {
     for (const ruleId of [...this.buckets.keys()]) {
+      const bucket = this.buckets.get(ruleId)
+      if (!bucket) continue
       this.dropBucket(ruleId)
-      await this.flush(ruleId)
+      await this.dispatchBucket(ruleId, bucket)
     }
   }
 
@@ -244,9 +253,13 @@ export class AutomationEngine {
       }
     })
     return watchFn(root, (relPath) => {
+      // win32 fs.watch recursive 回调的 filename 用反斜杠分隔（Node 文档明载）——
+      // 统一归一为 POSIX 形态，噪声过滤与 pathPattern 匹配才两端一致。POSIX 上
+      // 反斜杠是合法文件名字符，不动。
+      const rel = process.platform === 'win32' ? relPath.replace(/\\/g, '/') : relPath
       // .git 噪声与 node_modules 不进事件面（规则 pattern 再过滤一道）
-      if (!relPath || relPath.startsWith('.git/') || relPath.includes('/.git/') || relPath.startsWith('node_modules/') || relPath.includes('/node_modules/')) return
-      this.ingestEvent({ type: 'file', workspacePath: root, path: relPath })
+      if (!rel || rel.startsWith('.git/') || rel.includes('/.git/') || rel.startsWith('node_modules/') || rel.includes('/node_modules/')) return
+      this.ingestEvent({ type: 'file', workspacePath: root, path: rel })
     })
   }
 

@@ -174,7 +174,7 @@ diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/sr
 @@ -19,6 +19,7 @@
    opencode: { label: 'OpenCode', src: '/coding-agents/opencode.png' },
    dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
-   cursor: { label: 'Cursor', src: '/coding-agents/cursor.svg' },
+   cursor: { label: 'Cursor', src: '/coding-agents/cursor-logo.png' },
 +  zcode: { label: 'ZCode', src: '/coding-agents/zcode.svg' },
  } as const satisfies Record<string, ChatAgentAvatar>
  

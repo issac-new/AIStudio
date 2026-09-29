@@ -187,6 +187,8 @@ interface BridgeState {
 
 const SENT_IDS_CAP = 500
 const SEEN_CAP = 1000
+/** assignHandled 防重上限（长驻进程只增不减会随派发量线性涨内存；同 SENT_IDS/SEEN 环形语义） */
+const ASSIGN_HANDLED_CAP = 1000
 
 function defaultStateFile(): string {
   return path.join(hermesHomePath(), 'chat-bridge-state.json')
@@ -281,10 +283,16 @@ export class ChatBridge {
           if (!mapping) continue
           for (const ev of room.customEvents) {
             if (ev.type === TASK_ASSIGN_EVENT_TYPE && ev.sender !== this.opts.env.userId) {
-              await this.handleAssignEvent(mapping, { eventId: ev.eventId, content: ev.content as { taskId?: string; title?: string; body?: string; issuedBy?: string } })
+              // 逐条容错：since 已推进到本批，单条异常不得吞掉同批其余事件（丢失后不再重投）
+              try {
+                await this.handleAssignEvent(mapping, { eventId: ev.eventId, content: ev.content as { taskId?: string; title?: string; body?: string; issuedBy?: string } })
+              } catch (e) { this.opts.log(`assign ${ev.eventId} 处理失败跳过：${String((e as Error).message)}`) }
             }
           }
-          for (const msg of room.messages) await this.handleMatrixEvent(mapping, msg)
+          for (const msg of room.messages) {
+            try { await this.handleMatrixEvent(mapping, msg) }
+            catch (e) { this.opts.log(`message ${msg.eventId} 处理失败跳过：${String((e as Error).message)}`) }
+          }
         }
         for (const mapping of this.opts.mappings) await this.flushOutbound(mapping)
         saveState(this.opts.stateFile, this.st)
@@ -326,6 +334,10 @@ export class ChatBridge {
     const taskId = String(ev.content.taskId ?? '')
     if (!taskId || this.assignHandled.has(taskId)) return
     this.assignHandled.add(taskId)
+    if (this.assignHandled.size > ASSIGN_HANDLED_CAP) {
+      const oldest = this.assignHandled.values().next().value
+      if (oldest !== undefined) this.assignHandled.delete(oldest)
+    }
     const issuedBy = ev.content.issuedBy ? matrixLocalPart(String(ev.content.issuedBy)) : '远端'
     const prompt = [
       `【任务派发】${ev.content.title ?? taskId}`,

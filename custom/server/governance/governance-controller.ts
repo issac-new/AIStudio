@@ -33,6 +33,16 @@ import { readDispatchLedger } from './dispatch-ledger'
 
 const router = new Router({ prefix: '/api/governance' })
 
+/** P6-P8 管理维护角色闸（fleet.ts:54 同判据）：启用鉴权的部署仅 super_admin 可写
+ * 注册表/matrix 账号面；未启用鉴权（单用户部署）放行。返回 true=已写 403，调用侧直接 return。 */
+function superAdminDenied(ctx: { state?: unknown; status: number; body: unknown }): boolean {
+  const user = (ctx.state as { user?: { role?: string } | undefined } | undefined)?.user
+  if (!user || user.role === 'super_admin') return false
+  ctx.status = 403
+  ctx.body = { ok: false, error: '管理维护端点仅 super_admin 可操作' }
+  return true
+}
+
 /** 治理工件登记表：kind → 仓内路径 + 界面标题 + 所属闸。单一事实源（client 只消费）。 */
 export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title: string; gate: string; group: string; ref?: string }> = [
   // 六闸工件（治理门禁对象）
@@ -296,6 +306,7 @@ router.get('/registry/:kind', async (ctx) => {
 })
 
 router.put('/registry/:kind', async (ctx) => {
+  if (superAdminDenied(ctx)) return
   if (!isRegistryKind(ctx.params.kind)) { ctx.status = 404; ctx.body = { error: 'unknown registry' }; return }
   const { markdown, message, actor } = ctx.request.body as { markdown?: string; message?: string; actor?: string }
   if (typeof markdown !== 'string' || !markdown.trim()) { ctx.status = 400; ctx.body = { error: 'markdown 必填' }; return }
@@ -303,6 +314,7 @@ router.put('/registry/:kind', async (ctx) => {
 })
 
 router.post('/matrix-users', async (ctx) => {
+  if (superAdminDenied(ctx)) return
   const b = ctx.request.body as Record<string, string>
   for (const k of ['localName', 'role', 'password', 'adminToken', 'homeserverUrl']) {
     if (!b[k]) { ctx.status = 400; ctx.body = { error: `缺 ${k}` }; return }
@@ -315,6 +327,7 @@ router.post('/matrix-users', async (ctx) => {
 })
 
 router.post('/matrix-offboard', async (ctx) => {
+  if (superAdminDenied(ctx)) return
   const b = ctx.request.body as Record<string, string | string[]>
   for (const k of ['localName', 'handoverTo', 'adminToken', 'homeserverUrl']) {
     if (!b[k]) { ctx.status = 400; ctx.body = { error: `缺 ${k}` }; return }
