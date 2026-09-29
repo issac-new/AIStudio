@@ -134,7 +134,7 @@ await shot('s03-login', '/login', { board: null, wait: 6000 })
 await shot('s01-people-org', '/app/gov', { readyText: '治理', settle: 3500 })
 
 // 步骤 2/5：看板总览（板清单+卡真实在列）
-await shot('s02-boards-registry', '/hermes/kanban?board=fanfan-pm-plan', { readyText: 'RFD-001', settle: 2500 })
+await shot('s02-boards-registry', '/app/board', { readyText: 'RFD-001', settle: 2500 })
 
 // 步骤 4：驾驶舱工作台（房间列表+任务面板）
 await shot('s04-smoke-cockpit', '/app', { readyText: '支付收银台需求分析讨论群', settle: 3000 })
@@ -155,7 +155,7 @@ await shot('s07-dispatch-msg', `/app/s/group/${encodeURIComponent(ANALYSIS_ROOM)
 } })
 
 // 步骤 10：fanfan-pm-plan RACI 徽章（等具体卡标题出现）
-await shot('s08-kanban-raci', '/hermes/kanban?board=fanfan-pm-plan', { readyText: 'RFD-001', settle: 2500 })
+await shot('s08-kanban-raci', '/app/board', { readyText: 'RFD-001', settle: 2500 })
 
 // 步骤 10/11：任务抽屉 RACI 四元组（/app/board 深链）
 await shot('s09-drawer-raci', '/app/board?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 3000, readyTimeout: 70000 })
@@ -167,7 +167,7 @@ await shot('s10-raci-dispatch', `/app/s/group/${encodeURIComponent(ANALYSIS_ROOM
 } })
 
 // 步骤 12：等您操作过滤器
-await shot('s11-triage-mine', '/hermes/kanban?board=fanfan-pm-plan', {
+await shot('s11-triage-mine', '/app/board', {
   readyText: 'RFD-001', settle: 2000, after: async () => {
     const mine = page.locator('[data-testid="filter-mine-only"]').first()
     if (await mine.isVisible().catch(() => false)) { await mine.click().catch(() => {}); await page.waitForTimeout(1500) }
@@ -196,7 +196,7 @@ await shot('s15-g2-archgate', '/app/gov', { readyText: 'G2', settle: 2500, after
 } })
 
 // 步骤 16/17：排期拆单卡（T-101/T-102 真实在板）
-await shot('s16-plan-cards', '/hermes/kanban?board=fanfan-pm-plan', { readyText: 'T-101', settle: 2500 })
+await shot('s16-plan-cards', '/app/board', { readyText: 'T-101', settle: 2500 })
 
 // 步骤 18（G3）：IDE Git 面板
 await shot('s17-ide-git', '/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle: 2500, readyTimeout: 70000, after: async () => {
@@ -205,7 +205,7 @@ await shot('s17-ide-git', '/ide?task=t_9e5c6c18', { readyText: 'RFD-001', settle
 } })
 
 // 步骤 19（G4）：fei-test-mp 缺陷卡
-await shot('s18-defect-cards', '/hermes/kanban?board=fei-test-mp', { readyText: '缺陷', settle: 2500, board: 'fei-test-mp' })
+await shot('s18-defect-cards', '/app/board', { readyText: '缺陷', settle: 2500, board: 'fei-test-mp' })
 
 // 步骤 19：治理中心测试报告工件
 await shot('s19-testreport-doc', '/app/gov', { readyText: '治理', settle: 2500, after: async () => {
