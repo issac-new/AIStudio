@@ -41,6 +41,7 @@ import IdeTaskGroupsPanel from '../components/IdeTaskGroupsPanel.vue'
 import IdeReviewPanel from '../components/IdeReviewPanel.vue'
 import IdeMentionPicker from '../components/IdeMentionPicker.vue'
 import IdeInlineDiff from '../components/IdeInlineDiff.vue'
+import type { InlineDiffUndoContext } from '../components/IdeInlineDiff.vue'
 import IdeAgentsView from '../components/IdeAgentsView.vue'
 import IdeResumeAdvisor from '../components/IdeResumeAdvisor.vue'
 import IdeSecurityBoostBar from '../components/IdeSecurityBoostBar.vue'
@@ -323,7 +324,11 @@ const modelPickerOpen = ref(false)
 const recoveryOpen = ref(false)
 // S1 inline diff：当前会话最近 run 首文件的 patch 文本（真实数据链：
 // fetchWorkspaceRunChangesForSession → 首文件详情端点 patch）；无 diff 不渲染。
-const demoDiff = ref('')
+// A1 接线（2026-09-29）：同时捕获 undo 上下文（changeId/fileId/workspace），
+// 逐处拒绝经 /api/ide/run-undo hunkIndexes 真回滚；workspace 缺失时不传上下文，
+// 组件降级为本地标记。
+const latestDiff = ref('')
+const latestDiffUndoCtx = ref<InlineDiffUndoContext | null>(null)
 async function loadLatestDiff(): Promise<void> {
   const sid = chatStore.activeSessionId
   if (!sid) return
@@ -337,13 +342,18 @@ async function loadLatestDiff(): Promise<void> {
     if (!res.ok) return
     const body = (await res.json()) as { file?: { patch?: string } }
     if (chatStore.activeSessionId !== sid) return // 文件详情返回前再次校验
-    demoDiff.value = body.file?.patch ?? ''
+    latestDiff.value = body.file?.patch ?? ''
+    const ws = ide.workspace
+    latestDiffUndoCtx.value = latestDiff.value && ws
+      ? { sessionId: sid, changeId: file.change_id, fileId: file.id, workspace: ws }
+      : null
   } catch { /* 无 diff 保持不渲染 */ }
 }
 onMounted(() => { void loadLatestDiff() })
 // 会话切换即清空并重拉：inline diff 只属于当前会话，残留即跨会话串显。
 watch(() => chatStore.activeSessionId, () => {
-  demoDiff.value = ''
+  latestDiff.value = ''
+  latestDiffUndoCtx.value = null
   void loadLatestDiff()
 })
 const modelLabel = computed(() => {
@@ -524,7 +534,7 @@ async function pickModel(provider: string, model: string): Promise<void> {
         <IdeTurnRail />
       </div>
       <IdeMentionPicker />
-      <IdeInlineDiff :diff-text="demoDiff" />
+      <IdeInlineDiff :diff-text="latestDiff" :undo-context="latestDiffUndoCtx" />
       <IdeAgentsView />
       <IdeResumeAdvisor />
       <IdeSecurityBoostBar />
