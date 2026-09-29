@@ -125,10 +125,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           meta: { standaloneEmbed: true },
         },
         {
-          // 循环 → 运行画布（实时|历史）
+          // V5 补遗⑤ M6（R-C1 用户裁决合一）：循环运行画布并入运行中心详情页，
+          // /app/l 画布入口退役——本路由降为兼容重定向（旧深链/name 落运行列表，
+          // 详情页内嵌 RunCanvas 承接实时画布能力）
           path: 'l/:loopId',
           name: 'ia2.loopCanvas',
-          component: workbench,
+          redirect: () => ({ name: 'ia2.runs' }),
         },
         {
           // 看板（工作页）
