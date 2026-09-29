@@ -55,6 +55,9 @@ export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
   { from: '/app/collab/global-agent/session/:sessionId', to: '/app/agent/session/:sessionId' },
   { from: '/app/collab/global-agent', to: '/app/agent' },
   { from: '/app/collab', to: '/app' },
+  // M6（补遗⑤）：/app/l 循环画布退役 → 运行中心（画布能力在 /app/runs/:runId 详情）
+  { from: '/app/l/:loopId', to: '/app/runs' },
+  { from: '/app/l', to: '/app/runs' },
 ]
 
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */
@@ -124,11 +127,18 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           // v14 统一聊天：嵌入态隐藏 GroupChatPanel 自带房间侧栏（左栏即唯一导航）
           meta: { standaloneEmbed: true },
         },
+        // 补遗⑤ M6（R-C1 裁决）：/app/l/:loopId 循环画布路由退役——RunCanvas
+        // 能力并入 /app/runs/:runId 运行详情（RunDetailView 内嵌区块）；旧深链经
+        // IA_LEGACY_REDIRECTS 落运行中心。RunCanvas 组件保留（C 档）。
         {
-          // 循环 → 运行画布（实时|历史）
-          path: 'l/:loopId',
-          name: 'ia2.loopCanvas',
-          component: workbench,
+          // IDE 工作台（补遗⑤ M2 归一，2026-09-29）：IaShell 子路由 /app/ide，
+          // 全屏中栏语义。名称沿用 ide.shell（useIdeJump/视图切换器/gov 面板/
+          // 任务抽屉 ⌨IDE 等深链消费者零改动）；IdeShell 自带共享顶区 IaGlobalTop
+          // 与 RunTrace 弹窗，IaShell 对本子路由隐藏同名件防双份。旧 /ide 直链
+          // 由 ide/routes.ts 重定向兼容。
+          path: 'ide',
+          name: 'ide.shell',
+          component: () => import('@/custom/ide/views/IdeShell.vue'),
         },
         {
           // 看板（工作页）

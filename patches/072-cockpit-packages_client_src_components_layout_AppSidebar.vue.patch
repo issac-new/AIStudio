@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index 0e27541b..606a7800 100644
+index 0e27541..1e3fb35 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
 @@ -1,8 +1,9 @@
@@ -13,7 +13,7 @@ index 0e27541b..606a7800 100644
  import RouteLinkItem from "@/components/common/RouteLinkItem.vue";
  import PageSidebarFooter from "@/components/layout/PageSidebarFooter.vue";
  import { isStoredSuperAdmin } from "@/api/client";
-@@ -11,10 +12,25 @@ const { t } = useI18n();
+@@ -11,10 +12,23 @@ const { t } = useI18n();
  const route = useRoute();
  const router = useRouter();
  const appStore = useAppStore();
@@ -26,8 +26,6 @@ index 0e27541b..606a7800 100644
 +const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin());
 +// overlay[ia2]: P3 六区域新 IA 高亮（Task 8: cockpit 入口随退役移除，仅保留新 IA 项）
 +const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
-+// overlay[ide]: IDE 工作台（/ide）一级入口高亮（编程专业界面壳）
-+const isIdeArea = computed(() => String(route.name ?? "").startsWith("ide."));
 +// overlay[nav]: 系统折叠分组（统一导航裁决）——低频运维/配置入口收敛；
 +// 当前命中系统页时默认展开
 +const SYSTEM_ROUTE_NAMES = [
@@ -40,31 +38,12 @@ index 0e27541b..606a7800 100644
  const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
  const isDesktopShell = computed(
    () =>
-@@ -52,6 +68,89 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -52,6 +66,70 @@ function handleSidebarClick(event: MouseEvent) {
      @click="handleSidebarClick"
    >
      <nav class="sidebar-nav">
-+      <!-- overlay[ide]: IDE 工作台一级入口（登录默认落点 /ide；codex 底座 + zcode 会话 UI） -->
-+      <RouteLinkItem
-+        class="nav-item"
-+        :to="{ name: 'ide.shell' }"
-+        :active="isIdeArea"
-+      >
-+        <svg
-+          width="16"
-+          height="16"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
-+          stroke-width="1.5"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
-+          <path d="M8 6 3 12l5 6" />
-+          <path d="M16 6l5 6-5 6" />
-+        </svg>
-+        <span>{{ t("sidebar.ideWorkspace") }}</span>
-+      </RouteLinkItem>
++      <!-- overlay[ide]: IDE 一级入口移除（补遗⑤ M2：IDE 归一为驾驶舱子路由 /app/ide，
++           入口经页头视图切换与任务 ⌨IDE 深链；/ide 旧路由加兼容重定向） -->
 +      <!-- overlay[ia2]: 六区域新 IA 一级入口（P3 登录默认；Task 8 cockpit 退役后唯一入口） -->
 +      <RouteLinkItem
 +        class="nav-item"
@@ -88,7 +67,7 @@ index 0e27541b..606a7800 100644
 +        </svg>
 +        <span>{{ t("ia2.brand") }}</span>
 +      </RouteLinkItem>
-+      <!-- overlay[nav]: 系统折叠分组头（统一导航：一级仅 驾驶舱/IDE 双入口） -->
++      <!-- overlay[nav]: 系统折叠分组头（统一导航：一级仅驾驶舱单入口，补遗⑤ M2 后 IDE 经 /app/ide） -->
 +      <button
 +        class="nav-item sidebar-system-toggle"
 +        data-testid="sidebar-system-toggle"
@@ -130,7 +109,37 @@ index 0e27541b..606a7800 100644
        <RouteLinkItem
          class="nav-item"
          :to="{ name: 'hermes.logs' }"
-@@ -279,31 +378,13 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -118,7 +196,9 @@ function handleSidebarClick(event: MouseEvent) {
+         </svg>
+         <span>{{ t("sidebar.performance") }}</span>
+       </RouteLinkItem>
++      <!-- overlay[s1]: 技能用量入口隐藏（补遗⑤ A 档：路由保留，v-if 恒 false 摘面） -->
+       <RouteLinkItem
++        v-if="false"
+         class="nav-item"
+         :to="{ name: 'hermes.skillsUsage' }"
+         :active="selectedKey === 'hermes.skillsUsage'"
+@@ -190,7 +270,9 @@ function handleSidebarClick(event: MouseEvent) {
+         </svg>
+         <span>{{ t("sidebar.versionPreview") }}</span>
+       </RouteLinkItem>
++      <!-- overlay[s1]: 主题页入口隐藏（补遗⑤ A 档：主题切换走页头 ThemeSwitch，路由保留） -->
+       <RouteLinkItem
++        v-if="false"
+         class="nav-item"
+         :to="{ name: 'hermes.theme' }"
+         :active="selectedKey === 'hermes.theme'"
+@@ -214,7 +296,9 @@ function handleSidebarClick(event: MouseEvent) {
+         </svg>
+         <span>{{ t("sidebar.theme") }}</span>
+       </RouteLinkItem>
++      <!-- overlay[s1]: 宠物商店入口隐藏（补遗⑤ A 档+S3 桌面宠物默认关，路由保留） -->
+       <RouteLinkItem
++        v-if="false"
+         class="nav-item"
+         :to="{ name: 'hermes.petdex' }"
+         :active="selectedKey === 'hermes.petdex'"
+@@ -279,31 +363,13 @@ function handleSidebarClick(event: MouseEvent) {
          </svg>
          <span>{{ t("sidebar.settings") }}</span>
        </RouteLinkItem>
@@ -165,7 +174,7 @@ index 0e27541b..606a7800 100644
        <button
          class="collapse-btn"
          @click="appStore.toggleSidebarCollapsed()"
-@@ -412,11 +493,18 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -412,11 +478,18 @@ function handleSidebarClick(event: MouseEvent) {
    border-top: 1px solid $border-color;
  }
  
@@ -189,7 +198,7 @@ index 0e27541b..606a7800 100644
  }
  
  .sidebar-account-footer {
-@@ -443,12 +531,6 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -443,12 +516,6 @@ function handleSidebarClick(event: MouseEvent) {
      padding-top: 8px;
    }
  

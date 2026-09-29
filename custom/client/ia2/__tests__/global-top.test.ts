@@ -110,13 +110,19 @@ describe('IaViewSwitcher — 右上角视图切换器（v12.4 单按钮）', () 
     wrapper.unmount()
   })
 
-  it('/ide → 显示目标视图沟通协作，点击跳 ia2.collab', async () => {
-    const { wrapper } = await mountAt('/ide', IaViewSwitcher)
+  it('/app/ide（M2 归一后 IDE 落点）→ 显示目标视图沟通协作，点击跳 ia2.collab', async () => {
+    const { wrapper } = await mountAt('/app/ide', IaViewSwitcher)
     const btn = wrapper.find('[data-testid="ia-view-toggle"]')
     expect(btn.text()).toContain('ia2.nav.collab')
     await btn.trigger('click')
     await flushPromises()
     expect(wrapper.vm.$router.currentRoute.value.name).toBe('ia2.collab')
+    wrapper.unmount()
+  })
+
+  it('/ide 旧直链 → 非IDE 态判定（M2 后 /ide 经重定向兜底，路径判定不再命中）', async () => {
+    const { wrapper } = await mountAt('/ide', IaViewSwitcher)
+    expect(wrapper.find('[data-testid="ia-view-toggle"]').text()).toContain('ia2.shell.gotoIde')
     wrapper.unmount()
   })
 
