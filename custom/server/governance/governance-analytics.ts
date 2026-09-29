@@ -311,22 +311,22 @@ function walkUp(rel: string, fromDir: string): string | null {
   return null
 }
 
-/** qgate runs 扫描根：GOVERNANCE_QGATE_RUNS 覆盖（逗号分隔）；默认 cwd/.qgate + 仓根上寻 + 示例仓。 */
+/** qgate runs 扫描根：GOVERNANCE_QGATE_RUNS 覆盖（逗号分隔）；默认 cwd/.qgate + 仓根上寻（__dirname 与 cwd 双起点，覆盖注入树/打包 shim/开发树三形态）+ 示例仓。 */
 function qgateRunRoots(): string[] {
   const env = process.env.GOVERNANCE_QGATE_RUNS?.trim()
   if (env) return env.split(',').map((s) => resolve(s.trim().replace(/^~/, homedir()))).filter(Boolean)
   const roots: string[] = []
-  const cwdRoot = resolve(process.cwd(), '.qgate', 'runs')
-  if (existsSync(cwdRoot)) roots.push(cwdRoot)
-  const upRoot = walkUp('.qgate/runs', __dirname)
-  if (upRoot && !roots.includes(upRoot)) roots.push(upRoot)
-  const examples = walkUp('custom/qgate/examples', __dirname)
-  if (examples) {
+  const push = (p: string | null) => { if (p && !roots.includes(p)) roots.push(p) }
+  push(resolve(process.cwd(), '.qgate', 'runs'))
+  push(walkUp('.qgate/runs', __dirname))
+  push(walkUp('.qgate/runs', process.cwd()))
+  for (const base of [__dirname, process.cwd()]) {
+    const examples = walkUp('custom/qgate/examples', base)
+    if (!examples) continue
     try {
       for (const d of readdirSync(examples, { withFileTypes: true })) {
         if (!d.isDirectory()) continue
-        const r = resolve(examples, d.name, '.qgate', 'runs')
-        if (existsSync(r)) roots.push(r)
+        push(resolve(examples, d.name, '.qgate', 'runs'))
       }
     } catch { /* 示例目录读失败忽略 */ }
   }
