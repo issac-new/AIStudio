@@ -32,6 +32,7 @@ import { listTasks } from '@/api/hermes/kanban'
 import { bucketPriority } from '@/custom/cockpit/adapters/task-adapter'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archivedSessions'
+import { restoreAllArchived } from '../utils/archive-restore'
 import { formatRelativeTime, workspaceLabel } from '../utils/time'
 import { bucketSessions } from '../utils/sessionBuckets'
 
@@ -297,6 +298,26 @@ async function onUnarchive(id: string): Promise<void> {
   message.success(t('chat.sessionUnarchived'))
   archived.value = archived.value.filter(s => s.id !== id)
   await chat.loadSessions(chat.sessionProfileFilter)
+}
+
+// B11 归档批量恢复（09-19 全景 #5：cc Unarchive all 对照）：逻辑在
+// utils/archive-restore.ts 纯函数（单测直连），此处只接线。
+const restoreAllBusy = ref(false)
+async function onRestoreAllArchived(): Promise<void> {
+  if (restoreAllBusy.value || !archived.value.length) return
+  restoreAllBusy.value = true
+  try {
+    const { okIds, failedIds } = await restoreAllArchived(archived.value.map((s) => s.id), unarchiveSession)
+    if (okIds.length) archived.value = archived.value.filter((s) => !okIds.includes(s.id))
+    if (failedIds.length) {
+      message.error(t('ide.task.restoreAllArchivedFailed', { count: failedIds.length, defaultValue: `${failedIds.length} 条恢复失败（仍在归档列）` }))
+    } else {
+      message.success(t('ide.task.restoreAllArchivedOk', { defaultValue: '归档已全部恢复' }))
+    }
+    if (okIds.length) await chat.loadSessions(chat.sessionProfileFilter)
+  } finally {
+    restoreAllBusy.value = false
+  }
 }
 
 // ---- 会话操作 ----
@@ -572,6 +593,15 @@ onMounted(async () => {
             <span class="ide-taskbar__section-caret" :class="{ 'is-collapsed': !archivedOpen }">▾</span>
             <span class="ide-taskbar__section-title">{{ t('ide.task.archived') }}</span>
             <span v-if="archived.length" class="ide-taskbar__archived-count">{{ t('ide.task.archivedTaskCount', { count: archived.length }) }}</span>
+            <button
+              v-if="archived.length"
+              type="button"
+              class="ide-taskbar__group-btn"
+              :disabled="restoreAllBusy"
+              data-testid="ide-task-restore-all-archived"
+              :title="t('ide.task.restoreAllArchived', '全部恢复')"
+              @click.stop="onRestoreAllArchived"
+            >⇪</button>
             <button
               v-if="archived.length"
               type="button"

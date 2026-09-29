@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // IdePermissionSwitcher — 权限模式七档循环切换器（复刻 claude-code Shift+Tab 七档
 // +minimax Alt+M 六档形态；UI 复刻 R2）。数据面=permmodes（七档语义+toEngineTaskMode
-// 引擎任务档映射）；当前会话档存 localStorage（会话级 v4 通道引擎未开，档位随
-// 任务派发/自动化消费生效——UI 语义与未来通道就位即真控）。
+// 引擎任务档映射）；当前会话档存 localStorage。
+// A2 诚实化（2026-09-29）：面板底部常显生效面说明——档位当前随任务派发/自动化消费，
+// 会话内即时切换需引擎通道。通道锚点已查实：zcode v4 sendText payload 支持
+// mode: submissionModeSchema（build/edit/plan/yolo，command.ts:99），接线列独立轮
+// （需 /ide 发送链从 hermes 通道切/并到 engine sendText）。
 import { computed, ref } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 
@@ -64,6 +67,7 @@ defineExpose({ cycle })
         :title="m.hint"
         @click="pick(m.key)"
       >{{ m.label }}<small>{{ m.hint }}</small></button>
+      <div class="ide-perm__note" data-testid="ide-perm-note">生效面：任务派发/自动化。会话内即时切换通道待引擎接线（v4 sendText mode 已查实，见组件头注）。</div>
     </div>
   </span>
 </template>
@@ -88,4 +92,8 @@ defineExpose({ cycle })
 .ide-perm__mode:hover { background: var(--hover-color, rgba(0, 0, 0, 0.06)); }
 .ide-perm__mode.is-active { background: var(--hover-color, rgba(0, 0, 0, 0.1)); color: var(--primary-color, #18a058); }
 .ide-perm__mode small { display: block; color: var(--text-color-3, #999); font-size: 10px; }
+.ide-perm__note {
+  padding: 6px 8px 4px; font-size: 10px; color: var(--text-color-3, #999);
+  border-top: 1px dashed var(--border-color, #e0e0e0); margin-top: 4px; line-height: 1.5;
+}
 </style>

@@ -15,6 +15,7 @@ import { useNotifyReadStore } from '../store/notify-read'
 import { useReviewCenterStore } from '@/custom/matrix-teams/stores/review-center'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useDecisionRows, type DecisionRow } from '../composables/useDecisionRows'
+import { NOTIFY_PREF_GROUPS, filterInboxByPrefs, notifyPrefsState, prefEnabled, setPref } from '../store/notify-prefs'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 
@@ -29,9 +30,12 @@ const { decisionRows, decisionIds, decisionUnread, gateRows } = useDecisionRows(
 
 const tab = ref<'decisions' | 'messages'>('decisions')
 
-const messageRows = computed(() => cockpit.inboxItems ?? [])
+// B9：偏好分组过滤（关掉的类目不进列表不计徽章；过滤面=notify-prefs 单一事实源）
+const prefsOpen = ref(false)
+const messageRows = computed(() => filterInboxByPrefs(cockpit.inboxItems ?? []))
 
 // R6 补充：消息未读计数（messages tab 徽章；与顶部通知徽章双计数同源）
+// B9 口径修订：同走偏好过滤（关掉的类目即降噪，不计数）。
 const messageUnread = computed(() =>
   messageRows.value.reduce((n: number, i: { count?: number }) => n + (i.count ?? 0), 0),
 )
@@ -91,6 +95,10 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
       </button>
       <span class="ndp__spacer" />
       <button
+        v-if="tab === 'messages'" type="button" class="ndp__act"
+        data-testid="notify-prefs-toggle" title="消息类目偏好（降噪分组）" @click="prefsOpen = !prefsOpen"
+      >⚙</button>
+      <button
         v-if="tab === 'decisions'" type="button" class="ndp__act"
         data-testid="notify-mark-all" :title="t('ia2.notify.markAllTitle')" @click="read.markManyRead(decisionIds)"
       >✓ {{ t('ia2.notify.markAll') }}</button>
@@ -127,8 +135,22 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
         </div>
       </template>
 
-      <!-- ② 消息：统一收件箱（未读消息/待办提醒），点击跳对象 -->
+      <!-- ② 消息：统一收件箱（未读消息/待办提醒），点击跳对象；B9 偏好分组降噪 -->
       <template v-else>
+        <div v-if="prefsOpen" class="ndp__prefs" data-testid="notify-prefs">
+          <div class="ndp__prefshead">消息类目偏好（关闭即降噪：不进列表不计徽章）</div>
+          <label
+            v-for="g in NOTIFY_PREF_GROUPS" :key="g.key" class="ndp__prefsrow"
+            :data-testid="`notify-pref-${g.key}`"
+          >
+            <input
+              type="checkbox"
+              :checked="prefEnabled(g.key)"
+              @change="setPref(g.key, ($event.target as HTMLInputElement).checked)"
+            />
+            {{ g.label }}
+          </label>
+        </div>
         <div v-if="!messageRows.length" class="ndp__empty">{{ t('ia2.notify.emptyMessages') }}</div>
         <button
           v-for="m in messageRows" :key="m.id" type="button" class="ndp__row ndp__row--msg"
@@ -170,6 +192,9 @@ function onGateVerdict(row: DecisionRow, verdict: 'pass' | 'reject'): void {
 
 /* R6 消息计数徽章（与决策红色区分，蓝色语义） */
 .ndp__badge--msg { background: #61afef; }
+.ndp__prefs { border-bottom: 1px solid var(--border-color); padding: 6px 10px; }
+.ndp__prefshead { font-size: 11px; font-weight: 600; color: var(--text-color-3, #999); margin-bottom: 4px; }
+.ndp__prefsrow { display: flex; gap: 6px; align-items: center; font-size: 12px; padding: 2px 0; cursor: pointer; }
 .ndp__spacer { flex: 1; }
 .ndp__act {
   height: 22px; padding: 0 8px; border: none; border-radius: 4px; background: transparent;
