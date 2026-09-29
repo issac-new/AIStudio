@@ -306,18 +306,3 @@
 504-sidebar-dead-matrix-entry-removal.patch
 # 505（卡抽屉 body/评论 Markdown 渲染）：upstream 抽屉裸插值→KanbanMarkdown，run2 实拍实证 raw 字面量。
 505-kanban-drawer-markdown.patch
-# 506/507（v14 统一聊天 Phase 1）：ia2 工作台嵌入态 standaloneEmbed——ChatView/GroupChatView
-#      隐藏自带会话/房间侧栏（工作台左栏即唯一导航）+ 深链失效回 /app 不越界 +
-#      嵌入态高度 100%（治 calc(vh) 溢出裁切输入区）。独立 meta key 不复用
-#      standaloneChat：App.vue 以其门控六个全局弹层，挂上会连带砍 GlobalPendingActions。
-506-client-chatview-standalone-embed.patch
-507-client-groupchatview-standalone-embed.patch
-# 508（v14 配套词条，473 之后按 496/501 同例单补）：ia2.flow 六键 zh/en 成对——
-#      chatSection/newChat/newAgentChat/newGroupChat/newMatrixRoom/deleteGroup。
-508-client-i18n-comm-v14.patch
-# 509/510（v14 统一聊天 P2B ChatBridge）：group-chat.ts 桥注入 API
-#      （publishBridgeMemberMessage：持久化+广播+processMentions 编排，非 socket 入口）
-#      + bridgeEvents 桥订阅面（approval.requested 广播）+ bootstrap/http.ts 挂载
-#      （CHAT_BRIDGE_ENABLED 门控，动态 import 失败不阻断主进程）。
-509-server-groupchat-bridge-api.patch
-510-server-chatbridge-mount.patch
