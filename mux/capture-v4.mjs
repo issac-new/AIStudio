@@ -165,7 +165,13 @@ const ideTask = process.env.IDE_TASK || state.card_review_rfd || ''
 await shot('ui-25-ide', `/ide${ideTask ? `?task=${ideTask}` : ''}`, { wait: 6000 })
 
 // 步骤 26：报告自身（生成后重跑本位）
-await shot('ui-26-report', '/app/gov', { wait: 5000 })
+// ui-26-report：第 26 步交付物=本报告自身——直拍生成的 simulation-report.html 首屏（治"拍成治理中心"错拍）
+if (!only || only === 'ui-26-report') {
+  await page.goto('file://' + RUN_DIR + '/evidence/simulation-report.html', { waitUntil: 'load' })
+  await page.waitForTimeout(2500)
+  await page.screenshot({ path: `${OUT}/ui-26-report.png` })
+  console.log('shot: ui-26-report (report file first screen)')
+}
 
 await reportDuplicateFrames()
 await browser.close()

@@ -1,0 +1,92 @@
+#!/bin/bash
+# mx-clean.sh —— 0→1 清环境（V5 补遗④第 1 项 / §十一）
+# 用法：bash mx-clean.sh [--dry-run] [--keep-accounts] [--reset-central]
+#   --dry-run      只打印将执行的动作（默认即 dry-run——显式 --apply 才真清）
+#   --apply        真执行（危险：清空 runs/state/locks/房间归档）
+#   --keep-accounts 保留 synapse 账号（缺省连同房间一起归档清理但保留账号与凭据）
+#   --reset-central 重置中央仓 integration/RFD-* 与 docs/{analysis,design,plan,test,delivery,acceptance,retro,requirements}/RFD-*
+# 合格线（方案 §十一）：清后 runs/ 无旧轮目录、state.env 空、房间列表无旧轮同名房；可反复跑。
+set -euo pipefail
+SIM_ROOT="${SIM_ROOT:-/Volumes/nvme2230/lab/ncwk-sim-mux}"
+APPLY=0; KEEP_ACCOUNTS=0; RESET_CENTRAL=0
+for a in "$@"; do
+  case "$a" in
+    --apply) APPLY=1 ;;
+    --dry-run) APPLY=0 ;;
+    --keep-accounts) KEEP_ACCOUNTS=1 ;;
+    --reset-central) RESET_CENTRAL=1 ;;
+    *) echo "未知参数 $a"; exit 2 ;;
+  esac
+done
+say() { echo "[mx-clean $([ "$APPLY" = 1 ] && echo APPLY || echo DRY-RUN)] $*"; }
+
+# 0) 推演在跑则拒绝（单驱动锁判活）
+if [ -f "$SIM_ROOT/.driver.lock.d/info" ]; then
+  LP=$(sed -n 's/^pid=\([0-9]*\).*/\1/p' "$SIM_ROOT/.driver.lock.d/info" 2>/dev/null || true)
+  if [ -n "$LP" ] && kill -0 "$LP" 2>/dev/null; then
+    echo "[mx-clean FAIL] 推演进行中（驱动 pid $LP 活锁）——拒绝清理；结束推演后重试" >&2; exit 3
+  fi
+fi
+
+# 1) 停栈
+say "停 studio/gateway（pids/ 下 pid 若活则 TERM）"
+for f in studio.pid gateway.pid; do
+  p="$SIM_ROOT/pids/$f"
+  [ -f "$p" ] || continue
+  pid=$(cat "$p")
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then say "  TERM $f pid=$pid"; [ "$APPLY" = 1 ] && kill "$pid" || true
+  fi
+done
+
+# 2) 归档并清空 runs 与 state/locks
+TS=$(date +%Y%m%d-%H%M%S)
+ARC="$SIM_ROOT/archive/mx-clean-$TS"
+say "runs/ 与 state.env → ${ARC}（tar 归档后删除原物）"
+if [ "$APPLY" = 1 ]; then
+  mkdir -p "$ARC"
+  [ -d "$SIM_ROOT/runs" ] && tar -cf "$ARC/runs.tar" -C "$SIM_ROOT" runs && rm -rf "$SIM_ROOT/runs" && mkdir -p "$SIM_ROOT/runs"
+  for f in state.env fleet-manifest.json; do
+    [ -f "$SIM_ROOT/$f" ] && mv "$SIM_ROOT/$f" "$ARC/$f"
+  done
+  rm -rf "$SIM_ROOT/gateway-locks" "$SIM_ROOT/.driver.lock.d"
+fi
+
+# 3) synapse 房间归档清理（保留账号与凭据：按创建时间/名称把推演房间逐个 PUT /forget+delete 前先 archive）
+#    管理员 token 自 creds/admin.token；房间筛选=成员含 @fanfan:matrix.test 且名称含「需求分析讨论群」等推演特征
+if [ "$KEEP_ACCOUNTS" = 0 ]; then
+  say "归档并退出本机 joined 推演房间（保留账号；凭据不动）"
+  ADM=$( [ -f "$SIM_ROOT/creds/admin.token" ] && cat "$SIM_ROOT/creds/admin.token" | head -1 || true )
+  if [ "$APPLY" = 1 ] && [ -n "$ADM" ]; then
+    HS=http://127.0.0.1:8008
+    for u in fanfan bella; do
+      T=$( [ -f "$SIM_ROOT/creds/$u.token" ] && head -1 "$SIM_ROOT/creds/$u.token" || true )
+      [ -n "$T" ] || continue
+      curl -sf "$HS/_matrix/client/v3/joined_rooms?access_token=$T" | jq -r '.joined_rooms[]' | while read -r rid; do
+        nm=$(curl -sf "$HS/_matrix/client/v3/rooms/$rid/state/m.room.name?access_token=$T" | jq -r '.name // ""' 2>/dev/null || echo "")
+        case "$nm" in *"讨论群"*|"dlv-"*|*"需求"*) 
+          curl -sf -X PUT "$HS/_matrix/client/v3/rooms/$rid/state/m.room.join_rules?access_token=$T" -d '{"join_rule":"public"}' >/dev/null || true
+          curl -sf -X POST "$HS/_matrix/client/v3/rooms/$rid/leave?access_token=$T" -d '{}' >/dev/null || true
+          say "  left $rid ($nm)"
+        ;; esac
+      done
+    done
+  fi
+else
+  say "保留账号且不动房间（--keep-accounts）"
+fi
+
+# 4) 中央仓按需重置（默认保留；--reset-central 清 RFD 系工件与 integration 分支）
+if [ "$RESET_CENTRAL" = 1 ]; then
+  say "中央仓重置：docs/{requirements,analysis,design,plan,test,delivery,acceptance,retro}/RFD-* 与 integration 分支（先打 tag 快照 mx-clean-$TS）"
+  if [ "$APPLY" = 1 ]; then
+    CEN="$SIM_ROOT/central/aipaydev"
+    git -C "$CEN" tag "mx-clean-$TS" 2>/dev/null || true
+    ( cd "$CEN" && git rm -rq --ignore-unmatch docs/requirements/RFD-* docs/analysis/RFD-* docs/design/RFD-* docs/plan/RFD-* docs/test/RFD-* docs/delivery/RFD-* docs/acceptance/RFD-* docs/retro/*RFD* 2>/dev/null || true
+      git commit -qrm "mx-clean：RFD 工件清空（快照 tag mx-clean-$TS）" 2>/dev/null || true )
+  fi
+else
+  say "中央仓保留（未指定 --reset-central）"
+fi
+
+say "完成。后续：mx-setup.sh → mx-up.sh → RUN_ID=<新轮> aipay-scenario.sh（0→1）"
+[ "$APPLY" = 1 ] || echo "（DRY-RUN：以上未执行；确认后加 --apply）"
