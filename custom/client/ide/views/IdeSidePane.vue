@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // IdeSidePane — 右侧辅助面板（对标 zcode sidePane 多标签容器，用户清单批）：
-//   审查（变更 diff，复用 IdeGitPane）/ 浏览器（复用上游 DesktopBrowserView）/
+//   审查（变更 diff，复用 IdeGitPane）/ 浏览器（真·内置浏览器 DesktopBrowserPanel，代理可驱动——Computer Use 接线轮）/
 //   Wiki 引用（IdeWikiPane）/ 辅助对话（快速追问 MVP：多活跃会话架构为 M4 项，
 //   当前提供结构化追问复制 + 跳主会话）。
 // 开关经 ide.toggleSidePane（IdeStatusBar 面板切换按钮），宽高偏好持久化在 ide store。
@@ -25,7 +25,7 @@ import IdeTerminalDock from './IdeTerminalDock.vue'
 import IdeHooksPane from './IdeHooksPane.vue'
 import IdeAutomationsPane from './IdeAutomationsPane.vue'
 import IdeSlashCommandsPane from './IdeSlashCommandsPane.vue'
-import DesktopBrowserView from '@/views/hermes/DesktopBrowserView.vue'
+import IdeBrowserPane from './IdeBrowserPane.vue'
 import {
   loadTerminalActions,
   addTerminalAction,
@@ -239,7 +239,7 @@ function focusMainChat(): void {
     <div class="ide-sidepane__body">
       <IdeFilesPane v-if="ide.sidePane.tab === 'files'" class="ide-sidepane__fill" data-testid="ide-sidepane-files" />
       <IdeGitPane v-else-if="ide.sidePane.tab === 'review'" class="ide-sidepane__fill" data-testid="ide-sidepane-review" />
-      <DesktopBrowserView v-else-if="ide.sidePane.tab === 'browser'" class="ide-sidepane__fill" />
+      <IdeBrowserPane v-else-if="ide.sidePane.tab === 'browser'" class="ide-sidepane__fill" data-testid="ide-sidepane-browser" />
       <IdeWikiPane v-else-if="ide.sidePane.tab === 'wiki'" class="ide-sidepane__fill" />
       <IdeStoragePane v-else-if="ide.sidePane.tab === 'storage'" class="ide-sidepane__fill" />
       <IdeMemoryPane v-else-if="ide.sidePane.tab === 'memory'" class="ide-sidepane__fill" />
