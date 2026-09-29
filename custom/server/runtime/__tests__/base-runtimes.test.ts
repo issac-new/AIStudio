@@ -17,8 +17,15 @@ import { validateSkillsShape, buildPinYaml, syncFromSource, readPin, readPinSkil
 import { applyPuaRegistration, semanticaMcpStatus } from '../../../../scripts/runtime/register-runtime.mjs';
 import { extractNewFileContent, validateSemanticaManifest, validatePin, seriesListsPatch } from '../../../../scripts/runtime/runtime-doctor.mjs';
 
-const hermesAgentRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
-const hermesStudioRoot = resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
+// 期望根与 inject.mjs 同源解析（含 OVERLAY_UPSTREAM_ROOT 隔离覆盖）——
+// 否则隔离测试（env 指私有根）下实现返回私有根、期望仍是默认相对根，恒假红。
+const upstreamRootEnv = process.env.OVERLAY_UPSTREAM_ROOT?.trim();
+const hermesAgentRoot = upstreamRootEnv
+  ? resolve(upstreamRootEnv, 'hermes-agent')
+  : resolve(overlayRoot, '..', 'upstream', 'hermes-agent');
+const hermesStudioRoot = upstreamRootEnv
+  ? resolve(upstreamRootEnv, 'hermes-studio')
+  : resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
 
 // worktree 环境（.claude/worktrees/<feat>/ 的 upstream 经符号链接指回真实树）下，
 // inject.mjs 的 resolvePatchTargetRoot 返回 realpathSync 后的真实路径，测试侧若用
