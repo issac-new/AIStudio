@@ -19,6 +19,7 @@ import { buildLoopRows } from '../adapters/flow'
 import { loopRest } from '@/custom/loop/api/loop-rest'
 import type { TaskContract } from '@/custom/loop/types'
 import { useNowTick } from './useNowTick'
+import { usePlatformsStore } from '../store/platforms'
 
 export function useSitCounts() {
   const workspace = useWorkspaceStore()
@@ -30,7 +31,15 @@ export function useSitCounts() {
   const groupChat = useGroupChatStore()
   const teamRegistry = useTeamRegistryStore()
   const kanbanStore = useKanbanStore()
+  const platformsStore = usePlatformsStore()
+  // 网关探测轮询随首个态势消费方启动（retain 引用计数，shell 生命周期内常驻）
+  platformsStore.retain()
   const now = useNowTick()
+
+  /** matrix 客户端已建立连接=本人在线（在线三数里「人」的底线真值） */
+  function matrixConnected(): boolean {
+    try { return !!useMatrixClientStore().client?.isLoggedIn?.() } catch { return false }
+  }
 
   /** aipaydev cockpit-online-zero 动态兜底：活跃房间 joined 成员 presence=online
    *  的 Matrix 账号去重（matrix-sdk 自动维护 presence，非响应式——由 now tick
@@ -125,10 +134,19 @@ export function useSitCounts() {
   const online = computed(() => {
     void now.value
     const fleet = cockpit.fleetSessions ?? []
+    // 网关真值（cockpit-online-zero 根治 2026-09-30）：fleetSessions=studio 会话面，
+    // agent 走网关通道时不在此列——机器/智能体以 ia2-platforms 网关探测为准：
+    // 机器=网关实例（running 即 ≥1），智能体=网关连通通道的去重档案数。
+    const gw = platformsStore.gatewayState === 'running'
+    const gwAgents = new Set(
+      platformsStore.platforms
+        .filter(p => p.state === 'connected' && p.profile)
+        .map(p => p.profile as string),
+    ).size
     const registryPeople = accounts.value.length
     const registryAgents = accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0)
     if (registryPeople > 0 || registryAgents > 0) {
-      return { people: registryPeople, agents: registryAgents, machines: fleet.length }
+      return { people: registryPeople, agents: Math.max(registryAgents, gwAgents), machines: Math.max(fleet.length, gw ? 1 : 0) }
     }
     const profiles = new Set(fleet.map(s => s.profile || 'default'))
     const people = collectPresencePeople()
@@ -137,10 +155,12 @@ export function useSitCounts() {
         .filter((t: { status: string; assignee?: string | null }) => t.status === 'running' && t.assignee)
         .map((t: { assignee?: string | null }) => t.assignee as string),
     )
+    // 本人已登录即在线（matrix client 已连 = 至少本人在场）；presence 未汇入前不下零
+    const selfOnline = matrixConnected() ? 1 : 0
     return {
-      people: Math.max(people.size, profiles.size),
-      agents: Math.max(fleet.length, runningAssignees.size),
-      machines: fleet.length,
+      people: Math.max(people.size, profiles.size, selfOnline),
+      agents: Math.max(fleet.length, runningAssignees.size, gwAgents),
+      machines: Math.max(fleet.length, gw ? 1 : 0),
     }
   })
 
