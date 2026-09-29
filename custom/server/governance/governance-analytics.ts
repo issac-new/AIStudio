@@ -15,6 +15,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import type { LedgerDoc, MetricsDoc } from './governance-ledger'
+import type { DispatchLedgerEntry } from './dispatch-ledger'
 
 // ---------- kanban 实耗 ----------
 
@@ -139,7 +140,7 @@ export interface UnitUsage {
   unitId: string
   kind: string
   mapped: boolean
-  source: 'kanban-assignee' | 'squad-ledger' | 'untracked'
+  source: 'kanban-assignee' | 'squad-ledger' | 'dispatch-ledger' | 'untracked'
   lastUsedAt: number | null
   daysSinceUse: number | null
   note?: string
@@ -152,18 +153,43 @@ export interface UsageReport {
   zeroUseCandidates: UnitUsage[]
 }
 
+export interface UsageOpts {
+  now?: number
+  zeroUseDays?: number
+  /** 派发结果台账条目（第三期：lane-specialist/coding-agent 实耗信号面）。 */
+  dispatchEntries?: DispatchLedgerEntry[]
+}
+
+/** 单元在派发台账中的归因命中（column 条目按 specialist、mention 条目按 target）。 */
+function dispatchUsageFor(entries: DispatchLedgerEntry[], unitId: string): { last: number | null; count: number; delivered: number } {
+  let last: number | null = null
+  let count = 0
+  let delivered = 0
+  for (const e of entries) {
+    const hit = (e.kind === 'column' && e.specialist === unitId) || (e.kind === 'mention' && e.target === unitId)
+    if (!hit) continue
+    count += 1
+    if (e.reason === 'queued' || e.reason === 'coalesced') delivered += 1
+    if (last === null || e.ts > last) last = e.ts
+  }
+  return { last, count, delivered }
+}
+
 export function deriveUsage(
   ledger: LedgerDoc,
   assigneeStats: Map<string, AssigneeStat>,
   squadStats: Map<string, SquadStat>,
-  now: number = Date.now(),
-  zeroUseDays = 90,
+  opts: UsageOpts = {},
 ): UsageReport {
+  const now = opts.now ?? Date.now()
+  const zeroUseDays = opts.zeroUseDays ?? 90
+  const dispatchEntries = opts.dispatchEntries ?? []
   const perUnit: UnitUsage[] = []
   const mappedAssignees = new Set<string>()
   for (const u of ledger.units ?? []) {
     let usage: UnitUsage
     const asStat = assigneeStats.get(u.id)
+    const du = dispatchUsageFor(dispatchEntries, u.id)
     if (asStat) {
       mappedAssignees.add(u.id)
       usage = {
@@ -181,6 +207,14 @@ export function deriveUsage(
             note: `台账评估 ${sq.total} 条`,
           }
         : { unitId: u.id, kind: u.kind, mapped: true, source: 'squad-ledger', lastUsedAt: null, daysSinceUse: null, note: '评估台账缺席' }
+    } else if (du.count > 0) {
+      // 第三期：引擎派发台账归因（column specialist / mention target 命中单元 id）
+      usage = {
+        unitId: u.id, kind: u.kind, mapped: true, source: 'dispatch-ledger',
+        lastUsedAt: du.last,
+        daysSinceUse: du.last !== null ? Math.floor((now - du.last) / 86400000) : null,
+        note: `引擎派发 ${du.count} 次（送达 ${du.delivered}）`,
+      }
     } else {
       usage = {
         unitId: u.id, kind: u.kind, mapped: false, source: 'untracked', lastUsedAt: null, daysSinceUse: null,
@@ -197,6 +231,133 @@ export function deriveUsage(
     (u) => u.mapped && (u.lastUsedAt === null || (u.daysSinceUse ?? 0) > zeroUseDays),
   )
   return { perUnit, unmappedAssignees, zeroUseCandidates }
+}
+
+// ---------- 派发统计（第三期：dispatch.successRate 本地权威源） ----------
+
+export interface DispatchUnitStat {
+  key: string
+  dispatched: number
+  delivered: number
+  rate: number | null
+}
+export interface DispatchStats {
+  dispatched: number
+  delivered: number
+  deferred: number
+  failed: number
+  deliveredRate: number | null
+  byUnit: DispatchUnitStat[]
+}
+
+/** 同 commandId 去重（column 条目归因更细，优先于引擎单例落的 mention 条目）。 */
+export function dedupeDispatchEntries(entries: DispatchLedgerEntry[]): DispatchLedgerEntry[] {
+  const byCommand = new Map<string, DispatchLedgerEntry>()
+  const rest: DispatchLedgerEntry[] = []
+  for (const e of entries) {
+    if (!e.commandId) { rest.push(e); continue }
+    const prev = byCommand.get(e.commandId)
+    if (!prev || (prev.kind === 'mention' && e.kind === 'column')) byCommand.set(e.commandId, e)
+  }
+  return [...byCommand.values(), ...rest]
+}
+
+export function dispatchStats(entries: DispatchLedgerEntry[]): DispatchStats {
+  const dedup = dedupeDispatchEntries(entries)
+  const isDelivered = (e: DispatchLedgerEntry) => e.reason === 'queued' || e.reason === 'coalesced'
+  const delivered = dedup.filter(isDelivered).length
+  const deferred = dedup.filter((e) => e.reason === 'deferred').length
+  const byUnitMap = new Map<string, { dispatched: number; delivered: number }>()
+  for (const e of dedup) {
+    const key = e.kind === 'column' ? (e.specialist ?? e.target) : e.target
+    const b = byUnitMap.get(key) ?? { dispatched: 0, delivered: 0 }
+    b.dispatched += 1
+    if (isDelivered(e)) b.delivered += 1
+    byUnitMap.set(key, b)
+  }
+  const byUnit = [...byUnitMap.entries()]
+    .map(([key, b]) => ({ key, dispatched: b.dispatched, delivered: b.delivered, rate: b.dispatched > 0 ? b.delivered / b.dispatched : null }))
+    .sort((a, b) => b.dispatched - a.dispatched)
+  return {
+    dispatched: dedup.length,
+    delivered,
+    deferred,
+    failed: dedup.length - delivered - deferred,
+    deliveredRate: dedup.length > 0 ? delivered / dedup.length : null,
+    byUnit,
+  }
+}
+
+// ---------- 门禁通过率（第三期：gate.passRate 实况，qgate runs 扫描） ----------
+
+export interface GateStats {
+  runs: number
+  byVerdict: Record<string, number>
+  /** pass / (总 - not_applicable)；conditional 计分母不计分子（metrics.yaml 口径）。 */
+  passRate: number | null
+  lastAt: number | null
+  roots: string[]
+}
+
+function walkUp(rel: string, fromDir: string): string | null {
+  let dir = resolve(fromDir)
+  for (let i = 0; i <= 6; i++) {
+    const candidate = resolve(dir, rel)
+    if (existsSync(candidate)) return candidate
+    const parent = resolve(dir, '..')
+    if (parent === dir) break
+    dir = parent
+  }
+  return null
+}
+
+/** qgate runs 扫描根：GOVERNANCE_QGATE_RUNS 覆盖（逗号分隔）；默认 cwd/.qgate + 仓根上寻（__dirname 与 cwd 双起点，覆盖注入树/打包 shim/开发树三形态）+ 示例仓。 */
+function qgateRunRoots(): string[] {
+  const env = process.env.GOVERNANCE_QGATE_RUNS?.trim()
+  if (env) return env.split(',').map((s) => resolve(s.trim().replace(/^~/, homedir()))).filter(Boolean)
+  const roots: string[] = []
+  const push = (p: string | null) => { if (p && !roots.includes(p)) roots.push(p) }
+  push(resolve(process.cwd(), '.qgate', 'runs'))
+  push(walkUp('.qgate/runs', __dirname))
+  push(walkUp('.qgate/runs', process.cwd()))
+  for (const base of [__dirname, process.cwd()]) {
+    const examples = walkUp('custom/qgate/examples', base)
+    if (!examples) continue
+    try {
+      for (const d of readdirSync(examples, { withFileTypes: true })) {
+        if (!d.isDirectory()) continue
+        push(resolve(examples, d.name, '.qgate', 'runs'))
+      }
+    } catch { /* 示例目录读失败忽略 */ }
+  }
+  return roots
+}
+
+interface QgateRunRow { verdict?: string; endedAt?: number }
+
+export function collectQgateRuns(rootsOverride?: string[]): GateStats {
+  const roots = rootsOverride ?? qgateRunRoots()
+  const byVerdict: Record<string, number> = {}
+  let runs = 0
+  let lastAt: number | null = null
+  for (const root of roots) {
+    let files: string[] = []
+    try {
+      files = readdirSync(root).filter((f) => /^run-.*\.json$/.test(f))
+    } catch { continue }
+    for (const f of files) {
+      try {
+        const j = JSON.parse(readFileSync(join(root, f), 'utf8')) as QgateRunRow
+        const v = String(j.verdict ?? '').toLowerCase() || 'unknown'
+        byVerdict[v] = (byVerdict[v] ?? 0) + 1
+        runs += 1
+        if (typeof j.endedAt === 'number' && j.endedAt > (lastAt ?? 0)) lastAt = j.endedAt
+      } catch { /* 坏文件跳过 */ }
+    }
+  }
+  const na = byVerdict['not_applicable'] ?? 0
+  const denominator = runs - na
+  return { runs, byVerdict, passRate: denominator > 0 ? (byVerdict['pass'] ?? 0) / denominator : null, lastAt, roots }
 }
 
 // ---------- ③ SLO 实况 ----------
@@ -312,6 +473,8 @@ export interface CostSummary {
   currency: string
   byProvider: CostBucket[]
   byProfile: CostBucket[]
+  /** 能力维度归集（第三期）：profile→台账单元→capability 映射，未映射如实入 (未映射) 桶。 */
+  byCapability: CostBucket[]
   total: { calls: number; inputTokens: number; outputTokens: number; costIdle: number; costPeak: number; unpricedRows: number }
   pricingMissing: string[]
   dbFound: boolean
@@ -335,9 +498,9 @@ function studioDbCandidates(): string[] {
   ]
 }
 
-export async function costSummary(days = 30, dbPath?: string): Promise<CostSummary> {
+export async function costSummary(days = 30, dbPath?: string, ledger?: LedgerDoc | null): Promise<CostSummary> {
   const empty: CostSummary = {
-    days, rows: 0, currency: 'CNY', byProvider: [], byProfile: [],
+    days, rows: 0, currency: 'CNY', byProvider: [], byProfile: [], byCapability: [],
     total: { calls: 0, inputTokens: 0, outputTokens: 0, costIdle: 0, costPeak: 0, unpricedRows: 0 },
     pricingMissing: [], dbFound: false,
   }
@@ -386,11 +549,17 @@ export async function costSummary(days = 30, dbPath?: string): Promise<CostSumma
     }
     const byProvider = new Map<string, CostBucket>()
     const byProfile = new Map<string, CostBucket>()
+    const byCapability = new Map<string, CostBucket>()
+    // profile → 台账单元 → capability（第三期能力维度归集；无档入 (未映射) 桶如实呈现）
+    const profileToCapability = new Map<string, string>()
+    for (const u of ledger?.units ?? []) profileToCapability.set(u.id, u.capability)
+    const capabilityOf = (profile: string): string => profileToCapability.get(profile) ?? '(未映射)'
     const total = { calls: 0, inputTokens: 0, outputTokens: 0, costIdle: 0, costPeak: 0, unpricedRows: 0 }
     for (const r of rows) {
       const cost = costOf(r)
       bucket(byProvider, r.provider || '(未知 provider)', r, cost)
       bucket(byProfile, r.profile || 'default', r, cost)
+      bucket(byCapability, capabilityOf(r.profile || 'default'), r, cost)
       total.calls += r.api_calls || 0
       total.inputTokens += r.input_tokens || 0
       total.outputTokens += r.output_tokens || 0
@@ -404,6 +573,7 @@ export async function costSummary(days = 30, dbPath?: string): Promise<CostSumma
       currency: table.currency || 'CNY',
       byProvider: [...byProvider.values()].sort(sortDesc),
       byProfile: [...byProfile.values()].sort(sortDesc),
+      byCapability: [...byCapability.values()].sort(sortDesc),
       total,
       pricingMissing: [...pricingMissing].sort(),
       dbFound: true,
