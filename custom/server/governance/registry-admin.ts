@@ -92,12 +92,12 @@ export async function provisionMatrixAccount(inp: ProvisionInput): Promise<{
   const serverName = new URL(inp.homeserverUrl).hostname === '127.0.0.1' ? 'matrix.test' : new URL(inp.homeserverUrl).hostname
   const human = `${name}:${serverName}`
   const base = { password: inp.password, adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl }
-  await createMatrixUser({ ...base, userId: `@${human}`, displayName: inp.displayName || name })
+  await createMatrixUser(`@${human}`, inp.password, inp.adminToken, inp.homeserverUrl, inp.displayName || name)
   created.push(`@${human}`)
   let agentIdentity: AgentIdentityOutcome | undefined
   if (inp.withAgent !== false) {
     const agentUserId = `@${name}-agent:${serverName}`
-    await createMatrixUser({ ...base, userId: agentUserId, password: inp.password + '-agent' })
+    await createMatrixUser(agentUserId, inp.password + '-agent', inp.adminToken, inp.homeserverUrl)
     created.push(agentUserId)
     // v14 P2A：初始密码换 token → 写 profiles/<name>/.env（消费侧 gateway-env /
     // hermes matrix 适配器零改动）。best-effort：失败记 reason 不回滚建号。
