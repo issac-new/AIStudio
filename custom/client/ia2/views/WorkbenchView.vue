@@ -39,7 +39,7 @@ import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import RunCanvas from '../components/flow/RunCanvas.vue'
 import CockpitOverview from '../components/flow/CockpitOverview.vue'
-import { fetchPendingApprovals, fetchApprovalHistory, type PendingApprovalItem, type ApprovalHistoryEntry } from '@/custom/cockpit/api/approvals'
+import { fetchPendingApprovals, dedupePending, fetchApprovalHistory, type PendingApprovalItem, type ApprovalHistoryEntry } from '@/custom/cockpit/api/approvals'
 import { getStoredUsername } from '@/api/client'
 import IaColumnControls from '../components/IaColumnControls.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
@@ -86,7 +86,7 @@ let overviewTimer: ReturnType<typeof setInterval> | null = null
 async function refreshOverview(): Promise<void> {
   try {
     const [p, h] = await Promise.all([fetchPendingApprovals(), fetchApprovalHistory(20)])
-    overviewPending.value = p.items ?? []
+    overviewPending.value = dedupePending(p.items ?? [])
     overviewHistory.value = h.entries ?? []
   } catch { /* 后端未就绪保持上次数据 */ }
 }
@@ -537,7 +537,16 @@ function onNewLoop(): void {
         @handle-task="onHandleTask"
         @goto-board="onGotoBoard"
       />
-      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`" />
+      <div v-else class="wb__canvas-ph" :data-testid="`wb-canvas-${activeSel?.kind ?? 'none'}`">
+        <div class="wb__canvas-ph-body">
+          <p class="wb__canvas-ph-tit">未选择会话或循环</p>
+          <p class="wb__canvas-ph-sub">从左侧选择一个会话 / 循环开始工作；归档或无内容的条目也会落到这里。</p>
+          <div class="wb__canvas-ph-acts">
+            <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-board" @click="router.push({ name: 'ia2.board' })">打开看板</button>
+            <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-tasks" @click="router.push({ name: 'ia2.tasks' })">查看任务</button>
+          </div>
+        </div>
+      </div>
     </section>
     <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控迁独立控制条行 -->
     <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
@@ -629,5 +638,22 @@ function onNewLoop(): void {
   font-size: 10px; line-height: 1; padding: 0;
   &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
-.wb__canvas-ph { height: 100%; border: 1px dashed var(--border-color); border-radius: 6px; }
+.wb__canvas-ph {
+  height: 100%;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wb__canvas-ph-body { text-align: center; max-width: 320px; padding: 20px; }
+.wb__canvas-ph-tit { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--text-primary, inherit); }
+.wb__canvas-ph-sub { margin: 0 0 14px; font-size: 12px; color: var(--text-muted, #878c99); line-height: 1.6; }
+.wb__canvas-ph-acts { display: flex; gap: 8px; justify-content: center; }
+.wb__canvas-ph-btn {
+  padding: 5px 14px; font-size: 12px; border-radius: 6px;
+  border: 1px solid var(--border-color); background: var(--bg-primary, #fff);
+  color: var(--text-primary, inherit); cursor: pointer;
+  &:hover { background: var(--bg-secondary, #f1f2f4); }
+}
 </style>

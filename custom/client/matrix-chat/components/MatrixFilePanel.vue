@@ -133,7 +133,7 @@ function getDownloadUrl(ev: MatrixEvent): string | null {
 function getTimestamp(ev: MatrixEvent): string {
   const ts = ev.getTs() ?? 0
   if (!ts) return ''
-  return new Date(ts).toLocaleString()
+  return new Date(ts).toLocaleString('zh-CN')
 }
 
 function getFileTypeIcon(type: 'image' | 'video' | 'audio' | 'file'): string {
