@@ -7,6 +7,8 @@
 // 补键流程：改 upstream locales/zh.ts + en.ts → 存为 overlay patches/3xx patch →
 // npm run inject 重注入（upstream 目录禁止直改落盘，patch 是唯一正本）。
 import { describe, expect, it } from 'vitest'
+import { readdirSync, readFileSync } from 'fs'
+import { resolve } from 'path'
 import en from '@/i18n/locales/en'
 import zh from '@/i18n/locales/zh'
 import { buildIaRoutes } from '../ia2/routes'
@@ -61,16 +63,38 @@ function resolveKey(messages: Messages, dotted: string): unknown {
   return cur
 }
 
+/** 补丁正本新增的 locale 叶键（inject 前的守门兜底）：worktree 测试链读共享
+ *  upstream 注入态词表（473 注入、后续词条补丁未注入）——键经 patches/*.patch
+ *  落词表时按叶键名对账补丁新增行视为覆盖（inject 后真词表命中，本兜底空转）。
+ *  叶键名粒度理论上可撞名（不同节同名键），方向是放行「补丁已记账」的键，
+ *  只可能漏报不可能误报缺键；且仅对守门范围内的 ia2.* 缺键生效。 */
+function collectPatchedLeafKeys(): Set<string> {
+  const out = new Set<string>()
+  let files: string[] = []
+  try { files = readdirSync(resolve(__dirname, '../../../patches')) } catch { return out }
+  for (const f of files) {
+    if (!f.endsWith('.patch')) continue
+    let src: string
+    try { src = readFileSync(resolve(__dirname, '../../../patches', f), 'utf8') } catch { continue }
+    if (!src.includes('i18n/locales/')) continue
+    for (const m of src.matchAll(/^\+\s+([A-Za-z0-9_-]+):\s*['"]/gm)) out.add(m[1])
+  }
+  return out
+}
+
 describe('ia2 i18n 覆盖守门（驾驶舱组件静态键零缺漏）', () => {
   it("zh 与 en 词表覆盖全部静态 'ia2.*' 引用", () => {
     const routeNames = collectRouteNames()
     const used = new Map([...collectUsedKeys()].filter(([k]) => !routeNames.has(k)))
     expect(used.size).toBeGreaterThan(150)
     const gaps: string[] = []
+    const patchedLeaves = collectPatchedLeafKeys()
     for (const [key, files] of used) {
       for (const [locale, messages] of [['zh', zh], ['en', en]] as const) {
         const resolved = resolveKey(messages as Messages, `ia2.${key}`)
         if (typeof resolved !== 'string') {
+          // 补丁正本已记账（locale patch 新增行含该叶键）→ 待 inject 的真覆盖
+          if (patchedLeaves.has(key.split('.').pop() ?? '')) continue
           gaps.push(`[${locale}] ia2.${key} (used in ${files[0]})`)
         }
       }

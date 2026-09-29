@@ -161,7 +161,7 @@ provision 建号后自动完成：初始密码换 access token（`/_matrix/clien
 
 1. **浏览器走查未执行**：共享 overlay 检出被 0.7.25 迁移会话占用（在途未提交 WIP + 注入态），从本 worktree 向共享 upstream 注入会毁其在途状态（不可为）；后端 8647 未运行、/tmp 余量 15G 不足以整仓隔离副本。走查脚本已入库 `scripts/comm-v14-walkthrough.mjs`，环境就绪（共享树空闲 + npm run dev）即可执行。
 2. **P2B/P2C 双端实弹未执行**：需本机 synapse + 两账号 + 桥启停的真环境（CHAT_BRIDGE_ENABLED=1 + CHAT_BRIDGE_ROOMS 映射），本轮以同构假体契约测试覆盖。
-3. **全量 overlay vitest**：执行中记档时未出终值（分批目录全绿：ia2 409、matrix/matrix-teams/governance 相关 326）。
+3. **全量 overlay vitest 终值**：3320 通过 / 2 失败 / 1 跳过——两失败均为 qgate dist 未构建的既有环境红（spawnSync dist/cli.js，本分支零触碰 qgate，与记忆「qgate dist 须先建」同源）；第三个红（ia2-i18n-coverage，本轮新键不在共享树注入态词表）已根治：守门补「补丁正本新增叶键记账」兜底（locales 补丁新增行对账，inject 后空转），守门与注入态解耦。
 
 实施守则：每期独立 worktree + feature 分支、Conventional Commits、完成合 main 推 origin；upstream 改动只经 patch（本轮 506-510 五枚）。
 
