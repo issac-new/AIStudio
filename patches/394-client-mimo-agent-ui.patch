@@ -49,7 +49,7 @@ diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/sr
 +  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
 +  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
    dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
-   cursor: { label: 'Cursor', src: '/coding-agents/cursor.svg' },
+   cursor: { label: 'Cursor', src: '/coding-agents/cursor-logo.png' },
    zcode: { label: 'ZCode', src: '/coding-agents/zcode.svg' },
 diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
 --- a/packages/client/src/utils/group-agent-avatar.ts
@@ -61,7 +61,7 @@ diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/s
 +    mimo: '/coding-agents/mimo.svg',
 +    mimo: '/coding-agents/mimo.svg',
      dsh: '/coding-agents/deepseek.svg',
-     cursor: '/coding-agents/cursor.svg',
+     cursor: '/coding-agents/cursor-logo.png',
  }
 diff --git a/packages/client/src/api/coding-agents.ts b/packages/client/src/api/coding-agents.ts
 --- a/packages/client/src/api/coding-agents.ts
