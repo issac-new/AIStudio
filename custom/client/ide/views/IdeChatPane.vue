@@ -77,6 +77,7 @@ import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
 import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
 import { matchMemory, recordSessionApproval, clearMemory, type ApprovalMemoryEntry } from '../utils/approvalLearning'
 import { showToast } from '../utils/toast'
+import { authFetch } from '../utils/auth-fetch'
 
 const ide = useIdeStore()
 const chatStore = useChatStore()
@@ -365,7 +366,7 @@ async function loadLatestDiff(): Promise<void> {
     const latest = summaries[0]
     const file = (latest as unknown as { files?: Array<{ id: number; change_id: string; path: string }> }).files?.[0]
     if (!file) return
-    const res = await fetch(`/api/studio/sessions/${encodeURIComponent(sid)}/workspace-run-changes/${encodeURIComponent(file.change_id)}/files/${file.id}`)
+    const res = await authFetch(`/api/studio/sessions/${encodeURIComponent(sid)}/workspace-run-changes/${encodeURIComponent(file.change_id)}/files/${file.id}`)
     if (!res.ok) return
     const body = (await res.json()) as { file?: { patch?: string } }
     if (chatStore.activeSessionId !== sid) return // 文件详情返回前再次校验

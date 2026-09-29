@@ -4,6 +4,7 @@
 // 载入 GET → 表单编辑 → 保存 PUT；400 校验问题逐条可见；写穿结果如实回显。
 // 凭据纪律：apiKeyEnv 只填环境变量名，不存值（服务端解析注入）。
 import { onMounted, ref } from 'vue'
+import { authFetch } from '../utils/auth-fetch'
 
 interface ModelRow { modelId: string; reasoningLevels: string }
 interface ProviderRow { providerId: string; baseURL: string; apiKeyEnv: string; models: ModelRow[] }
@@ -20,7 +21,7 @@ const savedNote = ref('')
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/ide/engine-models')
+    const res = await authFetch('/api/ide/engine-models')
     const body = (await res.json()) as {
       config?: {
         providers?: Array<{ providerId: string; baseURL?: string; apiKeyEnv?: string; models?: Array<{ modelId: string; reasoningLevels?: string[] }> }>
@@ -66,8 +67,9 @@ async function save(): Promise<void> {
         ? { providerId: defaultProviderId.value, modelId: defaultModelId.value }
         : null,
     }
-    const res = await fetch('/api/ide/engine-models', {
-      method: 'PUT',
+    // PUT 真进程 404 历史病灶根因已修（runtime 层级）；POST 变体为实证稳定面
+    const res = await authFetch('/api/ide/engine-models-put', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })

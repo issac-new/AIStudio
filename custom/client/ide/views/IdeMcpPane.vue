@@ -17,6 +17,7 @@ import { fetchHermesSkills } from '../utils/hermes-skills'
 import { buildSkillsLedger, skillsSummary, type SkillEntry } from '../utils/skills-ledger'
 import { SEARCH_TIERS, searchVerdict, type SearchTier } from '../../../server/websearch/web-search-policy'
 import { harnessReport } from '../../../server/harnesshealth/harness-health'
+import { authFetch } from '../utils/auth-fetch'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -94,7 +95,7 @@ async function loadHealth(): Promise<void> {
   } catch { /* 无工作区文件面：0 维=poor 提示 */ }
   // automations（列自动化清单）
   try {
-    const res = await fetch('/api/column-automation/')
+    const res = await authFetch('/api/column-automation/')
     if (res.ok) {
       const body = await res.json() as { automations?: unknown[] } | Array<unknown>
       const list = Array.isArray(body) ? body : body.automations
