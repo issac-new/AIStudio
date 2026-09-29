@@ -124,6 +124,7 @@ describe('派单链（MentionDispatchService）', () => {
     expect(multi.map((o) => o.reason)).toEqual(['queued', 'deferred', 'coalesced'])
     // P-D(b) 信封对称：target=squad 名，leader 独立字段（不再塞 'leader:zcode' 进 target）。
     expect(multi[0].target).toBe('core')
+    expect(multi[0].mentionKind).toBe('squad')
     expect(multi[0].leader).toBe('zcode')
     expect(multi[0].detail).toContain('[squad]')
     expect(multi[1].detail).toContain('hermes 旧链')
