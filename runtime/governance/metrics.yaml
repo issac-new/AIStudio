@@ -63,7 +63,14 @@ metrics:
     dimensions: [capability, sloTier, period]
     permission: 全员可读
     authority: kanban 事件流 + state.db
-    status: defined
+    status: live
+  - id: slo.tierSuccessRate
+    name: 分档任务成功率
+    formula: 窗口内 done 数 / (done+archived) 数；assignee 经台账单元映射 sloTier，未映射入 unmapped 桶不计预算；样本 <minSamples 预算判定挂起
+    dimensions: [sloTier, windowDays]
+    permission: 全员可读
+    authority: kanban.db（root+boards/* 聚合，只读）
+    status: live
   - id: cost.perRun
     name: 单次运行成本
     formula: run 内全部 model_call 用量按价目表折算求和；未收录模型不计金额并显式标注
@@ -71,3 +78,23 @@ metrics:
     permission: 管理者可读
     authority: usage-store（hermes-web-ui.db）+ token-meter 价目表
     status: defined
+
+# SLO 分级目标值（技术架构总图"分级×目标值"在本机的承载；错误预算耗尽动作
+# budgetAction：freeze=冻结该档派发（GOVERNANCE_SLO_BUDGET=enforce 时硬性生效，
+# 默认 warn 只告警记档），warn=治理中心横幅+日志告警）。
+sloTargets:
+  core:
+    successRate: 0.95
+    windowDays: 30
+    minSamples: 10
+    budgetAction: freeze
+  important:
+    successRate: 0.90
+    windowDays: 30
+    minSamples: 10
+    budgetAction: warn
+  general:
+    successRate: 0.80
+    windowDays: 30
+    minSamples: 10
+    budgetAction: warn

@@ -193,6 +193,24 @@ export function validateMetrics(doc: MetricsDoc): string[] {
     if (metricIds.has(m.id)) problems.push(`metric id 重复：${m.id}`)
     metricIds.add(m.id)
   }
+  // sloTargets（第二期 ③）：tier 限词表、successRate∈(0,1]、windowDays/minSamples 正整数、
+  // budgetAction∈{warn,freeze}；freeze 档须为 core（防一般档误配硬冻结）。
+  const sloTargets = (doc as { sloTargets?: Record<string, unknown> }).sloTargets
+  if (sloTargets != null) {
+    if (typeof sloTargets !== 'object' || Array.isArray(sloTargets)) {
+      problems.push('sloTargets 须为对象')
+    } else {
+      for (const [tier, raw] of Object.entries(sloTargets)) {
+        if (!LEDGER_SLO_TIERS.includes(tier as typeof LEDGER_SLO_TIERS[number])) problems.push(`sloTargets tier 越词表：${tier}`)
+        const t = raw as { successRate?: unknown; windowDays?: unknown; minSamples?: unknown; budgetAction?: unknown }
+        if (typeof t?.successRate !== 'number' || !(t.successRate > 0 && t.successRate <= 1)) problems.push(`sloTargets.${tier}.successRate 须 ∈ (0,1]`)
+        if (!Number.isInteger(t?.windowDays) || (t.windowDays as number) <= 0) problems.push(`sloTargets.${tier}.windowDays 须为正整数`)
+        if (!Number.isInteger(t?.minSamples) || (t.minSamples as number) <= 0) problems.push(`sloTargets.${tier}.minSamples 须为正整数`)
+        if (!['warn', 'freeze'].includes(String(t?.budgetAction))) problems.push(`sloTargets.${tier}.budgetAction 越词表：${String(t?.budgetAction)}`)
+        if (t?.budgetAction === 'freeze' && tier !== 'core') problems.push(`sloTargets.${tier} 配 freeze 越权：硬冻结仅 core 档可配`)
+      }
+    }
+  }
   return problems
 }
 

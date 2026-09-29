@@ -14,6 +14,7 @@
 // 自动面同源（同一 dispatchColumnTransition 入口）。
 import { matchColumnTransition, isSafeStep, type ColumnTransitionTrigger, type AutomationStep } from './column-automation'
 import { MentionDispatchService, type MentionOutcome } from '../zcode/mention-dispatch'
+import { checkDispatchBudget } from '../governance/governance-budget'
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
@@ -63,6 +64,9 @@ export async function dispatchColumnTransition(
           `列 ${trigger.column} step ${step.id || '?'} 配置非法（provider 限 zcode 词表；id/role/specialist 限 [A-Za-z0-9._-] 且 ≤64 字符）`,
         )
       }
+      // SLO 错误预算闸（4A 治理层 ③）：GOVERNANCE_SLO_BUDGET=enforce 时 core 档
+      // 预算耗尽抛 BudgetExhaustedError 拒绝派发；warn（默认）日志放行并记档。
+      await checkDispatchBudget(step.specialist || step.id)
     }
   }
   const outcomes: MentionOutcome[] = []
