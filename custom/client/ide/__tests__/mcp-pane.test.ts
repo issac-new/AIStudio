@@ -37,7 +37,8 @@ vi.mock('@/api/hermes/mcp', () => ({
 const routerPush = vi.fn()
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: routerPush }),
-  createRouter: () => { throw new Error('router should not be created in pane tests') },
+  createRouter: vi.fn(() => ({ beforeEach: vi.fn(), push: vi.fn() })),
+  createWebHashHistory: vi.fn(() => ({})),
 }))
 vi.mock('../utils/hermes-skills', () => ({
   fetchHermesSkills: vi.fn(async () => ({ rows: [], categories: 0 })),

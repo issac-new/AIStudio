@@ -44,6 +44,8 @@ export function applyKeymap(
 /** 默认键位（codex 风格最小集：会话/编辑器两上下文）。 */
 export function defaultKeymap(): KeyBinding[] {
   return [
+    // global 上下文（生效面 v2：palette 真实走映射分发，见 IdeShell onGlobalKeydown）。
+    { context: 'global', action: 'palette', key: 'Cmd+K' },
     { context: 'session', action: 'submit', key: 'Enter' },
     { context: 'session', action: 'newline', key: 'Shift+Enter' },
     { context: 'session', action: 'interrupt', key: 'Esc' },

@@ -9,12 +9,14 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import type { McpServerInfo } from '@/api/hermes/mcp'
 import { fetchMcpServers } from '@/api/hermes/mcp'
+import { listFiles } from '@/api/studio/files'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { buildMcpConfigPrompt } from '../utils/mcpConfigPrompt'
 import { fetchHermesSkills } from '../utils/hermes-skills'
 import { buildSkillsLedger, skillsSummary, type SkillEntry } from '../utils/skills-ledger'
 import { SEARCH_TIERS, searchVerdict, type SearchTier } from '../../../server/websearch/web-search-policy'
+import { harnessReport } from '../../../server/harnesshealth/harness-health'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -28,7 +30,17 @@ const searchTier = ref<SearchTier>((() => {
   const saved = localStorage.getItem('ide_websearch_tier')
   return (SEARCH_TIERS as readonly string[]).includes(saved ?? '') ? saved as SearchTier : 'agent'
 })())
-watch(searchTier, (v) => localStorage.setItem('ide_websearch_tier', v))
+watch(searchTier, (v) => {
+  localStorage.setItem('ide_websearch_tier', v)
+  applySearchPolicy(v)
+})
+/** 写穿（遗留清单 L5）：策略声明注入当前会话——声明式（agent 遵循取决于模型；
+ *  引擎 web_search 工具参数面开窗后升配置式，记档）。 */
+function applySearchPolicy(tier: SearchTier): void {
+  const v = searchVerdict(tier)
+  const text = `[web-search-policy] tier=${tier} allowed=${v.allowed} consumption=${v.consumption} —— ${v.detail}。后续 web_search 按此策略执行。`
+  void chatStore.sendMessage(text)
+}
 
 const activeTab = ref<'mcp' | 'skills'>('mcp')
 const skillEntries = ref<SkillEntry[]>([])
@@ -56,9 +68,58 @@ async function load(): Promise<void> {
   }
 }
 
+// ── 体检三维补齐（遗留清单 L1：memory/rules/automations 真数据面）──
+// memory=workspace 记忆文件数（listFiles 同 IdeMemoryPane 口径）；rules=根规则
+// 文件存在数（AGENTS.md/CLAUDE.md/.cursorrules/.clinerules）；automations=
+// 列自动化清单（GET /api/column-automation/，455 真域）。五维齐后启用
+// harnessReport 五维评分（原两维诚实版退役）。
+const healthCounts = ref<Record<'rules' | 'memory' | 'automations', number>>({ rules: 0, memory: 0, automations: 0 })
+const healthBroken = ref<Record<'rules' | 'memory' | 'automations', number>>({ rules: 0, memory: 0, automations: 0 })
+
+async function loadHealth(): Promise<void> {
+  const ws = ide.workspace
+  if (!ws) return
+  // memory + rules（一次 listFiles 根目录 + memory/ 子目录）
+  try {
+    const root = await listFiles('', ws)
+    const ruleNames = ['AGENTS.md', 'CLAUDE.md', '.cursorrules', '.clinerules']
+    healthCounts.value.rules = ruleNames.filter(n => root.entries.some(e => e.name === n && !e.isDir)).length
+    const memNames = ['AGENTS.md', 'CLAUDE.md', 'MEMORY.md']
+    let mem = memNames.filter(n => root.entries.some(e => e.name === n && !e.isDir)).length
+    if (root.entries.some(e => e.name === 'memory' && e.isDir)) {
+      const sub = await listFiles('memory', ws)
+      mem += sub.entries.filter(e => !e.isDir && e.name.endsWith('.md')).length
+    }
+    healthCounts.value.memory = mem
+  } catch { /* 无工作区文件面：0 维=poor 提示 */ }
+  // automations（列自动化清单）
+  try {
+    const res = await fetch('/api/column-automation/')
+    if (res.ok) {
+      const body = await res.json() as { automations?: unknown[] } | Array<unknown>
+      const list = Array.isArray(body) ? body : body.automations
+      healthCounts.value.automations = Array.isArray(list) ? list.length : 0
+    }
+  } catch { /* 端点不可达=0 */ }
+}
+
+const HEALTH_LABEL: Record<string, string> = { rules: '规则', memory: '记忆', skills: '技能', mcp: 'MCP', automations: '自动化' }
+const HEALTH_HINT: Record<string, string> = {
+  rules: '规则体系（AGENTS.md/.cursorrules 等存在性计数）',
+  memory: '记忆资产（根记忆文件+memory/ 目录）',
+  skills: '技能资产',
+  mcp: 'MCP 资产',
+  automations: '列自动化（/api/column-automation 清单）',
+}
+const healthReport = computed(() => harnessReport({
+  counts: { rules: healthCounts.value.rules, memory: healthCounts.value.memory, skills: skillEntries.value.length, mcp: servers.value.length, automations: healthCounts.value.automations },
+  broken: { rules: healthBroken.value.rules, memory: healthBroken.value.memory, skills: 0, mcp: 0, automations: healthBroken.value.automations },
+}))
+
 onMounted(() => {
   void load()
   void loadSkills()
+  void loadHealth()
 })
 
 async function loadSkills(): Promise<void> {
@@ -105,12 +166,12 @@ function openManage(): void {
          不虚标——全数据面接通后升五维 harnessReport（harnesshealth 域记档）。 -->
     <div class="ide-mcp__health" data-testid="ide-harness-health">
       <span class="ide-mcp__health-title">体检</span>
-      <span class="ide-mcp__health-dim" :data-level="skillEntries.length ? 'good' : 'poor'" title="技能资产：0 项=欠账（常用流程技能化）">
-        技能 {{ skillEntries.length ? `✓ ${skillEntries.length}` : '✗ 欠账' }}
-      </span>
-      <span class="ide-mcp__health-dim" :data-level="servers.length ? 'good' : 'poor'" title="MCP 资产：0 项=欠账（高频工具接入）">
-        MCP {{ servers.length ? `✓ ${servers.length}` : '✗ 欠账' }}
-      </span>
+      <span
+        v-for="d in healthReport.dimensions" :key="d.dimension"
+        class="ide-mcp__health-dim" :data-level="d.score"
+        :data-testid="`ide-health-${d.dimension}`"
+        :title="(HEALTH_HINT[d.dimension] ?? '') + (healthReport.optimizationCards.some(c => c.dimension === d.dimension) ? '（优化卡：' + (healthReport.optimizationCards.find(c => c.dimension === d.dimension)?.suggestion ?? '') + '）' : '')"
+      >{{ HEALTH_LABEL[d.dimension] ?? d.dimension }} {{ d.score === 'good' ? `✓ ${d.detail}` : d.score === 'fair' ? `△ ${d.detail}` : `✗ ${d.detail}` }}</span>
       <!-- 搜索策略（v2 批 websearch，codex 四档）：档位选择+判定展示；域白名单
            可编（逗号分隔）。策略经 agent 会话提示词生效（写穿链路记档）。 -->
       <span class="ide-mcp__search" data-testid="ide-websearch-policy">
