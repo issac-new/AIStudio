@@ -3,6 +3,9 @@
 // features.ide 关闭时 bootstrap 必须注册 /ide 重定向兜底，否则登录后
 // 命中无匹配路由白屏。
 // 2026-09-18 统一导航 Task 5：兜底目标 /hermes/cockpit 已是死路由，改指 /app。
+// @vitest-environment jsdom
+// 2026-09-29：bootstrap→上游 router/index.ts 模块级 createWebHashHistory 需要 location——
+// 环境钉 tgu 注入树（OVERLAY_UPSTREAM_ROOT）后 import 链必达，无 DOM 必炸。
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const featuresState = vi.hoisted(() => ({
@@ -15,7 +18,9 @@ const featuresState = vi.hoisted(() => ({
 vi.mock('../../../../config/features', () => ({ features: featuresState }))
 
 const routerStubs = vi.hoisted(() => ({ addRoute: vi.fn() }))
-vi.mock('../../../../../upstream/hermes-studio/packages/client/src/router', () => ({ default: routerStubs }))
+// mock 面与 bootstrap 的导入符同源（'@/router'）：相对路径写法只在主树布局下与
+// alias 解析合流；OVERLAY_UPSTREAM_ROOT 钉私有注入树时两者分叉，mock 打空（2026-09-29 实锤）。
+vi.mock('@/router', () => ({ default: routerStubs }))
 
 const ia2Stubs = vi.hoisted(() => ({
   registerIa2: vi.fn(async () => {}),
