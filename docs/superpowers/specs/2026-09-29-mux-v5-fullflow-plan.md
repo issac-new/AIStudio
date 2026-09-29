@@ -1,7 +1,8 @@
 # Swarm Studio 全流程推演方案（V5 整合版）
 
 > **文档定位**：本文合并 V3 操作主链（`2026-09-25-mux-v3-lifecycle-plan.md`，背景/目标/编制/架构/26 步逐步把关原文/治理总则，全文并入第二至五章）与 V4.1 整合终版（`2026-09-28-aipaydev-v4-roadshow-refactor-v4.1-final.md`，七问题域治理框架、实现清单、路演层与执行态，并入第六至九章），是全流程推演的唯一正本。V3 与 V4.1 自本文起转为历史版本，仅存档不更新。此后变更走本文增量补遗，不再另立平行版本。
-> **基准**：overlay main @ f185efc5（本文合并基底）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
+> **补遗记档**：2026-09-29 补遗①——第八章细化为路演报告规范（8.1 形式与生成／8.2 内容结构／8.3 硬性要求 R1-R9，依据 run1/run2 两轮报告内容级审计）；第九章 run2 行按独立审计改判修正；第七、十章同步（x20 v2 合入、报告生成器补课记档）。
+> **基准**：overlay main @ a34e15aa（补遗①基底；首版基底 f185efc5）；推演环境 ncwk-sim-mux（gateway :8801 / studio :8802 / synapse :8008 / hindsight :8888）；中央仓 github.com/issac-new/aipaydev。
 
 ---
 
@@ -239,28 +240,66 @@ graph TB
 | room-invite-gap 终清 | 建群全量预邀+派发全员保障 | 1360d6a8 |
 | 驾驶舱主题统一 | 494 变量族+明暗主题语义色清扫 | 65f68a64（merge b643d147） |
 | studio v0.7.25 升级 | 244 补丁重放零告警（2.34）+构建防超重（495 相对路径过滤/497 win zip 重建）+dmg 幂等自恢复 | e0ab849c/c9f4faae/5aea65ff 等 |
-| V4-run1 harness 三修 | 进群核验双态/合并冲突自愈/保姆竞拉加固（issues.log 16 条独立取证） | 215f6e92（merge a0646e07） |
+| V4-run1 harness 三修 | 进群核验双态/合并冲突自愈/保姆竞拉加固（issues.log 19 条事件独立取证） | 215f6e92（merge a0646e07） |
 | 报告审计器锚定 | mx-report-audit 选择器真实 DOM，标题逐字 26/26 可用 | 0e236ea0（merge bed66aea） |
 | workflow 全链集成 | zcode 动态工作流进 IDE 工作台（投影透传+4 RPC+4 路由+运行行/面板组件）+§3.10 虚标孤儿补真接线 | 5ec445f0（merge 414f64a9） |
 | capture-v42 | RUN_ID 参数化+三新特性实拍位+去 Dismiss 导航劫持 | 12db6e64；8f109fe8 |
 | 统一报告 run 模式 | UNIFIED_RUN_ID 按轮次取输入落输出+旅程线正文嵌入+审计改判真值节 | 4046ab5c/9f80ac7e（merge b964f7fd） |
 | 终版叙事收口 | G5 三轮打回环真值化+G2/19 步复跑轮语义+缺图步补拍对位 | c353a154 |
-| x20 吸收第一批 | IDE 14 件接线（presence/workdir/resume/roster/thread-usage/memory 分治新鲜度/brief 差异度量/modelroute Auto 档等） | d5f70537+83e5413f |
+| x20 吸收 | IDE 吸收计划 20 件全数落地（presence/workdir/resume/roster/thread-usage/memory 分治新鲜度/brief 差异度量/modelroute Auto 档等，第一批+v2 批 5 件） | d5f70537+83e5413f；a34e15aa |
 
-## 八、路演报告与交付物
+## 八、路演报告规范与交付物（第 26 步细化）
 
-**报告形态**：统一报告 `unified-roadshow-report.html`（unified-report-gen.py 生成，`UNIFIED_RUN_ID` 按轮次取输入落输出）。实操线为基底——叙事层（挑战实例台账实算、RSI 记为演进方向不作现态承诺；六亮点对比行业通用方案；双 loop 环图：skill 内循环 × swarm 外循环，测试/架构/安全左移+"业务先行技术债后补"全清+四维协作质量）+ 旅程层（26 步实录，每步标 [实操作]/[实状态]/[缺口]）+ 问题单与治理报告挂接；并入旅程线三资产——①每步"方案把关（原文）"行（26 条，V3 文档生成时逐字解析，PLAN_MAP 两线步骤语义对齐）②六道闸仪表盘与治理度量（首过率/真实打回环/问题单处置/测试/发布基线）③步骤真证据索引（matrix event_id/git 可反查）。共享数据模块 demo_steps_data.py 为 STEPS/GAPS/FIXES 单一事实源，demo/unified 双生成器共用。
+本章是报告生成与验收的唯一规范，细化第 26 步"生成 HTML 推演报告"的要求。补遗①依据 run1（simulation-report.html，85.6KB/36 图）、run2（unified-roadshow-report.html，106KB/43 图）两轮报告的内容级审计固化：两轮暴露的判词、台账、元信息缺陷逐条转为 8.3 硬性要求，违例先例留档备查。
 
-**证据红线**：每图必须真实产品 UI 操作画面（文档渲染/CLI 输出凑数即打回）；描述与截图逐字对齐；数字从 issues.log/state.env 生成时实算，取不到显式 ⬜。
+### 8.1 形式与生成
 
-**采集链**：capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录+弹窗点击清单+等您操作/概览/卡链接专用截图位）→ shots/ → 三个生成器（mx-report-gen 旅程线，`--run` 必带；demo-report-gen 实操线；unified-report-gen 统一版）。群聊实拍注意：房间须左栏点击选择（深链不驱动）、matrix 房列表等 sync、登录身份须为房间成员。
+| 项 | 要求 |
+|---|---|
+| 交付形态 | 单文件 HTML，统一版为唯一交付（旅程线与实操线已合并，不再各自交付路演版）；文件名 unified-roadshow-report.html，落 runs/&lt;RUN_ID&gt;/evidence/ |
+| 生成器 | unified-report-gen.py，`UNIFIED_RUN_ID` 按轮次取输入落输出；共享数据模块 demo_steps_data.py 为 STEPS/GAPS/FIXES 单一事实源 |
+| 元信息 | 标题、RUN_ID、生成时间、基线 commit、图数与步数计数全部从 RUN 数据派生，禁止硬编码。违例先例：生成器标题行与生成说明行硬编码"2026-09-28"及"38 张真证据/29 步"静态口径（unified-report-gen.py:97/123），run2 报告 09-29 生成却标 09-28 |
+| 图 | base64 内嵌自包含为基准形态；走相对路径时必须与 screenshots/ 同目录打包交付（现状：两轮 36-43 张全部相对引用，断链为零但单文件不可移植） |
+| 页内导航 | #step1-26 与 #cp-g1..g6 锚点，六闸仪表盘与对应步骤互链 |
 
-**交付物清单**：
+### 8.2 内容结构（顺序固定，九章骨架）
+
+1. 本轮口径：RUN_ID、执行区间（START_STEP/UNTIL_STEP）、基线 commit、环境端口。
+2. 独立审计改判真值层：审计意见与导演侧机械化结论不一致时，逐条列出改判与依据，处置单一事实源文件（audit-response-disposition.md）挂链。run2 首例：审计出具 AUDIT-OPINION-CONCERNS 10 项，与导演侧"通过（无发现）"不一致，报告按审计复核口径呈现。
+3. 意图链路：G1 冻结 AC→系分→编码门禁→独立测试→UAT 逐条连线。
+4. 本轮新特性实证：当轮重构特性的实拍位（run2 例：低风险抽检器、意图链路可视化、时间线源分派）。
+5. 旅程层 26 步：每步四件套——真实状态（✅/⬜，执行过什么标什么，不作假）、把关原文行（合格线/准出，自 V3 文档逐字解析，PLAN_MAP 两线步骤语义对齐）、证据锚点（matrix event_id／git commit／t_ 卡号）、截图。
+6. 叙事层：挑战实例（台账实算，RSI 记为演进方向不作现态承诺）、双 loop 环图（skill 内循环 × swarm 外循环，测试/架构/安全左移+"业务先行技术债后补"全清）、六亮点对比行业通用方案、四维协作质量。
+7. 六域审计：每域一个交付问题，逐域实测。
+8. 问题单终态：唯一键口径去重＋DISP 三态（已修/观察/延后）明细可展开。
+9. 闭环治理终态：六闸仪表盘带落键时间、治理度量（首过率/真实打回环/问题单处置/测试/发布基线）。
+
+### 8.3 硬性要求（验收线，缺一打回）
+
+| # | 要求 | 违例先例（两轮实录） |
+|---|---|---|
+| R1 | 判词真值：闸门判词只认评审卡/结构化结论字段，不认消息词面；stub 诱饵词（如"False alarm — READY-GATE-PASS 或 FAIL"）必须免疫 | run2 G5：日志行"发布准出通过（04:49）"系词面误配，真实评审卡 body=READY-GATE-FAIL（04:51 完成），步 20 按 R-A1 判回滚；H8 根治在 fix/harness-gate-integrity 待合 |
+| R2 | 落键完整：六闸落键时间戳齐全，G3 不得为空 | run1 六闸表 G3 落键时间为"—" |
+| R3 | UAT 逐条判词：有条件通过必须逐 AC 标注，禁止"全部通过"总括矛盾 | run2 AC-4/AC-7 有条件通过（历史缺陷修复未合入 integration 基线），验收书却写"全部 AC 通过" |
+| R4 | 发布基线守卫：合入只许快进或 merge 增量；非快进重建＝丢线事故，守卫拦截并回补重验 | run2 发布基线 69ba333→0ab43de 非快进重建丢 23 提交 |
+| R5 | 问题单 100% DISP：每条一行处置结论；审计改判处置回灌 issues.log | run1 台账 19 行 ISSUE/0 行 DISP，唯一键 12 全部待处置（违反第 24 步合格线，报告内如实披露）；run2 已补齐 6/6 |
+| R6 | 证据锚点密度：每个实操作步至少 1 个可反查锚点（event_id/commit/t_ 卡号） | run1 内联锚点仅 1 个、run2 仅 6 个（09-28 产品演示版曾达 77 张索引，run 版退化） |
+| R7 | 截图红线：每图必须真实产品 UI 操作画面（文档渲染/CLI 输出凑数即打回），描述与截图逐字对齐；缺图标 ⬜ 并挂缺口台账 | 既有红线；缺图步补拍对位机制 c353a154 已落 |
+| R8 | 数字实算：全部计数从 issues.log/state.env 生成时实算，取不到显式 ⬜ | — |
+| R9 | 报告步自证：第 26 步状态以产物存在性与生成时间回填，不得自标 ⬜ 留自证悖论 | run1/run2 均自标 ⬜ |
+
+R1-R4 的根治（H7-H11：mx-report-gen `--run` 必带与 EVID 同源、判词语义、基线变更受控、UAT 判词、G3 落键）已在 fix/harness-gate-integrity 分支，待合 main 后以 run3 复跑验证。
+
+### 8.4 采集链与验收
+
+capture-ui.mjs（v42 起 RUN_ID 参数化；matrix 真登录＋弹窗点击清单＋等您操作/概览/卡链接专用截图位）→ shots/ → 生成器（统一版为交付口径；mx-report-gen 旅程线 `--run` 必带、demo-report-gen 实操线为内部资产）。群聊实拍注意：房间须左栏点击选择（深链不驱动）、matrix 房列表等 sync、登录身份须为房间成员。报告生成后跑 mx-report-audit（选择器锚定真实 DOM，标题逐字 26/26）并对 8.3 的 R1-R9 逐项断言，不过即打回重生成。
+
+### 8.5 交付物清单
 
 1. 架构与全流程链路图（`2026-09-25-mux-v3-fig.html`，A4 横版 PPT 单页直用：六层逻辑流自上而下 + 记忆反哺通道 + 右栏共享/隔离/治理 + 26 步流程条；文档内 mermaid 版见第三章）；
 2. 推演过程仓库（https://github.com/issac-new/aipaydev）；
-3. HTML 推演报告（simulation-report.html 旅程版 + unified-roadshow-report.html 统一版，含驾驶舱/协作沟通/IDE 工作台截图，产品路演用）；
-4. 问题单台账、治理报告、验收报告、复盘文档、合规意见书（随轮次入仓库与 evidence）。
+3. HTML 推演报告（统一版 unified-roadshow-report.html 为路演交付物，按 8.1 形态交付；simulation-report.html 旅程版随 evidence 存档备查）；
+4. 问题单台账、治理报告、验收报告、复盘文档、合规意见书、审计处置台账（随轮次入仓库与 evidence）。
 
 ## 九、执行态与证据
 
@@ -269,16 +308,16 @@ graph TB
 | V3 收官（09-26） | 26 步全流程 26✅/0⬜；四硬闸真实过闸（G2 arch 实评、G4 独立测试 51/51+四套件、G5 三轮评审实测复审）；G3 四分支 testlog 全落档（PAYCORE 52/CHWX 25/CHALI 54 用例全绿，MP 17+220 检查全过）；问题单 34 条 ISSUE/34 条 DISP（100% 处置） |
 | run14 马拉松（09-27） | 26 步全流程 + MX_DELIVERY=1 协议事件单发马拉松 exit 0（3h44m，run_in_background 载体）；六 stage 6/6、六 gate 全过、UAT AC=7 全过；案例房地面真值 case×6+gate×6+stage×6；关键突破=推演本体以后台任务载体跑（前 13 轮死于会话回合结束的进程组清理） |
 | 产品实操演示（09-28） | 30/30 步界面实拍+六域审计节+V2 采集器（图证强一致）；统一报告合并两线（实操线基底+旅程线三资产） |
-| V4-run1（RUN_ID=20260928-v4-run1，09-28/29） | V4 能力栈复跑收尾：执行区间（START_STEP=ready）全部 gates 完毕；M3 事件化断言全过（六 stage/六 gate/终态 P6，案例房 dlv-20260928-v4-run1-194332）；**G5 真实打回环**——首轮缺项（回滚阈值/灰度/发布说明）被退回补齐，复评两轮未过触发"两轮不过不得发布"硬闸拦截，补齐重报后通过（HumanGate=导演批准留痕）；报告四查全过（叙事真值化 c353a154）；issues.log 16 条独立取证四根治（215f6e92） |
-| V4-run2（RUN_ID=20260929-v4-run2，09-29） | 执行区间（START_STEP=smoke）全部 gates 完毕；evidence/ 落 unified-roadshow-report.html（97.5KB）+ simulation-report.html（88KB）+ 审计处置台账 audit-response-disposition.md；配套门禁完整性根治在 fix/harness-gate-integrity（在途待合） |
+| V4-run1（RUN_ID=20260928-v4-run1，09-28/29） | V4 能力栈复跑收尾：执行区间（START_STEP=ready）全部 gates 完毕；M3 事件化断言全过（六 stage/六 gate/终态 P6，案例房 dlv-20260928-v4-run1-194332）；**G5 真实打回环**——首轮缺项（回滚阈值/灰度/发布说明）被退回补齐，复评两轮未过触发"两轮不过不得发布"硬闸拦截，补齐重报后通过（HumanGate=导演批准留痕）；报告四查全过（叙事真值化 c353a154）；issues.log 19 条事件（唯一键 12）独立取证四根治（215f6e92）；问题单 0 行 DISP、全部待处置，违反第 24 步合格线（报告内如实披露，run2 起口径补齐） |
+| V4-run2（RUN_ID=20260929-v4-run2，09-29） | 执行区间（START_STEP=smoke）gates 完毕（driver 口径）；**独立审计改判真值**：G5 实质未通过（04:49 日志行"通过"系 stub 词面误配，真实评审卡 body=READY-GATE-FAIL，步 20 按 R-A1 判回滚）、UAT AC-4/AC-7 有条件通过、发布基线非快进重建丢 23 提交——判词/落键/守卫根治 H8-H11 在 fix/harness-gate-integrity 待合；问题单 6 ISSUE/6 DISP 全已修（审计处置台账 audit-response-disposition.md 单一事实源）；evidence/ 落统一报告 106KB（43 图）+ 旅程版 88KB |
 | 终态回归 | vitest 413 文件 3034 用例 + build:full 绿（V4.1 时点）；v0.7.25 升级轮 244 补丁重放零告警 |
 | aipaydev 中央仓 | 冻结/系分/概设/排期/DEV 分支/测试报告/验收/审计/复盘全程入仓（本地 integration/RFD-001 与远端 27 分支，ls-remote 核对） |
-| 在途待合（截至 f185efc5） | fix/24h-review-20260929（24h 审查批 20 项根治）；fix/harness-gate-integrity（门禁完整性六缺陷+H7-H11 判词语义）——x20 吸收第一批已随 d5f70537/83e5413f 进 main |
+| 在途待合（截至 a34e15aa） | fix/24h-review-20260929（24h 审查批 20 项根治）；fix/harness-gate-integrity（门禁完整性六缺陷+H7-H11 判词语义与报告真值化，8.3 节 R1-R4 根治所在）——x20 吸收计划已全数进 main（第一批 d5f70537/83e5413f、v2 批 a34e15aa） |
 
 ## 十、剩余 backlog（按优先级）
 
-1. **在途两支待合 main**：24h 审查批、harness 门禁完整性——各属主会话收口，合入后本章更新。
-2. **统一报告路演定稿**：run2 版已出（97.5KB），定稿前按报告内缺口台账补拍对位（c353a154 机制已落）。
+1. **在途两支待合 main**：24h 审查批、harness 门禁完整性（含报告判词真值化 H7-H11，即 8.3 节 R1-R4 根治）——各属主会话收口，合入后以 run3 复跑验证并更新本章。
+2. **报告生成器补课**（补遗①新增，对应 8.3 验收线）：元信息参数化去硬编码（unified-report-gen.py:97/123）；图 base64 自包含或同目录打包交付；R1-R9 内建断言接入 mx-report-audit；报告步自证回填。
 3. **长线记档项**：SBOM+依赖白名单；graphify 代码知识图谱接入；影子运行/双跑对比（口径已立）；逃逸缺陷率与 revert 率长线数据（六域体检台账已开始积攒）。
 
 ## 十一、运行手册
