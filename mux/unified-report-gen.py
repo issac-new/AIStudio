@@ -6,7 +6,7 @@
 #   ② 六道闸仪表盘与治理度量——从 simulation-report.html 实抽真实数字（首过率/打回/问题单/测试/基线）
 #   ③ 步骤真证据索引——evidence/screenshots/steps/ 38 张（matrix event_id/git 可反查），相对路径引用
 # 输出：evidence/unified-roadshow-report.html（与 steps/ 同根，相对路径可服务）
-import os, re, base64, html, sys
+import os, re, base64, html, sys, subprocess
 from pathlib import Path
 
 DIR = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -15,6 +15,17 @@ SIM = Path('/Volumes/nvme2230/lab/ncwk-sim-mux')
 # （evidence/screenshots/steps + simulation-report.html + 输出落 run 目录），
 # 缺省保持既有行为（evidence/ 根，20260928 两线合并版口径）。
 _RUN_ID = os.environ.get('UNIFIED_RUN_ID', '').strip()
+GEN_TS = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')
+# 基线 commit：生成时实查（禁止硬编码）；overlay 工作树可能被并行会话占用，--git-dir 直读
+def _overlay_head():
+    gd = Path('/Volumes/nvme2230/lab/ncwk/overlay/.git')
+    try:
+        # 方案基线=main（共享工作树 HEAD 是并行会话的分支，不是方案基准）
+        return subprocess.run(['git', '--git-dir', str(gd), 'rev-parse', '--short', 'main'],
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+    except Exception:
+        return ''
+OVERLAY_HEAD = _overlay_head()
 if _RUN_ID:
     EVID = SIM / 'runs' / _RUN_ID / 'evidence'
     JOURNEY_HTML = EVID / 'simulation-report.html'
@@ -117,7 +128,7 @@ def b64(name):
 
 out = []
 out.append('''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
-<title>SwarmStudio 全流程推演 · 统一版报告（方案对齐 × 产品实操 · 2026-09-28）</title>
+<title>SwarmStudio 全流程推演 · 统一版报告（方案对齐 × 产品实操__TITLE_RUN__）</title>
 <style>
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;max-width:1080px;margin:0 auto;padding:28px;color:#1f2328;background:#fafafa}
 h1{font-size:26px;border-bottom:3px solid #2563eb;padding-bottom:10px}
@@ -142,9 +153,13 @@ th{background:#f3f4f6}
 .idx td{padding:4px 8px}
 code{background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:12px}
 </style></head><body>''')
+_title_run = f' · RUN_ID={_RUN_ID}' if _RUN_ID else ' · 20260928 两线合并版'
+_truth_total = len(truth_imgs)
+_step_total = len(STEPS) if not RUN_BODY else 26
 out.append('<h1>SwarmStudio 全流程推演 · 统一版报告</h1>')
-out.append('<div class="meta">生成：2026-09-28 ｜ 合并两线：旅程线（26 步对齐方案原文+闸门仪表盘+38 张步骤真证据）× 实操线（叙事层+29 步产品 UI 实拍+六域审计）<br>'
-           '方案基准：V3 生命周期方案（操作单一事实源）+ V4.1 整合终版（七问题域/亮点/四维）｜ 环境：SwarmStudio :8802 + gateway :8801 + matrix :8008 ｜ 中央仓 issac-new/aipaydev<br>'
+out.append(f'<div class="meta">生成：{GEN_TS}（实查）｜ 合并两线：旅程线（26 步对齐方案原文+闸门仪表盘+{_truth_total} 张步骤真证据）× 实操线（叙事层+{_step_total} 步产品 UI 实拍+六域审计）<br>'
+           f'方案基准：V5 整合版（唯一正本，操作主链沿用 V3 原文解析）｜ 环境：SwarmStudio :8802 + gateway :8801 + matrix :8008 ｜ 中央仓 issac-new/aipaydev'
+           + (f' ｜ 基线：overlay HEAD <code>{html.escape(OVERLAY_HEAD)}</code>' if OVERLAY_HEAD else '') + '<br>'
            '修复基线：' + '；'.join(f'<b>{a}</b> {b}' for a, b in FIXES) + '</div>')
 
 # 叙事层 + 意图链路（V4.1 需求保真域；run 模式下叙事层由旅程线正文自带，去重）
@@ -272,5 +287,6 @@ else:
                ' 本报告：<code>evidence/unified-roadshow-report.html</code>（自包含实拍+外链真证据）</div>')
 out.append('</body></html>')
 
-OUT.write_text('\n'.join(out), encoding='utf-8')
+_title_run = f' · RUN_ID={_RUN_ID}' if _RUN_ID else ' · 20260928 两线合并版'
+OUT.write_text('\n'.join(out).replace('__TITLE_RUN__', _title_run), encoding='utf-8')
 print(f'unified report: {OUT} ({OUT.stat().st_size // 1024} KB, gates={len(gate_rows)}, truth_idx={len(truth_imgs)}, steps={len(STEPS)})')
