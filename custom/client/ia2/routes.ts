@@ -145,6 +145,12 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/GovernanceView.vue'),
         },
         {
+          // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓
+          path: 'accounts',
+          name: 'ia2.accounts',
+          component: () => import('./views/AccountAdminView.vue'),
+        },
+        {
           // 编排（工程）：＋新循环入口
           path: 'eng',
           name: 'ia2.eng',
