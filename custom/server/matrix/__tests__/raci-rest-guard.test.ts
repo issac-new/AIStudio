@@ -28,8 +28,6 @@ const ALLOWED_CONSUMERS = [
 const URL_ALLOWED = [
   'server/matrix/raci-matrix.ts', // 初始化（建群/邀人/摘要）REST 通道
   'server/matrix/admin-service.ts', // 管理面（whoami/displayname/synapse admin）
-  'server/matrix/agent-identity.ts', // v14 P2A：agent 身份供给（login 换 token，初始化面）
-  'server/matrix/chat-bridge.ts', // v14 P2B：ChatBridge（sync/join/send；协作信号仍走协议事件，见 task-protocol 单一源）
 ]
 // ③ 协议事件类型字面量唯一源。
 const PROTOCOL_SOURCE = 'server/matrix/task-protocol.ts'
