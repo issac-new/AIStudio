@@ -98,11 +98,15 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 's/chat',
           name: 'ia2.collabChat',
           component: workbench,
+          // v14 统一聊天：嵌入态隐藏 ChatPanel 自带会话侧栏（standaloneEmbed
+          // 是独立 key——App.vue 不消费，不连带砍六个全局弹层，见 v14 文档 §1.2）
+          meta: { standaloneEmbed: true },
         },
         {
           path: 's/chat/:sessionId',
           name: 'ia2.collabSession',
           component: workbench,
+          meta: { standaloneEmbed: true },
         },
         {
           // matrix 房间画布（roomId 参数名与旧 comms 一致，深链免改）
@@ -117,6 +121,8 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 's/group/:roomId',
           name: 'ia2.groupRoom',
           component: workbench,
+          // v14 统一聊天：嵌入态隐藏 GroupChatPanel 自带房间侧栏（左栏即唯一导航）
+          meta: { standaloneEmbed: true },
         },
         {
           // 循环 → 运行画布（实时|历史）

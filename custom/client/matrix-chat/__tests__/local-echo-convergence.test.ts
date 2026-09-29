@@ -33,7 +33,8 @@ describe('D1 本地回显收敛（LocalEchoUpdated 链路）', () => {
     expect(src).toContain('matrixEventBus.onLocalEchoUpdated.value = () => getRoomStore().refreshMessages({ force: true })')
     expect(src).toContain('opts?.force')
     // v-for key 必须含 event id：id 原地翻转后 key 变化才能重挂行
+    // （v14 P2D 在 key 链中段插入 agentBadge 分支，message 分支仍是末端 'msg-' 兜底）
     const panel = read('components/MatrixTimelinePanel.vue')
-    expect(panel).toContain("item.type === 'stateEvent' ? 'state-' + item.event.getId() : 'msg-' + item.event.getId()")
+    expect(panel).toContain("item.type === 'agentBadge' ? 'agent-badge-' + item.event.getId() : 'msg-' + item.event.getId()")
   })
 })
