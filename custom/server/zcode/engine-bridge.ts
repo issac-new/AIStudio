@@ -26,6 +26,8 @@ export interface ZcodeEngineAgentService {
   conversationWorkflowRunEventsV4(params: { workspacePath: string; sessionId: string; runId: string; afterSequence?: number; limit?: number }): Promise<Record<string, unknown>>
   listSavedWorkflows(params: { workspacePath?: string; scope?: string }): Promise<Record<string, unknown>>
   listSavedWorkflowRuns(params: { workspacePath?: string; name?: string; limit: number; scope?: string }): Promise<Record<string, unknown>>
+  // overlay 002-import-session-rpc（#22 写入面）：归一化行→imported 会话。
+  importSessionV4(params: { workspacePath: string; source: 'codex' | 'kimi' | 'claude'; sourceId: string; rows: Array<{ role: 'user' | 'assistant' | 'tool'; text: string; at: number }> }): Promise<{ sessionId: string; rowsWritten: number }>
 }
 
 export interface ZcodeEngineBridge {
