@@ -15,6 +15,10 @@ import { join, resolve } from 'path'
 import {
   validateEngineModelConfig, type EngineModelConfig,
 } from '../../enginemodels/engine-model-config'
+import {
+  deniedProviderIds, loadGovernancePolicyStatements, mergePolicyStatements,
+  type PolicyStatement,
+} from '../../enginemodels/provider-policy'
 
 const engineModelsRouter = new Router({ prefix: '/api/ide/engine-models' })
 
@@ -34,6 +38,27 @@ function readConfig(): EngineModelConfig {
   }
 }
 
+// B2 治理面语句（4A 治理平面所有；HERMES_GOVERNANCE_POLICY 覆盖供守门测试）
+const GOVERNANCE_POLICY_PATH = process.env.HERMES_GOVERNANCE_POLICY?.trim()
+  ? resolve(process.env.HERMES_GOVERNANCE_POLICY)
+  : join(__dirname, '../../../../runtime/governance/provider-policy.json')
+
+function governanceStatements(): PolicyStatement[] {
+  return loadGovernancePolicyStatements(GOVERNANCE_POLICY_PATH)
+}
+
+/** 有效策略快照：合并序=用户在前、治理面压轴（最后匹配生效 → 治理权威）。 */
+function effectivePolicySnapshot(config: EngineModelConfig) {
+  const user = config.policy?.statements ?? []
+  const gov = governanceStatements()
+  return {
+    statements: mergePolicyStatements(user, gov),
+    userCount: user.length,
+    governanceCount: gov.length,
+    denied: deniedProviderIds(user, gov, config.providers.map((p) => p.providerId)),
+  }
+}
+
 function writeAtomic(config: EngineModelConfig): void {
   const tmp = `${STORE_PATH}.tmp`
   writeFileSync(tmp, JSON.stringify(config, null, 2), 'utf8')
@@ -41,7 +66,13 @@ function writeAtomic(config: EngineModelConfig): void {
 }
 
 engineModelsRouter.get('/', (ctx) => {
-  ctx.body = { ok: true, config: readConfig(), store: 'runtime/ide-engine-models.json' }
+  const config = readConfig()
+  ctx.body = {
+    ok: true,
+    config,
+    effectivePolicy: effectivePolicySnapshot(config),
+    store: 'runtime/ide-engine-models.json',
+  }
 })
 
 engineModelsRouter.put('/', (ctx) => {
@@ -49,6 +80,9 @@ engineModelsRouter.put('/', (ctx) => {
   const config: EngineModelConfig = {
     providers: Array.isArray(body?.providers) ? body!.providers! : [],
     defaultModel: body?.defaultModel ?? null,
+    policy: body?.policy && typeof body.policy === 'object' && Array.isArray(body.policy.statements)
+      ? { statements: body.policy.statements }
+      : undefined,
   }
   const validation = validateEngineModelConfig(config)
   if (!validation.ok) {
@@ -86,8 +120,24 @@ export function writeThroughToEngine(config: EngineModelConfig): EnginePassthrou
       provider?: Record<string, Record<string, unknown>>
     }
     engine.provider = engine.provider ?? {}
+    // B2 策略强制面：被拒 provider 不写穿（引擎读不到=派发不可达），并清掉
+    // 此前已写的同名键（策略收紧后不留可达残留）。
+    const gov = loadGovernancePolicyStatements(GOVERNANCE_POLICY_PATH)
+    // 判定集合=当前目录 ∪ 已存在的 ide-engine:* 键（历史残留键同样过策略——
+    // 策略收紧后不在目录里的旧键也不留可达残留）。
+    const existingIds = Object.keys(engine.provider)
+      .filter((k) => k.startsWith('ide-engine:'))
+      .map((k) => k.slice('ide-engine:'.length))
+    const knownIds = [...new Set([...config.providers.map((p) => p.providerId), ...existingIds])]
+    const denied = new Set(deniedProviderIds(config.policy?.statements ?? [], gov, knownIds).map((x) => x.providerId))
+    const skipped: string[] = []
+    for (const providerId of denied) {
+      const key = `ide-engine:${providerId}`
+      if (engine.provider[key]) { delete engine.provider[key]; skipped.push(`${key}（已清除残留）`) }
+    }
     const keys: string[] = []
     for (const p of config.providers) {
+      if (denied.has(p.providerId)) { skipped.push(`ide-engine:${p.providerId}`); continue }
       const key = `ide-engine:${p.providerId}`
       const apiKey = p.apiKeyEnv ? (process.env[p.apiKeyEnv] ?? '').trim() : ''
       const models: Record<string, unknown> = {}
@@ -112,7 +162,8 @@ export function writeThroughToEngine(config: EngineModelConfig): EnginePassthrou
     const tmp = `${path}.tmp`
     writeFileSync(tmp, JSON.stringify(engine, null, 2), 'utf8')
     renameSync(tmp, path)
-    return { wrote: true, providerKeys: keys, note: '已写穿 ~/.zcode/v2/config.json（ide-engine: 前缀条目；引擎重载/新会话生效）' }
+    const deniedNote = skipped.length > 0 ? `；策略拒配跳过 ${skipped.length} 项` : ''
+    return { wrote: true, providerKeys: keys, note: `已写穿 ~/.zcode/v2/config.json（ide-engine: 前缀条目；引擎重载/新会话生效）${deniedNote}` }
   } catch (err) {
     return { wrote: false, providerKeys: [], note: `写穿失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
   }
