@@ -1,0 +1,275 @@
+# 511（fresh-build 类型门禁根治）：上游 vue-tsc 门禁在 dist 缺席的全新树上会被
+#      prepare 钩子触发，暴露补丁集 29 项存量类型债（此前构建树 dist 常在、
+#      prepare 短路从未触达）。本补丁一次收口：
+#      - mimo/zcode 补丁族（379/394/507/509-510 交互面）类型尾债：头像 label 联合、
+#        RoomAgent/RoomAgentInput/GroupAgentType/descriptor 联合、Record 字面量补键、
+#        394 迁移重放残留的 mimo 重复键两处（chat/group avatar）
+#      - MessageItem B8 取回编辑块插入时吃掉 computed 右括号（孤儿括号+三连错误）
+#      - Workflow 边组件 defineProps 自定义类型的缺口（必填坐标/模板 props/未用导入）
+#      - ChatInput 自定义斜杠选项参数显式类型（@/custom 环境声明为 any 族）
+#      - useKeyboard isContentEditable 断言 HTMLElement；chat store systemType 补 gateway
+#        （101 gateway banner 运行时早已使用）与 QueueInsertionState.runtime 补 zcode
+diff --git a/packages/client/src/api/studio/group-chat-agent-link.ts b/packages/client/src/api/studio/group-chat-agent-link.ts
+index 08891a6..5047469 100644
+--- a/packages/client/src/api/studio/group-chat-agent-link.ts
++++ b/packages/client/src/api/studio/group-chat-agent-link.ts
+@@ -1,7 +1,7 @@
+ import { request } from '../client'
+ 
+ export type RemoteGroupAgentDescriptor = {
+-  agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'
++  agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
+   agentMode: 'scoped' | 'global'
+   priorAgentMode?: 'scoped' | 'global' | ''
+   profile: string
+diff --git a/packages/client/src/api/studio/group-chat.ts b/packages/client/src/api/studio/group-chat.ts
+index 0d67135..e4fe3ee 100644
+--- a/packages/client/src/api/studio/group-chat.ts
++++ b/packages/client/src/api/studio/group-chat.ts
+@@ -100,7 +100,7 @@ export interface RoomAgent {
+     id: string
+     roomId: string
+     agentId: string
+-    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'
++    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
+     agentMode: 'scoped' | 'global'
+     priorAgentMode?: 'scoped' | 'global' | ''
+     profile: string
+@@ -146,7 +146,7 @@ export interface GroupAgentActivity {
+ 
+ export interface RoomAgentInput {
+     presetId?: string
+-    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'
++    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
+     agentMode?: 'scoped' | 'global'
+     priorAgentMode?: 'scoped' | 'global' | ''
+     profile: string
+diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
+index 7fad52d..ca17d8c 100644
+--- a/packages/client/src/components/hermes/chat/ChatInput.vue
++++ b/packages/client/src/components/hermes/chat/ChatInput.vue
+@@ -276,7 +276,7 @@ const skillPickerItems = computed(() => {
+ })
+ // overlay[ide] B7 自定义斜杠命令选项（coding-agent 会话面追加）
+ const customSlashOptions = computed<SlashCommandOption[]>(() =>
+-  slashCommandsSnapshot().map((c) => ({
++  slashCommandsSnapshot().map((c: { name: string; description?: string; prompt: string }) => ({
+     key: `custom:${c.name}`,
+     name: c.name,
+     args: '',
+diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
+index ee5d38d..1a3f81b 100644
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -179,7 +179,7 @@ const displayText = computed(() => {
+     .join('\n');
+ });
+ const parsedMessageReference = computed(() =>
+-  props.message.role === 'user' ? parseMessageReference(displayText.value) : null,
++  props.message.role === 'user' ? parseMessageReference(displayText.value) : null)
+ // overlay[ide] B8：取回编辑（window 事件直发，ChatInput patch 500 消费）
+ function emitEditResend(): void {
+   if (props.message.role !== 'user') return
+@@ -187,7 +187,6 @@ function emitEditResend(): void {
+   if (!text) return
+   window.dispatchEvent(new CustomEvent('ide-edit-resend', { detail: text }))
+ }
+-)
+ const referencedContentMarkdown = computed(() =>
+   parsedMessageReference.value
+     ? formatReferencedContentForDisplay(parsedMessageReference.value.content)
+diff --git a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+index 8afab5e..05c6f7b 100644
+--- a/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
++++ b/packages/client/src/components/hermes/group-chat/GroupChatPanel.vue
+@@ -241,7 +241,7 @@ const profileOptions = computed(() =>
+     profilesStore.profiles.map(p => ({ label: p.name, value: p.name }))
+ )
+ 
+-type GroupAgentType = 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'
++type GroupAgentType = 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'zcode'
+ 
+ const groupAgentTypeDefinitions = GROUP_AGENT_OPTIONS
+ 
+diff --git a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
+index 5488d7d..4c262c1 100644
+--- a/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
++++ b/packages/client/src/components/hermes/workflow/WorkflowAgentNode.vue
+@@ -1,7 +1,7 @@
+ <script setup lang="ts">
+ import DshSessionPresetSelect from "@/components/coding-agents/dsh/DshSessionPresetSelect.vue"
+ import { computed, ref } from 'vue'
+-import { Handle, Position, type NodeProps } from '@vue-flow/core'
++import { Handle, Position } from '@vue-flow/core'
+ import { NodeResizer } from '@vue-flow/node-resizer'
+ import { NInput, NSelect, NSwitch, NTooltip, useMessage } from 'naive-ui'
+ import { useI18n } from 'vue-i18n'
+diff --git a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
+index 1bd4888..865e032 100644
+--- a/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
++++ b/packages/client/src/components/hermes/workflow/WorkflowConditionEdge.vue
+@@ -1,6 +1,6 @@
+ <script setup lang="ts">
+ import { computed } from 'vue'
+-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@vue-flow/core'
++import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from '@vue-flow/core'
+ import {
+   workflowSelfLoopGeometry,
+   type WorkflowHandlePosition,
+@@ -12,15 +12,18 @@ const props = defineProps<{
+   label?: unknown
+   source: string
+   target: string
+-  sourceX?: number
+-  sourceY?: number
+-  targetX?: number
+-  targetY?: number
++  sourceX: number
++  sourceY: number
++  targetX: number
++  targetY: number
+   sourcePosition?: any
+   targetPosition?: any
+   sourceNode?: any
+   targetNode?: any
+-  markerEnd?: unknown
++  markerEnd?: string
++  markerStart?: string
++  interactionWidth?: number
++  style?: any
+   data?: unknown
+ }>()
+ const emit = defineEmits<{ edit: [edgeId: string] }>()
+diff --git a/packages/client/src/composables/useKeyboard.ts b/packages/client/src/composables/useKeyboard.ts
+index 47824ee..28d413e 100644
+--- a/packages/client/src/composables/useKeyboard.ts
++++ b/packages/client/src/composables/useKeyboard.ts
+@@ -11,7 +11,7 @@ export function useKeyboard() {
+     if (!el) return false
+     if (el.closest('.monaco-editor')) return true
+     const tag = el.tagName
+-    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
++    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el as HTMLElement).isContentEditable
+   }
+ 
+   function handleKeydown(e: KeyboardEvent) {
+diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index 80a7ef9..56a6f70 100644
+--- a/packages/client/src/stores/hermes/chat.ts
++++ b/packages/client/src/stores/hermes/chat.ts
+@@ -104,7 +104,7 @@ export interface Message {
+   // 不含 <think> 包裹标签；内容自身可以为多段纯文本。
+   reasoning?: string
+   queued?: boolean
+-  systemType?: 'command' | 'error' | 'fork-divider' | 'tool-run'
++  systemType?: 'command' | 'error' | 'fork-divider' | 'tool-run' | 'gateway'
+   commandAction?: string
+   commandData?: Record<string, unknown>
+   finishReason?: string | null
+@@ -447,7 +447,7 @@ export interface QueueInsertionState {
+   generation: string
+   runId?: string
+   queueId: string
+-  runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor'
++  runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'zcode'
+   phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn'
+   guarantee: 'strict' | 'immediate'
+   requestedAt: number
+diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
+index b93f7aa..c6b913a 100644
+--- a/packages/client/src/utils/chat-agent-avatar.ts
++++ b/packages/client/src/utils/chat-agent-avatar.ts
+@@ -1,5 +1,5 @@
+ export interface ChatAgentAvatar {
+-  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'DeepSeek Harness' | 'Cursor'
++  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'MiMo Code' | 'DeepSeek Harness' | 'Cursor' | 'ZCode'
+   src: string
+ }
+ 
+@@ -18,7 +18,6 @@ const AGENT_AVATARS = {
+   grok: { label: 'Grok', src: '/coding-agents/grok.svg' },
+   opencode: { label: 'OpenCode', src: '/coding-agents/opencode.png' },
+   mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
+-  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
+   dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
+   cursor: { label: 'Cursor', src: '/coding-agents/cursor.svg' },
+   zcode: { label: 'ZCode', src: '/coding-agents/zcode.svg' },
+diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
+index bbddea9..36a59ae 100644
+--- a/packages/client/src/utils/group-agent-avatar.ts
++++ b/packages/client/src/utils/group-agent-avatar.ts
+@@ -10,9 +10,9 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
+     grok: '/coding-agents/grok.svg',
+     opencode: '/coding-agents/opencode.png',
+     mimo: '/coding-agents/mimo.svg',
+-    mimo: '/coding-agents/mimo.svg',
+     dsh: '/coding-agents/deepseek.svg',
+     cursor: '/coding-agents/cursor.svg',
++    zcode: '/coding-agents/zcode.svg',
+ }
+ 
+ export function parseStoredAvatar(raw: unknown): ProfileAvatar | null {
+diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
+index 4962c93..db26f87 100644
+--- a/packages/client/src/views/hermes/AgentManagerView.vue
++++ b/packages/client/src/views/hermes/AgentManagerView.vue
+@@ -131,17 +131,19 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
+ const aiHelpDrawerVisible = ref(false)
+ const aiHelpPrompt = ref('')
+ const legacyDataMigrationChecked = ref(false)
+-const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, zcode: false })
+-const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, zcode: false })
+-const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, zcode: false })
++const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, zcode: false })
++const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, zcode: false })
++const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, zcode: false })
+ const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
+   'claude-code': null,
+   codex: null,
+   pi: null,
+   grok: null,
+   opencode: null,
++  mimo: null,
+   dsh: null,
+   cursor: null,
++  zcode: null,
+ })
+ 
+ const hermesStatus = computed(() => agentStatusSnapshot.value?.agents.find(agent => agent.id === 'hermes'))
+diff --git a/packages/client/src/views/hermes/CodingAgentConfigView.vue b/packages/client/src/views/hermes/CodingAgentConfigView.vue
+index 40bebaf..fea1e3c 100644
+--- a/packages/client/src/views/hermes/CodingAgentConfigView.vue
++++ b/packages/client/src/views/hermes/CodingAgentConfigView.vue
+@@ -39,9 +39,11 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>
+   opencode: { preference: 'memory', configuration: 'settings' },
+   dsh: { preference: 'memory', configuration: 'settings' },
+   cursor: { configuration: 'settings' },
++  mimo: { preference: 'memory', configuration: 'settings' },
++  zcode: {},
+ }
+ 
+-const skillTargets: Record<CodingAgentId, SkillTarget> = {
++const skillTargets: Partial<Record<CodingAgentId, SkillTarget>> = {
+   'claude-code': 'claude',
+   codex: 'codex',
+   pi: 'pi',
+@@ -62,8 +64,8 @@ let loadVersion = 0
+ const validAgentId = computed<CodingAgentId | null>(() =>
+   agentId.value in settingsKeys ? agentId.value as CodingAgentId : null,
+ )
+-const skillTarget = computed<SkillTarget>(() =>
+-  validAgentId.value ? skillTargets[validAgentId.value] : 'hermes',
++const skillTarget = computed<SkillTarget | null>(() =>
++  validAgentId.value ? skillTargets[validAgentId.value] ?? null : 'hermes',
+ )
+ const activeEditorKinds = computed(() => editorKinds.filter(kind =>
+   validAgentId.value && settingsKeys[validAgentId.value][kind],
+@@ -145,7 +147,7 @@ watch([agentId, section], loadSettingsFiles, { immediate: true })
+     <DshPluginsPanel v-if="section === 'plugins' && validAgentId === 'dsh'" />
+     <DshAgentPresetsPanel v-else-if="section === 'presets' && validAgentId === 'dsh'" />
+     <div v-else-if="section === 'skills'" class="coding-agent-skills-content">
+-      <CodingAgentSkillsPanel :target="skillTarget" />
++      <CodingAgentSkillsPanel v-if="skillTarget" :target="skillTarget" />
+     </div>
+ 
+     <div v-else-if="section === 'mcp' && validAgentId" class="coding-agent-mcp-content">
