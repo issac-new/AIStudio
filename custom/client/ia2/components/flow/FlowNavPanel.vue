@@ -17,6 +17,7 @@ import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
 import InboxNavEntry from '../InboxNavEntry.vue'
 import GovernanceNavEntry from '../GovernanceNavEntry.vue'
+import AccountsNavEntry from '../AccountsNavEntry.vue'
 import IaOverviewEntry from '../IaOverviewEntry.vue'
 
 const props = defineProps<{
@@ -103,6 +104,7 @@ function submitCreateRoom(): void {
     <InboxNavEntry />
     <!-- 治理中心入口（六闸工件+待裁决徽标；自含轮询） -->
     <GovernanceNavEntry />
+    <AccountsNavEntry />
 
     <div class="flow-nav__filters" data-testid="flow-filters">
       <button
