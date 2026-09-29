@@ -107,7 +107,7 @@ export function normalizeWorkflowActivity(raw: unknown): ProjectionWorkflowActiv
     const r = item as Record<string, unknown>
     const runId = str(r.runId)
     const status = str(r.status)
-    if (!runId || !WORKFLOW_RUN_STATUSES.includes(status)) continue
+    if (!runId || !status || !WORKFLOW_RUN_STATUSES.includes(status)) continue
     const phasesRaw = Array.isArray(r.phases) ? r.phases : []
     const phases: ProjectionWorkflowPhase[] = []
     for (const p of phasesRaw) {
@@ -115,7 +115,7 @@ export function normalizeWorkflowActivity(raw: unknown): ProjectionWorkflowActiv
       const pr = p as Record<string, unknown>
       const name = str(pr.name)
       const pstatus = str(pr.status)
-      if (!name || !WORKFLOW_PHASE_STATUSES.includes(pstatus)) continue
+      if (!name || !pstatus || !WORKFLOW_PHASE_STATUSES.includes(pstatus)) continue
       const alongside = Array.isArray(pr.alongside)
         ? pr.alongside.filter((n): n is number => Number.isInteger(n) && n >= 0)
         : undefined
@@ -129,7 +129,7 @@ export function normalizeWorkflowActivity(raw: unknown): ProjectionWorkflowActiv
       ...(str(r.toolCallId) ? { toolCallId: str(r.toolCallId) } : {}),
       ...(str(r.name) ? { name: str(r.name) } : {}),
       status: status as ProjectionWorkflowRunStatus,
-      ...(WORKFLOW_STOP_REASONS.includes(stopReason) ? { stopReason: stopReason as ProjectionWorkflowStopReason } : {}),
+      ...(stopReason !== undefined && WORKFLOW_STOP_REASONS.includes(stopReason) ? { stopReason: stopReason as ProjectionWorkflowStopReason } : {}),
       ...(startedAt !== undefined ? { startedAt } : {}),
       phases,
       ...(str(r.currentPhase) ? { currentPhase: str(r.currentPhase) } : {}),
