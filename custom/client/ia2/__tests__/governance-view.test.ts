@@ -53,6 +53,7 @@ vi.mock('@/custom/governance/api/governance', () => ({
 vi.mock('@/custom/cockpit/api/approvals', () => ({
   fetchPendingApprovals: vi.fn(),
   decideApproval: vi.fn(),
+  dedupePending: (items: unknown[]) => items,
 }))
 vi.mock('@/custom/kanban/components/KanbanMarkdown.vue', () => ({
   default: { name: 'KanbanMarkdown', props: ['source'], template: '<div class="md-stub">{{ source }}</div>' },

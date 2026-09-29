@@ -8,7 +8,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  fetchPendingApprovals, decideApproval, fetchApprovalHistory,
+  fetchPendingApprovals, dedupePending, decideApproval, fetchApprovalHistory,
   fetchSpotChecks, resolveSpotCheck,
   type PendingApprovalItem, type ApprovalHistoryEntry, type ApprovalRiskTier, type SpotCheckItem,
 } from '../api/approvals'
@@ -26,6 +26,12 @@ const emit = defineEmits<{ changed: [] }>()
 
 const { t, locale } = useI18n()
 const items = ref<PendingApprovalItem[]>([])
+
+/** 操作对象可读化（视觉审计 #14）：纯哈希对象缩位显示 `对象 xxxxxxxx`，完整值挂 title。 */
+function prettyTarget(title: string): string {
+  const s = (title || '').trim()
+  return /^[0-9a-f]{16,}$/i.test(s) ? `对象 ${s.slice(0, 8)}…` : s || '—'
+}
 const history = ref<ApprovalHistoryEntry[]>([])
 const spotChecks = ref<SpotCheckItem[]>([])
 const spotResolvedCount = ref(0)
@@ -53,7 +59,7 @@ async function refresh(): Promise<void> {
       props.showHistory ? fetchApprovalHistory(50) : Promise.resolve({ entries: [] }),
       props.showHistory ? fetchSpotChecks(20) : Promise.resolve({ items: [], resolved: [] }),
     ])
-    items.value = pending.items ?? []
+    items.value = dedupePending(pending.items ?? [])
     history.value = hist.entries ?? []
     spotChecks.value = spot.items ?? []
     spotResolvedCount.value = (spot.resolved ?? []).length
@@ -242,10 +248,10 @@ defineExpose({ refresh })
           <tr v-for="entry in history" :key="entry.id + entry.ts">
             <td>{{ fmtTime(entry.ts) }}</td>
             <td>{{ entry.actor }}</td>
-            <td>{{ entry.targetTitle }}</td>
-            <td><span v-if="entry.risk" class="risk-badge" :class="`risk-badge--${entry.risk}`" data-testid="approval-history-risk">{{ t(`approvals.risk.${entry.risk}`) }}</span></td>
+            <td :title="entry.targetTitle">{{ prettyTarget(entry.targetTitle) }}</td>
+            <td><span v-if="entry.risk" class="risk-badge" :class="`risk-badge--${entry.risk}`" data-testid="approval-history-risk">{{ t(`approvals.risk.${entry.risk}`) }}</span><span v-else class="approval-history__dim">—</span></td>
             <td><span class="approval-history__decision" :class="`is-${entry.decision}`">{{ t(`approvals.choice.${entry.decision}`) !== `approvals.choice.${entry.decision}` ? t(`approvals.choice.${entry.decision}`) : entry.decision }}</span></td>
-            <td>{{ entry.note || '' }}</td>
+            <td>{{ entry.note && entry.note !== entry.targetTitle ? entry.note : '—' }}</td>
           </tr>
         </tbody>
       </table>
@@ -385,7 +391,8 @@ defineExpose({ refresh })
   th { color: var(--text-muted, #878c99); font-weight: 500; }
   td { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
-.approval-history__decision {
+.approval-history__dim { color: var(--text-muted, #878c99); }
+  .approval-history__decision {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;

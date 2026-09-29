@@ -317,7 +317,7 @@ function handleReplyInThread() {
       />
 
       <!-- Bubble Layout: Timestamp inline -->
-      <div v-if="layout === 'bubble'" class="message-timestamp-bubble" :title="props.event.getDate()?.toLocaleString()">
+      <div v-if="layout === 'bubble'" class="message-timestamp-bubble" :title="props.event.getDate()?.toLocaleString('zh-CN')">
         {{ props.event.getDate()?.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) }}
       </div>
     </div>

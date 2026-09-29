@@ -18,7 +18,7 @@ import LedgerSection from '@/custom/governance/components/LedgerSection.vue'
 import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
 import AuditSection from '@/custom/governance/components/AuditSection.vue'
 import {
-  fetchPendingApprovals, decideApproval, type PendingApprovalItem,
+  fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
 } from '@/custom/cockpit/api/approvals'
 
 const i18nCtx = useI18n()
@@ -93,7 +93,7 @@ async function refresh(): Promise<void> {
     overview.value = await fetchGovernanceOverview()
     audit.value = await fetchDomainAudit().catch(() => audit.value)
     const pending = await fetchPendingApprovals()
-    reviews.value = (pending.items ?? []).filter((i) => i.kind === 'review')
+    reviews.value = dedupePending(pending.items ?? []).filter((i) => i.kind === 'review')
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -126,7 +126,7 @@ async function decide(item: PendingApprovalItem, decision: 'approve' | 'request_
 }
 
 function fmtTime(ts: number): string {
-  return ts ? new Date(ts).toLocaleString() : ''
+  return ts ? new Date(ts).toLocaleString('zh-CN') : ''
 }
 
 onMounted(() => void refresh())

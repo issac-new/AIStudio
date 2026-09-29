@@ -134,7 +134,7 @@ function getEventTimestamp(event: any): string {
   const ts = event?.getTs?.() ?? 0
   if (!ts) return ''
   const date = new Date(ts)
-  return date.toLocaleString()
+  return date.toLocaleString('zh-CN')
 }
 
 function getSenderName(event: any): string {

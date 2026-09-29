@@ -18,6 +18,7 @@ vi.mock('../api/approvals', async () => {
     spotResolveResult: { ok: true } as Record<string, unknown>,
   }
   return {
+    dedupePending: (items: unknown[]) => items,
     fetchPendingApprovals: vi.fn(async () => JSON.parse(JSON.stringify(state.pending))),
     fetchApprovalHistory: vi.fn(async () => JSON.parse(JSON.stringify(state.history))),
     fetchSpotChecks: vi.fn(async () => JSON.parse(JSON.stringify(state.spotcheck))),

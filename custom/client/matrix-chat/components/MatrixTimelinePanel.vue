@@ -113,7 +113,7 @@ const groupedItems = computed(() => {
   for (let i = 0; i < messages.value.length; i++) {
     const event = messages.value[i]
     const date = event.getDate()
-    const dateStr = date ? date.toLocaleDateString() : ''
+    const dateStr = date ? date.toLocaleDateString('zh-CN') : ''
 
     // Date separator
     if (dateStr && dateStr !== lastDateStr) {
@@ -140,7 +140,7 @@ const groupedItems = computed(() => {
     const nextEvent = messages.value[i + 1]
     const nextSenderId = nextEvent?.getSender() ?? ''
     const nextDate = nextEvent?.getDate()
-    const nextDateStr = nextDate ? nextDate.toLocaleDateString() : ''
+    const nextDateStr = nextDate ? nextDate.toLocaleDateString('zh-CN') : ''
     const isLastInSection = senderId !== nextSenderId || dateStr !== nextDateStr
 
     result.push({
