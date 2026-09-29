@@ -13,6 +13,7 @@
 //   全角化 @（mention 解析器不再识别）、限长、去控制字符。简报经 @mention 总线
 //   派发（mention-dispatch.parseMentions 只认半角 @word）。
 import { randomUUID } from 'crypto'
+import { isAbsolute as posixIsAbsolute, win32 as win32Path } from 'path'
 
 /** 事件源词表（Manus Automations 触发源收敛到本机可产的四面）。 */
 export const AUTOMATION_SOURCE_TYPES = ['file', 'kanban', 'git', 'webhook'] as const
@@ -71,6 +72,16 @@ export type AutomationEvent =
 export interface RuleValidationErrors { [field: string]: string }
 
 /**
+ * workspacePath 绝对性判定（双栈语法判定，单一事实源）：POSIX 或 win32 任一形态
+ * 为绝对即合法。path.isAbsolute 是平台相关的——mac/linux 主机上 startsWith('/')
+ * 与 isAbsolute 都会拒掉 Windows 盘符路径，而事件摄入面存在跨机派发形态；
+ * 真正的安全控制在工作区归属闸（path.resolve 按宿主归一后精确比对）。
+ */
+export function isAbsoluteWorkspacePath(p: string): boolean {
+  return posixIsAbsolute(p) || win32Path.isAbsolute(p)
+}
+
+/**
  * 规则校验（REST 400 依据）。返回 null=合法；否则字段级错误表。
  * workspacePath 必须绝对路径（watcher/poller 挂载与派发都以它为根）。
  */
@@ -81,7 +92,7 @@ export function validateRuleInput(input: unknown): { rule: AutomationRule } | { 
   if (!name || name.length > RULE_NAME_MAX) errors.name = `名称必填且 ≤${RULE_NAME_MAX} 字符`
 
   const workspacePath = typeof raw.workspacePath === 'string' ? raw.workspacePath.trim() : ''
-  if (!workspacePath.startsWith('/')) errors.workspacePath = 'workspacePath 必须是绝对路径'
+  if (!workspacePath || !isAbsoluteWorkspacePath(workspacePath)) errors.workspacePath = 'workspacePath 必须是绝对路径'
 
   const sourceRaw = (raw.source ?? {}) as Record<string, unknown>
   const type = sourceRaw.type

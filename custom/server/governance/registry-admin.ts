@@ -4,10 +4,10 @@
 //（操作本身以 body 携带的 synapse adminToken 鉴权——只有真实管理员持有效管理凭据）。
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, appendFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { repoRoot } from './governance-controller'
-import { createMatrixUser, setMatrixUserActive } from '../matrix/admin-service'
+import { createMatrixUser, setMatrixUserActive, validateMatrixToken } from '../matrix/admin-service'
 
 const exec = promisify(execFile)
 
@@ -99,6 +99,11 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
   handoverCommit: string; deactivated: string[]; auditCommit: string
 }> {
   const name = inp.localName.trim().replace(/^@/, '').split(':')[0]
+  // 与 provisionMatrixAccount 同款白名单：name 拼进 offboarding 文件路径，无校验可穿越 repoRoot
+  if (!/^[a-z0-9_.-]+$/i.test(name)) throw new Error(`非法用户名：${name}`)
+  // 先鉴权后写盘：adminToken 无效时不得产生任何工单/审计文件与 git 提交
+  const who = await validateMatrixToken(inp.adminToken, inp.homeserverUrl)
+  if (!who) throw new Error('adminToken 无效（synapse whoami 失败），已拒绝落盘')
   const base = { adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl }
   // ① 任务移交工单
   const doc = [
@@ -122,12 +127,17 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
       if (await setMatrixUserActive(uid, false, base.adminToken, base.homeserverUrl)) deactivated.push(uid)
     } catch (e) { if (!/not found|404/i.test(String(e))) throw e }
   }
-  // ③ 审计留痕（append-only 台账）
+  // ③ 审计留痕（append-only 台账）：appendFile 直追加，不做读-改-写全量覆写
+  //（并发 offboard 各自读旧全文再覆写会互相丢行）。
   const trailPath = 'docs/admin/audit-trail.md'
-  let trail = ''
-  try { trail = await readFile(path.join(repoRoot(), trailPath), 'utf-8') } catch { trail = '# 账号审计留痕（append-only）\n\n' }
-  trail += `| ${new Date().toISOString()} | offboard | ${name} → 移交 ${inp.handoverTo} | 停用 ${deactivated.join(' ')} | ${inp.reason} | ${inp.actor || 'account-admin'} |\n`
-  await writeFile(path.join(repoRoot(), trailPath), trail, 'utf-8')
+  const trailAbs = path.join(repoRoot(), trailPath)
+  const trailLine = `| ${new Date().toISOString()} | offboard | ${name} → 移交 ${inp.handoverTo} | 停用 ${deactivated.join(' ')} | ${inp.reason} | ${inp.actor || 'account-admin'} |\n`
+  try {
+    await appendFile(trailAbs, trailLine, 'utf-8')
+  } catch {
+    await mkdir(path.dirname(trailAbs), { recursive: true })
+    await writeFile(trailAbs, '# 账号审计留痕（append-only）\n\n' + trailLine, 'utf-8')
+  }
   await git(['add', trailPath])
   await git(['commit', '-m', `离职③审计留痕：${name}`])
   const auditCommit = await currentCommit()
