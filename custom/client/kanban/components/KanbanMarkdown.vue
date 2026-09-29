@@ -31,6 +31,14 @@ function renderInline(esc: string): string {
     )
 }
 
+function splitRow(line: string): string[] {
+  return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim())
+}
+
+function isTableDivider(line: string): boolean {
+  return /^\s*\|?(\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(line)
+}
+
 function renderMarkdown(src: string): string {
   const blocks: string[] = []
   let working = String(src).replace(/```([\s\S]*?)```/g, (_m, code) => {
@@ -41,13 +49,47 @@ function renderMarkdown(src: string): string {
   const lines = escaped.split(/\r?\n/)
   const out: string[] = []
   let inList = false
-  for (const raw of lines) {
-    const line = raw
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
     const bullet = /^\s*[-*]\s+(.*)$/.exec(line)
     const heading = /^(#{1,4})\s+(.*)$/.exec(line)
+    // 引用块：连续 > 行合并为一个 blockquote（治理工件结论/注记段）
+    const quote = /^\s*&gt;\s?(.*)$/.exec(line)
+    if (quote) {
+      const qs: string[] = [quote[1]]
+      i += 1
+      while (i < lines.length) {
+        const q2 = /^\s*&gt;\s?(.*)$/.exec(lines[i])
+        if (!q2) break
+        qs.push(q2[1])
+        i += 1
+      }
+      out.push(`<blockquote>${qs.map((q) => `<p>${renderInline(q)}</p>`).join('')}</blockquote>`)
+      continue
+    }
+    // 表格：当前行含 | 且下一行是 |---| 分隔行 → 表头+表体渲染（治理工件台账/矩阵主体）
+    if (line.includes('|') && i + 1 < lines.length && isTableDivider(lines[i + 1])) {
+      const head = splitRow(line)
+      i += 2
+      const body: string[][] = []
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim() !== '') {
+        body.push(splitRow(lines[i]))
+        i += 1
+      }
+      out.push(
+        `<table class="kanban-md-table"><thead><tr>${head
+          .map((c) => `<th>${renderInline(c)}</th>`)
+          .join('')}</tr></thead><tbody>${body
+          .map((r) => `<tr>${r.map((c) => `<td>${renderInline(c)}</td>`).join('')}</tr>`)
+          .join('')}</tbody></table>`,
+      )
+      continue
+    }
     if (bullet) {
       if (!inList) { out.push('<ul>'); inList = true }
       out.push(`<li>${renderInline(bullet[1])}</li>`)
+      i += 1
       continue
     }
     if (inList) { out.push('</ul>'); inList = false }
@@ -59,11 +101,12 @@ function renderMarkdown(src: string): string {
     } else {
       out.push(`<p>${renderInline(line)}</p>`)
     }
+    i += 1
   }
   if (inList) out.push('</ul>')
   let html = out.join('\n')
-  html = html.replace(/\u0000CODE(\d+)\u0000/g, (_m, i) =>
-    `<pre class="kanban-md-code"><code>${escapeHtml(blocks[Number(i)])}</code></pre>`,
+  html = html.replace(/\u0000CODE(\d+)\u0000/g, (_m, n) =>
+    `<pre class="kanban-md-code"><code>${escapeHtml(blocks[Number(n)])}</code></pre>`,
   )
   return html
 }
@@ -124,5 +167,31 @@ function renderMarkdown(src: string): string {
     }
   }
   :deep(strong) { font-weight: 600; }
+  :deep(blockquote) {
+    margin: 0.35rem 0;
+    padding: 0.25rem 0.7rem;
+    border-left: 3px solid $accent-primary;
+    background: color-mix(in srgb, currentColor 5%, transparent);
+    border-radius: 0 $radius-sm $radius-sm  0;
+
+    p { margin: 0.15rem 0; }
+  }
+  :deep(table.kanban-md-table) {
+    margin: 0.4rem 0;
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.85rem;
+
+    th, td {
+      border: 1px solid $border-light;
+      padding: 0.3rem 0.5rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: color-mix(in srgb, currentColor 6%, transparent); font-weight: 600; }
+    tbody tr:nth-child(even) td {
+      background: color-mix(in srgb, currentColor 3%, transparent);
+    }
+  }
 }
 </style>
