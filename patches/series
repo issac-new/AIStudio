@@ -253,8 +253,6 @@
 # 491（U1 公告非阻塞）：StudioAnnouncementPrompt 模态→底部常驻横幅，
 #      公告不再遮罩拦截全界面（20+ 张推演截图被挡实锤），确认后按 id 记账不再弹。
 491-client-announcement-nonblocking-banner.patch
-# 476（feat/p0-hardening 轮）：案例面板 P0 词条（zh/en）——inFlight/completed（读数新口径）
-476-delivery-panel-p0-i18n.patch
 # 492（U3/U10 根治 · 跨板 404）：GET /api/hermes/kanban/:id 错板/缺省板兜底——
 #      任务 ID 全局唯一，sqlite 快查定位所在板后重试 show（抽屉/深链/消息卡链接
 #      恒带 board=default 撞 404 的根因，推演截图三连拍实锤）。
@@ -282,10 +280,8 @@
 #      （2.25 轮 patch 281 语义；系列折叠时随 111 孤儿化丢失，v0.7.25 结构重建——
 #      12GB vite 缓存入包致产物 14GB 的根因）。
 495-desktop-extrares-vite-cache-exclude.patch
-# 496（V4.1 §七 抽检器 locale）：approvals 域补 choice.auto_pass/spotcheck_*（历史
 #      决策列显示）与 spotcheck.* 键族（收件箱「抽检·自动放行回看」区）。锚定 473
 #      注入后的 approvals 块（zh/en 同构，与 473 同例不动其余 9 语言）。
-496-client-locales-approvals-spotcheck.patch
 # 497（win 交付物重建）：win.target 补 zip x64——本机分发交付物（nsis -86 在案惯例
 #      非交付物）；2.25 轮 patch 109 语义，系列折叠时孤儿化，v0.7.25 结构重建。
 497-desktop-win-zip-target.patch
