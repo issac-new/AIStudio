@@ -289,3 +289,6 @@
 # 499（侧栏死链根治）：删 PageSidebarNav 孤函数 openMatrixChat——目标路由 hermes.matrixChat
 #      已被 297 随 cockpit 家族整体删除，函数零调用方（按钮块在更早系列已移除）。
 499-sidebar-dead-matrix-entry-removal.patch
+# 500（B7 自定义斜杠命令）：ChatInput slash 菜单合并自定义命令（coding-agent 会话面），
+#      选中写 prompt 模板全文而非 /name；数据=/api/ide/slash-commands（native-routes 原生中间件）。
+500-client-chatinput-custom-slash.patch
