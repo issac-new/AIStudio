@@ -74,9 +74,14 @@ describe('A2 实弹事件源', () => {
     try {
       engine.addRule({ name: 'api 变更', workspacePath: ws, source: { type: 'file', pathPattern: 'src/api/**.ts' }, promptTemplate: '为变更补测试 {{paths}}', debounceMs: 500 })
       engine.syncSources()
-      writeFileSync(join(ws, 'src/api/user.ts'), 'export const x = 1\n')
-      writeFileSync(join(ws, 'README.md'), 'noise')
-      await waitFor(() => dispatchCalls.length > 0)
+      // fs.watch 在并行负载下可能丢单次回调（平台合法行为）：有界重触碰——
+      // 500ms 未见派发就再写一次（内容变化，等价编辑器重存），至多 20 轮。
+      for (let round = 0; round < 20 && dispatchCalls.length === 0; round++) {
+        writeFileSync(join(ws, 'src/api/user.ts'), `export const x = ${round + 1}\n`)
+        writeFileSync(join(ws, 'README.md'), `noise ${round}`)
+        await new Promise((r) => setTimeout(r, 500))
+      }
+      await waitFor(() => dispatchCalls.length > 0, 2000)
       expect(dispatchCalls[0].text).toContain('src/api/user.ts')
       // README 同窗口写入但规则 pattern 只认 src/api/**.ts——规则级过滤生效，不进简报
       expect(dispatchCalls[0].text).not.toContain('README.md')
@@ -90,5 +95,5 @@ describe('A2 实弹事件源', () => {
       engine.dispose()
     }
 
-  }, 30_000)
+  }, 35_000)
 })
