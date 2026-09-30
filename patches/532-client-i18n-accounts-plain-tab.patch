@@ -1,0 +1,42 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -2164,7 +2164,7 @@
+       loadFailed: '追溯数据加载失败',
+       retry: '重试',
+       emptyTitle: '暂无追溯数据',
+-      emptyHint: 'loop 落库工作项后，这里汇总 需求 → run → 产出任务 → 验证轮次 的双向链路',
++      emptyHint: '这里按「需求 → 运行 → 产出任务 → 验证轮次」展示每条工作链的来龙去脉；看板任务或循环产生执行记录后即有内容',
+       colRun: '运行',
+       colIter: '迭代',
+       colTask: '产出任务',
+@@ -2199,7 +2199,7 @@
+     tasks: {
+       tabBoard: '看板',
+       tabTrace: '追溯',
+-      tabAccounts: '管理三账',
++      tabAccounts: '项目健康',
+     },
+     dispatch: {
+       queued: '已入队',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -2164,7 +2164,7 @@
+       loadFailed: 'Failed to load traceability data',
+       retry: 'Retry',
+       emptyTitle: 'No traceability data yet',
+-      emptyHint: 'Once a loop persists work items, the goal → run → task → verification chain shows up here',
++      emptyHint: 'Each work chain is shown as goal → run → task → verification rounds; content appears once board tasks or loops have run records',
+       colRun: 'Run',
+       colIter: 'Iter',
+       colTask: 'Produced task',
+@@ -2199,7 +2199,7 @@
+     tasks: {
+       tabBoard: 'Board',
+       tabTrace: 'Traceability',
+-      tabAccounts: 'Accounts',
++      tabAccounts: 'Project Health',
+     },
+     dispatch: {
+       queued: 'Queued',
