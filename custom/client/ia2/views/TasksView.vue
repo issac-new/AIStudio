@@ -18,7 +18,6 @@ import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
 import GovernanceView from '@/custom/ia2/views/GovernanceView.vue'
 import { useRunSurfaceText } from '../i18n-run-surface'
 
-
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()

@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index fd1de955..ecb8491d 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -210,6 +210,8 @@ const desktopTitleBarLeft = computed(() => {
+@@ -210,6 +210,8 @@
    return appStore.pageSidebarExpanded ? 240 : 10;
  });
  const isDesktopPetRoute = computed(() => route.name === "desktop.pet");
@@ -11,7 +10,7 @@ index fd1de955..ecb8491d 100644
  const showWebPet = computed(
    () =>
      !isLoginPage.value &&
-@@ -383,7 +385,7 @@ useKeyboard();
+@@ -383,7 +385,7 @@
                </div>
              </div>
            </div>
