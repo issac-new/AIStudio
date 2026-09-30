@@ -99,9 +99,13 @@ else
   say "保留账号且不动房间（--keep-accounts）"
 fi
 
-# 4) 中央仓按需重置（默认保留；--reset-central 清 RFD 系工件与 integration 分支）
+# 4) 中央仓按需重置（默认保留；--reset-central 清推演工件与 integration 分支）
+# 清空范围（run5 教训修订）：推演工件不止 RFD-* 前缀——系分稿 AN-*、任务稿 T-*、
+# admin 台账（app-registry/org，setup 重建）同属轮次产物。0→1 语义=七个 docs 交付
+# 目录全清 + docs/admin + retro*RFD*；architecture/ 基线保留（AN 稿引用的公共基线，
+# setup 负责刷新）。合格线新增：清空后七目录为空（防旧稿残留满足"文件存在"假真值）。
 if [ "$RESET_CENTRAL" = 1 ]; then
-  say "中央仓重置：docs/{requirements,analysis,design,plan,test,delivery,acceptance,retro}/RFD-* 与 integration 分支（先打 tag 快照 mx-clean-${TS}）"
+  say "中央仓重置：docs/{requirements,analysis,design,plan,test,delivery,acceptance,retro,admin} 全目录 + integration 分支（先打 tag 快照 mx-clean-${TS}）"
   if [ "$APPLY" = 1 ]; then
     CEN="$SIM_ROOT/central/aipaydev"
     git -C "$CEN" tag "mx-clean-${TS}" 2>/dev/null || true
@@ -109,9 +113,16 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     # （run4 实锤）；未提交改动与清单先入 $ARC，再 -f 强删。
     git -C "$CEN" diff > "$ARC/central-uncommitted.patch" 2>/dev/null || true
     git -C "$CEN" status --porcelain > "$ARC/central-status.txt" 2>/dev/null || true
-    ( cd "$CEN" && git rm -rfq --ignore-unmatch docs/requirements/RFD-* docs/analysis/RFD-* docs/design/RFD-* docs/plan/RFD-* docs/test/RFD-* docs/delivery/RFD-* docs/acceptance/RFD-* docs/retro/*RFD* 2>/dev/null || true
-      git clean -fdq -- docs/requirements/RFD-* docs/analysis/RFD-* docs/design/RFD-* docs/plan/RFD-* docs/test/RFD-* docs/delivery/RFD-* docs/acceptance/RFD-* 'docs/retro/*RFD*' 2>/dev/null || true
-      git commit -q -m "mx-clean：RFD 工件清空（快照 tag mx-clean-${TS}）" 2>/dev/null || true )
+    ( cd "$CEN" && git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 2>/dev/null || true
+      git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
+      git commit -q -m "mx-clean：推演工件全目录清空（快照 tag mx-clean-${TS}）" 2>/dev/null || true )
+    # 合格线自检：七目录 + admin 不得残留（旧稿残留=repo_has 假真值温床）
+    _leftover="$(cd "$CEN" && ls docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/admin 2>/dev/null | grep -v '^$' | head -5 || true)"
+    if [ -n "$_leftover" ]; then
+      say "⚠ 清空后仍残留：$_leftover …（人工核查——勿带旧稿起跑 0→1 轮）"
+    else
+      say "✓ 交付目录清空核验通过（九目录零残留）"
+    fi
   fi
 else
   say "中央仓保留（未指定 --reset-central）"
