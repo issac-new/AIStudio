@@ -10,17 +10,23 @@ import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
+import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
 import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
+import RunTraceOverview from '@/custom/cockpit/components/RunTraceOverview.vue'
+import { useRunSurfaceText } from '../i18n-run-surface'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const kanban = useKanbanStore()
+const cockpit = useCockpitStore()
 
-type TabKey = 'board' | 'trace' | 'accounts'
+type TabKey = 'board' | 'trace' | 'accounts' | 'observatory'
 const tab = ref<TabKey>('board')
+/** 全链路追踪页签约文案（i18n-run-surface 独立事实源，漂移治理后收编 473） */
+const rsText = useRunSurfaceText()
 
 /** v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）——回到沟通协作
  *  工作台（页头视图切换器同义的回退动线） */
@@ -38,6 +44,7 @@ const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>
 function applyQuery(q: Record<string, unknown>): void {
   if (q.tab === 'trace') tab.value = 'trace'
   else if (q.tab === 'accounts') tab.value = 'accounts'
+  else if (q.tab === 'observatory') tab.value = 'observatory'
   else if (q.tab === 'board') tab.value = 'board'
   if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status)) {
     kanban.setStatusFilter(q.status)
@@ -45,6 +52,15 @@ function applyQuery(q: Record<string, unknown>): void {
   if (typeof q.task === 'string' && q.task) {
     kanban.setSearchQuery(q.task)
   }
+}
+
+/** 全链路追踪页签（2026-10-01）：Run Observatory 页签化——选会话复用既有
+ *  CockpitRunTraceModal 单会话下钻（本页在 IaShell 内，弹窗已挂载），关闭回落看板页签 */
+function onTraceSelectSession(sessionId: string): void {
+  cockpit.openRunTrace({ sessionId })
+}
+function onTraceClose(): void {
+  tab.value = 'board'
 }
 
 onMounted(() => applyQuery(route.query as Record<string, unknown>))
@@ -112,6 +128,18 @@ function goInboxFromAccounts(): void {
       >
         {{ t('ia2.tasks.tabAccounts') }}
       </button>
+      <!-- 全链路追踪（2026-10-01 用户裁定）：Run Observatory 页签化，选会话走弹窗下钻 -->
+      <button
+        type="button"
+        class="ia-tasks__tab"
+        :class="{ 'ia-tasks__tab--active': tab === 'observatory' }"
+        role="tab"
+        :aria-selected="tab === 'observatory'"
+        data-testid="ia-tasks-tab-observatory"
+        @click="tab = 'observatory'"
+      >
+        {{ rsText.tabObservatory }}
+      </button>
       <!-- 治理中心跳转（2026-09-30 用户找不到入口的实缺口）：看板侧平级入口——
            治理中心是独立工作页（ia2.governance），非本页内 tab，点击整页跳转。 -->
       <button
@@ -144,6 +172,11 @@ function goInboxFromAccounts(): void {
         @filter-assignee="filterAssigneeFromAccounts"
         @go-inbox="goInboxFromAccounts"
       />
+    </div>
+    <!-- 全链路追踪：RunTraceOverview 自足组件（useKanbanTaskGraph 数据面）；
+         定高滚动容器内 flex 项防压扁（min-height:0 交给面板自管） -->
+    <div v-else-if="tab === 'observatory'" class="ia-area ia-tasks__observatory" data-testid="ia-tasks-panel-observatory">
+      <RunTraceOverview @select-session="onTraceSelectSession" @close="onTraceClose" />
     </div>
     <div v-else class="ia-area">
       <TraceabilityMatrix @open-task="openTaskFromMatrix" />
@@ -203,5 +236,10 @@ function goInboxFromAccounts(): void {
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* 全链路追踪页签容器：.ia-area 已给定高 flex 列，面板根 flex:1 自适应；此处只收溢出 */
+.ia-tasks__observatory {
+  overflow: hidden;
 }
 </style>

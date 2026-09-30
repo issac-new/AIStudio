@@ -45,6 +45,20 @@ vi.mock('naive-ui', () => ({ NSpin: { template: '<div class="nspin-stub" />' } }
 vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
   default: { template: '<div class="kanban-stub" />' },
 }))
+// 全链路追踪页签（2026-10-01）：RunTraceOverview 打桩（useKanbanTaskGraph 数据面
+// 与弹窗态链重；页签接线守门在此，面板实体由 cockpit 域测试覆盖）
+vi.mock('@/custom/cockpit/components/RunTraceOverview.vue', () => ({
+  default: {
+    name: 'RunTraceOverview',
+    template: '<div class="rto-stub" data-testid="rto-stub" @click="$emit(\'select-session\', \'sess-1\'); $emit(\'close\')" />',
+    emits: ['select-session', 'close'],
+  },
+}))
+// cockpit store 桩（TasksView observatory 下钻经 openRunTrace 开弹窗）
+const cockpitOpenTrace = vi.hoisted(() => vi.fn())
+vi.mock('@/custom/cockpit/store/cockpit', () => ({
+  useCockpitStore: () => ({ openRunTrace: cockpitOpenTrace }),
+}))
 
 import RunLinks from '../components/RunLinks.vue'
 import TraceabilityMatrix from '../components/TraceabilityMatrix.vue'
@@ -304,5 +318,34 @@ describe('TasksView 页签与深链预选', () => {
     await wrapper.vm.$nextTick()
     expect(kanbanState.searchQuery).toBe('t_77')
     expect(wrapper.find('.kanban-stub').exists()).toBe(true)
+  })
+
+  it('全链路追踪页签（2026-10-01）：点签挂面板；select-session 走弹窗下钻、close 回看板；?tab= 深链', async () => {
+    cockpitOpenTrace.mockClear()
+    const router = makeRouter()
+    await router.push('/app/board')
+    await router.isReady()
+    const wrapper = mount(TasksView, { global: { plugins: [router] } })
+    expect(wrapper.find('[data-testid="ia-tasks-panel-observatory"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="ia-tasks-tab-observatory"]').trigger('click')
+    expect(wrapper.find('[data-testid="ia-tasks-panel-observatory"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="rto-stub"]').exists()).toBe(true)
+
+    // select-session → cockpit.openRunTrace 单会话下钻（复用既有弹窗）
+    await wrapper.find('[data-testid="rto-stub"]').trigger('click')
+    expect(cockpitOpenTrace).toHaveBeenCalledWith({ sessionId: 'sess-1' })
+    // close → 回看板页签
+    expect(wrapper.find('.kanban-stub').exists()).toBe(true)
+    wrapper.unmount()
+
+    // ?tab=observatory 深链直达（onMounted 后需一次 tick 重渲染）
+    const router2 = makeRouter()
+    await router2.push('/app/board?tab=observatory')
+    await router2.isReady()
+    const wrapper2 = mount(TasksView, { global: { plugins: [router2] } })
+    await wrapper2.vm.$nextTick()
+    expect(wrapper2.find('[data-testid="ia-tasks-panel-observatory"]').exists()).toBe(true)
+    wrapper2.unmount()
   })
 })
