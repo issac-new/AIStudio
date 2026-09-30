@@ -39,8 +39,10 @@ diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages
 diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
 --- a/packages/client/src/views/hermes/AgentManagerView.vue
 +++ b/packages/client/src/views/hermes/AgentManagerView.vue
-@@ -1,5 +1,7 @@
+@@ -1,7 +1,9 @@
  <script setup lang="ts">
+ import PageLoading from '@/components/common/PageLoading.vue'
+ import PageHeader from '@/components/layout/PageHeader.vue'
  import { getAgentUpdatePolicies, setAgentAutoUpdate, type AgentUpdatePolicyState } from '@/api/coding-agents'
 +// overlay[s3]（补遗⑤）：ekko 配置入口默认关（VITE_CUSTOM_EKKO 再开）
 +import { features } from '@/custom/features'

@@ -11,10 +11,10 @@
  type ChatContentMode = 'chat' | 'connections' | 'agents' | 'models'
  
  const contentMode = computed<ChatContentMode>(() => {
-@@ -50,7 +52,8 @@
- async function loadRouteSession() {
-   await chatStore.loadSessions(chatStore.sessionProfileFilter, routeSessionId.value)
-   if (routeSessionId.value && chatStore.activeSessionId !== routeSessionId.value) {
+@@ -61,7 +63,8 @@
+   const sessionId = routeSessionId.value
+   await chatStore.loadSessions(chatStore.sessionProfileFilter, sessionId)
+   if (!disposed && sessionId && routeSessionId.value === sessionId && chatStore.activeSessionId !== sessionId) {
 -    await router.replace({ name: 'hermes.chat' })
 +    // overlay[v14]: 嵌入态深链失效回工作台首页，不跳出 /app 壳
 +    await router.replace(route.meta?.standaloneEmbed === true ? '/app' : { name: 'hermes.chat' })
