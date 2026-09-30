@@ -1,17 +1,31 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -29,6 +29,9 @@
+@@ -29,6 +29,12 @@
  import { sessionRoutes } from '../modules/studio/routes/sessions'
  import { sessionSharePublicRoutes, sessionShareRoutes } from '../modules/studio/routes/session-shares'
  import { profileRoutes } from '../modules/hermes/routes/profiles'
 +// overlay[perf]（2026-09-30 性能批）：CLI 读端点缓存中间件（GET 白名单 TTL +
 +// 非 GET 失效；挂载位置见下方 profileRoutes / fleetRouter 之前）
 +import { profileReadCache, kanbanReadCache } from '../custom/middleware/kanban-read-cache'
++// overlay[perf]（2026-09-30 性能批二轮）：快道库根解析用（见 initCommandPost）
++import { homedir } from 'node:os'
++import { join } from 'node:path'
  import { skillRoutes } from '../modules/hermes/routes/skills'
  import { skillBundleRoutes } from '../modules/hermes/routes/skill-bundles'
  import { pluginRoutes } from '../modules/hermes/routes/plugins'
-@@ -278,6 +281,11 @@
+@@ -226,6 +232,10 @@
+   killWatch: (pid, fallbackKill) => killOwnedProcessTreeForCommandPost(pid, fallbackKill),
+   getSession: getSessionRowForCommandPost,
+   userCanAccessProfile: userCanAccessProfileForCommandPost,
++  // overlay[perf]（2026-09-30 性能批二轮）：sqlite 直读快道库根=CLI 执行同源根
++  // （HERMES_HOME 缺省回落 ~/.hermes——CLI 无显式 HOME 时即读此根的真库；
++  // 不能按 active_profile 文件解析：profile 下常无 kanban 数据，实测指错根）
++  resolveKanbanDir: () => process.env.HERMES_HOME || join(homedir(), '.hermes'),
+ })
+ async function initLoopSubsystem(): Promise<void> {
+   if (loopStore) return
+@@ -278,6 +288,11 @@
    app.use(socialMessageRoutes.routes())
    app.use(sessionRoutes.routes())
    app.use(sessionShareRoutes.routes())
@@ -23,7 +37,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
    app.use(profileRoutes.routes())
    app.use(ekkoMemoryRoutes.routes())
    app.use(ekkoSkillRoutes.routes())
-@@ -306,6 +314,11 @@
+@@ -306,6 +321,11 @@
    app.use(jobRoutes.routes())
    app.use(cronHistoryRoutes.routes())
    app.use(kanbanDashboardUrlRoutes.routes())
