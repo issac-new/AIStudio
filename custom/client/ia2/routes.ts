@@ -65,30 +65,38 @@ export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
  * 收编页记录表（2026-09-30 双栏根治）：同名替换上游 /hermes-* 家族 + 设置页，
  * 组件统一 IaLegacyShell（视图装载表见其 VIEW_LOADERS，两者按路由名一一对应）。
  * 路径与上游逐字一致（deep link 兼容）；requiresSuperAdmin 随上游路由 meta 迁移。
+ * embed=true 附加 standaloneEmbed（2026-09-30 五次反馈：模型/工作流/设备互联页
+ * 自带的会话/列表侧栏也要隐）——ChatView 族走 v14 嵌入态机制（ChatPanel
+ * standalone prop 隐会话列）；WorkflowView 经 patch 526 默认收起工作流列表
+ * （头部既有开关可展开）。
  */
-const annex = (path: string, name: string, requiresSuperAdmin = false): RouteRecordRaw => ({
+const annex = (path: string, name: string, opts: { superAdmin?: boolean; embed?: boolean } = {}): RouteRecordRaw => ({
   path,
   name,
   component: () => import('./views/IaLegacyShell.vue'),
-  meta: { fullscreen: true, ...(requiresSuperAdmin ? { requiresSuperAdmin: true } : {}) },
+  meta: {
+    fullscreen: true,
+    ...(opts.superAdmin ? { requiresSuperAdmin: true } : {}),
+    ...(opts.embed ? { standaloneEmbed: true } : {}),
+  },
 })
 
 export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   // 设置页（路径沿用收编批已迁的 /app/settings；旧路径重定向见树尾记录）
   annex('/app/settings', 'hermes.settings'),
-  // ChatView 族（页面自持会话列；路径不变 → 页内按 path 分派行为不变）
-  annex('/hermes/chat', 'hermes.chat'),
-  annex('/hermes/session/:sessionId', 'hermes.session'),
-  annex('/hermes/global-agent', 'hermes.globalAgent'),
-  annex('/hermes/global-agent/session/:sessionId', 'hermes.globalAgentSession'),
-  annex('/hermes/models', 'hermes.models'),
-  annex('/hermes/connections', 'hermes.connections'),
-  annex('/studio/agents', 'hermes.agentManager', true),
-  // 群聊（GroupChatView 兜底深链族）
+  // ChatView 族（standaloneEmbed 隐自带会话列；路径不变 → 页内按 path 分派行为不变）
+  annex('/hermes/chat', 'hermes.chat', { embed: true }),
+  annex('/hermes/session/:sessionId', 'hermes.session', { embed: true }),
+  annex('/hermes/global-agent', 'hermes.globalAgent', { embed: true }),
+  annex('/hermes/global-agent/session/:sessionId', 'hermes.globalAgentSession', { embed: true }),
+  annex('/hermes/models', 'hermes.models', { embed: true }),
+  annex('/hermes/connections', 'hermes.connections', { embed: true }),
+  annex('/studio/agents', 'hermes.agentManager', { superAdmin: true, embed: true }),
+  // 群聊（GroupChatView 兜底深链族；自带房间列是该页核心导航，不隐）
   annex('/hermes/group-chat', 'hermes.groupChat'),
   annex('/hermes/group-chat/room/:roomId', 'hermes.groupChatRoom'),
-  // 工具页
-  annex('/hermes/workflow', 'hermes.workflow'),
+  // 工具页（workflow 收起列表侧栏=patch 526；files 无侧栏）
+  annex('/hermes/workflow', 'hermes.workflow', { embed: true }),
   annex('/hermes/files', 'hermes.files'),
   // 配置域（原 HermesConfigSidebar 面）
   annex('/hermes/skills', 'hermes.skills'),
@@ -103,12 +111,12 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   // 系统域（原 AppSidebar 系统组面）
   annex('/hermes/logs', 'hermes.logs'),
   annex('/hermes/usage', 'hermes.usage'),
-  annex('/hermes/performance', 'hermes.performance', true),
-  annex('/hermes/profiles', 'hermes.profiles', true),
+  annex('/hermes/performance', 'hermes.performance', { superAdmin: true }),
+  annex('/hermes/profiles', 'hermes.profiles', { superAdmin: true }),
   annex('/hermes/theme', 'hermes.theme'),
   annex('/hermes/petdex', 'hermes.petdex'),
   annex('/hermes/skills-usage', 'hermes.skillsUsage'),
-  annex('/hermes/version-preview', 'hermes.versionPreview', true),
+  annex('/hermes/version-preview', 'hermes.versionPreview', { superAdmin: true }),
 ]
 
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */

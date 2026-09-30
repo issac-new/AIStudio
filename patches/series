@@ -366,3 +366,7 @@
 # 525（run4 轮，2026-09-30）：build-server onResolve 重锚 custom 兄弟布局字面量
 #      （../../../../upstream/hermes-studio/… → 本仓根）——worktree/沙箱布局 build:full 必炸根治。
 525-server-build-upstream-escape.patch
+
+# 526（收编批五次反馈，2026-09-30）：WorkflowView 嵌入态（standaloneEmbed）默认收起
+#      工作流列表侧栏——驾驶舱侧栏为唯一导航面，头部既有开关可随时展开。
+526-client-workflowview-embed-collapse.patch
