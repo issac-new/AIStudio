@@ -379,7 +379,7 @@ room_has_from() { # <room> <sender-mxid> <pattern> [since-ms]
 # 不得落键（R-A2）。
 mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=无判词）
   local out
-  out=$(printf '%s' "$2" | grep -oE "$1-(PASS|FAIL)" | tail -1)
+  out=$(printf '%s' "$2" | grep -vE "$1-PASS.*$1-FAIL|$1-FAIL.*$1-PASS" | grep -oE "$1-(PASS|FAIL)" | tail -1)
   case "$out" in
     *-PASS) echo PASS ;;
     *-FAIL) echo FAIL ;;
