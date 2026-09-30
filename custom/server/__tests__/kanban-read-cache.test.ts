@@ -18,6 +18,7 @@ function mkCtx(path: string, method = 'GET', userId = 7) {
     body: undefined,
     headers: {} as Record<string, string>,
     set: vi.fn((k: string, v: string) => { (ctx.headers as Record<string, string>)[k] = v }),
+    get: (k: string) => (ctx.headers as Record<string, string>)[k.toLowerCase()] ?? '',
   }
   if (path.includes('?')) {
     ctx.url = path
@@ -57,6 +58,22 @@ describe('kanbanReadCache — 看板读端点 TTL 缓存（性能批守门）', 
     const n2 = await run(c2, async () => { (c2 as unknown as { status: number }).status = 200; (c2 as unknown as { body: unknown }).body = { for: 9 } })
     expect(n2).toHaveBeenCalledTimes(1)
     expect((c2 as unknown as { body: { for: number } }).body).toEqual({ for: 9 })
+  })
+
+  it('性能批二轮：任务详情 t_xxx（正则）与任务列表入缓存——BFS N+1 风暴治理', async () => {
+    const c1 = mkCtx('/api/hermes/kanban/t_abc123')
+    await run(c1, async () => { (c1 as unknown as { status: number }).status = 200; (c1 as unknown as { body: unknown }).body = { id: 't_abc123' } })
+    const c2 = mkCtx('/api/hermes/kanban/t_abc123')
+    const n2 = await run(c2)
+    expect(n2).not.toHaveBeenCalled()
+    expect((c2 as unknown as { body: { id: string } }).body).toEqual({ id: 't_abc123' })
+    // 任务列表（精确路径）与未知静态路径区分：/api/hermes/kanban/overview 不拦
+    const cList = mkCtx('/api/hermes/kanban')
+    await run(cList, async () => { (cList as unknown as { status: number }).status = 200; (cList as unknown as { body: unknown }).body = { tasks: [] } })
+    const cList2 = mkCtx('/api/hermes/kanban')
+    expect((await run(cList2))).not.toHaveBeenCalled()
+    const cOv = mkCtx('/api/hermes/kanban/overview')
+    expect((await run(cOv))).toHaveBeenCalledTimes(1)
   })
 
   it('非 GET 看板请求：放行后全量失效（同进程 UI 变更即时生效）', async () => {
