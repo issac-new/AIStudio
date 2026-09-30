@@ -72,6 +72,17 @@ async function shot(name, url, opts = {}) {
     }
     if (!gated) { console.error(`DEFECT[shutter-gate]: ${name} 目标 ${opts.expect} 空/加载中——拒拍（补数据或修组件后重拍）`); return }
   }
+  // 文本级快门守门：动态数据（在线三数等）须水合到预期形态才拍——空态即拒拍
+  if (opts.expectText) {
+    const rx = new RegExp(opts.expectText)
+    let textOk = false
+    for (let i = 0; i < 8 && !textOk; i++) {
+      const body = await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '))
+      textOk = rx.test(body)
+      if (!textOk) await page.waitForTimeout(1500)
+    }
+    if (!textOk) { console.error(`DEFECT[shutter-gate]: ${name} 文本 /${opts.expectText}/ 未达——拒拍（数据未水合）`); return }
+  }
   await page.waitForTimeout(opts.wait ?? 4000)
   // ⚠️ 不点任何弹窗按钮："知道了"=通知跳转钮，点击即劫持导航到 board?task=<卡>
   // （run2 实锤：五连拍全被劫持到 t_666aecf8；去掉 Dismiss 循环后全部正确落位）
@@ -86,7 +97,10 @@ async function shot(name, url, opts = {}) {
     }
   })
   // 文件名-内容对齐校验：落地路由与预期不符即记缺陷（防 ui-26 错拍类复发）
-  if (opts.expectRoute && !new RegExp(opts.expectRoute).test(probe.url)) {
+  // 校验前剥 hash 前缀（probe.url 形如 #/app，expectRoute 写 ^/app——直接测必误报，
+  // run5 09-30 实锤 DEFECT[route-mismatch] 全是校验器自身假红）
+  const landed = (probe.url || '').replace(/^#/, '')
+  if (opts.expectRoute && !new RegExp(opts.expectRoute).test(landed)) {
     console.error(`DEFECT[route-mismatch]: ${name} 落地 ${probe.url} ≠ 预期 /#${opts.expectRoute}`)
   }
   console.log('shot:', name, JSON.stringify(probe))
@@ -140,7 +154,7 @@ async function openCurrentRoom() {
 }
 
 // ── 驾驶舱全景 + P5 概览 ──
-await shot('ui-03-cockpit', '/app', { wait: 6000, expect: '[data-testid="wb-rail-left"], .ia-shell, main', expectRoute: '^/app' })
+await shot('ui-03-cockpit', '/app', { wait: 6000, expect: '[data-testid="wb-rail-left"], .ia-shell, main', expectRoute: '^/app', expectText: '\\d+ 人 · \\d+ 智能体 · \\d+ 机器' })
 await shot('ui-03b-dash', '/app/dash', { wait: 5000, expect: '[data-testid*="dash"], .ia-overview, main', expectRoute: '/app' })
 
 // ── 补遗④第 3 项：驾驶舱回归（第 4 步）——页头「任务」「在线」chips 下拉逐项验证 ──
