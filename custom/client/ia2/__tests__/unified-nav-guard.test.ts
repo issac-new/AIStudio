@@ -107,9 +107,19 @@ describe('v12 统一视图守门（双视图）', () => {
     const child = app?.children?.find(c => c.name === 'hermes.settings')
     expect(child, '/app/settings 子路由应存在').toBeTruthy()
     expect(child?.path).toBe('settings')
-    // 左侧栏保留（2026-09-30 用户反馈回归修复）：子路由 meta.fullscreen=false
-    // 压过壳层 true——App.vue 挂回 AppSidebar（双入口+系统分组），防再收编时丢栏
-    expect(child?.meta?.fullscreen).toBe(false)
+    // 左侧栏（2026-09-30 二次反馈）：壳内自绘（IaSettingsView 两栏，侧栏在注意
+    // 力条下方），子路由不得覆写 fullscreen（覆写 false 会让 App.vue 挂
+    // AppSidebar 致双栏/贯穿左侧栏回潮）
+    expect(child?.meta?.fullscreen).toBeUndefined()
+    const setView = readFileSync(resolve(__dirname, '../views/IaSettingsView.vue'), 'utf8')
+    const setNav = readFileSync(resolve(__dirname, '../components/IaSettingsSidebar.vue'), 'utf8')
+    expect(setView).toContain('<IaSettingsSidebar />')
+    expect(setView).toContain("from '@/views/hermes/SettingsView.vue'")
+    // 功能面=三侧栏并集；全部条目 hasRoute 门控（退役/桌面专属路由自动隐）
+    expect(setNav).toContain('router.hasRoute(')
+    for (const name of ['hermes.skillsUsage', 'hermes.theme', 'hermes.petdex', 'hermes.mcp', 'hermes.plugins', 'hermes.memory', 'hermes.models', 'hermes.workflow', 'hermes.connections', 'hermes.files', 'hermes.kanban', 'hermes.journey', 'hermes.channels', 'hermes.jobs']) {
+      expect(setNav, `侧栏应含原功能入口 ${name}`).toContain(`name: '${name}'`)
+    }
     // 旧深链兜底：/hermes/settings → /app/settings（query 保真，tab 页签深链不丢）
     const legacy = routes.find(r => r.path === '/hermes/settings')
     expect(legacy, '旧路径兼容重定向应存在').toBeTruthy()
