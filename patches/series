@@ -396,3 +396,12 @@
 # 532（白话化批 2026-09-30）：看板第三页签「管理三账」→「项目健康」(zh/en)；
 #      追溯空态提示去 loop/run 黑话改白话（用户裁定：不要有黑话）。
 532-client-i18n-accounts-plain-tab.patch
+
+# 533（限流通知风暴根治 2026-09-30，run4 实锤）：容量拒绝（max_concurrent_sessions）
+#      不再回写聊天——机器人"session limit"通知本身就是群消息，会再次触发全部 agent
+#      派发、每条拒绝再回写，形成自持消息风暴（run4 实测 2 分钟 120 条，97 条是限流
+#      通知）。改为静默入队（64 上限/20min 龄期/单泵轮询）等坑位释放后重派，满闸不再
+#      丢弃消息；归属/协调类拒绝保留回文（单会话冲突不可跨 agent 放大）。
+#      tests/gateway/test_max_concurrent_sessions.py 四守门（风暴不可能+排队重试+
+#      归属拒绝保留回文）；可移植性双向验证 v0.21.5 工作树与安装树（新上游）均干净应用。
+533-agent-gateway-capacity-storm.patch

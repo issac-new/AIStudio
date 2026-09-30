@@ -244,7 +244,7 @@ mx_kanban() { # <board> <hermes-kanban-args...>
 mx_apply_agent_patches() {
   local tree="${HERMES_AGENT_TREE:-$HOME/.hermes/hermes-agent}"
   [[ -d "$tree/.git" ]] || fail "不是 git 仓库：$tree"
-  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch; do
+  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch; do
     local pf="$PATCH_DIR/$p"
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
@@ -255,7 +255,7 @@ mx_apply_agent_patches() {
       # ——在位=运行时行为已生效（installs 分发物已带），如实记档跳过；缺位才真失败。
       _marker=$(grep -m1 -oE '^\+(def|class) [A-Za-z_0-9]+' "$pf" | sed -E 's/^\+(def|class) //')
       if [ -n "$_marker" ] && grep -rql "$_marker" "$HERMES_ROOT/installs/" 2>/dev/null; then
-        log "运行时 patch 语义已在安装环境在位（源码树漂移跳过）：$p（marker=$_marker）"
+        log "运行时 patch 语义已在安装环境在位（源码树漂移跳过）：${p}（marker=${_marker}）"
         continue
       fi
       fail "$p 与安装树冲突且语义未在安装环境（marker=${_marker:-无}）——人工处置后重跑"
