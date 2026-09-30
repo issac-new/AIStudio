@@ -86,6 +86,17 @@ describe('路由白名单守门（补遗⑤ §13.6-2：快照断言）', () => {
       const rec = hermes.find((r) => r.name === name)
       expect(rec?.meta?.requiresSuperAdmin, `${name} 须保留 requiresSuperAdmin`).toBe(true)
     }
+    // 五次反馈（2026-09-30）：ChatView 族+工作流页自带会话/列表侧栏也要隐——
+    // standaloneEmbed（ChatPanel standalone prop / patch 526 WorkflowView 默认收起）
+    for (const name of ['hermes.chat', 'hermes.session', 'hermes.globalAgent', 'hermes.globalAgentSession', 'hermes.models', 'hermes.connections', 'hermes.agentManager', 'hermes.workflow']) {
+      const rec = hermes.find((r) => r.name === name)
+      expect(rec?.meta?.standaloneEmbed, `${name} 须带 standaloneEmbed（隐自带侧栏）`).toBe(true)
+    }
+    // 群聊自带房间列是该页核心导航，不得隐
+    for (const name of ['hermes.groupChat', 'hermes.groupChatRoom']) {
+      const rec = hermes.find((r) => r.name === name)
+      expect(rec?.meta?.standaloneEmbed, `${name} 不得带 standaloneEmbed`).toBeUndefined()
+    }
   })
   it('兼容层全部为 redirect；退役名 ia2.eng / ia2.loopCanvas 不在可达名账本', () => {
     for (const c of compat) expect(['string','function']).toContain(typeof c.redirect)
