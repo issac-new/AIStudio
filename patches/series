@@ -370,3 +370,13 @@
 # 526（收编批五次反馈，2026-09-30）：WorkflowView 嵌入态（standaloneEmbed）默认收起
 #      工作流列表侧栏——驾驶舱侧栏为唯一导航面，头部既有开关可随时展开。
 526-client-workflowview-embed-collapse.patch
+
+# 527（性能批 2026-09-30）：kanban exec 队列并发 2→6——CLI 子进程 4-6s/次，
+#      冷启动读端点突发排队串行 10s+ 是页面卡顿主因之一（配套读缓存见
+#      custom/server/middleware/kanban-read-cache.ts）。
+527-server-kanban-exec-concurrency.patch
+
+# 528（性能批 2026-09-30）：profiles 读缓存挂载——profileRoutes（§281）先于
+#      fleetRouter，profileReadCache 须直挂其前（GET /api/hermes/profiles 实测
+#      8.7s CLI；中间件实现在 custom/server/middleware/kanban-read-cache.ts）。
+528-server-profiles-read-cache-mount.patch

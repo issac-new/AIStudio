@@ -1,0 +1,16 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -18,7 +18,11 @@
+ // 后续请求连带挂起（health 正常而 /api/hermes/kanban* 整体无响应）。
+ // 处置：进程内 FIFO 队列把 execHermes 并发压到 2；排队超过 queueTimeout 的
+ // 请求直接报错（把挂起变成快速失败）。watchEvents 长连流不经过此队列。
+-const KANBAN_EXEC_CONCURRENCY = 2
++// overlay[perf]（2026-09-30 性能批）：2→6——每次 exec 是 4-6s 的 hermes CLI
++// 子进程（IO 为主），页面冷启动一次并发 4-5 个读端点，并发 2 会排队串行
++// 成 10s+ 墙钟（「点开页面特别卡顿」实测主因之一）；读端点已有 TTL 缓存
++// （custom/server/middleware/kanban-read-cache.ts），本并发提升兜冷启动/失效后。
++const KANBAN_EXEC_CONCURRENCY = 6
+ const KANBAN_EXEC_QUEUE_TIMEOUT_MS = 45000
+ const kanbanExecQueue: Array<() => void> = []
+ let kanbanExecActive = 0
