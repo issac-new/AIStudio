@@ -4,7 +4,8 @@ import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
-  decideEscalation, isEscalationUrgency, listPending, loadEscalation, requestEscalation,
+  attributeEscalation, decideEscalation, isEscalationUrgency, isMechanismGap, listDecided,
+  listPending, loadEscalation, recurrenceByScope, requestEscalation, AttributionGateError,
 } from '../escalation-store'
 
 let dir: string
@@ -56,5 +57,57 @@ describe('裁决（一次定音 + 批准即改沙箱约束）', () => {
     const denied = decideEscalation('e6', 'denied', { by: 'coordinator', note: '不批' })
     expect('state' in denied && denied.state).toBe('denied')
     expect(listPending()).toHaveLength(0)  // 待决清空
+  })
+})
+
+describe('机制归因（甲2：结案断点五选一 + 复发纪律）', () => {
+  it('pending 不许归因；裁决后可归因；一次定音', () => {
+    req('a1', 'normal')
+    const early = attributeEscalation('a1', 'capability', 'coordinator')
+    expect('error' in early && early.error).toContain('未裁决')
+    decideEscalation('a1', 'approved', { by: 'c' })
+    const ok = attributeEscalation('a1', 'capability', 'cuishi', '缺 LSP 工具')
+    expect('attribution' in ok && ok.attribution?.gap).toBe('capability')
+    expect('attribution' in ok && ok.attribution?.note).toBe('缺 LSP 工具')
+    const again = attributeEscalation('a1', 'resource', 'c')
+    expect('error' in again && again.error).toContain('一次定音')
+  })
+
+  it('gap 词表冻结（六值）', () => {
+    expect(isMechanismGap('information')).toBe(true)
+    expect(isMechanismGap('authority')).toBe(true)
+    expect(isMechanismGap('none')).toBe(true)
+    expect(isMechanismGap('budget')).toBe(false)
+  })
+
+  it('recurrenceByScope：同 tool 聚合、gap≠none 计断点、未归因单列', () => {
+    req('r1', 'normal', 100); decideEscalation('r1', 'approved', { by: 'c' })
+    attributeEscalation('r1', 'capability', 'c')
+    req('r2', 'normal', 200); decideEscalation('r2', 'denied', { by: 'c' })  // 不归因
+    const g = recurrenceByScope().get('terminal')
+    expect(g?.incidents).toBe(2)
+    expect(g?.byGap.capability).toBe(1)
+    expect(g?.unattributed).toBe(1)
+    expect(listDecided()).toHaveLength(2)
+  })
+
+  it('enforce 闸：同 (fromAgent, tool) 未归因前科拒新；归因后放行；异 tool 不连坐', () => {
+    process.env.GOVERNANCE_ATTRIBUTION_ENFORCE = '1'
+    try {
+      req('g1', 'normal'); decideEscalation('g1', 'approved', { by: 'c' })
+      expect(() => req('g2', 'normal')).toThrow(AttributionGateError)
+      // 异 tool 不连坐（复发纪律按 scope 断点，不是全停）
+      requestEscalation({
+        escalationId: 'g3', fromAgent: 'zcode', scope: { tool: 'files' },
+        urgency: 'normal', reason: 'x',
+      })
+      attributeEscalation('g1', 'authority', 'c')
+      expect(requestEscalation({
+        escalationId: 'g4', fromAgent: 'zcode', scope: { tool: 'terminal' },
+        urgency: 'normal', reason: 'y',
+      }).escalationId).toBe('g4')
+    } finally {
+      delete process.env.GOVERNANCE_ATTRIBUTION_ENFORCE
+    }
   })
 })

@@ -53,7 +53,7 @@ router.post('/dispatch', async (ctx) => {
       to,
       workspacePath,
     })
-    ctx.body = { ok: true, triggers: result.triggers.length, outcomes: result.outcomes }
+    ctx.body = { ok: true, triggers: result.triggers.length, outcomes: result.outcomes, delegation: result.delegation }
   } catch (err) {
     // 错误分类透传（P-D(c)）：配置/校验错误≠引擎不可达≠未预期错误，不一律谎报。
     const detail = err instanceof Error ? err.message : String(err)

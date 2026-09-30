@@ -278,3 +278,46 @@ export interface StateModelResp {
 export function fetchStateModel(): Promise<StateModelResp> {
   return request<StateModelResp>('/api/governance/state-model')
 }
+
+// ---- 五流断点诊断（甲1，2026-09-30 调研落地） ----
+export interface OrgSignalDto {
+  id: string
+  severity: 'ok' | 'warn' | 'alert' | 'unknown'
+  value: string
+  detail: string
+  evidence: string
+}
+export interface FlowDiagnosisDto {
+  flow: 'information' | 'decision' | 'responsibility' | 'resource' | 'feedback'
+  title: string
+  essence: string
+  signals: OrgSignalDto[]
+}
+export interface ImprovementCandidateDto {
+  tool: string
+  incidents: number
+  unattributed: number
+  gaps: string[]
+  direction: string
+  lastAt: number
+}
+export interface OrgDiagnosisResp {
+  ok: boolean
+  generatedAt: number
+  flows: FlowDiagnosisDto[]
+  manualIntervention: { last7d: number; last30d: number; totalDecided: number }
+  unattributed: Array<{ escalationId: string; fromAgent: string; tool: string; decidedAt: number; verdict: string }>
+  improvementCandidates: ImprovementCandidateDto[]
+  sources: Record<string, number>
+}
+export function fetchOrgDiagnosis(): Promise<OrgDiagnosisResp> {
+  return request<OrgDiagnosisResp>('/api/governance/org-diagnosis')
+}
+
+/** 机制归因（甲2）：已裁决升级结案补断点五选一。 */
+export function attributeEscalation(id: string, gap: string, note?: string): Promise<{ ok: boolean; request?: unknown; detail?: string }> {
+  return request<{ ok: boolean; request?: unknown; detail?: string }>(`/api/escalation/${encodeURIComponent(id)}/attribution`, {
+    method: 'POST',
+    body: { gap, note, by: 'studio' },
+  })
+}
