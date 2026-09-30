@@ -4,7 +4,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { fetchAuditLog, type AuditLogResult } from '@/custom/governance/api/governance'
+import { downloadProvO, fetchAuditLog, type AuditLogResult } from '@/custom/governance/api/governance'
 import { governanceMessages } from '@/custom/governance/i18n'
 
 const i18nCtx = useI18n()
@@ -19,6 +19,18 @@ const active = ref<Set<string>>(new Set(SOURCE_IDS))
 const q = ref('')
 const result = ref<AuditLogResult | null>(null)
 const loading = ref(false)
+const provMsg = ref('')
+
+/** PROV-O 导出（丁10 UI 化，2026-10-01）：audit 四源证据链下载为 W3C PROV JSON-LD。 */
+async function exportProv(): Promise<void> {
+  provMsg.value = ''
+  try {
+    await downloadProvO()
+    provMsg.value = '已导出 JSON-LD'
+  } catch (e) {
+    provMsg.value = `导出失败：${e instanceof Error ? e.message : String(e)}`
+  }
+}
 
 const sourceAvailable = computed(() => {
   const m = new Map<string, boolean>()
@@ -79,6 +91,9 @@ onMounted(() => void refresh())
         @input="onQueryInput"
       />
       <span v-if="result" class="audit__count" data-testid="audit-count">{{ result.total }} {{ L?.events }}</span>
+      <!-- PROV-O 导出（丁10 UI 化）：四源证据链 → W3C PROV JSON-LD 下载 -->
+      <button type="button" class="audit__prov" data-testid="audit-prov-export" @click="exportProv()">⤓ PROV-O</button>
+      <span v-if="provMsg" class="audit__prov-msg" data-testid="audit-prov-msg">{{ provMsg }}</span>
     </div>
     <div class="audit__body">
       <div v-if="loading && !result" class="audit__empty">…</div>
@@ -142,6 +157,8 @@ onMounted(() => void refresh())
   background: var(--bg-primary, #fff);
   color: var(--text-primary, inherit);
 }
+.audit__prov { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--accent-primary, var(--color-primary, #3b82f6)); }
+.audit__prov-msg { font-size: 11px; opacity: 0.7; }
 .audit__count { font-size: 10.5px; color: var(--text-muted, #878c99); }
 .audit__body { max-height: 300px; overflow: auto; }
 .audit__empty { border: 1px dashed var(--border-color, #e5e7eb); border-radius: 8px; padding: 14px; text-align: center; font-size: 11px; color: var(--text-muted, #878c99); }
