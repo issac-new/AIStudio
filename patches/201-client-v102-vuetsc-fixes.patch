@@ -51,10 +51,11 @@ diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client
 index 430aa59..27aa103 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -69,7 +69,6 @@ import ChatInput from '@/components/hermes/chat/ChatInput.vue'
+@@ -69,8 +69,7 @@ import ChatInput from '@/components/hermes/chat/ChatInput.vue'
  import MessageList from '@/components/hermes/chat/MessageList.vue'
  import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
  import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
+ import ListActionsMenu from '@/components/layout/ListActionsMenu.vue'
 -import PageSidebarFooter from '@/components/layout/PageSidebarFooter.vue'
  import { useAppStore } from '@/stores/hermes/app'
  import { useChatStore } from '@/stores/hermes/chat'

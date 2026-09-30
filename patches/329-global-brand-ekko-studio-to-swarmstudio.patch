@@ -8,7 +8,7 @@ index e430165..4af9182 100644
    <meta name="apple-mobile-web-app-capable" content="yes" />
 -  <meta name="apple-mobile-web-app-title" content="Ekko Studio" />
 +  <meta name="apple-mobile-web-app-title" content="SwarmStudio" />
-   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 -  <title>Ekko Studio</title>
 +  <title>SwarmStudio</title>
    <style>
@@ -1492,18 +1492,18 @@ index 7d4ee4f..de3d081 100644
    details.style.cssText = 'white-space:pre-wrap;color:#f88'
    details.textContent = error instanceof Error ? error.message : String(error)
 diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
-index 8f3c283..21f7411 100644
+index 584bce9..d00fc78 100644
 --- a/packages/client/src/views/hermes/ChatView.vue
 +++ b/packages/client/src/views/hermes/ChatView.vue
-@@ -33,7 +33,7 @@ const contentMode = computed<ChatContentMode>(() => {
+@@ -34,7 +34,7 @@ const contentMode = computed<ChatContentMode>(() => {
    if (route.name === 'hermes.models') return 'models'
    return 'chat'
  })
 -const productTitle = 'Ekko Studio'
 +const productTitle = 'SwarmStudio'
- const tabTitle = computed(() => {
-   if (route.name !== 'hermes.session' && route.name !== 'desktop.chat') return productTitle
-   return chatStore.activeSession?.title?.trim() || productTitle
+ const initializing = ref(true)
+ const routeLoading = ref(false)
+ let routeLoadSequence = 0
 diff --git a/packages/desktop/README.md b/packages/desktop/README.md
 index c743a1f..6c4a8ab 100644
 --- a/packages/desktop/README.md
@@ -2311,6 +2311,7 @@ index f22f461..755a75c 100644
            options: {
              baseURL: runtime.baseUrl || '',
              apiKey: `{env:${OPENCODE_API_KEY_ENV}}`,
+
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/codex-compact.ts b/packages/server/src/modules/coding-agents/services/runtime/codex-compact.ts
 index 6429d4b..73d6c50 100644
 --- a/packages/server/src/modules/coding-agents/services/runtime/codex-compact.ts

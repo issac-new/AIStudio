@@ -1,6 +1,8 @@
---- a/packages/client/src/views/hermes/GroupChatView.vue	2026-09-29 16:18:09
-+++ b/packages/client/src/views/hermes/GroupChatView.vue	2026-09-29 16:18:09
-@@ -22,6 +22,9 @@
+diff --git a/packages/client/src/views/hermes/GroupChatView.vue b/packages/client/src/views/hermes/GroupChatView.vue
+index 1547e2e8..6fa9bd3c 100644
+--- a/packages/client/src/views/hermes/GroupChatView.vue
++++ b/packages/client/src/views/hermes/GroupChatView.vue
+@@ -29,6 +29,9 @@ const routeProfile = computed(() => {
      return typeof value === 'string' && value.trim() ? value : null
  })
  
@@ -10,7 +12,7 @@
  async function applyRouteProfile() {
      const profile = routeProfile.value
      if (!profile || profile === profilesStore.activeProfileName) return
-@@ -39,7 +42,8 @@
+@@ -48,7 +51,8 @@ async function syncRouteRoom() {
      }
  
      if (!store.rooms.some(room => room.id === roomId)) {
@@ -20,18 +22,18 @@
          return
      }
  
-@@ -67,8 +71,8 @@
+@@ -99,8 +103,8 @@ watch([routeRoomId, routeProfile], async () => {
  </script>
  
  <template>
--    <div class="group-chat-view">
+-    <PageLoading :show="pageLoading" initial-only class="group-chat-view">
 -        <GroupChatPanel />
-+    <div class="group-chat-view" :class="{ 'group-chat-view--standalone': isStandaloneEmbed }">
++    <PageLoading :show="pageLoading" initial-only class="group-chat-view" :class="{ 'group-chat-view--standalone': isStandaloneEmbed }">
 +        <GroupChatPanel :standalone="isStandaloneEmbed" />
-     </div>
+     </PageLoading>
  </template>
  
-@@ -78,4 +82,9 @@
+@@ -110,4 +114,9 @@ watch([routeRoomId, routeProfile], async () => {
      display: flex;
      flex-direction: column;
  }
