@@ -38,7 +38,7 @@ interface KanbanTaskRow {
   completed_at: number | null
 }
 
-function kanbanDbFiles(homeDir?: string): string[] {
+export function kanbanDbFiles(homeDir?: string): string[] {
   const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
   const files: string[] = []
   const root = join(home, 'kanban.db')
@@ -54,7 +54,7 @@ function kanbanDbFiles(homeDir?: string): string[] {
   return files
 }
 
-async function openReadonly(dbPath: string) {
+export async function openReadonly(dbPath: string) {
   const { DatabaseSync } = await import('node:sqlite')
   return new DatabaseSync(dbPath, { open: true, readOnly: true })
 }

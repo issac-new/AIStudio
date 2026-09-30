@@ -7,12 +7,14 @@ import { mkdtempSync, writeFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
-  loadColumnAutomations, matchColumnTransition, resetColumnAutomationsCacheForTests,
+  isSafeStep, loadColumnAutomations, matchColumnTransition, resetColumnAutomationsCacheForTests,
+  STEP_AUTONOMY_MAX, STEP_CONSTRAINT_COUNT_MAX,
   type ColumnAutomation,
 } from '../column-automation'
 import { MentionDispatchService, type MentionOutcome, type DispatchEnginePort } from '../../zcode/mention-dispatch'
 import {
-  dispatchColumnTransition, ColumnDispatchConfigError, type ColumnDispatchResult,
+  dispatchColumnTransition, ColumnDispatchConfigError, delegationCompleteness,
+  type ColumnDispatchResult, type DelegationCheck,
 } from '../column-dispatch'
 
 // 控制器错误分类（P-D(c)）用可控派单替身；impl 未设时转发真实现（单测不受影响）。
@@ -298,5 +300,47 @@ describe('REST 接线（X1 闸 / 共享派单单例 / 错误分类）', () => {
     const unknown = await run(() => Promise.reject(new TypeError('boom')))
     expect(unknown.status).toBe(500)
     expect(unknown.body).toMatchObject({ reason: 'internal_error' }) // 不再一律谎报 engine_unreachable
+  })
+})
+
+describe('授权五要素完备性（甲3，2026-09-30 调研落地）', () => {
+  it('五要素判定：责任/空间/资源/约束/结果标准；缺项如实入 missing', () => {
+    // 空白台账 fixture（resource 要素经台账单元+SLO 档可查）
+    const govDir = mkdtempSync(join(tmpdir(), 'gov-a3-'))
+    writeFileSync(join(govDir, 'capability-ledger.yaml'),
+      'version: 1\nreviewedAt: "2026-09-30"\ndomains: []\ncapabilities: []\nunits:\n  - id: dev-exec\n    capability: eng.implement\n    name: 实现\n    primary: true\n    kind: lane-specialist\n    owner: cuishi\n    lifecycle: active\n    sloTier: important\n    skills: [kanban]\n    refs: { file: x.yaml }\n')
+    writeFileSync(join(govDir, 'metrics.yaml'),
+      'version: 1\nreviewedAt: "2026-09-30"\nverdicts: []\nmetrics: []\nsloTargets:\n  important: { successRate: 0.9, windowDays: 30, minSamples: 5 }\n')
+    const prevGov = process.env.GOVERNANCE_DIR
+    process.env.GOVERNANCE_DIR = govDir
+    try {
+      const full = delegationCompleteness([{
+        id: 's1', role: 'impl', specialist: 'dev-exec', provider: 'zcode',
+        autonomy: '实现路径与技术选型可自定', constraints: ['禁改 upstream/', '预算 ≤10k token'],
+      }])
+      expect(full[0].missing).toEqual([])
+      expect(full[0].elements.outcomeStandard).toBe(true)  // 契约块恒在
+
+      const bare = delegationCompleteness([{
+        id: 's2', role: 'impl', specialist: 'ghost', provider: 'zcode',
+      }]) as DelegationCheck[]
+      expect(bare[0].missing).toContain('space')
+      expect(bare[0].missing).toContain('constraint')
+      expect(bare[0].missing).toContain('resource')  // ghost 不在台账
+      expect(bare[0].elements.responsibility).toBe(true)
+    } finally {
+      if (prevGov === undefined) delete process.env.GOVERNANCE_DIR
+      else process.env.GOVERNANCE_DIR = prevGov
+      rmSync(govDir, { recursive: true, force: true })
+    }
+  })
+
+  it('注入面限幅：autonomy ≤200；constraints 每条 ≤120 至多 5 条——违规 step 派发硬拦', () => {
+    const base = { id: 's3', role: 'impl', specialist: '', provider: 'zcode' as const }
+    expect(isSafeStep({ ...base, autonomy: 'a'.repeat(STEP_AUTONOMY_MAX) })).toBe(true)
+    expect(isSafeStep({ ...base, autonomy: 'a'.repeat(STEP_AUTONOMY_MAX + 1) })).toBe(false)
+    expect(isSafeStep({ ...base, constraints: ['x'] })).toBe(true)
+    expect(isSafeStep({ ...base, constraints: Array(STEP_CONSTRAINT_COUNT_MAX + 1).fill('x') })).toBe(false)
+    expect(isSafeStep({ ...base, constraints: ['c'.repeat(121)] })).toBe(false)
   })
 })

@@ -15,12 +15,47 @@
 import { matchColumnTransition, isSafeStep, type ColumnTransitionTrigger, type AutomationStep } from './column-automation'
 import { MentionDispatchService, type MentionOutcome } from '../zcode/mention-dispatch'
 import { checkDispatchBudget } from '../governance/governance-budget'
-import { loadActionContracts, buildDispatchSemanticContext } from '../governance/governance-ledger'
+import { loadActionContracts, buildDispatchSemanticContext, loadCapabilityLedger, loadMetricsDefs } from '../governance/governance-ledger'
 import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
   outcomes: MentionOutcome[]
+  /**
+   * 授权五要素完备性（甲3，2026-09-30 调研落地）：每 step 检"责任/空间/资源/约束/
+   * 结果标准"五要素，缺项只 warn 不拦截——先让缺口可见，再谈强制。
+   */
+  delegation: DelegationCheck[]
+}
+
+/** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
+export type DelegationElement = 'responsibility' | 'space' | 'resource' | 'constraint' | 'outcomeStandard'
+
+export interface DelegationCheck {
+  stepId: string
+  elements: Record<DelegationElement, boolean>
+  missing: DelegationElement[]
+}
+
+/**
+ * 授权五要素完备性检查（甲3）：责任=role/specialist 已声明；空间=autonomy 已声明；
+ * 资源=SLO 档经台账单元可查（语义上下文同源）；约束=constraints 非空；结果标准=
+ * 契约块恒在（contractFooter 永远拼上）。台账注册表缺席时 resource 如实 false。
+ */
+export function delegationCompleteness(steps: AutomationStep[]): DelegationCheck[] {
+  const ledger = loadCapabilityLedger().doc
+  const metrics = loadMetricsDefs().doc as { sloTargets?: Record<string, unknown> } | null
+  return steps.map((s) => {
+    const unit = ledger?.units.find((u) => u.id === (s.specialist || s.id))
+    const elements: Record<DelegationElement, boolean> = {
+      responsibility: Boolean(s.role || s.specialist),
+      space: typeof s.autonomy === 'string' && s.autonomy.length > 0,
+      resource: Boolean(unit && metrics?.sloTargets?.[unit.sloTier]),
+      constraint: Array.isArray(s.constraints) && s.constraints.length > 0,
+      outcomeStandard: true,
+    }
+    return { stepId: s.id, elements, missing: (Object.keys(elements) as DelegationElement[]).filter((k) => !elements[k]) }
+  })
 }
 
 /** 配置/校验错误（≠引擎不可达）：REST 侧按 400 配置错误回报，不谎报 engine_unreachable。 */
@@ -61,11 +96,14 @@ function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], in
   const semantic = steps[index].specialist
     ? buildDispatchSemanticContext(steps[index].specialist || '')
     : null
+  const step = steps[index]
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
-    `本次派发第 ${index + 1} 步：${steps[index].id}${trigger.autoAdvanceOnSuccess ? '（全部步骤完成后由人工/编排推进列）' : ''}。`,
+    `本次派发第 ${index + 1} 步：${step.id}${trigger.autoAdvanceOnSuccess ? '（全部步骤完成后由人工/编排推进列）' : ''}。`,
     `请按职责处理列 ${trigger.column} 的当前任务。`,
+    ...(step.autonomy ? [`授权空间：${step.autonomy}（在此范围内可自主决策，无需回问）`] : []),
+    ...(step.constraints?.length ? [`约束（硬边界，越界须升级申请）：${step.constraints.map((c, i) => `${i + 1}. ${c}`).join('；')}`] : []),
     ...(semantic ? [semantic] : []),
     contractFooter(),
   ].join('\n')
@@ -96,7 +134,9 @@ export async function dispatchColumnTransition(
     }
   }
   const outcomes: MentionOutcome[] = []
+  const delegation: DelegationCheck[] = []
   for (const trigger of triggers) {
+    delegation.push(...delegationCompleteness(trigger.steps))
     for (const [index, step] of trigger.steps.entries()) {
       // step→agent 派单：provider 已过词表校验才拼进目标 token；简报文本同理。
       const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index)}`
@@ -114,5 +154,5 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes }
+  return { triggers, outcomes, delegation }
 }

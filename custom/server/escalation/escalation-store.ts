@@ -37,6 +37,33 @@ export interface EscalationRequest {
     /** 批准附带的沙箱约束（批准即学习：联动 402 规则）。 */
     sandboxConstraints?: Array<{ tool: string; argvPrefix?: string; list: 'allow' | 'deny' | 'ask' }>
   }
+  /**
+   * 机制归因（甲2，2026-09-30 调研落地）：裁决后结案时回答"为什么原有机制没提前
+   * 处理它"——责任人缺的是信息/权限/能力/资源/反馈哪一样（文章第四节五问词表化）。
+   * gap=none 表示机制本就无需提前处理（一次性正常升级）。
+   */
+  attribution?: {
+    gap: MechanismGap
+    note?: string
+    by: string
+    at: number
+  }
+}
+
+/** 机制归因词表（五流对齐：缺信息/缺权限/缺能力/缺资源/缺反馈 + 无断点）。 */
+export const MECHANISM_GAPS = ['information', 'authority', 'capability', 'resource', 'feedback', 'none'] as const
+export type MechanismGap = (typeof MECHANISM_GAPS)[number]
+
+export function isMechanismGap(v: unknown): v is MechanismGap {
+  return typeof v === 'string' && (MECHANISM_GAPS as readonly string[]).includes(v)
+}
+
+/** 归因闸（enforce 模式）：同 (fromAgent, scope.tool) 有已裁决未归因的升级时拒新。 */
+export class AttributionGateError extends Error {
+  constructor(public blockedBy: string) {
+    super(`前次升级 ${blockedBy} 已裁决但未做机制归因——先补归因再发起新升级（GOVERNANCE_ATTRIBUTION_ENFORCE）`)
+    this.name = 'AttributionGateError'
+  }
 }
 
 const MAX_REQUESTS = 200
@@ -81,10 +108,16 @@ function save(req: EscalationRequest): void {
   writeFileSync(escFile(req.escalationId), JSON.stringify(req, null, 2))
 }
 
-/** 发起升级（幂等 escalationId）。 */
+/** 发起升级（幂等 escalationId）。enforce 模式下同 scope 有未归因前科即拒（甲2 复发纪律）。 */
 export function requestEscalation(req: Omit<EscalationRequest, 'at' | 'state'> & { at?: number }): EscalationRequest {
   const existing = loadEscalation(req.escalationId)
   if (existing) return existing
+  if (process.env.GOVERNANCE_ATTRIBUTION_ENFORCE === '1') {
+    const blocker = listDecided().find(
+      (e) => e.fromAgent === req.fromAgent && e.scope.tool === req.scope.tool && !e.attribution,
+    )
+    if (blocker) throw new AttributionGateError(blocker.escalationId)
+  }
   const full: EscalationRequest = { ...req, at: req.at ?? Date.now(), state: 'pending' }
   save(full)
   return full
@@ -107,6 +140,26 @@ export function listPending(): EscalationRequest[] {
   return out.sort((a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || a.at - b.at)
 }
 
+/** 全量升级（org-diagnosis 用：pending+已裁决都算人工介入事件）。 */
+export function listAll(): EscalationRequest[] {
+  const out: EscalationRequest[] = []
+  try {
+    if (!existsSync(escalationDir())) return out
+    const { readdirSync } = require('fs') as typeof import('fs')
+    for (const f of readdirSync(escalationDir())) {
+      if (!f.endsWith('.json')) continue
+      const req = loadEscalation(f.slice(0, -5))
+      if (req) out.push(req)
+    }
+  } catch { /* 目录缺席/坏行跳过 */ }
+  return out.sort((a, b) => a.at - b.at)
+}
+
+/** 已裁决（结案）的升级——机制归因的责任面。 */
+export function listDecided(): EscalationRequest[] {
+  return listAll().filter((e) => e.state !== 'pending')
+}
+
 /** 裁决（一次定音；approved 可附 sandboxConstraints——联动 402 由调用方做）。 */
 export function decideEscalation(
   id: string, verdict: 'approved' | 'denied', decision: Omit<NonNullable<EscalationRequest['decision']>, 'at'> & { at?: number },
@@ -118,4 +171,53 @@ export function decideEscalation(
   req.decision = { ...decision, at: decision.at ?? Date.now() }
   save(req)
   return req
+}
+
+/**
+ * 机制归因（甲2）：已裁决的升级结案时补"为什么原有机制没提前处理"的断点判定。
+ * 一次定音（与 decide 同款纪律）；pending 不允许归因（结果未出，归因无据）。
+ */
+export function attributeEscalation(
+  id: string, gap: MechanismGap, by: string, note?: string,
+): EscalationRequest | { error: string } {
+  const req = loadEscalation(id)
+  if (!req) return { error: '升级请求不存在' }
+  if (req.state === 'pending') return { error: '升级请求未裁决，先裁决再归因（结果未出归因无据）' }
+  if (req.attribution) return { error: '已归因（一次定音）' }
+  req.attribution = { gap, note: note?.trim() || undefined, by, at: Date.now() }
+  save(req)
+  return req
+}
+
+export interface RecurrenceGroup {
+  /** 复发键：scope.tool（同工具反复升级=同类问题）。 */
+  tool: string
+  incidents: number
+  /** 断点归因分布（gap≠none 才计为机制断点）。 */
+  byGap: Partial<Record<MechanismGap, number>>
+  /** 未归因条数（复发但根因不明——比复发本身更重的断点信号）。 */
+  unattributed: number
+  lastAt: number
+}
+
+/**
+ * 同类问题复发分析（甲2）：按 scope.tool 聚合已裁决升级——文章第九节自检问句
+ * "同样的问题下一次再发生，还需要我亲自出来解决吗"的机械形态。incidents≥2 且
+ * gap≠none 占比高 → 同类问题在依赖同一次次人工协调，机制没有迭代。
+ */
+export function recurrenceByScope(): Map<string, RecurrenceGroup> {
+  const groups = new Map<string, RecurrenceGroup>()
+  for (const e of listDecided()) {
+    const key = e.scope.tool
+    const g = groups.get(key) ?? { tool: key, incidents: 0, byGap: {}, unattributed: 0, lastAt: 0 }
+    g.incidents += 1
+    g.lastAt = Math.max(g.lastAt, e.at)
+    if (e.attribution) {
+      if (e.attribution.gap !== 'none') g.byGap[e.attribution.gap] = (g.byGap[e.attribution.gap] ?? 0) + 1
+    } else {
+      g.unattributed += 1
+    }
+    groups.set(key, g)
+  }
+  return groups
 }

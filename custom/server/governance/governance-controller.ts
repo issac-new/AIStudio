@@ -29,6 +29,7 @@ import { crossMachineDispatchStats } from './governance-crossdispatch'
 import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount } from './registry-admin'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns } from './governance-analytics'
 import { auditLog } from './governance-audit'
+import { orgDiagnosis } from './org-diagnosis'
 import { readDispatchLedger } from './dispatch-ledger'
 
 const router = new Router({ prefix: '/api/governance' })
@@ -291,6 +292,11 @@ router.get('/impact', async (ctx) => {
     return
   }
   ctx.body = { ok: true, ...queryImpact(target) }
+})
+
+// ---- 第七期（甲1，2026-09-30 调研落地）：五流断点诊断 ----
+router.get('/org-diagnosis', async (ctx) => {
+  ctx.body = { ok: true, ...(await orgDiagnosis()) }
 })
 
 // ---- 第六期：跨机派发账本聚合（服务端权威面；客户端 dispatch-kv 为同口径本机视图）----
