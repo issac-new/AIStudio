@@ -25,7 +25,7 @@ export interface ProvDocument {
   prefix: { prov: string }
   agent: Record<string, { 'prov:label': string }>
   activity: Record<string, { 'prov:type': string; 'prov:startedAtTime': string; 'prov:label'?: string }>
-  entity: Record<string, { 'prov:label': string }>
+  entity: Record<string, Record<string, string>>
   wasAssociatedWith: Array<{ 'prov:activity': string; 'prov:agent': string }>
   used: Array<{ 'prov:activity': string; 'prov:entity': string }>
   /** 导出元数据（诚实标注源与生成时间）。 */
