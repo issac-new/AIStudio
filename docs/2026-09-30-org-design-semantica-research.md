@@ -137,7 +137,33 @@ Semantica 定位"Graph-Native Infrastructure for Context and Accountable AI Syst
 
 丁组与甲 3/乙 6 为独立小块，可穿插在任何批次。
 
-## 六、落地约束与风险登记
+## 六、落地实录（2026-09-30 全量批准后同日收口）
+
+用户裁决"按提案及推荐顺序执行，全做"。四批十件全落地，分支 feat/org-breakpoint-diagnosis 合 main（be8f07ab）+ 走查修复批（3325de8f）+ 看板侧入口（9669d053）+ 超时分层（5c7fa037，并行会话收编提交）+ 534 让号 535（4cf8e3f5）。
+
+| 项 | 落地形态 | 关键锚点 |
+|---|---|---|
+| 甲1 | org-diagnosis.ts 五流信号聚合 + GET /api/governance/org-diagnosis + 治理中心 OrgDiagnosisSection | escalation 72h 单件即 alert（agent 被卡死不按件数降级） |
+| 甲2 | escalation 归因五选一（MECHANISM_GAPS 冻结）+ enforce 闸 + recurrenceByScope + 改进候选 | POST /api/escalation/:id/attribution |
+| 甲3 | AutomationStep autonomy/constraints（限幅）+ delegationCompleteness 随派发返回 | 派单文本"授权空间/约束（硬边界）"行 |
+| 乙4 | semantica-bridge.py（flock+原子写）+ 四 hook（dispatch/approval/escalation/gate 摄取）+ link_precedent 因果边 | appendApprovalLog 单一收口点覆盖 6 调用面 |
+| 乙5 | precedentLineFor（相似度≥40%，"仅供参考不构成判定依据"）+ TTL 10min | max_results=3 跳过自身（榜首自匹配挤掉真先例的坑） |
+| 乙6 | decision-rules.yaml（谓词词表冻结）+ TS 求值器 + off/warn/enforce | 不用 semantica check_decision_rules（内置语义不可控：approved 判非法） |
+| 丙7 | 每板 KG + entity-batch/relation-batch（单进程整板，744 任务分钟级→秒级）+ marker 幂等 | 冲突写保护：同 id 异 props 不覆盖（content 伪冲突已排除） |
+| 丙8 | conflict-inbox.jsonl + keep-existing/take-incoming 裁决（take 走 force 重写） | KnowledgeGraphSection 收件箱面板 |
+| 丁9 | 节流快照（5min，SNAP_MAX 50）+ replay 择近（lagMs 精度标注） | 实测删 marker 重摄取→快照落盘→回放命中 lagMs 3.7s |
+| 丁10 | audit 四源 → PROV-JSON-LD（actor→Agent/action→Activity/target→Entity 归一） | GET /api/governance/audit-log/prov-o |
+
+**功能入口（用户走查后实补）**：
+- 看板页页签区"治理中心 ↗"（与 看板/追溯/项目健康 平级，点击整页跳 /app/gov）——patch 535 词条 + TasksView 跳转页签；起因=看板侧此前零治理入口（入口只在 IDE 工作台侧工作流导航面板），用户实测找不到。
+- 治理中心页内：五流断点诊断 + 板级共享知识图谱 两个新区（StateModelSection 之后）。
+- 决策图谱/规则闸/先例回灌/回放/PROV-O 为 API 面（/api/governance/{decision-graph,decision-rules,knowledge-graph,audit-log} 前缀族，零新挂载点），按设计"先 API 后 UI"。
+
+**真实数据面（本机实测）**：15 板同步（744 结案任务摄取，460K KG）；13 qgate 运行落决策 KG；prov-o 30 activities 四源全通；幂等再同步 78ms。
+
+**走查实抓的坑（真实工具链价值实证）**：ts-node 起服务抓到 vitest/esbuild 不查的三处 TS 严格错；maybeSnapshot 接线 replace 锚文本落错文件静默未生效（快照数为 0 暴露）；高负载下 python 冷启动超时致集成测试间歇红（超时分层：异步面 20s/同步 similar 保 5s）。
+
+## 七、落地约束与风险登记
 
 - upstream 只读：全部改动走 `overlay/patches/` + `overlay/custom/`，经 `npm run inject` 注入；视图类优先 custom 组件挂载（patch 490 前缀族先例）。
 - 写者边界：KG 分板写入、决策落账均为新运行时写面，须按边界 spec 登记（dispatch-ledger 已有 append-only 单点先例可复用）。
