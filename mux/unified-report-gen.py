@@ -119,6 +119,38 @@ if JOURNEY_HTML.exists():
 # ── ③ 步骤真证据索引 ──
 truth_imgs = sorted(STEPS_DIR.glob('*.png')) if STEPS_DIR.exists() else []
 
+# ── R15 协作时序线（V5 补遗⑥）：scenario.log 实抽——驱动侧断言留痕本身即
+#    matrix 事件/kanban 流转/git 提交三源核验的结果记录，此处仅解析呈现，禁手编 ──
+collab_events = []   # (HH:MM:SS, 主体, 事件行)
+_scen = EVID / 'scenario.log'
+if _scen.exists():
+    for _l in _scen.read_text(encoding='utf-8').splitlines():
+        _m = re.match(r'^\[mux (\d{2}:\d{2}:\d{2})\] (.+)$', _l.strip())
+        if not _m:
+            continue
+        _ts, _body = _m.group(1), _m.group(2)
+        # 主体抽取：[真值]/[熔断]/[观察]/[fanfan]/[arch]/[lin]… 或「── 阶段」分隔行
+        _am = re.match(r'^\[([^\]]+)\]\s*(.*)$', _body)
+        if _am and not _am.group(1).startswith('mux'):
+            _actor, _rest = _am.group(1), _am.group(2)
+        else:
+            _actor, _rest = '', _body
+        if _body.startswith('──') or _body.startswith('====='):
+            _actor, _rest = '阶段', _body
+        collab_events.append((_ts, _actor, _rest or _body))
+# 治理有效性实算（R15 配套：打回环/审批留痕/人工放行——全部在档实数）
+_gov_stats = {'rework': 0, 'approve_receipts': 0, 'gate_override': 0, 'collab_total': len(collab_events)}
+for _ts, _a, _b in collab_events:
+    if re.search(r'熔断|退回|拒收|打回', _b):
+        _gov_stats['rework'] += 1
+_ap = EVID / 'approved.events'
+if _ap.exists():
+    _gov_stats['approve_receipts'] = sum(1 for _l in _ap.read_text(encoding='utf-8').splitlines() if _l.strip())
+_gilog = EVID / 'issues.log'
+if _gilog.exists():
+    _gov_stats['gate_override'] = sum(1 for _l in _gilog.read_text(encoding='utf-8').splitlines()
+                                      if _l.startswith('ISSUE|gate-breaker-override'))
+
 # ── run 模式（UNIFIED_RUN_ID）：旅程线报告正文嵌入 + 审计改判/新特性真值节 ──
 RUN_BODY = ''
 JOURNEY_STYLE = ''
@@ -184,15 +216,56 @@ out.append(f'<div class="meta">生成：{GEN_TS}（实查）｜ 合并两线：�
            + (f' ｜ 基线：overlay HEAD <code>{html.escape(OVERLAY_HEAD)}</code>' if OVERLAY_HEAD else '') + '<br>'
            '修复基线：' + '；'.join(f'<b>{a}</b> {b}' for a, b in FIXES) + '</div>')
 
-# 演示动线 + 三功能区（⑤ R7 口径：驾驶舱三功能区=工作台/看板/IDE 画布；截图三界面按此核验）
+# ── 第 0 章 推演逻辑与协作顺序总述（补遗⑥ R15；演示动线并入本章）──
 if RUN_BODY:
     _tri = [('ui-03-cockpit', '工作台（#/app）'), ('ui-10-kanban', '看板（#/app/board）'), ('ui-25-ide', 'IDE 画布（#/app/ide）')]
     _tri_html = ' ｜ '.join((f'<b>{n}</b> <code>{s}.png</code>' if _shot_exists(s) else f'{n}（本轮未拍——如实标注）') for s, n in _tri)
+    # 六幕分幕总览（方案事实：六阶段 × 主角 × 闸门；状态色自本轮闸门表）
+    _gate_status = {g: ('✓' in (cells[1] if len(cells) > 1 else '')) for g, cells in gate_rows}
+    ACTS = [
+        ('一 环境准备', '1-4', '账号分配 · 配置初始化 · 登录 · 冒烟', 'admin+各用户', '—', ''),
+        ('二 需求管理', '5-7', '应用登记 · 人员管理 · 需求上锁', 'admin+bella(BA)+人审', 'G1（步7）', 'G1'),
+        ('三 需求分析', '8-14', '建群 · 派发 · 系统分析 · 四路系分 · 复核定稿', 'fanfan(PM)+系分 agent+各 lead', '—', ''),
+        ('四 设计评审与编码', '15-18', 'G2 评审 · 归档 · 排期 · G3 编码', 'arch 治理组+研发 agent', 'G2（步15）G3（步18）', 'G2'),
+        ('五 测试与交付', '19-21', 'G4 测试 · G5 准出 · 发版 UAT', 'qi/fei 独立测试+PM+评审卡+bella', 'G4（步19）G5（步20）', 'G4'),
+        ('六 治理与复盘', '22-26', '台账 · 审计 · G6 复盘 · IDE · 报告', '全员+治理 AI+audit', 'G6（步24）', 'G6'),
+    ]
+    _acts_rows = []
+    for act, rng, goal, who, gates, gk in ACTS:
+        _st = ''
+        if gk:
+            _st = '<span style="color:#059669;font-weight:700">✓ 已过</span>' if _gate_status.get(gk) else '<span style="color:#b45309">（见审计叠加层）</span>'
+        _acts_rows.append(f'<tr><td><b>{act}</b></td><td>步 {rng}</td><td>{goal}</td><td style="font-size:12px">{who}</td><td>{gates}</td><td>{_st}</td></tr>')
+    out.append('<h2 id="ch0-collab">第 0 章 · 推演逻辑与协作顺序总述（R15）</h2>')
+    out.append('<div class="gatebox"><b style="font-size:14px">产品定位（一页）</b>'
+               '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">Swarm Studio 是 AI 员工驱动的研发交付系统：'
+               '15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，'
+               '完整跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
+               '人的角色=<b>意图持有者、仲裁者、最终验证者</b>；AI 员工（需求设计/应用研发/质量测试/研发治理四类）主理执行；'
+               '六道硬闸守住意图对齐与不可逆决策；一切"完成"必须带代码提交号+任务卡号双凭证并经系统反向核验。'
+               '产品面=驾驶舱单面六功能区（工作台/看板/IDE 画布/审批收件箱/治理中心/账户），'
+               '双 loop=skill 内循环 × swarm 外循环。</p></div>')
     out.append('<div class="gatebox"><b style="font-size:14px">演示动线（补遗⑤ 驾驶舱单面）</b>'
                '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">登录 → 驾驶舱工作台（任务/在线 chips·注意力条·中栏会话画布）'
-               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转） → IDE 画布（任务简报·交互编码）'
+               ' → 审批收件箱（三档分区·抽检回看） → swarm kanban 看板（RACI 徽章·状态流转·全链路追踪页签） → IDE 画布（任务简报·交互编码）'
                ' → 治理中心（六闸工件·应用资产·组织）——全流程不出 /app 路由树。</p>'
                f'<p style="margin:4px 0;font-size:12.5px;color:#57606a">三功能区证据（R7 核验口径）：{_tri_html}</p></div>')
+    out.append('<h3>26 步六阶段分幕总览</h3>'
+               '<div class="meta">每幕一行：目标 · 主角（RACI 摘要）· 闸门位置；先读此表建立全局，再走下方 26 步实录。闸门状态列自本轮闸门表实抽。</div>'
+               '<table><tr><th>幕</th><th>步骤</th><th>目标</th><th>主角（谁在做什么）</th><th>闸门</th><th>本轮</th></tr>'
+               + ''.join(_acts_rows) + '</table>')
+    out.append('<h3>RACI 协作时序线（scenario.log 实抽，' + str(len(collab_events)) + ' 条）</h3>'
+               '<div class="meta">数据源=导演侧断言留痕（每行本身即 matrix 事件/kanban 流转/git 提交三源核验的结果记录）——'
+               '谁在何时发起、谁执行、谁把关、何处打回，时间线自明；锚点（event_id $xxx／t_ 卡号）可反查。</div>')
+    if collab_events:
+        out.append('<details open><summary style="cursor:pointer;font-size:13px;color:#1e40af">展开协作时序全表（按推演时间正序）</summary>'
+                   '<table class="idx" style="max-height:520px;overflow:auto;display:block"><tr><th>时间</th><th>主体</th><th>协作事件（含锚点）</th></tr>')
+        for _ts, _a, _b in collab_events:
+            out.append(f'<tr><td style="white-space:nowrap">{_ts}</td><td style="white-space:nowrap">{html.escape(_a)}</td>'
+                       f'<td style="font-size:11.5px">{html.escape(_b[:220])}</td></tr>')
+        out.append('</table></details>')
+    else:
+        out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮 scenario.log 无可解析协作事件（如实标注，禁编造）。</div>')
 
 # 叙事层 + 意图链路（V4.1 需求保真域；run 模式下叙事层由旅程线正文自带，去重）
 if not RUN_BODY:
@@ -240,6 +313,35 @@ if RUN_BODY:
     if _miss_feats:
         out.append('<div class="gap" style="padding:10px 14px;font-size:13px">本轮未出数的实证位（如实标注，不计通过）：'
                    + '；'.join(html.escape(t) for t in _miss_feats) + '</div>')
+
+    # 研发全流程治理有效性（补遗⑥：重点难点突出——治理逆境实数，全部在档实算）
+    _ilog_p = EVID / 'issues.log'
+    _iss_n = _disp_n = 0
+    if _ilog_p.exists():
+        _seen_i, _seen_d = set(), set()
+        for _l in _ilog_p.read_text(encoding='utf-8').splitlines():
+            if _l.startswith('ISSUE|'):
+                _p = _l.split('|', 3)
+                _seen_i.add(f'{_p[1]}·{_p[2]}')
+            elif _l.startswith('DISP|'):
+                _p = _l.split('|', 3)
+                _seen_d.add(f'{_p[1]}·{_p[2]}')
+        _iss_n, _disp_n = len(_seen_i), len(_seen_d)
+    _gov_cards = [
+        ('协作事件总数', _gov_stats['collab_total'], 'scenario.log 三源核验留痕行'),
+        ('真实打回环', _gov_stats['rework'], '熔断/退回/拒收事件（治理闸真实拦截，非橡皮图章）'),
+        ('人工批准留痕', _gov_stats['approve_receipts'], 'approved.events（HumanGate 可反查）'),
+        ('熔断人工放行', _gov_stats['gate_override'], 'GATE_BREAKER_OVERRIDE 显式放行记档（治理逆境素材）'),
+        ('问题单处置率', f'{_disp_n}/{_iss_n}' if _iss_n else '0/0', 'issues.log 唯一键 DISP 回写'),
+    ]
+    out.append('<h2>研发全流程治理有效性（实算）</h2>'
+               '<div class="meta">"有效应用及治理"的量化呈现：打回环=闸门真实拦截的证据；人工放行=逆境下的人机接力（均在 issues.log 留痕可反查）。</div>'
+               '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0">')
+    for _t, _v, _d in _gov_cards:
+        out.append(f'<div class="step" style="flex:1;min-width:180px;margin:0"><h4 style="font-size:13.5px">{html.escape(str(_t))}</h4>'
+                   f'<div style="font-size:24px;font-weight:700;color:#1e40af">{html.escape(str(_v))}</div>'
+                   f'<p style="font-size:11.5px;color:#57606a">{html.escape(_d)}</p></div>')
+    out.append('</div>')
 
     # 独立审计真值叠加层（run4 起数据驱动：读本轮 evidence 的审计产物；
     # 缺产物=如实标"待审计"，绝不沿用旧轮审计叙事）
