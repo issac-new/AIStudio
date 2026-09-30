@@ -1,0 +1,27 @@
+diff --git a/packages/server/src/modules/hermes/services/runtime/process.ts b/packages/server/src/modules/hermes/services/runtime/process.ts
+--- a/packages/server/src/modules/hermes/services/runtime/process.ts
++++ b/packages/server/src/modules/hermes/services/runtime/process.ts
+@@ -65,7 +65,13 @@
+   args: readonly string[],
+   options?: ExecFileOptions,
+ ): Promise<HermesExecResult> {
+-  const invocation = resolveHermesInvocation(hermesBin, options?.env || process.env)
++  // overlay[perf]（2026-09-30 根治批）：短生命周期查询 exec 显式关闭托管安装
++  // 机制——CLI 启动时 venv 货币性检查（48 个插件选择 YAML 的 ruamel 纯 Python
++  // 解析）实测 3.9s/exec，配 hermes-agent patch 529 的 check_runtime 旗标短路；
++  // 调用方已设值时不覆写。长连流（spawnHermes：看板 watcher/网关）不注入。
++  const baseEnv = { ...(options?.env || process.env) }
++  if (!baseEnv.HERMES_DISABLE_LAZY_INSTALLS) baseEnv.HERMES_DISABLE_LAZY_INSTALLS = '1'
++  const invocation = resolveHermesInvocation(hermesBin, baseEnv)
+   const invocationArgs = [...invocation.argsPrefix, ...args]
+   const execution = process.platform === 'win32' && windowsCommandNeedsShell(invocation.command)
+     ? windowsCmdShimExecution(invocation.command, invocationArgs)
+@@ -75,7 +81,7 @@
+       execution.command,
+       execution.args,
+       {
+-        ...withWindowsHide(options),
++        ...withWindowsHide({ ...options, env: baseEnv }),
+         encoding: 'utf8',
+         ...('windowsVerbatimArguments' in execution
+           ? { windowsVerbatimArguments: execution.windowsVerbatimArguments }

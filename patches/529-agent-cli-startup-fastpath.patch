@@ -1,0 +1,46 @@
+diff --git a/hermes_cli/venv_sync.py b/hermes_cli/venv_sync.py
+--- a/hermes_cli/venv_sync.py
++++ b/hermes_cli/venv_sync.py
+@@ -50,11 +50,21 @@
+ 
+ def check_runtime(project_root: Path) -> str | None:
+     """One passive startup verdict; callers only choose stderr or logging."""
++    import os
++
+     import pm
+     from hermes_cli.steward import read_install_stamp, sealed_steward
+ 
+     if (Path(project_root) / ".git").exists() and read_install_stamp(project_root).get("updateMechanism") != "self":
+         return None  # A developer's checkout does not owe managed products.
++
++    # overlay[perf]（2026-09-30 根治批）：短生命周期查询 exec（studio 服务端看板
++    # 族等）显式置 HERMES_DISABLE_LAZY_INSTALLS 时跳过 drift 探测——pm.activate
++    # 每次 venv 货币性检查需解析 48 个插件选择 YAML（ruamel 纯 Python 解析），
++    # 实测 3.9s/exec；与 prepare_launch 的同名旗标语义一致（托管安装机制关闭，
++    # 过期时走既有 degrade 路径）。
++    if os.environ.get("HERMES_DISABLE_LAZY_INSTALLS", "").lower() in ("1", "true", "yes"):
++        return None
+ 
+     problems = pm.activate()
+     if not problems:
+diff --git a/hermes_cli/update_cmd_fleet.py b/hermes_cli/update_cmd_fleet.py
+--- a/hermes_cli/update_cmd_fleet.py
++++ b/hermes_cli/update_cmd_fleet.py
+@@ -526,6 +526,17 @@
+ 
+ def _warn_pending_fleet_restart_on_startup() -> None:
+     """Cheap CLI-startup hint. Never restarts; never raises."""
++    import sys
++
++    # overlay[perf]（2026-09-30 根治批）：非交互（管道 stdio，如 studio 服务端
++    # exec / --json 消费方）不再跑舰队重启义务判定——其内部 git 身份解析实测
++    # 2.0s/exec，且横幅直写 stdout 会污染 --json 输出；人类终端（TTY）保持提示。
++    try:
++        if not sys.stderr.isatty():
++            return
++    except Exception:
++        pass
++
+     from hermes_cli.update_receipt import read_latest_receipt
+     from hermes_cli.update_serve_obligations import retain_receipt_manual_serves, warn_pending_manual_serves
+ 
