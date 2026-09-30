@@ -223,6 +223,24 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
 }
 
 # ── 完成凭证反向核验（账号板断言）────────────────────────
+mx_messages_deep() { # <token> <room> <since-epoch-sec> <max-pages> — dir=b 翻页直抵 since 时刻
+  # 消息洪后固定窗口失效（run4 实锤：500 条只回溯到当天上午，昨日派发被挤出）。
+  # 用 end token 连续翻页，直到某页最老消息早于 since 或页数耗尽；输出与 mx_messages 同构数组。
+  local tok="$1" room="$2" since_ms=$(( $3 * 1000 )) pages="${4:-10}" out='[]' page_url chunk oldest
+  page_url="$HS/_matrix/client/v3/rooms/$room/messages?access_token=$tok&dir=b&limit=500"
+  for _ in $(seq 1 "$pages"); do
+    chunk=$(curl -sf -m 20 "$page_url" 2>/dev/null) || break
+    chunk=$(printf '%s' "$chunk" | jq -c '{chunk: (.chunk // []), end: .end}' 2>/dev/null) || break
+    out=$(jq -c --slurp 'add' <(printf '%s' "$out") <(printf '%s' "$chunk" | jq '.chunk') 2>/dev/null) || break
+    oldest=$(printf '%s' "$chunk" | jq -r '[.chunk[].origin_server_ts] | min // 0')
+    [ "${oldest:-0}" -lt "$since_ms" ] && break
+    end_tok=$(printf '%s' "$chunk" | jq -r '.end // empty')
+    [ -n "$end_tok" ] || break
+    page_url="$HS/_matrix/client/v3/rooms/$room/messages?access_token=$tok&dir=b&limit=500&from=$end_tok"
+  done
+  printf '%s' "$out"
+}
+
 verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造假
   # 只认"可反向核验"的完成：结论行里的 commit 必须真在 aipaydev origin 上、
   # 且该 commit 确实含分析稿；card 必须能在 fanfan 账号的板（账号板）查到。
@@ -244,7 +262,10 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
        ] | first | .content.body // ""')
   [[ -n "$body" ]] || { note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
   sha=$(printf '%s' "$body" | grep -oE 'commit=[0-9a-fA-F]{7,40}' | head -1 | cut -d= -f2)
-  card=$(printf '%s' "$body" | grep -oE 'card=[^ ,；;]+' | head -1 | cut -d= -f2)
+  # card 提取钉字符集（run4 实锤）：agent 结论行常带 Markdown 加粗（**card=t_xxx**），
+  # [^ ,；;]+ 会把 ** 一起吃进卡号致反核 grep 失配、真凭证误判虚报。卡 ID 只含
+  # [A-Za-z0-9_-]，钉死字符集对加粗/代码块包裹免疫。
+  card=$(printf '%s' "$body" | grep -oE 'card=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
   [[ -n "$sha" && -n "$card" ]] || { note "[凭证] DONE 行缺 commit/card 凭证：$body"; return 1; }
   git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
   git -C "$DIRECTOR_CLONE" cat-file -e "$sha^{commit}" 2>/dev/null \
@@ -365,6 +386,12 @@ kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> → stdout: PAS
 
 mx_gate_verdict_seen() { # <room> <sender> <gate> [since-ms] → 0 当出现任一判词结论行
   [[ -n "$(mx_room_gate_verdict "$@")" ]]
+}
+
+mx_gate_verdict_dual_seen() { # <room> <sender> <gate> <since-ms> <card-user> <card-needle> → 0 房间行或卡面任一出现判词
+  # 双源到达判定（run4）：arch 评审可经 kanban worker 执行（写卡不发房）——只盯房间行
+  # 会让真实结论永远等不到。到达=任一源出现；判 PASS/FAIL 仍由 combined 保守合并。
+  [[ -n "$(mx_gate_verdict_combined "$@")" ]]
 }
 
 mx_gate_verdict_pass() { # <room> <sender> <gate> [since-ms] → 0 仅当最新结论判词为 PASS
