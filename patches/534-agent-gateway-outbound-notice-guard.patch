@@ -1,0 +1,462 @@
+diff --git a/gateway/outbound_notice_guard.py b/gateway/outbound_notice_guard.py
+new file mode 100644
+index 0000000000..452d7114a5
+--- /dev/null
++++ b/gateway/outbound_notice_guard.py
+@@ -0,0 +1,166 @@
++"""Outbound throttle for gateway-authored chat notices.
++
++``_handle_message`` returns a string only for operational notices — ownership/
++coordination refusals, drain notices, busy-path acknowledgements, slash-command
++replies; conversational agent replies stream out-of-band and return ``None``.
++In a multi-agent room an echoed notice is itself a new room message that
++re-triggers every agent's dispatch, and each of those refusals echoes again:
++a self-sustaining notification storm (run4 measured 120 messages in 2 minutes,
++97 of them the identical "active session limit" text).
++
++The capacity path no longer echoes at all (silent retry queue, patch 533). This
++guard is the sink-level backstop for every other notice: identical texts dedup
++inside ``dedup_seconds``, a per-chat sliding budget opens a cooldown announced
++by a single digest line, and nothing here can block processing — a suppressed
++notice only loses its echo. Settings: config.yaml ``gateway.outbound_notice_guard``.
++"""
++
++from __future__ import annotations
++
++import hashlib
++import threading
++import time
++from collections import OrderedDict, deque
++from dataclasses import dataclass
++from typing import Callable, Deque, Dict, Hashable, Optional, Tuple
++
++# Parsing helpers shared with the inbound twin: one parser, two guards.
++from gateway.bot_loop_guard import _as_bool, _as_positive, _as_positive_int
++
++__all__ = [
++    "OutboundNoticeGuard",
++    "OutboundNoticeGuardSettings",
++    "load_settings",
++    "settings_from_config",
++]
++
++
++@dataclass(frozen=True)
++class OutboundNoticeGuardSettings:
++    enabled: bool = True
++    dedup_seconds: float = 60.0
++    max_notices: int = 8
++    window_seconds: float = 60.0
++    cooldown_seconds: float = 120.0
++    max_tracked_texts: int = 64
++
++
++def settings_from_config(cfg) -> OutboundNoticeGuardSettings:
++    """Read ``gateway.outbound_notice_guard`` from a loaded config dict. Unusable values keep the default."""
++    from hermes_cli.config import cfg_get
++
++    block = cfg_get(cfg, "gateway", "outbound_notice_guard", default=None)
++    if not isinstance(block, dict):
++        return OutboundNoticeGuardSettings()
++    defaults = OutboundNoticeGuardSettings()
++    return OutboundNoticeGuardSettings(
++        enabled=_as_bool(block.get("enabled"), defaults.enabled),
++        dedup_seconds=_as_positive(block.get("dedup_seconds"), defaults.dedup_seconds),
++        max_notices=_as_positive_int(block.get("max_notices"), defaults.max_notices),
++        window_seconds=_as_positive(block.get("window_seconds"), defaults.window_seconds),
++        cooldown_seconds=_as_positive(block.get("cooldown_seconds"), defaults.cooldown_seconds),
++        max_tracked_texts=_as_positive_int(block.get("max_tracked_texts"), defaults.max_tracked_texts),
++    )
++
++
++def load_settings() -> OutboundNoticeGuardSettings:
++    """Settings from the live config.yaml. Defaults when the config cannot be read."""
++    try:
++        from hermes_cli.config import load_config_readonly
++
++        return settings_from_config(load_config_readonly())
++    except Exception:
++        return OutboundNoticeGuardSettings()
++
++
++class OutboundNoticeGuard:
++    """Per-chat throttle at the reply sink: identical-text dedup plus a sliding send
++    budget whose trip opens a cooldown. Thread-safe; settings are re-read on every
++    call so a config.yaml edit takes effect without a restart. The digest line is
++    emitted exactly once per cooldown epoch and bypasses the budget by construction
++    (it is returned to the caller, never re-admitted)."""
++
++    def __init__(
++        self,
++        settings: Callable[[], OutboundNoticeGuardSettings] = load_settings,
++        clock: Callable[[], float] = time.monotonic,
++    ) -> None:
++        self._settings = settings
++        self._clock = clock
++        self._lock = threading.Lock()
++        # target -> (text digest -> last seen ts); OrderedDict for LRU eviction.
++        self._seen: Dict[Hashable, "OrderedDict[str, float]"] = {}
++        # target -> timestamps of admitted notices inside the budget window.
++        self._sent: Dict[Hashable, Deque[float]] = {}
++        self._cooldown_until: Dict[Hashable, float] = {}
++        # Suppressions since the last admitted notice (reset on every "ok").
++        self._suppressed_since_admit: Dict[Hashable, int] = {}
++        self._last_sweep = 0.0
++
++    def decide(self, target: Hashable, text: str) -> Tuple[bool, Optional[str], str]:
++        """Decide one outbound notice. Returns ``(send_original, digest_text, state)``;
++        ``state`` is ``disabled``/``ok``/``deduped``/``tripped``/``cooldown``.
++        ``tripped`` opens the cooldown and carries the epoch's single digest line."""
++        settings = self._settings()
++        if not settings.enabled:
++            return True, None, "disabled"
++        now = self._clock()
++        digest = hashlib.sha1(text.strip().encode("utf-8", "replace")).hexdigest()
++        with self._lock:
++            self._sweep(now, settings)
++            if self._cooldown_until.get(target, 0.0) > now:
++                self._bump_suppressed(target)
++                return False, None, "cooldown"
++            seen = self._seen.setdefault(target, OrderedDict())
++            last = seen.get(digest)
++            if last is not None and now - last < settings.dedup_seconds:
++                self._bump_suppressed(target)
++                return False, None, "deduped"
++            sent = self._sent.setdefault(target, deque())
++            cutoff = now - settings.window_seconds
++            while sent and sent[0] <= cutoff:
++                sent.popleft()
++            if len(sent) >= settings.max_notices:
++                self._cooldown_until[target] = now + settings.cooldown_seconds
++                suppressed = self._suppressed_since_admit.get(target, 0) + 1
++                self._suppressed_since_admit[target] = suppressed
++                seen[digest] = now
++                self._evict_seen(seen, settings)
++                return False, self._digest_line(suppressed, settings), "tripped"
++            sent.append(now)
++            seen[digest] = now
++            self._evict_seen(seen, settings)
++            self._suppressed_since_admit.pop(target, None)
++            return True, None, "ok"
++
++    def _bump_suppressed(self, target: Hashable) -> None:
++        self._suppressed_since_admit[target] = self._suppressed_since_admit.get(target, 0) + 1
++
++    @staticmethod
++    def _evict_seen(seen: "OrderedDict[str, float]", settings: OutboundNoticeGuardSettings) -> None:
++        while len(seen) > settings.max_tracked_texts:
++            seen.popitem(last=False)
++
++    @staticmethod
++    def _digest_line(suppressed: int, settings: OutboundNoticeGuardSettings) -> str:
++        return (
++            f"⚠️ Gateway notice throttle active for this chat: {suppressed} repeated gateway "
++            f"notice(s) suppressed; gateway notices resume in ~{settings.cooldown_seconds:.0f}s."
++        )
++
++    def _sweep(self, now: float, settings: OutboundNoticeGuardSettings) -> None:
++        """Drop chats idle past every horizon at most once per window so memory stays bounded."""
++        if now - self._last_sweep < settings.window_seconds:
++            return
++        self._last_sweep = now
++        idle_cutoff = now - max(
++            settings.window_seconds, settings.dedup_seconds, settings.cooldown_seconds)
++        for key in [
++            k for k, dq in self._sent.items()
++            if (not dq or dq[-1] <= idle_cutoff) and self._cooldown_until.get(k, 0.0) <= now
++        ]:
++            del self._sent[key]
++            self._seen.pop(key, None)
++            self._suppressed_since_admit.pop(key, None)
++        for key in [k for k, until in self._cooldown_until.items() if until <= idle_cutoff]:
++            del self._cooldown_until[key]
+diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
+index d938cdc793..b28b988b9a 100644
+--- a/gateway/platforms/base.py
++++ b/gateway/platforms/base.py
+@@ -3519,6 +3519,9 @@ class BasePlatformAdapter(ABC):
+         thread_meta = _thread_metadata_for_event(event)
+         response = await self._message_handler(event)
+         text, eph_ttl = self._unwrap_ephemeral(response)
++        if not text:
++            return
++        text = self._apply_outbound_notice_throttle(event, text)
+         if not text:
+             return
+         if log_cmd is not None:
+@@ -3530,6 +3533,32 @@ class BasePlatformAdapter(ABC):
+         if eph_ttl > 0 and result.success and result.message_id:
+             self._schedule_ephemeral_delete(event.source.chat_id, result.message_id, eph_ttl)
+ 
++    def _apply_outbound_notice_throttle(self, event: MessageEvent, text: str) -> Optional[str]:
++        """Throttle a gateway-authored notice at the reply sink; returns the text to send
++        (the original, or the cooldown epoch's single digest line) or ``None`` when
++        suppressed. Identical-text dedup plus a per-chat budget (see
++        ``gateway/outbound_notice_guard.py``) so an echoed refusal can never re-trigger a
++        dispatch storm in multi-agent rooms. Fail-open: any internal error sends the text."""
++        guard = getattr(self, "_outbound_notice_guard", None)
++        if guard is None:
++            from gateway.outbound_notice_guard import OutboundNoticeGuard
++            guard = self._outbound_notice_guard = OutboundNoticeGuard()
++        try:
++            send, digest, state = guard.decide((self.name, event.source.chat_id), text)
++        except Exception:
++            logger.debug("[%s] Outbound notice throttle failed; sending unthrottled",
++                         self.name, exc_info=True)
++            return text
++        if send:
++            return text
++        if digest is not None:
++            logger.info("[%s] Outbound notice budget tripped for %s; cooling down",
++                        self.name, event.source.chat_id)
++            return digest
++        logger.debug("[%s] Suppressing repeated gateway notice for %s (state=%s)",
++                     self.name, event.source.chat_id, state)
++        return None
++
+     def _media_delivery_scope(self, source: Optional[SessionSource]):
+         """Routed home + terminal policy for post-handler text, media and error delivery;
+         a no-op without a runner or outside multiplexing."""
+@@ -4504,9 +4533,14 @@ class BasePlatformAdapter(ABC):
+                         or _tts_paths or _tts_caption_delivered:
+                     self.pause_typing_for_chat(event.source.chat_id)
+                 if text_content and not _tts_caption_delivered:
+-                    await self._send_final_text(
+-                        event, session_key, text_content, _final_thread_metadata,
+-                        is_ephemeral_response, _ephemeral_ttl, _record_delivery)
++                    # Sink-level storm backstop: a repeated gateway notice (refusal echoes,
++                    # command replies) is deduped/throttled before it lands in the chat,
++                    # where it would re-trigger every agent's dispatch all over again.
++                    _notice = self._apply_outbound_notice_throttle(event, text_content)
++                    if _notice is not None:
++                        await self._send_final_text(
++                            event, session_key, _notice, _final_thread_metadata,
++                            is_ephemeral_response, _ephemeral_ttl, _record_delivery)
+                 await self._deliver_attachments(
+                     event, extracted, _final_thread_metadata,
+                     anything_sent=delivery_attempted or _tts_caption_delivered,
+diff --git a/tests/gateway/test_outbound_notice_guard.py b/tests/gateway/test_outbound_notice_guard.py
+new file mode 100644
+index 0000000000..96891ee6fb
+--- /dev/null
++++ b/tests/gateway/test_outbound_notice_guard.py
+@@ -0,0 +1,219 @@
++"""Tests for the outbound notice throttle (gateway-authored chat notices).
++
++Storm signature (run4): an echoed refusal is itself a room message that re-triggers
++every agent's dispatch; the same notice comes back multiplied (120 messages / 2 min,
++97 identical "active session limit" texts). The capacity path is silent since patch
++533 — these tests pin the sink-level backstop for every other notice."""
++
++import asyncio
++from types import SimpleNamespace
++
++import pytest
++
++from gateway.config import Platform
++from gateway.outbound_notice_guard import (
++    OutboundNoticeGuard,
++    OutboundNoticeGuardSettings,
++    settings_from_config,
++)
++from gateway.platforms.base import BasePlatformAdapter
++from gateway.platforms.event import MessageEvent, MessageType
++from gateway.session import SessionSource
++
++LIMIT_TEXT = "Hermes is at the active session limit (4/4). Try again once a session finishes."
++
++SETTINGS = OutboundNoticeGuardSettings(
++    enabled=True, dedup_seconds=60.0, max_notices=8,
++    window_seconds=60.0, cooldown_seconds=120.0, max_tracked_texts=64)
++
++
++class FakeClock:
++    def __init__(self, now: float = 1000.0):
++        self.now = now
++
++    def __call__(self) -> float:
++        return self.now
++
++    def advance(self, seconds: float) -> None:
++        self.now += seconds
++
++
++def _guard(settings: OutboundNoticeGuardSettings = SETTINGS, clock: FakeClock = None):
++    return OutboundNoticeGuard(settings=lambda: settings, clock=clock or FakeClock())
++
++
++def _make_event(chat_id: str = "chat-1") -> MessageEvent:
++    return MessageEvent(
++        text="hello",
++        message_type=MessageType.TEXT,
++        source=SessionSource(
++            platform=Platform.TELEGRAM, chat_id=chat_id, chat_type="dm", user_id="user-1"),
++    )
++
++
++# --- Guard unit tests ---------------------------------------------------------
++
++def test_identical_text_dedups_inside_window_then_recovers():
++    clock = FakeClock()
++    guard = _guard(clock=clock)
++    assert guard.decide("t", LIMIT_TEXT) == (True, None, "ok")
++    assert guard.decide("t", LIMIT_TEXT) == (False, None, "deduped")
++    assert guard.decide("t", LIMIT_TEXT) == (False, None, "deduped")
++    clock.advance(60.1)
++    assert guard.decide("t", LIMIT_TEXT) == (True, None, "ok")
++
++
++def test_distinct_texts_trip_budget_with_single_digest_line():
++    clock = FakeClock()
++    guard = _guard(settings=OutboundNoticeGuardSettings(
++        enabled=True, dedup_seconds=60.0, max_notices=3,
++        window_seconds=60.0, cooldown_seconds=120.0, max_tracked_texts=64), clock=clock)
++    for i in range(3):
++        assert guard.decide("t", f"notice {i}")[0] is True
++    send, digest, state = guard.decide("t", "notice 3")
++    assert (send, state) == (False, "tripped")
++    assert digest is not None and "1" in digest and "120s" in digest
++    # Exactly one digest per cooldown epoch; everything else is silent.
++    assert guard.decide("t", "notice 4") == (False, None, "cooldown")
++    assert guard.decide("t", "notice 5") == (False, None, "cooldown")
++    clock.advance(120.1)  # cooldown longer than the budget window: fresh budget.
++    send, digest, state = guard.decide("t", "notice 6")
++    assert (send, digest, state) == (True, None, "ok")
++
++
++def test_suppressed_counter_resets_on_admitted_notice():
++    clock = FakeClock()
++    guard = _guard(settings=OutboundNoticeGuardSettings(
++        enabled=True, dedup_seconds=60.0, max_notices=2,
++        window_seconds=60.0, cooldown_seconds=120.0, max_tracked_texts=64), clock=clock)
++    guard.decide("t", "a")
++    guard.decide("t", "a")            # deduped: suppressed=1
++    guard.decide("t", "b")            # admitted (2/2): counter resets
++    _, digest, _ = guard.decide("t", "c")  # trips: only this one suppressed so far
++    assert digest is not None and "1 repeated" in digest
++    # Without the reset the earlier deduped "a" would count up to "2 repeated".
++
++
++def test_targets_are_independent():
++    guard = _guard()
++    for i in range(8):                 # distinct texts: exhaust chat-a's budget
++        guard.decide("chat-a", f"notice {i}")
++    assert guard.decide("chat-a", "one more")[2] in ("tripped", "cooldown")
++    assert guard.decide("chat-b", "notice 0") == (True, None, "ok")
++
++
++def test_disabled_setting_sends_everything():
++    guard = _guard(settings=OutboundNoticeGuardSettings(enabled=False))
++    for _ in range(50):
++        assert guard.decide("t", LIMIT_TEXT) == (True, None, "disabled")
++
++
++def test_tracked_texts_are_bounded():
++    clock = FakeClock()
++    guard = _guard(settings=OutboundNoticeGuardSettings(
++        enabled=True, dedup_seconds=60.0, max_notices=1000,
++        window_seconds=60.0, cooldown_seconds=120.0, max_tracked_texts=2), clock=clock)
++    guard.decide("t", "a")
++    guard.decide("t", "b")
++    guard.decide("t", "c")            # evicts "a" (LRU)
++    assert guard.decide("t", "a")[2] == "ok"       # no longer tracked
++    # Re-admitting "a" evicts "b"; "c" survives and still dedups.
++    assert guard.decide("t", "c")[2] == "deduped"
++
++
++def test_storm_signature_identical_texts_cannot_amplify():
++    """run4 replayed: 97 identical limit notices inside two minutes.
++    The room sees exactly the first one — no digest, no echoes."""
++    guard = _guard()
++    sends = sum(1 for _ in range(97) if guard.decide("room", LIMIT_TEXT)[0])
++    digests = sum(1 for _ in range(97) if guard.decide("room", LIMIT_TEXT)[1])
++    assert sends == 1
++    assert digests == 0
++
++
++def test_storm_signature_distinct_texts_are_budget_capped():
++    """Even non-identical notices (ownership texts naming different sessions) are
++    capped: 8 originals + one digest line land in the room, the rest is silence."""
++    guard = _guard()
++    sent, digests, suppressed = 0, 0, 0
++    for i in range(97):
++        send, digest, _ = guard.decide("room", f"conflict on session-{i}: held by user-{i}")
++        sent += bool(send)
++        digests += digest is not None
++        suppressed += not send and digest is None
++    assert sent == 8
++    assert digests == 1
++    assert suppressed == 88
++
++
++def test_settings_from_config_reads_block_and_keeps_defaults():
++    settings = settings_from_config(
++        {"gateway": {"outbound_notice_guard": {"max_notices": "3", "enabled": False, "bogus": 1}}})
++    assert settings.enabled is False
++    assert settings.max_notices == 3
++    assert settings.dedup_seconds == 60.0  # untouched keys keep defaults
++    assert settings_from_config({}).enabled is True
++    assert settings_from_config({"gateway": {}}).max_notices == 8
++
++
++# --- Sink wiring (BasePlatformAdapter) ---------------------------------------
++
++class _SinkStub(BasePlatformAdapter):
++    # Same trick as test_approval_boundary/_multiplex_*: clear the abstract surface so the
++    # send-sink methods can be exercised on a bare instance without platform plumbing.
++    pass
++
++
++_SinkStub.__abstractmethods__ = frozenset()
++
++
++def _bare_adapter() -> BasePlatformAdapter:
++    adapter = _SinkStub.__new__(_SinkStub)
++    adapter.platform = Platform.TELEGRAM  # ``name`` derives from this (read-only property)
++    return adapter
++
++
++def test_helper_throttles_and_returns_digest():
++    clock = FakeClock()
++    adapter = _bare_adapter()
++    adapter._outbound_notice_guard = _guard(clock=clock)
++    event = _make_event()
++    assert adapter._apply_outbound_notice_throttle(event, LIMIT_TEXT) == LIMIT_TEXT
++    assert adapter._apply_outbound_notice_throttle(event, LIMIT_TEXT) is None
++
++
++def test_helper_fails_open():
++    class _Broken:
++        def decide(self, *_a, **_k):
++            raise RuntimeError("boom")
++
++    adapter = _bare_adapter()
++    adapter._outbound_notice_guard = _Broken()
++    assert adapter._apply_outbound_notice_throttle(_make_event(), LIMIT_TEXT) == LIMIT_TEXT
++
++
++def test_inline_reply_sink_suppresses_echoed_notices():
++    """End-to-end at the dispatch sink: five identical handler replies produce one
++    send — the echo feedback edge a storm needs is severed at the sink itself."""
++    adapter = _bare_adapter()
++    clock = FakeClock()
++    adapter._outbound_notice_guard = _guard(clock=clock)
++    sent = []
++
++    async def _record_send(**kwargs):
++        sent.append(kwargs["content"])
++        return SimpleNamespace(success=True, message_id="m1")
++
++    adapter._send_with_retry = _record_send
++
++    async def _handler(_event):
++        return LIMIT_TEXT
++
++    adapter._message_handler = _handler
++
++    async def _scenario():
++        for _ in range(5):
++            await adapter._dispatch_inline_reply(_make_event())
++
++    asyncio.run(_scenario())
++    assert sent == [LIMIT_TEXT]
