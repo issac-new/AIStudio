@@ -1,111 +1,100 @@
 --- a/packages/client/src/components/hermes/chat/ChatInput.vue
 +++ b/packages/client/src/components/hermes/chat/ChatInput.vue
-@@ -11,6 +11,8 @@
- import { NButton, NTooltip, NModal, NInputNumber, NPopover, NSlider, NDropdown, useDialog, useMessage, type DropdownOption } from 'naive-ui'
- import { computed, ref, nextTick, onMounted, onUnmounted, watch, h } from 'vue'
- import { useI18n } from 'vue-i18n'
-+// overlay[ide] B7 自定义斜杠命令（/ide 输入框 / 可选用，选中写模板）
-+import { loadSlashCommands, slashCommandsSnapshot } from '@/custom/ide/store/slash-commands'
- import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
- import { extractClipboardFiles } from '@/utils/clipboard-files'
- import VoiceDialogueControls from './VoiceDialogueControls.vue'
-@@ -146,6 +148,8 @@
+@@ -146,8 +146,6 @@
    opensSkillPicker?: boolean
    opensBundlePicker?: boolean
    opensBundleCreator?: boolean
-+  // overlay[ide] B7：自定义命令——选中写 prompt 模板而非 /name
-+  opensCustomPrompt?: boolean
+-  // overlay[ide] B7：自定义命令——选中写 prompt 模板而非 /name
+-  opensCustomPrompt?: boolean
  }
  
  function insertVoiceTranscriptIntoInput(text: string) {
-@@ -270,6 +274,17 @@
+@@ -272,17 +270,6 @@
      }
    })
  })
-+// overlay[ide] B7 自定义斜杠命令选项（coding-agent 会话面追加）
-+const customSlashOptions = computed<SlashCommandOption[]>(() =>
-+  slashCommandsSnapshot().map((c) => ({
-+    key: `custom:${c.name}`,
-+    name: c.name,
-+    args: '',
-+    description: c.description || c.name,
-+    insertText: c.prompt,
-+    opensCustomPrompt: true,
-+  })),
-+)
+-// overlay[ide] B7 自定义斜杠命令选项（coding-agent 会话面追加）
+-const customSlashOptions = computed<SlashCommandOption[]>(() =>
+-  slashCommandsSnapshot().map((c) => ({
+-    key: `custom:${c.name}`,
+-    name: c.name,
+-    args: '',
+-    description: c.description || c.name,
+-    insertText: c.prompt,
+-    opensCustomPrompt: true,
+-  })),
+-)
  const filteredBridgeCommands = computed(() => {
    const query = slashQuery.value.trim().toLowerCase()
    const commands = isBridgeSession.value
-@@ -285,8 +300,10 @@
+@@ -298,10 +285,8 @@
        : isForkCommandSession.value
          ? bridgeCommands.value.filter(command => command.name === 'fork')
          : []
--  if (!query) return commands
--  return commands.filter((command) => {
-+  // overlay[ide] B7：合并自定义命令（与内建同一查询过滤链）
-+  const commandsWithCustom = [...commands, ...customSlashOptions.value]
-+  if (!query) return commandsWithCustom
-+  return commandsWithCustom.filter((command) => {
+-  // overlay[ide] B7：合并自定义命令（与内建同一查询过滤链）
+-  const commandsWithCustom = [...commands, ...customSlashOptions.value]
+-  if (!query) return commandsWithCustom
+-  return commandsWithCustom.filter((command) => {
++  if (!query) return commands
++  return commands.filter((command) => {
      const name = command.name.toLowerCase()
      const insertText = command.insertText?.toLowerCase()
      const description = command.description.toLowerCase()
-@@ -586,6 +603,7 @@
+@@ -601,7 +586,6 @@
  }
  
  function updateSlashState() {
-+  void loadSlashCommands() // overlay[ide] B7：slash 菜单打开即确保自定义命令已载入（幂等）
+-  void loadSlashCommands() // overlay[ide] B7：slash 菜单打开即确保自定义命令已载入（幂等）
    if (!isBridgeSession.value && !isCodingAgentSession.value && !isForkCommandSession.value) {
      slashActive.value = false
      return
-@@ -617,6 +635,19 @@
+@@ -633,19 +617,6 @@
    if (command.opensBundleCreator) {
      slashActive.value = false
      openBundleCreator()
-+    return
-+  }
-+  // overlay[ide] B7：自定义命令选中写 prompt 模板全文（用户可编辑再发送）
-+  if (command.opensCustomPrompt) {
-+    inputText.value = command.insertText ?? ''
-+    slashActive.value = false
-+    nextTick(() => {
-+      const el = textareaRef.value
-+      if (!el) return
-+      const pos = inputText.value.length
-+      el.setSelectionRange(pos, pos)
-+      el.focus()
-+    })
+-    return
+-  }
+-  // overlay[ide] B7：自定义命令选中写 prompt 模板全文（用户可编辑再发送）
+-  if (command.opensCustomPrompt) {
+-    inputText.value = command.insertText ?? ''
+-    slashActive.value = false
+-    nextTick(() => {
+-      const el = textareaRef.value
+-      if (!el) return
+-      const pos = inputText.value.length
+-      el.setSelectionRange(pos, pos)
+-      el.focus()
+-    })
      return
    }
    inputText.value = `/${command.insertText || command.name} `
---- a/packages/client/src/components/hermes/chat/ChatInput.vue
-+++ b/packages/client/src/components/hermes/chat/ChatInput.vue
-@@ -1012,7 +1012,28 @@
+@@ -1010,28 +981,7 @@
    nextTick(() => textareaRef.value?.focus())
  }
  
--defineExpose({ addFiles, focusComposer })
-+// overlay[ide] B8：取回编辑——window 事件消费（MessageItem patch 503 发起）+ expose setInputText
-+const editResendHandler = (e: Event) => {
-+  const text = (e as CustomEvent<string>).detail ?? ''
-+  if (typeof text === 'string' && text.trim()) {
-+    inputText.value = text
-+    nextTick(() => {
-+      const el = textareaRef.value
-+      if (!el) return
-+      const pos = inputText.value.length
-+      el.setSelectionRange(pos, pos)
-+      el.focus()
-+      autoSizeTextarea(el)
-+    })
-+  }
-+}
-+onMounted(() => window.addEventListener('ide-edit-resend', editResendHandler))
-+onUnmounted(() => window.removeEventListener('ide-edit-resend', editResendHandler))
-+function setInputText(text: string): void {
-+  inputText.value = text
-+  nextTick(() => textareaRef.value?.focus())
-+}
-+defineExpose({ addFiles, focusComposer, setInputText })
+-// overlay[ide] B8：取回编辑——window 事件消费（MessageItem patch 503 发起）+ expose setInputText
+-const editResendHandler = (e: Event) => {
+-  const text = (e as CustomEvent<string>).detail ?? ''
+-  if (typeof text === 'string' && text.trim()) {
+-    inputText.value = text
+-    nextTick(() => {
+-      const el = textareaRef.value
+-      if (!el) return
+-      const pos = inputText.value.length
+-      el.setSelectionRange(pos, pos)
+-      el.focus()
+-      autoSizeTextarea(el)
+-    })
+-  }
+-}
+-onMounted(() => window.addEventListener('ide-edit-resend', editResendHandler))
+-onUnmounted(() => window.removeEventListener('ide-edit-resend', editResendHandler))
+-function setInputText(text: string): void {
+-  inputText.value = text
+-  nextTick(() => textareaRef.value?.focus())
+-}
+-defineExpose({ addFiles, focusComposer, setInputText })
++defineExpose({ addFiles, focusComposer })
  
  // --- Send ---
  
