@@ -10,23 +10,25 @@ import { getRegisteredRoutes } from './index'
 export async function bootstrapClient(app: App): Promise<void> {
   // 对应原 custom/index.ts 的 registerCustomFeatures,改为从 overlay/custom 注册。
   // 各 custom 模块内部用 registerRoute/registerNavEntry/registerComponent 收集。
+  // 2026-09-30 冷启动根治：六路注册由串行 await 改并行 Promise.all——dev 下
+  // 每路动态 import 是一条模块请求瀑布，串行把首个 API 请求拖到 ~2.3s（注意力
+  // 条就绪 0.9-2.9s 抖动的主体，服务端全部 17-99ms 无辜）。顺序无关性：各注册
+  // 只写 registry/调 router.addRoute，均发生在下方 addRoute 循环与 mount 前，
+  // 相互无依赖（matrix-chat 子路由挂载在其自身注册内自理）。
+  const registrations: Array<Promise<void>> = []
   if (features.matrixChat) {
-    const { registerMatrixChat } = await import('../../custom/client/matrix-chat')
-    await registerMatrixChat(app)
+    registrations.push(import('../../custom/client/matrix-chat').then(m => m.registerMatrixChat(app)))
   }
   if (features.kanbanEnhancements) {
-    const { registerKanbanEnhancements } = await import('../../custom/client/kanban')
-    await registerKanbanEnhancements(app)
+    registrations.push(import('../../custom/client/kanban').then(m => m.registerKanbanEnhancements(app)))
   }
   if (features.branding) {
-    const { registerBranding } = await import('../../custom/client/branding')
-    await registerBranding(app)
+    registrations.push(import('../../custom/client/branding').then(m => m.registerBranding(app)))
   }
   // P4 用户裁决（2026-09-11）：原有 AI 协作中心（cockpit）与新 /app 六区域 IA
   // 平行共存——A 类注册（导航入口/样式/i18n 增量）恢复。
   if (features.cockpit) {
-    const { registerCockpit } = await import('../../custom/client/cockpit')
-    await registerCockpit(app)
+    registrations.push(import('../../custom/client/cockpit').then(m => m.registerCockpit(app)))
   }
   // 2026-09-18 统一导航 Task 5：/hermes/loop 路由家族整体退役，
   // loop 模块瘦身为纯组件/店铺库——runcenter 视图改由 ia2 运行场景（ia2.routes）挂载。
@@ -34,8 +36,7 @@ export async function bootstrapClient(app: App): Promise<void> {
   // codex 底座 + zcode 会话 UI 全量复用。注册顺序无关守卫，仅要求在下方
   // addRoute 循环（mount 前）之前。
   if (features.ide) {
-    const { registerIde } = await import('../../custom/client/ide')
-    await registerIde(app)
+    registrations.push(import('../../custom/client/ide').then(m => m.registerIde(app)))
   } else {
     // patch 276/277 的登录守卫硬指向 /app/ide：开关关闭时注册重定向兜底，
     // 避免登录后命中无匹配路由白屏（2026-09-17 24h 评审；⑤ M2 两路径都兜）。
@@ -46,10 +47,10 @@ export async function bootstrapClient(app: App): Promise<void> {
   // P3 Task 3：六区域新 IA（/app 路由树）。无守卫依赖，仅要求在 mount 前完成。
   // 2026-09-18 统一导航 Task 5：旧 loop 深链兼容守卫随 /hermes/loop 家族退役删除；
   // 登录默认落点由 patch 071 守卫直落 /app。
-  {
-    const { registerIa2 } = await import('../../custom/client/ia2')
-    await registerIa2(app)
-  }
+  registrations.push(import('../../custom/client/ia2').then(m => m.registerIa2(app)))
+
+  await Promise.all(registrations)
+
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,
   // 实际翻译是直接写在上游 locale 文件里的(现经 patch 044-053 注入)。无需运行时注册。
 
