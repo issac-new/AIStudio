@@ -21,6 +21,7 @@ import RuntimeSection from '@/custom/governance/components/RuntimeSection.vue'
 import AuditSection from '@/custom/governance/components/AuditSection.vue'
 import StateModelSection from '@/custom/governance/components/StateModelSection.vue'
 import OrgDiagnosisSection from '@/custom/governance/components/OrgDiagnosisSection.vue'
+import KnowledgeGraphSection from '@/custom/governance/components/KnowledgeGraphSection.vue'
 import ChangeGovernanceSection from '@/custom/governance/components/ChangeGovernanceSection.vue'
 import {
   fetchPendingApprovals, dedupePending, decideApproval, type PendingApprovalItem,
@@ -199,6 +200,9 @@ onMounted(() => void refresh())
 
     <!-- 五流断点诊断（2026-09-30 调研落地）：信息/决策/责任/资源/反馈 + 机制归因闭环 -->
     <OrgDiagnosisSection />
+
+    <!-- 板级共享知识图谱（2026-09-30 调研落地）：结案摄取 + 冲突收件箱 -->
+    <KnowledgeGraphSection />
 
     <!-- 变更治理（调研落地轮 2026-09-29）：分级评审/五维影响/三级冻结窗口/管控基准 -->
     <ChangeGovernanceSection />
