@@ -1,6 +1,26 @@
 --- a/packages/client/src/views/hermes/GroupChatView.vue
 +++ b/packages/client/src/views/hermes/GroupChatView.vue
-@@ -103,8 +103,8 @@
+@@ -24,6 +24,9 @@
+     return typeof value === 'string' && value.trim() ? value : null
+ })
+ 
++// overlay[v14]: standaloneEmbed — ia2 工作台嵌入态（隐藏房间侧栏；左栏即唯一导航）
++const isStandaloneEmbed = computed(() => route.meta?.standaloneEmbed === true)
++
+ const routeProfile = computed(() => {
+     const value = route.query?.profile
+     return typeof value === 'string' && value.trim() ? value : null
+@@ -48,7 +51,8 @@
+     }
+ 
+     if (!store.rooms.some(room => room.id === roomId)) {
+-        await router.replace({ name: 'hermes.groupChat' })
++        // overlay[v14]: 嵌入态深链失效回工作台首页，不跳出 /app 壳
++        await router.replace(isStandaloneEmbed.value ? '/app' : { name: 'hermes.groupChat' })
+         return
+     }
+ 
+@@ -99,12 +103,15 @@
  </script>
  
  <template>
@@ -11,3 +31,10 @@
      </PageLoading>
  </template>
  
+ <style scoped lang="scss">
++.group-chat-view--standalone {
++    height: 100%;
++}
+ .group-chat-view {
+     height: 100%;
+     display: flex;
