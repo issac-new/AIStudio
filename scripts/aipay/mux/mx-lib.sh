@@ -31,6 +31,11 @@ NCWK_ROOT="$(_mx_root_walk "$OVERLAY_ROOT" || echo "$(cd "$OVERLAY_ROOT/.." && p
 SKILLS_SRC="$OVERLAY_ROOT/scripts/aipay/skills"
 STUDIO_DIST="${MX_STUDIO_DIST:-$NCWK_ROOT/upstream/hermes-studio/dist}"
 HERMES_BIN="${HERMES_BIN:-$HOME/.hermes/hermes-agent/venv/bin/hermes}"
+# 驱动 PATH 盲（run5 09-30 实锤再犯）：库内裸 `hermes` 调用面（kanban_list/
+# verify_done_evidence 等）依赖登录 shell 的 PATH，非交互 shell 启动的驱动里
+# `hermes` 不在 PATH → CLI 报 command not found 被 `|| echo '[]'` 吞掉 → 看板
+# 查询恒空、真值闸门永远差一拍。显式把 HERMES_BIN 所在目录前置进 PATH 兜全部裸调用。
+export PATH="$(dirname "$HERMES_BIN"):$PATH"
 # worker 网关解释器（HERMES_HOME/tools/python）裸跑找不到 hermes_cli——必须带
 # PYTHONPATH（09-26 实锤：缺 PATH 致 worker -m hermes_cli.main 两连崩 gave_up）
 _env_sp=$(ls -d "$HOME"/.hermes/installs/*/environments/*/venv/lib/python*/site-packages 2>/dev/null | head -1)
