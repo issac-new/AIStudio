@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
-const { fleetSessionsRef, accountsRef, kanbanTasksRef, matrixRoomsRef, joinedMembersRef, platformsRef, gatewayStateRef, loggedInRef } = vi.hoisted(() => ({
+const { fleetSessionsRef, accountsRef, kanbanTasksRef, matrixRoomsRef, joinedMembersRef, platformsRef, gatewayStateRef, loggedInRef, currentUserNameRef } = vi.hoisted(() => ({
   fleetSessionsRef: { value: [] as Array<{ profile: string }> },
   accountsRef: { value: [] as Array<{ agentTeams?: Array<{ profiles: string[] }> }> },
   kanbanTasksRef: { value: [] as Array<{ status: string; assignee?: string | null }> },
@@ -15,10 +15,11 @@ const { fleetSessionsRef, accountsRef, kanbanTasksRef, matrixRoomsRef, joinedMem
   platformsRef: { value: [] as Array<{ name: string; state: string; profile?: string; icon: string; updated: string }> },
   gatewayStateRef: { value: 'stopped' as string },
   loggedInRef: { value: false as boolean },
+  currentUserNameRef: { value: '' as string },
 }))
 
 vi.mock('@/custom/cockpit/store/cockpit', () => ({
-  useCockpitStore: () => ({ fleetSessions: fleetSessionsRef.value, teams: [] }),
+  useCockpitStore: () => ({ fleetSessions: fleetSessionsRef.value, teams: [], currentUserName: currentUserNameRef.value }),
 }))
 vi.mock('@/custom/matrix-teams/stores/team-registry', () => ({
   useTeamRegistryStore: () => ({ accounts: accountsRef.value }),
@@ -71,6 +72,7 @@ beforeEach(() => {
   platformsRef.value = []
   gatewayStateRef.value = 'stopped'
   loggedInRef.value = false
+  currentUserNameRef.value = ''
 })
 
 describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
@@ -149,5 +151,11 @@ describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
     kanbanTasksRef.value = [{ status: 'running', assignee: 'x' }]
     const { online } = useSitCounts()
     expect(online.value.agents).toBe(3)
+  })
+
+  it('人≥登录本人：matrix client 未建连但 cockpit 会话在 → people ≥ 1（run5 驾驶舱首屏口径）', () => {
+    currentUserNameRef.value = 'fanfan'
+    const { online } = useSitCounts()
+    expect(online.value.people).toBeGreaterThanOrEqual(1)
   })
 })
