@@ -3,11 +3,15 @@
      双按钮合并为一个切换钮——显示目标视图名（collab 态显示 IDE 工作台，
      ide 态显示沟通协作），点击跳另一视图。自算当前视图（V5 补遗⑤ M2 起
      /app/ide → ide，其余 /app 家族 → collab；旧 /ide 兼容重定向已兜）；
-     testid 沿用 ia-viewswitch-row / ia-scenes 保持守门兼容，按钮改 ia-view-toggle。 -->
+     testid 沿用 ia-viewswitch-row / ia-scenes 保持守门兼容，按钮改 ia-view-toggle。
+     2026-09-30 用户裁定：迁入页头品牌位（「驾驶舱」文案退役）并配图标——
+     前导目标视图图标（IDE 工作台=code / 沟通协作=message），尾随切换图标
+     （switch，替换原 ⇄ 文字字符）；自算视图与跳转逻辑不动。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,7 +30,11 @@ function toggleView(): void {
       <button
         type="button" class="ia-scenes__btn ia-scenes__btn--on" data-testid="ia-view-toggle"
         :title="isIde ? t('ia2.nav.collab') : t('ia2.shell.gotoIde')" @click="toggleView"
-      >{{ isIde ? t('ia2.nav.collab') : t('ia2.shell.gotoIde') }} ⇄</button>
+      >
+        <CockpitIcon :name="isIde ? 'message' : 'code'" :size="12" />
+        {{ isIde ? t('ia2.nav.collab') : t('ia2.shell.gotoIde') }}
+        <CockpitIcon name="switch" :size="12" />
+      </button>
     </nav>
   </div>
 </template>
@@ -50,6 +58,8 @@ function toggleView(): void {
   background: transparent; color: var(--text-muted);
   font-size: 12px; font-family: inherit; white-space: nowrap; height: 100%;
   margin: 1px 0; align-self: center;
+  /* 2026-09-30 图标入钮：前导目标视图图标 + 尾随切换图标同行排布 */
+  display: inline-flex; align-items: center; gap: 4px;
   &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
 </style>

@@ -9,6 +9,11 @@
 // ia2.collabSession 与 ia2.commsRoom 的参数名（sessionId/roomId）原样保留——
 // cockpit 适配器与上游 GlobalPendingActions/KanbanTaskDrawer 的深链零改动。
 // board/runs/eng 为工作页（不进场景条）：看板 / 全部运行 / 编排。
+// 收编例外（2026-09-30 用户裁定）：hermes.settings 挂为 /app/settings 子路由
+// （设置页顶部栏+注意力条常显）；路由名保留 hermes.settings——上游
+// useKeyboard/ChatInput/MessageItem/GroupChatInput/DefaultCredentialPrompt 按
+// 名跳零改动；registerRoute → addRoute 同名先删上游顶层记录，旧路径由
+// /hermes/settings 函数式重定向兜住（query 保真）。
 //
 // 纪律：本文件只产纯路由描述和区域元数据，可被 router.resolve 级测试直接消费，
 // 不触发任何懒组件加载。壳层 meta.fullscreen: true。
@@ -205,8 +210,23 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           name: 'ia2.collabGlobalAgentSession',
           component: () => import('@/views/hermes/GlobalAgentView.vue'),
         },
+        {
+          // 设置页收编（2026-09-30 用户裁定）：进入设置页后顶部栏与注意力条
+          // 常显——上游 SettingsView 挂为 /app 壳子路由；路由名保留
+          // hermes.settings，bootstrap 的同名 addRoute 即替换上游顶层记录，
+          // 上游按名跳（Ctrl+, / ChatInput / MessageItem 等）零改动直落本页。
+          path: 'settings',
+          name: 'hermes.settings',
+          component: () => import('@/views/hermes/SettingsView.vue'),
+        },
         ...legacy,
       ],
+    },
+    {
+      // 旧深链兜底（收编配套）：/hermes/settings → 壳内 /app/settings；
+      // 函数式重定向保 query（?tab=display 等 SettingsView 页签深链不丢）。
+      path: '/hermes/settings',
+      redirect: to => ({ path: '/app/settings', query: to.query }),
     },
   ]
 }
