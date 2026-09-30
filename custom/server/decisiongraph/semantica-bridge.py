@@ -5,6 +5,11 @@ studio server 经短生命周期 python 进程读写 Semantica ContextGraph KG �
 避免长驻 sidecar 的状态漂移。写操作进程内串行 + fcntl 文件锁 + tmp/rename 原子落盘。
 
 用法（stdin 传 JSON 免 shell 转义坑）：
+  bridge.py entity  --kg <path>            stdin: {id,type,props,force?}
+                                                → stdout: {ok, added, conflicts:[{entityId,field,existing,incoming}]}
+                                                已存在同 id 且 props 不一致 → 冲突上报不覆盖（force=true 才覆盖）
+  bridge.py relation --kg <path>           stdin: {src,dst,type} → {ok, added}
+  bridge.py kg-summary --kg <path>         → {ok, nodes, edges, byType, recent:[{id,type}]}
   bridge.py record  --kg <path>            stdin: {category,scenario,reasoning,outcome,confidence,decision_maker,metadata,link_precedent}
                                                 → stdout: {ok, decisionId, precedentOf|null}
   bridge.py similar --kg <path>            stdin: {scenario, category?, max?, min_similarity?}
@@ -93,7 +98,7 @@ def dec_dict(d):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("op", choices=["record", "similar", "chain", "list", "status"])
+    ap.add_argument("op", choices=["record", "similar", "chain", "list", "status", "entity", "relation", "kg-summary"])
     ap.add_argument("--kg", required=True)
     ap.add_argument("--id")
     ap.add_argument("--limit", type=int, default=50)
@@ -166,6 +171,83 @@ def main():
             try: n = kg_attr.graph.number_of_nodes()
             except Exception: n = 0
         print(json.dumps({"ok": True, "exists": True, "nodes": n, "decisions": len(store)}))
+        return
+
+    if args.op == "kg-summary":
+        if not os.path.exists(args.kg):
+            print(json.dumps({"ok": True, "nodes": 0, "edges": 0, "byType": {}, "recent": []}))
+            return
+        try:
+            with open(args.kg) as f:
+                kg = json.load(f)
+        except Exception:
+            print(json.dumps({"ok": False, "error": "kg-corrupt"}))
+            sys.exit(3)
+        nodes = kg.get("nodes", [])
+        edges = kg.get("edges", [])
+        by_type = {}
+        for n in nodes:
+            props = n.get("properties", {}) or {}
+            t = props.get("type") or n.get("type", "?")
+            by_type[t] = by_type.get(t, 0) + 1
+        recent = [{"id": n.get("id", ""),
+                   "type": (n.get("properties", {}) or {}).get("type") or n.get("type", "?")}
+                  for n in nodes[-10:]]
+        print(json.dumps({"ok": True, "nodes": len(nodes), "edges": len(edges),
+                          "byType": by_type, "recent": recent}, ensure_ascii=False))
+        return
+
+    if args.op == "entity":
+        req = json.loads(sys.stdin.read() or "{}")
+        if not req.get("id") or not req.get("type"):
+            print(json.dumps({"ok": False, "error": "id/type-required"}))
+            sys.exit(4)
+
+        def do_entity():
+            existing_props = None
+            if os.path.exists(args.kg):
+                try:
+                    with open(args.kg) as f:
+                        kg_raw = json.load(f)
+                    for n in kg_raw.get("nodes", []):
+                        if n.get("id") == req["id"]:
+                            existing_props = n.get("properties", {})
+                            break
+                except Exception:
+                    existing_props = None
+            incoming = dict(req.get("props") or {})
+            if existing_props is not None and existing_props != incoming:
+                changed = {k: {"existing": existing_props.get(k), "incoming": incoming.get(k)}
+                           for k in (set(existing_props) | set(incoming)) - {"content"}
+                           if existing_props.get(k) != incoming.get(k)}
+                if not req.get("force"):
+                    # 冲突不覆盖（丙8）：如实上报，写保护；裁决后 force 重写。
+                    return {"ok": True, "added": False,
+                            "conflicts": [{"entityId": req["id"], "field": k, "existing": v["existing"],
+                                           "incoming": v["incoming"]} for k, v in changed.items()]}
+            g = load_graph(args.kg)
+            g.add_node(str(req["id"])[:128], str(req["type"])[:64], **{
+                str(k): v for k, v in incoming.items()})
+            save_atomic(g, args.kg)
+            return {"ok": True, "added": True, "conflicts": []}
+
+        print(json.dumps(with_lock(args.kg, do_entity), ensure_ascii=False))
+        return
+
+    if args.op == "relation":
+        req = json.loads(sys.stdin.read() or "{}")
+        if not req.get("src") or not req.get("dst"):
+            print(json.dumps({"ok": False, "error": "src/dst-required"}))
+            sys.exit(4)
+
+        def do_relation():
+            g = load_graph(args.kg)
+            g.add_edge(str(req["src"])[:128], str(req["dst"])[:128],
+                       str(req.get("type", "related_to"))[:64])
+            save_atomic(g, args.kg)
+            return {"ok": True, "added": True}
+
+        print(json.dumps(with_lock(args.kg, do_relation), ensure_ascii=False))
         return
 
     # record

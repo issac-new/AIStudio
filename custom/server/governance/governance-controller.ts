@@ -35,6 +35,9 @@ import { qgateRunRoots } from './governance-analytics'
 import { loadDecisionRules } from './decision-rules'
 import { causalChain, kgStatus, listDecisions } from '../decisiongraph/semantica-client'
 import { recordGateRunDecision } from '../decisiongraph/decision-recorder'
+import {
+  boardGraphSummary, listConflictInbox, resolveConflictInbox, syncAllBoardGraphs, syncBoardGraph,
+} from '../knowledge/board-graph'
 import { readDispatchLedger } from './dispatch-ledger'
 
 const router = new Router({ prefix: '/api/governance' })
@@ -370,6 +373,39 @@ router.post('/decision-graph/sync-gates', async (ctx) => {
   }
   writeGateSyncMarker(seen)
   ctx.body = { ok: true, ingested, totalSeen: seen.size }
+})
+
+// ---- 板级共享知识图谱（丙7/丙8，2026-09-30 调研落地） ----
+router.post('/knowledge-graph/sync', async (ctx) => {
+  const board = typeof ctx.query.board === 'string' && ctx.query.board ? ctx.query.board : null
+  const results = board ? [await syncBoardGraph(board)] : await syncAllBoardGraphs()
+  ctx.body = { ok: true, results }
+})
+
+router.get('/knowledge-graph/summary', async (ctx) => {
+  const board = typeof ctx.query.board === 'string' && ctx.query.board ? ctx.query.board : 'main'
+  ctx.body = { ok: true, ...(await boardGraphSummary(board)) }
+})
+
+router.get('/knowledge-graph/conflicts', async (ctx) => {
+  ctx.body = { ok: true, inbox: listConflictInbox() }
+})
+
+router.post('/knowledge-graph/conflicts/resolve', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { inboxId, action } = body as { inboxId?: unknown; action?: unknown }
+  if (typeof inboxId !== 'string' || !inboxId || (action !== 'keep-existing' && action !== 'take-incoming')) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'inboxId 必填；action 须为 keep-existing|take-incoming' }
+    return
+  }
+  const hit = resolveConflictInbox(inboxId, action)
+  if (!hit) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: '收件箱条目不存在' }
+    return
+  }
+  ctx.body = { ok: true, entry: hit }
 })
 
 // ---- 决策规则注册表（乙6 投影） ----
