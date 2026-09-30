@@ -313,7 +313,20 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
 # ── 仓库/房间真值 ───────────────────────────────────────
 repo_has() { # <path-in-repo>（导演 clone 拉最新后核验）
   git -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
-  git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1
+  git -C "$DIRECTOR_CLONE" show "origin/main:$1" >/dev/null 2>&1 || return 1
+  # 工件新鲜度（run5 教训：旧轮 AN-*/T-* 稿未被 mx-clean 清掉，"文件存在"被旧稿
+  # 满足=假真值）。文件在 origin/main 的最后提交时间必须 ≥ 本轮首次起跑时刻；
+  # run_started_at 缺键（旧轮 state）时保持旧语义并告警，不静默放行新代码路径。
+  local _rs
+  _rs="$(sget run_started_at)"
+  if [ -z "$_rs" ]; then
+    log "[观察] repo_has 无 run_started_at 键（旧 state 兼容），跳过新鲜度窗口：$1"
+    return 0
+  fi
+  local _ct
+  _ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/main" -- "$1" 2>/dev/null)"
+  [ -n "$_ct" ] || return 1
+  (( _ct >= _rs ))
 }
 # repo_pull（Z3）：只刷引用、不动当前分支/工作树。旧写法 `git pull origin main` 会把
 # origin/main merge 进当前分支——defect 步后 HEAD 停在 integration/${RFD_ID}，pull 即把
