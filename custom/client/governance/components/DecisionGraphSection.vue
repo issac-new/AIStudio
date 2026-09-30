@@ -102,7 +102,9 @@ const categoryZh = (c: string | null): string => ({
 }[c ?? ''] ?? (c ?? '—'))
 
 function fmtTs(ts: number | null): string {
-  return ts ? new Date(ts).toLocaleString('zh-CN', { hour12: false }) : '—'
+  // 跟随应用 locale（zh→zh-CN，其余 en 族→en）：硬编码 zh-CN 会让 en 用户看到中文格式时间戳
+  const loc = String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh')
+  return ts ? new Date(ts).toLocaleString(loc.startsWith('zh') ? 'zh-CN' : 'en', { hour12: false }) : '—'
 }
 
 onMounted(() => void refresh())

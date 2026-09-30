@@ -13,3 +13,6 @@ tests/
 .runtime-cache/
 __pycache__/
 runtime/
+
+# worktree 环境的上游符号链（主 checkout 中 upstream/ 是仓外真实目录，不入库）
+/upstream

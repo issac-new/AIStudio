@@ -8,6 +8,8 @@ const shots = '/tmp/run-surface-fusion-shots'
 mkdirSync(shots, { recursive: true })
 
 const browser = await chromium.launch({ channel: 'chrome' })
+// try/finally 保证中途异常也关浏览器：曾无兜底，任一断言抛错即泄漏 Chrome 子进程
+try {
 const page = await browser.newPage({ viewport: { width: 1560, height: 940 } })
 await page.addInitScript(() => {
   try { localStorage.setItem('hermes_ide_sidepane', JSON.stringify({ open: true, tab: 'workflow', width: 340 })) } catch {}
@@ -86,7 +88,12 @@ if (ideSchedOk) {
   await page.screenshot({ path: `${shots}/06-ide-schedule-modal.png` })
 }
 
-await browser.close()
+} catch (e) {
+  console.error('[walkthrough] 中途异常，已保留已完成断言：', e?.message || e)
+  process.exitCode = 1
+} finally {
+  await browser.close().catch(() => {})
+}
 
 const pass = results.filter(r => r.ok).length
 console.log(`\n===== 走查结果 ${pass}/${results.length} =====`)

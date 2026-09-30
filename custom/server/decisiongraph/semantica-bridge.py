@@ -47,13 +47,26 @@ def save_atomic(g, kg_path):
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(kg_path)) or ".",
                                prefix=".kg-", suffix=".json")
     os.close(fd)
-    g.save_to_file(tmp)
-    os.replace(tmp, kg_path)
+    try:
+        g.save_to_file(tmp)
+        os.replace(tmp, kg_path)
+    except Exception:
+        # 失败清理临时文件：残留 .kg-*.json 会在 semantica 目录里无限累积
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def with_lock(kg_path, fn):
-    """写前取 .lock 排他锁（带超时，锁文件常驻无害）。"""
-    import fcntl
+    """写前取 .lock 排他锁（带超时，锁文件常驻无害）。
+    无 fcntl 的平台（Windows）降级为无锁执行：单写者部署下正确性不受损，
+    仅跨进程并发写失去互斥（fail-soft，不阻塞全部写操作）。"""
+    try:
+        import fcntl
+    except ImportError:
+        return fn()
     lock_path = kg_path + ".lock"
     os.makedirs(os.path.dirname(os.path.abspath(lock_path)) or ".", exist_ok=True)
     with open(lock_path, "w") as lf:
@@ -143,6 +156,12 @@ def main():
         decisions = []
         for did, d in store.items():
             dd = dec_dict(d) if not isinstance(d, dict) else dec_dict(d)
+            # Decision 模型的时间字段是 timestamp（无 created_at）；datetime 必须 isoformat
+            # 成字符串，否则 json.dumps 直接 TypeError 且排序键恒空（新→旧排序名存实亡）。
+            raw_at = (d.get("timestamp") or d.get("created_at")) if isinstance(d, dict) \
+                else getattr(d, "timestamp", None) or getattr(d, "created_at", None)
+            if raw_at is not None and hasattr(raw_at, "isoformat"):
+                raw_at = raw_at.isoformat()
             decisions.append({
                 "id": dd.get("id") or did,
                 "category": dd.get("category"),
@@ -150,7 +169,7 @@ def main():
                 "outcome": dd.get("outcome"),
                 "confidence": dd.get("confidence"),
                 "decidedBy": dd.get("decidedBy"),
-                "at": (getattr(d, "created_at", None) if not isinstance(d, dict) else d.get("created_at")),
+                "at": raw_at,
             })
         decisions = [d for d in decisions if d.get("id")]
         decisions.sort(key=lambda x: str(x.get("at") or ""), reverse=True)
@@ -225,6 +244,10 @@ def main():
                     return {"ok": True, "added": False,
                             "conflicts": [{"entityId": req["id"], "field": k, "existing": v["existing"],
                                            "incoming": v["incoming"]} for k, v in changed.items()]}
+                # force 裁决=改争议字段，其余属性必须保留：semantica add_node 是整节点替换
+                # （_add_internal_node 直接 self.nodes[id]=node），只传单字段 props 会把
+                # title/status 等既有属性清空，且下轮同步因 props 不一致再报冲突（循环）。
+                incoming = {**{k: v for k, v in existing_props.items() if k != "content"}, **incoming}
             g = load_graph(args.kg)
             g.add_node(str(req["id"])[:128], str(req["type"])[:64], **{
                 str(k): v for k, v in incoming.items()})

@@ -139,7 +139,9 @@ export async function dispatchColumnTransition(
       // 预算耗尽抛 BudgetExhaustedError 拒绝派发；warn（默认）日志放行并记档。
       await checkDispatchBudget(step.specialist || step.id)
       // 决策规则闸（乙6，2026-09-30 调研落地）：enforce 模式 deny 命中抛 DecisionRuleError。
-      checkDecisionRulesForDispatch({ specialist: step.specialist || undefined })
+      // column 必须随预检传入：漏传时 column 谓词的 deny 规则不命中预检（只落事后
+      // ruleEvals 不抛），enforce 对这类规则名存实亡。
+      checkDecisionRulesForDispatch({ specialist: step.specialist || undefined, column: trigger.column })
     }
   }
   const outcomes: MentionOutcome[] = []

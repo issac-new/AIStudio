@@ -12,15 +12,19 @@ const RUN_SURFACE_TEXT = {
     tabWorkflows: '工作流',
     ctaWorkflows: '查看工作流运行',
     tabObservatory: '全链路追踪',
+    tabGovernance: '治理中心',
   },
   en: {
     tabWorkflows: 'Workflows',
     ctaWorkflows: 'View workflow runs',
     tabObservatory: 'Observatory',
+    tabGovernance: 'Governance',
   },
 } as const
 
-export type RunSurfaceText = typeof RUN_SURFACE_TEXT.zh
+// 值放宽为 string：as const 下 zh/en 字面量类型互斥，computed<typeof zh> 会拒收 en 分支
+// （TS2322）；键完整性仍由 Record 强制——任一字典缺键在类型面即红（24h 审查 P3）。
+export type RunSurfaceText = Record<keyof typeof RUN_SURFACE_TEXT.zh, string>
 
 /** 运行面词条（locale 响应式跟随；t('runcenter.tab.workflows') 等键位语义对齐 473 命名空间） */
 export function useRunSurfaceText() {

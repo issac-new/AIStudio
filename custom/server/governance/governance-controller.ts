@@ -354,8 +354,10 @@ router.get('/decision-graph/chain', async (ctx) => {
 
 /** qgate 门禁判定摄取（乙4·gate 面）：新 run 落 KG，seen 标记防重（marker 文件）。 */
 router.post('/decision-graph/sync-gates', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面（KG 摄取+marker 落盘）与 registry/matrix 写端点同闸
   const seen = readGateSyncMarker()
   let ingested = 0
+  let failed = 0
   for (const root of qgateRunRoots()) {
     let files: string[] = []
     try { files = readdirSync(root).filter((f) => /^run-.*\.json$/.test(f)) } catch { continue }
@@ -364,17 +366,18 @@ router.post('/decision-graph/sync-gates', async (ctx) => {
       if (seen.has(key)) continue
       try {
         const j = JSON.parse(readFileSync(join(root, f), 'utf8')) as { verdict?: string; gateId?: string; gate?: string }
-        recordGateRunDecision({
+        // 成功才记 marker：落账失败（bridge 缺席/超时）不写键，下轮同步自动重试——
+        // 先记后写会把失败的 run 永久标成已摄取（丢单，对照 board-graph 同步的同款约定）
+        const ok = await recordGateRunDecision({
           runId: f.replace(/\.json$/, ''), verdict: String(j.verdict ?? 'unknown').toLowerCase(),
           gateId: j.gateId, gateName: j.gate,
         })
-        seen.add(key)
-        ingested += 1
+        if (ok) { seen.add(key); ingested += 1 } else { failed += 1 }
       } catch { /* 坏文件跳过 */ }
     }
   }
   writeGateSyncMarker(seen)
-  ctx.body = { ok: true, ingested, totalSeen: seen.size }
+  ctx.body = { ok: true, ingested, failed, totalSeen: seen.size }
 })
 
 // ---- 双时态回放 + PROV-O 导出（丁9/丁10，2026-09-30 调研落地） ----
@@ -399,6 +402,7 @@ router.get('/audit-log/prov-o', async (ctx) => {
 
 // ---- 板级共享知识图谱（丙7/丙8，2026-09-30 调研落地） ----
 router.post('/knowledge-graph/sync', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 写面（KG 摄取/冲突重写）与 registry/matrix 写端点同闸
   const board = typeof ctx.query.board === 'string' && ctx.query.board ? ctx.query.board : null
   const results = board ? [await syncBoardGraph(board)] : await syncAllBoardGraphs()
   ctx.body = { ok: true, results }
@@ -414,6 +418,7 @@ router.get('/knowledge-graph/conflicts', async (ctx) => {
 })
 
 router.post('/knowledge-graph/conflicts/resolve', async (ctx) => {
+  if (superAdminDenied(ctx)) return  // 裁决含 force 重写实体，写面与 registry/matrix 写端点同闸
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const { inboxId, action } = body as { inboxId?: unknown; action?: unknown }
   if (typeof inboxId !== 'string' || !inboxId || (action !== 'keep-existing' && action !== 'take-incoming')) {

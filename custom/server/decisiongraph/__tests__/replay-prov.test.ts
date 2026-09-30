@@ -69,14 +69,17 @@ describe('双时态回放（丁9）：快照择近 + 精度标注 + 裁剪', () 
     // python 缺席：决策列表空但 snapshotTs 仍如实
     expect(beforeMid.decisions).toEqual([])
 
-    // 裁剪：塞满 SNAP_MAX+10 份，prune 后 ≤SNAP_MAX（借 snapshotStats 间接验）
+    // 裁剪：塞满 SNAP_MAX+10 份 → prune 后恰余 SNAP_MAX（保留最新一批，最旧的被删）。
+    // pruneSnapshots 直接驱动（曾只经 snapshotNow 内部调用，测试触达不了=零覆盖，
+    // 且断言方向反着写：断"超限未被裁剪"+常量恒真式，剪坏也绿）。
     for (let i = 0; i < SNAP_MAX + 10; i++) {
       writeFileSync(join(snaps, `kg-${4000000000000 + i}.json`), '{}')
     }
-    const { snapshotStats } = await import('../replay')
-    // 裁剪发生在 snapshotNow 内部；这里直接验 prune 行为约束（列表超限时外部可观察）
-    expect(snapshotStats().count).toBeGreaterThan(SNAP_MAX)  // 未触发 prune 前如实多
-    expect(SNAP_MAX).toBe(50)
+    const { pruneSnapshots, snapshotStats } = await import('../replay')
+    expect(snapshotStats().count).toBe(3 + SNAP_MAX + 10)  // prune 前 63 份如实
+    pruneSnapshots()
+    expect(snapshotStats().count).toBe(SNAP_MAX)  // 超限裁剪到 SNAP_MAX
+    expect(listSnapshots()[0].ts).toBe(4000000000010)  // 最早 13 份（含 3 份早期）已删
   })
 })
 
