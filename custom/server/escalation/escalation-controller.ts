@@ -15,6 +15,7 @@ import {
   listPending, loadEscalation, requestEscalation,
   type EscalationRequest,
 } from './escalation-store'
+import { recordEscalationDecision } from '../decisiongraph/decision-recorder'
 
 const router = new Router({ prefix: '/api/escalation' })
 
@@ -60,6 +61,11 @@ router.post('/:id/decide', async (ctx) => {
     ctx.body = { ok: false, detail: result.error }
     return
   }
+  // 决策落账（乙4）：升级裁决进 KG（fire-and-forget，失败不打断 REST 响应）。
+  recordEscalationDecision({
+    escalationId: result.escalationId, fromAgent: result.fromAgent, tool: result.scope.tool,
+    verdict, by: result.decision?.by ?? 'coordinator', note: result.decision?.note,
+  })
   ctx.body = { ok: true, request: result }
 })
 

@@ -312,7 +312,7 @@ function walkUp(rel: string, fromDir: string): string | null {
 }
 
 /** qgate runs 扫描根：GOVERNANCE_QGATE_RUNS 覆盖（逗号分隔）；默认 cwd/.qgate + 仓根上寻（__dirname 与 cwd 双起点，覆盖注入树/打包 shim/开发树三形态）+ 示例仓。 */
-function qgateRunRoots(): string[] {
+export function qgateRunRoots(): string[] {
   const env = process.env.GOVERNANCE_QGATE_RUNS?.trim()
   if (env) return env.split(',').map((s) => resolve(s.trim().replace(/^~/, homedir()))).filter(Boolean)
   const roots: string[] = []
