@@ -34,7 +34,11 @@ export const usePlatformsStore = defineStore('ia2-platforms', () => {
 
   function projectLoadedPlatforms(data: unknown): PlatformInfo[] {
     if (!data || typeof data !== 'object') return []
-    const loaded = (data as { loaded_platforms?: unknown }).loaded_platforms
+    // 双态兼容（run5 2026-09-30 实锤恒零根因）：新版网关回 loaded_platforms，
+    // 安装树 0.21.5 回 platforms——只认新键时旧网关下投影恒空、在线三数全零，
+    // 守门测试 mock 新键全绿而运行态全红（测试面与运行面 schema 脱节的实例）。
+    const d = data as { loaded_platforms?: unknown; platforms?: unknown }
+    const loaded = d.loaded_platforms ?? d.platforms
     if (!loaded || typeof loaded !== 'object' || Array.isArray(loaded)) return []
     const profiles = new Set(
       Array.isArray((data as { served_profiles?: unknown }).served_profiles)
