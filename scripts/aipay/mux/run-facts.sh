@@ -19,7 +19,7 @@ kv() { # key value…
 : > "$OUT"
 # 代码线（服务面）
 CODE_LINE=$(git -C "$WT" log -1 --format='%h %ci %s' 2>/dev/null | head -c 160)
-[ -n "$CODE_LINE" ] && kv code_line "overlay feat/v5-run4-report（main ba8b6c70+run4 批）@ $CODE_LINE；studio dist=私有上游沙箱隔离注入构建（.wxwork/v5run4-sb）"
+[ -n "$CODE_LINE" ] && kv code_line "overlay feat/v5-run4-report（main ba8b6c70+run4 批）@ ${CODE_LINE}；studio dist=私有上游沙箱隔离注入构建（.wxwork/v5run4-sb）"
 # 注入与构建
 SERIES_N=$(grep -cv '^\s*#' "$WT/patches/series" 2>/dev/null || echo 0)
 kv inject_count "$SERIES_N 补丁全系列（含 525）私有沙箱重放 + build:full 绿（verify-dist 过：index.html 4141B/assets js 6）"
@@ -55,5 +55,5 @@ kv stack "单 gateway :8801（hermes 0.21.5 多路复用 15 平台）+ 单 studi
 {
   echo 'limitation=审批人独立性=单操作者无人值守环境局限（G5 HumanGate=导演批准，产品级独立审批线收件箱已具）;;run4 驱动首启 PATH 缺 hermes 致 kanban_list 全盲（register 二窗误杀后带正 PATH 续跑，agent 实况无恙——kanban_list 静默吞错列 harness 修复项）;;LLM 通道 aim/custom(cc-switch) 回切抖动致子代理 turn 中断重定向（群内真实流量在案，恢复后继续）'
 } >> "$OUT"
-echo "run-facts.env 写入 $OUT："
+echo "run-facts.env 写入 ${OUT}："
 cat "$OUT"
