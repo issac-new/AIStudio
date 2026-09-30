@@ -15,12 +15,53 @@
 import { matchColumnTransition, isSafeStep, type ColumnTransitionTrigger, type AutomationStep } from './column-automation'
 import { MentionDispatchService, type MentionOutcome } from '../zcode/mention-dispatch'
 import { checkDispatchBudget } from '../governance/governance-budget'
-import { loadActionContracts, buildDispatchSemanticContext } from '../governance/governance-ledger'
+import { loadActionContracts, buildDispatchSemanticContext, loadCapabilityLedger, loadMetricsDefs } from '../governance/governance-ledger'
 import { appendDispatchOutcome } from '../governance/dispatch-ledger'
+import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluation } from '../governance/decision-rules'
+import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
   outcomes: MentionOutcome[]
+  /**
+   * 授权五要素完备性（甲3，2026-09-30 调研落地）：每 step 检"责任/空间/资源/约束/
+   * 结果标准"五要素，缺项只 warn 不拦截——先让缺口可见，再谈强制。
+   */
+  delegation: DelegationCheck[]
+  /** 决策规则闸求值（乙6）：mode + 命中规则（enforce 时 deny 已在派发前抛出）。 */
+  rules: RuleEvaluation[]
+  /** 先例检索是否注入（乙5）：null=KG 缺席/无先例。 */
+  precedents: Array<{ stepId: string; line: string | null }>
+}
+
+/** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
+export type DelegationElement = 'responsibility' | 'space' | 'resource' | 'constraint' | 'outcomeStandard'
+
+export interface DelegationCheck {
+  stepId: string
+  elements: Record<DelegationElement, boolean>
+  missing: DelegationElement[]
+}
+
+/**
+ * 授权五要素完备性检查（甲3）：责任=role/specialist 已声明；空间=autonomy 已声明；
+ * 资源=SLO 档经台账单元可查（语义上下文同源）；约束=constraints 非空；结果标准=
+ * 契约块恒在（contractFooter 永远拼上）。台账注册表缺席时 resource 如实 false。
+ */
+export function delegationCompleteness(steps: AutomationStep[]): DelegationCheck[] {
+  const ledger = loadCapabilityLedger().doc
+  const metrics = loadMetricsDefs().doc as { sloTargets?: Record<string, unknown> } | null
+  return steps.map((s) => {
+    const unit = ledger?.units.find((u) => u.id === (s.specialist || s.id))
+    const elements: Record<DelegationElement, boolean> = {
+      responsibility: Boolean(s.role || s.specialist),
+      space: typeof s.autonomy === 'string' && s.autonomy.length > 0,
+      resource: Boolean(unit && metrics?.sloTargets?.[unit.sloTier]),
+      constraint: Array.isArray(s.constraints) && s.constraints.length > 0,
+      outcomeStandard: true,
+    }
+    return { stepId: s.id, elements, missing: (Object.keys(elements) as DelegationElement[]).filter((k) => !elements[k]) }
+  })
 }
 
 /** 配置/校验错误（≠引擎不可达）：REST 侧按 400 配置错误回报，不谎报 engine_unreachable。 */
@@ -54,18 +95,22 @@ function contractFooter(): string {
   ].join('')
 }
 
-function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number): string {
+function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
   // 第五期 ①：语义上下文块（agent 消费本体）——单元/能力/SLO 目标/判定词表随负载下发，
   // buildDispatchSemanticContext 内部 fail-soft（注册表缺该单元返回 null 不占行）。
   const semantic = steps[index].specialist
     ? buildDispatchSemanticContext(steps[index].specialist || '')
     : null
+  const step = steps[index]
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
-    `本次派发第 ${index + 1} 步：${steps[index].id}${trigger.autoAdvanceOnSuccess ? '（全部步骤完成后由人工/编排推进列）' : ''}。`,
+    `本次派发第 ${index + 1} 步：${step.id}${trigger.autoAdvanceOnSuccess ? '（全部步骤完成后由人工/编排推进列）' : ''}。`,
     `请按职责处理列 ${trigger.column} 的当前任务。`,
+    ...(step.autonomy ? [`授权空间：${step.autonomy}（在此范围内可自主决策，无需回问）`] : []),
+    ...(step.constraints?.length ? [`约束（硬边界，越界须升级申请）：${step.constraints.map((c, i) => `${i + 1}. ${c}`).join('；')}`] : []),
+    ...(precedentLine ? [precedentLine] : []),
     ...(semantic ? [semantic] : []),
     contractFooter(),
   ].join('\n')
@@ -93,17 +138,31 @@ export async function dispatchColumnTransition(
       // SLO 错误预算闸（4A 治理层 ③）：GOVERNANCE_SLO_BUDGET=enforce 时 core 档
       // 预算耗尽抛 BudgetExhaustedError 拒绝派发；warn（默认）日志放行并记档。
       await checkDispatchBudget(step.specialist || step.id)
+      // 决策规则闸（乙6，2026-09-30 调研落地）：enforce 模式 deny 命中抛 DecisionRuleError。
+      checkDecisionRulesForDispatch({ specialist: step.specialist || undefined })
     }
   }
   const outcomes: MentionOutcome[] = []
+  const delegation: DelegationCheck[] = []
+  const ruleEvals: RuleEvaluation[] = []
+  const precedents: Array<{ stepId: string; line: string | null }> = []
   for (const trigger of triggers) {
+    delegation.push(...delegationCompleteness(trigger.steps))
     for (const [index, step] of trigger.steps.entries()) {
+      // 规则闸求值随结果返回（enforce 已在预检抛出；这里收集 warn 档命中供 REST 透出）。
+      ruleEvals.push(evaluateDecisionRules({ specialist: step.specialist || undefined, column: trigger.column }))
+      // 先例检索（乙5）：预算 5s + TTL 缓存，fail-soft 无先例不占行。
+      const scenarioKey = `${trigger.column}:${step.specialist ?? step.provider}`
+      const precedent = await precedentLineFor(
+        scenarioKey,
+        `[kanban:${trigger.column}] ${step.specialist ?? step.provider} ${step.role ?? ''}`,
+      ).catch(() => null)
+      const precedentLine = precedent?.line ?? null
+      precedents.push({ stepId: step.id, line: precedentLine })
       // step→agent 派单：provider 已过词表校验才拼进目标 token；简报文本同理。
-      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index)}`
+      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine)}`
       const stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text })
       outcomes.push(...stepOutcomes)
-      // 派发结果台账（4A 第三期）：column 条目归因到 specialist/role/列，同 commandId
-      // 与引擎单例落的 mention 条目去重（统计面优先取本条目）。
       for (const o of stepOutcomes) {
         appendDispatchOutcome({
           kind: 'column', target: step.provider, specialist: step.specialist || undefined,
@@ -111,8 +170,14 @@ export async function dispatchColumnTransition(
           commandId: o.commandId, sessionId: o.sessionId, workspaceId: o.workspaceId,
           detail: o.detail?.slice(0, 200),
         })
+        // 决策落账（乙4）：派发路由决策进 KG，fire-and-forget 不等不抛。
+        recordDispatchDecision({
+          column: trigger.column, specialist: step.specialist || undefined, role: step.role || undefined,
+          provider: step.provider, reason: o.reason, commandId: o.commandId, text,
+        })
       }
     }
   }
-  return { triggers, outcomes }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents }
 }
+

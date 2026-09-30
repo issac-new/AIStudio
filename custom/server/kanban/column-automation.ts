@@ -40,11 +40,22 @@ export function isAutomationProvider(v: unknown): v is AutomationProvider {
   return typeof v === 'string' && (AUTOMATION_PROVIDERS as readonly string[]).includes(v)
 }
 
+/** autonomy 上限（一句话）；constraints 每条上限与条数上限——授权要素（甲3）注入面限幅。 */
+export const STEP_AUTONOMY_MAX = 200
+export const STEP_CONSTRAINT_MAX = 120
+export const STEP_CONSTRAINT_COUNT_MAX = 5
+
 /** step 全字段校验（load 侧跳过坏条目 / 派单侧拼文本前复验共用）。 */
 export function isSafeStep(step: AutomationStep): boolean {
+  const autonomyOk = step.autonomy === undefined
+    || (typeof step.autonomy === 'string' && step.autonomy.length > 0 && step.autonomy.length <= STEP_AUTONOMY_MAX)
+  const constraintsOk = step.constraints === undefined
+    || (Array.isArray(step.constraints) && step.constraints.length <= STEP_CONSTRAINT_COUNT_MAX
+      && step.constraints.every((c) => typeof c === 'string' && c.length > 0 && c.length <= STEP_CONSTRAINT_MAX))
   return isSafeStepLabel(step.id) && isSafeStepLabel(step.role)
     && (step.specialist === '' || isSafeStepLabel(step.specialist))
     && isAutomationProvider(step.provider)
+    && autonomyOk && constraintsOk
 }
 
 export interface AutomationStep {
@@ -52,6 +63,16 @@ export interface AutomationStep {
   role: string
   specialist: string
   provider: string
+  /**
+   * 授权五要素之「空间」（甲3，2026-09-30 调研落地）：允许 agent 自主决策的范围
+   * （一句话，≤200 字符）。缺省=未声明（完备性检查 warn，不拦截）。
+   */
+  autonomy?: string
+  /**
+   * 授权五要素之「约束」（甲3）：禁改路径/预算上限/时间盒等硬边界（每条 ≤120 字符，
+   * 至多 5 条）。「给资源，也给约束；允许不同路径，同时守住结果标准」。
+   */
+  constraints?: string[]
 }
 
 export interface ColumnAutomation {
@@ -105,7 +126,7 @@ export function loadColumnAutomations(): Record<string, ColumnAutomation> {
           const steps: AutomationStep[] = []
           if (Array.isArray(d.steps)) {
             for (const st of d.steps) {
-              const s = st as { id?: unknown; role?: unknown; specialist?: unknown; provider?: unknown } | null
+              const s = st as { id?: unknown; role?: unknown; specialist?: unknown; provider?: unknown; autonomy?: unknown; constraints?: unknown } | null
               if (!s || typeof s !== 'object') {
                 console.warn(`[columns] 列 ${name} 含空 step 条目，跳过`)
                 continue
@@ -115,6 +136,10 @@ export function loadColumnAutomations(): Record<string, ColumnAutomation> {
                 role: typeof s.role === 'string' ? s.role : '',
                 specialist: typeof s.specialist === 'string' ? s.specialist : '',
                 provider: typeof s.provider === 'string' ? s.provider : 'zcode',
+                ...(typeof s.autonomy === 'string' && s.autonomy ? { autonomy: s.autonomy } : {}),
+                ...(Array.isArray(s.constraints)
+                  ? { constraints: (s.constraints as unknown[]).filter((c): c is string => typeof c === 'string' && c.length > 0) }
+                  : {}),
               }
               // 词表/字符集校验（P-D(d)）：违规 step 如实进表并 warn（配置面能看到原样），
               // 拼文本前由 column-dispatch isSafeStep 硬拦（配置错误≠引擎不可达）。

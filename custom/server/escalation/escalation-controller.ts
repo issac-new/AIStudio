@@ -1,18 +1,21 @@
 /**
  * 权限升级协议 REST（/api/escalation）——routa §七#7 吸收（矩阵 §3.6 P1）。
  *
- * POST /api/escalation           发起（urgency 三档；幂等 escalationId）
+ * POST /api/escalation           发起（urgency 三档；幂等 escalationId；enforce 模式下同 scope 未归因前科拒收）
  * GET  /api/escalation/pending   待决队列（urgency 高在前，routa listPendingPermissions）
  * POST /api/escalation/:id/decide 裁决（approved 可附 sandboxConstraints→联动 402 规则；一次定音）
+ * POST /api/escalation/:id/attribution 机制归因（甲2：裁决后结案断点五选一；一次定音）
  * GET  /api/escalation/:id       查询
  *
  * 挂载：B 类 patch 455（统一挂载）在 bootstrap/routes.ts。
  */
 import Router from '@koa/router'
 import {
-  decideEscalation, isEscalationUrgency, listPending, loadEscalation, requestEscalation,
+  attributeEscalation, decideEscalation, isEscalationUrgency, isMechanismGap,
+  listPending, loadEscalation, requestEscalation,
   type EscalationRequest,
 } from './escalation-store'
+import { recordEscalationDecision } from '../decisiongraph/decision-recorder'
 
 const router = new Router({ prefix: '/api/escalation' })
 
@@ -53,6 +56,33 @@ router.post('/:id/decide', async (ctx) => {
     note: typeof body.note === 'string' ? body.note : undefined,
     sandboxConstraints: Array.isArray(body.sandboxConstraints) ? body.sandboxConstraints as never : undefined,
   })
+  if ('error' in result) {
+    ctx.status = result.error.includes('不存在') ? 404 : 409
+    ctx.body = { ok: false, detail: result.error }
+    return
+  }
+  // 决策落账（乙4）：升级裁决进 KG（fire-and-forget，失败不打断 REST 响应）。
+  recordEscalationDecision({
+    escalationId: result.escalationId, fromAgent: result.fromAgent, tool: result.scope.tool,
+    verdict, by: result.decision?.by ?? 'coordinator', note: result.decision?.note,
+  })
+  ctx.body = { ok: true, request: result }
+})
+
+// 机制归因（甲2，2026-09-30 调研落地）：已裁决升级结案时补断点判定。
+router.post('/:id/attribution', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  if (!isMechanismGap(body.gap)) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'gap 须为 information|authority|capability|resource|feedback|none' }
+    return
+  }
+  const result = attributeEscalation(
+    ctx.params.id,
+    body.gap,
+    typeof body.by === 'string' && body.by ? body.by : 'coordinator',
+    typeof body.note === 'string' ? body.note : undefined,
+  )
   if ('error' in result) {
     ctx.status = result.error.includes('不存在') ? 404 : 409
     ctx.body = { ok: false, detail: result.error }

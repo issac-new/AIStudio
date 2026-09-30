@@ -18,8 +18,9 @@
  */
 import Router from '@koa/router'
 import { execFile } from 'child_process'
-import { existsSync } from 'fs'
-import { resolve } from 'path'
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
+import { join, resolve } from 'path'
+import { homedir } from 'os'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
@@ -29,9 +30,42 @@ import { crossMachineDispatchStats } from './governance-crossdispatch'
 import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount } from './registry-admin'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns } from './governance-analytics'
 import { auditLog } from './governance-audit'
+import { orgDiagnosis } from './org-diagnosis'
+import { qgateRunRoots } from './governance-analytics'
+import { loadDecisionRules } from './decision-rules'
+import { listSnapshots, replayDecisions, snapshotStats } from '../decisiongraph/replay'
+import { provExport } from './prov-o'
+import { causalChain, kgStatus, listDecisions } from '../decisiongraph/semantica-client'
+import { recordGateRunDecision } from '../decisiongraph/decision-recorder'
+import {
+  boardGraphSummary, listConflictInbox, resolveConflictInbox, syncAllBoardGraphs, syncBoardGraph,
+} from '../knowledge/board-graph'
 import { readDispatchLedger } from './dispatch-ledger'
 
 const router = new Router({ prefix: '/api/governance' })
+
+/** gate 同步 seen 标记（~/.hermes-web-ui/overlay/gate-sync-marker.json；GOVERNANCE_GATE_SYNC_MARKER 覆盖）。 */
+function gateSyncMarkerPath(): string {
+  const env = process.env.GOVERNANCE_GATE_SYNC_MARKER?.trim()
+  if (env) return resolve(env)
+  return resolve(homedir(), '.hermes-web-ui', 'overlay', 'gate-sync-marker.json')
+}
+
+function readGateSyncMarker(): Set<string> {
+  try {
+    return new Set(JSON.parse(readFileSync(gateSyncMarkerPath(), 'utf8')) as string[])
+  } catch { return new Set() }
+}
+
+function writeGateSyncMarker(seen: Set<string>): void {
+  try {
+    const file = gateSyncMarkerPath()
+    mkdirSync(resolve(file, '..'), { recursive: true })
+    const tmp = `${file}.tmp-${process.pid}`
+    writeFileSync(tmp, JSON.stringify([...seen], null, 1))
+    renameSync(tmp, file)
+  } catch { /* marker 写失败=下次重复摄取，图谱冗余节点可接受（fail-soft） */ }
+}
 
 /** P6-P8 管理维护角色闸（fleet.ts:54 同判据）：启用鉴权的部署仅 super_admin 可写
  * 注册表/matrix 账号面；未启用鉴权（单用户部署）放行。返回 true=已写 403，调用侧直接 return。 */
@@ -291,6 +325,120 @@ router.get('/impact', async (ctx) => {
     return
   }
   ctx.body = { ok: true, ...queryImpact(target) }
+})
+
+// ---- 第七期（甲1，2026-09-30 调研落地）：五流断点诊断 ----
+router.get('/org-diagnosis', async (ctx) => {
+  ctx.body = { ok: true, ...(await orgDiagnosis()) }
+})
+
+// ---- 决策图谱（乙4/乙5 投影面，2026-09-30 调研落地；prefix 复用本路由器=零新挂载点） ----
+router.get('/decision-graph/status', async (ctx) => {
+  ctx.body = { ok: true, ...(await kgStatus()) }
+})
+
+router.get('/decision-graph/decisions', async (ctx) => {
+  const limit = Math.max(1, Math.min(Number(ctx.query.limit) || 50, 200))
+  ctx.body = { ok: true, ...(await listDecisions(limit)) }
+})
+
+router.get('/decision-graph/chain', async (ctx) => {
+  const id = String(ctx.query.id ?? '').trim()
+  if (!id) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'id 必填（decision uuid）' }
+    return
+  }
+  ctx.body = { ok: true, chain: await causalChain(id) }
+})
+
+/** qgate 门禁判定摄取（乙4·gate 面）：新 run 落 KG，seen 标记防重（marker 文件）。 */
+router.post('/decision-graph/sync-gates', async (ctx) => {
+  const seen = readGateSyncMarker()
+  let ingested = 0
+  for (const root of qgateRunRoots()) {
+    let files: string[] = []
+    try { files = readdirSync(root).filter((f) => /^run-.*\.json$/.test(f)) } catch { continue }
+    for (const f of files) {
+      const key = `${root}/${f}`
+      if (seen.has(key)) continue
+      try {
+        const j = JSON.parse(readFileSync(join(root, f), 'utf8')) as { verdict?: string; gateId?: string; gate?: string }
+        recordGateRunDecision({
+          runId: f.replace(/\.json$/, ''), verdict: String(j.verdict ?? 'unknown').toLowerCase(),
+          gateId: j.gateId, gateName: j.gate,
+        })
+        seen.add(key)
+        ingested += 1
+      } catch { /* 坏文件跳过 */ }
+    }
+  }
+  writeGateSyncMarker(seen)
+  ctx.body = { ok: true, ingested, totalSeen: seen.size }
+})
+
+// ---- 双时态回放 + PROV-O 导出（丁9/丁10，2026-09-30 调研落地） ----
+router.get('/decision-graph/replay', async (ctx) => {
+  const at = Number(ctx.query.at)
+  if (!Number.isFinite(at) || at <= 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'at 必填（unix 毫秒）' }
+    return
+  }
+  ctx.body = { ok: true, ...(await replayDecisions(at)) }
+})
+
+router.get('/decision-graph/snapshots', async (ctx) => {
+  ctx.body = { ok: true, stats: snapshotStats(), snapshots: listSnapshots().slice(-20).reverse() }
+})
+
+router.get('/audit-log/prov-o', async (ctx) => {
+  const limit = Math.max(1, Math.min(Number(ctx.query.limit) || 200, 500))
+  ctx.body = await provExport({ limit })
+})
+
+// ---- 板级共享知识图谱（丙7/丙8，2026-09-30 调研落地） ----
+router.post('/knowledge-graph/sync', async (ctx) => {
+  const board = typeof ctx.query.board === 'string' && ctx.query.board ? ctx.query.board : null
+  const results = board ? [await syncBoardGraph(board)] : await syncAllBoardGraphs()
+  ctx.body = { ok: true, results }
+})
+
+router.get('/knowledge-graph/summary', async (ctx) => {
+  const board = typeof ctx.query.board === 'string' && ctx.query.board ? ctx.query.board : 'main'
+  ctx.body = { ok: true, ...(await boardGraphSummary(board)) }
+})
+
+router.get('/knowledge-graph/conflicts', async (ctx) => {
+  ctx.body = { ok: true, inbox: listConflictInbox() }
+})
+
+router.post('/knowledge-graph/conflicts/resolve', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const { inboxId, action } = body as { inboxId?: unknown; action?: unknown }
+  if (typeof inboxId !== 'string' || !inboxId || (action !== 'keep-existing' && action !== 'take-incoming')) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'inboxId 必填；action 须为 keep-existing|take-incoming' }
+    return
+  }
+  const hit = resolveConflictInbox(inboxId, action)
+  if (!hit) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: '收件箱条目不存在' }
+    return
+  }
+  ctx.body = { ok: true, entry: hit }
+})
+
+// ---- 决策规则注册表（乙6 投影） ----
+router.get('/decision-rules', async (ctx) => {
+  const res = loadDecisionRules()
+  if (!res.exists) {
+    ctx.status = 404
+    ctx.body = { ok: false, exists: false, error: 'decision-rules.yaml 未找到（runtime/governance/）' }
+    return
+  }
+  ctx.body = { ok: true, exists: true, doc: res.doc, problems: res.problems }
 })
 
 // ---- 第六期：跨机派发账本聚合（服务端权威面；客户端 dispatch-kv 为同口径本机视图）----

@@ -1,0 +1,29 @@
+# 决策规则注册表（乙6，2026-09-30 调研落地）——确定性派发预检，策略即数据。
+# 语义：列编排派单在引擎派发前过本表；enforce 模式命中 deny 即拒（409），warn 只记档。
+# 与 governance-budget 闸互补：budget 管 SLO 额度，本表管声明式策略（生命周期/分档/列）。
+# 谓词词表（冻结，evaluator 强校验）：unitTier/unitLifecycle/unitKind/specialist/column。
+version: 1
+reviewedAt: "2026-09-30"
+mode: warn          # off | warn | enforce（GOVERNANCE_RULES_MODE 覆盖）
+rules:
+  - id: retire-candidate-no-new
+    description: 退役候选单元不得接新派单（4A 生命周期纪律的执行面）
+    when:
+      unitLifecycle: retire-candidate
+    then: deny
+    message: "能力台账该单元为 retire-candidate（退役候选）——先完成退役复核或改派他人"
+
+  - id: retired-absolute-no
+    description: 已退役单元绝对禁派
+    when:
+      unitLifecycle: retired
+    then: deny
+    message: "能力台账该单元已退役（retired）——派单目标不存在，请更新 columns.yaml"
+
+  - id: base-tier-review-reminder
+    description: base 档（基础承载）接核心列时提醒复核主承载认定
+    when:
+      unitKind: service
+      column: done
+    then: warn
+    message: "service 型单元进 done 列收尾——确认这是主承载认定内的动作还是临时补位"

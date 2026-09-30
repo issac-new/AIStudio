@@ -278,3 +278,90 @@ export interface StateModelResp {
 export function fetchStateModel(): Promise<StateModelResp> {
   return request<StateModelResp>('/api/governance/state-model')
 }
+
+// ---- 五流断点诊断（甲1，2026-09-30 调研落地） ----
+export interface OrgSignalDto {
+  id: string
+  severity: 'ok' | 'warn' | 'alert' | 'unknown'
+  value: string
+  detail: string
+  evidence: string
+}
+export interface FlowDiagnosisDto {
+  flow: 'information' | 'decision' | 'responsibility' | 'resource' | 'feedback'
+  title: string
+  essence: string
+  signals: OrgSignalDto[]
+}
+export interface ImprovementCandidateDto {
+  tool: string
+  incidents: number
+  unattributed: number
+  gaps: string[]
+  direction: string
+  lastAt: number
+}
+export interface OrgDiagnosisResp {
+  ok: boolean
+  generatedAt: number
+  flows: FlowDiagnosisDto[]
+  manualIntervention: { last7d: number; last30d: number; totalDecided: number }
+  unattributed: Array<{ escalationId: string; fromAgent: string; tool: string; decidedAt: number; verdict: string }>
+  improvementCandidates: ImprovementCandidateDto[]
+  sources: Record<string, number>
+}
+export function fetchOrgDiagnosis(): Promise<OrgDiagnosisResp> {
+  return request<OrgDiagnosisResp>('/api/governance/org-diagnosis')
+}
+
+/** 机制归因（甲2）：已裁决升级结案补断点五选一。 */
+export function attributeEscalation(id: string, gap: string, note?: string): Promise<{ ok: boolean; request?: unknown; detail?: string }> {
+  return request<{ ok: boolean; request?: unknown; detail?: string }>(`/api/escalation/${encodeURIComponent(id)}/attribution`, {
+    method: 'POST',
+    body: { gap, note, by: 'studio' },
+  })
+}
+
+// ---- 板级共享知识图谱（丙7/丙8，2026-09-30 调研落地） ----
+export interface BoardSyncResultDto {
+  board: string
+  scanned: number
+  ingested: number
+  relations: number
+  conflicts: Array<{ entityId: string; field: string; existing: unknown; incoming: unknown }>
+  kgAvailable: boolean
+}
+export interface KgSummaryDto {
+  ok: boolean
+  board: string
+  nodes: number
+  edges: number
+  byType: Record<string, number>
+  recent: Array<{ id: string; type: string }> | null
+}
+export interface ConflictInboxDto {
+  inboxId: string
+  ts: number
+  board: string
+  entityId: string
+  field: string
+  existing: unknown
+  incoming: unknown
+  resolved: false | { action: 'keep-existing' | 'take-incoming'; at: number }
+}
+export function syncKnowledgeGraph(board?: string): Promise<{ ok: boolean; results: BoardSyncResultDto[] }> {
+  const q = board ? `?board=${encodeURIComponent(board)}` : ''
+  return request<{ ok: boolean; results: BoardSyncResultDto[] }>(`/api/governance/knowledge-graph/sync${q}`, { method: 'POST' })
+}
+export function fetchKgSummary(board = 'main'): Promise<KgSummaryDto> {
+  return request<KgSummaryDto>(`/api/governance/knowledge-graph/summary?board=${encodeURIComponent(board)}`)
+}
+export function fetchConflictInbox(): Promise<{ ok: boolean; inbox: ConflictInboxDto[] }> {
+  return request<{ ok: boolean; inbox: ConflictInboxDto[] }>('/api/governance/knowledge-graph/conflicts')
+}
+export function resolveConflict(inboxId: string, action: 'keep-existing' | 'take-incoming'): Promise<{ ok: boolean; entry?: ConflictInboxDto; detail?: string }> {
+  return request<{ ok: boolean; entry?: ConflictInboxDto; detail?: string }>('/api/governance/knowledge-graph/conflicts/resolve', {
+    method: 'POST',
+    body: { inboxId, action },
+  })
+}
