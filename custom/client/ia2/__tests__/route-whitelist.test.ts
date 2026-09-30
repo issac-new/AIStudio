@@ -1,6 +1,8 @@
 // overlay/custom/client/ia2/__tests__/route-whitelist.test.ts
 // 路由白名单守门（补遗⑤ §13.6-2）：用户可达路由集合快照断言——新增可达路由须走补遗⑤评审
-//（改本快照=显式变更点）。快照取自 2026-09-29 P9/P10 落地后实况。
+//（改本快照=显式变更点）。快照取自 2026-09-29 P9/P10 落地后实况；
+// 2026-09-30 用户裁定变更：+hermes.settings（设置页收编 /app/settings，唯一
+// hermes.* 例外，路由名保留换掉上游顶层记录——上游按名跳零改动）。
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { buildIaRoutes } from '../routes'
@@ -14,6 +16,7 @@ const all = flatten([...buildIaRoutes(), ...buildIdeRoutes()])
 const named = all.filter((r) => r.name).map((r) => r.name) as string[]
 const compat = all.filter((r) => r.redirect)
 const EXPECTED_NAMES = [
+  'hermes.settings',
   'ia2.accounts',
   'ia2.board',
   'ia2.collab',
@@ -38,7 +41,7 @@ const EXPECTED_NAMES = [
 ]
 
 describe('路由白名单守门（补遗⑤ §13.6-2：快照断言）', () => {
-  it('路由名账本快照：仅 ia2.* 与 ide.shell——零 hermes.*/ekko.*/share.*/desktop.*/codingAgent.*', () => {
+  it('路由名账本快照：ia2.* 与 ide.shell + 收编例外 hermes.settings（2026-09-30 设置页进壳）——零其它 hermes.*/ekko.*/share.*/desktop.*/codingAgent.*', () => {
     expect([...new Set(named)].sort()).toEqual(EXPECTED_NAMES)
   })
   it('兼容层全部为 redirect；退役名 ia2.eng / ia2.loopCanvas 不在可达名账本', () => {
