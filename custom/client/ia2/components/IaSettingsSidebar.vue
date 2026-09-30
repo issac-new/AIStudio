@@ -10,8 +10,10 @@
      守卫：全部条目 router.hasRoute() 门控（退役/桌面专属路由自动隐，防死链）；
      superadmin 项随权限显隐（authStore 响应式 + localStorage 快照回退，与
      AppSidebar 同款）；版本预览随 VITE_HERMES_PREVIEW（同 AppSidebar）。
-     分组标签全用既有词表键（sidebar.groupTools/groupSystem/hermes）——
-     零新增 i18n、零上游补丁。 -->
+     分组标签全用既有词表键（sidebar.groupTools/groupSystem）+ 品牌名直书
+     Hermes——零新增 i18n、零上游补丁。
+     视图双入口（驾驶舱/IDE 工作台）退役：与页头品牌位切换器重复
+     （2026-09-30 用户裁定保留页面顶部即可）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -34,12 +36,6 @@ const authStore = useAuthStore()
 
 const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin())
 const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === '1'
-
-/** 双入口（驾驶舱 ⇄ IDE 两视图直达，沿 AppSidebar 既有形态） */
-const DUAL: NavEntry[] = [
-  { name: 'ia2.collab', icon: 'grid', labelKey: 'ia2.brand' },
-  { name: 'ide.shell', icon: 'code', labelKey: 'sidebar.ideWorkspace' },
-]
 
 /** 三域分组；labelKey 用既有词表键，label 为直书文案（Hermes 是品牌名，词表
  *  无该键——走 t() 会触发 intlify 缺键告警并渲染裸键名） */
@@ -90,22 +86,12 @@ function visible(e: NavEntry): boolean {
   return router.hasRoute(e.name)
 }
 
-const dualVisible = computed(() => DUAL.filter(visible))
 const groupVisible = computed(() =>
   GROUPS.map(g => ({ ...g, entries: g.entries.filter(visible) })))
 </script>
 
 <template>
   <aside class="ia-setnav" data-testid="ia-settings-sidebar">
-    <div class="ia-setnav__dual">
-      <RouteLinkItem
-        v-for="e in dualVisible" :key="e.name"
-        class="ia-setnav__item ia-setnav__item--dual" :to="{ name: e.name }"
-      >
-        <CockpitIcon :name="e.icon" :size="14" />
-        <span>{{ t(e.labelKey) }}</span>
-      </RouteLinkItem>
-    </div>
     <div class="ia-setnav__scroll">
       <section v-for="g in groupVisible" :key="g.labelKey ?? g.label" class="ia-setnav__group">
         <h3 class="ia-setnav__label">{{ g.labelKey ? t(g.labelKey) : g.label }}</h3>
@@ -125,10 +111,9 @@ const groupVisible = computed(() =>
 <style scoped lang="scss">
 /* Pure Ink：仅 CSS 变量；沿侧栏常规形态（bg-card 底/右描边/28px 行/幽灵 hover） */
 .ia-setnav { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--bg-card); border-right: 1px solid var(--border-color); min-height: 0; }
-.ia-setnav__dual { display: flex; flex-direction: column; gap: 2px; padding: 8px 8px 6px; border-bottom: 1px solid var(--border-color); }
-.ia-setnav__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 8px 12px; }
-.ia-setnav__group { margin-top: 8px;
-  &:first-child { margin-top: 2px; }
+.ia-setnav__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 8px 12px; }
+.ia-setnav__group { margin-top: 10px;
+  &:first-child { margin-top: 0; }
 }
 .ia-setnav__label { margin: 6px 6px 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
 .ia-setnav__item { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 6px; font-size: 12px; color: var(--text-secondary); text-decoration: none; white-space: nowrap; overflow: hidden;
@@ -138,6 +123,5 @@ const groupVisible = computed(() =>
     .cockpit-icon { color: var(--text-primary); }
   }
 }
-.ia-setnav__item--dual { font-weight: 600; color: var(--text-primary); }
 .ia-setnav__empty { margin: 2px 6px; font-size: 11px; color: var(--text-muted); }
 </style>
