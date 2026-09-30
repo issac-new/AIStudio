@@ -101,12 +101,17 @@ fi
 
 # 4) 中央仓按需重置（默认保留；--reset-central 清 RFD 系工件与 integration 分支）
 if [ "$RESET_CENTRAL" = 1 ]; then
-  say "中央仓重置：docs/{requirements,analysis,design,plan,test,delivery,acceptance,retro}/RFD-* 与 integration 分支（先打 tag 快照 mx-clean-$TS）"
+  say "中央仓重置：docs/{requirements,analysis,design,plan,test,delivery,acceptance,retro}/RFD-* 与 integration 分支（先打 tag 快照 mx-clean-${TS}）"
   if [ "$APPLY" = 1 ]; then
     CEN="$SIM_ROOT/central/aipaydev"
-    git -C "$CEN" tag "mx-clean-$TS" 2>/dev/null || true
-    ( cd "$CEN" && git rm -rq --ignore-unmatch docs/requirements/RFD-* docs/analysis/RFD-* docs/design/RFD-* docs/plan/RFD-* docs/test/RFD-* docs/delivery/RFD-* docs/acceptance/RFD-* docs/retro/*RFD* 2>/dev/null || true
-      git commit -qrm "mx-clean：RFD 工件清空（快照 tag mx-clean-$TS）" 2>/dev/null || true )
+    git -C "$CEN" tag "mx-clean-${TS}" 2>/dev/null || true
+    # 先存档再删：RFD 工件常带在途改动，git rm 无 -f 会拒删且被 || true 吞掉=清不掉
+    # （run4 实锤）；未提交改动与清单先入 $ARC，再 -f 强删。
+    git -C "$CEN" diff > "$ARC/central-uncommitted.patch" 2>/dev/null || true
+    git -C "$CEN" status --porcelain > "$ARC/central-status.txt" 2>/dev/null || true
+    ( cd "$CEN" && git rm -rfq --ignore-unmatch docs/requirements/RFD-* docs/analysis/RFD-* docs/design/RFD-* docs/plan/RFD-* docs/test/RFD-* docs/delivery/RFD-* docs/acceptance/RFD-* docs/retro/*RFD* 2>/dev/null || true
+      git clean -fdq -- docs/requirements/RFD-* docs/analysis/RFD-* docs/design/RFD-* docs/plan/RFD-* docs/test/RFD-* docs/delivery/RFD-* docs/acceptance/RFD-* 'docs/retro/*RFD*' 2>/dev/null || true
+      git commit -q -m "mx-clean：RFD 工件清空（快照 tag mx-clean-${TS}）" 2>/dev/null || true )
   fi
 else
   say "中央仓保留（未指定 --reset-central）"
