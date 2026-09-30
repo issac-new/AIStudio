@@ -107,6 +107,9 @@ describe('v12 统一视图守门（双视图）', () => {
     const child = app?.children?.find(c => c.name === 'hermes.settings')
     expect(child, '/app/settings 子路由应存在').toBeTruthy()
     expect(child?.path).toBe('settings')
+    // 左侧栏保留（2026-09-30 用户反馈回归修复）：子路由 meta.fullscreen=false
+    // 压过壳层 true——App.vue 挂回 AppSidebar（双入口+系统分组），防再收编时丢栏
+    expect(child?.meta?.fullscreen).toBe(false)
     // 旧深链兜底：/hermes/settings → /app/settings（query 保真，tab 页签深链不丢）
     const legacy = routes.find(r => r.path === '/hermes/settings')
     expect(legacy, '旧路径兼容重定向应存在').toBeTruthy()

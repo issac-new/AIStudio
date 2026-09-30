@@ -215,9 +215,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           // 常显——上游 SettingsView 挂为 /app 壳子路由；路由名保留
           // hermes.settings，bootstrap 的同名 addRoute 即替换上游顶层记录，
           // 上游按名跳（Ctrl+, / ChatInput / MessageItem 等）零改动直落本页。
+          // 左侧栏保留（同日用户反馈回归修复）：子路由 meta.fullscreen=false
+          // 压过壳层 true——App.vue 照常挂 AppSidebar（双入口+系统分组；
+          // SYSTEM_ROUTE_NAMES 含 hermes.settings，进组默认展开、设置项高亮），
+          // 恢复原设置页左侧栏，壳内顶栏+注意力条常显不变。
           path: 'settings',
           name: 'hermes.settings',
           component: () => import('@/views/hermes/SettingsView.vue'),
+          meta: { fullscreen: false },
         },
         ...legacy,
       ],
