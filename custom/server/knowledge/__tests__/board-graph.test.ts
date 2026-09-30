@@ -127,7 +127,8 @@ describe('真实 python 集成（venv 缺席则跳过如实标注）', () => {
     const bg = await import('../board-graph')
     const r1 = await bg.syncBoardGraph('integ', db)
     expect(r1.kgAvailable).toBe(true)
-    expect(r1.ingested).toBe(1)
+    // 批量模式 ingested=新增实体总数（1 task + 1 agent 伴随实体）
+    expect(r1.ingested).toBe(2)
     expect(r1.relations).toBe(1)
     const kgFile = join(process.env.SEMANTICA_BOARD_KG_DIR!, 'board-integ.json')
     expect(existsSync(kgFile)).toBe(true)

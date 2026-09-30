@@ -10,6 +10,7 @@
  * Python：SEMANTICA_PYTHON 覆盖，默认 hermes-agent venv（无则缺席降级）。
  */
 import { spawn } from 'node:child_process'
+import { maybeSnapshot } from './replay'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -137,7 +138,10 @@ export async function recordDecision(input: RecordInput): Promise<{ decisionId: 
       link_precedent: input.linkPrecedent === true,
     }),
   })
-  return res?.decisionId ? { decisionId: res.decisionId, precedentOf: res.precedentOf ?? null } : null
+  const out = res?.decisionId ? { decisionId: res.decisionId, precedentOf: res.precedentOf ?? null } : null
+  // 落账成功后节流快照（丁9）：fire-and-forget，绝不阻塞落账返回。
+  if (out) maybeSnapshot()
+  return out
 }
 
 export async function findSimilar(scenario: string, category?: string, max = 3): Promise<BridgeDecision[]> {

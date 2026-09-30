@@ -179,38 +179,53 @@ export async function syncBoardGraph(slug: string, boardDb?: string): Promise<Bo
   const dbPath = boardDb ?? join(home, 'kanban', 'boards', slug, 'kanban.db')
   if (!existsSync(dbPath)) return res
   let rows: TaskRow[] = []
-  let db
+  let db: Awaited<ReturnType<typeof openReadonly>> | undefined
   try {
     db = await openReadonly(dbPath)
     rows = db.prepare("SELECT id, title, assignee, status, completed_at FROM tasks WHERE status IN ('done','archived')").all() as unknown as TaskRow[]
   } catch { return res }
-  finally { try { db.close() } catch { /* 已关 */ } }
+  finally { try { db?.close() } catch { /* 已关 */ } }
   res.scanned = rows.length
   const seen = readMarker(slug)
   const kg = boardKgPath(slug)
+  // 批量摄取（丙7 性能根治）：整板两次 bridge 调用（entity-batch + relation-batch），
+  // 替代每任务 2-3 次子进程（744 任务 × 2.2s → 两板各 2 次调用，分钟级降为秒级）。
+  const entities: Array<{ id: string; type: string; props: Record<string, unknown> }> = []
+  const relations: Array<{ src: string; dst: string; type: string }> = []
+  const touched: string[] = []
   for (const t of rows) {
     const tid = String(t.id)
     if (seen.has(tid)) continue
-    const ent = await runKgOp<{ ok: boolean; added: boolean; conflicts: EntityConflict[] }>('entity', kg, {
-      id: `task:${tid}`, type: 'task',
-      props: { title: t.title ?? '', status: t.status, type: 'task' },
-    })
-    if (!ent) { res.kgAvailable = false; break }  // python 缺席：停止而非谎报摄取
-    if (ent.added) res.ingested += 1
-    for (const c of ent.conflicts ?? []) {
-      res.conflicts.push(c)
-      appendConflictInbox({ board: slug, entityId: c.entityId, field: c.field, existing: c.existing, incoming: c.incoming })
-    }
+    entities.push({ id: `task:${tid}`, type: 'task', props: { title: t.title ?? '', status: t.status, type: 'task' } })
     if (t.assignee?.trim()) {
-      const ag = await runKgOp<{ ok: boolean }>('entity', kg, {
-        id: `agent:${t.assignee.trim()}`, type: 'agent', props: { name: t.assignee.trim(), type: 'agent' },
-      })
-      if (!ag) { res.kgAvailable = false; break }
-      const rel = await runKgOp<{ ok: boolean }>('relation', kg, { src: `agent:${t.assignee.trim()}`, dst: `task:${tid}`, type: 'performed' })
-      if (rel) res.relations += 1
+      entities.push({ id: `agent:${t.assignee.trim()}`, type: 'agent', props: { name: t.assignee.trim(), type: 'agent' } })
+      relations.push({ src: `agent:${t.assignee.trim()}`, dst: `task:${tid}`, type: 'performed' })
     }
-    seen.add(tid)
+    touched.push(tid)
   }
+  if (entities.length > 0) {
+    const batch = await runKgOp<{ ok: boolean; added: number; conflicts: Array<{ entityId: string; fields: EntityConflict[] }> }>('entity-batch', kg, { items: entities })
+    if (!batch) {
+      res.kgAvailable = false
+      return res  // python 缺席：如实降级，不写 marker（下次重试）
+    }
+    res.ingested = batch.added ?? 0
+    for (const c of batch.conflicts ?? []) {
+      for (const f of c.fields) {
+        res.conflicts.push({ entityId: c.entityId, field: f.field, existing: f.existing, incoming: f.incoming })
+        appendConflictInbox({ board: slug, entityId: c.entityId, field: f.field, existing: f.existing, incoming: f.incoming })
+      }
+    }
+  }
+  if (relations.length > 0) {
+    const relBatch = await runKgOp<{ ok: boolean; added: number }>('relation-batch', kg, { items: relations })
+    if (!relBatch) {
+      res.kgAvailable = false
+      return res
+    }
+    res.relations = relBatch.added ?? 0
+  }
+  for (const tid of touched) seen.add(tid)
   if (res.kgAvailable) writeMarker(slug, seen)
   return res
 }

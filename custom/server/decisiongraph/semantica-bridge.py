@@ -98,7 +98,7 @@ def dec_dict(d):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("op", choices=["record", "similar", "chain", "list", "status", "entity", "relation", "kg-summary"])
+    ap.add_argument("op", choices=["record", "similar", "chain", "list", "status", "entity", "relation", "kg-summary", "entity-batch", "relation-batch"])
     ap.add_argument("--kg", required=True)
     ap.add_argument("--id")
     ap.add_argument("--limit", type=int, default=50)
@@ -248,6 +248,76 @@ def main():
             return {"ok": True, "added": True}
 
         print(json.dumps(with_lock(args.kg, do_relation), ensure_ascii=False))
+        return
+
+    if args.op == "entity-batch":
+        # 批量实体（丙7 性能根治）：单进程整板摄取；已存在同 id 异 props 的条目逐项
+        # 上报冲突且不覆盖（与 entity 单条同语义），added 计新增数。
+        req = json.loads(sys.stdin.read() or "{}")
+        items = req.get("items") or []
+        if not isinstance(items, list):
+            print(json.dumps({"ok": False, "error": "items-required"}))
+            sys.exit(4)
+
+        def do_batch():
+            existing = {}
+            if os.path.exists(args.kg):
+                try:
+                    with open(args.kg) as f:
+                        kg_raw = json.load(f)
+                    for n in kg_raw.get("nodes", []):
+                        existing[n.get("id")] = n.get("properties", {}) or {}
+                except Exception:
+                    existing = {}
+            g = load_graph(args.kg)
+            added, conflicts, skipped = 0, [], 0
+            for it in items:
+                nid = str(it.get("id") or "")[:128]
+                ntype = str(it.get("type") or "entity")[:64]
+                props = {str(k): v for k, v in (it.get("props") or {}).items()}
+                if not nid:
+                    skipped += 1
+                    continue
+                ex = existing.get(nid)
+                if ex is not None and {k: v for k, v in ex.items() if k != "content"} != props:
+                    changed = {k: {"existing": ex.get(k), "incoming": props.get(k)}
+                               for k in (set(ex) | set(props)) - {"content"}
+                               if ex.get(k) != props.get(k)}
+                    conflicts.append({"entityId": nid,
+                                      "fields": [{"field": k, "existing": v["existing"], "incoming": v["incoming"]}
+                                                 for k, v in changed.items()]})
+                    continue  # 冲突不覆盖（写保护）
+                if ex is None:
+                    g.add_node(nid, ntype, **props)
+                    added += 1
+            if added > 0:
+                save_atomic(g, args.kg)
+            return {"ok": True, "added": added, "skipped": skipped, "conflicts": conflicts}
+
+        print(json.dumps(with_lock(args.kg, do_batch), ensure_ascii=False))
+        return
+
+    if args.op == "relation-batch":
+        req = json.loads(sys.stdin.read() or "{}")
+        items = req.get("items") or []
+        if not isinstance(items, list):
+            print(json.dumps({"ok": False, "error": "items-required"}))
+            sys.exit(4)
+
+        def do_rel_batch():
+            g = load_graph(args.kg)
+            added = 0
+            for it in items:
+                s, t, ty = str(it.get("src") or ""), str(it.get("dst") or ""), str(it.get("type") or "related_to")
+                if not s or not t:
+                    continue
+                g.add_edge(s[:128], t[:128], ty[:64])
+                added += 1
+            if added > 0:
+                save_atomic(g, args.kg)
+            return {"ok": True, "added": added}
+
+        print(json.dumps(with_lock(args.kg, do_rel_batch), ensure_ascii=False))
         return
 
     # record

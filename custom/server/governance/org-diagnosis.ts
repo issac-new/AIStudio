@@ -266,10 +266,14 @@ export async function orgDiagnosis(opts: { now?: number } = {}): Promise<OrgDiag
         },
         {
           id: 'gate.failRate',
-          severity: gates.runs === 0 ? 'unknown' : (gates.passRate ?? 0) >= 0.9 ? 'ok' : (gates.passRate ?? 0) >= 0.7 ? 'warn' : 'alert',
+          severity: (() => {
+            const rate = gates.passRate
+            if (gates.runs === 0 || rate === null) return 'unknown'
+            return rate >= 0.9 ? 'ok' : rate >= 0.7 ? 'warn' : 'alert'
+          })(),
           value: gates.passRate === null ? '—' : `${(gates.passRate * 100).toFixed(0)}%`,
-          detail: gates.runs === 0
-            ? '无 qgate 运行记录'
+          detail: gates.runs === 0 || gates.passRate === null
+            ? '无 qgate 运行记录（或通过率不可算）'
             : `门禁通过率 ${(gates.passRate * 100).toFixed(0)}%（${gates.runs} 次运行）——fail 密集说明返工在消耗产能`,
           evidence: '.qgate/runs（gate.passRate 口径：NA 双侧剔除）',
         },
