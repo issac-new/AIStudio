@@ -24,10 +24,11 @@ diff --git a/packages/client/src/components/hermes/connections/ConnectionsPanel.
 index f1ca865..a662584 100644
 --- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
 +++ b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
-@@ -1,6 +1,8 @@
+@@ -1,7 +1,9 @@
  <script setup lang="ts">
+ import PageHeader from '@/components/layout/PageHeader.vue'
  import { computed, ref, watch } from 'vue'
- import { NButton, NTabPane, NTabs } from 'naive-ui'
+ import { NTabPane, NTabs } from 'naive-ui'
 +// overlay[s3]（补遗⑤）：connections 的社媒 app/ESP32 mcu tab 默认关（VITE_CUSTOM_CONNECTIONS_EXTRAS 再开）
 +import { features } from '@/custom/features'
  import { useI18n } from 'vue-i18n'
@@ -52,7 +53,7 @@ index 0d5aa77..a36b3bc 100644
 +++ b/packages/client/src/views/hermes/ModelsView.vue
 @@ -3,6 +3,8 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
  import { useRoute, useRouter } from 'vue-router'
- import { NButton, NSelect, NSpin, NTabPane, NTabs, useMessage } from 'naive-ui'
+ import { NButton, NSelect, NTabPane, NTabs, useMessage } from 'naive-ui'
  import { useI18n } from 'vue-i18n'
 +// overlay[s3]（补遗⑤）：语音设置/图像生成辅助默认关（VITE_CUSTOM_VOICE/IMAGE_ASSIST 再开）
 +import { features } from '@/custom/features'
@@ -61,7 +62,7 @@ index 0d5aa77..a36b3bc 100644
  import JevSettingsPanel from '@/components/hermes/models/JevSettingsPanel.vue'
 @@ -241,7 +243,7 @@ async function handleRefreshModelCache() {
              <ProvidersPanel />
-           </NSpin>
+           </div>
          </NTabPane>
 -        <NTabPane name="auxiliary" :tab="t('models.auxiliaryTitle')">
 +        <NTabPane v-if="features.imageAssist" name="auxiliary" :tab="t('models.auxiliaryTitle')">

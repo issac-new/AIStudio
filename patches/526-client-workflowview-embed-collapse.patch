@@ -1,28 +1,17 @@
 diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
+index 6f3ce44a..c3a226a3 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -317,8 +317,13 @@
- const workspaceModalVisible = ref(false)
+@@ -324,6 +324,12 @@ const workspaceModalVisible = ref(false)
  const workspacePickerTarget = ref<'active' | 'create'>('active')
  const activeWorkflowId = ref('')
+ const { expanded: showWorkflowSidebar, isMobile } = usePageSidebarState()
 +// overlay[ia2]: 收编壳嵌入态（route.meta.standaloneEmbed）默认收起工作流列表
-+// 侧栏（2026-09-30 用户裁定：驾驶舱侧栏为唯一导航面；头部既有开关可随时展开）。
-+// 注意 handleMobileChange 挂载即调，亦须尊重嵌入态，否则会把初始 false 顶回 true。
++// 侧栏（2026-09-30 用户裁定：驾驶舱侧栏为唯一导航面；页头既有开关可随时展开）。
++// v0.7.26 侧栏状态机已上收 usePageSidebarState（移动端联动随 composable），
++// 嵌入态以 immediate watch 钉住初始收起。
 +const isEmbeddedSidebar = computed(() => route.meta?.standaloneEmbed === true)
- const showWorkflowSidebar = ref(
--  typeof window === 'undefined' || !window.matchMedia('(max-width: 768px)').matches,
-+  !isEmbeddedSidebar.value &&
-+    (typeof window === 'undefined' || !window.matchMedia('(max-width: 768px)').matches),
- )
++watch(isEmbeddedSidebar, v => { if (v) showWorkflowSidebar.value = false }, { immediate: true })
  watch(
    showWorkflowSidebar,
-@@ -944,7 +949,8 @@
- 
- function handleMobileChange(event: MediaQueryList | MediaQueryListEvent) {
-   isMobile.value = event.matches
--  showWorkflowSidebar.value = !event.matches
-+  // overlay[ia2]: 嵌入态保持收起（挂载即调本函数，不尊重嵌入态会把初始值顶回 true）
-+  showWorkflowSidebar.value = !event.matches && !isEmbeddedSidebar.value
-   if (event.matches) showWorkflowRunsPanel.value = false
- }
- 
+   expanded => appStore.setPageSidebarExpanded(expanded),
