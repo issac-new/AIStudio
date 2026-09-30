@@ -213,6 +213,27 @@ if _b26:
 else:
     warns.append('R9 未定位第 26 步块（结构漂移？）')
 
+# ── 查 7：V5 补遗⑥ R15/R16 断言（R16 旅程版逐步操作入口；R15 统一版第 0 章协作总述）──
+_entry_hit = sum(1 for b in blocks if 'class="st-entry"' in b)
+if blocks and _entry_hit == len(blocks):
+    pass
+elif _entry_hit > 0:
+    fails.append(f'R16 操作入口缺失：{_entry_hit}/{len(blocks)} 步块含入口行——26 步须全量可复现路径')
+else:
+    fails.append('R16 操作入口零呈现：报告无任何 st-entry 步块（补遗⑥ R16 验收线）')
+
+_uni = EVID / 'unified-roadshow-report.html'
+if _uni.exists():
+    _u = _uni.read_text(encoding='utf-8')
+    if 'id="ch0-collab"' not in _u:
+        fails.append('R15 统一版缺第 0 章「推演逻辑与协作顺序总述」（id=ch0-collab 未检出）')
+    elif 'scenario.log 实抽' not in _u:
+        warns.append('R15 第 0 章在位但协作时序线标记缺失（scenario.log 实抽注记）')
+    if '研发全流程治理有效性' not in _u:
+        warns.append('统一版缺「研发全流程治理有效性」实算节（补遗⑥）')
+else:
+    warns.append('统一版 unified-roadshow-report.html 未生成——R15 断言待其生成后复跑审计')
+
 # ── 汇总 ──
 print(f'报告：{REPORT}')
 print(f'步块：{len(blocks)}；图：{len(pngs)} 张 PNG，唯一 md5 {len(md5)} 组')
