@@ -18,7 +18,9 @@ kv() { # key value…
 
 : > "$OUT"
 # 代码线（服务面）
-CODE_LINE=$(git -C "$WT" log -1 --format='%h %ci %s' 2>/dev/null | head -c 160)
+# || true 守卫必须给整条命令替换：set -euo pipefail 下 git 失败（WT 缺失/换轮未带 FACTS_WT）
+# 会让赋值语句失败并静默终止整个脚本、零输出（24h 审查实锤），与 :24 SERIES_N 的守卫对齐
+CODE_LINE=$(git -C "$WT" log -1 --format='%h %ci %s' 2>/dev/null | head -c 160 || true)
 [ -n "$CODE_LINE" ] && kv code_line "overlay feat/v5-run4-report（main ba8b6c70+run4 批）@ ${CODE_LINE}；studio dist=私有上游沙箱隔离注入构建（.wxwork/v5run4-sb）"
 # 注入与构建
 SERIES_N=$(grep -cv '^\s*#' "$WT/patches/series" 2>/dev/null || echo 0)
