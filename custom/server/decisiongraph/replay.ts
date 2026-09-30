@@ -89,7 +89,7 @@ export async function replayDecisions(atMs: number): Promise<ReplayResult> {
   const decisions = await new Promise<ReplayResult['decisions']>((res) => {
     const child = spawn(python, [bridgeScript(), 'list', '--kg', latest.file, '--limit', '200'], { stdio: ['pipe', 'pipe', 'pipe'] })
     let out = ''
-    const timer = setTimeout(() => child.kill('SIGKILL'), 8000)
+    const timer = setTimeout(() => child.kill('SIGKILL'), 15000)
     child.stdout.on('data', (d: Buffer) => { out += d.toString() })
     child.on('error', () => { clearTimeout(timer); res([]) })
     child.on('close', () => {

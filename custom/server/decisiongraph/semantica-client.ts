@@ -92,7 +92,9 @@ async function runBridge<T>(op: string, opts: {
 } = {}): Promise<T | null> {
   const python = semanticaPython()
   if (!python || process.env.HERMES_DECISION_GRAPH === '0') return null
-  const timeoutMs = opts.timeoutMs ?? 8000
+  // record/chain 走异步面（无人同步等）：20s 容忍高负载下 python 冷启动+semantica
+  // 重载入；similar 保持调用方显式预算（派单同步路径 5s 约束，乙5 设计）。
+  const timeoutMs = opts.timeoutMs ?? 20000
   const exec = async (): Promise<T | null> => {
     try {
       const args = [op, '--kg', studioKgPath(), ...(opts.extraArgs ?? [])]
@@ -154,7 +156,7 @@ export async function findSimilar(scenario: string, category?: string, max = 3):
 
 export async function causalChain(decisionId: string): Promise<BridgeDecision[]> {
   const res = await runBridge<{ ok: boolean; chain: BridgeDecision[] }>('chain', {
-    timeoutMs: 5000,
+    timeoutMs: 12000,
     extraArgs: ['--id', decisionId],
   })
   return res?.chain ?? []
@@ -164,7 +166,7 @@ export async function listDecisions(limit = 50): Promise<{ decisions: BridgeDeci
   const python = semanticaPython()
   if (!python || process.env.HERMES_DECISION_GRAPH === '0') return { decisions: [], total: 0 }
   try {
-    const stdout = await runner(python, ['list', '--kg', studioKgPath(), '--limit', String(limit)], null, 6000)
+    const stdout = await runner(python, ['list', '--kg', studioKgPath(), '--limit', String(limit)], null, 12000)
     const parsed = parseOut<{ ok: boolean; decisions: BridgeDecision[]; total: number }>(stdout)
     return parsed ? { decisions: parsed.decisions ?? [], total: parsed.total ?? 0 } : { decisions: [], total: 0 }
   } catch {
