@@ -33,6 +33,8 @@ import { useFilesStore } from '@/stores/hermes/files'
 import type { BriefingContextFile } from '../components/briefing-types'
 import { buildAuxMessage, parseRaciFromTask } from '../components/briefing-types'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
+import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
+import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { listBoards, listTasks } from '@/api/hermes/kanban'
 import { request } from '@/api/client'
@@ -43,6 +45,7 @@ const { t } = useI18n()
 const route = useRoute()
 const ide = useIdeStore()
 const cockpitStore = useCockpitStore()
+const workspaceStore = useWorkspaceStore()
 const chatStore = useChatStore()
 const kanbanStore = useKanbanStore()
 
@@ -467,6 +470,9 @@ onUnmounted(() => {
       </div>
     </Transition>
     <IdeStatusBar />
+    <!-- 日程弹窗（2026-10-01 还原：页头按钮经 IaGlobalTop 双壳共享，IDE 壳补挂载） -->
+    <div v-if="workspaceStore.scheduleOpen" class="ide-shell__modal-overlay" @click="workspaceStore.closeSchedule()" />
+    <CockpitScheduleModal v-if="workspaceStore.scheduleOpen" />
     <CockpitRunTraceModal />
     <IdeCommandPalette />
   </div>
@@ -481,6 +487,14 @@ onUnmounted(() => {
   color: var(--text-primary, #e6e6e6);
   overflow: hidden;
 
+}
+
+/* 日程弹窗遮罩（ia2.scss 的 ia-overlay 同语义；IDE 壳直进路由不加载 ia2.scss，就地声明） */
+.ide-shell__modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 40;
 }
 
 .ide-shell__main {
