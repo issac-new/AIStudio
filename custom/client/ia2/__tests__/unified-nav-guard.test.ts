@@ -98,6 +98,34 @@ describe('v12 统一视图守门（双视图）', () => {
     }
   })
 
+  it('设置页收编（2026-09-30 用户裁定）：hermes.settings 挂 /app 壳子路由，旧路径重定向保 query', async () => {
+    // 子路由在案：/app/settings、名保留 hermes.settings（上游 useKeyboard/
+    // ChatInput/MessageItem 等按名跳零改动；bootstrap 同名 addRoute 替换上游
+    // 顶层记录——设置页落壳内，顶部栏+注意力条常显）
+    const routes = buildIaRoutes()
+    const app = routes.find(r => r.path === '/app')
+    const child = app?.children?.find(c => c.name === 'hermes.settings')
+    expect(child, '/app/settings 子路由应存在').toBeTruthy()
+    expect(child?.path).toBe('settings')
+    // 旧深链兜底：/hermes/settings → /app/settings（query 保真，tab 页签深链不丢）
+    const legacy = routes.find(r => r.path === '/hermes/settings')
+    expect(legacy, '旧路径兼容重定向应存在').toBeTruthy()
+    expect(typeof legacy?.redirect).toBe('function')
+    // 实走重定向（组件换桩，避免拉起 SettingsView 导入链）
+    const Stub = { template: '<div />' }
+    const stub = (records: ReturnType<typeof buildIaRoutes>): ReturnType<typeof buildIaRoutes> =>
+      records.map(r => {
+        const copy: Record<string, unknown> = { ...r }
+        if (copy.component) copy.component = Stub
+        if (Array.isArray(copy.children)) copy.children = stub(copy.children as ReturnType<typeof buildIaRoutes>)
+        return copy as unknown as ReturnType<typeof buildIaRoutes>[number]
+      })
+    const router = createRouter({ history: createMemoryHistory(), routes: stub(buildIaRoutes()) })
+    await router.push('/hermes/settings?tab=display')
+    expect(router.currentRoute.value.fullPath).toBe('/app/settings?tab=display')
+    expect(router.currentRoute.value.name).toBe('hermes.settings')
+  })
+
   it('catch-all 兜底 → /app（旧深链不白屏）', () => {
     const router = readUpstream('router/index.ts')
     expect(router).toContain(`{ path: '/:pathMatch(.*)*', redirect: '/app' }`)

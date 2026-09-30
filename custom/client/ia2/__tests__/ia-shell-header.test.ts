@@ -10,6 +10,9 @@
 // v12.4（2026-09-20 用户裁定）：语言/视图单按钮切换；态势 chips 收窄（删会话/
 // 循环/管理）；等我 = useDecisionRows 待我决策（任务及会话）；三栏栏控迁各栏
 // 顶部控制条（页头 IaWindowControls 退役）。
+// 2026-09-30 用户裁定：品牌位「驾驶舱」文案退役，IaViewSwitcher 迁入品牌位
+// （带目标视图图标 code/message + 切换图标 switch）；设置页收编 /app/settings
+//（用户按钮跳 hermes.settings 名不变，经路由收编落壳内）。
 // 重依赖桩化：composables（态势/决策聚合拉 chat/matrix/team 上游链）、
 // IaLocaleToggle（upstream switchLocale）；NotifyDropdownPanel
 // 用真组件——铃铛开合即本文件守门。fetch mock 写法参照 cockpit-topbar-health.test.ts；
@@ -130,15 +133,18 @@ describe('IaShellHeader — 统一壳页头', () => {
     cockpitStubs.state.inboxItems = []
   })
 
-  it('品牌：连接点 + ia2.brand 文案（无 Swarm Studio 字样）；语言单按钮切换在位（v12.4）', async () => {
+  it('品牌位（2026-09-30 用户裁定）：「驾驶舱」文案退役，视图切换器就位品牌簇且全页头唯一', async () => {
     const w = await mountHeader()
-    expect(w.text()).toContain('ia2.brand')
+    expect(w.text()).not.toContain('ia2.brand')
     expect(w.text()).not.toContain('Swarm Studio')
+    // 切换器在品牌簇内（ThemeSwitch/语言钮/连接点之后），且不再挂最右
+    expect(w.find('.cockpit-top__brand [data-testid="ia-view-toggle"]').exists()).toBe(true)
+    expect(w.findAll('[data-testid="ia-viewswitch-row"]')).toHaveLength(1)
     expect(w.find('[data-testid="ia-locale-toggle"]').exists()).toBe(true)
     w.unmount()
   })
 
-  it('v12.4 视图切换器单按钮固定最右（/app 态显示目标视图 IDE 工作台，双按钮退役）', async () => {
+  it('v12.4 视图切换器单按钮（2026-09-30 迁品牌位；/app 态显示目标视图 IDE 工作台，双按钮退役）', async () => {
     const w = await mountHeader()
     expect(w.find('[data-testid="ia-header-ide"]').exists()).toBe(false)
     const row = w.find('[data-testid="ia-viewswitch-row"]')
