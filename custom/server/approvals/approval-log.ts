@@ -8,6 +8,21 @@ import { homedir } from 'os'
 import { dirname, join } from 'path'
 import type { ApprovalRiskTier } from './risk-tier'
 
+// 决策图谱落账（乙4，2026-09-30 调研落地）：appendApprovalLog 是全部审批裁决的单一
+// 收口点（autopass/pending-controller 六调用面共经），在此挂 fire-and-forget 钩子。
+// 动态 require 防 vitest 假执行器污染：模块加载失败静默跳过（fail-soft）。
+function recordToDecisionGraph(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: number }): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { recordApprovalDecision } = require('../decisiongraph/decision-recorder') as
+      typeof import('../decisiongraph/decision-recorder')
+    recordApprovalDecision({
+      targetKind: entry.targetKind, targetId: entry.targetId, targetTitle: entry.targetTitle ?? '',
+      decision: entry.decision, actor: entry.actor, note: entry.note,
+    })
+  } catch { /* fail-soft：落账失败不影响审批日志主链路 */ }
+}
+
 export interface ApprovalLogEntry {
   id: string
   ts: number
@@ -55,6 +70,7 @@ function isEntry(v: unknown): v is ApprovalLogEntry {
 /** 追加一条决策记录（原子写：tmp + rename）。返回写入后的条目。 */
 export function appendApprovalLog(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: number }): ApprovalLogEntry {
   const full: ApprovalLogEntry = { ts: Date.now(), ...entry }
+  recordToDecisionGraph(entry)
   const list = load()
   list.push(full)
   const trimmed = list.length > CAP ? list.slice(list.length - CAP) : list
