@@ -12,6 +12,7 @@
  * （重复落账代价=图谱冗余节点，不影响正确性——不引入跨进程去重状态面）。
  */
 import { recordDecision, findSimilar, type BridgeDecision } from './semantica-client'
+import { maybeSnapshot } from './replay'
 
 const seenKeys = new Set<string>()
 

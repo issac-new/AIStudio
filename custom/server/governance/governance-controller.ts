@@ -33,6 +33,8 @@ import { auditLog } from './governance-audit'
 import { orgDiagnosis } from './org-diagnosis'
 import { qgateRunRoots } from './governance-analytics'
 import { loadDecisionRules } from './decision-rules'
+import { listSnapshots, replayDecisions, snapshotStats } from '../decisiongraph/replay'
+import { provExport } from './prov-o'
 import { causalChain, kgStatus, listDecisions } from '../decisiongraph/semantica-client'
 import { recordGateRunDecision } from '../decisiongraph/decision-recorder'
 import {
@@ -373,6 +375,26 @@ router.post('/decision-graph/sync-gates', async (ctx) => {
   }
   writeGateSyncMarker(seen)
   ctx.body = { ok: true, ingested, totalSeen: seen.size }
+})
+
+// ---- 双时态回放 + PROV-O 导出（丁9/丁10，2026-09-30 调研落地） ----
+router.get('/decision-graph/replay', async (ctx) => {
+  const at = Number(ctx.query.at)
+  if (!Number.isFinite(at) || at <= 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'at 必填（unix 毫秒）' }
+    return
+  }
+  ctx.body = { ok: true, ...(await replayDecisions(at)) }
+})
+
+router.get('/decision-graph/snapshots', async (ctx) => {
+  ctx.body = { ok: true, stats: snapshotStats(), snapshots: listSnapshots().slice(-20).reverse() }
+})
+
+router.get('/audit-log/prov-o', async (ctx) => {
+  const limit = Math.max(1, Math.min(Number(ctx.query.limit) || 200, 500))
+  ctx.body = await provExport({ limit })
 })
 
 // ---- 板级共享知识图谱（丙7/丙8，2026-09-30 调研落地） ----
