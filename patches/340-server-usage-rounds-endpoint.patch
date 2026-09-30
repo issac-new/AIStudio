@@ -88,8 +88,8 @@ diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packag
    updateSessionStats as localUpdateSessionStats,
  } from '../public/sessions'
  import { buildDbExportHistory, ExportCompressor } from '../services/context-compressor/export-compressor'
--import { getLocalUsageStats, getRecordedUsageSessionIds, getUsage, getUsageBatch } from '../public/sessions'
-+import { getLocalUsageStats, getRecordedUsageSessionIds, getUsage, getUsageBatch, getUsageRounds } from '../public/sessions'
+-import { getUnpricedHermesUsageSessions, getLocalUsageStats, getRecordedUsageSessionIds, getUsage, getUsageBatch } from '../public/sessions'
++import { getUnpricedHermesUsageSessions, getLocalUsageStats, getRecordedUsageSessionIds, getUsage, getUsageBatch, getUsageRounds } from '../public/sessions'
  import {
    SESSION_CATEGORY_NAME_MAX_LENGTH,
    createSessionCategory,

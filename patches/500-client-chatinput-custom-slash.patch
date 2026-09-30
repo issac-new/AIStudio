@@ -1,7 +1,7 @@
 --- a/packages/client/src/components/hermes/chat/ChatInput.vue
 +++ b/packages/client/src/components/hermes/chat/ChatInput.vue
 @@ -11,6 +11,8 @@
- import { NButton, NTooltip, NModal, NInputNumber, NPopover, NSlider, NDropdown, useDialog, useMessage, type DropdownOption } from 'naive-ui'
+ import { NSpin, NButton, NTooltip, NModal, NInputNumber, NPopover, NSlider, NDropdown, useDialog, useMessage, type DropdownOption } from 'naive-ui'
  import { computed, ref, nextTick, onMounted, onUnmounted, watch, h } from 'vue'
  import { useI18n } from 'vue-i18n'
 +// overlay[ide] B7 自定义斜杠命令（/ide 输入框 / 可选用，选中写模板）

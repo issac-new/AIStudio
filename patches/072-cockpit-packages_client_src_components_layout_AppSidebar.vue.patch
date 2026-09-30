@@ -1,9 +1,11 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index 0e27541b..606a7800 100644
+index 61345a4e..d69688b6 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
-@@ -1,8 +1,9 @@
+@@ -1,10 +1,11 @@
  <script setup lang="ts">
+ import PageSidebar from "./PageSidebar.vue";
+ import { usePageSidebarState } from "@/composables/usePageSidebar";
 -import { computed } from "vue";
 +import { computed, ref } from "vue";
  import { useRoute, useRouter } from "vue-router";
@@ -13,11 +15,12 @@ index 0e27541b..606a7800 100644
  import RouteLinkItem from "@/components/common/RouteLinkItem.vue";
  import PageSidebarFooter from "@/components/layout/PageSidebarFooter.vue";
  import { isStoredSuperAdmin } from "@/api/client";
-@@ -11,10 +12,23 @@ const { t } = useI18n();
+@@ -13,11 +14,26 @@ const { t } = useI18n();
  const route = useRoute();
  const router = useRouter();
  const appStore = useAppStore();
 +const authStore = useAuthStore();
+ const { expanded, isMobile } = usePageSidebarState();
  const selectedKey = computed(() => {
    return route.name as string;
  });
@@ -26,6 +29,8 @@ index 0e27541b..606a7800 100644
 +const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin());
 +// overlay[ia2]: P3 六区域新 IA 高亮（Task 8: cockpit 入口随退役移除，仅保留新 IA 项）
 +const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
++// overlay[nav]: IDE 工作台高亮（双入口之一；S7 双壳回生后 ide.shell 为常驻路由）
++const isIdeShellArea = computed(() => String(route.name ?? "").startsWith("ide."));
 +// overlay[nav]: 系统折叠分组（统一导航裁决）——低频运维/配置入口收敛；
 +// 当前命中系统页时默认展开
 +const SYSTEM_ROUTE_NAMES = [
@@ -38,7 +43,7 @@ index 0e27541b..606a7800 100644
  const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
  const isDesktopShell = computed(
    () =>
-@@ -52,6 +68,70 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -56,6 +72,90 @@ function handleSidebarClick(event: MouseEvent) {
      @click="handleSidebarClick"
    >
      <nav class="sidebar-nav">
@@ -67,6 +72,26 @@ index 0e27541b..606a7800 100644
 +        </svg>
 +        <span>{{ t("ia2.brand") }}</span>
 +      </RouteLinkItem>
++      <!-- overlay[nav]: IDE 工作台一级入口（双入口之二；2026-09-30 双栏根治裁定） -->
++      <RouteLinkItem
++        class="nav-item"
++        :to="{ name: 'ide.shell' }"
++        :active="isIdeShellArea"
++      >
++        <svg
++          width="16"
++          height="16"
++          viewBox="0 0 24 24"
++          fill="none"
++          stroke="currentColor"
++          stroke-width="1.5"
++          stroke-linecap="round"
++          stroke-linejoin="round"
++        >
++          <polyline points="16 18 22 12 16 6" />
++          <polyline points="8 6 2 12 8 18" />
++        </svg>
++        <span>{{ t("ia2.shell.gotoIde") }}</span>
 +      <!-- overlay[nav]: 系统折叠分组头（统一导航：一级仅 驾驶舱/IDE 双入口） -->
 +      <button
 +        class="nav-item sidebar-system-toggle"
@@ -109,7 +134,7 @@ index 0e27541b..606a7800 100644
        <RouteLinkItem
          class="nav-item"
          :to="{ name: 'hermes.logs' }"
-@@ -279,31 +378,13 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -283,31 +383,13 @@ function handleSidebarClick(event: MouseEvent) {
          </svg>
          <span>{{ t("sidebar.settings") }}</span>
        </RouteLinkItem>
@@ -144,7 +169,7 @@ index 0e27541b..606a7800 100644
        <button
          class="collapse-btn"
          @click="appStore.toggleSidebarCollapsed()"
-@@ -412,11 +493,18 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -415,11 +497,18 @@ function handleSidebarClick(event: MouseEvent) {
    border-top: 1px solid $border-color;
  }
  
@@ -168,7 +193,7 @@ index 0e27541b..606a7800 100644
  }
  
  .sidebar-account-footer {
-@@ -443,12 +531,6 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -446,12 +535,6 @@ function handleSidebarClick(event: MouseEvent) {
      padding-top: 8px;
    }
  
