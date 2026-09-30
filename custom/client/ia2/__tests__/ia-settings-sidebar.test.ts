@@ -36,9 +36,9 @@ describe('IaSettingsSidebar — 设置页侧栏（功能面恢复）', () => {
     authState.isSuperAdmin = true
     const w = mountSidebar()
     const text = w.text()
-    // 双入口
-    expect(text).toContain('ia2.brand')
-    expect(text).toContain('sidebar.ideWorkspace')
+    // 2026-09-30 裁定：视图双入口退役（与页头品牌位切换器重复）——零出现守门
+    expect(text).not.toContain('ia2.brand')
+    expect(text).not.toContain('sidebar.ideWorkspace')
     // 工具组（原 PageSidebarNav 面）
     for (const key of ['sidebar.models', 'sidebar.workflow', 'sidebar.connections', 'sidebar.files']) {
       expect(text, `工具组缺 ${key}`).toContain(key)
