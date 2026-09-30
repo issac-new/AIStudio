@@ -47,6 +47,8 @@ vi.mock('@/api/hermes/kanban', () => ({
   listTasks: (...a: unknown[]) => listTasksMock(...a),
 }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: () => ({}) }))
+// 日程弹窗还原（2026-10-01）后 IdeShell 引 workspace store——同款桩
+vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: () => ({ scheduleOpen: false, openSchedule: () => {}, closeSchedule: () => {} }) }))
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ sessions: [], setRuntimeMode: vi.fn(), loadSessions: vi.fn(async () => {}) }) }))
 // P3.2 上下文文件接线（2026-09-28）：files store 与 listFiles 须替身（真实实现需 pinia/网络）
 vi.mock('@/stores/hermes/files', () => ({ useFilesStore: () => ({ openEditor: vi.fn() }) }))

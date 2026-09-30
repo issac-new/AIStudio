@@ -33,6 +33,8 @@ vi.mock('@/stores/hermes/kanban', () => ({
 }))
 vi.mock('@/api/hermes/kanban', () => ({ listBoards: vi.fn(), listTasks: vi.fn() }))
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: () => ({}) }))
+// 日程弹窗还原（2026-10-01）后 IdeShell 引 workspace store——同款桩
+vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: () => ({ scheduleOpen: false, openSchedule: () => {}, closeSchedule: () => {} }) }))
 
 const chatState = reactive({ sessionsLoaded: false, sessionProfileFilter: null as string | null })
 const loadSessionsMock = vi.fn(async () => { chatState.sessionsLoaded = true })

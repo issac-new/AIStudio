@@ -62,6 +62,12 @@ vi.mock('@/custom/loop/runcenter/api', () => ({
   },
 }))
 
+// ── 工作流共享面板桩（融合 Phase 1）：本文件守 RunCenterView 骨架，面板实体由
+//    workflow-pane.test.ts / 运行行走查覆盖；真面板拉 zcode-projection 链，桩掉防串染 ──
+vi.mock('@/custom/ide/components/WorkflowObservationPanel.vue', () => ({
+  default: { name: 'WorkflowObservationPanel', template: '<div data-testid="workflow-panel-stub" />' },
+}))
+
 // ── 上游 auth mock（P3 台账 #6）：审批面板经 getStoredUsername 取审批人身份；
 // mock 掉 '@/api/client'（其 @/router import 会在下方 vue-router mock 下炸）──
 const { authMock } = vi.hoisted(() => ({ authMock: { username: 'alice' as string | null } }))
@@ -187,14 +193,37 @@ describe('RunCenterView (jsdom)', () => {
     expect(w.find('.rc-table__row').classes()).toContain('rc-table__row--awaiting')
   })
 
-  it('空态渲染三步引导 + CTA 跳循环工程（⑤ S5 后 /app/eng 重定向交付案例）', async () => {
+  it('空态渲染三步引导 + CTA 改指工作流页签（2026-10-01 融合 Phase 1；原 ia2.eng 已 S5 退役）', async () => {
     rest.listRuns.mockResolvedValue([])
     const w = mount(RunCenterView)
     await new Promise(r => setTimeout(r, 0))
     expect(w.find('.rc-view__onboarding').exists()).toBe(true)
     expect(w.findAll('.rc-view__step')).toHaveLength(3)
-    // ⑤ S5：CTA 按钮随「循环创建不走 UI」注释退役（合并态 L262）——守门断言按钮不在
-    expect(w.find('.rc-view__cta').exists()).toBe(false)
+    // CTA 回归：不再跳退役的 ia2.eng，切到「工作流」页签（词条=run-surface 本地字典）
+    const cta = w.find('[data-testid="rc-empty-cta"]')
+    expect(cta.exists()).toBe(true)
+    expect(cta.text()).toContain('查看工作流运行')
+    await cta.trigger('click')
+    expect(w.find('[data-testid="rc-panel-workflows"]').exists()).toBe(true)
+  })
+
+  it('工作流页签（融合 Phase 1）：第四 tab 挂共享面板 + ?tab= 深链直达', async () => {
+    rest.listRuns.mockResolvedValue([])
+    const w = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+    expect(w.find('[data-testid="rc-tab-workflows"]').exists()).toBe(true)
+    expect(w.find('[data-testid="rc-panel-workflows"]').exists()).toBe(false)
+    await w.find('[data-testid="rc-tab-workflows"]').trigger('click')
+    expect(w.find('[data-testid="rc-panel-workflows"]').exists()).toBe(true)
+    expect(w.find('[data-testid="workflow-panel-stub"]').exists()).toBe(true)
+    w.unmount()
+
+    // ?tab=workflows 深链：挂载即激活（RunDetailView 既有 push query:{tab} 本轮接通）
+    routeMock.query = { tab: 'workflows' }
+    const w2 = mount(RunCenterView)
+    await new Promise(r => setTimeout(r, 0))
+    expect(w2.find('[data-testid="rc-panel-workflows"]').exists()).toBe(true)
+    w2.unmount()
   })
 
   it('?loop= 深链预填搜索框：落点即该 loop 的运行列表（P3 台账，Task 9 补）', async () => {
