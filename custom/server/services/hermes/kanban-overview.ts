@@ -331,7 +331,9 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
   }
 
   let wss: WebSocketServer | null = null
-  const clients = new Set<{ raw: OverviewClient }>()
+  // boards=该连接 ensure 过的板（close 时逐板 release——refs 只增不减会让空闲回收器
+  // 被 refs>0 永久短路，watch 子进程到 stop() 前不回收，"无订阅者自动回收"承诺失效）
+  const clients = new Set<{ raw: OverviewClient; boards: string[] }>()
   const upgradeHandlers: Array<(req: IncomingMessage, socket: Duplex, head: Buffer) => void> = []
 
   function broadcast(board: string): void {
@@ -369,12 +371,14 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
         }
       }
       wss!.handleUpgrade(req, socket, head, ws => {
-        const client = { raw: ws as unknown as OverviewClient }
+        const client = { raw: ws as unknown as OverviewClient, boards: [] as string[] }
         clients.add(client)
         ws.on('close', () => {
           clients.delete(client)
+          for (const b of client.boards) releaseWatcher(b)
           maybeReapWatchers()
         })
+        // 只摘除不 release：error 后必随 close，close 是唯一释放点（避免双重扣减）
         ws.on('error', () => clients.delete(client))
         try {
           ws.send(JSON.stringify({ type: 'connected' }))
@@ -382,7 +386,10 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
           /* 忽略 */
         }
         // 该连接关心全部 board：预热的 watcher 集合在首个事件到达时按 board 建齐
-        for (const board of boardCache.keys()) ensureWatcher(board)
+        for (const board of boardCache.keys()) {
+          client.boards.push(board)
+          ensureWatcher(board)
+        }
       })
     }
     servers.forEach(server => server.on('upgrade', onUpgrade))

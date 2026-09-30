@@ -11,9 +11,10 @@
 // agent 主动发起的**权限申请**（运行中升级）。批准带 constraints 时联动 402 规则
 // （addRule），实现 routa "批准可附带沙箱约束并实时改写策略"。
 // 存储：每升级请求一份 JSON（幂等 escalationId），HERMES_ESCALATION_DIR 降级同款。
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { createHash } from 'crypto'
 
 export const ESCALATION_URGENCIES = ['normal', 'urgent', 'critical'] as const
 export type EscalationUrgency = (typeof ESCALATION_URGENCIES)[number]
@@ -92,7 +93,11 @@ export function isEscalationUrgency(v: unknown): v is EscalationUrgency {
 }
 
 function escFile(id: string): string {
-  return join(escalationDir(), `${id.replace(/[^A-Za-z0-9._-]/g, '_')}.json`)
+  const safe = id.replace(/[^A-Za-z0-9._-]/g, '_')
+  // 清洗改写过 id 时必须带原 id 摘要后缀：否则 a/b 与 a_b 落同一文件，后写覆写先写
+  // （幂等检查靠 raw.escalationId 区分不命中即覆写=丢已存在条目，含已裁决记录）
+  const suffix = safe === id ? '' : `-${createHash('sha1').update(id).digest('hex').slice(0, 8)}`
+  return join(escalationDir(), `${safe}${suffix}.json`)
 }
 
 export function loadEscalation(id: string): EscalationRequest | null {
@@ -105,7 +110,12 @@ export function loadEscalation(id: string): EscalationRequest | null {
 
 function save(req: EscalationRequest): void {
   mkdirSync(escalationDir(), { recursive: true })
-  writeFileSync(escFile(req.escalationId), JSON.stringify(req, null, 2))
+  // tmp+rename 原子写：裸 writeFileSync 半写会产出坏 JSON，被 loadEscalation 的
+  // fail-soft 吞掉=该升级无声离开 pending 队列
+  const file = escFile(req.escalationId)
+  const tmp = `${file}.tmp-${process.pid}`
+  writeFileSync(tmp, JSON.stringify(req, null, 2))
+  renameSync(tmp, file)
 }
 
 /** 发起升级（幂等 escalationId）。enforce 模式下同 scope 有未归因前科即拒（甲2 复发纪律）。 */

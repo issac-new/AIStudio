@@ -30,13 +30,24 @@ router.post('/', async (ctx) => {
     ctx.body = { ok: false, detail: 'escalationId/fromAgent/scope.tool/urgency(三档)/reason 必填' }
     return
   }
-  const req = requestEscalation({
-    escalationId, fromAgent,
-    scope: { tool: sc.tool, argvPrefix: typeof sc.argvPrefix === 'string' ? sc.argvPrefix : undefined },
-    urgency: urgency as EscalationRequest['urgency'], reason,
-    taskId: typeof body.taskId === 'string' ? body.taskId : undefined,
-  })
-  ctx.body = { ok: true, request: req }
+  try {
+    const req = requestEscalation({
+      escalationId, fromAgent,
+      scope: { tool: sc.tool, argvPrefix: typeof sc.argvPrefix === 'string' ? sc.argvPrefix : undefined },
+      urgency: urgency as EscalationRequest['urgency'], reason,
+      taskId: typeof body.taskId === 'string' ? body.taskId : undefined,
+    })
+    ctx.body = { ok: true, request: req }
+  } catch (err) {
+    // 归因闸拒收（甲2 enforce）：409 冲突语义 + blockedBy 指引——漏映射会以 500
+    // internal_error 裸奔，调用方拿不到"先补归因"的信号。
+    if ((err as { name?: string } | null)?.name === 'AttributionGateError') {
+      ctx.status = 409
+      ctx.body = { ok: false, reason: 'attribution_gate_blocked', detail: err instanceof Error ? err.message : String(err) }
+      return
+    }
+    throw err
+  }
 })
 
 router.get('/pending', async (ctx) => {

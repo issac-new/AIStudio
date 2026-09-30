@@ -113,11 +113,14 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     # （run4 实锤）；未提交改动与清单先入 $ARC，再 -f 强删。
     git -C "$CEN" diff > "$ARC/central-uncommitted.patch" 2>/dev/null || true
     git -C "$CEN" status --porcelain > "$ARC/central-status.txt" 2>/dev/null || true
-    ( cd "$CEN" && git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 2>/dev/null || true
+    # cd 失败必须中止整个子 shell：否则 git clean/git commit 落在调用者 cwd（run 复现过删调用仓未跟踪文件）
+    ( cd "$CEN" || exit 0
+      git rm -rfq --ignore-unmatch 'docs/requirements' 'docs/analysis' 'docs/design' 'docs/plan' 'docs/test' 'docs/delivery' 'docs/acceptance' 'docs/retro' 'docs/admin' 2>/dev/null || true
       git clean -fdq -- docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin 2>/dev/null || true
       git commit -q -m "mx-clean：推演工件全目录清空（快照 tag mx-clean-${TS}）" 2>/dev/null || true )
-    # 合格线自检：七目录 + admin 不得残留（旧稿残留=repo_has 假真值温床）
-    _leftover="$(cd "$CEN" && ls docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/admin 2>/dev/null | grep -v '^$' | head -5 || true)"
+    # 合格线自检：九目录均不得残留文件（旧稿残留=repo_has 假真值温床）；find 只认真实文件，
+    # ls 空目录会打 "dir:" 头行造成假残留告警
+    _leftover="$(cd "$CEN" 2>/dev/null && find docs/requirements docs/analysis docs/design docs/plan docs/test docs/delivery docs/acceptance docs/retro docs/admin -type f 2>/dev/null | head -5)"
     if [ -n "$_leftover" ]; then
       say "⚠ 清空后仍残留：$_leftover …（人工核查——勿带旧稿起跑 0→1 轮）"
     else

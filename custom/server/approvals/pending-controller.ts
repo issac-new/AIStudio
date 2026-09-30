@@ -291,7 +291,7 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = result
       return
     }
-    const entry = appendApprovalLog({
+    const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: approvalId,
       targetTitle: `${sessionId} · ${approvalId}`, decision, note, risk,
     })
@@ -312,7 +312,7 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: '审批请求不在队列（已超时或不存在）' }
       return
     }
-    const entry = appendApprovalLog({
+    const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: requestId,
       targetTitle: note || requestId, decision, note,
     })
@@ -329,7 +329,7 @@ router.post('/:id/decide', async (ctx) => {
       return
     }
     const targetTitle = typeof body.title === 'string' ? body.title.slice(0, 200) : (note || targetId)
-    const entry = appendApprovalLog({
+    const entry = await appendApprovalLog({
       id, actor, targetKind: 'kanban', targetId,
       targetTitle, decision, note,
       risk: classifyApprovalRisk({ kind: 'kanban', title: targetTitle }),
@@ -358,7 +358,7 @@ router.post('/:id/decide', async (ctx) => {
     }
     const verdict = decision as ReviewVerdict
     const updated = setVerdict(reviewId, verdict, note, actor)
-    const entry = appendApprovalLog({
+    const entry = await appendApprovalLog({
       id, actor, targetKind: 'review', targetId: reviewId,
       targetTitle: rec.taskId || reviewId, decision: verdict, note,
       risk: classifyApprovalRisk({ kind: 'review', title: rec.taskId || reviewId, domain: rec.domain, detail: rec.baseRef }),

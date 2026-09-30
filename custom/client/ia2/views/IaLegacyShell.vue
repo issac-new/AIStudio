@@ -14,6 +14,8 @@ import { useRoute } from 'vue-router'
 import { defineAsyncComponent, markRaw, type Component } from 'vue'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
 import IaSettingsSidebar from '../components/IaSettingsSidebar.vue'
+import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
+import { useWorkspaceStore } from '../store/workspace'
 
 /** 收编页视图装载表（路由名 → 懒加载工厂；与 routes.ts 收编记录一一对应） */
 const VIEW_LOADERS: Record<string, () => Promise<unknown>> = {
@@ -51,6 +53,9 @@ const VIEW_LOADERS: Record<string, () => Promise<unknown>> = {
 }
 
 const route = useRoute()
+// 页头日程按钮（IaGlobalTop）指向 workspace store——本壳是第三壳，必须像 IaShell/IdeShell
+// 一样挂弹窗，否则收编页点 📅 只置 store 状态、无任何 UI 出现（24h 审查 P2）
+const workspace = useWorkspaceStore()
 
 const pageComp = shallowRef<Component | null>(null)
 
@@ -71,6 +76,9 @@ const pageKey = computed(() => String(route.name ?? ''))
         <component :is="pageComp" v-if="pageComp" :key="pageKey" />
       </div>
     </div>
+    <!-- 日程弹窗（与 IaShell.vue:83-84 同款；遮罩 z-index 低于弹窗） -->
+    <div v-if="workspace.scheduleOpen" class="ia-overlay" @click="workspace.closeSchedule()" />
+    <CockpitScheduleModal v-if="workspace.scheduleOpen" />
   </div>
 </template>
 

@@ -34,6 +34,7 @@ import { useSitCounts } from '../composables/useSitCounts'
 import { useSessionRows } from '../composables/useSessionRows'
 import { useDecisionActions } from '../composables/useDecisionActions'
 import { useDecisionRows } from '../composables/useDecisionRows'
+import { useNowTick } from '../composables/useNowTick'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -52,7 +53,11 @@ function goSettings() { router.push({ name: 'hermes.settings' }) }
 
 // ── 日程按钮（2026-10-01 用户裁定还原 S7 摘除，v12.3 原样回生）：当日有事件亮徽章 ──
 
+// 依赖共享秒级 tick：computed 里只有 new Date() 时无响应式依赖、首次求值后永久
+// 缓存，挂载过夜后徽章永远查昨天的键（24h 审查 P3）
+const nowTick = useNowTick()
 const todayKey = computed(() => {
+  void nowTick.value
   const d = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
