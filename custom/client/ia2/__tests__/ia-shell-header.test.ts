@@ -193,10 +193,27 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
-  it('V5 补遗⑤ S7：Gateway 探测区入口已摘除（能力保留于 platforms store）', async () => {
+  it('V5 补遗⑤ S7：Gateway 探测区入口维持摘除（能力保留于 platforms store）', async () => {
     const w = await mountHeader()
     expect(w.find('.cockpit-top__grp').exists()).toBe(false)
-    expect(w.find('[data-testid="ia-header-schedule"]').exists()).toBe(false)
     w.unmount()
+  })
+
+  it('日程按钮（2026-10-01 用户裁定还原 S7 摘除）：渲染/当日事件亮徽章/点击开弹窗', async () => {
+    cockpitStubs.state.scheduleDatesWithEvents = new Set()
+    const w = await mountHeader()
+    const btn = w.find('[data-testid="ia-header-schedule"]')
+    expect(btn.exists()).toBe(true)
+    // 当日无日程事件 → 不亮徽章
+    expect(btn.find('.cockpit-top__bdg').exists()).toBe(false)
+    await btn.trigger('click')
+    expect(workspaceStubs.state.scheduleOpen).toBe(true)
+    w.unmount()
+
+    // 当日有事件（cockpit.scheduleDatesWithEvents 含今天）→ 亮徽章
+    cockpitStubs.state.scheduleDatesWithEvents = new Set([todayKey()])
+    const w2 = await mountHeader()
+    expect(w2.find('[data-testid="ia-header-schedule"] .cockpit-top__bdg').exists()).toBe(true)
+    w2.unmount()
   })
 })

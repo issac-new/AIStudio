@@ -47,8 +47,17 @@ defineProps<{ userName?: string }>()
 /** 用户按钮 → 设置页 */
 function goSettings() { router.push({ name: 'hermes.settings' }) }
 
-// ── V5 补遗⑤ S7：Gateway 探测组与日程按钮入口摘除（A 档——platforms store 与
-// 轮询能力保留，引用计数由 GovTeamSection/WorkbenchView 各自 retain） ──
+// ── V5 补遗⑤ S7（仅 Gateway 段维持摘除）：platforms store 与轮询能力保留，
+//    引用计数由 GovTeamSection/WorkbenchView 各自 retain ──
+
+// ── 日程按钮（2026-10-01 用户裁定还原 S7 摘除，v12.3 原样回生）：当日有事件亮徽章 ──
+
+const todayKey = computed(() => {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+})
+const scheduleTodayCount = computed(() => store.scheduleDatesWithEvents.has(todayKey.value) ? 1 : 0)
 
 // ── 通知下拉（v12.3）：铃铛徽章 = 待决策未读数（useDecisionRows 单一聚合）──
 
@@ -151,6 +160,13 @@ function onPanelJumpTask(taskId: string): void {
         @select="onSitSelect"
       />
     </div>
+    <!-- 日程按钮（2026-10-01 用户裁定还原：S7 A 档摘除回生，v12.3 原样） -->
+    <button type="button" class="cockpit-top__btn" data-testid="ia-header-schedule"
+      :title="t('cockpit.scheduleTitle')" @click="workspace.openSchedule()"
+    >
+      <CockpitIcon name="calendar" />
+      <span v-if="scheduleTodayCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ t('ia2.header.scheduleToday') }}</span>
+    </button>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" data-testid="ia-header-notify" @click="showNotify = !showNotify">
       <CockpitIcon name="bell" />
