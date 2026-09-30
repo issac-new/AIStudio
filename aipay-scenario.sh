@@ -372,10 +372,13 @@ if step_reached analysis; then
   sset analysis_verified 1
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
-    wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 1200 bash -c \
-      "curl -sf '$HS/_matrix/client/v3/rooms/$RID/messages?access_token=$(load_token fanfan)&dir=b&limit=200' | \
-       jq -e '[.chunk[] | select(.type==\"m.room.message\") | select((.content.body//\"\") | contains(\"@${1}-agent\") and contains(\"@${2}-agent\"))] | length > 0'" \
-      || note "[观察] @$1/@$2 派发消息未见（记问题单，继续）"
+    # 消息洪窗口失效（run4 实锤：当日风暴数千条，500 条仅回溯 5 分钟；深翻页到昨日需
+    # 数十页不经济）：派发真实性由 state dispatch_marker（事件 id 可反查）锚定，此处
+    # 文本级复查按 60s 窗降级观察——结论不放宽，只省注定超时的等待。
+    wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 60 bash -c \
+      "mx_messages_deep \"$(load_token fanfan)\" \"$RID\" $(( $(date +%s) - 3600 )) 3 | \
+       jq -e '[.[] | select(.type==\"m.room.message\") | select((.content.body//\"\") | contains(\"@${1}-agent\") and contains(\"@${2}-agent\"))] | length > 0'" \
+      || note "[观察] @$1/@$2 派发消息未见（消息洪窗口外，dispatch_marker 锚在 state，继续）"
   done
   # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
   RACI_JSON="$(kanban_raci_of fanfan "${RFD_ID}")"
@@ -525,7 +528,11 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
 3) 验证计划前移：测试要点是否在设计期已列
 4) 备选方案 ≥2 且有取舍理由
 评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单）。不许谎报。" "$(agent_mxid arch)"
-  if wait_truth "房间出现 ARCH-GATE 结论行（判词语义）" 1800 mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS"; then
+  # 等待谓词补全双源（H8 语义，run4 实锤补齐）：结论行的权威载体是评审卡 body
+  # （review-record 在卡；arch 的 G2 评审经 kanban worker 执行时只写卡不发房间——
+  # 通道差异不该让硬闸失明）。房间行+卡面任一出现即视为结论到达；放行判定仍走
+  # verdict_combined（FAIL 优先，不放宽）。
+  if wait_truth "G2 结论（房间行或评审卡 body，双源）" 1800 mx_gate_verdict_dual_seen "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审"; then
     # 判词合并（R-A2）：房间行+评审卡 body 双源，FAIL 任一出现即 FAIL（保守不放行）
     if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审")" == "PASS" ]]; then
       kanban_walk_done arch "$AGID"
