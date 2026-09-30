@@ -157,8 +157,10 @@ export function useSitCounts() {
         .filter((t: { status: string; assignee?: string | null }) => t.status === 'running' && t.assignee)
         .map((t: { assignee?: string | null }) => t.assignee as string),
     )
-    // 本人已登录即在线（matrix client 已连 = 至少本人在场）；presence 未汇入前不下零
-    const selfOnline = matrixConnected() ? 1 : 0
+    // 本人已登录即在线（人≥登录本人，run5 口径补齐）：matrix client 只在聊天视图
+    // initClient 建连，驾驶舱首屏 client 未起时仅认 isLoggedIn 会把已登录本人漏成 0
+    // ——补 cockpit 会话名兜底（有会话名=已登录本人在场）。
+    const selfOnline = matrixConnected() || !!cockpit.currentUserName ? 1 : 0
     return {
       people: Math.max(people.size, profiles.size, selfOnline),
       agents: Math.max(fleet.length, runningAssignees.size, gwAgents),
