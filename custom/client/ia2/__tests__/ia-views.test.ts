@@ -12,6 +12,9 @@ const { swarmKanbanMounted } = vi.hoisted(() => ({
   swarmKanbanMounted: { count: 0 },
 }))
 
+vi.mock('@/custom/ia2/views/GovernanceView.vue', () => ({
+  default: { template: '<div class="gov-stub" data-testid="gov-stub">gov</div>' },
+}))
 vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
   default: { setup: () => { swarmKanbanMounted.count += 1 }, template: '<div class="kanban-stub" />' },
 }))
@@ -45,6 +48,31 @@ describe('视图壳内嵌接线', () => {
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(wrapper.find('.kanban-stub').exists()).toBe(true)
     expect(swarmKanbanMounted.count).toBe(1)
+  })
+
+  it('治理中心平级页签（2026-10-01 用户裁定）：页签常驻 + 点击内嵌渲染不整页跳转', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/app/board', name: 'ia2.board', component: TasksView }],
+    })
+    await router.push('/app/board')
+    await router.isReady()
+    const wrapper = mount(TasksView, { global: { plugins: [router] } })
+    // 页签区四页签常驻（board/trace/accounts/gov——gov 非跳转型 ↗）
+    const govTab = wrapper.find('[data-testid="ia-tasks-tab-governance"]')
+    expect(govTab.exists()).toBe(true)
+    expect(govTab.text()).not.toContain('↗')
+    // 点击=页内切换：URL 不变 + 治理中心内嵌渲染 + 页签仍在
+    await govTab.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gov-stub"]').exists()).toBe(true)
+    expect(router.currentRoute.value.name).toBe('ia2.board')
+    expect(wrapper.find('[data-testid="ia-tasks-tab-governance"]').exists()).toBe(true)
+    // 深链 ?tab=gov 直达
+    await router.push('/app/board?tab=gov')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gov-stub"]').exists()).toBe(true)
+    wrapper.unmount()
   })
 
   it('v12.6 看板页右上角关闭钮（用户裁定：打开的 swarm kanban 页可关）→ 回沟通协作工作台', async () => {
