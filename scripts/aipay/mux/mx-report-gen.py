@@ -272,13 +272,13 @@ STEPS_META_RUN4 = {
             imgs=[
                   ('ui-08b-msgcard', '驾驶舱·会话画布：群内派发与回执现场——@提及高亮+card=t_ 卡链接（P4①②）', 'ui'),]),
     10: dict(keys=['register_done'], actor='ai', actorText='AI · Orchestrator',
-            narrative='Orchestrator agent 经 matrix channel 接收指令，fanfan 账号板 RFD-001 任务主卡 t_215792cd（23:46:00 落板）真值 ✓。完成凭证反向核验（commit 真在 origin、卡真在账号板），超时即拒收回灌限期重报——打回环真实发生，非橡皮图章。看板入口=注意力条最左「swarm kanban」按钮（M1 裁决动线，/app/board）。',
+            narrative='Orchestrator agent 经 matrix channel 接收指令，fanfan 账号板 RFD-001 任务主卡 t_215792cd（23:46:00 落板）+七张 RACI 子卡落对板落对人。凭证核验打回环 ×3 真实发生：agent 曾在卡面虚报"分析稿 v8"（仓库无对应提交）被第一轮正确拒收；通道恢复后（09:47-10:02 回合）v8 增量真实推送入仓（origin/main 4a5a891，RUN=20260929-v5-run4 标记）——产物核验成立；唯"agent 亲发的结论行"因运行时回合中断问题始终未落群（事件链全记档），验收按宁缺勿假未放行。看板入口=注意力条最左「swarm kanban」按钮（M1 裁决动线，/app/board）。',
             imgs=[
                   ('ui-10-kanban', '驾驶舱·看板（#/app/board，M1 归一）：RACI 徽章卡（R/A/C/I+我的角色描边）+「等您操作」过滤入口', 'ui'),
                   ('ui-10-carddrawer', '看板卡抽屉：RFD-001 凭证主卡详情——需求/交付物（含 commit 锚点）/关联卡对账', 'ui'),
                   ('ui-10b-kanban-mine', '看板：「等您操作」过滤器一键筛出当前登录人相关卡（P2）', 'ui'),]),
     11: dict(keys=['analysis_done'], actor='ai', actorText='AI · 系统分析智能体',
-            narrative='系统分析智能体完成需求切分与三清单匹配（人员/应用模块/组织），系统分析稿与任务清单入仓，ANALYSIS-DONE 结论行经反向核验。',
+            narrative='系统分析产物真值：任务清单 v8 入仓（4a5a891——双路提取核对+三清单匹配+SMART 拆分，RUN 标记本轮）；结论行验收未完成（见步 10 记档），步 11 按 ⬜ 如实。',
             imgs=[
                   ('ui-gov-tasklist', '治理中心·分析档案：SMART 任务清单——具体到人（RACI）+人日合计', 'ui'),]),
     12: dict(keys=['triage_done'], actor='both', actorText='人确认 · AI 执行',
