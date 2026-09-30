@@ -167,6 +167,8 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
   function invalidateBoard(board: string): void {
     const entry = boardCache.get(board)
     if (entry) entry.ts = 0
+    // 板级失效连带作废整结果缓存（事件到达时结果必已过期）
+    overviewResult = null
   }
 
   function notify(board: string): void {
@@ -223,25 +225,46 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     }
   }
 
+  // 整结果缓存（2026-09-30 性能批）：客户端武装一次会发两路 overview
+  // （cockpit/teams-adapter 与 workspace 各一），冷启动 boards→tasks 两跳 CLI
+  // 实测 9s+——结果级 single-flight + 短 TTL 把并发与紧邻重复压成一次；
+  // 板级事件失效（invalidateBoard）会连带作废。
+  let overviewResult: { value: KanbanOverviewResult; ts: number } | null = null
+  let overviewInflight: Promise<KanbanOverviewResult> | null = null
+  const OVERVIEW_RESULT_TTL_MS = 3_000
+
   async function getOverview(): Promise<KanbanOverviewResult> {
-    const boards = await listBoardsCached()
-    const results = await Promise.allSettled(boards.map(board => listTasksCached(board.slug)))
-    const tasks: Array<{ board: string; task: any }> = []
-    boards.forEach((board, index) => {
-      const result = results[index]
-      if (result.status === 'fulfilled') {
-        for (const task of result.value || []) tasks.push({ board: board.slug, task })
+    if (overviewResult && Date.now() - overviewResult.ts < OVERVIEW_RESULT_TTL_MS) {
+      return overviewResult.value
+    }
+    if (overviewInflight) return overviewInflight
+    overviewInflight = (async () => {
+      const boards = await listBoardsCached()
+      const results = await Promise.allSettled(boards.map(board => listTasksCached(board.slug)))
+      const tasks: Array<{ board: string; task: any }> = []
+      boards.forEach((board, index) => {
+        const result = results[index]
+        if (result.status === 'fulfilled') {
+          for (const task of result.value || []) tasks.push({ board: board.slug, task })
+        }
+      })
+      const value: KanbanOverviewResult = {
+        boards: boards.map(board => ({
+          slug: board.slug,
+          name: board.name,
+          total: Number(board.total ?? 0),
+          archived: Boolean(board.archived),
+        })),
+        tasks,
+        fetchedAt: Date.now(),
       }
-    })
-    return {
-      boards: boards.map(board => ({
-        slug: board.slug,
-        name: board.name,
-        total: Number(board.total ?? 0),
-        archived: Boolean(board.archived),
-      })),
-      tasks,
-      fetchedAt: Date.now(),
+      overviewResult = { value, ts: Date.now() }
+      return value
+    })()
+    try {
+      return await overviewInflight
+    } finally {
+      overviewInflight = null
     }
   }
 

@@ -41,8 +41,9 @@ const DUAL: NavEntry[] = [
   { name: 'ide.shell', icon: 'code', labelKey: 'sidebar.ideWorkspace' },
 ]
 
-/** 三域分组（labelKey 全为既有词表键） */
-const GROUPS: Array<{ labelKey: string; entries: NavEntry[] }> = [
+/** 三域分组；labelKey 用既有词表键，label 为直书文案（Hermes 是品牌名，词表
+ *  无该键——走 t() 会触发 intlify 缺键告警并渲染裸键名） */
+const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> = [
   {
     labelKey: 'sidebar.groupTools',
     entries: [
@@ -53,7 +54,7 @@ const GROUPS: Array<{ labelKey: string; entries: NavEntry[] }> = [
     ],
   },
   {
-    labelKey: 'hermes',
+    label: 'Hermes',
     entries: [
       { name: 'hermes.agentManager', icon: 'users', labelKey: 'sidebar.agentManager', superAdmin: true },
       { name: 'hermes.skills', icon: 'decompose', labelKey: 'sidebar.skills' },
@@ -106,8 +107,8 @@ const groupVisible = computed(() =>
       </RouteLinkItem>
     </div>
     <div class="ia-setnav__scroll">
-      <section v-for="g in groupVisible" :key="g.labelKey" class="ia-setnav__group">
-        <h3 class="ia-setnav__label">{{ t(g.labelKey) }}</h3>
+      <section v-for="g in groupVisible" :key="g.labelKey ?? g.label" class="ia-setnav__group">
+        <h3 class="ia-setnav__label">{{ g.labelKey ? t(g.labelKey) : g.label }}</h3>
         <RouteLinkItem
           v-for="e in g.entries" :key="e.name"
           class="ia-setnav__item" :to="{ name: e.name }"

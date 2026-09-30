@@ -68,6 +68,7 @@ vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
 }))
 
 import IaGlobalTop from '../components/IaGlobalTop.vue'
+import { __flushSharedArmDisposeForTest } from '../composables/useSharedArm'
 import IaViewSwitcher from '../components/IaViewSwitcher.vue'
 
 function makeRouter(): Router {
@@ -137,7 +138,28 @@ describe('IaGlobalTop — 全局顶区（双视图常驻）', () => {
     expect(workspaceStubs.state.loadTodos).toHaveBeenCalled()
     expect(cockpitStubs.state.bootstrap).toHaveBeenCalled()
     wrapper.unmount()
+    // 2026-09-30 性能批：末卸载改 DISPOSE_GRACE_MS 宽限延迟回收（页面跳转免
+    // 重拉数据面）——立即断言须冲刷宽限（等价真实超时路径）
+    __flushSharedArmDisposeForTest()
     expect(cockpitStubs.state.disconnectOnUnmount).toHaveBeenCalled()
+  })
+
+  it('2026-09-30 性能批：宽限期内重挂载免重拉（页面跳转不重取数据面）', async () => {
+    const { wrapper: first } = await mountAt('/app')
+    expect(workspaceStubs.state.loadTodos).toHaveBeenCalledTimes(1)
+    first.unmount()
+    // 宽限期内（未冲刷、未超时）重挂载：武装保持，不得再次武装取数
+    const { wrapper: second } = await mountAt('/app')
+    expect(workspaceStubs.state.loadTodos).toHaveBeenCalledTimes(1)
+    expect(cockpitStubs.state.bootstrap).toHaveBeenCalledTimes(1)
+    second.unmount()
+    __flushSharedArmDisposeForTest()
+    expect(cockpitStubs.state.disconnectOnUnmount).toHaveBeenCalledTimes(1)
+    // 真超时后再挂载：重新武装
+    const { wrapper: third } = await mountAt('/app')
+    expect(workspaceStubs.state.loadTodos).toHaveBeenCalledTimes(2)
+    third.unmount()
+    __flushSharedArmDisposeForTest()
   })
 
   it('blocked 任务进注意力条（blocked 梯队）；空态条不消失（R2 管理入口常驻）', async () => {
