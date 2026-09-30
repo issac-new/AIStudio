@@ -392,3 +392,7 @@
 # 531（根治批 2026-09-30）：公告远端拉取服务端 TTL 缓存（5min/locale）——
 #      实测 2.6s/次且客户端每冷启动都拉，页面武装被拖慢；失败不缓存。
 531-server-announcements-ttl-cache.patch
+
+# 532（白话化批 2026-09-30）：看板第三页签「管理三账」→「项目健康」(zh/en)；
+#      追溯空态提示去 loop/run 黑话改白话（用户裁定：不要有黑话）。
+532-client-i18n-accounts-plain-tab.patch

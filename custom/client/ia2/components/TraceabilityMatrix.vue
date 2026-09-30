@@ -87,6 +87,12 @@ onMounted(() => {
   if (runsStore.runs.length === 0) void runsStore.fetchRuns()
 })
 
+/** 失败态重试：两个数据面（循环矩阵 + 任务链投影）都拉 */
+function retryAll(): void {
+  void load()
+  void loadChain()
+}
+
 const groups = computed<TraceLoopGroup[]>(() => {
   if (failed.value) return []
   return buildTraceMatrix({
@@ -126,9 +132,12 @@ function fmtTime(v: string | null): string {
 <template>
   <div class="ia-trace" data-testid="ia-trace">
     <NSpin v-if="loading" size="medium" class="ia-trace__loading" />
-    <div v-else-if="failed" class="ia-trace__failed">
+    <!-- 2026-09-30 用户反馈「追溯页空白」根治：任务链 API 失败（如后端重启窗口）
+         且循环矩阵也无内容时，原落入泛化空态看起来就是一片白——归并为明确的
+         失败态 + 双数据面重试（load 只拉循环面，重试须两路都拉）。 -->
+    <div v-else-if="failed || (chainFailed && groups.length === 0)" class="ia-trace__failed">
       <span>{{ t('ia2.trace.loadFailed') }}</span>
-      <button type="button" class="ia-trace__retry" @click="load">
+      <button type="button" class="ia-trace__retry" @click="retryAll">
         {{ t('ia2.trace.retry') }}
       </button>
     </div>
