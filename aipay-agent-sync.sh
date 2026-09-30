@@ -73,6 +73,36 @@ for p in "${WANT[@]}"; do
   fi
 done
 
+# ── 环境工作区漂移修复（点名清单，2026-09-30 run5 实锤）────────
+# HERMES_HOME/installs/<hash>/environments/<env>/workspace 是 agent 运行时的
+# **快照副本**（各自带 venv，kanban worker 在其内跑 cli_single_query）。上游
+# `hermes update` 只推进 ~/.hermes/hermes-agent，环境快照不会跟着走——run5 实锤：
+# 8e7dd4ef/3cb43390 两个环境的 tools/kanban_tools.py 缺 register_current_worker_from_env，
+# 而其 hermes_cli/cli_single_query.py 已带该 import → worker 启动即 ImportError →
+# dispatcher 连败 2 次自动熔断执行卡（T-103/104/105/107 同源崩）。
+# 修法=点名补齐缺失符号（只插入缺失函数块，不动环境本地改动如 3cb43390 的
+# workspace_kind 形参微调；改前先存 .bak）。判定点名：import 在而 def 缺=漂移。
+env_fix_fn="register_current_worker_from_env"
+env_block=$(awk "/^def ${env_fix_fn}\(/{f=1} f && /^def / && !/^def ${env_fix_fn}\(/{exit} f{print}" \
+  "$AGENT_TREE/tools/kanban_tools.py" 2>/dev/null || true)
+env_fixed=0; env_scan=0
+if [[ -n "$env_block" && -n "${HERMES_HOME:-}" && -d "${HERMES_HOME}/installs" ]]; then
+  for wk in "$HERMES_HOME"/installs/*/environments/*/workspace; do
+    kt="$wk/tools/kanban_tools.py"; sq="$wk/hermes_cli/cli_single_query.py"
+    [[ -f "$kt" && -f "$sq" ]] || continue
+    env_scan=$((env_scan+1))
+    grep -q "from tools.kanban_tools import ${env_fix_fn}" "$sq" 2>/dev/null || continue
+    grep -q "def ${env_fix_fn}(" "$kt" 2>/dev/null && continue
+    bak="$kt.bak.$(date +%s)"
+    cp "$kt" "$bak"
+    printf '\n\n%s\n' "$env_block" >> "$kt"
+    python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$kt" 2>/dev/null \
+      && { env_fixed=$((env_fixed+1)); echo "  ✓ 环境工作区补齐 ${env_fix_fn}：${wk#"$HERMES_HOME"/}" ; } \
+      || { mv "$bak" "$kt" 2>/dev/null; echo "  ✗ 补齐后语法校验失败，已回滚：$kt" >&2; }
+  done
+fi
+echo "环境工作区漂移：扫描 ${env_scan} ｜ 补齐 ${env_fixed}（点名 ${env_fix_fn}）"
+
 echo "────────────────────────────────────────────"
 echo "agent 运行时 patch：候选 $total ｜ 新部署 $applied ｜ 已在位 $skipped ｜ 冲突 $conflicts"
 if (( conflicts > 0 )); then
