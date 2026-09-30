@@ -188,7 +188,7 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
 #   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
 # 事件 id 即 Matrix $event_id（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
 APPROVED_LOG="$EVID_DIR/approved.events"; touch "$APPROVED_LOG"
-auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份线程内回 !approve
+auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份批准（反应+线程内 !approve 双通道）
   local room="$1"
   for u in "${INSTANCED_USERS[@]}"; do
     local pend
@@ -196,16 +196,35 @@ auto_approve() { # 扫描房间 agent 审批请求，以对应人类身份线程
     # 命中——两个仅 `.` 位不同的 eid 互误判"已批"，!approve 永不发。两式并联：本台账
     # （裸 eid 整行）由 -Fx 全行命中；eid+空格分隔的多字段行（主干格式）由 -F "$eid "
     # 命中（分隔符收边界防前缀），旧版台账行不漏、重跑不重复批。
+    # 只匹配原始请求（"needs your OK" 提示头）：超时后 hermes 会把请求 m.replace 编辑成
+    # "Approval timed out…"，旧模式 `needs your OK|approval` 会把编辑事件也当请求，对
+    # 带 relation 的编辑事件开线程必被 Synapse 拒（run4/run5 实锤 18/19 NO_REPLY）。
     pend=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg agent "$(agent_mxid "$u")" \
-      '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK|approval"))) | .event_id' 2>/dev/null \
+      '.[] | select(.sender == $agent and ((.content.body // "") | test("needs your OK"))) | .event_id' 2>/dev/null \
       | while read -r eid; do grep -qFx "$eid" "$APPROVED_LOG" || grep -qF "$eid " "$APPROVED_LOG" || echo "$eid"; done) || true
     for eid in $pend; do
-      local reply_eid
-      reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
-        "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$eid\"}}" \
+      local reply_eid="" react_eid="" root
+      # 反应通道（✅=once）：按 prompt.session_key 直解，不受线程/会话路由影响，是双兜底之一
+      react_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.reaction" \
+        "{\"m.relates_to\":{\"rel_type\":\"m.annotation\",\"event_id\":\"$eid\",\"key\":\"✅\"}}" \
         | jq -r '.event_id // empty' 2>/dev/null) || true
+      # 线程通道：请求事件本身就是线程子事件，从它开新线程会被 Synapse 拒
+      # （M_UNKNOWN: Cannot start threads from an event with a relation）——必须把
+      # 回复发进请求所在线程（root=其 m.relates_to.event_id），并 m.in_reply_to 指回请求，
+      # 才与被阻塞的 agent 回合同会话键，!approve 命令路由才命中等待中的审批。
+      root=$(mx_messages "$(load_token "$u")" "$room" 20 2>/dev/null | jq -r --arg e "$eid" \
+        '[.[] | select(.event_id == $e)][0] | (.content."m.relates_to" | if . and .rel_type == "m.thread" then .event_id else empty end) // $e' 2>/dev/null) || root="$eid"
+      reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
+        "{\"msgtype\":\"m.text\",\"body\":\"!approve\",\"m.relates_to\":{\"rel_type\":\"m.thread\",\"event_id\":\"$root\",\"is_falling_back\":true,\"m.in_reply_to\":{\"event_id\":\"$eid\"}}}" \
+        | jq -r '.event_id // empty' 2>/dev/null) || true
+      # 兜底：线程发送仍失败则退化为房间级 !approve（session_scope=room 时同样命中）
+      if [[ -z "$reply_eid" ]]; then
+        reply_eid=$(mx "$(load_token "$u")" POST "rooms/$room/send/m.room.message" \
+          "{\"msgtype\":\"m.text\",\"body\":\"!approve\"}" \
+          | jq -r '.event_id // empty' 2>/dev/null) || true
+      fi
       echo "$eid ${reply_eid:-NO_REPLY} $u $(date +%s)" >> "$APPROVED_LOG"
-      note "[$u] 线程内回复 !approve（请求 ${eid} → 回执 ${reply_eid:-NO_REPLY}）"
+      note "[$u] 线程内回复 !approve（请求 ${eid} → 回执 ${reply_eid:-NO_REPLY}${react_eid:+ 反应=${react_eid}}）"
     done
   done
 }
@@ -254,7 +273,10 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
   # "ANALYSIS-DONE-<rfd>" 模板串，只按内容 contains 匹配时最新命中永远是验证器
   # 自己的回声。故 ①发信人钉 agent 账号（agent_mxid）②内容须带完整凭证形态
   # （commit=<hex> card=<非空白>），模板行 commit=<已推送commitId> 不满足。
-  body=$(mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 2>/dev/null \
+  # 深翻页取样（run5 实锤 false negative）：房间消息洪（⏳ Working 心跳/多 agent 回合）下
+  # 固定 200 条只回溯几分钟，17:20 的真结论行 17:25 就被挤出窗口，凭证核验永远差一拍。
+  # 改 mx_messages_deep 回溯 48h 翻页取样；判别逻辑不变（发信人+凭证形态双过滤）。
+  body=$(mx_messages_deep "$(load_token fanfan)" "$(sget room_analysis)" $(( $(date +%s) - 172800 )) 12 2>/dev/null \
     | jq -r --arg p "ANALYSIS-DONE-$rfd" --arg s "$(agent_mxid fanfan)" \
       '[.[] | select((.sender//"") == $s)
             | select((.content.body//"") | contains($p))

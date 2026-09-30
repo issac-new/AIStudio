@@ -327,13 +327,13 @@ if step_reached register; then
   jwt_of fanfan >/dev/null
   # 超时不直接退出：把拒收原因回灌给 agent 再等一轮。否则核验方默默失败、agent 以为已
   # 交活，整轮只能靠人肉重跑（09-23 三连超时皆因此，第三次更是拿需求编号冒充卡ID）。
-  if ! wait_truth "fanfan 账号板出现 ${RFD_ID} 任务卡" 900 kanban_has fanfan "${RFD_ID}"; then
+  if ! wait_truth "fanfan 账号板出现 ${RFD_ID} 任务卡" "${MX_WAIT_RETRY:-2400}" kanban_has fanfan "${RFD_ID}"; then
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
       "@$(agent_mxid fanfan) 验收拒收：你的结论行上报了完成，但你账号的板查无 ${RFD_ID} 任务卡。
       请先用协作看板登记主卡（建卡工具会返回真实卡 ID），再以 ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<该卡ID> 重报。
       填需求编号当卡 ID 会被判虚报。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[拒收回灌] 已 @fanfan-agent 告知缺账号板卡，要求补登记后重报凭证"
-    wait_truth "补登记后账号板出现 ${RFD_ID} 任务卡" 900 kanban_has fanfan "${RFD_ID}" \
+    wait_truth "补登记后账号板出现 ${RFD_ID} 任务卡" "${MX_WAIT_RETRY:-2400}" kanban_has fanfan "${RFD_ID}" \
       || { echo "ISSUE|kanban-registration-skipped|fanfan-agent|两轮拒收后仍未登记 ${RFD_ID} 账号板卡" >> "$EVID_DIR/issues.log"; \
            fail "fanfan 账号板登记超时（已回灌拒收仍未补做）"; }
   fi
@@ -365,7 +365,7 @@ if step_reached analysis; then
       请重新发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID，形如 t_4bee99f1>。
       只需补这一行，不要重做已完成的分析与登记。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
     note "[拒收回灌] 已 @fanfan-agent 要求用真实卡 ID 重报结论行"
-    wait_truth "重报后凭证反向核验" 900 verify_done_evidence "${RFD_ID}" \
+    wait_truth "重报后凭证反向核验" "${MX_WAIT_RETRY:-2400}" verify_done_evidence "${RFD_ID}" \
       || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 两轮拒收后凭证仍缺失或造假" >> "$EVID_DIR/issues.log"; \
            fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
   fi
