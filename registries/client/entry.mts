@@ -88,11 +88,14 @@ app.use(createPinia())
 // 对应原 custom/index.ts 的 registerCustomFeatures,改为从 overlay/custom 注册。
 // v0.6.30+: i18n 改为异步创建(i18nReady 返回 Promise),需 await 后再 use。
 // 不用顶层 await(es2020 target 不支持),改用 .then 链式,保证 bootstrap 在 mount 前完成。
-i18nReady
-  .then((i18n) => {
-    app.use(i18n)
-  })
-  .then(() => import('./bootstrap'))
+// 2026-09-30 冷启动根治：i18n 装载与六路 A 类注册并行重叠——原链路串行
+// (i18nReady → import bootstrap → 注册)，dev 下两条各自都是模块瀑布，串行
+// 实测把首个 API 请求拖到 ~2.3s。并行无顺序风险：bootstrapClient 不触 i18n，
+// app.use(i18n) 仍先于 app.use(router)/mount。
+const i18nInstalled = i18nReady.then((i18n) => {
+  app.use(i18n)
+})
+const registrationsDone = import('./bootstrap')
   .then(({ bootstrapClient }) => bootstrapClient(app))
   .then(() => {
     // 冷启动时序修复（2026-09-18 驾驶舱黑屏回归）：app.use(router) 的 install 会
@@ -105,6 +108,7 @@ i18nReady
     // addRoute 完成之后（守门：ia2/__tests__/entry-boot-order.test.ts）。
     return devAutoLogin()
   })
+Promise.all([i18nInstalled, registrationsDone])
   .then(() => {
     app.use(router)
   })
