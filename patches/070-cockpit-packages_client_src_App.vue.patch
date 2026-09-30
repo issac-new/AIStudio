@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index 40f6450..f6e1c13 100644
+index b2a059ec..fd1de955 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -24,6 +24,7 @@ import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHyd
+@@ -27,6 +27,7 @@ import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHyd
  import { useAppStore } from "@/stores/hermes/app";
  import { useProfilesStore } from "@/stores/hermes/profiles";
  import { isStoredSuperAdmin } from "@/api/client";
@@ -10,7 +10,7 @@ index 40f6450..f6e1c13 100644
  import AuthEventListener from "@/components/auth/AuthEventListener.vue";
  import { desktopBridge } from "@/utils/desktop-bridge";
  import { naiveLocaleFor } from "@/constants/naiveLocale";
-@@ -84,6 +85,7 @@ const naiveLocale = computed(() => naiveLocaleFor(locale.value));
+@@ -101,6 +102,7 @@ const naiveLocale = computed(() => naiveLocaleFor(locale.value));
  const naiveRtl = computed(() => naiveRtlFor(locale.value));
  const appStore = useAppStore();
  const profilesStore = useProfilesStore();
@@ -18,10 +18,10 @@ index 40f6450..f6e1c13 100644
  const route = useRoute();
  const { sessionSearchOpen } = useSessionSearch();
  
-@@ -101,22 +103,8 @@ const isStandaloneChatPage = computed(
-   () => route.meta?.standaloneChat === true,
- );
- const isInviteOnlyPage = computed(() => route.meta?.inviteOnly === true);
+@@ -144,22 +146,8 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
+ function handleWideViewportChange(event: MediaQueryListEvent) {
+   isWideViewport.value = event.matches;
+ }
 -const usesPageSidebar = computed(() =>
 -  [
 -    "hermes.chat",
@@ -43,7 +43,7 @@ index 40f6450..f6e1c13 100644
  const usesHermesConfigSidebar = computed(
    () => route.meta?.hermesConfig === true,
  );
-@@ -130,7 +118,7 @@ const showAppSidebar = computed(
+@@ -173,7 +161,7 @@ const showAppSidebar = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -52,7 +52,7 @@ index 40f6450..f6e1c13 100644
      !usesHermesConfigSidebar.value &&
      !usesEkkoConfigSidebar.value &&
      !usesCodingAgentConfigSidebar.value,
-@@ -139,8 +127,8 @@ const showMobileMenuButton = computed(
+@@ -185,8 +173,8 @@ const showMobileMenuButton = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -62,7 +62,7 @@ index 40f6450..f6e1c13 100644
        usesHermesConfigSidebar.value ||
        usesEkkoConfigSidebar.value ||
        usesCodingAgentConfigSidebar.value),
-@@ -203,6 +191,7 @@ watch(
+@@ -246,6 +234,7 @@ watch(
        appStore.stopHealthPolling();
        return;
      }

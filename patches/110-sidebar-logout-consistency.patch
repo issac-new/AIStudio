@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
-index 93ca28dd..183fe7de 100644
+index 42d37227..692c3842 100644
 --- a/packages/client/src/views/hermes/WorkflowView.vue
 +++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -47,6 +47,7 @@ import PageSidebarFooter from '@/components/layout/PageSidebarFooter.vue'
+@@ -81,6 +81,7 @@ import PageSidebarFooter from '@/components/layout/PageSidebarFooter.vue'
  import { useAppStore } from '@/stores/hermes/app'
  import { useChatStore } from '@/stores/hermes/chat'
  import { useProfilesStore } from '@/stores/hermes/profiles'
@@ -10,7 +10,7 @@ index 93ca28dd..183fe7de 100644
  import { uploadRuntimeFiles } from '@/api/studio/files'
  import {
    approveWorkflowNode,
-@@ -99,6 +100,7 @@ const { t } = useI18n()
+@@ -144,6 +145,7 @@ const route = useRoute()
  const appStore = useAppStore()
  const chatStore = useChatStore()
  const profilesStore = useProfilesStore()
@@ -18,7 +18,7 @@ index 93ca28dd..183fe7de 100644
  const message = useMessage()
  const {
    screenToFlowCoordinate, getViewport, setViewport, setNodes, setEdges, updateNodeInternals,
-@@ -2728,7 +2730,16 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
+@@ -3340,7 +3342,16 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
            </NPopconfirm>
          </button>
        </div>
@@ -34,9 +34,9 @@ index 93ca28dd..183fe7de 100644
 +        </button>
 +      </div>
      </aside>
+     </PageSidebar>
  
-     <main
-@@ -4558,4 +4569,45 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
+@@ -5350,4 +5361,45 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
      display: none;
    }
  }
