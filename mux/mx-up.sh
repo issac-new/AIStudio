@@ -20,7 +20,15 @@ if curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1; then
   log "gateway 已在跑（:${GW_PORT}），跳过"
 else
   [[ -d "$HERMES_ROOT" ]] || fail "先跑 mx-setup.sh"
+  # HERMES_GATEWAY_BUSY_INPUT_MODE=queue（run4 实锤根治）：busy 回合收到新消息→静默 FIFO
+  # 排队（不 interrupt、不发"排队/打断"通知）——多 agent 抢串行坑时通知互触的消息风暴
+  # 由此断源；排队消息在回合结束后按序消费。
+  # HERMES_BIN 必须同时进网关环境（run4 实锤第三层）：网关集成的 kanban dispatcher
+  # spawn worker 时 $HERMES_BIN 优先于 "-m hermes_cli.main" 模块形式——缺它时用
+  # sys.executable（SIM tools python）跑 -m，模块不在其 path 上=worker 必崩
+  # （No module named hermes_cli，评审卡 run2-9 连崩实录）。
   PYTHONPATH="$HERMES_PYTHONPATH" HERMES_SKIP_UPDATE=1 HERMES_HOME="$HERMES_ROOT" HERMES_GATEWAY_LOCK_DIR="$LOCK_DIR" \
+    HERMES_GATEWAY_BUSY_INPUT_MODE=queue HERMES_BIN="$HERMES_BIN" \
     nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 &
   echo $! > "$PIDS_DIR/gateway.pid"
   log "gateway 启动中（pid $(cat "$PIDS_DIR/gateway.pid")，日志 $LOGS_DIR/gateway.log）"
@@ -67,7 +75,7 @@ if matrix_adapter_degraded "$LOGS_DIR/gateway.log"; then
   log "检测到 matrix 适配器降级（agent 将收不到 @mention）——执行自愈"
   if matrix_adapter_selfheal; then
     kill "$(cat "$PIDS_DIR/gateway.pid" 2>/dev/null)" 2>/dev/null; sleep 3
-    ( cd "$SIM_ROOT" && nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 & \
+    ( cd "$SIM_ROOT" && HERMES_GATEWAY_BUSY_INPUT_MODE=queue nohup "$HERMES_BIN" gateway run > "$LOGS_DIR/gateway.log" 2>&1 & \
       echo $! > "$PIDS_DIR/gateway.pid" )
     deadline=$(( $(date +%s) + 120 ))
     while (( $(date +%s) < deadline )); do
