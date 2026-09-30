@@ -1,0 +1,24 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -2198,6 +2198,7 @@
+     tasks: {
+       tabBoard: '看板',
+       tabTrace: '追溯',
+       tabAccounts: '项目健康',
++      tabGovernance: '治理中心',
+     },
+     dispatch: {
+       queued: '已入队',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -2200,6 +2200,7 @@
+     tasks: {
+       tabBoard: 'Board',
+       tabTrace: 'Traceability',
+       tabAccounts: 'Project Health',
++      tabGovernance: 'Governance',
+     },
+     dispatch: {
+       queued: 'Queued',

@@ -112,6 +112,18 @@ function goInboxFromAccounts(): void {
       >
         {{ t('ia2.tasks.tabAccounts') }}
       </button>
+      <!-- 治理中心跳转（2026-09-30 用户找不到入口的实缺口）：看板侧平级入口——
+           治理中心是独立工作页（ia2.governance），非本页内 tab，点击整页跳转。 -->
+      <button
+        type="button"
+        class="ia-tasks__tab ia-tasks__tab--link"
+        role="tab"
+        :aria-selected="false"
+        data-testid="ia-tasks-tab-governance"
+        @click="router.push({ name: 'ia2.governance' })"
+      >
+        {{ t('ia2.tasks.tabGovernance') }} ↗
+      </button>
       <!-- v12.6 右上角关闭钮（用户裁定：打开的 swarm kanban 页可关） -->
       <button
         type="button"
@@ -181,6 +193,9 @@ function goInboxFromAccounts(): void {
     border-bottom-color: var(--accent-primary, var(--color-primary, #3b82f6));
     font-weight: 600;
   }
+
+  /* 跳转型页签（治理中心入口）：非本页 tab，弱标识区分 */
+  &--link { font-size: 12px; }
 }
 
 .ia-tasks__board {
