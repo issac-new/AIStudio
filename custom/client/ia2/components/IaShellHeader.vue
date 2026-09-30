@@ -8,6 +8,9 @@
        的待人工决策同源）；
      ④ 三栏栏控迁各栏顶部控制条（WorkbenchView/IdeShell 挂 IaColumnControls，
        页头集中簇 IaWindowControls 退役）。
+     2026-09-30 用户裁定：品牌位「驾驶舱」文案退役，视图切换器（沟通协作 ⇄
+     IDE 工作台，带目标视图图标+切换图标）自最右迁入品牌位；用户按钮设置页
+     跳转经路由收编落 /app/settings（壳内顶栏+注意力条常显，见 routes.ts）。
      历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
      Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
@@ -122,7 +125,9 @@ function onPanelJumpTask(taskId: string): void {
         :title="appStore.connected ? t('cockpit.connected') : t('cockpit.disconnected')">
         <span class="cockpit-top__dot" :class="appStore.connected ? 'is-ok' : 'is-err'" />
       </span>
-      {{ t('ia2.brand') }}
+      <!-- 2026-09-30 用户裁定：品牌位「驾驶舱」文案退役，换视图切换器
+           （沟通协作 ⇄ IDE 工作台；目标视图图标 + 切换图标见 IaViewSwitcher） -->
+      <IaViewSwitcher />
     </div>
     <div class="cockpit-top__div" />
     <div class="cockpit-top__search">
@@ -157,10 +162,6 @@ function onPanelJumpTask(taskId: string): void {
       <span class="cockpit-top__uname">{{ userName ?? t('cockpit.defaultUser') }}</span>
       <span class="cockpit-top__caret">▾</span>
     </button>
-    <!-- v12.4：三栏栏控迁各栏顶部控制条（页头集中簇退役） -->
-    <div class="cockpit-top__div" />
-    <!-- v12.4 视图切换器单按钮固定最右（显示目标视图：沟通协作 ⇄ IDE 工作台） -->
-    <IaViewSwitcher />
 
     <!-- 态势内联面板（v12.3 迁页头；浮层贴页头下方） -->
     <div v-if="sitPanel" class="cockpit-top__sitpanel">
@@ -196,7 +197,9 @@ function onPanelJumpTask(taskId: string): void {
 
 <style scoped lang="scss">
 .cockpit-top { flex-shrink: 0; height: 44px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 6px; padding: 0 12px; position: relative; z-index: 10; }
-.cockpit-top__brand { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--text-primary); flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 2026-09-30：品牌位文字退役改挂切换器控件簇——不再收缩裁剪（窄幅挤压转由
+ * 搜索框 flex-shrink:2 与态势条横向滚动吸收），文字省略三件套随之退役 */
+.cockpit-top__brand { display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
 .cockpit-top__conn { font-size: 10px; flex-shrink: 0; }
 .cockpit-top__div { width: 1px; height: 20px; background: var(--border-color); margin: 0 2px; flex-shrink: 0; }
 .cockpit-top__btn { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; font-family: inherit; position: relative; white-space: nowrap; flex-shrink: 0;
