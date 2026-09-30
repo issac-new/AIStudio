@@ -405,3 +405,14 @@
 #      tests/gateway/test_max_concurrent_sessions.py 四守门（风暴不可能+排队重试+
 #      归属拒绝保留回文）；可移植性双向验证 v0.21.5 工作树与安装树（新上游）均干净应用。
 533-agent-gateway-capacity-storm.patch
+
+# 534（通知去重/退避第二层 2026-09-30，治本续章）：533 断了容量拒绝的反馈边，
+#      本补丁给出站侧汇点闸——platforms/base.py 两处 handler 返回值发送点
+#      （_dispatch_inline_reply 与 _send_final_text 前）统一过 OutboundNoticeGuard：
+#      同文去重（60s 窗口）+ 每聊天预算（8 条/60s）+ 超预算开冷却并只发一条摘要行，
+#      处理逻辑不受影响（被压的只是回声）。即便未来某条路径再引入回声反馈，
+#      出站物理限速使风暴结构性不可能（run4 签名 97 条同文 → 实发 1 条）。
+#      config.yaml gateway.outbound_notice_guard 可调；失败 fail-open。
+#      tests/gateway/test_outbound_notice_guard.py 12 守门（含风暴签名两条）；
+#      双树可移植性验证：v0.21.5 工作树与安装树（~/.hermes/hermes-agent）均干净应用。
+534-agent-gateway-outbound-notice-guard.patch
