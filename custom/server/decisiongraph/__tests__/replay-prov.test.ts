@@ -13,6 +13,9 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'dg-d9-'))
   process.env.SEMANTICA_SNAPSHOT_DIR = join(dir, 'snaps')
   process.env.SEMANTICA_STUDIO_KG = join(dir, 'kg.json')
+  // 快照择近/裁剪用例测纯 TS 逻辑：显式禁 python 免真起子进程偶发超时
+  // （decisions=[] 断言本就是缺席分支语义；真实 python 走末组集成用例）。
+  process.env.SEMANTICA_PYTHON = '/nonexistent-for-unit'
 })
 afterEach(() => {
   for (const k of ['SEMANTICA_SNAPSHOT_DIR', 'SEMANTICA_STUDIO_KG', 'SEMANTICA_PYTHON']) delete process.env[k]
