@@ -16,6 +16,8 @@ import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 const { runRest, loopRest } = vi.hoisted(() => ({
   runRest: {
     listRuns: vi.fn(async () => [] as Array<{ runId: string; graphId: string; status: string; updatedAt: string | null }>),
+    // getMind 默认「图不可用」（合法空态）；失败场景用例内覆写为 reject
+    getMind: vi.fn(async () => ({ available: false, thoughts: [], relations: [], runs: [] })),
     replay: vi.fn(async () => [] as Array<{ type: string; ts: string }>),
     getRun: vi.fn(async () => { throw new Error('not used') }),
     resumeRun: vi.fn(async () => ({ runId: 'x', instance: {} })),
@@ -204,6 +206,22 @@ describe('TraceabilityMatrix', () => {
     const empty = mount(TraceabilityMatrix, { global: { plugins: [router] } })
     await flushPromises()
     expect(empty.find('.ia-trace__empty-title').exists()).toBe(true)
+  })
+
+  it('2026-09-30 空白根治：任务链 API 失败且无循环 → 失败态+双面重试（不再落入泛化空态装作没数据）', async () => {
+    loopRest.listLoops.mockResolvedValue([])
+    runRest.getMind.mockRejectedValueOnce(new Error('mind down'))
+    matrixStubs()
+    const router = makeRouter()
+    const wrapper = mount(TraceabilityMatrix, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.find('.ia-trace__failed').exists()).toBe(true)
+    expect(wrapper.find('.ia-trace__empty-title').exists()).toBe(false)
+    // 重试拉双面
+    wrapper.find('.ia-trace__retry').trigger('click')
+    await flushPromises()
+    expect(loopRest.listLoops).toHaveBeenCalledTimes(2)
+    expect(runRest.getMind).toHaveBeenCalledTimes(2)
   })
 })
 
